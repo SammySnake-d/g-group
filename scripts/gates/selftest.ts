@@ -3,8 +3,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { layers, red, review, stub, tautology, trace } from "./gates.ts";
-import { type Ctx, type Gate, type Receipt, ctxFromDir } from "./lib.ts";
+import { ALL_GATES, LOCAL_GATES, layers, provenance, red, review, stub, tautology, trace } from "./gates.ts";
+import { type Ctx, type Gate, type Receipt, ctxFromDir, runGates } from "./lib.ts";
+import { vendorOf } from "./vendor.ts";
 
 const SPEC = "# 验收\n| AC-01 示例 |\n| AC-02 示例 |\n";
 const ADD = "export function add(a: number, b: number): number { return a + b; }\n";
@@ -92,25 +93,79 @@ const CASES: [Gate, string, Case, string | null][] = [
   [layers, "领域层反向依赖内核", { files: { ...baseFiles(), "packages/kern/package.json": PKG("@g-group/kern", "kernel"), "packages/kern/src/k.ts": "export const k = 1;\n", "packages/core/src/bad.ts": `import { k } from "@g-group/kern";\nexport const b = k;\n` }, changed: ["packages/core/src/bad.ts"] }, "不能依赖 kernel"],
   [layers, "插件依赖另一个插件", { files: { ...baseFiles(), "packages/p1/package.json": PKG("@g-group/plugin-a", "plugin"), "packages/p2/package.json": PKG("@g-group/plugin-b", "plugin"), "packages/p2/src/x.ts": "export const x = 1;\n", "packages/p1/src/y.ts": `import { x } from "@g-group/plugin-b";\nexport const y = x;\n` }, changed: ["packages/p1/src/y.ts"] }, "不能依赖 plugin"],
   [layers, "相对路径跨包", { files: { ...baseFiles(), "packages/kern/package.json": PKG("@g-group/kern", "kernel"), "packages/kern/src/k.ts": `import { add } from "../../core/src/add.ts";\nexport const k = add;\n` }, changed: ["packages/kern/src/k.ts"] }, "跨出了包"],
+  [layers, "依赖声明里反向引用", { files: { ...baseFiles(), "packages/kern/package.json": PKG("@g-group/kern", "kernel"), "packages/core/package.json": JSON.stringify({ name: "@g-group/core", gGroup: { layer: "domain" }, dependencies: { "@g-group/kern": "*" } }) }, changed: ["packages/core/package.json"] }, "依赖声明里引用了 kernel"],
+  [trace, "删掉源码文件也要收据", { changed: ["packages/core/src/gone.ts"], receipt: null }, "缺收据"],
+  [tautology, "只调 expect 不算断言", { files: { ...baseFiles(), "packages/core/src/add.test.ts": `import { test } from "node:test";\nimport { add } from "./add.ts";\ndeclare const expect: (v: unknown) => unknown;\ntest("adds", () => { expect(add(1, 2)); });\n` } }, "没有任何断言"],
+
+  [provenance, "会话记录与自报一致", {}, null],
+  [provenance, "自报模型与会话记录不符", { receipt: R((r) => { r.review!.model = "gpt-6-astra"; r.review!.session = "codex:fake"; }) }, "实际是"],
+  [provenance, "审查会话没见过被审 hash", { receipt: R((r) => { r.review!.session = "codex:nohash"; }) }, "没出现过 reviewed_hash"],
+  [provenance, "会话不存在", { receipt: R((r) => { r.author.session = "claude:missing"; }) }, "会话记录不存在"],
+  [provenance, "真实用户豁免", { receipt: R((r) => { r.waiver = { by: "39impacts.talent", reason: "g-group#900" }; }) }, null],
+  [provenance, "伪造豁免出处", { receipt: R((r) => { r.waiver = { by: "39impacts.talent", reason: "g-group#901" }; }) }, "不是 39impacts.talent 本人"],
+  [provenance, "豁免出处不存在", { receipt: R((r) => { r.waiver = { by: "39impacts.talent", reason: "g-group#99999" }; }) }, "找不到"],
   [layers, "包没声明层级", { files: { ...baseFiles(), "packages/core/package.json": JSON.stringify({ name: "@g-group/core" }) } }, "gGroup.layer"],
 ];
 
+// 假的 mirasim 会话与群聊记录,供 G-PROVENANCE 自检
+function fakeMirasim(): void {
+  const sess = path.join(tmpRoot, "_sessions"), rooms = path.join(tmpRoot, "_rooms");
+  const put = (f: string, t: string) => { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, t); };
+  put(path.join(sess, "claude/a/turns.jsonl"), `{"model":"ai-x/claude-opus-5-5"}\n`);
+  put(path.join(sess, "codex/fake/turns.jsonl"), `{"model":"claude-sonnet-5-5"}\n`);
+  put(path.join(sess, "codex/nohash/turns.jsonl"), `{"model":"gpt-6-astra"}\n`);
+  put(path.join(rooms, "g-group/md/2026-11-05.md"), [
+    "- 02:18 **39impacts.talent**: 这次同厂商审查我同意 <!-- #900 -->",
+    "- 02:19 **Claude Code** (agent · for 39impacts.talent): **39impacts.talent** 同意了 <!-- #901 -->",
+  ].join("\n") + "\n");
+  process.env.MIRASIM_SESSIONS = sess;
+  process.env.MIRASIM_ROOMS = rooms;
+}
+
 export function selfTest(): boolean {
   tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "gate-selftest-"));
+  const env = { s: process.env.MIRASIM_SESSIONS, r: process.env.MIRASIM_ROOMS };
+  fakeMirasim();
   let ok = true;
   try {
     for (const [gate, name, c, expect] of CASES) {
-      const probs = gate.run(build(c)).map((x) => x.msg);
+      const ctx = build(c);
+      if (gate === provenance) {
+        // 审查会话里写入被审 hash(nohash 样例除外),模拟审查人确实看过这一版
+        const rv = ctx.receipt?.review;
+        if (rv && rv.session === "codex:b") {
+          const f = path.join(process.env.MIRASIM_SESSIONS!, "codex/b/turns.jsonl");
+          fs.mkdirSync(path.dirname(f), { recursive: true });
+          fs.writeFileSync(f, `{"model":"gpt-6-astra","text":"审查 ${rv.reviewed_hash}"}\n`);
+        }
+      }
+      const probs = runGates(ctx, [gate])[0]!.problems.map((x) => x.msg);
       const pass = expect === null ? probs.length === 0 : probs.some((m) => m.includes(expect));
       if (!pass) ok = false;
       console.log(`${pass ? "✓" : "✗"} ${gate.id} ${expect === null ? "放行" : "拦下"}:${name}${pass ? "" : `  实际=${JSON.stringify(probs)}`}`);
     }
+    // 执行器层:CI 跑的 ALL_GATES 与本机的 LOCAL_GATES 必须覆盖所有门禁,删掉任何一个都要红(R-18)
+    const registered = new Set([...ALL_GATES, ...LOCAL_GATES].map((g) => g.id));
+    const all = [trace, review, red, stub, tautology, layers, provenance];
+    for (const g of all) if (!registered.has(g.id)) { ok = false; console.log(`✗ ${g.id} 没有注册进执行器`); }
+    if (LOCAL_GATES.some((g) => ALL_GATES.includes(g)) || !LOCAL_GATES.includes(provenance)) { ok = false; console.log("✗ 执行器注册表不对"); }
+    // 一个违规样例走完整执行器也必须被拦下
+    const full = runGates(build({ receipt: null }), ALL_GATES);
+    if (!full.some((r) => r.problems.length)) { ok = false; console.log("✗ 完整执行器放行了没收据的改动"); } else console.log("✓ 执行器 拦下:完整门禁集对违规改动不放行");
+    for (const [m, v] of [["o1", "openai"], ["gpt-6-astra", "openai"], ["claude-opus-5-5", "anthropic"], ["grok-4.7", "xai"], ["gemini-4-argon", "google"], ["stealth/crouton-alpha", "unknown"]] as const) {
+      const pass = vendorOf(m) === v; if (!pass) ok = false;
+      console.log(`${pass ? "✓" : "✗"} vendorOf(${m}) = ${vendorOf(m)}`);
+    }
     const covered = new Set(CASES.map(([g]) => g.id));
-    for (const g of [trace, review, red, stub, tautology, layers]) {
+    for (const g of all) {
       const kinds = CASES.filter(([x]) => x.id === g.id);
       if (!covered.has(g.id) || !kinds.some(([, , , e]) => e === null) || !kinds.some(([, , , e]) => e !== null)) { ok = false; console.log(`✗ ${g.id} 缺合规或违规样例`); }
     }
-  } finally { fs.rmSync(tmpRoot, { recursive: true, force: true }); }
+  } finally {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+    if (env.s === undefined) delete process.env.MIRASIM_SESSIONS; else process.env.MIRASIM_SESSIONS = env.s;
+    if (env.r === undefined) delete process.env.MIRASIM_ROOMS; else process.env.MIRASIM_ROOMS = env.r;
+  }
   console.log(ok ? "自检通过" : "自检失败");
   return ok;
 }

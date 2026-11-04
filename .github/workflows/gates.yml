@@ -20,4 +20,7 @@ jobs:
         run: npm test
       - name: 机械门禁
         if: github.event_name == 'pull_request'
-        run: node scripts/gates/run-all.ts --base origin/${{ github.base_ref }} --branch ${{ github.head_ref }}
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: node scripts/gates/run-all.ts --base="origin/$BASE_REF" --branch="$HEAD_REF"

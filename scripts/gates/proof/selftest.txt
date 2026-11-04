@@ -6,7 +6,7 @@
 ✓ G-TRACE 拦下:状态不在四种之内
 ✓ G-TRACE 拦下:第 7 栏没点到条目
 ✓ G-REVIEW 放行:跨厂商审查
-[G-REVIEW] Waived(by_user 39impacts.talent):同厂商 anthropic,依据 g-group#999 同意
+[G-REVIEW] Waived(by_user 39impacts.talent):同厂商 anthropic,依据 g-group#999 同意(真伪由 G-PROVENANCE 对照群聊记录核对)
 ✓ G-REVIEW 放行:同厂商但有用户豁免
 ✓ G-REVIEW 拦下:作者自审
 ✓ G-REVIEW 拦下:同厂商审查
@@ -29,5 +29,22 @@
 ✓ G-LAYER 拦下:领域层反向依赖内核
 ✓ G-LAYER 拦下:插件依赖另一个插件
 ✓ G-LAYER 拦下:相对路径跨包
+✓ G-LAYER 拦下:依赖声明里反向引用
+✓ G-TRACE 拦下:删掉源码文件也要收据
+✓ G-TAUTO 拦下:只调 expect 不算断言
+✓ G-PROVENANCE 放行:会话记录与自报一致
+✓ G-PROVENANCE 拦下:自报模型与会话记录不符
+✓ G-PROVENANCE 拦下:审查会话没见过被审 hash
+✓ G-PROVENANCE 拦下:会话不存在
+✓ G-PROVENANCE 放行:真实用户豁免
+✓ G-PROVENANCE 拦下:伪造豁免出处
+✓ G-PROVENANCE 拦下:豁免出处不存在
 ✓ G-LAYER 拦下:包没声明层级
+✓ 执行器 拦下:完整门禁集对违规改动不放行
+✓ vendorOf(o1) = openai
+✓ vendorOf(gpt-6-astra) = openai
+✓ vendorOf(claude-opus-5-5) = anthropic
+✓ vendorOf(grok-4.7) = xai
+✓ vendorOf(gemini-4-argon) = google
+✓ vendorOf(stealth/crouton-alpha) = unknown
 自检通过

@@ -49,6 +49,7 @@ export interface Gate {
 export const SPEC_FILE = "docs/spec/验收文档-v0.1.md";
 export const RECEIPT_DIR = "receipts";
 export const isTest = (p: string) => /\.test\.ts$/.test(p);
+export const existing = (ctx: { files: string[] }, ps: string[]) => ps.filter((x) => ctx.files.includes(x));
 export const isSrc = (p: string) => /^packages\/.+\.ts$/.test(p) && !isTest(p) && !p.includes("/fixtures/");
 
 export function specIdsFrom(text: string | undefined): Set<string> {
@@ -94,7 +95,7 @@ export function branchSlug(branch: string): string {
 
 export function ctxFromGit(root: string, base: string, branch: string): Ctx {
   const mergeBase = git(root, "merge-base", base, "HEAD");
-  const changed = git(root, "diff", "--name-only", "--diff-filter=ACMR", mergeBase, "HEAD").split("\n").filter(Boolean);
+  const changed = git(root, "diff", "--name-only", "--no-renames", mergeBase, "HEAD").split("\n").filter(Boolean); // 含删除;重命名拆成删+增
   const files = git(root, "ls-files").split("\n").filter(Boolean).filter((f) => fs.existsSync(path.join(root, f)));
   const receiptPath = `${RECEIPT_DIR}/${branchSlug(branch)}.json`;
   const read = (p: string) => { const f = path.join(root, p); return fs.existsSync(f) ? fs.readFileSync(f, "utf8") : undefined; };
@@ -157,3 +158,12 @@ export function copyTree(src: string, dst: string, files: string[]) {
 }
 
 export const p = (gate: string, msg: string): Problem => ({ gate, msg });
+
+export interface GateResult { gate: Gate; problems: Problem[] }
+// 唯一的执行器:run-all 和自检都走这里,门禁出错算拦下
+export function runGates(ctx: Ctx, gates: Gate[]): GateResult[] {
+  return gates.map((gate) => {
+    try { return { gate, problems: gate.run(ctx) }; }
+    catch (e) { return { gate, problems: [{ gate: gate.id, msg: `门禁自身出错:${(e as Error).message}` }] }; }
+  });
+}

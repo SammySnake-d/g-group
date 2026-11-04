@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import ts from "typescript";
-import { type Ctx, type Gate, type Problem, copyTree, isSrc, isTest, p } from "./lib.ts";
+import { type Ctx, type Gate, type Problem, copyTree, existing, isSrc, isTest, p } from "./lib.ts";
 import { vendorOf } from "./vendor.ts";
 
 const needsReceipt = (ctx: Ctx) => ctx.changed.some((f) => f.startsWith("packages/") || f.startsWith("scripts/gates/"));
@@ -48,7 +48,7 @@ export const review: Gate = {
     if (va === "unknown") out.push(p(g, `作者模型厂商认不出:${author.model}`));
     if (vr === "unknown") out.push(p(g, `审查模型厂商认不出:${rv.model}`));
     if (va !== "unknown" && va === vr) {
-      if (waiver?.by && /g-group#\d+/.test(waiver.reason)) console.log(`[${g}] Waived(by_user ${waiver.by}):同厂商 ${va},依据 ${waiver.reason}`);
+      if (waiver?.by && /g-group#\d+/.test(waiver.reason)) console.log(`[${g}] Waived(by_user ${waiver.by}):同厂商 ${va},依据 ${waiver.reason}(真伪由 G-PROVENANCE 对照群聊记录核对)`);
       else out.push(p(g, `作者与审查同为 ${va},且没有带群消息出处的用户豁免`));
     }
     const h = ctx.contentHash();
@@ -76,6 +76,15 @@ export const provenance: Gate = {
     };
     check("作者", ctx.receipt.author);
     check("审查", ctx.receipt.review, ctx.receipt.review.reviewed_hash);
+    const w = ctx.receipt.waiver;
+    if (w) {
+      const m = /g-group#(\d+)/.exec(w.reason);
+      const rooms = process.env.MIRASIM_ROOMS ?? path.join(os.homedir(), ".mirasim/chat/rooms");
+      const dir = path.join(rooms, "g-group", "md");
+      const line = m && fs.existsSync(dir) ? fs.readdirSync(dir).map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join("\n").split("\n").find((l) => l.endsWith(`<!-- #${m[1]} -->`)) : undefined;
+      if (!line) out.push(p(g, `豁免出处 ${w.reason} 在群聊记录里找不到`));
+      else if (!line.includes(`**${w.by}**`) || line.includes("(agent")) out.push(p(g, `豁免出处 g-group#${m![1]} 不是 ${w.by} 本人发的消息`));
+    }
     return out;
   },
 };
@@ -86,9 +95,9 @@ export const red: Gate = {
   id: "G-RED", rule: "R-02:先红后绿,门禁复跑红提交,点名测试当时失败、现在通过",
   run(ctx) {
     const g = this.id, out: Problem[] = [];
-    const tests = ctx.changed.filter((f) => isTest(f) && f.startsWith("packages/"));
+    const tests = existing(ctx, ctx.changed.filter((f) => isTest(f) && f.startsWith("packages/")));
     if (tests.length === 0) {
-      if (ctx.changed.some(isSrc)) out.push(p(g, "改了源码却没有改动任何测试"));
+      if (existing(ctx, ctx.changed).some(isSrc)) out.push(p(g, "改了源码却没有改动任何测试"));
       return out;
     }
     const rr = ctx.receipt?.red;
@@ -137,7 +146,7 @@ export const stub: Gate = {
   id: "G-STUB", rule: "R-03:空实现红基线,桩替换后仍通过的测试判无效",
   run(ctx) {
     const g = this.id, out: Problem[] = [];
-    const tests = ctx.changed.filter((f) => isTest(f) && f.startsWith("packages/"));
+    const tests = existing(ctx, ctx.changed.filter((f) => isTest(f) && f.startsWith("packages/")));
     if (tests.length === 0) return out;
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-stub-"));
     try {
@@ -174,7 +183,7 @@ export function lintTestFile(code: string, file: string): string[] {
       if (ts.isIdentifier(n) && imported.has(n.text)) usesSrc = true;
       if (ts.isCallExpression(n)) {
         const callee = n.expression.getText(sf);
-        if (/^(assert(\.\w+)?|expect|t\.assert(\.\w+)?)$/.test(callee) || /^assert\./.test(callee)) {
+        if (/^(?:t\.)?assert(?:\.\w+)?$/.test(callee)) {
           asserts++;
           const args = n.arguments;
           if (args.length > 0 && args.slice(0, Math.min(2, args.length)).every(isLit) && !/throws|rejects|fail/.test(callee)) errs.push(`"${name}":恒真/恒定断言 ${n.getText(sf).slice(0, 60)}`);
@@ -202,7 +211,7 @@ export const tautology: Gate = {
   id: "G-TAUTO", rule: "R-04:拒绝同语反复测试(无断言、恒真断言、不碰被测源码)",
   run(ctx) {
     const out: Problem[] = [];
-    for (const f of ctx.changed.filter((f) => isTest(f) && f.startsWith("packages/"))) {
+    for (const f of existing(ctx, ctx.changed.filter((f) => isTest(f) && f.startsWith("packages/")))) {
       for (const e of lintTestFile(ctx.read(f) ?? "", f)) out.push(p(this.id, `${f} ${e}`));
     }
     return out;
@@ -226,15 +235,25 @@ export const layers: Gate = {
   run(ctx) {
     const g = this.id, out: Problem[] = [];
     const pkgs = new Map<string, { dir: string; layer: Layer }>();
+    const manifests: [string, { name?: string; dependencies?: Record<string, string>; devDependencies?: Record<string, string>; peerDependencies?: Record<string, string>; optionalDependencies?: Record<string, string> }][] = [];
     for (const f of ctx.files.filter((f) => /^packages\/[^/]+\/package\.json$/.test(f))) {
-      const j = JSON.parse(ctx.read(f)!) as { name?: string; gGroup?: { layer?: string } };
+      const j = JSON.parse(ctx.read(f)!) as { name?: string; gGroup?: { layer?: string }; dependencies?: Record<string, string>; devDependencies?: Record<string, string>; peerDependencies?: Record<string, string>; optionalDependencies?: Record<string, string> };
+      manifests.push([f, j]);
       const dir = path.posix.dirname(f);
       const layer = j.gGroup?.layer as Layer | undefined;
       if (!j.name || !layer || !LAYERS.includes(layer)) { out.push(p(g, `${f} 缺 name 或合法的 gGroup.layer(${LAYERS.join("/")})`)); continue; }
       pkgs.set(j.name, { dir, layer });
     }
+    for (const [f, j] of manifests) {
+      const own = j.name ? pkgs.get(j.name) : undefined;
+      if (!own) continue;
+      for (const dep of Object.keys({ ...j.dependencies, ...j.devDependencies, ...j.peerDependencies, ...j.optionalDependencies })) {
+        const d = pkgs.get(dep);
+        if (d && dep !== j.name && !ALLOWED[own.layer].includes(d.layer)) out.push(p(g, `${f}:${own.layer} 层的 ${j.name} 在依赖声明里引用了 ${d.layer} 层的 ${dep}`));
+      }
+    }
     const ownerOf = (f: string) => [...pkgs.entries()].find(([, v]) => f.startsWith(v.dir + "/"));
-    for (const f of ctx.changed.filter((f) => f.startsWith("packages/") && f.endsWith(".ts"))) {
+    for (const f of existing(ctx, ctx.changed).filter((f) => f.startsWith("packages/") && f.endsWith(".ts"))) {
       const own = ownerOf(f);
       if (!own) { out.push(p(g, `${f} 不属于任何声明了层级的包`)); continue; }
       const [ownName, ownInfo] = own;

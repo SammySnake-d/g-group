@@ -3,7 +3,7 @@ export type Vendor = "anthropic" | "openai" | "google" | "xai" | "zhipu" | "deep
 
 const TABLE: [RegExp, Vendor][] = [
   [/claude|anthropic|\bopus\b|\bsonnet\b|\bhaiku\b|\bfable\b|mythos/i, "anthropic"],
-  [/\bgpt|codex|\bo[134]-|openai/i, "openai"],
+  [/\bgpt|codex|\bo[134](?:-|$)|openai/i, "openai"],
   [/gemini|google/i, "google"],
   [/grok|xai/i, "xai"],
   [/\bglm|zhipu/i, "zhipu"],
