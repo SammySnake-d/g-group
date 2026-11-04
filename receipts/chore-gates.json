@@ -60,5 +60,12 @@
   "red": null,
   "unverifiable": "R-01 的厂商判定靠 vendor.ts 的正则表,新厂商的模型名会被判 unknown 而拦下(偏严,不会放水)。G-PROVENANCE 与豁免真伪核对只在本机 merge.sh 跑,CI 不跑;分支保护只要求 CI 的 gates,所以绕过 merge.sh 直接在网页点合并能跳过会话来源核对,这一点目前靠纪律兜。R-03 的空桩替换只换函数体,测试只读模块顶层常量时能骗过 G-STUB。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "astra",
+    "session": "codex:f933f07c-ae51-45bf-ba20-4d6cea7e2b8c",
+    "model": "ai-iisbo/[乾坤按量]gpt-6-astra",
+    "verdict": "reject",
+    "reviewed_hash": "9c82e6ea9c229fec2711eb2412f77f4653a7fe8b1d061199b2fff4a22f2b11ea",
+    "notes": "独立复现确认 8 个阻塞问题：审查来源、用户豁免、测试有效性和真实 runner 均可绕过，修复后重审；详见 reviews/chore-gates.md。"
+  }
 }
