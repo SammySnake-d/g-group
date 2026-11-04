@@ -1,0 +1,47 @@
+# 可信门禁:裁判代码、配置和依赖一律取自 main,PR 内容只当被检查的数据。
+# pull_request_target 永远用默认分支上的这份 workflow,PR 改不了它;PR 代码只在无网络容器里执行。
+name: trusted-gates
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  trusted-gates:
+    runs-on: ubuntu-latest
+    env:
+      GATE_SANDBOX_IMAGE: node:22.22.0-slim
+    steps:
+      - name: 检出 main(裁判)
+        uses: actions/checkout@v4
+        with: { path: trusted, persist-credentials: false }
+      - name: 检出 PR(被检查的数据)
+        uses: actions/checkout@v4
+        with:
+          path: pr
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with: { node-version: "22.22.0" }
+      - name: 安装裁判依赖
+        run: npm ci --prefix trusted
+      - name: 安装 PR 依赖(不执行任何安装脚本)
+        run: npm ci --prefix pr --ignore-scripts
+      - name: 拉沙箱镜像
+        run: docker pull "$GATE_SANDBOX_IMAGE"
+      - name: 机械门禁(main 上的门禁检查 PR)
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: node trusted/scripts/gates/run-all.ts --repo=pr --base=origin/main --branch="$HEAD_REF"
+      - name: 类型检查与 lint(用 main 上的配置)
+        run: |
+          rsync -a --exclude node_modules --exclude .git pr/ lintcopy/
+          ln -s "$PWD/pr/node_modules" lintcopy/node_modules
+          cp trusted/tsconfig.json trusted/biome.json lintcopy/
+          trusted/node_modules/.bin/tsc -p lintcopy/tsconfig.json
+          cd lintcopy && ../trusted/node_modules/.bin/biome lint --error-on-warnings
+      - name: 测试(沙箱内)
+        run: |
+          docker run --rm --network none -v "$PWD/pr:/w" -w /w "$GATE_SANDBOX_IMAGE" \
+            node --test "packages/**/*.test.ts"

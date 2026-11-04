@@ -13,30 +13,36 @@ export interface AcceptanceClaim {
   approver?: string;
 }
 export interface Party { agent: string; session: string; model: string }
+export interface Review extends Party { verdict: "approve" | "reject"; reviewed_hash: string; notes: string }
 export interface Receipt {
   slice: string;
   acceptance: AcceptanceClaim[];
   author: Party;
-  review: (Party & { verdict: "approve" | "reject"; reviewed_hash: string; notes: string }) | null;
-  red: { commit: string; tests: string[] } | null;
+  review: Review | null;
+  red: { commit: string } | null;
   unverifiable: string;
   waiver: { by: string; reason: string } | null;
 }
 
-export interface TestRun { ok: boolean; passed: string[]; failed: string[]; output: string }
+export interface NamedTest { file: string; name: string }
+export interface TestRun { exitOk: boolean; passed: NamedTest[]; failed: NamedTest[]; output: string }
+
+export interface Snapshot { dir: string; cleanup(): void; inRange: boolean }
 
 export interface Ctx {
   root: string;
+  branch: string;
   changed: string[];
   files: string[];
   read(p: string): string | undefined;
+  /** 读 merge-base 时的文件;不存在返回 undefined */
+  readBase(p: string): string | undefined;
   receipt: Receipt | undefined;
-  receiptPath: string | undefined;
+  receiptPath: string;
   specIds: Set<string>;
   runTests(files: string[], cwd?: string): TestRun;
   contentHash(): string;
-  /** 取某个提交时的仓库快照目录(用于复跑"先红"),调用方负责 cleanup */
-  snapshot(ref: string): { dir: string; cleanup(): void; inRange: boolean } | undefined;
+  snapshot(ref: string): Snapshot | undefined;
 }
 
 export interface Problem { gate: string; msg: string }
@@ -48,40 +54,69 @@ export interface Gate {
 
 export const SPEC_FILE = "docs/spec/验收文档-v0.1.md";
 export const RECEIPT_DIR = "receipts";
-export const isTest = (p: string) => /\.test\.ts$/.test(p);
+/** 只有这些路径的改动不需要收据与审查;其余一切(含 workflow、hook、脚本、依赖清单)都受管 */
+export const UNGOVERNED = [/^docs\//, /^reviews\//, /^receipts\//, /^README\.md$/];
+export const isGoverned = (f: string) => !UNGOVERNED.some((re) => re.test(f));
+export const isTest = (f: string) => /^packages\/.+\.test\.ts$/.test(f);
+export const isSrc = (f: string) => /^packages\/.+\.ts$/.test(f) && !isTest(f) && !f.includes("/fixtures/");
 export const existing = (ctx: { files: string[] }, ps: string[]) => ps.filter((x) => ctx.files.includes(x));
-export const isSrc = (p: string) => /^packages\/.+\.ts$/.test(p) && !isTest(p) && !p.includes("/fixtures/");
 
 export function specIdsFrom(text: string | undefined): Set<string> {
   return new Set((text ?? "").match(/\b(?:AC-\d+|V-\d+|R-M?\d+)\b/g) ?? []);
 }
 
-export function runNodeTests(root: string, files: string[]): TestRun {
-  if (files.length === 0) return { ok: true, passed: [], failed: [], output: "" };
-  const r = spawnSync(process.execPath, ["--test", "--test-reporter=tap", ...files], { cwd: root, encoding: "utf8", timeout: 300_000 });
-  const output = (r.stdout ?? "") + (r.stderr ?? "");
-  const passed: string[] = [], failed: string[] = [];
-  for (const line of output.split("\n")) {
-    const m = /^\s*(not ok|ok) \d+ - (.+?)(?: # .*)?$/.exec(line);
-    if (m) (m[1] === "ok" ? passed : failed).push(m[2]!.trim());
+// 用 node --test 的 TAP 输出解析"每个文件里哪些具名测试通过/失败"。
+// 只认测试真的注册并执行后的结果;文件加载失败时 TAP 里只有文件级失败,不会出现具名测试。
+// 执行 PR 代码的唯一出口。CI 的可信门禁设 GATE_SANDBOX_IMAGE,PR 代码在无网络的容器里跑,
+// 只能改它自己挂载的临时目录,碰不到可信门禁的进程和文件。本机不设则直接跑。
+export function sandboxed(args: string[], cwd: string, mounts: string[] = []) {
+  const image = process.env.GATE_SANDBOX_IMAGE;
+  if (!image) return spawnSync(process.execPath, args, { cwd, encoding: "utf8", timeout: 900_000 });
+  const vols = [...new Set([cwd, ...mounts].map((m) => fs.realpathSync(m)))].flatMap((m) => ["-v", `${m}:${m}`]);
+  const uid = typeof process.getuid === "function" ? `${process.getuid()}:${process.getgid?.() ?? 0}` : "1000:1000";
+  return spawnSync("docker", ["run", "--rm", "--network", "none", "--user", uid, "-e", "HOME=/tmp", ...vols, "-w", fs.realpathSync(cwd), image, "node", ...args], { encoding: "utf8", timeout: 900_000 });
+}
+const nmMount = (root: string) => { const nm = path.join(root, "node_modules"); return fs.existsSync(nm) ? [fs.realpathSync(nm)] : []; };
+
+export function runNodeTests(root: string, files: string[], extraArgs: string[] = []): TestRun {
+  const passed: NamedTest[] = [], failed: NamedTest[] = [];
+  let output = "", exitOk = true;
+  for (const file of files) {
+    const r = sandboxed([...extraArgs, "--test", "--test-reporter=tap", "--test-concurrency=1", file], root, nmMount(root));
+    output += `### ${file}\n${r.stdout ?? ""}${r.stderr ?? ""}`;
+    if (r.status !== 0) exitOk = false;
+    const lines = (r.stdout ?? "").split("\n");
+    // 只取叶子测试:后面紧跟的缩进更深的 "ok/not ok" 说明它是 describe 容器
+    const rows: { depth: number; ok: boolean; name: string; skip: boolean }[] = [];
+    for (const line of lines) {
+      const m = /^(\s*)(not ok|ok) \d+ - (.+?)(?: # (.*))?$/.exec(line);
+      if (m) rows.push({ depth: m[1]!.length, ok: m[2] === "ok", name: m[3]!.trim(), skip: /^(SKIP|TODO)/i.test(m[4] ?? "") });
+    }
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]!;
+      if (row.name === file || row.name.endsWith(path.basename(file))) { if (!row.ok) failed.push({ file, name: `<文件级失败>` }); continue; }
+      const prevDeeper = i > 0 && rows[i - 1]!.depth > row.depth;
+      if (prevDeeper) continue; // 容器
+      if (row.skip) continue;
+      (row.ok ? passed : failed).push({ file, name: row.name });
+    }
   }
-  return { ok: r.status === 0, passed, failed, output };
+  return { exitOk, passed, failed, output };
 }
 
-// 审查钉住的内容:仓库全部文件(receipts/ 与审查人自己写的 reviews/ 除外)+ 本 PR 收据去掉 review 字段后的内容
-function hashFiles(root: string, files: string[], receipt?: Receipt): string {
+// 审查钉住的内容:仓库全部文件(receipts/ 与 reviews/ 除外)+ 本 PR 收据去掉 review 字段后的内容
+export function hashFiles(root: string, files: string[], receipt?: Receipt): string {
   const h = createHash("sha256");
-  if (receipt) { const { review: _r, ...rest } = receipt; h.update("receipt\0" + JSON.stringify(rest) + "\0"); }
-  for (const f of [...files].filter((f) => !f.startsWith(RECEIPT_DIR + "/") && !f.startsWith("reviews/")).sort()) {
-    h.update(f + "\0");
+  if (receipt) { const { review: _r, ...rest } = receipt; h.update(`receipt\0${JSON.stringify(rest)}\0`); }
+  for (const f of [...files].filter((f) => !f.startsWith(`${RECEIPT_DIR}/`) && !f.startsWith("reviews/")).sort()) {
+    h.update(`${f}\0`);
     h.update(fs.readFileSync(path.join(root, f)));
     h.update("\0");
   }
   return h.digest("hex");
 }
 
-function loadReceipt(root: string, rel: string | undefined): Receipt | undefined {
-  if (!rel) return undefined;
+function loadReceipt(root: string, rel: string): Receipt | undefined {
   const p = path.join(root, rel);
   if (!fs.existsSync(p)) return undefined;
   return JSON.parse(fs.readFileSync(p, "utf8")) as Receipt;
@@ -99,51 +134,24 @@ export function ctxFromGit(root: string, base: string, branch: string): Ctx {
   const files = git(root, "ls-files").split("\n").filter(Boolean).filter((f) => fs.existsSync(path.join(root, f)));
   const receiptPath = `${RECEIPT_DIR}/${branchSlug(branch)}.json`;
   const read = (p: string) => { const f = path.join(root, p); return fs.existsSync(f) ? fs.readFileSync(f, "utf8") : undefined; };
+  const readBase = (p: string) => { const r = spawnSync("git", ["show", `${mergeBase}:${p}`], { cwd: root, encoding: "utf8" }); return r.status === 0 ? r.stdout : undefined; };
   return {
-    root, changed, files, read,
+    root, branch, changed, files, read, readBase,
     receipt: loadReceipt(root, receiptPath), receiptPath,
     specIds: specIdsFrom(read(SPEC_FILE)),
     runTests: (fs_, cwd) => runNodeTests(cwd ?? root, fs_),
     contentHash: () => hashFiles(root, files, loadReceipt(root, receiptPath)),
     snapshot(ref) {
-      let sha: string;
-      try { sha = git(root, "rev-parse", "--verify", ref + "^{commit}"); } catch { return undefined; }
+      const r = spawnSync("git", ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`], { cwd: root, encoding: "utf8" });
+      if (r.status !== 0) return undefined;
+      const sha = r.stdout.trim();
       const isAnc = (a: string, b: string) => spawnSync("git", ["merge-base", "--is-ancestor", a, b], { cwd: root }).status === 0;
       const inRange = isAnc(sha, "HEAD") && !isAnc(sha, mergeBase);
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gate-snap-"));
       execFileSync("git", ["worktree", "add", "--detach", "-q", dir, sha], { cwd: root });
       const nm = path.join(root, "node_modules");
       if (fs.existsSync(nm)) fs.symlinkSync(nm, path.join(dir, "node_modules"));
-      return { dir, inRange, cleanup: () => execFileSync("git", ["worktree", "remove", "--force", dir], { cwd: root }) };
-    },
-  };
-}
-
-// 自检夹具:目录里放一棵迷你仓库 + _ctx.json({ changed, receipt })
-export function ctxFromDir(dir: string): Ctx {
-  const meta = JSON.parse(fs.readFileSync(path.join(dir, "_ctx.json"), "utf8")) as { changed: string[]; receipt?: string };
-  const files: string[] = [];
-  const walk = (d: string) => {
-    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
-      const full = path.join(d, e.name);
-      if (e.isDirectory()) walk(full);
-      else if (e.name !== "_ctx.json") files.push(path.relative(dir, full).split(path.sep).join("/"));
-    }
-  };
-  walk(dir);
-  const read = (p: string) => { const f = path.join(dir, p); return fs.existsSync(f) ? fs.readFileSync(f, "utf8") : undefined; };
-  return {
-    root: dir, changed: meta.changed, files, read,
-    receipt: loadReceipt(dir, meta.receipt), receiptPath: meta.receipt,
-    specIds: specIdsFrom(read(SPEC_FILE)),
-    runTests: (fs_, cwd) => runNodeTests(cwd ?? dir, fs_),
-    contentHash: () => hashFiles(dir, files, loadReceipt(dir, meta.receipt)),
-    snapshot(ref) {
-      const d = path.join(dir, "..", "_snap", ref);
-      if (!fs.existsSync(d)) return undefined;
-      const nm = path.join(dir, "node_modules");
-      if (fs.existsSync(nm) && !fs.existsSync(path.join(d, "node_modules"))) fs.symlinkSync(fs.realpathSync(nm), path.join(d, "node_modules"));
-      return { dir: d, inRange: true, cleanup: () => {} };
+      return { dir, inRange, cleanup: () => { execFileSync("git", ["worktree", "remove", "--force", dir], { cwd: root }); } };
     },
   };
 }
@@ -154,7 +162,7 @@ export function copyTree(src: string, dst: string, files: string[]) {
     fs.copyFileSync(path.join(src, f), path.join(dst, f));
   }
   const nm = path.join(src, "node_modules");
-  if (fs.existsSync(nm) && !fs.existsSync(path.join(dst, "node_modules"))) fs.symlinkSync(nm, path.join(dst, "node_modules"));
+  if (fs.existsSync(nm) && !fs.existsSync(path.join(dst, "node_modules"))) fs.symlinkSync(fs.realpathSync(nm), path.join(dst, "node_modules"));
 }
 
 export const p = (gate: string, msg: string): Problem => ({ gate, msg });

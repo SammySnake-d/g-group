@@ -22,26 +22,37 @@
 
 ## 开发流程(每个 PR)
 
-1. 分支 `feat/<切片>`。先写行为测试,单独提交一次(这个提交上测试必须失败),记下提交号。
+1. 分支 `feat/<切片>`。先提交"红"提交:行为测试 + 空壳实现(函数签名在、返回假值),测试按名字失败。记下提交号。
 2. 写实现,测试变绿。
-3. 写收据 `receipts/<分支名,斜杠换成横杠>.json`(格式见 [docs/RECEIPT.md](docs/RECEIPT.md)):对上的 AC 条目、证据路径、红提交、第 7 栏。
-4. `node scripts/gates/run-all.ts --hash` 得到内容 hash,交给 Astra 审。Astra 把结论、她的会话号和这个 hash 写进收据 `review` 字段。
-5. 审后任何代码或收据结论的改动都会让 hash 失效,需要重审。
-6. 只用 `scripts/merge.sh <PR号>` 合并:本机跑全部门禁(含会话来源核对)+ CI 绿。
+3. 写收据 `receipts/<分支名,非字母数字换成 ->.json`(格式见 [docs/RECEIPT.md](docs/RECEIPT.md))。
+4. 审查人在自己的会话里跑 `node scripts/gates/run-all.ts --hash --branch <分支>`,把输出原样填进收据 `review.reviewed_hash`。G-PROVENANCE 只认这一次工具调用的输出和那一轮的模型。
+5. 审后改任何受管内容(除 docs/、reviews/、receipts/、README.md 外的一切,含 workflow 和依赖清单)都会让 hash 失效,需要重审。
+6. 只用 `scripts/merge.sh <PR号>` 合并。
 
 ## 机械门禁
 
-`npm run gates:selftest` 校准门禁本身:每个门禁都有必须放行和必须拦下的样例。
+裁判在 main 上。`trusted-gates` 用 `pull_request_target` 触发,workflow、门禁代码、tsconfig、biome 配置都取自 main,PR 的内容只当数据检查,PR 代码只在无网络容器里执行。`self-check` 跑 PR 自己的门禁自检和变异校验,证明改过的门禁仍然可信。
+
+分支保护要求三项检查都在 PR 当前 head 上通过:
+
+| 检查 | 谁写 | 内容 |
+|---|---|---|
+| `trusted-gates` | main 上的 workflow | 下表除 G-PROVENANCE 外的门禁 + 类型检查 + lint + 测试 |
+| `self-check` | PR 的 workflow | 类型检查、lint、测试、门禁自检、门禁变异校验 |
+| `provenance` | `scripts/merge.sh`(仓库所有者的 token) | 本机跑全部门禁含 G-PROVENANCE,通过后写在这个 SHA 上 |
 
 | 门禁 | 规则 | 拦什么 |
 |---|---|---|
-| G-TRACE | R-06 R-08 R-15 | 改了代码没收据;条目不在验收文档;通过没证据;状态不在 通过/失败/未测/不适用;第 7 栏没点到条目 |
-| G-REVIEW | R-01 | 作者自审;同厂商审查(除非有带群消息出处的用户豁免);厂商认不出;审后又改 |
-| G-PROVENANCE | R-01 R-07 | 收据自报的模型与 mirasim 会话原始记录不符;审查会话里没出现过被审 hash(仅本机,merge.sh 跑) |
-| G-RED | R-02 | 门禁检出红提交亲自复跑:点名测试当时没失败、现在没通过 |
-| G-STUB | R-03 | 所有源码函数体换成 throw 后仍通过的测试 |
-| G-TAUTO | R-04 | 无断言、恒真断言、不碰被测源码的测试 |
-| G-LAYER | 插件化 | 包分层(domain → kernel → adapter/plugin → app)只能向下依赖;插件互不依赖;不准相对路径跨包 |
+| G-TRACE | R-06 R-08 R-15 | 受管改动没收据;条目不在验收文档;通过没证据;状态不在 通过/失败/未测/不适用;第 7 栏没点到条目 |
+| G-REVIEW | R-01 | 作者自审;自报同厂商且无豁免;厂商认不出;审查结论不是 approve;审后又改 |
+| G-PROVENANCE | R-01 R-07 R-10 | 审查会话里没有一次 `run-all.ts --hash` 输出等于被审 hash;算 hash 那一轮的模型与自报不符;审查厂商落在作者的产出厂商集合里;豁免不是用户本人在群里对这一版 hash 的明确"批准豁免"、或之后被撤回/改写 |
+| G-RED | R-02 | 新增或改动的每条测试,门禁检出红提交复跑:当时没按名字失败(加载失败不算)、现在没按名字通过 |
+| G-STUB | R-03 | 测试执行期间把所有源码函数变成空桩,基线通过的测试没有按名字失败(仍通过、skip、没执行都算) |
+| G-TAUTO | R-04 | 按 node:test 真实导入识别测试(含别名);无断言、没有一条断言判被测源码的结果、恒定断言、skip/only;运行时注册的测试和静态识别不一致 |
+| G-WORKFLOW | R-18 | PR 的 workflow 冒充受保护检查名、申请写权限、写提交状态、用 pull_request_target;删掉 trusted-gates.yml |
+| G-LAYER | 插件化 | 包分层只能向下依赖;插件互不依赖;不准相对路径跨包;import 和依赖声明都查 |
+
+门禁自身可信(R-18):`npm run gates:selftest` 在真实 git 仓库里调用真实命令行入口,合规必放行、违规必拦下;`npm run gates:mutation` 把门禁故意改坏 21 种(跳过执行器、不比 hash、删门禁……),每种都必须被自检发现。
 
 机器验不了、交给人判的:R-06 切片边界对不对;R-07 证据是不是真实对象;收据第 7 栏的质量;体验类结论;需求有没有漏。
 
@@ -58,5 +69,5 @@
 ```sh
 npm ci
 git config core.hooksPath .githooks
-npm run typecheck && npm run gates:selftest && npm test
+npm run typecheck && npm run lint && npm test && npm run gates:selftest
 ```

@@ -1,50 +1,65 @@
-✓ G-TRACE 放行:合规收据
-✓ G-TRACE 放行:只改文档不需要收据
-✓ G-TRACE 拦下:改了代码没收据
-✓ G-TRACE 拦下:条目不在验收文档
-✓ G-TRACE 拦下:通过但无证据
-✓ G-TRACE 拦下:状态不在四种之内
-✓ G-TRACE 拦下:第 7 栏没点到条目
-✓ G-REVIEW 放行:跨厂商审查
-[G-REVIEW] Waived(by_user 39impacts.talent):同厂商 anthropic,依据 g-group#999 同意(真伪由 G-PROVENANCE 对照群聊记录核对)
-✓ G-REVIEW 放行:同厂商但有用户豁免
-✓ G-REVIEW 拦下:作者自审
-✓ G-REVIEW 拦下:同厂商审查
-✓ G-REVIEW 拦下:审查模型认不出
-✓ G-REVIEW 拦下:审后又改代码
-✓ G-REVIEW 拦下:审后改了收据的验收结论
-✓ G-REVIEW 拦下:没有审查
-✓ G-RED 放行:红提交上失败、现在通过
-✓ G-RED 拦下:红提交上本来就绿
-✓ G-RED 拦下:收据没写红提交
-✓ G-RED 拦下:红提交不存在
-✓ G-RED 拦下:改源码不改测试
-✓ G-STUB 放行:测试真的调用了实现
-✓ G-STUB 拦下:吞掉异常的假测试
-✓ G-TAUTO 放行:正常测试
-✓ G-TAUTO 拦下:恒真断言
-✓ G-TAUTO 拦下:不碰源码
-✓ G-TAUTO 拦下:没有断言
-✓ G-LAYER 放行:向下依赖
-✓ G-LAYER 拦下:领域层反向依赖内核
-✓ G-LAYER 拦下:插件依赖另一个插件
-✓ G-LAYER 拦下:相对路径跨包
-✓ G-LAYER 拦下:依赖声明里反向引用
-✓ G-TRACE 拦下:删掉源码文件也要收据
-✓ G-TAUTO 拦下:只调 expect 不算断言
-✓ G-PROVENANCE 放行:会话记录与自报一致
-✓ G-PROVENANCE 拦下:自报模型与会话记录不符
-✓ G-PROVENANCE 拦下:审查会话没见过被审 hash
-✓ G-PROVENANCE 拦下:会话不存在
-✓ G-PROVENANCE 放行:真实用户豁免
-✓ G-PROVENANCE 拦下:伪造豁免出处
-✓ G-PROVENANCE 拦下:豁免出处不存在
-✓ G-LAYER 拦下:包没声明层级
-✓ 执行器 拦下:完整门禁集对违规改动不放行
+✓ 放行:合规:先红后绿、跨厂商审查、来源核对通过
+✓ 放行:合规:node:test 别名 + 断言
+✓ 放行:合规:只改文档不需要收据
+✓ 放行:合规:用户本人对这一版批准豁免
+✓ 放行:合规(CI 模式,不跑来源核对)
+✓ 拦下:CI 模式下违规同样拦下
+✓ 拦下:改了代码没收据
+✓ 拦下:F-02 只改 workflow 没收据
+✓ 拦下:只改 package.json 没收据
+✓ 拦下:删掉源码也要收据
+✓ 拦下:条目不在验收文档
+✓ 拦下:状态不在四种之内
+✓ 拦下:第 7 栏没点到条目
+✓ 拦下:作者自审
+✓ 拦下:同厂商审查且无豁免
+✓ 拦下:审查模型认不出
+✓ 拦下:审查结论 reject
+✓ 拦下:审后又改代码
+✓ 拦下:审后改 workflow
+✓ 拦下:F-01 审查会话不存在
+✓ 拦下:F-01 审查会话里没算过这个 hash
+✓ 拦下:F-04 历史出现过别家模型,算 hash 那一轮是同厂商
+✓ 拦下:审查会话算出的是别的 hash
+✓ 拦下:F-04 hash 只出现在聊天文本里
+✓ 拦下:作者自报与实际产出厂商不符
+✓ 拦下:作者会话没碰过本仓库
+✓ 拦下:作者中途换成审查同厂商(累积集合)
+✓ 拦下:F-03 用户明确不批准豁免
+✓ 拦下:豁免是助手发的
+✓ 拦下:豁免没绑定这一版
+✓ 拦下:豁免之后被撤回
+✓ 拦下:F-05 node:test 别名、零断言、错误实现
+✓ 拦下:间接注册测试绕过静态识别
+✓ 拦下:F-07 断言只判复制的逻辑
+✓ 拦下:恒真断言
+✓ 拦下:提交了 skip 的测试
+✓ 拦下:源码里偷偷导入 node:test
+✓ 拦下:F-06 同文件后补的测试没有红记录
+✓ 拦下:红提交上测试本来就绿
+✓ 拦下:红提交只是加载失败
+✓ 拦下:收据没写红提交
+✓ 拦下:改源码不改测试
+✓ 拦下:F-07 测试只读顶层常量
+✓ 拦下:空桩下测试自己 skip 掉
+✓ 拦下:门禁自身出错按拦下处理
+✓ 拦下:吞掉异常的测试
+✓ 拦下:PR 的 workflow 冒充受保护检查名
+✓ 拦下:PR 的 workflow 写提交状态
+✓ 拦下:PR 的 workflow 申请写权限
+✓ 拦下:PR 的 workflow 用 pull_request_target
+✓ 拦下:删掉 trusted-gates.yml
+✓ 拦下:领域层反向依赖内核
+✓ 拦下:插件依赖另一个插件
+✓ 拦下:相对路径跨包
+✓ 拦下:依赖声明里反向引用
+✓ 拦下:包没声明层级
 ✓ vendorOf(o1) = openai
 ✓ vendorOf(gpt-6-astra) = openai
+✓ vendorOf(ai-iisbo/[乾坤按量]gpt-6-astra) = openai
 ✓ vendorOf(claude-opus-5-5) = anthropic
 ✓ vendorOf(grok-4.7) = xai
 ✓ vendorOf(gemini-4-argon) = google
 ✓ vendorOf(stealth/crouton-alpha) = unknown
+✓ vendorOf(undefined) = unknown
 自检通过
