@@ -16,7 +16,7 @@
 ## 分工
 
 - Claude Code:主开发、拆 PR、合并。
-- Astra(Codex,OpenAI):每个 PR 独立复现验证。审查必须不同厂商,这是硬门禁。
+- 审查人:默认 Codex,Astra 也可(g-group#1531,写在 `scripts/gates/policy.json`)。审查会话必须是 codex 会话,厂商按会话记录里实际的模型核对;审查必须与作者不同厂商,这是硬门禁;禁止自审;reject 必须返修后再审。
 - Argon:维护文档,标注实现与需求的差异。
 - Grok:边界清楚、有测试兜底的子任务。
 
@@ -31,9 +31,9 @@
 
 ## 机械门禁
 
-裁判在 main 上。`trusted-gates` 用 `pull_request_target` 触发,workflow、门禁代码、tsconfig、biome 配置都取自 main,PR 的内容只当数据检查,PR 代码只在无网络容器里执行。`self-check` 跑 PR 自己的门禁自检和变异校验,证明改过的门禁仍然可信。
+裁判在 main 上。`trusted-gates` 用 `pull_request_target` 触发,workflow、门禁代码、tsconfig、biome 配置都取自 main,PR 的内容只当数据检查,PR 代码只在沙箱里执行:CI 用 docker --network none,本机用 macOS sandbox-exec(禁网、只许写本次临时副本、不许读会话/群聊/凭据目录);两者都没有就停,不回退到宿主。门禁的 git 子进程剥掉全部 GIT_* 环境、不跑 hook。`self-check` 跑 PR 自己的门禁自检和变异校验,证明改过的门禁仍然可信。
 
-分支保护要求三项检查都在 PR 当前 head 上通过:
+引导期(trusted-gates 还没进 main)分支保护只要求 `self-check` 和 `provenance` 两项在 PR 当前 head 上通过;trusted-gates 合进 main 后再加为必需项。三项各自的内容:
 
 | 检查 | 谁写 | 内容 |
 |---|---|---|
@@ -44,12 +44,12 @@
 | 门禁 | 规则 | 拦什么 |
 |---|---|---|
 | G-TRACE | R-06 R-08 R-15 | 受管改动没收据;条目不在验收文档;通过没证据;状态不在 通过/失败/未测/不适用;第 7 栏没点到条目 |
-| G-REVIEW | R-01 | 作者自审;自报同厂商且无豁免;厂商认不出;审查结论不是 approve;审后又改 |
-| G-PROVENANCE | R-01 R-07 R-10 | 审查会话里没有一次 `run-all.ts --hash` 输出等于被审 hash;算 hash 那一轮的模型与自报不符;审查厂商落在作者的产出厂商集合里;豁免不是用户本人在群里对这一版 hash 的明确"批准豁免"、或之后被撤回/改写 |
-| G-RED | R-02 | 新增或改动的每条测试,门禁检出红提交复跑:当时没按名字失败(加载失败不算)、现在没按名字通过 |
-| G-STUB | R-03 | 测试执行期间把所有源码函数变成空桩,基线通过的测试没有按名字失败(仍通过、skip、没执行都算) |
-| G-TAUTO | R-04 | 按 node:test 真实导入识别测试(含别名);无断言、没有一条断言判被测源码的结果、恒定断言、skip/only;运行时注册的测试和静态识别不一致 |
-| G-WORKFLOW | R-18 | PR 的 workflow 冒充受保护检查名、申请写权限、写提交状态、用 pull_request_target;删掉 trusted-gates.yml |
+| G-REVIEW | R-01 | 审查人不在 policy.json 的白名单(默认 Codex,Astra 也可);作者自审;自报同厂商且无豁免;厂商认不出;审查结论不是 approve;审后又改 |
+| G-PROVENANCE | R-01 R-07 R-10 | 会话标识不合格式、harness 不在白名单、realpath 逃出会话根目录;审查会话不是 codex 会话、或派活卡片显示会话属于别的助手;审查会话里没有一次 `run-all.ts --hash` 输出等于被审 hash;算 hash 那一轮的模型与自报不符;审查厂商落在作者的产出厂商集合里;豁免不是仓库所有者 39impacts.talent(usr_4f6ca5e0d86b4a73b5575724ab172bb0)本人发的整行独立指令 `批准豁免 PR#<号> <hash前12位>`(不在引号、引用块、代码块里,全文只此一处),或之后被引用、转发、编辑、撤回 |
+| G-RED | R-02 | 新增或改动的每条测试:红提交上的测试体与现在不同;把现在的测试文件放到红提交的实现上没按名字失败(加载失败不算);现在没恰好通过一次 |
+| G-STUB | R-03 R-04 | 测试执行期间把所有源码函数变成空桩,基线通过的测试没有按名字失败(仍通过、skip、没执行都算);返回 number/string/boolean 的函数换成错误返回值(不抛错)后,文件里的测试全部仍通过 |
+| G-TAUTO | R-04 | 按 node:test 真实导入识别测试(含别名);无断言、自比较或恒真关系、写在执行不到的位置、没有一条断言判被测源码的结果、恒定断言、skip/only;运行时注册的测试和静态识别按 file+name 逐条计数不一致(含同名重复) |
+| G-WORKFLOW | R-18 | 结构化解析 YAML(含引号、折叠标量、锚点合并):PR 的 workflow 的 job id 或 name 冒充受保护检查名、name 含 `${{ }}` 表达式、workflow 或 job 申请任何写权限(含 write-all)、写提交状态、用 pull_request_target/workflow_run、调用可复用 workflow;删掉 trusted-gates.yml |
 | G-LAYER | 插件化 | 包分层只能向下依赖;插件互不依赖;不准相对路径跨包;import 和依赖声明都查 |
 
 门禁自身可信(R-18):`npm run gates:selftest` 在真实 git 仓库里调用真实命令行入口,合规必放行、违规必拦下;`npm run gates:mutation` 把门禁故意改坏 21 种(跳过执行器、不比 hash、删门禁……),每种都必须被自检发现。
