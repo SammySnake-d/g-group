@@ -178,3 +178,117 @@ assert.equal(JSON.stringify(log), before); // 实测失败
 重审最低条件：F-01 修正并增加真实回归；F-02 / F-03 的四个存活埋雷被针对性测试杀死；阴性对照仍绿；F-04 的收据状态与第 7 栏据实收口；重新跑基础检查、红基线、双侧标定与新内容 hash。仍由不同厂商模型独立复现，不以作者自检代替。
 
 本次仅提交本审查文件和 `receipts/feat-domain-core.json` 的 `review` 字段，未修改产品源码、测试、作者验收声明或其他收据字段。
+
+## 重审
+
+### 2026-11-05：8431601，结论仍为 reject，剩两处定点测试缺口
+
+**主要实现修复有效，但还不能批准本轮。** 上次的 body 引用缺陷已消失，原先 4 个存活变体已被挡住，完整 AC 的状态也已改为未测；本轮剩余阻塞是两个既有合同的回归测试未闭合，不是要求增加产品功能或提前完成存储层。
+
+#### 固定版本、身份及 hash
+
+- 功能提交：`8431601e2689201a6eece0092a833ac209016e6f`。
+- 红提交：`bc28ed2ab10df5a0867937a286c95838b7a2d77a`；基线仍为 `origin/chore/gates` 的 `b2a15c7b10e3e1520debf024e3dfb55974130c31`。
+- 审查人 / 会话：`astra` / `codex:a29efe3a-4939-4f8c-ba7f-3e52222b56bd`。
+- 本轮实际 `turn_context.model`：`gpt-6-astra`，OpenAI。重新读取作者会话中触及本仓库的轮次，实际模型仍为上述两种路由前缀的 `claude-opus-5-5`，厂商集合为 Anthropic。不同厂商条件成立；作者没有自判批准。
+- 审查期间原共享目录被并行开发切到 `feat/task-lifecycle`，HEAD 为 `720d683`。没有切回或改动该工作树；本审查继续使用自己已固定在 `8431601` 的独立 worktree，并将它检出为 `feat/domain-core`。此前在已换分支目录上取得的 `44731d…` **不是本轮受审 hash，不采用**。
+- 本轮在受审 worktree 的仓库根目录 `/private/tmp/g-group-pr2-rereview-aj_r9ge8/green` 实际执行以下原命令：
+
+  ```sh
+  node scripts/gates/run-all.ts --hash --branch=feat/domain-core --base=origin/chore/gates
+  ```
+
+  原样标准输出：
+
+  ```text
+  9e16ca6b83e9f863f544d9240bcb98fc84a4abce28ddf8925444ded579f6b78b
+  ```
+
+#### 独立执行，而非采信作者输出
+
+| 检查 | 观察结果 |
+|---|---|
+| 绿版 npm ci / npm run typecheck / npm run lint | 分别退出 0；lint 无自动修改 |
+| 绿版 npm test | 退出 0；19 通过，0 失败，0 跳过 |
+| 红版 npm ci / npm test | 安装退出 0；测试退出 1，19 条具名失败，0 通过 / 跳过；逐名字与绿版匹配，不是文件加载失败 |
+| 红绿测试文件连续性 | `git diff bc28ed2..8431601 -- packages/domain/src/{log,cas}.test.ts` 为空 |
+| 原门禁 runner | G-RED / G-STUB / G-TAUTO / G-TRACE / G-WORKFLOW / G-LAYER 均绿；原始收据 review=null，G-REVIEW 报“还没有独立审查”，整体退出 1 |
+| 作者 mutations.mjs 亲自重跑 | 原样 19/19；M01–M12 均有具名测试失败，脚本退出 0 |
+| 独立逐个再注入 M01–M12 | 12 种全部被杀；保留完整 TAP，逐次确认全部 19 个测试均执行，未把文件级错误当具名失败 |
+| 本轮 16 种行为变体的类型检查 | 全部通过；没有用语法错误、加载错误冒充测试鉴别力 |
+| 上次独立探针复跑 | 7/7 通过；原先 message / edit body 别名两条由红变绿，正文保持原值，verify 为 ok:true |
+| 本轮额外独立探针 | 5/5 通过且严格类型检查通过：覆盖三种 body、sender、投影隔离、五层冻结、真实冲突输入快照及旧快照边界 |
+| 实验结束后重跑绿版 | 仍然 19/19；产品源码与测试保持原样 |
+
+#### 上轮意见逐条收口
+
+| 原意见 | 本轮判断 |
+|---|---|
+| F-01 引用导致历史改写 | **实现缺陷关闭。** message / edit / retract 与 sender 均经过合同字段快照；调用方后续改对象不影响历史、投影、hash。实际已提交对象的冻结也有效；相应回归覆盖仍有 RR-01 |
+| F-02 断链与原地编辑变体存活 | **关闭。** M01 被“单条 hash 自洽但与前一条脱链”杀死；M05 原地写旧事件被冻结保护阻止，测试失败；新编辑测试保存了调用前独立序列化快照 |
+| F-03 CAS 内容与输入不变未验证 | **部分关闭。** M06 保留旧正文、M07 原地修改输入 Store 都被杀；新建 / 更新的 value、ver 已断言。但冲突路径比较错对象，RR-02 未关闭 |
+| F-04 验收范围误报 | **关闭原主要问题。** AC-03 / AC-05 / AC-21 全部标未测，并分别说明宿主入口 / 落盘 / 事务缺口；已测纯函数子判据与整项验收分开。R-02 的红提交可独立复现；R-05 的“通过”只支持已实际执行的 12 种变体，不证明以下拆开的子判据 |
+
+#### RR-01 [P1 / 合并前必补] M12 多层同时取消冻结，红因不能证明事件外壳不可改
+
+位置：`packages/domain/src/log.test.ts:88-93`；`packages/domain/proof/mutations.mjs:25`。
+
+“已提交的事件对象不可被改写”实际只尝试修改 `e.body.text` 与 `log.events.push(e)`。M12 同时取消事件、事件数组、日志外壳三层冻结。独立保留的完整 TAP 显示：它在 **log.test.ts:92 的数组 push 缺少预期 TypeError** 处失败，不是在改事件外壳处失败。
+
+把三个不同保护单独拆开，结果如下（每次只改一个点，其他源码与 19 条测试不变）：
+
+| 独立变体 | 作者测试 | 独立断言 |
+|---|---|---|
+| R13 仅去掉 `Object.freeze({ ...draft, hash: hashOf(draft) })` 的事件外壳冻结 | 19/19 绿 | `Object.assign(e,{seq:99})` 不再抛 TypeError，断言红 |
+| R14 仅去掉 sender 的 freeze，仍然拷贝 kind / id | 19/19 绿 | `Object.assign(e.sender,{id:"冒充"})` 不再抛 TypeError，断言红 |
+| R15 仅去掉返回日志外壳的 freeze，事件和数组继续冻结 | 19/19 绿 | `Object.assign(log,{events:[]})` 不再抛 TypeError，断言红 |
+
+原实现对以上三种改写均正确抛 TypeError；因此本项是**具体测试假阴性**，不把未发生的实现错误写成现状。三种变体均通过 typecheck，不是无效变异。
+
+**定点修复**：分别断言事件顶层字段、事件 sender、body、数组、日志外壳不能被改写，并核对失败操作后完整快照 / hash 不变。把 M12 拆成能独立覆盖各保护点的埋雷，勿再用“数组冻结产生的红”代替“事件冻结已被验证”。这些都是本片已有的不可改写合同，不要求增加新的业务能力。
+
+#### RR-02 [P1 / 合并前必补] CAS 冲突路径保存、比较的不是本次入参
+
+位置：`packages/domain/src/cas.test.ts:43-52`。
+
+第 49 行冲突调用传入的是 `ok.store`，第 52 行却继续比较第一次成功调用之前的 `store` 与 `saved`；对真正的冲突输入只检查了 `.value`，没有检查版本或整份 Store。
+
+独立变体 R16 仅在 `commitIn` 冲突分支增加下面这一处错误副作用，保留原有冲突返回值：
+
+```ts
+if (curVer !== expectedVer) {
+  if (cur) Object.assign(cur, { ver: curVer + 1 });
+  return { ok: false, reason: "version-conflict", currentVer: curVer };
+}
+```
+
+**实测作者测试仍为 19/19 绿。** 对真正入参保存 `JSON.stringify([...store])` 再比较的独立探针：原版绿、R16 红；冲突已经偷偷推进版本，虽然返回的 currentVer 仍为 1、正文未变。该变体也通过 typecheck。
+
+**定点修复**：冲突调用前保存 `ok.store` 的独立完整快照，调用后比较同一个 `ok.store`；包含文档版本和未改键。把冲突时更改 version 的埋雷加入校准，确认针对性测试红且正常冲突仍绿。`cas.ts` 原实现此路径没有改入参，无需为了本意见发明新的 CAS 机制。
+
+#### AC 四栏及第 7 栏复核
+
+| AC | 必须 | 禁止 | 阳性埋雷 | 阴性对照与范围 |
+|---|---|---|---|---|
+| AC-03 | user / contact 普通消息通过 | compute 被 sender-not-allowed 拒绝 | M02 具名失败，已独立复现 | 同 body / id / at 只切 sender kind 的对照成立；helper 允许是三入口需求的预留。`@` 条件本片没有输入、不能验证，宿主总入口 / 消息表整项保留未测 |
+| AC-05 | edit / retract 追加事件，独立历史快照、投影、hash 正确；body 引用缺陷已修 | 现实现的五层不可改写探针通过 | M01 / M05 / M08–M12 被杀，但 R13–R15 仍存活，不能声称冻结所有子判据已标定 | 只改投影不改日志成立；存储落盘未测。剩余阻塞仅为 RR-01 的回归与单点校准 |
+| AC-21 | 当前版写入 value / ver，旧版拒绝；新建与不同文档内容正确 | 现实现无顺序静默覆盖、无输入修改 | M03 / M04 / M06 / M07 被杀，但 R16 冲突错误改版本仍存活 | 独立同一快照只切 key 的对照通过；作者同名对照的两次调用使用先后状态，不能仅凭测试标题当严格单开关证明。共享存储原子提交仍未测 |
+
+第 7 栏关于纯函数不是事务、同一旧快照两次提交都成功、Helper 三入口须由内核路由保证、hash 只证明链内自洽的边界均与本次观察相符。补充两点：
+
+- 12 种变体的覆盖上界已经说明，但 M12 复合变异留下 RR-01；“两条路径都不改入参”还留下 RR-02。
+- `Object.defineProperty` **不能改写这些已冻结对象的现有字段**：独立探针尝试改已冻结事件的 hash，实际抛 TypeError。第 7 栏“冻结以外的约束”若泛指授权 / 路由应如此明确写，不应理解成反射能够绕过本实现的冻结。这是措辞澄清，不另列合并阻塞。
+
+R-02 的具名先红后绿、R-03 的当前空桩门禁、R-04 的真实符号检查本轮均已亲自运行；它们的通过仍不能替代上述单点反例。未运行真实存储、并发事务、宿主入口或 UI，不改变整项未测状态。
+
+#### 本轮证据与下一次重审边界
+
+持久证据：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-review-evidence/pr2-8431601-a29efe3a/`。
+
+- `results.json`、`named-red-green.json`、`green-*.log`、`red-*.log`：命令、退出码与 19 条按名比对。
+- `independent-mutations.mjs`、`mutations.json`、`M*-change.json`、`M*.log`：独立重复 M01–M12，保留具名红因。
+- `R13`–`R16` 的 `*-change.json`、`*.log`、`*-typecheck.log`、`*-probe.log`：四个单点存活变体及非等价证明。
+- `reviewer-probes.mts`、`previous-review-probes.mts`、`probe-results.json`：新旧独立探针；当前原实现全部通过。
+- 两个源码归档、`identity.json`、`provenance-observed.json`、`reviewed-hash.txt`、`README.md` 和 `SHA256SUMS.json`：固定输入、来源与复现方法，83 个证据文件已逐一校验。
+
+下一轮仅需定点补 RR-01 / RR-02 的测试与校准，保留负例红、正常路径绿，并提供新红提交 / 新内容 hash；不撤销已经关闭的 F-01 / F-02 / F-04，也不以其他切片未完成为阻塞。审查提交仍只追加本节并更新收据 review 字段。
