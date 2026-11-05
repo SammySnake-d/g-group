@@ -23,7 +23,7 @@ function history(n = 10): Log {
   return log;
 }
 const opts = (over: Partial<AssembleOptions> = {}): AssembleOptions => ({
-  stable: STABLE, compressed: { throughSeq: 7, text: "前 7 条摘要:讨论了压测和登录页" }, quotes: [], budgetBytes: BIG, ...over,
+  stable: STABLE, compressed: { throughSeq: 7, builtAtSeq: 7, text: "前 7 条摘要:讨论了压测和登录页" }, quotes: [], budgetBytes: BIG, ...over,
 });
 function ok(r: AssembleResult) {
   assert.equal(r.ok, true, JSON.stringify(r));
@@ -85,7 +85,7 @@ test("撤回的消息既不进 history 也不能被引用页入,清单把它列�
   let log = history();
   log = append(log, user, { kind: "retract", target: 10 }, at);
   log = append(log, contact, { kind: "retract", target: 1 }, at);
-  const r = ok(assemble(log, opts({ quotes: [1] })));
+  const r = ok(assemble(log, opts({ quotes: [1], compressed: { throughSeq: 7, builtAtSeq: 12, text: "前 7 条摘要:讨论了压测和登录页" } })));
   const body = serialize(r.request);
   assert.equal(body.includes(OLD), false);
   assert.equal(body.includes("闲聊第10句"), false);
@@ -148,7 +148,7 @@ test("连续多轮追加不滑动窗口:压缩点之后的消息一条不少,旧
 
 test("旧历史被重截时前缀哈希不一致,宿主据此能发现(AC-39 阳性埋雷)", () => {
   const before = ok(assemble(history(10), opts()));
-  const retruncated = ok(assemble(history(11), opts({ compressed: { throughSeq: 8, text: "前 7 条摘要:讨论了压测和登录页" } })));
+  const retruncated = ok(assemble(history(11), opts({ compressed: { throughSeq: 8, builtAtSeq: 8, text: "前 7 条摘要:讨论了压测和登录页" } })));
   assert.notEqual(prefixHash(retruncated.request, prefixLength(before.request)), prefixHash(before.request));
 });
 
@@ -172,4 +172,171 @@ test("缓存断点不超过 4 个,位于工具定义末尾、stable 末尾、已
   assert.equal(next.request.segments.filter((s) => s.cacheBreakpoint).at(-1)?.seq, 11, "最后一个断点随最新追加消息移动");
   const noCompressed = ok(assemble(history(), { stable: STABLE, quotes: [], budgetBytes: BIG }));
   assert.equal(noCompressed.request.segments.filter((s) => s.cacheBreakpoint).length, 3);
+});
+
+// —— 第四轮:R3-01..R3-06
+const FOOD = "用户原来决定吃面";
+function foodLog(): Log {
+  let log = append(emptyLog(), user, { kind: "message", text: FOOD }, at);
+  log = append(log, user, { kind: "message", text: "普通记录" }, at);
+  return log;
+}
+const SUMMARY = { throughSeq: 2, builtAtSeq: 2, text: `${FOOD};普通记录` };
+
+test("撤回的原文在压缩块里:压缩块生成于撤回前即作废,不给 recompress 时显式要求重建(R3-01 阳性埋雷)", () => {
+  const log = append(foodLog(), user, { kind: "retract", target: 1 }, at);
+  const r = assemble(log, opts({ compressed: SUMMARY, quotes: [1] }));
+  assert.deepEqual(r, { ok: false, reason: "recompress-required", fromSeq: 1 });
+});
+
+test("撤回的原文在压缩块里:给 recompress 就只用仍可见的消息重建,请求里不再有原文,并标 prefixBreak", () => {
+  const log = append(foodLog(), user, { kind: "retract", target: 1 }, at);
+  let seen: number[] = [];
+  const r = ok(assemble(log, opts({
+    compressed: SUMMARY, quotes: [1],
+    recompress: (through, visible) => { seen = visible.map((m) => m.seq); return `至 #${through}:${visible.map((m) => m.text).join(";")}`; },
+  })));
+  assert.deepEqual(seen, [2]);
+  assert.equal(serialize(r.request).includes(FOOD), false);
+  assert.deepEqual(r.prefixBreaks, [{ reason: "retract", seq: 1, at: "compressed" }]);
+  assert.deepEqual(r.compressed, { throughSeq: 2, builtAtSeq: 3, text: "至 #2:普通记录" });
+  assert.deepEqual(r.skipped, [{ seq: 1, reason: "retracted" }]);
+});
+
+test("压缩块生成于撤回之后(已不含原文)照常复用,不报 prefixBreak(单开关对照)", () => {
+  const log = append(foodLog(), user, { kind: "retract", target: 1 }, at);
+  const r = ok(assemble(log, opts({ compressed: { throughSeq: 2, builtAtSeq: 3, text: "普通记录" }, previousHeadSeq: 3 })));
+  assert.deepEqual(r.prefixBreaks, []);
+  assert.equal(serialize(r.request).includes(FOOD), false);
+});
+
+test("重建后的压缩块或调用方给的块仍含撤回原文,显式失败而不是送进模型", () => {
+  const log = append(foodLog(), user, { kind: "retract", target: 1 }, at);
+  const a = assemble(log, opts({ compressed: SUMMARY, recompress: () => `还是${FOOD}` }));
+  assert.deepEqual(a, { ok: false, reason: "retracted-text-leaked", where: "compressed", seq: 1 });
+  const b = assemble(log, opts({ compressed: { throughSeq: 2, builtAtSeq: 3, text: FOOD } }));
+  assert.deepEqual(b, { ok: false, reason: "retracted-text-leaked", where: "compressed", seq: 1 });
+});
+
+test("撤回的原文在 history 里:下一次装配不再含原文,从该位置起标 prefixBreak,宿主不计为前缀错误", () => {
+  const before = ok(assemble(foodLog(), opts({ compressed: undefined as never })));
+  const log = append(foodLog(), user, { kind: "retract", target: 1 }, at);
+  const after = ok(assemble(log, { stable: STABLE, quotes: [], budgetBytes: BIG, previousHeadSeq: before.headSeq }));
+  assert.equal(serialize(after.request).includes(FOOD), false);
+  assert.deepEqual(after.prefixBreaks, [{ reason: "retract", seq: 1, at: "history" }]);
+  const again = ok(assemble(log, { stable: STABLE, quotes: [], budgetBytes: BIG, previousHeadSeq: after.headSeq }));
+  assert.deepEqual(again.prefixBreaks, [], "同一撤回只报一次");
+});
+
+test("撤回的原文进 tail:引用页入跳过它,会变状态里带了原文就显式失败", () => {
+  const log = append(foodLog(), user, { kind: "retract", target: 1 }, at);
+  const quoted = ok(assemble(log, { stable: STABLE, quotes: [1], budgetBytes: BIG }));
+  assert.equal(serialize(quoted.request).includes(FOOD), false);
+  assert.equal(quoted.request.segments.some((s) => s.section === "tail"), false);
+  const v = assemble(log, { stable: STABLE, quotes: [], budgetBytes: BIG, volatile: `摘要:${FOOD}` });
+  assert.deepEqual(v, { ok: false, reason: "retracted-text-leaked", where: "volatile", seq: 1 });
+});
+
+test("撤回连带它之后的编辑文字也不再出现", () => {
+  let log = append(foodLog(), user, { kind: "edit", target: 1, text: "用户改为决定吃米饭" }, at);
+  log = append(log, user, { kind: "retract", target: 1 }, at);
+  const r = ok(assemble(log, { stable: STABLE, quotes: [1], budgetBytes: BIG }));
+  const body = serialize(r.request);
+  assert.equal(body.includes(FOOD), false);
+  assert.equal(body.includes("吃米饭"), false);
+});
+
+test("未压缩时编辑作为新事件追加在 history 末尾,旧消息原文不改,前缀逐字节不变(R3-02 阳性埋雷)", () => {
+  const before = ok(assemble(foodLog(), { stable: STABLE, quotes: [], budgetBytes: BIG }));
+  const edited = append(foodLog(), user, { kind: "edit", target: 1, text: "用户改为决定吃米饭" }, at);
+  const after = ok(assemble(edited, { stable: STABLE, quotes: [], budgetBytes: BIG }));
+  assert.equal(prefixHash(after.request, prefixLength(before.request)), prefixHash(before.request));
+  const last = after.request.segments.filter((s) => s.section === "history").at(-1);
+  assert.deepEqual([last?.label, last?.seq, last?.text], ["edit", 3, "#3 user:u1 编辑 #1 为: 用户改为决定吃米饭\n"]);
+  assert.deepEqual(after.prefixBreaks, []);
+});
+
+test("压缩点之后编辑压缩块里的旧消息:编辑事件照样进 history,不被旧消息 seq 过滤掉(R3-02 阳性埋雷)", () => {
+  const before = ok(assemble(foodLog(), opts({ compressed: SUMMARY })));
+  const edited = append(foodLog(), user, { kind: "edit", target: 1, text: "用户改为决定吃米饭" }, at);
+  const after = ok(assemble(edited, opts({ compressed: SUMMARY })));
+  assert.ok(serialize(after.request).includes("编辑 #1 为: 用户改为决定吃米饭"));
+  assert.notEqual(serialize(after.request), serialize(before.request));
+  assert.equal(prefixHash(after.request, prefixLength(before.request)), prefixHash(before.request));
+});
+
+test("连续多轮编辑与新消息交替,每轮前缀都保留上一轮,最新编辑在末尾", () => {
+  let log = foodLog();
+  let prev = ok(assemble(log, { stable: STABLE, quotes: [], budgetBytes: BIG }));
+  for (let i = 0; i < 6; i++) {
+    log = i % 2 ? append(log, contact, { kind: "message", text: `回应${i}` }, at) : append(log, user, { kind: "edit", target: 1, text: `第${i}次改主意` }, at);
+    const cur = ok(assemble(log, { stable: STABLE, quotes: [], budgetBytes: BIG }));
+    assert.equal(prefixHash(cur.request, prefixLength(prev.request)), prefixHash(prev.request), `第 ${i} 轮`);
+    prev = cur;
+  }
+  assert.ok(serialize(prev.request).includes("编辑 #1 为: 第4次改主意"));
+});
+
+test("用户自然复述固定提示词里的话不再误拦(R3-04 阴性对照)", () => {
+  const stable = [{ kind: "system", text: "你是群聊助手,请帮助用户解决问题。" }] as const;
+  const log = append(emptyLog(), user, { kind: "message", text: "帮助用户" }, at);
+  const r = ok(assemble(log, { stable, quotes: [], budgetBytes: BIG }));
+  assert.ok(serialize(r.request).includes("#1 user:u1: 帮助用户"));
+});
+
+test("stable 段自身写了新消息字样仍拦下,不管会话里有没有消息(单开关对照)", () => {
+  const stable = [{ kind: "system", text: "你是群聊助手。用户刚说:帮助用户" }] as const;
+  const r = assemble(emptyLog(), { stable, quotes: [], budgetBytes: BIG });
+  assert.equal(r.ok === false && r.reason, "volatile-in-stable");
+});
+
+test("固定段顺序必须是 system → tools → persona,倒序、重复、未知段、缺 system 都拒(R3-05 阳性埋雷)", () => {
+  const [sys, tools, persona] = STABLE;
+  const bad = [[persona, sys, tools], [sys, persona, tools], [sys, sys], [tools, persona], [], [sys, { kind: "rules", text: "x" }]];
+  for (const stable of bad) {
+    const r = assemble(history(), { stable: stable as never, quotes: [], budgetBytes: BIG });
+    assert.equal(r.ok === false && r.reason, "invalid-stable", JSON.stringify(stable.map((p) => p.kind)));
+  }
+  for (const stable of [[sys], [sys, tools], [sys, persona], [sys, tools, persona]]) {
+    const r = assemble(history(), { stable, quotes: [], budgetBytes: BIG });
+    assert.equal(r.ok, true, JSON.stringify(stable.map((p) => p.kind)));
+  }
+});
+
+test("压缩点必须是不超过日志最新 seq 的非负整数,生成点在压缩点与最新之间,否则拒绝(R3-05 阳性埋雷)", () => {
+  const head = history().events.at(-1)?.seq ?? 0;
+  const bad = [
+    { throughSeq: head + 1, builtAtSeq: head + 1 }, { throughSeq: 999, builtAtSeq: 999 }, { throughSeq: -1, builtAtSeq: 0 },
+    { throughSeq: 2.5, builtAtSeq: 3 }, { throughSeq: 3, builtAtSeq: 2 }, { throughSeq: 3, builtAtSeq: head + 1 },
+  ];
+  for (const c of bad) {
+    const r = assemble(history(), opts({ compressed: { ...c, text: "摘要" } }));
+    assert.equal(r.ok === false && r.reason, "invalid-compressed", JSON.stringify(c));
+  }
+  for (const c of [{ throughSeq: 0, builtAtSeq: 0 }, { throughSeq: head, builtAtSeq: head }]) {
+    const r = assemble(history(), opts({ compressed: { ...c, text: "摘要" } }));
+    assert.equal(r.ok, true, JSON.stringify(c));
+  }
+});
+
+test("user、contact、helper 的消息原文逐字进 history,清单逐条对应(R3-06)", () => {
+  let log = append(emptyLog(), user, { kind: "message", text: "用户提问" }, at);
+  log = append(log, contact, { kind: "message", text: "联系人回答" }, at);
+  log = append(log, { kind: "helper", id: "h1" }, { kind: "message", text: "重要工具结果" }, at);
+  const r = ok(assemble(log, { stable: STABLE, quotes: [], budgetBytes: BIG }));
+  assert.deepEqual(r.request.segments.filter((s) => s.section === "history").map((s) => s.text), [
+    "#1 user:u1: 用户提问\n", "#2 contact:c-astra: 联系人回答\n", "#3 helper:h1: 重要工具结果\n",
+  ]);
+  assert.deepEqual(r.manifest, [
+    { seq: 1, bytes: Buffer.byteLength("#1 user:u1: 用户提问\n"), via: "history" },
+    { seq: 2, bytes: Buffer.byteLength("#2 contact:c-astra: 联系人回答\n"), via: "history" },
+    { seq: 3, bytes: Buffer.byteLength("#3 helper:h1: 重要工具结果\n"), via: "history" },
+  ]);
+});
+
+test("会变状态原文逐字出现在 tail 末段;空字符串不产生段(R3-06)", () => {
+  const r = ok(assemble(history(), opts({ volatile: "必须停止发送\n任务表:无" })));
+  assert.deepEqual(r.request.segments.at(-1), { section: "tail", label: "volatile", text: "[当前状态]\n必须停止发送\n任务表:无\n", bytes: Buffer.byteLength("[当前状态]\n必须停止发送\n任务表:无\n"), cacheBreakpoint: false });
+  const empty = ok(assemble(history(), opts({ volatile: "" })));
+  assert.equal(empty.request.segments.some((s) => s.label === "volatile"), false);
 });

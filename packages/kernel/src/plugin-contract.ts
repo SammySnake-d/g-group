@@ -59,6 +59,8 @@ export interface OutboundChannel {
   readonly idempotency: ChannelIdempotency;
   /** B1 必填:服务商对同一 action_id 去重的保留期(毫秒);B2 不填 */
   readonly idempotencyWindowMs?: number;
+  /** 接收端/渠道身份(如 smtp://mx.example 或 gmail:me@x);注册时快照,绑定到每个动作 */
+  readonly endpoint: string;
   /** 这一片只支持返回 Promise 的发送,宿主 await 它 */
   send(req: SendRequest): Promise<SendReceipt>;
 }
@@ -101,6 +103,8 @@ export interface DeliveryBinding {
   readonly channelVersion: number;
   readonly idempotency: ChannelIdempotency;
   readonly windowMs: number;
+  /** 首次投递时快照里的接收端身份 */
+  readonly endpoint: string;
   readonly firstAttemptAt: number;
   /** 载荷 UTF-8 字节的 sha256 */
   readonly payloadSha256: string;

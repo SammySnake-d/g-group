@@ -12,7 +12,7 @@ const ev = (over: Record<string, unknown> = {}) => ({
 });
 const tg = (events: unknown[] = [ev()]) => ({ kind: "data-source", id: "telegram", sources: ["g1"], pull: async () => events });
 const okSend = (log: string[]) => async (req: { action_id: string }) => { log.push(req.action_id); return { action_id: req.action_id, receiptId: `r-${log.length}` }; };
-const mail = (log: string[], idempotency = "none") => ({ kind: "outbound-channel", id: "gmail", idempotency, send: okSend(log) });
+const mail = (log: string[], idempotency = "none") => ({ kind: "outbound-channel", endpoint: "ep-main", id: "gmail", idempotency, send: okSend(log) });
 const panel = () => ({ kind: "ui-extension", id: "artifacts", mounts: ["right-dock"] });
 
 test("三类合法插件都能注册并按类型列出", () => {
@@ -75,7 +75,7 @@ test("DataSource 缺 sources、空 sources、sources 非字符串、缺 pull 各
   assert.deepEqual(reg.register({ ...base, id: "ok" }), { ok: true });
 });
 
-test("OutboundChannel 缺 send、send 非函数、缺或错 idempotency、B1 缺保留期、B2 带保留期各自被拒,补齐后放行", () => {
+test("OutboundChannel 缺 send、send 非函数、缺或错 idempotency、B1 缺保留期、B2 带保留期、缺 endpoint、配置不能快照各自被拒,补齐后放行", () => {
   const base = mail([]);
   const cases: [string, unknown][] = [
     ["缺 send", { kind: base.kind, id: "a", idempotency: "none" }],
@@ -86,6 +86,9 @@ test("OutboundChannel 缺 send、send 非函数、缺或错 idempotency、B1 缺
     ["B1 保留期为 0", { ...base, id: "f", idempotency: "action-id", idempotencyWindowMs: 0 }],
     ["B1 保留期不是数", { ...base, id: "g", idempotency: "action-id", idempotencyWindowMs: "1h" }],
     ["B2 声明保留期", { ...base, id: "h", idempotency: "none", idempotencyWindowMs: 1000 }],
+    ["缺 endpoint", { kind: base.kind, id: "i", idempotency: "none", send: base.send }],
+    ["endpoint 不是字符串", { ...base, id: "j", endpoint: 7 }],
+    ["配置不能快照", { ...base, id: "k", client: new WeakMap() }],
   ];
   const reg = createRegistry();
   for (const [why, c] of cases) {
@@ -295,7 +298,7 @@ test("同 action_id 换内容被拒,不复用旧回执也不真发", async () =>
 test("B2 渠道送达后抛错记 DeliveryUnknown,同 action_id 再调被拒,插件只被调 1 次(阳性埋雷)", async () => {
   let calls = 0;
   const reg = createRegistry();
-  reg.register({ kind: "outbound-channel", id: "smtp", idempotency: "none", send: async () => { calls++; throw new Error("送达后响应超时"); } });
+  reg.register({ kind: "outbound-channel", endpoint: "ep-main", id: "smtp", idempotency: "none", send: async () => { calls++; throw new Error("送达后响应超时"); } });
   const a = await reg.send("smtp", { action_id: "act-1", payload: "告警" });
   assert.equal(a.ok === false && a.state, "delivery-unknown");
   assert.equal(a.ok === false && a.reason, "send-threw");
@@ -311,7 +314,7 @@ test("B1 渠道结果未知后在保留期内同 action_id 重试会交给接收
   let calls = 0;
   const reg = createRegistry();
   reg.register({
-    kind: "outbound-channel", id: "group", idempotency: "action-id", idempotencyWindowMs: 60_000,
+    kind: "outbound-channel", endpoint: "ep-main", id: "group", idempotency: "action-id", idempotencyWindowMs: 60_000,
     send: async (req: { action_id: string }) => { calls++; if (calls === 1) throw new Error("EOF"); return { action_id: req.action_id, receiptId: "srv-7" }; },
   });
   const a = await reg.send("group", { action_id: "act-1", payload: "进度" });
@@ -324,7 +327,7 @@ test("B1 渠道结果未知后在保留期内同 action_id 重试会交给接收
 
 test("await 超时记 DeliveryUnknown 而不是成功", async () => {
   const reg = createRegistry({ sendTimeoutMs: 20 });
-  reg.register({ kind: "outbound-channel", id: "slow", idempotency: "none", send: () => new Promise(() => {}) });
+  reg.register({ kind: "outbound-channel", endpoint: "ep-main", id: "slow", idempotency: "none", send: () => new Promise(() => {}) });
   const r = await reg.send("slow", { action_id: "act-1", payload: "x" });
   assert.equal(r.ok === false && r.reason, "timeout");
   assert.equal(r.ok === false && r.state, "delivery-unknown");
@@ -333,8 +336,8 @@ test("await 超时记 DeliveryUnknown 而不是成功", async () => {
 
 test("回执不合契约或 send 同步返回都记 DeliveryUnknown,不把返回值当回执", async () => {
   const reg = createRegistry();
-  reg.register({ kind: "outbound-channel", id: "badrcpt", idempotency: "none", send: async () => ({ action_id: "别的", receiptId: "r" }) });
-  reg.register({ kind: "outbound-channel", id: "sync", idempotency: "none", send: (req: { action_id: string }) => ({ action_id: req.action_id, receiptId: "r" }) });
+  reg.register({ kind: "outbound-channel", endpoint: "ep-main", id: "badrcpt", idempotency: "none", send: async () => ({ action_id: "别的", receiptId: "r" }) });
+  reg.register({ kind: "outbound-channel", endpoint: "ep-main", id: "sync", idempotency: "none", send: (req: { action_id: string }) => ({ action_id: req.action_id, receiptId: "r" }) });
   const a = await reg.send("badrcpt", { action_id: "act-1", payload: "x" });
   assert.equal(a.ok === false && a.reason, "invalid-receipt");
   const b = await reg.send("sync", { action_id: "act-1", payload: "x" });
@@ -347,7 +350,7 @@ test("上一次发送还在途时同 action_id 再调被拒,插件只被调 1 �
   let release: (v: unknown) => void = () => {};
   const reg = createRegistry();
   reg.register({
-    kind: "outbound-channel", id: "gmail", idempotency: "action-id", idempotencyWindowMs: 60_000,
+    kind: "outbound-channel", endpoint: "ep-main", id: "gmail", idempotency: "action-id", idempotencyWindowMs: 60_000,
     send: (req: { action_id: string }) => { calls++; return new Promise((res) => { release = () => res({ action_id: req.action_id, receiptId: "r-1" }); }); },
   });
   const first = reg.send("gmail", { action_id: "act-1", payload: "x" });
@@ -381,7 +384,7 @@ test("已确认的 B1 动作过了服务商保留期再调,复用已知回执,�
   let t = T0;
   const p = provider(() => t, 1000);
   const reg = createRegistry({ now: () => t });
-  reg.register({ kind: "outbound-channel", id: "b1", idempotency: "action-id", idempotencyWindowMs: 1000, send: p.send });
+  reg.register({ kind: "outbound-channel", endpoint: "ep-main", id: "b1", idempotency: "action-id", idempotencyWindowMs: 1000, send: p.send });
   const a = await reg.send("b1", { action_id: "a", payload: "x" });
   t += 1001;
   const b = await reg.send("b1", { action_id: "a", payload: "x" });
@@ -399,7 +402,7 @@ test("结果未知的 B1 只在首次尝试的保留期内重试:保留期前放
     let t = T0;
     const p = provider(() => t, 1000, true);
     const reg = createRegistry({ now: () => t });
-    reg.register({ kind: "outbound-channel", id: "b1", idempotency: "action-id", idempotencyWindowMs: 1000, send: p.send });
+    reg.register({ kind: "outbound-channel", endpoint: "ep-main", id: "b1", idempotency: "action-id", idempotencyWindowMs: 1000, send: p.send });
     const first = await reg.send("b1", { action_id: "a", payload: "x" });
     assert.equal(first.ok === false && first.state, "delivery-unknown");
     t += delay;
@@ -420,7 +423,7 @@ test("B1 多次重试不刷新首次尝试时间:最后一次重试离首次已�
   let t = T0;
   let calls = 0;
   const reg = createRegistry({ now: () => t });
-  reg.register({ kind: "outbound-channel", id: "b1", idempotency: "action-id", idempotencyWindowMs: 1000, send: async () => { calls++; throw new Error("EOF"); } });
+  reg.register({ kind: "outbound-channel", endpoint: "ep-main", id: "b1", idempotency: "action-id", idempotencyWindowMs: 1000, send: async () => { calls++; throw new Error("EOF"); } });
   await reg.send("b1", { action_id: "a", payload: "x" });
   for (const step of [400, 400]) {
     t += step;
@@ -440,10 +443,10 @@ test("B2 结果未知后 reregister 成 B1,同 action_id 仍拒绝重发,新接�
   let oldCalls = 0;
   const fresh = provider(() => T0, 60_000);
   const reg = createRegistry({ now: () => T0 });
-  reg.register({ kind: "outbound-channel", id: "mail", idempotency: "none", send: async () => { oldCalls++; throw new Error("已送达但回执丢失"); } });
+  reg.register({ kind: "outbound-channel", endpoint: "ep-main", id: "mail", idempotency: "none", send: async () => { oldCalls++; throw new Error("已送达但回执丢失"); } });
   const first = await reg.send("mail", { action_id: "a", payload: "x" });
   assert.equal(first.ok === false && first.state, "delivery-unknown");
-  assert.deepEqual(reg.reregister({ kind: "outbound-channel", id: "mail", idempotency: "action-id", idempotencyWindowMs: 60_000, send: fresh.send }), { ok: true });
+  assert.deepEqual(reg.reregister({ kind: "outbound-channel", endpoint: "ep-main", id: "mail", idempotency: "action-id", idempotencyWindowMs: 60_000, send: fresh.send }), { ok: true });
   const again = await reg.send("mail", { action_id: "a", payload: "x" });
   assert.equal(again.ok === false && again.state, "delivery-unknown");
   assert.equal(again.ok === false && again.reason, "retry-refused");
@@ -458,10 +461,10 @@ test("B1 结果未知后 reregister 换了接收端,保留期内也不重试,标
   const oldP = provider(() => T0, 60_000, true);
   const newP = provider(() => T0, 60_000);
   const reg = createRegistry({ now: () => T0 });
-  reg.register({ kind: "outbound-channel", id: "group", idempotency: "action-id", idempotencyWindowMs: 60_000, send: oldP.send });
+  reg.register({ kind: "outbound-channel", endpoint: "ep-main", id: "group", idempotency: "action-id", idempotencyWindowMs: 60_000, send: oldP.send });
   await reg.send("group", { action_id: "a", payload: "x" });
   const v1 = reg.delivery("group", "a")?.binding.channelVersion;
-  reg.reregister({ kind: "outbound-channel", id: "group", idempotency: "action-id", idempotencyWindowMs: 60_000, send: newP.send });
+  reg.reregister({ kind: "outbound-channel", endpoint: "ep-main", id: "group", idempotency: "action-id", idempotencyWindowMs: 60_000, send: newP.send });
   const r = await reg.send("group", { action_id: "a", payload: "x" });
   assert.equal(r.ok === false && r.reason, "channel-changed");
   assert.equal(newP.stats.calls, 0);
@@ -471,7 +474,7 @@ test("B1 结果未知后 reregister 换了接收端,保留期内也不重试,标
 test("同一渠道版本内 B1 未知可在保留期内重试(单开关对照:不 reregister)", async () => {
   const p = provider(() => T0, 60_000, true);
   const reg = createRegistry({ now: () => T0 });
-  reg.register({ kind: "outbound-channel", id: "group", idempotency: "action-id", idempotencyWindowMs: 60_000, send: p.send });
+  reg.register({ kind: "outbound-channel", endpoint: "ep-main", id: "group", idempotency: "action-id", idempotencyWindowMs: 60_000, send: p.send });
   await reg.send("group", { action_id: "a", payload: "x" });
   const r = await reg.send("group", { action_id: "a", payload: "x" });
   assert.equal(r.ok && r.state, "confirmed");
@@ -484,11 +487,11 @@ test("发送在途时 reregister,同 action_id 再调仍被在途拦下,旧投�
   const newP = provider(() => T0, 60_000);
   const reg = createRegistry({ now: () => T0 });
   reg.register({
-    kind: "outbound-channel", id: "gmail", idempotency: "none",
+    kind: "outbound-channel", endpoint: "ep-main", id: "gmail", idempotency: "none",
     send: (q: { action_id: string }) => { oldCalls++; return new Promise((res) => { release = () => res({ action_id: q.action_id, receiptId: "old-1" }); }); },
   });
   const first = reg.send("gmail", { action_id: "a", payload: "x" });
-  reg.reregister({ kind: "outbound-channel", id: "gmail", idempotency: "action-id", idempotencyWindowMs: 60_000, send: newP.send });
+  reg.reregister({ kind: "outbound-channel", endpoint: "ep-main", id: "gmail", idempotency: "action-id", idempotencyWindowMs: 60_000, send: newP.send });
   const second = await reg.send("gmail", { action_id: "a", payload: "x" });
   assert.equal(second.ok === false && second.reason, "in-flight");
   release();
@@ -552,3 +555,77 @@ test("对未注册的插件拉取或发送显式失败", async () => {
   assert.equal(p.ok === false && p.reason, "unknown-plugin");
   assert.equal(s.ok === false && s.reason, "unknown-plugin");
 });
+
+/** 按 this.endpoint 选接收端的插件:A、B 两个模拟接收端各自按 action_id 去重 */
+function endpointPlugin(failAOnce: boolean) {
+  const effects: string[] = [];
+  const caches: Record<string, Map<string, { action_id: string; receiptId: string }>> = { A: new Map(), B: new Map() };
+  const plugin = {
+    kind: "outbound-channel", id: "mail", idempotency: "action-id", idempotencyWindowMs: 10_000, endpoint: "A",
+    async send(this: { endpoint: string }, q: { action_id: string }) {
+      const cache = caches[this.endpoint];
+      if (!cache) throw new Error(`没有接收端 ${this.endpoint}`);
+      const hit = cache.get(q.action_id);
+      if (hit) return hit;
+      effects.push(this.endpoint);
+      const receipt = { action_id: q.action_id, receiptId: `provider-${this.endpoint}` };
+      cache.set(q.action_id, receipt);
+      if (failAOnce && this.endpoint === "A" && effects.length === 1) throw new Error("A 已接收但回执丢失");
+      return receipt;
+    },
+  };
+  return { plugin, effects };
+}
+
+test("注册后改插件实例的 endpoint 但不 reregister,重试仍发往注册时快照的接收端,副作用只有一次(R3-03 阳性埋雷)", async () => {
+  let t = T0;
+  const { plugin, effects } = endpointPlugin(true);
+  const reg = createRegistry({ now: () => t });
+  reg.register(plugin);
+  const first = await reg.send("mail", { action_id: "a", payload: "x" });
+  assert.equal(first.ok === false && first.state, "delivery-unknown");
+  plugin.endpoint = "B";
+  t += 1000;
+  const retry = await reg.send("mail", { action_id: "a", payload: "x" });
+  assert.equal(retry.ok && retry.receipt.receiptId, "provider-A");
+  assert.deepEqual(effects, ["A"]);
+  const fresh = await reg.send("mail", { action_id: "b", payload: "x" });
+  assert.equal(fresh.ok && fresh.receipt.receiptId, "provider-A", "新动作也走快照里的接收端");
+  assert.equal(reg.delivery("mail", "a")?.binding.endpoint, "A");
+});
+
+test("改接收端走 reregister:未知动作标渠道已变不重试,新动作发往新接收端(单开关对照)", async () => {
+  const { plugin, effects } = endpointPlugin(true);
+  const reg = createRegistry({ now: () => T0 });
+  reg.register(plugin);
+  await reg.send("mail", { action_id: "a", payload: "x" });
+  assert.deepEqual(reg.reregister({ ...plugin, endpoint: "B" }), { ok: true });
+  const retry = await reg.send("mail", { action_id: "a", payload: "x" });
+  assert.equal(retry.ok === false && retry.reason, "channel-changed");
+  const other = await reg.send("mail", { action_id: "b", payload: "x" });
+  assert.equal(other.ok && other.receipt.receiptId, "provider-B");
+  assert.deepEqual(effects, ["A", "B"]);
+});
+
+test("发送在途时改插件实例的 endpoint:同 action_id 被在途拦下,完成后的回执来自原接收端,调用计数为 1", async () => {
+  let release: () => void = () => {};
+  const effects: string[] = [];
+  const plugin = {
+    kind: "outbound-channel", id: "mail", idempotency: "none", endpoint: "A",
+    send(this: { endpoint: string }, q: { action_id: string }) {
+      effects.push(this.endpoint);
+      return new Promise((res) => { release = () => res({ action_id: q.action_id, receiptId: `provider-${this.endpoint}` }); });
+    },
+  };
+  const reg = createRegistry({ now: () => T0 });
+  reg.register(plugin);
+  const first = reg.send("mail", { action_id: "a", payload: "x" });
+  plugin.endpoint = "B";
+  const second = await reg.send("mail", { action_id: "a", payload: "x" });
+  assert.equal(second.ok === false && second.reason, "in-flight");
+  release();
+  const done = await first;
+  assert.equal(done.ok && done.receipt.receiptId, "provider-A");
+  assert.deepEqual(effects, ["A"]);
+});
+
