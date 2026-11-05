@@ -1,8 +1,9 @@
 // AC-01 联系人持久身份;AC-33 直接工具清单收窄、Compute 不继承记忆和性格、凭据只给引用、placement 契约;
-// 概念卡第 11 张:定时是联系人自己的承诺(带时区和误差),不是插件能力;AC-35① 专职锁不挡控制指令;AC-31⑤ 承诺终态自动回收。
+// 概念卡第 11 张:定时是联系人自己的承诺(带时区和误差),不是插件能力;AC-31⑤ 承诺终态自动回收。
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { addContact, briefFor, normalize, canCallDirectly, commit, confirmFinalReport, decideUnderFocus, emptyDirectory, grantComputeAsset, grantTool, revokeCommitment, setFocus, settleTask, updateContact } from "./contact.ts";
+import * as contactModule from "./contact.ts";
+import { addContact, briefFor, normalize, canCallDirectly, commit, confirmFinalReport, emptyDirectory, grantComputeAsset, grantTool, revokeCommitment, settleTask, updateContact } from "./contact.ts";
 
 /** 按需求文档 75-78 行独立列出的通用能力样本,不取自被测实现的清单。 */
 const SPEC_GENERAL_TOOLS = ["bash", "shell", "exec", "run_command", "write_file", "edit_file", "apply_patch", "browser", "computer_use", "run_script"];
@@ -143,18 +144,13 @@ test("AC-31⑤ 绑定任务全部终态但末次汇报还没发出,承诺仍有�
   assert.deepEqual(done.commitments[0]?.awaitingReport, []);
 });
 
-test("AC-31⑤ 承诺回收后不污染后续任务:旧专职锁解除,新派的活正常接,旧承诺不能再被锁定", () => {
+test("AC-31⑤ 承诺回收后不影响新承诺:旧承诺 done 后不能再撤销,新承诺照常立", () => {
   const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 200, text: "只盯 T_A", boundTaskIds: ["T_A"], schedule: null });
   assert.ok(a.ok);
-  const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k1" });
-  assert.ok(f.ok);
-  const locked = f.ok ? f.contact : (null as never);
-  const newWork = { kind: "work", text: "T_A2 写周报", commitmentId: null } as const;
-  assert.equal(decideUnderFocus(locked, newWork), "decline-focused");
-  const after = confirmFinalReport(settleTask(locked, "T_A"), rc("T_A"));
-  assert.equal(after.focus, null);
-  assert.equal(decideUnderFocus(after, newWork), "handle");
-  assert.equal(setFocus(after, { onlyCommitmentId: "k1" }).ok, false);
+  const base = a.ok ? a.contact : (null as never);
+  const after = confirmFinalReport(settleTask(base, "T_A"), rc("T_A"));
+  assert.equal(after.commitments[0]?.status, "done");
+  assert.equal(revokeCommitment(after, "k1").ok, false);
   const k2 = commit(after, { id: "k2", sourceSeq: 300, text: "T_A2", boundTaskIds: ["T_A2"], schedule: null });
   assert.equal(k2.ok && k2.contact.commitments.find((k) => k.id === "k2")?.status, "active");
 });
@@ -172,42 +168,12 @@ test("AC-31⑤ 别的任务的汇报确认不回收无关承诺(阴性对照)", 
   assert.equal(confirmFinalReport(a.ok ? a.contact : (null as never), rc("T_X")).commitments[0]?.status, "active");
 });
 
-test("AC-35① 专职锁:职责内的活照接,越界派活婉拒,无关闲聊忽略,停止/撤销/改时间照样处理", () => {
-  const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 1, text: "每天 8 点总结 Telegram G1", boundTaskIds: [], schedule: daily8 });
-  assert.ok(a.ok);
-  const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k1" });
-  assert.ok(f.ok);
-  const c = f.ok ? f.contact : (null as never);
-  assert.equal(decideUnderFocus(c, { kind: "chatter", text: "今天天气不错" }), "ignore");
-  assert.equal(decideUnderFocus(c, { kind: "work", text: "总结 Telegram G1", commitmentId: "k1" }), "handle");
-  assert.equal(decideUnderFocus(c, { kind: "work", text: "总结 Telegram G1", commitmentId: null }), "decline-focused");
-  assert.equal(decideUnderFocus(c, { kind: "work", text: "帮我写个前端页面", commitmentId: "k9" }), "decline-focused");
-  for (const action of ["stop", "revoke", "reschedule"] as const) {
-    assert.equal(decideUnderFocus(c, { kind: "control", action, commitmentId: "k1" }), "handle");
-    assert.equal(decideUnderFocus(c, { kind: "control", action, commitmentId: "k9" }), "handle");
-  }
-});
-
-test("AC-35① 没有专职锁时派活正常处理(阴性对照)", () => {
-  assert.equal(decideUnderFocus(mk().contacts.get("c-mi")!, { kind: "work", text: "帮我写个前端页面", commitmentId: null }), "handle");
-});
-
-test("AC-35① 撤销被锁定的承诺,专职锁随之解除", () => {
+test("撤销承诺置为 revoked,不能重复撤销", () => {
   const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 1, text: "每天 8 点", boundTaskIds: [], schedule: daily8 });
-  const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k1" });
-  const r = revokeCommitment(f.ok ? f.contact : (null as never), "k1");
+  const r = revokeCommitment(a.ok ? a.contact : (null as never), "k1");
   assert.ok(r.ok);
   assert.equal(r.ok && r.contact.commitments[0]?.status, "revoked");
-  assert.equal(r.ok && r.contact.focus, null);
   assert.equal(r.ok && revokeCommitment(r.contact, "k1").ok, false);
-});
-
-test("专职锁只能指向自己身上有效的承诺,已回收的也不行", () => {
-  assert.equal(setFocus(mk().contacts.get("c-mi")!, { onlyCommitmentId: "nope" }).ok, false);
-  const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 1, text: "x", boundTaskIds: ["T1"], schedule: null });
-  const gone = confirmFinalReport(settleTask(a.ok ? a.contact : (null as never), "T1"), rc("T1"));
-  assert.equal(setFocus(gone, { onlyCommitmentId: "k1" }).ok, false);
-  assert.equal(setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k1" }).ok, true);
 });
 
 test("联系人更新不改入参目录", () => {
@@ -218,47 +184,37 @@ test("联系人更新不改入参目录", () => {
   assert.equal(JSON.stringify([...d.contacts]), saved);
 });
 
-test("CH-05 末次汇报确认先于终态到达:不被吞掉,任务终态后立即回收并解除旧锁;重复确认与重复终态幂等", () => {
+test("CH-05 末次汇报确认先于终态到达:不被吞掉,任务终态后立即回收;重复确认与重复终态幂等", () => {
   const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 1, text: "进度汇报", boundTaskIds: ["T1"], schedule: null });
-  const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k1" });
-  assert.ok(f.ok);
-  const reported = confirmFinalReport(f.ok ? f.contact : (null as never), rc("T1"));
+  const reported = confirmFinalReport(a.ok ? a.contact : (null as never), rc("T1"));
   assert.deepEqual(reported.commitments[0], { id: "k1", sourceSeq: 1, text: "进度汇报", boundTaskIds: ["T1"], awaitingReport: [], reportedTaskIds: ["T1"], schedule: null, status: "active" });
-  assert.deepEqual(reported.focus, { onlyCommitmentId: "k1" });
   const replayed = confirmFinalReport(reported, rc("T1"));
   assert.deepEqual(replayed.commitments[0]?.reportedTaskIds, ["T1"]);
   const ended = settleTask(replayed, "T1");
   assert.deepEqual(ended.commitments[0], { id: "k1", sourceSeq: 1, text: "进度汇报", boundTaskIds: [], awaitingReport: [], reportedTaskIds: [], schedule: null, status: "done" });
-  assert.equal(ended.focus, null);
-  assert.equal(decideUnderFocus(ended, { kind: "work", text: "新活", commitmentId: null }), "handle");
   assert.deepEqual(confirmFinalReport(settleTask(ended, "T1"), rc("T1")).commitments[0], ended.commitments[0]);
 });
 
 test("CH-05 先终态后确认的顺序照旧回收(对照),确认重放不改结果", () => {
   const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 1, text: "进度汇报", boundTaskIds: ["T1"], schedule: null });
-  const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k1" });
-  const ended = settleTask(f.ok ? f.contact : (null as never), "T1");
+  const ended = settleTask(a.ok ? a.contact : (null as never), "T1");
   assert.deepEqual(ended.commitments[0]?.awaitingReport, ["T1"]);
   assert.equal(ended.commitments[0]?.status, "active");
-  assert.deepEqual(ended.focus, { onlyCommitmentId: "k1" });
   const done = confirmFinalReport(ended, rc("T1"));
   assert.equal(done.commitments[0]?.status, "done");
-  assert.equal(done.focus, null);
   assert.deepEqual(confirmFinalReport(done, rc("T1")).commitments[0], done.commitments[0]);
 });
 
 test("CH-05 跨任务负对照:先确认的任务不替别的任务放行,无关任务的确认不被记下", () => {
   const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 1, text: "两件事都汇报", boundTaskIds: ["T1", "T2"], schedule: null });
   const b = commit(a.ok ? a.contact : (null as never), { id: "k2", sourceSeq: 2, text: "另一件", boundTaskIds: ["T9"], schedule: null });
-  const f = setFocus(b.ok ? b.contact : (null as never), { onlyCommitmentId: "k1" });
-  const early = confirmFinalReport(confirmFinalReport(f.ok ? f.contact : (null as never), rc("T1")), rc("T_X"));
+  const early = confirmFinalReport(confirmFinalReport(b.ok ? b.contact : (null as never), rc("T1")), rc("T_X"));
   assert.deepEqual(early.commitments.map((k) => k.reportedTaskIds), [["T1"], []]);
   const t2 = settleTask(early, "T2");
   assert.deepEqual(t2.commitments[0], { id: "k1", sourceSeq: 1, text: "两件事都汇报", boundTaskIds: ["T1"], awaitingReport: ["T2"], reportedTaskIds: ["T1"], schedule: null, status: "active" });
   const t1 = settleTask(t2, "T1");
   assert.equal(t1.commitments[0]?.status, "active");
   assert.deepEqual(t1.commitments[0]?.awaitingReport, ["T2"]);
-  assert.deepEqual(t1.focus, { onlyCommitmentId: "k1" });
   const done = confirmFinalReport(t1, rc("T2"));
   assert.equal(done.commitments[0]?.status, "done");
   assert.equal(done.commitments[1]?.status, "active");
@@ -298,16 +254,13 @@ test("CH-07 空名或仅空白的工具不能授为直接工具,也不能写进 
   assert.equal(ok.ok && briefFor(ok.contact, { task: "t", rules: [], tools: ["get_weather"], credentialRefs: [] }).ok, true);
 });
 
-test("CH-08 一个任务终态且已汇报、另一个仍在跑:承诺不回收,专职锁不解", () => {
+test("CH-08 一个任务终态且已汇报、另一个仍在跑:承诺不回收", () => {
   const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 45, text: "两件事", boundTaskIds: ["T_A", "T_B"], schedule: null });
-  const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k1" });
-  const half = confirmFinalReport(settleTask(f.ok ? f.contact : (null as never), "T_A"), rc("T_A"));
+  const half = confirmFinalReport(settleTask(a.ok ? a.contact : (null as never), "T_A"), rc("T_A"));
   assert.equal(half.commitments[0]?.status, "active");
   assert.deepEqual(half.commitments[0]?.boundTaskIds, ["T_B"]);
-  assert.deepEqual(half.focus, { onlyCommitmentId: "k1" });
   const done = confirmFinalReport(settleTask(half, "T_B"), rc("T_B"));
   assert.equal(done.commitments[0]?.status, "done");
-  assert.equal(done.focus, null);
 });
 
 test("CH-08 Compute 说明原样保留多条群规和多项凭据引用", () => {
@@ -325,33 +278,16 @@ test("CH-08 定时允许误差 0 秒合法(非负含 0),负数仍被拒(对照)"
   assert.equal(commit(c, { id: "n", sourceSeq: 8, text: "负", boundTaskIds: [], schedule: { cron: "0 8 * * *", tz: "Asia/Shanghai", toleranceSec: -0.5 } }).ok, false);
 });
 
-test("CH-08 撤销或回收别的承诺不解除当前承诺的专职锁", () => {
-  const a = commit(mk().contacts.get("c-mi")!, { id: "other", sourceSeq: 1, text: "别的", boundTaskIds: ["T_X"], schedule: null });
-  const b = commit(a.ok ? a.contact : (null as never), { id: "target", sourceSeq: 2, text: "专职", boundTaskIds: ["T_Y"], schedule: null });
-  const f = setFocus(b.ok ? b.contact : (null as never), { onlyCommitmentId: "target" });
-  const locked = f.ok ? f.contact : (null as never);
-  const revoked = revokeCommitment(locked, "other");
-  assert.equal(revoked.ok && revoked.contact.commitments[0]?.status, "revoked");
-  assert.deepEqual(revoked.ok && revoked.contact.focus, { onlyCommitmentId: "target" });
-  const retired = confirmFinalReport(settleTask(locked, "T_X"), rc("T_X", ["other"]));
-  assert.equal(retired.commitments[0]?.status, "done");
-  assert.deepEqual(retired.focus, { onlyCommitmentId: "target" });
-});
-
-test("CH-09 同一任务两条承诺:只履行旧承诺的迟到回执不替新承诺放行,新承诺的锁不解", () => {
+test("CH-09 同一任务两条承诺:只履行旧承诺的迟到回执不替新承诺放行,新承诺仍等自己的回执", () => {
   const a = commit(mk().contacts.get("c-mi")!, { id: "kA", sourceSeq: 100, text: "T1 汇报到群 A", boundTaskIds: ["T1"], schedule: null });
   const b = commit(a.ok ? a.contact : (null as never), { id: "kB", sourceSeq: 200, text: "T1 汇报到群 B", boundTaskIds: ["T1"], schedule: null });
-  const f = setFocus(b.ok ? b.contact : (null as never), { onlyCommitmentId: "kB" });
-  const lateOld = confirmFinalReport(f.ok ? f.contact : (null as never), rc("T1", ["kA"], 150));
+  const lateOld = confirmFinalReport(b.ok ? b.contact : (null as never), rc("T1", ["kA"], 150));
   assert.deepEqual(lateOld.commitments.map((k) => k.reportedTaskIds), [["T1"], []]);
   const ended = settleTask(lateOld, "T1");
   assert.deepEqual(ended.commitments.map((k) => k.status), ["done", "active"]);
   assert.deepEqual(ended.commitments[1]?.awaitingReport, ["T1"]);
-  assert.deepEqual(ended.focus, { onlyCommitmentId: "kB" });
-  assert.equal(decideUnderFocus(ended, { kind: "work", text: "职责外新活", commitmentId: null }), "decline-focused");
   const done = confirmFinalReport(ended, rc("T1", ["kB"], 250));
   assert.deepEqual(done.commitments.map((k) => k.status), ["done", "done"]);
-  assert.equal(done.focus, null);
 });
 
 test("CH-09 回执依据位置早于承诺出处时,即使点名这条承诺也不算数;依据位置不早于出处才算(对照)", () => {
@@ -442,23 +378,20 @@ test("CH-12 承诺出处必须是非负整数消息位置:NaN、Infinity、负�
   for (const sourceSeq of [0, 200]) assert.equal(commit(c, { id: "k", sourceSeq, text: "x", boundTaskIds: ["T1"], schedule: null }).ok, true, String(sourceSeq));
 });
 
-test("CH-12 回执依据位置不是非负整数时不确认、不回收、不解锁;同一回执换成合法位置才生效(对照)", () => {
+test("CH-12 回执依据位置不是非负整数时不确认、不回收;同一回执换成合法位置才生效(对照)", () => {
   const a = commit(mk().contacts.get("c-mi")!, { id: "kB", sourceSeq: 200, text: "T1 汇报到群 B", boundTaskIds: ["T1"], schedule: null });
-  const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "kB" });
-  const locked = f.ok ? f.contact : (null as never);
-  const ended = settleTask(locked, "T1");
+  const base = a.ok ? a.contact : (null as never);
+  const ended = settleTask(base, "T1");
   for (const basedOnSeq of [Number.NaN, Number.POSITIVE_INFINITY, -1, 200.5]) {
-    const early = confirmFinalReport(locked, rc("T1", ["kB"], basedOnSeq));
-    assert.deepEqual(early.commitments, locked.commitments, String(basedOnSeq));
+    const early = confirmFinalReport(base, rc("T1", ["kB"], basedOnSeq));
+    assert.deepEqual(early.commitments, base.commitments, String(basedOnSeq));
     const afterEnd = settleTask(early, "T1");
     assert.equal(afterEnd.commitments[0]?.status, "active", String(basedOnSeq));
-    assert.deepEqual(afterEnd.focus, { onlyCommitmentId: "kB" }, String(basedOnSeq));
     assert.deepEqual(confirmFinalReport(ended, rc("T1", ["kB"], basedOnSeq)).commitments, ended.commitments, String(basedOnSeq));
   }
-  assert.deepEqual(confirmFinalReport(locked, rc("T1", ["kB"], 199)).commitments, locked.commitments);
+  assert.deepEqual(confirmFinalReport(base, rc("T1", ["kB"], 199)).commitments, base.commitments);
   const ok = confirmFinalReport(ended, rc("T1", ["kB"], 200));
   assert.equal(ok.commitments[0]?.status, "done");
-  assert.equal(ok.focus, null);
 });
 
 test("CH-13 回执作用域为空时不确认任何承诺;点名后才确认(对照)", () => {
@@ -539,16 +472,6 @@ test("CH-15 -0 按位置 0 处理(合法);负的最小值被拒(对照)", () => 
   const c = mk().contacts.get("c-mi")!;
   assert.equal(commit(c, { id: "k", sourceSeq: -0, text: "x", boundTaskIds: ["T"], schedule: null }).ok, true);
   assert.equal(commit(c, { id: "k", sourceSeq: Number.MIN_SAFE_INTEGER, text: "x", boundTaskIds: ["T"], schedule: null }).ok, false);
-});
-
-test("CH-15 已撤销的承诺不能重新加专职锁,已回收的也不能;有效承诺可以(对照)", () => {
-  const a = commit(mk().contacts.get("c-mi")!, { id: "k", sourceSeq: 1, text: "x", boundTaskIds: ["T"], schedule: null });
-  const base = a.ok ? a.contact : (null as never);
-  assert.equal(setFocus(base, { onlyCommitmentId: "k" }).ok, true);
-  const revoked = revokeCommitment(base, "k");
-  const r = setFocus(revoked.ok ? revoked.contact : (null as never), { onlyCommitmentId: "k" });
-  assert.equal(r.ok, false);
-  assert.match(!r.ok ? r.reason : "", /不存在或已结束/);
 });
 
 test("CH-15 已回收(done)的承诺不能被撤销改写成 revoked;有效承诺可以撤销(对照)", () => {
@@ -763,73 +686,6 @@ test("CH-23 凭据引用必须整串是引用:明文前缀加合法引用后缀�
   assert.deepEqual(ok.ok && ok.brief.credentialRefs, ["vault://mail/1"]);
 });
 
-test("CH-20 入站意图形状不对一律 ignore;合法 work/control/chatter 照常(对照)", () => {
-  const c = mk().contacts.get("c-mi")!;
-  for (const bad of [null, "work", { kind: "bogus", text: "x" }, { kind: 1 }, { kind: "work", text: "x", commitmentId: 3 }]) {
-    assert.equal(decideUnderFocus(c, bad as never), "ignore", JSON.stringify(bad));
-  }
-  assert.equal(decideUnderFocus(c, { kind: "work", text: "x", commitmentId: null }), "handle");
-  assert.equal(decideUnderFocus(c, { kind: "control", action: "stop", commitmentId: "k" }), "handle");
-  assert.equal(decideUnderFocus(c, { kind: "chatter", text: "x" }), "ignore");
-});
-
-test("CH-24 入站意图按 kind 分变体:合法 control/work/chatter 的判定;变体外额外字段丢弃、不影响判定", () => {
-  const a = commit(mk().contacts.get("c-mi")!, { id: "k", sourceSeq: 1, text: "x", boundTaskIds: [], schedule: null });
-  const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k" });
-  const locked = f.ok ? f.contact : (null as never);
-  const free = mk().contacts.get("c-mi")!;
-  const cases: [string, unknown, string, string][] = [
-    ["stop", { kind: "control", action: "stop", commitmentId: "k" }, "handle", "handle"],
-    ["revoke", { kind: "control", action: "revoke", commitmentId: "k9" }, "handle", "handle"],
-    ["reschedule", { kind: "control", action: "reschedule", commitmentId: "k" }, "handle", "handle"],
-    ["control 带 text:42", { kind: "control", action: "stop", commitmentId: "k", text: 42 }, "handle", "handle"],
-    ["control 带 debug", { kind: "control", action: "stop", commitmentId: "k", debug: true }, "handle", "handle"],
-    ["职责内 work", { kind: "work", text: "t", commitmentId: "k" }, "handle", "handle"],
-    ["职责外 work", { kind: "work", text: "t", commitmentId: null }, "decline-focused", "handle"],
-    ["work 带 action:42", { kind: "work", text: "t", commitmentId: "k", action: 42 }, "handle", "handle"],
-    ["chatter", { kind: "chatter", text: "hi" }, "ignore", "ignore"],
-    ["chatter 带 commitmentId:5", { kind: "chatter", text: "hi", commitmentId: 5 }, "ignore", "ignore"],
-  ];
-  for (const [label, intent, withLock, noLock] of cases) {
-    const parsed = JSON.parse(JSON.stringify(intent));
-    assert.equal(decideUnderFocus(locked, parsed), withLock, `有锁 ${label}`);
-    assert.equal(decideUnderFocus(free, parsed), noLock, `无锁 ${label}`);
-  }
-});
-
-test("CH-24 入站意图不合变体形状一律 ignore:每个变体 × 缺字段/错类型/null/枚举外/空 id", () => {
-  const a = commit(mk().contacts.get("c-mi")!, { id: "k", sourceSeq: 1, text: "x", boundTaskIds: [], schedule: null });
-  const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k" });
-  const locked = f.ok ? f.contact : (null as never);
-  const free = mk().contacts.get("c-mi")!;
-  const bad: unknown[] = [
-    { kind: "control" },
-    { kind: "control", action: "stop" },
-    { kind: "control", commitmentId: "k" },
-    { kind: "control", action: "explode", commitmentId: "k" },
-    { kind: "control", action: 1, commitmentId: "k" },
-    { kind: "control", action: "stop", commitmentId: null },
-    { kind: "control", action: "stop", commitmentId: "" },
-    { kind: "control", action: "stop", commitmentId: "  " },
-    { kind: "control", action: "stop", commitmentId: 7 },
-    { kind: "work", commitmentId: "k" },
-    { kind: "work", text: "t" },
-    { kind: "work", text: 3, commitmentId: "k" },
-    { kind: "work", text: null, commitmentId: "k" },
-    { kind: "work", text: "t", commitmentId: 9 },
-    { kind: "chatter" },
-    { kind: "chatter", text: 5 },
-    { kind: "bogus", text: "t" },
-    { text: "t" },
-    { kind: null },
-  ];
-  for (const intent of bad) {
-    const parsed = JSON.parse(JSON.stringify(intent));
-    assert.equal(decideUnderFocus(locked, parsed), "ignore", `有锁 ${JSON.stringify(intent)}`);
-    assert.equal(decideUnderFocus(free, parsed), "ignore", `无锁 ${JSON.stringify(intent)}`);
-  }
-});
-
 test("CH-25 只接受普通数据对象:外层 Proxy、数组 Proxy、自定义原型对象、类实例都拒;普通对象与 Object.create(null) 通过", () => {
   const g = grantTool(mk().contacts.get("c-mi")!, { name: "get_weather", bounded: true });
   const c = g.ok ? g.contact : (null as never);
@@ -870,7 +726,6 @@ test("CH-25 回执与登记入口同样拒绝外层 Proxy:回执作用域不能�
   assert.equal((grantTool(c, new Proxy({ name: "weather", bounded: true }, {})) as { reason: string }).reason, "直接工具 只接受普通数据对象");
   assert.equal((grantComputeAsset(c, new Proxy({ name: "x", kind: "mcp" }, {})) as { reason: string }).reason, "能力资产 只接受普通数据对象");
   assert.equal((commit(c, new Proxy({ id: "k", sourceSeq: 1, text: "x", boundTaskIds: [], schedule: null }, {})) as { reason: string }).reason, "承诺 只接受普通数据对象");
-  assert.equal(decideUnderFocus(c, new Proxy({ kind: "control", action: "stop", commitmentId: "k" }, {}) as never), "ignore");
 });
 
 test("普通数据合同:联系人每个公开入口的每个对象字段做成 getter 或 setter 都直接拒绝,getter 调用 0 次;同样内容的数据属性通过(对照)", () => {
@@ -879,19 +734,17 @@ test("普通数据合同:联系人每个公开入口的每个对象字段做成 
   const k = commit(c, { id: "k", sourceSeq: 5, text: "x", boundTaskIds: ["T"], schedule: null });
   const withK = k.ok ? k.contact : (null as never);
   const ended = settleTask(withK, "T");
-  const locked = (() => { const f = setFocus(withK, { onlyCommitmentId: "k" }); return f.ok ? f.contact : (null as never); })();
   const cases: [string, Record<string, unknown>, string, (x: never) => unknown, (r: unknown) => boolean][] = [
     ["addContact", { id: "n1", name: "n", speakingModel: "m" }, "联系人", (x) => addContact(emptyDirectory(), x), (r) => (r as { ok: boolean }).ok],
     ["updateContact", { memory: "m", soul: "s" }, "联系人修改", (x) => updateContact(dir, "c-mi", x), (r) => (r as { ok: boolean }).ok],
     ["grantTool", { name: "weather", bounded: true }, "直接工具", (x) => grantTool(c, x), (r) => (r as { ok: boolean }).ok],
     ["grantComputeAsset", { name: "research", kind: "mcp" }, "能力资产", (x) => grantComputeAsset(c, x), (r) => (r as { ok: boolean }).ok],
     ["commit", { id: "k2", sourceSeq: 1, text: "t", boundTaskIds: ["T"], schedule: null }, "承诺", (x) => commit(c, x), (r) => (r as { ok: boolean }).ok],
-    ["setFocus", { onlyCommitmentId: "k" }, "专职锁", (x) => setFocus(withK, x), (r) => (r as { ok: boolean }).ok],
     ["briefFor", { task: "t", rules: ["r"], tools: [], credentialRefs: ["vault://a"], placement: "local" }, "Compute 说明请求", (x) => briefFor(c, x), (r) => (r as { ok: boolean }).ok],
     ["confirmFinalReport", { taskId: "T", commitmentIds: ["k"], basedOnSeq: 5 }, "回执", (x) => confirmFinalReport(ended, x), (r) => (r as typeof ended).commitments[0]?.status === "done"],
-    ["decideUnderFocus control", { kind: "control", action: "stop", commitmentId: "k" }, "入站意图", (x) => decideUnderFocus(locked, x), (r) => r === "handle"],
   ];
-  for (const [label, base, what, call, accepted] of cases) {
+  for (let ci = 0; ci < cases.length; ci++) {
+    const [label, base, what, call, accepted] = cases[ci]!;
     assert.equal(accepted(call(base as never)), true, `${label} 数据属性`);
     for (const key of Object.keys(base)) {
       for (const kind of ["get", "set"] as const) {
@@ -937,7 +790,6 @@ test("普通数据合同:逐个入口拒绝外层 Proxy 与数组 Proxy,普通�
   const P = <T extends object>(o: T): T => new Proxy(o, {});
   assert.equal((addContact(emptyDirectory(), P({ id: "n", name: "n", speakingModel: "m" })) as { reason: string }).reason, "联系人 只接受普通数据对象");
   assert.equal((updateContact(dir, "c-mi", P({ memory: "x" })) as { reason: string }).reason, "联系人修改 只接受普通数据对象");
-  assert.equal((setFocus(withK, P({ onlyCommitmentId: "k" })) as { reason: string }).reason, "专职锁 只接受普通数据对象");
   assert.equal((commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: [], schedule: P({ cron: "0 8 * * *", tz: "UTC", toleranceSec: 0 }) }) as { reason: string }).reason, "schedule 只接受普通数据对象");
   assert.equal((commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: P(["T"]), schedule: null }) as { reason: string }).reason, "boundTaskIds 只接受普通数据数组");
   const base = { task: "t", rules: [] as string[], tools: [] as string[], credentialRefs: [] as string[] };
@@ -948,27 +800,7 @@ test("普通数据合同:逐个入口拒绝外层 Proxy 与数组 Proxy,普通�
   assert.equal(updateContact(dir, "c-mi", { memory: "x" }).ok, true);
 });
 
-test("CH-28 control 意图字段为访问器时拒绝且不调用:缺 action 时 commitmentId 是会抛错的 getter 也不读、不抛", () => {
-  const a = commit(mk().contacts.get("c-mi")!, { id: "k", sourceSeq: 1, text: "x", boundTaskIds: [], schedule: null });
-  const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k" });
-  const locked = f.ok ? f.contact : (null as never);
-  for (const field of ["kind", "action", "commitmentId"]) {
-    let n = 0;
-    const o: Record<string, unknown> = { kind: "control", action: "stop", commitmentId: "k" };
-    delete o[field];
-    Object.defineProperty(o, field, { enumerable: true, get: () => { n++; throw new Error("不应读取"); } });
-    assert.equal(decideUnderFocus(locked, o as never), "ignore", field);
-    assert.equal(n, 0, field);
-  }
-  let n = 0;
-  const missingAction = { kind: "control" } as Record<string, unknown>;
-  Object.defineProperty(missingAction, "commitmentId", { enumerable: true, get: () => { n++; throw new Error("不应读取"); } });
-  assert.equal(decideUnderFocus(locked, missingAction as never), "ignore");
-  assert.equal(n, 0);
-  assert.equal(decideUnderFocus(locked, { kind: "control", action: "stop", commitmentId: "k" }), "handle");
-});
-
-test("快照合同:入口返回后改调用方对象或数组,已存状态与输出都不变(addContact/updateContact/commit/setFocus/回执)", () => {
+test("快照合同:入口返回后改调用方对象或数组,已存状态与输出都不变(addContact/updateContact/commit/回执)", () => {
   const req = { id: "first", name: "n", speakingModel: "m" };
   const d = addContact(emptyDirectory(), req);
   req.id = "second";
@@ -983,10 +815,6 @@ test("快照合同:入口返回后改调用方对象或数组,已存状态与输
   sched.cron = "not-cron";
   bound.push("T9");
   assert.deepEqual(k.ok && [k.contact.commitments[0]?.schedule, k.contact.commitments[0]?.boundTaskIds], [{ cron: "0 8 * * *", tz: "UTC", toleranceSec: 0 }, ["T"]]);
-  const fp = { onlyCommitmentId: "k" };
-  const f = setFocus(k.ok ? k.contact : (null as never), fp);
-  fp.onlyCommitmentId = "other";
-  assert.deepEqual(f.ok && f.contact.focus, { onlyCommitmentId: "k" });
   const extra = commit(mk().contacts.get("c-mi")!, { id: "x", sourceSeq: 1, text: "t", boundTaskIds: [], schedule: null, secret: "plaintext" } as never);
   assert.equal(extra.ok && "secret" in extra.contact.commitments[0]!, false);
 });
@@ -1004,9 +832,6 @@ test("普通数据合同:快照是冻结的空原型对象,schema 外字段丢�
   assert.equal(Object.getPrototypeOf(v), null);
   assert.ok(Object.isFrozen(v) && Object.isFrozen(v.boundTaskIds));
   assert.deepEqual(Object.keys(v), ["id", "boundTaskIds"]);
-  const k2 = commit(mk().contacts.get("c-mi")!, { id: "k", sourceSeq: 1, text: "t", boundTaskIds: [], schedule: null });
-  const f = setFocus(k2.ok ? k2.contact : (null as never), { onlyCommitmentId: "k", extra: 1 } as never);
-  assert.deepEqual(f.ok && f.contact.focus, { onlyCommitmentId: "k" });
 });
 
 test("普通数据合同:Object.prototype 上有同名可写数据属性、setter、不可写属性时,快照字段照常写入、setter 调用 0 次;无污染时同样(对照)", () => {
@@ -1020,8 +845,6 @@ test("普通数据合同:Object.prototype 上有同名可写数据属性、sette
     assert.equal(got.sourceSeq, 5);
     assert.deepEqual([...got.boundTaskIds], ["T", "U"]);
     assert.equal(got.schedule?.cron, "0 8 * * *");
-    const f = setFocus(k.ok ? k.contact : (null as never), { onlyCommitmentId: "k" });
-    assert.equal(f.ok && f.contact.focus?.onlyCommitmentId, "k");
     const b = briefFor(c, { task: "交付", rules: ["r1", "r2"], tools: [], credentialRefs: [] });
     assert.equal(b.ok && b.brief.task, "交付");
     assert.deepEqual(b.ok && [...b.brief.rules], ["r1", "r2"]);
@@ -1055,4 +878,21 @@ test("普通数据合同:Object.prototype 上有同名可写数据属性、sette
     const calls = pollute(mode, run);
     assert.equal(calls, 0, `${mode} setter 调用次数`);
   }
+});
+
+test("g-group 第 2273 号讨论撤销专职开关:联系人没有 focus 字段,模块不导出 setFocus/decideUnderFocus,有承诺时也没有按「专职」婉拒的路径", () => {
+  const c = mk().contacts.get("c-mi")!;
+  assert.equal("focus" in c, false);
+  const k = commit(c, { id: "k", sourceSeq: 1, text: "只做 T1", boundTaskIds: ["T1"], schedule: null });
+  assert.ok(k.ok);
+  const withK = k.ok ? k.contact : (null as never);
+  const ended = settleTask(withK, "T1");
+  const done = confirmFinalReport(ended, rc("T1", ["k"], 1));
+  assert.deepEqual([withK, ended, done].map((x) => "focus" in x), [false, false, false]);
+  const r = revokeCommitment(withK, "k");
+  assert.equal(r.ok && "focus" in r.contact, false);
+  const exported = Object.keys(contactModule);
+  for (const name of ["setFocus", "decideUnderFocus", "focus", "FocusPolicy", "FocusDecision"]) assert.equal(exported.includes(name), false, name);
+  const sources = Object.entries(contactModule).filter(([, v]) => typeof v === "function").map(([n, v]) => [n, String(v)] as const);
+  assert.deepEqual(sources.filter(([, src]) => /decline-focused|onlyCommitmentId/.test(src)).map(([n]) => n), []);
 });
