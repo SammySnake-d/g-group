@@ -439,7 +439,7 @@ const staleDelivery = (t: Task, e: TaskEvent): boolean => {
 
 // ---- 运行时事件形状校验(R7-CORR-01 / R7-TEST-01)----
 // 事件常来自 JSON 等未经类型检查的外部输入,静态类型的必填不等于运行时存在。入口按下表逐字段核对:
-// str = 非空字符串;nat = 非负安全整数;pint = 正安全整数;bool = 布尔;字符串数组 = 枚举取值。多余字段不拒绝。
+// str = 非空且不全是空白的字符串;nat = 非负安全整数;pint = 正安全整数;bool = 布尔;字符串数组 = 枚举取值。多余字段不拒绝。
 type FieldSpec = "str" | "nat" | "pint" | "bool" | readonly string[];
 type Shape = { readonly req: Readonly<Record<string, FieldSpec>>; readonly opt?: Readonly<Record<string, FieldSpec>> };
 const DELIVERY_SHAPE = { taskId: "str", deliveryRound: "pint", commit: "str" } as const;
@@ -461,25 +461,38 @@ const EVENT_SHAPES: { readonly [K in EventKind]: Shape } = {
   ExecFailed: { req: {}, opt: { computeId: "str", requestId: "str" } },
 };
 const fieldOk = (v: unknown, f: FieldSpec): boolean => {
-  if (f === "str") return typeof v === "string" && v.length > 0;
+  if (f === "str") return typeof v === "string" && v.trim().length > 0;
   if (f === "nat") return Number.isSafeInteger(v) && (v as number) >= 0;
   if (f === "pint") return Number.isSafeInteger(v) && (v as number) >= 1;
   if (f === "bool") return typeof v === "boolean";
   return typeof v === "string" && f.includes(v);
 };
+/** 事件种类 → 形状:用 Map 查表,"__proto__"、"constructor"、"toString" 这类原型链上的名字查不到,一律按未知种类拒绝(R8-CORR-01)。 */
+const SHAPE_BY_KIND: ReadonlyMap<string, Shape> = new Map(Object.entries(EVENT_SHAPES));
 const label = (f: FieldSpec): string => f === "str" ? "非空字符串" : f === "nat" ? "非负整数" : f === "pint" ? "正整数" : f === "bool" ? "布尔" : f.join("/");
 /** 校验一个(可能来自 JSON 的)事件的运行时形状:种类已知、必填字段存在且取值合法、可选字段若出现也合法。合法返回 null,否则返回原因。 */
 export function validateEvent(e: unknown): string | null {
-  if (typeof e !== "object" || e === null || Array.isArray(e)) return "事件不是对象";
-  const o = e as Record<string, unknown>;
-  const kind = o.kind;
-  if (typeof kind !== "string" || !(EVENT_KINDS as readonly string[]).includes(kind)) return `未知的事件种类 ${String(kind)}`;
-  const shape = EVENT_SHAPES[kind as EventKind];
-  for (const [k, f] of Object.entries(shape.req)) if (!fieldOk(o[k], f)) return `${kind}.${k} 缺失或取值非法(应为${label(f)})`;
-  for (const [k, f] of Object.entries(shape.opt ?? {})) if (o[k] !== undefined && !fieldOk(o[k], f)) return `${kind}.${k} 取值非法(应为${label(f)})`;
-  if (kind === "Review" && o.verdict === "reject" && !fieldOk(o.computeResumable, "bool")) return "Review.computeResumable 缺失或取值非法(应为布尔)";
-  return null;
+  // 外层兜底:任何意外(例如字段上的 getter 抛错)都按拒绝返回,校验本身绝不抛异常(R8-CORR-01)
+  try {
+    return checkShape(e);
+  } catch {
+    return "事件无法校验";
+  }
 }
+/** 只读自有属性:原型链上继承来的同名成员不算字段。 */
+const own = (o: object, k: string): unknown => (Object.hasOwn(o, k) ? (o as Record<string, unknown>)[k] : undefined);
+const checkShape = (e: unknown): string | null => {
+  if (typeof e !== "object" || e === null || Array.isArray(e)) return "事件不是对象";
+  const kind = own(e, "kind");
+  // 非字符串的 kind 用固定文字拒绝,不把不可信值格式化进原因(对象 kind 可能无法转成字符串)
+  if (typeof kind !== "string") return "事件种类缺失或不是字符串";
+  const shape = SHAPE_BY_KIND.get(kind);
+  if (!shape) return `未知的事件种类 ${JSON.stringify(kind)}`;
+  for (const [k, f] of Object.entries(shape.req)) if (!fieldOk(own(e, k), f)) return `${kind}.${k} 缺失或取值非法(应为${label(f)})`;
+  for (const [k, f] of Object.entries(shape.opt ?? {})) if (own(e, k) !== undefined && !fieldOk(own(e, k), f)) return `${kind}.${k} 取值非法(应为${label(f)})`;
+  if (kind === "Review" && own(e, "verdict") === "reject" && !fieldOk(own(e, "computeResumable"), "bool")) return "Review.computeResumable 缺失或取值非法(应为布尔)";
+  return null;
+};
 
 /**
  * 入口校验(先于状态表):形状合法;带 taskId 的事件必须属于本任务;交付代次必须是本任务已分配过的——

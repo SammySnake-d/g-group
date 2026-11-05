@@ -1433,3 +1433,98 @@ test("R7-TEST-01 有另一个活动实例时,退役实例重放上线只停它�
   assert.deepEqual(r.effects, [{ kind: "stop-compute", computeId: "b" }]);
   assert.equal(r.task.computeId, "cc-1");
 });
+
+// ---- 第八轮 ----
+const PROTO_KINDS = ["__proto__", "constructor", "toString", "hasOwnProperty", "valueOf", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "__defineGetter__"];
+
+test("R8-CORR-01 标准 JSON 的异常 kind:validateEvent、apply、applyAll 都返回拒绝,绝不抛异常", () => {
+  const t = newTask("t1", "u1");
+  for (const j of ['{"kind":{"toString":null}}', '{"kind":{"toString":{},"valueOf":{}}}', '{"kind":[{"toString":null}]}', '{"kind":{}}', '{"kind":null}', '{"kind":7}', '{"kind":true}', '{}', '{"__proto__":{"kind":"Cancel","by":"u1"}}']) {
+    const e = JSON.parse(j) as TaskEvent;
+    assert.equal(validateEvent(e), "事件种类缺失或不是字符串", j);
+    const r = apply(t, e);
+    assert.ok(!r.ok && r.reason === "事件种类缺失或不是字符串", j);
+    assert.equal(applyAll(t, [e]).ok, false, j);
+  }
+});
+
+test("R8-CORR-01 原型链上的名字作为 kind 一律按未知种类拒绝,并在原因里原样点名", () => {
+  for (const k of PROTO_KINDS) {
+    const e = JSON.parse(JSON.stringify({ kind: k, by: "u1" })) as TaskEvent;
+    assert.equal(validateEvent(e), `未知的事件种类 ${JSON.stringify(k)}`, k);
+    assert.equal(apply(newTask("t1", "u1"), e).ok, false, k);
+  }
+  assert.equal(validateEvent({ kind: "Nope" }), '未知的事件种类 "Nope"');
+  assert.equal(validateEvent({ kind: "" }), '未知的事件种类 ""');
+});
+
+test("R8-CORR-01 字段读取只认自有属性:原型上继承来的同名字段不算数", () => {
+  const proto = { by: "u1" };
+  const e = Object.assign(Object.create(proto), { kind: "Claim" });
+  assert.equal(validateEvent(e), "Claim.by 缺失或取值非法(应为非空字符串)");
+  const evil = { kind: "Claim", get by(): string { throw new Error("boom"); } };
+  assert.equal(validateEvent(evil), "事件无法校验");
+  assert.equal(apply(newTask("t1", "u1"), evil as unknown as TaskEvent).ok, false);
+});
+
+test("R8-TEST-01 取值域边界正反对照:非负整数、正整数、安全整数上界", () => {
+  const nh = (v: unknown) => validateEvent({ kind: "NeedHuman", qId: "q", computeId: "c", constraintVer: v });
+  assert.equal(nh(0), null);
+  assert.equal(nh(Number.MAX_SAFE_INTEGER), null);
+  assert.equal(nh(-1), "NeedHuman.constraintVer 缺失或取值非法(应为非负整数)");
+  assert.equal(nh(Number.MAX_SAFE_INTEGER + 1), "NeedHuman.constraintVer 缺失或取值非法(应为非负整数)");
+  assert.equal(nh(2 ** 60), "NeedHuman.constraintVer 缺失或取值非法(应为非负整数)");
+  const rv = (v: unknown) => validateEvent({ kind: "Review", reviewerId: "r", reviewerModel: "m", round: v, commit: "c", constraintVer: 0, verdict: "approve" });
+  assert.equal(rv(1), null);
+  assert.equal(rv(Number.MAX_SAFE_INTEGER), null);
+  assert.equal(rv(0), "Review.round 缺失或取值非法(应为正整数)");
+  assert.equal(rv(Number.MAX_SAFE_INTEGER + 1), "Review.round 缺失或取值非法(应为正整数)");
+  assert.equal(rv(2 ** 60), "Review.round 缺失或取值非法(应为正整数)");
+});
+
+test("R8-TEST-01 字符串边界:非 ASCII 合法,空串与全空白拒绝;多余字段不拒绝", () => {
+  const c = (by: unknown) => validateEvent({ kind: "Claim", by });
+  for (const ok1 of ["联系人小旅", "a", " x ", "é"]) assert.equal(c(ok1), null, ok1);
+  for (const bad of ["", " ", "\t\n", "　"]) assert.equal(c(bad), "Claim.by 缺失或取值非法(应为非空字符串)", JSON.stringify(bad));
+  assert.equal(validateEvent({ kind: "Claim", by: "u", extra: 1, note: { x: 1 } }), null);
+  assert.equal(must(apply(newTask("t1", "u1"), { kind: "Claim", by: "联系人小旅" })).task.owner, "联系人小旅");
+});
+
+test("R8-TEST-01 布尔边界:true/false 合法;数组、对象、字符串、数字一律拒绝,并点名字段", () => {
+  const am = (v: unknown) => validateEvent({ kind: "Amend", by: "u1", computeResumable: v });
+  assert.equal(am(true), null);
+  assert.equal(am(false), null);
+  for (const bad of [[], [true], {}, "false", "true", 0, 1, null]) assert.equal(am(bad), "Amend.computeResumable 缺失或取值非法(应为布尔)", JSON.stringify(bad));
+  const urj = (v: unknown) => ({ kind: "UserReject", by: "u1", computeResumable: v, ...D1 }) as unknown as TaskEvent;
+  for (const bad of ["false", [], 1]) {
+    const r = apply(delivered(), urj(bad));
+    assert.ok(!r.ok && r.reason === "UserReject.computeResumable 缺失或取值非法(应为布尔)", JSON.stringify(bad));
+  }
+});
+
+test("R8-TEST-01 枚举边界:只认表内原样取值,大小写变体和表外值都拒绝", () => {
+  const hr = (v: unknown) => validateEvent({ kind: "HumanReply", qId: "q", constraintVer: 0, answer: v });
+  assert.equal(hr("approve"), null);
+  assert.equal(hr("reject"), null);
+  for (const bad of ["yes", "no", "APPROVE", "Approve", "approve ", "", 1]) assert.equal(hr(bad), "HumanReply.answer 缺失或取值非法(应为approve/reject)", JSON.stringify(bad));
+  const blocked = must(apply(running(), { kind: "NeedHuman", qId: "q1", computeId: "cc-1", constraintVer: 0 })).task;
+  const r = apply(blocked, { kind: "HumanReply", qId: "q1", constraintVer: 0, answer: "REJECT" } as unknown as TaskEvent);
+  assert.equal(r.ok, false);
+  const rv = (v: unknown) => validateEvent({ kind: "Review", reviewerId: "r", reviewerModel: "m", round: 1, commit: "c", constraintVer: 0, verdict: v, computeResumable: true });
+  for (const bad of ["yes", "Approve", "REJECT"]) assert.equal(rv(bad), "Review.verdict 缺失或取值非法(应为approve/reject)", bad);
+});
+
+test("R8-TEST-01 审查打回的 computeResumable:每种非法类型都拒绝,经 apply 也不发恢复副作用", () => {
+  const base = { kind: "Review", reviewerId: "astra", reviewerModel: "gpt-6-astra", round: 1, commit: "abc", constraintVer: 0, verdict: "reject" };
+  assert.equal(validateEvent({ ...base, computeResumable: false }), null);
+  for (const bad of [undefined, null, "false", "true", 0, 1, [], {}]) {
+    const e = { ...base, computeResumable: bad } as unknown as TaskEvent;
+    assert.equal(validateEvent(e), "Review.computeResumable 缺失或取值非法(应为布尔)", JSON.stringify(bad));
+    assert.equal(apply(inReview(), e).ok, false, JSON.stringify(bad));
+  }
+});
+
+test("R8-TEST-01 非对象与非字符串 kind 的拒绝原因精确", () => {
+  for (const bad of [null, undefined, 1, "Claim", [], [{ kind: "Claim", by: "u" }]]) assert.equal(validateEvent(bad), "事件不是对象", String(bad));
+  for (const k of [1, 0, true, null, {}, []]) assert.equal(validateEvent({ kind: k, by: "u" }), "事件种类缺失或不是字符串", JSON.stringify(k));
+});

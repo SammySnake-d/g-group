@@ -739,3 +739,92 @@ node "$E/independent-probes.mjs" "$PWD"
 ### 第七轮本地门禁的实际结果
 
 写入 reject 收据后运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`：exit 1。`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER` 通过。`G-PROVENANCE` 实际报告当前已落盘会话中没有输出等于本轮 hash 的调用、审查那轮厂商认不出；活动轮次尚未落盘，本轮 hash 命令与原始 rollout 的实际模型已分别实查，**不声称来源门禁通过**。当前轮记录落盘后由原任务复跑，不伪造记录。原始输出见证据目录 `gates-after.log`。
+
+---
+
+# 第八轮 · Codex 独立复现（2026-11-06）
+
+## 结论：reject
+
+`4cd80a3f302e913f62cbcd871c579847ea0ab418` 的 150 项原样测试、189 项作者变异，以及第七轮缺 taskId 和未来交付代次的主要修复路径均可复现；但新 `validateEvent(e: unknown)` 对某些**可由标准 JSON.parse 产生的未知 kind** 会抛 `TypeError`，而不是返回拒绝。自造 10 项变异有 9 项存活。审查只运行纯函数及隔离副本，没有启动真实服务、发送卡片或修改产品代码；返修交回 Claude Code，不合并 PR。
+
+- 审查会话 `codex:5fd2f15b-443d-4c5b-a287-dfa6fe248103`，原始 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI）；作者会话涉及目标仓库的实际模型为 `claude-opus-5-5`（Anthropic，不同渠道前缀），跨厂商、无豁免。
+- 普通独立 HTTPS clone；`.git` 与 common dir 均为该副本自己的目录。`origin/feat/domain-core=afd02560f9546147da380382404eb6106222a9b8`，与 HEAD 的 merge-base 为 `133cf7abcf6c897653f5b91647202c4ac963f231`；二者只差 PR #2 的审查/收据文件。
+- 仓库根目录执行 `node scripts/gates/run-all.ts --hash --branch=feat/task-lifecycle --base=origin/feat/domain-core`，原样输出：
+
+```text
+673839576013644b72eae0107b98fa014eb8e8808dbf8441474ef94cc3cc06d4
+```
+
+- 原始日志、独立行为测试、375 项形状矩阵、旧 U02 隔离等价对照、10 个变异补丁及测试/typecheck/比较结果：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review8-evidence-5fd2f15b/`。
+
+## 一、独立执行
+
+| 操作 | 实测结果 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均 exit 0；Node `v25.8.1` / npm `11.11.0` |
+| `npm test` | exit 0，150 通过、0 失败、0 跳过 |
+| 红提交 `889050e8a2d37dc3c411d6f2ef71d27aefa30691` 完整具名测试 | exit 1，23 通过、127 具名失败：126 条报“未实现”、1 条 TABLE undefined；红绿测试文件相同。空壳红是激活证据，不是 127 条各自的缺陷复现 |
+| 红测试配旧版 `a425387` 实现，在另一隔离副本运行 | exit 1，142 通过、8 具名失败；与 `packages/domain/proof/red-against-a425387.tap` 的失败名称集合完全一致。旧版不导出新符号，为避免文件级加载失败，**在隔离副本追加一行恒返回 null 的 `validateEvent` 桩**；其余旧实现原样，不能称为未经修改的旧实现运行 |
+| 作者 `node packages/domain/proof/mutations.mjs` | exit 0，原样 150 绿，189 项出现具名失败；W01–W11 均被杀；文件级失败不算杀死 |
+| 本轮独立形状矩阵 | 15 种事件、375 项独立期望检查；372 项符合预期，3 个 JSON 可表示的未知 kind 抛 TypeError，脚本 exit 1 |
+| 本轮独立行为测试 | **3 红、2 绿**：同一 JSON 异常 kind 分别经 `validateEvent`、`apply`、`applyAll` 抛异常；普通未知 kind、合法 Claim/额外字段对照通过 |
+| 本轮独立事件矩阵 | 五类事件缺/错 taskId 被拒且有效正例通过；四个交付状态 × 四类未分配未来事件均拒；已分配旧代次忽略 |
+| 旧 U02 注入点隔离对照 | 去掉 `forDelivery` 的原比对后原测试 150 绿、typecheck 绿；15,552 个状态/代次/commit/任务/事件组合的输出一致。入口先拒未来代次，再忽略所有与当前交付不符的已分配代次，故该后置比对对到达它的事件无额外作用；有限组合结果与代码路径均支持作者将其判为等价变异、转而测试入口，不把“旧变异存活”误报为当前缺陷 |
+| 自造 H01–H10，逐项跑完整测试和 typecheck | **9 项存活**（每项 150 绿、typecheck exit 0）；H10 阳性对照被具名测试杀死且 typecheck 绿 |
+
+旧 U02 对照首次汇总日志时相对路径写错，`tail` 报文件不存在；已从本轮隔离目录实际写入的位置复制并核对完整测试/类型检查日志，不把汇总命令的路径错误当作产品失败。
+
+## 二、必须返修
+
+### R8-CORR-01 · 标准 JSON 的异常 kind 可使入口抛异常，而非拒绝
+
+- `packages/domain/src/task.ts:472–480,488–500`：非字符串 kind 也进入错误消息模板 `${String(kind)}`。当 kind 是从合法 JSON 得到的普通对象、其自有 `toString` 被置为非函数时，JS 无法将其转为原始值，`String(kind)` 自身抛 `TypeError`。
+- 最小输入是标准 JSON，不需要 Proxy、getter 或自定义类：
+
+```json
+{"kind":{"toString":null}}
+```
+
+  本轮对 `JSON.parse` 的结果分别调用 `validateEvent`、`apply(newTask(...), ...)`、`applyAll(newTask(...), [...])`，三者均抛 `TypeError: Cannot convert object to primitive value`，没有返回约定的原因或 `ok:false`。`{"kind":{"toString":{},"valueOf":{}}}` 和 `{"kind":[{"toString":null}]}` 同样复现；普通 `{"kind":{}}` 正常返回“未知的事件种类”，作为阴性对照。
+- 在单独 Node 进程中不加外层捕获调用 `apply`，实测进程 exit 1，栈指向 `task.ts:476`。这证明库调用可抛出而非按契约拒绝，**不声称真实宿主没有全局异常捕获或已发生线上故障**；如果宿主按事件批次处理，异常可能中断该批次，但实际宿主行为未测。
+- 对非字符串 kind 返回固定、不依赖输入强制转换的错误，再仅对安全字符串做枚举比较；若错误消息需要包含不可信值，必须保证格式化本身不会抛异常。补上述真实 JSON、嵌套数组、普通未知字符串/对象、合法事件及 `apply/applyAll` 三条入口对照。拒绝时应返回结构化失败、不改任务、不发 effect。
+
+### R8-TEST-01 · 表驱动校验覆盖改善，但取值域与异常格式化仍有盲区
+
+H01–H09 是**人为单点改坏的变异，不是指控原版已有这些错误**。每项隔离运行 150 项原测试与 typecheck，均 exit 0；各项另对照原版和变异版纯函数结果：
+
+| ID | 可存活的单点变异 |
+|---|---|
+| H01 | 正整数改用 `Number.isInteger`，允许超过 MAX_SAFE_INTEGER 的审查轮次 |
+| H02 / H03 | 非空字符串额外禁止非 ASCII（中文联系人名被拒）；或拒绝未知附加字段（违反本轮允许多余字段的契约） |
+| H04 / H05 | 布尔接受数组或字符串 `"false"`；无效退回请求中的 truthy 值可错误发恢复原实例 effect |
+| H06 / H07 | 枚举接受 `"yes"` 或把 `"APPROVE"` 大小写折叠通过，但后续分支仍按原字符串比较，错误发停止效果 |
+| H08 | `Review.reject` 的 `computeResumable` 仅检查是否存在、不检查布尔；字符串 `"false"` 可被当 truthy 恢复实例 |
+| H09 | 数字 kind 被错误放过，后续 `apply` 对未定义表格抛 TypeError |
+
+H10（非负整数允许超出安全范围）被具名测试杀死且 typecheck 绿，作为阳性对照。原版对上表探针均按契约拒绝或允许；这些是**测试保护不足**，不是原版现有逻辑错误。建议独立覆盖正安全整数上界、合法非 ASCII/额外字段、布尔的数组/对象/`"false"`、枚举多种非法字符串及大小写、reject 条件字段的所有非法类型、数字/对象 kind，且保留合法布尔/枚举与正常事件的阴性对照。
+
+## 三、逐项复核第七轮与未测边界
+
+- **R7-CORR-01：五类事件缺失/null/类型错/空 taskId 形状校验已生效。** 本轮独立矩阵另对五类缺 taskId、错误 taskId 和正确 taskId 实际调用 `apply`，均符合预期；可信身份认证/真实宿主路由仍未测。
+- **R7-CORR-02：未来交付代次在四个交付状态 × 四类事件均被拒；已分配旧代次正常忽略。** 已独立验证 16 格与旧代次对照。
+- **R7-TEST-01：G01–G09 在作者脚本均被具名测试杀死。** 本轮 H01–H09 是新形状校验分支的独立测试盲区；真实 JSON 异常 kind 属 R8-CORR-01 的实际原版缺陷。
+- **停止/失败来源语义需明确：**当前 `StoppedConfirmed(taskId)` 不带 computeId/requestId、以及 `ExecFailed` 不带任何来源，`validateEvent` 均返回 null，`apply` 成功无操作；作者现有测试也明确将这两种形状列为合法。它们不会触发停止或释放，但与源码注释“必须指明哪个实例或启动”可能造成调用方将无来源信号视为成功消费。若产品要求至少一个来源，应在类型/验证与宿主协议中明确；若有意接受为空作噪声，需把该语义与重投/告警责任写清。本轮不把这个已被测试明确选择的边界单独当成必修结论。
+- `retired` 无上界、可信 taskId/computeId/model 的认证、宿主发卡前重校验、旧卡 UI、工作区隔离、CAS/租约、真实恢复与资源回收、T9/T10/T11 改条件及完整状态机均仍未做跨层验证；不把纯函数 effect 当作真实进程或 UI 完成。
+
+复现（仓库根目录；独立行为测试当前预期 3 红、2 绿）：
+
+```sh
+E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review8-evidence-5fd2f15b
+REVIEW_REPO="$PWD" node --test "$E/independent.test.mjs"
+node "$E/independent-matrix.mjs" "$PWD"
+node "$E/independent-shapes.mjs" "$PWD"
+# 各变异补丁及测试/typecheck 输出见 "$E/mutants/H01" … "$E/mutants/H10"。
+```
+
+本轮只追加本报告并修改 `receipts/feat-task-lifecycle.json` 的 review 字段；保留前七轮及作者其余收据字段。返修后继续由不同厂商独立复现。
+
+### 第八轮本地门禁的实际结果
+
+写入 reject 收据后运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`：exit 1。`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER` 通过。`G-PROVENANCE` 实际报告当前已落盘会话中没有输出等于本轮 hash 的调用、审查那轮厂商认不出；活动轮次尚未落盘，本轮 hash 命令与原始 rollout 的实际模型已分别实查，**不声称来源门禁通过**。当前轮记录落盘后由原任务复跑，不伪造记录。原始输出见证据目录 `gates-after.log`。
