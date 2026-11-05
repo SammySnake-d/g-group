@@ -749,3 +749,54 @@ Y04（直接跳过嵌套 schedule 快照）虽然 236 测试绿，但被 lint �
 **回交条件：** Claude Code 在原开发任务落实 CH-27 的领域输入合同、补 CH-28 的代表性测试与校准，并纠正 K55 等价声明的条件；保持第十轮修复、Helper 三入口、定时归属和控制穿透，整合最新依赖基线后重跑门禁并交跨厂商复审。AC-01/31/33/35 整项仍未端到端验收，本轮不声称全部后端或用户故事完成。
 
 **本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 在 `b027c81` / 固定 `24646a2` 下 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 报未找到等于本轮 `reviewed_hash` 的审查工具输出、无法识别该审查轮厂商。本轮会话尚未完整落盘；原生模型上下文可观察，但不冒称来源门禁通过、不伪造记录或豁免，待既有流程在会话落盘后重核（`$E/gates-local-round11.log`）。
+
+---
+
+## 第十二轮：专职开关撤销及第十一轮返修的跨厂商独立复审（2026-11-06）
+
+**结论：reject，交回 Claude Code 原开发任务。** 普通场景下的 Helper 形状检查、承诺回收/撤销和新增功能删除测试通过；但当前实现仍不能满足本轮明确的普通数据与原型污染合同。另有旧联系人对象残留 `focus`、四条被移出变异并非所称等价，以及一条独立单点变异未被现有测试发现。下述污染与旧状态均为进程内夹具，不声称真实宿主已发生污染、生产利用或历史联系人已持久化。
+
+### 固定对象及执行证据
+
+- 被审 PR #4 `feat/contact-helper` HEAD **`f227649a4676716e3851b4ddbc9bd8609f6d864a`**；克隆时 `origin/feat/task-lifecycle=c100498e35a8886648d28823d0dc148626e05b5e`，与本 HEAD 的 merge-base 是 `15f0aab7870aae410c2b152d4bee647c980dc7ec`。独立 HTTPS clone `/tmp/g-group-pr4-review.9nujk7/repo` 的 `.git` 与 common dir 都是该 clone 的 `.git`，不是 linked worktree。
+- 作者 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38` / `claude-opus-5-5`；本审查 `codex:79eeef77-6ea1-40c5-a493-dfd5df4ad452`，原生会话 `turn_context.model=gpt-6.1-terra`。会话身份不代替 G-PROVENANCE 的实际判决。
+- 本会话在仓库根目录运行 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle`，实际原样输出 **`b9a437ad0f1bce9bfc6c1babbc9feeb10d6b0aa80cee809957f001e480a31869`**，与作者声明一致。最初执行因尚未 `npm ci` 缺 `typescript` 退出 1；安装锁定依赖后重跑退出 0。CI run `42105783468` 的 head 正是被审提交，`self-check` 结果 success。
+- 证据目录 **`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round12-SA5x2W`**，下称 `$E`。`npm ci`、typecheck、lint 成功；Node v25.8.1 全量 **258/258 通过、0 skip/todo**（`$E/green-checks.log`）。
+- 红提交 `5b5d30ca6e1dd3c844ef1271086a386f44ca083d` 的 contact/helper 测试实际 **0/78 通过、78 按名失败**，其源码是空壳；不能把这些全说成旧实现的行为故障。保留红提交测试并仅换回其父提交真实 contact/helper 实现的隔离副本是 **77 通过、1 按名失败**，失败的正是新增“联系人没有 focus 字段……”测试，断言 `true !== false`；作者的旧实现 TAP 为同一失败名。绿提交通过（`$E/red.tap`、`$E/red-old.tap`）。
+- 独立重跑作者变异脚本，原样 **258 绿**，保留的 **354/354** 变异各被具名测试发现，退出 0（`$E/author-mutations.log`）；这不等于任何输入或任意变异都已覆盖。
+
+### 必须修复
+
+**CH-29 [High，访问器合同] 描述符判定会把原型链上的 `value` 当成本身的数据属性。** `packages/domain/src/contact.ts:81-89` 用 `"value" in d` 判断 `Object.getOwnPropertyDescriptor` 的返回值；`:133-136` 又读取 `d.value`。在 `Object.prototype.value` 预先为只读 `"global"` 的进程内夹具里，带 `kind` getter 的 `routeHelper` 入口以及带额外 getter 的入口均返回 `ok:true`；无污染对照均明确拒绝，输入 getter 本身调用 0 次（`$E/focused-probe.json`）。即便 getter 没执行，含访问器输入仍被接受，且 `kind` 来自原型而非输入数据，违反本轮“含访问器即拒绝”的明确要求。建议使用**自有属性**判别描述符并读取自有值，补该只读属性及 setter 对照，不以“getter 未调用”替代拒绝断言。
+
+**CH-30 [High，合法输入稳定性] `Object.defineProperty` 所用普通对象描述符会继承 `get`/`set`。** `packages/domain/src/contact.ts:105,138` 用普通对象字面量作属性描述符；若 `Object.prototype.get` 或 `set` 预先有 setter 或只读属性，合法普通输入也会在定义快照字段时抛 `TypeError`。例如 `{kind:"global", get:"legitimate-extra"}` 在无污染时正常路由；将同名 `Object.prototype.get` 定为 setter 后 `routeHelper` 抛 `Invalid property descriptor`，setter 调用 0 次（`$E/focused-probe.json`；其余字段和两种污染方式的矩阵见 `$E/input-probe.json`）。这不是下游已发生崩溃的证据，但直接推翻合法输入不受同名污染影响和 `routeHelper` 不抛异常的合同。建议构造不继承原型的属性描述符，覆盖对象和数组写入，补两种属性名 × setter/只读的正常输入对照。
+
+**CH-31 [High，字段形状校验] `spec.optional` 会从 `Object.prototype` 继承。** `packages/domain/src/contact.ts:131-136` 对未声明 `optional` 的必填字段直接读取 `spec.optional`。若 `Object.prototype.optional` 是只读 `true`，缺 `name` 的 `addContact` 被接受并生成没有 name 的联系人；缺 `id` 的 Helper caller 则在 `packages/domain/src/helper.ts:38-39` 触发 `undefined.trim()` 异常。无污染的同一输入均返回有理由的拒绝（`$E/focused-probe.json`）。建议仅认 schema 自有的 `optional` 标记或把内部 schema 制成不受原型影响的数据，并测试所有必填字段的缺失/错类型及正常对照。
+
+**CH-32 [High，公开入口对象合同] 状态参数未按收据声明的“所有公开入口的对象入参”检查。** `packages/domain/src/contact.ts:186-195` 只规范化 `grantTool` 的第二个参数，直接使用第一个 `Contact`；`:145-149` 展开该状态。把真实返回的联系人复制为普通对象并将其声明的 `memory` 字段改为 getter，调用 `grantTool` 返回 `ok:true`，getter 被调用一次并把其值写入输出；以 Proxy 包装同一状态也被接受，普通状态对照成功（`$E/state-input-probe.json`）。本次没有证明宿主会提供这类状态，但这与 `receipts/feat-contact-helper.json:12,43` 无例外的公开入口对象合同不一致。请按该合同处理状态参数及相关入口，或先由需求方明确“领域内部状态为可信输入”的收缩边界，并让接口、收据和测试一致；不能继续声称所有对象都已拒绝访问器/Proxy。
+
+**CH-33 [Medium，专职字段移除] 旧联系人对象可把 `focus` 带回新输出。** 新建联系人没有 `focus`，运行时也不再导出 `setFocus`/`decideUnderFocus`；但 `packages/domain/src/contact.ts:145-149` 的 `{...c}` 保留状态中的额外自有字段。用红提交父版本实际创建带 `focus.onlyCommitmentId` 的联系人，交给新版本的 `commit`、`settleTask`、`revokeCommitment`、`updateContact` 后，四个返回的联系人均仍带原 `focus`（`$E/legacy-contact-probe.json`；全是隔离夹具）。当前实现没有旧锁的执行函数，不据此断言锁仍生效或已有真实持久数据；但“从联系人数据结构完全去掉”在旧对象输入上不成立。请明确旧状态的接入/迁移边界，在应支持旧状态的路径去掉该字段并测回收、撤销；若确无旧数据且禁止旧形状，需明确并验证这一边界。
+
+**CH-34 [Medium，变异删除理由] 四个“等价”删除理由被当前声明支持的输入推翻。** `receipts/feat-contact-helper.json:43` 将 K40/K41/K42 和 CY02 归为校验后重读数据仍等价。按历史定义在独立副本逐一注入，typecheck/lint 均通过，但全部被现有具名测试及独立 oracle 杀死（`$E/equivalence-mutations.json`）：
+
+| 原变异 | 非等价原因 | 现有测试 |
+|---|---|---|
+| K40 / K41 | 输入数组自身覆盖 `Symbol.iterator` 时，规范化按下标复制，但变异重新 spread 原数组：分别可把已校验工具改成 `run_command`、凭据引用改成 `plaintext`。这是收据明确声称支持、`contact.test.ts:761-780` 也实测的特殊对照，不是说当前源码发生越权。 | 均按名失败 |
+| K42 | 缺省 placement 时，变异重读输入可继承 `Object.prototype.placement`，不再默认 `local`。 | 污染对照按名失败 |
+| CY02 | 缺省 memory 时，变异重读 patch 可继承 `Object.prototype.memory` 并写入联系人。 | 污染对照按名失败 |
+
+应恢复这些可区分变异或逐项修正分类及证据，而不是将其称为等价；同时保留对应正反测试。
+
+**CH-35 [Medium，测试标定] 一条违反“任何访问器均拒绝”的独立单点变异存活。** 在隔离副本将 `packages/domain/src/contact.ts:86` 的 `Reflect.ownKeys` 改为 `Object.keys`，跳过不可枚举及 Symbol 属性；typecheck、lint 和全部 **258** 测试仍通过，但非枚举 `debug` getter 的独立 oracle 原样拒绝、变异副本接受（getter 均未调用）。这是人为变异，不是当前源码对无污染的该输入已有错误。X02（继承属性）、X03（Helper 身份）、X04（回执作用域）三项独立单点故障均被现有具名测试杀死（`$E/independent-mutations.json`）。建议补非枚举及 Symbol 访问器的逐入口正反测试，并把可区别故障纳入标定。
+
+### 删除理由、其余验收与门禁
+
+- 按用户 #2273 撤销，原 M41、M42、I10、CK04、CK05、CK06、CN05、CK16、CY03、CZ03、CV04、CK51、CK53、CK54、CK56、CK57、CK58、AA03 这 **18 项**分别针对已删除的专职锁、专职意图或其锁清理，移除理由成立；不代表承诺的撤销与回收也可移除。原 CK55、CY05 依赖已删除的专职意图分支，也应以功能已撤销而非无条件等价说明。CK46、CK47、CY01、CY06 的重读只有在普通稳定数据、可信且不产生副作用的状态等条件下可作等价判断；本轮未穷举非常规输入。CK64 因快照为 null 原型且最终冻结，在该实现及稳定 schema 条件下不经过继承 setter，理由有条件成立。其余四项见 CH-34。
+- 独立生命周期对照（`$E/lifecycle-probe.json`）：先确认后终态、先终态后确认均从 active 变 done；有效承诺可撤销成 revoked，重复撤销及撤销已回收承诺被拒；定时承诺不随任务终态回收。仅为纯函数行为，不等于实际入库回执、调度器或跨层验收。AC-01、AC-31、AC-33、AC-35 整项仍未测；本轮依用户指示不再核对已撤销的专职子判据。
+- 分支内 `docs/spec/验收文档-v0.1.md:155` 仍有旧专职条文及埋雷，尚未标注撤销；`receipts/feat-contact-helper.json:17` 却说该文档已记为删除。应以用户 #2273 为准，不恢复旧功能，但须由文档/开发负责人对齐版本或纠正收据，不能把该分支旧文档当作已同步证据。
+- 自编独立 git 夹具经真实 `run-all.ts --local` 调用：正常夹具 **8/8 门禁通过、exit 0**；八个单独失败输入分别让目标门禁判失败、exit 1：G-TRACE 不存在的 AC、G-REVIEW reject、G-RED 红提交测试已绿、G-STUB 吞空桩异常、G-TAUTO 恒真断言、G-WORKFLOW 写权限、G-LAYER 反向依赖、G-PROVENANCE 审查记录无匹配 hash。输入构造、逐项结果和原始输出分别在 `$E/gate-probe.mjs`、`$E/gate-probe-results.json`、`$E/gates/`。来源记录是**独立夹具**，不冒充本轮真实会话的来源验收；这些有限双侧样例也不证明门禁无其他绕过。
+- 远端 base 相对 `15f0aab` 已前移含任务实现/测试，而非仅报告；GitHub 返回 PR `DIRTY`。不改工作区执行 `git merge-tree --write-tree HEAD origin/feat/task-lifecycle` 退出 1，冲突在 `packages/domain/proof/mutations.mjs` 和 `mutations.txt`（`$E/merge-tree.log`）。返修须整合当时最新基线并重新运行/校准；本审查不替作者处理冲突。
+
+**回交条件：** 修复 CH-29–CH-31 的实际输入错误，解决 CH-32 的状态信任边界与 CH-33 的旧状态字段问题，校正 CH-34 的变异分类并补 CH-35 校准，纠正验收文档/收据不一致，整合最新基线后重算 hash 并重提跨厂商独立复审。本次不改产品代码。
+
+**本轮本地门禁：** 在被审 HEAD、上述最新本地基线和本轮收据下实跑 `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle`，exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦截；G-PROVENANCE 报本轮 `turns.jsonl` 尚不存在，故本轮实际来源核对**未通过**，不得用上面的合成夹具结果代替。hash 命令已在本会话实际运行且有原样输出，待会话记录落盘后由既有流程重核（`$E/local-gates.log`）。
