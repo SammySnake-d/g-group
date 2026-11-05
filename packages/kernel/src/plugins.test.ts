@@ -1036,12 +1036,13 @@ async function pollutedAsync<T>(target: object, key: string, mode: "setter" | "r
   }
 }
 
-/** 跨 await 的 Array.prototype 污染会波及测试运行器自己的内部数组,所以放进独立子进程:子进程临时污染、拉取、复原后输出 JSON */
-function pullUnderArrayPollution(mode: "setter" | "readonly", batch: unknown[]): { calls: number; err?: string; ok?: boolean; events?: string[]; rejected?: unknown[]; ownEvents?: boolean[]; ownRejected?: boolean[] } {
+/** 在独立子进程里临时污染 Array.prototype[0] 后拉取一次:跨 await 的污染会波及测试运行器与 async_hooks 自己的内部数组,
+ *  只能放进不带测试运行器的子进程。子进程污染、拉取、复原后把结果与自有下标情况输出成 JSON。 */
+function pullUnderArrayPollution(mode: "setter" | "readonly", batch: unknown[]): unknown {
   const code = `
     import { createRegistry } from ${JSON.stringify(new URL("./plugins.ts", import.meta.url).href)};
     const batch = ${JSON.stringify(batch)};
-    const reg = createRegistry({ now: () => 0 });
+    const reg = createRegistry({ now: () => ${T0} });
     reg.register({ kind: "data-source", id: "s", sources: ["g1"], pull: async () => batch });
     const d = Object.create(null); d.configurable = true; let calls = 0;
     if (${JSON.stringify(mode)} === "setter") d.set = () => { calls++; }; else { d.value = 17; d.writable = false; }
@@ -1049,22 +1050,34 @@ function pullUnderArrayPollution(mode: "setter" | "readonly", batch: unknown[]):
     let r, err;
     try { r = await reg.pull("s", "g1"); } catch (e) { err = String(e); } finally { delete Array.prototype[0]; }
     const own = (a) => Array.from({ length: a.length }, (_, i) => Object.hasOwn(a, i));
-    console.log(JSON.stringify(err ? { calls, err } : { calls, ok: r.ok, events: r.events.map((e) => e.origin.nativeId), rejected: r.rejected, ownEvents: own(r.events), ownRejected: own(r.rejected) }));
+    console.log(JSON.stringify(err ? { calls, err } : { calls, result: r, ownEvents: own(r.events), ownRejected: own(r.rejected) }));
   `;
   return JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e", code], { encoding: "utf8" }));
 }
 
-test("Array.prototype[0] 上有 setter 或只读值时,拉取一条、多条、含拒收与空结果都返回自有下标与真实内容(R6-02 阳性埋雷)", () => {
-  const batches: [string, unknown[], string[], unknown[]][] = [
-    ["一条", [ev()], ["m-1"], []],
-    ["多条", [ev({ nativeId: "m-1" }), ev({ nativeId: "m-2" })], ["m-1", "m-2"], []],
-    ["含拒收", [{ nativeId: "" }, ev({ nativeId: "m-3" })], ["m-3"], [{ index: 0, reason: "缺 nativeId" }]],
-    ["空", [], [], []],
+test("Array.prototype[0] 上有 setter 或只读值时,拉取一条、多条、含拒收与空结果都返回自有下标与真实内容(R6-02 阳性埋雷)", async () => {
+  const batches: [string, unknown[]][] = [
+    ["一条", [ev()]],
+    ["多条", [ev({ nativeId: "m-1" }), ev({ nativeId: "m-2" })]],
+    ["含拒收", [{ nativeId: "" }, ev({ nativeId: "m-3" })]],
+    ["空", []],
   ];
-  for (const mode of ["setter", "readonly"] as const) for (const [name, batch, events, rejected] of batches) {
-    const r = pullUnderArrayPollution(mode, batch);
-    assert.deepEqual(r, { calls: 0, ok: true, events, rejected, ownEvents: events.map(() => true), ownRejected: rejected.map(() => true) }, `${mode}/${name}`);
+  for (const [name, batch] of batches) {
+    // 基线:同一批次在无污染的本进程里直接拉取
+    const reg = createRegistry({ now: () => T0 });
+    reg.register({ kind: "data-source", id: "s", sources: ["g1"], pull: async () => batch });
+    const base = await reg.pull("s", "g1");
+    assert.equal(base.ok, true, name);
+    if (!base.ok) continue;
+    const expected = JSON.parse(JSON.stringify(base));
+    for (const mode of ["setter", "readonly"] as const) {
+      assert.deepEqual(pullUnderArrayPollution(mode, batch), {
+        calls: 0, result: expected, ownEvents: base.events.map(() => true), ownRejected: base.rejected.map(() => true),
+      }, `${mode}/${name}`);
+    }
   }
+  const sample = await (async () => { const reg = createRegistry({ now: () => T0 }); reg.register(tg([{ nativeId: "" }, ev({ nativeId: "m-3" })])); return reg.pull("telegram", "g1"); })();
+  assert.deepEqual(sample.ok && [sample.events.map((e) => e.origin.nativeId), sample.rejected], [["m-3"], [{ index: 0, reason: "缺 nativeId" }]]);
 });
 
 test("Object.prototype 上有 get/set/value/writable/enumerable/configurable 的 setter 或只读值时,注册、拉取、发送照常成功(R6-01 阳性埋雷)", async () => {
