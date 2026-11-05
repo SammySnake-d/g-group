@@ -477,3 +477,49 @@ Helper 三入口 × 本人/他人/同 ID 联系人 9 格、定时归联系人且
 **回交条件：** Claude Code 在原开发任务将有限资产类别矩阵和同类多资产正反对照纳入项目测试与校准，保留现有实现及先前已验证的 Helper、定时和控制行为；按最新 PR #3 基线重新运行相关门禁并交跨厂商独立复审。用户要求的后端持续实现、验收清单及用户故事闭环仍在原开发流程中推进；本审查不创建或冒称完成该全局目标。
 
 **本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 在 `2aff4ca` / `fdfecb1` 下 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 未找到等于本轮 `reviewed_hash` 的审查工具输出，也未识别该审查轮厂商。当前轮尚未完整写入会话 `turns.jsonl`；原生 rollout 可观察本轮模型，但不能冒充该门禁通过。会话落盘后由既有流程重核，不伪造记录或豁免（`$E/gates-local.log`）。
+
+---
+
+## 第七轮：第六轮测试返修后的跨厂商独立复审（2026-11-05）
+
+**结论：reject，交回 Claude Code 原开发任务补齐 Compute 说明的验证后快照测试和校准。** CH-16 已闭合：当前实现不变，有限资产类别矩阵正确，原 W01–W05 均被现有测试杀死。本轮未复现当前实现泄露凭据、越权授工具或丢群规；拒绝依据是独立变异证实现有测试不能检测**验证通过后调用方修改原数组**使这些安全边界失效的回归。建议一次表驱动补齐三个输入数组的快照对照，不把每个变异拆成零碎实现任务。本轮结束不是整个后端或用户故事已验收完成。
+
+### 固定对象、来源与独立复现
+
+- 按用户明确要求审查 PR #4 `feat/contact-helper` 的 HEAD `fe69b70a609b8bc01fc55742f04e091ee560f943` 与固定基线 `356d012cdc3cc0dc22ee0c6923600465ba06c524`。普通独立 clone 初始看到远端 `origin/feat/task-lifecycle=78cecbb5463dbafe8fe89775d163a3ee964a3b68`；仅在该 clone 中将 `refs/remotes/origin/feat/task-lifecycle` 固定到用户指定的 `356d012` 供本轮命令使用，**没有修改远端分支**。固定基线已包含于受审 HEAD，不改工作区的试合并 exit 0（`$E/merge-tree-pinned.log`）。
+- 用户已说明较新 PR #3 基线稍后合入。仅作提示：对克隆时的 `78cecbb` 不改工作区试合并 exit 1，`packages/domain/proof/mutations.mjs` 与 `packages/domain/proof/mutations.txt` 冲突（`$E/merge-tree-remote.log`）；不把该新基线混进本轮 CH-16 判断，等原负责人整合后重跑测试、变异、哈希与跨厂商审查。
+- 红提交 `94e4babf9fe05c58ad412b2cc5af30bc19c282af`、绿提交 `b5adcceaf912e4bf8524323a9a41b9c6336f5918`；合并 `05cb8cdfd42e3efb6297931a1f6f84b8e2a9797b` 的父提交是 `b5adcce` 与 `356d012`；`fe69b70` 相对合并只改收据基线号。`contact.ts`、`helper.ts` 在 `39a849a` 与本轮 HEAD 的 Git blob 分别均为 `c3909ab78bf83385ede39703f4c73045d29dd083`、`8c69b2b9d8162baff516325e89dfe804450bcebf`，实现未改。
+- 作者 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38` 的生产模型为 `claude-opus-5-5`（Anthropic）；独立审查 `codex:4d37f5a5-0839-4adc-8afc-9b481602df5a`，原生当前 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI），无豁免。实际模型记录不等同于 G-PROVENANCE 已通过。
+- 仓库根目录实跑 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 的原样 stdout：`87d31162b015053b890602ca075aa284484f6402bbc75ff22e50a5fca0b47ceb`，该 `origin` 本地引用按上面的用户指令固定为 356d012。
+- 本轮证据根 `$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round7-gCtuI8`；`$E/repo` 为普通独立 clone，`.git` 与 common dir 均为该 clone 的 `.git`。被审源码与测试未改；独立变异只写 `$E/mutants/`。
+- `npm ci` exit 0；Node v25.8.1 下 typecheck、lint、test 均 exit 0，**176/176**、无 skip/todo；Node v22.22.0 下三项也均 exit 0（`$E/npm-ci.log`、`$E/{typecheck,lint,test}.log`、`$E/node22-*.log`）。
+- 独立检出红提交并 `npm ci`：全量测试 115 绿 / 61 红；目标文件 TAP 的 61 项均按名字失败、原因均为 `未实现`，不是加载失败（`$E/red-tests.tap`、`$E/red-all-tests.log`）。红提交把既有实现置空；隔离副本保留红测试、仅恢复其父提交真实源码，**61/61 绿**（`$E/red-prior-overlay.tap`），符合本轮实际是给正确实现补测试、而非修源码缺陷。故不能单凭空壳红声称旧实现存在 CH-16 运行错误；旧的 W01–W04 故障变异在新测试下被杀才是针对测试缺口的有效正向证据。
+- 自己运行作者 `node packages/domain/proof/mutations.mjs`：exit 0，原样 176 绿、**224/224** 变异被具名测试杀死（`$E/author-mutations.log`）。源码数组 contact/helper 93、其他 131，编号无重复；原第六轮 W01–W05 的注入前后字符串与本轮清单逐一一致（`$E/mutation-origin-audit.log`）。
+
+### CH-16 已闭合及保留行为
+
+原样运行第六轮独立 `oracles-round6.mjs`，W01–W05 **5/5 PASS**；之前的 12 格资产矩阵、第五轮 Z01–Z05、三承诺三任务的 1,000 个固定种子场景/30,000 次状态检查，以及 Helper 三入口、定时归属、职责内外与控制穿透等纯函数探针均通过（`$E/previous-oracles.log`、`$E/asset-matrix.log`、`$E/earlier-oracles.log`、`$E/state-random.log`、`$E/safeguards.log`）。新增仓库测试独立声明三类，逐格检查 3×3 同名组合、每类两个不同名资产及派出、前缀顺序和直接工具双向互斥。第 7 栏关于同名异类需宿主采用不同名称的限制仍属待集成边界，不把它说成真实适配器或整项 AC-33 已通过。
+
+### 必须补齐的测试门禁
+
+**CH-17 [High，R-05 / AC-33④] Compute 说明的授权与凭据检查缺少验证后快照回归。** `packages/domain/src/contact.ts:215-225` 当前将 `rules`、`tools`、`credentialRefs` 都复制并冻结；本轮实际探针先传入合法可变数组，再修改调用方数组，原实现返回的说明保持不变（`$E/clean-snapshot.json`）。因此**当前实现没有观察到规则丢失、越权工具进入或明文凭据进入**。
+
+但在隔离副本分别把三个字段的复制替换为原数组引用，仅改一处源码、不改测试，typecheck/lint 和 **176 项现有测试仍全绿**，独立 oracle 红：
+
+| ID | 单点变异 | 验证后修改调用方数组的实测后果 |
+|---|---|---|
+| V06 | `rules` 不复制 | 删除输入规则后，说明丢失已生效的硬约束 |
+| V07 | `tools` 不复制 | 原本只授权 `get_weather`，随后调用方追加未授权 `run_command`，说明也出现它 |
+| V08 | `credentialRefs` 不复制 | 原本只有 `vault://mail/1`，随后调用方追加 `plaintext-secret`，说明也出现明文 |
+
+这些后果只发生于相应**人为变异副本**，不是当前源码或真实 Compute 进程的实测泄露。它们分别直接触及母规格 `docs/spec/需求文档.md:75-78,106` 的授权子集、凭据引用和生效约束不静默丢失；现有静态输入检查能被“校验后改调用方数组”绕过的变异骗过，不能作为这些具体边界已持续校准的依据。建议一次表驱动测试：传入合法可变数组、生成说明、分别修改原 `rules/tools/credentialRefs`，断言说明仍保持原规则、授权子集与引用；再将 V06–V08 的正向故障纳入 R-05。可用复制、持有权约束等满足安全合同，不必把 `Object.freeze` 的实现形式本身当验收目标。
+
+本轮另有 V01–V04 被现有测试杀死（互斥、混合授权和已结束承诺）；V05 将同名异类错误理由的名字硬编码为 `research` 后存活，属于错误诊断覆盖，建议顺手以非 `research` 名称补对照，不作为本轮安全门禁的独立阻塞项。精确替换、typecheck/lint/test/oracle 退出码在 `$E/independent-mutations-round7.json`；执行器、独立判据、原始日志为 `$E/independent-mutations-round7.py`、`$E/oracles-round7.mjs`、`$E/{clean,V01..V08}-{typecheck,lint,test,oracle}.log`，三字段的实际前后快照为 `$E/{clean,V06,V07,V08}-snapshot.json`。224 个作者变异被杀的结果真实，但不意味着未列的快照故障也被持续测试捕获。
+
+### 收据边界与交回
+
+第 7 栏关于同名异类需宿主改名、不同名同能力不可识别、工具黑名单和凭据引用仅形状、cron 不验范围、回执作用域由宿主判定、非法回执静默不改状态及无真实 DST/Helper 内核/插件接线等边界，与本片实现一致；224 个变异数量及 93/131 分组已复现。它没有声称 224 项穷尽所有故障；本轮 CH-17 是额外发现的**测试盲区**。AC-01/31/33/35 整项继续标未测是合理分层。
+
+**回交条件：** Claude Code 在原开发任务一次补齐三个可变入参的快照/授权表驱动测试和对应正反校准，保留现有正确实现及已验证的 Helper、定时和控制行为；按用户所说在 PR #3 最新基线整合后重新运行门禁并交跨厂商独立复审。用户要求的后端持续实现、验收清单和用户故事闭环仍由原开发流程推进，本审查不创建或冒称完成该全局目标。
+
+**本轮本地门禁：** 在用户指定并于本 clone 固定的 `fe69b70` / `356d012` 下，`node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 实测 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 未找到等于本轮 `reviewed_hash` 的审查工具输出，也未识别该审查轮厂商。当前轮尚未完整写入会话 `turns.jsonl`；原生 rollout 可观察模型，但不能冒充该门禁通过。会话落盘后由既有流程重核，不伪造记录或豁免（`$E/gates-local-pinned.log`）。
