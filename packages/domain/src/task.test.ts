@@ -5,7 +5,7 @@
 // AC-19 确认卡绑定版本,卡片是不可变快照(CORR-04)。
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { apply, applyAll, type Effect, EVENT_KINDS, type EventKind, newTask, type Outcome, STATES, TABLE, type Task, type TaskEvent, type TaskState, validateEvent } from "./task.ts";
+import { apply, applyAll, type Effect, EVENT_KINDS, type EventKind, newTask, type Outcome, STATES, TABLE, type Task, type TaskEvent, type TaskState, normalizeEvent, validateEvent } from "./task.ts";
 
 const must = (r: Outcome) => {
   if (!r.ok) throw new Error(r.reason);
@@ -1527,4 +1527,139 @@ test("R8-TEST-01 审查打回的 computeResumable:每种非法类型都拒绝,�
 test("R8-TEST-01 非对象与非字符串 kind 的拒绝原因精确", () => {
   for (const bad of [null, undefined, 1, "Claim", [], [{ kind: "Claim", by: "u" }]]) assert.equal(validateEvent(bad), "事件不是对象", String(bad));
   for (const k of [1, 0, true, null, {}, []]) assert.equal(validateEvent({ kind: k, by: "u" }), "事件种类缺失或不是字符串", JSON.stringify(k));
+});
+
+// ---- 第九轮 ----
+/** 事件对象:own 是自有字段,inherited 放在原型上(模拟继承来的字段)。 */
+const withProto = (own: Record<string, unknown>, inherited: Record<string, unknown>): TaskEvent => Object.assign(Object.create(inherited), own) as TaskEvent;
+
+test("R9-CORR-01 ExecFailed 的 computeId 只从原型继承:不停当前实例;省略同样不停;自有才停", () => {
+  const t = running();
+  const inh = must(apply(t, withProto({ kind: "ExecFailed" }, { computeId: "cc-1" })));
+  assert.equal(inh.task.state, "T3_Running");
+  assert.deepEqual(inh.effects, []);
+  const omit = must(apply(t, { kind: "ExecFailed" }));
+  assert.equal(omit.task.state, "T3_Running");
+  assert.deepEqual(omit.effects, []);
+  const own = must(apply(t, { kind: "ExecFailed", computeId: "cc-1" }));
+  assert.equal(own.task.state, "T9_StopRequested");
+  assert.deepEqual(own.effects, [{ kind: "stop-compute", computeId: "cc-1" }]);
+  const batch = must(applyAll(t, [withProto({ kind: "ExecFailed" }, { computeId: "cc-1" }), { kind: "NeedHuman", qId: "q", computeId: "cc-1", constraintVer: 0 }]));
+  assert.equal(batch.task.state, "T4b_BlockedOnHuman");
+  assert.deepEqual(batch.effects, []);
+});
+
+test("R9-CORR-01 StoppedConfirmed 的 computeId 只从原型继承:不确认停止、不释放;省略同样;自有才确认", () => {
+  const t = STOPPING();
+  for (const ev of [withProto({ kind: "StoppedConfirmed", taskId: "t1" }, { computeId: "cc-1" }), { kind: "StoppedConfirmed", taskId: "t1" } as TaskEvent]) {
+    const r = must(apply(t, ev));
+    assert.equal(r.task.state, "T9_StopRequested");
+    assert.deepEqual(r.effects, []);
+  }
+  const own = must(apply(t, SC({ computeId: "cc-1" })));
+  assert.equal(own.task.state, "T10_Cancelled");
+  assert.deepEqual(own.effects, [{ kind: "release-slot", computeId: "cc-1" }]);
+});
+
+test("R9-CORR-01 同厂商审查的 waiverBy 只从原型继承:不算豁免,照样拒绝;自有提出者豁免才记 Waived", () => {
+  const base = { kind: "Review", reviewerId: "argon", reviewerModel: "claude-sonnet-5-5", round: 1, commit: "abc", constraintVer: 0, verdict: "approve" };
+  const inh = apply(inReview(), withProto(base, { waiverBy: "u1" }));
+  assert.ok(!inh.ok && /豁免/.test(inh.reason));
+  const omit = apply(inReview(), base as TaskEvent);
+  assert.equal(omit.ok, false);
+  const own = must(apply(inReview(), { ...base, waiverBy: "u1" } as TaskEvent));
+  assert.equal(own.task.reviewGate, "waived-by-user");
+  assert.equal(own.effects[0]?.kind, "send-card");
+});
+
+test("R9-CORR-01/02 Claim 不声明 taskId:继承的或自有的多余 taskId 都被丢弃,正常认领", () => {
+  for (const ev of [withProto({ kind: "Claim", by: "claude" }, { taskId: "B" }), { kind: "Claim", by: "claude", taskId: "B" } as unknown as TaskEvent, { kind: "Claim", by: "claude" } as TaskEvent]) {
+    const r = must(apply(newTask("t1", "u1"), ev));
+    assert.equal(r.task.state, "T2_Claimed");
+    assert.equal(r.task.owner, "claude");
+  }
+});
+
+test("R9-CORR-02 标准 JSON 的多余 taskId(含无法转字符串的对象)不让 apply/applyAll 抛异常,照常认领", () => {
+  for (const j of ['{"kind":"Claim","by":"author","taskId":{"toString":null}}', '{"kind":"Claim","by":"author","taskId":"B"}', '{"kind":"Claim","by":"author","extra":1}']) {
+    const e = JSON.parse(j) as TaskEvent;
+    assert.equal(validateEvent(e), null, j);
+    assert.equal(must(apply(newTask("t1", "u1"), e)).task.owner, "author", j);
+    assert.equal(must(applyAll(newTask("t1", "u1"), [e])).task.state, "T2_Claimed", j);
+  }
+  const bad = JSON.parse('{"kind":"UserAccept","by":"u1","deliveryRound":1,"commit":"abc","taskId":{"toString":null}}') as TaskEvent;
+  const r = apply(delivered(), bad);
+  assert.ok(!r.ok && r.reason === "UserAccept.taskId 缺失或取值非法(应为非空字符串)");
+});
+
+/** 每个 getter 读一次计数;values 依次返回,用完后抛错。 */
+const getterEvent = (fixed: Record<string, unknown>, key: string, values: unknown[], reads: { n: number }) => {
+  const o: Record<string, unknown> = { ...fixed };
+  Object.defineProperty(o, key, { enumerable: true, get() { const i = reads.n++; if (i >= values.length) throw new Error("第二次读取"); return values[i]; } });
+  return o as unknown as TaskEvent;
+};
+
+test("R9-CORR-03 Claim.by 的 getter 第二次会变值:只读一次,按首次值认领", () => {
+  const reads = { n: 0 };
+  const r = must(apply(newTask("t1", "u1"), getterEvent({ kind: "Claim" }, "by", ["claude", 42], reads)));
+  assert.equal(reads.n, 1);
+  assert.equal(r.task.owner, "claude");
+  assert.deepEqual(r.effects, [{ kind: "spawn-compute", withHandoff: false, requestId: "t1#L0", constraintVer: 0 }]);
+});
+
+test("R9-CORR-03 UserReject.computeResumable 的 getter 先 false 后 \"false\":只读一次,按不可恢复新开", () => {
+  const reads = { n: 0 };
+  const r = must(apply(delivered(), getterEvent({ kind: "UserReject", by: "u1", ...D1 }, "computeResumable", [false, "false"], reads)));
+  assert.equal(reads.n, 1);
+  assert.equal(r.task.computeId, null);
+  assert.equal(r.effects[0]?.kind, "spawn-compute");
+});
+
+test("R9-CORR-03 kind 的 getter 第二次读取抛错:只读一次,按首次值处理;首次就抛错则拒绝", () => {
+  const reads = { n: 0 };
+  const r = must(apply(newTask("t1", "u1"), getterEvent({ by: "claude" }, "kind", ["Claim"], reads)));
+  assert.equal(reads.n, 1);
+  assert.equal(r.task.state, "T2_Claimed");
+  const reads2 = { n: 0 };
+  const r2 = apply(newTask("t1", "u1"), getterEvent({ by: "claude" }, "kind", [], reads2));
+  assert.equal(reads2.n, 1);
+  assert.ok(!r2.ok && r2.reason === "事件无法校验");
+  const reads3 = { n: 0 };
+  assert.equal(applyAll(newTask("t1", "u1"), [getterEvent({ by: "claude" }, "kind", ["Claim"], reads3)]).ok, true);
+  assert.equal(reads3.n, 1);
+});
+
+test("R9 快照:冻结、原型为 null、只含声明字段,值与首次读取一致", () => {
+  const n = normalizeEvent({ kind: "Claim", by: "claude", taskId: "B", extra: 1 });
+  assert.ok(n.ok);
+  const e = n.ok ? (n.event as unknown as Record<string, unknown>) : {};
+  assert.ok(Object.isFrozen(e));
+  assert.equal(Object.getPrototypeOf(e), null);
+  assert.deepEqual(Object.keys(e).sort(), ["by", "kind"]);
+  const n2 = normalizeEvent({ kind: "ExecFailed" });
+  assert.ok(n2.ok && Object.keys(n2.event).length === 1);
+  assert.deepEqual(normalizeEvent(null), { ok: false, reason: "事件不是对象" });
+});
+
+test("R9-TEST-01 继承的 kind 不算:按种类缺失拒绝", () => {
+  assert.equal(validateEvent(withProto({ by: "u1" }, { kind: "Claim" })), "事件种类缺失或不是字符串");
+  assert.equal(apply(newTask("t1", "u1"), withProto({ by: "u1" }, { kind: "Claim" })).ok, false);
+});
+
+test("R9-TEST-01 继承的非法可选字段被忽略,不导致拒绝", () => {
+  assert.equal(validateEvent(withProto({ kind: "ExecFailed" }, { computeId: 5, requestId: [] })), null);
+  assert.equal(validateEvent(withProto({ kind: "StoppedConfirmed", taskId: "t1" }, { computeId: {} })), null);
+  assert.equal(validateEvent(withProto({ kind: "Review", reviewerId: "r", reviewerModel: "m", round: 1, commit: "c", constraintVer: 0, verdict: "approve" }, { waiverBy: 1 })), null);
+});
+
+test("R9-TEST-01 审查打回所需的 computeResumable 只从原型继承:按缺失拒绝", () => {
+  const base = { kind: "Review", reviewerId: "astra", reviewerModel: "gpt-6-astra", round: 1, commit: "abc", constraintVer: 0, verdict: "reject" };
+  assert.equal(validateEvent(withProto(base, { computeResumable: true })), "Review.computeResumable 缺失或取值非法(应为布尔)");
+  assert.equal(apply(inReview(), withProto(base, { computeResumable: true })).ok, false);
+});
+
+test("R9-TEST-01 非负整数接受 -0(JSON 可表示),正整数仍拒绝 -0", () => {
+  assert.equal(validateEvent({ kind: "NeedHuman", qId: "q", computeId: "c", constraintVer: -0 }), null);
+  assert.equal(validateEvent(JSON.parse('{"kind":"HumanReply","qId":"q","constraintVer":-0,"answer":"approve"}')), null);
+  assert.equal(validateEvent({ kind: "Review", reviewerId: "r", reviewerModel: "m", round: -0, commit: "c", constraintVer: 0, verdict: "approve" }), "Review.round 缺失或取值非法(应为正整数)");
 });
