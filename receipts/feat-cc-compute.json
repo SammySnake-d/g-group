@@ -1,5 +1,5 @@
 {
-  "slice": "Claude Code Compute 适配器(adapter 层)第一条路径,含 Codex 首轮 F-01–F-04 与第二轮 RR-01–RR-06 返修:brief 只收五个字段、凭据只收引用、tools 只收具体内置工具名;默认 runner 起真实 claude -p --output-format stream-json --verbose --bare,挂 report_progress MCP,--tools/--allowedTools 按 brief.tools 收窄;必须先收到可校验的 init(tools 是字符串数组、host MCP connected、含 report_progress、不越界)才进入运行;汇报由服务器与适配器共用 schema 校验,被拒收的 blocked/failed 只有同种合规重报或宿主 resume 才解除;已受理 blocked 后冻结回收整棵已知后代树、停在受阻;停止按 ps 的 ppid 递归找已知后代树(含 setsid 脱组的后代)逐个 TERM→KILL,确认为空才产出 stopped(scope: descendant-tree);对外终态 后代树未清 > 停止 > 违规 > 受阻 > 进程失败 > 汇报放弃 > 拒收未解决 > 完成,违规留在 violations[];snapshot 只在终态且后代树为空后成功。",
+  "slice": "Claude Code Compute 适配器(adapter 层)第一条路径,含 Codex 首轮 F-01–F-04、第二轮 RR-01/02/04/05 返修,停止语义按 g-group#2309 对齐 mirasim 0.0.774:brief 只收五个字段、凭据只收引用、tools 只收具体内置工具名;默认 runner 起真实 claude -p --output-format stream-json --verbose --bare,挂 report_progress MCP,--tools/--allowedTools 按 brief.tools 收窄;必须先收到可校验的 init 才进入运行;汇报由服务器与适配器共用 schema 校验,被拒收的 blocked/failed 只有同种合规重报或宿主 resume 才解除;已受理 blocked 后对进程组 SIGSTOP、停在受阻;POSIX 上 CLI detached 自成进程组,stop 对进程组 SIGTERM 后立即产出 stopped(scope:\"process-group\"),reapForceMs(默认 10000)后组 SIGKILL;CLI 正常结束后同样回收进程组,completed 立即产出;对外终态 停止 > 违规 > 受阻 > 进程失败 > 汇报放弃 > 拒收未解决 > 完成,违规留在 violations[];snapshot 只在终态且主进程已退出后成功。",
   "acceptance": [
     {
       "id": "AC-33",
@@ -9,12 +9,12 @@
     {
       "id": "AC-07",
       "status": "未测",
-      "reason": "快照与装配清单子判据在假 CLI 上通过(M07、M08、M14);snapshot 只在终态且已知后代树为空后成功(M41、M42);stopped 前后代树确认为空(M22–M24、M39、M44)。整项要求的“卸载或转交前必须写快照”“换 Compute 不换负责人”“已完成副作用不重做(副作用账)”依赖内核的转交流程与副作用账,本片没有"
+      "reason": "快照与装配清单子判据在假 CLI 上通过(M07、M08、M14);snapshot 只在终态且主进程已退出后成功(M41、M42)。按 g-group#2309 对齐 mirasim 后,快照不检查脱离进程组的后代,stopped 只表示对进程组发过 SIGTERM。整项要求的“卸载或转交前必须写快照”“换 Compute 不换负责人”“已完成副作用不重做(副作用账)”依赖内核的转交流程与副作用账,本片没有"
     },
     {
       "id": "V-06",
       "status": "未测",
-      "reason": "completed 以 result、is_error 与退出码为准,milestone 漏报不影响(M04、M05、M20);汇报放弃、拒收未解决不报完成(M19、M21、M32、M33、M35);已受理 blocked 后冻结回收、停在受阻(M11、M34)。三次真实 CLI smoke 都因模型网关 503 没跑到汇报(proof/smoke-real.txt),真实 CLI 上的事件映射没有证据"
+      "reason": "completed 以 result、is_error 与退出码为准,milestone 漏报不影响(M04、M05、M20);汇报放弃、拒收未解决不报完成(M19、M21、M32、M33、M35);已受理 blocked 后对进程组 SIGSTOP、停在受阻(M11、M34)。三次真实 CLI smoke 都因模型网关 503 没跑到汇报(proof/smoke-real.txt),真实 CLI 上的事件映射没有证据"
     },
     {
       "id": "R-02",
@@ -38,9 +38,9 @@
     "model": "claude-opus-5-5"
   },
   "red": {
-    "commit": "045b320a3db47f0af7990931513e8d5391f5c53c"
+    "commit": "5312efc0f6c80fabb5729f129b6aa9f13130c496"
   },
-  "unverifiable": "所有行为测试跑在假 CLI(test-support/fake-claude.mjs)上:report_progress 经真实 MCP 服务器往返,孙进程、setsid 进程、双 fork 守护进程都是真实进程,但 --tools(default 展开按 Codex 在真实 CLI 2.1.316 上的观察写死)、--allowedTools、dontAsk、--bare 是模拟的;AC-33 ④ 在真实 CLI 上是否真拒绝清单外调用、--bare 是否真不加载记忆,没有证据。RR-03/AC-07:stopped 的 scope 是 descendant-tree,只覆盖运行期间每 200ms 按 ppid 采样到的后代及其进程组;双 fork 后在采样前就被 init/launchd 收养的守护进程、经 launchd/systemd 托管另起的进程不在范围内(有记录性测试,只断言 scope 标注)。内核不得把 stopped 或后代树为空当作容器级静止;完全隔离归 placement=cloud_sandbox/容器,不在本片。采样间隔内起了又脱组的短命后代可能漏采。ps 不可用时判 failed 而不是 stopped。进程组与 ps 只在 POSIX 上成立,Windows 未测。RR-01:已受理 blocked 后的冻结是 SIGSTOP→SIGKILL,模型在 blocked 前已经发出的工具调用不能撤回;resume 用同一 CLI 会话号续接。V-06:三次真实 smoke 都因模型网关 503 未完成;第三次产出了 started,由实现推出真实 CLI 的 init 通过了 RR-02 的核验(init 原始行未打印),真实 CLI 上的 milestone/blocked/completed/failed 映射与快照没跑到。CC_BUILTIN_TOOLS 是手写白名单,CLI 增改内置工具时要跟着改(只会误拒,不会放宽)。F-04 的 schema 由服务器和适配器共用 src/report-schema.ts,两边同时写错会一起失效。hostEnv 由宿主显式给出,内核放明文凭据时本包不拦(AC-33)。快照内容来自 Compute 自报。R-05 只覆盖 mutations.mjs 列出的故障;mutations.mjs 把超时、被信号结束、部分执行一律记为未杀死(R-05)。",
+  "unverifiable": "停止语义按用户 g-group#2309「按照 mirasim 的做法来」对齐 mirasim 0.0.774 server-main.cjs:POSIX 上 CLI detached 自成进程组(Windows 不 detached);stop 对进程组 SIGTERM 后立即产出 stopped(scope:\"process-group\"),不等进程退出确认;reapForceMs(默认 10000,对应 MIRASIM_REAP_FORCE_MS)后组仍有进程就 SIGKILL;不按 ppid 遍历后代树、不追 setsid 脱组进程,报停止前不确认进程树为空。所以 Codex 第二轮 RR-03 指出的脱组后代在 stopped 后仍能产生副作用这一点,按用户决定不修,以记录性测试固定为已知不覆盖(setsid 孙进程在 stopped 后仍存活并能写标记;双 fork 守护进程)。内核不得把 stopped 当作执行树已静止,更不是容器级静止;完全隔离归 placement=cloud_sandbox/容器,不在本片。快照(AC-07)只要求终态且主进程已退出,组里忽略 SIGTERM 的孙进程在 10 秒内仍可能活着。Windows 未测。F-03 的 CI 偶发失败(run 42086652992)根因是测试按时间判断孙进程状态;现改事件屏障:假 CLI 在 init 前写出孙进程 pid,测试有界轮询 kill(pid,0)(上限 5s),孙进程只在测试创建 trigger 后写副作用标记、收到 SIGTERM 先置退出标记再退出。负载下连跑 20 次全绿(proof/flake-20.txt,load average 最高约 28),这只证明这台 8 核机器上的稳定性。所有行为测试跑在假 CLI 上:report_progress 经真实 MCP 服务器往返,孙进程与守护进程是真实进程,但 --tools(default 展开按 Codex 在真实 CLI 2.1.316 上的观察写死)、--allowedTools、dontAsk、--bare 是模拟的;AC-33 ④ 在真实 CLI 上是否真拒绝清单外调用、--bare 是否真不加载记忆,没有证据。已受理 blocked 后的 SIGSTOP 撤不回模型此前已发出的工具调用。V-06:三次真实 smoke 都因模型网关 503 未完成,真实 CLI 上的 milestone/blocked/completed/failed 映射与快照没跑到。CC_BUILTIN_TOOLS 是手写白名单;F-04 的 schema 由服务器和适配器共用 src/report-schema.ts,两边同时写错会一起失效;hostEnv 里的明文由内核接线保证(AC-33);快照内容来自 Compute 自报。R-05 只覆盖 mutations.mjs 列出的 45 种故障,超时、被信号结束、部分执行一律记为未杀死。",
   "waiver": null,
   "review": {
     "agent": "codex",
