@@ -1,22 +1,51 @@
 {
-  "slice": "领域底座第一片:会话记录只追加且带 hash 链(编辑/撤回是新事件)、Compute 不能直接上群发言、基于版本号的单一并发提交原语",
+  "slice": "领域底座第一片(纯函数层):会话记录只追加、事件冻结且与调用方不共享引用、hash 链能查出原地改写和脱链;会话发言者只能是用户/联系人/被叫到的 Helper,Compute 被拒绝;按版本号比较并提交的单元与多文档原语。已通过的子判据:AC-05 的内存层不可改写与链校验、AC-03 的 append 入口拒绝 compute、AC-21 的顺序调用下版本冲突检测。",
   "acceptance": [
-    { "id": "AC-05", "status": "通过", "evidence": "packages/domain/proof/domain-core-tests.txt" },
-    { "id": "AC-03", "status": "通过", "evidence": "packages/domain/proof/domain-core-tests.txt" },
-    { "id": "AC-21", "status": "通过", "evidence": "packages/domain/proof/domain-core-tests.txt" },
-    { "id": "AC-15", "status": "未测", "reason": "E5b 改挂与单调递增版本依赖任务状态机,下一片(任务生命周期)做" },
-    { "id": "AC-31", "status": "未测", "reason": "入库端 action_id 去重与单游标落盘依赖 SQLite 存储适配器,后续切片做" }
+    {
+      "id": "AC-05",
+      "status": "未测",
+      "reason": "纯函数层子判据已通过(见 packages/domain/proof/domain-core-tests.txt 与 mutations.txt 的 M01/M05/M08–M12);整项要求的落盘只追加(存储层拒绝 UPDATE/DELETE)要等 SQLite 适配器一片"
+    },
+    {
+      "id": "AC-03",
+      "status": "未测",
+      "reason": "append 入口拒绝 compute 的子判据已通过(M02 被杀);整项的观测点是消息表 sender_kind 与宿主所有写消息入口,要等存储与内核层"
+    },
+    {
+      "id": "AC-21",
+      "status": "未测",
+      "reason": "顺序调用下的版本冲突检测子判据已通过(M03/M04/M06/M07 被杀);整项要求两人共享存储的单一原子提交点,纯函数对同一旧快照两次提交都会成功,要等存储层事务"
+    },
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "packages/domain/proof/domain-core-tests.txt"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "packages/domain/proof/mutations.txt"
+    },
+    {
+      "id": "AC-15",
+      "status": "未测",
+      "reason": "E5b 改挂与单调递增版本依赖任务状态机,后续切片"
+    },
+    {
+      "id": "AC-31",
+      "status": "未测",
+      "reason": "入库端 action_id 去重与单游标落盘依赖存储适配器,后续切片"
+    }
   ],
-  "author": { "agent": "claude", "session": "claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38", "model": "claude-opus-5-5" },
-  "red": { "commit": "dd7bf7a0708ed3856674a2c7bbc02c1e295afdd2" },
-  "unverifiable": "AC-05 目前只在内存里的纯函数层成立:verify 能查出原地改写,但真正落盘后有没有人绕过 append 直接 UPDATE,要等 SQLite 适配器把表设成只追加(触发器拒绝 UPDATE/DELETE)才算闭环,本片的绿不覆盖存储层。AC-21 的 commit 是纯函数,并发安全要靠存储层把读版本和写入放进同一事务,这一片没有并发执行的证据。AC-03 只验了 append 入口拒绝 compute 发言者,宿主其他写消息的路径要在内核层统一走这个入口。",
+  "author": {
+    "agent": "claude",
+    "session": "claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "bc28ed2ab10df5a0867937a286c95838b7a2d77a"
+  },
+  "unverifiable": "AC-05/AC-03/AC-21 三项整项都标未测:本片只证明纯函数子判据,不能代表落盘、宿主入口和并发事务。AC-21 的 commit 是纯函数,两个调用方拿同一个旧快照分别提交会各自成功,真正的单一提交点必须由存储层在同一事务里读版本并写入。AC-05 的不可改写靠 Object.freeze 与快照拷贝,TypeScript 之外用 Object.defineProperty 之类的反射手段仍可能绕过冻结以外的约束,verify 只证明链内自洽,不证明作者授权。AC-03 允许 helper 作为发言者,按用户 g-group#1365 的三入口定义:@Helper 时它在会话里作答;但 append 本身不知道 Helper 是否被叫到,'只有被 @ 时才进消息、全局与侧边栏入口不进消息'要由内核层的 Helper 路由来保证,本片没有这条证据。R-05 的变异校准只覆盖 mutations.mjs 列出的 12 种故障。",
   "waiver": null,
-  "review": {
-    "agent": "astra",
-    "session": "codex:a29efe3a-4939-4f8c-ba7f-3e52222b56bd",
-    "model": "gpt-6-astra",
-    "verdict": "reject",
-    "reviewed_hash": "3b1798a514566edb18065e3b230e6a6c3b7c762c306c18160bc3c5d6bbb5e414",
-    "notes": "独立复现 14 条先红后绿，但 body 引用可改写历史且 4 个核心故障变体仍全绿，验收状态超出证据，详见 reviews/feat-domain-core.md。"
-  }
+  "review": null
 }
