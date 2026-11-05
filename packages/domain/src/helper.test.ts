@@ -22,11 +22,15 @@ test("在聊天里打开侧边栏:带当前聊天上下文,但回复不作为消
   assert.deepEqual(r, { ok: true, route: { replyIn: "sidebar", becomesMessage: false, contextConversation: "g-group", replyToSeq: null } });
 });
 
-test("Helper 只听用户本人:联系人 @Helper 不执行软件操作", () => {
-  const r = routeHelper({ kind: "mention", conversationId: "g-group", seq: 9 }, { kind: "contact", id: "c-astra" }, "u1");
-  assert.equal(r.ok, false);
-  const other = routeHelper({ kind: "sidebar", conversationId: "g-group" }, { kind: "user", id: "u2" }, "u1");
-  assert.equal(other.ok, false);
+test("Helper 只听用户本人:三种入口下联系人(哪怕 id 与用户相同)和其他用户都被拒", () => {
+  const entries = [{ kind: "global" }, { kind: "mention", conversationId: "g-group", seq: 9 }, { kind: "sidebar", conversationId: "g-group" }] as const;
+  for (const e of entries) {
+    for (const caller of [{ kind: "contact", id: "c-astra" }, { kind: "contact", id: "u1" }, { kind: "user", id: "u2" }] as const) {
+      const r = routeHelper(e, caller, "u1");
+      assert.equal(r.ok, false, `${e.kind} ${caller.kind}:${caller.id}`);
+    }
+    assert.equal(routeHelper(e, me, "u1").ok, true, e.kind);
+  }
 });
 
 test("Helper 不是项目成员,不认领任务", () => {

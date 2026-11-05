@@ -5,6 +5,12 @@
 
 /** 联系人本体能直接调用的工具:必须是宿主注册的具名、有界工具(效果可知、返回短)。 */
 export interface NamedTool { readonly name: string; readonly bounded: true }
+/**
+ * 联系人名下、可以授给它手下 Compute 用的能力资产(需求文档 74-79 行的 U66 白名单)。
+ * 和直接工具清单是两个集合:shell 类 MCP、跑脚本的 Skill 只能登记在这里,联系人本体永远调不到。
+ * Harness 自带的 shell/文件系统是 Compute 的底子,不经这里继承。
+ */
+export interface ComputeAsset { readonly name: string; readonly kind: "mcp" | "skill" | "script" }
 /** Compute 在哪跑:首版只有 local,字段先留好,以后接云端不改状态机(#1186)。 */
 export type Placement = "local" | "byom_daemon" | "cloud_sandbox";
 export interface Schedule { readonly cron: string; readonly tz: string; readonly toleranceSec: number }
@@ -12,8 +18,10 @@ export interface Commitment {
   readonly id: string;
   readonly sourceSeq: number;
   readonly text: string;
-  /** 绑定的任务;全部结束后承诺自动回收(AC-31⑤)。定时承诺不随任务回收。 */
+  /** 还没进终态的绑定任务。定时承诺不随任务回收。 */
   readonly boundTaskIds: readonly string[];
+  /** 已进终态、末次汇报还没确认发出的任务。两张表都空了承诺才回收(AC-31⑤)。 */
+  readonly awaitingReport: readonly string[];
   readonly schedule: Schedule | null;
   readonly status: "active" | "done" | "revoked";
 }
@@ -24,6 +32,7 @@ export interface Contact {
   readonly name: string;
   readonly speakingModel: string;
   readonly tools: readonly NamedTool[];
+  readonly computeAssets: readonly ComputeAsset[];
   readonly memory: string;
   readonly soul: string;
   readonly commitments: readonly Commitment[];
@@ -52,14 +61,16 @@ export interface ComputeBrief {
 export type BriefResult = { ok: true; brief: ComputeBrief } | { ok: false; reason: string };
 export type InboundIntent =
   | { kind: "control"; action: "stop" | "revoke" | "reschedule"; commitmentId: string }
-  | { kind: "work"; text: string }
+  /** commitmentId:上游判定这件活属于哪条承诺的职责;不属于任何承诺给 null。本层不做自然语言理解。 */
+  | { kind: "work"; text: string; commitmentId: string | null }
   | { kind: "chatter"; text: string };
 export type FocusDecision = "handle" | "decline-focused" | "ignore";
 
 const freezeContact = (c: Contact): Contact => Object.freeze({
   ...c,
   tools: Object.freeze(c.tools.map((t) => Object.freeze({ ...t }))),
-  commitments: Object.freeze(c.commitments.map((k) => Object.freeze({ ...k, boundTaskIds: Object.freeze([...k.boundTaskIds]), schedule: k.schedule ? Object.freeze({ ...k.schedule }) : null }))),
+  computeAssets: Object.freeze(c.computeAssets.map((a) => Object.freeze({ ...a }))),
+  commitments: Object.freeze(c.commitments.map((k) => Object.freeze({ ...k, boundTaskIds: Object.freeze([...k.boundTaskIds]), awaitingReport: Object.freeze([...k.awaitingReport]), schedule: k.schedule ? Object.freeze({ ...k.schedule }) : null }))),
   focus: c.focus ? Object.freeze({ ...c.focus }) : null,
 });
 const withContact = (d: Directory, c: Contact): Directory => {
@@ -68,33 +79,21 @@ const withContact = (d: Directory, c: Contact): Directory => {
   return Object.freeze({ contacts: m });
 };
 
+// 红提交:空壳
 export function emptyDirectory(): Directory {
-  return Object.freeze({ contacts: new Map<string, Contact>() });
+  throw new Error("未实现");
 }
 
 export function addContact(d: Directory, c: { id: string; name: string; speakingModel: string }): DirectoryResult {
-  if (!c.id) return { ok: false, reason: "联系人 id 不能为空" };
-  if (d.contacts.has(c.id)) return { ok: false, reason: `联系人 ${c.id} 已存在,不能同 id 新建覆盖` };
-  return { ok: true, dir: withContact(d, { id: c.id, name: c.name, speakingModel: c.speakingModel, tools: [], memory: "", soul: "", commitments: [], focus: null }) };
+  throw new Error("未实现");
 }
 
-export function updateContact(d: Directory, id: string, patch: Partial<Pick<Contact, "name" | "speakingModel" | "memory">>): DirectoryResult {
-  const cur = d.contacts.get(id);
-  if (!cur) return { ok: false, reason: `联系人 ${id} 不存在` };
-  const next: Contact = {
-    ...cur,
-    ...(patch.name !== undefined ? { name: patch.name } : {}),
-    ...(patch.speakingModel !== undefined ? { speakingModel: patch.speakingModel } : {}),
-    ...(patch.memory !== undefined ? { memory: patch.memory } : {}),
-  };
-  return { ok: true, dir: withContact(d, next) };
+export function updateContact(d: Directory, id: string, patch: Partial<Pick<Contact, "name" | "speakingModel" | "memory" | "soul">>): DirectoryResult {
+  throw new Error("未实现");
 }
 
 export function grantTool(c: Contact, tool: { name: string; bounded: boolean }): ContactResult {
-  if (FORBIDDEN_DIRECT_TOOLS.includes(tool.name)) return { ok: false, reason: `${tool.name} 是通用能力,只能在 Compute 里用` };
-  if (!tool.bounded) return { ok: false, reason: `${tool.name} 不是有界工具,不能进联系人直接工具清单` };
-  if (c.tools.some((t) => t.name === tool.name)) return { ok: true, contact: c };
-  return { ok: true, contact: freezeContact({ ...c, tools: [...c.tools, { name: tool.name, bounded: true }] }) };
+  throw new Error("未实现");
 }
 
 function checkSchedule(s: Schedule): string | null {
@@ -106,43 +105,51 @@ function checkSchedule(s: Schedule): string | null {
   return null;
 }
 
-export function commit(c: Contact, k: Omit<Commitment, "status">): ContactResult {
-  if (c.commitments.some((x) => x.id === k.id)) return { ok: false, reason: `承诺 ${k.id} 已存在` };
-  if (k.schedule) { const e = checkSchedule(k.schedule); if (e) return { ok: false, reason: e }; }
-  return { ok: true, contact: freezeContact({ ...c, commitments: [...c.commitments, { ...k, status: "active" }] }) };
+/** 登记一项只给 Compute 用的能力资产。它不会因此进入联系人直接工具清单。 */
+export function grantComputeAsset(c: Contact, a: { name: string; kind: ComputeAsset["kind"] }): ContactResult {
+  throw new Error("未实现");
 }
 
-/** 一个任务进入终态时调用:非定时承诺的绑定任务全部结束,承诺自动置为 done。 */
+/** 联系人本体能不能直接调用这个名字:只看直接工具清单,Compute 能力资产不算。 */
+export function canCallDirectly(c: Contact, name: string): boolean {
+  throw new Error("未实现");
+}
+
+export function commit(c: Contact, k: Omit<Commitment, "status" | "awaitingReport">): ContactResult {
+  throw new Error("未实现");
+}
+
+/** 承诺结束(回收或撤销)后,指向它的专职锁一起解除,不拦后续新工作。 */
+const dropStaleFocus = (c: Contact): Contact =>
+  c.focus && !c.commitments.some((k) => k.id === c.focus?.onlyCommitmentId && k.status === "active") ? { ...c, focus: null } : c;
+
+const retire = (k: Commitment): Commitment =>
+  k.boundTaskIds.length === 0 && k.awaitingReport.length === 0 ? { ...k, status: "done" } : k;
+
+/** 任务进入终态:从绑定表挪到"等末次汇报"表,承诺仍有效。定时承诺不受影响。 */
 export function settleTask(c: Contact, taskId: string): Contact {
-  return freezeContact({
-    ...c,
-    commitments: c.commitments.map((k) => {
-      if (k.status !== "active" || k.schedule || !k.boundTaskIds.includes(taskId)) return k;
-      const left = k.boundTaskIds.filter((t) => t !== taskId);
-      return { ...k, boundTaskIds: left, status: left.length === 0 ? "done" : "active" };
-    }),
-  });
+  throw new Error("未实现");
+}
+
+/** 该任务的末次汇报已确认发出(宿主拿到入库回执后调用)。绑定任务全部终态且都汇报过,承诺回收(AC-31⑤)。 */
+export function confirmFinalReport(c: Contact, taskId: string): Contact {
+  throw new Error("未实现");
+}
+
+/** 用户撤销一条承诺:置为 revoked,指向它的专职锁同时解除。 */
+export function revokeCommitment(c: Contact, id: string): ContactResult {
+  throw new Error("未实现");
 }
 
 export function setFocus(c: Contact, f: FocusPolicy | null): ContactResult {
-  if (f && !c.commitments.some((k) => k.id === f.onlyCommitmentId && k.status === "active")) return { ok: false, reason: `专职锁指向的承诺 ${f.onlyCommitmentId} 不存在或已结束` };
-  return { ok: true, contact: freezeContact({ ...c, focus: f }) };
+  throw new Error("未实现");
 }
 
 export function decideUnderFocus(c: Contact, i: InboundIntent): FocusDecision {
-  if (i.kind === "control") return "handle";
-  if (!c.focus) return i.kind === "work" ? "handle" : "ignore";
-  return i.kind === "work" ? "decline-focused" : "ignore";
+  throw new Error("未实现");
 }
 
-/** 派给 Compute 的说明:只带任务、群规切片、联系人白名单内的工具和凭据引用;不带记忆和性格(AC-33 ④)。 */
+/** 派给 Compute 的说明:只带任务、群规切片、联系人已授权集合(直接工具 + Compute 能力资产)内的工具和凭据引用;不带记忆和性格(AC-33 ④)。 */
 export function briefFor(c: Contact, r: { task: string; rules: readonly string[]; tools: readonly string[]; credentialRefs: readonly string[]; placement?: Placement }): BriefResult {
-  const placement = r.placement ?? "local";
-  if (!PLACEMENTS.has(placement)) return { ok: false, reason: `未知的运行位置 ${placement}` };
-  const allowed = new Set(c.tools.map((t) => t.name));
-  const extra = r.tools.filter((t) => !allowed.has(t));
-  if (extra.length) return { ok: false, reason: `工具 ${extra.join(", ")} 超出联系人 ${c.id} 的白名单` };
-  const bad = r.credentialRefs.filter((x) => !CREDENTIAL_REF.test(x));
-  if (bad.length) return { ok: false, reason: "凭据只能给引用句柄(<scheme>://<path>),不能给明文" };
-  return { ok: true, brief: Object.freeze({ task: r.task, rules: Object.freeze([...r.rules]), tools: Object.freeze([...r.tools]), credentialRefs: Object.freeze([...r.credentialRefs]), placement }) };
+  throw new Error("未实现");
 }
