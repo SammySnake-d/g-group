@@ -1,2 +1,2 @@
-Checked 8 files in 71ms. No fixes applied.
-LINT=ok
+Checked 8 files in 45ms. No fixes applied.
+exit=0

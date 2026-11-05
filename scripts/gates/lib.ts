@@ -86,8 +86,9 @@ export const GIT_SAFE_ARGS = ["-c", "core.hooksPath=/dev/null"];
 
 export type SandboxMode = "docker" | "seatbelt";
 export function sandboxMode(): SandboxMode {
-  if (process.env.GATE_SANDBOX_IMAGE) return "docker";
+  // 模拟开关先判:CI 在 job 级设了 GATE_SANDBOX_IMAGE,自检要能在那里验证"没有沙箱就停"
   if (process.env.GATE_SIMULATE_NO_SANDBOX === "1") throw new Error("没有可用沙箱(GATE_SIMULATE_NO_SANDBOX),拒绝在宿主上执行 PR 代码");
+  if (process.env.GATE_SANDBOX_IMAGE) return "docker";
   if (process.platform === "darwin" && fs.existsSync("/usr/bin/sandbox-exec")) return "seatbelt";
   throw new Error("没有可用沙箱(既没有 GATE_SANDBOX_IMAGE 也不是带 sandbox-exec 的 macOS),拒绝在宿主上执行 PR 代码");
 }

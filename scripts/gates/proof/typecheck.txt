@@ -1,1 +1,1 @@
-TC=ok
+exit=0
