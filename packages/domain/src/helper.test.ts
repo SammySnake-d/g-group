@@ -133,3 +133,100 @@ test("CH-27 普通数据合同:entry/caller 是 Proxy、可撤销 Proxy、类实
   }
   assert.equal(routeHelper(e, me, "u1").ok, true);
 });
+
+/** 在 Object.prototype 上临时放同名属性(描述符空原型),跑完 f 立即恢复;返回 setter 调用次数。 */
+const polluted = (keys: readonly string[], mode: "none" | "readonly" | "setter" | "readonlyTrue", f: () => void): number => {
+  const np = (d: PropertyDescriptor): PropertyDescriptor => Object.assign(Object.create(null) as PropertyDescriptor, d);
+  const saved: [string, PropertyDescriptor | undefined][] = [];
+  let calls = 0;
+  try {
+    if (mode !== "none") for (const key of keys) {
+      saved.push([key, Object.getOwnPropertyDescriptor(Object.prototype, key)]);
+      Object.defineProperty(Object.prototype, key, np(mode === "setter" ? { set() { calls++; }, configurable: true } : { value: mode === "readonlyTrue" ? true : "污染", writable: false, configurable: true }));
+    }
+    f();
+  } finally {
+    for (const [key, d] of saved.reverse()) { if (d) Object.defineProperty(Object.prototype, key, np(d)); else delete (Object.prototype as Record<string, unknown>)[key]; }
+  }
+  return calls;
+};
+const okRoutes = [
+  [{ kind: "global" }, "global-panel"],
+  [{ kind: "mention", conversationId: "g-group", seq: 9 }, "conversation"],
+  [{ kind: "sidebar", conversationId: "g-group" }, "sidebar"],
+] as const;
+
+test("CH-29/CH-35 Object.prototype.value 被污染或无污染时,caller/entry 含访问器(可枚举、不可枚举、Symbol 键)一律拒绝,getter 调用 0 次", () => {
+  for (const mode of ["none", "readonly"] as const) {
+    let n = 0;
+    const out: [string, boolean, string][] = [];
+    const sym = Symbol("s");
+    const mk = (base: object, key: string | symbol, enumerable: boolean) => Object.defineProperty({ ...base }, key, Object.assign(Object.create(null) as PropertyDescriptor, { enumerable, get: () => { n++; return "u1"; } }));
+    polluted(["value"], mode, () => {
+      for (const [entry] of okRoutes) {
+        for (const [label, key, en] of [["可枚举", "extra", true], ["不可枚举", "extra", false], ["Symbol", sym, true], ["不可枚举 Symbol", sym, false]] as const) {
+          const r1 = routeHelper(mk(entry, key, en) as never, me, "u1");
+          out.push([`${mode} ${entry.kind} entry ${label}`, r1.ok, r1.ok ? "" : r1.reason]);
+          const r2 = routeHelper(entry, mk(me, key, en) as never, "u1");
+          out.push([`${mode} ${entry.kind} caller ${label}`, r2.ok, r2.ok ? "" : r2.reason]);
+        }
+      }
+    });
+    for (const [label, ok, reason] of out) { assert.equal(ok, false, label); assert.match(reason, /是访问器属性/, label); }
+    assert.equal(n, 0, `${mode} getter 调用次数`);
+  }
+});
+
+test("CH-35 caller/entry 上不可枚举或 Symbol 键的普通数据属性不影响结果,三入口都照常路由(对照)", () => {
+  const sym = Symbol("s");
+  for (const [entry, replyIn] of okRoutes) {
+    for (const add of [(o: object) => Object.defineProperty(o, "extra", { enumerable: false, value: 1 }), (o: object) => Object.defineProperty(o, sym, { enumerable: true, value: 1 })]) {
+      const r1 = routeHelper(add({ ...entry }) as never, me, "u1");
+      const r2 = routeHelper(entry, add({ ...me }) as never, "u1");
+      assert.equal(r1.ok && r1.route.replyIn, replyIn);
+      assert.equal(r2.ok && r2.route.replyIn, replyIn);
+    }
+  }
+});
+
+test("CH-30 Object.prototype.get/set 被放成 setter 或只读属性时,带 get/set 普通字段的 caller/entry 照常路由、不抛、setter 调用 0 次;无污染时同样(对照)", () => {
+  for (const mode of ["none", "setter", "readonly"] as const) {
+    const out: [string, unknown][] = [];
+    const calls = polluted(["get", "set"], mode, () => {
+      for (const [entry, replyIn] of okRoutes) {
+        try {
+          const r = routeHelper({ ...entry, get: "x", set: "y" } as never, { ...me, get: "x" } as never, "u1");
+          out.push([entry.kind, r.ok && r.route.replyIn === replyIn]);
+        } catch (e) { out.push([entry.kind, `抛出 ${(e as Error).message}`]); }
+      }
+    });
+    for (const [label, v] of out) assert.equal(v, true, `${mode} ${label}`);
+    assert.equal(calls, 0, `${mode} setter 调用次数`);
+  }
+});
+
+test("CH-31 caller 与每个入口变体的每个必填字段:缺失或类型不对拒绝、不抛,正常值接受;Object.prototype.optional 被放成只读 true 时结果相同", () => {
+  const wrong: Record<string, unknown> = { kind: 1, id: 7, conversationId: 3, seq: "9" };
+  for (const mode of ["none", "readonlyTrue"] as const) {
+    const out: [string, unknown, boolean][] = [];
+    polluted(["optional"], mode, () => {
+      const run = (label: string, f: () => { ok: boolean }, want: boolean) => { try { out.push([label, f().ok, want]); } catch (e) { out.push([label, `抛出 ${(e as Error).message}`, want]); } };
+      for (const [entry] of okRoutes) {
+        for (const key of Object.keys(entry)) {
+          const missing = { ...entry } as Record<string, unknown>;
+          delete missing[key];
+          run(`${entry.kind}.${key} 缺失`, () => routeHelper(missing as never, me, "u1"), false);
+          run(`${entry.kind}.${key} 类型不对`, () => routeHelper({ ...entry, [key]: wrong[key] } as never, me, "u1"), false);
+        }
+        for (const key of Object.keys(me)) {
+          const missing = { ...me } as Record<string, unknown>;
+          delete missing[key];
+          run(`${entry.kind} caller.${key} 缺失`, () => routeHelper(entry, missing as never, "u1"), false);
+          run(`${entry.kind} caller.${key} 类型不对`, () => routeHelper(entry, { ...me, [key]: wrong[key] } as never, "u1"), false);
+        }
+        run(`${entry.kind} 正常`, () => routeHelper(entry, me, "u1"), true);
+      }
+    });
+    for (const [label, got, want] of out) assert.equal(got, want, `${mode} ${label}`);
+  }
+});

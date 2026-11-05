@@ -1,3 +1,4 @@
+// biome-ignore-all lint/correctness/noUnusedVariables lint/correctness/noUnusedFunctionParameters lint/correctness/noUnusedImports: 红提交空壳,绿提交恢复实现
 import { types } from "node:util";
 
 // 联系人(AC-01 / AC-33 / 概念卡第 1、11 张)。
@@ -64,19 +65,32 @@ export interface ComputeBrief {
 export type BriefResult = { ok: true; brief: ComputeBrief } | { ok: false; reason: string };
 
 // ---------------------------------------------------------------- 入参规范化(普通数据对象合同)
-// 领域层所有公开入口(联系人与 Helper)的对象入参都先经 normalize。合同:只接受 JSON 能产生的普通数据对象,依次检查——
+// 领域层所有公开入口(联系人与 Helper)的对象参数都先经 normalize,包括调用方传回来的状态(Contact、Directory)。合同:只接受 JSON 能产生的普通数据对象,依次检查——
 //   1. 不是 Proxy(node:util types.isProxy);
 //   2. 对象原型为 Object.prototype 或 null,数组为原型 Array.prototype 的真数组;
-//   3. 逐个取自有属性描述符,出现任何访问器属性(getter/setter)直接拒绝,getter 永不调用。
-// 通过后只从数据属性描述符取值,读到立即复制成冻结纯数据;数组按 length 逐个下标取数据属性,不走迭代器,空位或非字符串项拒绝。
-// 快照是空原型(Object.create(null))对象,字段用 defineProperty 写入,数组项同样用 defineProperty,不经过原型链上的同名 setter/不可写属性。
-// 之后的校验、判断、错误理由和存储/输出只用这份快照。只认自有属性,schema 没声明的字段丢掉;
-// 可选字段只有缺省或 undefined 算缺省,显式 null 按类型不对拒绝。本层不承诺防御任意 JS 元编程对象。
-type FieldKind = "string" | "stringOrNull" | "boolean" | "number" | "strings" | "schedule";
-interface FieldSpec { readonly kind: FieldKind; readonly optional?: true }
+//   3. 用 Reflect.ownKeys 逐个取全部自有属性(含不可枚举、Symbol 键)的描述符,描述符自己没有 value 就是访问器,直接拒绝,getter 永不调用。
+// 只认自有属性:描述符的 value、schema 的 optional/of 标记都用 Object.hasOwn 判定,不读原型链。
+// 通过后只从数据属性取值,读到立即复制成冻结纯数据;数组按 length 逐个下标取值,不走迭代器,空位或类型不对的项拒绝。
+// 快照是空原型(Object.create(null))对象,字段与数组项用 defineProperty 写入,属性描述符本身也是空原型对象,
+// 不会从 Object.prototype 继承 get/set/value 等字段,也不经过原型链上的同名 setter 或不可写属性。
+// 之后的校验、判断、错误理由和存储/输出只用这份快照;输出的联系人只按声明字段重新构造,状态里多出来的字段(如旧版本的 focus)不会带出。
+// schema 没声明的字段丢掉;可选字段只有缺省或 undefined 算缺省,显式 null 按类型不对拒绝。本层不承诺防御任意 JS 元编程对象。
+type FieldKind = "string" | "stringOrNull" | "boolean" | "number" | "strings" | "schedule" | "objects";
+interface FieldSpec { readonly kind: FieldKind; readonly optional?: true; readonly of?: Schema }
 export type Schema = Readonly<Record<string, FieldSpec>>;
 export type Normalized<T> = { ok: true; value: T } | { ok: false; reason: string };
 type FieldResult = { ok: true; value: unknown } | { ok: false; reason: string };
+
+/** 空原型的数据属性描述符:defineProperty 读描述符字段时不会读到 Object.prototype 上的同名属性。 */
+const dataDesc = (value: unknown, writable: boolean): PropertyDescriptor => {
+  const d = Object.create(null) as PropertyDescriptor;
+  d.value = value;
+  d.writable = writable;
+  d.enumerable = true;
+  d.configurable = writable;
+  return d;
+};
+const isOptional = (s: FieldSpec): boolean => Object.hasOwn(s, "optional") && s.optional === true;
 
 /** 普通数据检查(调用前已排除 Proxy):返回 null 表示通过,否则返回拒绝理由。不调用任何 getter。 */
 function plainDataError(v: object, what: string, wantArray: boolean): string | null {
@@ -85,68 +99,132 @@ function plainDataError(v: object, what: string, wantArray: boolean): string | n
   if (wantArray ? proto !== Array.prototype || !Array.isArray(v) : proto !== Object.prototype && proto !== null) return `${what} 只接受普通数据${noun}`;
   for (const key of Reflect.ownKeys(v)) {
     const d = Object.getOwnPropertyDescriptor(v, key);
-    if (d && !("value" in d)) return `${what} 只接受普通数据${noun}(${String(key)} 是访问器属性)`;
+    if (d && !Object.hasOwn(d, "value")) return `${what} 只接受普通数据${noun}(${String(key)} 是访问器属性)`;
   }
   return null;
 }
 
-/** 读一个入参数组:必须是普通数据数组;按 length 逐个下标取数据属性复制成本地数组,逐项检查是原始字符串。 */
-const readList = (v: unknown, field: string): string[] | { reason: string } => {
-  if (typeof v !== "object" || v === null) return { reason: `${field} 必须是字符串数组` };
+/** 复制一个普通数据数组:按 length 逐个下标取自有数据属性复制成本地数组,不走迭代器;空位取成 undefined,交给调用方按项类型拒绝。 */
+const copyArray = (v: unknown, field: string, want: string): unknown[] | { reason: string } => {
+  if (typeof v !== "object" || v === null) return { reason: `${field} 必须是${want}` };
   if (types.isProxy(v)) return { reason: `${field} 只接受普通数据数组` };
-  if (!Array.isArray(v)) return { reason: `${field} 必须是字符串数组` };
+  if (!Array.isArray(v)) return { reason: `${field} 必须是${want}` };
   const bad = plainDataError(v, field, true);
   if (bad) return { reason: bad };
   const len = (Object.getOwnPropertyDescriptor(v, "length") as PropertyDescriptor).value as number;
   const out: unknown[] = [];
   for (let i = 0; i < len; i++) {
     const d = Object.getOwnPropertyDescriptor(v, String(i));
-    if (!d) return { reason: `${field} 里只能是字符串` };
-    Object.defineProperty(out, i, { value: d.value, writable: true, enumerable: true, configurable: true });
+    Object.defineProperty(out, i, dataDesc(d !== undefined && Object.hasOwn(d, "value") ? d.value : undefined, true));
   }
+  return out;
+};
+
+/** 读一个入参数组:必须是普通数据数组,每项都是原始字符串。 */
+const readList = (v: unknown, field: string): string[] | { reason: string } => {
+  const out = copyArray(v, field, "字符串数组");
+  if (!Array.isArray(out)) return out;
   return out.every((x) => typeof x === "string") ? (out as string[]) : { reason: `${field} 里只能是字符串` };
+};
+
+/** 读一个对象数组:必须是普通数据数组,每项按 of 规范化成快照。 */
+const readObjects = (v: unknown, field: string, of: Schema): FieldResult => {
+  const arr = copyArray(v, field, "对象数组");
+  if (!Array.isArray(arr)) return { ok: false, reason: arr.reason };
+  const out: unknown[] = [];
+  for (let i = 0; i < arr.length; i++) {
+    const n = normalize(arr[i], of, `${field}[${i}]`);
+    if (!n.ok) return n;
+    Object.defineProperty(out, i, dataDesc(n.value, true));
+  }
+  return { ok: true, value: Object.freeze(out) };
 };
 
 const SCHEDULE_SCHEMA: Schema = { cron: { kind: "string" }, tz: { kind: "string" }, toleranceSec: { kind: "number" } };
 
-function copyField(v: unknown, field: string, kind: FieldKind): FieldResult {
-  switch (kind) {
+function copyField(v: unknown, field: string, spec: FieldSpec): FieldResult {
+  switch (spec.kind) {
     case "string": return typeof v === "string" ? { ok: true, value: v } : { ok: false, reason: `${field} 必须是字符串` };
     case "stringOrNull": return v === null || typeof v === "string" ? { ok: true, value: v } : { ok: false, reason: `${field} 必须是字符串或 null` };
     case "boolean": return typeof v === "boolean" ? { ok: true, value: v } : { ok: false, reason: `${field} 必须是布尔值` };
     case "number": return typeof v === "number" ? { ok: true, value: v } : { ok: false, reason: `${field} 必须是数字` };
     case "strings": { const l = readList(v, field); return Array.isArray(l) ? { ok: true, value: Object.freeze(l) } : { ok: false, reason: l.reason }; }
     case "schedule": return v === null ? { ok: true, value: null } : normalize(v, SCHEDULE_SCHEMA, field);
+    case "objects": return readObjects(v, field, Object.hasOwn(spec, "of") ? (spec.of as Schema) : {});
   }
 }
 
 /** 把一个入参对象按 schema 规范化成冻结纯数据快照;不合普通数据合同或字段类型不对时给出理由。 */
 export function normalize<T>(input: unknown, schema: Schema, what: string): Normalized<T> {
-  if (typeof input !== "object" || input === null) return { ok: false, reason: `${what} 必须是对象` };
-  if (types.isProxy(input)) return { ok: false, reason: `${what} 只接受普通数据对象` };
-  if (Array.isArray(input)) return { ok: false, reason: `${what} 必须是对象` };
-  const bad = plainDataError(input, what, false);
-  if (bad) return { ok: false, reason: bad };
-  const out = Object.create(null) as Record<string, unknown>;
-  for (const key of Object.keys(schema)) {
-    const spec = schema[key] as FieldSpec;
-    const d = Object.getOwnPropertyDescriptor(input, key);
-    const raw: unknown = d === undefined ? undefined : d.value;
-    if (raw === undefined && spec.optional) continue;
-    const v = copyField(raw, key, spec.kind);
-    if (!v.ok) return v;
-    Object.defineProperty(out, key, { value: v.value, writable: false, enumerable: true, configurable: false });
-  }
-  return { ok: true, value: Object.freeze(out) as T };
+  throw new Error("未实现");
 }
 
 const ASSET_KINDS: ReadonlySet<string> = new Set<ComputeAsset["kind"]>(["mcp", "skill", "script"]);
 
+// ---------------------------------------------------------------- 状态参数(CH-32)
+// 调用方传回来的联系人与目录状态也是公开入口的对象参数,按同一合同规范化:Proxy、非普通原型、含访问器一律拒绝,
+// 只取声明字段(旧版本留下的 focus 之类多余字段丢掉)。返回结果类型带失败分支的入口返回 { ok:false, reason };
+// settleTask、confirmFinalReport 只返回 Contact,没有失败分支,状态不合法时抛 TypeError(带同样的理由)。
+const TOOL_SCHEMA: Schema = { name: { kind: "string" }, bounded: { kind: "boolean" } };
+const ASSET_SCHEMA: Schema = { name: { kind: "string" }, kind: { kind: "string" } };
+const COMMITMENT_SCHEMA: Schema = {
+  id: { kind: "string" }, sourceSeq: { kind: "number" }, text: { kind: "string" }, boundTaskIds: { kind: "strings" },
+  awaitingReport: { kind: "strings" }, reportedTaskIds: { kind: "strings" }, schedule: { kind: "schedule" }, status: { kind: "string" },
+};
+const CONTACT_SCHEMA: Schema = {
+  id: { kind: "string" }, name: { kind: "string" }, speakingModel: { kind: "string" },
+  tools: { kind: "objects", of: TOOL_SCHEMA }, computeAssets: { kind: "objects", of: ASSET_SCHEMA },
+  memory: { kind: "string" }, soul: { kind: "string" }, commitments: { kind: "objects", of: COMMITMENT_SCHEMA },
+};
+const readContact = (state: unknown): Normalized<Contact> => normalize<Contact>(state, CONTACT_SCHEMA, "联系人状态");
+const mustContact = (state: unknown): Contact => {
+  const n = readContact(state);
+  if (!n.ok) throw new TypeError(n.reason);
+  return n.value;
+};
+
+/** 目录状态:外层是普通数据对象,contacts 是真 Map(不是 Proxy、原型为 Map.prototype、无访问器自有属性),每个联系人按 CONTACT_SCHEMA 规范化。 */
+function readDirectory(d: unknown): Normalized<Directory> {
+  if (typeof d !== "object" || d === null) return { ok: false, reason: "目录 必须是对象" };
+  if (types.isProxy(d)) return { ok: false, reason: "目录 只接受普通数据对象" };
+  if (Array.isArray(d)) return { ok: false, reason: "目录 必须是对象" };
+  const bad = plainDataError(d, "目录", false);
+  if (bad) return { ok: false, reason: bad };
+  const desc = Object.getOwnPropertyDescriptor(d, "contacts");
+  const m: unknown = desc !== undefined && Object.hasOwn(desc, "value") ? desc.value : undefined;
+  if (typeof m !== "object" || m === null || types.isProxy(m) || !types.isMap(m) || Object.getPrototypeOf(m) !== Map.prototype) return { ok: false, reason: "目录.contacts 必须是普通 Map" };
+  for (const key of Reflect.ownKeys(m)) {
+    const x = Object.getOwnPropertyDescriptor(m, key);
+    if (x && !Object.hasOwn(x, "value")) return { ok: false, reason: `目录.contacts 只接受普通 Map(${String(key)} 是访问器属性)` };
+  }
+  const out = new Map<string, Contact>();
+  const errs: string[] = [];
+  Map.prototype.forEach.call(m, (v: unknown, k: unknown) => {
+    if (errs.length) return;
+    if (typeof k !== "string") { errs.push("目录.contacts 的键必须是字符串"); return; }
+    const c = readContact(v);
+    if (!c.ok) { errs.push(c.reason); return; }
+    out.set(k, c.value);
+  });
+  if (errs.length) return { ok: false, reason: errs[0] as string };
+  return { ok: true, value: Object.freeze({ contacts: out }) };
+}
+
+/** 输出联系人:只按声明字段重新构造(普通对象字面量,定义属性不经过原型链 setter),再逐层冻结。 */
 const freezeContact = (c: Contact): Contact => Object.freeze({
-  ...c,
-  tools: Object.freeze(c.tools.map((t) => Object.freeze({ ...t }))),
-  computeAssets: Object.freeze(c.computeAssets.map((a) => Object.freeze({ ...a }))),
-  commitments: Object.freeze(c.commitments.map((k) => Object.freeze({ ...k, boundTaskIds: Object.freeze([...k.boundTaskIds]), awaitingReport: Object.freeze([...k.awaitingReport]), reportedTaskIds: Object.freeze([...k.reportedTaskIds]), schedule: k.schedule ? Object.freeze({ ...k.schedule }) : null }))),
+  id: c.id,
+  name: c.name,
+  speakingModel: c.speakingModel,
+  tools: Object.freeze(c.tools.map((t) => Object.freeze({ name: t.name, bounded: t.bounded }))),
+  computeAssets: Object.freeze(c.computeAssets.map((a) => Object.freeze({ name: a.name, kind: a.kind }))),
+  memory: c.memory,
+  soul: c.soul,
+  commitments: Object.freeze(c.commitments.map((k) => Object.freeze({
+    id: k.id, sourceSeq: k.sourceSeq, text: k.text,
+    boundTaskIds: Object.freeze([...k.boundTaskIds]), awaitingReport: Object.freeze([...k.awaitingReport]), reportedTaskIds: Object.freeze([...k.reportedTaskIds]),
+    schedule: k.schedule ? Object.freeze({ cron: k.schedule.cron, tz: k.schedule.tz, toleranceSec: k.schedule.toleranceSec }) : null,
+    status: k.status,
+  }))),
 });
 const withContact = (d: Directory, c: Contact): Directory => {
   const m = new Map(d.contacts);
@@ -155,44 +233,19 @@ const withContact = (d: Directory, c: Contact): Directory => {
 };
 
 export function emptyDirectory(): Directory {
-  return Object.freeze({ contacts: new Map<string, Contact>() });
+  throw new Error("未实现");
 }
 
-export function addContact(d: Directory, input: { id: string; name: string; speakingModel: string }): DirectoryResult {
-  const n = normalize<{ id: string; name: string; speakingModel: string }>(input, { id: { kind: "string" }, name: { kind: "string" }, speakingModel: { kind: "string" } }, "联系人");
-  if (!n.ok) return n;
-  const c = n.value;
-  if (!c.id) return { ok: false, reason: "联系人 id 不能为空" };
-  if (d.contacts.has(c.id)) return { ok: false, reason: `联系人 ${c.id} 已存在,不能同 id 新建覆盖` };
-  return { ok: true, dir: withContact(d, { id: c.id, name: c.name, speakingModel: c.speakingModel, tools: [], computeAssets: [], memory: "", soul: "", commitments: [] }) };
+export function addContact(dirState: Directory, input: { id: string; name: string; speakingModel: string }): DirectoryResult {
+  throw new Error("未实现");
 }
 
-export function updateContact(d: Directory, id: string, input: Partial<Pick<Contact, "name" | "speakingModel" | "memory" | "soul">>): DirectoryResult {
-  const n = normalize<Partial<Pick<Contact, "name" | "speakingModel" | "memory" | "soul">>>(input, { name: { kind: "string", optional: true }, speakingModel: { kind: "string", optional: true }, memory: { kind: "string", optional: true }, soul: { kind: "string", optional: true } }, "联系人修改");
-  if (!n.ok) return n;
-  const patch = n.value;
-  const cur = d.contacts.get(id);
-  if (!cur) return { ok: false, reason: `联系人 ${id} 不存在` };
-  const next: Contact = {
-    ...cur,
-    ...(patch.name !== undefined ? { name: patch.name } : {}),
-    ...(patch.speakingModel !== undefined ? { speakingModel: patch.speakingModel } : {}),
-    ...(patch.memory !== undefined ? { memory: patch.memory } : {}),
-    ...(patch.soul !== undefined ? { soul: patch.soul } : {}),
-  };
-  return { ok: true, dir: withContact(d, next) };
+export function updateContact(dirState: Directory, id: string, input: Partial<Pick<Contact, "name" | "speakingModel" | "memory" | "soul">>): DirectoryResult {
+  throw new Error("未实现");
 }
 
-export function grantTool(c: Contact, input: { name: string; bounded: boolean }): ContactResult {
-  const n = normalize<{ name: string; bounded: boolean }>(input, { name: { kind: "string" }, bounded: { kind: "boolean" } }, "直接工具");
-  if (!n.ok) return n;
-  const tool = n.value;
-  if (!tool.name.trim()) return { ok: false, reason: "工具名不能为空" };
-  if (FORBIDDEN_DIRECT_TOOLS.includes(tool.name)) return { ok: false, reason: `${tool.name} 是通用能力,只能在 Compute 里用` };
-  if (!tool.bounded) return { ok: false, reason: `${tool.name} 不是有界工具,不能进联系人直接工具清单` };
-  if (c.computeAssets.some((x) => x.name === tool.name)) return { ok: false, reason: `${tool.name} 已登记为只给 Compute 用的能力资产,不能再当直接工具` };
-  if (c.tools.some((t) => t.name === tool.name)) return { ok: true, contact: c };
-  return { ok: true, contact: freezeContact({ ...c, tools: [...c.tools, { name: tool.name, bounded: true }] }) };
+export function grantTool(state: Contact, input: { name: string; bounded: boolean }): ContactResult {
+  throw new Error("未实现");
 }
 
 function checkSchedule(s: Schedule): string | null {
@@ -205,33 +258,18 @@ function checkSchedule(s: Schedule): string | null {
 }
 
 /** 登记一项只给 Compute 用的能力资产。它不会因此进入联系人直接工具清单。 */
-export function grantComputeAsset(c: Contact, input: { name: string; kind: ComputeAsset["kind"] }): ContactResult {
-  const n = normalize<{ name: string; kind: ComputeAsset["kind"] }>(input, { name: { kind: "string" }, kind: { kind: "string" } }, "能力资产");
-  if (!n.ok) return n;
-  const a = n.value;
-  if (!ASSET_KINDS.has(a.kind)) return { ok: false, reason: `未知的能力资产类别 ${a.kind}` };
-  if (!a.name.trim()) return { ok: false, reason: "能力资产名不能为空" };
-  if (c.tools.some((t) => t.name === a.name)) return { ok: false, reason: `${a.name} 已是直接工具,不必再登记` };
-  const same = c.computeAssets.find((x) => x.name === a.name);
-  if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };
-  if (same) return { ok: true, contact: c };
-  return { ok: true, contact: freezeContact({ ...c, computeAssets: [...c.computeAssets, { name: a.name, kind: a.kind }] }) };
+export function grantComputeAsset(state: Contact, input: { name: string; kind: ComputeAsset["kind"] }): ContactResult {
+  throw new Error("未实现");
 }
 
 /** 联系人本体能不能直接调用这个名字:只看直接工具清单,Compute 能力资产不算。 */
-export function canCallDirectly(c: Contact, name: string): boolean {
-  return c.tools.some((t) => t.name === name);
+export function canCallDirectly(state: Contact, name: string): boolean {
+  throw new Error("未实现");
 }
 
 type CommitInput = Omit<Commitment, "status" | "awaitingReport" | "reportedTaskIds">;
-export function commit(c: Contact, input: CommitInput): ContactResult {
-  const n = normalize<CommitInput>(input, { id: { kind: "string" }, sourceSeq: { kind: "number" }, text: { kind: "string" }, boundTaskIds: { kind: "strings" }, schedule: { kind: "schedule" } }, "承诺");
-  if (!n.ok) return n;
-  const k = n.value;
-  if (c.commitments.some((x) => x.id === k.id)) return { ok: false, reason: `承诺 ${k.id} 已存在` };
-  if (!isSeq(k.sourceSeq)) return { ok: false, reason: `承诺出处 ${k.sourceSeq} 不是合法的消息位置(非负整数)` };
-  if (k.schedule) { const e = checkSchedule(k.schedule); if (e) return { ok: false, reason: e }; }
-  return { ok: true, contact: freezeContact({ ...c, commitments: [...c.commitments, { ...k, awaitingReport: [], reportedTaskIds: [], status: "active" }] }) };
+export function commit(state: Contact, input: CommitInput): ContactResult {
+  throw new Error("未实现");
 }
 
 const retire = (k: Commitment): Commitment =>
@@ -241,16 +279,8 @@ const retire = (k: Commitment): Commitment =>
  * 任务进入终态:从绑定表挪出。它的末次汇报已先确认过,就直接消掉那条记录、按条件回收;
  * 否则挪进"等末次汇报"表,承诺仍有效。定时承诺不受影响。重放(任务已不在绑定表)不改任何东西。
  */
-export function settleTask(c: Contact, taskId: string): Contact {
-  return freezeContact({
-    ...c,
-    commitments: c.commitments.map((k) => {
-      if (k.status !== "active" || k.schedule || !k.boundTaskIds.includes(taskId)) return k;
-      const boundTaskIds = k.boundTaskIds.filter((t) => t !== taskId);
-      if (k.reportedTaskIds.includes(taskId)) return retire({ ...k, boundTaskIds, reportedTaskIds: k.reportedTaskIds.filter((t) => t !== taskId) });
-      return { ...k, boundTaskIds, awaitingReport: [...k.awaitingReport, taskId] };
-    }),
-  });
+export function settleTask(state: Contact, taskId: string): Contact {
+  throw new Error("未实现");
 }
 
 /**
@@ -265,28 +295,13 @@ export interface FinalReportReceipt { readonly taskId: string; readonly commitme
  * 任务已终态就从等待表消掉并按条件回收;还没终态就记下"已确认",不丢(AC-31⑤ 两项条件都满足才回收,不规定先后)。
  * 回执没点名的承诺、已结束的承诺、与本承诺无关的任务、重复确认、依据位置不是非负整数或字段类型不对的畸形回执都不改状态。
  */
-export function confirmFinalReport(c: Contact, input: FinalReportReceipt): Contact {
-  const n = normalize<FinalReportReceipt>(input, { taskId: { kind: "string" }, commitmentIds: { kind: "strings" }, basedOnSeq: { kind: "number" } }, "回执");
-  if (!n.ok) return c;
-  const receipt = n.value;
-  const { taskId } = receipt;
-  if (!isSeq(receipt.basedOnSeq)) return c;
-  return freezeContact({
-    ...c,
-    commitments: c.commitments.map((k) => {
-      if (k.status !== "active" || k.schedule) return k;
-      if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq > receipt.basedOnSeq) return k;
-      if (k.awaitingReport.includes(taskId)) return retire({ ...k, awaitingReport: k.awaitingReport.filter((t) => t !== taskId) });
-      if (k.boundTaskIds.includes(taskId) && !k.reportedTaskIds.includes(taskId)) return { ...k, reportedTaskIds: [...k.reportedTaskIds, taskId] };
-      return k;
-    }),
-  });
+export function confirmFinalReport(state: Contact, input: FinalReportReceipt): Contact {
+  throw new Error("未实现");
 }
 
 /** 用户撤销一条承诺:置为 revoked。 */
-export function revokeCommitment(c: Contact, id: string): ContactResult {
-  if (!c.commitments.some((k) => k.id === id && k.status === "active")) return { ok: false, reason: `承诺 ${id} 不存在或已结束` };
-  return { ok: true, contact: freezeContact({ ...c, commitments: c.commitments.map((k) => (k.id === id ? { ...k, status: "revoked" } : k)) }) };
+export function revokeCommitment(state: Contact, id: string): ContactResult {
+  throw new Error("未实现");
 }
 
 export interface BriefRequest { readonly task: string; readonly rules: readonly string[]; readonly tools: readonly string[]; readonly credentialRefs: readonly string[]; readonly placement?: Placement }
@@ -296,17 +311,6 @@ export interface BriefRequest { readonly task: string; readonly rules: readonly 
  * 入参经 normalize 变成冻结纯数据快照 r(每个字段只读一次、读到立即复制),之后的校验和输出都只用这份快照(CH-18/CH-21)。
  * placement 缺省或 undefined 时默认 local;显式 null 和其他值拒绝(CH-22)。
  */
-export function briefFor(c: Contact, input: BriefRequest): BriefResult {
-  const n = normalize<{ task: string; rules: readonly string[]; tools: readonly string[]; credentialRefs: readonly string[]; placement?: string }>(input, { task: { kind: "string" }, rules: { kind: "strings" }, tools: { kind: "strings" }, credentialRefs: { kind: "strings" }, placement: { kind: "string", optional: true } }, "Compute 说明请求");
-  if (!n.ok) return n;
-  const r = n.value;
-  const placement = r.placement ?? "local";
-  if (!PLACEMENTS.has(placement)) return { ok: false, reason: `未知的运行位置 ${placement}` };
-  if (r.tools.some((t) => !t.trim())) return { ok: false, reason: "派给 Compute 的工具名不能为空" };
-  const allowed = new Set([...c.tools.map((t) => t.name), ...c.computeAssets.map((x) => x.name)]);
-  const extra = r.tools.filter((t) => !allowed.has(t));
-  if (extra.length) return { ok: false, reason: `工具 ${extra.join(", ")} 超出联系人 ${c.id} 的授权集合` };
-  const bad = r.credentialRefs.filter((x) => !CREDENTIAL_REF.test(x));
-  if (bad.length) return { ok: false, reason: "凭据只能给引用句柄(<scheme>://<path>),不能给明文" };
-  return { ok: true, brief: Object.freeze({ task: r.task, rules: Object.freeze([...r.rules]), tools: Object.freeze([...r.tools]), credentialRefs: Object.freeze([...r.credentialRefs]), placement: placement as Placement }) };
+export function briefFor(state: Contact, input: BriefRequest): BriefResult {
+  throw new Error("未实现");
 }

@@ -896,3 +896,251 @@ test("g-group 第 2273 号讨论撤销专职开关:联系人没有 focus 字段,
   const sources = Object.entries(contactModule).filter(([, v]) => typeof v === "function").map(([n, v]) => [n, String(v)] as const);
   assert.deepEqual(sources.filter(([, src]) => /decline-focused|onlyCommitmentId/.test(src)).map(([n]) => n), []);
 });
+
+/** 在 Object.prototype(及 Array.prototype)上临时放同名属性,跑完 f 立即恢复;返回同名 setter 被调用的次数。 */
+const withPollution = (keys: readonly string[], mode: "none" | "writable" | "setter" | "readonly" | "readonlyTrue", f: () => void): number => {
+  const saved: [object, string, PropertyDescriptor | undefined][] = [];
+  let calls = 0;
+  // 描述符一律空原型:污染 get/set 时,测试自己的 defineProperty 也不能读到原型上的同名属性
+  const np = (d: PropertyDescriptor): PropertyDescriptor => Object.assign(Object.create(null) as PropertyDescriptor, d);
+  const desc = (): PropertyDescriptor => np(mode === "writable" ? { value: "污染", writable: true, configurable: true }
+    : mode === "setter" ? { set() { calls++; }, configurable: true }
+    : mode === "readonlyTrue" ? { value: true, writable: false, configurable: true }
+    : { value: "污染", writable: false, configurable: true });
+  try {
+    if (mode !== "none") for (const key of keys) {
+      for (const proto of /^\d+$/.test(key) ? [Object.prototype, Array.prototype] : [Object.prototype]) {
+        saved.push([proto, key, Object.getOwnPropertyDescriptor(proto, key)]);
+        Object.defineProperty(proto, key, desc());
+      }
+    }
+    f();
+  } finally {
+    for (const [proto, key, d] of saved.reverse()) { if (d) Object.defineProperty(proto, key, np(d)); else delete (proto as Record<string, unknown>)[key]; }
+  }
+  return calls;
+};
+
+/** 每个公开入口的一份合法调用:返回是否被接受。用于访问器、Symbol、不可枚举、原型污染的逐入口对照。 */
+const entryCases = () => {
+  const dir = mk();
+  const c = dir.contacts.get("c-mi")!;
+  const k = commit(c, { id: "k", sourceSeq: 5, text: "x", boundTaskIds: ["T"], schedule: null });
+  const withK = k.ok ? k.contact : (null as never);
+  const ended = settleTask(withK, "T");
+  const ok = (r: unknown) => (r as { ok: boolean }).ok;
+  return [
+    ["addContact", "联系人", { id: "n1", name: "n", speakingModel: "m" }, (x: never) => addContact(emptyDirectory(), x), ok],
+    ["updateContact", "联系人修改", { memory: "m", soul: "s" }, (x: never) => updateContact(dir, "c-mi", x), ok],
+    ["grantTool", "直接工具", { name: "weather", bounded: true }, (x: never) => grantTool(c, x), ok],
+    ["grantComputeAsset", "能力资产", { name: "research", kind: "mcp" }, (x: never) => grantComputeAsset(c, x), ok],
+    ["commit", "承诺", { id: "k2", sourceSeq: 1, text: "t", boundTaskIds: ["T"], schedule: null }, (x: never) => commit(c, x), ok],
+    ["briefFor", "Compute 说明请求", { task: "t", rules: ["r"], tools: [], credentialRefs: ["vault://a"], placement: "local" }, (x: never) => briefFor(c, x), ok],
+    ["confirmFinalReport", "回执", { taskId: "T", commitmentIds: ["k"], basedOnSeq: 5 }, (x: never) => confirmFinalReport(ended, x), (r: unknown) => (r as typeof ended).commitments[0]?.status === "done"],
+  ] as const;
+};
+
+test("CH-35 每个入口:不可枚举访问器与 Symbol 键访问器都拒绝、getter 调用 0 次;不可枚举或 Symbol 键的数据属性照常接受(对照)", () => {
+  for (const [label, what, base, call, accepted] of entryCases()) {
+    const sym = Symbol("x");
+    const variants: [string, (o: object, n: { n: number }) => void, string | null][] = [
+      ["不可枚举访问器", (o, n) => Object.defineProperty(o, "debug", { enumerable: false, get: () => { n.n++; return 1; } }), "debug"],
+      ["Symbol 访问器", (o, n) => Object.defineProperty(o, sym, { enumerable: true, get: () => { n.n++; return 1; } }), "Symbol(x)"],
+      ["不可枚举 Symbol setter", (o, n) => Object.defineProperty(o, sym, { enumerable: false, set: () => { n.n++; } }), "Symbol(x)"],
+      ["不可枚举数据属性", (o) => Object.defineProperty(o, "debug", { enumerable: false, value: 1 }), null],
+      ["Symbol 数据属性", (o) => Object.defineProperty(o, sym, { enumerable: true, value: 1 }), null],
+    ];
+    for (const [vlabel, add, key] of variants) {
+      const o = { ...base } as object;
+      const n = { n: 0 };
+      add(o, n);
+      const r = call(o as never);
+      assert.equal(accepted(r), key === null, `${label} ${vlabel}`);
+      if (key !== null && typeof r === "object" && r !== null && "reason" in r) assert.equal((r as { reason: string }).reason, `${what} 只接受普通数据对象(${key} 是访问器属性)`, `${label} ${vlabel}`);
+      assert.equal(n.n, 0, `${label} ${vlabel} getter 调用次数`);
+    }
+  }
+});
+
+test("CH-29 Object.prototype.value 被放成只读或可写数据属性时,含访问器的输入照样拒绝、getter 调用 0 次;无污染时同样(对照)", () => {
+  for (const mode of ["none", "readonly", "writable"] as const) {
+    const results: [string, boolean, number][] = [];
+    const cases = entryCases();
+    const prepared = cases.map(([label, , base, call, accepted]) => {
+      const key = Object.keys(base)[0]!;
+      const { o, calls } = withAccessor(base as Record<string, unknown>, key);
+      return [label, o, calls, call, accepted] as const;
+    });
+    withPollution(["value"], mode, () => {
+      for (const [label, o, calls, call, accepted] of prepared) results.push([label, accepted(call(o as never)), calls.n]);
+    });
+    for (const [label, acc, n] of results) {
+      assert.equal(acc, false, `${mode} ${label}`);
+      assert.equal(n, 0, `${mode} ${label} getter 调用次数`);
+    }
+  }
+});
+
+test("CH-30 Object.prototype.get/set 被放成 setter 或只读属性时,带同名普通字段的合法输入照常接受、不抛、setter 调用 0 次;无污染时同样(对照)", () => {
+  for (const mode of ["none", "setter", "readonly"] as const) {
+    const results: [string, boolean | string][] = [];
+    const cases = entryCases();
+    const prepared = cases.map(([label, , base, call, accepted]) => [label, { ...base, get: "legitimate-extra", set: "legitimate-extra" }, call, accepted] as const);
+    const calls = withPollution(["get", "set"], mode, () => {
+      for (const [label, o, call, accepted] of prepared) {
+        try { results.push([label, accepted(call(o as never))]); } catch (e) { results.push([label, `抛出 ${(e as Error).message}`]); }
+      }
+      const arr = briefFor(mk().contacts.get("c-mi")!, { task: "t", rules: ["r1", "r2"], tools: [], credentialRefs: [] });
+      results.push(["briefFor 数组写入", arr.ok && arr.brief.rules.length === 2]);
+    });
+    for (const [label, acc] of results) assert.equal(acc, true, `${mode} ${label}`);
+    assert.equal(calls, 0, `${mode} setter 调用次数`);
+  }
+});
+
+test("CH-31 每个入口的每个必填字段:缺失或类型不对都拒绝、正常值接受;Object.prototype.optional 被放成只读 true 时结果相同", () => {
+  const wrong: Record<string, unknown> = { id: 1, name: 1, speakingModel: 1, bounded: "yes", kind: 1, sourceSeq: "1", text: 1, boundTaskIds: "T", schedule: "0 8 * * *", task: 1, rules: "r", tools: "t", credentialRefs: "c", taskId: 1, commitmentIds: "k", basedOnSeq: "5" };
+  for (const mode of ["none", "readonlyTrue"] as const) {
+    const results: [string, boolean, boolean][] = [];
+    const cases = entryCases().filter(([label]) => label !== "updateContact");
+    const prepared: [string, object, (x: never) => unknown, (r: unknown) => boolean, boolean][] = [];
+    for (const [label, , base, call, accepted] of cases) {
+      for (const key of Object.keys(base).filter((k) => k !== "placement")) {
+        const missing = { ...base } as Record<string, unknown>;
+        delete missing[key];
+        prepared.push([`${label}.${key} 缺失`, missing, call, accepted, false]);
+        prepared.push([`${label}.${key} 类型不对`, { ...base, [key]: wrong[key] }, call, accepted, false]);
+      }
+      prepared.push([`${label} 正常`, { ...base }, call, accepted, true]);
+    }
+    withPollution(["optional"], mode, () => {
+      for (const [label, o, call, accepted, want] of prepared) results.push([label, accepted(call(o as never)), want]);
+    });
+    for (const [label, got, want] of results) assert.equal(got, want, `${mode} ${label}`);
+  }
+});
+
+test("CH-32 状态参数同样走普通数据合同:联系人状态是 Proxy、自定义原型或含访问器时,各入口拒绝且 getter 调用 0 次;普通状态照常(对照)", () => {
+  const c0 = mk().contacts.get("c-mi")!;
+  const k = commit(c0, { id: "k", sourceSeq: 1, text: "x", boundTaskIds: ["T"], schedule: null });
+  const c = k.ok ? k.contact : (null as never);
+  const calls = { n: 0 };
+  const accessorState = { ...c } as Record<string, unknown>;
+  delete accessorState.memory;
+  Object.defineProperty(accessorState, "memory", { enumerable: true, get: () => { calls.n++; return "偷换"; } });
+  const states: [string, unknown, string][] = [
+    ["memory 是访问器", accessorState, "联系人状态 只接受普通数据对象(memory 是访问器属性)"],
+    ["Proxy", new Proxy({ ...c }, {}), "联系人状态 只接受普通数据对象"],
+    ["自定义原型", Object.assign(Object.create({ x: 1 }), c), "联系人状态 只接受普通数据对象"],
+    ["工具项是 Proxy", { ...c, tools: [new Proxy({ name: "w", bounded: true }, {})] }, "tools[0] 只接受普通数据对象"],
+    ["承诺数组是 Proxy", { ...c, commitments: new Proxy([...c.commitments], {}) }, "commitments 只接受普通数据数组"],
+  ];
+  for (const [label, s, reason] of states) {
+    const st = s as never;
+    for (const [entry, r] of [["grantTool", grantTool(st, { name: "weather", bounded: true })], ["grantComputeAsset", grantComputeAsset(st, { name: "x", kind: "mcp" })], ["commit", commit(st, { id: "k2", sourceSeq: 1, text: "t", boundTaskIds: [], schedule: null })], ["revokeCommitment", revokeCommitment(st, "k")], ["briefFor", briefFor(st, { task: "t", rules: [], tools: [], credentialRefs: [] })]] as const) {
+      assert.deepEqual(r, { ok: false, reason }, `${label} ${entry}`);
+    }
+    assert.throws(() => settleTask(st, "T"), { name: "TypeError", message: reason }, `${label} settleTask`);
+    assert.throws(() => confirmFinalReport(st, rc("T", ["k"], 1)), { name: "TypeError", message: reason }, `${label} confirmFinalReport`);
+    assert.equal(canCallDirectly(st, "weather"), false, `${label} canCallDirectly`);
+  }
+  assert.equal(calls.n, 0);
+  assert.equal(grantTool(c, { name: "weather", bounded: true }).ok, true);
+  assert.equal(revokeCommitment(c, "k").ok, true);
+  assert.equal(settleTask(c, "T").commitments[0]?.awaitingReport[0], "T");
+});
+
+test("CH-32 目录状态同样走普通数据合同:外层 Proxy、contacts 访问器、contacts 是 Map Proxy 或不是 Map、里面的联系人含访问器时 addContact/updateContact 拒绝;普通目录照常(对照)", () => {
+  const d = mk();
+  const c = d.contacts.get("c-mi")!;
+  let n = 0;
+  const accessorDir = {};
+  Object.defineProperty(accessorDir, "contacts", { enumerable: true, get: () => { n++; return d.contacts; } });
+  const badContact = { ...c } as Record<string, unknown>;
+  delete badContact.name;
+  Object.defineProperty(badContact, "name", { enumerable: true, get: () => { n++; return "x"; } });
+  const dirs: [string, unknown, string][] = [
+    ["外层 Proxy", new Proxy({ contacts: d.contacts }, {}), "目录 只接受普通数据对象"],
+    ["contacts 访问器", accessorDir, "目录 只接受普通数据对象(contacts 是访问器属性)"],
+    ["contacts 是 Map Proxy", { contacts: new Proxy(new Map(d.contacts), {}) }, "目录.contacts 必须是普通 Map"],
+    ["contacts 不是 Map", { contacts: { "c-mi": c } }, "目录.contacts 必须是普通 Map"],
+    ["联系人含访问器", { contacts: new Map([["c-mi", badContact]]) }, "联系人状态 只接受普通数据对象(name 是访问器属性)"],
+  ];
+  for (const [label, dir, reason] of dirs) {
+    assert.deepEqual(addContact(dir as never, { id: "n2", name: "n", speakingModel: "m" }), { ok: false, reason }, `${label} addContact`);
+    assert.deepEqual(updateContact(dir as never, "c-mi", { memory: "m" }), { ok: false, reason }, `${label} updateContact`);
+  }
+  assert.equal(n, 0);
+  assert.equal(addContact(d, { id: "n2", name: "n", speakingModel: "m" }).ok, true);
+  assert.equal(updateContact(d, "c-mi", { memory: "m" }).ok, true);
+});
+
+test("CH-33 旧版本形状(带 focus 字段)的联系人经 commit/settleTask/confirmFinalReport/revokeCommitment/updateContact/grantTool 后,输出不再有 focus", () => {
+  const c = mk().contacts.get("c-mi")!;
+  const k = commit(c, { id: "k", sourceSeq: 1, text: "只盯 T", boundTaskIds: ["T"], schedule: null });
+  const legacy = Object.freeze({ ...(k.ok ? k.contact : (null as never)), focus: Object.freeze({ onlyCommitmentId: "k" }) });
+  assert.equal("focus" in legacy, true);
+  const outs: [string, object][] = [];
+  const committed = commit(legacy, { id: "k2", sourceSeq: 2, text: "t", boundTaskIds: [], schedule: null });
+  outs.push(["commit", committed.ok ? committed.contact : {}]);
+  const settled = settleTask(legacy, "T");
+  outs.push(["settleTask", settled]);
+  outs.push(["confirmFinalReport", confirmFinalReport(settled, rc("T", ["k"], 1))]);
+  const revoked = revokeCommitment(legacy, "k");
+  outs.push(["revokeCommitment", revoked.ok ? revoked.contact : {}]);
+  const updated = updateContact({ contacts: new Map([["c-mi", legacy]]) }, "c-mi", { memory: "新" });
+  outs.push(["updateContact", updated.ok ? updated.dir.contacts.get("c-mi")! : {}]);
+  const granted = grantTool(legacy, { name: "weather", bounded: true });
+  outs.push(["grantTool", granted.ok ? granted.contact : {}]);
+  for (const [label, out] of outs) {
+    assert.equal("id" in out, true, label);
+    assert.equal("focus" in out, false, label);
+  }
+  assert.equal(settled.commitments[0]?.status, "active");
+  assert.equal(confirmFinalReport(settled, rc("T", ["k"], 1)).commitments[0]?.status, "done");
+  assert.equal(revoked.ok && revoked.contact.commitments[0]?.status, "revoked");
+});
+
+test("CH-34 briefFor 输出的 tools/credentialRefs 来自按下标复制的快照:入参数组自带的 Symbol.iterator 数据属性改写不了输出;无改写时同样(对照)", () => {
+  const g = grantTool(mk().contacts.get("c-mi")!, { name: "weather", bounded: true });
+  const c = g.ok ? g.contact : (null as never);
+  for (const rewire of [false, true]) {
+    const tools = ["weather"];
+    const refs = ["vault://a"];
+    if (rewire) {
+      Object.defineProperty(tools, Symbol.iterator, { value: function* () { yield "run_command"; } });
+      Object.defineProperty(refs, Symbol.iterator, { value: function* () { yield "plaintext-secret"; } });
+    }
+    const r = briefFor(c, { task: "t", rules: [], tools, credentialRefs: refs });
+    assert.equal(r.ok, true, `rewire=${rewire}`);
+    assert.deepEqual(r.ok && [...r.brief.tools], ["weather"], `rewire=${rewire} tools`);
+    assert.deepEqual(r.ok && [...r.brief.credentialRefs], ["vault://a"], `rewire=${rewire} credentialRefs`);
+  }
+});
+
+test("CH-34 Object.prototype.placement 被放成只读非法值时,不带 placement 的 briefFor 仍默认 local;Object.prototype.memory 被污染时,空修改不改记忆;无污染时同样(对照)", () => {
+  for (const mode of ["none", "readonly"] as const) {
+    let brief: unknown;
+    let mem: unknown;
+    withPollution(["placement", "memory"], mode, () => {
+      const r = briefFor(mk().contacts.get("c-mi")!, { task: "t", rules: [], tools: [], credentialRefs: [] });
+      brief = r.ok ? r.brief.placement : r.reason;
+      const u = updateContact(mk(), "c-mi", {});
+      mem = u.ok ? u.dir.contacts.get("c-mi")!.memory : u.reason;
+    });
+    assert.equal(brief, "local", mode);
+    assert.equal(mem, mk().contacts.get("c-mi")!.memory, mode);
+  }
+});
+
+test("CH-34 commit 存下的是按下标复制的快照:boundTaskIds 自带的 Symbol.iterator 数据属性改写不了存下的绑定任务,多余字段不进承诺;无改写时同样(对照)", () => {
+  for (const rewire of [false, true]) {
+    const ids = ["T"];
+    if (rewire) Object.defineProperty(ids, Symbol.iterator, { value: function* () { yield "偷换"; } });
+    const r = commit(mk().contacts.get("c-mi")!, { id: "k", sourceSeq: 1, text: "t", boundTaskIds: ids, schedule: null, extra: "多余" } as never);
+    assert.equal(r.ok, true, `rewire=${rewire}`);
+    const k = r.ok ? r.contact.commitments[0]! : (null as never);
+    assert.deepEqual([...k.boundTaskIds], ["T"], `rewire=${rewire}`);
+    assert.equal("extra" in k, false, `rewire=${rewire}`);
+  }
+});
