@@ -71,6 +71,6 @@
     "model": "gpt-6.1-terra",
     "verdict": "reject",
     "reviewed_hash": "b3d591914d9e156cd272901686eddbb309ddf2a450d2cd327ba43800d08d809e",
-    "notes": "第三轮 reject：RR-09/10 自检执行与路径漏检；补充独立真实 CLI 复现 RR-11..15（红绿测试依赖、文件级变异掩盖弱测试、否定文本豁免、printf 注释冒充 hash、跨 clone 厂商漏计），详见报告。默认 mutation 仍在运行；首次推送误触共享 worktree hook 已更正披露。"
+    "notes": "第三轮 reject：RR-09/10 自检执行与路径漏检；真实 CLI 复现 RR-11..15，详见报告。独立默认 mutation 在原样自检约 900 秒超时、退出 1，38 项未开始；短超时反例正确计未发现。首次推送误触共享 worktree hook 已披露。"
   }
 }

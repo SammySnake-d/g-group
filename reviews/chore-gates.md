@@ -434,10 +434,10 @@ register("adds", () => { add(1, 2); });
 | `npm run typecheck` | 退出 0 |
 | `npm run lint` | 退出 0，Biome 检查 8 个文件 |
 | `npm run gates:selftest` | 退出 0；独立完整重跑共 111 个样例/检查，末尾为“自检通过” |
-| `GATE_MUTATION_JOBS=4 npm run gates:mutation` | 默认值的独立完整运行已启动，仍在运行；尚不能声称本会话已独立复现 38/38。为验证新 timeout 语义，另以 `GATE_MUTANT_TIMEOUT_MS=100`、`GATE_MUTATION_JOBS=1` 实跑：原样副本通过，38 条全部打印 `✗ …自检超时(0s),不算被发现`，最终退出 1；不是把超时算作成功。 |
+| `GATE_MUTATION_JOBS=4 npm run gates:mutation` | 默认值独立运行退出 1：原样副本自检在 `runSelftest` 的 900 秒上限处未完成，输出 `✗ 原样副本自检通过` 并提前返回；38 个变异未开始。日志 `/private/tmp/g-group-pr1-codex-786-mutation.log`。另以 `GATE_MUTANT_TIMEOUT_MS=100`、`GATE_MUTATION_JOBS=1` 实跑：原样副本通过，38 条全部打印 `✗ …自检超时(0s),不算被发现`，最终退出 1；不是把超时算作成功。 |
 | `git diff --check` | 退出 0 |
 | `node scripts/gates/run-all.ts --hash --branch=chore/gates --base=origin/main` | 原样输出：`b3d591914d9e156cd272901686eddbb309ddf2a450d2cd327ba43800d08d809e` |
-| 作者 proof | `scripts/gates/proof/mutation.txt` 显示原样通过、38/38 变异被发现、汇总退出 0；作者 proof 自报的完整结果尚未由本次独立默认运行完成复现；独立的 selftest、timeout 反例和路径判定反例见本节。 |
+| 作者 proof | `scripts/gates/proof/mutation.txt` 显示原样通过、38/38 变异被发现、汇总退出 0；作者 proof 自报的完整结果未被本次独立默认运行复现（原样副本超时）；独立的 selftest、timeout 反例和路径判定反例见本节。 |
 
 注意：本轮在本地普通 clone 中独立运行；最初查询 GitHub 时 PR head 为旧 `8a28502`，对应 `self-check` run `42053090530` 已成功；没有查到以 `7865762` 为 head 的 run。首次推送后，`f32155b` 的 run `42078235009` 已触发；截至 2026-11-06 01:57（UTC+8），自检成功、变异校验仍在运行，最终结论未知。不能用旧 run 的成功冒充新 HEAD 的 CI 结果。
 
@@ -491,7 +491,7 @@ fi
 | R-08 | 未完成独立验收 | 收据字段自检通过，但尚未完成独立双侧全覆盖 |
 | R-10 | 未完成独立验收 | RR-08 对应作者自检通过，尚未逐条完成独立正反例 |
 | R-15 | 未完成独立验收 | 作者自检通过；RR-09/RR-10 影响元验证是否执行 |
-| R-18 | **未通过** | 作者 proof 声称 38 个列举变异被发现；本轮独立默认运行尚未完成，短超时反例显示 fail-closed。workflow 可改写/跳过两项且重命名路径可漏检，故规则可信性端到端仍未闭合 |
+| R-18 | **未通过** | 作者 proof 声称 38 个列举变异被发现；本轮独立默认运行在原样对照阶段超时并退出 1、未执行变异；短超时反例显示 fail-closed。workflow 可改写/跳过两项且重命名路径可漏检，故规则可信性端到端仍未闭合 |
 
 ### 交付边界
 
@@ -511,4 +511,13 @@ fi
 - **RR-15 [P1，关联 RR-05] 同仓库另一 clone 的产出厂商可能漏计。** 模拟作者的 Anthropic 轮次操作路径含 `g-group`；后续 OpenAI 轮次写入临时目录中的另一 clone（路径不含仓库名）。该 clone 由同一 fixture 的仓库克隆；审查人为 OpenAI。路径启发式未将后者计入产出集合，8 门禁全绿。该例证明跨 clone 的关联未绑定仓库身份；不指控真实作者曾这样操作。
 - **RR-09 的完整门禁对照**：另在功能 fixture 写入只执行 `echo no-checks-were-run` 的 `self-check.yml`，真实完整 `--local` 8 门禁均绿，退出 0；没有在 GitHub 上提交该 fixture，也没有声称服务端已合并。该例补强前述“G-WORKFLOW 不校验 self-check 的步骤内容”的局部证明。
 
-以上是独立夹具结果，不等同真实宿主身份被伪造、真实凭据泄露、GitHub 状态被写入或真实 PR 已合并。作者应分别补对应正例及反例；本轮的完整 RR-01..08 双侧独立覆盖和默认 38 项变异仍未完成，不能据此宣称审查已全部覆盖。
+以上是独立夹具结果，不等同真实宿主身份被伪造、真实凭据泄露、GitHub 状态被写入或真实 PR 已合并。作者应分别补对应正例及反例；本轮的完整 RR-01..08 双侧独立覆盖和默认 38 项变异未完成（原样对照超时），不能据此宣称审查已全部覆盖。
+
+
+### 原样对照超时与 CI 状态补记
+
+在 Node `v25.8.1`、`GATE_MUTATION_JOBS=4` 的普通独立 clone 中，`npm run gates:mutation` 原样副本自检运行约 900 秒后未完成，程序输出 `✗ 原样副本自检通过` 并退出 1，38 项变异没有启动。`runSelftest` 使用 `spawnSync` 的固定 `timeout: 900_000`，但只返回 `status/stdout/stderr`，未打印 `error` 或明确区分超时；本次结果是资源/时限下**未完成**，不是证明具体门禁变异存活。建议原样对照超时单独报告超时错误并确认子进程回收，也应使限制与目标运行环境的实际耗时相容。
+
+本机本次审查为 Node 25；workflow 指定 Node 22.22，不能将此本机超时直接当成 CI 的同一失败。审查推送的 `f32155b` run `42078235009` 已被同分支更新取消；`13dba1f` run `42080188883` 也取消；最新 `cea05b7` run `42080870577` 截至检查时仍运行，最终 CI 结果未知。
+
+写入 reject 后真实 `--local` 退出 1：G-REVIEW 报 reject；G-PROVENANCE 因当前会话的 `turns.jsonl` 当时尚未落盘而报会话记录不存在，不能声称来源门禁通过。CONTENT_HASH 未变。中性标记沙箱探针与独立反例路径见 `/private/tmp/g-group-pr1-independent-probes/`。
