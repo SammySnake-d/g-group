@@ -1,4 +1,4 @@
-// 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时;第五轮按 R4-01..R4-07 扩充,含 R4-M1=K92、R4-M2=K91;第六轮按 R5-01..R5-05 扩充,含 R5-M1=K111、R5-M2=K126),在隔离副本里跑本包测试,
+// 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时;第五轮按 R4-01..R4-07 扩充,含 R4-M1=K92、R4-M2=K91;第六轮按 R5-01..R5-05 扩充,含 R5-M1=K111、R5-M2=K126;第七轮按 R6-01..R6-05 扩充,含 R6-M1=K142、R6-M2=K143),在隔离副本里跑本包测试,
 // 每个变异都必须让至少一条具名测试失败(文件级加载失败不算杀死)。注入点必须在源码里恰好出现 1 次。
 // 原样副本必须全绿(阴性对照)。
 // 每个变异在独立进程组里跑,超时(默认 300s,KERNEL_MUT_TIMEOUT_MS 可改)就杀掉整个进程组,记 ✗ 超时,不算被杀死。
@@ -12,6 +12,8 @@ import path from "node:path";
 // 删掉的等价变异(在 55e7121 的实现下改不了行为,不再列入):
 //   K21 mounts 不拷贝:注册入口先把整个输入克隆成冻结纯数据,mounts 读自这份副本,拷不拷贝都不与调用方共享;
 //   K141 对象结果直接赋值:对象结果本身是 Object.create(null),没有原型,直接赋值碰不到原型链上的同名 setter,与 defineProperty 等价;
+//   K38 诊断序列化失败直接抛出(在 257d56e 的实现下等价):safeDescribe 不再调用 JSON.stringify,只读非 Proxy 对象的自有描述符,
+//       原始值逐类处理,深度有上限,可达路径上没有会抛错的操作,兜底 catch 走不到;
 //   K108 单调读数倒退仍放行:读数一倒退该动作就已标为时钟不可信并在窗口判断前返回,窗口判断里不会再见到负的 elapsed。
 const PKG = path.resolve(import.meta.dirname, "..");
 const ROOT = path.resolve(PKG, "../..");
@@ -42,7 +44,7 @@ const M = [
   ["K11 发送不要求 action_id", "plugins.ts", 'if (!isStr(actionId)) return { ok: false, state: "rejected", reason: "missing-action-id"', 'if (false) return { ok: false, state: "rejected", reason: "missing-action-id"'],
   ["K12 同一 action_id 已确认仍重复真发", "plugins.ts", "if (prior.state === \"confirmed\" && prior.receipt) return", "if (false) return"],
   ["K29 B2 结果未知时盲重试", "plugins.ts", "if (b.idempotency === \"none\") return", "if (false) return"],
-  ["K30 同步返回值当回执", "plugins.ts", "if (!isThenable(pending)) return unknown(", "if (false) return unknown("],
+  ["K30 同步返回值当回执", "plugins.ts", "if (!isPlainPromise(pending)) return unknown(", "if (false) return unknown("],
   ["K31 超时当成功", "plugins.ts", 'if (got === TIMEOUT) return unknown("timeout", ', 'if (got === TIMEOUT) got = { action_id: actionId, receiptId: "assumed" }; if (false) return unknown("timeout", '],
   ["K32 异步异常当成功", "plugins.ts", '    } catch (err) {\n      return unknown("send-threw", errText(err));', '    } catch {\n      got = { action_id: actionId, receiptId: "assumed" };'],
   ["K33 回执不校验 action_id", "plugins.ts", "if (!isObj(rc) || rc.action_id !== actionId || !isStr(rc.receiptId)) return", "if (!isObj(rc) || !isStr(rc.receiptId)) return"],
@@ -52,15 +54,14 @@ const M = [
   ["K04 Page-in 改成取最近 N 条", "assemble.ts", "const m = all.find((x) => x.seq === seq);", "const m = all.slice(-3).find((x) => x.seq === seq);"],
   ["K05 超预算静默截断", "assemble.ts", "if (need > opts.budgetBytes) return { ok: false, reason: \"over-budget\", need, budget: opts.budgetBytes, action: \"compress\" };", "while (final.length > 0 && final.reduce((a, s) => a + s.bytes, 0) > opts.budgetBytes) final.shift();"],
   ["K06 窗口内引用重复页入", "assemble.ts", "if (inHistory.has(seq) || paged.some((p) => p.seq === seq)) continue;", "if (paged.some((p) => p.seq === seq)) continue;"],
-  ["K07a 撤回消息被引用时仍页入", "assemble.ts", 'if (m.retracted) { skipped.push({ seq, reason: "retracted" }); continue; }', ""],
+  ["K07a 撤回消息被引用时仍页入", "assemble.ts", "if (m.retracted) { appendOwn(skipped, { seq, reason: \"retracted\" }); continue; }", ""],
   ["K07b \u64a4\u56de\u6d88\u606f\u8fdb\u7a97\u53e3", "assemble.ts", "      if (retracted.has(e.seq)) continue;\n", ""],
   // —— 分类(AC-11 / AC-12,F-04 / F-05)
   ["K08 \u6709\u673a\u68b0\u951a\u70b9\u4e5f\u8c03\u5206\u7c7b\u5668", "classify.ts", "const { invalidMentions, ...anchors } = anchorsOf(event);", "const { invalidMentions, ...anchors } = anchorsOf(event);\n  try { classifier(event); } catch { /* \u53d8\u5f02:\u591a\u8c03\u4e00\u6b21 */ }"],
   ["K09 分类器自由文本被放行", "classify.ts", 'if (typeof raw === "string" && ALLOWED.has(raw))', 'if (typeof raw === "string")'],
   ["K13 确认卡版本号不算机械线索", "classify.ts", "if (anchors.card !== undefined) {", "if (false) {"],
-  ["K37 诊断不防循环引用", "plain.ts", "if (seen.has(v)) return \"[循环]\"; seen.add(v);", "seen.add(v);"],
-  ["K38 诊断序列化失败直接抛出(审查 F-04 原错)", "plain.ts", "  } catch (err) {\n    let tag", "  } catch (err) {\n    throw err;\n    let tag"],
-  ["K39 诊断不处理嵌套 BigInt", "plain.ts", "if (typeof v === \"bigint\") return `${v}n`;", ""],
+  ["K37 诊断不防循环引用", "plain.ts", "  if (seen.has(v)) return JSON.stringify(\"[循环]\");\n", ""],
+  ["K39 诊断不处理嵌套 BigInt", "plain.ts", "  if (typeof v === \"bigint\") return JSON.stringify(`${v}n`);\n", ""],
   ["K40 确认卡不校验回复者是用户", "classify.ts", 'if (e.sender?.kind !== "user") return', "if (false) return"],
   ["K41 确认卡不校验版本", "classify.ts", "if (!Number.isInteger(c.version) || c.version < 1) return", "if (false) return"],
   ["K42 确认卡不校验决定枚举", "classify.ts", 'if (typeof c.decision !== "string" || !DECISIONS.has(c.decision)) return', "if (false) return"],
@@ -81,7 +82,7 @@ const M = [
   ["K45 纯点名用宽泛正则去名字(RR-03 原错)", "classify.ts", "return rest.trim() === \"\";", "return e.text.replace(/@\\S+/g, \"\").trim() === \"\";"],
   ["K46 点名不查名字里的标点", "classify.ts", "NAME_FORBIDDEN.test(name)", "false"],
   ["K47 点名不查范围与正文对得上", "classify.ts", "return text.slice(start as number, end as number) === `@${name}`;", "return true;"],
-  ["K50 异常兜底直接读 message(RR-04 原错)", "plain.ts", "try {\n    if (err instanceof Error) return safeDescribe(err.message);\n  } catch { /* 读取失败,退回整体描述 */ }", "if (err instanceof Error) return safeDescribe(err.message);"],
+  ["K50 异常兜底直接读 message(RR-04 原错)", "plain.ts", "      if (d && !isAccessor(d) && typeof d.value === \"string\") return d.value;", "      return String((err as Error).message);"],
   // —— AC-39 / D22 前缀纪律
   ["K61 stable 段不扫会变内容(system 注入时间)", "assemble.ts", "for (const [name, re] of VOLATILE_PATTERNS) {", "for (const [name, re] of []) {"],
   ["K62 stable 段放行最近 N 条", "assemble.ts", "  [\"最近 N 条\", /最近\\s*\\d+\\s*条/],", ""],
@@ -91,7 +92,7 @@ const M = [
   ["K66 \u65ad\u70b9\u8d85\u8fc7 4 \u4e2a", "assemble.ts", "lastOf((s) => s.section === \"history\" && s.label !== \"compressed\"),", "lastOf((s) => s.section === \"history\" && s.label !== \"compressed\"),\n    lastOf((s) => s.section === \"tail\"),\n    0,"],
   ["K67 \u65ad\u70b9\u653e\u8fdb tail", "assemble.ts", "lastOf((s) => s.section === \"history\" && s.label !== \"compressed\"),", "lastOf((s) => s.section !== \"stable\" && s.label !== \"compressed\"),"],
   ["K68 前缀哈希把 tail 算进去", "assemble.ts", "section !== \"tail\")", "section !== \"never\")"],
-  ["K69 前缀哈希不按字节截", "assemble.ts", "subarray(0, bytes)", "subarray(0)"],
+  ["K69 前缀哈希不按字节截", "assemble.ts", "subarray(0, bytes ?? prefixBytes(segs))", "subarray(0)"],
   // —— 第四轮:R3-01..R3-06
   ["K63 stable \u6bb5\u62ff\u4f1a\u8bdd\u6d88\u606f\u6bd4\u5bf9(R3-04 \u539f\u9519)", "assemble.ts", "const hit = volatileIn(part.text);", "const hit = volatileIn(part.text) ?? (log.events.some((e) => e.body.kind === \"message\" && e.body.text.length >= 4 && part.text.includes(e.body.text)) ? \"\u6d88\u606f\u539f\u6587\" : undefined);"],
   ["K72 send 用调用方原对象为 this(R3-03 原错)", "plugins.ts", "send: (r: SendRequest) => send.call(self, r)", "send: (r: SendRequest) => send.call(raw, r)"],
@@ -99,7 +100,7 @@ const M = [
   ["K74 不扫压缩块里的撤回原文", "assemble.ts", "${block.text}\\n`), block.text);", "${block.text}\\n`), \"\");"],
   ["K75 不扫会变状态里的撤回原文", "assemble.ts", "${opts.volatile}\\n`), opts.volatile);", "${opts.volatile}\\n`), \"\");"],
   ["K76 重建压缩块时交出撤回消息", "assemble.ts", "frozenSnapshot(all.filter((m) => m.seq <= b.throughSeq && !m.retracted))", "frozenSnapshot(all.filter((m) => m.seq <= b.throughSeq))"],
-  ["K77 history \u64a4\u56de\u4e0d\u6807 prefixBreak", "assemble.ts", "if (target > through && isNew(rs)) prefixBreaks.push", "if (false) prefixBreaks.push"],
+  ["K77 history 撤回不标 prefixBreak", "assemble.ts", "if (target > through && isNew(rs)) appendOwn(prefixBreaks", "if (false) appendOwn(prefixBreaks"],
   ["K78 \u540c\u4e00\u64a4\u56de\u6bcf\u8f6e\u91cd\u590d\u62a5 prefixBreak", "assemble.ts", "const isNew = (retractSeq: number) => opts.previousHeadSeq === undefined || retractSeq > opts.previousHeadSeq;", "const isNew = (_retractSeq: number) => true;"],
   ["K79 \u64a4\u56de\u540e\u7684\u7f16\u8f91\u6587\u5b57\u4ecd\u8fdb history", "assemble.ts", "      if (retracted.has(b.target)) continue;\n", ""],
   ["K80 编辑原地改写旧消息(R3-02 原错)", "assemble.ts", "push(seg(\"history\", \"message\", `#${e.seq} ${who(e)}: ${b.text}\\n`, { seq: e.seq }), b.text);", "push(seg(\"history\", \"message\", `#${e.seq} ${who(e)}: ${all.find((m) => m.seq === e.seq)?.text ?? b.text}\\n`, { seq: e.seq }), b.text);"],
@@ -116,14 +117,14 @@ const M = [
   ["K90 \u64a4\u56de\u539f\u6587\u6309 4 \u5b57\u9608\u503c\u653e\u884c(R4-01 \u539f\u9519)", "assemble.ts", "if (needle !== \"\" && hay.includes(needle)) return seq;", "if (needle.length >= 4 && hay.includes(needle)) return seq;"],
   ["K91 \u9608\u503c\u6539\u6210\u5927\u4e8e 4(\u5ba1\u67e5 R4-M2)", "assemble.ts", "if (needle !== \"\" && hay.includes(needle)) return seq;", "if (needle.length > 4 && hay.includes(needle)) return seq;"],
   ["K92 \u4e0d\u6536\u96c6\u64a4\u56de\u6d88\u606f\u7684\u7f16\u8f91\u6587\u672c(\u5ba1\u67e5 R4-M1)", "assemble.ts", "    if (b.kind === \"edit\" && retracted.has(b.target)) out.set(b.target, [...(out.get(b.target) ?? []), b.text]);\n", ""],
-  ["K93 不做空白规范化", "assemble.ts", "const squash = (t: string) => t.replace(/[\\s\\u200B-\\u200D\\u2060\\uFEFF]+/gu, \"\");", "const squash = (t: string) => t;"],
+  ["K93 不做空白规范化", "assemble.ts", "export const squash = (t: string): string => t.replace(INVISIBLE, \"\");", "export const squash = (t: string): string => t;"],
   ["K94 最终请求边界不扫描", "assemble.ts", "const leaked = leakIn(bodies[i] ?? \"\", secret);", "const leaked = undefined as number | undefined;"],
   ["K95 不扫 stable 段", "assemble.ts", "${part.text}\\n`), part.text);", "${part.text}\\n`), \"\");"],
   ["K96 扫描包含宿主标签", "assemble.ts", "const leaked = leakIn(bodies[i] ?? \"\", secret);", "const leaked = leakIn(sg.text, secret);"],
   ["K97 \u56de\u8c03\u62ff\u5230\u53ef\u53d8\u539f\u5bf9\u8c61(R4-01 \u539f\u9519)", "assemble.ts", "const visible = frozenSnapshot(", "const visible = ((x: readonly ProjectedMessage[]) => x)("],
   ["K99 \u56de\u8c03\u629b\u9519\u4e0d\u515c\u5e95", "assemble.ts", "try { text = opts.recompress(b.throughSeq, visible); } catch (err) {", "try { text = opts.recompress(b.throughSeq, visible); } catch (err) { throw err;"],
   ["K100 放行 Map 等非普通对象(R4-02 原错)", "plain.ts", "  if (proto !== Object.prototype && proto !== null) {\n    return bad(at, \"只允许普通对象", "  if (false) {\n    return bad(at, \"只允许普通对象"],
-  ["K101 放行配置 getter", "plain.ts", "    if (\"get\" in d || \"set\" in d) return bad(`${at}.${k}`, \"不允许 getter/setter\");\n", ""],
+  ["K101 放行配置 getter", "plain.ts", "    if (isAccessor(d)) return bad(`${at}.${k}`, \"不允许 getter/setter\");\n", ""],
   ["K102 this \u539f\u578b\u4e0d\u662f null", "plugins.ts", "  const self: Record<string, unknown> = Object.create(null);", "  const self: Record<string, unknown> = {};"],
   ["K103 this 不冻结", "plugins.ts", "  return Object.freeze(self);\n}", "  return self;\n}"],
   ["K104 嵌套对象不冻结", "plain.ts", "  return { ok: true, value: Object.freeze(out) };\n}", "  return { ok: true, value: depth > 0 ? out : Object.freeze(out) };\n}"],
@@ -133,8 +134,8 @@ const M = [
   ["K109 账本键用分隔符拼接(R4-05 原错)", "plugins.ts", "  const entryOf = (pluginId: string, actionId: string) => ledger.get(pluginId)?.get(actionId);\n  const putEntry = (pluginId: string, actionId: string, e: LedgerEntry) => {\n    let m = ledger.get(pluginId);\n    if (!m) { m = new Map(); ledger.set(pluginId, m); }\n    m.set(actionId, e);\n  };", "  const flat = new Map<string, LedgerEntry>();\n  const entryOf = (pluginId: string, actionId: string) => flat.get(`${pluginId}\\u0000${actionId}`);\n  const putEntry = (pluginId: string, actionId: string, e: LedgerEntry) => { flat.set(`${pluginId}\\u0000${actionId}`, e); };"],
   ["K110 stable \u628a\u666e\u901a\u8bcd\u5f53\u52a8\u6001(R4-06 \u539f\u9519)", "assemble.ts", "  [\"\u6700\u8fd1 N \u6761\", /\u6700\u8fd1\\s*\\d+\\s*\u6761/],", "  [\"\u6700\u8fd1 N \u6761\", /\u6700\u8fd1\\s*\\d+\\s*\u6761/],\n  [\"\u65b0\u6d88\u606f\", /\u65b0\u6d88\u606f|\u521a\u624d\u8bf4|\u521a\u8bf4|\u6700\u65b0\u4e00\u6761/],"],
   // —— 第六轮:R5-01..R5-05
-  ["K111 只删普通空格和换行(审查 R5-M1)", "assemble.ts", "t.replace(/[\\s\\u200B-\\u200D\\u2060\\uFEFF]+/gu, \"\")", "t.replace(/[ \\n]+/g, \"\")"],
-  ["K127 不去零宽字符", "assemble.ts", "t.replace(/[\\s\\u200B-\\u200D\\u2060\\uFEFF]+/gu, \"\")", "t.replace(/\\s+/gu, \"\")"],
+  ["K111 只删普通空格和换行(审查 R5-M1)", "assemble.ts", "export const INVISIBLE = /[\\s\\u0085\\u200B-\\u200D\\u2060\\uFEFF]+/gu;", "export const INVISIBLE = /[ \\n]+/gu;"],
+  ["K127 不去零宽字符", "assemble.ts", "export const INVISIBLE = /[\\s\\u0085\\u200B-\\u200D\\u2060\\uFEFF]+/gu;", "export const INVISIBLE = /[\\s\\u0085]+/gu;"],
   ["K126 只收集第一条撤回消息(审查 R5-M2)", "assemble.ts", "if (b.kind === \"message\" && retracted.has(e.seq)) out.set", "if (b.kind === \"message\" && retracted.has(e.seq) && out.size === 0) out.set"],
   ["K112 只和首次读数比(R5-01 原错)", "plugins.ts", "reading < prior.maxMonotonic) prior.clockTrusted = false;", "reading < b.firstAttemptMonotonic) prior.clockTrusted = false;"],
   ["K113 读数回升恢复重试资格(R5-01 原错)", "plugins.ts", "if (!prior.clockTrusted) return", "if (!prior.clockTrusted && reading < prior.maxMonotonic) return"],
@@ -144,7 +145,7 @@ const M = [
   ["K118 放行不可枚举属性", "plain.ts", "    if (!d.enumerable) return bad(`${at}.${k}`, \"不允许不可枚举属性\");\n", ""],
   ["K119 放行嵌套函数", "plain.ts", "if (!fnsHere) return", "if (false) return"],
   ["K120 不查稀疏数组", "plain.ts", "if (!d) return bad(`${at}[${i}]`, \"不允许稀疏数组\");", "if (!d) { out.push(null); continue; }"],
-  ["K128 数组元素不查描述符(R5-02 原错)", "plain.ts", "    if (\"get\" in d || \"set\" in d) return bad(`${at}[${i}]`, \"不允许 getter/setter\");\n    if (!d.enumerable) return bad(`${at}[${i}]`, \"不允许不可枚举属性\");\n    put(out, d.value);", "    if (!d.enumerable) return bad(`${at}[${i}]`, \"不允许不可枚举属性\");\n    put(out, (x as unknown[])[i]);"],
+  ["K128 数组元素不查描述符(R5-02 原错)", "plain.ts", "    if (isAccessor(d)) return bad(`${at}[${i}]`, \"不允许 getter/setter\");\n    if (!d.enumerable) return bad(`${at}[${i}]`, \"不允许不可枚举属性\");\n    appendOwn(out, d.value);", "    if (!d.enumerable) return bad(`${at}[${i}]`, \"不允许不可枚举属性\");\n    appendOwn(out, (x as unknown[])[i]);"],
   ["K122 recompress 兜底直接读 message(R5-03 原错)", "assemble.ts", "不能改消息投影):${describeThrown(err)}", "不能改消息投影):${err instanceof Error ? err.message : \"未知错误\"}"],
   ["K124 按冒号分割猜正文(R5-04 原错)", "assemble.ts", "const leaked = leakIn(bodies[i] ?? \"\", secret);", "const leaked = leakIn(sg.text.slice(sg.text.indexOf(\": \") + 2), secret);"],
   ["K125 引用页入不扫正文", "assemble.ts", "{ seq: m.seq }), m.text);", "{ seq: m.seq }), \"\");"],
@@ -160,7 +161,22 @@ const M = [
   ["K138 放行数组上的额外属性", "plain.ts", "if (k !== \"length\" && !INDEX.test(k)) return", "if (false) return"],
   // —— 原型链污染:中间表与结果不经过原型链
   ["K139 描述符表走原型链(原型污染)", "plain.ts", "  const table: Record<string, PropertyDescriptor> = Object.create(null);", "  const table: Record<string, PropertyDescriptor> = {};"],
-  ["K140 数组结果用 push(原型 setter / 只读下标)", "plain.ts", "  Object.defineProperty(out, out.length, { value: v, writable: true, enumerable: true, configurable: true });", "  out.push(v);"],
+  ["K140 数组结果用 push(原型 setter / 只读下标)", "plain.ts", "  Object.defineProperty(out, out.length, dataDesc(v));", "  out.push(v);"],
+  // —— 第七轮:按 PR #6 第六轮审查 R6-01..R6-05 扩充,含审查自造 R6-M1=K142、R6-M2=K143
+  ["K142 有限小数被拒(审查 R6-M1)", "plain.ts", "return Number.isFinite(x) ? { ok: true, value: x }", "return Number.isInteger(x) ? { ok: true, value: x }"],
+  ["K143 空白改成白名单漏掉 U+000B(审查 R6-M2)", "assemble.ts", "export const INVISIBLE = /[\\s\\u0085\\u200B-\\u200D\\u2060\\uFEFF]+/gu;", "export const INVISIBLE = /[ \\t\\n\\r\\u00A0\\u3000\\u200B-\\u200D\\u2060\\uFEFF]+/gu;"],
+  ["K144 空白只用 \\s,漏掉 U+0085", "assemble.ts", "export const INVISIBLE = /[\\s\\u0085\\u200B-\\u200D\\u2060\\uFEFF]+/gu;", "export const INVISIBLE = /[\\s\\u200B-\\u200D\\u2060\\uFEFF]+/gu;"],
+  ["K145 defineProperty 描述符继承 Object.prototype(R6-01 原错)", "plain.ts", "  const d: PropertyDescriptor = Object.create(null);\n  d.value = value;", "  const d: PropertyDescriptor = {};\n  d.value = value;"],
+  ["K146 访问器判断读继承属性(R6-01 原错)", "plain.ts", "const isAccessor = (d: PropertyDescriptor): boolean => Object.hasOwn(d, \"get\") || Object.hasOwn(d, \"set\");", "const isAccessor = (d: PropertyDescriptor): boolean => \"get\" in d || \"set\" in d;"],
+  ["K147 拉取结果用 push(R6-02 原错)", "plugins.ts", "else appendOwn(events, s);", "else events.push(s);"],
+  ["K148 装配段用 push(R6-02 原错)", "assemble.ts", "const push = (sg: Segment, body: string) => { appendOwn(segments, sg); appendOwn(bodies, body); };", "const push = (sg: Segment, body: string) => { segments.push(sg); bodies.push(body); };"],
+  ["K149 注册表选项不过统一判定(R6-03 原错)", "plugins.ts", "const plain = plainData(input ?? {}, \"注册表选项\", { topFunctions: true });", "const plain = { ok: true as const, value: input ?? {} } as ReturnType<typeof plainData>;"],
+  ["K150 判定选项直接读 topFunctions(R6-03 原错)", "plain.ts", "    const fns = topFunctionsOf(opts);", "    const fns = (opts as PlainOptions | undefined)?.topFunctions === true;"],
+  ["K151 序列化与前缀工具不过统一判定(R6-03 原错)", "assemble.ts", "  const plain = plainData(input, `${fn} 请求`);", "  const plain = { ok: true as const, value: input } as ReturnType<typeof plainData>;"],
+  ["K152 分类结果不过统一判定(R6-04 原错)", "classify.ts", "    const p = plainData(raw, \"分类结果\");", "    const p = { ok: true as const, value: raw } as ReturnType<typeof plainData>;"],
+  ["K153 诊断不标访问器", "plain.ts", "isAccessor(d) ? JSON.stringify(\"[getter/setter]\") : render(d.value, seen, depth + 1)", "render(d.value, seen, depth + 1)"],
+  ["K154 发送结果读 then 判 thenable(R6-04 原错)", "plugins.ts", "  if (!types.isPromise(x) || types.isProxy(x)) return false;", "  if (typeof x === \"object\" && x !== null && typeof (x as { then?: unknown }).then === \"function\") return true;\n  if (!types.isPromise(x) || types.isProxy(x)) return false;"],
+  ["K155 放行带自有 then 的 Promise", "plugins.ts", "  return !Object.hasOwn(x, \"then\") && !Object.hasOwn(x, \"constructor\");", "  return true;"],
 ];
 
 const TIMEOUT_MS = Number(process.env.KERNEL_MUT_TIMEOUT_MS ?? 300_000);
