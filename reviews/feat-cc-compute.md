@@ -202,3 +202,113 @@
 - AC-07、AC-33④、V-06 的整体状态仍为未测；不得以模拟 CLI、init 自报或原型的 10 次实验冒充本适配器的真实完整模型执行。原型确实允许 milestone 漏报，宿主以最终完成补齐/标注；其 blocked 样本为请求用户条件后停止，而 CLI result 的 subtype 仍是 success。
 - 本轮中性环境对照仍证明 `hostEnv` 显式内容会进入子进程，不证明内核不会放明文；没有伪造凭据文件，也没有取用真实凭据。`--bare` 不读取 auto-memory/CLAUDE.md 的真实模型上下文、真实授权外工具调用、Windows 及跨厂商状态机完整接线仍未验证。
 - 仅修改本报告的“第二轮”追加段和收据 `review`；具体问题修复由作者进行。返修后应对新 hash 再做跨厂商复审，不把暂时缺测或错误终态标绿。
+
+---
+
+## 第三轮（2026-11-06）：按用户确认的 process-group 语义复审
+
+**结论：reject。** 用户已经明确不需要容器，停止范围改为 `process-group`；本轮不再以 setsid 脱组后代仍存活作为缺陷。独立实测组内 SIGTERM、立即 stopped、默认 10 秒 SIGKILL、blocked 冻结和主进程退出前拒绝快照均符合本轮明示行为；但停止后的输出仍可改变终态、空续接先杀掉暂停进程、init 前输出的门禁不完整。另发现一个变异触发的测试进程清理缺口，以及用户所列语义与 mirasim 0.0.774 源码并不完全相同，不能写成逐项等同。
+
+### 1. 固定对象、身份与跨厂商
+
+- PR #7 `feat/cc-compute` 产品 HEAD `e7c1d4aa624e7cf4dc13a51e389f9661c1e9b97c`；基线 `origin/feat/domain-core` 为 `afd02560f9546147da380382404eb6106222a9b8`。暂停时的 `388bce0` 已作废，本结论不以它为审查目标。
+- 普通独立 clone：`/tmp/g-group-pr7-r3b-review-codex-592ebd7a`；红提交和变异分别使用其他独立副本，不在共享 linked worktree 执行钩子。Node `v25.8.1`，macOS，8 核；真实 Claude Code 网关未配置，本轮未跑真实模型 smoke。
+- 审查会话 `codex:592ebd7a-e738-43bd-a331-069366648d54`，本轮原生 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI）；作者会话中涉及本仓库的模型均为 Claude/Anthropic。没有豁免。
+- 指定命令 `node scripts/gates/run-all.ts --hash --branch=feat/cc-compute --base=origin/feat/domain-core` 在该 clone 根目录的**原样输出**如下，与作者声明一致：
+
+  ```text
+  46b92e881f30862f7eea853ae17b7ea7051f1142b20732d30c6278274bded229
+  ```
+
+- GitHub self-check run `42122024671` 的 `headSha` 确为上述产品 HEAD，状态 completed、结论 success；这不是独立审查通过，也不是全部业务验收通过。
+
+### 2. 必须修复的问题
+
+#### R3-01 [P1] `stopped` 后仍处理输出，受阻回报还能反向覆盖终态
+
+位置：`packages/adapter-cc-compute/src/adapter.ts:120-164,263-277`。`stop()` 设置 `finished` 并立即 emit stopped，但没有设置 `halted`；`onLine()` 只检查 `halted`。因此仍在宽限期的 CLI 可以在 stopped 之后继续改变对外事件和内部状态。
+
+**独立反例：** 使用可注入的真实 Node 子进程及同组子进程；主进程收到 SIGTERM 后写一个合规 `report_progress` 的 tool_use/tool_result，再保持存活。先调用 `stop`：
+
+- 若迟到的是 milestone，实际在 stopped 之后又收到 milestone。
+- 若迟到的是 blocked，实际顺序为 `started → stopped → blocked → stopped`；第二次 `stop()` 也返回 `{ok:true}`。迟到的 blocked 将 `round.terminal` 改回 `paused-blocked`，还向组发送 SIGSTOP。
+
+这不是要求等进程退出：用户明确允许 stopped 立即产生；问题是**已经宣布的终态仍被同一轮的迟到输出改写**。测试用的是模拟 CLI stream 和真实 POSIX 信号，没有冒称真实 Claude 模型执行。原有测试只用收到 TERM 后不再输出的夹具，因此没有发现。
+
+**要求：** stop 确认后封存该轮语义输入与终态，后续 stdout/tool_result 不得再产事件、改变状态或触发信号；保留已记录的违规、SIGTERM 和 10 秒升级。补迟到 milestone、blocked、重复 stop 和退出竞态对照。
+
+#### R3-02 [P1] 空 `resume` 先杀掉受阻进程，再返回输入错误
+
+位置：`src/adapter.ts:245-259`。受阻进程处于 SIGSTOP 时，`resume()` 在检查 `text.trim()` **之前**对其进程组 SIGKILL 并等待退出。
+
+**反例：** 已核验 init、blocked 后，确认父子组状态均为 `T`；调用 `resume(id, '   ')`，得到 `{ok:false,reason:'续接的内容不能为空'}`，但原主进程已不再存活。合法续接仍有原有测试作对照。无效输入不应先对暂停的原会话产生不可逆进程副作用。
+
+**要求：** 在任何信号/状态变更前验证续接输入及其他必要前置条件；补空白输入前后主进程和同组子进程保持暂停、合法续接再执行的单开关测试。
+
+#### R3-03 [P1] init 前未识别的输出被静默忽略，提前 tool_use 还能在 init 后生效
+
+位置：`src/events.ts:51-78`、`src/adapter.ts:141-164`。第二轮返修要求 init 前其他输出回收并 failed，但 parser 对非 JSON、assistant 文本、尚未配对的 tool_use 都返回空 signal，故 `onLine()` 的 init 前检查没有运行。
+
+**三个独立输入：**
+
+1. assistant 文本 → 合法 init → success result，实际 `started → completed`。
+2. 非 JSON 行 → 合法 init → success result，实际 `started → completed`。
+3. init 前的 `report_progress` tool_use → 合法 init → 对应 tool_result → success，实际 `started → milestone → completed`；提前的调用被 `pending` 保存并跨越 init 配对。
+
+对照：合法 init 后正常 result 完成；init 前直接 result 目前确实 failed。夹具 `test-support/fake-claude.mjs:47-73` 自己也在 init 前输出 `fake_grandchild` 行，而当前 parser 会忽略它。
+
+**要求：** 按已确认的协议显式处理 init 前每一行，不得先记住工具调用、后通过 init 洗白；如果某些真实 CLI 前导帧需要豁免，应先明确允许清单和用户契约，而不是静默吞掉所有未知输出。把测试用 PID 屏障留在中性文件/IPC，不依赖未声明的前导 stdout。
+
+#### R3-04 [P2 / RR-06] 断言在假 CLI 写记录前失败时，afterEach 漏回收进程
+
+位置：`src/adapter.test.ts:27-49,684-690`。独立将快照守卫做单点变异（运行中错误地放行），typecheck 退出 0；对应测试在约 10ms 具名失败，但测试进程未正常退出。首次外层 90 秒超时后，本轮假 CLI 仍作为独立进程存活，已核验其命令属于本轮独立变异副本后清理。按本仓库规则，**超时/强杀不能计为完整按名杀死**。
+
+进一步在另一个独立变异副本限制观察 6 秒：测试已具名失败而假 CLI 仍存活；只清理匹配该副本完整可执行路径的组后，测试进程才退出 1。清理只涉及本轮进程，之后两个变异副本均恢复干净。代码存在的竞态是：`afterEach` 只从已经存在的 `record.jsonl` 取 PID 并立即清空 `ownDirs`；若断言先于假 CLI 写记录失败，就没有 PID 可回收。
+
+**要求：** 测试在启动时直接记录可回收的子进程/进程组身份，或提供可靠启动屏障；无论断言失败在记录前还是后均在 `finally/afterEach` 回收。对完整变异执行验收需排除超时、信号、部分执行和残留；不得按名称模糊清理其他会话。
+
+### 3. 与 mirasim 0.0.774 的实际对照
+
+用户本轮明示的 **POSIX 组 SIGTERM → 立即 stopped → 默认 10 秒后仍存活组 SIGKILL** 是本次审查的行为基准，本 PR 的独立实测符合它；不应因为参考实现不同就擅自改成只杀主进程。
+
+但指定文件 `/Users/snakesammy/.mirasim/app/0.0.774/server-main.cjs` 的 SHA-256 为 `b342710fd8a9cf28211003fe521bd12e11e36b8f8cd3ce4a988b305d359c4d4c`。源码中 Claude abort 路径调用 `z2(child,{graceMs:0,group:true})`；`PU = process.platform !== 'win32'`，POSIX 下该函数初始分支调用 `MLe(child)`，即 **`child.kill('SIGTERM')`，不是组 SIGTERM**。其 10 秒升级经 `FG(...,'SIGKILL')` 发组信号，但主进程 `exit` 会清除升级计时器。
+
+为核对解释，将本机原文件的 `MLe` 至 `z2` 原函数片段放进隔离进程执行（仅将 forceMs 缩短为 1 秒以观察，默认值仍由原源码 `Lkc=1e4` 核实）：主进程保持运行时，主进程收到 TERM、同组子进程**没有**收到 TERM，之后两者被组 KILL；主进程先退出时，计时器取消、同组子进程仍活。全过程只用中性标记并清理自己的进程。
+
+**结论：** 当前 PR 符合用户明确列出的组信号要求，但“与 0.0.774 不多不少/完全一致”的说法与所给源码不符；需要更正证据与措辞，若要改用户明确行为须另行征得用户决定。不能把脱组后代逃逸当作本轮失败：独立 setsid 对照中，stopped 的 `scope:'process-group'` 且脱组中性子进程继续写标记，正是已披露、不覆盖的范围，不要求 Docker 或容器。
+
+### 4. 实际运行、门禁负例与变异
+
+| 复现 | 实际结果与边界 |
+|---|---|
+| 绿版 `npm ci`、typecheck、lint、全仓 test | 各退出 0；全仓 72/72，0 跳过 |
+| 红提交 `5312efc0f6c80fabb5729f129b6aa9f13130c496` 独立 clone、npm ci、本包测试 | 安装退出 0；49 条按名字失败、0 跳过；这些名字均在绿版通过；红绿测试与假 CLI 文件无差异 |
+| 独立 POSIX 同组信号 | stopped 约 1ms 返回时父子均存活，随后父子均写出 TERM 标记；默认强杀实际约 10.107 秒，两者随后消失。blocked 时父子 `ps` 状态均为 T；主进程存活及刚 stopped 时 snapshot 均拒绝，退出后给快照 |
+| F-03 负载复现 | 自建 2 个 CPU 负载进程、8 核机器上只针对“正常结束留同组孙进程”用例连续 20 次，20/20 通过；观察的 1 分钟 load 约 5.2–9.7。**不是**重新跑完整 49 项 20 次，也未复现作者约 28 的峰值；作者 `flake-20.txt` 对应的 `a83b309` 到本 HEAD 产品源码和夹具无差异 |
+| 审查前完整 `run-all --local` | 退出 1，G-REVIEW 因旧 reject 和旧 hash 拦截；其余绿。旧轮次 G-PROVENANCE 通过不代表本轮 hash 已完成来源核验 |
+| 填写本轮 reject 后 `run-all --local` | 退出 1；G-REVIEW 按 reject 拦截，G-PROVENANCE 暂未在已落盘轮次中找到本轮 hash，因而同时报审查轮次厂商无法确认；不伪造当前会话记录补绿 |
+| 真实 smoke | 当前审查环境没有设置 Anthropic 网关/认证环境，本轮没有运行真实模型 smoke。`proof/smoke-real.txt` 从 `388bce0` 到本 HEAD 无改动，最后一次提交为 `88dbbef`；只能说明仓库没有新增 smoke 证据，不能证明作者本机从未运行未记录的测试 |
+
+**每个机械门禁独立负例：** 在临时、普通 Git 仓库中给真实 `run-all.ts --local` 分别输入：G-TRACE 缺失证据、G-REVIEW 作者自审、G-RED 缺红提交、G-STUB 只断言模块加载时算出的顶层值、G-TAUTO 恒真断言、G-WORKFLOW 使用 `pull_request_target`、G-LAYER 领域层反向依赖内核、G-PROVENANCE 审查记录缺 hash 调用。八例均退出 1 且对应门禁和预期原因被观察到；独立合规对照退出 0。会话记录是门禁测试用的隔离夹具，不是实际审查来源或凭据文件。
+
+**独立单点变异：** 下列变异均在单独 clone、每次只改一处且 typecheck 退出 0：
+
+| 变异 | 现有测试的实际结果 |
+|---|---|
+| SIGTERM 只发主进程 | F-03 具名失败 |
+| 不升级组 SIGKILL | 无视 SIGTERM 的 stop 用例具名失败 |
+| blocked 不发 SIGSTOP | blocked 组冻结用例具名失败 |
+| stop 等待主进程退出才返回 | 立即 stopped 用例具名失败 |
+| 原 M18 不核对越界 / M32 started 清除拒收 | 两项分别具名失败，M18 这次有界退出 |
+| init 前 signal 不检查、直接忽略 | **现有本包 49/49 通过，变异存活**；独立的“init 前 result 后补合法 init”断言失败，原版该对照通过 |
+| 快照守卫放行运行中 | 具名断言先失败，但测试进程超时且假 CLI 残留；按超时/强杀规则不计完整杀死，见 R3-04 |
+
+未重跑作者全部 45 个变异，不把作者的 45/45 自报当作本轮观察；本轮独立测试和日志存于 `/tmp/g-group-pr7-r3b-*`，报告已列出输入与决定性结果。
+
+**执行器错误如实记录：** 独立默认强杀探针首版误给了 700ms 覆盖值而失败，修正为不传覆盖值后实测 10.107 秒通过，该失败不是产品结论。一次额外清理监督脚本因把自身 shell 命令字符串误识别为目标而退出 137；仅该临时复测受影响，随后核验并清理自己的两组进程，严格按可执行路径重跑后得到 R3-04 的 6 秒观察；不把退出 137 当产品失败。 插入门禁结果时曾误改旧段，前缀校验发现后已从 HEAD 恢复旧报告原字节，仅保留第三轮追加；未提交受影响版本。
+
+### 5. 未测与交付边界
+
+AC-07、AC-33④ 和 V-06 整项仍未测：内核授权子集、权威约束/副作用账、真实 CLI 的工具权限及模型事件映射没有凭本轮假 CLI 推断通过。`hostEnv` 明文接线、共享 schema 同错、Windows 和脱组后代均保持已披露边界。用户已经选择本机 process-group 语义，内核不得把 stopped 或主进程退出误当作整棵执行树静止。
+
+本轮只追加本节和更新收据 `review`；本轮会话尚在运行，hash 对应的当前轮记录尚未落盘，不声称本轮 G-PROVENANCE 已通过。返修由作者负责，新产品 hash 需重新跨厂商审查。

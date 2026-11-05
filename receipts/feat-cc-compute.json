@@ -47,7 +47,7 @@
     "session": "codex:592ebd7a-e738-43bd-a331-069366648d54",
     "model": "gpt-6.1-terra",
     "verdict": "reject",
-    "reviewed_hash": "6ff1111788cf671b820f18852a067c887207cc24abc96eed27a3f2b60e9924f1",
-    "notes": "第二轮 reject：受阻可被错误解除、MCP 缺失时仍完成、脱组后代与运行中快照不保证静止；现有测试有单点变异存活，作者变异重放在 M18 挂起。详见 reviews/feat-cc-compute.md 第二轮。"
+    "reviewed_hash": "46b92e881f30862f7eea853ae17b7ea7051f1142b20732d30c6278274bded229",
+    "notes": "第三轮 reject：stopped 后仍可接收事件并重复停止，空 resume 先杀冻结进程，init 前输出漏检；单点变异暴露测试进程清理竞态，mirasim 源码与所列组 SIGTERM 语义亦不完全相同。详见 reviews/feat-cc-compute.md 第三轮。"
   }
 }
