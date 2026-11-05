@@ -5,7 +5,8 @@
 // B01–B10(B09 与 N09 同一注入,不重复)对应第二轮审查独立变异;R01–R11 是 R2-CORR-01..04 修复的新增埋雷;
 // C01–C10(C10 与 R03 同一注入,不重复)对应第三轮审查独立变异;S01–S14 是 R3-CORR-01..03 修复的新增埋雷;
 // D01–D11 对应第四轮审查独立变异;T01–T15 是 R4-CORR-01..03 修复的新增埋雷;
-// E01–E10(E10 与 T04 同一注入,不重复)对应第五轮审查独立变异;U01–U11 是 R5-CORR-01..03 修复的新增埋雷。原样副本必须全绿(阴性对照)。
+// E01–E10(E10 与 T04 同一注入,不重复)对应第五轮审查独立变异;U01–U11 是 R5-CORR-01..03 修复的新增埋雷;
+// F01–F08 对应第六轮审查独立变异(F09 阳性对照与 U08/U09 同类不重复);V01–V10 是第六轮修复的新增埋雷。原样副本必须全绿(阴性对照)。
 // 用法: node packages/domain/proof/mutations.mjs
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -112,7 +113,7 @@ const M = [
   ["S04 撤销重发不登记旧启动", "task.ts", "  relaunch(set(t, { constraintVer: ver, revoked: [...t.revoked, launch.requestId] }), [{ kind: \"cancel-spawn\", requestId: launch.requestId }], t.state !== \"T2_Claimed\");", "  relaunch(set(t, { constraintVer: ver, revoked: t.revoked }), [{ kind: \"cancel-spawn\", requestId: launch.requestId }], t.state !== \"T2_Claimed\");"],
   ["S05 只等当前对象,忽略孤儿与旧启动", "task.ts", "if (c.computeId || c.launch || c.revoked.length || c.orphans.length) return r;", "if (c.computeId || c.launch) return r;"],
   ["S06 取消时不等未决旧启动", "task.ts", "  if (t.revoked.length || t.orphans.length) return ok(set(t, { state: \"T9_StopRequested\", stopReason: reason }));\n", ""],
-  ["S07 孤儿停止确认不释放槽位", "task.ts", "orphans: t.orphans.filter((c) => c !== ev.computeId) }), [{ kind: \"release-slot\", computeId: ev.computeId }]);", "orphans: t.orphans.filter((c) => c !== ev.computeId) }));"],
+  ["S07 孤儿停止确认不释放槽位", "task.ts", "return ok(set(t, { orphans: t.orphans.filter((c) => c !== ev.computeId), retired: [...t.retired, ev.computeId] }), [{ kind: \"release-slot\", computeId: ev.computeId }]);", "return ok(set(t, { orphans: t.orphans.filter((c) => c !== ev.computeId), retired: [...t.retired, ev.computeId] }));"],
   ["S08 提审不核对来源实例", "task.ts", "  if (ev.computeId !== t.computeId || ev.constraintVer !== t.constraintVer) return ok(t);\n  const commit", "  if (ev.constraintVer !== t.constraintVer) return ok(t);\n  const commit"],
   ["S09 提审不核对条件版本", "task.ts", "  if (ev.computeId !== t.computeId || ev.constraintVer !== t.constraintVer) return ok(t);\n  const commit", "  if (ev.computeId !== t.computeId) return ok(t);\n  const commit"],
   ["S10 提问不核对来源与版本", "task.ts", "      if (ev.computeId !== t.computeId || ev.constraintVer !== t.constraintVer) return ok(t);\n      return ok(set(t, { state: \"T4b_BlockedOnHuman\"", "      return ok(set(t, { state: \"T4b_BlockedOnHuman\""],
@@ -123,7 +124,7 @@ const M = [
   ["D01 T4b 不消费孤儿停止确认", "task.ts", "    Amend: amendLive, SubmitForReview: staleOr(\"等人确认中,不能提审\"), Review: rej(\"不在审查中\"), DeliveredCard: rej(\"等人确认中\"),\n    UserAccept: rej(NOT_DELIVERED), UserReject: rej(NOT_DELIVERED), AcceptTimeout: ign(NOT_DELIVERED),\n    Cancel: cancel, StoppedConfirmed: ack,", "    Amend: amendLive, SubmitForReview: staleOr(\"等人确认中,不能提审\"), Review: rej(\"不在审查中\"), DeliveredCard: rej(\"等人确认中\"),\n    UserAccept: rej(NOT_DELIVERED), UserReject: rej(NOT_DELIVERED), AcceptTimeout: ign(NOT_DELIVERED),\n    Cancel: cancel, StoppedConfirmed: ign(\"变异\"),"],
   ["D02 T7 不消费孤儿停止确认", "task.ts", "Cancel: cancel, StoppedConfirmed: ack, ExecFailed: ign(\"工件已落盘", "Cancel: cancel, StoppedConfirmed: ign(\"变异\"), ExecFailed: ign(\"工件已落盘"],
   ["D03 任一旧启动确认清空全部 revoked", "task.ts", "if (ev.requestId !== undefined && t.revoked.includes(ev.requestId)) return ok(set(t, { revoked: t.revoked.filter((r) => r !== ev.requestId) }));", "if (ev.requestId !== undefined && t.revoked.includes(ev.requestId)) return ok(set(t, { revoked: [] }));"],
-  ["D04 任一孤儿确认清空全部 orphans", "task.ts", "if (ev.computeId !== undefined && t.orphans.includes(ev.computeId)) return ok(set(t, { orphans: t.orphans.filter((c) => c !== ev.computeId) }), [{ kind: \"release-slot\", computeId: ev.computeId }]);", "if (ev.computeId !== undefined && t.orphans.includes(ev.computeId)) return ok(set(t, { orphans: [] }), [{ kind: \"release-slot\", computeId: ev.computeId }]);"],
+  ["D04 任一孤儿确认清空全部 orphans", "task.ts", "return ok(set(t, { orphans: t.orphans.filter((c) => c !== ev.computeId), retired: [...t.retired, ev.computeId] }), [{ kind: \"release-slot\", computeId: ev.computeId }]);", "return ok(set(t, { orphans: [], retired: [...t.retired, ev.computeId] }), [{ kind: \"release-slot\", computeId: ev.computeId }]);"],
   ["D05 只登记第一个孤儿", "task.ts", "  if (t.orphans.includes(ev.computeId)) return ok(t);", "  if (t.orphans.length > 0) return ok(t);"],
   ["D06 revoked 不冻结", "task.ts", "revoked: Object.freeze([...(patch.revoked ?? t.revoked)]), orphans: Object.freeze([...(patch.orphans ?? t.orphans)]),", "revoked: [...(patch.revoked ?? t.revoked)], orphans: Object.freeze([...(patch.orphans ?? t.orphans)]),"],
   ["D07 orphans 不冻结", "task.ts", "revoked: Object.freeze([...(patch.revoked ?? t.revoked)]), orphans: Object.freeze([...(patch.orphans ?? t.orphans)]),", "revoked: Object.freeze([...(patch.revoked ?? t.revoked)]), orphans: [...(patch.orphans ?? t.orphans)],"],
@@ -159,13 +160,31 @@ const M = [
   ["U02 交付侧事件不核对代次", "task.ts", "  if (!t.delivery || ev.deliveryRound !== t.delivery.round || ev.commit !== t.delivery.commit) return no(`交付代次 ${ev.deliveryRound} 不是当前交付`);\n", ""],
   ["U03 旧代次判定不核 commit", "task.ts", "  return !t.delivery || ev.deliveryRound !== t.delivery.round || ev.commit !== t.delivery.commit;", "  return !t.delivery || ev.deliveryRound !== t.delivery.round;"],
   ["U04 交付代次不递增", "task.ts", "  const round = t.deliverySeq + 1;", "  const round = 1;"],
-  ["U05 审查通过不请求发卡", "task.ts", "    [{ kind: \"send-card\", deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    []);"],
+  ["U05 审查通过不请求发卡", "task.ts", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    []);"],
   ["U06 重审不清当前交付", "task.ts", "approval: null, delivery: null, badge: \"none\" }), [{ kind: \"request-review\"", "approval: null, badge: \"none\" }), [{ kind: \"request-review\""],
   ["U07 返工不清当前交付", "task.ts", "badge: \"none\", approval: null, delivery: null } as const;", "badge: \"none\", approval: null } as const;"],
   ["U08 未回绑时可证明旧回包也拒", "task.ts", "  if (ev.constraintVer !== undefined && ev.constraintVer < t.constraintVer) return true;\n  return ev.computeId", "  if (ev.constraintVer !== undefined && false) return true;\n  return false && ev.computeId"],
-  ["U09 未回绑时旧实例回包不算旧", "task.ts", "  return ev.computeId !== undefined && ev.computeId !== t.computeId && (t.instances.includes(ev.computeId) || t.orphans.includes(ev.computeId));", "  return false;"],
+  ["U09 未回绑时旧实例回包不算旧", "task.ts", "  return ev.computeId !== undefined && ev.computeId !== t.computeId && (t.instances.includes(ev.computeId) || t.orphans.includes(ev.computeId) || t.retired.includes(ev.computeId));", "  return false;"],
   ["U10 交付快照不冻结", "task.ts", "d ? Object.freeze({ round: Number(d.round), commit: String(d.commit) }) : null;", "d ? { round: Number(d.round), commit: String(d.commit) } : null;"],
   ["U11 T2 旧提问回包仍拒", "task.ts", "NeedHuman: unboundOr(NOT_RUNNING), HumanReply: ign(NO_CARD),\n    Amend: amendQueued,", "NeedHuman: rej(NOT_RUNNING), HumanReply: ign(NO_CARD),\n    Amend: amendQueued,"],
+  ["F01 未回绑时不识别已登记孤儿", "task.ts", "  return ev.computeId !== undefined && ev.computeId !== t.computeId && (t.instances.includes(ev.computeId) || t.orphans.includes(ev.computeId) || t.retired.includes(ev.computeId));", "  return ev.computeId !== undefined && ev.computeId !== t.computeId && (t.instances.includes(ev.computeId) || t.retired.includes(ev.computeId));"],
+  ["F02 未回绑时只认最近两个历史实例", "task.ts", "  return ev.computeId !== undefined && ev.computeId !== t.computeId && (t.instances.includes(ev.computeId) || t.orphans.includes(ev.computeId) || t.retired.includes(ev.computeId));", "  return ev.computeId !== undefined && ev.computeId !== t.computeId && (t.instances.slice(-2).includes(ev.computeId) || t.orphans.includes(ev.computeId) || t.retired.includes(ev.computeId));"],
+  ["F03 只把上一代次当旧代次", "task.ts", "  if (ev.deliveryRound > t.deliverySeq) return false;", "  if (ev.deliveryRound > t.deliverySeq || ev.deliveryRound < t.deliverySeq - 1) return false;"],
+  ["F04 send-card 条件版本封顶为 1", "task.ts", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: Math.min(t.constraintVer, 1) }]);"],
+  ["F05 第三次交付 send-card commit 错误", "task.ts", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: round >= 3 ? \"__wrong__\" : delivery.commit, constraintVer: t.constraintVer }]);"],
+  ["F06 归档后退回交付序列清零", "task.ts", "badge: \"none\", approval: null, delivery: null } as const;", "badge: \"none\", approval: null, delivery: null, deliverySeq: t.state === \"T8_ArchivedUnverified\" ? 0 : t.deliverySeq } as const;"],
+  ["F07 只对 UserAccept 检查旧交付 commit", "task.ts", "  return !t.delivery || ev.deliveryRound !== t.delivery.round || ev.commit !== t.delivery.commit;", "  return !t.delivery || ev.deliveryRound !== t.delivery.round || (e.kind === \"UserAccept\" && ev.commit !== t.delivery.commit);"],
+  ["F08 send-card 交付代次封顶为 2", "task.ts", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: Math.min(round, 2), commit: delivery.commit, constraintVer: t.constraintVer }]);"],
+  ["V01 孤儿确认停止后不记入退役", "task.ts", "return ok(set(t, { orphans: t.orphans.filter((c) => c !== ev.computeId), retired: [...t.retired, ev.computeId] }), [{ kind: \"release-slot\", computeId: ev.computeId }]);", "return ok(set(t, { orphans: t.orphans.filter((c) => c !== ev.computeId) }), [{ kind: \"release-slot\", computeId: ev.computeId }]);"],
+  ["V02 当前实例确认停止后不记入退役", "task.ts", "computeId: null, boundRequest: null, retired: [...t.retired, t.computeId] }),", "computeId: null, boundRequest: null }),"],
+  ["V03 退役实例重放上线重新登记为孤儿", "task.ts", "  if (t.retired.includes(ev.computeId)) return ok(t, [{ kind: \"stop-compute\", computeId: ev.computeId }]);\n", ""],
+  ["V04 退役实例重放上线不再发停止", "task.ts", "  if (t.retired.includes(ev.computeId)) return ok(t, [{ kind: \"stop-compute\", computeId: ev.computeId }]);", "  if (t.retired.includes(ev.computeId)) return ok(t);"],
+  ["V05 未回绑时退役实例回包不算旧", "task.ts", "  return ev.computeId !== undefined && ev.computeId !== t.computeId && (t.instances.includes(ev.computeId) || t.orphans.includes(ev.computeId) || t.retired.includes(ev.computeId));", "  return ev.computeId !== undefined && ev.computeId !== t.computeId && (t.instances.includes(ev.computeId) || t.orphans.includes(ev.computeId));"],
+  ["V06 交付代次不校验正整数", "task.ts", "  if (DELIVERY_EVENTS.has(e.kind) && !(Number.isSafeInteger(ev.deliveryRound) && (ev.deliveryRound as number) >= 1)) return `交付代次 ${ev.deliveryRound} 不是正整数`;\n", ""],
+  ["V07 交付代次允许 0", "task.ts", "(ev.deliveryRound as number) >= 1)", "(ev.deliveryRound as number) >= 0)"],
+  ["V08 交付代次允许小数", "task.ts", "!(Number.isSafeInteger(ev.deliveryRound) && (ev.deliveryRound as number) >= 1)", "!(Number.isFinite(ev.deliveryRound) && (ev.deliveryRound as number) >= 1)"],
+  ["V09 不核对事件所属任务", "task.ts", "  if (ev.taskId !== undefined && ev.taskId !== t.id) return `事件属于任务 ${ev.taskId},不是本任务 ${t.id}`;\n", ""],
+  ["V10 send-card 不带任务号", "task.ts", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    [{ kind: \"send-card\", taskId: \"\", deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);"],
   ["M28 vendor 两家都像时取第一家", "vendor.ts", "return hits.size === 1 ? [...hits][0]! : \"unknown\";", "return hits.size >= 1 ? [...hits][0]! : \"unknown\";"],
 ];
 
