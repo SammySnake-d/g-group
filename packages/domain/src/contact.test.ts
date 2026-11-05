@@ -431,3 +431,75 @@ test("CH-09 两条承诺出处都早于汇报依据位置,回执只点名 kA:只
   const early = confirmFinalReport(b.ok ? b.contact : (null as never), rc("T1", ["kA"], 300));
   assert.deepEqual(early.commitments.map((k) => k.reportedTaskIds), [["T1"], []]);
 });
+
+test("CH-12 承诺出处必须是非负整数消息位置:NaN、Infinity、负数、小数被拒;0 与正整数照常(对照)", () => {
+  const c = mk().contacts.get("c-mi")!;
+  for (const sourceSeq of [Number.NaN, Number.POSITIVE_INFINITY, -1, 1.5]) {
+    const r = commit(c, { id: "k", sourceSeq, text: "x", boundTaskIds: ["T1"], schedule: null });
+    assert.equal(r.ok, false, String(sourceSeq));
+    assert.match(!r.ok ? r.reason : "", /不是合法的消息位置/, String(sourceSeq));
+  }
+  for (const sourceSeq of [0, 200]) assert.equal(commit(c, { id: "k", sourceSeq, text: "x", boundTaskIds: ["T1"], schedule: null }).ok, true, String(sourceSeq));
+});
+
+test("CH-12 回执依据位置不是非负整数时不确认、不回收、不解锁;同一回执换成合法位置才生效(对照)", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "kB", sourceSeq: 200, text: "T1 汇报到群 B", boundTaskIds: ["T1"], schedule: null });
+  const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "kB" });
+  const locked = f.ok ? f.contact : (null as never);
+  const ended = settleTask(locked, "T1");
+  for (const basedOnSeq of [Number.NaN, Number.POSITIVE_INFINITY, -1, 200.5]) {
+    const early = confirmFinalReport(locked, rc("T1", ["kB"], basedOnSeq));
+    assert.deepEqual(early.commitments, locked.commitments, String(basedOnSeq));
+    const afterEnd = settleTask(early, "T1");
+    assert.equal(afterEnd.commitments[0]?.status, "active", String(basedOnSeq));
+    assert.deepEqual(afterEnd.focus, { onlyCommitmentId: "kB" }, String(basedOnSeq));
+    assert.deepEqual(confirmFinalReport(ended, rc("T1", ["kB"], basedOnSeq)).commitments, ended.commitments, String(basedOnSeq));
+  }
+  assert.deepEqual(confirmFinalReport(locked, rc("T1", ["kB"], 199)).commitments, locked.commitments);
+  const ok = confirmFinalReport(ended, rc("T1", ["kB"], 200));
+  assert.equal(ok.commitments[0]?.status, "done");
+  assert.equal(ok.focus, null);
+});
+
+test("CH-13 回执作用域为空时不确认任何承诺;点名后才确认(对照)", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "kA", sourceSeq: 100, text: "汇报", boundTaskIds: ["T"], schedule: null });
+  const base = a.ok ? a.contact : (null as never);
+  assert.deepEqual(confirmFinalReport(base, rc("T", [], 100)).commitments, base.commitments);
+  assert.deepEqual(confirmFinalReport(settleTask(base, "T"), rc("T", [], 100)).commitments[0]?.awaitingReport, ["T"]);
+  assert.deepEqual(confirmFinalReport(base, rc("T", ["kA"], 100)).commitments[0]?.reportedTaskIds, ["T"]);
+});
+
+test("CH-13 同一回执点名两条承诺时逐条比较出处:出处 100 与 200、依据 150 只确认前者;顺序颠倒结果相同", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "kA", sourceSeq: 100, text: "群 A", boundTaskIds: ["T"], schedule: null });
+  const b = commit(a.ok ? a.contact : (null as never), { id: "kB", sourceSeq: 200, text: "群 B", boundTaskIds: ["T"], schedule: null });
+  const fwd = b.ok ? b.contact : (null as never);
+  const after = confirmFinalReport(fwd, rc("T", ["kA", "kB"], 150));
+  assert.deepEqual(after.commitments.map((k) => k.reportedTaskIds), [["T"], []]);
+  assert.deepEqual(settleTask(after, "T").commitments.map((k) => k.status), ["done", "active"]);
+  const x = commit(mk().contacts.get("c-mi")!, { id: "kB", sourceSeq: 200, text: "群 B", boundTaskIds: ["T"], schedule: null });
+  const y = commit(x.ok ? x.contact : (null as never), { id: "kA", sourceSeq: 100, text: "群 A", boundTaskIds: ["T"], schedule: null });
+  const rev = confirmFinalReport(y.ok ? y.contact : (null as never), rc("T", ["kB", "kA"], 150));
+  assert.deepEqual(rev.commitments.map((k) => [k.id, k.reportedTaskIds]), [["kB", []], ["kA", ["T"]]]);
+});
+
+test("CH-13 交错重放:先确认 T1、再 T2、再重放 T1,不重复记录;再全部终态后回收", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "kA", sourceSeq: 100, text: "两件事", boundTaskIds: ["T1", "T2"], schedule: null });
+  const first = confirmFinalReport(a.ok ? a.contact : (null as never), rc("T1", ["kA"], 100));
+  const second = confirmFinalReport(first, rc("T2", ["kA"], 100));
+  const replay = confirmFinalReport(second, rc("T1", ["kA"], 100));
+  assert.deepEqual(replay.commitments[0]?.reportedTaskIds, ["T1", "T2"]);
+  assert.deepEqual(replay.commitments, second.commitments);
+  const done = settleTask(settleTask(replay, "T1"), "T2");
+  assert.equal(done.commitments[0]?.status, "done");
+  assert.deepEqual(done.commitments[0]?.reportedTaskIds, []);
+});
+
+test("CH-13 换行、回车、非断行空格等任何空白组成的名字都不能登记为 Compute 能力资产或直接工具;夹空白的有效名照常(对照)", () => {
+  const c = mk().contacts.get("c-mi")!;
+  for (const name of ["\n", "\r", "\u00a0", " \n\t\u00a0", "\u3000"]) {
+    assert.equal(grantComputeAsset(c, { name, kind: "script" }).ok, false, JSON.stringify(name));
+    assert.equal(grantTool(c, { name, bounded: true }).ok, false, JSON.stringify(name));
+  }
+  const ok = grantComputeAsset(c, { name: "my script", kind: "script" });
+  assert.deepEqual(ok.ok && ok.contact.computeAssets.map((x) => x.name), ["my script"]);
+});
