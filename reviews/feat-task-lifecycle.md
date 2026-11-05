@@ -380,3 +380,96 @@ node "$E/independent-probes.mjs" "$PWD"
 ### 第三轮本地门禁的实际结果
 
 写入 reject 收据后运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`：exit 1。`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER` 通过。`G-PROVENANCE` 实际报告当前已落盘会话里尚无输出等于本轮 hash 的调用、审查那轮厂商认不出：本会话当前轮次尚未落盘，本轮 hash 命令及原始 rollout 的实际模型已分别实查，**不声称来源门禁通过**。当前轮记录落盘后需由原任务复跑，不伪造记录。原始输出见证据目录 `gates-after.log`。
+
+---
+
+# 第四轮 · Codex 独立复现（2026-11-05）
+
+## 结论：reject
+
+`b50c0e9f87d686bf72898b45deae3da54f3a72fb` 的 98 项原样测试、105 项作者变异及第三轮修复的主要正反路径可以复现；但旧生产实例的换模回包迟到时会被丢弃，可能让**实际参与生产的厂商通过跨厂商审查**。此外，旧执行器在等人确认状态的回包仍会中断有效回复，首派在途取消没有可表达或安全收口的状态。新造的 11 项变异有 10 项存活。审查仅使用纯函数与隔离副本，没有启动真实 Compute；返修交回 Claude Code，不合并 PR。
+
+- 审查会话 `codex:5fd2f15b-443d-4c5b-a287-dfa6fe248103`，原始 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI）；作者会话涉及目标仓库的实际模型为 `claude-opus-5-5`（Anthropic，不同渠道前缀），跨厂商、无豁免。
+- 普通独立 clone；`.git` 与 common dir 均为该副本自己的 `.git`。`origin/feat/domain-core=afd02560f9546147da380382404eb6106222a9b8`，与 HEAD 的 merge-base 为 `133cf7abcf6c897653f5b91647202c4ac963f231`，两者只差 PR #2 的审查/收据文件。
+- 在仓库根目录执行 `node scripts/gates/run-all.ts --hash --branch=feat/task-lifecycle --base=origin/feat/domain-core`，原样输出：
+
+```text
+156a216f70138c27186f9f895d67e353ebbcda60d8a02962d48c12f7eefb7073
+```
+
+- 原始日志、独立行为测试、事件路径探针、11 个变异补丁及测试/typecheck/比较结果：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review4-evidence-5fd2f15b/`。
+
+## 一、亲自执行
+
+| 操作 | 实测结果 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均 exit 0；Node `v25.8.1` / npm `11.11.0` |
+| `npm test` | exit 0，98 通过、0 失败、0 跳过 |
+| 普通独立副本检出红提交 `4888aafdd9995b25bb852f5c4641e76cd46f7bfd` 后跑全部具名测试 | exit 1，23 通过、75 具名失败；74 条报“未实现”、1 条 TABLE undefined；红绿测试文件相同。它是空壳激活红，不是 75 条彼此独立的缺陷红 |
+| 红测试配旧版 `cb3fba0` 的实现，在另一隔离副本运行 | exit 1，81 通过、17 具名失败；与 `packages/domain/proof/red-against-cb3fba0.tap` 中失败名称集合完全一致 |
+| 作者 `node packages/domain/proof/mutations.mjs` | exit 0，原样 98 绿，105 项出现具名失败；文件级失败不算杀死 |
+| 本轮独立行为测试 | **4 红、4 绿**：旧生产模型迟到、两类旧回包阻断当前卡回复、模拟首派迟到上线无停止效果；当前实例重复回包、当前卡有效回复、首派已回绑取消、首派未发取消的对照通过 |
+| 本轮独立事件矩阵 | 9 个返工入口 × 可/不可恢复共 18 格，重复同一实例上线、同请求不同实例、两次启动乱序停止以及 T3 旧执行器回包对照通过 |
+| 自造 D01–D11，逐项跑完整测试和 typecheck | **10 项存活**（每项 98 绿、typecheck exit 0）；D11 阳性对照被具名测试杀死且 typecheck 绿 |
+
+## 二、必须返修
+
+### R4-CORR-01 · 旧生产实例的换模回包迟到可漏掉参与厂商
+
+- `packages/domain/src/task.ts:125–130,175–178,246–249,279–284`：`ProducerModelAdded` 只接受 `ev.computeId === t.computeId`，返工回绑新实例后旧实例的换模记录一律忽略。
+- 独立对照：c1 在旧代次使用 Anthropic，产生一次 `ProducerModelAdded(c1, gpt-6)`；旧产物交付后不可恢复返工并回绑 c2（DeepSeek）。**同一个旧生产模型事件**若在 c1 仍是当前实例时处理，累计集合为 `{Anthropic, OpenAI, DeepSeek}`，后续 OpenAI 审查被拒；若该事件排队迟到至 c2 回绑之后，实际被无效果忽略，集合只剩 `{Anthropic, DeepSeek}`，后续 OpenAI 审查返回 `compliant` 并进入 T7。
+- 这里的“c1 的模型实际参与了旧产物/交接”是探针的明确前提，不是声称本轮启动真实模型或观察到磁盘产物被改。只凭当前代码无法辨别这条真实但迟到的生产记录，也没有已验证的宿主保序/落盘屏障，故“宁多勿少”的累积集合与跨厂商硬门禁不能在该顺序下成立。T7/T8 的 `ProducerModelAdded` 还会直接拒绝，不能补齐事后迟到记录。
+- 应持久化并关联每一代次的实际生产模型，在产物提审/批准前确保相关记录已收齐且可追溯；若晚到记录改变合规结论，需使受影响审查失效/重审。也可由宿主保证事件与产物的原子有序提交，但须有具体不可绕过的接口及真实乱序/恢复测试，不能仅靠“当前实例 ID”假设。对未参与产物的旧实例保留阴性对照。
+
+### R4-CORR-02 · 等当前确认卡时，旧执行器回包会阻断有效用户回复
+
+- `task.ts:250–258,263–275,335–344`：T3 中旧来源的 `NeedHuman` 和 `SubmitForReview` 会先核 ID/版本并忽略；但 T4b 对这两类事件直接使用无条件 `rej`，没有区分旧来源。
+- 实测：c2/v1 正在等待 q2，迟到的 c1/v0 `NeedHuman(q1)` 或 `SubmitForReview(old)` 均返回 `ok:false`。`applyAll([旧回包, HumanReply(q2,v1,approve)])` 在第一条即停；单独执行同一有效 q2 回复则正常回 T3。与第二轮的旧卡回复问题相同，旧事件可挡住当前有效操作。
+- 在所有会接收迟到执行事件的相关状态先做来源/版本校验并幂等忽略旧回包，再对**当前实例的非法重复提问/提审**保留拒绝；补 T4b 旧提问、旧提审与其后有效回复的批次测试及当前来源阴性对照。
+
+### R4-CORR-03 · 初次派发在途取消不能区分“尚未发”和“已发送待上线”
+
+- `task.ts:103–106,110–115,228–245,155–164,208–210`：T2 没有表示首派请求在途的字段或事件，`Cancel` 在无 `computeId/launch` 时直接 T10；首派成功回报的 `Dispatch` 也允许不带 requestId。D20.3 T2 明确要求：未发请求可直接取消，**已在途或状态未知必须先转 T9**。
+- 纯函数模拟：认领 T2 → Cancel 得 T10、effects 空 → 晚到无 requestId 的首次 `Dispatch(first-worker)`，实际仍 T10、effects 空，既不登记也不停止该实例。此处没有真正发送派发请求或启动进程：测试显示的是状态/API 无法表示“请求已发但尚未回绑”，以及随后输入被静默忽略。相对照，已回绑的首派取消会发 stop 并等实例确认，确实尚未发出时直接取消也正确；关键是当前 T2 无法把两种情况区分开。
+- 需要持久化首派请求及发送/确认状态、关联请求身份，并覆盖取消与上线/确认乱序；或定义并实测宿主在发起请求前的原子绑定及取消隔离协议。第 7 栏提到首派无 requestId，但不能据此宣称首派在途取消已实现。
+
+### R4-TEST-01 · 新引入的多未决集合和版本通知仍有回归盲区
+
+D01–D10 是**人为单点改坏的变异，不是声称原版本身已存在这些错误**。每项均在隔离副本跑完 98 项原测试与 typecheck，均 exit 0；另逐项对照原版和变异版的真实纯函数结果：
+
+| ID | 可存活的单点变异 |
+|---|---|
+| D01 / D02 | T4b / T7 不消费孤儿停止确认，孤儿与槽位无法清理 |
+| D03 | 任一旧启动确认清空全部 `revoked`；L1 确认可抹掉 L2，当前 L3 确认后提前 T10 |
+| D04 | 任一孤儿确认清空全部 `orphans`；孤儿 1 确认可抹掉仍未停止的孤儿 2 |
+| D05 | 仅登记第一个孤儿；第二个旧实例上线不发停止效果 |
+| D06 / D07 | `revoked` / `orphans` 数组不再冻结；外部可直接清掉待确认对象 |
+| D08 | 返工时丢掉尚未停止的孤儿集合 |
+| D09 | 同一启动请求但不同实例被误当成重复回包，不停止第二个实例 |
+| D10 | 第三次及以后 `update-constraints` 的版本错误封顶；任务 v3 但通知实例 v2 |
+
+D11（停止确认时不等待当前实例）被现有具名测试杀死且通过 typecheck，作为阳性对照。应补多条旧启动/多个孤儿、各状态确认、快照不可变、同请求不同实例、反复版本推进的双侧测试，并区分**需要记录所有未决对象**与“单个对象”正例。105 项作者变异全杀本身属实，但不证明这些新增判据已被充分标定。
+
+## 三、逐项复核第三轮及边界
+
+- **R3-CORR-01：原版复现修复。** 同一实例重复上线不再发停止；不同实例即使带同一请求号，本轮独立对照也会被停止并登记。实际实现对任何与当前 `computeId` 相同的回包都不发停止，不仅限同一 requestId；作者第 7 栏已披露无法识别冒用 ID。
+- **R3-CORR-02：上轮两请求/一个孤儿的提前终态路径已复现修复。** 旧实例已上线时，L2 确认不会抹掉孤儿，孤儿确认后才进终态并释放其槽位。多个未决对象的**测试保护**不足见 D03–D05；首派在途是另一未实现路径，见 R4-CORR-03。
+- **R3-CORR-03：T3 的旧实例/旧版本提问、提审与旧实例失败可忽略；当前实例改条件/恢复效果带新版本。** T4b 的旧回包仍阻断有效操作，旧生产实例的迟到换模记录被忽略，见 R4-CORR-01/02。`update-constraints` 只是通知，实际执行器是否使用正确版本仍未测。
+- **R3-TEST-01：C01–C09 均在作者变异脚本内被具名测试杀死，属于真实改进；**D01–D10 的独立反例证明不能把这一点扩大为完整标定。
+- **其他界限：**T9/T10/T11 改条件、真实身份认证、跨进程 CAS/租约、实际恢复和资源回收、可信模型身份、Handoff 内容、UI 与完整状态机均未实测。另实测：L1 仍在 `revoked` 未确认时，L2 绑定后可以发起提审；若两代执行器可能共享可写工作区，宿主必须证明旧执行器隔离/提交屏障，再声称产物与厂商集合可信；本轮未执行真实工作区并发。
+
+复现（仓库根目录；独立行为测试当前预期 4 红、4 绿）：
+
+```sh
+E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review4-evidence-5fd2f15b
+REVIEW_REPO="$PWD" node --test "$E/independent.test.mjs"
+node "$E/independent-matrix.mjs" "$PWD"
+node "$E/independent-probes.mjs" "$PWD"
+# 各变异补丁及测试/typecheck 输出见 "$E/mutants/D01" … "$E/mutants/D11"。
+```
+
+本轮只追加本报告并修改 `receipts/feat-task-lifecycle.json` 的 review 字段；保留前三轮及作者其余收据字段。返修后继续由不同厂商独立复现。
+
+### 第四轮本地门禁的实际结果
+
+写入 reject 收据后运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`：exit 1。`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER/G-PROVENANCE` 均通过。来源门禁通过只证明本轮审查与作者来源及 hash 检查通过，不覆盖以上业务反例。完整输出见证据目录 `gates-after.log`。
