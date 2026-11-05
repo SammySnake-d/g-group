@@ -42,5 +42,12 @@
   },
   "unverifiable": "Helper 三入口的路由只在纯函数层判定;把侧边栏回复挡在消息表外、把 @Helper 回复写成消息要内核接线,AC-34 端到端没做。AC-33:通用工具黑名单是名字表,改名可绕过,真正约束靠宿主注册时如实设 bounded(arbitrary_terminal + bounded:true 能通过);Compute 专用与直接工具的互斥按名字判定,宿主若用不同名字登记同一能力本层看不出,要等 Compute 适配器的工具 Schema 检查;Compute 能力资产只记名字和种类,不验证宿主是否真的只把它挂给 Compute。凭据引用只验形状,sk://abc 挡不住,要等 Vault。cron 只验字段形状不验范围(0 99 * * * 能过),DST 实际触发没测。AC-35①:work 是否属于某条承诺(commitmentId)由上游判定,本片只保证给定归属后的决定正确,分类本身对不对没测。AC-31⑤:confirmFinalReport 由宿主拿到入库回执后调用,回执里的 commitmentIds(这条汇报履行了哪几条承诺)和 basedOnSeq(汇报依据的处理位置)由宿主判定传入,本片只保证按给定作用域更新正确,不验回执真实性、不验宿主对作用域的判定是否正确;只用 source_seq 与 basedOnSeq 比较防旧回执替后立的承诺放行,没有更细的因果版本;确认对还没绑定到承诺上的任务不记录(只记已绑定、未终态的任务)。R-05 覆盖 mutations.mjs 数组里列出的 101 个具体变异(原有 M 系列 52 + Astra 独立审查按新源码改写后仍适用的 I 系列 14 + 历轮返修埋雷 C01–C25 共 25 + Codex 第二轮独立变异 N01–N05 共 5 + Codex 第三轮独立变异 P01–P05 共 5);mutations.txt 另有原样对照 1 行和结论 1 行,不计入变异数。有限变异数不推断整体覆盖。Astra 原 oracle 的 I10/I18 按旧回收语义写,返修后按 CH-03 改了语义,不再适用。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "codex",
+    "session": "codex:4d37f5a5-0839-4adc-8afc-9b481602df5a",
+    "model": "gpt-6.1-terra",
+    "verdict": "reject",
+    "reviewed_hash": "677bed266beaea0696b7a7da8e4a367d570e539819dd65a6c537e4289962dbbd",
+    "notes": "第四轮 reject：非有限 sourceSeq/basedOnSeq 可绕过出处比较并提前回收承诺；独立 Q01–Q04 变异存活，Q05 被杀。作者 101 项变异及上轮适配回归已复现；与 PR #3 基线的变异文件存在合并冲突。详见第四轮报告。"
+  }
 }

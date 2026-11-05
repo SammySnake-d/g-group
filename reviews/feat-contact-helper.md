@@ -318,3 +318,57 @@ Claude Code 在原开发任务中修 CH-01–CH-04，保留正确的 Helper 三�
 **回交条件：** Claude Code 在原开发任务修 CH-09–11，补针对真实旧实现的缺陷红测和上述变异/单开关对照，保留此前已验证的三个 Helper 入口、定时归属、控制穿透及允许的安全工具重叠；修复后再次交跨厂商独立复现。不要因报告提交或预推送测试通过而标记 PR 已验收。
 
 **本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 实测 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 拦下；G-PROVENANCE 找不到与本轮 `reviewed_hash` 相同的审查工具输出，且无法识别该审查轮厂商。检查时该会话 `turns.jsonl` 只有上一轮，当前轮尚未落盘；原生 rollout 中可观察到本轮模型，但不能冒充 G-PROVENANCE 通过。应待本轮落盘后由既有流程重核，不伪造记录或豁免。原始输出 `$E/gates-local.log`。拉取新基线后重跑同一命令仍 exit 1，结果和内容哈希相同（`$E/gates-local-live-base.log`）；这也不替代上面的实际合并冲突检查。
+
+---
+
+## 第四轮：第三轮返修后的跨厂商独立复审（2026-11-05）
+
+**结论：reject，交回 Claude Code 原开发任务继续返修。** 第三轮 CH-09–11 的具体反例已修，101 个作者变异均被复现杀死；独立模型也覆盖了 720 个有效事件排列。但新增回执来源位置的比较对非有限 `number` 失效，可能在纯函数中提前回收并解锁；此外独立变异显示若干作用域/重放测试盲区。当前 PR 也与最新 PR #3 基线有实际合并冲突。不得把本轮结束或推送成功视为功能验收完成。
+
+### 固定对象与独立复现
+
+- PR #4 `feat/contact-helper`，受审 HEAD `792067761bc9e164b7d3555d36a9a8d2a17e0119`；本轮基线 `origin/feat/task-lifecycle` 为 `44c5ab6f67c9528ac47132f6384d1152f64d05ac`。本轮不替 PR #3 返修作审查结论。
+- 作者 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38`，生产模型 `claude-opus-5-5`（Anthropic）；独立审查 `codex:4d37f5a5-0839-4adc-8afc-9b481602df5a`，本轮原生 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI），无豁免。实际模型记录不等同于本地 G-PROVENANCE 已通过。
+- 仓库根目录实跑 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle`，原样 stdout：`677bed266beaea0696b7a7da8e4a367d570e539819dd65a6c537e4289962dbbd`。
+- 证据根 `$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round4-Ea3pen`。`$E/repo` 为普通独立 clone，`.git` 与 common dir 均为该 clone 自己的 `.git`；被审实现与测试没有修改，独立变异只写 `$E/mutants/` 副本。
+- `npm ci` exit 0；Node v25.8.1 下 typecheck、lint、test 均 exit 0，**101/101**，无 skip/todo；Node v22.22.0 下三项也均 exit 0（`$E/npm-ci.log`、`$E/{typecheck,lint,test}.log`、`$E/node22-*.log`）。
+- 检出红提交 `fc3980daf56103868639b76a59bbe8c3d84e4b01` 并 `npm ci`：全量测试 56 绿 / 45 红；目标文件 TAP 45 项均按名字失败、均为 `未实现`，不是加载失败（`$E/red-tests.tap`、`$E/red-all-tests.log`）。它把已有实现置空，证明空壳按名红但不能单独证明旧缺陷复现。另在隔离副本叠加父提交真实源码，并**只桥接新回执对象到旧 taskId 参数，保留旧任务级语义**，新测试得到 41 绿 / 4 红，CH-09 作用域与 CH-10 空白资产断言实际失败（`$E/red-prior-overlay-retry.tap`）；这是本轮对照，不冒称作者的历史红输出。
+- 作者 `node packages/domain/proof/mutations.mjs` exit 0：原样 101 绿、**101/101** 具体变异被具名测试杀死；源数组为 M 52 + I 14 + C 25 + N 5 + P 5（`$E/author-mutations.log`）。
+
+### 上轮问题及不回退项
+
+第三轮独立 `oracles-round3.mjs` 按新接口作本轮自己的适配：测试中的旧任务级确认对应现有承诺集合和合法依据位置，P01–P05 **5/5 PASS**。第三轮 `regressions-round3.test.mjs` 的适配保留“群 A 回执只点名 old、依据位置 100”语义，**3/3 绿**（`$E/oracles-round3-adapted.mjs`、`$E/adapted-oracles.log`、`$E/regressions-round3-adapted.test.mjs`、`$E/adapted-regressions.tap`）。不是原样调用已改变签名的旧测试，也不是直接采信作者 `/tmp` 结果。
+
+CH-09：同任务分别点名、旧来源位置排除新承诺、明确一条回执覆盖两条、两种终态/确认顺序和重放，均在合法序号输入下成立；CH-10 的空/空白 Compute 资产名拒绝成立；CH-11 的 P01–P05 均被现有测试杀死。独立参考状态模型对两承诺、两任务、三个不同作用域/依据位置回执、终态与撤销的 **720 种排列、8,640 次状态检查**均通过，包含每步即时重放（`$E/state-matrix-round4.mjs`、`$E/state-matrix-round4.log`）；只代表这些枚举，不是端到端证明。
+
+Helper 三入口 × 本人/他人/同 ID 联系人 9 格、定时归联系人且绑定任务终态不回收、职责内外判断、stop/revoke/reschedule 控制穿透、撤销解锁和能力同名双向互斥均经独立适配用例通过（`$E/safeguards-round4.log`）。`helper.ts` 在 f01a84c 与本轮 HEAD 的 Git blob 均为 `8c69b2b9d8162baff516325e89dfe804450bcebf`。这些是纯函数检查，不代表消息表、DST 或外部插件已交付。
+
+### 必须修复
+
+**CH-12 [Medium，AC-31⑤ 回执边界] 非有限序号绕过出处比较，错误确认和回收。** `packages/domain/src/contact.ts:138-141,172-187` 的 `sourceSeq`、`basedOnSeq` 都是 TypeScript `number`，没有有限性/整数校验；`k.sourceSeq > receipt.basedOnSeq` 对 `NaN` 返回 false，因此不能按承诺的“仅当 sourceSeq ≤ basedOnSeq”防止放行。独立实测，承诺出处为 200、专职锁指向它：合法依据 199 不确认、200 确认；`basedOnSeq=NaN` 和 `Infinity` 也会把任务记入 `reportedTaskIds`，随后 `settleTask` 将承诺置 `done` 并清锁（`$E/receipt-sequence-boundary.log`）。反方向 `commit` 也接受 `sourceSeq=NaN`，有限依据 100 的回执随后同样可确认并回收（`$E/invalid-source-corrected.log`）。`Number.NaN` 在该接口声明下确实通过静态类型检查（`$E/nan-static.ts`、`$E/nan-static-retry.log`）。
+
+这是**畸形宿主输入**触发的纯函数边界反例；本片尚无真实宿主调用方，未观察到实际宿主产生 NaN 或消息真实丢失，也不把它宣称为远程利用。它仍是本片自己承诺的来源比较未能 fail closed：第 7 栏说明宿主判定回执作用域和真实性，但未说明序号非法时放行。群消息位置是单调序号（`packages/domain/src/log.ts:63`），并非 NaN/Infinity。建议按项目日志序号合同对承诺出处与回执依据位置做有限、整数及合法范围校验；无效值明确拒绝或保持状态不变，绝不能静默确认。补合法旧位置、相等位置、非法数值和无关承诺单开关对照。独立回归 `$E/receipt-sequence-regression.tap`：旧/相等两个对照通过，NaN 回执、Infinity 回执、NaN 出处三项失败。
+
+**CH-13 [Medium，测试判别力] 作用域与重放仍有本轮独立盲区。** 本轮 5 个单点变异中，Q01–Q04 typecheck/lint/101 项现有测试均绿，但各自独立 oracle 红；Q05 被现有具名测试杀死。原样代码和 5 个 oracle 全绿。这些是**测试缺口**，不宣称原实现有 Q01–Q04 的变异行为，也不以“有限清单没有穷尽所有变异”否认作者 101 项的实际结果。
+
+| ID | 单点变异 | 结果及缺失的边界 |
+|---|---|---|
+| Q01 | 空 `commitmentIds` 当成覆盖全部承诺 | 存活；空作用域应不确认任何承诺 |
+| Q02 | 所有点名承诺共用第一条承诺的来源位置做比较 | 存活；同回执点名来源 100 和 200、依据 150 时应只确认前者 |
+| Q03 | 只检查上一次报告，代替检查任务是否已经报告过 | 存活；先确认 T1、再 T2、重放 T1 应保持幂等 |
+| Q04 | 资产空白校验只覆盖空格和制表符 | 存活；换行和非断行空格仍属于空白名 |
+| Q05 | 来源等于依据位置也拒绝 | **被杀**；现有测试准确检测相等边界 |
+
+应优先补 Q01–Q03 对应的有效输入/事件序列及各自故障的阳性和单开关阴性对照，Q04 补代表性空白字符；不要只追加变异计数。`$E/independent-mutations-round4.json` 保存精确替换和四条退出码，执行器与独立判据分别为 `$E/independent-mutations-round4.py`、`$E/oracles-round4.mjs`，原始日志 `$E/{clean,Q01..Q05}-{typecheck,lint,test,oracle}.log`。
+
+### 基线、收据与交回
+
+第 7 栏所述的宿主判定回执作用域及真实性、本层只比较来源位置、同一底层能力不同名无法识别、工具黑名单/凭据引用仅形状、cron 不验范围、无真实 DST/插件/Helper 内核接线等边界与本片实现一致；101 个变异数量和构成也已复现。它未覆盖 CH-12 的非有限序号放行。AC-01/31/33/35 整项保持未测是合理分层。
+
+对受审 HEAD 和本轮 `44c5ab6` 基线运行不改工作区的 `git merge-tree --write-tree`：exit 1，`packages/domain/proof/mutations.mjs` 和 `packages/domain/proof/mutations.txt` 内容冲突（`$E/merge-tree.log`）。按既有负责人在 PR #3/PR #4 的集成阶段处理，不在本次审查里改代码；整合后重新跑测试、变异、哈希和门禁并再次跨厂商复审。
+
+**回交条件：** Claude Code 在原开发任务修 CH-12、补 CH-13 中与来源作用域/幂等直接相关的正反对照，保留前三轮已通过的行为；然后处理基线冲突并重新交独立复现。用户要求的连续落地流程继续，不能把 reject 的审查轮当成项目完成。
+
+**执行器纠错记录：** 首次独立 `tsc` 文件检查遇 TS5112、exit 1（`$E/nan-static.log`）；补 `--ignoreConfig` 后 exit 0（`$E/nan-static-retry.log`）。一次 shell heredoc 接到 `tee` 而非 Node，输出的是源码、退出码未单独记录，没有作为行为证据；改正重定向后才记录 `$E/invalid-source-corrected.log`。
+
+**本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 实测 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 未找到等于本轮 `reviewed_hash` 的审查工具输出，也无法识别该审查轮厂商。检查时 `turns.jsonl` 仅包含先前轮次，当前轮尚未落盘；原生 rollout 可观察当前模型，但不能冒充该门禁通过。会话落盘后由既有流程重核；不伪造记录、不使用豁免。原始输出 `$E/gates-local.log`。
