@@ -12,13 +12,13 @@ const must = (r: Outcome) => {
   return r;
 };
 const PRODUCER = "claude-opus-5-5";
-const running = () => must(applyAll(newTask("t1", "u1"), [{ kind: "Claim", by: "claude" }, { kind: "Dispatch", computeId: "cc-1", model: PRODUCER }])).task;
+const running = () => must(applyAll(newTask("t1", "u1"), [{ kind: "Claim", by: "claude" }, { kind: "Dispatch", computeId: "cc-1", model: PRODUCER, requestId: "t1#L0" }])).task;
 const inReview = (commit = "abc") => must(apply(running(), { kind: "SubmitForReview", commit, computeId: "cc-1", constraintVer: 0 })).task;
 const approve = (commit: string, constraintVer: number, round = 1): TaskEvent => ({ kind: "Review", reviewerId: "astra", reviewerModel: "gpt-6-astra", round, commit, constraintVer, verdict: "approve" });
 const delivered = () => must(applyAll(inReview(), [approve("abc", 0), { kind: "DeliveredCard" }])).task;
 
 const SAMPLE: { [K in EventKind]: Extract<TaskEvent, { kind: K }> } = {
-  Claim: { kind: "Claim", by: "x" }, Dispatch: { kind: "Dispatch", computeId: "c", model: "gpt-6" },
+  Claim: { kind: "Claim", by: "x" }, Dispatch: { kind: "Dispatch", computeId: "c", model: "gpt-6", requestId: "t#L0" },
   ProducerModelAdded: { kind: "ProducerModelAdded", model: "gpt-6", computeId: "cc" }, NeedHuman: { kind: "NeedHuman", qId: "q", computeId: "cc", constraintVer: 0 },
   HumanReply: { kind: "HumanReply", qId: "q", constraintVer: 0, answer: "approve" }, Amend: { kind: "Amend", by: "u1", computeResumable: true },
   SubmitForReview: { kind: "SubmitForReview", commit: "c2", computeId: "cc", constraintVer: 0 },
@@ -26,10 +26,12 @@ const SAMPLE: { [K in EventKind]: Extract<TaskEvent, { kind: K }> } = {
   DeliveredCard: { kind: "DeliveredCard" }, UserAccept: { kind: "UserAccept", by: "u1" }, UserReject: { kind: "UserReject", by: "u1", computeResumable: true },
   AcceptTimeout: { kind: "AcceptTimeout" }, Cancel: { kind: "Cancel", by: "u1" }, StoppedConfirmed: { kind: "StoppedConfirmed", computeId: "cc" }, ExecFailed: { kind: "ExecFailed", computeId: "cc" },
 };
-/** 各状态的代表性任务:未派发的 T1/T2 没有 Compute;T4b 带一张当前版本的卡;T5 正在审第 1 轮的 commit "c"。 */
+/** 各状态的代表性任务:T1 没有 Compute;T2 有在途首派请求 t#L0;其余由 cc 执行;T4b 带一张当前版本的卡;T5 正在审第 1 轮的 commit "c"。 */
 const inState = (s: TaskState): Task => ({
   ...newTask("t", "u1"), state: s, owner: "o",
   computeId: s === "T1_Open" || s === "T2_Claimed" ? null : "cc",
+  instances: s === "T1_Open" || s === "T2_Claimed" ? [] : ["cc"],
+  launch: s === "T2_Claimed" ? { requestId: "t#L0", constraintVer: 0 } : null,
   producerModels: [PRODUCER], reviewedCommit: s === "T5_InReview" ? "c" : null, reviewRound: s === "T5_InReview" ? 1 : 0,
   pendingQ: s === "T4b_BlockedOnHuman" ? { qId: "q", constraintVer: 0 } : null,
 });
@@ -43,6 +45,8 @@ const STOP: Effect[] = [{ kind: "stop-compute", computeId: "cc" }];
 const RESUME: Effect[] = [{ kind: "resume-compute", computeId: "cc", constraintVer: 1 }];
 const REWORK: Exp = { to: "T3_Running", fx: RESUME, ver: 1 };
 const allIgn = (): { [E in EventKind]: Exp } => Object.fromEntries(EVENT_KINDS.map((k) => [k, "ign"])) as { [E in EventKind]: Exp };
+/** 带着不认识的启动请求号上线的实例:不绑定,立即停止(R2-CORR-01 / R4-CORR-03)。 */
+const ORPHAN_STOP = (s: TaskState): Exp => ({ to: s, fx: [{ kind: "stop-compute", computeId: "c" }] });
 const SPEC: { [S in TaskState]: { [E in EventKind]: Exp } } = {
   T1_Open: {
     Claim: { to: "T2_Claimed", owner: "x" }, Dispatch: "rej", ProducerModelAdded: "rej", NeedHuman: "rej", HumanReply: "ign",
@@ -51,42 +55,43 @@ const SPEC: { [S in TaskState]: { [E in EventKind]: Exp } } = {
   },
   T2_Claimed: {
     Claim: "rej", Dispatch: { to: "T3_Running", pm: PM2 }, ProducerModelAdded: "rej", NeedHuman: "rej", HumanReply: "ign",
-    Amend: { to: "T2_Claimed", ver: 1 }, SubmitForReview: "rej", Review: "rej", DeliveredCard: "rej", UserAccept: "rej",
-    UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T10_Cancelled", fx: [] }, StoppedConfirmed: "ign", ExecFailed: "ign",
+    Amend: { to: "T2_Claimed", ver: 1, fx: [{ kind: "cancel-spawn", requestId: "t#L0" }, { kind: "spawn-compute", withHandoff: false, requestId: "t#L1", constraintVer: 1 }] },
+    SubmitForReview: "rej", Review: "rej", DeliveredCard: "rej", UserAccept: "rej",
+    UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: [{ kind: "cancel-spawn", requestId: "t#L0" }] }, StoppedConfirmed: "ign", ExecFailed: "ign",
   },
   T3_Running: {
-    Claim: "rej", Dispatch: "rej", ProducerModelAdded: { to: "T3_Running", pm: PM2 }, NeedHuman: { to: "T4b_BlockedOnHuman" }, HumanReply: "ign",
+    Claim: "rej", Dispatch: ORPHAN_STOP("T3_Running"), ProducerModelAdded: { to: "T3_Running", pm: PM2 }, NeedHuman: { to: "T4b_BlockedOnHuman" }, HumanReply: "ign",
     Amend: { to: "T3_Running", fx: [{ kind: "update-constraints", computeId: "cc", constraintVer: 1 }], ver: 1 }, SubmitForReview: { to: "T5_InReview", fx: [{ kind: "request-review", round: 1, commit: "c2", constraintVer: 0 }] }, Review: "rej", DeliveredCard: "rej",
     UserAccept: "rej", UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: STOP }, StoppedConfirmed: "ign",
     ExecFailed: { to: "T9_StopRequested", fx: STOP },
   },
   T4b_BlockedOnHuman: {
-    Claim: "rej", Dispatch: "rej", ProducerModelAdded: { to: "T4b_BlockedOnHuman", pm: PM2 }, NeedHuman: "rej", HumanReply: { to: "T3_Running", fx: [] },
+    Claim: "rej", Dispatch: ORPHAN_STOP("T4b_BlockedOnHuman"), ProducerModelAdded: { to: "T4b_BlockedOnHuman", pm: PM2 }, NeedHuman: "rej", HumanReply: { to: "T3_Running", fx: [] },
     Amend: { to: "T3_Running", fx: [{ kind: "update-constraints", computeId: "cc", constraintVer: 1 }], ver: 1 }, SubmitForReview: "rej", Review: "rej", DeliveredCard: "rej", UserAccept: "rej",
     UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: STOP }, StoppedConfirmed: "ign",
     ExecFailed: { to: "T9_StopRequested", fx: STOP },
   },
   T5_InReview: {
-    Claim: "rej", Dispatch: "rej", ProducerModelAdded: { to: "T5_InReview", pm: PM2 }, NeedHuman: "rej", HumanReply: "ign",
+    Claim: "rej", Dispatch: ORPHAN_STOP("T5_InReview"), ProducerModelAdded: { to: "T5_InReview", pm: PM2 }, NeedHuman: "rej", HumanReply: "ign",
     Amend: REWORK, SubmitForReview: { to: "T5_InReview", fx: [{ kind: "request-review", round: 2, commit: "c2", constraintVer: 0 }] }, Review: { to: "T7_Delivering", fx: [] }, DeliveredCard: "rej",
     UserAccept: "rej", UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: STOP }, StoppedConfirmed: "ign",
     ExecFailed: { to: "T9_StopRequested", fx: STOP },
   },
   T7_Delivering: {
-    Claim: "rej", Dispatch: "rej", ProducerModelAdded: "rej", NeedHuman: "rej", HumanReply: "ign", Amend: REWORK,
+    Claim: "rej", Dispatch: ORPHAN_STOP("T7_Delivering"), ProducerModelAdded: { to: "T7_Delivering", pm: PM2, fx: [] }, NeedHuman: "rej", HumanReply: "ign", Amend: REWORK,
     SubmitForReview: "rej", Review: "ign", DeliveredCard: { to: "T8a_Delivered", fx: [] }, UserAccept: "rej", UserReject: "rej",
     AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: STOP }, StoppedConfirmed: "ign", ExecFailed: "ign",
   },
   T8a_Delivered: {
-    Claim: "rej", Dispatch: "rej", ProducerModelAdded: "rej", NeedHuman: "rej", HumanReply: "ign", Amend: REWORK,
+    Claim: "rej", Dispatch: ORPHAN_STOP("T8a_Delivered"), ProducerModelAdded: { to: "T8a_Delivered", pm: PM2, fx: [] }, NeedHuman: "rej", HumanReply: "ign", Amend: REWORK,
     SubmitForReview: "rej", Review: "ign", DeliveredCard: "ign", UserAccept: { to: "T8_Accepted", fx: [] }, UserReject: REWORK,
     AcceptTimeout: { to: "T8_ArchivedUnverified", fx: [] }, Cancel: "ign", StoppedConfirmed: "ign", ExecFailed: "ign",
   },
-  T8_Accepted: { ...allIgn(), Amend: REWORK, UserReject: REWORK },
-  T8_ArchivedUnverified: { ...allIgn(), Amend: REWORK, UserReject: REWORK, UserAccept: { to: "T8_Accepted", fx: [] } },
-  T9_StopRequested: { ...allIgn(), Claim: "rej", Dispatch: "rej", StoppedConfirmed: { to: "T10_Cancelled", fx: [{ kind: "release-slot", computeId: "cc" }] } },
-  T10_Cancelled: allIgn(),
-  T11_Failed: allIgn(),
+  T8_Accepted: { ...allIgn(), Dispatch: ORPHAN_STOP("T8_Accepted"), ProducerModelAdded: { to: "T8_Accepted", pm: PM2, fx: [] }, Amend: REWORK, UserReject: REWORK },
+  T8_ArchivedUnverified: { ...allIgn(), Dispatch: ORPHAN_STOP("T8_ArchivedUnverified"), ProducerModelAdded: { to: "T8_ArchivedUnverified", pm: PM2, fx: [] }, Amend: REWORK, UserReject: REWORK, UserAccept: { to: "T8_Accepted", fx: [] } },
+  T9_StopRequested: { ...allIgn(), Claim: "rej", Dispatch: ORPHAN_STOP("T9_StopRequested"), StoppedConfirmed: { to: "T10_Cancelled", fx: [{ kind: "release-slot", computeId: "cc" }] } },
+  T10_Cancelled: { ...allIgn(), Dispatch: ORPHAN_STOP("T10_Cancelled") },
+  T11_Failed: { ...allIgn(), Dispatch: ORPHAN_STOP("T11_Failed") },
 };
 test("AC-09 每个状态×每个事件都有明确处理:拒绝格实际拒绝并给出原因,忽略格实际不改任务", () => {
   for (const s of STATES) for (const e of EVENT_KINDS) {
@@ -161,7 +166,7 @@ test("applyAll 遇到第一个被拒的事件就停,返回原因,不应用后面
 test("主干:认领 → 派发 → 提审 → 跨厂商通过 → 交付待确认", () => {
   const r = applyAll(newTask("t1", "u1"), [
     { kind: "Claim", by: "claude" },
-    { kind: "Dispatch", computeId: "cc-1", model: PRODUCER },
+    { kind: "Dispatch", computeId: "cc-1", model: PRODUCER, requestId: "t1#L0" },
     { kind: "SubmitForReview", commit: "abc", computeId: "cc-1", constraintVer: 0 },
     { kind: "Review", reviewerId: "astra", reviewerModel: "gpt-6-astra", round: 1, commit: "abc", constraintVer: 0, verdict: "approve" },
     { kind: "DeliveredCard" },
@@ -211,7 +216,7 @@ test("AC-26 ② 审查厂商只和早先的生产模型同厂商,也要拦(不�
 test("AC-26 ③ 审查或生产模型厂商认不出(unknown)被拒", () => {
   const a = apply(inReview(), rv("x", "stealth/crouton-alpha"));
   assert.equal(a.ok, false);
-  const t = must(applyAll(newTask("t2", "u1"), [{ kind: "Claim", by: "claude" }, { kind: "Dispatch", computeId: "c", model: "stealth/crouton-alpha" }, { kind: "SubmitForReview", commit: "abc", computeId: "c", constraintVer: 0 }])).task;
+  const t = must(applyAll(newTask("t2", "u1"), [{ kind: "Claim", by: "claude" }, { kind: "Dispatch", computeId: "c", model: "stealth/crouton-alpha", requestId: "t2#L0" }, { kind: "SubmitForReview", commit: "abc", computeId: "c", constraintVer: 0 }])).task;
   const b = apply(t, rv("astra", "gpt-6-astra"));
   assert.equal(b.ok, false);
 });
@@ -325,7 +330,7 @@ test("CORR-03 交付中追加条件且原 Compute 可恢复:恢复原实例,版�
 
 const respawned = () => must(apply(delivered(), { kind: "UserReject", by: "u1", computeResumable: false })).task;
 const L1 = "t1#L1";
-const up = (computeId: string, requestId: string | undefined = L1): TaskEvent => ({ kind: "Dispatch", computeId, model: "gemini-4-argon", ...(requestId ? { requestId } : {}) });
+const up = (computeId: string, requestId: string = L1): TaskEvent => ({ kind: "Dispatch", computeId, model: "gemini-4-argon", requestId });
 
 test("CORR-02 不可恢复返工后新 Compute 回绑:记录新实例、保留负责人并累积生产模型", () => {
   const r = must(apply(respawned(), up("cc-2")));
@@ -334,12 +339,18 @@ test("CORR-02 不可恢复返工后新 Compute 回绑:记录新实例、保留�
   assert.equal(r.task.launch, null);
   assert.equal(r.task.owner, "claude");
   assert.deepEqual(r.task.producerModels, [PRODUCER, "gemini-4-argon"]);
-  assert.equal(apply(r.task, { kind: "Dispatch", computeId: "cc-3", model: "gpt-6" }).ok, false);
+  const second = must(apply(r.task, { kind: "Dispatch", computeId: "cc-3", model: "gpt-6", requestId: L1 }));
+  assert.equal(second.task.computeId, "cc-2");
+  assert.deepEqual(second.task.orphans, ["cc-3"]);
+  assert.deepEqual(second.task.producerModels, [PRODUCER, "gemini-4-argon"]);
+  assert.deepEqual(second.effects, [{ kind: "stop-compute", computeId: "cc-3" }]);
 });
 
-test("R2-CORR-01 回绑必须对上当前启动请求号:不带号的回包被拒,别的请求号的实例被立即停止", () => {
+test("R2-CORR-01 回绑必须对上当前启动请求号:已用过的旧请求号与别的请求号的实例都被立即停止", () => {
   const t = respawned();
-  assert.equal(apply(t, { kind: "Dispatch", computeId: "cc-2", model: "gemini-4-argon" }).ok, false);
+  const reused = must(apply(t, up("cc-2", "t1#L0")));
+  assert.equal(reused.task.computeId, null);
+  assert.deepEqual(reused.effects, [{ kind: "stop-compute", computeId: "cc-2" }]);
   const wrong = must(apply(t, up("cc-x", "t1#L9")));
   assert.equal(wrong.task.computeId, null);
   assert.deepEqual(wrong.task.launch, { requestId: L1, constraintVer: 1 });
@@ -496,7 +507,7 @@ test("R3-CORR-02 运行中孤儿确认停止后释放它的槽位,任务不受�
   assert.deepEqual(r.task.orphans, []);
   assert.deepEqual(r.effects, [{ kind: "release-slot", computeId: "old-worker" }]);
   assert.deepEqual(must(apply(r.task, { kind: "StoppedConfirmed", computeId: "old-worker" })).effects, []);
-  const open = must(applyAll(newTask("t9", "u1"), [{ kind: "Claim", by: "c" }, { kind: "Cancel", by: "u1" }]));
+  const open = must(apply(newTask("t9", "u1"), { kind: "Cancel", by: "u1" }));
   assert.equal(open.task.state, "T10_Cancelled");
 });
 
@@ -744,15 +755,15 @@ test("取消在途任务:先请求停止,真实停止确认后才进终态并释
 test("停止期间禁止把任务重新指派或重新派发给他人", () => {
   const stopping = must(applyAll(running(), [{ kind: "Cancel", by: "u1" }])).task;
   assert.equal(apply(stopping, { kind: "Claim", by: "argon" }).ok, false);
-  assert.equal(apply(stopping, { kind: "Dispatch", computeId: "cc-2", model: "gpt-6" }).ok, false);
+  const late = must(apply(stopping, { kind: "Dispatch", computeId: "cc-2", model: "gpt-6", requestId: "t1#L0" }));
+  assert.equal(late.task.computeId, "cc-1");
+  assert.deepEqual(late.effects, [{ kind: "stop-compute", computeId: "cc-2" }]);
 });
 
-test("未派发的任务取消直接进终态,不发停止信号", () => {
-  const r = must(applyAll(newTask("t1", "u1"), [{ kind: "Claim", by: "claude" }, { kind: "Cancel", by: "u1" }]));
-  assert.equal(r.task.state, "T10_Cancelled");
-  assert.deepEqual(r.effects, []);
+test("尚未认领(没发出任何派发请求)的任务取消直接进终态,不发停止信号", () => {
   const open = must(apply(newTask("t2", "u1"), { kind: "Cancel", by: "u1" }));
   assert.equal(open.task.state, "T10_Cancelled");
+  assert.deepEqual(open.effects, []);
 });
 
 test("停止期间重复取消幂等,终态后迟到的事件不复活任务", () => {
@@ -792,4 +803,207 @@ test("状态转移不改入参任务", () => {
   assert.equal(JSON.stringify(t), saved);
   assert.equal(reviewed.ok && reviewed.task.state, "T7_Delivering");
   assert.equal(amended.ok && amended.task.constraintVer, 1);
+});
+
+// ---- 第四轮 ----
+const deliveredBy = (reviewerModel: string) => must(applyAll(inReview(), [{ kind: "Review", reviewerId: "astra", reviewerModel, round: 1, commit: "abc", constraintVer: 0, verdict: "approve" }, { kind: "DeliveredCard" }])).task;
+
+test("R4-CORR-01 旧生产实例的换模记录在新实例回绑后迟到:仍计入累积集合,后续同厂商审查被拒", () => {
+  const t = must(applyAll(respawned(), [up("cc-2"), { kind: "ProducerModelAdded", model: "gpt-6", computeId: "cc-1" }])).task;
+  assert.deepEqual(t.instances, ["cc-1", "cc-2"]);
+  assert.deepEqual(t.producerModels, [PRODUCER, "gemini-4-argon", "gpt-6"]);
+  const sub = must(apply(t, { kind: "SubmitForReview", commit: "v1", computeId: "cc-2", constraintVer: 1 })).task;
+  const r = apply(sub, { kind: "Review", reviewerId: "astra", reviewerModel: "gpt-6-astra", round: 2, commit: "v1", constraintVer: 1, verdict: "approve" });
+  assert.equal(r.ok, false);
+  assert.match(!r.ok ? r.reason : "", /openai/);
+});
+
+test("R4-CORR-01 从未回绑过的孤儿实例的换模记录不计入(阴性对照)", () => {
+  const t = must(applyAll(respawned(), [up("cc-2"), up("cc-x", "t1#L9"), { kind: "ProducerModelAdded", model: "gpt-6", computeId: "cc-x" }]));
+  assert.deepEqual(t.task.producerModels, [PRODUCER, "gemini-4-argon"]);
+  assert.deepEqual(t.effects, [{ kind: "stop-compute", computeId: "cc-x" }]);
+});
+
+test("R4-CORR-01 审查通过后迟到的生产记录让结论不再成立:作废审查,同一产物以新轮次重新送审", () => {
+  for (const t of [deliveredBy("deepseek-v4"), must(apply(deliveredBy("deepseek-v4"), { kind: "UserAccept", by: "u1" })).task, must(apply(deliveredBy("deepseek-v4"), { kind: "AcceptTimeout" })).task]) {
+    assert.equal(t.reviewGate, "compliant", t.state);
+    const r = must(apply(t, { kind: "ProducerModelAdded", model: "deepseek-v4-coder", computeId: "cc-1" }));
+    assert.equal(r.task.state, "T5_InReview", t.state);
+    assert.equal(r.task.reviewGate, "none", t.state);
+    assert.equal(r.task.badge, "none", t.state);
+    assert.equal(r.task.reviewRound, 2, t.state);
+    assert.deepEqual(r.effects, [{ kind: "request-review", round: 2, commit: "abc", constraintVer: 0 }], t.state);
+    const again = apply(r.task, { kind: "Review", reviewerId: "astra", reviewerModel: "deepseek-v4", round: 2, commit: "abc", constraintVer: 0, verdict: "approve" });
+    assert.equal(again.ok, false, t.state);
+  }
+});
+
+test("R4-CORR-01 交付中迟到的生产记录不改变结论:并入集合,留在原状态,无副作用(阴性对照)", () => {
+  const delivering = must(apply(inReview(), approve("abc", 0))).task;
+  const r = must(apply(delivering, { kind: "ProducerModelAdded", model: "gemini-4-x", computeId: "cc-1" }));
+  assert.equal(r.task.state, "T7_Delivering");
+  assert.equal(r.task.reviewGate, "compliant");
+  assert.deepEqual(r.task.producerModels, [PRODUCER, "gemini-4-x"]);
+  assert.deepEqual(r.effects, []);
+  assert.deepEqual(must(apply(r.task, { kind: "ProducerModelAdded", model: "gemini-4-x", computeId: "cc-1" })).task, r.task);
+});
+
+test("R4-CORR-01 迟到记录把合规变成同厂商、原审查有提出者豁免:改记 Waived,不重审", () => {
+  const waived = must(applyAll(inReview(), [{ kind: "Review", reviewerId: "argon", reviewerModel: "gemini-4-argon", round: 1, commit: "abc", constraintVer: 0, verdict: "approve", waiverBy: "u1" }, { kind: "DeliveredCard" }])).task;
+  assert.equal(waived.reviewGate, "compliant");
+  const r = must(apply(waived, { kind: "ProducerModelAdded", model: "gemini-4-pro", computeId: "cc-1" }));
+  assert.equal(r.task.state, "T8a_Delivered");
+  assert.equal(r.task.reviewGate, "waived-by-user");
+  assert.deepEqual(r.effects, []);
+});
+
+test("R4-CORR-02 等当前确认卡时,旧执行器的提问与提审回包幂等忽略,不打断同批随后的有效回复", () => {
+  const blocked = must(applyAll(respawned(), [up("cc-2"), { kind: "NeedHuman", qId: "q2", computeId: "cc-2", constraintVer: 1 }])).task;
+  for (const stale of [
+    { kind: "NeedHuman", qId: "q1", computeId: "cc-1", constraintVer: 0 },
+    { kind: "SubmitForReview", commit: "old", computeId: "cc-1", constraintVer: 0 },
+    { kind: "NeedHuman", qId: "q1", computeId: "cc-2", constraintVer: 0 },
+  ] as TaskEvent[]) {
+    const r = must(applyAll(blocked, [stale, { kind: "HumanReply", qId: "q2", constraintVer: 1, answer: "approve" }]));
+    assert.equal(r.task.state, "T3_Running", stale.kind);
+    assert.equal(r.task.pendingQ, null, stale.kind);
+  }
+});
+
+test("R4-CORR-02 当前实例当前版本的重复提问/提审在 T4b/T5/T7/T8a 仍被拒(阴性对照)", () => {
+  const blocked = must(apply(running(), { kind: "NeedHuman", qId: "q1", computeId: "cc-1", constraintVer: 0 })).task;
+  assert.equal(apply(blocked, { kind: "NeedHuman", qId: "q2", computeId: "cc-1", constraintVer: 0 }).ok, false);
+  assert.equal(apply(blocked, { kind: "SubmitForReview", commit: "x", computeId: "cc-1", constraintVer: 0 }).ok, false);
+  assert.equal(apply(inReview(), { kind: "NeedHuman", qId: "q", computeId: "cc-1", constraintVer: 0 }).ok, false);
+  const delivering = must(apply(inReview(), approve("abc", 0))).task;
+  for (const t of [delivering, delivered()]) {
+    assert.equal(apply(t, { kind: "SubmitForReview", commit: "x", computeId: "cc-1", constraintVer: 0 }).ok, false, t.state);
+    assert.equal(apply(t, { kind: "NeedHuman", qId: "q", computeId: "cc-1", constraintVer: 0 }).ok, false, t.state);
+    assert.deepEqual(must(apply(t, { kind: "SubmitForReview", commit: "x", computeId: "old", constraintVer: 0 })).task, t, t.state);
+  }
+});
+
+const claimed = () => must(apply(newTask("t1", "u1"), { kind: "Claim", by: "claude" }));
+
+test("R4-CORR-03 认领即发出首派请求 L0;首派实例只凭这个请求号回绑", () => {
+  const c = claimed();
+  assert.equal(c.task.state, "T2_Claimed");
+  assert.deepEqual(c.task.launch, { requestId: "t1#L0", constraintVer: 0 });
+  assert.deepEqual(c.effects, [{ kind: "spawn-compute", withHandoff: false, requestId: "t1#L0", constraintVer: 0 }]);
+  const bad = must(apply(c.task, { kind: "Dispatch", computeId: "x", model: PRODUCER, requestId: "t1#L5" }));
+  assert.equal(bad.task.state, "T2_Claimed");
+  assert.deepEqual(bad.effects, [{ kind: "stop-compute", computeId: "x" }]);
+  const ok1 = must(apply(c.task, { kind: "Dispatch", computeId: "cc-1", model: PRODUCER, requestId: "t1#L0" }));
+  assert.equal(ok1.task.state, "T3_Running");
+  assert.equal(ok1.task.boundRequest, "t1#L0");
+  assert.deepEqual(ok1.task.instances, ["cc-1"]);
+});
+
+test("R4-CORR-03 首派在途取消:进 T9 撤销 L0,晚到的首派实例被停止,确认停止后才终态", () => {
+  const stopping = must(apply(claimed().task, { kind: "Cancel", by: "u1" }));
+  assert.equal(stopping.task.state, "T9_StopRequested");
+  assert.deepEqual(stopping.effects, [{ kind: "cancel-spawn", requestId: "t1#L0" }]);
+  const late = must(apply(stopping.task, { kind: "Dispatch", computeId: "first-worker", model: PRODUCER, requestId: "t1#L0" }));
+  assert.equal(late.task.state, "T9_StopRequested");
+  assert.deepEqual(late.effects, [{ kind: "stop-compute", computeId: "first-worker" }]);
+  assert.equal(must(apply(late.task, { kind: "StoppedConfirmed", requestId: "t1#L0" })).task.state, "T9_StopRequested");
+  const done = must(apply(late.task, { kind: "StoppedConfirmed", computeId: "first-worker" }));
+  assert.equal(done.task.state, "T10_Cancelled");
+  assert.deepEqual(done.effects, [{ kind: "release-slot", computeId: "first-worker" }]);
+});
+
+test("R4-CORR-03 首派在途取消、宿主确认撤销成功(实例从未上线):凭 L0 进终态;之后迟到上线的实例仍被停止", () => {
+  const stopping = must(apply(claimed().task, { kind: "Cancel", by: "u1" })).task;
+  const done = must(apply(stopping, { kind: "StoppedConfirmed", requestId: "t1#L0" }));
+  assert.equal(done.task.state, "T10_Cancelled");
+  assert.deepEqual(done.effects, []);
+  const zombie = must(apply(done.task, { kind: "Dispatch", computeId: "first-worker", model: PRODUCER, requestId: "t1#L0" }));
+  assert.equal(zombie.task.state, "T10_Cancelled");
+  assert.deepEqual(zombie.effects, [{ kind: "stop-compute", computeId: "first-worker" }]);
+});
+
+test("R4-CORR-03 首派在途改条件:撤销 L0、按新版本重发首派(不带交接),只认新请求;在途首派失败也先停", () => {
+  const r = must(apply(claimed().task, { kind: "Amend", by: "u1", computeResumable: true }));
+  assert.equal(r.task.state, "T2_Claimed");
+  assert.deepEqual(r.task.revoked, ["t1#L0"]);
+  assert.deepEqual(r.effects, [{ kind: "cancel-spawn", requestId: "t1#L0" }, { kind: "spawn-compute", withHandoff: false, requestId: "t1#L1", constraintVer: 1 }]);
+  const old = must(apply(r.task, { kind: "Dispatch", computeId: "w0", model: PRODUCER, requestId: "t1#L0" }));
+  assert.deepEqual(old.effects, [{ kind: "stop-compute", computeId: "w0" }]);
+  assert.equal(must(apply(old.task, { kind: "Dispatch", computeId: "w1", model: PRODUCER, requestId: "t1#L1" })).task.computeId, "w1");
+  const failed = must(apply(claimed().task, { kind: "ExecFailed", requestId: "t1#L0" }));
+  assert.equal(failed.task.state, "T9_StopRequested");
+  assert.deepEqual(failed.effects, [{ kind: "cancel-spawn", requestId: "t1#L0" }]);
+});
+
+/** 运行中、有两个孤儿 o1/o2 的任务(由两次撤销重发产生)。 */
+const twoOrphans = () => must(applyAll(respawned(), [
+  { kind: "Amend", by: "u1", computeResumable: true }, { kind: "Amend", by: "u1", computeResumable: true }, up("cc-new", "t1#L3"), up("o1", L1), up("o2", "t1#L2"),
+]));
+
+test("R4-TEST-01 多个孤儿:每个都被停止并登记,确认一个只划掉它自己并释放它的槽位", () => {
+  const r = twoOrphans();
+  assert.deepEqual(r.task.orphans, ["o1", "o2"]);
+  assert.deepEqual(r.task.revoked, []);
+  assert.deepEqual(r.effects.filter((e) => e.kind === "stop-compute"), [{ kind: "stop-compute", computeId: "o1" }, { kind: "stop-compute", computeId: "o2" }]);
+  const a = must(apply(r.task, { kind: "StoppedConfirmed", computeId: "o1" }));
+  assert.deepEqual(a.task.orphans, ["o2"]);
+  assert.deepEqual(a.effects, [{ kind: "release-slot", computeId: "o1" }]);
+});
+
+test("R4-TEST-01 多个旧启动:确认一个只划掉它自己,全部与当前启动都确认后才终态", () => {
+  const stopping = must(applyAll(respawned(), [{ kind: "Amend", by: "u1", computeResumable: true }, { kind: "Amend", by: "u1", computeResumable: true }, { kind: "Cancel", by: "u1" }])).task;
+  assert.deepEqual(stopping.revoked, [L1, "t1#L2"]);
+  const a = must(applyAll(stopping, [{ kind: "StoppedConfirmed", requestId: L1 }, { kind: "StoppedConfirmed", requestId: "t1#L3" }])).task;
+  assert.equal(a.state, "T9_StopRequested");
+  assert.deepEqual(a.revoked, ["t1#L2"]);
+  assert.equal(must(apply(a, { kind: "StoppedConfirmed", requestId: "t1#L2" })).task.state, "T10_Cancelled");
+});
+
+test("R4-TEST-01 孤儿的停止确认在 T4b/T5/T7/T8a 都被消费并释放槽位", () => {
+  const base = twoOrphans().task;
+  const t4b = must(apply(base, { kind: "NeedHuman", qId: "q", computeId: "cc-new", constraintVer: 3 })).task;
+  const t5 = must(apply(base, { kind: "SubmitForReview", commit: "z", computeId: "cc-new", constraintVer: 3 })).task;
+  const t7 = must(apply(t5, approve("z", 3, 2))).task;
+  const t8a = must(apply(t7, { kind: "DeliveredCard" })).task;
+  for (const t of [t4b, t5, t7, t8a]) {
+    const r = must(apply(t, { kind: "StoppedConfirmed", computeId: "o2" }));
+    assert.equal(r.task.state, t.state, t.state);
+    assert.deepEqual(r.task.orphans, ["o1"], t.state);
+    assert.deepEqual(r.effects, [{ kind: "release-slot", computeId: "o2" }], t.state);
+  }
+});
+
+test("R4-TEST-01 待确认集合是冻结快照;返工不丢掉尚未停止的孤儿", () => {
+  const t = twoOrphans().task;
+  assert.ok(Object.isFrozen(t.orphans));
+  assert.ok(Object.isFrozen(t.revoked));
+  assert.ok(Object.isFrozen(t.instances));
+  assert.throws(() => { (t.orphans as string[]).length = 0; }, TypeError);
+  assert.throws(() => { (t.revoked as string[]).push("x"); }, TypeError);
+  const t5 = must(apply(t, { kind: "SubmitForReview", commit: "z", computeId: "cc-new", constraintVer: 3 })).task;
+  for (const resumable of [true, false]) {
+    const r = must(apply(t5, { kind: "Amend", by: "u1", computeResumable: resumable }));
+    assert.deepEqual(r.task.orphans, ["o1", "o2"], String(resumable));
+  }
+});
+
+test("R4-TEST-01 反复改条件:每次 update-constraints 都带当时的新版本", () => {
+  let t = running();
+  for (const v of [1, 2, 3, 4]) {
+    const r = must(apply(t, { kind: "Amend", by: "u1", computeResumable: true }));
+    assert.deepEqual(r.effects, [{ kind: "update-constraints", computeId: "cc-1", constraintVer: v }]);
+    t = r.task;
+  }
+});
+
+test("R4-CORR-03 首派撤销重发后,旧首派实例在 T2 上线被停止,它的停止确认在 T2 被消费并释放槽位", () => {
+  const t = must(applyAll(claimed().task, [{ kind: "Amend", by: "u1", computeResumable: true }, { kind: "Dispatch", computeId: "w0", model: PRODUCER, requestId: "t1#L0" }])).task;
+  assert.equal(t.state, "T2_Claimed");
+  assert.deepEqual(t.orphans, ["w0"]);
+  const r = must(apply(t, { kind: "StoppedConfirmed", computeId: "w0" }));
+  assert.equal(r.task.state, "T2_Claimed");
+  assert.deepEqual(r.task.orphans, []);
+  assert.deepEqual(r.effects, [{ kind: "release-slot", computeId: "w0" }]);
+  const revokedAck = must(apply(must(apply(claimed().task, { kind: "Amend", by: "u1", computeResumable: true })).task, { kind: "StoppedConfirmed", requestId: "t1#L0" }));
+  assert.deepEqual(revokedAck.task.revoked, []);
 });

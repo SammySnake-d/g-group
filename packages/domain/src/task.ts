@@ -9,8 +9,8 @@ export type EventKind = (typeof EVENT_KINDS)[number];
 
 export type TaskEvent =
   | { kind: "Claim"; by: string }
-  // requestId:新实例回报的是哪一次启动请求;返工后新开的实例必须带上并对上当前启动(R2-CORR-01/02)
-  | { kind: "Dispatch"; computeId: string; model: string; requestId?: string }
+  // requestId:实例回报的是哪一次启动请求;首派与返工新开都必须带上并对上当前启动(R2-CORR-01/02 / R4-CORR-03)
+  | { kind: "Dispatch"; computeId: string; model: string; requestId: string }
   // 执行侧回包都带来源实例 computeId;提问/提审还带它所依据的条件版本。对不上当前实例(或当前版本)的是旧执行器的迟到回包(R3-CORR-03)
   | { kind: "ProducerModelAdded"; model: string; computeId: string }
   | { kind: "NeedHuman"; qId: string; computeId: string; constraintVer: number }
@@ -34,6 +34,8 @@ export type TaskEvent =
 /** 确认卡绑定快照:创建后冻结,不与其它 Task 共享(CORR-04)。 */
 export interface PendingQuestion { readonly qId: string; readonly constraintVer: number }
 export interface Launch { readonly requestId: string; readonly constraintVer: number }
+/** 通过审查时的审查人模型与豁免人;交付后迟到的生产模型记录据此重判合规(R4-CORR-01)。 */
+export interface Approval { readonly reviewerModel: string; readonly waiverBy: string | null }
 export type ReviewGate = "none" | "compliant" | "waived-by-user";
 export type VerificationBadge = "none" | "accepted" | "unverified";
 export interface Task {
@@ -47,6 +49,10 @@ export interface Task {
   readonly launch: Launch | null;
   /** 当前 computeId 是由哪个启动请求回绑的(首次派发为 null);同一请求同一实例的重复上线回包据此幂等(R3-CORR-01)。 */
   readonly boundRequest: string | null;
+  /** 曾经回绑到本任务的全部实例;它们报来的生产模型都计入累积集合,哪怕已不是当前实例(R4-CORR-01)。 */
+  readonly instances: readonly string[];
+  /** 当前通过的审查(T7/T8 有效);其余状态为 null。 */
+  readonly approval: Approval | null;
   /** 已发 cancel-spawn、还没确认撤销也没见到实例上线的旧启动请求(R3-CORR-02)。 */
   readonly revoked: readonly string[];
   /** 已发 stop-compute、还没确认停止的孤儿实例(R3-CORR-02)。 */
@@ -91,18 +97,21 @@ const as = <K extends EventKind>(e: TaskEvent, k: K): Extract<TaskEvent, { kind:
 };
 const snapQ = (q: PendingQuestion | null): PendingQuestion | null => q ? Object.freeze({ qId: String(q.qId), constraintVer: Number(q.constraintVer) }) : null;
 const snapL = (l: Launch | null): Launch | null => l ? Object.freeze({ requestId: String(l.requestId), constraintVer: Number(l.constraintVer) }) : null;
+const snapA = (a: Approval | null): Approval | null => a ? Object.freeze({ reviewerModel: String(a.reviewerModel), waiverBy: a.waiverBy === null ? null : String(a.waiverBy) }) : null;
 const set = (t: Task, patch: Partial<Task>): Task => {
   const q = "pendingQ" in patch ? patch.pendingQ ?? null : t.pendingQ;
   const l = "launch" in patch ? patch.launch ?? null : t.launch;
+  const a = "approval" in patch ? patch.approval ?? null : t.approval;
   return Object.freeze({
     ...t, ...patch, producerModels: Object.freeze([...(patch.producerModels ?? t.producerModels)]), pendingQ: snapQ(q), launch: snapL(l),
     revoked: Object.freeze([...(patch.revoked ?? t.revoked)]), orphans: Object.freeze([...(patch.orphans ?? t.orphans)]),
+    instances: Object.freeze([...(patch.instances ?? t.instances)]), approval: snapA(a),
   });
 };
 
 export function newTask(id: string, requester: string): Task {
   return set({
-    id, requester, state: "T1_Open", owner: null, constraintVer: 0, computeId: null, launch: null, boundRequest: null, revoked: [], orphans: [], launchSeq: 0, reviewRound: 0, producerModels: [],
+    id, requester, state: "T1_Open", owner: null, constraintVer: 0, computeId: null, launch: null, boundRequest: null, instances: [], approval: null, revoked: [], orphans: [], launchSeq: 0, reviewRound: 0, producerModels: [],
     pendingQ: null, reviewedCommit: null, reviewGate: "none", badge: "none", stopReason: null,
   }, {});
 }
@@ -122,10 +131,13 @@ const execFailed = go((t, e) => {
   const current = t.computeId ? ev.computeId === t.computeId : !!t.launch && ev.requestId === t.launch.requestId;
   return current ? stopThenRun(t, "fail") : ok(t);
 });
-/** 换模只认当前实例报来的;不核对条件版本:当前实例换过的模型都参与了产出,累积集合宁多勿少(AC-26)。 */
+/**
+ * 换模记录认任何曾回绑到本任务的实例(含已被替换的旧实例),不核对条件版本:它们换过的模型都可能进了产物或交接,累积集合宁多勿少(AC-26 / R4-CORR-01);
+ * 从未回绑过的孤儿实例没有参与产出,它的记录忽略。
+ */
 const addModel = go((t, e) => {
   const ev = as(e, "ProducerModelAdded");
-  if (!t.computeId || ev.computeId !== t.computeId) return ok(t);
+  if (!t.instances.includes(ev.computeId)) return ok(t);
   const m = ev.model;
   return ok(set(t, { producerModels: t.producerModels.includes(m) ? t.producerModels : [...t.producerModels, m] }));
 });
@@ -135,27 +147,31 @@ const addModel = go((t, e) => {
  * 负责人与累积生产模型保留;版本推进,评审与验收标记作废。
  */
 const rework = (t: Task, resumable: boolean): Outcome => {
-  const base = { state: "T3_Running", constraintVer: t.constraintVer + 1, pendingQ: null, reviewedCommit: null, reviewGate: "none", badge: "none" } as const;
+  const base = { state: "T3_Running", constraintVer: t.constraintVer + 1, pendingQ: null, reviewedCommit: null, reviewGate: "none", badge: "none", approval: null } as const;
   if (resumable && t.computeId) return ok(set(t, { ...base, launch: null }), [{ kind: "resume-compute", computeId: t.computeId, constraintVer: base.constraintVer }]);
-  return relaunch(set(t, { ...base, computeId: null, boundRequest: null }), []);
+  return relaunch(set(t, { ...base, computeId: null, boundRequest: null }), [], true);
 };
 /** 发起一次新的启动请求:requestId 永不复用,绑定当前条件版本;pre 是要先执行的副作用(如撤销旧启动)。 */
-const relaunch = (t: Task, pre: Effect[]): Outcome => {
+const relaunch = (t: Task, pre: Effect[], withHandoff: boolean): Outcome => {
   const seq = t.launchSeq + 1;
   const launch: Launch = { requestId: `${t.id}#L${seq}`, constraintVer: t.constraintVer };
-  return ok(set(t, { launch, launchSeq: seq }), [...pre, { kind: "spawn-compute", withHandoff: true, ...launch }]);
+  return ok(set(t, { launch, launchSeq: seq }), [...pre, { kind: "spawn-compute", withHandoff, ...launch }]);
 };
+/** 启动在途时改条件:旧启动按旧版本发出,撤销并登记它(直到确认撤销或其实例被停止),按新版本重新发起(R2-CORR-02 / R3-CORR-02);首派(T2)不带交接,返工新开带交接。 */
+const revokeAndRelaunch = (t: Task, launch: Launch, ver: number): Outcome =>
+  relaunch(set(t, { constraintVer: ver, revoked: [...t.revoked, launch.requestId] }), [{ kind: "cancel-spawn", requestId: launch.requestId }], t.state !== "T2_Claimed");
 /** 执行中/阻塞中改条件:Compute 仍在运行,版本单调递增、阻塞卡片作废,回到执行;启动在途时旧启动按旧版本发出,撤销它并按新版本重新发起(R2-CORR-02)。 */
 const amendLive = go((t) => {
   const ver = t.constraintVer + 1;
   if (!t.launch) return ok(set(t, { constraintVer: ver, pendingQ: null, state: "T3_Running" }), t.computeId ? [{ kind: "update-constraints", computeId: t.computeId, constraintVer: ver }] : []);
-  // 旧启动记入 revoked,直到确认撤销或它的实例上线后被停止,任务才可能终态(R3-CORR-02)
-  return relaunch(set(t, { constraintVer: ver, revoked: [...t.revoked, t.launch.requestId] }), [{ kind: "cancel-spawn", requestId: t.launch.requestId }]);
+  return revokeAndRelaunch(t, t.launch, ver);
 });
+/** 已认领、首派请求已发出但未回绑时改条件:撤销重发,留在 T2(R4-CORR-03)。 */
+const amendQueued = go((t) => t.launch ? revokeAndRelaunch(t, t.launch, t.constraintVer + 1) : ok(set(t, { constraintVer: t.constraintVer + 1 })));
 /** 带启动请求号、却不是当前在途启动的实例:不绑定,立即停止,不让它带着过期授权运行(R2-CORR-01/02)。 */
 const orphan = (t: Task, e: TaskEvent): Outcome | null => {
   const ev = as(e, "Dispatch");
-  if (ev.requestId === undefined || ev.requestId === t.launch?.requestId) return null;
+  if (ev.requestId === t.launch?.requestId) return null;
   // 当前实例的重复上线回包(或冒用当前实例 ID 的回包):绝不停当前实例,幂等忽略(R3-CORR-01)
   if (ev.computeId === t.computeId) return ok(t);
   // 已经下过停止的孤儿:不重复登记
@@ -175,7 +191,7 @@ const amendRework = go((t, e) => rework(t, as(e, "Amend").computeResumable));
 /** 新实例回绑:只在已发出 spawn、还没有实例时接受;模型并入累积生产集合。 */
 const bind = (t: Task, e: TaskEvent): Task => {
   const ev = as(e, "Dispatch");
-  return set(t, { computeId: ev.computeId, boundRequest: ev.requestId ?? null, launch: null, producerModels: [...new Set([...t.producerModels, ev.model])] });
+  return set(t, { computeId: ev.computeId, boundRequest: ev.requestId, launch: null, instances: t.instances.includes(ev.computeId) ? t.instances : [...t.instances, ev.computeId], producerModels: [...new Set([...t.producerModels, ev.model])] });
 };
 /** 回绑只接受当前在途启动的实例(requestId 对上),没有启动在途或已有实例都拒。 */
 const canBind = (t: Task, e: TaskEvent): boolean => !t.computeId && !!t.launch && as(e, "Dispatch").requestId === t.launch.requestId;
@@ -186,23 +202,44 @@ const userReject = go((t, e) => {
 });
 
 /** T5 守卫(AC-26 / R-01):审查人≠作者;审查厂商不在累积生产厂商集合里;任何一方 unknown 都拒;提出者本人可豁免同厂商,记为 Waived。 */
+/** 跨厂商判定:返回门禁结论,或不通过的原因(以 Error 包装区分)。 */
+const vendorGate = (t: Task, reviewerModel: string, waiverBy: string | null | undefined): ReviewGate | Error => {
+  const producers = new Set<Vendor>(t.producerModels.map(vendorOf));
+  const reviewer = vendorOf(reviewerModel);
+  if (producers.size === 0) return new Error("没有记录到生产模型,无法判定跨厂商");
+  if (producers.has("unknown")) return new Error("有生产模型认不出厂商(unknown)");
+  if (reviewer === "unknown") return new Error(`审查模型 ${reviewerModel} 认不出厂商(unknown)`);
+  if (!producers.has(reviewer)) return "compliant";
+  if (waiverBy !== t.requester) return new Error(`审查厂商 ${reviewer} 在生产厂商集合 {${[...producers].join(",")}} 里,且没有提出者本人的豁免`);
+  return "waived-by-user";
+};
 const review = go((t, e) => {
   const ev = as(e, "Review");
   // 过期回包:审的不是当前提审的 commit 或条件版本,幂等忽略,当前提审继续等(CORR-01)
   if (ev.round !== t.reviewRound || ev.commit !== t.reviewedCommit || ev.constraintVer !== t.constraintVer) return ok(t);
   if (ev.reviewerId === t.owner) return no(`审查人 ${ev.reviewerId} 就是作者,不能自审`);
-  const producers = new Set<Vendor>(t.producerModels.map(vendorOf));
-  const reviewer = vendorOf(ev.reviewerModel);
-  if (producers.size === 0) return no("没有记录到生产模型,无法判定跨厂商");
-  if (producers.has("unknown")) return no("有生产模型认不出厂商(unknown)");
-  if (reviewer === "unknown") return no(`审查模型 ${ev.reviewerModel} 认不出厂商(unknown)`);
-  let gate: ReviewGate = "compliant";
-  if (producers.has(reviewer)) {
-    if (ev.waiverBy !== t.requester) return no(`审查厂商 ${reviewer} 在生产厂商集合 {${[...producers].join(",")}} 里,且没有提出者本人的豁免`);
-    gate = "waived-by-user";
-  }
+  const gate = vendorGate(t, ev.reviewerModel, ev.waiverBy);
+  if (gate instanceof Error) return no(gate.message);
   if (ev.verdict === "reject") return rework(t, ev.computeResumable);
-  return ok(set(t, { state: "T7_Delivering", reviewGate: gate }));
+  return ok(set(t, { state: "T7_Delivering", reviewGate: gate, approval: { reviewerModel: ev.reviewerModel, waiverBy: ev.waiverBy ?? null } }));
+});
+/** 同一产物重新送审:新轮次、清掉结论与验收标记(R4-CORR-01)。 */
+const reReview = (t: Task): Outcome => {
+  const round = t.reviewRound + 1;
+  return ok(set(t, { state: "T5_InReview", reviewRound: round, reviewGate: "none", approval: null, badge: "none" }), [{ kind: "request-review", round, commit: t.reviewedCommit!, constraintVer: t.constraintVer }]);
+};
+/**
+ * 审查通过后才到的生产模型记录(来自曾回绑的实例):并入累积集合并用原审查人模型重判。
+ * 结论不变就留在原状态;变成需豁免就改记 Waived;不再通过就作废这次审查、同一产物重新送审(R4-CORR-01)。
+ */
+const lateModel = go((t, e) => {
+  const ev = as(e, "ProducerModelAdded");
+  if (!t.instances.includes(ev.computeId) || t.producerModels.includes(ev.model)) return ok(t);
+  const t2 = set(t, { producerModels: [...t.producerModels, ev.model] });
+  if (!t.approval) return ok(t2);
+  const gate = vendorGate(t2, t.approval.reviewerModel, t.approval.waiverBy);
+  if (gate instanceof Error) return reReview(t2);
+  return ok(gate === t.reviewGate ? t2 : set(t2, { reviewGate: gate }));
 });
 
 type Row = { readonly [E in EventKind]: Cell };
@@ -220,14 +257,25 @@ const submit = (t: Task, e: TaskEvent): Outcome => {
   if (ev.computeId !== t.computeId || ev.constraintVer !== t.constraintVer) return ok(t);
   const commit = ev.commit;
   const round = t.reviewRound + 1;
-  return ok(set(t, { state: "T5_InReview", reviewedCommit: commit, reviewRound: round, reviewGate: "none" }), [{ kind: "request-review", round, commit, constraintVer: t.constraintVer }]);
+  return ok(set(t, { state: "T5_InReview", reviewedCommit: commit, reviewRound: round, reviewGate: "none", approval: null }), [{ kind: "request-review", round, commit, constraintVer: t.constraintVer }]);
 };
+/** 执行侧回包在不接受它的状态:旧实例或旧版本的迟到回包幂等忽略,不打断后续有效操作;当前实例当前版本的才按非法拒绝(R4-CORR-02)。 */
+const staleOr = (reason: string) => go((t, e) => {
+  const ev = e as { computeId?: string; constraintVer?: number };
+  const current = !!t.computeId && ev.computeId === t.computeId && (ev.constraintVer === undefined || ev.constraintVer === t.constraintVer);
+  return current ? no(reason) : ok(t);
+});
+/** 认领:原子地发出首派请求(requestId 带 L0,不与返工启动号冲突);从此 T2 总有一个在途首派请求,取消必须等它确认撤销(R4-CORR-03)。 */
+const claim = go((t, e) => {
+  const launch: Launch = { requestId: `${t.id}#L0`, constraintVer: t.constraintVer };
+  return ok(set(t, { state: "T2_Claimed", owner: as(e, "Claim").by, launch }), [{ kind: "spawn-compute", withHandoff: false, ...launch }]);
+});
 /** 尚未派发时改条件:只推进版本。 */
 const bumpVer = go((t) => ok(set(t, { constraintVer: t.constraintVer + 1 })));
 
 export const TABLE: TransitionTable = {
   T1_Open: {
-    Claim: go((t, e) => ok(set(t, { state: "T2_Claimed", owner: as(e, "Claim").by }))),
+    Claim: claim,
     Dispatch: rej("尚未认领,不能派发"), ProducerModelAdded: rej(NOT_RUNNING), NeedHuman: rej(NOT_RUNNING),
     HumanReply: ign(NO_CARD), Amend: bumpVer,
     SubmitForReview: rej(NOT_RUNNING), Review: rej("不在审查中"), DeliveredCard: rej("没有工件可交付"),
@@ -236,12 +284,13 @@ export const TABLE: TransitionTable = {
   },
   T2_Claimed: {
     Claim: rej("已被认领,重复认领原子拒绝(可改领子任务)"),
-    Dispatch: go((t, e) => { const ev = as(e, "Dispatch"); return ok(set(t, { state: "T3_Running", computeId: ev.computeId, boundRequest: null, producerModels: [...new Set([...t.producerModels, ev.model])] })); }),
+    // 首派实例上线:只认当前首派请求号;别的请求号的实例停止(R4-CORR-03)
+    Dispatch: go((t, e) => canBind(t, e) ? ok(set(bind(t, e), { state: "T3_Running" })) : orphan(t, e) ?? no("首派回包对不上")),
     ProducerModelAdded: rej(NOT_RUNNING), NeedHuman: rej(NOT_RUNNING), HumanReply: ign(NO_CARD),
-    Amend: bumpVer,
+    Amend: amendQueued,
     SubmitForReview: rej(NOT_RUNNING), Review: rej("不在审查中"), DeliveredCard: rej("没有工件可交付"),
     UserAccept: rej(NOT_DELIVERED), UserReject: rej(NOT_DELIVERED), AcceptTimeout: ign(NOT_DELIVERED),
-    Cancel: cancel, StoppedConfirmed: ign("没有在停止的 Compute"), ExecFailed: ign("尚未派发"),
+    Cancel: cancel, StoppedConfirmed: ack, ExecFailed: execFailed,
   },
   T3_Running: {
     Claim: rej("已在执行,拒绝重复认领"),
@@ -261,7 +310,7 @@ export const TABLE: TransitionTable = {
     Cancel: cancel, StoppedConfirmed: ack, ExecFailed: execFailed,
   },
   T4b_BlockedOnHuman: {
-    Claim: rej("已在执行,拒绝重复认领"), Dispatch: dispatchElse("已有 Compute 在执行"), ProducerModelAdded: addModel, NeedHuman: rej("已有一张待回复的卡"),
+    Claim: rej("已在执行,拒绝重复认领"), Dispatch: dispatchElse("已有 Compute 在执行"), ProducerModelAdded: addModel, NeedHuman: staleOr("已有一张待回复的卡"),
     HumanReply: go((t, e) => {
       const ev = as(e, "HumanReply");
       const q = t.pendingQ;
@@ -272,36 +321,36 @@ export const TABLE: TransitionTable = {
       const cleared = set(t, { pendingQ: null });
       return ev.answer === "approve" ? ok(set(cleared, { state: "T3_Running" })) : stopThenRun(cleared, "cancel");
     }),
-    Amend: amendLive, SubmitForReview: rej("等人确认中,不能提审"), Review: rej("不在审查中"), DeliveredCard: rej("等人确认中"),
+    Amend: amendLive, SubmitForReview: staleOr("等人确认中,不能提审"), Review: rej("不在审查中"), DeliveredCard: rej("等人确认中"),
     UserAccept: rej(NOT_DELIVERED), UserReject: rej(NOT_DELIVERED), AcceptTimeout: ign(NOT_DELIVERED),
     Cancel: cancel, StoppedConfirmed: ack, ExecFailed: execFailed,
   },
   T5_InReview: {
-    Claim: rej("审查中,拒绝重复认领"), Dispatch: dispatchElse("已有 Compute"), ProducerModelAdded: addModel, NeedHuman: rej("审查中不再向人提问"),
+    Claim: rej("审查中,拒绝重复认领"), Dispatch: dispatchElse("已有 Compute"), ProducerModelAdded: addModel, NeedHuman: staleOr("审查中不再向人提问"),
     HumanReply: ign(NO_CARD), Amend: amendRework, SubmitForReview: go(submit),
     Review: review, DeliveredCard: rej("还没审过,不能交付"),
     UserAccept: rej(NOT_DELIVERED), UserReject: rej(NOT_DELIVERED), AcceptTimeout: ign(NOT_DELIVERED),
     Cancel: cancel, StoppedConfirmed: ack, ExecFailed: execFailed,
   },
   T7_Delivering: {
-    Claim: rej("交付中,拒绝重复认领"), Dispatch: dispatchElse("已有 Compute"), ProducerModelAdded: rej("已审完,不能再加生产模型"), NeedHuman: rej("交付中"),
-    HumanReply: ign(NO_CARD), Amend: amendRework, SubmitForReview: rej("已审完"), Review: ign("已审完,迟到的审查结论忽略"),
+    Claim: rej("交付中,拒绝重复认领"), Dispatch: dispatchElse("已有 Compute"), ProducerModelAdded: lateModel, NeedHuman: staleOr("交付中"),
+    HumanReply: ign(NO_CARD), Amend: amendRework, SubmitForReview: staleOr("已审完"), Review: ign("已审完,迟到的审查结论忽略"),
     DeliveredCard: go((t) => ok(set(t, { state: "T8a_Delivered" }))),
     UserAccept: rej("卡片还没发到群里"), UserReject: rej("卡片还没发到群里"), AcceptTimeout: ign("卡片还没发到群里"),
     Cancel: cancel, StoppedConfirmed: ack, ExecFailed: ign("工件已落盘,只重发卡片,不回去重跑"),
   },
   T8a_Delivered: {
-    Claim: rej("已交付"), Dispatch: dispatchElse("已交付"), ProducerModelAdded: rej("已交付"), NeedHuman: rej("已交付"),
-    HumanReply: ign(NO_CARD), Amend: amendRework, SubmitForReview: rej("已交付"), Review: ign("已交付,迟到的审查结论忽略"),
+    Claim: rej("已交付"), Dispatch: dispatchElse("已交付"), ProducerModelAdded: lateModel, NeedHuman: staleOr("已交付"),
+    HumanReply: ign(NO_CARD), Amend: amendRework, SubmitForReview: staleOr("已交付"), Review: ign("已交付,迟到的审查结论忽略"),
     DeliveredCard: ign("卡片已发出,重复发送幂等"),
     UserAccept: go((t, e) => as(e, "UserAccept").by === t.requester ? ok(set(t, { state: "T8_Accepted", badge: "accepted" })) : no(`只有提出者 ${t.requester} 能确认验收`)),
     UserReject: userReject,
     AcceptTimeout: go((t) => ok(set(t, { state: "T8_ArchivedUnverified", badge: "unverified" }))),
     Cancel: ign("已交付,取消只停后续动作"), StoppedConfirmed: ack, ExecFailed: ign("已交付"),
   },
-  T8_Accepted: { ...terminalRow(), Amend: amendRework, UserReject: userReject },
+  T8_Accepted: { ...terminalRow(), ProducerModelAdded: lateModel, Amend: amendRework, UserReject: userReject },
   T8_ArchivedUnverified: {
-    ...terminalRow(), Amend: amendRework, UserReject: userReject,
+    ...terminalRow(), ProducerModelAdded: lateModel, Amend: amendRework, UserReject: userReject,
     UserAccept: go((t, e) => as(e, "UserAccept").by === t.requester ? ok(set(t, { state: "T8_Accepted", badge: "accepted" })) : no(`只有提出者 ${t.requester} 能确认验收`)),
   },
   T9_StopRequested: {
