@@ -15,7 +15,7 @@
 // M30–M47 是联系人/Helper 作者埋雷;contact/helper 其余系列见各分组注释。为不和任务侧重名:
 // reviews/feat-contact-helper.md 第二轮的 N01–N05 记为 CN01–CN05,第三轮的 P01–P05 记为 CP01–CP05,第五轮的 Z01–Z05 记为 CZ01–CZ05,
 // 第六轮的 W01–W05 记为 CW01–CW05,第七轮的 V01–V08 记为 CV01–CV08,第八轮的 H05–H06 记为 CH05–CH06,第九轮的 J01–J05 记为 CJ01–CJ05,
-// 第十轮的 Y01–Y08 记为 CY01–CY08;contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK71。原样副本必须全绿(阴性对照)。
+// 第十轮的 Y01–Y08 记为 CY01–CY08;contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK78。原样副本必须全绿(阴性对照)。
 // 用法: node packages/domain/proof/mutations.mjs
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -322,7 +322,7 @@ const M = [
   ["Q04 能力资产空白校验只认空格和制表符", "contact.ts", "if (!a.name.trim()) return { ok: false, reason: \"能力资产名不能为空\" };", "if (a.name === \"\" || /^[ \\t]*$/.test(a.name)) return { ok: false, reason: \"能力资产名不能为空\" };"],
   ["Q05 出处等于依据位置也拒", "contact.ts", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq > receipt.basedOnSeq) return k;", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq >= receipt.basedOnSeq) return k;"],
   ["CK26 承诺不校验出处位置", "contact.ts", "  if (!isSeq(k.sourceSeq)) return { ok: false, reason: `承诺出处 ${k.sourceSeq} 不是合法的消息位置(非负整数)` };\n", ""],
-  ["CK27 回执不校验依据位置", "contact.ts", "  if (!isSeq(receipt.basedOnSeq)) return c;\n", ""],
+  ["CK27 回执不校验依据位置", "contact.ts", "  if (!isSeq(receipt.basedOnSeq)) return freezeContact(c);\n", ""],
   ["CK28 位置只查有限不查整数", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isFinite(n) && n >= 0"],
   ["CK29 位置不查负数", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isSafeInteger(n)"],
   ["CK30 位置把 0 也拒", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isSafeInteger(n) && n > 0"],
@@ -332,11 +332,11 @@ const M = [
   ["CZ04 撤销允许任何非 revoked 状态", "contact.ts", "k.id === id && k.status === \"active\"", "k.id === id && k.status !== \"revoked\""],
   ["CZ05 位置 0 被拒", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isSafeInteger(n) && n > 0"],
   ["CK31 同名异类资产静默成功", "contact.ts", "  if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };\n", ""],
-  ["CK32 同名同类资产也拒", "contact.ts", "  if (same) return { ok: true, contact: c };", "  if (same) return { ok: false, reason: \"重复\" };"],
+  ["CK32 同名同类资产也拒", "contact.ts", "  if (same) return { ok: true, contact: freezeContact(c) };", "  if (same) return { ok: false, reason: \"重复\" };"],
   ["CK33 同名异类覆盖旧资产", "contact.ts", "if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };", "if (same && same.kind !== a.kind) return { ok: true, contact: freezeContact({ ...c, computeAssets: c.computeAssets.map((x) => (x.name === a.name ? { name: a.name, kind: a.kind } : x)) }) };"],
   // 以下 CW01–CW05(报告原编号 W01–W05)取自 Codex 第六轮独立复审 reviews/feat-contact-helper.md CH-16(注入点与 independent-mutations-round6.json 一致),CK34–CK36 是本轮表驱动用例的埋雷
   ["CW01 同名异类只在涉及 MCP 时拒绝", "contact.ts", "if (same && same.kind !== a.kind)", "if (same && same.kind !== a.kind && (same.kind === \"mcp\" || a.kind === \"mcp\"))"],
-  ["CW02 同名同类幂等只对 MCP 生效", "contact.ts", "if (same) return { ok: true, contact: c };", "if (same && same.kind === \"mcp\") return { ok: true, contact: c };"],
+  ["CW02 同名同类幂等只对 MCP 生效", "contact.ts", "if (same) return { ok: true, contact: freezeContact(c) };", "if (same && same.kind === \"mcp\") return { ok: true, contact: freezeContact(c) };"],
   ["CW03 资产名按前缀匹配", "contact.ts", "c.computeAssets.find((x) => x.name === a.name)", "c.computeAssets.find((x) => x.name.startsWith(a.name))"],
   ["CW04 资产按同名或同类判重", "contact.ts", "c.computeAssets.find((x) => x.name === a.name)", "c.computeAssets.find((x) => x.name === a.name || x.kind === a.kind)"],
   ["CW05 删除同名异类拒绝", "contact.ts", "  if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };\n", ""],
@@ -358,7 +358,7 @@ const M = [
   ["CH05 凭据只校验第一项", "contact.ts", "const bad = r.credentialRefs.filter((x) => !CREDENTIAL_REF.test(x));", "const bad = r.credentialRefs.slice(0, 1).filter((x) => !CREDENTIAL_REF.test(x));"],
   ["CH06 凭据只校验 scheme 前缀", "contact.ts", "const CREDENTIAL_REF = /^[a-z][a-z0-9+.-]*:\\/\\/[^\\s]+$/;", "const CREDENTIAL_REF = /^[a-z][a-z0-9+.-]*:\\/\\//;"],
   ["CK43 数组项不查是字符串", "contact.ts", "return out.every((x) => typeof x === \"string\") ? (out as string[]) :", "return true ? (out as string[]) :"],
-  ["CK44 数组字段不查是数组", "contact.ts", "  if (!Array.isArray(v)) return { reason: `${field} 必须是字符串数组` };\n", ""],
+  ["CK44 数组字段不查是数组", "contact.ts", "  if (!Array.isArray(v)) return { reason: `${field} 必须是${want}` };\n", ""],
   ["CK45 字符串字段不查类型(含 task)", "contact.ts", "case \"string\": return typeof v === \"string\" ? { ok: true, value: v } : { ok: false, reason: `${field} 必须是字符串` };", "case \"string\": return { ok: true, value: v };"],
   // 以下 CJ01–CJ05(报告原编号 J01–J05)取自 Codex 第九轮独立复审 reviews/feat-contact-helper.md CH-23(注入点与 independent-mutations-round9.json 一致),CK46–CK52 是 CH-20–22 统一规范化返修的埋雷;规范化后数组在入口已复制,CV06–CV08 与 I08、CK45 的注入点随源码改到等价位置
   ["CJ01 字符串项检查漏掉首项", "contact.ts", "out.every((x) => typeof x === \"string\")", "out.slice(1).every((x) => typeof x === \"string\")"],
@@ -367,10 +367,10 @@ const M = [
   ["CJ04 cloud_sandbox 静默改成 local", "contact.ts", "const placement = r.placement ?? \"local\";", "const placement = r.placement === \"cloud_sandbox\" ? \"local\" : r.placement ?? \"local\";"],
   ["CJ05 几乎跳过凭据拒绝", "contact.ts", "if (bad.length) return { ok: false, reason:", "if (bad.length > 99) return { ok: false, reason:"],
   ["CK48 数组字段不复制、返回原数组", "contact.ts", "return out.every((x) => typeof x === \"string\") ? (out as string[]) :", "return out.every((x) => typeof x === \"string\") ? (v as string[]) :"],
-  ["CK49 显式 null 当成缺省", "contact.ts", "if (raw === undefined && spec.optional) continue;", "if (raw == null && spec.optional) continue;"],
+  ["CK49 显式 null 当成缺省", "contact.ts", "if (raw === undefined && isOptional(spec)) continue;", "if (raw == null && isOptional(spec)) continue;"],
   ["CK50 能力资产不查类别", "contact.ts", "  if (!ASSET_KINDS.has(a.kind)) return { ok: false, reason: `未知的能力资产类别 ${a.kind}` };\n", ""],
-  ["CK52 不查访问器属性", "contact.ts", "    if (d && !(\"value\" in d)) return `${what} 只接受普通数据${noun}(${String(key)} 是访问器属性)`;\n", ""],
-  // 以下 CY01–CY08(报告原编号 Y01–Y08)取自 Codex 第十轮独立复审 reviews/feat-contact-helper.md CH-26(注入点按 independent-mutations-round10.json 与 independent-Y08-round10.py;CH-24 后 decideUnderFocus 的 Y05 注入点改到等价位置),CK53–CK62 是 CH-24/CH-25 返修的埋雷(CK55"control 字段都可选"是等价变异,条件见收据第 7 栏,不收录)
+  ["CK52 不查访问器属性", "contact.ts", "    if (d && !Object.hasOwn(d, \"value\")) return `${what} 只接受普通数据${noun}(${String(key)} 是访问器属性)`;\n", ""],
+  // 以下 CY01–CY08(报告原编号 Y01–Y08)取自 Codex 第十轮独立复审 reviews/feat-contact-helper.md CH-26(注入点按 independent-mutations-round10.json 与 independent-Y08-round10.py;CH-24 后 decideUnderFocus 的 Y05 注入点改到等价位置),CK53–CK62 是 CH-24/CH-25 返修的埋雷(CK55"control 字段都可选"所测的 control 意图已按 #2273 撤销,不收录)
   ["CY04 schedule 不规范化直接保留原对象", "contact.ts", "case \"schedule\": return v === null ? { ok: true, value: null } : normalize(v, SCHEDULE_SCHEMA, field);", "case \"schedule\": return v === null ? { ok: true, value: null } : { ok: true, value: v };"],
   ["CY07 commit 存下原始对象的全部字段", "contact.ts", "commitments: [...c.commitments, { ...k, awaitingReport: [], reportedTaskIds: [], status: \"active\" }]", "commitments: [...c.commitments, { ...input, awaitingReport: [], reportedTaskIds: [], status: \"active\" }]"],
   ["CY08 校验嵌套 schedule 但保留原对象", "contact.ts", "case \"schedule\": return v === null ? { ok: true, value: null } : normalize(v, SCHEDULE_SCHEMA, field);", "case \"schedule\": return v === null ? { ok: true, value: null } : (normalize(v, SCHEDULE_SCHEMA, field).ok ? { ok: true, value: v } : { ok: false, reason: field });"],
@@ -385,14 +385,28 @@ const M = [
   ["AA04 addContact 不拒 Proxy", "contact.ts", "if (types.isProxy(input)) return { ok: false, reason:", "if (what !== \"联系人\" && types.isProxy(input)) return { ok: false, reason:"],
   ["AA05 updateContact 不拒 Proxy", "contact.ts", "if (types.isProxy(input)) return { ok: false, reason:", "if (what !== \"联系人修改\" && types.isProxy(input)) return { ok: false, reason:"],
   ["CK63 快照用普通对象并赋值写入(经原型链 setter)", "contact.ts", "const out = Object.create(null) as Record<string, unknown>;", "const out: Record<string, unknown> = {};"],
-  ["CK65 数组项用 push 写入(经原型链 setter)", "contact.ts", "    Object.defineProperty(out, i, { value: d.value, writable: true, enumerable: true, configurable: true });", "    out.push(d.value);"],
+  ["CK65 数组项用 push 写入(经原型链 setter)", "contact.ts", "    Object.defineProperty(out, i, dataDesc(d !== undefined && Object.hasOwn(d, \"value\") ? d.value : undefined, true));", "    out.push(d !== undefined && Object.hasOwn(d, \"value\") ? d.value : undefined);"],
   ["CK66 Helper 不查 owner", "helper.ts", "  if (typeof owner !== \"string\" || !owner.trim()) return no(\"owner 必须是非空字符串\");\n", ""],
   ["CK67 Helper 不查调用方种类", "helper.ts", "  if (who.value.kind !== \"user\" && who.value.kind !== \"contact\") return no(`调用方种类 ${who.value.kind} 不认识`);\n", ""],
   ["CK68 Helper 不查调用方 id 非空", "helper.ts", "  if (!who.value.id.trim()) return no(\"调用方 id 不能为空\");\n", ""],
   ["CK69 Helper 未知入口不拒", "helper.ts", "  if (!variant) return no(`Helper 入口种类 ${head.value.kind} 不认识`);\n", ""],
   ["CK70 Helper 不查 conversationId 非空", "helper.ts", "  if (head.value.kind !== \"global\" && !e.conversationId?.trim()) return no(\"conversationId 必须是非空字符串\");\n", ""],
   ["CK71 Helper 不查 mention 的 seq", "helper.ts", "  if (head.value.kind === \"mention\" && !isSeq(e.seq as number)) return no(`seq ${e.seq} 不是合法的消息位置(非负整数)`);\n", ""],
-  // CK40、CK41、CK42、CK46、CK47、CY01、CY02、CY05、CY06 只在"校验后再读一次入参"时可观察,本轮合同下入参只能是数据属性、读两次结果相同,是等价变异,移出清单;CK64"空原型快照改赋值写入"因空原型没有可经过的 setter 也等价,移出(条件见收据第 7 栏)。
+  // 以下取自 Codex 第十二轮复审 reviews/feat-contact-helper.md:CH-34 指出 CK40、CK41、CK42、CY02 在入参数组自带迭代器、原型链同名属性下可观察,不是等价变异,恢复进清单;
+  // CK72 对应 CH-35 / 独立变异 X01(Reflect.ownKeys→Object.keys);CK73–CK78 是 CH-29–CH-33 返修的埋雷。
+  // 仍不收录的等价条件(写在收据第 7 栏):CK46、CK47、CY01、CY06 的入参字段是原始字符串/数字、读两次结果相同,且没有原型链缺省可读;CK64"空原型快照改赋值写入"没有可经过的 setter;
+  // CK55、CY05 所测功能已按 #2273 撤销,不是等价变异。
+  ["CK40 输出 tools 重新遍历入参(经入参数组自带的迭代器)", "contact.ts", "tools: Object.freeze([...r.tools])", "tools: Object.freeze([...input.tools])"],
+  ["CK41 输出 credentialRefs 重新遍历入参(经入参数组自带的迭代器)", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs])", "credentialRefs: Object.freeze([...input.credentialRefs])"],
+  ["CK42 placement 重新读入参(缺省时读到原型链)", "contact.ts", "const placement = r.placement ?? \"local\";", "const placement = input.placement ?? \"local\";"],
+  ["CY02 updateContact 校验后改用原始 patch(缺省字段读到原型链)", "contact.ts", "const patch = n.value;", "const patch = input;"],
+  ["CK72 只查可枚举字符串键的访问器(Reflect.ownKeys 改 Object.keys)", "contact.ts", "for (const key of Reflect.ownKeys(v)) {", "for (const key of Object.keys(v)) {"],
+  ["CK73 访问器判定用 in(读到原型上的 value)", "contact.ts", "if (d && !Object.hasOwn(d, \"value\")) return `${what}", "if (d && !(\"value\" in d)) return `${what}"],
+  ["CK74 属性描述符用普通对象(读到原型上的 get/set)", "contact.ts", "const d = Object.create(null) as PropertyDescriptor;", "const d: PropertyDescriptor = {};"],
+  ["CK75 optional 读原型链", "contact.ts", "const isOptional = (s: FieldSpec): boolean => Object.hasOwn(s, \"optional\") && s.optional === true;", "const isOptional = (s: FieldSpec): boolean => s.optional === true;"],
+  ["CK76 联系人状态不过普通数据合同", "contact.ts", "const readContact = (state: unknown): Normalized<Contact> => normalize<Contact>(state, CONTACT_SCHEMA, \"联系人状态\");", "const readContact = (state: unknown): Normalized<Contact> => ({ ok: true, value: state as Contact });"],
+  ["CK77 目录状态不拒 Proxy", "contact.ts", "  if (types.isProxy(d)) return { ok: false, reason: \"目录 只接受普通数据对象\" };\n", ""],
+  ["CK78 settleTask 输出带上原状态的全部字段", "contact.ts", "const c = mustContact(state);\n  return freezeContact({", "const c = mustContact(state);\n  return Object.freeze({ ...(state as object),"],
 ];
 // 所测功能已按 g-group#2273 撤销(专职开关「只做这件事」整体删除),对应变异移出清单;运行时逐条打印说明,写进 mutations.txt。
 const REMOVED = [
