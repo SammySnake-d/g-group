@@ -1,0 +1,39 @@
+packages/domain/proof/mutations.mjs
+  s_e35be614b37bea::t_ab5ee78e7b6086 4-5,40,46,53,57-58,60,63-64,68-71,75,77-96,103-104
+packages/domain/proof/mutations.txt
+  s_e35be614b37bea::t_b93bc3a37b4bba 1-83
+packages/domain/proof/red-against-96d48dd.tap
+  s_e35be614b37bea::t_62e50a99a01532 1-937
+packages/domain/proof/task-lifecycle-tests.txt
+  s_e35be614b37bea::t_33583679d0947c 1-86,88,93
+packages/domain/src/task.ts
+  s_e35be614b37bea::t_686f287ba7c46d 1-2,73-89,91-301
+packages/domain/src/vendor.ts
+  s_e35be614b37bea::t_5c8c7180599e1e 1,4-18
+receipts/feat-task-lifecycle.json
+  s_60e9c5a2ac18df::t_3b68e2523c7e1b 2,12,17,22,56,58,60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cb3fba02725c37d8de3b2e066a04ce44c8019eda",
+  "prompts": {},
+  "sessions": {
+    "s_60e9c5a2ac18df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac25756ecc32db3a1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_e35be614b37bea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ab1f-7839-72e2-afb1-d71409a8ddd2",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
