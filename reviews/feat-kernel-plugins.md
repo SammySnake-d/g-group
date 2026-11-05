@@ -654,3 +654,176 @@ NODE
 ## 未完成验收边界
 
 作者披露的短撤回词与他人**正文**碰撞可能误拦、摘要改写后的派生语义无法由逐字扫描保证、插件可能忽略声明 endpoint、进程重启后内存账本丢失及 AC-39 实际缓存/会话/用量观测未接线，均不能以当前模拟结果当作通过。R-06 纵向路径仍未测；AC-06、AC-08、AC-11、AC-12、AC-35、AC-39 整项也均未通过。本次 reject 的问题包含本片内已可直接复现的错误，不只是未来集成缺口。
+
+---
+
+# 第六轮：返修独立复审
+
+**结论：reject。** 哈希与作者一致；常规入站 getter、第五轮时钟反例和 8 个门禁的各自负例已独立复现。但“所有入口访问器均不执行”和“原型 setter/只读属性不影响合法输入”不成立：`Object.prototype.get` 污染会拒绝合法数据；`Array.prototype[0]` setter 可使拉取结果缺失事件却返回成功，装配也会抛错；若干公开入口和非法分类/发送结果仍会执行 getter。两个自行注入的单点故障一个被杀、一个存活。
+
+## 审查范围、身份和实际执行
+
+- 普通独立 clone `feat/kernel-plugins` 功能 HEAD `2d4bf600165d61a1e6264b2ad68ae9f1c83a74cb`；`origin/feat/domain-core` 为 `afd02560f9546147da380382404eb6106222a9b8`；红提交 `0d0a03b42e735261b91543765222c53614607ea8`。前五轮原样保留；本次只追加本节与更新收据 `review`；变异及门禁夹具均在其他临时独立目录。
+- 审查人 `codex`；会话 `codex:7d29bd3e-c4cd-4e15-ad0b-298bd0301bd3`；本轮原生 `turn_context` 实际模型 `gpt-6.1-terra`（OpenAI）。作者会话实际触及项目的模型为 `claude-opus-5-5`（Anthropic）。当前轮来源门禁须会话落盘后再核验。
+- 独立 clone 仓库根目录实际执行 `node scripts/gates/run-all.ts --hash --branch=feat/kernel-plugins --base=origin/feat/domain-core`，标准输出原样为：
+
+  ```text
+  2f6783ff4f308ba9ea77918bd5b1549a7dc46f980f98e438d0844cd33bf98f27
+  ```
+
+  与用户给出的作者 hash **完全一致**。
+
+| 检查 | 独立结果 |
+|---|---|
+| 绿提交 `npm ci`、`npm run typecheck`、`npm run lint` | 全部退出 0；lint 检查 24 文件 |
+| 绿提交 `npm test` | 退出 0；174 通过、0 失败、0 跳过，其中 kernel 151 条 |
+| 红提交 `npm ci`、`npm test` | 安装退出 0；测试退出 1；23 条旧测试通过、151 条 kernel 测试逐名失败、0 跳过。红绿四份测试文件无差异，测试名与红失败名双向差集为空 |
+| 作者变异脚本，Node `v22.22.0` / `v25.8.1` | 两次独立顺序运行均退出 0；各自原样 151 绿，131 个具名变异被杀、0 存活、0 超时。K20/K72/K128 的新注入点均被具名测试杀死 |
+| 金丝雀，Node 22 / 25 | 各以 `KERNEL_MUT_TIMEOUT_MS=5000` 运行，约 5 秒结束、退出 0；金丝雀被记录为超时，不冒充杀死 |
+| 自造单点变异 R6-M1 / R6-M2 | M1 在隔离副本被一条具名测试发现；M2 typecheck 通过、174/174 测试绿却破坏空白撤回防护，见 R6-05 |
+| 原始 `run-all.ts --local` | 退出 1，`G-REVIEW` 因无审查而红；其余门禁显示绿。`review=null` 时 `G-PROVENANCE` 提前跳过，不能称已核验来源 |
+| 填写 reject 后重跑同一 `--local` | 退出 1；`G-REVIEW` 因 reject 拦截；`G-PROVENANCE` 当前找不到本次 hash 调用且无法确认审查厂商。本轮会话尚未落盘，结束后仍须实测 |
+
+## 逐入口 getter 与原型条件
+
+- 独立构造 getter 时，`plainData`、`plainItems`、注册、重注册、发送请求、发送回执、拉取数组、拉取事件、装配日志、装配选项和分类入站**在各自所测样例中**均给出拒绝/保守结果，getter 调用 0 次；分类器计数也为 0。不能据此推广到未覆盖的公开入口或分类器返回值：见 R6-03/R6-04。
+- `Object.prototype.x` 同名 setter 或不可写属性下，合法 `{x:1}` 的 `plainData` 及普通装配样例正常；`plainData(['a'])` 本身在 `Array.prototype[0]` setter / 不可写下标下也正常。针对描述符字段名和完整调用链的反例见 R6-01/R6-02。
+- 第五轮的单调时钟先升后降并恢复反例，现在持续 `clock-untrusted`，不会自动再发；普通字段 getter、重建恶意异常、含冒号的 sender 标签样例已修复。所有这些仅是局部样例，不等于所有边界已证明。
+
+## 每个门禁的独立负例
+
+为每项创建单独的临时真实 Git 仓库；在同一生产 `runGates` 上核对预期问题文字，并分别以本仓库真实 `node scripts/gates/run-all.ts --repo <夹具> --base main --branch feat/case --local` 运行完整 CLI。**八个夹具均退出 1，且各自目标门禁为 ✗**；单个夹具可能同时触发其他门禁，不能据此声称其他门禁通过。
+
+| 门禁 | 本轮独立输入 | 实际目标判定 |
+|---|---|---|
+| G-TRACE | 收据 AC-01 状态写 `快通过` | 状态不是四选一 |
+| G-REVIEW | 审查 agent 与作者均为 `claude` | 审查人与作者是同一个 |
+| G-PROVENANCE | `codex:not-found` 审查会话；临时空会话根 | 审查会话不可信 |
+| G-RED | `red.commit` 为不存在的 40 个 0 | 红提交不存在 |
+| G-STUB | 测试只断言 `typeof calc`、从不调用实现 | 空桩后没有按名字失败 |
+| G-TAUTO | `assert.equal(3,3)` | 恒真/恒定断言 |
+| G-WORKFLOW | 新 workflow 声明 `permissions: {contents: write}` | 申请写权限 |
+| G-LAYER | plugin-one 的源码 import plugin-two | plugin 层不能依赖 plugin 层 |
+
+本轮第一个自写夹具运行时把 G-TAUTO 预期文字误写成“字面量”，门禁实际已报“恒真”；且管道未开 `pipefail` 遮住了脚本非零退出。我修正预期并开启 `pipefail` 后重跑：8/8 目标负例均识别，随后完整 CLI 的 8 次也均为目标 ✗、退出 1。下方给出可重跑的完整临时夹具脚本；这验证每门禁一条负例，不代表门禁不存在其他绕过。
+
+## 删除与修改的变异
+
+- **K21**：把 `mounts: Object.freeze([...c.mounts])` 改成 `mounts: c.mounts`，独立变异 174 绿；注册后修改原实例 mounts，原版与变异都只保留注册时值。当前 `c` 已先经 `plainData` 深拷贝冻结，且公开 API 不暴露该数组引用，因此在已声明的行为下删除理由成立。
+- **K108**：当前先检测并持久标记 `clock-untrusted`，窗口判断才执行。对照加回 `elapsed >= 0`、再测读数 `500→499→501`，原版与对照均两次 `clock-untrusted`、真实调用 1 次，174 测试绿；该旧条件在当前可达路径中冗余，删除理由成立。
+- **K141**：将对 null 原型结果对象的 `defineProperty` 改为直接赋值；含自有 `__proto__`、`constructor` 与 `Object.prototype.a` setter 的样例中，原版/变异均保持 null 原型、值相同、setter 0 次，174 测试绿。该指定结果写入变异在当前合同下有等价依据；**这不能证明其他描述符构造点能抵抗 `Object.prototype.get` 污染**，见 R6-01。
+- 修改后的 **K20/K72/K128** 在 Node 25 的独立原脚本运行中均被具名测试杀死，分别检出原对象共享、错误 this、数组元素描述符绕过。上述三个等价结论均限定本版已声明的可观察接口及所测输入，不是对所有未来实现的永久证明。
+
+## 必须修复
+
+### R6-01 [P1 / 普通对象合同] `Object.prototype.get` 污染使合法输入被误拒
+
+位置：`packages/kernel/src/plain.ts:23-30,38-43,73-83,96-112`。`ownDescs` 虽用 null 原型保存结果，但 `Object.defineProperty(table,k,{value:d,enumerable:true})` 的**描述符参数自身**是普通对象。临时在 `Object.prototype` 安装名为 `get` 的 setter 后，对无 accessor 的合法 `{x:1}` 调 `plainData`，实测 `ok:false`，理由 `Invalid property descriptor. Cannot both specify accessors and a value or writable attribute`；`assemble` 同样失败，`classifyInbound` 把合法输入归为 `Uncertain`。`get` 设为不可写普通值 `17` 时也拒绝，理由 `Getter must be a function: 17`。setter 本身虽未调用，结果已改变。作为正对照，`Object.prototype.x` setter/不可写属性下相同合法输入通过。
+
+**修复要求**：连传给 `Object.defineProperty` 的属性描述符也不得继承可污染原型，检查 `get/set` 应只依据 descriptor 的自有字段；对 `get/set/value/writable/enumerable/configurable` 等描述符名分别做 setter/只读对照，并验证从 public 入口到最终结果，而非仅测普通输入键 `x`。
+
+### R6-02 [P1 / AC-35、AC-39] Array 原型污染穿透调用链，拉取成功但丢事件
+
+位置：`packages/kernel/src/plugins.ts:194-212`、`assemble.ts:187-225`。`plainData/plainItems` 自身用 `defineProperty` 追加，所测单独克隆可通过；但调用者仍用 `events.push`、`segments.push`、`bodies.push` 等。
+
+独立进程临时在 `Array.prototype['0']` 设置 setter，正常 DataSource 返回一条合法事件。实测 `pull` 返回 `ok:true`，setter 被调用 1 次，`events.length===1` 但 `Object.hasOwn(events,0)===false`、事件为稀疏空槽（JSON 中显示 `null`）；合法内容没有返回。相同条件下装配合法日志抛 `Cannot read properties of undefined (reading 'label')`。把该属性改成不可写数据属性，合法 `pull` 与装配分别抛 `Cannot assign to read only property '0'`。污染只在独立子进程里临时设置，结束后恢复；这不是说真实宿主已被污染。
+
+**修复要求**：保障整个公开调用链的结果数组构建及后续使用不受继承 setter/只读下标影响，或在入口检测并显式拒绝环境而不得返回伪成功；对合法一条/多条事件、合法装配、拒收事件与空结果分别验证自有下标及真实内容，覆盖 setter 与不可写两侧。不能只证明 `plainData` 的临时数组安全。
+
+### R6-03 [P1 / 对外入口合同] 工厂选项、序列化和前缀工具仍会执行 getter
+
+位置：`plugins.ts:130-134`、`plain.ts:39-41`、`assemble.ts` 的 `serialize/prefixLength/prefixHash`（均由 `packages/kernel/src/index.ts` 导出）。
+
+独立测试 `createRegistry({get now(){counter++;return Date.now}})`：对象被接受且 getter 调用 1 次；`plainData({x:1},'x',{get topFunctions(){counter++;return true}})` 同样接受并调用 1 次。给 `serialize/prefixLength/prefixHash` 一个 `segments` getter，三个函数分别执行 getter 1、1、2 次并返回结果，而不是拒绝。以上是直接传入公开接口的 accessor，不是前述已通过的 `assemble` 日志/选项样例。
+
+**修复要求**：明确这些公开入口的边界并在读取属性前做无 getter 检查；若仅允许可信内部 `AssembledRequest`，应收紧导出/类型并用可验证的内部能力而非接受任意对象。新增每个公开入口的 getter/setter 与不调用计数测试。
+
+### R6-04 [P1 / AC-12、AC-35] 非法分类结果与 thenable 会执行 getter，发送账本卡在 in-flight
+
+位置：`classify.ts:87-104`、`plain.ts:116-144`、`plugins.ts:23-26,143-158`。
+
+- 让分类器返回带可枚举 getter 的非枚举对象：分类结果虽为 `Uncertain`，`safeDescribe` 的 `JSON.stringify` 已执行 getter 1 次。入站事件 getter 计数为 0 的测试不能证明分类器输出也安全。
+- 让已注册 JS 插件的 `send` 返回非 Promise 对象，且 `then` 是会抛错的 getter。`isThenable` 直接读 `x.then`，实测 getter 被执行、首次 `send` 的 Promise 抛 `then getter`，账本仍为 `in-flight`；再次同动作只能收到 `in-flight`，并未按不合法发送结果记 `DeliveryUnknown`。
+
+**修复要求**：对分类器非枚举结果做不执行 getter/`toJSON` 的安全诊断；发送结果识别与 Promise assimilation 不得在受保护范围外触发 accessor，任何无法确认的执行结果应安全落入 `DeliveryUnknown`，不能让账本永久停在 in-flight。测试非法 getter 有/无抛错、真实 Promise、同步返回、重试及计数。
+
+### R6-05 [P1 / R-05] 自造单点变异一个被杀，一个存活
+
+在独立副本分别修改，未改原版：
+
+- **R6-M1（被杀）**：`plain.ts` 把 `Number.isFinite(x)` 改成 `Number.isInteger(x)`；typecheck 0，174 条中 173 绿、1 条具名红，失败是压缩点 `2.5` 的预期错误类型改变。证明这个单点错误能被现有套件发现；它不是单独证明普通小数正例已被覆盖。
+- **R6-M2（存活）**：`assemble.ts` 将统一空白正则改为只列出已测普通空格、tab、换行、回车、NBSP、全角空格和零宽字符的白名单，遗漏合法空白 U+000B（垂直制表符）。typecheck 0、174/174 绿。原版对撤回 `秘密口令` 与 volatile `秘\u000B密口令` 返回 `retracted-text-leaked`；变异版 `ok:true` 并带入 tail。
+
+**修复要求**：对支持的完整空白类别做性质测试或代表性边界测试，注入不含 U+000B 的白名单故障并验证具名测试变红；不要仅以 131 个预选变异全部被杀宣称所有撤回检查已双侧标定。
+
+## 原版反例可执行复现
+
+在 `2d4bf60` 的仓库根目录完成 `npm ci` 后运行；脚本只在本进程临时污染原型并在 finally 恢复，断言的是当前**错误行为**，无外网副作用：
+
+```sh
+node --input-type=module <<'NODE'
+import assert from 'node:assert/strict';
+import {plainData} from './packages/kernel/src/plain.ts';
+import {createRegistry} from './packages/kernel/src/plugins.ts';
+import {assemble,serialize,prefixLength,prefixHash} from './packages/kernel/src/assemble.ts';
+import {classifyInbound} from './packages/kernel/src/classify.ts';
+import {append,emptyLog} from './packages/domain/src/log.ts';
+const d=Object.create(null);d.configurable=true;d.set=()=>{};const old=Object.getOwnPropertyDescriptor(Object.prototype,'get');let checked;
+try{Object.defineProperty(Object.prototype,'get',d);checked=plainData({x:1})}finally{delete Object.prototype.get;if(old)Object.defineProperty(Object.prototype,'get',old)}
+assert.equal(checked.ok,false);console.log('R6-01：Object.prototype.get setter 使合法数据被拒');
+const r=createRegistry(),ev={nativeId:'m',sourceVersion:'1',eventType:'create',author:'a',content:'hello',occurredAt:'2026-11-06T00:00:00Z',attachments:[]};
+r.register({kind:'data-source',id:'p',sources:['g'],pull:async()=>[ev]});
+const log=append(emptyLog(),{kind:'user',id:'u'},{kind:'message',text:'合法正文'},'2026-11-06T00:00:00Z');const opts={stable:[{kind:'system',text:'助手'}],quotes:[],budgetBytes:1000};
+let calls=0,out,err;const ad=Object.create(null);ad.configurable=true;ad.set=()=>{calls++};const old0=Object.getOwnPropertyDescriptor(Array.prototype,'0');
+try{Object.defineProperty(Array.prototype,'0',ad);out=await r.pull('p','g');try{assemble(log,opts)}catch(e){err=String(e)}}finally{delete Array.prototype['0'];if(old0)Object.defineProperty(Array.prototype,'0',old0)}
+assert.equal(out.ok,true);assert.equal(out.events.length,1);assert.equal(Object.hasOwn(out.events,0),false);assert.ok(calls>0);assert.match(err,/undefined/);
+console.log('R6-02：合法 pull 假成功且事件为空槽；assemble 抛错');
+let n=0;const options={};Object.defineProperty(options,'now',{enumerable:true,get(){n++;return Date.now}});createRegistry(options);assert.equal(n,1);
+const request={};Object.defineProperty(request,'segments',{enumerable:true,get(){n++;return []}});serialize(request);prefixLength(request);prefixHash(request);assert.equal(n,5);
+console.log('R6-03：工厂和公开工具执行 getter');
+let seen=0;const raw={};Object.defineProperty(raw,'x',{enumerable:true,get(){seen++;return 'x'}});
+const c=classifyInbound({sender:{kind:'user',id:'u'},text:'hi'},()=>raw);assert.equal(c.intent,'Uncertain');assert.equal(seen,1);
+const thenable={};Object.defineProperty(thenable,'then',{get(){seen++;throw Error('then getter')}});
+const send=createRegistry();send.register({kind:'outbound-channel',id:'p',endpoint:'A',idempotency:'none',send:()=>thenable});
+await assert.rejects(send.send('p',{action_id:'a',payload:'x'}),/then getter/);assert.equal(send.delivery('p','a').state,'in-flight');assert.equal((await send.send('p',{action_id:'a',payload:'x'})).reason,'in-flight');
+console.log('R6-04：分类器输出 getter 被执行；then getter 让账本卡在 in-flight');
+NODE
+```
+
+## 各门禁负例完整夹具脚本
+
+在审查版本仓库根目录，将下面脚本保存为临时 `.mjs` 文件并运行。它只创建系统临时目录中的普通 Git 仓库与伪会话，不写生产仓库、不访问网络；每例既调用实际 `runGates` 检查原因，也运行实际 CLI 检查对应 `✗` 与退出码 1。
+
+```js
+import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {execFileSync,spawnSync} from 'node:child_process';import {pathToFileURL} from 'node:url';
+const judge=process.cwd();const {trace,review,provenance,red,stub,tautology,workflow,layers}=await import(pathToFileURL(path.join(judge,'scripts/gates/gates.ts')).href);
+const {ctxFromGit,runGates}=await import(pathToFileURL(path.join(judge,'scripts/gates/lib.ts')).href);
+const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'pr6-independent-gates-'));const original=path.join(tmp,'original');fs.mkdirSync(original);
+const git=(cwd,...args)=>execFileSync('git',args,{cwd,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
+const write=(root,f,text)=>{const x=path.join(root,f);fs.mkdirSync(path.dirname(x),{recursive:true});fs.writeFileSync(x,text)};
+const commit=(dir,msg)=>{git(dir,'add','-A');git(dir,'-c','user.name=fixture','-c','user.email=fixture@example.invalid','commit','-q','-m',msg);return git(dir,'rev-parse','HEAD')};
+git(original,'init','-q','-b','main');write(original,'package.json','{"type":"module"}\n');write(original,'docs/spec/验收文档-v0.1.md','| AC-01 示例 |\n');write(original,'packages/core/package.json',JSON.stringify({name:'fixture-core',gGroup:{layer:'domain'}}));write(original,'.github/workflows/trusted-gates.yml','name: trusted-gates\non: pull_request_target\n');commit(original,'base');git(original,'checkout','-q','-b','feat/case');
+const test='import {test} from "node:test"; import assert from "node:assert/strict"; import {calc} from "./calc.ts"; test("正向结果",()=>{assert.equal(calc(2),7)});\n';
+write(original,'packages/core/src/calc.ts','export function calc(n:number):number {return 0}\n');write(original,'packages/core/src/calc.test.ts',test);const redSha=commit(original,'red');write(original,'packages/core/src/calc.ts','export function calc(n:number):number {return n+5}\n');commit(original,'green');
+const receipt={slice:'fixture',acceptance:[{id:'AC-01',status:'未测',reason:'fixture'}],author:{agent:'claude',session:'claude:fixture',model:'claude-opus-5-5'},red:{commit:redSha},unverifiable:'AC-01 fixture',waiver:null,review:null};write(original,'receipts/feat-case.json',JSON.stringify(receipt,null,2));commit(original,'receipt');
+const sessions=path.join(tmp,'sessions');fs.mkdirSync(sessions);process.env.MIRASIM_SESSIONS=sessions;process.env.MIRASIM_ROOMS=path.join(tmp,'rooms');
+const cases=[
+ {gate:trace,expect:'不是 通过/失败/未测/不适用',mutate:(dir)=>{const r=JSON.parse(fs.readFileSync(path.join(dir,'receipts/feat-case.json')));r.acceptance[0].status='快通过';write(dir,'receipts/feat-case.json',JSON.stringify(r))}},
+ {gate:review,expect:'审查人与作者是同一个',mutate:(dir)=>{const r=JSON.parse(fs.readFileSync(path.join(dir,'receipts/feat-case.json')));r.review={agent:'claude',session:'claude:same',model:'claude-opus-5-5',verdict:'approve',reviewed_hash:'wrong',notes:'fixture'};write(dir,'receipts/feat-case.json',JSON.stringify(r))}},
+ {gate:provenance,expect:'审查会话不可信',mutate:(dir)=>{const r=JSON.parse(fs.readFileSync(path.join(dir,'receipts/feat-case.json')));r.review={agent:'codex',session:'codex:not-found',model:'gpt-6.1-terra',verdict:'approve',reviewed_hash:'wrong',notes:'fixture'};write(dir,'receipts/feat-case.json',JSON.stringify(r))}},
+ {gate:red,expect:'不存在',mutate:(dir)=>{const r=JSON.parse(fs.readFileSync(path.join(dir,'receipts/feat-case.json')));r.red.commit='0000000000000000000000000000000000000000';write(dir,'receipts/feat-case.json',JSON.stringify(r))}},
+ {gate:stub,expect:'在全部实现换成空桩后没有按名字失败',mutate:(dir)=>write(dir,'packages/core/src/calc.test.ts','import {test} from "node:test"; import assert from "node:assert/strict"; import {calc} from "./calc.ts"; test("不调用实现",()=>{assert.equal(typeof calc,"function")});\n')},
+ {gate:tautology,expect:'恒真',mutate:(dir)=>write(dir,'packages/core/src/calc.test.ts','import {test} from "node:test"; import assert from "node:assert/strict"; import {calc} from "./calc.ts"; test("恒真",()=>{void calc;assert.equal(3,3)});\n')},
+ {gate:workflow,expect:'写权限',mutate:(dir)=>{write(dir,'.github/workflows/unsafe.yml','name: unsafe\non: pull_request\npermissions: { contents: write }\njobs:\n  probe:\n    runs-on: ubuntu-latest\n    steps: [{ run: echo-ok }]\n');git(dir,'add','.github/workflows/unsafe.yml')}},
+ {gate:layers,expect:'不能依赖',mutate:(dir)=>{write(dir,'packages/one/package.json',JSON.stringify({name:'plugin-one',gGroup:{layer:'plugin'}}));write(dir,'packages/two/package.json',JSON.stringify({name:'plugin-two',gGroup:{layer:'plugin'}}));write(dir,'packages/one/src/a.ts','import "plugin-two";\n');git(dir,'add','packages/one','packages/two')}}
+];
+let failed=0;
+for(const [i,c] of cases.entries()){
+ const dir=path.join(tmp,'case-'+i);git(tmp,'clone','-q','--no-hardlinks',original,dir);git(dir,'branch','main','origin/main');c.mutate(dir);
+ const ctx=ctxFromGit(dir,'main','feat/case');const actual=runGates(ctx,[c.gate])[0];const messages=actual.problems.map(p=>p.msg);const targeted=messages.some(x=>x.includes(c.expect));
+ const cli=spawnSync(process.execPath,[path.join(judge,'scripts/gates/run-all.ts'),'--repo',dir,'--base','main','--branch','feat/case','--local'],{encoding:'utf8',timeout:120000,env:process.env});
+ const raw=(cli.stdout??'')+(cli.stderr??'');const cliRejected=cli.status===1&&raw.includes(`✗ ${c.gate.id} `);fs.writeFileSync(path.join(tmp,`${c.gate.id}.log`),raw);const ok=targeted&&cliRejected;
+ console.log(JSON.stringify({gate:c.gate.id,negativeRecognized:ok,cliExit:cli.status,expected:c.expect,problems:messages}));if(!ok)failed++;
+}
+console.log(JSON.stringify({cases:cases.length,recognized:cases.length-failed,failed,fixtureRoot:tmp}));process.exit(failed?1:0);
+```
