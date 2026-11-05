@@ -1,0 +1,21 @@
+receipts/feat-task-lifecycle.json
+  s_36f8aff8cdaf05::t_ab2b278da3d71e 60-67
+reviews/feat-task-lifecycle.md
+  s_36f8aff8cdaf05::t_892a5783db5211 383-475
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ac2fffeb24ae1eb5d04caf013c678aa68f879f73",
+  "prompts": {},
+  "sessions": {
+    "s_36f8aff8cdaf05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a528004857a3a0bf5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
