@@ -202,6 +202,15 @@ const M = [
   ["K28 位置只查有限不查整数", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isFinite(n) && n >= 0"],
   ["K29 位置不查负数", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isSafeInteger(n)"],
   ["K30 位置把 0 也拒", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isSafeInteger(n) && n > 0"],
+  // 以下 Z01–Z05 取自 Codex 第五轮独立复审 reviews/feat-contact-helper.md CH-15(注入点与 independent-mutations-round5.json 一致),K31–K33 是 CH-14 返修的埋雷
+  ["Z01 位置只查整数不查安全整数", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isInteger(n) && n >= 0"],
+  ["Z02 最大安全整数也拒", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isSafeInteger(n) && n >= 0 && n < Number.MAX_SAFE_INTEGER"],
+  ["Z03 加锁允许任何非 done 状态", "contact.ts", "k.id === f.onlyCommitmentId && k.status === \"active\"", "k.id === f.onlyCommitmentId && k.status !== \"done\""],
+  ["Z04 撤销允许任何非 revoked 状态", "contact.ts", "k.id === id && k.status === \"active\"", "k.id === id && k.status !== \"revoked\""],
+  ["Z05 位置 0 被拒", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isSafeInteger(n) && n > 0"],
+  ["K31 同名异类资产静默成功", "contact.ts", "  if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };\n", ""],
+  ["K32 同名同类资产也拒", "contact.ts", "  if (same) return { ok: true, contact: c };", "  if (same) return { ok: false, reason: \"重复\" };"],
+  ["K33 同名异类覆盖旧资产", "contact.ts", "if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };", "if (same && same.kind !== a.kind) return { ok: true, contact: freezeContact({ ...c, computeAssets: c.computeAssets.map((x) => (x.name === a.name ? { name: a.name, kind: a.kind } : x)) }) };"],
 ];
 function run(dir) {
   const files = fs.readdirSync(path.join(dir, "src")).filter((f) => f.endsWith(".test.ts")).map((f) => path.join("src", f));
