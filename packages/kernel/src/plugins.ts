@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/correctness/noUnusedFunctionParameters: 红提交空壳,签名先行 */
 // 三类插件契约(AC-35 阶段 I 宿主契约桩):DataSource 只回答"从哪取",OutboundChannel 只回答"往哪发",UIExtension 只声明挂载点。
 // 定时不是插件:到点醒来是联系人自己的承诺(概念卡 v2 第 11 张,#1286)。插件之间互不依赖,只依赖宿主。
 
@@ -57,6 +56,56 @@ export interface PluginRegistry {
 
 export const SCHEDULE_REASON = "定时归联系人:插件只提供数据源和输出渠道,不能自带 schedule/cron(概念卡 v2 第 11 张,#1286)";
 
+const KINDS: ReadonlySet<string> = new Set<PluginKind>(["data-source", "outbound-channel", "ui-extension"]);
+const isObj = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null;
+const isStrList = (x: unknown): x is string[] => Array.isArray(x) && x.every((s) => typeof s === "string" && s !== "");
+const reject = (reason: RegisterRejection, detail: string): RegisterResult => ({ ok: false, reason, detail });
+
+function check(c: unknown, taken: ReadonlySet<string>): RegisterResult {
+  if (!isObj(c) || typeof c.kind !== "string" || !KINDS.has(c.kind)) return reject("invalid-kind", `类型必须是 ${[...KINDS].join(" / ")}`);
+  if (typeof c.id !== "string" || c.id.trim() === "") return reject("invalid-contract", "缺 id");
+  if (taken.has(c.id)) return reject("duplicate-id", c.id);
+  if ("schedule" in c || "cron" in c) return reject("schedule-not-allowed", SCHEDULE_REASON);
+  if ("dependsOn" in c && !(Array.isArray(c.dependsOn) && c.dependsOn.length === 0)) return reject("plugin-dependency-not-allowed", "插件只能依赖宿主接口,不能依赖其他插件");
+  if (c.kind === "data-source" && !(isStrList(c.sources) && typeof c.pull === "function")) return reject("invalid-contract", "DataSource 需要 sources 与 pull");
+  if (c.kind === "outbound-channel" && typeof c.send !== "function") return reject("invalid-contract", "OutboundChannel 需要 send");
+  if (c.kind === "ui-extension" && !isStrList(c.mounts)) return reject("invalid-contract", "UIExtension 需要 mounts");
+  return { ok: true };
+}
+
+/** 外部内容由宿主盖章:只取契约字段,trust 固定为不可信,插件自报的一律丢弃。 */
+function stamp(plugin: string, source: string, m: RawExternalMessage): ExternalEnvelope {
+  return { origin: { plugin, source, nativeId: String(m.nativeId) }, author: String(m.author), content: String(m.content), trust: "untrusted" };
+}
+
 export function createRegistry(): PluginRegistry {
-  throw new Error("未实现");
+  const plugins = new Map<string, Plugin>();
+  const sent = new Map<string, SendReceipt>(); // `${plugin}\u0000${action_id}` → 首次回执
+  return {
+    register(candidate) {
+      const r = check(candidate, new Set(plugins.keys()));
+      if (r.ok) { const p = candidate as Plugin; plugins.set(p.id, p); }
+      return r;
+    },
+    list: () => [...plugins.values()].map((p) => ({ id: p.id, kind: p.kind })),
+    pull(pluginId, sourceId) {
+      const p = plugins.get(pluginId);
+      if (p?.kind !== "data-source") return { ok: false, reason: "unknown-plugin", detail: pluginId };
+      if (!p.sources.includes(sourceId)) return { ok: false, reason: "source-not-declared", detail: sourceId };
+      return { ok: true, messages: p.pull(sourceId).map((m) => stamp(p.id, sourceId, m)) };
+    },
+    send(pluginId, req) {
+      const p = plugins.get(pluginId);
+      if (p?.kind !== "outbound-channel") return { ok: false, reason: "unknown-plugin", detail: pluginId };
+      const actionId = req.action_id;
+      if (typeof actionId !== "string" || actionId === "") return { ok: false, reason: "missing-action-id", detail: "外发动作必须带 action_id,宿主按它幂等" };
+      const key = `${pluginId}\u0000${actionId}`;
+      const prior = sent.get(key);
+      if (prior) return { ok: true, receipt: prior, deduplicated: true };
+      const receipt = p.send({ action_id: actionId, payload: req.payload });
+      sent.set(key, receipt);
+      return { ok: true, receipt, deduplicated: false };
+    },
+    mounts: (point) => [...plugins.values()].filter((p): p is UIExtension => p.kind === "ui-extension" && p.mounts.includes(point)).map((p) => p.id),
+  };
 }

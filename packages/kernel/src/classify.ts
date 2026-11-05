@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/correctness/noUnusedFunctionParameters: 红提交空壳,签名先行 */
 // 先机械后语义(AC-11)与固定枚举(AC-12):有 @、↩ #seq、版本号可判定时不调分类器;分类器只能出 E1..E10 或 Uncertain。
 
 export const EVENT_CODES = ["E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9", "E10"] as const;
@@ -22,6 +21,26 @@ export interface ClassifyResult {
   readonly violation?: string;
 }
 
+const ALLOWED: ReadonlySet<string> = new Set<string>([...EVENT_CODES, "Uncertain"]);
+
+function mechanicalCues(e: InboundEvent): Cue[] {
+  const cues: Cue[] = [];
+  if ((e.mentions?.length ?? 0) > 0) cues.push("mention");
+  if ((e.quotes?.length ?? 0) > 0) cues.push("quote");
+  if (typeof e.version === "number" && Number.isFinite(e.version)) cues.push("version");
+  return cues;
+}
+
+const describe = (x: unknown) => (typeof x === "string" ? x : (JSON.stringify(x) ?? String(x)));
+
 export function classifyInbound(event: InboundEvent, classifier: Classifier): ClassifyResult {
-  throw new Error("未实现");
+  const cues = mechanicalCues(event);
+  // 版本号绑定的回复是对确认卡的人类答复(E6);@ 与引用都是带锚点的入站消息(E1)
+  if (cues.length > 0) return { event: cues.includes("version") ? "E6" : "E1", via: "mechanical", cues };
+  let raw: unknown;
+  try { raw = classifier(event); } catch (err) {
+    return { event: "Uncertain", via: "semantic", cues, violation: `classifier-threw: ${String(err)}` };
+  }
+  if (typeof raw === "string" && ALLOWED.has(raw)) return { event: raw as Classification, via: "semantic", cues };
+  return { event: "Uncertain", via: "semantic", cues, violation: describe(raw) };
 }
