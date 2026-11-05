@@ -29,6 +29,9 @@ const M = [
   ["S16 冲突时覆盖其他文档(R16)", "store.ts", 'if (cur !== expectedVer) return { ok: false, reason: "version-conflict", currentVer: cur };', 'if (cur !== expectedVer) { s.db.prepare("UPDATE docs SET value = ? WHERE key <> ?").run(JSON.stringify("错误覆盖"), key); return { ok: false, reason: "version-conflict", currentVer: cur }; }'],
   ["S17 事务换成进程内布尔锁(R17)", "store.ts", "return tx(s.db, () => cas(s, key, expectedVer, value));", 'const g = globalThis as { casLock?: boolean }; if (g.casLock) return { ok: false, reason: "busy" }; g.casLock = true; try { return cas(s, key, expectedVer, value); } finally { g.casLock = false; }'],
   ["S18 busy 不映射,照抛异常", "store.ts", 'if (isBusy(e)) return { ok: false, reason: "busy" };', ""],
+  // 以下按 Codex 第二轮审查 RR-01 补入
+  ["S19 初始化套用调用方的 busy 超时", "store.ts", "db.exec(`PRAGMA busy_timeout = ${INIT_BUSY_MS}`);", "db.exec(`PRAGMA busy_timeout = ${Math.max(0, Math.trunc(opts.busyTimeoutMs ?? 5000))}`);"],
+  ["S20 初始化后不恢复调用方的 busy 超时", "store.ts", "  db.exec(SCHEMA);\n  db.exec(`PRAGMA busy_timeout = ${Math.max(0, Math.trunc(opts.busyTimeoutMs ?? 5000))}`);", "  db.exec(SCHEMA);"],
 ];
 
 function run(dir) {
