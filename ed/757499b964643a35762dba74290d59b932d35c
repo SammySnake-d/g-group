@@ -1,0 +1,25 @@
+packages/kernel/proof/mutations.mjs
+  s_060cb60f4a56ed::t_6ceac9ac26ba4e 1,28,38-39,45,48-49,51,53,62-90
+packages/kernel/proof/mutations.txt
+  s_060cb60f4a56ed::t_840f03a7b8ea88 1-70
+packages/kernel/proof/tests.txt
+  s_060cb60f4a56ed::t_628e4f52649a30 1-71,73,78
+receipts/feat-kernel-plugins.json
+  s_060cb60f4a56ed::t_b122be1ebf9b38 2,7,12,17,22,48-52,61,63,65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ed757499b964643a35762dba74290d59b932d35c",
+  "prompts": {},
+  "sessions": {
+    "s_060cb60f4a56ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae8c5e6a9c179f748",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
