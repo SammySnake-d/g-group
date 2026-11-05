@@ -299,6 +299,15 @@ const M = [
   ["K37 说明 rules 复制但不冻结", "contact.ts", "rules: Object.freeze([...r.rules])", "rules: [...r.rules]"],
   ["K38 说明 tools 复制但不冻结", "contact.ts", "tools: Object.freeze([...r.tools])", "tools: [...r.tools]"],
   ["K39 说明 credentialRefs 复制但不冻结", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs])", "credentialRefs: [...r.credentialRefs]"],
+  // 以下 H05–H06 取自 Codex 第八轮独立复审 reviews/feat-contact-helper.md CH-19(注入点与 independent-mutations-round8.json 一致;H01–H04、H07–H08 与已有变异同类且已被杀,不重复),K40–K45 是 CH-18 快照返修的埋雷
+  ["H05 凭据只校验第一项", "contact.ts", "const bad = r.credentialRefs.filter((x) => !CREDENTIAL_REF.test(x));", "const bad = r.credentialRefs.slice(0, 1).filter((x) => !CREDENTIAL_REF.test(x));"],
+  ["H06 凭据只校验 scheme 前缀", "contact.ts", "const CREDENTIAL_REF = /^[a-z][a-z0-9+.-]*:\\/\\/[^\\s]+$/;", "const CREDENTIAL_REF = /^[a-z][a-z0-9+.-]*:\\/\\//;"],
+  ["K40 输出 tools 重新读入参", "contact.ts", "tools: Object.freeze([...r.tools])", "tools: Object.freeze([...input.tools])"],
+  ["K41 输出 credentialRefs 重新读入参", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs])", "credentialRefs: Object.freeze([...input.credentialRefs])"],
+  ["K42 placement 重新读入参", "contact.ts", "const placement = r.placement ?? \"local\";", "const placement = input.placement ?? \"local\";"],
+  ["K43 数组项不查是字符串", "contact.ts", "return out.every((x) => typeof x === \"string\") ? (out as string[]) :", "return true ? (out as string[]) :"],
+  ["K44 数组字段不查是数组", "contact.ts", "  if (!Array.isArray(v)) return { reason: `${field} 必须是字符串数组` };\n", ""],
+  ["K45 task 不查是字符串", "contact.ts", "  if (typeof task !== \"string\") return { ok: false, reason: \"task 必须是字符串\" };\n", ""],
 ];
 function run(dir) {
   const files = fs.readdirSync(path.join(dir, "src")).filter((f) => f.endsWith(".test.ts")).map((f) => path.join("src", f));
