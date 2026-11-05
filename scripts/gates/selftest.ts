@@ -328,8 +328,9 @@ export const CASES: Case[] = [
  * 结果按用例顺序输出。GATE_SELFTEST_FAILFAST=1 时出现失败就不再启动新用例。
  */
 const WORKER_TIMEOUT_MS = 900_000;
-function runCaseInWorker(i: number): Promise<{ pass: boolean; detail: string }> {
-  return new Promise((resolve) => {
+function runCaseInWorker(i: number): Promise<{ pass: boolean; detail: string; secs: number }> {
+  const t0 = Date.now();
+  return timed(t0, new Promise((resolve) => {
     const c = spawn(process.execPath, [path.join(HERE, "selftest.ts"), "--case", String(i)], { env: gitEnv() });
     let out = "";
     let timedOut = false;
@@ -343,8 +344,9 @@ function runCaseInWorker(i: number): Promise<{ pass: boolean; detail: string }> 
       if (!line) return resolve({ pass: false, detail: `用例子进程没有给出结果(退出 ${code})\n${out}` });
       resolve(JSON.parse(line.slice(RESULT_MARK.length)) as { pass: boolean; detail: string });
     });
-  });
+  }));
 }
+const timed = (t0: number, p: Promise<{ pass: boolean; detail: string }>) => p.then((r) => ({ ...r, secs: Math.round((Date.now() - t0) / 1000) }));
 const RESULT_MARK = "__GATE_SELFTEST_RESULT__";
 
 export async function selfTest(only?: (c: Case) => boolean): Promise<boolean> {
@@ -352,14 +354,22 @@ export async function selfTest(only?: (c: Case) => boolean): Promise<boolean> {
   let ok = true;
   const failFast = process.env.GATE_SELFTEST_FAILFAST === "1";
   const idx = CASES.map((c, i) => [c, i] as const).filter(([c]) => !only || only(c)).map(([, i]) => i);
+  // GATE_SELFTEST_FIRST=<用例名>:先跑这一条,其余照原顺序随后全跑。只改顺序,不跳过任何用例。
+  const first = process.env.GATE_SELFTEST_FIRST;
+  if (first) {
+    const fi = CASES.findIndex((c) => c.name === first);
+    if (fi < 0) { console.log(`✗ GATE_SELFTEST_FIRST 指向不存在的用例「${first}」`); console.log("自检失败"); return false; }
+    const at = idx.indexOf(fi);
+    if (at > 0) { idx.splice(at, 1); idx.unshift(fi); }
+  }
   const width = Math.max(1, Math.min(Number(process.env.GATE_SELFTEST_JOBS ?? Math.min(4, os.availableParallelism())), idx.length || 1));
-  const results: ({ pass: boolean; detail: string } | undefined)[] = new Array(CASES.length);
+  const results: ({ pass: boolean; detail: string; secs: number } | undefined)[] = new Array(CASES.length);
   let next = 0;
   let printed = 0;
   const flush = () => {
     while (printed < idx.length && results[idx[printed]!]) {
-      const i = idx[printed++]!, c = CASES[i]!, { pass, detail } = results[i]!;
-      console.log(`${pass ? "✓" : "✗"} ${c.expect === null ? "放行" : "拦下"}:${c.name}`);
+      const i = idx[printed++]!, c = CASES[i]!, { pass, detail, secs } = results[i]!;
+      console.log(`${pass ? "✓" : "✗"} ${c.expect === null ? "放行" : "拦下"}:${c.name} (${secs}s)`);
       if (!pass && !failFast) console.log(detail.split("\n").map((l) => `      | ${l}`).join("\n"));
     }
   };
