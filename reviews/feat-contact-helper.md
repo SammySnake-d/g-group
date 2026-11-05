@@ -569,3 +569,66 @@ Helper 三入口 × 本人/他人/同 ID 联系人 9 格、定时归联系人且
 **执行器纠错：** 等候独立变异进程的旧会话号时工具返回 `Unknown process id 11077`，不是产品测试失败；完整逐项 JSON/日志已保留，但不声称未观察到的整脚本退出码。H05/H06 已在各自副本直接重跑 typecheck、lint、test 及 oracle，退出码逐项记录。初次查看 getter 联合探针时查错证据目录，随后已在 `$E/repo` 上重跑并写入 `$E/getter-boundary-probe.json`。
 
 **本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 在 `0b40600` / `a425387` 下 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 未找到等于本轮 `reviewed_hash` 的审查工具输出，也未识别该审查轮厂商。当前轮尚未完整写入会话 `turns.jsonl`；原生 rollout 可观察模型，但不能冒充该门禁通过。会话落盘后由既有流程重核，不伪造记录或豁免（`$E/gates-local.log`）。
+
+---
+
+## 第九轮：第八轮快照返修后的跨厂商独立复审（2026-11-06）
+
+**结论：reject，交回 Claude Code 原开发任务返修。** 第八轮 CH-18 的“同一属性反复读取并输出后一个值”原反例和 CH-19 的 H05/H06 原变异已关闭；但授权登记入口还有同类 getter 换值缺陷，`briefFor` 又在复制数组之前读取其他 getter，可使已读规则被清空。此外 `placement: null` 未按声明的类型拒绝；独立变异也暴露具体的形状和位置回归测试缺口。下面的 getter 反例是实际纯函数结果，不等于证明真实宿主会构造 getter、远程可利用、真正启动 Compute 或泄露凭据。
+
+### 固定对象与独立复现
+
+- 按任务指定审 PR #4 `feat/contact-helper` 的 HEAD `130ac7068b4f24ab788dceb23a7d40629d06453f`，固定基线 `origin/feat/task-lifecycle=4cd80a3f302e913f62cbcd871c579847ea0ab418`。红 `17cbc601d18774ad9ff275deb852ab1582a5b935`、绿 `07ef975d2b9bfbd8b202ced345960c0fcb4b6532`；合并 `6517952` 的父提交是该绿与基线，`130ac70` 相对合并只改收据；红提交的父源码与绿的 `helper.ts` 均为 Git blob `8c69b2b9d8162baff516325e89dfe804450bcebf`。
+- 审查在普通独立 clone `$E/repo` 执行，`.git` 与 common dir 均为此 clone 自己的 `.git`；未改受审源码或测试。`$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round9-5jjrbB`；独立变异及探针放在仓库外的 `$E/mutants-round9/` 和 `$E/`。
+- 作者 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38`、`claude-opus-5-5`（Anthropic）；审查 `codex:4d37f5a5-0839-4adc-8afc-9b481602df5a`、原生 `turn_context.model=gpt-6.1-terra`（OpenAI），无豁免。模型记录不能代替 G-PROVENANCE 的实际判定。
+- 在仓库根目录实跑 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle`，原样输出 `580637431e716db20dbb1c64d3a2f1b977fdaff52fe134250a32c6b56af338c8`；恢复固定基线引用后又以同一命令单独复算相同值。
+- `npm ci` exit 0；Node v25.8.1 下 typecheck、lint、test 均 exit 0，**218/218 绿**；Node v22.22.0 下三项也均 exit 0，**218/218 绿**（`$E/{lint,test}-round9.log`、`$E/node22-{typecheck,lint,test}.log`）。
+- 独立 clone 检出红提交并 `npm ci`；contact/helper 目标文件 TAP **68/68 按名字失败**，每条原因均为 `未实现`，不是文件加载失败（`$E/red-tests.tap`）。红提交将已有源码置空；在隔离红副本仅恢复其父提交的真实 contact/helper 源码，同样 68 项中 **66 绿、2 红**，红的是 CH-18 的 getter 换值和类型检查（`$E/red-prior-overlay.tap`）。不能将空壳的 68 红都当成旧实现缺陷。
+- 自己运行作者 `node packages/domain/proof/mutations.mjs`：exit 0，原样 **218 绿**、**301/301** 具体变异被具名测试杀死（`$E/author-mutations-round9.log`）。独立解析清单得到 contact/helper **112**、任务/core **189**，无重名，301 个注入点在当前对应源码中均恰有一次；H05/H06 与第八轮独立注入、CW01–CW05 与第六轮 W01–W05 的前后字符串均逐项一致（`$E/mutation-audit-round9.json`）。
+
+### 第八轮修复及保留行为
+
+原样运行独立 `oracles-round8.mjs`，H01–H08 **8/8 PASS**；`getter-regression.test.mjs` **3/3 绿**。作者新增测试检查了五个字段各读一次，单纯由同一 getter 后续换出的未授权工具和明文不会进入说明；首次即无效仍拒绝。H05/H06 在本轮确实分别被 CH-19 的具名测试杀死（`$E/oracles-round8-recheck.log`、`$E/getter-regression-round9.tap`、作者变异日志）。因此前轮这两个**具体**反例已闭合，不应称为仍原样存在。
+
+独立重跑 Helper 三入口 × 本人/其他用户/同 ID 联系人，定时承诺归联系人且终态不回收，职责内外与停止/撤销/改时间穿透、撤销解锁，以及直接工具与 Compute 资产互斥的稳定输入对照，均通过（`$E/safeguards-round9.log`）。这些不是消息表、真实调度器、Compute 适配器或插件的端到端验收。
+
+### 必须修复
+
+**CH-20 [High，AC-33① / 函数授权合同] 授权登记时重复读取 `name`，变化的 getter 可绕过直接工具禁令和同名互斥。** `packages/domain/src/contact.ts:109-115,128-134` 的 `grantTool` 与 `grantComputeAsset` 分别多次读取 `tool.name`、`a.name`。在实际原源码的进程内探针 `$E/grant-getters-round9.mjs` / `.json` 中：
+
+1. 空联系人调用 `grantTool`，`name` getter 前两次返回 `weather`、第三次返回 `run_command`，`bounded:true`；结果 **`ok:true`**，`contact.tools` 含 `run_command`，`canCallDirectly(..., "run_command") === true`。同样的稳定 `run_command` 入参被拒。
+2. 已有直接工具 `weather` 时调用 `grantComputeAsset`，getter 前两次返回 `something_else`、第三次返回 `weather`，kind 为 `script`；结果 **`ok:true`**，直接工具与 Compute 专用资产同名并存。稳定的同名资产入参被拒。
+
+getter 对象以声明的 `grantTool` / `grantComputeAsset` 参数类型编写，TypeScript 严格检查通过（`$E/grant-getters-typed-round9.ts` / `.log`）。这与第 7 栏已经披露的“宿主用不同名登记同一能力看不出”不同：这里最终存入的是**同名**或禁用名。建议分别在入口读取名称（以及影响判断的其他属性）一次，校验、互斥判断、错误理由和持久化都使用同一快照；补 getter 换值正反对照和故障校准。此处只证明函数能返回违反自身契约的状态，真实宿主输入与机械权限门禁未验证。
+
+**CH-21 [High，AC-33④ / 生效规则] `briefFor` 先读完五个属性、后复制数组，后一个 getter 可改写前一个已读数组。** `packages/domain/src/contact.ts:231-244` 先保存 `rawRules/rawTools/rawRefs` 引用，读取 `placement` 等 getter 后才依次 `Array.from`。`$E/independent-boundaries-round9.mjs` / `.json` 的实际原源码探针：`rules` getter 首次返回 `["改代码前先问", "不得泄露用户秘密"]`；接着 `tools` getter 清空刚返回的数组并返回合法 `get_weather`；函数 **`ok:true`**，但说明的 `rules` 是 `[]`。同样稳定对象则保留两条规则；这种 getter 对象满足 `BriefRequest` 的严格类型检查（`$E/getter-typed-round9.ts` / `.log`）。另一个实际探针在 `placement` getter 中改写已读的工具和凭据数组，说明返回的是后换的其他已授权工具与另一个形状合法引用（`$E/cross-field-getters-round9.json`）。后者没有证明实际凭据泄露或未授权挂载。
+
+这发生在 **`Array.from` 开始之前**，不是第 7 栏已经声明的“遍历中途被改写”；虽然校验与输出使用同一复制结果，已确认规则在首次读出后、复制之前仍可被静默移除，违背需求文档 74–79 行的群规/硬约束不丢失及本轮“首次读取值的快照”声明。建议对每个字段读出后立即复制/验证再读下一个，或规定并在宿主入口强制无副作用的稳定数据输入；补后续 getter 分别改动前面 `rules/tools/credentialRefs` 的反例与稳定对照，保留既有遍历中途限制的明确边界。
+
+**CH-22 [Medium，placement 入参合同] 显式 `null` 被当成缺省值，和“字段类型不对明确拒绝”声明不符。** `packages/domain/src/contact.ts:244-246` 的 `?? "local"` 让运行时 JSON/JS 输入 `placement:null` 返回 `ok:true`、`placement:"local"`；缺省和 `undefined` 合法默认，`"local"` / `"byom_daemon"` 合法，`"mars"` / 数字被拒（`$E/independent-boundaries-round9.json`）。`BriefRequest` 的可选类型允许缺省/undefined，不允许 null；它是类型外输入，不能称为正常 TypeScript 调用的故障。建议仅对 `undefined` 使用默认，对显式 null 和其他非法值拒绝并测试；若产品另行选择 null 等价缺省，需先更正公开合同/收据并证明宿主处理一致。
+
+### 独立变异揭示的具体测试缺口
+
+本轮另自行构造 5 个单点变异：在隔离副本分别运行 typecheck、lint、218 项现有测试及独立 oracle。原样副本四项 exit 0；J01–J04 的前三项均 exit 0、各自 oracle exit 1；J05 的现有测试与 oracle 均 exit 1，是被杀的对照（`$E/independent-mutations-round9.json`、`$E/round9-{clean,J01..J05}-{typecheck,lint,test,oracle}.log`）。这些后果**只在对应人为变异副本发生**，当前原源码在这些 oracle 上全部通过（`$E/mutation-observations-round9.json`）。
+
+| ID | 注入的单点故障 | 现有测试漏掉的可观察结果 |
+|---|---|---|
+| J01 | 字符串项类型检查漏掉首项 | `rules:[42,"生效规则"]` 被成功输出 |
+| J02 | 数组检查误接收普通类数组对象 | `rules:{0:"规则",length:1}` 被成功转换输出 |
+| J03 | 凭据引用正则漏掉开头锚定 | `plaintext-secret vault://mail/1` 被成功输出 |
+| J04 | `cloud_sandbox` 被静默改为 `local` | 成功返回但位置字段与请求不符 |
+| J05 | 几乎跳过凭据拒绝 | 被既有具名测试杀死，作为对照 |
+
+**CH-23 [Medium，R-05 / AC-33④]** 建议在同一返修批次为上述首项非字符串、类数组对象、明文前缀加合法引用后缀、三种 placement 的返回值逐项加正反对照，并把代表性故障纳入校准。不是要求所有可构造变异都被杀，也不是称本次 301/301 的作者结果不真实；问题是这些具体故障触及本轮明示的类型、凭据形状和位置保真合同，却可被现有测试骗过。
+
+### 收据边界、基线及交回
+
+第 7 栏对真实适配器/宿主、Vault 引用仅形状、cron 与 DST、回执作用域与日志位置真实性、Helper 内核接线，以及 301 项非穷尽的限制整体合理；但其“只防 getter 换值、数组遍历中改写”的描述没有涵盖 CH-21 的**遍历之前、其他字段 getter 改写已读数组**，也未涵盖 CH-20 的授权登记读取换值。收据验收理由“字段类型不对明确拒绝”被 CH-22 的 null 反例推翻。AC-01/31/33/35 整项继续标未测合理，不能据本片声称整个后端、验收清单或用户故事完成。
+
+审查期间实际远端 `feat/task-lifecycle` 从固定 `4cd80a3` 前移至 `f8b3b95abe195fc9da568174d7db6ba368d4c95c`，增量只改 PR #3 的审查报告和收据；与本 HEAD 不改工作区试合并 exit 0（`$E/merge-tree-live-round9.log`）。本轮未把新基线混进固定对象，也未改远端基线；返修时由原负责人整合当时最新基线、重算哈希和重跑门禁，再交跨厂商复审。
+
+**执行器纠错：** 第一次 TypeScript 探针因 TS 6 命令行指定文件而未加 `--ignoreConfig`，报 TS5112、exit 1；补上后两份 getter 类型探针 exit 0。拉取实时基线时 Git 同时更新了本 clone 的 `origin/feat/task-lifecycle` 引用；已立即恢复到用户指定的 `4cd80a3`、另保留 `origin/review-live-task=f8b3b95`，并重新单独实算相同的 `--hash`；没有更新远端分支或产品代码。
+
+**回交条件：** Claude Code 在原开发任务修复 CH-20–CH-22、补 CH-23 的相关测试与校准，保持已验证的 Helper 三入口、定时归属、控制穿透及既有回归；合入最新依赖基线后重新送独立跨厂商复审。本轮 reject 不是宣称所有后端文档和用户故事已验收。
+
+**本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 在 `130ac70` / 固定 `4cd80a3` 下 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 报未找到与本轮 `reviewed_hash` 相等的审查工具输出、无法识别该审查轮厂商。当前会话轮次尚未完整落盘；原生模型上下文可观察，但不冒称来源门禁通过、不伪造来源或豁免，待既有流程在会话落盘后重核（`$E/gates-local-round9.log`）。
