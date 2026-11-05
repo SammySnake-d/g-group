@@ -503,3 +503,63 @@ test("CH-13 换行、回车、非断行空格等任何空白组成的名字都�
   const ok = grantComputeAsset(c, { name: "my script", kind: "script" });
   assert.deepEqual(ok.ok && ok.contact.computeAssets.map((x) => x.name), ["my script"]);
 });
+
+test("CH-14 同名不同类的 Compute 能力资产第二次登记明确拒绝,原资产不变;两种顺序都一样", () => {
+  for (const [first, second] of [["mcp", "skill"], ["skill", "mcp"], ["mcp", "script"]] as const) {
+    const a = grantComputeAsset(mk().contacts.get("c-mi")!, { name: "research", kind: first });
+    assert.ok(a.ok);
+    const base = a.ok ? a.contact : (null as never);
+    const r = grantComputeAsset(base, { name: "research", kind: second });
+    assert.equal(r.ok, false, `${first}→${second}`);
+    assert.match(!r.ok ? r.reason : "", new RegExp(`^research 已登记为 ${first} 类能力资产,不能再以 ${second} 类同名登记$`));
+    assert.deepEqual(base.computeAssets, [{ name: "research", kind: first }]);
+  }
+});
+
+test("CH-14 同名同类的 Compute 能力资产重复登记幂等成功;不同名不同类照常并存(对照)", () => {
+  const a = grantComputeAsset(mk().contacts.get("c-mi")!, { name: "research", kind: "mcp" });
+  const again = grantComputeAsset(a.ok ? a.contact : (null as never), { name: "research", kind: "mcp" });
+  assert.deepEqual(again.ok && again.contact.computeAssets, [{ name: "research", kind: "mcp" }]);
+  const other = grantComputeAsset(again.ok ? again.contact : (null as never), { name: "summarize", kind: "skill" });
+  assert.deepEqual(other.ok && other.contact.computeAssets, [{ name: "research", kind: "mcp" }, { name: "summarize", kind: "skill" }]);
+});
+
+test("CH-15 消息位置以安全整数为界:MAX_SAFE_INTEGER 合法,+1 与更大值被拒;回执依据位置同样以此为界", () => {
+  const c = mk().contacts.get("c-mi")!;
+  const max = commit(c, { id: "k", sourceSeq: Number.MAX_SAFE_INTEGER, text: "x", boundTaskIds: ["T"], schedule: null });
+  assert.equal(max.ok && max.contact.commitments[0]?.sourceSeq, Number.MAX_SAFE_INTEGER);
+  for (const sourceSeq of [Number.MAX_SAFE_INTEGER + 1, 2 ** 60]) assert.equal(commit(c, { id: "k", sourceSeq, text: "x", boundTaskIds: ["T"], schedule: null }).ok, false, String(sourceSeq));
+  const k = commit(c, { id: "k", sourceSeq: 5, text: "x", boundTaskIds: ["T"], schedule: null });
+  const ended = settleTask(k.ok ? k.contact : (null as never), "T");
+  assert.deepEqual(confirmFinalReport(ended, rc("T", ["k"], Number.MAX_SAFE_INTEGER + 1)).commitments, ended.commitments);
+  assert.equal(confirmFinalReport(ended, rc("T", ["k"], Number.MAX_SAFE_INTEGER)).commitments[0]?.status, "done");
+});
+
+test("CH-15 -0 按位置 0 处理(合法);负的最小值被拒(对照)", () => {
+  const c = mk().contacts.get("c-mi")!;
+  assert.equal(commit(c, { id: "k", sourceSeq: -0, text: "x", boundTaskIds: ["T"], schedule: null }).ok, true);
+  assert.equal(commit(c, { id: "k", sourceSeq: Number.MIN_SAFE_INTEGER, text: "x", boundTaskIds: ["T"], schedule: null }).ok, false);
+});
+
+test("CH-15 已撤销的承诺不能重新加专职锁,已回收的也不能;有效承诺可以(对照)", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "k", sourceSeq: 1, text: "x", boundTaskIds: ["T"], schedule: null });
+  const base = a.ok ? a.contact : (null as never);
+  assert.equal(setFocus(base, { onlyCommitmentId: "k" }).ok, true);
+  const revoked = revokeCommitment(base, "k");
+  const r = setFocus(revoked.ok ? revoked.contact : (null as never), { onlyCommitmentId: "k" });
+  assert.equal(r.ok, false);
+  assert.match(!r.ok ? r.reason : "", /不存在或已结束/);
+});
+
+test("CH-15 已回收(done)的承诺不能被撤销改写成 revoked;有效承诺可以撤销(对照)", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "k", sourceSeq: 1, text: "x", boundTaskIds: ["T"], schedule: null });
+  const base = a.ok ? a.contact : (null as never);
+  const done = confirmFinalReport(settleTask(base, "T"), rc("T", ["k"], 1));
+  assert.equal(done.commitments[0]?.status, "done");
+  const r = revokeCommitment(done, "k");
+  assert.equal(r.ok, false);
+  assert.match(!r.ok ? r.reason : "", /不存在或已结束/);
+  assert.equal(done.commitments[0]?.status, "done");
+  const ok = revokeCommitment(base, "k");
+  assert.equal(ok.ok && ok.contact.commitments[0]?.status, "revoked");
+});
