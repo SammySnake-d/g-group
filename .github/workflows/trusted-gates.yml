@@ -33,7 +33,8 @@ jobs:
       - name: 机械门禁(main 上的门禁检查 PR)
         env:
           HEAD_REF: ${{ github.head_ref }}
-        run: node trusted/scripts/gates/run-all.ts --repo=pr --base=origin/main --branch="$HEAD_REF"
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node trusted/scripts/gates/run-all.ts --repo=pr --base=origin/main --branch="$HEAD_REF" --pr="$PR_NUMBER"
       - name: 类型检查与 lint(用 main 上的配置)
         run: |
           rsync -a --exclude node_modules --exclude .git pr/ lintcopy/
