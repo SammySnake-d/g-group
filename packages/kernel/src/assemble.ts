@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/correctness/noUnusedFunctionParameters: 红提交空壳,签名先行 */
 // 上下文装配:AC-06 引用旧消息确定性 Page-in + AC-39 / D22 群聊缓存前缀纪律 + AC-08 撤回不再暴露原文。
 // 请求分三段,顺序固定:
 //   stable  :system → 工具定义 → 人设规则,调用方给的固定文本;顺序在输入层校验;段内出现时间、消息序号、任务号、"最近 N 条"就报错;
@@ -10,7 +9,8 @@
 //   在压缩块里:块是撤回前生成的就作废,调用方给 recompress 就重建,不给就返回 recompress-required。
 // 缓存断点(D22 规则 3):工具定义末尾、stable 末尾、已压缩块末尾、最新追加的事件,按构造最多 4 个。
 // 超预算显式失败并要求压缩,禁止静默截断。
-import type { Log, ProjectedMessage } from "@g-group/domain";
+import { createHash } from "node:crypto";
+import { type Log, type LogEvent, type ProjectedMessage, project } from "@g-group/domain";
 
 export type StableKind = "system" | "tools" | "persona";
 export interface StablePart { readonly kind: StableKind; readonly text: string }
@@ -63,18 +63,180 @@ export type AssembleResult =
   | { ok: false; reason: "invalid-compressed"; detail: string }
   | { ok: false; reason: "recompress-required"; fromSeq: number }
   | { ok: false; reason: "retracted-text-leaked"; where: "compressed" | "volatile"; seq: number };
+const bytesOf = (s: string) => Buffer.byteLength(s, "utf8");
+const who = (e: { sender: { kind: string; id: string } }) => `${e.sender.kind}:${e.sender.id}`;
+const renderMsg = (m: ProjectedMessage) => `#${m.seq} ${who(m)}: ${m.text}\n`;
+
+/** stable 段自身不许出现的会变内容;只扫调用方给的固定文本,不拿会话消息去比对 */
+const VOLATILE_PATTERNS: readonly [string, RegExp][] = [
+  ["日期", /\d{4}[-/年]\d{1,2}[-/月]\d{1,2}/],
+  ["时刻", /\b\d{1,2}:\d{2}(?::\d{2})?\b/],
+  ["消息序号", /#\d+/],
+  ["任务号", /\bT-\d+\b/],
+  ["最近 N 条", /最近\s*\d+\s*条/],
+  ["新消息", /新消息|刚才说|刚说|最新一条/],
+];
+
+function volatileIn(text: string): string | undefined {
+  for (const [name, re] of VOLATILE_PATTERNS) {
+    const m = re.exec(text);
+    if (m) return `${name}:${m[0]}`;
+  }
+  return undefined;
+}
+
+/** 固定段:只能是 system、tools、persona,各至多一次,必须有 system,顺序必须 system → tools → persona */
+function checkStable(parts: readonly StablePart[]): string | undefined {
+  if (!Array.isArray(parts) || parts.length === 0) return "stable 不能为空";
+  const seen = new Set<StableKind>();
+  let last = -1;
+  for (const p of parts) {
+    const i = STABLE_ORDER.indexOf(p?.kind);
+    if (i < 0) return `未知固定段 ${String(p?.kind)}`;
+    if (typeof p.text !== "string") return `${p.kind} 的 text 必须是字符串`;
+    if (seen.has(p.kind)) return `固定段 ${p.kind} 重复`;
+    if (i < last) return `固定段顺序必须是 system → tools → persona,收到 ${parts.map((x) => x.kind).join(" → ")}`;
+    seen.add(p.kind);
+    last = i;
+  }
+  if (!seen.has("system")) return "缺 system 段";
+  return undefined;
+}
+
+const isNat = (x: unknown): x is number => Number.isInteger(x) && (x as number) >= 0;
+
+/** 压缩点必须落在有效日志范围:0 ≤ throughSeq ≤ builtAtSeq ≤ 日志最新 seq,都是整数 */
+function checkCompressed(c: CompressedBlock, head: number): string | undefined {
+  if (!isNat(c.throughSeq)) return `throughSeq 必须是非负整数,收到 ${String(c.throughSeq)}`;
+  if (!isNat(c.builtAtSeq)) return `builtAtSeq 必须是非负整数,收到 ${String(c.builtAtSeq)}`;
+  if (typeof c.text !== "string") return "压缩块 text 必须是字符串";
+  if (c.throughSeq > head) return `压缩点 #${c.throughSeq} 超过日志最新 #${head}`;
+  if (c.builtAtSeq < c.throughSeq || c.builtAtSeq > head) return `builtAtSeq #${c.builtAtSeq} 必须在 #${c.throughSeq} 与日志最新 #${head} 之间`;
+  return undefined;
+}
+
+/** 被撤回消息的全部原文:发出时的文字和它之后每次编辑的文字 */
+function retractedTexts(events: readonly LogEvent[], retracted: ReadonlySet<number>): Map<number, string[]> {
+  const out = new Map<number, string[]>();
+  for (const e of events) {
+    const b = e.body;
+    if (b.kind === "message" && retracted.has(e.seq)) out.set(e.seq, [...(out.get(e.seq) ?? []), b.text]);
+    if (b.kind === "edit" && retracted.has(b.target)) out.set(b.target, [...(out.get(b.target) ?? []), b.text]);
+  }
+  return out;
+}
+
+function leakIn(text: string, texts: ReadonlyMap<number, string[]>): number | undefined {
+  for (const [seq, list] of texts) for (const t of list) if (t.length >= MIN_LEAK_SCAN_CHARS && text.includes(t)) return seq;
+  return undefined;
+}
+
+const seg = (section: Section, label: string, text: string, extra: { seq?: number } = {}): Segment =>
+  ({ section, label, text, bytes: bytesOf(text), cacheBreakpoint: false, ...extra });
+
 export function assemble(log: Log, opts: AssembleOptions): AssembleResult {
-  throw new Error("未实现");
+  const stableBad = checkStable(opts.stable);
+  if (stableBad) return { ok: false, reason: "invalid-stable", detail: stableBad };
+  for (const part of opts.stable) {
+    const hit = volatileIn(part.text);
+    if (hit) return { ok: false, reason: "volatile-in-stable", part: part.kind, match: hit };
+  }
+  const events = log.events;
+  const head = events.at(-1)?.seq ?? 0;
+  const all = project(log);
+  const retractSeqOf = new Map<number, number>(); // 被撤回的消息 → 撤回事件 seq
+  for (const e of events) if (e.body.kind === "retract") retractSeqOf.set(e.body.target, e.seq);
+  const retracted = new Set(retractSeqOf.keys());
+  const isNew = (retractSeq: number) => opts.previousHeadSeq === undefined || retractSeq > opts.previousHeadSeq;
+  const secret = retractedTexts(events, retracted);
+  const prefixBreaks: PrefixBreak[] = [];
+
+  // 压缩块:撤回发生在它生成之后,且撤回的消息在它覆盖的范围里 → 作废
+  let block = opts.compressed;
+  if (block) {
+    const bad = checkCompressed(block, head);
+    if (bad) return { ok: false, reason: "invalid-compressed", detail: bad };
+    const b = block;
+    const stale = [...retractSeqOf].filter(([target, rs]) => target <= b.throughSeq && rs > b.builtAtSeq).map(([target]) => target);
+    if (stale.length > 0) {
+      const fromSeq = Math.min(...stale);
+      if (!opts.recompress) return { ok: false, reason: "recompress-required", fromSeq };
+      const visible = all.filter((m) => m.seq <= b.throughSeq && !m.retracted);
+      const text = opts.recompress(b.throughSeq, visible);
+      if (typeof text !== "string") return { ok: false, reason: "invalid-compressed", detail: "recompress 必须返回字符串" };
+      block = Object.freeze({ throughSeq: b.throughSeq, builtAtSeq: head, text });
+      prefixBreaks.push({ reason: "retract", seq: fromSeq, at: "compressed" });
+    }
+    const leaked = leakIn(block.text, secret);
+    if (leaked !== undefined) return { ok: false, reason: "retracted-text-leaked", where: "compressed", seq: leaked };
+  }
+  if (opts.volatile !== undefined) {
+    const leaked = leakIn(opts.volatile, secret);
+    if (leaked !== undefined) return { ok: false, reason: "retracted-text-leaked", where: "volatile", seq: leaked };
+  }
+  const through = block?.throughSeq ?? 0;
+
+  // history:压缩点之后的事件按发生顺序追加;撤回的消息和它的编辑都不出现
+  const segments: Segment[] = [];
+  for (const part of opts.stable) segments.push(seg("stable", part.kind, `[${part.kind}]\n${part.text}\n`));
+  if (block) segments.push(seg("history", "compressed", `[已压缩至 #${block.throughSeq}]\n${block.text}\n`));
+  const inHistory = new Set<number>();
+  for (const e of events) {
+    if (e.seq <= through) continue;
+    const b = e.body;
+    if (b.kind === "message") {
+      if (retracted.has(e.seq)) continue;
+      inHistory.add(e.seq);
+      segments.push(seg("history", "message", `#${e.seq} ${who(e)}: ${b.text}\n`, { seq: e.seq }));
+    } else if (b.kind === "edit") {
+      if (retracted.has(b.target)) continue;
+      segments.push(seg("history", "edit", `#${e.seq} ${who(e)} 编辑 #${b.target} 为: ${b.text}\n`, { seq: e.seq }));
+    }
+  }
+  for (const [target, rs] of retractSeqOf) if (target > through && isNew(rs)) prefixBreaks.push({ reason: "retract", seq: target, at: "history" });
+
+  // tail:被引用旧消息按最新文字页入;已在 history 的不重复;撤回的跳过
+  const paged: ProjectedMessage[] = [];
+  const skipped: { seq: number; reason: "retracted" }[] = [];
+  for (const seq of opts.quotes) {
+    const m = all.find((x) => x.seq === seq);
+    if (!m) return { ok: false, reason: "quote-not-found", seq };
+    if (m.retracted) { skipped.push({ seq, reason: "retracted" }); continue; }
+    if (inHistory.has(seq) || paged.some((p) => p.seq === seq)) continue;
+    paged.push(m);
+  }
+  for (const m of paged) segments.push(seg("tail", "page-in", `[引用页入] ${renderMsg(m)}`, { seq: m.seq }));
+  if (opts.volatile !== undefined && opts.volatile !== "") segments.push(seg("tail", "volatile", `[当前状态]\n${opts.volatile}\n`));
+
+  // 断点:工具定义末尾、stable 末尾、已压缩块末尾、最新追加的事件;tail 里永远不放
+  const lastOf = (pred: (s: Segment) => boolean) => segments.findLastIndex(pred);
+  const marks = new Set([
+    lastOf((s) => s.label === "tools"),
+    lastOf((s) => s.section === "stable"),
+    lastOf((s) => s.label === "compressed"),
+    lastOf((s) => s.section === "history" && s.label !== "compressed"),
+  ].filter((i) => i >= 0));
+  const final = segments.map((s, i) => (marks.has(i) ? { ...s, cacheBreakpoint: true } : s));
+
+  const need = final.reduce((a, s) => a + s.bytes, 0);
+  if (need > opts.budgetBytes) return { ok: false, reason: "over-budget", need, budget: opts.budgetBytes, action: "compress" };
+  const manifest: ManifestEntry[] = final.filter((s) => s.seq !== undefined).map((s) => ({ seq: s.seq as number, bytes: s.bytes, via: s.section === "tail" ? "page-in" : "history" }));
+  const request = Object.freeze({ segments: Object.freeze(final.map((s) => Object.freeze(s))) });
+  const base = { ok: true as const, request, manifest, totalBytes: need, headSeq: head, skipped, prefixBreaks };
+  return block && block !== opts.compressed ? { ...base, compressed: block } : base;
 }
 
+/** 整个请求体:各段按顺序拼接 */
 export function serialize(req: AssembledRequest): string {
-  throw new Error("未实现");
+  return req.segments.map((s) => s.text).join("");
 }
 
+/** 缓存前缀(stable + history)的字节长度 */
 export function prefixLength(req: AssembledRequest): number {
-  throw new Error("未实现");
+  return req.segments.filter((s) => s.section !== "tail").reduce((a, s) => a + s.bytes, 0);
 }
 
-export function prefixHash(req: AssembledRequest, bytes?: number): string {
-  throw new Error("未实现");
+/** 请求体前 bytes 个字节的 sha256;默认取本请求自己的缓存前缀。宿主比较相邻两次:prefixHash(新, prefixLength(旧)) === prefixHash(旧) */
+export function prefixHash(req: AssembledRequest, bytes: number = prefixLength(req)): string {
+  return createHash("sha256").update(Buffer.from(serialize(req), "utf8").subarray(0, bytes)).digest("hex");
 }
