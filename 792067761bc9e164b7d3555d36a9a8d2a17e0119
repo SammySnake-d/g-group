@@ -1,0 +1,45 @@
+packages/domain/proof/contact-helper-tests.txt
+  s_e35be614b37bea::t_ef628a3f5e58c6 1-101
+packages/domain/src/contact.ts
+  s_e35be614b37bea::t_97d1c8a9ba8017 85,89-91,95-104,108-113,127-130,135,139-141,156-164,180-190,195-196,200-201,205-208,213-221
+packages/domain/src/helper.ts
+  s_e35be614b37bea::t_fd9f1c8dc02905 20-25,30
+receipts/feat-contact-helper.json
+  s_61a093f1d7185d::t_a9bd1dc52a227d 2,12,22,41,43,45
+packages/domain/proof/mutations.mjs
+  s_36f8aff8cdaf05::t_8528b368df908c 107-117
+packages/domain/proof/mutations.txt
+  s_36f8aff8cdaf05::t_2ae499a8a88a67 1-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "792067761bc9e164b7d3555d36a9a8d2a17e0119",
+  "prompts": {},
+  "sessions": {
+    "s_36f8aff8cdaf05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a528004857a3a0bf5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_61a093f1d7185d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ab34-0d09-7f83-962f-b60faebc52cf",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_e35be614b37bea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ab1f-7839-72e2-afb1-d71409a8ddd2",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
