@@ -1,3 +1,6 @@
+// biome-ignore-all lint/correctness/noUnusedVariables lint/correctness/noUnusedFunctionParameters lint/correctness/noUnusedImports: 红提交空壳,绿提交恢复实现
+import { isSeq, normalize, type Schema } from "./contact.ts";
+
 // Helper 三种入口(用户 g-group#1365、#1353)。Helper 的本质只有两条:只为用户本人服务;能读哪些内容。
 // 回复出现在哪,跟着在哪叫它走:
 //   全局入口 → 回复在全局面板,隔离,不进任何对话,不读任何会话;
@@ -16,16 +19,24 @@ export interface HelperRoute {
 }
 export type RouteResult = { ok: true; route: HelperRoute } | { ok: false; reason: string };
 
+const CALLER_SCHEMA: Schema = { kind: { kind: "string" }, id: { kind: "string" } };
+/** 入口按 kind 分变体,每个变体只取自己声明的字段,别的字段丢掉。 */
+const ENTRY_SCHEMAS: ReadonlyMap<string, Schema> = new Map<string, Schema>([
+  ["global", {}],
+  ["mention", { conversationId: { kind: "string" }, seq: { kind: "number" } }],
+  ["sidebar", { conversationId: { kind: "string" } }],
+]);
+const no = (reason: string): RouteResult => ({ ok: false, reason });
+
+/**
+ * entry、caller 都走领域层统一的普通数据对象合同(contact.ts normalize:Proxy、非普通原型、含访问器一律拒绝)。
+ * 入口形状不对、kind 不认识、caller 不合形状或 owner 不是非空字符串时返回 { ok:false, reason },不抛、不返回 undefined。
+ */
 export function routeHelper(entry: HelperEntry, caller: { kind: "user" | "contact"; id: string }, owner: string): RouteResult {
-  if (caller.kind !== "user" || caller.id !== owner) return { ok: false, reason: "Helper 只为用户本人服务,其他人叫它不执行" };
-  switch (entry.kind) {
-    case "global": return { ok: true, route: { replyIn: "global-panel", becomesMessage: false, contextConversation: null, replyToSeq: null } };
-    case "mention": return { ok: true, route: { replyIn: "conversation", becomesMessage: true, contextConversation: entry.conversationId, replyToSeq: entry.seq } };
-    case "sidebar": return { ok: true, route: { replyIn: "sidebar", becomesMessage: false, contextConversation: entry.conversationId, replyToSeq: null } };
-  }
+  throw new Error("未实现");
 }
 
 /** Helper 不是项目成员:不参与扫一眼抢活,不认领任务。 */
 export function helperMayClaimTasks(): boolean {
-  return false;
+  throw new Error("未实现");
 }
