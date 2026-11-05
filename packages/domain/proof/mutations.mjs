@@ -28,6 +28,23 @@ const M = [
   ["M12d 事件数组不冻结", "log.ts", "return Object.freeze({ events: Object.freeze([...log.events, event]) });", "return Object.freeze({ events: [...log.events, event] });"],
   ["M12e 日志外壳不冻结", "log.ts", "return Object.freeze({ events: Object.freeze([...log.events, event]) });", "return { events: Object.freeze([...log.events, event]) };"],
   ["M07b 冲突时偷偷推进输入版本", "cas.ts", 'if (curVer !== expectedVer) return { ok: false, reason: "version-conflict", currentVer: curVer };', 'if (curVer !== expectedVer) { if (cur) (store as Map<string, Versioned<T>>).set(key, { value: cur.value, ver: curVer + 1 }); return { ok: false, reason: "version-conflict", currentVer: curVer }; }'],
+  ["M13 去掉作者自审守卫", "task.ts", "if (ev.reviewerId === t.owner) return no(`审查人 ${ev.reviewerId} 就是作者,不能自审`);", ""],
+  ["M14 只比末次生产模型", "task.ts", "const producers = new Set<Vendor>(t.producerModels.map(vendorOf));", "const producers = new Set<Vendor>(t.producerModels.slice(-1).map(vendorOf));"],
+  ["M15 放行 unknown 审查模型", "task.ts", 'if (reviewer === "unknown") return no(`审查模型 ${ev.reviewerModel} 认不出厂商(unknown)`);', ""],
+  ["M16 豁免记成合规", "task.ts", 'gate = "waived-by-user";', 'gate = "compliant";'],
+  ["M17 任何人都能豁免", "task.ts", "if (ev.waiverBy !== t.requester) return no(", "if (!ev.waiverBy) return no("],
+  ["M18 超时自动算验收通过", "task.ts", 'AcceptTimeout: go((t) => ok(set(t, { state: "T8_ArchivedUnverified", badge: "unverified" }))),', 'AcceptTimeout: go((t) => ok(set(t, { state: "T8_Accepted", badge: "accepted" }))),'],
+  ["M19 退回一律新开 Compute", "task.ts", "resumable && t.computeId ? [{ kind: \"resume-compute\", computeId: t.computeId }] : ", ""],
+  ["M20 确认卡不核对版本", "task.ts", "if (ev.constraintVer !== q.constraintVer) return ok(t);", ""],
+  ["M21 取消不等真实停止", "task.ts", "? ok(set(t, { state: \"T9_StopRequested\", stopReason: reason }), [{ kind: \"stop-compute\", computeId: t.computeId }])", "? ok(set(t, { state: reason === \"cancel\" ? \"T10_Cancelled\" : \"T11_Failed\", stopReason: reason }))"],
+  ["M29 拒绝确认卡不停止任务", "task.ts", 'return ev.answer === "approve" ? ok(set(cleared, { state: "T3_Running" })) : stopThenRun(cleared, "cancel");', 'return ok(set(cleared, { state: "T3_Running" }));'],
+  ["M22 停止期间允许重新认领", "task.ts", 'Claim: rej("停止期间禁止把任务重新指派给他人"),', 'Claim: go((t, e) => ok(set(t, { state: "T2_Claimed", owner: as(e, "Claim").by }))),'],
+  ["M23 允许重复认领", "task.ts", 'Claim: rej("已被认领,重复认领原子拒绝(可改领子任务)"),', 'Claim: go((t, e) => ok(set(t, { owner: as(e, "Claim").by }))),'],
+  ["M24 任何人都能确认验收", "task.ts", 'UserAccept: go((t, e) => as(e, "UserAccept").by === t.requester ? ok(set(t, { state: "T8_Accepted", badge: "accepted" })) : no(`只有提出者 ${t.requester} 能确认验收`)),\n    UserReject: userReject,\n    AcceptTimeout', 'UserAccept: go((t) => ok(set(t, { state: "T8_Accepted", badge: "accepted" }))),\n    UserReject: userReject,\n    AcceptTimeout'],
+  ["M25 改条件不递增版本", "task.ts", "const amend = go((t) => ok(set(t, { constraintVer: t.constraintVer + 1,", "const amend = go((t) => ok(set(t, { constraintVer: t.constraintVer,"],
+  ["M26 表里留一格空白", "task.ts", '    Dispatch: rej("尚未认领,不能派发"), ', "    Dispatch: undefined as unknown as Cell, "],
+  ["M27 状态转移改入参", "task.ts", "const set = (t: Task, patch: Partial<Task>): Task => Object.freeze({ ...t, ...patch,", "const set = (t: Task, patch: Partial<Task>): Task => Object.assign(t as object, patch) && Object.freeze({ ...t, ...patch,"],
+  ["M28 vendor 两家都像时取第一家", "vendor.ts", "return hits.size === 1 ? [...hits][0]! : \"unknown\";", "return hits.size >= 1 ? [...hits][0]! : \"unknown\";"],
 ];
 
 function run(dir) {
