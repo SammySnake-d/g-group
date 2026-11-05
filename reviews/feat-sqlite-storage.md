@@ -82,3 +82,62 @@
 本机证据目录：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-review-evidence/pr5-bea0c9f-ac7c92d1/`。其中有原版源码归档、红绿逐名对照、各命令原始日志、R14–R18 补丁与 typecheck/test 日志、`independent-probes.mjs`、`reopen-probes.mjs`、`multiprocess-and-crash.mjs` 及其原版/变异输出。各实验均在隔离副本中完成。
 
 请作者针对 F-01～F-04 修复测试、校准与收据后，固定新版本并重新交由不同厂商审查。此次只提交本文件及收据的 `review` 字段，不修改产品源码、测试或作者其他收据字段；reject 不等于批准合并。
+
+## 第二轮：2026-11-05，`ab0a176`，结论仍为 reject
+
+**首轮功能与验收范围意见已经得到实质修复；但新加的多进程测试本身存在可实际挂起和误判的缺陷，不能批准。** 这些是测试执行与验收可信度问题，不是声称当前 SQLite CAS 实现已发生静默覆盖。
+
+### 固定范围、身份与独立复现
+
+- 受审提交 `ab0a1761d3c17617c5c442a6aec9f56949970dda`，红提交 `e6021d05a5542d96679b7894465162579258e08b`；基线 `origin/feat/domain-core` = `afd02560f9546147da380382404eb6106222a9b8`。红绿的适配器测试文件没有差异。
+- 审查人 `codex`，会话 `codex:ac7c92d1-5ee6-484b-8325-64a980d8528f`；本轮原生 `turn_context.model` 实测 `gpt-6.1-terra`（OpenAI）。作者会话触及仓库的已落盘模型仍为两条路由下的 `claude-opus-5-5`（Anthropic），返修提交相关轮次也为 Anthropic。审查和生产厂商不同；先前未完成轮次的原样 hash 调用现已落盘，填入本轮 review 后单独运行 G-PROVENANCE，实际通过；这不等于完整门禁通过。
+- 在普通独立 clone 仓库根目录运行 `node scripts/gates/run-all.ts --hash --branch=feat/sqlite-storage --base=origin/feat/domain-core`，原样输出：
+
+  ```text
+  31f586608c63792228561838474e7a62e28251272b634cc85fee8b20798ae6d9
+  ```
+
+| 检查 | 实测结果 |
+|---|---|
+| Node 22.22.0 / npm 10.9.4：`npm ci`、`npm run typecheck`、`npm run lint` | 均退出 0 |
+| 首次原版 `npm test` | 退出 0，42 通过、0 失败、0 跳过；后续重复暴露下述偶发挂起，不能据一次绿断言稳定 |
+| 红版 `npm ci` / `npm test` | 安装退出 0；测试退出 1，19 条适配器测试逐名失败，另 23 条领域测试通过；红绿测试体无差异 |
+| 作者 18 种变异 | 独立运行 `mutations.mjs`：原样 19 绿，S01–S18 均被具名测试杀死，退出 0 |
+| 首轮 R14–R17 原样或按新 busy 合同复放 | 各自 typecheck 退出 0，分别被撤回、其他动作、其他文档和多进程测试具名杀死。R17 把原先的锁冲突抛错适配为新合同的 `busy` 返回，仍只使用进程内锁 |
+| 原版独立进程和 SIGKILL 探针 | 等锁后冲突、busy 后人工重试、动作提交前及提交后杀进程的存储现象均符合预期；这不是宿主端重试或群消息端到端验收 |
+| 原版 busy 用例有界重复 | 相同代码连续 3 次通过，第 4 次初始化报 `errcode=261` 后未完成；4 秒时记录进程并终止本次实验。另一次在 R14 副本里遇到同样初始化错误，等待约 78 秒仍未完成 |
+| 填 review 前 `run-all.ts --local` | G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER 通过，G-REVIEW 因 review=null 拦截，整体退出 1；G-PROVENANCE 在 review=null 时提前返回，不能当作本轮来源已验证 |
+| 填入 reject 后，仅调用 G-REVIEW / G-PROVENANCE 两个门禁函数 | G-REVIEW 因 reject 按预期拦截；G-PROVENANCE 通过，内容 hash 不变。这里只运行了两个门禁函数，不冒充整套门禁退出 0 |
+
+### 首轮意见收口
+
+- **F-01 原子 CAS 行为**：原版跨进程独立探针通过，R17 适配版被新多进程用例杀死；busy 返回并在独立探针由调用者重试后得到版本冲突。该实现/覆盖方向有效，但新测试的进程生命周期和时间屏障仍有下面的 RR-01/RR-02，不能以一轮通过视为稳定。
+- **F-02 撤回落盘**：R14 被新增的关闭重开测试具名杀死，独立原版探针通过，关闭原意见。
+- **F-03 跨对象保护**：R15/R16 分别被新增动作重放/文档冲突用例具名杀死，独立原版探针通过，关闭原意见。
+- **F-04 收据范围**：AC-05、AC-21 改为整项未测并注明存储子判据，AC-31 保持未测；第 7 栏已补充尾删、整删和重算均无法被无锚 hash 链检测，以及 R-05 覆盖上界。关闭原意见。R18 外层事务提前提交仍可逃过当前事后 SIGKILL 用例；该事务尚非本片承诺，不新增为合并阻塞。
+
+### RR-01 [P1 / 必修] 子进程启动失败会使测试无界等待；结果后异常退出还能误绿
+
+位置：`packages/adapter-sqlite/src/store.test.ts:123-145,149-155,167-178`，初始化路径 `packages/adapter-sqlite/src/store.ts:41-45`。
+
+**原版自然复现，不依赖错误的产品变异**：单独运行原版“另一进程持有写锁时提交返回 busy”用例，前 3 次成功，第 4 次 B 的 `busyTimeoutMs=0` 在 `openStore` 的 `PRAGMA journal_mode = WAL` 遇到真实 SQLite `database is locked`（扩展错误码 261）并在发 `ready` 前退出。A 已启动并等 `goA`；父进程在 `Promise.all([a.saw("ready"), b.saw("ready")])` 上等待。`saw()` 只在 stdout 看见指定行时 resolve，不监听 spawn error/提前 close，也没有时限，因此不会把 B 的启动失败转成测试失败，也不会释放 A。实验 4 秒后外部有界执行器终止进程组；另一次对只改撤回路径的 R14 副本自然遇到同样情况时，进程在约 78 秒后仍未退出，人工终止，**该次没有记作变异被杀**。进程列表和原始 stderr 已留证。
+
+**独立故障注入**：只在测试夹具中模拟 A 在 `ready` 前退出 42，另一个子进程仍等屏障；用例 4 秒内未结束。另只在子进程打印 `result` 后模拟 A `exit(42)`，用例却返回 **1 通过 / 0 失败**：`proc.done` 丢弃 `close` 的 code/signal，只要解析到 result 就当成功。两个注入都未修改产品实现。
+
+**修复要求**：确保两个连接的初始化不会因为测试用的零 busy 超时互相碰撞；`saw` 必须同时处理 spawn error、非预期 exit/close 和明确超时；`done` 必须校验退出码/信号；所有失败和超时路径都释放屏障并回收本次子进程，不能留下等待进程。补“启动前退出”“输出结果后异常退出”的具名负例，要求有限时间内失败且无子进程遗留；正常用例和 SQLite busy 行为仍绿。
+
+### RR-02 [P1 / 必修] busy 用例用固定睡眠代替进程间完成屏障，可能把正确行为判红
+
+位置：`store.test.ts:128,167-180`。A 读版本后仅睡 600ms；父进程收到 `held` 就放行 B，但没有保证 B 已经实际尝试提交时 A 仍持锁。调度延迟超过该窗口时，A 已提交，B 正确返回 `version-conflict`，而测试仍断言 `busy`。
+
+只在隔离测试夹具中让 B 在放行后延迟 1200ms，原产品代码不变：A 正常释放后 B 返回 `{ok:false,reason:"version-conflict",currentVer:1}`，现有 busy 测试退出 1，错误地期待 `busy`。这是受控调度反例，不声称生产 CAS 出错。
+
+**修复要求**：让 A 在独立进程中持锁直到 B 已实际尝试并返回 busy，再由父进程显式释放 A；用有界屏障和失败清理代替固定时间窗口。加入调度延迟反例，确保任何合理延迟下测试仍能验证“B 尝试期间 A 持锁”这一前提。
+
+### 其他边界与证据
+
+`busy` 扩展码检查还在诊断接缝中模拟了 5、261、517，均返回 busy 且未写；模拟码 6 会重新抛出。这里的 517 是**人工注入**，不是声称真实 SQLite 自然产生了 BUSY_SNAPSHOT。原版独立复测确认无锚链的尾删/整删/全链重算仍不能检测，与收据修订一致。
+
+本机证据目录：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-review-evidence/pr5-ab0a176-ac7c92d1/`。其中有源码归档、红绿逐名对照、独立变异补丁与日志、原版四次重复及超时前进程列表、三个子进程夹具反例、两类崩溃窗口和 busy 码探针。超时实验只终止本实验自己的进程组，未改作者代码或共享工作树。
+
+请作者修复 RR-01/RR-02，提交相应先红后绿和单点校准证据后再交不同厂商复审。本轮只追加本节及更新收据 `review` 字段；不要求本 PR 提前完成上层内核或把未测的整项 AC 改成通过。

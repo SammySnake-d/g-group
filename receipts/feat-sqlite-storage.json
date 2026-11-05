@@ -42,5 +42,12 @@
   },
   "unverifiable": "AC-05:触发器只挡经 SQL 的 UPDATE/DELETE/覆盖 INSERT;能 DROP TRIGGER 的人仍能改库。verify 只检查当前保留下来的链是否自洽:单改正文不重算会报 brokenAt(已测),但删掉尾部事件、删掉整条会话、或改正文并重算后续全部 hash 都返回 ok:true(Codex 首轮实测),本片没有外部可信头或长度锚,检测不到这些。宿主所有写消息入口是否都走 appendEvent 要等内核接线。AC-21:两进程竞争测试用 onCasRead 在读到版本后停 300ms 拉开窗口,证明 BEGIN IMMEDIATE 写锁跨进程生效;多进程长时间争用、WAL checkpoint 下的表现未测;busy 后由调用方重新读版本并重试的策略不在本片,宿主侧没有证据。AC-31:只到 actions 表单行去重;外层跨表事务(动作与 processed_seq 同事务)尚未存在,Codex 的 R18(提前 COMMIT 后在外层事务提交前被杀)是未来内核接线的风险,本片未覆盖。R-03 依赖 G-STUB 门禁实跑(19 条在空桩下都按名失败,见门禁输出)。R-05 的通过只覆盖 mutations.mjs 列出的 18 种故障(S14–S17 对应审查 R14–R17),不代表每条判据都已穷尽双侧标定。文档 value 用 JSON 存取,非 JSON 值行为未定义也未测。node:sqlite 在 Node 22 仍是 experimental。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "codex",
+    "session": "codex:ac7c92d1-5ee6-484b-8325-64a980d8528f",
+    "model": "gpt-6.1-terra",
+    "verdict": "reject",
+    "reviewed_hash": "31f586608c63792228561838474e7a62e28251272b634cc85fee8b20798ae6d9",
+    "notes": "第二轮已复现首轮返修及 18 种变异；原版多进程测试实际发生启动锁冲突后无界挂起，子进程异常退出可误绿，固定睡眠遇调度延迟可误红。详见 reviews/feat-sqlite-storage.md 第二轮。"
+  }
 }
