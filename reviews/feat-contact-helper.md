@@ -429,3 +429,51 @@ Helper 三入口 × 本人/他人/同 ID 联系人 9 格、定时归联系人且
 **执行器纠错：** 先前独立清单审计脚本放在仓库外，首次从脚本目录解析 `typescript` 报 `ERR_MODULE_NOT_FOUND`、exit 1（`$E0/mutation-origin-initial.log`）；改为从被审仓库 `node_modules` 解析后 exit 0，并在更正 HEAD 上重跑（`$E/mutation-origin-audit.log`）。平台曾返回 422 设备验证错误导致上次尝试未完成；本轮复用现存证据并继续，未据此推断更广泛网络故障或宣布目标完成。
 
 **本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 在 `8847051` / `b50c0e9` 上实测 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 和 **G-PROVENANCE 均通过**；G-REVIEW 因本轮 reject 正确拦下。经检查，已落盘审查轮中确有一次指定哈希工具输出与本轮 `reviewed_hash` 完全一致，模型为 `gpt-6.1-terra`。原始输出 `$E/gates-local.log`；在远端更新至 `3455da0` 后重跑本地门禁仍 exit 1，G-PROVENANCE 等七项通过、G-REVIEW 因 reject 拦下（`$E/gates-local-live-base.log`）。来源门禁通过不等于产品审查或用户故事验收通过。
+
+---
+
+## 第六轮：第五轮返修及最新基线合并后的跨厂商独立复审（2026-11-05）
+
+**结论：reject，交回 Claude Code 原开发任务补齐资产规则的行为测试与双侧校准。** 上轮 CH-14/CH-15 的具体反例在当前实现中均已修复；本轮未复现同名异类假成功或其他必须修的资产实现错误。拒绝依据是现有自动测试对同名类别组合、同类多资产等已声明规则的判别力不足，而不是把独立变异中的故障冒充当前代码故障。建议一次加入完整类型组合表驱动用例，再继续后端其他切片，避免逐变异零碎返修；本轮结束不是整个后端或用户故事已验收完成。
+
+### 固定对象、来源与独立复现
+
+- 按更正后的对象审查 PR #4 `feat/contact-helper`，受审 HEAD `2aff4ca068f8dcb18a35163165f68b8dac88f23e`；基线 `origin/feat/task-lifecycle` 为 `fdfecb13f48262b85610cbf62fb7d3a84cd8badb`。合并提交 `a263f2f3a6de9ed1e7914d4e1fe0fdf08c0e36dd` 的父提交是 `1bd870c` 与 `fdfecb1`；`2aff4ca` 相对该合并只修改收据。基线是 HEAD 祖先，不改工作区的试合并 exit 0（`$E/merge-tree.log`）。PR #3 本身另有独立审查，本轮不替它作结论。
+- 本轮先按 `1bd870c` 取证，期间接到更正后重新普通 clone、重新跑全仓测试和变异；`contact.ts`、`helper.ts` 及其测试在 `1bd870c` 与 `2aff4ca` 的 Git blob 逐一一致。旧 HEAD 的本地审查提交未采用；旧普通非强推在钩子完成后被远端以 `fetch first` 拒绝、exit 1，没有覆盖新分支。旧证据保留在 `$E0`。
+- 作者 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38` 的生产模型为 `claude-opus-5-5`（Anthropic）；本轮独立审查 `codex:4d37f5a5-0839-4adc-8afc-9b481602df5a`，当前原生 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI），无豁免。实际模型记录不等于 G-PROVENANCE 已通过。
+- 仓库根目录实际运行 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 的原样 stdout：`b2b5f7a7af8488b43eb1210e2fe13f71e2fd29714abfb175ac70cd1d79500fd5`。旧 HEAD 的 `a6d8…d4ee` 不用于本轮收据。
+- 本轮证据根 `$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round6-corrected-Du4tIb`，先前固定 `1bd870c` 的证据根 `$E0=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round6-1eG5kn`。`$E/repo` 为普通独立 clone，`.git` 与 common dir 均为本 clone 的 `.git`；被审实现和测试未改，独立变异只写 `$E/mutants/`。
+- `npm ci` exit 0；Node v25.8.1 下 typecheck、lint、test 均 exit 0，**172/172**、无 skip/todo；Node v22.22.0 下三项也均 exit 0（`$E/npm-ci.log`、`$E/{typecheck,lint,test}.log`、`$E/node22-*.log`）。
+- 红提交仍为 `708b7fea3b02340c94ed838a4f35609339df4475`；复用先前独立红 clone 的安装和全量测试证据（`$E0/red-npm-ci.log`、`$E0/red-all-tests.log`，历史快照 98 绿 / 57 红），再复跑目标文件 TAP，57 项均按名字失败、错误均为 `未实现`（`$E/red-tests.tap`）。红提交把已有实现置为空壳，不是加载失败，但单靠它不能证明旧缺陷红。此前隔离副本保留红测试、仅换回其父提交真实源码，得 56 绿 / 1 红；CH-14 同名异类用例对旧行为实际断言失败（`$E0/red-prior-overlay.tap`）。这是本轮独立对照，不冒称作者历史红记录。
+- 自己运行作者 `node packages/domain/proof/mutations.mjs`：exit 0，原样 172 绿、**216/216** 变异被具名测试杀死（`$E/author-mutations.log`）。源码数组 contact/helper 85、其他 131，编号无重复；对照两个合并父提交，PR #4 侧 190 项和基线侧 131 项均保留编号/描述，D01–D11、T01–T15 无撞名（`$E/merge-mutation-id-audit.log`）。原始第五轮 Z01–Z05 注入前后字符串与本轮清单逐一一致（`$E/mutation-origin-audit.log`）。
+- 对 `a263f2f` 的 Git 重合并差异核对：`mutations.mjs` 的冲突位于头部注释，`mutations.txt` 也有内容冲突并已重生成；`contact-helper-tests.txt` 有重生成差异但重合并输出未标为冲突。两侧条目和实际运行数如上复核，不把已处理的证明文件冲突当作当前未解决冲突。
+
+### 上轮修复与独立实际行为
+
+原样执行第五轮独立 `oracles-round5.mjs`，Z01–Z05 **5/5 PASS**；第五轮同名异类回归 **3/3 绿**；第四轮非法序号回归 **5/5 绿**（`$E/previous-oracles.log`、`$E/previous-asset-regression.tap`、`$E/sequence-regression.tap`）。新代码对同名异类返回带两种类型的拒绝理由、保留旧资产；同名同类幂等、不同名可并存。第 7 栏明确声明宿主若需同名 MCP 与 Skill 并存，必须采用不同名称；适配器如何保留真实身份、并能否按用户选择加载，仍是后续跨层验收边界，不得算作本轮端到端通过。
+
+本轮在更正 HEAD 上独立运行 **3×3 同名类别顺序/幂等矩阵 + 3 类双资产授予、派发及直接调用隔离**，共 12 格全部通过（`$E/asset-matrix.log`；脚本 `$E0/asset-matrix-round6.mjs`）。先前独立状态模型 1,000 个固定种子场景、30,000 次逐步检查、4,856 次重放仍通过；Helper 三入口 × 本人/他人/同 ID 联系人、定时归联系人、职责内外、控制穿透、撤销解锁及能力互斥也通过（`$E/state-random.log`、`$E/safeguards.log`）。`helper.ts` 在 `1bd870c` 与本轮 HEAD 的 Git blob 都为 `8c69b2b9d8162baff516325e89dfe804450bcebf`。这些都是纯函数结果。
+
+### 必须补齐的测试门禁
+
+**CH-16 [Medium，R-05 / AC-33、U66] 同名类别组合和同类多资产的回归测试不充分。** 更正 HEAD 的原样实现、typecheck/lint/172 项现有测试以及五个独立 oracle 均绿；在隔离副本分别注入以下故障后，W01–W04 的 typecheck/lint/172 项原有测试仍全绿，但对应 oracle 红。W05 为已能杀死的对照。这里的 W 行是**人为注入的故障**，不是当前实现已坏；当前实现的相应 12 格外部矩阵均通过。
+
+| ID | 单点变异 | 现有测试漏掉的后果 |
+|---|---|---|
+| W01 | 只在其中一类为 MCP 时拒绝同名异类 | Skill→Script 或 Script→Skill 会恢复同名异类假成功 |
+| W02 | 同名同类幂等只对 MCP 生效 | Skill 或 Script 的重复登记产生重复项 |
+| W03 | 把精确名称匹配改成前缀匹配 | `research-news` 与 `research` 两个不同资产被混成一个 |
+| W04 | 按“名称相同**或类别相同**”判重 | 同类的第二个不同名 MCP/Skill/Script 返回成功却被静默丢失 |
+| W05 | 删除同名异类拒绝 guard | **被杀**；现有 CH-14 用例能发现 |
+
+这不是要求有限变异清单穷尽所有故障。W01/W02 覆盖 `ComputeAsset.kind` 现有三类的不同/相同组合，W04 覆盖母规格 `docs/spec/需求文档.md:668-671` 明确给出的同一联系人选择多个 Skill 的基本场景；若当前测试不能阻挡这些故障，就不能仅凭 216 项通过断言这些具体边界已被持续回归保护。建议一次性把上述 **3×3 同名类型表 + 每类两个不同名称并验证派发**纳入仓库测试，按 R-05 增加对应阳性埋雷与单开关阴性对照；精确名称前缀用例一并覆盖 W03。这样以有限数据表覆盖已知类别，而不是逐项追加零碎补丁。
+
+`$E/independent-mutations-round6.json` 保存精确替换和四条退出码；执行器、独立判据及原始日志为 `$E/independent-mutations-round6.py`、`$E/oracles-round6.mjs`、`$E/{clean,W01..W05}-{typecheck,lint,test,oracle}.log`。作者 216 项被杀的记录真实，不能由此推断其他未列故障也会被检测。
+
+### 收据边界与交回
+
+第 7 栏关于同名异类只允许一种、需宿主改名、同能力不同名不可识别、工具黑名单/凭据仅形状、cron 不验范围、回执作用域由宿主判定、非法回执静默不改状态及缺真实 DST/Helper 内核/插件接线等声明，与本片实现边界一致；216 个变异数量和 85/131 分组也已复现。它没有声称 216 项穷尽所有故障；本轮 W01–W04 是额外发现的测试盲区。AC-01/31/33/35 整项继续标未测，是合理分层。
+
+**回交条件：** Claude Code 在原开发任务将有限资产类别矩阵和同类多资产正反对照纳入项目测试与校准，保留现有实现及先前已验证的 Helper、定时和控制行为；按最新 PR #3 基线重新运行相关门禁并交跨厂商独立复审。用户要求的后端持续实现、验收清单及用户故事闭环仍在原开发流程中推进；本审查不创建或冒称完成该全局目标。
+
+**本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 在 `2aff4ca` / `fdfecb1` 下 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 未找到等于本轮 `reviewed_hash` 的审查工具输出，也未识别该审查轮厂商。当前轮尚未完整写入会话 `turns.jsonl`；原生 rollout 可观察本轮模型，但不能冒充该门禁通过。会话落盘后由既有流程重核，不伪造记录或豁免（`$E/gates-local.log`）。
