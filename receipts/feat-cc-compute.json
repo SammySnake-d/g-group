@@ -1,20 +1,20 @@
 {
-  "slice": "Claude Code Compute 适配器(adapter 层)第一条路径,含 Codex 首轮 F-01–F-04 返修:brief 入口只收 task/rules/tools/credentialRefs/placement 五个字段,凭据只收引用句柄,tools 只收具体内置工具名(拒 default 等 CLI 控制词);默认 runner 起真实 claude -p --output-format stream-json --verbose --bare,挂 report_progress MCP,--tools/--allowedTools 按 brief.tools 收窄,并以 CLI init 自报的挂载清单核对,越界即回收进程组报 failed;子进程 env 不继承宿主环境;report_progress 汇报由服务器与适配器共用一份 schema 校验,不合规拒收并记录、不产出事件;终态按 停止 > 适配器违规 > 进程/CLI 失败 > 汇报放弃 > 完成 判定;CLI 自成进程组,stop 与收尾都回收整组,组退空后才报 stopped/completed;snapshot 产出交接快照,缺 constraintVer 拒绝,handoff 写进首个提示与装配清单。",
+  "slice": "Claude Code Compute 适配器(adapter 层)第一条路径,含 Codex 首轮 F-01–F-04 与第二轮 RR-01–RR-06 返修:brief 只收五个字段、凭据只收引用、tools 只收具体内置工具名;默认 runner 起真实 claude -p --output-format stream-json --verbose --bare,挂 report_progress MCP,--tools/--allowedTools 按 brief.tools 收窄;必须先收到可校验的 init(tools 是字符串数组、host MCP connected、含 report_progress、不越界)才进入运行;汇报由服务器与适配器共用 schema 校验,被拒收的 blocked/failed 只有同种合规重报或宿主 resume 才解除;已受理 blocked 后冻结回收整棵已知后代树、停在受阻;停止按 ps 的 ppid 递归找已知后代树(含 setsid 脱组的后代)逐个 TERM→KILL,确认为空才产出 stopped(scope: descendant-tree);对外终态 后代树未清 > 停止 > 违规 > 受阻 > 进程失败 > 汇报放弃 > 拒收未解决 > 完成,违规留在 violations[];snapshot 只在终态且后代树为空后成功。",
   "acceptance": [
     {
       "id": "AC-33",
       "status": "未测",
-      "reason": "本片只覆盖 ④ 的 Compute 侧子判据,在假 CLI 上通过(packages/adapter-cc-compute/proof/tests.txt;mutations.txt 的 M01 放行 memory、M02 放行明文凭据、M03/M10 工具不按 brief、M09 env 带明文、M16 放行 default、M17 空集给 default、M18 不核对 init 清单均被杀)。真实 CLI 上工具调用是否真被拒没有证据;①–③ 与“工具是联系人白名单子集”的校验在 domain contact.briefFor(PR #4)与内核接线,本包不 import contact"
+      "reason": "本片只覆盖 ④ 的 Compute 侧子判据,在假 CLI 上通过(proof/tests.txt;mutations.txt 的 M01–M03、M09、M10、M16–M18、M36–M38 被杀)。真实 CLI 上工具调用是否真被拒没有证据;①–③ 与“工具是联系人白名单子集”在 contact.briefFor(PR #4)与内核接线"
     },
     {
       "id": "AC-07",
       "status": "未测",
-      "reason": "快照与装配清单子判据在假 CLI 上通过(M07、M08、M14 被杀);stop 回收整个进程组后才报 stopped(M22–M24 被杀),快照取的是进程树静止后的状态。整项要求的“卸载或转交前必须写快照”“换 Compute 不换负责人”“已完成副作用不重做(副作用账)”依赖内核的转交流程与副作用账,本片没有"
+      "reason": "快照与装配清单子判据在假 CLI 上通过(M07、M08、M14);snapshot 只在终态且已知后代树为空后成功(M41、M42);stopped 前后代树确认为空(M22–M24、M39、M44)。整项要求的“卸载或转交前必须写快照”“换 Compute 不换负责人”“已完成副作用不重做(副作用账)”依赖内核的转交流程与副作用账,本片没有"
     },
     {
       "id": "V-06",
       "status": "未测",
-      "reason": "按 V-06 已实测的约束实现:completed 以 CLI 结束 result、is_error 与退出码为准,milestone 漏报不影响(M04、M05、M11、M20 被杀);Compute 明确汇报 failed、或 blocked/failed 被拒收且没有重报时不报 completed(M19、M21 被杀)。两次真实 CLI smoke 都因模型网关 503 没跑到任何汇报(packages/adapter-cc-compute/proof/smoke-real.txt),真实 CLI 上的 milestone/blocked/completed/failed 映射没有证据"
+      "reason": "completed 以 result、is_error 与退出码为准,milestone 漏报不影响(M04、M05、M20);汇报放弃、拒收未解决不报完成(M19、M21、M32、M33、M35);已受理 blocked 后冻结回收、停在受阻(M11、M34)。三次真实 CLI smoke 都因模型网关 503 没跑到汇报(proof/smoke-real.txt),真实 CLI 上的事件映射没有证据"
     },
     {
       "id": "R-02",
@@ -38,9 +38,9 @@
     "model": "claude-opus-5-5"
   },
   "red": {
-    "commit": "fbac6de76e8fd064a655194a60e4b1be75d86a90"
+    "commit": "045b320a3db47f0af7990931513e8d5391f5c53c"
   },
-  "unverifiable": "所有行为测试跑在假 CLI(test-support/fake-claude.mjs)上:report_progress 经真实 MCP 服务器与 JSON-RPC 往返,孙进程是真实进程,但 --tools(含 default 展开为 Bash/Edit/Read,按 Codex 在真实 CLI 2.1.316 上的观察写死)、--allowedTools、dontAsk、--bare 的处理是我写的模拟。AC-33 ④:F-01 的两道防线是 brief 白名单与 init 清单核对;真实 CLI 是否在 dontAsk 下真的拒绝清单外调用、--bare 是否真的不加载 CLAUDE.md/auto-memory,本片没有证据。第二次 smoke 终态是 stopped 而不是越界 failed,只间接说明真实 CLI 对 --tools Read,Write 自报的清单没超出授权,init 原始清单没打印。CC_BUILTIN_TOOLS 是手写的白名单,真实 CLI 新增或改名内置工具时要跟着改,否则合法工具会被拒(不会放宽)。AC-07/F-03:进程组回收只覆盖留在 CLI 进程组里的后代;后代自己 setsid/detached 另起进程组、或经 launchd/守护进程托管时,kill(-pgid) 收不到,本片没有隔离这种情况,需要容器或会话级隔离;进程组只在 POSIX 上成立,Windows 未测。V-06:两次真实 smoke 都因模型网关 503 未完成(proof/smoke-real.txt),真实 CLI 上的 milestone/blocked/completed/failed 映射与快照没跑到。F-04 的 schema 由服务器和适配器共用 src/report-schema.ts,两边同时写错时两道校验一起失效(M25/M26 只各自单独变异)。env 子判据只证明不继承宿主进程环境、brief 只能放引用;hostEnv 由宿主显式给出,内核把明文凭据放进 hostEnv 时本包不拦,要由内核接线保证(AC-33)。AC-07 的快照内容来自 Compute 自报,漏报或报错约束版本会照收,真值核对要靠内核的约束版本与副作用账。R-05 只覆盖 mutations.mjs 列出的 31 种故障。",
+  "unverifiable": "所有行为测试跑在假 CLI(test-support/fake-claude.mjs)上:report_progress 经真实 MCP 服务器往返,孙进程、setsid 进程、双 fork 守护进程都是真实进程,但 --tools(default 展开按 Codex 在真实 CLI 2.1.316 上的观察写死)、--allowedTools、dontAsk、--bare 是模拟的;AC-33 ④ 在真实 CLI 上是否真拒绝清单外调用、--bare 是否真不加载记忆,没有证据。RR-03/AC-07:stopped 的 scope 是 descendant-tree,只覆盖运行期间每 200ms 按 ppid 采样到的后代及其进程组;双 fork 后在采样前就被 init/launchd 收养的守护进程、经 launchd/systemd 托管另起的进程不在范围内(有记录性测试,只断言 scope 标注)。内核不得把 stopped 或后代树为空当作容器级静止;完全隔离归 placement=cloud_sandbox/容器,不在本片。采样间隔内起了又脱组的短命后代可能漏采。ps 不可用时判 failed 而不是 stopped。进程组与 ps 只在 POSIX 上成立,Windows 未测。RR-01:已受理 blocked 后的冻结是 SIGSTOP→SIGKILL,模型在 blocked 前已经发出的工具调用不能撤回;resume 用同一 CLI 会话号续接。V-06:三次真实 smoke 都因模型网关 503 未完成;第三次产出了 started,由实现推出真实 CLI 的 init 通过了 RR-02 的核验(init 原始行未打印),真实 CLI 上的 milestone/blocked/completed/failed 映射与快照没跑到。CC_BUILTIN_TOOLS 是手写白名单,CLI 增改内置工具时要跟着改(只会误拒,不会放宽)。F-04 的 schema 由服务器和适配器共用 src/report-schema.ts,两边同时写错会一起失效。hostEnv 由宿主显式给出,内核放明文凭据时本包不拦(AC-33)。快照内容来自 Compute 自报。R-05 只覆盖 mutations.mjs 列出的故障;mutations.mjs 把超时、被信号结束、部分执行一律记为未杀死(R-05)。",
   "waiver": null,
   "review": {
     "agent": "codex",

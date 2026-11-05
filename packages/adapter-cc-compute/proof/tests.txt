@@ -2,201 +2,291 @@ TAP version 13
 # Subtest: brief 带 memory 或 soul 字段被拒绝,不起任何进程(AC-33 ④ 阳性埋雷)
 ok 1 - brief 带 memory 或 soul 字段被拒绝,不起任何进程(AC-33 ④ 阳性埋雷)
   ---
-  duration_ms: 2.50525
+  duration_ms: 1.322334
   type: 'test'
   ...
 # Subtest: 同一 brief 只切凭据:明文 token 被拒绝,引用句柄放行(单开关)
 ok 2 - 同一 brief 只切凭据:明文 token 被拒绝,引用句柄放行(单开关)
   ---
-  duration_ms: 191.121125
+  duration_ms: 117.407125
   type: 'test'
   ...
 # Subtest: brief 的运行位置不是本机、工具名带逗号拼接时被拒绝
 ok 3 - brief 的运行位置不是本机、工具名带逗号拼接时被拒绝
   ---
-  duration_ms: 0.809958
+  duration_ms: 0.318166
   type: 'test'
   ...
 # Subtest: CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress
 ok 4 - CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress
   ---
-  duration_ms: 282.329
+  duration_ms: 115.149042
   type: 'test'
   ...
 # Subtest: F-01:brief.tools 里的 CLI 控制词与非内置工具名一律拒绝、不起进程;具体内置工具名放行(正反对照)
 ok 5 - F-01:brief.tools 里的 CLI 控制词与非内置工具名一律拒绝、不起进程;具体内置工具名放行(正反对照)
   ---
-  duration_ms: 242.440208
+  duration_ms: 116.696709
   type: 'test'
   ...
 # Subtest: F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress
 ok 6 - F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress
   ---
-  duration_ms: 187.77475
+  duration_ms: 114.222084
   type: 'test'
   ...
 # Subtest: F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)
 ok 7 - F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)
   ---
-  duration_ms: 404.528791
+  duration_ms: 431.965125
   type: 'test'
   ...
 # Subtest: F-03:stop 回收整个进程组,孙进程在 stopped 之前退出,之后不再产生副作用
 ok 8 - F-03:stop 回收整个进程组,孙进程在 stopped 之前退出,之后不再产生副作用
   ---
-  duration_ms: 2034.273166
+  duration_ms: 2041.174
   type: 'test'
   ...
 # Subtest: F-03:CLI 正常结束但留下孙进程时,收尾先回收进程组再报 completed;孙进程不再产生副作用
 ok 9 - F-03:CLI 正常结束但留下孙进程时,收尾先回收进程组再报 completed;孙进程不再产生副作用
   ---
-  duration_ms: 1838.333958
+  duration_ms: 1743.323041
   type: 'test'
   ...
 # Subtest: 子进程 env 不继承宿主进程环境里的明文密钥,凭据只以引用句柄出现
 ok 10 - 子进程 env 不继承宿主进程环境里的明文密钥,凭据只以引用句柄出现
   ---
-  duration_ms: 174.047959
+  duration_ms: 134.287708
   type: 'test'
   ...
 # Subtest: 正常多阶段:stream-json 与 report_progress 映射成 started → milestone×2 → completed
 ok 11 - 正常多阶段:stream-json 与 report_progress 映射成 started → milestone×2 → completed
   ---
-  duration_ms: 179.986416
+  duration_ms: 112.962458
   type: 'test'
   ...
 # Subtest: milestone 漏报、也没调 report_progress 的 completed 时,CLI 成功结束仍报 completed(V-06 约束)
 ok 12 - milestone 漏报、也没调 report_progress 的 completed 时,CLI 成功结束仍报 completed(V-06 约束)
   ---
-  duration_ms: 165.182292
+  duration_ms: 111.658958
   type: 'test'
   ...
 # Subtest: report_progress 服务器拒收的汇报(milestone 缺 stage)不产出事件
 ok 13 - report_progress 服务器拒收的汇报(milestone 缺 stage)不产出事件
   ---
-  duration_ms: 274.441833
+  duration_ms: 154.143459
   type: 'test'
   ...
 # Subtest: 服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照
 ok 14 - 服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照
   ---
-  duration_ms: 207.471292
+  duration_ms: 118.562458
   type: 'test'
   ...
 # Subtest: F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)
 ok 15 - F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)
   ---
-  duration_ms: 204.321209
+  duration_ms: 136.217458
   type: 'test'
   ...
 # Subtest: F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收
 ok 16 - F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收
   ---
-  duration_ms: 116.244375
+  duration_ms: 44.844458
   type: 'test'
   ...
 # Subtest: F-04:服务器校验失效、回执说已记录时,适配器自己的 schema 校验仍拒收不合规的 blocked
 ok 17 - F-04:服务器校验失效、回执说已记录时,适配器自己的 schema 校验仍拒收不合规的 blocked
   ---
-  duration_ms: 184.665041
+  duration_ms: 112.698209
   type: 'test'
   ...
 # Subtest: CLI 以权限拒绝回绝的 report_progress(内容合规,tool_result is_error)不产出事件,只记入拒收
 ok 18 - CLI 以权限拒绝回绝的 report_progress(内容合规,tool_result is_error)不产出事件,只记入拒收
   ---
-  duration_ms: 288.958083
+  duration_ms: 107.174167
   type: 'test'
   ...
 # Subtest: F-02:Compute 经 report_progress 明确汇报放弃,CLI 正常结束也报 failed 不报 completed
 ok 19 - F-02:Compute 经 report_progress 明确汇报放弃,CLI 正常结束也报 failed 不报 completed
   ---
-  duration_ms: 183.028167
+  duration_ms: 111.434084
   type: 'test'
   ...
 # Subtest: F-02:result 行 subtype 是 success 但 is_error 为 true → failed
 ok 20 - F-02:result 行 subtype 是 success 但 is_error 为 true → failed
   ---
-  duration_ms: 170.075958
+  duration_ms: 112.100292
   type: 'test'
   ...
 # Subtest: brief.tools 为空时 report_progress 仍挂载并被放行,汇报照常产出事件(阴性对照)
 ok 21 - brief.tools 为空时 report_progress 仍挂载并被放行,汇报照常产出事件(阴性对照)
   ---
-  duration_ms: 174.959292
+  duration_ms: 111.731458
   type: 'test'
   ...
 # Subtest: CLI 给出 success 结果但进程非零退出 → failed,不报 completed
 ok 22 - CLI 给出 success 结果但进程非零退出 → failed,不报 completed
   ---
-  duration_ms: 249.282625
+  duration_ms: 112.241416
   type: 'test'
   ...
 # Subtest: 退出码 0 但 CLI 没给结束结果或结果是出错 → failed
 ok 23 - 退出码 0 但 CLI 没给结束结果或结果是出错 → failed
   ---
-  duration_ms: 297.895834
+  duration_ms: 116.052416
   type: 'test'
   ...
 # Subtest: 进程被外部杀掉 → failed,带信号
 ok 24 - 进程被外部杀掉 → failed,带信号
   ---
-  duration_ms: 90.947292
+  duration_ms: 99.892917
   type: 'test'
   ...
 # Subtest: stop:子进程真的退出之后才产出 stopped,且只产出一次
 ok 25 - stop:子进程真的退出之后才产出 stopped,且只产出一次
   ---
-  duration_ms: 411.598792
+  duration_ms: 441.983
   type: 'test'
   ...
 # Subtest: stop:进程无视 SIGTERM 时升级为 SIGKILL,结束后才报 stopped
 ok 26 - stop:进程无视 SIGTERM 时升级为 SIGKILL,结束后才报 stopped
   ---
-  duration_ms: 1658.158625
+  duration_ms: 1653.21625
   type: 'test'
   ...
 # Subtest: blocked 后 CLI 结束不报 completed;resume 用同一 CLI 会话续接后报 completed
 ok 27 - blocked 后 CLI 结束不报 completed;resume 用同一 CLI 会话续接后报 completed
   ---
-  duration_ms: 484.816
+  duration_ms: 252.424
   type: 'test'
   ...
 # Subtest: 运行中不能 resume;未知 Compute 不能 stop
 ok 28 - 运行中不能 resume;未知 Compute 不能 stop
   ---
-  duration_ms: 23.643542
+  duration_ms: 47.6655
   type: 'test'
   ...
 # Subtest: snapshot 取自事件流里 report_progress 的结构化字段
 ok 29 - snapshot 取自事件流里 report_progress 的结构化字段
   ---
-  duration_ms: 249.20975
+  duration_ms: 116.120667
   type: 'test'
   ...
 # Subtest: 没汇报过约束版本的 Compute 拿不到快照;缺 constraintVer 的 handoff 被 spawn 拒绝(AC-07 阳性埋雷)
 ok 30 - 没汇报过约束版本的 Compute 拿不到快照;缺 constraintVer 的 handoff 被 spawn 拒绝(AC-07 阳性埋雷)
   ---
-  duration_ms: 180.345125
+  duration_ms: 113.793
   type: 'test'
   ...
 # Subtest: 带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里
 ok 31 - 带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里
   ---
-  duration_ms: 272.454917
+  duration_ms: 112.689084
   type: 'test'
   ...
 # Subtest: 没有 handoff 的 spawn:首个提示与装配清单都不含交接段(阴性对照)
 ok 32 - 没有 handoff 的 spawn:首个提示与装配清单都不含交接段(阴性对照)
   ---
-  duration_ms: 306.712042
+  duration_ms: 111.537666
   type: 'test'
   ...
-1..32
-# tests 32
+# Subtest: RR-01:被拒收的 blocked 未合规重报时,另一种合规汇报(completed)不能把它清掉 → failed
+ok 33 - RR-01:被拒收的 blocked 未合规重报时,另一种合规汇报(completed)不能把它清掉 → failed
+  ---
+  duration_ms: 112.704708
+  type: 'test'
+  ...
+# Subtest: RR-01:被拒收的 blocked 之后只来一个合规 started,也不算解除(审查存活变异)
+ok 34 - RR-01:被拒收的 blocked 之后只来一个合规 started,也不算解除(审查存活变异)
+  ---
+  duration_ms: 112.515375
+  type: 'test'
+  ...
+# Subtest: RR-01:被拒收的 blocked 由宿主显式 resume 解除,续接一轮正常完成(对照)
+ok 35 - RR-01:被拒收的 blocked 由宿主显式 resume 解除,续接一轮正常完成(对照)
+  ---
+  duration_ms: 224.505083
+  type: 'test'
+  ...
+# Subtest: RR-01:已受理 blocked 后进程与后代被冻结回收,之后的 milestone/completed 和孙进程副作用都不发生
+ok 36 - RR-01:已受理 blocked 后进程与后代被冻结回收,之后的 milestone/completed 和孙进程副作用都不发生
+  ---
+  duration_ms: 1740.871833
+  type: 'test'
+  ...
+# Subtest: RR-01:停在受阻的 Compute 可以被 stop,产出带 scope 的 stopped
+ok 37 - RR-01:停在受阻的 Compute 可以被 stop,产出带 scope 的 stopped
+  ---
+  duration_ms: 154.198167
+  type: 'test'
+  ...
+# Subtest: RR-02:report_progress MCP 起不来时 init 里 host 为 failed → 回收进程组并 failed,不报 completed
+ok 38 - RR-02:report_progress MCP 起不来时 init 里 host 为 failed → 回收进程组并 failed,不报 completed
+  ---
+  duration_ms: 75.374041
+  type: 'test'
+  ...
+# Subtest: RR-02:缺 init、tools 不是数组、tools 含非字符串 → failed;完整 init 对照 completed
+ok 39 - RR-02:缺 init、tools 不是数组、tools 含非字符串 → failed;完整 init 对照 completed
+  ---
+  duration_ms: 455.293208
+  type: 'test'
+  ...
+# Subtest: RR-02:与真实 CLI 同形的 init(host status failed、工具里无 report_progress)判为无法核验;connected 的同形 init 放行
+ok 40 - RR-02:与真实 CLI 同形的 init(host status failed、工具里无 report_progress)判为无法核验;connected 的同形 init 放行
+  ---
+  duration_ms: 0.183083
+  type: 'test'
+  ...
+# Subtest: RR-03:setsid 脱离进程组的孙进程在 stopped 之前被杀,之后不出现标记文件
+ok 41 - RR-03:setsid 脱离进程组的孙进程在 stopped 之前被杀,之后不出现标记文件
+  ---
+  duration_ms: 2519.787583
+  type: 'test'
+  ...
+# Subtest: RR-03 已知不覆盖(记录性):双 fork 后被收养的守护进程不在后代树内,stopped 只声明 scope=descendant-tree
+ok 42 - RR-03 已知不覆盖(记录性):双 fork 后被收养的守护进程不在后代树内,stopped 只声明 scope=descendant-tree
+  ---
+  duration_ms: 468.304541
+  type: 'test'
+  ...
+# Subtest: RR-04:运行中(进程与孙进程都在)取快照返回 not-quiescent;停止并确认后代树为空后才给出快照
+ok 43 - RR-04:运行中(进程与孙进程都在)取快照返回 not-quiescent;停止并确认后代树为空后才给出快照
+  ---
+  duration_ms: 444.167792
+  type: 'test'
+  ...
+# Subtest: RR-04/RR-05:后代树在 SIGKILL 后仍无法确认为空(ps 不可用)→ failed 而非 stopped,快照 not-quiescent
+ok 44 - RR-04/RR-05:后代树在 SIGKILL 后仍无法确认为空(ps 不可用)→ failed 而非 stopped,快照 not-quiescent
+  ---
+  duration_ms: 3884.820291
+  type: 'test'
+  ...
+# Subtest: RR-05:init 越界后用户 stop → 对外 stopped,违规保留在 violations[]
+ok 45 - RR-05:init 越界后用户 stop → 对外 stopped,违规保留在 violations[]
+  ---
+  duration_ms: 1634.526666
+  type: 'test'
+  ...
+# Subtest: RR-05:terminalFor 的优先级:后代树未清 > 停止 > 违规;没有停止时违规报 failed 并带 violations
+ok 46 - RR-05:terminalFor 的优先级:后代树未清 > 停止 > 违规;没有停止时违规报 failed 并带 violations
+  ---
+  duration_ms: 0.136667
+  type: 'test'
+  ...
+# Subtest: RR-03:CLI 自成进程组(pgid 等于自己的 pid),冻结时能先对整组发 SIGSTOP
+ok 47 - RR-03:CLI 自成进程组(pgid 等于自己的 pid),冻结时能先对整组发 SIGSTOP
+  ---
+  duration_ms: 440.368291
+  type: 'test'
+  ...
+1..47
+# tests 47
 # suites 0
-# pass 32
+# pass 47
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 13919.78025
+# duration_ms 34589.135209
