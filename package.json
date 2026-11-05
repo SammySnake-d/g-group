@@ -2,6 +2,9 @@
   "name": "g-group",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "engines": {
     "node": ">=22.18"
   },
