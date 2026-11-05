@@ -12,5 +12,12 @@
   "red": { "commit": "257933acacd9d0d553b78a2fda12c4965744974a" },
   "unverifiable": "Helper 三入口的路由只在纯函数层判定'回复落在哪、算不算消息、能读哪个会话';真正把侧边栏回复挡在消息表外、把 @Helper 的回复写成消息,要内核层调用这个路由并配合 log.ts 的 append,本片没有那条接线,AC-34 的端到端走查也没做。AC-33 的通用工具黑名单是一张名字表,新出现的通用工具改名就能绕过,真正的约束靠 bounded 标志由宿主注册工具时设定,这一片不验宿主是否如实设定。凭据引用只检查 <scheme>://<path> 的形状,像 'sk://abc' 这种伪装成引用的明文挡不住,要等凭据 Vault 落地后改成'必须是 Vault 里存在的句柄'。定时承诺的 cron 只做字段形状检查,不检查数值范围(比如 99 点),DST 下实际触发时刻没有测。专职锁的意图分类(control/work/chatter)由上游给出,本片不验分类本身对不对。R-05 的变异校准覆盖 mutations.mjs 列出的 52 种故障。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "astra",
+    "session": "codex:ca507fd7-9fc8-4431-a218-fb29ca3ca577",
+    "model": "gpt-6-astra",
+    "verdict": "reject",
+    "reviewed_hash": "9736f7091d1e67e2da2304b6a5d51b52dc84e6583fbc3a4207c93e84c83868eb",
+    "notes": "独立复现 npm ci/typecheck/lint/test 通过，78/78；红提交 22 个新增测试逐名失败；作者 52/52 变异被杀。独立 26 个变异 14 个存活，且均通过类型与 lint。必须修 CH-01 授权资产与直接工具集合混同、CH-02 专职锁拒绝职责内工作并残留失效锁、CH-03 GC 缺末次汇报确认、CH-04 R-05 校准盲区。Helper 三入口及定时归属正确；详见 reviews/feat-contact-helper.md。只结束审查轮次，功能仍待返修与跨厂商重审。"
+  }
 }
