@@ -1,0 +1,21 @@
+packages/domain/src/contact.test.ts
+  s_36f8aff8cdaf05::t_cf6b36fb42cad5 116,135,164,218-337
+packages/domain/src/contact.ts
+  s_36f8aff8cdaf05::t_710ae889599aac 1,26-27,76,85,87,91,95,99,113,118,121-122,132-135,137,140-144,146,151,155,159,164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ec18de1acac2e3e120fa9a2521087b31d12ceef1",
+  "prompts": {},
+  "sessions": {
+    "s_36f8aff8cdaf05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a528004857a3a0bf5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
