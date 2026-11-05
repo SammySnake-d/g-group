@@ -828,3 +828,105 @@ node "$E/independent-shapes.mjs" "$PWD"
 ### 第八轮本地门禁的实际结果
 
 写入 reject 收据后运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`：exit 1。`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER` 通过。`G-PROVENANCE` 实际报告当前已落盘会话中没有输出等于本轮 hash 的调用、审查那轮厂商认不出；活动轮次尚未落盘，本轮 hash 命令与原始 rollout 的实际模型已分别实查，**不声称来源门禁通过**。当前轮记录落盘后由原任务复跑，不伪造记录。原始输出见证据目录 `gates-after.log`。
+
+---
+
+# 第九轮 · Codex 独立复现（2026-11-06）
+
+## 结论：reject
+
+`52eb37af7a67ca34abe4269d5e294e0cffc2f764` 修复了第八轮所报的异常 **kind**：标准 JSON 的异常种类、原型链名字和读取时立即抛错的 getter，在 `validateEvent` 中均按预期拒绝；原样 159 项测试与作者的 204 个变异复现通过。但审查发现 **校验与后续实际使用不是同一个事件快照**：继承来的可选字段仍能触发停止、释放和豁免；另一个标准 JSON 附加字段能令 `apply` / `applyAll` 抛异常；校验后变化的 getter 还能写入非法类型或触发错误副作用。独立注入的 4 个变异存活。必须返修并补测，不能合并。
+
+- 对象：`feat/task-lifecycle` HEAD `52eb37af7a67ca34abe4269d5e294e0cffc2f764`；指定基线 `origin/feat/domain-core` = `afd02560f9546147da380382404eb6106222a9b8`。普通独立 clone，`.git` 和 common dir 均是本副本自己的 `.git`，不在共享 linked worktree 执行钩子。
+- 审查：`codex:494d03f8-8b47-4ae3-a080-43526db82afd`；本轮原始 Codex `turn_context.model` 为 `gpt-6.1-terra`（OpenAI）。作者会话 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38` 中涉及本仓库的模型记录为 `claude-opus-5-5`（Anthropic，两个渠道前缀）；双方不同原生研发厂商，无豁免。
+- 仓库根目录实际运行 `node scripts/gates/run-all.ts --hash --branch=feat/task-lifecycle --base=origin/feat/domain-core`，原样输出：
+
+```text
+3afaf9c960a1ded93a509aebebf45ba591aefa7b7a8fd4e340dde9e5e19d59d8
+```
+
+- 证据目录：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review9-evidence-494d03f8/`。本轮执行纯函数和隔离副本；没有启动真实 Compute、发送卡片或修改产品代码。
+
+## 一、独立执行
+
+| 操作 | 实测结果 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均 exit 0；Node `v25.8.1`、npm `11.11.0` |
+| `npm test` | exit 0，159 通过、0 失败、0 跳过 |
+| 独立 clone 检出红提交 `0fd741e6cef41933bb0a18ade77c6a9275f84187` | 159 项中 23 通过、136 **具名失败**，exit 1；按文件与名字比对指定基线以来新增/改动的 136 条测试，红提交全部按名失败、当前版全部按名通过，文件级失败 0；红绿测试文件无差异。该空壳红主要证明测试激活源码，不等于逐项复现缺陷 |
+| 新测试原样对 `4cd80a3` 的实现 | 隔离 clone 中只将 `task.ts` 换成旧版原文，不加桩；154 绿、5 具名失败、exit 1，与 `packages/domain/proof/red-against-4cd80a3.tap` 的失败名称集合一致 |
+| 作者 `node packages/domain/proof/mutations.mjs` | exit 0；原样 159 绿，204 个单点变异均有具名失败。该结果只覆盖作者所选 204 个故障，不证明所有判据充分标定 |
+| 独立行为测试 | 17 组：7 绿、10 红；包含 15 种事件的 444 条字段取值断言、异常 kind、getter、继承属性、交付代次、批次和下述反例；完整 TAP 与脚本见证据目录 |
+| 独立变异 | J01–J04 各自隔离改坏一个位置，typecheck 与原 159 项测试均绿，实际行为与原版不同；J05 删状态表一格后 typecheck 与两个具名 AC-09 测试均红；J06 增加事件、全格补齐并同步样例后 typecheck 和 159 项测试均绿 |
+
+第一次试算 hash 时在 `npm ci` 之前运行，因缺少 `typescript` 退出 1；安装依赖后以用户指定原命令重跑，退出 0 并取得上面的原样输出。这是执行顺序错误，不是产品失败。
+
+## 二、必须返修
+
+### R9-CORR-01 · 校验忽略继承字段，状态机执行却仍使用它们
+
+`packages/domain/src/task.ts:482–493` 的 `own()` 使验证阶段只看自有字段；但通过校验后，`execFailed`（144–147）、`ackStale`（198–203）、停止确认（403–412）、`review`（234–245）和 `misrouted`（501–506）又直接读取原事件对象或使用 `in`，会读取继承属性。以下都是独立测试的真实原版结果，对照均使用同一任务和同一事件，只改变字段是缺省、继承还是自有：
+
+1. `ExecFailed` 没有自有 `computeId` 时，继承的 `computeId` 指向当前实例：`validateEvent` 返回 `null`，`apply` 却进入 `T9_StopRequested` 并发出 `stop-compute`；完全省略该字段则保持 `T3_Running`、无副作用。后续有效提问放在同一 `applyAll` 中也会被这次错误停止改变结果。
+2. `StoppedConfirmed` 自有 `taskId` 正确，但 `computeId` 仅来自原型：当前实现会进入 `T10_Cancelled` 并发 `release-slot`；省略来源的对照仍在 `T9` 且无释放。自有的正确 `computeId` 正例仍正常确认。
+3. 同厂商审查事件没有自有 `waiverBy`，仅从原型继承提出者 ID 时，`validateEvent` 接受，`apply` 记录 `waived-by-user` 并发 `send-card`；没有该继承值时正确拒绝，自有豁免值对照按现有领域契约记为 Waived。**这说明领域函数错误地消费了继承字段，不声称已证明真实宿主的身份认证或用户授权被绕过。**
+4. 不声明 `taskId` 的 `Claim`，即使事件自有字段合法，继承的别任务 `taskId` 也会使其被错投检查拒绝，而无该继承值的对照正常认领。
+
+应保证状态机只消费与形状校验相同的自有字段，并为可选 `computeId` / `requestId` / `waiverBy` 及无声明 `taskId` 的事件补验证和实际 `apply` / `applyAll` 正反对照。领域层仍不能代替宿主认证。
+
+### R9-CORR-02 · 标准 JSON 的额外 `taskId` 能让入口抛异常
+
+`packages/domain/src/task.ts:501–505` 对**任何**事件上出现的 `taskId` 都作错投判定，并在错误原因中对其插值；但 `Claim` 等事件的形状根本不声明 `taskId`，且本片明确允许多余字段。无需 getter 或 Proxy，标准 JSON 即可复现：
+
+```json
+{"kind":"Claim","by":"author","taskId":{"toString":null}}
+```
+
+`validateEvent` 返回 `null`，而 `apply` 和 `applyAll` 都抛 `TypeError: Cannot convert object to primitive value`；把该附加字段去掉或换为普通无关的 `extra` 字段，正常认领。附加的不同字符串 `taskId` 也会被错误当作该类事件的路由字段而拒绝。此处只观察到纯函数抛错，未假定线上宿主没有外层异常处理。
+
+应只对本契约声明带 `taskId` 的事件做该字段的路由检查，或者明确修订并一致执行附加字段契约；不能让未校验字段插值或使批次抛异常。补普通 JSON 的恶意对象附加字段、普通附加字段和五类真正带任务号事件的正反对照。
+
+### R9-CORR-03 · 通过校验后重复读取原对象，可绕过类型检查或抛错
+
+`validateEvent` 内的 `try/catch` 只覆盖本次校验；`apply` 随后再次读取调用方原对象（`task.ts:299–304,482–493,501–517`）。这不是声称当前 `validateEvent` 对立即抛错 getter 不安全：该对照已经通过。问题是 JavaScript 对象的 getter 可以在两次读取之间返回不同值或第二次抛错：
+
+- `Claim.by` 首次返回合法字符串、第二次返回数字 `42`，当前 `apply` 返回 `ok:true`、`owner:42`，并发 `spawn-compute`。
+- `UserReject.computeResumable` 首次返回布尔 `false`、随后返回字符串 `"false"`，当前分支把字符串当真值，错误发 `resume-compute`，而不是不可恢复侧的处理。
+- `kind` getter 校验时返回 `Claim`、下一次读取抛错，`apply` 直接抛错。
+
+这些例子是带访问器的 JS 输入，不是普通 JSON；之所以在本轮范围内，是因为入口明确支持捕获字段读取异常。建议把经安全读取和验证的自有字段构造成稳定快照，供检查与转移共同使用；或者在入口一致拒绝不稳定的访问器。补上述变值、第二次抛错、正常稳定值和无副作用对照。
+
+### R9-TEST-01 · R-05 的新边界仍存在可存活变异
+
+以下是审查人**故意改坏**的独立单点变异，不是声称原版已存在对应的校验错误；每项均 typecheck exit 0、原 159 测试全部通过，并在独立探针中与原版表现不同：
+
+| 变异 | 实际对照 |
+|---|---|
+| J01 事件 `kind` 改为读取继承属性 | 原版拒绝继承的种类；变异版校验通过 |
+| J02 可选字段改为读取继承属性 | 原版忽略继承的非法可选字段；变异版错误拒绝 |
+| J03 审查退回所需 `computeResumable` 改为读取继承属性 | 原版拒绝仅继承的字段；变异版错误通过 |
+| J04 非负整数额外拒绝 `-0` | 原版按非负安全整数接受；变异版拒绝 JavaScript/JSON 可表示的负零 |
+
+J05 为阳性对照：从 T1 表删除一个事件格，typecheck exit 2，两个 AC-09 具名测试失败；J06 为阴性对照：新增事件、为各状态补格并同步测试样例及期望后，typecheck 与原测试均通过。完整补丁、测试、类型检查与原版/变异版探针均在 `mutants/J01`–`J06`。R-05 要求每项判据的阳性与阴性对照；上述新边界既能被改坏而不被原套件检出，当前不能据 204 项作者变异全杀就断言这些判据已完成双侧标定。
+
+## 三、与验收文档及收据第 7 栏对照
+
+- **AC-09**：亲自检查本片 12 状态 × 15 事件的 180 格均有处理或原因，并跑了删格与新增完整事件双侧对照；这是本片主干，不等于需求文档 D20.3 全表。收据列出的 T2b、T4a/T4c、T6/T6b、T8b 和 E5/E7b/E10 等仍未建模，不能把整张需求表判绿。
+- **R-02**：136 条新增/改动测试的红绿具名集合一致；空壳红是激活证明，另有未加桩的旧实现 5 条具名红。不能将空壳的 136 红解读成 136 个真实缺陷都在旧实现上复现。
+- **R-05**：作者所选 204 个确实均被杀；J01–J04 的独立存活反证了覆盖充分性。收据将 R-05 写为“通过”，对上述新边界不成立，应在返修后重新校准。
+- **第 7 栏精度**：`validateEvent` 对稳定自有字段、基本类型边界、原型名和立即抛错的字段读取，本轮所测符合描述；但“只读自有属性”和“多余字段不拒绝”不能推广为整个 `apply` / `applyAll` 链路已满足，R9-CORR-01/02 为反例；再次读取的不稳定 getter 也未受校验快照保护。其他已写明边界仍成立：taskId / computeId / 模型与豁免人真实性依靠宿主，退役账本无上界，真实进程恢复、资源回收、工作区隔离、CAS/租约、UI 卡片及跨层闭环本轮均未验。
+- 本轮额外对四类交付事件 × 12 个状态各测未分配未来代次拒绝与已分配旧代次忽略；五类要求 taskId 的事件错任务均拒绝。这些是领域函数的标识比对，不是宿主认证证明。
+
+复现：在该独立 clone 仓库根目录执行：
+
+```sh
+E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review9-evidence-494d03f8
+REVIEW_REPO="$PWD" node --test --test-reporter=tap "$E/independent.test.mjs"
+# 预期 7 绿 / 10 红；变异补丁与运行结果见 "$E/mutants/"。
+```
+
+本轮只追加本报告并更新 `receipts/feat-task-lifecycle.json` 的 `review` 字段；返修交回 Claude Code，由不同厂商再次独立复现。
+
+### 第九轮本地门禁的实际结果
+
+写入 reject 收据后，在此独立 clone 运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`，exit 1：`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER` 通过。`G-PROVENANCE` 报 `审查会话记录不存在:codex:494d03f8-8b47-4ae3-a080-43526db82afd`；实查当前活动会话目录只有 `record.json`，尚无门禁读取的 `turns.jsonl`。本轮原始 rollout 的实际模型与指定 hash 命令已分别实查，但**不能声称来源门禁通过**；待会话记录落盘后由原任务复跑，不能伪造记录。日志见证据目录 `gates-after.log`。

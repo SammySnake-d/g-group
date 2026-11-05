@@ -1,3 +1,4 @@
+import { types } from "node:util";
 import { type Vendor, vendorOf } from "./vendor.ts";
 // 第三台状态机:任务生命周期(需求文档 D20.3 第三台表,本片覆盖主干)。
 // 状态×事件表是一张穷尽的对象字面量:少一格 TypeScript 就报错(AC-09);每格要么转移,要么写明拒绝/忽略原因。
@@ -451,7 +452,7 @@ const EVENT_SHAPES: { readonly [K in EventKind]: Shape } = {
   HumanReply: { req: { qId: "str", constraintVer: "nat", answer: ["approve", "reject"] } },
   Amend: { req: { by: "str", computeResumable: "bool" } },
   SubmitForReview: { req: { commit: "str", computeId: "str", constraintVer: "nat" } },
-  Review: { req: { reviewerId: "str", reviewerModel: "str", round: "pint", commit: "str", constraintVer: "nat", verdict: ["approve", "reject"] }, opt: { waiverBy: "str" } },
+  Review: { req: { reviewerId: "str", reviewerModel: "str", round: "pint", commit: "str", constraintVer: "nat", verdict: ["approve", "reject"] }, opt: { waiverBy: "str", computeResumable: "bool" } },
   DeliveredCard: { req: DELIVERY_SHAPE },
   UserAccept: { req: { ...DELIVERY_SHAPE, by: "str" } },
   UserReject: { req: { ...DELIVERY_SHAPE, by: "str", computeResumable: "bool" } },
@@ -471,43 +472,76 @@ const fieldOk = (v: unknown, f: FieldSpec): boolean => {
 const SHAPE_BY_KIND: ReadonlyMap<string, Shape> = new Map(Object.entries(EVENT_SHAPES));
 const label = (f: FieldSpec): string => f === "str" ? "非空字符串" : f === "nat" ? "非负整数" : f === "pint" ? "正整数" : f === "bool" ? "布尔" : f.join("/");
 /** 校验一个(可能来自 JSON 的)事件的运行时形状:种类已知、必填字段存在且取值合法、可选字段若出现也合法。合法返回 null,否则返回原因。 */
-export function validateEvent(e: unknown): string | null {
-  // 外层兜底:任何意外(例如字段上的 getter 抛错)都按拒绝返回,校验本身绝不抛异常(R8-CORR-01)
+/**
+ * 把(可能来自 JSON、可能带访问器或原型的)事件规范化成冻结的纯数据快照(R9-CORR-01/02/03):
+ * 每个声明字段只经 Object.getOwnPropertyDescriptor 读一次——数据属性取值,访问器只调用一次 getter;
+ * 原型链上继承来的同名字段不算数;未声明字段一律丢弃(包括不声明 taskId 的事件上多出来的 taskId)。
+ * 读取出错即拒绝。之后的校验、路由检查和状态转移都只读这份快照,不再碰原对象,所以校验和执行看到的是同一组值。
+ */
+export function normalizeEvent(e: unknown): { ok: true; event: TaskEvent } | { ok: false; reason: string } {
   try {
-    return checkShape(e);
+    return snapshotOf(e);
   } catch {
-    return "事件无法校验";
+    return { ok: false, reason: "事件无法校验" };
   }
 }
-/** 只读自有属性:原型链上继承来的同名成员不算字段。 */
-const own = (o: object, k: string): unknown => (Object.hasOwn(o, k) ? (o as Record<string, unknown>)[k] : undefined);
-const checkShape = (e: unknown): string | null => {
-  if (typeof e !== "object" || e === null || Array.isArray(e)) return "事件不是对象";
-  const kind = own(e, "kind");
+/** 校验一个事件:就是对它的快照做形状校验。合法返回 null,否则返回原因;自身绝不抛异常(R8-CORR-01)。 */
+export function validateEvent(e: unknown): string | null {
+  const n = normalizeEvent(e);
+  return n.ok ? null : n.reason;
+}
+/** 读一次自有属性:没有该自有属性返回 undefined;访问器调用一次 getter。 */
+const readOnce = (o: object, k: string): unknown => {
+  const d = Object.getOwnPropertyDescriptor(o, k);
+  if (!d) return undefined;
+  if (Object.hasOwn(d, "value")) return d.value;
+  return d.get ? d.get.call(o) : undefined;
+};
+const snapshotOf = (e: unknown): { ok: true; event: TaskEvent } | { ok: false; reason: string } => {
+  const no_ = (reason: string) => ({ ok: false as const, reason });
+  if (typeof e !== "object" || e === null || Array.isArray(e)) return no_("事件不是对象");
+  // 契约边界:只接受 JSON 可产生的普通数据对象——原型为 Object.prototype 或 null,且不是 Proxy。
+  // 先判 Proxy(不触发任何陷阱),再看原型;自定义原型、类实例、Proxy 一律拒绝,不尝试防御任意元编程对象
+  if (types.isProxy(e)) return no_("只接受普通数据对象");
+  const proto = Object.getPrototypeOf(e);
+  if (proto !== Object.prototype && proto !== null) return no_("只接受普通数据对象");
+  const kind = readOnce(e, "kind");
   // 非字符串的 kind 用固定文字拒绝,不把不可信值格式化进原因(对象 kind 可能无法转成字符串)
-  if (typeof kind !== "string") return "事件种类缺失或不是字符串";
+  if (typeof kind !== "string") return no_("事件种类缺失或不是字符串");
   const shape = SHAPE_BY_KIND.get(kind);
-  if (!shape) return `未知的事件种类 ${JSON.stringify(kind)}`;
-  for (const [k, f] of Object.entries(shape.req)) if (!fieldOk(own(e, k), f)) return `${kind}.${k} 缺失或取值非法(应为${label(f)})`;
-  for (const [k, f] of Object.entries(shape.opt ?? {})) if (own(e, k) !== undefined && !fieldOk(own(e, k), f)) return `${kind}.${k} 取值非法(应为${label(f)})`;
-  if (kind === "Review" && own(e, "verdict") === "reject" && !fieldOk(own(e, "computeResumable"), "bool")) return "Review.computeResumable 缺失或取值非法(应为布尔)";
-  return null;
+  if (!shape) return no_(`未知的事件种类 ${JSON.stringify(kind)}`);
+  // 原型为 null 的快照:读不到的字段就是 undefined,不会从 Object.prototype 上继承
+  const snap = Object.create(null) as Record<string, unknown>;
+  snap.kind = kind;
+  for (const k of [...Object.keys(shape.req), ...Object.keys(shape.opt ?? {})]) {
+    const v = readOnce(e, k);
+    if (v !== undefined) snap[k] = v;
+  }
+  for (const [k, f] of Object.entries(shape.req)) if (!fieldOk(snap[k], f)) return no_(`${kind}.${k} 缺失或取值非法(应为${label(f)})`);
+  if (kind === "Review" && snap.verdict === "reject" && !fieldOk(snap.computeResumable, "bool")) return no_("Review.computeResumable 缺失或取值非法(应为布尔)");
+  for (const [k, f] of Object.entries(shape.opt ?? {})) if (snap[k] !== undefined && !fieldOk(snap[k], f)) return no_(`${kind}.${k} 取值非法(应为${label(f)})`);
+  return { ok: true, event: Object.freeze(snap) as unknown as TaskEvent };
 };
 
 /**
  * 入口校验(先于状态表):形状合法;带 taskId 的事件必须属于本任务;交付代次必须是本任务已分配过的——
  * 从未分配的(未来)代次在任何状态都拒绝(R7-CORR-02),已分配的旧代次随后幂等忽略。
  */
+/** 声明了 taskId 的事件种类:只有它们做错投检查(R9-CORR-02)。 */
+const TASK_ID_KINDS: ReadonlySet<EventKind> = new Set(["DeliveredCard", "UserAccept", "UserReject", "AcceptTimeout", "StoppedConfirmed"]);
+/** 入参 e 是已规范化、已校验的快照,taskId 必为非空字符串,插值安全。 */
 const misrouted = (t: Task, e: TaskEvent): string | null => {
-  const shape = validateEvent(e);
-  if (shape) return shape;
   const ev = e as { taskId?: string; deliveryRound?: number };
-  if ("taskId" in ev && ev.taskId !== t.id) return `事件属于任务 ${ev.taskId},不是本任务 ${t.id}`;
+  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id) return `事件属于任务 ${ev.taskId},不是本任务 ${t.id}`;
   if (DELIVERY_EVENTS.has(e.kind) && (ev.deliveryRound as number) > t.deliverySeq) return `交付代次 ${ev.deliveryRound} 本任务未分配过`;
   return null;
 };
 
-export function apply(t: Task, e: TaskEvent): Outcome {
+export function apply(t: Task, input: TaskEvent): Outcome {
+  // 入口只读原对象这一次;此后一律用快照(R9-CORR-03)
+  const n = normalizeEvent(input);
+  if (!n.ok) return no(n.reason);
+  const e = n.event;
   const bad = misrouted(t, e);
   if (bad) return no(bad);
   if (staleDelivery(t, e)) return ok(t);
