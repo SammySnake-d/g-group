@@ -68,9 +68,9 @@
   "review": {
     "agent": "codex",
     "session": "codex:51f52dd3-f00d-4d1a-ace4-866b25735ac0",
-    "model": "gpt-6.1-sol",
+    "model": "gpt-6.1-terra",
     "verdict": "reject",
     "reviewed_hash": "b3d591914d9e156cd272901686eddbb309ddf2a450d2cd327ba43800d08d809e",
-    "notes": "第三轮复审 7865762：npm ci/typecheck/lint/selftest 通过；38 条变异独立进度与超时语义实跑，当前列举变异全被发现，超时 fail-closed。新增 RR-09：self-check 的按路径判定和 gated if 由 PR 自己的 workflow 控制，功能 PR 可改判定器/if 使 selftest 与 mutation skipped，而 trusted-gates 不校验这两步；需移到 main 可信裁判或始终运行。旧 RR-01..RR-08 仍以历史报告为准，结论 reject。"
+    "notes": "第三轮复审 7865762：npm ci、typecheck、lint、自检通过；独立默认 mutation 仍在运行，短超时反例全部正确判未发现。reject：RR-09 PR 可改写 self-check 跳过条件；RR-10 默认重命名检测漏列移出门禁路径。RR-01..08 作者自检通过，但独立逐条双侧复现未完成。首次提交/推送误在共享 linked worktree 触发 hook，详见报告更正。"
   }
 }
