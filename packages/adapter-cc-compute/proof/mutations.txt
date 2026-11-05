@@ -1,48 +1,48 @@
-✓ 原样副本:47 绿 / 0 红,计划 47 条,退出码 0
-✓ M01 brief 放行 memory 等额外字段:46 绿 / 1 红,被「brief 带 memory 或 soul 字段被拒绝,不起任何进程(AC-33 ④ 阳性埋雷)」发现
-✓ M02 brief 放行明文凭据:46 绿 / 1 红,被「同一 brief 只切凭据:明文 token 被拒绝,引用句柄放行(单开关)」发现
-✓ M03 --allowedTools 不按 brief.tools:45 绿 / 2 红,被「CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress」发现
-✓ M04 没有 milestone 就不报 completed:40 绿 / 7 红,被「F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress」发现
-✓ M05 非零退出也报 completed:45 绿 / 2 红,被「F-03:CLI 正常结束但留下孙进程时,收尾先回收进程组再报 completed;孙进程不再产生副作用」发现
-✓ M06 stop 未等进程结束就报 stopped:44 绿 / 3 红,被「F-03:stop 回收整个进程组,孙进程在 stopped 之前退出,之后不再产生副作用」发现
-✓ M07 快照缺 constraintVer 放行:46 绿 / 1 红,被「没汇报过约束版本的 Compute 拿不到快照;缺 constraintVer 的 handoff 被 spawn 拒绝(AC-07 阳性埋雷)」发现
-✓ M08 handoff 不写进首个提示:46 绿 / 1 红,被「带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里」发现
-✓ M09 env 继承宿主进程环境(带明文):46 绿 / 1 红,被「子进程 env 不继承宿主进程环境里的明文密钥,凭据只以引用句柄出现」发现
-✓ M10 --tools 不按 brief.tools:17 绿 / 30 红,被「CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress」发现
-✓ M11 已受理 blocked 不停在受阻:43 绿 / 4 红,被「F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)」发现
-✓ M12 被拒收的汇报也产出事件:46 绿 / 1 红,被「CLI 以权限拒绝回绝的 report_progress(内容合规,tool_result is_error)不产出事件,只记入拒收」发现
-✓ M13 回收不升级 SIGKILL:44 绿 / 3 红,被「F-03:CLI 正常结束但留下孙进程时,收尾先回收进程组再报 completed;孙进程不再产生副作用」发现
-✓ M14 handoff 不列进装配清单:46 绿 / 1 红,被「带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里」发现
-✓ M15 resume 不带 CLI 会话号:45 绿 / 2 红,被「blocked 后 CLI 结束不报 completed;resume 用同一 CLI 会话续接后报 completed」发现
-✓ M16 F-01 brief.tools 放行 default 等非内置名:45 绿 / 2 红,被「brief 的运行位置不是本机、工具名带逗号拼接时被拒绝」发现
-✓ M17 F-01 空集时 --tools 给 default:44 绿 / 3 红,被「F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress」发现
-✓ M18 F-01 不核对 CLI init 的实际挂载清单:45 绿 / 2 红,被「F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)」发现
-✓ M19 F-02 忽略 Compute 汇报的 failed:46 绿 / 1 红,被「F-02:Compute 经 report_progress 明确汇报放弃,CLI 正常结束也报 failed 不报 completed」发现
-✓ M20 F-02 result 行不看 is_error:46 绿 / 1 红,被「F-02:result 行 subtype 是 success 但 is_error 为 true → failed」发现
-✓ M21 F-02 被拒收的 blocked 不记为未解决:42 绿 / 5 红,被「服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照」发现
-✓ M22 F-03 CLI 不自成进程组:46 绿 / 1 红,被「RR-03:CLI 自成进程组(pgid 等于自己的 pid),冻结时能先对整组发 SIGSTOP」发现
-✓ M23 F-03 收尾不回收后代树:44 绿 / 3 红,被「F-03:CLI 正常结束但留下孙进程时,收尾先回收进程组再报 completed;孙进程不再产生副作用」发现
-✓ M24 F-03 stop 只对直接子进程发 SIGTERM:46 绿 / 1 红,被「stop:进程无视 SIGTERM 时升级为 SIGKILL,结束后才报 stopped」发现
-✓ M25 F-04 MCP 服务器不校验 schema:46 绿 / 1 红,被「F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收」发现
-✓ M26 F-04 适配器不做第二道 schema 校验:46 绿 / 1 红,被「F-04:服务器校验失效、回执说已记录时,适配器自己的 schema 校验仍拒收不合规的 blocked」发现
-✓ M27 F-04 needs 只查真假不查类型:41 绿 / 6 红,被「F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)」发现
-✓ M28 F-04 stage 只查真假不查类型:45 绿 / 2 红,被「F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)」发现
-✓ M29 F-04 constraintVer 不校验:45 绿 / 2 红,被「服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照」发现
-✓ M30 F-04 kind 不查枚举:46 绿 / 1 红,被「F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收」发现
-✓ M31 F-04 放行未知字段:46 绿 / 1 红,被「F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收」发现
-✓ M32 RR-01 合规 started 清掉被拒收的 blocked(审查存活变异):46 绿 / 1 红,被「RR-01:被拒收的 blocked 之后只来一个合规 started,也不算解除(审查存活变异)」发现
-✓ M33 RR-01 合规 completed 清掉被拒收的 blocked:46 绿 / 1 红,被「RR-01:被拒收的 blocked 未合规重报时,另一种合规汇报(completed)不能把它清掉 → failed」发现
-✓ M34 RR-01 受理 blocked 后不冻结回收:46 绿 / 1 红,被「RR-01:已受理 blocked 后进程与后代被冻结回收,之后的 milestone/completed 和孙进程副作用都不发生」发现
-✓ M35 RR-01 resume 不解除被拒收的受阻:46 绿 / 1 红,被「RR-01:被拒收的 blocked 由宿主显式 resume 解除,续接一轮正常完成(对照)」发现
-✓ M36 RR-02 不要求 host MCP connected:45 绿 / 2 红,被「RR-02:report_progress MCP 起不来时 init 里 host 为 failed → 回收进程组并 failed,不报 completed」发现
-✓ M37 RR-02 不要求工具清单里有 report_progress:45 绿 / 2 红,被「F-03:CLI 正常结束但留下孙进程时,收尾先回收进程组再报 completed;孙进程不再产生副作用」发现
-✓ M38 RR-02 tools 元素不查类型:46 绿 / 1 红,被「RR-02:与真实 CLI 同形的 init(host status failed、工具里无 report_progress)判为无法核验;connected 的同形 init 放行」发现
-✓ M39 RR-03 不按 ppid 找后代(只认进程组):46 绿 / 1 红,被「RR-03:setsid 脱离进程组的孙进程在 stopped 之前被杀,之后不出现标记文件」发现
-✓ M40 RR-03 stopped 不带 descendant-tree 范围:44 绿 / 3 红,被「F-03:CLI 正常结束但留下孙进程时,收尾先回收进程组再报 completed;孙进程不再产生副作用」发现
-✓ M41 RR-04 运行中也给快照:44 绿 / 3 红,被「RR-01:已受理 blocked 后进程与后代被冻结回收,之后的 milestone/completed 和孙进程副作用都不发生」发现
-✓ M42 RR-04 后代树未清也给快照:46 绿 / 1 红,被「RR-04/RR-05:后代树在 SIGKILL 后仍无法确认为空(ps 不可用)→ failed 而非 stopped,快照 not-quiescent」发现
-✓ M43 RR-05 违规压过停止:44 绿 / 3 红,被「F-03:stop 回收整个进程组,孙进程在 stopped 之前退出,之后不再产生副作用」发现
-✓ M44 RR-05 后代树未清也照报 stopped:45 绿 / 2 红,被「RR-04/RR-05:后代树在 SIGKILL 后仍无法确认为空(ps 不可用)→ failed 而非 stopped,快照 not-quiescent」发现
-✓ M45 RR-05 违规不留痕:44 绿 / 3 红,被「F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)」发现
+✓ 原样副本:49 绿 / 0 红,计划 49 条,退出码 0
+✓ M01 brief 放行 memory 等额外字段:48 绿 / 1 红,被「brief 带 memory 或 soul 字段被拒绝,不起任何进程(AC-33 ④ 阳性埋雷)」发现
+✓ M02 brief 放行明文凭据:48 绿 / 1 红,被「同一 brief 只切凭据:明文 token 被拒绝,引用句柄放行(单开关)」发现
+✓ M03 --allowedTools 不按 brief.tools:47 绿 / 2 红,被「CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress」发现
+✓ M04 没有 milestone 就不报 completed:40 绿 / 9 红,被「F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress」发现
+✓ M05 非零退出也报 completed:47 绿 / 2 红,被「CLI 给出 success 结果但进程非零退出 → failed,不报 completed」发现
+✓ M06 stop 等主进程退出后才报 stopped(不是 mirasim 的立即报):45 绿 / 4 红,被「stop:对进程组 SIGTERM 后立即产出 stopped,不等进程退出;只产出一次,进程随后退出」发现
+✓ M07 快照缺 constraintVer 放行:48 绿 / 1 红,被「没汇报过约束版本的 Compute 拿不到快照;缺 constraintVer 的 handoff 被 spawn 拒绝(AC-07 阳性埋雷)」发现
+✓ M08 handoff 不写进首个提示:48 绿 / 1 红,被「带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里」发现
+✓ M09 env 继承宿主进程环境(带明文):48 绿 / 1 红,被「子进程 env 不继承宿主进程环境里的明文密钥,凭据只以引用句柄出现」发现
+✓ M10 --tools 不按 brief.tools:16 绿 / 33 红,被「CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress」发现
+✓ M11 已受理 blocked 不停在受阻:48 绿 / 1 红,被「RR-05:terminalFor 的优先级:停止 > 违规 > 进程失败 > 完成;违规保留在 violations,stopped.scope=process-group」发现
+✓ M12 被拒收的汇报也产出事件:48 绿 / 1 红,被「CLI 以权限拒绝回绝的 report_progress(内容合规,tool_result is_error)不产出事件,只记入拒收」发现
+✓ M13 到期不对进程组发 SIGKILL:46 绿 / 3 红,被「F-03:孙进程忽略 SIGTERM 时 completed 不等它;reapForceMs 后进程组 SIGKILL,孙进程随后消失」发现
+✓ M14 handoff 不列进装配清单:48 绿 / 1 红,被「带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里」发现
+✓ M15 resume 不带 CLI 会话号:47 绿 / 2 红,被「blocked 后 CLI 结束不报 completed;resume 用同一 CLI 会话续接后报 completed」发现
+✓ M16 F-01 brief.tools 放行 default 等非内置名:47 绿 / 2 红,被「brief 的运行位置不是本机、工具名带逗号拼接时被拒绝」发现
+✓ M17 F-01 空集时 --tools 给 default:47 绿 / 2 红,被「F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress」发现
+✓ M18 F-01 不核对 CLI init 的实际挂载清单:47 绿 / 2 红,被「F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)」发现
+✓ M19 F-02 忽略 Compute 汇报的 failed:48 绿 / 1 红,被「F-02:Compute 经 report_progress 明确汇报放弃,CLI 正常结束也报 failed 不报 completed」发现
+✓ M20 F-02 result 行不看 is_error:48 绿 / 1 红,被「F-02:result 行 subtype 是 success 但 is_error 为 true → failed」发现
+✓ M21 F-02 被拒收的 blocked 不记为未解决:44 绿 / 5 红,被「服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照」发现
+✓ M22 CLI 不自成进程组:42 绿 / 7 红,被「F-03:stop 对进程组 SIGTERM 后立即产出 stopped;同组孙进程随后退出,不再产生副作用」发现
+✓ M23 CLI 正常结束后不回收进程组:47 绿 / 2 红,被「F-03:CLI 正常结束留下同组孙进程时,completed 立即产出,收尾对进程组 SIGTERM,孙进程随后退出且不再产生副作用」发现
+✓ M24 stop 只对 CLI 进程本身发 SIGTERM:48 绿 / 1 红,被「stop:进程无视 SIGTERM 时 stopped 照样立即产出,reapForceMs 后对进程组 SIGKILL」发现
+✓ M25 F-04 MCP 服务器不校验 schema:48 绿 / 1 红,被「F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收」发现
+✓ M26 F-04 适配器不做第二道 schema 校验:48 绿 / 1 红,被「F-04:服务器校验失效、回执说已记录时,适配器自己的 schema 校验仍拒收不合规的 blocked」发现
+✓ M27 F-04 needs 只查真假不查类型:43 绿 / 6 红,被「F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)」发现
+✓ M28 F-04 stage 只查真假不查类型:47 绿 / 2 红,被「F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)」发现
+✓ M29 F-04 constraintVer 不校验:47 绿 / 2 红,被「服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照」发现
+✓ M30 F-04 kind 不查枚举:48 绿 / 1 红,被「F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收」发现
+✓ M31 F-04 放行未知字段:48 绿 / 1 红,被「F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收」发现
+✓ M32 RR-01 合规 started 清掉被拒收的 blocked(审查存活变异):48 绿 / 1 红,被「RR-01:被拒收的 blocked 之后只来一个合规 started,也不算解除(审查存活变异)」发现
+✓ M33 RR-01 合规 completed 清掉被拒收的 blocked:48 绿 / 1 红,被「RR-01:被拒收的 blocked 未合规重报时,另一种合规汇报(completed)不能把它清掉 → failed」发现
+✓ M34 RR-01 受理 blocked 后不对进程组 SIGSTOP:48 绿 / 1 红,被「RR-01:已受理 blocked 后对进程组 SIGSTOP 冻结,之后的 milestone/completed 与同组孙进程副作用都不发生」发现
+✓ M35 RR-01 resume 不解除被拒收的受阻:48 绿 / 1 红,被「RR-01:被拒收的 blocked 由宿主显式 resume 解除,续接一轮正常完成(对照)」发现
+✓ M36 RR-02 不要求 host MCP connected:47 绿 / 2 红,被「RR-02:report_progress MCP 起不来时 init 里 host 为 failed → 回收进程组并 failed,不报 completed」发现
+✓ M37 RR-02 不要求工具清单里有 report_progress:48 绿 / 1 红,被「RR-02:与真实 CLI 同形的 init(host status failed、工具里无 report_progress)判为无法核验;connected 的同形 init 放行」发现
+✓ M38 RR-02 tools 元素不查类型:48 绿 / 1 红,被「RR-02:与真实 CLI 同形的 init(host status failed、工具里无 report_progress)判为无法核验;connected 的同形 init 放行」发现
+✓ M39 信号只发给进程本身、不发给进程组:45 绿 / 4 红,被「F-03:stop 对进程组 SIGTERM 后立即产出 stopped;同组孙进程随后退出,不再产生副作用」发现
+✓ M40 stopped 不带 process-group 范围:45 绿 / 4 红,被「stop:对进程组 SIGTERM 后立即产出 stopped,不等进程退出;只产出一次,进程随后退出」发现
+✓ M41 RR-04 运行中也给快照:47 绿 / 2 红,被「RR-01:已受理 blocked 后对进程组 SIGSTOP 冻结,之后的 milestone/completed 与同组孙进程副作用都不发生」发现
+✓ M42 RR-04 快照不等主进程退出(只看终态):48 绿 / 1 红,被「RR-04:运行中、stopped 已产出但主进程未退出时快照都是 not-quiescent;主进程退出后才给出快照」发现
+✓ M43 RR-05 违规压过停止:48 绿 / 1 红,被「RR-05:terminalFor 的优先级:停止 > 违规 > 进程失败 > 完成;违规保留在 violations,stopped.scope=process-group」发现
+✓ M44 升级间隔不按配置(写死 10 秒):47 绿 / 2 红,被「F-03:孙进程忽略 SIGTERM 时 completed 不等它;reapForceMs 后进程组 SIGKILL,孙进程随后消失」发现
+✓ M45 RR-05 违规不留痕:46 绿 / 3 红,被「F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)」发现
 45 个变异
 变异校准通过
