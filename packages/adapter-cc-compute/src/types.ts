@@ -29,7 +29,7 @@ export interface AdapterOptions {
   readonly runner?: ClaudeRunner;
   /** 宿主自己给 CLI 的运行配置(例如模型网关地址)。不来自 brief,也不继承宿主进程的整份环境。 */
   readonly hostEnv?: Readonly<Record<string, string>>;
-  /** 对进程组发 SIGTERM 之后等多久仍未退出就发 SIGKILL;默认 10000,对应 mirasim 的 MIRASIM_REAP_FORCE_MS */
+  /** 对主进程发 SIGTERM 之后等多久主进程仍未退出就对进程组发 SIGKILL;默认 10000,对应 mirasim 的 MIRASIM_REAP_FORCE_MS */
   readonly reapForceMs?: number;
   /** report_progress MCP 服务器的启动命令;默认是本包 mcp/report-mcp.mjs。测试用它注入起不来的服务器 */
   readonly reportServer?: { readonly command: string; readonly args?: readonly string[] };
@@ -71,12 +71,14 @@ export type ComputeEvent =
       readonly code: number | null;
       readonly signal: string | null;
       /**
-       * 与 mirasim 0.0.774 一致(g-group#2309):stop 对 CLI 的进程组发 SIGTERM 后立即产出 stopped,不等进程退出确认;
-       * reapForceMs 后进程组仍有进程就发 SIGKILL。只覆盖留在 CLI 进程组里的进程:脱离进程组的后代(setsid、
-       * 双 fork 守护进程、launchd/systemd 托管)不覆盖。内核不得把 stopped 当作执行树已静止,更不是容器级静止;
-       * 完全隔离归 placement=cloud_sandbox / 容器,不在本适配器。
+       * 对照 mirasim 0.0.774 server-main.cjs 的 z2(child,{graceMs:0,group:true}) POSIX 路径(g-group#2309):
+       * stop 立即产出 stopped,不等进程退出;初始 SIGTERM 只发给 CLI 主进程,不发给进程组;
+       * reapForceMs(默认 10000,MIRASIM_REAP_FORCE_MS)后主进程仍未退出才对进程组 SIGKILL;主进程先退出就取消这次组 SIGKILL。
+       * 所以主进程按时退出时,同进程组的其它进程(MCP 服务器、Bash 起的子进程)收不到任何信号,可能继续运行;
+       * 脱离进程组的后代(setsid、双 fork 守护进程)任何情况下都不覆盖。
+       * 内核不得把 stopped 当作执行树已静止,更不是容器级静止;完全隔离归 placement=cloud_sandbox / 容器,不在本适配器。
        */
-      readonly scope: "process-group";
+      readonly scope: "main-then-group";
       /** 停止之前适配器判定过的违规(工具越界、init 无法核验等),停止优先于违规但违规保留可审计 */
       readonly violations: readonly string[];
     };
@@ -92,7 +94,7 @@ export interface ComputeAdapter {
   /** 这一轮产出终态(或停在受阻)且 CLI 主进程已退出后,返回这一轮的事件 */
   settled(computeId: string): Promise<readonly ComputeEvent[]>;
   /** 只在终态(stopped/completed/failed)且 CLI 主进程已退出之后成功;否则 {ok:false, reason:"not-quiescent"}。
-   *  不检查脱离进程组的后代,见 stopped.scope */
+   *  不检查同组或脱组的其它进程,见 stopped.scope */
   snapshot(computeId: string): SnapshotResult;
   /** 被拒收(服务器 isError,或回执合规但内容不合 schema)的汇报记录,按发生顺序;它们不产出语义事件 */
   rejectedReports(computeId: string): readonly RejectedReport[];

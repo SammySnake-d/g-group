@@ -34,7 +34,22 @@ const plan = resume ? (script.resume ?? { reports: [], result: "success" }) : sc
 
 // 挂起剧本在写记录之前就装好信号处理,避免测试读到记录后发的 SIGTERM 落在默认处理上。
 // graceful:收到 SIGTERM 后 300ms 才退出;stubborn:忽略 SIGTERM,只有 SIGKILL 能结束
-if (plan.hang) process.on("SIGTERM", () => { if (plan.hang === "graceful") setTimeout(() => process.exit(143), 300); });
+// 挂起的 CLI 收到 SIGTERM 时写 FAKE_RECORD.term(主进程收到了 SIGTERM 的事件证据)
+const noteTerm = () => { if (process.env.FAKE_RECORD) fs.writeFileSync(`${process.env.FAKE_RECORD}.term`, ""); };
+// graceful:收到 SIGTERM 后 300ms 退出;quick:收到 SIGTERM 立即退出;stubborn:忽略 SIGTERM,只有 SIGKILL 能结束
+if (plan.hang && plan.hang !== "late") process.on("SIGTERM", () => {
+  noteTerm();
+  if (plan.hang === "graceful") setTimeout(() => process.exit(143), 300);
+  if (plan.hang === "quick") process.exit(143);
+});
+// hang:"late" 收到 SIGTERM 后先输出 plan.lateReport 的 tool_use 与伪造的"已记录"回执(迟到的汇报,R3-01),400ms 后退出
+if (plan.hang === "late") process.on("SIGTERM", () => {
+  noteTerm();
+  const id = "toolu_late";
+  out({ type: "assistant", session_id: sid, message: { role: "assistant", content: [{ type: "tool_use", id, name: REPORT, input: plan.lateReport }] } });
+  out({ type: "user", session_id: sid, message: { role: "user", content: [{ type: "tool_result", tool_use_id: id, content: [{ type: "text", text: "已记录。" }] }] } });
+  setTimeout(() => process.exit(143), 400);
+});
 // 挂起剧本从一开始就占住事件循环:stop 按进程组发 SIGTERM 时 MCP 服务器也会退出,
 // 没有这个定时器,stubborn 会因为等不到 MCP 回复、事件循环排空而自己退出(退出码 13),测不到 SIGKILL 升级
 if (plan.hang) setInterval(() => {}, 1000);
@@ -46,17 +61,15 @@ if (process.env.FAKE_RECORD) {
 
 // 孙进程的副作用协议(事件屏障,不靠时间):孙进程只在测试创建 `<marker>.trigger` 之后才写 marker;
 // 收到 SIGTERM 就置"被要求退出"并立即退出,写之前先检查这个标记。ignoreTerm:true 的孙进程忽略 SIGTERM,只有 SIGKILL 能结束。
-// 孙进程 pid 在输出 init 之前就写进 FAKE_RECORD.grandchild.pid,并在 stdout 打一行 {"type":"fake_grandchild","pid":N}
-// (适配器不认识这种行,原样忽略);测试拿到 started/completed 时 pid 文件一定已经存在。
+// 孙进程 pid 在输出 init 之前就写进 FAKE_RECORD.grandchild.pid;收到 SIGTERM 时先写 <marker>.term(谁收到了 SIGTERM 的事件证据)。
+// 不再往 stdout 打前导行(R3-03:init 之前的未认可输出会被判违规);测试拿到 started/completed 时 pid 文件一定已经存在。
 const markerCode = (marker, ignoreTerm) => `const fs = require("node:fs"); let stopping = false;
-process.on("SIGTERM", () => { if (${ignoreTerm === true}) return; stopping = true; process.exit(0); });
+process.on("SIGTERM", () => { fs.writeFileSync(${JSON.stringify(`${marker}.term`)}, ""); if (${ignoreTerm === true}) return; stopping = true; process.exit(0); });
 setInterval(() => { if (!stopping && fs.existsSync(${JSON.stringify(`${marker}.trigger`)}) && !fs.existsSync(${JSON.stringify(marker)})) fs.writeFileSync(${JSON.stringify(marker)}, "副作用"); }, 20);`;
-const early = [];
 if (plan.grandchild) {
   const { marker, setsid, ignoreTerm } = plan.grandchild;
   const gc = spawn(process.execPath, ["-e", markerCode(marker, ignoreTerm)], { stdio: "ignore", detached: setsid === true });
   if (process.env.FAKE_RECORD) fs.writeFileSync(`${process.env.FAKE_RECORD}.grandchild.pid`, String(gc.pid));
-  early.push({ type: "fake_grandchild", pid: gc.pid });
   gc.unref();
 }
 if (plan.daemon && process.env.FAKE_RECORD) {
@@ -70,7 +83,6 @@ require("node:fs").writeFileSync(${JSON.stringify(pidFile)}, String(c.pid)); c.u
 }
 
 const out = (o) => process.stdout.write(`${JSON.stringify(o)}\n`);
-for (const line of early) out(line);
 const sid = resume ?? crypto.randomUUID();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -110,7 +122,10 @@ const init = { type: "system", subtype: "init", cwd: process.cwd(), session_id: 
   mcp_servers: client ? [{ name: "host", status: connected ? "connected" : "failed", source: "dynamic" }] : [], permissionMode: flag("--permission-mode") ?? "default" };
 if (plan.init === "noTools") init.tools = "Read,Write";
 if (plan.init === "badTools") init.tools = [...initTools, 42];
+// 剧本 preInit:init 之前原样输出的行(字符串);postInit:init 之后、汇报之前原样输出的行(R3-03)
+for (const line of plan.preInit ?? []) process.stdout.write(`${line}\n`);
 if (plan.init !== "missing") out(init);
+for (const line of plan.postInit ?? []) process.stdout.write(`${line}\n`);
 // 输出 init 之后写 FAKE_RECORD.init:测试据此知道 CLI 已过了握手与 init 这一步
 if (process.env.FAKE_RECORD) fs.writeFileSync(`${process.env.FAKE_RECORD}.init`, JSON.stringify(init));
 
