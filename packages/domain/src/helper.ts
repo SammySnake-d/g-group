@@ -1,4 +1,3 @@
-// biome-ignore-all lint/correctness/noUnusedVariables lint/correctness/noUnusedFunctionParameters lint/correctness/noUnusedImports: 红提交空壳,绿提交恢复实现
 import { isSeq, normalize, type Schema } from "./contact.ts";
 
 // Helper 三种入口(用户 g-group#1365、#1353)。Helper 的本质只有两条:只为用户本人服务;能读哪些内容。
@@ -33,10 +32,29 @@ const no = (reason: string): RouteResult => ({ ok: false, reason });
  * 入口形状不对、kind 不认识、caller 不合形状或 owner 不是非空字符串时返回 { ok:false, reason },不抛、不返回 undefined。
  */
 export function routeHelper(entry: HelperEntry, caller: { kind: "user" | "contact"; id: string }, owner: string): RouteResult {
-  throw new Error("未实现");
+  if (typeof owner !== "string" || !owner.trim()) return no("owner 必须是非空字符串");
+  const who = normalize<{ kind: string; id: string }>(caller, CALLER_SCHEMA, "调用方");
+  if (!who.ok) return no(who.reason);
+  if (who.value.kind !== "user" && who.value.kind !== "contact") return no(`调用方种类 ${who.value.kind} 不认识`);
+  if (!who.value.id.trim()) return no("调用方 id 不能为空");
+  const head = normalize<{ kind: string }>(entry, { kind: { kind: "string" } }, "Helper 入口");
+  if (!head.ok) return no(head.reason);
+  const variant = ENTRY_SCHEMAS.get(head.value.kind);
+  if (!variant) return no(`Helper 入口种类 ${head.value.kind} 不认识`);
+  const n = normalize<{ conversationId?: string; seq?: number }>(entry, variant, "Helper 入口");
+  if (!n.ok) return no(n.reason);
+  const e = n.value;
+  if (head.value.kind !== "global" && !e.conversationId?.trim()) return no("conversationId 必须是非空字符串");
+  if (head.value.kind === "mention" && !isSeq(e.seq as number)) return no(`seq ${e.seq} 不是合法的消息位置(非负整数)`);
+  if (who.value.kind !== "user" || who.value.id !== owner) return no("Helper 只为用户本人服务,其他人叫它不执行");
+  switch (head.value.kind) {
+    case "global": return { ok: true, route: { replyIn: "global-panel", becomesMessage: false, contextConversation: null, replyToSeq: null } };
+    case "mention": return { ok: true, route: { replyIn: "conversation", becomesMessage: true, contextConversation: e.conversationId as string, replyToSeq: e.seq as number } };
+    default: return { ok: true, route: { replyIn: "sidebar", becomesMessage: false, contextConversation: e.conversationId as string, replyToSeq: null } };
+  }
 }
 
 /** Helper 不是项目成员:不参与扫一眼抢活,不认领任务。 */
 export function helperMayClaimTasks(): boolean {
-  throw new Error("未实现");
+  return false;
 }
