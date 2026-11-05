@@ -5,7 +5,7 @@
 // AC-19 确认卡绑定版本,卡片是不可变快照(CORR-04)。
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { apply, applyAll, type Effect, EVENT_KINDS, type EventKind, newTask, type Outcome, STATES, TABLE, type Task, type TaskEvent, type TaskState } from "./task.ts";
+import { apply, applyAll, type Effect, EVENT_KINDS, type EventKind, newTask, type Outcome, STATES, TABLE, type Task, type TaskEvent, type TaskState, validateEvent } from "./task.ts";
 
 const must = (r: Outcome) => {
   if (!r.ok) throw new Error(r.reason);
@@ -97,12 +97,21 @@ const SPEC: { [S in TaskState]: { [E in EventKind]: Exp } } = {
   T10_Cancelled: { ...allIgn(), Dispatch: ORPHAN_STOP("T10_Cancelled") },
   T11_Failed: { ...allIgn(), Dispatch: ORPHAN_STOP("T11_Failed") },
 };
+// 这些状态的代表性任务从未分配过交付代次,样例里的第 1 代次是未分配的未来代次:四类交付事件在任何状态都必须拒绝(R7-CORR-02)
+for (const s of ["T1_Open", "T2_Claimed", "T3_Running", "T4b_BlockedOnHuman", "T5_InReview", "T9_StopRequested", "T10_Cancelled", "T11_Failed"] as const) {
+  for (const k of ["DeliveredCard", "UserAccept", "UserReject", "AcceptTimeout"] as const) SPEC[s][k] = "rej";
+}
 test("AC-09 每个状态×每个事件都有明确处理:拒绝格实际拒绝并给出原因,忽略格实际不改任务", () => {
   for (const s of STATES) for (const e of EVENT_KINDS) {
     const cell = TABLE[s][e];
     assert.ok(cell && ["go", "reject", "ignore"].includes(cell.kind), `${s} × ${e} 是空白格`);
     const t = inState(s);
     const r = apply(t, SAMPLE[e]);
+    // 入口先于状态表:本任务未分配过的交付代次直接拒绝,轮不到表格(R7-CORR-02)
+    if (["DeliveredCard", "UserAccept", "UserReject", "AcceptTimeout"].includes(e) && t.deliverySeq === 0) {
+      assert.ok(!r.ok && /未分配/.test(r.reason), `${s} × ${e} 未分配的交付代次应在入口拒绝`);
+      continue;
+    }
     if (cell.kind === "reject") assert.ok(!r.ok && r.reason.includes(cell.reason) && cell.reason.length > 0, `${s} × ${e} 拒绝但没给出表里的原因`);
     if (cell.kind === "ignore") {
       assert.ok(cell.reason.length > 0, `${s} × ${e} 忽略但没写原因`);
@@ -1260,4 +1269,167 @@ test("R6-TEST-01 归档后退回再交付同一 commit:交付代次不归零,旧
 test("R6-TEST-01 当前代次号但 commit 不符的退回被当作旧回包忽略,不打断同批当前确认", () => {
   const r = must(applyAll(delivered(), [{ kind: "UserReject", taskId: "t1", by: "u1", computeResumable: true, deliveryRound: 1, commit: "other" }, { kind: "UserAccept", by: "u1", ...D1 }]));
   assert.equal(r.task.state, "T8_Accepted");
+});
+
+// ---- 第七轮 ----
+// 独立于实现的事件形状期望:每种事件的必填字段与取值域(s=非空字符串,n=非负整数,p=正整数,b=布尔,数组=枚举)。
+type Dom = "s" | "n" | "p" | "b" | readonly string[];
+const SHAPES: { [K in EventKind]: { req: Record<string, Dom>; opt?: Record<string, Dom> } } = {
+  Claim: { req: { by: "s" } },
+  Dispatch: { req: { computeId: "s", model: "s", requestId: "s" } },
+  ProducerModelAdded: { req: { model: "s", computeId: "s" } },
+  NeedHuman: { req: { qId: "s", computeId: "s", constraintVer: "n" } },
+  HumanReply: { req: { qId: "s", constraintVer: "n", answer: ["approve", "reject"] } },
+  Amend: { req: { by: "s", computeResumable: "b" } },
+  SubmitForReview: { req: { commit: "s", computeId: "s", constraintVer: "n" } },
+  Review: { req: { reviewerId: "s", reviewerModel: "s", round: "p", commit: "s", constraintVer: "n", verdict: ["approve", "reject"] }, opt: { waiverBy: "s" } },
+  DeliveredCard: { req: { taskId: "s", deliveryRound: "p", commit: "s" } },
+  UserAccept: { req: { taskId: "s", by: "s", deliveryRound: "p", commit: "s" } },
+  UserReject: { req: { taskId: "s", by: "s", computeResumable: "b", deliveryRound: "p", commit: "s" } },
+  AcceptTimeout: { req: { taskId: "s", deliveryRound: "p", commit: "s" } },
+  Cancel: { req: { by: "s" } },
+  StoppedConfirmed: { req: { taskId: "s" }, opt: { computeId: "s", requestId: "s" } },
+  ExecFailed: { req: {}, opt: { computeId: "s", requestId: "s" } },
+};
+/** 每种取值域的非法值:缺失、null、错类型、越界。 */
+const BAD: Record<"s" | "n" | "p" | "b" | "enum", unknown[]> = {
+  s: [undefined, null, 1, true, "", ["x"], {}],
+  n: [undefined, null, "1", true, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 2],
+  p: [undefined, null, "1", true, 0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY],
+  b: [undefined, null, 0, 1, "true"],
+  enum: [undefined, null, 1, "", "maybe"],
+};
+const badOf = (d: Dom) => (typeof d === "string" ? BAD[d] : BAD.enum);
+const raw = (e: TaskEvent, patch: Record<string, unknown>): TaskEvent => {
+  const o: Record<string, unknown> = { ...e, ...patch };
+  for (const [k, v] of Object.entries(patch)) if (v === undefined) delete o[k];
+  return o as unknown as TaskEvent;
+};
+
+test("R7-TEST-01 形状校验:每种事件的合法样例通过", () => {
+  for (const k of EVENT_KINDS) assert.equal(validateEvent(SAMPLE[k]), null, k);
+  assert.equal(validateEvent({ kind: "Review", reviewerId: "r", reviewerModel: "m", round: 1, commit: "c", constraintVer: 0, verdict: "reject", computeResumable: false }), null);
+  assert.equal(validateEvent({ kind: "ExecFailed" }), null);
+  assert.equal(validateEvent({ kind: "StoppedConfirmed", taskId: "t" }), null);
+});
+
+test("R7-TEST-01 形状校验:每种事件 × 每个必填字段 × 缺失/null/错类型/越界都被拒,并点名字段", () => {
+  for (const k of EVENT_KINDS) for (const [f, d] of Object.entries(SHAPES[k].req)) for (const v of badOf(d)) {
+    const why = validateEvent(raw(SAMPLE[k], { [f]: v }));
+    assert.ok(why?.includes(`${k}.${f}`), `${k}.${f}=${String(v)} 应被拒,实际 ${why}`);
+  }
+});
+
+test("R7-TEST-01 形状校验:可选字段可以省略,出现时取值非法也被拒;reject 审查必须带 computeResumable", () => {
+  for (const k of EVENT_KINDS) for (const [f, d] of Object.entries(SHAPES[k].opt ?? {})) {
+    assert.equal(validateEvent(raw(SAMPLE[k], { [f]: undefined })), null, `${k}.${f} 省略`);
+    for (const v of badOf(d).filter((x) => x !== undefined)) assert.ok(validateEvent(raw(SAMPLE[k], { [f]: v })) !== null, `${k}.${f}=${String(v)}`);
+  }
+  assert.ok(validateEvent({ kind: "Review", reviewerId: "r", reviewerModel: "m", round: 1, commit: "c", constraintVer: 0, verdict: "reject" }) !== null);
+  for (const bad of [null, 1, "x", [], { kind: "Nope" }, { by: "u" }]) assert.ok(validateEvent(bad) !== null, JSON.stringify(bad));
+});
+
+test("R7-TEST-01 形状非法的事件经 apply 被拒,任务不变也不发副作用(每种事件各一例)", () => {
+  for (const s of STATES) for (const k of EVENT_KINDS) {
+    const [f, d] = Object.entries(SHAPES[k].req)[0] ?? ["computeId", "s" as Dom];
+    const r = apply(inState(s), raw(SAMPLE[k], { [f]: badOf(d)[2] }));
+    assert.equal(r.ok, false, `${s} × ${k}.${f}`);
+  }
+});
+
+const STOPPING = () => must(apply(running(), { kind: "Cancel", by: "u1" })).task;
+
+test("R7-CORR-01 五类必带 taskId 的事件:缺失/null/错类型/空串/别的任务都被拒,任务不变", () => {
+  const cases: [Task, TaskEvent][] = [
+    [delivered(), { kind: "UserAccept", by: "u1", ...D1 }],
+    [delivered(), { kind: "UserReject", by: "u1", computeResumable: true, ...D1 }],
+    [delivered(), { kind: "AcceptTimeout", ...D1 }],
+    [must(apply(inReview(), approve("abc", 0))).task, { kind: "DeliveredCard", ...D1 }],
+    [STOPPING(), { kind: "StoppedConfirmed", taskId: "t1", computeId: "cc-1" }],
+  ];
+  for (const [t, ev] of cases) {
+    assert.ok(must(apply(t, ev)).task !== t, `${ev.kind} 当前任务正例应生效`);
+    for (const v of [undefined, null, 7, "", "B"]) {
+      const r = apply(t, raw(ev, { taskId: v }));
+      assert.equal(r.ok, false, `${ev.kind} taskId=${String(v)}`);
+    }
+  }
+});
+
+test("R7-CORR-01 缺 taskId 的 JSON 输入(经 JSON.parse)不能验收或终结本任务", () => {
+  const t = delivered();
+  const json = JSON.parse(JSON.stringify({ kind: "UserAccept", by: "u1", deliveryRound: 1, commit: "abc" })) as TaskEvent;
+  assert.equal(apply(t, json).ok, false);
+  const stopJson = JSON.parse(JSON.stringify({ kind: "StoppedConfirmed", computeId: "cc-1" })) as TaskEvent;
+  const stopping = STOPPING();
+  assert.equal(apply(stopping, stopJson).ok, false);
+  assert.equal(apply(stopping, stopJson).ok || stopping.state, "T9_StopRequested");
+});
+
+test("R7-CORR-02 未分配的未来代次在 T7/T8a/T8_Accepted/T8_ArchivedUnverified 的四类交付事件都被拒;已分配旧代次仍忽略", () => {
+  const D2 = { taskId: "t1", deliveryRound: 2, commit: "abc" } as const;
+  const t7 = must(apply(inReview(), approve("abc", 0))).task;
+  const t8a = delivered();
+  const acc = must(apply(t8a, { kind: "UserAccept", by: "u1", ...D1 })).task;
+  const arc = must(apply(t8a, { kind: "AcceptTimeout", ...D1 })).task;
+  for (const t of [t7, t8a, acc, arc]) for (const ev of [
+    { kind: "DeliveredCard", ...D2 }, { kind: "UserAccept", by: "u1", ...D2 },
+    { kind: "UserReject", by: "u1", computeResumable: true, ...D2 }, { kind: "AcceptTimeout", ...D2 },
+  ] as TaskEvent[]) {
+    const r = apply(t, ev);
+    assert.ok(!r.ok && /未分配/.test(r.reason), `${t.state} × ${ev.kind}`);
+  }
+  const re = redelivered();
+  for (const ev of [{ kind: "DeliveredCard", ...D1 }, { kind: "UserAccept", by: "u1", ...D1 }, { kind: "AcceptTimeout", ...D1 }] as TaskEvent[]) {
+    assert.deepEqual(must(apply(re, ev)).task, re, ev.kind);
+  }
+});
+
+test("R7-TEST-01 错任务 ID 的交付事件在 T7/T8a/T8_Accepted/T8_ArchivedUnverified 全被拒;错任务停止确认在取消与失败停止中都被拒", () => {
+  const B = { taskId: "B", deliveryRound: 1, commit: "abc" } as const;
+  const t8a = delivered();
+  const states = [must(apply(inReview(), approve("abc", 0))).task, t8a, must(apply(t8a, { kind: "UserAccept", by: "u1", ...D1 })).task, must(apply(t8a, { kind: "AcceptTimeout", ...D1 })).task];
+  for (const t of states) for (const ev of [
+    { kind: "DeliveredCard", ...B }, { kind: "UserAccept", by: "u1", ...B },
+    { kind: "UserReject", by: "u1", computeResumable: true, ...B }, { kind: "AcceptTimeout", ...B },
+  ] as TaskEvent[]) assert.equal(apply(t, ev).ok, false, `${t.state} × ${ev.kind}`);
+  for (const t of [STOPPING(), must(apply(running(), { kind: "ExecFailed", computeId: "cc-1" })).task]) {
+    assert.equal(t.state, "T9_StopRequested");
+    assert.equal(apply(t, { kind: "StoppedConfirmed", taskId: "B", computeId: "cc-1" }).ok, false, t.stopReason ?? "");
+    assert.equal(must(apply(t, SC({ computeId: "cc-1" }))).task.state, t.stopReason === "fail" ? "T11_Failed" : "T10_Cancelled");
+  }
+});
+
+const upT2 = (id: string, req: string): TaskEvent => ({ kind: "Dispatch", computeId: id, model: PRODUCER, requestId: req });
+/** T2 里依次登记并确认停止三个孤儿 a/b/c。 */
+const threeRetired = () => must(applyAll(claimed().task, [upT2("a", "t1#L7"), SC({ computeId: "a" }), upT2("b", "t1#L8"), SC({ computeId: "b" }), upT2("c", "t1#L9"), SC({ computeId: "c" })])).task;
+
+test("R7-TEST-01 退役账本:三个孤儿全部保留且冻结,最早的重放上线与确认都不再释放槽位", () => {
+  const t = threeRetired();
+  assert.deepEqual(t.retired, ["a", "b", "c"]);
+  assert.ok(Object.isFrozen(t.retired));
+  assert.throws(() => { (t.retired as string[]).length = 0; }, TypeError);
+  const r = must(applyAll(t, [upT2("a", "t1#L7"), SC({ computeId: "a" })]));
+  assert.deepEqual(r.effects, [{ kind: "stop-compute", computeId: "a" }]);
+  assert.deepEqual(r.task.retired, ["a", "b", "c"]);
+});
+
+test("R7-TEST-01 未回绑时最早退役实例的迟到回包被忽略,首派实例同批上线", () => {
+  const r = must(applyAll(threeRetired(), [{ kind: "NeedHuman", qId: "q", computeId: "a", constraintVer: 0 }, upT2("cc-1", "t1#L0")]));
+  assert.equal(r.task.computeId, "cc-1");
+});
+
+test("R7-TEST-01 当前实例停止时追加进退役账本,不覆盖更早的退役记录", () => {
+  const t = must(applyAll(threeRetired(), [upT2("cc-1", "t1#L0"), { kind: "Cancel", by: "u1" }, SC({ computeId: "cc-1" })])).task;
+  assert.equal(t.state, "T10_Cancelled");
+  assert.deepEqual(t.retired, ["a", "b", "c", "cc-1"]);
+  const r = must(applyAll(t, [upT2("a", "t1#L7"), SC({ computeId: "a" })]));
+  assert.equal(r.effects.filter((e) => e.kind === "release-slot").length, 0);
+});
+
+test("R7-TEST-01 有另一个活动实例时,退役实例重放上线只停它自己,不停当前实例", () => {
+  const t = must(applyAll(threeRetired(), [upT2("cc-1", "t1#L0")])).task;
+  const r = must(apply(t, upT2("b", "t1#L8")));
+  assert.deepEqual(r.effects, [{ kind: "stop-compute", computeId: "b" }]);
+  assert.equal(r.task.computeId, "cc-1");
 });
