@@ -247,6 +247,18 @@ const M = [
   ["K34 资产登记不查同名直接工具", "contact.ts", "  if (c.tools.some((t) => t.name === a.name)) return { ok: false, reason: `${a.name} 已是直接工具,不必再登记` };\n", ""],
   ["K35 资产名按反向前缀匹配", "contact.ts", "c.computeAssets.find((x) => x.name === a.name)", "c.computeAssets.find((x) => a.name.startsWith(x.name))"],
   ["K36 同类第二个资产覆盖第一个", "contact.ts", "computeAssets: [...c.computeAssets, { name: a.name, kind: a.kind }]", "computeAssets: [...c.computeAssets.filter((x) => x.kind !== a.kind), { name: a.name, kind: a.kind }]"],
+  // 以下 V01–V08 取自 Codex 第七轮独立复审 reviews/feat-contact-helper.md CH-17(注入点与 independent-mutations-round7.json 一致),K37–K39 是本轮快照用例的埋雷
+  ["V01 script 类资产登记不查同名直接工具", "contact.ts", "if (c.tools.some((t) => t.name === a.name)) return", "if (a.kind !== \"script\" && c.tools.some((t) => t.name === a.name)) return"],
+  ["V02 直接工具只与 MCP 类资产互斥", "contact.ts", "c.computeAssets.some((x) => x.name === tool.name)", "c.computeAssets.some((x) => x.name === tool.name && x.kind === \"mcp\")"],
+  ["V03 只在全部工具越权时才拒", "contact.ts", "const extra = r.tools.filter((t) => !allowed.has(t));", "const extra = r.tools.every((t) => !allowed.has(t)) ? [...r.tools] : [];"],
+  ["V04 加锁允许任何非 revoked 状态", "contact.ts", "k.id === f.onlyCommitmentId && k.status === \"active\"", "k.id === f.onlyCommitmentId && k.status !== \"revoked\""],
+  ["V05 同名异类理由写死 research", "contact.ts", "reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记`", "reason: `research 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记`"],
+  ["V06 说明 rules 不复制", "contact.ts", "rules: Object.freeze([...r.rules])", "rules: r.rules"],
+  ["V07 说明 tools 不复制", "contact.ts", "tools: Object.freeze([...r.tools])", "tools: r.tools"],
+  ["V08 说明 credentialRefs 不复制", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs])", "credentialRefs: r.credentialRefs"],
+  ["K37 说明 rules 复制但不冻结", "contact.ts", "rules: Object.freeze([...r.rules])", "rules: [...r.rules]"],
+  ["K38 说明 tools 复制但不冻结", "contact.ts", "tools: Object.freeze([...r.tools])", "tools: [...r.tools]"],
+  ["K39 说明 credentialRefs 复制但不冻结", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs])", "credentialRefs: [...r.credentialRefs]"],
 ];
 function run(dir) {
   const files = fs.readdirSync(path.join(dir, "src")).filter((f) => f.endsWith(".test.ts")).map((f) => path.join("src", f));
