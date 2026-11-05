@@ -866,3 +866,130 @@ test("CH-20 入站意图形状不对一律 ignore;合法 work/control/chatter �
   assert.equal(decideUnderFocus(c, { kind: "control", action: "stop", commitmentId: "k" }), "handle");
   assert.equal(decideUnderFocus(c, { kind: "chatter", text: "x" }), "ignore");
 });
+
+test("CH-24 入站意图按 kind 分变体:合法 control/work/chatter 的判定;变体外额外字段丢弃、不影响判定", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "k", sourceSeq: 1, text: "x", boundTaskIds: [], schedule: null });
+  const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k" });
+  const locked = f.ok ? f.contact : (null as never);
+  const free = mk().contacts.get("c-mi")!;
+  const cases: [string, unknown, string, string][] = [
+    ["stop", { kind: "control", action: "stop", commitmentId: "k" }, "handle", "handle"],
+    ["revoke", { kind: "control", action: "revoke", commitmentId: "k9" }, "handle", "handle"],
+    ["reschedule", { kind: "control", action: "reschedule", commitmentId: "k" }, "handle", "handle"],
+    ["control 带 text:42", { kind: "control", action: "stop", commitmentId: "k", text: 42 }, "handle", "handle"],
+    ["control 带 debug", { kind: "control", action: "stop", commitmentId: "k", debug: true }, "handle", "handle"],
+    ["职责内 work", { kind: "work", text: "t", commitmentId: "k" }, "handle", "handle"],
+    ["职责外 work", { kind: "work", text: "t", commitmentId: null }, "decline-focused", "handle"],
+    ["work 带 action:42", { kind: "work", text: "t", commitmentId: "k", action: 42 }, "handle", "handle"],
+    ["chatter", { kind: "chatter", text: "hi" }, "ignore", "ignore"],
+    ["chatter 带 commitmentId:5", { kind: "chatter", text: "hi", commitmentId: 5 }, "ignore", "ignore"],
+  ];
+  for (const [label, intent, withLock, noLock] of cases) {
+    const parsed = JSON.parse(JSON.stringify(intent));
+    assert.equal(decideUnderFocus(locked, parsed), withLock, `有锁 ${label}`);
+    assert.equal(decideUnderFocus(free, parsed), noLock, `无锁 ${label}`);
+  }
+});
+
+test("CH-24 入站意图不合变体形状一律 ignore:每个变体 × 缺字段/错类型/null/枚举外/空 id", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "k", sourceSeq: 1, text: "x", boundTaskIds: [], schedule: null });
+  const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k" });
+  const locked = f.ok ? f.contact : (null as never);
+  const free = mk().contacts.get("c-mi")!;
+  const bad: unknown[] = [
+    { kind: "control" },
+    { kind: "control", action: "stop" },
+    { kind: "control", commitmentId: "k" },
+    { kind: "control", action: "explode", commitmentId: "k" },
+    { kind: "control", action: 1, commitmentId: "k" },
+    { kind: "control", action: "stop", commitmentId: null },
+    { kind: "control", action: "stop", commitmentId: "" },
+    { kind: "control", action: "stop", commitmentId: "  " },
+    { kind: "control", action: "stop", commitmentId: 7 },
+    { kind: "work", commitmentId: "k" },
+    { kind: "work", text: "t" },
+    { kind: "work", text: 3, commitmentId: "k" },
+    { kind: "work", text: null, commitmentId: "k" },
+    { kind: "work", text: "t", commitmentId: 9 },
+    { kind: "chatter" },
+    { kind: "chatter", text: 5 },
+    { kind: "bogus", text: "t" },
+    { text: "t" },
+    { kind: null },
+  ];
+  for (const intent of bad) {
+    const parsed = JSON.parse(JSON.stringify(intent));
+    assert.equal(decideUnderFocus(locked, parsed), "ignore", `有锁 ${JSON.stringify(intent)}`);
+    assert.equal(decideUnderFocus(free, parsed), "ignore", `无锁 ${JSON.stringify(intent)}`);
+  }
+});
+
+test("CH-25 只接受普通数据对象:外层 Proxy、数组 Proxy、自定义原型对象、类实例都拒;普通对象与 Object.create(null) 通过", () => {
+  const g = grantTool(mk().contacts.get("c-mi")!, { name: "get_weather", bounded: true });
+  const c = g.ok ? g.contact : (null as never);
+  const plain = { task: "t", rules: ["r1", "r2"], tools: ["get_weather"], credentialRefs: ["vault://mail/1"] };
+  const rules = ["r1", "r2"];
+  const outerProxy = new Proxy({ task: "t", rules, tools: ["get_weather"], credentialRefs: ["vault://mail/1"] }, {
+    getOwnPropertyDescriptor(t, k) { if (k === "tools") rules.length = 0; return Reflect.getOwnPropertyDescriptor(t, k); },
+  });
+  const r1 = briefFor(c, outerProxy);
+  assert.equal(!r1.ok && r1.reason, "Compute 说明请求 只接受普通数据对象");
+  const r2 = briefFor(c, { ...plain, rules: new Proxy(["r1"], {}) });
+  assert.equal(!r2.ok && r2.reason, "rules 只接受普通数据数组");
+  class Req { task = "t"; rules = ["r1"]; tools: string[] = []; credentialRefs: string[] = []; }
+  const r3 = briefFor(c, new Req());
+  assert.equal(!r3.ok && r3.reason, "Compute 说明请求 只接受普通数据对象");
+  const r4 = briefFor(c, Object.assign(Object.create({ inherited: 1 }), plain));
+  assert.equal(!r4.ok && r4.reason, "Compute 说明请求 只接受普通数据对象");
+  class MyArr extends Array<string> {}
+  const r5 = briefFor(c, { ...plain, tools: MyArr.from(["get_weather"]) });
+  assert.equal(!r5.ok && r5.reason, "tools 只接受普通数据数组");
+  assert.deepEqual(briefFor(c, plain), { ok: true, brief: { ...plain, placement: "local" } });
+  const bare = Object.assign(Object.create(null), plain);
+  assert.deepEqual(briefFor(c, bare), { ok: true, brief: { ...plain, placement: "local" } });
+  assert.deepEqual(briefFor(c, JSON.parse(JSON.stringify(plain))), { ok: true, brief: { ...plain, placement: "local" } });
+});
+
+test("CH-25 回执与登记入口同样拒绝外层 Proxy:回执作用域不能在读后改写;普通回执照常(对照)", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "a", sourceSeq: 1, text: "x", boundTaskIds: ["T"], schedule: null });
+  const b = commit(a.ok ? a.contact : (null as never), { id: "b", sourceSeq: 1, text: "y", boundTaskIds: ["T"], schedule: null });
+  const ended = settleTask(b.ok ? b.contact : (null as never), "T");
+  const ids = ["a"];
+  const proxied = new Proxy({ taskId: "T", commitmentIds: ids, basedOnSeq: 5 }, {
+    getOwnPropertyDescriptor(t, k) { if (k === "basedOnSeq") ids.splice(0, 1, "b"); return Reflect.getOwnPropertyDescriptor(t, k); },
+  });
+  assert.deepEqual(confirmFinalReport(ended, proxied).commitments, ended.commitments);
+  assert.deepEqual(confirmFinalReport(ended, { taskId: "T", commitmentIds: ["a"], basedOnSeq: 5 }).commitments.map((k) => k.status), ["done", "active"]);
+  const c = mk().contacts.get("c-mi")!;
+  assert.equal((grantTool(c, new Proxy({ name: "weather", bounded: true }, {})) as { reason: string }).reason, "直接工具 只接受普通数据对象");
+  assert.equal((grantComputeAsset(c, new Proxy({ name: "x", kind: "mcp" }, {})) as { reason: string }).reason, "能力资产 只接受普通数据对象");
+  assert.equal((commit(c, new Proxy({ id: "k", sourceSeq: 1, text: "x", boundTaskIds: [], schedule: null }, {})) as { reason: string }).reason, "承诺 只接受普通数据对象");
+  assert.equal(decideUnderFocus(c, new Proxy({ kind: "control", action: "stop", commitmentId: "k" }, {}) as never), "ignore");
+});
+
+test("CH-26 其余公开入口的快照:addContact/updateContact/setFocus/decideUnderFocus/commit 的嵌套 schedule 都只读一次并存首次值", () => {
+  let reads = 0;
+  const d = addContact(emptyDirectory(), { get id() { return ++reads === 1 ? "first" : "second"; }, name: "n", speakingModel: "m" });
+  assert.equal(reads, 1);
+  assert.deepEqual(d.ok && [...d.dir.contacts.keys()], ["first"]);
+  reads = 0;
+  const u = updateContact(mk(), "c-mi", { get memory() { return ++reads === 1 ? "original" : "changed"; } });
+  assert.equal(reads, 1);
+  assert.equal(u.ok && u.dir.contacts.get("c-mi")?.memory, "original");
+  const k = commit(mk().contacts.get("c-mi")!, { id: "k", sourceSeq: 5, text: "x", boundTaskIds: ["T"], schedule: null });
+  const base = k.ok ? k.contact : (null as never);
+  reads = 0;
+  const f = setFocus(base, { get onlyCommitmentId() { return ++reads <= 1 ? "k" : "other"; } });
+  assert.equal(reads, 1);
+  assert.deepEqual(f.ok && f.contact.focus, { onlyCommitmentId: "k" });
+  reads = 0;
+  const locked = f.ok ? f.contact : (null as never);
+  assert.equal(decideUnderFocus(locked, { get kind() { return ++reads === 1 ? "work" : "control"; }, text: "无关", commitmentId: null } as never), "decline-focused");
+  assert.equal(reads, 1);
+  reads = 0;
+  const s = commit(mk().contacts.get("c-mi")!, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: [], schedule: { get cron() { return ++reads === 1 ? "0 8 * * *" : "not-cron"; }, tz: "UTC", toleranceSec: 0 } });
+  assert.equal(reads, 1);
+  assert.deepEqual(s.ok && s.contact.commitments[0]?.schedule, { cron: "0 8 * * *", tz: "UTC", toleranceSec: 0 });
+  const extra = commit(mk().contacts.get("c-mi")!, { id: "x", sourceSeq: 1, text: "t", boundTaskIds: [], schedule: null, secret: "plaintext" } as never);
+  assert.equal(extra.ok && "secret" in extra.contact.commitments[0]!, false);
+});
