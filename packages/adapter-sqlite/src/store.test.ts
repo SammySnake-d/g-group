@@ -378,6 +378,32 @@ test("初始化失败(文件不是 SQLite 库):抛出原始错误,连续 20 次�
   closeStore(healthy);
 });
 
+test("初始化失败后 close 自身也抛错:仍抛初始化的原始错误,连接已关闭,恢复 close 后健康库照常读写", () => {
+  const f = prepare(dbFile());
+  fs.writeFileSync(f, "这不是 SQLite 数据库文件。".repeat(20));
+  // 人工故障注入:先真正关闭,再抛一个 close 故障;只在本测试内生效,finally 里恢复原方法
+  const realClose = DatabaseSync.prototype.close;
+  let closeCalls = 0;
+  DatabaseSync.prototype.close = function (this: DatabaseSync) { closeCalls++; realClose.call(this); throw new Error("模拟 close 故障"); };
+  let errs: unknown[];
+  const before = openFds();
+  try {
+    errs = failTimes(5, () => openStore(f));
+  } finally { DatabaseSync.prototype.close = realClose; }
+  assert.equal(openFds() - before, 0);
+  assert.equal(closeCalls, 5);
+  assert.equal(errs.filter((e) => e === undefined).length, 0);
+  for (const e of errs) {
+    assert.doesNotMatch(String((e as Error).message), /模拟 close 故障/);
+    assert.match(String((e as Error).message), /file is not a database/);
+    assert.equal((e as { errcode?: number }).errcode, 26);
+  }
+  const healthy = openStore(prepare(dbFile()), { busyTimeoutMs: 0 });
+  assert.deepEqual(commitDoc(healthy, "主稿", 0, "健康库可写"), { ok: true, ver: 1 });
+  assert.deepEqual(readDoc(healthy, "主稿"), { value: "健康库可写", ver: 1 });
+  closeStore(healthy);
+});
+
 test("初始化失败(只读打开的空库建不了表):抛出原始只读错误,没有遗留连接,健康库照常读写", () => {
   const f = prepare(dbFile());
   new DatabaseSync(f).close();
