@@ -729,3 +729,140 @@ test("CH-19 多项凭据逐项校验:合法引用后跟明文、空路径、路�
     assert.deepEqual(r.ok && r.brief.credentialRefs, refs, JSON.stringify(refs));
   }
 });
+
+/** getter 输入夹具:按读取次数依次返回 values(读完停在最后一个),并在 reads 里计数。 */
+const getterInput = (reads: Record<string, number>, spec: Record<string, readonly unknown[]>) => {
+  const o = {};
+  for (const [k, values] of Object.entries(spec)) {
+    reads[k] = 0;
+    Object.defineProperty(o, k, { enumerable: true, get: () => values[Math.min(reads[k]!++, values.length - 1)] });
+  }
+  return o;
+};
+
+test("CH-20 grantTool 的 name/bounded 各只读一次:getter 后续换成禁用名也存不进;首次就是禁用名或无界照常拒绝", () => {
+  const c = mk().contacts.get("c-mi")!;
+  const reads: Record<string, number> = {};
+  const r = grantTool(c, getterInput(reads, { name: ["weather", "weather", "run_command"], bounded: [true, false] }) as never);
+  assert.deepEqual(r.ok && r.contact.tools, [{ name: "weather", bounded: true }]);
+  assert.equal(r.ok && canCallDirectly(r.contact, "run_command"), false);
+  assert.deepEqual(reads, { name: 1, bounded: 1 });
+  const banned = grantTool(c, getterInput({}, { name: ["run_command", "weather"], bounded: [true] }) as never);
+  assert.equal(!banned.ok && banned.reason, "run_command 是通用能力,只能在 Compute 里用");
+  const unbounded = grantTool(c, getterInput({}, { name: ["weather"], bounded: [false, true] }) as never);
+  assert.match(!unbounded.ok ? unbounded.reason : "", /^weather 不是有界工具/);
+});
+
+test("CH-20 grantComputeAsset 的 name/kind 各只读一次:getter 后续换成已有直接工具名也绕不过互斥;首次就同名照常拒绝", () => {
+  const w = grantTool(mk().contacts.get("c-mi")!, { name: "weather", bounded: true });
+  const c = w.ok ? w.contact : (null as never);
+  const reads: Record<string, number> = {};
+  const r = grantComputeAsset(c, getterInput(reads, { name: ["something_else", "something_else", "weather"], kind: ["script", "mcp"] }) as never);
+  assert.deepEqual(r.ok && r.contact.computeAssets, [{ name: "something_else", kind: "script" }]);
+  assert.deepEqual(r.ok && r.contact.tools, [{ name: "weather", bounded: true }]);
+  assert.deepEqual(reads, { name: 1, kind: 1 });
+  const clash = grantComputeAsset(c, getterInput({}, { name: ["weather", "other"], kind: ["script"] }) as never);
+  assert.equal(!clash.ok && clash.reason, "weather 已是直接工具,不必再登记");
+  const a = grantComputeAsset(c, { name: "research", kind: "mcp" });
+  const kindSwap = grantComputeAsset(a.ok ? a.contact : (null as never), getterInput({}, { name: ["research"], kind: ["skill", "mcp"] }) as never);
+  assert.equal(!kindSwap.ok && kindSwap.reason, "research 已登记为 mcp 类能力资产,不能再以 skill 类同名登记");
+});
+
+test("CH-20 入参不是对象、字段类型不对、资产类别不认识:登记入口一律明确拒绝;合法输入照常(对照)", () => {
+  const c = mk().contacts.get("c-mi")!;
+  for (const bad of [null, "weather", ["weather"], 42]) {
+    assert.equal(!grantTool(c, bad as never).ok && (grantTool(c, bad as never) as { reason: string }).reason, "直接工具 必须是对象", String(bad));
+    assert.equal((grantComputeAsset(c, bad as never) as { reason: string }).reason, "能力资产 必须是对象", String(bad));
+  }
+  assert.equal((grantTool(c, { name: 7, bounded: true } as never) as { reason: string }).reason, "name 必须是字符串");
+  assert.equal((grantTool(c, { name: "weather", bounded: "yes" } as never) as { reason: string }).reason, "bounded 必须是布尔值");
+  assert.equal((grantComputeAsset(c, { name: "x", kind: "binary" } as never) as { reason: string }).reason, "未知的能力资产类别 binary");
+  assert.equal((grantComputeAsset(c, { name: "x", kind: null } as never) as { reason: string }).reason, "kind 必须是字符串");
+  for (const kind of ASSET_KINDS) assert.equal(grantComputeAsset(c, { name: "x", kind }).ok, true, kind);
+  assert.equal(grantTool(c, { name: "weather", bounded: true }).ok, true);
+});
+
+test("CH-21 briefFor 每个字段读到立即复制:后面字段的 getter 清空或改写前面已读的数组,说明仍是首次读到的内容", () => {
+  const g = grantTool(mk().contacts.get("c-mi")!, { name: "get_weather", bounded: true });
+  const a = grantComputeAsset(g.ok ? g.contact : (null as never), { name: "get_ip", kind: "mcp" });
+  const c = a.ok ? a.contact : (null as never);
+  const rules = ["改代码前先问", "不得泄露用户秘密"];
+  const tools = ["get_weather"];
+  const refs = ["vault://mail/1"];
+  const reads = { task: 0, rules: 0, tools: 0, credentialRefs: 0, placement: 0 };
+  const input = {
+    get task() { reads.task++; return "交付"; },
+    get rules() { reads.rules++; return rules; },
+    get tools() { reads.tools++; rules.length = 0; return tools; },
+    get credentialRefs() { reads.credentialRefs++; tools.splice(0, 1, "get_ip"); return refs; },
+    get placement() { reads.placement++; refs.splice(0, 1, "vault://news/2"); rules.push("偷加的规则"); return "local" as const; },
+  };
+  const r = briefFor(c, input);
+  assert.deepEqual(r, { ok: true, brief: { task: "交付", rules: ["改代码前先问", "不得泄露用户秘密"], tools: ["get_weather"], credentialRefs: ["vault://mail/1"], placement: "local" } });
+  assert.deepEqual(reads, { task: 1, rules: 1, tools: 1, credentialRefs: 1, placement: 1 });
+  const stable = briefFor(c, { task: "交付", rules: ["改代码前先问", "不得泄露用户秘密"], tools: ["get_weather"], credentialRefs: ["vault://mail/1"], placement: "local" });
+  assert.deepEqual(stable, r);
+});
+
+test("CH-22 placement 只有缺省或 undefined 时默认 local;显式 null、未知字符串、数字都拒绝;三种合法值原样返回", () => {
+  const c = mk().contacts.get("c-mi")!;
+  const base = { task: "t", rules: [] as string[], tools: [] as string[], credentialRefs: [] as string[] };
+  const missing = briefFor(c, base);
+  assert.equal(missing.ok && missing.brief.placement, "local");
+  const undef = briefFor(c, { ...base, placement: undefined } as never);
+  assert.equal(undef.ok && undef.brief.placement, "local");
+  assert.equal((briefFor(c, { ...base, placement: null } as never) as { reason: string }).reason, "placement 必须是字符串");
+  assert.equal((briefFor(c, { ...base, placement: 3 } as never) as { reason: string }).reason, "placement 必须是字符串");
+  assert.equal((briefFor(c, { ...base, placement: "mars" } as never) as { reason: string }).reason, "未知的运行位置 mars");
+  for (const placement of ["local", "byom_daemon", "cloud_sandbox"] as const) {
+    const r = briefFor(c, { ...base, placement });
+    assert.equal(r.ok && r.brief.placement, placement, placement);
+  }
+});
+
+test("CH-23 数组字段:首项非字符串、类数组对象一律拒绝;真字符串数组照常(对照)", () => {
+  const c = mk().contacts.get("c-mi")!;
+  const base = { task: "t", rules: [] as string[], tools: [] as string[], credentialRefs: [] as string[] };
+  for (const f of ["rules", "tools", "credentialRefs"] as const) {
+    assert.equal((briefFor(c, { ...base, [f]: [42, "生效规则"] } as never) as { reason: string }).reason, `${f} 里只能是字符串`, f);
+    assert.equal((briefFor(c, { ...base, [f]: { 0: "规则", length: 1 } } as never) as { reason: string }).reason, `${f} 必须是字符串数组`, f);
+  }
+  const ok = briefFor(c, { ...base, rules: ["生效规则"] });
+  assert.deepEqual(ok.ok && ok.brief.rules, ["生效规则"]);
+});
+
+test("CH-23 凭据引用必须整串是引用:明文前缀加合法引用后缀拒绝;纯引用照常(对照)", () => {
+  const c = mk().contacts.get("c-mi")!;
+  for (const ref of ["plaintext-secret vault://mail/1", "sk-live vault://a", "xvault://"]) {
+    const r = briefFor(c, { task: "t", rules: [], tools: [], credentialRefs: [ref] });
+    assert.match(!r.ok ? r.reason : "", /^凭据只能给引用句柄/, ref);
+  }
+  const ok = briefFor(c, { task: "t", rules: [], tools: [], credentialRefs: ["vault://mail/1"] });
+  assert.deepEqual(ok.ok && ok.brief.credentialRefs, ["vault://mail/1"]);
+});
+
+test("CH-20 承诺与回执入口同样只读一次:sourceSeq/basedOnSeq 的 getter 后续换成非法值不影响已存与已判的值", () => {
+  const reads: Record<string, number> = {};
+  const k = commit(mk().contacts.get("c-mi")!, getterInput(reads, { id: ["k1", "k2"], sourceSeq: [5, Number.NaN], text: ["汇报"], boundTaskIds: [["T1"], ["T9"]], schedule: [null] }) as never);
+  assert.deepEqual(k.ok && k.contact.commitments[0], { id: "k1", sourceSeq: 5, text: "汇报", boundTaskIds: ["T1"], awaitingReport: [], reportedTaskIds: [], schedule: null, status: "active" });
+  assert.deepEqual(reads, { id: 1, sourceSeq: 1, text: 1, boundTaskIds: 1, schedule: 1 });
+  const ended = settleTask(k.ok ? k.contact : (null as never), "T1");
+  const rReads: Record<string, number> = {};
+  const done = confirmFinalReport(ended, getterInput(rReads, { taskId: ["T1", "T9"], commitmentIds: [["k1"], []], basedOnSeq: [5, -1] }) as never);
+  assert.equal(done.commitments[0]?.status, "done");
+  assert.deepEqual(rReads, { taskId: 1, commitmentIds: 1, basedOnSeq: 1 });
+  const badSeq = commit(mk().contacts.get("c-mi")!, getterInput({}, { id: ["k1"], sourceSeq: [Number.NaN, 5], text: ["汇报"], boundTaskIds: [["T1"]], schedule: [null] }) as never);
+  assert.match(!badSeq.ok ? badSeq.reason : "", /不是合法的消息位置/);
+  assert.deepEqual(confirmFinalReport(ended, getterInput({}, { taskId: ["T1"], commitmentIds: [["k1"]], basedOnSeq: [-1, 5] }) as never).commitments, ended.commitments);
+  assert.deepEqual(confirmFinalReport(ended, { taskId: "T1", commitmentIds: "k1", basedOnSeq: 5 } as never).commitments, ended.commitments);
+});
+
+test("CH-20 入站意图形状不对一律 ignore;合法 work/control/chatter 照常(对照)", () => {
+  const c = mk().contacts.get("c-mi")!;
+  for (const bad of [null, "work", { kind: "bogus", text: "x" }, { kind: 1 }, { kind: "work", text: "x", commitmentId: 3 }]) {
+    assert.equal(decideUnderFocus(c, bad as never), "ignore", JSON.stringify(bad));
+  }
+  assert.equal(decideUnderFocus(c, { kind: "work", text: "x", commitmentId: null }), "handle");
+  assert.equal(decideUnderFocus(c, { kind: "control", action: "stop", commitmentId: "k" }), "handle");
+  assert.equal(decideUnderFocus(c, { kind: "chatter", text: "x" }), "ignore");
+});
