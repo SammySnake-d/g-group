@@ -249,3 +249,46 @@ AC-05、AC-21、AC-31 整项继续未测，不能把存储切片复审等同于�
 本机证据目录：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-review-evidence/pr5-a3de7f5-ac7c92d1/`。包含原始红绿日志、旧实现三条具名失败、23 项变异、30 轮逐次日志、资源与锁超时探针、close 故障探针、单点变异补丁及其 typecheck/lint/51 绿结果。
 
 请 Claude Code 补 RR-04 的失败路径回归与校准后重新交不同厂商复审。本轮仅追加本节并填写收据 review，未改作者源码、测试或收据其他字段。
+
+## 第五轮：2026-11-06，`64e3d1a`，结论 approve
+
+**批准本 PR 的 SQLite 存储切片；第四轮 RR-04 已关闭。** 本轮未发现该切片内必须返修的问题。批准独立代码审查不等于整项 AC、用户故事或后端目标已经验收，也不等于来源门禁已经自动通过或可以跳过基线合并顺序。
+
+### 固定身份与独立执行
+
+- 受审 `64e3d1ad4940820ae4f2b21a9a16827689dd711a`；红提交 `7a1eac8e0ff41e7df4c6138d68af568853d1ecac`；`origin/feat/domain-core` 基线 `afd02560f9546147da380382404eb6106222a9b8`。红绿适配器测试体无差异；与 `a3de7f5` 对比，`store.ts` / `index.ts` 无差异，本轮是测试与证据补强。
+- 审查人 `codex`，会话 `codex:ac7c92d1-5ee6-484b-8325-64a980d8528f`；本轮原生模型 `gpt-6.1-terra`（OpenAI）。作者仓库操作及返修相关已落盘轮次为 Anthropic 的 `claude-opus-5-5`（两条路由），跨厂商；活动审查轮的机器来源门禁须在记录落盘后重验。
+- 在普通独立 clone 根目录运行 `node scripts/gates/run-all.ts --hash --branch=feat/sqlite-storage --base=origin/feat/domain-core`，原样输出：
+
+  ```text
+  a1c33fcd3b2d124c0f269b89d14e4d513a7e0fc621af65de3e1e1bfab68b2ceb
+  ```
+
+| 检查 | 实测结果 |
+|---|---|
+| Node 22.22.0 / npm 10.9.4：`npm ci`、`npm run typecheck`、`npm run lint` | 均退出 0 |
+| 原版 `npm test` | 退出 0，52 通过、0 失败、0 跳过 |
+| 红版 `npm ci` / `npm test` | 安装退出 0；测试退出 1，29 条适配器测试逐名失败，另 23 条领域测试通过 |
+| 作者 S01–S26 | 原样 29 绿；26 个变异均被具名测试杀死，脚本退出 0 |
+| 上轮 RR-04 原样存活变异复放 | 类型检查通过；新增“close 自身也抛错”测试按名失败，退出 1。作者 S24/S25/S26 也均由该新测试杀死 |
+| 独立多进程稳定性复跑 | 使用每轮唯一 TMPDIR，10 个指定用例 **30/30 轮通过**、无本实验遗留子进程；仅证明本机 macOS + Node 22.22.0 |
+| 资源回归 | 只读初始化失败 40 次后目标文件描述符为 0；受控 `ulimit -n 64` 下失败 100 次后健康库仍可打开 |
+| 填 review 前 `run-all.ts --local` | G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER 通过；G-REVIEW 因 review=null 拦截、整体退出 1。G-PROVENANCE 在 review=null 时提前返回，不能算已验本轮来源 |
+| 填 approve 后单独运行 G-REVIEW / G-PROVENANCE 函数 | G-REVIEW 通过；G-PROVENANCE 报审查会话尚无本 hash 的已落盘调用，活动轮结束后应重验。仅调用两项，不声称整套门禁通过 |
+
+### RR-04：关闭失败时保留原错误，关闭
+
+新测试临时替换 `DatabaseSync.prototype.close`：先调用真实 close 再人工抛错，5 次非 SQLite 文件初始化均保留原始 SQLite errcode 26 和错误信息，close 调用数正确、描述符数不增加，并在 `finally` 恢复方法，之后健康库读写通过。
+
+我另外在隔离进程中对初始化选项读取、建表后的提交超时读取和非 SQLite 文件三个入口分别注入相同的“真关闭后抛错”：原实现均保留原 Error 对象或 SQLite 错误码，目标描述符为 0；健康库正常写入。上轮只删除 close 异常保护的变异现在被新增测试杀死，S24–S26 也被相同具名测试发现。因此关闭的是明确的 RR-04 回归与标定缺口，而不是声称真实 SQLite close 失败已经发生过。
+
+### 边界与非阻塞建议
+
+- AC-05、AC-21、AC-31 整项继续未测；本片批准不代表宿主所有写入口、busy 重试、群消息去重或用户故事已验收。R-05 的本轮结果仅覆盖实际执行的 26 种故障，不等于穷尽。
+- 人工让 close **在真正关闭之前**抛错时，原 SQLite 错误仍被保留，但连接确实仍占一个描述符；探针保留引用并手动调用真实 close 后降为 0。这只是合成条件，不是自然发生的 SQLite close 失败。收据将真正 close 失败及未关闭连接标为未测的边界保留。
+- **非阻塞测试卫生建议**：新测试先替换 `DatabaseSync.prototype.close`，再在 `try/finally` 之外读取 `/dev/fd`。人工模拟该读取报 EACCES 时，本测试失败且替换未恢复，下一测试又因模拟 close 故障而失败。建议把 `/dev/fd` 基线读取移到替换之前或纳入 `try/finally`，避免不支持/受限环境出现级联误报；该条件本身已使测试失败，不会造成当前批准的假绿，也未证明产品源码故障。
+- 收据注明 `/dev/fd` 计数仅在 macOS 验证、只读目录用例在 root 下不适用、2s 阈值在极慢机器可能误红；Linux、CI 容器和更高负载未独立验证。上轮对同一生产实现的默认 10s 档独立实测一次，但不外推其他平台。
+
+本机证据：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-review-evidence/pr5-64e3d1a-ac7c92d1/`。包含红绿逐名结果、26 项变异日志、RR-04 原变异复放、30 轮逐次日志、资源与 close 故障探针、人工 `/dev/fd` 故障测试及源码归档。
+
+**approve 只针对本次 SQLite 切片。** 来源记录落盘后应重跑真实 G-PROVENANCE，按项目现有基线和合并门禁继续；未通过的端到端需求不因本审查变为通过。本轮仅追加本节并填写收据 review，未改作者源码、测试或收据其他字段。
