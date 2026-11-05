@@ -35,4 +35,4 @@ jobs:
         run: npm run gates:selftest
       - name: 门禁变异校验(把门禁改坏,自检必须发现)
         timeout-minutes: 120
-        run: GATE_MUTATION_JOBS=4 npm run gates:mutation
+        run: GATE_MUTATION_JOBS=2 npm run gates:mutation

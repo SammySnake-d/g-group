@@ -147,5 +147,5 @@
 ✓ vendorOf(stealth/crouton-alpha) = unknown
 ✓ vendorOf(undefined) = unknown
 自检通过
-自检耗时 141s:用例 140/140,并发 4(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0
+自检耗时 95s:用例 140/140,并发 4(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0
 exit=0
