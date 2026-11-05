@@ -5,13 +5,12 @@
 // 和真实 CLI 一样,工具不在 --allowedTools 里时不调用,回 is_error 的权限拒绝。
 // 和真实 CLI 2.1.316 一样,--tools default 展开成整套内置工具(Codex 审查 F-01 在真实 CLI 上观察到 Bash/Edit/Read);
 // 剧本 extraInitTools 模拟 CLI 不按参数、多挂了工具。
-// 剧本 grandchild:{ delayMs, marker } 起一个同进程组的孙进程,delayMs 后写 marker 文件并继续挂着(F-03 反例);
-// 孙进程 pid 写进 FAKE_RECORD 同目录的 grandchild.pid。
+// 剧本 grandchild:{ marker, setsid?, ignoreTerm? } 起一个孙进程(默认同进程组),副作用协议见 markerCode。
 // 剧本 denyReports:true 让 CLI 以权限拒绝回绝每次 report_progress(内容即使合规,tool_result 也是 is_error)。
 // 剧本 forgeAccept:true 不经 MCP 服务器、直接回"已记录"(模拟服务器校验失效)。
 // 剧本 result:"success_is_error" 输出 subtype success 但 is_error true 的结束行。
 // 剧本 grandchild.setsid:true 让孙进程另建会话与进程组(审查 RR-03 的脱组反例)。
-// 剧本 daemon:{ delayMs, marker } 起一个中间进程,它再起一个另建会话的守护进程后立刻退出(双 fork,守护进程被 init/launchd 收养);
+// 剧本 daemon:{ marker } 起一个中间进程,它再起一个另建会话的守护进程后立刻退出(双 fork,守护进程被 init/launchd 收养);
 // 守护进程 pid 写进 FAKE_RECORD.daemon.pid。这是已披露的不覆盖边界。
 // 剧本 init:"missing" 不输出 init;"noTools" tools 不是数组;"badTools" tools 含非字符串。
 // 和真实 CLI 一样先与 MCP 服务器握手再输出 init:服务器起不来时 init 里 host 状态为 failed、工具清单里没有 report_progress
@@ -45,22 +44,33 @@ if (process.env.FAKE_RECORD) {
     mcpConfig: flag("--mcp-config") ? JSON.parse(fs.readFileSync(flag("--mcp-config"), "utf8")) : null })}\n`);
 }
 
-const markerCode = (marker, delayMs) => `setTimeout(() => require("node:fs").writeFileSync(${JSON.stringify(marker)}, "副作用"), ${Number(delayMs)}); setInterval(() => {}, 1000);`;
+// 孙进程的副作用协议(事件屏障,不靠时间):孙进程只在测试创建 `<marker>.trigger` 之后才写 marker;
+// 收到 SIGTERM 就置"被要求退出"并立即退出,写之前先检查这个标记。ignoreTerm:true 的孙进程忽略 SIGTERM,只有 SIGKILL 能结束。
+// 孙进程 pid 在输出 init 之前就写进 FAKE_RECORD.grandchild.pid,并在 stdout 打一行 {"type":"fake_grandchild","pid":N}
+// (适配器不认识这种行,原样忽略);测试拿到 started/completed 时 pid 文件一定已经存在。
+const markerCode = (marker, ignoreTerm) => `const fs = require("node:fs"); let stopping = false;
+process.on("SIGTERM", () => { if (${ignoreTerm === true}) return; stopping = true; process.exit(0); });
+setInterval(() => { if (!stopping && fs.existsSync(${JSON.stringify(`${marker}.trigger`)}) && !fs.existsSync(${JSON.stringify(marker)})) fs.writeFileSync(${JSON.stringify(marker)}, "副作用"); }, 20);`;
+const early = [];
 if (plan.grandchild) {
-  const { delayMs, marker, setsid } = plan.grandchild;
-  const gc = spawn(process.execPath, ["-e", markerCode(marker, delayMs)], { stdio: "ignore", detached: setsid === true });
+  const { marker, setsid, ignoreTerm } = plan.grandchild;
+  const gc = spawn(process.execPath, ["-e", markerCode(marker, ignoreTerm)], { stdio: "ignore", detached: setsid === true });
   if (process.env.FAKE_RECORD) fs.writeFileSync(`${process.env.FAKE_RECORD}.grandchild.pid`, String(gc.pid));
+  early.push({ type: "fake_grandchild", pid: gc.pid });
   gc.unref();
 }
 if (plan.daemon && process.env.FAKE_RECORD) {
-  const { delayMs, marker } = plan.daemon;
+  const { marker } = plan.daemon;
   const pidFile = `${process.env.FAKE_RECORD}.daemon.pid`;
-  const middle = `const c = require("node:child_process").spawn(process.execPath, ["-e", ${JSON.stringify(markerCode(marker, delayMs))}], { stdio: "ignore", detached: true });
+  const middle = `const c = require("node:child_process").spawn(process.execPath, ["-e", ${JSON.stringify(markerCode(marker, false))}], { stdio: "ignore", detached: true });
 require("node:fs").writeFileSync(${JSON.stringify(pidFile)}, String(c.pid)); c.unref(); process.exit(0);`;
-  spawn(process.execPath, ["-e", middle], { stdio: "ignore" }).unref();
+  const m = spawn(process.execPath, ["-e", middle], { stdio: "ignore" });
+  // 等中间进程写完守护进程的 pid 再继续,测试拿到 started 时 pid 文件已存在
+  await new Promise((r) => m.on("exit", r));
 }
 
 const out = (o) => process.stdout.write(`${JSON.stringify(o)}\n`);
+for (const line of early) out(line);
 const sid = resume ?? crypto.randomUUID();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
