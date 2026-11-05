@@ -57,5 +57,12 @@
   },
   "unverifiable": "AC-09 在本片指的是本片覆盖的 12 个状态 × 15 种事件;需求文档第三台表还有 T2b 转交、T4a/T4c 依赖、T6/T6b 集成、T8b 纠错和 E5/E7b/E10 等事件,这一片没建模,不能说整张需求表没有空白格。AC-09 的逐格期望 SPEC 写在 task.test.ts 里,不读生产 TABLE,但它是作者照 D20.3 主干手写的,不是从需求文档表格自动展开;每格只用一个代表性任务和一个样例事件,条件分支(守卫通过/不通过)靠具名测试补双侧对照,SPEC 本身没有覆盖每格的所有分支。已知规格差异未在本片解决:T9 下 Amend 被忽略(需求要求记录新条件供重开),T10/T11 下 Amend 一律忽略(需求要求新代次 T1/T2 重做);终态重开由哪个接口承担未定义,本片不声称这几格已对齐需求。R-09 的超时时长 N 需求文档里仍待定,本片只验了'超时事件到来时不算通过'。AC-26 的 vendorOf 对整个模型串做关键词匹配,渠道前缀或命名里出现厂商关键词就能影响推断(例如 'google/stealth-crouton-alpha' 判为 google、'stealth/gpt-custom-unverified' 判为 openai),不是'新模型名一律 unknown'的偏严保证;宿主必须提供可信、规范化的实际模型身份。豁免只认 waiverBy 等于提出者本人,事件真实发出者的认证由宿主负责,本片不验。computeResumable 由宿主报告,本片不验证宿主报告的真假;withHandoff:true 只是意图标记,不含 Handoff Capsule 数据。HumanReply 没有 taskId,StoppedConfirmed 与 Dispatch 没有 request/lease/epoch 身份,回绑只靠'已发 spawn 且无实例'判定,派发与取消的并发竞态、跨任务串包、CAS 原子性均未验;重复认领拒绝只是单线程状态判定。免审产出路径、正常交付后的真实停止与资源回收、T4b 同版批准的持久留痕未覆盖。R-05 的变异校准共 62 个单点变异(作者 M01–M29 共 34 个,含 domain-core 的 M01–M12;Astra 第 3 节 A01–A14 共 14 个按新源码改注入点;本轮 CORR 修复新增 N01–N14 共 14 个),原样副本 75 绿,62 个变异全部有具名测试失败;这只说明这 62 种故障能被发现,不等于每条规格已被充分标定。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "codex",
+    "session": "codex:5fd2f15b-443d-4c5b-a287-dfa6fe248103",
+    "model": "gpt-6.1-terra",
+    "verdict": "reject",
+    "reviewed_hash": "a0ee78f092579b5180a6af48749a28648a180c843bfc11398b15fc1c66ad5962",
+    "notes": "第二轮独立复现 reject：停止/启动回包身份与条件版本缺口、不同卡号的过期回复中断后续处理、审查轮次 ABA 语义待定；10 个独立变异中 8 个存活。详见 reviews/feat-task-lifecycle.md。"
+  }
 }

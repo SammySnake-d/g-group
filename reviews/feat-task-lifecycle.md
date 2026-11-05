@@ -181,3 +181,107 @@ JS
 Claude Code 在原 `feat/task-lifecycle` 开发任务内处理 CORR-01～04 和 TEST-01，分别留下先红后绿及新增单点变异证据；保留已确认有效的旧卡修复、跨厂商五组条件和超时未核验行为。补齐/收窄收据的通过口径和第 7 栏边界后，再交不同厂商独立复现。
 
 本轮只提交 `reviews/feat-task-lifecycle.md` 与 `receipts/feat-task-lifecycle.json` 的 review 更新；不修改源代码、作者收据其他字段，不代替作者修复，不合并 PR。
+
+---
+
+# 第二轮 · Codex 独立复现（2026-11-05）
+
+## 结论：reject
+
+`96d48dd3fa8e9cc053950d313ce9d344b7408ef6` 的常规检查、作者列举的 62 项变异和本轮 18 格返工路径均可复现；但**启动/停止回包归属、启动中改条件、旧卡回包，以及重要行为的测试标定仍有必须处理的缺口**。下列独立变异是测试充分性反例，不能误写成当前原版已存在相同改坏实现。审查不改产品代码、不合并 PR。
+
+- 审查人：`codex:5fd2f15b-443d-4c5b-a287-dfa6fe248103`，实际模型 `gpt-6.1-terra`（OpenAI，取当前 Codex 原始 rollout 的 `turn_context.model`）；作者会话 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38` 的原始 turns 中触及仓库的模型均为 `claude-opus-5-5`（Anthropic，存在不同渠道前缀）。写审跨厂商，未使用豁免。
+- 普通独立 clone；`.git` 和 common dir 均为该副本自己的 `.git`。审查时 `origin/feat/domain-core=afd02560f9546147da380382404eb6106222a9b8`，与 HEAD 的 merge-base 是 `133cf7abcf6c897653f5b91647202c4ac963f231`；前者比后者只多 PR #2 的 `receipts/feat-domain-core.json`、`reviews/feat-domain-core.md` 两个审查文件。GitHub PR API 当时仍返回 base SHA `133cf7a`，不可把两个值混同。
+- 在仓库根目录独立运行 `node scripts/gates/run-all.ts --hash --branch=feat/task-lifecycle --base=origin/feat/domain-core`，原样输出：
+
+```text
+a0ee78f092579b5180a6af48749a28648a180c843bfc11398b15fc1c66ad5962
+```
+
+- 日志、独立探针、10 个变异的补丁及测试/typecheck 原始结果：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review-evidence-5fd2f15b/`。
+
+## 一、亲自运行与红基线的限定
+
+| 操作 | 实测 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均 exit 0；Node `v25.8.1` / npm `11.11.0` |
+| `npm test` | exit 0，75 通过，0 失败，0 跳过 |
+| 普通独立副本检出红提交 `cb162a80b07475e9ee5aed1dd252afaac7e3518b`，运行全部具名测试 | exit 1，23 通过、52 条具名失败；红绿提交的两个测试文件相同 |
+| 红测试文件 + `75a76cd` 的原有 `task.ts` / `vendor.ts`，在另一个隔离副本运行 | exit 1，61 通过、**14 条具名失败**，覆盖新旧审查、不可恢复返工/回绑、确认卡快照和独立表期望；证明针对旧实现确实有可复现的失败 |
+| 作者 `node packages/domain/proof/mutations.mjs` | exit 0，原样 75 绿、62 项均出现具名失败；不把这 62 项全杀当成所有行为已标定 |
+| 独立构造 B01–B10，逐项隔离运行完整测试和 typecheck | **8 项存活**（测试 75/75 绿、typecheck exit 0），另 2 项阳性对照被具名测试杀死，typecheck 均 exit 0 |
+| 自写返工路径矩阵 | `Amend` 在 T5/T7/三个 T8 状态各测可/不可恢复，`UserReject` 在三个 T8 状态各测两侧，`Review reject` 测两侧，共 18 格通过；另验绑定后取消/失败、旧审查版本、冻结与同卡号旧版本回复 |
+
+**红的原因不能只数名字**：`cb162a8` 把已有 `task.ts` 和 `vendor.ts` 的实现整体换成空壳；52 条具名失败中 51 条报“未实现”，1 条是 `TABLE` 为 undefined，而非 52 条分别证明各修复缺陷。上面的 14 条是把同一批红测试嫁接回旧实现后本轮实测的反例；它不是作者当时实际留下的 14 条历史运行记录。R-02 和 R-03 是不同要求，返修时应保存针对**未修复旧行为**的具名红记录，不能仅用空壳红代替 bug 复现红。
+
+## 二、必须返修
+
+### R2-CORR-01 · 在途启动的停止确认没有身份，旧确认可使新实例漏停
+
+- `packages/domain/src/task.ts:24–28,90–95,228–238,240–241`：`cancel-spawn` 不带启动请求 ID；`StoppedConfirmed` 不带 Compute、请求或 epoch 身份。`T9` 收到任意该事件就清掉 `spawnPending` 进入终态，而终态 `Dispatch` 一律忽略。
+- 本轮实际状态机序列：已交付 → `UserReject(false)` 新开待回绑 → `Cancel`，得到 `T9 + cancel-spawn` → 若**旧实例的迟到** `StoppedConfirmed` 到达，实际立即 `T10 + spawnPending:false` → 新实例随后 `Dispatch(c2)` 实际 `ok:true` 但保持 T10、effects 空。反过来若 `Dispatch(c2)` **先于**停止确认，T9 分支确实发 `stop-compute(c2)`。作者测试只覆盖后一种顺序。
+- 领域接口无法区分上面的旧确认与待取消启动的安全确认；没有实际启动进程，故不声称本轮已在 OS 中泄漏进程。**若宿主不另行过滤或隔离，领域层会把旧回包当作足以终结新启动的证据**。这影响本片“撤销启动、确认停止后终态”的主干，不能仅以第 7 栏注明并发未验来认定已实现。
+- 修复须把在途启动与停止确认关联到可验证的 request/lease/epoch，或明确并实测等价的宿主隔离/完成确认契约；覆盖旧实例迟到停止、新实例在确认前后回绑、重复回包和最终资源回收。仅发 `cancel-spawn` 不等于撤销已完成。
+
+### R2-CORR-02 · 启动中改条件后，可回绑无法证明使用了新版本
+
+- `task.ts:88–89,108–119,173–179`：`spawnPending:true` 且 `computeId:null` 时，T3 的 `Amend` 仍成功把 `constraintVer` 从 1 加到 2，但 effects 为空，原启动仍在途；之后的 `Dispatch` 只带实例 ID/模型，不带启动请求或其条件版本，成功把实例绑定到 v2。
+- 实测见 `independent-probes-original.log` 的 `pending_before_amend`、`pending_amend`、`pending_after_amend_dispatch`。若旧请求已携 v1 交接启动，现有领域接口没有手段确认它实际使用 v2，也没有发重启、更新条件或拒绝旧版本回绑的效果。这里没有接真实适配器，**不声称实测该进程已经按旧条件产出**；这是可复现的接口/状态缺口。
+- 修复或明确可验证契约：将启动请求绑定条件版本和代次；改条件时安全更新/撤销重发，或在回绑时阻止旧版本并处理实例，增加“启动在途→改条件→旧启动迟到”及正常新版阴性对照。
+
+### R2-CORR-03 · 过期不同卡号的回复会中断后续有效回复
+
+- `task.ts:186–194` 先比 `qId`，再比版本。先问 q1/v0 → Amend → 再问 q2/v1 → 投递 q1/v0，实际是 `ok:false`，而不是需求文档 `D20.3` T4b 的过期回复幂等忽略；当前 q2 不被清除，但 `applyAll([旧 q1, 有效 q2])` 会在旧回包处停止，单独执行 q2/v1 则正常回 T3。
+- 同卡号、不同版本的旧回复已正确忽略；不是说确认卡快照修复无效。补“不同旧卡号+旧版本”和后续当前卡有效回复的成对测试；同时保留**同版本但错误卡号拒绝**的阴性对照。
+
+### R2-TEST-01 · 独立表已改善，但关键字段/条件分支仍能被变异骗过
+
+`task.test.ts:37–115` 的 `SPEC` 不读取生产 `TABLE`，逐格目标状态检查比第一轮更强；但单一样例对多数 go 格只断言目标状态，未逐格验证负责人、生产集合及所有守卫分支。以下 **8 项每项原测试均 75 绿且 typecheck 绿**；原版和变异版均以额外独立探针比较过：
+
+| ID | 故意注入的单点错误 | 实际漏检的后果 |
+|---|---|---|
+| B01 | 可恢复返工时把 owner 改为 requester | 负责人从 `author` 静默变成 `user`，违背身份连续性 |
+| B02 | 可恢复返工时只保留最后一个生产模型 | `{Anthropic, OpenAI}` 退化为 `{OpenAI}`，旧 Anthropic 生产厂商的审查竟标 `compliant` 并进 T7 |
+| B03 | T5 中忽略 `ProducerModelAdded` | 审查期间新增的 OpenAI 生产模型未记录，OpenAI 审查错误进 T7 |
+| B04 / B05 | T5 / T7 的 Amend 无论 `false` 都按 `true` 恢复 | 原实例不可恢复时仍发 `resume-compute(old)`，应新开 |
+| B06 / B07 | Accepted / Archived 的 `UserReject(false)` 被当成 `true` | 应带交接新开，却向失效旧 ID 发 resume |
+| B08 | T9 迟到新实例回绑时把 owner 改为 requester | T9 中负责人被静默改掉 |
+
+阳性对照 B09（启动中取消不撤销）及 B10（未回绑即提审）被现有具名测试杀死，排除本轮变异跑错套件或完全无效。原版 **B02/B03 的相应探针均正确拒绝同厂商审查**；这里的发现是回归测试不能保护这一硬门禁，而不是指控当前原版已放行。本片 `R-05` 的“通过”应限于现有变异集合，补每个实际有意义入口的双侧行为和 owner/累积厂商断言，并让上述变异因正确断言失败。
+
+### R2-CORR-04 · 审查对象 ABA：是否容许复用旧轮次须明确
+
+`task.ts:126–129,202` 只比较 `(commit, constraintVer)`。本轮实际送 `sha-a/v0 → sha-b/v0 → sha-a/v0`，第一次的 `sha-a/v0` 迟到 approve 在最后一次 T5 被接受并进入 T7。D20.3 写明作者推新 commit 后旧评审过期重审；若这意味着**过期轮次不得复活**，仅比较这对字段不够，须绑定唯一审查请求/轮次并补 ABA 测试。若产品明确允许对完全相同 commit 与条件版本复用旧评审，则需明确该例外及审查人资格/生产快照条件；当前代码无法证明轮次新鲜。这个问题与不同 commit 或不同版本的普通迟到回包已修好并不矛盾。
+
+## 三、逐项复核首轮与三个设计选择
+
+- **CORR-01**：不同 commit、不同条件版本的旧回包均被忽略，当前对照可进入 T7；一般路径已修。另有上面的同值 ABA 轮次边界。
+- **CORR-02**：不可恢复返工后能 `Dispatch` 新实例，保留 owner 并累积模型；绑定后取消/失败分别停新 ID，停止确认后释放新槽位；启动中取消会发 `cancel-spawn`。但启动/停止回包身份及倒序竞争仍未闭合，见 R2-CORR-01/02。
+- **CORR-03**：本轮 18 格原版路径的两个恢复分支及 T5 恢复副作用均正确；不过四个入口的不可恢复分支可被 B04–B07 单独改坏而测试仍绿。
+- **CORR-04**：新旧 Task 不共享卡片对象，`pendingQ` 冻结，卡片与任务版本一致性及同卡号旧版均有防护。不同卡号旧回包的幂等/事件批次问题仍在，见 R2-CORR-03。
+- **TEST-01**：独立 SPEC 和目标状态、部分 effects/ver 断言已解决“完全用生产 TABLE 自作预期”的原问题；但不等于每格关键字段和分支均充分，B01–B08 反证 R-05 完整标定。
+- **Amend 必填 `computeResumable`**：为 T5/T7/T8 返工让宿主报告可恢复性，是可行的接口选择，需求没有规定这一字段形式；但类型也要求 T1–T4b 这种不读它的事件提供布尔值，属于额外调用约束，不应解释成“用户必须判断实例能否恢复”。宿主如何得到可信结果、未知时是否先探测/安全处理，未验证；不能把传 `true` 说成真的恢复成功。
+- **`cancel-spawn`**：撤销在途派发的意图与 D20.3 的先停后终态方向一致，不是需求禁止的副作用；但当前无身份关联，不能由效果字样单独证明真实撤销与隔离，见 R2-CORR-01。
+- **`spawnPending` 时禁止 `NeedHuman`/`SubmitForReview`**：在新实例尚未绑定时不把旧/无来源回包当作本次产出，是合理的保守处理；需求没有直接规定这种接口策略。若真实启动回调可能先于 Dispatch 到达，当前做法会拒绝而不缓存，需由适配器明确保序或可靠重投并在跨层验证，不能默认这些事件永不乱序。
+
+## 四、第 7 栏和验收口径
+
+1. 独立实测 `vendorOf('google/stealth-crouton-alpha') === 'google'`、`vendorOf('stealth/gpt-custom-unverified') === 'openai'`、无关键词字符串为 `unknown`；所写“整串关键词可误判”属实。仅凭字符串本身不证明这两个虚构名称对应实际厂商；可信原生模型身份、真实豁免发起人和产出集合采集仍需宿主与适配器。
+2. 独立实测 T9/T10/T11 的 `Amend` 原样忽略、版本不变；与 D20.3 中 T9 记录条件供重开、终态新代次的文字存在已披露差异。真正补充消息落盘及终态重开由哪个外层接口承担尚无实现证据，不能擅自断定必须在原任务对象原地重开，但也不能宣称这几格符合需求。
+3. 缺 request/lease/epoch、`HumanReply` 无 taskId、`withHandoff:true` 只有意图标记、真实卡片与日志、槽位/进程、CAS、免审路径和超时 N 等边界均应保持未测；本轮只跑纯函数，未启动真实 Compute，也未证明跨层隔离/投递/恢复。
+4. `AC-09` 的 180 格是**本片** 12×15 单一代表性状态与事件，不是完整需求状态机或所有分支。`AC-19/26/28` 在收据为未测是合理的整项界限；对 `AC-09`/`R-05` 和 R-02 的通过口径须按上面的漏检及红原因收窄/补证。
+
+最小复现（仓库根目录；只读原始实现）：
+
+```sh
+E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review-evidence-5fd2f15b
+node "$E/independent-matrix.mjs" "$PWD"
+node "$E/independent-probes.mjs" "$PWD"
+# 独立变异的精确补丁及原测试日志在 "$E/mutants/B01" … "$E/mutants/B10"。
+```
+
+本轮只更新本报告及 `receipts/feat-task-lifecycle.json` 的 review 字段。保留第一轮及作者其余收据字段，返修交回 Claude Code，修完后仍需新的跨厂商独立复审。
+
+### 本轮本地门禁的实际结果
+
+写入 reject 收据后运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`：exit 1。`G-REVIEW` 因结论是 reject 按预期阻止合入；`G-RED/G-STUB/G-TAUTO/G-TRACE/G-WORKFLOW/G-LAYER` 通过，但 G-RED 只证明 52 条按名红，不能取代本报告对实际失败原因的核对。`G-PROVENANCE` 报本审查会话 `turns.jsonl` 记录尚不存在；当前活动会话的 `record.json` 和 Codex 原始 rollout 已单独核实身份与模型，但**不声称来源门禁已通过**。会话结束、记录落盘后应由原任务复跑，不伪造会话文件。完整输出见证据目录 `gates-after.log`。
