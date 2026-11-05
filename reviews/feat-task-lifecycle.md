@@ -473,3 +473,96 @@ node "$E/independent-probes.mjs" "$PWD"
 ### 第四轮本地门禁的实际结果
 
 写入 reject 收据后运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`：exit 1。`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER/G-PROVENANCE` 均通过。来源门禁通过只证明本轮审查与作者来源及 hash 检查通过，不覆盖以上业务反例。完整输出见证据目录 `gates-after.log`。
+
+---
+
+# 第五轮 · Codex 独立复现（2026-11-05）
+
+## 结论：reject
+
+`fdfecb13f48262b85610cbf62fb7d3a84cd8badb` 的 115 项原样测试、131 个作者变异和第四轮修复的主要路径均可复现；但**交付确认和验收事件没有绑定交付代次**，上一版的迟到确认、退回或超时可作用于新版本，上一轮的发送确认也可把新一轮标成已交付。迟到生产记录触发重审时，旧交付确认还可让 `applyAll` 丢失前面的重审结果。自造 10 个变异有 9 个存活。审查只跑纯函数及隔离副本，没有启动真实 Compute、发送真实卡片或修改产品代码；返修交回 Claude Code，不合并 PR。
+
+- 审查会话 `codex:5fd2f15b-443d-4c5b-a287-dfa6fe248103`，原始 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI）；作者会话涉及目标仓库的实际模型为 `claude-opus-5-5`（Anthropic，不同渠道前缀），跨厂商、无豁免。
+- 普通独立 clone；`.git` 与 common dir 均为该副本自己的目录。`origin/feat/domain-core=afd02560f9546147da380382404eb6106222a9b8`，与 HEAD 的 merge-base 为 `133cf7abcf6c897653f5b91647202c4ac963f231`；二者只差 PR #2 的审查/收据文件。
+- 仓库根目录执行 `node scripts/gates/run-all.ts --hash --branch=feat/task-lifecycle --base=origin/feat/domain-core`，原样输出：
+
+```text
+0afd541f65efbe0da82c6815366998997af88e1717fd2c5f29f7bf4bdc72c8e3
+```
+
+- 原始日志、独立行为测试、事件路径探针、10 个变异补丁及测试/typecheck/比较结果：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review5-evidence-5fd2f15b/`。
+
+## 一、独立执行
+
+| 操作 | 实测结果 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均 exit 0；Node `v25.8.1` / npm `11.11.0` |
+| `npm test` | exit 0，115 通过、0 失败、0 跳过 |
+| 红提交 `9dacc0920b463c8a8944c7ffad3f56266b6e9acf` 完整具名测试 | exit 1，23 通过、92 具名失败：91 条报“未实现”、1 条 TABLE undefined；红绿测试文件相同。空壳红是激活证据，不是 92 个各自的缺陷复现 |
+| 红测试配旧版 `b50c0e9` 实现，在另一隔离副本运行 | exit 1，104 通过、11 具名失败；与 `packages/domain/proof/red-against-b50c0e9.tap` 的失败名称集合完全一致。仅补测试、旧实现本来正确的 D 类变异，应靠变异校准而非旧实现红来验证 |
+| 作者 `node packages/domain/proof/mutations.mjs` | exit 0，原样 115 绿，131 项出现具名失败；文件级失败不算杀死 |
+| 本轮独立行为测试 | **6 红、3 绿**：旧版本的接受/退回/超时、旧发送确认、迟到模型与旧发送确认批次、首派重发时旧提问；当前用户验收、非提出者拒绝、单独迟到模型重新送审的对照通过 |
+| 本轮独立事件矩阵 | 已绑定实例的迟到模型在 T7/T8a/Accepted/Archived 四个状态重判；仍合规、显式豁免、历史实例回包、旧卡批次、首派取消及重发的原版路径通过 |
+| 自造 E01–E10，逐项跑完整测试和 typecheck | **9 项存活**（每项 115 绿、typecheck exit 0）；E10 阳性对照被具名测试杀死且 typecheck 绿 |
+
+执行纠错记录：最初在 `npm ci` 前误跑 hash，因缺少 `typescript` 报 `ERR_MODULE_NOT_FOUND`、exit 1；随后安装成功并重新运行指定 hash 命令得到上文结果。这是执行顺序错误，不当作产品失败；原日志见 `hash-before-ci.log`。
+
+## 二、必须返修
+
+### R5-CORR-01 · 旧交付卡的接受、退回、超时可作用于新版本
+
+- `packages/domain/src/task.ts:24–27,342–355`：`UserAccept` 只有 `by`，`UserReject` 只有 `by/computeResumable`，`AcceptTimeout` 没有任何交付身份。没有 card、artifact、交付代次、审查轮次或条件版本，状态机无法区分旧卡的回包和当前卡的回包。
+- 独立纯函数序列：v0/旧 commit 已发卡；保存那张卡发出的 `UserAccept(user)`、`UserReject(user)` 和旧超时事件；然后用户 Amend，v1/新 commit 完成新审查并交付。向 v1 的 T8a 投递这些旧事件：旧接受实际令 **v1 进入 T8_Accepted、badge=accepted**；旧退回令 v1 意外进入 T3/v2 并发恢复；旧超时令 v1 提前归档为 unverified。用户对旧卡的点击不能证明用户验收了新产物，这触及 R-09 “必须明确确认、不说话不算验收”。
+- 探针模拟的是旧事件晚到，并没有真实用户点击或卡片发送；同一个 `by` 的旧/新 `UserAccept` 在当前公开类型中**字节内容完全相同**，因此仅靠当前状态不可能区分。不能把“谁发的”校验误当成“确认的是哪一版”。
+- 为每次交付定义不可复用的卡片/交付代次，并在接受、退回及超时事件中携带并核验其身份与产物/条件版本；旧事件幂等忽略、当前版本的合法接受/退回/超时仍正常。若由宿主先校验，须明确不可绕过的事件边界并提供实际乱序回放证明，不得让领域层凭无法区分的事件直接接受新版本。
+
+### R5-CORR-02 · 上轮发送确认能冒充新轮交付；失效回包可堵住重审批次
+
+- `task.ts:24,226–229,335–338,384–394`：`DeliveredCard` 仅有 kind，不绑定 commit、审查轮次或发送请求。实测 v0 的 T7 发送确认延迟，再将任务改到 v1、新 commit、新审查轮次的 T7；投递旧 `DeliveredCard` 后实际直接进 v1 的 T8a。领域层没有字段可知道这是上一轮发送确认，也不能证明新一轮卡片已发送。
+- 新增迟到生产记录路径还有一个批次反例：在旧 T7 上单独处理已绑定生产实例迟到的同厂商模型记录，原版会正确撤销审查并返回 T5 + `request-review(round=2)`；但 `applyAll([该记录, 上轮 DeliveredCard])` 的第二条在 T5 被拒，整个返回值仅有 `ok:false/reason`，不提供前一步的更新任务或重审 effect。纯函数入参未变；若宿主按整批成功才提交/重放，会留在旧 T7，必须额外拆批/跳过才能恢复。没有真实 Outbox 或群消息测试，不能声称实际消息已发出或已被接受。
+- 为发卡请求及发送 ACK 绑定同一交付代次、commit/条件及审查轮次；旧发送确认不可证明新卡已送达。明确 `applyAll` 的原子/前缀语义，使迟到旧 ACK 不能吞掉有效的审查撤销；实际宿主发卡的提交前版本校验、取消/失效标记与乱序回执另需跨层验证。
+
+### R5-CORR-03 · 首派重发时旧版本回包仍可阻断新实例上线
+
+- `task.ts:269–293,384–394`：首派 L0 在途时 Amend 到 v1 并重发 L1，旧执行器的 `NeedHuman(v0)` 或 `SubmitForReview(v0)` 在 T2 均无条件拒绝；`applyAll([旧回包, Dispatch(L1)])` 返回 false，不处理当前实例上线，单独投递同一 L1 Dispatch 则正常。
+- 第 7 栏已说明启动在途时拒绝提问/提审、不缓存乱序；这里进一步确认**可由版本判定为旧的回包也会阻断同批后续有效事件**。在保留“当前版本、未回绑的真实提问/提审须保守拒绝或可靠重投”的同时，对可确认的旧版本/旧请求回包做幂等忽略或通过有证据的宿主保序/重投协议处理，并验证后续新实例能上线。真实适配器如何投递仍未测。
+
+### R5-TEST-01 · 第四轮变异均杀死，但新重判契约仍有单点回归盲区
+
+E01–E09 是**人为单点改坏的变异，不是指控原版已有这些错误**。每项均在隔离副本跑 115 项原测试及 typecheck、均 exit 0；并对原版和变异版分别运行实际路径对照：
+
+| ID | 可存活的单点变异 |
+|---|---|
+| E01 / E02 | 只认最近两个曾回绑实例；第三次换实例后最早实例的生产记录被丢弃，审前可放行同厂商、审后可漏触发重审 |
+| E03 | 审后迟到的 `unknown` 生产厂商不触发重审，仍显示 compliant |
+| E04 / E05 | 审查批准快照不冻结或沿用调用方可变引用，可篡改之后重判依据 |
+| E06 | 触发重审时保留旧 `approval` 对象，违反 T5 无当前批准的字段契约 |
+| E07 | 迟到生产记录触发重审时把负责人改成提出者 |
+| E08 | 在 T1 已改条件后认领，首派请求仍绑定版本 0 而非新版本 |
+| E09 | 当前实例未来版本的迟到回包被拒而非忽略，可挡住后续当前卡有效回复 |
+
+E10（迟到生产厂商冲突时不重审）被具名测试杀死且 typecheck 绿。建议对多次换实例后最早实例、未知厂商迟到、批准快照不可变/不共享、重审身份清理、认领前改条件和版本乱序补独立双侧对照；131 项全杀不等于这些新分支已标定。
+
+## 三、逐项复核第四轮返修与未测边界
+
+- **R4-CORR-01：所实现的已回绑实例路径复现有效。** 老实例记录在新实例回绑后仍累计；审后迟到记录在四个交付状态不合规时撤销旧结论并重审；仍合规、显式豁免和未回绑孤儿阴性路径按作者选择处理。纯函数无法证明模型记录已全部收齐；未回绑孤儿是否真的不可能在隔离/回绑前写入产物仍需宿主证明，不能仅以未回绑推断实际没有贡献。
+- **R4-CORR-02：原先 T4b 旧提问/提审阻断有效用户回复已复现修好。** 当前实例当前版本的不合法重复仍拒绝；T2 首派重发期的不同旧事件批次见 R5-CORR-03。
+- **R4-CORR-03：首派认领产生 L0，首派在途取消/上线/停止确认与改条件重发均已独立复现。** 宿主须在确认撤销 L0 后保证不会再实际发送该启动请求；这是已披露、未接真实适配器的边界。
+- **R4-TEST-01：D01–D11 在作者 131 项变异执行中均被具名测试杀死。** 新增 E01–E09 暴露的是新实现条件的测试不足。
+- **补充第 7 栏：**T9 中 `ProducerModelAdded` 对已回绑旧实例也无条件忽略，实际不会并入集合；该状态目前只走取消/失败且终态记录被声明忽略，审查没有将其等同于已交付的直接门禁绕过，但“晚到记录不丢弃”的口径需限制状态，后续重开/审计须补证。T9/T10/T11 改条件、真实模型身份及事件认证、模型/工作区隔离、CAS/租约、实际恢复、资源回收、Handoff 内容、卡片发送和 UI 均未做跨层验证。
+
+复现（仓库根目录；独立行为测试当前预期 6 红、3 绿）：
+
+```sh
+E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review5-evidence-5fd2f15b
+REVIEW_REPO="$PWD" node --test "$E/independent.test.mjs"
+node "$E/independent-matrix.mjs" "$PWD"
+node "$E/independent-probes.mjs" "$PWD"
+# 各变异补丁及测试/typecheck 输出见 "$E/mutants/E01" … "$E/mutants/E10"。
+```
+
+本轮只追加本报告并修改 `receipts/feat-task-lifecycle.json` 的 review 字段；保留前四轮及作者其余收据字段。返修后继续由不同厂商独立复现。
+
+### 第五轮本地门禁的实际结果
+
+写入 reject 收据后运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`：exit 1。`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER` 通过。`G-PROVENANCE` 实际报告当前已落盘会话中没有输出等于本轮 hash 的调用、审查那轮厂商认不出；活动轮次尚未落盘，本轮 hash 命令与原始 rollout 的实际模型已分别实查，**不声称来源门禁通过**。当前轮记录落盘后由原任务复跑，不伪造记录。原始输出见证据目录 `gates-after.log`。
