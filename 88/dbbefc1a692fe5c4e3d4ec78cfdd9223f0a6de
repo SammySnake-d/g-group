@@ -1,0 +1,27 @@
+packages/adapter-cc-compute/proof/mutations.mjs
+  s_2f83768618cc30::t_083abf66796ba0 2,5,17-19,24,26,30-31,34,36-37,45-59,62-75,78-93,104-137
+packages/adapter-cc-compute/proof/mutations.txt
+  s_2f83768618cc30::t_dc1d9e2edf1941 1-47
+packages/adapter-cc-compute/proof/smoke-real.txt
+  s_2f83768618cc30::t_2c5238b4365099 42-63
+packages/adapter-cc-compute/proof/tests.txt
+  s_2f83768618cc30::t_858af07a339a1f 5,11,17,23,29,35,41,47,53,59,65,71,77,83,89,95,101,107,113,119,125,131,137,143,149,155,161,167,173,179,185,191,194-285,287,292
+receipts/feat-cc-compute.json
+  s_2f83768618cc30::t_c6fccce0651397 2,7,12,17,41,43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "88dbbefc1a692fe5c4e3d4ec78cfdd9223f0a6de",
+  "prompts": {},
+  "sessions": {
+    "s_2f83768618cc30": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cead6154-ca5b-434c-a8cd-89304d1c4151",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
