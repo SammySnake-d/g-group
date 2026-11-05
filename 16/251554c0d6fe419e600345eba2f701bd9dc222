@@ -1,0 +1,27 @@
+receipts/chore-gates.json
+  s_22ba9b1b818602::t_0948718baf1f30 66,69
+scripts/gates/lib.ts
+  s_22ba9b1b818602::t_90fe5b21019d85 89,91
+scripts/gates/proof/lint.txt
+  s_22ba9b1b818602::t_df37e00f7d769d 1-2
+scripts/gates/proof/selftest.txt
+  s_22ba9b1b818602::t_93dcde1d887ad2 48
+scripts/gates/proof/typecheck.txt
+  s_22ba9b1b818602::t_b718d4aba58fc9 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "16251554c0d6fe419e600345eba2f701bd9dc222",
+  "prompts": {},
+  "sessions": {
+    "s_22ba9b1b818602": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91b17b26-1e2d-4bc5-904f-9d3aab1e0f38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
