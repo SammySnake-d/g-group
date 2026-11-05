@@ -540,3 +540,117 @@ NODE
 ## 仍未完成的验收边界
 
 AC-06、AC-08、AC-11、AC-12、AC-35、AC-39 与 R-06 的整项均未通过；短撤回文本、引用回读、实际渠道与持久账本、模型真实缓存断点、按线路的命中率及可信度、常驻会话和用户可见纵向路径都不能以当前纯函数/模拟结果代替。特别是 AC-08 和 AC-39 是本轮已复现有实质错误的子判据，不只是“等集成测试”。
+
+---
+
+# 第五轮：返修独立复审
+
+**结论：reject。** 第四轮的常规反例已有可复现修复，但单调时钟先前进再倒退时仍会重发；被声明必须拒绝的 getter 在数组内被执行并接受，关键字段 getter 抛错会逃逸注册入口；重建压缩块的异常兜底也可再次抛错；部分发言者标签被误扫为消息正文。两个自行构造的撤回检查变异骗过全部 135 条测试。以下是对 `cedc19e` 的实测，不以模拟接收端冒充真实外发 E2E。
+
+## 复审范围与运行结果
+
+- 普通独立 clone `feat/kernel-plugins`，功能 HEAD `cedc19eff9d1681624993843f005694eb7b6bdc7`；基线 `origin/feat/domain-core` = `afd02560f9546147da380382404eb6106222a9b8`；红提交 `86263e187391c573d332667fb58172e802679353`。前四轮报告原样保留；只追加本节并改收据 `review`。自造变异在另一个独立副本。
+- 审查人 `codex`，会话 `codex:7d29bd3e-c4cd-4e15-ad0b-298bd0301bd3`；本轮原生 `turn_context` 模型 `gpt-6.1-terra`（OpenAI）。作者会话触及本项目的模型为 `claude-opus-5-5`（Anthropic）。来源门禁仍须等本轮会话落盘后实测。
+- 审查仓库根目录实际执行 `node scripts/gates/run-all.ts --hash --branch=feat/kernel-plugins --base=origin/feat/domain-core`，原样标准输出：
+
+  ```text
+  6622c16d92efaa0a90df359386bd277afe1c7dcd69700bdc67dc0334816104b7
+  ```
+
+| 检查 | 独立结果 |
+|---|---|
+| 绿提交 `npm ci`、`npm run typecheck`、`npm run lint` | 均退出 0；lint 检查 22 文件 |
+| 绿提交 `npm test` | 退出 0，135 通过、0 失败、0 跳过；其中 kernel 112 条 |
+| 红提交 `npm ci`、`npm test` | 安装退出 0；测试退出 1，23 条旧测试通过、112 条 kernel 测试逐名失败、0 跳过。红绿三份测试文件无差异，测试名与红失败名双向差集为空 |
+| 作者变异脚本，Node `v22.22.0` / `v25.8.1` | 两次独立顺序运行均退出 0；各自原样 112 绿，107 个具名变异被杀、0 存活、0 超时；R4-M1/M2 的 K92/K91 均纳入 |
+| 超时金丝雀，Node `v22.22.0` / `v25.8.1` | `KERNEL_MUT_TIMEOUT_MS=5000` 两次均约 5 秒退出 0；金丝雀超时按脚本语义不记为变异被杀 |
+| 自造变异 R5-M1 / R5-M2 | 隔离副本先后注入；每次 typecheck 退出 0，全仓 135/135 仍绿；原版对照与具体反例见 R5-05 |
+| 原始 `run-all.ts --local --branch=feat/kernel-plugins --base=origin/feat/domain-core` | 退出 1；`G-REVIEW` 因无 review 而红，其余机械门禁显示绿。`review=null` 时 `G-PROVENANCE` 提前跳过，不能当作审查来源已验证 |
+| 填写 reject 后重跑同一 `--local` | 退出 1；`G-REVIEW` 因 reject 拦截；`G-PROVENANCE` 找不到本次 hash 调用且不能确认审查厂商，本轮会话尚未落盘，结束后仍须实测 |
+
+## 第四轮修复复测
+
+- **R4-01**：普通 3 字撤回原文在 volatile 中被拒；回调试图修改冻结可见消息时不能污染引用，引用仍是日志真实原文。异常兜底的另一条路径见 R5-03。
+- **R4-02 / R4-03**：普通 `Map` 配置与带私有字段的类实例在注册时返回 `unsupported-instance`；已注册普通对象的 send 请求带绑定 endpoint。嵌套数组 getter 与关键字段 getter 的异常路径仍有缺口，见 R5-02。
+- **R4-04**：墙钟跳变不影响正常单调时钟窗口；读数低于首次读数时该次被拒。但读数低于**上一次**而仍高于首次时不被拒，见 R5-01。
+- **R4-05 / R4-06**：此前含 NUL 的两渠道动作各自产生一次调用，不再共用账本；静态规则“收到新消息后，先遵守群规”被放行。**R4-07**：作者已将此前两个变异纳入 K92/K91 并杀死，但本轮两个新变异存活，见 R5-05。
+
+## 必须修复
+
+### R5-01 [P1 / AC-35] 单调读数相对上一轮倒退仍可重试，已发现倒退后恢复也可再次重试
+
+位置：`packages/kernel/src/plugins.ts:159-162,245,255-260`。代码只比较当前读数与 `firstAttemptMonotonic`，没有记录上一次观测值或“时钟已不可信”状态。
+
+独立模拟的 B1 服务商在 1,000 ms 后忘记去重键，三次宿主读数依次为 `1000 → 1100 → 1050`：第二次在服务商保留期内重复请求；第三次相对上一轮倒退，但仍高于首次，宿主继续发送。服务商在独立模拟时钟上已过期，真实副作用数由 1 增至 2。另一反例：`1000 → 999` 的那次虽拒绝，但读数再变成 `1001`、服务商实际已过期时宿主又允许发送，最终副作用仍为 2。这里的服务商/时钟都是确定性模拟，不称真实邮件已重复。
+
+**修复要求**：逐次记录可比较的最近单调观测，任意倒退或无法确认时长后将该动作的自动重试资格持久地标为不可信，直到明确对账/新动作；不能因读数回升便重新假设 TTL 安全。保留首次时间不刷新的约束，覆盖首次后倒退但仍高于首次、发现倒退后读数回升、到期与无倒退对照。
+
+### R5-02 [P1 / AC-35] getter 在数组中被执行并接受；关键字段 getter 抛错可逃出注册
+
+位置：`plugins.ts:31-55,63-75,83-107`。`plainData` 的数组分支直接读 `x[i]`，没有检查索引 descriptor；而 `snapshotOf` 在调用 `channelSelf` 检查 getter 之前就读取 `kind/id/send/endpoint` 等字段。
+
+- 对普通插件配置 `config.routes[0]` 定义可枚举 getter，getter 只返回字符串 `A` 并递增计数；独立调用 `register` 实际 `{ok:true}`，getter 被执行 1 次。与“getter 注册即拒且指出字段”相反。
+- 对顶层 `endpoint` 定义会抛错的 getter，`register` 直接抛 `Error: endpoint getter 执行`，没有 `RegisterResult` 和字段级拒绝。不是现有测试里非关键 `route` getter 的普通样例。
+
+**修复要求**：在读取任何契约字段前先以安全 descriptor 检查普通对象/数组的自有字段，逐层拒绝 accessor 并报告路径（包括数组索引）；处理可能抛出的反射/读取错误，不能让注册入口抛异常或执行 getter 后再声称已拒绝。补关键字段及嵌套数组 getter 的正负对照和调用计数。
+
+### R5-03 [P1 / AC-08] 重建回调的异常兜底自身仍可抛错
+
+位置：`packages/kernel/src/assemble.ts:173-180`。当被撤回消息使旧压缩块失效时，令 `recompress` 抛出一个 `Error`，其 `message` getter 自身抛错；当前 catch 块先直接读取 `err.message`，实测 `assemble` 抛出 `Error: message getter 错误`，而不是返回 `{ok:false,reason:'invalid-compressed'}`。这和分类器已修复的异常序列化问题是同类但不同代码入口。
+
+**修复要求**：对 `instanceof`、错误字段读取及字符串化全部使用安全封闭的诊断转换；恶意 getter、会抛的 `getPrototypeOf`、普通 Error 及非 Error 都要返回明确失败，不暴露半成品且不抛出。
+
+### R5-04 [P1 / AC-08] 带 `: ` 的发言者 ID 让宿主标签被误计入撤回扫描
+
+位置：`assemble.ts:199-202,220-225,252-258`。代码通过 `sg.text.indexOf(': ')` 猜测正文起点，而不是直接保存结构化正文。合法事件序列：用户 #1 发 `敏感词` 并撤回；另一发言者 ID 为 `其他: 敏感词`，消息正文为 `普通内容`。实测返回 `retracted-text-leaked / history / seq:1`；只把该 ID 的 `: ` 改成 `_`，正文和其他输入不变，装配成功。被命中的是发言者标签，不是正文，违背本轮明确要求“宿主自加的序号与发言者标签不参与扫描”。这不同于作者已披露的“其他人正文恰含撤回短词”的有意保守误拦。
+
+**修复要求**：渲染时保留独立的原始内容字段供扫描，或用消息事件直接提供正文，勿从可包含任意 ID 的渲染字符串反向猜分隔符；分别覆盖消息、编辑与引用的 sender ID 中 `: `、空格和冒号，并确保真实正文含撤回原文仍被拦。
+
+### R5-05 [P1 / R-05] 两个新变异存活，空白种类和多次撤回缺少充分校准
+
+以下只发生在隔离变异副本，不是将变异版行为归咎原版；每次 `npm run typecheck` 退出 0、`npm test` 全仓 135/135 绿：
+
+- **R5-M1**：将 `squash` 的 `/\s+/gu` 换成只删除普通空格和换行的 `/[ \n]+/g`。对撤回原文 `秘密口令` 与 volatile `秘\t密　口令`（制表符和全角空格），原版返回 `retracted-text-leaked`，变异版返回 `ok:true` 并带入尾部；现有空白测试只覆盖普通空格和换行。
+- **R5-M2**：在 M1 副本上，让 `retractedTexts` 仅收集第一条被撤回的 message。输入连续撤回 `第一个秘密` 和 `第二个秘密`，volatile 为第二条原文；原版拒绝并报 `seq:2`，变异版 `ok:true`。现有测试没有以多条同时撤回及第二条正文作为判据。
+
+**修复要求**：补制表符、全角空格等支持的空白种类及多条撤回分别命中的可执行负例，注入相应坏变异并配非泄漏正例；不要以预选 107 个变异全部被杀代替这些新增合同的双侧标定。
+
+## 原版反例可执行复现
+
+在 `cedc19e` 仓库根目录 `npm ci` 后运行；断言固定的是**当前错误**，服务端和时钟均为本机模拟：
+
+```sh
+node --input-type=module <<'NODE'
+import assert from 'node:assert/strict';
+import {append,emptyLog} from './packages/domain/src/log.ts';
+import {assemble} from './packages/kernel/src/assemble.ts';
+import {createRegistry} from './packages/kernel/src/plugins.ts';
+const arr=[];let reads=0;Object.defineProperty(arr,'0',{enumerable:true,configurable:true,get(){reads++;return 'A'}});arr.length=1;
+const r=createRegistry(),base={kind:'outbound-channel',id:'p',endpoint:'A',idempotency:'none',config:{routes:arr},send:async q=>({action_id:q.action_id,receiptId:'r'})};
+assert.equal(r.register(base).ok,true);assert.equal(reads,1);
+const bad={kind:'outbound-channel',id:'g',idempotency:'none',send:async q=>({action_id:q.action_id,receiptId:'r'})};
+Object.defineProperty(bad,'endpoint',{enumerable:true,get(){throw Error('endpoint getter 执行')}});
+assert.throws(()=>r.register(bad),/endpoint getter 执行/);console.log('R5-02：数组 getter 被接受且执行；关键 getter 抛出');
+let mono=1000,server=0,effects=0,calls=0;const seen=new Map(),reg=createRegistry({now:()=>0,monotonic:()=>mono});
+reg.register({kind:'outbound-channel',id:'b1',endpoint:'A',idempotency:'action-id',idempotencyWindowMs:1000,send:async q=>{
+ calls++;const old=seen.get(q.action_id);if(old!==undefined&&server-old<1000)throw Error('回执继续丢失');
+ effects++;seen.set(q.action_id,server);throw Error('已送达但回执丢失');
+}});
+const req={action_id:'a',payload:'x'};await reg.send('b1',req);mono=1100;server=100;await reg.send('b1',req);mono=1050;server=1001;await reg.send('b1',req);
+assert.equal(calls,3);assert.equal(effects,2);console.log('R5-01：读数倒退后请求数',calls,'副作用数',effects);
+const u={kind:'user',id:'u'},at='2026-11-05T00:00:00Z',stable=[{kind:'system',text:'助手'}];
+let log=append(emptyLog(),u,{kind:'message',text:'旧的保密原文'},at);log=append(log,u,{kind:'message',text:'普通消息'},at);log=append(log,u,{kind:'retract',target:1},at);
+const err=new Error('x');Object.defineProperty(err,'message',{get(){throw Error('message getter 错误')}});
+assert.throws(()=>assemble(log,{stable,quotes:[],budgetBytes:1000,compressed:{throughSeq:2,builtAtSeq:2,text:'旧摘要'},recompress(){throw err}}),/message getter 错误/);
+console.log('R5-03：重建异常处理再次抛错');
+let labels=append(emptyLog(),u,{kind:'message',text:'敏感词'},at);labels=append(labels,u,{kind:'retract',target:1},at);
+const a=append(labels,{kind:'user',id:'其他: 敏感词'},{kind:'message',text:'普通内容'},at);
+const b=append(labels,{kind:'user',id:'其他_敏感词'},{kind:'message',text:'普通内容'},at);
+assert.equal(assemble(a,{stable,quotes:[],budgetBytes:1000}).reason,'retracted-text-leaked');
+assert.equal(assemble(b,{stable,quotes:[],budgetBytes:1000}).ok,true);console.log('R5-04：标签中的冒号导致误拦');
+NODE
+```
+
+## 未完成验收边界
+
+作者披露的短撤回词与他人**正文**碰撞可能误拦、摘要改写后的派生语义无法由逐字扫描保证、插件可能忽略声明 endpoint、进程重启后内存账本丢失及 AC-39 实际缓存/会话/用量观测未接线，均不能以当前模拟结果当作通过。R-06 纵向路径仍未测；AC-06、AC-08、AC-11、AC-12、AC-35、AC-39 整项也均未通过。本次 reject 的问题包含本片内已可直接复现的错误，不只是未来集成缺口。
