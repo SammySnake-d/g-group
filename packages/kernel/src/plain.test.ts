@@ -169,3 +169,63 @@ test("safeDescribe 与 describeThrown 给出确切的诊断文字", () => {
   Object.defineProperty(bad, "message", { get() { throw new Error("坏"); } });
   assert.equal(describeThrown(bad), "{}");
 });
+
+// —— 第六轮:描述符字段名污染(R6-01)、判定选项 getter(R6-03)、诊断不执行外部代码(R6-04)、普通小数(R6-M1)
+const DESC_KEYS = ["get", "set", "value", "writable", "enumerable", "configurable"] as const;
+/** 在 Object.prototype 上临时装同名 setter(计数)或不可写普通值;结束后一定复原 */
+function underDescKey<T>(key: string, mode: "setter" | "readonly", counter: { n: number }, fn: () => T): T {
+  const d: PropertyDescriptor = Object.create(null);
+  d.configurable = true;
+  if (mode === "setter") d.set = () => { counter.n++; };
+  else { d.value = 17; d.writable = false; }
+  return withPolluted(Object.prototype, key, d, fn);
+}
+
+test("Object.prototype 上有描述符字段名(get/set/value/writable/enumerable/configurable)的 setter 或只读值时,合法输入照常通过且结果正确(R6-01 阳性埋雷)", () => {
+  for (const key of DESC_KEYS) for (const mode of ["setter", "readonly"] as const) {
+    const counter = { n: 0 };
+    const r = underDescKey(key, mode, counter, () => plainData({ x: 1, list: ["a", { y: 2 }] }));
+    const it = underDescKey(key, mode, counter, () => plainItems(["a", "b"]));
+    assert.equal(r.ok, true, `${key}/${mode}: ${r.ok ? "" : `${r.path} ${r.why}`}`);
+    assert.deepEqual(r.ok && JSON.parse(JSON.stringify(r.value)), { x: 1, list: ["a", { y: 2 }] }, `${key}/${mode}`);
+    assert.deepEqual(it.ok && [...it.items], ["a", "b"], `${key}/${mode}`);
+    assert.equal(counter.n, 0, `${key}/${mode} setter 被调用`);
+  }
+});
+
+test("描述符字段名污染下 getter 仍被拒绝并点名路径,getter 调用 0 次(R6-01 单开关对照)", () => {
+  for (const key of DESC_KEYS) {
+    const calls = { n: 0 };
+    const input = { a: getterOn({}, "k", calls) }; // 污染前构造:测试自己的 defineProperty 不受污染影响
+    const r = underDescKey(key, "readonly", { n: 0 }, () => plainData(input, "x"));
+    assert.deepEqual(r.ok === false && [r.path, r.why], ["x.a.k", "不允许 getter/setter"], key);
+    assert.equal(calls.n, 0);
+  }
+});
+
+test("判定选项 topFunctions 是 getter 时拒绝,getter 调用 0 次;数据属性照常生效(R6-03 阳性埋雷)", () => {
+  const calls = { n: 0 };
+  const opts = getterOn({}, "topFunctions", calls);
+  const r = plainData({ fn: () => 1 }, "x", opts as never);
+  assert.deepEqual(r.ok === false && [r.path, r.why], ["x", "判定选项只接受普通数据对象,topFunctions 必须是数据属性"]);
+  assert.equal(calls.n, 0);
+  assert.equal(plainData({ fn: () => 1 }, "x", { topFunctions: true }).ok, true);
+});
+
+test("safeDescribe 不执行 getter、toJSON 与 toString,访问器记作占位;describeThrown 不读 message getter(R6-04 阳性埋雷)", () => {
+  const calls = { n: 0 };
+  const o = getterOn({ a: 1 }, "g", calls);
+  const toJSON = () => { calls.n++; return "被调用"; };
+  assert.equal(safeDescribe(o), '{"a":1,"g":"[getter/setter]"}');
+  assert.equal(safeDescribe({ toJSON }), '{"toJSON":"<函数>"}');
+  assert.equal(safeDescribe([1, getterOn([2], "0", calls)]), '[1,["[getter/setter]"]]');
+  const err = new Error("x");
+  Object.defineProperty(err, "message", { enumerable: true, get() { calls.n++; return "读到了"; } });
+  assert.equal(describeThrown(err), '{"message":"[getter/setter]"}');
+  assert.equal(calls.n, 0);
+});
+
+test("有限小数照常通过并原样保留(R6-M1 单开关对照:只拒绝 NaN 与无穷)", () => {
+  const r = plainData({ ratio: 2.5, neg: -0.125, list: [0.1] });
+  assert.deepEqual(r.ok && JSON.parse(JSON.stringify(r.value)), { ratio: 2.5, neg: -0.125, list: [0.1] });
+});

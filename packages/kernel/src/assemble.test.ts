@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { append, emptyLog, type Log } from "@g-group/domain";
-import { assemble, type AssembleOptions, type AssembleResult, MAX_BREAKPOINTS, prefixHash, prefixLength, serialize } from "./assemble.ts";
+import { assemble, INVISIBLE, type AssembleOptions, type AssembleResult, MAX_BREAKPOINTS, prefixHash, prefixLength, serialize, squash } from "./assemble.ts";
 
 const user = { kind: "user", id: "u1" } as const;
 const contact = { kind: "contact", id: "c-astra" } as const;
@@ -590,4 +590,79 @@ test("日志或装配选项带 getter、Proxy 时显式失败,getter 调用 0 �
   }
   assert.equal(calls, 0);
   assert.equal(assemble(log, { stable: S, quotes: [1], budgetBytes: BIG }).ok, true);
+});
+
+// —— 第六轮:原型污染穿透调用链(R6-01 / R6-02)、公开工具执行 getter(R6-03)、空白定义与实现同源(R6-05)
+/** 在 target 的 key 上临时装属性(描述符用空原型构造),只在 fn 执行期间生效,结束后一定复原 */
+function polluted<T>(target: object, key: string, mode: "setter" | "readonly", counter: { n: number }, fn: () => T): T {
+  const had = Object.getOwnPropertyDescriptor(target, key);
+  const d: PropertyDescriptor = Object.create(null);
+  d.configurable = true;
+  if (mode === "setter") d.set = () => { counter.n++; };
+  else { d.value = 17; d.writable = false; }
+  Object.defineProperty(target, key, d);
+  try { return fn(); } finally {
+    if (had) Object.defineProperty(target, key, had);
+    else delete (target as Record<string, unknown>)[key];
+  }
+}
+
+test("Object.prototype 上有 get/set/value/writable/enumerable/configurable 的 setter 或只读值时,合法装配照常成功且内容正确(R6-01 阳性埋雷)", () => {
+  const baseline = ok(assemble(history(), opts({ quotes: [1] })));
+  for (const key of ["get", "set", "value", "writable", "enumerable", "configurable"]) for (const mode of ["setter", "readonly"] as const) {
+    const counter = { n: 0 };
+    const log = history();
+    const r = polluted(Object.prototype, key, mode, counter, () => assemble(log, opts({ quotes: [1] })));
+    assert.equal(r.ok, true, `${key}/${mode}: ${JSON.stringify(r)}`);
+    if (r.ok) assert.equal(serialize(r.request), serialize(baseline.request), `${key}/${mode}`);
+    assert.equal(counter.n, 0, `${key}/${mode}`);
+  }
+});
+
+test("Array.prototype[0] 上有 setter 或只读值时,合法装配照常成功,段、清单与跳过都是自有下标且内容正确(R6-02 阳性埋雷)", () => {
+  let log = history();
+  log = append(log, user, { kind: "retract", target: 8 }, at);
+  const o = opts({ quotes: [1, 8], volatile: "任务表:无" });
+  const baseline = ok(assemble(log, o));
+  for (const mode of ["setter", "readonly"] as const) {
+    const counter = { n: 0 };
+    let r: AssembleResult | undefined;
+    assert.doesNotThrow(() => { r = polluted(Array.prototype, "0", mode, counter, () => assemble(log, o)); }, mode);
+    const got = ok(r as AssembleResult);
+    assert.equal(counter.n, 0, mode);
+    for (const arr of [got.request.segments, got.manifest, got.skipped, got.prefixBreaks]) assert.equal(Object.hasOwn(arr, "0"), true, mode);
+    assert.deepEqual(JSON.parse(JSON.stringify(got)), JSON.parse(JSON.stringify(baseline)), mode);
+  }
+});
+
+test("serialize、prefixLength、prefixHash 遇到带 getter 的请求抛受控 TypeError,getter 调用 0 次;装配结果照常可用(R6-03 阳性埋雷)", () => {
+  let calls = 0;
+  const req = {};
+  Object.defineProperty(req, "segments", { enumerable: true, get() { calls++; return []; } });
+  for (const fn of [() => serialize(req as never), () => prefixLength(req as never), () => prefixHash(req as never)]) {
+    assert.throws(fn, (e: unknown) => e instanceof TypeError && /只接受普通数据对象.*segments.*getter/.test(e.message));
+  }
+  assert.equal(calls, 0);
+  const r = ok(assemble(history(), opts()));
+  assert.equal(prefixHash(r.request, prefixLength(r.request)), prefixHash(r.request));
+  assert.equal(serialize(r.request).length > 0, true);
+});
+
+/** Unicode 空白(White_Space)全集里的代表点、零宽字符与 BOM:撤回比对时都必须被去掉 */
+const INVISIBLE_SAMPLES = ["\u0009", "\u000A", "\u000B", "\u000C", "\u000D", "\u0020", "\u0085", "\u00A0", "\u1680", "\u2000", "\u2001", "\u2002", "\u2003", "\u2004", "\u2005", "\u2006", "\u2007", "\u2008", "\u2009", "\u200A", "\u2028", "\u2029", "\u202F", "\u205F", "\u3000", "\u200B", "\u200C", "\u200D", "\u2060", "\uFEFF"];
+
+test("撤回原文中间夹着 U+000B、U+0085、U+1680、U+2000–U+200A、U+2028/2029、U+202F、U+205F、U+3000、零宽字符或 BOM 都算命中(R6-05 阳性埋雷)", () => {
+  for (const ch of INVISIBLE_SAMPLES) {
+    const hex = ch.codePointAt(0)?.toString(16).toUpperCase().padStart(4, "0");
+    assert.equal(squash(`秘${ch}密`), "秘密", `U+${hex}`);
+    const r = assemble(retractedLog("秘密口令"), { stable: S, quotes: [], volatile: `状态:秘${ch}密口令`, budgetBytes: BIG });
+    assert.deepEqual(r, { ok: false, reason: "retracted-text-leaked", where: "volatile", seq: 1 }, `U+${hex}`);
+  }
+});
+
+test("撤回比对用的不可见字符定义与实现同源:每个样例都在 INVISIBLE 里,普通可见字符都不在(R6-05 单开关对照)", () => {
+  for (const ch of INVISIBLE_SAMPLES) assert.equal(new RegExp(INVISIBLE.source, "u").test(ch), true, `U+${ch.codePointAt(0)?.toString(16)}`);
+  for (const ch of ["秘", "a", "_", "-", "\u00B7", "\u00AD"]) assert.equal(new RegExp(INVISIBLE.source, "u").test(ch), false, ch);
+  const r = assemble(retractedLog("秘密口令"), { stable: S, quotes: [], volatile: "状态:秘-密口令", budgetBytes: BIG });
+  assert.equal(r.ok, true);
 });

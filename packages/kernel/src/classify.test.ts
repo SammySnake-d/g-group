@@ -111,7 +111,8 @@ test("分类器返回非字符串或越界编号同样按 Uncertain 处理并记
 test("分类器返回循环对象、BigInt、toJSON 抛错的对象都封闭为 Uncertain 并记可读违规,不抛错", () => {
   const cycle: Record<string, unknown> = { a: 1 };
   cycle.self = cycle;
-  const evil = { toJSON() { throw new Error("toJSON 炸了"); } };
+  let toJsonCalls = 0;
+  const evil = { toJSON() { toJsonCalls++; throw new Error("toJSON 炸了"); } };
   const nested = { n: 2n, deep: { arr: [1n] } };
   for (const bad of [cycle, 1n, evil, nested, Symbol("s")]) {
     const r = classifyInbound({ sender: user, text: "嗯" }, () => bad);
@@ -121,7 +122,8 @@ test("分类器返回循环对象、BigInt、toJSON 抛错的对象都封闭为 
   }
   assert.match(safeDescribe(cycle), /循环/);
   assert.equal(safeDescribe(1n), "1n");
-  assert.match(safeDescribe(evil), /无法序列化.*toJSON 炸了/);
+  assert.equal(safeDescribe(evil), '{"toJSON":"<函数>"}', "toJSON 不被调用,只记成函数");
+  assert.equal(toJsonCalls, 0);
   assert.match(safeDescribe(nested), /"2n"/);
 });
 
@@ -224,4 +226,17 @@ test("分类器拿到的是冻结副本,改不了调用方的事件;同内容普
   assert.equal(r.intent, "E4");
   assert.equal(Object.isFrozen(seen), true);
   assert.notEqual(seen, e);
+});
+
+test("分类器返回带 getter 或 toJSON 的非枚举对象时按 Uncertain 处理,getter 与 toJSON 调用 0 次,违规点名路径(R6-04 阳性埋雷)", () => {
+  let calls = 0;
+  const withGetter = {};
+  Object.defineProperty(withGetter, "x", { enumerable: true, get() { calls++; return "E1"; } });
+  const r = classifyInbound({ sender: user, text: "嗯" }, () => withGetter);
+  assert.deepEqual([r.intent, r.via, r.violation], ["Uncertain", "semantic", "分类结果只接受普通数据对象:分类结果.x 不允许 getter/setter"]);
+  const j = classifyInbound({ sender: user, text: "嗯" }, () => ({ toJSON() { calls++; return "E1"; } }));
+  assert.deepEqual([j.intent, j.violation], ["Uncertain", "分类结果只接受普通数据对象:分类结果.toJSON 只有顶层字段可以是函数"]);
+  assert.equal(calls, 0);
+  const plain = classifyInbound({ sender: user, text: "嗯" }, () => ({ event: "E1" }));
+  assert.deepEqual([plain.intent, plain.violation], ["Uncertain", '{"event":"E1"}']);
 });

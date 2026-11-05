@@ -2,6 +2,7 @@
 // 定时归联系人不归插件;插件互不依赖;外部事件由宿主校验并盖章(来源、版本、事件类型、双时间、附件、不可信);
 // 外发按 action_id 记账,in-flight 后超时或异常记 DeliveryUnknown,B2 渠道拒绝盲重试。
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { test } from "node:test";
 import { createRegistry, SCHEDULE_REASON } from "./plugins.ts";
 
@@ -1018,4 +1019,128 @@ test("拉取结果数组元素是 getter 时整批拒绝,事件对象里有 gett
     assert.equal(one.events.length, 1);
   }
   assert.equal(counter.n, 0);
+});
+
+// —— 第六轮:原型污染穿透拉取与注册(R6-01 / R6-02)、工厂选项 getter(R6-03)、then getter 与账本终态(R6-04)
+/** 在 target 的 key 上临时装 setter(计数)或只读值,描述符用空原型构造;fn 结束后一定复原 */
+async function pollutedAsync<T>(target: object, key: string, mode: "setter" | "readonly", counter: { n: number }, fn: () => Promise<T>): Promise<T> {
+  const had = Object.getOwnPropertyDescriptor(target, key);
+  const d: PropertyDescriptor = Object.create(null);
+  d.configurable = true;
+  if (mode === "setter") d.set = () => { counter.n++; };
+  else { d.value = 17; d.writable = false; }
+  Object.defineProperty(target, key, d);
+  try { return await fn(); } finally {
+    if (had) Object.defineProperty(target, key, had);
+    else delete (target as Record<string, unknown>)[key];
+  }
+}
+
+/** 跨 await 的 Array.prototype 污染会波及测试运行器自己的内部数组,所以放进独立子进程:子进程临时污染、拉取、复原后输出 JSON */
+function pullUnderArrayPollution(mode: "setter" | "readonly", batch: unknown[]): { calls: number; err?: string; ok?: boolean; events?: string[]; rejected?: unknown[]; ownEvents?: boolean[]; ownRejected?: boolean[] } {
+  const code = `
+    import { createRegistry } from ${JSON.stringify(new URL("./plugins.ts", import.meta.url).href)};
+    const batch = ${JSON.stringify(batch)};
+    const reg = createRegistry({ now: () => 0 });
+    reg.register({ kind: "data-source", id: "s", sources: ["g1"], pull: async () => batch });
+    const d = Object.create(null); d.configurable = true; let calls = 0;
+    if (${JSON.stringify(mode)} === "setter") d.set = () => { calls++; }; else { d.value = 17; d.writable = false; }
+    Object.defineProperty(Array.prototype, "0", d);
+    let r, err;
+    try { r = await reg.pull("s", "g1"); } catch (e) { err = String(e); } finally { delete Array.prototype[0]; }
+    const own = (a) => Array.from({ length: a.length }, (_, i) => Object.hasOwn(a, i));
+    console.log(JSON.stringify(err ? { calls, err } : { calls, ok: r.ok, events: r.events.map((e) => e.origin.nativeId), rejected: r.rejected, ownEvents: own(r.events), ownRejected: own(r.rejected) }));
+  `;
+  return JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e", code], { encoding: "utf8" }));
+}
+
+test("Array.prototype[0] 上有 setter 或只读值时,拉取一条、多条、含拒收与空结果都返回自有下标与真实内容(R6-02 阳性埋雷)", () => {
+  const batches: [string, unknown[], string[], unknown[]][] = [
+    ["一条", [ev()], ["m-1"], []],
+    ["多条", [ev({ nativeId: "m-1" }), ev({ nativeId: "m-2" })], ["m-1", "m-2"], []],
+    ["含拒收", [{ nativeId: "" }, ev({ nativeId: "m-3" })], ["m-3"], [{ index: 0, reason: "缺 nativeId" }]],
+    ["空", [], [], []],
+  ];
+  for (const mode of ["setter", "readonly"] as const) for (const [name, batch, events, rejected] of batches) {
+    const r = pullUnderArrayPollution(mode, batch);
+    assert.deepEqual(r, { calls: 0, ok: true, events, rejected, ownEvents: events.map(() => true), ownRejected: rejected.map(() => true) }, `${mode}/${name}`);
+  }
+});
+
+test("Object.prototype 上有 get/set/value/writable/enumerable/configurable 的 setter 或只读值时,注册、拉取、发送照常成功(R6-01 阳性埋雷)", async () => {
+  for (const key of ["get", "set", "value", "writable", "enumerable", "configurable"]) for (const mode of ["setter", "readonly"] as const) {
+    const counter = { n: 0 };
+    const reg = createRegistry({ now: () => T0 });
+    const out = await pollutedAsync(Object.prototype, key, mode, counter, async () => {
+      const a = reg.register(tg());
+      const b = reg.register(mail([]));
+      const p = await reg.pull("telegram", "g1");
+      const s = await reg.send("gmail", { action_id: "a", payload: "x" });
+      return { a, b, p, s };
+    });
+    assert.deepEqual([out.a, out.b], [{ ok: true }, { ok: true }], `${key}/${mode}`);
+    assert.equal(out.p.ok && out.p.events.length, 1, `${key}/${mode}`);
+    assert.equal(out.p.ok && out.p.events[0]?.content, ev().content, `${key}/${mode}`);
+    assert.equal(out.s.ok && out.s.state, "confirmed", `${key}/${mode}`);
+    assert.equal(counter.n, 0, `${key}/${mode}`);
+  }
+});
+
+test("createRegistry 的选项带 getter 时抛受控 TypeError,getter 调用 0 次;字段类型不对也抛;普通选项照常生效(R6-03 阳性埋雷)", () => {
+  const counter = { n: 0 };
+  const opts = trapGetter({}, "now", () => T0, counter);
+  assert.throws(() => createRegistry(opts as never), (e: unknown) => e instanceof TypeError && /注册表选项.*now.*getter/.test(e.message));
+  assert.equal(counter.n, 0);
+  assert.throws(() => createRegistry({ sendTimeoutMs: -1 }), (e: unknown) => e instanceof TypeError && /sendTimeoutMs/.test(e.message));
+  assert.throws(() => createRegistry({ now: 5 } as never), (e: unknown) => e instanceof TypeError && /now 必须是函数/.test(e.message));
+  assert.doesNotThrow(() => createRegistry({ now: () => T0, monotonic: () => 0, sendTimeoutMs: 10 }));
+});
+
+test("send 返回带 then getter 的对象(抛错或不抛错)时 getter 调用 0 次,账本落到 delivery-unknown,重发按 B2 拒绝(R6-04 阳性埋雷)", async () => {
+  for (const throws of [true, false]) {
+    const counter = { n: 0 };
+    const reg = createRegistry();
+    let calls = 0;
+    reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => { calls++; return trapGetter({}, "then", () => undefined, counter, throws); } });
+    const r = await reg.send("p", { action_id: "a", payload: "x" });
+    assert.deepEqual(r.ok === false && [r.state, r.reason], ["delivery-unknown", "non-promise-send"], `throws=${throws}`);
+    assert.equal(reg.delivery("p", "a")?.state, "delivery-unknown");
+    const again = await reg.send("p", { action_id: "a", payload: "x" });
+    assert.equal(again.ok === false && again.reason, "retry-refused");
+    assert.deepEqual([counter.n, calls], [0, 1], `throws=${throws}`);
+  }
+});
+
+test("send 返回普通 thenable、带自有 then 的 Promise 或同步值都记 non-promise-send 不调用 then;原生 Promise 照常确认(R6-04 单开关对照)", async () => {
+  let thenCalls = 0;
+  // biome-ignore lint/suspicious/noThenProperty: 测试要的就是一个普通 thenable,验证它的 then 不被调用
+  const thenable = { then(ok: (v: unknown) => void) { thenCalls++; ok({ action_id: "a", receiptId: "r" }); } };
+  const ownThen = Promise.resolve({ action_id: "a", receiptId: "r" });
+  // biome-ignore lint/suspicious/noThenProperty: 测试要的就是带自有 then 的 Promise,验证它不被当成原生 Promise
+  Object.defineProperty(ownThen, "then", { value: () => { thenCalls++; } });
+  for (const [name, value] of [["thenable", thenable], ["自有 then 的 Promise", ownThen], ["同步回执", { action_id: "a", receiptId: "r" }]] as const) {
+    const reg = createRegistry();
+    reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => value });
+    const r = await reg.send("p", { action_id: "a", payload: "x" });
+    assert.deepEqual(r.ok === false && [r.state, r.reason], ["delivery-unknown", "non-promise-send"], name);
+  }
+  assert.equal(thenCalls, 0);
+  const reg = createRegistry();
+  reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: (q: { action_id: string }) => Promise.resolve({ action_id: q.action_id, receiptId: "r" }) });
+  assert.equal((await reg.send("p", { action_id: "a", payload: "x" })).ok, true);
+});
+
+test("B1 渠道 then getter 让首次落到 delivery-unknown 后,保留期内重试交给接收端并确认,getter 调用 0 次(R6-04 重试)", async () => {
+  const counter = { n: 0 };
+  let calls = 0;
+  const reg = createRegistry({ monotonic: () => 0 });
+  reg.register({
+    kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "action-id", idempotencyWindowMs: 1000,
+    send: (q: { action_id: string }) => { calls++; return calls === 1 ? trapGetter({}, "then", () => undefined, counter, true) : Promise.resolve({ action_id: q.action_id, receiptId: "r-2" }); },
+  });
+  const first = await reg.send("p", { action_id: "a", payload: "x" });
+  assert.equal(first.ok === false && first.reason, "non-promise-send");
+  const retry = await reg.send("p", { action_id: "a", payload: "x" });
+  assert.deepEqual(retry.ok && retry.receipt, { action_id: "a", receiptId: "r-2" });
+  assert.deepEqual([counter.n, calls, reg.delivery("p", "a")?.attempts], [0, 2, 2]);
 });
