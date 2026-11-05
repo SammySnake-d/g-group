@@ -57,5 +57,12 @@
   },
   "unverifiable": "本片是内核契约桩,R-06 纵向路径未测(由后续 app 接线切片交付:存储 PR #5 + 执行器 + 本内核)。AC-06/AC-11/AC-12/AC-35 整项都标未测,只证明纯函数与内存实现的子判据。AC-06:预算按渲染后 UTF-8 字节计,不是 token;超长原文整条进或整体失败,D06.3 的有界切片与分页游标没有做;assemble 不带会话/权限上下文,跨会话回读隔离没有证据。AC-11:只能证明 classifyInbound 自己在确认卡回复与纯点名时不调分类器,不能证明宿主其它入口不绕过它直接调模型;纯点名判 E1、确认卡判 E6 是本片定的机械规则,E5 子类型等要状态机切片定;确认卡只校验回复者 kind 是 user,没有核对卡片是否真属于这位用户与这个版本是否当前有效(要状态表)。AC-12:违规只在返回值 violation 字段,没有落盘的分类调用日志。AC-35:宿主快照只冻结声明字段,pull/send 函数在注册时取定但仍是调用方的代码,可执行插件代码的隔离与加载(沙箱、进程边界、包签名)不在本片,插件代码内部仍可以自己定时或调用别的插件;dependsOn 只查声明字段,import 级的插件互依赖靠 G-LAYER 且只扫仓库内包;不可信标记只是信封上的 trust 字段,不阻止下游把 content 当指令(R-10/AC-20 的拦截没有做);DeliveryUnknown 与 action_id 账本都在内存里,进程重启即丢,持久 Outbox 与入库端去重属于 AC-31;B1 的接收端去重是插件自报的 idempotency,宿主无法核实,不把它当作外部恰一次保证;超时后底层 Promise 仍可能完成,宿主只记 DeliveryUnknown,不会回补成 confirmed。R-05 的变异校准只覆盖 mutations.mjs 列出的 45 种故障(含审查存活的 M1=K14、M2=K15)。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "codex",
+    "session": "codex:7d29bd3e-c4cd-4e15-ad0b-298bd0301bd3",
+    "model": "gpt-6.1-terra",
+    "verdict": "reject",
+    "reviewed_hash": "3d7e9f12193180ab59a9287d8477ea781a6ca952eb450551512742c013af2b44",
+    "notes": "第二轮独立复审结论和反例见 reviews/feat-kernel-plugins.md 的第二轮"
+  }
 }

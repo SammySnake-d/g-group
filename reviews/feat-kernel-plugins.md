@@ -139,3 +139,129 @@ const control=classifyInbound({text:'@小秘 停止定时总结',mentions:['xiao
 assert.equal(control.event,'E1'); console.log('F-05：停止指令被归类为',control.event);
 NODE
 ```
+
+---
+
+# 第二轮：返修版独立复审
+
+**结论：reject。** 首轮多数具体反例得到修复，但返修版仍存在可重复发送的 B1 TTL 错误和插件更新绕过 B2 未知状态的问题；中文标点紧接 `@` 时停止指令仍被机械误分。新构造的两个变异仍可骗过全部测试。这些是对 `8964bfc` 实际运行的结果，不把原问题“一般样例已修复”等同于合同全部成立。
+
+## 复审对象和证据
+
+- 普通独立 clone `/private/tmp/g-group-pr6-codex-7d29bd3e`，HEAD `8964bfc875a0033a5912c2f1bfaa4cfccc74f1aa`；基线 `origin/feat/domain-core` = `afd02560f9546147da380382404eb6106222a9b8`；红提交 `c07656c8ffc482c20817ba073dbe7f873b01d870`。本次只追加本报告并填写收据的 `review`，不修改产品代码；故障注入在另一个独立副本。
+- 审查人 `codex`，会话 `codex:7d29bd3e-c4cd-4e15-ad0b-298bd0301bd3`；本轮原生 `turn_context` 模型 `gpt-6.1-terra`（OpenAI）。作者会话实际触及该项目的轮次模型均为 `claude-opus-5-5`（Anthropic）。本轮来源门禁仍需等当前会话落盘后实际核验，不能由厂商自报冒充门禁通过。
+- 独立 clone 根目录运行 `node scripts/gates/run-all.ts --hash --branch=feat/kernel-plugins --base=origin/feat/domain-core`，原样输出：
+
+  ```text
+  3d7e9f12193180ab59a9287d8477ea781a6ca952eb450551512742c013af2b44
+  ```
+
+| 验证 | 独立观察 |
+|---|---|
+| 绿提交 `npm ci`、`npm run typecheck`、`npm run lint` | 均退出 0；lint 检查 22 文件 |
+| 绿提交 `npm test` | 退出 0；72 通过、0 失败、0 跳过（其中 kernel 49 条） |
+| 红提交 `npm ci`、`npm test` | 安装退出 0；测试退出 1；23 条旧测试通过、49 条 kernel 具名测试失败、0 跳过。按测试名双向比较差集为空，红绿三份测试文件无差异 |
+| 作者 `node packages/kernel/proof/mutations.mjs` | 原样 49 绿，输出的 45 个指定变异均由具名测试杀死，包括上一轮 M1/M2（K14/K15）；只证明这些变异 |
+| 自造变异 R2-M1、R2-M2 | 第一个变异后，及叠加第二个变异后，类型检查均退出 0、全仓均 72/72 绿；违约行为见 RR-05 |
+| 原始收据 `run-all.ts --local` | 退出 1，`G-REVIEW` 因尚无 review 而红；`G-RED/G-STUB/G-TAUTO` 等绿。`G-PROVENANCE` 在 `review=null` 时直接跳过，不是审查来源已验证 |
+| 写入 reject 收据后重跑同一门禁 | 退出 1，`G-REVIEW` 因 reject 拦截；`G-PROVENANCE` 当前报未找到本次 hash 调用、审查厂商认不出。本轮运行中尚未落盘，会话完成后仍须复核 |
+
+## 首轮问题逐项复测
+
+- **F-01**：常规 create/delete 事件的 `sourceVersion/eventType`、源与宿主时间等可区分，宿主丢弃插件自报信任标志；先前“完全相同”的原反例不再重现。仍只能说所测字段和正负样例通过，不代表 AC-35 整项通过。
+- **F-02**：普通异步成功要等待真实回执；B2 送达后抛错、同一注册状态下重复调用确实返回 `retry-refused` 且只调一次。**但 B1 TTL 和插件更新后的异常路径仍失败，见 RR-01、RR-02。**
+- **F-03**：普通来源数组、ID/挂载点突变不改变宿主快照；更新走 `reregister` 校验。可执行函数仍以原对象为 `this`，代码隔离不在本片；更新时对旧投递状态的错误处理见 RR-02。
+- **F-04**：循环对象、BigInt、`toJSON` 抛错等作为分类器返回值时已封闭为 `Uncertain`。但抛出的异常自身读取失败仍能逃出，见 RR-04。
+- **F-05**：`@小秘 停止定时总结`（空格分开）会保留锚点并经分类器返回 E4；中文无空格标点反例仍失败，见 RR-03。
+- **F-06**：上次两个变异已被 K14/K15 检出，但本轮两个新变异存活，见 RR-05。
+- **F-07**：收据现将 R-06 标为未测，比冒充通过准确；当前仍未提供群消息入站→状态落盘→用户可见结果的真实纵向路径，不能说 R-06 或整个后端验收已通过。后续 app 接线是待完成工作，不是已完成证据。
+
+## 必须修复
+
+### RR-01 [P1 / AC-35] B1 的 TTL 逻辑在过期后仍重发，可造成重复外部副作用
+
+位置：`packages/kernel/src/plugins.ts:86,96-105,113-119,163-174`，`packages/kernel/src/plugin-contract.ts:90-96`；需求文档 D04.2 的 B1 条件要求同一 action、相同载荷、**首次尝试仍在服务商幂等保留期内**，超期结果未知时禁止当作安全重发。
+
+独立探针用宿主可注入时钟和**模拟**的 B1 接收端（按 action_id 去重，1,000 ms 后忘记旧键）复现：
+
+1. 第一次返回真实回执并 `confirmed`；时钟推进 1,001 ms，再用完全相同 action_id 和 payload 调用。宿主第 170 行重新发送，模拟接收端因键已过期产生第二次副作用；结果分别为 `r1`、`r2`，两次均 `deduplicated:false`。
+2. 第一次已产生副作用但回执丢失，宿主标 `delivery-unknown`；推进 1,001 ms 后再次调用，同一逻辑动作再被发送并产生第二次副作用。第 172–174 行对未知状态根本不检查首次尝试时间和服务商 TTL。
+
+`packages/kernel/src/plugins.test.ts:357-375` 的测试甚至**要求**已确认 B1 过期后再次调用插件，K36 把“不再重发”的变异当作坏变异杀死；它的绿色与安全幂等要求相反。上述是确定性模拟，不宣称已对真实 Gmail/Resend 发送。
+
+**修复要求**：已确认的同动作/载荷复用已知确认结果，不能因服务端缓存过期就重新产生副作用；对结果未知的 B1 保存首次尝试时间、对应服务商真实幂等保留期及载荷指纹，仅在保留期内允许安全重试，超期保持 `DeliveryUnknown` 并对账，不盲发。测试覆盖保留期前、恰到期、过期以及多次重试不能刷新首次时间；纠正当前反向断言和 K36。
+
+### RR-02 [P1 / AC-35] `reregister` 可以把 B2 结果未知的动作改按新 B1 判断并重发
+
+位置：`plugins.ts:96-105,130-137,157-174`。独立探针先注册 B2 渠道：它产生一次外部副作用后抛超时，宿主记录 `delivery-unknown`。然后用同一插件 ID `reregister` 一个新的、在自身服务端正确按 action_id 去重的 B1 渠道；更新返回 `{ok:true}`。再次调用同 action_id/载荷，宿主依据**当前** `p.idempotency` 而非旧动作所绑定的渠道版本/首次投递能力，进入 `deliver`；由于新服务端从未见过该动作，产生第二次副作用并返回 `confirmed`。
+
+这不是把不守约的 B2 伪装成 B1：探针的新 B1 对自身重复 action_id 确实去重，只是无法知道旧 B2 已发出什么。更换插件或接收端不能 retroactively 将旧的不确定投递变成幂等投递。
+
+**修复要求**：将每个在途/未知动作绑定到首次投递的插件版本、渠道身份、幂等能力及安全窗口；重注册或权限变更不得把旧 B2 未知结果转成可盲重发。需对 B2→B1、不同接收端、更新时 in-flight 等路径作真实调用计数测试，未知结果先对账或显式处理。
+
+### RR-03 [P1 / AC-11、AC-35] 中文标点与 @ 紧接时，“纯点名”正则吞掉控制指令
+
+位置：`packages/kernel/src/classify.ts:72-88`。`mentionOnly` 用 `e.text.replace(/@\S+/g, '')` 试图去掉 @ 名称。对于文本 `@小秘，停止定时总结` 和真实结构化 `mentions:['小秘']`，无空格的 `\S+` 将**整段文字**当作 @ 名称删除；实测返回 `intent:E1, via:mechanical`，分类器调用 0 次，而非交给分类器识别 E4。对中文自然输入这是现实可达路径；不是上一轮已测的带空格样例。
+
+**修复要求**：基于结构化 mention 的确切范围/格式区分名字与后续正文；只有正文真正为空才走纯点名。增加中文逗号、冒号、无空格控制文字、多个 @ 和真正纯点名的正负对照，并保持机械锚点与语义分离，不要用宽泛正则丢失正文。
+
+### RR-04 [P1 / AC-12] 分类器抛出无法读取 message 的 Error 时，兜底本身再次抛错
+
+位置：`classify.ts:89-92`。尽管 `safeDescribe` 自身有保护，catch 分支在调用它之前先求值 `err instanceof Error ? err.message : err`。本轮将一个 `Error` 的 `message` 属性设置为读取时抛错，再让分类器抛出它；`classifyInbound` 实际抛出 `Error: message getter failed`，没有返回 `Uncertain` 和违规说明。异常对象可以来自外部分类器；此处只证明该输入的同步失败，不声称已产生下游系统故障。
+
+**修复要求**：连 `instanceof` 和 `message` 的读取也放在不会逃出异常的安全兜底里；增补恶意 getter、异常对象本身不可转文字等测试，分类失败仍返回保守结果。
+
+### RR-05 [P1 / R-05] 两个新的违约变异仍可骗过所有测试
+
+对独立 clone 的 `plugins.ts` 注入，原始产品代码未改；每次类型检查 0，全部 72 条测试通过：
+
+- **R2-M1**：将 `const payload = String(req.payload);` 改为 `const payload = String(req.payload).trim();`。先发载荷 `x`，再以相同 action_id 发 `x `：原版返回 `payload-mismatch`；变异版返回 `ok:true,deduplicated:true`，将不同原文错误当成同一动作。现有测试不覆盖有意义的空白差异。
+- **R2-M2**：在 M1 副本上，删除 `typeof e.author !== 'string'` 的拒绝检查，返回信封时将 `e.author` 改为 `String(e.author)`。输入 `author:42` 时原版将该事件放入 `rejected`，变异版却接收成 `author:'42'`；全仓依然 72/72 绿。
+
+**修复要求**：针对载荷字节级差异及每个必需外部事件字段的非法类型，添加独立反例和能杀死对应错误的双侧标定；复核收据 R-05 的“通过”是否与完整判据覆盖相符。以上是测试缺口，不把两种变异造成的行为说成原版已有缺陷。
+
+## 原版实际错误的最小复现
+
+在 `8964bfc` 的仓库根目录、`npm ci` 后运行；以下断言的是**当前错误现象**，不是修复后的期望：
+
+```sh
+node --input-type=module <<'NODE'
+import assert from 'node:assert/strict';
+import {createRegistry} from './packages/kernel/src/plugins.ts';
+import {classifyInbound} from './packages/kernel/src/classify.ts';
+let t=100000, effects=0; const ttl=1000, seen=new Map();
+const r=createRegistry({now:()=>t,receiptTtlMs:ttl});
+r.register({kind:'outbound-channel',id:'b1',idempotency:'action-id',send:async q=>{
+  const old=seen.get(q.action_id); if(old && t-old.at<ttl) return old.receipt;
+  effects++; const receipt={action_id:q.action_id,receiptId:`r${effects}`};
+  seen.set(q.action_id,{at:t,receipt}); return receipt;
+}});
+await r.send('b1',{action_id:'a',payload:'x'}); t+=ttl+1;
+await r.send('b1',{action_id:'a',payload:'x'}); assert.equal(effects,2);
+console.log('RR-01 已确认的 B1 TTL 过期后副作用次数:',effects);
+let u=200000, n=0; const seen2=new Map(), x=createRegistry({now:()=>u,receiptTtlMs:ttl});
+x.register({kind:'outbound-channel',id:'b1',idempotency:'action-id',send:async q=>{
+  const old=seen2.get(q.action_id); if(old && u-old.at<ttl) return old.receipt;
+  n++; const receipt={action_id:q.action_id,receiptId:`r${n}`}; seen2.set(q.action_id,{at:u,receipt});
+  if(n===1) throw Error('已送达但回执丢失'); return receipt;
+}});
+assert.equal((await x.send('b1',{action_id:'a',payload:'x'})).state,'delivery-unknown');
+u+=ttl+1; await x.send('b1',{action_id:'a',payload:'x'}); assert.equal(n,2);
+console.log('RR-01 结果未知的 B1 TTL 过期后副作用次数:',n);
+let sent=0; const z=createRegistry(), newProvider=new Map();
+z.register({kind:'outbound-channel',id:'mail',idempotency:'none',send:async()=>{sent++;throw Error('已送达但回执丢失')}});
+assert.equal((await z.send('mail',{action_id:'a',payload:'x'})).state,'delivery-unknown');
+z.reregister({kind:'outbound-channel',id:'mail',idempotency:'action-id',send:async q=>{
+  if(newProvider.has(q.action_id)) return newProvider.get(q.action_id);
+  sent++; const receipt={action_id:q.action_id,receiptId:'new'}; newProvider.set(q.action_id,receipt); return receipt;
+}});
+await z.send('mail',{action_id:'a',payload:'x'}); assert.equal(sent,2);
+console.log('RR-02 B2 未知后替换插件的副作用次数:',sent);
+let calls=0; const event={sender:{kind:'user',id:'u'},text:'@小秘，停止定时总结',mentions:['小秘']};
+const c=classifyInbound(event,()=>{calls++;return 'E4'}); assert.equal(c.intent,'E1'); assert.equal(calls,0);
+console.log('RR-03 中文控制语句:',c.intent,'分类器调用:',calls);
+const bad=new Error('original'); Object.defineProperty(bad,'message',{get(){throw Error('message getter failed')}});
+assert.throws(()=>classifyInbound({sender:{kind:'user',id:'u'},text:'测试'},()=>{throw bad}),/message getter failed/);
+console.log('RR-04 异常兜底再次抛出');
+NODE
+```
