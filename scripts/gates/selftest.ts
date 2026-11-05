@@ -149,6 +149,12 @@ const user = (seq: number, text: string, by = OWNER_UID, name = OWNER_NAME) => (
 const SAME = R((r) => { r.review!.model = "claude-sonnet-5-5"; r.waiver = { by: OWNER_NAME, reason: "g-group#900" }; });
 const sameTurns = (h: string) => [{ model: "claude-sonnet-5-5", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }];
 const WF = (y: string): Files => ({ ...HEAD_OK, ".github/workflows/x.yml": y });
+// RR-09:self-check.yml 必须无条件跑门禁自检与变异校验,package.json 对应脚本必须是规范值
+const SC_STEP_SELF = "      - name: 门禁自检\n        run: npm run gates:selftest\n";
+const SC_STEP_MUT = "      - name: 门禁变异校验\n        run: GATE_MUTATION_JOBS=4 npm run gates:mutation\n";
+const SC_WF = (steps = SC_STEP_SELF + SC_STEP_MUT, jobExtra = "") => `on: pull_request\npermissions: { contents: read }\njobs:\n  self-check:\n    runs-on: ubuntu-latest\n${jobExtra}    steps:\n${steps}`;
+const ROOT_PKG = (scripts: Record<string, string> = {}) => JSON.stringify({ name: "g-group", private: true, type: "module", scripts: { "gates:selftest": "node scripts/gates/run-all.ts --self-test", "gates:mutation": "node scripts/gates/mutation.ts", ...scripts } });
+const SC = (wf: string, pkg = ROOT_PKG()): Files => ({ ...HEAD_OK, ".github/workflows/self-check.yml": wf, "package.json": pkg });
 
 export const CASES: Case[] = [
   { name: "合规:先红后绿、跨厂商审查、来源核对通过", expect: null },
@@ -225,7 +231,18 @@ export const CASES: Case[] = [
   { name: "RR-03 job 名用折叠标量", head: WF("on: pull_request\njobs:\n  aux:\n    name: >-\n      provenance\n    runs-on: ubuntu-latest\n    steps: [{ run: 'true' }]\n"), expect: "冒充受保护检查名 provenance" },
   { name: "RR-03 权限经锚点合并进来", head: WF("on: pull_request\nx-perm: &p\n  statuses: write\njobs:\n  a:\n    permissions:\n      <<: *p\n    runs-on: ubuntu-latest\n    steps: [{ run: 'true' }]\n"), expect: "申请了写权限 statuses" },
   { name: "RR-03 别的 workflow 冒充 self-check", head: WF("on: pull_request\njobs:\n  self-check:\n    runs-on: ubuntu-latest\n    steps: [{ run: 'true' }]\n"), expect: "冒充受保护检查名 self-check" },
-  { name: "RR-03 self-check.yml 自己产出 self-check(阴性对照)", head: { ...HEAD_OK, ".github/workflows/self-check.yml": "on: pull_request\npermissions: { contents: read }\njobs:\n  self-check:\n    runs-on: ubuntu-latest\n    steps: [{ run: 'true' }]\n" }, expect: null },
+  { name: "RR-03 self-check.yml 自己产出 self-check(阴性对照)", head: SC(SC_WF()), expect: null },
+  { name: "RR-09 门禁自检步骤加 if: false", head: SC(SC_WF(SC_STEP_SELF.replace("        run:", "        if: false\n        run:") + SC_STEP_MUT)), expect: "带了 if" },
+  { name: "RR-09 变异步骤按 PR 自己的路径判定跳过", head: SC(SC_WF(SC_STEP_SELF + SC_STEP_MUT.replace("        run:", "        if: steps.x.outputs.changed == 'true'\n        run:"))), expect: "带了 if" },
+  { name: "RR-09 变异步骤 continue-on-error", head: SC(SC_WF(SC_STEP_SELF + SC_STEP_MUT.replace("        run:", "        continue-on-error: true\n        run:"))), expect: "带了 continue-on-error" },
+  { name: "RR-09 缺变异步骤", head: SC(SC_WF(SC_STEP_SELF)), expect: "缺必需步骤" },
+  { name: "RR-09 变异命令后接 || true", head: SC(SC_WF(SC_STEP_SELF + SC_STEP_MUT.replace("gates:mutation\n", "gates:mutation || true\n"))), expect: "缺必需步骤" },
+  { name: "RR-09 job 加 continue-on-error", head: SC(SC_WF(undefined, "    continue-on-error: true\n")), expect: "带了 continue-on-error" },
+  { name: "RR-09 job 加 if", head: SC(SC_WF(undefined, "    if: false\n")), expect: "带了 if" },
+  { name: "RR-09 self-check.yml 里没有 self-check job", head: SC(SC_WF().replace("  self-check:", "  other:")), expect: "缺 job self-check" },
+  { name: "RR-09 package.json 把 gates:mutation 改成 true", head: SC(SC_WF(), ROOT_PKG({ "gates:mutation": "true" })), expect: 'scripts["gates:mutation"] 必须是' },
+  { name: "RR-09 package.json 把 gates:selftest 改掉", head: SC(SC_WF(), ROOT_PKG({ "gates:selftest": "node scripts/gates/run-all.ts" })), expect: 'scripts["gates:selftest"] 必须是' },
+  { name: "RR-09 规范 self-check.yml(变异命令不带并发参数)+ 规范 scripts(阴性对照)", head: SC(SC_WF(SC_STEP_SELF + "      - run: npm run gates:mutation\n        timeout-minutes: 120\n")), expect: null },
   { name: "RR-03 只读权限的普通 workflow(阴性对照)", head: WF("on: pull_request\npermissions:\n  contents: read\njobs:\n  lint:\n    name: lint\n    runs-on: ubuntu-latest\n    steps: [{ run: 'true' }]\n"), expect: null },
   { name: "隔离:hook 环境的 GIT_DIR 指向别的仓库,门禁不碰它", hostileGit: true, expect: null },
   { name: "审查人 codex 放行(g-group#1531 默认审查人)", receipt: R((r) => { r.review!.agent = "codex"; }), room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "codex:b", assistant: "ai-codex" } }], expect: null },
