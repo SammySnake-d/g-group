@@ -434,15 +434,63 @@ const DELIVERY_EVENTS: ReadonlySet<EventKind> = new Set(["DeliveredCard", "UserA
 const staleDelivery = (t: Task, e: TaskEvent): boolean => {
   if (!DELIVERY_EVENTS.has(e.kind)) return false;
   const ev = e as { deliveryRound: number; commit: string };
-  if (ev.deliveryRound > t.deliverySeq) return false;
   return !t.delivery || ev.deliveryRound !== t.delivery.round || ev.commit !== t.delivery.commit;
 };
 
-/** 入口校验:带 taskId 的事件必须属于本任务;交付代次必须是正安全整数(R6-CORR-02 / 跨任务边界)。 */
+// ---- 运行时事件形状校验(R7-CORR-01 / R7-TEST-01)----
+// 事件常来自 JSON 等未经类型检查的外部输入,静态类型的必填不等于运行时存在。入口按下表逐字段核对:
+// str = 非空字符串;nat = 非负安全整数;pint = 正安全整数;bool = 布尔;字符串数组 = 枚举取值。多余字段不拒绝。
+type FieldSpec = "str" | "nat" | "pint" | "bool" | readonly string[];
+type Shape = { readonly req: Readonly<Record<string, FieldSpec>>; readonly opt?: Readonly<Record<string, FieldSpec>> };
+const DELIVERY_SHAPE = { taskId: "str", deliveryRound: "pint", commit: "str" } as const;
+const EVENT_SHAPES: { readonly [K in EventKind]: Shape } = {
+  Claim: { req: { by: "str" } },
+  Dispatch: { req: { computeId: "str", model: "str", requestId: "str" } },
+  ProducerModelAdded: { req: { model: "str", computeId: "str" } },
+  NeedHuman: { req: { qId: "str", computeId: "str", constraintVer: "nat" } },
+  HumanReply: { req: { qId: "str", constraintVer: "nat", answer: ["approve", "reject"] } },
+  Amend: { req: { by: "str", computeResumable: "bool" } },
+  SubmitForReview: { req: { commit: "str", computeId: "str", constraintVer: "nat" } },
+  Review: { req: { reviewerId: "str", reviewerModel: "str", round: "pint", commit: "str", constraintVer: "nat", verdict: ["approve", "reject"] }, opt: { waiverBy: "str" } },
+  DeliveredCard: { req: DELIVERY_SHAPE },
+  UserAccept: { req: { ...DELIVERY_SHAPE, by: "str" } },
+  UserReject: { req: { ...DELIVERY_SHAPE, by: "str", computeResumable: "bool" } },
+  AcceptTimeout: { req: DELIVERY_SHAPE },
+  Cancel: { req: { by: "str" } },
+  StoppedConfirmed: { req: { taskId: "str" }, opt: { computeId: "str", requestId: "str" } },
+  ExecFailed: { req: {}, opt: { computeId: "str", requestId: "str" } },
+};
+const fieldOk = (v: unknown, f: FieldSpec): boolean => {
+  if (f === "str") return typeof v === "string" && v.length > 0;
+  if (f === "nat") return Number.isSafeInteger(v) && (v as number) >= 0;
+  if (f === "pint") return Number.isSafeInteger(v) && (v as number) >= 1;
+  if (f === "bool") return typeof v === "boolean";
+  return typeof v === "string" && f.includes(v);
+};
+const label = (f: FieldSpec): string => f === "str" ? "非空字符串" : f === "nat" ? "非负整数" : f === "pint" ? "正整数" : f === "bool" ? "布尔" : f.join("/");
+/** 校验一个(可能来自 JSON 的)事件的运行时形状:种类已知、必填字段存在且取值合法、可选字段若出现也合法。合法返回 null,否则返回原因。 */
+export function validateEvent(e: unknown): string | null {
+  if (typeof e !== "object" || e === null || Array.isArray(e)) return "事件不是对象";
+  const o = e as Record<string, unknown>;
+  const kind = o.kind;
+  if (typeof kind !== "string" || !(EVENT_KINDS as readonly string[]).includes(kind)) return `未知的事件种类 ${String(kind)}`;
+  const shape = EVENT_SHAPES[kind as EventKind];
+  for (const [k, f] of Object.entries(shape.req)) if (!fieldOk(o[k], f)) return `${kind}.${k} 缺失或取值非法(应为${label(f)})`;
+  for (const [k, f] of Object.entries(shape.opt ?? {})) if (o[k] !== undefined && !fieldOk(o[k], f)) return `${kind}.${k} 取值非法(应为${label(f)})`;
+  if (kind === "Review" && o.verdict === "reject" && !fieldOk(o.computeResumable, "bool")) return "Review.computeResumable 缺失或取值非法(应为布尔)";
+  return null;
+}
+
+/**
+ * 入口校验(先于状态表):形状合法;带 taskId 的事件必须属于本任务;交付代次必须是本任务已分配过的——
+ * 从未分配的(未来)代次在任何状态都拒绝(R7-CORR-02),已分配的旧代次随后幂等忽略。
+ */
 const misrouted = (t: Task, e: TaskEvent): string | null => {
+  const shape = validateEvent(e);
+  if (shape) return shape;
   const ev = e as { taskId?: string; deliveryRound?: number };
-  if (ev.taskId !== undefined && ev.taskId !== t.id) return `事件属于任务 ${ev.taskId},不是本任务 ${t.id}`;
-  if (DELIVERY_EVENTS.has(e.kind) && !(Number.isSafeInteger(ev.deliveryRound) && (ev.deliveryRound as number) >= 1)) return `交付代次 ${ev.deliveryRound} 不是正整数`;
+  if ("taskId" in ev && ev.taskId !== t.id) return `事件属于任务 ${ev.taskId},不是本任务 ${t.id}`;
+  if (DELIVERY_EVENTS.has(e.kind) && (ev.deliveryRound as number) > t.deliverySeq) return `交付代次 ${ev.deliveryRound} 本任务未分配过`;
   return null;
 };
 

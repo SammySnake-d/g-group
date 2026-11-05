@@ -6,9 +6,11 @@
 // C01–C10(C10 与 R03 同一注入,不重复)对应第三轮审查独立变异;S01–S14 是 R3-CORR-01..03 修复的新增埋雷;
 // D01–D11 对应第四轮审查独立变异;T01–T15 是 R4-CORR-01..03 修复的新增埋雷;
 // E01–E10(E10 与 T04 同一注入,不重复)对应第五轮审查独立变异;U01–U11 是 R5-CORR-01..03 修复的新增埋雷;
-// F01–F08 对应第六轮审查独立变异(F09 阳性对照与 U08/U09 同类不重复);V01–V10 是第六轮修复的新增埋雷。
+// F01–F08 对应第六轮审查独立变异(F09 阳性对照与 U08/U09 同类不重复);V01–V10 是第六轮修复的新增埋雷;
+// G01–G09 对应第七轮审查独立变异(G10 与 V09 同一注入不重复);W01–W11 是第七轮运行时形状校验的新增埋雷。
 // M30–M47 是联系人/Helper 作者埋雷;contact/helper 其余系列见各分组注释。为不和任务侧重名:
-// reviews/feat-contact-helper.md 第二轮的 N01–N05 记为 CN01–CN05,第七轮的 V01–V08 记为 CV01–CV08,contact 返修埋雷原 C01–C30 记为 K01–K30。原样副本必须全绿(阴性对照)。
+// reviews/feat-contact-helper.md 第二轮的 N01–N05 记为 CN01–CN05,第六轮的 W01–W05 记为 CW01–CW05,第七轮的 V01–V08 记为 CV01–CV08,
+// contact 返修埋雷原 C01–C30 记为 K01–K30。原样副本必须全绿(阴性对照)。
 // 用法: node packages/domain/proof/mutations.mjs
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -159,7 +161,7 @@ const M = [
   ["E08 认领时首派请求绑版本 0", "task.ts", "const launch: Launch = { requestId: `${t.id}#L0`, constraintVer: t.constraintVer };", "const launch: Launch = { requestId: `${t.id}#L0`, constraintVer: 0 };"],
   ["E09 当前实例未来版本回包被拒", "task.ts", "(ev.constraintVer === undefined || ev.constraintVer === t.constraintVer);", "(ev.constraintVer === undefined || ev.constraintVer >= t.constraintVer);"],
   ["U01 旧交付代次不在入口忽略", "task.ts", "  if (staleDelivery(t, e)) return ok(t);\n", ""],
-  ["U02 交付侧事件不核对代次", "task.ts", "  if (!t.delivery || ev.deliveryRound !== t.delivery.round || ev.commit !== t.delivery.commit) return no(`交付代次 ${ev.deliveryRound} 不是当前交付`);\n", ""],
+  ["U02 入口放过下一个未分配代次(原'forDelivery 不核代次'在入口校验后成等价变异,改指入口)", "task.ts", "if (DELIVERY_EVENTS.has(e.kind) && (ev.deliveryRound as number) > t.deliverySeq) return", "if (DELIVERY_EVENTS.has(e.kind) && (ev.deliveryRound as number) > t.deliverySeq + 1) return"],
   ["U03 旧代次判定不核 commit", "task.ts", "  return !t.delivery || ev.deliveryRound !== t.delivery.round || ev.commit !== t.delivery.commit;", "  return !t.delivery || ev.deliveryRound !== t.delivery.round;"],
   ["U04 交付代次不递增", "task.ts", "  const round = t.deliverySeq + 1;", "  const round = 1;"],
   ["U05 审查通过不请求发卡", "task.ts", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    []);"],
@@ -171,7 +173,7 @@ const M = [
   ["U11 T2 旧提问回包仍拒", "task.ts", "NeedHuman: unboundOr(NOT_RUNNING), HumanReply: ign(NO_CARD),\n    Amend: amendQueued,", "NeedHuman: rej(NOT_RUNNING), HumanReply: ign(NO_CARD),\n    Amend: amendQueued,"],
   ["F01 未回绑时不识别已登记孤儿", "task.ts", "  return ev.computeId !== undefined && ev.computeId !== t.computeId && (t.instances.includes(ev.computeId) || t.orphans.includes(ev.computeId) || t.retired.includes(ev.computeId));", "  return ev.computeId !== undefined && ev.computeId !== t.computeId && (t.instances.includes(ev.computeId) || t.retired.includes(ev.computeId));"],
   ["F02 未回绑时只认最近两个历史实例", "task.ts", "  return ev.computeId !== undefined && ev.computeId !== t.computeId && (t.instances.includes(ev.computeId) || t.orphans.includes(ev.computeId) || t.retired.includes(ev.computeId));", "  return ev.computeId !== undefined && ev.computeId !== t.computeId && (t.instances.slice(-2).includes(ev.computeId) || t.orphans.includes(ev.computeId) || t.retired.includes(ev.computeId));"],
-  ["F03 只把上一代次当旧代次", "task.ts", "  if (ev.deliveryRound > t.deliverySeq) return false;", "  if (ev.deliveryRound > t.deliverySeq || ev.deliveryRound < t.deliverySeq - 1) return false;"],
+  ["F03 只把上一代次当旧代次", "task.ts", "  return !t.delivery || ev.deliveryRound !== t.delivery.round || ev.commit !== t.delivery.commit;", "  return ev.deliveryRound >= t.deliverySeq - 1 && (!t.delivery || ev.deliveryRound !== t.delivery.round || ev.commit !== t.delivery.commit);"],
   ["F04 send-card 条件版本封顶为 1", "task.ts", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: Math.min(t.constraintVer, 1) }]);"],
   ["F05 第三次交付 send-card commit 错误", "task.ts", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: round >= 3 ? \"__wrong__\" : delivery.commit, constraintVer: t.constraintVer }]);"],
   ["F06 归档后退回交付序列清零", "task.ts", "badge: \"none\", approval: null, delivery: null } as const;", "badge: \"none\", approval: null, delivery: null, deliverySeq: t.state === \"T8_ArchivedUnverified\" ? 0 : t.deliverySeq } as const;"],
@@ -182,11 +184,31 @@ const M = [
   ["V03 退役实例重放上线重新登记为孤儿", "task.ts", "  if (t.retired.includes(ev.computeId)) return ok(t, [{ kind: \"stop-compute\", computeId: ev.computeId }]);\n", ""],
   ["V04 退役实例重放上线不再发停止", "task.ts", "  if (t.retired.includes(ev.computeId)) return ok(t, [{ kind: \"stop-compute\", computeId: ev.computeId }]);", "  if (t.retired.includes(ev.computeId)) return ok(t);"],
   ["V05 未回绑时退役实例回包不算旧", "task.ts", "  return ev.computeId !== undefined && ev.computeId !== t.computeId && (t.instances.includes(ev.computeId) || t.orphans.includes(ev.computeId) || t.retired.includes(ev.computeId));", "  return ev.computeId !== undefined && ev.computeId !== t.computeId && (t.instances.includes(ev.computeId) || t.orphans.includes(ev.computeId));"],
-  ["V06 交付代次不校验正整数", "task.ts", "  if (DELIVERY_EVENTS.has(e.kind) && !(Number.isSafeInteger(ev.deliveryRound) && (ev.deliveryRound as number) >= 1)) return `交付代次 ${ev.deliveryRound} 不是正整数`;\n", ""],
-  ["V07 交付代次允许 0", "task.ts", "(ev.deliveryRound as number) >= 1)", "(ev.deliveryRound as number) >= 0)"],
-  ["V08 交付代次允许小数", "task.ts", "!(Number.isSafeInteger(ev.deliveryRound) && (ev.deliveryRound as number) >= 1)", "!(Number.isFinite(ev.deliveryRound) && (ev.deliveryRound as number) >= 1)"],
-  ["V09 不核对事件所属任务", "task.ts", "  if (ev.taskId !== undefined && ev.taskId !== t.id) return `事件属于任务 ${ev.taskId},不是本任务 ${t.id}`;\n", ""],
+  ["V06 交付代次不校验正整数", "task.ts", "const DELIVERY_SHAPE = { taskId: \"str\", deliveryRound: \"pint\", commit: \"str\" } as const;", "const DELIVERY_SHAPE = { taskId: \"str\", commit: \"str\" } as const;"],
+  ["V07 交付代次允许 0", "task.ts", "const DELIVERY_SHAPE = { taskId: \"str\", deliveryRound: \"pint\", commit: \"str\" } as const;", "const DELIVERY_SHAPE = { taskId: \"str\", deliveryRound: \"nat\", commit: \"str\" } as const;"],
+  ["V08 交付代次允许小数", "task.ts", "  if (f === \"pint\") return Number.isSafeInteger(v) && (v as number) >= 1;", "  if (f === \"pint\") return Number.isFinite(v) && (v as number) >= 1;"],
+  ["V09 不核对事件所属任务", "task.ts", "  if (\"taskId\" in ev && ev.taskId !== t.id) return `事件属于任务 ${ev.taskId},不是本任务 ${t.id}`;\n", ""],
   ["V10 send-card 不带任务号", "task.ts", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    [{ kind: \"send-card\", taskId: \"\", deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);"],
+  ["G01 失败停止的确认不核 taskId", "task.ts", "  if (\"taskId\" in ev && ev.taskId !== t.id) return", "  if (\"taskId\" in ev && ev.taskId !== t.id && !(e.kind === \"StoppedConfirmed\" && t.stopReason === \"fail\")) return"],
+  ["G02 已验收状态退回不核 taskId", "task.ts", "  if (\"taskId\" in ev && ev.taskId !== t.id) return", "  if (\"taskId\" in ev && ev.taskId !== t.id && !(e.kind === \"UserReject\" && t.state === \"T8_Accepted\")) return"],
+  ["G03 归档状态补确认不核 taskId", "task.ts", "  if (\"taskId\" in ev && ev.taskId !== t.id) return", "  if (\"taskId\" in ev && ev.taskId !== t.id && !(e.kind === \"UserAccept\" && t.state === \"T8_ArchivedUnverified\")) return"],
+  ["G04 DeliveredCard 不校验代次", "task.ts", "  DeliveredCard: { req: DELIVERY_SHAPE },", "  DeliveredCard: { req: { taskId: \"str\", commit: \"str\" } },"],
+  ["G05 retired 不冻结", "task.ts", "retired: Object.freeze([...(patch.retired ?? t.retired)]),", "retired: [...(patch.retired ?? t.retired)],"],
+  ["G06 孤儿退役时只留最近一条旧记录", "task.ts", "retired: [...t.retired, ev.computeId] })", "retired: [...t.retired.slice(-1), ev.computeId] })"],
+  ["G07 当前实例停止覆盖旧退役账本", "task.ts", "retired: [...t.retired, t.computeId] }),", "retired: [t.computeId] }),"],
+  ["G08 未回绑时只认最近两个退役实例", "task.ts", "t.retired.includes(ev.computeId));", "t.retired.slice(-2).includes(ev.computeId));"],
+  ["G09 退役实例重放时停当前实例", "task.ts", "if (t.retired.includes(ev.computeId)) return ok(t, [{ kind: \"stop-compute\", computeId: ev.computeId }]);", "if (t.retired.includes(ev.computeId)) return ok(t, [{ kind: \"stop-compute\", computeId: t.computeId ?? ev.computeId }]);"],
+  ["W01 不校验必填字段", "task.ts", "  for (const [k, f] of Object.entries(shape.req)) if (!fieldOk(o[k], f)) return", "  for (const [k, f] of Object.entries(shape.req)) if (k === \"__never__\" && !fieldOk(o[k], f)) return"],
+  ["W02 字符串字段只查存在", "task.ts", "  if (f === \"str\") return typeof v === \"string\" && v.length > 0;", "  if (f === \"str\") return v !== undefined;"],
+  ["W03 空字符串当合法", "task.ts", "  if (f === \"str\") return typeof v === \"string\" && v.length > 0;", "  if (f === \"str\") return typeof v === \"string\";"],
+  ["W04 非负整数允许负数", "task.ts", "  if (f === \"nat\") return Number.isSafeInteger(v) && (v as number) >= 0;", "  if (f === \"nat\") return Number.isSafeInteger(v);"],
+  ["W05 布尔接受 0/1", "task.ts", "  if (f === \"bool\") return typeof v === \"boolean\";", "  if (f === \"bool\") return typeof v === \"boolean\" || v === 0 || v === 1;"],
+  ["W06 枚举不查取值", "task.ts", "  return typeof v === \"string\" && f.includes(v);", "  return typeof v === \"string\";"],
+  ["W07 可选字段不校验", "task.ts", "  for (const [k, f] of Object.entries(shape.opt ?? {})) if (o[k] !== undefined && !fieldOk(o[k], f)) return", "  for (const [k, f] of Object.entries(shape.opt ?? {})) if (k === \"__never__\" && !fieldOk(o[k], f)) return"],
+  ["W08 reject 审查不要求 computeResumable", "task.ts", "  if (kind === \"Review\" && o.verdict === \"reject\" && !fieldOk(o.computeResumable, \"bool\")) return", "  if (kind === \"__never__\" && o.verdict === \"reject\" && !fieldOk(o.computeResumable, \"bool\")) return"],
+  ["W09 未知事件种类放过", "task.ts", "if (typeof kind !== \"string\" || !(EVENT_KINDS as readonly string[]).includes(kind)) return", "if (typeof kind !== \"string\") return"],
+  ["W10 入口不做形状校验", "task.ts", "  if (shape) return shape;\n", ""],
+  ["W11 非对象事件放过", "task.ts", "  if (typeof e !== \"object\" || e === null || Array.isArray(e)) return \"事件不是对象\";", "  if (e === undefined) return \"事件不是对象\";"],
   ["M28 vendor 两家都像时取第一家", "vendor.ts", "return hits.size === 1 ? [...hits][0]! : \"unknown\";", "return hits.size >= 1 ? [...hits][0]! : \"unknown\";"],
   ["M30 同 id 新建覆盖", "contact.ts", "if (d.contacts.has(c.id)) return { ok: false, reason: `联系人 ${c.id} 已存在,不能同 id 新建覆盖` };", ""],
   ["M31 改名时清空记忆", "contact.ts", "...(patch.name !== undefined ? { name: patch.name } : {}),", "...(patch.name !== undefined ? { name: patch.name, memory: \"\" } : {}),"],
@@ -278,12 +300,12 @@ const M = [
   ["K31 同名异类资产静默成功", "contact.ts", "  if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };\n", ""],
   ["K32 同名同类资产也拒", "contact.ts", "  if (same) return { ok: true, contact: c };", "  if (same) return { ok: false, reason: \"重复\" };"],
   ["K33 同名异类覆盖旧资产", "contact.ts", "if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };", "if (same && same.kind !== a.kind) return { ok: true, contact: freezeContact({ ...c, computeAssets: c.computeAssets.map((x) => (x.name === a.name ? { name: a.name, kind: a.kind } : x)) }) };"],
-  // 以下 W01–W05 取自 Codex 第六轮独立复审 reviews/feat-contact-helper.md CH-16(注入点与 independent-mutations-round6.json 一致),K34–K36 是本轮表驱动用例的埋雷
-  ["W01 同名异类只在涉及 MCP 时拒绝", "contact.ts", "if (same && same.kind !== a.kind)", "if (same && same.kind !== a.kind && (same.kind === \"mcp\" || a.kind === \"mcp\"))"],
-  ["W02 同名同类幂等只对 MCP 生效", "contact.ts", "if (same) return { ok: true, contact: c };", "if (same && same.kind === \"mcp\") return { ok: true, contact: c };"],
-  ["W03 资产名按前缀匹配", "contact.ts", "c.computeAssets.find((x) => x.name === a.name)", "c.computeAssets.find((x) => x.name.startsWith(a.name))"],
-  ["W04 资产按同名或同类判重", "contact.ts", "c.computeAssets.find((x) => x.name === a.name)", "c.computeAssets.find((x) => x.name === a.name || x.kind === a.kind)"],
-  ["W05 删除同名异类拒绝", "contact.ts", "  if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };\n", ""],
+  // 以下 CW01–CW05(报告原编号 W01–W05)取自 Codex 第六轮独立复审 reviews/feat-contact-helper.md CH-16(注入点与 independent-mutations-round6.json 一致),K34–K36 是本轮表驱动用例的埋雷
+  ["CW01 同名异类只在涉及 MCP 时拒绝", "contact.ts", "if (same && same.kind !== a.kind)", "if (same && same.kind !== a.kind && (same.kind === \"mcp\" || a.kind === \"mcp\"))"],
+  ["CW02 同名同类幂等只对 MCP 生效", "contact.ts", "if (same) return { ok: true, contact: c };", "if (same && same.kind === \"mcp\") return { ok: true, contact: c };"],
+  ["CW03 资产名按前缀匹配", "contact.ts", "c.computeAssets.find((x) => x.name === a.name)", "c.computeAssets.find((x) => x.name.startsWith(a.name))"],
+  ["CW04 资产按同名或同类判重", "contact.ts", "c.computeAssets.find((x) => x.name === a.name)", "c.computeAssets.find((x) => x.name === a.name || x.kind === a.kind)"],
+  ["CW05 删除同名异类拒绝", "contact.ts", "  if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };\n", ""],
   ["K34 资产登记不查同名直接工具", "contact.ts", "  if (c.tools.some((t) => t.name === a.name)) return { ok: false, reason: `${a.name} 已是直接工具,不必再登记` };\n", ""],
   ["K35 资产名按反向前缀匹配", "contact.ts", "c.computeAssets.find((x) => x.name === a.name)", "c.computeAssets.find((x) => a.name.startsWith(x.name))"],
   ["K36 同类第二个资产覆盖第一个", "contact.ts", "computeAssets: [...c.computeAssets, { name: a.name, kind: a.kind }]", "computeAssets: [...c.computeAssets.filter((x) => x.kind !== a.kind), { name: a.name, kind: a.kind }]"],

@@ -651,3 +651,91 @@ node "$E/independent-probes.mjs" "$PWD"
 ### 第六轮本地门禁的实际结果
 
 写入 reject 收据后运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`：exit 1。`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER` 通过。`G-PROVENANCE` 实际报告当前已落盘会话中没有输出等于本轮 hash 的调用、审查那轮厂商认不出；活动轮次尚未落盘，本轮 hash 命令与原始 rollout 的实际模型已分别实查，**不声称来源门禁通过**。当前轮记录落盘后由原任务复跑，不伪造记录。原始输出见证据目录 `gates-after.log`。
+
+---
+
+# 第七轮 · Codex 独立复现（2026-11-06）
+
+## 结论：reject
+
+`a425387bc9781f53a44f48892dfb041cd8f7f3e4` 的 138 项原样测试、169 项作者变异，以及第六轮已退役实例、合法 taskId 和非法数字代次的主要路径均可复现；但新增入口校验**仅在 taskId 存在时比对**，缺失该必填字段的运行时 JSON 仍能触发交付、验收、退回、超时及停止确认。另有部分交付状态把从未分配的未来代次成功忽略，而非按本轮声明拒绝。自造 10 个变异有 9 个存活。审查只跑纯函数和隔离副本，没有发真实卡片、启动真实进程或回收真实槽位；返修交回 Claude Code，不合并 PR。
+
+- 审查会话 `codex:5fd2f15b-443d-4c5b-a287-dfa6fe248103`，原始 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI）；作者会话涉及目标仓库的实际模型为 `claude-opus-5-5`（Anthropic，不同渠道前缀），跨厂商、无豁免。
+- 普通独立 clone；`.git` 与 common dir 均为该副本自己的目录。`origin/feat/domain-core=afd02560f9546147da380382404eb6106222a9b8`，与 HEAD 的 merge-base 为 `133cf7abcf6c897653f5b91647202c4ac963f231`；二者只差 PR #2 的审查/收据文件。
+- 仓库根目录执行 `node scripts/gates/run-all.ts --hash --branch=feat/task-lifecycle --base=origin/feat/domain-core`，原样输出：
+
+```text
+74317f462b5f5935556fc7a79efd93e8b54df3e0088433a4f39ca2b01c76b1f2
+```
+
+- 原始日志、独立行为测试、类型/JSON 对照、事件路径探针、10 个变异补丁及测试/typecheck/比较结果：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review7-evidence-5fd2f15b/`。
+
+## 一、独立执行
+
+| 操作 | 实测结果 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均 exit 0；Node `v25.8.1` / npm `11.11.0` |
+| `npm test` | exit 0，138 通过、0 失败、0 跳过 |
+| 红提交 `bb21b878d74776343c44685c031e8563dee19b79` 完整具名测试 | exit 1，23 通过、115 具名失败：114 条报“未实现”、1 条 TABLE undefined；红绿测试文件相同。空壳红是激活证据，不是 115 条各自的缺陷复现 |
+| 红测试配旧版 `78cecbb` 实现，在另一隔离副本运行 | exit 1，128 通过、10 具名失败；与 `packages/domain/proof/red-against-78cecbb.tap` 的失败名称集合完全一致 |
+| 作者 `node packages/domain/proof/mutations.mjs` | exit 0，原样 138 绿，169 项出现具名失败；第六轮 F01–F08 均被杀；文件级失败不算杀死 |
+| 本轮独立行为测试 | **6 红、2 绿**：五类缺 taskId 的运行时输入、已验收状态未分配未来代次；明确错任务 ID 的拒绝/当前任务正例、已退役旧实例与当前上线对照通过。缺字段输入不符合静态 TaskEvent 类型，见下一节的类型与 JSON 区分 |
+| 本轮独立事件矩阵 | T2/T9 退役实例重放只释放一次，退役旧提问不阻断当前上线；明确错误 taskId 被拒，当前 taskId 正常，0/负数/小数/非有限代次被拒 |
+| 自造 G01–G10，逐项跑完整测试和 typecheck | **9 项存活**（每项 138 绿、typecheck exit 0）；G10 阳性对照被具名测试杀死且 typecheck 绿 |
+
+执行纠错：初次 SSH 独立 clone 因 `Permission denied (publickey)` 退出 128；改用 GitHub 现有凭据经 HTTPS 建立新的普通独立 clone，未修改全局 Git 凭据配置。独立 TypeScript JSON 探针第一次显式传文件时因 TS5112（存在 tsconfig，需 `--ignoreConfig`）exit 1；加参数后 typecheck exit 0、运行 exit 0，日志均保留在证据目录。这两项是审查执行环境/命令问题，不当作产品失败。
+
+## 二、必须返修
+
+### R7-CORR-01 · 必填 taskId 在运行时缺失时绕过入口校验
+
+- `packages/domain/src/task.ts:24–33,441–455`：五类事件的 TypeScript 联合类型声明 `taskId` 必填，但 `misrouted` 的实际判断是 `ev.taskId !== undefined && ev.taskId !== t.id`。字段**存在但错投**确会拒绝；字段缺失或值为 undefined 时，条件为 false，继续执行状态表。
+- 独立纯函数运行时对照：目标任务 B 的当前交付是 `(round=1, commit=same)`。`UserAccept(taskId=A, ...)` 投给 B 被拒；去掉 taskId、其余字段不变，实际返回 `ok:true`、B 进入 `T8_Accepted`。同样去掉 taskId 的 `DeliveredCard`、`UserReject`、`AcceptTimeout` 分别推进到 T8a、返工和未核验归档；去掉 taskId 的 `StoppedConfirmed(computeId=B-c)` 能使 B 从 T9 到 T10 并发 `release-slot(B-c)`。仅观察领域状态/effect，未发送实际卡片或释放实际资源。
+- **区分静态类型和运行时输入**：字面量缺 taskId 作为 `TaskEvent` 编译失败（exit 2，TS2322）；但本轮另写了明确标注 `const input: TaskEvent = JSON.parse(...)` 的 TypeScript 探针，`tsc --ignoreConfig ...` exit 0，执行 exit 0 且缺 taskId 的输入令 B 验收。`JSON.parse` 不自动验证结构，静态必填不能替代外部事件的运行时校验；本轮未发现或声称实际宿主已接入这样的未校验 JSON 路径。
+- 既然本轮声称这五类事件**必填 taskId 并在入口拒绝错投**，应在领域入口或不可绕过的宿主解码边界校验字段存在、为有效字符串且等于当前任务；缺字段/undefined/null/错误类型均应拒绝且不改变状态、不发 effect。补五类事件的缺字段与错误任务 ID 双侧对照，并保留其他尚无 taskId 事件的既定行为。若只在宿主校验，需提供实际宿主入口/解码器及乱序错投测试，而不是只依赖类型声明。
+
+### R7-CORR-02 · 部分交付状态把未分配的未来代次成功忽略
+
+- `task.ts:432–455`：正安全整数校验已修复 0/负数/小数；但 `staleDelivery` 对 `deliveryRound > deliverySeq` 返回 false 后直接落到状态表。部分状态用 `ign`，没有经 `forDelivery` 拒绝未来代次。
+- 真实事件矩阵：当前 `deliverySeq=1`，有效 taskId B、未来 round=2。T8a 的四类未来交付事件都拒绝；但 T7 的 `AcceptTimeout` 返回 `ok:true`；T8_Accepted 的 `DeliveredCard/UserAccept/AcceptTimeout` 返回 `ok:true`；T8_ArchivedUnverified 的 `DeliveredCard/AcceptTimeout` 返回 `ok:true`。它们均没有推进状态；问题是与本轮和第 7 栏“从未分配的未来代次在交付状态拒绝”的口径不符，成功无操作也可能被上游当作有效消费。
+- 在统一入口区分合法已分配历史代次、当前代次和从未分配的未来代次，明确不同状态都应拒绝还是哪些终态允许无害忽略；如果有意豁免终态，先修正契约与收据并加状态矩阵，而不是把单一 T8a 正例扩大为全部状态通过。旧已分配代次仍应幂等忽略，当前正例仍正常。
+
+### R7-TEST-01 · 本轮新增身份与退役账本的分支仍有回归盲区
+
+G01–G09 是**人为单点改坏的变异，不是指控原版已有这些错误**。每项隔离运行 138 项原测试与 typecheck，均 exit 0；各项再对照原版与变异版纯函数结果：
+
+| ID | 可存活的单点变异 |
+|---|---|
+| G01 | 失败停止的 `StoppedConfirmed` 不核 taskId，错误任务确认可让当前任务进 T11 并发释放效果 |
+| G02 / G03 | 已验收状态的退回、未核验归档状态的补确认不核 taskId，可分别误返工或误验收 |
+| G04 | 只有 `UserAccept` 校验代次正整数；其他交付事件的非法 round 被成功忽略 |
+| G05 | `retired` 账本不冻结，外部可清掉已停身份 |
+| G06 / G07 | 第三个孤儿退役时丢掉更早记录，或当前实例停止时覆盖旧退役账本；旧回放可重新产生释放效果 |
+| G08 | 未回绑时只识别最近两个退役实例；更早已停实例的迟到回包又被拒绝 |
+| G09 | 退役实例重放上线时误停止当前活动实例，而非重放实例 |
+
+G10（完全删除跨任务校验）被具名测试杀死且 typecheck 绿。应补不同任务状态和失败/取消原因、四类交付事件的非法数值、至少三个退役实例、当前停止保留旧账本、退役重放时存在另一活动实例、`retired` 冻结及缺字段 JSON 的双侧对照。169 项作者变异全杀属实，但不能据此推断这些新增分支也已标定。
+
+## 三、逐项复核第六轮与边界
+
+- **R6-CORR-01：原有两条孤儿迟到/重复释放路径复现修好。** T2/T9 已停实例重放只重新发 stop、不重新登记；重复停止确认不再发 release-slot；旧提问后当前实例可上线。宿主资源侧 release-slot 幂等仍未验证；`retired` 只增不减、每次状态快照复制，当前未做容量或长期负载测试，不能仅凭“任务内实例数有限”证明其有界。
+- **R6-CORR-02：0/负数/小数/NaN/Infinity 被拒，当前合法代次正常。** 未分配的未来正整数在部分交付状态仍被忽略，见 R7-CORR-02。
+- **跨任务错投：带明确且不匹配 taskId 的五类事件已复现被拒，send-card 带本任务 ID。** 缺字段运行时输入仍可绕过该入口，见 R7-CORR-01。taskId 是否来自可信认证、HumanReply 与执行侧回包如何绑定任务，仍需真实宿主/路由验收。
+- **R6-TEST-01：F01–F08 在作者脚本均被具名测试杀死。** 本轮 G01–G09 是新增分支的独立测试盲区。
+- 仍未实测真实模型身份采集、工作区隔离、CAS/租约、实际恢复/资源回收、Handoff、Outbox、旧卡 UI、T9/T10/T11 改条件与完整状态机。纯函数的效果不等于 OS 或 UI 已执行。
+
+复现（仓库根目录；独立行为测试当前预期 6 红、2 绿，其中缺字段来自模拟未验证 JSON，而不是合法 TS 字面量）：
+
+```sh
+E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review7-evidence-5fd2f15b
+REVIEW_REPO="$PWD" node --test "$E/independent.test.mjs"
+node "$E/independent-matrix.mjs" "$PWD"
+node "$E/independent-probes.mjs" "$PWD"
+# typed-json-probe.mts 与其 typecheck/运行日志、各变异补丁见证据目录。
+```
+
+本轮只追加本报告并修改 `receipts/feat-task-lifecycle.json` 的 review 字段；保留前六轮及作者其余收据字段。返修后继续由不同厂商独立复现。
+
+### 第七轮本地门禁的实际结果
+
+写入 reject 收据后运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`：exit 1。`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER` 通过。`G-PROVENANCE` 实际报告当前已落盘会话中没有输出等于本轮 hash 的调用、审查那轮厂商认不出；活动轮次尚未落盘，本轮 hash 命令与原始 rollout 的实际模型已分别实查，**不声称来源门禁通过**。当前轮记录落盘后由原任务复跑，不伪造记录。原始输出见证据目录 `gates-after.log`。
