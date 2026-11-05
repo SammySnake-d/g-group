@@ -1,0 +1,29 @@
+packages/adapter-cc-compute/proof/mutations.mjs
+  s_060cb60f4a56ed::t_49a735f1661f1e 1-64
+packages/adapter-cc-compute/proof/mutations.txt
+  s_060cb60f4a56ed::t_a2c214f6db2cfe 1-18
+packages/adapter-cc-compute/proof/smoke-real.txt
+  s_060cb60f4a56ed::t_edb4279066723a 1-20
+packages/adapter-cc-compute/proof/tests.txt
+  s_060cb60f4a56ed::t_2527f239a74a4a 1-136
+packages/adapter-cc-compute/smoke/real-claude.mjs
+  s_060cb60f4a56ed::t_f7b23e95b01d3c 1-41
+receipts/feat-cc-compute.json
+  s_060cb60f4a56ed::t_54af6dbcf14ea5 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a6fa1b1ec5b1a0aabc362c86a1b6d803ecaba056",
+  "prompts": {},
+  "sessions": {
+    "s_060cb60f4a56ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae8c5e6a9c179f748",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
