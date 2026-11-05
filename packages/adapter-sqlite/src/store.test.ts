@@ -6,6 +6,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { after, afterEach, test } from "node:test";
+import { DatabaseSync } from "node:sqlite";
 import { appendEvent, closeStore, commitDoc, listActions, loadLog, openStore, readDoc, recordAction } from "./index.ts";
 
 const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "adapter-sqlite-"));
@@ -351,6 +352,89 @@ test("测试夹具负例:子进程输出结果后异常退出,done 判失败而�
   const s = openStore(f);
   assert.deepEqual(readDoc(s, "主稿"), { value: "A 的修改", ver: 1 });
   closeStore(s);
+});
+
+// RR-03:new DatabaseSync 成功之后的初始化失败,必须当场关掉这个连接并抛出原始错误;不靠 GC 回收。
+// 用本进程 /dev/fd 的条目数观察是否有连接遗留(macOS 与 Linux 都有 /dev/fd)。连续失败 20 次,遗留一个就会多出至少 20 个。
+const openFds = () => fs.readdirSync("/dev/fd").length;
+// 意外打开成功的句柄当场关掉,避免它本身被算成遗留;此时对应位置记 undefined,由断言判失败
+const failTimes = (n: number, open: () => { db: { close(): void } }): unknown[] => {
+  const errs: unknown[] = [];
+  for (let i = 0; i < n; i++) { try { open().db.close(); errs.push(undefined); } catch (e) { errs.push(e); } }
+  return errs;
+};
+
+test("初始化失败(文件不是 SQLite 库):抛出原始错误,连续 20 次后没有遗留连接,健康库照常读写", () => {
+  const f = prepare(dbFile());
+  fs.writeFileSync(f, "这不是 SQLite 数据库文件。".repeat(20));
+  const before = openFds();
+  const errs = failTimes(20, () => openStore(f));
+  assert.equal(openFds() - before, 0);
+  for (const e of errs) assert.match(String((e as Error | undefined)?.message), /file is not a database/);
+  assert.equal((errs[0] as { errcode?: number }).errcode, 26);
+  const healthy = openStore(prepare(dbFile()), { busyTimeoutMs: 0 });
+  assert.deepEqual(commitDoc(healthy, "主稿", 0, "健康库可写"), { ok: true, ver: 1 });
+  assert.deepEqual(readDoc(healthy, "主稿"), { value: "健康库可写", ver: 1 });
+  closeStore(healthy);
+});
+
+test("初始化失败(只读打开的空库建不了表):抛出原始只读错误,没有遗留连接,健康库照常读写", () => {
+  const f = prepare(dbFile());
+  new DatabaseSync(f).close();
+  const before = openFds();
+  const errs = failTimes(20, () => openStore(`file:${f}?mode=ro`));
+  assert.equal(openFds() - before, 0);
+  for (const e of errs) assert.match(String((e as Error | undefined)?.message), /readonly/);
+  assert.equal((errs[0] as { errcode?: number }).errcode, 8);
+  const healthy = openStore(prepare(dbFile()), { busyTimeoutMs: 0 });
+  assert.deepEqual(commitDoc(healthy, "主稿", 0, "健康库可写"), { ok: true, ver: 1 });
+  assert.deepEqual(readDoc(healthy, "主稿"), { value: "健康库可写", ver: 1 });
+  closeStore(healthy);
+});
+
+test("只读目录里打不开新库:构造就失败,原始错误照抛,没有遗留连接", () => {
+  const dir = path.dirname(prepare(dbFile()));
+  const ro = path.join(dir, "ro");
+  fs.mkdirSync(ro);
+  fs.chmodSync(ro, 0o555);
+  try {
+    const before = openFds();
+    const errs = failTimes(20, () => openStore(path.join(ro, "g.sqlite")));
+    assert.equal(openFds() - before, 0);
+    assert.equal(errs.filter((e) => e === undefined).length, 0);
+    assert.match(String((errs[0] as Error).message), /unable to open database file/);
+    assert.equal((errs[0] as { errcode?: number }).errcode, 14);
+  } finally { fs.chmodSync(ro, 0o755); }
+  const healthy = openStore(prepare(dbFile()), { busyTimeoutMs: 0 });
+  assert.deepEqual(commitDoc(healthy, "主稿", 0, "健康库可写"), { ok: true, ver: 1 });
+  assert.deepEqual(readDoc(healthy, "主稿"), { value: "健康库可写", ver: 1 });
+  closeStore(healthy);
+});
+
+test("另一进程持锁超过初始化等待:openStore 在 initBusyTimeoutMs 后抛 database is locked,没有遗留连接,释放后健康库照常读写", async () => {
+  // 必须是还没建表的新库:建表要写锁,才会卡在初始化;已建好表的库 CREATE IF NOT EXISTS 不需要写锁
+  const f = prepare(dbFile());
+  const holder = kid(f, "", { rawHold: true });
+  await holder.saw("held");
+  const before = openFds();
+  const t0 = Date.now();
+  const errs = failTimes(3, () => openStore(f, { initBusyTimeoutMs: 200, busyTimeoutMs: 0 }));
+  const took = Date.now() - t0;
+  const leaked = openFds() - before;
+  holder.send("release");
+  assert.deepEqual(await holder.done(), { released: true });
+  assert.equal(leaked, 0);
+  assert.equal(errs.filter((e) => e === undefined).length, 0);
+  for (const e of errs) assert.match(String((e as Error | undefined)?.message), /database is locked/);
+  assert.equal(((errs[0] as { errcode?: number }).errcode ?? 0) & 0xff, 5);
+  assert.ok(took >= 3 * 150 && took < 5000, `3 次初始化等锁共用了 ${took}ms`);
+  const s = openStore(f, { initBusyTimeoutMs: 200 });
+  assert.deepEqual(commitDoc(s, "主稿", 0, "释放后可写"), { ok: true, ver: 1 });
+  closeStore(s);
+  const healthy = openStore(prepare(dbFile()), { busyTimeoutMs: 0 });
+  assert.deepEqual(commitDoc(healthy, "主稿", 0, "健康库可写"), { ok: true, ver: 1 });
+  assert.deepEqual(readDoc(healthy, "主稿"), { value: "健康库可写", ver: 1 });
+  closeStore(healthy);
 });
 
 test("版本冲突不改任何文档:冲突的文档和旁边的文档内容、版本都不变", () => {
