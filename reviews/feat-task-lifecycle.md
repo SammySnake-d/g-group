@@ -285,3 +285,98 @@ node "$E/independent-probes.mjs" "$PWD"
 ### 本轮本地门禁的实际结果
 
 写入 reject 收据后运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`：exit 1。`G-REVIEW` 因结论是 reject 按预期阻止合入；`G-RED/G-STUB/G-TAUTO/G-TRACE/G-WORKFLOW/G-LAYER` 通过，但 G-RED 只证明 52 条按名红，不能取代本报告对实际失败原因的核对。`G-PROVENANCE` 报本审查会话 `turns.jsonl` 记录尚不存在；当前活动会话的 `record.json` 和 Codex 原始 rollout 已单独核实身份与模型，但**不声称来源门禁已通过**。会话结束、记录落盘后应由原任务复跑，不伪造会话文件。完整输出见证据目录 `gates-after.log`。
+
+---
+
+# 第三轮 · Codex 独立复现（2026-11-05）
+
+## 结论：reject
+
+返修 `cb3fba02725c37d8de3b2e066a04ce44c8019eda` 的常规检查、旧实现红对照、作者 82 个变异，以及本轮实走的 18 格返工路径均可复现；但新增的启动身份处理引入了**重复上线误停合法实例、多个在途启动尚未全部停止就结束任务**两个可复现问题。旧执行器的执行/提审回包也没有可校验的来源或版本，不能只靠回绑时校验请求号证明旧产物不会进入新版本。另有 9 个独立单点变异存活，见下文。返修交回 Claude Code；审查不改产品代码、不合并 PR。
+
+- 审查会话 `codex:5fd2f15b-443d-4c5b-a287-dfa6fe248103`，本轮原始 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI）；作者会话中涉及目标仓库的实际模型为 `claude-opus-5-5`（Anthropic，不同渠道前缀），满足跨厂商；无豁免。
+- 普通独立 clone 审查，`.git` 与 common dir 均为该 clone 自己的目录。基线 `origin/feat/domain-core=afd02560f9546147da380382404eb6106222a9b8`；与 HEAD 的 merge-base 是 `133cf7abcf6c897653f5b91647202c4ac963f231`，两者差异只包含 PR #2 的审查与收据文件。
+- 在仓库根目录运行 `node scripts/gates/run-all.ts --hash --branch=feat/task-lifecycle --base=origin/feat/domain-core`，原样输出：
+
+```text
+0abcb78516594a476200a83ec538fc719fde386be38ef5b2056c7ee54043ae58
+```
+
+- 原始日志、独立测试和脚本、每项变异补丁及其测试/typecheck/比较探针：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review3-evidence-5fd2f15b/`。
+
+## 一、独立执行结果
+
+| 操作 | 实际结果 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均 exit 0；Node `v25.8.1` / npm `11.11.0` |
+| `npm test` | exit 0，85 通过，0 失败，0 跳过 |
+| 检出红提交 `af549553ee51c96c4b5e70def85dc34ed05fb7ed`，运行完整具名测试 | exit 1，23 通过、62 具名失败：61 条报“未实现”，1 条为 TABLE undefined；红绿测试文件相同。这是空实现激活证据，不是 62 个不同旧缺陷 |
+| 红提交测试配上 `96d48dd` 的原实现，在隔离副本独立运行 | exit 1，68 通过、17 具名失败；与 `packages/domain/proof/red-against-96d48dd.tap` 的失败名称集合完全一致 |
+| 作者 `node packages/domain/proof/mutations.mjs` | exit 0，原样 85 绿、82 项均有具名失败；未将文件加载失败算作被杀 |
+| 独立行为测试 | **2 红、1 绿**：重复上线误停、未等旧实例停止提前终态；正确当前实例停止确认的阴性对照通过 |
+| 独立事件历史矩阵 | 9 个返工入口 × 可/不可恢复共 18 格通过；旧卡号旧版本后当前卡继续处理、审查 ABA 和当前轮对照通过 |
+| 自造 C01–C10，分别运行完整测试与 typecheck | **9 项存活，均 85 绿、typecheck exit 0**；C10 阳性对照被具名测试杀死且 typecheck 绿 |
+
+## 二、必须返修
+
+### R3-CORR-01 · 重复当前上线回包会停止合法运行的实例
+
+- `packages/domain/src/task.ts:132–146,207–213,218–219,234–235`：第一次 `Dispatch(requestId=L1, computeId=c2)` 成功后，`bind` 把 `launch` 清成 null，但没有保留已绑定的启动请求身份。下一次**完全相同**的 Dispatch 进入 `orphan`，由于 `L1 !== undefined`，误发 `stop-compute(c2)`；任务仍显示 T3、`computeId=c2`。
+- 本轮分别实测 T3、T4b、T5 下重复该已绑定回包，都产生 `stop-compute(current-worker)`。这不是另一个过期实例；回包的 requestId 和 computeId 与第一次绑定完全相同。至少一次投递/回放、丢 ACK 后重投等正常重复会错误中断当前活；本轮只验证 effect，**没有声称已在 OS 中停止真实进程**。
+- 补充可验证的已绑定身份并将同一实例同一请求的重复回包幂等处理（或安全拒绝且无停止效果）；同时确保**不同**旧请求的不同实例仍被停止。分别测试 T3/T4b/T5 等状态、重放和不同实例的阴性对照。
+
+### R3-CORR-02 · 已发现的旧实例仍未确认停止时，另一请求的确认可提前终结
+
+- `task.ts:127–138,262–276`。可运行复现：返工发 L1/v1 → 在途 Amend 发 `cancel-spawn(L1)` 和 L2/v2 → 用户取消，T9 等待 L2 → L1 的实例 `old-launch-worker` 迟到上线，领域层实际发 `stop-compute(old-launch-worker)`，但 Task 不登记这个仍待停止的实例 → `StoppedConfirmed(requestId=L2)` 到达，实际立即进入 **T10**，尽管 L1 实例尚无 `StoppedConfirmed(computeId=old-launch-worker)` → 之后该确认在终态被忽略，也没有该实例的 `release-slot` effect。
+- 这是**已经收到旧实例上线事件**的情况，不以猜测是否存在进程为前提；仍没有真实启动进程，因此不把领域结果说成已发生真实泄漏。当前 T9 只跟踪一个 `launch` 或 `computeId`，无法表示撤销重发后多个尚未结束的请求/孤儿实例；单个当前请求的确认不足以证明全部停止。第二轮提出的“真实停止/隔离后才终态”因此仍未闭合。
+- 修复可选择：在旧启动确认不可能上线/已停止隔离后再启动新代次，或持续跟踪所有未决旧请求及已发现实例，逐个确认停止/隔离与资源处理；不得因为 L2 的确认抹掉 L1 的未决停止。补 L1/L2 乱序、重复 ACK、失败终态及无真实实例的对照，不只测一条在途请求。
+
+### R3-CORR-03 · 回绑虽带号，但后续执行结果未绑定实例/条件版本
+
+- `task.ts:12–19,28–30,207–216`：`SubmitForReview` 只有 commit，`NeedHuman`、`ProducerModelAdded`、`ExecFailed` 也不带执行实例/启动请求/版本。实际在 L1/v1 被撤销、L2/v2 已回绑后，模拟 L1 的迟到 `SubmitForReview(commit=old-L1-artifact)`，领域函数仍进入 T5 并发出 `request-review(round=2, constraintVer=2, commit=old-L1-artifact)`；当前轮的跨厂商 approve 后进入 T7。模拟旧实例的 `ExecFailed` 也会发 `stop-compute(new-L2-worker)`。
+- 探针把 `computeId/requestId/constraintVer` 作为**额外元数据**标注来源；它们不是目前 `TaskEvent` 声明的字段，当前实现忽略它们。此测试证明领域接口自身无法区分上述来源，并没有证明真实适配器已经产生这些迟到回包。若依赖宿主先过滤，必须定义不可绕过的来源/代次校验契约，并用实际宿主边界的重放测试证明；否则在领域事件及状态上关联执行身份和条件版本，使旧执行器的提审、询问、模型变更、失败回包不能影响当前代次。
+- 这与本轮已经修复的“旧 requestId 不可回绑”和“旧审查 round 不可批准”不同：上例旧结果被当作**当前**条件发起了全新一轮审查，故仅审查 round 守卫无法拦住。
+
+### R3-TEST-01 · 82 项全杀属实，但 9 个相关独立故障仍存活
+
+每个 C01–C09 都只改单一实现点、保留原测试、实跑全套 85 项及 typecheck，均 exit 0；各项另有原版/变异版行为对照。下表是**测试盲区**，不指控原版已有这些故意注入的错误：
+
+| ID | 单点变异与可观察后果 |
+|---|---|
+| C01 / C02 / C03 | T5 / T4b / T8a 遇旧请求实例改为仅拒绝、不发停止；原版会 `stop-compute(orphan)`，变异版不停止 |
+| C04 | 仅在 `stopReason=fail` 时取消停止确认身份检查；旧实例的确认可令当前实例尚未确认退出就进 T11 并释放当前槽位 |
+| C05 | 审查只拦较小轮次、不拦未来轮次；未来轮次 approve 错误进 T7 |
+| C06 | 仅 approve 核审查 round，reject 不核；旧轮次打回可中断当前审查并恢复 Compute |
+| C07 | 卡片版本在第二次改条件后被错误封顶；v2 卡携 v1，当前 v2 回复被拒 |
+| C08 | 审查请求 effect 的条件版本在第二次改条件后被错误封顶；T5 实际 v2，却请求审查 v1 |
+| C09 | 回绑时把启动序列归零；下一次不可恢复返工复用 `t#L1`，而原版是 `t#L2` |
+
+C10（允许无请求号的实例回绑）被两条具名测试杀死，typecheck exit 0。建议用独立期望补足上述状态、轮次、重复/乱序和多次返工条件，并保留 C01–C09 的双侧对照；不能据 82 个自选变异全杀就宣称这些判据已充分标定。
+
+## 三、逐项复核第二轮返修
+
+- **R2-CORR-01：部分修复。** 正常单次启动的不同 ID 上线会被停止；旧实例停止确认不会终结正在等待的新请求，当前实例的正确确认可释放槽位。本轮独立阴性对照通过。但重复同一合法回包误停、以及多请求未决停止被遗忘，分别见 R3-CORR-01/02。
+- **R2-CORR-02：部分修复。** 在途改条件确实产生新的 requestId/新版本，并要求只有当前请求才能回绑；旧请求上线时发停止 effect。它还未证明旧执行结果不会作为新版本提审，见 R3-CORR-03；也未等待所有旧启动/实例停止，见 R3-CORR-02。
+- **R2-CORR-03：已复现修复。** 旧卡号+旧版本回复被幂等忽略，不打断同批当前卡有效回复；同版错卡号仍拒绝。
+- **R2-CORR-04：已复现所选方案。** 每次提审产生 round 和 `request-review`，`a→b→a` 后旧轮回包不复活，当前轮可通过；同值重审的代价写入第 7 栏。C05/C06 显示对应分支仍可被改坏而不被测试发现，并不是说原版 round 守卫没生效。
+- **R2-TEST-01：原 B 类变异已被作者脚本杀死，逐格补充 owner/生产模型、18 格返工两侧有实际改善；但本轮 C01–C09 证明仍不是所有安全相关分支都有有效对照。**
+
+## 四、第 7 栏和验收边界
+
+红提交空壳的 62 失败与旧实现上的 17 失败均实测属实；后者失败名称与作者记录一致。`T9/T10/T11` 下改条件、模型名关键词推断、真实进程/资源回收、可信宿主提供身份、适配器保序重投、Handoff 内容、CAS 和完整状态机等仍是已披露的界限，不应当称为跨层验收完成。额外需要补入的是：绑定后重复同一回包会误停当前实例；已发现的孤儿仍未停止时另一请求 ACK 能提前终结；执行/提审回包本身无法按来源与版本辨别。上述问题不是本轮真实进程测试结果。
+
+复现（从审查目标仓库根目录运行；独立行为测试预期 2 红 1 绿）：
+
+```sh
+E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review3-evidence-5fd2f15b
+REVIEW_REPO="$PWD" node --test "$E/independent.test.mjs"
+node "$E/independent-matrix.mjs" "$PWD"
+node "$E/independent-probes.mjs" "$PWD"
+# 每个独立变异补丁、85 项测试及 typecheck 原始输出在 "$E/mutants/C01" … "$E/mutants/C10"。
+```
+
+本轮只追加本报告并修改 `receipts/feat-task-lifecycle.json` 的 review 字段；保留前两轮及作者其余收据字段。修复后应再次跨厂商独立复现。
+
+### 第三轮本地门禁的实际结果
+
+写入 reject 收据后运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`：exit 1。`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER` 通过。`G-PROVENANCE` 实际报告当前已落盘会话里尚无输出等于本轮 hash 的调用、审查那轮厂商认不出：本会话当前轮次尚未落盘，本轮 hash 命令及原始 rollout 的实际模型已分别实查，**不声称来源门禁通过**。当前轮记录落盘后需由原任务复跑，不伪造记录。原始输出见证据目录 `gates-after.log`。
