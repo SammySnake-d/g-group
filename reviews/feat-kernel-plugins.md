@@ -397,3 +397,146 @@ assert.deepEqual(effects,['A','B']); assert.equal(r.delivery('mail','a').binding
 console.log('R3-03：不重注册换接收端，重复副作用:',effects.join(','));
 NODE
 ```
+
+---
+
+# 第四轮：返修独立复审
+
+**结论：reject。** 第三轮的常规样例及变异运行器已有可复现修复，但本版仍可将撤回内容重新送入请求，`recompress` 回调还可篡改被引用消息；冻结的 `Map` 或共享原型仍能让同一动作切换接收端，B1 墙钟回拨与账本键冲突也会破坏幂等。两个自行构造的坏变异骗过全部 112 条测试。这些均是对 `c0dd021` 的实际执行，不将模拟渠道当作真实邮件 E2E。
+
+## 复审范围和执行结果
+
+- 独立普通 clone 的功能 HEAD `c0dd0217b8eaee35008771796c97914248badd0c`；基线 `origin/feat/domain-core` = `afd02560f9546147da380382404eb6106222a9b8`；红提交 `5fed9eb63b1c70c54d19e9c60756c7ec704ac78d`。先前三轮报告字节原样保留；本次只追加本节并更新收据 `review`，变异在独立副本。
+- 审查人 `codex`、会话 `codex:7d29bd3e-c4cd-4e15-ad0b-298bd0301bd3`；本轮原生 `turn_context` 模型 `gpt-6.1-terra`（OpenAI）。作者会话中实际触及项目的轮次模型为 `claude-opus-5-5`（Anthropic）；本轮来源门禁需会话落盘后实际核验。
+- 仓库根目录实际运行 `node scripts/gates/run-all.ts --hash --branch=feat/kernel-plugins --base=origin/feat/domain-core`，标准输出原样为：
+
+  ```text
+  e3e8a92e41c85048fd538cc0b9d31be5b9d9d0ac9a20f0b90dca39fba5b63f95
+  ```
+
+| 检查 | 实际结果 |
+|---|---|
+| 绿提交 `npm ci`、`npm run typecheck`、`npm run lint` | 全部退出 0，lint 检查 22 文件 |
+| 绿提交 `npm test` | 退出 0，112 通过、0 失败、0 跳过，其中 kernel 89 条 |
+| 红提交 `npm ci`、`npm test` | 安装退出 0，测试退出 1：23 条旧测试通过、89 条内核测试逐名失败、0 跳过；红绿三份测试文件无差异，失败名与当前测试名双向差集为空 |
+| 作者变异脚本，Node `v22.22.0` / `v25.8.1` | 两次独立顺序运行均退出 0；各自原样 89 绿、87 个变异被具名测试杀死、0 存活、0 超时。K86/K87 均被杀 |
+| `--canary-hang`，Node 22 / 25 | 两次以 `KERNEL_MUT_TIMEOUT_MS=5000` 执行均约 5 秒结束、退出 0；脚本明确将金丝雀超时记为超时、不计变异杀死 |
+| 自造变异 R4-M1 / R4-M2 | 在隔离副本先后注入；每次类型检查退出 0、全仓 112/112 测试仍绿；原版对照及反例见 R4-07 |
+| 原始 `run-all.ts --local --branch=feat/kernel-plugins --base=origin/feat/domain-core` | 退出 1，`G-REVIEW` 因尚无 review 而红，其余机械门禁显示绿；`review=null` 时 `G-PROVENANCE` 提前跳过，不是来源已验证 |
+| 写入 reject 后重跑同一 `--local` | 退出 1；`G-REVIEW` 因 reject 拦截；`G-PROVENANCE` 当前找不到本次 hash 调用且不能确认审查厂商。本轮会话尚未落盘，完成后仍须实测该门禁 |
+
+## 第三轮问题复测
+
+- **R3-01 / R3-02**：旧压缩块在撤回后返回 `recompress-required`，普通重建只收到可见消息；未压缩消息的编辑追加为新事件且正常样例前缀不变。新的短文本与可变回调反例仍失败，见 R4-01。
+- **R3-03**：直接修改原插件对象的 `endpoint` 不再改变宿主账本绑定；但 `Map` 内部槽及共享原型仍可改变真实目的地，见 R4-02。标准私有字段类插件兼容性见 R4-03。
+- **R3-04 / R3-05**：用户复述已有提示词的普通样例不误拦；倒序 stable 和未来压缩点被拒。静态规则中出现“新消息”仍有误拦，见 R4-06。
+- **R3-06**：作者已把原 helper 和 volatile 变异纳入 K86/K87 并杀死；新变异仍存活，见 R4-07。**R3-07**：两种 Node 版本独立实跑及金丝雀均有界完成；此前 Node 25 K08 卡住的原样例本轮不再重现。
+
+## 必须修复
+
+### R4-01 [P1 / AC-06、AC-08] 短撤回原文从 tail 漏出；重建回调还能篡改引用投影
+
+位置：`packages/kernel/src/assemble.ts:19-20,118-131,150-175,199-209`，领域消息类型 `packages/domain/src/log.ts:22`。
+
+1. 用户 #1 发送 `不同意` 后撤回；在 `volatile:'不同意'` 下调用装配，实测返回 `ok:true`，序列化请求的 tail 仍有这三字。`MIN_LEAK_SCAN_CHARS=4` 导致此路径不检查短原文；压缩块 `builtAtSeq` 不覆盖 `volatile`，因此不能兜底。第 7 栏已披露扫描只处理 4 字以上，但收据又称“只保证本次请求体不含撤回原文”，该保证与实际冲突。不能用对任意三字做无差别全局过滤替代来源/依赖控制。
+2. 先发未撤回 #1 `真正的用户指令` 与 #2 `这是需要撤回的密码`，随后撤回 #2；旧压缩块触发 `recompress`，回调将收到的可见对象 `visible[0].text` 改成 #2 的原文，再返回无泄漏字样的摘要，同时引用 #1。实测 `ok:true`，最终 page-in 为 `#1 user:u: 这是需要撤回的密码`，真实 #1 原文消失。`visible` 数组虽标 readonly，`ProjectedMessage` 元素本身可变，且与后续 `all.find` 共享对象；我另用实际 TypeScript 编译器验证这种回调赋值类型检查退出 0。
+
+**修复要求**：对 tail/压缩派生内容建立可验证的来源依赖并在撤回后失效，短原文也不能仅靠 4 字扫描放行；给外部回调独立、不可修改的深快照，引用页入从未受回调污染的权威日志重新取得最新原文，并在最终完整请求边界验证撤回约束。补短文本、回调改元素/嵌套字段、引用与撤回组合测试；不可把“上层压缩器通常不改对象”当成安全合同。
+
+### R4-02 [P1 / AC-35] 快照的 Map 和原型仍可变，同一未知动作可换接收端
+
+位置：`packages/kernel/src/plugins.ts:26-39,67-72,198-213`。`Object.freeze(map)` 不冻结 Map 内部条目；`Object.create(Object.getPrototypeOf(c))` 还共享调用方原型。
+
+- 独立 B1 模拟插件将实际目的地存于 `this.route = new Map([['dst','A']])`。首次向 A 产生副作用后，插件正常执行 `this.route.set('dst','B')` 并因回执丢失抛错；保留期内重试，宿主仍记录 `endpoint:'A'`、同一渠道版本 1，却真正向 B 发出，模拟副作用依次为 `[A,B]`，最后误报 confirmed。
+- 另以继承原型上的 `endpoint:'A'` 与 `send` 的合法实例注册；第一次 A 结果未知后，仅将共享原型的 endpoint 改为 B，不 reregister，实测也出现 `[A,B]`，账本仍绑定 A 和原版本。
+
+这两例的两个模拟接收端均各自按 action_id 去重；问题是不同接收端的去重域独立。它们使用 `this` 上的配置或原型，不是仅重复第 7 栏已披露的外部闭包变量问题。
+
+**修复要求**：对允许进入配置快照的值和原型提供真正不可变、不可借内部槽修改的表示，或拒绝无法安全快照的配置；绑定并验证实际接收端能力，而不只信任自报的字符串。对 Map/Set/Date、原型继承及在途变更做实际调用计数反例；无法验证时保守拒绝结果未知后的重试。
+
+### R4-03 [P1 / 插件契约] 合法带私有字段的渠道被注册成功，但实际调用必然失败
+
+位置：`plugins.ts:26-39,58-72`。一个实现 `kind/id/endpoint/idempotency/send` 的正常 JavaScript class，其 `send` 读取自身 `#credentials`。实测 `register(new Mail())` 返回 `{ok:true}`；发送时 `send.call(self,...)` 的 `self` 只是 `Object.create` 的同原型对象，没有该类的 private brand，抛 `Cannot read private member #credentials...`，宿主记 `delivery-unknown`；B2 的后续同动作因未知结果不可重试。
+
+**修复要求**：明确并实现可用的插件实例/快照协议，保留所需实例语义；不能安全支持的实例需在注册前显式拒绝，而非先声称注册成功、到发送时才落入结果未知。增加 class 私有字段与典型有状态适配器的正负测试，不要求将不可快照资源的内部字段原样暴露给模型。
+
+### R4-04 [P1 / AC-35] 墙钟回拨会延长 B1 重试窗口并重发
+
+位置：`plugins.ts:120-122,198-199,209-213`。默认 `now=Date.now`，只判断 `now() - firstAttemptAt >= windowMs`，没有保护墙钟回拨。独立模拟：服务端正常前进 1,001 ms 且 1,000 ms 的幂等键已过期，但宿主墙钟比首次尝试倒退 1 ms；同一未知动作仍被重试，接收端产生第二个副作用。仅看 `now - firstAttemptAt` 的负值会错误落在“保留期内”。
+
+**修复要求**：使用适合本运行生命周期的单调时间核对真实经过时长，并对时钟不可信、重启后无法确认安全窗口等情况保守保持 `DeliveryUnknown`；至少拒绝负向时间，测试回拨、前进跳变、恰好到期和多次重试。不要把可注入的墙钟值视作已经证明服务商仍保留幂等键。
+
+### R4-05 [P1 / 账本隔离] 含 NUL 的合法字符串导致不同渠道/动作键碰撞
+
+位置：`plugins.ts:20-21,47,125,191-197,215-217`。注册及 action_id 校验只要求非空字符串，账本却以 `${pluginId}\0${actionId}` 拼接。实测注册 `id='a'` 和 `id='a\0b'` 均成功；先发送 `(a, b\0c)`，再发送 `(a\0b, c)`、相同 payload。第二次错误返回第一渠道的回执（action_id 还是 `b\0c`）、`deduplicated:true`，第二渠道实际调用 0 次。
+
+**修复要求**：使用不碰撞的结构化键（例如分层 Map/长度编码），或在契约输入处明确拒绝分隔符及其他不合法 ID，并对两个不同渠道/动作、相同及不同 payload 做隔离测试。不能靠调用方“通常使用 UUID”保证该已接受输入安全。
+
+### R4-06 [P1 / AC-39] 固定说明中出现“新消息”也会被误当成动态内容
+
+位置：`assemble.ts:70-85,137-143`。空日志下，完全静态的 system `收到新消息后，先遵守群规。` 实测返回 `volatile-in-stable`，因为规则无条件匹配字串 `新消息`；实际上没有任何新消息正文、时刻或任务表被注入固定前缀。它是常见的行为规则，阻断了正常固定提示词，第三轮“避免自然内容误拦”未完全成立。
+
+**修复要求**：区分稳定的规则描述与实际动态值，借助结构化数据来源/版本和相邻请求变化校验，而非只凭触发词判定。保留真实的动态注入负例，同时加入“不含动态值的通用规则”阴性测试。
+
+### R4-07 [P1 / R-05] 两个新变异存活，撤回编辑文本与阈值边界未被覆盖
+
+变异仅在隔离副本执行；每次 `npm run typecheck` 退出 0、`npm test` 112/112 绿：
+
+- **R4-M1**：删除 `retractedTexts` 收集被撤回消息 edit 文本的分支。对先发“最初的旧内容”、再编辑成“新的非常机密内容”、再撤回并在 volatile 带编辑文本的输入，原版返回 `retracted-text-leaked`；变异版却 `ok:true` 并把编辑文本带入 tail。
+- **R4-M2**：在 M1 的副本上，将 `t.length >= MIN_LEAK_SCAN_CHARS` 改成 `>`。对恰好四字的撤回内容 `秘密口令`，原版拦截；变异版放行。112 条测试仍全绿。
+
+**修复要求**：覆盖撤回前多次编辑的全部版本出现在压缩块/tail 的场景，以及明确阈值的边界正负对照，并实际注入上述错误检查具名测试变红。第 7 栏已承认只测 87 种变异，但收据 R-05 的整体“通过”不能代替对新增判据的充分标定。以上是**测试覆盖缺口**，不是把变异后行为说成原版已有错误。
+
+## 原版反例可执行复现
+
+在 `c0dd021` 的仓库根目录完成 `npm ci` 后运行；以下断言的是当前观察到的错误，两个接收端均是本机模拟，不连接外网：
+
+```sh
+node --input-type=module <<'NODE'
+import assert from 'node:assert/strict';
+import {append,emptyLog} from './packages/domain/src/log.ts';
+import {assemble,serialize} from './packages/kernel/src/assemble.ts';
+import {createRegistry} from './packages/kernel/src/plugins.ts';
+const u={kind:'user',id:'u'},at='2026-11-05T00:00:00Z',stable=[{kind:'system',text:'助手规则'}];
+let log=append(emptyLog(),u,{kind:'message',text:'不同意'},at);log=append(log,u,{kind:'retract',target:1},at);
+const short=assemble(log,{stable,quotes:[],volatile:'不同意',budgetBytes:1000});
+assert.equal(short.ok,true);assert.ok(serialize(short.request).includes('不同意'));
+const secret='这是需要撤回的密码';log=append(emptyLog(),u,{kind:'message',text:'真正的用户指令'},at);
+log=append(log,u,{kind:'message',text:secret},at);log=append(log,u,{kind:'retract',target:2},at);
+const poisoned=assemble(log,{stable,quotes:[1],budgetBytes:10000,compressed:{throughSeq:2,builtAtSeq:2,text:'旧摘要'},recompress(_n,visible){visible[0].text=secret;return '安全摘要'}});
+assert.equal(poisoned.ok,true);assert.ok(serialize(poisoned.request).includes(secret));assert.equal(serialize(poisoned.request).includes('真正的用户指令'),false);
+console.log('R4-01：短撤回文字泄出；重建回调篡改引用并带回撤回原文');
+let now=100000;const effects=[],caches={A:new Map(),B:new Map()};
+const p={kind:'outbound-channel',id:'p',endpoint:'A',idempotency:'action-id',idempotencyWindowMs:10000,route:new Map([['dst','A']]),async send(q){
+ const dst=this.route.get('dst'),cache=caches[dst];if(cache.has(q.action_id))return cache.get(q.action_id);
+ effects.push(dst);const r={action_id:q.action_id,receiptId:dst};cache.set(q.action_id,r);
+ if(dst==='A'){this.route.set('dst','B');throw Error('A 已接收但回执丢失')}return r;
+}};
+const reg=createRegistry({now:()=>now});assert.equal(reg.register(p).ok,true);const req={action_id:'a',payload:'x'};
+assert.equal((await reg.send('p',req)).state,'delivery-unknown');now+=1000;await reg.send('p',req);
+assert.deepEqual(effects,['A','B']);assert.equal(reg.delivery('p','a').binding.endpoint,'A');
+console.log('R4-02：冻结 Map 仍能改路由，重复副作用',effects.join(','));
+class Mail {kind='outbound-channel';id='m';endpoint='M';idempotency='none';#credential='handle';async send(q){return {action_id:q.action_id,receiptId:this.#credential}}}
+const classes=createRegistry();assert.equal(classes.register(new Mail()).ok,true);
+const cr=await classes.send('m',{action_id:'a',payload:'x'});assert.equal(cr.reason,'send-threw');assert.match(cr.detail,/private member/);
+console.log('R4-03：合法私有字段类注册成功但无法发送');
+let host=100000,server=0,count=0;const cache=new Map(), clock=createRegistry({now:()=>host});
+clock.register({kind:'outbound-channel',id:'c',endpoint:'C',idempotency:'action-id',idempotencyWindowMs:1000,async send(q){
+ const old=cache.get(q.action_id);if(old&&server-old.at<1000)return old.receipt;
+ count++;const receipt={action_id:q.action_id,receiptId:'r'+count};cache.set(q.action_id,{at:server,receipt});
+ if(count===1)throw Error('已送达但回执丢失');return receipt;
+}});
+await clock.send('c',req);server=1001;host=99999;await clock.send('c',req);assert.equal(count,2);
+console.log('R4-04：墙钟回拨后副作用次数',count);
+const calls=[],ledger=createRegistry();for(const [id,ep] of [['a','A'],['a\0b','B']]) ledger.register({kind:'outbound-channel',id,endpoint:ep,idempotency:'none',send:async q=>{calls.push(ep);return {action_id:q.action_id,receiptId:ep}}});
+await ledger.send('a',{action_id:'b\0c',payload:'x'});const wrong=await ledger.send('a\0b',{action_id:'c',payload:'x'});
+assert.deepEqual(calls,['A']);assert.equal(wrong.deduplicated,true);assert.equal(wrong.receipt.action_id,'b\0c');
+console.log('R4-05：不同渠道/动作碰撞并错误复用回执');
+const fixed=assemble(emptyLog(),{stable:[{kind:'system',text:'收到新消息后，先遵守群规。'}],quotes:[],budgetBytes:1000});
+assert.equal(fixed.reason,'volatile-in-stable');console.log('R4-06：无动态输入的静态规则被误拦');
+NODE
+```
+
+## 仍未完成的验收边界
+
+AC-06、AC-08、AC-11、AC-12、AC-35、AC-39 与 R-06 的整项均未通过；短撤回文本、引用回读、实际渠道与持久账本、模型真实缓存断点、按线路的命中率及可信度、常驻会话和用户可见纵向路径都不能以当前纯函数/模拟结果代替。特别是 AC-08 和 AC-39 是本轮已复现有实质错误的子判据，不只是“等集成测试”。
