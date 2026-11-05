@@ -104,6 +104,17 @@ const M = [
   ["C18 直接工具不查空名", "contact.ts", "if (!tool.name.trim()) return { ok: false, reason: \"工具名不能为空\" };", ""],
   ["C19 直接工具只查空串不查空白", "contact.ts", "if (!tool.name.trim()) return", "if (!tool.name) return"],
   ["C20 说明不查空工具名", "contact.ts", "if (r.tools.some((t) => !t.trim())) return { ok: false, reason: \"派给 Compute 的工具名不能为空\" };", ""],
+  // 以下 P01–P05 取自 Codex 第三轮独立复审 reviews/feat-contact-helper.md CH-11(注入点与 independent-mutations-round3.json 一致),C21–C25 是 CH-09/CH-10 返修的埋雷
+  ["P01 汇报确认不查承诺是否有效", "contact.ts", "if (k.status !== \"active\" || k.schedule) return k;", "if (k.schedule) return k;"],
+  ["P02 任务终态不查承诺是否有效", "contact.ts", "if (k.status !== \"active\" || k.schedule || !k.boundTaskIds.includes(taskId)) return k;", "if (k.schedule || !k.boundTaskIds.includes(taskId)) return k;"],
+  ["P03 说明只留第一项工具", "contact.ts", "tools: Object.freeze([...r.tools])", "tools: Object.freeze([...r.tools].slice(0, 1))"],
+  ["P04 汇报确认丢等待表第一项", "contact.ts", "awaitingReport: k.awaitingReport.filter((t) => t !== taskId)", "awaitingReport: k.awaitingReport.slice(1)"],
+  ["P05 终态消耗第一项确认记录", "contact.ts", "reportedTaskIds: k.reportedTaskIds.filter((t) => t !== taskId)", "reportedTaskIds: k.reportedTaskIds.slice(1)"],
+  ["C21 回执不看点名的承诺", "contact.ts", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq > receipt.basedOnSeq) return k;", "if (k.sourceSeq > receipt.basedOnSeq) return k;"],
+  ["C22 回执不看承诺出处位置", "contact.ts", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq > receipt.basedOnSeq) return k;", "if (!receipt.commitmentIds.includes(k.id)) return k;"],
+  ["C23 出处等于依据位置也拒", "contact.ts", "k.sourceSeq > receipt.basedOnSeq", "k.sourceSeq >= receipt.basedOnSeq"],
+  ["C24 回执只认第一条点名承诺", "contact.ts", "receipt.commitmentIds.includes(k.id)", "receipt.commitmentIds.slice(0, 1).includes(k.id)"],
+  ["C25 能力资产只查空串不查空白", "contact.ts", "if (!a.name.trim()) return", "if (!a.name) return"],
 ];
 function run(dir) {
   const files = fs.readdirSync(path.join(dir, "src")).filter((f) => f.endsWith(".test.ts")).map((f) => path.join("src", f));
