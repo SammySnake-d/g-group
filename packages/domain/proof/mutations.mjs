@@ -1,6 +1,6 @@
 // 行为变异校准(R-05 阳性埋雷):对 domain 包的实现逐个注入单一故障,在隔离副本里跑本包测试,
 // 每个变异都必须让至少一条具名测试失败。M01–M09 对应 Astra 审查 reviews/feat-domain-core.md 的变体清单,
-// M10–M12 是这次修复新增的不可变性埋雷。原样副本必须全绿(阴性对照)。
+// M10–M12 是不可变性埋雷,其余按文件分组见各行。原样副本必须全绿(阴性对照)。
 // 用法: node packages/domain/proof/mutations.mjs
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -55,16 +55,40 @@ const M = [
   ["M37 定时不校验时区", "contact.ts", "  if (!s.tz) return \"定时承诺必须写明时区\";\n  try { new Intl.DateTimeFormat(\"en-US\", { timeZone: s.tz }); } catch { return `时区 \"${s.tz}\" 不认识`; }", ""],
   ["M38 定时不检查误差", "contact.ts", "if (!Number.isFinite(s.toleranceSec) || s.toleranceSec < 0) return \"允许误差必须是非负秒数\";", ""],
   ["M39 定时承诺也随任务回收", "contact.ts", "if (k.status !== \"active\" || k.schedule || !k.boundTaskIds.includes(taskId)) return k;", "if (k.status !== \"active\" || !k.boundTaskIds.includes(taskId)) return k;"],
-  ["M40 第一个任务结束就回收", "contact.ts", "status: left.length === 0 ? \"done\" : \"active\"", "status: \"done\""],
+  ["M40 第一个汇报确认就回收", "contact.ts", "k.boundTaskIds.length === 0 && k.awaitingReport.length === 0 ? { ...k, status: \"done\" } : k", "({ ...k, status: \"done\" })"],
   ["M41 专职锁挡住控制指令", "contact.ts", "if (i.kind === \"control\") return \"handle\";", "if (i.kind === \"control\" && !c.focus) return \"handle\";"],
-  ["M42 专职时照样接活", "contact.ts", "return i.kind === \"work\" ? \"decline-focused\" : \"ignore\";", "return i.kind === \"work\" ? \"handle\" : \"ignore\";"],
+  ["M42 专职时照样接活", "contact.ts", "return i.commitmentId === c.focus.onlyCommitmentId ? \"handle\" : \"decline-focused\";", "return \"handle\";"],
   ["M43 侧边栏回复变成消息", "helper.ts", "case \"sidebar\": return { ok: true, route: { replyIn: \"sidebar\", becomesMessage: false,", "case \"sidebar\": return { ok: true, route: { replyIn: \"sidebar\", becomesMessage: true,"],
   ["M44 全局入口读当前会话", "helper.ts", "case \"global\": return { ok: true, route: { replyIn: \"global-panel\", becomesMessage: false, contextConversation: null,", "case \"global\": return { ok: true, route: { replyIn: \"global-panel\", becomesMessage: false, contextConversation: \"*\","],
   ["M45 @Helper 回复不进对话", "helper.ts", "case \"mention\": return { ok: true, route: { replyIn: \"conversation\", becomesMessage: true,", "case \"mention\": return { ok: true, route: { replyIn: \"sidebar\", becomesMessage: false,"],
   ["M46 联系人也能指挥 Helper", "helper.ts", "if (caller.kind !== \"user\" || caller.id !== owner)", "if (caller.id === \"__never__\")"],
   ["M47 Helper 可以认领任务", "helper.ts", "  return false;\n}", "  return true;\n}"],
+  // 以下 I01–I26 取自 Astra 独立审查 reviews/feat-contact-helper.md 第 6 节(按返修后的源码改注入点),C01–C10 是本次返修新增判据的埋雷
+  ["I01 说明带上性格", "contact.ts", "brief: Object.freeze({ task: r.task,", "brief: Object.freeze({ soul: c.soul, task: r.task,"],
+  ["I02 禁项删 shell", "contact.ts", "\"bash\", \"shell\", \"exec\",", "\"bash\", \"exec\","],
+  ["I03 禁项删 write_file", "contact.ts", "\"write_file\", \"edit_file\",", "\"edit_file\","],
+  ["I04 禁项删 browser", "contact.ts", "\"browser\", \"computer_use\",", "\"computer_use\","],
+  ["I05 说明丢合法工具", "contact.ts", "tools: Object.freeze([...r.tools])", "tools: Object.freeze([])"],
+  ["I06 说明丢凭据引用", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs])", "credentialRefs: Object.freeze([])"],
+  ["I07 说明丢任务", "contact.ts", "brief: Object.freeze({ task: r.task,", "brief: Object.freeze({ task: \"\","],
+  ["I08 placement 一律 local", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs]), placement })", "credentialRefs: Object.freeze([...r.credentialRefs]), placement: \"local\" })"],
+  ["I09 sourceSeq 清零", "contact.ts", "{ ...k, awaitingReport: [], status: \"active\" }", "{ ...k, sourceSeq: 0, awaitingReport: [], status: \"active\" }"],
+  ["I10 专职锁可指向已结束承诺", "contact.ts", "k.id === f.onlyCommitmentId && k.status === \"active\"", "k.id === f.onlyCommitmentId"],
+  ["I11 Helper 不查调用方类型", "helper.ts", "caller.kind !== \"user\" || caller.id !== owner", "caller.id !== owner"],
+  ["I12 全局入口跳过鉴权", "helper.ts", "if (caller.kind !== \"user\" || caller.id !== owner)", "if (entry.kind !== \"global\" && (caller.kind !== \"user\" || caller.id !== owner))"],
+  ["I19 误差放行 NaN/Infinity", "contact.ts", "!Number.isFinite(s.toleranceSec) || s.toleranceSec < 0", "s.toleranceSec < 0"],
+  ["I26 拒绝理由写错", "contact.ts", "reason: `${tool.name} 是通用能力,只能在 Compute 里用`", "reason: \"时区不认识\""],
+  ["C01 终态就回收,不等末次汇报", "contact.ts", "boundTaskIds: k.boundTaskIds.filter((t) => t !== taskId), awaitingReport: [...k.awaitingReport, taskId] };", "boundTaskIds: k.boundTaskIds.filter((t) => t !== taskId), awaitingReport: k.awaitingReport, status: k.boundTaskIds.length === 1 ? \"done\" : \"active\" };"],
+  ["C02 汇报确认不回收", "contact.ts", "return retire({ ...k, awaitingReport: k.awaitingReport.filter((t) => t !== taskId) });", "return { ...k, awaitingReport: k.awaitingReport.filter((t) => t !== taskId) };"],
+  ["C03 别的任务的确认也回收", "contact.ts", "if (k.status !== \"active\" || !k.awaitingReport.includes(taskId)) return k;", "if (k.status !== \"active\") return k;"],
+  ["C04 回收不解专职锁", "contact.ts", "return freezeContact(dropStaleFocus({\n    ...c,\n    commitments: c.commitments.map((k) => {\n      if (k.status !== \"active\" || !k.awaitingReport", "return freezeContact(({\n    ...c,\n    commitments: c.commitments.map((k) => {\n      if (k.status !== \"active\" || !k.awaitingReport"],
+  ["C05 撤销不解专职锁", "contact.ts", "freezeContact(dropStaleFocus({ ...c, commitments: c.commitments.map((k) => (k.id === id", "freezeContact(({ ...c, commitments: c.commitments.map((k) => (k.id === id"],
+  ["C06 专职锁拒一切工作", "contact.ts", "return i.commitmentId === c.focus.onlyCommitmentId ? \"handle\" : \"decline-focused\";", "return \"decline-focused\";"],
+  ["C07 能力资产进直接清单", "contact.ts", "return c.tools.some((t) => t.name === name);", "return c.tools.some((t) => t.name === name) || c.computeAssets.some((x) => x.name === name);"],
+  ["C08 授权集合不含能力资产", "contact.ts", "const allowed = new Set([...c.tools.map((t) => t.name), ...c.computeAssets.map((x) => x.name)]);", "const allowed = new Set(c.tools.map((t) => t.name));"],
+  ["C09 能力资产登记写进直接工具", "contact.ts", "computeAssets: [...c.computeAssets, { name: a.name, kind: a.kind }]", "tools: [...c.tools, { name: a.name, bounded: true }]"],
+  ["C10 撤销记成 done", "contact.ts", "(k.id === id ? { ...k, status: \"revoked\" } : k)", "(k.id === id ? { ...k, status: \"done\" } : k)"],
 ];
-
 function run(dir) {
   const files = fs.readdirSync(path.join(dir, "src")).filter((f) => f.endsWith(".test.ts")).map((f) => path.join("src", f));
   const r = spawnSync(process.execPath, ["--test", "--test-reporter=tap", ...files], { cwd: dir, encoding: "utf8" });

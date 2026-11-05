@@ -16,12 +16,16 @@ export interface HelperRoute {
 }
 export type RouteResult = { ok: true; route: HelperRoute } | { ok: false; reason: string };
 
-// 红提交:空壳
 export function routeHelper(entry: HelperEntry, caller: { kind: "user" | "contact"; id: string }, owner: string): RouteResult {
-  throw new Error("未实现");
+  if (caller.kind !== "user" || caller.id !== owner) return { ok: false, reason: "Helper 只为用户本人服务,其他人叫它不执行" };
+  switch (entry.kind) {
+    case "global": return { ok: true, route: { replyIn: "global-panel", becomesMessage: false, contextConversation: null, replyToSeq: null } };
+    case "mention": return { ok: true, route: { replyIn: "conversation", becomesMessage: true, contextConversation: entry.conversationId, replyToSeq: entry.seq } };
+    case "sidebar": return { ok: true, route: { replyIn: "sidebar", becomesMessage: false, contextConversation: entry.conversationId, replyToSeq: null } };
+  }
 }
 
 /** Helper 不是项目成员:不参与扫一眼抢活,不认领任务。 */
 export function helperMayClaimTasks(): boolean {
-  throw new Error("未实现");
+  return false;
 }
