@@ -563,3 +563,73 @@ test("CH-15 已回收(done)的承诺不能被撤销改写成 revoked;有效承�
   const ok = revokeCommitment(base, "k");
   assert.equal(ok.ok && ok.contact.commitments[0]?.status, "revoked");
 });
+
+/** 规格里 Compute 能力资产的全部类别(ComputeAsset.kind),独立列出,不取自被测实现。 */
+const ASSET_KINDS = ["mcp", "skill", "script"] as const;
+
+test("CH-16 同名资产 3×3 类别组合:同类重复登记幂等(只留一项),异类第二次登记明确拒绝且原资产不变", () => {
+  for (const first of ASSET_KINDS) {
+    for (const second of ASSET_KINDS) {
+      const label = `${first}→${second}`;
+      const a = grantComputeAsset(mk().contacts.get("c-mi")!, { name: "research", kind: first });
+      assert.ok(a.ok, label);
+      const base = a.ok ? a.contact : (null as never);
+      const r = grantComputeAsset(base, { name: "research", kind: second });
+      if (first === second) {
+        assert.equal(r.ok, true, label);
+        assert.deepEqual(r.ok && r.contact.computeAssets, [{ name: "research", kind: first }], label);
+      } else {
+        assert.equal(r.ok, false, label);
+        assert.match(!r.ok ? r.reason : "", new RegExp(`^research 已登记为 ${first} 类能力资产,不能再以 ${second} 类同名登记$`), label);
+      }
+      assert.deepEqual(base.computeAssets, [{ name: "research", kind: first }], label);
+    }
+  }
+});
+
+test("CH-16 每类登记两个不同名资产都并存,且都能派给 Compute;未登记的同类名字仍被拒(对照)", () => {
+  for (const kind of ASSET_KINDS) {
+    const a = grantComputeAsset(mk().contacts.get("c-mi")!, { name: `${kind}-one`, kind });
+    const b = grantComputeAsset(a.ok ? a.contact : (null as never), { name: `${kind}-two`, kind });
+    assert.ok(b.ok, kind);
+    const c = b.ok ? b.contact : (null as never);
+    assert.deepEqual(c.computeAssets, [{ name: `${kind}-one`, kind }, { name: `${kind}-two`, kind }], kind);
+    const brief = briefFor(c, { task: "t", rules: [], tools: [`${kind}-one`, `${kind}-two`], credentialRefs: [] });
+    assert.deepEqual(brief.ok && brief.brief.tools, [`${kind}-one`, `${kind}-two`], kind);
+    assert.equal(canCallDirectly(c, `${kind}-one`), false, kind);
+    assert.equal(canCallDirectly(c, `${kind}-two`), false, kind);
+    const extra = briefFor(c, { task: "t", rules: [], tools: [`${kind}-three`], credentialRefs: [] });
+    assert.match(!extra.ok ? extra.reason : "", new RegExp(`${kind}-three 超出联系人 c-mi 的授权集合`), kind);
+  }
+});
+
+test("CH-16 名字按全名精确匹配:前缀相同的不同名资产无论先后各自独立登记、各自判重", () => {
+  for (const kind of ASSET_KINDS) {
+    const a = grantComputeAsset(mk().contacts.get("c-mi")!, { name: "research-news", kind });
+    const b = grantComputeAsset(a.ok ? a.contact : (null as never), { name: "research", kind });
+    assert.deepEqual(b.ok && b.contact.computeAssets.map((x) => x.name), ["research-news", "research"], kind);
+    const c = grantComputeAsset(b.ok ? b.contact : (null as never), { name: "research-news", kind });
+    assert.deepEqual(c.ok && c.contact.computeAssets.map((x) => x.name), ["research-news", "research"], kind);
+    const other = ASSET_KINDS.find((k) => k !== kind)!;
+    const clash = grantComputeAsset(b.ok ? b.contact : (null as never), { name: "research", kind: other });
+    assert.equal(clash.ok, false, `${kind}/${other}`);
+    const shortFirst = grantComputeAsset(mk().contacts.get("c-mi")!, { name: "research", kind });
+    const longSecond = grantComputeAsset(shortFirst.ok ? shortFirst.contact : (null as never), { name: "research-news", kind: other });
+    assert.deepEqual(longSecond.ok && longSecond.contact.computeAssets, [{ name: "research", kind }, { name: "research-news", kind: other }], `短名在先 ${kind}/${other}`);
+  }
+});
+
+test("CH-16 直接工具与每类资产同名双向互斥;不同名的直接工具与资产照常并存(对照)", () => {
+  for (const kind of ASSET_KINDS) {
+    const asset = grantComputeAsset(mk().contacts.get("c-mi")!, { name: "dual", kind });
+    const toTool = grantTool(asset.ok ? asset.contact : (null as never), { name: "dual", bounded: true });
+    assert.equal(toTool.ok, false, kind);
+    assert.match(!toTool.ok ? toTool.reason : "", /^dual 已登记为只给 Compute 用的能力资产/, kind);
+    const tool = grantTool(mk().contacts.get("c-mi")!, { name: "dual", bounded: true });
+    const toAsset = grantComputeAsset(tool.ok ? tool.contact : (null as never), { name: "dual", kind });
+    assert.equal(toAsset.ok, false, kind);
+    assert.match(!toAsset.ok ? toAsset.reason : "", /^dual 已是直接工具/, kind);
+    const both = grantComputeAsset(tool.ok ? tool.contact : (null as never), { name: "dual-asset", kind });
+    assert.deepEqual(both.ok && [both.contact.tools.map((t) => t.name), both.contact.computeAssets.map((x) => x.name)], [["dual"], ["dual-asset"]], kind);
+  }
+});
