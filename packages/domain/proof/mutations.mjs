@@ -264,8 +264,6 @@ const M = [
   ["M38 定时不检查误差", "contact.ts", "if (!Number.isFinite(s.toleranceSec) || s.toleranceSec < 0) return \"允许误差必须是非负秒数\";", ""],
   ["M39 定时承诺也随任务回收", "contact.ts", "if (k.status !== \"active\" || k.schedule || !k.boundTaskIds.includes(taskId)) return k;", "if (k.status !== \"active\" || !k.boundTaskIds.includes(taskId)) return k;"],
   ["M40 第一个汇报确认就回收", "contact.ts", "k.boundTaskIds.length === 0 && k.awaitingReport.length === 0 ? { ...k, status: \"done\" } : k", "({ ...k, status: \"done\" })"],
-  ["M41 专职锁挡住控制指令", "contact.ts", "if (i.kind === \"control\") return \"handle\";", "if (i.kind === \"control\" && !c.focus) return \"handle\";"],
-  ["M42 专职时照样接活", "contact.ts", "return i.commitmentId === c.focus.onlyCommitmentId ? \"handle\" : \"decline-focused\";", "return \"handle\";"],
   ["M43 侧边栏回复变成消息", "helper.ts", "default: return { ok: true, route: { replyIn: \"sidebar\", becomesMessage: false,", "default: return { ok: true, route: { replyIn: \"sidebar\", becomesMessage: true,"],
   ["M44 全局入口读当前会话", "helper.ts", "case \"global\": return { ok: true, route: { replyIn: \"global-panel\", becomesMessage: false, contextConversation: null,", "case \"global\": return { ok: true, route: { replyIn: \"global-panel\", becomesMessage: false, contextConversation: \"*\","],
   ["M45 @Helper 回复不进对话", "helper.ts", "case \"mention\": return { ok: true, route: { replyIn: \"conversation\", becomesMessage: true,", "case \"mention\": return { ok: true, route: { replyIn: \"sidebar\", becomesMessage: false,"],
@@ -281,7 +279,6 @@ const M = [
   ["I07 说明丢任务", "contact.ts", "brief: Object.freeze({ task: r.task,", "brief: Object.freeze({ task: \"\","],
   ["I08 placement 一律 local", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs]), placement: placement as Placement })", "credentialRefs: Object.freeze([...r.credentialRefs]), placement: \"local\" })"],
   ["I09 sourceSeq 清零", "contact.ts", "{ ...k, awaitingReport: [], reportedTaskIds: [], status: \"active\" }", "{ ...k, sourceSeq: 0, awaitingReport: [], reportedTaskIds: [], status: \"active\" }"],
-  ["I10 专职锁可指向已结束承诺", "contact.ts", "k.id === f.onlyCommitmentId && k.status === \"active\"", "k.id === f.onlyCommitmentId"],
   ["I11 Helper 不查调用方类型", "helper.ts", "who.value.kind !== \"user\" || who.value.id !== owner", "who.value.id !== owner"],
   ["I12 全局入口跳过鉴权", "helper.ts", "if (who.value.kind !== \"user\" || who.value.id !== owner)", "if (head.value.kind !== \"global\" && (who.value.kind !== \"user\" || who.value.id !== owner))"],
   ["I19 误差放行 NaN/Infinity", "contact.ts", "!Number.isFinite(s.toleranceSec) || s.toleranceSec < 0", "s.toleranceSec < 0"],
@@ -289,9 +286,6 @@ const M = [
   ["CK01 终态就回收,不等末次汇报", "contact.ts", "return { ...k, boundTaskIds, awaitingReport: [...k.awaitingReport, taskId] };", "return { ...k, boundTaskIds, status: boundTaskIds.length === 0 ? \"done\" : \"active\" };"],
   ["CK02 汇报确认不回收", "contact.ts", "return retire({ ...k, awaitingReport: k.awaitingReport.filter((t) => t !== taskId) });", "return { ...k, awaitingReport: k.awaitingReport.filter((t) => t !== taskId) };"],
   ["CK03 别的任务的确认也回收", "contact.ts", "if (k.awaitingReport.includes(taskId)) return retire(", "if (true) return retire("],
-  ["CK04 回收不解专职锁", "contact.ts", "return freezeContact(dropStaleFocus({\n    ...c,\n    commitments: c.commitments.map((k) => {\n      if (k.status !== \"active\" || k.schedule) return k;", "return freezeContact(({\n    ...c,\n    commitments: c.commitments.map((k) => {\n      if (k.status !== \"active\" || k.schedule) return k;"],
-  ["CK05 撤销不解专职锁", "contact.ts", "freezeContact(dropStaleFocus({ ...c, commitments: c.commitments.map((k) => (k.id === id", "freezeContact(({ ...c, commitments: c.commitments.map((k) => (k.id === id"],
-  ["CK06 专职锁拒一切工作", "contact.ts", "return i.commitmentId === c.focus.onlyCommitmentId ? \"handle\" : \"decline-focused\";", "return \"decline-focused\";"],
   ["CK07 能力资产进直接清单", "contact.ts", "return c.tools.some((t) => t.name === name);", "return c.tools.some((t) => t.name === name) || c.computeAssets.some((x) => x.name === name);"],
   ["CK08 授权集合不含能力资产", "contact.ts", "const allowed = new Set([...c.tools.map((t) => t.name), ...c.computeAssets.map((x) => x.name)]);", "const allowed = new Set(c.tools.map((t) => t.name));"],
   ["CK09 能力资产登记写进直接工具", "contact.ts", "computeAssets: [...c.computeAssets, { name: a.name, kind: a.kind }]", "tools: [...c.tools, { name: a.name, bounded: true }]"],
@@ -301,13 +295,11 @@ const M = [
   ["CN02 说明只留第一条群规", "contact.ts", "rules: Object.freeze([...r.rules])", "rules: Object.freeze([...r.rules].slice(0, 1))"],
   ["CN03 说明只留第一项凭据引用", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs])", "credentialRefs: Object.freeze([...r.credentialRefs].slice(0, 1))"],
   ["CN04 误差 0 被拒", "contact.ts", "s.toleranceSec < 0", "s.toleranceSec <= 0"],
-  ["CN05 任一承诺结束都清空专职锁", "contact.ts", "c.focus && !c.commitments.some((k) => k.id === c.focus?.onlyCommitmentId && k.status === \"active\") ? { ...c, focus: null } : c;", "c.focus ? { ...c, focus: null } : c;"],
   ["CK11 先到的汇报确认被吞", "contact.ts", "if (k.boundTaskIds.includes(taskId) && !k.reportedTaskIds.includes(taskId)) return { ...k, reportedTaskIds: [...k.reportedTaskIds, taskId] };", ""],
   ["CK12 终态不看已确认记录", "contact.ts", "if (k.reportedTaskIds.includes(taskId)) return retire({ ...k, boundTaskIds, reportedTaskIds: k.reportedTaskIds.filter((t) => t !== taskId) });", ""],
   ["CK13 无关任务的确认也被记下", "contact.ts", "if (k.boundTaskIds.includes(taskId) && !k.reportedTaskIds.includes(taskId))", "if (!k.reportedTaskIds.includes(taskId))"],
   ["CK14 重放确认重复记录", "contact.ts", "if (k.boundTaskIds.includes(taskId) && !k.reportedTaskIds.includes(taskId))", "if (k.boundTaskIds.includes(taskId))"],
   ["CK15 先确认就回收,不等终态", "contact.ts", "return { ...k, reportedTaskIds: [...k.reportedTaskIds, taskId] };", "return { ...k, status: \"done\" };"],
-  ["CK16 终态回收不解专职锁", "contact.ts", "export function settleTask(c: Contact, taskId: string): Contact {\n  return freezeContact(dropStaleFocus({", "export function settleTask(c: Contact, taskId: string): Contact {\n  return freezeContact(({"],
   ["CK17 Compute 专用资产可同名授为直接工具", "contact.ts", "if (c.computeAssets.some((x) => x.name === tool.name)) return { ok: false, reason: `${tool.name} 已登记为只给 Compute 用的能力资产,不能再当直接工具` };", ""],
   ["CK18 直接工具不查空名", "contact.ts", "if (!tool.name.trim()) return { ok: false, reason: \"工具名不能为空\" };", ""],
   ["CK19 直接工具只查空串不查空白", "contact.ts", "if (!tool.name.trim()) return", "if (!tool.name) return"],
@@ -337,7 +329,6 @@ const M = [
   // 以下 CZ01–CZ05(报告原编号 Z01–Z05)取自 Codex 第五轮独立复审 reviews/feat-contact-helper.md CH-15(注入点与 independent-mutations-round5.json 一致),CK31–CK33 是 CH-14 返修的埋雷
   ["CZ01 位置只查整数不查安全整数", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isInteger(n) && n >= 0"],
   ["CZ02 最大安全整数也拒", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isSafeInteger(n) && n >= 0 && n < Number.MAX_SAFE_INTEGER"],
-  ["CZ03 加锁允许任何非 done 状态", "contact.ts", "k.id === f.onlyCommitmentId && k.status === \"active\"", "k.id === f.onlyCommitmentId && k.status !== \"done\""],
   ["CZ04 撤销允许任何非 revoked 状态", "contact.ts", "k.id === id && k.status === \"active\"", "k.id === id && k.status !== \"revoked\""],
   ["CZ05 位置 0 被拒", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isSafeInteger(n) && n > 0"],
   ["CK31 同名异类资产静默成功", "contact.ts", "  if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };\n", ""],
@@ -356,7 +347,6 @@ const M = [
   ["CV01 script 类资产登记不查同名直接工具", "contact.ts", "if (c.tools.some((t) => t.name === a.name)) return", "if (a.kind !== \"script\" && c.tools.some((t) => t.name === a.name)) return"],
   ["CV02 直接工具只与 MCP 类资产互斥", "contact.ts", "c.computeAssets.some((x) => x.name === tool.name)", "c.computeAssets.some((x) => x.name === tool.name && x.kind === \"mcp\")"],
   ["CV03 只在全部工具越权时才拒", "contact.ts", "const extra = r.tools.filter((t) => !allowed.has(t));", "const extra = r.tools.every((t) => !allowed.has(t)) ? [...r.tools] : [];"],
-  ["CV04 加锁允许任何非 revoked 状态", "contact.ts", "k.id === f.onlyCommitmentId && k.status === \"active\"", "k.id === f.onlyCommitmentId && k.status !== \"revoked\""],
   ["CV05 同名异类理由写死 research", "contact.ts", "reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记`", "reason: `research 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记`"],
   ["CV06 说明 rules 直接引用调用方数组", "contact.ts", "rules: Object.freeze([...r.rules])", "rules: input.rules"],
   ["CV07 说明 tools 直接引用调用方数组", "contact.ts", "tools: Object.freeze([...r.tools])", "tools: input.tools"],
@@ -379,18 +369,11 @@ const M = [
   ["CK48 数组字段不复制、返回原数组", "contact.ts", "return out.every((x) => typeof x === \"string\") ? (out as string[]) :", "return out.every((x) => typeof x === \"string\") ? (v as string[]) :"],
   ["CK49 显式 null 当成缺省", "contact.ts", "if (raw === undefined && spec.optional) continue;", "if (raw == null && spec.optional) continue;"],
   ["CK50 能力资产不查类别", "contact.ts", "  if (!ASSET_KINDS.has(a.kind)) return { ok: false, reason: `未知的能力资产类别 ${a.kind}` };\n", ""],
-  ["CK51 不认识的意图当成工作", "contact.ts", "  if (!variant) return \"ignore\";", "  if (!variant) return \"handle\";"],
   ["CK52 不查访问器属性", "contact.ts", "    if (d && !(\"value\" in d)) return `${what} 只接受普通数据${noun}(${String(key)} 是访问器属性)`;\n", ""],
   // 以下 CY01–CY08(报告原编号 Y01–Y08)取自 Codex 第十轮独立复审 reviews/feat-contact-helper.md CH-26(注入点按 independent-mutations-round10.json 与 independent-Y08-round10.py;CH-24 后 decideUnderFocus 的 Y05 注入点改到等价位置),CK53–CK62 是 CH-24/CH-25 返修的埋雷(CK55"control 字段都可选"是等价变异,条件见收据第 7 栏,不收录)
-  ["CY03 setFocus 校验后沿用原对象", "contact.ts", "const f = n ? n.value : null;", "const f = input;"],
   ["CY04 schedule 不规范化直接保留原对象", "contact.ts", "case \"schedule\": return v === null ? { ok: true, value: null } : normalize(v, SCHEDULE_SCHEMA, field);", "case \"schedule\": return v === null ? { ok: true, value: null } : { ok: true, value: v };"],
   ["CY07 commit 存下原始对象的全部字段", "contact.ts", "commitments: [...c.commitments, { ...k, awaitingReport: [], reportedTaskIds: [], status: \"active\" }]", "commitments: [...c.commitments, { ...input, awaitingReport: [], reportedTaskIds: [], status: \"active\" }]"],
   ["CY08 校验嵌套 schedule 但保留原对象", "contact.ts", "case \"schedule\": return v === null ? { ok: true, value: null } : normalize(v, SCHEDULE_SCHEMA, field);", "case \"schedule\": return v === null ? { ok: true, value: null } : (normalize(v, SCHEDULE_SCHEMA, field).ok ? { ok: true, value: v } : { ok: false, reason: field });"],
-  ["CK53 control 不查 action 枚举", "contact.ts", "!CONTROL_ACTIONS.has(i.action ?? \"\") || ", ""],
-  ["CK54 control 不查 commitmentId 非空", "contact.ts", " || !i.commitmentId?.trim()", ""],
-  ["CK56 work 的 text 可选", "contact.ts", "[\"work\", { text: { kind: \"string\" }, commitmentId: { kind: \"stringOrNull\" } }],", "[\"work\", { text: { kind: \"string\", optional: true }, commitmentId: { kind: \"stringOrNull\" } }],"],
-  ["CK57 work 的 commitmentId 可选", "contact.ts", "[\"work\", { text: { kind: \"string\" }, commitmentId: { kind: \"stringOrNull\" } }],", "[\"work\", { text: { kind: \"string\" }, commitmentId: { kind: \"stringOrNull\", optional: true } }],"],
-  ["CK58 各变体共用全字段 schema(他变体字段干扰判定)", "contact.ts", "const variant = INTENT_SCHEMAS.get(head.value.kind);", "const variant = INTENT_SCHEMAS.get(head.value.kind) && { action: { kind: \"string\", optional: true }, text: { kind: \"string\", optional: true }, commitmentId: { kind: \"stringOrNull\", optional: true } } as Schema;"],
   ["CK59 不拒外层 Proxy", "contact.ts", "  if (types.isProxy(input)) return { ok: false, reason: `${what} 只接受普通数据对象` };\n", ""],
   ["CK60 不查对象原型", "contact.ts", ": proto !== Object.prototype && proto !== null) return", ": false) return"],
   ["CK61 不拒数组 Proxy", "contact.ts", "  if (types.isProxy(v)) return { reason: `${field} 只接受普通数据数组` };\n", ""],
@@ -399,7 +382,6 @@ const M = [
   // 本轮合同改为含访问器即拒绝、getter 永不调用后与原样等价,由 CK52 与 CH-28 测试覆盖,不收录。CK63–CK71 是本轮普通数据合同与 CH-27 Helper 入参的埋雷。
   ["AA01 数组 Proxy 只在 rules 字段被拒", "contact.ts", "if (types.isProxy(v)) return { reason:", "if (field === \"rules\" && types.isProxy(v)) return { reason:"],
   ["AA02 嵌套 schedule 不拒 Proxy", "contact.ts", "if (types.isProxy(input)) return { ok: false, reason:", "if (what !== \"schedule\" && types.isProxy(input)) return { ok: false, reason:"],
-  ["AA03 setFocus 不拒 Proxy", "contact.ts", "if (types.isProxy(input)) return { ok: false, reason:", "if (what !== \"专职锁\" && types.isProxy(input)) return { ok: false, reason:"],
   ["AA04 addContact 不拒 Proxy", "contact.ts", "if (types.isProxy(input)) return { ok: false, reason:", "if (what !== \"联系人\" && types.isProxy(input)) return { ok: false, reason:"],
   ["AA05 updateContact 不拒 Proxy", "contact.ts", "if (types.isProxy(input)) return { ok: false, reason:", "if (what !== \"联系人修改\" && types.isProxy(input)) return { ok: false, reason:"],
   ["CK63 快照用普通对象并赋值写入(经原型链 setter)", "contact.ts", "const out = Object.create(null) as Record<string, unknown>;", "const out: Record<string, unknown> = {};"],
@@ -412,6 +394,27 @@ const M = [
   ["CK71 Helper 不查 mention 的 seq", "helper.ts", "  if (head.value.kind === \"mention\" && !isSeq(e.seq as number)) return no(`seq ${e.seq} 不是合法的消息位置(非负整数)`);\n", ""],
   // CK40、CK41、CK42、CK46、CK47、CY01、CY02、CY05、CY06 只在"校验后再读一次入参"时可观察,本轮合同下入参只能是数据属性、读两次结果相同,是等价变异,移出清单;CK64"空原型快照改赋值写入"因空原型没有可经过的 setter 也等价,移出(条件见收据第 7 栏)。
 ];
+// 所测功能已按 g-group#2273 撤销(专职开关「只做这件事」整体删除),对应变异移出清单;运行时逐条打印说明,写进 mutations.txt。
+const REMOVED = [
+  "M41 专职锁挡住控制指令",
+  "M42 专职时照样接活",
+  "I10 专职锁可指向已结束承诺",
+  "CK04 回收不解专职锁",
+  "CK05 撤销不解专职锁",
+  "CK06 专职锁拒一切工作",
+  "CN05 任一承诺结束都清空专职锁",
+  "CK16 终态回收不解专职锁",
+  "CY03 setFocus 校验后沿用原对象",
+  "CZ03 加锁允许任何非 done 状态",
+  "CV04 加锁允许任何非 revoked 状态",
+  "CK51 不认识的意图当成工作",
+  "CK53 control 不查 action 枚举",
+  "CK54 control 不查 commitmentId 非空",
+  "CK56 work 的 text 可选",
+  "CK57 work 的 commitmentId 可选",
+  "CK58 各变体共用全字段 schema(他变体字段干扰判定)",
+  "AA03 setFocus 不拒 Proxy"
+  ];
 function run(dir) {
   const files = fs.readdirSync(path.join(dir, "src")).filter((f) => f.endsWith(".test.ts")).map((f) => path.join("src", f));
   const r = spawnSync(process.execPath, ["--test", "--test-reporter=tap", ...files], { cwd: dir, encoding: "utf8" });
@@ -431,6 +434,7 @@ const copy = (name) => {
 let ok = true;
 const clean = run(copy("clean"));
 console.log(`${clean.code === 0 ? "✓" : "✗"} 原样副本:${clean.passed.length} 绿 / ${clean.failed.length} 红`);
+for (const name of REMOVED) console.log(`— ${name}:已移除,所测功能已按 #2273 撤销`);
 if (clean.code !== 0) ok = false;
 M.forEach(([name, file, from, to], i) => {
   const d = copy(`m${i}`);
