@@ -265,3 +265,135 @@ assert.throws(()=>classifyInbound({sender:{kind:'user',id:'u'},text:'测试'},()
 console.log('RR-04 异常兜底再次抛出');
 NODE
 ```
+
+---
+
+# 第三轮：返修与 AC-39 独立复审
+
+**结论：reject。** 第二轮的常规反例已复现修复，但新装配器在压缩后无法处理旧消息的编辑和撤回，甚至可把撤回原文从压缩块送入模型；普通用户发言与固定提示词偶然重合会导致装配失败。第二轮声称绑定的发送渠道还可通过注册对象的可变接收端被绕过。两个新构造变异骗过全部 93 条测试。不能把这些结果表述成 AC-39 的前缀纪律子判据均已通过。
+
+## 范围、身份和独立执行
+
+- 审查普通独立 clone 的 `feat/kernel-plugins`，功能 HEAD `c829cb02cc32b29efe3f9cbfa4ab20b29bd0c1f9`；`origin/feat/domain-core` 为 `afd02560f9546147da380382404eb6106222a9b8`；红提交 `ef9b953ccea20bea81bf2979cfb471b1f60b7f8a`。先前两轮报告原样保留；本轮只追加此节并填写收据 review。所有变异在独立副本执行。
+- 审查会话 `codex:7d29bd3e-c4cd-4e15-ad0b-298bd0301bd3`，本轮原生 `turn_context` 模型 `gpt-6.1-terra`（OpenAI）；作者会话实际触及项目的模型均为 `claude-opus-5-5`（Anthropic）。当前会话落盘后的来源门禁仍需实测。
+- 自己在仓库根目录运行 `node scripts/gates/run-all.ts --hash --branch=feat/kernel-plugins --base=origin/feat/domain-core`，原样输出：
+
+  ```text
+  0a540eede66e796fa689ce2a0f5ec9a8f7f8cecff6f6c516c5ef6cedb391b56e
+  ```
+
+| 检查 | 独立结果 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 绿提交均退出 0；lint 检查 22 文件 |
+| 绿提交 `npm test` | 退出 0，93 通过、0 失败、0 跳过；其中 kernel 70 条 |
+| 红提交 `npm ci`、`npm test` | 安装退出 0；测试退出 1，23 旧测试通过、70 个 kernel 测试按名字失败、0 跳过。红绿三份测试文件无差异，70 个名字双向差集为空；失败样本为真实调用空壳而非文件加载失败 |
+| 作者变异脚本（Node 22.22.0） | 原样 70 绿，69 个列出的变异均有具名测试变红，命令退出 0；K51/K52 也被杀。仅证明这些指定变异 |
+| 作者变异脚本（Node 25.8.1） | 常规测试 93 绿，但脚本完成 33 个变异后卡在 K08；我在 4 分 49 秒后终止自己的隔离进程，退出 143，未完成，不记为 69 个通过，见 R3-07 |
+| 独立故障注入 R3-M1 / R3-M2 | 独立副本中的两个变异累积后类型检查均退出 0，且 93/93 测试仍绿；具体违约及原版对照见 R3-06 |
+| 原始 `run-all.ts --local --branch=feat/kernel-plugins --base=origin/feat/domain-core` | 退出 1，只有 `G-REVIEW` 因无审查而红，其余机械门禁显示绿。`review=null` 时 `G-PROVENANCE` 提前跳过，不能当作实际来源已校验 |
+| 写入 reject 后重跑 `--local` | 退出 1；`G-REVIEW` 因 reject 拦截；`G-PROVENANCE` 因本轮会话尚未落盘而未找到本次 hash 调用并报厂商认不出。会话完成后仍须复核，不能提前声明来源门禁通过 |
+
+## 第二轮修复复测
+
+- **RR-01**：已确认 B1 在保留期后复用回执、插件调用仍 1 次；未知 B1 在首次尝试后 999 ms 可重试、1,000 ms 恰到期及之后被拒，首次时间不随重试刷新。该固定渠道样例通过；不同接收端的隐式切换见 R3-03。
+- **RR-02**：经 `reregister` 的 B2→B1 情况保留旧 B2 状态，第二次 `retry-refused`，调用 1 次。普通版本更新样例通过，但同一个已注册对象的可变 `this` 不经 `reregister` 也能换接收端，见 R3-03。
+- **RR-03 / RR-04**：使用结构化范围的 `@小秘，停止定时总结` 返回 E4 且分类器调用 1 次；抛出 message getter 失败的 Error 返回 `Uncertain`。原错误样例通过。
+- **RR-05**：作者脚本将上一轮 R2-M1/R2-M2 纳入 K51/K52。新增漏洞和存活变异见下文；R-06 仍为未测，未出现用户可见纵向路径。
+
+## 必须修复
+
+### R3-01 [P1 / AC-06、AC-08、AC-39] 撤回后压缩块仍可向模型暴露被撤回原文
+
+位置：`packages/kernel/src/assemble.ts:82-84,88-101`；`docs/spec/验收文档-v0.1.md` 的 AC-06/AC-08 及需求文档 D06.3 明确撤回内容不能由缓存、派生摘要或回读重新暴露。
+
+独立输入：用户 #1 是 `用户原来决定吃面`，#2 是普通消息；合法压缩块 `throughSeq:2` 的摘要里保留 #1 的原文。用户随后追加 `retract(target:1)`，且本次引用 #1。实测 `skipped=[{seq:1,reason:'retracted'}]`，但 `serialize(request)` 的压缩块**仍含 #1 原文**，装配还返回 `ok:true`。跳过 `page-in` 只检查单条投影，不能清除压缩块里已派生的数据。
+
+**修复要求**：压缩结果须携带来源/版本或等价可验证依赖；当压缩范围内消息撤回、删除或需隐私修订时，在任何请求发出前机械失效并重建/安全隔离受影响块与缓存，不能只跳过引用。补足“压缩前包含撤回原文、撤回后完整序列化请求和缓存都不可见”的端到端负例。若摘要包含敏感信息但非逐字相同，还需处理派生关联，不能只做字符串替换。
+
+### R3-02 [P1 / AC-39] 编辑事件被旧消息 seq 过滤掉，或原地改变已缓存前缀
+
+位置：`assemble.ts:76-84,96-100`；领域日志 `packages/domain/src/log.ts:83-96`。`project(log)` 折叠 edit 到旧消息的原 seq，然后仅保留 `m.seq > throughSeq`：
+
+- 未压缩时，编辑 #1 后它在原来的位置被替换，旧前缀哈希与新请求相应前缀不同；`assemble` 仍返回成功，没有给调用者任何失效提示。这不是正常“只追加一条新消息”。
+- 已压缩到 #2 后，再追加编辑 #1 的事件 #3（“用户改为决定吃米饭”）；实测新旧请求体完全相同，既保留旧摘要“吃面”，也不包含新文字。若没有显式引用 #1，新编辑根本未进入上下文。
+
+**修复要求**：用追加事件/版本游标与压缩依赖建模编辑后的可见状态，保证新修订不会被旧消息 seq 吞掉；针对可安全保留的历史只追加修订，必须重建的隐私/压缩块则显式通知缓存失效并更新块。增加压缩点前/后编辑、连续多轮及相邻前缀/最新版本对照，不要以纯追加新消息的 30 轮测试代表所有合法入站事件。撤回隐私优先于缓存命中，不得为了哈希稳定保留已撤回内容。
+
+### R3-03 [P1 / AC-35] 注册后改变插件实例内部接收端，可绕开动作的渠道版本绑定
+
+位置：`packages/kernel/src/plugins.ts:41-50,138-145,175-191`。宿主快照冻结了函数包装，但第 50 行仍执行 `send.call(c, r)`，其中 `c` 是调用方原对象。一个普通插件的 `send` 可读取自身可变 `this.endpoint`，此字段不在冻结快照内。
+
+独立模拟：一个声明 B1、保留期 10 秒的插件初始 `endpoint='A'`；A 接收 action 后回执丢失，宿主记 `delivery-unknown`。调用方**不执行 reregister**，只把原实例 endpoint 改为 `B`；在期限内重试同一 action/载荷。A、B 各自都按 action_id 在自己的接收端去重，但 B 没见过 A 的请求，实际副作用依次为 `[A,B]`；宿主记录的 `channelVersion` 前后均为 1，最后误记 `confirmed`。这是模拟接收端的真实调用计数，不声称调用了真实邮件服务。
+
+**修复要求**：首次动作绑定实际接收端/渠道实例的不可变标识、版本及能力，并在每次尝试前验证；插件调用不应通过保留可变配置的外部 `this` 绕开宿主版本，更新配置必须走受控版本变更并对未知动作拒绝盲重试。补“实例原配置字段突变但不 reregister”和在途突变的正负测试。若无法在当前插件模型验证接收端，需保守阻止未知结果重试，不能宣称已绑定。
+
+### R3-04 [P1 / AC-39] 普通消息与固定提示词重合即触发误拦
+
+位置：`assemble.ts:49-65,76-81`。固定 system 文本 `你是群聊助手，请帮助用户解决问题。` 本身不变；空日志可成功装配。用户随后合法发 `帮助用户`，由于它是固定文本中的 4 字子串，`volatileIn` 立即返回 `消息 #1 原文`，整次装配 `volatile-in-stable`。这里并没有把新消息注入 stable；单靠内容碰撞无法判断生成来源。这样任意常见措辞重合都可能中断聊天，且早前空日志成功与新消息失败构成单开关证据。
+
+**修复要求**：以明确的输入来源、不可变模板版本/结构化字段及相邻请求实际前缀变化判断是否把会变内容注入 stable，而不是把正常重复字串当作注入；在不削弱真实动态注入拦截的同时，新增固定提示词与用户自然复述重合的阴性测试。
+
+### R3-05 [P1 / AC-39] 输入既不保证固定段顺序，也不验证压缩点在有效日志范围
+
+位置：`assemble.ts:76-84,96-99`。D22 明确前缀为 system→工具→人设/规则→历史。将 `stable` 按 `[persona,system,tools]` 传入时实测返回 `ok:true`，输出顺序仍为 `persona,system,tools`。此外，仅有两条消息时传入 `throughSeq:999` 也返回成功、清单为空，原两条均未进入历史，导致把未压缩的新消息错误视作已压缩。调用方传压缩块不等于允许宿主无条件接受一个未来位置。
+
+**修复要求**：明确可选/重复稳定段契约并机械保证固定顺序，拒绝或规范化非法顺序；验证压缩水位与可信日志快照和压缩内容/版本关联，未来或无效水位显式失败而非静默吞消息。补倒序、缺失/重复段以及负数、非整数、未来压缩点的单开关测试。
+
+### R3-06 [P1 / R-05] 原版测试不能证明 helper 历史和会变状态的内容完整
+
+以下均为**隔离副本**故障注入，不是声称原版已经丢失 helper 或 volatile：
+
+- **R3-M1**：在 history 过滤条件增加 `m.sender.kind !== 'helper'`。类型检查通过、93/93 测试绿；独立输入一条合法 helper 消息“重要工具结果”，变异版 `ok:true` 但内容与清单都没有该消息。原版同输入内容可见、清单有 #1。
+- **R3-M2**：在 M1 副本上，把 tail 内容中的 `${opts.volatile}` 换成固定字串 `无`。类型检查通过、仍 93/93 绿；会变状态“必须停止发送”在变异版消失，原版则完整出现。现有测试多检查段位置/自洽字节数，没有断言实际载荷。
+
+**修复要求**：对 user/contact/helper 等合法发言者、非空会变状态及其原文字节做完整内容断言，加入对应的可执行坏变异和单开关对照；当前收据 R-05 写“通过”不足以说明新 AC-39 相关判据已标定完备。
+
+### R3-07 [P1 / R-05] 作者变异脚本在受支持的 Node 25 下卡住且无超时
+
+位置：`packages/kernel/proof/mutations.mjs` 的 `run()` 使用 `spawnSync`，没有进程或测试超时。绿提交自身在 Node `v25.8.1` 的常规 93 条测试通过；独立运行同一版本的作者变异脚本时，前 33 个变异有结果，进入 K08 后其 Node 测试子进程持续等待超过 4 分钟 49 秒、无后续结果。我另行直接运行该 K08 的 `classify.test.ts`，能看到多条具名断言失败，但测试进程同样不退出。为避免留下本次隔离进程，已终止本次自启进程；原脚本退出 143，不把这次中断记为 69 个通过。
+
+**修复要求**：为每个隔离变异设置有界超时并回收测试子进程，逐项输出完成或超时状态；超时/未完成不能自动冒充已杀变异，仍须有具名断言失败证据或明确将校准标为未完成。补一个会卡住的变异验证脚本能有界退出；不应仅依赖全局 CI 长超时。Node 22.22.0 同一脚本本轮实测 69 个变异均杀、退出 0；这不消除 Node 25.8.1 卡住和缺超时的问题。
+
+## 原版反例可执行复现
+
+在 `c829cb0` 的仓库根目录 `npm ci` 后执行。断言固定的是本轮**观察到的错误**，并非修复后的期望；插件仅是本机模拟，不访问外网：
+
+```sh
+node --input-type=module <<'NODE'
+import assert from 'node:assert/strict';
+import {append,emptyLog} from './packages/domain/src/log.ts';
+import {assemble,serialize,prefixHash,prefixLength} from './packages/kernel/src/assemble.ts';
+import {createRegistry} from './packages/kernel/src/plugins.ts';
+const u={kind:'user',id:'u'},at='2026-11-05T00:00:00Z';
+const stable=[{kind:'system',text:'你是群聊助手，请帮助用户解决问题。'},{kind:'tools',text:'查询历史'},{kind:'persona',text:'回答清晰。'}];
+const opts=x=>({stable,quotes:[],budgetBytes:100000,...x});
+let log=append(emptyLog(),u,{kind:'message',text:'用户原来决定吃面'},at);
+log=append(log,u,{kind:'message',text:'普通记录'},at);
+const edited=append(log,u,{kind:'edit',target:1,text:'用户改为决定吃米饭'},at);
+const x=assemble(log,opts()),y=assemble(edited,opts());
+assert.notEqual(prefixHash(y.request,prefixLength(x.request)),prefixHash(x.request));
+const compressed={throughSeq:2,text:'用户原来决定吃面；普通记录'};
+const before=assemble(log,opts({compressed})),after=assemble(edited,opts({compressed}));
+assert.equal(serialize(before.request),serialize(after.request)); assert.equal(serialize(after.request).includes('用户改为决定吃米饭'),false);
+const revoked=append(log,u,{kind:'retract',target:1},at), bad=assemble(revoked,opts({compressed,quotes:[1]}));
+assert.equal(bad.skipped[0].reason,'retracted'); assert.equal(serialize(bad.request).includes('用户原来决定吃面'),true);
+console.log('R3-01/02：压缩后撤回原文仍在，编辑不进入请求；未压缩编辑改写前缀');
+const common=append(emptyLog(),u,{kind:'message',text:'帮助用户'},at);
+assert.equal(assemble(emptyLog(),opts()).ok,true); assert.equal(assemble(common,opts()).reason,'volatile-in-stable');
+const reversed=assemble(log,opts({stable:[stable[2],stable[0],stable[1]]}));
+assert.deepEqual(reversed.request.segments.filter(s=>s.section==='stable').map(s=>s.label),['persona','system','tools']);
+const future=assemble(log,opts({compressed:{throughSeq:999,text:'先前摘要'}})); assert.deepEqual(future.manifest,[]);
+console.log('R3-04/05：固定提示词重合误拦；倒序及未来压缩点被接受');
+let t=100000; const effects=[],caches={A:new Map(),B:new Map()};
+const plugin={kind:'outbound-channel',id:'mail',idempotency:'action-id',idempotencyWindowMs:10000,endpoint:'A',async send(q){
+ const cache=caches[this.endpoint]; if(cache.has(q.action_id)) return cache.get(q.action_id);
+ effects.push(this.endpoint); const receipt={action_id:q.action_id,receiptId:'provider-'+this.endpoint}; cache.set(q.action_id,receipt);
+ if(this.endpoint==='A') throw Error('A 已接收但回执丢失'); return receipt;
+}};
+const r=createRegistry({now:()=>t}); r.register(plugin); const req={action_id:'a',payload:'x'};
+assert.equal((await r.send('mail',req)).state,'delivery-unknown'); const v1=r.delivery('mail','a').binding.channelVersion;
+plugin.endpoint='B';t+=1000;await r.send('mail',req);
+assert.deepEqual(effects,['A','B']); assert.equal(r.delivery('mail','a').binding.channelVersion,v1);
+console.log('R3-03：不重注册换接收端，重复副作用:',effects.join(','));
+NODE
+```
