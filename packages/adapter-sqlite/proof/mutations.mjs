@@ -36,6 +36,10 @@ const M = [
   ["S21 初始化失败不关闭连接", "store.ts", "    try { db.close(); } catch { /* 关闭失败也以初始化的原始错误为准 */ }\n", ""],
   ["S22 关闭后吞掉原始错误换成笼统错误", "store.ts", "    throw e;\n  }\n  return { file, db,", "    throw new Error(\"openStore 初始化失败\");\n  }\n  return { file, db,"],
   ["S23 关闭后不抛错,返回已关闭的句柄", "store.ts", "    throw e;\n  }\n  return { file, db,", "  }\n  return { file, db,"],
+  // 以下按 Codex 第四轮审查 RR-04 补入:close 自身抛错的分支
+  ["S24 去掉 close 的异常保护(close 抛错盖掉原错误)", "store.ts", "    try { db.close(); } catch { /* 关闭失败也以初始化的原始错误为准 */ }\n", "    db.close();\n"],
+  ["S25 close 抛错时改抛 close 的错误", "store.ts", "    try { db.close(); } catch { /* 关闭失败也以初始化的原始错误为准 */ }\n", "    try { db.close(); } catch (c) { throw c; }\n"],
+  ["S26 close 抛错时吞掉原错误,返回已关闭句柄", "store.ts", "    try { db.close(); } catch { /* 关闭失败也以初始化的原始错误为准 */ }\n    throw e;\n", "    try { db.close(); } catch { return { file, db, onCasRead: opts.onCasRead }; }\n    throw e;\n"],
 ];
 
 function run(dir) {
