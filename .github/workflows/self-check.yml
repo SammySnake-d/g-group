@@ -30,18 +30,9 @@ jobs:
         run: npm run lint
       - name: 测试
         run: npm test
-      # 门禁自检与变异校验只证明"门禁代码本身可信";本 PR 没改门禁代码或 workflow 时重跑证明不了新东西。
-      # 判断范围:相对 PR 基线(push 到 main 时相对上一提交)改了 scripts/gates/** 或 .github/workflows/**。
-      - name: 判断是否改了门禁代码
-        id: gates
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then base="${{ github.event.pull_request.base.sha }}"; else base="${{ github.event.before }}"; fi
-          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then echo "changed=true" >> "$GITHUB_OUTPUT"; echo "找不到基线,按改了处理"; exit 0; fi
-          if git diff --name-only "$(git merge-base "$base" HEAD)" HEAD | grep -qE '^(scripts/gates/|\.github/workflows/)'; then echo "changed=true" >> "$GITHUB_OUTPUT"; else echo "changed=false" >> "$GITHUB_OUTPUT"; fi
+      # 这两步始终运行:不按路径跳过(RR-09)。main 上的 G-WORKFLOW 断言它们存在且无 if / continue-on-error。
       - name: 门禁自检(真实命令行入口,合规必放行、违规必拦下)
-        if: steps.gates.outputs.changed == 'true'
         run: npm run gates:selftest
       - name: 门禁变异校验(把门禁改坏,自检必须发现)
-        if: steps.gates.outputs.changed == 'true'
         timeout-minutes: 120
         run: GATE_MUTATION_JOBS=4 npm run gates:mutation

@@ -1,16 +1,19 @@
 // 各条机械门禁。每个门禁只读 Ctx,返回问题列表;空列表 = 放行。
 // 门禁代码本身在 CI 里取自 main(trusted-gates.yml,pull_request_target),PR 里的版本只当被检查的数据。
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import ts from "typescript";
 import YAML from "yaml";
-import { type Ctx, type Gate, type NamedTest, type Problem, copyTree, existing, isGoverned, isSrc, isTest, p, runNodeTests } from "./lib.ts";
+import { type Ctx, type Gate, GIT_SAFE_ARGS, gitEnv, type NamedTest, type Problem, copyTree, existing, isGoverned, isSrc, isTest, p, runNodeTests } from "./lib.ts";
 import { analyzeTestFile, lintTestFile } from "./testlint.ts";
 import { type Vendor, vendorOf } from "./vendor.ts";
 
 // 门禁策略取自裁判自己所在目录(CI 里是 main 上那份),PR 改不了它
-export interface Policy { allowedReviewers: string[]; defaultReviewer: string; reviewerHarness: string; assistantIds: Record<string, string>; source: string }
+export interface Policy { allowedReviewers: string[]; defaultReviewer: string; reviewerHarness: string; reviewerHarnessOf: Record<string, string>; assistantIds: Record<string, string>; source: string }
+/** 审查人对应的会话 harness:codex/astra 跑在 codex,argon 跑在 claude;没登记的退回默认 */
+export const harnessOf = (agent: string) => POLICY.reviewerHarnessOf[agent] ?? POLICY.reviewerHarness;
 export const POLICY: Policy = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, "policy.json"), "utf8")) as Policy;
 
 const needsReceipt = (ctx: Ctx) => ctx.changed.some(isGoverned);
@@ -44,7 +47,7 @@ export const trace: Gate = {
 
 // ---------------------------------------------------------------- R-01(CI 可查的部分)
 export const review: Gate = {
-  id: "G-REVIEW", rule: "R-01:审查人限 Codex 或 Astra(g-group#1531,默认 Codex),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)",
+  id: "G-REVIEW", rule: "R-01:审查人限 Codex/Astra(g-group#1531,默认 Codex),Codex/Astra 被拒审时可临时用 Argon(g-group#2404),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)",
   run(ctx) {
     const g = this.id, out: Problem[] = [];
     if (!needsReceipt(ctx) || !ctx.receipt) return out;
@@ -142,6 +145,58 @@ export function turnTouchesRepo(t: Turn, workdir: string | undefined, inRepo: (a
   return false;
 }
 
+/**
+ * RR-14:这次工具调用是不是真的执行了 `node <…>scripts/gates/run-all.ts … --hash`。
+ * 只认一条简单命令:没有 shell 元字符(注释、分隔、管道、重定向、替换、引号、换行),第一个词是 node,
+ * node 后面紧跟的第一个参数就是 run-all.ts(不许先跑别的脚本或 -e),参数里有 --hash。
+ * 这仍是对命令文本的解析;宿主结构化执行记录(可执行文件、argv、退出码)不在本片。
+ */
+export function isHashCall(input: unknown): boolean {
+  const inp = parseInput(input);
+  const cmd = [inp.command, inp.cmd, inp.raw].find((v) => typeof v === "string" || Array.isArray(v));
+  const argv = Array.isArray(cmd) ? cmd.map(String) : typeof cmd === "string" ? (/[#;&|<>`$()\\'"\n\r{}*?!]/.test(cmd) ? undefined : cmd.trim().split(/\s+/)) : undefined;
+  if (!argv || argv.length < 3) return false;
+  if (!/^(?:\S*\/)?node$/.test(argv[0]!)) return false;
+  if (!/^(?:\S*\/)?scripts\/gates\/run-all\.ts$/.test(argv[1]!)) return false;
+  return argv.slice(2).some((a) => a === "--hash");
+}
+
+/**
+ * RR-15:路径所在目录是不是同一仓库的另一个 clone。按"根提交有交集或 remote 指向同一地址"判断;
+ * 不在任何 git 仓库里 → 不是;git 判不了(读不出根提交、命令出错) → 按是处理(保守)。
+ */
+type RepoId = { roots: Set<string>; remotes: Set<string> };
+const normRemote = (u: string) => u.trim().replace(/\.git$/, "").replace(/\/+$/, "").replace(/^git@([^:]+):/, "$1/").replace(/^[a-z+]+:\/\/(?:[^@/]+@)?/i, "").toLowerCase();
+function repoIdAt(dir: string): RepoId | null | "unknown" {
+  const g = (...a: string[]) => spawnSync("git", [...GIT_SAFE_ARGS, "-c", "core.fsmonitor=false", ...a], { cwd: dir, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
+  const top = g("rev-parse", "--show-toplevel");
+  if (top.status !== 0) return /not a git repository/i.test(top.stderr ?? "") ? null : "unknown";
+  const roots = g("rev-list", "--max-parents=0", "--all");
+  const remotes = g("remote", "-v");
+  if (roots.status !== 0 || remotes.status !== 0) return "unknown";
+  const rs = new Set(roots.stdout.split("\n").filter(Boolean));
+  if (rs.size === 0) return "unknown";
+  return { roots: rs, remotes: new Set(remotes.stdout.split("\n").map((l) => l.split(/\s+/)[1]).filter((u): u is string => !!u).map(normRemote)) };
+}
+export function sameRepoClone(rootReal: string): (abs: string) => boolean {
+  const own = repoIdAt(rootReal);
+  const memo = new Map<string, boolean>();
+  return (abs) => {
+    let d = abs;
+    while (!fs.existsSync(d)) { const up = path.dirname(d); if (up === d) return false; d = up; }
+    try { if (!fs.statSync(d).isDirectory()) d = path.dirname(d); } catch { return true; }
+    const hit = memo.get(d);
+    if (hit !== undefined) return hit;
+    const id = repoIdAt(d);
+    let same: boolean;
+    if (id === null) same = false;
+    else if (id === "unknown" || own === null || own === "unknown") same = true;
+    else same = [...id.roots].some((r) => own.roots.has(r)) || [...id.remotes].some((r) => own.remotes.has(r) || r === rootReal.toLowerCase());
+    memo.set(d, same);
+    return same;
+  };
+}
+
 export interface RoomEvent { seq: number; by: string; name?: string; kind: string; text?: string; target?: number; reply?: number; via?: unknown; forward?: unknown; quotes?: unknown }
 export function readRoomLog(rooms: string, room: string): RoomEvent[] {
   const dir = path.join(rooms, room, "log");
@@ -162,17 +217,10 @@ export function waiverProblem(log: RoomEvent[], seq: number, by: string, pr: num
   if (msg.via !== undefined || msg.forward !== undefined) return "是转发或代发的消息,不认";
   const later = log.filter((e) => e.seq > seq && (e.target === seq || e.reply === seq || (Array.isArray(e.quotes) && e.quotes.includes(seq))));
   if (later.length) return `之后被${[...new Set(later.map((e) => (e.kind === "message" ? "引用" : e.kind)))].join("/")}过,不认`;
-  const text = msg.text ?? "";
-  const lines: string[] = [];
-  let fence = false;
-  for (const raw of text.split("\n")) {
-    const l = raw.trim();
-    if (l.startsWith("```")) { fence = !fence; continue; }
-    if (!fence && !l.startsWith(">")) lines.push(l);
-  }
-  const directive = lines.filter((l) => DIRECTIVE.test(l));
-  if (directive.length !== 1 || text.split("批准豁免").length !== 2) return `不是一条格式为"批准豁免 PR#<号> <hash前12位>"的独立指令行(要整行、不在引号或代码块里、全文只此一处)`;
-  const [, prs, h] = DIRECTIVE.exec(directive[0]!)!;
+  // 整条消息(去掉首尾空白)必须恰为指令这一行:任何说明、否定、引用符号、代码块都让它不算授权
+  const dm = DIRECTIVE.exec((msg.text ?? "").trim());
+  if (!dm) return `不是一条格式为"批准豁免 PR#<号> <hash前12位>"的消息(整条消息去掉首尾空白后必须恰为这一行,不能有其他文字)`;
+  const [, prs, h] = dm;
   if (pr === undefined) return "合并时没有传 --pr,无法核对豁免是不是给这个 PR 的";
   if (Number(prs) !== pr) return `批准的是 PR#${prs},不是本次的 PR#${pr}`;
   if (h !== hash12) return `批准的 hash 前 12 位 ${h} ≠ 当前 ${hash12},不能用于这一版`;
@@ -190,7 +238,8 @@ export const provenance: Gate = {
 
     const repoName = process.env.GATE_REPO_NAME ?? "g-group";
     const rootReal = fs.realpathSync(ctx.root);
-    const inRepo = (abs: string) => abs.split(path.sep).includes(repoName) || abs === rootReal || abs.startsWith(rootReal + path.sep);
+    const clone = sameRepoClone(rootReal);
+    const inRepo = (abs: string) => abs.split(path.sep).includes(repoName) || abs === rootReal || abs.startsWith(rootReal + path.sep) || clone(abs);
     const at = loadSession(base, author.session);
     const producers = new Set<Vendor>();
     if (!at.ok) out.push(p(g, `作者会话不可信:${at.why}`));
@@ -206,7 +255,7 @@ export const provenance: Gate = {
     let reviewer: Vendor = "unknown";
     // 审查人限 Codex 或 Astra(g-group#1531):会话 harness 必须是 codex,厂商按会话里实际的模型核对(下面),不认自报。
     // record.json 没有区分助手的字段;群聊日志里宿主写的派活卡片(session → assistant)若存在,必须与收据的审查人一致。
-    if (!rv.session.startsWith(`${POLICY.reviewerHarness}:`)) out.push(p(g, `审查会话必须是 ${POLICY.reviewerHarness} 会话(${POLICY.source}),实际 ${rv.session}`));
+    if (!rv.session.startsWith(`${harnessOf(rv.agent)}:`)) out.push(p(g, `审查人 ${rv.agent} 的审查会话必须是 ${harnessOf(rv.agent)} 会话(${POLICY.source}),实际 ${rv.session}`));
     else {
       const want = POLICY.assistantIds[rv.agent];
       const cards = readRoomLog(roomsRoot(), "g-group").flatMap((e) => {
@@ -218,7 +267,7 @@ export const provenance: Gate = {
     }
     if (!rt.ok) out.push(p(g, `审查会话不可信:${rt.why}`));
     else {
-      const hits = rt.turns.filter((t) => (t.toolCalls ?? []).some((c) => /run-all\.ts/.test(str(c.input)) && /--hash/.test(str(c.input)) && str(c.result).trim() === rv.reviewed_hash));
+      const hits = rt.turns.filter((t) => (t.toolCalls ?? []).some((c) => isHashCall(c.input) && str(c.result).trim() === rv.reviewed_hash));
       if (hits.length === 0) out.push(p(g, "审查会话里没有一次 run-all.ts --hash 的输出等于 reviewed_hash,无法证明审的是这一版"));
       else {
         const vs = new Set(hits.map((t) => vendorOf(t.model)));
@@ -262,6 +311,33 @@ export function changedTests(ctx: Ctx): NamedTest[] {
   return res;
 }
 
+/**
+ * RR-11:测试的规格不只在测试体里,也在它静态 import 的测试依赖里(helper、fixtures、期望值)。
+ * 测试依赖 = 测试文件(递归经由测试依赖)相对 import 的本仓库文件中,非源码的那些(isSrc 为假,含 fixtures/、.mjs/.js),
+ * 以及没有任何函数体的源码模块(纯数据,换空桩也不变)。红重放时这些文件一律用现在的版本覆盖到红快照。
+ */
+export function testDeps(ctx: Ctx, testFiles: string[]): string[] {
+  const seen = new Set<string>(), out: string[] = [];
+  const queue = [...testFiles];
+  while (queue.length) {
+    const f = queue.shift()!;
+    const code = ctx.read(f) ?? "";
+    const sf = ts.createSourceFile(f, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    for (const st of sf.statements) {
+      if (!(ts.isImportDeclaration(st) || ts.isExportDeclaration(st)) || !st.moduleSpecifier || !ts.isStringLiteral(st.moduleSpecifier)) continue;
+      const spec = st.moduleSpecifier.text;
+      if (!spec.startsWith(".")) continue;
+      const dep = path.posix.normalize(path.posix.join(path.posix.dirname(f), spec));
+      if (seen.has(dep) || !ctx.files.includes(dep) || isTest(dep)) continue;
+      seen.add(dep);
+      const depCode = ctx.read(dep) ?? "";
+      const data = isSrc(dep) && stubSource(depCode, dep) === depCode;
+      if (!isSrc(dep) || data) { out.push(dep); queue.push(dep); }
+    }
+  }
+  return out;
+}
+
 export const red: Gate = {
   id: "G-RED", rule: "R-02:先红后绿,红提交上的测试与现在相同,现在的测试放到红提交实现上按名字失败、现在按名字通过",
   run(ctx) {
@@ -293,6 +369,11 @@ export const red: Gate = {
         // 把现在的测试文件放到红提交的实现上跑
         fs.mkdirSync(path.dirname(redFile), { recursive: true });
         fs.writeFileSync(redFile, ctx.read(f) ?? "");
+      }
+      for (const d of testDeps(ctx, files)) {
+        const target = path.join(snap.dir, d);
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.writeFileSync(target, ctx.read(d) ?? "");
       }
       const then = countKeys(runNodeTests(snap.dir, files).failed);
       for (const t of tests) if (then.get(key(t)) !== 1) out.push(p(g, `${key(t)} 放到红提交的实现上没有按名字失败(文件加载失败不算,红提交要带空壳实现)`));
@@ -328,11 +409,14 @@ export function stubSource(code: string, file = "x.ts"): string {
 
 // 返回值变异:声明返回 number / string / boolean 的函数,测试执行期间把每个 return 的值换成同类型的错误值(不抛错)。
 // 抛错只能证明"测试调用了它",换错值才能证明"测试检查了它算出来的结果"。
+export const MUT_HIT = "__gGroupGateMutHit";
+export const MUT_MARK = "__GATE_MUT_HIT__";
 export function mutateReturns(code: string, file = "x.ts"): { code: string; count: number } {
   const sf = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const edits: [number, number, string][] = [];
   const wrong = (kind: string, expr: string) => {
-    const armed = `Reflect.get(globalThis, "${ARM_FLAG}")`;
+    // 打开开关时先记下"这条测试碰到了被变异的 return",再返回错值
+    const armed = `(Reflect.get(globalThis, "${ARM_FLAG}") && Reflect.set(globalThis, "${MUT_HIT}", true))`;
     if (kind === "number") return `(${armed} ? ((${expr}) + 7919) : (${expr}))`;
     if (kind === "string") return `(${armed} ? (String(${expr}) + "\\u0000mut") : (${expr}))`;
     return `(${armed} ? !(${expr}) : (${expr}))`;
@@ -370,7 +454,20 @@ export function mutateReturns(code: string, file = "x.ts"): { code: string; coun
   return { code: s, count: kept.length };
 }
 
-const ARM_SRC = `import { beforeEach, afterEach } from "node:test";\nbeforeEach(() => { globalThis.${ARM_FLAG} = true; });\nafterEach(() => { globalThis.${ARM_FLAG} = false; });\n`;
+const ARM_SRC = `import { beforeEach, afterEach } from "node:test";\nbeforeEach(() => { globalThis.${MUT_HIT} = false; globalThis.${ARM_FLAG} = true; });\nafterEach((t) => { globalThis.${ARM_FLAG} = false; if (globalThis.${MUT_HIT}) console.log("${MUT_MARK}" + JSON.stringify(t.name)); });\n`;
+/** 从 TAP 输出里读出"哪些测试执行时碰到了被变异的 return"(按 runNodeTests 的 ### 文件 分段) */
+export function mutHits(output: string): Set<string> {
+  const hits = new Set<string>();
+  let file = "";
+  for (const line of output.split("\n")) {
+    const h = /^### (.+)$/.exec(line);
+    if (h) { file = h[1]!; continue; }
+    const i = line.indexOf(MUT_MARK);
+    if (i < 0) continue;
+    try { hits.add(`${file} › ${JSON.parse(line.slice(i + MUT_MARK.length).trim()) as string}`); } catch { /* 标记残缺:不算命中 */ }
+  }
+  return hits;
+}
 function runTransformed(ctx: Ctx, files: string[], transform: (code: string, f: string) => string) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-xform-"));
   try {
@@ -393,14 +490,17 @@ export const stub: Gate = {
     for (const [k, n] of base) if (n !== 1) out.push(p(g, `${k} 在真实实现上通过了 ${n} 次,测试身份不唯一`));
     const stubbed = countKeys(runTransformed(ctx, files, stubSource).failed);
     for (const [k, n] of base) if ((stubbed.get(k) ?? 0) !== n) out.push(p(g, `${k} 在全部实现换成空桩后没有按名字失败(仍通过、没执行或文件加载失败),没有测到被测代码`));
-    // 返回值变异:只要源码里有可变异的 return,改动的测试文件里至少要有一条在错值下失败
+    // 返回值变异(RR-12,按测试判定):执行时碰到被变异 return 的每一条测试,都必须在错值下按名字失败。
+    // 只断言 typeof、只判一部分结果的测试会在错值下仍通过,同文件里有强测试也掩盖不了。
     let mutable = 0;
     const mutated = runTransformed(ctx, files, (c, f) => { const r = mutateReturns(c, f); mutable += r.count; return r.code; });
     if (mutable > 0) {
       const killed = countKeys(mutated.failed);
+      const hit = mutHits(mutated.output);
+      for (const k of base.keys()) if (hit.has(k) && (killed.get(k) ?? 0) === 0) out.push(p(g, `${k} 在被测函数返回错误值(不抛错)时仍通过,没有检查计算结果`));
       for (const f of files) {
         const mine = [...base.keys()].filter((k) => k.startsWith(`${f} › `));
-        if (mine.length && !mine.some((k) => (killed.get(k) ?? 0) > 0)) out.push(p(g, `${f} 的测试在被测函数返回错误值(不抛错)时全部仍通过,没有检查计算结果`));
+        if (mine.length && !mine.some((k) => hit.has(k) || (killed.get(k) ?? 0) > 0)) out.push(p(g, `${f} 的测试在被测函数返回错误值(不抛错)时全部仍通过,没有检查计算结果`));
       }
     }
     return out;
@@ -454,6 +554,47 @@ function events(on: unknown): string[] {
   if (on && typeof on === "object") return Object.keys(on);
   return [];
 }
+// RR-09:self-check 由 PR 自己的 YAML 运行,所以由 main 上的裁判结构化断言它无条件跑门禁自检与变异校验。
+// self-check.yml 不存在时不在这里报:分支保护要求的 self-check 检查会挡住。
+const SELF_CHECK_WF = ".github/workflows/self-check.yml";
+const REQUIRED_SELF_CHECK_STEPS: { label: string; ok: (run: string) => boolean }[] = [
+  { label: "npm run gates:selftest", ok: (r) => r === "npm run gates:selftest" },
+  { label: "npm run gates:mutation", ok: (r) => /^(GATE_MUTATION_JOBS=\d+ )?npm run gates:mutation$/.test(r) },
+];
+export const REQUIRED_GATE_SCRIPTS: Record<string, string> = {
+  "gates:selftest": "node scripts/gates/run-all.ts --self-test",
+  "gates:mutation": "node scripts/gates/mutation.ts",
+};
+function selfCheckProblems(doc: Record<string, unknown>): string[] {
+  const f = SELF_CHECK_WF;
+  const jobs = doc.jobs && typeof doc.jobs === "object" ? (doc.jobs as Record<string, unknown>) : {};
+  const jv = jobs["self-check"];
+  if (!jv || typeof jv !== "object") return [`${f} 缺 job self-check`];
+  const job = jv as Record<string, unknown>;
+  const out: string[] = [];
+  if (job.if !== undefined) out.push(`${f} 的 job self-check 带了 if,门禁自检与变异校验必须无条件运行`);
+  if (job["continue-on-error"] !== undefined) out.push(`${f} 的 job self-check 带了 continue-on-error`);
+  // shell / working-directory / defaults 都能让 run 的文字不变、实际不执行它
+  if (doc.defaults !== undefined) out.push(`${f} 顶层带了 defaults,可能改掉必需步骤的 shell 或工作目录`);
+  if (job.defaults !== undefined) out.push(`${f} 的 job self-check 带了 defaults,可能改掉必需步骤的 shell 或工作目录`);
+  const steps = Array.isArray(job.steps) ? (job.steps as unknown[]) : [];
+  for (const req of REQUIRED_SELF_CHECK_STEPS) {
+    const hits = steps.filter((s): s is Record<string, unknown> => !!s && typeof s === "object" && typeof (s as Record<string, unknown>).run === "string" && req.ok(((s as Record<string, unknown>).run as string).trim()));
+    if (hits.length === 0) { out.push(`${f} 的 job self-check 缺必需步骤:run 为 ${req.label}`); continue; }
+    for (const s of hits) {
+      if (s.if !== undefined) out.push(`${f} 的必需步骤「${req.label}」带了 if,必须无条件运行`);
+      if (s["continue-on-error"] !== undefined) out.push(`${f} 的必需步骤「${req.label}」带了 continue-on-error`);
+      for (const k of ["shell", "working-directory"]) if (s[k] !== undefined) out.push(`${f} 的必需步骤「${req.label}」带了 ${k}`);
+    }
+  }
+  return out;
+}
+function selfCheckScriptProblems(raw: string | undefined): string[] {
+  let scripts: Record<string, unknown> = {};
+  try { const j: unknown = raw === undefined ? {} : JSON.parse(raw); scripts = (j && typeof j === "object" && (j as { scripts?: unknown }).scripts && typeof (j as { scripts?: unknown }).scripts === "object" ? (j as { scripts: Record<string, unknown> }).scripts : {}); }
+  catch { return ["package.json 解析失败,无法核对门禁脚本"]; }
+  return Object.entries(REQUIRED_GATE_SCRIPTS).filter(([k, v]) => scripts[k] !== v).map(([k, v]) => `package.json 的 scripts["${k}"] 必须是 ${JSON.stringify(v)},现在是 ${JSON.stringify(scripts[k])}`);
+}
 export const workflow: Gate = {
   id: "G-WORKFLOW", rule: "R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限、不得写提交状态、不得用 pull_request_target",
   run(ctx) {
@@ -489,7 +630,9 @@ export const workflow: Gate = {
         if (job.uses !== undefined) out.push(p(g, `${f} 的 job ${id} 调用了可复用 workflow,无法静态核对`));
       }
       if (/\/statuses\/|check-runs|check_runs|createCommitStatus|checks\.create/i.test(raw)) out.push(p(g, `${f} 在写提交状态或检查结果`));
+      if (f === SELF_CHECK_WF) for (const m of selfCheckProblems(doc)) out.push(p(g, m));
     }
+    if (ctx.files.includes(SELF_CHECK_WF)) for (const m of selfCheckScriptProblems(ctx.read("package.json"))) out.push(p(g, m));
     return out;
   },
 };

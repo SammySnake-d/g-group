@@ -201,12 +201,21 @@ export function ctxFromGit(root: string, base: string, branch: string, pr?: numb
   const receiptPath = `${RECEIPT_DIR}/${branchSlug(branch)}.json`;
   const read = (p: string) => { const f = path.join(root, p); return fs.existsSync(f) ? fs.readFileSync(f, "utf8") : undefined; };
   let hashMemo: string | undefined;
+  const testMemo = new Map<string, TestRun>();
   const readBase = (p: string) => { const r = gitRaw(root, "show", `${mergeBase}:${p}`); return r.status === 0 ? r.stdout : undefined; };
   return {
     root, branch, changed, files, read, readBase, pr,
     receipt: loadReceipt(root, receiptPath), receiptPath,
     specIds: specIdsFrom(read(SPEC_FILE)),
-    runTests: (fs_, cwd) => runNodeTests(cwd ?? root, fs_),
+    // 同一次门禁运行里,G-RED / G-STUB / G-TAUTO 都要在真实实现上跑同一组测试文件:只跑一遍,结果共用。
+    // 每次仍在新副本 + 沙箱里跑;共用的是同一输入(同一棵树、同一组文件)的结果。
+    runTests: (fs_, cwd) => {
+      if (cwd !== undefined && cwd !== root) return runNodeTests(cwd, fs_);
+      const k = JSON.stringify([...fs_].sort());
+      let r = testMemo.get(k);
+      if (!r) { r = runNodeTests(root, fs_); testMemo.set(k, r); }
+      return r;
+    },
     contentHash: () => (hashMemo ??= hashFiles(root, files, loadReceipt(root, receiptPath))),
     snapshot(ref) {
       const r = gitRaw(root, "rev-parse", "--verify", "--quiet", `${ref}^{commit}`);

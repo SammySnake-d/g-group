@@ -1,1 +1,1 @@
-{"allowedReviewers":["codex","astra"],"defaultReviewer":"codex","reviewerHarness":"codex","assistantIds":{"codex":"ai-codex","astra":"ai-astra"},"source":"g-group#1531"}
+{"allowedReviewers":["codex","astra","argon"],"defaultReviewer":"codex","reviewerHarness":"codex","reviewerHarnessOf":{"codex":"codex","astra":"codex","argon":"claude"},"assistantIds":{"codex":"ai-codex","astra":"ai-astra","argon":"ai-argon"},"source":"g-group#1531 g-group#2404(argon 仅在 Codex/Astra 被平台拒审时单轮临时使用,下次换回 codex)"}

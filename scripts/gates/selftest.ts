@@ -2,7 +2,7 @@
 // 每个样例都是一个真实 git 仓库(main → 红提交 → 绿提交 → 收据),用子进程调用真实命令行入口 run-all.ts,
 // 只看退出码和输出。合规样例必须放行,违规样例必须拦下且原因文字对。
 // 跑的是 import.meta.dirname 下的那份门禁代码,所以 mutation.ts 改坏一份副本后跑它的自检,必须失败。
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -323,25 +323,78 @@ export const CASES: Case[] = [
   { name: "包没声明层级", head: { ...HEAD_OK, "packages/core/package.json": JSON.stringify({ name: "@g-group/core" }) }, expect: "gGroup.layer" },
 ];
 
-export function selfTest(only?: (c: Case) => boolean): boolean {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-selftest-"));
+/**
+ * 有界并发(GATE_SELFTEST_JOBS,默认 min(4, CPU 数)):每个用例在自己的子进程、自己的临时目录里跑,
+ * 结果按用例顺序输出。GATE_SELFTEST_FAILFAST=1 时出现失败就不再启动新用例。
+ */
+const WORKER_TIMEOUT_MS = 900_000;
+function runCaseInWorker(i: number): Promise<{ pass: boolean; detail: string }> {
+  return new Promise((resolve) => {
+    const c = spawn(process.execPath, [path.join(HERE, "selftest.ts"), "--case", String(i)], { env: gitEnv() });
+    let out = "";
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; c.kill("SIGKILL"); }, WORKER_TIMEOUT_MS);
+    c.stdout.on("data", (d) => { out += d; });
+    c.stderr.on("data", (d) => { out += d; });
+    c.on("close", (code) => {
+      clearTimeout(timer);
+      const line = out.split("\n").reverse().find((l) => l.startsWith(RESULT_MARK));
+      if (timedOut) return resolve({ pass: false, detail: `用例超时(${WORKER_TIMEOUT_MS / 1000}s)\n${out}` });
+      if (!line) return resolve({ pass: false, detail: `用例子进程没有给出结果(退出 ${code})\n${out}` });
+      resolve(JSON.parse(line.slice(RESULT_MARK.length)) as { pass: boolean; detail: string });
+    });
+  });
+}
+const RESULT_MARK = "__GATE_SELFTEST_RESULT__";
+
+export async function selfTest(only?: (c: Case) => boolean): Promise<boolean> {
+  const t0 = Date.now();
   let ok = true;
   const failFast = process.env.GATE_SELFTEST_FAILFAST === "1";
-  try {
-    CASES.forEach((c, i) => {
-      if (only && !only(c)) return;
-      if (failFast && !ok) return;
-      const { pass, detail } = runCase(tmp, c, i);
-      if (!pass) ok = false;
+  const idx = CASES.map((c, i) => [c, i] as const).filter(([c]) => !only || only(c)).map(([, i]) => i);
+  const width = Math.max(1, Math.min(Number(process.env.GATE_SELFTEST_JOBS ?? Math.min(4, os.availableParallelism())), idx.length || 1));
+  const results: ({ pass: boolean; detail: string } | undefined)[] = new Array(CASES.length);
+  let next = 0;
+  let printed = 0;
+  const flush = () => {
+    while (printed < idx.length && results[idx[printed]!]) {
+      const i = idx[printed++]!, c = CASES[i]!, { pass, detail } = results[i]!;
       console.log(`${pass ? "✓" : "✗"} ${c.expect === null ? "放行" : "拦下"}:${c.name}`);
       if (!pass && !failFast) console.log(detail.split("\n").map((l) => `      | ${l}`).join("\n"));
-    });
-    for (const [m, v] of [["o1", "openai"], ["gpt-6-astra", "openai"], ["ai-iisbo/[乾坤按量]gpt-6-astra", "openai"], ["claude-opus-5-5", "anthropic"], ["grok-4.7", "xai"], ["gemini-4-argon", "google"], ["stealth/crouton-alpha", "unknown"], [undefined, "unknown"]] as const) {
-      const pass = vendorOf(m) === v;
-      if (!pass) ok = false;
-      console.log(`${pass ? "✓" : "✗"} vendorOf(${m}) = ${vendorOf(m)}`);
     }
-  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  };
+  await Promise.all(Array.from({ length: width }, async () => {
+    while (next < idx.length && !(failFast && !ok)) {
+      const i = idx[next++]!;
+      const r = await runCaseInWorker(i);
+      results[i] = r;
+      if (!r.pass) ok = false;
+      flush();
+    }
+  }));
+  // FAILFAST 下没启动的用例不打印;已跑完的按顺序补齐
+  for (const i of idx) if (results[i] && idx.indexOf(i) >= printed) { const c = CASES[i]!, { pass } = results[i]!; console.log(`${pass ? "✓" : "✗"} ${c.expect === null ? "放行" : "拦下"}:${c.name}`); }
+  for (const [m, v] of [["o1", "openai"], ["gpt-6-astra", "openai"], ["ai-iisbo/[乾坤按量]gpt-6-astra", "openai"], ["claude-opus-5-5", "anthropic"], ["grok-4.7", "xai"], ["gemini-4-argon", "google"], ["stealth/crouton-alpha", "unknown"], [undefined, "unknown"]] as const) {
+    const pass = vendorOf(m) === v;
+    if (!pass) ok = false;
+    console.log(`${pass ? "✓" : "✗"} vendorOf(${m}) = ${vendorOf(m)}`);
+  }
+  const ran = idx.filter((i) => results[i]).length;
   console.log(ok ? "自检通过" : "自检失败");
+  console.log(`自检耗时 ${Math.round((Date.now() - t0) / 1000)}s:用例 ${ran}/${idx.length},并发 ${width}(GATE_SELFTEST_JOBS),CPU ${os.availableParallelism()},node ${process.version}`);
   return ok;
+}
+
+// 子进程入口:只跑一个用例,把结果作为一行 JSON 打出来
+if (import.meta.main) {
+  const k = process.argv.indexOf("--case");
+  const i = k >= 0 ? Number(process.argv[k + 1]) : Number.NaN;
+  const c = CASES[i];
+  if (!c) { console.log(`未知用例 ${process.argv[k + 1]}`); process.exit(2); }
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-selftest-"));
+  let r: { pass: boolean; detail: string };
+  try { r = runCase(tmp, c, i); } catch (e) { r = { pass: false, detail: `用例自身出错:${(e as Error).stack ?? e}` }; }
+  finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  console.log(RESULT_MARK + JSON.stringify(r));
+  process.exit(0);
 }

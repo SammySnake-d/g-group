@@ -22,14 +22,16 @@ export const MUTATIONS: Mutation[] = [
   { name: "workflow/依赖清单不算受管", file: "lib.ts", from: "export const isGoverned = (f: string) => !UNGOVERNED.some((re) => re.test(f));", to: "export const isGoverned = (f: string) => f.startsWith(\"packages/\");" },
   { name: "来源核对不比对 hash", file: "gates.ts", from: "str(c.result).trim() === rv.reviewed_hash", to: "true" },
   { name: "来源核对看全会话模型", file: "gates.ts", from: "const vs = new Set(hits.map((t) => vendorOf(t.model)));", to: "const vs = new Set([vendorOf(rv.model)]);" },
-  { name: "豁免不看批准原文", file: "gates.ts", from: "if (directive.length !== 1 || text.split(\"批准豁免\").length !== 2)", to: "if (false)" },
+  { name: "豁免认消息里任意一行指令", file: "gates.ts", from: "const dm = DIRECTIVE.exec((msg.text ?? \"\").trim());", to: "const dm = (msg.text ?? \"\").split(\"\\n\").map((l) => DIRECTIVE.exec(l.trim())).find(Boolean) ?? null;" },
   { name: "红提交只要求点名一条", file: "gates.ts", from: "for (const t of tests) if (then.get(key(t)) !== 1)", to: "for (const t of tests.slice(0, 1)) if (then.get(key(t)) !== 1)" },
   { name: "空桩失败不按名字计数", file: "gates.ts", from: "if ((stubbed.get(k) ?? 0) !== n)", to: "if (false)" },
   { name: "断言不要求判源码结果", file: "testlint.ts", from: "else if (t.srcAsserts === 0)", to: "else if (false)" },
   { name: "测试只认字面 test", file: "testlint.ts", from: "if (TEST_FNS.has(orig)) testNames.set(e.name.text, \"test\");", to: "if (TEST_FNS.has(orig) && e.name.text === orig) testNames.set(e.name.text, \"test\");" },
   { name: "去掉审查人白名单检查", file: "gates.ts", from: "if (!POLICY.allowedReviewers.includes(rv.agent))", to: "if (false)" },
   // biome-ignore lint/suspicious/noTemplateCurlyInString: 匹配源码里的模板字符串原文
-  { name: "来源核对不查审查会话 harness", file: "gates.ts", from: "if (!rv.session.startsWith(`${POLICY.reviewerHarness}:`))", to: "if (false)" },
+  { name: "来源核对不查审查会话 harness", file: "gates.ts", from: "if (!rv.session.startsWith(`${harnessOf(rv.agent)}:`))", to: "if (false)" },
+  { name: "审查会话 harness 不按审查人区分", file: "gates.ts", from: "export const harnessOf = (agent: string) => POLICY.reviewerHarnessOf[agent] ?? POLICY.reviewerHarness;", to: "export const harnessOf = (_agent: string) => POLICY.reviewerHarness;" },
+  { name: "argon 不受跨厂商约束", file: "gates.ts", from: "if (va !== \"unknown\" && va === vr && !waiver)", to: "if (va !== \"unknown\" && va === vr && !waiver && rv.agent !== \"argon\")" },
   { name: "不核对派活卡片", file: "gates.ts", from: "if (wrong.length) out.push(", to: "if (false) out.push(" },
   { name: "session 不做 realpath 包含检查", file: "gates.ts", from: "if (!inside(real)) return", to: "if (false) return" },
   { name: "session harness 不查白名单", file: "gates.ts", from: "if (!HARNESSES.has(m[1]!)) return", to: "if (false) return" },
@@ -43,9 +45,24 @@ export const MUTATIONS: Mutation[] = [
   { name: "测试身份按集合比较(计数去重)", file: "gates.ts", from: "m.set(key(t), (m.get(key(t)) ?? 0) + 1);", to: "m.set(key(t), 1);" },
   { name: "不核对红提交测试体", file: "gates.ts", from: "else if (redBodies.get(t.name) !== normBody(t.body))", to: "else if (false)" },
   { name: "豁免不核对 uid", file: "gates.ts", from: "if (msg.by !== own.uid || msg.name !== own.name)", to: "if (false)" },
-  { name: "豁免认引用里的文字", file: "gates.ts", from: "if (!fence && !l.startsWith(\">\")) lines.push(l);", to: "lines.push(l.replace(/^[>「]+|」$/g, \"\"));" },
+  { name: "豁免认引用里的文字", file: "gates.ts", from: "const dm = DIRECTIVE.exec((msg.text ?? \"\").trim());", to: "const dm = DIRECTIVE.exec((msg.text ?? \"\").trim().replace(/^>\\s*/, \"\"));" },
   { name: "git 子进程继承 GIT_*", file: "lib.ts", from: "if (!k.startsWith(\"GIT_\") && v !== undefined) env[k] = v;", to: "if (v !== undefined) env[k] = v;" },
   { name: "self-check 白名单放给所有文件", file: "gates.ts", from: "if (c === \"self-check\" && f === \".github/workflows/self-check.yml\" && id === \"self-check\") continue;", to: "if (c === \"self-check\") continue;" },
+  { name: "不检查 self-check 必需步骤", file: "gates.ts", from: "if (f === SELF_CHECK_WF) for (const m of selfCheckProblems(doc))", to: "if (false) for (const m of selfCheckProblems(doc))" },
+  { name: "不检查 self-check 步骤的 if", file: "gates.ts", from: "if (s.if !== undefined) out.push(", to: "if (false) out.push(" },
+  { name: "不检查 self-check job 的 if", file: "gates.ts", from: "if (job.if !== undefined) out.push(", to: "if (false) out.push(" },
+  { name: "不检查 self-check continue-on-error", file: "gates.ts", from: "if (job[\"continue-on-error\"] !== undefined) out.push(", to: "if (false) out.push(" },
+  { name: "变异命令允许任意后缀", file: "gates.ts", from: "npm run gates:mutation$/", to: "npm run gates:mutation/" },
+  { name: "不检查 package.json 门禁脚本", file: "gates.ts", from: "if (ctx.files.includes(SELF_CHECK_WF)) for (const m of selfCheckScriptProblems(", to: "if (false) for (const m of selfCheckScriptProblems(" },
+  { name: "不检查 self-check 的 shell/working-directory", file: "gates.ts", from: "for (const k of [\"shell\", \"working-directory\"]) if (s[k] !== undefined)", to: "for (const k of [\"shell\", \"working-directory\"]) if (false)" },
+  { name: "不检查 self-check 的 defaults", file: "gates.ts", from: "if (job.defaults !== undefined) out.push(", to: "if (false) out.push(" },
+  { name: "红重放不覆盖测试依赖", file: "gates.ts", from: "for (const d of testDeps(ctx, files)) {", to: "for (const d of [] as string[]) {" },
+  { name: "测试依赖只认非源码文件", file: "gates.ts", from: "if (!isSrc(dep) || data) { out.push(dep); queue.push(dep); }", to: "if (!isSrc(dep)) { out.push(dep); queue.push(dep); }" },
+  { name: "返回值变异退回按文件判定", file: "gates.ts", from: "for (const k of base.keys()) if (hit.has(k) && (killed.get(k) ?? 0) === 0) out.push(", to: "for (const k of base.keys()) if (false) out.push(" },
+  { name: "hash 调用认任意含 run-all --hash 的命令", file: "gates.ts", from: "(c) => isHashCall(c.input) && str(c.result).trim() === rv.reviewed_hash", to: "(c) => /run-all\\.ts/.test(str(c.input)) && /--hash/.test(str(c.input)) && str(c.result).trim() === rv.reviewed_hash" },
+  { name: "hash 调用不拒 shell 元字符", file: "gates.ts", from: "(/[#;&|<>`$()\\\\'\"\\n\\r{}*?!]/.test(cmd) ? undefined : cmd.trim().split(/\\s+/))", to: "cmd.trim().split(/\\s+/)" },
+  { name: "hash 调用不要求 node 后紧跟 run-all", file: "gates.ts", from: "if (!/^(?:\\S*\\/)?scripts\\/gates\\/run-all\\.ts$/.test(argv[1]!)) return false;", to: "if (!argv.some((a) => /run-all\\.ts$/.test(a))) return false;" },
+  { name: "产出厂商不认同仓库的另一个 clone", file: "gates.ts", from: " || clone(abs);", to: " || (clone, false);" },
   ...GATE_NAMES.map((g) => ({ name: `从 ALL_GATES 删掉 ${g}`, file: "gates.ts", from: new RegExp(`(ALL_GATES: Gate\\[\\] = \\[[^\\]]*?)\\b${g}, ?`), to: "$1" })),
   { name: "从 ALL_GATES 删掉 layers(末项)", file: "gates.ts", from: /, layers\];/, to: "];" },
 ];
@@ -57,11 +74,14 @@ function copyGates(dst: string) {
   fs.writeFileSync(path.join(dst, "package.json"), JSON.stringify({ type: "module" }));
 }
 
+/** 变异并发 × 每个变异自检的并发 ≈ CPU 数,不超订(GATE_SELFTEST_JOBS 显式给了就用它) */
+const WIDTH = Math.max(1, Number(process.env.GATE_MUTATION_JOBS ?? 4));
+const CHILD_JOBS = Number(process.env.GATE_SELFTEST_JOBS ?? Math.max(1, Math.floor(os.availableParallelism() / WIDTH)));
 /** 单个变异的自检上限。超时算"没被发现"(✗):没跑完的自检证明不了门禁拦得住这个变异。 */
 const MUTANT_TIMEOUT_MS = Number(process.env.GATE_MUTANT_TIMEOUT_MS ?? 900_000);
 function runSelftestAsync(dir: string): Promise<{ code: number | null; out: string; timedOut: boolean }> {
   return new Promise((resolve) => {
-    const c = spawn(process.execPath, [path.join(dir, "scripts/gates/run-all.ts"), "--self-test"], { env: gitEnv({ GATE_SELFTEST_FAILFAST: "1" }), detached: true });
+    const c = spawn(process.execPath, [path.join(dir, "scripts/gates/run-all.ts"), "--self-test"], { env: gitEnv({ GATE_SELFTEST_FAILFAST: "1", GATE_SELFTEST_JOBS: String(CHILD_JOBS) }), detached: true });
     let out = "";
     let timedOut = false;
     const timer = setTimeout(() => { timedOut = true; try { process.kill(-c.pid!, "SIGKILL"); } catch { c.kill("SIGKILL"); } }, MUTANT_TIMEOUT_MS);
@@ -71,9 +91,12 @@ function runSelftestAsync(dir: string): Promise<{ code: number | null; out: stri
   });
 }
 
+/** 原样对照的上限(GATE_CLEAN_TIMEOUT_MS,默认 30 分钟)。超时单独报出,不和"原样自检失败"混在一起。 */
+const CLEAN_TIMEOUT_MS = Number(process.env.GATE_CLEAN_TIMEOUT_MS ?? 1_800_000);
 function runSelftest(dir: string) {
-  const r = spawnSync(process.execPath, [path.join(dir, "scripts/gates/run-all.ts"), "--self-test"], { encoding: "utf8", env: gitEnv({ GATE_SELFTEST_FAILFAST: "1" }), timeout: 900_000 });
-  return { code: r.status, out: (r.stdout ?? "") + (r.stderr ?? "") };
+  const r = spawnSync(process.execPath, [path.join(dir, "scripts/gates/run-all.ts"), "--self-test"], { encoding: "utf8", env: gitEnv({ GATE_SELFTEST_FAILFAST: "1" }), timeout: CLEAN_TIMEOUT_MS, killSignal: "SIGKILL" });
+  const timedOut = (r.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT";
+  return { code: r.status, out: (r.stdout ?? "") + (r.stderr ?? ""), timedOut };
 }
 
 export async function mutationTest(): Promise<boolean> {
@@ -82,11 +105,17 @@ export async function mutationTest(): Promise<boolean> {
   try {
     const clean = path.join(tmp, "clean");
     copyGates(clean);
+    const tc = Date.now();
     const c = runSelftest(clean);
+    console.log(`原样副本自检耗时 ${Math.round((Date.now() - tc) / 1000)}s`);
     const cleanOk = c.code === 0 && c.out.includes("自检通过");
+    if (c.timedOut) { console.log(`✗ 原样对照超时:原样副本自检 ${CLEAN_TIMEOUT_MS / 1000}s 内没跑完(GATE_CLEAN_TIMEOUT_MS 可调),变异没有开始,不是变异存活`); console.log(c.out); return false; }
     console.log(`${cleanOk ? "✓" : "✗"} 原样副本自检通过`);
     if (!cleanOk) { console.log(c.out); return false; }
-    const jobs = MUTATIONS.map((m, i) => () => {
+    // 本机诊断用:GATE_MUTATION_ONLY=<正则> 只跑名字匹配的变异(CI 不设,跑全部)
+    const only = process.env.GATE_MUTATION_ONLY ? new RegExp(process.env.GATE_MUTATION_ONLY) : undefined;
+    const picked = MUTATIONS.filter((m) => !only || only.test(m.name));
+    const jobs = picked.map((m, i) => () => {
       const d = path.join(tmp, `m${i}`);
       copyGates(d);
       const f = path.join(d, "scripts/gates", m.file);
@@ -100,16 +129,18 @@ export async function mutationTest(): Promise<boolean> {
         if (r.timedOut) return `✗ 变异「${m.name}」自检超时(${secs}s),不算被发现`;
         const killed = r.code !== 0;
         const firstFail = r.out.split("\n").find((l) => l.startsWith("✗")) ?? "(进程失败)";
-        return `${killed ? "✓" : "✗"} 变异「${m.name}」${killed ? `被自检发现:${firstFail.slice(0, 80)}` : "存活:自检仍然通过"}`;
+        return `${killed ? "✓" : "✗"} 变异「${m.name}」(${secs}s)${killed ? `被自检发现:${firstFail.slice(0, 80)}` : "存活:自检仍然通过"}`;
       });
     });
-    const width = Math.max(1, Math.min(Number(process.env.GATE_MUTATION_JOBS ?? 4), jobs.length));
+    const width = Math.max(1, Math.min(WIDTH, jobs.length));
+    console.log(`变异 ${jobs.length} 个,并发 ${width},每个变异的自检并发 ${CHILD_JOBS},CPU ${os.availableParallelism()},node ${process.version}`);
+    const t0 = Date.now();
     const lines: string[] = new Array(jobs.length);
     let next = 0;
     await Promise.all(Array.from({ length: width }, async () => {
       while (next < jobs.length) { const i = next++; lines[i] = await jobs[i]!(); console.log(`[${lines.filter(Boolean).length}/${jobs.length}] ${lines[i]}`); }
     }));
-    console.log("—— 汇总 ——");
+    console.log(`—— 汇总(总耗时 ${Math.round((Date.now() - t0) / 1000)}s)——`);
     for (const l of lines) { console.log(l); if (l.startsWith("✗")) ok = false; }
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   console.log(ok ? "变异校验通过" : "变异校验失败");

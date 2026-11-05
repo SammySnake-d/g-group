@@ -25,6 +25,9 @@
 ✓ 拦下:作者会话没碰过本仓库
 ✓ 拦下:作者中途换成审查同厂商(累积集合)
 ✓ 放行:合规:仓库所有者对这个 PR 这一版结构化批准豁免
+✓ 拦下:RR-13 指令前另有说明文字
+✓ 拦下:RR-13 先说不批准、下一行是格式行
+✓ 拦下:RR-13 整条消息是引用块里的指令
 ✓ 拦下:F-03 用户明确不批准豁免
 ✓ 拦下:豁免是助手发的
 ✓ 拦下:豁免没绑定这一版
@@ -65,12 +68,46 @@
 ✓ 拦下:RR-03 权限经锚点合并进来
 ✓ 拦下:RR-03 别的 workflow 冒充 self-check
 ✓ 放行:RR-03 self-check.yml 自己产出 self-check(阴性对照)
+✓ 拦下:RR-09 门禁自检步骤加 if: false
+✓ 拦下:RR-09 变异步骤按 PR 自己的路径判定跳过
+✓ 拦下:RR-09 变异步骤 continue-on-error
+✓ 拦下:RR-09 缺变异步骤
+✓ 拦下:RR-09 变异命令后接 || true
+✓ 拦下:RR-09 job 加 continue-on-error
+✓ 拦下:RR-09 job 加 if
+✓ 拦下:RR-09 self-check.yml 里没有 self-check job
+✓ 拦下:RR-09 package.json 把 gates:mutation 改成 true
+✓ 拦下:RR-09 package.json 把 gates:selftest 改掉
+✓ 放行:RR-09 规范 self-check.yml(变异命令不带并发参数)+ 规范 scripts(阴性对照)
 ✓ 放行:RR-03 只读权限的普通 workflow(阴性对照)
 ✓ 放行:隔离:hook 环境的 GIT_DIR 指向别的仓库,门禁不碰它
+✓ 拦下:RR-09 self-check.yml 只 echo
+✓ 拦下:RR-09 必需步骤换 shell
+✓ 拦下:RR-09 job 用 defaults 换 shell
+✓ 拦下:RR-09 自检命令后接 || true
+✓ 拦下:RR-09 必需步骤换 working-directory
+✓ 拦下:RR-09 workflow 顶层 defaults 换 shell
+✓ 拦下:RR-10 把门禁文件改名移出受管目录(重命名检测会只报新路径)
+✓ 拦下:RR-11 helper 在红提交上给了错期望值
+✓ 拦下:RR-11 fixtures 下的 helper 在红提交上给了错期望值
+✓ 放行:RR-11 helper 两边一致、红提交是空壳实现(阴性对照)
+✓ 拦下:RR-12 一条强测试 + 一条只断言 typeof
+✓ 放行:RR-12 两条测试都判结果(阴性对照)
+✓ 拦下:RR-14 printf 打印 hash、run-all 只在注释里
+✓ 拦下:RR-14 node -e 打印 hash、run-all 只是多余参数
+✓ 拦下:RR-14 echo 后接真实 hash 命令
+✓ 拦下:RR-14 真实 hash 输出被丢弃、再 echo hash
+✓ 拦下:RR-14 node 先跑别的脚本、run-all 只是它的参数
+✓ 放行:RR-14 codex 真实形状的 hash 调用(阴性对照)
+✓ 拦下:RR-15 后续轮次写进同仓库的另一个 clone
+✓ 放行:RR-15 后续轮次写进无关的 git 仓库(阴性对照)
 ✓ 放行:审查人 codex 放行(g-group#1531 默认审查人)
 ✓ 放行:审查人 astra 放行
 ✓ 拦下:审查人 grok 被拦
-✓ 拦下:审查人 argon 被拦
+✓ 放行:审查人 argon 放行(g-group#2404 临时审查人,claude 会话)
+✓ 拦下:argon 审查照样要跨研发厂商:作者也用 Google 模型
+✓ 拦下:argon 审查会话必须是 claude 会话
+✓ 拦下:astra 审查会话不能是 claude 会话
 ✓ 拦下:审查会话不是 codex 会话
 ✓ 拦下:派活卡片显示会话属于别的助手
 ✓ 拦下:自报 codex 但会话实际是 Anthropic 模型
@@ -110,3 +147,5 @@
 ✓ vendorOf(stealth/crouton-alpha) = unknown
 ✓ vendorOf(undefined) = unknown
 自检通过
+自检耗时 141s:用例 140/140,并发 4(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0
+exit=0

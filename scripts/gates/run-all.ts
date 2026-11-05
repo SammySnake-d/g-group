@@ -19,7 +19,7 @@ const { values: a } = parseArgs({
 
 if (a["self-test"]) {
   const { selfTest } = await import("./selftest.ts");
-  process.exit(selfTest() ? 0 : 1);
+  process.exit((await selfTest()) ? 0 : 1);
 }
 
 const g = (cwd: string, ...args: string[]) => execFileSync("git", [...GIT_SAFE_ARGS, ...args], { cwd, encoding: "utf8", env: gitEnv() }).trim();
