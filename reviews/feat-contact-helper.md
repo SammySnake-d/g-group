@@ -693,3 +693,59 @@ Y04（直接跳过嵌套 schedule 快照）虽然 236 测试绿，但被 lint �
 **本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 在 `d871c87` / 固定 `52eb37a` 下 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 报未找到等于本轮 `reviewed_hash` 的审查工具输出、无法识别该审查轮厂商。本轮会话尚未完整落盘；原生模型上下文可观察，但不冒称来源门禁通过、不伪造记录或豁免，待既有流程在会话落盘后重核（`$E/gates-local-round10.log`）。
 
 **执行器纠错：** 首次单独调用 `--hash` 的等待时间过短，未取到输出也未保留该调用的进程标识，故不将其当作结果；之后以较长等待重跑，实得上文完整 hash，`--local` 也输出同值。只读检查会话 `turns.jsonl` 时，第一次 Python 解析遇到尚未完整写完的 JSON 而报 `JSONDecodeError`（组合命令未单独采集该子命令退出码）；改为逐行识别未完成记录后 exit 0，未改写会话记录。
+
+---
+
+## 第十一轮：第十轮返修后的跨厂商独立复审（2026-11-06）
+
+**结论：reject，交回 Claude Code 原开发任务返修。** 第十轮 CH-24–CH-26 的具体反例已关闭；但本轮宣称的领域层普通对象输入合同没有覆盖 Helper 的 `routeHelper`，普通 JSON 形状错误也可得到异常、`undefined` 或成功但无效的路由。另有按入口与字段的输入边界测试盲区，K55 的等价性也只能在附加条件下成立。未证明真实宿主接受这些异常对象、发生远程攻击或实际消息错投。
+
+### 固定对象与独立复现
+
+- 按用户指定审 PR #4 `feat/contact-helper` HEAD `b027c81123156966eb1500913588413f813e44c5`，固定基线 `origin/feat/task-lifecycle=24646a2868b2006eb7cd35e943746d3b2abbd7e3`。红 `d5c0a66ce624ef5be33a2a7095303742a8f569ff` 的父提交为上轮报告 `b561ae9`，绿 `1ce980387be602b96f93e73eecc78ad67cacdac5`；合并 `94b83fb` 的父提交为该绿与指定基线，`b027c81` 相对合并只改收据。红父、绿和 HEAD 的 `helper.ts` 都为 blob `8c69b2b9d8162baff516325e89dfe804450bcebf`。
+- 审查在普通独立 clone `$E/repo` 中执行，`.git` 与 common dir 均为该 clone 的 `.git`，被审实现和测试未改。`$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round11-fuPOZP`；独立变异及探针位于仓库外 `$E/mutants-round11/` 和 `$E/`。
+- 作者 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38` / `claude-opus-5-5`（Anthropic）；审查 `codex:4d37f5a5-0839-4adc-8afc-9b481602df5a`，本轮原生 `turn_context.model=gpt-6.1-terra`（OpenAI），无豁免。模型记录不代替 G-PROVENANCE 的实际判定。
+- 仓库根目录实跑 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 的原样输出：`11796ec8802578cd5f04b119d5a35bbcfeb8a759d8cb7485b42ea09509b91cd6`。
+- `npm ci`、typecheck、lint、test 均 exit 0；Node v25.8.1 下 **256/256 测试绿**、无 skip/todo；Node v22.22.0 下 typecheck/lint/test 均 exit 0、**256/256 绿**（`$E/npm-ci-round11.log`、`$E/{typecheck,lint,test}-round11.log`、`$E/node22-{typecheck,lint,test}-round11.log`）。
+- 独立 clone 检出红提交并 `npm ci`，contact/helper **82 项均按名字失败，原因均为 `未实现`**，并非文件加载失败（`$E/red-tests.tap`）。隔离红副本保留红测试、仅恢复其父提交真实 contact/helper 源码，**78 绿、4 红**，失败是新增 CH-24/CH-25 正反测试；不能将 82 个空壳红都说成旧实现故障（`$E/red-parent-overlay.tap`）。
+- 自己运行 `nice -n 10 node packages/domain/proof/mutations.mjs`，exit 0，原样 **256 绿**，**358/358** 具体变异均被具名测试杀死（`$E/author-mutations-round11.log`）。独立解析清单得 contact/helper **141**、任务/core **217**，无重复 ID，358 个注入点在对应源码中均恰好出现一次；CZ01–CZ05、CJ01–CJ05 与原 Z/J 注入前后完全一致；CY01–CY04、CY06–CY08 与原 Y 注入前后一致，CY05 随意图源码变化作了明确改写（`$E/mutation-audit-round11.json`）。
+
+### 上轮返修与保留行为
+
+本轮独立重跑第十轮意图缺字段、未知 action、额外字段正反对照；外层/数组 Proxy 和撤销 Proxy 拒绝、普通对象、null 原型及本 realm 的 JSON 输入对照均通过。第十轮独立 oracle Y01–Y08 **8/8 PASS**（含单独 Y08），此前的规则 getter、placement 与授权登记对照也在仓库现有测试中通过（`$E/regressions-round10-on-round11.log`、`$E/oracles-round10-recheck.log`、`$E/oracle-Y08-recheck.log`）。第十轮的具体 CH-24–CH-26 原反例因此已闭合。
+
+独立重跑 Helper 三入口 × 用户本人/其他用户/同 ID 联系人、定时归联系人且终态不回收、职责内外与停止/撤销/改时间穿透、撤销解锁及稳定输入的能力互斥，均通过（`$E/safeguards-round11.log`）。这些只是纯函数子判据，不能当作真实消息表、调度器、Compute 或插件接线的端到端验收。
+
+### 必须修复
+
+**CH-27 [High，领域输入合同 / Helper 三入口] `routeHelper` 未执行本轮宣称的普通数据输入约束，也未拒绝不合入口形状的 JSON。** 本轮要求和收据第 7 栏均写“领域层合同只接受普通数据对象/数组，Proxy 或不符合原型的输入拒绝”；`packages/domain/src/helper.ts:19-25` 却直接读取 `caller.kind`、`entry.kind`，既不验证外层对象，也无未知入口分支。实际原源码探针（`$E/helper-input-contract-round11.json`、`$E/helper-json-shapes-round11.json`、`$E/helper-entry-shape-round11.json`）：
+
+- `entry` 或 `caller` 包成 Proxy，或 `caller` 使用类实例，稳定有效内容仍得到 **`ok:true`**；被撤销的 Proxy 直接抛 `TypeError`，不是带原因的拒绝。Proxy 示例可通过 TypeScript 声明的参数类型（`$E/helper-input-contract-typed-round11.ts` / `.log`）。
+- 普通 JSON 的 `null` 入口或调用者抛 `TypeError`；数组入口或未知入口种类返回 **`undefined`**，不符合 `RouteResult`。
+- 普通 JSON `{kind:"mention"}` 返回 **`ok:true`**，但 `contextConversation` 和 `replyToSeq` 均为 `undefined`；给出数字 conversationId、字符串 seq 或缺少 sidebar conversationId，也仍成功返回。正常 mention/sidebar/global 的稳定对照仍正确。
+
+这证明的是函数的运行时合同与返回值问题，不证明生产宿主会转入此类对象，也不证明身份认证被绕过或消息已错投。建议将该领域输入合同落实到 Helper 的 entry/caller 边界，对 Proxy/非普通对象给明确拒绝，按三入口分别校验必填字段和类型，未知 kind 返回明确失败；`null`、错误类型和非法入口不应抛错或返回 `undefined`。保留本人鉴权及原有三个正确路由，补各入口 × 本人/他人、负向形状、普通对象/null 原型/JSON 和 Proxy 的正反对照。若产品实际只要求联系人模块而非整个领域层如此，需由需求方先明确收缩合同，不能沿用第 7 栏无例外的声明。
+
+**CH-28 [Medium，R-05 / 本轮输入合同] 已规范化的联系人入口仍缺按字段/入口的 Proxy 与 control getter 回归保护。** 自造 9 个单点故障分别放在隔离副本中，运行 typecheck、lint、与 `npm test` 相同的六个测试文件（Node `--test-concurrency=1`，共 256 项）和独立 oracle。原样四项 exit 0；AA01–AA08 的 typecheck/lint/256 测试均 exit 0，各自 oracle exit 1；AA09 为 Helper 鉴权故障，被现有具名测试杀死（test exit 1、oracle exit 1）。这些都是**人为变异**，不是说当前联系人实现已放行相应 Proxy 或重读 getter。
+
+| ID | 注入的故障 | 独立反例或测试缺口 |
+|---|---|---|
+| AA01 | 数组 Proxy 只在 `rules` 字段被拒 | `tools`、`credentialRefs`、`boundTaskIds`、`commitmentIds` 漏守；对应回执可使承诺误 done |
+| AA02–AA05 | 分别漏掉嵌套 schedule、setFocus、addContact、updateContact 的对象 Proxy 检查 | 各入口的 Proxy 在对应变异副本里被成功接受 |
+| AA06–AA07 | control 的 action 或 commitmentId 校验重新读取原输入 | 首读未知 action/空 id、后读合法值时由 `ignore` 变成 `handle` |
+| AA08 | 将 control 的 action 与 commitmentId 均设为可选，即作者所述 K55 | 见下方等价性边界 |
+| AA09 | Helper 身份条件由 OR 改为 AND | **被杀**，作为正向故障对照 |
+
+`$E/independent-mutations-round11.json`、`$E/independent-AA09-round11.json` 保存精确替换与逐项退出码；原样与各变异实际输出在 `$E/mutation-observations-round11.json`。建议对领域入口 × 顶层/嵌套字段一次性做表驱动 Proxy/非 Proxy 正反对照，并覆盖 control 的 action/commitmentId getter 首值与后值；保留正常数据、正常控制和各路由的正向对照。不要求穷尽所有可想象变异，也不否认作者 358/358 的真实结果。
+
+**K55 等价性限定：** 对无副作用且不抛错的稳定数据，control 字段改可选后，现有 action 枚举及非空 id 的后置 guard 确实仍会让缺字段结果为 `ignore`。但在同样是本 realm、非 Proxy、原型为 `Object.prototype` 的普通对象中，给缺 `action` 的 control 一个会抛错的 `commitmentId` getter：原样代码在读该 getter 前即返回 `ignore`（读取 0 次），AA08/K55 变异却读取 getter 并抛错（读取 1 次）。因此不能无条件称其完全行为等价；这一反例依赖进程内异常 getter，不证明真实宿主采用此类对象。请按实际支持的异常 getter 合同补对照，或将等价判断明确限定为无副作用、非抛错数据，并在收据边界中说清。
+
+### 第 7 栏、基线及交回
+
+第 7 栏对 Vault 只验形状、cron/DST、回执作用域由宿主判定、Helper 内核接线及有限变异非穷尽的说明仍属合理边界；但无例外的“领域层只接受普通数据对象”被 CH-27 的 Helper 实测推翻。另两项只作边界观察，不单独认定真实集成故障：① 同一进程 `node:vm` 内的 `JSON.parse` 结果不是 Proxy，但其对象与数组原型属于另一 realm，`briefFor` 分别拒绝；本 realm 的相同 JSON 通过（`$E/realm-json-round11.json`）。因此目前“JSON.parse 结果都接受”只在接收方 realm 内得到验证；实际宿主是否跨 realm 尚未验证。② 普通原型、非 Proxy 真数组若自行覆写 `Symbol.iterator`，`Array.from` 可输出与索引不同的规则切片（`$E/ordinary-array-iterator-round11.json`）；这属于已声明不承诺防御的 JS 元编程输入，不应冒称普通 JSON 出现该行为，也不能仅凭原型/Proxy 判断就说宿主已机械保证 JSON 数据输入。后续适配层需明确并验收信任边界。
+
+克隆时远端 `feat/task-lifecycle` 已从指定 `24646a2` 前移至 `432c5844de4d71af7625dc25315dce6d8900f8a7`，增量仅改 PR #3 的审查报告与收据。只在本普通 clone 中保留最新值到 `refs/review/round11-live-base`、把本地 `origin/feat/task-lifecycle` 固定为用户指定的 `24646a2`；没有改远端。不改工作区试合并 exit 0（`$E/merge-tree-live-round11.log`）。返修时由原负责人整合当时最新基线、重算 hash 和重验，不替代 PR #3 审查。
+
+**回交条件：** Claude Code 在原开发任务落实 CH-27 的领域输入合同、补 CH-28 的代表性测试与校准，并纠正 K55 等价声明的条件；保持第十轮修复、Helper 三入口、定时归属和控制穿透，整合最新依赖基线后重跑门禁并交跨厂商复审。AC-01/31/33/35 整项仍未端到端验收，本轮不声称全部后端或用户故事完成。
+
+**本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 在 `b027c81` / 固定 `24646a2` 下 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 报未找到等于本轮 `reviewed_hash` 的审查工具输出、无法识别该审查轮厂商。本轮会话尚未完整落盘；原生模型上下文可观察，但不冒称来源门禁通过、不伪造记录或豁免，待既有流程在会话落盘后重核（`$E/gates-local-round11.log`）。
