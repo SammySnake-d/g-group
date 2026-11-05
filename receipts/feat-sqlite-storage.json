@@ -42,5 +42,12 @@
   },
   "unverifiable": "AC-05:触发器只挡经 SQL 的 UPDATE/DELETE/覆盖 INSERT;能 DROP TRIGGER 的人仍能改库。verify 只检查当前保留下来的链是否自洽:单改正文不重算会报 brokenAt(已测),但删掉尾部事件、删掉整条会话、或改正文并重算后续全部 hash 都返回 ok:true,本片没有外部可信头或长度锚。宿主所有写消息入口是否都走 appendEvent 要等内核接线。AC-21:多进程用例用 stdin 行协议做屏障,A 读到版本后停住直到父进程显式 release,不靠睡眠定时;每次等待有上限(默认 10s/20s),失败/超时都 SIGKILL 回收子进程。30 轮(proof/flake-30.txt)只证明本机 macOS + Node 22.22.0 下稳定,CI 容器、负载更高的机器未测;『提交遵守 busy 超时』用 2s 上限判定,极端慢机可能误红。初始化固定等锁 10s,持锁超过 10s 时 openStore 仍会抛 database is locked,这一行为没有测试。多进程长时间争用、WAL checkpoint 未测;busy 后由调用方重读版本重试的策略不在本片。AC-31:只到 actions 表单行去重;外层跨表事务(动作与 processed_seq 同事务)尚未存在,审查提到的 R18(提前 COMMIT 后在外层事务提交前被杀)是未来内核接线的风险,本片未覆盖。R-03 依赖 G-STUB 门禁实跑。R-05 的通过只覆盖 mutations.mjs 列出的 20 种故障,不代表每条判据都已穷尽双侧标定;夹具负例(就绪前退出、结果后异常退出)校准的是测试夹具,不是产品代码。文档 value 用 JSON 存取,非 JSON 值行为未定义也未测。node:sqlite 在 Node 22 仍是 experimental。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "codex",
+    "session": "codex:ac7c92d1-5ee6-484b-8325-64a980d8528f",
+    "model": "gpt-6.1-terra",
+    "verdict": "reject",
+    "reviewed_hash": "ab14b4f18b7e7b45cac566b144fe401c53d1c421246392c8abbd3da80f5c5844",
+    "notes": "第三轮复现 47 条绿、红版 24 条具名失败、20 项变异及 30 轮并发；旧 RR-01/02 关闭，但 openStore 初始化失败未关闭连接，真实锁超时和只读失败会积累描述符，低上限下健康库打开失败；详见第三轮报告。"
+  }
 }
