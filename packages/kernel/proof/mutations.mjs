@@ -1,4 +1,4 @@
-// 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时),在隔离副本里跑本包测试,
+// 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时;第五轮按 R4-01..R4-07 扩充,含 R4-M1=K92、R4-M2=K91),在隔离副本里跑本包测试,
 // 每个变异都必须让至少一条具名测试失败(文件级加载失败不算杀死)。注入点必须在源码里恰好出现 1 次。
 // 原样副本必须全绿(阴性对照)。
 // 每个变异在独立进程组里跑,超时(默认 300s,KERNEL_MUT_TIMEOUT_MS 可改)就杀掉整个进程组,记 ✗ 超时,不算被杀死。
@@ -46,7 +46,7 @@ const M = [
   ["K34 在途时允许再发", "plugins.ts", 'if (prior.state === "in-flight") return', "if (false) return"],
   ["K35 同 action_id 换内容复用旧回执", "plugins.ts", "if (b.payloadSha256 !== fingerprint) return", "if (false) return"],
   // —— 上下文装配(AC-06)
-  ["K04 Page-in \u6539\u6210\u53d6\u6700\u8fd1 N \u6761", "assemble.ts", "const m = all.find((x) => x.seq === seq);", "const m = all.slice(-3).find((x) => x.seq === seq);"],
+  ["K04 Page-in 改成取最近 N 条", "assemble.ts", "const m = all.find((x) => x.seq === seq);", "const m = all.slice(-3).find((x) => x.seq === seq);"],
   ["K05 超预算静默截断", "assemble.ts", "if (need > opts.budgetBytes) return { ok: false, reason: \"over-budget\", need, budget: opts.budgetBytes, action: \"compress\" };", "while (final.length > 0 && final.reduce((a, s) => a + s.bytes, 0) > opts.budgetBytes) final.shift();"],
   ["K06 窗口内引用重复页入", "assemble.ts", "if (inHistory.has(seq) || paged.some((p) => p.seq === seq)) continue;", "if (paged.some((p) => p.seq === seq)) continue;"],
   ["K07a 撤回消息被引用时仍页入", "assemble.ts", 'if (m.retracted) { skipped.push({ seq, reason: "retracted" }); continue; }', ""],
@@ -65,8 +65,8 @@ const M = [
   ["K44 带引用也机械判 E1", "classify.ts", "if (mentionOnly(event, { ...anchors, invalidMentions })) return", "if (mentionOnly(event, { ...anchors, invalidMentions }) || anchors.quotes.length > 0) return"],
   // —— 第三轮:RR-01..RR-05
   ["K71 已确认 B1 过保留期后重发(RR-01 原错)", "plugins.ts", "if (prior.state === \"confirmed\" && prior.receipt) return", "if (prior.state === \"confirmed\" && prior.receipt && now() - b.firstAttemptAt < b.windowMs) return"],
-  ["K55 未知 B1 不查保留期(RR-01 原错)", "plugins.ts", "if (now() - b.firstAttemptAt >= b.windowMs) return", "if (false) return"],
-  ["K56 恰到期仍放行重试", "plugins.ts", "now() - b.firstAttemptAt >= b.windowMs", "now() - b.firstAttemptAt > b.windowMs"],
+  ["K55 \u672a\u77e5 B1 \u4e0d\u67e5\u4fdd\u7559\u671f(RR-01 \u539f\u9519)", "plugins.ts", "if (!(elapsed >= 0 && elapsed < b.windowMs)) return", "if (false) return"],
+  ["K56 \u6070\u5230\u671f\u4ecd\u653e\u884c\u91cd\u8bd5", "plugins.ts", "elapsed < b.windowMs)", "elapsed <= b.windowMs)"],
   ["K57 重试刷新首次尝试时间", "plugins.ts", "entry.attempts++;", "entry.attempts++;\n    entry.binding = { ...entry.binding, firstAttemptAt: now() };"],
   ["K54 \u672a\u77e5\u52a8\u4f5c\u4e0d\u67e5\u6e20\u9053\u7248\u672c(RR-02 \u539f\u9519)", "plugins.ts", "if (reg.version !== b.channelVersion || p.endpoint !== b.endpoint) return", "if (p.endpoint !== b.endpoint) return"],
   ["K58 未知动作按当前渠道判 B2(RR-02 原错)", "plugins.ts", "if (b.idempotency === \"none\") return", "if (p.idempotency === \"none\") return"],
@@ -91,11 +91,11 @@ const M = [
   ["K69 前缀哈希不按字节截", "assemble.ts", "subarray(0, bytes)", "subarray(0)"],
   // —— 第四轮:R3-01..R3-06
   ["K63 stable \u6bb5\u62ff\u4f1a\u8bdd\u6d88\u606f\u6bd4\u5bf9(R3-04 \u539f\u9519)", "assemble.ts", "const hit = volatileIn(part.text);", "const hit = volatileIn(part.text) ?? (log.events.some((e) => e.body.kind === \"message\" && e.body.text.length >= 4 && part.text.includes(e.body.text)) ? \"\u6d88\u606f\u539f\u6587\" : undefined);"],
-  ["K72 send \u7528\u8c03\u7528\u65b9\u539f\u5bf9\u8c61\u4e3a this(R3-03 \u539f\u9519)", "plugins.ts", "send: (r: { action_id: string; payload: string }) => send.call(self, r)", "send: (r: { action_id: string; payload: string }) => send.call(c, r)"],
+  ["K72 send 用调用方原对象为 this(R3-03 原错)", "plugins.ts", "send: (r: SendRequest) => send.call(self, r)", "send: (r: SendRequest) => send.call(c, r)"],
   ["K73 \u64a4\u56de\u4e0d\u4f5c\u5e9f\u538b\u7f29\u5757(R3-01 \u539f\u9519)", "assemble.ts", "if (stale.length > 0) {", "if (false) {"],
-  ["K74 \u4e0d\u626b\u538b\u7f29\u5757\u91cc\u7684\u64a4\u56de\u539f\u6587", "assemble.ts", "    if (leaked !== undefined) return { ok: false, reason: \"retracted-text-leaked\", where: \"compressed\", seq: leaked };\n", ""],
-  ["K75 \u4e0d\u626b\u4f1a\u53d8\u72b6\u6001\u91cc\u7684\u64a4\u56de\u539f\u6587", "assemble.ts", "    if (leaked !== undefined) return { ok: false, reason: \"retracted-text-leaked\", where: \"volatile\", seq: leaked };\n", ""],
-  ["K76 \u91cd\u5efa\u538b\u7f29\u5757\u65f6\u4ea4\u51fa\u64a4\u56de\u6d88\u606f", "assemble.ts", "const visible = all.filter((m) => m.seq <= b.throughSeq && !m.retracted);", "const visible = all.filter((m) => m.seq <= b.throughSeq);"],
+  ["K74 不扫压缩块里的撤回原文", "assemble.ts", "  if (sg.label === \"compressed\") return block?.text ?? \"\";", "  if (sg.label === \"compressed\") return \"\";"],
+  ["K75 不扫会变状态里的撤回原文", "assemble.ts", "  if (sg.label === \"volatile\") return opts.volatile ?? \"\";", "  if (sg.label === \"volatile\") return \"\";"],
+  ["K76 重建压缩块时交出撤回消息", "assemble.ts", "frozenSnapshot(all.filter((m) => m.seq <= b.throughSeq && !m.retracted))", "frozenSnapshot(all.filter((m) => m.seq <= b.throughSeq))"],
   ["K77 history \u64a4\u56de\u4e0d\u6807 prefixBreak", "assemble.ts", "if (target > through && isNew(rs)) prefixBreaks.push", "if (false) prefixBreaks.push"],
   ["K78 \u540c\u4e00\u64a4\u56de\u6bcf\u8f6e\u91cd\u590d\u62a5 prefixBreak", "assemble.ts", "const isNew = (retractSeq: number) => opts.previousHeadSeq === undefined || retractSeq > opts.previousHeadSeq;", "const isNew = (_retractSeq: number) => true;"],
   ["K79 \u64a4\u56de\u540e\u7684\u7f16\u8f91\u6587\u5b57\u4ecd\u8fdb history", "assemble.ts", "      if (retracted.has(b.target)) continue;\n", ""],
@@ -108,7 +108,28 @@ const M = [
   ["K86 helper \u6d88\u606f\u4e0d\u8fdb history(\u5ba1\u67e5 R3-M1)", "assemble.ts", "    if (b.kind === \"message\") {\n", "    if (b.kind === \"message\" && e.sender.kind !== \"helper\") {\n"],
   ["K87 \u4f1a\u53d8\u72b6\u6001\u88ab\u6362\u6210\u56fa\u5b9a\u5b57(\u5ba1\u67e5 R3-M2)", "assemble.ts", "`[\u5f53\u524d\u72b6\u6001]\\n${opts.volatile}\\n`", "`[\u5f53\u524d\u72b6\u6001]\\n\u65e0\\n`"],
   ["K88 \u4e0d\u8981\u6c42 endpoint", "plugins.ts", "if (!isStr(c.endpoint)) return", "if (false) return"],
-  ["K89 \u4e0d\u5feb\u7167\u914d\u7f6e", "plugins.ts", "if (!self) return", "if (false) return"],
+  ["K89 不快照配置", "plugins.ts", "if (!snap.ok) return", "if (false) return"],
+  // —— 第五轮:R4-01..R4-07
+  ["K90 \u64a4\u56de\u539f\u6587\u6309 4 \u5b57\u9608\u503c\u653e\u884c(R4-01 \u539f\u9519)", "assemble.ts", "if (needle !== \"\" && hay.includes(needle)) return seq;", "if (needle.length >= 4 && hay.includes(needle)) return seq;"],
+  ["K91 \u9608\u503c\u6539\u6210\u5927\u4e8e 4(\u5ba1\u67e5 R4-M2)", "assemble.ts", "if (needle !== \"\" && hay.includes(needle)) return seq;", "if (needle.length > 4 && hay.includes(needle)) return seq;"],
+  ["K92 \u4e0d\u6536\u96c6\u64a4\u56de\u6d88\u606f\u7684\u7f16\u8f91\u6587\u672c(\u5ba1\u67e5 R4-M1)", "assemble.ts", "    if (b.kind === \"edit\" && retracted.has(b.target)) out.set(b.target, [...(out.get(b.target) ?? []), b.text]);\n", ""],
+  ["K93 \u4e0d\u505a\u7a7a\u767d\u89c4\u8303\u5316", "assemble.ts", "const squash = (t: string) => t.replace(/\\s+/gu, \"\");", "const squash = (t: string) => t;"],
+  ["K94 \u6700\u7ec8\u8bf7\u6c42\u8fb9\u754c\u4e0d\u626b\u63cf", "assemble.ts", "const leaked = leakIn(content, secret);", "const leaked = undefined as number | undefined;"],
+  ["K95 \u4e0d\u626b stable \u6bb5", "assemble.ts", "  if (sg.section === \"stable\") return opts.stable.find((p) => p.kind === sg.label)?.text ?? \"\";", "  if (sg.section === \"stable\") return \"\";"],
+  ["K96 \u626b\u63cf\u5305\u542b\u5bbf\u4e3b\u6807\u7b7e", "assemble.ts", "return i >= 0 ? sg.text.slice(i + 2) : sg.text;", "return sg.text;"],
+  ["K97 \u56de\u8c03\u62ff\u5230\u53ef\u53d8\u539f\u5bf9\u8c61(R4-01 \u539f\u9519)", "assemble.ts", "const visible = frozenSnapshot(", "const visible = ((x: readonly ProjectedMessage[]) => x)("],
+  ["K99 \u56de\u8c03\u629b\u9519\u4e0d\u515c\u5e95", "assemble.ts", "try { text = opts.recompress(b.throughSeq, visible); } catch (err) {", "try { text = opts.recompress(b.throughSeq, visible); } catch (err) { throw err;"],
+  ["K100 \u653e\u884c Map \u7b49\u975e\u666e\u901a\u5bf9\u8c61(R4-02 \u539f\u9519)", "plugins.ts", "if (proto !== Object.prototype && proto !== null) return { ok: false, path: at,", "if (false) return { ok: false, path: at,"],
+  ["K101 \u653e\u884c\u914d\u7f6e getter", "plugins.ts", "if (d.get || d.set) return { ok: false, detail:", "if (false) return { ok: false, detail:"],
+  ["K102 this \u539f\u578b\u4e0d\u662f null", "plugins.ts", "  const self: Record<string, unknown> = Object.create(null);", "  const self: Record<string, unknown> = {};"],
+  ["K103 this \u4e0d\u51bb\u7ed3", "plugins.ts", "return { ok: true, self: Object.freeze(self) };", "return { ok: true, self };"],
+  ["K104 \u5d4c\u5957\u5bf9\u8c61\u4e0d\u51bb\u7ed3", "plugins.ts", "    return { ok: true, value: Object.freeze(out) };\n  }\n  return { ok: false, path: at, why: `\u4e0d\u652f\u6301", "    return { ok: true, value: out };\n  }\n  return { ok: false, path: at, why: `\u4e0d\u652f\u6301"],
+  ["K105 \u653e\u884c\u7c7b\u5b9e\u4f8b\u4e0e\u7ee7\u627f\u539f\u578b(R4-03 \u539f\u9519)", "plugins.ts", "  if (proto !== Object.prototype && proto !== null) {\n", "  if (false) {\n"],
+  ["K106 请求里不带 endpoint(R4-02 原错)", "plugins.ts", "Object.freeze({ action_id: actionId, payload, endpoint })", "Object.freeze({ action_id: actionId, payload })"],
+  ["K107 \u5899\u949f\u7b97 B1 \u7a97\u53e3(R4-04 \u539f\u9519)", "plugins.ts", "const elapsed = monotonic() - b.firstAttemptMonotonic;", "const elapsed = now() - b.firstAttemptAt;"],
+  ["K108 \u5355\u8c03\u8bfb\u6570\u5012\u9000\u4ecd\u653e\u884c", "plugins.ts", "if (!(elapsed >= 0 && elapsed < b.windowMs)) return", "if (!(elapsed < b.windowMs)) return"],
+  ["K109 账本键用分隔符拼接(R4-05 原错)", "plugins.ts", "  const entryOf = (pluginId: string, actionId: string) => ledger.get(pluginId)?.get(actionId);\n  const putEntry = (pluginId: string, actionId: string, e: LedgerEntry) => {\n    let m = ledger.get(pluginId);\n    if (!m) { m = new Map(); ledger.set(pluginId, m); }\n    m.set(actionId, e);\n  };", "  const flat = new Map<string, LedgerEntry>();\n  const entryOf = (pluginId: string, actionId: string) => flat.get(`${pluginId}\\u0000${actionId}`);\n  const putEntry = (pluginId: string, actionId: string, e: LedgerEntry) => { flat.set(`${pluginId}\\u0000${actionId}`, e); };"],
+  ["K110 stable \u628a\u666e\u901a\u8bcd\u5f53\u52a8\u6001(R4-06 \u539f\u9519)", "assemble.ts", "  [\"\u6700\u8fd1 N \u6761\", /\u6700\u8fd1\\s*\\d+\\s*\u6761/],", "  [\"\u6700\u8fd1 N \u6761\", /\u6700\u8fd1\\s*\\d+\\s*\u6761/],\n  [\"\u65b0\u6d88\u606f\", /\u65b0\u6d88\u606f|\u521a\u624d\u8bf4|\u521a\u8bf4|\u6700\u65b0\u4e00\u6761/],"],
 ];
 
 const TIMEOUT_MS = Number(process.env.KERNEL_MUT_TIMEOUT_MS ?? 300_000);
