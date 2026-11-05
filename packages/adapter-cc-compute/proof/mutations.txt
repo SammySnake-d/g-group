@@ -1,18 +1,34 @@
-✓ 原样副本:21 绿 / 0 红
-✓ M01 brief 放行 memory 等额外字段:20 绿 / 1 红,被「brief 带 memory 或 soul 字段被拒绝,不起任何进程(AC-33 ④ 阳性埋雷)」发现
-✓ M02 brief 放行明文凭据:20 绿 / 1 红,被「同一 brief 只切凭据:明文 token 被拒绝,引用句柄放行(单开关)」发现
-✓ M03 --allowedTools 不按 brief.tools:20 绿 / 1 红,被「CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress」发现
-✓ M04 没有 milestone 就不报 completed:19 绿 / 2 红,被「milestone 漏报、也没调 report_progress 的 completed 时,CLI 成功结束仍报 completed(V-06 约束)」发现
-✓ M05 非零退出也报 completed:20 绿 / 1 红,被「CLI 给出 success 结果但进程非零退出 → failed,不报 completed」发现
-✓ M06 stop 未等进程结束就报 stopped:20 绿 / 1 红,被「stop:子进程真的退出之后才产出 stopped,且只产出一次」发现
-✓ M07 快照缺 constraintVer 放行:20 绿 / 1 红,被「没汇报过约束版本的 Compute 拿不到快照;缺 constraintVer 的 handoff 被 spawn 拒绝(AC-07 阳性埋雷)」发现
-✓ M08 handoff 不写进首个提示:20 绿 / 1 红,被「带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里」发现
-✓ M09 env 继承宿主进程环境(带明文):20 绿 / 1 红,被「子进程 env 不继承宿主进程环境里的明文密钥,凭据只以引用句柄出现」发现
-✓ M10 --tools 不按 brief.tools:20 绿 / 1 红,被「CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress」发现
-✓ M11 blocked 未解除也报 completed:20 绿 / 1 红,被「blocked 后 CLI 结束不报 completed;resume 用同一 CLI 会话续接后报 completed」发现
-✓ M12 被拒收的汇报也产出事件:20 绿 / 1 红,被「服务器拒收的 blocked(约束版本非法)不产出 blocked,也不阻止 completed;合法字段不进快照」发现
-✓ M13 stop 不升级 SIGKILL:20 绿 / 1 红,被「stop:进程无视 SIGTERM 时升级为 SIGKILL,结束后才报 stopped」发现
-✓ M14 handoff 不列进装配清单:20 绿 / 1 红,被「带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里」发现
-✓ M15 resume 不带 CLI 会话号:20 绿 / 1 红,被「blocked 后 CLI 结束不报 completed;resume 用同一 CLI 会话续接后报 completed」发现
-15 个变异
+✓ 原样副本:32 绿 / 0 红
+✓ M01 brief 放行 memory 等额外字段:31 绿 / 1 红,被「brief 带 memory 或 soul 字段被拒绝,不起任何进程(AC-33 ④ 阳性埋雷)」发现
+✓ M02 brief 放行明文凭据:31 绿 / 1 红,被「同一 brief 只切凭据:明文 token 被拒绝,引用句柄放行(单开关)」发现
+✓ M03 --allowedTools 不按 brief.tools:30 绿 / 2 红,被「CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress」发现
+✓ M04 没有 milestone 就不报 completed:27 绿 / 5 红,被「F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress」发现
+✓ M05 非零退出也报 completed:31 绿 / 1 红,被「CLI 给出 success 结果但进程非零退出 → failed,不报 completed」发现
+✓ M06 stop 未等进程结束就报 stopped:30 绿 / 2 红,被「F-03:stop 回收整个进程组,孙进程在 stopped 之前退出,之后不再产生副作用」发现
+✓ M07 快照缺 constraintVer 放行:31 绿 / 1 红,被「没汇报过约束版本的 Compute 拿不到快照;缺 constraintVer 的 handoff 被 spawn 拒绝(AC-07 阳性埋雷)」发现
+✓ M08 handoff 不写进首个提示:31 绿 / 1 红,被「带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里」发现
+✓ M09 env 继承宿主进程环境(带明文):31 绿 / 1 红,被「子进程 env 不继承宿主进程环境里的明文密钥,凭据只以引用句柄出现」发现
+✓ M10 --tools 不按 brief.tools:9 绿 / 23 红,被「CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress」发现
+✓ M11 blocked 未解除也报 completed:30 绿 / 2 红,被「F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)」发现
+✓ M12 被拒收的汇报也产出事件:31 绿 / 1 红,被「CLI 以权限拒绝回绝的 report_progress(内容合规,tool_result is_error)不产出事件,只记入拒收」发现
+✓ M13 stop 不升级 SIGKILL:31 绿 / 1 红,被「stop:进程无视 SIGTERM 时升级为 SIGKILL,结束后才报 stopped」发现
+✓ M14 handoff 不列进装配清单:31 绿 / 1 红,被「带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里」发现
+✓ M15 resume 不带 CLI 会话号:31 绿 / 1 红,被「blocked 后 CLI 结束不报 completed;resume 用同一 CLI 会话续接后报 completed」发现
+✓ M16 F-01 brief.tools 放行 default 等非内置名:30 绿 / 2 红,被「brief 的运行位置不是本机、工具名带逗号拼接时被拒绝」发现
+✓ M17 F-01 空集时 --tools 给 default(Codex 存活变异 M33-empty-default):30 绿 / 2 红,被「F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress」发现
+✓ M18 F-01 不核对 CLI init 的实际挂载清单:31 绿 / 1 红,被「F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)」发现
+✓ M19 F-02 忽略 Compute 汇报的 failed:29 绿 / 3 红,被「服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照」发现
+✓ M20 F-02 result 行不看 is_error:31 绿 / 1 红,被「F-02:result 行 subtype 是 success 但 is_error 为 true → failed」发现
+✓ M21 F-02 被拒收的 blocked 不阻止 completed:30 绿 / 2 红,被「服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照」发现
+✓ M22 F-03 CLI 不自成进程组:21 绿 / 3 红,被「F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)」发现
+✓ M23 F-03 收尾不回收进程组:31 绿 / 1 红,被「F-03:CLI 正常结束但留下孙进程时,收尾先回收进程组再报 completed;孙进程不再产生副作用」发现
+✓ M24 F-03 stop 只对直接子进程发 SIGTERM:31 绿 / 1 红,被「stop:进程无视 SIGTERM 时升级为 SIGKILL,结束后才报 stopped」发现
+✓ M25 F-04 MCP 服务器不校验 schema:31 绿 / 1 红,被「F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收」发现
+✓ M26 F-04 适配器不做第二道 schema 校验:31 绿 / 1 红,被「F-04:服务器校验失效、回执说已记录时,适配器自己的 schema 校验仍拒收不合规的 blocked」发现
+✓ M27 F-04 needs 只查真假不查类型:29 绿 / 3 红,被「F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)」发现
+✓ M28 F-04 stage 只查真假不查类型:30 绿 / 2 红,被「F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)」发现
+✓ M29 F-04 constraintVer 不校验:30 绿 / 2 红,被「服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照」发现
+✓ M30 F-04 kind 不查枚举:31 绿 / 1 红,被「F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收」发现
+✓ M31 F-04 放行未知字段:31 绿 / 1 红,被「F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收」发现
+31 个变异
 变异校准通过
