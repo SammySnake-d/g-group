@@ -71,6 +71,6 @@
     "model": "gpt-6.1-terra",
     "verdict": "reject",
     "reviewed_hash": "b3d591914d9e156cd272901686eddbb309ddf2a450d2cd327ba43800d08d809e",
-    "notes": "第三轮复审 7865762：npm ci、typecheck、lint、自检通过；独立默认 mutation 仍在运行，短超时反例全部正确判未发现。reject：RR-09 PR 可改写 self-check 跳过条件；RR-10 默认重命名检测漏列移出门禁路径。RR-01..08 作者自检通过，但独立逐条双侧复现未完成。首次提交/推送误在共享 linked worktree 触发 hook，详见报告更正。"
+    "notes": "第三轮 reject：RR-09/10 自检执行与路径漏检；补充独立真实 CLI 复现 RR-11..15（红绿测试依赖、文件级变异掩盖弱测试、否定文本豁免、printf 注释冒充 hash、跨 clone 厂商漏计），详见报告。默认 mutation 仍在运行；首次推送误触共享 worktree hook 已更正披露。"
   }
 }
