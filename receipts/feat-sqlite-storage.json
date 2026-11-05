@@ -42,5 +42,12 @@
   },
   "unverifiable": "AC-05 的通过只到存储层:触发器挡住经 SQL 的 UPDATE/DELETE/INSERT OR REPLACE,能 DROP TRIGGER 的人仍能改库,这种篡改只能事后被 loadLog 的 verify 报 brokenAt,挡不住;hash 链不带密钥,改正文同时重算后续所有 hash 的人 verify 查不出。宿主是否所有写消息入口都走 appendEvent 要等内核接线。AC-21 的并发测试是同进程两个连接,用 onCasRead 接缝在 A 读到版本、未写入的时刻插入 B 的提交,B 因写锁被挡(busy)后再提交收到冲突;多进程长时间争用、WAL 检查点和 busy 超时下的调用方重试策略没测,busy 现在以异常抛给调用方而不是 version-conflict。AC-31 只证明③的入库端去重子判据,其余整项未测。R-03 依赖 G-STUB 门禁实跑(本片 14 条测试在空桩下都按名失败,见门禁输出),仓库内证据只有变异结果;R-05 的变异只覆盖 mutations.mjs 列出的 13 种故障,文档 value 用 JSON 存取,非 JSON 值(undefined、BigInt、循环引用)的行为未定义也未测。node:sqlite 在 Node 22 仍是 experimental。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "codex",
+    "session": "codex:ac7c92d1-5ee6-484b-8325-64a980d8528f",
+    "model": "gpt-6.1-terra",
+    "verdict": "reject",
+    "reviewed_hash": "1608cd3ce7ada1a4ed303ac9ff241e27970668a67c326dede67abde6cf1c1ed4",
+    "notes": "独立复现 37 条绿、红提交 14 条按名失败及作者 13 种变异；跨进程假锁、漏写撤回、跨对象误写等独立变异骗过原测试；AC-05/AC-21 整项及篡改检测边界越报，详见 reviews/feat-sqlite-storage.md。"
+  }
 }
