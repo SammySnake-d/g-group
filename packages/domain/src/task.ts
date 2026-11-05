@@ -452,7 +452,7 @@ const EVENT_SHAPES: { readonly [K in EventKind]: Shape } = {
   HumanReply: { req: { qId: "str", constraintVer: "nat", answer: ["approve", "reject"] } },
   Amend: { req: { by: "str", computeResumable: "bool" } },
   SubmitForReview: { req: { commit: "str", computeId: "str", constraintVer: "nat" } },
-  Review: { req: { reviewerId: "str", reviewerModel: "str", round: "pint", commit: "str", constraintVer: "nat", verdict: ["approve", "reject"] }, opt: { waiverBy: "str", computeResumable: "bool" } },
+  Review: { req: { reviewerId: "str", reviewerModel: "str", round: "pint", commit: "str", constraintVer: "nat", verdict: ["approve", "reject"] }, opt: { waiverBy: "str" } },
   DeliveredCard: { req: DELIVERY_SHAPE },
   UserAccept: { req: { ...DELIVERY_SHAPE, by: "str" } },
   UserReject: { req: { ...DELIVERY_SHAPE, by: "str", computeResumable: "bool" } },
@@ -471,17 +471,20 @@ const fieldOk = (v: unknown, f: FieldSpec): boolean => {
 /** 事件种类 → 形状:用 Map 查表,"__proto__"、"constructor"、"toString" 这类原型链上的名字查不到,一律按未知种类拒绝(R8-CORR-01)。 */
 const SHAPE_BY_KIND: ReadonlyMap<string, Shape> = new Map(Object.entries(EVENT_SHAPES));
 const label = (f: FieldSpec): string => f === "str" ? "非空字符串" : f === "nat" ? "非负整数" : f === "pint" ? "正整数" : f === "bool" ? "布尔" : f.join("/");
-/** 校验一个(可能来自 JSON 的)事件的运行时形状:种类已知、必填字段存在且取值合法、可选字段若出现也合法。合法返回 null,否则返回原因。 */
 /**
- * 把(可能来自 JSON、可能带访问器或原型的)事件规范化成冻结的纯数据快照(R9-CORR-01/02/03):
- * 每个声明字段只经 Object.getOwnPropertyDescriptor 读一次——数据属性取值,访问器只调用一次 getter;
- * 原型链上继承来的同名字段不算数;未声明字段一律丢弃(包括不声明 taskId 的事件上多出来的 taskId)。
- * 读取出错即拒绝。之后的校验、路由检查和状态转移都只读这份快照,不再碰原对象,所以校验和执行看到的是同一组值。
+ * 把(可能来自 JSON 的)事件规范化成冻结的纯数据快照(R9-CORR-01/02/03、R10-CORR-01/02/03)。
+ * 契约边界:领域层只接受 JSON 可产生的普通数据对象——不是 Proxy、原型为 Object.prototype 或 null、所有自有属性都是数据属性。
+ * 入口顺序固定:先判 Proxy(任何 Proxy,含数组、函数、已撤销的 Proxy,都不触发陷阱地拒绝)→ 再判对象/数组/原型 →
+ * 再逐个自有属性取描述符,出现任何访问器(get/set,含不可枚举和 symbol 键)直接拒绝,永不调用 getter。
+ * 字段值只取描述符里的 value;原型链上继承来的同名字段不算数;未声明字段一律丢弃。
+ * Review 先看 verdict:只有 reject 才声明并校验 computeResumable,approve 时它是未声明字段,直接丢弃。
+ * 之后的校验、路由检查和状态转移都只读这份快照,不再碰原对象,所以校验和执行看到的是同一组值。
  */
 export function normalizeEvent(e: unknown): { ok: true; event: TaskEvent } | { ok: false; reason: string } {
   try {
     return snapshotOf(e);
   } catch {
+    // 契约内的输入不会走到这里;只为宿主特殊对象(例如尚未初始化绑定的模块命名空间,取描述符会抛错)兜底
     return { ok: false, reason: "事件无法校验" };
   }
 }
@@ -490,35 +493,38 @@ export function validateEvent(e: unknown): string | null {
   const n = normalizeEvent(e);
   return n.ok ? null : n.reason;
 }
-/** 读一次自有属性:没有该自有属性返回 undefined;访问器调用一次 getter。 */
-const readOnce = (o: object, k: string): unknown => {
-  const d = Object.getOwnPropertyDescriptor(o, k);
-  if (!d) return undefined;
-  if (Object.hasOwn(d, "value")) return d.value;
-  return d.get ? d.get.call(o) : undefined;
-};
+const PLAIN_ONLY = "只接受普通数据对象";
 const snapshotOf = (e: unknown): { ok: true; event: TaskEvent } | { ok: false; reason: string } => {
   const no_ = (reason: string) => ({ ok: false as const, reason });
+  // 先判 Proxy:types.isProxy 对任何值都安全,且不触发陷阱;数组 Proxy、函数 Proxy、已撤销的 Proxy 都在这里拒绝
+  if (types.isProxy(e)) return no_(PLAIN_ONLY);
   if (typeof e !== "object" || e === null || Array.isArray(e)) return no_("事件不是对象");
-  // 契约边界:只接受 JSON 可产生的普通数据对象——原型为 Object.prototype 或 null,且不是 Proxy。
-  // 先判 Proxy(不触发任何陷阱),再看原型;自定义原型、类实例、Proxy 一律拒绝,不尝试防御任意元编程对象
-  if (types.isProxy(e)) return no_("只接受普通数据对象");
   const proto = Object.getPrototypeOf(e);
-  if (proto !== Object.prototype && proto !== null) return no_("只接受普通数据对象");
-  const kind = readOnce(e, "kind");
+  if (proto !== Object.prototype && proto !== null) return no_(PLAIN_ONLY);
+  // 逐个自有属性看描述符:访问器直接拒绝(不调用 getter);数据属性只取 value
+  const own = new Map<string, unknown>();
+  for (const key of Reflect.ownKeys(e)) {
+    const d = Object.getOwnPropertyDescriptor(e, key);
+    if (!d) continue;
+    if (!Object.hasOwn(d, "value")) return no_(`${PLAIN_ONLY}(含访问器属性 ${String(key)})`);
+    if (typeof key === "string") own.set(key, d.value);
+  }
+  const kind = own.get("kind");
   // 非字符串的 kind 用固定文字拒绝,不把不可信值格式化进原因(对象 kind 可能无法转成字符串)
   if (typeof kind !== "string") return no_("事件种类缺失或不是字符串");
   const shape = SHAPE_BY_KIND.get(kind);
   if (!shape) return no_(`未知的事件种类 ${JSON.stringify(kind)}`);
+  const req: Record<string, FieldSpec> = { ...shape.req };
+  // Review 先读 verdict:只有打回才需要 computeResumable;通过时它不是声明字段
+  if (kind === "Review" && own.get("verdict") === "reject") req.computeResumable = "bool";
   // 原型为 null 的快照:读不到的字段就是 undefined,不会从 Object.prototype 上继承
   const snap = Object.create(null) as Record<string, unknown>;
   snap.kind = kind;
-  for (const k of [...Object.keys(shape.req), ...Object.keys(shape.opt ?? {})]) {
-    const v = readOnce(e, k);
+  for (const k of [...Object.keys(req), ...Object.keys(shape.opt ?? {})]) {
+    const v = own.get(k);
     if (v !== undefined) snap[k] = v;
   }
-  for (const [k, f] of Object.entries(shape.req)) if (!fieldOk(snap[k], f)) return no_(`${kind}.${k} 缺失或取值非法(应为${label(f)})`);
-  if (kind === "Review" && snap.verdict === "reject" && !fieldOk(snap.computeResumable, "bool")) return no_("Review.computeResumable 缺失或取值非法(应为布尔)");
+  for (const [k, f] of Object.entries(req)) if (!fieldOk(snap[k], f)) return no_(`${kind}.${k} 缺失或取值非法(应为${label(f)})`);
   for (const [k, f] of Object.entries(shape.opt ?? {})) if (snap[k] !== undefined && !fieldOk(snap[k], f)) return no_(`${kind}.${k} 取值非法(应为${label(f)})`);
   return { ok: true, event: Object.freeze(snap) as unknown as TaskEvent };
 };

@@ -1461,7 +1461,7 @@ test("R8-CORR-01 原型链上的名字作为 kind 一律按未知种类拒绝,�
 test("R8-CORR-01 字段读取只认自有属性:原型上继承来的同名字段不算数", () => {
   assert.equal(polluted("by", "u1", () => validateEvent({ kind: "Claim" })), "Claim.by 缺失或取值非法(应为非空字符串)");
   const evil = { kind: "Claim", get by(): string { throw new Error("boom"); } };
-  assert.equal(validateEvent(evil), "事件无法校验");
+  assert.equal(validateEvent(evil), "只接受普通数据对象(含访问器属性 by)");
   assert.equal(apply(newTask("t1", "u1"), evil as unknown as TaskEvent).ok, false);
 });
 
@@ -1608,41 +1608,63 @@ test("R9-CORR-02 标准 JSON 的多余 taskId(含无法转字符串的对象)不
   assert.ok(!r.ok && r.reason === "UserAccept.taskId 缺失或取值非法(应为非空字符串)");
 });
 
-/** 每个 getter 读一次计数;values 依次返回,用完后抛错。 */
-const getterEvent = (fixed: Record<string, unknown>, key: string, values: unknown[], reads: { n: number }) => {
-  const o: Record<string, unknown> = { ...fixed };
-  Object.defineProperty(o, key, { enumerable: true, get() { const i = reads.n++; if (i >= values.length) throw new Error("第二次读取"); return values[i]; } });
+/** 在普通对象上挂一个访问器属性;calls 记录 getter/setter 被调用的次数(新契约下必须始终为 0)。 */
+const withAccessor = (fixed: Record<string, unknown>, key: PropertyKey, calls: { n: number }, opts: { enumerable?: boolean; setterOnly?: boolean } = {}) => {
+  const o: Record<PropertyKey, unknown> = { ...fixed };
+  const getter = { get() { calls.n++; return (fixed as Record<PropertyKey, unknown>)[key]; } };
+  const setter = { set(_v: unknown) { calls.n++; } };
+  Object.defineProperty(o, key, { enumerable: opts.enumerable ?? true, configurable: true, ...(opts.setterOnly ? setter : { ...getter, ...setter }) });
   return o as unknown as TaskEvent;
 };
+const accessorReason = (key: string) => `只接受普通数据对象(含访问器属性 ${key})`;
 
-test("R9-CORR-03 Claim.by 的 getter 第二次会变值:只读一次,按首次值认领", () => {
-  const reads = { n: 0 };
-  const r = must(apply(newTask("t1", "u1"), getterEvent({ kind: "Claim" }, "by", ["claude", 42], reads)));
-  assert.equal(reads.n, 1);
+test("R10-CORR-01 每种事件 × 每个声明字段换成访问器:四个入口都按含访问器拒绝,getter 调用 0 次", () => {
+  for (const k of EVENT_KINDS) {
+    const fields = ["kind", ...Object.keys(SHAPES[k].req), ...Object.keys(SHAPES[k].opt ?? {})];
+    for (const f of fields) {
+      const calls = { n: 0 };
+      const ev = withAccessor({ ...SAMPLE[k], [f]: (SAMPLE[k] as Record<string, unknown>)[f] ?? "x" }, f, calls);
+      const no = { ok: false, reason: accessorReason(f) };
+      assert.deepEqual(normalizeEvent(ev), no, `${k}.${f}`);
+      assert.equal(validateEvent(ev), no.reason, `${k}.${f}`);
+      assert.deepEqual(apply(inState("T3_Running"), ev), no, `${k}.${f}`);
+      assert.deepEqual(applyAll(inState("T3_Running"), [ev]), no, `${k}.${f}`);
+      assert.equal(calls.n, 0, `${k}.${f} 的 getter 不应被调用`);
+    }
+  }
+});
+
+test("R10-CORR-01 未声明字段、不可枚举字段、symbol 键、只有 setter 的访问器同样拒绝,且从不调用", () => {
+  for (const k of EVENT_KINDS) {
+    const calls = { n: 0 };
+    assert.equal(validateEvent(withAccessor({ ...SAMPLE[k], extra: 1 }, "extra", calls)), accessorReason("extra"), k);
+    assert.equal(calls.n, 0, k);
+  }
+  const calls = { n: 0 };
+  assert.equal(validateEvent(withAccessor({ kind: "Claim", by: "claude" }, "hidden", calls, { enumerable: false })), accessorReason("hidden"));
+  const sym = Symbol("s");
+  assert.equal(validateEvent(withAccessor({ kind: "Claim", by: "claude" }, sym, calls)), accessorReason("Symbol(s)"));
+  assert.equal(validateEvent(withAccessor({ kind: "Claim", by: "claude" }, "w", calls, { setterOnly: true })), accessorReason("w"));
+  assert.equal(calls.n, 0);
+});
+
+test("R10-CORR-01 getter 自身的 call 被遮蔽也不影响:访问器直接拒绝,不经任何 call", () => {
+  let calls = 0;
+  const get = () => { calls++; return "claude"; };
+  Object.defineProperty(get, "call", { value: () => "attacker" });
+  const ev = Object.defineProperty({ kind: "Claim" }, "by", { get, enumerable: true });
+  const no = { ok: false, reason: accessorReason("by") };
+  assert.deepEqual(normalizeEvent(ev), no);
+  assert.equal(validateEvent(ev), no.reason);
+  assert.deepEqual(apply(newTask("t1", "u1"), ev as unknown as TaskEvent), no);
+  assert.deepEqual(applyAll(newTask("t1", "u1"), [ev as unknown as TaskEvent]), no);
+  assert.equal(calls, 0);
+});
+
+test("R10-CORR-01 数据属性的值原样进入快照:描述符 value 就是快照值", () => {
+  const ev = Object.defineProperty({ kind: "Claim" }, "by", { value: "claude", enumerable: false });
+  const r = must(apply(newTask("t1", "u1"), ev as unknown as TaskEvent));
   assert.equal(r.task.owner, "claude");
-  assert.deepEqual(r.effects, [{ kind: "spawn-compute", withHandoff: false, requestId: "t1#L0", constraintVer: 0 }]);
-});
-
-test("R9-CORR-03 UserReject.computeResumable 的 getter 先 false 后 \"false\":只读一次,按不可恢复新开", () => {
-  const reads = { n: 0 };
-  const r = must(apply(delivered(), getterEvent({ kind: "UserReject", by: "u1", ...D1 }, "computeResumable", [false, "false"], reads)));
-  assert.equal(reads.n, 1);
-  assert.equal(r.task.computeId, null);
-  assert.equal(r.effects[0]?.kind, "spawn-compute");
-});
-
-test("R9-CORR-03 kind 的 getter 第二次读取抛错:只读一次,按首次值处理;首次就抛错则拒绝", () => {
-  const reads = { n: 0 };
-  const r = must(apply(newTask("t1", "u1"), getterEvent({ by: "claude" }, "kind", ["Claim"], reads)));
-  assert.equal(reads.n, 1);
-  assert.equal(r.task.state, "T2_Claimed");
-  const reads2 = { n: 0 };
-  const r2 = apply(newTask("t1", "u1"), getterEvent({ by: "claude" }, "kind", [], reads2));
-  assert.equal(reads2.n, 1);
-  assert.ok(!r2.ok && r2.reason === "事件无法校验");
-  const reads3 = { n: 0 };
-  assert.equal(applyAll(newTask("t1", "u1"), [getterEvent({ by: "claude" }, "kind", ["Claim"], reads3)]).ok, true);
-  assert.equal(reads3.n, 1);
 });
 
 test("R9 快照:冻结、原型为 null、只含声明字段,值与首次读取一致", () => {
@@ -1655,6 +1677,20 @@ test("R9 快照:冻结、原型为 null、只含声明字段,值与首次读取�
   const n2 = normalizeEvent({ kind: "ExecFailed" });
   assert.ok(n2.ok && Object.keys(n2.event).length === 1);
   assert.deepEqual(normalizeEvent(null), { ok: false, reason: "事件不是对象" });
+});
+
+test("R10-TEST-01 每种事件的快照:冻结、原型为 null、只含声明字段且值相同,多余数据字段丢弃", () => {
+  const full: { [K in EventKind]: Record<string, unknown> } = { ...SAMPLE, StoppedConfirmed: { ...SAMPLE.StoppedConfirmed, requestId: "t#L0" }, ExecFailed: { ...SAMPLE.ExecFailed, requestId: "t#L0" }, Review: { ...SAMPLE.Review, waiverBy: "u1" } };
+  for (const k of EVENT_KINDS) {
+    const n = normalizeEvent({ ...full[k], extra: 1, taskId: (full[k] as Record<string, unknown>).taskId ?? "B" });
+    assert.ok(n.ok, k);
+    const e = n.ok ? (n.event as unknown as Record<string, unknown>) : {};
+    assert.ok(Object.isFrozen(e), `${k} 快照应冻结`);
+    assert.equal(Object.getPrototypeOf(e), null, `${k} 快照原型应为 null`);
+    const declared = ["kind", ...Object.keys(SHAPES[k].req), ...Object.keys(SHAPES[k].opt ?? {})];
+    assert.deepEqual(Object.keys(e).sort(), declared.filter((f) => full[k][f] !== undefined).sort(), k);
+    for (const f of Object.keys(e)) assert.equal(e[f], full[k][f], `${k}.${f}`);
+  }
 });
 
 test("R9-TEST-01 继承的 kind 不算:按种类缺失拒绝", () => {
@@ -1693,6 +1729,60 @@ test("R9 契约边界:Proxy 事件拒绝且不触发任何陷阱;自定义原型
   class Ev { kind = "Claim"; by = "claude"; }
   assert.equal(validateEvent(new Ev()), PLAIN_ONLY);
   assert.equal(applyAll(newTask("t1", "u1"), [new Ev() as unknown as TaskEvent]).ok, false);
+});
+
+test("R10-CORR-02 各类 Proxy(对象、数组、函数、已撤销)在四个入口给同一原因,且不触发陷阱", () => {
+  let traps = 0;
+  const handler: ProxyHandler<object> = new Proxy({}, { get: () => () => { traps++; return undefined; } });
+  const revocable = Proxy.revocable({ kind: "Claim", by: "claude" }, {});
+  revocable.revoke();
+  const revokedFn = Proxy.revocable(() => undefined, {});
+  revokedFn.revoke();
+  const proxies = [
+    new Proxy({ kind: "Claim", by: "claude" }, handler),
+    new Proxy([], handler),
+    new Proxy(() => undefined, handler),
+    new Proxy(Object.create(null), handler),
+    revocable.proxy,
+    revokedFn.proxy,
+  ];
+  const no = { ok: false, reason: PLAIN_ONLY };
+  for (const [i, p] of proxies.entries()) {
+    assert.deepEqual(normalizeEvent(p), no, `Proxy #${i}`);
+    assert.equal(validateEvent(p), PLAIN_ONLY, `Proxy #${i}`);
+    assert.deepEqual(apply(newTask("t1", "u1"), p as TaskEvent), no, `Proxy #${i}`);
+    assert.deepEqual(applyAll(newTask("t1", "u1"), [p as TaskEvent]), no, `Proxy #${i}`);
+  }
+  assert.equal(traps, 0);
+});
+
+test("R10-CORR-02 非 Proxy 的数组、函数仍按不是对象拒绝", () => {
+  const no = { ok: false, reason: "事件不是对象" };
+  for (const v of [[], [1], () => undefined, "Claim", 1]) {
+    assert.deepEqual(normalizeEvent(v), no, String(v));
+    assert.equal(validateEvent(v), no.reason, String(v));
+    assert.deepEqual(apply(newTask("t1", "u1"), v as unknown as TaskEvent), no, String(v));
+    assert.deepEqual(applyAll(newTask("t1", "u1"), [v as unknown as TaskEvent]), no, String(v));
+  }
+});
+
+test("R10-CORR-03 审查通过时 computeResumable 是未声明字段:任意数据值都通过、被丢弃,照常进入交付", () => {
+  for (const extra of ["metadata", 1, null, {}, true]) {
+    const ev = { ...approve("abc", 0), computeResumable: extra } as unknown as TaskEvent;
+    assert.equal(validateEvent(ev), null, String(extra));
+    const n = normalizeEvent(ev);
+    assert.ok(n.ok && !Object.hasOwn(n.event, "computeResumable"), String(extra));
+    const r = must(apply(inReview(), ev));
+    assert.equal(r.task.state, "T7_Delivering");
+    assert.equal(r.effects[0]?.kind, "send-card");
+  }
+});
+
+test("R10-CORR-03 审查打回时 computeResumable 是声明字段:非法值拒绝,合法值进入快照", () => {
+  const base = { kind: "Review", reviewerId: "astra", reviewerModel: "gpt-6-astra", round: 1, commit: "abc", constraintVer: 0, verdict: "reject" };
+  for (const v of ["metadata", 1, null, {}]) assert.equal(validateEvent({ ...base, computeResumable: v }), "Review.computeResumable 缺失或取值非法(应为布尔)", String(v));
+  const n = normalizeEvent({ ...base, computeResumable: false });
+  assert.ok(n.ok && (n.event as unknown as Record<string, unknown>).computeResumable === false);
 });
 
 test("R9 契约边界:普通对象、Object.create(null) 对象、JSON.parse 结果都接受", () => {

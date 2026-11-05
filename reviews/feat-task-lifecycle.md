@@ -930,3 +930,193 @@ REVIEW_REPO="$PWD" node --test --test-reporter=tap "$E/independent.test.mjs"
 ### 第九轮本地门禁的实际结果
 
 写入 reject 收据后，在此独立 clone 运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`，exit 1：`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER` 通过。`G-PROVENANCE` 报 `审查会话记录不存在:codex:494d03f8-8b47-4ae3-a080-43526db82afd`；实查当前活动会话目录只有 `record.json`，尚无门禁读取的 `turns.jsonl`。本轮原始 rollout 的实际模型与指定 hash 命令已分别实查，但**不能声称来源门禁通过**；待会话记录落盘后由原任务复跑，不能伪造记录。日志见证据目录 `gates-after.log`。
+
+---
+
+# 第十轮 · Codex 独立复现（2026-11-06）
+
+## 结论：reject
+
+`24646a2868b2006eb7cd35e943746d3b2abbd7e3` 对第九轮的普通场景已修复：事件进入状态机前会构造冻结、空原型的快照；继承的可选字段和未声明的 `taskId` 不再参与转移；普通的变值／抛错 getter 只读取一次。原样 174 项测试与作者的 217 个变异均独立复现通过。但仍有三个必须处理的问题：**getter 自带的 `call` 属性可以替换真正的 getter，使事件种类发生错误转移；数组、可调用及已撤销 Proxy 的拒绝原因不符合约定；`Review(approve)` 对旧版允许的附加字段出现拒绝回归。**另有 4 个独立单点变异存活。该版本不能据此作为已通过复审的 PR #4 基线。
+
+- 对象：`feat/task-lifecycle` HEAD `24646a2868b2006eb7cd35e943746d3b2abbd7e3`；指定基线 `origin/feat/domain-core` = `afd02560f9546147da380382404eb6106222a9b8`。普通独立 HTTPS clone，`.git` 与 common dir 均为该 clone 自己的目录，不在共享 linked worktree 运行钩子。
+- 审查：`codex:494d03f8-8b47-4ae3-a080-43526db82afd`；本轮原始 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI）。作者 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38` 的本仓库产出轮次为 `claude-opus-5-5`（Anthropic，两个渠道前缀）；不同原生研发厂商，无豁免。
+- 仓库根目录运行 `node scripts/gates/run-all.ts --hash --branch=feat/task-lifecycle --base=origin/feat/domain-core`，原样输出：
+
+```text
+bbe39e6bc1ce496bfc98cb79f65681893cf30b0debf4e76f07a1093d02b3b5a1
+```
+
+- 脚本、TAP、红绿名称比对、旧版对照、变异补丁与日志：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review10-evidence-Oy7YB6/`。只运行领域纯函数和隔离副本，未启动真实 Compute、发送卡片或修改产品代码。
+
+## 一、独立执行
+
+| 操作 | 实测结果 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均 exit 0；Node `v25.8.1`、npm `11.11.0` |
+| `npm test` | exit 0；174 通过、0 失败、0 跳过 |
+| 普通独立 clone 检出红提交 `fce6e9f` | exit 1；23 绿、151 具名红；红绿测试文件无差异。按文件＋测试名比对指定基线以来新增／改动的 151 条，红提交全部按名失败、绿版全部按名通过，文件级失败 0。空壳红证明测试激活，不等于每条缺陷都在真实旧实现上复现 |
+| 同一份新测试套旧实现 `52eb37a` | 隔离副本只替换 `task.ts` 为旧版并追加 `normalizeEvent` 垫片：调用旧 `validateEvent`、成功时原样返回原事件；其余实现不改。exit 1，164 绿、10 具名红，与作者 `red-against-52eb37a.tap` 失败名集合一致。垫片是使新测试能够加载，不是旧实现原生具备快照 |
+| 作者 `node packages/domain/proof/mutations.mjs` | exit 0；原样 174 绿，217 个作者单点变异均有具名失败 |
+| 独立行为测试 | 20 组：13 绿、7 红；对 15 类事件在 `normalizeEvent`、`validateEvent`、`apply` 三入口检查了 183 次字段读取计数，并覆盖空原型、普通对象、Proxy、原型污染、任务错投、快照、 getter 和实际转移。失败分别对应下述三项 |
+| 独立单点变异 | K01–K04 类型检查和原 174 项测试全绿，但与原版探针行为不同；K05 去掉全部快照冻结，原有具名测试杀死。K06 删除一格后 typecheck 与 2 条 AC-09 测试失败；K07 新增事件、全格补齐并同步样例后 typecheck 与 174 项测试均绿 |
+
+## 二、必须返修
+
+### R10-CORR-01 · 读取 getter 时使用其可被覆盖的 `call` 属性，快照可能不是字段的真实值
+
+`packages/domain/src/task.ts:493–498` 使用 `d.get.call(o)`，而 getter 是普通 JavaScript 函数，其自有 `call` 属性可以遮蔽 `Function.prototype.call`。输入事件本身是原型为 `Object.prototype` 的普通对象，不是 Proxy 或类实例；仅把 `kind` 的 getter 设为返回 `Claim`，再给该 getter 函数设置一个自有 `call` 方法返回 `Cancel`：
+
+- 语言层面的 `event.kind` 为 `Claim`；`normalizeEvent` 实际得到冻结快照 `{kind:"Cancel", by:"author"}`。
+- 对新建任务调用 `apply`：真正的 getter **调用 0 次**、遮蔽的 `call` 方法调用 1 次，返回 `ok:true` 并进入 `T10_Cancelled`；预期应读取真正 getter 一次，以 `Claim` 进入 `T2_Claimed`。
+- 将 getter 的自有 `call` 设为非函数时，真正 getter 可正常返回合法值，但当前入口返回 `事件无法校验`，真正 getter 仍未调用。
+
+这是支持访问器的普通事件对象上的实际状态机结果，不涉及声称真实宿主已执行某个外部副作用。应使用不经 getter 自身 `call` 属性的调用方式（例如 `Reflect.apply`），并覆盖 kind、普通字段、覆盖为函数／非函数及稳定 getter 的对照。
+
+### R10-CORR-02 · Proxy 分类在数组与类型判断之后，部分 Proxy 给出错误拒绝原因
+
+`packages/domain/src/task.ts:500–507` 在 `types.isProxy` 之前先判断 `typeof` 和 `Array.isArray`。按本轮明确的契约，Proxy 一律应以 `只接受普通数据对象` 拒绝、判断时不得触发陷阱；独立四入口探针的实际结果：
+
+| 输入 | `normalizeEvent` / `validateEvent` / `apply` / `applyAll` 实际原因 |
+|---|---|
+| 普通对象 Proxy | `只接受普通数据对象`，符合预期 |
+| 数组 Proxy、可调用 Proxy | `事件不是对象` |
+| 已撤销的对象 Proxy | `事件无法校验`（`Array.isArray` 在检查前抛错，被外层捕获） |
+
+四组探针的 Proxy 陷阱次数均为 0，且均被拒绝；此处是**拒绝原因和判定顺序违约**，不是声称这些 Proxy 被放行。普通非 Proxy 数组仍应按非事件对象拒绝。应先以不触发陷阱的方式识别全部 Proxy，再做类型／数组／原型检查，并补上述三类与普通对象 Proxy、普通数组的对照。
+
+### R10-CORR-03 · Review 通过分支把原先的附加字段改成受校验字段
+
+`TaskEvent` 的 `Review` 联合类型（`task.ts:23–24`）仅在 `verdict:"reject"` 分支声明 `computeResumable`；此前承诺未声明的多余字段不拒绝。新形状表（`task.ts:455,516–522`）却把该字段无条件列为 Review 的可选布尔，并在知道 verdict 前读取：
+
+- 同一条合法 `Review(approve)` 在 `52eb37a` 和本版不带额外字段时都进入 `T7_Delivering` 并发 `send-card`；附加普通 JSON 字段 `computeResumable:"metadata"` 时，旧版仍正常通过，新版返回 `Review.computeResumable 取值非法(应为布尔)`。
+- 将该未使用的附加字段换成会抛错的 getter，旧版不读取它且照常通过；新版调用 getter，返回 `事件无法校验`。
+
+这不仅是快照内部多一个键，而是旧版实际已接受的外部输入被拒绝；`approve-extra-probe.log` 中分别记录旧版与本版正反对照。应按 Review 的实际分支选择声明字段：打回时读取并要求布尔，通过时丢弃未声明的该字段；如果产品有意扩大为两种 verdict 均声明的可选字段，应先明确这是契约变更，不能仍以“未声明字段一律丢弃／多余字段不拒绝”描述它。
+
+### R10-TEST-01 · 新快照契约仍有可存活的单点变异
+
+以下是审查人在隔离副本中**故意改坏**的变异，不表示原版已存在相应错误。每项 typecheck exit 0、原 174 项测试全绿；独立探针确认其行为与原版不同：
+
+| 变异 | 原版与变异版的实际差异 |
+|---|---|
+| K01 只对 `requestId` 重复读取 | 原版 getter 读 1 次并通过；变异版读 2 次、第二次抛错后拒绝 |
+| K02 只让 `HumanReply` 快照不冻结 | 原版冻结；变异版可写 |
+| K03 只让 `HumanReply` 快照带普通原型 | 原版原型为 null；变异版不是 null |
+| K04 只对 `HumanReply` 读取多余 `extra` | 原版丢弃且不调用多余 getter；变异版调用 getter 并拒绝 |
+
+K05 将所有快照改为不冻结，现有具名快照测试能杀死它，作为阳性对照。以上补丁和逐项类型检查、完整测试、原版／变异版探针见 `mutants/K01`–`K05`。这说明作者 217 个变异均被杀的事实可以复现，但不能据此推断每个事件字段或快照分支都已完成 R-05 双侧标定。
+
+## 三、第九轮返修及收据第 7 栏边界
+
+- 继承的 `computeId`、`waiverBy`、`taskId` 在普通对象的 `Object.prototype` 被污染时，不再影响对应转移；本轮分别对照省略字段和自有字段。用户不带任务号的 `Claim` 即使附带无法转换的 JSON `taskId` 也正常认领；真正声明任务号的五类事件错投仍拒绝。
+- 常规 getter 首次失败返回 `事件无法校验`；第二次才改变或抛错的 getter 在所测路径只调用一次。15 类事件逐字段取值／调用次数与快照冻结、空原型均有独立对照；R10-CORR-01 是 getter 本体 `call` 被遮蔽时的例外。
+- **AC-09**：本片 12 × 15 共 180 格具处理或原因；删格阳性和新增事件全格补齐阴性均已执行（`mutants/K06`、`K07`）。这不等于需求文档 D20.3 中尚未建模的 T2b、T4a/T4c、T6/T6b、T8b 和 E5/E7b/E10 均已覆盖。
+- **R-02**：151 条新增／改动测试均按文件和名称红绿匹配；另以明确标注的兼容垫片复跑旧实现，10 条具名失败与作者证据一致。
+- **R-05**：217 个作者变异复现全杀，但 K01–K04 存活，当前第 7 栏对于每个声明字段、快照形状及未声明字段的整体断言仍可能被现有测试骗过；需要补变异与正反对照，不能仅因作者变异全杀而将新边界整体标为充分校准。
+- 收据仍正确提示：可信 taskId / computeId / 模型／豁免人由宿主负责；真实 Compute、卡片 UI、工作区隔离、CAS/租约、真实资源回收及跨层闭环本轮未验。领域函数的 `send-card` 或 `release-slot` 是意图，不是真实发送或回收证明。
+
+复现（独立 clone 仓库根目录；当前预期 13 绿 / 7 红）：
+
+```sh
+E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review10-evidence-Oy7YB6
+REVIEW_REPO="$PWD" node --test --test-reporter=tap "$E/independent.test.mjs"
+REVIEW_REPO="$PWD" node "$E/spot-probes.mjs"
+REVIEW_REPO="$PWD" node "$E/approve-extra-probe.mjs"
+```
+
+本轮只追加本报告并更新 `receipts/feat-task-lifecycle.json` 的 `review` 字段；返修交回 Claude Code，再由不同厂商独立复现。
+
+### 第十轮本地门禁的实际结果
+
+写入 reject 收据后，在独立 clone 运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`，exit 1：`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER` 通过。`G-PROVENANCE` 报当前会话记录中没有一次 hash 命令输出等于本轮 `reviewed_hash`，因此也认不出该轮审查厂商；当前门禁读到的 `turns.jsonl` 尚未包含本活动轮次。指定命令和本轮原始 `turn_context.model` 已分别实际核对，但**不声称来源门禁已通过**；待本轮记录落盘后由原任务复跑，不伪造会话记录。原始输出见证据目录 `gates-after.log`。
+
+---
+
+# 第十一轮 · Codex 独立复现（2026-11-06）
+
+## 结论：reject
+
+`8e57583bd0934bb110f99c63fda3974c407a6380` 的第十轮主要修复在本轮常规对照中成立：各类 Proxy 先判、访问器不调用而拒绝、`Review(approve)` 丢弃附加的 `computeResumable`、事件快照冻结且原型为 null。原样 180 项测试和作者 227 个变异均独立复现通过。但**合法 JSON 审查打回事件仍可受 `Object.prototype` 上同名属性影响**：自有的 `computeResumable:true` 被丢弃并错误选择新开实例，缺失的必填字段也可被放行；同名不可写数据属性则令合法事件被误拒。另有 4 个独立单点变异存活。此版应返修后再复审，不得据此合并。
+
+- 对象：`feat/task-lifecycle` HEAD `8e57583bd0934bb110f99c63fda3974c407a6380`；基线 `origin/feat/domain-core` = `afd02560f9546147da380382404eb6106222a9b8`。普通独立 HTTPS clone，`.git` 与 common dir 都是此 clone 自己的目录，不在共享 linked worktree 运行钩子。
+- 审查会话 `codex:494d03f8-8b47-4ae3-a080-43526db82afd`；本轮原始 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI）。作者会话 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38` 中本仓库产出轮次为 `claude-opus-5-5`（Anthropic，两个渠道前缀）；不同原生研发厂商，无豁免。
+- 仓库根目录实际运行 `node scripts/gates/run-all.ts --hash --branch=feat/task-lifecycle --base=origin/feat/domain-core`，原样输出：
+
+```text
+3392b3d2ba9e6ec6842d4ae1e90db210c8f0d215b5b1eec9f6389ac275911be1
+```
+
+- 证据目录：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review11-evidence-uDMmuf/`。测试只运行纯函数和隔离副本，没有启动真实 Compute、发送卡片或修改产品代码。
+
+## 一、独立执行
+
+| 操作 | 实测结果 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均 exit 0；Node `v25.8.1`、npm `11.11.0` |
+| `npm test` | exit 0，180 通过、0 失败、0 跳过 |
+| 普通独立 clone 检出红提交 `ee72b47` | exit 1，23 绿、157 具名红；红绿测试文件无差异。按文件＋名称比对基线以来新增／改动的 157 条，红提交全部具名失败、绿版全部具名通过，文件级失败 0；空壳红证明激活，不等于每个缺陷都在旧实现上复现 |
+| 新测试套旧实现 `24646a2` | 隔离副本只将 `task.ts` 换回旧版原文，不加垫片；exit 1，174 绿、6 具名红，失败名称集合与 `red-against-24646a2.tap` 一致 |
+| 作者 `node packages/domain/proof/mutations.mjs` | exit 0，原样 180 绿、227 个作者变异均有具名失败。第一次运行被主机重启中断，保留残段 `author-mutations-interrupted.log`，恢复后在同一 HEAD 重跑，完整结果为 `author-mutations.log` |
+| 独立行为测试 | 17 组：14 绿、3 红；15 类事件共 61 个声明字段的访问器分别走四入口，共 244 次入口断言；另测 Proxy、symbol／不可枚举／仅 setter、自有 JSON 字段、Review 两个 verdict、快照与受污染原型 |
+| 独立变异及对照 | L01–L04 各自在隔离副本 typecheck exit 0、原 180 项测试全绿，但原版／变异版探针有实质差异；L05 删除全部访问器拒绝时 typecheck 绿、4 条具名测试红；AC-09 删格 K06 类型检查及 2 条测试红，新增事件全格补齐 K07 类型检查及 180 项测试绿 |
+
+## 二、必须返修
+
+### R11-CORR-01 · 审查打回的条件字段定义受继承 setter／不可写属性影响
+
+`packages/domain/src/task.ts:517–519` 用普通原型对象 `req = { ...shape.req }` 保存必填字段，然后通过赋值 `req.computeResumable = "bool"` 追加条件字段。普通对象赋值会经过原型链：如果 `Object.prototype` 恰有一个同名 setter，赋值调用该 setter 而不是创建 `req` 的自有字段；如果它是不可写数据属性，赋值抛 `TypeError`，被外层包装成 `事件无法校验`。
+
+本轮在**单独 Node 进程**中临时设置该原型属性，测试结束均在 `finally` 中删除；被测事件本身是 `JSON.parse` 产生的普通对象，相关自有字段全是数据属性、没有 getter 或 Proxy。比较同一事件、同一 T5 任务，仅切换宿主原型条件：
+
+| 条件与事件 | 实测结果 |
+|---|---|
+| 无污染，自有 `computeResumable:true` | 快照保留 `true`；`apply` 发 `resume-compute`，保留当前实例 |
+| 同名继承 setter，自有 `computeResumable:true` | setter 被调用，快照缺少该字段；`apply` 错发 `spawn-compute`，清掉当前实例 |
+| 无污染，缺 `computeResumable` | 返回 `Review.computeResumable 缺失或取值非法(应为布尔)` |
+| 同名继承 setter，缺 `computeResumable` | 错误校验通过，并发 `spawn-compute` |
+| 同名不可写数据属性，自有 `computeResumable:true` | `normalizeEvent`、`validateEvent`、`apply`、`applyAll` 均返回 `事件无法校验`；无污染的同一事件正常恢复 |
+
+这直接违反第七栏沿用的“只认自有属性、`Object.prototype` 被污染时继承字段不算数”，也违反本轮对 `Review(reject)` 的布尔必填与返工选择。**前提是宿主进程的 `Object.prototype` 已有同名 setter／不可写属性；没有证明普通 JSON 本身能建立这种污染，也未测真实宿主是否处于该状态。**输出 effect 是领域意图，不是声称真实进程已经停止或新开。
+
+建议让临时字段表自身也使用空原型，或用不会经过继承 setter 的方式定义条件字段；补无污染、同名可写数据字段、setter、不可写字段的四入口对照，并对 `true`、`false`、缺失分别检查实际转移与 effects。证据：`prototype-setter-probe.mjs/.log`、`prototype-nonwritable-probe.mjs/.log` 和 `independent-test.tap` 的 11–13 项。
+
+### R11-TEST-01 · 227 个作者变异之外仍有可存活故障
+
+下表是审查人在隔离副本中**故意注入**的单点故障，不把它们当作原版已存在的实现错误。每项 typecheck exit 0、原 180 项测试全部通过，独立探针证实原版与变异版输出不同：
+
+| 变异 | 原版／变异版差异 |
+|---|---|
+| L01 有 `waiverBy` 的 Review 打回漏掉 `computeResumable` 必填校验 | 原版缺字段拒绝、`true` 恢复原实例；变异版缺字段放行，`true` 也错误新开 |
+| L02 漏检不可枚举的 symbol 访问器 | 原版按访问器拒绝；变异版错误放行，均未调用 getter |
+| L03 漏检 symbol 键的仅 setter 访问器 | 原版拒绝；变异版错误放行，均未调用 setter |
+| L04 重新注入已移除的 X03：去掉外层 catch | 在上面的同名不可写原型字段条件下，原版将合法 JSON 事件返回 `事件无法校验`；变异版直接抛 `TypeError` |
+
+L05 删除全部访问器拒绝后，typecheck 仍绿但 4 条具名测试红，是阳性对照。补丁、完整测试和两侧探针位于 `mutants/L01`–`L05`。这些结果说明作者所选 227 项全杀可以复现，但不代表 R-05 的上述组合已充分双侧标定。
+
+**被删除变异的边界：**Y01“访问器读两次”在本轮对事件自有访问器直接拒绝的契约下确无同样触发路径，删除理由成立。X03“去掉外层兜底”所写的“契约内输入不会抛错”对当前代码不成立：L04 使用普通 JSON 事件，在本收据仍承诺处理的 `Object.prototype` 同名字段环境下实际抛错。修复 R11-CORR-01 后应重新评估该变异是否等价；如果有意排除被污染的宿主原型，应明确修订之前的边界，而不是同时声称继承字段一律不影响。
+
+**K01–K04 的来源：**对照本审查人第十轮实际注入脚本与当前 `mutations.mjs`：K02/K03 保持相同注入方向；K01 从“重复读取 requestId getter”改为“放行 requestId 访问器”，K04 从读取／保留额外 getter 改为保留额外数据字段。新契约拒绝访问器，改写可能合理，但它们并非四项均“原样”注入，证据见 `k-variant-comparison.txt`。
+
+## 三、契约与收据边界
+
+- 本轮常规数据对象、空原型对象、JSON、数组／函数／已撤销 Proxy、不可枚举和 symbol 访问器、setter-only、Review 的 approve/reject 分支、15 类快照均已独立实测。非 Proxy 数组仍按“事件不是对象”拒绝；各类 Proxy 均按约定拒绝且陷阱次数为 0。
+- **PR #4 并非已确认与本轮完全一致：**本轮查询到其远端 HEAD `98e31bd54a8ec7ac1d9f6f42ca3f26e43392a557`。该版本 `receipts/feat-contact-helper.json` 写明普通对象 getter 读取一次；其 `briefFor` 的 CH-18 getter 用例在另一个普通独立 clone 实跑 exit 0，确认 getter 被接受并各读一次。本 PR 的新契约则拒绝任何自有访问器。该事实只针对当时已推送的 PR #4 版本及该联系人入口，不推断未推送的本地改动或后续合流结果；若要求统一，需由对应负责人协调契约和调用方。
+- PR #6 当时远端 HEAD `e92cba87060b574a6ca87480fa0a5e2e2fcd0b0e` 的收据与 `packages/kernel/src/plugins.test.ts` 对 **OutboundChannel 配置**明确拒绝 getter，与本轮方向一致；这不足以证明 PR #6 的所有入口与 PR #3 是同一契约。
+- **AC-09**：本片 12 × 15 的 180 格有处理或原因，删格与新增完整事件的阳性／阴性对照已执行；需求文档 D20.3 中未建模状态和事件不因本片而全部通过。**R-02** 的 157 条红绿名称匹配；**R-05** 的 227 个已选故障全杀，但 L01–L04 为额外存活反例。
+- 仍不验证宿主对 taskId、computeId、模型、豁免身份的真实性；真实 Compute、卡片 UI、工作区隔离、CAS/租约和跨层资源回收不在本片。`resume-compute` / `spawn-compute` 是纯函数返回的意图，不是真实进程执行证据。
+
+复现（独立 clone 仓库根目录；当前独立测试预期 14 绿／3 红）：
+
+```sh
+E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review11-evidence-uDMmuf
+REVIEW_REPO="$PWD" node --test --test-reporter=tap "$E/independent.test.mjs"
+REVIEW_REPO="$PWD" node "$E/prototype-setter-probe.mjs"
+REVIEW_REPO="$PWD" node "$E/prototype-nonwritable-probe.mjs"
+```
+
+本轮只追加本报告并更新 `receipts/feat-task-lifecycle.json` 的 `review` 字段；返修交回 Claude Code，再由不同厂商独立复现。
+
+### 第十一轮本地门禁的实际结果
+
+写入 reject 收据后，在独立 clone 运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`，exit 1：`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER/G-PROVENANCE` 均通过。来源门禁本轮已在会话记录中识别出指定 hash 和跨厂商来源；完整输出见证据目录 `gates-after.log`。
