@@ -112,16 +112,14 @@ const snapQ = (q: PendingQuestion | null): PendingQuestion | null => q ? Object.
 const snapL = (l: Launch | null): Launch | null => l ? Object.freeze({ requestId: String(l.requestId), constraintVer: Number(l.constraintVer) }) : null;
 const snapA = (a: Approval | null): Approval | null => a ? Object.freeze({ reviewerModel: String(a.reviewerModel), waiverBy: a.waiverBy === null ? null : String(a.waiverBy) }) : null;
 const snapD = (d: Delivery | null): Delivery | null => d ? Object.freeze({ round: Number(d.round), commit: String(d.commit) }) : null;
+/** patch 的字段只认自有属性:Object.prototype 上同名的继承属性不算"本次改了它"(R11-CORR-01)。 */
+const pick = <K extends keyof Task>(t: Task, patch: Partial<Task>, k: K): Task[K] => Object.hasOwn(patch, k) ? patch[k] as Task[K] : t[k];
 const set = (t: Task, patch: Partial<Task>): Task => {
-  const d = "delivery" in patch ? patch.delivery ?? null : t.delivery;
-  const q = "pendingQ" in patch ? patch.pendingQ ?? null : t.pendingQ;
-  const l = "launch" in patch ? patch.launch ?? null : t.launch;
-  const a = "approval" in patch ? patch.approval ?? null : t.approval;
   return Object.freeze({
-    ...t, ...patch, producerModels: Object.freeze([...(patch.producerModels ?? t.producerModels)]), pendingQ: snapQ(q), launch: snapL(l),
-    revoked: Object.freeze([...(patch.revoked ?? t.revoked)]), orphans: Object.freeze([...(patch.orphans ?? t.orphans)]),
-    retired: Object.freeze([...(patch.retired ?? t.retired)]),
-    instances: Object.freeze([...(patch.instances ?? t.instances)]), approval: snapA(a), delivery: snapD(d),
+    ...t, ...patch, producerModels: Object.freeze([...pick(t, patch, "producerModels")]), pendingQ: snapQ(pick(t, patch, "pendingQ") ?? null), launch: snapL(pick(t, patch, "launch") ?? null),
+    revoked: Object.freeze([...pick(t, patch, "revoked")]), orphans: Object.freeze([...pick(t, patch, "orphans")]),
+    retired: Object.freeze([...pick(t, patch, "retired")]),
+    instances: Object.freeze([...pick(t, patch, "instances")]), approval: snapA(pick(t, patch, "approval") ?? null), delivery: snapD(pick(t, patch, "delivery") ?? null),
   });
 };
 
@@ -470,6 +468,8 @@ const fieldOk = (v: unknown, f: FieldSpec): boolean => {
 };
 /** 事件种类 → 形状:用 Map 查表,"__proto__"、"constructor"、"toString" 这类原型链上的名字查不到,一律按未知种类拒绝(R8-CORR-01)。 */
 const SHAPE_BY_KIND: ReadonlyMap<string, Shape> = new Map(Object.entries(EVENT_SHAPES));
+/** 可选字段表只认形状自有的 opt;没声明 opt 的形状不会读到 Object.prototype 上同名的继承属性(R11-CORR-01)。 */
+const optOf = (shape: Shape): Readonly<Record<string, FieldSpec>> => Object.hasOwn(shape, "opt") ? shape.opt! : {};
 const label = (f: FieldSpec): string => f === "str" ? "非空字符串" : f === "nat" ? "非负整数" : f === "pint" ? "正整数" : f === "bool" ? "布尔" : f.join("/");
 /**
  * 把(可能来自 JSON 的)事件规范化成冻结的纯数据快照(R9-CORR-01/02/03、R10-CORR-01/02/03)。
@@ -484,7 +484,8 @@ export function normalizeEvent(e: unknown): { ok: true; event: TaskEvent } | { o
   try {
     return snapshotOf(e);
   } catch {
-    // 契约内的输入不会走到这里;只为宿主特殊对象(例如尚未初始化绑定的模块命名空间,取描述符会抛错)兜底
+    // JSON 产生的普通对象(含 Object.prototype 被放了同名属性时)不会走到这里;
+    // 尚未初始化绑定的模块命名空间原型为 null、不是 Proxy,取描述符会抛 ReferenceError,由这里兜底(R11-TEST-01,对应 X03/L04)
     return { ok: false, reason: "事件无法校验" };
   }
 }
@@ -514,18 +515,20 @@ const snapshotOf = (e: unknown): { ok: true; event: TaskEvent } | { ok: false; r
   if (typeof kind !== "string") return no_("事件种类缺失或不是字符串");
   const shape = SHAPE_BY_KIND.get(kind);
   if (!shape) return no_(`未知的事件种类 ${JSON.stringify(kind)}`);
-  const req: Record<string, FieldSpec> = { ...shape.req };
+  // 临时字段表原型为 null:追加条件字段时不会经过 Object.prototype 上同名的 setter 或不可写属性(R11-CORR-01)
+  const req: Record<string, FieldSpec> = Object.assign(Object.create(null), shape.req);
+  const opt = optOf(shape);
   // Review 先读 verdict:只有打回才需要 computeResumable;通过时它不是声明字段
   if (kind === "Review" && own.get("verdict") === "reject") req.computeResumable = "bool";
   // 原型为 null 的快照:读不到的字段就是 undefined,不会从 Object.prototype 上继承
   const snap = Object.create(null) as Record<string, unknown>;
   snap.kind = kind;
-  for (const k of [...Object.keys(req), ...Object.keys(shape.opt ?? {})]) {
+  for (const k of [...Object.keys(req), ...Object.keys(opt)]) {
     const v = own.get(k);
     if (v !== undefined) snap[k] = v;
   }
   for (const [k, f] of Object.entries(req)) if (!fieldOk(snap[k], f)) return no_(`${kind}.${k} 缺失或取值非法(应为${label(f)})`);
-  for (const [k, f] of Object.entries(shape.opt ?? {})) if (snap[k] !== undefined && !fieldOk(snap[k], f)) return no_(`${kind}.${k} 取值非法(应为${label(f)})`);
+  for (const [k, f] of Object.entries(opt)) if (snap[k] !== undefined && !fieldOk(snap[k], f)) return no_(`${kind}.${k} 取值非法(应为${label(f)})`);
   return { ok: true, event: Object.freeze(snap) as unknown as TaskEvent };
 };
 

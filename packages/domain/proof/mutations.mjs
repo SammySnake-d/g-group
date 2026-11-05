@@ -11,11 +11,14 @@
 // H01–H09 对应第八轮审查独立变异(H10 为阳性对照不重复);X01–X06 是第八轮修复的新增埋雷;
 // J01–J04 对应第九轮审查独立变异(J05/J06 为对照不列入);Y02–Y05 是第九轮规范化快照的新增埋雷;Z01–Z05 是普通数据对象契约边界的埋雷;
 // 第十轮:Y01(访问器读两次)与 X03(去掉外层兜底)随"含访问器即拒绝、永不调用 getter"失去可达输入而删除;
-// K01–K04 对应第十轮审查独立变异(K05 为阳性对照与 Y02 同一注入,K06/K07 为 AC-09 对照,均不列入);P01–P07 是第十轮修复的新增埋雷。
+// K01–K04 对应第十轮审查独立变异(K05 为阳性对照与 Y02 同一注入,K06/K07 为 AC-09 对照,均不列入);P01–P07 是第十轮修复的新增埋雷;
+// K01/K04 不是第十轮审查原注入的原样搬运:K02/K03 注入方向不变,K01 由"重复读取 requestId getter"改为"放行 requestId 访问器",K04 由"读取并保留额外 getter"改为"保留额外数据字段"(新契约拒绝访问器,原注入点已不存在);
+// 第十一轮:L01–L04 对应第十一轮审查独立变异(L05 为阳性对照与 P01 同类不列入),L04 就是第十轮删除的 X03,已有可达输入(未初始化的模块命名空间)故恢复;
+// Q01–Q03 是 R11-CORR-01 修复的新增埋雷;N13/D06/D07/E05/G05/W07/P07 随 set 改用自有属性 pick、形状表改用 optOf 重新指向新注入点,注入语义不变。
 // M30–M47 是联系人/Helper 作者埋雷;contact/helper 其余系列见各分组注释。为不和任务侧重名:
 // reviews/feat-contact-helper.md 第二轮的 N01–N05 记为 CN01–CN05,第三轮的 P01–P05 记为 CP01–CP05,第五轮的 Z01–Z05 记为 CZ01–CZ05,
 // 第六轮的 W01–W05 记为 CW01–CW05,第七轮的 V01–V08 记为 CV01–CV08,第八轮的 H05–H06 记为 CH05–CH06,第九轮的 J01–J05 记为 CJ01–CJ05,
-// 第十轮的 Y01–Y08 记为 CY01–CY08;contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK78。原样副本必须全绿(阴性对照)。
+// 第十轮的 Y01–Y08 记为 CY01–CY08,第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK78。原样副本必须全绿(阴性对照)。
 // 用法: node packages/domain/proof/mutations.mjs
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -85,7 +88,7 @@ const M = [
   ["N10 停止期间迟到上线的新实例不被停止", "task.ts", "return ok(b, [{ kind: \"stop-compute\", computeId: b.computeId! }]);", "return ok(b);"],
   ["N11 未回绑也允许向人提问", "task.ts", "const ev = as(e, \"NeedHuman\");\n      if (!t.computeId) return provablyStale(t, e) ? ok(t) : no(NO_COMPUTE);", "const ev = as(e, \"NeedHuman\");\n      if (!t.computeId) return ok(set(t, { state: \"T4b_BlockedOnHuman\", pendingQ: { qId: ev.qId, constraintVer: t.constraintVer } }));"],
   ["N12 确认卡不冻结", "task.ts", "q ? Object.freeze({ qId: String(q.qId), constraintVer: Number(q.constraintVer) }) : null", "q ? { qId: String(q.qId), constraintVer: Number(q.constraintVer) } : null"],
-  ["N13 确认卡沿用外部引用不重新快照", "task.ts", "pendingQ: snapQ(q), launch", "pendingQ: q, launch"],
+  ["N13 确认卡沿用外部引用不重新快照", "task.ts", "pendingQ: snapQ(pick(t, patch, \"pendingQ\") ?? null), launch", "pendingQ: pick(t, patch, \"pendingQ\") ?? null, launch"],
   ["N14 卡片绑定版本不与任务版本比对", "task.ts", "if (q.constraintVer !== t.constraintVer) return no(`卡片绑定版本 ${q.constraintVer} 与任务当前版本 ${t.constraintVer} 不一致`);", ""],
   ["B01 可恢复返工把负责人改成提出者", "task.ts", "if (resumable && t.computeId) return ok(set(t, { ...base, launch: null }),", "if (resumable && t.computeId) return ok(set(t, { ...base, launch: null, owner: t.requester }),"],
   ["B02 可恢复返工只保留末次生产模型", "task.ts", "if (resumable && t.computeId) return ok(set(t, { ...base, launch: null }),", "if (resumable && t.computeId) return ok(set(t, { ...base, launch: null, producerModels: t.producerModels.slice(-1) }),"],
@@ -135,8 +138,8 @@ const M = [
   ["D03 任一旧启动确认清空全部 revoked", "task.ts", "if (ev.requestId !== undefined && t.revoked.includes(ev.requestId)) return ok(set(t, { revoked: t.revoked.filter((r) => r !== ev.requestId) }));", "if (ev.requestId !== undefined && t.revoked.includes(ev.requestId)) return ok(set(t, { revoked: [] }));"],
   ["D04 任一孤儿确认清空全部 orphans", "task.ts", "return ok(set(t, { orphans: t.orphans.filter((c) => c !== ev.computeId), retired: [...t.retired, ev.computeId] }), [{ kind: \"release-slot\", computeId: ev.computeId }]);", "return ok(set(t, { orphans: [], retired: [...t.retired, ev.computeId] }), [{ kind: \"release-slot\", computeId: ev.computeId }]);"],
   ["D05 只登记第一个孤儿", "task.ts", "  if (t.orphans.includes(ev.computeId)) return ok(t);", "  if (t.orphans.length > 0) return ok(t);"],
-  ["D06 revoked 不冻结", "task.ts", "revoked: Object.freeze([...(patch.revoked ?? t.revoked)]), orphans: Object.freeze([...(patch.orphans ?? t.orphans)]),", "revoked: [...(patch.revoked ?? t.revoked)], orphans: Object.freeze([...(patch.orphans ?? t.orphans)]),"],
-  ["D07 orphans 不冻结", "task.ts", "revoked: Object.freeze([...(patch.revoked ?? t.revoked)]), orphans: Object.freeze([...(patch.orphans ?? t.orphans)]),", "revoked: Object.freeze([...(patch.revoked ?? t.revoked)]), orphans: [...(patch.orphans ?? t.orphans)],"],
+  ["D06 revoked 不冻结", "task.ts", "revoked: Object.freeze([...pick(t, patch, \"revoked\")]), orphans", "revoked: [...pick(t, patch, \"revoked\")], orphans"],
+  ["D07 orphans 不冻结", "task.ts", "orphans: Object.freeze([...pick(t, patch, \"orphans\")]),", "orphans: [...pick(t, patch, \"orphans\")],"],
   ["D08 返工丢掉孤儿集合", "task.ts", "const base = { state: \"T3_Running\", constraintVer: t.constraintVer + 1,", "const base = { orphans: [], state: \"T3_Running\", constraintVer: t.constraintVer + 1,"],
   ["D09 同请求不同实例当作重复", "task.ts", "  if (ev.computeId === t.computeId) return ok(t);", "  if (ev.computeId === t.computeId || ev.requestId === t.boundRequest) return ok(t);"],
   ["D10 update-constraints 版本封顶为 2", "task.ts", "[{ kind: \"update-constraints\", computeId: t.computeId, constraintVer: ver }]", "[{ kind: \"update-constraints\", computeId: t.computeId, constraintVer: Math.min(ver, 2) }]"],
@@ -160,7 +163,7 @@ const M = [
   ["E02 迟到换模只认最近两个曾回绑实例(审后)", "task.ts", "if (!t.instances.includes(ev.computeId) || t.producerModels.includes(ev.model)) return ok(t);", "if (!t.instances.slice(-2).includes(ev.computeId) || t.producerModels.includes(ev.model)) return ok(t);"],
   ["E03 审后迟到的 unknown 厂商不重审", "task.ts", "  if (gate instanceof Error) return reReview(t2);", "  if (gate instanceof Error) return t2.producerModels.some((m) => vendorOf(m) === \"unknown\") ? ok(t2) : reReview(t2);"],
   ["E04 审查批准快照不冻结", "task.ts", "a ? Object.freeze({ reviewerModel: String(a.reviewerModel), waiverBy: a.waiverBy === null ? null : String(a.waiverBy) }) : null;", "a ? { reviewerModel: String(a.reviewerModel), waiverBy: a.waiverBy === null ? null : String(a.waiverBy) } : null;"],
-  ["E05 审查批准沿用调用方引用", "task.ts", "approval: snapA(a), delivery: snapD(d),", "approval: a, delivery: snapD(d),"],
+  ["E05 审查批准沿用调用方引用", "task.ts", "approval: snapA(pick(t, patch, \"approval\") ?? null),", "approval: pick(t, patch, \"approval\") ?? null,"],
   ["E06 重审保留旧 approval", "task.ts", "reviewGate: \"none\", approval: null, delivery: null, badge: \"none\" }), [{ kind: \"request-review\"", "reviewGate: \"none\", delivery: null, badge: \"none\" }), [{ kind: \"request-review\""],
   ["E07 重审把负责人改成提出者", "task.ts", "return ok(set(t, { state: \"T5_InReview\", reviewRound: round,", "return ok(set(t, { state: \"T5_InReview\", owner: t.requester, reviewRound: round,"],
   ["E08 认领时首派请求绑版本 0", "task.ts", "const launch: Launch = { requestId: `${t.id}#L0`, constraintVer: t.constraintVer };", "const launch: Launch = { requestId: `${t.id}#L0`, constraintVer: 0 };"],
@@ -198,7 +201,7 @@ const M = [
   ["G02 已验收状态退回不核 taskId", "task.ts", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id) return", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id && !(e.kind === \"UserReject\" && t.state === \"T8_Accepted\")) return"],
   ["G03 归档状态补确认不核 taskId", "task.ts", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id) return", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id && !(e.kind === \"UserAccept\" && t.state === \"T8_ArchivedUnverified\")) return"],
   ["G04 DeliveredCard 不校验代次", "task.ts", "  DeliveredCard: { req: DELIVERY_SHAPE },", "  DeliveredCard: { req: { taskId: \"str\", commit: \"str\" } },"],
-  ["G05 retired 不冻结", "task.ts", "retired: Object.freeze([...(patch.retired ?? t.retired)]),", "retired: [...(patch.retired ?? t.retired)],"],
+  ["G05 retired 不冻结", "task.ts", "retired: Object.freeze([...pick(t, patch, \"retired\")]),", "retired: [...pick(t, patch, \"retired\")],"],
   ["G06 孤儿退役时只留最近一条旧记录", "task.ts", "retired: [...t.retired, ev.computeId] })", "retired: [...t.retired.slice(-1), ev.computeId] })"],
   ["G07 当前实例停止覆盖旧退役账本", "task.ts", "retired: [...t.retired, t.computeId] }),", "retired: [t.computeId] }),"],
   ["G08 未回绑时只认最近两个退役实例", "task.ts", "t.retired.includes(ev.computeId));", "t.retired.slice(-2).includes(ev.computeId));"],
@@ -209,7 +212,7 @@ const M = [
   ["W04 非负整数允许负数", "task.ts", "  if (f === \"nat\") return Number.isSafeInteger(v) && (v as number) >= 0;", "  if (f === \"nat\") return Number.isSafeInteger(v);"],
   ["W05 布尔接受 0/1", "task.ts", "  if (f === \"bool\") return typeof v === \"boolean\";", "  if (f === \"bool\") return typeof v === \"boolean\" || v === 0 || v === 1;"],
   ["W06 枚举不查取值", "task.ts", "  return typeof v === \"string\" && f.includes(v);", "  return typeof v === \"string\";"],
-  ["W07 可选字段不校验", "task.ts", "  for (const [k, f] of Object.entries(shape.opt ?? {})) if (snap[k] !== undefined && !fieldOk(snap[k], f)) return no_(", "  for (const [k, f] of Object.entries(shape.opt ?? {})) if (k === \"__never__\" && !fieldOk(snap[k], f)) return no_("],
+  ["W07 可选字段不校验", "task.ts", "  for (const [k, f] of Object.entries(opt)) if (snap[k] !== undefined && !fieldOk(snap[k], f)) return no_(", "  for (const [k, f] of Object.entries(opt)) if (k === \"__never__\" && !fieldOk(snap[k], f)) return no_("],
   ["W08 reject 审查不要求 computeResumable", "task.ts", "  if (kind === \"Review\" && own.get(\"verdict\") === \"reject\") req.computeResumable = \"bool\";", ""],
   ["W09 未知事件种类放过", "task.ts", "  if (!shape) return no_(`未知的事件种类 ${JSON.stringify(kind)}`);", "  if (!shape) return { ok: true as const, event: e as TaskEvent };"],
   ["W10 入口不做形状校验", "task.ts", "  const n = normalizeEvent(input);\n  if (!n.ok) return no(n.reason);\n  const e = n.event;", "  const e = input;"],
@@ -251,7 +254,14 @@ const M = [
   ["P04 访问器拒绝原因不点名", "task.ts", "    if (!Object.hasOwn(d, \"value\")) return no_(`${PLAIN_ONLY}(含访问器属性 ${String(key)})`);", "    if (!Object.hasOwn(d, \"value\")) return no_(PLAIN_ONLY);"],
   ["P05 审查通过也要求 computeResumable", "task.ts", "  if (kind === \"Review\" && own.get(\"verdict\") === \"reject\") req.computeResumable = \"bool\";", "  if (kind === \"Review\") req.computeResumable = \"bool\";"],
   ["P06 审查通过时出现 computeResumable 也校验", "task.ts", "  if (kind === \"Review\" && own.get(\"verdict\") === \"reject\") req.computeResumable = \"bool\";", "  if (kind === \"Review\" && (own.get(\"verdict\") === \"reject\" || own.get(\"computeResumable\") !== undefined)) req.computeResumable = \"bool\";"],
-  ["P07 审查通过时 computeResumable 进入快照", "task.ts", "  for (const k of [...Object.keys(req), ...Object.keys(shape.opt ?? {})]) {", "  for (const k of [...Object.keys(req), ...Object.keys(shape.opt ?? {}), ...(kind === \"Review\" ? [\"computeResumable\"] : [])]) {"],
+  ["P07 审查通过时 computeResumable 进入快照", "task.ts", "  for (const k of [...Object.keys(req), ...Object.keys(opt)]) {", "  for (const k of [...Object.keys(req), ...Object.keys(opt), ...(kind === \"Review\" ? [\"computeResumable\"] : [])]) {"],
+  ["L01 有 waiverBy 的审查打回漏校验 computeResumable", "task.ts", "  if (kind === \"Review\" && own.get(\"verdict\") === \"reject\") req.computeResumable = \"bool\";", "  if (kind === \"Review\" && own.get(\"verdict\") === \"reject\" && !own.has(\"waiverBy\")) req.computeResumable = \"bool\";"],
+  ["L02 漏检不可枚举的 symbol 访问器", "task.ts", "    if (!d) continue;", "    if (!d || (typeof key === \"symbol\" && !d.enumerable)) continue;"],
+  ["L03 漏检 symbol 键的仅 setter 访问器", "task.ts", "    if (!Object.hasOwn(d, \"value\")) return no_(`${PLAIN_ONLY}(含访问器属性 ${String(key)})`);", "    if (!Object.hasOwn(d, \"value\") && !(typeof key === \"symbol\" && d.get === undefined)) return no_(`${PLAIN_ONLY}(含访问器属性 ${String(key)})`);"],
+  ["L04 去掉外层 catch(即第十轮删除的 X03)", "task.ts", "  try {\n    return snapshotOf(e);\n  } catch {\n    // JSON 产生的普通对象(含 Object.prototype 被放了同名属性时)不会走到这里;\n    // 尚未初始化绑定的模块命名空间原型为 null、不是 Proxy,取描述符会抛 ReferenceError,由这里兜底(R11-TEST-01,对应 X03/L04)\n    return { ok: false, reason: \"事件无法校验\" };\n  }", "  return snapshotOf(e);"],
+  ["Q01 临时必填字段表改回普通原型", "task.ts", "  const req: Record<string, FieldSpec> = Object.assign(Object.create(null), shape.req);", "  const req: Record<string, FieldSpec> = { ...shape.req };"],
+  ["Q02 任务 patch 字段用 in 判断(认继承属性)", "task.ts", "Object.hasOwn(patch, k) ? patch[k] as Task[K] : t[k];", "k in patch ? patch[k] as Task[K] : t[k];"],
+  ["Q03 可选字段表读 shape.opt(认继承属性)", "task.ts", "Object.hasOwn(shape, \"opt\") ? shape.opt! : {};", "shape.opt ?? {};"],
   ["M28 vendor 两家都像时取第一家", "vendor.ts", "return hits.size === 1 ? [...hits][0]! : \"unknown\";", "return hits.size >= 1 ? [...hits][0]! : \"unknown\";"],
   ["M30 同 id 新建覆盖", "contact.ts", "if (d.contacts.has(c.id)) return { ok: false, reason: `联系人 ${c.id} 已存在,不能同 id 新建覆盖` };", ""],
   ["M31 改名时清空记忆", "contact.ts", "...(patch.name !== undefined ? { name: patch.name } : {}),", "...(patch.name !== undefined ? { name: patch.name, memory: \"\" } : {}),"],
@@ -315,12 +325,12 @@ const M = [
   ["CK23 出处等于依据位置也拒", "contact.ts", "k.sourceSeq > receipt.basedOnSeq", "k.sourceSeq >= receipt.basedOnSeq"],
   ["CK24 回执只认第一条点名承诺", "contact.ts", "receipt.commitmentIds.includes(k.id)", "receipt.commitmentIds.slice(0, 1).includes(k.id)"],
   ["CK25 能力资产只查空串不查空白", "contact.ts", "if (!a.name.trim()) return", "if (!a.name) return"],
-  // 以下 Q01–Q05 取自 Codex 第四轮独立复审 reviews/feat-contact-helper.md CH-13(注入点与 independent-mutations-round4.json 一致),CK26–CK30 是 CH-12 返修的埋雷
-  ["Q01 空作用域当成覆盖全部承诺", "contact.ts", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq > receipt.basedOnSeq) return k;", "if ((receipt.commitmentIds.length > 0 && !receipt.commitmentIds.includes(k.id)) || k.sourceSeq > receipt.basedOnSeq) return k;"],
-  ["Q02 点名承诺共用第一条的出处比较", "contact.ts", "k.sourceSeq > receipt.basedOnSeq", "c.commitments[0]!.sourceSeq > receipt.basedOnSeq"],
-  ["Q03 只看上一次确认代替查已确认集合", "contact.ts", "!k.reportedTaskIds.includes(taskId)", "k.reportedTaskIds.at(-1) !== taskId"],
-  ["Q04 能力资产空白校验只认空格和制表符", "contact.ts", "if (!a.name.trim()) return { ok: false, reason: \"能力资产名不能为空\" };", "if (a.name === \"\" || /^[ \\t]*$/.test(a.name)) return { ok: false, reason: \"能力资产名不能为空\" };"],
-  ["Q05 出处等于依据位置也拒", "contact.ts", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq > receipt.basedOnSeq) return k;", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq >= receipt.basedOnSeq) return k;"],
+  // 以下 CQ01–CQ05(报告原编号 Q01–Q05)取自 Codex 第四轮独立复审 reviews/feat-contact-helper.md CH-13(注入点与 independent-mutations-round4.json 一致),CK26–CK30 是 CH-12 返修的埋雷
+  ["CQ01 空作用域当成覆盖全部承诺", "contact.ts", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq > receipt.basedOnSeq) return k;", "if ((receipt.commitmentIds.length > 0 && !receipt.commitmentIds.includes(k.id)) || k.sourceSeq > receipt.basedOnSeq) return k;"],
+  ["CQ02 点名承诺共用第一条的出处比较", "contact.ts", "k.sourceSeq > receipt.basedOnSeq", "c.commitments[0]!.sourceSeq > receipt.basedOnSeq"],
+  ["CQ03 只看上一次确认代替查已确认集合", "contact.ts", "!k.reportedTaskIds.includes(taskId)", "k.reportedTaskIds.at(-1) !== taskId"],
+  ["CQ04 能力资产空白校验只认空格和制表符", "contact.ts", "if (!a.name.trim()) return { ok: false, reason: \"能力资产名不能为空\" };", "if (a.name === \"\" || /^[ \\t]*$/.test(a.name)) return { ok: false, reason: \"能力资产名不能为空\" };"],
+  ["CQ05 出处等于依据位置也拒", "contact.ts", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq > receipt.basedOnSeq) return k;", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq >= receipt.basedOnSeq) return k;"],
   ["CK26 承诺不校验出处位置", "contact.ts", "  if (!isSeq(k.sourceSeq)) return { ok: false, reason: `承诺出处 ${k.sourceSeq} 不是合法的消息位置(非负整数)` };\n", ""],
   ["CK27 回执不校验依据位置", "contact.ts", "  if (!isSeq(receipt.basedOnSeq)) return freezeContact(c);\n", ""],
   ["CK28 位置只查有限不查整数", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isFinite(n) && n >= 0"],
@@ -330,7 +340,6 @@ const M = [
   ["CZ01 位置只查整数不查安全整数", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isInteger(n) && n >= 0"],
   ["CZ02 最大安全整数也拒", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isSafeInteger(n) && n >= 0 && n < Number.MAX_SAFE_INTEGER"],
   ["CZ04 撤销允许任何非 revoked 状态", "contact.ts", "k.id === id && k.status === \"active\"", "k.id === id && k.status !== \"revoked\""],
-  ["CZ05 位置 0 被拒", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isSafeInteger(n) && n > 0"],
   ["CK31 同名异类资产静默成功", "contact.ts", "  if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };\n", ""],
   ["CK32 同名同类资产也拒", "contact.ts", "  if (same) return { ok: true, contact: freezeContact(c) };", "  if (same) return { ok: false, reason: \"重复\" };"],
   ["CK33 同名异类覆盖旧资产", "contact.ts", "if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };", "if (same && same.kind !== a.kind) return { ok: true, contact: freezeContact({ ...c, computeAssets: c.computeAssets.map((x) => (x.name === a.name ? { name: a.name, kind: a.kind } : x)) }) };"],
@@ -339,7 +348,6 @@ const M = [
   ["CW02 同名同类幂等只对 MCP 生效", "contact.ts", "if (same) return { ok: true, contact: freezeContact(c) };", "if (same && same.kind === \"mcp\") return { ok: true, contact: freezeContact(c) };"],
   ["CW03 资产名按前缀匹配", "contact.ts", "c.computeAssets.find((x) => x.name === a.name)", "c.computeAssets.find((x) => x.name.startsWith(a.name))"],
   ["CW04 资产按同名或同类判重", "contact.ts", "c.computeAssets.find((x) => x.name === a.name)", "c.computeAssets.find((x) => x.name === a.name || x.kind === a.kind)"],
-  ["CW05 删除同名异类拒绝", "contact.ts", "  if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };\n", ""],
   ["CK34 资产登记不查同名直接工具", "contact.ts", "  if (c.tools.some((t) => t.name === a.name)) return { ok: false, reason: `${a.name} 已是直接工具,不必再登记` };\n", ""],
   ["CK35 资产名按反向前缀匹配", "contact.ts", "c.computeAssets.find((x) => x.name === a.name)", "c.computeAssets.find((x) => a.name.startsWith(x.name))"],
   ["CK36 同类第二个资产覆盖第一个", "contact.ts", "computeAssets: [...c.computeAssets, { name: a.name, kind: a.kind }]", "computeAssets: [...c.computeAssets.filter((x) => x.kind !== a.kind), { name: a.name, kind: a.kind }]"],
@@ -395,7 +403,7 @@ const M = [
   // 以下取自 Codex 第十二轮复审 reviews/feat-contact-helper.md:CH-34 指出 CK40、CK41、CK42、CY02 在入参数组自带迭代器、原型链同名属性下可观察,不是等价变异,恢复进清单;
   // CK72 对应 CH-35 / 独立变异 X01(Reflect.ownKeys→Object.keys);CK73–CK78 是 CH-29–CH-33 返修的埋雷。
   // 仍不收录的等价条件(写在收据第 7 栏):CK46、CK47、CY01、CY06 的入参字段是原始字符串/数字、读两次结果相同,且没有原型链缺省可读;CK64"空原型快照改赋值写入"没有可经过的 setter;
-  // CK55、CY05 所测功能已按 #2273 撤销,不是等价变异。
+  // CK55、CY05 所测功能已按 #2273 撤销,不是等价变异。CZ05 与 CK30、CW05 与 CK31 是同一注入,只保留 CK30、CK31,不重复。
   ["CK40 输出 tools 重新遍历入参(经入参数组自带的迭代器)", "contact.ts", "tools: Object.freeze([...r.tools])", "tools: Object.freeze([...input.tools])"],
   ["CK41 输出 credentialRefs 重新遍历入参(经入参数组自带的迭代器)", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs])", "credentialRefs: Object.freeze([...input.credentialRefs])"],
   ["CK42 placement 重新读入参(缺省时读到原型链)", "contact.ts", "const placement = r.placement ?? \"local\";", "const placement = input.placement ?? \"local\";"],

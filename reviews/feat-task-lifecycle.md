@@ -1120,3 +1120,108 @@ REVIEW_REPO="$PWD" node "$E/prototype-nonwritable-probe.mjs"
 ### 第十一轮本地门禁的实际结果
 
 写入 reject 收据后，在独立 clone 运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`，exit 1：`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER/G-PROVENANCE` 均通过。来源门禁本轮已在会话记录中识别出指定 hash 和跨厂商来源；完整输出见证据目录 `gates-after.log`。
+
+---
+
+# 第十二轮 · Codex 独立复现（2026-11-06）
+
+## 结论：approve（限定本片领域纯函数）
+
+第十一轮原型字段污染导致的必填校验和返工副作用错误，在指定 `a85a90928804aac2fd52f5aaf1a4391af51b1ef4` 的本轮独立对照中已修复；用户列出的行为、7 个重定向变异语义、X03 可达性、PR #4 联系人入口契约，以及 8 个门禁的独立负例均已执行。**没有发现当前原版必须修复的行为缺陷**，故对本片代码审查给出 approve；这不是用户体验、真实 Compute 或完整跨层验收。
+
+需要如实保留测试覆盖边界：本轮另造的 5 个单点故障中 **2 个被现有测试杀死、3 个存活**；原版在这 3 个独立探针中均正确。建议把对应 3 个用例加入后续回归，不把“234 个作者变异全杀”解释成所有可能的故障都会被发现。R-05 要求每条判据至少一个阳性与阴性对照，并未要求所有可构造变异全杀；本轮用户指定判据的现有正反标定与独立实测见下，不将仅属未来回归保护的存活变异虚报为当前实现缺陷。
+
+- 对象：`feat/task-lifecycle` HEAD `a85a90928804aac2fd52f5aaf1a4391af51b1ef4`；基线 `origin/feat/domain-core` = `afd02560f9546147da380382404eb6106222a9b8`。普通独立 HTTPS clone，`.git` 与 common dir 都是该 clone 自己的目录；未在共享 linked worktree 运行钩子。
+- 审查会话 `codex:494d03f8-8b47-4ae3-a080-43526db82afd`；本轮原始 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI）。作者会话 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38` 涉及本仓库的产出轮次为 `claude-opus-5-5`（Anthropic，两个渠道前缀）；不同原生研发厂商，无豁免。
+- 在独立 clone 仓库根目录实际运行 `node scripts/gates/run-all.ts --hash --branch=feat/task-lifecycle --base=origin/feat/domain-core`，原样输出，与作者声明一致：
+
+```text
+d0ff7802b8fed999fa6af05049c246e85516e859bdd32b75a41ef6418d18b61f
+```
+
+- 原始日志、脚本、单点变异补丁、独立门禁夹具与结果：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review12-evidence-gWS5VA/`。独立探针运行纯函数及隔离副本，未启动真实 Compute 或发送卡片。
+
+## 一、独立执行与第十一轮返修
+
+| 操作 | 实测结果 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均 exit 0；Node `v25.8.1`、npm `11.11.0` |
+| `npm test` | exit 0；184 通过、0 失败、0 跳过 |
+| 独立 clone 检出红提交 `60389ce` | exit 1；23 绿、161 具名红。按文件＋测试名比对基线以来新增／改动的 161 条，红提交全部具名失败、绿版全部具名通过，文件级失败 0；红绿测试文件无差异。空壳红证明测试激活，不等于每个缺陷在旧实现上均被复现 |
+| 新测试套旧实现 `8e57583` | 隔离副本只把 `task.ts` 换回旧版，沿用绿版新增测试夹具，不加垫片；exit 1，182 绿、2 具名红，失败名称集合与作者 `red-against-8e57583.tap` 一致 |
+| 作者 `node packages/domain/proof/mutations.mjs` | exit 0，原样 184 绿；234 个作者变异均有具名失败。7 个重新指向的旧变异另逐项隔离执行，见下 |
+| 上轮审查独立测试 | 本审查人的第十一轮 17 组测试在本版全部通过，包括上轮 3 条原型污染红例、61 个声明字段 × 4 入口的访问器拒绝对照 |
+| 原型矩阵 | 27 个字段名 × 可写数据属性／setter／不可写属性，共 81 组；每组对 Review 打回 `true`、`false`、缺失分别调用四入口，并检查新建任务与派发，全部通过；继承 setter 未调用。测试只在单独进程临时改变原型，结束恢复 |
+| Review 打回效果 | `true` 恢复 `cc-1` 并发 `resume-compute`；`false` 清除当前实例并发带交接的 `spawn-compute`；缺失在四入口按字段原因拒绝。上述三种在各原型条件下与无污染对照一致 |
+| 独立 AC-09 对照 | 本片 12 × 15 格有处理／原因；删除一格 typecheck 失败且 2 条 AC-09 具名测试红；新增事件、补全所有格及测试样例后 typecheck 与 184 项测试绿。首次运行对照脚本时漏建证据子目录，Python 报 `FileNotFoundError`，原管道仅返回 `tee` 的 exit 0；建目录并启用 `pipefail` 后已重跑，非产品失败 |
+
+## 二、7 个重定向变异与 X03
+
+7 个变异逐一在独立副本按作者当前注入点执行：每项 typecheck exit 0、原测试有具名失败；同时用相同输入比较原版／变异版的实际语义：
+
+| 变异 | 独立对照 |
+|---|---|
+| N13 | 原版 `pendingQ` 冻结且不复用外部引用；变异版沿用引用，外部修改会改变结果 |
+| D06 / D07 | 原版 `revoked` / `orphans` 冻结；对应变异版未冻结 |
+| E05 | 原版 `approval` 复制并冻结；变异版沿用外部引用，可被外部改写 |
+| G05 | 原版 `retired` 冻结；变异版未冻结 |
+| W07 | 原版非法可选字段 `ExecFailed.computeId` 被拒；变异版放行 |
+| P07 | 原版 `Review(approve)` 快照丢弃 `computeResumable`；变异版保留 |
+
+所以就上述实际探针而言，7 项的重定向仍覆盖作者写明的原故障方向，不仅是因类型错误或模块加载失败变红。完整补丁、类型检查、原测试与双侧探针见 `retarget/`。
+
+**X03 非等价理由成立。**审查人另建循环 ES module：在导出绑定初始化前取得命名空间，它不是 Proxy、原型为 null，但取未初始化绑定的属性描述符会抛 `ReferenceError`。原版四入口均返回 `事件无法校验`；隔离副本去掉外层 catch 后，同一输入的四入口均抛 `ReferenceError`，且原有具名测试杀死该变异。模块命名空间不是 JSON 数据对象；它证明外层兜底对这个可达的**契约外输入**有区别，不是称其为合法 JSON 事件。结果见 `x03/original.log`、`mutant.log`、`tests.tap`。
+
+收据对 K01/K04 已明确记为适配新契约后的改写，而不是“原样注入”；K02/K03 方向未变，描述已与代码相符。
+
+## 三、独立注入故障与剩余覆盖风险
+
+以下仅是隔离副本中**故意改坏**的单点故障。R01–R03 每项 typecheck exit 0、原 184 项测试仍全绿；原版／变异版的同一输入实际不同：
+
+| 变异 | 原版／变异版对照 | 对现有测试的意义 |
+|---|---|---|
+| R01 仅把 `UserReject` 临时字段表改为普通原型 | 同名继承 setter 下，原版保留自有 `true` 并恢复原实例；变异版调用 setter 并错误新开 | 现有原型测试覆盖 Review 打回和其他任务字段，但未以此特定组合杀死故障 |
+| R02 错误放过 getter、setter 均为 `undefined` 的自有访问器描述符 | 原版按访问器拒绝；变异版错误放行 | 现有测试覆盖可调用 getter、setter-only 等，但此描述符组合未锁住 |
+| R03 错误跳过数字名称的自有访问器 | 原版拒绝且 getter 调用 0 次；变异版放行 | 现有测试未锁住 `"0"` 这类键名 |
+
+R04（`NeedHuman` 可选字段表认继承 `opt`）及 R05（patch 用 `in` 认继承属性）均被现有具名测试杀死，类型检查均绿。额外独立的 `novel-regressions.test.mjs` 在原版 3/3 通过，在 R01、R02、R03 各自只让对应一条失败；建议将这 3 个用例纳入产品测试，以保护重要的返工与“任何访问器”边界。完整补丁、测试、双侧结果在 `novel-mutants/`。这些是**回归测试缺口，不是当前原版已出现上述变异行为**。
+
+## 四、各门禁独立负例及 PR #4
+
+审查人构造 8 个独立临时 Git 仓库，每个只注入一个针对目标门禁的违规输入；另有一个正常对照。均调用本轮实际 `scripts/gates/run-all.ts --local`：正常对照 exit 0、8 门禁全绿；每个负例 exit 1，且**恰好目标门禁失败**。来源记录在这些仓库中是明确标注的合成测试夹具，不冒充真实审查会话。
+
+| 门禁 | 独立失败输入 | 观察 |
+|---|---|---|
+| G-TRACE | 收据声明验收文档不存在的 `AC-99` | 只该门禁拒绝 |
+| G-REVIEW | 收据审查结论 `reject` | 只该门禁拒绝 |
+| G-RED | 红提交里的行为测试本来就绿 | 按测试名拒绝 |
+| G-STUB | 测试吞掉桩异常并错误保留期望值 | 判为空桩下未具名失败 |
+| G-TAUTO | 增加恒真断言 `assert.equal(7, 7)` | 标出恒真断言 |
+| G-WORKFLOW | PR workflow 申请 `contents: write` | 拒绝写权限 |
+| G-LAYER | domain 包引用 kernel 包 | 拒绝反向依赖 |
+| G-PROVENANCE | 合成审查记录中的 hash 不等于收据 | 拒绝来源不符 |
+
+另测合成的同厂商且无豁免输入：`G-REVIEW` 与 `G-PROVENANCE` 均拒绝。各夹具及输出见 `gate-fixtures/`；仓库自带 `npm run gates:selftest` 也 exit 0，64 个检查项通过。
+
+PR #4 当时远端 HEAD 为 `f227649a4676716e3851b4ddbc9bd8609f6d864a`。其收据与联系人入口源代码已改为普通数据对象、Proxy 拒绝、自有访问器拒绝且 getter 不调用；审查人另在普通独立 clone 运行“联系人每个公开入口对象字段 getter/setter 均拒绝”用例，1/1 通过。与本 PR 事件对象的相关原则一致；PR #4 对其需要的数组还有单独约束，本次未完成 PR #4 全量审查或端到端验收。
+
+## 五、收据与未测边界
+
+- 审查前运行本机 `run-all --local`：只 `G-REVIEW` 因 review 尚为空失败；此时 `G-PROVENANCE` 虽显示绿，但因无 review 会直接跳过，不能把它当成来源验证。
+- 收据保留的边界仍重要：AC-09 仅本片 12 × 15 主干；其他需求状态／事件、宿主对 taskId / computeId / 模型 / 豁免身份的认证、真实 Compute 恢复或新开、UI、工作区隔离、CAS/租约及跨层资源回收均未验。纯函数 effects 是意图，不是实际进程或卡片证据。
+- 独立复现脚本示例：
+
+```sh
+E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review12-evidence-gWS5VA
+REVIEW_REPO="$PWD" node --test --test-reporter=tap "$E/prototype-matrix.test.mjs"
+REVIEW_REPO="$PWD" node --test --test-reporter=tap "$E/novel-regressions.test.mjs"
+# 各单点变异和门禁负例的完整输入、日志及原版／变异版对照均保存在证据目录。
+```
+
+本轮只追加本报告并更新 `receipts/feat-task-lifecycle.json` 的 `review` 字段；未修改产品代码。批准仅针对本片领域纯函数及本轮所列检查，不替代用户验收或后续跨层验证。
+
+### 第十二轮本地门禁的实际结果与合入阻塞
+
+写入 approve 收据后，在独立 clone 运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`，exit 1。`G-TRACE/G-REVIEW/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER` 均通过；**`G-PROVENANCE` 未通过**：门禁读取的会话记录中尚没有输出恰等于本轮 `reviewed_hash` 的工具调用，因此也无法认出该轮审查厂商。实查当前 `turns.jsonl` 已落盘的 4 轮中命中本 hash 的调用为 0；本轮指定命令已单独实际运行，原始 `turn_context.model` 与作者模型也已分别核查，但这些观察不能代替门禁通过。
+
+因此，本报告的代码 `approve` **不解除跨厂商来源硬门禁，当前不可据此合入**。待本活动轮次完整落盘后，由原任务复跑同一 `--local` 命令并确认 `G-PROVENANCE` 真正通过；不伪造会话记录。原始输出见证据目录 `gates-after.log`。

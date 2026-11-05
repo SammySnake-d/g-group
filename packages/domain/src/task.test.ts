@@ -4,6 +4,7 @@
 // AC-28 / R-09 交付待确认、超时只算未核验、所有返工入口共用可恢复性契约并能回绑新 Compute(CORR-02/03);
 // AC-19 确认卡绑定版本,卡片是不可变快照(CORR-04)。
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 import { apply, applyAll, type Effect, EVENT_KINDS, type EventKind, newTask, type Outcome, STATES, TABLE, type Task, type TaskEvent, type TaskState, normalizeEvent, validateEvent } from "./task.ts";
 
@@ -1790,5 +1791,149 @@ test("R9 契约边界:普通对象、Object.create(null) 对象、JSON.parse 结
   for (const ev of [{ kind: "Claim", by: "claude" }, nullProto, JSON.parse('{"kind":"Claim","by":"claude"}')]) {
     assert.equal(validateEvent(ev), null);
     assert.equal(must(apply(newTask("t1", "u1"), ev as TaskEvent)).task.owner, "claude");
+  }
+});
+
+// ---- 第十一轮 ----
+const TASK_URL = new URL("./task.ts", import.meta.url).href;
+/**
+ * 在单独的 Node 子进程里跑一段脚本(脚本里 m 是同一份 task.ts 模块),返回它 stdout 的 JSON。
+ * Object.prototype 只在子进程里被临时改动,子进程在 finally 中删除并核对已恢复;测试主进程的原型从不被改动。
+ */
+const inChild = (body: string): unknown => {
+  const r = spawnSync(process.execPath, ["--input-type=module", "-e", `const m = await import(process.env.TASK_URL);\n${CHILD_PRELUDE}\n${body}`], { env: { ...process.env, TASK_URL }, encoding: "utf8" });
+  if (r.status !== 0) throw new Error(`子进程失败(exit ${r.status}):${r.stderr}`);
+  return JSON.parse(r.stdout);
+};
+/** 子进程共用:under(key, cond, value, fn) 按四种条件之一在 Object.prototype 上放同名属性,fn 结束后一定删掉;safe 把异常记成 { threw }。 */
+const CHILD_PRELUDE = `
+const { newTask, apply, applyAll, normalizeEvent, validateEvent } = m;
+let calls = 0;
+const restored = [];
+const under = (key, cond, value, fn) => {
+  if (Object.getOwnPropertyDescriptor(Object.prototype, key)) throw new Error("Object.prototype 上已有 " + key);
+  const d = cond === "none" ? null
+    : cond === "data" ? { value, writable: true, configurable: true }
+    : cond === "setter" ? { set(_v) { calls++; }, configurable: true }
+    : { value, writable: false, configurable: true };
+  if (d) Object.defineProperty(Object.prototype, key, d);
+  try { return fn(); } finally {
+    if (d) delete Object.prototype[key];
+    restored.push(Object.getOwnPropertyDescriptor(Object.prototype, key) === undefined);
+  }
+};
+const safe = (fn) => { try { return fn(); } catch (err) { return { threw: String(err && err.message) }; } };
+`;
+const PROTO_CONDS = ["none", "data", "setter", "readonly"] as const;
+const R11_REVIEW = { kind: "Review", reviewerId: "astra", reviewerModel: "gpt-6-astra", round: 1, commit: "abc", constraintVer: 0, verdict: "reject" } as const;
+const R11_T5 = [{ kind: "Claim", by: "claude" }, { kind: "Dispatch", computeId: "cc-1", model: PRODUCER, requestId: "t1#L0" }, { kind: "SubmitForReview", commit: "abc", computeId: "cc-1", constraintVer: 0 }];
+/** computeResumable 取 true / false / 缺失;有无豁免人各一份(waiverBy 是提出者本人,跨厂商下不影响结论)。 */
+const r11Review = (v: "true" | "false" | "missing", w: "plain" | "waiver"): Record<string, unknown> =>
+  ({ ...R11_REVIEW, ...(v === "missing" ? {} : { computeResumable: v === "true" }), ...(w === "waiver" ? { waiverBy: "u1" } : {}) });
+const R11_MISSING = "Review.computeResumable 缺失或取值非法(应为布尔)";
+
+test("R11-CORR-01 审查打回经受 Object.prototype 同名 computeResumable(无/可写数据/setter/不可写):四个入口与无污染一致,true 恢复原实例、false 新开、缺失拒绝", () => {
+  const cases: [string, Record<string, unknown>][] = [];
+  for (const v of ["true", "false", "missing"] as const) for (const w of ["plain", "waiver"] as const) cases.push([`${v}/${w}`, r11Review(v, w)]);
+  const got = inChild(`
+const T5 = applyAll(newTask("t1", "u1"), ${JSON.stringify(R11_T5)}).task;
+const out = {};
+for (const [id, raw] of ${JSON.stringify(cases)}) for (const cond of ${JSON.stringify(PROTO_CONDS)}) {
+  const ev = JSON.parse(JSON.stringify(raw));
+  const r = under("computeResumable", cond, true, () => ({ normalize: safe(() => normalizeEvent(ev)), validate: safe(() => validateEvent(ev)), apply: safe(() => apply(T5, ev)), applyAll: safe(() => applyAll(T5, [ev])) }));
+  out[cond + "/" + id] = JSON.parse(JSON.stringify(r));
+}
+console.log(JSON.stringify({ out, calls, restored: restored.length > 0 && restored.every(Boolean) }));
+`) as { out: Record<string, unknown>; calls: number; restored: boolean };
+  for (const [id, raw] of cases) {
+    const ev = raw as unknown as TaskEvent;
+    const want = JSON.parse(JSON.stringify({ normalize: normalizeEvent(ev), validate: validateEvent(ev), apply: apply(inReview(), ev), applyAll: applyAll(inReview(), [ev]) }));
+    const v = id.split("/")[0];
+    if (v === "missing") {
+      const no = { ok: false, reason: R11_MISSING };
+      assert.deepEqual(want.normalize, no, id);
+      assert.equal(want.validate, R11_MISSING, id);
+      assert.deepEqual(want.apply, no, id);
+      assert.deepEqual(want.applyAll, no, id);
+    } else {
+      const fx = v === "true" ? [{ kind: "resume-compute", computeId: "cc-1", constraintVer: 1 }] : [{ kind: "spawn-compute", withHandoff: true, requestId: "t1#L1", constraintVer: 1 }];
+      assert.equal(want.validate, null, id);
+      assert.equal(want.normalize.event.computeResumable, v === "true", id);
+      for (const r of [want.apply, want.applyAll]) {
+        assert.equal(r.ok, true, id);
+        assert.equal(r.task.state, "T3_Running", id);
+        assert.equal(r.task.computeId, v === "true" ? "cc-1" : null, id);
+        assert.deepEqual(r.effects, fx, id);
+      }
+    }
+    for (const cond of PROTO_CONDS) assert.deepEqual(got.out[`${cond}/${id}`], want, `${cond}/${id}`);
+  }
+  assert.equal(got.calls, 0, "继承的 setter 不应被调用");
+  assert.equal(got.restored, true, "子进程每次都应恢复 Object.prototype");
+  assert.equal(Object.getOwnPropertyDescriptor(Object.prototype, "computeResumable"), undefined, "主进程原型未被改动");
+});
+
+/** 跑遍交付、退回、新开回绑、提问:产生 delivery、approval、launch、instances、producerModels、pendingQ 的读写。 */
+const R11_PATH = [...R11_T5,
+  { kind: "Review", reviewerId: "astra", reviewerModel: "gpt-6-astra", round: 1, commit: "abc", constraintVer: 0, verdict: "approve" },
+  { kind: "DeliveredCard", taskId: "t1", deliveryRound: 1, commit: "abc" },
+  { kind: "UserReject", taskId: "t1", by: "u1", computeResumable: false, deliveryRound: 1, commit: "abc" },
+  { kind: "Dispatch", computeId: "cc-2", model: "gemini-4-argon", requestId: "t1#L1" },
+  { kind: "NeedHuman", qId: "q", computeId: "cc-2", constraintVer: 1 }];
+const R11_TASK_KEYS = ["delivery", "pendingQ", "launch", "approval", "producerModels", "revoked", "orphans", "retired", "instances", "opt"];
+
+test("R11-CORR-01 同类:Object.prototype 上有任务字段或形状表 opt 的同名属性(可写数据/setter/不可写)时,新建任务、状态转移与形状校验结果不变", () => {
+  const junk = { by: "pint", round: 9, commit: "z", requestId: "t1#L9", constraintVer: 9, reviewerModel: "gpt-6", waiverBy: "u1", qId: "q9" };
+  const got = inChild(`
+const out = {};
+for (const key of ${JSON.stringify(R11_TASK_KEYS)}) for (const cond of ["data", "setter", "readonly"]) {
+  const r = under(key, cond, ${JSON.stringify(junk)}, () => ({ run: safe(() => applyAll(newTask("t1", "u1"), ${JSON.stringify(R11_PATH)})), claim: safe(() => validateEvent({ kind: "Claim", by: "claude" })) }));
+  out[cond + "/" + key] = JSON.parse(JSON.stringify(r));
+}
+console.log(JSON.stringify({ out, calls, restored: restored.length > 0 && restored.every(Boolean) }));
+`) as { out: Record<string, unknown>; calls: number; restored: boolean };
+  const run = must(applyAll(newTask("t1", "u1"), R11_PATH as TaskEvent[]));
+  assert.equal(run.task.state, "T4b_BlockedOnHuman");
+  assert.deepEqual(run.task.instances, ["cc-1", "cc-2"]);
+  assert.deepEqual(run.task.producerModels, [PRODUCER, "gemini-4-argon"]);
+  assert.deepEqual(run.task.pendingQ, { qId: "q", constraintVer: 1 });
+  assert.equal(run.task.delivery, null);
+  assert.equal(run.task.approval, null);
+  assert.equal(run.task.launch, null);
+  assert.deepEqual(run.effects.map((e) => e.kind), ["spawn-compute", "request-review", "send-card", "spawn-compute"]);
+  const want = JSON.parse(JSON.stringify({ run, claim: validateEvent({ kind: "Claim", by: "claude" }) }));
+  assert.equal(want.claim, null);
+  for (const key of R11_TASK_KEYS) for (const cond of ["data", "setter", "readonly"]) assert.deepEqual(got.out[`${cond}/${key}`], want, `${cond}/${key}`);
+  assert.equal(got.calls, 0, "继承的 setter 不应被调用");
+  assert.equal(got.restored, true);
+  for (const key of R11_TASK_KEYS) assert.equal(Object.getOwnPropertyDescriptor(Object.prototype, key), undefined, `主进程原型未被改动:${key}`);
+});
+
+test("R11-TEST-01 symbol 键的不可枚举访问器、仅 setter 访问器:四个入口都按含访问器拒绝,从不调用", () => {
+  for (const opts of [{ enumerable: false }, { setterOnly: true }, { enumerable: false, setterOnly: true }]) {
+    const calls = { n: 0 };
+    const ev = withAccessor({ kind: "Claim", by: "claude" }, Symbol("hidden"), calls, opts);
+    const no = { ok: false, reason: accessorReason("Symbol(hidden)") };
+    const tag = JSON.stringify(opts);
+    assert.deepEqual(normalizeEvent(ev), no, tag);
+    assert.equal(validateEvent(ev), no.reason, tag);
+    assert.deepEqual(apply(newTask("t1", "u1"), ev), no, tag);
+    assert.deepEqual(applyAll(newTask("t1", "u1"), [ev]), no, tag);
+    assert.equal(calls.n, 0, tag);
+  }
+});
+
+test("R11-TEST-01 外层兜底可达:未初始化的模块命名空间取描述符会抛错,四个入口都返回事件无法校验而不抛出", async () => {
+  await assert.rejects(import("./fixtures/tdz-namespace.mjs"), /stop/);
+  const ns = Reflect.get(globalThis, "__r11TdzNamespace") as TaskEvent;
+  try {
+    assert.throws(() => Object.getOwnPropertyDescriptor(ns, "kind"), ReferenceError);
+    const no = { ok: false, reason: "事件无法校验" };
+    assert.deepEqual(normalizeEvent(ns), no);
+    assert.equal(validateEvent(ns), no.reason);
+    assert.deepEqual(apply(newTask("t1", "u1"), ns), no);
+    assert.deepEqual(applyAll(newTask("t1", "u1"), [ns]), no);
+  } finally {
+    Reflect.deleteProperty(globalThis, "__r11TdzNamespace");
   }
 });
