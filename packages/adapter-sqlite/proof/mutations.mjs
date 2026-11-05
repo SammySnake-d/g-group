@@ -30,8 +30,12 @@ const M = [
   ["S17 事务换成进程内布尔锁(R17)", "store.ts", "return tx(s.db, () => cas(s, key, expectedVer, value));", 'const g = globalThis as { casLock?: boolean }; if (g.casLock) return { ok: false, reason: "busy" }; g.casLock = true; try { return cas(s, key, expectedVer, value); } finally { g.casLock = false; }'],
   ["S18 busy 不映射,照抛异常", "store.ts", 'if (isBusy(e)) return { ok: false, reason: "busy" };', ""],
   // 以下按 Codex 第二轮审查 RR-01 补入
-  ["S19 初始化套用调用方的 busy 超时", "store.ts", "db.exec(`PRAGMA busy_timeout = ${INIT_BUSY_MS}`);", "db.exec(`PRAGMA busy_timeout = ${Math.max(0, Math.trunc(opts.busyTimeoutMs ?? 5000))}`);"],
-  ["S20 初始化后不恢复调用方的 busy 超时", "store.ts", "  db.exec(SCHEMA);\n  db.exec(`PRAGMA busy_timeout = ${Math.max(0, Math.trunc(opts.busyTimeoutMs ?? 5000))}`);", "  db.exec(SCHEMA);"],
+  ["S19 初始化套用调用方的 busy 超时", "store.ts", "ms(opts.initBusyTimeoutMs ?? INIT_BUSY_MS)", "ms(opts.busyTimeoutMs ?? 5000)"],
+  ["S20 初始化后不恢复调用方的 busy 超时", "store.ts", "    db.exec(`PRAGMA busy_timeout = ${ms(opts.busyTimeoutMs ?? 5000)}`);\n", ""],
+  // 以下按 Codex 第三轮审查 RR-03 补入
+  ["S21 初始化失败不关闭连接", "store.ts", "    try { db.close(); } catch { /* 关闭失败也以初始化的原始错误为准 */ }\n", ""],
+  ["S22 关闭后吞掉原始错误换成笼统错误", "store.ts", "    throw e;\n  }\n  return { file, db,", "    throw new Error(\"openStore 初始化失败\");\n  }\n  return { file, db,"],
+  ["S23 关闭后不抛错,返回已关闭的句柄", "store.ts", "    throw e;\n  }\n  return { file, db,", "  }\n  return { file, db,"],
 ];
 
 function run(dir) {

@@ -1,35 +1,35 @@
 # 多进程用例循环 30 次:node --test --test-name-pattern='进程|夹具负例|busyTimeoutMs|调度延迟' packages/adapter-sqlite/src/store.test.ts
-# HEAD=795ad5d5024f5303981660e412228e7ebe20e243 node=v22.22.0 每轮后检查遗留 child.mjs 进程
-run 1: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 2: exit=0 pass=9 fail=0 遗留子进程=0 用时=2s
-run 3: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 4: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 5: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 6: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 7: exit=0 pass=9 fail=0 遗留子进程=0 用时=2s
-run 8: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 9: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 10: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 11: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 12: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 13: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 14: exit=0 pass=9 fail=0 遗留子进程=0 用时=2s
-run 15: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 16: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 17: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 18: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 19: exit=0 pass=9 fail=0 遗留子进程=0 用时=2s
-run 20: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 21: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 22: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 23: exit=0 pass=9 fail=0 遗留子进程=0 用时=2s
-run 24: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 25: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 26: exit=0 pass=9 fail=0 遗留子进程=0 用时=2s
-run 27: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 28: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 29: exit=0 pass=9 fail=0 遗留子进程=0 用时=3s
-run 30: exit=0 pass=9 fail=0 遗留子进程=0 用时=2s
+# 实现提交=e6431ddccdf3969df762e4afa4de48bae69824d2 node=v22.22.0 每轮后检查遗留 child.mjs 进程
+run 1: exit=0 pass=10 fail=0 遗留子进程=0 用时=4s
+run 2: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 3: exit=0 pass=10 fail=0 遗留子进程=0 用时=4s
+run 4: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 5: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 6: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 7: exit=0 pass=10 fail=0 遗留子进程=0 用时=4s
+run 8: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 9: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 10: exit=0 pass=10 fail=0 遗留子进程=0 用时=4s
+run 11: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 12: exit=0 pass=10 fail=0 遗留子进程=0 用时=4s
+run 13: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 14: exit=0 pass=10 fail=0 遗留子进程=0 用时=4s
+run 15: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 16: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 17: exit=0 pass=10 fail=0 遗留子进程=0 用时=4s
+run 18: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 19: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 20: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 21: exit=0 pass=10 fail=0 遗留子进程=0 用时=4s
+run 22: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 23: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 24: exit=0 pass=10 fail=0 遗留子进程=0 用时=4s
+run 25: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 26: exit=0 pass=10 fail=0 遗留子进程=0 用时=4s
+run 27: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 28: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 29: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
+run 30: exit=0 pass=10 fail=0 遗留子进程=0 用时=5s
 # 最后一轮用例: ok 1 - 同进程两个连接:A 读到版本未写入时 B 提交,B 返回 busy 不写入,重试收到版本冲突
 # 最后一轮用例: ok 2 - 另一进程持有写锁时新连接照常打开:初始化等锁,不因提交用的 0 busy 超时失败
 # 最后一轮用例: ok 3 - 两个独立进程基于同一版本同时提交:后到者等写锁,拿到锁后读到新版本收到冲突,内容是先到者的
@@ -38,5 +38,6 @@ run 30: exit=0 pass=9 fail=0 遗留子进程=0 用时=2s
 # 最后一轮用例: ok 6 - 调度延迟反例:B 放行后再拖 1500ms 才尝试,A 仍持锁,B 依旧返回 busy
 # 最后一轮用例: ok 7 - 测试夹具负例:子进程在就绪前退出,等待在有限时间内报失败,另一个等屏障的进程被回收,库未写入
 # 最后一轮用例: ok 8 - 测试夹具负例:子进程输出结果后异常退出,done 判失败而不是拿结果当绿
-# 最后一轮用例: ok 9 - 入库后、发送方记成功前进程被杀,重启重放同一 action_id 仍只有 1 条(AC-31③)
+# 最后一轮用例: ok 9 - 另一进程持锁超过初始化等待:openStore 在 initBusyTimeoutMs 后抛 database is locked,没有遗留连接,释放后健康库照常读写
+# 最后一轮用例: ok 10 - 入库后、发送方记成功前进程被杀,重启重放同一 action_id 仍只有 1 条(AC-31③)
 结论:30/30 全绿,无遗留子进程
