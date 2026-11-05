@@ -566,3 +566,88 @@ node "$E/independent-probes.mjs" "$PWD"
 ### 第五轮本地门禁的实际结果
 
 写入 reject 收据后运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`：exit 1。`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER` 通过。`G-PROVENANCE` 实际报告当前已落盘会话中没有输出等于本轮 hash 的调用、审查那轮厂商认不出；活动轮次尚未落盘，本轮 hash 命令与原始 rollout 的实际模型已分别实查，**不声称来源门禁通过**。当前轮记录落盘后由原任务复跑，不伪造记录。原始输出见证据目录 `gates-after.log`。
+
+---
+
+# 第六轮 · Codex 独立复现（2026-11-05）
+
+## 结论：reject
+
+`78cecbb5463dbafe8fe89775d163a3ee964a3b68` 的 126 项原样测试、151 项作者变异，以及第五轮旧交付代次与重审批次的主要正反路径均可复现；但孤儿实例的停止确认会删除其唯一身份记录，导致**同一已停止孤儿的迟到回包再次阻断当前启动，重复上线/确认还能产生两次释放同一槽位的 effect**。此外，无效、从未分配的 0/负数/小数交付代次被当成旧代次成功忽略，与本轮契约的“未分配即拒绝”不符。自造 9 个变异有 8 个存活。审查仅执行纯函数与隔离副本，没有启动真实进程或真实回收槽位；返修交回 Claude Code，不合并 PR。
+
+- 审查会话 `codex:5fd2f15b-443d-4c5b-a287-dfa6fe248103`，原始 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI）；作者会话涉及目标仓库的实际模型为 `claude-opus-5-5`（Anthropic，不同渠道前缀），跨厂商、无豁免。
+- 普通独立 clone；`.git` 与 common dir 均为该副本自己的目录。`origin/feat/domain-core=afd02560f9546147da380382404eb6106222a9b8`，与 HEAD 的 merge-base 为 `133cf7abcf6c897653f5b91647202c4ac963f231`；二者只差 PR #2 的审查/收据文件。
+- 仓库根目录执行 `node scripts/gates/run-all.ts --hash --branch=feat/task-lifecycle --base=origin/feat/domain-core`，原样输出：
+
+```text
+44bbc3fb9e46aac0c164275cb18f893d2d909a8769847fc98a09407ee8e924ba
+```
+
+- 原始日志、独立行为测试、事件路径探针、9 个变异补丁及测试/typecheck/比较结果：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review6-evidence-5fd2f15b/`。
+
+## 一、独立执行
+
+| 操作 | 实测结果 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均 exit 0；Node `v25.8.1` / npm `11.11.0` |
+| `npm test` | exit 0，126 通过、0 失败、0 跳过 |
+| 红提交 `bccccdbfd0034e6de7e6b2acfa61b583e8c85ab5` 完整具名测试 | exit 1，23 通过、103 具名失败：102 条报“未实现”、1 条 TABLE undefined；红绿测试文件相同。空壳红是激活证据，不是 103 条各自的缺陷复现 |
+| 红测试配旧版 `fdfecb1` 实现，在另一隔离副本运行 | exit 1，117 通过、9 具名失败；与 `packages/domain/proof/red-against-fdfecb1.tap` 的失败名称集合完全一致 |
+| 作者 `node packages/domain/proof/mutations.mjs` | exit 0，原样 126 绿，151 项出现具名失败；第五轮 E01–E09 均被杀；文件级失败不算杀死 |
+| 本轮独立行为测试 | **6 红、2 绿**：已确认停止的孤儿旧提问/提审、未分配数字代次、模拟跨任务错路由，以及 T2/T9 孤儿重复上线后重复释放；确认前旧提问和当前合法路径对照通过。跨任务红仅证明领域接口能力边界，不等于已观察到宿主误路由 |
+| 本轮独立事件矩阵 | 旧卡接受/退回/超时、旧发送 ACK、迟到生产记录重审批次、当前交付及首派重发旧版本对照均通过 |
+| 自造 F01–F09，逐项跑完整测试和 typecheck | **8 项存活**（每项 126 绿、typecheck exit 0）；F09 阳性对照被具名测试杀死且 typecheck 绿 |
+
+## 二、必须返修
+
+### R6-CORR-01 · 确认停止后忘掉孤儿身份，迟到回包阻断及重复释放
+
+- `packages/domain/src/task.ts:183–197,284–290,314–322,397–406`：孤儿上线后记在 `orphans`，`StoppedConfirmed(computeId)` 清掉该 ID 并发 `release-slot`；`provablyStale` 随后只能查 `instances` 或**当前** `orphans`，没有已确认停止的孤儿记录。
+- 独立纯函数序列：T2 等待当前首派 L0；错误请求的 `stopped-orphan` 上线，被登记并发 stop。**确认之前**它携当前条件版本的迟到 `NeedHuman` 被正确忽略；收到该孤儿停止确认后，同一个迟到提问或提审变成 `ok:false`。`applyAll([孤儿旧回包, 当前 L0 的合法 Dispatch])` 在第一条停止；单独执行相同合法 Dispatch 可以上线。这里说的是已被本任务登记且确认停止的实例，不是未知当前来源。
+- 同一根因还可重复产生释放 effect：孤儿上线 → `StoppedConfirmed` 返回一次 `release-slot(id)` → 同一个上线回包迟到重放 → 再次登记/stop → 同一个停止确认重放，实际又返回一次 `release-slot(id)`。T2 和 T9 均亲自复现。只观察了**两次同 ID 释放意图**，没有接真实槽位表，不能声称实际超配或重复扣减已经发生；宿主资源层的幂等也尚未验证。
+- 需保留能识别已结束实例及已消费确认的持久身份/幂等账本（可采用有界生命周期设计），让旧回包在确认前后都不阻断当前代次；同一实例/请求的重复上线与确认不可二次发释放。覆盖 T2/T3 新启动、T9、上线/确认乱序和不同合法实例的阴性对照；资源层也要对重复释放做可验证的幂等，不靠进程内数组假设。
+
+### R6-CORR-02 · 从未分配的交付代次被静默当成旧代次
+
+- `task.ts:291–295,426–440`：交付号从 1 开始递增，但 `staleDelivery` 只判断 `deliveryRound > deliverySeq`。在当前交付 round=1 时，`UserAccept` 的 round `0`、`-1`、`0.5`（均为 TypeScript `number`）都返回 `ok:true`、任务原样不变；round `2` 才被拒绝，round `1` 正常接受。前三个数都从未分配。
+- 这不是“无效代次获得了验收”：上述输入没有推进状态；问题是与本轮明确契约“已分配的旧代次忽略，**未分配的代次拒绝**”不符，调用方可能把成功的无操作当作已消费。若外层在反序列化前已保证正安全整数，也必须明确并验证该边界；当前公开事件类型仅为 `number`。
+- 先校验代次为正安全整数并确实属于本任务已分配的范围，再区分历史代次忽略与当前交付校验；未来、零、负数、小数和非有限值应有明确拒绝/解析错误，保留合法旧代次幂等与当前代次正例。不要把任务间相同数值自动视作同一代次，见下述边界。
+
+### R6-TEST-01 · 第五轮变异均杀死，但多代交付与已知孤儿分支仍有回归盲区
+
+F01–F08 是**人为单点改坏的变异，不是指控原版已有这些错误**。每项均在隔离副本跑完 126 项原测试与 typecheck，均 exit 0；各项另跑原版与变异版路径对照：
+
+| ID | 可存活的单点变异 |
+|---|---|
+| F01 / F02 | 未回绑时不识别已登记孤儿，或只认最近两个历史实例；已知旧来源的同版本回包被拒并可中断批次 |
+| F03 | 第三次交付后，最早交付的迟到回包不再忽略，阻断后续当前卡确认 |
+| F04 / F05 / F08 | 多次条件修改或第三次交付时，`send-card` effect 携带错误条件版本、commit 或交付轮次 |
+| F06 | 未核验归档后退回时交付序列清零；同 commit 再交付重用旧轮次，旧点击可误验收新版本 |
+| F07 | 只对 `UserAccept` 检查旧交付 commit；旧退回与当前确认同批时意外拒绝并中断 |
+
+F09（未回绑的未知当前来源也忽略）被具名测试杀死且 typecheck 绿，作为阳性对照。应补已登记孤儿的当前版本来源、多次历史实例和至少三次交付、不同事件种类的旧 commit、归档后重交付及 effect 字段的双侧测试；不能以 151 项作者变异全杀推断这些分支已被充分标定。
+
+## 三、逐项复核第五轮与边界
+
+- **R5-CORR-01：原有跨版本旧卡路径复现修好。** 旧 round 的接受/退回/超时均不改变新交付，当前 round 合法事件生效；未来正整数 round 在 T8a 被拒。0/负/小数并非已分配代次，仍被忽略，见 R6-CORR-02。
+- **R5-CORR-02：原有旧发送 ACK 与重审批次路径复现修好。** 新 `send-card` 携当次 round、commit、条件版本；旧 ACK 不把新一轮标成已交付，迟到模型 + 旧 ACK 的批次返回 T5 和重审 effect。真实宿主发卡前重校验及 UI 旧卡失效仍未测。
+- **R5-CORR-03：已知旧版本、已绑定实例和停止确认前已登记孤儿的回包可忽略；未知来源当前版本仍拒。** 孤儿停止确认后身份被删除的路径未闭合，见 R6-CORR-01。
+- **R5-TEST-01：E01–E09 在作者脚本均被具名测试杀死。** 本轮 F01–F08 是新增分支的独立测试盲区。
+- **交付任务身份边界：**D20.3 的 `E6(target_id, decision, expected_ver)` 指定 T8a 的 target 是 `task_id`（`docs/spec/需求文档.md:1488`）。当前交付事件和 `send-card` effect 只携 task 内数字 round 与 commit，不携 task ID。独立构造任务 A/B：同一提出者、同一 commit、各自 round=1 时，模拟把 A 的 `UserAccept` 投给 B，纯函数会让 B 进入 Accepted；本轮没有真实路由器，也没有证明宿主发生串包。宿主必须把经认证的 task/card 身份绑定到 effect、回包和事务，或领域事件自身携 task ID 并校验，再做 A/B 同提交同轮次错路由的跨层测试；不能仅凭 round+commit 声称跨任务隔离已经验证。
+- T9 下换模记录忽略、真实模型身份与事件认证、工作区隔离、CAS/租约、实际恢复/资源回收、Handoff、发送 Outbox、卡片 UI 和完整状态机均仍是第 7 栏所述未测边界。本轮没有将纯函数 effect 当成 OS 或 UI 实际完成。
+
+复现（仓库根目录；独立行为测试当前预期 6 红、2 绿，其中跨任务用例模拟宿主错路由）：
+
+```sh
+E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr3-review6-evidence-5fd2f15b
+REVIEW_REPO="$PWD" node --test "$E/independent.test.mjs"
+node "$E/independent-matrix.mjs" "$PWD"
+node "$E/independent-probes.mjs" "$PWD"
+# 各变异补丁及测试/typecheck 输出见 "$E/mutants/F01" … "$E/mutants/F09"。
+```
+
+本轮只追加本报告并修改 `receipts/feat-task-lifecycle.json` 的 review 字段；保留前五轮及作者其余收据字段。返修后继续由不同厂商独立复现。
+
+### 第六轮本地门禁的实际结果
+
+写入 reject 收据后运行 `node scripts/gates/run-all.ts --local --branch=feat/task-lifecycle --base=origin/feat/domain-core`：exit 1。`G-REVIEW` 因 reject 按预期阻止合入；`G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER` 通过。`G-PROVENANCE` 实际报告当前已落盘会话中没有输出等于本轮 hash 的调用、审查那轮厂商认不出；活动轮次尚未落盘，本轮 hash 命令与原始 rollout 的实际模型已分别实查，**不声称来源门禁通过**。当前轮记录落盘后由原任务复跑，不伪造记录。原始输出见证据目录 `gates-after.log`。
