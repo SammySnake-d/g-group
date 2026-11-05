@@ -1,0 +1,25 @@
+packages/domain/proof/domain-core-tests.txt
+  s_22ba9b1b818602::t_aa3a35ca61d3ef 1-22
+packages/domain/src/cas.ts
+  s_22ba9b1b818602::t_a7efc4643f8c52 1-2,8-25
+packages/domain/src/log.ts
+  s_22ba9b1b818602::t_80d89133235042 1-4,6,8,10-20,25-81
+receipts/feat-domain-core.json
+  s_22ba9b1b818602::t_2fd4be6971444d 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "33fe57f65370e7729878fe21fe1fc33b51aeb040",
+  "prompts": {},
+  "sessions": {
+    "s_22ba9b1b818602": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91b17b26-1e2d-4bc5-904f-9d3aab1e0f38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
