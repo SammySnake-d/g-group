@@ -12,6 +12,8 @@ const mk = () => {
   if (!r.ok) throw new Error(r.reason);
   return r.dir;
 };
+/** 末次汇报回执夹具:默认履行 k1,依据位置足够新。 */
+const rc = (taskId: string, commitmentIds: readonly string[] = ["k1"], basedOnSeq = 10_000) => ({ taskId, commitmentIds, basedOnSeq });
 const daily8 = { cron: "0 8 * * *", tz: "Asia/Shanghai", toleranceSec: 120 };
 
 test("AC-01 同 id 重复新建被拒,不会覆盖原联系人的记忆", () => {
@@ -133,10 +135,10 @@ test("AC-31⑤ 绑定任务全部终态但末次汇报还没发出,承诺仍有�
   const half = settleTask(a.ok ? a.contact : (null as never), "T_A");
   const ended = settleTask(half, "T_B");
   assert.deepEqual(ended.commitments[0], { id: "k1", sourceSeq: 200, text: "有进度就汇报", boundTaskIds: [], awaitingReport: ["T_A", "T_B"], reportedTaskIds: [], schedule: null, status: "active" });
-  const oneReported = confirmFinalReport(ended, "T_A");
+  const oneReported = confirmFinalReport(ended, rc("T_A"));
   assert.equal(oneReported.commitments[0]?.status, "active");
-  assert.equal(confirmFinalReport(oneReported, "T_X").commitments[0]?.status, "active");
-  const done = confirmFinalReport(oneReported, "T_B");
+  assert.equal(confirmFinalReport(oneReported, rc("T_X")).commitments[0]?.status, "active");
+  const done = confirmFinalReport(oneReported, rc("T_B"));
   assert.equal(done.commitments[0]?.status, "done");
   assert.deepEqual(done.commitments[0]?.awaitingReport, []);
 });
@@ -149,7 +151,7 @@ test("AC-31⑤ 承诺回收后不污染后续任务:旧专职锁解除,新派的
   const locked = f.ok ? f.contact : (null as never);
   const newWork = { kind: "work", text: "T_A2 写周报", commitmentId: null } as const;
   assert.equal(decideUnderFocus(locked, newWork), "decline-focused");
-  const after = confirmFinalReport(settleTask(locked, "T_A"), "T_A");
+  const after = confirmFinalReport(settleTask(locked, "T_A"), rc("T_A"));
   assert.equal(after.focus, null);
   assert.equal(decideUnderFocus(after, newWork), "handle");
   assert.equal(setFocus(after, { onlyCommitmentId: "k1" }).ok, false);
@@ -160,14 +162,14 @@ test("AC-31⑤ 承诺回收后不污染后续任务:旧专职锁解除,新派的
 test("AC-31⑤ 定时承诺不随任务结束回收(阴性对照)", () => {
   const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 1, text: "每天 8 点", boundTaskIds: ["T_A"], schedule: daily8 });
   assert.ok(a.ok);
-  const after = confirmFinalReport(settleTask(a.ok ? a.contact : (null as never), "T_A"), "T_A");
+  const after = confirmFinalReport(settleTask(a.ok ? a.contact : (null as never), "T_A"), rc("T_A"));
   assert.deepEqual(after.commitments[0], { id: "k1", sourceSeq: 1, text: "每天 8 点", boundTaskIds: ["T_A"], awaitingReport: [], reportedTaskIds: [], schedule: daily8, status: "active" });
 });
 
 test("AC-31⑤ 别的任务的汇报确认不回收无关承诺(阴性对照)", () => {
   const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 1, text: "常驻承诺", boundTaskIds: [], schedule: null });
   assert.ok(a.ok);
-  assert.equal(confirmFinalReport(a.ok ? a.contact : (null as never), "T_X").commitments[0]?.status, "active");
+  assert.equal(confirmFinalReport(a.ok ? a.contact : (null as never), rc("T_X")).commitments[0]?.status, "active");
 });
 
 test("AC-35① 专职锁:职责内的活照接,越界派活婉拒,无关闲聊忽略,停止/撤销/改时间照样处理", () => {
@@ -203,7 +205,7 @@ test("AC-35① 撤销被锁定的承诺,专职锁随之解除", () => {
 test("专职锁只能指向自己身上有效的承诺,已回收的也不行", () => {
   assert.equal(setFocus(mk().contacts.get("c-mi")!, { onlyCommitmentId: "nope" }).ok, false);
   const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 1, text: "x", boundTaskIds: ["T1"], schedule: null });
-  const gone = confirmFinalReport(settleTask(a.ok ? a.contact : (null as never), "T1"), "T1");
+  const gone = confirmFinalReport(settleTask(a.ok ? a.contact : (null as never), "T1"), rc("T1"));
   assert.equal(setFocus(gone, { onlyCommitmentId: "k1" }).ok, false);
   assert.equal(setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k1" }).ok, true);
 });
@@ -220,16 +222,16 @@ test("CH-05 末次汇报确认先于终态到达:不被吞掉,任务终态后立
   const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 1, text: "进度汇报", boundTaskIds: ["T1"], schedule: null });
   const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k1" });
   assert.ok(f.ok);
-  const reported = confirmFinalReport(f.ok ? f.contact : (null as never), "T1");
+  const reported = confirmFinalReport(f.ok ? f.contact : (null as never), rc("T1"));
   assert.deepEqual(reported.commitments[0], { id: "k1", sourceSeq: 1, text: "进度汇报", boundTaskIds: ["T1"], awaitingReport: [], reportedTaskIds: ["T1"], schedule: null, status: "active" });
   assert.deepEqual(reported.focus, { onlyCommitmentId: "k1" });
-  const replayed = confirmFinalReport(reported, "T1");
+  const replayed = confirmFinalReport(reported, rc("T1"));
   assert.deepEqual(replayed.commitments[0]?.reportedTaskIds, ["T1"]);
   const ended = settleTask(replayed, "T1");
   assert.deepEqual(ended.commitments[0], { id: "k1", sourceSeq: 1, text: "进度汇报", boundTaskIds: [], awaitingReport: [], reportedTaskIds: [], schedule: null, status: "done" });
   assert.equal(ended.focus, null);
   assert.equal(decideUnderFocus(ended, { kind: "work", text: "新活", commitmentId: null }), "handle");
-  assert.deepEqual(confirmFinalReport(settleTask(ended, "T1"), "T1").commitments[0], ended.commitments[0]);
+  assert.deepEqual(confirmFinalReport(settleTask(ended, "T1"), rc("T1")).commitments[0], ended.commitments[0]);
 });
 
 test("CH-05 先终态后确认的顺序照旧回收(对照),确认重放不改结果", () => {
@@ -239,17 +241,17 @@ test("CH-05 先终态后确认的顺序照旧回收(对照),确认重放不改�
   assert.deepEqual(ended.commitments[0]?.awaitingReport, ["T1"]);
   assert.equal(ended.commitments[0]?.status, "active");
   assert.deepEqual(ended.focus, { onlyCommitmentId: "k1" });
-  const done = confirmFinalReport(ended, "T1");
+  const done = confirmFinalReport(ended, rc("T1"));
   assert.equal(done.commitments[0]?.status, "done");
   assert.equal(done.focus, null);
-  assert.deepEqual(confirmFinalReport(done, "T1").commitments[0], done.commitments[0]);
+  assert.deepEqual(confirmFinalReport(done, rc("T1")).commitments[0], done.commitments[0]);
 });
 
 test("CH-05 跨任务负对照:先确认的任务不替别的任务放行,无关任务的确认不被记下", () => {
   const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 1, text: "两件事都汇报", boundTaskIds: ["T1", "T2"], schedule: null });
   const b = commit(a.ok ? a.contact : (null as never), { id: "k2", sourceSeq: 2, text: "另一件", boundTaskIds: ["T9"], schedule: null });
   const f = setFocus(b.ok ? b.contact : (null as never), { onlyCommitmentId: "k1" });
-  const early = confirmFinalReport(confirmFinalReport(f.ok ? f.contact : (null as never), "T1"), "T_X");
+  const early = confirmFinalReport(confirmFinalReport(f.ok ? f.contact : (null as never), rc("T1")), rc("T_X"));
   assert.deepEqual(early.commitments.map((k) => k.reportedTaskIds), [["T1"], []]);
   const t2 = settleTask(early, "T2");
   assert.deepEqual(t2.commitments[0], { id: "k1", sourceSeq: 1, text: "两件事都汇报", boundTaskIds: ["T1"], awaitingReport: ["T2"], reportedTaskIds: ["T1"], schedule: null, status: "active" });
@@ -257,7 +259,7 @@ test("CH-05 跨任务负对照:先确认的任务不替别的任务放行,无关
   assert.equal(t1.commitments[0]?.status, "active");
   assert.deepEqual(t1.commitments[0]?.awaitingReport, ["T2"]);
   assert.deepEqual(t1.focus, { onlyCommitmentId: "k1" });
-  const done = confirmFinalReport(t1, "T2");
+  const done = confirmFinalReport(t1, rc("T2"));
   assert.equal(done.commitments[0]?.status, "done");
   assert.equal(done.commitments[1]?.status, "active");
   assert.deepEqual(done.commitments[1]?.boundTaskIds, ["T9"]);
@@ -265,7 +267,7 @@ test("CH-05 跨任务负对照:先确认的任务不替别的任务放行,无关
 
 test("CH-05 定时承诺的绑定任务先确认汇报也不回收、不记录(阴性对照)", () => {
   const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 1, text: "每天 8 点", boundTaskIds: ["T_A"], schedule: daily8 });
-  const after = settleTask(confirmFinalReport(a.ok ? a.contact : (null as never), "T_A"), "T_A");
+  const after = settleTask(confirmFinalReport(a.ok ? a.contact : (null as never), rc("T_A")), "T_A");
   assert.deepEqual(after.commitments[0], { id: "k1", sourceSeq: 1, text: "每天 8 点", boundTaskIds: ["T_A"], awaitingReport: [], reportedTaskIds: [], schedule: daily8, status: "active" });
 });
 
@@ -299,11 +301,11 @@ test("CH-07 空名或仅空白的工具不能授为直接工具,也不能写进 
 test("CH-08 一个任务终态且已汇报、另一个仍在跑:承诺不回收,专职锁不解", () => {
   const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 45, text: "两件事", boundTaskIds: ["T_A", "T_B"], schedule: null });
   const f = setFocus(a.ok ? a.contact : (null as never), { onlyCommitmentId: "k1" });
-  const half = confirmFinalReport(settleTask(f.ok ? f.contact : (null as never), "T_A"), "T_A");
+  const half = confirmFinalReport(settleTask(f.ok ? f.contact : (null as never), "T_A"), rc("T_A"));
   assert.equal(half.commitments[0]?.status, "active");
   assert.deepEqual(half.commitments[0]?.boundTaskIds, ["T_B"]);
   assert.deepEqual(half.focus, { onlyCommitmentId: "k1" });
-  const done = confirmFinalReport(settleTask(half, "T_B"), "T_B");
+  const done = confirmFinalReport(settleTask(half, "T_B"), rc("T_B"));
   assert.equal(done.commitments[0]?.status, "done");
   assert.equal(done.focus, null);
 });
@@ -331,7 +333,101 @@ test("CH-08 撤销或回收别的承诺不解除当前承诺的专职锁", () =>
   const revoked = revokeCommitment(locked, "other");
   assert.equal(revoked.ok && revoked.contact.commitments[0]?.status, "revoked");
   assert.deepEqual(revoked.ok && revoked.contact.focus, { onlyCommitmentId: "target" });
-  const retired = confirmFinalReport(settleTask(locked, "T_X"), "T_X");
+  const retired = confirmFinalReport(settleTask(locked, "T_X"), rc("T_X", ["other"]));
   assert.equal(retired.commitments[0]?.status, "done");
   assert.deepEqual(retired.focus, { onlyCommitmentId: "target" });
+});
+
+test("CH-09 同一任务两条承诺:只履行旧承诺的迟到回执不替新承诺放行,新承诺的锁不解", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "kA", sourceSeq: 100, text: "T1 汇报到群 A", boundTaskIds: ["T1"], schedule: null });
+  const b = commit(a.ok ? a.contact : (null as never), { id: "kB", sourceSeq: 200, text: "T1 汇报到群 B", boundTaskIds: ["T1"], schedule: null });
+  const f = setFocus(b.ok ? b.contact : (null as never), { onlyCommitmentId: "kB" });
+  const lateOld = confirmFinalReport(f.ok ? f.contact : (null as never), rc("T1", ["kA"], 150));
+  assert.deepEqual(lateOld.commitments.map((k) => k.reportedTaskIds), [["T1"], []]);
+  const ended = settleTask(lateOld, "T1");
+  assert.deepEqual(ended.commitments.map((k) => k.status), ["done", "active"]);
+  assert.deepEqual(ended.commitments[1]?.awaitingReport, ["T1"]);
+  assert.deepEqual(ended.focus, { onlyCommitmentId: "kB" });
+  assert.equal(decideUnderFocus(ended, { kind: "work", text: "职责外新活", commitmentId: null }), "decline-focused");
+  const done = confirmFinalReport(ended, rc("T1", ["kB"], 250));
+  assert.deepEqual(done.commitments.map((k) => k.status), ["done", "done"]);
+  assert.equal(done.focus, null);
+});
+
+test("CH-09 回执依据位置早于承诺出处时,即使点名这条承诺也不算数;依据位置不早于出处才算(对照)", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "kB", sourceSeq: 200, text: "T1 汇报到群 B", boundTaskIds: ["T1"], schedule: null });
+  const ended = settleTask(a.ok ? a.contact : (null as never), "T1");
+  const stale = confirmFinalReport(ended, rc("T1", ["kB"], 199));
+  assert.deepEqual(stale.commitments[0], ended.commitments[0]);
+  const fresh = confirmFinalReport(ended, rc("T1", ["kB"], 200));
+  assert.equal(fresh.commitments[0]?.status, "done");
+});
+
+test("CH-09 一条汇报经宿主明确判定覆盖两条承诺:两条都生效;先确认后终态与先终态后确认结果一致,重放不变", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "kA", sourceSeq: 100, text: "群 A", boundTaskIds: ["T1"], schedule: null });
+  const b = commit(a.ok ? a.contact : (null as never), { id: "kB", sourceSeq: 200, text: "群 B", boundTaskIds: ["T1"], schedule: null });
+  const base = b.ok ? b.contact : (null as never);
+  const both = rc("T1", ["kA", "kB"], 300);
+  const early = settleTask(confirmFinalReport(base, both), "T1");
+  const late = confirmFinalReport(settleTask(base, "T1"), both);
+  assert.deepEqual(early.commitments.map((k) => k.status), ["done", "done"]);
+  assert.deepEqual(late.commitments, early.commitments);
+  assert.deepEqual(confirmFinalReport(late, both).commitments, late.commitments);
+});
+
+test("CH-10 空名或仅空白的 Compute 能力资产不能登记;合法具名资产照常登记并可派出(阴性对照)", () => {
+  const c = mk().contacts.get("c-mi")!;
+  for (const name of ["", "   ", "\t"]) {
+    const r = grantComputeAsset(c, { name, kind: "script" });
+    assert.equal(r.ok, false, JSON.stringify(name));
+    assert.match(!r.ok ? r.reason : "", /^能力资产名不能为空$/);
+  }
+  const ok = grantComputeAsset(c, { name: "valid-script", kind: "script" });
+  assert.deepEqual(ok.ok && ok.contact.computeAssets, [{ name: "valid-script", kind: "script" }]);
+  assert.equal(ok.ok && briefFor(ok.contact, { task: "t", rules: [], tools: ["valid-script"], credentialRefs: [] }).ok, true);
+});
+
+test("CH-11 已撤销承诺:迟到的汇报确认不再记录,迟到的终态不把 revoked 改成 done", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 1, text: "汇报", boundTaskIds: ["T1"], schedule: null });
+  const revoked = revokeCommitment(a.ok ? a.contact : (null as never), "k1");
+  assert.ok(revoked.ok);
+  const lateReceipt = confirmFinalReport(revoked.ok ? revoked.contact : (null as never), rc("T1"));
+  assert.deepEqual(lateReceipt.commitments[0], { id: "k1", sourceSeq: 1, text: "汇报", boundTaskIds: ["T1"], awaitingReport: [], reportedTaskIds: [], schedule: null, status: "revoked" });
+  const early = confirmFinalReport(a.ok ? a.contact : (null as never), rc("T1"));
+  const r2 = revokeCommitment(early, "k1");
+  const lateEnd = settleTask(r2.ok ? r2.contact : (null as never), "T1");
+  assert.deepEqual(lateEnd.commitments[0], { id: "k1", sourceSeq: 1, text: "汇报", boundTaskIds: ["T1"], awaitingReport: [], reportedTaskIds: ["T1"], schedule: null, status: "revoked" });
+});
+
+test("CH-11 Compute 说明保留全部已授权工具", () => {
+  const a = grantTool(mk().contacts.get("c-mi")!, { name: "get_weather", bounded: true });
+  const b = grantComputeAsset(a.ok ? a.contact : (null as never), { name: "get_ip", kind: "mcp" });
+  const r = briefFor(b.ok ? b.contact : (null as never), { task: "两项查询", rules: [], tools: ["get_weather", "get_ip"], credentialRefs: [] });
+  assert.deepEqual(r.ok && r.brief.tools, ["get_weather", "get_ip"]);
+});
+
+test("CH-11 双任务乱序:先终态 A、B 再先确认 B 只移除 B;先确认 A、B 再先终态 B 只消耗 B 的确认", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "k1", sourceSeq: 1, text: "两件事", boundTaskIds: ["A", "B"], schedule: null });
+  const base = a.ok ? a.contact : (null as never);
+  const endedFirst = confirmFinalReport(settleTask(settleTask(base, "A"), "B"), rc("B"));
+  assert.deepEqual(endedFirst.commitments[0]?.awaitingReport, ["A"]);
+  assert.equal(endedFirst.commitments[0]?.status, "active");
+  assert.equal(confirmFinalReport(endedFirst, rc("A")).commitments[0]?.status, "done");
+  const reportedFirst = settleTask(confirmFinalReport(confirmFinalReport(base, rc("A")), rc("B")), "B");
+  assert.deepEqual(reportedFirst.commitments[0]?.reportedTaskIds, ["A"]);
+  assert.deepEqual(reportedFirst.commitments[0]?.boundTaskIds, ["A"]);
+  const done = settleTask(reportedFirst, "A");
+  assert.equal(done.commitments[0]?.status, "done");
+  assert.deepEqual(done.commitments[0]?.reportedTaskIds, []);
+});
+
+test("CH-09 两条承诺出处都早于汇报依据位置,回执只点名 kA:只有 kA 生效,kB 仍等自己的回执", () => {
+  const a = commit(mk().contacts.get("c-mi")!, { id: "kA", sourceSeq: 100, text: "群 A", boundTaskIds: ["T1"], schedule: null });
+  const b = commit(a.ok ? a.contact : (null as never), { id: "kB", sourceSeq: 200, text: "群 B", boundTaskIds: ["T1"], schedule: null });
+  const ended = settleTask(b.ok ? b.contact : (null as never), "T1");
+  const onlyA = confirmFinalReport(ended, rc("T1", ["kA"], 300));
+  assert.deepEqual(onlyA.commitments.map((k) => k.status), ["done", "active"]);
+  assert.deepEqual(onlyA.commitments[1]?.awaitingReport, ["T1"]);
+  const early = confirmFinalReport(b.ok ? b.contact : (null as never), rc("T1", ["kA"], 300));
+  assert.deepEqual(early.commitments.map((k) => k.reportedTaskIds), [["T1"], []]);
 });
