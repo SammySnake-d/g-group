@@ -39,6 +39,7 @@ interface Case {
   setup?: (x: { dir: string; repo: string; sessions: string; hash: string }) => void; // 写完收据和会话后、跑门禁前
   postCheck?: (dir: string) => string | undefined; // 跑完后检查副作用,返回问题
   hostileGit?: boolean; // 在 GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE 指向另一个仓库的环境里跑
+  main?: Files; // main 上额外的文件
 }
 
 const MAIN: Files = { "docs/spec/验收文档-v0.1.md": SPEC, "README.md": "x\n", "packages/core/package.json": PKG("@g-group/core", "domain"), ".github/workflows/trusted-gates.yml": TRUSTED_WF };
@@ -93,7 +94,7 @@ function runCaseInner(tmp: string, c: Case, i: number): { pass: boolean; detail:
   const repo = path.join(dir, "repo"), sessions = path.join(dir, "sessions"), rooms = path.join(dir, "rooms");
   fs.mkdirSync(repo, { recursive: true });
   sh(repo, "init", "-q", "-b", "main");
-  write(repo, MAIN);
+  write(repo, { ...MAIN, ...c.main });
   commit(repo, "main");
   sh(repo, "checkout", "-q", "-b", "feat/x");
   let redSha = "";
@@ -155,6 +156,14 @@ const SC_STEP_MUT = "      - name: 门禁变异校验\n        run: GATE_MUTATIO
 const SC_WF = (steps = SC_STEP_SELF + SC_STEP_MUT, jobExtra = "") => `on: pull_request\npermissions: { contents: read }\njobs:\n  self-check:\n    runs-on: ubuntu-latest\n${jobExtra}    steps:\n${steps}`;
 const ROOT_PKG = (scripts: Record<string, string> = {}) => JSON.stringify({ name: "g-group", private: true, type: "module", scripts: { "gates:selftest": "node scripts/gates/run-all.ts --self-test", "gates:mutation": "node scripts/gates/mutation.ts", ...scripts } });
 const SC = (wf: string, pkg = ROOT_PKG()): Files => ({ ...HEAD_OK, ".github/workflows/self-check.yml": wf, "package.json": pkg });
+// RR-11:测试经 helper 拿期望值
+const TEST_HELPER = (spec: string) => T(`import { expected } from "${spec}";\ntest("adds", () => { assert.equal(add(1, 2), expected); });\n`);
+// RR-12:同文件一强一弱
+const ADD2 = `${ADD_OK}export function difference(_a: number, _b: number): number { return 999; }\n`;
+const RED2 = `${ADD_EMPTY}export function difference(_a: number, _b: number): number { throw new Error("red"); }\n`;
+const TEST2 = (diffAssert: string) => `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport { add, difference } from "./add.ts";\ntest("addition", () => { assert.equal(add(1, 2), 3); });\ntest("difference", () => { ${diffAssert} });\n`;
+// RR-14:审查轮次的工具调用(codex 的真实形状:{ command, shell, cwd })
+const hashCall = (command: string) => (h: string) => [{ model: "gpt-6-astra", toolCalls: [{ name: "shell", input: { command, shell: "/bin/zsh -lc", cwd: "/x/review" }, result: h }] }];
 
 export const CASES: Case[] = [
   { name: "合规:先红后绿、跨厂商审查、来源核对通过", expect: null },
@@ -172,7 +181,7 @@ export const CASES: Case[] = [
   { name: "第 7 栏没点到条目", receipt: R((r) => { r.unverifiable = "应该没问题"; }), expect: "第 7 栏" },
 
   { name: "作者自审", receipt: R((r) => { r.review!.agent = "claude"; }), expect: "同一个" },
-  { name: "同厂商审查且无豁免", receipt: R((r) => { r.review!.model = "claude-sonnet-5-5"; }), reviewerTurns: (h) => [{ model: "claude-sonnet-5-5", toolCalls: [{ input: "run-all.ts --hash", result: h }] }], expect: "没有用户豁免" },
+  { name: "同厂商审查且无豁免", receipt: R((r) => { r.review!.model = "claude-sonnet-5-5"; }), reviewerTurns: (h) => [{ model: "claude-sonnet-5-5", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "没有用户豁免" },
   { name: "审查模型认不出", receipt: R((r) => { r.review!.model = "stealth/crouton-alpha"; }), expect: "认不出" },
   { name: "审查结论 reject", receipt: R((r) => { r.review!.verdict = "reject"; }), expect: "审查结论是 reject" },
   { name: "审后又改代码", after: { "packages/core/src/add.ts": `${ADD_OK}// x\n` }, expect: "需要重审" },
@@ -183,11 +192,14 @@ export const CASES: Case[] = [
   { name: "F-04 历史出现过别家模型,算 hash 那一轮是同厂商", reviewerTurns: (h) => [{ model: "gpt-6-astra", toolCalls: [{ input: "ls", result: "old" }] }, { model: "claude-opus-5-5", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "实际是 anthropic" },
   { name: "审查会话算出的是别的 hash", reviewerTurns: () => [{ model: "gpt-6-astra", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: "0".repeat(64) }] }], expect: "审查会话里没有一次" },
   { name: "F-04 hash 只出现在聊天文本里", reviewerTurns: (h) => [{ model: "gpt-6-astra", text: `我审的是 ${h}`, toolCalls: [] }], expect: "审查会话里没有一次" },
-  { name: "作者自报与实际产出厂商不符", authorTurns: () => [{ model: "gpt-6", toolCalls: [{ input: "/x/g-group/packages/core/src/add.ts" }] }], receipt: R((r) => { r.review!.model = "gemini-4"; }), reviewerTurns: (h) => [{ model: "gemini-4", toolCalls: [{ input: "run-all.ts --hash", result: h }] }], expect: "实际产出厂商是 openai" },
+  { name: "作者自报与实际产出厂商不符", authorTurns: () => [{ model: "gpt-6", toolCalls: [{ input: "/x/g-group/packages/core/src/add.ts" }] }], receipt: R((r) => { r.review!.model = "gemini-4"; }), reviewerTurns: (h) => [{ model: "gemini-4", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "实际产出厂商是 openai" },
   { name: "作者会话没碰过本仓库", authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ input: "/x/g-group-requirements/a.md" }] }], expect: "找不到对本仓库的任何操作" },
   { name: "作者中途换成审查同厂商(累积集合)", authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ input: "cd ~/g-group && vim x" }] }, { model: "gpt-6", toolCalls: [{ input: "/x/g-group/y" }] }, { model: "gemini-4", toolCalls: [{ input: "/x/g-group-requirements/z" }] }], expect: "在作者的产出厂商集合" },
 
-  { name: "合规:仓库所有者对这个 PR 这一版结构化批准豁免", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `这次同厂商审查可以\n批准豁免 PR#7 ${h}`)], expect: null },
+  { name: "合规:仓库所有者对这个 PR 这一版结构化批准豁免", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `  批准豁免 PR#7 ${h}\n`)], expect: null },
+  { name: "RR-13 指令前另有说明文字", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `这次同厂商审查可以\n批准豁免 PR#7 ${h}`)], expect: "不是一条格式为" },
+  { name: "RR-13 先说不批准、下一行是格式行", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `下面仅为格式演示，我不批准任何豁免：\n批准豁免 PR#7 ${h}`)], expect: "不是一条格式为" },
+  { name: "RR-13 整条消息是引用块里的指令", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `> 批准豁免 PR#7 ${h}`)], expect: "不是一条格式为" },
   { name: "F-03 用户明确不批准豁免", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `必须跨厂商，不批准豁免。${h}`)], expect: "不是一条格式为" },
   { name: "豁免是助手发的", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `批准豁免 PR#7 ${h}`, "ai-claude", OWNER_NAME)], expect: "不是仓库所有者" },
   { name: "豁免没绑定这一版", receipt: SAME, reviewerTurns: sameTurns, room: () => [user(900, "批准豁免 PR#7 000000000000")], expect: "≠ 当前" },
@@ -242,9 +254,26 @@ export const CASES: Case[] = [
   { name: "RR-09 self-check.yml 里没有 self-check job", head: SC(SC_WF().replace("  self-check:", "  other:")), expect: "缺 job self-check" },
   { name: "RR-09 package.json 把 gates:mutation 改成 true", head: SC(SC_WF(), ROOT_PKG({ "gates:mutation": "true" })), expect: 'scripts["gates:mutation"] 必须是' },
   { name: "RR-09 package.json 把 gates:selftest 改掉", head: SC(SC_WF(), ROOT_PKG({ "gates:selftest": "node scripts/gates/run-all.ts" })), expect: 'scripts["gates:selftest"] 必须是' },
-  { name: "RR-09 规范 self-check.yml(变异命令不带并发参数)+ 规范 scripts(阴性对照)", head: SC(SC_WF(SC_STEP_SELF + "      - run: npm run gates:mutation\n        timeout-minutes: 120\n")), expect: null },
+  { name: "RR-09 规范 self-check.yml(变异命令不带并发参数)+ 规范 scripts(阴性对照)", head: SC(SC_WF(`${SC_STEP_SELF}      - run: npm run gates:mutation\n        timeout-minutes: 120\n`)), expect: null },
   { name: "RR-03 只读权限的普通 workflow(阴性对照)", head: WF("on: pull_request\npermissions:\n  contents: read\njobs:\n  lint:\n    name: lint\n    runs-on: ubuntu-latest\n    steps: [{ run: 'true' }]\n"), expect: null },
   { name: "隔离:hook 环境的 GIT_DIR 指向别的仓库,门禁不碰它", hostileGit: true, expect: null },
+  { name: "RR-09 self-check.yml 只 echo", head: SC(SC_WF("      - run: echo no-checks-were-run\n")), expect: "缺必需步骤" },
+  { name: "RR-09 必需步骤换 shell", head: SC(SC_WF(SC_STEP_SELF.replace("        run:", '        shell: "true {0}"\n        run:') + SC_STEP_MUT)), expect: "带了 shell" },
+  { name: "RR-09 job 用 defaults 换 shell", head: SC(SC_WF(undefined, '    defaults: { run: { shell: "true {0}" } }\n')), expect: "带了 defaults" },
+  { name: "RR-10 把门禁文件改名移出受管目录(重命名检测会只报新路径)", main: { "scripts/gates/vendor.ts": "export const v = 1;\n" }, head: { "scripts/gates/vendor.ts": null, "docs/vendor.ts": "export const v = 1;\n" }, red: null, receipt: null, expect: "缺收据" },
+  { name: "RR-11 helper 在红提交上给了错期望值", head: { ...HEAD_OK, "packages/core/src/add.test.ts": TEST_HELPER("./expected.ts"), "packages/core/src/expected.ts": "export const expected = 3;\n" }, red: { ...RED_OK, "packages/core/src/add.ts": ADD_OK, "packages/core/src/add.test.ts": TEST_HELPER("./expected.ts"), "packages/core/src/expected.ts": "export const expected = -100;\n" }, expect: "没有按名字失败" },
+  { name: "RR-11 fixtures 下的 helper 在红提交上给了错期望值", head: { ...HEAD_OK, "packages/core/src/add.test.ts": TEST_HELPER("./fixtures/expected.ts"), "packages/core/src/fixtures/expected.ts": "export const expected = 3;\n" }, red: { ...RED_OK, "packages/core/src/add.ts": ADD_OK, "packages/core/src/add.test.ts": TEST_HELPER("./fixtures/expected.ts"), "packages/core/src/fixtures/expected.ts": "export const expected = -100;\n" }, expect: "没有按名字失败" },
+  { name: "RR-11 helper 两边一致、红提交是空壳实现(阴性对照)", head: { ...HEAD_OK, "packages/core/src/add.test.ts": TEST_HELPER("./fixtures/expected.ts"), "packages/core/src/fixtures/expected.ts": "export const expected = 3;\n" }, red: { ...RED_OK, "packages/core/src/add.test.ts": TEST_HELPER("./fixtures/expected.ts"), "packages/core/src/fixtures/expected.ts": "export const expected = 3;\n" }, expect: null },
+  { name: "RR-12 一条强测试 + 一条只断言 typeof", head: { ...HEAD_OK, "packages/core/src/add.ts": ADD2, "packages/core/src/add.test.ts": TEST2('assert.equal(typeof difference(9, 2), "number");') }, red: { ...RED_OK, "packages/core/src/add.ts": RED2, "packages/core/src/add.test.ts": TEST2('assert.equal(typeof difference(9, 2), "number");') }, expect: "返回错误值" },
+  { name: "RR-12 两条测试都判结果(阴性对照)", head: { ...HEAD_OK, "packages/core/src/add.ts": `${ADD_OK}export function difference(a: number, b: number): number { return a - b; }\n`, "packages/core/src/add.test.ts": TEST2("assert.equal(difference(9, 2), 7);") }, red: { ...RED_OK, "packages/core/src/add.ts": RED2, "packages/core/src/add.test.ts": TEST2("assert.equal(difference(9, 2), 7);") }, expect: null },
+  { name: "RR-14 printf 打印 hash、run-all 只在注释里", reviewerTurns: (h) => hashCall(`printf '%s\\n' '${h}' # node scripts/gates/run-all.ts --hash`)(h), expect: "审查会话里没有一次" },
+  { name: "RR-14 node -e 打印 hash、run-all 只是多余参数", reviewerTurns: (h) => hashCall(`node -e "console.log('${h}')" scripts/gates/run-all.ts --hash`)(h), expect: "审查会话里没有一次" },
+  { name: "RR-14 echo 后接真实 hash 命令", reviewerTurns: (h) => hashCall(`echo ${h} && node scripts/gates/run-all.ts --hash`)(h), expect: "审查会话里没有一次" },
+  { name: "RR-14 codex 真实形状的 hash 调用(阴性对照)", reviewerTurns: hashCall("node scripts/gates/run-all.ts --hash --branch=feat/x --base=main"), expect: null },
+  { name: "RR-15 后续轮次写进同仓库的另一个 clone", authorRecord: { workdir: "/tmp" }, authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }, { model: "gpt-6", toolCalls: [{ name: "Write", input: { file_path: path.join(path.dirname(repo), "other-clone", "packages/core/src/add.ts") } }] }],
+    setup: ({ dir, repo }) => { sh(dir, "clone", "-q", repo, path.join(dir, "other-clone")); }, expect: "在作者的产出厂商集合" },
+  { name: "RR-15 后续轮次写进无关的 git 仓库(阴性对照)", authorRecord: { workdir: "/tmp" }, authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }, { model: "gpt-6", toolCalls: [{ name: "Write", input: { file_path: path.join(path.dirname(repo), "unrelated", "a.ts") } }] }],
+    setup: ({ dir }) => { const u = path.join(dir, "unrelated"); fs.mkdirSync(u, { recursive: true }); sh(u, "init", "-q", "-b", "main"); write(u, { "x.txt": "x\n" }); commit(u, "x"); }, expect: null },
   { name: "审查人 codex 放行(g-group#1531 默认审查人)", receipt: R((r) => { r.review!.agent = "codex"; }), room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "codex:b", assistant: "ai-codex" } }], expect: null },
   { name: "审查人 astra 放行", room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "codex:b", assistant: "ai-astra" } }], expect: null },
   { name: "审查人 grok 被拦", receipt: R((r) => { r.review!.agent = "grok"; r.review!.model = "grok-4.7"; }), reviewerTurns: (h) => [{ model: "grok-4.7", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "审查人必须是 codex 或 astra" },
