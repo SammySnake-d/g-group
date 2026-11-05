@@ -237,3 +237,181 @@ env PATH=/Users/snakesammy/.nvm/versions/node/v22.22.0/bin:/opt/homebrew/bin:/us
 - 再次在仓库根目录运行指定 hash 命令，仍为 `9c82e6ea9c229fec2711eb2412f77f4653a7fe8b1d061199b2fff4a22f2b11ea`，报告与 review 未使审查失效。
 - 再跑完整 `--local`：退出 **1**，G-REVIEW 原因由「还没有独立审查」变为「审查结论是 reject」；G-PROVENANCE 通过，未伪造、补写或修改真实会话记录。
 - `git diff --check` 通过。拒绝结论应继续阻止合并；修复由作者另行实施，本报告不替换为作者自检，也不放宽任何硬门禁。
+
+## 重审
+
+### 重审结论与对象
+
+**仍为 reject。** 本次对象固定为 `f5dfaf5fcfb62248b34d37cb8c232b739d734eb8`，分支仍为 `chore/gates`；原报告保留，上文判断属于上一版，不覆盖本节的新结果。新的真实 CLI 自检和变异校验确有改进，旧的几个反例已被拦住，但以下 **8 个合并前必须修复的问题**仍使 R-01/R-02/R-04 与受保护执行边界不能成立。
+
+审查仍由 Astra 独立执行，mirasim 会话为 `codex:f933f07c-ae51-45bf-ba20-4d6cea7e2b8c`，实际模型 `ai-iisbo/[乾坤按量]gpt-6-astra`（从 native `turn_context` 以及已落盘的本次 hash 工具调用轮次核实，OpenAI）。作者为 Claude/Anthropic；未由作者自判通过，也未改门禁代码、分支保护或写远端 provenance 状态。
+
+本人在仓库根目录执行 `node scripts/gates/run-all.ts --hash --branch chore/gates`，本次被审 hash 为：
+
+```text
+86ba2b96f8a182dfd39f266659d2d3683634ffcfee898342b559622e0cef22da
+```
+
+### 重审实跑与旧问题回归
+
+执行固定 Node `v22.22.0`；反例用被审提交的独立 judge 副本，通过 `--repo` 检查真实临时 Git 仓库，红提交、绿提交、收据及来源记录均隔离。下文「8 道门禁全绿」指真实 CLI 的完整 `--local`，不是仅调用单个 Gate；不冒充已在 GitHub 完成攻击。
+
+| 项目 | 亲自观察的结果 |
+|---|---|
+| `npm ci` | 退出 0，5 packages，0 vulnerabilities |
+| `npm run typecheck` | 退出 0 |
+| `npm run lint` | 直接复跑退出 0，Biome 检查 8 个文件；首遍 RTK 的 ESLint 解析报错不算 lint 结果，已用 `rtk bypass` 纠正执行器输出 |
+| `npm test` | 退出 0，但 tests=0；仍无产品代码，不能写成产品测试已验收 |
+| `npm run gates:selftest` | 退出 0；56 个 Git/CLI 样例加 8 个 vendor 检查，共 64 项 |
+| `npm run gates:mutation` | 最终独立复跑退出 0，原样副本通过、20 个变异均被自检发现，含「CI 模式不跑任何门禁」；不是 21 个变异，作者将原样对照也计入了总数 |
+| 初次 mutation 执行 | 清理 `.git/ai` 时 ENOTEMPTY，退出 1；不能冒充通过。后用进程级 Git 配置关闭临时仓库继承 hooks、并发数 2 重跑成功；未改项目 runner |
+| GitHub `f5dfaf5` 的 self-check | API 确认成功，运行 `41911827747`；这不是 trusted-gates 的执行证明 |
+| Docker | `docker info` 实际失败，OrbStack daemon socket 不存在；没有启动 Docker，也没有把容器路径标成已实测 |
+
+| 原发现 | 重审判断 |
+|---|---|
+| F-01 | 必需 provenance 状态已配置，但来源验证仍可绕过，见 RR-01/RR-02/RR-05 |
+| F-02 | 旧路径白名单缺口已修；CLI 自检确实拦只改 workflow/package.json 无收据，文档豁免仍通过 |
+| F-03 | 旧的「不批准豁免」输入已被自检拦住，但引用材料与用户身份绑定仍有缺口，见 RR-08 |
+| F-04 | 旧的历史 GPT、hash 轮为 Claude 的输入已被拦住；累积生产厂商仍漏相对路径操作，见 RR-05 |
+| F-05 | 独立旧别名零断言反例现在退出 1，明确报「没有任何断言」；新变体见 RR-04/RR-06 |
+| F-06 | 独立同文件后补 negative 测试现在退出 1，报没有按名字失败；红绿行为绑定仍不足，见 RR-07 |
+| F-07 | 独立旧复制逻辑/加载失败反例退出 1，G-STUB 和 G-TAUTO 均拦下；不再沿用旧版失败结论 |
+| F-08 | 原「跳过 CI 全部门禁」变异本次确实被自检发现，可以关闭该具体反例；不表示新 workflow 策略已经安全或所有变异均可发现 |
+
+### RR-01 [P1] session 的 harness 可路径穿越，PR 内伪造记录被当作真实独立审查
+
+位置：[gates.ts:readTurns](../scripts/gates/gates.ts#L64)。对应 R-01/R-07。
+
+`readTurns` 只检查冒号右边的 id，未限制左边的 harness，也没有对拼接后的 realpath 做会话根目录 containment 校验。收据可以把左边填为 `../g-group/reviews/forged`，右边为 `r`，使实际读取落到 PR 的 `reviews/forged/r/turns.jsonl`。`reviews/` 不进入 hash，所以伪造记录可以在获得 hash 后写入，无循环依赖。
+
+**实际证明：** `review-session-path-traversal` 在真实临时 Git 仓库提交伪造记录，完整 `--local` 的 8 道门禁全绿，退出 **0**。随后 `default-sessions-traversal` 取消 `MIRASIM_SESSIONS` 环境变量，使用默认真实会话根目录与作者原有真实会话（只读），仅将 reviewer.session 设为从该根目录通向隔离 PR 的相对路径，仍退出 **0**。没有改任何真实 turns.jsonl。该路径的具体临时目录和最终读取文件均在原始 JSON 中。
+
+**影响：** 作者无需存在真正的 OpenAI 审查会话，仅靠 PR 内一份 JSONL 就能通过来源门禁；这不是「信任真实会话文件未被篡改」可以解释的边界，因为被读的根本不是真实会话文件。
+
+**要求：** 对完整 `<harness>:<id>` 做严格 schema 校验和 harness allowlist，拒绝额外冒号、分隔符、绝对路径及路径跳转；读取前核对 realpath 必须位于可信会话目录，包含软链逃逸反例。来源必须与真实会话身份绑定，不能由 PR 指定任意文件。
+
+### RR-02 [P1] 本机来源签署进程执行未隔离 PR 测试，PR 可在核验前补造来源
+
+位置：[merge.sh](../scripts/merge.sh#L24)、[lib.ts:sandboxed](../scripts/gates/lib.ts#L72)、[门禁顺序](../scripts/gates/gates.ts#L332)。对应 R-01/R-07/R-18。
+
+本机 `merge.sh` 未设置 `GATE_SANDBOX_IMAGE`，`sandboxed` 默认退回宿主 `spawnSync`，子进程继承全部环境、文件权限与网络能力；worktree 不是进程隔离。G-RED/G-STUB/G-TAUTO 在最后的 G-PROVENANCE 前运行 PR 测试。main 上的裁判代码不变，也不能阻止这些测试写裁判稍后读取的外部文件。
+
+**实际证明 A：** `local-external-write` 的正常测试将环境变量 `REVIEW_SENTINEL` 写到检出目录之外的临时标记文件；真实观察到内容 `independent-review-only`，同时完整门禁退出 **0**。只读了自设哨兵，没有读取真实凭据。
+
+**实际证明 B：** `local-tests-forge-provenance` 初始模拟 reviewer 记录为空；PR 测试在正常调用源码后，将收据 hash 写入模拟会话根目录下的 reviewer JSONL。最后 G-PROVENANCE 认可这份由 PR 测试补造的记录，完整 8 道门禁退出 **0**。该测试以 main 同款配置进行 typecheck、Biome lint 也都退出 0。模拟文件全在 disposable 目录，未改真实会话。
+
+**影响：** 与「所有者本人能写状态」不同，这里是所有者运行标准合并核验时，把可读凭据/可写来源的执行权限交给了未受信的 PR 测试。继承的 token（若有）或宿主可读认证文件也处于同一信任域；未实际读取 token、写 GitHub 状态或尝试合并。
+
+**要求：** 本机与 CI 都应 fail closed 地执行隔离测试，隔离环境不能接触会话/群聊/凭据、裁判及其依赖，不应继承敏感环境；签署状态的进程与 PR 代码分离。没有可用沙箱时停止，而不是静默回退宿主；补测试伪造来源与目录外写入反例。还应冻结核验输入，防止测试进程改写后续检查对象。
+
+### RR-03 [P1] G-WORKFLOW 用原文正则，带引号的写权限与表达式检查名可同时漏过
+
+位置：[gates.ts:G-WORKFLOW](../scripts/gates/gates.ts#L260)。对应 R-18、受保护 provenance 状态边界。
+
+反例新增普通 PR workflow：
+
+```yaml
+name: auxiliary
+on: pull_request
+permissions:
+  statuses: "write"
+jobs:
+  auxiliary:
+    name: ${{ format('pro{0}', 'venance') }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'true'
+```
+
+**实际结果：** `workflow-quoted-write-dynamic-name` 完整 8 道门禁退出 **0**；同一内容只改为不带引号的 `write` 和字面 `provenance`，`workflow-literal-control` 即退出 **1**，同时报写权限与保护名问题。已用 YAML 解析器确认带引号值确为字符串 `write`。GitHub 官方文档确认 job name 支持表达式，`format` 产生拼接结果；因此原文中没有完整 `provenance` 不代表实际检查名不是它。[workflow 语法](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idpermissions)、[表达式适用位置](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability)、[format](https://docs.github.com/en/actions/reference/evaluate-expressions-in-workflows-and-actions#format)。
+
+**边界：** 没有推送攻击 workflow，没有声称已经在 GitHub 伪造了状态或绕过了合并。已证实的是本 PR 声明必须拦的写权限及保护检查名输入被本机完整门禁放行。当前 provenance 的保护配置 `app_id=null`，所以不能把可信状态的来源区分仅寄托于该正则。
+
+**要求：** 结构化解析 YAML，校验有效 permissions；对受保护 job/status 名拒绝无法静态证明安全的表达式及动态生成，或从服务端机制隔离可信检查身份。必须覆盖引号、折叠标量、锚点、表达式和实际 job name，而非只找原文 token。
+
+### RR-04 [P1] 恒真源码断言仍能与错误实现一起过完整门禁
+
+位置：[testlint.ts:analyzeBody](../scripts/gates/testlint.ts#L110)。对应 R-04。
+
+`self-equality` 的红实现直接 throw，绿实现故意 `return 999`，测试为：
+
+```ts
+test("adds", () => { assert.equal(add(1, 2), add(1, 2)); });
+```
+
+**实际结果：** 测试通过，完整 8 道门禁退出 **0**；以被审 tsconfig 和 biome 配置检查该反例，typecheck/lint 均退出 0。该断言只验证确定性函数与自身相等，没有验证加法结果为 3。G-RED/G-STUB 只能因 throw 变红，不能使恒真断言变成行为规格。
+
+同类补充 `unreachable-assertion` 在 `if (false)` 中放源码断言，测试仅真实调用源码，无实际执行断言，8 道门禁也退出 0；此补充只声明门禁结果，未声称它通过其他 lint。`srcAsserts` 的语法提及与 `constAsserts` 的字面量检查，均不足以验证有意义且执行过的判据。
+
+**要求：** 至少拦自比较、恒真关系与不可达断言；不要将污点存在等价于测试语义有效。用错误的非抛错实现做行为变异校准，让确定性错误值必须被当前测试识别；保留正确负向对照，不能靠统一禁止源码测试换红。
+
+### RR-05 [P1] 生产厂商累积集合仍漏相对路径操作，同厂商审查可伪装合规
+
+位置：[gates.ts:producers](../scripts/gates/gates.ts#L94)。对应新版 R-01 的 `actual_producer_models[]`。
+
+**反例：** 固定在 g-group 工作目录的作者会话，Claude 轮次的输入含绝对仓库路径；随后 GPT 轮次用相对路径 `packages/core/src/add.ts` 执行 apply_patch。审查轮次为 GPT，无豁免。输入记录中 GPT 轮次的相对 patch 不含字面 `g-group`，所以未计入生产集合。
+
+**实际结果：** `relative-producer-turn` 完整 8 道门禁退出 **0**。这里使用模拟多轮原始记录测试来源算法，不指控真实作者已经换过模型；它证明所谓「宁多勿少」实际上仍会漏掉标准相对路径编辑。正反例中的厂商区别不能弥补漏识别整个生产轮次。
+
+**要求：** 根据 session/turn 的真实工作目录与工具语义解析规范化文件路径，或直接消费宿主生成的不可变生产模型快照与动作关联；不能以工具输入是否含仓库名作可信来源判定。覆盖 apply_patch 相对路径、持续 cwd、工具省略 cwd、链接路径和重命名。
+
+### RR-06 [P1] 用 Set 对齐测试名不等于一一对应，同名间接测试仍可零断言通过
+
+位置：[gates.ts:G-TAUTO](../scripts/gates/gates.ts#L238)、[testlint.ts](../scripts/gates/testlint.ts#L125)。对应 R-04/R-03。
+
+`duplicate-runtime-name` 在同一文件中提交：
+
+```ts
+test("adds", () => { assert.equal(add(1, 2), 3); });
+const register = test;
+register("adds", () => { add(1, 2); });
+```
+
+红提交源码 throw，绿提交正常加法。**实际结果：** Node 注册了两个具名测试，两个都通过；完整 8 道门禁仍退出 **0**，同款 typecheck/lint 也退出 0。静态分析只识别第一条，运行时与静态各转成按 `file+name` 的 Set，重复项被折叠，于是第二条零断言测试消失。静态同名检查也看不到未识别的 register。
+
+**要求：** 比较稳定身份及数量，不用去重集合冒充一一映射；发现运行时同名/额外实例或无法追踪注册必须拦截。G-RED/G-STUB 同样不能用另一条同名的失败代偿当前测试；保留嵌套 suite 与参数化测试的明确身份规则。
+
+### RR-07 [P1] 红绿只按名字匹配，可先写假断言红，再把断言改绿
+
+位置：[gates.ts:G-RED](../scripts/gates/gates.ts#L170)。对应 R-02/AC-27。
+
+`red-different-test-body` 的红提交已经有正确 `add` 实现，测试名 adds，但断言 `assert.equal(add(1, 2), -100)`；绿提交只将期望改成 3，同名测试通过。真实正确行为测试从未在空壳/错误实现上执行过一次红。
+
+**实际结果：** 红提交同名测试确实失败、绿提交确实通过、桩替换失败，完整 8 道门禁退出 **0**，同款 typecheck/lint 也退出 0。当前 `changedTests` 与 base 比较了测试体，却没有把绿版本测试体与 red.commit 的测试体绑定；`red.commit`「只含测试和空壳实现」也未被验证。
+
+**要求：** 红阶段运行的应是同一行为规格及其必要测试依赖，不能让更换期望/移除断言冒充实现从红到绿。绑定红绿测试身份和规范化内容，必要时在红实现上重跑绿版本测试；以本例补负向回归，避免仅凭相同名称作证明。
+
+### RR-08 [P1] 豁免仍未绑定真实授权动作与授权人，引用示例被当成同意
+
+位置：[gates.ts:waiver](../scripts/gates/gates.ts#L121)。对应 R-01/R-10。
+
+**反例 A：** `quoted-waiver` 令作者/审查均为 Claude；模拟 usr_ 用户消息原文为 `以下只是测试样例，不构成授权：「批准豁免 <当前hash前12位>」`。没有不批准/拒绝/不同意这三个黑名单子串，只有引用示例，却被记录为 Waived。完整 8 道门禁退出 **0**。
+
+**反例 B：** `different-waiver-user` 中收据 by 仍为 `39impacts.talent`，模拟原始事件的发送者是另一个 `usr_unrelated`，完整门禁也退出 **0**。检查只认 usr_ 前缀，未将 waiver.by 映射到发起人身份或具有该权限的主体。真实群聊 g-group#865 的用户 UID 已核实，反例未往真实群聊写入任何模拟消息。
+
+**要求：** 使用认证主体发出的、作用于本 PR/hash 的结构化授权事件/明确确认交互；转发、引用、示例和否定不能产生授权事件，不能把「任意 usr_ 消息」当成「指定用户本人」。保留编辑/撤回后失效，并明确谁有权批准，而不是不断扩充否定词正则。
+
+### 作者第 7 栏的风险是否可接受
+
+| 声明的边界 | 重审判断 |
+|---|---|
+| 所有者 token 能写 provenance，防不了所有者本人 | 可作为外部信任根限制披露，不要求防御最终管理员；但 RR-02 是未受信测试继承所有者执行权限，RR-03 是检查来源可混淆，不能并入「所有者主动绕过」而豁免 |
+| 信任 turns.jsonl 未被篡改 | 若来源由独立受保护宿主维护，可显式列为信任前提；当前 RR-01 连来源文件位置都不可信，RR-02 还允许 PR 测试在核验前写来源，故现状不可接受 |
+| Docker 本机未测 | 维持未测，不等于通过。已实际确认 daemon 不可用；未来 trusted-gates 需要真实沙箱正反例，特别是目录外写、凭据/来源不可读、依赖/裁判不可改及网络拒绝 |
+| 引导期 trusted-gates 不会运行 | API 确认 main 无此文件，目前必需项只有 self-check（GitHub Actions app_id=15368）和 provenance（app_id=null）。一次性引导需要明确受控步骤与首次落地后的实测，再将可信检查加入必需项；不能把未运行路径标为已验。本次仍有直接门禁绕过，不批准用引导理由提前合并 |
+
+另外，README 当前写「三项都必须」，与实际两项的引导期状态并不一致；这属于待作者纠正的发布状态描述，不由本次审查改动。裁判移到 main 的方向与 R-18 的具体旧变异修复成立，不抵消上述来源、测试有效性和执行隔离问题。
+
+### 重审原始工件与交付范围
+
+- 完整反例脚本：`/tmp/g-group-rereview-f933.mjs`；最新完整运行目录：`/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/g-group-rereview-f933-apfk2A/`，总结果 `results.json`，各例同名 JSON 保存退出码、完整输出、收据、红提交和副本路径。
+- RR-01 默认真实会话根目录的额外验证：`/tmp/g-group-default-session-probe-f933.mjs`；原始结果 `.../g-group-rereview-f933-8RnB4V/default-sessions-traversal.json`。脚本只在隔离 PR 内写伪造文件，真实作者会话只读。
+- RR-02 链式验证：最新目录的 `local-tests-forge-provenance.json`；目录外哨兵：`local-external-write.json`；静态额外对照：`fixture-static-checks.json`。
+- 变异最终实跑：`/tmp/g-group-rereview-f933-mutation-final.json`，退出 0。变异源码未在运行中修改；关闭继承 hooks 仅为测试进程配置，未修改仓库 hook 或全局 Git 配置。
+- 反例的假会话、假豁免事件均在临时目录，经环境变量明确注入；没有写真实会话/群聊，没有远端攻击状态、没有实际合并。源码与执行器在实验期间冻结，真实仓库只追加本节并填 review。
+- 收据除 `review` 外保持作者提交内容不变。本次不能将 R-01/R-02/R-04 等作者「通过」继承为独立通过；R-08 原有字段反例和 F-08 具体旧变异可确认改善，产品状态机/UI/真实容器执行仍未验。
+
+作者应先修上述问题，再交跨厂商独立复审。不要只加能对上本次字面输入的正则；应补信任边界、结构化身份与红绿同一规格，并以正反例证明实际执行结果。
+
+重审 review 写入后已复核：原报告是当前报告的完整前缀，收据非 review 字段与 `f5dfaf5` 结构化比较完全一致，仅指定两文件变化；`git diff --check` 通过。指定 hash 命令仍输出本节的 `86ba2b96…cef22da`；完整 `--local` 退出 1，唯一问题是「审查结论是 reject」，G-PROVENANCE 通过。未以绕过本次拒绝为目的写成功状态或合并。
