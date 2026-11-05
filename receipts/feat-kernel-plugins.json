@@ -52,5 +52,12 @@
   },
   "unverifiable": "AC-06/AC-11/AC-12/AC-35 整项都标未测,本片只证明纯函数与内存实现的子判据。AC-06:预算按渲染后 UTF-8 字节计,不是真实 token;渲染格式 '#seq kind:id: text' 是本片自定的,真实装配段格式变了需要重测;被引用的超长原文现在是整条进或整体失败,需求 D06.3 的有界切片 + 分页游标没有做。AC-11:机械线索到事件的映射是简化的(@ 与引用 → E1,带版本号 → E6),真实子类型(E5 改挂等)要状态机切片定;这里只能证明 classifyInbound 自己不调分类器,不能证明宿主其它入口不绕过它直接调模型。AC-12:违规只记在返回值 violation 字段,没有落盘的分类调用日志。AC-35:不可信标记只是信封上的 trust 字段,不能阻止下游把 content 当指令(R-10/AC-20 的拦截没有做);dependsOn 只查声明字段,import 级的插件互依赖靠 G-LAYER;action_id 幂等表在内存里,进程重启即丢,持久去重属于 AC-31。R-05 的变异校准只覆盖 mutations.mjs 列出的 14 种故障。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "codex",
+    "session": "codex:7d29bd3e-c4cd-4e15-ad0b-298bd0301bd3",
+    "model": "gpt-6.1-terra",
+    "verdict": "reject",
+    "reviewed_hash": "bfd2172771d30c4a5959a5bf6310afa7ffb11c9af3923bde3b292a17f3770845",
+    "notes": "独立复现、必须修复问题与变异见 reviews/feat-kernel-plugins.md"
+  }
 }
