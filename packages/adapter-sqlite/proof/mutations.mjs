@@ -23,6 +23,12 @@ const M = [
   ["S11 追加不接旧链(每次从空日志算)", "store.ts", "append({ events: readEvents(s.db, sessionId) }, sender, body, at)", "append({ events: [] }, sender, body, at)"],
   ["S12 读事件不按会话过滤", "store.ts", "FROM events WHERE session = ? ORDER BY seq\").all(sessionId)", "FROM events WHERE ? IS NOT NULL ORDER BY seq\").all(sessionId)"],
   ["S13 CAS 冲突时仍写入", "store.ts", "  s.onCasRead?.(key, cur);\n", "  s.onCasRead?.(key, cur);\n  if (cur !== expectedVer) { s.db.prepare(\"INSERT INTO docs (key, ver, value) VALUES (?, ?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value\").run(key, cur, JSON.stringify(value)); }\n"],
+  // 以下按 Codex 首轮审查 reviews/feat-sqlite-storage.md 的 R14–R17 与 busy 契约补入
+  ["S14 撤回事件不落盘直接返回(R14)", "store.ts", "const e = next.events.at(-1)!;", "const e = next.events.at(-1)!;\n    if (e.body.kind === \"retract\") return e;"],
+  ["S15 重放时删掉其他动作(R15)", "store.ts", "INSERT OR IGNORE INTO actions (action_id, payload) VALUES (?, ?)\").run(actionId, JSON.stringify(payload));", "INSERT OR IGNORE INTO actions (action_id, payload) VALUES (?, ?)\").run(actionId, JSON.stringify(payload));\n  if (Number(r.changes) === 0) s.db.prepare(\"DELETE FROM actions WHERE action_id <> ?\").run(actionId);"],
+  ["S16 冲突时覆盖其他文档(R16)", "store.ts", 'if (cur !== expectedVer) return { ok: false, reason: "version-conflict", currentVer: cur };', 'if (cur !== expectedVer) { s.db.prepare("UPDATE docs SET value = ? WHERE key <> ?").run(JSON.stringify("错误覆盖"), key); return { ok: false, reason: "version-conflict", currentVer: cur }; }'],
+  ["S17 事务换成进程内布尔锁(R17)", "store.ts", "return tx(s.db, () => cas(s, key, expectedVer, value));", 'const g = globalThis as { casLock?: boolean }; if (g.casLock) return { ok: false, reason: "busy" }; g.casLock = true; try { return cas(s, key, expectedVer, value); } finally { g.casLock = false; }'],
+  ["S18 busy 不映射,照抛异常", "store.ts", 'if (isBusy(e)) return { ok: false, reason: "busy" };', ""],
 ];
 
 function run(dir) {
