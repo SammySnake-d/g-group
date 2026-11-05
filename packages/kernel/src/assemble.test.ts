@@ -1,84 +1,94 @@
-// AC-06 引用旧消息确定性 Page-in:被引用 #seq 原文精确进装配;超预算显式失败,禁止静默截断;窗口内引用不重复页入。
+// AC-06 引用旧消息确定性 Page-in:被引用 #seq 原文精确进装配;超预算显式失败,禁止静默截断;已在历史里的引用不重复页入。
+// AC-39 / D22 群聊缓存前缀纪律:stable 段不含会变内容;历史只追加不重截;Page-in 与会变状态只在 tail;断点 ≤ 4。
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { append, emptyLog, type Log } from "@g-group/domain";
-import { assemble } from "./assemble.ts";
+import { assemble, type AssembleOptions, type AssembleResult, MAX_BREAKPOINTS, prefixHash, prefixLength, serialize } from "./assemble.ts";
 
 const user = { kind: "user", id: "u1" } as const;
 const contact = { kind: "contact", id: "c-astra" } as const;
 const at = "2026-11-05T13:40:00Z";
 const OLD = "压测报告结论:p99 在 820ms,瓶颈在登录接口的 bcrypt 轮数";
-
-/** 10 条消息:#1 是早已滑出窗口的旧结论,#2..#10 是日常闲聊 */
-function history(): Log {
-  let log = append(emptyLog(), contact, { kind: "message", text: OLD }, at);
-  for (let i = 2; i <= 10; i++) log = append(log, i % 2 ? contact : user, { kind: "message", text: `闲聊 ${i}` }, at);
-  return log;
-}
+const STABLE = [
+  { kind: "system", text: "你是群聊里的联系人,只在被叫到或有把握时发言。" },
+  { kind: "tools", text: "read_log(compute_id, offset, limit)\nrecall_by_chain(seq)" },
+  { kind: "persona", text: "小审:负责代码审查,说话简短。群规:先给结论再给证据。" },
+] as const;
 const BIG = 1_000_000;
 
-test("被引用的旧消息不在窗口内也按原文精确页入,清单记 seq 与字节数", () => {
-  const r = assemble(history(), { window: 3, quotes: [1], budgetBytes: BIG });
-  assert.equal(r.ok, true);
-  if (!r.ok) return;
-  assert.ok(r.content.includes(OLD), "#1 原文必须逐字出现在装配内容里");
-  const paged = r.manifest.find((m) => m.seq === 1);
-  assert.equal(paged?.via, "page-in");
-  assert.ok((paged?.bytes ?? 0) >= Buffer.byteLength(OLD, "utf8"));
-  assert.deepEqual(r.manifest.filter((m) => m.via === "window").map((m) => m.seq), [8, 9, 10]);
+/** 10 条消息:#1 是早已压缩掉的旧结论,#2..#10 是日常闲聊 */
+function history(n = 10): Log {
+  let log = append(emptyLog(), contact, { kind: "message", text: OLD }, at);
+  for (let i = 2; i <= n; i++) log = append(log, i % 2 ? contact : user, { kind: "message", text: `闲聊第${i}句` }, at);
+  return log;
+}
+const opts = (over: Partial<AssembleOptions> = {}): AssembleOptions => ({
+  stable: STABLE, compressed: { throughSeq: 7, text: "前 7 条摘要:讨论了压测和登录页" }, quotes: [], budgetBytes: BIG, ...over,
+});
+function ok(r: AssembleResult) {
+  assert.equal(r.ok, true, JSON.stringify(r));
+  if (!r.ok) throw new Error("装配失败");
+  return r;
+}
+
+test("请求按 stable → history → tail 分段,压缩点之后的可见消息全量进 history", () => {
+  const r = ok(assemble(history(), opts({ volatile: "当前时间 2026-11-05 13:40" })));
+  const secs = r.request.segments.map((s) => s.section);
+  assert.deepEqual([...new Set(secs)], ["stable", "history", "tail"]);
+  assert.deepEqual(r.request.segments.filter((s) => s.section === "stable").map((s) => s.label), ["system", "tools", "persona"]);
+  assert.deepEqual(r.request.segments.filter((s) => s.label === "message").map((s) => s.seq), [8, 9, 10]);
+  assert.ok(r.request.segments.find((s) => s.label === "volatile")?.section === "tail");
 });
 
-test("同一窗口只切引用开关:不引用 1 号旧消息时它不进装配(阴性对照)", () => {
-  const r = assemble(history(), { window: 3, quotes: [], budgetBytes: BIG });
-  assert.equal(r.ok, true);
-  if (!r.ok) return;
-  assert.equal(r.content.includes(OLD), false);
+test("被引用的已压缩旧消息按原文精确页入 tail,清单记 seq 与字节数", () => {
+  const r = ok(assemble(history(), opts({ quotes: [1] })));
+  const paged = r.request.segments.find((s) => s.seq === 1);
+  assert.equal(paged?.section, "tail");
+  assert.ok(paged?.text.includes(OLD), "#1 原文必须逐字出现");
+  assert.deepEqual(r.manifest.find((m) => m.seq === 1), { seq: 1, bytes: paged?.bytes, via: "page-in" });
+  assert.ok((paged?.bytes ?? 0) >= Buffer.byteLength(OLD, "utf8"));
+});
+
+test("同一历史只切引用开关:不引用 1 号旧消息时它不进装配(阴性对照)", () => {
+  const r = ok(assemble(history(), opts({ quotes: [] })));
+  assert.equal(serialize(r.request).includes(OLD), false);
   assert.deepEqual(r.manifest.map((m) => m.seq), [8, 9, 10]);
 });
 
-test("清单字节数之和等于装配内容的实际 UTF-8 字节数", () => {
-  const r = assemble(history(), { window: 4, quotes: [1, 2], budgetBytes: BIG });
-  assert.equal(r.ok, true);
-  if (!r.ok) return;
-  const sum = r.manifest.reduce((a, m) => a + m.bytes, 0);
-  assert.equal(sum, Buffer.byteLength(r.content, "utf8"));
-  assert.equal(r.totalBytes, sum);
+test("清单字节数与各段字节数之和等于请求体实际 UTF-8 字节数", () => {
+  const r = ok(assemble(history(), opts({ quotes: [1, 2], volatile: "任务表:无" })));
+  const body = serialize(r.request);
+  assert.equal(r.totalBytes, Buffer.byteLength(body, "utf8"));
+  assert.equal(r.request.segments.reduce((a, s) => a + s.bytes, 0), r.totalBytes);
+  for (const m of r.manifest) assert.equal(m.bytes, r.request.segments.find((s) => s.seq === m.seq)?.bytes);
 });
 
-test("超预算一个字节就显式失败并报出需要多少,而不是静默截断(阳性埋雷)", () => {
-  const full = assemble(history(), { window: 3, quotes: [1], budgetBytes: BIG });
-  assert.equal(full.ok, true);
-  if (!full.ok) return;
-  const r = assemble(history(), { window: 3, quotes: [1], budgetBytes: full.totalBytes - 1 });
-  assert.deepEqual(r, { ok: false, reason: "over-budget", need: full.totalBytes, budget: full.totalBytes - 1 });
+test("超预算一个字节就显式失败并要求压缩,而不是静默截断(阳性埋雷)", () => {
+  const full = ok(assemble(history(), opts({ quotes: [1] })));
+  const r = assemble(history(), opts({ quotes: [1], budgetBytes: full.totalBytes - 1 }));
+  assert.deepEqual(r, { ok: false, reason: "over-budget", need: full.totalBytes, budget: full.totalBytes - 1, action: "compress" });
 });
 
 test("预算恰好等于所需字节时装配成功(阴性对照)", () => {
-  const full = assemble(history(), { window: 3, quotes: [1], budgetBytes: BIG });
-  assert.equal(full.ok, true);
-  if (!full.ok) return;
-  const r = assemble(history(), { window: 3, quotes: [1], budgetBytes: full.totalBytes });
-  assert.equal(r.ok, true);
-  if (r.ok) assert.equal(r.content, full.content);
+  const full = ok(assemble(history(), opts({ quotes: [1] })));
+  const r = ok(assemble(history(), opts({ quotes: [1], budgetBytes: full.totalBytes })));
+  assert.equal(serialize(r.request), serialize(full.request));
 });
 
-test("引用窗口内的消息不触发页入,原文只出现一次", () => {
-  const r = assemble(history(), { window: 3, quotes: [9], budgetBytes: BIG });
-  assert.equal(r.ok, true);
-  if (!r.ok) return;
-  assert.deepEqual(r.manifest.map((m) => [m.seq, m.via]), [[8, "window"], [9, "window"], [10, "window"]]);
-  assert.equal(r.content.split("闲聊 9").length - 1, 1);
+test("引用已在 history 里的消息不触发页入,原文只出现一次", () => {
+  const r = ok(assemble(history(), opts({ quotes: [9] })));
+  assert.equal(r.request.segments.some((s) => s.section === "tail"), false);
+  assert.equal(serialize(r.request).split("闲聊第9句").length - 1, 1);
 });
 
-test("撤回的消息既不进窗口也不能被引用页入,清单把它列为跳过", () => {
+test("撤回的消息既不进 history 也不能被引用页入,清单把它列为跳过", () => {
   let log = history();
   log = append(log, user, { kind: "retract", target: 10 }, at);
   log = append(log, contact, { kind: "retract", target: 1 }, at);
-  const r = assemble(log, { window: 2, quotes: [1], budgetBytes: BIG });
-  assert.equal(r.ok, true);
-  if (!r.ok) return;
-  assert.equal(r.content.includes(OLD), false);
-  assert.equal(r.content.includes("闲聊 10"), false);
+  const r = ok(assemble(log, opts({ quotes: [1] })));
+  const body = serialize(r.request);
+  assert.equal(body.includes(OLD), false);
+  assert.equal(body.includes("闲聊第10句"), false);
   assert.deepEqual(r.manifest.map((m) => m.seq), [8, 9]);
   assert.deepEqual(r.skipped, [{ seq: 1, reason: "retracted" }]);
 });
@@ -86,14 +96,80 @@ test("撤回的消息既不进窗口也不能被引用页入,清单把它列为�
 test("编辑过的消息按最新文字装配", () => {
   let log = history();
   log = append(log, contact, { kind: "edit", target: 1, text: "压测报告结论(订正):p99 在 640ms" }, at);
-  const r = assemble(log, { window: 2, quotes: [1], budgetBytes: BIG });
-  assert.equal(r.ok, true);
-  if (!r.ok) return;
-  assert.ok(r.content.includes("p99 在 640ms"));
-  assert.equal(r.content.includes(OLD), false);
+  const r = ok(assemble(log, opts({ quotes: [1] })));
+  assert.ok(serialize(r.request).includes("p99 在 640ms"));
+  assert.equal(serialize(r.request).includes(OLD), false);
 });
 
 test("引用不存在的消息序号显式失败", () => {
-  const r = assemble(history(), { window: 2, quotes: [99], budgetBytes: BIG });
+  const r = assemble(history(), opts({ quotes: [99] }));
   assert.deepEqual(r, { ok: false, reason: "quote-not-found", seq: 99 });
+});
+test("把最近 25 条、时间、消息序号、任务号或新消息原文注入 stable 段都报错(AC-39 阳性埋雷)", () => {
+  const injected: [string, string][] = [
+    ["system", "以下是最近 25 条消息:……"],
+    ["system", "当前时间 2026-11-05"],
+    ["persona", "现在是 13:40,注意时效"],
+    ["persona", "上一条是 #9,记得回"],
+    ["tools", "当前任务 T-12 进行中"],
+    ["persona", "用户刚说:闲聊第10句"],
+  ];
+  for (const [kind, text] of injected) {
+    const stable = STABLE.map((p) => (p.kind === kind ? { kind: p.kind, text: `${p.text}\n${text}` } : p));
+    const r = assemble(history(), opts({ stable }));
+    assert.equal(r.ok === false && r.reason, "volatile-in-stable", text);
+    if (!r.ok && r.reason === "volatile-in-stable") assert.equal(r.part, kind);
+  }
+});
+
+test("同样的时间与任务表放进 tail 的会变状态里照常装配(单开关对照)", () => {
+  const r = ok(assemble(history(), opts({ volatile: "当前时间 2026-11-05 13:40;最近 25 条摘要;任务 T-12" })));
+  assert.equal(r.request.segments.at(-1)?.section, "tail");
+});
+
+test("正常追加一条消息后,新请求从开头到上次 history 末尾逐字节相同(AC-39 阴性对照)", () => {
+  const before = ok(assemble(history(10), opts()));
+  const after = ok(assemble(history(11), opts()));
+  const n = prefixLength(before.request);
+  assert.equal(prefixHash(after.request, n), prefixHash(before.request));
+  assert.equal(Buffer.from(serialize(after.request)).subarray(0, n).equals(Buffer.from(serialize(before.request)).subarray(0, n)), true);
+  assert.ok(prefixLength(after.request) > n, "新消息追加在 history 末尾");
+});
+
+test("连续多轮追加不滑动窗口:压缩点之后的消息一条不少,旧前缀每轮都保留", () => {
+  let prev = ok(assemble(history(10), opts()));
+  for (let n = 11; n <= 40; n++) {
+    const cur = ok(assemble(history(n), opts()));
+    assert.equal(prefixHash(cur.request, prefixLength(prev.request)), prefixHash(prev.request), `第 ${n} 条`);
+    assert.deepEqual(cur.request.segments.filter((s) => s.label === "message").map((s) => s.seq), Array.from({ length: n - 7 }, (_, i) => i + 8));
+    prev = cur;
+  }
+});
+
+test("旧历史被重截时前缀哈希不一致,宿主据此能发现(AC-39 阳性埋雷)", () => {
+  const before = ok(assemble(history(10), opts()));
+  const retruncated = ok(assemble(history(11), opts({ compressed: { throughSeq: 8, text: "前 7 条摘要:讨论了压测和登录页" } })));
+  assert.notEqual(prefixHash(retruncated.request, prefixLength(before.request)), prefixHash(before.request));
+});
+
+test("引用页入与会变状态都不改变缓存前缀", () => {
+  const plain = ok(assemble(history(), opts()));
+  const withTail = ok(assemble(history(), opts({ quotes: [1, 3], volatile: "当前时间 2026-11-05 13:40" })));
+  assert.equal(prefixLength(withTail.request), prefixLength(plain.request));
+  assert.equal(prefixHash(withTail.request), prefixHash(plain.request));
+  const firstTail = withTail.request.segments.findIndex((s) => s.section === "tail");
+  assert.ok(withTail.request.segments.slice(firstTail).every((s) => s.section === "tail"), "tail 之后不再有前缀段");
+});
+
+test("缓存断点不超过 4 个,位于工具定义末尾、stable 末尾、已压缩块末尾与最新追加消息,tail 里没有", () => {
+  const r = ok(assemble(history(), opts({ quotes: [1], volatile: "任务表:无" })));
+  const marks = r.request.segments.filter((s) => s.cacheBreakpoint);
+  assert.ok(marks.length <= MAX_BREAKPOINTS);
+  assert.deepEqual(marks.map((s) => [s.section, s.label, s.seq]), [
+    ["stable", "tools", undefined], ["stable", "persona", undefined], ["history", "compressed", undefined], ["history", "message", 10],
+  ]);
+  const next = ok(assemble(history(11), opts()));
+  assert.equal(next.request.segments.filter((s) => s.cacheBreakpoint).at(-1)?.seq, 11, "最后一个断点随最新追加消息移动");
+  const noCompressed = ok(assemble(history(), { stable: STABLE, quotes: [], budgetBytes: BIG }));
+  assert.equal(noCompressed.request.segments.filter((s) => s.cacheBreakpoint).length, 3);
 });

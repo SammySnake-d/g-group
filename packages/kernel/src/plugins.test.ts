@@ -75,13 +75,17 @@ test("DataSource 缺 sources、空 sources、sources 非字符串、缺 pull 各
   assert.deepEqual(reg.register({ ...base, id: "ok" }), { ok: true });
 });
 
-test("OutboundChannel 缺 send、send 非函数、缺或错 idempotency 各自被拒,补齐后放行", () => {
+test("OutboundChannel 缺 send、send 非函数、缺或错 idempotency、B1 缺保留期、B2 带保留期各自被拒,补齐后放行", () => {
   const base = mail([]);
   const cases: [string, unknown][] = [
     ["缺 send", { kind: base.kind, id: "a", idempotency: "none" }],
     ["send 不是函数", { ...base, id: "b", send: {} }],
     ["缺 idempotency", { kind: base.kind, id: "c", send: base.send }],
     ["idempotency 越界", { ...base, id: "d", idempotency: "exactly-once" }],
+    ["B1 缺保留期", { ...base, id: "e", idempotency: "action-id" }],
+    ["B1 保留期为 0", { ...base, id: "f", idempotency: "action-id", idempotencyWindowMs: 0 }],
+    ["B1 保留期不是数", { ...base, id: "g", idempotency: "action-id", idempotencyWindowMs: "1h" }],
+    ["B2 声明保留期", { ...base, id: "h", idempotency: "none", idempotencyWindowMs: 1000 }],
   ];
   const reg = createRegistry();
   for (const [why, c] of cases) {
@@ -90,7 +94,7 @@ test("OutboundChannel 缺 send、send 非函数、缺或错 idempotency 各自�
   }
   assert.equal(reg.list().length, 0);
   assert.deepEqual(reg.register({ ...base, id: "b2" }), { ok: true });
-  assert.deepEqual(reg.register({ ...base, id: "b1", idempotency: "action-id" }), { ok: true });
+  assert.deepEqual(reg.register({ ...base, id: "b1", idempotency: "action-id", idempotencyWindowMs: 1000 }), { ok: true });
 });
 
 test("UIExtension 缺 mounts、mounts 不是字符串数组各自被拒,补齐后放行", () => {
@@ -248,6 +252,7 @@ test("pull 抛错或不给数组显式失败,不当作空结果", async () => {
   reg.register({ ...tg(), id: "obj", pull: async () => ({ events: [] }) });
   const a = await reg.pull("boom", "g1");
   assert.equal(a.ok === false && a.reason, "pull-failed");
+  assert.equal(a.ok === false && a.detail, "限流", "失败原因原样带回插件抛出的错误文字");
   const b = await reg.pull("obj", "g1");
   assert.equal(b.ok === false && b.reason, "invalid-batch");
 });
@@ -275,7 +280,7 @@ test("await 异步发送拿到真实回执才算确认;同 action_id 同内容�
   const c = await reg.send("gmail", { action_id: "act-2", payload: "日报" });
   assert.equal(c.ok && c.deduplicated, false);
   assert.deepEqual(log, ["act-1", "act-2"]);
-  assert.equal(reg.delivery("gmail", "act-1"), "confirmed");
+  assert.equal(reg.delivery("gmail", "act-1")?.state, "confirmed");
 });
 
 test("同 action_id 换内容被拒,不复用旧回执也不真发", async () => {
@@ -294,18 +299,19 @@ test("B2 渠道送达后抛错记 DeliveryUnknown,同 action_id 再调被拒,插
   const a = await reg.send("smtp", { action_id: "act-1", payload: "告警" });
   assert.equal(a.ok === false && a.state, "delivery-unknown");
   assert.equal(a.ok === false && a.reason, "send-threw");
-  assert.equal(reg.delivery("smtp", "act-1"), "delivery-unknown");
+  assert.equal(a.ok === false && a.detail, "送达后响应超时");
+  assert.equal(reg.delivery("smtp", "act-1")?.state, "delivery-unknown");
   const b = await reg.send("smtp", { action_id: "act-1", payload: "告警" });
   assert.equal(b.ok === false && b.reason, "retry-refused");
   assert.equal(b.ok === false && b.state, "delivery-unknown");
   assert.equal(calls, 1);
 });
 
-test("B1 渠道结果未知后同 action_id 重试会交给接收端去重,拿到真实回执后确认(单开关对照)", async () => {
+test("B1 渠道结果未知后在保留期内同 action_id 重试会交给接收端去重,拿到真实回执后确认(单开关对照)", async () => {
   let calls = 0;
   const reg = createRegistry();
   reg.register({
-    kind: "outbound-channel", id: "group", idempotency: "action-id",
+    kind: "outbound-channel", id: "group", idempotency: "action-id", idempotencyWindowMs: 60_000,
     send: async (req: { action_id: string }) => { calls++; if (calls === 1) throw new Error("EOF"); return { action_id: req.action_id, receiptId: "srv-7" }; },
   });
   const a = await reg.send("group", { action_id: "act-1", payload: "进度" });
@@ -313,7 +319,7 @@ test("B1 渠道结果未知后同 action_id 重试会交给接收端去重,拿�
   const b = await reg.send("group", { action_id: "act-1", payload: "进度" });
   assert.deepEqual(b, { ok: true, state: "confirmed", receipt: { action_id: "act-1", receiptId: "srv-7" }, deduplicated: false });
   assert.equal(calls, 2);
-  assert.equal(reg.delivery("group", "act-1"), "confirmed");
+  assert.equal(reg.delivery("group", "act-1")?.state, "confirmed");
 });
 
 test("await 超时记 DeliveryUnknown 而不是成功", async () => {
@@ -322,7 +328,7 @@ test("await 超时记 DeliveryUnknown 而不是成功", async () => {
   const r = await reg.send("slow", { action_id: "act-1", payload: "x" });
   assert.equal(r.ok === false && r.reason, "timeout");
   assert.equal(r.ok === false && r.state, "delivery-unknown");
-  assert.equal(reg.delivery("slow", "act-1"), "delivery-unknown");
+  assert.equal(reg.delivery("slow", "act-1")?.state, "delivery-unknown");
 });
 
 test("回执不合契约或 send 同步返回都记 DeliveryUnknown,不把返回值当回执", async () => {
@@ -341,11 +347,11 @@ test("上一次发送还在途时同 action_id 再调被拒,插件只被调 1 �
   let release: (v: unknown) => void = () => {};
   const reg = createRegistry();
   reg.register({
-    kind: "outbound-channel", id: "gmail", idempotency: "action-id",
+    kind: "outbound-channel", id: "gmail", idempotency: "action-id", idempotencyWindowMs: 60_000,
     send: (req: { action_id: string }) => { calls++; return new Promise((res) => { release = () => res({ action_id: req.action_id, receiptId: "r-1" }); }); },
   });
   const first = reg.send("gmail", { action_id: "act-1", payload: "x" });
-  assert.equal(reg.delivery("gmail", "act-1"), "in-flight");
+  assert.equal(reg.delivery("gmail", "act-1")?.state, "in-flight");
   const second = await reg.send("gmail", { action_id: "act-1", payload: "x" });
   assert.equal(second.ok === false && second.reason, "in-flight");
   release(undefined);
@@ -354,24 +360,189 @@ test("上一次发送还在途时同 action_id 再调被拒,插件只被调 1 �
   assert.equal(calls, 1);
 });
 
-test("B1 回执在 TTL 内复用,过期后交给接收端按 action_id 去重;B2 回执一直复用不重发", async () => {
+/** 模拟 B1 接收端:按 action_id 去重,但只记 windowMs 毫秒;effects 是真实副作用次数 */
+function provider(clock: () => number, windowMs: number, failFirst = false) {
+  const seen = new Map<string, { at: number; receipt: { action_id: string; receiptId: string } }>();
+  const stats = { calls: 0, effects: 0 };
+  const send = async (q: { action_id: string }) => {
+    stats.calls++;
+    const old = seen.get(q.action_id);
+    if (old && clock() - old.at < windowMs) return old.receipt;
+    stats.effects++;
+    const receipt = { action_id: q.action_id, receiptId: `r${stats.effects}` };
+    seen.set(q.action_id, { at: clock(), receipt });
+    if (failFirst && stats.effects === 1) throw new Error("已送达但回执丢失");
+    return receipt;
+  };
+  return { send, stats };
+}
+
+test("已确认的 B1 动作过了服务商保留期再调,复用已知回执,不重新产生副作用(阳性埋雷)", async () => {
   let t = T0;
-  const b1: string[] = [];
-  const b2: string[] = [];
-  const reg = createRegistry({ now: () => t, receiptTtlMs: 1000 });
-  reg.register({ kind: "outbound-channel", id: "group", idempotency: "action-id", send: okSend(b1) });
-  reg.register({ kind: "outbound-channel", id: "smtp", idempotency: "none", send: okSend(b2) });
+  const p = provider(() => t, 1000);
+  const reg = createRegistry({ now: () => t });
+  reg.register({ kind: "outbound-channel", id: "b1", idempotency: "action-id", idempotencyWindowMs: 1000, send: p.send });
+  const a = await reg.send("b1", { action_id: "a", payload: "x" });
+  t += 1001;
+  const b = await reg.send("b1", { action_id: "a", payload: "x" });
+  t += 10 * 24 * 3600_000;
+  const c = await reg.send("b1", { action_id: "a", payload: "x" });
+  assert.equal(a.ok && a.deduplicated, false);
+  assert.equal(b.ok && b.deduplicated, true);
+  assert.equal(c.ok && c.deduplicated, true);
+  if (a.ok && c.ok) assert.deepEqual(c.receipt, a.receipt);
+  assert.deepEqual(p.stats, { calls: 1, effects: 1 });
+});
+
+test("结果未知的 B1 只在首次尝试的保留期内重试:保留期前放行、恰到期与过期都保持 DeliveryUnknown", async () => {
+  for (const [delay, allowed] of [[999, true], [1000, false], [1001, false]] as const) {
+    let t = T0;
+    const p = provider(() => t, 1000, true);
+    const reg = createRegistry({ now: () => t });
+    reg.register({ kind: "outbound-channel", id: "b1", idempotency: "action-id", idempotencyWindowMs: 1000, send: p.send });
+    const first = await reg.send("b1", { action_id: "a", payload: "x" });
+    assert.equal(first.ok === false && first.state, "delivery-unknown");
+    t += delay;
+    const retry = await reg.send("b1", { action_id: "a", payload: "x" });
+    if (allowed) {
+      assert.equal(retry.ok && retry.state, "confirmed", `延迟 ${delay}`);
+      assert.deepEqual(p.stats, { calls: 2, effects: 1 }, `延迟 ${delay}`);
+    } else {
+      assert.equal(retry.ok === false && retry.reason, "retry-window-expired", `延迟 ${delay}`);
+      assert.equal(retry.ok === false && retry.state, "delivery-unknown");
+      assert.deepEqual(p.stats, { calls: 1, effects: 1 }, `延迟 ${delay}`);
+      assert.equal(reg.delivery("b1", "a")?.state, "delivery-unknown");
+    }
+  }
+});
+
+test("B1 多次重试不刷新首次尝试时间:最后一次重试离首次已满保留期就拒绝", async () => {
+  let t = T0;
+  let calls = 0;
+  const reg = createRegistry({ now: () => t });
+  reg.register({ kind: "outbound-channel", id: "b1", idempotency: "action-id", idempotencyWindowMs: 1000, send: async () => { calls++; throw new Error("EOF"); } });
+  await reg.send("b1", { action_id: "a", payload: "x" });
+  for (const step of [400, 400]) {
+    t += step;
+    const r = await reg.send("b1", { action_id: "a", payload: "x" });
+    assert.equal(r.ok === false && r.reason, "send-threw");
+  }
+  t += 200;
+  const late = await reg.send("b1", { action_id: "a", payload: "x" });
+  assert.equal(late.ok === false && late.reason, "retry-window-expired");
+  assert.equal(calls, 3);
+  const d = reg.delivery("b1", "a");
+  assert.equal(d?.binding.firstAttemptAt, T0);
+  assert.equal(d?.attempts, 3);
+});
+
+test("B2 结果未知后 reregister 成 B1,同 action_id 仍拒绝重发,新接收端调用 0 次(阳性埋雷)", async () => {
+  let oldCalls = 0;
+  const fresh = provider(() => T0, 60_000);
+  const reg = createRegistry({ now: () => T0 });
+  reg.register({ kind: "outbound-channel", id: "mail", idempotency: "none", send: async () => { oldCalls++; throw new Error("已送达但回执丢失"); } });
+  const first = await reg.send("mail", { action_id: "a", payload: "x" });
+  assert.equal(first.ok === false && first.state, "delivery-unknown");
+  assert.deepEqual(reg.reregister({ kind: "outbound-channel", id: "mail", idempotency: "action-id", idempotencyWindowMs: 60_000, send: fresh.send }), { ok: true });
+  const again = await reg.send("mail", { action_id: "a", payload: "x" });
+  assert.equal(again.ok === false && again.state, "delivery-unknown");
+  assert.equal(again.ok === false && again.reason, "retry-refused");
+  assert.equal(oldCalls, 1);
+  assert.equal(fresh.stats.calls, 0);
+  assert.equal(reg.delivery("mail", "a")?.binding.idempotency, "none");
+  const other = await reg.send("mail", { action_id: "b", payload: "x" });
+  assert.equal(other.ok, true, "新动作走新渠道");
+});
+
+test("B1 结果未知后 reregister 换了接收端,保留期内也不重试,标渠道已变", async () => {
+  const oldP = provider(() => T0, 60_000, true);
+  const newP = provider(() => T0, 60_000);
+  const reg = createRegistry({ now: () => T0 });
+  reg.register({ kind: "outbound-channel", id: "group", idempotency: "action-id", idempotencyWindowMs: 60_000, send: oldP.send });
   await reg.send("group", { action_id: "a", payload: "x" });
-  await reg.send("smtp", { action_id: "a", payload: "x" });
-  t += 500;
-  const inTtl = await reg.send("group", { action_id: "a", payload: "x" });
-  assert.equal(inTtl.ok && inTtl.deduplicated, true);
-  t += 1000;
-  const expired = await reg.send("group", { action_id: "a", payload: "x" });
-  assert.equal(expired.ok && expired.deduplicated, false);
-  const b2Late = await reg.send("smtp", { action_id: "a", payload: "x" });
-  assert.equal(b2Late.ok && b2Late.deduplicated, true);
-  assert.deepEqual([b1.length, b2.length], [2, 1]);
+  const v1 = reg.delivery("group", "a")?.binding.channelVersion;
+  reg.reregister({ kind: "outbound-channel", id: "group", idempotency: "action-id", idempotencyWindowMs: 60_000, send: newP.send });
+  const r = await reg.send("group", { action_id: "a", payload: "x" });
+  assert.equal(r.ok === false && r.reason, "channel-changed");
+  assert.equal(newP.stats.calls, 0);
+  assert.equal(reg.delivery("group", "a")?.binding.channelVersion, v1);
+});
+
+test("同一渠道版本内 B1 未知可在保留期内重试(单开关对照:不 reregister)", async () => {
+  const p = provider(() => T0, 60_000, true);
+  const reg = createRegistry({ now: () => T0 });
+  reg.register({ kind: "outbound-channel", id: "group", idempotency: "action-id", idempotencyWindowMs: 60_000, send: p.send });
+  await reg.send("group", { action_id: "a", payload: "x" });
+  const r = await reg.send("group", { action_id: "a", payload: "x" });
+  assert.equal(r.ok && r.state, "confirmed");
+  assert.deepEqual(p.stats, { calls: 2, effects: 1 });
+});
+
+test("发送在途时 reregister,同 action_id 再调仍被在途拦下,旧投递完成后新渠道调用 0 次", async () => {
+  let release: () => void = () => {};
+  let oldCalls = 0;
+  const newP = provider(() => T0, 60_000);
+  const reg = createRegistry({ now: () => T0 });
+  reg.register({
+    kind: "outbound-channel", id: "gmail", idempotency: "none",
+    send: (q: { action_id: string }) => { oldCalls++; return new Promise((res) => { release = () => res({ action_id: q.action_id, receiptId: "old-1" }); }); },
+  });
+  const first = reg.send("gmail", { action_id: "a", payload: "x" });
+  reg.reregister({ kind: "outbound-channel", id: "gmail", idempotency: "action-id", idempotencyWindowMs: 60_000, send: newP.send });
+  const second = await reg.send("gmail", { action_id: "a", payload: "x" });
+  assert.equal(second.ok === false && second.reason, "in-flight");
+  release();
+  const done = await first;
+  assert.equal(done.ok && done.receipt.receiptId, "old-1");
+  const third = await reg.send("gmail", { action_id: "a", payload: "x" });
+  assert.equal(third.ok && third.deduplicated, true);
+  assert.equal(oldCalls, 1);
+  assert.equal(newP.stats.calls, 0);
+});
+
+test("同 action_id 的载荷按字节比对:多一个空格、换行或全角字符都算不同,不当成同一动作", async () => {
+  const log: string[] = [];
+  const reg = createRegistry();
+  reg.register(mail(log));
+  await reg.send("gmail", { action_id: "a", payload: "x" });
+  for (const variant of ["x ", " x", "x\n", "ｘ", "X"]) {
+    const r = await reg.send("gmail", { action_id: "a", payload: variant });
+    assert.equal(r.ok === false && r.reason, "payload-mismatch", JSON.stringify(variant));
+  }
+  const same = await reg.send("gmail", { action_id: "a", payload: "x" });
+  assert.equal(same.ok && same.deduplicated, true);
+  assert.deepEqual(log, ["a"]);
+  assert.equal(reg.delivery("gmail", "a")?.binding.payloadSha256, "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881");
+});
+
+test("载荷不是字符串被拒且插件不被调用", async () => {
+  const log: string[] = [];
+  const reg = createRegistry();
+  reg.register(mail(log));
+  for (const payload of [42, null, { text: "x" }]) {
+    const r = await reg.send("gmail", { action_id: "a", payload: payload as unknown as string });
+    assert.equal(r.ok === false && r.reason, "invalid-payload");
+  }
+  assert.equal(log.length, 0);
+});
+
+test("外部事件每个必需字段给错类型都单独拒收,同一事件改回正确类型就放行", async () => {
+  const wrong: [string, Record<string, unknown>][] = [
+    ["nativeId", { nativeId: 1 }], ["sourceVersion", { sourceVersion: 3 }], ["eventType", { eventType: 1 }],
+    ["author", { author: 42 }], ["author 缺", { author: undefined }], ["content", { content: 5 }],
+    ["occurredAt", { occurredAt: 7 }], ["attachments 项", { attachments: [{ ref: 9 }] }],
+    ["附件 name", { attachments: [{ ref: "a", name: 3 }] }], ["附件 mime", { attachments: [{ ref: "a", mime: false }] }],
+  ];
+  for (const [field, over] of wrong) {
+    const reg = createRegistry({ now: () => T0 });
+    reg.register(tg([ev(over), ev()]));
+    const r = await reg.pull("telegram", "g1");
+    assert.equal(r.ok, true);
+    if (!r.ok) continue;
+    assert.deepEqual(r.rejected.map((x) => x.index), [0], field);
+    assert.equal(r.events.length, 1, field);
+    assert.equal(r.events[0]?.author, "群友", field);
+  }
 });
 
 test("对未注册的插件拉取或发送显式失败", async () => {

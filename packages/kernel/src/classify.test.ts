@@ -5,6 +5,13 @@ import { test } from "node:test";
 import { type Classifier, classifyInbound, EVENT_CODES, safeDescribe } from "./classify.ts";
 
 const user = { kind: "user", id: "u1" } as const;
+/** 按输入框的方式给出结构化点名:找到第 nth 个 "@name" 的确切范围 */
+function at(text: string, name: string, id: string, nth = 0) {
+  let start = -1;
+  for (let i = 0; i <= nth; i++) start = text.indexOf(`@${name}`, start + 1);
+  if (start < 0) throw new Error(`正文里没有 @${name}`);
+  return { id, name, start, end: start + name.length + 1 };
+}
 function counting(answer: unknown): { fn: Classifier; calls: () => number } {
   let n = 0;
   return { fn: () => { n++; return answer; }, calls: () => n };
@@ -40,20 +47,21 @@ test("确认卡回复不是用户本人、缺卡号、版本非正整数、决�
 
 test("只有 @ 没有别的文字的点名机械判定为 E1,分类器调用 0 次", () => {
   const c = counting("E4");
-  const r = classifyInbound({ sender: user, text: "@小前 ", mentions: ["c-front"] }, c.fn);
+  const text = "@小前 ";
+  const r = classifyInbound({ sender: user, text, mentions: [at(text, "小前", "c-front")] }, c.fn);
   assert.equal(r.via, "mechanical");
   assert.equal(r.intent, "E1");
-  assert.deepEqual(r.anchors, { mentions: ["c-front"], quotes: [] });
+  assert.deepEqual(r.anchors, { mentions: [{ id: "c-front", name: "小前", start: 0, end: 3 }], quotes: [] });
   assert.equal(c.calls(), 0);
 });
 
 test("带 @ 的停止、修改、纠偏文字意图不能机械确定,交给分类器并采用其结果,锚点照样提取", () => {
   for (const [text, code] of [["@小秘 停止定时总结", "E4"], ["@小秘 改成每天 9 点", "E3"], ["@小秘 我不是让你写代码", "E5"]] as const) {
     const c = counting(code);
-    const r = classifyInbound({ sender: user, text, mentions: ["xiaomi"] }, c.fn);
+    const r = classifyInbound({ sender: user, text, mentions: [at(text, "小秘", "xiaomi")] }, c.fn);
     assert.equal(r.via, "semantic", text);
     assert.equal(r.intent, code, text);
-    assert.deepEqual(r.anchors.mentions, ["xiaomi"]);
+    assert.deepEqual(r.anchors.mentions.map((m) => m.id), ["xiaomi"]);
     assert.equal(c.calls(), 1);
   }
 });
@@ -69,7 +77,7 @@ test("带 ↩ 引用的控制指令交给分类器,引用序号作为锚点保�
 
 test("同一句纯点名多一个引用就不再是纯点名,改调分类器(单开关对照)", () => {
   const c = counting("E1");
-  const r = classifyInbound({ sender: user, text: "@小前", mentions: ["c-front"], quotes: [3] }, c.fn);
+  const r = classifyInbound({ sender: user, text: "@小前", mentions: [at("@小前", "小前", "c-front")], quotes: [3] }, c.fn);
   assert.equal(r.via, "semantic");
   assert.equal(c.calls(), 1);
 });
@@ -133,4 +141,60 @@ test("分类器抛错(含抛出无法转文字的值)时走 Uncertain 保守路�
   const weird = classifyInbound({ sender: user, text: "嗯" }, () => { throw { toString() { throw new Error("x"); } }; });
   assert.equal(weird.intent, "Uncertain");
   assert.equal(typeof weird.violation, "string");
+});
+
+test("@ 和控制文字之间只隔中文逗号、冒号或没有空格时,正文不被当成名字吞掉,交给分类器(RR-03 阳性埋雷)", () => {
+  for (const text of ["@小秘，停止定时总结", "@小秘：改成每天 9 点", "@小秘停止定时总结", "@小秘,停一下", "@小秘…先别弄了"]) {
+    const c = counting("E4");
+    const r = classifyInbound({ sender: user, text, mentions: [at(text, "小秘", "xiaomi")] }, c.fn);
+    assert.equal(r.via, "semantic", text);
+    assert.equal(r.intent, "E4", text);
+    assert.equal(c.calls(), 1, text);
+    assert.deepEqual(r.anchors.mentions.map((m) => [m.id, m.start, m.end]), [["xiaomi", 0, 3]], text);
+  }
+});
+
+test("多个 @ 之间只有空白才是纯点名;任一 @ 后面带了正文就交给分类器", () => {
+  const pure = "@小秘 @小前  ";
+  const p = counting("E4");
+  const rp = classifyInbound({ sender: user, text: pure, mentions: [at(pure, "小秘", "xiaomi"), at(pure, "小前", "c-front")] }, p.fn);
+  assert.equal(rp.via, "mechanical");
+  assert.equal(rp.intent, "E1");
+  assert.equal(p.calls(), 0);
+  for (const text of ["@小秘 @小前 停止", "@小秘 停止 @小前", "@小秘，@小前"]) {
+    const c = counting("E4");
+    const r = classifyInbound({ sender: user, text, mentions: [at(text, "小秘", "xiaomi"), at(text, "小前", "c-front")] }, c.fn);
+    assert.equal(r.via, "semantic", text);
+    assert.equal(c.calls(), 1, text);
+  }
+});
+
+test("点名范围和正文对不上、或名字里含标点空白,都不算锚点也不走纯点名", () => {
+  const text = "@小秘，停止定时总结";
+  const cases = [
+    { id: "xiaomi", name: "小秘，停止定时总结", start: 0, end: text.length },
+    { id: "xiaomi", name: "小秘", start: 1, end: 4 },
+    { id: "xiaomi", name: "小秘", start: 0, end: 99 },
+    { id: "", name: "小秘", start: 0, end: 3 },
+    "xiaomi",
+  ];
+  for (const m of cases) {
+    const c = counting("E4");
+    const r = classifyInbound({ sender: user, text, mentions: [m] as never }, c.fn);
+    assert.equal(r.via, "semantic", JSON.stringify(m));
+    assert.deepEqual(r.anchors.mentions, [], JSON.stringify(m));
+    assert.equal(c.calls(), 1);
+  }
+});
+
+test("分类器抛出 message getter 会抛错、instanceof 会抛错的异常,兜底仍返回 Uncertain(RR-04 阳性埋雷)", () => {
+  const badMessage = new Error("original");
+  Object.defineProperty(badMessage, "message", { get() { throw new Error("message getter failed"); } });
+  const badProto = new Proxy({}, { getPrototypeOf() { throw new Error("instanceof failed"); } });
+  for (const thrown of [badMessage, badProto]) {
+    const r = classifyInbound({ sender: user, text: "嗯" }, () => { throw thrown; });
+    assert.equal(r.intent, "Uncertain");
+    assert.equal(r.via, "semantic");
+    assert.match(r.violation ?? "", /^classifier-threw: /);
+  }
 });

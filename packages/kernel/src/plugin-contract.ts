@@ -40,8 +40,9 @@ export interface SendRequest { readonly action_id: string; readonly payload: str
 export interface SendReceipt { readonly action_id: string; readonly receiptId: string }
 
 /**
- * 外发幂等能力(需求 D15.1 维度 B):
- * - "action-id"(B1):接收端按 action_id 去重,结果未知时可以用同一 action_id 重试;
+ * 外发幂等能力(需求 D04.2 / D15.1 维度 B):
+ * - "action-id"(B1):接收端按 action_id 去重,且只在服务商幂等保留期 idempotencyWindowMs 内有效;
+ *   结果未知时,只有首次尝试仍在保留期内才允许用同一 action_id 重试;
  * - "none"(B2):接收端不去重,结果未知时宿主拒绝再发,等人工对账。
  */
 export type ChannelIdempotency = "action-id" | "none";
@@ -56,6 +57,8 @@ export interface OutboundChannel {
   readonly kind: "outbound-channel";
   readonly id: string;
   readonly idempotency: ChannelIdempotency;
+  /** B1 必填:服务商对同一 action_id 去重的保留期(毫秒);B2 不填 */
+  readonly idempotencyWindowMs?: number;
   /** 这一片只支持返回 Promise 的发送,宿主 await 它 */
   send(req: SendRequest): Promise<SendReceipt>;
 }
@@ -84,16 +87,30 @@ export type PullResult =
 export type DeliveryState = "in-flight" | "confirmed" | "delivery-unknown";
 export type SendResult =
   | { ok: true; state: "confirmed"; receipt: SendReceipt; deduplicated: boolean }
-  | { ok: false; state: "delivery-unknown"; reason: "timeout" | "send-threw" | "invalid-receipt" | "non-promise-send" | "retry-refused"; detail: string }
-  | { ok: false; state: "rejected"; reason: "unknown-plugin" | "missing-action-id" | "payload-mismatch" | "in-flight"; detail: string };
+  | {
+    ok: false; state: "delivery-unknown";
+    reason: "timeout" | "send-threw" | "invalid-receipt" | "non-promise-send" | "retry-refused" | "retry-window-expired" | "channel-changed";
+    detail: string;
+  }
+  | { ok: false; state: "rejected"; reason: "unknown-plugin" | "missing-action-id" | "invalid-payload" | "payload-mismatch" | "in-flight"; detail: string };
+
+/** 一个外发动作首次投递时绑定的渠道:之后的重试只认这一版,reregister 换不掉它 */
+export interface DeliveryBinding {
+  readonly pluginId: string;
+  /** 宿主快照版本:register / reregister 每次递增 */
+  readonly channelVersion: number;
+  readonly idempotency: ChannelIdempotency;
+  readonly windowMs: number;
+  readonly firstAttemptAt: number;
+  /** 载荷 UTF-8 字节的 sha256 */
+  readonly payloadSha256: string;
+}
 
 export interface RegistryOptions {
-  /** 宿主时钟(毫秒),receivedAt 与回执 TTL 都用它 */
+  /** 宿主时钟(毫秒),receivedAt 与幂等保留期都用它 */
   readonly now?: () => number;
   /** await send 的上限,超时记 DeliveryUnknown */
   readonly sendTimeoutMs?: number;
-  /** B1 渠道复用已知回执的时长;过期后转交插件,由接收端按 action_id 去重 */
-  readonly receiptTtlMs?: number;
 }
 
 export interface PluginRegistry {
@@ -103,7 +120,7 @@ export interface PluginRegistry {
   list(): readonly { readonly id: string; readonly kind: PluginKind }[];
   pull(pluginId: string, sourceId: string): Promise<PullResult>;
   send(pluginId: string, req: { action_id?: unknown; payload: string }): Promise<SendResult>;
-  delivery(pluginId: string, actionId: string): DeliveryState | undefined;
+  delivery(pluginId: string, actionId: string): { readonly state: DeliveryState; readonly binding: DeliveryBinding; readonly attempts: number } | undefined;
   mounts(point: string): readonly string[];
 }
 
