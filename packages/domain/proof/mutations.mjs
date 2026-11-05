@@ -167,6 +167,17 @@ const M = [
   ["C23 出处等于依据位置也拒", "contact.ts", "k.sourceSeq > receipt.basedOnSeq", "k.sourceSeq >= receipt.basedOnSeq"],
   ["C24 回执只认第一条点名承诺", "contact.ts", "receipt.commitmentIds.includes(k.id)", "receipt.commitmentIds.slice(0, 1).includes(k.id)"],
   ["C25 能力资产只查空串不查空白", "contact.ts", "if (!a.name.trim()) return", "if (!a.name) return"],
+  // 以下 Q01–Q05 取自 Codex 第四轮独立复审 reviews/feat-contact-helper.md CH-13(注入点与 independent-mutations-round4.json 一致),C26–C30 是 CH-12 返修的埋雷
+  ["Q01 空作用域当成覆盖全部承诺", "contact.ts", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq > receipt.basedOnSeq) return k;", "if ((receipt.commitmentIds.length > 0 && !receipt.commitmentIds.includes(k.id)) || k.sourceSeq > receipt.basedOnSeq) return k;"],
+  ["Q02 点名承诺共用第一条的出处比较", "contact.ts", "k.sourceSeq > receipt.basedOnSeq", "c.commitments[0]!.sourceSeq > receipt.basedOnSeq"],
+  ["Q03 只看上一次确认代替查已确认集合", "contact.ts", "!k.reportedTaskIds.includes(taskId)", "k.reportedTaskIds.at(-1) !== taskId"],
+  ["Q04 能力资产空白校验只认空格和制表符", "contact.ts", "if (!a.name.trim()) return { ok: false, reason: \"能力资产名不能为空\" };", "if (a.name === \"\" || /^[ \\t]*$/.test(a.name)) return { ok: false, reason: \"能力资产名不能为空\" };"],
+  ["Q05 出处等于依据位置也拒", "contact.ts", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq > receipt.basedOnSeq) return k;", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq >= receipt.basedOnSeq) return k;"],
+  ["C26 承诺不校验出处位置", "contact.ts", "  if (!isSeq(k.sourceSeq)) return { ok: false, reason: `承诺出处 ${k.sourceSeq} 不是合法的消息位置(非负整数)` };\n", ""],
+  ["C27 回执不校验依据位置", "contact.ts", "  if (!isSeq(receipt.basedOnSeq)) return c;\n", ""],
+  ["C28 位置只查有限不查整数", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isFinite(n) && n >= 0"],
+  ["C29 位置不查负数", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isSafeInteger(n)"],
+  ["C30 位置把 0 也拒", "contact.ts", "Number.isSafeInteger(n) && n >= 0", "Number.isSafeInteger(n) && n > 0"],
 ];
 function run(dir) {
   const files = fs.readdirSync(path.join(dir, "src")).filter((f) => f.endsWith(".test.ts")).map((f) => path.join("src", f));
