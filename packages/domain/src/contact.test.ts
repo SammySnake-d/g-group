@@ -674,3 +674,58 @@ test("CH-17 同名异类拒绝理由写出实际的资产名和两个类别(非 
   assert.equal(r.ok, false);
   assert.equal(!r.ok && r.reason, "inbox_digest 已登记为 skill 类能力资产,不能再以 script 类同名登记");
 });
+
+test("CH-18 入参属性用 getter 时每个属性只读一次;getter 后续返回的越权工具和明文凭据进不了说明", () => {
+  const g = grantTool(mk().contacts.get("c-mi")!, { name: "get_weather", bounded: true });
+  const c = g.ok ? g.contact : (null as never);
+  const reads: Record<string, number> = { task: 0, rules: 0, tools: 0, credentialRefs: 0, placement: 0 };
+  const seq = <T,>(field: string, values: T[]) => () => values[Math.min(reads[field]!++, values.length - 1)]!;
+  const input = Object.defineProperties({}, {
+    task: { get: seq("task", ["交付", "偷换的任务"]), enumerable: true },
+    rules: { get: seq("rules", [["改代码前先问"], []]), enumerable: true },
+    tools: { get: seq("tools", [["get_weather"], ["get_weather"], ["run_command"]]), enumerable: true },
+    credentialRefs: { get: seq("credentialRefs", [["vault://mail/1"], ["plaintext-secret"]]), enumerable: true },
+    placement: { get: seq("placement", ["byom_daemon", "mars"]), enumerable: true },
+  }) as { task: string; rules: string[]; tools: string[]; credentialRefs: string[]; placement: "byom_daemon" };
+  const r = briefFor(c, input);
+  assert.deepEqual(r, { ok: true, brief: { task: "交付", rules: ["改代码前先问"], tools: ["get_weather"], credentialRefs: ["vault://mail/1"], placement: "byom_daemon" } });
+  assert.deepEqual(reads, { task: 1, rules: 1, tools: 1, credentialRefs: 1, placement: 1 });
+});
+
+test("CH-18 getter 第一次就给越权工具或明文凭据:照常拒绝;稳定数据对象照常通过(对照)", () => {
+  const g = grantTool(mk().contacts.get("c-mi")!, { name: "get_weather", bounded: true });
+  const c = g.ok ? g.contact : (null as never);
+  const badTools = briefFor(c, { task: "t", rules: [], get tools() { return ["run_command"]; }, credentialRefs: [] });
+  assert.match(!badTools.ok ? badTools.reason : "", /run_command 超出联系人 c-mi 的授权集合/);
+  const badRefs = briefFor(c, { task: "t", rules: [], tools: [], get credentialRefs() { return ["plaintext-secret"]; } });
+  assert.match(!badRefs.ok ? badRefs.reason : "", /^凭据只能给引用句柄/);
+  assert.equal(briefFor(c, { task: "t", rules: [], tools: ["get_weather"], credentialRefs: ["vault://mail/1"] }).ok, true);
+});
+
+test("CH-18 入参类型不对时明确拒绝:数组字段不是数组、数组里混了非字符串、task 不是字符串", () => {
+  const c = mk().contacts.get("c-mi")!;
+  const base = { task: "t", rules: [] as string[], tools: [] as string[], credentialRefs: [] as string[] };
+  for (const f of ["rules", "tools", "credentialRefs"] as const) {
+    const notArray = briefFor(c, { ...base, [f]: "vault://mail/1" as never });
+    assert.equal(!notArray.ok && notArray.reason, `${f} 必须是字符串数组`, f);
+    const mixed = briefFor(c, { ...base, [f]: ["ok", 42] as never });
+    assert.equal(!mixed.ok && mixed.reason, `${f} 里只能是字符串`, f);
+  }
+  const badTask = briefFor(c, { ...base, task: 7 as never });
+  assert.equal(!badTask.ok && badTask.reason, "task 必须是字符串");
+  assert.equal(briefFor(c, base).ok, true);
+});
+
+test("CH-19 多项凭据逐项校验:合法引用后跟明文、空路径、路径含空白都拒;多个合法引用通过(对照)", () => {
+  const c = mk().contacts.get("c-mi")!;
+  const req = (credentialRefs: string[]) => briefFor(c, { task: "t", rules: [], tools: [], credentialRefs });
+  for (const refs of [["vault://mail/1", "plaintext-secret"], ["vault://mail/1", "vault://news/2", "sk-live-123"], ["vault://"], ["vault://a b"], ["vault://mail/1", "vault://\tx"], ["vault://ok", "vault:// "]]) {
+    const r = req(refs);
+    assert.equal(r.ok, false, JSON.stringify(refs));
+    assert.match(!r.ok ? r.reason : "", /^凭据只能给引用句柄/, JSON.stringify(refs));
+  }
+  for (const refs of [["vault://mail/1", "vault://news/2"], ["op://team/item", "vault://a/b/c"]]) {
+    const r = req(refs);
+    assert.deepEqual(r.ok && r.brief.credentialRefs, refs, JSON.stringify(refs));
+  }
+});
