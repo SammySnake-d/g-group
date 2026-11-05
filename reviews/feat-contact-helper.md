@@ -204,3 +204,60 @@ Claude Code 在原开发任务中修 CH-01–CH-04，保留正确的 Helper 三�
 本轮只允许提交 `reviews/feat-contact-helper.md` 与 `receipts/feat-contact-helper.json` 的 review 字段。完整门禁执行结果、普通 clone 的钩子推送结果在对应外部证据中保留；不能把提交/推送成功解释成 reject 已被解除。
 
 实际运行 `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle`：exit 1。G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 报当前审查会话 `turns.jsonl` 尚不存在。原生 rollout 已能读到 gpt-6-astra，但这不能冒充该门禁已通过。没有伪造会话记录、没有豁免或改门禁；会话正式落盘后仍须由既有合入流程重新核验来源。原始结果是 `$E/gates-local.txt`。
+
+---
+
+## 第二轮：返修后的跨厂商独立复审（2026-11-05）
+
+**结论：reject，交回 Claude Code 原开发任务返修。** 原先的能力集合分离、职责内接活和等待末次汇报在常见顺序上有明显改善，但仍存在可重现的领域缺陷：确认先于终态时承诺与旧锁残留；已登记为 Compute 专用的脚本可被同名登记为联系人直接工具；空名称也可作为直接工具。另有 5 个本轮独立变异在原测试中全部存活，收据第 7 栏的变异数也与可执行清单不符。不得把审查结束或后续推送成功当成功能验收。
+
+### 复审范围和来源
+
+- 对象：PR #4 `feat/contact-helper`，被审 HEAD `4f6ed39db6dbddf36a75aadaee62ab1566dc9d86`；本轮基线 `origin/feat/task-lifecycle` 为 `75a76cdee568137d96683d3807643a8683183347`。PR #3 的单独审查不在本轮范围。
+- 作者 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38`，相关会话记录中的生产模型为 `claude-opus-5-5`（Anthropic，渠道前缀不改变原生厂商）。审查者 `codex:4d37f5a5-0839-4adc-8afc-9b481602df5a`，原生 rollout `turn_context.model` 实录为 `gpt-6.1-terra`（OpenAI）。两者跨厂商、无豁免；这不等于 G-PROVENANCE 已通过。
+- 仓库根目录实跑 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 的原样 stdout：`0e4fb7f13a2bfd1b5856e37d392e45ccea013adec935e3c340b977aabb46dafa`。本轮只提交本报告和收据 `review` 字段，不改产品实现、测试或第 7 栏。
+- 本轮证据根 `$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round2-exyigB`；此前 Astra 证据保留在第一轮报告所列目录。副本、反例和日志均在仓库以外；`$E/repo` 是普通独立 clone，`git-dir` 与 `git-common-dir` 均为该 clone 的 `.git`。
+
+### 必须修复
+
+**CH-05 [High，AC-31⑤ / AC-35①] 末次汇报确认先到时被静默丢弃，随后终态不能回收。** `packages/domain/src/contact.ts:147-166` 的 `confirmFinalReport` 只处理已在 `awaitingReport` 的任务；若宿主收到真实末次汇报入库确认时任务仍在 `boundTaskIds`，调用静默返回，之后 `settleTask` 又把它加入 `awaitingReport`，没有记住已确认事实。独立实测同一 `T1`：先确认、后终态 → `active`、`awaitingReport=[T1]`、旧 `focus=k1`；先终态、后确认 → `done`、无等待项、`focus=null`。两个条件最终都已成立，第一种顺序却永不自动回收，越界新活仍被旧锁拒绝。规格要求两项条件均满足，未规定确认必须后到；任务生命周期也区分先交付、后用户验收终态。这里不是声称已经实测宿主消息链，只证明纯函数接口丢失了一个合法先到事件。应记录/对账确认事实并防乱序与重放；若设计上必须禁止先到，须有可观察拒绝和可靠重试契约，而不是静默吞掉。加两种顺序的单开关回归与跨任务负对照。
+
+**CH-06 [High，AC-33①，CH-01 未完全闭合] 已标为 Compute 专用脚本的同名资产仍能变成直接工具。** `contact.ts:105-109,121-131`：对新联系人先 `grantComputeAsset({name:"workspace_script",kind:"script"})`，此时 `canCallDirectly` 为 false；随后 `grantTool({name:"workspace_script",bounded:true})` 返回成功，`canCallDirectly` 变为 true，`tools` 与 `computeAssets` 同时出现该名字。反方向（已有直接工具后再登记资产）反而被拒。这里测试的是**同一已知资产名和已登记的脚本类别**，不是单纯改名绕过黑名单；纯函数自己已持有冲突信息。第 7 栏说真实挂载要等适配器核验是对的，但不能证明这条领域决策正确，也不能把本反例说成真实进程已执行了脚本。应对 Compute-only 身份/类别做不可绕过的互斥校验，或引入可区分同名不同能力的权威身份；同时保留合法具名有界工具可供两侧使用的需求。
+
+**CH-07 [Medium，AC-33①] 空名被接受为“具名有界工具”。** `contact.ts:105-109,129-131,191-196` 中 `grantTool({name:"",bounded:true})` 返回成功，`canCallDirectly("")` 返回 true，`briefFor(...tools:[""])` 也成功。即使宿主需保证工具 Schema 真实性，本层也应拒绝空名称（包括仅空白的名称），并对有效命名工具做阴性对照。`grantComputeAsset` 已检查空字符串，但直接工具入口没有。
+
+**CH-08 [High，R-05 / CH-04] 新测试仍漏掉多个不同的真实契约破坏。** 这是**测试判别力缺陷**，不等于原实现已出现以下五种变异行为。每个变异只改隔离副本的一处实现，不改测试；原样对照 typecheck/lint/83 项测试及 5 条独立 oracle 均 exit 0，每个变异 typecheck/lint/83 项测试仍全部 exit 0，但对应独立 oracle exit 1：
+
+| ID | 单点变异 | 原测试漏掉的具体行为 |
+|---|---|---|
+| N01 | 回收条件只看 `awaitingReport.length === 0`，不看 `boundTaskIds` | A 先终态且已汇报，B 仍运行时承诺过早回收并解锁；现有双任务测试先把两个任务都置终态再确认 |
+| N02 | brief 的 `rules` 保留第一条 | 多条生效群规被静默删减，违反需求文档第 78 行不丢约束 |
+| N03 | brief 的 `credentialRefs` 保留第一项 | 两个合法凭据引用传入后第二项丢失 |
+| N04 | 合法容差由 `< 0` 改为 `<= 0` 拒绝 | 非负数中的 0 被错误拒绝 |
+| N05 | 任一承诺回收或撤销时无条件清空 focus | 撤销未被锁定的承诺会错误解除另一条仍有效承诺的专职锁 |
+
+精确替换、退出码和执行器在 `$E/independent-mutations-round2.json`、`$E/independent-mutations-round2.py`；原样及各变异日志为 `$E/{clean,N01..N05}-{typecheck,lint,test,oracle}.log`，判据源码为 `$E/oracles-round2.mjs`。应补上述对应行为测试及阳性/单开关阴性校准，不要只把变异追加为第 7 栏局限仍声称判据已标定。对于 CH-05–07 的真实缺陷，独立回归 `$E/regressions-round2.test.mjs`、`$E/regressions-round2-v2.tap` 为 1 绿 3 红（先终态后确认的对照绿）；修复应先针对真实旧实现留缺陷复现红，再实现。
+
+### 四项旧问题及未回退行为
+
+| 项 | 本轮独立判断 |
+|---|---|
+| CH-01 | 已增加 `computeAssets`，未登记 `run_command` 不可派、登记后可派且默认不可直调；但同名再次注册绕过隔离，仍须修 CH-06。空名另见 CH-07。 |
+| CH-02 | 显式职责 `commitmentId` 使职责内接活、越界拒绝；正常顺序下完成/撤销对应承诺会解锁。但 CH-05 乱序导致旧锁残留，未完全闭合。 |
+| CH-03 | 终态先到时会等汇报确认，确认后才回收；确认先到会被吞，仍须修 CH-05。真实入库回执尚未接线或验证。 |
+| CH-04 | 作者此前 14 个存活项已加入新清单并在本轮测试中被杀，但新的 5 个独立变异仍存活；其余整体覆盖不能由有限变异数推断。 |
+
+原 Astra oracle 的 **I10、I18 两条原样判据确实过时**：二者仅 `settleTask` 后、没有末次汇报确认，就分别要求旧承诺不可锁定和状态 `done`，与 AC-31⑤ 相反。实跑旧 oracle 于新 HEAD：仅这两项失败、其余 24 项通过（`$E/old-oracles-on-new-head.log`）；不能把这两个失败当新实现错误。但**确认后**已结束承诺不能再加锁、确认后应回收的抽象判据仍适用：本轮作者改写的 I10 及 C02 变异均被杀。这一结论不消除 CH-05 的另一个事件顺序缺口。
+
+独立九格验证 Helper 的 global / mention / sidebar 对本人位置与上下文正确，对非本人用户和同 ID 联系人均拒绝；只证明纯路由，不证明真实消息表写入或隔离。定时仍存在联系人自身 `commitments[].schedule`，不会随无关任务终态回收；控制 stop/revoke/reschedule 均穿透锁；职责内/外判定分别为 handle/decline-focused。见 `$E/behavior-round2.json`。
+
+### 亲自复现与第 7 栏核验
+
+- `npm ci` exit 0；Node v25.8.1 下 `npm run typecheck`、`npm run lint`、`npm test` 均 exit 0，83/83 绿，0 skip/todo；Node v22.22.0 下三项也全部 exit 0。日志 `$E/npm-ci.log`、`$E/{typecheck,lint,test}.log`、`$E/node22-*.log`。
+- 普通独立副本检出 `6613c816731f3ef6b23ce23b0a3e24e3be932a19` 并执行 `npm ci`：全量 `npm test` exit 1，56 绿 / 27 红；单独 TAP 核对 27 条均按名字失败（`$E/red-tests.tap`、`$E/red-all-tests.log`）。**但 27 条原因全部为 `未实现`**：红提交把之前已有的 contact/Helper 函数也替换成空壳，因此它证明按名空壳红，不单独证明返修 bug 在旧实现上按预期失败。另在隔离副本把旧实现叠加该红测试、仅给四个旧版不存在的导出加加载占位，得到 18 绿 / 9 红；其中职责内工作有实际断言差异、末次汇报有状态差异，但 Compute-only 用例先因旧错误文案不同失败；该对照不是作者当时留下的历史红记录（`$E/red-prior-overlay.tap`）。
+- 作者 `node packages/domain/proof/mutations.mjs` exit 0：**76/76** 个具体变异被具名测试杀死，原样 83 绿（`$E/author-mutations.log`）。源数组为原有 M 系列 52 + I 系列 14 + C 系列 10 = 76。日志共 78 行是“原样对照 1 + 变异 76 + 最终结论 1”，**不是 78 个变异**。收据第 7 栏写“78 种故障”不实，须由作者修正；其中旧 oracle I10/I18 的时序说明则如上所述属实。
+- 第 7 栏其余已声称边界基本属实：纯路由无内核消息接线；`arbitrary_terminal + bounded:true` 可绕开名字表；`sk://abc` 通过引用形状检查；`0 99 * * *` 通过 cron 形状检查；未实现 DST 触发、宿主职责分类或真实回执认证。实测见 `$E/behavior-round2.json`；这些不是对应端到端能力通过的证据。除变异数错误，还遗漏 CH-05–07 和本轮变异存活；AC-01/31/33/35 整项保持未测的分层标注是恰当的。
+
+**回交条件：** Claude Code 在原开发任务中修 CH-05–08、修正收据第 7 栏数量并补真实缺陷红测；保留三入口、定时归联系人、控制穿透和合法工具重叠。修复后重新交不同厂商独立复现；当前 reject 不是 PR 已完成。
+
+**本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 实测 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 提示当前审查 `turns.jsonl` 尚不存在。原生 rollout 的模型记录不能冒充此门禁通过；会话结束落盘后由既有流程重核，不伪造记录或豁免。原始输出 `$E/gates-local-rerun.log`。

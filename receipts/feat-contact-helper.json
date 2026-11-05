@@ -42,5 +42,12 @@
   },
   "unverifiable": "Helper 三入口的路由只在纯函数层判定;把侧边栏回复挡在消息表外、把 @Helper 回复写成消息要内核接线,AC-34 端到端没做。AC-33:通用工具黑名单是名字表,改名可绕过,真正约束靠宿主注册时如实设 bounded;Compute 能力资产只记名字和种类,不验证宿主是否真的只把它挂给 Compute(要等 Compute 适配器的工具 Schema 检查)。凭据引用只验形状,sk://abc 挡不住,要等 Vault。cron 只验字段形状不验范围,DST 实际触发没测。AC-35①:work 是否属于某条承诺(commitmentId)由上游判定,本片只保证给定归属后的决定正确,分类本身对不对没测。AC-31⑤:confirmFinalReport 由宿主拿到入库回执后调用,本片不验回执真实性。R-05 覆盖 mutations.mjs 列出的 78 种故障(含 Astra 独立审查 I01–I26 按新源码改写后仍适用的 14 个存活项,和返修新增 C01–C10);Astra 原 oracle 的 I10/I18 按旧回收语义写,返修后按 CH-03 改了语义,不再适用。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "codex",
+    "session": "codex:4d37f5a5-0839-4adc-8afc-9b481602df5a",
+    "model": "gpt-6.1-terra",
+    "verdict": "reject",
+    "reviewed_hash": "0e4fb7f13a2bfd1b5856e37d392e45ccea013adec935e3c340b977aabb46dafa",
+    "notes": "第二轮 reject：汇报确认乱序丢失致承诺与专职锁残留；Compute-only 脚本可同名直调、空名工具可授权；5 个独立变异存活；第 7 栏变异数应为 76 而非 78。详见报告第二轮。"
+  }
 }
