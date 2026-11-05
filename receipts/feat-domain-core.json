@@ -47,5 +47,12 @@
   },
   "unverifiable": "AC-05/AC-03/AC-21 三项整项都标未测:本片只证明纯函数子判据,不能代表落盘、宿主入口和并发事务。AC-21 的 commit 是纯函数,两个调用方拿同一个旧快照分别提交会各自成功,真正的单一提交点必须由存储层在同一事务里读版本并写入。AC-05 的不可改写靠 Object.freeze 与快照拷贝,TypeScript 之外用 Object.defineProperty 之类的反射手段仍可能绕过冻结以外的约束,verify 只证明链内自洽,不证明作者授权。AC-03 允许 helper 作为发言者,按用户 g-group#1365 的三入口定义:@Helper 时它在会话里作答;但 append 本身不知道 Helper 是否被叫到,'只有被 @ 时才进消息、全局与侧边栏入口不进消息'要由内核层的 Helper 路由来保证,本片没有这条证据。R-05 的变异校准只覆盖 mutations.mjs 列出的 17 种故障(冻结按事件、sender、body、事件数组、日志外壳五层分别注入)。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "astra",
+    "session": "codex:a29efe3a-4939-4f8c-ba7f-3e52222b56bd",
+    "model": "gpt-6-astra",
+    "verdict": "approve",
+    "reviewed_hash": "e877562242a309d30b8b4d1cacac196358f1e071d517c63237b8efe9e1481413",
+    "notes": "第三轮独立复现 23 条按名先红后绿、17 个声明变体及上轮 R13–R16 均被杀，RR-01/RR-02 关闭；批准纯函数切片，完整 AC 仍未测，详见 reviews/feat-domain-core.md 第三轮。"
+  }
 }

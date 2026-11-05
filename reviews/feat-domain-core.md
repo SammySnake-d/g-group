@@ -292,3 +292,92 @@ R-02 的具名先红后绿、R-03 的当前空桩门禁、R-04 的真实符号�
 - 两个源码归档、`identity.json`、`provenance-observed.json`、`reviewed-hash.txt`、`README.md` 和 `SHA256SUMS.json`：固定输入、来源与复现方法，83 个证据文件已逐一校验。
 
 下一轮仅需定点补 RR-01 / RR-02 的测试与校准，保留负例红、正常路径绿，并提供新红提交 / 新内容 hash；不撤销已经关闭的 F-01 / F-02 / F-04，也不以其他切片未完成为阻塞。审查提交仍只追加本节并更新收据 review 字段。
+
+### 第三轮：2026-11-05，133cf7a，当前审查结论 approve
+
+**批准本 PR 的纯函数切片；RR-01、RR-02 均已通过独立复现关闭。** 前两轮 reject 是各自版本的历史结论，予以保留。本轮没有发现该切片范围内剩余必须修项；不把批准代码审查等同于完整 AC 验收或已经合并。
+
+#### 版本及跨厂商身份
+
+- 固定功能提交：`133cf7abcf6c897653f5b91647202c4ac963f231`。
+- 红提交：`abe754eab4911d6f8a1bd6c686cdfe1cdbc05210`；基线：`origin/chore/gates` = `b2a15c7b10e3e1520debf024e3dfb55974130c31`。
+- 审查人：`astra`；会话：`codex:a29efe3a-4939-4f8c-ba7f-3e52222b56bd`；本轮原生 `turn_context.model` 为 `gpt-6-astra`（OpenAI，2026-11-05T07:31:01.774Z）。
+- 作者的 mirasim 已落盘轮次仍为 Anthropic。为避免仅凭旧轮次推断本轮生产模型，又读取其原生 Claude 记录的工具调用 / 结果，不读取推理块：本次写入 M12a–M12e、`savedConflictInput`，以及产生 `abe754e` / `133cf7a` 的 Bash 调用，实际模型均为 `ai-iisbo-2/[kiro企业优化]claude-opus-5-5`。相应调用 UUID 和时间保存在 `author-native-provenance.json`，其中生成 `133cf7a` 的调用为 `e420bf85-8b59-474f-988a-669ffee04898`（07:25:51.668Z）。跨厂商硬条件成立，不用作者自报或作者自检代替。
+- 使用普通独立 clone `/private/tmp/g-group-pr2-review3-lnhg9zta/green`，独立 `.git` 目录；红版为另一普通 clone。未切换或修改正在开发 PR #3 的原工作树，也未在 linked worktree 内运行 pre-push 自检。
+- 核对 `8431601..133cf7a`：`log.ts`、`cas.ts`、`errors.ts`、`index.ts` 与门禁代码 / 钩子没有差异。本轮是已审实现的测试与证据补强，没有混入 PR #1 或 PR #3 的实现。
+
+在上述受审 clone 的仓库根目录，本轮实际运行：
+
+```sh
+node scripts/gates/run-all.ts --hash --branch=feat/domain-core --base=origin/chore/gates
+```
+
+原样标准输出：
+
+```text
+e877562242a309d30b8b4d1cacac196358f1e071d517c63237b8efe9e1481413
+```
+
+#### 独立执行结果
+
+| 检查 | 实际结果 |
+|---|---|
+| 绿提交 `npm ci`、`npm run typecheck`、`npm run lint` | 各退出 0；lint 未改文件 |
+| 绿提交 `npm test` | 退出 0，23 通过 / 0 失败 / 0 跳过 |
+| 红提交 `npm ci`、`npm test` | 安装退出 0；测试退出 1，23 条具名失败；名称集合逐条与绿版相同，不是文件级失败 |
+| 红绿测试体 | `git diff abe754e..133cf7a -- packages/domain/src/{log,cas}.test.ts` 为空 |
+| 作者 `mutations.mjs` 本轮亲自运行 | 原样副本 23/23；17 个变体全部有具名失败；脚本退出 0 |
+| 独立执行器重复注入 | 从固定源码读取 17 个注入定义，另行运行并保存完整 TAP；每次均实际执行全部 23 条具名测试，17 个全部被杀 |
+| 上轮 R13–R16 原样复放 | 4 个全部由对应作者测试杀死；不只运行作者重新改写的变体版本 |
+| 上述 21 次变体运行的 typecheck | 全部退出 0，排除语法 / 加载故障导致的假红；21 次包括 17 个声明变体和 4 个旧变体复放，不声称 21 种互异故障 |
+| 两组既有独立探针 | 7/7 与 5/5 通过，严格类型检查通过；body / sender 快照、五层冻结、投影隔离、冲突快照及旧快照边界均保持正确 |
+| 变异完成后重跑原版 | 仍为 23/23；源码和测试未被审查修改 |
+| 填审查前的门禁运行 | G-TRACE / G-RED / G-STUB / G-TAUTO / G-WORKFLOW / G-LAYER 通过；G-REVIEW 因原始 review=null 报“还没有独立审查”。该次整体退出 1，不冒充全门禁已通过 |
+
+#### RR-01：五层冻结单独标定，关闭
+
+五条测试分别对真实返回对象检查 `Object.isFrozen`，再尝试写入并要求抛 `TypeError`。单独取消每一层保护，实测分别为 **22 绿 / 1 红**：
+
+| 单点变体 | 精确失败的作者测试 |
+|---|---|
+| M12a 事件对象不冻结；旧 R13 同样被杀 | 已提交事件本身冻结:不能改 seq、hash 等字段 |
+| M12b sender 不冻结；旧 R14 同样被杀 | 已提交事件的 sender 冻结 |
+| M12c message body 不冻结 | 已提交事件的 body 冻结 |
+| M12d 事件数组不冻结 | 日志的事件数组冻结:不能追加或替换 |
+| M12e 日志外壳不冻结；旧 R15 同样被杀 | 日志外壳冻结:不能把 events 换成另一份数组 |
+
+不再依靠“数组没有冻结”的红因替代事件或 sender 冻结证据。原样实现与独立五层探针保持绿。本轮关闭的是上述已执行的保护点；17 项校准不被解释为穷尽所有可能错误。
+
+#### RR-02：真正的冲突入参快照，关闭
+
+CAS 测试现在在调用前令 `conflictInput = ok.store`，保存 `snapStore(conflictInput)`；调用后比较**同一个** `conflictInput` 的完整快照，另断言该文档保持 `{ value: "改", ver: 1 }`。
+
+- 作者 M07b（冲突时用 Map.set 偷偷推进输入版本）：22 绿 / 1 红。
+- 上轮原样 R16（冲突时原地修改 cell.ver，而非替换 Map 项）：22 绿 / 1 红。
+- 两者均由“多文档存储:成功和冲突两条路径都不改输入 Store”发现；完整原样实现仍绿。此前比较错 Store 的缺口已闭合。
+
+#### AC、R 规则及批准范围
+
+| 条目 | 本轮收口 |
+|---|---|
+| AC-03 | append 的 compute 禁止分支及 contact 单开关阴性对照有效，M02 被杀；宿主总入口、消息表、Helper 三入口路由仍未测，收据整项未测保持不变 |
+| AC-05 | 常规编辑 / 撤回追加、调用前快照、body / sender 引用隔离、正文 hash 与前驱关联、投影不改日志、上述五层冻结均有执行证据与相应变体；落盘拒绝 UPDATE/DELETE 仍未测 |
+| AC-21 | 顺序版本冲突、成功内容 / 版本、新建、不同 key 对照、成功与冲突输入不变均有证据；同一旧快照两次提交仍可各自成功，单一持久化事务提交点未测 |
+| R-02 / R-03 / R-04 | 23 条按名红绿、当前空桩门禁、真实符号 / 非恒真检查已执行；没有因测试增加而丢掉原有反例 |
+| R-05 | 声明的 17 个故障已独立实注入，并原样复放上轮 4 个存活变体；本次执行集合中无存活项，原样副本与既有独立阴性对照均绿 |
+
+第 7 栏关于存储、事务、Helper 路由、hash 不证明授权的边界继续保留。上一轮对 `Object.defineProperty` 措辞的澄清仍成立：它不能改写已经冻结的现有字段，不把该句解读为发现了新的冻结绕过。AC-15 / AC-31 也继续未测。
+
+**本轮 approve 只表示 PR #2 当前纯函数切片通过独立代码 / 行为审查。** 不代表 PR #1 已批准、不绕过合并顺序、不宣称本轮 G-PROVENANCE 自动门禁已经验真，也不把整项 AC 或用户验收改为通过。PR #3 尚未审查，等单独派审后再处理，不在这里顺带批准或扩大范围。
+
+#### 本轮工件
+
+持久证据目录：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-review-evidence/pr2-133cf7a-a29efe3a/`。
+
+- `results.json` / `named-red-green.json` / `green-*.log` / `red-*.log`：逐命令状态与 23 条按名核对。
+- `independent-mutations.mjs` / `mutations.json` / `M*.log` / `R*.log` / `*-change.json`：全部 21 次独立注入及红因；类型检查输出另存。
+- `reviewer-probes.mts` / `previous-review-probes.mts` / `reused-probes.json`：既有独立探针原样复用及摘要。
+- `author-native-provenance.json` / `provenance-observed.json` / `identity.json` / `reviewed-hash.txt`：实际生产与审查来源、固定提交及本轮 hash。
+- 两个源码归档、复现 README 与 `SHA256SUMS.json`：100 个证据文件逐一校验通过。
+
+只追加本节并填写收据 review；原有审查历史及作者其他收据字段逐字节保留，产品代码与测试不改。
