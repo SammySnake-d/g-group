@@ -633,3 +633,44 @@ test("CH-16 直接工具与每类资产同名双向互斥;不同名的直接工�
     assert.deepEqual(both.ok && [both.contact.tools.map((t) => t.name), both.contact.computeAssets.map((x) => x.name)], [["dual"], ["dual-asset"]], kind);
   }
 });
+
+test("CH-17 说明生成后改调用方的 rules/tools/credentialRefs 数组,说明不受影响;同时改三项也一样", () => {
+  const g = grantTool(mk().contacts.get("c-mi")!, { name: "get_weather", bounded: true });
+  const c = g.ok ? g.contact : (null as never);
+  const fields = ["rules", "tools", "credentialRefs"] as const;
+  const mutateInput: Record<(typeof fields)[number], (a: string[]) => void> = {
+    rules: (a) => { a.length = 0; a.push("被调用方改掉的规则"); },
+    tools: (a) => { a.push("run_command"); },
+    credentialRefs: (a) => { a.push("plaintext-secret"); },
+  };
+  for (const which of [...fields.map((f) => [f]), fields]) {
+    const input = { task: "交付", rules: ["改代码前先问", "不得泄露用户秘密"], tools: ["get_weather"], credentialRefs: ["vault://mail/1"] };
+    const r = briefFor(c, input);
+    assert.ok(r.ok, which.join("+"));
+    for (const f of which) mutateInput[f](input[f]);
+    assert.deepEqual(r.ok && r.brief, { task: "交付", rules: ["改代码前先问", "不得泄露用户秘密"], tools: ["get_weather"], credentialRefs: ["vault://mail/1"], placement: "local" }, which.join("+"));
+  }
+});
+
+test("CH-17 说明里的 rules/tools/credentialRefs 不能被改写,改写尝试不影响调用方入参(反方向)", () => {
+  const g = grantTool(mk().contacts.get("c-mi")!, { name: "get_weather", bounded: true });
+  const input = { task: "交付", rules: ["改代码前先问"], tools: ["get_weather"], credentialRefs: ["vault://mail/1"] };
+  const r = briefFor(g.ok ? g.contact : (null as never), input);
+  assert.ok(r.ok);
+  const brief = r.ok ? r.brief : (null as never);
+  for (const f of ["rules", "tools", "credentialRefs"] as const) {
+    const arr = brief[f] as string[];
+    assert.notEqual(arr, input[f], f);
+    assert.throws(() => { arr.push("x"); }, TypeError, f);
+    assert.throws(() => { arr[0] = "y"; }, TypeError, f);
+  }
+  assert.deepEqual(input, { task: "交付", rules: ["改代码前先问"], tools: ["get_weather"], credentialRefs: ["vault://mail/1"] });
+  assert.deepEqual(brief, { task: "交付", rules: ["改代码前先问"], tools: ["get_weather"], credentialRefs: ["vault://mail/1"], placement: "local" });
+});
+
+test("CH-17 同名异类拒绝理由写出实际的资产名和两个类别(非 research 名对照)", () => {
+  const a = grantComputeAsset(mk().contacts.get("c-mi")!, { name: "inbox_digest", kind: "skill" });
+  const r = grantComputeAsset(a.ok ? a.contact : (null as never), { name: "inbox_digest", kind: "script" });
+  assert.equal(r.ok, false);
+  assert.equal(!r.ok && r.reason, "inbox_digest 已登记为 skill 类能力资产,不能再以 script 类同名登记");
+});
