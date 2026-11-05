@@ -471,3 +471,123 @@ test("恰好 4 字与 3 字的撤回原文都拦,未撤回的同样文字照常(
     assert.equal(k.ok, true, text);
   }
 });
+
+// —— 第六轮:R5-03..R5-05
+function staleBlockLog(): Log {
+  let log = append(emptyLog(), user, { kind: "message", text: "旧的保密原文" }, at);
+  log = append(log, user, { kind: "message", text: "普通消息" }, at);
+  return append(log, user, { kind: "retract", target: 1 }, at);
+}
+const STALE = { throughSeq: 2, builtAtSeq: 2, text: "旧摘要" };
+
+test("recompress 抛出 message getter 抛错、原型陷阱抛错、非 Error 值时都返回 invalid-compressed,不抛出(R5-03 阳性埋雷)", () => {
+  const badMessage = new Error("x");
+  Object.defineProperty(badMessage, "message", { get() { throw new Error("message getter 错误"); } });
+  const badProto = new Proxy({}, { getPrototypeOf() { throw new Error("原型陷阱"); } });
+  const badString = { toString() { throw new Error("toString 炸了"); } };
+  for (const thrown of [badMessage, badProto, badString, 42, null, undefined]) {
+    let r: ReturnType<typeof assemble> | undefined;
+    assert.doesNotThrow(() => { r = assemble(staleBlockLog(), { stable: S, quotes: [], budgetBytes: BIG, compressed: STALE, recompress: () => { throw thrown; } }); });
+    assert.equal(r?.ok === false && r.reason, "invalid-compressed", String(typeof thrown));
+    if (r && !r.ok && r.reason === "invalid-compressed") assert.match(r.detail, /^recompress 抛错/);
+  }
+});
+
+test("recompress 抛普通 Error 时失败原因里带它的文字(R5-03 单开关对照)", () => {
+  const r = assemble(staleBlockLog(), { stable: S, quotes: [], budgetBytes: BIG, compressed: STALE, recompress: () => { throw new Error("压缩服务 503"); } });
+  assert.equal(r.ok === false && r.reason, "invalid-compressed");
+  if (!r.ok && r.reason === "invalid-compressed") assert.match(r.detail, /压缩服务 503/);
+});
+
+test("发言者 id 含冒号加空格、单个冒号或空格时,标签不参与撤回扫描(R5-04 阳性埋雷)", () => {
+  for (const id of ["其他: 敏感词", "其他:敏感词", "其他 敏感词", "敏感词"]) {
+    let log = append(emptyLog(), user, { kind: "message", text: "敏感词" }, at);
+    log = append(log, user, { kind: "retract", target: 1 }, at);
+    log = append(log, { kind: "user", id }, { kind: "message", text: "普通内容" }, at);
+    log = append(log, { kind: "user", id }, { kind: "message", text: "原句" }, at);
+    log = append(log, { kind: "user", id }, { kind: "edit", target: 4, text: "改过的句子" }, at);
+    const r = assemble(log, { stable: S, quotes: [], budgetBytes: BIG });
+    assert.equal(r.ok, true, id);
+    if (r.ok) assert.ok(serialize(r.request).includes(`${id}: 普通内容`), id);
+  }
+});
+
+test("引用页入的发言者 id 含撤回原文时同样不误拦", () => {
+  let log = append(emptyLog(), { kind: "contact", id: "c: 敏感词" }, { kind: "message", text: "被引用的话" }, at);
+  log = append(log, user, { kind: "message", text: "敏感词" }, at);
+  log = append(log, user, { kind: "retract", target: 2 }, at);
+  const r = ok(assemble(log, { stable: S, quotes: [1], budgetBytes: BIG, compressed: { throughSeq: 1, builtAtSeq: 3, text: "前情" } }));
+  assert.ok(serialize(r.request).includes("[引用页入] #1 contact:c: 敏感词: 被引用的话"));
+});
+
+test("正文里真的含撤回原文时,不管发言者 id 长什么样都拦下(R5-04 单开关对照)", () => {
+  for (const id of ["其他: 敏感词", "plain"]) {
+    let log = append(emptyLog(), user, { kind: "message", text: "敏感词" }, at);
+    log = append(log, user, { kind: "retract", target: 1 }, at);
+    const msg = append(log, { kind: "user", id }, { kind: "message", text: "我也说敏感词" }, at);
+    assert.deepEqual(assemble(msg, { stable: S, quotes: [], budgetBytes: BIG }), { ok: false, reason: "retracted-text-leaked", where: "history", seq: 1 }, id);
+    const ed = append(append(log, { kind: "user", id }, { kind: "message", text: "原句" }, at), { kind: "user", id }, { kind: "edit", target: 3, text: "改成敏感词" }, at);
+    assert.deepEqual(assemble(ed, { stable: S, quotes: [], budgetBytes: BIG }), { ok: false, reason: "retracted-text-leaked", where: "history", seq: 1 }, id);
+  }
+});
+
+test("制表、换行、全角空格、不换行空格与零宽字符夹在撤回原文里都算命中(R5-05 阳性埋雷)", () => {
+  for (const v of ["秘\t密口令", "秘\n密\r\n口令", "秘　密　口令", "秘 密口令", "秘​密‌口‍令", "秘⁠密﻿口令"]) {
+    const r = assemble(retractedLog("秘密口令"), { stable: S, quotes: [], volatile: v, budgetBytes: BIG });
+    assert.deepEqual(r, { ok: false, reason: "retracted-text-leaked", where: "volatile", seq: 1 }, JSON.stringify(v));
+  }
+});
+
+test("同样夹着各种空白但文字不同时照常装配(R5-05 单开关对照)", () => {
+  for (const v of ["秘\t密码", "秘　诀口令", "秘​方"]) {
+    const r = assemble(retractedLog("秘密口令"), { stable: S, quotes: [], volatile: v, budgetBytes: BIG });
+    assert.equal(r.ok, true, JSON.stringify(v));
+  }
+});
+
+test("多条消息分别撤回时每一条都拦,命中哪条报哪条(R5-05 阳性埋雷)", () => {
+  let log = append(emptyLog(), user, { kind: "message", text: "第一个秘密" }, at);
+  log = append(log, user, { kind: "message", text: "第二个秘密" }, at);
+  log = append(log, user, { kind: "message", text: "第三条留着" }, at);
+  log = append(log, user, { kind: "retract", target: 1 }, at);
+  log = append(log, user, { kind: "retract", target: 2 }, at);
+  assert.deepEqual(assemble(log, { stable: S, quotes: [], volatile: "第一个秘密", budgetBytes: BIG }), { ok: false, reason: "retracted-text-leaked", where: "volatile", seq: 1 });
+  assert.deepEqual(assemble(log, { stable: S, quotes: [], volatile: "第二个秘密", budgetBytes: BIG }), { ok: false, reason: "retracted-text-leaked", where: "volatile", seq: 2 });
+  const r = ok(assemble(log, { stable: S, quotes: [], volatile: "第三条留着", budgetBytes: BIG }));
+  assert.deepEqual(r.manifest.map((m) => m.seq), [3]);
+});
+
+test("同一消息撤回后再被引用多次:每次都跳过,原文不出现,也不重复报跳过", () => {
+  let log = append(emptyLog(), user, { kind: "message", text: "撤回的那句" }, at);
+  log = append(log, user, { kind: "message", text: "留下的" }, at);
+  log = append(log, user, { kind: "retract", target: 1 }, at);
+  const first = ok(assemble(log, { stable: S, quotes: [1, 1], budgetBytes: BIG }));
+  assert.deepEqual(first.skipped, [{ seq: 1, reason: "retracted" }, { seq: 1, reason: "retracted" }]);
+  log = append(log, user, { kind: "message", text: "又提了一次" }, at);
+  const again = ok(assemble(log, { stable: S, quotes: [1], budgetBytes: BIG, previousHeadSeq: first.headSeq }));
+  assert.equal(serialize(again.request).includes("撤回的那句"), false);
+  assert.deepEqual(again.skipped, [{ seq: 1, reason: "retracted" }]);
+  assert.deepEqual(again.prefixBreaks, [], "同一次撤回不重复报前缀作废");
+});
+
+test("日志或装配选项带 getter、Proxy 时显式失败,getter 调用 0 次;同内容普通对象照常装配", () => {
+  let calls = 0;
+  const trap = <T extends object>(o: T, k: string, v: unknown): T => { Object.defineProperty(o, k, { enumerable: true, configurable: true, get() { calls++; return v; } }); return o; };
+  const log = history();
+  const quotes: unknown[] = [];
+  trap(quotes, "0", 1);
+  const cases: [unknown, unknown, RegExp][] = [
+    [trap({}, "events", log.events), { stable: S, quotes: [], budgetBytes: BIG }, /日志\.events.*getter/],
+    [log, trap({ stable: S, quotes: [] }, "budgetBytes", BIG), /装配选项\.budgetBytes.*getter/],
+    [log, { stable: S, quotes, budgetBytes: BIG }, /装配选项\.quotes\[0\].*getter/],
+    [log, { stable: [trap({ kind: "system" }, "text", "规则")], quotes: [], budgetBytes: BIG }, /装配选项\.stable\[0\]\.text.*getter/],
+    [new Proxy(log, {}), { stable: S, quotes: [], budgetBytes: BIG }, /Proxy/],
+  ];
+  for (const [l, o, re] of cases) {
+    const r = assemble(l as Log, o as AssembleOptions);
+    assert.equal(r.ok === false && r.reason, "invalid-input");
+    if (!r.ok && r.reason === "invalid-input") assert.match(r.detail, re);
+  }
+  assert.equal(calls, 0);
+  assert.equal(assemble(log, { stable: S, quotes: [1], budgetBytes: BIG }).ok, true);
+});

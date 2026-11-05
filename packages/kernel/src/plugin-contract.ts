@@ -81,6 +81,9 @@ export type RegisterRejection =
   | "schedule-not-allowed"
   | "plugin-dependency-not-allowed"
   | "unsupported-instance";
+/** 插件注册入口只接受普通数据对象:非 Proxy,原型为 Object.prototype 或 null(数组为 Array.prototype),
+ *  所有自有属性(含不可枚举、Symbol 键与数组元素)都是数据属性;只有顶层字段可以是函数。
+ *  不承诺防御任意 JS 元编程对象,遇到就拒绝,注册入口不会抛错。 */
 export type RegisterResult = { ok: true } | { ok: false; reason: RegisterRejection; detail: string };
 
 export interface RejectedEvent { readonly index: number; readonly reason: string }
@@ -93,7 +96,7 @@ export type SendResult =
   | { ok: true; state: "confirmed"; receipt: SendReceipt; deduplicated: boolean }
   | {
     ok: false; state: "delivery-unknown";
-    reason: "timeout" | "send-threw" | "invalid-receipt" | "non-promise-send" | "retry-refused" | "retry-window-expired" | "channel-changed";
+    reason: "timeout" | "send-threw" | "invalid-receipt" | "non-promise-send" | "retry-refused" | "retry-window-expired" | "channel-changed" | "clock-untrusted";
     detail: string;
   }
   | { ok: false; state: "rejected"; reason: "unknown-plugin" | "missing-action-id" | "invalid-payload" | "payload-mismatch" | "in-flight"; detail: string };
@@ -115,10 +118,21 @@ export interface DeliveryBinding {
   readonly payloadSha256: string;
 }
 
+/** 一个动作的账目视图;clockTrusted 一旦为 false 就不会恢复 */
+export interface DeliveryView {
+  readonly state: DeliveryState;
+  readonly binding: DeliveryBinding;
+  readonly attempts: number;
+  /** 这个动作见过的最大单调读数 */
+  readonly maxMonotonic: number;
+  /** 单调读数从没倒退过;任何一次读数小于已见最大值就永久置 false,之后不再自动重试 */
+  readonly clockTrusted: boolean;
+}
+
 export interface RegistryOptions {
   /** 宿主墙钟(毫秒),receivedAt 与 firstAttemptAt 用它 */
   readonly now?: () => number;
-  /** 单调时钟(毫秒),B1 保留期用它;默认 performance.now。读数倒退时一律按结果未知处理,不重试 */
+  /** 单调时钟(毫秒),B1 保留期用它;默认 performance.now。某个动作见到读数倒退后,该动作永久不再自动重试 */
   readonly monotonic?: () => number;
   /** await send 的上限,超时记 DeliveryUnknown */
   readonly sendTimeoutMs?: number;
@@ -131,7 +145,7 @@ export interface PluginRegistry {
   list(): readonly { readonly id: string; readonly kind: PluginKind }[];
   pull(pluginId: string, sourceId: string): Promise<PullResult>;
   send(pluginId: string, req: { action_id?: unknown; payload: string }): Promise<SendResult>;
-  delivery(pluginId: string, actionId: string): { readonly state: DeliveryState; readonly binding: DeliveryBinding; readonly attempts: number } | undefined;
+  delivery(pluginId: string, actionId: string): DeliveryView | undefined;
   mounts(point: string): readonly string[];
 }
 

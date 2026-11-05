@@ -2,7 +2,8 @@
 // AC-12 分类只出固定枚举 E1..E10 或 Uncertain;非法输出(含无法序列化的)封闭为 Uncertain 并记违规。
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { type Classifier, classifyInbound, EVENT_CODES, safeDescribe } from "./classify.ts";
+import { type Classifier, classifyInbound, EVENT_CODES } from "./classify.ts";
+import { safeDescribe } from "./plain.ts";
 
 const user = { kind: "user", id: "u1" } as const;
 /** 按输入框的方式给出结构化点名:找到第 nth 个 "@name" 的确切范围 */
@@ -197,4 +198,30 @@ test("分类器抛出 message getter 会抛错、instanceof 会抛错的异常,�
     assert.equal(r.via, "semantic");
     assert.match(r.violation ?? "", /^classifier-threw: /);
   }
+});
+
+test("入站事件带 getter、Proxy 或类实例时封闭为 Uncertain,getter 与分类器都调用 0 次", () => {
+  let getterCalls = 0;
+  const withGetter = { sender: user };
+  Object.defineProperty(withGetter, "text", { enumerable: true, get() { getterCalls++; return "停止"; } });
+  const mentions: unknown[] = [];
+  Object.defineProperty(mentions, "0", { enumerable: true, get() { getterCalls++; return { id: "x", name: "小秘", start: 0, end: 3 }; } });
+  class Ev { sender = user; text = "停止"; }
+  for (const e of [withGetter, { sender: user, text: "@小秘", mentions }, new Proxy({ sender: user, text: "停止" }, {}), new Ev()]) {
+    const c = counting("E4");
+    const r = classifyInbound(e as never, c.fn);
+    assert.equal(r.intent, "Uncertain");
+    assert.match(r.violation ?? "", /普通数据对象/);
+    assert.equal(c.calls(), 0);
+  }
+  assert.equal(getterCalls, 0);
+});
+
+test("分类器拿到的是冻结副本,改不了调用方的事件;同内容普通对象照常分类(单开关对照)", () => {
+  const e = { sender: user, text: "停止" };
+  let seen: unknown;
+  const r = classifyInbound(e, (x) => { seen = x; return "E4"; });
+  assert.equal(r.intent, "E4");
+  assert.equal(Object.isFrozen(seen), true);
+  assert.notEqual(seen, e);
 });

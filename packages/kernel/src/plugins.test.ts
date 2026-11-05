@@ -757,7 +757,7 @@ test("单调时钟读数倒退时按结果未知处理,不重试", async () => {
   await reg.send("c", { action_id: "a", payload: "x" });
   mono = 499;
   const r = await reg.send("c", { action_id: "a", payload: "x" });
-  assert.equal(r.ok === false && r.reason, "retry-window-expired");
+  assert.equal(r.ok === false && r.reason, "clock-untrusted");
   assert.equal(calls, 1);
   assert.equal(reg.delivery("c", "a")?.binding.firstAttemptMonotonic, 500);
 });
@@ -787,4 +787,235 @@ test("同一渠道同一 action_id 仍去重(R4-05 单开关对照)", async () =
   const again = await reg.send("a\0b", { action_id: "c", payload: "x" });
   assert.equal(again.ok && again.deduplicated, true);
   assert.deepEqual(calls, ["c"]);
+});
+
+// —— 第六轮:R5-01、R5-02
+/** B1 模拟服务商:按自己的时钟记住 action_id windowMs 毫秒,每次都丢回执 */
+function lossyProvider(server: () => number, windowMs: number) {
+  const seen = new Map<string, number>();
+  const stats = { calls: 0, effects: 0 };
+  const send = async (q: { action_id: string }) => {
+    stats.calls++;
+    const old = seen.get(q.action_id);
+    if (old !== undefined && server() - old < windowMs) throw new Error("回执继续丢失");
+    stats.effects++;
+    seen.set(q.action_id, server());
+    throw new Error("已送达但回执丢失");
+  };
+  return { send, stats };
+}
+
+test("单调读数先前进再倒退(仍高于首次)时永久停止重试,副作用只有一次(R5-01 阳性埋雷)", async () => {
+  let mono = 1000, server = 0;
+  const p = lossyProvider(() => server, 1000);
+  const reg = createRegistry({ now: () => 0, monotonic: () => mono });
+  reg.register({ kind: "outbound-channel", id: "b1", endpoint: "A", idempotency: "action-id", idempotencyWindowMs: 1000, send: p.send });
+  const req = { action_id: "a", payload: "x" };
+  await reg.send("b1", req);
+  mono = 1100; server = 100;
+  const second = await reg.send("b1", req);
+  assert.equal(second.ok === false && second.reason, "send-threw");
+  mono = 1050; server = 1001;
+  const third = await reg.send("b1", req);
+  assert.equal(third.ok === false && third.reason, "clock-untrusted");
+  assert.equal(third.ok === false && third.state, "delivery-unknown");
+  assert.deepEqual(p.stats, { calls: 2, effects: 1 });
+  assert.deepEqual([reg.delivery("b1", "a")?.clockTrusted, reg.delivery("b1", "a")?.maxMonotonic], [false, 1100]);
+});
+
+test("单调读数倒退后再回升也不恢复重试资格(R5-01 阳性埋雷)", async () => {
+  let mono = 1000, server = 0;
+  const p = lossyProvider(() => server, 1000);
+  const reg = createRegistry({ now: () => 0, monotonic: () => mono });
+  reg.register({ kind: "outbound-channel", id: "b1", endpoint: "A", idempotency: "action-id", idempotencyWindowMs: 1000, send: p.send });
+  const req = { action_id: "a", payload: "x" };
+  await reg.send("b1", req);
+  mono = 999;
+  const back = await reg.send("b1", req);
+  assert.equal(back.ok === false && back.reason, "clock-untrusted");
+  for (const m of [1001, 1500, 1999]) {
+    mono = m; server = 1001;
+    const r = await reg.send("b1", req);
+    assert.equal(r.ok === false && r.reason, "clock-untrusted", String(m));
+  }
+  assert.deepEqual(p.stats, { calls: 1, effects: 1 });
+});
+
+test("单调读数一直前进时照常在保留期内重试,到期才拒绝(R5-01 单开关对照)", async () => {
+  let mono = 1000, server = 0;
+  const p = lossyProvider(() => server, 5000);
+  const reg = createRegistry({ now: () => 0, monotonic: () => mono });
+  reg.register({ kind: "outbound-channel", id: "b1", endpoint: "A", idempotency: "action-id", idempotencyWindowMs: 1000, send: p.send });
+  const req = { action_id: "a", payload: "x" };
+  await reg.send("b1", req);
+  for (const m of [1100, 1100, 1500, 1999]) {
+    mono = m;
+    const r = await reg.send("b1", req);
+    assert.equal(r.ok === false && r.reason, "send-threw", String(m));
+  }
+  mono = 2000;
+  const late = await reg.send("b1", req);
+  assert.equal(late.ok === false && late.reason, "retry-window-expired");
+  assert.deepEqual([reg.delivery("b1", "a")?.clockTrusted, reg.delivery("b1", "a")?.maxMonotonic], [true, 2000]);
+  assert.deepEqual(p.stats, { calls: 5, effects: 1 });
+});
+
+test("单调读数不是有限数时同样永久停止重试", async () => {
+  let mono = 1000;
+  const p = lossyProvider(() => 0, 1000);
+  const reg = createRegistry({ now: () => 0, monotonic: () => mono });
+  reg.register({ kind: "outbound-channel", id: "b1", endpoint: "A", idempotency: "action-id", idempotencyWindowMs: 1000, send: p.send });
+  await reg.send("b1", { action_id: "a", payload: "x" });
+  mono = Number.NaN;
+  const r = await reg.send("b1", { action_id: "a", payload: "x" });
+  assert.equal(r.ok === false && r.reason, "clock-untrusted");
+  mono = 1001;
+  const again = await reg.send("b1", { action_id: "a", payload: "x" });
+  assert.equal(again.ok === false && again.reason, "clock-untrusted");
+  assert.equal(p.stats.calls, 1);
+});
+
+/** 定义可枚举 getter 并计数调用次数 */
+function trapGetter<T extends object>(o: T, key: string, value: unknown, counter: { n: number }, throws = false): T {
+  Object.defineProperty(o, key, { enumerable: true, configurable: true, get() { counter.n++; if (throws) throw new Error(`${key} getter 执行`); return value; } });
+  return o;
+}
+const okSendFn = async (q: { action_id: string }) => ({ action_id: q.action_id, receiptId: "r" });
+
+test("嵌套数组元素是 getter 时注册拒绝并点名下标,getter 一次都不调用(R5-02 阳性埋雷)", () => {
+  const counter = { n: 0 };
+  const routes: unknown[] = [];
+  trapGetter(routes, "0", "A", counter);
+  const r = createRegistry().register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", config: { routes }, send: okSendFn });
+  assert.equal(r.ok === false && r.reason, "unsupported-instance");
+  if (!r.ok) assert.match(r.detail, /config\.routes\[0\].*getter/);
+  assert.equal(counter.n, 0);
+});
+
+test("关键字段 endpoint、kind、id、send 是会抛错的 getter 时注册返回拒绝,不抛出也不调用(R5-02 阳性埋雷)", () => {
+  for (const key of ["endpoint", "kind", "id", "send", "idempotency"]) {
+    const counter = { n: 0 };
+    const plugin: Record<string, unknown> = { kind: "outbound-channel", id: "g", endpoint: "A", idempotency: "none", send: okSendFn };
+    delete plugin[key];
+    trapGetter(plugin, key, "x", counter, true);
+    const reg = createRegistry();
+    let r: ReturnType<typeof reg.register> | undefined;
+    assert.doesNotThrow(() => { r = reg.register(plugin); }, key);
+    assert.equal(r?.ok === false && r.reason, "unsupported-instance", key);
+    if (r && !r.ok) assert.match(r.detail, new RegExp(`插件\\.${key}.*getter`), key);
+    assert.equal(counter.n, 0, key);
+    assert.equal(reg.reregister(plugin).ok, false);
+    assert.equal(counter.n, 0, key);
+  }
+});
+
+test("同样形状的普通数据对象注册成功,数组与嵌套配置原样冻结进 this(R5-02 单开关对照)", async () => {
+  let self: unknown;
+  const reg = createRegistry();
+  const plugin = {
+    kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", config: { routes: ["A", "B"], nested: [{ k: 1 }] },
+    async send(this: unknown, q: { action_id: string }) { self = this; return { action_id: q.action_id, receiptId: "r" }; },
+  };
+  assert.deepEqual(reg.register(plugin), { ok: true });
+  await reg.send("p", { action_id: "a", payload: "x" });
+  const cfg = (self as { config: { routes: string[]; nested: { k: number }[] } }).config;
+  assert.deepEqual([[...cfg.routes], cfg.nested[0]?.k], [["A", "B"], 1]);
+  assert.equal(Object.isFrozen(cfg.nested[0]), true);
+});
+
+test("Proxy、Symbol 键、不可枚举属性、稀疏数组、数组上的额外属性、嵌套函数都拒绝并点名路径(R5-02)", () => {
+  const base = { kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: okSendFn };
+  const sparse: unknown[] = [];
+  sparse[1] = "A";
+  const extra = Object.assign(["A"], { tag: "x" });
+  const hidden = { ...base };
+  Object.defineProperty(hidden, "secret", { value: 1, enumerable: false });
+  const cases: [string, unknown, RegExp][] = [
+    ["顶层 Proxy", new Proxy({ ...base }, {}), /Proxy/],
+    ["配置 Proxy", { ...base, config: new Proxy({}, {}) }, /config.*Proxy/],
+    ["Symbol 键", { ...base, [Symbol("k")]: 1 }, /Symbol/],
+    ["不可枚举属性", hidden, /secret.*不可枚举/],
+    ["稀疏数组", { ...base, list: sparse }, /list\[0\].*稀疏/],
+    ["数组额外属性", { ...base, list: extra }, /list\[tag\]/],
+    ["嵌套函数", { ...base, config: { fn: () => 1 } }, /config\.fn.*函数/],
+    ["Proxy 函数", { ...base, send: new Proxy(okSendFn, {}) }, /send.*Proxy/],
+  ];
+  for (const [why, plugin, re] of cases) {
+    const reg = createRegistry();
+    const r = reg.register(plugin);
+    assert.equal(r.ok === false && r.reason, "unsupported-instance", why);
+    if (!r.ok) assert.match(r.detail, re, why);
+    assert.equal(reg.list().length, 0, why);
+  }
+});
+
+test("注册时检查本身抛错(Proxy 陷阱抛错)也返回拒绝,不逃出注册入口", () => {
+  const evil = new Proxy({}, { getPrototypeOf() { throw new Error("原型陷阱"); }, ownKeys() { throw new Error("键陷阱"); } });
+  const reg = createRegistry();
+  let r: ReturnType<typeof reg.register> | undefined;
+  assert.doesNotThrow(() => { r = reg.register(evil); });
+  assert.equal(r?.ok === false && r.reason, "unsupported-instance");
+  assert.equal(reg.list().length, 0);
+});
+
+test("DataSource 与 UIExtension 走同一入口:getter 拒绝,普通数据放行", () => {
+  const counter = { n: 0 };
+  const ds = trapGetter({ kind: "data-source", id: "d", pull: async () => [] } as Record<string, unknown>, "sources", ["g1"], counter);
+  const ui = trapGetter({ kind: "ui-extension", id: "u" } as Record<string, unknown>, "mounts", ["right"], counter);
+  const reg = createRegistry();
+  assert.equal(reg.register(ds).ok, false);
+  assert.equal(reg.register(ui).ok, false);
+  assert.equal(counter.n, 0);
+  assert.deepEqual(reg.register({ kind: "data-source", id: "d", sources: ["g1"], pull: async () => [] }), { ok: true });
+  assert.deepEqual(reg.register({ kind: "ui-extension", id: "u", mounts: ["right"] }), { ok: true });
+});
+
+// —— 统一判定接到发送请求、回执与拉取结果
+test("发送请求是 getter、Proxy 或类实例时拒绝,getter 调用 0 次且插件不被调用", async () => {
+  const counter = { n: 0 };
+  const calls: string[] = [];
+  const reg = createRegistry();
+  reg.register({ kind: "outbound-channel", id: "g", endpoint: "A", idempotency: "none", send: async (q: { action_id: string }) => { calls.push(q.action_id); return { action_id: q.action_id, receiptId: "r" }; } });
+  const withGetter = trapGetter({ action_id: "a" } as Record<string, unknown>, "payload", "x", counter);
+  for (const req of [withGetter, new Proxy({ action_id: "a", payload: "x" }, {})]) {
+    const r = await reg.send("g", req as never);
+    assert.equal(r.ok === false && r.reason, "invalid-payload");
+    if (!r.ok) assert.match(r.detail, /普通数据对象/);
+  }
+  assert.deepEqual([counter.n, calls.length], [0, 0]);
+  const plain = await reg.send("g", { action_id: "a", payload: "x" });
+  assert.equal(plain.ok, true, "同样内容的普通对象照常发送");
+});
+
+test("回执带 getter 时记 DeliveryUnknown,getter 调用 0 次;普通回执照常确认", async () => {
+  const counter = { n: 0 };
+  const reg = createRegistry();
+  reg.register({ kind: "outbound-channel", id: "g", endpoint: "A", idempotency: "none", send: async (q: { action_id: string }) => trapGetter({ action_id: q.action_id } as Record<string, unknown>, "receiptId", "r", counter) });
+  const r = await reg.send("g", { action_id: "a", payload: "x" });
+  assert.equal(r.ok === false && r.reason, "invalid-receipt");
+  if (!r.ok) assert.match(r.detail, /回执\.receiptId.*getter/);
+  assert.equal(counter.n, 0);
+  reg.register({ kind: "outbound-channel", id: "h", endpoint: "A", idempotency: "none", send: okSendFn });
+  const ok2 = await reg.send("h", { action_id: "a", payload: "x" });
+  assert.equal(ok2.ok, true);
+});
+
+test("拉取结果数组元素是 getter 时整批拒绝,事件对象里有 getter 时只拒那一条,getter 调用 0 次", async () => {
+  const counter = { n: 0 };
+  const arr: unknown[] = [];
+  trapGetter(arr, "0", ev(), counter);
+  const reg = createRegistry({ now: () => T0 });
+  reg.register({ kind: "data-source", id: "a", sources: ["g1"], pull: async () => arr });
+  reg.register({ kind: "data-source", id: "b", sources: ["g1"], pull: async () => [trapGetter(ev() as Record<string, unknown>, "content", "x", counter), ev()] });
+  const whole = await reg.pull("a", "g1");
+  assert.equal(whole.ok === false && whole.reason, "invalid-batch");
+  if (!whole.ok) assert.match(whole.detail, /pull 结果\[0\].*getter/);
+  const one = await reg.pull("b", "g1");
+  assert.equal(one.ok, true);
+  if (one.ok) {
+    assert.deepEqual(one.rejected.map((x) => x.index), [0]);
+    assert.match(one.rejected[0]?.reason ?? "", /事件\[0\]\.content.*getter/);
+    assert.equal(one.events.length, 1);
+  }
+  assert.equal(counter.n, 0);
 });
