@@ -1,11 +1,11 @@
 // SQLite 存储适配器行为测试:临时目录里的真实 sqlite 文件,不 mock。
 // AC-05 落盘只追加、AC-21 两个连接的单一提交点、AC-31③ 入库端 action_id 去重(含真实崩溃重放)、重启持久。
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { after, test } from "node:test";
+import { after, afterEach, test } from "node:test";
 import { appendEvent, closeStore, commitDoc, listActions, loadLog, openStore, readDoc, recordAction } from "./index.ts";
 
 const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "adapter-sqlite-"));
@@ -119,68 +119,237 @@ test("同进程两个连接:A 读到版本未写入时 B 提交,B 返回 busy �
   closeStore(b);
 });
 
-// 真实多进程:每个子进程独立打开同一个库文件,等屏障文件出现后才提交;读到版本后在事务里停 holdMs,把竞争窗口拉开
-const CHILD = `
+// 真实多进程:每个子进程独立打开同一个库文件。父子之间只用 stdin/stdout 行协议做屏障(go / release),不靠睡眠定时;
+// 子进程的每次等待都有上限,任何失败/超时路径都会杀掉并回收本测试起的全部子进程。
+const CHILD = path.join(ROOT, "child.mjs");
+fs.writeFileSync(CHILD, `
 import fs from "node:fs";
-import { openStore, commitDoc } from ${JSON.stringify(new URL("./index.ts", import.meta.url).href)};
-const [file, key, value, busyMs, holdMs, go] = process.argv.slice(2);
+import { DatabaseSync } from "node:sqlite";
+const [mod, file, key, value, cfgJson] = process.argv.slice(2);
+const cfg = JSON.parse(cfgJson);
+const say = (s) => fs.writeSync(1, s + "\\n");
 const nap = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
-const s = openStore(file, { busyTimeoutMs: Number(busyMs), onCasRead: () => { process.stdout.write("held\\n"); nap(Number(holdMs)); } });
-process.stdout.write("ready\\n");
-while (!fs.existsSync(go)) nap(5);
+const buf = Buffer.alloc(64);
+let pending = "";
+const readLine = () => {
+  for (;;) {
+    const i = pending.indexOf("\\n");
+    if (i >= 0) { const l = pending.slice(0, i); pending = pending.slice(i + 1); return l; }
+    let n;
+    try { n = fs.readSync(0, buf, 0, buf.length, null); } catch (e) { if (e.code === "EAGAIN") { nap(2); continue; } throw e; }
+    if (n === 0) process.exit(70); // 父进程关了 stdin:不再等屏障
+    pending += buf.toString("utf8", 0, n);
+  }
+};
+if (cfg.exitBeforeReady) process.exit(42);
+if (cfg.rawHold) {
+  const db = new DatabaseSync(file);
+  db.exec("PRAGMA journal_mode = WAL");
+  db.exec("BEGIN IMMEDIATE");
+  db.exec("CREATE TABLE IF NOT EXISTS hold (x)");
+  say("held");
+  if (readLine() !== "release") process.exit(71);
+  db.exec("COMMIT");
+  say("result " + JSON.stringify({ released: true }));
+  process.exit(0);
+}
+const { openStore, commitDoc } = await import(mod);
+if (cfg.openOnly) {
+  say("opening");
+  let out;
+  try { openStore(file, { busyTimeoutMs: cfg.busyMs }); out = { opened: true }; } catch (e) { out = { threw: String(e.message) }; }
+  say("result " + JSON.stringify(out));
+  process.exit(0);
+}
+const s = openStore(file, { busyTimeoutMs: cfg.busyMs, onCasRead: () => { say("held"); if (cfg.holdUntilRelease && readLine() !== "release") process.exit(71); } });
+say("ready");
+if (readLine() !== "go") process.exit(72);
+if (cfg.delayMs) nap(cfg.delayMs);
+say("trying");
 let out;
 try { out = commitDoc(s, key, 0, value); } catch (e) { out = { threw: String(e.message) }; }
-process.stdout.write("result " + JSON.stringify(out) + "\\n");
-`;
-interface Proc { saw(line: string): Promise<void>; done: Promise<unknown> }
-function proc(file: string, value: string, busyMs: number, holdMs: number, go: string): Proc {
-  const script = path.join(path.dirname(file), "child.mjs");
-  if (!fs.existsSync(script)) fs.writeFileSync(script, CHILD);
-  const c = spawn(process.execPath, ["--no-warnings", script, file, "主稿", value, String(busyMs), String(holdMs), go], { stdio: ["ignore", "pipe", "inherit"] });
-  let out = "";
-  const waiters: [string, () => void][] = [];
-  c.stdout.setEncoding("utf8").on("data", (d: string) => { out += d; for (const [l, r] of waiters) if (out.includes(`${l}\n`)) r(); });
+say("result " + JSON.stringify(out));
+if (cfg.exitAfterResult) process.exit(42);
+`);
+const MOD = new URL("./index.ts", import.meta.url).href;
+interface ChildCfg { busyMs?: number; holdUntilRelease?: boolean; delayMs?: number; exitBeforeReady?: boolean; exitAfterResult?: boolean; rawHold?: boolean; openOnly?: boolean }
+interface Kid { pid: number; saw(line: string, ms?: number): Promise<void>; send(line: string): void; done(ms?: number): Promise<unknown> }
+const live = new Set<ChildProcess>();
+async function reap(): Promise<void> {
+  await Promise.all([...live].map((c) => new Promise<void>((r) => {
+    if (c.exitCode !== null || c.signalCode !== null) { live.delete(c); r(); return; }
+    c.once("close", () => { live.delete(c); r(); });
+    c.kill("SIGKILL");
+  })));
+}
+afterEach(reap);
+after(reap);
+const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+function kid(file: string, value: string, cfg: ChildCfg): Kid {
+  const c = spawn(process.execPath, ["--no-warnings", CHILD, MOD, file, "主稿", value, JSON.stringify(cfg)], { stdio: ["pipe", "pipe", "pipe"] });
+  live.add(c);
+  let out = "", err = "", spawnError: Error | undefined, closed: { code: number | null; signal: string | null } | undefined;
+  const wake = new Set<() => void>();
+  const poke = () => { for (const w of [...wake]) w(); };
+  c.on("error", (e) => { spawnError = e; poke(); });
+  c.stdout!.setEncoding("utf8").on("data", (d: string) => { out += d; poke(); });
+  c.stderr!.setEncoding("utf8").on("data", (d: string) => { err += d; });
+  c.on("close", (code, signal) => { closed = { code, signal }; live.delete(c); poke(); });
+  c.stdin!.on("error", () => {});
+  const lines = () => out.split("\n");
+  const until = <T>(what: string, ms: number, check: () => T | undefined): Promise<T> => new Promise((resolve, reject) => {
+    const tick = () => {
+      let v: T | undefined;
+      try { v = check(); } catch (e) { finish(); reject(e); return; }
+      if (v !== undefined) { finish(); resolve(v); }
+    };
+    const timer = setTimeout(() => { finish(); reject(new Error(`等待子进程 ${what} 超时 ${ms}ms;stdout=${JSON.stringify(out)} stderr=${err.slice(0, 400)}`)); }, ms);
+    const finish = () => { clearTimeout(timer); wake.delete(tick); };
+    wake.add(tick);
+    tick();
+  });
+  const failed = () => {
+    if (spawnError) throw new Error(`子进程启动失败:${spawnError.message}`);
+    if (closed) throw new Error(`子进程提前退出 code=${closed.code} signal=${closed.signal};stdout=${JSON.stringify(out)} stderr=${err.slice(0, 400)}`);
+  };
   return {
-    saw: (l) => new Promise((r) => { if (out.includes(`${l}\n`)) r(); else waiters.push([l, r]); }),
-    done: new Promise((r) => c.on("close", () => { const m = /^result (.+)$/m.exec(out); r(m ? JSON.parse(m[1]!) : { exit: out }); })),
+    pid: c.pid ?? -1,
+    saw: (line, ms = 10_000) => until(`输出 ${line}`, ms, () => { if (lines().includes(line)) return true; failed(); return undefined; }).then(() => {}),
+    send: (line) => { c.stdin!.write(`${line}\n`); },
+    done: (ms = 20_000) => until("退出", ms, () => {
+      if (spawnError) throw new Error(`子进程启动失败:${spawnError.message}`);
+      if (!closed) return undefined;
+      if (closed.code !== 0 || closed.signal !== null) throw new Error(`子进程异常退出 code=${closed.code} signal=${closed.signal};stdout=${JSON.stringify(out)} stderr=${err.slice(0, 400)}`);
+      const m = /^result (.+)$/m.exec(out);
+      if (!m) throw new Error(`子进程正常退出但没有输出结果;stdout=${JSON.stringify(out)}`);
+      return JSON.parse(m[1]!) as unknown;
+    }),
   };
 }
+const freshDb = () => { const f = prepare(dbFile()); closeStore(openStore(f)); return f; };
 
-test("两个独立进程基于同一版本同时提交:只有一个成功,另一个收到版本冲突,内容是胜者的", async () => {
+test("另一进程持有写锁时新连接照常打开:初始化等锁,不因提交用的 0 busy 超时失败", async () => {
   const f = prepare(dbFile());
-  closeStore(openStore(f));
-  const go = path.join(path.dirname(f), "go");
-  const a = proc(f, "A 的修改", 5000, 300, go);
-  const b = proc(f, "B 的修改", 5000, 300, go);
-  await Promise.all([a.saw("ready"), b.saw("ready")]);
-  fs.writeFileSync(go, "");
-  const results = (await Promise.all([a.done, b.done])) as { ok: boolean; ver?: number; reason?: string; currentVer?: number }[];
-  const wins = results.filter((r) => r.ok);
-  assert.deepEqual(wins, [{ ok: true, ver: 1 }], JSON.stringify(results));
-  assert.deepEqual(results.filter((r) => !r.ok), [{ ok: false, reason: "version-conflict", currentVer: 1 }], JSON.stringify(results));
-  const s = openStore(f);
-  const winner = results[0]?.ok ? "A 的修改" : "B 的修改";
-  assert.deepEqual(readDoc(s, "主稿"), { value: winner, ver: 1 });
+  const holder = kid(f, "", { rawHold: true });
+  await holder.saw("held");
+  const opener = kid(f, "", { openOnly: true, busyMs: 0 });
+  await opener.saw("opening");
+  // 旧实现在这里立刻失败返回;等锁的实现在持锁方释放前不会有结果
+  const early = await Promise.race([opener.done().then((r) => ({ early: r })), delay(400).then(() => undefined)]);
+  holder.send("release");
+  assert.deepEqual(await holder.done(), { released: true });
+  assert.equal(early, undefined, JSON.stringify(early));
+  assert.deepEqual(await opener.done(), { opened: true });
+  const s = openStore(f, { busyTimeoutMs: 0 });
+  assert.deepEqual(commitDoc(s, "主稿", 0, "打开后可写"), { ok: true, ver: 1 });
   closeStore(s);
 });
 
-test("另一进程持有写锁时提交返回 busy 且不写入;锁释放后按同一旧版本重试收到版本冲突", async () => {
-  const f = prepare(dbFile());
-  closeStore(openStore(f));
-  const goA = path.join(path.dirname(f), "goA");
-  const goB = path.join(path.dirname(f), "goB");
-  const a = proc(f, "A 的修改", 5000, 600, goA);
-  const b = proc(f, "B 的修改", 0, 0, goB);
+test("两个独立进程基于同一版本同时提交:后到者等写锁,拿到锁后读到新版本收到冲突,内容是先到者的", async () => {
+  const f = freshDb();
+  const a = kid(f, "A 的修改", { busyMs: 10_000, holdUntilRelease: true });
+  const b = kid(f, "B 的修改", { busyMs: 10_000, holdUntilRelease: true });
   await Promise.all([a.saw("ready"), b.saw("ready")]);
-  fs.writeFileSync(goA, "");
+  a.send("go");
+  b.send("go");
+  await Promise.all([a.saw("trying"), b.saw("trying")]);
+  // 两边都已真正发起提交;先拿到写锁的一方在读到版本后停住,另一方必须被挡在锁外
+  const first = await Promise.any([a.saw("held").then(() => a), b.saw("held").then(() => b)]);
+  const second = first === a ? b : a;
+  first.send("release");
+  const r1 = await first.done();
+  await second.saw("held");
+  second.send("release");
+  const r2 = await second.done();
+  assert.deepEqual(r1, { ok: true, ver: 1 });
+  assert.deepEqual(r2, { ok: false, reason: "version-conflict", currentVer: 1 });
+  const s = openStore(f);
+  assert.deepEqual(readDoc(s, "主稿"), { value: first === a ? "A 的修改" : "B 的修改", ver: 1 });
+  closeStore(s);
+});
+
+test("另一进程持有写锁期间提交返回 busy 且不写入;父进程确认后才释放,重试收到版本冲突", async () => {
+  const f = freshDb();
+  const a = kid(f, "A 的修改", { busyMs: 10_000, holdUntilRelease: true });
+  const b = kid(f, "B 的修改", { busyMs: 0 });
+  await Promise.all([a.saw("ready"), b.saw("ready")]);
+  a.send("go");
   await a.saw("held");
-  fs.writeFileSync(goB, "");
-  const [ra, rb] = await Promise.all([a.done, b.done]);
+  b.send("go");
+  const rb = await b.done();
+  a.send("release");
+  const ra = await a.done();
   assert.deepEqual(rb, { ok: false, reason: "busy" });
   assert.deepEqual(ra, { ok: true, ver: 1 });
   const s = openStore(f);
   assert.deepEqual(readDoc(s, "主稿"), { value: "A 的修改", ver: 1 });
   assert.deepEqual(commitDoc(s, "主稿", 0, "B 的修改"), { ok: false, reason: "version-conflict", currentVer: 1 });
+  closeStore(s);
+});
+
+test("提交遵守调用方的 busyTimeoutMs:持锁方一直不释放时,0 超时的提交在 2s 内返回 busy(初始化的长等待不能带进提交)", async () => {
+  const f = freshDb();
+  const a = kid(f, "A 的修改", { busyMs: 10_000, holdUntilRelease: true });
+  const b = kid(f, "B 的修改", { busyMs: 0 });
+  await Promise.all([a.saw("ready"), b.saw("ready")]);
+  a.send("go");
+  await a.saw("held");
+  b.send("go");
+  await b.saw("trying");
+  const t0 = Date.now();
+  const rb = await b.done(8000);
+  const waited = Date.now() - t0;
+  a.send("release");
+  assert.deepEqual(await a.done(), { ok: true, ver: 1 });
+  assert.deepEqual(rb, { ok: false, reason: "busy" });
+  assert.ok(waited < 2000, `0 超时的提交等了 ${waited}ms`);
+  const s = openStore(f);
+  assert.deepEqual(readDoc(s, "主稿"), { value: "A 的修改", ver: 1 });
+  closeStore(s);
+});
+
+test("调度延迟反例:B 放行后再拖 1500ms 才尝试,A 仍持锁,B 依旧返回 busy", async () => {
+  const f = freshDb();
+  const a = kid(f, "A 的修改", { busyMs: 10_000, holdUntilRelease: true });
+  const b = kid(f, "B 的修改", { busyMs: 0, delayMs: 1500 });
+  await Promise.all([a.saw("ready"), b.saw("ready")]);
+  a.send("go");
+  await a.saw("held");
+  b.send("go");
+  const rb = await b.done();
+  a.send("release");
+  assert.deepEqual(await a.done(), { ok: true, ver: 1 });
+  assert.deepEqual(rb, { ok: false, reason: "busy" });
+  const s = openStore(f);
+  assert.deepEqual(readDoc(s, "主稿"), { value: "A 的修改", ver: 1 });
+  closeStore(s);
+});
+
+test("测试夹具负例:子进程在就绪前退出,等待在有限时间内报失败,另一个等屏障的进程被回收,库未写入", async () => {
+  const f = freshDb();
+  const waiting = kid(f, "A 的修改", { busyMs: 10_000 });
+  const broken = kid(f, "B 的修改", { exitBeforeReady: true });
+  const t0 = Date.now();
+  await assert.rejects(Promise.all([waiting.saw("ready"), broken.saw("ready")]), /提前退出 code=42/);
+  assert.ok(Date.now() - t0 < 5000, `失败用了 ${Date.now() - t0}ms`);
+  await reap();
+  assert.equal(alive(waiting.pid) || alive(broken.pid), false);
+  const s = openStore(f);
+  assert.equal(readDoc(s, "主稿"), undefined);
+  closeStore(s);
+});
+
+test("测试夹具负例:子进程输出结果后异常退出,done 判失败而不是拿结果当绿", async () => {
+  const f = freshDb();
+  const k = kid(f, "A 的修改", { busyMs: 10_000, exitAfterResult: true });
+  await k.saw("ready");
+  k.send("go");
+  await k.saw("trying");
+  await assert.rejects(k.done(), /异常退出 code=42/);
+  assert.equal(alive(k.pid), false);
+  const s = openStore(f);
+  assert.deepEqual(readDoc(s, "主稿"), { value: "A 的修改", ver: 1 });
   closeStore(s);
 });
 
