@@ -523,3 +523,49 @@ Helper 三入口 × 本人/他人/同 ID 联系人 9 格、定时归联系人且
 **回交条件：** Claude Code 在原开发任务一次补齐三个可变入参的快照/授权表驱动测试和对应正反校准，保留现有正确实现及已验证的 Helper、定时和控制行为；按用户所说在 PR #3 最新基线整合后重新运行门禁并交跨厂商独立复审。用户要求的后端持续实现、验收清单和用户故事闭环仍由原开发流程推进，本审查不创建或冒称完成该全局目标。
 
 **本轮本地门禁：** 在用户指定并于本 clone 固定的 `fe69b70` / `356d012` 下，`node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 实测 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 未找到等于本轮 `reviewed_hash` 的审查工具输出，也未识别该审查轮厂商。当前轮尚未完整写入会话 `turns.jsonl`；原生 rollout 可观察模型，但不能冒充该门禁通过。会话落盘后由既有流程重核，不伪造记录或豁免（`$E/gates-local-pinned.log`）。
+
+---
+
+## 第八轮：第七轮快照测试返修后的跨厂商独立复审（2026-11-06）
+
+**结论：reject，交回 Claude Code 原开发任务返修。** 第七轮 CH-17 对普通可变数组的快照反例已闭合；但本轮发现当前 `briefFor` 对同一个输入属性多次读取，若进程内调用方传入会变化的 getter，校验的是一组值而成功结果携带另一组值，能在纯函数结果中出现未授权工具或明文凭据。另有混合凭据与引用形状的独立变异存活。此处没有验证真实宿主会构造 getter，也没有证明远程利用或真实凭据外泄。
+
+### 固定对象、来源与独立复现
+
+- PR #4 `feat/contact-helper`：受审 HEAD `0b40600e9f90fdc0ed4bb15451b0c0b9dc8d0258`，开始时基线 `origin/feat/task-lifecycle=a425387bc9781f53a44f48892dfb041cd8f7f3e4`。合并提交 `177370a09a08aa9feca23399b02e79784f79e19d` 的父提交为 `9b0a201` 与 `a425387`；`0b40600` 相对该合并只改收据。`contact.ts`、`helper.ts` 与 `02f87d3` 的 Git blob 分别均为 `c3909ab78bf83385ede39703f4c73045d29dd083`、`8c69b2b9d8162baff516325e89dfe804450bcebf`，本轮实现未改。
+- 作者 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38` 的生产模型为 `claude-opus-5-5`（Anthropic）；独立审查 `codex:4d37f5a5-0839-4adc-8afc-9b481602df5a`，当前原生 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI），无豁免。原生模型记录不等于 G-PROVENANCE 已通过。
+- 仓库根目录实际运行 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 的原样 stdout：`750d642523c5222c1e770cdf95928bfe597cbe399daf8fef6c4911a68aa0c3b1`。
+- 本轮证据根 `$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round8-YN2ljl`；`$E/repo` 为普通独立 clone，`.git` 与 common dir 均为该 clone 的 `.git`。被审实现和测试未改；独立变异只写 `$E/mutants/`。
+- `npm ci` exit 0；Node v25.8.1 下 typecheck、lint、test 均 exit 0，**202/202**、无 skip/todo；Node v22.22.0 下三项也均 exit 0（`$E/npm-ci.log`、`$E/{typecheck,lint,test}.log`、`$E/node22-*.log`）。
+- 独立检出红提交 `25139cb2bdda3f25e5117834a97a11763f085cd7` 并安装依赖：红提交历史快照全量测试 115 绿 / 64 红；目标文件 TAP 64 项均按名字失败、原因均为 `未实现`，不是加载失败（`$E/red-tests.tap`、`$E/red-all-tests.log`）。红提交把已有实现置空；隔离副本保留红测试、仅恢复其父提交真实源码，**64/64 绿**（`$E/red-prior-overlay.tap`），符合本轮给已有正确快照行为补测试而非改源码。上轮 V06–V08 别名故障在新测试下被杀，才是针对原测试缺口的正向证据。
+- 自己运行作者 `node packages/domain/proof/mutations.mjs`：exit 0，原样 202 绿、**273/273** 变异被具名测试杀死（`$E/author-mutations.log`）。源码数组 contact/helper 104、其他 169，编号无重复；独立解析 273 项并逐一核对，每个注入点在对应源码中均恰好出现一次（`$E/injection-count-audit.log`）；对照合并父提交，PR #4 侧 235 项、基线侧 169 项均保留编号/描述，上轮 V01–V08 映射 CV01–CV08，注入前后字符串逐一一致（`$E/merge-mutation-id-audit.log`、`$E/mutation-origin-audit.log`）。
+
+### 上轮修复与保留行为
+
+原样运行第七轮独立 `oracles-round7.mjs`，V01–V08 **8/8 PASS**；调用方在 `briefFor` 返回后修改规则、工具和凭据数组，当前说明保持原样（`$E/previous-oracles.log`、`$E/brief-snapshot.json`）。作者新增测试还逐个及同时修改入参，并反向检查说明数组与入参不相同、数组 push/赋值失败、双方内容不变；K37–K39 与 CV01–CV08 的记录已复现。
+
+此前 W01–W05、12 格资产矩阵、1,000 个固定种子场景/30,000 次状态检查，以及 Helper 三入口、定时归属、职责内外与控制穿透等纯函数探针均通过（`$E/earlier-oracles.log`、`$E/asset-matrix.log`、`$E/state-random.log`、`$E/safeguards.log`）。这些不代表真实消息表、Compute 进程、DST 或插件端到端已验收。
+
+### 必须修复
+
+**CH-18 [High，AC-33④ 函数合同] 校验与输出多次读取同一输入属性，变化的 getter 可让成功结果越过授权与凭据检查。** `packages/domain/src/contact.ts:218-227` 中，`r.tools` 依次被读取用于空名检查、白名单检查、输出拷贝；`r.credentialRefs` 分别被读取用于形状检查和输出拷贝。`readonly string[]` 类型限制数组使用方式，但不保证外层属性是稳定数据属性；`$E/getter-static.ts` 的 getter 形式输入通过 TypeScript 静态检查（`$E/getter-static.log`，exit 0）。
+
+独立实测（`$E/getter-boundary-probe.json`）：联系人只授权 `get_weather`；进程内测试对象的 `tools` getter 前两次返回 `["get_weather"]`、第三次返回 `["run_command"]`，`credentialRefs` getter 第一次返回 `["vault://mail/1"]`、第二次返回 `["plaintext-secret"]`。`briefFor` 返回 **`ok:true`**，说明中却包含未授权 `run_command` 和无引用形状的 `plaintext-secret`。两项分开的负向回归均失败，稳定数据对象正向对照通过（`$E/getter-regression.test.mjs`、`$E/getter-regression.tap`）。
+
+这是特殊**进程内 JavaScript 对象**的已观察函数合同反例；目前仓库内除测试外没有 `briefFor` 实际调用方，未证明真实宿主会接受 getter、远程攻击、实际启动 Compute 或泄露真实凭据。第 7 栏只声明凭据按形状校验、宿主负责真实挂载等，没有声明或强制输入必须为无 accessor 的稳定数据对象。建议先对每个待验证数组读取并拷贝成一次性快照，随后只对同一快照校验并输出；或者在真实宿主入口明确强制并测试“无 accessor/Proxy、稳定数据”的输入契约。补两种 getter 单独负向与稳定输入正向测试，并保持上轮返回后输入变更的快照防护。
+
+**CH-19 [Medium，R-05 / AC-33④] 多项凭据的非法后项与引用形状边界未被现有测试持续保护。** 当前源码对 `["vault://mail/1","plaintext-secret"]`、`["vault://"]`、`["vault://mail/1 space"]` 均拒绝。独立单点变异 H05 只校验第一项，H06 只校验 scheme 前缀；两者 typecheck/lint 和 **202 项现有测试均绿**，各自独立 oracle 红：H05 放行合法引用后跟明文，H06 放行空路径和含空白路径。`$E/{clean,H05,H06}-credential-boundary.json` 保存原样与变异结果，`$E/{H05,H06}-{typecheck,lint,test,oracle}-recheck.log` 为直接复核。
+
+本轮其他独立 H01–H04、H07–H08 均被现有测试杀死；原样副本及 8 个独立 oracle 均绿。上述 H05/H06 后果仅发生于**人为变异副本**，不是声称当前源码会接受这些普通数组。建议在 CH-18 的同一批回归中补多项引用逐项校验、空路径/空白路径与合法引用对照，并纳入 R-05，而非声称有限 273 个变异穷尽所有故障。精确替换与各项退出码在 `$E/independent-mutations-round8.json`，执行器、oracle 和原始日志为 `$E/independent-mutations-round8.py`、`$E/oracles-round8.mjs`、`$E/{clean,H01..H08}-{typecheck,lint,test,oracle}.log`。
+
+### 基线、收据与交回
+
+审查期间远端 `feat/task-lifecycle` 从 `a425387` 前移至 `f2e6ec297379687efe8788b4bf7bb127273937b5`；新增提交仅改 PR #3 的审查报告和收据。将新基线取到独立审查引用而不更改本 clone 的固定 `origin/feat/task-lifecycle`，共同祖先仍是 `a425387`，不改工作区试合并 exit 0（`$E/merge-tree-live.log`）。这不替代 PR #3 自身审查；如果产品基线再次前移，整合后须重算哈希并重验。
+
+第 7 栏关于同名异类需宿主改名、名字表/凭据仅形状、cron 不验范围、回执作用域由宿主判定、非法回执静默不改状态，以及无真实 DST/Helper 内核/插件接线的边界与本片一致；273 个变异数量及 104/169 分组已复现。但它未披露 CH-18 的**校验与输出重复读取同一属性**，也不能以“仅校验形状”覆盖实际 `ok:true` 返回不符合形状的结果。AC-01/31/33/35 整项继续标未测是合理分层。
+
+**回交条件：** Claude Code 在原开发任务修复 CH-18 的校验/输出快照一致性，并一次补 CH-19 的多项及引用形状正反对照；保留此前已验证的数组快照、资产矩阵、Helper、定时和控制行为。之后按最新 PR #3 基线重跑门禁并交跨厂商独立复审；后端持续实现、验收清单及用户故事闭环仍在原开发流程中推进，本审查不冒称完成全局目标。
+
+**执行器纠错：** 等候独立变异进程的旧会话号时工具返回 `Unknown process id 11077`，不是产品测试失败；完整逐项 JSON/日志已保留，但不声称未观察到的整脚本退出码。H05/H06 已在各自副本直接重跑 typecheck、lint、test 及 oracle，退出码逐项记录。初次查看 getter 联合探针时查错证据目录，随后已在 `$E/repo` 上重跑并写入 `$E/getter-boundary-probe.json`。
+
+**本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 在 `0b40600` / `a425387` 下 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 未找到等于本轮 `reviewed_hash` 的审查工具输出，也未识别该审查轮厂商。当前轮尚未完整写入会话 `turns.jsonl`；原生 rollout 可观察模型，但不能冒充该门禁通过。会话落盘后由既有流程重核，不伪造记录或豁免（`$E/gates-local.log`）。
