@@ -521,3 +521,10 @@ fi
 本机本次审查为 Node 25；workflow 指定 Node 22.22，不能将此本机超时直接当成 CI 的同一失败。审查推送的 `f32155b` run `42078235009` 已被同分支更新取消；`13dba1f` run `42080188883` 也取消；最新 `cea05b7` run `42080870577` 截至检查时仍运行，最终 CI 结果未知。
 
 写入 reject 后真实 `--local` 退出 1：G-REVIEW 报 reject；G-PROVENANCE 因当前会话的 `turns.jsonl` 当时尚未落盘而报会话记录不存在，不能声称来源门禁通过。CONTENT_HASH 未变。中性标记沙箱探针与独立反例路径见 `/private/tmp/g-group-pr1-independent-probes/`。
+
+
+### 逐 gate 局部对照补记
+
+在当前判定实现上调用真实 CLI 的自检夹具：合规先红后绿样例 8 gate 全绿；分别执行无收据、reject 审查、harness 路径穿越、正确实现冒充红、桩下顶层常量、运行时同名额外测试、workflow 写权限和层级反向依赖八个负例，均按预期被对应门禁拦住。负例复用作者样例并只对部分输入改名或改造，不能称为八个全新独立设计样例；RR-09..15 的独立反例才是本轮额外设计/复跑的失败判据。直接对 `loadSession` 的有效 session 与穿越/软链，`turnTouchesRepo` 的仓库内相对路径/仓库外路径/未知写入，以及 workflow 的 read/write/表达式名也做了局部正反例，结果与各自现有条件一致。
+
+CI 最新 `47cdf6a` run `42081461578` 截至查询仍在自检，变异步骤 pending，未有最终结论；之前两次审查提交的 run 已被新提交取消。
