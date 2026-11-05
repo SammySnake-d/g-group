@@ -374,3 +374,58 @@ Helper 三入口 × 本人/他人/同 ID 联系人 9 格、定时归联系人且
 **本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 实测 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 未找到等于本轮 `reviewed_hash` 的审查工具输出，也无法识别该审查轮厂商。检查时 `turns.jsonl` 仅包含先前轮次，当前轮尚未落盘；原生 rollout 可观察当前模型，但不能冒充该门禁通过。会话落盘后由既有流程重核；不伪造记录、不使用豁免。原始输出 `$E/gates-local.log`。
 
 **推送后基线变化（同日复核）：** 本轮报告推送完成后，远端 `feat/task-lifecycle` 由 `44c5ab6` 前移至 `cb3fba02725c37d8de3b2e066a04ce44c8019eda`。只读取最新基线并对当前审查提交做 `git merge-tree --write-tree`：仍 exit 1，冲突仍为 `packages/domain/proof/mutations.mjs`、`packages/domain/proof/mutations.txt`（`$E/merge-tree-live.log`）。以新 `origin/feat/task-lifecycle` 再执行指定 `--hash`，输出仍为 `677bed266beaea0696b7a7da8e4a367d570e539819dd65a6c537e4289962dbbd`；共同祖先仍为 `c6ca694`。这不代表已合并或验收新基线，仍须由原开发任务整合冲突并重新复验。
+
+---
+
+## 第五轮：第四轮返修及最新基线合并后的跨厂商独立复审（2026-11-05）
+
+**结论：reject，交回 Claude Code 原开发任务继续返修。** 上轮 CH-12/CH-13 的真实反例与独立判据已修复，作者列举的 182 个变异也全部复现杀死；但本轮发现 Compute 能力资产同名异类登记会静默丢掉后者并错误返回成功。另有独立变异揭示安全整数边界与已结束承诺状态的测试盲区。该审查轮结束不是整个后端、文档需求或用户故事已验收完成。
+
+### 固定对象、来源与执行
+
+- 按更正后的对象审查 PR #4 `feat/contact-helper`，受审 HEAD `884705194ce932a37638b6bdb696e71f83adc284`；更正复现开始时的 `origin/feat/task-lifecycle` 为 `b50c0e9f87d686bf72898b45deae3da54f3a72fb`，审查期间远端后续前移到 `3455da04b10f98ed4921be4b51f5f7406e2223d1`。合并提交 `7b1472a2b9f1bc29b6e9929abb37fea965d28729` 的父提交是 `635f154` 与 `b50c0e9`；`8847051` 相对该合并只修改收据。PR #3 本身另有独立审查，本轮不替它作结论。
+- 第一次以 `635f154` 开始的草稿保留为本地证据、未提交；更正后重新普通 clone、测试和计算哈希。`contact.ts`、`helper.ts` 及其测试在 `635f154` 和 `8847051` 的 Git blob 逐一一致，但全仓测试和变异因合并重新执行。
+- 作者 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38` 的生产模型为 `claude-opus-5-5`（Anthropic）；本轮独立审查 `codex:4d37f5a5-0839-4adc-8afc-9b481602df5a`，原生当前 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI），无豁免。原生模型记录不等同于 G-PROVENANCE 已通过。
+- 在仓库根目录实际运行 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 的原样 stdout：`11368d01517df2597deb843667bf9a2e61f01cf6c9653803e2b72aef5644fcfc`。旧 HEAD 的 `d290…78f3` 不用于本轮收据。
+- 证据根 `$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round5-corrected-GSFaDm`；`$E/repo` 是普通独立 clone，`.git` 与 common dir 均为该 clone 自己的 `.git`。先前执行证据根 `$E0=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round5-NqaK29`；产品实现与测试未修改，独立变异只写 `$E/mutants/`。
+- `npm ci` exit 0；Node v25.8.1 下 typecheck、lint、test 均 exit 0，**149/149**、无 skip/todo；Node v22.22.0 下三项也均 exit 0（`$E/npm-ci.log`、`$E/{typecheck,lint,test}.log`、`$E/node22-*.log`）。
+- 红提交仍为 `5c244deea7ac35bf43ea63126af03caf529289ca`，已验证为当前 HEAD 祖先；复用先前独立红 clone 的 `npm ci` 和全量测试证据（`$E0/red-npm-ci.log`、`$E0/red-all-tests.log`，该历史快照 85 绿 / 51 红），又复跑目标文件 TAP，51 项均按名字失败、错误均为 `未实现`（`$E/red-tests.tap`）。红提交把已有 contact/Helper 实现置为空壳，不是导入失败，但单靠它不能证明旧缺陷红。此前隔离副本保留该红测试、仅换回红提交父提交真实源码，得 49 绿 / 2 红；两条 CH-12 用例对旧行为断言失败（`$E0/red-prior-overlay.tap`）。这是独立对照，不冒称作者历史红输出。
+- 自己运行作者 `node packages/domain/proof/mutations.mjs`：exit 0，原样 149 绿、**182/182** 变异被具名测试杀死（`$E/author-mutations.log`）。实际数组 M52 + A14 + N14 + B9 + R11 + C9 + S14 + I14 + K30 + CN5 + P5 + Q5 = 182，无重复编号；任务侧实际 C01–C09 共 9 项，收据的 C9 计数正确。对照两个合并父提交，PR #4 侧 159 项及基线侧 105 项均有对应编号/描述，contact 旧 C01–C30 映射为 K01–K30（`$E/merge-mutation-id-audit.log`）。
+
+### 上轮问题和保留行为
+
+原样执行第四轮独立 `oracles-round4.mjs`，Q01–Q05 **5/5 PASS**；非有限序号旧回归 **5/5 绿**（`$E/previous-oracles.log`、`$E/previous-sequence-regression.tap`）。源码中的 CN01–CN05 与原始第二轮 N01–N05 替换前后字符串完全一致；Q01–Q04 与第四轮替换完全一致，Q05 把注入上下文扩到整条 guard，但实际仍是原来的 `>` → `>=`（`$E/mutation-origin-audit.log`）：故障语义保留，文本注入范围并非逐字相同。
+
+上轮独立 **720 个事件排列/8,640 次检查**全部通过；本轮再跑独立参考状态模型 **1,000 个固定种子场景、30,000 次逐步状态检查、4,856 次重放**，覆盖三承诺/三任务、空和混合作用域、旧依据位置、未知 ID、终态与撤销，均通过（`$E/state-matrix.log`、`$E/state-random.log`；模型脚本保留在 `$E0/state-random-round5.mjs`）。这些只证明列举和采样的纯函数行为。
+
+Helper 三入口 × 本人/他人/同 ID 联系人 9 格、定时归联系人且绑定任务终态不回收、职责内外判断、控制指令穿透、撤销解锁以及直接工具与 Compute 资产同名双向互斥均通过（`$E/safeguards.log`）；`helper.ts` 在 `8227ef4`、`635f154` 和本轮 HEAD 的 Git blob 均为 `8c69b2b9d8162baff516325e89dfe804450bcebf`。这些不代表消息表、DST 或真实插件已验收。
+
+### 必须修复
+
+**CH-14 [High，AC-33 / U66 能力白名单] 不同类型同名资产第二次登记返回成功却静默丢失。** `packages/domain/src/contact.ts:127-132` 的 `grantComputeAsset` 以 `x.name === a.name` 判重，命中后不管 `kind` 是否相同都返回 `ok:true`、原 contact。独立实测：先登记 `{name:"research",kind:"mcp"}`、再登记 `{name:"research",kind:"skill"}`，第二次返回成功，但 `computeAssets` 仍只有 MCP；顺序反过来，第二次也返回成功但只保留 Skill。`briefFor` 的工具表示只有名字（`contact.ts:215-225`），返回的 `research` 不能自行区分两个被请求的类别（`$E/asset-kind-conflict.json`；该探针源保留于 `$E0/asset-kind-conflict.mjs`）。
+
+母规格 `docs/spec/需求文档.md:668-670` 要求从全局库分别勾选联系人所需 Skill 子集与 MCP 子集，未规定两类显示名必须跨类全局唯一；这里测试的是两类显示名相同的情形。不声称真实适配器已经挂错工具——适配器尚未交付——而是纯函数已对未实际登记的第二个请求报告成功。即便将名称规定为全局唯一，代码也已有信息检测 `kind` 冲突，不应返回假成功。应明确资产身份/命名空间：使不同类资产能可靠区分和传递，或在明确宿主全局唯一标识约束时拒绝冲突并给可操作原因；同时保留同名同类幂等和合法安全工具重叠。独立回归 `$E/asset-kind-regression.tap`：两种登记顺序都红，同名同类/不同名对照绿；测试源码保留于 `$E0/asset-kind-regression.test.mjs`。
+
+**CH-15 [Medium，R-05 覆盖] 安全整数边界与已结束承诺状态的变异存活。** 原样副本 typecheck/lint/149 项测试和五个独立 oracle 均绿；每个变异只改一个注入点，Z01–Z04 的三项项目检查和全部测试仍绿、独立 oracle 红；Z05 被现有具名测试杀死。这些是测试判别力缺口，**不意味着原实现已有这些变异行为**，也不否认作者 182 项的结果：
+
+| ID | 单点变异 | 未被现有测试发现的后果 |
+|---|---|---|
+| Z01 | `Number.isSafeInteger` 改为 `Number.isInteger` | 超过 `MAX_SAFE_INTEGER` 的不安全位置被接受，非负安全整数判据丢失 |
+| Z02 | 额外拒绝 `Number.MAX_SAFE_INTEGER` | 最大合法安全整数被拒 |
+| Z03 | 加锁允许任何非 `done` 状态 | `revoked` 承诺可被重新锁定，违背只锁 active 的边界 |
+| Z04 | 撤销允许任何非 `revoked` 状态 | 已 `done` 承诺可被改写为 revoked |
+| Z05 | 拒绝序号 0 | **被杀**；现有用例覆盖 0 边界 |
+
+建议至少补 Z01 的不安全值/最大安全值对照，以及 Z03/Z04 的 revoked/done 区分和对应阳性埋雷；这些针对已声明的安全整数及已结束承诺状态，而非要求有限清单穷尽所有故障。`$E/independent-mutations-round5.json` 保存精确替换与退出码；执行器、独立判据和原始日志分别为 `$E/independent-mutations-round5.py`、`$E/oracles-round5.mjs`、`$E/{clean,Z01..Z05}-{typecheck,lint,test,oracle}.log`。
+
+### 基线、收据边界与交回
+
+受审时 `b50c0e9` 已为 HEAD 祖先，不改工作区的 `git merge-tree --write-tree` exit 0（`$E/merge-tree.log`）；本轮不把先前 `a35b78e` 对 `b50c0e9` 的冲突错误套到已合并的 `8847051` 上。审查期间远端基线又前移至 `3455da0`，新增提交只改 PR #3 的审查报告和收据；共同祖先仍为 `b50c0e9`，不改工作区的试合并 exit 0（`$E/merge-tree-live.log`）。以更新后的 `origin/feat/task-lifecycle` 重跑指定 `--hash`，输出仍为 `11368d01517df2597deb843667bf9a2e61f01cf6c9653803e2b72aef5644fcfc`。这不是对 PR #3 审查结论的替代；若产品基线再次前移，须重新检查合并、哈希、测试与门禁。
+
+第 7 栏如实声明非法回执静默不改状态、宿主看不到理由，位置只检查非负安全整数而不检查日志存在/末尾、回执作用域真实性由宿主负责；也声明工具名字表/同能力不同名、凭据仅形状、cron 不验范围、DST/Helper 内核/真实插件未完成。这些边界没有被纯函数结果取代。第 7 栏未披露 CH-14 的**同名不同类型假成功**；AC-01/31/33/35 整项继续标未测是正确的分层。
+
+**回交条件：** Claude Code 在原开发任务处理 CH-14、补 CH-15 的关键正反对照，并按最新 PR #3 基线重新运行相关验收与门禁，再交跨厂商独立复审。用户要求的后端持续实现与验收流程继续，不能把审查轮或 PR 单片测试绿当成全部文档/用户故事完成。
+
+**执行器纠错：** 先前独立清单审计脚本放在仓库外，首次从脚本目录解析 `typescript` 报 `ERR_MODULE_NOT_FOUND`、exit 1（`$E0/mutation-origin-initial.log`）；改为从被审仓库 `node_modules` 解析后 exit 0，并在更正 HEAD 上重跑（`$E/mutation-origin-audit.log`）。平台曾返回 422 设备验证错误导致上次尝试未完成；本轮复用现存证据并继续，未据此推断更广泛网络故障或宣布目标完成。
+
+**本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 在 `8847051` / `b50c0e9` 上实测 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 和 **G-PROVENANCE 均通过**；G-REVIEW 因本轮 reject 正确拦下。经检查，已落盘审查轮中确有一次指定哈希工具输出与本轮 `reviewed_hash` 完全一致，模型为 `gpt-6.1-terra`。原始输出 `$E/gates-local.log`；在远端更新至 `3455da0` 后重跑本地门禁仍 exit 1，G-PROVENANCE 等七项通过、G-REVIEW 因 reject 拦下（`$E/gates-local-live-base.log`）。来源门禁通过不等于产品审查或用户故事验收通过。
