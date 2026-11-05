@@ -4,10 +4,10 @@
 // 设了 REPORT_LOG 时每次调用另追加一行 JSONL,便于事后核对。
 import fs from "node:fs";
 import readline from "node:readline";
+import { REPORT_KINDS, reportErrors } from "../src/report-schema.ts";
 
 const LOG = process.env.REPORT_LOG;
-const KINDS = ["started", "milestone", "blocked", "completed", "failed"];
-const strArr = (x) => Array.isArray(x) && x.every((s) => typeof s === "string");
+const KINDS = REPORT_KINDS;
 const tool = {
   name: "report_progress",
   description:
@@ -17,7 +17,7 @@ const tool = {
   inputSchema: {
     type: "object",
     properties: {
-      kind: { type: "string", enum: KINDS },
+      kind: { type: "string", enum: [...KINDS] },
       summary: { type: "string", description: "一句话,给用户看" },
       stage: { type: "string", description: "阶段名(milestone 时必填)" },
       needs: { type: "string", description: "blocked 时:需要用户做什么" },
@@ -26,6 +26,7 @@ const tool = {
       doneSideEffects: { type: "array", items: { type: "string" }, description: "已经完成、不可重做的副作用(追加)" },
     },
     required: ["kind", "summary"],
+    additionalProperties: false,
   },
 };
 
@@ -41,14 +42,8 @@ rl.on("line", (line) => {
     send({ jsonrpc: "2.0", id: m.id, result: { tools: [tool] } });
   } else if (m.method === "tools/call") {
     const a = m.params?.arguments || {};
-    const errs = [];
-    if (!KINDS.includes(a.kind)) errs.push("kind 非法");
-    if (typeof a.summary !== "string" || !a.summary) errs.push("缺 summary");
-    if (a.kind === "milestone" && !a.stage) errs.push("milestone 缺 stage");
-    if (a.kind === "blocked" && !a.needs) errs.push("blocked 缺 needs");
-    if (a.constraintVer !== undefined && !(Number.isInteger(a.constraintVer) && a.constraintVer >= 0)) errs.push("constraintVer 须为非负整数");
-    if (a.openQuestions !== undefined && !strArr(a.openQuestions)) errs.push("openQuestions 须为字符串数组");
-    if (a.doneSideEffects !== undefined && !strArr(a.doneSideEffects)) errs.push("doneSideEffects 须为字符串数组");
+    // 与适配器同一份 schema 规则:类型、枚举、条件必填、constraintVer、未知字段都查,不合规一律拒收
+    const errs = reportErrors(a);
     if (LOG) fs.appendFileSync(LOG, `${JSON.stringify({ ts: new Date().toISOString(), valid: errs.length === 0, errs, ...a })}\n`);
     send({ jsonrpc: "2.0", id: m.id, result: { content: [{ type: "text",
       text: errs.length ? `已拒收:${errs.join(";")}。请修正后重报。` : "已记录。" }], isError: errs.length > 0 } });

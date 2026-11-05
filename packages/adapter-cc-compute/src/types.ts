@@ -75,4 +75,11 @@ export interface ComputeAdapter {
   /** 当前这一轮进程结束(并已产出终态事件)后,返回这一轮的事件 */
   settled(computeId: string): Promise<readonly ComputeEvent[]>;
   snapshot(computeId: string): SnapshotResult;
+  /** 被拒收(服务器 isError,或回执合规但内容不合 schema)的汇报记录,按发生顺序;它们不产出语义事件 */
+  rejectedReports(computeId: string): readonly RejectedReport[];
+}
+
+export interface RejectedReport {
+  readonly kind: unknown;
+  readonly reason: string;
 }

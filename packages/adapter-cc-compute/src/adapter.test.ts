@@ -7,7 +7,8 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { createComputeAdapter } from "./adapter.ts";
+import { REPORT_MCP_PATH, createComputeAdapter } from "./adapter.ts";
+import { reportErrors } from "./report-schema.ts";
 
 const FAKE = fileURLToPath(new URL("../test-support/fake-claude.mjs", import.meta.url));
 const REPORT = "mcp__host__report_progress";
@@ -30,6 +31,9 @@ type Launch = { pid: number; argv: string[]; env: Record<string, string>; prompt
 const launches = (record: string): Launch[] => fs.readFileSync(record, "utf8").trim().split("\n").map((l) => JSON.parse(l) as Launch);
 const flagOf = (argv: string[], name: string) => argv[argv.indexOf(name) + 1];
 const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+/** 限时:被测实现挂住时把挂起变成按名字失败,而不是整个文件超时 */
+const within = <T>(p: Promise<T>, ms = 8000) => Promise.race([p, new Promise<"超时">((ok) => setTimeout(() => ok("超时"), ms))]);
+const grandchildPid = (record: string) => Number(fs.readFileSync(`${record}.grandchild.pid`, "utf8"));
 async function waitFor(cond: () => boolean, ms = 5000) {
   const t0 = Date.now();
   while (!cond()) { if (Date.now() - t0 > ms) throw new Error("等待超时"); await new Promise((r) => setTimeout(r, 20)); }
@@ -82,6 +86,96 @@ test("CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 rep
   assert.equal(l!.mcpConfig?.mcpServers.host?.args[0]?.endsWith("report-mcp.mjs"), true);
 });
 
+test("F-01:brief.tools 里的 CLI 控制词与非内置工具名一律拒绝、不起进程;具体内置工具名放行(正反对照)", async () => {
+  const f = fake({ reports: [], result: "success" });
+  const a = createComputeAdapter(f.options);
+  for (const tools of [["default"], [""], ["*"], ["Bash(rm:*)"], ["mcp__host__report_progress"], ["Task"], ["Read", "default"]]) {
+    const r = await a.spawn(brief({ tools }));
+    assert.equal(r.ok, false, JSON.stringify(tools));
+  }
+  assert.equal(fs.existsSync(f.record), false);
+  const ok = await a.spawn(brief({ tools: ["Read", "Grep"] }));
+  assert.ok(ok.ok);
+  await a.settled(ok.computeId);
+  assert.equal(launches(f.record).length, 1);
+});
+
+test("F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress", async () => {
+  const f = fake({ reports: [], result: "success" });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief({ tools: [] }));
+  assert.ok(r.ok);
+  const evs = await a.settled(r.computeId);
+  const [l] = launches(f.record);
+  assert.equal(flagOf(l!.argv, "--tools"), "");
+  assert.equal(flagOf(l!.argv, "--allowedTools"), REPORT);
+  assert.equal(evs.at(-1)?.kind, "completed");
+});
+
+test("F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)", async () => {
+  const over = fake({ reports: [], hang: "graceful", extraInitTools: ["Bash"] });
+  const exact = fake({ reports: [], result: "success" });
+  const a1 = createComputeAdapter(over.options);
+  const a2 = createComputeAdapter(exact.options);
+  const r1 = await a1.spawn(brief());
+  const r2 = await a2.spawn(brief());
+  assert.ok(r1.ok && r2.ok);
+  const e1 = await within(a1.settled(r1.computeId));
+  assert.notEqual(e1, "超时");
+  const last = e1 === "超时" ? undefined : e1.at(-1);
+  assert.equal(last?.kind, "failed");
+  assert.match(last?.kind === "failed" ? last.reason : "", /未授权的工具 Bash/);
+  assert.equal(alive(launches(over.record)[0]!.pid), false);
+  assert.equal((await a2.settled(r2.computeId)).at(-1)?.kind, "completed");
+});
+
+test("F-03:stop 回收整个进程组,孙进程在 stopped 之前退出,之后不再产生副作用", async () => {
+  const marker = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "cc-marker-")), "outside-marker.txt");
+  const f = fake({ reports: [{ kind: "started", summary: "开始" }], hang: "graceful", grandchild: { delayMs: 1200, marker } });
+  const a = createComputeAdapter(f.options);
+  const it = a.events()[Symbol.asyncIterator]();
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  await waitFor(() => fs.existsSync(`${f.record}.grandchild.pid`));
+  const gc = grandchildPid(f.record);
+  try {
+    const stopping = a.stop(r.computeId);
+    let gcAliveAtStopped: boolean | undefined;
+    const seen = await within((async () => {
+      for (;;) {
+        const { value } = await it.next();
+        if (value?.computeId === r.computeId && value.kind === "stopped") { gcAliveAtStopped = alive(gc); return true; }
+      }
+    })());
+    assert.equal(seen, true);
+    assert.equal(gcAliveAtStopped, false);
+    assert.deepEqual(await within(stopping), { ok: true });
+    await new Promise((ok) => setTimeout(ok, 1600));
+    assert.equal(fs.existsSync(marker), false);
+  } finally {
+    if (alive(gc)) process.kill(gc, "SIGKILL");
+  }
+});
+
+test("F-03:CLI 正常结束但留下孙进程时,收尾先回收进程组再报 completed;孙进程不再产生副作用", async () => {
+  const marker = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "cc-marker-")), "outside-marker.txt");
+  const f = fake({ reports: [], result: "success", grandchild: { delayMs: 1200, marker } });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  const evs = await within(a.settled(r.computeId));
+  const gc = grandchildPid(f.record);
+  try {
+    assert.notEqual(evs, "超时");
+    assert.equal(evs === "超时" ? undefined : evs.at(-1)?.kind, "completed");
+    assert.equal(alive(gc), false);
+    await new Promise((ok) => setTimeout(ok, 1600));
+    assert.equal(fs.existsSync(marker), false);
+  } finally {
+    if (alive(gc)) process.kill(gc, "SIGKILL");
+  }
+});
+
 test("子进程 env 不继承宿主进程环境里的明文密钥,凭据只以引用句柄出现", async () => {
   process.env.G_TEST_PLAINTEXT_SECRET = "sk-live-PLAINTEXT-should-never-leak";
   try {
@@ -130,14 +224,98 @@ test("report_progress 服务器拒收的汇报(milestone 缺 stage)不产出事�
   assert.deepEqual(evs.filter((e) => e.kind === "milestone").map((e) => e.kind === "milestone" && e.summary), ["补报"]);
 });
 
-test("服务器拒收的 blocked(约束版本非法)不产出 blocked,也不阻止 completed;合法字段不进快照", async () => {
-  const f = fake({ reports: [{ kind: "started", summary: "开始", constraintVer: 2 }, { kind: "blocked", summary: "要令牌", needs: "上传令牌", constraintVer: -1 }], result: "success", text: "做完了" });
+test("服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照", async () => {
+  const f = fake({ reports: [{ kind: "started", summary: "开始", constraintVer: 2 }, { kind: "blocked", summary: "要令牌", needs: "上传令牌", constraintVer: -1 }], result: "success", text: "尚未完成" });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  const evs = await a.settled(r.computeId);
+  assert.deepEqual(evs.map((e) => e.kind), ["started", "failed"]);
+  assert.match(evs.at(-1)?.kind === "failed" ? (evs.at(-1) as { reason: string }).reason : "", /constraintVer/);
+  assert.deepEqual(a.rejectedReports(r.computeId).map((x) => x.kind), ["blocked"]);
+  assert.deepEqual(a.snapshot(r.computeId), { ok: true, snapshot: { constraintVer: 2, openQuestions: [], doneSideEffects: [] } });
+});
+
+test("F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)", async () => {
+  const f = fake({
+    reports: [
+      { kind: "milestone", summary: "阶段名是数字", stage: 1 },
+      { kind: "blocked", summary: "要令牌", needs: 1 },
+      { kind: "blocked", summary: "要令牌", needs: "请提供上传令牌" },
+    ],
+    result: "success", text: "尚未完成",
+  });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  const evs = await a.settled(r.computeId);
+  assert.deepEqual(evs.map((e) => e.kind), ["started", "blocked"]);
+  assert.equal(evs[1]?.kind === "blocked" ? evs[1].needs : "", "请提供上传令牌");
+  assert.deepEqual(a.rejectedReports(r.computeId).map((x) => x.kind), ["milestone", "blocked"]);
+  assert.match(a.rejectedReports(r.computeId)[1]?.reason ?? "", /needs 须为非空字符串/);
+});
+
+test("F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收", async () => {
+  const bad = [
+    { kind: "blocked", summary: "x", needs: 1 },
+    { kind: "milestone", summary: "x", stage: 1 },
+    { kind: "done", summary: "x" },
+    { kind: "started", summary: 3 },
+    { kind: "started", summary: "x", constraintVer: 1.5 },
+    { kind: "started", summary: "x", constraintVer: "3" },
+    { kind: "started", summary: "x", openQuestions: [1] },
+    { kind: "started", summary: "x", doneSideEffects: "发了邮件" },
+    { kind: "started", summary: "x", memory: "私人记忆" },
+  ];
+  const good = [{ kind: "blocked", summary: "x", needs: "令牌" }, { kind: "started", summary: "x", constraintVer: 0, openQuestions: [], doneSideEffects: ["建表"] }];
+  const lines = [...bad, ...good].map((args, i) => JSON.stringify({ jsonrpc: "2.0", id: i + 1, method: "tools/call", params: { name: "report_progress", arguments: args } })).join("\n");
+  const { spawnSync } = await import("node:child_process");
+  const out = spawnSync(process.execPath, [REPORT_MCP_PATH], { input: `${lines}\n`, encoding: "utf8", env: { PATH: process.env.PATH ?? "" } });
+  const replies = out.stdout.trim().split("\n").map((l) => JSON.parse(l) as { result: { isError: boolean; content: { text: string }[] } });
+  assert.deepEqual(replies.map((x) => x.result.isError), [...bad.map(() => true), ...good.map(() => false)]);
+  for (const [i, args] of bad.entries()) assert.ok(replies[i]!.result.content[0]!.text.includes(reportErrors(args)[0]!), JSON.stringify(args));
+  assert.deepEqual(good.map((g) => reportErrors(g)), [[], []]);
+});
+
+test("F-04:服务器校验失效、回执说已记录时,适配器自己的 schema 校验仍拒收不合规的 blocked", async () => {
+  const f = fake({ forgeAccept: true, reports: [{ kind: "blocked", summary: "要令牌", needs: 1 }], result: "success", text: "尚未完成" });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  const evs = await a.settled(r.computeId);
+  assert.deepEqual(evs.map((e) => e.kind), ["started", "failed"]);
+  assert.deepEqual(a.rejectedReports(r.computeId).map((x) => x.kind), ["blocked"]);
+});
+
+test("CLI 以权限拒绝回绝的 report_progress(内容合规,tool_result is_error)不产出事件,只记入拒收", async () => {
+  const f = fake({ denyReports: true, reports: [{ kind: "milestone", stage: "阶段1", summary: "a 完成" }], result: "success", text: "做完了" });
   const a = createComputeAdapter(f.options);
   const r = await a.spawn(brief());
   assert.ok(r.ok);
   const evs = await a.settled(r.computeId);
   assert.deepEqual(evs.map((e) => e.kind), ["started", "completed"]);
-  assert.deepEqual(a.snapshot(r.computeId), { ok: true, snapshot: { constraintVer: 2, openQuestions: [], doneSideEffects: [] } });
+  assert.deepEqual(a.rejectedReports(r.computeId).map((x) => x.kind), ["milestone"]);
+  assert.match(a.rejectedReports(r.computeId)[0]?.reason ?? "", /denied/);
+});
+
+test("F-02:Compute 经 report_progress 明确汇报放弃,CLI 正常结束也报 failed 不报 completed", async () => {
+  const f = fake({ reports: [{ kind: "started", summary: "开始" }, { kind: "failed", summary: "无法完成,放弃任务" }], result: "success", text: "无法完成,放弃任务" });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  const evs = await a.settled(r.computeId);
+  assert.deepEqual(evs.map((e) => e.kind), ["started", "failed"]);
+  assert.match(evs.at(-1)?.kind === "failed" ? (evs.at(-1) as { reason: string }).reason : "", /放弃/);
+});
+
+test("F-02:result 行 subtype 是 success 但 is_error 为 true → failed", async () => {
+  const f = fake({ reports: [{ kind: "completed", summary: "我觉得完成了" }], result: "success_is_error", text: "API Error: 503" });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  const evs = await a.settled(r.computeId);
+  assert.equal(evs.at(-1)?.kind, "failed");
+  assert.equal(evs.some((e) => e.kind === "completed"), false);
 });
 
 test("brief.tools 为空时 report_progress 仍挂载并被放行,汇报照常产出事件(阴性对照)", async () => {
