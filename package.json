@@ -8,7 +8,7 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "lint": "biome lint --error-on-warnings",
-    "test": "node --test \"packages/**/*.test.ts\"",
+    "test": "node scripts/gates/test-runner.ts \"packages/**/*.test.ts\" \"scripts/gates/*.test.ts\"",
     "gates": "node scripts/gates/run-all.ts",
     "gates:selftest": "node scripts/gates/run-all.ts --self-test",
     "gates:mutation": "node scripts/gates/mutation.ts"

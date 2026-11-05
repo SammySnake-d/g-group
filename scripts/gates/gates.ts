@@ -558,10 +558,13 @@ function events(on: unknown): string[] {
 // self-check.yml 不存在时不在这里报:分支保护要求的 self-check 检查会挡住。
 const SELF_CHECK_WF = ".github/workflows/self-check.yml";
 const REQUIRED_SELF_CHECK_STEPS: { label: string; ok: (run: string) => boolean }[] = [
+  { label: "npm test", ok: (r) => r === "npm test" },
   { label: "npm run gates:selftest", ok: (r) => r === "npm run gates:selftest" },
   { label: "npm run gates:mutation", ok: (r) => /^(GATE_MUTATION_JOBS=\d+ )?npm run gates:mutation$/.test(r) },
 ];
 export const REQUIRED_GATE_SCRIPTS: Record<string, string> = {
+  // g-group#2538:裸 node --test 在 glob 没匹配到文件时也退出 0;test-runner.ts 在 0 条用例时判失败
+  test: 'node scripts/gates/test-runner.ts "packages/**/*.test.ts" "scripts/gates/*.test.ts"',
   "gates:selftest": "node scripts/gates/run-all.ts --self-test",
   "gates:mutation": "node scripts/gates/mutation.ts",
 };

@@ -69,6 +69,10 @@ export const MUTATIONS: Mutation[] = [
   { name: "hash 调用不拒 shell 元字符", kill: "RR-14 真实 hash 输出被丢弃、再 echo hash", file: "gates.ts", from: "(/[#;&|<>`$()\\\\'\"\\n\\r{}*?!]/.test(cmd) ? undefined : cmd.trim().split(/\\s+/))", to: "cmd.trim().split(/\\s+/)" },
   { name: "hash 调用不要求 node 后紧跟 run-all", kill: "RR-14 node 先跑别的脚本、run-all 只是它的参数", file: "gates.ts", from: "if (!/^(?:\\S*\\/)?scripts\\/gates\\/run-all\\.ts$/.test(argv[1]!)) return false;", to: "if (!argv.some((a) => /run-all\\.ts$/.test(a))) return false;" },
   { name: "产出厂商不认同仓库的另一个 clone", kill: "RR-15 后续轮次写进同仓库的另一个 clone", file: "gates.ts", from: " || clone(abs);", to: " || (clone, false);" },
+  { name: "0 用例判通过", kill: "g-group#2538 测试入口 0 条用例判失败", file: "test-runner.ts", from: "if (n === 0) {", to: "if (false) {" },
+  { name: "读不到汇总行判通过", kill: "g-group#2538 测试入口 0 条用例判失败", file: "test-runner.ts", from: "const m = /^# tests (\\d+)\\s*$/.exec(line);", to: "const m = /^# tests ([1-9]\\d*)\\s*$/.exec(line);" },
+  { name: "不要求 test 脚本为规范值", kill: "g-group#2538 test 脚本改回裸 node --test(0 用例也判通过)", file: "gates.ts", from: "  test: 'node scripts/gates/test-runner.ts", to: "  _test: 'node scripts/gates/test-runner.ts" },
+  { name: "self-check 不要求 npm test 步骤", kill: "g-group#2538 self-check 缺 npm test 步骤", file: "gates.ts", from: "  { label: \"npm test\", ok: (r) => r === \"npm test\" },\n", to: "" },
   ...GATE_NAMES.map((g) => ({ name: `从 ALL_GATES 删掉 ${g}`, kill: GATE_KILL[g]!, file: "gates.ts", from: new RegExp(`(ALL_GATES: Gate\\[\\] = \\[[^\\]]*?)\\b${g}, ?`), to: "$1" })),
   { name: "从 ALL_GATES 删掉 layers(末项)", kill: "领域层反向依赖内核", file: "gates.ts", from: /, layers\];/, to: "];" },
 ];
