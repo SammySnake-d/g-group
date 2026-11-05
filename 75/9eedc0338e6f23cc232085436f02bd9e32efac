@@ -1,0 +1,19 @@
+docs/开发手册.md
+  s_e6bae4efeeae65::t_8275aa3cf04022 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "759eedc0338e6f23cc232085436f02bd9e32efac",
+  "prompts": {},
+  "sessions": {
+    "s_e6bae4efeeae65": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6cf90497-25a8-400c-855c-13f8caa07fa1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
