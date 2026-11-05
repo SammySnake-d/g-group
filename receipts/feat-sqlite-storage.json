@@ -1,0 +1,46 @@
+{
+  "slice": "SQLite 存储适配器第一片(adapter 层,只依赖 domain):用 Node 内置 node:sqlite 把会话事件只追加落盘(触发器拒绝 UPDATE/DELETE/覆盖 INSERT,读回用 domain verify 重算 hash 链)、共享文档在单个 BEGIN IMMEDIATE 写事务里比版本并提交、外发动作按 action_id 唯一索引入库去重(含 SIGKILL 崩溃后重放),关闭重开同一文件状态都在。",
+  "acceptance": [
+    {
+      "id": "AC-05",
+      "status": "通过",
+      "evidence": "packages/adapter-sqlite/proof/tests.txt"
+    },
+    {
+      "id": "AC-21",
+      "status": "通过",
+      "evidence": "packages/adapter-sqlite/proof/tests.txt"
+    },
+    {
+      "id": "AC-31",
+      "status": "未测",
+      "reason": "整项①–⑤依赖内核的注意循环、processed_seq 同事务落盘、发送前 based_on_seq 拦截和承诺 GC,内核包还不存在。本片只证明③里『入库端按 action_id 幂等去重、崩溃重放仍只有 1 条』的存储子判据(tests.txt 第 11–13 条,mutations.txt 的 S07/S08 被杀)"
+    },
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "packages/adapter-sqlite/proof/tests.txt"
+    },
+    {
+      "id": "R-03",
+      "status": "通过",
+      "evidence": "packages/adapter-sqlite/proof/mutations.txt"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "packages/adapter-sqlite/proof/mutations.txt"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "f1f3dfc74f99d8faf82d1d7276921ad471efa432"
+  },
+  "unverifiable": "AC-05 的通过只到存储层:触发器挡住经 SQL 的 UPDATE/DELETE/INSERT OR REPLACE,能 DROP TRIGGER 的人仍能改库,这种篡改只能事后被 loadLog 的 verify 报 brokenAt,挡不住;hash 链不带密钥,改正文同时重算后续所有 hash 的人 verify 查不出。宿主是否所有写消息入口都走 appendEvent 要等内核接线。AC-21 的并发测试是同进程两个连接,用 onCasRead 接缝在 A 读到版本、未写入的时刻插入 B 的提交,B 因写锁被挡(busy)后再提交收到冲突;多进程长时间争用、WAL 检查点和 busy 超时下的调用方重试策略没测,busy 现在以异常抛给调用方而不是 version-conflict。AC-31 只证明③的入库端去重子判据,其余整项未测。R-03 依赖 G-STUB 门禁实跑(本片 14 条测试在空桩下都按名失败,见门禁输出),仓库内证据只有变异结果;R-05 的变异只覆盖 mutations.mjs 列出的 13 种故障,文档 value 用 JSON 存取,非 JSON 值(undefined、BigInt、循环引用)的行为未定义也未测。node:sqlite 在 Node 22 仍是 experimental。",
+  "waiver": null,
+  "review": null
+}
