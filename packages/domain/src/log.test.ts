@@ -85,12 +85,36 @@ test("追加后再改调用方手里的 edit body 与 sender,已提交历史不�
   assert.deepEqual(verify(log), { ok: true });
 });
 
-test("已提交的事件对象不可被改写", () => {
-  const log = sample();
-  const e = log.events[0]!;
-  assert.throws(() => { (e.body as { text: string }).text = "x"; }, TypeError);
-  assert.throws(() => { (log.events as unknown as unknown[]).push(e); }, TypeError);
-  assert.equal(project(log)[0]?.text, "谁修一下登录页");
+test("已提交事件本身冻结:不能改 seq、hash 等字段", () => {
+  const e = append(emptyLog(), user, { kind: "message", text: "原话" }, at).events[0]!;
+  assert.equal(Object.isFrozen(e), true);
+  assert.throws(() => { (e as { seq: number }).seq = 99; }, TypeError);
+  assert.throws(() => { (e as { hash: string }).hash = "x"; }, TypeError);
+});
+
+test("已提交事件的 body 冻结", () => {
+  const body = append(emptyLog(), user, { kind: "message", text: "原话" }, at).events[0]!.body;
+  assert.equal(Object.isFrozen(body), true);
+  assert.throws(() => { (body as { text: string }).text = "x"; }, TypeError);
+});
+
+test("已提交事件的 sender 冻结", () => {
+  const sender = append(emptyLog(), user, { kind: "message", text: "原话" }, at).events[0]!.sender;
+  assert.equal(Object.isFrozen(sender), true);
+  assert.throws(() => { (sender as { id: string }).id = "冒充者"; }, TypeError);
+});
+
+test("日志的事件数组冻结:不能追加或替换", () => {
+  const events = append(emptyLog(), user, { kind: "message", text: "原话" }, at).events;
+  assert.equal(Object.isFrozen(events), true);
+  assert.throws(() => { (events as unknown as unknown[]).push(events[0]); }, TypeError);
+  assert.throws(() => { (events as unknown as unknown[])[0] = null; }, TypeError);
+});
+
+test("日志外壳冻结:不能把 events 换成另一份数组", () => {
+  const log = append(emptyLog(), user, { kind: "message", text: "原话" }, at);
+  assert.equal(Object.isFrozen(log), true);
+  assert.throws(() => { (log as { events: unknown }).events = []; }, TypeError);
 });
 
 test("投影只读:多次投影不改记录(阴性对照)", () => {

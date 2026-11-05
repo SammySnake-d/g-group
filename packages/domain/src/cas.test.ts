@@ -46,9 +46,12 @@ test("多文档存储:成功和冲突两条路径都不改输入 Store", () => {
   const ok = commitIn(store, "需求", 0, "改");
   assert.ok(ok.ok);
   assert.equal(snapStore(store), saved);
-  const conflict = commitIn(ok.store, "需求", 0, "旧版本上的修改");
+  const conflictInput = ok.store;
+  const savedConflictInput = snapStore(conflictInput);
+  const conflict = commitIn(conflictInput, "需求", 0, "旧版本上的修改");
   assert.equal(conflict.ok, false);
-  assert.equal(ok.store.get("需求")?.value, "改");
+  assert.equal(snapStore(conflictInput), savedConflictInput);
+  assert.deepEqual(conflictInput.get("需求"), { value: "改", ver: 1 });
   assert.equal(snapStore(store), saved);
 });
 
