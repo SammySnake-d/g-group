@@ -9,6 +9,7 @@ permissions:
 jobs:
   trusted-gates:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     env:
       GATE_SANDBOX_IMAGE: node:22.22.0-slim
     steps:

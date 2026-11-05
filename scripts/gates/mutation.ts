@@ -57,13 +57,17 @@ function copyGates(dst: string) {
   fs.writeFileSync(path.join(dst, "package.json"), JSON.stringify({ type: "module" }));
 }
 
-function runSelftestAsync(dir: string): Promise<{ code: number | null; out: string }> {
+/** 单个变异的自检上限。超时算"没被发现"(✗):没跑完的自检证明不了门禁拦得住这个变异。 */
+const MUTANT_TIMEOUT_MS = Number(process.env.GATE_MUTANT_TIMEOUT_MS ?? 900_000);
+function runSelftestAsync(dir: string): Promise<{ code: number | null; out: string; timedOut: boolean }> {
   return new Promise((resolve) => {
-    const c = spawn(process.execPath, [path.join(dir, "scripts/gates/run-all.ts"), "--self-test"], { env: gitEnv({ GATE_SELFTEST_FAILFAST: "1" }) });
+    const c = spawn(process.execPath, [path.join(dir, "scripts/gates/run-all.ts"), "--self-test"], { env: gitEnv({ GATE_SELFTEST_FAILFAST: "1" }), detached: true });
     let out = "";
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; try { process.kill(-c.pid!, "SIGKILL"); } catch { c.kill("SIGKILL"); } }, MUTANT_TIMEOUT_MS);
     c.stdout.on("data", (d) => { out += d; });
     c.stderr.on("data", (d) => { out += d; });
-    c.on("close", (code) => resolve({ code, out }));
+    c.on("close", (code) => { clearTimeout(timer); resolve({ code, out, timedOut }); });
   });
 }
 
@@ -90,7 +94,10 @@ export async function mutationTest(): Promise<boolean> {
       const mutated = src.replace(m.from, m.to);
       if (mutated === src) return Promise.resolve(`✗ 变异「${m.name}」没能注入(代码已变,更新 MUTATIONS)`);
       fs.writeFileSync(f, mutated);
+      const t0 = Date.now();
       return runSelftestAsync(d).then((r) => {
+        const secs = Math.round((Date.now() - t0) / 1000);
+        if (r.timedOut) return `✗ 变异「${m.name}」自检超时(${secs}s),不算被发现`;
         const killed = r.code !== 0;
         const firstFail = r.out.split("\n").find((l) => l.startsWith("✗")) ?? "(进程失败)";
         return `${killed ? "✓" : "✗"} 变异「${m.name}」${killed ? `被自检发现:${firstFail.slice(0, 80)}` : "存活:自检仍然通过"}`;
@@ -100,8 +107,9 @@ export async function mutationTest(): Promise<boolean> {
     const lines: string[] = new Array(jobs.length);
     let next = 0;
     await Promise.all(Array.from({ length: width }, async () => {
-      while (next < jobs.length) { const i = next++; lines[i] = await jobs[i]!(); }
+      while (next < jobs.length) { const i = next++; lines[i] = await jobs[i]!(); console.log(`[${lines.filter(Boolean).length}/${jobs.length}] ${lines[i]}`); }
     }));
+    console.log("—— 汇总 ——");
     for (const l of lines) { console.log(l); if (l.startsWith("✗")) ok = false; }
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   console.log(ok ? "变异校验通过" : "变异校验失败");
