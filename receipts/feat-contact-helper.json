@@ -9,7 +9,7 @@
     {
       "id": "AC-33",
       "status": "未测",
-      "reason": "直接工具清单收窄(独立规格样本)、直接工具与 Compute 能力资产都拒绝空名和仅由任何空白字符组成的名字、Compute 能力资产与直接工具同名双向互斥、同名不同类资产拒绝且同名同类幂等、说明不带记忆和性格且多项工具、多条群规与多项凭据引用原样保留、白名单子集、凭据引用、placement 的子判据已过(K17–K20、K25、CN02/CN03、P03、Q04、K31–K33 被杀);'试错 3 轮自动转开 Compute' 与进程 env 无明文要等联系人运行时和 Compute 适配器"
+      "reason": "直接工具清单收窄(独立规格样本)、直接工具与 Compute 能力资产都拒绝空名和仅由任何空白字符组成的名字、Compute 能力资产与直接工具同名双向互斥、同名不同类资产拒绝且同名同类幂等(mcp/skill/script 3×3 同名组合表、每类两个不同名资产并存且都能派出、全名精确匹配不按前缀、直接工具与每类资产双向互斥)、说明不带记忆和性格且多项工具、多条群规与多项凭据引用原样保留、白名单子集、凭据引用、placement 的子判据已过(K17–K20、K25、CN02/CN03、P03、Q04、K31–K36、W01–W05 被杀);'试错 3 轮自动转开 Compute' 与进程 env 无明文要等联系人运行时和 Compute 适配器"
     },
     {
       "id": "AC-35",
@@ -38,16 +38,9 @@
     "model": "claude-opus-5-5"
   },
   "red": {
-    "commit": "708b7fea3b02340c94ed838a4f35609339df4475"
+    "commit": "94e4babf9fe05c58ad412b2cc5af30bc19c282af"
   },
-  "unverifiable": "Helper 三入口的路由只在纯函数层判定;把侧边栏回复挡在消息表外、把 @Helper 回复写成消息要内核接线,AC-34 端到端没做。AC-33:通用工具黑名单是名字表,改名可绕过,真正约束靠宿主注册时如实设 bounded(arbitrary_terminal + bounded:true 能通过);Compute 专用与直接工具的互斥按名字判定,宿主若用不同名字登记同一能力本层看不出,要等 Compute 适配器的工具 Schema 检查;Compute 能力资产只记名字和种类,不验证宿主是否真的只把它挂给 Compute;同一名字只能对应一种类别,宿主若确需同名的 MCP 与 Skill 并存,本层会拒绝第二个,要换名登记。凭据引用只验形状,sk://abc 挡不住,要等 Vault。cron 只验字段形状不验范围(0 99 * * * 能过),DST 实际触发没测。AC-35①:work 是否属于某条承诺(commitmentId)由上游判定,本片只保证给定归属后的决定正确,分类本身对不对没测。AC-31⑤:confirmFinalReport 由宿主拿到入库回执后调用,回执里的 commitmentIds(这条汇报履行了哪几条承诺)和 basedOnSeq(汇报依据的处理位置)由宿主判定传入,本片只保证按给定作用域更新正确,不验回执真实性、不验宿主对作用域的判定是否正确;只用 source_seq 与 basedOnSeq 比较防旧回执替后立的承诺放行,没有更细的因果版本;两者只校验是非负安全整数,不校验它们确实是日志里存在的位置,也不校验 basedOnSeq 不超过当前日志末尾;非法依据位置的回执静默保持状态不变,不返回拒绝理由,宿主看不到;确认对还没绑定到承诺上的任务不记录(只记已绑定、未终态的任务)。R-05:合并基线 origin/feat/task-lifecycle(fdfecb1)后 mutations.mjs 是 task 与 contact/helper 合一的清单,数组共 216 个具体变异,注入点对当前源码各恰好出现 1 次,全部被杀。本片 contact/helper 部分 85 个:M30–M47 共 18(contact 13、helper 5) + Astra 独立审查按新源码改写后仍适用的 I 系列 14 + 历轮返修埋雷 K01–K33 共 33(K01–K30 原编号 C01–C30,改名避免与任务侧第三轮 C 系列重名) + Codex 第二轮独立变异 CN01–CN05 共 5(报告原编号 N01–N05,改名避免与任务侧 N 系列重名) + 第三轮 P01–P05 共 5 + 第四轮 Q01–Q05 共 5 + 第五轮 Z01–Z05 共 5;其余 131 个属 domain-core 与任务生命周期(M 系列 log/cas/task/vendor 34 + A14 + N14 + B9 + R11 + C9 + S14 + D11 + T15)。mutations.txt 另有原样对照 1 行和结论 1 行,不计入变异数。有限变异数不推断整体覆盖。Astra 原 oracle 的 I10/I18 按旧回收语义写,返修后按 CH-03 改了语义,不再适用。",
+  "unverifiable": "Helper 三入口的路由只在纯函数层判定;把侧边栏回复挡在消息表外、把 @Helper 回复写成消息要内核接线,AC-34 端到端没做。AC-33:通用工具黑名单是名字表,改名可绕过,真正约束靠宿主注册时如实设 bounded(arbitrary_terminal + bounded:true 能通过);Compute 专用与直接工具的互斥按名字判定,宿主若用不同名字登记同一能力本层看不出,要等 Compute 适配器的工具 Schema 检查;Compute 能力资产只记名字和种类,不验证宿主是否真的只把它挂给 Compute;同一名字只能对应一种类别,宿主若确需同名的 MCP 与 Skill 并存,本层会拒绝第二个,要换名登记。凭据引用只验形状,sk://abc 挡不住,要等 Vault。cron 只验字段形状不验范围(0 99 * * * 能过),DST 实际触发没测。AC-35①:work 是否属于某条承诺(commitmentId)由上游判定,本片只保证给定归属后的决定正确,分类本身对不对没测。AC-31⑤:confirmFinalReport 由宿主拿到入库回执后调用,回执里的 commitmentIds(这条汇报履行了哪几条承诺)和 basedOnSeq(汇报依据的处理位置)由宿主判定传入,本片只保证按给定作用域更新正确,不验回执真实性、不验宿主对作用域的判定是否正确;只用 source_seq 与 basedOnSeq 比较防旧回执替后立的承诺放行,没有更细的因果版本;两者只校验是非负安全整数,不校验它们确实是日志里存在的位置,也不校验 basedOnSeq 不超过当前日志末尾;非法依据位置的回执静默保持状态不变,不返回拒绝理由,宿主看不到;确认对还没绑定到承诺上的任务不记录(只记已绑定、未终态的任务)。R-05:合并基线 origin/feat/task-lifecycle(fdfecb1)后 mutations.mjs 是 task 与 contact/helper 合一的清单,数组共 224 个具体变异,注入点对当前源码各恰好出现 1 次,全部被杀。本片 contact/helper 部分 93 个:M30–M47 共 18(contact 13、helper 5) + Astra 独立审查按新源码改写后仍适用的 I 系列 14 + 历轮返修埋雷 K01–K36 共 36(K01–K30 原编号 C01–C30,改名避免与任务侧第三轮 C 系列重名) + Codex 第二轮独立变异 CN01–CN05 共 5(报告原编号 N01–N05,改名避免与任务侧 N 系列重名) + 第三轮 P01–P05 共 5 + 第四轮 Q01–Q05 共 5 + 第五轮 Z01–Z05 共 5 + 第六轮 W01–W05 共 5;其余 131 个属 domain-core 与任务生命周期(M 系列 log/cas/task/vendor 34 + A14 + N14 + B9 + R11 + C9 + S14 + D11 + T15)。mutations.txt 另有原样对照 1 行和结论 1 行,不计入变异数。有限变异数不推断整体覆盖。Astra 原 oracle 的 I10/I18 按旧回收语义写,返修后按 CH-03 改了语义,不再适用。",
   "waiver": null,
-  "review": {
-    "agent": "codex",
-    "session": "codex:4d37f5a5-0839-4adc-8afc-9b481602df5a",
-    "model": "gpt-6.1-terra",
-    "verdict": "reject",
-    "reviewed_hash": "b2b5f7a7af8488b43eb1210e2fe13f71e2fd29714abfb175ac70cd1d79500fd5",
-    "notes": "第六轮 reject：当前资产实现及 12 格独立矩阵正确，但 W01–W04 测试盲区覆盖同名类型组合、同类多个资产和精确名称；W05 被杀。更正 HEAD 后 216 项作者变异与上轮回归均已复现。建议一次补齐有限类别矩阵和 R-05 校准。"
-  }
+  "review": null
 }

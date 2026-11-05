@@ -238,6 +238,15 @@ const M = [
   ["K31 同名异类资产静默成功", "contact.ts", "  if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };\n", ""],
   ["K32 同名同类资产也拒", "contact.ts", "  if (same) return { ok: true, contact: c };", "  if (same) return { ok: false, reason: \"重复\" };"],
   ["K33 同名异类覆盖旧资产", "contact.ts", "if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };", "if (same && same.kind !== a.kind) return { ok: true, contact: freezeContact({ ...c, computeAssets: c.computeAssets.map((x) => (x.name === a.name ? { name: a.name, kind: a.kind } : x)) }) };"],
+  // 以下 W01–W05 取自 Codex 第六轮独立复审 reviews/feat-contact-helper.md CH-16(注入点与 independent-mutations-round6.json 一致),K34–K36 是本轮表驱动用例的埋雷
+  ["W01 同名异类只在涉及 MCP 时拒绝", "contact.ts", "if (same && same.kind !== a.kind)", "if (same && same.kind !== a.kind && (same.kind === \"mcp\" || a.kind === \"mcp\"))"],
+  ["W02 同名同类幂等只对 MCP 生效", "contact.ts", "if (same) return { ok: true, contact: c };", "if (same && same.kind === \"mcp\") return { ok: true, contact: c };"],
+  ["W03 资产名按前缀匹配", "contact.ts", "c.computeAssets.find((x) => x.name === a.name)", "c.computeAssets.find((x) => x.name.startsWith(a.name))"],
+  ["W04 资产按同名或同类判重", "contact.ts", "c.computeAssets.find((x) => x.name === a.name)", "c.computeAssets.find((x) => x.name === a.name || x.kind === a.kind)"],
+  ["W05 删除同名异类拒绝", "contact.ts", "  if (same && same.kind !== a.kind) return { ok: false, reason: `${a.name} 已登记为 ${same.kind} 类能力资产,不能再以 ${a.kind} 类同名登记` };\n", ""],
+  ["K34 资产登记不查同名直接工具", "contact.ts", "  if (c.tools.some((t) => t.name === a.name)) return { ok: false, reason: `${a.name} 已是直接工具,不必再登记` };\n", ""],
+  ["K35 资产名按反向前缀匹配", "contact.ts", "c.computeAssets.find((x) => x.name === a.name)", "c.computeAssets.find((x) => a.name.startsWith(x.name))"],
+  ["K36 同类第二个资产覆盖第一个", "contact.ts", "computeAssets: [...c.computeAssets, { name: a.name, kind: a.kind }]", "computeAssets: [...c.computeAssets.filter((x) => x.kind !== a.kind), { name: a.name, kind: a.kind }]"],
 ];
 function run(dir) {
   const files = fs.readdirSync(path.join(dir, "src")).filter((f) => f.endsWith(".test.ts")).map((f) => path.join("src", f));

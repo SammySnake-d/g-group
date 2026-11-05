@@ -1,4 +1,3 @@
-// biome-ignore-all lint/correctness/noUnusedFunctionParameters: 红提交空壳,绿提交恢复实现
 // Helper 三种入口(用户 g-group#1365、#1353)。Helper 的本质只有两条:只为用户本人服务;能读哪些内容。
 // 回复出现在哪,跟着在哪叫它走:
 //   全局入口 → 回复在全局面板,隔离,不进任何对话,不读任何会话;
@@ -18,10 +17,15 @@ export interface HelperRoute {
 export type RouteResult = { ok: true; route: HelperRoute } | { ok: false; reason: string };
 
 export function routeHelper(entry: HelperEntry, caller: { kind: "user" | "contact"; id: string }, owner: string): RouteResult {
-  throw new Error("未实现");
+  if (caller.kind !== "user" || caller.id !== owner) return { ok: false, reason: "Helper 只为用户本人服务,其他人叫它不执行" };
+  switch (entry.kind) {
+    case "global": return { ok: true, route: { replyIn: "global-panel", becomesMessage: false, contextConversation: null, replyToSeq: null } };
+    case "mention": return { ok: true, route: { replyIn: "conversation", becomesMessage: true, contextConversation: entry.conversationId, replyToSeq: entry.seq } };
+    case "sidebar": return { ok: true, route: { replyIn: "sidebar", becomesMessage: false, contextConversation: entry.conversationId, replyToSeq: null } };
+  }
 }
 
 /** Helper 不是项目成员:不参与扫一眼抢活,不认领任务。 */
 export function helperMayClaimTasks(): boolean {
-  throw new Error("未实现");
+  return false;
 }
