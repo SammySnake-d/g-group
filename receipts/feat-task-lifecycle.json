@@ -57,5 +57,12 @@
   },
   "unverifiable": "AC-09 在本片指的是本片覆盖的 12 个状态 × 15 种事件,需求文档第三台表还有 T2b 转交、T4a/T4c 依赖、T6/T6b 集成、T8b 纠错和 E5/E7b/E10 等事件,这一片没建模,不能说整张需求表没有空白格;义务集是 TypeScript 穷尽类型 + 测试遍历,不是从需求文档的表格自动展开。R-09 的超时时长 N 需求文档里仍待定,本片只验了'超时事件到来时不算通过'。AC-26 的 vendorOf 是正则表,新厂商模型名会被判 unknown 而拦下(偏严)。豁免只认 waiverBy 等于提出者本人,谁来证明这个事件真是提出者本人点的,要由宿主的认证层负责,本片不验。审查打回(Review reject)时一律假定原 Compute 可恢复,不可恢复的分支只在用户退回(UserReject)上测过。R-05 的变异校准覆盖 mutations.mjs 列出的 34 种故障。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "astra",
+    "session": "codex:fe55ba38-c68b-4127-b71b-1303a0e7b3c7",
+    "model": "gpt-6-astra",
+    "verdict": "reject",
+    "reviewed_hash": "fb306d3f832808a9d070539e9e6b370fe848c2b8d32fe2ee5d9f8081c428eb0f",
+    "notes": "独立复现 reject：旧审查未绑定新提交、返工 Compute 无法回绑、恢复入口不一致、确认卡快照可变，且 14 个独立变异中 10 个存活；详见 reviews/feat-task-lifecycle.md。"
+  }
 }
