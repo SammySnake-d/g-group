@@ -372,3 +372,5 @@ Helper 三入口 × 本人/他人/同 ID 联系人 9 格、定时归联系人且
 **执行器纠错记录：** 首次独立 `tsc` 文件检查遇 TS5112、exit 1（`$E/nan-static.log`）；补 `--ignoreConfig` 后 exit 0（`$E/nan-static-retry.log`）。一次 shell heredoc 接到 `tee` 而非 Node，输出的是源码、退出码未单独记录，没有作为行为证据；改正重定向后才记录 `$E/invalid-source-corrected.log`。
 
 **本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 实测 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 未找到等于本轮 `reviewed_hash` 的审查工具输出，也无法识别该审查轮厂商。检查时 `turns.jsonl` 仅包含先前轮次，当前轮尚未落盘；原生 rollout 可观察当前模型，但不能冒充该门禁通过。会话落盘后由既有流程重核；不伪造记录、不使用豁免。原始输出 `$E/gates-local.log`。
+
+**推送后基线变化（同日复核）：** 本轮报告推送完成后，远端 `feat/task-lifecycle` 由 `44c5ab6` 前移至 `cb3fba02725c37d8de3b2e066a04ce44c8019eda`。只读取最新基线并对当前审查提交做 `git merge-tree --write-tree`：仍 exit 1，冲突仍为 `packages/domain/proof/mutations.mjs`、`packages/domain/proof/mutations.txt`（`$E/merge-tree-live.log`）。以新 `origin/feat/task-lifecycle` 再执行指定 `--hash`，输出仍为 `677bed266beaea0696b7a7da8e4a367d570e539819dd65a6c537e4289962dbbd`；共同祖先仍为 `c6ca694`。这不代表已合并或验收新基线，仍须由原开发任务整合冲突并重新复验。
