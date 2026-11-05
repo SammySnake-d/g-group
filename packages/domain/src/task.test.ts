@@ -1459,9 +1459,7 @@ test("R8-CORR-01 原型链上的名字作为 kind 一律按未知种类拒绝,�
 });
 
 test("R8-CORR-01 字段读取只认自有属性:原型上继承来的同名字段不算数", () => {
-  const proto = { by: "u1" };
-  const e = Object.assign(Object.create(proto), { kind: "Claim" });
-  assert.equal(validateEvent(e), "Claim.by 缺失或取值非法(应为非空字符串)");
+  assert.equal(polluted("by", "u1", () => validateEvent({ kind: "Claim" })), "Claim.by 缺失或取值非法(应为非空字符串)");
   const evil = { kind: "Claim", get by(): string { throw new Error("boom"); } };
   assert.equal(validateEvent(evil), "事件无法校验");
   assert.equal(apply(newTask("t1", "u1"), evil as unknown as TaskEvent).ok, false);
@@ -1530,54 +1528,72 @@ test("R8-TEST-01 非对象与非字符串 kind 的拒绝原因精确", () => {
 });
 
 // ---- 第九轮 ----
-/** 事件对象:own 是自有字段,inherited 放在原型上(模拟继承来的字段)。 */
+/** 自定义原型的事件:领域层只接受普通数据对象,这类输入整体拒绝。 */
 const withProto = (own: Record<string, unknown>, inherited: Record<string, unknown>): TaskEvent => Object.assign(Object.create(inherited), own) as TaskEvent;
+/** 在 Object.prototype 上临时放一个同名字段(模拟原型污染),让普通对象"继承"它;fn 结束后一定删掉。 */
+const polluted = <T>(key: string, value: unknown, fn: () => T): T => {
+  Object.defineProperty(Object.prototype, key, { value, configurable: true, writable: true, enumerable: false });
+  try { return fn(); } finally { delete (Object.prototype as Record<string, unknown>)[key]; }
+};
+const PLAIN_ONLY = "只接受普通数据对象";
 
 test("R9-CORR-01 ExecFailed 的 computeId 只从原型继承:不停当前实例;省略同样不停;自有才停", () => {
   const t = running();
-  const inh = must(apply(t, withProto({ kind: "ExecFailed" }, { computeId: "cc-1" })));
+  const inh = polluted("computeId", "cc-1", () => must(apply(t, { kind: "ExecFailed" })));
   assert.equal(inh.task.state, "T3_Running");
   assert.deepEqual(inh.effects, []);
+  const batch = polluted("computeId", "cc-1", () => must(applyAll(t, [{ kind: "ExecFailed" }, { kind: "NeedHuman", qId: "q", computeId: "cc-1", constraintVer: 0 }])));
+  assert.equal(batch.task.state, "T4b_BlockedOnHuman");
+  assert.deepEqual(batch.effects, []);
   const omit = must(apply(t, { kind: "ExecFailed" }));
   assert.equal(omit.task.state, "T3_Running");
   assert.deepEqual(omit.effects, []);
   const own = must(apply(t, { kind: "ExecFailed", computeId: "cc-1" }));
   assert.equal(own.task.state, "T9_StopRequested");
   assert.deepEqual(own.effects, [{ kind: "stop-compute", computeId: "cc-1" }]);
-  const batch = must(applyAll(t, [withProto({ kind: "ExecFailed" }, { computeId: "cc-1" }), { kind: "NeedHuman", qId: "q", computeId: "cc-1", constraintVer: 0 }]));
-  assert.equal(batch.task.state, "T4b_BlockedOnHuman");
-  assert.deepEqual(batch.effects, []);
+  const custom = apply(t, withProto({ kind: "ExecFailed" }, { computeId: "cc-1" }));
+  assert.ok(!custom.ok && custom.reason === PLAIN_ONLY);
 });
 
 test("R9-CORR-01 StoppedConfirmed 的 computeId 只从原型继承:不确认停止、不释放;省略同样;自有才确认", () => {
   const t = STOPPING();
-  for (const ev of [withProto({ kind: "StoppedConfirmed", taskId: "t1" }, { computeId: "cc-1" }), { kind: "StoppedConfirmed", taskId: "t1" } as TaskEvent]) {
-    const r = must(apply(t, ev));
-    assert.equal(r.task.state, "T9_StopRequested");
-    assert.deepEqual(r.effects, []);
-  }
+  const inh = polluted("computeId", "cc-1", () => must(apply(t, { kind: "StoppedConfirmed", taskId: "t1" })));
+  assert.equal(inh.task.state, "T9_StopRequested");
+  assert.deepEqual(inh.effects, []);
+  const omit = must(apply(t, { kind: "StoppedConfirmed", taskId: "t1" }));
+  assert.equal(omit.task.state, "T9_StopRequested");
+  assert.deepEqual(omit.effects, []);
   const own = must(apply(t, SC({ computeId: "cc-1" })));
   assert.equal(own.task.state, "T10_Cancelled");
   assert.deepEqual(own.effects, [{ kind: "release-slot", computeId: "cc-1" }]);
+  const custom = apply(t, withProto({ kind: "StoppedConfirmed", taskId: "t1" }, { computeId: "cc-1" }));
+  assert.ok(!custom.ok && custom.reason === PLAIN_ONLY);
 });
 
 test("R9-CORR-01 同厂商审查的 waiverBy 只从原型继承:不算豁免,照样拒绝;自有提出者豁免才记 Waived", () => {
   const base = { kind: "Review", reviewerId: "argon", reviewerModel: "claude-sonnet-5-5", round: 1, commit: "abc", constraintVer: 0, verdict: "approve" };
-  const inh = apply(inReview(), withProto(base, { waiverBy: "u1" }));
+  const inh = polluted("waiverBy", "u1", () => apply(inReview(), { ...base } as TaskEvent));
   assert.ok(!inh.ok && /豁免/.test(inh.reason));
   const omit = apply(inReview(), base as TaskEvent);
-  assert.equal(omit.ok, false);
+  assert.ok(!omit.ok && /豁免/.test(omit.reason));
   const own = must(apply(inReview(), { ...base, waiverBy: "u1" } as TaskEvent));
   assert.equal(own.task.reviewGate, "waived-by-user");
   assert.equal(own.effects[0]?.kind, "send-card");
+  const custom = apply(inReview(), withProto(base, { waiverBy: "u1" }));
+  assert.ok(!custom.ok && custom.reason === PLAIN_ONLY);
 });
 
 test("R9-CORR-01/02 Claim 不声明 taskId:继承的或自有的多余 taskId 都被丢弃,正常认领", () => {
-  for (const ev of [withProto({ kind: "Claim", by: "claude" }, { taskId: "B" }), { kind: "Claim", by: "claude", taskId: "B" } as unknown as TaskEvent, { kind: "Claim", by: "claude" } as TaskEvent]) {
+  const inh = polluted("taskId", "B", () => must(apply(newTask("t1", "u1"), { kind: "Claim", by: "claude" })));
+  assert.equal(inh.task.state, "T2_Claimed");
+  assert.equal(inh.task.owner, "claude");
+  for (const ev of [{ kind: "Claim", by: "claude", taskId: "B" } as unknown as TaskEvent, { kind: "Claim", by: "claude" } as TaskEvent]) {
     const r = must(apply(newTask("t1", "u1"), ev));
     assert.equal(r.task.state, "T2_Claimed");
     assert.equal(r.task.owner, "claude");
   }
+  const custom = apply(newTask("t1", "u1"), withProto({ kind: "Claim", by: "claude" }, { taskId: "B" }));
+  assert.ok(!custom.ok && custom.reason === PLAIN_ONLY);
 });
 
 test("R9-CORR-02 标准 JSON 的多余 taskId(含无法转字符串的对象)不让 apply/applyAll 抛异常,照常认领", () => {
@@ -1642,24 +1658,47 @@ test("R9 快照:冻结、原型为 null、只含声明字段,值与首次读取�
 });
 
 test("R9-TEST-01 继承的 kind 不算:按种类缺失拒绝", () => {
-  assert.equal(validateEvent(withProto({ by: "u1" }, { kind: "Claim" })), "事件种类缺失或不是字符串");
-  assert.equal(apply(newTask("t1", "u1"), withProto({ by: "u1" }, { kind: "Claim" })).ok, false);
+  assert.equal(polluted("kind", "Claim", () => validateEvent({ by: "u1" })), "事件种类缺失或不是字符串");
+  assert.equal(polluted("kind", "Claim", () => apply(newTask("t1", "u1"), { by: "u1" } as unknown as TaskEvent)).ok, false);
 });
 
 test("R9-TEST-01 继承的非法可选字段被忽略,不导致拒绝", () => {
-  assert.equal(validateEvent(withProto({ kind: "ExecFailed" }, { computeId: 5, requestId: [] })), null);
-  assert.equal(validateEvent(withProto({ kind: "StoppedConfirmed", taskId: "t1" }, { computeId: {} })), null);
-  assert.equal(validateEvent(withProto({ kind: "Review", reviewerId: "r", reviewerModel: "m", round: 1, commit: "c", constraintVer: 0, verdict: "approve" }, { waiverBy: 1 })), null);
+  assert.equal(polluted("computeId", 5, () => validateEvent({ kind: "ExecFailed" })), null);
+  assert.equal(polluted("requestId", [], () => validateEvent({ kind: "ExecFailed" })), null);
+  assert.equal(polluted("computeId", {}, () => validateEvent({ kind: "StoppedConfirmed", taskId: "t1" })), null);
+  assert.equal(polluted("waiverBy", 1, () => validateEvent({ kind: "Review", reviewerId: "r", reviewerModel: "m", round: 1, commit: "c", constraintVer: 0, verdict: "approve" })), null);
 });
 
 test("R9-TEST-01 审查打回所需的 computeResumable 只从原型继承:按缺失拒绝", () => {
   const base = { kind: "Review", reviewerId: "astra", reviewerModel: "gpt-6-astra", round: 1, commit: "abc", constraintVer: 0, verdict: "reject" };
-  assert.equal(validateEvent(withProto(base, { computeResumable: true })), "Review.computeResumable 缺失或取值非法(应为布尔)");
-  assert.equal(apply(inReview(), withProto(base, { computeResumable: true })).ok, false);
+  assert.equal(polluted("computeResumable", true, () => validateEvent({ ...base })), "Review.computeResumable 缺失或取值非法(应为布尔)");
+  assert.equal(polluted("computeResumable", true, () => apply(inReview(), { ...base } as TaskEvent)).ok, false);
 });
 
 test("R9-TEST-01 非负整数接受 -0(JSON 可表示),正整数仍拒绝 -0", () => {
   assert.equal(validateEvent({ kind: "NeedHuman", qId: "q", computeId: "c", constraintVer: -0 }), null);
   assert.equal(validateEvent(JSON.parse('{"kind":"HumanReply","qId":"q","constraintVer":-0,"answer":"approve"}')), null);
   assert.equal(validateEvent({ kind: "Review", reviewerId: "r", reviewerModel: "m", round: -0, commit: "c", constraintVer: 0, verdict: "approve" }), "Review.round 缺失或取值非法(应为正整数)");
+});
+
+test("R9 契约边界:Proxy 事件拒绝且不触发任何陷阱;自定义原型、类实例也拒绝", () => {
+  let traps = 0;
+  const handler: ProxyHandler<object> = new Proxy({}, { get: () => () => { traps++; return undefined; } });
+  const proxied = new Proxy({ kind: "Claim", by: "claude" }, handler);
+  assert.equal(validateEvent(proxied), PLAIN_ONLY);
+  const r = apply(newTask("t1", "u1"), proxied as TaskEvent);
+  assert.ok(!r.ok && r.reason === PLAIN_ONLY);
+  assert.equal(traps, 0);
+  assert.equal(validateEvent(Object.assign(Object.create({}), { kind: "Claim", by: "claude" })), PLAIN_ONLY);
+  class Ev { kind = "Claim"; by = "claude"; }
+  assert.equal(validateEvent(new Ev()), PLAIN_ONLY);
+  assert.equal(applyAll(newTask("t1", "u1"), [new Ev() as unknown as TaskEvent]).ok, false);
+});
+
+test("R9 契约边界:普通对象、Object.create(null) 对象、JSON.parse 结果都接受", () => {
+  const nullProto = Object.assign(Object.create(null), { kind: "Claim", by: "claude" });
+  for (const ev of [{ kind: "Claim", by: "claude" }, nullProto, JSON.parse('{"kind":"Claim","by":"claude"}')]) {
+    assert.equal(validateEvent(ev), null);
+    assert.equal(must(apply(newTask("t1", "u1"), ev as TaskEvent)).task.owner, "claude");
+  }
 });
