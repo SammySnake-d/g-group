@@ -42,5 +42,12 @@
   },
   "unverifiable": "所有行为测试跑在假 CLI(test-support/fake-claude.mjs)上,它是按原型 g-group-prototype/out/t3 的真实 stream-json 样本写的,report_progress 经真实 MCP 服务器与 JSON-RPC 往返,但它对 --tools、--allowedTools、--permission-mode dontAsk、--bare 的处理是我写的模拟:真实 CLI 是否真的拒绝清单外工具、--bare 是否真的不加载 CLAUDE.md/auto-memory,本片没有证据,AC-33 ④ 的“工具权限仅为白名单子集”在真实进程上未验证。V-06:真实 smoke(proof/smoke-real.txt)因模型网关 503 未完成,只证明真实 CLI 接受适配器拼出的参数并输出 init、stop 让真实 claude 进程以 143 退出后才报 stopped;真实 CLI 上的 milestone、blocked、completed 映射与快照没跑到。假 CLI 的 result 行字段只取原型样本里出现过的 type/subtype/is_error/result,真实 CLI 的其它结束形态(例如达到 max_turns 的 error_max_turns)按 failed 处理,未单独测。env 子判据只证明不继承宿主进程环境、brief 只能放引用;hostEnv 由宿主显式给出,如果内核把明文凭据放进 hostEnv,本包不会拦,这个边界要由内核接线保证(AC-33)。AC-07 的快照内容来自 Compute 自报的 report_progress 字段,Compute 漏报或报错约束版本时快照会照收,真值核对要靠内核的约束版本与副作用账。R-05 只覆盖 mutations.mjs 列出的 15 种故障。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "codex",
+    "session": "codex:592ebd7a-e738-43bd-a331-069366648d54",
+    "model": "gpt-6.1-terra",
+    "verdict": "reject",
+    "reviewed_hash": "7402e18b7d5c9157a0328d74b35b050d2bb0a077a6f3e2cce13714803e946d33",
+    "notes": "独立复现发现真实 CLI 默认工具集扩张、失败误报完成、停止后子进程树仍可执行、汇报 schema 漏校验及空工具名单变异存活；详见 reviews/feat-cc-compute.md。"
+  }
 }
