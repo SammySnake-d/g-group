@@ -357,8 +357,26 @@ const M = [
   ["K48 数组字段不复制、保留原引用", "contact.ts", "const out: unknown[] = Array.from(v as readonly unknown[]);", "const out: unknown[] = v as unknown[];"],
   ["K49 显式 null 当成缺省", "contact.ts", "if (raw === undefined && spec.optional) continue;", "if (raw == null && spec.optional) continue;"],
   ["K50 能力资产不查类别", "contact.ts", "  if (!ASSET_KINDS.has(a.kind)) return { ok: false, reason: `未知的能力资产类别 ${a.kind}` };\n", ""],
-  ["K51 不认识的意图当成工作", "contact.ts", "  if (i.kind !== \"work\") return \"ignore\";\n", ""],
+  ["K51 不认识的意图当成工作", "contact.ts", "  if (!variant) return \"ignore\";", "  if (!variant) return \"handle\";"],
   ["K52 getter 被调用两次", "contact.ts", "d.get ? d.get.call(input) : undefined", "d.get ? (d.get.call(input), d.get.call(input)) : undefined"],
+  // 以下 Y01–Y08 取自 Codex 第十轮独立复审 reviews/feat-contact-helper.md CH-26(注入点按 independent-mutations-round10.json 与 independent-Y08-round10.py;CH-24 后 decideUnderFocus 的 Y05 注入点改到等价位置),K53–K62 是 CH-24/CH-25 返修的埋雷(K55"control 字段都可选"是等价变异:action 枚举和 commitmentId 非空检查已拒缺字段,不收录)
+  ["Y01 addContact 校验后改用原始对象", "contact.ts", "const c = n.value;", "const c = input;"],
+  ["Y02 updateContact 校验后改用原始 patch", "contact.ts", "const patch = n.value;", "const patch = input;"],
+  ["Y03 setFocus 校验后沿用原对象", "contact.ts", "const f = n ? n.value : null;", "const f = input;"],
+  ["Y04 schedule 不规范化直接保留原对象", "contact.ts", "case \"schedule\": return v === null ? { ok: true, value: null } : normalize(v, SCHEDULE_SCHEMA, field);", "case \"schedule\": return v === null ? { ok: true, value: null } : { ok: true, value: v };"],
+  ["Y05 decideUnderFocus 校验后改用原始意图", "contact.ts", "const i = Object.freeze({ ...n.value, kind: head.value.kind });", "const i = input as unknown as { kind: string; action?: string; text?: string; commitmentId?: string | null };"],
+  ["Y06 confirmFinalReport 校验后改用原始回执", "contact.ts", "const receipt = n.value;", "const receipt = input;"],
+  ["Y07 commit 存下原始对象的全部字段", "contact.ts", "commitments: [...c.commitments, { ...k, awaitingReport: [], reportedTaskIds: [], status: \"active\" }]", "commitments: [...c.commitments, { ...input, awaitingReport: [], reportedTaskIds: [], status: \"active\" }]"],
+  ["Y08 校验嵌套 schedule 但保留原对象", "contact.ts", "case \"schedule\": return v === null ? { ok: true, value: null } : normalize(v, SCHEDULE_SCHEMA, field);", "case \"schedule\": return v === null ? { ok: true, value: null } : (normalize(v, SCHEDULE_SCHEMA, field).ok ? { ok: true, value: v } : { ok: false, reason: field });"],
+  ["K53 control 不查 action 枚举", "contact.ts", "!CONTROL_ACTIONS.has(i.action ?? \"\") || ", ""],
+  ["K54 control 不查 commitmentId 非空", "contact.ts", " || !i.commitmentId?.trim()", ""],
+  ["K56 work 的 text 可选", "contact.ts", "[\"work\", { text: { kind: \"string\" }, commitmentId: { kind: \"stringOrNull\" } }],", "[\"work\", { text: { kind: \"string\", optional: true }, commitmentId: { kind: \"stringOrNull\" } }],"],
+  ["K57 work 的 commitmentId 可选", "contact.ts", "[\"work\", { text: { kind: \"string\" }, commitmentId: { kind: \"stringOrNull\" } }],", "[\"work\", { text: { kind: \"string\" }, commitmentId: { kind: \"stringOrNull\", optional: true } }],"],
+  ["K58 各变体共用全字段 schema(他变体字段干扰判定)", "contact.ts", "const variant = INTENT_SCHEMAS.get(head.value.kind);", "const variant = INTENT_SCHEMAS.get(head.value.kind) && { action: { kind: \"string\", optional: true }, text: { kind: \"string\", optional: true }, commitmentId: { kind: \"stringOrNull\", optional: true } } as Schema;"],
+  ["K59 不拒外层 Proxy", "contact.ts", "  if (types.isProxy(input)) return { ok: false, reason: `${what} 只接受普通数据对象` };\n", ""],
+  ["K60 不查对象原型", "contact.ts", "  if (proto !== Object.prototype && proto !== null) return { ok: false, reason: `${what} 只接受普通数据对象` };\n", ""],
+  ["K61 不拒数组 Proxy", "contact.ts", "  if (types.isProxy(v)) return { reason: `${field} 只接受普通数据数组` };\n", ""],
+  ["K62 不查数组原型", "contact.ts", "  if (Object.getPrototypeOf(v) !== Array.prototype) return { reason: `${field} 只接受普通数据数组` };\n", ""],
 ];
 function run(dir) {
   const files = fs.readdirSync(path.join(dir, "src")).filter((f) => f.endsWith(".test.ts")).map((f) => path.join("src", f));
