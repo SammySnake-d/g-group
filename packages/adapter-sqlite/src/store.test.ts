@@ -1,7 +1,7 @@
 // SQLite 存储适配器行为测试:临时目录里的真实 sqlite 文件,不 mock。
 // AC-05 落盘只追加、AC-21 两个连接的单一提交点、AC-31③ 入库端 action_id 去重(含真实崩溃重放)、重启持久。
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -105,25 +105,94 @@ test("文档 CAS:改不同文档都成功(阴性对照)", () => {
   closeStore(s);
 });
 
-test("两个连接基于同一版本并发提交,只有一个成功,另一个之后收到版本冲突", () => {
+test("同进程两个连接:A 读到版本未写入时 B 提交,B 返回 busy 不写入,重试收到版本冲突", () => {
   const f = prepare(dbFile());
   const b = openStore(f, { busyTimeoutMs: 50 });
-  const outcomes: string[] = [];
+  const during: unknown[] = [];
   // A 读到版本、还没写入的那一刻,B 用同一版本提交:这是静默覆盖最容易发生的时刻
-  const a = openStore(f, {
-    busyTimeoutMs: 50,
-    onCasRead: () => {
-      try { const r = commitDoc(b, "主稿", 0, "B 的修改"); outcomes.push(r.ok ? "B 成功" : "B 冲突"); } catch (e) { outcomes.push(`B 被挡:${(e as Error).message}`); }
-    },
-  });
-  const ra = commitDoc(a, "主稿", 0, "A 的修改");
-  assert.deepEqual(ra, { ok: true, ver: 1 });
-  assert.equal(outcomes.length, 1);
-  assert.match(outcomes[0] ?? "", /^B 被挡:.*locked/);
+  const a = openStore(f, { busyTimeoutMs: 50, onCasRead: () => { during.push(commitDoc(b, "主稿", 0, "B 的修改")); } });
+  assert.deepEqual(commitDoc(a, "主稿", 0, "A 的修改"), { ok: true, ver: 1 });
+  assert.deepEqual(during, [{ ok: false, reason: "busy" }]);
   assert.deepEqual(commitDoc(b, "主稿", 0, "B 的修改"), { ok: false, reason: "version-conflict", currentVer: 1 });
   assert.deepEqual(readDoc(b, "主稿"), { value: "A 的修改", ver: 1 });
   closeStore(a);
   closeStore(b);
+});
+
+// 真实多进程:每个子进程独立打开同一个库文件,等屏障文件出现后才提交;读到版本后在事务里停 holdMs,把竞争窗口拉开
+const CHILD = `
+import fs from "node:fs";
+import { openStore, commitDoc } from ${JSON.stringify(new URL("./index.ts", import.meta.url).href)};
+const [file, key, value, busyMs, holdMs, go] = process.argv.slice(2);
+const nap = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+const s = openStore(file, { busyTimeoutMs: Number(busyMs), onCasRead: () => { process.stdout.write("held\\n"); nap(Number(holdMs)); } });
+process.stdout.write("ready\\n");
+while (!fs.existsSync(go)) nap(5);
+let out;
+try { out = commitDoc(s, key, 0, value); } catch (e) { out = { threw: String(e.message) }; }
+process.stdout.write("result " + JSON.stringify(out) + "\\n");
+`;
+interface Proc { saw(line: string): Promise<void>; done: Promise<unknown> }
+function proc(file: string, value: string, busyMs: number, holdMs: number, go: string): Proc {
+  const script = path.join(path.dirname(file), "child.mjs");
+  if (!fs.existsSync(script)) fs.writeFileSync(script, CHILD);
+  const c = spawn(process.execPath, ["--no-warnings", script, file, "主稿", value, String(busyMs), String(holdMs), go], { stdio: ["ignore", "pipe", "inherit"] });
+  let out = "";
+  const waiters: [string, () => void][] = [];
+  c.stdout.setEncoding("utf8").on("data", (d: string) => { out += d; for (const [l, r] of waiters) if (out.includes(`${l}\n`)) r(); });
+  return {
+    saw: (l) => new Promise((r) => { if (out.includes(`${l}\n`)) r(); else waiters.push([l, r]); }),
+    done: new Promise((r) => c.on("close", () => { const m = /^result (.+)$/m.exec(out); r(m ? JSON.parse(m[1]!) : { exit: out }); })),
+  };
+}
+
+test("两个独立进程基于同一版本同时提交:只有一个成功,另一个收到版本冲突,内容是胜者的", async () => {
+  const f = prepare(dbFile());
+  closeStore(openStore(f));
+  const go = path.join(path.dirname(f), "go");
+  const a = proc(f, "A 的修改", 5000, 300, go);
+  const b = proc(f, "B 的修改", 5000, 300, go);
+  await Promise.all([a.saw("ready"), b.saw("ready")]);
+  fs.writeFileSync(go, "");
+  const results = (await Promise.all([a.done, b.done])) as { ok: boolean; ver?: number; reason?: string; currentVer?: number }[];
+  const wins = results.filter((r) => r.ok);
+  assert.deepEqual(wins, [{ ok: true, ver: 1 }], JSON.stringify(results));
+  assert.deepEqual(results.filter((r) => !r.ok), [{ ok: false, reason: "version-conflict", currentVer: 1 }], JSON.stringify(results));
+  const s = openStore(f);
+  const winner = results[0]?.ok ? "A 的修改" : "B 的修改";
+  assert.deepEqual(readDoc(s, "主稿"), { value: winner, ver: 1 });
+  closeStore(s);
+});
+
+test("另一进程持有写锁时提交返回 busy 且不写入;锁释放后按同一旧版本重试收到版本冲突", async () => {
+  const f = prepare(dbFile());
+  closeStore(openStore(f));
+  const goA = path.join(path.dirname(f), "goA");
+  const goB = path.join(path.dirname(f), "goB");
+  const a = proc(f, "A 的修改", 5000, 600, goA);
+  const b = proc(f, "B 的修改", 0, 0, goB);
+  await Promise.all([a.saw("ready"), b.saw("ready")]);
+  fs.writeFileSync(goA, "");
+  await a.saw("held");
+  fs.writeFileSync(goB, "");
+  const [ra, rb] = await Promise.all([a.done, b.done]);
+  assert.deepEqual(rb, { ok: false, reason: "busy" });
+  assert.deepEqual(ra, { ok: true, ver: 1 });
+  const s = openStore(f);
+  assert.deepEqual(readDoc(s, "主稿"), { value: "A 的修改", ver: 1 });
+  assert.deepEqual(commitDoc(s, "主稿", 0, "B 的修改"), { ok: false, reason: "version-conflict", currentVer: 1 });
+  closeStore(s);
+});
+
+test("版本冲突不改任何文档:冲突的文档和旁边的文档内容、版本都不变", () => {
+  const s = openStore(prepare(dbFile()));
+  commitDoc(s, "需求", 0, "需求 v1");
+  commitDoc(s, "验收", 0, "验收 v1");
+  commitDoc(s, "验收", 1, "验收 v2");
+  assert.deepEqual(commitDoc(s, "需求", 0, "旧版本上的修改"), { ok: false, reason: "version-conflict", currentVer: 1 });
+  assert.deepEqual(readDoc(s, "需求"), { value: "需求 v1", ver: 1 });
+  assert.deepEqual(readDoc(s, "验收"), { value: "验收 v2", ver: 2 });
+  closeStore(s);
 });
 
 test("外发动作同一 action_id 重放只保留 1 行并返回已存在,原 payload 不被覆盖", () => {
@@ -157,6 +226,30 @@ test("入库后、发送方记成功前进程被杀,重启重放同一 action_id
   assert.deepEqual(recordAction(s, "act_1", { text: "T_A 进度汇报" }), { recorded: false, reason: "already-exists" });
   assert.deepEqual(listActions(s), [{ actionId: "act_1", payload: { text: "T_A 进度汇报" } }]);
   closeStore(s);
+});
+
+test("重放已有 action_id 不改其他动作:旁边的动作仍在、payload 不变", () => {
+  const s = openStore(prepare(dbFile()));
+  recordAction(s, "act_1", { text: "A 的汇报" });
+  recordAction(s, "act_2", { text: "B 的汇报" });
+  assert.deepEqual(recordAction(s, "act_1", { text: "重放" }), { recorded: false, reason: "already-exists" });
+  assert.deepEqual(listActions(s), [{ actionId: "act_1", payload: { text: "A 的汇报" } }, { actionId: "act_2", payload: { text: "B 的汇报" } }]);
+  closeStore(s);
+});
+
+test("编辑和撤回都作为新事件落盘:关闭重开后三条都在,原消息逐字不变,链完整", () => {
+  const f = prepare(dbFile());
+  const s = openStore(f);
+  const m = appendEvent(s, "g1", user, { kind: "message", text: "原文" }, "t1");
+  const ed = appendEvent(s, "g1", user, { kind: "edit", target: 1, text: "改后" }, "t2");
+  const rt = appendEvent(s, "g1", user, { kind: "retract", target: 1 }, "t3");
+  closeStore(s);
+  const r = openStore(f);
+  const loaded = loadLog(r, "g1");
+  assert.deepEqual(loaded.check, { ok: true });
+  assert.deepEqual(loaded.log.events.map((e) => [e.seq, e.hash, e.prev]), [[1, m.hash, m.prev], [2, ed.hash, m.hash], [3, rt.hash, ed.hash]]);
+  assert.deepEqual(loaded.log.events.map((e) => e.body), [{ kind: "message", text: "原文" }, { kind: "edit", target: 1, text: "改后" }, { kind: "retract", target: 1 }]);
+  closeStore(r);
 });
 
 test("关闭再打开同一文件,事件、文档版本、动作都在", () => {
