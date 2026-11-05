@@ -1,0 +1,29 @@
+packages/domain/proof/contact-helper-tests.txt
+  s_36f8aff8cdaf05::t_b85ae30432013c 1-227
+packages/domain/proof/mutations.mjs
+  s_36f8aff8cdaf05::t_33764581d84a0a 239,318-320,332-345
+packages/domain/proof/mutations.txt
+  s_36f8aff8cdaf05::t_c674b29c07e4d1 1-314
+packages/domain/src/contact.ts
+  s_36f8aff8cdaf05::t_063c5d1a679aea 136,140-145,149-161,165-173,187-196,201,206-212,227-235,251-265,270-271,275-279,284-291,302-313
+packages/domain/src/helper.ts
+  s_36f8aff8cdaf05::t_2af38877c9b3e3 20-25,30
+receipts/feat-contact-helper.json
+  s_36f8aff8cdaf05::t_a1ec8ea61a2459 12,41,43,45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1128dad65c7ef96680d5307e8828bc31818491bf",
+  "prompts": {},
+  "sessions": {
+    "s_36f8aff8cdaf05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a528004857a3a0bf5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
