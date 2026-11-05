@@ -36,7 +36,8 @@ export interface ExternalEnvelope {
   readonly trust: "untrusted";
 }
 
-export interface SendRequest { readonly action_id: string; readonly payload: string }
+/** 宿主交给插件的发送请求;endpoint 是首次投递时绑定的接收端,插件必须按它发,不要读自身可变状态 */
+export interface SendRequest { readonly action_id: string; readonly payload: string; readonly endpoint: string }
 export interface SendReceipt { readonly action_id: string; readonly receiptId: string }
 
 /**
@@ -78,7 +79,8 @@ export type RegisterRejection =
   | "unknown-plugin"
   | "kind-change-not-allowed"
   | "schedule-not-allowed"
-  | "plugin-dependency-not-allowed";
+  | "plugin-dependency-not-allowed"
+  | "unsupported-instance";
 export type RegisterResult = { ok: true } | { ok: false; reason: RegisterRejection; detail: string };
 
 export interface RejectedEvent { readonly index: number; readonly reason: string }
@@ -105,14 +107,19 @@ export interface DeliveryBinding {
   readonly windowMs: number;
   /** 首次投递时快照里的接收端身份 */
   readonly endpoint: string;
+  /** 首次尝试的墙钟时间(只用于展示与对账) */
   readonly firstAttemptAt: number;
+  /** 首次尝试的单调时钟读数;保留期按它算,墙钟回拨不延长窗口 */
+  readonly firstAttemptMonotonic: number;
   /** 载荷 UTF-8 字节的 sha256 */
   readonly payloadSha256: string;
 }
 
 export interface RegistryOptions {
-  /** 宿主时钟(毫秒),receivedAt 与幂等保留期都用它 */
+  /** 宿主墙钟(毫秒),receivedAt 与 firstAttemptAt 用它 */
   readonly now?: () => number;
+  /** 单调时钟(毫秒),B1 保留期用它;默认 performance.now。读数倒退时一律按结果未知处理,不重试 */
+  readonly monotonic?: () => number;
   /** await send 的上限,超时记 DeliveryUnknown */
   readonly sendTimeoutMs?: number;
 }

@@ -75,7 +75,7 @@ test("DataSource 缺 sources、空 sources、sources 非字符串、缺 pull 各
   assert.deepEqual(reg.register({ ...base, id: "ok" }), { ok: true });
 });
 
-test("OutboundChannel 缺 send、send 非函数、缺或错 idempotency、B1 缺保留期、B2 带保留期、缺 endpoint、配置不能快照各自被拒,补齐后放行", () => {
+test("OutboundChannel 缺 send、send 非函数、缺或错 idempotency、B1 缺保留期、B2 带保留期、缺 endpoint 各自被拒,补齐后放行", () => {
   const base = mail([]);
   const cases: [string, unknown][] = [
     ["缺 send", { kind: base.kind, id: "a", idempotency: "none" }],
@@ -88,7 +88,6 @@ test("OutboundChannel 缺 send、send 非函数、缺或错 idempotency、B1 缺
     ["B2 声明保留期", { ...base, id: "h", idempotency: "none", idempotencyWindowMs: 1000 }],
     ["缺 endpoint", { kind: base.kind, id: "i", idempotency: "none", send: base.send }],
     ["endpoint 不是字符串", { ...base, id: "j", endpoint: 7 }],
-    ["配置不能快照", { ...base, id: "k", client: new WeakMap() }],
   ];
   const reg = createRegistry();
   for (const [why, c] of cases) {
@@ -383,7 +382,7 @@ function provider(clock: () => number, windowMs: number, failFirst = false) {
 test("已确认的 B1 动作过了服务商保留期再调,复用已知回执,不重新产生副作用(阳性埋雷)", async () => {
   let t = T0;
   const p = provider(() => t, 1000);
-  const reg = createRegistry({ now: () => t });
+  const reg = createRegistry({ now: () => t, monotonic: () => t });
   reg.register({ kind: "outbound-channel", endpoint: "ep-main", id: "b1", idempotency: "action-id", idempotencyWindowMs: 1000, send: p.send });
   const a = await reg.send("b1", { action_id: "a", payload: "x" });
   t += 1001;
@@ -401,7 +400,7 @@ test("结果未知的 B1 只在首次尝试的保留期内重试:保留期前放
   for (const [delay, allowed] of [[999, true], [1000, false], [1001, false]] as const) {
     let t = T0;
     const p = provider(() => t, 1000, true);
-    const reg = createRegistry({ now: () => t });
+    const reg = createRegistry({ now: () => t, monotonic: () => t });
     reg.register({ kind: "outbound-channel", endpoint: "ep-main", id: "b1", idempotency: "action-id", idempotencyWindowMs: 1000, send: p.send });
     const first = await reg.send("b1", { action_id: "a", payload: "x" });
     assert.equal(first.ok === false && first.state, "delivery-unknown");
@@ -422,7 +421,7 @@ test("结果未知的 B1 只在首次尝试的保留期内重试:保留期前放
 test("B1 多次重试不刷新首次尝试时间:最后一次重试离首次已满保留期就拒绝", async () => {
   let t = T0;
   let calls = 0;
-  const reg = createRegistry({ now: () => t });
+  const reg = createRegistry({ now: () => t, monotonic: () => t });
   reg.register({ kind: "outbound-channel", endpoint: "ep-main", id: "b1", idempotency: "action-id", idempotencyWindowMs: 1000, send: async () => { calls++; throw new Error("EOF"); } });
   await reg.send("b1", { action_id: "a", payload: "x" });
   for (const step of [400, 400]) {
@@ -580,7 +579,7 @@ function endpointPlugin(failAOnce: boolean) {
 test("注册后改插件实例的 endpoint 但不 reregister,重试仍发往注册时快照的接收端,副作用只有一次(R3-03 阳性埋雷)", async () => {
   let t = T0;
   const { plugin, effects } = endpointPlugin(true);
-  const reg = createRegistry({ now: () => t });
+  const reg = createRegistry({ now: () => t, monotonic: () => t });
   reg.register(plugin);
   const first = await reg.send("mail", { action_id: "a", payload: "x" });
   assert.equal(first.ok === false && first.state, "delivery-unknown");
@@ -629,3 +628,163 @@ test("发送在途时改插件实例的 endpoint:同 action_id 被在途拦下,�
   assert.deepEqual(effects, ["A"]);
 });
 
+
+// —— 第五轮:R4-02..R4-05
+test("配置里有 Map、Set、Date 或类实例的渠道在注册时拒绝,原因指出字段(R4-02 阳性埋雷)", () => {
+  const base = { kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: async () => ({ action_id: "a", receiptId: "r" }) };
+  const cases: [string, Record<string, unknown>, RegExp][] = [
+    ["Map", { route: new Map([["dst", "A"]]) }, /route/],
+    ["Set", { tags: new Set(["a"]) }, /tags/],
+    ["Date", { since: new Date(0) }, /since/],
+    ["嵌套 Map", { cfg: { inner: new Map() } }, /cfg\.inner/],
+    ["数组里的 Map", { list: [1, new Map()] }, /list\[1\]/],
+  ];
+  for (const [why, extra, field] of cases) {
+    const reg = createRegistry();
+    const r = reg.register({ ...base, ...extra });
+    assert.equal(r.ok === false && r.reason, "unsupported-instance", why);
+    if (!r.ok) assert.match(r.detail, field, why);
+    assert.equal(reg.list().length, 0);
+  }
+});
+
+test("配置字段是 getter 的渠道在注册时拒绝(展开运算会把 getter 求值,这里直接在对象上定义)", () => {
+  const plugin = { kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: async () => ({ action_id: "a", receiptId: "r" }) };
+  Object.defineProperty(plugin, "route", { get: () => "A", enumerable: true });
+  const r = createRegistry().register(plugin);
+  assert.equal(r.ok === false && r.reason, "unsupported-instance");
+  if (!r.ok) assert.match(r.detail, /route.*getter/);
+});
+
+test("配置是普通数组与普通对象时注册成功,send 的 this 是冻结纯数据且原型为 null(R4-02 单开关对照)", async () => {
+  let seen: unknown;
+  const reg = createRegistry();
+  const plugin = {
+    kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none",
+    route: { dst: "A", hops: ["x", "y"] },
+    async send(this: unknown, q: { action_id: string }) { seen = this; return { action_id: q.action_id, receiptId: "r" }; },
+  };
+  assert.deepEqual(reg.register(plugin), { ok: true });
+  plugin.route.dst = "B";
+  plugin.route.hops.push("z");
+  await reg.send("p", { action_id: "a", payload: "x" });
+  const self = seen as { route: { dst: string; hops: string[] } };
+  assert.equal(Object.getPrototypeOf(self), null);
+  assert.equal(Object.isFrozen(self) && Object.isFrozen(self.route) && Object.isFrozen(self.route.hops), true);
+  assert.deepEqual([self.route.dst, [...self.route.hops]], ["A", ["x", "y"]]);
+  assert.throws(() => { (self.route as { dst: string }).dst = "C"; });
+});
+
+test("send 拿到的请求带绑定的 endpoint,插件按它发;原型上的配置改了不影响同一未知动作(R4-02 阳性埋雷)", async () => {
+  let t = T0;
+  const effects: string[] = [];
+  const caches: Record<string, Map<string, { action_id: string; receiptId: string }>> = { A: new Map(), B: new Map() };
+  const plugin = {
+    kind: "outbound-channel", id: "mail", idempotency: "action-id", idempotencyWindowMs: 10_000, endpoint: "A",
+    async send(q: { action_id: string; endpoint: string }) {
+      const cache = caches[q.endpoint];
+      if (!cache) throw new Error(`没有接收端 ${q.endpoint}`);
+      const hit = cache.get(q.action_id);
+      if (hit) return hit;
+      effects.push(q.endpoint);
+      const receipt = { action_id: q.action_id, receiptId: `provider-${q.endpoint}` };
+      cache.set(q.action_id, receipt);
+      if (effects.length === 1) throw new Error("A 已接收但回执丢失");
+      return receipt;
+    },
+  };
+  const reg = createRegistry({ now: () => t, monotonic: () => t });
+  reg.register(plugin);
+  await reg.send("mail", { action_id: "a", payload: "x" });
+  plugin.endpoint = "B";
+  t += 1000;
+  const retry = await reg.send("mail", { action_id: "a", payload: "x" });
+  assert.equal(retry.ok && retry.receipt.receiptId, "provider-A");
+  assert.deepEqual(effects, ["A"]);
+});
+
+test("继承原型的实例渠道注册时拒绝,原型后改不可能影响已注册版本(R4-02)", () => {
+  const proto = { endpoint: "A", async send(q: { action_id: string }) { return { action_id: q.action_id, receiptId: "r" }; } };
+  const inst = Object.assign(Object.create(proto), { kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: proto.send });
+  const r = createRegistry().register(inst);
+  assert.equal(r.ok === false && r.reason, "unsupported-instance");
+  const plain = createRegistry().register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: proto.send });
+  assert.deepEqual(plain, { ok: true });
+});
+
+test("带私有字段的类实例渠道在注册时拒绝并说明理由,不会注册成功后发送必然失败(R4-03)", () => {
+  class Mail {
+    kind = "outbound-channel"; id = "m"; endpoint = "M"; idempotency = "none";
+    #credential = "handle";
+    async send(q: { action_id: string }) { return { action_id: q.action_id, receiptId: this.#credential }; }
+  }
+  const reg = createRegistry();
+  const r = reg.register(new Mail());
+  assert.equal(r.ok === false && r.reason, "unsupported-instance");
+  if (!r.ok) assert.match(r.detail, /类实例.*私有字段/);
+  assert.equal(reg.list().length, 0);
+});
+
+test("B1 窗口按单调时钟算:墙钟回拨不延长窗口,单调时钟到期就拒绝重试(R4-04 阳性埋雷)", async () => {
+  let wall = T0, mono = 0, calls = 0;
+  const reg = createRegistry({ now: () => wall, monotonic: () => mono });
+  reg.register({ kind: "outbound-channel", endpoint: "C", id: "c", idempotency: "action-id", idempotencyWindowMs: 1000, send: async () => { calls++; throw new Error("回执丢失"); } });
+  await reg.send("c", { action_id: "a", payload: "x" });
+  mono = 1001;
+  wall = T0 - 1;
+  const r = await reg.send("c", { action_id: "a", payload: "x" });
+  assert.equal(r.ok === false && r.reason, "retry-window-expired");
+  assert.equal(calls, 1);
+});
+
+test("墙钟大幅前跳不影响单调窗口:单调时钟未到期仍可重试(R4-04 单开关对照)", async () => {
+  let wall = T0, mono = 0, calls = 0;
+  const reg = createRegistry({ now: () => wall, monotonic: () => mono });
+  reg.register({ kind: "outbound-channel", endpoint: "C", id: "c", idempotency: "action-id", idempotencyWindowMs: 1000,
+    send: async (q: { action_id: string }) => { calls++; if (calls === 1) throw new Error("回执丢失"); return { action_id: q.action_id, receiptId: "r" }; } });
+  await reg.send("c", { action_id: "a", payload: "x" });
+  wall = T0 + 10 * 24 * 3600_000;
+  mono = 999;
+  const r = await reg.send("c", { action_id: "a", payload: "x" });
+  assert.equal(r.ok && r.state, "confirmed");
+  assert.equal(calls, 2);
+});
+
+test("单调时钟读数倒退时按结果未知处理,不重试", async () => {
+  let mono = 500, calls = 0;
+  const reg = createRegistry({ now: () => T0, monotonic: () => mono });
+  reg.register({ kind: "outbound-channel", endpoint: "C", id: "c", idempotency: "action-id", idempotencyWindowMs: 1000, send: async () => { calls++; throw new Error("回执丢失"); } });
+  await reg.send("c", { action_id: "a", payload: "x" });
+  mono = 499;
+  const r = await reg.send("c", { action_id: "a", payload: "x" });
+  assert.equal(r.ok === false && r.reason, "retry-window-expired");
+  assert.equal(calls, 1);
+  assert.equal(reg.delivery("c", "a")?.binding.firstAttemptMonotonic, 500);
+});
+
+test("渠道 id 与 action_id 含 NUL 等任意字符时账本不碰撞,各渠道各自真发(R4-05 阳性埋雷)", async () => {
+  const calls: string[] = [];
+  const reg = createRegistry();
+  for (const [id, ep] of [["a", "A"], ["a\0b", "B"], ["a\0", "C"]] as const) {
+    assert.deepEqual(reg.register({ kind: "outbound-channel", id, endpoint: ep, idempotency: "none", send: async (q: { action_id: string }) => { calls.push(`${ep}:${q.action_id}`); return { action_id: q.action_id, receiptId: ep }; } }), { ok: true });
+  }
+  const r1 = await reg.send("a", { action_id: "b\0c", payload: "x" });
+  const r2 = await reg.send("a\0b", { action_id: "c", payload: "x" });
+  const r3 = await reg.send("a\0", { action_id: "b\0c", payload: "x" });
+  assert.deepEqual([r1.ok && r1.deduplicated, r2.ok && r2.deduplicated, r3.ok && r3.deduplicated], [false, false, false]);
+  if (r2.ok) assert.deepEqual(r2.receipt, { action_id: "c", receiptId: "B" });
+  assert.deepEqual(calls, ["A:b\0c", "B:c", "C:b\0c"]);
+  assert.equal(reg.delivery("a\0b", "c")?.binding.endpoint, "B");
+  assert.equal(reg.delivery("a", "b\0c")?.binding.endpoint, "A");
+  assert.equal(reg.delivery("a\0b", "b\0c"), undefined);
+});
+
+test("同一渠道同一 action_id 仍去重(R4-05 单开关对照)", async () => {
+  const calls: string[] = [];
+  const reg = createRegistry();
+  reg.register({ kind: "outbound-channel", id: "a\0b", endpoint: "B", idempotency: "none", send: async (q: { action_id: string }) => { calls.push(q.action_id); return { action_id: q.action_id, receiptId: "B" }; } });
+  await reg.send("a\0b", { action_id: "c", payload: "x" });
+  const again = await reg.send("a\0b", { action_id: "c", payload: "x" });
+  assert.equal(again.ok && again.deduplicated, true);
+  assert.deepEqual(calls, ["c"]);
+});

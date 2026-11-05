@@ -105,14 +105,15 @@ test("引用不存在的消息序号显式失败", () => {
   const r = assemble(history(), opts({ quotes: [99] }));
   assert.deepEqual(r, { ok: false, reason: "quote-not-found", seq: 99 });
 });
-test("把最近 25 条、时间、消息序号、任务号或新消息原文注入 stable 段都报错(AC-39 阳性埋雷)", () => {
+test("把最近 25 条、时间、消息序号、任务号注入 stable 段都报错(AC-39 阳性埋雷)", () => {
   const injected: [string, string][] = [
     ["system", "以下是最近 25 条消息:……"],
     ["system", "当前时间 2026-11-05"],
     ["persona", "现在是 13:40,注意时效"],
     ["persona", "上一条是 #9,记得回"],
     ["tools", "当前任务 T-12 进行中"],
-    ["persona", "用户刚说:闲聊第10句"],
+    ["system", "现在是2026年11月5日"],
+    ["persona", "以下最近 3 条:……"],
   ];
   for (const [kind, text] of injected) {
     const stable = STABLE.map((p) => (p.kind === kind ? { kind: p.kind, text: `${p.text}\n${text}` } : p));
@@ -284,10 +285,26 @@ test("用户自然复述固定提示词里的话不再误拦(R3-04 阴性对照)
   assert.ok(serialize(r.request).includes("#1 user:u1: 帮助用户"));
 });
 
-test("stable 段自身写了新消息字样仍拦下,不管会话里有没有消息(单开关对照)", () => {
-  const stable = [{ kind: "system", text: "你是群聊助手。用户刚说:帮助用户" }] as const;
-  const r = assemble(emptyLog(), { stable, quotes: [], budgetBytes: BIG });
-  assert.equal(r.ok === false && r.reason, "volatile-in-stable");
+test("不含动态值的通用规则不误拦:新消息、刚才、最近、任务这类普通词都放行(R4-06 阴性对照)", () => {
+  for (const text of ["收到新消息后,先遵守群规。", "用户刚说的话要先确认再执行。", "只看最近的上下文,不要翻旧账。", "接到任务先复述目标。", "回复保持 3 句以内。"]) {
+    const r = assemble(emptyLog(), { stable: [{ kind: "system", text }], quotes: [], budgetBytes: BIG });
+    assert.equal(r.ok, true, text);
+  }
+});
+
+test("同一条规则只多一个动态值就拦下:日期、时刻、消息序号、任务号、带数字的最近 N 条(R4-06 单开关对照)", () => {
+  const cases: [string, RegExp][] = [
+    ["收到新消息后,先遵守群规。今天是 2026-11-05", /日期/],
+    ["收到新消息后,先遵守群规。现在 09:30", /时刻/],
+    ["收到新消息后,先遵守群规。参见 #42", /消息序号/],
+    ["收到新消息后,先遵守群规。当前 T-7", /任务号/],
+    ["收到新消息后,先遵守群规。附最近 25 条", /最近 N 条/],
+  ];
+  for (const [text, why] of cases) {
+    const r = assemble(emptyLog(), { stable: [{ kind: "system", text }], quotes: [], budgetBytes: BIG });
+    assert.equal(r.ok === false && r.reason, "volatile-in-stable", text);
+    if (!r.ok && r.reason === "volatile-in-stable") assert.match(r.match, why);
+  }
 });
 
 test("固定段顺序必须是 system → tools → persona,倒序、重复、未知段、缺 system 都拒(R3-05 阳性埋雷)", () => {
@@ -339,4 +356,118 @@ test("会变状态原文逐字出现在 tail 末段;空字符串不产生段(R3-
   assert.deepEqual(r.request.segments.at(-1), { section: "tail", label: "volatile", text: "[当前状态]\n必须停止发送\n任务表:无\n", bytes: Buffer.byteLength("[当前状态]\n必须停止发送\n任务表:无\n"), cacheBreakpoint: false });
   const empty = ok(assemble(history(), opts({ volatile: "" })));
   assert.equal(empty.request.segments.some((s) => s.label === "volatile"), false);
+});
+
+// —— 第五轮:R4-01、R4-07
+const S = [{ kind: "system", text: "助手规则" }] as const;
+function retractedLog(text: string): Log {
+  let log = append(emptyLog(), user, { kind: "message", text }, at);
+  log = append(log, user, { kind: "retract", target: 1 }, at);
+  return log;
+}
+
+test("撤回的短原文(1 到 4 字)出现在会变状态里也显式失败,没有长度阈值(R4-01 阳性埋雷)", () => {
+  for (const text of ["否", "不行", "不同意", "秘密口令"]) {
+    const r = assemble(retractedLog(text), { stable: S, quotes: [], volatile: `状态:${text}`, budgetBytes: BIG });
+    assert.deepEqual(r, { ok: false, reason: "retracted-text-leaked", where: "volatile", seq: 1 }, text);
+  }
+});
+
+test("撤回原文中间夹了空白也算命中:空白规范化后比对", () => {
+  const r = assemble(retractedLog("秘密口令"), { stable: S, quotes: [], volatile: "状态:秘 密\n口令", budgetBytes: BIG });
+  assert.deepEqual(r, { ok: false, reason: "retracted-text-leaked", where: "volatile", seq: 1 });
+});
+
+test("会变状态不含撤回原文时照常装配,短原文只是没出现(单开关对照)", () => {
+  const r = ok(assemble(retractedLog("不同意"), { stable: S, quotes: [], volatile: "状态:同意", budgetBytes: BIG }));
+  assert.ok(serialize(r.request).includes("状态:同意"));
+  assert.equal(serialize(r.request).includes("不同意"), false);
+});
+
+test("撤回原文出现在 stable、压缩块、其他消息里都在最终请求边界拦下,并指出位置", () => {
+  const leakStable = assemble(retractedLog("不同意"), { stable: [{ kind: "system", text: "规则:不同意就停" }], quotes: [], budgetBytes: BIG });
+  assert.deepEqual(leakStable, { ok: false, reason: "retracted-text-leaked", where: "stable", seq: 1 });
+  const leakBlock = assemble(retractedLog("不同意"), { stable: S, quotes: [], budgetBytes: BIG, compressed: { throughSeq: 1, builtAtSeq: 2, text: "用户不同意" } });
+  assert.deepEqual(leakBlock, { ok: false, reason: "retracted-text-leaked", where: "compressed", seq: 1 });
+  const log = append(retractedLog("不同意"), contact, { kind: "message", text: "收到,你不同意" }, at);
+  const leakHistory = assemble(log, { stable: S, quotes: [], budgetBytes: BIG });
+  assert.deepEqual(leakHistory, { ok: false, reason: "retracted-text-leaked", where: "history", seq: 1 });
+});
+
+test("被引用的消息在 tail 里复述了撤回原文也拦下", () => {
+  let log = append(emptyLog(), user, { kind: "message", text: "不同意" }, at);
+  log = append(log, contact, { kind: "message", text: "他说不同意" }, at);
+  log = append(log, user, { kind: "retract", target: 1 }, at);
+  const r = assemble(log, { stable: S, quotes: [2], budgetBytes: BIG, compressed: { throughSeq: 2, builtAtSeq: 3, text: "旧事" } });
+  assert.deepEqual(r, { ok: false, reason: "retracted-text-leaked", where: "tail", seq: 1 });
+});
+
+test("宿主加的序号与发言者标签不参与扫描:撤回原文恰好是标签片段也不误拦", () => {
+  let log = append(emptyLog(), user, { kind: "message", text: "u1" }, at);
+  log = append(log, user, { kind: "retract", target: 1 }, at);
+  log = append(log, user, { kind: "message", text: "下一步" }, at);
+  const r = ok(assemble(log, { stable: S, quotes: [], budgetBytes: BIG }));
+  assert.ok(serialize(r.request).includes("#3 user:u1: 下一步"));
+});
+
+test("recompress 改不了交给它的消息,引用页入仍是日志里的原文(R4-01 阳性埋雷)", () => {
+  const secret = "这是需要撤回的密码";
+  let log = append(emptyLog(), user, { kind: "message", text: "真正的用户指令" }, at);
+  log = append(log, user, { kind: "message", text: secret }, at);
+  log = append(log, user, { kind: "retract", target: 2 }, at);
+  let threw = false;
+  const r = ok(assemble(log, {
+    stable: S, quotes: [1], budgetBytes: BIG, compressed: { throughSeq: 2, builtAtSeq: 2, text: "旧摘要" },
+    recompress: (_n, visible) => {
+      try { (visible[0] as { text: string }).text = secret; } catch { threw = true; }
+      try { (visible[0]?.sender as { id: string }).id = "攻击者"; } catch { threw = true; }
+      return "安全摘要";
+    },
+  }));
+  assert.equal(threw, true, "冻结的副本赋值会抛错");
+  const body = serialize(r.request);
+  assert.equal(body.includes(secret), false);
+  assert.equal(body.includes("攻击者"), false);
+});
+
+test("recompress 拿到的是冻结深拷贝,内容与可见消息逐字一致", () => {
+  let log = append(emptyLog(), user, { kind: "message", text: "甲" }, at);
+  log = append(log, contact, { kind: "message", text: "乙" }, at);
+  log = append(log, user, { kind: "retract", target: 1 }, at);
+  let got: unknown;
+  const r = ok(assemble(log, { stable: S, quotes: [], budgetBytes: BIG, compressed: { throughSeq: 2, builtAtSeq: 2, text: "甲乙" }, recompress: (_n, v) => { got = v; return "乙"; } }));
+  assert.deepEqual(r.compressed, { throughSeq: 2, builtAtSeq: 3, text: "乙" });
+  assert.equal(serialize(r.request).includes("甲"), false);
+  const v = got as readonly { seq: number; sender: object; text: string }[];
+  assert.equal(Object.isFrozen(v) && Object.isFrozen(v[0]) && Object.isFrozen(v[0]?.sender), true);
+  assert.deepEqual(v.map((m) => [m.seq, m.text]), [[2, "乙"]]);
+});
+
+test("recompress 抛错时显式失败,不把半成品当压缩块", () => {
+  const r = assemble(retractedLog("不同意"), { stable: S, quotes: [], budgetBytes: BIG, compressed: { throughSeq: 1, builtAtSeq: 1, text: "旧" }, recompress: () => { throw new Error("压缩器坏了"); } });
+  assert.equal(r.ok === false && r.reason, "invalid-compressed");
+  if (!r.ok && r.reason === "invalid-compressed") assert.match(r.detail, /压缩器坏了/);
+});
+
+test("撤回前多次编辑的每个版本出现在会变状态或压缩块里都拦下(R4-07 阳性埋雷)", () => {
+  let log = append(emptyLog(), user, { kind: "message", text: "最初的旧内容" }, at);
+  log = append(log, user, { kind: "edit", target: 1, text: "第二版内容" }, at);
+  log = append(log, user, { kind: "edit", target: 1, text: "新的非常机密内容" }, at);
+  log = append(log, user, { kind: "retract", target: 1 }, at);
+  for (const v of ["最初的旧内容", "第二版内容", "新的非常机密内容"]) {
+    const a = assemble(log, { stable: S, quotes: [], volatile: v, budgetBytes: BIG });
+    assert.deepEqual(a, { ok: false, reason: "retracted-text-leaked", where: "volatile", seq: 1 }, v);
+    const b = assemble(log, { stable: S, quotes: [], budgetBytes: BIG, compressed: { throughSeq: 3, builtAtSeq: 4, text: `摘要:${v}` } });
+    assert.deepEqual(b, { ok: false, reason: "retracted-text-leaked", where: "compressed", seq: 1 }, v);
+  }
+});
+
+test("恰好 4 字与 3 字的撤回原文都拦,未撤回的同样文字照常(R4-07 边界对照)", () => {
+  for (const text of ["秘密口令", "三个字"]) {
+    const r = assemble(retractedLog(text), { stable: S, quotes: [], volatile: text, budgetBytes: BIG });
+    assert.equal(r.ok === false && r.reason, "retracted-text-leaked", text);
+    const kept = append(emptyLog(), user, { kind: "message", text }, at);
+    const k = assemble(kept, { stable: S, quotes: [], volatile: text, budgetBytes: BIG });
+    assert.equal(k.ok, true, text);
+  }
 });
