@@ -1,0 +1,20 @@
+cwd: /var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/cc-smoke-qlM1LB
+hostEnv 键: ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN, ANTHROPIC_DEFAULT_OPUS_MODEL, ANTHROPIC_DEFAULT_SONNET_MODEL, ANTHROPIC_DEFAULT_HAIKU_MODEL, ANTHROPIC_SMALL_FAST_MODEL, ANTHROPIC_API_KEY(值不打印)
+manifest: {"computeId":"cc-5ebdd229-2dbf-4a19-9a1f-b8651ba13ea2","sections":[{"name":"task","detail":{"text":"在当前目录完成两个阶段:阶段1 创建 a.txt 写入 hello;阶段2 创建 b.txt 写入 a.txt 内容的大写。每完成一个阶段用 report_progress 报 milestone,开始时报 started 并带 constraintVer=1,最后报 completed。"}},{"name":"rules","detail":{"items":["只在当前目录内写文件"]}},{"name":"credentialRefs","detail":{"refs":["vault://smoke/none"]}}],"allowedTools":["Read","Write","mcp__host__report_progress"],"credentialRefs":["vault://smoke/none"],"placement":"local"}
+超时 480000ms,调用 stop
+event: {"computeId":"cc-5ebdd229-2dbf-4a19-9a1f-b8651ba13ea2","kind":"started","sessionId":"678aa63d-d414-4842-aba7-d1ca0377cc63","resumed":false}
+event: {"computeId":"cc-5ebdd229-2dbf-4a19-9a1f-b8651ba13ea2","kind":"stopped","code":143,"signal":null}
+snapshot: {"ok":false,"reason":"交接快照缺约束版本 constraintVer(非负整数),不能只有流畅文字"}
+a.txt: (不存在)
+b.txt: (不存在)
+耗时 480s,终态 stopped
+exit=2
+
+## 失败诊断(2026-11-05T14:23:10Z,claude 2.1.316 (Claude Code))
+smoke 本身没跑通:真实 CLI 只产出 system/init,模型请求一直 503 重试,480s 后适配器 stop。
+为区分是适配器的精简 env 还是网关本身,另跑三次最小调用 claude -p "只回复 ok" --tools "" --permission-mode dontAsk --output-format stream-json --verbose,各 timeout 150s:
+- bare: exit=124(timeout); 2 "subtype":"api_retry"; 1 "subtype":"init";  2 "error_status":503;
+- nobare: exit=124(timeout); 2 "subtype":"api_retry"; 1 "subtype":"hook_response"; 1 "subtype":"hook_started"; 1 "subtype":"init";  2 "error_status":503;
+- full: exit=124(timeout); 2 "subtype":"api_retry"; 1 "subtype":"hook_response"; 1 "subtype":"hook_started"; 1 "subtype":"init";  2 "error_status":503;
+bare=env -i 精简环境加 --bare;nobare=同样精简环境不加 --bare;full=完整继承本会话环境。三者都是 503,判定为网关当时不可用,不是适配器参数或 env 问题。
+这次 smoke 实际证明的只有:真实 CLI 接受适配器拼出的参数并输出 init(started 事件来自真实 session_id);stop 对真实 claude 进程发 SIGTERM 后进程以 143 退出,之后才产出 stopped。milestone/completed/快照在真实 CLI 上未验证。
