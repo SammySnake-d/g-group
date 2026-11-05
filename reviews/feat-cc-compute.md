@@ -96,3 +96,109 @@
 - 收据原有 AC-07 / AC-33 / V-06 的“未测”不改写为通过。R-02 与本轮具名红绿复现相符；原始 G-STUB 对 R-03 报通过；R-05 的 15 个具体变异已复现，但空白名单新变异存活，不能把那 15 个结果扩大成所有工具子判据已充分标定。
 
 **返修后复审边界：** 保留原作者收据的其他字段；修复 F-01–F-04，补真正检出反例的测试和双侧标定。真实 CLI 模型不可用时继续标记未测，不能用假 CLI 或一次 init 冒充真实完整执行；跨厂商审查与最终门禁重新对准新 hash。
+
+---
+
+## 第二轮（2026-11-06）：返修后的独立复审
+
+**结论：reject，继续交回 Claude Code 返修。** 首轮原有 12 项独立反例已经转绿，普通同进程组的回收和原 M17 空白名单变异也已复现修复；但受阻状态仍可被错误清除并继续产生副作用，汇报 MCP 缺失或 init 信息不完整时也可未经核验而完成。`stopped` 对主动脱离进程组的后代仍不成立，且快照接口没有保证调用时已静止。以下区分了新发现与作者已披露的边界。
+
+### 1. 复审身份和范围
+
+- 产品 HEAD `2a4d3872873de0867dd4993192b53bdf8aea315f`，基线 `origin/feat/domain-core` 的 `afd02560f9546147da380382404eb6106222a9b8`；红 `fbac6de76e8fd064a655194a60e4b1be75d86a90`，绿 `98713f64e7a745636d4afe44c4b0c79e952543e6`。
+- 普通独立 clone `/tmp/g-group-pr7-r2-review-codex-592ebd7a`；红与单点变异在另两个普通独立副本。审查会话仍是 `codex:592ebd7a-e738-43bd-a331-069366648d54`，本轮原生 `turn_context.model` 为 `gpt-6.1-terra`（OpenAI）；作者会话中涉及该仓库的产出轮次均为 Claude/Anthropic。没有使用豁免。
+- 根目录实跑 `node scripts/gates/run-all.ts --hash --branch=feat/cc-compute --base=origin/feat/domain-core`，原样输出：
+
+  ```text
+  6ff1111788cf671b820f18852a067c887207cc24abc96eed27a3f2b60e9924f1
+  ```
+
+- 本轮活动尚未结束，新增 hash 调用对应的本轮会话记录此时尚未落盘；不宣称本轮 G-PROVENANCE 已通过，不伪造记录。
+
+### 2. 首轮四项修复实测及剩余问题
+
+| 首轮项 | 独立观察 | 本轮判断 |
+|---|---|---|
+| F-01 | `default` 等控制词被拒；空白名单传空串；声明越界的 init 会触发 failed。原 M17 单点变异类型检查通过、32 项中 2 项具名失败 | 这几条反例已修；init 缺失、无效或汇报工具未挂载仍会通过，见 RR-02 |
+| F-02 | 明确 `failed` 与 `is_error:true` 已映射为 failed；非法 blocked 未重报、无其他报告时也 failed | 换一个 unrelated completed 即可清掉拒收，受理的 blocked 也可在同一轮自行解除，见 RR-01；停止与违规优先级另见 RR-05 |
+| F-03 | 原先同组孙进程测试已转绿：在 stopped/正常 completed 前回收，之后中性标记不出现 | 作者披露的脱组边界可复现，不能据此承诺整棵执行树停了；运行中快照也未强制静止，见 RR-03/RR-04 |
+| F-04 | MCP 直连 `needs:1` / `stage:1` 均拒收；回执伪称接受时适配器也拒收；非法 blocked 被记录 | 原反例已修；共用 schema 同错会一起失效的边界仍存在 |
+
+### RR-01 [P1] 受阻报告未重报或已经受理后，仍可在同一轮继续并误报完成
+
+位置：`packages/adapter-cc-compute/src/adapter.ts:106-119,151-157,173-181`；验收文档 V-06 与原型报告要求受阻带 needs 并停下。
+
+1. **拒收后被其他种类清除。** 假 CLI 经真实 MCP 发送 `{kind:'blocked',summary:'等待条件',needs:1}`，服务器拒收并记录；随后仅发合法 `{kind:'completed',summary:'结束'}`，**没有重报 blocked**，CLI 正常退出且 result 为“尚未完成”。实际事件为 `[started, completed]`，而 `rejectedReports` 仍含 blocked。`absorb` 对任何合法 completed 都清空 `round.rejectedStop`，与“blocked/failed 被拒收且未重报不算完成”不符。对照：只发非法 blocked 时终态确为 failed。
+2. **受理后仍能执行。** 使用现有假 CLI、真实 MCP 和同组孙进程，先合法汇报 `{kind:'blocked',needs:'需要用户确认',...}`，在没有任何用户续接前等 1.2 秒，孙进程已写出 `outside-marker.txt`；最后由审查脚本 stop 清理。另一条纯事件反例为 `[started, blocked, milestone, completed]`，result 为“尚未完成”：一次 milestone 就把 `blockedOpen` 清掉。模型被提示“blocked 后停止”不是机械保证。
+
+**要求：** 对拒收报告按种类/实例保留未解决状态，只有符合约定的重报或由宿主授权的明确解除才能消除；已受理 blocked 后必须保证不继续执行或产生副作用，除非通过明确的宿主 resume/解除流程。保留成功执行中 milestone 可漏报、正常 resume 可完成的对照。标记文件只是临时中性文件，没有伪造密钥/凭据文件。
+
+### RR-02 [P1] 汇报工具未连接或 init 无法核验，仍可报告完成
+
+位置：`src/events.ts:43-45,65` 与 `src/adapter.ts:142-150,166-181`。当前 init 把缺失/非数组 tools 转成 `[]`，把非字符串元素过滤掉；终态没有要求曾收到有效、完整的 init 或 `report_progress`。
+
+- **真实 CLI 初始化观察：** Claude Code 2.1.316、隔离临时 HOME、无凭据、回环不可达地址，使用原样 `cliArgs` 并让 host MCP 以 `/usr/bin/false` 退出；真实 init 给出 `tools:['Read']`、`mcp_servers:[{name:'host',status:'failed',source:'dynamic'}]`，真实 CLI 并不会因 MCP 启动失败而在 init 前终止。
+- **适配器独立反例：** 将上述同形 init（含 failed MCP）和 CLI `success` 结果交给注入式 runner，实际 `[started, completed]`，尽管没有 `mcp__host__report_progress`。分别省略 init、init 缺 tools、tools 含非字符串，实际也可完成；完整且不越界的 init 对照完成。这里的成功 result 来自注入式 runner，不冒称真实网关/模型完成。
+
+**要求：** 未收到可校验的 init、工具列表形状不合规、必须的 report MCP 未实际挂载/连接，应以明确失败处理并回收，而非把未知清单视作空集。补真实初始化失败与适配器同形事件流两层测试；不要仅检测列表里已出现的越界名字。
+
+### RR-03 [P1 / 首轮 F-03 尚未完整关闭] 后代脱离进程组时，stopped 之后仍可产生副作用
+
+位置：`src/adapter.ts:47-71,125-126,166-175,225-233`。作者第 7 栏已明确披露此限制，本轮不是把它冒充为未披露问题。
+
+只切换孙进程的 `detached` 开关：同组对照在 stopped 后标记不存在；另建 session 的子进程在 `stop` 返回 `{ok:true}` 且事件为 stopped 时仍存活，1.2 秒后实际写出 `outside-marker.txt`。所有测试子进程由审查脚本在退出前自行结束/清理。复现使用可注入 runner、真实 POSIX 进程和中性标记，不声称在本轮真实 Claude 模型调用中已复现。
+
+首轮审查对 F-03 的要求是 stopped 后不能再有该执行的下游副作用；当前只保证未脱组的进程，`Bash` 已在本适配器可授权清单内，另建会话/托管并非类型上不可能。**要求：** 在把 stopped 用作整体停止或交接前提时，提供可验证的会话/容器/宿主隔离等边界，或取得用户对更窄语义的明确决定并阻止内核把它当全树静止；仅在收据披露不等于首轮完整关闭。Windows 仍未测。
+
+### RR-04 [P1 / AC-07 边界] 运行中的 Compute 也能返回成功交接快照
+
+位置：`src/adapter.ts:187-205,247-250`。用合法 handoff 的 `constraintVer:1` 启动仍在运行且其同组孙进程也存活的 runner，立即调用 `snapshot()`，返回 `{ok:true,snapshot:{constraintVer:1,openQuestions:[],doneSideEffects:[]}}`，没有等待停止或进程组退空。独立断言“最终交接快照不得在活动进程上成功”失败。
+
+这直接限制了收据中“快照取的是进程树静止后的状态”的表述：本包没有保证调用顺序，快照的内容仍是 Compute 自报；AC-07 的负责人和副作用账也仍未接线，整项继续未测。**要求：** 对最终交接快照提供机械的静止/代次前置条件，或将运行中结果显式标为非最终快照并要求内核证明停止后再取；同时覆盖组未退空的失败路径和停止竞态。
+
+### RR-05 [P2 / 声明的终态优先级不一致] 用户 stop 与工具越界并存时实际报 failed
+
+位置：`src/events.ts:84-88`。本轮提交和收据声明“停止 > 适配器违规”，但 `terminalFor` 只有 `stopRequested && fault === undefined` 才返回 stopped。独立真实子进程先 init 自报越界 Bash 并忽略 SIGTERM，随后用户 `stop` 返回 `{ok:true}`；实际终态是带越界原因的 failed，不是声明的 stopped。纯函数和进程链两种反例一致。
+
+**要求：** 明确并实现同一套对外状态优先级，同时保留违规作为可审计事实；若认为违规应高于停止，需让请求方确认并同步契约/收据。进程组未收干净必须 failed 的明确例外不能被普通停止掩盖。
+
+### RR-06 [P2 / 标定执行可靠性] M18 反例使测试进程长期不退出，缺少失败清理
+
+位置：`src/adapter.test.ts:115-130`、`proof/mutations.mjs` 的 M18 和 `run()`。作者原脚本的原样副本 32 项通过，M01–M17 均产生具名失败；到 M18（禁用 init 越界核对）时，本轮 Node 25 的 `node --test --test-timeout=20000` 进程仍在运行，至少经过 2 分 49 秒，测试 worker 及其 `hang:graceful` 假 CLI 仍存活且脚本没有输出该变异的结果。该测试在 `within(...)` 超时断言失败后没有 `finally` 回收被测假 CLI；单条测试的超时不等于测试进程和后代已退出。脚本外层 `spawnSync` 配置的是 300 秒超时，未等待到该上限，因此不能断言它到上限后的最终表现。
+
+为避免继续占用共享机器，只对可确认属于本轮临时变异目录的进程发送终止信号；脚本退出 143，已确认这些进程退出。**M18–M31 本轮没有完成复现，不将作者 31/31 的说法当作本轮观察，也不因此断定作者记录虚假。** 本轮独立完成的六种变异和 M17 结果见下表。
+
+**要求：** 即使阳性变异使断言失败或超时，也在 `finally` 中回收该测试自己创建的进程树；为完整测试进程设有界超时并校验清理，不把超时/强杀/部分执行误计为按名杀死。不得清理其他会话的进程。
+
+### 3. 独立执行与双侧标定
+
+| 项目 | 实际观察 |
+|---|---|
+| 绿提交 `npm ci`、typecheck、lint、全仓 test | 全部退出 0；test 为 55/55，0 跳过 |
+| 红提交独立 clone、`npm ci`、本包测试 | 安装退出 0；测试退出 1，32 条按名称失败、0 跳过；32 个名字均在绿版通过；红绿测试、假 CLI、MCP 服务器文件 diff 为空 |
+| 首轮 `/tmp/g-group-pr7-independent-probes.mjs` 换到本轮产品副本后重放 | 12/12 通过；覆盖首轮四项及其对照，不代表本轮新反例通过 |
+| 本轮新增独立反例 | 15 项中 4 项对照通过、11 项断言失败，0 跳过；同一根因可能对应多个输入，详见 RR-01–RR-05 |
+| 真实 smoke | 本会话未设置 Anthropic 模型/网关环境；运行一次 `SMOKE_TIMEOUT_MS=20000 node packages/adapter-cc-compute/smoke/real-claude.mjs`，20 秒超时后 stopped、退出 2；无汇报/文件/快照，定向检查无本次 report-mcp 残留。本轮没有观察到 503，不推断网关当前状态 |
+| 填本轮审查前 `run-all --local` | 退出 1；G-REVIEW 因首轮 reject 与旧 hash 拦截，其余包括旧轮次 G-PROVENANCE 通过。这个通过不等于本轮 hash 已完成来源核验 |
+| 填本轮 reject 后 `run-all --local` | 退出 1；G-REVIEW 正确因 reject 拦截；G-PROVENANCE 暂因本轮 hash 调用未落盘而找不到匹配轮次，随后厂商也显示认不出。不能把旧轮次的通过当本轮通过 |
+| Node 22.22.0 兼容性抽查 | 真实 MCP JSON-RPC schema 的 1 条具名测试退出 0；不是 Node 22 下全仓测试 |
+| 作者原 31 个变异完整重放 | 原样 32 绿，M01–M17 有具名失败；M18 测试进程至少 2 分 49 秒未退出，主动清理本轮进程后脚本退出 143；M18–M31 未完成复现，详见 RR-06 |
+
+本轮单点变异使用另一个完整 clone，每项修改仅一处，测试运行结束才恢复源文件；六次 typecheck 均退出 0。前五项运行对应原有具名测试，最后一项运行完整本包 32 项与独立反例：
+
+| 条件/单点改坏 | 现有测试 | 独立输入 |
+|---|---|---|
+| AC-33：放行 `default` | 对应具名测试失败 | 默认控制词拒绝是原样对照 |
+| AC-07：放行缺 constraintVer | 对应具名测试失败 | 缺版本被拒、完整快照进入提示/清单 |
+| V-06：忽略 accepted failed | 对应具名测试失败 | failed + CLI success 不得 completed |
+| stop：禁用 SIGKILL 升级 | 对应具名测试失败 | 无视 SIGTERM 的目标在超时后被测试清理 |
+| schema：`needs` 只检查真假 | MCP JSON-RPC 具名测试失败 | 数字 needs 被拒，合法字符串接收 |
+| **新变异：在已有 cleared 条件外，额外让 `started` 清除尚未重报的 blocked** | **32/32 通过，变异存活** | 非法 blocked → 合法 started → CLI success 的独立断言失败；原版同输入 failed |
+
+另独立复跑 M17：仅将空集的 `--tools ''` 改为 `default`，类型检查退出 0，本包 32 条全部执行、30 绿 2 条按名红。单点变异输出与反例脚本在 `/tmp/g-group-pr7-r2-mutations/`、`/tmp/g-group-pr7-r2-independent-probes.mjs`；临时路径不是永久证据，上文已给输入与实际结果。
+
+### 4. 未测与接线边界
+
+- AC-07、AC-33④、V-06 的整体状态仍为未测；不得以模拟 CLI、init 自报或原型的 10 次实验冒充本适配器的真实完整模型执行。原型确实允许 milestone 漏报，宿主以最终完成补齐/标注；其 blocked 样本为请求用户条件后停止，而 CLI result 的 subtype 仍是 success。
+- 本轮中性环境对照仍证明 `hostEnv` 显式内容会进入子进程，不证明内核不会放明文；没有伪造凭据文件，也没有取用真实凭据。`--bare` 不读取 auto-memory/CLAUDE.md 的真实模型上下文、真实授权外工具调用、Windows 及跨厂商状态机完整接线仍未验证。
+- 仅修改本报告的“第二轮”追加段和收据 `review`；具体问题修复由作者进行。返修后应对新 hash 再做跨厂商复审，不把暂时缺测或错误终态标绿。

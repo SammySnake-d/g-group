@@ -47,7 +47,7 @@
     "session": "codex:592ebd7a-e738-43bd-a331-069366648d54",
     "model": "gpt-6.1-terra",
     "verdict": "reject",
-    "reviewed_hash": "7402e18b7d5c9157a0328d74b35b050d2bb0a077a6f3e2cce13714803e946d33",
-    "notes": "独立复现发现真实 CLI 默认工具集扩张、失败误报完成、停止后子进程树仍可执行、汇报 schema 漏校验及空工具名单变异存活；详见 reviews/feat-cc-compute.md。"
+    "reviewed_hash": "6ff1111788cf671b820f18852a067c887207cc24abc96eed27a3f2b60e9924f1",
+    "notes": "第二轮 reject：受阻可被错误解除、MCP 缺失时仍完成、脱组后代与运行中快照不保证静止；现有测试有单点变异存活，作者变异重放在 M18 挂起。详见 reviews/feat-cc-compute.md 第二轮。"
   }
 }
