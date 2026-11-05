@@ -2,12 +2,14 @@
 // 按 stream-json 输出,并按 --mcp-config 真的起 report_progress MCP 服务器、走 JSON-RPC 汇报。不 mock child_process。
 // 对应 AC-33 ④(brief 只收五个字段、凭据只给引用、工具子集、env 无明文)、V-06(completed 以 CLI 结果为准)、AC-07(交接快照)。
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { test } from "node:test";
+import { afterEach, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { REPORT_MCP_PATH, createComputeAdapter } from "./adapter.ts";
+import { checkInit, terminalFor } from "./events.ts";
 import { reportErrors } from "./report-schema.ts";
 
 const FAKE = fileURLToPath(new URL("../test-support/fake-claude.mjs", import.meta.url));
@@ -22,10 +24,41 @@ const brief = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-/** 假 CLI 的剧本与记录文件,经宿主运行配置 hostEnv 交给子进程 */
-function fake(script: unknown) {
-  const record = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "fake-cc-")), "record.jsonl");
-  return { record, options: { runner: { command: process.execPath, args: [FAKE] }, hostEnv: { FAKE_SCRIPT: JSON.stringify(script), FAKE_RECORD: record }, stopGraceMs: 1500 } };
+// RR-06:本文件只回收自己创建的进程。每个 fake() 有独立目录;清理时只对命令行里带本文件假 CLI 路径或该目录的进程下手。
+const ownDirs = new Set<string>();
+const ownedBy = (pid: number, needles: readonly string[]) => {
+  try {
+    const cmd = execFileSync("ps", ["-o", "command=", "-p", String(pid)], { encoding: "utf8" });
+    return needles.some((n) => cmd.includes(n));
+  } catch { return false; }
+};
+function reapOwn() {
+  for (const dir of ownDirs) {
+    const record = path.join(dir, "record.jsonl");
+    const pids: number[] = [];
+    if (fs.existsSync(record)) for (const l of fs.readFileSync(record, "utf8").trim().split("\n")) if (l) pids.push((JSON.parse(l) as { pid: number }).pid);
+    for (const ext of [".grandchild.pid", ".daemon.pid"]) if (fs.existsSync(record + ext)) pids.push(Number(fs.readFileSync(record + ext, "utf8")));
+    for (const pid of pids) {
+      if (!(pid > 1) || !ownedBy(pid, [FAKE, dir])) continue;
+      try { process.kill(-pid, "SIGKILL"); } catch { /* 不是组长或已退出 */ }
+      try { process.kill(pid, "SIGKILL"); } catch { /* 已退出 */ }
+    }
+  }
+  ownDirs.clear();
+}
+afterEach(reapOwn);
+// 整个测试文件有界:240 秒还没跑完就回收自己的进程并以失败退出
+setTimeout(() => { reapOwn(); console.error("adapter.test.ts 超过 240 秒,强制结束"); process.exit(1); }, 240_000).unref();
+process.once("SIGTERM", () => { reapOwn(); process.exit(143); });
+
+/** 假 CLI 的剧本与记录文件,经宿主运行配置 hostEnv 交给子进程;marker 是本测试专用的中性副作用文件 */
+function fake(script: unknown, extra: Record<string, unknown> = {}) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fake-cc-"));
+  ownDirs.add(dir);
+  const record = path.join(dir, "record.jsonl");
+  const marker = path.join(dir, "outside-marker.txt");
+  const filled = JSON.parse(JSON.stringify(script).replaceAll("@MARKER@", marker.replaceAll("\\", "\\\\")));
+  return { record, marker, options: { runner: { command: process.execPath, args: [FAKE] }, hostEnv: { FAKE_SCRIPT: JSON.stringify(filled), FAKE_RECORD: record }, stopGraceMs: 1500, ...extra } };
 }
 type Launch = { pid: number; argv: string[]; env: Record<string, string>; prompt: string; mcpConfig: { mcpServers: Record<string, { command: string; args: string[] }> } | null };
 const launches = (record: string): Launch[] => fs.readFileSync(record, "utf8").trim().split("\n").map((l) => JSON.parse(l) as Launch);
@@ -34,6 +67,14 @@ const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catc
 /** 限时:被测实现挂住时把挂起变成按名字失败,而不是整个文件超时 */
 const within = <T>(p: Promise<T>, ms = 8000) => Promise.race([p, new Promise<"超时">((ok) => setTimeout(() => ok("超时"), ms))]);
 const grandchildPid = (record: string) => Number(fs.readFileSync(`${record}.grandchild.pid`, "utf8"));
+/** 等到这个 Compute 的 started 事件(init 已核验通过);假 CLI 先与 MCP 握手再输出 init,记录文件出现时还没 started */
+async function waitStarted(a: ReturnType<typeof createComputeAdapter>, id: string) {
+  const got = await within((async () => {
+    for await (const e of a.events()) if (e.computeId === id && e.kind === "started") return true;
+    return false;
+  })());
+  if (got !== true) throw new Error("等 started 超时");
+}
 async function waitFor(cond: () => boolean, ms = 5000) {
   const t0 = Date.now();
   while (!cond()) { if (Date.now() - t0 > ms) throw new Error("等待超时"); await new Promise((r) => setTimeout(r, 20)); }
@@ -130,8 +171,8 @@ test("F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程
 });
 
 test("F-03:stop 回收整个进程组,孙进程在 stopped 之前退出,之后不再产生副作用", async () => {
-  const marker = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "cc-marker-")), "outside-marker.txt");
-  const f = fake({ reports: [{ kind: "started", summary: "开始" }], hang: "graceful", grandchild: { delayMs: 1200, marker } });
+  const f = fake({ reports: [{ kind: "started", summary: "开始" }], hang: "graceful", grandchild: { delayMs: 1200, marker: "@MARKER@" } });
+  const { marker } = f;
   const a = createComputeAdapter(f.options);
   const it = a.events()[Symbol.asyncIterator]();
   const r = await a.spawn(brief());
@@ -158,8 +199,8 @@ test("F-03:stop 回收整个进程组,孙进程在 stopped 之前退出,之后�
 });
 
 test("F-03:CLI 正常结束但留下孙进程时,收尾先回收进程组再报 completed;孙进程不再产生副作用", async () => {
-  const marker = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "cc-marker-")), "outside-marker.txt");
-  const f = fake({ reports: [], result: "success", grandchild: { delayMs: 1200, marker } });
+  const f = fake({ reports: [], result: "success", grandchild: { delayMs: 1200, marker: "@MARKER@" } });
+  const { marker } = f;
   const a = createComputeAdapter(f.options);
   const r = await a.spawn(brief());
   assert.ok(r.ok);
@@ -357,7 +398,7 @@ test("进程被外部杀掉 → failed,带信号", async () => {
   const a = createComputeAdapter(f.options);
   const r = await a.spawn(brief());
   assert.ok(r.ok);
-  await waitFor(() => fs.existsSync(f.record));
+  await waitStarted(a, r.computeId);
   process.kill(launches(f.record)[0]!.pid, "SIGKILL");
   const last = (await a.settled(r.computeId)).at(-1);
   assert.equal(last?.kind, "failed");
@@ -370,7 +411,7 @@ test("stop:子进程真的退出之后才产出 stopped,且只产出一次", asy
   const it = a.events()[Symbol.asyncIterator]();
   const r = await a.spawn(brief());
   assert.ok(r.ok);
-  await waitFor(() => fs.existsSync(f.record));
+  await waitStarted(a, r.computeId);
   const pid = launches(f.record)[0]!.pid;
   const stopping = a.stop(r.computeId);
   let aliveAtStopped: boolean | undefined;
@@ -390,7 +431,7 @@ test("stop:进程无视 SIGTERM 时升级为 SIGKILL,结束后才报 stopped", a
   const a = createComputeAdapter(f.options);
   const r = await a.spawn(brief());
   assert.ok(r.ok);
-  await waitFor(() => fs.existsSync(f.record));
+  await waitStarted(a, r.computeId);
   const pid = launches(f.record)[0]!.pid;
   try {
     // 不升级 SIGKILL 时 stop 会永远等下去;限时把挂起变成按名字失败
@@ -491,4 +532,213 @@ test("没有 handoff 的 spawn:首个提示与装配清单都不含交接段(阴
   await a.settled(r.computeId);
   assert.doesNotMatch(launches(f.record)[0]!.prompt, /交接快照/);
   assert.deepEqual(r.manifest.sections.map((s) => s.name), ["task", "rules", "credentialRefs"]);
+});
+
+// ---------------------------------------------------------------- 第二轮审查 RR-01 – RR-05
+
+test("RR-01:被拒收的 blocked 未合规重报时,另一种合规汇报(completed)不能把它清掉 → failed", async () => {
+  const f = fake({ reports: [{ kind: "blocked", summary: "等待条件", needs: 1 }, { kind: "completed", summary: "结束" }], result: "success", text: "尚未完成" });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  const evs = await a.settled(r.computeId);
+  assert.deepEqual(evs.map((e) => e.kind), ["started", "failed"]);
+  const last = evs.at(-1);
+  assert.match(last?.kind === "failed" ? last.reason : "", /blocked/);
+});
+
+test("RR-01:被拒收的 blocked 之后只来一个合规 started,也不算解除(审查存活变异)", async () => {
+  const f = fake({ reports: [{ kind: "blocked", summary: "等待条件", needs: 1 }, { kind: "started", summary: "继续" }], result: "success", text: "尚未完成" });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  assert.deepEqual((await a.settled(r.computeId)).map((e) => e.kind), ["started", "failed"]);
+});
+
+test("RR-01:被拒收的 blocked 由宿主显式 resume 解除,续接一轮正常完成(对照)", async () => {
+  const f = fake({ reports: [{ kind: "blocked", summary: "等待条件", needs: 1 }], result: "success", text: "尚未完成", resume: { reports: [], result: "success", text: "完成" } });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  assert.equal((await a.settled(r.computeId)).at(-1)?.kind, "failed");
+  assert.deepEqual(await a.resume(r.computeId, "条件已满足"), { ok: true });
+  assert.deepEqual((await a.settled(r.computeId)).map((e) => e.kind), ["started", "completed"]);
+});
+
+test("RR-01:已受理 blocked 后进程与后代被冻结回收,之后的 milestone/completed 和孙进程副作用都不发生", async () => {
+  const f = fake({
+    reports: [{ kind: "blocked", summary: "要确认", needs: "需要用户确认" }, { kind: "milestone", stage: "偷跑", summary: "继续做" }, { kind: "completed", summary: "做完" }],
+    // 没有冻结时,CLI 在 blocked 之后还要再跑约 3 秒,孙进程在 1.2 秒时写标记;冻结回收才能挡住它
+    reportGapMs: 1500, result: "success", text: "尚未完成", grandchild: { delayMs: 1200, marker: "@MARKER@" },
+  });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  const evs = await within(a.settled(r.computeId));
+  assert.notEqual(evs, "超时");
+  assert.deepEqual(evs === "超时" ? [] : evs.map((e) => e.kind), ["started", "blocked"]);
+  assert.equal(alive(launches(f.record)[0]!.pid), false);
+  assert.equal(alive(grandchildPid(f.record)), false);
+  await new Promise((ok) => setTimeout(ok, 1600));
+  assert.equal(fs.existsSync(f.marker), false);
+  assert.deepEqual(a.snapshot(r.computeId), { ok: false, reason: "not-quiescent" });
+});
+
+test("RR-01:停在受阻的 Compute 可以被 stop,产出带 scope 的 stopped", async () => {
+  const f = fake({ reports: [{ kind: "blocked", summary: "要确认", needs: "需要用户确认" }], result: "success" });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  await a.settled(r.computeId);
+  assert.deepEqual(await a.stop(r.computeId), { ok: true });
+  const last = (await a.settled(r.computeId)).at(-1);
+  assert.equal(last?.kind, "stopped");
+  assert.equal(last?.kind === "stopped" ? last.scope : "", "descendant-tree");
+});
+
+test("RR-02:report_progress MCP 起不来时 init 里 host 为 failed → 回收进程组并 failed,不报 completed", async () => {
+  const f = fake({ reports: [], result: "success", text: "完成" }, { reportServer: { command: "/usr/bin/false" } });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  const evs = await a.settled(r.computeId);
+  assert.deepEqual(evs.map((e) => e.kind), ["failed"]);
+  assert.match(evs[0]?.kind === "failed" ? evs[0].reason : "", /MCP 未连接/);
+});
+
+test("RR-02:缺 init、tools 不是数组、tools 含非字符串 → failed;完整 init 对照 completed", async () => {
+  for (const init of ["missing", "noTools", "badTools"]) {
+    const f = fake({ init, reports: [], result: "success", text: "完成" });
+    const a = createComputeAdapter(f.options);
+    const r = await a.spawn(brief());
+    assert.ok(r.ok);
+    const evs = await a.settled(r.computeId);
+    assert.deepEqual(evs.map((e) => e.kind), ["failed"], init);
+  }
+  const ok = fake({ reports: [], result: "success", text: "完成" });
+  const a = createComputeAdapter(ok.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  assert.deepEqual((await a.settled(r.computeId)).map((e) => e.kind), ["started", "completed"]);
+});
+
+test("RR-02:与真实 CLI 同形的 init(host status failed、工具里无 report_progress)判为无法核验;connected 的同形 init 放行", () => {
+  const real = { type: "system", subtype: "init", session_id: "s", tools: ["Read"], mcp_servers: [{ name: "host", status: "failed", source: "dynamic" }] };
+  const bad = checkInit(real);
+  assert.equal(bad.type, "bad-init");
+  assert.match(bad.type === "bad-init" ? bad.reason : "", /未连接/);
+  assert.equal(checkInit({ ...real, mcp_servers: [{ name: "host", status: "connected" }] }).type, "bad-init");
+  assert.deepEqual(checkInit({ ...real, tools: ["Read", REPORT], mcp_servers: [{ name: "host", status: "connected" }] }), { type: "init", sessionId: "s", tools: ["Read", REPORT] });
+  assert.equal(checkInit({ ...real, mcp_servers: undefined }).type, "bad-init");
+  const mixed = checkInit({ ...real, tools: ["Read", REPORT, 42], mcp_servers: [{ name: "host", status: "connected" }] });
+  assert.match(mixed.type === "bad-init" ? mixed.reason : "", /非字符串/);
+  assert.equal(checkInit({ ...real, session_id: undefined }).type, "bad-init");
+});
+
+test("RR-03:setsid 脱离进程组的孙进程在 stopped 之前被杀,之后不出现标记文件", async () => {
+  const f = fake({ reports: [{ kind: "started", summary: "开始" }], hang: "graceful", grandchild: { delayMs: 1200, marker: "@MARKER@", setsid: true } });
+  const a = createComputeAdapter(f.options);
+  const it = a.events()[Symbol.asyncIterator]();
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  await waitStarted(a, r.computeId);
+  await waitFor(() => fs.existsSync(`${f.record}.grandchild.pid`));
+  await new Promise((ok) => setTimeout(ok, 450)); // 让适配器至少采样一次后代树
+  const gc = grandchildPid(f.record);
+  const stopping = a.stop(r.computeId);
+  let gcAliveAtStopped: boolean | undefined;
+  let scope = "";
+  const seen = await within((async () => {
+    for (;;) {
+      const { value } = await it.next();
+      if (value?.computeId === r.computeId && value.kind === "stopped") { gcAliveAtStopped = alive(gc); scope = value.scope; return true; }
+    }
+  })());
+  assert.equal(seen, true);
+  assert.equal(gcAliveAtStopped, false);
+  assert.equal(scope, "descendant-tree");
+  assert.deepEqual(await within(stopping), { ok: true });
+  await new Promise((ok) => setTimeout(ok, 1600));
+  assert.equal(fs.existsSync(f.marker), false);
+});
+
+test("RR-03 已知不覆盖(记录性):双 fork 后被收养的守护进程不在后代树内,stopped 只声明 scope=descendant-tree", async () => {
+  const f = fake({ reports: [], hang: "graceful", daemon: { delayMs: 60_000, marker: "@MARKER@" } });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  await waitStarted(a, r.computeId);
+  await waitFor(() => fs.existsSync(`${f.record}.daemon.pid`));
+  assert.deepEqual(await a.stop(r.computeId), { ok: true });
+  const last = (await a.settled(r.computeId)).at(-1);
+  assert.equal(last?.kind, "stopped");
+  assert.equal(last?.kind === "stopped" ? last.scope : "", "descendant-tree");
+  // 不断言守护进程被杀:这是已披露的边界;它由 afterEach 按本测试目录回收
+});
+
+test("RR-04:运行中(进程与孙进程都在)取快照返回 not-quiescent;停止并确认后代树为空后才给出快照", async () => {
+  const handoff = { constraintVer: 1, openQuestions: [], doneSideEffects: [] };
+  const f = fake({ reports: [], hang: "graceful", grandchild: { delayMs: 60_000, marker: "@MARKER@" } });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief(), { handoff });
+  assert.ok(r.ok);
+  assert.deepEqual(a.snapshot(r.computeId), { ok: false, reason: "not-quiescent" });
+  await waitStarted(a, r.computeId);
+  await waitFor(() => fs.existsSync(`${f.record}.grandchild.pid`));
+  assert.deepEqual(a.snapshot(r.computeId), { ok: false, reason: "not-quiescent" });
+  const stopping = a.stop(r.computeId);
+  // 停止竞态:stop 已发出、收尾还没完成时也不能给快照
+  assert.deepEqual(a.snapshot(r.computeId), { ok: false, reason: "not-quiescent" });
+  assert.deepEqual(await within(stopping), { ok: true });
+  assert.equal(alive(grandchildPid(f.record)), false);
+  assert.deepEqual(a.snapshot(r.computeId), { ok: true, snapshot: handoff });
+});
+
+test("RR-04/RR-05:后代树在 SIGKILL 后仍无法确认为空(ps 不可用)→ failed 而非 stopped,快照 not-quiescent", async () => {
+  const f = fake({ reports: [], hang: "graceful" }, { procLister: async () => null });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief(), { handoff: { constraintVer: 1, openQuestions: [], doneSideEffects: [] } });
+  assert.ok(r.ok);
+  await waitStarted(a, r.computeId);
+  assert.deepEqual(await within(a.stop(r.computeId), 15_000), { ok: true });
+  const last = (await a.settled(r.computeId)).at(-1);
+  assert.equal(last?.kind, "failed");
+  assert.match(last?.kind === "failed" ? last.reason : "", /后代树/);
+  assert.deepEqual(a.snapshot(r.computeId), { ok: false, reason: "not-quiescent" });
+});
+
+test("RR-05:init 越界后用户 stop → 对外 stopped,违规保留在 violations[]", async () => {
+  const f = fake({ reports: [], hang: "stubborn", extraInitTools: ["Bash"] });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  // 越界的 init 不产出 started;等假 CLI 输出 init 之后再 stop,否则 stop 会先杀掉 MCP 服务器、init 变成"未连接"
+  await waitFor(() => fs.existsSync(`${f.record}.init`));
+  assert.deepEqual(await within(a.stop(r.computeId), 15_000), { ok: true });
+  const last = (await a.settled(r.computeId)).at(-1);
+  assert.equal(last?.kind, "stopped");
+  assert.match(last?.kind === "stopped" ? last.violations.join(";") : "", /未授权的工具 Bash/);
+});
+
+test("RR-05:terminalFor 的优先级:后代树未清 > 停止 > 违规;没有停止时违规报 failed 并带 violations", () => {
+  const exit = { code: 0, signal: null };
+  const ok = { success: true, text: "完成" };
+  const base = { stopRequested: false, treeClean: true, violations: [] as string[], pausedBlocked: false, unresolved: [] as string[] };
+  assert.equal(terminalFor(exit, ok, { ...base, stopRequested: true, violations: ["越界"] }, "").kind, "stopped");
+  assert.equal(terminalFor(exit, ok, { ...base, stopRequested: true, treeClean: false }, "").kind, "failed");
+  const v = terminalFor(exit, ok, { ...base, violations: ["越界"] }, "");
+  assert.deepEqual(v.kind === "failed" ? v.violations : [], ["越界"]);
+  assert.equal(terminalFor(exit, ok, base, "").kind, "completed");
+});
+
+test("RR-03:CLI 自成进程组(pgid 等于自己的 pid),冻结时能先对整组发 SIGSTOP", async () => {
+  const f = fake({ reports: [], hang: "graceful" });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  await waitStarted(a, r.computeId);
+  const pid = launches(f.record)[0]!.pid;
+  const pgid = Number(execFileSync("ps", ["-o", "pgid=", "-p", String(pid)], { encoding: "utf8" }).trim());
+  assert.equal(pgid, pid);
+  assert.deepEqual(await within(a.stop(r.computeId)), { ok: true });
 });

@@ -10,6 +10,13 @@
 // 剧本 denyReports:true 让 CLI 以权限拒绝回绝每次 report_progress(内容即使合规,tool_result 也是 is_error)。
 // 剧本 forgeAccept:true 不经 MCP 服务器、直接回"已记录"(模拟服务器校验失效)。
 // 剧本 result:"success_is_error" 输出 subtype success 但 is_error true 的结束行。
+// 剧本 grandchild.setsid:true 让孙进程另建会话与进程组(审查 RR-03 的脱组反例)。
+// 剧本 daemon:{ delayMs, marker } 起一个中间进程,它再起一个另建会话的守护进程后立刻退出(双 fork,守护进程被 init/launchd 收养);
+// 守护进程 pid 写进 FAKE_RECORD.daemon.pid。这是已披露的不覆盖边界。
+// 剧本 init:"missing" 不输出 init;"noTools" tools 不是数组;"badTools" tools 含非字符串。
+// 和真实 CLI 一样先与 MCP 服务器握手再输出 init:服务器起不来时 init 里 host 状态为 failed、工具清单里没有 report_progress
+// (RR-02 引用的真实 CLI 2.1.316 观察)。
+// 剧本 reportGapMs:相邻两次汇报之间的间隔。
 // 剧本来自环境变量 FAKE_SCRIPT(JSON);每次启动把 pid/argv/env/cwd/首个提示追加到 FAKE_RECORD。
 import { spawn } from "node:child_process";
 import crypto from "node:crypto";
@@ -38,12 +45,19 @@ if (process.env.FAKE_RECORD) {
     mcpConfig: flag("--mcp-config") ? JSON.parse(fs.readFileSync(flag("--mcp-config"), "utf8")) : null })}\n`);
 }
 
+const markerCode = (marker, delayMs) => `setTimeout(() => require("node:fs").writeFileSync(${JSON.stringify(marker)}, "副作用"), ${Number(delayMs)}); setInterval(() => {}, 1000);`;
 if (plan.grandchild) {
-  const { delayMs, marker } = plan.grandchild;
-  const code = `setTimeout(() => require("node:fs").writeFileSync(${JSON.stringify(marker)}, "副作用"), ${Number(delayMs)}); setInterval(() => {}, 1000);`;
-  const gc = spawn(process.execPath, ["-e", code], { stdio: "ignore" });
+  const { delayMs, marker, setsid } = plan.grandchild;
+  const gc = spawn(process.execPath, ["-e", markerCode(marker, delayMs)], { stdio: "ignore", detached: setsid === true });
   if (process.env.FAKE_RECORD) fs.writeFileSync(`${process.env.FAKE_RECORD}.grandchild.pid`, String(gc.pid));
   gc.unref();
+}
+if (plan.daemon && process.env.FAKE_RECORD) {
+  const { delayMs, marker } = plan.daemon;
+  const pidFile = `${process.env.FAKE_RECORD}.daemon.pid`;
+  const middle = `const c = require("node:child_process").spawn(process.execPath, ["-e", ${JSON.stringify(markerCode(marker, delayMs))}], { stdio: "ignore", detached: true });
+require("node:fs").writeFileSync(${JSON.stringify(pidFile)}, String(c.pid)); c.unref(); process.exit(0);`;
+  spawn(process.execPath, ["-e", middle], { stdio: "ignore" }).unref();
 }
 
 const out = (o) => process.stdout.write(`${JSON.stringify(o)}\n`);
@@ -65,18 +79,35 @@ function mcpClient(cfg) {
   });
   let id = 0;
   const call = (method, params) => new Promise((resolve) => { const n = ++id; pending.set(n, resolve); child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: n, method, params })}\n`); });
-  return { call, close: () => child.kill() };
+  // 握手:服务器在回 initialize 之前退出或出错就判连接失败
+  const ready = new Promise((resolve) => {
+    child.on("exit", () => resolve(false));
+    child.on("error", () => resolve(false));
+    call("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "fake-claude", version: "0" } }).then(() => resolve(true));
+    setTimeout(() => resolve(false), 3000);
+  });
+  return { call, ready, close: () => child.kill() };
 }
 
 const REPORT = "mcp__host__report_progress";
 const cfgPath = flag("--mcp-config");
-const mcp = cfgPath ? mcpClient(JSON.parse(fs.readFileSync(cfgPath, "utf8"))) : null;
+const client = cfgPath ? mcpClient(JSON.parse(fs.readFileSync(cfgPath, "utf8"))) : null;
+const connected = client ? await client.ready : false;
+const mcp = connected ? client : null;
 
-out({ type: "system", subtype: "init", cwd: process.cwd(), session_id: sid, tools: [...builtins, ...(plan.extraInitTools ?? []), ...(mcp ? [REPORT] : [])],
-  mcp_servers: mcp ? [{ name: "host", status: "connected" }] : [], permissionMode: flag("--permission-mode") ?? "default" });
+const initTools = [...builtins, ...(plan.extraInitTools ?? []), ...(mcp ? [REPORT] : [])];
+const init = { type: "system", subtype: "init", cwd: process.cwd(), session_id: sid, tools: initTools,
+  mcp_servers: client ? [{ name: "host", status: connected ? "connected" : "failed", source: "dynamic" }] : [], permissionMode: flag("--permission-mode") ?? "default" };
+if (plan.init === "noTools") init.tools = "Read,Write";
+if (plan.init === "badTools") init.tools = [...initTools, 42];
+if (plan.init !== "missing") out(init);
+// 输出 init 之后写 FAKE_RECORD.init:测试据此知道 CLI 已过了握手与 init 这一步
+if (process.env.FAKE_RECORD) fs.writeFileSync(`${process.env.FAKE_RECORD}.init`, JSON.stringify(init));
 
-if (mcp) await mcp.call("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "fake-claude", version: "0" } });
+let first = true;
 for (const input of plan.reports ?? []) {
+  if (!first && plan.reportGapMs) await sleep(plan.reportGapMs);
+  first = false;
   const useId = `toolu_${crypto.randomUUID().slice(0, 8)}`;
   out({ type: "assistant", session_id: sid, message: { role: "assistant", content: [{ type: "tool_use", id: useId, name: REPORT, input }] } });
   let content, isError;

@@ -1,4 +1,5 @@
 // Claude Code Compute 适配器的对外类型。
+import type { ProcLister } from "./proctree.ts";
 // Brief 与 domain 里 contact.briefFor 的输出形状一致;本包不 import contact(避免依赖尚未合入的 PR #4),自己声明。
 
 export type Placement = "local" | "byom_daemon" | "cloud_sandbox";
@@ -31,6 +32,10 @@ export interface AdapterOptions {
   readonly hostEnv?: Readonly<Record<string, string>>;
   /** stop 发出 SIGTERM 后等多久升级为 SIGKILL */
   readonly stopGraceMs?: number;
+  /** report_progress MCP 服务器的启动命令;默认是本包 mcp/report-mcp.mjs。测试用它注入起不来的服务器 */
+  readonly reportServer?: { readonly command: string; readonly args?: readonly string[] };
+  /** 进程表来源;默认 `ps -A`。测试用它模拟 ps 不可用 */
+  readonly procLister?: ProcLister;
 }
 
 export interface SpawnOptions {
@@ -61,8 +66,21 @@ export type ComputeEvent =
   | { readonly computeId: string; readonly kind: "milestone"; readonly stage: string; readonly summary: string }
   | { readonly computeId: string; readonly kind: "blocked"; readonly needs: string; readonly summary: string }
   | { readonly computeId: string; readonly kind: "completed"; readonly result: string }
-  | { readonly computeId: string; readonly kind: "failed"; readonly reason: string; readonly code: number | null; readonly signal: string | null }
-  | { readonly computeId: string; readonly kind: "stopped"; readonly code: number | null; readonly signal: string | null };
+  | { readonly computeId: string; readonly kind: "failed"; readonly reason: string; readonly code: number | null; readonly signal: string | null; readonly violations: readonly string[] }
+  | {
+      readonly computeId: string;
+      readonly kind: "stopped";
+      readonly code: number | null;
+      readonly signal: string | null;
+      /**
+       * stopped 只保证这一轮的**已知后代树**已经不存在:从 CLI 进程按 ppid 递归找到的后代、以及它们所在进程组的成员。
+       * 双 fork 后被 init/launchd 收养的守护进程、经 launchd/systemd 托管另起的进程不在范围内。
+       * 内核不得把 stopped 当作容器级静止;完全隔离归 placement=cloud_sandbox / 容器,不在本适配器。
+       */
+      readonly scope: "descendant-tree";
+      /** 停止之前适配器判定过的违规(工具越界、init 无法核验等),停止优先于违规但违规保留可审计 */
+      readonly violations: readonly string[];
+    };
 
 export type ComputeEventKind = ComputeEvent["kind"];
 
@@ -74,6 +92,7 @@ export interface ComputeAdapter {
   events(): AsyncIterable<ComputeEvent>;
   /** 当前这一轮进程结束(并已产出终态事件)后,返回这一轮的事件 */
   settled(computeId: string): Promise<readonly ComputeEvent[]>;
+  /** 只在终态(stopped/completed/failed)且已知后代树确认为空之后成功;否则 {ok:false, reason:"not-quiescent"} */
   snapshot(computeId: string): SnapshotResult;
   /** 被拒收(服务器 isError,或回执合规但内容不合 schema)的汇报记录,按发生顺序;它们不产出语义事件 */
   rejectedReports(computeId: string): readonly RejectedReport[];
