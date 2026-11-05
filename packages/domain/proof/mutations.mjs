@@ -7,7 +7,8 @@
 // D01–D11 对应第四轮审查独立变异;T01–T15 是 R4-CORR-01..03 修复的新增埋雷;
 // E01–E10(E10 与 T04 同一注入,不重复)对应第五轮审查独立变异;U01–U11 是 R5-CORR-01..03 修复的新增埋雷;
 // F01–F08 对应第六轮审查独立变异(F09 阳性对照与 U08/U09 同类不重复);V01–V10 是第六轮修复的新增埋雷;
-// G01–G09 对应第七轮审查独立变异(G10 与 V09 同一注入不重复);W01–W11 是第七轮运行时形状校验的新增埋雷。原样副本必须全绿(阴性对照)。
+// G01–G09 对应第七轮审查独立变异(G10 与 V09 同一注入不重复);W01–W11 是第七轮运行时形状校验的新增埋雷;
+// H01–H09 对应第八轮审查独立变异(H10 为阳性对照不重复);X01–X06 是第八轮修复的新增埋雷。原样副本必须全绿(阴性对照)。
 // 用法: node packages/domain/proof/mutations.mjs
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -195,17 +196,32 @@ const M = [
   ["G07 当前实例停止覆盖旧退役账本", "task.ts", "retired: [...t.retired, t.computeId] }),", "retired: [t.computeId] }),"],
   ["G08 未回绑时只认最近两个退役实例", "task.ts", "t.retired.includes(ev.computeId));", "t.retired.slice(-2).includes(ev.computeId));"],
   ["G09 退役实例重放时停当前实例", "task.ts", "if (t.retired.includes(ev.computeId)) return ok(t, [{ kind: \"stop-compute\", computeId: ev.computeId }]);", "if (t.retired.includes(ev.computeId)) return ok(t, [{ kind: \"stop-compute\", computeId: t.computeId ?? ev.computeId }]);"],
-  ["W01 不校验必填字段", "task.ts", "  for (const [k, f] of Object.entries(shape.req)) if (!fieldOk(o[k], f)) return", "  for (const [k, f] of Object.entries(shape.req)) if (k === \"__never__\" && !fieldOk(o[k], f)) return"],
-  ["W02 字符串字段只查存在", "task.ts", "  if (f === \"str\") return typeof v === \"string\" && v.length > 0;", "  if (f === \"str\") return v !== undefined;"],
-  ["W03 空字符串当合法", "task.ts", "  if (f === \"str\") return typeof v === \"string\" && v.length > 0;", "  if (f === \"str\") return typeof v === \"string\";"],
+  ["W01 不校验必填字段", "task.ts", "  for (const [k, f] of Object.entries(shape.req)) if (!fieldOk(own(e, k), f)) return", "  for (const [k, f] of Object.entries(shape.req)) if (k === \"__never__\" && !fieldOk(own(e, k), f)) return"],
+  ["W02 字符串字段只查存在", "task.ts", "  if (f === \"str\") return typeof v === \"string\" && v.trim().length > 0;", "  if (f === \"str\") return v !== undefined;"],
+  ["W03 空字符串当合法", "task.ts", "  if (f === \"str\") return typeof v === \"string\" && v.trim().length > 0;", "  if (f === \"str\") return typeof v === \"string\";"],
   ["W04 非负整数允许负数", "task.ts", "  if (f === \"nat\") return Number.isSafeInteger(v) && (v as number) >= 0;", "  if (f === \"nat\") return Number.isSafeInteger(v);"],
   ["W05 布尔接受 0/1", "task.ts", "  if (f === \"bool\") return typeof v === \"boolean\";", "  if (f === \"bool\") return typeof v === \"boolean\" || v === 0 || v === 1;"],
   ["W06 枚举不查取值", "task.ts", "  return typeof v === \"string\" && f.includes(v);", "  return typeof v === \"string\";"],
-  ["W07 可选字段不校验", "task.ts", "  for (const [k, f] of Object.entries(shape.opt ?? {})) if (o[k] !== undefined && !fieldOk(o[k], f)) return", "  for (const [k, f] of Object.entries(shape.opt ?? {})) if (k === \"__never__\" && !fieldOk(o[k], f)) return"],
-  ["W08 reject 审查不要求 computeResumable", "task.ts", "  if (kind === \"Review\" && o.verdict === \"reject\" && !fieldOk(o.computeResumable, \"bool\")) return", "  if (kind === \"__never__\" && o.verdict === \"reject\" && !fieldOk(o.computeResumable, \"bool\")) return"],
-  ["W09 未知事件种类放过", "task.ts", "if (typeof kind !== \"string\" || !(EVENT_KINDS as readonly string[]).includes(kind)) return", "if (typeof kind !== \"string\") return"],
+  ["W07 可选字段不校验", "task.ts", "  for (const [k, f] of Object.entries(shape.opt ?? {})) if (own(e, k) !== undefined && !fieldOk(own(e, k), f)) return", "  for (const [k, f] of Object.entries(shape.opt ?? {})) if (k === \"__never__\" && !fieldOk(own(e, k), f)) return"],
+  ["W08 reject 审查不要求 computeResumable", "task.ts", "  if (kind === \"Review\" && own(e, \"verdict\") === \"reject\" && !fieldOk(own(e, \"computeResumable\"), \"bool\")) return", "  if (kind === \"__never__\" && own(e, \"verdict\") === \"reject\" && !fieldOk(own(e, \"computeResumable\"), \"bool\")) return"],
+  ["W09 未知事件种类放过", "task.ts", "  if (!shape) return `未知的事件种类 ${JSON.stringify(kind)}`;", "  if (!shape) return null;"],
   ["W10 入口不做形状校验", "task.ts", "  if (shape) return shape;\n", ""],
   ["W11 非对象事件放过", "task.ts", "  if (typeof e !== \"object\" || e === null || Array.isArray(e)) return \"事件不是对象\";", "  if (e === undefined) return \"事件不是对象\";"],
+  ["H01 正整数不限安全范围", "task.ts", "  if (f === \"pint\") return Number.isSafeInteger(v) && (v as number) >= 1;", "  if (f === \"pint\") return Number.isInteger(v) && (v as number) >= 1;"],
+  ["H02 字符串禁止非 ASCII", "task.ts", "  if (f === \"str\") return typeof v === \"string\" && v.trim().length > 0;", "  if (f === \"str\") return typeof v === \"string\" && v.trim().length > 0 && /^[\\x00-\\x7f]+$/.test(v);"],
+  ["H03 拒绝未知附加字段", "task.ts", "  if (!shape) return `未知的事件种类 ${JSON.stringify(kind)}`;", "  if (!shape) return `未知的事件种类 ${JSON.stringify(kind)}`;\n  if (Object.keys(e).some((k) => k !== \"kind\" && !(k in shape.req) && !(k in (shape.opt ?? {})) && !(kind === \"Review\" && k === \"computeResumable\"))) return `${kind}.extra`;"],
+  ["H04 布尔接受数组", "task.ts", "  if (f === \"bool\") return typeof v === \"boolean\";", "  if (f === \"bool\") return typeof v === \"boolean\" || Array.isArray(v);"],
+  ["H05 布尔接受字符串 false", "task.ts", "  if (f === \"bool\") return typeof v === \"boolean\";", "  if (f === \"bool\") return typeof v === \"boolean\" || v === \"false\";"],
+  ["H06 枚举接受 yes", "task.ts", "  return typeof v === \"string\" && f.includes(v);", "  return typeof v === \"string\" && (f.includes(v) || v === \"yes\");"],
+  ["H07 枚举大小写折叠", "task.ts", "  return typeof v === \"string\" && f.includes(v);", "  return typeof v === \"string\" && f.includes(v.toLowerCase());"],
+  ["H08 reject 审查只查 computeResumable 存在", "task.ts", "  if (kind === \"Review\" && own(e, \"verdict\") === \"reject\" && !fieldOk(own(e, \"computeResumable\"), \"bool\")) return \"Review.computeResumable 缺失或取值非法(应为布尔)\";", "  if (kind === \"Review\" && own(e, \"verdict\") === \"reject\" && own(e, \"computeResumable\") === undefined) return \"Review.computeResumable 缺失或取值非法(应为布尔)\";"],
+  ["H09 数字 kind 放过", "task.ts", "  if (typeof kind !== \"string\") return \"事件种类缺失或不是字符串\";", "  if (typeof kind === \"number\") return null;\n  if (typeof kind !== \"string\") return \"事件种类缺失或不是字符串\";"],
+  ["X01 非字符串 kind 格式化进原因", "task.ts", "  if (typeof kind !== \"string\") return \"事件种类缺失或不是字符串\";", "  if (typeof kind !== \"string\") return `未知的事件种类 ${String(kind)}`;"],
+  ["X02 形状表用普通对象按名取", "task.ts", "  const shape = SHAPE_BY_KIND.get(kind);", "  const shape = (EVENT_SHAPES as unknown as Record<string, Shape>)[kind];"],
+  ["X03 去掉外层兜底", "task.ts", "  try {\n    return checkShape(e);\n  } catch {\n    return \"事件无法校验\";\n  }", "  return checkShape(e);"],
+  ["X04 字段读取不限自有属性", "task.ts", "const own = (o: object, k: string): unknown => (Object.hasOwn(o, k) ? (o as Record<string, unknown>)[k] : undefined);", "const own = (o: object, k: string): unknown => (o as Record<string, unknown>)[k];"],
+  ["X05 全空白字符串当合法", "task.ts", "  if (f === \"str\") return typeof v === \"string\" && v.trim().length > 0;", "  if (f === \"str\") return typeof v === \"string\" && v.length > 0;"],
+  ["X06 未知种类原因不点名", "task.ts", "  if (!shape) return `未知的事件种类 ${JSON.stringify(kind)}`;", "  if (!shape) return \"未知的事件种类\";"],
   ["M28 vendor 两家都像时取第一家", "vendor.ts", "return hits.size === 1 ? [...hits][0]! : \"unknown\";", "return hits.size >= 1 ? [...hits][0]! : \"unknown\";"],
 ];
 
