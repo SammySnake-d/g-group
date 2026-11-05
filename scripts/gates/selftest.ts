@@ -40,6 +40,7 @@ interface Case {
   postCheck?: (dir: string) => string | undefined; // 跑完后检查副作用,返回问题
   hostileGit?: boolean; // 在 GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE 指向另一个仓库的环境里跑
   main?: Files; // main 上额外的文件
+  direct?: () => string | undefined; // 不建夹具仓库、直接检查;返回问题,undefined = 通过
 }
 
 const MAIN: Files = { "docs/spec/验收文档-v0.1.md": SPEC, "README.md": "x\n", "packages/core/package.json": PKG("@g-group/core", "domain"), ".github/workflows/trusted-gates.yml": TRUSTED_WF };
@@ -90,6 +91,7 @@ function runCase(tmp: string, c: Case, i: number): { pass: boolean; detail: stri
 }
 
 function runCaseInner(tmp: string, c: Case, i: number): { pass: boolean; detail: string } {
+  if (c.direct) { const why = c.direct(); return { pass: why === undefined, detail: why ?? "" }; }
   const dir = path.join(tmp, `c${i}`);
   const repo = path.join(dir, "repo"), sessions = path.join(dir, "sessions"), rooms = path.join(dir, "rooms");
   fs.mkdirSync(repo, { recursive: true });
@@ -153,8 +155,19 @@ const WF = (y: string): Files => ({ ...HEAD_OK, ".github/workflows/x.yml": y });
 // RR-09:self-check.yml 必须无条件跑门禁自检与变异校验,package.json 对应脚本必须是规范值
 const SC_STEP_SELF = "      - name: 门禁自检\n        run: npm run gates:selftest\n";
 const SC_STEP_MUT = "      - name: 门禁变异校验\n        run: GATE_MUTATION_JOBS=4 npm run gates:mutation\n";
-const SC_WF = (steps = SC_STEP_SELF + SC_STEP_MUT, jobExtra = "") => `on: pull_request\npermissions: { contents: read }\njobs:\n  self-check:\n    runs-on: ubuntu-latest\n${jobExtra}    steps:\n${steps}`;
-const ROOT_PKG = (scripts: Record<string, string> = {}) => JSON.stringify({ name: "g-group", private: true, type: "module", scripts: { "gates:selftest": "node scripts/gates/run-all.ts --self-test", "gates:mutation": "node scripts/gates/mutation.ts", ...scripts } });
+const SC_STEP_TEST = "      - name: 测试\n        run: npm test\n";
+const SC_WF = (steps = SC_STEP_SELF + SC_STEP_MUT, jobExtra = "", testStep = SC_STEP_TEST) => `on: pull_request\npermissions: { contents: read }\njobs:\n  self-check:\n    runs-on: ubuntu-latest\n${jobExtra}    steps:\n${testStep}${steps}`;
+const TEST_SCRIPT = 'node scripts/gates/test-runner.ts "packages/**/*.test.ts" "scripts/gates/*.test.ts"';
+// g-group#2538:直接跑 test-runner.ts,0 条用例必须判失败
+function runTestRunner(files: Record<string, string>) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gate-runner-"));
+  try {
+    write(dir, files);
+    const r = spawnSync(process.execPath, [path.join(HERE, "test-runner.ts"), "*.test.ts"], { cwd: dir, encoding: "utf8", env: gitEnv(), timeout: 120_000 });
+    return { code: r.status, out: (r.stdout ?? "") + (r.stderr ?? "") };
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+const ROOT_PKG = (scripts: Record<string, string> = {}) => JSON.stringify({ name: "g-group", private: true, type: "module", scripts: { test: TEST_SCRIPT, "gates:selftest": "node scripts/gates/run-all.ts --self-test", "gates:mutation": "node scripts/gates/mutation.ts", ...scripts } });
 const SC = (wf: string, pkg = ROOT_PKG()): Files => ({ ...HEAD_OK, ".github/workflows/self-check.yml": wf, "package.json": pkg });
 // RR-11:测试经 helper 拿期望值
 const TEST_HELPER = (spec: string) => T(`import { expected } from "${spec}";\ntest("adds", () => { assert.equal(add(1, 2), expected); });\n`);
@@ -263,6 +276,12 @@ export const CASES: Case[] = [
   { name: "RR-09 自检命令后接 || true", head: SC(SC_WF(SC_STEP_SELF.replace("gates:selftest\n", "gates:selftest || true\n") + SC_STEP_MUT)), expect: "缺必需步骤" },
   { name: "RR-09 必需步骤换 working-directory", head: SC(SC_WF(SC_STEP_SELF + SC_STEP_MUT.replace("        run:", "        working-directory: fake\n        run:"))), expect: "带了 working-directory" },
   { name: "RR-09 workflow 顶层 defaults 换 shell", head: SC(`defaults: { run: { shell: "true {0}" } }\n${SC_WF()}`), expect: "顶层带了 defaults" },
+  { name: "g-group#2538 test 脚本改回裸 node --test(0 用例也判通过)", head: SC(SC_WF(), ROOT_PKG({ test: 'node --test "packages/**/*.test.ts"' })), expect: 'scripts["test"] 必须是' },
+  { name: "g-group#2538 test 脚本改成 true", head: SC(SC_WF(), ROOT_PKG({ test: "true" })), expect: 'scripts["test"] 必须是' },
+  { name: "g-group#2538 self-check 缺 npm test 步骤", head: SC(SC_WF(undefined, "", "")), expect: "缺必需步骤:run 为 npm test" },
+  { name: "g-group#2538 测试入口 0 条用例判失败", direct: () => { const r = runTestRunner({}); return r.code === 1 && r.out.includes("跑了 0 条用例,不算通过") ? undefined : `0 条用例没有判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
+  { name: "g-group#2538 测试入口 1 条通过的用例判通过(阴性对照)", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest("ok", () => {});\n' }); return r.code === 0 ? undefined : `1 条通过的用例没有判通过(退出 ${r.code})\n${r.out}`; }, expect: null },
+  { name: "g-group#2538 测试入口有失败用例判失败", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest("bad", () => { throw new Error("x"); });\n' }); return r.code !== 0 && r.code !== null ? undefined : `失败用例没有判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
   { name: "RR-10 把门禁文件改名移出受管目录(重命名检测会只报新路径)", main: { "scripts/gates/vendor.ts": "export const v = 1;\n" }, head: { "scripts/gates/vendor.ts": null, "docs/vendor.ts": "export const v = 1;\n" }, red: null, receipt: null, expect: "缺收据" },
   { name: "RR-11 helper 在红提交上给了错期望值", head: { ...HEAD_OK, "packages/core/src/add.test.ts": TEST_HELPER("./expected.ts"), "packages/core/src/expected.ts": "export const expected = 3;\n" }, red: { ...RED_OK, "packages/core/src/add.ts": ADD_OK, "packages/core/src/add.test.ts": TEST_HELPER("./expected.ts"), "packages/core/src/expected.ts": "export const expected = -100;\n" }, expect: "没有按名字失败" },
   { name: "RR-11 fixtures 下的 helper 在红提交上给了错期望值", head: { ...HEAD_OK, "packages/core/src/add.test.ts": TEST_HELPER("./fixtures/expected.ts"), "packages/core/src/fixtures/expected.ts": "export const expected = 3;\n" }, red: { ...RED_OK, "packages/core/src/add.ts": ADD_OK, "packages/core/src/add.test.ts": TEST_HELPER("./fixtures/expected.ts"), "packages/core/src/fixtures/expected.ts": "export const expected = -100;\n" }, expect: "没有按名字失败" },
