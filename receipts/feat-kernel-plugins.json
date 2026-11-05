@@ -1,25 +1,25 @@
 {
-  "slice": "kernel 包内核契约桩(纯函数 + 内存实现,没有纵向路径):三类插件契约 DataSource / OutboundChannel / UIExtension 的注册校验(id 唯一、类型合法、三类各自必需字段、拒绝自带 schedule/cron、拒绝 dependsOn 其他插件),注册时深拷贝冻结宿主快照、更新走 reregister 重新校验;外部事件由宿主校验并盖章(来源、sourceVersion、create/edit/delete、occurredAt 与宿主 receivedAt、附件引用、不可信);async 外发按 action_id 记账,in-flight 后超时/异常记 DeliveryUnknown,B1 同 action_id+同 payload 在 TTL 内复用回执、B2 结果未知拒绝盲重试;上下文装配 assemble 按 seq 确定性 Page-in、超预算显式失败、窗口内引用不重复页入、撤回不进装配;classifyInbound 返回 {anchors, intent},只有确认卡结构化回复与纯点名能机械确定意图,带 @/引用的控制文字交给分类器,非枚举输出(含无法序列化的值)封闭为 Uncertain。",
+  "slice": "kernel 包内核契约桩(纯函数 + 内存实现,没有纵向路径):三类插件契约注册校验与宿主快照(reregister 重新校验并递增渠道版本);外部事件由宿主校验盖章(来源、sourceVersion、create/edit/delete、occurredAt 与宿主 receivedAt、附件引用、不可信);async 外发按 action_id 记账,每个动作绑定首次投递的渠道版本、幂等能力、服务商保留期、首次尝试时间与载荷 sha256:已确认永远复用已知回执不重发,结果未知时 B2 拒绝重发、B1 只在同一渠道版本且首次尝试仍在保留期内重试,reregister 换不掉旧绑定;上下文装配按需求 D22 / AC-39 产出分段请求 {stable, history, tail}:stable 里出现时间、消息序号、任务号、最近 N 条或会话消息原文即报错,history 是已压缩块 + 压缩点之后全部可见消息只追加,Page-in 与会变状态只进 tail,断点 ≤ 4 位于工具定义末尾、stable 末尾、压缩块末尾与最新追加消息,prefixHash 供宿主比较相邻两次前缀;classifyInbound 返回 {anchors, intent},纯点名按结构化点名范围判正文真为空,分类器异常兜底连 instanceof 与 message 读取也安全。",
   "acceptance": [
     {
       "id": "AC-06",
       "status": "未测",
-      "reason": "纯函数子判据已通过(packages/kernel/proof/tests.txt 的 assemble 九条;mutations.txt 的 K04 取最近 N 条、K05 静默截断、K06 窗口内重复页入、K07a/K07b 撤回进装配均被杀)。整项的观测点是联系人运行时真实装配视图(段 3)与 token 预算,要等 pi 联系人运行时与存储适配器接入"
+      "reason": "纯装配层子判据已通过(packages/kernel/proof/tests.txt 的 assemble 前十条;mutations.txt 的 K04 取最近 N 条、K05 静默截断、K06 已在历史的引用重复页入、K07a/K07b 撤回进装配、K65 Page-in 插进前缀均被杀)。Page-in 现在放在 tail,不进缓存前缀,与 AC-39 不冲突。整项观测点是联系人运行时真实装配视图与 token 预算,要等 pi 联系人运行时与存储适配器接入"
     },
     {
       "id": "AC-11",
       "status": "未测",
-      "reason": "classifyInbound 子判据已通过:确认卡结构化回复与纯点名时分类器计数桩 0 次;带 @/引用的停止、修改、纠偏文字交给分类器恰好 1 次(K08、K13、K43、K44 被杀)。整项观测点是真实分类调用日志,要等注意循环与真实分类器(Clef/Jev/LLM)接入后核对没有绕过本入口的调用"
+      "reason": "classifyInbound 子判据已通过:确认卡结构化回复与纯点名时分类器计数桩 0 次;带 @ 或引用的停止、修改、纠偏文字(含 @ 与正文之间只隔中文逗号、冒号或没有空格、多个 @)交给分类器恰好 1 次(K08、K13、K43–K47 被杀)。整项观测点是真实分类调用日志,要等注意循环与真实分类器接入后核对没有绕过本入口的调用"
     },
     {
       "id": "AC-12",
       "status": "未测",
-      "reason": "入口校验子判据已通过:自由文本、越界编号、非字符串、循环对象、BigInt、toJSON 抛错、分类器抛错一律封闭为 Uncertain 并记可读违规(K09、K37、K38、K39 被杀)。整项要求真实分类器链路的输出都过这道 schema,本片没有真实分类器"
+      "reason": "入口校验子判据已通过:自由文本、越界编号、非字符串、循环对象、BigInt、toJSON 抛错、分类器抛错(含 message getter 抛错、instanceof 抛错)一律封闭为 Uncertain 并记违规(K09、K37–K39、K50 被杀)。整项要求真实分类器链路的输出都过这道 schema,本片没有真实分类器"
     },
     {
       "id": "AC-35",
       "status": "未测",
-      "reason": "只做了阶段 I 宿主契约桩的一部分:三类插件注册与各自必需字段(K15–K19)、宿主快照与 reregister(K20–K23)、定时不归插件(K02)、插件互不依赖(K03)、外部事件版本/类型/双时间/附件/不可信盖章(K10、K24–K28)、未声明源多输入拒绝(K14)、action_id 必填与 B1/B2 幂等及 DeliveryUnknown(K11、K12、K29–K36)。专职锁、[T_prev_at, T_curr_at] 区间、CVE 复合指纹、ScopedPreAuthGrant、持久 Outbox 状态机与阶段 II/III 真实 Telegram/Gmail/市场都没有做"
+      "reason": "只做了阶段 I 宿主契约桩的一部分:三类插件注册与必需字段(K15–K19、K59)、宿主快照与 reregister(K20–K23)、定时不归插件(K02)、插件互不依赖(K03)、外部事件盖章与逐字段类型(K10、K24–K28、K52、K53)、未声明源(K14)、action_id 必填、载荷逐字节比对、已确认不重发、B1 保留期与首次尝试时间、B2 拒绝重发、渠道版本绑定、DeliveryUnknown(K11、K12、K29–K35、K51、K54–K58、K60、K71)。专职锁、区间总结、CVE 复合指纹、ScopedPreAuthGrant、持久 Outbox 与阶段 II/III 都没有做"
     },
     {
       "id": "R-02",
@@ -45,6 +45,11 @@
       "id": "R-06",
       "status": "未测",
       "reason": "本片是内核契约桩,没有从群消息入站经状态落盘到用户可见结果的纵向路径;纵向路径由后续 app 接线切片交付(存储 PR #5 + 执行器 + 本内核),本片不冒充通过"
+    },
+    {
+      "id": "AC-39",
+      "status": "未测",
+      "reason": "按需求 D22 落地规则 1–3,纯装配层能测的子判据已通过:① 前缀纪律:最近 25 条、日期、时刻、消息序号、任务号、会话消息原文注入 system/工具/人设段即报错(K61–K63、K70 被杀),同样内容放进 tail 照常装配;② 只追加:正常追加一条后新请求从开头到上次 history 末尾逐字节相同、prefixHash 一致,连续 30 轮不滑动窗口;重截历史时前缀哈希不一致(K64、K68、K69 被杀);③ 断点 ≤ 4 且位于工具定义末尾、stable 末尾、压缩块末尾与最新追加消息,tail 里没有(K66、K67 被杀);Page-in 在 tail 不改前缀(K65 被杀)。整项未测:④ 常驻会话(同一联系人同一群不新开、不跨线路分流)要等联系人运行时;⑤ 每次调用记录 input/cache_read/cache_write/线路并按线路×联系人×群出命中率、⑥ 拆账口径可信度检查要等适配器与用量表;'压缩后新块固定'只测了调用方传入固定压缩块,压缩本身(D06、AC-32)不在本片"
     }
   ],
   "author": {
@@ -53,16 +58,9 @@
     "model": "claude-opus-5-5"
   },
   "red": {
-    "commit": "c07656c8ffc482c20817ba073dbe7f873b01d870"
+    "commit": "ef9b953ccea20bea81bf2979cfb471b1f60b7f8a"
   },
-  "unverifiable": "本片是内核契约桩,R-06 纵向路径未测(由后续 app 接线切片交付:存储 PR #5 + 执行器 + 本内核)。AC-06/AC-11/AC-12/AC-35 整项都标未测,只证明纯函数与内存实现的子判据。AC-06:预算按渲染后 UTF-8 字节计,不是 token;超长原文整条进或整体失败,D06.3 的有界切片与分页游标没有做;assemble 不带会话/权限上下文,跨会话回读隔离没有证据。AC-11:只能证明 classifyInbound 自己在确认卡回复与纯点名时不调分类器,不能证明宿主其它入口不绕过它直接调模型;纯点名判 E1、确认卡判 E6 是本片定的机械规则,E5 子类型等要状态机切片定;确认卡只校验回复者 kind 是 user,没有核对卡片是否真属于这位用户与这个版本是否当前有效(要状态表)。AC-12:违规只在返回值 violation 字段,没有落盘的分类调用日志。AC-35:宿主快照只冻结声明字段,pull/send 函数在注册时取定但仍是调用方的代码,可执行插件代码的隔离与加载(沙箱、进程边界、包签名)不在本片,插件代码内部仍可以自己定时或调用别的插件;dependsOn 只查声明字段,import 级的插件互依赖靠 G-LAYER 且只扫仓库内包;不可信标记只是信封上的 trust 字段,不阻止下游把 content 当指令(R-10/AC-20 的拦截没有做);DeliveryUnknown 与 action_id 账本都在内存里,进程重启即丢,持久 Outbox 与入库端去重属于 AC-31;B1 的接收端去重是插件自报的 idempotency,宿主无法核实,不把它当作外部恰一次保证;超时后底层 Promise 仍可能完成,宿主只记 DeliveryUnknown,不会回补成 confirmed。R-05 的变异校准只覆盖 mutations.mjs 列出的 45 种故障(含审查存活的 M1=K14、M2=K15)。",
+  "unverifiable": "本片是内核契约桩,R-06 纵向路径未测(由后续 app 接线切片交付:存储 PR #5 + 执行器 + 本内核)。AC-06/AC-11/AC-12/AC-35/AC-39 整项都标未测,只证明纯函数与内存实现的子判据。AC-39:stable 段的会变内容检测是正则加消息原文匹配,能拦住时间、序号、任务号、最近 N 条和 4 字以上的原文,换个说法写进人设(如'今天周三')拦不住,最终仍要看相邻两次真实请求的 prefixHash;prefixHash 只证明我们拼出的请求体前缀稳定,不证明中转渠道真的按断点缓存(D22 实测鸿运线只缓存首段),命中率与拆账口径要等适配器;断点只是段上的布尔标记,真实 cache_control 的位置要等适配器按它生成;压缩点由调用方传入,压缩时机与压缩结果是否固定不在本片。AC-06:预算按 UTF-8 字节,不是 token;超预算只报 action:compress,不做压缩;没有有界切片、分页游标、会话/权限上下文。AC-11:不能证明宿主其它入口不绕过本入口调模型;纯点名依赖输入框给出的结构化点名范围,范围对不上就不算锚点;确认卡只校验回复者是 user,不核对卡片归属与版本是否当前有效。AC-12:违规只在返回值里,没有落盘日志。AC-35:B1 的服务商保留期是插件自报的 idempotencyWindowMs,宿主无法核实,自报偏长就会在服务商已遗忘后重试;账本和渠道版本都在内存里,进程重启即丢,持久 Outbox 与入库端去重属 AC-31;超时后底层 Promise 仍可能完成,宿主只记 DeliveryUnknown 不回补;可执行插件代码的隔离与加载不在本片;不可信标记不阻止下游当指令(R-10/AC-20 未做)。R-05 的变异校准只覆盖 mutations.mjs 列出的 69 种故障(含第一轮审查 M1=K14、M2=K15,第二轮审查 R2-M1=K51、R2-M2=K52;旧 K36 方向反了已删除)。",
   "waiver": null,
-  "review": {
-    "agent": "codex",
-    "session": "codex:7d29bd3e-c4cd-4e15-ad0b-298bd0301bd3",
-    "model": "gpt-6.1-terra",
-    "verdict": "reject",
-    "reviewed_hash": "3d7e9f12193180ab59a9287d8477ea781a6ca952eb450551512742c013af2b44",
-    "notes": "第二轮独立复审结论和反例见 reviews/feat-kernel-plugins.md 的第二轮"
-  }
+  "review": null
 }
