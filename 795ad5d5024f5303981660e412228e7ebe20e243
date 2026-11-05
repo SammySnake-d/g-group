@@ -1,0 +1,29 @@
+packages/adapter-sqlite/src/store.ts
+  s_e22e670ac40a01::t_0b2dfcbe7d0c29 25-88,93,97,105,109,113,117
+  s_e22e670ac40a01::t_c2d4002f0af271 23-24
+  s_e22e670ac40a01::t_66c6408464fc12 91-92
+  s_e22e670ac40a01::t_96d6c6a4cf3f97 94
+  s_e22e670ac40a01::t_c1de59e6655bb0 98-99
+  s_e22e670ac40a01::t_c0f13f18c68364 102-104
+  s_e22e670ac40a01::t_7e3eca4fb06814 106-108
+  s_e22e670ac40a01::t_1ebe37635c5f76 112
+  s_e22e670ac40a01::t_3ae0ba7d8e0d1c 114-116
+  s_e22e670ac40a01::t_dcc9de61381a2d 118-119
+  s_e22e670ac40a01::t_d6f72029f3df1b 3-4,122-125,128-131,134-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "795ad5d5024f5303981660e412228e7ebe20e243",
+  "prompts": {},
+  "sessions": {
+    "s_e22e670ac40a01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1b743a657e0be6fc",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
