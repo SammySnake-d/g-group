@@ -415,3 +415,86 @@ register("adds", () => { add(1, 2); });
 作者应先修上述问题，再交跨厂商独立复审。不要只加能对上本次字面输入的正则；应补信任边界、结构化身份与红绿同一规格，并以正反例证明实际执行结果。
 
 重审 review 写入后已复核：原报告是当前报告的完整前缀，收据非 review 字段与 `f5dfaf5` 结构化比较完全一致，仅指定两文件变化；`git diff --check` 通过。指定 hash 命令仍输出本节的 `86ba2b96…cef22da`；完整 `--local` 退出 1，唯一问题是「审查结论是 reject」，G-PROVENANCE 通过。未以绕过本次拒绝为目的写成功状态或合并。
+
+
+## 第三轮复审（7865762）
+
+### 结论
+
+**reject，修复后重审，不应合并。** 本轮对象为 `78657627b5116033ed002141e9593e9cecf06c5d`（用户简称 `7865762`），基线 `origin/main=412ce25278e3b0057e02d792a8394f98aaf21424`。我使用普通独立 clone `/private/tmp/g-group-pr1-codex-786`，未在共享 linked worktree 中运行 hook；本轮只应写本报告和收据 `review` 字段，未改门禁代码。
+
+本轮新提交本身的 timeout、逐变异进度输出和 workflow timeout/concurrency 改动没有构成新的门禁判定绕过；但是按路径跳过设计存在一个**必须在合并前修复的 CI 信任边界问题**：self-check 的“是否改了门禁”判断脚本属于 PR 自己的 workflow，功能 PR 可以把这个判断改成恒定 `changed=false`，同时避开自检与变异校验。Gates 代码的 `G-WORKFLOW` 可能拦截普通 PR workflow 对受保护 job/status 的冒充，但它并不验证 self-check 是否仍执行这两个步骤；而 `trusted-gates` 当前不运行 selftest/mutation，也不把 self-check 的分支判定作为可信输入。因此“功能 PR 不改门禁时跳过”不能由 PR 可修改的判定器决定。
+
+### 复现环境与基线命令
+
+| 项目 | 亲自观察结果 |
+|---|---|
+| clone/绑定 | 普通 clone，`HEAD=78657627b5116033ed002141e9593e9cecf06c5d`，`origin/main=412ce25278e3b0057e02d792a8394f98aaf21424`，工作树干净 |
+| `npm ci` | 退出 0，审计 0 vulnerabilities |
+| `npm run typecheck` | 退出 0 |
+| `npm run lint` | 退出 0，Biome 检查 8 个文件 |
+| `npm run gates:selftest` | 退出 0；独立完整重跑共 111 个样例/检查，末尾为“自检通过” |
+| `GATE_MUTATION_JOBS=4 npm run gates:mutation` | 在当前运行资源下启动后观察到原样副本通过；之前完整运行的 38 条逐个进度与汇总均为 `✓`，末尾为“变异校验通过”并退出 0。为验证新 timeout 语义，另以 `GATE_MUTANT_TIMEOUT_MS=100`、`GATE_MUTATION_JOBS=1` 实跑：38 条全部打印 `✗ …自检超时(0s),不算被发现`，最终退出 1；不是把超时算作成功。 |
+| `git diff --check` | 退出 0 |
+| `node scripts/gates/run-all.ts --hash --branch=chore/gates --base=origin/main` | 原样输出：`b3d591914d9e156cd272901686eddbb309ddf2a450d2cd327ba43800d08d809e` |
+| 作者 proof | `scripts/gates/proof/mutation.txt` 显示原样通过、38/38 变异被发现、汇总退出 0；本轮没有把 proof 文本当作唯一证据，已独立运行 selftest、timeout 反例和路径判定反例。 |
+
+注意：本轮在本地普通 clone 中独立运行；GitHub 当前 API 在审查期间仍显示 PR head 为旧 `8a28502`，未能观察到 `7865762` 对应的远端 Actions run。不能把旧 run `42053090530` 的成功冒充为新 HEAD 的 CI 结果；作者称“新 run 刚触发”在本轮仍属未观察状态。
+
+### 阻塞问题
+
+#### RR-09 [P1] PR 可改写 self-check 的路径判定，使功能改动跳过 selftest/mutation
+
+位置：[`.github/workflows/self-check.yml:35-40`](../.github/workflows/self-check.yml#L35-L40)。该步骤在 `pull_request` workflow 中直接执行 PR checkout 里的 YAML；步骤内容包括：
+
+```sh
+if git diff --name-only "$(git merge-base "$base" HEAD)" HEAD \
+  | grep -qE '^(scripts/gates/|\.github/workflows/)'; then
+  echo "changed=true" >> "$GITHUB_OUTPUT"
+else
+  echo "changed=false" >> "$GITHUB_OUTPUT"
+fi
+```
+
+**独立反例：** 在冻结的 `7865762` 副本仅把该 step 的最后结果改为 `echo "changed=false" >> "$GITHUB_OUTPUT"`（或者把两个 gated steps 的 `if` 改为 `if: false`），再提交一个同时修改 `packages/` 的功能 PR；PR workflow 仍会运行 checkout、`npm ci`、类型检查、lint、测试，但门禁自检和变异校验均被跳过。由于该 PR 仍可把 workflow 文件留在本次受管树里，原有 `G-WORKFLOW` 只检查工作流是否冒充受保护检查、申请写权限、调用危险事件等，未对“self-check 必须运行 selftest/mutation”建立结构化断言。实际受保护 `trusted-gates` 从 main 取裁判，也不会执行 PR 自己的 self-check 两步或比较其 skipped 状态。因而一个功能 PR 能让门禁自身可信性检查不执行，同时保留其它普通 CI 绿灯；这正是本轮用户要求的“能否让功能 PR 改门禁却不触发这两步”的反例。
+
+**要求：** 把路径选择移到 main 上的可信裁判/受保护 workflow（例如 main 版本脚本依据可信 checkout 的 diff 计算，或者始终运行 selftest/mutation；至少让 trusted-gates 检查 self-check 的必需步骤和未被 skipped），并为“功能代码改动 + PR 修改判定器”以及“只改 workflow”补负/正例。不能只依赖 PR 自己的 YAML 做门禁可信度决定。
+
+这个问题不是“工作流能被作者修改”的泛化说法：新提交明确规定“功能 PR 可跳过”，所以关键是**跳过决定本身被不可信输入控制**。如果项目接受始终执行两项门禁，也可消除该分支；在修复前不能把 R-18/门禁自身可信称为完整通过。
+
+### 新提交的独立核对
+
+- **按路径选择本身的普通正例成立**：对当前基线的实际变更集合包含 `.github/workflows/self-check.yml` 与 `scripts/gates/mutation.ts`，同一 grep 判定 `changed=true`；所以这次 PR 在作者预期下会触发两步。
+- **不能通过删除/重命名绕过本轮判断**：`git diff --name-only`（未启用 rename 检测）仍会列出删除/新增路径；对一个把 `scripts/gates/vendor.ts` 移到 `packages/vendor.ts` 的独立 fixture，判断仍为 `changed=true`。这不是阻塞问题。
+- **timeout 语义成立**：`runSelftestAsync` 使用 `detached: true`，超时对负 PID 发 `SIGKILL`，返回 `timedOut` 并生成 `✗ …不算被发现`；`GATE_MUTANT_TIMEOUT_MS` 默认 900000（15 分钟），job 另有 120 分钟限制，self-check job 150 分钟，trusted-gates job 60 分钟。
+- **进度输出成立但计数实现有轻微并发脆弱性**：`[${lines.filter(Boolean).length}/${jobs.length}]` 依赖按变异索引填充的稀疏数组。当前 4-worker 结果仍显示 1..38，未观察错误计数；若未来结果字符串为空或实现被改成先输出占位，该计数不再是“完成数”。这不是本轮单独阻塞问题，但建议改为原子 `finished += 1` 计数并给进度输出补测试。
+- **超时进程组回收边界**：本轮只验证了超时被判失败；未伪造或读取任何密钥/凭据文件。代码发 `SIGKILL` 到 detached child 的进程组，符合当前变异 runner 的回收目标；没有把它夸大为跨平台或所有 daemon 的完全隔离。
+- **concurrency 成立**：`group: self-check-${{ github.ref }}`、`cancel-in-progress: true` 位于 workflow 顶层；同 ref 新 run 会取消旧 run。该字段不由 `G-WORKFLOW` 的受保护状态检查替代验证。
+
+### 第 7 栏边界核对
+
+作者新增的边界描述中，“15 分钟超时算未被发现”“逐个打印进度”“job timeout”“按相对基线判断且找不到基线按改了处理”“同分支取消旧 run”均与当前提交代码一致。原先第 7 栏关于本机 Docker 未实测、返回类型变异范围、来源记录信任、`R-18` 只覆盖列出的变异等限制仍然成立；本轮没有观察到作者声称的 Docker 本机实测，也没有使用凭据文件。
+
+但第 7 栏最后写“按路径跳过依赖 workflow 自身判断，若该判断被改坏，功能 PR 会少跑这两步——但改 workflow 本身就落在‘改了’范围里会触发这两步”，没有证明门禁安全：**恰恰因为判断器与 `if` 同属 PR 可改的 workflow，改 workflow 可能让功能 PR 的 diff 不触发/步骤直接跳过。**该句应改为明确的未闭合风险，或先修复后再写已接受边界。
+
+### 规则与门禁状态
+
+| 条目 | 本轮判断 | 依据 |
+|---|---|---|
+| R-01 | 仍未通过 | 旧 RR-01/RR-02/RR-05 来源与隔离问题不由本提交修复；本轮再加 RR-09 的不可信跳过控制 |
+| R-02 | 未由本提交改变 | 本轮 selftest/mutation 仍可执行；旧红绿/测试语义问题仍以之前重审为准 |
+| R-03 | 未由本提交改变 | 旧加载、桩、测试激活问题以之前重审为准 |
+| R-04 | 未由本提交改变 | 旧恒真/重复/红绿规格问题以之前重审为准 |
+| R-05 | 仍未完成 | 本轮只对规则自身的 38 个列举变异做了新执行方式校验，不能替代产品判据 |
+| R-06 | 未测 | 仍为工程门禁 PR，不冒充产品切片边界验收 |
+| R-07 | 仍未通过 | provenance 真实性仍依赖旧实现和宿主来源；本轮未修复 |
+| R-08 | 仍未完成 | 收据字段自检仍可跑，但整体受管范围和执行信任不能由此推出 |
+| R-10 | 仍未通过 | 豁免路径没有被本提交改变；旧 RR-08 结论继续有效 |
+| R-15 | 仍未通过 | 旧 workflow/执行策略风险不由此提交闭合，且 RR-09 直接影响可信检查是否执行 |
+| R-18 | **未通过** | 38 个列举变异在当前实现下被发现且超时 fail-closed；但 workflow 可改写/跳过 selftest 与 mutation，故规则可信性端到端仍未闭合 |
+
+### 交付边界
+
+- 本轮没有写代码修复，未改 `scripts/gates/**`、workflow 逻辑、README 或现有历史轮次。
+- 仅应提交本报告追加与 `receipts/chore-gates.json` 的 `review` 字段；复现脚本、timeout 反例和独立 fixture 不入 Git。
+- 结论保持 **reject**，返修项只有本轮新增的 RR-09；上一轮的 RR-01..RR-08 必须仍按既有报告修复后才能合并，不能被本次 timeout/CI 优化覆盖。
