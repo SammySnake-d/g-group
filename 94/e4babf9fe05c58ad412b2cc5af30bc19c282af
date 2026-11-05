@@ -1,0 +1,23 @@
+packages/domain/src/contact.test.ts
+  s_36f8aff8cdaf05::t_732f03f2bb2012 566-635
+packages/domain/src/contact.ts
+  s_36f8aff8cdaf05::t_7d94d6a18b5142 1,88,92,96,100,114,119,123,138,154,159,163,167,172
+packages/domain/src/helper.ts
+  s_36f8aff8cdaf05::t_7f3e5a3b8e5b82 1,21,26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "94e4babf9fe05c58ad412b2cc5af30bc19c282af",
+  "prompts": {},
+  "sessions": {
+    "s_36f8aff8cdaf05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a528004857a3a0bf5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
