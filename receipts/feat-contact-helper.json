@@ -42,5 +42,12 @@
   },
   "unverifiable": "Helper 三入口的路由只在纯函数层判定;把侧边栏回复挡在消息表外、把 @Helper 回复写成消息要内核接线,AC-34 端到端没做。AC-33:通用工具黑名单是名字表,改名可绕过,真正约束靠宿主注册时如实设 bounded(arbitrary_terminal + bounded:true 能通过);Compute 专用与直接工具的互斥按名字判定,宿主若用不同名字登记同一能力本层看不出,要等 Compute 适配器的工具 Schema 检查;Compute 能力资产只记名字和种类,不验证宿主是否真的只把它挂给 Compute;同一名字只能对应一种类别,宿主若确需同名的 MCP 与 Skill 并存,本层会拒绝第二个,要换名登记。凭据引用只验形状(scheme://非空无空白路径,每一项都验),sk://abc 挡不住,要等 Vault。公开入口的对象入参经统一 normalize 取成快照:每个字段只读一次(数据属性取 value、访问器只调一次 getter),读到立即深拷贝,所以 getter 换值和后读字段改写前读数组都无效;但它不防数组本身是 Proxy 或在 Array.from 那一次遍历中途被改写(遍历只有一次,得到什么就校验并输出什么),也不检查对象原型链上的属性(只认自有属性,继承来的字段当成缺省);入站意图形状不对时返回 ignore,不返回理由;畸形回执与此前一样静默不改状态。cron 只验字段形状不验范围(0 99 * * * 能过),DST 实际触发没测。AC-35①:work 是否属于某条承诺(commitmentId)由上游判定,本片只保证给定归属后的决定正确,分类本身对不对没测。AC-31⑤:confirmFinalReport 由宿主拿到入库回执后调用,回执里的 commitmentIds(这条汇报履行了哪几条承诺)和 basedOnSeq(汇报依据的处理位置)由宿主判定传入,本片只保证按给定作用域更新正确,不验回执真实性、不验宿主对作用域的判定是否正确;只用 source_seq 与 basedOnSeq 比较防旧回执替后立的承诺放行,没有更细的因果版本;两者只校验是非负安全整数,不校验它们确实是日志里存在的位置,也不校验 basedOnSeq 不超过当前日志末尾;非法依据位置的回执静默保持状态不变,不返回拒绝理由,宿主看不到;确认对还没绑定到承诺上的任务不记录(只记已绑定、未终态的任务)。R-05:合并基线 origin/feat/task-lifecycle(52eb37a)后 mutations.mjs 是 task 与 contact/helper 合一的清单,数组共 328 个具体变异,注入点对当前源码各恰好出现 1 次,全部被杀。本片 contact/helper 部分 124 个:M30–M47 共 18(contact 13、helper 5) + Astra 独立审查按新源码改写后仍适用的 I 系列 14 + 历轮返修埋雷 K01–K52 共 52(K01–K30 原编号 C01–C30,改名避免与任务侧第三轮 C 系列重名) + Codex 第二轮独立变异 CN01–CN05 共 5(报告原编号 N01–N05,改名避免与任务侧 N 系列重名) + 第三轮 P01–P05 共 5 + 第四轮 Q01–Q05 共 5 + 第五轮 Z01–Z05 共 5 + 第六轮 CW01–CW05 共 5(报告原编号 W01–W05,改名避免与任务侧第七轮 W 系列重名) + 第七轮 CV01–CV08 共 8(报告原编号 V01–V08,改名避免与任务侧第六轮修复 V 系列重名) + 第八轮 CH05–CH06 共 2(报告原编号 H05–H06,改名避免与任务侧第八轮 H 系列重名)(H01–H04、H07–H08 与已有变异同类且已被杀,不重复收录) + 第九轮 J01–J05 共 5;其余 204 个属 domain-core 与任务生命周期(M 系列 log/cas/task/vendor 34 + A14 + N14 + B9 + R11 + C9 + S14 + D11 + T15 + E9 + U11 + F8 + V10 + G9 + W11 + H9 + X6)。mutations.txt 另有原样对照 1 行和结论 1 行,不计入变异数。有限变异数不推断整体覆盖。Astra 原 oracle 的 I10/I18 按旧回收语义写,返修后按 CH-03 改了语义,不再适用。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "codex",
+    "session": "codex:4d37f5a5-0839-4adc-8afc-9b481602df5a",
+    "model": "gpt-6.1-terra",
+    "verdict": "reject",
+    "reviewed_hash": "f92dbe94ff396d48ace4815cc41d894e3d23f5c23016a5f71cb539ee735d4cf6",
+    "notes": "第十轮:入站意图缺少变体形状校验且额外字段可阻断合法控制;外层 Proxy 取描述符可在复制前改写普通数组;五个入口快照故障变异存活。详见 reviews/feat-contact-helper.md。"
+  }
 }

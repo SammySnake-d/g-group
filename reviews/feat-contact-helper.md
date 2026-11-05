@@ -632,3 +632,64 @@ getter 对象以声明的 `grantTool` / `grantComputeAsset` 参数类型编写�
 **回交条件：** Claude Code 在原开发任务修复 CH-20–CH-22、补 CH-23 的相关测试与校准，保持已验证的 Helper 三入口、定时归属、控制穿透及既有回归；合入最新依赖基线后重新送独立跨厂商复审。本轮 reject 不是宣称所有后端文档和用户故事已验收。
 
 **本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 在 `130ac70` / 固定 `4cd80a3` 下 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 报未找到与本轮 `reviewed_hash` 相等的审查工具输出、无法识别该审查轮厂商。当前会话轮次尚未完整落盘；原生模型上下文可观察，但不冒称来源门禁通过、不伪造来源或豁免，待既有流程在会话落盘后重核（`$E/gates-local-round9.log`）。
+
+---
+
+## 第十轮：第九轮返修后的跨厂商独立复审（2026-11-06）
+
+**结论：reject，交回 Claude Code 原开发任务继续返修。** 第九轮 CH-20–CH-23 的具体反例和 J01–J05 已关闭；但新增入站意图规范化没有按变体验证，普通 JSON 的畸形控制/工作意图可能被当成 `handle`，合法控制意图也可能因为本变体未声明的额外字段被忽略。另有外层 Proxy 描述符取值顺序使已读普通数组在复制之前被改写；几个新公开入口的快照回归可被独立变异绕过。Proxy 反例只证明进程内纯函数合同，不证明真实宿主使用 Proxy 或发生远程利用。
+
+### 固定对象与复现
+
+- 按用户指定审 PR #4 `feat/contact-helper` 的 HEAD `d871c87ad6b49e4fcde8bc27ca7dd020aaff41d2`，固定基线 `origin/feat/task-lifecycle=52eb37af7a67ca34abe4269d5e294e0cffc2f764`。红 `db4d7c2c0eb9d9709ea1b0cade4dc19c1ea8c58b` 的父提交是上轮报告 `1176295`，绿 `1128dad65c7ef96680d5307e8828bc31818491bf`；合并 `c40c477` 的父提交为该绿与指定基线，`d871c87` 相对合并只改收据。helper 源码红提交之父、绿与 HEAD 的 blob 一致，均为 `8c69b2b9d8162baff516325e89dfe804450bcebf`。
+- 在普通独立 clone `$E/repo` 执行，`.git` 与 common dir 是该 clone 自己的 `.git`；被审源码与测试未改。`$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round10-nChbqH`；独立变异与探针均在仓库外的 `$E/mutants-round10/` 和 `$E/`。
+- 作者 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38` / `claude-opus-5-5`（Anthropic）；审查 `codex:4d37f5a5-0839-4adc-8afc-9b481602df5a`，当前原生 `turn_context.model=gpt-6.1-terra`（OpenAI），未使用豁免。原生模型记录不能代替 G-PROVENANCE 的实际判定。
+- 仓库根目录实际执行 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 的原样输出：`f92dbe94ff396d48ace4815cc41d894e3d23f5c23016a5f71cb539ee735d4cf6`。
+- `npm ci`、typecheck、lint、test 均 exit 0；Node v25.8.1 下 **236/236 测试绿**，无 skip/todo（`$E/npm-ci-round10.log`、`$E/{typecheck,lint,test}-round10.log`）；Node v22.22.0 下三项也均 exit 0，**236/236 绿**（`$E/node22-{typecheck,lint,test}-round10.log`）。
+- 独立 clone 检出红提交并安装依赖：contact/helper 的 **77 项按名字失败，77 个原因均为 `未实现`**，不是文件级加载失败（`$E/red-tests.tap`）。隔离红副本保留红测试、仅恢复其父提交的真实 contact/helper 源码，**70 绿、7 红**，失败名包括授权 getter、跨字段 getter、placement、承诺回执及意图（`$E/red-parent-overlay.tap`）；不能把空壳的 77 红都说成旧实现缺陷。
+- 作者变异：自己实跑 `nice -n 10 node packages/domain/proof/mutations.mjs`，exit 0，原样 **236 绿**、**328/328 个具体变异被具名测试杀死**（`$E/author-mutations-round10.log`）。独立解析清单得到 contact/helper **124**、任务/core **204**，无重复 ID，328 个注入点均在当前源码恰好出现一次；CH05/CH06 与第八轮 H05/H06、J01–J05 与第九轮注入前后字符串逐项一致（`$E/mutation-audit-round10.json`）。
+
+### 已闭合的反例与保留行为
+
+按原输入独立复测上轮直接工具/资产 getter、后读 getter 改写前读数组、placement null/数字/未知值和三种合法位置，均符合第九轮反例的预期修复（`$E/round9-regressions-on-round10.mjs` / `.log`）；第九轮 oracle J01–J05 **5/5 PASS**，第八轮 oracle H01–H08 **8/8 PASS**。原样普通 getter 的第九轮反例因此已关闭；下述 CH-25 是新的外层 Proxy 读描述符反例，不是将前轮结论原样重复。
+
+独立重跑 Helper 三入口 × 本人/他人/同 ID 联系人、定时归联系人且终态不回收、职责内外与三种控制穿透、撤销解锁和稳定输入的能力互斥，均通过（`$E/safeguards-round10.log`）。这些是纯函数子判据，不能当作真实消息表、调度器或 Compute/插件接线的端到端验收。Astra 旧 I10/I18 仅按“终态即回收”的旧语义写，第二轮已独立判为不适用；“汇报确认后回收/不能再锁定”仍需保持。
+
+### 必须修复
+
+**CH-24 [High，AC-35① / 入站意图合同] 各变体的必填字段和动作枚举未校验，且其他变体的字段会干扰合法控制。** `packages/domain/src/contact.ts:283-291` 把 `action/text/commitmentId` 在统一 schema 中全设为可选，只判断 kind；`control` 分支未验证 `action` 是否为 `stop/revoke/reschedule`、`commitmentId` 是否是字符串，`work` 分支也未要求 `text` 和 `commitmentId` 必填。对通过 `JSON.parse` 的普通对象实测（`$E/intent-shape-probe-round10.mjs` / `.json`）：
+
+- `{kind:"control"}`、未知 action 的 control、`commitmentId:null` 的 control 在有专职锁时均返回 **`handle`**，不是本轮约定的 `ignore`；缺 `text` 的职责内 work 也返回 `handle`，缺 `commitmentId` 的 work 在无锁时返回 `handle`。
+- 反向地，一个合法 `stop` 加上 control 变体未声明的额外字段 `text:42`，返回 **`ignore`**；一个合法职责内 work 加上 work 变体未声明的 `action:42`，也返回 `ignore`。不加这些额外字段的对照均 `handle`；加其他无关 `debug` 字段的 stop 仍 `handle`（`$E/intent-extra-probe-round10.json`）。两个带额外字段的对象作为变量符合 TypeScript 结构类型并通过严格检查（`$E/intent-extra-typed-round10.ts` / `.log`）。
+
+这里证明的是路由函数作出错误决定；尚未证明真实用户的停止消息含这些字段或真实下游执行了错误动作。建议在同一次读取的快照上按 kind 校验各变体的必填字段与 action 枚举；仅校验该变体声明的字段并丢弃其余字段。补空缺、null、错误类型、未知 action 的负向，以及三种有效控制、职责内外 work、无关额外字段的正向对照，保持控制穿透。
+
+**CH-25 [High，AC-33④ / AC-31⑤ 快照合同] 先批量取所有属性描述符，再复制数组，外层 Proxy 可在后字段读取时改掉前字段。** `packages/domain/src/contact.ts:105-117` 的 `Object.getOwnPropertyDescriptors(input)` 在进入逐字段复制循环前，就向外层对象取得所有字段描述符。在 `$E/proxy-descriptor-probe-round10.mjs` / `.json` 的实际原源码探针中，外层请求对象是 Proxy，`rules` 是普通数组而非 Proxy：读取 `rules` 描述符时它含两条群规，取得后面的 `tools` 描述符时 Proxy trap 清空该数组；`briefFor` 返回 **`ok:true` 且规则为空**。稳定对象对照保留两条规则。该外层 Proxy 满足 `BriefRequest` 并通过严格 TypeScript 检查（`$E/proxy-typed-round10.ts` / `.log`）。
+
+同一问题不只影响规则：`$E/proxy-receipt-probe-round10.json` 中，普通 `commitmentIds=["a"]` 的描述符已取到后，读取 `basedOnSeq` 描述符时外层 Proxy 将它改为 `["b"]`；两个承诺都绑定同一任务且符合位置，结果 **b done、a 仍 active**，稳定回执对照则 **a done、b active**。未证明真实宿主传入外层 Proxy，也未证明真实回执或任务被误回收。
+
+这发生在 `Array.from` **开始之前**，且被改写数组不是 Proxy；第 7 栏只披露 Proxy 数组或遍历中途变化，不能覆盖这个反例。建议逐个取得并读取声明字段描述符、取得后立即复制冻结该字段，再取下一个字段，或在宿主入口强制并测试禁止外层 Proxy/副作用读取的稳定数据合同；补普通数组 + 外层 Proxy 的规则与回执作用域对照。已披露的数组遍历中途边界仍需保留，不能声称任意 hostile Proxy 均可完全防御。
+
+**CH-26 [Medium，R-05 / 本轮公开入口快照合同] 部分新增入口的具体快照故障能通过全部现有测试。** 自造 8 个单点故障于隔离副本，分别运行 typecheck、lint、与 `npm test` 相同的六个测试文件（Node `--test-concurrency=1`，共 236 项）和独立 oracle。原样副本四项 exit 0；以下五个变异的 typecheck/lint/236 测试均 exit 0、对应 oracle exit 1：
+
+| ID | 人为故障 | 仅在变异副本观察到的结果 |
+|---|---|---|
+| Y01 | `addContact` 校验后改用原始对象 | 首读 id 为 `first`，最终目录却存 `second` |
+| Y02 | `updateContact` 校验后改用原始 patch | 首读记忆为 `original`，最终写成 `changed` |
+| Y03 | `setFocus` 校验后沿用原对象 | 有效承诺 `k` 的检查通过，但锁最终指向不存在的 `other` |
+| Y05 | `decideUnderFocus` 校验后改用原始意图 | 首读为职责外 work，getter 后换成 control 后返回 `handle` |
+| Y08 | 校验嵌套 schedule 但继续保留原对象 | 检查有效 cron 后成功存下 `not-cron` |
+
+Y04（直接跳过嵌套 schedule 快照）虽然 236 测试绿，但被 lint 未使用变量检查拦下，**不计作全门禁存活**；Y06、Y07 被已有承诺/回执 getter 具名测试杀死，作为对照。原样代码对所有这些独立 oracle 均通过；上述错误只存在于人为变异副本，不是说当前源码实际会存错 id、记忆、锁或 cron。建议一次性表驱动覆盖 `addContact/updateContact/setFocus/decideUnderFocus` 和嵌套 schedule 的首次读取、后换值、输出、未声明字段及稳定对照，并校准上述代表性故障；不要求穷尽任意有限变异。精确替换和逐项退出码见 `$E/independent-mutations-round10.json`、`$E/independent-Y08-round10.json`；原样与变异行为见 `$E/mutation-observations-round10.json`。
+
+### 收据边界与交回
+
+第 7 栏对 Vault 只验形状、宿主/适配器的身份和权限、真实消息/调度/DST、回执真实性及 328 项有限变异非穷尽等边界仍有价值；但“形状不对的入站意图 ignore”被 CH-24 的普通 JSON 反例推翻，对外层 Proxy 在遍历前改写普通数组的 CH-25 也没有披露。AC-01/31/33/35 整项保持未测是合理分层，不能据本纯函数片称全部后端、验收清单或用户故事完成。
+
+审查期间远端 `feat/task-lifecycle` 从指定 `52eb37a` 前移到 `d1a228a23759845790c0c11cc4aa1ca7d288e7bb`，增量只改 PR #3 的审查报告及收据；将新基线取到单独 `refs/review/round10-live-base`，没有改本 clone 固定的 `origin/feat/task-lifecycle`，不改工作区试合并 exit 0（`$E/merge-tree-live-round10.log`）。本轮结论仍只绑定用户指定快照，不替代 PR #3 自身审查；返修时由原负责人整合当时最新基线并重验。
+
+**回交条件：** Claude Code 在原开发任务修复 CH-24、CH-25 并补 CH-26 的表驱动测试与校准，保留上轮已正确的 getter、placement、工具互斥、Helper 三入口、定时归属和控制穿透；整合最新依赖基线、重算 hash 和重新运行门禁后交独立跨厂商复审。本次 reject 不新开实现任务。
+
+**本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 在 `d871c87` / 固定 `52eb37a` 下 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦下；G-PROVENANCE 报未找到等于本轮 `reviewed_hash` 的审查工具输出、无法识别该审查轮厂商。本轮会话尚未完整落盘；原生模型上下文可观察，但不冒称来源门禁通过、不伪造记录或豁免，待既有流程在会话落盘后重核（`$E/gates-local-round10.log`）。
+
+**执行器纠错：** 首次单独调用 `--hash` 的等待时间过短，未取到输出也未保留该调用的进程标识，故不将其当作结果；之后以较长等待重跑，实得上文完整 hash，`--local` 也输出同值。只读检查会话 `turns.jsonl` 时，第一次 Python 解析遇到尚未完整写完的 JSON 而报 `JSONDecodeError`（组合命令未单独采集该子命令退出码）；改为逐行识别未完成记录后 exit 0，未改写会话记录。
