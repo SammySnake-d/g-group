@@ -69,7 +69,7 @@ export function specIdsFrom(text: string | undefined): Set<string> {
 
 // 执行 PR 代码的唯一出口,一律 fail closed:
 //  - 设了 GATE_SANDBOX_IMAGE:docker run --network none,只挂这次的临时副本和 node_modules;
-//  - macOS:sandbox-exec,拒绝联网,只许写这次的临时副本,拒绝读会话、群聊、凭据目录;
+//  - macOS:sandbox-exec,拒绝联网,只许写这次的临时副本,拒绝读 HOME 下的点文件(只放行临时副本、依赖)和会话、群聊、凭据目录;
 //  - 两者都没有:直接报错停下,绝不回退到宿主执行。
 // 子进程只拿最小环境(PATH、HOME/TMPDIR 指向临时副本),不继承任何 token。
 // git/node 子进程的统一环境:剥掉全部 GIT_*(pre-push 等 hook 会注入 GIT_DIR/GIT_INDEX_FILE,
@@ -102,15 +102,29 @@ export function sandboxMode(): SandboxMode {
   throw new Error("没有可用沙箱(既没有 GATE_SANDBOX_IMAGE 也不是带 sandbox-exec 的 macOS),拒绝在宿主上执行 PR 代码");
 }
 const sbq = (s: string) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-function seatbeltProfile(work: string): string {
-  const home = os.homedir();
-  const secret = [".mirasim/sessions", ".mirasim/chat", ".ssh", ".config/gh", ".claude", ".codex", ".gnupg", ".aws", ".npmrc"].map((d) => path.join(home, d));
+const realOr = (d: string) => { try { return fs.realpathSync(d); } catch { return d; } };
+// SBPL 正则字面量 #"...":路径里的正则元字符逐个转义;含引号或换行的路径写不进字面量,直接报错停下(fail closed)
+const sbRe = (re: string) => { if (/["\n\r]/.test(re)) throw new Error(`沙箱规则写不进含引号或换行的路径:${JSON.stringify(re)}`); return `#"${re}"`; };
+const reEsc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// 读隔离(R7-01):seatbelt 按真实路径(realpath)匹配,同一条规则后写的生效。
+//  1. HOME 下所有点文件/点目录默认拒读(.git-credentials、.netrc、.ssh、.config/... 以及没列出的凭据位置);
+//  2. 只放行运行必需的:这次的临时副本、挂载的依赖(node_modules 真实路径)。node 可执行文件即使在点目录里(~/.nvm)
+//     也能启动:exec 不受 file-read-data 约束(自检把 node 放进假 HOME 的点目录核对);
+//  3. 最后再拒读固定清单(会话、群聊、凭据目录,含 HOME 之外的 MIRASIM_SESSIONS/ROOMS):放行项落在其中也不放开。
+// HOME 取实际值(os.homedir(),即这次的 $HOME),规则同时写原样和 realpath 两份。
+const SECRET_IN_HOME = [".mirasim/sessions", ".mirasim/chat", ".ssh", ".config/gh", ".claude", ".codex", ".gnupg", ".aws", ".npmrc", ".git-credentials", ".netrc"];
+function seatbeltProfile(work: string, mounts: string[] = []): string {
+  const home = path.resolve(os.homedir());
+  const homes = [...new Set([home, realOr(home)])];
+  const secret = SECRET_IN_HOME.map((d) => path.join(home, d));
   for (const v of [process.env.MIRASIM_SESSIONS, process.env.MIRASIM_ROOMS]) if (v) secret.push(v);
-  const real = secret.map((d) => { try { return fs.realpathSync(d); } catch { return d; } });
+  const runtime = [work, ...mounts].map((d) => `(subpath ${sbq(realOr(d))})`);
   return [
     "(version 1)", "(allow default)", "(deny network*)", "(deny file-write*)",
     `(allow file-write* (subpath ${sbq(work)}) (regex #"^/dev/"))`,
-    `(deny file-read-data ${[...new Set([...secret, ...real])].map((d) => `(subpath ${sbq(d)})`).join(" ")})`,
+    `(deny file-read-data ${homes.map((h) => `(regex ${sbRe(`^${reEsc(h)}/\\.`)})`).join(" ")})`,
+    `(allow file-read-data ${runtime.join(" ")})`,
+    `(deny file-read-data ${[...new Set([...secret, ...secret.map(realOr)])].map((d) => `(subpath ${sbq(d)})`).join(" ")})`,
   ].join("\n");
 }
 export function sandboxed(args: string[], work: string, mounts: string[] = []) {
@@ -123,7 +137,7 @@ export function sandboxed(args: string[], work: string, mounts: string[] = []) {
     return spawnSync("docker", ["run", "--rm", "--network", "none", "--user", uid, "-e", `HOME=${w}`, "-e", `TMPDIR=${w}`, ...vols, "-w", w, process.env.GATE_SANDBOX_IMAGE!, "node", ...args], { encoding: "utf8", timeout: 900_000, env: { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: w } });
   }
   const prof = path.join(w, ".gate-sandbox.sb");
-  fs.writeFileSync(prof, seatbeltProfile(w));
+  fs.writeFileSync(prof, seatbeltProfile(w, mounts));
   return spawnSync("/usr/bin/sandbox-exec", ["-f", prof, process.execPath, ...args], { cwd: w, encoding: "utf8", timeout: 900_000, env });
 }
 
