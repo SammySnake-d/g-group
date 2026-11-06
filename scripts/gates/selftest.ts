@@ -7,7 +7,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { GIT_SAFE_ARGS, gitEnv, type Receipt } from "./lib.ts";
-import { type CaseResult, evidence, killedBy } from "./judge.ts";
+import { CASE_MARK, type CaseResult, evidence, type Kind, killedBy, parseGateOutput } from "./judge.ts";
+import { verdict as runnerVerdict } from "./test-runner.ts";
 import { vendorOf } from "./vendor.ts";
 
 const HERE = import.meta.dirname;
@@ -69,7 +70,11 @@ function cli(repo: string, env: NodeJS.ProcessEnv, ...args: string[]) {
   return { code: r.status, out: (r.stdout ?? "") + (r.stderr ?? "") };
 }
 
-function runCase(tmp: string, c: Case, i: number): { pass: boolean; detail: string } {
+type Run = CaseResult & { detail: string };
+function mk(c: Case, o: Partial<CaseResult> & { pass: boolean; kind: Kind; detail: string }): Run {
+  return { name: c.name, direct: !!c.direct, expect: c.expect, exit: null, gates: {}, expectHit: [], gateErrors: [], ...o };
+}
+function runCase(tmp: string, c: Case, i: number): Run {
   if (!c.hostileGit) return runCaseInner(tmp, c, i);
   // 造一个"另一个仓库",把 GIT_* 指向它,模拟 pre-push hook 的环境;跑完它必须分毫未动
   const other = path.join(tmp, `other${i}`);
@@ -81,18 +86,18 @@ function runCase(tmp: string, c: Case, i: number): { pass: boolean; detail: stri
   const before = snapOf();
   const saved = { d: process.env.GIT_DIR, w: process.env.GIT_WORK_TREE, x: process.env.GIT_INDEX_FILE };
   process.env.GIT_DIR = path.join(other, ".git"); process.env.GIT_WORK_TREE = other; process.env.GIT_INDEX_FILE = path.join(other, ".git", "index");
-  let res: { pass: boolean; detail: string };
+  let res: Run;
   try { res = runCaseInner(tmp, c, i); }
   finally {
     for (const [k, v] of [["GIT_DIR", saved.d], ["GIT_WORK_TREE", saved.w], ["GIT_INDEX_FILE", saved.x]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
   }
   const after = snapOf();
-  if (after !== before) return { pass: false, detail: `GIT_DIR 指向的另一个仓库被改动了:\n${before}\n=====\n${after}` };
+  if (after !== before) return { ...res, pass: false, kind: "side", why: "GIT_DIR 指向的另一个仓库被改动了", detail: `GIT_DIR 指向的另一个仓库被改动了:\n${before}\n=====\n${after}` };
   return res;
 }
 
-function runCaseInner(tmp: string, c: Case, i: number): { pass: boolean; detail: string } {
-  if (c.direct) { const why = c.direct(); return { pass: why === undefined, detail: why ?? "" }; }
+function runCaseInner(tmp: string, c: Case, i: number): Run {
+  if (c.direct) { const why = c.direct(); return mk(c, { pass: why === undefined, kind: why === undefined ? "ok" : "verdict", detail: why ?? "", ...(why === undefined ? {} : { why }) }); }
   const dir = path.join(tmp, `c${i}`);
   const repo = path.join(dir, "repo"), sessions = path.join(dir, "sessions"), rooms = path.join(dir, "rooms");
   fs.mkdirSync(repo, { recursive: true });
@@ -138,13 +143,16 @@ function runCaseInner(tmp: string, c: Case, i: number): { pass: boolean; detail:
   }
   if (c.after) { write(repo, c.after); commit(repo, "after-review"); }
   const res = c.local === false ? cli(repo, env) : cli(repo, env, "--local");
+  if (res.code === null) return mk(c, { pass: false, kind: "timeout", why: "门禁命令行超时", detail: res.out });
+  const g = parseGateOutput(res.out, c.expect);
+  const seen = { exit: res.code, gates: g.gates, expectHit: g.expectHit, gateErrors: g.gateErrors };
+  if (!g.header || (res.code !== 0 && res.code !== 1)) return mk(c, { ...seen, pass: false, kind: "crash", why: `门禁命令行没有正常跑完(退出 ${res.code})`, detail: res.out });
   const side = c.postCheck?.(dir);
-  if (side) return { pass: false, detail: `${side}\n${res.out}` };
-  if (c.expect === null) {
-    const allListed = (c.local === false ? GATE_IDS.slice(0, -1) : GATE_IDS).every((id) => res.out.includes(`✓ ${id} `));
-    return { pass: res.code === 0 && allListed, detail: res.out };
-  }
-  return { pass: res.code === 1 && res.out.includes(c.expect), detail: res.out };
+  if (side) return mk(c, { ...seen, pass: false, kind: "side", why: side, detail: `${side}\n${res.out}` });
+  const pass = c.expect === null
+    ? res.code === 0 && (c.local === false ? GATE_IDS.slice(0, -1) : GATE_IDS).every((id) => res.out.includes(`✓ ${id} `))
+    : res.code === 1 && res.out.includes(c.expect);
+  return mk(c, { ...seen, pass, kind: pass ? "ok" : "verdict", detail: res.out, ...(pass ? {} : { why: c.expect === null ? "该放行的没放行" : `没有按「${c.expect}」拦下` }) });
 }
 
 const R = (f: (r: Receipt) => void) => f;
@@ -301,6 +309,8 @@ export const CASES: Case[] = [
   { name: "R4-01 目标门禁不再按预期原因拦下算发现", direct: () => { const ev = evidence(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] })); return ev?.includes("G-TRACE") ? undefined : `真正的目标故障没算发现(判因 ${ev})`; }, expect: null },
   { name: "R4-01 目标门禁由放行变为拦下算发现", direct: () => { const ev = evidence(["G-RED"], ALLOWED(), ALLOWED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-RED": "✗" } })); return ev?.includes("G-RED") ? undefined : `真正的目标故障没算发现(判因 ${ev})`; }, expect: null },
   { name: "R4-01 端到端:中性变异 + 提示用例夹具故障,变异校验必须判存活", direct: () => {
+    // 这条用例会在副本里跑一整套变异校验,副本的自检里又有这条用例:嵌套一层后不再展开
+    if (process.env.GATE_SELFTEST_NESTED === "1") return undefined;
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r401-"));
     try {
       const d = path.join(tmp, "gates");
@@ -312,14 +322,16 @@ export const CASES: Case[] = [
       const at = ms.indexOf("export const MUTATIONS: Mutation[] = [");
       if (at < 0) return "mutation.ts 里找不到 MUTATIONS";
       const end = ms.indexOf("\n];\n", at);
-      fs.writeFileSync(mf, `${ms.slice(0, at)}export const MUTATIONS: Mutation[] = [\n  { name: "中性注释变异", kill: "改了代码没收据", file: "gates.ts", from: "// 各条机械门禁。", to: "// 各条机械门禁(注释改了)。" },\n${ms.slice(end + 1)}`);
+      fs.writeFileSync(mf, `${ms.slice(0, at)}export const MUTATIONS: Mutation[] = [\n  { name: "中性注释变异", kill: "改了代码没收据", target: ["G-TRACE"], file: "gates.ts", from: "// 各条机械门禁。", to: "// 各条机械门禁(注释改了)。" },\n${ms.slice(end + 1)}`);
       const st = path.join(d, "scripts/gates/selftest.ts");
       const ss = fs.readFileSync(st, "utf8");
-      const hook = "function runCaseInner(tmp: string, c: Case, i: number): { pass: boolean; detail: string } {\n";
+      const hook = "function runCaseInner(tmp: string, c: Case, i: number): Run {\n";
       if (!ss.includes(hook)) return "selftest.ts 里找不到 runCaseInner";
       // 只在变异副本(注释被改过)里、只对提示用例,在准备阶段抛与变异无关的错
       fs.writeFileSync(st, ss.replace(hook, `${hook}  if (c.name === "改了代码没收据" && fs.readFileSync(path.join(HERE, "gates.ts"), "utf8").includes("注释改了")) throw new Error("模拟与变异无关的用例准备失败");\n`));
-      const r = spawnSync(process.execPath, [mf], { encoding: "utf8", env: gitEnv({ GATE_MUTATION_JOBS: "1", GATE_SELFTEST_JOBS: "4" }), timeout: 1_500_000 });
+      // 外层的 GATE_*(只跑子集、目标、基线、提示)不能漏进这次内层变异校验
+      const outer = Object.fromEntries(Object.entries(gitEnv()).filter(([k]) => !/^GATE_(MUTATION|SELFTEST|MUTANT|CLEAN)_/.test(k)));
+      const r = spawnSync(process.execPath, [mf], { encoding: "utf8", env: { ...outer, ...{ GATE_MUTATION_JOBS: "1", GATE_SELFTEST_JOBS: "2", GATE_SELFTEST_NESTED: "1", GATE_SELFTEST_ONLY: "^(改了代码没收据|删掉源码也要收据|只改 package.json 没收据|合规:只改文档不需要收据)$" } }, timeout: 600_000 });
       const out = (r.stdout ?? "") + (r.stderr ?? "");
       if (!out.includes("✓ 原样副本自检通过")) return `原样对照没通过,反例不成立\n${out}`;
       return r.status === 1 && /✗ 变异「中性注释变异」/.test(out) ? undefined : `中性变异在提示用例夹具故障下被判成发现(退出 ${r.status})\n${out}`;
@@ -329,6 +341,7 @@ export const CASES: Case[] = [
     const other = BLOCKED({ name: "删掉源码也要收据" });
     const k = killedBy(["G-TRACE"], new Map([["改了代码没收据", BLOCKED()], ["删掉源码也要收据", other]]), [BLOCKED({ pass: false, kind: "error", exit: null, gates: {}, expectHit: [], why: "用例自身出错" }), { ...other, pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] }]);
     return k?.case === "删掉源码也要收据" ? undefined : `应由后面那条真实故障判定,实际 ${JSON.stringify(k)}`; }, expect: null },
+  { name: "R4-02 判定:读不到汇总行判失败", direct: () => { const why = runnerVerdict("TAP version 13\nok 1 - x\n"); return why?.includes("汇总行") ? undefined : `没有汇总行却判 ${why ?? "通过"}`; }, expect: "" },
   { name: "R4-02 测试入口全部 skip 判失败", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest.skip("s", () => {});\n' }); return r.code === 1 && r.out.includes("没有实际执行") ? undefined : `全部 skip 没有按"没有实际执行"判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
   { name: "R4-02 测试入口全部 todo 判失败", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest.todo("t");\n' }); return r.code === 1 && r.out.includes("没有实际执行") ? undefined : `全部 todo 没有按"没有实际执行"判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
   { name: "R4-02 测试入口 skip 与 todo 混合判失败", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest.skip("s", () => {});\ntest.todo("t");\n' }); return r.code === 1 && r.out.includes("没有实际执行") ? undefined : `skip+todo 没有按"没有实际执行"判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
@@ -399,7 +412,8 @@ export const CASES: Case[] = [
  * 结果按用例顺序输出。GATE_SELFTEST_FAILFAST=1 时出现失败就不再启动新用例。
  */
 const WORKER_TIMEOUT_MS = 900_000;
-function runCaseInWorker(i: number): Promise<{ pass: boolean; detail: string; secs: number }> {
+function runCaseInWorker(i: number): Promise<Run & { secs: number }> {
+  const c0 = CASES[i]!;
   const t0 = Date.now();
   return timed(t0, new Promise((resolve) => {
     const c = spawn(process.execPath, [path.join(HERE, "selftest.ts"), "--case", String(i)], { env: gitEnv() });
@@ -411,20 +425,22 @@ function runCaseInWorker(i: number): Promise<{ pass: boolean; detail: string; se
     c.on("close", (code) => {
       clearTimeout(timer);
       const line = out.split("\n").reverse().find((l) => l.startsWith(RESULT_MARK));
-      if (timedOut) return resolve({ pass: false, detail: `用例超时(${WORKER_TIMEOUT_MS / 1000}s)\n${out}` });
-      if (!line) return resolve({ pass: false, detail: `用例子进程没有给出结果(退出 ${code})\n${out}` });
-      resolve(JSON.parse(line.slice(RESULT_MARK.length)) as { pass: boolean; detail: string });
+      if (timedOut) return resolve(mk(c0, { pass: false, kind: "timeout", why: `用例超时(${WORKER_TIMEOUT_MS / 1000}s)`, detail: out }));
+      if (!line) return resolve(mk(c0, { pass: false, kind: "no-result", why: `用例子进程没有给出结果(退出 ${code})`, detail: out }));
+      resolve(JSON.parse(line.slice(RESULT_MARK.length)) as Run);
     });
   }));
 }
-const timed = (t0: number, p: Promise<{ pass: boolean; detail: string }>) => p.then((r) => ({ ...r, secs: Math.round((Date.now() - t0) / 1000) }));
+const timed = (t0: number, p: Promise<Run>) => p.then((r) => ({ ...r, secs: Math.round((Date.now() - t0) / 1000) }));
 const RESULT_MARK = "__GATE_SELFTEST_RESULT__";
 
 export async function selfTest(only?: (c: Case) => boolean): Promise<boolean> {
   const t0 = Date.now();
   let ok = true;
   const failFast = process.env.GATE_SELFTEST_FAILFAST === "1";
-  const idx = CASES.map((c, i) => [c, i] as const).filter(([c]) => !only || only(c)).map(([, i]) => i);
+  // GATE_SELFTEST_ONLY=<正则>:只跑名字匹配的用例(本机诊断与端到端夹具用;self-check 里设它会被 G-WORKFLOW 拦下)
+  const onlyRe = process.env.GATE_SELFTEST_ONLY ? new RegExp(process.env.GATE_SELFTEST_ONLY) : undefined;
+  const idx = CASES.map((c, i) => [c, i] as const).filter(([c]) => (!only || only(c)) && (!onlyRe || onlyRe.test(c.name))).map(([, i]) => i);
   // GATE_SELFTEST_FIRST=<用例名>:先跑这一条,其余照原顺序随后全跑。只改顺序,不跳过任何用例。
   const first = process.env.GATE_SELFTEST_FIRST;
   if (first) {
@@ -434,27 +450,38 @@ export async function selfTest(only?: (c: Case) => boolean): Promise<boolean> {
     if (at > 0) { idx.splice(at, 1); idx.unshift(fi); }
   }
   const width = Math.max(1, Math.min(Number(process.env.GATE_SELFTEST_JOBS ?? Math.min(4, os.availableParallelism())), idx.length || 1));
-  const results: ({ pass: boolean; detail: string; secs: number } | undefined)[] = new Array(CASES.length);
+  const results: ((Run & { secs: number }) | undefined)[] = new Array(CASES.length);
+  // 变异校验传入目标与原样基线:FAILFAST 只在出现"目标判因"时停;执行故障、非目标原因的失败继续往下跑
+  const target = process.env.GATE_SELFTEST_TARGET?.split(",").filter(Boolean);
+  const baseline = process.env.GATE_SELFTEST_BASELINE ? new Map((JSON.parse(fs.readFileSync(process.env.GATE_SELFTEST_BASELINE, "utf8")) as CaseResult[]).map((r) => [r.name, r])) : undefined;
+  const stopOn = (r: Run) => failFast && (target && baseline ? evidence(target, baseline.get(r.name), r) !== undefined : !r.pass);
+  let stop = false;
   let next = 0;
   let printed = 0;
-  const flush = () => {
-    while (printed < idx.length && results[idx[printed]!]) {
-      const i = idx[printed++]!, c = CASES[i]!, { pass, detail, secs } = results[i]!;
-      console.log(`${pass ? "✓" : "✗"} ${c.expect === null ? "放行" : "拦下"}:${c.name} (${secs}s)`);
-      if (!pass && !failFast) console.log(detail.split("\n").map((l) => `      | ${l}`).join("\n"));
-    }
+  const printOne = (i: number) => {
+    const c = CASES[i]!, r = results[i]!, { detail, secs, ...cr } = r;
+    console.log(`${r.pass ? "✓" : "✗"} ${c.expect === null ? "放行" : "拦下"}:${c.name} (${secs}s)`);
+    console.log(CASE_MARK + JSON.stringify(cr));
+    if (r.pass) return;
+    const ev = target && baseline ? evidence(target, baseline.get(r.name), r) : undefined;
+    // FAILFAST 也留判因证据:失败类型、原因、门禁结论;全量模式打印完整输出
+    console.log(`      | 失败类型 ${r.kind}${r.why ? `:${r.why.split("\n")[0]}` : ""}${ev ? `;目标判因:${ev}` : target ? ";不是目标判因" : ""}`);
+    const lines = detail.split("\n");
+    console.log((failFast ? lines.filter((l) => /^(✓|✗) G-|^ {4}- |Error|出错/.test(l)).slice(0, 12) : lines).map((l) => `      | ${l}`).join("\n"));
   };
+  const flush = () => { while (printed < idx.length && results[idx[printed]!]) printOne(idx[printed++]!); };
   await Promise.all(Array.from({ length: width }, async () => {
-    while (next < idx.length && !(failFast && !ok)) {
+    while (next < idx.length && !stop) {
       const i = idx[next++]!;
       const r = await runCaseInWorker(i);
       results[i] = r;
       if (!r.pass) ok = false;
+      if (stopOn(r)) stop = true;
       flush();
     }
   }));
   // FAILFAST 下没启动的用例不打印;已跑完的按顺序补齐
-  for (const i of idx) if (results[i] && idx.indexOf(i) >= printed) { const c = CASES[i]!, { pass } = results[i]!; console.log(`${pass ? "✓" : "✗"} ${c.expect === null ? "放行" : "拦下"}:${c.name}`); }
+  for (const i of idx) if (results[i] && idx.indexOf(i) >= printed) printOne(i);
   for (const [m, v] of [["o1", "openai"], ["gpt-6-astra", "openai"], ["ai-iisbo/[乾坤按量]gpt-6-astra", "openai"], ["claude-opus-5-5", "anthropic"], ["grok-4.7", "xai"], ["gemini-4-argon", "google"], ["stealth/crouton-alpha", "unknown"], [undefined, "unknown"]] as const) {
     const pass = vendorOf(m) === v;
     if (!pass) ok = false;
@@ -473,8 +500,8 @@ if (import.meta.main) {
   const c = CASES[i];
   if (!c) { console.log(`未知用例 ${process.argv[k + 1]}`); process.exit(2); }
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-selftest-"));
-  let r: { pass: boolean; detail: string };
-  try { r = runCase(tmp, c, i); } catch (e) { r = { pass: false, detail: `用例自身出错:${(e as Error).stack ?? e}` }; }
+  let r: Run;
+  try { r = runCase(tmp, c, i); } catch (e) { r = mk(c, { pass: false, kind: "error", why: `用例自身出错:${(e as Error).message}`, detail: `用例自身出错:${(e as Error).stack ?? e}` }); }
   finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   console.log(RESULT_MARK + JSON.stringify(r));
   process.exit(0);

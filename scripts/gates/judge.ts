@@ -27,16 +27,18 @@ export const RUNNER = "RUNNER";
 export const DIRECT = "DIRECT";
 
 /** 从 run-all.ts 的输出读每个门禁的结论,以及哪些门禁的问题里出现了预期原因 */
-export function parseGateOutput(out: string, expect: string | null): { gates: Record<string, "✓" | "✗">; expectHit: string[]; header: boolean } {
+export function parseGateOutput(out: string, expect: string | null): { gates: Record<string, "✓" | "✗">; expectHit: string[]; gateErrors: string[]; header: boolean } {
   const gates: Record<string, "✓" | "✗"> = {};
-  const hit: string[] = [];
+  const hit: string[] = [], errs: string[] = [];
   let cur: string | undefined;
   for (const line of out.split("\n")) {
     const m = /^(✓|✗) (G-[A-Z]+) /.exec(line);
     if (m) { cur = m[2]!; gates[cur] = m[1] as "✓" | "✗"; continue; }
-    if (cur && expect && gates[cur] === "✗" && line.startsWith("    - ") && line.includes(expect) && !hit.includes(cur)) hit.push(cur);
+    if (!cur || gates[cur] !== "✗" || !line.startsWith("    - ")) continue;
+    if (expect && line.includes(expect) && !hit.includes(cur)) hit.push(cur);
+    if (line.includes("门禁自身出错") && !errs.includes(cur)) errs.push(cur);
   }
-  return { gates, expectHit: hit, header: /受检文件 \d+ 个.* 门禁 \d+ 个/.test(out) };
+  return { gates, expectHit: hit, gateErrors: errs, header: /受检文件 \d+ 个.* 门禁 \d+ 个/.test(out) };
 }
 
 export function parseCases(out: string): CaseResult[] {
@@ -50,9 +52,26 @@ export function parseCases(out: string): CaseResult[] {
 }
 
 /** 这条用例结果能不能作为"目标被发现"的证据;能就返回判因,不能返回 undefined */
-export function evidence(_target: string[], _base: CaseResult | undefined, mut: CaseResult): string | undefined {
-  // 红基线占位:任何失败都算发现(即 R4-01 指出的旧口径)
-  return mut.pass ? undefined : `用例「${mut.name}」失败`;
+const fmt = (g: Record<string, string>) => Object.entries(g).map(([k, v]) => `${v}${k.slice(2)}`).join(" ") || "(无)";
+/**
+ * 这条用例结果能不能作为"目标被发现"的证据;能就返回判因,不能返回 undefined。
+ * 前提:用例正常执行(kind 为 verdict/side,不是出错/超时/没结果/崩溃),且原样副本上同一条用例通过(有可比基线)。
+ * - 门禁目标:目标门禁不再按预期原因拦下,或由放行变为拦下且不是"门禁自身出错";
+ * - RUNNER:退出码或门禁结论集合变了,或副作用检查失败;
+ * - DIRECT:直接判定用例在变异下判失败。
+ */
+export function evidence(target: string[], base: CaseResult | undefined, mut: CaseResult): string | undefined {
+  if (mut.pass || (mut.kind !== "verdict" && mut.kind !== "side")) return undefined;
+  if (!base?.pass) return undefined;
+  if (mut.direct) return target.includes(DIRECT) && mut.kind === "verdict" ? `直接判定用例在变异下判失败:${(mut.why ?? "").split("\n")[0]!.slice(0, 120)}` : undefined;
+  if (target.includes(RUNNER) && (mut.kind === "side" || mut.exit !== base.exit || fmt(mut.gates) !== fmt(base.gates)))
+    return `执行器:退出码 ${base.exit}→${mut.exit},门禁 ${fmt(base.gates)} → ${fmt(mut.gates)}${mut.kind === "side" ? `;副作用检查失败:${mut.why ?? ""}` : ""}`;
+  for (const g of target) {
+    if (g === RUNNER || g === DIRECT) continue;
+    if (base.expectHit.includes(g) && !mut.expectHit.includes(g)) return `${g} 不再按预期原因「${base.expect}」拦下(${base.gates[g]} → ${mut.gates[g] ?? "没跑"})`;
+    if (base.gates[g] === "✓" && mut.gates[g] === "✗" && !mut.gateErrors.includes(g)) return `${g} 由放行变为拦下(不是门禁自身出错)`;
+  }
+  return undefined;
 }
 
 export function killedBy(target: string[], base: Map<string, CaseResult>, results: CaseResult[]): { case: string; ev: string } | undefined {

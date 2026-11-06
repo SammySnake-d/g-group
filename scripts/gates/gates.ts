@@ -579,6 +579,13 @@ function selfCheckProblems(doc: Record<string, unknown>): string[] {
   if (job["continue-on-error"] !== undefined) out.push(`${f} 的 job self-check 带了 continue-on-error`);
   // shell / working-directory / defaults 都能让 run 的文字不变、实际不执行它
   if (doc.defaults !== undefined) out.push(`${f} 顶层带了 defaults,可能改掉必需步骤的 shell 或工作目录`);
+  // GATE_* 是门禁/自检/变异的运行开关(只跑子集、超时、并发等),只许设沙箱镜像;并发只许写在变异命令前缀里
+  const envs: [string, unknown][] = [["顶层", doc.env], ["job self-check", job.env], ...(Array.isArray(job.steps) ? (job.steps as unknown[]) : []).map((s, i) => [`第 ${i + 1} 步`, s && typeof s === "object" ? (s as Record<string, unknown>).env : undefined] as [string, unknown])];
+  for (const [where, e] of envs) {
+    if (e === undefined) continue;
+    if (!e || typeof e !== "object" || Array.isArray(e)) { out.push(`${f} ${where}的 env 不是对象,无法核对门禁开关`); continue; }
+    for (const k of Object.keys(e)) if (/^GATE_/.test(k) && k !== "GATE_SANDBOX_IMAGE") out.push(`${f} ${where}设置了门禁开关 ${k},self-check 只许设 GATE_SANDBOX_IMAGE`);
+  }
   if (job.defaults !== undefined) out.push(`${f} 的 job self-check 带了 defaults,可能改掉必需步骤的 shell 或工作目录`);
   const steps = Array.isArray(job.steps) ? (job.steps as unknown[]) : [];
   for (const req of REQUIRED_SELF_CHECK_STEPS) {
