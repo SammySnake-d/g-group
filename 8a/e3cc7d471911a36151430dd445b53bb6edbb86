@@ -1,0 +1,35 @@
+packages/adapter-cc-compute/src/adapter.test.ts
+  s_2950c8e8f91d67::t_601f5cd3ea712b 11,61,69,71-84,188-189,193,195-199,202-203,208-209,211-224,415,422-424,427-430,433-434,440-458,581,584,591-594,596-599,611,653-654,659,661-667,670-671,680,684,686,693-694,696-697,701-703,705,707-709,725,728-731,734,738
+packages/adapter-cc-compute/src/adapter.ts
+  s_2950c8e8f91d67::t_8563d6ea7937b3 1-2,4,8,11
+packages/adapter-cc-compute/src/brief.ts
+  s_2950c8e8f91d67::t_4bb23fc6596364 1-3,6,9,13
+packages/adapter-cc-compute/src/cli.ts
+  s_2950c8e8f91d67::t_c847fe438dd2eb 1-2,6,9,13,17,21,25
+packages/adapter-cc-compute/src/events.ts
+  s_2950c8e8f91d67::t_2bd7a8896cf17b 1-2,23,27,33,45
+packages/adapter-cc-compute/src/procgroup.ts
+  s_2950c8e8f91d67::t_fa7264223b4903 1-12
+packages/adapter-cc-compute/src/report-schema.ts
+  s_2950c8e8f91d67::t_eabd219ef7aed0 1-2,7
+packages/adapter-cc-compute/src/types.ts
+  s_2950c8e8f91d67::t_6fbc44a2556ef9 32-33,70,74-77,79,92,94-95
+packages/adapter-cc-compute/test-support/fake-claude.mjs
+  s_2950c8e8f91d67::t_b9f1b2c408eea0 8,13,47-54,56-57,59,63,65,67-69,73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8ae3cc7d471911a36151430dd445b53bb6edbb86",
+  "prompts": {},
+  "sessions": {
+    "s_2950c8e8f91d67": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a224e5bbe1fb8b394",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
