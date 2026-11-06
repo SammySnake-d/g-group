@@ -1,0 +1,14 @@
+docs/开发手册.md
+  h_f33e46a035b77c 850,852,858-859,861,864
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "15e2046f44379c612bc05000baa1c84b9c9e307e",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
