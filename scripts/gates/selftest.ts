@@ -37,7 +37,9 @@ interface Case {
   local?: boolean; // 默认 true
   expect: string | null; // null = 必须放行
   headFn?: (dir: string) => Files; // 需要知道样例目录的绿提交内容
+  redFn?: (dir: string) => Files; // 需要知道样例目录的红提交内容(优先于 red)
   env?: Record<string, string>;
+  envFn?: (dir: string) => Record<string, string>; // 需要知道样例目录的环境(合并在 env 之后)
   authorRecord?: object; // 作者会话的 record.json
   setup?: (x: { dir: string; repo: string; sessions: string; hash: string }) => void; // 写完收据和会话后、跑门禁前
   postCheck?: (dir: string) => string | undefined; // 跑完后检查副作用,返回问题
@@ -107,12 +109,12 @@ function runCaseInner(tmp: string, c: Case, i: number): Run {
   commit(repo, "main");
   sh(repo, "checkout", "-q", "-b", "feat/x");
   let redSha = "";
-  const red = c.red === undefined ? RED_OK : c.red;
+  const red = c.redFn ? c.redFn(dir) : c.red === undefined ? RED_OK : c.red;
   if (red) { write(repo, red); redSha = commit(repo, "red"); }
   write(repo, c.headFn ? c.headFn(dir) : (c.head ?? HEAD_OK));
   commit(repo, "green");
   fs.mkdirSync(sessions, { recursive: true });
-  const env = { MIRASIM_SESSIONS: sessions, MIRASIM_ROOMS: rooms, GATE_OWNER_UID: OWNER_UID, GATE_OWNER_NAME: OWNER_NAME, ...c.env };
+  const env = { MIRASIM_SESSIONS: sessions, MIRASIM_ROOMS: rooms, GATE_OWNER_UID: OWNER_UID, GATE_OWNER_NAME: OWNER_NAME, ...c.env, ...c.envFn?.(dir) };
   const putTurns = (session: string, turns: object[]) => {
     const [h, id] = session.split(":");
     write(path.join(sessions, h!, id!), { "turns.jsonl": `${turns.map((t) => JSON.stringify(t)).join("\n")}\n` });
@@ -225,6 +227,82 @@ const TEST2 = (diffAssert: string) => `import { test } from "node:test";\nimport
 // RR-14:审查轮次的工具调用(codex 的真实形状:{ command, shell, cwd })
 const hashCall = (command: string) => (h: string) => [{ model: "gpt-6-astra", toolCalls: [{ name: "shell", input: { command, shell: "/bin/zsh -lc", cwd: "/x/review" }, result: h }] }];
 
+// R7-01:沙箱读隔离按实际 HOME 与规范化路径核对。只用假 HOME 和中性内容的假文件,不碰真实账户文件。
+const NEUTRAL = "NEUTRAL_FIXTURE_NO_CREDENTIALS";
+// 前五项是已知位置;后两项是不在任何固定清单里的点文件位置,用来核对"HOME 下点文件默认拒读"本身生效
+const R7_KNOWN = 5;
+const R7_DENY = [".git-credentials", ".netrc", ".ssh/key-fixture", ".mirasim/sessions/fixture", ".config/gh/hosts.yml", ".docker/config.json", ".config/fixture-tool/token"];
+const R7_DEP: Files = { "fixture-dep/package.json": JSON.stringify({ name: "fixture-dep", type: "module", main: "index.js" }), "fixture-dep/index.js": `export const v = ${JSON.stringify(NEUTRAL)};\n` };
+/**
+ * 假 HOME 是指向真目录的符号链接,真目录在 TMPDIR 下(macOS 上 /var → /private/var),同一个文件按三种写法各读一次:
+ * 链接路径、未规范化的真目录路径、realpath。node 可执行文件和依赖放进 HOME 的点目录(和本机一样:node 在 ~/.nvm、
+ * 仓库依赖在 ~/.mirasim/.../node_modules),用这份 node 调真实的 sandboxed;窄挂载只挂依赖,宽挂载挂到会话目录的上级,
+ * 整个 HOME 挂载时已知位置的固定清单仍须生效(显式挂载盖过点文件默认拒读)。
+ * 期望:拒读项(已知位置与未列出的点文件位置)每一项每种写法都 EPERM;工作副本文件、依赖文件可读,依赖能 import;沙箱进程退出 0。
+ * docker 模式(GATE_SANDBOX_IMAGE)下假 HOME 不挂进容器,拒读项读不到即可(错误码不限),放行项只认真实路径;宽挂载只在 seatbelt 下核对。
+ */
+function sandboxReadProbe(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r701-"));
+  try {
+    const docker = !!process.env.GATE_SANDBOX_IMAGE;
+    const real = path.join(tmp, "home-real"), link = path.join(tmp, "home-link"), work = path.join(tmp, "work");
+    const nm = path.join(real, ".mirasim", "repo", "node_modules");
+    write(real, Object.fromEntries(R7_DENY.map((f) => [f, NEUTRAL])));
+    write(nm, R7_DEP);
+    write(work, { "own.txt": NEUTRAL });
+    fs.symlinkSync(real, link);
+    let node = process.execPath;
+    if (!docker) {
+      node = path.join(real, ".nvm", "bin", "node");
+      fs.mkdirSync(path.dirname(node), { recursive: true });
+      fs.copyFileSync(process.execPath, node, fs.constants.COPYFILE_FICLONE);
+      fs.chmodSync(node, 0o755);
+    }
+    const forms = (rel: string) => (docker ? [path.join(fs.realpathSync(real), rel)] : [path.join(link, rel), path.join(real, rel), path.join(fs.realpathSync(real), rel)]);
+    const deny = R7_DENY.flatMap(forms);
+    const dep = path.join(".mirasim", "repo", "node_modules", "fixture-dep", "index.js");
+    const allow = [path.join(fs.realpathSync(work), "own.txt"), ...forms(dep)];
+    const reader = `import fs from "node:fs";
+const ps = JSON.parse(process.argv[1]);
+const out = {};
+for (const p of ps) { try { out[p] = fs.readFileSync(p, "utf8").includes(${JSON.stringify(NEUTRAL)}) ? "ok" : "wrong"; } catch (e) { out[p] = e.code ?? String(e); } }
+try { const m = await import(${JSON.stringify(new URL(`file://${path.join(fs.realpathSync(real), dep)}`).href)}); out.import = m.v === ${JSON.stringify(NEUTRAL)} ? "ok" : "wrong"; } catch (e) { out.import = e.code ?? String(e); }
+console.log(JSON.stringify(out));`;
+    // 宽挂载:挂到会话目录的上级;整个 HOME 挂载:点文件默认拒读被放行盖过时,拒读清单本身仍须生效
+    const probes: [string, string[]][] = [["窄挂载", [nm]], ...(docker ? [] : [["宽挂载", [path.join(real, ".mirasim")]], ["整个 HOME 挂载", [real]]] as [string, string[]][])];
+    const driver = `const { sandboxed } = await import(${JSON.stringify(new URL(`file://${path.join(HERE, "lib.ts")}`).href)});
+const out = {};
+for (const [k, mounts] of ${JSON.stringify(probes)}) { const r = sandboxed(["--input-type=module", "-e", ${JSON.stringify(reader)}, ${JSON.stringify(JSON.stringify([...deny, ...allow]))}], ${JSON.stringify(work)}, mounts); out[k] = { status: r.status, stdout: r.stdout, stderr: r.stderr }; }
+console.log(JSON.stringify(out));`;
+    const r = spawnSync(node, ["--input-type=module", "-e", driver], { encoding: "utf8", timeout: 120_000, env: { ...gitEnv(), PATH: `${path.dirname(node)}:/usr/bin:/bin`, HOME: link } });
+    const line = (r.stdout ?? "").trim().split("\n").pop() ?? "";
+    let res: Record<string, { status: number | null; stdout: string; stderr: string }>;
+    try { res = JSON.parse(line); } catch { return `探针没有给出结果(退出 ${r.status}):${(r.stdout ?? "").slice(-300)}${(r.stderr ?? "").slice(-300)}`; }
+    const bad: string[] = [];
+    for (const [k] of probes) {
+      const x = res[k];
+      if (x?.status !== 0) { bad.push(`${k}:沙箱进程退出 ${x?.status}:${(x?.stderr ?? "").split("\n").find((l) => l.trim()) ?? ""}`); continue; }
+      let got: Record<string, string>;
+      try { got = JSON.parse(x.stdout.trim().split("\n").pop() ?? ""); } catch { bad.push(`${k}:读取结果不是 JSON:${x.stdout.slice(-200)}`); continue; }
+      // 整个 HOME 都被显式挂载时放行项盖过点文件默认拒读,只核对已知位置的固定清单仍生效
+      const want = k === "整个 HOME 挂载" ? R7_DENY.slice(0, R7_KNOWN).flatMap(forms) : deny;
+      for (const f of want) if (docker ? got[f] === "ok" || got[f] === undefined : got[f] !== "EPERM") bad.push(`${k}:${f} 应拒读(EPERM),实际 ${got[f]}`);
+      for (const f of [...allow, "import"]) if (got[f] !== "ok") bad.push(`${k}:${f} 应可读,实际 ${got[f]}`);
+    }
+    return bad.length ? bad.join("\n") : undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+// 完整入口:假 HOME 在样例目录下(TMPDIR 里,macOS 上未规范化的 /var 路径),门禁命令行就用这个 HOME
+const R7_HOME = (dir: string) => path.join(dir, "home");
+const R7_READ_TEST = (dir: string) => T(`test("adds", () => { const a = fs.readFileSync(${JSON.stringify(path.join(R7_HOME(dir), ".git-credentials"))}, "utf8"); const b = fs.readFileSync(${JSON.stringify(path.join(R7_HOME(dir), ".netrc"))}, "utf8"); console.log(a.length + b.length); assert.equal(add(1, 2), 3); });\n`, `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport fs from "node:fs";\nimport { add } from "./add.ts";\n`);
+const R7_OK_TEST = T(`test("adds", () => { const own = fs.readFileSync(new URL("./fixture.txt", import.meta.url), "utf8"); console.log(own.length + v.length); assert.equal(add(1, 2), 3); });\n`, `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport fs from "node:fs";\nimport { v } from "fixture-dep";\nimport { add } from "./add.ts";\n`);
+const R7_SETUP = ({ dir, repo }: { dir: string; repo: string }) => {
+  write(R7_HOME(dir), Object.fromEntries(R7_DENY.map((f) => [f, NEUTRAL])));
+  const nm = path.join(R7_HOME(dir), ".mirasim", "deps", "node_modules");
+  write(nm, R7_DEP);
+  fs.symlinkSync(nm, path.join(repo, "node_modules"));
+};
+
 export const CASES: Case[] = [
   { name: "合规:先红后绿、跨厂商审查、来源核对通过", expect: null },
   { name: "合规:node:test 别名 + 断言", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`check("adds", () => { assert.equal(add(1, 2), 3); });\n`, `import { test as check } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`check("adds", () => { assert.equal(add(1, 2), 3); });\n`, `import { test as check } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\n`) }, expect: null },
@@ -284,6 +362,9 @@ export const CASES: Case[] = [
     red: null, receipt: R((r) => { r.red = null; }), postCheck: (dir) => (fs.existsSync(path.join(dir, "sessions", "codex", "late", "turns.jsonl")) ? "PR 测试写进了会话目录" : undefined), expect: "缺 red.commit" },
   { name: "RR-02 没有沙箱就停", env: { GATE_SIMULATE_NO_SANDBOX: "1" }, expect: "没有可用沙箱" },
   { name: "RR-02 CI 设了沙箱镜像时,模拟无沙箱仍然停", env: { GATE_SIMULATE_NO_SANDBOX: "1", GATE_SANDBOX_IMAGE: "node:22.22.0-slim" }, expect: "没有可用沙箱" },
+  { name: "R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载)", direct: sandboxReadProbe, expect: null },
+  { name: "R7-01 完整入口:具名测试读假 HOME 的 .git-credentials/.netrc 被拒,门禁拦下", main: { ".gitignore": "node_modules\n" }, headFn: (dir) => ({ ...HEAD_OK, "packages/core/src/add.test.ts": R7_READ_TEST(dir) }), redFn: (dir) => ({ ...RED_OK, "packages/core/src/add.test.ts": R7_READ_TEST(dir) }), envFn: (dir) => ({ HOME: R7_HOME(dir) }), setup: R7_SETUP, expect: "现在没有恰好通过一次" },
+  { name: "R7-01 完整入口对照:同一假 HOME 下,测试读工作副本文件、加载 HOME 点目录里的依赖照常放行", main: { ".gitignore": "node_modules\n" }, head: { ...HEAD_OK, "packages/core/src/add.test.ts": R7_OK_TEST, "packages/core/src/fixture.txt": NEUTRAL }, red: { ...RED_OK, "packages/core/src/add.test.ts": R7_OK_TEST, "packages/core/src/fixture.txt": NEUTRAL }, envFn: (dir) => ({ HOME: R7_HOME(dir) }), setup: R7_SETUP, expect: null },
   { name: "RR-05 相对路径的写操作算进产出厂商", authorRecord: { workdir: "/x/deliverables/g-group" }, authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/deliverables/g-group/a.ts" } }] }, { model: "gpt-6", toolCalls: [{ name: "apply_patch", input: "*** Begin Patch\n*** Update File: packages/core/src/add.ts\n*** End Patch" }] }], expect: "在作者的产出厂商集合" },
   { name: "RR-05 判不了路径的 shell 轮次也算进去", authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }, { model: "gpt-6", toolCalls: [{ name: "shell", input: { command: "sed -i s/a/b/ src/add.ts" } }] }], expect: "在作者的产出厂商集合" },
   { name: "RR-05 工作目录在仓库外的相对写不算(阴性对照)", authorRecord: { workdir: "/x/other-project" }, authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }, { model: "gpt-6", toolCalls: [{ name: "apply_patch", input: { cwd: "/x/other-project", patch: "*** Update File: notes.md" } }] }], expect: null },
