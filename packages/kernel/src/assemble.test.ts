@@ -3,7 +3,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { append, emptyLog, type Log } from "@g-group/domain";
-import { assemble, INVISIBLE, type AssembleOptions, type AssembleResult, MAX_BREAKPOINTS, prefixHash, prefixLength, serialize, squash } from "./assemble.ts";
+import * as assembleModule from "./assemble.ts";
+import { assemble, INVISIBLE_SOURCE, STABLE_ORDER, type AssembleOptions, type AssembleResult, MAX_BREAKPOINTS, prefixHash, prefixLength, serialize, squash } from "./assemble.ts";
 
 const user = { kind: "user", id: "u1" } as const;
 const contact = { kind: "contact", id: "c-astra" } as const;
@@ -660,9 +661,70 @@ test("撤回原文中间夹着 U+000B、U+0085、U+1680、U+2000–U+200A、U+20
   }
 });
 
-test("撤回比对用的不可见字符定义与实现同源:每个样例都在 INVISIBLE 里,普通可见字符都不在(R6-05 单开关对照)", () => {
-  for (const ch of INVISIBLE_SAMPLES) assert.equal(new RegExp(INVISIBLE.source, "u").test(ch), true, `U+${ch.codePointAt(0)?.toString(16)}`);
-  for (const ch of ["秘", "a", "_", "-", "\u00B7", "\u00AD"]) assert.equal(new RegExp(INVISIBLE.source, "u").test(ch), false, ch);
+test("撤回比对用的不可见字符定义与实现同源:每个样例都在 INVISIBLE_SOURCE 里,普通可见字符都不在(R6-05 单开关对照)", () => {
+  for (const ch of INVISIBLE_SAMPLES) assert.equal(new RegExp(INVISIBLE_SOURCE, "u").test(ch), true, `U+${ch.codePointAt(0)?.toString(16)}`);
+  for (const ch of ["秘", "a", "_", "-", "\u00B7", "\u00AD"]) assert.equal(new RegExp(INVISIBLE_SOURCE, "u").test(ch), false, ch);
   const r = assemble(retractedLog("秘密口令"), { stable: S, quotes: [], volatile: "状态:秘-密口令", budgetBytes: BIG });
   assert.equal(r.ok, true);
+});
+
+// —— 第七轮:导出策略对象不可变(R7-04)、squash 公开入口(R7-02)、JSON null 等非对象输入(R7-06)、同一可见旧消息重复引用(R7-M3)
+test("导出的固定段顺序是冻结副本、撤回空白正则不导出实例:调用方改它们之后,顺序校验与撤回扫描都不受影响(R7-04 阳性埋雷)", () => {
+  const reversed = { stable: [{ kind: "persona", text: "风格" }, { kind: "system", text: "规则" }], quotes: [], budgetBytes: BIG } as unknown as AssembleOptions;
+  const leak = { stable: S, quotes: [], volatile: "秘\u0085密口令", budgetBytes: BIG };
+  const before = [assemble(retractedLog("无关"), reversed), assemble(retractedLog("秘密口令"), leak)];
+  assert.equal(Object.isFrozen(STABLE_ORDER), true);
+  assert.throws(() => { (STABLE_ORDER as string[]).reverse(); }, TypeError);
+  assert.deepEqual([...STABLE_ORDER], ["system", "tools", "persona"]);
+  assert.equal("INVISIBLE" in assembleModule, false, "可变的 RegExp 实例不导出");
+  assert.equal(typeof INVISIBLE_SOURCE, "string");
+  // 调用方能拿到的只有规范文本:照它新建、改写自己的实例,宿主的扫描不受影响
+  const mine = new RegExp(INVISIBLE_SOURCE, "gu");
+  mine.compile("x", "g");
+  const after = [assemble(retractedLog("无关"), reversed), assemble(retractedLog("秘密口令"), leak)];
+  assert.deepEqual(after, before);
+  assert.equal(after[0]?.ok === false && after[0].reason, "invalid-stable");
+  assert.deepEqual(after[1], { ok: false, reason: "retracted-text-leaked", where: "volatile", seq: 1 });
+});
+
+test("squash 只收字符串:带 replace getter 的对象、null、数字都抛受控 TypeError,getter 调用 0 次(R7-02 阳性埋雷)", () => {
+  let calls = 0;
+  const bad = {};
+  Object.defineProperty(bad, "replace", { enumerable: true, get() { calls++; return () => "调用了"; } });
+  for (const v of [bad, null, 5]) assert.throws(() => squash(v as never), (e: unknown) => e instanceof TypeError && e.message === "squash 只接受字符串");
+  assert.equal(calls, 0);
+  assert.equal(squash("秘 密"), "秘密");
+});
+
+test("日志或装配选项是 null、数字、字符串、数组,或事件是 null 时返回 invalid-input,不抛错;正常输入照常装配(R7-06 阳性埋雷)", () => {
+  const log = history();
+  const o = opts();
+  const cases: [unknown, unknown, string][] = [
+    [null, o, "日志必须是对象"], [5, o, "日志必须是对象"], ["日志", o, "日志必须是对象"], [[], o, "日志必须是对象"],
+    [log, null, "装配选项必须是对象"], [log, 5, "装配选项必须是对象"], [log, "x", "装配选项必须是对象"], [log, [], "装配选项必须是对象"],
+    [{ events: [null] }, o, "日志 events[0] 必须是带整数 seq、sender{kind,id} 与 body{kind} 的对象"],
+    [{ events: [{ seq: 1, sender: null, body: { kind: "message", text: "x" } }] }, o, "日志 events[0] 必须是带整数 seq、sender{kind,id} 与 body{kind} 的对象"],
+    [log, { ...o, budgetBytes: null }, "budgetBytes 必须是非负整数"],
+    [log, { ...o, volatile: null }, "volatile 必须是字符串"],
+  ];
+  for (const [l, op, detail] of cases) {
+    let r: AssembleResult | undefined;
+    assert.doesNotThrow(() => { r = assemble(l as Log, op as AssembleOptions); }, detail);
+    assert.deepEqual(r, { ok: false, reason: "invalid-input", detail }, JSON.stringify([l === log ? "log" : l, op === o ? "opts" : op]));
+  }
+  ok(assemble(log, o));
+});
+
+test("serialize、prefixLength、prefixHash 收到 null 或非对象请求时抛受控 TypeError 并说明请求必须是对象(R7-06 阳性埋雷)", () => {
+  for (const req of [null, 5, "x"]) for (const fn of [serialize, prefixLength, prefixHash] as ((r: never) => unknown)[]) {
+    assert.throws(() => fn(req as never), (e: unknown) => e instanceof TypeError && / 请求必须是对象$/.test(e.message));
+  }
+});
+
+test("同一条仍可见的已压缩旧消息被重复引用时只页入一次,清单一条、字节只算一次(R7-M3 阳性埋雷)", () => {
+  const once = ok(assemble(history(), opts({ quotes: [1] })));
+  const twice = ok(assemble(history(), opts({ quotes: [1, 1] })));
+  assert.equal(twice.request.segments.filter((s) => s.label === "page-in").length, 1);
+  assert.deepEqual(twice.manifest.filter((m) => m.seq === 1), [{ seq: 1, bytes: once.manifest.find((m) => m.seq === 1)?.bytes, via: "page-in" }]);
+  assert.equal(twice.totalBytes, once.totalBytes);
 });

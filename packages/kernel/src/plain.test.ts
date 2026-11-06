@@ -1,7 +1,7 @@
 // 统一的普通数据对象判定(与 PR #3 同一契约):先 isProxy → 原型 → 逐层属性描述符,getter/setter 拒绝且永不调用。
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { describeThrown, plainData, plainItems, safeDescribe } from "./plain.ts";
+import { appendOwn, describeThrown, plainData, plainItems, safeDescribe } from "./plain.ts";
 
 function getterOn<T extends object>(o: T, key: string, counter: { n: number }): T {
   Object.defineProperty(o, key, { enumerable: true, configurable: true, get() { counter.n++; return "x"; } });
@@ -207,7 +207,7 @@ test("判定选项 topFunctions 是 getter 时拒绝,getter 调用 0 次;数据�
   const calls = { n: 0 };
   const opts = getterOn({}, "topFunctions", calls);
   const r = plainData({ fn: () => 1 }, "x", opts as never);
-  assert.deepEqual(r.ok === false && [r.path, r.why], ["x", "判定选项只接受普通数据对象,topFunctions 必须是数据属性"]);
+  assert.deepEqual(r.ok === false && [r.path, r.why], ["x", "判定选项只接受普通数据对象,只能有布尔数据属性 topFunctions"]);
   assert.equal(calls.n, 0);
   assert.equal(plainData({ fn: () => 1 }, "x", { topFunctions: true }).ok, true);
 });
@@ -228,4 +228,39 @@ test("safeDescribe 不执行 getter、toJSON 与 toString,访问器记作占位;
 test("有限小数照常通过并原样保留(R6-M1 单开关对照:只拒绝 NaN 与无穷)", () => {
   const r = plainData({ ratio: 2.5, neg: -0.125, list: [0.1] });
   assert.deepEqual(r.ok && JSON.parse(JSON.stringify(r.value)), { ratio: 2.5, neg: -0.125, list: [0.1] });
+});
+
+// —— 第七轮:公开工具 appendOwn 与判定选项(R7-02)、topFunctions:false 单开关(R7-M1)
+test("appendOwn 的目标不是普通数组(带 length getter 的对象、Proxy 数组、null)时抛受控 TypeError,getter 调用 0 次;普通数组照常追加(R7-02 阳性埋雷)", () => {
+  const calls = { n: 0 };
+  const fake = getterOn({}, "length", calls);
+  for (const target of [fake, new Proxy([], {}), null, { length: 0 }]) {
+    assert.throws(() => appendOwn(target as never, "x"), (e: unknown) => e instanceof TypeError && e.message === "appendOwn 的目标必须是普通数组");
+  }
+  assert.equal(calls.n, 0);
+  const real: string[] = ["a"];
+  appendOwn(real, "b");
+  assert.deepEqual([real.length, Object.hasOwn(real, "1"), real[1]], [2, true, "b"]);
+});
+
+test("判定选项里任何 getter/setter(可枚举或不可枚举)、其它键或非布尔 topFunctions 都拒绝,访问器调用 0 次(R7-02 阳性埋雷)", () => {
+  const calls = { n: 0 };
+  const visible = getterOn({ topFunctions: true }, "other", calls);
+  const hidden = { topFunctions: true };
+  Object.defineProperty(hidden, "other", { enumerable: false, get() { calls.n++; return 1; } });
+  const setter = { topFunctions: true };
+  Object.defineProperty(setter, "other", { enumerable: true, set() { calls.n++; } });
+  for (const opts of [visible, hidden, setter, { topFunctions: true, other: 1 }, { topFunctions: "yes" }, { [Symbol("k")]: 1 }]) {
+    const r = plainData({ x: 1 }, "x", opts as never);
+    assert.deepEqual(r.ok === false && [r.path, r.why], ["x", "判定选项只接受普通数据对象,只能有布尔数据属性 topFunctions"]);
+  }
+  assert.equal(calls.n, 0);
+  assert.equal(plainData({ x: 1 }, "x", {}).ok, true);
+});
+
+test("topFunctions:false 与不传一样拒绝顶层函数,只有 true 放行(R7-M1 单开关对照)", () => {
+  const fn = () => 1;
+  const off = plainData({ fn }, "x", { topFunctions: false });
+  assert.deepEqual(off.ok === false && [off.path, off.why], ["x.fn", "只有顶层字段可以是函数"]);
+  assert.equal(plainData({ fn }, "x", { topFunctions: true }).ok, true);
 });

@@ -1157,3 +1157,51 @@ test("B1 渠道 then getter 让首次落到 delivery-unknown 后,保留期内重
   assert.deepEqual(retry.ok && retry.receipt, { action_id: "a", receiptId: "r-2" });
   assert.deepEqual([counter.n, calls, reg.delivery("p", "a")?.attempts], [0, 2, 2]);
 });
+
+// —— 第七轮:pull 返回值先判定再 await(R7-01)、发送请求是 null 等非对象(R7-06)
+test("pull 同步返回带 then getter 的对象(抛错或不抛错)或带自有 constructor getter 的原生 Promise 时直接 invalid-batch,getter 调用 0 次(R7-01 阳性埋雷)", async () => {
+  const counter = { n: 0 };
+  const promiseWithCtor = Promise.resolve([ev()]);
+  trapGetter(promiseWithCtor, "constructor", Promise, counter, true);
+  for (const [name, returned] of [
+    ["then getter", trapGetter({}, "then", undefined, counter)],
+    ["抛错 then getter", trapGetter({}, "then", undefined, counter, true)],
+    ["Promise 自有 constructor getter", promiseWithCtor],
+  ] as const) {
+    const reg = createRegistry({ now: () => T0 });
+    reg.register({ kind: "data-source", id: "s", sources: ["g1"], pull: () => returned });
+    const r = await reg.pull("s", "g1");
+    assert.equal(r.ok === false && r.reason, "invalid-batch", name);
+    if (!r.ok) assert.match(r.detail, /^pull 必须给出普通数据数组:pull 结果 /, name);
+  }
+  assert.equal(counter.n, 0);
+});
+
+test("pull 返回合法原生 Promise 或同步普通数组时照常拉取(R7-01 单开关对照)", async () => {
+  for (const pull of [() => Promise.resolve([ev()]), async () => [ev()], () => [ev()]]) {
+    const reg = createRegistry({ now: () => T0 });
+    reg.register({ kind: "data-source", id: "s", sources: ["g1"], pull });
+    const r = await reg.pull("s", "g1");
+    assert.deepEqual(r.ok && r.events.map((e) => e.origin.nativeId), ["m-1"]);
+  }
+});
+
+test("发送请求是 null、数字、字符串或数组时返回 invalid-payload 拒绝,不抛错,插件调用 0 次,不建账目(R7-06 阳性埋雷)", async () => {
+  let calls = 0;
+  const reg = createRegistry();
+  reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: async (q: { action_id: string }) => { calls++; return { action_id: q.action_id, receiptId: "r" }; } });
+  for (const req of [null, 5, "x", []]) {
+    const r = await reg.send("p", req as never);
+    assert.deepEqual(r, { ok: false, state: "rejected", reason: "invalid-payload", detail: "发送请求必须是对象" }, JSON.stringify(req));
+  }
+  assert.equal(calls, 0);
+  assert.equal((await reg.send("p", { action_id: "a", payload: "x" })).ok, true);
+  assert.equal(calls, 1);
+});
+
+test("createRegistry(null) 按没给选项处理,用默认值;注册与拉取照常(R7-06 单开关对照)", async () => {
+  const reg = createRegistry(null as never);
+  reg.register(tg());
+  const r = await reg.pull("telegram", "g1");
+  assert.equal(r.ok && r.events.length, 1);
+});

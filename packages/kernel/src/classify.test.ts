@@ -240,3 +240,29 @@ test("分类器返回带 getter 或 toJSON 的非枚举对象时按 Uncertain �
   const plain = classifyInbound({ sender: user, text: "嗯" }, () => ({ event: "E1" }));
   assert.deepEqual([plain.intent, plain.violation], ["Uncertain", '{"event":"E1"}']);
 });
+
+test("入站事件是 null、数字、字符串或数组时封闭为 Uncertain 并说明必须是对象,分类器调用 0 次,不抛错(R7-06 阳性埋雷)", () => {
+  for (const e of [null, 5, "停止", []]) {
+    const c = counting("E4");
+    let r: ReturnType<typeof classifyInbound> | undefined;
+    assert.doesNotThrow(() => { r = classifyInbound(e as never, c.fn); });
+    assert.deepEqual([r?.intent, r?.via, r?.violation], ["Uncertain", "mechanical", "入站事件必须是对象"], JSON.stringify(e));
+    assert.equal(c.calls(), 0);
+  }
+  assert.equal(classifyInbound({ sender: user, text: "停止" }, () => "E4").intent, "E4");
+});
+
+test("确认卡回复是 null 或数组时封闭为 Uncertain 并说明必须是对象,不抛错;合法卡片照常 E6(R7-06 阳性埋雷)", () => {
+  for (const card of [null, [], 3]) {
+    let r: ReturnType<typeof classifyInbound> | undefined;
+    assert.doesNotThrow(() => { r = classifyInbound({ sender: user, text: "同意", card } as never, () => "E1"); });
+    assert.deepEqual([r?.intent, r?.violation], ["Uncertain", "确认卡回复必须是对象"], JSON.stringify(card));
+  }
+  assert.equal(classifyInbound({ sender: user, text: "同意", card: { cardId: "q", version: 1, decision: "approve" } }, () => "E1").intent, "E6");
+});
+
+test("导出的事件枚举是冻结的,调用方改不了;改动尝试之后分类照旧只认 E1..E10 与 Uncertain(R7-04 阳性埋雷)", () => {
+  assert.equal(Object.isFrozen(EVENT_CODES), true);
+  assert.throws(() => { (EVENT_CODES as unknown as string[]).push("E11"); }, TypeError);
+  assert.equal(classifyInbound({ sender: user, text: "嗯" }, () => "E11").intent, "Uncertain");
+});
