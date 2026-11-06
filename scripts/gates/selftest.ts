@@ -157,6 +157,11 @@ function runCaseInner(tmp: string, c: Case, i: number): Run {
 }
 
 const R = (f: (r: Receipt) => void) => f;
+// 原则 68:作者是 Codex(OpenAI 模型、codex 会话);审查人是 Claude(Anthropic 模型、claude 会话)
+const CODEX_AUTHOR = (r: Receipt) => { r.author = { agent: "codex", session: "codex:a", model: "gpt-6" }; };
+const CODEX_AUTHOR_TURNS = (_repo: string) => [{ model: "ai-x/gpt-6", toolCalls: [{ name: "apply_patch", input: { path: "/x/deliverables/g-group/packages/core/src/add.ts" } }] }];
+const CLAUDE_REVIEW = (r: Receipt) => { r.review = { ...r.review!, agent: "claude", model: "claude-opus-5-5", session: "claude:rv1" }; };
+const claudeReviewTurns = (h: string) => [{ model: "ai-x/claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }, result: h }] }];
 const OWNER_UID = "usr_owner", OWNER_NAME = "39impacts.talent";
 const user = (seq: number, text: string, by = OWNER_UID, name = OWNER_NAME) => ({ v: 1, seq, by, name, kind: "message", text });
 const SAME = R((r) => { r.review!.model = "claude-sonnet-5-5"; r.waiver = { by: OWNER_NAME, reason: "g-group#900" }; });
@@ -366,7 +371,7 @@ export const CASES: Case[] = [
     let o: { allowed: string[]; harness: string; codex: string; ctx: string[]; layers: string[]; scripts: Record<string, string>; review: string[]; harnesses: string[] };
     try { o = JSON.parse(r.stdout.trim().split("\n").pop() ?? ""); } catch { return `探针没跑通:${r.stdout}${r.stderr}`; }
     const bad: string[] = [];
-    if (o.allowed.join(",") !== "codex,astra,argon") bad.push(`allowedReviewers 变成 ${o.allowed}`);
+    if (o.allowed.join(",") !== "codex,astra,claude") bad.push(`allowedReviewers 变成 ${o.allowed}`);
     if (o.harness !== "codex" || o.codex !== "codex") bad.push(`harnessOf 变成 ${o.harness}/${o.codex}`);
     if (o.ctx.join(",") !== "trusted-gates,provenance,self-check") bad.push(`PROTECTED_CONTEXTS 变成 ${o.ctx}`);
     if (o.layers.join(",") !== "domain,kernel,adapter,plugin,app") bad.push(`LAYERS 变成 ${o.layers}`);
@@ -471,10 +476,15 @@ export const CASES: Case[] = [
   { name: "审查人 codex 放行(g-group#1531 默认审查人)", receipt: R((r) => { r.review!.agent = "codex"; }), room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "codex:b", assistant: "ai-codex" } }], expect: null },
   { name: "审查人 astra 放行", room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "codex:b", assistant: "ai-astra" } }], expect: null },
   { name: "审查人 grok 被拦", receipt: R((r) => { r.review!.agent = "grok"; r.review!.model = "grok-4.7"; }), reviewerTurns: (h) => [{ model: "grok-4.7", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "审查人必须是" },
-  { name: "审查人 argon 放行(g-group#2404 临时审查人,claude 会话)", receipt: R((r) => { r.review!.agent = "argon"; r.review!.model = "gemini-4-argon"; r.review!.session = "claude:argon1"; }), reviewerTurns: (h) => [{ model: "ai-iisbo-2/[vertex]gemini-4-argon", toolCalls: [{ name: "Bash", input: { command: "node scripts/gates/run-all.ts --hash" }, result: h }] }],
-    room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "claude:argon1", assistant: "ai-argon" } }], expect: null },
-  { name: "argon 审查照样要跨研发厂商:作者也用 Google 模型", authorTurns: () => [{ model: "gemini-4-argon", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }], receipt: R((r) => { r.author.model = "gemini-4-argon"; r.review!.agent = "argon"; r.review!.model = "gemini-4-argon"; r.review!.session = "claude:argon1"; }), reviewerTurns: (h) => [{ model: "gemini-4-argon", toolCalls: [{ name: "Bash", input: { command: "node scripts/gates/run-all.ts --hash" }, result: h }] }], expect: "同为 google" },
-  { name: "argon 审查会话必须是 claude 会话", receipt: R((r) => { r.review!.agent = "argon"; r.review!.model = "gemini-4-argon"; }), reviewerTurns: (h) => [{ model: "gemini-4-argon", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "必须是 claude 会话" },
+  // 原则 68(g-group#2943):Claude 审 Codex 写的 PR;Argon 读不到仓库,不再当审查人;跨厂商与禁止自审不变
+  { name: "原则 68 claude 审 codex 作者放行(claude 会话)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); CLAUDE_REVIEW(r); }), reviewerTurns: claudeReviewTurns,
+    room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "claude:rv1", assistant: "ai-claude" } }], expect: null },
+  { name: "原则 68 claude 审 claude 作者被拦(禁止自审)", receipt: R((r) => { CLAUDE_REVIEW(r); }), reviewerTurns: claudeReviewTurns, expect: "审查人与作者是同一个(claude)" },
+  { name: "原则 68 claude 审查照样要跨研发厂商:作者用 Anthropic 模型", authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }], receipt: R((r) => { r.author.agent = "deepseek"; r.author.session = "pi:a"; CLAUDE_REVIEW(r); }), reviewerTurns: claudeReviewTurns, expect: "同为 anthropic" },
+  { name: "原则 68 claude 审查会话必须是 claude 会话", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); CLAUDE_REVIEW(r); r.review!.session = "codex:b"; }), reviewerTurns: claudeReviewTurns, expect: "必须是 claude 会话" },
+  { name: "原则 68 argon 当审查人被拦(隔离沙盒读不到仓库)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); r.review!.agent = "argon"; r.review!.model = "gemini-4-argon"; r.review!.session = "claude:argon1"; }), reviewerTurns: (h) => [{ model: "ai-iisbo-2/[vertex]gemini-4-argon", toolCalls: [{ name: "Bash", input: { command: "node scripts/gates/run-all.ts --hash" }, result: h }] }],
+    room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "claude:argon1", assistant: "ai-argon" } }], expect: "审查人必须是" },
+  { name: "原则 68 astra 审 codex 作者被拦(同为 OpenAI)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); }), expect: "同为 openai" },
   { name: "astra 审查会话不能是 claude 会话", receipt: R((r) => { r.review!.session = "claude:astra1"; }), reviewerTurns: (h) => reviewerOk(h), expect: "必须是 codex 会话" },
   { name: "审查会话不是 codex 会话", receipt: R((r) => { r.review!.session = "pi:b"; }), reviewerTurns: (h) => reviewerOk(h), expect: "必须是 codex 会话" },
   { name: "派活卡片显示会话属于别的助手", room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "codex:b", assistant: "ai-codex" } }], expect: "对不上" },
