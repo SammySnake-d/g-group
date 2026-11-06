@@ -12,6 +12,7 @@ import { DEFAULT_REAP_FORCE_MS, DEFAULT_RUNNER, REPORT_MCP_PATH, createComputeAd
 import { CC_BUILTIN_TOOLS, checkBrief, checkSnapshot, isCredentialRef } from "./brief.ts";
 import { PRE_INIT_SYSTEM_SUBTYPES, checkInit, preInitFrame, terminalFor } from "./events.ts";
 import { REPORT_KINDS, reportErrors, reportToolDefinition } from "./report-schema.ts";
+import * as root from "./index.ts";
 
 const FAKE = fileURLToPath(new URL("../test-support/fake-claude.mjs", import.meta.url));
 const REPORT = "mcp__host__report_progress";
@@ -1361,4 +1362,284 @@ test("R5-02:report MCP 的 tools/call 只认 report_progress:未知、缺失或�
   const recs = fs.readFileSync(log, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { valid: boolean; kind: string });
   assert.deepEqual(recs.map((x) => [x.valid, x.kind]), [[true, "started"]]);
   assert.deepEqual(reportErrors(args), []);
+});
+
+// ---------------------------------------------------------------- 第六轮审查 R6-01、R6-02、R6-03
+// R6-01 合同:包根(./index.ts,即 @g-group/adapter-cc-compute)导出的每个函数都是外部入口。对象参数先按 plain.ts 纯数据合同判定
+// (brief 过 checkBrief、交接快照过 checkSnapshot),状态参数(字符串、数字)先判 typeof;getter/setter、Proxy(含嵌套、已撤销)、
+// 带 toPrimitive/toString/valueOf 访问器的对象一律不调用即拒收(抛受控 TypeError,或按该入口的约定返回拒绝),访问器与陷阱计数为 0;
+// 合法纯数据照常工作。合同限定内置原型未被改的环境(g-group#2662),本节不改任何内置原型。
+
+const PROXY_TRAPS = ["get", "set", "has", "ownKeys", "getOwnPropertyDescriptor", "getPrototypeOf", "setPrototypeOf", "defineProperty", "deleteProperty", "isExtensible", "preventExtensions"] as const;
+/** 计数器:任何访问器或 Proxy 陷阱被调用一次就加一 */
+function hitCounter() {
+  const c = { hits: 0 };
+  const handler: ProxyHandler<object> = {};
+  for (const k of PROXY_TRAPS) {
+    (handler as Record<string, unknown>)[k] = (...args: unknown[]) => { c.hits++; return (Reflect as unknown as Record<string, (...a: unknown[]) => unknown>)[k]!(...args); };
+  }
+  return { c, proxy: <T extends object>(t: T): T => new Proxy(t, handler) as T };
+}
+function deadProxy(): object {
+  const r = Proxy.revocable({}, {});
+  r.revoke();
+  return r.proxy;
+}
+/** 带计数 getter 的副本:把 x 的 key 换成可枚举 getter,返回原值 */
+function getterCopy<T extends object>(x: T, key: string, k: ReturnType<typeof hitCounter>): T {
+  const val = (x as Record<string, unknown>)[key];
+  Object.defineProperty(x, key, { enumerable: true, configurable: true, get() { k.c.hits++; return val; } });
+  return x;
+}
+/** 状态参数的反例:typeof 不是 string/number,隐式转换会经过 toPrimitive/toString/valueOf 访问器 */
+function coercible(v: unknown, k: ReturnType<typeof hitCounter>): object {
+  const o = {};
+  for (const key of [Symbol.toPrimitive, "toString", "valueOf"]) Object.defineProperty(o, key, { get() { k.c.hits++; return () => v; } });
+  return o;
+}
+/** 由合法参数派生的反例:已撤销 Proxy、整体 Proxy、首个自有键换 getter、首个对象值换成 Proxy / 已撤销 Proxy;原始值换成可转换对象 */
+function hostileVariants(v: unknown, k: ReturnType<typeof hitCounter>): [string, unknown][] {
+  const out: [string, unknown][] = [["已撤销 Proxy", deadProxy()]];
+  if (typeof v !== "object" || v === null) return [...out, ["toPrimitive/toString/valueOf 访问器", coercible(v, k)], ["转换陷阱 Proxy", k.proxy({})]];
+  out.push(["整体 Proxy", k.proxy(structuredClone(v))]);
+  const keys = Object.keys(v);
+  if (keys.length === 0) return [...out, ["自有 getter x", getterCopy({ x: "x" }, "x", k)]];
+  out.push([`自有 getter ${keys[0]}`, getterCopy(structuredClone(v), keys[0]!, k)]);
+  const nested = keys.find((key) => typeof (v as Record<string, unknown>)[key] === "object" && (v as Record<string, unknown>)[key] !== null);
+  if (nested) {
+    const p = structuredClone(v) as Record<string, unknown>;
+    p[nested] = k.proxy(p[nested] as object);
+    out.push([`嵌套 Proxy ${nested}`, p]);
+    const r = structuredClone(v) as Record<string, unknown>;
+    r[nested] = deadProxy();
+    out.push([`嵌套已撤销 Proxy ${nested}`, r]);
+  }
+  return out;
+}
+type Attempt = { threw?: unknown; value?: unknown };
+const attempt = (f: () => unknown): Attempt => { try { return { value: f() }; } catch (threw) { return { threw }; } };
+const RESULT_LINE = JSON.stringify({ type: "result", subtype: "success", result: "完成" });
+const legalFacts = () => ({ stopRequested: false, violations: ["越界"], pausedBlocked: false, unresolved: [] as string[] });
+/** 包根每个导出函数的合法参数与“拒绝”的返回约定(不写 refused 的入口只以受控 TypeError 拒收) */
+const PUBLIC_CALLS: Record<string, { readonly args: readonly unknown[]; readonly refused?: (v: unknown) => boolean }> = {
+  createComputeAdapter: { args: [{ reapForceMs: 1000 }] },
+  resolveReapForceMs: { args: [undefined, "400"] },
+  checkBrief: { args: [brief()], refused: (v) => (v as { ok: boolean }).ok === false },
+  checkSnapshot: { args: [{ constraintVer: 1, openQuestions: ["q"], doneSideEffects: [] }], refused: (v) => (v as { ok: boolean }).ok === false },
+  isCredentialRef: { args: ["vault://team/upload-token"], refused: (v) => v === false },
+  reportErrors: { args: [{ kind: "started", summary: "开始" }], refused: (v) => Array.isArray(v) && v.length > 0 },
+  reportToolDefinition: { args: [] },
+  allowedTools: { args: [brief()] },
+  cliArgs: { args: [brief(), "提示", "/nonexistent/mcp.json", "sess-1"] },
+  cliEnv: { args: [brief(), "cc-1", { SAFE_MARKER: "fixture" }] },
+  firstPrompt: { args: [brief(), { constraintVer: 1, openQuestions: ["q"], doneSideEffects: ["d"] }] },
+  toolOverreach: { args: [brief(), ["Read", REPORT]] },
+  streamParser: { args: [RESULT_LINE] },
+  terminalFor: { args: [{ code: 0, signal: null }, { success: true, text: "完成" }, legalFacts(), ""] },
+};
+
+test("R6-01:包根 firstPrompt 对 brief/交接快照的 getter、嵌套与已撤销 Proxy 不调用即抛受控 TypeError(计数 0);合法纯数据照常拼出首个提示,返回值深冻结", () => {
+  const k = hitCounter();
+  const bad: [string, unknown, unknown][] = [
+    ["brief.task getter", getterCopy(brief(), "task", k), undefined],
+    ["brief.rules 嵌套 Proxy", brief({ rules: k.proxy(["群规"]) }), undefined],
+    ["brief 已撤销 Proxy", deadProxy(), undefined],
+    ["handoff getter", brief(), getterCopy({ constraintVer: 1, openQuestions: [], doneSideEffects: [] }, "constraintVer", k)],
+    ["handoff 嵌套已撤销 Proxy", brief(), { constraintVer: 1, openQuestions: deadProxy(), doneSideEffects: [] }],
+  ];
+  for (const [name, b, h] of bad) {
+    const r = attempt(() => root.firstPrompt(b as never, h as never));
+    assert.ok(r.threw instanceof TypeError, `${name}:没有以 TypeError 拒收`);
+    assert.equal(k.c.hits, 0, `${name}:访问器或陷阱被调用`);
+  }
+  const ok = root.firstPrompt(brief() as never, { constraintVer: 4, openQuestions: ["q1"], doneSideEffects: ["已发邮件"] });
+  assert.match(ok.prompt, /把 a\.txt 改成大写/);
+  assert.match(ok.prompt, /约束版本: 4/);
+  assert.deepEqual(ok.sections.map((s) => s.name), ["task", "rules", "handoff", "credentialRefs"]);
+  assert.ok(Object.isFrozen(ok) && Object.isFrozen(ok.sections) && Object.isFrozen(ok.sections[1]!.detail) && Object.isFrozen((ok.sections[1]!.detail as { items: string[] }).items));
+});
+
+test("R6-01:包根 allowedTools、cliArgs、toolOverreach 对 brief Proxy/getter 与非字符串状态参数不调用即抛受控 TypeError(计数 0);合法输入给出按 brief 收窄的工具清单与参数", () => {
+  const k = hitCounter();
+  const proxied = () => k.proxy(brief());
+  const cases: [string, () => unknown][] = [
+    ["allowedTools brief Proxy", () => root.allowedTools(proxied() as never)],
+    ["allowedTools brief.tools 嵌套 Proxy", () => root.allowedTools(brief({ tools: k.proxy(["Read"]) }) as never)],
+    ["cliArgs brief Proxy", () => root.cliArgs(proxied() as never, "提示", "/nonexistent/mcp.json")],
+    ["cliArgs brief getter", () => root.cliArgs(getterCopy(brief(), "tools", k) as never, "提示", "/nonexistent/mcp.json")],
+    ["cliArgs prompt 可转换对象", () => root.cliArgs(brief() as never, coercible("提示", k) as never, "/nonexistent/mcp.json")],
+    ["cliArgs mcpConfigPath Proxy", () => root.cliArgs(brief() as never, "提示", k.proxy({}) as never)],
+    ["cliArgs resumeSession 可转换对象", () => root.cliArgs(brief() as never, "提示", "/nonexistent/mcp.json", coercible("s", k) as never)],
+    ["toolOverreach brief 已撤销 Proxy", () => root.toolOverreach(deadProxy() as never, [REPORT])],
+    ["toolOverreach initTools Proxy", () => root.toolOverreach(brief() as never, k.proxy([REPORT]))],
+  ];
+  for (const [name, f] of cases) {
+    const r = attempt(f);
+    assert.ok(r.threw instanceof TypeError, `${name}:没有以 TypeError 拒收`);
+    assert.equal(k.c.hits, 0, `${name}:访问器或陷阱被调用`);
+  }
+  assert.deepEqual(root.allowedTools(brief() as never), ["Read", "Write", REPORT]);
+  const args = root.cliArgs(brief() as never, "提示", "/nonexistent/mcp.json", "sess-1");
+  assert.equal(flagOf([...args], "--tools"), "Read,Write");
+  assert.equal(flagOf([...args], "--allowedTools"), `Read,Write,${REPORT}`);
+  assert.equal(flagOf([...args], "--resume"), "sess-1");
+  assert.deepEqual(root.toolOverreach(brief() as never, ["Read", "Bash", REPORT]), ["Bash"]);
+});
+
+test("R6-01:包根 cliEnv 对 hostEnv 的 getter、Proxy、非字符串或 undefined 值与非字符串 computeId 不调用即抛受控 TypeError(计数 0),与 createComputeAdapter 的 hostEnv 判定一致;合法 hostEnv 原样复制", () => {
+  const k = hitCounter();
+  const getterEnv = () => getterCopy({ SAFE_MARKER: "fixture" }, "SAFE_MARKER", k);
+  assert.throws(() => createComputeAdapter({ hostEnv: getterEnv() }), TypeError);
+  const cases: [string, () => unknown][] = [
+    ["hostEnv getter", () => root.cliEnv(brief() as never, "cc-1", getterEnv())],
+    ["hostEnv Proxy", () => root.cliEnv(brief() as never, "cc-1", k.proxy({ SAFE_MARKER: "fixture" }))],
+    ["hostEnv 已撤销 Proxy", () => root.cliEnv(brief() as never, "cc-1", deadProxy() as never)],
+    ["hostEnv 值是对象", () => root.cliEnv(brief() as never, "cc-1", { SAFE_MARKER: { x: 1 } } as never)],
+    ["hostEnv 值是 undefined", () => root.cliEnv(brief() as never, "cc-1", { SAFE_MARKER: undefined } as never)],
+    ["brief 嵌套 Proxy", () => root.cliEnv(brief({ credentialRefs: k.proxy(["vault://a/b"]) }) as never, "cc-1")],
+    ["computeId 可转换对象", () => root.cliEnv(brief() as never, coercible("cc-1", k) as never)],
+  ];
+  for (const [name, f] of cases) {
+    const r = attempt(f);
+    assert.ok(r.threw instanceof TypeError, `${name}:没有以 TypeError 拒收`);
+    assert.equal(k.c.hits, 0, `${name}:访问器或陷阱被调用`);
+  }
+  const env = root.cliEnv(brief() as never, "cc-1", { SAFE_MARKER: "fixture" });
+  assert.equal(env.SAFE_MARKER, "fixture");
+  assert.equal(env.G_GROUP_COMPUTE_ID, "cc-1");
+  assert.equal(env.G_GROUP_CREDENTIAL_REFS, JSON.stringify(["vault://team/upload-token"]));
+  assert.equal(root.cliEnv(brief() as never, "cc-2").G_GROUP_COMPUTE_ID, "cc-2");
+});
+
+test("R6-01:包根 streamParser 的输入行与 terminalFor 的退出/结果/事实参数遇到 Proxy、getter、嵌套 Proxy 不调用即抛受控 TypeError(计数 0);合法字符串行与纯数据照常解析和裁决", () => {
+  const k = hitCounter();
+  const toPrimitiveProxy = k.proxy({});
+  const cases: [string, () => unknown][] = [
+    ["streamParser 转换陷阱 Proxy", () => root.streamParser()(toPrimitiveProxy as never)],
+    ["streamParser 可转换对象", () => root.streamParser()(coercible(RESULT_LINE, k) as never)],
+    ["terminalFor exit getter", () => root.terminalFor(getterCopy({ code: 0, signal: null }, "code", k) as never, { success: true, text: "完成" }, legalFacts(), "")],
+    ["terminalFor result Proxy", () => root.terminalFor({ code: 0, signal: null }, k.proxy({ success: true, text: "完成" }), legalFacts(), "")],
+    ["terminalFor facts.violations 嵌套 Proxy", () => root.terminalFor({ code: 0, signal: null }, undefined, { ...legalFacts(), violations: k.proxy(["越界"]) }, "")],
+    ["terminalFor facts 已撤销 Proxy", () => root.terminalFor({ code: 0, signal: null }, undefined, deadProxy() as never, "")],
+    ["terminalFor stderrTail 可转换对象", () => root.terminalFor({ code: 1, signal: null }, undefined, { ...legalFacts(), violations: [] }, coercible("x", k) as never)],
+  ];
+  for (const [name, f] of cases) {
+    const r = attempt(f);
+    assert.ok(r.threw instanceof TypeError, `${name}:没有以 TypeError 拒收`);
+    assert.equal(k.c.hits, 0, `${name}:访问器或陷阱被调用`);
+  }
+  assert.deepEqual(root.streamParser()(RESULT_LINE), [{ type: "result", success: true, text: "完成" }]);
+  assert.deepEqual(root.streamParser()("不是 JSON"), []);
+  const t = root.terminalFor({ code: 0, signal: null }, { success: true, text: "完成" }, legalFacts(), "");
+  assert.deepEqual(t, { kind: "failed", reason: "越界", code: 0, signal: null, violations: ["越界"] });
+  assert.deepEqual(root.terminalFor({ code: 0, signal: null }, { success: true, text: "完成" }, { ...legalFacts(), violations: [] }, ""), { kind: "completed", result: "完成" });
+});
+
+test("R6-01:包根导出的每个函数逐个参数换成已撤销 Proxy、整体 Proxy、getter、嵌套 Proxy/已撤销 Proxy 或可转换对象时都拒收且访问器与陷阱计数为 0;同一组合法参数照常工作;导出函数清单与本表一致", () => {
+  const exported = Object.keys(root).filter((name) => typeof (root as Record<string, unknown>)[name] === "function").sort();
+  assert.deepEqual(exported, Object.keys(PUBLIC_CALLS).sort());
+  for (const [name, spec] of Object.entries(PUBLIC_CALLS)) {
+    const fn = (name === "streamParser" ? root.streamParser() : (root as unknown as Record<string, (...a: unknown[]) => unknown>)[name]!) as (...a: unknown[]) => unknown;
+    const legal = attempt(() => fn(...spec.args));
+    assert.equal(legal.threw, undefined, `${name} 合法对照抛错:${String(legal.threw)}`);
+    assert.notEqual(spec.refused?.(legal.value), true, `${name} 合法对照被拒`);
+    const k = hitCounter();
+    spec.args.forEach((v, i) => {
+      for (const [label, bad] of hostileVariants(v, k)) {
+        const args = [...spec.args];
+        args[i] = bad;
+        const r = attempt(() => fn(...args));
+        assert.equal(k.c.hits, 0, `${name} 第 ${i + 1} 个参数 ${label}:访问器或陷阱被调用`);
+        assert.ok(r.threw instanceof TypeError || (r.threw === undefined && spec.refused?.(r.value) === true), `${name} 第 ${i + 1} 个参数 ${label}:没有拒收(${r.threw === undefined ? "返回了结果" : String(r.threw)})`);
+      }
+    });
+  }
+});
+
+/** 从一个订阅者里读到这个 Compute 的指定种类事件 */
+async function nextKind(it: AsyncIterator<ComputeEventT>, id: string, kind: string): Promise<ComputeEventT> {
+  for (;;) {
+    const n = await it.next();
+    if (n.done) throw new Error(`事件流结束,没有 ${kind}`);
+    if (n.value.computeId === id && n.value.kind === kind) return n.value;
+  }
+}
+type ComputeEventT = Awaited<ReturnType<Adapter["settled"]>>[number];
+const violationsOf = (e: ComputeEventT | undefined) => (e && (e.kind === "failed" || e.kind === "stopped") ? e.violations : undefined);
+
+test("R6-02:failed 事件及其 violations 深冻结:一个消费者 splice(0) 抛 TypeError,两次 settled() 与两个订阅者读到同一份违规", async () => {
+  const f = fake({ reports: [], result: "success", extraInitTools: ["Bash"] });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  const sub1 = a.events()[Symbol.asyncIterator]();
+  const sub2 = a.events()[Symbol.asyncIterator]();
+  const first = await within(a.settled(r.computeId));
+  assert.notEqual(first, "超时");
+  const failed = first === "超时" ? undefined : first.find((e) => e.kind === "failed");
+  const before = [...(violationsOf(failed) ?? [])];
+  assert.match(before.join(";"), /未授权的工具 Bash/);
+  assert.ok(Object.isFrozen(failed) && Object.isFrozen(violationsOf(failed)));
+  assert.throws(() => (violationsOf(failed) as string[]).splice(0), TypeError);
+  const second = await within(a.settled(r.computeId));
+  assert.deepEqual(violationsOf(second === "超时" ? undefined : second.find((e) => e.kind === "failed")), before);
+  const seen1 = await within(nextKind(sub1, r.computeId, "failed"));
+  assert.throws(() => (violationsOf(seen1 as ComputeEventT) as string[]).splice(0), TypeError);
+  const seen2 = await within(nextKind(sub2, r.computeId, "failed"));
+  assert.deepEqual(violationsOf(seen2 as ComputeEventT), before);
+  assert.deepEqual(violationsOf((await within(nextKind(a.events()[Symbol.asyncIterator](), r.computeId, "failed"))) as ComputeEventT), before);
+});
+
+test("R6-02:违规后 stop 的 stopped 事件及其 violations 深冻结:首个订阅者改写抛 TypeError,新订阅者与两次 settled() 仍看到原违规;停止优先、违规可审计", async () => {
+  const f = fake({ reports: [], hang: "stubborn", extraInitTools: ["Bash"] }, { reapForceMs: 3000 });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  // 越界 init 触发违规回收:主进程收到 SIGTERM(忽略)写 .term,此时违规已记录,再 stop
+  await waitFor(() => fs.existsSync(termFile(f.record)));
+  assert.deepEqual(await a.stop(r.computeId), { ok: true });
+  const s1 = await within(nextKind(a.events()[Symbol.asyncIterator](), r.computeId, "stopped"));
+  const before = [...(violationsOf(s1 as ComputeEventT) ?? [])];
+  assert.match(before.join(";"), /未授权的工具 Bash/);
+  assert.ok(Object.isFrozen(s1) && Object.isFrozen(violationsOf(s1 as ComputeEventT)));
+  assert.throws(() => (violationsOf(s1 as ComputeEventT) as string[]).splice(0), TypeError);
+  const s2 = await within(nextKind(a.events()[Symbol.asyncIterator](), r.computeId, "stopped"));
+  assert.deepEqual(violationsOf(s2 as ComputeEventT), before);
+  const evs = await within(a.settled(r.computeId), 10_000);
+  assert.notEqual(evs, "超时");
+  assert.deepEqual(evs === "超时" ? [] : evs.map((e) => e.kind), ["stopped"]);
+  assert.deepEqual(violationsOf(evs === "超时" ? undefined : evs[0]), before);
+  const again = await within(a.settled(r.computeId));
+  assert.deepEqual(violationsOf(again === "超时" ? undefined : again[0]), before);
+});
+
+test("R6-02:rejectedReports 记录里来自 JSON 的 kind(数组)深冻结,改写抛 TypeError,再次读取不变", async () => {
+  const f = fake({ reports: [{ kind: ["blocked"], summary: "种类不是字符串" }], result: "success" });
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  await within(a.settled(r.computeId));
+  const rec = a.rejectedReports(r.computeId)[0];
+  assert.ok(rec);
+  assert.deepEqual(rec.kind, ["blocked"]);
+  assert.ok(Object.isFrozen(rec.kind));
+  assert.throws(() => (rec.kind as string[]).splice(0), TypeError);
+  assert.deepEqual(a.rejectedReports(r.computeId)[0]?.kind, ["blocked"]);
+});
+
+test("R6-03:report MCP 只认精确的 report_progress:前后空格、制表/换行、大小写不同、连字符等近似名称回 -32602 且不写 REPORT_LOG,同一参数的精确名称照常接收并只记一行(直接 JSON-RPC 正反对照)", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fake-cc-"));
+  ownDirs.add(dir);
+  const log = path.join(dir, "report.jsonl");
+  const args = { kind: "started", summary: "开始" };
+  const exact = (reportToolDefinition() as { name: string }).name;
+  const near = [`${exact} `, ` ${exact}`, `\t${exact}\n`, exact.toUpperCase(), "Report_Progress", exact.replace("_", "-")];
+  const r = rpc([...near.map((name, i) => callNamed(i + 1, { name, arguments: args })), callNamed(99, { name: exact, arguments: args })], { REPORT_LOG: log });
+  assert.equal(r.status, 0);
+  assert.equal(r.stderr, "");
+  assert.deepEqual(r.replies.map((x) => [x.id, x.error?.code ?? null, x.result?.isError ?? null]), [...near.map((_, i) => [i + 1, -32602, null]), [99, null, false]]);
+  assert.equal(r.replies.slice(0, near.length).some((x) => x.result !== undefined), false);
+  assert.equal(r.replies.at(-1)!.result?.content?.[0]?.text, "已记录。");
+  const recs = fs.readFileSync(log, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { valid: boolean; kind: string });
+  assert.deepEqual(recs.map((x) => [x.valid, x.kind]), [[true, "started"]]);
 });
