@@ -1,0 +1,22 @@
+packages/kernel/src/assemble.ts
+  h_f33e46a035b77c 14-17,54-56,73-154,156-157,160-296,299-319,321,324,326,329,331-333
+packages/kernel/src/classify.ts
+  h_f33e46a035b77c 9,11-12,40-115
+packages/kernel/src/own.ts
+  h_f33e46a035b77c 1-17
+packages/kernel/src/plain.ts
+  h_f33e46a035b77c 6-8,11-12,21-40,42-43,46-77,80-85,88-154,156-193,196,198-204
+packages/kernel/src/plugins.ts
+  h_f33e46a035b77c 1-21,25-199,201-342
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dde651db6908c7b2b73ee162b60b3d01f7f085ff",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
