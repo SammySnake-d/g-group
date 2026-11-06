@@ -12,7 +12,7 @@ const ROOT = path.resolve(PKG, "../..");
 
 const M = [
   ["M01 brief 放行 memory 等额外字段", "src/brief.ts", "if (extra.length) return refuse(`brief", "if (false) return refuse(`brief"],
-  ["M02 brief 放行明文凭据", "src/brief.ts", "if (credentialRefs.some((c) => !CREDENTIAL_REF.test(c)))", "if (false)"],
+  ["M02 brief 放行明文凭据", "src/brief.ts", "if (plaintext.length) return refuse(", "if (false) return refuse("],
   ["M03 --allowedTools 不按 brief.tools", "src/cli.ts", '"--allowedTools", allowedTools(brief).join(","),', '"--allowedTools", ["Read", "Write", "Edit", "Bash", REPORT_TOOL].join(","),'],
   ["M04 没有 milestone 就不报 completed", "src/adapter.ts", 'if (terminal.kind !== "paused-blocked") emit(', 'if (terminal.kind !== "paused-blocked" && (terminal.kind !== "completed" || round.events.some((e) => e.kind === "milestone"))) emit('],
   ["M05 非零退出也报 completed", "src/events.ts", "if (!(exit.code === 0 && exit.signal === null && result?.success)) {", "if (!result?.success) {"],
@@ -55,7 +55,7 @@ const M = [
   ["M41 RR-04 运行中也给快照", "src/adapter.ts", 'if (!r?.exited || !terminal) return refuse("not-quiescent");', ""],
   ["M42 RR-04 快照不等主进程退出(只看终态)", "src/adapter.ts", 'if (!r?.exited || !terminal) return refuse(', "if (!terminal) return refuse("],
   ["M43 RR-05 违规压过停止", "src/events.ts", "if (facts.stopRequested) return {", "if (facts.stopRequested && violations.length === 0) return {"],
-  ["M44 升级间隔不按配置(写死 10 秒)", "src/adapter.ts", "const reapForceMs = options.reapForceMs ?? DEFAULT_REAP_FORCE_MS;", "const reapForceMs = DEFAULT_REAP_FORCE_MS;"],
+  ["M44 升级间隔不按配置(写死 10 秒)", "src/adapter.ts", "const reapForceMs = resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS);", "const reapForceMs = DEFAULT_REAP_FORCE_MS;"],
   ["M45 RR-05 违规不留痕", "src/adapter.ts", "    round.violations.push(msg);", ""],
   // 以下对应第三轮:停止语义更正为 mirasim z2 的实际做法、R3-01–R3-03
   ["M46 主进程先退出也不取消组 SIGKILL", "src/adapter.ts", '    p.once("exit", () => clearTimeout(timer));', ""],
@@ -63,6 +63,30 @@ const M = [
   ["M48 R3-02 空白续接先杀掉冻结的进程组再报错", "src/adapter.ts", '      if (!text.trim()) return refuse("续接的内容不能为空");', '      if (!text.trim()) { if (st.round && !st.round.exited) signalGroup(st.round.pid, "SIGKILL"); return refuse("续接的内容不能为空"); }'],
   ["M49 R3-03 init 前未认可的输出放行", "src/adapter.ts", 'if (pre.kind === "rejected") { violate(', "if (false) { violate("],
   ["M50 R3-03 init 前任何 system 帧都放行", "src/events.ts", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype)) return", "true) return"],
+  // 以下对应第四轮 R4-01–R4-05、第四轮补充、磁盘清理与导出常量冻结
+  ["M51 R4-04 凭据校验只在数组长度为 1 时执行", "src/brief.ts", "const plaintext = credentialRefs.filter((c) => !isCredentialRef(c));", "const plaintext = credentialRefs.length === 1 ? credentialRefs.filter((c) => !isCredentialRef(c)) : [];"],
+  ["M52 补充 删除 openQuestions 校验", "src/report-schema.ts", 'if (a.openQuestions !== undefined && !strArr(a.openQuestions)) errs.push("openQuestions 须为字符串数组");', ""],
+  ["M53 补充 删除 doneSideEffects 校验", "src/report-schema.ts", 'if (a.doneSideEffects !== undefined && !strArr(a.doneSideEffects)) errs.push("doneSideEffects 须为字符串数组");', ""],
+  ["M54 R4-05 tools/list 返回空数组", "mcp/report-mcp.mjs", "result: { tools: [tool] }", "result: { tools: [] }"],
+  ["M55 R4-05 删除 REPORT_LOG 日志追加", "mcp/report-mcp.mjs", "    if (LOG) fs.appendFileSync(LOG,", "    if (false) fs.appendFileSync(LOG,"],
+  ["M56 R4-02 非对象请求不拒绝(直接访问 m.method)", "mcp/report-mcp.mjs", 'if (typeof m !== "object" || m === null || Array.isArray(m)) {', "if (false) {"],
+  ["M57 R4-01 不先判 Proxy", "src/plain.ts", 'if (types.isProxy(x)) return bad(at, "不允许 Proxy");', ""],
+  ["M58 R4-01 访问器不拒收(当作缺失字段)", "src/plain.ts", 'if (isAccessor(d)) return bad(path, "不允许 getter/setter");', ""],
+  ["M59 R4-01 不查原型(自定义原型放行)", "src/plain.ts", "if (isArray ? proto !== Array.prototype : proto !== Object.prototype && proto !== null) {", "if (false) {"],
+  ["M60 R4-01 不可枚举属性放行", "src/plain.ts", 'if (!d.enumerable) return bad(path, "不允许不可枚举属性");', ""],
+  ["M61 R4-01 嵌套值不递归判定", "src/plain.ts", "const c = walk(d.value, path, depth + 1);", "const c: PlainResult = { ok: true, value: d.value };"],
+  ["M62 R4-01 checkBrief 不过纯数据判定", "src/brief.ts", 'const p = plainData(input, "brief");', 'const p: ReturnType<typeof plainData> = { ok: true, value: input };'],
+  ["M63 R4-01 reportErrors 不过纯数据判定", "src/report-schema.ts", 'const p = plainData(input, "汇报");', 'const p: ReturnType<typeof plainData> = { ok: true, value: input };'],
+  ["M64 R4-01 spawn 选项不过纯数据判定", "src/adapter.ts", 'const p = plainData(opts, "spawn 选项");', 'const p: ReturnType<typeof plainData> = { ok: true, value: opts };'],
+  ["M65 R4-01 适配器选项不过纯数据判定", "src/adapter.ts", 'const p = plainData(options, "适配器选项");', 'const p: ReturnType<typeof plainData> = { ok: true, value: options };'],
+  ["M66 R4-01 resume 不查状态参数类型", "src/adapter.ts", 'if (typeof computeId !== "string" || typeof text !== "string") return refuse(', "if (false) return refuse("],
+  ["M67 R4-01 spawn 选项放行非预期字段", "src/adapter.ts", "if (extra.length) return refuse(`spawn 选项只收", "if (false) return refuse(`spawn 选项只收"],
+  ["M68 R4-03 不读 MIRASIM_REAP_FORCE_MS", "src/adapter.ts", "return Number.isFinite(n) && n > 0 ? n : DEFAULT_REAP_FORCE_MS;", "return DEFAULT_REAP_FORCE_MS;"],
+  ["M69 R4-03 非正环境值也生效", "src/adapter.ts", "return Number.isFinite(n) && n > 0 ? n : DEFAULT_REAP_FORCE_MS;", "return Number.isFinite(n) ? n : DEFAULT_REAP_FORCE_MS;"],
+  ["M70 R4-03 环境值压过显式选项", "src/adapter.ts", "  if (explicit !== undefined) return explicit;\n  const n = Number(env);", "  const n = Number(env);\n  if (Number.isFinite(n) && n > 0) return n;\n  if (explicit !== undefined) return explicit;"],
+  ["M71 导出的 CC_BUILTIN_TOOLS 不冻结", "src/brief.ts", 'export const CC_BUILTIN_TOOLS: readonly string[] = Object.freeze(["Read",', 'export const CC_BUILTIN_TOOLS: readonly string[] = (["Read",'],
+  ["M72 导出的 REPORT_KINDS 不冻结", "src/report-schema.ts", 'export const REPORT_KINDS: readonly string[] = Object.freeze(["started",', 'export const REPORT_KINDS: readonly string[] = (["started",'],
+  ["M73 磁盘清理 CLI 退出后不删 g-group-cc-* 目录", "src/adapter.ts", "      removeDir();\n      round.exited = true;", "      round.exited = true;"],
 ];
 
 // 不用 --test-timeout:在 node --test <file> 下它限制的是整个文件,文件超过上限会被整体取消(部分执行)。
@@ -82,7 +106,11 @@ function reapDir(dir) {
 function run(dir) {
   const files = fs.readdirSync(path.join(dir, "src")).filter((f) => f.endsWith(".test.ts")).map((f) => path.join("src", f));
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, ["--test", "--test-reporter=tap", ...files], { cwd: dir, detached: true, stdio: ["ignore", "pipe", "pipe"] });
+    // 每个副本自己的 TMPDIR(在副本目录里):被测代码与测试建的 g-group-cc-* / fake-cc-* 都落在这里,
+    // 变异体即使不清理目录(M73)也随副本一起删掉,不往系统临时目录漏(g-group#2900,原则 67)
+    const tmpdir = path.join(dir, ".tmp");
+    fs.mkdirSync(tmpdir, { recursive: true });
+    const child = spawn(process.execPath, ["--test", "--test-reporter=tap", ...files], { cwd: dir, detached: true, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, TMPDIR: tmpdir } });
     let out = "";
     child.stdout.on("data", (d) => { out += d; });
     child.stderr.on("data", () => {});
