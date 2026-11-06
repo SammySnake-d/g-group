@@ -1,0 +1,23 @@
+packages/adapter-cc-compute/src/events.ts
+  s_677b2cd67e9f04::t_574f0eaef35ea2 4-8,33-38,44-51,54-55,60-66,70-98,123-153
+packages/adapter-cc-compute/src/plain.ts
+  s_677b2cd67e9f04::t_47e4d5da55e16a 1-9,13-19,21-63,66-75
+packages/adapter-cc-compute/src/adapter.ts
+  s_677b2cd67e9f04::t_f575201f713997 1-16,18-23,27,30-32,34-166,170-413
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f9ae924225a00e379d275499ee364c77517bbcb8",
+  "prompts": {},
+  "sessions": {
+    "s_677b2cd67e9f04": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1aff5-be5f-7ff1-a153-0a17c97be283",
+        "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

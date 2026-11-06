@@ -1,0 +1,25 @@
+receipts/feat-commitment-ledger.json
+  s_677b2cd67e9f04::t_dd0777be88ed71 1-32
+packages/domain/proof/commitment-ledger-mutations.mjs
+  s_677b2cd67e9f04::t_6a07a21f299a9a 1-71
+packages/domain/proof/commitment-ledger-mutations.txt
+  s_677b2cd67e9f04::t_dd0777be88ed71 1-23
+packages/domain/proof/commitment-ledger-tests.txt
+  s_677b2cd67e9f04::t_dd0777be88ed71 1-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "48344271ba84c7b2ce74eaf1847e83867b3d49c8",
+  "prompts": {},
+  "sessions": {
+    "s_677b2cd67e9f04": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1aff5-be5f-7ff1-a153-0a17c97be283",
+        "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

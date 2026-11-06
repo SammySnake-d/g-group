@@ -1,0 +1,19 @@
+docs/spec/验收文档-v0.1.md
+  s_677b2cd67e9f04::t_380999bb7db98a 1,3-5,43,90,148,152-166,193,248-250,252-253,257-258
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a1746295757554fc7d9a54cf514633c7ed60bac0",
+  "prompts": {},
+  "sessions": {
+    "s_677b2cd67e9f04": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1aff5-be5f-7ff1-a153-0a17c97be283",
+        "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
