@@ -13,8 +13,8 @@
 // 剧本 daemon:{ marker } 起一个中间进程,它再起一个另建会话的守护进程后立刻退出(双 fork,守护进程被 init/launchd 收养);
 // 守护进程 pid 写进 FAKE_RECORD.daemon.pid。这是已披露的不覆盖边界。
 // 剧本 init:"missing" 不输出 init;"noTools" tools 不是数组;"badTools" tools 含非字符串。
-// 和真实 CLI 一样先与 MCP 服务器握手再输出 init:服务器起不来时 init 里 host 状态为 failed、工具清单里没有 report_progress
-// (RR-02 引用的真实 CLI 2.1.316 观察)。
+// 和真实 CLI 一样先与 MCP 服务器握手、再用 tools/list 发现工具,然后输出 init:服务器起不来时 init 里 host 状态为 failed、
+// 工具清单里没有 report_progress(RR-02 引用的真实 CLI 2.1.316 观察);服务器连上了但 tools/list 不含它时同样没有(R4-05)。
 // 剧本 reportGapMs:相邻两次汇报之间的间隔。
 // 剧本来自环境变量 FAKE_SCRIPT(JSON);每次启动把 pid/argv/env/cwd/首个提示追加到 FAKE_RECORD。
 import { spawn } from "node:child_process";
@@ -116,8 +116,12 @@ const cfgPath = flag("--mcp-config");
 const client = cfgPath ? mcpClient(JSON.parse(fs.readFileSync(cfgPath, "utf8"))) : null;
 const connected = client ? await client.ready : false;
 const mcp = connected ? client : null;
+// 和真实 CLI 一样经 tools/list 发现 MCP 工具,按 mcp__<服务器>__<工具名> 列进 init(R4-05);
+// 服务器的清单里没有 report_progress 时 init 里也就没有它。3 秒没有回复按空清单处理
+const listed = mcp ? await Promise.race([mcp.call("tools/list", {}), new Promise((r) => setTimeout(() => r(null), 3000).unref())]) : null;
+const discovered = Array.isArray(listed?.result?.tools) ? listed.result.tools.filter((t) => typeof t?.name === "string").map((t) => `mcp__host__${t.name}`) : [];
 
-const initTools = [...builtins, ...(plan.extraInitTools ?? []), ...(mcp ? [REPORT] : [])];
+const initTools = [...builtins, ...(plan.extraInitTools ?? []), ...discovered];
 const init = { type: "system", subtype: "init", cwd: process.cwd(), session_id: sid, tools: initTools,
   mcp_servers: client ? [{ name: "host", status: connected ? "connected" : "failed", source: "dynamic" }] : [], permissionMode: flag("--permission-mode") ?? "default" };
 if (plan.init === "noTools") init.tools = "Read,Write";

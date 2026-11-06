@@ -2,15 +2,16 @@
 // 按 stream-json 输出,并按 --mcp-config 真的起 report_progress MCP 服务器、走 JSON-RPC 汇报。不 mock child_process。
 // 对应 AC-33 ④(brief 只收五个字段、凭据只给引用、工具子集、env 无明文)、V-06(completed 以 CLI 结果为准)、AC-07(交接快照)。
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_REAP_FORCE_MS, REPORT_MCP_PATH, createComputeAdapter } from "./adapter.ts";
-import { checkInit, preInitFrame, terminalFor } from "./events.ts";
-import { reportErrors } from "./report-schema.ts";
+import { DEFAULT_REAP_FORCE_MS, DEFAULT_RUNNER, REPORT_MCP_PATH, createComputeAdapter, resolveReapForceMs } from "./adapter.ts";
+import { CC_BUILTIN_TOOLS, checkBrief, checkSnapshot, isCredentialRef } from "./brief.ts";
+import { PRE_INIT_SYSTEM_SUBTYPES, checkInit, preInitFrame, terminalFor } from "./events.ts";
+import { REPORT_KINDS, reportErrors, reportToolDefinition } from "./report-schema.ts";
 
 const FAKE = fileURLToPath(new URL("../test-support/fake-claude.mjs", import.meta.url));
 const REPORT = "mcp__host__report_progress";
@@ -27,6 +28,7 @@ const brief = (over: Record<string, unknown> = {}) => ({
 // RR-06 / R3-04:本文件只回收自己创建的进程。每个 fake() 有独立目录,runner 参数带上 --fake-dir=<目录>,
 // 孙进程与守护进程的 -e 代码里也带着该目录下的标记路径;回收时扫描进程表,只对命令行里含本测试目录的进程下手,
 // 不依赖假 CLI 有没有来得及写记录文件(断言在写记录之前就失败也能回收)。
+// 磁盘清理(g-group#2900,开发手册原则 67):回收进程之后一并删掉这些 fake-cc-* 目录,谁建谁清。
 const ownDirs = new Set<string>();
 function ownProcs(dir: string): number[] {
   let out = "";
@@ -52,6 +54,7 @@ function reapOwn() {
     if (found === 0 && round > 0) break;
     execFileSync("sleep", ["0.1"]);
   }
+  for (const dir of ownDirs) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
   ownDirs.clear();
 }
 afterEach(reapOwn);
@@ -882,4 +885,390 @@ test("R3-04:断言在假 CLI 写记录之前就失败时,afterEach 仍按测试�
   reapOwn();
   for (const pid of pids) assert.equal(await gone(pid), true);
   assert.deepEqual(ownProcs(dir), []);
+  // 磁盘清理:回收时本测试的 fake-cc-* 目录一并删除
+  assert.equal(fs.existsSync(dir), false);
+});
+
+// ---------------------------------------------------------------- 第四轮审查 R4-01 – R4-05、磁盘清理
+// 合同(g-group#2662):只保证内置原型未被改的环境;外部输入(含状态参数)带 getter/setter/Proxy 不调用即拒收。
+// 以下反例都不改动任何内置原型,计数器只数被测代码有没有调用访问器或 Proxy 陷阱。
+
+type Adapter = ReturnType<typeof createComputeAdapter>;
+type SpawnOpts = Parameters<Adapter["spawn"]>[1];
+type AdapterOpts = Parameters<typeof createComputeAdapter>[0];
+const asOpts = (x: unknown) => x as SpawnOpts;
+const json = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
+const TRAPS = ["get", "set", "has", "ownKeys", "getOwnPropertyDescriptor", "defineProperty", "deleteProperty", "getPrototypeOf", "setPrototypeOf", "isExtensible", "preventExtensions"] as const;
+/** 每个陷阱都计数后转给 Reflect 的 Proxy */
+function counted<T extends object>(target: T, hits: { n: number }): T {
+  const handler: Record<string, (...args: unknown[]) => unknown> = {};
+  for (const trap of TRAPS) handler[trap] = (...args: unknown[]) => { hits.n++; return (Reflect[trap] as unknown as (...a: unknown[]) => unknown)(...args); };
+  return new Proxy(target, handler as ProxyHandler<T>);
+}
+const revoked = <T extends object>(target: T): T => { const r = Proxy.revocable(target, {}); r.revoke(); return r.proxy; };
+/** 把 obj[key] 换成计数的 getter(默认可枚举) */
+function withGetter<T extends object>(obj: T, key: PropertyKey, value: unknown, hits: { n: number }, enumerable = true): T {
+  Object.defineProperty(obj, key, { get() { hits.n++; return value; }, enumerable, configurable: true });
+  return obj;
+}
+/** 只有 setter、不可枚举的属性(Object.keys 看不到) */
+function withHiddenSetter<T extends object>(obj: T, key: PropertyKey, hits: { n: number }): T {
+  Object.defineProperty(obj, key, { set() { hits.n++; }, enumerable: false, configurable: true });
+  return obj;
+}
+/** 访问器挂在自定义原型上(不是内置原型) */
+function onCustomProto<T extends object>(own: T, key: string, value: unknown, hits: { n: number }): T {
+  const proto = {};
+  withGetter(proto, key, value, hits);
+  return Object.assign(Object.create(proto) as T, own);
+}
+
+test("R4-01:checkBrief 遇到字段/数组元素 getter、Proxy、撤销 Proxy、自定义原型 getter、不可枚举 setter 时不调用即拒收;纯 JSON brief 放行(对照)", () => {
+  const hits = { n: 0 };
+  const rules: string[] = [];
+  withGetter(rules, 0, "群规", hits);
+  const notEnumTask = brief();
+  Object.defineProperty(notEnumTask, "task", { value: "x", enumerable: false });
+  const { task: _t, ...noTask } = brief();
+  const cases: [string, unknown][] = [
+    ["task getter", withGetter(brief(), "task", "把 a.txt 改成大写", hits)],
+    ["顶层 Proxy", counted(brief(), hits)],
+    ["撤销的 Proxy", revoked(brief())],
+    ["rules[0] getter", brief({ rules })],
+    ["tools 是 Proxy 数组", brief({ tools: counted(["Read"], hits) })],
+    ["credentialRefs 元素 getter", brief({ credentialRefs: withGetter(["vault://a/b"], 0, "vault://a/b", hits) })],
+    ["自定义原型上的 task getter", onCustomProto(noTask, "task", "x", hits)],
+    ["不可枚举 setter", withHiddenSetter(brief(), "memory", hits)],
+    ["不可枚举的 task", notEnumTask],
+  ];
+  for (const [name, x] of cases) {
+    let r: ReturnType<typeof checkBrief> | undefined;
+    assert.doesNotThrow(() => { r = checkBrief(x); }, name);
+    assert.equal(r?.ok, false, name);
+  }
+  assert.equal(hits.n, 0);
+  const ok = checkBrief(json(brief()));
+  assert.equal(ok.ok, true);
+  assert.deepEqual(ok.ok ? ok.brief : null, brief());
+});
+
+test("R4-01:spawn 的 brief、选项与 handoff(含嵌套数组)带 getter/Proxy/非预期字段时不调用即拒收、不起子进程;纯 JSON 选项与 handoff 正常启动(对照)", async () => {
+  const f = fake({ reports: [], result: "success" });
+  const a = createComputeAdapter(f.options);
+  const hits = { n: 0 };
+  const handoff = () => ({ constraintVer: 4, openQuestions: ["q"], doneSideEffects: ["d"] });
+  const cases: [string, unknown, unknown][] = [
+    ["brief.task getter", withGetter(brief(), "task", "x", hits), undefined],
+    ["brief 是 Proxy", counted(brief(), hits), undefined],
+    ["选项是 Proxy", brief(), counted({ handoff: handoff() }, hits)],
+    ["选项是撤销的 Proxy", brief(), revoked({})],
+    ["选项的 handoff getter", brief(), withGetter({}, "handoff", handoff(), hits)],
+    ["选项的 cwd getter", brief(), withGetter({}, "cwd", process.cwd(), hits)],
+    ["选项带不可枚举 setter", brief(), withHiddenSetter({}, "env", hits)],
+    ["选项带非预期字段", brief(), { handoff: handoff(), env: { A: "1" } }],
+    ["选项在自定义原型上", brief(), onCustomProto({}, "handoff", handoff(), hits)],
+    ["handoff.constraintVer getter", brief(), { handoff: withGetter(handoff(), "constraintVer", 4, hits) }],
+    ["handoff 是 Proxy", brief(), { handoff: counted(handoff(), hits) }],
+    ["handoff.openQuestions 是 Proxy 数组", brief(), { handoff: { ...handoff(), openQuestions: counted(["q"], hits) } }],
+    ["handoff.doneSideEffects 元素 getter", brief(), { handoff: { ...handoff(), doneSideEffects: withGetter(["d"], 0, "d", hits) } }],
+  ];
+  for (const [name, b, o] of cases) {
+    const r = await a.spawn(b, asOpts(o));
+    assert.equal(r.ok, false, name);
+  }
+  assert.equal(hits.n, 0);
+  assert.equal(fs.existsSync(f.record), false);
+  const ok = await a.spawn(json(brief()), asOpts(json({ handoff: handoff() })));
+  assert.ok(ok.ok);
+  await a.settled(ok.computeId);
+  assert.equal(launches(f.record).length, 1);
+  assert.deepEqual(a.snapshot(ok.computeId), { ok: true, snapshot: handoff() });
+});
+
+test("R4-01:checkSnapshot 直接调用:访问器、Proxy、撤销 Proxy、非预期字段与嵌套数组 Proxy 不调用即拒收;纯 JSON 快照放行(对照)", () => {
+  const hits = { n: 0 };
+  const snap = () => ({ constraintVer: 1, openQuestions: ["q"], doneSideEffects: [] as string[] });
+  const cases: [string, unknown][] = [
+    ["constraintVer getter", withGetter(snap(), "constraintVer", 1, hits)],
+    ["Proxy", counted(snap(), hits)],
+    ["撤销的 Proxy", revoked(snap())],
+    ["openQuestions 元素 getter", { ...snap(), openQuestions: withGetter(["q"], 0, "q", hits) }],
+    ["doneSideEffects 是 Proxy 数组", { ...snap(), doneSideEffects: counted([], hits) }],
+    ["不可枚举 setter", withHiddenSetter(snap(), "note", hits)],
+    ["非预期字段", { ...snap(), memory: "私人记忆" }],
+  ];
+  for (const [name, x] of cases) {
+    let r: ReturnType<typeof checkSnapshot> | undefined;
+    assert.doesNotThrow(() => { r = checkSnapshot(x); }, name);
+    assert.equal(r?.ok, false, name);
+  }
+  assert.equal(hits.n, 0);
+  assert.deepEqual(checkSnapshot(json(snap())), { ok: true, snapshot: snap() });
+});
+
+test("R4-01:reportErrors 遇到 getter、Proxy、撤销 Proxy、嵌套数组访问器、不可枚举字段时返回错误且不调用;纯 JSON 汇报无错(对照)", () => {
+  const hits = { n: 0 };
+  const rep = () => ({ kind: "started", summary: "开始", openQuestions: ["q"], doneSideEffects: ["d"] });
+  const notEnumSummary = rep();
+  Object.defineProperty(notEnumSummary, "summary", { value: "开始", enumerable: false });
+  const { kind: _k, ...noKind } = rep();
+  const cases: [string, unknown][] = [
+    ["kind getter", withGetter(rep(), "kind", "started", hits)],
+    ["可选字段 stage getter", withGetter(rep(), "stage", "阶段", hits)],
+    ["Proxy", counted(rep(), hits)],
+    ["撤销的 Proxy", revoked(rep())],
+    ["openQuestions 是 Proxy 数组", { ...rep(), openQuestions: counted(["q"], hits) }],
+    ["doneSideEffects 元素 getter", { ...rep(), doneSideEffects: withGetter(["d"], 0, "d", hits) }],
+    ["自定义原型上的 kind getter", onCustomProto(noKind, "kind", "started", hits)],
+    ["不可枚举 setter", withHiddenSetter(rep(), "needs", hits)],
+    ["不可枚举的 summary", notEnumSummary],
+  ];
+  for (const [name, x] of cases) {
+    let errs: string[] = [];
+    assert.doesNotThrow(() => { errs = reportErrors(x); }, name);
+    assert.ok(errs.length > 0, name);
+  }
+  assert.equal(hits.n, 0);
+  assert.deepEqual(reportErrors(json(rep())), []);
+});
+
+test("R4-01:适配器选项与状态参数(computeId、续接文本)带 getter/Proxy/toPrimitive 时不调用即拒收;纯数据的选项与续接正常(对照)", async () => {
+  const hits = { n: 0 };
+  const f = fake({ reports: [], result: "success" });
+  const badOptions: [string, unknown][] = [
+    ["hostEnv getter", { ...f.options, hostEnv: withGetter({ ...f.options.hostEnv }, "FAKE_RECORD", f.record, hits) }],
+    ["选项是 Proxy", counted({ ...f.options }, hits)],
+    ["选项是撤销的 Proxy", revoked({ ...f.options })],
+    ["runner.args 元素 getter", { ...f.options, runner: { command: process.execPath, args: withGetter([FAKE], 0, FAKE, hits) } }],
+    ["hostEnv 是 Proxy", { ...f.options, hostEnv: counted({ ...f.options.hostEnv }, hits) }],
+    ["reapForceMs getter", withGetter({ ...f.options }, "reapForceMs", 1500, hits)],
+    ["选项带不可枚举 setter", withHiddenSetter({ ...f.options }, "env", hits)],
+  ];
+  for (const [name, o] of badOptions) assert.throws(() => createComputeAdapter(o as AdapterOpts), TypeError, name);
+  const a = createComputeAdapter(json(f.options));
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  await a.settled(r.computeId);
+  const evil = { [Symbol.toPrimitive]() { hits.n++; return r.computeId; }, toString() { hits.n++; return r.computeId; }, valueOf() { hits.n++; return r.computeId; } };
+  const proxied = counted({}, hits);
+  for (const id of [evil, proxied] as unknown as string[]) {
+    assert.equal((await a.resume(id, "继续")).ok, false);
+    assert.equal((await a.stop(id)).ok, false);
+    assert.equal(a.snapshot(id).ok, false);
+    assert.deepEqual(a.rejectedReports(id), []);
+    assert.deepEqual(await a.settled(id), []);
+  }
+  assert.equal((await a.resume(r.computeId, evil as unknown as string)).ok, false);
+  assert.equal((await a.resume(r.computeId, proxied as unknown as string)).ok, false);
+  assert.equal(hits.n, 0);
+  assert.equal(launches(f.record).length, 1);
+  assert.deepEqual(await a.resume(r.computeId, "继续"), { ok: true });
+  assert.deepEqual((await a.settled(r.computeId)).map((e) => e.kind), ["started", "completed"]);
+});
+
+test("导出的策略常量不可变:CC_BUILTIN_TOOLS、REPORT_KINDS、PRE_INIT_SYSTEM_SUBTYPES、DEFAULT_RUNNER 冻结,改写抛错且校验行为不变", () => {
+  for (const c of [CC_BUILTIN_TOOLS, REPORT_KINDS, PRE_INIT_SYSTEM_SUBTYPES, DEFAULT_RUNNER, DEFAULT_RUNNER.args]) assert.equal(Object.isFrozen(c), true);
+  assert.throws(() => (CC_BUILTIN_TOOLS as string[]).push("Task"), TypeError);
+  assert.throws(() => (REPORT_KINDS as string[]).push("done"), TypeError);
+  assert.throws(() => (PRE_INIT_SYSTEM_SUBTYPES as string[]).push("assistant"), TypeError);
+  assert.throws(() => { (DEFAULT_RUNNER as { command: string }).command = "sh"; }, TypeError);
+  assert.equal(checkBrief(brief({ tools: ["Task"] })).ok, false);
+  assert.deepEqual(reportErrors({ kind: "done", summary: "x" }), ["kind 非法"]);
+  assert.equal(preInitFrame(JSON.stringify({ type: "assistant" })).kind, "rejected");
+  assert.equal(isCredentialRef("vault://team/upload-token"), true);
+  assert.equal(isCredentialRef("ghp_PLAINTEXT"), false);
+});
+
+test("R4-04:多凭据引用:每一个位置放非引用都被拒绝、不起进程;全部合法的多元素放行并原样进清单(对照)", async () => {
+  const f = fake({ reports: [], result: "success" });
+  const a = createComputeAdapter(f.options);
+  for (const refs of [["vault://team/a", "ref://fixture/path"], ["vault://team/a", "ref://fixture/path", "kms://k/2"]]) {
+    for (let i = 0; i < refs.length; i++) {
+      const bad = [...refs];
+      bad[i] = "not-a-reference";
+      assert.equal(checkBrief(brief({ credentialRefs: bad })).ok, false, JSON.stringify(bad));
+      const r = await a.spawn(brief({ credentialRefs: bad }));
+      assert.equal(r.ok, false, JSON.stringify(bad));
+      assert.match(r.ok ? "" : r.reason, /引用句柄/);
+    }
+  }
+  assert.equal(fs.existsSync(f.record), false);
+  const refs = ["vault://team/a", "ref://fixture/path", "kms://k/2"];
+  const ok = await a.spawn(brief({ credentialRefs: refs }));
+  assert.ok(ok.ok);
+  assert.deepEqual(ok.manifest.credentialRefs, refs);
+  await a.settled(ok.computeId);
+  assert.equal(launches(f.record)[0]!.env.G_GROUP_CREDENTIAL_REFS, JSON.stringify(refs));
+});
+
+type RpcReply = { id: unknown; result?: { tools?: unknown[]; isError?: boolean; content?: { text: string }[] }; error?: { code: number } };
+/** 向真实 report MCP 子进程 stdin 逐行写入,收集全部回复、退出码与 stderr */
+function rpc(lines: string[], env: Record<string, string> = {}) {
+  const out = spawnSync(process.execPath, [REPORT_MCP_PATH], { input: `${lines.join("\n")}\n`, encoding: "utf8", env: { PATH: process.env.PATH ?? "", ...env }, timeout: 10_000 });
+  return { status: out.status, stderr: out.stderr, replies: out.stdout.trim() ? out.stdout.trim().split("\n").map((l) => JSON.parse(l) as RpcReply) : [] };
+}
+const call = (id: number, args: unknown) => JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call", params: { name: "report_progress", arguments: args } });
+const list = (id: number) => JSON.stringify({ jsonrpc: "2.0", id, method: "tools/list" });
+
+test("R4-02:report MCP 收到合法 JSON null、其他原始值、数组与坏 JSON 时回 JSON-RPC 错误且进程继续可用,随后的合法请求照常处理(正反对照)", () => {
+  const good = rpc([list(1), call(2, { kind: "started", summary: "x" })]);
+  assert.equal(good.status, 0);
+  assert.deepEqual(good.replies.map((x) => x.id), [1, 2]);
+  const r = rpc(["null", list(1), "1", '"文本"', "true", "[]", "{坏", call(2, { kind: "started", summary: "x" }), call(3, { kind: "done", summary: "x" })]);
+  assert.equal(r.status, 0);
+  assert.equal(r.stderr, "");
+  assert.deepEqual(r.replies.map((x) => [x.id, x.error?.code ?? null]), [[null, -32600], [1, null], [null, -32600], [null, -32600], [null, -32600], [null, -32600], [null, -32700], [2, null], [3, null]]);
+  assert.deepEqual(r.replies[1]!.result?.tools, [reportToolDefinition()]);
+  assert.deepEqual([r.replies[7]!.result?.isError, r.replies[8]!.result?.isError], [false, true]);
+  assert.ok(r.replies[8]!.result?.content?.[0]?.text.includes(reportErrors({ kind: "done", summary: "x" })[0]!));
+});
+
+test("R4-05:tools/list 直接 JSON-RPC 返回 report_progress 及与共享定义一致的 schema;未知方法回 method not found(对照)", () => {
+  const r = rpc([list(1), JSON.stringify({ jsonrpc: "2.0", id: 2, method: "resources/list" })]);
+  assert.equal(r.status, 0);
+  const tools = r.replies[0]!.result?.tools as { name: string; inputSchema: { properties: { kind: { enum: string[] } } } }[];
+  assert.deepEqual(tools, [reportToolDefinition()]);
+  assert.equal(tools[0]?.name, "report_progress");
+  assert.deepEqual(tools[0]?.inputSchema.properties.kind.enum, [...REPORT_KINDS]);
+  assert.deepEqual(r.replies[1]!.error?.code, -32601);
+});
+
+/** 只回 initialize、tools/list 返回空数组的 MCP 服务器(工具缺失路径);命令行带测试目录,便于按目录回收 */
+const EMPTY_TOOLS_SERVER = `const rl = require("node:readline").createInterface({ input: process.stdin });
+rl.on("line", (l) => { let m; try { m = JSON.parse(l); } catch { return; } if (!m || typeof m !== "object") return;
+  const send = (o) => process.stdout.write(JSON.stringify(o) + "\\n");
+  if (m.method === "initialize") send({ jsonrpc: "2.0", id: m.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "empty", version: "0" } } });
+  else if (m.method === "tools/list") send({ jsonrpc: "2.0", id: m.id, result: { tools: [] } });
+  else if (m.id !== undefined) send({ jsonrpc: "2.0", id: m.id, error: { code: -32601, message: "method not found" } }); });`;
+
+test("R4-05:经假 CLI 的工具发现:tools/list 列出 report_progress 时 init 带上它并 started→completed;tools/list 为空时 init 缺 report_progress → failed(正反对照)", async () => {
+  const listed = fake({ reports: [{ kind: "milestone", stage: "阶段1", summary: "a" }], result: "success" });
+  const a1 = createComputeAdapter(listed.options);
+  const r1 = await a1.spawn(brief());
+  assert.ok(r1.ok);
+  assert.deepEqual((await a1.settled(r1.computeId)).map((e) => e.kind), ["started", "milestone", "completed"]);
+  const init1 = JSON.parse(fs.readFileSync(`${listed.record}.init`, "utf8")) as { tools: string[] };
+  assert.equal(init1.tools.includes(REPORT), true);
+  const empty = fake({ reports: [], result: "success", text: "完成" });
+  const a2 = createComputeAdapter({ ...empty.options, reportServer: { command: process.execPath, args: ["-e", EMPTY_TOOLS_SERVER, "--", `--fake-dir=${path.dirname(empty.record)}${path.sep}`] } });
+  const r2 = await a2.spawn(brief());
+  assert.ok(r2.ok);
+  const evs = await a2.settled(r2.computeId);
+  assert.deepEqual(evs.map((e) => e.kind), ["failed"]);
+  // 原因是"清单里没有"而不是"MCP 未连接":服务器已连上(checkInit 先查连接、后查清单),只是 tools/list 没列出它。
+  // 不读假 CLI 的 .init 记录:适配器判违规后立即 SIGTERM 主进程,记录可能来不及写完
+  assert.match(evs[0]?.kind === "failed" ? evs[0].reason : "", /工具清单里没有 mcp__host__report_progress/);
+});
+
+test("R4-05:REPORT_LOG:合法与非法调用各追加一行,valid/errs 与共享校验一致,无效请求不记;未设 REPORT_LOG 时不写任何文件(正反对照)", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fake-cc-"));
+  ownDirs.add(dir);
+  const log = path.join(dir, "report.jsonl");
+  const bad = { kind: "done", summary: "x" };
+  const r = rpc([call(1, { kind: "started", summary: "开始", constraintVer: 2 }), "null", call(2, bad)], { REPORT_LOG: log });
+  assert.equal(r.status, 0);
+  const recs = fs.readFileSync(log, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { ts: string; valid: boolean; errs: string[]; kind: string });
+  assert.deepEqual(recs.map((x) => [x.valid, x.errs, x.kind]), [[true, [], "started"], [false, reportErrors(bad), "done"]]);
+  assert.equal(recs.every((x) => !Number.isNaN(Date.parse(x.ts))), true);
+  const quiet = rpc([call(1, { kind: "started", summary: "开始" })]);
+  assert.equal(quiet.replies[0]?.result?.isError, false);
+  assert.deepEqual(fs.readdirSync(dir), ["report.jsonl"]);
+});
+
+test("R4-03:resolveReapForceMs 与 mirasim Ukc 一致:未传显式值时合法正数环境值生效,缺失/无效/非正回落 10000;显式值优先", () => {
+  assert.equal(resolveReapForceMs(undefined, undefined), DEFAULT_REAP_FORCE_MS);
+  for (const bad of ["", "abc", "0", "-5", "NaN", "Infinity", "-Infinity", "1e400"]) assert.equal(resolveReapForceMs(undefined, bad), 10_000, bad);
+  assert.equal(resolveReapForceMs(undefined, "500"), 500);
+  assert.equal(resolveReapForceMs(undefined, " 750 "), 750);
+  assert.equal(resolveReapForceMs(undefined, "1.5"), 1.5);
+  assert.equal(resolveReapForceMs(1234, "500"), 1234);
+  assert.equal(resolveReapForceMs(1234, undefined), 1234);
+  assert.equal(resolveReapForceMs(0, "500"), 0);
+});
+
+test("R4-03:未传 reapForceMs 时读 MIRASIM_REAP_FORCE_MS=400,主进程无视 SIGTERM 约 400ms 后整组 SIGKILL;显式 reapForceMs=5000 优先,1.5 秒后主进程仍在(对照)", async () => {
+  const prev = process.env.MIRASIM_REAP_FORCE_MS;
+  process.env.MIRASIM_REAP_FORCE_MS = "400";
+  try {
+    const f1 = fake({ reports: [], hang: "stubborn", grandchild: { marker: "@MARKER@" } }, { reapForceMs: undefined });
+    const a1 = createComputeAdapter(f1.options);
+    const r1 = await a1.spawn(brief());
+    assert.ok(r1.ok);
+    await waitStarted(a1, r1.computeId);
+    const cli = launches(f1.record)[0]!.pid;
+    const gc = grandchildPid(f1.record);
+    assert.deepEqual(await a1.stop(r1.computeId), { ok: true });
+    assert.equal(alive(cli), true);
+    assert.equal(await gone(cli, 3000), true);
+    assert.equal(await gone(gc, 1000), true);
+    const f2 = fake({ reports: [], hang: "stubborn" }, { reapForceMs: 5000 });
+    const a2 = createComputeAdapter(f2.options);
+    const r2 = await a2.spawn(brief());
+    assert.ok(r2.ok);
+    await waitStarted(a2, r2.computeId);
+    assert.deepEqual(await a2.stop(r2.computeId), { ok: true });
+    await new Promise((ok) => setTimeout(ok, 1500));
+    assert.equal(alive(launches(f2.record)[0]!.pid), true);
+  } finally {
+    if (prev === undefined) delete process.env.MIRASIM_REAP_FORCE_MS;
+    else process.env.MIRASIM_REAP_FORCE_MS = prev;
+  }
+});
+
+test("R4-03:环境值无效(abc)且未传 reapForceMs 时回落默认 10000,1.5 秒后主进程仍在", async () => {
+  const prev = process.env.MIRASIM_REAP_FORCE_MS;
+  process.env.MIRASIM_REAP_FORCE_MS = "abc";
+  try {
+    const f = fake({ reports: [], hang: "stubborn" }, { reapForceMs: undefined });
+    const a = createComputeAdapter(f.options);
+    const r = await a.spawn(brief());
+    assert.ok(r.ok);
+    await waitStarted(a, r.computeId);
+    assert.deepEqual(await a.stop(r.computeId), { ok: true });
+    await new Promise((ok) => setTimeout(ok, 1500));
+    assert.equal(alive(launches(f.record)[0]!.pid), true);
+    assert.equal(resolveReapForceMs(undefined, process.env.MIRASIM_REAP_FORCE_MS), DEFAULT_REAP_FORCE_MS);
+  } finally {
+    if (prev === undefined) delete process.env.MIRASIM_REAP_FORCE_MS;
+    else process.env.MIRASIM_REAP_FORCE_MS = prev;
+  }
+});
+
+const mcpDir = (l: Launch) => path.dirname(flagOf(l.argv, "--mcp-config")!);
+
+test("磁盘清理:每轮的 g-group-cc-* 临时目录运行中存在,CLI 结束、stop 或受阻后续接时删除;续接的新一轮另建目录并在结束后删除", async () => {
+  const done = fake({ reports: [], result: "success" });
+  const a1 = createComputeAdapter(done.options);
+  const r1 = await a1.spawn(brief());
+  assert.ok(r1.ok);
+  await a1.settled(r1.computeId);
+  const d1 = mcpDir(launches(done.record)[0]!);
+  assert.equal(path.basename(d1).startsWith("g-group-cc-"), true);
+  assert.equal(path.dirname(d1), os.tmpdir());
+  assert.equal(fs.existsSync(d1), false);
+
+  const running = fake({ reports: [], hang: "graceful" });
+  const a2 = createComputeAdapter(running.options);
+  const r2 = await a2.spawn(brief());
+  assert.ok(r2.ok);
+  await waitStarted(a2, r2.computeId);
+  const d2 = mcpDir(launches(running.record)[0]!);
+  assert.equal(fs.existsSync(d2), true);
+  assert.deepEqual(await a2.stop(r2.computeId), { ok: true });
+  await within(a2.settled(r2.computeId));
+  assert.equal(fs.existsSync(d2), false);
+
+  const blocked = fake({ reports: [{ kind: "blocked", summary: "要确认", needs: "需要用户确认" }], result: "success", resume: { reports: [], result: "success" } });
+  const a3 = createComputeAdapter(blocked.options);
+  const r3 = await a3.spawn(brief());
+  assert.ok(r3.ok);
+  await a3.settled(r3.computeId);
+  const d3 = mcpDir(launches(blocked.record)[0]!);
+  assert.equal(fs.existsSync(d3), true);
+  assert.deepEqual(await a3.resume(r3.computeId, "已确认"), { ok: true });
+  assert.equal(fs.existsSync(d3), false);
+  assert.deepEqual((await a3.settled(r3.computeId)).map((e) => e.kind), ["started", "completed"]);
+  const d4 = mcpDir(launches(blocked.record)[1]!);
+  assert.notEqual(d4, d3);
+  assert.equal(fs.existsSync(d4), false);
 });
