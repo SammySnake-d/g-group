@@ -1,0 +1,23 @@
+Command: node packages/domain/proof/commitment-ledger-mutations.mjs
+PASS 原样对照 22 通过 / 0 失败
+KILLED M01 未接收直接处理: 未收到的消息不能处理或生成承诺
+KILLED M02 重试丢失幂等性: 同一投递动作重试按稳定 id 去重,旧版本重试也不重复
+KILLED M03 相同动作号允许不同内容: 复用动作 id 改载荷会被拒绝
+KILLED M04 同消息号的冲突被吞掉: 同一消息 id 重投不重复,但内容冲突不得覆盖
+KILLED M05 删除版本检查: 新动作使用旧版本被拒绝且不改原状态
+KILLED M06 未接下也登记: 用户未接下的要求不能伪造承诺
+KILLED M07 覆盖同名承诺: 同 id 承诺不可覆盖,失败不得部分处理消息
+KILLED M08 新消息冲掉旧承诺: 后台等待的承诺不因后续消息或时间样式字段自动消失
+KILLED M09 登记后不标记消息: 用户交办并接下的多个承诺同时登记并保留来源
+KILLED M10 不检查产物存在: done 没有存在的产物不得落账
+KILLED M11 允许修改终态: 已了结承诺不能再次改成其他状态
+KILLED M12 Compute 直接发言: Compute 不得直接作为群消息发送者
+KILLED M13 跨任务更新承诺: Compute 只可报告绑定任务的承诺进展,不能了结承诺
+KILLED M14 Compute 直接了结承诺: Compute 只可报告绑定任务的承诺进展,不能了结承诺
+KILLED M15 引用补充串任务: 引用审查汇报的补充不能绑到快捷键任务
+KILLED M16 其他轮次动作冒充本轮: 本轮有动作后对账通过,别轮动作不冒充本轮动作
+KILLED M17 所有后台承诺阻塞闲聊: 轮末只对本轮绑定承诺对账,后台任务不阻塞闲聊
+PASS 17/17 变异被指定测试杀死
+
+Mutations are limited to these 17 declared changes. A load failure is not a kill.
+The runner uses a fresh isolated copy per mutant and removes its temporary directory in finally.

@@ -1,0 +1,23 @@
+D23 domain-only verification
+Base: afd02560f9546147da380382404eb6106222a9b8 (origin/feat/domain-core)
+Red: ff0255c1f4b505542b555231f98f14f306e8cba6
+Green implementation: eb296c42f451e5e48d77a664fc88ad7c2a72a6d1
+
+node --test --test-reporter=spec packages/domain/src/commitment-ledger.test.ts
+Red: 22 named failures, 0 passed, 0 file-level failures; exit 1.
+Green: 22 named passes, 0 failures; exit 0.
+
+npm test --silent
+45 tests passed, 0 failed; exit 0. The 23 inherited tests are included.
+npm run typecheck
+exit 0
+./node_modules/.bin/biome lint --error-on-warnings
+Checked 16 files, no fixes; exit 0.
+scripts/gates/testlint.ts lintTestFile on commitment-ledger.test.ts
+[]
+scripts/gates/gates.ts stub.run with origin/feat/domain-core base
+[]
+
+Domain tests exercise a proposed immutable snapshot, not physical persistence.
+The done resolver is a trusted injected predicate; external artifact existence and
+production actor authentication require host integration and separate acceptance.

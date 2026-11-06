@@ -1,0 +1,32 @@
+{
+  "slice": "D23 领域纯函数:接收快照与处理分离、稳定动作和消息去重、联系人承诺登记、产物校验、任务隔离与本轮绑定对账;不接存储、内核或联系人运行时。",
+  "acceptance": [
+    {
+      "id": "AC-40",
+      "status": "未测",
+      "reason": "本片只测领域子判据:承诺登记和保留、Compute 不作为消息发送者、引用任务不串、对账仅检查绑定集合;尚未接真实消息、联系人、Compute、存储和实际用户界面,整项与 C1/C2 端到端未测。候选处置、补次数、边界、唤醒、短名仅有可替换类型形状,未实施、未升为已定。"
+    },
+    {
+      "id": "AC-16",
+      "status": "未测",
+      "reason": "领域入口要求可信产物解析器返回存在才登记 done;实际消息、文件或提交的解析器及结果对外发送尚未接入,完整验收未测。"
+    },
+    { "id": "R-02", "status": "通过", "evidence": "packages/domain/proof/commitment-ledger-tests.txt" },
+    { "id": "R-03", "status": "通过", "evidence": "packages/domain/proof/commitment-ledger-tests.txt" },
+    { "id": "R-04", "status": "通过", "evidence": "packages/domain/proof/commitment-ledger-tests.txt" },
+    { "id": "R-05", "status": "通过", "evidence": "packages/domain/proof/commitment-ledger-mutations.txt" }
+  ],
+  "candidate": {
+    "status": "候选",
+    "description": "处置枚举、对账补次数、步骤边界、唤醒格式、短名标签仅提供 CandidatePolicy 的可替换字段形状;没有默认值、策略实例或行为。"
+  },
+  "author": {
+    "agent": "codex",
+    "session": "codex:2e5b967e-007c-43fe-84b4-58374f144f9a",
+    "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra"
+  },
+  "red": { "commit": "ff0255c1f4b505542b555231f98f14f306e8cba6" },
+  "unverifiable": "AC-40/AC-16:状态转移返回的只是拟提交快照;真实宿主必须先原子持久化接收记录,再在同一持久化事务内提交处理、动作去重和版本检查,并验证调用方身份与产物真实存在。纯函数不能保证崩溃恢复、并发写入的单一提交点、模型完整提取承诺或用户真正看到了结果。PR #4 contact.ts 的 commitments 仍是另一套数据形状:id/sourceSeq/text 可对应,但 boundTaskIds/awaitingReport/reportedTaskIds/schedule 与这里单个 taskId 和 blocked/superseded 状态不一一对应;合并接线时必须明确单一账本权威、迁移和末次汇报语义,不能作为两份并列真源。R-05 只覆盖声明的 17 个变异,不是穷尽。",
+  "waiver": null,
+  "review": null
+}
