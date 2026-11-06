@@ -29,7 +29,7 @@ export interface AdapterOptions {
   readonly runner?: ClaudeRunner;
   /** 宿主自己给 CLI 的运行配置(例如模型网关地址)。不来自 brief,也不继承宿主进程的整份环境。 */
   readonly hostEnv?: Readonly<Record<string, string>>;
-  /** 对主进程发 SIGTERM 之后等多久主进程仍未退出就对进程组发 SIGKILL;默认 10000,对应 mirasim 的 MIRASIM_REAP_FORCE_MS */
+  /** 对主进程发 SIGTERM 之后等多久主进程仍未退出就对进程组发 SIGKILL。不给时与 mirasim 一样读环境变量 MIRASIM_REAP_FORCE_MS(有限正数生效),否则 10000;给了就以它为准 */
   readonly reapForceMs?: number;
   /** report_progress MCP 服务器的启动命令;默认是本包 mcp/report-mcp.mjs。测试用它注入起不来的服务器 */
   readonly reportServer?: { readonly command: string; readonly args?: readonly string[] };

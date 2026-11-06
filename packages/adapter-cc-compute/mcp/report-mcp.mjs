@@ -1,40 +1,27 @@
 #!/usr/bin/env node
 // 宿主汇报工具:最小 stdio MCP 服务器,只暴露 report_progress(来自原型 g-group-prototype/report-mcp.mjs,
-// 加了交接快照的三个结构化字段)。按 schema 校验,拒收的调用返回 isError,适配器只认被接收的调用。
-// 设了 REPORT_LOG 时每次调用另追加一行 JSONL,便于事后核对。
+// 加了交接快照的三个结构化字段)。工具定义与校验都取自 src/report-schema.ts,拒收的调用返回 isError,适配器只认被接收的调用。
+// 设了 REPORT_LOG 时每次 tools/call 另追加一行 JSONL,便于事后核对。
+// 每行先解析;不是 JSON 回 -32700,解析结果不是对象(null、数字、字符串、布尔、数组)回 -32600,均带 id:null,进程继续处理后续行(R4-02)。
 import fs from "node:fs";
 import readline from "node:readline";
-import { REPORT_KINDS, reportErrors } from "../src/report-schema.ts";
+import { reportErrors, reportToolDefinition } from "../src/report-schema.ts";
 
 const LOG = process.env.REPORT_LOG;
-const KINDS = REPORT_KINDS;
-const tool = {
-  name: "report_progress",
-  description:
-    "向宿主汇报任务进展。开始干活报 started;完成一个有意义的阶段报 milestone(带 stage);" +
-    "需要用户授权/提供信息/外部条件不满足而无法继续时报 blocked(带 needs)并停下;全部完成报 completed;放弃报 failed。" +
-    "知道当前生效的约束版本、未决问题或已经做完的有副作用的动作时,带上 constraintVer/openQuestions/doneSideEffects。",
-  inputSchema: {
-    type: "object",
-    properties: {
-      kind: { type: "string", enum: [...KINDS] },
-      summary: { type: "string", description: "一句话,给用户看" },
-      stage: { type: "string", description: "阶段名(milestone 时必填)" },
-      needs: { type: "string", description: "blocked 时:需要用户做什么" },
-      constraintVer: { type: "integer", minimum: 0, description: "当前遵守的群规/硬约束版本号" },
-      openQuestions: { type: "array", items: { type: "string" }, description: "仍未决的问题(整份替换)" },
-      doneSideEffects: { type: "array", items: { type: "string" }, description: "已经完成、不可重做的副作用(追加)" },
-    },
-    required: ["kind", "summary"],
-    additionalProperties: false,
-  },
-};
+const tool = reportToolDefinition();
 
 const send = (o) => process.stdout.write(`${JSON.stringify(o)}\n`);
 const rl = readline.createInterface({ input: process.stdin });
 rl.on("line", (line) => {
   let m;
-  try { m = JSON.parse(line); } catch { return; }
+  try { m = JSON.parse(line); } catch {
+    send({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "parse error" } });
+    return;
+  }
+  if (typeof m !== "object" || m === null || Array.isArray(m)) {
+    send({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "invalid request: 请求必须是 JSON 对象" } });
+    return;
+  }
   if (m.method === "initialize") {
     send({ jsonrpc: "2.0", id: m.id, result: { protocolVersion: m.params?.protocolVersion || "2025-06-18",
       capabilities: { tools: {} }, serverInfo: { name: "host-report", version: "0.2.0" } } });
