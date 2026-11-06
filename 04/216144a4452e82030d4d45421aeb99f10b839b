@@ -1,0 +1,29 @@
+packages/adapter-cc-compute/src/adapter.ts
+  s_2950c8e8f91d67::t_fb07ecfad96bff 1-10,12-16,20,23-87,89-301
+packages/adapter-cc-compute/src/brief.ts
+  s_2950c8e8f91d67::t_a12ecedbf540fe 1-2,4-7,9-15,18-39,43-57
+packages/adapter-cc-compute/src/cli.ts
+  s_2950c8e8f91d67::t_79143a19ee7bc2 1-2,6-10,13-26,30,33,35-36,40-52,55,57-64
+packages/adapter-cc-compute/src/events.ts
+  s_2950c8e8f91d67::t_724a8b76e48187 1-5,7,19,21,24,26,30-39,41-48,52-79,86,89,92,94,96,98,102-103,105-116
+packages/adapter-cc-compute/src/procgroup.ts
+  s_2950c8e8f91d67::t_64b91d314fad27 1-6,9,11-20,23,25-31
+packages/adapter-cc-compute/src/report-schema.ts
+  s_2950c8e8f91d67::t_a9da6341907c68 1-2,5,7-11,13-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "04216144a4452e82030d4d45421aeb99f10b839b",
+  "prompts": {},
+  "sessions": {
+    "s_2950c8e8f91d67": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a224e5bbe1fb8b394",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
