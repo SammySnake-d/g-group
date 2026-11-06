@@ -804,3 +804,31 @@ INCOMPLETE_PROBE_EXIT=0
 ### 证据与交付
 
 原始日志、可复现驱动与 SHA-256 清单：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr1-r7-evidence-740bc8df/`，`MANIFEST.json`。核心证据为 `sandbox-probe.mjs` / `sandbox.json`、`prepare-sandbox-fixture.mjs` / `sandbox-e2e.json` / `sandbox-e2e.log`；其他为 `selftest.log`、`mutation.log`、`test.log`、`red.log`、`probes.*`、`G-*.json`、`ci.log`。仅追加本节并写收据 `review`，不改产品、门禁实现、作者声明或历史审查。按原则 67，推送核实后仅清掉本轮自建临时 clone、依赖及夹具目录，保留报告所引用的小型证据；清理结果见 `cleanup.json`，不触碰其他会话目录。
+
+## 第八轮独立复审（58c5162）
+
+### 结论
+
+**REJECT，返修后重审，不应合并。** 第七轮的 `.git-credentials` / `.netrc` 原始反例在所测情形中已被拦下；但本轮用假 HOME 与中性标记发现，固定保护目录**内部**的符号链接仍可让 PR 测试读到链接目标。真实本机沙箱和完整 `--local` 入口均已复现，属于仍须修复的读隔离缺口 R8-01。自检 199/199 与列举变异 98/98 全绿不能代替这一反例的隔离保证。
+
+### R8-01 [P1] 固定保护目录内的符号链接可绕过沙箱读隔离
+
+位置：[lib.ts:116-127](../scripts/gates/lib.ts#L116-L127)，由 [lib.ts:164-174](../scripts/gates/lib.ts#L164-L174) 的测试运行路径使用。`seatbeltProfile` 将固定清单中每个**根路径**及其 `realpath` 加入拒读规则，但未覆盖这些目录内文件或子目录符号链接的目标。实测 seatbelt 按被解析后的目标路径检查：若 `.ssh/outside-marker.txt`、`.config/gh/outside-marker.txt` 或 `.mirasim/sessions/outside-marker.txt` 各是一个指向假 HOME 的 `Documents/` 下中性文件的符号链接，经该受保护路径读取得到的不是 EPERM，而是文件内容。即使只挂载所需依赖（没有挂载整个 HOME），结果也如此；整个假 HOME 挂载的对照同样如此。对照中顶层 `.git-credentials` 与 `.netrc` 本身是指向普通目录的符号链接，均被拒读；工作副本可写，副本外的中性标记写入被 EPERM 拒绝且原样不变。
+
+**完整入口：** 在独立临时 Git 夹具中，`MIRASIM_SESSIONS` 指向夹具内的假会话目录；在该目录放置一个 `outside-marker.txt` 符号链接，目标是同一假 HOME 的 `Documents/neutral-target/outside-marker.txt`，内容为 `NEUTRAL_FIXTURE_NO_CREDENTIALS`。具名 PR 测试经会话目录路径读取并断言中性内容，同时断言被测 `add`；红、绿、收据和来源记录都在夹具中。被审 58c5162 的真实 `run-all.ts --local` 对此返回 **0，八门禁均为 ✓**。本例证明的是沙箱允许读取该中性文件及真实门禁未阻断，不声称读取了真实会话、凭据或其他账户文件，也不声称真实 PR 已合并。复现驱动和原始输出为 `reproduce-e2e.sh`、`e2e-session-fragment.ts`、`reproduced-e2e.log`；直接沙箱正反例为 `sandbox-symlink-probe.mjs` / `sandbox-symlink-probe.json`。
+
+**返修要求：** 对固定保护目录内部的文件与目录符号链接，按实际读取目标保持拒读；不能只解析清单的顶层根目录。若采用路径枚举或白名单策略，应对不可解析目标、循环和竞态采取有界 fail-closed 处理，且保证最终拒读不能被运行依赖放行规则覆盖。补齐受保护会话/群聊、`.ssh`、`.config/gh` 下指向 HOME 内普通目录及 HOME 外的中性标记双侧用例，并保留依赖与工作副本可用对照；再以真实 `--local` 入口确认测试不能读到这些标记。这里没有要求读取、构造或验证任何真实凭据。
+
+### 复现与范围
+
+- 普通独立 HTTPS clone，非共享 linked worktree；被审 HEAD `58c5162d0ff83e407c10d65619c7e8ff960a3b58`，基线 `origin/main=412ce25278e3b0057e02d792a8394f98aaf21424`。审查人 Codex，mirasim 会话 `codex:51f52dd3-f00d-4d1a-ace4-866b25735ac0`；本轮 native `turn_context` 记载模型 `gpt-6.1-terra`，作者为 Claude/Anthropic。模型记录与个人观察不替代实际 G-PROVENANCE 的会话认证。
+- 在该 clone 根目录亲自运行 `node scripts/gates/run-all.ts --hash --branch=chore/gates --base=origin/main`，原样输出 `7aec866ee8ad4edb74639c1143fe3a6596ee90c2ec4c7c441204f2e09fbb9d84`，与送审值一致。
+- Node v22.22.0：`npm ci` 退出 0、0 vulnerabilities；`npm run typecheck`、`npm run lint` 均退出 0；`npm test` 退出 0，实际通过 8 条，0 skip/todo/cancelled。`npm run gates:selftest` 退出 0，199/199（120 秒）；`npm run gates:mutation` 退出 0，原样副本通过（121 秒），98/98 具名变异均被发现（变异阶段 173 秒，4 并发，每个自检 2 并发）。
+- 红提交 `7783201` 用独立 archive 只筛选三条 R7-01 用例：直接隔离和完整入口两条按名失败，同假 HOME 的工作副本与依赖对照通过，真实自检退出 1。当前 HEAD 全量自检中同三条均通过；详见 `red-r7.log` 与 `selftest.log`。
+- 八门禁分别构造负例并对真实完整 CLI 核对该门禁的 ✗ 和退出 1：G-TRACE 缺收据；G-REVIEW 缺审查；G-PROVENANCE 缺审查 hash 轮次；G-RED 缺红提交；G-STUB 顶层常量绕过桩激活；G-TAUTO 无断言；G-WORKFLOW 必需步骤 `if: false`；G-LAYER 文件不属于声明层级的包。另有完整合规对照 8/8 放行；9 个夹具均达到各自预期。见 `G-*.json`、`independent-cases.fragment.ts` 与 `gate-probes.log`。
+- 披露边界：HOME 下普通非点目录的直接读取确实被允许；这只能作为**有限隔离**边界，不等于 RR-02 的会话/群聊/凭据不可读。即便接受普通目录可读，也不能据此接受 R8-01 所示的受保护目录内部符号链接可读。整个 HOME 挂载会覆盖一般点文件拒读；当前正常 `runNodeTests` 的挂载来源为依赖路径，本轮没有声称真实调用会挂载整个 HOME，但该宽挂载下固定清单对目录内符号链接也不完整。本机 Docker daemon 不可用，容器隔离本轮**未实测**，不记为通过。
+- GitHub self-check [run 42284568758](https://github.com/SammySnake-d/g-group/actions/runs/42284568758) 针对 `58c5162`：2026-11-07 04:11 CST 查询时，安装、拉镜像、类型、lint、测试、自检步骤均 success，变异步骤仍 in progress，整次 run 尚无结论；不把进行中写成全绿。原始状态见 `ci.json`。
+
+### 证据与交付
+
+必要的复现脚本、输出和完整性清单位于 `/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr1-r8-evidence-51f52dd3/`；清理记录见其中 `cleanup.json`。本轮只追加本节并更新收据的 `review` 字段；原有各轮和收据其他字段保留。临时 clone、依赖和夹具在推送核实后清除，保留本节引用的小型证据。
