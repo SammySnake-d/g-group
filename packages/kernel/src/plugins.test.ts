@@ -1366,3 +1366,42 @@ test("send / pull 收到普通的已拒绝或稍后拒绝原生 Promise 时记 s
     assert.deepEqual(refusedPromiseRun("pull", "plain", timing), { code: 0, out: { reason: "pull-failed", state: null, gets: 0, alive: true } }, timing);
   }
 });
+
+test("墙钟 now() 返回有限小数(0.5、T0+0.25)时 pull 照常盖收到时间、首次发送照常投递一次,不当成 clock-invalid(R9-02 审查 R9-M1)", async () => {
+  for (const t of [0.5, T0 + 0.25]) {
+    let calls = 0;
+    const reg = createRegistry({ now: () => t, monotonic: () => 0 });
+    reg.register(tg());
+    reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: async (q: { action_id: string }) => { calls++; return { action_id: q.action_id, receiptId: "r" }; } });
+    const pulled = await reg.pull("telegram", "g1");
+    assert.deepEqual(pulled.ok && pulled.events.map((e) => e.receivedAt), [new Date(t).toISOString()], String(t));
+    const sent = await reg.send("p", { action_id: "a", payload: "x" });
+    assert.deepEqual(sent, { ok: true, state: "confirmed", receipt: { action_id: "a", receiptId: "r" }, deduplicated: false }, String(t));
+    assert.deepEqual([calls, reg.delivery("p", "a")?.binding.firstAttemptAt], [1, t], String(t));
+  }
+});
+
+test("send / pull 返回带自有静态 Symbol.species getter 的 Promise 子类时直接拒收,不 await、species getter 0 次、子类构造不再执行;普通原生 Promise 照常(R9-02 审查 R9-M3 单开关对照)", async () => {
+  let species = 0, ctor = 0;
+  class Sub extends Promise<unknown> {
+    constructor(executor: (ok: (v: unknown) => void, fail: (e: unknown) => void) => void) { ctor++; super(executor); }
+    static override get [Symbol.species](): PromiseConstructor { species++; throw new Error("不应读取 species"); }
+  }
+  const receipt = new Sub((ok) => ok({ action_id: "a", receiptId: "r" }));
+  const batch = new Sub((ok) => ok([ev()]));
+  const built = ctor;
+  const reg = createRegistry({ now: () => T0 });
+  reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => receipt });
+  reg.register({ kind: "data-source", id: "d", sources: ["g"], pull: () => batch });
+  assert.deepEqual(await reg.send("p", { action_id: "a", payload: "x" }), { ok: false, state: "delivery-unknown", reason: "non-promise-send", detail: "这一片只支持返回原生 Promise 的 send;同步返回值、thenable 与改过 then 的 Promise 都不当作回执" });
+  const pulled = await reg.pull("d", "g");
+  assert.equal(pulled.ok === false && pulled.reason, "invalid-batch");
+  await new Promise((r) => setImmediate(r));
+  assert.deepEqual([species, ctor - built], [0, 0]);
+  const plain = createRegistry({ now: () => T0 });
+  plain.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => Promise.resolve({ action_id: "a", receiptId: "r" }) });
+  plain.register({ kind: "data-source", id: "d", sources: ["g"], pull: () => Promise.resolve([ev()]) });
+  assert.equal((await plain.send("p", { action_id: "a", payload: "x" })).ok, true);
+  const ok = await plain.pull("d", "g");
+  assert.equal(ok.ok && ok.events.length, 1);
+});
