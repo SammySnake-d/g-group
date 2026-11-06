@@ -1,0 +1,28 @@
+receipts/chore-gates.json
+  h_f33e46a035b77c 66
+scripts/gates/gates.ts
+  h_f33e46a035b77c 15,55,263
+scripts/gates/mutation.ts
+  h_f33e46a035b77c 42-46
+scripts/gates/policy.json
+  h_f33e46a035b77c 1
+scripts/gates/proof/lint.txt
+  h_f33e46a035b77c 1
+scripts/gates/proof/mutation.txt
+  h_f33e46a035b77c 1,3-91,93-94,98-138,140-155,157-166
+scripts/gates/proof/selftest.txt
+  h_f33e46a035b77c 26,33,99,179,181,183,185,187,189,191,229,249,271,273,283,285,287,289,291,299-310,315,317,319,321,323,325,327,329,331,333,335,337,339,341,345,347,349,351,353,355,357,359,361,363,365,367,369,382
+scripts/gates/proof/test.txt
+  h_f33e46a035b77c 9,15,21,27,33,39,45,51,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b3a47a8ea40494b125b75110a85e9090c492f7b1",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
