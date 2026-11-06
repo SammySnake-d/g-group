@@ -1,0 +1,192 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { applyLedger, emptyLedger, reconcileRound, type Actor, type Command, type Ledger, type Result } from "./commitment-ledger.ts";
+
+const user = { kind: "user", id: "u" } as const;
+const contact = { kind: "contact", id: "c" } as const;
+const compute = { kind: "compute", id: "worker" } as const;
+const message = (id: string, seq: number, taskId: string | null = "task-a", sender = user) =>
+  ({ id, seq, sender, text: `原文 ${id}`, taskId, replyToSeq: null });
+const receive = (id = "m1", seq = 1, taskId: string | null = "task-a"): Command =>
+  ({ type: "receive", actionId: `receive-${id}`, message: message(id, seq, taskId) });
+const process = (seq = 1, taskId = "task-a"): Command => ({
+  type: "process", actionId: `process-${seq}`, seq, accepted: true,
+  commitments: [{ id: `k${seq}`, taskId, text: `承诺 ${seq}` }],
+});
+const progress = (id = "k1", taskId = "task-a", roundId = "r1", actor: Actor = contact): Command =>
+  ({ type: "progress", actionId: `progress-${id}-${roundId}`, commitmentId: id, taskId, actor, roundId, text: "进展" });
+const close = (outcome: "done" | "revoked" | "superseded" | "blocked", artifact: string | null = null, actor: typeof contact | typeof user = contact): Command =>
+  ({ type: "close", actionId: `close-${outcome}`, commitmentId: "k1", taskId: "task-a", actor, roundId: "r1", outcome, artifact, detail: outcome === "done" ? null : "明确原因" });
+function unwrap(result: Result): Ledger {
+  if (!result.ok) throw new Error(result.reason);
+  return result.ledger;
+}
+function received(): Ledger {
+  return unwrap(applyLedger(emptyLedger("c"), 0, receive()));
+}
+function registered(): Ledger {
+  const r = received();
+  return unwrap(applyLedger(r, r.version, process()));
+}
+
+test("收到消息时先记录原文、序号和未处理状态", () => {
+  const result = applyLedger(emptyLedger("c"), 0, receive());
+  assert.equal(result.ok, true);
+  if (result.ok) assert.deepEqual(result.ledger.messages.map((m) => [m.seq, m.id, m.text, m.handled]), [[1, "m1", "原文 m1", false]]);
+});
+
+test("未收到的消息不能处理或生成承诺", () => {
+  const result = applyLedger(emptyLedger("c"), 0, process());
+  assert.deepEqual(result, { ok: false, reason: "message-not-found" });
+});
+
+test("同一投递动作重试按稳定 id 去重,旧版本重试也不重复", () => {
+  const first = received();
+  const result = applyLedger(first, 0, receive());
+  assert.equal(result.ok, true);
+  if (result.ok) { assert.equal(result.duplicate, true); assert.deepEqual(result.ledger, first); }
+});
+
+test("复用动作 id 改载荷会被拒绝", () => {
+  const first = received();
+  const result = applyLedger(first, first.version, { type: "receive", actionId: "receive-m1", message: message("m2", 2) });
+  assert.deepEqual(result, { ok: false, reason: "action-id-conflict" });
+});
+
+test("同一消息 id 重投不重复,但内容冲突不得覆盖", () => {
+  const first = received();
+  const retry = applyLedger(first, first.version, { type: "receive", actionId: "retry", message: message("m1", 1) });
+  const changed = applyLedger(first, first.version, { type: "receive", actionId: "other", message: { ...message("m1", 1), text: "另一正文" } });
+  assert.equal(retry.ok && retry.duplicate, true);
+  assert.deepEqual(changed, { ok: false, reason: "message-id-conflict" });
+});
+
+test("新动作使用旧版本被拒绝且不改原状态", () => {
+  const first = received();
+  const saved = JSON.stringify(first);
+  const result = applyLedger(first, 0, receive("m2", 2));
+  assert.deepEqual(result, { ok: false, reason: "version-conflict" });
+  assert.equal(JSON.stringify(first), saved);
+});
+
+test("用户交办并接下的多个承诺同时登记并保留来源", () => {
+  const r = received();
+  const result = applyLedger(r, r.version, { type: "process", actionId: "p", seq: 1, accepted: true, commitments: [
+    { id: "a", taskId: "task-a", text: "做 A" }, { id: "b", taskId: "task-a", text: "做 B" },
+  ] });
+  assert.equal(result.ok, true);
+  if (result.ok) { assert.deepEqual(result.ledger.commitments.map((c) => [c.id, c.sourceSeq, c.text]), [["a", 1, "做 A"], ["b", 1, "做 B"]]); assert.equal(result.ledger.messages[0]?.handled, true); }
+});
+
+test("用户未接下的要求不能伪造承诺", () => {
+  const r = received();
+  const result = applyLedger(r, r.version, { type: "process", actionId: "p", seq: 1, accepted: false, commitments: [{ id: "a", taskId: "task-a", text: "做 A" }] });
+  assert.deepEqual(result, { ok: false, reason: "not-accepted" });
+});
+
+test("联系人自己说出的承诺进自己的账本", () => {
+  const msg = { ...message("m2", 2), sender: contact, text: "我会做" };
+  const r = unwrap(applyLedger(emptyLedger("c"), 0, { type: "receive", actionId: "r", message: msg }));
+  const result = applyLedger(r, r.version, { type: "process", actionId: "p", seq: 2, accepted: false, commitments: [{ id: "self", taskId: "task-a", text: "我会做" }] });
+  assert.equal(result.ok && result.ledger.commitments[0]?.text, "我会做");
+});
+
+test("同 id 承诺不可覆盖,失败不得部分处理消息", () => {
+  const first = registered();
+  const next = unwrap(applyLedger(first, first.version, receive("m2", 2)));
+  const result = applyLedger(next, next.version, { type: "process", actionId: "p2", seq: 2, accepted: true, commitments: [{ id: "k1", taskId: "task-a", text: "覆盖" }] });
+  assert.deepEqual(result, { ok: false, reason: "commitment-id-conflict" });
+  assert.equal(next.messages[1]?.handled, false);
+});
+
+test("后台等待的承诺不因后续消息或时间样式字段自动消失", () => {
+  const first = registered();
+  const next = applyLedger(first, first.version, receive("m2", 2, null));
+  assert.equal(next.ok && next.ledger.commitments[0]?.status, "active");
+  if (next.ok) assert.deepEqual(next.ledger.commitments, first.commitments);
+});
+
+test("done 没有存在的产物不得落账", () => {
+  const first = registered();
+  const absent = applyLedger(first, first.version, close("done", "missing"), () => false);
+  const unspecified = applyLedger(first, first.version, close("done"), () => true);
+  assert.deepEqual(absent, { ok: false, reason: "artifact-not-found" });
+  assert.deepEqual(unspecified, { ok: false, reason: "artifact-not-found" });
+  assert.equal(first.commitments[0]?.status, "active");
+});
+
+test("可信产物解析器确认存在后才可完成,并保留指针", () => {
+  const first = registered();
+  const result = applyLedger(first, first.version, close("done", "artifact-1"), (id) => id === "artifact-1");
+  assert.equal(result.ok, true);
+  if (result.ok) assert.deepEqual(result.ledger.commitments[0]?.resolution, { artifact: "artifact-1", detail: null });
+});
+
+test("撤销、替代和阻塞必须明确记录而不是删除", () => {
+  const first = registered();
+  const revoked = applyLedger(first, first.version, close("revoked", null, user));
+  const replaced = applyLedger(first, first.version, close("superseded"));
+  const blocked = applyLedger(first, first.version, close("blocked"));
+  assert.deepEqual([revoked, replaced, blocked].map((r) => r.ok && [r.ledger.commitments[0]?.status, r.ledger.commitments[0]?.resolution?.detail]), [["revoked", "明确原因"], ["superseded", "明确原因"], ["blocked", "明确原因"]]);
+});
+
+test("已了结承诺不能再次改成其他状态", () => {
+  const first = registered();
+  const done = unwrap(applyLedger(first, first.version, close("done", "a"), () => true));
+  const result = applyLedger(done, done.version, close("blocked"));
+  assert.deepEqual(result, { ok: false, reason: "commitment-closed" });
+});
+
+test("Compute 不得直接作为群消息发送者", () => {
+  const result = applyLedger(emptyLedger("c"), 0, { type: "receive", actionId: "r", message: { ...message("m1", 1), sender: compute } });
+  assert.deepEqual(result, { ok: false, reason: "sender-not-allowed" });
+});
+
+test("Compute 只可报告绑定任务的承诺进展,不能了结承诺", () => {
+  const first = registered();
+  const good = applyLedger(first, first.version, progress("k1", "task-a", "r1", compute));
+  const wrong = applyLedger(first, first.version, progress("k1", "task-b", "r1", compute));
+  const closed = applyLedger(first, first.version, { ...close("blocked"), actor: compute } as Command);
+  assert.equal(good.ok, true);
+  assert.deepEqual(wrong, { ok: false, reason: "task-mismatch" });
+  assert.deepEqual(closed, { ok: false, reason: "actor-not-allowed" });
+});
+
+test("引用审查汇报的补充不能绑到快捷键任务", () => {
+  const first = unwrap(applyLedger(emptyLedger("c"), 0, { type: "receive", actionId: "r1", message: { ...message("report", 1, "review"), sender: contact } }));
+  const result = applyLedger(first, first.version, { type: "receive", actionId: "r2", message: { ...message("followup", 2, "shortcut"), replyToSeq: 1 } });
+  assert.deepEqual(result, { ok: false, reason: "task-mismatch" });
+});
+
+test("轮末只对本轮绑定承诺对账,后台任务不阻塞闲聊", () => {
+  const first = registered();
+  const chat = reconcileRound(first, "chat", []);
+  const work = reconcileRound(first, "r1", ["k1"]);
+  assert.deepEqual(chat, { ok: true, ready: true, pending: [] });
+  assert.deepEqual(work, { ok: true, ready: false, pending: ["k1"] });
+});
+
+test("本轮有动作后对账通过,别轮动作不冒充本轮动作", () => {
+  const first = registered();
+  const changed = unwrap(applyLedger(first, first.version, progress()));
+  const same = reconcileRound(changed, "r1", ["k1"]);
+  const other = reconcileRound(changed, "r2", ["k1"]);
+  assert.deepEqual(same, { ok: true, ready: true, pending: [] });
+  assert.deepEqual(other, { ok: true, ready: false, pending: ["k1"] });
+});
+
+test("拒绝 getter、setter 和 Proxy,不触发其代码", () => {
+  let invoked = 0;
+  const command = Object.defineProperty({ ...receive() }, "actionId", { enumerable: true, get() { invoked++; return "x"; } });
+  const proxy = new Proxy(receive(), { get() { invoked++; throw new Error("不应调用"); }, ownKeys() { invoked++; throw new Error("不应调用"); } });
+  const a = applyLedger(emptyLedger("c"), 0, command as Command);
+  const b = applyLedger(emptyLedger("c"), 0, proxy);
+  assert.deepEqual(a, { ok: false, reason: "invalid-input" });
+  assert.deepEqual(b, { ok: false, reason: "invalid-input" });
+  assert.equal(invoked, 0);
+});
+
+test("合法 JSON 的 null 输入被拒绝但不抛异常", () => {
+  const result = applyLedger(emptyLedger("c"), 0, null as unknown as Command);
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+});
