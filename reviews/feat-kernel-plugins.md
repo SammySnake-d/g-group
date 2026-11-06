@@ -987,3 +987,181 @@ for(const [name,fn] of [['classify null',()=>classifyInbound(null,()=> 'E1')],['
 const r=createRegistry();let calls=0;r.register({kind:'outbound-channel',id:'p',endpoint:'A',idempotency:'none',send:async q=>{calls++;return {action_id:q.action_id,receiptId:'r'}}});try{console.log(await r.send('p',null))}catch(e){console.log('send null THREW',e.message,'calls',calls)}
 NODE
 ```
+
+# 第八轮：返修独立复审
+
+**结论：reject。** 本轮审查普通独立 clone 的 `ad43546f64f696a63d152b2ee32fdc0077b7849c`。R7-01、R7-02、R7-04、R7-05、R7-06 的原样反例已按下文复测；R7-03 按用户 `g-group#2662` 缩小后的合同排除，不作为打回依据。但未改内置原型时，公开状态参数和时钟回调返回值仍会执行访问器或 Proxy，`appendOwn` 接受带访问器的数组；带自有访问器的已拒绝 Promise 虽先返回拒绝，随后会在默认 Node 进程触发未处理拒绝并退出。一个新造的单点故障也逃过全部测试。
+
+## 审查身份、范围与基础结果
+
+- 分支 `feat/kernel-plugins`，基线 `origin/feat/domain-core` 为 `afd02560f9546147da380382404eb6106222a9b8`；普通独立 clone，Git 共用目录就是该 clone 的 `.git`。作者会话 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38`；审查会话 `codex:7d29bd3e-c4cd-4e15-ad0b-298bd0301bd3`，本轮原生 `turn_context` 的模型 `gpt-6.1-terra`，分别属于 Anthropic 与 OpenAI。
+- 在被审 clone 的仓库根目录实跑 `node scripts/gates/run-all.ts --hash --branch=feat/kernel-plugins --base=origin/feat/domain-core`，标准输出**原样**为：
+
+  ```text
+  a0c64e77bb4192d61874f26d58133753b4de32ea2148874fe62091efbd9cdadd
+  ```
+
+  与作者声明完全一致。
+
+| 检查 | 独立实测 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均退出 0；lint 检查 24 文件 |
+| Node 25 `npm test` | 206 通过、0 失败、0 跳过，含 183 条 kernel 测试 |
+| 红提交 `5236136a4dc6a3dc177b2478a51b655c6d3741d3` | 另一个普通独立 clone 安装后执行测试，退出 1；23 条旧测试通过、183 条 kernel 测试逐名失败、0 跳过；红绿 kernel 测试文件无差异，绿通过名与红失败名双向差集均为空 |
+| 两个绿提交 `7d0ca09` 与 `cca84b0` | 四个实现文件 `assemble.ts`、`classify.ts`、`plain.ts`、`plugins.ts` 的 `git diff --quiet` 为 0 |
+| 作者 161 个变异 | Node `v25.8.1`、`v22.22.0` 各独立运行一次：原样副本均 183 绿，161/161 被具名测试发现，0 存活、0 超时；K156、K157、K158 均被各自对应具名测试发现 |
+| 自造单点变异 | 三个独立 clone 各注入一个故障，typecheck 均通过；2 个被具名测试发现，1 个存活，详见 R8-05 |
+| `review=null` 的 `--local` | 退出 1，仅 `G-REVIEW` 报未审；`G-PROVENANCE` 因尚无 review 提前跳过，不是已核验来源 |
+| 填写 reject 后 `--local` | 退出 1；`G-REVIEW` 按 reject 阻挡；`G-PROVENANCE` 当前报告已落盘会话找不到本轮 hash 调用、审查厂商认不出。命令和输出已在本轮实际运行；会话落盘后仍需复核门禁，当前不能宣称来源门禁通过 |
+| 变异超时金丝雀 | Node 22 与 25 各跑一次，必卡子进程约 5.0 秒超时被杀；超时不计为变异杀死 |
+
+收据仍将 AC-06/08/11/12/35/39 和 R-06 纵向路径列为未测；当前结果仅覆盖内核片段，不代表真实联系人运行时、外部渠道及完整用户故事已验收。
+
+## 上轮问题复测及 K38
+
+- **R7-01**：同步 then getter 对象、原生 Promise 自有 constructor getter 的上轮样例均返回 `invalid-batch`，getter 调用 0；普通数组和普通原生 Promise 均可拉取。但被拒绝 Promise 已经拒绝时仍有进程级问题，见 R8-04。
+- **R7-02**：上轮假目标对象的 `length` getter、`squash` 的 `replace` getter、`plainData` 选项中的额外 getter 均拒绝且 getter 为 0；其他状态参数和真实数组仍有缺口，见 R8-01/02。
+- **R7-03**：用户已明确只保证内置原型未被改写的环境。本轮不再以预先修改 `Object.prototype`、`Array.prototype`、`Promise.prototype` 或内置方法作为拒绝理由，既有防护与测试不等于扩张合同。
+- **R7-04**：`STABLE_ORDER`、`EVENT_CODES` 已冻结；空白正则实例不再导出，只导出不可变 `INVISIBLE_SOURCE`。修改由规范文本另建的正则不改变宿主对 U+0085 混入撤回原文的拦截；倒序固定段仍拒绝。
+- **R7-05**：`topFunctions:false` 下顶层函数被拒；同一可见压缩旧消息重复引用只页入一次，清单一条。K156/K157/K158 的独立变异结果见上表及日志。
+- **R7-06**：分类、装配、发送的 null 反例分别给出 `Uncertain`、`invalid-input`、`invalid-payload`；序列化工具对 null 抛约定的受控 `TypeError`，未再出现上轮的无保护字段读取。`createRegistry(null)` 按无选项处理。各结论仅限所测入口与样例。
+- 撤回空白 U+000B/U+0085/零宽字符，以及 B1 未知后窗口内重试、已确认回执复用、未知动作换渠道版本拒重试，独立样例均符合预期；不能以此替代运行时纵向验收。
+- **K38 删除理由已更正**：脚本明确仍对基本类型调用 `JSON.stringify`，但不把外部对象交给它或执行其 `toJSON`，且仅声称有限样例和未改内置环境下的判断。我在独立 clone 把新 `safeDescribe` catch 改为重抛，typecheck 与 206 条测试均绿；普通对象、循环、BigInt、撤销 Proxy、getter/toJSON 样例原版和变异一致且外部 getter/toJSON 0 次。若隔离进程改写内置 `JSON.stringify` 使它抛错，两者有差异，但这属于用户排除的环境；以上不能证明所有可能环境中 catch 严格不可达。
+
+## 必须返修
+
+### R8-01 [P1 / 对外状态参数] `plainData` / `plainItems` 的路径参数可执行 getter 或 Proxy
+
+位置：`packages/kernel/src/plain.ts:73-86,101,111-119,139-148`，函数从 `index.ts` 导出。独立传入的第二参数 `at` 是自有 `Symbol.toPrimitive` getter 的对象；`plainData({x:1}, at)` 实测 **getter 1 次并 `ok:true`**。把 `at` 换成有 `get` trap 的 Proxy，trap 1 次、仍 `ok:true`。对稀疏数组调用 `plainItems(array, at)` 虽返回拒绝，也在生成错误路径时先调用 getter 1 次。这些均未改任何内置原型。正常字符串路径的单开关对照通过。
+
+影响限定在调用公开工具并传入非法路径参数的情形，不声称一般业务消息都能控制路径。这里的直接问题是状态参数被模板字符串隐式强转，违反“外部输入含状态参数出现访问器/Proxy 不调用即拒绝”。要求在任何插值/强转之前检查路径参数的原始类型；getter、setter、Proxy、null 等非法参数不触发外部代码，并提供受控拒绝和正常字符串对照。
+
+### R8-02 [P1 / 对外状态参数] `appendOwn` 放行带访问器的真实数组并修改它
+
+位置：`packages/kernel/src/plain.ts:47-51`。当前只检 `Array.isArray` 和目标本身不是 Proxy，没有检查目标数组的自有元素描述符及原型。对下标 0 为 getter/setter 的真实数组调用 `appendOwn(array,'z')`，实测访问器调用 0，但函数**没有拒绝**，长度由 1 变 2，写入了自有下标 1。`Array` 子类实例也被接受。原先“假对象带 length getter”的 R7-02 样例已拒绝，不能证明真实数组状态也拒绝。
+
+要求按公开入口的实际合同检查调用方数组（含自有访问器、Proxy、非普通原型），非法时不调用访问器且不写入；对合法普通数组保留阳性对照。若不打算支持外部调用，应收紧导出并明确证明其只能接收宿主自建数组，而不是继续以公开函数宣称普通数组合同。
+
+### R8-03 [P1 / 时钟状态与回调] 非数字时钟结果可触发访问器、伪造时间或抛出
+
+位置：`packages/kernel/src/plugins.ts:238,265-273`。这是由调用方显式注入 `RegistryOptions.now/monotonic` 回调并使其返回非法对象的复现，**不是说普通外部消息自动能控制宿主时钟**：
+
+1. `now()` 返回带 `Symbol.toPrimitive` getter 的对象；`pull` 在 `new Date(now())` 中执行 getter 1 次，仍 `ok:true`，收到时间被记为 `1970-01-01T00:00:00.000Z`。
+2. B1 第一次 `monotonic()` 返回带 getter 的对象，首次发送结果未知；第二次返回数字，`reading < prior.maxMonotonic` 又将上次对象强转，getter 执行 1 次。若 getter 抛错，第二次 `send` 的 Promise 直接抛错而不是安全返回 `clock-untrusted`；首次实际插件调用 1 次、账本仍为 `delivery-unknown`。
+
+Node 22.22.0 与 25.8.1 独立进程均复现；没有改内置原型。要求验证时钟结果是有限数字后才转换、存储或比较；已不可信状态不得在后续比较中重新执行外部值。对 getter、Proxy、null、非有限数字、恢复读数与合法时钟做单开关对照，并保证无法确认结果时不误重发、不把伪造时间盖章成成功。
+
+### R8-04 [P1 / AC-35] 拒绝异常 Promise 后仍有未处理拒绝，可终止宿主进程
+
+位置：`packages/kernel/src/plugins.ts:33-36,187-189,232-237`。在**没有额外 `unhandledRejection` 处理器**的独立进程里，插件返回一个已拒绝的原生 Promise，并在该 Promise 实例上定义自有 `then` 或 `constructor` getter；内置原型未修改。`send` 先返回 `non-promise-send` / `delivery-unknown`，`pull` 先返回 `invalid-batch`，getter 均为 0；随后未处理的 Promise 拒绝使 Node 默认策略下进程**退出 1**。同样的已拒绝普通 Promise（无自有访问器）作为对照，分别得到 `send-threw` / `pull-failed`，进程退出 0。Node 22.22.0 与 25.8.1 下 `then` 访问器的发送与拉取四个子进程均复现；Node 25 的 `constructor` 访问器也复现。
+
+要求连同进程级观察验证“安全拒绝”：非法返回不读取 getter、不留下未处理拒绝，也不能把进程退出伪装为已安全返回；对已拒绝/稍后拒绝、then/constructor 访问器、合法已拒绝 Promise、发送账本和拉取结果分别作正负对照。若所用原生 Promise 形态无法在不触发访问器时安全观察，应调整外部回调边界或隔离执行，不应只断言返回值。
+
+### R8-05 [P1 / R-05] 自造变异暴露非枚举数组元素的测试空缺
+
+在独立临时 clone 对各注入点只改一次，未改受审仓库：
+
+- **R8-M1，被杀**：删除 `appendOwn` 的 Proxy 拒绝条件；typecheck 0，全仓 205 绿 / 1 红，被目标数组 Proxy 的具名测试发现。
+- **R8-M2，存活**：删除 `plain.ts` 中 `items` 对**数组下标** `!d.enumerable` 的拒绝；typecheck 0，全仓仍 206/206 绿。对自有下标 0 是不可枚举数据属性的数组，原版 `plainItems` / `plainData` 均拒绝，变异版均 `ok:true`。这是测试缺口，**不是说本版已经放行该值**；现有不可枚举正例只覆盖对象字段。
+- **R8-M3，被杀**：将装配字节数从 UTF-8 `Buffer.byteLength` 改为 `s.length`；typecheck 0，全仓 200 绿 / 6 红，包括页入清单与实际字节数的具名测试。
+
+要求为不可枚举数组元素补普通数组阳性与该单点故障阴性对照，分别覆盖 `plainItems`、`plainData` 和实际使用拉取数组的入口；不能把预选 161 个变异全杀等同所有形态都有防护。
+
+## 每个门禁一条独立负例
+
+按第六轮完整夹具脚本在本版独立 clone 中重建八个临时 Git 仓库和伪会话；本轮换了非法状态、缺失红提交和恒真常量等具体输入。每例单独调用目标 `runGates` 并实际运行完整 `run-all.ts --local` CLI：8/8 目标门禁显示 ✗ 且各 CLI 退出 1。单个夹具可能同时触发其他门禁，这不是对其他门禁正例的证明。
+
+| 门禁 | 负例 | 目标结果 |
+|---|---|---|
+| G-TRACE | 收据状态 `接近通过` | 非四选一 |
+| G-REVIEW | 作者和审查者均为 Claude | 同一审查人与作者 |
+| G-PROVENANCE | `codex:does-not-exist-r8` 空会话 | 审查会话不可信 |
+| G-RED | 不存在的全 `f` 红提交 | 红提交不存在 |
+| G-STUB | 测试只断言导入函数类型 | 空桩未按名字失败 |
+| G-TAUTO | `assert.equal(7,7)` | 恒真断言 |
+| G-WORKFLOW | workflow 申请 `contents: write` | 申请写权限 |
+| G-LAYER | plugin 导入 plugin | 插件层不能互相依赖 |
+
+## 最小复现（受审仓库根目录，`npm ci` 后）
+
+以下仅在当前进程创建临时值，不修改任何内置原型、不联网；打印的是本版实际行为：
+
+```sh
+node --input-type=module <<'NODE'
+import {plainData,plainItems,appendOwn} from './packages/kernel/src/plain.ts';
+let gets=0;const label={};Object.defineProperty(label,Symbol.toPrimitive,{get(){gets++;return ()=> '路径'}});
+console.log('plainData',plainData({x:1},label),'getter',gets); // ok:true, 1
+gets=0;console.log('plainItems',plainItems(new Array(1),label),'getter',gets); // 拒绝, 1
+let traps=0;const proxy=new Proxy({}, {get(_t,k){traps++;return k===Symbol.toPrimitive?()=> '路径':undefined}});
+console.log('path Proxy',plainData({x:1},proxy),'traps',traps); // ok:true, 1
+let n=0;const a=[];Object.defineProperty(a,'0',{enumerable:true,get(){n++;return 'x'},set(_){n++}});
+appendOwn(a,'z');console.log('appendOwn',{length:a.length,own1:Object.hasOwn(a,1),accessorCalls:n}); // 2,true,0
+NODE
+```
+
+```sh
+node --input-type=module <<'NODE'
+import {createRegistry} from './packages/kernel/src/plugins.ts';
+const ev={nativeId:'m',sourceVersion:'v',eventType:'create',author:'a',content:'hello',occurredAt:'2026-01-01T00:00:00Z',attachments:[]};
+let nowGets=0;const clock={};Object.defineProperty(clock,Symbol.toPrimitive,{get(){nowGets++;return ()=>0}});
+const a=createRegistry({now:()=>clock});a.register({kind:'data-source',id:'p',sources:['g'],pull:()=>Promise.resolve([ev])});
+const pulled=await a.pull('p','g');console.log('now',{ok:pulled.ok,receivedAt:pulled.events?.[0].receivedAt,nowGets});
+let monoGets=0;const state={};Object.defineProperty(state,Symbol.toPrimitive,{get(){monoGets++;throw Error('时钟访问器被执行')}});let reads=0,calls=0;
+const b=createRegistry({monotonic:()=>reads++===0?state:1});b.register({kind:'outbound-channel',id:'b',endpoint:'A',idempotency:'action-id',idempotencyWindowMs:1000,send:()=>{calls++;return Promise.reject(Error('未知'))}});
+console.log('first',await b.send('b',{action_id:'a',payload:'x'}));try{await b.send('b',{action_id:'a',payload:'x'})}catch(e){console.log('second throws',e.message)}console.log({monoGets,calls,state:b.delivery('b','a').state});
+NODE
+```
+
+下列脚本故意运行两个将以 1 退出的隔离子进程，先打印拒绝结果，再由未处理拒绝终止；不应在生产宿主直接运行：
+
+```sh
+for mode in send pull; do
+ MODE="$mode" node --input-type=module <<'NODE'
+import {createRegistry} from './packages/kernel/src/plugins.ts';
+let gets=0;const pending=Promise.reject(Error('外部 Promise 失败'));Object.defineProperty(pending,'then',{get(){gets++;throw Error('不应读取')}});
+const r=createRegistry();if(process.env.MODE==='send')r.register({kind:'outbound-channel',id:'p',endpoint:'A',idempotency:'none',send:()=>pending});else r.register({kind:'data-source',id:'p',sources:['g'],pull:()=>pending});
+const result=process.env.MODE==='send'?await r.send('p',{action_id:'a',payload:'x'}):await r.pull('p','g');console.log({mode:process.env.MODE,reason:result.reason,getterCalls:gets});setTimeout(()=>console.log('alive'),30);
+NODE
+ echo "$mode 子进程退出码: $?"
+done
+```
+
+## 用户追加核对：v3.12 五块重拼、AC-39② 与 AC-40 坏实现⑪
+
+### 结论与版本边界
+
+**不符合 v3.12 的五块重拼契约；但本 PR 是契约桩，不存在足够证据断言真实联系人端到端请求已经失败或通过。** 本轮原始受审 HEAD 为 `ad43546f64f696a63d152b2ee32fdc0077b7849c`；该 HEAD 自带 `docs/spec/需求文档.md` 是 **v3.2 审查稿**，其验收文档的 AC-39② 仍写“旧历史只追加”。这是本 PR 当前行为的旧文档来源，并非用户追加指定的 v3.12。
+
+用户指定的对照文档为文档分支已推送提交 `36180ef7188a15c65689fec4a19e5b8ae201d699` 的 **v3.12 审查稿（非批准版）**；独立冻结了两个文件并核对与该提交字节一致：`需求文档.md` SHA-256 `f1949a5a3cdfd8e491c51f9b74b50c8b2f5cea35260ef362de1c94a76a095bc0`，配套 `验收文档-v0.1.md` SHA-256 `9ecb8c08eacf103c66a64b272a840911fa2332818a15ba6ce72478e7879b237a`。文档分支是对照真源，未把它合并进受审代码或改变本次内容 hash。
+
+- [v3.12 D06 第 2 小节，第 682–701 行](https://github.com/SammySnake-d/g-group/blob/36180ef7188a15c65689fec4a19e5b8ae201d699/docs/spec/需求文档.md#L682-L701)要求每轮由宿主重拼：①固定前缀（含当前确认规矩与纠正原文）；②未了结承诺的原文/索引；③状态笔记；④ `processed_seq` 之后的新消息原文；⑤指针和按需取回。**同一轮内**的工具往返要保留本轮工具调用与结果。D23 第 9 小节同时说明方向已定、五块具体顺序仍是待审方案；此处按用户明确指定的 v3.12 做差异核对，不把候选顺序擅称为用户已批准的每个细节。
+- [v3.12 验收文档 AC-39② / AC-40 坏实现⑪，第 159–160 行](https://github.com/SammySnake-d/g-group/blob/36180ef7188a15c65689fec4a19e5b8ae201d699/docs/spec/验收文档-v0.1.md#L159-L160)要求稳定前缀之后的账本、状态笔记、新消息每轮重拼；实际发出的第 N 轮请求若含五块以外旧消息、账本非原文，或同轮工具往返丢调用与结果，列为坏实现。AC-40 末列对当前必过与候选子项作区分，未在末列单独写明⑪的归类；不据此虚构其批准状态。
+
+### 本 PR 实际实现与收据
+
+1. [受审 `assemble.ts:18–48,231–265`](https://github.com/SammySnake-d/g-group/blob/ad43546f64f696a63d152b2ee32fdc0077b7849c/packages/kernel/src/assemble.ts#L231-L265)只声明 `stable / history / tail`：先放压缩块，再按 seq 追加压缩点之后所有可见消息/编辑，再将引用页入与 `volatile` 放 tail。`AssembleOptions` 没有 `processed_seq`、承诺账本或状态笔记等独立字段，也没有同一轮工具调用/结果接口；不能证明按五块逐轮重拼、逐字保留账本或同轮工具往返。调用方可以自行往通用字符串放内容，但该接口没有提供或校验对应的五块语义与顺序。
+2. [受审 `assemble.ts:315–332`](https://github.com/SammySnake-d/g-group/blob/ad43546f64f696a63d152b2ee32fdc0077b7849c/packages/kernel/src/assemble.ts#L315-L332)的 `prefixLength` 和默认 `prefixHash` 把全部 `stable + history` 计入前缀；压缩块或后续历史变化会改变默认前缀 hash，与 v3.12 只以固定前缀为稳定边界、之后每轮重拼的口径不一致。`prefixHash` 确实允许调用方额外传字节数，因而可以**手工**只哈希 stable；但这不等于当前默认接口已建立 v3.12 的规则原文边界或完成命中率验收。
+3. [受审收据 AC-39](https://github.com/SammySnake-d/g-group/blob/ad43546f64f696a63d152b2ee32fdc0077b7849c/receipts/feat-kernel-plugins.json#L49-L54)整体标“未测”，R-06 也承认无纵向路径，这部分边界如实；但其已过子判据仍称“②只追加、旧历史保留”，这是 v3.2 的旧标准，**不能作为 v3.12 AC-39② 已通过的证据**。本收据没有 AC-40 项。受审 HEAD 的 `G-TRACE` 从本仓库验收文档提取代号，且只检查代号/状态/证据路径；其绿灯既未换用 v3.12，也不证明 AC-39/40 语义已实现。
+
+### 独立装配探针及交付边界
+
+我在 `ad43546` 的普通独立 clone 构造三条消息：#1 已压缩，#2 假定已处理且没有被引用，#3 是本轮新消息；压缩点设为 1、引用为空。传入**仅作诊断的未声明附加字段** `processedSeq:2`，实际 `history` 仍包含 #2 和 #3；把诊断字段改为 3，序列化结果完全不变。实际 stable 长度为 22 字节，`prefixLength` 却为 128 字节；只改压缩块文本时，手工按 22 字节算的 stable hash 不变，默认 `prefixHash` 改变。说明该接口当前无法表达或执行“按处理游标筛本轮新消息”的合同，且默认把变化的 history 当作前缀。
+
+若未来 runtime 将这次装配结果直接用于实际 provider 请求，则在该夹具假设（#2 不属于账本、状态、新消息或按需引用）下，会出现 AC-40⑪ 所描述的五块之外旧消息；**本轮没有实际联系人/模型请求观察，因此这只是有条件的集成风险，不报告成端到端已实测失败**。同轮工具往返、账本原文、真实缓存命中和处理游标的持久化也都未在本 PR 证明。
+
+### R8-06 [P1 / D06、AC-39②] 契约桩与新文档方向不一致，旧子判据不能冒充新判据
+
+返修需同步最新文档基线或在 PR 中明确标出版本差异，调整装配契约/调用边界，使固定前缀、承诺原文、状态笔记、未处理新消息与按需取回能按新方向明确区分，并避免默认把会变历史纳入固定前缀；补“已处理旧消息未被引用不进入本轮、新消息进入、规矩与承诺原文不改、只变会变状态时固定前缀不变”的切片级对照。用户未批准的五块具体顺序和其他候选细节须保留状态，不自行扩成已定需求。真实 provider 请求、同轮工具往返、存储/账本和 AC-40 纵向验收留给后续 runtime/App 接线，届时独立实测；本 PR 不应把缺失端到端链路本身冒充已过或已实测红。
+
+复现（`processedSeq` 故意作为诊断附加字段，**不是此版本已声明的参数**）：
+
+```sh
+node --input-type=module <<'NODE'
+import {assemble,prefixLength,prefixHash,serialize} from './packages/kernel/src/assemble.ts';import {append,emptyLog} from './packages/domain/src/log.ts';
+const u={kind:'user',id:'u'},t='2026-01-01T00:00:00Z';let log=emptyLog();for(const text of ['已压缩的旧消息','已经处理的旧消息','本轮尚未处理的新消息'])log=append(log,u,{kind:'message',text},t);
+const base={stable:[{kind:'system',text:'固定规则'}],compressed:{throughSeq:1,builtAtSeq:3,text:'旧摘要'},quotes:[],budgetBytes:4000};
+const a=assemble(log,{...base,processedSeq:2}),b=assemble(log,{...base,processedSeq:3}),c=assemble(log,{...base,compressed:{...base.compressed,text:'更新摘要'},processedSeq:2});
+const stableBytes=a.request.segments.filter(s=>s.section==='stable').reduce((n,s)=>n+s.bytes,0);
+console.log({segments:a.request.segments.map(s=>({section:s.section,label:s.label,seq:s.seq,text:s.text})),cursor2vs3Same:serialize(a.request)===serialize(b.request),stableBytes,prefixLength:prefixLength(a.request),stableHashSame:prefixHash(a.request,stableBytes)===prefixHash(c.request,stableBytes),defaultPrefixHashSame:prefixHash(a.request)===prefixHash(c.request)});
+NODE
+```
