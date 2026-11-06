@@ -871,3 +871,129 @@ Y04（直接跳过嵌套 schedule 快照）虽然 236 测试绿，但被 lint �
 **回交条件：** Claude Code 在 PR #4 原开发任务修复 CH-36–CH-38、处理公开快照的运行时可变边界并补上述具体测试/校准；以用户 #2662 为准保留已有防护但不继续以预改内置原型反例拒审。上游导出状态表问题交 PR #3 原任务，不在此改其代码；整合依赖及文档后重算 hash 并交跨厂商复审。整项后端、验收清单和用户故事仍未完成端到端验收。
 
 **本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 在 `fcb22ea` / `c100498` 下 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦截；G-PROVENANCE 报未找到等于本轮 `reviewed_hash` 的审查工具输出、无法识别该审查轮厂商。本轮会话尚未完整落盘；不冒称来源门禁通过、不伪造记录或豁免，待既有流程在会话落盘后重核（`$E/gates-local-round13.log`）。
+
+
+## 第十四轮：CH-36–CH-38、公开快照与独立门禁复现（2026-11-07）
+
+**结论：reject。** CH-36、CH-37 及公开只读快照的原反例已关闭；CH-38 上轮列出的非法工具/资产类别/承诺字段/目录键案例也已修复。仍有 **CH-39 状态入口漏验身份与唯一性**，以及 **CH-40 四个独立变异存活**。交回 Claude Code 的 PR #4 返修，不推翻已确认的修复，不恢复已撤销的专职开关；不是整项功能或合入门禁已通过。
+
+### 固定对象、合同与范围
+
+- 受审 HEAD：`30046801a857268b495cb773f1cdbae8d285ef27`；基线：`origin/feat/task-lifecycle=ba90d6769992d2f3df2a571f846409afcafd644d`。规范取 `origin/docs/dev-handbook=bb3dcb242d98fa712908f2d6c494209d0c0d6cbf` 的 `docs/spec/验收文档-v0.1.md`，不是拿旧专职条文要求恢复删除功能。
+- `task.ts`、`task.test.ts`、`receipts/feat-task-lifecycle.json`、`reviews/feat-task-lifecycle.md` 与 ba90d67 **逐字相同**；变异清单中来自基线的 **243 条顺序、名称、文件、注入前后内容也全部相同**。PR #3 不在本轮复审范围。
+- 使用普通独立 HTTPS clone，`.git` 与 common dir 都是本 clone 的 `.git`，没有在共享 linked worktree 运行钩子；未修改产品代码、产品测试或作者变异脚本。
+- 合同仍为用户 `g-group#2662`：内置原型和内置方法未被预先改写；外部 getter/setter/Proxy 不调用，JSON null 不抛；静态策略不可变，撤销/幂等/版本检查不撤销。本轮自造反例**没有预改内置原型**。用户 `#3140` 对 **PR #6 R9-01** 的三类排除，不擅自扩张为 PR #4 的豁免。
+- 本轮作者原生模型记录仍为 Claude Opus 5.5 / Anthropic；审查原生 `turn_context`（2026-11-06T15:53:09.509Z）为 `gpt-6-astra` / OpenAI，会话 `codex:ca507fd7-9fc8-4431-a218-fb29ca3ca577`。没有同厂商豁免。模型事实与 G-PROVENANCE 的机械判决分开，见后文。
+
+证据目录，以下记为 `$E`：
+
+```text
+/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-r14-20261106-Ra8qM3
+```
+
+`snapshot.json` 固定 HEAD/base/规范 SHA/受管文件 SHA；`base-comparison.json`、`baseline-mutation-comparison.json` 是基线核对；`acceptance-extract.md` 是规范分支的有关条文及行号；`model-provenance.json` 只记录实际模型元数据。仅保留本报告引用的证据，临时 clone、依赖和变异副本不作为交付物保留。
+
+### 实际 hash 与基线复现
+
+在本轮审查 clone 的仓库根目录实际运行：
+
+```sh
+node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle
+```
+
+原样 stdout，与送审值一致：
+
+```text
+586ec0578b71d3d9a8d56686bceb9c9efdab54cc5e8a31ca621ff39ca0d35c1d
+```
+
+- `npm ci`、`npm run typecheck`、`npm run lint`、`npm test` 均 exit 0；全量 **291/291 通过、0 skip/todo**。另外直接 TAP 重跑同一套测试确认计数（`baseline.json`、`npm-ci.log`、`typecheck.log`、`lint.log`、`test.log`、`npm-test.log`）。
+- 红提交 `285a41e9e7bb75dc4f7543613e24eb94bb604c85` 在隔离副本实际运行：contact **89/89**、helper **14/14** 逐名失败，当前 103 个测试名与红失败名集合完全相同，没有文件级加载失败冒充具名红。空壳红不等于每一项在旧真实实现上都是故障（`red-name-comparison.json`、`red-summary.json`、`red-contact.test.ts.tap`、`red-helper.test.ts.tap`）。
+- 作者 runner 亲自重跑 exit 0：原样 291 绿，**407/407 被具名测试杀死**。独立静态核对为 407 种不同 `(file,from,to)`，所有注入点恰好一次；contact/helper 范围 164 条（contact 122、plain 27、helper 14、index 1），基线 243 条（`author-mutations.log`、`author-mutations-exit.json`、`author-mutation-audit.json`）。不把基线的 243 条说成 PR #4 新覆盖。
+- 远端查询时 HEAD 一致，CI `42244819364` 的 self-check success、GitHub MERGEABLE；只作参考，不替代以上复现或下面的反证。
+
+### 新旧实现的判别输入：已修好的项目
+
+旧实现固定为红提交父版本 `a5a79b21993c8c71251a1a6256d474124314035a`，不是空壳。`probes.mjs` 对同一组输入分别加载旧/新源码，结果为 `old-probes.json`、`current-probes.json`；新版本另以 `assert-current` 对结果逐项断言，exit 0。
+
+| 项目 | 输入与预期 | 旧实际 | 新实际与结论 |
+|---|---|---|---|
+| CH-36 标量 | 四入口的 ID 分别换 Proxy、自有 Symbol.toPrimitive getter、null、数字、undefined；应拒绝且不调用 | update/revoke 两类对象输入共触发外部读取 4 次并抛错；settle 的部分非法 ID 被当正常状态返回 | 20 格全部拒绝、0 次调用；合法字符串对照通过。原问题关闭 |
+| CH-36 导出 | contact 模块不再公开接受外部 schema 的 normalize | `normalize` 可导入 | contact 与包入口不导出，package exports 仅 `.`；内部 plain.ts 的源码可直导入是已披露的包边界，不声称有运行时私有隔离 |
+| CH-37 状态 | null、数字、字符串、数组、空对象、undefined × settle/confirm，应显式失败、不抛 | 12/12 抛错 | 12/12 `{ok:false}`，0 抛错；合法状态的 null 回执保持状态不变。原问题关闭 |
+| CH-38 原列举字段 | 无界/禁项/空名工具、工具资产同名、非法/空名资产、非法状态/出处/定时；含坏项在第二项、目录 alias 与前缀键 | 多个登记入口拒绝的状态可作为恢复状态继续用 | 本组 57 个入口观察全部拒绝；新增确认后文“身份与唯一性”仍漏验，不能据此宣称所有不变量已齐 |
+| 状态输入合同 | tools/computeAssets/commitments 数组及元素 Proxy，memory/soul getter/setter | 本轮对照不靠原型污染 | 新版逐项拒绝，读取计数为 0；合法普通状态仍可用 |
+| Directory 快照 | 尝试 set/delete/clear、借 Map.prototype.delete；检查实例/原型/类冻结 | 真 Map 可删，联系人消失 | 没有三种改写方法，借 Map 方法抛 TypeError，联系人仍存在；实例/原型/类冻结 |
+| HelperRoute | mention 的 becomesMessage 从 true 改 false | 改写成功 | 抛 TypeError，仍为 true；没有将“修改只读输出时抛错”混同为“非法外部状态入口不应抛错” |
+| AC-31⑤ 回归 | 先终态后确认、先确认后终态、重放、撤销后迟到事件 | 对照沿用两条件语义 | pending=active，两种顺序最终 done，重放不变、撤销仍 revoked |
+
+`settleTask`、`confirmFinalReport` 的 ContactResult 返回接口变化已检查：仓库 packages 中除定义和测试外未找到调用方。并未据此声称外部宿主已迁移。
+
+### CH-39 [High] 恢复状态漏验身份/唯一性，绕开登记入口的拒绝合同
+
+位置：`packages/domain/src/contact.ts:89-119`（`contactInvariantError/readContact`）、`:167-175`（目录读取）、`:275-278`（同名资产）、`:298`（承诺唯一）、`:368-369`（撤销）。证据：`state-extra.mjs`、`state-extra.json`。
+
+本轮旧问题的字段守卫已经生效；以下是仍缺的登记/恢复一致性，不要求真实签名或来源认证。所有输入都是普通数据，不带访问器/Proxy，不改内置原型：
+
+| 同一业务约束 | 正常登记入口实测 | 恢复状态入口实测 | 应有结果 |
+|---|---|---|---|
+| 联系人 id 不可空 | `addContact(...,{id:'',...})` 返回“联系人 id 不能为空” | 将 `id:''` 的完整联系人放进 `Map([['',state]])`，`updateContact(...,'',{memory:'changed'})` 返回 ok:true | 拒绝非法身份，不能因为目录键恰好也为空就放行 |
+| 同一资产名只能一种类别 | 先登记 same/mcp，再登记 same/skill 被拒 | 普通状态直接放 `[{name:'same',kind:'mcp'},{name:'same',kind:'skill'}]`，`grantComputeAsset(...,same/mcp)` 返回成功并保留两项；`briefFor(...tools:['same'])` 成功授出歧义名字 | 在状态入口拒绝这种登记入口不可产生的类别冲突 |
+| 承诺 id 唯一 | 第二次 `commit(id:'p')` 被拒 | 普通状态放两条不同 sourceSeq/text、同 id='p' 的承诺；`revokeCommitment(state,'p')` 成功并将**两条**都置 revoked | 拒绝重复 ID，不能让一个控制标识同时指向两条不同承诺 |
+
+这不是“数据内容被合法改成另一段 memory，本层无法验证来源”的已声明边界；非空与唯一性都是可以本地检查、并且登记 API 已强制的规则。没有证据显示真实宿主已加载这些状态，本轮只报告纯函数的实际接受及输出，不外推生产事故。
+
+建议在共有状态校验处补非空联系人 ID、资产名称唯一/类别冲突、承诺 ID 唯一，并用“经登记生成的合法状态 vs 仅改成重复/空标识的恢复状态”逐入口对照。不要在具体调用方逐个打补丁，也不要把歧义状态静默规范成第一项而吞掉其他记录。
+
+### CH-40 [High，验收判别力] 8 个独立单点变异中 4 个存活
+
+独立 `mutations.py` 对干净副本各改一处实现字符串，**不改测试**，每个副本跑 typecheck、lint、同一套 291 项测试与独立 probe；副本在 finally 中立即删除。C00 原样四项 exit 0。所有 8 个变异类型/lint 均通过，结果如下（`independent-mutations.json`、`V01`–`V08` 的对应日志）：
+
+| ID（仅本轮） | 单点变化 | 现有测试 | 独立观察 |
+|---|---|---|---|
+| V01 | 已有 tools 校验循环从全部项缩成 `Math.min(1,length)` | **291 绿，存活** | 第二项 shell/bounded:true 被接受；原样拒绝，probe 红 |
+| V02 | 已有 commitments 校验循环从全部项缩成 `Math.min(1,length)` | **291 绿，存活** | 第二条 status=unknown 的承诺被接受；原样拒绝，probe 红 |
+| V03 | 目录键与 ID 的精确相等改成 startsWith | **291 绿，存活** | key='person' / id='person-2' 被接受；原样拒绝，probe 红 |
+| V04 | ContactTable.forEach 回调第三参从只读表改成内部 Map | 290 绿 / 1 红 | 被快照测试准确发现 |
+| V05 | HelperRoute 不再冻结 | 290 / 1 | 被快照测试发现，独立改写也不再抛错 |
+| V06 | taskId 的非 string 拒绝误改为只拒 object | 290 / 1 | 数字/undefined 的具名 CH-36 测试红 |
+| V07 | Reflect.ownKeys 改 Object.keys | 289 / 2 | 被非枚举/Symbol 访问器具名测试发现；其中无污染测试足以杀死，不靠排除范围内的原型污染 |
+| V08 | 回执 commitmentIds 精确 includes 改成前缀匹配 | **291 绿，存活** | 下述独立差分确认会错误确认另一条承诺 |
+
+V08 的通用 probe 未区分该故障，因此另写 `prefix-oracle.mjs`，没有把原 probe 的绿冒充杀死证据。输入：真实承诺 ID=`promise-long`、任务 T，回执仅点名 `promise`。预期末次汇报未确认，任务终态后仍 active/awaitingReport=['T']；原样如此（exit 0），变异却置 done（断言 exit 1）。阴性对照只把回执 ID 改为完整 `promise-long`，两者均正常 done。见 `V08-clean-differential.log`、`V08-mutant-differential.log`。
+
+必须补的不是更多重复计数，而是**所有项都被校验**、**标识精确相等而不是前缀相关**这两类可区分输入：坏项放首/中/尾；目录键互为前缀；回执作用域 ID 互为前缀。将这些单点变异收进校准时应按内容去重，编号避免与任务侧已有 V 系列冲突。上述坏行为只存在于人为变异副本，原实现 V01/V02/V03/V08 对应的独立输入均正确；不要把测试盲区写成原实现已经按前缀确认承诺。
+
+### 四项 AC 与第 7 栏
+
+| AC | 本片可核实的子集 | 仍未验，不提升为整项通过 |
+|---|---|---|
+| AC-01 | ID 更新不重建；目录与联系人快照只读；同 ID 新建拒绝 | 存储重启后身份/MEMORY/INVARIANTS 读回；新增 CH-39 的恢复身份约束待修 |
+| AC-31 | 终态+确认双条件、乱序、作用域、来源位置、撤销和重放 | ①–④内核/存储事务、真实入库回执与发送前检查；CH-39 重复承诺与 CH-40 精确标识校准待修 |
+| AC-33 | 直接工具/Compute 资产分离、参数形状、快照、白名单子集与说明输出 | 真实宿主注册、MCP 挂载、动态升级、Vault 存在性及进程 env；CH-39 冲突资产状态、CH-40 多项校验待修 |
+| AC-35 | 撤销、定时字段形状/时区/非负有限误差；专职 API 已按 #2273 删除 | 实际停止/改时间接线、DST 触发、插件渠道与邮件；不把撤销的专职锁重新列为必修 |
+
+收据这四项标“未测”及主要依赖说明与规范分支范围相符；第 7 栏关于真实路由接线、工具改名、伪引用、cron 范围、跨 realm、回执真实性等限制仍然成立，也已删除旧专职语义。**但不能用“状态没有签名/来源校验”解释 CH-39 的可机械检查身份和唯一性遗漏，407 个有限变异全杀也不能覆盖 CH-40。** R-02 已复现；R-05 的作者有限枚举结果成立，充分性结论仍不通过。本轮没有做 UI、真实插件或端到端持久化验收，也没有提出无证据的性能/风格阻塞项。
+
+### 八个门禁：每个一个独立失败输入
+
+`gate-negatives.py` 自建真正 Git 小仓库（base→red→green→收据），调用被审仓库的真实 `run-all.ts --local`。正常对照 **8/8 绿、exit 0**；以下每项均 **exit 1 且目标门禁为 ✗**，不是只看总退出码（`gate-negatives.json`、`gate-control.log`、`gate-G-*.log`）。合成来源记录只在独立夹具目录，绝未写进真实会话或作为实际跨厂商证明。
+
+| 门禁 | 应失败输入 | 结果 |
+|---|---|---|
+| G-TRACE | 收据引用规范中不存在的 AC-999 | 拦下 |
+| G-REVIEW | 作者与审查 agent 相同 | 拦下 |
+| G-RED | 所谓 red 提交的测试已绿 | 拦下 |
+| G-STUB | 只断言模块加载时已经计算的 answer 常量，函数运行期置桩也仍绿 | 拦下 |
+| G-TAUTO | 正常行为断言旁追加恒等 `assert.equal(2,2)` | 拦下 |
+| G-WORKFLOW | 额外 workflow 请求 contents:write（仅夹具文本，未发布执行） | 拦下 |
+| G-LAYER | domain 的 optionalDependencies 引用 kernel 包 | 拦下 |
+| G-PROVENANCE | 声明 OpenAI 审查，但合成 hash 工具轮次模型为 Anthropic | 拦下 |
+
+本轮真实 clone 的 `--local` 结果为 exit 1（`actual-gates.log`）：G-TRACE/RED/STUB/TAUTO/WORKFLOW/LAYER 通过，G-REVIEW 因收据 `review:null` 报“还没有独立审查”。**G-PROVENANCE 虽打印 ✓，但实现遇 review:null 直接返回，未作真实来源核验，不能把这一行当来源门禁通过。** 按本次“approve 时更新 review”的要求，reject 只追加报告，保留作者收据 review:null，不写 approve、不伪造记录、不改门禁。
+
+### 返修及清理
+
+Claude Code 接续修 CH-39、CH-40；CH-36/CH-37、只读快照与已闭合的具体 CH-38 案例不再重复打回。下一轮按手册原则 68 交回 Codex 独立复审，仍须实际跨厂商。修复要留针对新判据的红绿差分，不以 CI MERGEABLE、407 全杀或本轮报告已推送代替验收。
+
+本轮仅提交本报告的第十四轮追加节；源码、测试和收据未改。推送保留 pre-push 检查。临时 clone/旧版/红版/门禁夹具/变异副本与 node_modules 在推送及远端核实后清理；外部证据目录只保留本节引用文件。推送、仅报告 diff、原受管 SHA 不变、远端提交及最终清理结果见 `$E/push.log`、`$E/final-verification.json`、`$E/cleanup.json`。清理量按 df 可用空间变化记录，不把 APFS/并发写入下的差值冒充本任务净回收量。
