@@ -1,4 +1,4 @@
-// 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时;第五轮按 R4-01..R4-07 扩充,含 R4-M1=K92、R4-M2=K91;第六轮按 R5-01..R5-05 扩充,含 R5-M1=K111、R5-M2=K126;第七轮按 R6-01..R6-05 扩充,含 R6-M1=K142、R6-M2=K143;第八轮按 R7-01/02/04/05/06 扩充,含 R7-M1=K156、R7-M2=K157、R7-M3=K158;第九轮按 R8-01..R8-05 扩充,含 R8-M1=K173、R8-M2=K174、R8-M3=K175;第十轮按 R9-02 扩充,含 R9-M1=K188、R9-M2=K177、R9-M3=K189),在隔离副本里跑本包测试,
+// 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时;第五轮按 R4-01..R4-07 扩充,含 R4-M1=K92、R4-M2=K91;第六轮按 R5-01..R5-05 扩充,含 R5-M1=K111、R5-M2=K126;第七轮按 R6-01..R6-05 扩充,含 R6-M1=K142、R6-M2=K143;第八轮按 R7-01/02/04/05/06 扩充,含 R7-M1=K156、R7-M2=K157、R7-M3=K158;第九轮按 R8-01..R8-05 扩充,含 R8-M1=K173、R8-M2=K174、R8-M3=K175;第十轮按 R9-01/R9-02 扩充,含 R9-M1=K188、R9-M2=K177、R9-M3=K189),在隔离副本里跑本包测试,
 // 每个变异都必须让至少一条具名测试失败(文件级加载失败不算杀死)。注入点必须在源码里恰好出现 1 次。
 // 原样副本必须全绿(阴性对照)。
 // 每个变异在独立进程组里跑,超时(默认 300s,KERNEL_MUT_TIMEOUT_MS 可改)就杀掉整个进程组,记 ✗ 超时,不算被杀死。
@@ -210,13 +210,21 @@ const M = [
   ["K181 时钟读数不查类型原样返回(R8-03 原错)", "plugins.ts", "  return typeof v === \"number\" && Number.isFinite(v) ? v : Number.NaN;", "  return v as number;"],
   ["K182 墙钟不查 Date 范围", "plugins.ts", "  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();", "  return d.toISOString();"],
   ["K183 拒收的原生 Promise 不挂拒绝处理(R8-04 原错)", "plugins.ts", "  Reflect.apply(Promise.prototype.then, x, [undefined, () => {}]);", "  void x;"],
-  ["K184 带自有 constructor 的 Promise 也用内置 then 挂处理(会执行插件访问器)", "plugins.ts", "if (Object.getPrototypeOf(x) !== Promise.prototype || Object.hasOwn(x, \"constructor\")) return;", "if (Object.getPrototypeOf(x) !== Promise.prototype) return;"],
+  ["K184 带任何自有 constructor 的 Promise 都直接用内置 then 挂处理(会执行插件访问器;第十轮改注入点到新实现)", "plugins.ts", "\"value\" in own && own.value === Promise) { attachQuiet(x); return; }", "true) { attachQuiet(x); return; }"],
   ["K185 pull 拒收时不挂处理(R8-04 原错)", "plugins.ts", "      if (!isPlainPromise(returned)) quietRefused(returned);\n", ""],
   ["K186 send 拒收时不挂处理(R8-04 原错)", "plugins.ts", "{ quietRefused(pending); return unknown(", "{ return unknown("],
   ["K187 首次单调读数原样存储(R8-03 原错)", "plugins.ts", "        const firstAttemptMonotonic = readClock(monotonic);", "        const firstAttemptMonotonic = monotonic();"],
   // —— 第十轮:按 PR #6 第九轮审查 R9-02 扩充,含审查自造 R9-M1=K188、R9-M3=K189(R9-M2 与 K177 注入点相同,见上)
   ["K188 墙钟只认整数毫秒(审查 R9-M1)", "plugins.ts", "  if (!Number.isFinite(ms)) return undefined;", "  if (!Number.isInteger(ms)) return undefined;"],
   ["K189 原生 Promise 判定不查原型,子类也 await(审查 R9-M3)", "plugins.ts", "  if (Object.getPrototypeOf(x) !== Promise.prototype) return false;\n", ""],
+  // —— 第十轮:R9-01(用户 g-group#3140 选 A)方案 1 / 方案 2 的单点故障
+  ["K190 方案 2 不删临时 constructor(原本没有自有 constructor 时)", "plugins.ts", "    if (own === undefined) Reflect.deleteProperty(x, \"constructor\");\n", "    if (own === undefined) void 0;\n"],
+  ["K191 方案 1 跳过值为内置 Promise 的 constructor 数据属性", "plugins.ts", "\"value\" in own && own.value === Promise) { attachQuiet(x); return; }", "false) { attachQuiet(x); return; }"],
+  ["K192 方案 2 临时属性用原型上的 constructor", "plugins.ts", "Object.assign(Object.create(null), { value: Promise, writable", "Object.assign(Object.create(null), { value: Object.getPrototypeOf(x).constructor, writable"],
+  ["K193 只做方案 1,不做方案 2", "plugins.ts", "  if (!Reflect.defineProperty(x, \"constructor\", temp)) return;", "  if (temp || !Reflect.defineProperty(x, \"constructor\", temp)) return;"],
+  ["K194 临时属性用 Object.defineProperty(不可改写时抛错)", "plugins.ts", "  if (!Reflect.defineProperty(x, \"constructor\", temp)) return;", "  Object.defineProperty(x, \"constructor\", temp);"],
+  ["K195 方案 2 不恢复原 constructor 描述符", "plugins.ts", "    else Reflect.defineProperty(x, \"constructor\", Object.assign(Object.create(null), own));\n", ""],
+  ["K196 方案 1 不看原型,没有自有 constructor 就直接挂处理", "plugins.ts", "own === undefined ? Object.getPrototypeOf(x) === Promise.prototype :", "own === undefined ? true :"],
 ];
 
 const TIMEOUT_MS = Number(process.env.KERNEL_MUT_TIMEOUT_MS ?? 300_000);
