@@ -1,0 +1,37 @@
+packages/kernel/src/assemble.test.ts
+  s_060cb60f4a56ed::t_32938986fc999f 474-593
+packages/kernel/src/assemble.ts
+  s_060cb60f4a56ed::t_873f08ad29b856 1,15,62,70,74,78,81-82
+packages/kernel/src/classify.test.ts
+  s_060cb60f4a56ed::t_e077507b32def5 5-6,202-227
+packages/kernel/src/classify.ts
+  s_060cb60f4a56ed::t_808d0bb01b958e 1,9,40
+packages/kernel/src/index.ts
+  s_060cb60f4a56ed::t_1a18a1f58af809 3
+packages/kernel/src/plain.test.ts
+  s_060cb60f4a56ed::t_1d75e854f5a947 1-161
+packages/kernel/src/plain.ts
+  s_060cb60f4a56ed::t_81cc043ddabd79 1-33
+packages/kernel/src/plugin-contract.ts
+  s_060cb60f4a56ed::t_b718e86bec29b3 84-86,99,121-131,135,148
+packages/kernel/src/plugins.test.ts
+  s_060cb60f4a56ed::t_042240d8cad71a 760,791-1021
+packages/kernel/src/plugins.ts
+  s_060cb60f4a56ed::t_b1c4894c5f1d59 1-3,8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ebe4e044a64bfe56b420645a16530847b4b464eb",
+  "prompts": {},
+  "sessions": {
+    "s_060cb60f4a56ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae8c5e6a9c179f748",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
