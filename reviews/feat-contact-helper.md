@@ -1067,3 +1067,41 @@ Claude Code 接续修 CH-39、CH-40；CH-36/CH-37、只读快照与已闭合的�
 ### 返修与边界
 
 只提交本报告追加节和收据 `review` 字段，保留第一至十四轮，未修改产品代码。`unverifiable` 除 CH-41/CH-42 的合同表述缺口外，对本体/Compute 同名、可信注册、回执真实性和位置边界、cron 形状及未接线部分的局限仍应保留，不得把纯函数绿说成整项 AC 通过。启用普通独立 clone 中仓库 `.githooks/pre-push`，不绕过钩子；推送和清理结果见 `$E/push.log`、`$E/cleanup.json`。
+
+## 第十六轮：第十五轮返修复审（2026-11-07）
+
+**结论：reject。** 新增测试和主要返修已有正向证据，但仍有下列输入合同缺口，且 `G-RED` 和领域变异校准未通过，不能把本版标为通过。请按先红后绿处理 CH-44，并修复收据和变异证据，再交独立复审。
+
+### 固定对象和范围
+
+- 独立 HTTPS clone；受审 `HEAD=af28fcfd0ea5d0d4a54d6636183fcc6aa177def3`，基线 `origin/feat/task-lifecycle=ba90d6769992d2f3df2a571f846409afcafd644d`。GitHub PR #4 的实际头分支是 `feat/contact-helper`，`feat/task-lifecycle` 是基线，不向基线推送本审查。
+- 本会话在受审克隆运行 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle`，得到 `0c56d4a3ee15669e230b743f703519650311df3847db1abfed61cfd68d67bcbb`。仓库没有 `scripts/content-hash.sh`，使用仓库真实入口计算。
+- 审查会话为 `codex:b90dff1d-0880-441d-a1f6-d8469dea14e8`，当前原生 `turn_context` 的模型是 `ai-iisbo-2/[gptpro+plus]gpt-6.1-terra`。证据目录 `$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round16-b90dff1d`。
+
+### CH-44【输入合同】别名使非普通对象跳过原型校验
+
+位置：`packages/domain/src/plain.ts:62-78`。`nestedPlainError` 以对象身份去重，而函数的自有 `prototype` 属性的值一律标成 `fnProto`，跳过对象原型检查；若同一对象之后又作为普通字段被访问，`seen.has(x)` 又让它跳过检查。`fn.prototype` 可以被赋为调用方提供的任意对象，且不要求是引擎自带的原型。
+
+`$E/alias-check.mjs` 使用未改写内置原型的对照：`bad=Object.create({inherited:true})`、`fn=()=>{}`、`fn.prototype=bad`。同一个 `bad` 单独位于 Helper 的 `extra` 内或以 `{fn,bad}` 顺序放入时被拒绝；以 `{bad,fn}` 顺序放入时，`routeHelper({kind:'global',extra:{bad,fn}}, {kind:'user',id:'u'}, 'u')` 实际返回 `ok:true`，普通对象对照也返回成功。对象只因遍历顺序不同而被放行，违反本实现对丢弃字段中非普通原型对象的检查约定。
+
+这是输入拒收合同缺口；多余字段随后被丢弃，本次没有观察到 getter/Proxy 被调用或真实权限提升。应区分同一对象在例外位置和普通位置的校验，不能把可人为替换的任意 `prototype` 值都当成引擎自带对象；同时保留数组自带迭代器/函数的既有对照，确保不调用访问器或 trap。
+
+### CH-45【R-02 证据绑定】收据仍指向上一轮红提交
+
+`receipts/feat-contact-helper.json:40-41` 的 `red.commit` 仍是 `2a27cf3`。受审 HEAD 实跑 `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 时，`G-RED` 对本轮五条新增具名测试逐条报红提交中未失败（`$E/local-gates-before-review.log`）。
+
+并非没有实际红绿：在 `ae1d4a5dacf8ba03a75d391f950f2e962bfa7625` 上五条 CH-41/42/43 测试逐名失败，在 `af28fcf` 上五条逐名通过（`$E/red-focused.log`、`$E/green-focused.log`）。隔离工作树仅将 `red.commit` 改指 `ae1d4a5` 后，`G-RED` 实测通过（`$E/receipt-probe.log`）；该探针改变了内容哈希，不是提交到 PR 的修复。作者应更新真实收据，再按更新后的内容重新计算哈希和送审。
+
+### CH-46【R-05 证据】领域变异清单无法完整注入
+
+直接运行受审源码自带的 `node packages/domain/proof/mutations.mjs`：原样副本 305 绿；420 项、420 种不同注入中 418 项被具名测试发现，另外两项未执行，整体 exit 1（`$E/domain-mutations.log`）。`CK72` 的原注入点现在出现 2 次；`CK84` 的原注入点出现 0 次。不能把这两项算作被杀，也不能沿用 `packages/domain/proof/mutations.txt` 和收据中上一版本的 420/420 结论作为本版本证据。应按原故障语义重新定位并逐项重跑，更新清单、证明和收据，不删除测试或降低断言。
+
+### 已核验的部分和边界
+
+- `npm ci`、类型检查、lint、`npm test` 通过；当前 305 项测试均通过，0 skip/todo。lint 的工具输出首次经包装器解析失败，使用 `rtk bypass npm run lint` 重跑后实际通过。
+- 门禁自身 `--self-test` 通过；`GATE_MUTATION_JOBS=2 npm run gates:mutation` 的原样自检及 20 个门禁变异均通过（`$E/gate-selftest.log`、`$E/gate-mutations.log`）。它们不同于上面失败的领域变异校准。
+- 独立复验上轮三个大小写变异、三个只校验前三项的变异：每个副本的类型检查和 lint 均通过，各变异均被新的 CH-43 具名测试发现；原样和独立 oracle 对照通过（`$E/case-mutations.json`、`$E/independent-mutations.json`）。这是对相应样本的修复验证，不推断无限输入覆盖。
+- 当前收据指向上一轮 review 时，本机 `--local` 的 G-REVIEW 因旧 reject/旧 hash 拦截，G-RED 因旧红提交拦截，其余门禁显示通过；其中 G-PROVENANCE 核查的是**上一轮**审查记录，不是本轮来源证明。更新本轮 review 后重跑，G-REVIEW 因 reject 拦截、G-RED 仍拦截、G-PROVENANCE 因当前审查会话记录尚不存在而拦截，其余五项通过（`$E/local-gates-after-review.log`）。本轮 hash 工具调用和原生模型已实际观察，但在会话记录落盘后仍需真实来源门禁重核。
+- GitHub `self-check` run 42266506255 在本受审 SHA 上为 success，但该 workflow 不运行领域 420 项校准，不能抵消上述实跑失败。真实存储、宿主授权、消息路由与调度端到端仍未验，不把纯函数子集写成整项 AC 通过。
+
+本轮只追加本节和更新收据的 `review` 字段，未改产品源码、测试、作者 red 指针或领域变异清单。有限测试和变异不能证明不存在其他缺陷。

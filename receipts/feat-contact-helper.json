@@ -44,10 +44,10 @@
   "waiver": null,
   "review": {
     "agent": "codex",
-    "session": "codex:4d37f5a5-0839-4adc-8afc-9b481602df5a",
-    "model": "gpt-6.1-terra",
+    "session": "codex:b90dff1d-0880-441d-a1f6-d8469dea14e8",
+    "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra",
     "verdict": "reject",
-    "reviewed_hash": "8e25e5cb767502fcb291fc938cca1d842535be65621240c248e7d4beea3b29b7",
-    "notes": "第十五轮独立复审 reject：输入合同、回执拒收信号与独立变异判别缺口；详见 reviews/feat-contact-helper.md。"
+    "reviewed_hash": "0c56d4a3ee15669e230b743f703519650311df3847db1abfed61cfd68d67bcbb",
+    "notes": "第十六轮独立复审 reject：嵌套对象别名校验缺口、红提交绑定过期、领域变异清单无法完整注入；详见 reviews/feat-contact-helper.md。"
   }
 }
