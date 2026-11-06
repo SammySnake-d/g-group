@@ -1,0 +1,21 @@
+scripts/gates/judge.ts
+  s_a1d351a2cfe605::t_8a84bef72dc49e 1-64
+scripts/gates/selftest.ts
+  s_a1d351a2cfe605::t_2e1c9d30c95bd0 10,159-163,290-327
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9868da71408dc4901bb072d41c44b851eacb1062",
+  "prompts": {},
+  "sessions": {
+    "s_a1d351a2cfe605": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a77e6bd4f86950c8d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
