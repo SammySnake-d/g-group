@@ -1,0 +1,16 @@
+receipts/feat-commitment-ledger.json
+  h_f33e46a035b77c 35
+reviews/feat-commitment-ledger.md
+  h_f33e46a035b77c 1-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dd4a8563f3c5cadc8d0f6a871df677015ffe23a8",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
