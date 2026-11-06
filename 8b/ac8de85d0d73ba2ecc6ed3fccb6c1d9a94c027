@@ -1,0 +1,39 @@
+.github/workflows/self-check.yml
+  s_a1d351a2cfe605::t_a5d0e7ec92b710 33
+receipts/chore-gates.json
+  s_a1d351a2cfe605::t_5528bb2053466d 66,68
+scripts/gates/gates.ts
+  s_a1d351a2cfe605::t_a9da077fcbd876 3,9,14-16,50,148-199,220-223,241-242,258,270,314-340,373-377,412-413,418-419,457-470,493-494,499-500,503,557-597,633,635
+scripts/gates/lib.ts
+  s_a1d351a2cfe605::t_c5cb5c286f471d 204,210-218
+scripts/gates/mutation.ts
+  s_a1d351a2cfe605::t_220bf368758696 25,32-34,48,51-65,77-79,84,94-95,97-99,108,110,112,115-118,132,135-137,143
+scripts/gates/policy.json
+  s_a1d351a2cfe605::t_d8d1d90bce72cf 1
+scripts/gates/proof/lint.txt
+  s_a1d351a2cfe605::t_dae71fb5220f20 1
+scripts/gates/proof/mutation.txt
+  s_a1d351a2cfe605::t_7d8627d608e7e2 2-15
+scripts/gates/proof/selftest.txt
+  s_a1d351a2cfe605::t_b9d039d64616b0 28-30,71-81,84-103,107-110,150-151
+scripts/gates/run-all.ts
+  s_a1d351a2cfe605::t_b60e188d72eb95 22
+scripts/gates/selftest.ts
+  s_a1d351a2cfe605::t_56e00fcedb5b6d 5,326-351,354-361,365-382,384,387-400
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8bac8de85d0d73ba2ecc6ed3fccb6c1d9a94c027",
+  "prompts": {},
+  "sessions": {
+    "s_a1d351a2cfe605": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a77e6bd4f86950c8d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
