@@ -960,6 +960,10 @@ test("CH-35 每个入口:不可枚举访问器与 Symbol 键访问器都拒绝�
       assert.equal(n.n, 0, `${label} ${vlabel} getter 调用次数`);
     }
   }
+  let hit = 0;
+  const hidden = Object.defineProperty({ name: "weather", bounded: true }, Symbol("direct"), { enumerable: false, get: () => { hit++; return 1; } });
+  assert.deepEqual(grantTool(mk().contacts.get("c-mi")!, hidden as never), { ok: false, reason: "直接工具 只接受普通数据对象(Symbol(direct) 是访问器属性)" });
+  assert.equal(hit, 0);
 });
 
 test("CH-29 Object.prototype.value 被放成只读或可写数据属性时,含访问器的输入照样拒绝、getter 调用 0 次;无污染时同样(对照)", () => {
@@ -971,9 +975,15 @@ test("CH-29 Object.prototype.value 被放成只读或可写数据属性时,含�
       const { o, calls } = withAccessor(base as Record<string, unknown>, key);
       return [label, o, calls, call, accepted] as const;
     });
+    let hit = 0;
+    const acc = Object.defineProperty({ bounded: true }, "name", Object.assign(Object.create(null) as PropertyDescriptor, { enumerable: true, get: () => { hit++; return "weather"; } }));
+    let direct: unknown;
     withPollution(["value"], mode, () => {
       for (const [label, o, calls, call, accepted] of prepared) results.push([label, accepted(call(o as never)), calls.n]);
+      direct = grantTool(mk().contacts.get("c-mi")!, acc as never);
     });
+    assert.deepEqual(direct, { ok: false, reason: "直接工具 只接受普通数据对象(name 是访问器属性)" }, mode);
+    assert.equal(hit, 0, mode);
     for (const [label, acc, n] of results) {
       assert.equal(acc, false, `${mode} ${label}`);
       assert.equal(n, 0, `${mode} ${label} getter 调用次数`);
@@ -1013,9 +1023,12 @@ test("CH-31 每个入口的每个必填字段:缺失或类型不对都拒绝、�
       }
       prepared.push([`${label} 正常`, { ...base }, call, accepted, true]);
     }
+    let direct: unknown;
     withPollution(["optional"], mode, () => {
       for (const [label, o, call, accepted, want] of prepared) results.push([label, accepted(call(o as never)), want]);
+      direct = commit(mk().contacts.get("c-mi")!, { id: "k9", sourceSeq: 1, text: "t", boundTaskIds: [] } as never);
     });
+    assert.deepEqual(direct, { ok: false, reason: "schedule 必须是对象" }, mode);
     for (const [label, got, want] of results) assert.equal(got, want, `${mode} ${label}`);
   }
 });

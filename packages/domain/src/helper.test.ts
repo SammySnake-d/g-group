@@ -161,6 +161,7 @@ test("CH-29/CH-35 Object.prototype.value 被污染或无污染时,caller/entry �
     let n = 0;
     const out: [string, boolean, string][] = [];
     const sym = Symbol("s");
+    let direct: unknown;
     const mk = (base: object, key: string | symbol, enumerable: boolean) => Object.defineProperty({ ...base }, key, Object.assign(Object.create(null) as PropertyDescriptor, { enumerable, get: () => { n++; return "u1"; } }));
     polluted(["value"], mode, () => {
       for (const [entry] of okRoutes) {
@@ -171,7 +172,9 @@ test("CH-29/CH-35 Object.prototype.value 被污染或无污染时,caller/entry �
           out.push([`${mode} ${entry.kind} caller ${label}`, r2.ok, r2.ok ? "" : r2.reason]);
         }
       }
+      direct = routeHelper({ kind: "global" }, mk(me, Symbol("direct"), false) as never, "u1");
     });
+    assert.deepEqual(direct, { ok: false, reason: "调用方 只接受普通数据对象(Symbol(direct) 是访问器属性)" }, mode);
     for (const [label, ok, reason] of out) { assert.equal(ok, false, label); assert.match(reason, /是访问器属性/, label); }
     assert.equal(n, 0, `${mode} getter 调用次数`);
   }
@@ -209,7 +212,9 @@ test("CH-31 caller 与每个入口变体的每个必填字段:缺失或类型不
   const wrong: Record<string, unknown> = { kind: 1, id: 7, conversationId: 3, seq: "9" };
   for (const mode of ["none", "readonlyTrue"] as const) {
     const out: [string, unknown, boolean][] = [];
+    let direct: unknown;
     polluted(["optional"], mode, () => {
+      direct = routeHelper({ kind: "mention", conversationId: "g-group" } as never, me, "u1");
       const run = (label: string, f: () => { ok: boolean }, want: boolean) => { try { out.push([label, f().ok, want]); } catch (e) { out.push([label, `抛出 ${(e as Error).message}`, want]); } };
       for (const [entry] of okRoutes) {
         for (const key of Object.keys(entry)) {
@@ -228,5 +233,6 @@ test("CH-31 caller 与每个入口变体的每个必填字段:缺失或类型不
       }
     });
     for (const [label, got, want] of out) assert.equal(got, want, `${mode} ${label}`);
+    assert.deepEqual(direct, { ok: false, reason: "seq 必须是数字" }, mode);
   }
 });
