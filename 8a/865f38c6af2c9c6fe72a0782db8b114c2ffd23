@@ -1,0 +1,21 @@
+.github/workflows/self-check.yml
+  s_22ba9b1b818602::t_5222a9fae7fda3 38
+scripts/gates/proof/selftest.txt
+  s_22ba9b1b818602::t_b2318cc08cf4be 150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8a865f38c6af2c9c6fe72a0782db8b114c2ffd23",
+  "prompts": {},
+  "sessions": {
+    "s_22ba9b1b818602": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91b17b26-1e2d-4bc5-904f-9d3aab1e0f38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

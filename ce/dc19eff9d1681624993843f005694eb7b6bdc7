@@ -1,0 +1,29 @@
+packages/kernel/proof/mutations-canary.txt
+  s_a1d351a2cfe605::t_ec73cf93d41d3e 4
+packages/kernel/proof/mutations-node25.txt
+  s_a1d351a2cfe605::t_d066dc90e7585c 2-110
+packages/kernel/proof/mutations.mjs
+  s_a1d351a2cfe605::t_83264702889ca5 1,49,68-69,94,96-98,111-132
+packages/kernel/proof/mutations.txt
+  s_a1d351a2cfe605::t_f3e8a87491c8b2 2-110
+packages/kernel/proof/tests.txt
+  s_a1d351a2cfe605::t_32716c5c52a61b 1-113,115,120
+receipts/feat-kernel-plugins.json
+  s_a1d351a2cfe605::t_3eb97556377db7 2,22,52,57,66,68,70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cedc19eff9d1681624993843f005694eb7b6bdc7",
+  "prompts": {},
+  "sessions": {
+    "s_a1d351a2cfe605": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a77e6bd4f86950c8d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
