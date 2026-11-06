@@ -1,0 +1,27 @@
+packages/domain/proof/r12-regressions-O01.tap
+  s_b517c605a7c83f::t_f5262e39e0a682 1-1395
+packages/domain/proof/r12-regressions-O02.tap
+  s_b517c605a7c83f::t_0b13b48ca0f3d9 1-1168
+packages/domain/proof/r12-regressions-O03.tap
+  s_b517c605a7c83f::t_dff865384b8ac1 1-1168
+packages/domain/proof/r12-regressions-original.tap
+  s_b517c605a7c83f::t_6355a534241689 1-1133
+packages/domain/src/task.test.ts
+  s_b517c605a7c83f::t_5225cde44ecc6c 1940-1998
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4ad3ede6062a0339e837eb1403f31058250974a6",
+  "prompts": {},
+  "sessions": {
+    "s_b517c605a7c83f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adbd1c9c28bef0051",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
