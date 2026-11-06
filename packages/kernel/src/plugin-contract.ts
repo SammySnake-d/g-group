@@ -89,7 +89,7 @@ export type RegisterResult = { ok: true } | { ok: false; reason: RegisterRejecti
 export interface RejectedEvent { readonly index: number; readonly reason: string }
 export type PullResult =
   | { ok: true; events: ExternalEnvelope[]; rejected: RejectedEvent[] }
-  | { ok: false; reason: "unknown-plugin" | "source-not-declared" | "pull-failed" | "invalid-batch"; detail: string };
+  | { ok: false; reason: "unknown-plugin" | "source-not-declared" | "pull-failed" | "invalid-batch" | "clock-invalid"; detail: string };
 
 export type DeliveryState = "in-flight" | "confirmed" | "delivery-unknown";
 export type SendResult =
@@ -99,7 +99,7 @@ export type SendResult =
     reason: "timeout" | "send-threw" | "invalid-receipt" | "non-promise-send" | "retry-refused" | "retry-window-expired" | "channel-changed" | "clock-untrusted";
     detail: string;
   }
-  | { ok: false; state: "rejected"; reason: "unknown-plugin" | "missing-action-id" | "invalid-payload" | "payload-mismatch" | "in-flight"; detail: string };
+  | { ok: false; state: "rejected"; reason: "unknown-plugin" | "missing-action-id" | "invalid-payload" | "payload-mismatch" | "in-flight" | "clock-invalid"; detail: string };
 
 /** 一个外发动作首次投递时绑定的渠道:之后的重试只认这一版,reregister 换不掉它 */
 export interface DeliveryBinding {
