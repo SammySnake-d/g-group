@@ -359,7 +359,7 @@
 ✓ CK52 不查访问器属性:268 绿 / 8 红,被「普通数据合同:联系人每个公开入口的每个对象字段做成 getter 或 setter 都直接拒绝,getter 调用 0 次;同样内容的数据属性通过(对照)」发现
 ✓ CY04 schedule 不规范化直接保留原对象:273 绿 / 3 红,被「普通数据合同:嵌套 schedule 对象与数组字段里的访问器同样拒绝、getter 调用 0 次」发现
 ✓ CY07 commit 存下原始对象的全部字段:275 绿 / 1 红,被「CH-34 commit 存下的是按下标复制的快照:boundTaskIds 自带的 Symbol.iterator 数据属性改写不了存下的绑定任务,多余字段不进承诺;无改写时同样(对照)」发现
-✓ CY08 校验嵌套 schedule 但保留原对象:274 绿 / 2 红,被「普通数据合同:嵌套 schedule 对象与数组字段里的访问器同样拒绝、getter 调用 0 次」发现
+✓ CY08 校验嵌套 schedule 但保留原对象:273 绿 / 3 红,被「普通数据合同:嵌套 schedule 对象与数组字段里的访问器同样拒绝、getter 调用 0 次」发现
 ✓ CK59 不拒外层 Proxy:271 绿 / 5 红,被「CH-25 只接受普通数据对象:外层 Proxy、数组 Proxy、自定义原型对象、类实例都拒;普通对象与 Object.create(null) 通过」发现
 ✓ CK60 不查对象原型:273 绿 / 3 红,被「CH-25 只接受普通数据对象:外层 Proxy、数组 Proxy、自定义原型对象、类实例都拒;普通对象与 Object.create(null) 通过」发现
 ✓ CK61 不拒数组 Proxy:273 绿 / 3 红,被「CH-25 只接受普通数据对象:外层 Proxy、数组 Proxy、自定义原型对象、类实例都拒;普通对象与 Object.create(null) 通过」发现
