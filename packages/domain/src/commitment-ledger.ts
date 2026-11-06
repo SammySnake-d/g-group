@@ -40,7 +40,8 @@ export type Command =
   | { readonly type: "process"; readonly actionId: string; readonly seq: number; readonly accepted: boolean; readonly commitments: readonly Proposal[] }
   | { readonly type: "progress"; readonly actionId: string; readonly commitmentId: string; readonly taskId: string; readonly actor: Actor; readonly roundId: string; readonly text: string }
   | { readonly type: "close"; readonly actionId: string; readonly commitmentId: string; readonly taskId: string; readonly actor: Actor; readonly roundId: string; readonly outcome: "done" | "revoked" | "superseded" | "blocked"; readonly artifact: string | null; readonly detail: string | null };
-export type Result = { readonly ok: true; readonly ledger: Ledger; readonly duplicate: boolean } | { readonly ok: false; readonly reason: string };
+export type Failure = { readonly ok: false; readonly reason: string };
+export type Result = { readonly ok: true; readonly ledger: Ledger; readonly duplicate: boolean } | Failure;
 export type Reconciliation = { readonly ok: true; readonly ready: boolean; readonly pending: readonly string[] } | { readonly ok: false; readonly reason: string };
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -137,11 +138,9 @@ function canonical(value: Json): string {
   return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key]!)}`).join(",")}}`;
 }
 
-const fail = (reason: string): Result => ({ ok: false, reason });
+const fail = (reason: string): Failure => ({ ok: false, reason });
 
-export function emptyLedger(ownerId: string): Ledger;
-export function emptyLedger(ownerId: unknown): Ledger | Result;
-export function emptyLedger(ownerId: unknown): Ledger | Result {
+export function emptyLedger(ownerId: unknown): Ledger | Failure {
   if (!text(ownerId)) return fail("invalid-input");
   return freeze({ ownerId, version: 0, messages: [], commitments: [], actions: [], activity: [] });
 }
@@ -166,8 +165,9 @@ export function applyLedger(ledger: Ledger, expectedVersion: number, command: Co
     const old = messages.find((entry) => entry.id === m.id);
     if (old) {
       const { handled: _handled, ...prior } = old;
-      return canonical(prior as unknown as Json) === canonical(m as unknown as Json) ?
-        { ok: true, ledger: freeze(state), duplicate: true } : fail("message-id-conflict");
+      if (canonical(prior as unknown as Json) !== canonical(m as unknown as Json)) return fail("message-id-conflict");
+      const repeat: Ledger = { ...state, version: state.version + 1, actions: [...state.actions, { id: input.actionId, payload }] };
+      return { ok: true, ledger: freeze(repeat), duplicate: true };
     }
     if (messages.some((entry) => entry.seq === m.seq)) return fail("seq-conflict");
     if (m.replyToSeq !== null) {
