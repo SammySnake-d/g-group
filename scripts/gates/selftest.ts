@@ -161,6 +161,10 @@ const R = (f: (r: Receipt) => void) => f;
 const CODEX_AUTHOR = (r: Receipt) => { r.author = { agent: "codex", session: "codex:a", model: "gpt-6" }; };
 const CODEX_AUTHOR_TURNS = (_repo: string) => [{ model: "ai-x/gpt-6", toolCalls: [{ name: "apply_patch", input: { path: "/x/deliverables/g-group/packages/core/src/add.ts" } }] }];
 const CLAUDE_REVIEW = (r: Receipt) => { r.review = { ...r.review!, agent: "claude", model: "claude-opus-5-5", session: "claude:rv1" }; };
+// g-group#3199:Argon 是 Google 模型、跑在 claude 会话里,派活卡片上的助手是 ai-argon
+const ARGON_REVIEW = (r: Receipt) => { r.review = { ...r.review!, agent: "argon", model: "gemini-4-argon", session: "claude:argon1" }; };
+const argonReviewTurns = (h: string) => [{ model: "ai-iisbo-2/[vertex]gemini-4-argon", toolCalls: [{ name: "Bash", input: { command: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }, result: h }] }];
+const ARGON_ROOM = () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "claude:argon1", assistant: "ai-argon" } }];
 const claudeReviewTurns = (h: string) => [{ model: "ai-x/claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }, result: h }] }];
 const OWNER_UID = "usr_owner", OWNER_NAME = "39impacts.talent";
 const user = (seq: number, text: string, by = OWNER_UID, name = OWNER_NAME) => ({ v: 1, seq, by, name, kind: "message", text });
@@ -354,6 +358,48 @@ export const CASES: Case[] = [
     const t = traps();
     for (const [k, v] of Object.entries(t.list)) { const why = rejects(v); if (why) return `${k}:${why}`; }
     return t.calls() === 0 ? undefined : `外部对象的 getter/setter/Proxy 被回调了 ${t.calls()} 次`; }, expect: null },
+  { name: "R6-01 目标门禁仍在但变异侧输出不完整(缺 CONTENT_HASH/少列表项/截断)不算发现", direct: () => {
+    // 同输入双侧:complete 只差这一位;不完整的变异观测一律先排除,不论目标门禁是否还在、结论怎么变
+    const variants: [string, CaseResult, CaseResult][] = [
+      ["预期拦下→放行", BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [], complete: false })],
+      ["预期拦下→放行(其他门禁仍拦,退出 1)", BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-RED": "✗" }, expectHit: [], complete: false })],
+      ["仍拦下但原因变了", BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 1, expectHit: [], complete: false })],
+      ["放行→拦下", ALLOWED(), ALLOWED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-TRACE": "✗" }, complete: false })],
+    ];
+    for (const [k, base, mut] of variants) { const why = notKilled(["G-TRACE"], base, mut); if (why) return `${k}:${why}`; }
+    return undefined; }, expect: null },
+  { name: "R6-01 同输入输出完整时目标变化仍算发现(对照)", direct: () => {
+    const variants: [string, CaseResult, CaseResult][] = [
+      ["预期拦下→放行", BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] })],
+      ["预期拦下→放行(其他门禁仍拦,退出 1)", BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-RED": "✗" }, expectHit: [] })],
+      ["仍拦下但原因变了", BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 1, expectHit: [] })],
+      ["放行→拦下", ALLOWED(), ALLOWED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-TRACE": "✗" } })],
+    ];
+    for (const [k, base, mut] of variants) if (!evidence(["G-TRACE"], base, mut)) return `${k}:完整输出的有效变化没算发现`;
+    return undefined; }, expect: null },
+  { name: "R6-02 killedBy 基线 Map 是 Proxy/撤销的 Proxy/伪 Map、结果数组是 Proxy 时 trap 回调 0 次、不抛错、不给判因", direct: () => {
+    let calls = 0;
+    const boom = () => { calls++; throw new Error("中性标记:trap 被调用"); };
+    const handler: ProxyHandler<object> = { getPrototypeOf: boom, get: boom, has: boom, ownKeys: boom, getOwnPropertyDescriptor: boom, apply: boom, construct: boom, set: boom, defineProperty: boom, deleteProperty: boom, isExtensible: boom, preventExtensions: boom, setPrototypeOf: boom };
+    const goodMap = () => new Map([["改了代码没收据", BLOCKED()]]);
+    const mut = [BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] })];
+    const revokedMap = Proxy.revocable(goodMap(), handler); revokedMap.revoke();
+    const revokedArr = Proxy.revocable([...mut], handler); revokedArr.revoke();
+    const nested = new Map<string, CaseResult>([["改了代码没收据", Object.defineProperty({ ...BLOCKED() }, "pass", { get: () => { calls++; return true; }, enumerable: true })]]);
+    const shapes: [string, unknown, unknown][] = [
+      ["基线 Map Proxy", new Proxy(goodMap(), handler), mut],
+      ["基线撤销的 Proxy", revokedMap.proxy, mut],
+      ["基线伪 Map(原型是 Map.prototype 但不是 Map)", Object.create(Map.prototype), mut],
+      ["基线 Map 的值带 getter", nested, mut],
+      ["结果数组 Proxy", goodMap(), new Proxy([...mut], handler)],
+      ["结果数组撤销的 Proxy", goodMap(), revokedArr.proxy],
+    ];
+    for (const [k, base, rs] of shapes) {
+      try { const r = killedBy(["G-TRACE"], base as Map<string, CaseResult>, rs as CaseResult[]); if (r !== undefined) return `${k}:被当成证据 ${JSON.stringify(r)}`; }
+      catch (e) { return `${k}:抛错 ${(e as Error).message}`; }
+    }
+    if (calls) return `trap/getter 被回调了 ${calls} 次`;
+    return killedBy(["G-TRACE"], goodMap(), mut) ? undefined : "合法 Map 对照没给判因"; }, expect: null },
   { name: "R5-03 改导出的策略对象不改变后续门禁行为", direct: () => {
     const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
       const g = await import(${JSON.stringify(path.join(HERE, "gates.ts"))});
@@ -371,13 +417,43 @@ export const CASES: Case[] = [
     let o: { allowed: string[]; harness: string; codex: string; ctx: string[]; layers: string[]; scripts: Record<string, string>; review: string[]; harnesses: string[] };
     try { o = JSON.parse(r.stdout.trim().split("\n").pop() ?? ""); } catch { return `探针没跑通:${r.stdout}${r.stderr}`; }
     const bad: string[] = [];
-    if (o.allowed.join(",") !== "codex,astra,claude") bad.push(`allowedReviewers 变成 ${o.allowed}`);
+    if (o.allowed.join(",") !== "codex,astra,claude,argon") bad.push(`allowedReviewers 变成 ${o.allowed}`);
     if (o.harness !== "codex" || o.codex !== "codex") bad.push(`harnessOf 变成 ${o.harness}/${o.codex}`);
     if (o.ctx.join(",") !== "trusted-gates,provenance,self-check") bad.push(`PROTECTED_CONTEXTS 变成 ${o.ctx}`);
     if (o.layers.join(",") !== "domain,kernel,adapter,plugin,app") bad.push(`LAYERS 变成 ${o.layers}`);
     if (Object.keys(o.scripts).length !== 3 || o.scripts.test === "true") bad.push(`REQUIRED_GATE_SCRIPTS 变成 ${JSON.stringify(o.scripts)}`);
     if (o.harnesses.join(",") !== "claude,codex,pi") bad.push(`HARNESSES 变成 ${o.harnesses}`);
     if (!o.review.some((m) => m.includes("审查人必须是"))) bad.push(`改了导出名单后 unlisted 审查人被放行:${JSON.stringify(o.review)}`);
+    return bad.length ? bad.join(";") : undefined; }, expect: null },
+  { name: "R6-03 改 ALL_GATES/LOCAL_GATES 里的门禁对象(run/id/rule/加属性)不改变后续门禁行为", direct: () => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const g = await import(${JSON.stringify(path.join(HERE, "gates.ts"))});
+      const ids0 = g.ALL_GATES.map((x) => x.id), local0 = g.LOCAL_GATES.map((x) => x.id), provRun = g.provenance.run, reviewRun = g.review.run;
+      const rv = g.ALL_GATES.find((x) => x.id === "G-REVIEW");
+      const tries = [
+        () => { rv.run = () => []; }, () => { g.review.run = () => []; }, () => { g.ALL_GATES[0].run = () => []; }, () => { g.layers.run = () => []; },
+        () => { rv.id = "G-X"; }, () => { g.trace.id = "G-Y"; }, () => { rv.rule = "改过"; }, () => { g.review.extra = 1; }, () => { g.ALL_GATES[2].extra = 1; },
+        () => { Object.defineProperty(rv, "run", { value: () => [] }); }, () => { delete g.review.run; }, () => { Object.setPrototypeOf(g.review, { run: () => [] }); },
+        () => { g.LOCAL_GATES[0].run = () => []; }, () => { g.provenance.id = "G-Z"; }, () => { g.LOCAL_GATES[0].extra = 1; },
+      ];
+      for (const t of tries) { try { t(); } catch {} }
+      const ctx = { changed: ["packages/core/src/a.ts"], receipt: { author: { agent: "claude", model: "claude-opus-5-5", session: "claude:a" }, review: { agent: "unlisted", model: "gpt-6", session: "codex:b", verdict: "approve", reviewed_hash: "h" }, waiver: null }, contentHash: () => "h" };
+      const out = {
+        frozen: [...g.ALL_GATES, ...g.LOCAL_GATES].every((x) => Object.isFrozen(x)) && Object.isFrozen(g.ALL_GATES) && Object.isFrozen(g.LOCAL_GATES),
+        ids: g.ALL_GATES.map((x) => x.id), ids0, local: g.LOCAL_GATES.map((x) => x.id), local0,
+        extra: [...g.ALL_GATES, ...g.LOCAL_GATES].some((x) => "extra" in x), provSame: g.LOCAL_GATES[0].run === provRun && g.provenance.run === provRun, reviewSame: g.review.run === reviewRun,
+        review: g.ALL_GATES.find((x) => x.id === "G-REVIEW")?.run(ctx).map((x) => x.msg) ?? [], review2: g.review.run(ctx).map((x) => x.msg),
+      };
+      console.log(JSON.stringify(out));`], { encoding: "utf8", timeout: 60_000 });
+    let o: { frozen: boolean; ids: string[]; ids0: string[]; local: string[]; local0: string[]; extra: boolean; provSame: boolean; reviewSame: boolean; review: string[]; review2: string[] };
+    try { o = JSON.parse(r.stdout.trim().split("\n").pop() ?? ""); } catch { return `探针没跑通:${r.stdout}${r.stderr}`; }
+    const bad: string[] = [];
+    if (!o.frozen) bad.push("门禁对象没有全部冻结");
+    if (o.ids.join(",") !== "G-TRACE,G-REVIEW,G-RED,G-STUB,G-TAUTO,G-WORKFLOW,G-LAYER" || o.ids.join(",") !== o.ids0.join(",")) bad.push(`ALL_GATES 的 id 变成 ${o.ids}`);
+    if (o.local.join(",") !== "G-PROVENANCE" || o.local.join(",") !== o.local0.join(",")) bad.push(`LOCAL_GATES 的 id 变成 ${o.local}`);
+    if (o.extra) bad.push("门禁对象被加上了属性");
+    if (!o.provSame || !o.reviewSame) bad.push("门禁的 run 被替换");
+    if (!o.review.some((m) => m.includes("审查人必须是")) || !o.review2.some((m) => m.includes("审查人必须是"))) bad.push(`改了门禁对象后非法审查人被放行:${JSON.stringify([o.review, o.review2])}`);
     return bad.length ? bad.join(";") : undefined; }, expect: null },
   { name: "R5-04 正则注入点 0 次/多次在变异执行前拒绝,恰 1 次放行", direct: () => {
     const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
@@ -397,6 +473,26 @@ export const CASES: Case[] = [
       console.log(JSON.stringify(bad));`], { encoding: "utf8", timeout: 60_000 });
     const got = (r.stdout ?? "").trim().split("\n").pop() ?? "";
     return got === "[]" ? undefined : `注入点不唯一或检查不可用:${got || r.stderr.split("\n").find((l) => /Error/.test(l))}`; }, expect: null },
+  { name: "R6-04 正则注入计数:零宽 /u 按码点前进不死循环,sticky 与普通搜索计数一致", direct: () => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const m = await import(${JSON.stringify(path.join(HERE, "mutation.ts"))});
+      const E = "\\u{1F600}";
+      const rows = [
+        ["", /(?:)/u], [E, /(?:)/u], [E, /(?:)/gu], ["a" + E + "b", /(?:)/u], [E, /(?:)/], [E, /(?:)/v],
+        ["a" + E + "b" + E, new RegExp(E, "u")], ["a" + E + "b" + E, new RegExp(E, "gu")], ["ab", new RegExp(E, "u")],
+        ["MARK x MARK", /MARK/y], ["MARK x MARK", /MARK/gy], ["x MARK", /MARK/y], ["x MARK", /MARK/gy], ["x NONE", /MARK/y], ["MARKMARK", /MARK/y],
+      ];
+      console.log(JSON.stringify(rows.map(([s, f]) => m.injectionCount(s, f))));`], { encoding: "utf8", timeout: 10_000, killSignal: "SIGKILL" });
+    const got = (r.stdout ?? "").trim().split("\n").pop() ?? "";
+    const want = "[1,2,2,4,3,2,2,2,0,2,2,1,1,0,2]";
+    return got === want ? undefined : `injectionCount 结果 ${got || (r.error ? `没返回(${(r.error as NodeJS.ErrnoException).code ?? r.signal})` : r.stderr.split("\n").find((l) => /Error/.test(l)))},应为 ${want}`; }, expect: null },
+  { name: "R6-04 sticky 正则注入点按计数时的同一语义替换", direct: () => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const m = await import(${JSON.stringify(path.join(HERE, "mutation.ts"))});
+      console.log(JSON.stringify([m.inject("x MARK y", /MARK/y, "DONE"), m.inject("x MARK y", /MARK/gy, "DONE"), m.inject("x MARK y", /MARK/, "DONE"), m.inject("x MARK y", "MARK", "DONE"), m.inject("a$b", "$", "$&$&")]));`], { encoding: "utf8", timeout: 10_000, killSignal: "SIGKILL" });
+    const got = (r.stdout ?? "").trim().split("\n").pop() ?? "";
+    const want = JSON.stringify(["x DONE y", "x DONE y", "x DONE y", "x DONE y", "a$$b"]);
+    return got === want ? undefined : `inject 结果 ${got || r.stderr.split("\n").find((l) => /Error/.test(l))},应为 ${want}`; }, expect: null },
   { name: "磁盘:门禁命令行与一条自检用例跑完不在 TMPDIR 留下 gate-home/gate-run/gate-snap/gate-selftest 目录", direct: () => {
     const tmpd = fs.mkdtempSync(path.join(os.tmpdir(), "gate-leakprobe-"));
     try {
@@ -476,14 +572,18 @@ export const CASES: Case[] = [
   { name: "审查人 codex 放行(g-group#1531 默认审查人)", receipt: R((r) => { r.review!.agent = "codex"; }), room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "codex:b", assistant: "ai-codex" } }], expect: null },
   { name: "审查人 astra 放行", room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "codex:b", assistant: "ai-astra" } }], expect: null },
   { name: "审查人 grok 被拦", receipt: R((r) => { r.review!.agent = "grok"; r.review!.model = "grok-4.7"; }), reviewerTurns: (h) => [{ model: "grok-4.7", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "审查人必须是" },
-  // 原则 68(g-group#2943):Claude 审 Codex 写的 PR;Argon 读不到仓库,不再当审查人;跨厂商与禁止自审不变
+  // 原则 68(g-group#2943、#3199):Claude 审 Codex 写的 PR;Argon(Google 模型、claude 会话、能执行命令)作备用审查人;
+  // argon-chat 不能执行命令,不当审查人;跨厂商与禁止自审不变
   { name: "原则 68 claude 审 codex 作者放行(claude 会话)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); CLAUDE_REVIEW(r); }), reviewerTurns: claudeReviewTurns,
     room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "claude:rv1", assistant: "ai-claude" } }], expect: null },
   { name: "原则 68 claude 审 claude 作者被拦(禁止自审)", receipt: R((r) => { CLAUDE_REVIEW(r); }), reviewerTurns: claudeReviewTurns, expect: "审查人与作者是同一个(claude)" },
   { name: "原则 68 claude 审查照样要跨研发厂商:作者用 Anthropic 模型", authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }], receipt: R((r) => { r.author.agent = "deepseek"; r.author.session = "pi:a"; CLAUDE_REVIEW(r); }), reviewerTurns: claudeReviewTurns, expect: "同为 anthropic" },
   { name: "原则 68 claude 审查会话必须是 claude 会话", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); CLAUDE_REVIEW(r); r.review!.session = "codex:b"; }), reviewerTurns: claudeReviewTurns, expect: "必须是 claude 会话" },
-  { name: "原则 68 argon 当审查人被拦(隔离沙盒读不到仓库)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); r.review!.agent = "argon"; r.review!.model = "gemini-4-argon"; r.review!.session = "claude:argon1"; }), reviewerTurns: (h) => [{ model: "ai-iisbo-2/[vertex]gemini-4-argon", toolCalls: [{ name: "Bash", input: { command: "node scripts/gates/run-all.ts --hash" }, result: h }] }],
-    room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "claude:argon1", assistant: "ai-argon" } }], expect: "审查人必须是" },
+  { name: "原则 68 argon 审 codex 作者放行(claude 会话,g-group#3199 备用审查人)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); ARGON_REVIEW(r); }), reviewerTurns: argonReviewTurns, room: ARGON_ROOM, expect: null },
+  { name: "原则 68 argon 审 claude 作者放行(Google 审 Anthropic)", receipt: R((r) => { ARGON_REVIEW(r); }), reviewerTurns: argonReviewTurns, room: ARGON_ROOM, expect: null },
+  { name: "原则 68 argon 审 Google 作者被拦(同为 google)", authorTurns: () => [{ model: "ai-x/gemini-4-argon", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }], receipt: R((r) => { r.author.agent = "deepseek"; r.author.session = "pi:a"; r.author.model = "gemini-4-argon"; ARGON_REVIEW(r); }), reviewerTurns: argonReviewTurns, room: ARGON_ROOM, expect: "同为 google" },
+  { name: "原则 68 argon 审查会话必须是 claude 会话", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); ARGON_REVIEW(r); r.review!.session = "codex:b"; }), reviewerTurns: argonReviewTurns, expect: "必须是 claude 会话" },
+  { name: "原则 68 argon-chat 当审查人被拦(不能执行命令)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); ARGON_REVIEW(r); r.review!.agent = "argon-chat"; }), reviewerTurns: argonReviewTurns, expect: "审查人必须是" },
   { name: "原则 68 astra 审 codex 作者被拦(同为 OpenAI)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); }), expect: "同为 openai" },
   { name: "astra 审查会话不能是 claude 会话", receipt: R((r) => { r.review!.session = "claude:astra1"; }), reviewerTurns: (h) => reviewerOk(h), expect: "必须是 codex 会话" },
   { name: "审查会话不是 codex 会话", receipt: R((r) => { r.review!.session = "pi:b"; }), reviewerTurns: (h) => reviewerOk(h), expect: "必须是 codex 会话" },
