@@ -1,0 +1,31 @@
+packages/domain/proof/contact-helper-tests.txt
+  s_36f8aff8cdaf05::t_1b1b11f29231ff 1-258
+packages/domain/proof/focus-removal-red-against-old-impl.tap
+  s_36f8aff8cdaf05::t_e6585720971903 1-444
+packages/domain/proof/mutations.mjs
+  s_36f8aff8cdaf05::t_8753f543103e81 397-417,437
+packages/domain/proof/mutations.txt
+  s_36f8aff8cdaf05::t_add4f5642c3b57 1-373
+packages/domain/src/contact.ts
+  s_36f8aff8cdaf05::t_1db5ab8bfac5cd 125-140,158,162-167,171-183,187-195,209-218,223,228-234,245-253,269-283,288-289,300-311
+packages/domain/src/helper.ts
+  s_36f8aff8cdaf05::t_dfb60707aa1d1f 35-54,59
+receipts/feat-contact-helper.json
+  s_36f8aff8cdaf05::t_8cb4f5b8dd46ee 2,12,17,22,41,43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f227649a4676716e3851b4ddbc9bd8609f6d864a",
+  "prompts": {},
+  "sessions": {
+    "s_36f8aff8cdaf05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a528004857a3a0bf5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
