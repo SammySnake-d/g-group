@@ -113,7 +113,7 @@ function isLedger(x: unknown): x is Ledger {
   const actions = x.actions as { id: string }[];
   return new Set(messages.map((m) => m.id)).size === messages.length && new Set(messages.map((m) => m.seq)).size === messages.length &&
     new Set(commitments.map((c) => c.id)).size === commitments.length && new Set(actions.map((a) => a.id)).size === actions.length &&
-    commitments.every((c) => messages.some((m) => m.seq === c.sourceSeq && m.handled) &&
+    commitments.every((c) => messages.some((m) => m.seq === c.sourceSeq && m.handled && m.text.includes(c.text)) &&
       (c.status === "active" ? c.resolution === null : c.resolution !== null &&
         (c.status === "done" ? text(c.resolution.artifact) : text(c.resolution.detail)))) &&
     x.activity.every((a: { commitmentId: string; taskId: string }) => commitments.some((c) => c.id === a.commitmentId && c.taskId === a.taskId));
@@ -185,8 +185,9 @@ export function applyLedger(ledger: Ledger, expectedVersion: number, command: Co
     if (input.commitments.some((c) => m.taskId !== null && c.taskId !== m.taskId)) return fail("task-mismatch");
     const ids = input.commitments.map((c) => c.id);
     if (new Set(ids).size !== ids.length || ids.some((id) => commitments.some((c) => c.id === id))) return fail("commitment-id-conflict");
+    if (input.commitments.some((c) => !m.text.includes(c.text))) return fail("commitment-text-not-source");
     messages = messages.map((entry) => entry.seq === m.seq ? { ...entry, handled: true } : entry);
-    commitments.push(...input.commitments.map((c) => ({ ...c, sourceSeq: m.seq, status: "active" as const, resolution: null })));
+    commitments.push(...input.commitments.map((c) => ({ ...c, text: m.text.slice(m.text.indexOf(c.text), m.text.indexOf(c.text) + c.text.length), sourceSeq: m.seq, status: "active" as const, resolution: null })));
   } else {
     const current = commitments.find((c) => c.id === input.commitmentId);
     if (!current) return fail("commitment-not-found");
