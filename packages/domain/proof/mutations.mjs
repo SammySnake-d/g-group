@@ -16,11 +16,13 @@
 // 第十一轮:L01–L04 对应第十一轮审查独立变异(L05 为阳性对照与 P01 同类不列入),L04 就是第十轮删除的 X03,已有可达输入(未初始化的模块命名空间)故恢复;
 // Q01–Q03 是 R11-CORR-01 修复的新增埋雷;
 // 第十三轮:按 AC-28①(用户 #2273)删除归档状态,M18/B07/F06/G03 改写到 T8a 拒绝超时与 T8_Accepted 上的同类故障(不删除);
-// I01–I02 是"T8a 收到超时自动归档/清掉交付",I03–I07 是导出策略对象深冻结(用户 #2662)的埋雷;N13/D06/D07/E05/G05/W07/P07 随 set 改用自有属性 pick、形状表改用 optOf 重新指向新注入点,注入语义不变。
+// I01 是"T8a 收到超时直接转 T10_Cancelled 并清交付",I02 是"停在 T8a 但清交付",I09 才是恢复旧的未核验归档;I03–I08 是导出策略对象深冻结(用户 #2662)的埋雷,I08 为 run 函数本体;
+// 第十三轮复审 R13-TEST-01:B07/G03 曾与 B06/G02 字节相同,重定向到 T8a 不可恢复退回强制恢复、T8a × UserAccept 错任务放行;
+// 本脚本拒绝 (file, from, to) 完全相同的重复条目,每条都是一种不同的文本注入。N13/D06/D07/E05/G05/W07/P07 随 set 改用自有属性 pick、形状表改用 optOf 重新指向新注入点,注入语义不变。
 // M30–M47 是联系人/Helper 作者埋雷;contact/helper 其余系列见各分组注释。为不和任务侧重名:
 // reviews/feat-contact-helper.md 第二轮的 N01–N05 记为 CN01–CN05,第三轮的 P01–P05 记为 CP01–CP05,第五轮的 Z01–Z05 记为 CZ01–CZ05,
 // 第六轮的 W01–W05 记为 CW01–CW05,第七轮的 V01–V08 记为 CV01–CV08,第八轮的 H05–H06 记为 CH05–CH06,第九轮的 J01–J05 记为 CJ01–CJ05,
-// 第十轮的 Y01–Y08 记为 CY01–CY08,Astra 第 6 节的 I01–I26 记为 CI01–CI26(与任务侧第十三轮 I01–I07 区分),第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK101;第十三轮独立变异 AD01–AD04 原样保留编号(任务侧无 AD 前缀)。原样副本必须全绿(阴性对照)。
+// 第十轮的 Y01–Y08 记为 CY01–CY08,Astra 第 6 节的 I01–I26 记为 CI01–CI26(与任务侧第十三轮 I01–I09 区分),第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK101;第十三轮独立变异 AD01–AD04 原样保留编号(任务侧无 AD 前缀)。原样副本必须全绿(阴性对照)。
 // 用法: node packages/domain/proof/mutations.mjs
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -98,7 +100,7 @@ const M = [
   ["B04 T5 改条件一律按可恢复", "task.ts", "const amendRework = go((t, e) => rework(t, as(e, \"Amend\").computeResumable));", "const amendRework = go((t, e) => rework(t, t.state === \"T5_InReview\" ? true : as(e, \"Amend\").computeResumable));"],
   ["B05 T7 改条件一律按可恢复", "task.ts", "const amendRework = go((t, e) => rework(t, as(e, \"Amend\").computeResumable));", "const amendRework = go((t, e) => rework(t, t.state === \"T7_Delivering\" ? true : as(e, \"Amend\").computeResumable));"],
   ["B06 Accepted 退回一律按可恢复", "task.ts", "return ev.by === t.requester ? rework(t, ev.computeResumable) :", "return ev.by === t.requester ? rework(t, t.state === \"T8_Accepted\" ? true : ev.computeResumable) :"],
-  ["B07 已验收后退回一律按可恢复", "task.ts", "return ev.by === t.requester ? rework(t, ev.computeResumable) :", "return ev.by === t.requester ? rework(t, t.state === \"T8_Accepted\" ? true : ev.computeResumable) :"],
+  ["B07 T8a 不可恢复的退回强制按可恢复", "task.ts", "return ev.by === t.requester ? rework(t, ev.computeResumable) :", "return ev.by === t.requester ? rework(t, t.state === \"T8a_Delivered\" ? true : ev.computeResumable) :"],
   ["B08 T9 迟到回绑把负责人改成提出者", "task.ts", "      const b = bind(t, e);", "      const b = set(bind(t, e), { owner: t.requester });"],
   ["B10 未回绑即可提审", "task.ts", "const ev = as(e, \"SubmitForReview\");\n  if (!t.computeId) return provablyStale(t, e) ? ok(t) : no(NO_COMPUTE);", "const ev = as(e, \"SubmitForReview\");\n  if (!t.computeId) return ok(set(t, { state: \"T5_InReview\", reviewedCommit: ev.commit }));"],
   ["R01 停止确认不核对身份", "task.ts", "      if (c.computeId || c.launch || c.revoked.length || c.orphans.length) return r;", "      void c;"],
@@ -201,7 +203,7 @@ const M = [
   ["V10 send-card 不带任务号", "task.ts", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    [{ kind: \"send-card\", taskId: \"\", deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);"],
   ["G01 失败停止的确认不核 taskId", "task.ts", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id) return", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id && !(e.kind === \"StoppedConfirmed\" && t.stopReason === \"fail\")) return"],
   ["G02 已验收状态退回不核 taskId", "task.ts", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id) return", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id && !(e.kind === \"UserReject\" && t.state === \"T8_Accepted\")) return"],
-  ["G03 已验收状态退回不核 taskId", "task.ts", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id) return", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id && !(e.kind === \"UserReject\" && t.state === \"T8_Accepted\")) return"],
+  ["G03 T8a 的 UserAccept 不核 taskId(错任务放行)", "task.ts", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id) return", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id && !(e.kind === \"UserAccept\" && t.state === \"T8a_Delivered\")) return"],
   ["G04 DeliveredCard 不校验代次", "task.ts", "  DeliveredCard: { req: DELIVERY_SHAPE },", "  DeliveredCard: { req: { taskId: \"str\", commit: \"str\" } },"],
   ["G05 retired 不冻结", "task.ts", "retired: Object.freeze([...pick(t, patch, \"retired\")]),", "retired: [...pick(t, patch, \"retired\")],"],
   ["G06 孤儿退役时只留最近一条旧记录", "task.ts", "retired: [...t.retired, ev.computeId] })", "retired: [...t.retired.slice(-1), ev.computeId] })"],
@@ -264,13 +266,15 @@ const M = [
   ["Q01 临时必填字段表改回普通原型", "task.ts", "  const req: Record<string, FieldSpec> = Object.assign(Object.create(null), shape.req);", "  const req: Record<string, FieldSpec> = { ...shape.req };"],
   ["Q02 任务 patch 字段用 in 判断(认继承属性)", "task.ts", "Object.hasOwn(patch, k) ? patch[k] as Task[K] : t[k];", "k in patch ? patch[k] as Task[K] : t[k];"],
   ["Q03 可选字段表读 shape.opt(认继承属性)", "task.ts", "Object.hasOwn(shape, \"opt\") ? shape.opt! : {};", "shape.opt ?? {};"],
-  ["I01 T8a 收到 AcceptTimeout 自动归档(关闭任务、清掉交付)", "task.ts", "    AcceptTimeout: rej(ACCEPT_WAITS),", "    AcceptTimeout: forDelivery((t) => ok(set(t, { state: \"T10_Cancelled\", delivery: null }))),"],
+  ["I01 T8a 收到 AcceptTimeout 直接转 T10_Cancelled 并清掉交付", "task.ts", "    AcceptTimeout: rej(ACCEPT_WAITS),", "    AcceptTimeout: forDelivery((t) => ok(set(t, { state: \"T10_Cancelled\", delivery: null }))),"],
   ["I02 T8a 收到 AcceptTimeout 停在原状态但清掉当前交付", "task.ts", "    AcceptTimeout: rej(ACCEPT_WAITS),", "    AcceptTimeout: forDelivery((t) => ok(set(t, { delivery: null }))),"],
   ["I03 STATES 不冻结", "task.ts", "export const STATES = Object.freeze(", "export const STATES = ("],
   ["I04 EVENT_KINDS 不冻结", "task.ts", "export const EVENT_KINDS = Object.freeze(", "export const EVENT_KINDS = ("],
-  ["I05 转移表的格不冻结", "task.ts", "    for (const cell of Object.values(row)) Object.freeze(cell);\n", ""],
+  ["I05 转移表的格不冻结", "task.ts", "      Object.freeze(cell);\n", ""],
   ["I06 转移表的行不冻结", "task.ts", "    Object.freeze(row);\n", ""],
   ["I07 转移表整表不冻结", "task.ts", "  return Object.freeze(table);", "  return table;"],
+  ["I08 转移表 go 格的 run 函数不冻结", "task.ts", "      if (cell?.kind === \"go\") Object.freeze(cell.run);\n", ""],
+  ["I09 T8a 收到 AcceptTimeout 恢复旧的未核验归档(T8_ArchivedUnverified + unverified 标记)", "task.ts", "    AcceptTimeout: rej(ACCEPT_WAITS),", "    AcceptTimeout: forDelivery((t) => ok(set(t, { state: \"T8_ArchivedUnverified\" as unknown as TaskState, badge: \"unverified\" as unknown as VerificationBadge }))),"],
   ["M28 vendor 两家都像时取第一家", "vendor.ts", "return hits.size === 1 ? [...hits][0]! : \"unknown\";", "return hits.size >= 1 ? [...hits][0]! : \"unknown\";"],
   ["M30 同 id 新建覆盖", "contact.ts", "if (d.contacts.has(c.id)) return { ok: false, reason: `联系人 ${c.id} 已存在,不能同 id 新建覆盖` };", ""],
   ["M31 改名时清空记忆", "contact.ts", "...(patch.name !== undefined ? { name: patch.name } : {}),", "...(patch.name !== undefined ? { name: patch.name, memory: \"\" } : {}),"],
@@ -493,6 +497,14 @@ const copy = (name) => {
   return d;
 };
 let ok = true;
+// 记账:同一 (file, from, to) 只能出现一次,重复注入不算独立故障(R13-TEST-01)
+const seen = new Map();
+for (const [name, file, from, to] of M) {
+  const k = JSON.stringify([file, from, to]);
+  if (seen.has(k)) { ok = false; console.log(`✗ ${name}:与 ${seen.get(k)} 是同一注入,不能重复计数`); }
+  else seen.set(k, name);
+}
+console.log(`共 ${M.length} 个变异,${seen.size} 种不同注入`);
 const clean = run(copy("clean"));
 console.log(`${clean.code === 0 ? "✓" : "✗"} 原样副本:${clean.passed.length} 绿 / ${clean.failed.length} 红`);
 for (const name of REMOVED) console.log(`— ${name}:已移除,所测功能已按 #2273 撤销`);

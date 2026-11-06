@@ -1988,3 +1988,23 @@ test("R13 进程内改写 TABLE/行/格/STATES/EVENT_KINDS 都抛 TypeError,未�
   assert.equal(STATES.length, 11);
   assert.equal(EVENT_KINDS[0], "Claim");
 });
+
+test("R13-CORR-01 每个 go 格的 run 函数本体冻结:逐格 Object.isFrozen(cell.run),改写或新增属性都抛 TypeError,转移结果不变", () => {
+  const runs = new Set<unknown>();
+  for (const s of STATES) for (const e of EVENT_KINDS) {
+    const cell = TABLE[s][e];
+    if (cell.kind !== "go") continue;
+    assert.ok(Object.isFrozen(cell.run), `${s} × ${e} 的 run 未冻结`);
+    assert.ok(!Object.isExtensible(cell.run), `${s} × ${e} 的 run 仍可扩展`);
+    runs.add(cell.run);
+  }
+  assert.ok(runs.size > 0);
+  const claim = TABLE.T1_Open.Claim;
+  assert.equal(claim.kind, "go");
+  const run = (claim as { run: unknown }).run as Record<string, unknown>;
+  assert.throws(() => { run.call = () => "forged"; }, TypeError);
+  assert.throws(() => { Object.defineProperty(run, "forged", { value: 1 }); }, TypeError);
+  assert.throws(() => { run.name = "forged"; }, TypeError);
+  assert.equal(Object.hasOwn(run, "call"), false);
+  assert.equal(must(apply(newTask("t1", "u1"), { kind: "Claim", by: "claude" })).task.state, "T2_Claimed");
+});

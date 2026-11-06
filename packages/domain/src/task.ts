@@ -309,10 +309,14 @@ const claim = go((t, e) => {
 /** 尚未派发时改条件:只推进版本。 */
 const bumpVer = go((t) => ok(set(t, { constraintVer: t.constraintVer + 1 })));
 
-/** 深冻结转移表:每一格、每一行、整张表都冻结(用户 #2662)。 */
+/** 深冻结转移表:go 格的 run 函数本体、每一格、每一行、整张表都冻结(用户 #2662,R13-CORR-01)。 */
 const freezeTable = (table: TransitionTable): TransitionTable => {
   for (const row of Object.values(table)) {
-    for (const cell of Object.values(row)) Object.freeze(cell);
+    // 漏格只可能出自绕过类型的改动:冻结时不抛,让模块照常加载,由 AC-09 测试报出空白格
+    for (const cell of Object.values(row) as (Cell | undefined)[]) {
+      if (cell?.kind === "go") Object.freeze(cell.run);
+      Object.freeze(cell);
+    }
     Object.freeze(row);
   }
   return Object.freeze(table);
