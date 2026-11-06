@@ -323,7 +323,7 @@ test("appendOwn 的目标是带访问器下标、不可枚举下标、额外键�
 test("appendOwn 对普通数组(空、带元素、元素是对象)照常追加自有元素(R8-02 单开关对照)", () => {
   for (const start of [[], ["a"], [{ k: 1 }, 2]] as unknown[][]) {
     const arr = [...start];
-    appendOwn(arr, "z");
+    assert.doesNotThrow(() => appendOwn(arr, "z"));
     assert.deepEqual([arr.length, Object.hasOwn(arr, start.length), arr[start.length]], [start.length + 1, true, "z"]);
   }
 });

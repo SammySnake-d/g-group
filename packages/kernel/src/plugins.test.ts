@@ -1331,14 +1331,36 @@ function refusedPromiseRun(mode: "send" | "pull", shape: "then-getter" | "plain"
   }
 }
 
-test("send / pull 拒收带自有 then getter 的已拒绝或稍后拒绝原生 Promise 时不留未处理拒绝,宿主进程存活,getter 调用 0 次(R8-04 阳性埋雷)", () => {
+/** 本进程内同一形态的拒收结果(基线):插件返回已拒绝的原生 Promise,可选带自有 then getter */
+async function refusedInProcess(mode: "send" | "pull", withGetter: boolean): Promise<{ reason: string; gets: number }> {
+  let gets = 0;
+  const pending = Promise.reject(new Error("外部 Promise 失败"));
+  // biome-ignore lint/suspicious/noThenProperty: 测试要的就是带自有 then getter 的已拒绝 Promise,验证它不被读取且不留未处理拒绝
+  if (withGetter) Object.defineProperty(pending, "then", { get() { gets++; throw new Error("不应读取"); } });
+  const reg = createRegistry({ now: () => T0 });
+  if (mode === "send") reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => pending });
+  else reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => pending });
+  const r = mode === "send" ? await reg.send("p", { action_id: "a", payload: "x" }) : await reg.pull("p", "g");
+  return { reason: r.ok ? "ok" : r.reason, gets };
+}
+
+test("send / pull 拒收带自有 then getter 的已拒绝或稍后拒绝原生 Promise 时不留未处理拒绝,宿主进程存活,getter 调用 0 次(R8-04 阳性埋雷)", async () => {
+  const reg = createRegistry({ now: () => T0 });
+  // biome-ignore lint/suspicious/noThenProperty: 测试要的就是带自有 then getter 的已拒绝 Promise,验证它不被读取且不留未处理拒绝
+  reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => { const p = Promise.reject(new Error("x")); Object.defineProperty(p, "then", { get() { throw new Error("不应读取"); } }); return p; } });
+  assert.deepEqual(await reg.send("p", { action_id: "a", payload: "x" }), { ok: false, state: "delivery-unknown", reason: "non-promise-send", detail: "这一片只支持返回原生 Promise 的 send;同步返回值、thenable 与改过 then 的 Promise 都不当作回执" });
+  assert.deepEqual(await refusedInProcess("pull", true), { reason: "invalid-batch", gets: 0 });
   for (const timing of ["now", "later"] as const) {
     assert.deepEqual(refusedPromiseRun("send", "then-getter", timing), { code: 0, out: { reason: "non-promise-send", state: "delivery-unknown", gets: 0, alive: true } }, timing);
     assert.deepEqual(refusedPromiseRun("pull", "then-getter", timing), { code: 0, out: { reason: "invalid-batch", state: null, gets: 0, alive: true } }, timing);
   }
 });
 
-test("send / pull 收到普通的已拒绝或稍后拒绝原生 Promise 时记 send-threw / pull-failed,宿主进程存活(R8-04 单开关对照)", () => {
+test("send / pull 收到普通的已拒绝或稍后拒绝原生 Promise 时记 send-threw / pull-failed,宿主进程存活(R8-04 单开关对照)", async () => {
+  const reg = createRegistry({ now: () => T0 });
+  reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => Promise.reject(new Error("外部 Promise 失败")) });
+  assert.deepEqual(await reg.pull("p", "g"), { ok: false, reason: "pull-failed", detail: "外部 Promise 失败" });
+  assert.deepEqual(await refusedInProcess("send", false), { reason: "send-threw", gets: 0 });
   for (const timing of ["now", "later"] as const) {
     assert.deepEqual(refusedPromiseRun("send", "plain", timing), { code: 0, out: { reason: "send-threw", state: "delivery-unknown", gets: 0, alive: true } }, timing);
     assert.deepEqual(refusedPromiseRun("pull", "plain", timing), { code: 0, out: { reason: "pull-failed", state: null, gets: 0, alive: true } }, timing);
