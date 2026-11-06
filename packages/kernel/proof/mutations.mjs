@@ -1,4 +1,4 @@
-// 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时;第五轮按 R4-01..R4-07 扩充,含 R4-M1=K92、R4-M2=K91;第六轮按 R5-01..R5-05 扩充,含 R5-M1=K111、R5-M2=K126;第七轮按 R6-01..R6-05 扩充,含 R6-M1=K142、R6-M2=K143;第八轮按 R7-01/02/04/05/06 扩充,含 R7-M1=K156、R7-M2=K157、R7-M3=K158;第九轮按 R8-01..R8-05 扩充,含 R8-M1=K173、R8-M2=K174、R8-M3=K175;第十轮按 R9-01/R9-02 扩充,含 R9-M1=K188、R9-M2=K177、R9-M3=K189),在隔离副本里跑本包测试,
+// 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时;第五轮按 R4-01..R4-07 扩充,含 R4-M1=K92、R4-M2=K91;第六轮按 R5-01..R5-05 扩充,含 R5-M1=K111、R5-M2=K126;第七轮按 R6-01..R6-05 扩充,含 R6-M1=K142、R6-M2=K143;第八轮按 R7-01/02/04/05/06 扩充,含 R7-M1=K156、R7-M2=K157、R7-M3=K158;第九轮按 R8-01..R8-05 扩充,含 R8-M1=K173、R8-M2=K174、R8-M3=K175;第十轮按 R9-01/R9-02 扩充,含 R9-M1=K188、R9-M2=K177、R9-M3=K189;第十一轮按 R10-01/R10-02 扩充,含 R10-M1=K197、R10-M2=K198、R10-M3=K199,并按新实现改写 K184、K190–K196 的注入点),在隔离副本里跑本包测试,
 // 每个变异都必须让至少一条具名测试失败(文件级加载失败不算杀死)。注入点必须在源码里恰好出现 1 次。
 // 原样副本必须全绿(阴性对照)。
 // 每个变异在独立进程组里跑,超时(默认 300s,KERNEL_MUT_TIMEOUT_MS 可改)就杀掉整个进程组,记 ✗ 超时,不算被杀死。
@@ -17,6 +17,8 @@ import path from "node:path";
 //       这些调用在内置未被改写时不会抛错,所以兜底 catch 在所测样例中走不到。若内置 JSON.stringify 被改写成抛错,
 //       原版返回 <无法描述> 而变异版抛错,但这属于合同之外(只保证内置原型未被改写的运行环境,用户 g-group#2662);
 //       这是对有限样例和该合同的判断,不是兜底分支在所有环境中严格不可达的证明;
+//   K209 方案 3 不排除 Proxy 构造器(第十一轮,等价):lookup 第一步就对传入对象查 types.isProxy,值是 Proxy 时返回空链,
+//       shadow 对空链直接返回 undefined,去掉调用处的 !types.isProxy(value) 改不了行为(lookup 里那一步由 K205 覆盖);
 //   K108 单调读数倒退仍放行:读数一倒退该动作就已标为时钟不可信并在窗口判断前返回,窗口判断里不会再见到负的 elapsed。
 const PKG = path.resolve(import.meta.dirname, "..");
 const ROOT = path.resolve(PKG, "../..");
@@ -210,21 +212,34 @@ const M = [
   ["K181 时钟读数不查类型原样返回(R8-03 原错)", "plugins.ts", "  return typeof v === \"number\" && Number.isFinite(v) ? v : Number.NaN;", "  return v as number;"],
   ["K182 墙钟不查 Date 范围", "plugins.ts", "  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();", "  return d.toISOString();"],
   ["K183 拒收的原生 Promise 不挂拒绝处理(R8-04 原错)", "plugins.ts", "  Reflect.apply(Promise.prototype.then, x, [undefined, () => {}]);", "  void x;"],
-  ["K184 带任何自有 constructor 的 Promise 都直接用内置 then 挂处理(会执行插件访问器;第十轮改注入点到新实现)", "plugins.ts", "\"value\" in own && own.value === Promise) { attachQuiet(x); return; }", "true) { attachQuiet(x); return; }"],
+  ["K184 带任何 constructor 都直接用内置 then 挂处理(会执行插件访问器;第十一轮改注入点到新实现)", "plugins.ts", "  if (known && speciesSafe(value)) { attachQuiet(x); return; }", "  if (true) { attachQuiet(x); return; }"],
   ["K185 pull 拒收时不挂处理(R8-04 原错)", "plugins.ts", "      if (!isPlainPromise(returned)) quietRefused(returned);\n", ""],
   ["K186 send 拒收时不挂处理(R8-04 原错)", "plugins.ts", "{ quietRefused(pending); return unknown(", "{ return unknown("],
   ["K187 首次单调读数原样存储(R8-03 原错)", "plugins.ts", "        const firstAttemptMonotonic = readClock(monotonic);", "        const firstAttemptMonotonic = monotonic();"],
   // —— 第十轮:按 PR #6 第九轮审查 R9-02 扩充,含审查自造 R9-M1=K188、R9-M3=K189(R9-M2 与 K177 注入点相同,见上)
   ["K188 墙钟只认整数毫秒(审查 R9-M1)", "plugins.ts", "  if (!Number.isFinite(ms)) return undefined;", "  if (!Number.isInteger(ms)) return undefined;"],
   ["K189 原生 Promise 判定不查原型,子类也 await(审查 R9-M3)", "plugins.ts", "  if (Object.getPrototypeOf(x) !== Promise.prototype) return false;\n", ""],
-  // —— 第十轮:R9-01(用户 g-group#3140 选 A)方案 1 / 方案 2 的单点故障
-  ["K190 方案 2 不删临时 constructor(原本没有自有 constructor 时)", "plugins.ts", "    if (own === undefined) Reflect.deleteProperty(x, \"constructor\");\n", "    if (own === undefined) void 0;\n"],
-  ["K191 方案 1 跳过值为内置 Promise 的 constructor 数据属性", "plugins.ts", "\"value\" in own && own.value === Promise) { attachQuiet(x); return; }", "false) { attachQuiet(x); return; }"],
-  ["K192 方案 2 临时属性用原型上的 constructor", "plugins.ts", "Object.assign(Object.create(null), { value: Promise, writable", "Object.assign(Object.create(null), { value: Object.getPrototypeOf(x).constructor, writable"],
-  ["K193 只做方案 1,不做方案 2", "plugins.ts", "  if (!Reflect.defineProperty(x, \"constructor\", temp)) return;", "  if (temp || !Reflect.defineProperty(x, \"constructor\", temp)) return;"],
-  ["K194 临时属性用 Object.defineProperty(不可改写时抛错)", "plugins.ts", "  if (!Reflect.defineProperty(x, \"constructor\", temp)) return;", "  Object.defineProperty(x, \"constructor\", temp);"],
-  ["K195 方案 2 不恢复原 constructor 描述符", "plugins.ts", "    else Reflect.defineProperty(x, \"constructor\", Object.assign(Object.create(null), own));\n", ""],
-  ["K196 方案 1 不看原型,没有自有 constructor 就直接挂处理", "plugins.ts", "own === undefined ? Object.getPrototypeOf(x) === Promise.prototype :", "own === undefined ? true :"],
+  // —— 第十轮:R9-01(用户 g-group#3140 选 A)单点故障;第十一轮按新实现改写注入点,语义不变
+  ["K190 不删临时 constructor(原本没有自有 constructor 时)", "plugins.ts", "return () => { Reflect.deleteProperty(o, key); };", "return () => {};"],
+  ["K191 方案 1 跳过值为内置 Promise 的 constructor", "plugins.ts", "  if (v === undefined || v === Promise) return true;", "  if (v === undefined) return true;"],
+  ["K192 临时属性用原型上的 constructor", "plugins.ts", "if (Reflect.defineProperty(o, key, descOf({ value: Promise, writable: true, enumerable: false,", "if (Reflect.defineProperty(o, key, descOf({ value: Object.getPrototypeOf(o).constructor, writable: true, enumerable: false,"],
+  ["K193 只做方案 1,不做临时改写", "plugins.ts", "  const undo = shadow(ctor.chain, \"constructor\") ??", "  const undo = undefined ??"],
+  ["K194 临时属性用 Object.defineProperty(改不了时抛错)", "plugins.ts", "      if (Reflect.defineProperty(o, key, descOf({ value: Promise, writable: true, enumerable: false, configurable: true })))", "      if (Object.defineProperty(o, key, descOf({ value: Promise, writable: true, enumerable: false, configurable: true })))"],
+  ["K195 可配置属性不恢复原描述符", "plugins.ts", "return () => { Reflect.defineProperty(o, key, descOf(own)); };", "return () => {};"],
+  ["K196 只看自有属性不走原型链,没有自有 constructor 就当默认构造器直接挂处理", "plugins.ts", "cur = Object.getPrototypeOf(cur)) {", "cur = null) {"],
+  // —— 第十一轮:按 PR #6 第十轮审查 R10-01 / R10-02 扩充,含审查自造 R10-M1=K197、R10-M2=K198、R10-M3=K199
+  ["K197 恢复可配置 constructor 描述符时把 enumerable 改成 false(审查 R10-M1)", "plugins.ts", "return () => { Reflect.defineProperty(o, key, descOf(own)); };", "return () => { Reflect.defineProperty(o, key, descOf(Object.assign(Object.create(null), own, { enumerable: false }))); };"],
+  ["K198 墙钟先向下取整再转时间(审查 R10-M2)", "plugins.ts", "  const d = new Date(ms);", "  const d = new Date(Math.floor(ms));"],
+  ["K199 时钟读数只认整数(审查 R10-M3)", "plugins.ts", "  return typeof v === \"number\" && Number.isFinite(v) ? v : Number.NaN;", "  return typeof v === \"number\" && Number.isInteger(v) ? v : Number.NaN;"],
+  ["K200 不可配置但可写的数据属性不走只改值分支(R10-01 原错)", "plugins.ts", "    } else if (\"value\" in own && own.writable === true) {", "    } else if (false) {"],
+  ["K201 可写数据属性改值时连带重写 enumerable / configurable(R10-01 原错:不可配置时改不了)", "plugins.ts", "if (Reflect.defineProperty(o, key, descOf({ value: Promise }))) return", "if (Reflect.defineProperty(o, key, descOf({ value: Promise, writable: true, enumerable: false, configurable: true }))) return"],
+  ["K202 可写数据属性挂处理后不写回原值", "plugins.ts", "return () => { Reflect.defineProperty(o, key, descOf({ value: own.value })); };", "return () => {};"],
+  ["K203 不做方案 3(constructor 改不了时不改其 species)", "plugins.ts", "shadow(lookup(value, Symbol.species).chain, Symbol.species) : undefined);", "undefined : undefined);"],
+  ["K204 临时改写不跳过内置对象", "plugins.ts", "    if (INTRINSICS.has(o)) continue;\n", ""],
+  ["K205 原型链遇到 Proxy 不停,读其描述符(进陷阱)", "plugins.ts", "    if (types.isProxy(cur)) return { chain, desc: undefined, blocked: true };\n", ""],
+  ["K206 species 是任何数据属性都当安全(会构造插件的类)", "plugins.ts", "  return \"value\" in s.desc && (s.desc.value === undefined || s.desc.value === null || s.desc.value === Promise);", "  return \"value\" in s.desc;"],
+  ["K207 原型链上有 Proxy 时不换原型直接挂处理(Node 读内部异步 id 进陷阱)", "plugins.ts", "    if (!Reflect.setPrototypeOf(x, Promise.prototype)) return;\n", ""],
+  ["K208 换原型挂处理后不换回", "plugins.ts", "    try { attachQuiet(x); } finally { Reflect.setPrototypeOf(x, proto); }", "    attachQuiet(x);"],
 ];
 
 const TIMEOUT_MS = Number(process.env.KERNEL_MUT_TIMEOUT_MS ?? 300_000);
