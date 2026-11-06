@@ -23,7 +23,7 @@ const M = [
   ["M10 --tools 不按 brief.tools", "src/cli.ts", '"--tools", brief.tools.join(","),', '"--tools", "default",'],
   ["M11 已受理 blocked 不停在受阻", "src/events.ts", 'if (facts.pausedBlocked) return { kind: "paused-blocked" };', ""],
   ["M12 被拒收的汇报也产出事件", "src/events.ts", "        if (b.is_error === true) {", "        if (false) {"],
-  ["M13 到期不对进程组发 SIGKILL", "src/adapter.ts", 'if (Date.now() - t0 >= reapForceMs) { signalGroup(round.pid, "SIGKILL"); clearInterval(timer); }', "if (Date.now() - t0 >= reapForceMs) { clearInterval(timer); }"],
+  ["M13 到期不对进程组发 SIGKILL", "src/adapter.ts", 'const timer = setTimeout(() => signalGroup(round.pid, "SIGKILL"), reapForceMs);', "const timer = setTimeout(() => {}, reapForceMs);"],
   ["M14 handoff 不列进装配清单", "src/cli.ts", 'sections.push({ name: "handoff",', 'void ({ name: "handoff",'],
   ["M15 resume 不带 CLI 会话号", "src/cli.ts", '...(resumeSession ? ["--resume", resumeSession] : []),', ""],
   ["M16 F-01 brief.tools 放行 default 等非内置名", "src/brief.ts", "if (unknown.length) return refuse(", "if (false) return refuse("],
@@ -33,8 +33,8 @@ const M = [
   ["M20 F-02 result 行不看 is_error", "src/events.ts", 'success: m.subtype === "success" && m.is_error !== true,', 'success: m.subtype === "success",'],
   ["M21 F-02 被拒收的 blocked 不记为未解决", "src/adapter.ts", 'if (s.kind === "blocked" || s.kind === "failed") st.unresolved = [...st.unresolved, rec];', ""],
   ["M22 CLI 不自成进程组", "src/adapter.ts", "detached: !IS_WINDOWS", "detached: false"],
-  ["M23 CLI 正常结束后不回收进程组", "src/adapter.ts", "不等孙进程\n      reap(round);", "不等孙进程\n"],
-  ["M24 stop 只对 CLI 进程本身发 SIGTERM", "src/adapter.ts", "      reap(round);\n      // 停在受阻", '      round.child?.kill("SIGTERM");\n      // 停在受阻'],
+  ["M23 CLI 正常结束后仍对进程组发 SIGTERM(mirasim 不发)", "src/adapter.ts", "      round.child = null;\n", '      round.child = null;\n      signalGroup(round.pid, "SIGTERM");\n'],
+  ["M24 初始 SIGTERM 发给进程组而不是只发主进程", "src/adapter.ts", 'try { p.kill("SIGTERM"); } catch { /* 已退出 */ }', 'signalGroup(round.pid, "SIGTERM");'],
   ["M25 F-04 MCP 服务器不校验 schema", "mcp/report-mcp.mjs", "const errs = reportErrors(a);", "const errs = [];"],
   ["M26 F-04 适配器不做第二道 schema 校验", "src/events.ts", "const errors = reportErrors(input);", "const errors: string[] = [];"],
   ["M27 F-04 needs 只查真假不查类型", "src/report-schema.ts", "if (a.needs !== undefined && !nonEmpty(a.needs))", "if (a.needs !== undefined && !a.needs)"],
@@ -42,7 +42,7 @@ const M = [
   ["M29 F-04 constraintVer 不校验", "src/report-schema.ts", "if (a.constraintVer !== undefined && !(Number.isInteger(a.constraintVer)", "if (false && !(Number.isInteger(a.constraintVer)"],
   ["M30 F-04 kind 不查枚举", "src/report-schema.ts", 'if (typeof a.kind !== "string" || !REPORT_KINDS.includes(a.kind)) errs.push("kind 非法");', ""],
   ["M31 F-04 放行未知字段", "src/report-schema.ts", "if (extra.length) errs.push(", "if (false) errs.push("],
-  // 以下对应 Codex 第二轮 RR-01–RR-05;M06/M13/M22–M24/M34/M39–M42/M44 按 g-group#2309 对齐 mirasim 的进程组语义改写
+  // 以下对应 Codex 第二轮 RR-01–RR-05;M06/M13/M22–M24/M34/M39–M42/M44 按 g-group#2309 对齐 mirasim 改写;M13/M23/M24/M40 第三轮按 z2 实际做法再改
   ["M32 RR-01 合规 started 清掉被拒收的 blocked(审查存活变异)", "src/adapter.ts", 'if (r.kind === "blocked" || r.kind === "failed") st.unresolved = st.unresolved.filter((u) => u.kind !== r.kind);', 'if (r.kind === "blocked" || r.kind === "failed" || r.kind === "started") st.unresolved = [];'],
   ["M33 RR-01 合规 completed 清掉被拒收的 blocked", "src/adapter.ts", 'if (r.kind === "blocked" || r.kind === "failed") st.unresolved = st.unresolved.filter((u) => u.kind !== r.kind);', 'if (r.kind === "blocked" || r.kind === "failed" || r.kind === "completed") st.unresolved = [];'],
   ["M34 RR-01 受理 blocked 后不对进程组 SIGSTOP", "src/adapter.ts", '      signalGroup(round.pid, "SIGSTOP");', ""],
@@ -51,12 +51,18 @@ const M = [
   ["M37 RR-02 不要求工具清单里有 report_progress", "src/events.ts", "if (!m.tools.includes(REPORT_TOOL)) return", "if (false) return"],
   ["M38 RR-02 tools 元素不查类型", "src/events.ts", 'if (!m.tools.every((t) => typeof t === "string")) return', "if (false) return"],
   ["M39 信号只发给进程本身、不发给进程组", "src/procgroup.ts", "process.kill(-pid, sig);", "process.kill(pid, sig);"],
-  ["M40 stopped 不带 process-group 范围", "src/adapter.ts", 'scope: "process-group", violations: [...round.violations] });', 'scope: "descendant-tree" as "process-group", violations: [...round.violations] });'],
+  ["M40 stopped 不带 main-then-group 范围", "src/adapter.ts", 'scope: "main-then-group", violations: [...round.violations] });', 'scope: "process-group" as "main-then-group", violations: [...round.violations] });'],
   ["M41 RR-04 运行中也给快照", "src/adapter.ts", 'if (!r?.exited || !terminal) return refuse("not-quiescent");', ""],
   ["M42 RR-04 快照不等主进程退出(只看终态)", "src/adapter.ts", 'if (!r?.exited || !terminal) return refuse(', "if (!terminal) return refuse("],
   ["M43 RR-05 违规压过停止", "src/events.ts", "if (facts.stopRequested) return {", "if (facts.stopRequested && violations.length === 0) return {"],
   ["M44 升级间隔不按配置(写死 10 秒)", "src/adapter.ts", "const reapForceMs = options.reapForceMs ?? DEFAULT_REAP_FORCE_MS;", "const reapForceMs = DEFAULT_REAP_FORCE_MS;"],
   ["M45 RR-05 违规不留痕", "src/adapter.ts", "    round.violations.push(msg);", ""],
+  // 以下对应第三轮:停止语义更正为 mirasim z2 的实际做法、R3-01–R3-03
+  ["M46 主进程先退出也不取消组 SIGKILL", "src/adapter.ts", '    p.once("exit", () => clearTimeout(timer));', ""],
+  ["M47 R3-01 stop 后不封存这一轮", "src/adapter.ts", "      round.halted = true;\n      // 冻结的进程组", "      // 冻结的进程组"],
+  ["M48 R3-02 空白续接先杀掉冻结的进程组再报错", "src/adapter.ts", '      if (!text.trim()) return refuse("续接的内容不能为空");', '      if (!text.trim()) { if (st.round && !st.round.exited) signalGroup(st.round.pid, "SIGKILL"); return refuse("续接的内容不能为空"); }'],
+  ["M49 R3-03 init 前未认可的输出放行", "src/adapter.ts", 'if (pre.kind === "rejected") { violate(', "if (false) { violate("],
+  ["M50 R3-03 init 前任何 system 帧都放行", "src/events.ts", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype)) return", "true) return"],
 ];
 
 // 不用 --test-timeout:在 node --test <file> 下它限制的是整个文件,文件超过上限会被整体取消(部分执行)。
