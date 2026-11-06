@@ -1,0 +1,23 @@
+packages/domain/proof/mutations.mjs
+  s_b517c605a7c83f::t_f1321fe1ae0368 17,261-263
+packages/domain/proof/mutations.txt
+  s_b517c605a7c83f::t_e15d570b9b7dd2 1-238
+packages/domain/proof/task-lifecycle-tests.txt
+  s_b517c605a7c83f::t_8ac9898bc94ade 1-188,190,195
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fcd810900053b9366fe6c2d8c40ad52ecc6863b0",
+  "prompts": {},
+  "sessions": {
+    "s_b517c605a7c83f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adbd1c9c28bef0051",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

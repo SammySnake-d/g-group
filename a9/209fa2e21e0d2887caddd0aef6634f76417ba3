@@ -1,0 +1,31 @@
+packages/domain/proof/mutations.mjs
+  s_b517c605a7c83f::t_413ab37341bbf5 14-17,87,137-138,162,200,211,253-260
+packages/domain/proof/mutations.txt
+  s_b517c605a7c83f::t_3549a54180a57b 1-235
+packages/domain/proof/red-against-8e57583.tap
+  s_b517c605a7c83f::t_5647e374fd13e3 1
+packages/domain/proof/task-lifecycle-tests.txt
+  s_b517c605a7c83f::t_69867eb2dea484 1-134,136-185,187,192
+packages/domain/src/task.ts
+  s_b517c605a7c83f::t_a690e68fa85b6c 1-3,101-124,126-561
+packages/domain/src/vendor.ts
+  s_b517c605a7c83f::t_1e9d8fcb14b37c 1,4-18
+receipts/feat-task-lifecycle.json
+  s_b517c605a7c83f::t_a064cefbbd1ee6 56,58,60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a9209fa2e21e0d2887caddd0aef6634f76417ba3",
+  "prompts": {},
+  "sessions": {
+    "s_b517c605a7c83f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adbd1c9c28bef0051",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
