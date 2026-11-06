@@ -683,3 +683,81 @@ GATE_ERROR_EXIT=0
 ### 证据与交付边界
 
 可复核日志及 SHA-256 清单：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr1-round5-evidence-51f52dd3/`（约 283 KB，`MANIFEST.json`）。保留 `selftest.log`、`mutation.log`、`gate-probes.log`、`G-*.json`、`hint-fault.log`、`gate-error-corrected.log`、`unique-string.log`、`regex-unique.log`、`contract-probe.log`、`replay-round3.log`、四份 test-runner 对照和 CI 原始日志；不保留临时 clone、构建产物或 node_modules。实际执行中的所有测试输入与模拟会话均为临时夹具，没有读取或伪造真实凭据。仅追加此报告与修改收据 `review`，未修改产品/门禁代码、远端状态或合并 PR。
+
+
+## 第六轮独立复审（b3a47a8）
+
+### 结论
+
+**reject，修复后重新独立复审，不应合并。** 名单调整在本轮测试形状下没有放宽禁止自审或跨厂商检查；作者的 186 条自检、81 条列举变异和测试步骤也已独立跑通。第五轮问题有实际改善，但本轮新增的“输出完整才算判因”、外部 Proxy 零回调、深冻结以及正则注入计数仍有以下合并前问题。所有反例均未事先修改任何内置原型，符合 g-group#2662 的缩小合同。
+
+### 审查对象和运行
+
+- HEAD `b3a47a8ea40494b125b75110a85e9090c492f7b1`；基线 `origin/main=412ce25278e3b0057e02d792a8394f98aaf21424`。普通独立 clone 的 Git 目录为 `.git`，不是共享 linked worktree；代码未改。
+- 审查会话 `codex:51f52dd3-f00d-4d1a-ace4-866b25735ac0`；实际模型 `gpt-6.1-terra`（OpenAI）；作者收据为 Claude/Anthropic。本轮符合跨厂商分工。
+- 本人在仓库根目录运行 `node scripts/gates/run-all.ts --hash --branch=chore/gates --base=origin/main`，原样输出与作者一致：
+
+```text
+65913c3015092634336d6d0392008b9e2650fec7f083b230c997ea46fe812102
+```
+
+- Node `v22.22.0`：`npm ci`、typecheck、lint 均退出 0；`npm test` 8/8 真正通过、0 skip/todo；`gates:selftest` 186/186、退出 0（68 秒）；`GATE_MUTATION_JOBS=2 npm run gates:mutation` 81/81 报被发现、退出 0（原样对照 105 秒、变异阶段 341 秒）。这些是既有样例的结果，不能抵消本轮的额外反例。
+- [CI run 42239073941](https://github.com/SammySnake-d/g-group/actions/runs/42239073941) 确认对应同一 HEAD、self-check success：测试 8 条、自检 186/186、变异 81/81。自检日志 397 秒，变异阶段 212 秒；没有把 CI 自报代替独立运行。
+- 独立 `git archive` 红版快照：`ec5046b` 筛选 R5-01～04 相关 13 条，自检退出 1，其中 9 条红；`afac20d` 筛选原则 68 六条，自检退出 1，其中 Claude 审 Codex 的正例、Claude 会话和 Argon 名单三条红。当前 HEAD 的全量自检对应样例均通过。红版是针对作者已有样例的重跑，不等于证明所有变体均被覆盖。
+
+### R6-01 [P1] 目标门禁仍在输出中时，变异输出不完整也会被判“发现”
+
+位置：[judge.ts:130-145](../scripts/gates/judge.ts#L130-L145)、[selftest.ts:145-155](../scripts/gates/selftest.ts#L145-L155)。`judgeValid` 只在目标门禁 **消失** 的分支检查 `mut.complete`；若目标仍存在、状态由 ✗ 变 ✓ 或原因变化，只检查 `base.complete` 和退出码。自检遇到有头部但缺 `CONTENT_HASH` 的输出仍可生成 `kind:"verdict"` 的结构化结果。
+
+**独立端到端反例：** 隔离副本保留原样基线；一个用于判别的复合变异在同一替换处同时令 G-TRACE 的问题列表清空并抑制 `CONTENT_HASH` 输出。诊断夹具只选三个用例；它明确是为测试“不完整观察+表面目标变化”而注入的两种效应，不宣称这就是现有 81 个单点变异之一。实际提示用例的结构化变异结果为 `complete:false`、`G-TRACE:"✓"`、`exit:1`（G-RED 仍为 ✗，总退出码一致）；原样基线 `complete:true`、G-TRACE 因“缺收据”拦截。真实 `mutation.ts` 却输出：
+
+```text
+✓ 原样副本自检通过
+✓ 变异「独立不完整输出探针」被「改了代码没收据」发现:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+变异校验通过
+INCOMPLETE_PROBE_EXIT=0
+```
+
+`incomplete-case.log` 保存了 `complete:false` 的实际 case，`incomplete-judge.log` 保存原始 judge 对同一基线和结果的判因，`incomplete.log` 是端到端 runner 输出。对照：基线目标门禁按预期以“没有可用沙箱/自身出错”拦下、变异后真实放行，当前判定允许计为发现；变异侧目标自身出错的直接对照则不计发现。两项对照不覆盖此不完整分支。
+
+**要求：** 对需要完整 CLI 观察的目标判因统一核对基线与变异侧完整性，再判断目标变化；对直接判定与 RUNNER 自身被测行为明确例外，避免误把目标本身的预期退出码故障过滤。补“目标仍存在但缺 hash/少列表项/输出截断”及完整输出的同输入双侧回归。
+
+### R6-02 [P1] `killedBy` 在拒收 Proxy 基线 Map 前触发 trap，可传播异常
+
+位置：[judge.ts:150-152](../scripts/gates/judge.ts#L150-L152)。条件先执行 `base instanceof Map`，之后才执行 `types.isProxy(base)`；Proxy 的 `getPrototypeOf` trap 会在 `instanceof` 期间被调用。
+
+**实测：** 对 `killedBy(["G-TRACE"], new Proxy(new Map(), handler), [])`，handler 的 `getPrototypeOf` 即使只返回真实原型也被调用 **1 次**；若抛出中性标记异常，异常直接传出而非无回调拒收。对照中，CaseResult 自身的 getter、setter、Proxy 均被拒且回调为 0；`parseCases(CASE_MARK + "null")`、`killedBy(...,[null])` 和 `evidence` 的 null 输入均未抛错并拒收。因此第五轮原 null/CaseResult 形状已修，但完整消费路径的 Proxy 基线形状未满足本轮明确合同。没有修改内置原型。
+
+**要求：** 先用不触发 trap 的 `types.isProxy` 排除，再做 Map 身份/数据访问；为 `killedBy` 的基线 Map Proxy、results Proxy、嵌套 getter/setter 与合法 Map 对照分别断言回调 0、无异常、无判因。
+
+### R6-03 [P1] ALL_GATES/LOCAL_GATES 只冻结数组，门禁对象仍可修改
+
+位置：[gates.ts:718-719](../scripts/gates/gates.ts#L718-L719)。`Object.freeze([...])` 只冻结容器，数组元素仍是导出的同一批可变 `Gate` 对象；`POLICY` 和嵌套名单在本轮确已冻结。
+
+**实测（仅本进程）：** `Object.isFrozen(ALL_GATES)` 为 true，但七个元素及 `LOCAL_GATES[0]` 均为 false。相同非法 reviewer 输入，调用原 `ALL_GATES` 中 G-REVIEW 的 `run` 返回名单错误；将该元素的 `run` 赋为 `()=>[]` 后，同一调用返回空问题列表。未写文件或改内置原型，也没有宣称真实 PR 沙箱能直接改到裁判进程。这违反本轮对导出 `ALL_GATES/LOCAL_GATES` **深冻结**的明确要求。
+
+**要求：** 冻结实际参与判定的每个 Gate 对象及数组，或导出防御性只读副本并令执行器使用独立不可变内部快照；测试通过数组元素和单独导出 gate 两条引用修改 `run/id/rule`，确认行为不变，同时保留对 `POLICY` 嵌套数组及 `HARNESSES` 的对照。
+
+### R6-04 [P2] 正则注入计数对 Unicode 零宽匹配可能死循环，sticky 正则漏计
+
+位置：[mutation.ts:110-118](../scripts/gates/mutation.ts#L110-L118)、[mutation.ts:153-160](../scripts/gates/mutation.ts#L153-L160)。现有 81 个变异未因这些新输入卡住；以下是独立扩展输入，不是对现有 81 条结果的否定。
+
+**零宽 Unicode：** Node 22 下 `injectionCount("a", /(?:)/u)` 返回 2；同样调用 `injectionCount("😀", /(?:)/u)` 或 `/(?:)/gu` 在 2 秒外部时限内未返回。受控五步重放发现 `lastIndex++` 进入 UTF-16 代理对中间后，Unicode 正则每次仍在 index 0 匹配，`lastIndex` 持续回到 1。隔离副本在源码注释加入该字符、变异 from 用 `/(?:)/u`，整个 `mutation.ts` 在注入预检阶段 3 秒仍无输出；审查脚本仅终止并回收自己创建的子进程。由于预检在 clean/mutant 超时器之前执行，不能指望后者为其提供界限。
+
+**sticky：** `injectionCount("MARK x MARK", /MARK/y)` 和 `/MARK/gy` 返回 1，而普通 `/MARK/`、`/MARK/g` 返回 2；隔离 runner 中两个同样的注释标记没有被预检以“不唯一”拒绝，而是进入执行后因没有目标判因退出 1。sticky 的搜索语义与一般全局搜索不同；若不打算支持，应该显式拒绝而非声称所有正则都已核对唯一。
+
+**要求：** 使用 Unicode-aware 的安全推进（或一旦匹配超过 1 就有界返回并正确处理零宽），对 sticky 明确拒绝或定义并实现可验证的唯一性语义；覆盖 `/u`、`/gu`、代理对、零宽及 `/y`、`/gy` 的零/一/多次样例。不要将这两个当前扩展边界误报为现有 CI 已超时。
+
+### 重点复核：名单、旧问题和每个 gate
+
+- `policy.json` 为 `codex/astra/claude`，默认 `codex`，`argon` 不在名单；`reviewerHarnessOf.claude=claude`。独立七组 G-REVIEW 对照：Claude 审 Claude 作者同时报自审及同 Anthropic；Claude 审其他 agent 使用 Anthropic 模型报同厂商；Astra 审 Codex/OpenAI 报同厂商；Claude 审 Codex/OpenAI、Codex/Astra 审 Claude/Anthropic 放行；Argon 被名单拦。完整自检的相应会话/来源样例也通过。范围仅为已测输入与当前策略，不代表可变 Gate 对象问题可忽略。
+- R5-01：变异侧目标自身出错的原例现在不计发现；基线按预期因无沙箱而自身出错、变异后放行仍计发现（直接判定与“没有沙箱时回退宿主”变异均有观测）。**输出缺 hash 但目标仍存在**的缺口见 R6-01。
+- R5-02：合法 JSON null 与普通 CaseResult getter/setter/Proxy 的原例现在安全拒收；基线 Map Proxy 缺口见 R6-02。
+- R5-03：POLICY、嵌套 `allowedReviewers`、HARNESSES 等已冻结；数组元素问题见 R6-03。
+- R5-04：普通字符串、全局/非全局普通正则的既有零/一/多次自检通过；Unicode/sticky 扩展情况见 R6-04。
+- 八道 gate 的独立负例均运行真实完整 `--local` 并使对应 gate 标 ✗、退出 1：G-TRACE 无收据、G-REVIEW 无 review、G-PROVENANCE 无 hash 轮次、G-RED 无红提交、G-STUB 顶层常量、G-TAUTO 无断言、G-WORKFLOW 必需步骤 `if:false`、G-LAYER 无归属包。每例输出保存在 `G-*.json`，驱动片段和总结果分别为 `gate-probe-cases.fragment.ts` 与 `gate-probes.log`。
+- `gitEnv()` 临时 HOME：在本轮私有 TMPDIR 中，父子进程观察到同一路径；正常退出后无 `gate-home-*` 残留。仅对本轮自己创建的子进程发送 SIGKILL，观察到空 HOME 留存，随后已由探针清理；与收据已披露边界一致。
+
+### 证据与交付
+
+原始日志、最小夹具说明和 SHA-256 清单：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr1-round6-evidence-51f52dd3/`（`MANIFEST.json`；文件内容约 351 KB）。主要文件：`selftest.log`、`mutation.log`、`ci.log`、`red-r5.log`、`red-policy.log`、`reviewer-matrix.log`、`G-*.json`、`gate-probes.log`、`contract-probes.mjs` / `.log`、`boundary-extra.log`、`incomplete*.log`、`sticky.log`、`unicode*.log`、`home-*.log` 和 `fixture-repro.md`。探针只用临时 Git 仓库、中性字符串/文件与模拟会话；未伪造或读取真实凭据。审查只追加报告并修改收据 `review`，不改门禁代码、不写 provenance 状态、不合并；按原则 67，推送并复核后只清理本轮自建的临时 clone、node_modules 和测试副本，保留上述引用证据及其他会话目录。
