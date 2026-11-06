@@ -87,6 +87,11 @@ const M = [
   ["M71 导出的 CC_BUILTIN_TOOLS 不冻结", "src/brief.ts", 'export const CC_BUILTIN_TOOLS: readonly string[] = Object.freeze(["Read",', 'export const CC_BUILTIN_TOOLS: readonly string[] = (["Read",'],
   ["M72 导出的 REPORT_KINDS 不冻结", "src/report-schema.ts", 'export const REPORT_KINDS: readonly string[] = Object.freeze(["started",', 'export const REPORT_KINDS: readonly string[] = (["started",'],
   ["M73 磁盘清理 CLI 退出后不删 g-group-cc-* 目录", "src/adapter.ts", "      removeDir();\n      round.exited = true;", "      round.exited = true;"],
+  ["M74 R5-01 纯数据判定丢弃值为 undefined 的对象自有属性(未声明字段绕过白名单)", "src/plain.ts", "      (out as Record<string, unknown>)[k] = undefined;\n      continue;", "      continue;"],
+  ["M75 R5-01 spawn 选项 cwd 为 undefined 也拒收(可选字段 undefined 不按没给处理)", "src/adapter.ts", "if (o.cwd !== undefined && (typeof o.cwd !== \"string\" || !o.cwd))", "if (Object.hasOwn(o, \"cwd\") && (typeof o.cwd !== \"string\" || !o.cwd))"],
+  ["M76 R5-01 汇报 stage 为 undefined 也报错(可选字段 undefined 不按没给处理)", "src/report-schema.ts", "if (a.stage !== undefined && !nonEmpty(a.stage))", "if (Object.hasOwn(a, \"stage\") && !nonEmpty(a.stage))"],
+  ["M77 R5-02 tools/call 不核对工具名", "mcp/report-mcp.mjs", "    if (name !== tool.name) {", "    if (false) {"],
+  ["M78 R5-02 缺失或非字符串工具名放行", "mcp/report-mcp.mjs", "    if (name !== tool.name) {", "    if (typeof name === \"string\" && name !== tool.name) {"],
 ];
 
 // 不用 --test-timeout:在 node --test <file> 下它限制的是整个文件,文件超过上限会被整体取消(部分执行)。
