@@ -1,0 +1,8 @@
+{
+  "name": "@g-group/adapter-cc-compute",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": { "@g-group/domain": "*" },
+  "gGroup": { "layer": "adapter" }
+}
