@@ -48,6 +48,6 @@
     "model": "gpt-6.1-terra",
     "verdict": "reject",
     "reviewed_hash": "d515493cfe9f3a065c977fc8bc4191c4c72ff62139501c4867efdb2682bb81ef",
-    "notes": "第四轮 reject：外部 getter/Proxy 被调用并放行，合法 JSON null 令 MCP 崩溃；force 环境覆盖与参考存在差异，多凭据单点变异存活。R3-01～04 的原反例已转绿；详见 reviews/feat-cc-compute.md 第四轮。"
+    "notes": "第四轮 reject：外部 getter/Proxy 被调用并放行，合法 JSON null 令 MCP 崩溃；force 环境覆盖与参考存在差异，多凭据单点变异存活。R3-01～04 的原反例已转绿；详见 reviews/feat-cc-compute.md 第四轮。 第四轮补充：首红已含三字段校验，F-04 红绿不能补造最初先红；工具发现和日志存在测试覆盖缺口，详见报告。"
   }
 }
