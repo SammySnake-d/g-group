@@ -716,9 +716,14 @@ test("日志或装配选项是 null、数字、字符串、数组,或事件是 n
 });
 
 test("serialize、prefixLength、prefixHash 收到 null 或非对象请求时抛受控 TypeError 并说明请求必须是对象(R7-06 阳性埋雷)", () => {
-  for (const req of [null, 5, "x"]) for (const fn of [serialize, prefixLength, prefixHash] as ((r: never) => unknown)[]) {
-    assert.throws(() => fn(req as never), (e: unknown) => e instanceof TypeError && / 请求必须是对象$/.test(e.message));
+  for (const req of [null, 5, "x"]) {
+    assert.throws(() => serialize(req as never), (e: unknown) => e instanceof TypeError && e.message === "serialize 请求必须是对象");
+    assert.throws(() => prefixLength(req as never), (e: unknown) => e instanceof TypeError && e.message === "prefixLength 请求必须是对象");
+    assert.throws(() => prefixHash(req as never), (e: unknown) => e instanceof TypeError && e.message === "prefixHash 请求必须是对象");
   }
+  const r = ok(assemble(history(), opts()));
+  assert.equal(Buffer.byteLength(serialize(r.request), "utf8"), r.totalBytes);
+  assert.equal(prefixLength(r.request), r.request.segments.filter((sg) => sg.section !== "tail").reduce((n, sg) => n + sg.bytes, 0));
 });
 
 test("同一条仍可见的已压缩旧消息被重复引用时只页入一次,清单一条、字节只算一次(R7-M3 阳性埋雷)", () => {
