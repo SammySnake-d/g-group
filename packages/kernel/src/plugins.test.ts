@@ -1205,3 +1205,142 @@ test("createRegistry(null) 按没给选项处理,用默认值;注册与拉取照
   const r = await reg.pull("telegram", "g1");
   assert.equal(r.ok && r.events.length, 1);
 });
+
+// —— 第八轮:拉取数组下标不可枚举(R8-05)、宿主时钟回调返回非数字(R8-03)、拒收的原生 Promise 不留未处理拒绝(R8-04)
+test("pull 结果数组的下标是不可枚举数据属性时整批 invalid-batch 并点名下标;普通数组照常拉取(R8-05 审查 R8-M2)", async () => {
+  const hidden: unknown[] = [ev()];
+  Object.defineProperty(hidden, "1", { value: ev({ nativeId: "m-2" }), enumerable: false, writable: true, configurable: true });
+  const reg = createRegistry({ now: () => T0 });
+  reg.register({ kind: "data-source", id: "s", sources: ["g1"], pull: () => hidden });
+  const r = await reg.pull("s", "g1");
+  assert.deepEqual(r, { ok: false, reason: "invalid-batch", detail: "pull 必须给出普通数据数组:pull 结果[1] 不允许不可枚举属性" });
+  const okReg = createRegistry({ now: () => T0 });
+  okReg.register({ kind: "data-source", id: "s", sources: ["g1"], pull: () => [ev(), ev({ nativeId: "m-2" })] });
+  const fine = await okReg.pull("s", "g1");
+  assert.deepEqual(fine.ok && fine.events.map((e) => e.origin.nativeId), ["m-1", "m-2"]);
+});
+
+/** 时钟回调的非法返回值:Symbol.toPrimitive getter(抛错或不抛)、valueOf getter、Proxy、null、字符串数字、NaN、Infinity;被触发就计数。
+ *  墙钟另加超出 Date 范围的有限数(单调时钟不转日期,大数是合法读数) */
+function badClockValues(counter: { n: number }): [string, unknown][] {
+  const prim = {};
+  Object.defineProperty(prim, Symbol.toPrimitive, { get() { counter.n++; return () => 0; } });
+  const primThrows = {};
+  Object.defineProperty(primThrows, Symbol.toPrimitive, { get() { counter.n++; throw new Error("时钟访问器被执行"); } });
+  const viaValueOf = {};
+  Object.defineProperty(viaValueOf, "valueOf", { get() { counter.n++; return () => 0; } });
+  const proxy = new Proxy({}, { get() { counter.n++; return () => 0; } });
+  return [["toPrimitive getter", prim], ["抛错 toPrimitive getter", primThrows], ["valueOf getter", viaValueOf], ["Proxy", proxy], ["null", null], ["字符串", "0"], ["NaN", Number.NaN], ["Infinity", Number.POSITIVE_INFINITY]];
+}
+
+test("now() 返回非有限数字(访问器对象、Proxy、null、字符串、NaN、Infinity、超出范围)或抛错时 pull 返回 clock-invalid,不盖伪造时间,访问器调用 0 次(R8-03 阳性埋雷)", async () => {
+  const counter = { n: 0 };
+  const cases: [string, () => unknown][] = [...badClockValues(counter), ["超出 Date 范围", 9e15] as [string, unknown]].map(([name, v]) => [name, () => v]);
+  cases.push(["抛错", () => { throw new Error("时钟坏了"); }]);
+  for (const [name, now] of cases) {
+    const reg = createRegistry({ now: now as () => number });
+    reg.register(tg());
+    const r = await reg.pull("telegram", "g1");
+    assert.deepEqual(r, { ok: false, reason: "clock-invalid", detail: "宿主墙钟 now() 没有给出有限数字时间,不给事件盖收到时间" }, name);
+  }
+  assert.equal(counter.n, 0);
+});
+
+test("now() 返回有限数字时 pull 照常盖收到时间(R8-03 单开关对照)", async () => {
+  const reg = createRegistry({ now: () => T0 });
+  reg.register(tg());
+  const r = await reg.pull("telegram", "g1");
+  assert.deepEqual(r.ok && r.events.map((e) => e.receivedAt), [new Date(T0).toISOString()]);
+});
+
+test("首次发送时 now() 不是有限数字就拒绝发送(clock-invalid),插件调用 0 次、不建账目,访问器调用 0 次(R8-03 阳性埋雷)", async () => {
+  const counter = { n: 0 };
+  let calls = 0;
+  for (const [name, v] of [...badClockValues(counter), ["超出 Date 范围", 9e15] as [string, unknown]]) {
+    const reg = createRegistry({ now: (() => v) as () => number, monotonic: () => 0 });
+    reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: async (q: { action_id: string }) => { calls++; return { action_id: q.action_id, receiptId: "r" }; } });
+    const r = await reg.send("p", { action_id: "a", payload: "x" });
+    assert.deepEqual(r, { ok: false, state: "rejected", reason: "clock-invalid", detail: "宿主墙钟 now() 没有给出有限数字时间,不记首次尝试、不发送" }, name);
+    assert.equal(reg.delivery("p", "a"), undefined, name);
+  }
+  assert.deepEqual([calls, counter.n], [0, 0]);
+});
+
+test("B1 首次单调读数是访问器对象等非数字时只投递一次、记 NaN 且永久不重试;之后读数恢复为数字也返回 clock-untrusted 不抛错,访问器调用 0 次(R8-03 阳性埋雷)", async () => {
+  const counter = { n: 0 };
+  for (const [name, v] of badClockValues(counter)) {
+    let reads = 0, calls = 0;
+    const reg = createRegistry({ now: () => T0, monotonic: (() => (reads++ === 0 ? v : 1)) as () => number });
+    reg.register({ kind: "outbound-channel", id: "b", endpoint: "A", idempotency: "action-id", idempotencyWindowMs: 1000, send: () => { calls++; return Promise.reject(new Error("未知")); } });
+    const first = await reg.send("b", { action_id: "a", payload: "x" });
+    assert.equal(first.ok === false && first.reason, "send-threw", name);
+    const second = await reg.send("b", { action_id: "a", payload: "x" });
+    assert.deepEqual(second.ok === false && [second.state, second.reason], ["delivery-unknown", "clock-untrusted"], name);
+    const d = reg.delivery("b", "a");
+    assert.deepEqual([d?.clockTrusted, Number.isNaN(d?.maxMonotonic), Number.isNaN(d?.binding.firstAttemptMonotonic), d?.state, calls], [false, true, true, "delivery-unknown", 1], name);
+  }
+  assert.equal(counter.n, 0);
+});
+
+test("B1 首次读数正常、之后单调读数变成访问器对象、Proxy 或抛错时返回 clock-untrusted,不再重试,访问器调用 0 次(R8-03 阳性埋雷)", async () => {
+  const counter = { n: 0 };
+  const later: [string, () => unknown][] = badClockValues(counter).map(([name, v]) => [name, () => v]);
+  later.push(["抛错", () => { throw new Error("时钟坏了"); }]);
+  for (const [name, bad] of later) {
+    let reads = 0, calls = 0;
+    const reg = createRegistry({ now: () => T0, monotonic: (() => (reads++ === 0 ? 1000 : bad())) as () => number });
+    reg.register({ kind: "outbound-channel", id: "b", endpoint: "A", idempotency: "action-id", idempotencyWindowMs: 1000, send: () => { calls++; return Promise.reject(new Error("未知")); } });
+    await reg.send("b", { action_id: "a", payload: "x" });
+    const second = await reg.send("b", { action_id: "a", payload: "x" });
+    assert.deepEqual(second.ok === false && [second.state, second.reason], ["delivery-unknown", "clock-untrusted"], name);
+    assert.deepEqual([reg.delivery("b", "a")?.clockTrusted, reg.delivery("b", "a")?.maxMonotonic, calls], [false, 1000, 1], name);
+  }
+  assert.equal(counter.n, 0);
+});
+
+test("B1 单调读数一直是有限数字时保留期内照常重试(R8-03 单开关对照)", async () => {
+  let mono = 1000, calls = 0;
+  const reg = createRegistry({ now: () => T0, monotonic: () => mono });
+  reg.register({ kind: "outbound-channel", id: "b", endpoint: "A", idempotency: "action-id", idempotencyWindowMs: 1000, send: () => { calls++; return Promise.reject(new Error("未知")); } });
+  await reg.send("b", { action_id: "a", payload: "x" });
+  mono = 1500;
+  const second = await reg.send("b", { action_id: "a", payload: "x" });
+  assert.equal(second.ok === false && second.reason, "send-threw");
+  assert.deepEqual([reg.delivery("b", "a")?.clockTrusted, reg.delivery("b", "a")?.maxMonotonic, calls], [true, 1500, 2]);
+});
+
+/** 在没有 unhandledRejection 处理器的独立子进程里:插件返回一个(已拒绝或稍后拒绝的)原生 Promise,
+ *  可选在实例上定义不可配置的自有 then getter。子进程打印结果后再等 60ms,输出 { result, gets, alive } 与退出码。 */
+function refusedPromiseRun(mode: "send" | "pull", shape: "then-getter" | "plain", timing: "now" | "later"): { code: number; out: unknown } {
+  const code = `
+    import { createRegistry } from ${JSON.stringify(new URL("./plugins.ts", import.meta.url).href)};
+    let gets = 0;
+    const pending = ${JSON.stringify(timing)} === "now" ? Promise.reject(new Error("外部 Promise 失败")) : new Promise((_r, rej) => setTimeout(() => rej(new Error("外部 Promise 稍后失败")), 20));
+    if (${JSON.stringify(shape)} === "then-getter") Object.defineProperty(pending, "then", { get() { gets++; throw new Error("不应读取"); } });
+    const reg = createRegistry({ now: () => ${T0} });
+    if (${JSON.stringify(mode)} === "send") reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => pending });
+    else reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => pending });
+    const r = ${JSON.stringify(mode)} === "send" ? await reg.send("p", { action_id: "a", payload: "x" }) : await reg.pull("p", "g");
+    const state = ${JSON.stringify(mode)} === "send" ? reg.delivery("p", "a")?.state : null;
+    setTimeout(() => console.log(JSON.stringify({ reason: r.reason, state, gets, alive: true })), 60);
+  `;
+  try {
+    return { code: 0, out: JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e", code], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })) };
+  } catch (e) {
+    return { code: (e as { status?: number }).status ?? -1, out: (e as { stdout?: string }).stdout ?? "" };
+  }
+}
+
+test("send / pull 拒收带自有 then getter 的已拒绝或稍后拒绝原生 Promise 时不留未处理拒绝,宿主进程存活,getter 调用 0 次(R8-04 阳性埋雷)", () => {
+  for (const timing of ["now", "later"] as const) {
+    assert.deepEqual(refusedPromiseRun("send", "then-getter", timing), { code: 0, out: { reason: "non-promise-send", state: "delivery-unknown", gets: 0, alive: true } }, timing);
+    assert.deepEqual(refusedPromiseRun("pull", "then-getter", timing), { code: 0, out: { reason: "invalid-batch", state: null, gets: 0, alive: true } }, timing);
+  }
+});
+
+test("send / pull 收到普通的已拒绝或稍后拒绝原生 Promise 时记 send-threw / pull-failed,宿主进程存活(R8-04 单开关对照)", () => {
+  for (const timing of ["now", "later"] as const) {
+    assert.deepEqual(refusedPromiseRun("send", "plain", timing), { code: 0, out: { reason: "send-threw", state: "delivery-unknown", gets: 0, alive: true } }, timing);
+    assert.deepEqual(refusedPromiseRun("pull", "plain", timing), { code: 0, out: { reason: "pull-failed", state: null, gets: 0, alive: true } }, timing);
+  }
+});

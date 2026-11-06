@@ -264,3 +264,82 @@ test("topFunctions:false 与不传一样拒绝顶层函数,只有 true 放行(R7
   assert.deepEqual(off.ok === false && [off.path, off.why], ["x.fn", "只有顶层字段可以是函数"]);
   assert.equal(plainData({ fn }, "x", { topFunctions: true }).ok, true);
 });
+
+// —— 第八轮:路径参数(R8-01)、appendOwn 真实数组目标(R8-02)、数组下标不可枚举(R8-05 / 审查 R8-M2)
+/** 路径参数的各种非法形态:Symbol.toPrimitive getter、带 get 陷阱的 Proxy、toString getter、null、数字;每次被触发就计数 */
+function badPathArgs(counter: { n: number }): unknown[] {
+  const prim = {};
+  Object.defineProperty(prim, Symbol.toPrimitive, { get() { counter.n++; return () => "路径"; } });
+  const str = {};
+  Object.defineProperty(str, "toString", { get() { counter.n++; return () => "路径"; } });
+  const proxy = new Proxy({}, { get(_t, k) { counter.n++; return k === Symbol.toPrimitive ? () => "路径" : undefined; } });
+  return [prim, str, proxy, null, 7];
+}
+
+test("plainData / plainItems 的路径参数不是字符串(toPrimitive getter、Proxy、null、数字)时拒绝,访问器与陷阱调用 0 次(R8-01 阳性埋雷)", () => {
+  const counter = { n: 0 };
+  for (const at of badPathArgs(counter)) {
+    const d = plainData({ x: 1 }, at as never);
+    assert.deepEqual(d.ok === false && [d.path, d.why], ["<路径参数>", "路径参数必须是字符串"]);
+    const it = plainItems(new Array(1), at as never);
+    assert.deepEqual(it.ok === false && [it.path, it.why], ["<路径参数>", "路径参数必须是字符串"]);
+    const bad = plainData({ g: new Proxy({}, {}) }, at as never, { topFunctions: true });
+    assert.deepEqual(bad.ok === false && [bad.path, bad.why], ["<路径参数>", "路径参数必须是字符串"]);
+  }
+  assert.equal(counter.n, 0);
+});
+
+test("路径参数是字符串或不传时照常判定并按它点名(R8-01 单开关对照)", () => {
+  const ok = plainData({ x: 1 }, "路径");
+  assert.deepEqual(ok.ok && { ...(ok.value as object) }, { x: 1 });
+  const sparse = plainItems(new Array(1), "路径");
+  assert.deepEqual(sparse.ok === false && [sparse.path, sparse.why], ["路径[0]", "不允许稀疏数组"]);
+  const dflt = plainItems(new Array(1));
+  assert.deepEqual(dflt.ok === false && [dflt.path, dflt.why], ["输入[0]", "不允许稀疏数组"]);
+});
+
+test("appendOwn 的目标是带访问器下标、不可枚举下标、额外键、稀疏或 Array 子类的真实数组时抛受控 TypeError,访问器调用 0 次且不写入(R8-02 阳性埋雷)", () => {
+  const calls = { n: 0 };
+  const getter: unknown[] = [];
+  Object.defineProperty(getter, "0", { enumerable: true, configurable: true, get() { calls.n++; return "x"; } });
+  const setter: unknown[] = [];
+  Object.defineProperty(setter, "0", { enumerable: true, configurable: true, set() { calls.n++; } });
+  const both: unknown[] = [];
+  Object.defineProperty(both, "0", { enumerable: true, get() { calls.n++; return "x"; }, set() { calls.n++; } });
+  const hidden: unknown[] = [];
+  Object.defineProperty(hidden, "0", { value: "x", enumerable: false, writable: true, configurable: true });
+  const extra = Object.assign(["a"], { k: 1 });
+  class Sub extends Array<unknown> {}
+  const sub = new Sub();
+  sub.push("a");
+  for (const [name, target] of [["getter", getter], ["setter", setter], ["getter+setter", both], ["不可枚举", hidden], ["额外键", extra], ["稀疏", new Array(2)], ["子类", sub]] as const) {
+    const before = target.length;
+    assert.throws(() => appendOwn(target as unknown[], "z"), (e: unknown) => e instanceof TypeError && e.message === "appendOwn 的目标必须是普通数组", name);
+    assert.deepEqual([target.length, Object.hasOwn(target, before)], [before, false], name);
+  }
+  assert.equal(calls.n, 0);
+});
+
+test("appendOwn 对普通数组(空、带元素、元素是对象)照常追加自有元素(R8-02 单开关对照)", () => {
+  for (const start of [[], ["a"], [{ k: 1 }, 2]] as unknown[][]) {
+    const arr = [...start];
+    appendOwn(arr, "z");
+    assert.deepEqual([arr.length, Object.hasOwn(arr, start.length), arr[start.length]], [start.length + 1, true, "z"]);
+  }
+});
+
+test("数组下标是不可枚举数据属性时 plainItems 与 plainData 拒绝并点名下标(R8-05 阳性埋雷,审查 R8-M2)", () => {
+  const hidden: unknown[] = ["a"];
+  Object.defineProperty(hidden, "1", { value: "b", enumerable: false, writable: true, configurable: true });
+  const it = plainItems(hidden, "x");
+  assert.deepEqual(it.ok === false && [it.path, it.why], ["x[1]", "不允许不可枚举属性"]);
+  const d = plainData({ list: hidden }, "x");
+  assert.deepEqual(d.ok === false && [d.path, d.why], ["x.list[1]", "不允许不可枚举属性"]);
+});
+
+test("数组下标都是可枚举数据属性时 plainItems 与 plainData 放行(R8-05 单开关对照)", () => {
+  const it = plainItems(["a", "b"], "x");
+  assert.deepEqual(it.ok && it.items, ["a", "b"]);
+  const d = plainData({ list: ["a", "b"] }, "x");
+  assert.deepEqual(d.ok && { ...(d.value as object) }, { list: ["a", "b"] });
+});
