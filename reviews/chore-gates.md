@@ -528,3 +528,82 @@ fi
 在当前判定实现上调用真实 CLI 的自检夹具：合规先红后绿样例 8 gate 全绿；分别执行无收据、reject 审查、harness 路径穿越、正确实现冒充红、桩下顶层常量、运行时同名额外测试、workflow 写权限和层级反向依赖八个负例，均按预期被对应门禁拦住。负例复用作者样例并只对部分输入改名或改造，不能称为八个全新独立设计样例；RR-09..15 的独立反例才是本轮额外设计/复跑的失败判据。直接对 `loadSession` 的有效 session 与穿越/软链，`turnTouchesRepo` 的仓库内相对路径/仓库外路径/未知写入，以及 workflow 的 read/write/表达式名也做了局部正反例，结果与各自现有条件一致。
 
 CI 最新 `47cdf6a` run `42081461578` 截至查询仍在自检，变异步骤 pending，未有最终结论；之前两次审查提交的 run 已被新提交取消。
+
+
+## 第四轮独立复审（d95eb70）
+
+### 结论
+
+**reject，返修后重新独立复审，不应合并。** 第三轮 RR-09～RR-15 所述原始反例，本轮在隔离夹具中均被当前门禁拦截；作者列出的自检和变异计数也已独立重跑。但下述两个与本轮需求直接相关的问题使“变异被发现”和“测试步骤有真实执行的用例”仍不能成立。请修复后重新验收，不以新增披露替代规则修复。
+
+### 审查对象、身份与基础执行
+
+- 被审 HEAD：`d95eb70da95d8f517a3712db1f9a3d30b429c185`；基线 `origin/main=412ce25278e3b0057e02d792a8394f98aaf21424`。普通独立 clone：`/private/tmp/g-group-pr1-codex-786`，`git rev-parse --git-dir` 返回 `.git`，不是共享 linked worktree；审查期间没有修改门禁代码。
+- 审查会话 `codex:51f52dd3-f00d-4d1a-ace4-866b25735ac0`，实际模型 `gpt-6.1-terra`（OpenAI）；作者收据为 Claude/Anthropic，符合本次跨厂商分工。宿主重启后的续跑沿用同一会话及固定对象。
+- 亲自在仓库根目录运行 `node scripts/gates/run-all.ts --hash --branch=chore/gates --base=origin/main`，原样输出与作者一致：
+
+```text
+aa26d62d735ee09081bb65e022e31e5b8268c81155b5b805dc352ae902601c87
+```
+
+- 固定 Node `v22.22.0`：`npm ci` 退出 0（0 vulnerabilities）；`npm run typecheck`、`npm run lint` 均退出 0；`npm test` 退出 0，5 条通过、0 跳过；`npm run gates:selftest` 退出 0，146/146，165 秒；`GATE_MUTATION_JOBS=2 npm run gates:mutation` 退出 0，原样副本通过，59/59 报被发现（原样 257 秒、变异阶段 549 秒）。自检与变异原始日志分别为 `/private/tmp/g-group-pr1-round4-evidence/selftest-resumed.log` 和 `mutation-resumed.log`。这些运行成功本身不能证明下列故障不存在。
+- GitHub API 和 Actions 原始日志核实 [run 42127039845](https://github.com/SammySnake-d/g-group/actions/runs/42127039845) 对应同一 `d95eb70`，self-check success；测试 `# tests 5`、自检 146/146、59 个变异结果均为 ✓，自检 368 秒、变异原样对照 371 秒加变异 304 秒。作者所说约 11 分钟可理解为变异步骤（原样+变异），非整次 run：API 创建至完成约 18 分钟。该 run 不等于本轮独立审查通过。
+
+### R4-01 [P1] 无关的提示用例故障可把存活变异判为“被发现”
+
+位置：[mutation.ts:92-101](../scripts/gates/mutation.ts#L92-L101)、[mutation.ts:145-150](../scripts/gates/mutation.ts#L145-L150)、[selftest.ts:350-365](../scripts/gates/selftest.ts#L350-L365)。变异判定仅看自检进程 `code !== 0`，不区分预期 gate 断言失败与夹具准备/子进程故障；开启 fail-fast 时，失败细节又被隐藏。
+
+**独立单点反例：** 在 `/private/tmp/g-group-pr1-round4-evidence/hint-counterexample` 的隔离副本，仅令变异清单包含一项对 `gates.ts` 的**纯注释替换**，提示指向确实存在的“改了代码没收据”；在提示用例准备阶段模拟与变异无关的 I/O/夹具异常（仅提示变异运行触发）。实际原样对照通过，变异自检第一条因该准备错误失败；单独调用该 case 的结构化结果为 `pass:false`、`detail:用例自身出错:Error: 模拟与变异无关的用例准备失败`。但真实 `mutation.ts` 打印：
+
+```text
+✓ 原样副本自检通过
+[1/1] ✓ 变异「独立中性注释变异」被自检发现:✗ 拦下:改了代码没收据
+变异校验通过
+HINT_FAULT_EXIT=0
+```
+
+完整输出见 `/private/tmp/g-group-pr1-round4-evidence/hint-fault-resumed.log`。同一中性注释变异在另一份没有故障注入的对照副本中运行全部自检后被判“存活”、总退出 1（`hint-independent-suite.log`）。这证明提示用例的无关失败可将本不应被杀死的变异记成 ✓；并非仅靠静态推断，也不声称作者的 59 条都发生了误判。
+
+**修复要求：** 测试执行异常、超时、加载失败、缺预期观察应与“目标行为被检测”分型，必须基于该变异对应的具名用例、目标 gate 和可核验的预期失败原因计作 killed；不能把任意非零退出码算作发现。补上述无关夹具故障、错误 gate/错误原因、同一变异无故障对照与真正目标故障双侧样例，且 fail-fast 日志应保留可判因的证据。
+
+### R4-02 [P1] 全部测试被 skip/TODO 仍满足“跑过用例”
+
+位置：[test-runner.ts:7-14](../scripts/gates/test-runner.ts#L7-L14)、[test-runner.ts:20-28](../scripts/gates/test-runner.ts#L20-L28)。当前仅取 TAP 的 `# tests N` 并检查 `N>0`，这个数字包含 skipped 和 todo，不能证明有测试实际执行。
+
+**独立反例：** 在只有以下文件的临时目录，直接用被审 `test-runner.ts` 跑 `*.test.ts`：
+
+```ts
+import { test } from "node:test";
+test.skip("not executed", () => {});
+```
+
+真实 Node 22 输出 `# tests 1`、`# pass 0`、`# skipped 1`，runner 却输出 `test-runner:跑了 1 条用例` 并退出 **0**。同样单独跑 `test.todo(...)` 得到 `# tests 1`、`# pass 0`、`# todo 1`，也退出 0。**边界：** 这是测试入口的直接运行结果；没有声称包含该文件的完整 PR 能绕过 G-TAUTO 或实际合并。它说明 g-group#2538 的“测试步骤跑了真用例”仍有反例。
+
+**修复要求：** 统计至少一条实际执行且通过的测试，而非仅注册数；全 skip、全 TODO、部分 skip/有有效通过及零匹配分别测试。收据应说明只检查数量，不推导产品行为覆盖。
+
+### RR-09～RR-15 原反例复放
+
+| 第三轮问题 | 当前独立结果 |
+|---|---|
+| RR-09 | 将原 `self-check` 改成只 echo 的原 fixture 用当前真实 CLI 检查，退出 1，G-WORKFLOW 点名缺 `npm test`、selftest、mutation；另改必需 selftest 步骤为 `if:false`，G-WORKFLOW 明确拦下。 |
+| RR-10 | `self-check.yml` 不再按路径跳过；独立 Git fixture 将 `scripts/gates/vendor.ts` 移至 `docs/vendor.ts`，默认 diff 只报新路径，但当前 `ctxFromGit` 的 `--no-renames` 把旧路径纳入：无收据时 G-TRACE 退出 1。 |
+| RR-11 | 原 helper 红期望 -100、绿期望 3 的 fixture 现在被 G-RED 拦截，报当前规格放到红实现没有按名字失败。 |
+| RR-12 | 同文件一强一弱、弱测试只断言 `typeof` 的原 fixture 现在被 G-STUB 按弱测试名字拦截。 |
+| RR-13 | 明确否定+格式行的原模拟消息现在被 G-PROVENANCE 拦截，整条消息不符合授权指令。 |
+| RR-14 | `printf` 加 shell 注释伪装 hash 调用的原模拟记录现在被 G-PROVENANCE 拦截；当前仍为命令文本校验，不等于宿主级执行证明。 |
+| RR-15 | 同仓库另一 clone 的 OpenAI 产出轮次现在被计入，作者产出厂商集合 `{anthropic,openai}` 与 OpenAI reviewer 冲突，G-PROVENANCE 拦截。 |
+
+六例原始 CLI 输出在 `/private/tmp/g-group-pr1-round4-evidence/replay-round3.log` 及 `round3-replay/*.json`；RR-10 在 `rr10-resumed.log`。均为临时 Git 夹具/模拟会话，没有改真实群聊或凭据。旧反例关闭仅限以上实测形状，不等于该规则全部语义被证明。
+
+### 其他要求与第 7 栏核对
+
+- **每个 gate 的负例：** 在隔离的 gate-probes 复制中注入八个独立输入并调用真实完整 `--local`；G-TRACE（缺收据）、G-REVIEW（无 review）、G-PROVENANCE（无 hash 轮次）、G-RED（无红提交）、G-STUB（顶层常量不能被桩激活）、G-TAUTO（无断言）、G-WORKFLOW（必需步骤 `if:false`）、G-LAYER（无归属包）各自标 ✗、真实 CLI 均退出 1。原始结果分别为 `/private/tmp/g-group-pr1-round4-evidence/G-*.json`，驱动与汇总为 `gate-probes/scripts/gates/selftest.ts` 和 `gate-probes.log`。
+- **单点故障与提示：** 隔离副本单独删除 review、red、tautology 三个 gate，均被现有自检发现；中性注释单独变异在无故障对照中存活、总退出 1（`hint-independent-suite.log`）。不存在的 kill 名单项则立即被拒、退出 1（`wrong-hint.log`）。存在但因无关故障失败的提示见 R4-01。
+- **零用例/glob/脚本：** 空目录+glob、完全写错的 glob，runner 输出 `# tests 0`、退出 1；无 glob 退出 2。G-WORKFLOW 对改回裸 `node --test` 的 `package.json` 实际返回脚本不合规；相同规范脚本的对照无问题。一个 glob 匹配、另一个写错仍退出 0，符合第 7 栏披露的“只要求总数大于零”；全 skip/TODO 的反例未被该披露明确覆盖，见 R4-02。
+- **Argon 跨厂商：** 独立 `G-REVIEW` 输入令作者和 Argon reviewer 均为 Google 模型、无豁免，返回“作者与审查同为 google”；作者自检同形完整 CLI 样例也明确拦下。未测试任何真实豁免。
+- **job env 与 `.npmrc`：** G-WORKFLOW 的结构化检查不覆盖 job 级 env 或 `.npmrc`。以中性的 `NODE_OPTIONS: --no-warnings` 和 `.npmrc` 内容作局部输入，返回无问题；第 7 栏称未逐项断言与实现一致。这是披露的缺口而非安全保证。本轮未对真实认证数据作读取或伪造。
+- **hash 与拒审前提：** `isHashCall` 仍解析工具调用文本/数组，未绑定宿主执行文件、argv、退出码；旧 printf 例被拦并不消除这项披露。policy 允许 argon，代码未检查是否真实发生平台拒审、是否仅用一轮；该前提仍由派发人执行。
+- **测试运行共享缓存：** 静态核对 `ctxFromGit` 按同一文件列表缓存 `ctx.runTests`，G-RED/G-STUB/G-TAUTO 可共用；红快照和变异/桩测试仍分别运行。未以缓存实现本身宣称覆盖真实业务。
+- **引导期边界：** 当前 `origin/main` 尚无 `scripts/gates/run-all.ts` 或 `trusted-gates.yml`；GitHub main 的必需检查是 self-check 和 provenance，后者 app_id 为 null。PR 自述 bootstrap 边界属实；本轮未合并、未写 provenance 状态，trusted-gates 落地后的服务端要求仍需独立实测。
+
+本轮审查记录和收据以外不提交代码或复现夹具。第 7 栏中那些明确未承诺的边界均不可转成通过结论；尤其 R4-01 的“提示错误只会变慢，不会漏判”与实测反例冲突，应修复并更新描述。
