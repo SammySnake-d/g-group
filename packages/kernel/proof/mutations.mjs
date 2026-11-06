@@ -1,4 +1,4 @@
-// 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时;第五轮按 R4-01..R4-07 扩充,含 R4-M1=K92、R4-M2=K91;第六轮按 R5-01..R5-05 扩充,含 R5-M1=K111、R5-M2=K126;第七轮按 R6-01..R6-05 扩充,含 R6-M1=K142、R6-M2=K143;第八轮按 R7-01/02/04/05/06 扩充,含 R7-M1=K156、R7-M2=K157、R7-M3=K158;第九轮按 R8-01..R8-05 扩充,含 R8-M1=K173、R8-M2=K174、R8-M3=K175),在隔离副本里跑本包测试,
+// 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时;第五轮按 R4-01..R4-07 扩充,含 R4-M1=K92、R4-M2=K91;第六轮按 R5-01..R5-05 扩充,含 R5-M1=K111、R5-M2=K126;第七轮按 R6-01..R6-05 扩充,含 R6-M1=K142、R6-M2=K143;第八轮按 R7-01/02/04/05/06 扩充,含 R7-M1=K156、R7-M2=K157、R7-M3=K158;第九轮按 R8-01..R8-05 扩充,含 R8-M1=K173、R8-M2=K174、R8-M3=K175;第十轮按 R9-02 扩充,含 R9-M1=K188、R9-M2=K177、R9-M3=K189),在隔离副本里跑本包测试,
 // 每个变异都必须让至少一条具名测试失败(文件级加载失败不算杀死)。注入点必须在源码里恰好出现 1 次。
 // 原样副本必须全绿(阴性对照)。
 // 每个变异在独立进程组里跑,超时(默认 300s,KERNEL_MUT_TIMEOUT_MS 可改)就杀掉整个进程组,记 ✗ 超时,不算被杀死。
@@ -203,7 +203,7 @@ const M = [
   ["K174 数组下标不查可枚举(审查 R8-M2)", "plain.ts", "    if (!d.enumerable) return bad(`${at}[${i}]`, \"不允许不可枚举属性\");\n", ""],
   ["K175 装配字节数按 UTF-16 长度算(审查 R8-M3)", "assemble.ts", "const bytesOf = (s: string) => Buffer.byteLength(s, \"utf8\");", "const bytesOf = (s: string) => s.length;"],
   ["K176 plainData 不查路径参数类型(R8-01 原错)", "plain.ts", "  if (typeof at !== \"string\") return badPath();\n  try {\n    const fns", "  try {\n    const fns"],
-  ["K177 plainItems 不查路径参数类型(R8-01 原错)", "plain.ts", "  if (typeof at !== \"string\") return badPath();\n  try { return items", "  try { return items"],
+  ["K177 plainItems 不查路径参数类型(R8-01 原错;即审查 R9-M2)", "plain.ts", "  if (typeof at !== \"string\") return badPath();\n  try { return items", "  try { return items"],
   ["K178 appendOwn 只查是真数组且非 Proxy(R8-02 原错)", "plain.ts", "  if (!items(out, \"appendOwn 的目标\").ok) throw", "  if (!Array.isArray(out) || types.isProxy(out)) throw"],
   ["K179 pull 直接用 now() 盖收到时间(R8-03 原错)", "plugins.ts", "      const receivedAt = isoOf(readClock(now));", "      const receivedAt = new Date(now() as number).toISOString();"],
   ["K180 首次发送不查墙钟(R8-03 原错)", "plugins.ts", "        if (isoOf(firstAttemptAt) === undefined) return", "        if (false) return"],
@@ -214,6 +214,9 @@ const M = [
   ["K185 pull 拒收时不挂处理(R8-04 原错)", "plugins.ts", "      if (!isPlainPromise(returned)) quietRefused(returned);\n", ""],
   ["K186 send 拒收时不挂处理(R8-04 原错)", "plugins.ts", "{ quietRefused(pending); return unknown(", "{ return unknown("],
   ["K187 首次单调读数原样存储(R8-03 原错)", "plugins.ts", "        const firstAttemptMonotonic = readClock(monotonic);", "        const firstAttemptMonotonic = monotonic();"],
+  // —— 第十轮:按 PR #6 第九轮审查 R9-02 扩充,含审查自造 R9-M1=K188、R9-M3=K189(R9-M2 与 K177 注入点相同,见上)
+  ["K188 墙钟只认整数毫秒(审查 R9-M1)", "plugins.ts", "  if (!Number.isFinite(ms)) return undefined;", "  if (!Number.isInteger(ms)) return undefined;"],
+  ["K189 原生 Promise 判定不查原型,子类也 await(审查 R9-M3)", "plugins.ts", "  if (Object.getPrototypeOf(x) !== Promise.prototype) return false;\n", ""],
 ];
 
 const TIMEOUT_MS = Number(process.env.KERNEL_MUT_TIMEOUT_MS ?? 300_000);
