@@ -27,6 +27,14 @@ export interface Ledger {
   readonly activity: readonly { readonly roundId: string; readonly commitmentId: string; readonly taskId: string; readonly actor: Actor; readonly kind: "progress" | "close"; readonly text: string | null }[];
 }
 export type Proposal = { readonly id: string; readonly taskId: string; readonly text: string };
+/** Candidate fields are data only. This slice does not interpret or enable them. */
+export interface CandidatePolicy {
+  readonly disposition?: unknown;
+  readonly reconciliation?: unknown;
+  readonly stepBoundary?: unknown;
+  readonly wake?: unknown;
+  readonly labels?: unknown;
+}
 export type Command =
   | { readonly type: "receive"; readonly actionId: string; readonly message: Omit<Message, "handled"> }
   | { readonly type: "process"; readonly actionId: string; readonly seq: number; readonly accepted: boolean; readonly commitments: readonly Proposal[] }
