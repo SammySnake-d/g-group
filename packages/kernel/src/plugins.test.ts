@@ -1451,17 +1451,16 @@ const counters = (): ShapeCounters => ({ gets: 0, traps: 0, ctor: 0, species: 0 
 const refusedOk = (mode: "send" | "pull", shape: Shape) =>
   shape === "plain" ? (mode === "send" ? "send-threw" : "pull-failed") : (mode === "send" ? "non-promise-send" : "invalid-batch");
 
-/** 本进程:插件返回某形态的外部 Promise,返回结果原因、账目状态与计数;made 是插件实际造出的对象 */
-async function shapedInProcess(mode: "send" | "pull", shape: Shape, timing: "now" | "later"): Promise<{ reason: string; state: string | null; c: ShapeCounters; made: Shaped | undefined }> {
+/** 本进程:在调用方建的注册表上注册一个返回某形态外部 Promise 的插件(id "p");返回计数与插件实际造出的对象 */
+function plugShaped(reg: ReturnType<typeof createRegistry>, mode: "send" | "pull", shape: Shape, timing: "now" | "later"): { c: ShapeCounters; made: () => Shaped | undefined } {
   const c = counters();
   let made: Shaped | undefined;
   const make = () => { made = shapedPromise(shape, timing, c); return made.value; };
-  const reg = createRegistry({ now: () => T0 });
   if (mode === "send") reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: make });
   else reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: make });
-  const r = mode === "send" ? await reg.send("p", { action_id: "a", payload: "x" }) : await reg.pull("p", "g");
-  return { reason: r.ok ? "ok" : r.reason, state: mode === "send" ? (reg.delivery("p", "a")?.state ?? null) : null, c, made };
+  return { c, made: () => made };
 }
+const callShaped = (reg: ReturnType<typeof createRegistry>, mode: "send" | "pull") => (mode === "send" ? reg.send("p", { action_id: "a", payload: "x" }) : reg.pull("p", "g"));
 
 /** 无 unhandledRejection 处理器的独立子进程:同一形态依次跑 send/pull × 立即/稍后拒绝四种组合,每种打印一行,
  *  最后等 80ms 再打印存活。返回退出码与各行。 */
@@ -1494,46 +1493,58 @@ const zero = { gets: 0, traps: 0, ctor: 0, species: 0 };
 test("send / pull 拒收自有 constructor getter、自有 constructor 数据属性(内置 Promise 或别的类)、自有 then getter、带 species getter 的可扩展子类的已拒绝或稍后拒绝 Promise:结果为 non-promise-send / invalid-batch,访问器、子类构造、species 调用 0 次,原 constructor 描述符与原型原样恢复(R9-01 阳性埋雷)", async () => {
   for (const shape of HANDLED) for (const mode of ["send", "pull"] as const) for (const timing of ["now", "later"] as const) {
     const name = `${shape}/${mode}/${timing}`;
-    const { reason, state, c, made } = await shapedInProcess(mode, shape, timing);
-    assert.deepEqual([reason, state], [refusedOk(mode, shape), mode === "send" ? "delivery-unknown" : null], name);
-    assert.ok(made, name);
-    assert.deepEqual(Object.getOwnPropertyDescriptor(made.raw, "constructor"), made.ctorBefore, name);
-    assert.equal(Object.getPrototypeOf(made.raw), made.protoBefore, name);
+    const reg = createRegistry({ now: () => T0 });
+    const { c, made } = plugShaped(reg, mode, shape, timing);
+    const r = await callShaped(reg, mode);
+    assert.deepEqual([r.ok === false && r.reason, mode === "send" ? reg.delivery("p", "a")?.state : null], [refusedOk(mode, shape), mode === "send" ? "delivery-unknown" : null], name);
+    const m = made();
+    assert.ok(m, name);
+    assert.deepEqual(Object.getOwnPropertyDescriptor(m.raw, "constructor"), m.ctorBefore, name);
+    assert.equal(Object.getPrototypeOf(m.raw), m.protoBefore, name);
     await new Promise((ok) => setTimeout(ok, 20));
     assert.deepEqual(c, zero, name);
   }
 });
 
 test("无全局 unhandledRejection 处理器的子进程里,上述五种形态在 send / pull × 立即 / 稍后拒绝下都被拒收且进程存活,访问器、子类构造、species 调用 0 次(R9-01 阳性埋雷)", async () => {
-  assert.deepEqual((await shapedInProcess("pull", "ctor-getter", "now")).reason, "invalid-batch");
+  const reg = createRegistry({ now: () => T0 });
+  const { c } = plugShaped(reg, "pull", "ctor-getter", "now");
+  const r = await callShaped(reg, "pull");
+  assert.deepEqual([r.ok === false && r.reason, c], ["invalid-batch", zero]);
   for (const shape of HANDLED) {
-    const r = shapedSubprocess(shape);
+    const run = shapedSubprocess(shape);
     const expect = (["send", "pull"] as const).flatMap((mode) => (["now", "later"] as const).map((timing) => ({ mode, timing, reason: refusedOk(mode, shape), state: mode === "send" ? "delivery-unknown" : null, ...zero })));
-    assert.deepEqual(r, { code: 0, lines: [...expect, { alive: true }] }, shape);
+    assert.deepEqual(run, { code: 0, lines: [...expect, { alive: true }] }, shape);
   }
 });
 
 test("普通已拒绝或稍后拒绝的原生 Promise 照常 await,记 send-threw / pull-failed,子进程存活,不在实例上留下 constructor(R9-01 单开关对照)", async () => {
   for (const mode of ["send", "pull"] as const) for (const timing of ["now", "later"] as const) {
-    const { reason, c, made } = await shapedInProcess(mode, "plain", timing);
-    assert.equal(reason, refusedOk(mode, "plain"), `${mode}/${timing}`);
-    assert.deepEqual([made && Object.hasOwn(made.raw, "constructor"), c], [false, zero], `${mode}/${timing}`);
+    const reg = createRegistry({ now: () => T0 });
+    const { c, made } = plugShaped(reg, mode, "plain", timing);
+    const r = await callShaped(reg, mode);
+    assert.equal(r.ok === false && r.reason, refusedOk(mode, "plain"), `${mode}/${timing}`);
+    const m = made();
+    assert.deepEqual([m && Object.hasOwn(m.raw, "constructor"), c], [false, zero], `${mode}/${timing}`);
   }
-  const r = shapedSubprocess("plain");
-  assert.deepEqual(r, { code: 0, lines: [
+  const run = shapedSubprocess("plain");
+  assert.deepEqual(run, { code: 0, lines: [
     { mode: "send", timing: "now", reason: "send-threw", state: "delivery-unknown", ...zero }, { mode: "send", timing: "later", reason: "send-threw", state: "delivery-unknown", ...zero },
     { mode: "pull", timing: "now", reason: "pull-failed", state: null, ...zero }, { mode: "pull", timing: "later", reason: "pull-failed", state: null, ...zero }, { alive: true },
   ] });
 });
 
-test("排除在本片合同外的 Proxy、不可配置的自有 constructor getter、冻结子类(用户 g-group#3140 选 A,由集成前插件进程隔离兜底):仍被拒收,陷阱、访问器、子类构造、species 调用 0 次,对象不被改写;不断言进程存活(R9-01 记录性)", async () => {
+test("排除在本片合同外的 Proxy、不可配置的自有 constructor getter、冻结子类(用户 g-group 第 3140 条选 A,由集成前插件进程隔离兜底):仍被拒收,陷阱、访问器、子类构造、species 调用 0 次,对象不被改写;不断言进程存活(R9-01 记录性)", async () => {
   for (const shape of EXCLUDED) for (const mode of ["send", "pull"] as const) for (const timing of ["now", "later"] as const) {
     const name = `${shape}/${mode}/${timing}`;
-    const { reason, state, c, made } = await shapedInProcess(mode, shape, timing);
-    assert.deepEqual([reason, state], [refusedOk(mode, shape), mode === "send" ? "delivery-unknown" : null], name);
+    const reg = createRegistry({ now: () => T0 });
+    const { c, made } = plugShaped(reg, mode, shape, timing);
+    const r = await callShaped(reg, mode);
+    assert.deepEqual([r.ok === false && r.reason, mode === "send" ? reg.delivery("p", "a")?.state : null], [refusedOk(mode, shape), mode === "send" ? "delivery-unknown" : null], name);
     assert.deepEqual(c, zero, name);
-    assert.ok(made, name);
-    assert.deepEqual(Object.getOwnPropertyDescriptor(made.raw, "constructor"), made.ctorBefore, name);
-    made.cleanup(); // 测试进程自己给底层 Promise 挂处理(关掉计数后),不让本进程留下未处理拒绝
+    const m = made();
+    assert.ok(m, name);
+    assert.deepEqual(Object.getOwnPropertyDescriptor(m.raw, "constructor"), m.ctorBefore, name);
+    m.cleanup(); // 测试进程自己给底层 Promise 挂处理(关掉计数后),不让本进程留下未处理拒绝
   }
 });
