@@ -1101,7 +1101,7 @@ test("R4-04:多凭据引用:每一个位置放非引用都被拒绝、不起进�
   assert.equal(launches(f.record)[0]!.env.G_GROUP_CREDENTIAL_REFS, JSON.stringify(refs));
 });
 
-type RpcReply = { id: unknown; result?: { tools?: unknown[]; isError?: boolean; content?: { text: string }[] }; error?: { code: number } };
+type RpcReply = { id: unknown; result?: { tools?: unknown[]; isError?: boolean; content?: { text: string }[] }; error?: { code: number; message?: string } };
 /** 向真实 report MCP 子进程 stdin 逐行写入,收集全部回复、退出码与 stderr */
 function rpc(lines: string[], env: Record<string, string> = {}) {
   const out = spawnSync(process.execPath, [REPORT_MCP_PATH], { input: `${lines.join("\n")}\n`, encoding: "utf8", env: { PATH: process.env.PATH ?? "", ...env }, timeout: 10_000 });
@@ -1271,4 +1271,94 @@ test("磁盘清理:每轮的 g-group-cc-* 临时目录运行中存在,CLI 结束
   const d4 = mcpDir(launches(blocked.record)[1]!);
   assert.notEqual(d4, d3);
   assert.equal(fs.existsSync(d4), false);
+});
+
+// ---------------------------------------------------------------- 第五轮审查 R5-01、R5-02
+// R5-01 合同:未声明的自有字段按安全取得的描述符拒收,值为 undefined 也不能绕过白名单;
+// 声明过的可选字段(spawn 选项 cwd/handoff、汇报 stage/needs/constraintVer/openQuestions/doneSideEffects、适配器选项)
+// 值为 undefined 时按没给处理;必填字段为 undefined 按缺失拒收。
+
+/** 中性启动标记:runner 只往本测试目录下的 launch-marker.txt 追加一行 "launched" 后退出,用来判断适配器有没有起进程。
+ *  不含任何密钥或凭据;命令行带测试目录,afterEach 按目录回收 */
+function markerRunner() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fake-cc-"));
+  ownDirs.add(dir);
+  const marker = path.join(dir, "launch-marker.txt");
+  const code = 'require("node:fs").appendFileSync(process.argv[1], "launched\\n")';
+  return { marker, options: { runner: { command: process.execPath, args: ["-e", code, marker, `--fake-dir=${dir}${path.sep}`] }, reapForceMs: 1500 } };
+}
+
+test("R5-01:checkBrief、checkSnapshot、reportErrors 遇到值为 undefined 的未声明自有字段一律拒收;去掉该字段放行,声明过的可选字段为 undefined 按没给处理、必填字段为 undefined 拒收(单开关对照)", () => {
+  for (const key of ["memory", "soul"]) {
+    const r = checkBrief(brief({ [key]: undefined }));
+    assert.equal(r.ok, false, key);
+    assert.match(r.ok ? "" : r.reason, new RegExp(`额外字段 ${key}`), key);
+  }
+  assert.equal(checkBrief(brief({ task: undefined })).ok, false);
+  assert.deepEqual(checkBrief(brief()), { ok: true, brief: brief() });
+
+  const snap = () => ({ constraintVer: 3, openQuestions: ["q"], doneSideEffects: [] as string[] });
+  const badSnap = checkSnapshot({ ...snap(), outside: undefined });
+  assert.equal(badSnap.ok, false);
+  assert.match(badSnap.ok ? "" : badSnap.reason, /额外字段 outside/);
+  assert.equal(checkSnapshot({ ...snap(), constraintVer: undefined }).ok, false);
+  assert.deepEqual(checkSnapshot(snap()), { ok: true, snapshot: snap() });
+
+  const rep = { kind: "started", summary: "开始" };
+  assert.deepEqual(reportErrors({ ...rep, memory: undefined }), ["未知字段 memory"]);
+  assert.deepEqual(reportErrors(rep), []);
+  assert.deepEqual(reportErrors({ ...rep, stage: undefined, needs: undefined, constraintVer: undefined, openQuestions: undefined, doneSideEffects: undefined }), []);
+  assert.deepEqual(reportErrors({ kind: "milestone", summary: "x", stage: undefined }), ["milestone 缺 stage"]);
+  assert.deepEqual(reportErrors({ ...rep, summary: undefined }), ["summary 须为非空字符串"]);
+});
+
+test("R5-01:spawn 的 brief 带 memory/soul:undefined、选项或 handoff 带 outside:undefined 时拒收且不起进程(中性启动标记不出现);去掉该字段的同一输入照常启动,选项 cwd/handoff 为 undefined 按没给处理(单开关对照)", async () => {
+  const m = markerRunner();
+  const a = createComputeAdapter(m.options);
+  const handoff = () => ({ constraintVer: 2, openQuestions: [] as string[], doneSideEffects: [] as string[] });
+  const cases: [string, unknown, unknown, RegExp][] = [
+    ["brief.memory:undefined", brief({ memory: undefined }), undefined, /额外字段 memory/],
+    ["brief.soul:undefined", brief({ soul: undefined }), undefined, /额外字段 soul/],
+    ["spawn 选项 outside:undefined", brief(), { outside: undefined }, /拒绝 outside/],
+    ["handoff outside:undefined", brief(), { handoff: { ...handoff(), outside: undefined } }, /额外字段 outside/],
+  ];
+  for (const [name, b, o, re] of cases) {
+    const r = await a.spawn(b, asOpts(o));
+    assert.equal(r.ok, false, name);
+    assert.match(r.ok ? "" : r.reason, re, name);
+  }
+  assert.equal(fs.existsSync(m.marker), false);
+  const controls: [string, unknown, unknown][] = [
+    ["brief 不带额外字段", brief(), undefined],
+    ["spawn 选项为空对象", brief(), {}],
+    ["spawn 选项 cwd、handoff 为 undefined", brief(), { cwd: undefined, handoff: undefined }],
+    ["handoff 不带额外字段", brief(), { handoff: handoff() }],
+  ];
+  for (const [name, b, o] of controls) {
+    const r = await a.spawn(b, asOpts(o));
+    assert.ok(r.ok, name);
+    await within(a.settled(r.computeId));
+  }
+  assert.equal(fs.readFileSync(m.marker, "utf8"), "launched\n".repeat(controls.length));
+});
+
+const callNamed = (id: number, params: unknown) => JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call", params });
+
+test("R5-02:report MCP 的 tools/call 只认 report_progress:未知、缺失或非字符串工具名回 -32602 协议错误,不回已记录、不写 REPORT_LOG;同一参数换成合法名称照常接收并记录(单开关对照)", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fake-cc-"));
+  ownDirs.add(dir);
+  const log = path.join(dir, "report.jsonl");
+  const args = { kind: "started", summary: "开始" };
+  const name = (reportToolDefinition() as { name: string }).name;
+  const r = rpc([list(1), callNamed(2, { name: "unknown_tool", arguments: args }), callNamed(3, { arguments: args }), callNamed(4, { name: 7, arguments: args }), callNamed(5, { name, arguments: args })], { REPORT_LOG: log });
+  assert.equal(r.status, 0);
+  assert.equal(r.stderr, "");
+  assert.deepEqual(r.replies.map((x) => [x.id, x.error?.code ?? null, x.result?.isError ?? null]), [[1, null, null], [2, -32602, null], [3, -32602, null], [4, -32602, null], [5, null, false]]);
+  assert.deepEqual(((r.replies[0]!.result?.tools ?? []) as { name: string }[]).map((t) => t.name), [name]);
+  assert.match(r.replies[1]!.error?.message ?? "", /unknown_tool/);
+  assert.equal(r.replies.slice(1, 4).some((x) => x.result !== undefined), false);
+  assert.equal(r.replies[4]!.result?.content?.[0]?.text, "已记录。");
+  const recs = fs.readFileSync(log, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { valid: boolean; kind: string });
+  assert.deepEqual(recs.map((x) => [x.valid, x.kind]), [[true, "started"]]);
+  assert.deepEqual(reportErrors(args), []);
 });
