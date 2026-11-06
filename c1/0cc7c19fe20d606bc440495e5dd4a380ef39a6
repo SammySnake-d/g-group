@@ -1,0 +1,23 @@
+packages/domain/src/contact.ts
+  s_233b6d928b260b::t_817f5a724d3fc5 205,209-217,221-237,241-252,266-278,283-287,292-301,313-325,342-359,364-369,380-394
+packages/domain/src/helper.ts
+  s_233b6d928b260b::t_99a61be073e794 38-57,62
+packages/domain/src/plain.ts
+  s_233b6d928b260b::t_7030aee7a3ee23 36-43,98-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c10cc7c19fe20d606bc440495e5dd4a380ef39a6",
+  "prompts": {},
+  "sessions": {
+    "s_233b6d928b260b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1afe1-6e07-78f2-8a32-e312349378e7",
+        "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
