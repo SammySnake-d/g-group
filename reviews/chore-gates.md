@@ -607,3 +607,79 @@ test.skip("not executed", () => {});
 - **引导期边界：** 当前 `origin/main` 尚无 `scripts/gates/run-all.ts` 或 `trusted-gates.yml`；GitHub main 的必需检查是 self-check 和 provenance，后者 app_id 为 null。PR 自述 bootstrap 边界属实；本轮未合并、未写 provenance 状态，trusted-gates 落地后的服务端要求仍需独立实测。
 
 本轮审查记录和收据以外不提交代码或复现夹具。第 7 栏中那些明确未承诺的边界均不可转成通过结论；尤其 R4-01 的“提示错误只会变慢，不会漏判”与实测反例冲突，应修复并更新描述。
+
+
+## 第五轮独立复审（027b304）
+
+### 结论
+
+**reject，返修后重审，不应合并。** R4-01 的原「提示用例准备故障」反例已修，R4-02 的全 skip/TODO 反例已修；但变异判因的另一条分支仍会把目标门禁自身出错误算成“发现”。另外本轮明确要求的外部输入与导出策略合同尚未满足；新加的注入点唯一性检查也漏掉正则表达式。事先修改内置原型的情况按用户 g-group#2662 已排除，本轮没有以此打回。
+
+### 对象和复现
+
+- 被审 HEAD：`027b304765cc5a88d58f828a1cce2a629dd392d9`；base `origin/main=412ce25278e3b0057e02d792a8394f98aaf21424`。在普通独立 clone `/private/tmp/g-group-pr1-codex-786` 运行；完成后清理 clone 和本轮临时副本，证据保留目录见文末。
+- 审查会话 `codex:51f52dd3-f00d-4d1a-ace4-866b25735ac0`，实际模型 `gpt-6.1-terra`（OpenAI）；作者 Claude/Anthropic。本次未由作者自审。
+- 仓库根目录运行 `node scripts/gates/run-all.ts --hash --branch=chore/gates --base=origin/main`，原样输出与作者声明一致：
+
+```text
+096a4d8786ad0cc2ea3eadf4e6d6cd29b887ffd7c7336a1558f031ceeb631b67
+```
+
+- Node `v22.22.0` 独立实跑：`npm ci`、typecheck、lint 退出 0；`npm test` 8 条通过、0 skip/todo，退出 0；`gates:selftest` 166/166，退出 0；`GATE_MUTATION_JOBS=2 npm run gates:mutation` 66/66 报发现、退出 0（原样副本 113 秒，变异阶段 234 秒）。这些是列举样例的实际结果，不抵消下方反例。
+- GitHub [self-check 42202442174](https://github.com/SammySnake-d/g-group/actions/runs/42202442174) 对应同一 HEAD，最终 success。日志显示测试实际通过 8 条、自检 166/166、变异进度 66/66。未以该 run 代替本机独立复现。
+
+### R5-01 [P1] 原预期拦截被门禁自身异常替代，仍被误认作变异发现
+
+位置：[judge.ts:69-72](../scripts/gates/judge.ts#L69-L72)。`gateErrors` 只在“基线放行、变异后拦截”分支被检查；基线 `expectHit` 包含目标而变异不包含时直接算发现，即使变异结果记录同一目标 `gateErrors`。
+
+**端到端反例：** 在隔离副本中，变异只将 `gates.ts` 的中性注释替换为另一注释；副本中另预置一个只在该标记出现时触发的 G-TRACE 执行错误，用以模拟与门禁判因无关的运行故障。基线“改了代码没收据”按 `缺收据` 正常拦下；变异后同一 G-TRACE 输出 `门禁自身出错:独立模拟门禁执行故障`，结构化结果为 `gateErrors=["G-TRACE"]` 且无 `expectHit`。真实 `mutation.ts` 仍输出：
+
+```text
+✓ 原样副本自检通过
+✓ 变异「中性注释及门禁故障」被「改了代码没收据」发现:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✗)
+变异校验通过
+GATE_ERROR_EXIT=0
+```
+
+原始日志 `gate-error-corrected.log`。第一次 fixture 因自身检测字面量也含标记而使原样失败，已纠正为拆分字符串后重跑；上面是纠正后的实际结果。该故障没有改变被审原仓库，反例不主张当前 66 个变异都误判。
+
+**要求：** 对目标门禁的任意执行错误、观测缺失先排除，再判断两类有效行为变化；保留真实目标放行、真实目标拒绝、原违规目标改为自身异常、CLI/夹具异常四组对照，并确保结构化判因与总退出码一致。
+
+### R5-02 [P1] 外部结构化结果没有验证：getter/Proxy 被触发，JSON null 抛错
+
+位置：[judge.ts:44-50](../scripts/gates/judge.ts#L44-L50)、[judge.ts:63-80](../scripts/gates/judge.ts#L63-L80)。本轮要求外部输入带 getter/setter/Proxy 时不调用即拒收，合法 JSON null 不抛错。当前 `evidence` 直接读 `mut.pass` 和其他字段，`parseCases` 把 `JSON.parse` 的任意值强制断言为 `CaseResult`。
+
+**实测：** `evidence` 的 `mut.pass` 设置 getter 后，该 getter 被调用 1 次，函数返回 `undefined`；传 Proxy 的只读 `get` trap 被调用 4 次；并非拒收前零调用。`parseCases(CASE_MARK + "null")` 本身返回含 null 的数组，传给 `killedBy` 时抛 `TypeError: Cannot read properties of null (reading 'name')`；合法 JSON 对象缺少 `expectHit` 等字段也可抛 TypeError。探针只创建本地对象，没有修改内置原型；日志 `contract-probe.log`。setter 单独探针回调 0 次，但返回 `undefined`，没有观察到可区分的拒收结果。
+
+**要求：** 在信任边界先以可证明不会触发用户代码的方式检查并拒收非数据对象/可疑访问器/Proxy（必要时仅接受已解析的 JSON 文本或以明确可靠的宿主原语检测 Proxy），对 `null`、数组、缺字段、错误字段类型和非法枚举 fail-closed，不访问 getter、不把异常升级为未捕获崩溃。回归须断言 getter/setter/Proxy 回调次数为 0，并覆盖完整消费路径，而非仅 JSON.parse。
+
+### R5-03 [P1] 导出的策略对象可变，可改变后续审查结论
+
+位置：[gates.ts:13-17](../scripts/gates/gates.ts#L13-L17)、[gates.ts:49-65](../scripts/gates/gates.ts#L49-L65)。`POLICY` 是可变普通对象，`allowedReviewers` 也是可变数组；其他导出的 `PROTECTED_CONTEXTS`、`LAYERS`、`REQUIRED_GATE_SCRIPTS` 亦未冻结。
+
+**实测（同一进程、未改内置原型）：** 对 `review.run` 输入审查人 `unlisted`，原样返回“审查人必须是 codex 或 astra 或 argon”；对导出的 `POLICY.allowedReviewers.push("unlisted")` 后，同一输入返回空问题列表。未修改文件、未推远端，也未声称真实 PR 已被放行；这直接违反本轮「导出的策略对象不可变」要求。
+
+**要求：** 对实际参与判定的导出策略做不可变边界（含嵌套数组和映射；需要时避免导出可变引用），或返回只读防御性副本并令运行时判定使用不可变内部快照；验证对外赋值、push、删除与嵌套字段修改均不能改变随后门禁行为。
+
+### R5-04 [P2] 注入点唯一性只覆盖字符串，不覆盖现有正则变异
+
+位置：[mutation.ts:123-130](../scripts/gates/mutation.ts#L123-L130)。检查仅在 `typeof m.from === "string"` 时执行，而当前已有 `RegExp` 和 `new RegExp` 注入点。
+
+**实测：** 隔离目标文件里写两处相同的 `R5_UNIQUE_REGEX_MARK`，变异的 `from` 使用 `/R5_UNIQUE_REGEX_MARK/`。实际没有出现“注入点不唯一”错误，程序通过原样基线并进入该变异；它最终因没有目标判因而退出 1，而非在注入前拒绝。字符串注入点同样出现两次时，程序按预期立即拒绝（`unique-string.log` / `regex-unique.log`）。这里证明的是唯一性合同缺口，不声称该例最终冒充通过。
+
+**要求：** 对字符串及正则注入点都验证精确匹配次数为 1，覆盖全局/非全局正则、零次和多次，并在任何变异执行前 fail-closed。
+
+### 第四轮问题与新增规则的复核
+
+| 项目 | 本轮实际观察 |
+|---|---|
+| R4-01 原准备故障 | 独立隔离副本复跑：原样通过；中性注释变异+提示用例准备故障被判未发现，跑完 4 条、失败 1 条为 `error`、整体退出 1（`hint-fault.log`）。不存在的提示名也被拒。另一分支缺口见 R5-01。 |
+| R4-02 | 全 skip、全 TODO、通过+skip 分别退出 1；1 条实际通过退出 0。|
+| self-check env | 顶层 `GATE_SELFTEST_ONLY`、job `GATE_MUTATION_ONLY`、步骤 `GATE_SELFTEST_FIRST` 均被 G-WORKFLOW 拦下；仅有既定 `GATE_SANDBOX_IMAGE` 的原 workflow 放行。 |
+| 每个门禁负例 | 独立临时夹具对 G-TRACE、G-REVIEW、G-PROVENANCE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 各构造应失败输入；真实完整 CLI 均退出 1 且对应 gate 标 ✗。汇总和八份输出见 `gate-probes.log` / `G-*.json`。 |
+| 旧 RR-09～15 | 再跑第三轮六个原 fixture 均退出 1：echo workflow、红绿 helper、弱测试、否定豁免、printf 冒充 hash、另一 clone 厂商漏计分别被对应 gate 拦下；RR-10 的路径跳过已撤销。 |
+| 第 7 栏 | 已说明目标手写过宽、hash 仅文本解析、job 其他 env/.npmrc 与临时 Argon 使用前提不由门禁判断；这些不应解释为已验证通过。R5-01 说明“门禁自身出错不算发现”尚不完全成立。 |
+
+### 证据与交付边界
+
+可复核日志及 SHA-256 清单：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr1-round5-evidence-51f52dd3/`（约 283 KB，`MANIFEST.json`）。保留 `selftest.log`、`mutation.log`、`gate-probes.log`、`G-*.json`、`hint-fault.log`、`gate-error-corrected.log`、`unique-string.log`、`regex-unique.log`、`contract-probe.log`、`replay-round3.log`、四份 test-runner 对照和 CI 原始日志；不保留临时 clone、构建产物或 node_modules。实际执行中的所有测试输入与模拟会话均为临时夹具，没有读取或伪造真实凭据。仅追加此报告与修改收据 `review`，未修改产品/门禁代码、远端状态或合并 PR。
