@@ -7,6 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { GIT_SAFE_ARGS, gitEnv, type Receipt } from "./lib.ts";
+import * as judge from "./judge.ts";
 import { CASE_MARK, type CaseResult, evidence, type Kind, killedBy, parseGateOutput } from "./judge.ts";
 import { verdict as runnerVerdict } from "./test-runner.ts";
 import { vendorOf } from "./vendor.ts";
@@ -169,6 +170,29 @@ const ALL_OK: Record<string, "✓" | "✗"> = Object.fromEntries(GATE_IDS.map((g
 const BLOCKED = (o: Partial<CaseResult> = {}): CaseResult => ({ name: "改了代码没收据", pass: true, kind: "ok", direct: false, expect: "缺收据", exit: 1, gates: { ...ALL_OK, "G-TRACE": "✗" }, expectHit: ["G-TRACE"], gateErrors: [], ...o });
 const ALLOWED = (o: Partial<CaseResult> = {}): CaseResult => ({ name: "合规:先红后绿、跨厂商审查、来源核对通过", pass: true, kind: "ok", direct: false, expect: null, exit: 0, gates: { ...ALL_OK }, expectHit: [], gateErrors: [], ...o });
 const notKilled = (target: string[], base: CaseResult, mut: CaseResult) => { const ev = evidence(target, base, mut); return ev === undefined ? undefined : `不该算发现,却给出判因:${ev}`; };
+// R5-02:外部结构化结果的陷阱对象;计数器记录 getter/setter/Proxy 回调次数
+function traps() {
+  let calls = 0;
+  const getterObj = BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] }) as unknown as Record<string, unknown>;
+  Object.defineProperty(getterObj, "pass", { get: () => { calls++; return false; }, enumerable: true });
+  const setterObj = { ...BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] }) } as unknown as Record<string, unknown>;
+  Object.defineProperty(setterObj, "why", { set: () => { calls++; }, enumerable: true });
+  const proxyObj = new Proxy(BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] }), { get: (t, k) => { calls++; return Reflect.get(t, k); }, ownKeys: (t) => { calls++; return Reflect.ownKeys(t); }, getOwnPropertyDescriptor: (t, k) => { calls++; return Reflect.getOwnPropertyDescriptor(t, k); }, has: (t, k) => { calls++; return Reflect.has(t, k); }, getPrototypeOf: (t) => { calls++; return Reflect.getPrototypeOf(t); } });
+  const nestedGetter = BLOCKED({ pass: false, kind: "verdict", exit: 0, expectHit: [] }) as unknown as Record<string, unknown>;
+  nestedGetter.gates = Object.defineProperty({}, "G-TRACE", { get: () => { calls++; return "✓"; }, enumerable: true });
+  return { calls: () => calls, list: { getterObj, setterObj, proxyObj, nestedGetter } as Record<string, unknown> };
+}
+// 对外部结构化结果跑完整消费路径(evidence 当作变异结果、当作基线、killedBy),不得抛错、不得回调、不得给出判因
+function rejects(bad: unknown): string | undefined {
+  const asCase = bad as CaseResult;
+  try {
+    const a = evidence(["G-TRACE"], BLOCKED(), asCase);
+    const b = evidence(["G-TRACE"], asCase, BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] }));
+    const c = killedBy(["G-TRACE"], new Map([["改了代码没收据", BLOCKED()]]), [asCase]);
+    if (a !== undefined || b !== undefined || c !== undefined) return `非法结果被当成证据:${JSON.stringify([a, b, c])}`;
+  } catch (e) { return `消费非法结果时抛错:${(e as Error).message}`; }
+  return undefined;
+}
 const SC_STEP_TEST = "      - name: 测试\n        run: npm test\n";
 const SC_WF = (steps = SC_STEP_SELF + SC_STEP_MUT, jobExtra = "", testStep = SC_STEP_TEST) => `on: pull_request\npermissions: { contents: read }\njobs:\n  self-check:\n    runs-on: ubuntu-latest\n${jobExtra}    steps:\n${testStep}${steps}`;
 const TEST_SCRIPT = 'node scripts/gates/test-runner.ts "packages/**/*.test.ts" "scripts/gates/*.test.ts"';
@@ -299,6 +323,74 @@ export const CASES: Case[] = [
   { name: "g-group#2538 self-check 缺 npm test 步骤", head: SC(SC_WF(undefined, "", "")), expect: "缺必需步骤:run 为 npm test" },
   { name: "g-group#2538 测试入口 0 条用例判失败", direct: () => { const r = runTestRunner({}); return r.code === 1 && r.out.includes("跑了 0 条用例,不算通过") ? undefined : `0 条用例没有判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
   { name: "g-group#2538 测试入口 1 条通过的用例判通过(阴性对照)", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest("ok", () => {});\n' }); return r.code === 0 ? undefined : `1 条通过的用例没有判通过(退出 ${r.code})\n${r.out}`; }, expect: null },
+  { name: "R5-01 目标门禁由预期拦下变为门禁自身出错不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-TRACE": "✗" }, expectHit: [], gateErrors: ["G-TRACE"] })), expect: null },
+  { name: "R5-01 目标门禁没跑(观测缺失)不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK, "G-TRACE": undefined as unknown as "✓" }, expectHit: [] })), expect: null },
+  { name: "R5-01 目标门禁真实放行算发现(对照)", direct: () => (evidence(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] })) ? undefined : "真实放行没算发现"), expect: null },
+  { name: "R5-01 目标门禁真实拒绝算发现(对照)", direct: () => (evidence(["G-RED"], ALLOWED(), ALLOWED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-RED": "✗" } })) ? undefined : "真实拒绝没算发现"), expect: null },
+  { name: "R5-01 命令行与夹具异常不算发现(对照)", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "crash", exit: 2, gates: {}, expectHit: [] })) ?? notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "error", exit: null, gates: {}, expectHit: [] })), expect: null },
+  { name: "R5-01 结构化判因与退出码不一致不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK }, expectHit: [] })), expect: null },
+  { name: "R5-02 parseCases 遇到 null/数组/缺字段/错类型/非法枚举不抛错且全部拒收", direct: () => {
+    const lines = ["null", "[]", "1", '"x"', '{"name":"a"}', JSON.stringify({ ...BLOCKED(), pass: "yes" }), JSON.stringify({ ...BLOCKED(), kind: "maybe" }), JSON.stringify({ ...BLOCKED(), gates: { "G-TRACE": "?" } }), JSON.stringify({ ...BLOCKED(), expectHit: "G-TRACE" }), JSON.stringify({ ...BLOCKED(), exit: "1" })].map((l) => CASE_MARK + l).join("\n");
+    try { const r = judge.parseCases(lines); if (r.length !== 0) return `非法行被收下 ${r.length} 条:${JSON.stringify(r).slice(0, 200)}`; } catch (e) { return `parseCases 抛错:${(e as Error).message}`; }
+    try { if (killedBy(["G-TRACE"], new Map([["改了代码没收据", BLOCKED()]]), judge.parseCases(lines)) !== undefined) return "非法行被当成证据"; } catch (e) { return `完整路径抛错:${(e as Error).message}`; }
+    return undefined; }, expect: null },
+  { name: "R5-02 parseCases 收下合法行(对照)", direct: () => { const r = judge.parseCases(CASE_MARK + JSON.stringify(BLOCKED())); return r.length === 1 && r[0]!.name === "改了代码没收据" ? undefined : `合法行没收下:${JSON.stringify(r)}`; }, expect: null },
+  { name: "R5-02 evidence/killedBy 遇到 null、数组、缺字段、非法枚举不抛错且不给判因", direct: () => {
+    for (const bad of [null, [], 1, {}, { ...BLOCKED(), expectHit: undefined }, { ...BLOCKED(), pass: false, kind: "maybe", exit: 0, gates: { ...ALL_OK }, expectHit: [] }, { ...BLOCKED(), pass: false, kind: "verdict", exit: 0, gates: { "G-TRACE": "?" }, expectHit: [] }]) { const why = rejects(bad); if (why) return `${JSON.stringify(bad)}:${why}`; }
+    return undefined; }, expect: null },
+  { name: "R5-02 getter/setter/Proxy 回调 0 次且被拒收", direct: () => {
+    const t = traps();
+    for (const [k, v] of Object.entries(t.list)) { const why = rejects(v); if (why) return `${k}:${why}`; }
+    return t.calls() === 0 ? undefined : `外部对象的 getter/setter/Proxy 被回调了 ${t.calls()} 次`; }, expect: null },
+  { name: "R5-03 改导出的策略对象不改变后续门禁行为", direct: () => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const g = await import(${JSON.stringify(path.join(HERE, "gates.ts"))});
+      const tries = [
+        () => g.POLICY.allowedReviewers.push("unlisted"), () => { g.POLICY.allowedReviewers[0] = "unlisted"; }, () => { g.POLICY.allowedReviewers.length = 0; },
+        () => { g.POLICY.reviewerHarnessOf.unlisted = "claude"; }, () => { delete g.POLICY.reviewerHarnessOf.codex; }, () => { g.POLICY.assistantIds.unlisted = "ai-x"; }, () => { g.POLICY.reviewerHarness = "claude"; },
+        () => g.PROTECTED_CONTEXTS.pop(), () => { g.PROTECTED_CONTEXTS.length = 0; }, () => g.LAYERS.push("evil"), () => { g.REQUIRED_GATE_SCRIPTS.test = "true"; }, () => { delete g.REQUIRED_GATE_SCRIPTS["gates:mutation"]; },
+      ];
+      for (const t of tries) { try { t(); } catch {} }
+      const out = { allowed: [...g.POLICY.allowedReviewers], harness: g.harnessOf("unlisted"), codex: g.harnessOf("codex"), ctx: [...g.PROTECTED_CONTEXTS], layers: [...g.LAYERS], scripts: { ...g.REQUIRED_GATE_SCRIPTS } };
+      const ctx = { changed: ["packages/core/src/a.ts"], receipt: { author: { agent: "claude", model: "claude-opus-5-5", session: "claude:a" }, review: { agent: "unlisted", model: "gpt-6", session: "codex:b", verdict: "approve", reviewed_hash: "h" }, waiver: null }, contentHash: () => "h" };
+      out.review = g.review.run(ctx).map((x) => x.msg);
+      console.log(JSON.stringify(out));`], { encoding: "utf8", timeout: 60_000 });
+    let o: { allowed: string[]; harness: string; codex: string; ctx: string[]; layers: string[]; scripts: Record<string, string>; review: string[] };
+    try { o = JSON.parse(r.stdout.trim().split("\n").pop() ?? ""); } catch { return `探针没跑通:${r.stdout}${r.stderr}`; }
+    const bad: string[] = [];
+    if (o.allowed.join(",") !== "codex,astra,argon") bad.push(`allowedReviewers 变成 ${o.allowed}`);
+    if (o.harness !== "codex" || o.codex !== "codex") bad.push(`harnessOf 变成 ${o.harness}/${o.codex}`);
+    if (o.ctx.join(",") !== "trusted-gates,provenance,self-check") bad.push(`PROTECTED_CONTEXTS 变成 ${o.ctx}`);
+    if (o.layers.join(",") !== "domain,kernel,adapter,plugin,app") bad.push(`LAYERS 变成 ${o.layers}`);
+    if (Object.keys(o.scripts).length !== 3 || o.scripts.test === "true") bad.push(`REQUIRED_GATE_SCRIPTS 变成 ${JSON.stringify(o.scripts)}`);
+    if (!o.review.some((m) => m.includes("审查人必须是"))) bad.push(`改了导出名单后 unlisted 审查人被放行:${JSON.stringify(o.review)}`);
+    return bad.length ? bad.join(";") : undefined; }, expect: null },
+  { name: "R5-04 正则注入点 0 次/多次在变异执行前拒绝,恰 1 次放行", direct: () => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const m = await import(${JSON.stringify(path.join(HERE, "mutation.ts"))});
+      const src = "a MARK b MARK c ONE d";
+      const res = [/MARK/, /MARK/g, /NONE/, /NONE/g, /ONE/, /ONE/g, "MARK", "NONE", "ONE"].map((f) => m.injectionCount(src, f));
+      console.log(JSON.stringify(res));`], { encoding: "utf8", timeout: 60_000 });
+    const got = (r.stdout ?? "").trim().split("\n").pop() ?? "";
+    return got === "[2,2,0,0,1,1,2,0,1]" ? undefined : `injectionCount 结果 ${got || r.stderr.split("\n").find((l) => /Error/.test(l))}`; }, expect: null },
+  { name: "R5-04 MUTATIONS 每个注入点(字符串与正则)恰好匹配 1 次", direct: () => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const m = await import(${JSON.stringify(path.join(HERE, "mutation.ts"))});
+      const fs = await import("node:fs");
+      const bad = m.MUTATIONS.filter((x) => m.injectionCount(fs.readFileSync(${JSON.stringify(HERE)} + "/" + x.file, "utf8"), x.from) !== 1).map((x) => x.name);
+      console.log(JSON.stringify(bad));`], { encoding: "utf8", timeout: 60_000 });
+    const got = (r.stdout ?? "").trim().split("\n").pop() ?? "";
+    return got === "[]" ? undefined : `注入点不唯一或检查不可用:${got || r.stderr.split("\n").find((l) => /Error/.test(l))}`; }, expect: null },
+  { name: "磁盘:门禁命令行与一条自检用例跑完不在 TMPDIR 留下 gate-home/gate-run/gate-snap/gate-selftest 目录", direct: () => {
+    const tmpd = fs.mkdtempSync(path.join(os.tmpdir(), "gate-leakprobe-"));
+    try {
+      const env = { ...gitEnv(), TMPDIR: tmpd };
+      const i = CASES.findIndex((c) => c.name === "合规:先红后绿、跨厂商审查、来源核对通过");
+      const r = spawnSync(process.execPath, [path.join(HERE, "selftest.ts"), "--case", String(i)], { encoding: "utf8", env, timeout: 600_000 });
+      if (!(r.stdout ?? "").includes('"pass":true')) return `探针用例没通过:${(r.stdout ?? "").slice(-400)}${r.stderr}`;
+      const left = fs.readdirSync(tmpd).filter((f) => /^(gate-home-|gate-run-|gate-snap-|gate-selftest-|gate-xform-|cc-marker)/.test(f));
+      return left.length ? `留下了 ${left.length} 个临时目录:${left.slice(0, 6).join(", ")}` : undefined;
+    } finally { fs.rmSync(tmpd, { recursive: true, force: true }); } }, expect: null },
   { name: "R4-01 提示用例无关夹具故障不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "error", exit: null, gates: {}, expectHit: [], why: "用例自身出错:模拟与变异无关的用例准备失败" })), expect: null },
   { name: "R4-01 用例超时不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "timeout", exit: null, gates: {}, expectHit: [] })), expect: null },
   { name: "R4-01 用例没给出结果(缺观察)不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "no-result", exit: null, gates: {}, expectHit: [] })), expect: null },
