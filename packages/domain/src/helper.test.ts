@@ -236,3 +236,18 @@ test("CH-31 caller 与每个入口变体的每个必填字段:缺失或类型不
     assert.deepEqual(direct, { ok: false, reason: "seq 必须是数字" }, mode);
   }
 });
+
+test("公开快照运行时只读:三种入口返回的 HelperRoute 冻结,改写字段抛 TypeError、内容不变;下一次调用照常(对照)", () => {
+  for (const [entry, route] of okEntries) {
+    const r = routeHelper(entry as never, me, "u1");
+    assert.ok(r.ok, entry.kind);
+    const got = r.route as unknown as Record<string, unknown>;
+    assert.equal(Object.isFrozen(r.route), true, entry.kind);
+    assert.throws(() => { got.replyIn = "conversation"; }, TypeError, entry.kind);
+    assert.throws(() => { got.becomesMessage = true; }, TypeError, entry.kind);
+    assert.throws(() => { got.contextConversation = "其他会话"; }, TypeError, entry.kind);
+    assert.throws(() => { delete got.replyToSeq; }, TypeError, entry.kind);
+    assert.deepEqual(r.route, route, entry.kind);
+    assert.deepEqual(routeHelper(entry as never, me, "u1"), { ok: true, route }, `${entry.kind} 再次调用`);
+  }
+});
