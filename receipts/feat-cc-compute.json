@@ -47,7 +47,7 @@
     "session": "codex:592ebd7a-e738-43bd-a331-069366648d54",
     "model": "gpt-6.1-terra",
     "verdict": "reject",
-    "reviewed_hash": "46b92e881f30862f7eea853ae17b7ea7051f1142b20732d30c6278274bded229",
-    "notes": "第三轮 reject：stopped 后仍可接收事件并重复停止，空 resume 先杀冻结进程，init 前输出漏检；单点变异暴露测试进程清理竞态，mirasim 源码与所列组 SIGTERM 语义亦不完全相同。详见 reviews/feat-cc-compute.md 第三轮。"
+    "reviewed_hash": "d515493cfe9f3a065c977fc8bc4191c4c72ff62139501c4867efdb2682bb81ef",
+    "notes": "第四轮 reject：外部 getter/Proxy 被调用并放行，合法 JSON null 令 MCP 崩溃；force 环境覆盖与参考存在差异，多凭据单点变异存活。R3-01～04 的原反例已转绿；详见 reviews/feat-cc-compute.md 第四轮。"
   }
 }

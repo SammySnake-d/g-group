@@ -312,3 +312,91 @@
 AC-07、AC-33④ 和 V-06 整项仍未测：内核授权子集、权威约束/副作用账、真实 CLI 的工具权限及模型事件映射没有凭本轮假 CLI 推断通过。`hostEnv` 明文接线、共享 schema 同错、Windows 和脱组后代均保持已披露边界。用户已经选择本机 process-group 语义，内核不得把 stopped 或主进程退出误当作整棵执行树静止。
 
 本轮只追加本节和更新收据 `review`；本轮会话尚在运行，hash 对应的当前轮记录尚未落盘，不声称本轮 G-PROVENANCE 已通过。返修由作者负责，新产品 hash 需重新跨厂商审查。
+
+---
+
+## 第四轮（2026-11-06）：按更正后的 mirasim 停止语义独立复审
+
+**结论：reject。** 第三轮 R3-01～R3-04 的原反例已独立转绿，停止的默认主进程 TERM / 到期组 KILL 行为也基本复现；但外部 accessor/Proxy 输入会被调用并放行，合法 JSON `null` 会令汇报 MCP 进程崩溃。此两项均在用户确认的“内置原型未被改”范围内，不能因为全仓测试或 CI 为绿而放行。
+
+### 1. 固定对象与合同
+
+- PR #7 `feat/cc-compute` 产品 HEAD `a134e8a9c998e4240be7bbe11436136d26048712`；基线 `origin/feat/domain-core` 的 `afd02560f9546147da380382404eb6106222a9b8`。红提交 `230155ab320ecdb567541269f63ebcffe43ac862`，绿提交 `c418b74849e96400c7d3a8eb866a66866b3b7917`。
+- 本次使用普通独立 clone `/tmp/g-group-pr7-r4-review-codex-592ebd7a`；红提交与单点变异各在另一个独立副本，不在共享 linked worktree 运行钩子。Node `v25.8.1`；相关输入缺陷另在 Node `v22.22.0` 复现。
+- 审查会话 `codex:592ebd7a-e738-43bd-a331-069366648d54`，本轮原生模型 `gpt-6.1-terra`（OpenAI）；作者会话涉及仓库的产出轮次均为 Claude/Anthropic。没有豁免。
+- 在独立 clone 根目录实跑 `node scripts/gates/run-all.ts --hash --branch=feat/cc-compute --base=origin/feat/domain-core`，**原样输出**与声明一致：
+
+  ```text
+  d515493cfe9f3a065c977fc8bc4191c4c72ff62139501c4867efdb2682bb81ef
+  ```
+
+- GitHub self-check `42174842013` 为 completed/success，headSha 正是上述产品 HEAD。PR 正文已核对：当前状态是主进程 SIGTERM、到期组 SIGKILL、`scope:main-then-group`；旧组 SIGTERM 等文字在历史轮次并明确作废，本轮不拿它当当前合同。
+- 用户 `g-group#2662` 缩小了宿主内置原型已被修改时的合同；本轮**没有修改 `Object.prototype`、`Array.prototype` 或其他内置原型**，也不把先污染内置原型的反例作为打回理由。外部 getter/setter/Proxy 不调用即拒收，以及合法 JSON `null` 不抛错，仍按本轮明确要求核对。
+
+### 2. 必须修复
+
+#### R4-01 [P1] 外部 accessor / Proxy 被执行并放行，甚至启动执行器
+
+位置：`packages/adapter-cc-compute/src/brief.ts:13-35,42-55`、`src/adapter.ts:229-238`、`src/report-schema.ts:7-26`。这些对外入口直接 `Object.keys`、解构、读取数组元素和读取汇报属性，未先拒绝 Proxy/访问器。
+
+**独立反例（全部使用正常内置原型和无害计数器）：**
+
+- `brief.task` 是 getter：调用 `checkBrief` 后 getter 命中 1 次，结果 `ok:true`；调用实际 `spawn` 时同样命中 1 次、返回 `ok:true`，注入式子进程实际写出了中性 `outside-marker.txt`。
+- 顶层 Proxy 的 `ownKeys/get` trap 合计命中 6 次，仍 `ok:true`；撤销后的 Proxy 则抛出 `Cannot perform 'IsArray' on a proxy that has been revoked`，没有返回拒绝。
+- `rules[0]` getter 被调用 2 次并放行；自定义对象原型上的 getter 命中 1 次并放行——这没有改动任何内置原型。带不可枚举 setter 的输入虽然未调用 setter，仍被放行。
+- handoff `constraintVer` getter 命中 1 次并放行；`spawn` 选项的 `handoff` getter 命中 1 次，进程照样启动；导出的 `reportErrors` 对 `kind` getter 调用 4 次且返回空错误列表。
+
+普通纯数据 brief 的对照通过；直接 `checkBrief(null)` / `checkSnapshot(null)` 拒绝、`reportErrors(null)` 返回错误。上述 getter 与 Proxy 反例不依赖内置原型污染。Node 22 对字段 getter 另复现同样的命中与放行。
+
+**要求：** 在读取外部对象、数组或选项的属性前，安全识别并拒绝 Proxy、访问器及非预期属性；递归覆盖嵌套数组和快照/汇报输入，拒绝过程不能调用 getter、setter 或 Proxy trap，也不能启动子进程。补可观察计数器、撤销 Proxy 和普通纯 JSON 对照。这里只证明当前合同及副作用，不声称远程攻击已发生。
+
+#### R4-02 [P1] 合法 JSON `null` 使 report MCP 崩溃，后续合法请求不再处理
+
+位置：`packages/adapter-cc-compute/mcp/report-mcp.mjs:34-38`。`JSON.parse('null')` 成功后，代码直接访问 `m.method`，抛 `TypeError` 并终止服务器。
+
+**单开关对照：** 向真实 MCP 子进程 stdin 只发合法 `tools/list` 请求，退出 0 且收到 id 1 响应；先发一行 `null` 再发同一请求，进程退出 1、stderr 为 `Cannot read properties of null (reading 'method')`，没有后续响应。Node 22 与 Node 25 均复现。`null` 是合法 JSON，但并非有效 JSON-RPC 请求；要求是安全拒绝/忽略该无效请求并保持进程可用，**不是**把它当作有效 RPC 接受。
+
+**要求：** 在访问字段前检查解析结果是合规请求对象；覆盖 `null` 后继续处理合法请求、其他合法原始 JSON 值、对象正常调用和坏 JSON 对照。
+
+### 3. 源码对照与测试缺口
+
+#### R4-03 [P2] `MIRASIM_REAP_FORCE_MS` 的环境覆盖未接线
+
+参考文件 `/Users/snakesammy/.mirasim/app/0.0.774/server-main.cjs` 的 SHA-256 为 `b342710fd8a9cf28211003fe521bd12e11e36b8f8cd3ce4a988b305d359c4d4c`。其 `z2(...,{graceMs:0,group:true})` 在没有显式 forceMs 时经 `Ukc()` 读取 `process.env.MIRASIM_REAP_FORCE_MS`，合法正数生效，否则默认 `10000`。本包 `src/adapter.ts:92-95` 仅用 `options.reapForceMs ?? 10000`，没有读取该环境变量。
+
+**对照：** 在审查测试进程内设置 `MIRASIM_REAP_FORCE_MS=500`，不传 adapter 选项，1.4 秒后忽略 TERM 的主进程仍存活；同样注入式进程显式传 `reapForceMs:500` 时约 525ms 后主进程和同组子进程均消失。将指定原文件的实际 `z2/Ukc` 片段放到隔离进程、同样只设置该环境变量时，主进程不退出的组在 1.3 秒内已被回收；主进程提前退出时组 KILL 取消。该测试未更改正在运行的 mirasim 服务。
+
+默认 10 秒、初始只 TERM 主进程和主进程先退出取消升级均实测符合本轮所列行为；**未证实调用方是否打算负责把该变量映射为选项**。若要求配置层也与参考一致，需实现或明确由宿主接线并测试默认、有效/无效环境值和显式选项优先级；若刻意不支持环境覆盖，须更正“完全对齐”边界并取得相应合同确认。blocked 的 SIGSTOP 是作者已明确披露的适配器自有设计，不冒称来自 mirasim。
+
+#### R4-04 [P2] 多凭据引用组合的单点故障在现有测试中存活
+
+原版对 `credentialRefs:['ref://fixture/path','not-a-reference']` 正确返回拒绝；没有创建伪造密钥或凭据文件。仅在隔离副本改变一处：把凭据引用校验改为**仅数组长度为 1 时执行**。typecheck 退出 0，现有本包测试 **57/57 通过**；独立的上述双元素反例按名失败。其余五个可编译单点变异分别被相应用例发现，见下表。
+
+这证明现有测试未阻止“单元素正确、多元素放过明文样式”的回归；**不声称当前原版存在该放行**。要求补多元素中每一位置的非引用负例及全合法对照，并纳入变异标定。作者 50 个已列变异的结果不等于所有组合均有覆盖。
+
+### 4. 第三轮回归与独立运行
+
+| 检查 | 本轮实际观察 |
+|---|---|
+| `npm ci` / typecheck / lint / 全仓 test | 各退出 0；全仓 80/80，0 跳过 |
+| 红提交独立 clone 与本包测试 | npm ci 退出 0；57 条按名字失败、0 跳过，名字均在绿版通过；红绿测试和假 CLI 文件 diff 为空 |
+| R3-01 | 重放上轮迟到 milestone / blocked 反例，stopped 后均无迟到事件、不会重复 stop；独立 2 项通过 |
+| R3-02 | 空白 resume 返回拒绝时冻结主进程仍存活；合法 resume 的原有对照通过 |
+| R3-03 | 上轮 assistant 文本、非 JSON、提前 tool_use/result 五项负例及对照全部通过；现有允许的三种 pre-init system 帧按当前合同核验 |
+| R3-04 | 仅去掉运行中 snapshot 守卫，typecheck 0；对应测试按名失败、无超时、无外部强杀、无遗留本轮 fake CLI；原版直接 R3-04 测试随全仓通过 |
+| 独立停止进程 | 初始 TERM 只到主进程；主进程先退出时同组子进程不接收 TERM、过宽限仍活且可写中性标记；主进程忽略 TERM 时到期整组 KILL；默认实测约 10030ms。blocked 时父子组 `ps` 状态为 T；主进程未退出时快照拒绝，退出后可取 |
+| F-03 负载定向复现 | 对“CLI 正常结束不发信号、同组孙进程仍活”这一条连续 20 次，20/20 通过；初段使用两个本轮 CPU 负载进程，1 分钟 load 超 100 后已只停止这两个进程，剩余轮次在自然负载下运行。期间观察 load 约 63.7–116.9，8 核；不是重新跑完整 57 条 20 次 |
+| 填写本轮 reject 后 `run-all --local` | 退出 1；G-REVIEW 因 reject 拦截；G-PROVENANCE 尚未在已落盘轮次找到本轮 hash，因而同时报审查轮次厂商无法确认；不伪造会话记录补绿 |
+| 当前 CI / smoke | self-check 已验证为指定产品 HEAD success；当前审查进程未设置 Anthropic 网关/认证环境，本轮未跑真实模型 smoke。`proof/smoke-real.txt` 从上一轮审查提交到本 HEAD 无修改；这只能证明仓库没有新增 smoke 证据，不能证明作者没有未记录的运行 |
+
+**逐门禁独立负例：** 在临时普通 Git 仓库中运行真实 `run-all.ts --local`，分别输入：G-TRACE 缺失证据、G-REVIEW 作者自审、G-RED 缺红提交、G-STUB 只断言模块加载时的顶层值、G-TAUTO 恒真、G-WORKFLOW 使用 `pull_request_target`、G-LAYER 领域层反向依赖内核、G-PROVENANCE 审查记录缺 hash 调用。八例均退出 1、对应门禁及预期原因被观察到；合规对照退出 0。测试会话记录是隔离夹具，不是真实来源记录或凭据文件。
+
+**独立单点变异：** 每次只改隔离副本一处并完成 typecheck。取消主进程 exit 时的组 KILL 计时器清理（M46）、stop 不封存（M47）、非法 resume 先杀进程（M48）、忽略非法 pre-init 帧（M49）、运行中允许快照（M41），相应用例均按名失败、无超时/强制清理；双凭据数组跳过校验的变异则 **57/57 存活**，独立双元素负例失败。未重跑作者全部 50 个变异，不把其 50/50 自报当作本轮观察。
+
+执行器错误：M49 第一版变异写法产生 TS2339、typecheck 退出 2，不能算测试杀死；改为类型正确的单点变异后 typecheck 0、相应用例具名失败。旧版聊天工具名调用返回 `TypeError` 后，改用当前 `chat read` 成功核对 `g-group#2662`；请求一个已关闭的工具会话返回 unknown process id，均未当作产品结果。
+
+### 5. 未测与交付范围
+
+AC-07、AC-33④、V-06 整项仍未测：权威约束与副作用账、内核授权子集、真实 Claude 工具权限及真实模型事件映射不能由模拟 CLI/原型样本推断通过。用户已明确不采用容器；主进程先退出后同组及脱组后代可能继续运行是当前合同与已披露边界，本轮不因此打回，也不要求 Docker。
+
+本轮只追加本节及更新收据 `review`。当前轮会话尚未结束、hash 调用尚未落入完整轮次记录，不宣称本轮 G-PROVENANCE 已通过。修复由作者进行，新产品 hash 需重新跨厂商审查。
