@@ -22,7 +22,7 @@
 // M30–M47 是联系人/Helper 作者埋雷;contact/helper 其余系列见各分组注释。为不和任务侧重名:
 // reviews/feat-contact-helper.md 第二轮的 N01–N05 记为 CN01–CN05,第三轮的 P01–P05 记为 CP01–CP05,第五轮的 Z01–Z05 记为 CZ01–CZ05,
 // 第六轮的 W01–W05 记为 CW01–CW05,第七轮的 V01–V08 记为 CV01–CV08,第八轮的 H05–H06 记为 CH05–CH06,第九轮的 J01–J05 记为 CJ01–CJ05,
-// 第十轮的 Y01–Y08 记为 CY01–CY08,Astra 第 6 节的 I01–I26 记为 CI01–CI26(与任务侧第十三轮 I01–I09 区分),第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK101;第十三轮独立变异 AD01–AD04 原样保留编号(任务侧无 AD 前缀)。原样副本必须全绿(阴性对照)。
+// 第十轮的 Y01–Y08 记为 CY01–CY08,Astra 第 6 节的 I01–I26 记为 CI01–CI26(与任务侧第十三轮 I01–I09 区分),第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK110;第十三轮独立变异 AD01–AD04 原样保留编号(任务侧无 AD 前缀);第十四轮独立变异 V01/V02/V03/V08 记为 AE01–AE04(与任务侧 V01–V10 区分)。原样副本必须全绿(阴性对照)。
 // 用法: node packages/domain/proof/mutations.mjs
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -458,6 +458,21 @@ const M = [
   ["CK99 自造联系人表的内部 Map 不过普通 Map 检查", "contact.ts", "  if (typeof m !== \"object\" || m === null || types.isProxy(m) || !types.isMap(m) || Object.getPrototypeOf(m) !== Map.prototype) return", "  if (tableMap(raw) === undefined && (typeof m !== \"object\" || m === null || types.isProxy(m) || !types.isMap(m) || Object.getPrototypeOf(m) !== Map.prototype)) return"],
   ["CK100 HelperRoute 不冻结", "helper.ts", "({ ok: true, route: Object.freeze(route) })", "({ ok: true, route })"],
   ["CK101 目录不认本模块给出的联系人表", "contact.ts", "const m: unknown = tableMap(raw) ?? raw;", "const m: unknown = raw;"],
+  // 以下取自 Codex 第十四轮复审 reviews/feat-contact-helper.md CH-40:AE01–AE04 为该轮独立变异 V01/V02/V03/V08 的原样注入(改记 AE 前缀,避免与任务侧 V01–V10 重名;
+  // V04–V07 已被现有测试杀死,与 CK100 等同类,不重复列入);CK102–CK110 是 CH-39 身份与唯一性返修及 CH-40 同类精确标识的作者埋雷。
+  ["AE01 状态里的直接工具只查第一项", "contact.ts", "for (let i = 0; i < c.tools.length; i++)", "for (let i = 0; i < Math.min(1, c.tools.length); i++)"],
+  ["AE02 状态里的承诺只查第一条", "contact.ts", "for (let i = 0; i < c.commitments.length; i++)", "for (let i = 0; i < Math.min(1, c.commitments.length); i++)"],
+  ["AE03 目录键与联系人 id 按前缀匹配", "contact.ts", "if (c.value.id !== k)", "if (!c.value.id.startsWith(k))"],
+  ["AE04 回执 commitmentIds 按前缀点名承诺", "contact.ts", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq > receipt.basedOnSeq)", "if (!receipt.commitmentIds.some((id) => k.id.startsWith(id)) || k.sourceSeq > receipt.basedOnSeq)"],
+  ["CK102 状态里的能力资产只查第一项", "contact.ts", "for (let i = 0; i < c.computeAssets.length; i++)", "for (let i = 0; i < Math.min(1, c.computeAssets.length); i++)"],
+  ["CK103 状态不查联系人 id 非空", "contact.ts", "  if (!c.id) return \"联系人状态.id 为空\";\n", ""],
+  ["CK104 状态不查直接工具名唯一", "contact.ts", "    if (firstTool !== i) return `${at} 工具名 ${t.name} 已在 tools[${firstTool}] 登记,同一工具只能登记一次`;\n", ""],
+  ["CK105 状态不查能力资产名唯一", "contact.ts", "    if (firstAsset !== i) return `${at} 能力资产名 ${a.name} 已在 computeAssets[${firstAsset}] 登记,同一名字只能登记一次、只能一种类别`;\n", ""],
+  ["CK106 状态不查承诺 id 唯一", "contact.ts", "    if (firstCommitment !== i) return `${at} 承诺 id ${k.id} 已在 commitments[${firstCommitment}] 使用,承诺 id 必须唯一`;\n", ""],
+  ["CK107 能力资产名唯一只拒异类(同类重复放行)", "contact.ts", "if (firstAsset !== i) return", "if (firstAsset !== i && (c.computeAssets[firstAsset] as ComputeAsset).kind !== a.kind) return"],
+  ["CK108 撤销承诺按前缀匹配 id", "contact.ts", "if (!c.commitments.some((k) => k.id === id && k.status === \"active\"))", "if (!c.commitments.some((k) => k.id.startsWith(id) && k.status === \"active\"))"],
+  ["CK109 回执 commitmentIds 按后缀点名承诺", "contact.ts", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq > receipt.basedOnSeq)", "if (!receipt.commitmentIds.some((id) => k.id.endsWith(id)) || k.sourceSeq > receipt.basedOnSeq)"],
+  ["CK110 目录键与联系人 id 按后缀匹配", "contact.ts", "if (c.value.id !== k)", "if (!c.value.id.endsWith(k))"],
 ];
 // 所测功能已按 g-group#2273 撤销(专职开关「只做这件事」整体删除),对应变异移出清单;运行时逐条打印说明,写进 mutations.txt。
 const REMOVED = [
