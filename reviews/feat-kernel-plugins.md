@@ -1169,3 +1169,121 @@ const stableBytes=a.request.segments.filter(s=>s.section==='stable').reduce((n,s
 console.log({segments:a.request.segments.map(s=>({section:s.section,label:s.label,seq:s.seq,text:s.text})),cursor2vs3Same:serialize(a.request)===serialize(b.request),stableBytes,prefixLength:prefixLength(a.request),stableHashSame:prefixHash(a.request,stableBytes)===prefixHash(c.request,stableBytes),defaultPrefixHashSame:prefixHash(a.request)===prefixHash(c.request)});
 NODE
 ```
+
+# 第九轮：返修独立复审
+
+**结论：reject。** 第八轮路径、数组、时钟、非枚举测试和装配收据的原反例在独立样例中已修；被拒 Promise 的自有 `then` getter 情形也已修。但在不改任何内置原型、且没有 `unhandledRejection` 处理器的默认 Node 进程里，带自有 `constructor` getter 的已拒绝/稍后拒绝 Promise 仍能在返回拒绝后终止进程。用户 `g-group#2662` 只排除预先修改内置原型的环境，没有批准将外部返回值的访问器或 Proxy 触发进程退出排除在安全拒绝之外；仅在收据披露未来需隔离，不能把该结果当成本片已安全拒绝。另有自有普通 `constructor` 数据属性、Promise 子类和 Promise Proxy 的同类未处理拒绝；自造三个单点故障中两个逃过测试。
+
+## 审查身份、范围与基础结果
+
+- 被审 HEAD `7e6aebc2360d2af5ef11175f285919328ed7a8f7`，基线 `origin/feat/domain-core` 为 `afd02560f9546147da380382404eb6106222a9b8`；独立 HTTPS 普通 clone，`.git` 与 common dir 为同一目录。作者会话 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38`；审查会话 `codex:7d29bd3e-c4cd-4e15-ad0b-298bd0301bd3`，本轮原生 `turn_context` 模型 `gpt-6.1-terra`，作者与审查分别为 Anthropic 与 OpenAI。
+- 在独立 clone 仓库根目录实际运行 `node scripts/gates/run-all.ts --hash --branch=feat/kernel-plugins --base=origin/feat/domain-core`，标准输出**原样**为：
+
+  ```text
+  f4f9d769e128900f0e1fbe13fe23ad3d31ed0105e4ff50bfdc11024d7478f31b
+  ```
+
+  与作者声明完全一致。
+
+| 检查 | 本轮独立结果 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均退出 0；lint 25 文件 |
+| Node 25 `npm test` | 221 通过、0 失败、0 跳过，其中 kernel 198 条 |
+| 红提交 `0dd6dade772f70a3a2fb25a9be73cc273264adcd` | 另建普通独立 clone、安装后测试退出 1；23 条旧测试通过、198 条 kernel 测试逐名失败、0 跳过。红绿 kernel 测试文件无差异，失败名和绿测试名双向差集均为空 |
+| 绿提交 `2bd57e8` 与 `a8b8849` | `assemble.ts`、`own.ts`、`plain.ts`、`plugins.ts`、`plugin-contract.ts` 的 `git diff --quiet` 退出 0 |
+| 作者 176 个变异 | Node `v25.8.1`、`v22.22.0` 各独立运行一次：原样副本均 198 绿，176/176 被具名测试发现、0 存活、0 超时；K173、K174、K175 均被各自具名测试发现 |
+| 自造单点变异 | 三个独立 clone 中各注入一个故障，typecheck 均通过；1 个被具名测试发现、2 个存活，见 R9-02 |
+| 未填 review 的 `--local` | 退出 1；`G-REVIEW` 报未审，`G-RED/G-STUB/G-TAUTO` 等显示绿。`G-PROVENANCE` 因 review 为 null 提前跳过，不能解读成来源已验 |
+| 填写 reject 后的 `--local` | 退出 1；`G-REVIEW` 按 reject 阻挡；`G-PROVENANCE` 当前报告已落盘会话找不到本轮 hash 调用且审查厂商认不出。hash 已在本轮独立 clone 实际运行，会话落盘后仍须复核，当前不得报来源门禁已通过 |
+| 变异超时金丝雀 | Node 22 和 25 各运行一次，必卡子进程约 5.0 秒超时被杀；超时不算变异杀死 |
+
+## 第八轮逐项复测与边界
+
+- **R8-01**：`plainData` / `plainItems` 的路径参数传自有 `Symbol.toPrimitive` getter 或 Proxy，均拒绝，getter/陷阱调用 0；正常字符串路径对照通过。
+- **R8-02**：`appendOwn` 对带 getter/setter 下标的真实数组拒绝且不写入、访问器 0；Array 子类也拒绝；普通数组照常追加。`own.ts` 未从包入口导出，包 `exports` 只公开 `.`。
+- **R8-03**：墙钟返回带 getter 的非数字时，拉取和首次发送均 `clock-invalid`，发送插件 0 次、不建账目、访问器 0；单调读数非法时首次只投递一次、记录宿主 NaN 并永久不重试，恢复数字后为 `clock-untrusted`，不读取非法值访问器。
+- **R8-04**：原生 Promise 仅有自有 `then` getter 时，已拒绝和稍后拒绝两种在 Node 22 与 25 的发送/拉取独立子进程均安全返回并存活、getter 0；普通已拒绝 Promise 作为对照也存活。但自有 `constructor` getter 等情况仍有进程级问题，详见 R9-01。
+- **R8-05**：不可枚举数组下标在 `plainItems` 和 `plainData` 被拒；K174 的独立变异结果见上表。
+- **R8-06**：收据 AC-39 已明确本片是 v3.10 三段式，不满足 v3.11/v3.12 AC-39②，AC-40⑪无实际 provider 观测；五块重拼写为 D23 账本之后的后续独立切片，非已完成承诺。AC-06、AC-39 和 R-06 均标未测；不因本片没有完成五块或完整端到端链路本身打回。
+- 受测 `null`：`plainData(null)` 保留 null，业务分类返回 `Uncertain`，装配返回 `invalid-input`，发送返回 `invalid-payload`，拉取返回 `invalid-batch`；`appendOwn(null)` 和 `squash(null)` 按其工具合同抛受控 `TypeError`，不把这两种受控拒绝记为上述业务路径未捕获异常。
+- 未以修改 `Object.prototype`、`Array.prototype`、`Promise.prototype` 或其他内置对象的环境作为拒绝理由；本轮反例仅修改单个外部 Promise 实例或创建子类/Proxy，没有预先改内置原型。
+
+## 必须返修
+
+### R9-01 [P1 / AC-35、R8-04] 被拒 Promise 仍可产生未处理拒绝并终止进程
+
+位置：`packages/kernel/src/plugins.ts:34–47,214–216,258–266`。`quietRefused` 只对原型恰为 `Promise.prototype` 且没有自有 `constructor` 的 Promise 附加拒绝处理。带自有 `constructor` getter 的 Promise 被主动跳过处理；这与作者的第 7 栏披露一致，但 **#2662 的缩小范围只排除事先改写内置原型，不排除外部返回值自有访问器**。R8-04 要求的不只是入口先返回拒绝，还包括拒绝后宿主进程不因该返回值退出；当前没有插件进程隔离或其他已验证的保护，披露后续隔离不能冒充当前防住。
+
+独立按 Node `v22.22.0` / `v25.8.1`、`send` / `pull`、立即 / 稍后拒绝以及 6 种返回形态运行 **48 个隔离子进程**；不安装全局 `unhandledRejection` 处理器，也不改内置原型：
+
+| 返回形态 | 最初结果 / 外部访问器 | 子进程 |
+|---|---|---|
+| 普通原生 Promise | `send-threw` / `pull-failed` | 8/8 退出 0 |
+| 自有 `then` getter 的原生 Promise | `non-promise-send` / `invalid-batch`；getter 0 | 8/8 退出 0 |
+| 自有 `constructor` getter 的原生 Promise | 同上；getter 0 | 8/8 退出 1 |
+| 自有 `constructor` **数据属性**、值就是内置 `Promise` | 同上；无外部 getter | 8/8 退出 1 |
+| Promise 子类 | 同上 | 8/8 退出 1 |
+| 包装已拒绝 Promise 的 Proxy | 同上；Proxy get trap 0 | 8/8 退出 1 |
+
+进程退出的条件是返回 Promise 拒绝、Node 采用默认未处理拒绝策略且宿主未安装相应处理器；不声称所有部署都配置如此。插件自身可执行任意代码而隔离未交付也是现实边界，但本例是**插件把结果交给内核后，内核拒绝该返回值却未处理其拒绝**；不能用“getter 没被调用”替代进程存活。
+
+对作者称“constructor getter 不读便无法使用普通挂处理方式”的技术点：用已解决 Promise 的隔离对照实测 `Promise.prototype.then.call`、`Promise.resolve`、`await` 都各读该自有 getter 一次；这证明这三个直接办法不能同时满足不读 getter，但**不是所有可能架构均不可能的证明**。更具体地，对自有 `constructor` **数据属性**值恰为内置 `Promise` 的已拒绝原生 Promise，直接 `Reflect.apply(Promise.prototype.then, p, [undefined, ()=>{}])` 在 Node 22/25 各自退出 0；当前代码因只看 `Object.hasOwn` 而一律跳过，此可安全处理的子情况不应与访问器不可直接处理混为一谈。
+
+要求补齐可安全判定的原生 Promise 情况（含自有数据 constructor），并对 getter、子类、Proxy 等无法在现合同下安全观察的情况提供经实际验证的安全拒绝/隔离边界；如要把进程存活排除在合同外，须由用户明确批准范围和集成前保护，不能仅凭作者披露视为已批准。测试需包含立即/稍后拒绝、发送/拉取、getter/Proxy 调用计数、结果状态、无全局处理器子进程存活及普通 Promise 阳性对照。
+
+### R9-02 [P1 / R-05] 两个自造单点故障逃过 221 条测试
+
+三个变异分别在普通独立临时 clone 中精确替换一个注入点，未改受审源码；typecheck 均退出 0：
+
+- **R9-M1，存活**：`isoOf` 中 `Number.isFinite(ms)` 错改为 `Number.isInteger(ms)`。对有效墙钟 `now() => 0.5`，原版正常发送一次；变异版错误返回 `clock-invalid`、发送 0 次。全部 221 条测试仍绿。合同是有限数字，不只整数。
+- **R9-M2，被杀**：去掉 `plainItems` 的路径参数类型检查；221 条中 220 绿、1 红，被路径 getter/Proxy 的具名测试发现。
+- **R9-M3，存活**：去掉 `isPlainPromise` 对 `Object.getPrototypeOf(x) === Promise.prototype` 的检查。对已解决 Promise 子类，其自有静态 `Symbol.species` getter 会抛错：原版 `non-promise-send`、getter 0；变异版 `send-threw`、getter 1。全部 221 条测试仍绿。这里的 getter 属于新建子类，不是事先修改内置原型。
+
+要求为有限小数墙钟补正例与整数化单点故障负例；为 Promise 子类及其自有 `Symbol.species` getter 补计数与不执行对照。作者列出的 176 种故障全杀仅证明这些选定注入点，不证明新边界均有测试。
+
+## 八个门禁的独立负例
+
+依照报告第六轮完整夹具脚本在本版独立 clone 中重建八个临时 Git 仓库与伪会话；逐门调用实际 `runGates` 检查原因，并逐例运行真实 `run-all.ts --local`。8/8 目标门禁均显示 ✗ 且 CLI 各退出 1；一个夹具可能同时触发其他门禁，不据此称其他门禁通过。
+
+| 门禁 | 本轮负例 | 目标结果 |
+|---|---|---|
+| G-TRACE | 状态 `核验中` | 非四选一 |
+| G-REVIEW | 作者和审查者均为 Claude | 同一审查人与作者 |
+| G-PROVENANCE | `codex:does-not-exist-r9` 空会话 | 审查会话不可信 |
+| G-RED | 不存在的全 `e` 红提交 | 红提交不存在 |
+| G-STUB | 测试只断言导入函数类型 | 空桩未按名字失败 |
+| G-TAUTO | `assert.equal(9,9)` | 恒真断言 |
+| G-WORKFLOW | workflow 申请 `contents: write` | 申请写权限 |
+| G-LAYER | plugin 导入 plugin | 插件层不能互相依赖 |
+
+## 进程级最小复现（受审仓库根目录，`npm ci` 后）
+
+本脚本在当前 shell 中启动隔离 Node 子进程，不改内置原型、不访问网络；`then` getter 应安全退出 0，其余列出的拒绝 Promise 形态在默认策略下会先打印拒绝再退出 1。不要在生产宿主直接运行：
+
+```sh
+for mode in send pull; do
+ for shape in then-getter ctor-getter ctor-data subclass proxy; do
+  MODE="$mode" SHAPE="$shape" node --input-type=module <<'NODE'
+import {createRegistry} from './packages/kernel/src/plugins.ts';
+let gets=0,traps=0;class Sub extends Promise{};const T=process.env.SHAPE==='subclass'?Sub:Promise;
+const raw=new T((_,reject)=>reject(Error('外部拒绝')));
+if(process.env.SHAPE==='then-getter')Object.defineProperty(raw,'then',{get(){gets++;throw Error('不得读 then')}});
+if(process.env.SHAPE==='ctor-getter')Object.defineProperty(raw,'constructor',{get(){gets++;throw Error('不得读 constructor')}});
+if(process.env.SHAPE==='ctor-data')Object.defineProperty(raw,'constructor',{value:Promise});
+const pending=process.env.SHAPE==='proxy'?new Proxy(raw,{get(t,k,r){traps++;return Reflect.get(t,k,r)}}):raw;
+const reg=createRegistry();if(process.env.MODE==='send')reg.register({kind:'outbound-channel',id:'p',endpoint:'A',idempotency:'none',send:()=>pending});else reg.register({kind:'data-source',id:'p',sources:['g'],pull:()=>pending});
+const result=process.env.MODE==='send'?await reg.send('p',{action_id:'a',payload:'x'}):await reg.pull('p','g');console.log({mode:process.env.MODE,shape:process.env.SHAPE,reason:result.reason,gets,traps});setTimeout(()=>console.log('进程存活'),30);
+NODE
+  echo "$mode/$shape 子进程退出码: $?"
+ done
+done
+```
+
+在单独进程中，对自有 `constructor` **数据属性**等于 `Promise` 的情况，挂拒绝处理可以在不访问外部 getter 时成功：
+
+```sh
+node --input-type=module <<'NODE'
+const p=Promise.reject(Error('预期拒绝'));Object.defineProperty(p,'constructor',{value:Promise});
+Reflect.apply(Promise.prototype.then,p,[undefined,()=>{}]);setTimeout(()=>console.log('进程存活'),20);
+NODE
+```
