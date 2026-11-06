@@ -1,0 +1,23 @@
+docs/spec/技术栈与工程规则.md
+  s_22ba9b1b818602::t_c44a0e0a3c2262 3,5-6,9,11-12,59,61,64,66,69-70,75,78,87,90-104
+docs/spec/需求文档.md
+  s_22ba9b1b818602::t_ee256aaafd5f87 3,226-235,1621-1835,1907-1909,1924,2019-2059,2062,2064-2065,2069,2071,2212-2217,2222,2404-2411,3801-3858,3864,3869-3870
+docs/spec/验收文档-v0.1.md
+  s_22ba9b1b818602::t_898be2229e7cd0 3-5,43,90,152-160,243-244,248-249
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8a28502f10c62a02446a80e9a0c20033b565453c",
+  "prompts": {},
+  "sessions": {
+    "s_22ba9b1b818602": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91b17b26-1e2d-4bc5-904f-9d3aab1e0f38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

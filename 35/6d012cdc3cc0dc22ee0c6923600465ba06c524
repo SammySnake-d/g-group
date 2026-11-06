@@ -1,0 +1,16 @@
+receipts/feat-task-lifecycle.json
+  h_f33e46a035b77c 60-67
+reviews/feat-task-lifecycle.md
+  h_f33e46a035b77c 476-568
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "356d012cdc3cc0dc22ee0c6923600465ba06c524",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

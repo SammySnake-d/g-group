@@ -1,0 +1,16 @@
+receipts/feat-domain-core.json
+  h_f33e46a035b77c 14-21
+reviews/feat-domain-core.md
+  h_f33e46a035b77c 1-180
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a9822179ec6a46118c87806962dcb6b055a056d7",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

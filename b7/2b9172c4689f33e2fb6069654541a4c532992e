@@ -1,0 +1,21 @@
+docs/开发手册.md
+  s_22ba9b1b818602::t_caba9290eb7779 18,408-434
+docs/概念卡.md
+  s_22ba9b1b818602::t_9b8948bb061488 1,3-4,332-356
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b72b9172c4689f33e2fb6069654541a4c532992e",
+  "prompts": {},
+  "sessions": {
+    "s_22ba9b1b818602": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91b17b26-1e2d-4bc5-904f-9d3aab1e0f38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

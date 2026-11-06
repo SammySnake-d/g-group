@@ -1,0 +1,27 @@
+packages/adapter-sqlite/proof/flake-30.txt
+  s_060cb60f4a56ed::t_78930f9c1a6952 2-11,13,15,17-25,27,29-32
+packages/adapter-sqlite/proof/mutations.mjs
+  s_060cb60f4a56ed::t_dc07967650e4dc 39-42
+packages/adapter-sqlite/proof/mutations.txt
+  s_060cb60f4a56ed::t_153fcb716bd1d7 1-28
+packages/adapter-sqlite/proof/tests.txt
+  s_060cb60f4a56ed::t_2118e3ece598ce 1-30,32,37
+receipts/feat-sqlite-storage.json
+  s_060cb60f4a56ed::t_7963ca04b29ca0 12,41,43,45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "64e3d1ad4940820ae4f2b21a9a16827689dd711a",
+  "prompts": {},
+  "sessions": {
+    "s_060cb60f4a56ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae8c5e6a9c179f748",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

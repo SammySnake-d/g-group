@@ -1,0 +1,29 @@
+package-lock.json
+  s_e22e670ac40a01::t_52af885d0a7f34 8-10,219-226,257-265
+packages/adapter-sqlite/src/index.ts
+  s_e22e670ac40a01::t_9bba10ffab8808 1
+packages/adapter-sqlite/src/store.ts
+  s_e22e670ac40a01::t_7e197c53c3c1a6 1-54
+packages/adapter-sqlite/src/store.test.ts
+  s_e22e670ac40a01::t_93ec1052273f95 1-180
+packages/adapter-sqlite/package.json
+  s_e22e670ac40a01::t_9b4b6ca961a813 1-8
+package.json
+  s_e22e670ac40a01::t_5b6e8f84fe3795 5-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f1f3dfc74f99d8faf82d1d7276921ad471efa432",
+  "prompts": {},
+  "sessions": {
+    "s_e22e670ac40a01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1b743a657e0be6fc",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

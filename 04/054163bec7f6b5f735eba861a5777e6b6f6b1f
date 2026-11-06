@@ -1,0 +1,16 @@
+packages/adapter-cc-compute/src/adapter.test.ts
+  h_f33e46a035b77c 290-300
+packages/adapter-cc-compute/test-support/fake-claude.mjs
+  h_f33e46a035b77c 10,87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "04054163bec7f6b5f735eba861a5777e6b6f6b1f",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

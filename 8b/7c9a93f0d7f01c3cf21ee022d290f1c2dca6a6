@@ -1,0 +1,23 @@
+docs/spec/需求文档.md
+  s_60e9c5a2ac18df::t_5e2e5592b73b6b 236,1872,2279
+docs/spec/验收文档-v0.1.md
+  s_60e9c5a2ac18df::t_8560c25fdb0d19 161,244
+docs/开发手册.md
+  s_60e9c5a2ac18df::t_dd6bc0a82d404b 744,750
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8b7c9a93f0d7f01c3cf21ee022d290f1c2dca6a6",
+  "prompts": {},
+  "sessions": {
+    "s_60e9c5a2ac18df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac25756ecc32db3a1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

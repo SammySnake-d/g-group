@@ -1,0 +1,33 @@
+packages/domain/proof/mutations.mjs
+  s_82c5d25cfe1258::t_6a86846e69dc6e 3-7,41-43,48,50-98,143-148,174-175,195-196
+packages/domain/proof/mutations.txt
+  s_82c5d25cfe1258::t_c45e9aa21ce0dd 1-150
+packages/domain/proof/red-against-96d48dd.tap
+  s_82c5d25cfe1258::t_f8eb6826cfe08f 1-937
+packages/domain/proof/task-lifecycle-tests.txt
+  s_82c5d25cfe1258::t_61519d79d15a84 1-86,88,93
+packages/domain/src/task.test.ts
+  s_82c5d25cfe1258::t_a49bbf7f30c358 2-5,8,14-18,23-25,27,29-35,37-90,97,105-154,164,166,182-183,185,191,198-199,206,212,214-215,220,227,230,233-256,258-287,289-291,295-432,444-450,464-469,474-475,479,482-483,488,499,527-574,579,594-595,603,609,613-619,621,630-631
+packages/domain/src/task.ts
+  s_82c5d25cfe1258::t_ecf976565540d8 12-13,17-18,20-22,28-29,32-34,44-49,51,59-61,83-89,93,98-103,111-115,117-136,138-147,156-157,169,175,180-188,193,202,208-213,219,223-224,226,230,235-236,242-243,249-250,257,259,264-270,272-277
+receipts/feat-task-lifecycle.json
+  s_82c5d25cfe1258::t_228bb145d024e2 2,12,17,22,56,58,60-68
+reviews/feat-task-lifecycle.md
+  s_82c5d25cfe1258::t_d8359d4b400819 1-382
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "21e7ac5acd5f985839b3d73070da4fa09348876c",
+  "prompts": {},
+  "sessions": {
+    "s_82c5d25cfe1258": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "23cfa1f1-7e96-481e-b8a0-60049184d604",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
