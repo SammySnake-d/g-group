@@ -1381,6 +1381,20 @@ test("墙钟 now() 返回有限小数(0.5、T0+0.25)时 pull 照常盖收到时�
   }
 });
 
+test("墙钟 now() 返回负的有限小数(-0.5、-1.5)时按 Date 的取整规则盖收到时间(1970-01-01T00:00:00.000Z、1969-12-31T23:59:59.999Z),不向下取整,首次发送照常投递一次(R10-02 审查 R10-M2)", async () => {
+  for (const [t, iso] of [[-0.5, "1970-01-01T00:00:00.000Z"], [-1.5, "1969-12-31T23:59:59.999Z"]] as const) {
+    let calls = 0;
+    const reg = createRegistry({ now: () => t, monotonic: () => 0 });
+    reg.register(tg());
+    reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: async (q: { action_id: string }) => { calls++; return { action_id: q.action_id, receiptId: "r" }; } });
+    const pulled = await reg.pull("telegram", "g1");
+    assert.deepEqual(pulled.ok && pulled.events.map((e) => e.receivedAt), [iso], String(t));
+    const sent = await reg.send("p", { action_id: "a", payload: "x" });
+    assert.deepEqual(sent, { ok: true, state: "confirmed", receipt: { action_id: "a", receiptId: "r" }, deduplicated: false }, String(t));
+    assert.deepEqual([calls, reg.delivery("p", "a")?.binding.firstAttemptAt], [1, t], String(t));
+  }
+});
+
 test("send / pull 返回带自有静态 Symbol.species getter 的 Promise 子类时直接拒收,不 await、species getter 0 次、子类构造不再执行;普通原生 Promise 照常(R9-02 审查 R9-M3 单开关对照)", async () => {
   let species = 0, ctor = 0;
   class Sub extends Promise<unknown> {
@@ -1406,37 +1420,71 @@ test("send / pull 返回带自有静态 Symbol.species getter 的 Promise 子类
   assert.equal(ok.ok && ok.events.length, 1);
 });
 
-// —— R9-01(用户 g-group#3140 选 A):拒收的外部 Promise 能不执行外部代码就挂空拒绝处理的都挂上;
-// Proxy、不可配置的自有 constructor getter、冻结/不可扩展的子类排除在本片合同外(由集成前插件进程隔离兜底),只做记录性测试。
-type Shape = "plain" | "then-getter" | "ctor-getter" | "ctor-data" | "ctor-other" | "subclass" | "proxy" | "ctor-getter-fixed" | "frozen-subclass";
+// —— R9-01 / R10-01(用户 g-group#3140 选 A:"能安全处理的都做"):拒收的外部 Promise 能不执行外部代码就挂空拒绝处理的都挂上;
+// 用户排除的三类(Proxy、不可配置 getter、冻结子类)只做记录性测试;另有几种残余形态做不到或要改写内置对象,只做记录性测试,待用户拍板。
+type Shape = "plain" | "then-getter" | "ctor-getter" | "ctor-getter-enum" | "ctor-data" | "ctor-other" | "ctor-fixed-writable" | "ctor-fixed-writable-enum"
+  | "ctor-fixed-writable-null" | "ctor-locked-other" | "ctor-locked-plain" | "ctor-locked-subclass" | "ctor-locked-species-data" | "proxy-proto" | "subclass" | "sealed-subclass" | "frozen-subclass"
+  | "proxy" | "ctor-getter-fixed" | "frozen-all" | "ctor-locked-null" | "ctor-locked-builtin" | "ctor-locked-frozen-subclass" | "ctor-locked-proxy";
 type ShapeCounters = { gets: number; traps: number; ctor: number; species: number };
-type Shaped = { value: unknown; raw: Promise<unknown>; ctorBefore: PropertyDescriptor | undefined; protoBefore: object | null; cleanup: () => void };
-const HANDLED: readonly Shape[] = ["then-getter", "ctor-getter", "ctor-data", "ctor-other", "subclass"];
-const EXCLUDED: readonly Shape[] = ["proxy", "ctor-getter-fixed", "frozen-subclass"];
+type Shaped = { value: unknown; raw: Promise<unknown>; ctorBefore: PropertyDescriptor | undefined; protoBefore: object | null; snapBefore: unknown[]; snap: () => unknown[]; cleanup: () => void };
+const HANDLED: readonly Shape[] = ["then-getter", "ctor-getter", "ctor-getter-enum", "ctor-data", "ctor-other", "ctor-fixed-writable", "ctor-fixed-writable-enum", "ctor-fixed-writable-null",
+  "ctor-locked-other", "ctor-locked-plain", "ctor-locked-subclass", "ctor-locked-species-data", "proxy-proto", "subclass", "sealed-subclass", "frozen-subclass"];
+const EXCLUDED: readonly Shape[] = ["proxy", "ctor-getter-fixed", "frozen-all"];
+const RESIDUAL: readonly Shape[] = ["ctor-locked-null", "ctor-locked-builtin", "ctor-locked-frozen-subclass", "ctor-locked-proxy"];
 /** 造一个外部返回值。不引用模块里的任何变量,子进程通过 toString 复用同一份代码。
  *  armed 期间访问器、Proxy 陷阱、子类构造与 species 都计数(访问器与 species 还会抛错);cleanup 关掉计数,
- *  用于给排除形态的底层 Promise 挂处理,不让测试进程自身留下未处理拒绝。later:5ms 后才拒绝。 */
-function shapedPromise(shape: string, timing: string, c: ShapeCounters): Shaped {
+ *  用于给排除形态的底层 Promise 挂处理,不让测试进程自身留下未处理拒绝。later:5ms 后才拒绝。
+ *  pre:造好底层 Promise 后、改形态前就先挂处理(给根本挂不上处理的残余形态在测试进程内用)。
+ *  snap:插件类、类 prototype、Other 以及内置 Array / Promise 的相关描述符,用来核对临时改写后原样恢复。 */
+function shapedPromise(shape: string, timing: string, c: ShapeCounters, pre = false): Shaped {
   let armed = false;
   class Sub extends Promise<unknown> {
     constructor(executor: (ok: (v: unknown) => void, fail: (e: unknown) => void) => void) { if (armed) c.ctor++; super(executor); }
     static override get [Symbol.species](): PromiseConstructor { if (!armed) return Promise; c.species++; throw new Error("不应读取 species"); }
   }
+  class Bare extends Promise<unknown> {
+    constructor(executor: (ok: (v: unknown) => void, fail: (e: unknown) => void) => void) { if (armed) c.ctor++; super(executor); }
+  }
   const Other = function Other() {};
-  Object.defineProperty(Other, Symbol.species, { get() { if (!armed) return Promise; c.species++; throw new Error("不应读取 Other 的 species"); } });
+  Object.defineProperty(Other, Symbol.species, { configurable: true, get() { if (!armed) return Promise; c.species++; throw new Error("不应读取 Other 的 species"); } });
+  const Plain = function Plain() {};
+  // 与第十轮审查复现相同:species 是不可配置 getter(改不了 species,只能改实例上可写的 constructor 值)
+  const OtherFixed = function OtherFixed() {};
+  Object.defineProperty(OtherFixed, Symbol.species, { get() { if (!armed) return Promise; c.species++; throw new Error("不应读取 OtherFixed 的 species"); } });
+  const SpeciesData = function SpeciesData() {};
+  Object.defineProperty(SpeciesData, Symbol.species, { value: Bare, writable: true, enumerable: false, configurable: true });
+  const ProxyCtor = new Proxy(function Target() {}, { get(t, k, r) { if (armed) c.traps++; return Reflect.get(t, k, r); }, getOwnPropertyDescriptor(t, k) { if (armed) c.traps++; return Reflect.getOwnPropertyDescriptor(t, k); }, getPrototypeOf(t) { if (armed) c.traps++; return Reflect.getPrototypeOf(t); } });
+  const snap = () => [Sub, Sub.prototype, Bare, Bare.prototype, Other, OtherFixed, SpeciesData, Array, Promise].map((o) => [Object.getOwnPropertyDescriptor(o, "constructor"), Object.getOwnPropertyDescriptor(o, Symbol.species), Object.isExtensible(o)]);
   const executor = (_ok: (v: unknown) => void, fail: (e: unknown) => void) => {
     if (timing === "now") fail(new Error("外部拒绝"));
     else setTimeout(() => fail(new Error("外部稍后拒绝")), 5);
   };
-  const raw: Promise<unknown> = shape === "subclass" || shape === "frozen-subclass" ? new Sub(executor) : new Promise(executor);
+  const raw: Promise<unknown> = shape === "subclass" || shape === "frozen-subclass" || shape === "frozen-all" ? new Sub(executor) : shape === "sealed-subclass" ? new Bare(executor) : new Promise(executor);
+  if (pre) Reflect.apply(Promise.prototype.then, raw, [undefined, () => {}]);
   const throwing = { get() { if (!armed) return Promise; c.gets++; throw new Error("不应读取访问器"); } };
+  const lock = (value: unknown) => Object.defineProperty(raw, "constructor", { value, writable: false, enumerable: true, configurable: false });
   // biome-ignore lint/suspicious/noThenProperty: 测试要的就是带自有 then getter 的 Promise,验证它不被读取
   if (shape === "then-getter") Object.defineProperty(raw, "then", { get() { c.gets++; throw new Error("不应读取 then"); } });
-  if (shape === "ctor-getter") Object.defineProperty(raw, "constructor", { configurable: true, ...throwing });
+  if (shape === "ctor-getter") Object.defineProperty(raw, "constructor", { configurable: true, enumerable: false, ...throwing });
+  if (shape === "ctor-getter-enum") Object.defineProperty(raw, "constructor", { configurable: true, enumerable: true, ...throwing });
   if (shape === "ctor-getter-fixed") Object.defineProperty(raw, "constructor", { configurable: false, ...throwing });
   if (shape === "ctor-data") Object.defineProperty(raw, "constructor", { value: Promise });
   if (shape === "ctor-other") Object.defineProperty(raw, "constructor", { value: Other, configurable: true, writable: true });
+  if (shape === "ctor-fixed-writable") Object.defineProperty(raw, "constructor", { value: OtherFixed, writable: true, enumerable: false, configurable: false });
+  if (shape === "ctor-fixed-writable-enum") Object.defineProperty(raw, "constructor", { value: OtherFixed, writable: true, enumerable: true, configurable: false });
+  if (shape === "ctor-fixed-writable-null") Object.defineProperty(raw, "constructor", { value: null, writable: true, enumerable: true, configurable: false });
+  if (shape === "ctor-locked-other") lock(Other);
+  if (shape === "ctor-locked-plain") lock(Plain);
+  if (shape === "ctor-locked-subclass") lock(Bare);
+  if (shape === "ctor-locked-species-data") lock(SpeciesData);
+  if (shape === "proxy-proto") Object.setPrototypeOf(raw, new Proxy(Promise.prototype, { get(t, k, r) { if (armed) c.traps++; return Reflect.get(t, k, r); }, getOwnPropertyDescriptor(t, k) { if (armed) c.traps++; return Reflect.getOwnPropertyDescriptor(t, k); }, getPrototypeOf(t) { if (armed) c.traps++; return Reflect.getPrototypeOf(t); } }));
+  if (shape === "ctor-locked-null") lock(null);
+  if (shape === "ctor-locked-builtin") lock(Array);
+  if (shape === "ctor-locked-frozen-subclass") { Object.freeze(Bare); lock(Bare); }
+  if (shape === "ctor-locked-proxy") lock(ProxyCtor);
+  if (shape === "sealed-subclass") { Object.defineProperty(raw, "tag", { value: 1, writable: true, enumerable: true, configurable: true }); Object.preventExtensions(raw); }
   if (shape === "frozen-subclass") Object.freeze(raw);
+  if (shape === "frozen-all") { Object.freeze(raw); Object.freeze(Sub.prototype); Object.freeze(Sub); }
   const traps: ProxyHandler<Promise<unknown>> = {};
   for (const k of ["get", "set", "has", "getOwnPropertyDescriptor", "defineProperty", "deleteProperty", "ownKeys", "getPrototypeOf", "setPrototypeOf", "isExtensible", "preventExtensions", "apply", "construct"] as const) {
     Reflect.set(traps, k, (...args: unknown[]) => { if (armed) c.traps++; return Reflect.apply(Reflect.get(Reflect, k), undefined, args); });
@@ -1444,30 +1492,34 @@ function shapedPromise(shape: string, timing: string, c: ShapeCounters): Shaped 
   const value = shape === "proxy" ? new Proxy(raw, traps) : raw;
   const ctorBefore = Object.getOwnPropertyDescriptor(raw, "constructor");
   const protoBefore = Object.getPrototypeOf(raw);
+  const snapBefore = snap();
   armed = true;
-  return { value, raw, ctorBefore, protoBefore, cleanup: () => { armed = false; Reflect.apply(Promise.prototype.then, raw, [undefined, () => {}]); } };
+  return { value, raw, ctorBefore, protoBefore, snapBefore, snap, cleanup: () => { armed = false; Reflect.apply(Promise.prototype.then, raw, [undefined, () => {}]); } };
 }
 const counters = (): ShapeCounters => ({ gets: 0, traps: 0, ctor: 0, species: 0 });
 const refusedOk = (mode: "send" | "pull", shape: Shape) =>
   shape === "plain" ? (mode === "send" ? "send-threw" : "pull-failed") : (mode === "send" ? "non-promise-send" : "invalid-batch");
 
 /** 本进程:在调用方建的注册表上注册一个返回某形态外部 Promise 的插件(id "p");返回计数与插件实际造出的对象 */
-function plugShaped(reg: ReturnType<typeof createRegistry>, mode: "send" | "pull", shape: Shape, timing: "now" | "later"): { c: ShapeCounters; made: () => Shaped | undefined } {
+function plugShaped(reg: ReturnType<typeof createRegistry>, mode: "send" | "pull", shape: Shape, timing: "now" | "later", pre = false): { c: ShapeCounters; made: () => Shaped | undefined } {
   const c = counters();
   let made: Shaped | undefined;
-  const make = () => { made = shapedPromise(shape, timing, c); return made.value; };
+  const make = () => { made = shapedPromise(shape, timing, c, pre); return made.value; };
   if (mode === "send") reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: make });
   else reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: make });
   return { c, made: () => made };
 }
 const callShaped = (reg: ReturnType<typeof createRegistry>, mode: "send" | "pull") => (mode === "send" ? reg.send("p", { action_id: "a", payload: "x" }) : reg.pull("p", "g"));
 
-/** 无 unhandledRejection 处理器的独立子进程:同一形态依次跑 send/pull × 立即/稍后拒绝四种组合,每种打印一行,
- *  最后等 80ms 再打印存活。返回退出码与各行。 */
-function shapedSubprocess(shape: Shape): { code: number; lines: unknown[] } {
+/** 独立子进程:同一形态依次跑 send/pull × 立即/稍后拒绝四种组合,每种打印一行,最后等 80ms 再打印存活。返回退出码与各行。
+ *  默认不装 unhandledRejection 处理器(进程存活即内核挂上了处理);observe 时装一个只计数的处理器,
+ *  最后一行改为 { alive, unhandled },用来记录内核挂不上处理的形态确实留下了未处理拒绝。 */
+function shapedSubprocess(shape: Shape, observe = false): { code: number; lines: unknown[] } {
   const code = `
     import { writeSync } from "node:fs";
     import { createRegistry } from ${JSON.stringify(new URL("./plugins.ts", import.meta.url).href)};
+    let unhandled = 0;
+    if (${observe}) process.on("unhandledRejection", () => { unhandled++; });
     const shapedPromise = ${shapedPromise.toString()};
     for (const mode of ["send", "pull"]) for (const timing of ["now", "later"]) {
       const c = { gets: 0, traps: 0, ctor: 0, species: 0 };
@@ -1479,7 +1531,7 @@ function shapedSubprocess(shape: Shape): { code: number; lines: unknown[] } {
       await new Promise((ok) => setTimeout(ok, 20));
       writeSync(1, JSON.stringify({ mode, timing, reason: r.reason, state: mode === "send" ? reg.delivery("p", "a")?.state : null, ...c }) + "\\n");
     }
-    setTimeout(() => writeSync(1, JSON.stringify({ alive: true }) + "\\n"), 80);
+    setTimeout(() => writeSync(1, JSON.stringify(${observe} ? { alive: true, unhandled } : { alive: true }) + "\\n"), 80);
   `;
   const parse = (s: string) => s.split("\n").filter(Boolean).map((l) => JSON.parse(l));
   try {
@@ -1490,7 +1542,7 @@ function shapedSubprocess(shape: Shape): { code: number; lines: unknown[] } {
 }
 const zero = { gets: 0, traps: 0, ctor: 0, species: 0 };
 
-test("send / pull 拒收自有 constructor getter、自有 constructor 数据属性(内置 Promise 或别的类)、自有 then getter、带 species getter 的可扩展子类的已拒绝或稍后拒绝 Promise:结果为 non-promise-send / invalid-batch,访问器、子类构造、species 调用 0 次,原 constructor 描述符与原型原样恢复(R9-01 阳性埋雷)", async () => {
+test("send / pull 拒收十六种可安全处理的外部 Promise(自有 then getter;可配置 constructor getter 可枚举与否;constructor 为内置 Promise;别的类的可配置数据属性;不可配置但可写、值为 species 不可配置的类(可枚举与否)或 null 的数据属性;别的类的不可配置不可写数据属性;锁定指向无 species 的函数、未冻结子类或 species 为数据属性的类;原型是 Proxy 的可扩展实例;可扩展、仅不可扩展、冻结实例的子类)的已拒绝或稍后拒绝情形:结果为 non-promise-send / invalid-batch,访问器、子类构造、species 调用 0 次,实例 constructor 描述符、原型以及插件类与内置对象的描述符原样恢复(R9-01 / R10-01 阳性埋雷)", async () => {
   for (const shape of HANDLED) for (const mode of ["send", "pull"] as const) for (const timing of ["now", "later"] as const) {
     const name = `${shape}/${mode}/${timing}`;
     const reg = createRegistry({ now: () => T0 });
@@ -1501,12 +1553,13 @@ test("send / pull 拒收自有 constructor getter、自有 constructor 数据属
     assert.ok(m, name);
     assert.deepEqual(Object.getOwnPropertyDescriptor(m.raw, "constructor"), m.ctorBefore, name);
     assert.equal(Object.getPrototypeOf(m.raw), m.protoBefore, name);
+    assert.deepEqual(m.snap(), m.snapBefore, name);
     await new Promise((ok) => setTimeout(ok, 20));
     assert.deepEqual(c, zero, name);
   }
 });
 
-test("无全局 unhandledRejection 处理器的子进程里,上述五种形态在 send / pull × 立即 / 稍后拒绝下都被拒收且进程存活,访问器、子类构造、species 调用 0 次(R9-01 阳性埋雷)", async () => {
+test("无全局 unhandledRejection 处理器的子进程里,上述十六种形态在 send / pull × 立即 / 稍后拒绝下都被拒收且进程存活,访问器、子类构造、species 调用 0 次(R9-01 / R10-01 阳性埋雷)", async () => {
   const reg = createRegistry({ now: () => T0 });
   const { c } = plugShaped(reg, "pull", "ctor-getter", "now");
   const r = await callShaped(reg, "pull");
@@ -1534,7 +1587,7 @@ test("普通已拒绝或稍后拒绝的原生 Promise 照常 await,记 send-thre
   ] });
 });
 
-test("排除在本片合同外的 Proxy、不可配置的自有 constructor getter、冻结子类(用户 g-group 第 3140 条选 A,由集成前插件进程隔离兜底):仍被拒收,陷阱、访问器、子类构造、species 调用 0 次,对象不被改写;不断言进程存活(R9-01 记录性)", async () => {
+test("用户排除的 Proxy、不可配置的自有 constructor getter、冻结子类(实例、prototype、类全部冻结;用户 g-group 第 3140 条选 A,由集成前插件进程隔离兜底):仍被拒收,陷阱、访问器、子类构造、species 调用 0 次,对象不被改写;不断言进程存活(R9-01 记录性)", async () => {
   for (const shape of EXCLUDED) for (const mode of ["send", "pull"] as const) for (const timing of ["now", "later"] as const) {
     const name = `${shape}/${mode}/${timing}`;
     const reg = createRegistry({ now: () => T0 });
@@ -1545,6 +1598,45 @@ test("排除在本片合同外的 Proxy、不可配置的自有 constructor gett
     const m = made();
     assert.ok(m, name);
     assert.deepEqual(Object.getOwnPropertyDescriptor(m.raw, "constructor"), m.ctorBefore, name);
+    assert.deepEqual(m.snap(), m.snapBefore, name);
     m.cleanup(); // 测试进程自己给底层 Promise 挂处理(关掉计数后),不让本进程留下未处理拒绝
+  }
+});
+
+test("残余形态(constructor 不可配置不可写,值为 null、内置 Array、冻结的 Promise 子类或 Proxy;做不到或要改写内置对象才做得到,待用户拍板):仍被拒收,陷阱、访问器、子类构造、species 调用 0 次,插件类与内置 Array / Promise 不被改写;装计数处理器的子进程里四种组合各留下 1 个未处理拒绝(R10-01 记录性)", async () => {
+  for (const shape of RESIDUAL) for (const mode of ["send", "pull"] as const) for (const timing of ["now", "later"] as const) {
+    const name = `${shape}/${mode}/${timing}`;
+    const reg = createRegistry({ now: () => T0 });
+    const { c, made } = plugShaped(reg, mode, shape, timing, true);
+    const r = await callShaped(reg, mode);
+    assert.deepEqual([r.ok === false && r.reason, mode === "send" ? reg.delivery("p", "a")?.state : null], [refusedOk(mode, shape), mode === "send" ? "delivery-unknown" : null], name);
+    const m = made();
+    assert.ok(m, name);
+    assert.deepEqual(Object.getOwnPropertyDescriptor(m.raw, "constructor"), m.ctorBefore, name);
+    assert.deepEqual(m.snap(), m.snapBefore, name);
+    await new Promise((ok) => setTimeout(ok, 20));
+    assert.deepEqual(c, zero, name);
+  }
+  for (const shape of RESIDUAL) {
+    const expect = (["send", "pull"] as const).flatMap((mode) => (["now", "later"] as const).map((timing) => ({ mode, timing, reason: refusedOk(mode, shape), state: mode === "send" ? "delivery-unknown" : null, ...zero })));
+    assert.deepEqual(shapedSubprocess(shape, true), { code: 0, lines: [...expect, { alive: true, unhandled: 4 }] }, shape);
+  }
+});
+
+test("临时改写后恢复的 constructor 描述符逐旗标不变:可配置 getter 与不可配置但可写的数据属性各取 enumerable 为 true / false,拒收后描述符与原来逐字段相同,访问器与 species 调用 0 次(R10-02 审查 R10-M1 单开关对照)", async () => {
+  for (const shape of ["ctor-getter", "ctor-getter-enum", "ctor-fixed-writable", "ctor-fixed-writable-enum"] as const) for (const mode of ["send", "pull"] as const) {
+    const name = `${shape}/${mode}`;
+    const reg = createRegistry({ now: () => T0 });
+    const { c, made } = plugShaped(reg, mode, shape, "now");
+    const r = await callShaped(reg, mode);
+    assert.equal(r.ok === false && r.reason, refusedOk(mode, shape), name);
+    const m = made();
+    assert.ok(m, name);
+    const after = Object.getOwnPropertyDescriptor(m.raw, "constructor");
+    assert.deepEqual([after?.enumerable, after?.configurable, after?.writable], [m.ctorBefore?.enumerable, m.ctorBefore?.configurable, m.ctorBefore?.writable], name);
+    assert.equal(after?.enumerable, shape.endsWith("-enum"), name);
+    assert.deepEqual(after, m.ctorBefore, name);
+    await new Promise((ok) => setTimeout(ok, 20));
+    assert.deepEqual(c, zero, name);
   }
 });
