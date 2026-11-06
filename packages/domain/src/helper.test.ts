@@ -251,3 +251,25 @@ test("公开快照运行时只读:三种入口返回的 HelperRoute 冻结,改�
     assert.deepEqual(routeHelper(entry as never, me, "u1"), { ok: true, route }, `${entry.kind} 再次调用`);
   }
 });
+
+test("CH-41 Helper 入口与调用方被丢弃字段里嵌套的 Proxy、getter、setter 拒收且调用 0 次;同样位置放普通数据照常路由(对照)", () => {
+  let n = 0;
+  const hit = (): never => { n++; throw new Error("不该被调用"); };
+  const handler: ProxyHandler<object> = { get: hit, set: hit, has: hit, ownKeys: hit, getOwnPropertyDescriptor: hit, getPrototypeOf: hit, defineProperty: hit };
+  const proxy = new Proxy({ x: 1 }, handler);
+  const getter = Object.defineProperty({}, "x", { enumerable: true, get: hit });
+  const setter = Object.defineProperty({}, "x", { enumerable: true, set: hit });
+  assert.deepEqual(routeHelper({ kind: "global", extra: proxy } as never, me, "u1"), { ok: false, reason: "Helper 入口.extra 只接受普通数据(不能是 Proxy)" });
+  assert.deepEqual(routeHelper({ kind: "global" }, { ...me, extra: { deep: [getter] } } as never, "u1"), { ok: false, reason: "调用方.extra.deep.0 只接受普通数据对象(x 是访问器属性)" });
+  for (const [entry, replyIn] of okRoutes) {
+    for (const [kind, bad] of [["Proxy", proxy], ["getter 对象", getter], ["setter 对象", setter], ["深层 Proxy", { a: [proxy] }]] as const) {
+      assert.equal(routeHelper({ ...entry, extra: bad } as never, me, "u1").ok, false, `${entry.kind} entry ${kind}`);
+      assert.equal(routeHelper(entry, { ...me, extra: bad } as never, "u1").ok, false, `${entry.kind} caller ${kind}`);
+    }
+    const r1 = routeHelper({ ...entry, extra: { a: [1, "x"] } } as never, me, "u1");
+    const r2 = routeHelper(entry, { ...me, extra: { a: [1, "x"] } } as never, "u1");
+    assert.equal(r1.ok && r1.route.replyIn, replyIn);
+    assert.equal(r2.ok && r2.route.replyIn, replyIn);
+  }
+  assert.equal(n, 0);
+});

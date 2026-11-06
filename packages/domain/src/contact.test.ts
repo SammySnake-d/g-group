@@ -728,7 +728,8 @@ test("CH-25 回执与登记入口同样拒绝外层 Proxy:回执作用域不能�
   const proxied = new Proxy({ taskId: "T", commitmentIds: ids, basedOnSeq: 5 }, {
     getOwnPropertyDescriptor(t, k) { if (k === "basedOnSeq") ids.splice(0, 1, "b"); return Reflect.getOwnPropertyDescriptor(t, k); },
   });
-  assert.deepEqual(unwrap(confirmFinalReport(ended, proxied)).commitments, ended.commitments);
+  assert.deepEqual(confirmFinalReport(ended, proxied), { ok: false, reason: "回执 只接受普通数据(不能是 Proxy)" });
+  assert.deepEqual(ids, ["a"]);
   assert.deepEqual(unwrap(confirmFinalReport(ended, { taskId: "T", commitmentIds: ["a"], basedOnSeq: 5 })).commitments.map((k) => k.status), ["done", "active"]);
   const c = mk().contacts.get("c-mi")!;
   assert.equal((grantTool(c, new Proxy({ name: "weather", bounded: true }, {})) as { reason: string }).reason, "直接工具 只接受普通数据对象");
@@ -749,7 +750,7 @@ test("普通数据合同:联系人每个公开入口的每个对象字段做成 
     ["grantComputeAsset", { name: "research", kind: "mcp" }, "能力资产", (x) => grantComputeAsset(c, x), (r) => (r as { ok: boolean }).ok],
     ["commit", { id: "k2", sourceSeq: 1, text: "t", boundTaskIds: ["T"], schedule: null }, "承诺", (x) => commit(c, x), (r) => (r as { ok: boolean }).ok],
     ["briefFor", { task: "t", rules: ["r"], tools: [], credentialRefs: ["vault://a"], placement: "local" }, "Compute 说明请求", (x) => briefFor(c, x), (r) => (r as { ok: boolean }).ok],
-    ["confirmFinalReport", { taskId: "T", commitmentIds: ["k"], basedOnSeq: 5 }, "回执", (x) => unwrap(confirmFinalReport(ended, x)), (r) => (r as typeof ended).commitments[0]?.status === "done"],
+    ["confirmFinalReport", { taskId: "T", commitmentIds: ["k"], basedOnSeq: 5 }, "回执", (x) => confirmFinalReport(ended, x), (r) => (r as ContactResult).ok && (r as { contact: Contact }).contact.commitments[0]?.status === "done"],
   ];
   for (let ci = 0; ci < cases.length; ci++) {
     const [label, base, what, call, accepted] = cases[ci]!;
@@ -802,7 +803,7 @@ test("普通数据合同:逐个入口拒绝外层 Proxy 与数组 Proxy,普通�
   assert.equal((commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: P(["T"]), schedule: null }) as { reason: string }).reason, "boundTaskIds 只接受普通数据数组");
   const base = { task: "t", rules: [] as string[], tools: [] as string[], credentialRefs: [] as string[] };
   for (const f of ["rules", "tools", "credentialRefs"] as const) assert.equal((briefFor(c, { ...base, [f]: P([]) }) as { reason: string }).reason, `${f} 只接受普通数据数组`, f);
-  assert.deepEqual(unwrap(confirmFinalReport(ended, { taskId: "T", commitmentIds: P(["k"]), basedOnSeq: 1 })).commitments, ended.commitments);
+  assert.deepEqual(confirmFinalReport(ended, { taskId: "T", commitmentIds: P(["k"]), basedOnSeq: 1 }), { ok: false, reason: "回执.commitmentIds 只接受普通数据(不能是 Proxy)" });
   assert.equal(unwrap(confirmFinalReport(ended, { taskId: "T", commitmentIds: ["k"], basedOnSeq: 1 })).commitments[0]?.status, "done");
   assert.equal(addContact(emptyDirectory(), { id: "n", name: "n", speakingModel: "m" }).ok, true);
   assert.equal(updateContact(dir, "c-mi", { memory: "x" }).ok, true);
@@ -944,7 +945,7 @@ const entryCases = () => {
     ["grantComputeAsset", "能力资产", { name: "research", kind: "mcp" }, (x: never) => grantComputeAsset(c, x), ok],
     ["commit", "承诺", { id: "k2", sourceSeq: 1, text: "t", boundTaskIds: ["T"], schedule: null }, (x: never) => commit(c, x), ok],
     ["briefFor", "Compute 说明请求", { task: "t", rules: ["r"], tools: [], credentialRefs: ["vault://a"], placement: "local" }, (x: never) => briefFor(c, x), ok],
-    ["confirmFinalReport", "回执", { taskId: "T", commitmentIds: ["k"], basedOnSeq: 5 }, (x: never) => unwrap(confirmFinalReport(ended, x)), (r: unknown) => (r as typeof ended).commitments[0]?.status === "done"],
+    ["confirmFinalReport", "回执", { taskId: "T", commitmentIds: ["k"], basedOnSeq: 5 }, (x: never) => confirmFinalReport(ended, x), (r: unknown) => (r as ContactResult).ok && (r as { contact: Contact }).contact.commitments[0]?.status === "done"],
   ] as const;
 };
 
@@ -1583,4 +1584,181 @@ test("CH-40 回执 commitmentIds 按承诺 id 精确点名:回执只点名 promi
   const two = unwrap(commit(unwrap(commit(base, { id: "promise", sourceSeq: 1, text: "a", boundTaskIds: ["T"], schedule: null })), { id: "promise-long", sourceSeq: 1, text: "b", boundTaskIds: ["T"], schedule: null }));
   const one = unwrap(confirmFinalReport(unwrap(settleTask(two, "T")), rc("T", ["promise"], 10)));
   assert.deepEqual(one.commitments.map((k) => [k.id, k.status]), [["promise", "done"], ["promise-long", "active"]]);
+});
+
+// ---------------------------------------------------------------- 第十五轮(reviews/feat-contact-helper.md CH-41 / CH-42 / CH-43)
+/** 计数陷阱:Proxy 的任何 trap、getter、setter 被碰一次就计一次并抛错;合同要求它们一次都不被调用。 */
+const traps = () => {
+  const n = { v: 0 };
+  const hit = (): never => { n.v++; throw new Error("不该被调用"); };
+  const handler: ProxyHandler<object> = { get: hit, set: hit, has: hit, ownKeys: hit, getOwnPropertyDescriptor: hit, getPrototypeOf: hit, defineProperty: hit, deleteProperty: hit, isExtensible: hit, preventExtensions: hit, setPrototypeOf: hit };
+  const proxy = new Proxy({ x: 1 }, handler);
+  const getter = Object.defineProperty({}, "x", { enumerable: true, get: hit });
+  const setter = Object.defineProperty({}, "x", { enumerable: true, set: hit });
+  const nasty = [
+    ["Proxy", proxy], ["数组 Proxy", new Proxy(["x"], handler)], ["带 getter 的对象", getter], ["带 setter 的对象", setter],
+    ["深层 Proxy", { a: { b: [1, proxy] } }], ["数组里带 getter 的对象", [getter]],
+  ] as const;
+  return { n, hit, proxy, getter, nasty };
+};
+
+test("CH-41 被丢弃字段里嵌套的 Proxy、getter、setter 同样拒收且调用 0 次:七个联系人入口的入参、联系人状态各层(顶层、tools/computeAssets/commitments 项、schedule、数组的非下标属性)、目录外层与 Map 自有属性;同样位置放普通数据照常接受并丢弃(对照)", () => {
+  const { n, proxy, getter, nasty } = traps();
+  const c = fullContact();
+  assert.deepEqual(grantTool(c, { name: "read_issues", bounded: true, ignored: proxy } as never), { ok: false, reason: "直接工具.ignored 只接受普通数据(不能是 Proxy)" });
+  assert.deepEqual(grantTool(c, { name: "read_issues", bounded: true, ignored: { a: { b: [1, getter] } } } as never), { ok: false, reason: "直接工具.ignored.a.b.1 只接受普通数据对象(x 是访问器属性)" });
+  assert.deepEqual(grantTool(c, { name: "read_issues", bounded: true, ignored: new (class Legacy { v = 1; })() } as never), { ok: false, reason: "直接工具.ignored 只接受普通数据对象" });
+  assert.deepEqual(briefFor(c, { task: "t", rules: Object.assign(["r"], { meta: proxy }), tools: [], credentialRefs: [] }), { ok: false, reason: "rules.meta 只接受普通数据(不能是 Proxy)" });
+  assert.equal(n.v, 0);
+  const cyc: Record<string, unknown> = { a: [1, "x", null] };
+  cyc.self = cyc;
+  const kept = grantTool(c, { name: "read_issues", bounded: true, ignored: cyc } as never);
+  assert.deepEqual(kept.ok && kept.contact.tools.map((t) => [t.name, "ignored" in t]), [["get_weather", false], ["read_issues", false]]);
+  for (const [label, , base, call, accepted] of entryCases()) {
+    for (const [kind, bad] of nasty) {
+      n.v = 0;
+      assert.equal(accepted(call({ ...base, ignored: bad } as never)), false, `${label} ignored=${kind}`);
+      assert.equal(n.v, 0, `${label} ignored=${kind} 调用次数`);
+    }
+    assert.equal(accepted(call({ ...base, ignored: { a: { b: [1, "x", null] } } } as never)), true, `${label} 普通数据对照`);
+  }
+  const places: [string, (s: Raw, v: unknown) => void][] = [
+    ["联系人状态顶层", (s, v) => { s.legacy = v; }],
+    ["tools[1]", (s, v) => { s.tools[1]!.ignored = v; }],
+    ["computeAssets[2]", (s, v) => { s.computeAssets[2]!.ignored = v; }],
+    ["commitments[0]", (s, v) => { s.commitments[0]!.ignored = v; }],
+    ["commitments[2].schedule", (s, v) => { (s.commitments[2]!.schedule as Record<string, unknown>).ignored = v; }],
+    ["tools 数组的非下标属性", (s, v) => { Object.defineProperty(s.tools, "meta", { value: v, enumerable: false }); }],
+    ["boundTaskIds 的 Symbol 键属性", (s, v) => { Object.defineProperty(s.commitments[0]!.boundTaskIds, Symbol("meta"), { value: v, enumerable: true }); }],
+  ];
+  for (const [where, put] of places) {
+    for (const [kind, bad] of nasty) {
+      const st = raw(threeOfEach());
+      put(st, bad);
+      n.v = 0;
+      for (const [entry, r] of stateEntryResults(st as never)) assert.equal(r.ok, false, `${where}=${kind} ${entry}`);
+      assert.equal(canCallDirectly(st as never, "get_weather"), false, `${where}=${kind} canCallDirectly`);
+      assert.equal(updateContact({ contacts: new Map([["c-mi", st as never]]) }, "c-mi", { memory: "m" }).ok, false, `${where}=${kind} updateContact`);
+      assert.equal(n.v, 0, `${where}=${kind} 调用次数`);
+    }
+    const ok = raw(threeOfEach());
+    put(ok, { a: [1, "x"] });
+    for (const [entry, r] of stateEntryResults(ok as never)) assert.equal(r.ok, true, `${where} 普通数据对照 ${entry}`);
+    assert.equal(canCallDirectly(ok as never, "get_weather"), true, `${where} 普通数据对照 canCallDirectly`);
+  }
+  const good = raw(threeOfEach()) as never;
+  assert.deepEqual(updateContact({ contacts: new Map([["c-mi", good]]), meta: proxy } as never, "c-mi", { memory: "m" }), { ok: false, reason: "目录.meta 只接受普通数据(不能是 Proxy)" });
+  for (const [kind, bad] of nasty) {
+    n.v = 0;
+    assert.equal(updateContact({ contacts: new Map([["c-mi", good]]), meta: bad } as never, "c-mi", { memory: "m" }).ok, false, `目录外层 ${kind}`);
+    const m = new Map([["c-mi", good]]);
+    Object.defineProperty(m, "meta", { value: bad, enumerable: true });
+    assert.equal(updateContact({ contacts: m }, "c-mi", { memory: "m" }).ok, false, `Map 自有属性 ${kind}`);
+    assert.equal(addContact({ contacts: m }, { id: "n2", name: "n", speakingModel: "m" }).ok, false, `Map 自有属性 ${kind} addContact`);
+    assert.equal(n.v, 0, `目录 ${kind} 调用次数`);
+  }
+  const plainMap = new Map([["c-mi", good]]);
+  Object.defineProperty(plainMap, "meta", { value: { a: [1] }, enumerable: true });
+  const u = updateContact({ contacts: plainMap, meta: { a: [1] } } as never, "c-mi", { memory: "m" });
+  assert.equal(u.ok && u.dir.contacts.get("c-mi")?.memory, "m");
+});
+
+test("CH-42 非普通回执明确拒收:回执本身或其中任一层(含被丢弃字段与数组的非下标属性)是 Proxy、带 getter/setter 时返回 { ok:false, reason }、调用 0 次;普通回执照常回收,JSON null、字段类型不对、依据位置非法的回执仍是 { ok:true } 原样返回,两阶段回收不变(对照)", () => {
+  const { n, hit, proxy, getter } = traps();
+  const c = unwrap(commit(mk().contacts.get("c-mi")!, { id: "K", sourceSeq: 1, text: "x", boundTaskIds: ["T"], schedule: null }));
+  const pending = unwrap(settleTask(c, "T"));
+  const receipt = { taskId: "T", commitmentIds: ["K"], basedOnSeq: 1 };
+  const bad: [unknown, string][] = [
+    [Object.defineProperty({ commitmentIds: ["K"], basedOnSeq: 1 }, "taskId", { enumerable: true, get: hit }), "回执 只接受普通数据对象(taskId 是访问器属性)"],
+    [Object.defineProperty({ taskId: "T", commitmentIds: ["K"] }, "basedOnSeq", { enumerable: true, set: hit }), "回执 只接受普通数据对象(basedOnSeq 是访问器属性)"],
+    [new Proxy({ ...receipt }, { get: hit, ownKeys: hit, getOwnPropertyDescriptor: hit, getPrototypeOf: hit }), "回执 只接受普通数据(不能是 Proxy)"],
+    [{ ...receipt, commitmentIds: new Proxy(["K"], { get: hit, ownKeys: hit, getOwnPropertyDescriptor: hit, getPrototypeOf: hit }) }, "回执.commitmentIds 只接受普通数据(不能是 Proxy)"],
+    [{ ...receipt, ignored: proxy }, "回执.ignored 只接受普通数据(不能是 Proxy)"],
+    [{ ...receipt, commitmentIds: Object.assign(["K"], { meta: getter }) }, "回执.commitmentIds.meta 只接受普通数据对象(x 是访问器属性)"],
+  ];
+  for (const [r, reason] of bad) {
+    n.v = 0;
+    assert.deepEqual(confirmFinalReport(pending, r as never), { ok: false, reason }, `先终态 ${reason}`);
+    assert.deepEqual(confirmFinalReport(c, r as never), { ok: false, reason }, `先确认 ${reason}`);
+    assert.equal(n.v, 0, `${reason} 调用次数`);
+  }
+  assert.deepEqual(unwrap(confirmFinalReport(pending, receipt)).commitments.map((k) => [k.id, k.status]), [["K", "done"]]);
+  assert.deepEqual(confirmFinalReport(pending, JSON.parse("null")), { ok: true, contact: pending });
+  assert.deepEqual(confirmFinalReport(pending, { ...receipt, basedOnSeq: "1" } as never), { ok: true, contact: pending });
+  assert.deepEqual(confirmFinalReport(pending, { ...receipt, basedOnSeq: -1 }), { ok: true, contact: pending });
+  const early = unwrap(confirmFinalReport(c, receipt));
+  assert.deepEqual(early.commitments.map((k) => [k.status, k.reportedTaskIds]), [["active", ["T"]]]);
+  assert.deepEqual(unwrap(settleTask(early, "T")).commitments.map((k) => k.status), ["done"]);
+});
+
+test("CH-43 标识按大小写精确比较:目录键 case 与 id Case、回执 report-id 与承诺 Report-ID、撤销 report-id 都不算命中;直接工具名、承诺 id、任务 id 只差大小写时各自独立;大小写完全一致照常命中(对照)", () => {
+  const asId = (id: string) => { const d = addContact(emptyDirectory(), { id, name: "n", speakingModel: "m" }); return js(d.ok ? d.dir.contacts.get(id)! : (null as never)); };
+  for (const [key, id] of [["case", "Case"], ["Case", "case"], ["CASE", "Case"]] as const) {
+    const dir = { contacts: new Map([[key, asId(id)]]) };
+    const reason = `目录.contacts 的键 ${key} 与联系人 id ${id} 不一致`;
+    assert.deepEqual(updateContact(dir, key, { memory: "m" }), { ok: false, reason }, `${key}/${id} updateContact`);
+    assert.deepEqual(addContact(dir, { id: "n2", name: "n", speakingModel: "m" }), { ok: false, reason }, `${key}/${id} addContact`);
+  }
+  const exact = updateContact({ contacts: new Map([["Case", asId("Case")]]) }, "Case", { memory: "m" });
+  assert.equal(exact.ok && exact.dir.contacts.get("Case")?.memory, "m");
+  const base = mk().contacts.get("c-mi")!;
+  for (const [real, named] of [["Report-ID", "report-id"], ["report-id", "Report-ID"], ["Report-ID", "REPORT-ID"]] as const) {
+    const c = unwrap(commit(base, { id: real, sourceSeq: 1, text: "汇报", boundTaskIds: ["T"], schedule: null }));
+    const label = `承诺 ${real} / 点名 ${named}`;
+    const late = unwrap(confirmFinalReport(unwrap(settleTask(c, "T")), rc("T", [named], 10)));
+    assert.deepEqual(late.commitments.map((k) => [k.id, k.status, k.awaitingReport]), [[real, "active", ["T"]]], `${label} 先终态`);
+    const early = unwrap(confirmFinalReport(c, rc("T", [named], 10)));
+    assert.deepEqual(early.commitments.map((k) => k.reportedTaskIds), [[]], `${label} 先确认`);
+    assert.deepEqual(revokeCommitment(c, named), { ok: false, reason: `承诺 ${named} 不存在或已结束` }, `${label} 撤销`);
+    assert.deepEqual(unwrap(confirmFinalReport(unwrap(settleTask(c, "T")), rc("T", [real], 10))).commitments.map((k) => k.status), ["done"], `${label} 精确 先终态`);
+    assert.deepEqual(unwrap(settleTask(unwrap(confirmFinalReport(c, rc("T", [real], 10))), "T")).commitments.map((k) => k.status), ["done"], `${label} 精确 先确认`);
+    const revoked = revokeCommitment(c, real);
+    assert.deepEqual(revoked.ok && revoked.contact.commitments.map((k) => k.status), ["revoked"], `${label} 精确撤销`);
+  }
+  const g = unwrap(grantTool(base, { name: "Get_Weather", bounded: true }));
+  assert.equal(canCallDirectly(g, "get_weather"), false);
+  assert.equal(canCallDirectly(g, "Get_Weather"), true);
+  assert.deepEqual(briefFor(g, { task: "t", rules: [], tools: ["get_weather"], credentialRefs: [] }), { ok: false, reason: "工具 get_weather 超出联系人 c-mi 的授权集合" });
+  const both = unwrap(grantTool(g, { name: "get_weather", bounded: true }));
+  assert.deepEqual(both.tools.map((t) => t.name), ["Get_Weather", "get_weather"]);
+  assert.equal(canCallDirectly(js(both), "get_weather"), true);
+  const kk = unwrap(commit(unwrap(commit(base, { id: "K", sourceSeq: 1, text: "a", boundTaskIds: ["T"], schedule: null })), { id: "k", sourceSeq: 1, text: "b", boundTaskIds: ["U"], schedule: null }));
+  const rk = revokeCommitment(js(kk), "k");
+  assert.deepEqual(rk.ok && rk.contact.commitments.map((k) => [k.id, k.status]), [["K", "active"], ["k", "revoked"]]);
+  const one = unwrap(commit(base, { id: "k1", sourceSeq: 1, text: "a", boundTaskIds: ["T"], schedule: null }));
+  assert.deepEqual(unwrap(settleTask(one, "t")).commitments.map((k) => [k.boundTaskIds, k.awaitingReport]), [[["T"], []]]);
+  assert.deepEqual(unwrap(settleTask(one, "T")).commitments.map((k) => [k.boundTaskIds, k.awaitingReport]), [[[], ["T"]]]);
+});
+
+test("CH-43 状态逐项校验与长度无关:直接工具、能力资产、承诺各取长度 1–6,坏项放在每个位置都整份拒绝并指出该位置;同长度的合法状态照常(对照)", () => {
+  for (let len = 1; len <= 6; len++) {
+    let c = mk().contacts.get("c-mi")!;
+    for (let i = 0; i < len; i++) {
+      c = unwrap(grantTool(c, { name: `t${i}`, bounded: true }));
+      c = unwrap(grantComputeAsset(c, { name: `a${i}`, kind: "mcp" }));
+      c = unwrap(commit(c, { id: `k${i}`, sourceSeq: i, text: "t", boundTaskIds: [`T${i}`], schedule: null }));
+    }
+    const good = raw(c) as never;
+    assert.equal(canCallDirectly(good, `t${len - 1}`), true, `长度 ${len} 对照`);
+    assert.equal(grantTool(good, { name: "weather", bounded: true }).ok, true, `长度 ${len} 对照 grantTool`);
+    assert.equal(unwrap(settleTask(good, `T${len - 1}`)).commitments[len - 1]?.awaitingReport[0], `T${len - 1}`, `长度 ${len} 对照 settleTask`);
+    for (let p = 0; p < len; p++) {
+      const at = `长度 ${len} 第 ${p} 项`;
+      const badTool = raw(c);
+      badTool.tools[p] = { name: `t${p}`, bounded: false };
+      const toolReason = `联系人状态.tools[${p}] 不是有界工具,不能当直接工具`;
+      assert.deepEqual(grantTool(badTool as never, { name: "weather", bounded: true }), { ok: false, reason: toolReason }, `${at} 工具`);
+      assert.equal(canCallDirectly(badTool as never, "t0"), false, `${at} 工具 canCallDirectly`);
+      const badAsset = raw(c);
+      badAsset.computeAssets[p] = { name: `a${p}`, kind: "plugin" };
+      const assetReason = `联系人状态.computeAssets[${p}] 的类别 plugin 不认识`;
+      assert.deepEqual(briefFor(badAsset as never, { task: "t", rules: [], tools: ["a0"], credentialRefs: [] }), { ok: false, reason: assetReason }, `${at} 资产`);
+      assert.deepEqual(grantTool(badAsset as never, { name: "weather", bounded: true }), { ok: false, reason: assetReason }, `${at} 资产 grantTool`);
+      const badK = raw(c);
+      badK.commitments[p] = { ...badK.commitments[p], status: "paused" };
+      const kReason = `联系人状态.commitments[${p}] 的状态 paused 不认识`;
+      assert.deepEqual(settleTask(badK as never, "T0"), { ok: false, reason: kReason }, `${at} 承诺 settleTask`);
+      assert.deepEqual(confirmFinalReport(badK as never, rc("T0", ["k0"], 10)), { ok: false, reason: kReason }, `${at} 承诺 confirmFinalReport`);
+    }
+  }
 });
