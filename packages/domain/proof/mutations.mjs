@@ -14,11 +14,13 @@
 // K01–K04 对应第十轮审查独立变异(K05 为阳性对照与 Y02 同一注入,K06/K07 为 AC-09 对照,均不列入);P01–P07 是第十轮修复的新增埋雷;
 // K01/K04 不是第十轮审查原注入的原样搬运:K02/K03 注入方向不变,K01 由"重复读取 requestId getter"改为"放行 requestId 访问器",K04 由"读取并保留额外 getter"改为"保留额外数据字段"(新契约拒绝访问器,原注入点已不存在);
 // 第十一轮:L01–L04 对应第十一轮审查独立变异(L05 为阳性对照与 P01 同类不列入),L04 就是第十轮删除的 X03,已有可达输入(未初始化的模块命名空间)故恢复;
-// Q01–Q03 是 R11-CORR-01 修复的新增埋雷;N13/D06/D07/E05/G05/W07/P07 随 set 改用自有属性 pick、形状表改用 optOf 重新指向新注入点,注入语义不变。
+// Q01–Q03 是 R11-CORR-01 修复的新增埋雷;
+// 第十三轮:按 AC-28①(用户 #2273)删除归档状态,M18/B07/F06/G03 改写到 T8a 拒绝超时与 T8_Accepted 上的同类故障(不删除);
+// I01–I02 是"T8a 收到超时自动归档/清掉交付",I03–I07 是导出策略对象深冻结(用户 #2662)的埋雷;N13/D06/D07/E05/G05/W07/P07 随 set 改用自有属性 pick、形状表改用 optOf 重新指向新注入点,注入语义不变。
 // M30–M47 是联系人/Helper 作者埋雷;contact/helper 其余系列见各分组注释。为不和任务侧重名:
 // reviews/feat-contact-helper.md 第二轮的 N01–N05 记为 CN01–CN05,第三轮的 P01–P05 记为 CP01–CP05,第五轮的 Z01–Z05 记为 CZ01–CZ05,
 // 第六轮的 W01–W05 记为 CW01–CW05,第七轮的 V01–V08 记为 CV01–CV08,第八轮的 H05–H06 记为 CH05–CH06,第九轮的 J01–J05 记为 CJ01–CJ05,
-// 第十轮的 Y01–Y08 记为 CY01–CY08,第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK101;第十三轮独立变异 AD01–AD04 原样保留编号(任务侧无 AD 前缀)。原样副本必须全绿(阴性对照)。
+// 第十轮的 Y01–Y08 记为 CY01–CY08,Astra 第 6 节的 I01–I26 记为 CI01–CI26(与任务侧第十三轮 I01–I07 区分),第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK101;第十三轮独立变异 AD01–AD04 原样保留编号(任务侧无 AD 前缀)。原样副本必须全绿(阴性对照)。
 // 用法: node packages/domain/proof/mutations.mjs
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -51,7 +53,7 @@ const M = [
   ["M15 放行 unknown 审查模型", "task.ts", "  if (reviewer === \"unknown\") return new Error(`审查模型 ${reviewerModel} 认不出厂商(unknown)`);\n", ""],
   ["M16 豁免记成合规", "task.ts", "  return \"waived-by-user\";\n};", "  return \"compliant\";\n};"],
   ["M17 任何人都能豁免", "task.ts", "if (waiverBy !== t.requester) return new Error(", "if (!waiverBy) return new Error("],
-  ["M18 超时自动算验收通过", "task.ts", "AcceptTimeout: forDelivery((t) => ok(set(t, { state: \"T8_ArchivedUnverified\", badge: \"unverified\" }))),", "AcceptTimeout: forDelivery((t) => ok(set(t, { state: \"T8_Accepted\", badge: \"accepted\" }))),"],
+  ["M18 T8a 超时自动算验收通过", "task.ts", "    AcceptTimeout: rej(ACCEPT_WAITS),", "    AcceptTimeout: forDelivery((t) => ok(set(t, { state: \"T8_Accepted\", badge: \"accepted\" }))),"],
   ["M19 退回一律新开 Compute", "task.ts", "if (resumable && t.computeId) return ok(", "if (t.computeId === \"__never__\") return ok("],
   ["M20 确认卡不核对版本", "task.ts", "if (ev.constraintVer !== t.constraintVer) return ok(t);", ""],
   ["M21 取消不等真实停止", "task.ts", "if (t.computeId) return ok(set(t, { state: \"T9_StopRequested\", stopReason: reason }), [{ kind: \"stop-compute\", computeId: t.computeId }]);", "if (t.computeId) return ok(set(t, { state: reason === \"cancel\" ? \"T10_Cancelled\" : \"T11_Failed\", stopReason: reason }));"],
@@ -96,7 +98,7 @@ const M = [
   ["B04 T5 改条件一律按可恢复", "task.ts", "const amendRework = go((t, e) => rework(t, as(e, \"Amend\").computeResumable));", "const amendRework = go((t, e) => rework(t, t.state === \"T5_InReview\" ? true : as(e, \"Amend\").computeResumable));"],
   ["B05 T7 改条件一律按可恢复", "task.ts", "const amendRework = go((t, e) => rework(t, as(e, \"Amend\").computeResumable));", "const amendRework = go((t, e) => rework(t, t.state === \"T7_Delivering\" ? true : as(e, \"Amend\").computeResumable));"],
   ["B06 Accepted 退回一律按可恢复", "task.ts", "return ev.by === t.requester ? rework(t, ev.computeResumable) :", "return ev.by === t.requester ? rework(t, t.state === \"T8_Accepted\" ? true : ev.computeResumable) :"],
-  ["B07 Archived 退回一律按可恢复", "task.ts", "return ev.by === t.requester ? rework(t, ev.computeResumable) :", "return ev.by === t.requester ? rework(t, t.state === \"T8_ArchivedUnverified\" ? true : ev.computeResumable) :"],
+  ["B07 已验收后退回一律按可恢复", "task.ts", "return ev.by === t.requester ? rework(t, ev.computeResumable) :", "return ev.by === t.requester ? rework(t, t.state === \"T8_Accepted\" ? true : ev.computeResumable) :"],
   ["B08 T9 迟到回绑把负责人改成提出者", "task.ts", "      const b = bind(t, e);", "      const b = set(bind(t, e), { owner: t.requester });"],
   ["B10 未回绑即可提审", "task.ts", "const ev = as(e, \"SubmitForReview\");\n  if (!t.computeId) return provablyStale(t, e) ? ok(t) : no(NO_COMPUTE);", "const ev = as(e, \"SubmitForReview\");\n  if (!t.computeId) return ok(set(t, { state: \"T5_InReview\", reviewedCommit: ev.commit }));"],
   ["R01 停止确认不核对身份", "task.ts", "      if (c.computeId || c.launch || c.revoked.length || c.orphans.length) return r;", "      void c;"],
@@ -184,7 +186,7 @@ const M = [
   ["F03 只把上一代次当旧代次", "task.ts", "  return !t.delivery || ev.deliveryRound !== t.delivery.round || ev.commit !== t.delivery.commit;", "  return ev.deliveryRound >= t.deliverySeq - 1 && (!t.delivery || ev.deliveryRound !== t.delivery.round || ev.commit !== t.delivery.commit);"],
   ["F04 send-card 条件版本封顶为 1", "task.ts", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: Math.min(t.constraintVer, 1) }]);"],
   ["F05 第三次交付 send-card commit 错误", "task.ts", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: round >= 3 ? \"__wrong__\" : delivery.commit, constraintVer: t.constraintVer }]);"],
-  ["F06 归档后退回交付序列清零", "task.ts", "badge: \"none\", approval: null, delivery: null } as const;", "badge: \"none\", approval: null, delivery: null, deliverySeq: t.state === \"T8_ArchivedUnverified\" ? 0 : t.deliverySeq } as const;"],
+  ["F06 已验收后退回交付序列清零", "task.ts", "badge: \"none\", approval: null, delivery: null } as const;", "badge: \"none\", approval: null, delivery: null, deliverySeq: t.state === \"T8_Accepted\" ? 0 : t.deliverySeq } as const;"],
   ["F07 只对 UserAccept 检查旧交付 commit", "task.ts", "  return !t.delivery || ev.deliveryRound !== t.delivery.round || ev.commit !== t.delivery.commit;", "  return !t.delivery || ev.deliveryRound !== t.delivery.round || (e.kind === \"UserAccept\" && ev.commit !== t.delivery.commit);"],
   ["F08 send-card 交付代次封顶为 2", "task.ts", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: Math.min(round, 2), commit: delivery.commit, constraintVer: t.constraintVer }]);"],
   ["V01 孤儿确认停止后不记入退役", "task.ts", "return ok(set(t, { orphans: t.orphans.filter((c) => c !== ev.computeId), retired: [...t.retired, ev.computeId] }), [{ kind: \"release-slot\", computeId: ev.computeId }]);", "return ok(set(t, { orphans: t.orphans.filter((c) => c !== ev.computeId) }), [{ kind: \"release-slot\", computeId: ev.computeId }]);"],
@@ -199,7 +201,7 @@ const M = [
   ["V10 send-card 不带任务号", "task.ts", "    [{ kind: \"send-card\", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);", "    [{ kind: \"send-card\", taskId: \"\", deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);"],
   ["G01 失败停止的确认不核 taskId", "task.ts", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id) return", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id && !(e.kind === \"StoppedConfirmed\" && t.stopReason === \"fail\")) return"],
   ["G02 已验收状态退回不核 taskId", "task.ts", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id) return", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id && !(e.kind === \"UserReject\" && t.state === \"T8_Accepted\")) return"],
-  ["G03 归档状态补确认不核 taskId", "task.ts", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id) return", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id && !(e.kind === \"UserAccept\" && t.state === \"T8_ArchivedUnverified\")) return"],
+  ["G03 已验收状态退回不核 taskId", "task.ts", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id) return", "  if (TASK_ID_KINDS.has(e.kind) && ev.taskId !== t.id && !(e.kind === \"UserReject\" && t.state === \"T8_Accepted\")) return"],
   ["G04 DeliveredCard 不校验代次", "task.ts", "  DeliveredCard: { req: DELIVERY_SHAPE },", "  DeliveredCard: { req: { taskId: \"str\", commit: \"str\" } },"],
   ["G05 retired 不冻结", "task.ts", "retired: Object.freeze([...pick(t, patch, \"retired\")]),", "retired: [...pick(t, patch, \"retired\")],"],
   ["G06 孤儿退役时只留最近一条旧记录", "task.ts", "retired: [...t.retired, ev.computeId] })", "retired: [...t.retired.slice(-1), ev.computeId] })"],
@@ -262,6 +264,13 @@ const M = [
   ["Q01 临时必填字段表改回普通原型", "task.ts", "  const req: Record<string, FieldSpec> = Object.assign(Object.create(null), shape.req);", "  const req: Record<string, FieldSpec> = { ...shape.req };"],
   ["Q02 任务 patch 字段用 in 判断(认继承属性)", "task.ts", "Object.hasOwn(patch, k) ? patch[k] as Task[K] : t[k];", "k in patch ? patch[k] as Task[K] : t[k];"],
   ["Q03 可选字段表读 shape.opt(认继承属性)", "task.ts", "Object.hasOwn(shape, \"opt\") ? shape.opt! : {};", "shape.opt ?? {};"],
+  ["I01 T8a 收到 AcceptTimeout 自动归档(关闭任务、清掉交付)", "task.ts", "    AcceptTimeout: rej(ACCEPT_WAITS),", "    AcceptTimeout: forDelivery((t) => ok(set(t, { state: \"T10_Cancelled\", delivery: null }))),"],
+  ["I02 T8a 收到 AcceptTimeout 停在原状态但清掉当前交付", "task.ts", "    AcceptTimeout: rej(ACCEPT_WAITS),", "    AcceptTimeout: forDelivery((t) => ok(set(t, { delivery: null }))),"],
+  ["I03 STATES 不冻结", "task.ts", "export const STATES = Object.freeze(", "export const STATES = ("],
+  ["I04 EVENT_KINDS 不冻结", "task.ts", "export const EVENT_KINDS = Object.freeze(", "export const EVENT_KINDS = ("],
+  ["I05 转移表的格不冻结", "task.ts", "    for (const cell of Object.values(row)) Object.freeze(cell);\n", ""],
+  ["I06 转移表的行不冻结", "task.ts", "    Object.freeze(row);\n", ""],
+  ["I07 转移表整表不冻结", "task.ts", "  return Object.freeze(table);", "  return table;"],
   ["M28 vendor 两家都像时取第一家", "vendor.ts", "return hits.size === 1 ? [...hits][0]! : \"unknown\";", "return hits.size >= 1 ? [...hits][0]! : \"unknown\";"],
   ["M30 同 id 新建覆盖", "contact.ts", "if (d.contacts.has(c.id)) return { ok: false, reason: `联系人 ${c.id} 已存在,不能同 id 新建覆盖` };", ""],
   ["M31 改名时清空记忆", "contact.ts", "...(patch.name !== undefined ? { name: patch.name } : {}),", "...(patch.name !== undefined ? { name: patch.name, memory: \"\" } : {}),"],
@@ -279,20 +288,20 @@ const M = [
   ["M45 @Helper 回复不进对话", "helper.ts", "case \"mention\": return yes({ replyIn: \"conversation\", becomesMessage: true,", "case \"mention\": return yes({ replyIn: \"sidebar\", becomesMessage: false,"],
   ["M46 联系人也能指挥 Helper", "helper.ts", "if (who.value.kind !== \"user\" || who.value.id !== owner)", "if (who.value.id === \"__never__\")"],
   ["M47 Helper 可以认领任务", "helper.ts", "  return false;\n}", "  return true;\n}"],
-  // 以下 I01–I26 取自 Astra 独立审查 reviews/feat-contact-helper.md 第 6 节(按返修后的源码改注入点),CK01–CK10 是本次返修新增判据的埋雷
-  ["I01 说明带上性格", "contact.ts", "brief: Object.freeze({ task: r.task,", "brief: Object.freeze({ soul: c.soul, task: r.task,"],
-  ["I02 禁项删 shell", "contact.ts", "\"bash\", \"shell\", \"exec\",", "\"bash\", \"exec\","],
-  ["I03 禁项删 write_file", "contact.ts", "\"write_file\", \"edit_file\",", "\"edit_file\","],
-  ["I04 禁项删 browser", "contact.ts", "\"browser\", \"computer_use\",", "\"computer_use\","],
-  ["I05 说明丢合法工具", "contact.ts", "tools: Object.freeze([...r.tools])", "tools: Object.freeze([])"],
-  ["I06 说明丢凭据引用", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs])", "credentialRefs: Object.freeze([])"],
-  ["I07 说明丢任务", "contact.ts", "brief: Object.freeze({ task: r.task,", "brief: Object.freeze({ task: \"\","],
-  ["I08 placement 一律 local", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs]), placement: placement as Placement })", "credentialRefs: Object.freeze([...r.credentialRefs]), placement: \"local\" })"],
-  ["I09 sourceSeq 清零", "contact.ts", "{ ...k, awaitingReport: [], reportedTaskIds: [], status: \"active\" }", "{ ...k, sourceSeq: 0, awaitingReport: [], reportedTaskIds: [], status: \"active\" }"],
-  ["I11 Helper 不查调用方类型", "helper.ts", "who.value.kind !== \"user\" || who.value.id !== owner", "who.value.id !== owner"],
-  ["I12 全局入口跳过鉴权", "helper.ts", "if (who.value.kind !== \"user\" || who.value.id !== owner)", "if (head.value.kind !== \"global\" && (who.value.kind !== \"user\" || who.value.id !== owner))"],
-  ["I19 误差放行 NaN/Infinity", "contact.ts", "!Number.isFinite(s.toleranceSec) || s.toleranceSec < 0", "s.toleranceSec < 0"],
-  ["I26 拒绝理由写错", "contact.ts", "reason: `${tool.name} 是通用能力,只能在 Compute 里用`", "reason: \"时区不认识\""],
+  // 以下 CI01–CI26(报告原编号 I01–I26,为与任务侧第十三轮 I01–I07 区分加 C 前缀)取自 Astra 独立审查 reviews/feat-contact-helper.md 第 6 节(按返修后的源码改注入点),CK01–CK10 是本次返修新增判据的埋雷
+  ["CI01 说明带上性格", "contact.ts", "brief: Object.freeze({ task: r.task,", "brief: Object.freeze({ soul: c.soul, task: r.task,"],
+  ["CI02 禁项删 shell", "contact.ts", "\"bash\", \"shell\", \"exec\",", "\"bash\", \"exec\","],
+  ["CI03 禁项删 write_file", "contact.ts", "\"write_file\", \"edit_file\",", "\"edit_file\","],
+  ["CI04 禁项删 browser", "contact.ts", "\"browser\", \"computer_use\",", "\"computer_use\","],
+  ["CI05 说明丢合法工具", "contact.ts", "tools: Object.freeze([...r.tools])", "tools: Object.freeze([])"],
+  ["CI06 说明丢凭据引用", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs])", "credentialRefs: Object.freeze([])"],
+  ["CI07 说明丢任务", "contact.ts", "brief: Object.freeze({ task: r.task,", "brief: Object.freeze({ task: \"\","],
+  ["CI08 placement 一律 local", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs]), placement: placement as Placement })", "credentialRefs: Object.freeze([...r.credentialRefs]), placement: \"local\" })"],
+  ["CI09 sourceSeq 清零", "contact.ts", "{ ...k, awaitingReport: [], reportedTaskIds: [], status: \"active\" }", "{ ...k, sourceSeq: 0, awaitingReport: [], reportedTaskIds: [], status: \"active\" }"],
+  ["CI11 Helper 不查调用方类型", "helper.ts", "who.value.kind !== \"user\" || who.value.id !== owner", "who.value.id !== owner"],
+  ["CI12 全局入口跳过鉴权", "helper.ts", "if (who.value.kind !== \"user\" || who.value.id !== owner)", "if (head.value.kind !== \"global\" && (who.value.kind !== \"user\" || who.value.id !== owner))"],
+  ["CI19 误差放行 NaN/Infinity", "contact.ts", "!Number.isFinite(s.toleranceSec) || s.toleranceSec < 0", "s.toleranceSec < 0"],
+  ["CI26 拒绝理由写错", "contact.ts", "reason: `${tool.name} 是通用能力,只能在 Compute 里用`", "reason: \"时区不认识\""],
   ["CK01 终态就回收,不等末次汇报", "contact.ts", "return { ...k, boundTaskIds, awaitingReport: [...k.awaitingReport, taskId] };", "return { ...k, boundTaskIds, status: boundTaskIds.length === 0 ? \"done\" : \"active\" };"],
   ["CK02 汇报确认不回收", "contact.ts", "return retire({ ...k, awaitingReport: k.awaitingReport.filter((t) => t !== taskId) });", "return { ...k, awaitingReport: k.awaitingReport.filter((t) => t !== taskId) };"],
   ["CK03 别的任务的确认也回收", "contact.ts", "if (k.awaitingReport.includes(taskId)) return retire(", "if (true) return retire("],
@@ -450,7 +459,7 @@ const M = [
 const REMOVED = [
   "M41 专职锁挡住控制指令",
   "M42 专职时照样接活",
-  "I10 专职锁可指向已结束承诺",
+  "CI10 专职锁可指向已结束承诺",
   "CK04 回收不解专职锁",
   "CK05 撤销不解专职锁",
   "CK06 专职锁拒一切工作",

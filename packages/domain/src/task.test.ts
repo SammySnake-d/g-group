@@ -1,7 +1,7 @@
 // 第三台状态机(任务生命周期)主干。
 // AC-09 状态×事件表无空白格,且每格的处理对照一份独立于实现的需求期望(TEST-01);
 // AC-26 写审分离 + 跨厂商审查(含累积生产厂商集合),审查回包绑定被审 commit 与条件版本(CORR-01);
-// AC-28 / R-09 交付待确认、超时只算未核验、所有返工入口共用可恢复性契约并能回绑新 Compute(CORR-02/03);
+// AC-28 / R-09 交付待确认不超时、不归档(#2273),所有返工入口共用可恢复性契约并能回绑新 Compute(CORR-02/03);
 // AC-19 确认卡绑定版本,卡片是不可变快照(CORR-04)。
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -38,7 +38,7 @@ const inState = (s: TaskState): Task => ({
   launch: s === "T2_Claimed" ? { requestId: "t#L0", constraintVer: 0 } : null,
   producerModels: [PRODUCER], reviewedCommit: s === "T5_InReview" ? "c" : null, reviewRound: s === "T5_InReview" ? 1 : 0,
   pendingQ: s === "T4b_BlockedOnHuman" ? { qId: "q", constraintVer: 0 } : null,
-  ...(["T7_Delivering", "T8a_Delivered", "T8_Accepted", "T8_ArchivedUnverified"].includes(s) ? { delivery: { round: 1, commit: "c" }, deliverySeq: 1 } : {}),
+  ...(["T7_Delivering", "T8a_Delivered", "T8_Accepted"].includes(s) ? { delivery: { round: 1, commit: "c" }, deliverySeq: 1 } : {}),
 });
 
 // 独立需求期望(D20.3 第三台表主干 + AC-19/26/28 + R-09),不读生产 TABLE:
@@ -90,10 +90,9 @@ const SPEC: { [S in TaskState]: { [E in EventKind]: Exp } } = {
   T8a_Delivered: {
     Claim: "rej", Dispatch: ORPHAN_STOP("T8a_Delivered"), ProducerModelAdded: { to: "T8a_Delivered", pm: PM2, fx: [] }, NeedHuman: "rej", HumanReply: "ign", Amend: REWORK,
     SubmitForReview: "rej", Review: "ign", DeliveredCard: "ign", UserAccept: { to: "T8_Accepted", fx: [] }, UserReject: REWORK,
-    AcceptTimeout: { to: "T8_ArchivedUnverified", fx: [] }, Cancel: "ign", StoppedConfirmed: "ign", ExecFailed: "ign",
+    AcceptTimeout: "rej", Cancel: "ign", StoppedConfirmed: "ign", ExecFailed: "ign",
   },
   T8_Accepted: { ...allIgn(), Dispatch: ORPHAN_STOP("T8_Accepted"), ProducerModelAdded: { to: "T8_Accepted", pm: PM2, fx: [] }, Amend: REWORK, UserReject: REWORK },
-  T8_ArchivedUnverified: { ...allIgn(), Dispatch: ORPHAN_STOP("T8_ArchivedUnverified"), ProducerModelAdded: { to: "T8_ArchivedUnverified", pm: PM2, fx: [] }, Amend: REWORK, UserReject: REWORK, UserAccept: { to: "T8_Accepted", fx: [] } },
   T9_StopRequested: { ...allIgn(), Claim: "rej", Dispatch: ORPHAN_STOP("T9_StopRequested"), StoppedConfirmed: { to: "T10_Cancelled", fx: [{ kind: "release-slot", computeId: "cc" }] } },
   T10_Cancelled: { ...allIgn(), Dispatch: ORPHAN_STOP("T10_Cancelled") },
   T11_Failed: { ...allIgn(), Dispatch: ORPHAN_STOP("T11_Failed") },
@@ -141,8 +140,8 @@ test("AC-09 每格的实际处理符合独立需求期望(目标状态、副作�
 // 所有返工入口 × 可恢复两侧的独立期望:可恢复 → 恢复原实例;不可恢复 → 清掉旧实例、按新版本带交接新开(AC-28 / R2-TEST-01)
 type ReworkEntry = { s: TaskState; e: (resumable: boolean) => TaskEvent };
 const REWORK_ENTRIES: ReworkEntry[] = [
-  ...(["T5_InReview", "T7_Delivering", "T8a_Delivered", "T8_Accepted", "T8_ArchivedUnverified"] as const).map((s) => ({ s, e: (r: boolean): TaskEvent => ({ kind: "Amend", by: "u1", computeResumable: r }) })),
-  ...(["T8a_Delivered", "T8_Accepted", "T8_ArchivedUnverified"] as const).map((s) => ({ s, e: (r: boolean): TaskEvent => ({ kind: "UserReject", by: "u1", computeResumable: r, ...DC1 }) })),
+  ...(["T5_InReview", "T7_Delivering", "T8a_Delivered", "T8_Accepted"] as const).map((s) => ({ s, e: (r: boolean): TaskEvent => ({ kind: "Amend", by: "u1", computeResumable: r }) })),
+  ...(["T8a_Delivered", "T8_Accepted"] as const).map((s) => ({ s, e: (r: boolean): TaskEvent => ({ kind: "UserReject", by: "u1", computeResumable: r, ...DC1 }) })),
   { s: "T5_InReview", e: (r: boolean): TaskEvent => ({ kind: "Review", reviewerId: "r", reviewerModel: "gemini-4-argon", round: 1, commit: "c", constraintVer: 0, verdict: "reject", computeResumable: r }) },
 ];
 
@@ -630,24 +629,39 @@ test("R-09 只有提出者本人能确认验收", () => {
   assert.equal(r.ok, false);
 });
 
-test("R-09 未核验归档后也只有提出者本人能补确认验收", () => {
-  const archived = must(apply(delivered(), { kind: "AcceptTimeout", ...D1 })).task;
-  assert.equal(apply(archived, { kind: "UserAccept", by: "argon", ...D1 }).ok, false);
-  const r = must(apply(archived, { kind: "UserAccept", by: "u1", ...D1 }));
-  assert.equal(r.task.state, "T8_Accepted");
+test("AC-28① 交付待确认没有归档出口:状态集合里没有归档状态,T8a 只有用户确认能到 T8_Accepted,任何事件都不把它带进终态(用户定案 2273)", () => {
+  assert.ok(!(STATES as readonly string[]).some((s) => /Archiv/.test(s)), STATES.join(","));
+  const t = inState("T8a_Delivered");
+  for (const e of EVENT_KINDS) {
+    const r = apply(t, SAMPLE[e]);
+    if (!r.ok || r.task.state === "T8a_Delivered") continue;
+    assert.ok(["UserAccept", "UserReject", "Amend", "ProducerModelAdded"].includes(e), `${e} 不应让 T8a 离开到 ${r.task.state}`);
+    if (r.task.state === "T8_Accepted") assert.equal(e, "UserAccept");
+    assert.ok(!["T10_Cancelled", "T11_Failed"].includes(r.task.state), `${e} 把 T8a 带进了终态`);
+  }
+  assert.equal(apply(t, SAMPLE.AcceptTimeout).ok, false);
 });
 
-test("R-09 用户不说话超时只归档为未人工核验,绝不算通过(阳性埋雷)", () => {
-  const t = must(applyAll(delivered(), [{ kind: "AcceptTimeout", ...D1 }])).task;
-  assert.equal(t.state, "T8_ArchivedUnverified");
-  assert.equal(t.badge, "unverified");
-  assert.notEqual(t.state, "T8_Accepted");
+test("AC-28① 用户一直不说话:当前代次的 AcceptTimeout 在 T8a 被拒(用户定案 2273),任务原样停在 T8a,不归档、不算通过、不清当前交付(阳性埋雷)", () => {
+  const t = delivered();
+  const r = apply(t, { kind: "AcceptTimeout", ...D1 });
+  assert.ok(!r.ok && r.reason.includes("#2273"), JSON.stringify(r));
+  assert.deepEqual(applyAll(t, [{ kind: "AcceptTimeout", ...D1 }]), r);
+  assert.equal(t.state, "T8a_Delivered");
+  assert.equal(t.badge, "none");
+  assert.deepEqual(t.delivery, { round: 1, commit: "abc" });
+  const acc = must(apply(t, { kind: "UserAccept", by: "u1", ...D1 }));
+  assert.equal(acc.task.state, "T8_Accepted");
+  assert.equal(acc.task.badge, "accepted");
 });
 
-test("R-09 未核验归档后用户仍可退回", () => {
-  const r = must(applyAll(delivered(), [{ kind: "AcceptTimeout", ...D1 }, { kind: "UserReject", by: "u1", computeResumable: true, ...D1 }]));
+test("AC-28① 等过超时也只能由用户退回:被拒的 AcceptTimeout 之后,提出者退回照常恢复原实例", () => {
+  const t = delivered();
+  assert.equal(apply(t, { kind: "AcceptTimeout", ...D1 }).ok, false);
+  const r = must(apply(t, { kind: "UserReject", by: "u1", computeResumable: true, ...D1 }));
   assert.equal(r.task.state, "T3_Running");
   assert.equal(r.task.badge, "none");
+  assert.deepEqual(r.effects, [{ kind: "resume-compute", computeId: "cc-1", constraintVer: 1 }]);
 });
 
 test("R-09 只有提出者本人能退回验收", () => {
@@ -843,7 +857,7 @@ test("R4-CORR-01 从未回绑过的孤儿实例的换模记录不计入(阴性�
 });
 
 test("R4-CORR-01 审查通过后迟到的生产记录让结论不再成立:作废审查,同一产物以新轮次重新送审", () => {
-  for (const t of [deliveredBy("deepseek-v4"), must(apply(deliveredBy("deepseek-v4"), { kind: "UserAccept", by: "u1", ...D1 })).task, must(apply(deliveredBy("deepseek-v4"), { kind: "AcceptTimeout", ...D1 })).task]) {
+  for (const t of [deliveredBy("deepseek-v4"), must(apply(deliveredBy("deepseek-v4"), { kind: "UserAccept", by: "u1", ...D1 })).task]) {
     assert.equal(t.reviewGate, "compliant", t.state);
     const r = must(apply(t, { kind: "ProducerModelAdded", model: "deepseek-v4-coder", computeId: "cc-1" }));
     assert.equal(r.task.state, "T5_InReview", t.state);
@@ -1050,11 +1064,12 @@ test("R5-CORR-01 旧交付卡的接受、退回、超时作用不到新版本交
   }
 });
 
-test("R5-CORR-01 当前交付代次的接受、退回、超时正常生效(阴性对照);未发过的代次被拒", () => {
+test("R5-CORR-01 当前交付代次的接受、退回正常生效(阴性对照),超时按用户定案 2273 拒绝;未发过的代次被拒", () => {
   const t = redelivered();
   const D2 = { taskId: "t1", deliveryRound: 2, commit: "sha-v1" };
   assert.equal(must(apply(t, { kind: "UserAccept", by: "u1", ...D2 })).task.state, "T8_Accepted");
-  assert.equal(must(apply(t, { kind: "AcceptTimeout", ...D2 })).task.badge, "unverified");
+  const to = apply(t, { kind: "AcceptTimeout", ...D2 });
+  assert.ok(!to.ok && to.reason.includes("#2273"));
   const rj = must(apply(t, { kind: "UserReject", by: "u1", computeResumable: true, ...D2 }));
   assert.equal(rj.task.state, "T3_Running");
   assert.equal(rj.task.delivery, null);
@@ -1062,9 +1077,9 @@ test("R5-CORR-01 当前交付代次的接受、退回、超时正常生效(阴�
   assert.equal(apply(t, { kind: "UserAccept", taskId: "t1", by: "u1", deliveryRound: 3, commit: "sha-v1" }).ok, false);
 });
 
-test("R5-CORR-01 旧代次的退回在已验收/已归档的新版本上也被忽略", () => {
+test("R5-CORR-01 旧代次的退回在已验收的新版本上也被忽略", () => {
   const D2 = { taskId: "t1", deliveryRound: 2, commit: "sha-v1" };
-  for (const t of [must(apply(redelivered(), { kind: "UserAccept", by: "u1", ...D2 })).task, must(apply(redelivered(), { kind: "AcceptTimeout", ...D2 })).task]) {
+  for (const t of [must(apply(redelivered(), { kind: "UserAccept", by: "u1", ...D2 })).task]) {
     assert.deepEqual(must(apply(t, { kind: "UserReject", by: "u1", computeResumable: false, ...D1 })).task, t, t.state);
     assert.deepEqual(must(apply(t, { kind: "UserAccept", by: "u1", ...D1 })).task, t, t.state);
   }
@@ -1258,9 +1273,9 @@ test("R6-TEST-01 三个历史实例后再次新开:最早实例的当前版本�
   assert.equal(r.task.computeId, "cc-4");
 });
 
-test("R6-TEST-01 归档后退回再交付同一 commit:交付代次不归零,旧代次点击不会验收新版本", () => {
-  const archived = must(apply(delivered(), { kind: "AcceptTimeout", ...D1 })).task;
-  const t = must(applyAll(archived, [{ kind: "UserReject", by: "u1", computeResumable: true, ...D1 },
+test("R6-TEST-01 已验收后退回再交付同一 commit:交付代次不归零,旧代次点击不会验收新版本", () => {
+  const accepted = must(apply(delivered(), { kind: "UserAccept", by: "u1", ...D1 })).task;
+  const t = must(applyAll(accepted, [{ kind: "UserReject", by: "u1", computeResumable: true, ...D1 },
     { kind: "SubmitForReview", commit: "abc", computeId: "cc-1", constraintVer: 1 }, approve("abc", 1, 2)])).task;
   assert.deepEqual(t.delivery, { round: 2, commit: "abc" });
   const r = must(applyAll(t, [{ kind: "DeliveredCard", taskId: "t1", deliveryRound: 2, commit: "abc" }, { kind: "UserAccept", by: "u1", ...D1 }]));
@@ -1344,7 +1359,6 @@ test("R7-CORR-01 五类必带 taskId 的事件:缺失/null/错类型/空串/别�
   const cases: [Task, TaskEvent][] = [
     [delivered(), { kind: "UserAccept", by: "u1", ...D1 }],
     [delivered(), { kind: "UserReject", by: "u1", computeResumable: true, ...D1 }],
-    [delivered(), { kind: "AcceptTimeout", ...D1 }],
     [must(apply(inReview(), approve("abc", 0))).task, { kind: "DeliveredCard", ...D1 }],
     [STOPPING(), { kind: "StoppedConfirmed", taskId: "t1", computeId: "cc-1" }],
   ];
@@ -1354,6 +1368,17 @@ test("R7-CORR-01 五类必带 taskId 的事件:缺失/null/错类型/空串/别�
       const r = apply(t, raw(ev, { taskId: v }));
       assert.equal(r.ok, false, `${ev.kind} taskId=${String(v)}`);
     }
+  }
+});
+
+test("R7-CORR-01 AcceptTimeout 的 taskId:正确时到状态表按用户定案 2273 拒绝,缺失/错误时在入口就被拒", () => {
+  const t = delivered();
+  const ev: TaskEvent = { kind: "AcceptTimeout", ...D1 };
+  const good = apply(t, ev);
+  assert.ok(!good.ok && good.reason.includes("#2273"));
+  for (const v of [undefined, null, 7, "", "B"]) {
+    const r = apply(t, raw(ev, { taskId: v }));
+    assert.ok(!r.ok && !r.reason.includes("#2273"), `taskId=${String(v)}`);
   }
 });
 
@@ -1367,13 +1392,12 @@ test("R7-CORR-01 缺 taskId 的 JSON 输入(经 JSON.parse)不能验收或终结
   assert.equal(apply(stopping, stopJson).ok || stopping.state, "T9_StopRequested");
 });
 
-test("R7-CORR-02 未分配的未来代次在 T7/T8a/T8_Accepted/T8_ArchivedUnverified 的四类交付事件都被拒;已分配旧代次仍忽略", () => {
+test("R7-CORR-02 未分配的未来代次在 T7/T8a/T8_Accepted 的四类交付事件都被拒;已分配旧代次仍忽略", () => {
   const D2 = { taskId: "t1", deliveryRound: 2, commit: "abc" } as const;
   const t7 = must(apply(inReview(), approve("abc", 0))).task;
   const t8a = delivered();
   const acc = must(apply(t8a, { kind: "UserAccept", by: "u1", ...D1 })).task;
-  const arc = must(apply(t8a, { kind: "AcceptTimeout", ...D1 })).task;
-  for (const t of [t7, t8a, acc, arc]) for (const ev of [
+  for (const t of [t7, t8a, acc]) for (const ev of [
     { kind: "DeliveredCard", ...D2 }, { kind: "UserAccept", by: "u1", ...D2 },
     { kind: "UserReject", by: "u1", computeResumable: true, ...D2 }, { kind: "AcceptTimeout", ...D2 },
   ] as TaskEvent[]) {
@@ -1386,10 +1410,10 @@ test("R7-CORR-02 未分配的未来代次在 T7/T8a/T8_Accepted/T8_ArchivedUnver
   }
 });
 
-test("R7-TEST-01 错任务 ID 的交付事件在 T7/T8a/T8_Accepted/T8_ArchivedUnverified 全被拒;错任务停止确认在取消与失败停止中都被拒", () => {
+test("R7-TEST-01 错任务 ID 的交付事件在 T7/T8a/T8_Accepted 全被拒;错任务停止确认在取消与失败停止中都被拒", () => {
   const B = { taskId: "B", deliveryRound: 1, commit: "abc" } as const;
   const t8a = delivered();
-  const states = [must(apply(inReview(), approve("abc", 0))).task, t8a, must(apply(t8a, { kind: "UserAccept", by: "u1", ...D1 })).task, must(apply(t8a, { kind: "AcceptTimeout", ...D1 })).task];
+  const states = [must(apply(inReview(), approve("abc", 0))).task, t8a, must(apply(t8a, { kind: "UserAccept", by: "u1", ...D1 })).task];
   for (const t of states) for (const ev of [
     { kind: "DeliveredCard", ...B }, { kind: "UserAccept", by: "u1", ...B },
     { kind: "UserReject", by: "u1", computeResumable: true, ...B }, { kind: "AcceptTimeout", ...B },
@@ -1936,4 +1960,31 @@ test("R11-TEST-01 外层兜底可达:未初始化的模块命名空间取描述�
   } finally {
     Reflect.deleteProperty(globalThis, "__r11TdzNamespace");
   }
+});
+
+// ---- 第十三轮:导出的策略对象不可改写(用户 #2662)----
+test("R13 导出的策略对象深冻结:STATES、EVENT_KINDS、TABLE、每一行、每一格都冻结,冻结后的表照常驱动转移", () => {
+  assert.equal(apply(newTask("t1", "u1"), { kind: "Dispatch", computeId: "cc-1", model: PRODUCER, requestId: "t1#L0" }).ok, false);
+  assert.equal(must(apply(newTask("t1", "u1"), { kind: "Claim", by: "claude" })).task.state, "T2_Claimed");
+  assert.ok(Object.isFrozen(STATES));
+  assert.ok(Object.isFrozen(EVENT_KINDS));
+  assert.ok(Object.isFrozen(TABLE));
+  for (const s of STATES) {
+    assert.ok(Object.isFrozen(TABLE[s]), `${s} 行未冻结`);
+    for (const e of EVENT_KINDS) assert.ok(Object.isFrozen(TABLE[s][e]), `${s} × ${e} 格未冻结`);
+  }
+});
+
+test("R13 进程内改写 TABLE/行/格/STATES/EVENT_KINDS 都抛 TypeError,未认领任务的 Dispatch 仍被拒", () => {
+  const forged = { kind: "go", run: (t: Task) => ({ ok: true, task: { ...t, state: "T3_Running" }, effects: [] }) };
+  assert.throws(() => { (TABLE.T1_Open as unknown as Record<string, unknown>).Dispatch = forged; }, TypeError);
+  assert.throws(() => { (TABLE as unknown as Record<string, unknown>).T1_Open = { ...TABLE.T1_Open, Dispatch: forged }; }, TypeError);
+  assert.throws(() => { (TABLE.T1_Open.Dispatch as unknown as Record<string, unknown>).kind = "go"; }, TypeError);
+  assert.throws(() => { (STATES as unknown as string[]).push("T99"); }, TypeError);
+  assert.throws(() => { (EVENT_KINDS as unknown as string[])[0] = "Forged"; }, TypeError);
+  const r = apply(newTask("t1", "u1"), { kind: "Dispatch", computeId: "cc-1", model: PRODUCER, requestId: "t1#L0" });
+  assert.equal(r.ok, false);
+  assert.equal(TABLE.T1_Open.Dispatch.kind, "reject");
+  assert.equal(STATES.length, 11);
+  assert.equal(EVENT_KINDS[0], "Claim");
 });

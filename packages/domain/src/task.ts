@@ -3,9 +3,10 @@ import { type Vendor, vendorOf } from "./vendor.ts";
 // 第三台状态机:任务生命周期(需求文档 D20.3 第三台表,本片覆盖主干)。
 // 状态×事件表是一张穷尽的对象字面量:少一格 TypeScript 就报错(AC-09);每格要么转移,要么写明拒绝/忽略原因。
 // 纯函数:apply 不改入参,返回新任务和要宿主执行的副作用(恢复/新开/停止 Compute、释放槽位)。
-export const STATES = ["T1_Open", "T2_Claimed", "T3_Running", "T4b_BlockedOnHuman", "T5_InReview", "T7_Delivering", "T8a_Delivered", "T8_Accepted", "T8_ArchivedUnverified", "T9_StopRequested", "T10_Cancelled", "T11_Failed"] as const;
+// 导出的状态、事件种类与转移表一律冻结,进程内无法改写策略(用户 #2662)。
+export const STATES = Object.freeze(["T1_Open", "T2_Claimed", "T3_Running", "T4b_BlockedOnHuman", "T5_InReview", "T7_Delivering", "T8a_Delivered", "T8_Accepted", "T9_StopRequested", "T10_Cancelled", "T11_Failed"] as const);
 export type TaskState = (typeof STATES)[number];
-export const EVENT_KINDS = ["Claim", "Dispatch", "ProducerModelAdded", "NeedHuman", "HumanReply", "Amend", "SubmitForReview", "Review", "DeliveredCard", "UserAccept", "UserReject", "AcceptTimeout", "Cancel", "StoppedConfirmed", "ExecFailed"] as const;
+export const EVENT_KINDS = Object.freeze(["Claim", "Dispatch", "ProducerModelAdded", "NeedHuman", "HumanReply", "Amend", "SubmitForReview", "Review", "DeliveredCard", "UserAccept", "UserReject", "AcceptTimeout", "Cancel", "StoppedConfirmed", "ExecFailed"] as const);
 export type EventKind = (typeof EVENT_KINDS)[number];
 
 export type TaskEvent =
@@ -43,7 +44,7 @@ export interface Delivery { readonly round: number; readonly commit: string }
 /** 通过审查时的审查人模型与豁免人;交付后迟到的生产模型记录据此重判合规(R4-CORR-01)。 */
 export interface Approval { readonly reviewerModel: string; readonly waiverBy: string | null }
 export type ReviewGate = "none" | "compliant" | "waived-by-user";
-export type VerificationBadge = "none" | "accepted" | "unverified";
+export type VerificationBadge = "none" | "accepted";
 export interface Task {
   readonly id: string;
   readonly requester: string;
@@ -269,6 +270,7 @@ const terminalRow = (): Row => ({ ...(Object.fromEntries(EVENT_KINDS.map((k) => 
 const NOT_RUNNING = "当前不在执行,没有可接收这一事件的 Compute";
 const NO_CARD = "当前没有待回复的确认卡";
 const NOT_DELIVERED = "当前不在待验收状态";
+const ACCEPT_WAITS = "交付待确认不超时、不归档(用户 #2273),只有用户确认或退回能离开 T8a";
 
 /** 提审:分配新的、永不复用的审查轮次,清掉旧结论;只有这一轮的回包能生效(R2-CORR-04)。 */
 const submit = (t: Task, e: TaskEvent): Outcome => {
@@ -307,7 +309,15 @@ const claim = go((t, e) => {
 /** 尚未派发时改条件:只推进版本。 */
 const bumpVer = go((t) => ok(set(t, { constraintVer: t.constraintVer + 1 })));
 
-export const TABLE: TransitionTable = {
+/** 深冻结转移表:每一格、每一行、整张表都冻结(用户 #2662)。 */
+const freezeTable = (table: TransitionTable): TransitionTable => {
+  for (const row of Object.values(table)) {
+    for (const cell of Object.values(row)) Object.freeze(cell);
+    Object.freeze(row);
+  }
+  return Object.freeze(table);
+};
+export const TABLE: TransitionTable = freezeTable({
   T1_Open: {
     Claim: claim,
     Dispatch: rej("尚未认领,不能派发"), ProducerModelAdded: rej(NOT_RUNNING), NeedHuman: rej(NOT_RUNNING),
@@ -379,14 +389,11 @@ export const TABLE: TransitionTable = {
     DeliveredCard: forDelivery((t) => ok(t)),
     UserAccept: forDelivery(accept),
     UserReject: forDelivery(userRejectRun),
-    AcceptTimeout: forDelivery((t) => ok(set(t, { state: "T8_ArchivedUnverified", badge: "unverified" }))),
+    // 用户一直不说话就停在 T8a:不超时、不归档,只有用户确认或退回能离开(AC-28①,用户 #2273)
+    AcceptTimeout: rej(ACCEPT_WAITS),
     Cancel: ign("已交付,取消只停后续动作"), StoppedConfirmed: ack, ExecFailed: ign("已交付"),
   },
   T8_Accepted: { ...terminalRow(), ProducerModelAdded: lateModel, Amend: amendRework, UserReject: forDelivery(userRejectRun) },
-  T8_ArchivedUnverified: {
-    ...terminalRow(), ProducerModelAdded: lateModel, Amend: amendRework, UserReject: forDelivery(userRejectRun),
-    UserAccept: forDelivery(accept),
-  },
   T9_StopRequested: {
     ...Object.fromEntries(EVENT_KINDS.map((k) => [k, ign("正在等真实停止,其他事件不中断停止流程")])) as unknown as Row,
     Claim: rej("停止期间禁止把任务重新指派给他人"),
@@ -413,7 +420,7 @@ export const TABLE: TransitionTable = {
   },
   T10_Cancelled: terminalRow(),
   T11_Failed: terminalRow(),
-};
+});
 
 /** 把一串事件依次套到任务上(事件回放);遇到第一个被拒的事件就停,返回它的原因,副作用按顺序累积。 */
 export function applyAll(t: Task, events: readonly TaskEvent[]): Outcome {
