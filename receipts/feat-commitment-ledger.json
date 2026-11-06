@@ -26,7 +26,11 @@
     "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra"
   },
   "red": { "commit": "ff0255c1f4b505542b555231f98f14f306e8cba6" },
-  "unverifiable": "AC-40/AC-16:状态转移返回的只是拟提交快照;真实宿主必须先原子持久化接收记录,再在同一持久化事务内提交处理、动作去重和版本检查,并验证调用方身份与产物真实存在。纯函数不能保证崩溃恢复、并发写入的单一提交点、模型完整提取承诺或用户真正看到了结果。PR #4 contact.ts 的 commitments 仍是另一套数据形状:id/sourceSeq/text 可对应,但 boundTaskIds/awaitingReport/reportedTaskIds/schedule 与这里单个 taskId 和 blocked/superseded 状态不一一对应;合并接线时必须明确单一账本权威、迁移和末次汇报语义,不能作为两份并列真源。R-05 只覆盖声明的 17 个变异,不是穷尽。",
+  "additional_red": [
+    { "commit": "ba5fa58a3f204b61d42c810f82109b09fa3376c0", "green": "de6256dff22e3bab3fe11972c18bd1992e481ad2", "reason": "重投使用新动作号时必须保留该动作身份。" },
+    { "commit": "82c321568c46a729e92a323b62de7b8fbbee6201", "green": "2291e2b70314a899c4fcbcd8dfe63c695aac8863", "reason": "承诺文字必须可追溯到来源原文,不能凭空生成。" }
+  ],
+  "unverifiable": "AC-40/AC-16:状态转移返回的只是拟提交快照;真实宿主必须先原子持久化接收记录,再在同一持久化事务内提交处理、动作去重和版本检查,并验证调用方身份与产物真实存在。纯函数不能保证崩溃恢复、并发写入的单一提交点、模型完整提取承诺或用户真正看到了结果。原文子串校验只能证明字面来源,不能证明提取完整或语义正确。PR #4 contact.ts 的 commitments 仍是另一套数据形状:id/sourceSeq/text 可对应,但 boundTaskIds/awaitingReport/reportedTaskIds/schedule 与这里单个 taskId 和 blocked/superseded 状态不一一对应;合并接线时必须明确单一账本权威、迁移和末次汇报语义,不能作为两份并列真源。R-05 只覆盖声明的 19 个变异,不是穷尽。",
   "waiver": null,
   "review": null
 }

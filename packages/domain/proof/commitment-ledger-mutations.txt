@@ -17,7 +17,9 @@ KILLED M14 Compute 直接了结承诺: Compute 只可报告绑定任务的承诺
 KILLED M15 引用补充串任务: 引用审查汇报的补充不能绑到快捷键任务
 KILLED M16 其他轮次动作冒充本轮: 本轮有动作后对账通过,别轮动作不冒充本轮动作
 KILLED M17 所有后台承诺阻塞闲聊: 轮末只对本轮绑定承诺对账,后台任务不阻塞闲聊
-PASS 17/17 变异被指定测试杀死
+KILLED M18 重投不保留动作身份: 同一消息 id 重投不重复,但内容冲突不得覆盖
+KILLED M19 承诺文字脱离来源原文: 用户交办并接下的多个承诺同时登记并保留来源
+PASS 19/19 变异被指定测试杀死
 
-Mutations are limited to these 17 declared changes. A load failure is not a kill.
+Mutations are limited to these 19 declared changes. A load failure is not a kill.
 The runner uses a fresh isolated copy per mutant and removes its temporary directory in finally.

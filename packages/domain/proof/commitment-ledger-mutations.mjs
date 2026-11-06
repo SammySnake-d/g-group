@@ -10,7 +10,7 @@ const mutants = [
   ["M01 未接收直接处理", 'if (!m) return fail("message-not-found");', "", "未收到的消息不能处理或生成承诺"],
   ["M02 重试丢失幂等性", "if (previous) return previous.payload === payload", "if (false && previous) return previous.payload === payload", "同一投递动作重试按稳定 id 去重,旧版本重试也不重复"],
   ["M03 相同动作号允许不同内容", "previous.payload === payload ?", "true ?", "复用动作 id 改载荷会被拒绝"],
-  ["M04 同消息号的冲突被吞掉", "canonical(prior as unknown as Json) === canonical(m as unknown as Json) ?", "true ?", "同一消息 id 重投不重复,但内容冲突不得覆盖"],
+  ["M04 同消息号的冲突被吞掉", 'if (canonical(prior as unknown as Json) !== canonical(m as unknown as Json)) return fail("message-id-conflict");', 'if (false) return fail("message-id-conflict");', "同一消息 id 重投不重复,但内容冲突不得覆盖"],
   ["M05 删除版本检查", 'if (state.version !== expectedVersion) return fail("version-conflict");', "", "新动作使用旧版本被拒绝且不改原状态"],
   ["M06 未接下也登记", 'if (m.sender.kind === "user" && !input.accepted && input.commitments.length) return fail("not-accepted");', "", "用户未接下的要求不能伪造承诺"],
   ["M07 覆盖同名承诺", 'if (new Set(ids).size !== ids.length || ids.some((id) => commitments.some((c) => c.id === id))) return fail("commitment-id-conflict");', "", "同 id 承诺不可覆盖,失败不得部分处理消息"],
@@ -24,6 +24,8 @@ const mutants = [
   ["M15 引用补充串任务", 'if (parent.taskId !== m.taskId) return fail("task-mismatch");', "", "引用审查汇报的补充不能绑到快捷键任务"],
   ["M16 其他轮次动作冒充本轮", "a.roundId === roundId && a.commitmentId === id", "a.commitmentId === id", "本轮有动作后对账通过,别轮动作不冒充本轮动作"],
   ["M17 所有后台承诺阻塞闲聊", "const pending = ids.filter((id) => {", "const pending = state.commitments.map((c) => c.id).filter((id) => {", "轮末只对本轮绑定承诺对账,后台任务不阻塞闲聊"],
+  ["M18 重投不保留动作身份", "const repeat: Ledger = { ...state, version: state.version + 1, actions: [...state.actions, { id: input.actionId, payload }] };", "const repeat: Ledger = state;", "同一消息 id 重投不重复,但内容冲突不得覆盖"],
+  ["M19 承诺文字脱离来源原文", 'if (input.commitments.some((c) => !m.text.includes(c.text))) return fail("commitment-text-not-source");', "", "用户交办并接下的多个承诺同时登记并保留来源"],
 ];
 
 function run(dir) {

@@ -2,10 +2,19 @@ D23 domain-only verification
 Base: afd02560f9546147da380382404eb6106222a9b8 (origin/feat/domain-core)
 Red: ff0255c1f4b505542b555231f98f14f306e8cba6
 Green implementation: eb296c42f451e5e48d77a664fc88ad7c2a72a6d1
+Additional red: ba5fa58a3f204b61d42c810f82109b09fa3376c0
+Additional green: de6256dff22e3bab3fe11972c18bd1992e481ad2
+Source-text red: 82c321568c46a729e92a323b62de7b8fbbee6201
+Source-text green: 2291e2b70314a899c4fcbcd8dfe63c695aac8863
 
 node --test --test-reporter=spec packages/domain/src/commitment-ledger.test.ts
 Red: 22 named failures, 0 passed, 0 file-level failures; exit 1.
 Green: 22 named passes, 0 failures; exit 0.
+Additional red: the strengthened duplicate-message test failed by accepting
+a different message under the retry action ID; 21 passed, 1 failed, exit 1.
+Additional green: the same attempt returns action-id-conflict; 22 pass.
+Source-text red: an invented obligation was accepted; 21 passed, 1 failed.
+Source-text green: invented text is rejected; multiple exact excerpts pass.
 
 npm test --silent
 45 tests passed, 0 failed; exit 0. The 23 inherited tests are included.
