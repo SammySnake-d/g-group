@@ -827,3 +827,163 @@ for(const [i,c] of cases.entries()){
 }
 console.log(JSON.stringify({cases:cases.length,recognized:cases.length-failed,failed,fixtureRoot:tmp}));process.exit(failed?1:0);
 ```
+
+# 第七轮：返修独立复审
+
+**结论：reject。** 本轮在普通独立 clone 审查 `a1431c7a45f03823379dd44cfa269de1817a4772`。上轮所测描述符字段、数组下标与发送账本反例在重跑样例中已修；但拉取回调的返回值仍能执行 getter，公开导出的工具亦有同类漏洞；`Object.prototype.then` 为只读数据属性时合法发送被破坏。导出的可变策略对象还能关闭撤回扫描、放行倒序固定段；合法 JSON `null` 会让多个入口抛错；自造三个单点故障有两个逃过全套测试。必须返修后复审，不把本内核片段绿灯当成全部用户故事已验收。
+
+## 审查范围与独立结果
+
+- 基线 `origin/feat/domain-core` 为 `afd02560f9546147da380382404eb6106222a9b8`；作者/审查者分别为 Claude/Anthropic 与 Codex/OpenAI。本会话 `codex:7d29bd3e-c4cd-4e15-ad0b-298bd0301bd3`，本轮原生 `turn_context` 记录模型 `gpt-6.1-terra`。当前会话尚在运行，最终来源门禁仍须在记录落盘后复核。
+- 在本独立 clone 的仓库根实际执行 `node scripts/gates/run-all.ts --hash --branch=feat/kernel-plugins --base=origin/feat/domain-core`，其标准输出**原样**如下，与作者声明完全一致：
+
+  ```text
+  74b06b1104306632e8f840af04ddfc114cfae36bcf5d91519a5b61a8ba9c9cfe
+  ```
+
+| 检查 | 本轮实测 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均退出 0；lint 24 文件 |
+| `npm test`（Node 25.8.1） | 191 通过、0 失败、0 跳过，其中 kernel 168 条 |
+| 红提交 `f925f192f8df21fa7f02652df7b416d737f57008` | 独立普通 clone 执行 `npm ci` 后 `npm test` 退出 1：23 旧测试通过、kernel 168 个具名测试失败、0 跳过。红绿 kernel 测试文件无差异；绿版 168 个测试名与红版失败名双向差集均为空 |
+| 旧绿 `257d56e` 与新绿 `542c478` | 四个实现文件 `assemble.ts`、`classify.ts`、`plain.ts`、`plugins.ts` 的 `git diff --quiet` 退出 0；测试有调整 |
+| 作者变异脚本 | Node `v25.8.1` 与 `v22.22.0` 独立各跑一次：原样副本均 168 绿，144 个变异均被具名测试发现、0 存活、0 超时；中断前的 Node 22 不完整日志保留，不计为通过 |
+| 自造变异 | 三个注入点各在独立 clone 精确替换一次；typecheck 均通过，1 个被测试发现、2 个存活，见 R7-05 |
+| 未填 `review` 时的 `--local` | 退出 1；`G-REVIEW` 报“还没有独立审查”，其余显示绿。注意 `G-PROVENANCE` 在 `review=null` 时提前返回，显示绿不代表审查来源已核验 |
+| 填写 `reject` 后的 `--local` | 退出 1；`G-REVIEW` 正确阻挡 reject；`G-PROVENANCE` 报已落盘会话未找到本轮 hash 调用且审查厂商认不出。hash 已在独立 clone 实际执行，本轮会话落盘后仍需按门禁复核，不能把当前来源门禁报成通过 |
+| 变异超时金丝雀 | Node 22 和 25 各实跑一次，5.0 秒超时被杀；超时不算变异被杀 |
+
+验收范围：对照仓库 AC-06/08/11/12/35/39，此片仍只有装配、分类、插件宿主等纯函数/内存子判据；收据把整体验收和 R-06 纵向路径列为未测是必要边界，不能由单元测试代替真实运行时、存储及用户故事验收。
+
+## 第六轮探针与本轮边界
+
+- R6-01：`Object.prototype` 的 `get/set/value/writable/enumerable/configurable` 六个字段分别设 setter 与不可写数据值；独立样例 `plainData`、`assemble`、`classifyInbound` 均正常，setter 0 次。R6-02：在独立子进程对 `Array.prototype` 的下标 0、1、2 分别设 setter 或不可写值；拉取两条有效事件加一条拒收、装配与双点名分类都得预期内容与自有数组下标，setter 0 次。这不代表任意属性都已验证，见 R7-03。
+- R6-03/04 已测分支：`plainData` 的 `topFunctions` getter、`plainItems` 数组元素、注册、发送请求、拉取事件、装配日志与选项、分类输入、`serialize/prefixLength/prefixHash` 和分类器结果上的 getter 均拒绝或保守处理，计数 0。`send` 回调同步抛错、Promise 拒绝、超时、非法回执和 then getter 均记为 `delivery-unknown`；B2 同动作重试为 `retry-refused`，上述非法回执/then getter 计数 0。**不能推广到所有入口或 pull 返回值，见 R7-01/02。**
+- 补充探针：工厂选项、重注册、拉取数组、分类卡片 getter 分别拒绝或 `Uncertain`，安全描述使用占位，getter 与分类器调用均为 0，重注册失败保留旧快照。该探针首次把期望枚举 `Uncertain` 误拼为 `Unertain` 而断言退出 1；更正探针后重跑通过，这是审查脚本笔误而非产品故障。
+- 撤回比对单独测试了所列 30 个 Unicode 空白/零宽字符点，包括 U+000B、U+0085；混入后均返回 `retracted-text-leaked`。不混入该字符的直接泄漏同样被拦截。
+- 收据第 7 栏关于 **U+00AD 软连字符与全角/半角同形不规范化** 的披露与实测一致：原文 `秘密A` 被撤回后，`秘\u00AD密A` 和 `秘密Ａ` 仍可通过装配；这是声明的范围外，不能报成防住了同形改写。它关于“内置方法本身被改写不承诺”的披露在测试性改写 `JSON.stringify` 的样例中亦如实；**但新增一个 `Object.prototype.then` 只读属性不是重写内置方法，也会破坏结果**，见 R7-03。收据“外部回调返回值诊断不执行 getter”的概述不能覆盖 R7-01 的 await 边界。
+
+## 必须修复
+
+### R7-01 [P1 / AC-35] `pull` 在检查返回值之前 `await`，执行了返回值的访问器
+
+位置：`packages/kernel/src/plugins.ts:227-230`。`batch = await p.pull(sourceId)` 触发 JS Promise 同化，随后才调用 `plainItems`。独立传入一个自有 `then` getter 的同步返回对象，`pull` 虽最后返回 `invalid-batch`，getter 已执行 **1 次**；带会抛错的 `then` getter 也会执行后才报 `pull-failed`。即便插件返回的是原生 Promise，在该 Promise 实例上放自有 `constructor` 抛错 getter，`await` 仍执行 getter 1 次才返回 `pull-failed`。这与“外部回调返回值遇到访问器拒绝，且不调用”不符，不能用检查最终数组元素的测试替代检查 await 前的返回值。
+
+要求：在与 `send` 一致的可验证边界上先识别并拒绝不合约定的返回形态，避免宿主在验证前读取不可信的 `then/constructor`；对非抛错和抛错 getter、原生 Promise 自有访问器、合法原生 Promise 和合法数组结果分别断言 getter 计数及最终状态。由插件内部自行执行的代码或 Promise 自身在交给宿主前已经发生的同化，应另明确其无法控制的边界，不能冒称宿主未调用。
+
+### R7-02 [P1 / 对外入口] 部分已导出工具仍执行或接收访问器
+
+位置：`packages/kernel/src/index.ts:1-4`、`assemble.ts:138`、`plain.ts:47-61`。`index.ts` 通过 `export *` 把这些函数暴露为公开 API：
+
+1. `squash` 对传入值直接读 `.replace`。传入带 `replace` getter 的对象，实测 getter 1 次，返回 getter 指定的结果，不是拒绝。
+2. `appendOwn` 对非数组目标直接读 `.length`。传入带 `length` getter 的对象，实测 getter 1 次并继续写入。
+3. `plainData` 的判定选项仅看 `topFunctions` 的描述符；选项对象另有一个自有 getter 时，getter 虽为 0 次，却返回 `ok:true`，没有按“遇到访问器拒绝”的合同拒绝。
+
+要求：要么将纯内部 helper 从公开导出中撤出并限制可用边界，要么对公开入口先进行不触发访问器的类型/描述符检查并拒绝；判定选项须检查整个声明允许的对象而不只读取一个字段。分别测试 getter 与 setter、可枚举与不可枚举、合法参数和调用计数。诊断型 API 若有不同的“安全占位而非拒绝”合同，应明确区分并测试。
+
+### R7-03 [P1 / 原型条件] 只读 `Object.prototype.then` 改变合法发送结果
+
+位置：`packages/kernel/src/plugins.ts:168-202,245-260`。在隔离进程中仅向 `Object.prototype` **新增**不可写的 `then` 数据属性，值是接受 `resolve` 的函数；没有改写任何已有内置方法。正常异步渠道返回合法 `{action_id, receiptId}` 时，无污染对照确认成功；污染下 Promise 同化调用继承的 `then` 两次，调用方拿到字符串 `prototype-then` 而不是 `SendResult`，账本为 `delivery-unknown`。这是用户本轮要求检查的只读原型属性，而不是第 7 栏排除的“内置方法被改写”。
+
+要求：对此类 Promise 同化边界做隔离/防护或明确拒绝不安全环境，不得把返回字符串当合法结果；补无污染对照、只读 `then`、触发次数、真实副作用次数及账本状态。若产品只能承诺六个描述符名和数组下标等较窄场景，应把限制准确写在可见契约中并与本轮验收要求对齐，不能以“内置方法改写不承诺”掩盖此反例。
+
+### R7-04 [P1 / AC-08、AC-39] 导出的可变策略对象可改变撤回扫描和固定段顺序
+
+位置：`packages/kernel/src/assemble.ts:53,98,136-138`。`INVISIBLE` 是被直接导出的同一个可变 `RegExp` 实例，`squash` 也直接使用它；`STABLE_ORDER` 是导出的数组，TypeScript 的 `readonly` 不会冻结运行时对象。独立进程先运行正常对照：撤回 `秘密口令` 后的会变状态 `秘\u0085密口令` 被拦截，倒序 `persona → system` 被拒绝。随后仅对 **导出的实例** 调用 `INVISIBLE.compile('x','g')` 和 `STABLE_ORDER.reverse()`，没有修改任何内置方法：相同撤回正文装配成功并出现在 tail，倒序固定段亦成功。复现后已恢复两个实例；源文件和被审 clone 不变。
+
+要求使外部调用者拿不到可改变宿主判定的共享策略状态：如固定段顺序冻结或私有化，正则以不可变规范构造独立实例，或导出与内部状态分离的副本；补变更导出值前后的同一输入正负对照，明确宿主自身的策略不能被外部持有的对象改变。此反例不依赖改写 `RegExp.prototype`、`Array.prototype` 等内置方法，也不能由第 7 栏的内置改写范围外声明覆盖。
+
+### R7-05 [P1 / R-05] 两个新的单点故障逃过全部测试
+
+分别在普通独立临时 clone 里改一个注入点（没有改受审 clone），三者 typecheck 均退出 0：
+
+- **R7-M1，存活**：`plain.ts` 的 `topFunctionsOf` 末行 `return d.value === true` 改为 `return true`。原版对 `{topFunctions:false}` 下的顶层函数拒绝；变异版放行。全仓测试仍 **191/191 绿**。现有测试只对未传选项和 `true` 做对照。
+- **R7-M2，被杀**：`assemble.ts` 的预算比较 `need > budget` 改为 `need >= budget`。全仓 190 绿、1 红，被“预算恰好等于所需字节时装配成功”具名测试发现。
+- **R7-M3，存活**：`assemble.ts` 页入条件移除 `paged.some((p) => p.seq === seq)`。对一个已压缩旧消息重复引用 `[1,1]`，原版页入 1 次、清单 1 条；变异版页入 2 次、清单 2 条，可能无谓占用预算。全仓测试仍 **191/191 绿**。已有重复引用测试是撤回消息，并未覆盖同一仍可见旧消息。
+
+要求补 `topFunctions:false` 的单开关对照、同一仍可见压缩旧消息重复引用与清单/字节数断言，再把上述单点故障作为具名阳性校准；不要把作者预选变异 100% 杀死解读为充分证明。
+
+### R7-06 [P1 / 对外输入] 通过普通数据校验的 `null` 仍会在多个入口抛异常
+
+位置：`classify.ts:83-87`、`assemble.ts:156-168`、`plugins.ts:249-254`。`plainData(null)` 将 null 当作合法 JSON 值返回；这些入口随后直接将它强转为对象并读字段。独立实测 `classifyInbound(null, classifier)` 抛 `Cannot read properties of null (reading 'text')`；`assemble(null, opts)` 和 `assemble(log, null)` 分别在 `events`、`quotes` 处抛错；已注册渠道的 `send('p', null)` 在读取 `action_id` 时 Promise 拒绝而不是返回拒绝结果，插件实际调用 0 次。
+
+要求在统一普通值校验之后、属性读取之前验证各入口所需的对象形状：分类返回 `Uncertain` 与违规，装配返回 `invalid-input`，发送返回明确拒绝且不触发插件/建立虚假账目。对 `null`、其他 JSON 基本值、正常对象分别做负例与阳性对照；不能只测试 getter 和 Proxy。
+
+## 删除 K38 的核对
+
+旧 K38 改的是 `safeDescribe` 的异常兜底分支。新脚本声称“safeDescribe 不再调用 `JSON.stringify`”，这句事实不准确：`plain.ts` 的 `render` 仍对字符串、符号描述等**基本类型**调用 `JSON.stringify`，只是不再把外部对象直接传给它或执行其 `toJSON`。我在独立副本把新 catch 改成重抛：typecheck 通过、191/191 测试绿；普通对象、循环、BigInt、已撤销 Proxy、getter/toJSON 等所测样例与原版相同且外部 getter/toJSON 调用 0。
+
+隔离进程中若**改写内置** `JSON.stringify` 使其抛错，原版返回 `<无法描述>`、对照版抛错；该情形被第 7 栏明示排除，因此不构成承诺范围内反例。结论：删除理由里的“完全不调用 JSON.stringify”需更正；所测范围支持在未改内置、正常资源条件下两者相同，但不能据有限样例宣称兜底分支在所有可能环境中严格不可达。
+
+## 八个门禁的独立负例
+
+使用前一轮报告“各门禁负例完整夹具脚本”在本版独立 clone 重建临时 Git 仓库与会话目录，G-TRACE 状态改成另一无效值 `将要通过`；除逐门 `runGates` 检查预期问题外，每例另实跑完整 `run-all.ts --local` CLI。8/8 目标门禁均显示 ✗ 且各 CLI 退出 1：
+
+| 门禁 | 负例 | 实际被目标门禁拒绝 |
+|---|---|---|
+| G-TRACE | 非四选一验收状态 | 状态非法 |
+| G-REVIEW | 作者与审查者都填 Claude | 审查人与作者相同等 |
+| G-PROVENANCE | 不存在的审查会话 | 审查会话不可信 |
+| G-RED | 不存在的红提交 | 红提交不存在 |
+| G-STUB | 只断言导入函数类型、不调用实现 | 空桩后未按名字失败 |
+| G-TAUTO | `assert.equal(3,3)` | 恒真断言 |
+| G-WORKFLOW | PR workflow 申请 `contents: write` | 申请写权限 |
+| G-LAYER | plugin 导入另一 plugin | 插件层不能相互依赖 |
+
+这是每门禁各一条独立负例，不证明门禁没有其他绕过。`G-PROVENANCE` 对本轮正式收据须等会话落盘后再核验。
+
+## 最小复现（受审仓库根目录，`npm ci` 后）
+
+下列脚本只在当前隔离 Node 进程中构造非法值与临时原型属性，结束前恢复，不访问网络；`pull` 与公开 helper 的打印是本版实际错误行为：
+
+```sh
+node --input-type=module <<'NODE'
+import { createRegistry } from './packages/kernel/src/plugins.ts';
+import { plainData, appendOwn } from './packages/kernel/src/plain.ts';
+import { squash } from './packages/kernel/src/assemble.ts';
+let pullGetter=0; const out={}; Object.defineProperty(out,'then',{get(){pullGetter++; return undefined}});
+const r=createRegistry(); r.register({kind:'data-source',id:'p',sources:['g'],pull:()=>out});
+const result=await r.pull('p','g'); console.log('pull',result.reason,'getter',pullGetter); // invalid-batch, 1
+let helperGetter=0; const bad={}; Object.defineProperty(bad,'replace',{get(){helperGetter++; return ()=> '调用了';}});
+console.log('squash',squash(bad),'getter',helperGetter); // 调用了, 1
+let lengthGetter=0; appendOwn({get length(){lengthGetter++;return 0}},'x'); console.log('appendOwn getter',lengthGetter); // 1
+let optionGetter=0; const options={}; Object.defineProperty(options,'other',{get(){optionGetter++;return 1},enumerable:true});
+console.log('options accepted',plainData({x:1},'x',options).ok,'getter',optionGetter); // true, 0
+NODE
+```
+
+```sh
+node --input-type=module <<'NODE'
+import {createRegistry} from './packages/kernel/src/plugins.ts';
+const reg=createRegistry({sendTimeoutMs:100});let sent=0;
+reg.register({kind:'outbound-channel',id:'p',endpoint:'A',idempotency:'none',send:async q=>{sent++;return {action_id:q.action_id,receiptId:'r'}}});
+console.log('control',await reg.send('p',{action_id:'control',payload:'x'}));
+let n=0,result,error;const d=Object.create(null);d.configurable=true;d.writable=false;d.value=function(resolve){n++;resolve('prototype-then')};
+try{Object.defineProperty(Object.prototype,'then',d);result=await reg.send('p',{action_id:'polluted',payload:'x'})}catch(e){error=String(e)}finally{delete Object.prototype.then}
+console.log({result,error,thenCalls:n,sent,ledger:reg.delivery('p','polluted')});
+NODE
+```
+
+```sh
+node --input-type=module <<'NODE'
+import {INVISIBLE,STABLE_ORDER,assemble} from './packages/kernel/src/assemble.ts';
+import {append,emptyLog} from './packages/domain/src/log.ts';
+const u={kind:'user',id:'u'},t='2026-01-01T00:00:00Z';let log=append(emptyLog(),u,{kind:'message',text:'秘密口令'},t);log=append(log,u,{kind:'retract',target:1},t);
+const opts={stable:[{kind:'system',text:'固定规则'}],quotes:[],volatile:'秘\u0085密口令',budgetBytes:1000};
+console.log('撤回对照',assemble(log,opts));
+const source=INVISIBLE.source,flags=INVISIBLE.flags;
+try{INVISIBLE.compile('x','g');console.log('改变导出正则后',assemble(log,opts))}finally{INVISIBLE.compile(source,flags)}
+const reversed={...opts,stable:[{kind:'persona',text:'风格'},{kind:'system',text:'规则'}],volatile:'无'};
+console.log('倒序对照',assemble(log,reversed));
+try{STABLE_ORDER.reverse();console.log('改变导出数组后',assemble(log,reversed))}finally{STABLE_ORDER.reverse()}
+NODE
+```
+
+```sh
+node --input-type=module <<'NODE'
+import {createRegistry} from './packages/kernel/src/plugins.ts';import {classifyInbound} from './packages/kernel/src/classify.ts';import {assemble} from './packages/kernel/src/assemble.ts';import {append,emptyLog} from './packages/domain/src/log.ts';
+const opts={stable:[{kind:'system',text:'规则'}],quotes:[],budgetBytes:1000},log=append(emptyLog(),{kind:'user',id:'u'},{kind:'message',text:'正常'},'2026-01-01T00:00:00Z');
+for(const [name,fn] of [['classify null',()=>classifyInbound(null,()=> 'E1')],['assemble log null',()=>assemble(null,opts)],['assemble options null',()=>assemble(log,null)]]){try{console.log(name,fn())}catch(e){console.log(name,'THREW',e.message)}}
+const r=createRegistry();let calls=0;r.register({kind:'outbound-channel',id:'p',endpoint:'A',idempotency:'none',send:async q=>{calls++;return {action_id:q.action_id,receiptId:'r'}}});try{console.log(await r.send('p',null))}catch(e){console.log('send null THREW',e.message,'calls',calls)}
+NODE
+```
