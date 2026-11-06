@@ -1,0 +1,19 @@
+docs/spec/验收文档-v0.1.md
+  s_aa27e3e641bf01::t_da80bfc8a5a89a 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3a40425efc11527ce1a522b3ec3fc2c8ef02647c",
+  "prompts": {},
+  "sessions": {
+    "s_aa27e3e641bf01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5734b8e-3d55-4848-8e7c-d6dc70ac35b8",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
