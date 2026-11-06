@@ -11,7 +11,7 @@ const receive = (id = "m1", seq = 1, taskId: string | null = "task-a"): Command 
   ({ type: "receive", actionId: `receive-${id}`, message: message(id, seq, taskId) });
 const process = (seq = 1, taskId = "task-a"): Command => ({
   type: "process", actionId: `process-${seq}`, seq, accepted: true,
-  commitments: [{ id: `k${seq}`, taskId, text: `承诺 ${seq}` }],
+  commitments: [{ id: `k${seq}`, taskId, text: `原文 m${seq}` }],
 });
 const progress = (id = "k1", taskId = "task-a", roundId = "r1", actor: Actor = contact): Command =>
   ({ type: "progress", actionId: `progress-${id}-${roundId}`, commitmentId: id, taskId, actor, roundId, text: "进展" });
@@ -79,12 +79,14 @@ test("新动作使用旧版本被拒绝且不改原状态", () => {
 });
 
 test("用户交办并接下的多个承诺同时登记并保留来源", () => {
-  const r = received();
+  const r = unwrap(applyLedger(emptyLedger("c"), 0, { type: "receive", actionId: "r", message: { ...message("m1", 1), text: "请做 A，再做 B" } }));
   const result = applyLedger(r, r.version, { type: "process", actionId: "p", seq: 1, accepted: true, commitments: [
     { id: "a", taskId: "task-a", text: "做 A" }, { id: "b", taskId: "task-a", text: "做 B" },
   ] });
   assert.equal(result.ok, true);
   if (result.ok) { assert.deepEqual(result.ledger.commitments.map((c) => [c.id, c.sourceSeq, c.text]), [["a", 1, "做 A"], ["b", 1, "做 B"]]); assert.equal(result.ledger.messages[0]?.handled, true); }
+  const forged = applyLedger(r, r.version, { type: "process", actionId: "forged", seq: 1, accepted: true, commitments: [{ id: "x", taskId: "task-a", text: "未出现的承诺" }] });
+  assert.deepEqual(forged, { ok: false, reason: "commitment-text-not-source" });
 });
 
 test("用户未接下的要求不能伪造承诺", () => {
