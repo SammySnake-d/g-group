@@ -13,8 +13,13 @@ import { type Vendor, vendorOf } from "./vendor.ts";
 // 门禁策略取自裁判自己所在目录(CI 里是 main 上那份),PR 改不了它
 export interface Policy { allowedReviewers: string[]; defaultReviewer: string; reviewerHarness: string; reviewerHarnessOf: Record<string, string>; assistantIds: Record<string, string>; source: string }
 /** 审查人对应的会话 harness:codex/astra 跑在 codex,argon 跑在 claude;没登记的退回默认 */
-export const harnessOf = (agent: string) => POLICY.reviewerHarnessOf[agent] ?? POLICY.reviewerHarness;
-export const POLICY: Policy = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, "policy.json"), "utf8")) as Policy;
+export const harnessOf = (agent: string) => (Object.hasOwn(POLICY.reviewerHarnessOf, agent) ? POLICY.reviewerHarnessOf[agent]! : POLICY.reviewerHarness);
+/** 递归冻结(R5-03):导出的策略与常量参与判定,外部赋值、push、删除、改嵌套都不能改变后续门禁行为 */
+export function deepFreeze<T>(x: T): Readonly<T> {
+  if (x && typeof x === "object" && !Object.isFrozen(x)) { Object.freeze(x); for (const v of Object.values(x)) deepFreeze(v); }
+  return x;
+}
+export const POLICY: Readonly<Policy> = deepFreeze(JSON.parse(fs.readFileSync(path.join(import.meta.dirname, "policy.json"), "utf8")) as Policy);
 
 const needsReceipt = (ctx: Ctx) => ctx.changed.some(isGoverned);
 const STATUSES = new Set(["通过", "失败", "未测", "不适用"]);
@@ -72,7 +77,9 @@ export const review: Gate = {
 // 本门禁在 --local 模式下排在所有门禁之前:会话与群聊记录在执行任何 PR 代码之前读完;PR 代码另在沙箱里跑,读写不到这些目录。
 interface ToolCall { name?: string; input?: unknown; result?: unknown }
 interface Turn { model?: string; toolCalls?: ToolCall[] }
-export const HARNESSES = new Set(["claude", "codex", "pi"]);
+// 判定用的是内部私有快照;导出的只是冻结数组副本,改它不影响判定(R5-03:Set 冻结不住 add/delete)
+const HARNESS_LIST: readonly string[] = deepFreeze(["claude", "codex", "pi"]);
+export const HARNESSES: readonly string[] = HARNESS_LIST;
 const SESSION_RE = /^([a-z]+):([A-Za-z0-9-]+)$/;
 const realHome = () => os.userInfo().homedir;
 export const sessionsRoot = () => process.env.MIRASIM_SESSIONS ?? path.join(realHome(), ".mirasim/sessions");
@@ -83,7 +90,7 @@ type Loaded = { ok: true; turns: Turn[]; workdir: string | undefined } | { ok: f
 export function loadSession(base: string, session: string): Loaded {
   const m = SESSION_RE.exec(typeof session === "string" ? session : "");
   if (!m) return { ok: false, why: `格式必须是 <harness>:<id>(id 只含字母、数字和 -),实际 "${session}"` };
-  if (!HARNESSES.has(m[1]!)) return { ok: false, why: `harness "${m[1]}" 不在白名单 ${[...HARNESSES].join("/")} 里` };
+  if (!HARNESS_LIST.includes(m[1]!)) return { ok: false, why: `harness "${m[1]}" 不在白名单 ${HARNESS_LIST.join("/")} 里` };
   let root: string;
   try { root = fs.realpathSync(base); } catch { return { ok: false, why: `会话根目录 ${base} 不存在` }; }
   const inside = (f: string) => f.startsWith(root + path.sep);
@@ -534,7 +541,7 @@ export const tautology: Gate = {
 
 // ---------------------------------------------------------------- 工作流防篡改(R-18)
 // 结构化解析 YAML(含锚点合并、引号、折叠标量);受保护检查名查 job id 和 name,name 含表达式一律拒绝。
-export const PROTECTED_CONTEXTS = ["trusted-gates", "provenance", "self-check"];
+export const PROTECTED_CONTEXTS: readonly string[] = deepFreeze(["trusted-gates", "provenance", "self-check"]);
 const PERM_KEYS = ["actions", "attestations", "checks", "contents", "deployments", "discussions", "id-token", "issues", "models", "packages", "pages", "pull-requests", "repository-projects", "security-events", "statuses"];
 function permProblems(where: string, perms: unknown): string[] {
   if (perms === undefined || perms === null) return [];
@@ -562,12 +569,12 @@ const REQUIRED_SELF_CHECK_STEPS: { label: string; ok: (run: string) => boolean }
   { label: "npm run gates:selftest", ok: (r) => r === "npm run gates:selftest" },
   { label: "npm run gates:mutation", ok: (r) => /^(GATE_MUTATION_JOBS=\d+ )?npm run gates:mutation$/.test(r) },
 ];
-export const REQUIRED_GATE_SCRIPTS: Record<string, string> = {
+export const REQUIRED_GATE_SCRIPTS: Readonly<Record<string, string>> = deepFreeze({
   // g-group#2538:裸 node --test 在 glob 没匹配到文件时也退出 0;test-runner.ts 在 0 条用例时判失败
   test: 'node scripts/gates/test-runner.ts "packages/**/*.test.ts" "scripts/gates/*.test.ts"',
   "gates:selftest": "node scripts/gates/run-all.ts --self-test",
   "gates:mutation": "node scripts/gates/mutation.ts",
-};
+});
 function selfCheckProblems(doc: Record<string, unknown>): string[] {
   const f = SELF_CHECK_WF;
   const jobs = doc.jobs && typeof doc.jobs === "object" ? (doc.jobs as Record<string, unknown>) : {};
@@ -648,7 +655,7 @@ export const workflow: Gate = {
 };
 
 // ---------------------------------------------------------------- 插件化分层
-export const LAYERS = ["domain", "kernel", "adapter", "plugin", "app"] as const;
+export const LAYERS = deepFreeze(["domain", "kernel", "adapter", "plugin", "app"] as const);
 type Layer = (typeof LAYERS)[number];
 const ALLOWED: Record<Layer, Layer[]> = {
   domain: [], kernel: ["domain"], adapter: ["domain", "kernel"], plugin: ["domain", "kernel"], app: ["domain", "kernel", "adapter", "plugin"],
@@ -708,5 +715,5 @@ export const layers: Gate = {
   },
 };
 
-export const ALL_GATES: Gate[] = [trace, review, red, stub, tautology, workflow, layers];
-export const LOCAL_GATES: Gate[] = [provenance];
+export const ALL_GATES: readonly Gate[] = Object.freeze([trace, review, red, stub, tautology, workflow, layers]);
+export const LOCAL_GATES: readonly Gate[] = Object.freeze([provenance]);

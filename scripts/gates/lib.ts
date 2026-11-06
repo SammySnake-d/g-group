@@ -74,12 +74,21 @@ export function specIdsFrom(text: string | undefined): Set<string> {
 // 子进程只拿最小环境(PATH、HOME/TMPDIR 指向临时副本),不继承任何 token。
 // git/node 子进程的统一环境:剥掉全部 GIT_*(pre-push 等 hook 会注入 GIT_DIR/GIT_INDEX_FILE,
 // 继承下去会让临时仓库里的 git 命令写到真正的仓库),不读系统级配置,HOME 指向一个空临时目录。
+// 同一进程复用一个空 HOME,进程退出时删掉(用户 g-group#2900:测试要及时清理磁盘)。
+// 子进程继承到的 HOME 就用它,不再各建一个:有 GATE_ISOLATED_HOME 且确实是我们建的目录就复用,只由建它的进程删。
 let isolatedHome: string | undefined;
+function ownHome(): string {
+  const inherited = process.env.GATE_ISOLATED_HOME;
+  if (inherited && path.basename(inherited).startsWith("gate-home-") && fs.existsSync(inherited)) return inherited;
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), "gate-home-"));
+  process.on("exit", () => { try { fs.rmSync(d, { recursive: true, force: true }); } catch { /* 退出时尽力删 */ } });
+  return d;
+}
 export function gitEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
-  isolatedHome ??= fs.mkdtempSync(path.join(os.tmpdir(), "gate-home-"));
+  isolatedHome ??= ownHome();
   const env: NodeJS.ProcessEnv = {};
   for (const [k, v] of Object.entries(process.env)) if (!k.startsWith("GIT_") && v !== undefined) env[k] = v;
-  return { ...env, GIT_CONFIG_NOSYSTEM: "1", HOME: isolatedHome, ...extra };
+  return { ...env, GIT_CONFIG_NOSYSTEM: "1", HOME: isolatedHome, GATE_ISOLATED_HOME: isolatedHome, ...extra };
 }
 /** 在临时仓库里跑的 git 一律加上这些 -c:不跑任何 hook */
 export const GIT_SAFE_ARGS = ["-c", "core.hooksPath=/dev/null"];
@@ -245,7 +254,7 @@ export const p = (gate: string, msg: string): Problem => ({ gate, msg });
 
 export interface GateResult { gate: Gate; problems: Problem[] }
 // 唯一的执行器:run-all 和自检都走这里,门禁出错算拦下
-export function runGates(ctx: Ctx, gates: Gate[]): GateResult[] {
+export function runGates(ctx: Ctx, gates: readonly Gate[]): GateResult[] {
   return gates.map((gate) => {
     try { return { gate, problems: gate.run(ctx) }; }
     catch (e) { return { gate, problems: [{ gate: gate.id, msg: `门禁自身出错:${(e as Error).message}` }] }; }

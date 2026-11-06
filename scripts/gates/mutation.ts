@@ -40,11 +40,11 @@ export const MUTATIONS: Mutation[] = [
   { name: "去掉审查人白名单检查", kill: "审查人 grok 被拦", target: ["G-REVIEW"], file: "gates.ts", from: "if (!POLICY.allowedReviewers.includes(rv.agent))", to: "if (false)" },
   // biome-ignore lint/suspicious/noTemplateCurlyInString: 匹配源码里的模板字符串原文
   { name: "来源核对不查审查会话 harness", kill: "argon 审查会话必须是 claude 会话", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (!rv.session.startsWith(`${harnessOf(rv.agent)}:`))", to: "if (false)" },
-  { name: "审查会话 harness 不按审查人区分", kill: "审查人 argon 放行(g-group#2404 临时审查人,claude 会话)", target: ["G-PROVENANCE"], file: "gates.ts", from: "export const harnessOf = (agent: string) => POLICY.reviewerHarnessOf[agent] ?? POLICY.reviewerHarness;", to: "export const harnessOf = (_agent: string) => POLICY.reviewerHarness;" },
+  { name: "审查会话 harness 不按审查人区分", kill: "审查人 argon 放行(g-group#2404 临时审查人,claude 会话)", target: ["G-PROVENANCE"], file: "gates.ts", from: "export const harnessOf = (agent: string) => (Object.hasOwn(POLICY.reviewerHarnessOf, agent) ? POLICY.reviewerHarnessOf[agent]! : POLICY.reviewerHarness);", to: "export const harnessOf = (_agent: string) => POLICY.reviewerHarness;" },
   { name: "argon 不受跨厂商约束", kill: "argon 审查照样要跨研发厂商:作者也用 Google 模型", target: ["G-REVIEW"], file: "gates.ts", from: "if (va !== \"unknown\" && va === vr && !waiver)", to: "if (va !== \"unknown\" && va === vr && !waiver && rv.agent !== \"argon\")" },
   { name: "不核对派活卡片", kill: "派活卡片显示会话属于别的助手", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (wrong.length) out.push(", to: "if (false) out.push(" },
   { name: "session 不做 realpath 包含检查", kill: "RR-01 会话文件软链到 PR 里的伪造记录", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (!inside(real)) return", to: "if (false) return" },
-  { name: "session harness 不查白名单", kill: "RR-01 harness 不在白名单", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (!HARNESSES.has(m[1]!)) return", to: "if (false) return" },
+  { name: "session harness 不查白名单", kill: "RR-01 harness 不在白名单", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (!HARNESS_LIST.includes(m[1]!)) return", to: "if (false) return" },
   { name: "没有沙箱时回退宿主", kill: "RR-02 没有沙箱就停", target: ["G-RED", "G-STUB", "G-TAUTO"], file: "lib.ts", from: "throw new Error(\"没有可用沙箱(GATE_SIMULATE_NO_SANDBOX),拒绝在宿主上执行 PR 代码\");", to: "return \"seatbelt\";" },
   { name: "workflow 不查写权限", kill: "RR-03 带引号的写权限", target: ["G-WORKFLOW"], file: "gates.ts", from: "if (val !== \"read\" && val !== \"none\")", to: "if (false)" },
   { name: "workflow 不拒绝表达式名字", kill: "RR-03 job 名用表达式拼出受保护名", target: ["G-WORKFLOW"], file: "gates.ts", from: "if (/\\$\\{\\{/.test(n))", to: "if (false)" },
@@ -81,12 +81,40 @@ export const MUTATIONS: Mutation[] = [
   { name: "self-check 不要求 npm test 步骤", kill: "g-group#2538 self-check 缺 npm test 步骤", target: ["G-WORKFLOW"], file: "gates.ts", from: "  { label: \"npm test\", ok: (r) => r === \"npm test\" },\n", to: "" },
   { name: "self-check 不查 GATE_* 环境开关", kill: "R4-01 self-check job env 设 GATE_ 开关缩小自检", target: ["G-WORKFLOW"], file: "gates.ts", from: "if (/^GATE_/.test(k) && k !== \"GATE_SANDBOX_IMAGE\")", to: "if (false)" },
   { name: "任意非零即算发现", kill: "R4-01 端到端:中性变异 + 提示用例夹具故障,变异校验必须判存活", target: ["DIRECT"], file: "mutation.ts", from: /const k = killedBy\(m\.target, base, cases\);/, to: "const k = r.code !== 0 ? { case: \"(任意失败)\", ev: \"自检退出码非零\" } : undefined;" },
-  { name: "执行故障也算目标判因", kill: "R4-01 提示用例无关夹具故障不算发现", target: ["DIRECT"], file: "judge.ts", from: "if (mut.pass || (mut.kind !== \"verdict\" && mut.kind !== \"side\")) return undefined;", to: "if (mut.pass) return undefined;" },
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 匹配/注入源码里的模板字符串原文
+  { name: "执行故障也算目标判因", kill: "R4-01 提示用例无关夹具故障不算发现", target: ["DIRECT"], file: "judge.ts", from: "if (mut.pass || (mut.kind !== \"verdict\" && mut.kind !== \"side\")) return undefined;", to: "if (mut.pass) return undefined;\n  if (mut.kind !== \"verdict\" && mut.kind !== \"side\") return `${mut.name} 执行故障(${mut.kind})`;" },
   { name: "任何门禁变了都算目标", kill: "R4-01 错的门禁变了不算发现目标", target: ["DIRECT"], file: "judge.ts", from: "for (const g of target) {\n    if (g === RUNNER || g === DIRECT) continue;", to: "for (const g of Object.keys({ ...base.gates, ...mut.gates })) {\n    if (g === RUNNER || g === DIRECT) continue;" },
-  { name: "门禁自身出错也算拦下", kill: "R4-01 目标门禁因自身出错拦下不算预期原因", target: ["DIRECT"], file: "judge.ts", from: "&& !mut.gateErrors.includes(g)) return", to: ") return" },
-  ...GATE_NAMES.map((g) => ({ name: `从 ALL_GATES 删掉 ${g}`, kill: GATE_KILL[g]!, target: [GATE_ID[g]!], file: "gates.ts", from: new RegExp(`(ALL_GATES: Gate\\[\\] = \\[[^\\]]*?)\\b${g}, ?`), to: "$1" })),
-  { name: "从 ALL_GATES 删掉 layers(末项)", kill: "领域层反向依赖内核", target: ["G-LAYER"], file: "gates.ts", from: /, layers\];/, to: "];" },
+  { name: "门禁自身出错也算拦下", kill: "R4-01 目标门禁因自身出错拦下不算预期原因", target: ["DIRECT"], file: "judge.ts", from: "if (mut.gateErrors.includes(g) || (base.gateErrors.includes(g) && !expectedError)) continue;", to: "" },
+  { name: "预期拦下变成门禁自身出错仍算发现", kill: "R5-01 目标门禁由预期拦下变为门禁自身出错不算发现", target: ["DIRECT"], file: "judge.ts", from: "if (mut.gateErrors.includes(g) || (base.gateErrors.includes(g) && !expectedError)) continue;", to: "if (base.gateErrors.includes(g) && !expectedError) continue;" },
+  { name: "目标门禁没跑也参与判定", kill: "R5-01 目标门禁没跑(观测缺失)不算发现", target: ["DIRECT"], file: "judge.ts", from: "if (after === undefined && mut.complete && mut.exit ===", to: "if (after === undefined && true && mut.exit ===" },
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 匹配/注入源码里的模板字符串原文
+  { name: "门禁移出执行列表不算发现", kill: "R5-01 目标门禁从完整运行的执行列表里消失算发现", target: ["DIRECT"], file: "judge.ts", from: "return `${g} 从完整运行的执行列表里消失(没有运行)`;", to: "continue;" },
+  { name: "输出完整性只看头部", kill: "R4-01 门禁输出解析:注册数与列出数一致且有 CONTENT_HASH 才算完整", target: ["DIRECT"], file: "judge.ts", from: "complete: !!n && Number(n[1]) === Object.keys(gates).length && /^CONTENT_HASH=[0-9a-f]{64}$/m.test(out) };", to: "complete: !!n };" },
+  { name: "基线门禁出错一律排除", kill: "R5-01 基线就是按预期以门禁自身出错拦下(fail-closed)、变异后放行算发现", target: ["DIRECT"], file: "judge.ts", from: "const expectedError = base.expectHit.includes(g) && base.gateErrors.includes(g);", to: "const expectedError = false;" },
+  { name: "判因不核对退出码", kill: "R5-01 结构化判因与退出码不一致不算发现", target: ["DIRECT"], file: "judge.ts", from: "if (mut.exit !== (anyFail ? 1 : 0)) continue;", to: "" },
+  { name: "结构化结果不校验就收", kill: "R5-02 parseCases 遇到 null/数组/缺字段/错类型/非法枚举不抛错且全部拒收", target: ["DIRECT"], file: "judge.ts", from: "const c = validCase(v);", to: "const c = v as CaseResult;" },
+  { name: "不拒 Proxy", kill: "R5-02 getter/setter/Proxy 回调 0 次且被拒收", target: ["DIRECT"], file: "judge.ts", from: "if (x === null || typeof x !== \"object\" || types.isProxy(x) || Array.isArray(x)) return undefined;", to: "if (x === null || typeof x !== \"object\" || Array.isArray(x)) return undefined;" },
+  { name: "不拒访问器属性", kill: "R5-02 getter/setter/Proxy 回调 0 次且被拒收", target: ["DIRECT"], file: "judge.ts", from: "if (typeof k !== \"string\" || !(\"value\" in d) || !d.enumerable) return undefined;", to: "if (typeof k !== \"string\") return undefined;" },
+  { name: "导出策略不冻结", kill: "R5-03 改导出的策略对象不改变后续门禁行为", target: ["DIRECT"], file: "gates.ts", from: "if (x && typeof x === \"object\" && !Object.isFrozen(x)) { Object.freeze(x); for (const v of Object.values(x)) deepFreeze(v); }", to: "" },
+  { name: "只冻结顶层", kill: "R5-03 改导出的策略对象不改变后续门禁行为", target: ["DIRECT"], file: "gates.ts", from: "for (const v of Object.values(x)) deepFreeze(v);", to: "" },
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 匹配/注入源码里的模板字符串原文
+  { name: "注入点唯一性只查字符串", kill: "R5-04 正则注入点 0 次/多次在变异执行前拒绝,恰 1 次放行", target: ["DIRECT"], file: "mutation.ts", from: "const re = new RegExp(from.source, from.flags.includes(\"g\") ? from.flags : `${from.flags}g`);", to: "const re = new RegExp(from.source, from.flags.replace(\"g\", \"\"));\n  if (!re.test(src)) return 0; return 1;" },
+  { name: "门禁临时 HOME 退出不删", kill: "磁盘:门禁命令行与一条自检用例跑完不在 TMPDIR 留下 gate-home/gate-run/gate-snap/gate-selftest 目录", target: ["DIRECT"], file: "lib.ts", from: "process.on(\"exit\", () => { try { fs.rmSync(d, { recursive: true, force: true }); } catch { /* 退出时尽力删 */ } });", to: "" },
+  ...GATE_NAMES.map((g) => ({ name: `从 ALL_GATES 删掉 ${g}`, kill: GATE_KILL[g]!, target: [GATE_ID[g]!], file: "gates.ts", from: new RegExp(`(ALL_GATES: readonly Gate\\[\\] = Object\\.freeze\\(\\[[^\\]]*?)\\b${g}, ?`), to: "$1" })),
+  { name: "从 ALL_GATES 删掉 layers(末项)", kill: "领域层反向依赖内核", target: ["G-LAYER"], file: "gates.ts", from: /, layers\]\);/, to: "]);" },
 ];
+
+/**
+ * 注入点在源码里的匹配次数(R5-04):字符串按字面出现次数;正则不论有没有 g 标志都按全局扫描计数,
+ * 零宽匹配推进一位防死循环。变异执行前要求恰为 1。
+ */
+export function injectionCount(src: string, from: string | RegExp): number {
+  if (typeof from === "string") return from === "" ? Number.POSITIVE_INFINITY : src.split(from).length - 1;
+  const re = new RegExp(from.source, from.flags.includes("g") ? from.flags : `${from.flags}g`);
+  let n = 0;
+  for (let m = re.exec(src); m; m = re.exec(src)) { n++; if (m[0] === "") re.lastIndex++; }
+  return n;
+}
 
 function copyGates(dst: string) {
   fs.mkdirSync(path.join(dst, "scripts/gates"), { recursive: true });
@@ -102,7 +130,7 @@ const CHILD_JOBS = Number(process.env.GATE_SELFTEST_JOBS ?? Math.max(1, Math.flo
 const MUTANT_TIMEOUT_MS = Number(process.env.GATE_MUTANT_TIMEOUT_MS ?? 900_000);
 function runSelftestAsync(dir: string, m: Mutation, baselineFile: string): Promise<{ code: number | null; out: string; timedOut: boolean }> {
   return new Promise((resolve) => {
-    const c = spawn(process.execPath, [path.join(dir, "scripts/gates/run-all.ts"), "--self-test"], { env: gitEnv({ GATE_SELFTEST_FAILFAST: "1", GATE_SELFTEST_JOBS: String(CHILD_JOBS), GATE_SELFTEST_TARGET: m.target.join(","), GATE_SELFTEST_BASELINE: baselineFile, ...(m.kill ? { GATE_SELFTEST_FIRST: m.kill } : {}) }), detached: true });
+    const c = spawn(process.execPath, [path.join(dir, "scripts/gates/run-all.ts"), "--self-test"], { env: gitEnv({ GATE_SELFTEST_FAILFAST: "1", GATE_SELFTEST_JOBS: String(CHILD_JOBS), GATE_MUTANT_COPY: "1", GATE_SELFTEST_TARGET: m.target.join(","), GATE_SELFTEST_BASELINE: baselineFile, ...(m.kill ? { GATE_SELFTEST_FIRST: m.kill } : {}) }), detached: true });
     let out = "";
     let timedOut = false;
     const timer = setTimeout(() => { timedOut = true; try { process.kill(-c.pid!, "SIGKILL"); } catch { c.kill("SIGKILL"); } }, MUTANT_TIMEOUT_MS);
@@ -127,7 +155,7 @@ export async function mutationTest(): Promise<boolean> {
   const badHints = MUTATIONS.filter((m) => m.kill === undefined || !names.has(m.kill) || m.target.length === 0 || m.target.some((t) => !targets.has(t)));
   // 注入点必须唯一:字符串 from 在目标文件里出现多次时(例如改的是 mutation.ts 自己,MUTATIONS 里就有一份同样的字面量),
   // replace 只改第一处,可能改到无关位置,变异等于没注入
-  for (const m of MUTATIONS) if (typeof m.from === "string" && fs.readFileSync(path.join(HERE, m.file), "utf8").split(m.from).length !== 2) badHints.push(m);
+  for (const m of MUTATIONS) if (injectionCount(fs.readFileSync(path.join(HERE, m.file), "utf8"), m.from) !== 1) badHints.push(m);
   if (badHints.length) {
     for (const m of badHints) console.log(`✗ 变异「${m.name}」的 kill 提示「${m.kill ?? "(缺)"}」、目标 ${JSON.stringify(m.target)} 不合法或注入点不唯一`);
     console.log("变异校验失败");
