@@ -413,3 +413,51 @@ AC-07、AC-33④、V-06 整项仍未测：权威约束与副作用账、内核�
 **返修要求与门禁口径：** 作者在收据中如实说明首次三字段实现、后续 F-04 红绿以及原型复用部分的证据边界；为两个字段加入正式单点变异。补 `tools/list` 正反对照及经假 CLI 的工具发现/缺失路径，补 `REPORT_LOG` 合法与非法调用的记录正反对照，并用相应单点变异验证测试能发现清单为空或不写日志。首轮审查中“R-02 与具名红绿复现相符”仅指当时的机械具名测试结果；`G-RED` 检查声明红提交上的测试按名失败及当前通过，并不核实每段代码最早编写前是否已有针对性失败测试，不能把此结果扩大为三字段原始实现全部已证明 TDD。对历史先红缺证如何验收，应由项目规则或负责人明确，不能伪造补齐。
 
 本补充所有变异只在临时独立副本运行，没有修改产品代码或正式变异集；审查对象仍是 `a134e8a`，补充时重新实跑指定 hash，原样输出仍为 `d515493cfe9f3a065c977fc8bc4191c4c72ff62139501c4867efdb2682bb81ef`。
+
+---
+
+## 第五轮（2026-11-06）：第四轮返修后的独立复审
+
+**结论：reject。** 第四轮的 getter/Proxy、JSON `null`、forceMs 环境覆盖、多凭据及补充的工具发现/日志反例已复现修复；但本轮另发现额外字段值为 `undefined` 时被放行并启动执行器，以及 MCP 对未声明工具名返回成功。两项均需返修，不能用全仓及 CI 绿抵消。
+
+### 1. 固定对象与独立证据
+
+- 产品 HEAD `942659ce747581ceac0a72019524ef1f3915d737`，基线 `origin/feat/domain-core`（`afd02560f9546147da380382404eb6106222a9b8`）；红 `6e2c825b58b668f9067710c08ab2ff1c9551dd21`、绿 `cd43675`。审查使用普通独立 clone，测试、红版、变异和临时工作目录与其他会话隔离。
+- 审查 `codex:592ebd7a-e738-43bd-a331-069366648d54`、模型 `gpt-6.1-terra`（OpenAI），作者 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38`、`claude-opus-5-5`（Anthropic）；跨厂商。
+- 在审查 clone 根目录执行 `node scripts/gates/run-all.ts --hash --branch=feat/cc-compute --base=origin/feat/domain-core`，原样输出 `9665e9f6fadbef48379655a9eea66b9dd88a3e7ee790871755c6e4e0916c3153`，与声明一致。GitHub self-check `42237714177` 在该产品 HEAD 已 completed/success。
+- 本地证据仅保留于 `$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr7-r5-evidence-codex-592ebd7a`：`$E/hash.txt`、`$E/{typecheck,lint,test,red-test}.log`、`$E/{gate-negatives.mjs,gates-negative.log}`、`$E/{independent-probes.mjs,independent-probes.log,previous-brief.ts,undefined-before-after.log}`、`$E/{single-mutations.mjs,single-mutations.log,single-mutations-summary.json,mutation-*.log}`、`$E/mcp-tools-spec.mdx`。脚本运行时使用审查用临时 clone 路径；若复现，需先按脚本路径重新准备相同版本的隔离副本。没有伪造密钥或凭据文件。
+
+### 2. 必须修复
+
+#### R5-01 [P2] 未声明字段值为 `undefined` 时被丢弃，brief 和 spawn 选项仍被接受并启动进程
+
+位置：`packages/adapter-cc-compute/src/plain.ts:40-52`、`src/brief.ts:20-26,50-56`、`src/adapter.ts:76-84,309-329`、`src/report-schema.ts:46-52`。`plainData` 在白名单检查前跳过值为 `undefined` 的对象属性；因此实际有未声明自有字段的输入被当作没有该字段，违背 brief 只接受五个字段、额外 `memory`/`soul` 拒绝且不起进程的合同。
+
+**独立反例：** 在未修改内置原型的环境，合法 brief 加自有 `memory:undefined` 后 `checkBrief` 返回 `ok:true`；`spawn` 返回 `ok:true`，注入 runner 实际写出中性 `outside-marker-0.txt`。合法 brief 搭配 `{outside:undefined}` spawn 选项同样被接受并写出 `outside-marker-1.txt`。`soul:undefined`、快照 `outside:undefined` 和汇报 `memory:undefined` 也分别被接受/没有错误。`memory:null` 对照正确拒绝；相同 `memory:undefined` 输入在上一产品版本 `a134e8a` 实际被拒绝（`$E/undefined-before-after.log`）。`undefined` 的值本身并非证明实际私人记忆外泄；问题是字段存在时未按合同拒收，且执行器确已启动。
+
+**要求：** 在不调用 getter/setter/Proxy 的前提下，根据安全取得的自有描述符拒绝未知字段，不能因值为 `undefined` 而绕过白名单；对允许的可选字段如何处理 `undefined` 可单独明确。增加 brief、spawn 选项、快照和汇报的未知字段 `undefined` 负例、合法对照及不起进程的中性标记断言。
+
+#### R5-02 [P2] MCP 将未声明的工具名当成 `report_progress` 成功处理
+
+位置：`packages/adapter-cc-compute/mcp/report-mcp.mjs:28-36`。服务只在 `tools/list` 列出 `report_progress`，但 `tools/call` 分支不检查 `params.name`，对任何名字都直接按汇报参数校验、记录并回成功。
+
+**独立反例：** 同一服务器进程依次请求 `tools/list`、调用 `name:"unknown_tool"` 和调用 `name:"report_progress"`，两者都以合法 `started` 参数传入。工具列表只有 `report_progress`，但未知工具返回 `isError:false`、文本“已记录。”；启用中性 `REPORT_LOG` 时两条均被记为 `valid:true`（`$E/independent-probes.log` 的 `OBS_TOOL_NAME`）。这证明服务错误接收和误记，**不证明未知工具实际执行了其他工具或已被映射为适配器事件**。[MCP 2025-06-18 工具规范的错误处理](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#error-handling) 将未知工具列为协议错误，示例使用 `-32602`。
+
+**要求：** 在处理或记录汇报之前核对 `params.name`；未知或缺失名称返回适当协议错误，不能报“已记录”或作为有效汇报入日志。补未知/缺失名称与合法名称的直接 JSON-RPC 单开关对照及相应单点变异。
+
+### 3. 第四轮返修与本轮运行
+
+| 检查 | 本轮独立结果 |
+|---|---|
+| `npm ci`、typecheck、lint、全仓 test | 均退出 0；全仓 95/95、0 跳过 |
+| 红提交 | 独立 clone、`npm ci` 后本包 72 条按名失败、0 跳过；这 72 个名字在绿版均通过，红绿测试及假 CLI 文件 diff 为空 |
+| R4-01 | getter、嵌套 Proxy、撤销 Proxy、适配器选项 Proxy 独立反例均不调用即拒收，纯数据对照通过；新发现的未知 `undefined` 字段见 R5-01 |
+| R4-02 | 坏 JSON 返回 `-32700`，`null`、数字、布尔、字符串、数组返回 `-32600`，同进程随后的 `tools/list` 正常 |
+| R4-03 | 对照本机 mirasim 0.0.774 的 `Ukc/z2` 源码；独立子进程忽略 TERM 时，环境 `MIRASIM_REAP_FORCE_MS=400` 下约 403ms 后退出，stopped 的 scope 为 `main-then-group`；运行中快照拒绝。显式选项优先的函数对照及全仓进程组测试通过 |
+| R4-04 | 多个引用位置分别换成非引用均拒绝，全合法对照通过；只检查最后一个元素的独立变异被具名测试发现 |
+| R4-05 和历史 TDD 边界 | `tools/list` 和 `REPORT_LOG` 的原第四轮负例对应测试通过；M52–M55 已列入正式变异脚本；收据如实记录首红三字段缺少各自先红，后续红绿不冒充历史先红。但未知工具名仍可误接收，见 R5-02 |
+| 七个独立单点变异 | 只检查最后一个凭据、跳过访问器、null 守卫缺失、工具列表空、日志不写、环境值压过显式值、退出后不清目录：每个 typecheck 0，对应测试均按名失败；无超时、无信号终止、0 跳过（`$E/single-mutations-summary.json`） |
+| 每个门禁反例 | 在临时 Git 夹具调用当前真实门禁：G-TRACE 缺证据、G-REVIEW 自审、G-RED 缺红提交、G-STUB 只测顶层值、G-TAUTO 恒真、G-WORKFLOW 使用 `pull_request_target`、G-LAYER 领域层依赖内核、G-PROVENANCE 缺审查 hash 调用均按各自原因拦截；合规对照放行（`$E/gates-negative.log`） |
+| 清理 | 在本轮独有 TMPDIR 中，全仓测试前后 `g-group-cc-*`、`fake-cc-*` 均为 0；变异分别使用自己的临时目录并清理。审查完成后移除本轮独立 clone、运行与构建产物，只留上述引用证据 |
+
+本轮没有重跑作者全部 73 个变异，不把作者自报当作独立观察；没有重跑真实 Claude smoke。AC-07、AC-33④、V-06 的完整内核接线、真实 CLI 工具限制及真实模型事件映射仍未验证。用户已限定内置原型未被事先改写，且停止语义按 mirasim 而不是容器/后代树静止，本轮未以超出这两项边界的反例打回。
