@@ -1405,3 +1405,135 @@ test("send / pull 返回带自有静态 Symbol.species getter 的 Promise 子类
   const ok = await plain.pull("d", "g");
   assert.equal(ok.ok && ok.events.length, 1);
 });
+
+// —— R9-01(用户 g-group#3140 选 A):拒收的外部 Promise 能不执行外部代码就挂空拒绝处理的都挂上;
+// Proxy、不可配置的自有 constructor getter、冻结/不可扩展的子类排除在本片合同外(由集成前插件进程隔离兜底),只做记录性测试。
+type Shape = "plain" | "then-getter" | "ctor-getter" | "ctor-data" | "ctor-other" | "subclass" | "proxy" | "ctor-getter-fixed" | "frozen-subclass";
+type ShapeCounters = { gets: number; traps: number; ctor: number; species: number };
+type Shaped = { value: unknown; raw: Promise<unknown>; ctorBefore: PropertyDescriptor | undefined; protoBefore: object | null; cleanup: () => void };
+const HANDLED: readonly Shape[] = ["then-getter", "ctor-getter", "ctor-data", "ctor-other", "subclass"];
+const EXCLUDED: readonly Shape[] = ["proxy", "ctor-getter-fixed", "frozen-subclass"];
+/** 造一个外部返回值。不引用模块里的任何变量,子进程通过 toString 复用同一份代码。
+ *  armed 期间访问器、Proxy 陷阱、子类构造与 species 都计数(访问器与 species 还会抛错);cleanup 关掉计数,
+ *  用于给排除形态的底层 Promise 挂处理,不让测试进程自身留下未处理拒绝。later:5ms 后才拒绝。 */
+function shapedPromise(shape: string, timing: string, c: ShapeCounters): Shaped {
+  let armed = false;
+  class Sub extends Promise<unknown> {
+    constructor(executor: (ok: (v: unknown) => void, fail: (e: unknown) => void) => void) { if (armed) c.ctor++; super(executor); }
+    static override get [Symbol.species](): PromiseConstructor { if (!armed) return Promise; c.species++; throw new Error("不应读取 species"); }
+  }
+  const Other = function Other() {};
+  Object.defineProperty(Other, Symbol.species, { get() { if (!armed) return Promise; c.species++; throw new Error("不应读取 Other 的 species"); } });
+  const executor = (_ok: (v: unknown) => void, fail: (e: unknown) => void) => {
+    if (timing === "now") fail(new Error("外部拒绝"));
+    else setTimeout(() => fail(new Error("外部稍后拒绝")), 5);
+  };
+  const raw: Promise<unknown> = shape === "subclass" || shape === "frozen-subclass" ? new Sub(executor) : new Promise(executor);
+  const throwing = { get() { if (!armed) return Promise; c.gets++; throw new Error("不应读取访问器"); } };
+  // biome-ignore lint/suspicious/noThenProperty: 测试要的就是带自有 then getter 的 Promise,验证它不被读取
+  if (shape === "then-getter") Object.defineProperty(raw, "then", { get() { c.gets++; throw new Error("不应读取 then"); } });
+  if (shape === "ctor-getter") Object.defineProperty(raw, "constructor", { configurable: true, ...throwing });
+  if (shape === "ctor-getter-fixed") Object.defineProperty(raw, "constructor", { configurable: false, ...throwing });
+  if (shape === "ctor-data") Object.defineProperty(raw, "constructor", { value: Promise });
+  if (shape === "ctor-other") Object.defineProperty(raw, "constructor", { value: Other, configurable: true, writable: true });
+  if (shape === "frozen-subclass") Object.freeze(raw);
+  const traps: ProxyHandler<Promise<unknown>> = {};
+  for (const k of ["get", "set", "has", "getOwnPropertyDescriptor", "defineProperty", "deleteProperty", "ownKeys", "getPrototypeOf", "setPrototypeOf", "isExtensible", "preventExtensions", "apply", "construct"] as const) {
+    Reflect.set(traps, k, (...args: unknown[]) => { if (armed) c.traps++; return Reflect.apply(Reflect.get(Reflect, k), undefined, args); });
+  }
+  const value = shape === "proxy" ? new Proxy(raw, traps) : raw;
+  const ctorBefore = Object.getOwnPropertyDescriptor(raw, "constructor");
+  const protoBefore = Object.getPrototypeOf(raw);
+  armed = true;
+  return { value, raw, ctorBefore, protoBefore, cleanup: () => { armed = false; Reflect.apply(Promise.prototype.then, raw, [undefined, () => {}]); } };
+}
+const counters = (): ShapeCounters => ({ gets: 0, traps: 0, ctor: 0, species: 0 });
+const refusedOk = (mode: "send" | "pull", shape: Shape) =>
+  shape === "plain" ? (mode === "send" ? "send-threw" : "pull-failed") : (mode === "send" ? "non-promise-send" : "invalid-batch");
+
+/** 本进程:插件返回某形态的外部 Promise,返回结果原因、账目状态与计数;made 是插件实际造出的对象 */
+async function shapedInProcess(mode: "send" | "pull", shape: Shape, timing: "now" | "later"): Promise<{ reason: string; state: string | null; c: ShapeCounters; made: Shaped | undefined }> {
+  const c = counters();
+  let made: Shaped | undefined;
+  const make = () => { made = shapedPromise(shape, timing, c); return made.value; };
+  const reg = createRegistry({ now: () => T0 });
+  if (mode === "send") reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: make });
+  else reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: make });
+  const r = mode === "send" ? await reg.send("p", { action_id: "a", payload: "x" }) : await reg.pull("p", "g");
+  return { reason: r.ok ? "ok" : r.reason, state: mode === "send" ? (reg.delivery("p", "a")?.state ?? null) : null, c, made };
+}
+
+/** 无 unhandledRejection 处理器的独立子进程:同一形态依次跑 send/pull × 立即/稍后拒绝四种组合,每种打印一行,
+ *  最后等 80ms 再打印存活。返回退出码与各行。 */
+function shapedSubprocess(shape: Shape): { code: number; lines: unknown[] } {
+  const code = `
+    import { writeSync } from "node:fs";
+    import { createRegistry } from ${JSON.stringify(new URL("./plugins.ts", import.meta.url).href)};
+    const shapedPromise = ${shapedPromise.toString()};
+    for (const mode of ["send", "pull"]) for (const timing of ["now", "later"]) {
+      const c = { gets: 0, traps: 0, ctor: 0, species: 0 };
+      const make = () => shapedPromise(${JSON.stringify(shape)}, timing, c).value;
+      const reg = createRegistry({ now: () => ${T0} });
+      if (mode === "send") reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: make });
+      else reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: make });
+      const r = mode === "send" ? await reg.send("p", { action_id: "a", payload: "x" }) : await reg.pull("p", "g");
+      await new Promise((ok) => setTimeout(ok, 20));
+      writeSync(1, JSON.stringify({ mode, timing, reason: r.reason, state: mode === "send" ? reg.delivery("p", "a")?.state : null, ...c }) + "\\n");
+    }
+    setTimeout(() => writeSync(1, JSON.stringify({ alive: true }) + "\\n"), 80);
+  `;
+  const parse = (s: string) => s.split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  try {
+    return { code: 0, lines: parse(execFileSync(process.execPath, ["--input-type=module", "-e", code], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })) };
+  } catch (e) {
+    return { code: (e as { status?: number }).status ?? -1, lines: parse((e as { stdout?: string }).stdout ?? "") };
+  }
+}
+const zero = { gets: 0, traps: 0, ctor: 0, species: 0 };
+
+test("send / pull 拒收自有 constructor getter、自有 constructor 数据属性(内置 Promise 或别的类)、自有 then getter、带 species getter 的可扩展子类的已拒绝或稍后拒绝 Promise:结果为 non-promise-send / invalid-batch,访问器、子类构造、species 调用 0 次,原 constructor 描述符与原型原样恢复(R9-01 阳性埋雷)", async () => {
+  for (const shape of HANDLED) for (const mode of ["send", "pull"] as const) for (const timing of ["now", "later"] as const) {
+    const name = `${shape}/${mode}/${timing}`;
+    const { reason, state, c, made } = await shapedInProcess(mode, shape, timing);
+    assert.deepEqual([reason, state], [refusedOk(mode, shape), mode === "send" ? "delivery-unknown" : null], name);
+    assert.ok(made, name);
+    assert.deepEqual(Object.getOwnPropertyDescriptor(made.raw, "constructor"), made.ctorBefore, name);
+    assert.equal(Object.getPrototypeOf(made.raw), made.protoBefore, name);
+    await new Promise((ok) => setTimeout(ok, 20));
+    assert.deepEqual(c, zero, name);
+  }
+});
+
+test("无全局 unhandledRejection 处理器的子进程里,上述五种形态在 send / pull × 立即 / 稍后拒绝下都被拒收且进程存活,访问器、子类构造、species 调用 0 次(R9-01 阳性埋雷)", async () => {
+  assert.deepEqual((await shapedInProcess("pull", "ctor-getter", "now")).reason, "invalid-batch");
+  for (const shape of HANDLED) {
+    const r = shapedSubprocess(shape);
+    const expect = (["send", "pull"] as const).flatMap((mode) => (["now", "later"] as const).map((timing) => ({ mode, timing, reason: refusedOk(mode, shape), state: mode === "send" ? "delivery-unknown" : null, ...zero })));
+    assert.deepEqual(r, { code: 0, lines: [...expect, { alive: true }] }, shape);
+  }
+});
+
+test("普通已拒绝或稍后拒绝的原生 Promise 照常 await,记 send-threw / pull-failed,子进程存活,不在实例上留下 constructor(R9-01 单开关对照)", async () => {
+  for (const mode of ["send", "pull"] as const) for (const timing of ["now", "later"] as const) {
+    const { reason, c, made } = await shapedInProcess(mode, "plain", timing);
+    assert.equal(reason, refusedOk(mode, "plain"), `${mode}/${timing}`);
+    assert.deepEqual([made && Object.hasOwn(made.raw, "constructor"), c], [false, zero], `${mode}/${timing}`);
+  }
+  const r = shapedSubprocess("plain");
+  assert.deepEqual(r, { code: 0, lines: [
+    { mode: "send", timing: "now", reason: "send-threw", state: "delivery-unknown", ...zero }, { mode: "send", timing: "later", reason: "send-threw", state: "delivery-unknown", ...zero },
+    { mode: "pull", timing: "now", reason: "pull-failed", state: null, ...zero }, { mode: "pull", timing: "later", reason: "pull-failed", state: null, ...zero }, { alive: true },
+  ] });
+});
+
+test("排除在本片合同外的 Proxy、不可配置的自有 constructor getter、冻结子类(用户 g-group#3140 选 A,由集成前插件进程隔离兜底):仍被拒收,陷阱、访问器、子类构造、species 调用 0 次,对象不被改写;不断言进程存活(R9-01 记录性)", async () => {
+  for (const shape of EXCLUDED) for (const mode of ["send", "pull"] as const) for (const timing of ["now", "later"] as const) {
+    const name = `${shape}/${mode}/${timing}`;
+    const { reason, state, c, made } = await shapedInProcess(mode, shape, timing);
+    assert.deepEqual([reason, state], [refusedOk(mode, shape), mode === "send" ? "delivery-unknown" : null], name);
+    assert.deepEqual(c, zero, name);
+    assert.ok(made, name);
+    assert.deepEqual(Object.getOwnPropertyDescriptor(made.raw, "constructor"), made.ctorBefore, name);
+    made.cleanup(); // 测试进程自己给底层 Promise 挂处理(关掉计数后),不让本进程留下未处理拒绝
+  }
+});
