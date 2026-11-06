@@ -766,3 +766,41 @@ INCOMPLETE_PROBE_EXIT=0
 ### 写入拒绝后的本机复核
 
 以同一内容 hash 运行 `--local --branch=chore/gates --base=origin/main --pr=1` 退出 1：G-REVIEW 明确因 `reject` 拦截；G-PROVENANCE 尚未在会话记录中找到本轮 hash 调用，因而无法证明来源、审查轮次厂商也认不出。本人已在审查会话中实跑并取得上述 hash，但不能把该个人观察冒充 G-PROVENANCE 已通过；未补写或伪造会话记录，也未写远端 provenance 状态。原始输出见证据目录 `final-local.log`。
+
+## 第七轮独立复审（db45152）
+
+### 结论
+
+**REJECT，返修后重审，不应合并。** R6-01 至 R6-04 的已报反例和 Argon 名单调整均通过本轮复核，不重复打回。仍有一项 P1：macOS 沙箱可读取标准凭据文件位置；本轮只使用假 HOME 和中性假内容复现，没有读取真实凭据。类型、lint、测试、自检及列举变异全绿，不抵消该隔离缺口。
+
+### R7-01 [P1] macOS 沙箱允许读取 `.git-credentials` 和 `.netrc`
+
+位置：[lib.ts:105](../scripts/gates/lib.ts#L105)、[lib.ts:111](../scripts/gates/lib.ts#L111)、[lib.ts:158](../scripts/gates/lib.ts#L158)。`seatbeltProfile` 使用默认允许读取的配置，仅禁止一组固定路径；列表没有 Git 明文凭据文件 `.git-credentials` 和常用认证文件 `.netrc`。`runNodeTests` 经 `sandboxed` 执行 PR 测试时使用该策略。子进程改 HOME、清环境和禁网络都不阻止读取已知绝对路径，也不阻止将读取内容写入测试输出。
+
+**真实沙箱双侧对照：** 在本轮私有目录的假 HOME 中，五个文件均由探针写入相同的 `NEUTRAL_FIXTURE_NO_CREDENTIALS`。调用未修改的 `lib.ts` 导出 `sandboxed`：`.ssh/key-fixture`、`.mirasim/sessions/fixture`、`.config/gh/hosts.yml` 返回 `EPERM`；`.git-credentials` 和 `.netrc` 均成功读出并与假内容相等。沙箱进程退出 0。只读取这些明确创建的假文件，没有探测或读取真实账户文件。
+
+**完整入口复现：** 独立副本只增加审查夹具，不修改被审门禁实现。临时 Git 仓库正常完成 main、红、绿、收据及模拟来源记录；同一具名测试读取上述两份假内容，并确认假 SSH 文件仍被拒，最后断言真实 `add(1,2)` 结果。真实 `run-all.ts --local` 八门禁全部为 ✓、退出 **0**。红重放、桩替换和返回值变异也未阻止这一读取行为。结果见 `sandbox-e2e.json`；这不声称真实 PR 已合并，也不声称真实凭据已泄露。
+
+**返修要求：** 补上标准凭据位置的读隔离，并校验实际 HOME/规范化路径上的行为；以这些假文件保留同输入的允许/禁止读取对照和完整测试入口回归。至少覆盖 `.git-credentials`、`.netrc`，同时保证工作副本、Node 运行依赖仍可读、已有 SSH/会话隔离不回退。只用假的认证材料测试，不读取真实凭据。该问题属于 RR-02 的隔离保证，不是所有者主动改状态、内置原型修改或收据已披露的 Docker 未测边界。
+
+### 对象、运行和已关闭项
+
+- 普通独立 HTTPS clone：`/private/tmp/g-group-pr1-r7-astra-740bc8df`，Git 目录为独立 `.git`。被审 HEAD `db451520881bfa01e53dac3f929bc2a68c5a830f`；base `origin/main=412ce25278e3b0057e02d792a8394f98aaf21424`。执行期间未修改其源码或运行中的脚本。
+- 审查人 Astra，会话 `codex:740bc8df-9c5d-4594-9205-489c67d8094b`。助手配置读取为 `ai-iisbo-2/[gptpro]gpt-6-astra`；作者收据为 Claude/Anthropic。配置和人工观察不替代 G-PROVENANCE 的实际会话认证；本轮不写或补造宿主记录、豁免或远端 provenance 状态。
+- brief 中 `scripts/run-all.ts`、`scripts/content-hash.sh` 不存在。沿用仓库真实入口 `node scripts/gates/run-all.ts --hash --branch=chore/gates --base=origin/main`，输出与送审值相同：
+
+```text
+5e1740bb25d71657303cba5ced9e60aedc1dab7de70438202ecc1dbfa2a8119d
+```
+
+- Node `v22.22.0`：`npm ci` 退出 0、审计 0 vulnerabilities；typecheck、lint 退出 0；`npm test` 退出 0，8/8 通过，0 skip/todo；全量自检退出 0，196/196（365 秒）；`GATE_MUTATION_JOBS=2 GATE_SELFTEST_JOBS=2 npm run gates:mutation` 退出 0，原样对照通过（366 秒），91/91 按目标判因发现。
+- R6-01：独立不完整输出（缺 hash、缺门禁项、截断）均不计判因；完整同输入对照仍计判因，错误退出码及变异侧门禁自身异常不计判因。R6-02：Map Proxy、撤销的 Proxy、伪 Map、结果数组 Proxy、访问器和 JSON null 均无回调拒收，合法 Map 对照有效。R6-03：八个导出门禁对象和容器冻结，赋值、删除、defineProperty、setPrototypeOf 不改变行为。R6-04：Unicode `/u`、`/gu`、`/v`、`/gv` 零宽输入有界返回；sticky 的零/一/多次计数与替换和普通搜索一致。独立脚本及结果为 `probes.mjs`、`probes.json`。
+- `f676002` 独立 archive 红版：只筛选本轮修复和 Argon 相关 11 条，真实退出 1，8 条具名判定失败、3 条对照通过；当前全量 196 条均绿。没有把整份红版全部失败当作先红证明。
+- 八门禁独立失败输入均经完整 CLI 退出 1，且对应 gate 为 ✗：G-TRACE 缺收据、G-REVIEW 缺审查、G-PROVENANCE 缺 hash 轮次、G-RED 缺红提交、G-STUB 顶层常量、G-TAUTO 无断言、G-WORKFLOW 必需步骤 `if:false`、G-LAYER 无归属包。正常夹具完整 8/8 绿；共 9/9 审查夹具通过。详见 `G-*.json`、`gate-negatives.log`。
+- Argon 调整与用户 g-group#3199、后端 g-group#3210 相符。Google 审 Anthropic/OpenAI 放行、Google 审 Google 被拦、错误 harness 和 argon-chat 被拦；Claude 自审、同厂商以及 Astra 审 Codex 的原限制保持。
+- GitHub `self-check` run `42261596497` 为 SUCCESS；日志检出的是 `db45152` 与 main 的 PR 合并测试提交 `8d26fbe`，不是原始 HEAD 本身。日志为测试 8、自检 196/196、变异 91/91，未用 CI 替代本机复现。Docker 本机实查 daemon socket 不存在，容器运行仍未测，不声称本轮容器隔离已验证。
+- 原始 `--local` 退出 1：G-REVIEW 因 `review:null` 拦截；其 G-PROVENANCE 的 ✓ 是缺 review 时提前返回，不是来源认证通过。写入本轮拒绝后再跑真实 `--local` 仍退出 1：G-REVIEW 明确报 reject，G-PROVENANCE 报本轮 `turns.jsonl` 尚不存在；其余六道为 ✓，hash 不变。结果为 `final-local.log`，不把预期拒绝包装为全门禁通过，也不将配置模型当作实际来源认证。
+
+### 证据与交付
+
+原始日志、可复现驱动与 SHA-256 清单：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr1-r7-evidence-740bc8df/`，`MANIFEST.json`。核心证据为 `sandbox-probe.mjs` / `sandbox.json`、`prepare-sandbox-fixture.mjs` / `sandbox-e2e.json` / `sandbox-e2e.log`；其他为 `selftest.log`、`mutation.log`、`test.log`、`red.log`、`probes.*`、`G-*.json`、`ci.log`。仅追加本节并写收据 `review`，不改产品、门禁实现、作者声明或历史审查。按原则 67，推送核实后仅清掉本轮自建临时 clone、依赖及夹具目录，保留报告所引用的小型证据；清理结果见 `cleanup.json`，不触碰其他会话目录。
