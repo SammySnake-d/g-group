@@ -1,0 +1,16 @@
+packages/adapter-cc-compute/proof/tests.txt
+  h_f33e46a035b77c 5,11,17,23,29,35,41,47,53,59,65,71,77,83,89,95,101,107,113,119,125,131,137,143,149,155,161,167,173,179,185,191,197,203,209,215,221,227,233,239,245,251,257,263,269,275,281,287,293,299,305,311,317,323,329,335,341,344-435,437,442
+receipts/feat-cc-compute.json
+  h_f33e46a035b77c 2,7,17,41,43,45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "eb151a1297f65bda79c835c798fe3eca4f822d8a",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

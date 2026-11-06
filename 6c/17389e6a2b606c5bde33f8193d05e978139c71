@@ -1,0 +1,33 @@
+docs/spec/验收文档-v0.1.md
+  s_233b6d928b260b::t_2bc918941bba7e 1,166,252-253,257
+docs/spec/需求文档.md
+  s_8d15bc1ea77c30::t_da0e9c6f79ccac 3,179,214,291,326,925,947-977,1211,2301-2309,2376,2450,2464,2470,2683-2684
+docs/开发手册.md
+  s_8d15bc1ea77c30::t_cbc446004f7caa 29,717-718,807-822
+docs/概念卡.md
+  s_8d15bc1ea77c30::t_4f8952b0f113cd 359-380
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6c17389e6a2b606c5bde33f8193d05e978139c71",
+  "prompts": {},
+  "sessions": {
+    "s_233b6d928b260b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1afe1-6e07-78f2-8a32-e312349378e7",
+        "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_8d15bc1ea77c30": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "400d978d-ec1f-46cc-82b5-50fc388ded6d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
