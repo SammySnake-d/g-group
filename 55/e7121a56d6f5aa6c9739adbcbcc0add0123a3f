@@ -1,0 +1,25 @@
+packages/kernel/src/assemble.ts
+  s_060cb60f4a56ed::t_e0f08ac6194e3e 14-16,70-263,266,268,271,273,276-278
+packages/kernel/src/classify.ts
+  s_060cb60f4a56ed::t_2dbb122a747b6d 9,39-104
+packages/kernel/src/plain.ts
+  s_060cb60f4a56ed::t_2cf2e91a58990b 10,19-38,40-42,45,47-113,116,118-135,138,140-143
+packages/kernel/src/plugins.ts
+  s_060cb60f4a56ed::t_09c774f7aab9d6 1-18,22-131,133-255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "55e7121a56d6f5aa6c9739adbcbcc0add0123a3f",
+  "prompts": {},
+  "sessions": {
+    "s_060cb60f4a56ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae8c5e6a9c179f748",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

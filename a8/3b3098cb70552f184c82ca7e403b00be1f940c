@@ -1,0 +1,23 @@
+packages/adapter-cc-compute/proof/flake-20.sh
+  s_2950c8e8f91d67::t_bf8bb2b5a825a6 1-31
+packages/adapter-cc-compute/proof/mutations.mjs
+  s_2950c8e8f91d67::t_c1c5da41660755 19,26,35-37,45,48,53-56,58
+packages/adapter-cc-compute/proof/mutations.txt
+  s_2950c8e8f91d67::t_6e8b601de4565f 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a83b3098cb70552f184c82ca7e403b00be1f940c",
+  "prompts": {},
+  "sessions": {
+    "s_2950c8e8f91d67": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a224e5bbe1fb8b394",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
