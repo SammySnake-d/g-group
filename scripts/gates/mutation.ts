@@ -43,7 +43,9 @@ export const MUTATIONS: Mutation[] = [
   { name: "审查会话 harness 不按审查人区分", kill: "原则 68 claude 审 codex 作者放行(claude 会话)", target: ["G-PROVENANCE"], file: "gates.ts", from: "export const harnessOf = (agent: string) => (Object.hasOwn(POLICY.reviewerHarnessOf, agent) ? POLICY.reviewerHarnessOf[agent]! : POLICY.reviewerHarness);", to: "export const harnessOf = (_agent: string) => POLICY.reviewerHarness;" },
   { name: "claude 不受跨厂商约束", kill: "原则 68 claude 审查照样要跨研发厂商:作者用 Anthropic 模型", target: ["G-REVIEW"], file: "gates.ts", from: "if (va !== \"unknown\" && va === vr && !waiver)", to: "if (va !== \"unknown\" && va === vr && !waiver && rv.agent !== \"claude\")" },
   { name: "claude 可审 claude 作者", kill: "原则 68 claude 审 claude 作者被拦(禁止自审)", target: ["G-REVIEW"], file: "gates.ts", from: "if (rv.agent === author.agent)", to: "if (rv.agent === author.agent && rv.agent !== \"claude\")" },
-  { name: "名单仍含 argon", kill: "原则 68 argon 当审查人被拦(隔离沙盒读不到仓库)", target: ["G-REVIEW"], file: "policy.json", from: "\"allowedReviewers\":[\"codex\",\"astra\",\"claude\"]", to: "\"allowedReviewers\":[\"codex\",\"astra\",\"claude\",\"argon\"]" },
+  { name: "名单漏掉 argon", kill: "原则 68 argon 审 codex 作者放行(claude 会话,g-group#3199 备用审查人)", target: ["G-REVIEW"], file: "policy.json", from: "\"allowedReviewers\":[\"codex\",\"astra\",\"claude\",\"argon\"]", to: "\"allowedReviewers\":[\"codex\",\"astra\",\"claude\"]" },
+  { name: "argon 会话回退成 codex", kill: "原则 68 argon 审 codex 作者放行(claude 会话,g-group#3199 备用审查人)", target: ["G-PROVENANCE"], file: "policy.json", from: "\"claude\":\"claude\",\"argon\":\"claude\"}", to: "\"claude\":\"claude\"}" },
+  { name: "argon-chat 也进名单", kill: "原则 68 argon-chat 当审查人被拦(不能执行命令)", target: ["G-REVIEW"], file: "policy.json", from: "\"claude\",\"argon\"],", to: "\"claude\",\"argon\",\"argon-chat\"]," },
   { name: "不核对派活卡片", kill: "派活卡片显示会话属于别的助手", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (wrong.length) out.push(", to: "if (false) out.push(" },
   { name: "session 不做 realpath 包含检查", kill: "RR-01 会话文件软链到 PR 里的伪造记录", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (!inside(real)) return", to: "if (false) return" },
   { name: "session harness 不查白名单", kill: "RR-01 harness 不在白名单", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (!HARNESS_LIST.includes(m[1]!)) return", to: "if (false) return" },
@@ -88,7 +90,7 @@ export const MUTATIONS: Mutation[] = [
   { name: "任何门禁变了都算目标", kill: "R4-01 错的门禁变了不算发现目标", target: ["DIRECT"], file: "judge.ts", from: "for (const g of target) {\n    if (g === RUNNER || g === DIRECT) continue;", to: "for (const g of Object.keys({ ...base.gates, ...mut.gates })) {\n    if (g === RUNNER || g === DIRECT) continue;" },
   { name: "门禁自身出错也算拦下", kill: "R4-01 目标门禁因自身出错拦下不算预期原因", target: ["DIRECT"], file: "judge.ts", from: "if (mut.gateErrors.includes(g) || (base.gateErrors.includes(g) && !expectedError)) continue;", to: "" },
   { name: "预期拦下变成门禁自身出错仍算发现", kill: "R5-01 目标门禁由预期拦下变为门禁自身出错不算发现", target: ["DIRECT"], file: "judge.ts", from: "if (mut.gateErrors.includes(g) || (base.gateErrors.includes(g) && !expectedError)) continue;", to: "if (base.gateErrors.includes(g) && !expectedError) continue;" },
-  { name: "目标门禁没跑也参与判定", kill: "R5-01 目标门禁没跑(观测缺失)不算发现", target: ["DIRECT"], file: "judge.ts", from: "if (after === undefined && mut.complete && mut.exit ===", to: "if (after === undefined && true && mut.exit ===" },
+  { name: "目标门禁没跑也参与判定", kill: "R5-01 目标门禁没跑(观测缺失)不算发现", target: ["DIRECT"], file: "judge.ts", from: "if (!base.complete || !mut.complete || (before", to: "if (!base.complete || (!mut.complete && after !== undefined) || (before" },
   // biome-ignore lint/suspicious/noTemplateCurlyInString: 匹配/注入源码里的模板字符串原文
   { name: "门禁移出执行列表不算发现", kill: "R5-01 目标门禁从完整运行的执行列表里消失算发现", target: ["DIRECT"], file: "judge.ts", from: "return `${g} 从完整运行的执行列表里消失(没有运行)`;", to: "continue;" },
   { name: "输出完整性只看头部", kill: "R4-01 门禁输出解析:注册数与列出数一致且有 CONTENT_HASH 才算完整", target: ["DIRECT"], file: "judge.ts", from: "complete: !!n && Number(n[1]) === Object.keys(gates).length && /^CONTENT_HASH=[0-9a-f]{64}$/m.test(out) };", to: "complete: !!n };" },
@@ -99,23 +101,57 @@ export const MUTATIONS: Mutation[] = [
   { name: "不拒访问器属性", kill: "R5-02 getter/setter/Proxy 回调 0 次且被拒收", target: ["DIRECT"], file: "judge.ts", from: "if (typeof k !== \"string\" || !(\"value\" in d) || !d.enumerable) return undefined;", to: "if (typeof k !== \"string\") return undefined;" },
   { name: "导出策略不冻结", kill: "R5-03 改导出的策略对象不改变后续门禁行为", target: ["DIRECT"], file: "gates.ts", from: "if (x && typeof x === \"object\" && !Object.isFrozen(x)) { Object.freeze(x); for (const v of Object.values(x)) deepFreeze(v); }", to: "" },
   { name: "只冻结顶层", kill: "R5-03 改导出的策略对象不改变后续门禁行为", target: ["DIRECT"], file: "gates.ts", from: "for (const v of Object.values(x)) deepFreeze(v);", to: "" },
-  // biome-ignore lint/suspicious/noTemplateCurlyInString: 匹配/注入源码里的模板字符串原文
-  { name: "注入点唯一性只查字符串", kill: "R5-04 正则注入点 0 次/多次在变异执行前拒绝,恰 1 次放行", target: ["DIRECT"], file: "mutation.ts", from: "const re = new RegExp(from.source, from.flags.includes(\"g\") ? from.flags : `${from.flags}g`);", to: "const re = new RegExp(from.source, from.flags.replace(\"g\", \"\"));\n  if (!re.test(src)) return 0; return 1;" },
+  { name: "注入点唯一性只查字符串", kill: "R5-04 正则注入点 0 次/多次在变异执行前拒绝,恰 1 次放行", target: ["DIRECT"], file: "mutation.ts", from: "const re = searchRe(from, true);\n  const unicode =", to: "const re = searchRe(from, false);\n  if (!re.test(src)) return 0; return 1;\n  const unicode =" },
   { name: "门禁临时 HOME 退出不删", kill: "磁盘:门禁命令行与一条自检用例跑完不在 TMPDIR 留下 gate-home/gate-run/gate-snap/gate-selftest 目录", target: ["DIRECT"], file: "lib.ts", from: "process.on(\"exit\", () => { try { fs.rmSync(d, { recursive: true, force: true }); } catch { /* 退出时尽力删 */ } });", to: "" },
-  ...GATE_NAMES.map((g) => ({ name: `从 ALL_GATES 删掉 ${g}`, kill: GATE_KILL[g]!, target: [GATE_ID[g]!], file: "gates.ts", from: new RegExp(`(ALL_GATES: readonly Gate\\[\\] = Object\\.freeze\\(\\[[^\\]]*?)\\b${g}, ?`), to: "$1" })),
+  ...GATE_NAMES.map((g) => ({ name: `从 ALL_GATES 删掉 ${g}`, kill: GATE_KILL[g]!, target: [GATE_ID[g]!], file: "gates.ts", from: new RegExp(`(ALL_GATES: readonly Gate\\[\\] = deepFreeze\\(\\[[^\\]]*?)\\b${g}, ?`), to: "$1" })),
   { name: "从 ALL_GATES 删掉 layers(末项)", kill: "领域层反向依赖内核", target: ["G-LAYER"], file: "gates.ts", from: /, layers\]\);/, to: "]);" },
+  // R6-01..R6-04
+  { name: "变异侧输出不完整仍判因", kill: "R6-01 目标门禁仍在但变异侧输出不完整(缺 CONTENT_HASH/少列表项/截断)不算发现", target: ["DIRECT"], file: "judge.ts", from: "if (!base.complete || !mut.complete || (before", to: "if (!base.complete || (!mut.complete && after === undefined) || (before" },
+  { name: "killedBy 先用 instanceof 判 Map", kill: "R6-02 killedBy 基线 Map 是 Proxy/撤销的 Proxy/伪 Map、结果数组是 Proxy 时 trap 回调 0 次、不抛错、不给判因", target: ["DIRECT"], file: "judge.ts", from: "if (types.isProxy(base) || !types.isMap(base)) return undefined;", to: "if (!(base instanceof Map) || types.isProxy(base)) return undefined;" },
+  { name: "数组校验先 Array.isArray 后判 Proxy", kill: "R6-02 killedBy 基线 Map 是 Proxy/撤销的 Proxy/伪 Map、结果数组是 Proxy 时 trap 回调 0 次、不抛错、不给判因", target: ["DIRECT"], file: "judge.ts", from: "if (types.isProxy(x) || !Array.isArray(x) ||", to: "if (!Array.isArray(x) || types.isProxy(x) ||" },
+  { name: "ALL_GATES 只冻结数组", kill: "R6-03 改 ALL_GATES/LOCAL_GATES 里的门禁对象(run/id/rule/加属性)不改变后续门禁行为", target: ["DIRECT"], file: "gates.ts", from: "export const ALL_GATES: readonly Gate[] = deepFreeze([", to: "export const ALL_GATES: readonly Gate[] = Object.freeze([" },
+  { name: "LOCAL_GATES 只冻结数组", kill: "R6-03 改 ALL_GATES/LOCAL_GATES 里的门禁对象(run/id/rule/加属性)不改变后续门禁行为", target: ["DIRECT"], file: "gates.ts", from: "export const LOCAL_GATES: readonly Gate[] = deepFreeze([", to: "export const LOCAL_GATES: readonly Gate[] = Object.freeze([" },
+  { name: "零宽匹配按 UTF-16 单元前进", kill: "R6-04 正则注入计数:零宽 /u 按码点前进不死循环,sticky 与普通搜索计数一致", target: ["DIRECT"], file: "mutation.ts", from: "if (m[0] === \"\") re.lastIndex = advance(src, re.lastIndex, unicode);", to: "if (m[0] === \"\") re.lastIndex++;" },
+  { name: "计数保留 sticky", kill: "R6-04 正则注入计数:零宽 /u 按码点前进不死循环,sticky 与普通搜索计数一致", target: ["DIRECT"], file: "mutation.ts", from: "const f = from.flags.replace(/[gy]/g, \"\");", to: "const f = from.flags.replace(/g/g, \"\");" },
+  { name: "注入保留 sticky", kill: "R6-04 sticky 正则注入点按计数时的同一语义替换", target: ["DIRECT"], file: "mutation.ts", from: "src.replace(from, to) : src.replace(searchRe(from, false), to);\n}", to: "src.replace(from, to) : src.replace(from, to);\n}" },
 ];
 
 /**
- * 注入点在源码里的匹配次数(R5-04):字符串按字面出现次数;正则不论有没有 g 标志都按全局扫描计数,
- * 零宽匹配推进一位防死循环。变异执行前要求恰为 1。
+ * 正则注入点的统一语义(R6-04):在源码里"找"注入点是普通搜索。sticky(y)只在 lastIndex 处匹配,和普通搜索的出现次数不同,
+ * 所以计数与替换都去掉 y、按同一个普通搜索正则来做;计数再加 g 全局扫描。
+ */
+function searchRe(from: RegExp, global: boolean): RegExp {
+  const f = from.flags.replace(/[gy]/g, "");
+  return new RegExp(from.source, global ? `${f}g` : f);
+}
+/** 零宽匹配后的推进:Unicode 正则(u/v)按码点前进,不停在代理对中间(否则每次又回到代理对开头匹配,死循环) */
+function advance(s: string, i: number, unicode: boolean): number {
+  if (unicode && i + 1 < s.length) {
+    const hi = s.charCodeAt(i), lo = s.charCodeAt(i + 1);
+    if (hi >= 0xd800 && hi <= 0xdbff && lo >= 0xdc00 && lo <= 0xdfff) return i + 2;
+  }
+  return i + 1;
+}
+/**
+ * 注入点在源码里的匹配次数(R5-04/R6-04):字符串按字面出现次数;正则按 searchRe 的普通搜索全局计数,
+ * 零宽匹配按码点推进;匹配位置一旦不再前进就判为无界(返回 Infinity,必然不唯一)。变异执行前要求恰为 1。
  */
 export function injectionCount(src: string, from: string | RegExp): number {
   if (typeof from === "string") return from === "" ? Number.POSITIVE_INFINITY : src.split(from).length - 1;
-  const re = new RegExp(from.source, from.flags.includes("g") ? from.flags : `${from.flags}g`);
-  let n = 0;
-  for (let m = re.exec(src); m; m = re.exec(src)) { n++; if (m[0] === "") re.lastIndex++; }
+  const re = searchRe(from, true);
+  const unicode = re.flags.includes("u") || re.flags.includes("v");
+  let n = 0, last = -1;
+  for (let m = re.exec(src); m; m = re.exec(src)) {
+    if (m.index <= last && m[0] === "") return Number.POSITIVE_INFINITY;
+    n++;
+    last = m.index;
+    if (m[0] === "") re.lastIndex = advance(src, re.lastIndex, unicode);
+  }
   return n;
+}
+/** 注入:和 injectionCount 同一语义(字符串字面替换首处;正则用 searchRe 的普通搜索替换首处,替换模式 $1/$& 照常) */
+export function inject(src: string, from: string | RegExp, to: string): string {
+  return typeof from === "string" ? src.replace(from, to) : src.replace(searchRe(from, false), to);
 }
 
 function copyGates(dst: string) {
@@ -191,7 +227,7 @@ export async function mutationTest(): Promise<boolean> {
       copyGates(d);
       const f = path.join(d, "scripts/gates", m.file);
       const src = fs.readFileSync(f, "utf8");
-      const mutated = src.replace(m.from, m.to);
+      const mutated = inject(src, m.from, m.to);
       if (mutated === src) return Promise.resolve(`✗ 变异「${m.name}」没能注入(代码已变,更新 MUTATIONS)`);
       fs.writeFileSync(f, mutated);
       const t0 = Date.now();

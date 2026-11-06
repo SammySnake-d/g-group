@@ -61,7 +61,8 @@ function plainData(x: unknown): Record<string, unknown> | undefined {
   return Object.fromEntries(Object.entries(ds).map(([k, d]) => [k, d.value]));
 }
 function plainArray(x: unknown): unknown[] | undefined {
-  if (!Array.isArray(x) || types.isProxy(x) || Object.getPrototypeOf(x) !== Array.prototype) return undefined;
+  // 先判 Proxy:撤销的 Proxy 上 Array.isArray 会抛错(R6-02)
+  if (types.isProxy(x) || !Array.isArray(x) || Object.getPrototypeOf(x) !== Array.prototype) return undefined;
   const ds = Object.getOwnPropertyDescriptors(x);
   const out: unknown[] = [];
   for (const k of Reflect.ownKeys(ds)) {
@@ -125,16 +126,16 @@ function judgeValid(target: string[], base: CaseResult, mut: CaseResult): string
     return `执行器:退出码 ${base.exit}→${mut.exit},门禁 ${fmt(base.gates)} → ${fmt(mut.gates)}${mut.kind === "side" ? `;副作用检查失败:${mut.why ?? ""}` : ""}`;
   for (const g of target) {
     if (g === RUNNER || g === DIRECT) continue;
-    // R5-01:先排除目标门禁的执行故障与观测缺失(变异下自身出错、没跑),再判两类有效变化。
+    // R5-01/R6-01:先排除目标门禁的执行故障与观测缺失,再判有效变化。观测缺失包括基线或变异侧任何一侧输出不完整
+    // (缺 CONTENT_HASH、列出门禁数与注册数不符、截断):不论目标门禁是否还在输出里、结论怎么变,都不算发现。
     // 基线里的"门禁自身出错"如果就是预期原因(例如"没有可用沙箱"按 fail-closed 设计成抛错拦下),它是被测行为本身,不排除。
     const expectedError = base.expectHit.includes(g) && base.gateErrors.includes(g);
     if (mut.gateErrors.includes(g) || (base.gateErrors.includes(g) && !expectedError)) continue;
     const before = base.gates[g], after = mut.gates[g];
-    if (!base.complete || (before !== "✓" && before !== "✗")) continue;
+    if (!base.complete || !mut.complete || (before !== "✓" && before !== "✗")) continue;
     if (after !== "✓" && after !== "✗") {
-      // 目标门禁没出现在输出里:命令行完整跑完(注册数与列出数一致、有 CONTENT_HASH)说明它根本没被注册执行,是有效变化;
-      // 输出不完整则是观测缺失,不算
-      if (after === undefined && mut.complete && mut.exit === (Object.values(mut.gates).includes("✗") ? 1 : 0)) return `${g} 从完整运行的执行列表里消失(没有运行)`;
+      // 目标门禁没出现在完整跑完(注册数与列出数一致、有 CONTENT_HASH)的输出里:它根本没被注册执行,是有效变化
+      if (after === undefined && mut.exit === (Object.values(mut.gates).includes("✗") ? 1 : 0)) return `${g} 从完整运行的执行列表里消失(没有运行)`;
       continue;
     }
     // 结构化判因要和总退出码一致:任何门禁 ✗ ⇔ 退出 1
@@ -148,8 +149,11 @@ function judgeValid(target: string[], base: CaseResult, mut: CaseResult): string
 }
 
 export function killedBy(target: string[], base: Map<string, CaseResult>, results: CaseResult[]): { case: string; ev: string } | undefined {
+  // R6-02:先用不触发用户代码的宿主原语判 Proxy 与 Map 内部槽(不用 instanceof,它会调用 getPrototypeOf trap);
+  // 伪 Map(原型是 Map.prototype 但没有内部槽)也拒收,否则 Map.prototype.get.call 会抛错
+  if (types.isProxy(base) || !types.isMap(base)) return undefined;
   const rs = plainArray(results);
-  if (!rs || !(base instanceof Map) || types.isProxy(base)) return undefined;
+  if (!rs) return undefined;
   for (const raw of rs) {
     const r = validCase(raw);
     if (!r) continue;

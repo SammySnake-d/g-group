@@ -14,7 +14,7 @@ import { type Vendor, vendorOf } from "./vendor.ts";
 export interface Policy { allowedReviewers: string[]; defaultReviewer: string; reviewerHarness: string; reviewerHarnessOf: Record<string, string>; assistantIds: Record<string, string>; source: string }
 /** 审查人对应的会话 harness:codex/astra 跑在 codex,claude 跑在 claude;没登记的退回默认 */
 export const harnessOf = (agent: string) => (Object.hasOwn(POLICY.reviewerHarnessOf, agent) ? POLICY.reviewerHarnessOf[agent]! : POLICY.reviewerHarness);
-/** 递归冻结(R5-03):导出的策略与常量参与判定,外部赋值、push、删除、改嵌套都不能改变后续门禁行为 */
+/** 递归冻结(R5-03/R6-03):导出的策略、常量与门禁对象参与判定,外部赋值、push、删除、改嵌套、换 run/id/rule、加属性都不能改变后续门禁行为 */
 export function deepFreeze<T>(x: T): Readonly<T> {
   if (x && typeof x === "object" && !Object.isFrozen(x)) { Object.freeze(x); for (const v of Object.values(x)) deepFreeze(v); }
   return x;
@@ -52,7 +52,7 @@ export const trace: Gate = {
 
 // ---------------------------------------------------------------- R-01(CI 可查的部分)
 export const review: Gate = {
-  id: "G-REVIEW", rule: "R-01:审查人限 Codex/Astra/Claude(g-group#1531、g-group#2943 原则 68,默认 Codex;Claude 审 Codex 写的 PR),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)",
+  id: "G-REVIEW", rule: "R-01:审查人限 Codex/Astra/Claude/Argon(g-group#1531、g-group#2943、g-group#3199 原则 68,默认 Codex;Claude 审 Codex 写的 PR,Argon 备用),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)",
   run(ctx) {
     const g = this.id, out: Problem[] = [];
     if (!needsReceipt(ctx) || !ctx.receipt) return out;
@@ -260,7 +260,7 @@ export const provenance: Gate = {
     // 审查:必须有一次工具调用,命令是 run-all.ts --hash,输出恰好等于 reviewed_hash;审查厂商取那一轮的模型
     const rt = loadSession(base, rv.session);
     let reviewer: Vendor = "unknown";
-    // 审查人限 Codex/Astra/Claude(g-group#1531、#2943):会话 harness 按 policy.reviewerHarnessOf(codex/astra → codex,claude → claude),厂商按会话里实际的模型核对(下面),不认自报。
+    // 审查人限 Codex/Astra/Claude/Argon(g-group#1531、#2943、#3199):会话 harness 按 policy.reviewerHarnessOf(codex/astra → codex,claude/argon → claude),厂商按会话里实际的模型核对(下面),不认自报。
     // record.json 没有区分助手的字段;群聊日志里宿主写的派活卡片(session → assistant)若存在,必须与收据的审查人一致。
     if (!rv.session.startsWith(`${harnessOf(rv.agent)}:`)) out.push(p(g, `审查人 ${rv.agent} 的审查会话必须是 ${harnessOf(rv.agent)} 会话(${POLICY.source}),实际 ${rv.session}`));
     else {
@@ -715,5 +715,6 @@ export const layers: Gate = {
   },
 };
 
-export const ALL_GATES: readonly Gate[] = Object.freeze([trace, review, red, stub, tautology, workflow, layers]);
-export const LOCAL_GATES: readonly Gate[] = Object.freeze([provenance]);
+// R6-03:数组与其中每个门禁对象(及嵌套)都深冻结;单独导出的 trace/review/... 是同一批对象,也一并不可改
+export const ALL_GATES: readonly Gate[] = deepFreeze([trace, review, red, stub, tautology, workflow, layers]);
+export const LOCAL_GATES: readonly Gate[] = deepFreeze([provenance]);
