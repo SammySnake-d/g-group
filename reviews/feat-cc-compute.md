@@ -461,3 +461,57 @@ AC-07、AC-33④、V-06 整项仍未测：权威约束与副作用账、内核�
 | 清理 | 在本轮独有 TMPDIR 中，全仓测试前后 `g-group-cc-*`、`fake-cc-*` 均为 0；变异分别使用自己的临时目录并清理。审查完成后移除本轮独立 clone、运行与构建产物，只留上述引用证据 |
 
 本轮没有重跑作者全部 73 个变异，不把作者自报当作独立观察；没有重跑真实 Claude smoke。AC-07、AC-33④、V-06 的完整内核接线、真实 CLI 工具限制及真实模型事件映射仍未验证。用户已限定内置原型未被事先改写，且停止语义按 mirasim 而不是容器/后代树静止，本轮未以超出这两项边界的反例打回。
+
+---
+
+## 第六轮（2026-11-07）：第五轮返修后的独立复审
+
+**结论：reject。** R5-01 和 R5-02 的原反例已独立复现为通过，旧实现上的三条新测试也确实分别先红；但包的公开辅助入口仍直接调用外部 getter/Proxy，且对外事件中的 `violations` 可被一个消费者改写，污染后续消费者看到的审计记录。另有一个工具名精确匹配的测试漏检，需要一并补回归。
+
+### 1. 固定对象与证据
+
+- 产品 HEAD `c7bb391e15fee0c84578757f2207cd9b008c8f2f`，基线 `origin/feat/domain-core`（`afd02560f9546147da380382404eb6106222a9b8`）；红 `bc2f141`、绿 `109df47`。普通独立 clone；红版、旧版和变异各在独立副本，未在共享 linked worktree 跑钩子。
+- 审查 `codex:592ebd7a-e738-43bd-a331-069366648d54`，实际模型 `gpt-6.1-terra`（OpenAI）；作者 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38`，原始会话记录中模型均为 Claude Opus 5.5（Anthropic），满足跨厂商，未使用豁免。
+- 审查 clone 根目录实跑 `node scripts/gates/run-all.ts --hash --branch=feat/cc-compute --base=origin/feat/domain-core`，原样输出 `3da246447aec6cded6fb326a9b441c55dfe4675946ab1d2c931692fa84762332`；GitHub self-check `42249967688` 已在该产品 HEAD completed/success。
+- 本地引用证据 `$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr7-r6-evidence-codex-592ebd7a`：`$E/{hash.txt,ci.json,author-models.json,reviewer-model.json}`、`$E/{typecheck,lint,test,red-test,old-r5-test,green-r5-node22}.log`、`$E/{npm-*.log,red-green-comparison.json}`、`$E/{gate-negatives.mjs,gates-negative.log}`、`$E/{independent-probes.mjs,independent-probes.log,public-input-probes.mjs,public-input-probes.log,event-integrity.mjs,event-integrity.log}`、`$E/{single-mutations.mjs,single-mutations.log,single-mutations-summary.json,trim-name-oracle.mjs,mutation-*.log}`。脚本中的独立 clone 路径需在重做时按相应版本重新创建；本轮未伪造密钥或凭据文件。
+
+### 2. 必须修复
+
+#### R6-01 [P2] 包公开辅助入口直接调用外部 getter/Proxy，绕过不调用即拒收的输入合同
+
+位置：`packages/adapter-cc-compute/package.json` 的根导出、`src/index.ts:3-4`、`src/cli.ts:12-15,29-30,39-49,55-63`、`src/events.ts:66-70`。这些函数通过包根入口公开，但直接读取调用方对象或隐式转换参数，未像 `checkBrief`/`createComputeAdapter` 一样先拒绝不安全输入。
+
+**独立反例：** 在内置原型未被改写时，用同一个自有 `task` getter 的 brief：`checkBrief` 返回拒绝且计数为 0；直接从 `@g-group/adapter-cc-compute` 调用 `firstPrompt` 则 getter 命中 2 次并返回提示。对包公开的 `allowedTools`/`cliArgs` 直接传包装合法 brief 的 Proxy，陷阱累计命中 3 次、两者均返回；直接给 `cliEnv` 的 hostEnv 传返回普通字符串的 getter，构造器对照拒绝且计数为 0，但 `cliEnv` 调用 getter 1 次并复制了该值。公开 `streamParser` 直接接收非字符串 Proxy 时也触发一次转换陷阱并解析出结果信号。普通纯数据/字符串对照均通过（`$E/public-input-probes.log`）。
+
+**影响边界：** 已验证的 `createComputeAdapter().spawn` 正常路径使用校验后的副本；这里证明的是**公开辅助函数被外部直接调用时**不满足“不调用即拒收”，没有证明可经正常 spawn 绕过校验或产生进程。`Brief`/字符串映射的 TypeScript 结构类型本身不排除 getter；不能仅靠类型声明补齐运行时合同。
+
+**要求：** 对作为公开 API 保留的辅助入口先安全判定外部对象/状态参数，再使用纯数据副本；或在明确兼容性与合同的前提下将只接收可信已校验数据的辅助函数移出公开入口。为包根直接调用分别补 getter、嵌套/撤销 Proxy、合法对照与计数器为 0 的测试，不要通过修改内置原型构造反例。
+
+#### R6-02 [P2] `violations` 数组可被外部消费者清空，污染后续读取的违规事件
+
+位置：`src/adapter.ts:138-152,165-167,299-304,356-371,377-381`，合同见 `src/types.ts:66,82-83`。`eventHub` 只对事件外壳 `Object.freeze`，`failed`/`stopped` 的 `violations` 数组仍可变；`round.events` 和每个事件订阅者复用同一事件对象。
+
+**独立反例：** 中性 runner 发一个带未授权 `Bash` 的 init，适配器先正确记录违规。读取 `failed` 事件时，外壳已冻结但 `violations` 未冻结；调用方 `splice(0)` 后再次调用 `settled()`，相同事件的违规数组由 `["CLI 实际挂载了 brief 未授权的工具 Bash"]` 变为 `[]`。再用忽略 TERM 的独立 runner 在违规后调用 `stop`：首个订阅者可清空 stopped 的 `violations`，新的订阅者立即看到空数组（`$E/event-integrity.log`）。停止事件没有另一条 `reason` 字段；依赖该数组的审计消费者会丢失违规。这里使用的只是本轮自建子进程，未声称真实 CLI 被攻击。
+
+**要求：** 对外事件及其 `violations` 使用不可变快照或隔离副本，确保一个消费者不能更改其他订阅者及 `settled()` 的历史；分别覆盖 stopped/failed、两次读取与两个订阅者，并保留停止优先但违规可审计的现有语义。
+
+#### R6-03 [P2，测试缺口] 工具名 trim 单点变异未被现有测试发现
+
+原版对 `name:"report_progress "` 正确回 `-32602`。在独立变异副本仅将 `const name = m.params?.name` 改为对字符串先 `.trim()`：typecheck 退出 0，现有本包测试仍 **75/75 通过**；本轮独立单开关反例对尾部空格工具名按名失败（`$E/mutation-trim-unknown-tool.log`、`$E/mutation-trim-name-oracle.log`）。这只证明测试没有防止“近似工具名也被当作已声明工具”的回归，**不声称当前原版会放行它**。
+
+**要求：** 补带前后空格等近似名称与精确 `report_progress` 的直接 JSON-RPC 正反对照，将该单点变异纳入正式变异集。
+
+### 3. 第五轮返修与独立运行
+
+| 检查 | 观察 |
+|---|---|
+| `npm ci`、typecheck、lint、全仓 test | 均退出 0，全仓 98/98、0 跳过；全仓 Node 25.8.1 |
+| 红绿及先红 | 红提交 Node 22.22.0 上本包 75 条按名失败、0 跳过；绿版 98 个通过名覆盖全部红名。独立旧版 `8b13205` 只换入当前测试文件，三条 R5 新测试各自按名失败；当前版同三条在 Node 22 上 3/3 通过，测试文件 SHA-256 相同，红绿测试和假 CLI diff 为空 |
+| R5-01 | 原 `memory/soul:undefined`、spawn 选项及快照/汇报未知字段拒收且中性启动标记不出现；可选 `cwd/handoff:undefined` 对照可启动，必填/数组元素 undefined 拒绝；`hostEnv` 值为 undefined 的键按收据披露受控拒绝 |
+| R5-02 | 原未知、缺失及非字符串工具名均回 `-32602`、不记成功；本轮另测 null、数组及尾空格名称，精确工具名对照成功并只产生一条有效日志 |
+| R4 防回归及停止 | 独立访问器、嵌套/撤销 Proxy、合法 JSON null 和坏 JSON 对照、凭据每位置、冻结策略对象均通过；主进程忽略 TERM 时环境 force=400ms 的独立进程约 414ms 后退出，scope 为 `main-then-group`，运行中快照拒绝 |
+| 七个独立单点变异 | 嵌套 undefined 丢失、工具名不校验、非字符串名放行、可选 cwd undefined 错拒、Proxy 检测失效、环境值覆盖显式 force 六项均 typecheck 0 并被对应测试按名发现；字符串先 trim 的一项 typecheck 0、原测试 75/75 存活且独立反例失败（R6-03），无超时或信号终止 |
+| 门禁双侧 | 临时 Git 夹具分别输入 G-TRACE 缺证据、G-REVIEW 自审、G-RED 缺红、G-STUB 只测顶层值、G-TAUTO 恒真、G-WORKFLOW `pull_request_target`、G-LAYER 领域反向依赖内核、G-PROVENANCE 缺 hash 调用：各按预期原因拦截；合规对照放行 |
+| 临时目录 | 独立 TMPDIR 中全仓测试前后 `g-group-cc-*` / `fake-cc-*` 均为 0；变异各用独立 TMPDIR。审后删除本会话 clone、依赖与临时运行产物，只保留上述引用证据 |
+
+本轮未重跑作者全部 78 个变异，不把其自报当作独立观察；未重跑真实 Claude smoke。AC-07、AC-33④、V-06 的完整内核接线、真实 CLI 工具权限与模型事件映射仍未验证。未运行本轮完整 `--local`；夹具中的 G-PROVENANCE 负例不等于真实审查来源门禁已通过。用户已限定内置原型未被事先修改，停止按 mirasim 而非容器/后代树静止，本轮未以超出该边界的反例打回。
