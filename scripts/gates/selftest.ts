@@ -7,6 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { GIT_SAFE_ARGS, gitEnv, type Receipt } from "./lib.ts";
+import { type CaseResult, evidence, killedBy } from "./judge.ts";
 import { vendorOf } from "./vendor.ts";
 
 const HERE = import.meta.dirname;
@@ -155,6 +156,11 @@ const WF = (y: string): Files => ({ ...HEAD_OK, ".github/workflows/x.yml": y });
 // RR-09:self-check.yml 必须无条件跑门禁自检与变异校验,package.json 对应脚本必须是规范值
 const SC_STEP_SELF = "      - name: 门禁自检\n        run: npm run gates:selftest\n";
 const SC_STEP_MUT = "      - name: 门禁变异校验\n        run: GATE_MUTATION_JOBS=4 npm run gates:mutation\n";
+// R4-01:变异判定的双侧样例(直接调用 judge.ts)
+const ALL_OK: Record<string, "✓" | "✗"> = Object.fromEntries(GATE_IDS.map((g) => [g, "✓" as const]));
+const BLOCKED = (o: Partial<CaseResult> = {}): CaseResult => ({ name: "改了代码没收据", pass: true, kind: "ok", direct: false, expect: "缺收据", exit: 1, gates: { ...ALL_OK, "G-TRACE": "✗" }, expectHit: ["G-TRACE"], gateErrors: [], ...o });
+const ALLOWED = (o: Partial<CaseResult> = {}): CaseResult => ({ name: "合规:先红后绿、跨厂商审查、来源核对通过", pass: true, kind: "ok", direct: false, expect: null, exit: 0, gates: { ...ALL_OK }, expectHit: [], gateErrors: [], ...o });
+const notKilled = (target: string[], base: CaseResult, mut: CaseResult) => { const ev = evidence(target, base, mut); return ev === undefined ? undefined : `不该算发现,却给出判因:${ev}`; };
 const SC_STEP_TEST = "      - name: 测试\n        run: npm test\n";
 const SC_WF = (steps = SC_STEP_SELF + SC_STEP_MUT, jobExtra = "", testStep = SC_STEP_TEST) => `on: pull_request\npermissions: { contents: read }\njobs:\n  self-check:\n    runs-on: ubuntu-latest\n${jobExtra}    steps:\n${testStep}${steps}`;
 const TEST_SCRIPT = 'node scripts/gates/test-runner.ts "packages/**/*.test.ts" "scripts/gates/*.test.ts"';
@@ -281,6 +287,44 @@ export const CASES: Case[] = [
   { name: "g-group#2538 self-check 缺 npm test 步骤", head: SC(SC_WF(undefined, "", "")), expect: "缺必需步骤:run 为 npm test" },
   { name: "g-group#2538 测试入口 0 条用例判失败", direct: () => { const r = runTestRunner({}); return r.code === 1 && r.out.includes("跑了 0 条用例,不算通过") ? undefined : `0 条用例没有判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
   { name: "g-group#2538 测试入口 1 条通过的用例判通过(阴性对照)", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest("ok", () => {});\n' }); return r.code === 0 ? undefined : `1 条通过的用例没有判通过(退出 ${r.code})\n${r.out}`; }, expect: null },
+  { name: "R4-01 提示用例无关夹具故障不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "error", exit: null, gates: {}, expectHit: [], why: "用例自身出错:模拟与变异无关的用例准备失败" })), expect: null },
+  { name: "R4-01 用例超时不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "timeout", exit: null, gates: {}, expectHit: [] })), expect: null },
+  { name: "R4-01 用例没给出结果(缺观察)不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "no-result", exit: null, gates: {}, expectHit: [] })), expect: null },
+  { name: "R4-01 门禁命令行崩溃不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "crash", exit: 134, gates: {}, expectHit: [] })), expect: null },
+  { name: "R4-01 错的门禁变了不算发现目标", direct: () => notKilled(["G-RED"], BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] })), expect: null },
+  { name: "R4-01 目标门禁因自身出错拦下不算预期原因", direct: () => notKilled(["G-RED"], ALLOWED(), ALLOWED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-RED": "✗" }, gateErrors: ["G-RED"] })), expect: null },
+  { name: "R4-01 同一变异无故障时不算发现(对照)", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED()) ?? (killedBy(["G-TRACE"], new Map([["改了代码没收据", BLOCKED()]]), [BLOCKED()]) ? "全部通过却判了发现" : undefined), expect: null },
+  { name: "R4-01 目标门禁不再按预期原因拦下算发现", direct: () => { const ev = evidence(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] })); return ev?.includes("G-TRACE") ? undefined : `真正的目标故障没算发现(判因 ${ev})`; }, expect: null },
+  { name: "R4-01 目标门禁由放行变为拦下算发现", direct: () => { const ev = evidence(["G-RED"], ALLOWED(), ALLOWED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-RED": "✗" } })); return ev?.includes("G-RED") ? undefined : `真正的目标故障没算发现(判因 ${ev})`; }, expect: null },
+  { name: "R4-01 端到端:中性变异 + 提示用例夹具故障,变异校验必须判存活", direct: () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r401-"));
+    try {
+      const d = path.join(tmp, "gates");
+      fs.cpSync(HERE, path.join(d, "scripts/gates"), { recursive: true, filter: (src) => !src.includes(`${path.sep}proof`) });
+      fs.symlinkSync(path.resolve(HERE, "../../node_modules"), path.join(d, "node_modules"));
+      fs.writeFileSync(path.join(d, "package.json"), JSON.stringify({ type: "module" }));
+      const mf = path.join(d, "scripts/gates/mutation.ts");
+      const ms = fs.readFileSync(mf, "utf8");
+      const at = ms.indexOf("export const MUTATIONS: Mutation[] = [");
+      if (at < 0) return "mutation.ts 里找不到 MUTATIONS";
+      const end = ms.indexOf("\n];\n", at);
+      fs.writeFileSync(mf, `${ms.slice(0, at)}export const MUTATIONS: Mutation[] = [\n  { name: "中性注释变异", kill: "改了代码没收据", file: "gates.ts", from: "// 各条机械门禁。", to: "// 各条机械门禁(注释改了)。" },\n${ms.slice(end + 1)}`);
+      const st = path.join(d, "scripts/gates/selftest.ts");
+      const ss = fs.readFileSync(st, "utf8");
+      const hook = "function runCaseInner(tmp: string, c: Case, i: number): { pass: boolean; detail: string } {\n";
+      if (!ss.includes(hook)) return "selftest.ts 里找不到 runCaseInner";
+      // 只在变异副本(注释被改过)里、只对提示用例,在准备阶段抛与变异无关的错
+      fs.writeFileSync(st, ss.replace(hook, `${hook}  if (c.name === "改了代码没收据" && fs.readFileSync(path.join(HERE, "gates.ts"), "utf8").includes("注释改了")) throw new Error("模拟与变异无关的用例准备失败");\n`));
+      const r = spawnSync(process.execPath, [mf], { encoding: "utf8", env: gitEnv({ GATE_MUTATION_JOBS: "1", GATE_SELFTEST_JOBS: "4" }), timeout: 1_500_000 });
+      const out = (r.stdout ?? "") + (r.stderr ?? "");
+      if (!out.includes("✓ 原样副本自检通过")) return `原样对照没通过,反例不成立\n${out}`;
+      return r.status === 1 && /✗ 变异「中性注释变异」/.test(out) ? undefined : `中性变异在提示用例夹具故障下被判成发现(退出 ${r.status})\n${out}`;
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  }, expect: null },
+  { name: "R4-01 提示用例无关故障后由其余用例判定", direct: () => {
+    const other = BLOCKED({ name: "删掉源码也要收据" });
+    const k = killedBy(["G-TRACE"], new Map([["改了代码没收据", BLOCKED()], ["删掉源码也要收据", other]]), [BLOCKED({ pass: false, kind: "error", exit: null, gates: {}, expectHit: [], why: "用例自身出错" }), { ...other, pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] }]);
+    return k?.case === "删掉源码也要收据" ? undefined : `应由后面那条真实故障判定,实际 ${JSON.stringify(k)}`; }, expect: null },
   { name: "R4-02 测试入口全部 skip 判失败", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest.skip("s", () => {});\n' }); return r.code === 1 && r.out.includes("没有实际执行") ? undefined : `全部 skip 没有按"没有实际执行"判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
   { name: "R4-02 测试入口全部 todo 判失败", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest.todo("t");\n' }); return r.code === 1 && r.out.includes("没有实际执行") ? undefined : `全部 todo 没有按"没有实际执行"判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
   { name: "R4-02 测试入口 skip 与 todo 混合判失败", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest.skip("s", () => {});\ntest.todo("t");\n' }); return r.code === 1 && r.out.includes("没有实际执行") ? undefined : `skip+todo 没有按"没有实际执行"判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
