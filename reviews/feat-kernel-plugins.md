@@ -1287,3 +1287,112 @@ const p=Promise.reject(Error('预期拒绝'));Object.defineProperty(p,'construct
 Reflect.apply(Promise.prototype.then,p,[undefined,()=>{}]);setTimeout(()=>console.log('进程存活'),20);
 NODE
 ```
+
+# 第十轮：返修独立复审
+
+**结论：reject。** 第九轮所列普通受支持 Promise 形态与小数时钟在独立样例中通过，但一个**未被用户排除且可安全处理**的形态仍会使进程退出：原生 Promise 的自有 `constructor` 是不可配置、**可写**、值不为内置 `Promise` 的数据属性。实现要求临时描述符 `configurable:true`，覆盖失败后不挂拒绝处理；Node 默认策略下先返回拒绝、随后因未处理拒绝退出。按用户 `g-group#3140` 的原话，排除的是 Proxy、不可配置 **getter**、冻结子类，并不包括此可写数据属性；本轮没有修改内置原型。另有两个自造单点故障逃过现有测试。
+
+## 审查对象、来源与独立结果
+
+- 审查 HEAD `f427a119b1e78034872b4b4348b8fc98134f1e32`，基线 `origin/feat/domain-core` 为 `afd02560f9546147da380382404eb6106222a9b8`。采用普通独立 HTTPS clone，Git common dir 为该 clone 自己的 `.git`；未在共享 linked worktree 执行钩子。作者会话 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38`，审查会话 `codex:7d29bd3e-c4cd-4e15-ad0b-298bd0301bd3`，本轮原生 `turn_context` 模型 `gpt-6.1-terra`；作者与审查分别为 Anthropic、OpenAI。
+- 在独立 clone 仓库根目录实际运行 `node scripts/gates/run-all.ts --hash --branch=feat/kernel-plugins --base=origin/feat/domain-core`，标准输出**原样**为：
+
+  ```text
+  1e2a4f2df6dfb97b0d797a7fe61b16efc51151a0d091dc8c782d2f27624690b0
+  ```
+
+  与作者声明一致。
+
+| 检查 | 独立结果 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均退出 0；lint 25 文件 |
+| `npm test` | Node 25.8.1 与 22.22.0 各 227 通过、0 失败、0 跳过，含 kernel 204 条 |
+| 红提交 `afa8e50b499af531674a9c58a22f066e60dbb82b` | 独立 clone 安装后测试退出 1；23 条旧测试通过、204 条 kernel 测试逐名失败、0 跳过；红绿 kernel 测试文件无差异，绿测试名与红失败名双向差集为空 |
+| 返修实现 | `dde651d` 与 `2d4fcf9` 的 `plugins.ts` 无差异；`a8b8849` 与 `12ffe52` 的五个实现文件无差异 |
+| 作者 185 个变异 | Node 25.8.1：原样 204 绿，185 杀死 / 0 存活 / 0 超时；Node 22.22.0：原样 204 绿，185 杀死 / 0 存活 / 0 超时 |
+| 重点变异 | Node 22.22.0 与 25.8.1 各独立检验 K177、K188–K196 共 10 个，均被原样通过的具名测试杀死 |
+| 自造单点故障 | 三个隔离 clone 各注入一个故障，typecheck 均通过；1 个被具名测试发现，2 个存活，见 R10-02 |
+| `review=null` 的 `--local` | 退出 1，`G-REVIEW` 报未审；`G-RED/G-STUB/G-TAUTO` 等显示绿。`G-PROVENANCE` 在 review 为 null 时提前跳过，不能当成来源已核验 |
+| 填写 reject 后 | 分别对实际 `runGates` 调用两项：`G-REVIEW` 按 reject 阻挡；中断前的审查轮次落盘后重新核验，`G-PROVENANCE` 通过。此处是两门的定向复核，不冒称完整 `--local` 已通过 |
+| 必卡金丝雀 | Node 22.22.0 与 25.8.1 各运行 `node packages/kernel/proof/mutations.mjs --canary-hang`：均约 5.0 秒超时杀组、正确记超时不计杀死，命令退出 0 |
+
+## 返修与验收编号核对
+
+- R9-02：有限小数墙钟、Promise 子类静态 `Symbol.species` getter 原反例及路径参数对照已补测试；K188、K189 与 K177 对应检查见上表。
+- R9-01：在 Node 22/25，各测 `send/pull × 已拒绝/稍后拒绝`。自有 then getter、可配置 constructor getter、constructor 值为内置 Promise 的数据属性、值为其他类的可配置数据属性、可扩展子类这 5 类共 **40/40** 子进程退出 0；getter、species、额外子类构造均为 0，描述符和原型恢复。用户明确排除的 Proxy、不可配置 getter、冻结子类不以进程退出作拒绝理由。
+- `plainData/plainItems` 的非法路径 getter、带访问器数组、U+000B/U+0085/零宽字符撤回扫描以及 B1 已确认回执复用、未知动作换渠道版本等独立样例符合预期；业务入口 null 的所测样例安全返回拒绝，`appendOwn`/`squash` 的错误类型按工具合同抛受控 `TypeError`，不泛称所有工具都不抛异常。
+- 核对文档分支 `15e2046f44379c612bc05000baa1c84b9c9e307e` 的 v3.17 审查稿（非批准版），配套验收文档 SHA-256 `cca98187f579e426059731bc8916767875b82e8e4ab354cf602f2c2487e7d7de`：收据提及的 AC-06/08/11/12/20/31/32/35/39/40 均有对应条目；**AC-40 是消息连续投递不丢要求**，⑪在 v3.17 末列标为候选。收据 AC-39 已写本片仅 v3.10 三段式、不满足 v3.11/v3.12 的②，AC-40⑪无实际 provider 观测，五块重拼留给 D23 账本之后的独立切片；不以本片没有完成五块或完整端到端链路本身打回。
+- 文档准确性建议：收据 AC-35 旧叙述把“专职锁没有做”与其他未交付项并列；v3.17 AC-35①明确专职开关已按用户 `#2273` 撤销，应标“已撤销、不做”，避免误作欠交功能。第 7 栏的 AC-20 对应“授权只来自用户本人”，不宜单独代表全部外部提示注入风险；通用外部不可信防注入另见 AC-35③。二者均不冒充已经通过，本轮不作为独立代码拒绝原因。
+
+## 必须返修
+
+### R10-01 [P1 / R9-01 安全拒绝] 不可配置但可写的 constructor 数据属性被错误排除
+
+位置：`packages/kernel/src/plugins.ts:44–63,229–231,274–280`。`quietRefused` 对非内置 constructor 使用完整临时描述符 `{value: Promise, writable:true, enumerable:false, configurable:true}`。若外部原生 Promise 的自有 constructor 是 `{value: Other, writable:true, enumerable:true, configurable:false}`，改为 `configurable:true`（且改变 enumerable）不合法，`Reflect.defineProperty` 返回 false，代码直接返回、不挂拒绝处理。
+
+在没有全局 `unhandledRejection` 处理器的独立子进程中，Node 22/25、send/pull、立即/稍后拒绝共 **8/8**：入口先给 `non-promise-send` / `invalid-batch`，访问器和 `Symbol.species` 调用均为 0，随后因未处理拒绝退出 1。该对象是普通原生 Promise，不是 Proxy、不可配置 getter 或冻结子类；它的属性虽不可配置但**值仍可写**，不在用户限定的三个排除形态之内。
+
+同一对象的独立对照：只用 `{value: Promise}` 临时改值，不试图改 `configurable/enumerable`；调用内置 `Promise.prototype.then` 挂空拒绝处理，再只用 `{value: Other}` 恢复。Node 22/25 均退出 0，原描述符逐字段相同，外部 species getter 0。故此不是一般意义上“不可配置就不能安全处理”。
+
+另测不可配置且不可写、值为其他类的数据属性：上述组合也退出 1；它不是用户明确列出的“不可配置 getter”，但本轮未证明存在不执行外部代码的安全处理方式。需要明确其隔离/范围，不得把它悄悄归入用户已批准的三类。对可写数据属性则已有可运行安全对照，不能以这一待定问题免除返修。另用 Node 25 实测：仅 `preventExtensions`、含仍可写字段且 `Object.isFrozen` 为 false、无自有 constructor 的 Promise 子类，`pull` 返回 `invalid-batch` 后仍因未处理拒绝退出 1；收据把“不可扩展”与“冻结”并列，但用户原话只列冻结子类。此形态能否安全处理本轮未证明，也应明示隔离边界并确认，不能直接冒称已获用户批准。
+
+**要求**：区分可写数据描述符与不可配置访问器；覆盖和恢复时不改变原不可配置属性的其他旗标，拒绝后保证没有未处理拒绝。补 send/pull、立即/稍后拒绝、不同 enumerable/writable 组合、描述符原样恢复、getter/species 0、无全局处理器子进程存活及普通 Promise 对照。若不可写数据形态仍无法安全处理，先明确由何隔离以及是否需要用户重新批准范围。
+
+### R10-02 [P2 / 测试充分性] 两个新单点故障逃过 227 条测试
+
+三个独立临时 clone 各精确注入一个故障；typecheck 均退出 0。可按下列位置单独重做变异，不要同时注入：
+
+- **R10-M1，存活**：在 `plugins.ts:62` 恢复原 constructor 描述符时，错误地在 `Object.assign(Object.create(null), own)` 后追加覆盖 `{enumerable:false}`。用原本 `configurable:true, enumerable:true` 的 constructor getter：原版拒绝且 getter 0、恢复为 enumerable true；变异版 getter 0 却恢复为 false。227/227 测试仍绿。实际产品原版在此样例正确，缺的是该旗标对照。
+- **R10-M2，存活**：把 `plugins.ts:77` 的 `new Date(ms)` 改成 `new Date(Math.floor(ms))`。墙钟 `-0.5` 为合法有限数字；原版收到时间为 `1970-01-01T00:00:00.000Z`，变异版为 `1969-12-31T23:59:59.999Z`，227/227 测试仍绿。新增的小数样例均为正数，没覆盖负小数。
+- **R10-M3，被杀**：`plugins.ts:71` 的 `readClock` 将 `Number.isFinite` 错改为 `Number.isInteger`；224 绿 / 3 红，其中包含有限小数墙钟的具名测试。
+
+要求补原 constructor 描述符 enumerable=true 与 false 的单开关对照，并补负小数墙钟；把上述单点故障加入校准。它们说明测试覆盖不足，**不是声称当前原版在这两个样例已出错**。
+
+## 记录：async_hooks 观察与主动修改的边界
+
+普通只读 `async_hooks.init` 能在挂处理时看到临时 constructor，随后原描述符恢复，与收据披露一致。另在 Node 22/25 的 send/pull 独立进程中，让插件**主动**在该 hook 内把临时属性改为不可配置，`finally` 中恢复的 `Reflect.defineProperty` 返回 false 但实现没有检查；结果仍为普通拒绝，原描述符未恢复。此探针依赖插件主动修改自身 Promise，不等同于仅观察，也不是本轮 R10-01 的必要条件；考虑插件任意代码隔离尚未交付，记录为边界/需澄清与测试，不将其单独当成已批准外的第四类或本轮唯一打回理由。
+
+## 各门禁独立负例
+
+用本报告第六轮所附完整夹具脚本重新构造八个临时 Git 仓库与伪会话，逐门运行目标 `runGates` 检查原因，并逐例运行真实 `run-all.ts --local`；8/8 目标门禁均显示 ✗ 且各 CLI 退出 1。一个夹具可能同时触发其他门禁，不据此声称其他门禁通过。
+
+| 门禁 | 本轮负例 | 目标结果 |
+|---|---|---|
+| G-TRACE | 收据状态 `待验` | 非四选一 |
+| G-REVIEW | 作者与审查者都填 Claude | 审查人与作者相同 |
+| G-PROVENANCE | `codex:missing-ten` 空会话 | 审查会话不可信 |
+| G-RED | 不存在的全 `a` 红提交 | 红提交不存在 |
+| G-STUB | 测试只断言导入函数类型 | 空桩后未按名字失败 |
+| G-TAUTO | `assert.equal(11,11)` | 恒真断言 |
+| G-WORKFLOW | workflow 申请 `contents: write` | 申请写权限 |
+| G-LAYER | plugin 导入 plugin | 插件层不能互相依赖 |
+
+## 最小复现（受审仓库根目录，`npm ci` 后）
+
+下列子进程故意在无全局未处理拒绝处理器的默认 Node 策略下运行；不改任何内置原型、不联网。内核返回拒绝后，已拒绝 Promise 的未处理拒绝应使子进程退出 1；不要在生产宿主直接运行：
+
+```sh
+for mode in send pull; do
+ MODE="$mode" node --input-type=module <<'NODE'
+import {createRegistry} from './packages/kernel/src/plugins.ts';
+let species=0;function Other(){}Object.defineProperty(Other,Symbol.species,{get(){species++;throw Error('不应读 species')}});
+const p=Promise.reject(Error('外部拒绝'));Object.defineProperty(p,'constructor',{value:Other,writable:true,enumerable:true,configurable:false});
+const before=Object.getOwnPropertyDescriptor(p,'constructor');const reg=createRegistry();
+if(process.env.MODE==='send')reg.register({kind:'outbound-channel',id:'p',endpoint:'A',idempotency:'none',send:()=>p});else reg.register({kind:'data-source',id:'p',sources:['g'],pull:()=>p});
+const result=process.env.MODE==='send'?await reg.send('p',{action_id:'a',payload:'x'}):await reg.pull('p','g');
+const after=Object.getOwnPropertyDescriptor(p,'constructor');console.log({mode:process.env.MODE,reason:result.reason,species,descriptorUnchanged:before.value===after.value&&before.writable===after.writable&&before.enumerable===after.enumerable&&before.configurable===after.configurable});setTimeout(()=>console.log('进程存活'),30);
+NODE
+ echo "$mode 子进程退出码: $?"
+done
+```
+
+同一非配置但可写数据属性可以只改其值、挂处理、再恢复，不改变 flags；独立 Node 22/25 正例均退出 0：
+
+```sh
+node --input-type=module <<'NODE'
+import assert from 'node:assert/strict';let species=0;function Other(){}Object.defineProperty(Other,Symbol.species,{get(){species++;throw Error('不得访问')}});
+const p=Promise.reject(Error('预期拒绝'));Object.defineProperty(p,'constructor',{value:Other,writable:true,configurable:false,enumerable:true});const before=Object.getOwnPropertyDescriptor(p,'constructor');
+assert.equal(Reflect.defineProperty(p,'constructor',{value:Promise}),true);Reflect.apply(Promise.prototype.then,p,[undefined,()=>{}]);assert.equal(Reflect.defineProperty(p,'constructor',{value:Other}),true);
+assert.deepEqual(Object.getOwnPropertyDescriptor(p,'constructor'),before);assert.equal(species,0);setTimeout(()=>console.log('原描述符恢复，进程存活'),20);
+NODE
+```
