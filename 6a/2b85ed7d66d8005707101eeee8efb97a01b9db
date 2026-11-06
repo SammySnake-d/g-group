@@ -1,0 +1,28 @@
+packages/domain/proof/commitment-ledger-tests.txt
+  s_677b2cd67e9f04::t_8dc3cbd7bf67df 5-6,13-15
+  s_677b2cd67e9f04::t_838ff3cd7a622c 7-8,16-17
+receipts/feat-commitment-ledger.json
+  s_677b2cd67e9f04::t_838ff3cd7a622c 29-33
+packages/domain/proof/commitment-ledger-mutations.txt
+  s_677b2cd67e9f04::t_8dc3cbd7bf67df 20
+  s_677b2cd67e9f04::t_838ff3cd7a622c 21-22,24
+packages/domain/proof/commitment-ledger-mutations.mjs
+  s_677b2cd67e9f04::t_44241b3de37721 28
+  s_677b2cd67e9f04::t_a4f484968c81ad 13,27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6a2b85ed7d66d8005707101eeee8efb97a01b9db",
+  "prompts": {},
+  "sessions": {
+    "s_677b2cd67e9f04": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1aff5-be5f-7ff1-a153-0a17c97be283",
+        "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
