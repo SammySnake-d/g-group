@@ -1,3 +1,4 @@
+// biome-ignore-all lint/correctness/noUnusedVariables lint/correctness/noUnusedFunctionParameters lint/correctness/noUnusedImports lint/correctness/noUnusedPrivateClassMembers: 红提交空壳,绿提交恢复实现
 import { types } from "node:util";
 
 // 领域层内部模块:普通数据对象合同的规范化工具。只供 contact.ts、helper.ts 内部使用,
@@ -33,14 +34,7 @@ const isOptional = (s: FieldSpec): boolean => Object.hasOwn(s, "optional") && s.
 
 /** 普通数据检查(调用前已排除 Proxy):返回 null 表示通过,否则返回拒绝理由。不调用任何 getter。 */
 export function plainDataError(v: object, what: string, wantArray: boolean): string | null {
-  const noun = wantArray ? "数组" : "对象";
-  const proto: unknown = Object.getPrototypeOf(v);
-  if (wantArray ? proto !== Array.prototype || !Array.isArray(v) : proto !== Object.prototype && proto !== null) return `${what} 只接受普通数据${noun}`;
-  for (const key of Reflect.ownKeys(v)) {
-    const d = Object.getOwnPropertyDescriptor(v, key);
-    if (d && !Object.hasOwn(d, "value")) return `${what} 只接受普通数据${noun}(${String(key)} 是访问器属性)`;
-  }
-  return null;
+  throw new Error("未实现");
 }
 
 /** 复制一个普通数据数组:按 length 逐个下标取自有数据属性复制成本地数组,不走迭代器;空位取成 undefined,交给调用方按项类型拒绝。 */
@@ -95,20 +89,5 @@ function copyField(v: unknown, field: string, spec: FieldSpec): FieldResult {
 
 /** 把一个入参对象按 schema 规范化成冻结纯数据快照;不合普通数据合同或字段类型不对时给出理由。 */
 export function normalize<T>(input: unknown, schema: Schema, what: string): Normalized<T> {
-  if (typeof input !== "object" || input === null) return { ok: false, reason: `${what} 必须是对象` };
-  if (types.isProxy(input)) return { ok: false, reason: `${what} 只接受普通数据对象` };
-  if (Array.isArray(input)) return { ok: false, reason: `${what} 必须是对象` };
-  const bad = plainDataError(input, what, false);
-  if (bad) return { ok: false, reason: bad };
-  const out = Object.create(null) as Record<string, unknown>;
-  for (const key of Object.keys(schema)) {
-    const spec = schema[key] as FieldSpec;
-    const d = Object.getOwnPropertyDescriptor(input, key);
-    const raw: unknown = d !== undefined && Object.hasOwn(d, "value") ? d.value : undefined;
-    if (raw === undefined && isOptional(spec)) continue;
-    const v = copyField(raw, key, spec);
-    if (!v.ok) return v;
-    Object.defineProperty(out, key, dataDesc(v.value, false));
-  }
-  return { ok: true, value: Object.freeze(out) as T };
+  throw new Error("未实现");
 }

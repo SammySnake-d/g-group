@@ -1399,3 +1399,185 @@ test("CY06 回执 commitmentIds 自带 includes 数据属性函数时,确认只�
   const plain = unwrap(confirmFinalReport(ended, { taskId: "T", commitmentIds: ["a"], basedOnSeq: 5 }));
   assert.deepEqual(plain.commitments.map((k) => [k.id, k.status]), [["a", "done"], ["b", "active"]]);
 });
+
+// ---------------------------------------------------------------- 第十四轮(reviews/feat-contact-helper.md CH-39 / CH-40)
+// 合法状态一律经登记入口产生再 JSON 往返(模拟宿主从存储读回),反例只把其中的标识改成空或重复。
+/** 经登记入口产生:直接工具 get_weather、t_a、t_b;能力资产 ws_script/script、a_mcp/mcp、a_skill/skill;承诺 k(绑定 T)、k2(绑定 T2)、k3(定时)。 */
+const threeOfEach = (): Contact => {
+  let c = fullContact();
+  for (const name of ["t_a", "t_b"]) c = unwrap(grantTool(c, { name, bounded: true }));
+  c = unwrap(grantComputeAsset(c, { name: "a_mcp", kind: "mcp" }));
+  c = unwrap(grantComputeAsset(c, { name: "a_skill", kind: "skill" }));
+  c = unwrap(commit(c, { id: "k2", sourceSeq: 2, text: "第二条", boundTaskIds: ["T2"], schedule: null }));
+  c = unwrap(commit(c, { id: "k3", sourceSeq: 3, text: "每天八点", boundTaskIds: [], schedule: daily8 }));
+  return js(c);
+};
+type Raw = Record<string, unknown> & { tools: Record<string, unknown>[]; computeAssets: Record<string, unknown>[]; commitments: Record<string, unknown>[] };
+const raw = (c: Contact): Raw => js(c) as unknown as Raw;
+/** 同一份状态在全部状态入口上都按同一理由拒绝:七个联系人入口、canCallDirectly、briefFor 授出、目录的 updateContact/addContact。 */
+const assertStateRejected = (st: Raw, reason: string, label: string, tool: string) => {
+  const s = st as never;
+  for (const [entry, r] of stateEntryResults(s)) assert.deepEqual(r, { ok: false, reason }, `${label} ${entry}`);
+  assert.equal(canCallDirectly(s, tool), false, `${label} canCallDirectly ${tool}`);
+  assert.deepEqual(briefFor(s, { task: "t", rules: [], tools: [tool], credentialRefs: [] }), { ok: false, reason }, `${label} briefFor ${tool}`);
+  assert.deepEqual(updateContact({ contacts: new Map([[st.id as string, s]]) }, st.id as string, { memory: "m" }), { ok: false, reason }, `${label} updateContact`);
+  assert.deepEqual(addContact({ contacts: new Map([[st.id as string, s]]) }, { id: "n2", name: "n", speakingModel: "m" }), { ok: false, reason }, `${label} addContact`);
+};
+const PAIRS: readonly (readonly [number, number])[] = [[0, 1], [0, 2], [1, 2]];
+
+test("CH-39 联系人 id 不能为空:addContact 拒空 id;恢复目录里键与 id 都为空的完整联系人,updateContact 改记忆、addContact 与各状态入口同样拒绝;非空 id 照常(对照)", () => {
+  assert.deepEqual(addContact(emptyDirectory(), { id: "", name: "n", speakingModel: "m" }), { ok: false, reason: "联系人 id 不能为空" });
+  const reason = "联系人状态.id 为空";
+  const empty = { ...raw(fullContact()), id: "" };
+  assert.deepEqual(updateContact({ contacts: new Map([["", empty as never]]) }, "", { memory: "changed" }), { ok: false, reason });
+  assertStateRejected(empty, reason, "空 id", "get_weather");
+  const good = raw(fullContact());
+  const u = updateContact({ contacts: new Map([["c-mi", good as never]]) }, "c-mi", { memory: "changed" });
+  assert.deepEqual(u.ok && [...u.dir.contacts.keys()], ["c-mi"]);
+  assert.equal(u.ok && u.dir.contacts.get("c-mi")?.memory, "changed");
+  for (const [entry, r] of stateEntryResults(good as never)) assert.equal(r.ok, true, `对照 ${entry}`);
+  assert.equal(canCallDirectly(good as never, "get_weather"), true);
+});
+
+test("CH-39 同一能力资产名只能登记一次:same/mcp 与 same/skill 的类别冲突、同类重复放在恢复状态首/中/尾任一对位置,grantComputeAsset、briefFor 等各入口都拒绝,不静默取第一项;登记产生的不同名状态照常(对照)", () => {
+  const legit = threeOfEach();
+  assert.deepEqual(grantComputeAsset(legit, { name: "a_mcp", kind: "skill" }), { ok: false, reason: "a_mcp 已登记为 mcp 类能力资产,不能再以 skill 类同名登记" });
+  for (const [i, j] of PAIRS) {
+    for (const sameKind of [false, true]) {
+      const st = raw(legit);
+      const first = st.computeAssets[i] as { name: string; kind: string };
+      st.computeAssets[j] = sameKind ? { ...first } : { ...st.computeAssets[j], name: first.name };
+      assert.equal(st.computeAssets.length, 3);
+      const reason = `联系人状态.computeAssets[${j}] 能力资产名 ${first.name} 已在 computeAssets[${i}] 登记,同一名字只能登记一次、只能一种类别`;
+      const label = `资产 ${i}/${j} ${sameKind ? "同类" : "异类"}`;
+      assertStateRejected(st, reason, label, first.name);
+      assert.deepEqual(grantComputeAsset(st as never, { name: first.name, kind: first.kind as "mcp" }), { ok: false, reason }, `${label} grantComputeAsset`);
+    }
+  }
+  const again = grantComputeAsset(legit, { name: "a_mcp", kind: "mcp" });
+  assert.deepEqual(again.ok && again.contact.computeAssets.map((a) => `${a.name}/${a.kind}`), ["ws_script/script", "a_mcp/mcp", "a_skill/skill"]);
+  const b = briefFor(legit, { task: "t", rules: [], tools: ["ws_script", "a_mcp", "a_skill"], credentialRefs: [] });
+  assert.deepEqual(b.ok && b.brief.tools, ["ws_script", "a_mcp", "a_skill"]);
+});
+
+test("CH-39 承诺 id 必须唯一:两条出处、正文不同而 id 相同的承诺放在恢复状态首/中/尾任一对位置,revokeCommitment 不会一次撤销两条,settleTask/confirmFinalReport 等各入口都拒绝;登记产生的唯一 id 状态只撤销点名那一条(对照)", () => {
+  const legit = threeOfEach();
+  assert.deepEqual(commit(legit, { id: "k2", sourceSeq: 9, text: "另一条", boundTaskIds: [], schedule: null }), { ok: false, reason: "承诺 k2 已存在" });
+  for (const [i, j] of PAIRS) {
+    const st = raw(legit);
+    const id = st.commitments[i]?.id as string;
+    st.commitments[j] = { ...st.commitments[j], id };
+    const reason = `联系人状态.commitments[${j}] 承诺 id ${id} 已在 commitments[${i}] 使用,承诺 id 必须唯一`;
+    const label = `承诺 ${i}/${j}`;
+    assertStateRejected(st, reason, label, "get_weather");
+    assert.deepEqual(revokeCommitment(st as never, id), { ok: false, reason }, `${label} revokeCommitment ${id}`);
+  }
+  const r = revokeCommitment(legit, "k2");
+  assert.deepEqual(r.ok && r.contact.commitments.map((k) => [k.id, k.status]), [["k", "active"], ["k2", "revoked"], ["k3", "active"]]);
+});
+
+test("CH-39 直接工具名唯一:同名工具在恢复状态首/中/尾任一对位置重复时各入口拒绝;grantTool 重复授予幂等只留一项(对照)", () => {
+  const legit = threeOfEach();
+  for (const [i, j] of PAIRS) {
+    const st = raw(legit);
+    const name = st.tools[i]?.name as string;
+    st.tools[j] = { name, bounded: true };
+    assertStateRejected(st, `联系人状态.tools[${j}] 工具名 ${name} 已在 tools[${i}] 登记,同一工具只能登记一次`, `工具 ${i}/${j}`, name);
+  }
+  const again = grantTool(legit, { name: "t_a", bounded: true });
+  assert.deepEqual(again.ok && again.contact.tools.map((t) => t.name), ["get_weather", "t_a", "t_b"]);
+});
+
+test("CH-40 状态里的每一项直接工具都校验:禁项、无界、空名、与能力资产同名的坏项分别放在第 0/1/2 项都拒绝;三项都合法时照常(对照)", () => {
+  const legit = threeOfEach();
+  const bads: [Record<string, unknown>, (p: number) => string][] = [
+    [{ name: "shell", bounded: true }, (p) => `联系人状态.tools[${p}] shell 是通用能力,不能在直接工具清单里`],
+    [{ name: "loose", bounded: false }, (p) => `联系人状态.tools[${p}] 不是有界工具,不能当直接工具`],
+    [{ name: " \t", bounded: true }, (p) => `联系人状态.tools[${p}] 工具名为空`],
+    [{ name: "a_skill", bounded: true }, (p) => `联系人状态.tools[${p}] a_skill 同时登记为 Compute 能力资产`],
+  ];
+  for (const [bad, reason] of bads) {
+    for (const p of [0, 1, 2]) {
+      const st = raw(legit);
+      st.tools[p] = { ...bad };
+      assertStateRejected(st, reason(p), `tools[${p}]=${String(bad.name)}`, String(bad.name));
+    }
+  }
+  for (const name of ["get_weather", "t_a", "t_b"]) assert.equal(canCallDirectly(legit, name), true, `对照 ${name}`);
+  for (const [entry, r] of stateEntryResults(legit as never)) assert.equal(r.ok, true, `对照 ${entry}`);
+});
+
+test("CH-40 状态里的每一项能力资产都校验:非法类别、空名的坏项分别放在第 0/1/2 项都拒绝;三项都合法时照常(对照)", () => {
+  const legit = threeOfEach();
+  const bads: [Record<string, unknown>, (p: number) => string][] = [
+    [{ name: "odd", kind: "plugin" }, (p) => `联系人状态.computeAssets[${p}] 的类别 plugin 不认识`],
+    [{ name: "\n", kind: "mcp" }, (p) => `联系人状态.computeAssets[${p}] 能力资产名为空`],
+  ];
+  for (const [bad, reason] of bads) {
+    for (const p of [0, 1, 2]) {
+      const st = raw(legit);
+      st.computeAssets[p] = { ...bad };
+      assertStateRejected(st, reason(p), `computeAssets[${p}]=${String(bad.kind)}`, String(bad.name));
+    }
+  }
+  for (const [entry, r] of stateEntryResults(legit as never)) assert.equal(r.ok, true, `对照 ${entry}`);
+});
+
+test("CH-40 状态里的每一条承诺都校验:非法状态、非法出处、非法定时的坏项分别放在第 0/1/2 条都拒绝;三条都合法时照常(对照)", () => {
+  const legit = threeOfEach();
+  const bads: [(k: Record<string, unknown>) => Record<string, unknown>, (p: number) => string][] = [
+    [(k) => ({ ...k, status: "unknown" }), (p) => `联系人状态.commitments[${p}] 的状态 unknown 不认识`],
+    [(k) => ({ ...k, sourceSeq: -1 }), (p) => `联系人状态.commitments[${p}] 的出处 -1 不是合法的消息位置`],
+    [(k) => ({ ...k, schedule: { cron: "bad", tz: "Asia/Shanghai", toleranceSec: 1 } }), (p) => `联系人状态.commitments[${p}] 定时表达式 "bad" 不是 5 段 cron`],
+  ];
+  for (const [mutate, reason] of bads) {
+    for (const p of [0, 1, 2]) {
+      const st = raw(legit);
+      st.commitments[p] = mutate(st.commitments[p] as Record<string, unknown>);
+      assertStateRejected(st, reason(p), `commitments[${p}] ${reason(p)}`, "get_weather");
+    }
+  }
+  for (const [entry, r] of stateEntryResults(legit as never)) assert.equal(r.ok, true, `对照 ${entry}`);
+  const r = revokeCommitment(legit, "k3");
+  assert.deepEqual(r.ok && r.contact.commitments.map((k) => k.status), ["active", "active", "revoked"]);
+});
+
+test("CH-40 目录键必须与联系人 id 精确相等:键与 id 互为前缀或后缀(person/person-2、son/person)都拒绝,坏项在目录第 1/2/3 项一样;键与 id 精确相等照常(对照)", () => {
+  const as = (id: string) => ({ ...raw(fullContact()), id }) as never;
+  for (const [key, id] of [["person", "person-2"], ["person-2", "person"], ["son", "person"], ["person", "son"]] as const) {
+    const reason = `目录.contacts 的键 ${key} 与联系人 id ${id} 不一致`;
+    for (const p of [0, 1, 2]) {
+      const entries: [string, never][] = [["a", as("a")], ["b", as("b")]];
+      entries.splice(p, 0, [key, as(id)]);
+      const dir = { contacts: new Map(entries) };
+      assert.deepEqual(updateContact(dir, key, { memory: "m" }), { ok: false, reason }, `${key}/${id} 第 ${p} 项 updateContact`);
+      assert.deepEqual(updateContact(dir, "a", { memory: "m" }), { ok: false, reason }, `${key}/${id} 第 ${p} 项 updateContact a`);
+      assert.deepEqual(addContact(dir, { id: "n2", name: "n", speakingModel: "m" }), { ok: false, reason }, `${key}/${id} 第 ${p} 项 addContact`);
+    }
+  }
+  const good = updateContact({ contacts: new Map([["a", as("a")], ["person", as("person")], ["person-2", as("person-2")]]) }, "person", { memory: "m" });
+  assert.deepEqual(good.ok && [...good.dir.contacts.keys()], ["a", "person", "person-2"]);
+  assert.deepEqual(good.ok && [...good.dir.contacts.values()].map((c) => [c.id, c.memory]), [["a", ""], ["person", "m"], ["person-2", ""]]);
+});
+
+test("CH-40 回执 commitmentIds 按承诺 id 精确点名:回执只点名 promise 不确认 promise-long(前缀、后缀、子串都不算),先终态后确认、先确认后终态都仍等回执,撤销也不按前缀;精确点名时两种顺序都回收(对照)", () => {
+  const base = mk().contacts.get("c-mi")!;
+  const cases = [["promise-long", "promise"], ["promise", "promise-long"], ["promise-long", "long"], ["long", "promise-long"], ["promise-long", "romise-lon"]] as const;
+  for (const [real, named] of cases) {
+    const c = unwrap(commit(base, { id: real, sourceSeq: 1, text: "汇报", boundTaskIds: ["T"], schedule: null }));
+    const label = `承诺 ${real} / 回执 ${named}`;
+    const late = unwrap(confirmFinalReport(unwrap(settleTask(c, "T")), rc("T", [named], 10)));
+    assert.deepEqual(late.commitments.map((k) => [k.id, k.status, k.awaitingReport]), [[real, "active", ["T"]]], `${label} 先终态`);
+    const early = unwrap(confirmFinalReport(c, rc("T", [named], 10)));
+    assert.deepEqual(early.commitments.map((k) => k.reportedTaskIds), [[]], `${label} 先确认`);
+    assert.deepEqual(unwrap(settleTask(early, "T")).commitments.map((k) => [k.id, k.status, k.awaitingReport]), [[real, "active", ["T"]]], `${label} 先确认再终态`);
+    assert.deepEqual(revokeCommitment(c, named), { ok: false, reason: `承诺 ${named} 不存在或已结束` }, `${label} 撤销`);
+    const exactLate = unwrap(confirmFinalReport(unwrap(settleTask(c, "T")), rc("T", [real], 10)));
+    assert.deepEqual(exactLate.commitments.map((k) => k.status), ["done"], `${label} 精确点名 先终态`);
+    const exactEarly = unwrap(settleTask(unwrap(confirmFinalReport(c, rc("T", [real], 10))), "T"));
+    assert.deepEqual(exactEarly.commitments.map((k) => k.status), ["done"], `${label} 精确点名 先确认`);
+  }
+  const two = unwrap(commit(unwrap(commit(base, { id: "promise", sourceSeq: 1, text: "a", boundTaskIds: ["T"], schedule: null })), { id: "promise-long", sourceSeq: 1, text: "b", boundTaskIds: ["T"], schedule: null }));
+  const one = unwrap(confirmFinalReport(unwrap(settleTask(two, "T")), rc("T", ["promise"], 10)));
+  assert.deepEqual(one.commitments.map((k) => [k.id, k.status]), [["promise", "done"], ["promise-long", "active"]]);
+});
