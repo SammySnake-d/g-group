@@ -997,3 +997,73 @@ V08 的通用 probe 未区分该故障，因此另写 `prefix-oracle.mjs`，没�
 Claude Code 接续修 CH-39、CH-40；CH-36/CH-37、只读快照与已闭合的具体 CH-38 案例不再重复打回。下一轮按手册原则 68 交回 Codex 独立复审，仍须实际跨厂商。修复要留针对新判据的红绿差分，不以 CI MERGEABLE、407 全杀或本轮报告已推送代替验收。
 
 本轮仅提交本报告的第十四轮追加节；源码、测试和收据未改。推送保留 pre-push 检查。临时 clone/旧版/红版/门禁夹具/变异副本与 node_modules 在推送及远端核实后清理；外部证据目录只保留本节引用文件。推送、仅报告 diff、原受管 SHA 不变、远端提交及最终清理结果见 `$E/push.log`、`$E/final-verification.json`、`$E/cleanup.json`。清理量按 df 可用空间变化记录，不把 APFS/并发写入下的差值冒充本任务净回收量。
+
+## 第十五轮：CH-39/CH-40 复验与普通数据输入合同（2026-11-07）
+
+**结论：reject。** 第十四轮 CH-39/CH-40 的原实现反例、四个原存活变异均已按本轮复现的范围修复；不撤销已经判定正确的部分。仍须处理 **CH-41 嵌套的非普通输入未被拒绝、CH-42 非普通回执被报告为成功、CH-43 标识精确比较的独立变异存活**。请 Claude Code 接续 PR #4 原开发任务返修，再交跨厂商独立复审；这不是后端全部功能或用户故事的端到端验收。
+
+### 固定对象与合同
+
+- 受审 `HEAD=d711fa035838a8b51767a1d068efaefbc573bcb1`，`origin/feat/task-lifecycle=ba90d6769992d2f3df2a571f846409afcafd644d`；普通独立 clone，`.git` 和 common dir 均为该 clone。受审源码/测试未改。基线 task.ts/task.test.ts 与本 HEAD 无差异；不把 PR #3 的内容算成本轮新增。
+- 作者收据声明 Claude Opus 5.5 / Anthropic；本轮原生会话 `codex:4d37f5a5-0839-4adc-8afc-9b481602df5a` 的当前 `turn_context` 是 `gpt-6.1-terra` / OpenAI（`$E/review-provenance.json`）。模型事实与机械来源门禁结果分开记录。
+- 在独立 clone 仓库根目录实跑 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle`，stdout **`8e25e5cb767502fcb291fc938cca1d842535be65621240c248e7d4beea3b29b7`**，与作者所报一致（`$E/hash.log`）。
+- 合同按用户 #2662、`docs/spec/验收文档-v0.1.md:249`：只保证内置原型与方法未预改的环境；getter/setter/Proxy 拒绝且不调用、合法 JSON null 不抛、导出策略不可变以及撤回/幂等/版本检查仍适用。**下述反例没有预改任何内置原型；PR #6 的 #3140 豁免不用于本 PR。**
+- 本节证据目录 `$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round15-p7wk4C`。这里只保留报告引用的脚本与日志，不保留 clone、依赖或临时变异副本。
+
+### 第十四轮修复及基线复现
+
+- `npm ci`、`npm run typecheck`、`npm run lint`、`npm test` 均 exit 0；全量 **300/300 通过，0 skip/todo**（`$E/npm-ci.log`、`$E/typecheck.log`、`$E/lint.log`、`$E/test.log`）。
+- 红提交 `2a27cf3` 的 contact/helper 测试 **112/112 逐名失败**，与当前 112 个通过的测试名称集合一致，非文件级加载错误（`$E/red-contact-helper.tap`、`$E/current-contact-helper.tap`）。红版本是被测函数空壳，不能把全部 112 条都说成旧真实实现有 bug：同一红测试叠加红提交父版本真实 `contact.ts/helper.ts/plain.ts` 后 **108 通过、4 失败**，4 条均为 CH-39，新 CH-40 测试在原实现本来就绿（`$E/red-tests-with-parent-implementation.tap`）。
+- 独立重跑 Astra 的 `state-extra.mjs`、`probes.mjs assert-current`、`prefix-oracle.mjs`，均 exit 0；对 `state-extra` 的空 id、冲突资产和重复承诺状态及登记对照另作失败断言。联系人 id 非空，工具名、资产名、承诺 id 的恢复状态唯一性，以及逐项校验、目录和回执的前缀反例，本轮案例均正确（`$E/state-extra.json`、`$E/probes.json`、`$E/prefix-oracle.json`）。
+- `probes` 还复验了非法状态/JSON null 不抛、声明字段上的访问器/Proxy 被拦且调用数为 0、旧 `focus` 不输出、两个回收顺序、撤销后迟到事件及重放、只读目录和 HelperRoute 快照；Helper 三入口与 AC-01/31/33/35 仍仅为纯函数子集，真实存储重启、消息接线、宿主授权、定时/DST 和插件执行未验。不存在 `setFocus`/`decideUnderFocus` 导出，撤销的专职开关未恢复。
+- 基线 243 项变异的名称及注入内容均保留；当前清单共 **420 项、420 种不同 `(file,from,to)`**，各注入点在源码恰有一次、编号不重复；AE01–AE04 与 Astra V01/V02/V03/V08 注入逐字相同，CK102–CK110 均在清单中（`$E/mutation-inventory.json`）。在 d711fa0 的当前测试下亲自运行作者变异脚本 exit 0：原样副本 300 绿，420/420 变异被具名测试杀死，AE01–AE04 和 CK102–CK110 均包含其中（`$E/author-mutations.log`、`$E/author-mutations-summary.json`）。有限清单全杀不等于测试可区分下文独立变异。
+- GitHub Actions run `42255861593` 的 `self-check` 对应受审 HEAD，查询到 failure、**零步骤**；GitHub annotation 明确说账户付款失败或支出限额，不能当作代码测试失败，也不能说 CI 已通过（`$E/ci-gh-output.json`、`$E/ci-annotations.json`）。本轮按要求以本地复现判定。
+
+### CH-41【合同缺口】被丢弃字段内的 getter/setter/Proxy 不会被拒收
+
+位置：`packages/domain/src/plain.ts:34-43,96-113`。`plainDataError` 仅检查当前对象自有属性的**描述符**；`normalize` 随后只递归处理 schema 声明字段，不检查将被丢弃的数据属性里还有什么。
+
+独立进程中，用普通对象调用 `grantTool(c, {name:'read_issues', bounded:true, ignored: extra})`，`extra` 分别换成 Proxy、含自有 getter 的普通对象、含自有 setter 的普通对象；又将 Proxy 放进已恢复联系人 `tools[0].ignored`。四种情况实际都返回 `ok:true`，且 `read_issues` 确实被授予；getter/setter/trap 调用数均为 **0**。同一 getter 或 Proxy 放到被检查的顶层，均返回 `ok:false` 且调用数 0（`$E/input-contract-probe.mjs`、`$E/input-contract-probe.json`）。
+
+这不是“getter 被调用”或“Proxy 绕过白名单”的证据：这些额外字段确实被丢弃。本轮问题是**输入已经含这类对象却成功执行了入口**，与用户和验收文档写的“外部输入里的 getter、setter、Proxy 一律拒绝”不一致，收据第 7 栏也没有披露这项例外。请按该合同拒收这类输入并覆盖状态/输入嵌套层；若产品实际只打算验证声明字段，应先由用户明确批准收窄合同并同步文档/收据，不能自行套用 PR #6 的排除范围。
+
+### CH-42【合同冲突】非法回执未处理却以 `ok:true` 返回
+
+位置：`packages/domain/src/contact.ts:350-355`。`confirmFinalReport` 在 `normalize` 失败时返回成功和原状态。以等待末次汇报的合法承诺为对照，分别把回执本身做成 getter、setter、Proxy，或将 `commitmentIds` 做成 Proxy 数组：四例都 **调用计数 0、状态不变，但 `ok:true`**；完全相同的普通回执返回成功并使承诺 `done`（`$E/receipt-probe.mjs`、`$E/receipt-probe.json`）。
+
+已有“畸形回执静默不改状态”设计可以解释无副作用，但不能同时对外声称这些受 #2662 保护的非普通输入已被**拒绝**：调用方只看 `ContactResult.ok` 无法区分“未接收回执”和“已经处理”。目前仓库除测试外未见宿主调用方，**未实证真实回执丢失**。须在不调用访问器/Proxy 的前提下，使此类回执的拒收结果可观察，或取得用户对合同冲突的明确决定；不要误把已约定的旧依据位置/普通无效值的无副作用语义、JSON null 不抛、以及合法回执两阶段回收一起改坏。
+
+### CH-43【R-05 判别力】独立单点变异仍可骗过 300 条测试
+
+在彼此隔离的源码副本里各改一处、不改测试，分别运行 typecheck、lint、全量测试和独立 oracle；原样对照四项均 exit 0。以下三个单点变异 typecheck/lint 均 exit 0、测试均 **300/300 绿**，而 oracle 均 exit 1（`$E/case-mutations.mjs`、`$E/case-oracle.mjs`、`$E/case-mutations.json` 及各 `case-*-oracle.log`）：
+
+| 变异 | 独立输入：原样 → 变异 | 测试 |
+|---|---|---|
+| 目录键与联系人 id 比较时均转小写 | `case` 键 / `Case` id：拒绝 → 接受；精确 `Case` 仍接受 | 300 绿，存活 |
+| 回执承诺 id 比较时均转小写 | 承诺 `Report-ID`、回执 `report-id`：仍 active → 错误 done；精确 ID 仍 done | 300 绿，存活 |
+| 撤销存在性判断时均转小写 | `Report-ID` 承诺传 `report-id`：拒绝 → `ok:true`；由于后续 map 仍精确匹配，变异实际没有撤销，属于错误成功响应 | 300 绿，存活 |
+
+前后缀/子串测试已补好，但还缺大小写不同的精确匹配正反对照。另三个仅校验数组前三项的故障也各自 300 绿，独立 oracle 把非法工具、非法类别、非法承诺放在第 4 项时分别发现它们（`$E/independent-mutations.json` 与 `R15-01`–`R15-03` 日志）；这说明有限的首/中/尾样例不能证明任意长度，并非主张应无限堆固定长度测试。可用参数化多长度/坏项位置对照改进。作为杀死对照，依据位置 `>` 改 `>=`、定时承诺去除保护、工具唯一性守卫缺陷均被现有具名测试杀死（R15-04–R15-06）。上述错误行为都发生在人为变异副本，**不是原样实现已经把 ID 比较成大小写不敏感**。
+
+### 八个门禁的独立负向输入
+
+以 Astra 的真实 CLI 小仓库夹具为基础，另写并运行本轮反例，正常对照 8/8 绿、exit 0；以下各例 exit 1 且相应门禁明确为 ✗（`$E/gate-negatives15.py`、`$E/gate-negatives.json`、`$E/gate-*.log`）。夹具中的会话是合成测试数据，不作为本轮真实来源证明。
+
+| 门禁 | 失败输入 | 实测 |
+|---|---|---|
+| G-TRACE | 收据中的通过证据文件不存在 | 拦截 |
+| G-REVIEW | 审查人不同但与作者同厂商、无豁免 | 拦截 |
+| G-RED | red 已经通过具名测试 | 拦截 |
+| G-STUB | 只测加载时已计算的常量 | 拦截 |
+| G-TAUTO | 增加 `assert.equal(2,2)` | 拦截 |
+| G-WORKFLOW | 新 workflow 使用 pull_request_target | 拦截 |
+| G-LAYER | domain 包依赖 kernel 包 | 拦截 |
+| G-PROVENANCE | 夹具会话 hash 输出与收据不一致 | 拦截 |
+
+第一次运行夹具时我漏建 `gate-fixtures/tmp`，正常对照的 G-RED/G-STUB 因 ENOENT 报门禁自身错误，**那一次不算验证**；建好目录后整套重跑才得到上表（保留 `$E/gate-control-first-enoent.log`、`$E/gate-negatives-first-enoent.log`）。
+
+真实 clone 写入本轮 `review:reject` 后实跑 `--local` 为 exit 1（`$E/local-gates-review.log`）：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因 reject 正确阻止放行；G-PROVENANCE 在当前持久会话记录里还找不到本轮 `--hash` 原样输出，无法认定审查厂商。实际命令和原生模型已另留证据，但这不等于机械来源门禁通过；应在本轮会话记录落盘后按原流程重核，不伪造日志或豁免。
+
+### 返修与边界
+
+只提交本报告追加节和收据 `review` 字段，保留第一至十四轮，未修改产品代码。`unverifiable` 除 CH-41/CH-42 的合同表述缺口外，对本体/Compute 同名、可信注册、回执真实性和位置边界、cron 形状及未接线部分的局限仍应保留，不得把纯函数绿说成整项 AC 通过。启用普通独立 clone 中仓库 `.githooks/pre-push`，不绕过钩子；推送和清理结果见 `$E/push.log`、`$E/cleanup.json`。
