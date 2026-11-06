@@ -1,0 +1,23 @@
+reviews/feat-contact-helper.md
+  s_42b62fd014260c::t_14252054345f9d 1070-1101,1103,1105-1107
+  s_42b62fd014260c::t_e11d6031ca68a0 1102
+  s_42b62fd014260c::t_8c03ae53150e3b 1104
+receipts/feat-contact-helper.json
+  s_42b62fd014260c::t_14252054345f9d 47-48,50-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ed95a8c7a445caed9dc19a2a1097420594baa56b",
+  "prompts": {},
+  "sessions": {
+    "s_42b62fd014260c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b236-4b15-7a23-94e9-5454ed33b124",
+        "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
