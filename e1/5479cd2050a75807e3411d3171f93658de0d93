@@ -1,0 +1,19 @@
+receipts/feat-cc-compute.json
+  s_1427ea5767ea7a::t_c8e832367b4bc3 2-7,9-12,14-32,34-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e15479cd2050a75807e3411d3171f93658de0d93",
+  "prompts": {},
+  "sessions": {
+    "s_1427ea5767ea7a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bbfc88e6-0c0a-4109-babc-43ffa6298dcf",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
