@@ -1521,6 +1521,9 @@ test("CH-40 状态里的每一项能力资产都校验:非法类别、空名的�
     }
   }
   for (const [entry, r] of stateEntryResults(legit as never)) assert.equal(r.ok, true, `对照 ${entry}`);
+  const all = briefFor(legit, { task: "t", rules: [], tools: ["ws_script", "a_mcp", "a_skill"], credentialRefs: [] });
+  assert.deepEqual(all.ok && all.brief.tools, ["ws_script", "a_mcp", "a_skill"]);
+  assert.equal(canCallDirectly(legit, "a_mcp"), false);
 });
 
 test("CH-40 状态里的每一条承诺都校验:非法状态、非法出处、非法定时的坏项分别放在第 0/1/2 条都拒绝;三条都合法时照常(对照)", () => {
