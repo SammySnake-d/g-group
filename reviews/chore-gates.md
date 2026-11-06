@@ -761,3 +761,8 @@ INCOMPLETE_PROBE_EXIT=0
 ### 证据与交付
 
 原始日志、最小夹具说明和 SHA-256 清单：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr1-round6-evidence-51f52dd3/`（`MANIFEST.json`；文件内容约 351 KB）。主要文件：`selftest.log`、`mutation.log`、`ci.log`、`red-r5.log`、`red-policy.log`、`reviewer-matrix.log`、`G-*.json`、`gate-probes.log`、`contract-probes.mjs` / `.log`、`boundary-extra.log`、`incomplete*.log`、`sticky.log`、`unicode*.log`、`home-*.log` 和 `fixture-repro.md`。探针只用临时 Git 仓库、中性字符串/文件与模拟会话；未伪造或读取真实凭据。审查只追加报告并修改收据 `review`，不改门禁代码、不写 provenance 状态、不合并；按原则 67，推送并复核后只清理本轮自建的临时 clone、node_modules 和测试副本，保留上述引用证据及其他会话目录。
+
+
+### 写入拒绝后的本机复核
+
+以同一内容 hash 运行 `--local --branch=chore/gates --base=origin/main --pr=1` 退出 1：G-REVIEW 明确因 `reject` 拦截；G-PROVENANCE 尚未在会话记录中找到本轮 hash 调用，因而无法证明来源、审查轮次厂商也认不出。本人已在审查会话中实跑并取得上述 hash，但不能把该个人观察冒充 G-PROVENANCE 已通过；未补写或伪造会话记录，也未写远端 provenance 状态。原始输出见证据目录 `final-local.log`。
