@@ -1,0 +1,26 @@
+packages/domain/proof/mutations.mjs
+  h_f33e46a035b77c 19-21,25,103,206,269,273,276-277,500-507
+packages/domain/proof/red-against-d8ad906.tap
+  h_f33e46a035b77c 1-1155
+packages/domain/proof/task-lifecycle-tests.txt
+  h_f33e46a035b77c 1-189,191,196
+packages/domain/src/task.test.ts
+  h_f33e46a035b77c 1991-2010
+packages/domain/src/task.ts
+  h_f33e46a035b77c 312,315-319
+receipts/feat-task-lifecycle.json
+  h_f33e46a035b77c 17,56,58,64-66
+reviews/feat-task-lifecycle.md
+  h_f33e46a035b77c 1316-1383
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "afbdf7ad0ccb973d80435b4f382645f8deae0fa9",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
