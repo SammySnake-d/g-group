@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { applyLedger, emptyLedger, reconcileRound, type Actor, type Command, type Ledger, type Result } from "./commitment-ledger.ts";
+import { applyLedger, emptyLedger as createLedger, reconcileRound, type Actor, type Command, type Ledger, type Result } from "./commitment-ledger.ts";
 
 const user = { kind: "user", id: "u" } as const;
 const contact = { kind: "contact", id: "c" } as const;
@@ -20,6 +20,11 @@ const close = (outcome: "done" | "revoked" | "superseded" | "blocked", artifact:
 function unwrap(result: Result): Ledger {
   if (!result.ok) throw new Error(result.reason);
   return result.ledger;
+}
+function emptyLedger(owner: string): Ledger {
+  const result = createLedger(owner);
+  if ("ok" in result) throw new Error("invalid owner");
+  return result;
 }
 function received(): Ledger {
   return unwrap(applyLedger(emptyLedger("c"), 0, receive()));
@@ -59,6 +64,10 @@ test("同一消息 id 重投不重复,但内容冲突不得覆盖", () => {
   const changed = applyLedger(first, first.version, { type: "receive", actionId: "other", message: { ...message("m1", 1), text: "另一正文" } });
   assert.equal(retry.ok && retry.duplicate, true);
   assert.deepEqual(changed, { ok: false, reason: "message-id-conflict" });
+  if (retry.ok) {
+    const reuse = applyLedger(retry.ledger, retry.ledger.version, { type: "receive", actionId: "retry", message: message("m3", 3) });
+    assert.deepEqual(reuse, { ok: false, reason: "action-id-conflict" });
+  }
 });
 
 test("新动作使用旧版本被拒绝且不改原状态", () => {
@@ -189,4 +198,6 @@ test("拒绝 getter、setter 和 Proxy,不触发其代码", () => {
 test("合法 JSON 的 null 输入被拒绝但不抛异常", () => {
   const result = applyLedger(emptyLedger("c"), 0, null as unknown as Command);
   assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.deepEqual(createLedger(null), { ok: false, reason: "invalid-input" });
+  assert.deepEqual(createLedger(""), { ok: false, reason: "invalid-input" });
 });
