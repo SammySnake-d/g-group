@@ -800,3 +800,74 @@ Y04（直接跳过嵌套 schedule 快照）虽然 236 测试绿，但被 lint �
 **回交条件：** 修复 CH-29–CH-31 的实际输入错误，解决 CH-32 的状态信任边界与 CH-33 的旧状态字段问题，校正 CH-34 的变异分类并补 CH-35 校准，纠正验收文档/收据不一致，整合最新基线后重算 hash 并重提跨厂商独立复审。本次不改产品代码。
 
 **本轮本地门禁：** 在被审 HEAD、上述最新本地基线和本轮收据下实跑 `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle`，exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦截；G-PROVENANCE 报本轮 `turns.jsonl` 尚不存在，故本轮实际来源核对**未通过**，不得用上面的合成夹具结果代替。hash 命令已在本会话实际运行且有原样输出，待会话记录落盘后由既有流程重核（`$E/local-gates.log`）。
+
+---
+
+## 第十三轮：按 #2662 新合同复审第十二轮返修（2026-11-06）
+
+**结论：reject，交回 Claude Code 原开发任务。** 本轮严格采用用户 `g-group#2662` 的选择：只保证内置原型及内置方法未被改写的环境；已保留的原型污染防护与测试可以运行，但**不再把预先改写内置原型构造的反例作为拒审理由**。第十二轮不依赖原型污染的状态 getter/Proxy、旧 focus、数组迭代器和非枚举/Symbol 访问器具体反例均已关闭。仍有普通运行环境中的输入、null 和状态业务不变量问题，见下；均为本地纯函数证据，不声称真实宿主已接入、遭攻击或生产数据已损坏。
+
+### 固定对象与独立复现
+
+- 受审 PR #4 `feat/contact-helper` HEAD `fcb22eaef38a2cdd35352c0669c334395beb7359`，基线 `origin/feat/task-lifecycle=c100498e35a8886648d28823d0dc148626e05b5e`；红 `2bb46a4e93a9a42a69db3adb0554f3343d3eceda`、绿 `d1e50f91170e2bde8f87833d2746c79c84d2e688`，合并 `fa47dea` 的父提交为该绿与基线，之后有 `2e31854` 和受审 `fcb22ea`。
+- 普通独立 clone `$E/repo` 的 `.git` 和 common dir 均为其自身 `.git`，未改产品源码或测试；`$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-round13-qQrLiR`。独立变异及探针在仓库外 `$E/mutants-round13/`、`$E/mutant-cy06/` 和 `$E/`。
+- 作者 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38` / `claude-opus-5-5`（Anthropic）；本轮审查 `codex:4d37f5a5-0839-4adc-8afc-9b481602df5a`，原生 `turn_context.model=gpt-6.1-terra`（OpenAI），无豁免。模型记录不能代替 G-PROVENANCE 的实际判决。
+- 仓库根目录实际运行 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 的原样输出为 `b0fac1d94b146ef29db80af0e835808a7336fef8cd33d7f9dbd9d6b13c1a01ab`，与作者声明一致。
+- `npm ci`、typecheck、lint、test 均 exit 0；Node v25.8.1 下 **276/276** 绿、无 skip/todo；Node v22.22.0 下 typecheck/lint/test 同样 exit 0、**276/276** 绿（`$E/npm-ci-round13.log`、`$E/{typecheck,lint,test}-round13.log`、`$E/node22-{typecheck,lint,test}-round13.log`）。GitHub 在本次查询时报告相同 HEAD/base 为 `MERGEABLE`，self-check success（`$E/pr-view-round13.json`）；CI 绿不是审查通过。
+- 独立检出红提交并安装依赖，contact/helper 的 **92 项按名字失败**；它是空壳红，不能把每一项都说成旧实现故障（`$E/red-tests.tap`）。隔离红副本只恢复其父提交真实 contact/helper 源码、保留红测试，结果 **83 绿、9 红**，包含 CH-29–CH-33 的具名失败（`$E/red-parent-overlay.tap`）；其中原型污染类测试继续保留，但不用于违背 #2662 的拒审判据。
+- 自己运行 `nice -n 10 node packages/domain/proof/mutations.mjs`，exit 0，原样 **276 绿**、**370/370 具体变异被具名测试杀死**（`$E/author-mutations-round13.log`）。独立按文件及注入前后内容核对：联系人/Helper 136、任务/core 234；ID 无重复、370 个注入点各恰有一次、没有完全相同的 `(文件,原文,替换文)` 注入；合并左侧全部 138 个联系人/Helper 条目与右侧全部 234 个条目均有对应。`CZ05/CK30` 和 `CW05/CK31` 各自原来确为完全相同注入、现仅留后者；并非丢失两侧独有故障（`$E/mutation-audit-round13.json`）。恢复的 CK40、CK41、CK42、CY02 均被现有具名测试杀死；后两项的杀死场景涉及已排除的原型污染，只作为保留防护证据，不作为新的拒审理由。
+
+### 已闭合及保留行为
+
+在未改写内置原型的本轮环境中，独立复现状态自身 getter、setter、Proxy、嵌套 Symbol 访问器，以及目录外层/Map/联系人 Proxy：均被拒，getter、setter 和 Proxy trap 计数均为 0；普通状态对照通过（`$E/state-proxy-focus-round13.json`、`$E/state-setter-symbol-round13.json`、`$E/directory-state-proxy-round13.json`）。旧带 `focus` 的普通数据状态经 commit、settleTask、confirmFinalReport、revokeCommitment、updateContact、grantTool 六条路径后均不再输出 `focus`，对应终态后待汇报仍 active、确认后 done、撤销后 revoked。
+
+不改内置原型，自带 `Symbol.iterator` **数据属性**的工具/凭据数组仍按下标复制，假迭代器不执行；非枚举和 Symbol 访问器被拒且不调用；正常 mention 有当前会话和 seq，缺字段被拒（`$E/prior-nonprototype-round13.json`）。复用并按 #2273 去掉专职分支后的独立状态模型：**1,000 场景、30,000 次逐步检查、4,856 次重放**通过，涵盖三承诺三任务、先确认/先终态、空/混合作用域、旧依据、撤销和幂等（`$E/state-random-round13.log`）。用户撤销专职开关，不恢复原锁语义。
+
+### 必须修复
+
+**CH-36 [High，外部输入拒绝合同] 某些公开入口的非状态参数未先检查类型，错误分支会调用外部访问器或 Proxy。** `packages/domain/src/contact.ts:265-273,399-404` 的 `updateContact`/`revokeCommitment` 在未验证 `id` 是字符串时，把它插进拒绝理由。以普通有效目录/联系人状态配合 ID Proxy 实测，两者在构造错误消息时各触发一次 Proxy `get` 并抛 `Error`；一个普通对象的自有 `Symbol.toPrimitive` getter 也被调用一次。`settleTask` 接到 Proxy taskId 则不调用 trap，却静默返回正常状态而非拒绝；`canCallDirectly` 的同类输入对照返回 false、trap 为 0（`$E/primitive-proxy-round13.json`）。这些输入不符合 TypeScript 的 string 类型，但用户明确要求外部输入包括 Proxy/getter 也要拒绝且不调用；这里无需修改任何内置原型。
+
+另一个公开入口 `contact.normalize` 导出并接受 `schema` 对象，但未检查 schema：普通 schema 项的 `kind` getter 被调用并成功返回，schema Proxy 的 `ownKeys` trap 被触发并抛错（`$E/schema-accessors-round13.json`）。该参数可能是内部策略，但当前它作为公开函数参数没有可信输入限制；若要把它变成内部专用，需一并调整导出/调用合同并验证边界。建议在所有公开入口的标量 ID/配置参数上先做无强制转换的类型/Proxy 判定，拒绝前不要插值、遍历或调用访问器，补 getter/Proxy 与正常字符串正反对照。这里未证明真实宿主会传入这些异常参数。
+
+**CH-37 [High，JSON null / 状态错误边界] `settleTask` 与 `confirmFinalReport` 对 JSON null 状态直接抛 TypeError，不符合用户“不抛错”的明确要求。** `packages/domain/src/contact.ts:193-197,354,379-380` 的 `mustContact` 将所有非法状态都抛异常。以 `JSON.parse("null")` 的结果作为状态实测，两函数均抛 `TypeError: 联系人状态 必须是对象`；同一 null 作为 `briefFor` 输入、Helper 入口/调用者或 `confirmFinalReport` 的回执时则返回拒绝或不改状态，不抛（`$E/null-and-state-round13.json`）。null 在这里不是合法联系人状态，但它是用户明确提及的合法 JSON 值；不能因为状态无效就把“不抛”当作已满足。
+
+对非 JSON 的 Proxy/访问器状态，抛 TypeError 确实是可观察的拒绝，且本轮测试未触发 trap/getter；若有明确内部异常合同并由宿主可靠捕获，可以是内部编程错误处理方式。但目前仓库中除测试外没有这两函数的实际调用方，未证明外部边界已捕获；尤其 JSON null 的直调已与 #2662 的不抛要求冲突。建议增加显式失败返回，或在已验证的公共入口将错误转换为不抛的拒绝；不要把无调用方证据的 TypeError 当作整条链路已验收。
+
+**CH-38 [High，状态参数业务不变量] 只检查状态字段的基本类型，允许不可能通过登记入口的状态变成授权依据。** `packages/domain/src/contact.ts:182-193,326-331,414-429` 对已有工具的 `bounded` 仅检查 boolean、对资产 kind 仅检查 string。独立以普通 `JSON.parse` 联系人状态输入 `{tools:[{name:"run_command",bounded:false}],computeAssets:[{name:"strange",kind:"invalid-kind"}]}`：`canCallDirectly(state,"run_command")` 返回 **true**，`briefFor` 成功授出 `run_command` 和非法 kind 资产，另一次合法 `grantTool` 也把旧非法项保留在新输出（`$E/state-invariants-round13.json`）。对照的正常登记入口会拒绝无界/禁用工具与未知资产类别。
+
+同一探针中，目录状态 `Map` 的键为 `alias`、联系人自身 id 为 `x` 时，`updateContact(...,"alias",...)` 成功并产生键 `alias` 和 `x` 两条指向 id `x` 的记录。状态参数如今明确是外部输入；请在入口校验已有工具/资产的枚举、true 有界及禁项等不变量，校验目录键与联系人 id 一致，或在需求方批准的可信状态边界内完成可验证的来源约束。没有证据表明真实宿主会加载伪造状态，也不声称实际工具已执行或真实目录已损坏。
+
+### 导出/返回对象与独立变异
+
+联系人模块实际导出的 `FORBIDDEN_DIRECT_TOOLS` 冻结：直接 push 抛 TypeError、内容不变（`$E/readonly-outputs-round13.json`）。**额外的返回值边界**：`Directory.contacts` 声明为 `ReadonlyMap`，但返回的 Map 可直接 `delete("x")`，之后 `updateContact` 报联系人不存在；Helper 的 `HelperRoute` 字段声明 readonly，运行时返回对象也可改写。二者是**函数返回值而非静态导出策略对象**，不能把它们混同为前述策略数组已被改；若“导出的对象不能改写”包括这些公开快照，需提供运行时不可变容器/值并与 `readDirectory` 的 Map 合同一起验证；若只指静态策略，也至少应在收据披露这项可变状态边界。尚未证明真实持久化目录被修改。
+
+自造六个单点变异于隔离副本，逐个运行 typecheck、lint、与 npm test 相同的六个测试文件（`--test-concurrency=1`，共 276 项）和独立 oracle。原样四项 exit 0；AD01–AD04 的前三项均 exit 0、oracle exit 1：分别漏拒 `computeAssets[0]` Proxy、`commitments[0]` Proxy、`computeAssets` 数组 Proxy，及取消导出禁项数组冻结。对应变异分别接受 Proxy 并触发 6/18/6 次 trap，或允许 push；原样均拒绝且 trap 0/策略冻结。AD05（联系人状态 Proxy 全放行）与 AD06（说明规则不冻结）被现有具名测试杀死，作为对照（`$E/independent-mutations-round13.json`、`$E/mutation-observations-round13.json`）。这些后果只在**人为变异副本**出现，不是说原样代码会放行这些状态 Proxy 或当前禁项策略可变。建议对状态对象数组及元素做表驱动正反对照，并测试导出策略的运行时不可改写。
+
+对仍按等价移除的 CY06 另做单点复核：只把 `const receipt = n.value` 改成 `input`，typecheck/lint 和 **276 项现有测试均绿**；原样与变异的独立差分输入使用一个非 Proxy、普通数组原型、带自有 `includes` **数据属性函数**的 `commitmentIds=["a"]`。原样按索引快照后确认 a，变异调用该自有方法并确认 b（`$E/cy06-differential-round13.json`、`$E/cy06-{typecheck,lint,test}-round13.log`）。这不是内置原型被改写，也不是实际源码当前会确认 b；但该数组含函数、不是 JSON 解析结果。当前代码接受它，且本轮仍支持自有 `Symbol.iterator` 数据属性；因此 CY06 的“只读必填字符串/数字所以等价”不能无条件覆盖所有**实际接受**的数组。应补该对照，或明确并机械拒绝非 JSON 数据方法后再限定等价判断，不据此声称真实宿主已传入此类数组。
+
+### 八个门禁的独立负向输入
+
+自编独立 git 夹具通过真实 `run-all.ts --local` 执行：正常夹具 **8/8 通过、exit 0**；每个负向夹具均 exit 1、目标门禁确实显示 `✗`（`$E/gate-negatives-round13.mjs`、`$E/gate-negatives-round13.json`、`$E/gate-*-round13.log`）：
+
+| 门禁 | 应失败的输入 | 实际 |
+|---|---|---|
+| G-TRACE | 有受管变更但无收据 | 拦截；同时因无 red 收据触发 G-RED |
+| G-REVIEW | 收据 verdict 为 reject | 拦截 |
+| G-RED | 红提交的测试已通过 | 拦截 |
+| G-STUB | 测试只断言导入时已经算出的常量 | 拦截 |
+| G-TAUTO | 测试加入 `assert.equal(1,1)` | 拦截 |
+| G-WORKFLOW | PR workflow 使用 `pull_request_target` 和写权限 | 拦截 |
+| G-LAYER | domain 层导入 kernel 层 | 拦截 |
+| G-PROVENANCE | 合成审查会话没有匹配 hash 的工具调用 | 拦截 |
+
+夹具中的审查/作者记录仅是测试输入，不冒充本轮真实来源；有限负向样例不证明门禁不存在其他绕过。
+
+### 基线、文档及交回
+
+用户 #2273 的撤销和 #2662 的新边界均以用户原话为准。`docs/dev-handbook` 的 `7c3a42e` 已在验收文档第 155 行写明专职开关删除，在第 249 行写明 #2662；本次指定 PR HEAD 尚未包含该文档提交，PR 工作树同一路径第 155 行仍是旧文。因而收据中“本 PR 工作树仍旧”可观察，但不应再笼统说**文档分支尚未同步**；整合文档后须更新收据。收据第 7 栏另残留“work 归属由上游判定、本片保证给定归属后的决定正确”的旧专职语义；本片的 `decideUnderFocus` 已删除，不能把该判定说成已实现。
+
+**上游 PR #3 基线观察，不归因于本 PR 新增：** `packages/domain/src/task.ts` 在基线 `c100498` 与本 HEAD 的 blob 都是 `4e0e0c3eccdbf1963abb1a4f75a6ba540aad1820`，但其由包入口导出的 `TABLE`、行对象以及 `STATES`/`EVENT_KINDS` 均未冻结。独立进程内修改 `TABLE.T1_Open.Dispatch` 后，同一未认领任务的 Dispatch 从拒绝变成 `ok:true`、`T3_Running`（`$E/baseline-table-mutation-round13.json`）；没有改写任何内置原型。该静态策略对象不满足用户要求的不可改写，应交 PR #3 原负责人核查，不能假称是 PR #4 引入或由本审查改代码。
+
+**回交条件：** Claude Code 在 PR #4 原开发任务修复 CH-36–CH-38、处理公开快照的运行时可变边界并补上述具体测试/校准；以用户 #2662 为准保留已有防护但不继续以预改内置原型反例拒审。上游导出状态表问题交 PR #3 原任务，不在此改其代码；整合依赖及文档后重算 hash 并交跨厂商复审。整项后端、验收清单和用户故事仍未完成端到端验收。
+
+**本轮本地门禁：** `node scripts/gates/run-all.ts --local --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 在 `fcb22ea` / `c100498` 下 exit 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 reject 正确拦截；G-PROVENANCE 报未找到等于本轮 `reviewed_hash` 的审查工具输出、无法识别该审查轮厂商。本轮会话尚未完整落盘；不冒称来源门禁通过、不伪造记录或豁免，待既有流程在会话落盘后重核（`$E/gates-local-round13.log`）。
