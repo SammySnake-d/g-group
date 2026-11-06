@@ -32,5 +32,5 @@
   ],
   "unverifiable": "AC-40/AC-16:状态转移返回的只是拟提交快照;真实宿主必须先原子持久化接收记录,再在同一持久化事务内提交处理、动作去重和版本检查,并验证调用方身份与产物真实存在。纯函数不能保证崩溃恢复、并发写入的单一提交点、模型完整提取承诺或用户真正看到了结果。原文子串校验只能证明字面来源,不能证明提取完整或语义正确。PR #4 contact.ts 的 commitments 仍是另一套数据形状:id/sourceSeq/text 可对应,但 boundTaskIds/awaitingReport/reportedTaskIds/schedule 与这里单个 taskId 和 blocked/superseded 状态不一一对应;合并接线时必须明确单一账本权威、迁移和末次汇报语义,不能作为两份并列真源。R-05 只覆盖声明的 19 个变异,不是穷尽。",
   "waiver": null,
-  "review": null
+  "review": {"agent": "claude", "session": "claude:68161be7-5085-463b-90f9-7700266c3f56", "model": "claude-opus-5-5", "verdict": "reject", "reviewed_hash": "b5ec02032d53e8fee02ad8b4c1e6ee845acf3ee0b60342f444a0ed922a715ae2", "notes": "第 1 轮 REJECT：D23-R1-01 Compute 进展未校验对应条目（#1711，待定 a/b）；R1-02..R1-09 判别力不足，审查方 20 个单点故障全存活、5 种拒绝原因零引用，R-05 记通过不成立。见 reviews/feat-commitment-ledger.md。"}
 }
