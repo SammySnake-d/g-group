@@ -1,4 +1,4 @@
-// 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时;第五轮按 R4-01..R4-07 扩充,含 R4-M1=K92、R4-M2=K91;第六轮按 R5-01..R5-05 扩充,含 R5-M1=K111、R5-M2=K126;第七轮按 R6-01..R6-05 扩充,含 R6-M1=K142、R6-M2=K143),在隔离副本里跑本包测试,
+// 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时;第五轮按 R4-01..R4-07 扩充,含 R4-M1=K92、R4-M2=K91;第六轮按 R5-01..R5-05 扩充,含 R5-M1=K111、R5-M2=K126;第七轮按 R6-01..R6-05 扩充,含 R6-M1=K142、R6-M2=K143;第八轮按 R7-01/02/04/05/06 扩充,含 R7-M1=K156、R7-M2=K157、R7-M3=K158),在隔离副本里跑本包测试,
 // 每个变异都必须让至少一条具名测试失败(文件级加载失败不算杀死)。注入点必须在源码里恰好出现 1 次。
 // 原样副本必须全绿(阴性对照)。
 // 每个变异在独立进程组里跑,超时(默认 300s,KERNEL_MUT_TIMEOUT_MS 可改)就杀掉整个进程组,记 ✗ 超时,不算被杀死。
@@ -12,8 +12,11 @@ import path from "node:path";
 // 删掉的等价变异(在 55e7121 的实现下改不了行为,不再列入):
 //   K21 mounts 不拷贝:注册入口先把整个输入克隆成冻结纯数据,mounts 读自这份副本,拷不拷贝都不与调用方共享;
 //   K141 对象结果直接赋值:对象结果本身是 Object.create(null),没有原型,直接赋值碰不到原型链上的同名 setter,与 defineProperty 等价;
-//   K38 诊断序列化失败直接抛出(在 257d56e 的实现下等价):safeDescribe 不再调用 JSON.stringify,只读非 Proxy 对象的自有描述符,
-//       原始值逐类处理,深度有上限,可达路径上没有会抛错的操作,兜底 catch 走不到;
+//   K38 诊断序列化失败直接抛出(在 257d56e 起的实现下、内置未被改写时等价):safeDescribe 不再把外部对象交给 JSON.stringify
+//       (不执行 toJSON),只读非 Proxy 对象的自有描述符;JSON.stringify 仍用于给字符串、符号描述等基本类型加引号,
+//       这些调用在内置未被改写时不会抛错,所以兜底 catch 在所测样例中走不到。若内置 JSON.stringify 被改写成抛错,
+//       原版返回 <无法描述> 而变异版抛错,但这属于合同之外(只保证内置原型未被改写的运行环境,用户 g-group#2662);
+//       这是对有限样例和该合同的判断,不是兜底分支在所有环境中严格不可达的证明;
 //   K108 单调读数倒退仍放行:读数一倒退该动作就已标为时钟不可信并在窗口判断前返回,窗口判断里不会再见到负的 elapsed。
 const PKG = path.resolve(import.meta.dirname, "..");
 const ROOT = path.resolve(PKG, "../..");
@@ -117,7 +120,7 @@ const M = [
   ["K90 \u64a4\u56de\u539f\u6587\u6309 4 \u5b57\u9608\u503c\u653e\u884c(R4-01 \u539f\u9519)", "assemble.ts", "if (needle !== \"\" && hay.includes(needle)) return seq;", "if (needle.length >= 4 && hay.includes(needle)) return seq;"],
   ["K91 \u9608\u503c\u6539\u6210\u5927\u4e8e 4(\u5ba1\u67e5 R4-M2)", "assemble.ts", "if (needle !== \"\" && hay.includes(needle)) return seq;", "if (needle.length > 4 && hay.includes(needle)) return seq;"],
   ["K92 \u4e0d\u6536\u96c6\u64a4\u56de\u6d88\u606f\u7684\u7f16\u8f91\u6587\u672c(\u5ba1\u67e5 R4-M1)", "assemble.ts", "    if (b.kind === \"edit\" && retracted.has(b.target)) out.set(b.target, [...(out.get(b.target) ?? []), b.text]);\n", ""],
-  ["K93 不做空白规范化", "assemble.ts", "export const squash = (t: string): string => t.replace(INVISIBLE, \"\");", "export const squash = (t: string): string => t;"],
+  ["K93 不做空白规范化", "assemble.ts", "  return t.replace(INVISIBLE, \"\");", "  return t;"],
   ["K94 最终请求边界不扫描", "assemble.ts", "const leaked = leakIn(bodies[i] ?? \"\", secret);", "const leaked = undefined as number | undefined;"],
   ["K95 不扫 stable 段", "assemble.ts", "${part.text}\\n`), part.text);", "${part.text}\\n`), \"\");"],
   ["K96 扫描包含宿主标签", "assemble.ts", "const leaked = leakIn(bodies[i] ?? \"\", secret);", "const leaked = leakIn(sg.text, secret);"],
@@ -134,8 +137,8 @@ const M = [
   ["K109 账本键用分隔符拼接(R4-05 原错)", "plugins.ts", "  const entryOf = (pluginId: string, actionId: string) => ledger.get(pluginId)?.get(actionId);\n  const putEntry = (pluginId: string, actionId: string, e: LedgerEntry) => {\n    let m = ledger.get(pluginId);\n    if (!m) { m = new Map(); ledger.set(pluginId, m); }\n    m.set(actionId, e);\n  };", "  const flat = new Map<string, LedgerEntry>();\n  const entryOf = (pluginId: string, actionId: string) => flat.get(`${pluginId}\\u0000${actionId}`);\n  const putEntry = (pluginId: string, actionId: string, e: LedgerEntry) => { flat.set(`${pluginId}\\u0000${actionId}`, e); };"],
   ["K110 stable \u628a\u666e\u901a\u8bcd\u5f53\u52a8\u6001(R4-06 \u539f\u9519)", "assemble.ts", "  [\"\u6700\u8fd1 N \u6761\", /\u6700\u8fd1\\s*\\d+\\s*\u6761/],", "  [\"\u6700\u8fd1 N \u6761\", /\u6700\u8fd1\\s*\\d+\\s*\u6761/],\n  [\"\u65b0\u6d88\u606f\", /\u65b0\u6d88\u606f|\u521a\u624d\u8bf4|\u521a\u8bf4|\u6700\u65b0\u4e00\u6761/],"],
   // —— 第六轮:R5-01..R5-05
-  ["K111 只删普通空格和换行(审查 R5-M1)", "assemble.ts", "export const INVISIBLE = /[\\s\\u0085\\u200B-\\u200D\\u2060\\uFEFF]+/gu;", "export const INVISIBLE = /[ \\n]+/gu;"],
-  ["K127 不去零宽字符", "assemble.ts", "export const INVISIBLE = /[\\s\\u0085\\u200B-\\u200D\\u2060\\uFEFF]+/gu;", "export const INVISIBLE = /[\\s\\u0085]+/gu;"],
+  ["K111 只删普通空格和换行(审查 R5-M1)", "assemble.ts", "const INVISIBLE = /[\\s\\u0085\\u200B-\\u200D\\u2060\\uFEFF]+/gu;", "const INVISIBLE = /[ \\n]+/gu;"],
+  ["K127 不去零宽字符", "assemble.ts", "const INVISIBLE = /[\\s\\u0085\\u200B-\\u200D\\u2060\\uFEFF]+/gu;", "const INVISIBLE = /[\\s\\u0085]+/gu;"],
   ["K126 只收集第一条撤回消息(审查 R5-M2)", "assemble.ts", "if (b.kind === \"message\" && retracted.has(e.seq)) out.set", "if (b.kind === \"message\" && retracted.has(e.seq) && out.size === 0) out.set"],
   ["K112 只和首次读数比(R5-01 原错)", "plugins.ts", "reading < prior.maxMonotonic) prior.clockTrusted = false;", "reading < b.firstAttemptMonotonic) prior.clockTrusted = false;"],
   ["K113 读数回升恢复重试资格(R5-01 原错)", "plugins.ts", "if (!prior.clockTrusted) return", "if (!prior.clockTrusted && reading < prior.maxMonotonic) return"],
@@ -164,8 +167,8 @@ const M = [
   ["K140 数组结果用 push(原型 setter / 只读下标)", "plain.ts", "  Object.defineProperty(out, out.length, dataDesc(v));", "  out.push(v);"],
   // —— 第七轮:按 PR #6 第六轮审查 R6-01..R6-05 扩充,含审查自造 R6-M1=K142、R6-M2=K143
   ["K142 有限小数被拒(审查 R6-M1)", "plain.ts", "return Number.isFinite(x) ? { ok: true, value: x }", "return Number.isInteger(x) ? { ok: true, value: x }"],
-  ["K143 空白改成白名单漏掉 U+000B(审查 R6-M2)", "assemble.ts", "export const INVISIBLE = /[\\s\\u0085\\u200B-\\u200D\\u2060\\uFEFF]+/gu;", "export const INVISIBLE = /[ \\t\\n\\r\\u00A0\\u3000\\u200B-\\u200D\\u2060\\uFEFF]+/gu;"],
-  ["K144 空白只用 \\s,漏掉 U+0085", "assemble.ts", "export const INVISIBLE = /[\\s\\u0085\\u200B-\\u200D\\u2060\\uFEFF]+/gu;", "export const INVISIBLE = /[\\s\\u200B-\\u200D\\u2060\\uFEFF]+/gu;"],
+  ["K143 空白改成白名单漏掉 U+000B(审查 R6-M2)", "assemble.ts", "const INVISIBLE = /[\\s\\u0085\\u200B-\\u200D\\u2060\\uFEFF]+/gu;", "const INVISIBLE = /[ \\t\\n\\r\\u00A0\\u3000\\u200B-\\u200D\\u2060\\uFEFF]+/gu;"],
+  ["K144 空白只用 \\s,漏掉 U+0085", "assemble.ts", "const INVISIBLE = /[\\s\\u0085\\u200B-\\u200D\\u2060\\uFEFF]+/gu;", "const INVISIBLE = /[\\s\\u200B-\\u200D\\u2060\\uFEFF]+/gu;"],
   ["K145 defineProperty 描述符继承 Object.prototype(R6-01 原错)", "plain.ts", "  const d: PropertyDescriptor = Object.create(null);\n  d.value = value;", "  const d: PropertyDescriptor = {};\n  d.value = value;"],
   ["K146 访问器判断读继承属性(R6-01 原错)", "plain.ts", "const isAccessor = (d: PropertyDescriptor): boolean => Object.hasOwn(d, \"get\") || Object.hasOwn(d, \"set\");", "const isAccessor = (d: PropertyDescriptor): boolean => \"get\" in d || \"set\" in d;"],
   ["K147 拉取结果用 push(R6-02 原错)", "plugins.ts", "else appendOwn(events, s);", "else events.push(s);"],
@@ -177,6 +180,24 @@ const M = [
   ["K153 诊断不标访问器", "plain.ts", "isAccessor(d) ? JSON.stringify(\"[getter/setter]\") : render(d.value, seen, depth + 1)", "render(d.value, seen, depth + 1)"],
   ["K154 发送结果读 then 判 thenable(R6-04 原错)", "plugins.ts", "  if (!types.isPromise(x) || types.isProxy(x)) return false;", "  if (typeof x === \"object\" && x !== null && typeof (x as { then?: unknown }).then === \"function\") return true;\n  if (!types.isPromise(x) || types.isProxy(x)) return false;"],
   ["K155 放行带自有 then 的 Promise", "plugins.ts", "  return !Object.hasOwn(x, \"then\") && !Object.hasOwn(x, \"constructor\");", "  return true;"],
+  // —— 第八轮:按 PR #6 第七轮审查 R7-01/02/04/05/06 扩充,含审查自造 R7-M1=K156、R7-M2=K157、R7-M3=K158
+  ["K156 topFunctions:false 也放行顶层函数(审查 R7-M1)", "plain.ts", "  return value;\n}", "  return true;\n}"],
+  ["K157 预算恰好等于所需字节也判超(审查 R7-M2)", "assemble.ts", "if (need > opts.budgetBytes) return", "if (need >= opts.budgetBytes) return"],
+  ["K158 同一可见旧消息重复引用重复页入(审查 R7-M3)", "assemble.ts", "if (inHistory.has(seq) || paged.some((p) => p.seq === seq)) continue;", "if (inHistory.has(seq)) continue;"],
+  ["K159 pull 不判形态就 await(R7-01 原错)", "plugins.ts", "try { batch = isPlainPromise(returned) ? await returned : returned; }", "try { batch = await returned; }"],
+  ["K160 appendOwn 不查目标是数组(R7-02 原错)", "plain.ts", "  if (!Array.isArray(out) || types.isProxy(out)) throw new TypeError(\"appendOwn 的目标必须是普通数组\");\n", ""],
+  ["K161 squash 不查字符串(R7-02 原错)", "assemble.ts", "  if (typeof t !== \"string\") throw new TypeError(\"squash 只接受字符串\");\n", ""],
+  ["K162 判定选项只看 topFunctions 一个键(R7-02 原错)", "plain.ts", "    if (!d || isAccessor(d) || k !== \"topFunctions\") return undefined;", "    if (k !== \"topFunctions\") continue;\n    if (!d || isAccessor(d)) return undefined;"],
+  ["K163 宿主直接用导出的可变固定段顺序(R7-04 原错)", "assemble.ts", "const ORDER: readonly StableKind[] = Object.freeze([\"system\", \"tools\", \"persona\"] as StableKind[]);\nexport const STABLE_ORDER: readonly StableKind[] = Object.freeze([...ORDER]);", "export const STABLE_ORDER: readonly StableKind[] = [\"system\", \"tools\", \"persona\"];\nconst ORDER = STABLE_ORDER;"],
+  ["K164 导出的固定段顺序不冻结(R7-04 原错)", "assemble.ts", "export const STABLE_ORDER: readonly StableKind[] = Object.freeze([...ORDER]);", "export const STABLE_ORDER: readonly StableKind[] = [...ORDER];"],
+  ["K165 导出的事件枚举不冻结(R7-04 原错)", "classify.ts", "export const EVENT_CODES = Object.freeze([\"E1\", \"E2\", \"E3\", \"E4\", \"E5\", \"E6\", \"E7\", \"E8\", \"E9\", \"E10\"] as const);", "export const EVENT_CODES = [\"E1\", \"E2\", \"E3\", \"E4\", \"E5\", \"E6\", \"E7\", \"E8\", \"E9\", \"E10\"] as const;"],
+  ["K166 日志是 null 时直接读字段(R7-06 原错)", "assemble.ts", "  if (!isRecord(pl.value)) return { ok: false, reason: \"invalid-input\", detail: \"日志必须是对象\" };\n", ""],
+  ["K167 装配选项是 null 时直接读字段(R7-06 原错)", "assemble.ts", "  if (!isRecord(po.value)) return { ok: false, reason: \"invalid-input\", detail: \"装配选项必须是对象\" };\n", ""],
+  ["K168 日志事件不查形状(R7-06 原错)", "assemble.ts", "  if (badEvent >= 0) return", "  if (false) return"],
+  ["K169 入站事件是 null 时直接读字段(R7-06 原错)", "classify.ts", "    return { anchors: { mentions: [], quotes: [] }, intent: \"Uncertain\", via: \"mechanical\", violation: \"入站事件必须是对象\" };", "    return classifier as never;"],
+  ["K170 确认卡是 null 时直接读字段(R7-06 原错)", "classify.ts", "    if (typeof anchors.card !== \"object\" || anchors.card === null || Array.isArray(anchors.card)) return", "    if (false) return"],
+  ["K171 发送请求是 null 时直接读字段(R7-06 原错)", "plugins.ts", "      if (!isObj(plainReq.value) || Array.isArray(plainReq.value)) return { ok: false, state: \"rejected\", reason: \"invalid-payload\", detail: \"发送请求必须是对象\" };\n", ""],
+  ["K172 序列化请求是 null 时直接读字段(R7-06 原错)", "assemble.ts", "  if (!isRecord(plain.value)) throw new TypeError(`${fn} 请求必须是对象`);\n", ""],
 ];
 
 const TIMEOUT_MS = Number(process.env.KERNEL_MUT_TIMEOUT_MS ?? 300_000);
