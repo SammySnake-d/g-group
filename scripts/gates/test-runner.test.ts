@@ -39,6 +39,24 @@ test("1 条通过的用例判通过", () => {
   assert.equal(r.code, 0);
 });
 
+test("全部 skip 判失败", () => {
+  const r = runIn({ "a.test.ts": 'import { test } from "node:test";\ntest.skip("s", () => {});\n' });
+  assert.equal(r.code, 1);
+  assert.match(r.out, /没有实际执行/);
+});
+
+test("全部 todo 判失败", () => {
+  const r = runIn({ "a.test.ts": 'import { test } from "node:test";\ntest.todo("t");\n' });
+  assert.equal(r.code, 1);
+  assert.match(r.out, /没有实际执行/);
+});
+
+test("通过与 skip 混合判失败", () => {
+  const r = runIn({ "a.test.ts": 'import { test } from "node:test";\ntest("ok", () => {});\ntest.skip("s", () => {});\n' });
+  assert.equal(r.code, 1);
+  assert.match(r.out, /没有实际执行/);
+});
+
 test("有失败用例判失败", () => {
   const r = runIn({ "a.test.ts": 'import { test } from "node:test";\ntest("bad", () => { throw new Error("x"); });\n' });
   assert.notEqual(r.code, 0);
