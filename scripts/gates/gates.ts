@@ -12,7 +12,7 @@ import { type Vendor, vendorOf } from "./vendor.ts";
 
 // 门禁策略取自裁判自己所在目录(CI 里是 main 上那份),PR 改不了它
 export interface Policy { allowedReviewers: string[]; defaultReviewer: string; reviewerHarness: string; reviewerHarnessOf: Record<string, string>; assistantIds: Record<string, string>; source: string }
-/** 审查人对应的会话 harness:codex/astra 跑在 codex,argon 跑在 claude;没登记的退回默认 */
+/** 审查人对应的会话 harness:codex/astra 跑在 codex,claude 跑在 claude;没登记的退回默认 */
 export const harnessOf = (agent: string) => (Object.hasOwn(POLICY.reviewerHarnessOf, agent) ? POLICY.reviewerHarnessOf[agent]! : POLICY.reviewerHarness);
 /** 递归冻结(R5-03):导出的策略与常量参与判定,外部赋值、push、删除、改嵌套都不能改变后续门禁行为 */
 export function deepFreeze<T>(x: T): Readonly<T> {
@@ -52,7 +52,7 @@ export const trace: Gate = {
 
 // ---------------------------------------------------------------- R-01(CI 可查的部分)
 export const review: Gate = {
-  id: "G-REVIEW", rule: "R-01:审查人限 Codex/Astra(g-group#1531,默认 Codex),Codex/Astra 被拒审时可临时用 Argon(g-group#2404),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)",
+  id: "G-REVIEW", rule: "R-01:审查人限 Codex/Astra/Claude(g-group#1531、g-group#2943 原则 68,默认 Codex;Claude 审 Codex 写的 PR),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)",
   run(ctx) {
     const g = this.id, out: Problem[] = [];
     if (!needsReceipt(ctx) || !ctx.receipt) return out;
@@ -260,7 +260,7 @@ export const provenance: Gate = {
     // 审查:必须有一次工具调用,命令是 run-all.ts --hash,输出恰好等于 reviewed_hash;审查厂商取那一轮的模型
     const rt = loadSession(base, rv.session);
     let reviewer: Vendor = "unknown";
-    // 审查人限 Codex 或 Astra(g-group#1531):会话 harness 必须是 codex,厂商按会话里实际的模型核对(下面),不认自报。
+    // 审查人限 Codex/Astra/Claude(g-group#1531、#2943):会话 harness 按 policy.reviewerHarnessOf(codex/astra → codex,claude → claude),厂商按会话里实际的模型核对(下面),不认自报。
     // record.json 没有区分助手的字段;群聊日志里宿主写的派活卡片(session → assistant)若存在,必须与收据的审查人一致。
     if (!rv.session.startsWith(`${harnessOf(rv.agent)}:`)) out.push(p(g, `审查人 ${rv.agent} 的审查会话必须是 ${harnessOf(rv.agent)} 会话(${POLICY.source}),实际 ${rv.session}`));
     else {
