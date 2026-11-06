@@ -114,6 +114,14 @@ export const MUTATIONS: Mutation[] = [
   { name: "零宽匹配按 UTF-16 单元前进", kill: "R6-04 正则注入计数:零宽 /u 按码点前进不死循环,sticky 与普通搜索计数一致", target: ["DIRECT"], file: "mutation.ts", from: "if (m[0] === \"\") re.lastIndex = advance(src, re.lastIndex, unicode);", to: "if (m[0] === \"\") re.lastIndex++;" },
   { name: "计数保留 sticky", kill: "R6-04 正则注入计数:零宽 /u 按码点前进不死循环,sticky 与普通搜索计数一致", target: ["DIRECT"], file: "mutation.ts", from: "const f = from.flags.replace(/[gy]/g, \"\");", to: "const f = from.flags.replace(/g/g, \"\");" },
   { name: "注入保留 sticky", kill: "R6-04 sticky 正则注入点按计数时的同一语义替换", target: ["DIRECT"], file: "mutation.ts", from: "src.replace(from, to) : src.replace(searchRe(from, false), to);\n}", to: "src.replace(from, to) : src.replace(from, to);\n}" },
+  // R7-01:沙箱读隔离
+  { name: "沙箱不拒读 HOME 下的点文件", kill: "R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载)", target: ["DIRECT"], file: "lib.ts", from: /\n {4}`\(deny file-read-data \$\{homes\.map[^\n]*/, to: "" },
+  { name: "点文件拒读只按未规范化的 HOME", kill: "R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载)", target: ["DIRECT"], file: "lib.ts", from: "const homes = [...new Set([home, realOr(home)])];", to: "const homes = [home];" },
+  { name: "沙箱不放行挂载的依赖", kill: "R7-01 完整入口对照:同一假 HOME 下,测试读工作副本文件、加载 HOME 点目录里的依赖照常放行", target: ["DIRECT", "G-RED"], file: "lib.ts", from: "const runtime = [work, ...mounts].map(", to: "const runtime = [work].map(" },
+  { name: "sandboxed 不把挂载交给 seatbelt", kill: "R7-01 完整入口对照:同一假 HOME 下,测试读工作副本文件、加载 HOME 点目录里的依赖照常放行", target: ["DIRECT", "G-RED"], file: "lib.ts", from: "seatbeltProfile(w, mounts)", to: "seatbeltProfile(w)" },
+  { name: "放行项盖过拒读清单(去掉末尾的拒读清单)", kill: "R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载)", target: ["DIRECT"], file: "lib.ts", from: /\n {4}`\(deny file-read-data \$\{\[\.\.\.new Set\(\[\.\.\.secret[^\n]*/, to: "" },
+  { name: "拒读清单漏掉 .git-credentials 与 .netrc", kill: "R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载)", target: ["DIRECT"], file: "lib.ts", from: ", \".npmrc\", \".git-credentials\", \".netrc\"];", to: ", \".npmrc\"];" },
+  { name: "拒读清单不按 realpath", kill: "R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载)", target: ["DIRECT"], file: "lib.ts", from: "[...new Set([...secret, ...secret.map(realOr)])]", to: "[...new Set(secret)]" },
 ];
 
 /**
