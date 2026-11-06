@@ -1,0 +1,25 @@
+docs/spec/需求文档.md
+  s_2f83768618cc30::t_a13c661340f127 3,227,930,2416,2429,2436,2647-2648
+docs/spec/验收文档-v0.1.md
+  s_2f83768618cc30::t_d0ef4367d9604d 1,160,252
+docs/开发手册.md
+  s_2f83768618cc30::t_28d48f7adc25a2 20,568-569,571-575,583-587,589
+docs/概念卡.md
+  s_2f83768618cc30::t_6818d267c9fd53 350
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c9fe535fdad64925d395ab6cc1aece61f0f7f843",
+  "prompts": {},
+  "sessions": {
+    "s_2f83768618cc30": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cead6154-ca5b-434c-a8cd-89304d1c4151",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
