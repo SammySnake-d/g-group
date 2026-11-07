@@ -60,7 +60,7 @@ __GATE_CASE__{"name":"RR-13 先说不批准、下一行是格式行","direct":fa
 __GATE_CASE__{"name":"RR-13 整条消息是引用块里的指令","direct":false,"expect":"不是一条格式为","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:F-03 用户明确不批准豁免 (2s)
 __GATE_CASE__{"name":"F-03 用户明确不批准豁免","direct":false,"expect":"不是一条格式为","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:豁免是助手发的 (3s)
+✓ 拦下:豁免是助手发的 (2s)
 __GATE_CASE__{"name":"豁免是助手发的","direct":false,"expect":"不是仓库所有者","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:豁免没绑定这一版 (2s)
 __GATE_CASE__{"name":"豁免没绑定这一版","direct":false,"expect":"≠ 当前","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
@@ -92,9 +92,9 @@ __GATE_CASE__{"name":"RR-01 harness 不在白名单","direct":false,"expect":"�
 __GATE_CASE__{"name":"RR-01 id 带多余冒号","direct":false,"expect":"格式必须是","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:RR-01 会话文件软链到 PR 里的伪造记录 (2s)
 __GATE_CASE__{"name":"RR-01 会话文件软链到 PR 里的伪造记录","direct":false,"expect":"会话根目录之外","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-02 测试往目录外写文件被沙箱挡住 (2s)
+✓ 拦下:RR-02 测试往目录外写文件被沙箱挡住 (1s)
 __GATE_CASE__{"name":"RR-02 测试往目录外写文件被沙箱挡住","direct":false,"expect":"缺 red.commit","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-RED"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-02 测试补造来源记录被挡住 (2s)
+✓ 拦下:RR-02 测试补造来源记录被挡住 (1s)
 __GATE_CASE__{"name":"RR-02 测试补造来源记录被挡住","direct":false,"expect":"缺 red.commit","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-RED"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:RR-02 没有沙箱就停 (1s)
 __GATE_CASE__{"name":"RR-02 没有沙箱就停","direct":false,"expect":"没有可用沙箱","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✗","G-TAUTO":"✗","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-RED","G-STUB","G-TAUTO"],"gateErrors":["G-RED","G-STUB","G-TAUTO"],"complete":true,"pass":true,"kind":"ok"}
@@ -102,7 +102,9 @@ __GATE_CASE__{"name":"RR-02 没有沙箱就停","direct":false,"expect":"没有�
 __GATE_CASE__{"name":"RR-02 CI 设了沙箱镜像时,模拟无沙箱仍然停","direct":false,"expect":"没有可用沙箱","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✗","G-TAUTO":"✗","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-RED","G-STUB","G-TAUTO"],"gateErrors":["G-RED","G-STUB","G-TAUTO"],"complete":true,"pass":true,"kind":"ok"}
 ✓ 放行:R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载) (2s)
 __GATE_CASE__{"name":"R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载)","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
-✓ 拦下:R7-01 完整入口:具名测试读假 HOME 的 .git-credentials/.netrc 被拒,门禁拦下 (2s)
+✓ 放行:R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath) (0s)
+__GATE_CASE__{"name":"R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 拦下:R7-01 完整入口:具名测试读假 HOME 的 .git-credentials/.netrc 被拒,门禁拦下 (1s)
 __GATE_CASE__{"name":"R7-01 完整入口:具名测试读假 HOME 的 .git-credentials/.netrc 被拒,门禁拦下","direct":false,"expect":"现在没有恰好通过一次","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✗","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-RED"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 放行:R7-01 完整入口对照:同一假 HOME 下,测试读工作副本文件、加载 HOME 点目录里的依赖照常放行 (2s)
 __GATE_CASE__{"name":"R7-01 完整入口对照:同一假 HOME 下,测试读工作副本文件、加载 HOME 点目录里的依赖照常放行","direct":false,"expect":null,"exit":0,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":[],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
@@ -294,9 +296,9 @@ __GATE_CASE__{"name":"RR-12 一条强测试 + 一条只断言 typeof","direct":f
 __GATE_CASE__{"name":"RR-12 两条测试都判结果(阴性对照)","direct":false,"expect":null,"exit":0,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":[],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:RR-14 printf 打印 hash、run-all 只在注释里 (2s)
 __GATE_CASE__{"name":"RR-14 printf 打印 hash、run-all 只在注释里","direct":false,"expect":"审查会话里没有一次","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-14 node -e 打印 hash、run-all 只是多余参数 (3s)
+✓ 拦下:RR-14 node -e 打印 hash、run-all 只是多余参数 (2s)
 __GATE_CASE__{"name":"RR-14 node -e 打印 hash、run-all 只是多余参数","direct":false,"expect":"审查会话里没有一次","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-14 echo 后接真实 hash 命令 (3s)
+✓ 拦下:RR-14 echo 后接真实 hash 命令 (2s)
 __GATE_CASE__{"name":"RR-14 echo 后接真实 hash 命令","direct":false,"expect":"审查会话里没有一次","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:RR-14 真实 hash 输出被丢弃、再 echo hash (2s)
 __GATE_CASE__{"name":"RR-14 真实 hash 输出被丢弃、再 echo hash","direct":false,"expect":"审查会话里没有一次","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
@@ -388,13 +390,13 @@ __GATE_CASE__{"name":"PR 的 workflow 用 pull_request_target","direct":false,"e
 __GATE_CASE__{"name":"删掉 trusted-gates.yml","direct":false,"expect":"缺 .github/workflows/trusted-gates.yml","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:领域层反向依赖内核 (2s)
 __GATE_CASE__{"name":"领域层反向依赖内核","direct":false,"expect":"不能依赖 kernel","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✗"},"expectHit":["G-LAYER"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:插件依赖另一个插件 (3s)
+✓ 拦下:插件依赖另一个插件 (2s)
 __GATE_CASE__{"name":"插件依赖另一个插件","direct":false,"expect":"不能依赖 plugin","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✗"},"expectHit":["G-LAYER"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:相对路径跨包 (2s)
 __GATE_CASE__{"name":"相对路径跨包","direct":false,"expect":"跨出了包","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✗"},"expectHit":["G-LAYER"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:依赖声明里反向引用 (2s)
 __GATE_CASE__{"name":"依赖声明里反向引用","direct":false,"expect":"依赖声明里引用了 kernel","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✗"},"expectHit":["G-LAYER"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:包没声明层级 (2s)
+✓ 拦下:包没声明层级 (1s)
 __GATE_CASE__{"name":"包没声明层级","direct":false,"expect":"gGroup.layer","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✗"},"expectHit":["G-LAYER"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ vendorOf(o1) = openai
 ✓ vendorOf(gpt-6-astra) = openai
@@ -405,5 +407,4 @@ __GATE_CASE__{"name":"包没声明层级","direct":false,"expect":"gGroup.layer"
 ✓ vendorOf(stealth/crouton-alpha) = unknown
 ✓ vendorOf(undefined) = unknown
 自检通过
-自检耗时 79s:用例 199/199,并发 4(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0
-exit=0
+自检耗时 72s:用例 200/200,并发 4(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0
