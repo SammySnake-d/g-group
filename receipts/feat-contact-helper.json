@@ -44,10 +44,10 @@
   "waiver": null,
   "review": {
     "agent": "codex",
-    "session": "codex:b90dff1d-0880-441d-a1f6-d8469dea14e8",
-    "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra",
+    "session": "codex:b5a5f008-e701-4795-a8fa-e7a7ee66bf41",
+    "model": "ai-iisbo/[乾坤按量]gpt-6.1-terra",
     "verdict": "reject",
-    "reviewed_hash": "0c56d4a3ee15669e230b743f703519650311df3847db1abfed61cfd68d67bcbb",
-    "notes": "第十六轮独立复审 reject：嵌套对象别名校验缺口、红提交绑定过期、领域变异清单无法完整注入；详见 reviews/feat-contact-helper.md。"
+    "reviewed_hash": "daf0bf96eb6b07592fbbcf4b8c146fb266fb449a1b22d96822b55d8b5372c9a1",
+    "notes": "第十七轮独立复审 reject：函数 prototype 单一路径仍放行非普通对象；收据红提交不存在；领域变异 4 项无法注入、1 项存活且 CK84 不应删除，保存证明过期。详见 reviews/feat-contact-helper.md。"
   }
 }

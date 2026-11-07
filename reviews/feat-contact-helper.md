@@ -1105,3 +1105,48 @@ Claude Code 接续修 CH-39、CH-40；CH-36/CH-37、只读快照与已闭合的�
 - GitHub `self-check` run 42266506255 在本受审 SHA 上为 success，但该 workflow 不运行领域 420 项校准，不能抵消上述实跑失败。真实存储、宿主授权、消息路由与调度端到端仍未验，不把纯函数子集写成整项 AC 通过。
 
 本轮只追加本节和更新收据的 `review` 字段，未改产品源码、测试、作者 red 指针或领域变异清单。有限测试和变异不能证明不存在其他缺陷。
+
+## 第十七轮：第十六轮返修复审（2026-11-07）
+
+**结论：reject。** CH-44 的别名样例现已先红后绿，但函数 `prototype` 的单一路径仍可放行非普通对象；收据红提交不存在；领域变异和保存的证明不能支持当前的通过声明。请按下列问题返修后重新独立审查。
+
+### 受审对象
+
+- 独立 HTTPS clone，`HEAD=a8e3766f89869c344cee801f2f57d067f3316c85`；基线 `origin/feat/task-lifecycle=ba90d6769992d2f3df2a571f846409afcafd644d`。审前 GitHub PR 与远端分支均指向该 HEAD；需求与验收依据 `origin/docs/dev-handbook=3ae540eee9c193cda368bf24a75c3ccef4db4cf0` 的 `docs/spec/`。
+- 本会话直接运行 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle`，输出 `daf0bf96eb6b07592fbbcf4b8c146fb266fb449a1b22d96822b55d8b5372c9a1`。会话 `codex:b5a5f008-e701-4795-a8fa-e7a7ee66bf41`，该次原生 `turn_context` 模型 `ai-iisbo/[乾坤按量]gpt-6.1-terra`。
+- 证据目录 `$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-r17-codex/b5a5f008`。反例不改写任何内置原型；按 `g-group#2662` 收窄后的环境合同审查。
+
+### R17-01【输入合同】函数 prototype 单一路径仍放行非普通对象
+
+位置：`packages/domain/src/plain.ts:72-88`。对函数的自有 `prototype` 值设置 `fnProto` 后，`plainDataError(..., fnProto)` 跳过原型检查；即使该值是调用方替换的普通函数原型，也一律获得例外。CH-44 的 `seen` 修复只覆盖同一对象又从普通字段出现的情况。
+
+复现 `$E/prototype-only.jsonl`：`bad=Object.create({inherited:true}); function f(){}; f.prototype=bad`，`routeHelper({kind:'global',extra:{f}}, {kind:'user',id:'u'}, 'u')` 实际 `ok:true`；只将 `bad` 放普通字段或同时放别名时均 `ok:false`，普通函数对照 `ok:true`。这违反本 PR 收据对丢弃字段可达的非普通对象应拒收的合同。额外字段随后被丢弃，本例没有观察到 getter 或 Proxy trap 被调用，也不声称发生授权提升。
+
+返修：不能把任意由调用方替换的 `fn.prototype` 一律当成引擎自带特殊原型；先补这个单一路径和合法生成器/普通函数的正反对照，再实现能区分可接受情况的校验。
+
+### R17-02【R-02】收据指定的红提交不存在
+
+位置：`receipts/feat-contact-helper.json` 的 `red.commit` 为 `4123d61906e45fe87fa47a26fe78cbb7701cfbc3`。独立 clone 的 `git cat-file` 返回 128；GitHub 提交 API 返回 422 `No commit found`。真实 `--local` 的 G-RED 因该提交不存在而失败，不能逐名核实收据所指红基线。
+
+补充对照：已有的 `68e6a17` 上 CH-44 具名测试按名失败，当前 HEAD 按名通过（`$E/ch44-red.log`、`$E/ch44-green.log`）；这只证明 CH-44 的红绿，并不替代收据要求的本 PR 全部新增/改动测试逐名红基线。应提交并推送可达的真实红提交、更新 `red.commit`，让 G-RED 从实际基线逐名复跑通过，不得把加载错误或其他测试失败记作目标测试红。
+
+### R17-03【R-05】领域变异清单未完成校准，保存的证明也已过期
+
+直接运行受审 `node packages/domain/proof/mutations.mjs`（`$E/domain-mutations.log`）：原样副本 306 绿；445 种不同注入中 **440 个被具名测试杀死、4 个注入点出现 0 次、1 个存活**，总退出码 1。失效项为 `CK72a`、`CK72b`、`CK116`、`CK117`；`CK114` 放过函数自有访问器时 306 绿、0 红。独立探针 `$E/independent-probes.jsonl` 的 P4 在原样实现对带自有 getter 的函数返回拒绝、调用数 0；同一个单点变异返回成功、调用数仍为 0，整个现有测试集未检测到该差异。
+
+此外 `packages/domain/proof/mutations.txt` 仍以 420 个变异、300 个绿测试结尾称校准通过，而收据称 445/445 全部被杀；两者均不能代表本 HEAD 的实测。应为函数数据属性上的 getter/setter 加真实正反测试，重定位四个失效变异、逐项重跑并记录具名失败，再同步证明文件和收据；不可把注入失败或测试全绿算作杀死。
+
+### R17-04【R-05】CK84 被错误移出
+
+`packages/domain/proof/mutations.mjs` 将“`confirmFinalReport` 遇非法状态抛异常”CK84 删除，理由是函数现已按 CH-42 返回 `{ok:false}`。但 CK84 测的是把非法**状态**返回改成抛错，合同仍要求包括 JSON `null` 在内的非法状态返回失败而不抛；CH-42 关于非法**回执**的检查不使该故障等价或不可达。
+
+在隔离副本仅将 `confirmFinalReport` 中 `if (!s.ok) return s` 改为抛 `TypeError` 后，注入点恰好一处，CH-37 等 13 条具名测试失败（`$E/ck84-reanchor.jsonl`）。应将这个故障按当前实现重新定位并恢复到变异清单、证明和计数，或以等价的明确变异保留这项合同校准。
+
+### 复现和边界
+
+- `npm ci`、typecheck、lint、`npm test` 均通过；306 测试，0 失败、0 skip、0 todo。首次 lint 的 RTK 包装输出解析失败，`rtk bypass npm run lint` 的真实 biome 输出通过。
+- 本审查构造 5 个单点故障：P1 恢复别名先去重、P2 把回执位置相等改成拒绝、P3 绕过 Helper 所有者核对、P5 只验前四项能力资产，均被具名测试杀死；P4 函数自有访问器故障存活。逐项结果及对照见 `$E/independent-probes.jsonl`。
+- 八个门禁各写一个隔离负样例，真实 CLI 均对相应门禁返回失败；合规对照八项均通过（`$E/gate-negative-probes.jsonl`），门禁自身 `--self-test` 也通过（`$E/gate-selftest.log`）。夹具使用假 HOME、假会话和中性数据，不能代替真实来源核验。
+- 写入本轮审查前，真实会话路径下的 `--local`：G-TRACE、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER、G-PROVENANCE 通过；G-REVIEW 因上一轮 reject/旧 hash 拦截，G-RED 因不存在的红提交拦截（`$E/local-gates-real-sessions.log`）。当时 G-PROVENANCE 核对的是上一轮审查，不能说本轮来源已获门禁验证。
+- 写入本轮 `review` 后再跑真实会话路径下的 `--local`（`$E/local-gates-after-review.log`）：G-TRACE、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 按 reject 拦截，G-RED 仍因红提交不存在拦截；G-PROVENANCE 找不到本轮会话的 `turns.jsonl`。本轮哈希调用和模型已在原生会话中实际观察，但不能因此声称该来源门禁已通过，需会话记录落盘后重核。
+- 真实存储、宿主授权与消息表写入/隔离、Compute 接线及调度端到端仍未验；本轮不把纯函数子集或有限变异说成整项 AC 已通过。仅追加本审查节并更新收据 `review`，不改产品代码、测试或作者证据。
