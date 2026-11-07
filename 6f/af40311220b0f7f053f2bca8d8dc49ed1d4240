@@ -1,0 +1,29 @@
+packages/kernel/src/assemble.ts
+  s_f95254e55a45df::t_578ccf952e241e 1,15,52,69,71,74-75,79,83,87
+packages/kernel/src/classify.ts
+  s_f95254e55a45df::t_d887a5d0cf4db2 1,11,39-40
+packages/kernel/src/plain.test.ts
+  s_f95254e55a45df::t_4735a8d7e8d3a1 346-390
+packages/kernel/src/plain.ts
+  s_f95254e55a45df::t_436e7f7cd36a08 1,7-8,20,23-24,27-28,32,36
+packages/kernel/src/plugins.test.ts
+  s_f95254e55a45df::t_c6fc5e796e15d6 1426-1427,1432-1433,1458-1466,1468,1489-1491,1559,1576,1657-1971
+packages/kernel/src/plugins.ts
+  s_f95254e55a45df::t_34ae5ce3f5db7f 1-3,8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6faf40311220b0f7f053f2bca8d8dc49ed1d4240",
+  "prompts": {},
+  "sessions": {
+    "s_f95254e55a45df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bfea29f6-6e90-4808-9e7b-cd317a4576de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
