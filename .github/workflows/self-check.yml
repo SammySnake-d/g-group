@@ -10,12 +10,16 @@ permissions:
 jobs:
   self-check:
     runs-on: ubuntu-latest
+    env:
+      GATE_SANDBOX_IMAGE: node:22.22.0-slim
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0, persist-credentials: false }
       - uses: actions/setup-node@v4
         with: { node-version: "22.22.0" }
       - run: npm ci
+      - name: 拉沙箱镜像(门禁执行 PR 测试只走沙箱,没有就停)
+        run: docker pull "$GATE_SANDBOX_IMAGE"
       - name: 类型检查
         run: npm run typecheck
       - name: lint

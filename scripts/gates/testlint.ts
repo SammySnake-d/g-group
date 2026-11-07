@@ -8,6 +8,8 @@ export interface TestDecl {
   asserts: number;
   srcAsserts: number; // 断言参数里引用了被测源码结果的断言数
   constAsserts: string[];
+  selfAsserts: string[]; // 两侧规范化后相同、或恒真关系的断言
+  unreachableAsserts: string[]; // 写在常量假分支、return/throw 之后等永远执行不到的位置
 }
 export interface TestFileInfo { tests: TestDecl[]; errors: string[] }
 
@@ -97,6 +99,8 @@ export function analyzeTestFile(code: string, file: string): TestFileInfo {
     }
     let asserts = 0, srcAsserts = 0;
     const constAsserts: string[] = [];
+    const selfAsserts: string[] = [];
+    const unreachableAsserts: string[] = [];
     const isAssertCallee = (e: ts.Expression): boolean => {
       if (ts.isIdentifier(e)) return assertFns.has(e.text);
       if (ts.isPropertyAccessExpression(e)) {
@@ -107,19 +111,88 @@ export function analyzeTestFile(code: string, file: string): TestFileInfo {
       }
       return false;
     };
-    const w = (x: ts.Node) => {
+    // 规范化:去掉空白、括号和类型断言,只比结构
+    const norm = (e: ts.Node): string => {
+      let x: ts.Node = e;
+      while (ts.isParenthesizedExpression(x) || ts.isAsExpression(x) || ts.isNonNullExpression(x) || ts.isTypeAssertionExpression(x) || ts.isSatisfiesExpression(x)) x = (x as ts.ParenthesizedExpression).expression;
+      return x.getText(sf).replace(/\s+/g, "");
+    };
+    const constTruth = (e: ts.Expression): boolean | undefined => {
+      let x: ts.Expression = e;
+      while (ts.isParenthesizedExpression(x)) x = x.expression;
+      if (x.kind === ts.SyntaxKind.TrueKeyword) return true;
+      if (x.kind === ts.SyntaxKind.FalseKeyword || x.kind === ts.SyntaxKind.NullKeyword) return false;
+      if (ts.isIdentifier(x) && x.text === "undefined") return false;
+      if (ts.isNumericLiteral(x)) return Number(x.text) !== 0;
+      if (ts.isStringLiteralLike(x)) return x.text !== "";
+      if (ts.isPrefixUnaryExpression(x) && x.operator === ts.SyntaxKind.ExclamationToken) { const v = constTruth(x.operand); return v === undefined ? undefined : !v; }
+      if (ts.isBinaryExpression(x)) {
+        const op = x.operatorToken.kind;
+        const l = constTruth(x.left), r = constTruth(x.right);
+        if (op === ts.SyntaxKind.AmpersandAmpersandToken) { if (l === false || r === false) return false; if (l && r) return true; }
+        if (op === ts.SyntaxKind.BarBarToken) { if (l === true || r === true) return true; if (l === false && r === false) return false; }
+        const same = norm(x.left) === norm(x.right);
+        if (same && [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.EqualsEqualsToken, ts.SyntaxKind.LessThanEqualsToken, ts.SyntaxKind.GreaterThanEqualsToken].includes(op)) return true;
+        if (same && [ts.SyntaxKind.ExclamationEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsToken, ts.SyntaxKind.LessThanToken, ts.SyntaxKind.GreaterThanToken].includes(op)) return false;
+        if (isLit(x.left) && isLit(x.right)) return undefined;
+      }
+      return undefined;
+    };
+    const PAIR = /(?:^|\.)(?:equal|strictEqual|deepEqual|deepStrictEqual|notEqual|notStrictEqual|notDeepEqual|notDeepStrictEqual|partialDeepStrictEqual)$/;
+    const UNARY = /(?:^|\.)(?:ok)$|^(?:t\.)?assert$/;
+    const w = (x: ts.Node, reachable: boolean) => {
       if (ts.isCallExpression(x) && isAssertCallee(x.expression)) {
-        asserts++;
         const callee = x.expression.getText(sf);
         const args = [...x.arguments];
-        const judged = /throws|rejects/.test(callee) ? args.slice(0, 1) : args.slice(0, 2);
-        if (judged.some((a) => mentions(a))) srcAsserts++;
-        if (args.length > 0 && args.slice(0, Math.min(2, args.length)).every(isLit) && !/throws|rejects|fail/.test(callee)) constAsserts.push(x.getText(sf).slice(0, 60));
+        const text = x.getText(sf).slice(0, 60);
+        if (!reachable) unreachableAsserts.push(text);
+        else {
+          asserts++;
+          const judged = /throws|rejects/.test(callee) ? args.slice(0, 1) : args.slice(0, 2);
+          let degenerate = false;
+          if (PAIR.test(callee) && args.length >= 2 && norm(args[0]!) === norm(args[1]!)) { selfAsserts.push(text); degenerate = true; }
+          if ((UNARY.test(callee) || ts.isIdentifier(x.expression)) && args[0] && constTruth(args[0]) === true) { selfAsserts.push(text); degenerate = true; }
+          if (!degenerate && judged.some((a) => mentions(a))) srcAsserts++;
+          if (args.length > 0 && args.slice(0, Math.min(2, args.length)).every(isLit) && !/throws|rejects|fail/.test(callee)) constAsserts.push(text);
+        }
       }
-      ts.forEachChild(x, w);
+      // 可达性:常量条件分支、短路、return/throw 之后
+      if (ts.isIfStatement(x)) {
+        const c = constTruth(x.expression);
+        w(x.expression, reachable);
+        w(x.thenStatement, reachable && c !== false);
+        if (x.elseStatement) w(x.elseStatement, reachable && c !== true);
+        return;
+      }
+      if (ts.isConditionalExpression(x)) {
+        const c = constTruth(x.condition);
+        w(x.condition, reachable); w(x.whenTrue, reachable && c !== false); w(x.whenFalse, reachable && c !== true);
+        return;
+      }
+      const loopCond = ts.isWhileStatement(x) ? x.expression : ts.isForStatement(x) ? x.condition : undefined;
+      if (loopCond && (ts.isWhileStatement(x) || ts.isForStatement(x)) && constTruth(loopCond) === false) {
+        w(loopCond, reachable); w(x.statement, false);
+        return;
+      }
+      if (ts.isBinaryExpression(x) && (x.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken || x.operatorToken.kind === ts.SyntaxKind.BarBarToken)) {
+        const l = constTruth(x.left);
+        const dead = x.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ? l === false : l === true;
+        w(x.left, reachable); w(x.right, reachable && !dead);
+        return;
+      }
+      if (ts.isBlock(x) || ts.isSourceFile(x) || ts.isCaseClause(x) || ts.isDefaultClause(x)) {
+        let live = reachable;
+        for (const st of (x as ts.Block).statements) {
+          w(st, live);
+          if (ts.isReturnStatement(st) || ts.isThrowStatement(st) || ts.isBreakStatement(st) || ts.isContinueStatement(st)) live = false;
+        }
+        return;
+      }
+      // 嵌套函数体:定义了不等于执行了,只要外层可达就按可达算(回调大多会被调用),不再细分
+      ts.forEachChild(x, (c) => w(c, reachable));
     };
-    w(fn.body);
-    return { asserts, srcAsserts, constAsserts };
+    w(fn.body, true);
+    return { asserts, srcAsserts, constAsserts, selfAsserts, unreachableAsserts };
   };
 
   const tests: TestDecl[] = [];
@@ -158,6 +231,8 @@ export function lintTestFile(code: string, file: string): string[] {
     if (t.asserts === 0) out.push(`"${t.name}":没有任何断言`);
     else if (t.srcAsserts === 0) out.push(`"${t.name}":没有一条断言判的是被测源码的结果(只测 mock 或复制逻辑)`);
     for (const c of t.constAsserts) out.push(`"${t.name}":恒真/恒定断言 ${c}`);
+    for (const c of t.selfAsserts) out.push(`"${t.name}":自比较或恒真关系的断言 ${c}`);
+    for (const c of t.unreachableAsserts) out.push(`"${t.name}":写在执行不到的位置的断言 ${c}`);
   }
   return out;
 }
