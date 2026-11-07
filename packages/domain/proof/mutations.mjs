@@ -22,7 +22,7 @@
 // M30–M47 是联系人/Helper 作者埋雷;contact/helper 其余系列见各分组注释。为不和任务侧重名:
 // reviews/feat-contact-helper.md 第二轮的 N01–N05 记为 CN01–CN05,第三轮的 P01–P05 记为 CP01–CP05,第五轮的 Z01–Z05 记为 CZ01–CZ05,
 // 第六轮的 W01–W05 记为 CW01–CW05,第七轮的 V01–V08 记为 CV01–CV08,第八轮的 H05–H06 记为 CH05–CH06,第九轮的 J01–J05 记为 CJ01–CJ05,
-// 第十轮的 Y01–Y08 记为 CY01–CY08,Astra 第 6 节的 I01–I26 记为 CI01–CI26(与任务侧第十三轮 I01–I09 区分),第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK110;第十三轮独立变异 AD01–AD04 原样保留编号(任务侧无 AD 前缀);第十四轮独立变异 V01/V02/V03/V08 记为 AE01–AE04(与任务侧 V01–V10 区分)。原样副本必须全绿(阴性对照)。
+// 第十轮的 Y01–Y08 记为 CY01–CY08,Astra 第 6 节的 I01–I26 记为 CI01–CI26(与任务侧第十三轮 I01–I09 区分),第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK129;第十三轮独立变异 AD01–AD04 原样保留编号(任务侧无 AD 前缀);第十四轮独立变异 V01/V02/V03/V08 记为 AE01–AE04(与任务侧 V01–V10 区分);第十五轮独立变异 case-dir/case-receipt/case-revoke 与 R15-01–R15-03 记为 AF01–AF06;第十六轮:CK72 拆分为 CK72a(plainDataError)与 CK72b(nestedPlainError),各对应一处 Reflect.ownKeys 循环;CK84(confirmFinalReport 抛错)删除,该函数已按第十五轮 CH-42 明确返回 {ok:false},不再抛错。原样副本必须全绿(阴性对照)。
 // 用法: node packages/domain/proof/mutations.mjs
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -421,7 +421,8 @@ const M = [
   ["CK41 输出 credentialRefs 重新遍历入参(经入参数组自带的迭代器)", "contact.ts", "credentialRefs: Object.freeze([...r.credentialRefs])", "credentialRefs: Object.freeze([...input.credentialRefs])"],
   ["CK42 placement 重新读入参(缺省时读到原型链)", "contact.ts", "const placement = r.placement ?? \"local\";", "const placement = input.placement ?? \"local\";"],
   ["CY02 updateContact 校验后改用原始 patch(缺省字段读到原型链)", "contact.ts", "const patch = n.value;", "const patch = input;"],
-  ["CK72 只查可枚举字符串键的访问器(Reflect.ownKeys 改 Object.keys)", "plain.ts", "for (const key of Reflect.ownKeys(v)) {", "for (const key of Object.keys(v)) {"],
+  ["CK72a plainDataError 只查可枚举字符串键的访问器(Reflect.ownKeys 改 Object.keys)", "plain.ts", "  if (wantArray ? proto !== Array.prototype || !Array.isArray(v) : proto !== Object.prototype && proto !== null) return `${what} 只接受普通数据${noun}`;\n  for (const key of Reflect.ownKeys(v)) {\n    const d = Object.getOwnPropertyDescriptor(v, key);", "  if (wantArray ? proto !== Array.prototype || !Array.isArray(v) : proto !== Object.prototype && proto !== null) return `${what} 只接受普通数据${noun}`;\n  for (const key of Object.keys(v)) {\n    const d = Object.getOwnPropertyDescriptor(v, key);"],
+  ["CK72b nestedPlainError 只查可枚举字符串键的访问器(Reflect.ownKeys 改 Object.keys)", "plain.ts", "      if (bad) return bad;\n    }\n    for (const key of Reflect.ownKeys(x)) {\n      const d = Object.getOwnPropertyDescriptor(x, key);", "      if (bad) return bad;\n    }\n    for (const key of Object.keys(x)) {\n      const d = Object.getOwnPropertyDescriptor(x, key);"],
   ["CK73 访问器判定用 in(读到原型上的 value)", "plain.ts", "if (d && !Object.hasOwn(d, \"value\")) return `${what}", "if (d && !(\"value\" in d)) return `${what}"],
   ["CK74 属性描述符用普通对象(读到原型上的 get/set)", "plain.ts", "const d = Object.create(null) as PropertyDescriptor;", "const d: PropertyDescriptor = {};"],
   ["CK75 optional 读原型链", "plain.ts", "const isOptional = (s: FieldSpec): boolean => Object.hasOwn(s, \"optional\") && s.optional === true;", "const isOptional = (s: FieldSpec): boolean => s.optional === true;"],
@@ -440,7 +441,6 @@ const M = [
   ["CK81 settleTask 不判 taskId 类型(Proxy 静默放行)", "contact.ts", "  if (typeof taskId !== \"string\") return { ok: false, reason: \"任务 id 必须是字符串\" };\n", ""],
   ["CK82 包入口导出内部 normalize", "index.ts", "export * from \"./helper.ts\";", "export * from \"./helper.ts\";\nexport { normalize } from \"./plain.ts\";"],
   ["CK83 settleTask 状态不合法时抛 TypeError", "contact.ts", "\"任务 id 必须是字符串\" };\n  const s = readContact(state);\n  if (!s.ok) return s;", "\"任务 id 必须是字符串\" };\n  const s = readContact(state);\n  if (!s.ok) throw new TypeError(s.reason);"],
-  ["CK84 confirmFinalReport 状态不合法时抛 TypeError", "contact.ts", "  if (!s.ok) return s;\n  const c = s.value;\n  const n = normalize<FinalReportReceipt>", "  if (!s.ok) throw new TypeError(s.reason);\n  const c = s.value;\n  const n = normalize<FinalReportReceipt>"],
   ["CK85 状态里的工具不查有界", "contact.ts", "    if (t.bounded !== true) return `${at} 不是有界工具,不能当直接工具`;\n", ""],
   ["CK86 状态里的工具不查空名", "contact.ts", "    if (!t.name.trim()) return `${at} 工具名为空`;\n", ""],
   ["CK87 状态里的工具不查禁项", "contact.ts", "    if (FORBIDDEN_DIRECT_TOOLS.includes(t.name)) return `${at} ${t.name} 是通用能力,不能在直接工具清单里`;\n", ""],
@@ -473,6 +473,34 @@ const M = [
   ["CK108 撤销承诺按前缀匹配 id", "contact.ts", "if (!c.commitments.some((k) => k.id === id && k.status === \"active\"))", "if (!c.commitments.some((k) => k.id.startsWith(id) && k.status === \"active\"))"],
   ["CK109 回执 commitmentIds 按后缀点名承诺", "contact.ts", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq > receipt.basedOnSeq)", "if (!receipt.commitmentIds.some((id) => k.id.endsWith(id)) || k.sourceSeq > receipt.basedOnSeq)"],
   ["CK110 目录键与联系人 id 按后缀匹配", "contact.ts", "if (c.value.id !== k)", "if (!c.value.id.endsWith(k))"],
+  // 以下取自 Codex 第十五轮复审 reviews/feat-contact-helper.md CH-43:AF01–AF03 为该轮大小写独立变异 case-dir/case-receipt/case-revoke 的原样注入,
+  // AF04–AF06 为该轮 R15-01–R15-03(逐项校验只查前三项)的原样注入(R15-04–R15-06 该轮已被现有测试杀死,不重复列入);
+  // CK111–CK129 是 CH-41/CH-42 返修(嵌套非普通输入、非普通回执拒收)与 CH-43 其余标识大小写的作者埋雷。
+  ["AF01 目录键与联系人 id 比较时都转小写", "contact.ts", "if (c.value.id !== k)", "if (c.value.id.toLowerCase() !== k.toLowerCase())"],
+  ["AF02 回执承诺 id 比较时都转小写", "contact.ts", "if (!receipt.commitmentIds.includes(k.id) || k.sourceSeq > receipt.basedOnSeq)", "if (!receipt.commitmentIds.some((id) => k.id.toLowerCase() === id.toLowerCase()) || k.sourceSeq > receipt.basedOnSeq)"],
+  ["AF03 撤销存在性判断时都转小写", "contact.ts", "if (!c.commitments.some((k) => k.id === id && k.status === \"active\"))", "if (!c.commitments.some((k) => k.id.toLowerCase() === id.toLowerCase() && k.status === \"active\"))"],
+  ["AF04 状态里的直接工具只查前三项", "contact.ts", "for (let i = 0; i < c.tools.length; i++)", "for (let i = 0; i < Math.min(3, c.tools.length); i++)"],
+  ["AF05 状态里的能力资产只查前三项", "contact.ts", "for (let i = 0; i < c.computeAssets.length; i++)", "for (let i = 0; i < Math.min(3, c.computeAssets.length); i++)"],
+  ["AF06 状态里的承诺只查前三条", "contact.ts", "for (let i = 0; i < c.commitments.length; i++)", "for (let i = 0; i < Math.min(3, c.commitments.length); i++)"],
+  ["CK111 normalize 不查被丢弃字段", "plain.ts", "    const extra = nestedPlainError((Object.getOwnPropertyDescriptor(input, key) as PropertyDescriptor).value, `${what}.${String(key)}`);\n    if (extra) return { ok: false, reason: extra };\n", ""],
+  ["CK112 数组字段不查下标以外的属性", "plain.ts", "    const extra = nestedPlainError((Object.getOwnPropertyDescriptor(v, key) as PropertyDescriptor).value, `${field}.${String(key)}`);\n    if (extra) return { reason: extra };\n", ""],
+  ["CK113 嵌套检查不拒 Proxy(改为跳过)", "plain.ts", "if (types.isProxy(x)) return `${at} 只接受普通数据(不能是 Proxy)`;", "if (types.isProxy(x)) continue;"],
+  ["CK114 嵌套检查放行访问器", "plain.ts", "if (!Object.hasOwn(d, \"value\")) return `${at} 只接受普通数据(${String(key)} 是访问器属性)`;", "if (!Object.hasOwn(d, \"value\")) continue;"],
+  ["CK115 嵌套检查只查一层(不往下走)", "plain.ts", "      top = { x: d.value, at: `${at}.${String(key)}`, fnProto: typeof x === \"function\" && key === \"prototype\", next: top };", "      if (at === what) top = { x: d.value, at: `${at}.${String(key)}`, fnProto: typeof x === \"function\" && key === \"prototype\", next: top };"],
+  ["CK116 嵌套检查不查原型", "plain.ts", "    if (typeof x === \"object\" && !fnProto) {", "    if (typeof x === \"object\" && !fnProto && false) {"],
+  ["CK117 嵌套检查把函数当非普通数据拒绝", "plain.ts", "    if (typeof x === \"object\" && !fnProto) {", "    if (!fnProto) {"],
+  ["CK118 函数自带 prototype 也查原型", "plain.ts", "fnProto: typeof x === \"function\" && key === \"prototype\"", "fnProto: false"],
+  ["CK119 数组非下标属性只认 length 以外的字符串键(漏查 Symbol 键)", "plain.ts", "    if (key === \"length\" || (typeof key === \"string\" && INDEX.test(key) && Number(key) < len)) continue;", "    if (key === \"length\" || typeof key === \"symbol\" || (INDEX.test(key) && Number(key) < len)) continue;"],
+  ["CK120 目录外层不查 contacts 以外的字段", "contact.ts", "    const extra = nestedPlainError((Object.getOwnPropertyDescriptor(d, key) as PropertyDescriptor).value, `目录.${String(key)}`);\n    if (extra) return { ok: false, reason: extra };\n", ""],
+  ["CK121 Map 自有属性不深查", "contact.ts", "    const extra = nestedPlainError(x?.value, `目录.contacts.${String(key)}`);\n    if (extra) return { ok: false, reason: extra };\n", ""],
+  ["CK122 confirmFinalReport 不预检回执", "contact.ts", "  const nonPlain = nestedPlainError(input, \"回执\");\n  if (nonPlain) return { ok: false, reason: nonPlain };\n", ""],
+  ["CK123 非普通回执仍报 ok:true", "contact.ts", "if (nonPlain) return { ok: false, reason: nonPlain };", "if (nonPlain) return { ok: true, contact: freezeContact(c) };"],
+  ["CK124 canCallDirectly 不分大小写", "contact.ts", "return c.tools.some((t) => t.name === name);", "return c.tools.some((t) => t.name.toLowerCase() === name.toLowerCase());"],
+  ["CK125 grantTool 同名幂等不分大小写", "contact.ts", "if (c.tools.some((t) => t.name === tool.name)) return", "if (c.tools.some((t) => t.name.toLowerCase() === tool.name.toLowerCase())) return"],
+  ["CK126 commit 重复 id 不分大小写", "contact.ts", "if (c.commitments.some((x) => x.id === k.id)) return", "if (c.commitments.some((x) => x.id.toLowerCase() === k.id.toLowerCase())) return"],
+  ["CK127 状态直接工具名唯一不分大小写", "contact.ts", "const firstTool = c.tools.findIndex((x) => x.name === t.name);", "const firstTool = c.tools.findIndex((x) => x.name.toLowerCase() === t.name.toLowerCase());"],
+  ["CK128 settleTask 任务 id 不分大小写", "contact.ts", "if (k.status !== \"active\" || k.schedule || !k.boundTaskIds.includes(taskId)) return k;", "if (k.status !== \"active\" || k.schedule || !k.boundTaskIds.some((t) => t.toLowerCase() === taskId.toLowerCase())) return k;"],
+  ["CK129 状态承诺 id 唯一不分大小写", "contact.ts", "const firstCommitment = c.commitments.findIndex((x) => x.id === k.id);", "const firstCommitment = c.commitments.findIndex((x) => x.id.toLowerCase() === k.id.toLowerCase());"],
 ];
 // 所测功能已按 g-group#2273 撤销(专职开关「只做这件事」整体删除),对应变异移出清单;运行时逐条打印说明,写进 mutations.txt。
 const REMOVED = [
