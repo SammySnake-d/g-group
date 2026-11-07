@@ -1396,3 +1396,102 @@ assert.equal(Reflect.defineProperty(p,'constructor',{value:Promise}),true);Refle
 assert.deepEqual(Object.getOwnPropertyDescriptor(p,'constructor'),before);assert.equal(species,0);setTimeout(()=>console.log('原描述符恢复，进程存活'),20);
 NODE
 ```
+
+---
+
+# 第十一轮：Astra 独立复审
+
+**结论：REJECT。** 第十轮的不可配置但可写 constructor、enumerable 恢复、负小数墙钟原反例已修复。新的实现仍有一项 P1：拒收 Promise 时会临时改写 Node 内置 `Buffer[Symbol.species]`，同一观察窗口内正常的缓冲区切片会抛错；另有数组非下标数字键漏检及两个可破坏安全拒绝的单点故障未被测试发现。这里没有把用户排除的三类 Promise 形态或事先修改内置原型当成拒绝理由。
+
+## 对象、身份和范围
+
+- 普通独立 HTTPS clone：`/tmp/g-group-pr6-r11-astra-01a1b5ef`，开工回读远端 HEAD 为 `c4bc3326103e11acf77a1896c083c696252d88e9`；基线 `origin/feat/domain-core` 为 `afd02560f9546147da380382404eb6106222a9b8`。未使用 `deliverables/g-group-wt`，未使用已作废收据或先前子代理结论。
+- 审查者 `astra`，Mirasim 会话 `codex:d1d48db4-4c36-45db-b221-5edcf62ed037`；原生会话 `01a1b5ef-a44e-7b73-9609-382f8d76b296` 的 `turn_context` 模型为 `ai-iisbo/[乾坤按量]gpt-6-astra`，厂商 OpenAI。作者收据为 `claude:68161be7-5085-463b-90f9-7700266c3f56`、`claude-opus-5-5`；来源门禁实测结果见下表，不用自报代替核验。
+- 本轮只改本报告与收据 `review`。产品源码、作者验收状态、断言、测试、变异脚本都未改；自行故障注入在另外的临时副本完成。
+- 依据 `origin/docs/dev-handbook` 的 `3ae540eee9c193cda368bf24a75c3ccef4db4cf0`：验收文档标题为同步 v3.18，SHA-256 `17a4f224bb39ac1156bd02674a412da528f20b5e57589901868523c3a3625d04`。该文档仍标审查稿、未批准，不将它或本单元测试报告变成整体验收通过。
+- 在本会话、独立 clone 根目录实际运行规定命令，原样输出如下；填入 review 后再次运行仍相同：
+
+  ```text
+  44309caa4077bcdf2f409b56ff6cb26ee8b15ce052458f66a440ac9b23238fd1
+  ```
+
+## 复现结果
+
+本机证据目录：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr6-r11-astra/`；每条采集命令有同名 `.json`（真实 command/cwd/退出码/起止时间）和 `.log`，以及可重跑的独立探针。脚本自身退出 0 不等于产品反例通过，下面区分记录。
+
+| 检查 | 本轮实际结果 |
+|---|---|
+| `npm ci`、`npm run typecheck`、`npm run lint` | 均退出 0；安装审计 0 已知漏洞；lint 检查 25 文件 |
+| `npm test` / Node 22.22.0 与 Node 25.8.1 | 各 230 通过、0 失败、0 cancelled、0 skip、0 todo，其中 kernel 207 条 |
+| 红提交 `fd1f66087e2a0ce3d3d95cb12e057462b0555b37` | 另建普通独立 clone，安装退出 0；Node 22/25 各 23 旧测试通过、207 条 kernel 测试逐名失败、0 skip/todo；红绿四份 kernel 测试文件无差异，红失败名与绿 kernel 名双向差集为空 |
+| 绿 `70c1d8f` 与被审 HEAD 的产品实现 | `git diff 70c1d8f HEAD -- packages/kernel/src` 为空 |
+| 作者完整 197 个变异，Node 22.22.0 | 原样副本 207 绿；197/197 被原样通过的具名测试杀死、0 存活、0 超时，命令退出 0（12:20:12–12:50:00 UTC）；含 K197–K199 的第十轮存活故障回归 |
+| Node 25 补充变异 | 已完成前 78 个均被具名测试发现；为避免重复整轮延迟，审查者主动停止补充轮，不计完整通过；完整清单以 Node 22 结束收据为准 |
+| 必卡金丝雀，Node 22/25 | 各约 5.0 秒超时被杀，记超时而非杀死；校验命令退出 0 |
+| 自造 4 个单点故障 | typecheck 全部退出 0；2 个被具名测试发现、2 个 230/230 仍绿，见 R11-03 |
+| 独立 Promise 子进程矩阵，Node 22/25 | 共 88 个：72 个普通/受支持样例安全拒绝并退出 0；16 个锁定 null/Array 的残余样例先返回拒绝后退出 1。两类均访问器 0 次、描述符恢复；后者是确认残余风险，不是通过安全拒绝 |
+| 八门禁负例 | 8/8 对应门禁判失败，真实 CLI 各退出 1；单夹具可同时触发其他门禁，不把它们当成其他门禁的阳性通过 |
+| 假 HOME 中性标记隔离 | 保护目录直读和别名读取均 EPERM，普通对照标记可读；工作目录内可写、外部写被拒。未对真实 HOME 的文件作隔离攻击探针，未由此声称验证所有隔离路径 |
+| 未填 review 的 `--local` | 退出 1；仅 G-REVIEW 报“还没有独立审查”。G-PROVENANCE 因 review=null 提前返回，不能当作来源通过 |
+| 填 reject 后的 `--local` | 退出 1；G-REVIEW 报 reject；G-PROVENANCE 报本审查会话记录不存在（运行中尚未落盘）。G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 显示通过。原样完整输出在 `gates-after.log`，不得报八门全绿 |
+
+执行器记录：默认 `node` 实际是 22.22.0。第一次标为 `mutations-node25` 的调用因此只是重复 Node 22，已用 SIGINT 停止，不计完整结果，原始日志和 signal 保留；之后以绝对路径 `/opt/homebrew/bin/node` 运行真正的 Node 25 回归、边界和金丝雀。`mutations-node25-actual` 的补充矩阵也主动停止于 78/197，不将命名或部分日志冒充全跑。完整 Node 22 原脚本未更改、未中断。
+
+## 第十轮返修核对
+
+- R10-01 主反例：不可配置但可写、enumerable=true/false 的 constructor 数据属性（值为另一个类、该类 species getter 不可配置）现在只改值，send/pull × 立即/稍后拒绝均安全拒绝，getter/species 0 次、描述符逐字段恢复、无全局处理器的进程退出 0。仅不可扩展的子类样例也通过。
+- R10-02：可配置 constructor getter 的 enumerable 两侧、负小数 `-0.5/-1.5` 均有具名对照；K197–K199 的实跑结果以完整作者矩阵为准。本轮独立矩阵同时覆盖锁定 constructor 指向 species=null 的冻结普通函数，以及锁定 constructor 指向无 species 的冻结普通函数；原版均能安全拒绝，见 R11-03 的单点破坏对照。
+- 收据已把专职开关明确改为用户撤销、不做；AC-20 与通用外部不可信防注入分开。AC-06/08/11/12/35/39 和 R-06 的整体验收仍未测；本片仍是旧 v3.10 三段式，不能冒充 AC-39② 的每轮五块重拼或 AC-40⑪ 的真实 provider 观测。本轮不以这些既有、已披露的后续集成范围单独打回。
+- 残余锁定 constructor=null/Array 形态已由作者明确披露“待用户拍板”，独立子进程实测仍退出 1；它们不自动归入用户已排除的三类。本轮不把试过几种 API 当成一般不可能性的证明，也不替用户扩大排除范围；应保留范围/隔离决策，不能宣称所有拒收均保住宿主。
+
+## 必须返修
+
+### R11-01 [P1 / 拒收不得改写内置对象] INTRINSICS 漏掉 Node 内置 Buffer，方案 3 临时改写全局 species
+
+位置：`packages/kernel/src/plugins.ts:44-51,82-91,123-125`。`INTRINSICS` 是手列的构造器集合，包含 Array/Promise/Uint8Array 却不含 Node 全局 `Buffer`。原生 Promise 的自有 constructor 锁定为 Buffer 时，实例无法改值，方案 3 把 `Buffer[Symbol.species]` 临时由内置 getter 改为数据属性 `Promise`。这违反本实现“只改插件自己的对象、不改内置对象”的边界，而不是插件预先污染了内置原型。
+
+独立 `boundaries.mjs` 在 Node 22/25 的 send/pull 共 4/4：注册前的 `Uint8Array.prototype.slice.call(Buffer.from('neutral'))` 正常返回 Buffer；只读观察描述符的 async_hooks.init 看见一次全局 species=Promise，在该窗口执行相同切片会抛错一次；拒收返回 `non-promise-send` / `invalid-batch`，事后描述符恢复。探针没有改 Buffer 或其原型；hook 没有主动锁死、修改临时属性，只观察并调用正常内置切片。**不声称每个部署都装此 hook，也不声称属性永久未恢复；问题是已观察到的同步共享内置状态污染。**
+
+要求：临时改写的对象范围必须可靠地排除 Node 内置对象，补 Buffer 的拒收与不改写对照，并检验方案 3 所触及对象的所有权/内置边界；不得只验证 Array/Promise 两个样例就声称所有内置对象均未动。相同观察窗口内正常缓冲区操作也须保持有效；若处理不了，显式纳入待决定的安全拒绝/进程隔离边界，不能静默改全局。
+
+### R11-02 [P2 / 普通数组输入合同] 非数组下标的十进制数字键被吞掉，带访问器数组被接受
+
+位置：`packages/kernel/src/plain.ts:22,138-149`。`INDEX` 只检查十进制数字文本，没有检查数组索引的上界和它是否落在 length 内。`4294967295`（2^32-1，不是数组索引）与 `9007199254740992` 因而通过键检查，但它们不改变 length，后面的 0..length-1 循环不检查这些键的描述符。
+
+在空数组上分别定义这些自有 getter 后，Node 22/25 均观测 `plainData` 返回 ok:true/value:[]，`plainItems` 返回 ok:true/items:[]，已注册 DataSource 的 pull 返回 ok:true/events:[]/rejected:[]；getter 0 次。只把键换成 `extra` 的单开关对照，三条路径均明确拒绝。这里**不是声称 getter 被执行或有效索引里的正常事件丢失**，而是“出现访问器即拒绝、数组只能有下标与 length”的合同漏检，输入被静默净化成成功。
+
+要求：按真实数组索引与当前 length 校验每个自有键，不让超界数字名绕过额外键/访问器拒绝；补 plainData/plainItems、appendOwn 与 pull 容器的 2^32-1/更大数字键对照，保证 getter 不调用、异常形状明确拒绝。
+
+### R11-03 [P2 / R-05] 两个安全拒绝分支的单点破坏逃过 230 条测试
+
+四个故障分别只在自己的临时完整副本改一个位置，typecheck 均退出 0，产品原版未改：
+
+| 故障 | 精确改动 | 全套测试结果 | 独立行为对照 |
+|---|---|---|---|
+| R11-M1，存活 | plugins.ts:75 的 speciesSafe 不再把数据属性 species=null 视为安全 | 230 绿 / 0 红 | 原生 Promise 的 constructor 锁定为冻结普通函数，该函数自有只读 species=null：原版 send/pull × 立即/稍后拒绝 4/4 退出 0，变异版 4/4 先拒绝后因未处理拒绝退出 1 |
+| R11-M2，被杀 | plugins.ts:89 恢复可写 constructor 时额外把 writable 设为 false | 228 绿 / 2 具名红 | 十六形态恢复测试与逐旗标测试发现描述符不一致 |
+| R11-M3，存活 | plugins.ts:74 将“找不到 species 返回 true”改成 false | 230 绿 / 0 红 | constructor 锁定为无 species 的冻结普通函数（不是冻结 Promise 子类）：原版上述四组合退出 0，变异版四组合退出 1 |
+| R11-M4，被杀 | plugins.ts:117 挂处理后把原型恢复目标错改成 Promise.prototype | 228 绿 / 2 具名红 | 十六形态描述符/原型与无全局处理器子进程测试发现故障 |
+
+要求：为 species=null 与缺省 species 的**不可再改写普通函数**补单开关对照和无全局处理器子进程存活断言，将 M1/M3 纳入校准。原版在这两个样例正确，缺的是测试激活；“作者所列 197 种全部被杀”只能覆盖那些选定注入点。
+
+## 八个门禁负例
+
+`gate-negatives.mjs` 为每门创建独立真实 Git 夹具，用当前 runGates 检查具体原因，再调用真实 CLI。HOME、会话根和群聊根均指向新建的中性夹具目录；夹具结束后自行清理。
+
+| 门禁 | 应失败输入 | 实际目标结果 |
+|---|---|---|
+| G-TRACE | 验收状态“待验” | 非四选一 |
+| G-REVIEW | 作者与审查 agent 都为 claude | 同一作者/审查者 |
+| G-PROVENANCE | 不存在的 codex:missing-r11 会话 | 审查会话不可信 |
+| G-RED | 不存在的 40 个 e 红提交 | 红提交不存在 |
+| G-STUB | 只断言导入函数类型，从不调用 | 空桩后未按名字失败 |
+| G-TAUTO | assert.equal(11,11) | 恒真断言 |
+| G-WORKFLOW | workflow 申请 contents:write | 申请写权限 |
+| G-LAYER | plugin 包导入另一个 plugin 包 | 插件层不能互相依赖 |
+
+## 复跑入口与清理
+
+从该审查提交的仓库根目录安装依赖后，以证据目录的 `boundaries.mjs <repo>` 复现 R11-01/02，以 `own-mutations.mjs <repo>` 复现 R11-03（它只改临时副本并自动删除）。`independent-probes.mjs <repo> <node绝对路径>` 可重跑 44 个进程矩阵；故意复现残余样例的退出 1 不要误读为平台拦截。
+
+清理：本轮已绑定的临时 clone、故障副本、夹具和中断变异残留将在推送回读完成后删除，实际删除量另存证据收据；不删除其他助手或无法确认归属的临时目录。保留上述证据目录，不改其他工作区或现场服务。
