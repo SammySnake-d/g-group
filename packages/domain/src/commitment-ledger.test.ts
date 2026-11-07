@@ -238,3 +238,178 @@ test("合法 JSON 的 null 输入被拒绝但不抛异常", () => {
   assert.deepEqual(createLedger(null), { ok: false, reason: "invalid-input" });
   assert.deepEqual(createLedger(""), { ok: false, reason: "invalid-input" });
 });
+
+test("非主人联系人不得记进展", () => {
+  const state = registered();
+  assert.deepEqual(applyLedger(state, state.version, progress("k1", "task-a", "r1", { kind: "contact", id: "other" })), { ok: false, reason: "actor-not-allowed" });
+});
+
+test("非主人联系人不得了结承诺", () => {
+  const state = registered();
+  assert.deepEqual(applyLedger(state, state.version, { ...close("blocked"), actor: { kind: "contact", id: "other" } } as Command), { ok: false, reason: "actor-not-allowed" });
+});
+
+test("用户不得直接完成、替代或阻塞承诺", () => {
+  const state = registered();
+  for (const outcome of ["done", "superseded", "blocked"] as const) {
+    assert.deepEqual(applyLedger(state, state.version, close(outcome, outcome === "done" ? "artifact" : null, user), () => true), { ok: false, reason: "actor-not-allowed" });
+  }
+});
+
+test("用户不得记承诺进展", () => {
+  const state = registered();
+  assert.deepEqual(applyLedger(state, state.version, progress("k1", "task-a", "r1", user)), { ok: false, reason: "actor-not-allowed" });
+});
+
+test("其他联系人的消息不能登记到主人账本", () => {
+  const state = unwrap(applyLedger(emptyLedger("c"), 0, { type: "receive", actionId: "r", message: { ...message("m1", 1), sender: { kind: "contact", id: "other" } } }));
+  assert.deepEqual(applyLedger(state, state.version, process()), { ok: false, reason: "actor-not-allowed" });
+});
+
+test("承诺不得绑定到来源消息以外的任务", () => {
+  const state = received();
+  assert.deepEqual(applyLedger(state, state.version, process(1, "task-b")), { ok: false, reason: "task-mismatch" });
+});
+
+test("撤销后的承诺不得再记进展", () => {
+  const state = registered();
+  const revoked = unwrap(applyLedger(state, state.version, close("revoked", null, user)));
+  assert.deepEqual(applyLedger(revoked, revoked.version, progress()), { ok: false, reason: "commitment-closed" });
+});
+
+test("产物解析器返回非布尔真值不算存在", () => {
+  const state = registered();
+  assert.deepEqual(applyLedger(state, state.version, close("done", "artifact"), () => "yes" as unknown as boolean), { ok: false, reason: "artifact-not-found" });
+});
+
+test("产物解析器抛错按不存在处理", () => {
+  const state = registered();
+  assert.deepEqual(applyLedger(state, state.version, close("done", "artifact"), () => { throw new Error("unavailable"); }), { ok: false, reason: "artifact-not-found" });
+});
+
+test("别轮已完成的承诺不再挂起", () => {
+  const state = registered();
+  const done = unwrap(applyLedger(state, state.version, close("done", "artifact"), () => true));
+  assert.deepEqual(reconcileRound(done, "r2", ["k1"]), { ok: true, ready: true, pending: [] });
+});
+
+test("篡改承诺来源的外部账本被拒绝", () => {
+  const state = registered();
+  const forged = { ...state, commitments: [{ ...state.commitments[0]!, text: "不在来源中" }] };
+  assert.deepEqual(applyLedger(forged, forged.version, receive("m2", 2)), { ok: false, reason: "invalid-input" });
+});
+
+test("完成却缺少产物的外部账本被拒绝", () => {
+  const state = registered();
+  const forged: Ledger = { ...state, commitments: [{ ...state.commitments[0]!, status: "done", resolution: { detail: null, artifact: null } }] };
+  assert.deepEqual(applyLedger(forged, forged.version, receive("m2", 2)), { ok: false, reason: "invalid-input" });
+});
+
+test("相同动作载荷键序不同仍幂等", () => {
+  const state = received();
+  const reordered: Command = { actionId: "receive-m1", message: { text: "原文 m1", sender: { id: "u", kind: "user" }, seq: 1, id: "m1", replyToSeq: null, taskId: "task-a" }, type: "receive" };
+  const result = applyLedger(state, 0, reordered);
+  assert.equal(result.ok && result.duplicate, true);
+  if (result.ok) assert.deepEqual(result.ledger, state);
+});
+
+test("外部类实例命令被拒绝", () => {
+  class Input {}
+  const command = Object.assign(new Input(), receive());
+  assert.deepEqual(applyLedger(emptyLedger("c"), 0, command as Command), { ok: false, reason: "invalid-input" });
+});
+
+test("未来版本号不得提交", () => {
+  const state = received();
+  assert.deepEqual(applyLedger(state, state.version + 1, receive("m2", 2)), { ok: false, reason: "version-conflict" });
+});
+
+test("撤销、替代和阻塞缺原因或带产物均被拒绝", () => {
+  const state = registered();
+  for (const outcome of ["revoked", "superseded", "blocked"] as const) {
+    assert.deepEqual(applyLedger(state, state.version, { ...close(outcome), detail: null } as Command), { ok: false, reason: "resolution-required" });
+    assert.deepEqual(applyLedger(state, state.version, close(outcome, "artifact")), { ok: false, reason: "resolution-required" });
+  }
+});
+
+test("引用不存在的消息被拒绝", () => {
+  const state = emptyLedger("c");
+  assert.deepEqual(applyLedger(state, state.version, { type: "receive", actionId: "r", message: { ...message("m1", 1), replyToSeq: 99 } }), { ok: false, reason: "reply-not-found" });
+});
+
+test("已处理消息不得使用新动作号重复处理", () => {
+  const state = registered();
+  assert.deepEqual(applyLedger(state, state.version, { ...process(), actionId: "again" } as Command), { ok: false, reason: "already-processed" });
+});
+
+test("对账拒绝不存在的承诺", () => {
+  const state = registered();
+  assert.deepEqual(reconcileRound(state, "r1", ["missing"]), { ok: false, reason: "commitment-not-found" });
+});
+
+test("不同消息不能复用序号", () => {
+  const state = received();
+  assert.deepEqual(applyLedger(state, state.version, receive("m2", 1)), { ok: false, reason: "seq-conflict" });
+});
+
+test("嵌套访问器与 Proxy 在三个入口均不执行", () => {
+  let invoked = 0;
+  const trap = () => { invoked++; throw new Error("must not execute"); };
+  const nestedGetter = Object.defineProperty(message("m1", 1), "text", { enumerable: true, get: trap });
+  const setter = Object.defineProperty({ ...receive() }, "actionId", { enumerable: true, set: trap });
+  const nestedProxy = new Proxy(message("m1", 1), { get: trap, ownKeys: trap });
+  const entries = Object.defineProperty([{}], "0", { enumerable: true, get: trap });
+  const stateProxy = new Proxy(registered(), { get: trap, ownKeys: trap });
+  const idsProxy = new Proxy(["k1"], { get: trap, ownKeys: trap });
+  const resolverProxy = new Proxy(() => true, { apply: trap });
+  const empty = emptyLedger("c");
+  const state = registered();
+  for (const command of [
+    { type: "receive", actionId: "r", message: nestedGetter }, setter,
+    { type: "receive", actionId: "r", message: nestedProxy },
+    { type: "process", actionId: "p", seq: 1, accepted: true, commitments: entries },
+    { ...bindCompute("bind", "worker"), actor: new Proxy(contact, { get: trap, ownKeys: trap }) },
+  ]) assert.deepEqual(applyLedger(empty, empty.version, command as Command), { ok: false, reason: "invalid-input" });
+  assert.deepEqual(applyLedger(stateProxy, state.version, receive("m2", 2)), { ok: false, reason: "invalid-input" });
+  assert.deepEqual(reconcileRound(stateProxy, "r1", ["k1"]), { ok: false, reason: "invalid-input" });
+  assert.deepEqual(reconcileRound(state, "r1", idsProxy), { ok: false, reason: "invalid-input" });
+  assert.deepEqual(applyLedger(state, state.version, close("done", "artifact"), resolverProxy), { ok: false, reason: "artifact-not-found" });
+  assert.equal(invoked, 0);
+});
+
+test("各入口的 null 输入不抛错,合法 null 字段可接受", () => {
+  const state = registered();
+  assert.deepEqual(applyLedger(null as unknown as Ledger, 0, receive()), { ok: false, reason: "invalid-input" });
+  assert.deepEqual(applyLedger(state, null as unknown as number, receive("m2", 2)), { ok: false, reason: "invalid-input" });
+  assert.deepEqual(reconcileRound(null as unknown as Ledger, "r1", []), { ok: false, reason: "invalid-input" });
+  assert.deepEqual(reconcileRound(state, null as unknown as string, []), { ok: false, reason: "invalid-input" });
+  assert.deepEqual(reconcileRound(state, "r1", null as unknown as string[]), { ok: false, reason: "invalid-input" });
+  const empty = emptyLedger("c");
+  assert.equal(applyLedger(empty, empty.version, receive("free", 1, null)).ok, true);
+});
+
+test("返回账本深冻结且不冻结调用方输入", () => {
+  const input = receive();
+  const result = applyLedger(emptyLedger("c"), 0, input);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(Object.isFrozen(input), false);
+  assert.equal(Object.isFrozen(result.ledger), true);
+  assert.equal(Object.isFrozen(result.ledger.messages), true);
+  assert.equal(Object.isFrozen(result.ledger.messages[0]), true);
+  assert.equal(Object.isFrozen(result.ledger.messages[0]?.sender), true);
+  assert.equal(Object.isFrozen(result.ledger.actions[0]), true);
+});
+
+test("绑定范围限于对应承诺且拒绝无效或终态输入", () => {
+  const first = registered();
+  const next = unwrap(applyLedger(first, first.version, receive("m2", 2)));
+  const two = unwrap(applyLedger(next, next.version, process(2)));
+  const bound = unwrap(applyLedger(two, two.version, bindCompute("bind", "worker")));
+  assert.deepEqual(applyLedger(bound, bound.version, progress("k2", "task-a", "r1", compute)), { ok: false, reason: "actor-not-allowed" });
+  assert.deepEqual(applyLedger(bound, bound.version, { ...bindCompute("missing", "worker"), commitmentId: "missing" } as Command), { ok: false, reason: "commitment-not-found" });
+  assert.deepEqual(applyLedger(bound, bound.version, { ...bindCompute("wrong", "worker"), taskId: "task-b" } as Command), { ok: false, reason: "task-mismatch" });
+  assert.deepEqual(applyLedger(bound, bound.version, bindCompute("empty", "")), { ok: false, reason: "invalid-input" });
+  const done = unwrap(applyLedger(bound, bound.version, close("done", "artifact"), () => true));
+  assert.deepEqual(applyLedger(done, done.version, bindCompute("closed", "worker")), { ok: false, reason: "commitment-closed" });
+});
