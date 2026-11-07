@@ -30,3 +30,23 @@ scripts/gates/gates.ts stub.run with origin/feat/domain-core base
 Domain tests exercise a proposed immutable snapshot, not physical persistence.
 The done resolver is a trusted injected predicate; external artifact existence and
 production actor authentication require host integration and separate acceptance.
+
+Round 1 rework (codex:f2b3dc7a-ec4a-4277-ba62-5bd978ce063e)
+The binding feature had three failing named tests at 077f44b61f9eadefd5fc78d049d1432446857219
+(22 passed, 3 failed), before the implementation at dd6f341f164ca94a5b7ad56646ba5ea2b0acf7bb
+(25 passed, 0 failed). Unbound Compute progress was accepted before and is rejected afterwards.
+For the subsequently added tests against already implemented behavior, e417a25e47f3e31b90d69f38a022c40e892888a0
+is a retrospective stub control: 49 named tests failed. Restoring the implementation in
+b0d71549bed4846044beca95f5c112b4b7f6ba1d made all 49 pass. This retrospective control
+does not establish that those supplementary tests were written before the original implementation.
+
+node --test packages/domain/src/commitment-ledger.test.ts: 49 passed, 0 failed.
+npm test: 72 passed, 0 failed, including 23 inherited tests.
+npm run typecheck: exit 0.
+npm run lint: exit 0, 16 files checked.
+node packages/domain/proof/commitment-ledger-mutations.mjs: 54 named mutants killed;
+the designated test's diagnostic must contain the declared marker. F09 and F19 detect
+the explicitly expected exception; an unrelated test or a file-level failure is not a kill.
+All 49 named tests have a declared mutant, and all 18 implemented rejection reason strings
+are asserted. Some tests cover multiple criteria; one mutant per test does not prove that
+every individual criterion is calibrated, so R-05 remains unverified.
