@@ -129,21 +129,20 @@ function seatbeltProfile(work: string, mounts: string[] = []): string {
 }
 /** 沙箱执行计划:要执行的命令、参数、选项;seatbelt 时带上规则文本和写入位置。纯函数,不执行、不写文件。 */
 export interface SandboxPlan { cmd: string; argv: string[]; opts: SpawnSyncOptionsWithStringEncoding; profile?: string; profilePath?: string }
-export function sandboxPlan(_args: string[], _work: string, _mounts: string[] = [], _mode: SandboxMode = sandboxMode()): SandboxPlan {
-  return { cmd: "", argv: [], opts: { encoding: "utf8" } };
-}
-export function sandboxed(args: string[], work: string, mounts: string[] = []) {
-  const mode = sandboxMode();
+export function sandboxPlan(args: string[], work: string, mounts: string[] = [], mode: SandboxMode = sandboxMode()): SandboxPlan {
   const w = fs.realpathSync(work);
-  const env = { PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`, HOME: w, TMPDIR: w };
   if (mode === "docker") {
     const vols = [...new Set([w, ...mounts.map((m) => fs.realpathSync(m))])].flatMap((m) => ["-v", `${m}:${m}`]);
     const uid = typeof process.getuid === "function" ? `${process.getuid()}:${process.getgid?.() ?? 0}` : "1000:1000";
-    return spawnSync("docker", ["run", "--rm", "--network", "none", "--user", uid, "-e", `HOME=${w}`, "-e", `TMPDIR=${w}`, ...vols, "-w", w, process.env.GATE_SANDBOX_IMAGE!, "node", ...args], { encoding: "utf8", timeout: 900_000, env: { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: w } });
+    return { cmd: "docker", argv: ["run", "--rm", "--network", "none", "--user", uid, "-e", `HOME=${w}`, "-e", `TMPDIR=${w}`, ...vols, "-w", w, process.env.GATE_SANDBOX_IMAGE!, "node", ...args], opts: { encoding: "utf8", timeout: 900_000, env: { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: w } } };
   }
-  const prof = path.join(w, ".gate-sandbox.sb");
-  fs.writeFileSync(prof, seatbeltProfile(w, mounts));
-  return spawnSync("/usr/bin/sandbox-exec", ["-f", prof, process.execPath, ...args], { cwd: w, encoding: "utf8", timeout: 900_000, env });
+  const profilePath = path.join(w, ".gate-sandbox.sb");
+  return { cmd: "/usr/bin/sandbox-exec", argv: ["-f", profilePath, process.execPath, ...args], opts: { cwd: w, encoding: "utf8", timeout: 900_000, env: { PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`, HOME: w, TMPDIR: w } }, profile: seatbeltProfile(w, mounts), profilePath };
+}
+export function sandboxed(args: string[], work: string, mounts: string[] = []) {
+  const plan = sandboxPlan(args, work, mounts);
+  if (plan.profile !== undefined && plan.profilePath) fs.writeFileSync(plan.profilePath, plan.profile);
+  return spawnSync(plan.cmd, plan.argv, plan.opts);
 }
 
 // 把一棵树(不含 .git、node_modules)复制到新的临时目录;node_modules 以只读软链提供。
