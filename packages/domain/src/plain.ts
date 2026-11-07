@@ -1,3 +1,4 @@
+// biome-ignore-all lint/correctness/noUnusedVariables lint/correctness/noUnusedFunctionParameters lint/correctness/noUnusedImports lint/correctness/noUnusedPrivateClassMembers lint/suspicious/noExplicitAny: 红提交空壳,绿提交恢复实现
 import { types } from "node:util";
 
 // 领域层内部模块:普通数据对象合同的规范化工具。只供 contact.ts、helper.ts 内部使用,
@@ -34,18 +35,7 @@ const dataDesc = (value: unknown, writable: boolean): PropertyDescriptor => {
 const isOptional = (s: FieldSpec): boolean => Object.hasOwn(s, "optional") && s.optional === true;
 
 /** 普通数据检查(调用前已排除 Proxy):返回 null 表示通过,否则返回拒绝理由。不调用任何 getter。skipProtoCheck 为 true 时跳过原型检查但仍检查访问器。 */
-export function plainDataError(v: object, what: string, wantArray: boolean, skipProtoCheck = false): string | null {
-  const noun = wantArray ? "数组" : "对象";
-  if (!skipProtoCheck) {
-    const proto: unknown = Object.getPrototypeOf(v);
-    if (wantArray ? proto !== Array.prototype || !Array.isArray(v) : proto !== Object.prototype && proto !== null) return `${what} 只接受普通数据${noun}`;
-  }
-  for (const key of Reflect.ownKeys(v)) {
-    const d = Object.getOwnPropertyDescriptor(v, key);
-    if (d && !Object.hasOwn(d, "value")) return `${what} 只接受普通数据${noun}(${String(key)} 是访问器属性)`;
-  }
-  return null;
-}
+export function plainDataError(v: object, what: string, wantArray: boolean, skipProtoCheck = false): string | null { throw new Error("未实现"); }
 
 /** nestedPlainError 的待查项:值、它在入参里的位置、它是不是函数自带的 prototype 对象、下一项。 */
 interface Pending { readonly x: unknown; readonly at: string; readonly fnProto: boolean; readonly next: Pending | null }
@@ -58,37 +48,7 @@ interface Pending { readonly x: unknown; readonly at: string; readonly fnProto: 
  * 自有数据属性的值同样往下查;只有函数自带的 prototype 对象(生成器函数的原型由引擎给出)不查原型,它的自有属性照样查。
  * 已访问集合防环,不递归,深层嵌套不爆栈。confirmFinalReport 也用它对整个回执先做一遍检查(CH-42)。
  */
-export function nestedPlainError(v: unknown, what: string): string | null {
-  // 待查栈用对象字面量串成链表,不用数组 push:数组按下标写入会经过原型链上的同名 setter(CH-30 的污染对照)
-  let top: Pending | null = { x: v, at: what, fnProto: false, next: null };
-  const seen = new Set<unknown>();
-  while (top !== null) {
-    const { x, at, fnProto } = top;
-    top = top.next;
-    if (typeof x !== "function" && (typeof x !== "object" || x === null)) continue;
-    if (types.isProxy(x)) return `${at} 只接受普通数据(不能是 Proxy)`;
-    // CH-44:即使对象已在 seen 中(防循环引用),也要检查它本身是否普通,因为它可能同时以不同上下文出现(如别名+prototype)
-    // 已在 seen 中只豁免遍历其属性,不豁免检查对象本身。
-    const alreadySeen = seen.has(x);
-    if (!alreadySeen) seen.add(x);
-
-    // 对象的访问器必须被检查,即使它作为函数 prototype;fnProto 只豁免原型检查。
-    if (typeof x === "object") {
-      const bad = plainDataError(x, at, Array.isArray(x), fnProto);
-      if (bad) return bad;
-    }
-    // 如果已经访问过此对象,不再遍历其属性以防循环
-    if (alreadySeen) continue;
-
-    for (const key of Reflect.ownKeys(x)) {
-      const d = Object.getOwnPropertyDescriptor(x, key);
-      if (d === undefined) continue;
-      if (!Object.hasOwn(d, "value")) return `${at} 只接受普通数据(${String(key)} 是访问器属性)`;
-      top = { x: d.value, at: `${at}.${String(key)}`, fnProto: typeof x === "function" && key === "prototype", next: top };
-    }
-  }
-  return null;
-}
+export function nestedPlainError(v: unknown, what: string): string | null { throw new Error("未实现"); }
 
 const INDEX = /^(0|[1-9]\d*)$/;
 
@@ -148,26 +108,4 @@ function copyField(v: unknown, field: string, spec: FieldSpec): FieldResult {
 }
 
 /** 把一个入参对象按 schema 规范化成冻结纯数据快照;不合普通数据合同或字段类型不对时给出理由。 */
-export function normalize<T>(input: unknown, schema: Schema, what: string): Normalized<T> {
-  if (typeof input !== "object" || input === null) return { ok: false, reason: `${what} 必须是对象` };
-  if (types.isProxy(input)) return { ok: false, reason: `${what} 只接受普通数据对象` };
-  if (Array.isArray(input)) return { ok: false, reason: `${what} 必须是对象` };
-  const bad = plainDataError(input, what, false);
-  if (bad) return { ok: false, reason: bad };
-  const out = Object.create(null) as Record<string, unknown>;
-  for (const key of Object.keys(schema)) {
-    const spec = schema[key] as FieldSpec;
-    const d = Object.getOwnPropertyDescriptor(input, key);
-    const raw: unknown = d !== undefined && Object.hasOwn(d, "value") ? d.value : undefined;
-    if (raw === undefined && isOptional(spec)) continue;
-    const v = copyField(raw, key, spec);
-    if (!v.ok) return v;
-    Object.defineProperty(out, key, dataDesc(v.value, false));
-  }
-  for (const key of Reflect.ownKeys(input)) {
-    if (typeof key === "string" && Object.hasOwn(schema, key)) continue;
-    const extra = nestedPlainError((Object.getOwnPropertyDescriptor(input, key) as PropertyDescriptor).value, `${what}.${String(key)}`);
-    if (extra) return { ok: false, reason: extra };
-  }
-  return { ok: true, value: Object.freeze(out) as T };
-}
+export function normalize<T>(input: unknown, schema: Schema, what: string): Normalized<T> { throw new Error("未实现"); }

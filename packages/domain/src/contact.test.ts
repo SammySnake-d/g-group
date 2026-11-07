@@ -7,6 +7,7 @@ import * as contactModule from "./contact.ts";
 import * as domain from "./index.ts";
 import { addContact, briefFor, type Contact, type ContactResult, canCallDirectly, commit, confirmFinalReport, emptyDirectory, FORBIDDEN_DIRECT_TOOLS, grantComputeAsset, grantTool, revokeCommitment, settleTask, updateContact } from "./contact.ts";
 import { normalize } from "./plain.ts";
+import { routeHelper } from "./helper.ts";
 
 /** 按需求文档 75-78 行独立列出的通用能力样本,不取自被测实现的清单。 */
 const SPEC_GENERAL_TOOLS = ["bash", "shell", "exec", "run_command", "write_file", "edit_file", "apply_patch", "browser", "computer_use", "run_script"];
@@ -1795,4 +1796,138 @@ test("CH-44 非普通对象同时作为函数 prototype 和普通字段的别名
   plainFn.prototype = plainProto;
   const r4 = grantTool(c, { name: "tool4", bounded: true, ignored: { plainProto, plainFn } } as never);
   assert.equal(r4.ok, true, "普通对象对照应通过");
+});
+
+// ---------------------------------------------------------------- 第十七轮(reviews/feat-contact-helper.md R17-01 / R17-03)
+/** 函数自有 prototype 的几类值:引擎生成的原型、调用方换上的普通对象、调用方换上的非普通原型对象。 */
+const protoCases = () => {
+  const nonPlain = Object.create({ inherited: true }) as Record<string, unknown>;
+  const swapped = function swapped() {};
+  (swapped as { prototype: unknown }).prototype = nonPlain;
+  const swappedPlain = function swappedPlain() {};
+  (swappedPlain as { prototype: unknown }).prototype = {};
+  const swappedNull = function swappedNull() {};
+  (swappedNull as { prototype: unknown }).prototype = Object.create(null);
+  const gen = function* gen() {};
+  const agen = async function* agen() {};
+  const genSwapped = function* genSwapped() {};
+  (genSwapped as { prototype: unknown }).prototype = nonPlain;
+  const genSwappedPlain = function* genSwappedPlain() {};
+  (genSwappedPlain as { prototype: unknown }).prototype = {};
+  const genWithProxy = function* genWithProxy() {};
+  Object.defineProperty(genWithProxy.prototype, "extra", { value: new Proxy({ x: 1 }, { get: () => { throw new Error("不该被调用"); } }), enumerable: false });
+  return { nonPlain, swapped, swappedPlain, swappedNull, gen, agen, genSwapped, genSwappedPlain, genWithProxy };
+};
+
+test("CH-47 函数自有 prototype 单一路径:调用方换上的非普通原型对象必须拒收,引擎生成的生成器原型与普通函数原型照常(对照)", () => {
+  const c = fullContact();
+  const { nonPlain, swapped, swappedPlain, swappedNull, gen, agen, genSwapped, genSwappedPlain, genWithProxy } = protoCases();
+  // 单一路径:被丢弃字段里只有函数自己,别名不同时出现,所以只能由 prototype 这条路查到
+  const only = grantTool(c, { name: "tool1", bounded: true, ignored: { swapped } } as never);
+  assert.equal(only.ok, false, "单一路径应拒收");
+  assert.match(!only.ok ? only.reason : "", /^直接工具\.ignored\.swapped\.prototype 只接受普通数据对象$/, "理由应指向 prototype");
+  const deep = grantTool(c, { name: "tool2", bounded: true, ignored: { a: { b: [swapped] } } } as never);
+  assert.equal(deep.ok, false, "深层单一路径应拒收");
+  assert.match(!deep.ok ? deep.reason : "", /ignored\.a\.b\.0\.prototype 只接受普通数据对象$/, "深层理由应指向 prototype");
+  const genBad = grantTool(c, { name: "tool3", bounded: true, ignored: { genSwapped } } as never);
+  assert.equal(genBad.ok, false, "生成器函数被换上的非普通原型同样拒收");
+  assert.match(!genBad.ok ? genBad.reason : "", /genSwapped\.prototype 只接受普通数据对象$/, "生成器理由应指向 prototype");
+  const genProxy = grantTool(c, { name: "tool4", bounded: true, ignored: { genWithProxy } } as never);
+  assert.equal(genProxy.ok, false, "引擎生成的生成器原型里的 Proxy 照样拒收");
+  assert.match(!genProxy.ok ? genProxy.reason : "", /genWithProxy\.prototype\.extra 只接受普通数据\(不能是 Proxy\)$/, "生成器原型自有属性也要查");
+  // 对照:引擎生成的生成器原型、换上的普通对象与 null 原型、普通函数都照常接受
+  for (const [label, fn] of [["生成器", gen], ["异步生成器", agen], ["换普通对象的普通函数", swappedPlain], ["换 null 原型的普通函数", swappedNull], ["生成器换普通对象", genSwappedPlain]] as const) {
+    const r = grantTool(c, { name: "tool_ok", bounded: true, ignored: { fn } } as never);
+    assert.equal(r.ok, true, label);
+  }
+  assert.equal(nonPlain !== undefined, true, "夹具自检:非普通原型对象已构造");
+  // 换上的原型挂在引擎生成器原型层上的对象:结构上与引擎刚生成的原型无法区分(都是空对象、上层只有引擎原型),
+  // 里面没有任何调用方的数据可达,所以放行;一旦带上调用方的数据(自有属性、自有访问器、Proxy、普通对象)就照常拒收。
+  const GEN = Object.getPrototypeOf((function* () {}).prototype) as object;
+  // 生成器函数的原型被换成"空对象、上层正好是引擎原型":结构与引擎刚生成的那个一致,里面没有任何调用方的数据可达,放行。
+  const genForged = function* genForged() {};
+  (genForged as { prototype: unknown }).prototype = Object.create(GEN);
+  assert.equal(grantTool(c, { name: "tool5", bounded: true, ignored: { genForged } } as never).ok, true, "同层空对象放行(无调用方数据可达)");
+  const forgedOwn = function* forgedOwn() {};
+  (forgedOwn as { prototype: unknown }).prototype = Object.assign(Object.create(GEN), { inherited: Object.create({ deep: true }) });
+  const ownBad = grantTool(c, { name: "tool6", bounded: true, ignored: { forgedOwn } } as never);
+  assert.equal(ownBad.ok, false, "带上调用方数据的同层原型对象拒收");
+  assert.match(!ownBad.ok ? ownBad.reason : "", /forgedOwn\.prototype\.inherited 只接受普通数据对象$/, "理由应指向调用方数据");
+  // 生成器函数被别人换成另一层的原型(同步 / 异步)同样拒收
+  const agenSync = async function* agenSync() {};
+  (agenSync as { prototype: unknown }).prototype = Object.create(GEN);
+  assert.equal(grantTool(c, { name: "tool7", bounded: true, ignored: { agenSync } } as never).ok, false, "异步生成器换同步那层原型拒收");
+  const plainFake = function plainFake() {};
+  (plainFake as { prototype: unknown }).prototype = Object.create(GEN);
+  assert.equal(grantTool(c, { name: "tool8", bounded: true, ignored: { plainFake } } as never).ok, false, "普通函数拿生成器那层原型拒收");
+  // CH-44 的 seen 修复与本条同源:引擎生成的生成器原型先在免查原型的位置出现,之后又作为普通字段出现时,
+  // 必须检查对象本身(它的原型不是 Object.prototype),不能因为"已经见过"就跳过——两种遍历顺序结果一致。
+  const protoSelf = function* protoSelf() {};
+  const engineProto = (protoSelf as { prototype: unknown }).prototype;
+  const orderFnFirst = grantTool(c, { name: "tool9", bounded: true, ignored: { protoSelf, direct: engineProto } } as never);
+  assert.equal(orderFnFirst.ok, false, "生成器原型又作为普通字段出现(函数在前)应拒收");
+  assert.match(!orderFnFirst.ok ? orderFnFirst.reason : "", /只接受普通数据对象$/, "理由应指明不是普通数据对象");
+  const orderDirectFirst = grantTool(c, { name: "tool10", bounded: true, ignored: { direct: engineProto, protoSelf } } as never);
+  assert.equal(orderDirectFirst.ok, false, "生成器原型又作为普通字段出现(字段在前)应拒收");
+  assert.match(!orderDirectFirst.ok ? orderDirectFirst.reason : "", /只接受普通数据对象$/, "两种顺序理由一致");
+  // 同一路径在 Helper 入口与回执入口上同样生效
+  const helper = routeHelper({ kind: "global", extra: { swapped } } as never, { kind: "user", id: "u" }, "u");
+  assert.equal(helper.ok, false, "Helper 入口同样拒收");
+  assert.match(!helper.ok ? helper.reason : "", /extra\.swapped\.prototype 只接受普通数据对象$/, "Helper 理由应指向 prototype");
+  const helperGen = routeHelper({ kind: "global", extra: { gen } } as never, { kind: "user", id: "u" }, "u");
+  assert.equal(helperGen.ok, true, "Helper 入口生成器对照");
+  const receipt = confirmFinalReport(fullContact(), { taskId: "T", commitmentIds: ["k"], basedOnSeq: 1, extra: { swapped } } as never);
+  assert.equal(receipt.ok, false, "回执入口同样拒收");
+  assert.match(!receipt.ok ? receipt.reason : "", /回执\.extra\.swapped\.prototype 只接受普通数据对象$/, "回执理由应指向 prototype");
+});
+
+test("CH-48 函数自有访问器:被丢弃字段里的函数带 getter/setter(含 Symbol 键、不可枚举)一律拒收且调用 0 次,函数的数据属性与引擎生成的 prototype 照常(对照)", () => {
+  let calls = 0;
+  const hit = (): never => { calls++; throw new Error("不该被调用"); };
+  const withGetter = (enumerable: boolean, key: PropertyKey) => {
+    const fn = function withGetter() {};
+    Object.defineProperty(fn, key, { enumerable, configurable: true, get: hit });
+    return fn;
+  };
+  const withSetter = (enumerable: boolean, key: PropertyKey) => {
+    const fn = function withSetter() {};
+    Object.defineProperty(fn, key, { enumerable, configurable: true, set: hit });
+    return fn;
+  };
+  const withData = (key: PropertyKey) => {
+    const fn = function withData() {};
+    Object.defineProperty(fn, key, { enumerable: true, configurable: true, value: { a: [1, "x"] } });
+    return fn;
+  };
+  const variants: [string, unknown, boolean][] = [
+    ["可枚举字符串键 getter", withGetter(true, "x"), false],
+    ["不可枚举字符串键 getter", withGetter(false, "x"), false],
+    ["Symbol 键 getter", withGetter(true, Symbol("x")), false],
+    ["可枚举字符串键 setter", withSetter(true, "x"), false],
+    ["不可枚举 Symbol 键 setter", withSetter(false, Symbol("x")), false],
+    ["普通数据属性", withData("x"), true],
+    ["Symbol 键数据属性", withData(Symbol("x")), true],
+  ];
+  const c = fullContact();
+  const gen = function* gen() {};
+  for (const [label, fn, want] of variants) {
+    calls = 0;
+    const r = grantTool(c, { name: "tool1", bounded: true, ignored: { fn } } as never);
+    assert.equal(r.ok, want, label);
+    if (!want) assert.match(!r.ok ? r.reason : "", /只接受普通数据\(.*是访问器属性\)$/, `${label} 理由`);
+    assert.equal(calls, 0, `${label} 调用次数`);
+    calls = 0;
+    const helper = routeHelper({ kind: "global", extra: [fn] } as never, { kind: "user", id: "u" }, "u");
+    assert.equal(helper.ok, want, `${label} Helper 入口`);
+    assert.equal(calls, 0, `${label} Helper 调用次数`);
+    calls = 0;
+    const receipt = confirmFinalReport(fullContact(), { taskId: "T", commitmentIds: ["k"], basedOnSeq: 1, extra: { fn } } as never);
+    assert.equal(receipt.ok, want, `${label} 回执入口`);
+    assert.equal(calls, 0, `${label} 回执调用次数`);
+  }
+  // 对照:引擎生成的生成器原型照样放行(它自带 Symbol.toStringTag 这类数据属性,不是访问器)
+  calls = 0;
+  const ok = grantTool(c, { name: "tool2", bounded: true, ignored: { gen } } as never);
+  assert.equal(ok.ok, true, "生成器对照");
+  assert.equal(calls, 0, "生成器对照调用次数");
 });
