@@ -1,0 +1,22 @@
+receipts/chore-gates.json
+  s_0cc5843d10363c::t_beccf230b0e64e 69-71,73-74
+reviews/chore-gates.md
+  s_0cc5843d10363c::t_beccf230b0e64e 807-861,864
+  s_0cc5843d10363c::t_f03881fbe892b9 862-863
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c415292b11c7a4182db1baf03ddf3f3043186a83",
+  "prompts": {},
+  "sessions": {
+    "s_0cc5843d10363c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b780-4bdd-7092-acff-e4a664e48826",
+        "model": "ai-iisbo/[乾坤按量]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
