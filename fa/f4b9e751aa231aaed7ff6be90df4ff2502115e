@@ -1,0 +1,19 @@
+receipts/chore-gates.json
+  s_c26df142923f90::t_b27e6cd6af33ab 66,69-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "faf4b9e751aa231aaed7ff6be90df4ff2502115e",
+  "prompts": {},
+  "sessions": {
+    "s_c26df142923f90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1fd7608a-120a-4bbb-92d3-ffa9b797b509",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
