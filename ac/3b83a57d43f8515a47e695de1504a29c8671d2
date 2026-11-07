@@ -1,0 +1,21 @@
+receipts/chore-gates.json
+  s_6b0720ccb9aaa5::t_3ee62e4497ef78 69-74,76
+reviews/r7-01-sandbox-isolation.md
+  s_6b0720ccb9aaa5::t_ed23a67da065da 1-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ac3b83a57d43f8515a47e695de1504a29c8671d2",
+  "prompts": {},
+  "sessions": {
+    "s_6b0720ccb9aaa5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8d1af83f4b42b537",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
