@@ -80,6 +80,121 @@ const diagnostics = {
   F18: "already-processed", F19: "Cannot read properties of undefined", F20: "seq-conflict",
 };
 
+// Independent criteria have their own named mutation and the same unmodified-input control.
+const original = (id) => {
+  const match = mutants.find(([name]) => name.startsWith(`${id} `));
+  if (!match) throw new Error(`missing original mutation ${id}`);
+  return [match[1], match[2]];
+};
+const inherited = (name, id, criterion, marker) => [name, ...original(id), criterion, marker];
+const criteria = [
+  ["C01 接收错写消息编号", 'messages.push({ ...m, handled: false });', 'messages.push({ ...m, id: `${m.id}-wrong`, handled: false });', "接收保留消息编号", "m1-wrong"],
+  ["C02 接收错写序号", 'messages.push({ ...m, handled: false });', 'messages.push({ ...m, seq: m.seq + 1, handled: false });', "接收保留消息序号", "+   2"],
+  ["C03 接收错写原文", 'messages.push({ ...m, handled: false });', 'messages.push({ ...m, text: `${m.text}-wrong`, handled: false });', "接收保留消息原文", "wrong"],
+  inherited("C04 提前标处理", "M26", "接收不提前标记已处理", "true"),
+  ["C05 新动作重投未标重复", 'return { ok: true, ledger: freeze(repeat), duplicate: true };', 'return { ok: true, ledger: freeze(repeat), duplicate: false };', "同消息新动作重投标记重复", "false !== true"],
+  inherited("C06 重投丢失新动作身份", "M18", "同消息新动作重投保留新动作身份", "action-id-conflict"),
+  inherited("C07 消息正文冲突放行", "M04", "同消息号的正文冲突被拒绝", "message-id-conflict"),
+  inherited("C08 登记不标已处理", "M09", "登记后消息标记已处理", "false !== true"),
+  ["C09 来源序号错误", 'sourceSeq: m.seq, status:', 'sourceSeq: m.seq + 1, status:', "登记承诺保留来源序号", "2 !== 1"],
+  ["C10 来源文字错误", 'text: m.text.slice(m.text.indexOf(c.text), m.text.indexOf(c.text) + c.text.length), sourceSeq:', 'text: `${c.text}-wrong`, sourceSeq:', "登记承诺保留来源文字", "wrong"],
+  inherited("C11 允许伪造文字", "M19", "登记拒绝来源未出现的文字", "commitment-text-not-source"),
+  inherited("C12 解析器否认仍完成", "M10", "解析器否认存在时不能完成", "artifact-not-found"),
+  ["C13 未指定产物仍完成", 'exists = !!input.artifact && typeof artifactExists', 'exists = typeof artifactExists', "未指定产物时不能完成", "artifact-not-found"],
+  ["C14 完成不改变状态", 'status: input.outcome, resolution:', 'status: input.outcome === "done" ? "active" : input.outcome, resolution:', "存在产物的承诺进入完成状态", "active"],
+  ["C15 完成丢失产物指针", 'resolution: { artifact: input.artifact, detail: input.detail }', 'resolution: { artifact: null, detail: input.detail }', "完成时保留产物指针", "null"],
+  ["C16 撤销状态错记", 'status: input.outcome, resolution:', 'status: input.outcome === "revoked" ? "blocked" : input.outcome, resolution:', "用户撤销保留状态和原因", "blocked"],
+  ["C17 替代状态错记", 'status: input.outcome, resolution:', 'status: input.outcome === "superseded" ? "blocked" : input.outcome, resolution:', "替代保留状态和原因", "blocked"],
+  ["C18 阻塞状态错记", 'status: input.outcome, resolution:', 'status: input.outcome === "blocked" ? "superseded" : input.outcome, resolution:', "阻塞保留状态和原因", "superseded"],
+  ["C19 从未绑定的 Compute 可记进展", '(input.actor.kind === "compute" && input.actor.id !== current.computeId)', '(input.actor.kind === "compute" && input.actor.id !== current.computeId && !(current.computeId === null && !state.actions.some((a) => JSON.parse(a.payload).type === "bind-compute")))', "未绑定 Compute 不得记进展", "actor-not-allowed"],
+  inherited("C20 绑定冒充进展", "M22", "绑定动作不冒充本轮进展", "pending"),
+  ["C21 拒绝首次绑定的 Compute", '(input.actor.kind === "compute" && input.actor.id !== current.computeId)', '(input.actor.kind === "compute" && (input.actor.id !== current.computeId || state.actions.filter((a) => JSON.parse(a.payload).type === "bind-compute").length === 1))', "当前绑定 Compute 可记进展", "false !== true"],
+  ["C22 替换后旧绑定仍获授权", '(input.actor.kind === "compute" && input.actor.id !== current.computeId)', '(input.actor.kind === "compute" && input.actor.id !== current.computeId && !(current.computeId !== null && state.actions.some((a) => { const old = JSON.parse(a.payload); return old.type === "bind-compute" && old.computeId === input.actor.id; })))', "替换后原 Compute 不得记进展", "actor-not-allowed"],
+  ["C23 替换后新绑定不能进展", '(input.actor.kind === "compute" && input.actor.id !== current.computeId)', '(input.actor.kind === "compute" && (input.actor.id !== current.computeId || state.actions.some((a) => { const old = JSON.parse(a.payload); return old.type === "bind-compute" && old.computeId !== null && old.computeId !== input.actor.id; })))', "替换后新 Compute 可记进展", "false !== true"],
+  inherited("C24 撤销不清除绑定", "M23", "撤销绑定后 Compute 不得记进展", "actor-not-allowed"),
+  ["C25 用户可绑定", 'if (input.actor.kind !== "contact" || input.actor.id !== state.ownerId) return fail("actor-not-allowed");', 'if ((input.actor.kind !== "contact" || input.actor.id !== state.ownerId) && input.actor.kind !== "user") return fail("actor-not-allowed");', "用户不能绑定 Compute", "actor-not-allowed"],
+  ["C26 Compute 可绑定", 'if (input.actor.kind !== "contact" || input.actor.id !== state.ownerId) return fail("actor-not-allowed");', 'if ((input.actor.kind !== "contact" || input.actor.id !== state.ownerId) && input.actor.kind !== "compute") return fail("actor-not-allowed");', "Compute 不能绑定 Compute", "actor-not-allowed"],
+  ["C27 别的联系人可绑定", 'if (input.actor.kind !== "contact" || input.actor.id !== state.ownerId) return fail("actor-not-allowed");', 'if (input.actor.kind !== "contact") return fail("actor-not-allowed");', "非主人联系人不能绑定 Compute", "actor-not-allowed"],
+  ["C28 绑定不检查版本", 'if (state.version !== expectedVersion) return fail("version-conflict");', 'if (input.type !== "bind-compute" && state.version !== expectedVersion) return fail("version-conflict");', "绑定检查版本", "version-conflict"],
+  inherited("C29 绑定丢失幂等", "M02", "绑定动作重复提交保持幂等", "false !== true"),
+  inherited("C30 绑定动作号可变更载荷", "M03", "绑定动作号不能用于另一载荷", "action-id-conflict"),
+  ["C31 Compute 跨任务进展", 'if (current.taskId !== input.taskId) return fail("task-mismatch");', 'if (input.type !== "progress" && current.taskId !== input.taskId) return fail("task-mismatch");', "Compute 不得报告其他任务的进展", "task-mismatch"],
+  inherited("C32 Compute 可了结承诺", "M14", "Compute 不得了结已绑定承诺", "actor-not-allowed"),
+  inherited("C33 闲聊等待全部承诺", "M17", "闲聊不等待未绑定到本轮的承诺", "pending"),
+  ["C34 没有活动的承诺不挂起", 'return c.status === "active" && !state.activity', 'return c.status === "active" && state.activity.length > 0 && !state.activity', "本轮未处理的绑定承诺保持待处理", "pending"],
+  ["C35 本轮进展不算进展", 'a.roundId === roundId && a.commitmentId === id', 'a.roundId !== roundId && a.commitmentId === id', "本轮已有进展则对账通过", "pending"],
+  inherited("C36 别轮进展冒充本轮", "M16", "别轮进展不能冒充本轮进展", "pending"),
+  ["C37 用户可完成", '(input.actor.kind === "user" && input.outcome !== "revoked")', '(input.actor.kind === "user" && input.outcome !== "revoked" && input.outcome !== "done")', "用户不得直接完成承诺", "actor-not-allowed"],
+  ["C38 用户可替代", '(input.actor.kind === "user" && input.outcome !== "revoked")', '(input.actor.kind === "user" && input.outcome !== "revoked" && input.outcome !== "superseded")', "用户不得直接替代承诺", "actor-not-allowed"],
+  ["C39 用户可阻塞", '(input.actor.kind === "user" && input.outcome !== "revoked")', '(input.actor.kind === "user" && input.outcome !== "revoked" && input.outcome !== "blocked")', "用户不得直接阻塞承诺", "actor-not-allowed"],
+  ["C40 撤销可缺原因", '!input.detail || input.artifact !== null', '(!input.detail && input.outcome !== "revoked") || input.artifact !== null', "撤销必须有原因", "resolution-required"],
+  ["C41 替代可缺原因", '!input.detail || input.artifact !== null', '(!input.detail && input.outcome !== "superseded") || input.artifact !== null', "替代必须有原因", "resolution-required"],
+  ["C42 阻塞可缺原因", '!input.detail || input.artifact !== null', '(!input.detail && input.outcome !== "blocked") || input.artifact !== null', "阻塞必须有原因", "resolution-required"],
+  ["C43 撤销可带产物", '!input.detail || input.artifact !== null', '!input.detail || (input.artifact !== null && input.outcome !== "revoked")', "撤销不能携带产物", "resolution-required"],
+  ["C44 替代可带产物", '!input.detail || input.artifact !== null', '!input.detail || (input.artifact !== null && input.outcome !== "superseded")', "替代不能携带产物", "resolution-required"],
+  ["C45 阻塞可带产物", '!input.detail || input.artifact !== null', '!input.detail || (input.artifact !== null && input.outcome !== "blocked")', "阻塞不能携带产物", "resolution-required"],
+  inherited("C46 绑定波及其他承诺", "M24", "绑定不会影响其他承诺", "actor-not-allowed"),
+  ["C47 不存在的承诺错误原因", 'if (!current) return fail("commitment-not-found");', 'if (!current) return fail("invalid-input");', "绑定拒绝不存在的承诺", "commitment-not-found"],
+  ["C48 跨任务绑定", 'if (current.taskId !== input.taskId) return fail("task-mismatch");', 'if (input.type !== "bind-compute" && current.taskId !== input.taskId) return fail("task-mismatch");', "绑定拒绝错误任务", "task-mismatch"],
+  inherited("C49 空 Compute 身份放行", "M25", "绑定拒绝空 Compute 身份", "invalid-input"),
+  ["C50 可绑定已完成承诺", 'if (current.status !== "active") return fail("commitment-closed");', 'if (input.type !== "bind-compute" && current.status !== "active") return fail("commitment-closed");', "绑定拒绝已完成承诺", "commitment-closed"],
+  ["C51 调用顶层 getter", 'const descriptor = descriptors[key];', 'const descriptor = descriptors[key]; if (ancestors.size === 1 && descriptor?.get) Reflect.get(value, key);', "顶层 getter 被拒绝且不调用", "+   1"],
+  ["C52 调用顶层 setter", 'const descriptor = descriptors[key];', 'const descriptor = descriptors[key]; if (ancestors.size === 1 && descriptor?.set) Reflect.set(value, key, "x");', "顶层 setter 被拒绝且不调用", "+   1"],
+  ["C53 探测顶层命令 Proxy", 'input = jsonCopy(command);', 'input = jsonCopy(types.isProxy(command) ? Object.fromEntries(Object.entries(command)) : command);', "顶层 Proxy 被拒绝且不调用", "invalid-input"],
+  ["C54 调用嵌套消息 getter", 'const descriptor = descriptors[key];', 'const descriptor = descriptors[key]; if (ancestors.size > 1 && !Array.isArray(value) && descriptor?.get) Reflect.get(value, key);', "嵌套消息 getter 被拒绝且不调用", "+   1"],
+  ["C55 探测嵌套消息 Proxy", 'input = jsonCopy(command);', 'const field = command && typeof command === "object" && !types.isProxy(command) ? Object.getOwnPropertyDescriptor(command, "message")?.value : undefined; input = jsonCopy(types.isProxy(field) ? { ...command, message: Object.fromEntries(Object.entries(field)) } : command);', "嵌套消息 Proxy 被拒绝且不调用", "invalid-input"],
+  ["C56 调用数组 getter", 'const descriptor = descriptors[key];', 'const descriptor = descriptors[key]; if (Array.isArray(value) && descriptor?.get) Reflect.get(value, key);', "数组访问器被拒绝且不调用", "+   1"],
+  ["C57 更新入口探测账本 Proxy", 'state = jsonCopy(ledger); input = jsonCopy(command);', 'state = jsonCopy(types.isProxy(ledger) ? Object.fromEntries(Object.entries(ledger)) : ledger); input = jsonCopy(command);', "更新入口拒绝账本 Proxy 且不调用", "invalid-input"],
+  ["C58 对账入口探测账本 Proxy", 'state = jsonCopy(ledger); ids = jsonCopy(boundIds);', 'state = jsonCopy(types.isProxy(ledger) ? Object.fromEntries(Object.entries(ledger)) : ledger); ids = jsonCopy(boundIds);', "对账入口拒绝账本 Proxy 且不调用", "invalid-input"],
+  ["C59 对账入口探测数组 Proxy", 'state = jsonCopy(ledger); ids = jsonCopy(boundIds);', 'state = jsonCopy(ledger); ids = jsonCopy(types.isProxy(boundIds) ? Object.assign([], boundIds) : boundIds);', "对账入口拒绝编号数组 Proxy 且不调用", "invalid-input"],
+  ["C60 调用产物解析器 Proxy", '!types.isProxy(artifactExists) && artifactExists(input.artifact) === true', 'artifactExists(input.artifact) === true', "产物解析器 Proxy 不执行", "artifact-not-found"],
+  inherited("C61 拒绝合法空任务", "M33", "空任务字段是合法输入", "false !== true"),
+  ["C62 账本外壳不冻结", 'Object.freeze(value);', 'if (!("ownerId" in value)) Object.freeze(value);', "返回账本外壳冻结", "false !== true"],
+  ["C63 消息数组不冻结", 'Object.freeze(value);', 'if (!Array.isArray(value)) Object.freeze(value);', "返回消息数组冻结", "false !== true"],
+  ["C64 消息不冻结", 'Object.freeze(value);', 'if (!("handled" in value)) Object.freeze(value);', "返回消息冻结", "false !== true"],
+  ["C65 发送者不冻结", 'Object.freeze(value);', 'if (!("kind" in value)) Object.freeze(value);', "返回消息发送者冻结", "false !== true"],
+  ["C66 动作记录不冻结", 'Object.freeze(value);', 'if (!("payload" in value)) Object.freeze(value);', "返回动作记录冻结", "false !== true"],
+  ["C67 冻结调用方命令", 'export function applyLedger(ledger: Ledger, expectedVersion: number, command: Command, artifactExists?: (id: string) => boolean): Result {', 'export function applyLedger(ledger: Ledger, expectedVersion: number, command: Command, artifactExists?: (id: string) => boolean): Result {\n  Object.freeze(command);', "不冻结调用方命令", "+   true"],
+  inherited("C68 重试未标重复", "M02", "相同动作重试标记重复", "false !== true"),
+  ["C69 重试篡改账本版本", 'previous.payload === payload ? { ok: true, ledger: freeze(state), duplicate: true }', 'previous.payload === payload ? { ok: true, ledger: freeze({ ...state, version: state.version + 1 }), duplicate: true }', "相同动作重试不改账本", "version"],
+  ["C70 漏登记多个承诺", 'commitments.push(...input.commitments.map((c)', 'commitments.push(...input.commitments.slice(0, 1).map((c)', "一条消息可登记多个承诺", "-   'b'"],
+  inherited("C71 新消息冲掉旧承诺", "M08", "新消息保留原有承诺", "active"),
+  ["C72 空命令给出错误原因", 'if (!isLedger(state) || !isCommand(input) || !version(expectedVersion)) return fail("invalid-input");', 'if (input === null) return fail("invalid-command");\n  if (!isLedger(state) || !isCommand(input) || !version(expectedVersion)) return fail("invalid-input");', "更新入口拒绝空命令", "invalid-input"],
+  ["C73 空账本给出错误原因", 'if (!isLedger(state) || !isCommand(input) || !version(expectedVersion)) return fail("invalid-input");', 'if (state === null) return fail("invalid-ledger");\n  if (!isLedger(state) || !isCommand(input) || !version(expectedVersion)) return fail("invalid-input");', "更新入口拒绝空账本", "invalid-input"],
+  ["C74 空版本给出错误原因", 'if (!isLedger(state) || !isCommand(input) || !version(expectedVersion)) return fail("invalid-input");', 'if (expectedVersion === null) return fail("invalid-version");\n  if (!isLedger(state) || !isCommand(input) || !version(expectedVersion)) return fail("invalid-input");', "更新入口拒绝空版本", "invalid-input"],
+  ["C75 对账空账本错误原因", 'if (!isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) return { ok: false, reason: "invalid-input" };', 'if (state === null) return { ok: false, reason: "invalid-ledger" };\n  if (!isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) return { ok: false, reason: "invalid-input" };', "对账入口拒绝空账本", "invalid-input"],
+  ["C76 对账空轮次错误原因", 'if (!isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) return { ok: false, reason: "invalid-input" };', 'if (roundId === null) return { ok: false, reason: "invalid-round" };\n  if (!isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) return { ok: false, reason: "invalid-input" };', "对账入口拒绝空轮次", "invalid-input"],
+  ["C77 对账空绑定列表错误原因", 'if (!isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) return { ok: false, reason: "invalid-input" };', 'if (ids === null) return { ok: false, reason: "invalid-ids" };\n  if (!isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) return { ok: false, reason: "invalid-input" };', "对账入口拒绝空绑定列表", "invalid-input"],
+  ["C78 空所有者错误原因", 'if (!text(ownerId)) return fail("invalid-input");', 'if (!text(ownerId)) return fail(ownerId === null ? "invalid-owner" : "invalid-input");', "创建账本拒绝空所有者", "invalid-input"],
+  ["C79 空字符串所有者错误原因", 'if (!text(ownerId)) return fail("invalid-input");', 'if (!text(ownerId)) return fail(ownerId === "" ? "invalid-owner" : "invalid-input");', "创建账本拒绝空字符串所有者", "invalid-input"],
+  ["C80 探测绑定参与者 Proxy", 'input = jsonCopy(command);', 'const field = command && typeof command === "object" && !types.isProxy(command) ? Object.getOwnPropertyDescriptor(command, "actor")?.value : undefined; input = jsonCopy(types.isProxy(field) ? { ...command, actor: Object.fromEntries(Object.entries(field)) } : command);', "绑定参与者 Proxy 被拒绝且不调用", "invalid-input"],
+  ["C81 旧版本失败时修改可变输入", 'if (state.version !== expectedVersion) return fail("version-conflict");', 'if (state.version !== expectedVersion) { if (!Object.isFrozen(ledger)) (ledger as { version: number }).version++; return fail("version-conflict"); }', "旧版本被拒绝时不改调用方账本", "version: 2"],
+  ["C82 重复承诺失败时修改消息", 'if (new Set(ids).size !== ids.length || ids.some((id) => commitments.some((c) => c.id === id))) return fail("commitment-id-conflict");', 'if (new Set(ids).size !== ids.length || ids.some((id) => commitments.some((c) => c.id === id))) { if (!Object.isFrozen(ledger)) { const entry = (ledger as unknown as { messages: { seq: number; handled: boolean }[] }).messages.find((m) => m.seq === input.seq); if (entry) entry.handled = true; } return fail("commitment-id-conflict"); }', "重复承诺被拒绝时不改消息状态", "handled: true"],
+  ["C83 缺产物失败时修改可变输入", 'if (!exists) return fail("artifact-not-found");', 'if (!exists) { if (!Object.isFrozen(ledger)) (ledger as unknown as { commitments: { status: string }[] }).commitments[0]!.status = "done"; return fail("artifact-not-found"); }', "产物不存在时不改调用方承诺", "status: 'done'"],
+  ["C84 拒绝进展仍写入可变输入", 'if (input.actor.kind === "user" || (input.actor.kind === "contact" && input.actor.id !== state.ownerId) ||\n            (input.actor.kind === "compute" && input.actor.id !== current.computeId)) return fail("actor-not-allowed");', 'if (input.actor.kind === "user" || (input.actor.kind === "contact" && input.actor.id !== state.ownerId) ||\n            (input.actor.kind === "compute" && input.actor.id !== current.computeId)) { if (input.actor.kind === "compute" && !Object.isFrozen(ledger)) (ledger as unknown as { activity: unknown[] }).activity.push({ roundId: input.roundId, commitmentId: current.id, taskId: current.taskId, actor: input.actor, kind: "progress", text: input.text }); return fail("actor-not-allowed"); }', "未授权进展不改变本轮待处理状态", "pending"],
+  ["C85 后一个承诺来源序号错记", 'sourceSeq: m.seq, status:', 'sourceSeq: input.commitments.length > 1 && c === input.commitments.at(-1) ? m.seq + 1 : m.seq, status:', "多个承诺均保留来源序号", "+   2"],
+  ["C86 后一个承诺来源文字错记", 'text: m.text.slice(m.text.indexOf(c.text), m.text.indexOf(c.text) + c.text.length), sourceSeq:', 'text: input.commitments.length > 1 && c === input.commitments.at(-1) ? `${c.text}-wrong` : m.text.slice(m.text.indexOf(c.text), m.text.indexOf(c.text) + c.text.length), sourceSeq:', "多个承诺均保留来源文字", "wrong"],
+  ["C87 撤销状态错记", 'status: input.outcome, resolution:', 'status: input.outcome === "revoked" ? "blocked" : input.outcome, resolution:', "撤销状态准确", "blocked"],
+  ["C88 撤销原因错记", 'resolution: { artifact: input.artifact, detail: input.detail }', 'resolution: { artifact: input.artifact, detail: input.outcome === "revoked" ? "错误原因" : input.detail }', "撤销原因保留", "错误原因"],
+  ["C89 替代状态错记", 'status: input.outcome, resolution:', 'status: input.outcome === "superseded" ? "blocked" : input.outcome, resolution:', "替代状态准确", "blocked"],
+  ["C90 替代原因错记", 'resolution: { artifact: input.artifact, detail: input.detail }', 'resolution: { artifact: input.artifact, detail: input.outcome === "superseded" ? "错误原因" : input.detail }', "替代原因保留", "错误原因"],
+  ["C91 阻塞状态错记", 'status: input.outcome, resolution:', 'status: input.outcome === "blocked" ? "superseded" : input.outcome, resolution:', "阻塞状态准确", "superseded"],
+  ["C92 阻塞原因错记", 'resolution: { artifact: input.artifact, detail: input.detail }', 'resolution: { artifact: input.artifact, detail: input.outcome === "blocked" ? "错误原因" : input.detail }', "阻塞原因保留", "错误原因"],
+  ["C93 空命令抛错", 'if (!isLedger(state) || !isCommand(input) || !version(expectedVersion)) return fail("invalid-input");', 'if (input === null) throw new TypeError("null command threw");\n  if (!isLedger(state) || !isCommand(input) || !version(expectedVersion)) return fail("invalid-input");', "更新入口拒绝空命令", "null command threw"],
+  ["C94 空账本抛错", 'if (!isLedger(state) || !isCommand(input) || !version(expectedVersion)) return fail("invalid-input");', 'if (state === null) throw new TypeError("null ledger threw");\n  if (!isLedger(state) || !isCommand(input) || !version(expectedVersion)) return fail("invalid-input");', "更新入口拒绝空账本", "null ledger threw"],
+  ["C95 空版本抛错", 'if (!isLedger(state) || !isCommand(input) || !version(expectedVersion)) return fail("invalid-input");', 'if (expectedVersion === null) throw new TypeError("null version threw");\n  if (!isLedger(state) || !isCommand(input) || !version(expectedVersion)) return fail("invalid-input");', "更新入口拒绝空版本", "null version threw"],
+  ["C96 对账空账本抛错", 'if (!isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) return { ok: false, reason: "invalid-input" };', 'if (state === null) throw new TypeError("null reconciliation ledger threw");\n  if (!isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) return { ok: false, reason: "invalid-input" };', "对账入口拒绝空账本", "null reconciliation ledger threw"],
+  ["C97 对账空轮次抛错", 'if (!isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) return { ok: false, reason: "invalid-input" };', 'if (roundId === null) throw new TypeError("null round threw");\n  if (!isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) return { ok: false, reason: "invalid-input" };', "对账入口拒绝空轮次", "null round threw"],
+  ["C98 对账空绑定列表抛错", 'if (!isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) return { ok: false, reason: "invalid-input" };', 'if (ids === null) throw new TypeError("null bindings threw");\n  if (!isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) return { ok: false, reason: "invalid-input" };', "对账入口拒绝空绑定列表", "null bindings threw"],
+  ["C99 空所有者抛错", 'if (!text(ownerId)) return fail("invalid-input");', 'if (ownerId === null) throw new TypeError("null owner threw");\n  if (!text(ownerId)) return fail("invalid-input");', "创建账本拒绝空所有者", "null owner threw"],
+  ["C100 空字符串所有者抛错", 'if (!text(ownerId)) return fail("invalid-input");', 'if (ownerId === "") throw new TypeError("empty owner threw");\n  if (!text(ownerId)) return fail("invalid-input");', "创建账本拒绝空字符串所有者", "empty owner threw"],
+];
+
+for (const [name, from, to, criterion, marker] of criteria) {
+  mutants.push([name, from, to, `独立判据：${criterion}`]);
+  diagnostics[name.split(" ")[0]] = marker;
+}
+
 function run(dir) {
   const r = spawnSync(process.execPath, ["--test", "--test-reporter=tap", path.join(dir, "src", "commitment-ledger.test.ts")],
     { cwd: dir, encoding: "utf8", timeout: 30000 });
@@ -101,7 +216,7 @@ try {
     return dir;
   };
   const baseline = run(makeCopy("baseline"));
-  const baselineOk = baseline.status === 0 && baseline.passed.length === 49 && baseline.failed.length === 0;
+  const baselineOk = baseline.status === 0 && baseline.passed.length === 141 && baseline.failed.length === 0;
   console.log(`${baselineOk ? "PASS" : "FAIL"} 原样对照 ${baseline.passed.length} 通过 / ${baseline.failed.length} 失败`);
   if (!baselineOk) success = false;
   const named = new Set(mutants.map(([, , , expected]) => expected));
@@ -124,9 +239,13 @@ try {
     const id = name.split(" ")[0];
     const block = result.blocks.get(expected) ?? "";
     const marker = diagnostics[id];
-    const rightReason = typeof marker === "string" && block.includes(marker) && (id === "F09" || id === "F19" || block.includes("ERR_ASSERTION"));
-    const killed = result.status !== 0 && result.failed.includes(expected) && rightReason && !result.failed.some((n) => n.endsWith(".test.ts"));
-    console.log(`${killed ? "KILLED" : "SURVIVED"} ${name}: ${killed ? `${expected} [${marker}]` : `exit=${result.status} failures=${JSON.stringify(result.failed)} marker=${JSON.stringify(marker)} matched=${rightReason} ${result.error ?? ""}`}`);
+    const exceptionFault = id === "F09" || id === "F19" || /^C9[3-9]$|^C100$/.test(id);
+    const rightReason = typeof marker === "string" && block.includes(marker) &&
+      (exceptionFault ? block.includes("failureType: 'testCodeFailure'") : block.includes("ERR_ASSERTION"));
+    const killed = result.status === 1 && !result.error && result.failed.includes(expected) && rightReason && !result.failed.some((n) => n.endsWith(".test.ts"));
+    const evidence = block.split("\n").find((line) => line.includes(marker))?.trim();
+    const otherCriteria = result.failed.filter((n) => n.startsWith("独立判据：") && n !== expected);
+    console.log(`${killed ? "KILLED" : "SURVIVED"} ${name}: ${killed ? `${expected} diagnostic=${JSON.stringify(evidence)} other_criteria_failures=${JSON.stringify(otherCriteria)}` : `exit=${result.status} failures=${JSON.stringify(result.failed)} marker=${JSON.stringify(marker)} matched=${rightReason} ${result.error ?? ""}`}`);
     if (!killed) success = false;
   }
 } finally {

@@ -50,3 +50,30 @@ the explicitly expected exception; an unrelated test or a file-level failure is 
 All 49 named tests have a declared mutant, and all 18 implemented rejection reason strings
 are asserted. Some tests cover multiple criteria; one mutant per test does not prove that
 every individual criterion is calibrated, so R-05 remains unverified.
+
+Round 2 criterion calibration (codex:99008d31-cc72-445d-bd0a-b9cb0a8d1882)
+The original 49 scenarios remain. There are 92 additional named criterion tests.
+The supplementary red control de5eca2de427e799a19baf6db33a03be05f9f192
+ran after the original implementation: 141 named failures, no file-level failures,
+no skips. Restoring the existing implementation in efb97a13484e32bb202bf52cb3442ac3017417ae
+gave 141 named passes, no failures or skips. Names and summaries from both actual
+runs are in commitment-ledger-round2-red-green.txt. An earlier round-2 pair was
+488359c and a27629e; the later pair includes all 141 current named tests.
+
+This is a retrospective stub control for supplementary tests, not evidence that
+every later criterion or test existed before its original implementation. The
+original feature's red/green sequence and the binding feature's earlier red/green
+sequence are listed above and remain unchanged.
+
+npm test --silent: 164 passed, 0 failed, 0 skipped, including 23 inherited tests.
+npm run typecheck: exit 0. npm run lint: exit 0, 16 files checked.
+node packages/domain/proof/commitment-ledger-mutations.mjs: 154/154 named
+mutations killed; 141/141 named tests mapped. The serial runner runs the unchanged
+same inputs as the negative control, checks a single injection site, and records
+the actual matched diagnostic and other criterion failures. F09, F19 and
+C93-C100 deliberately inject exceptions; the runner verifies those exception
+diagnostics instead of treating a file-load failure as a kill. The existing broad
+scenarios remain alongside isolated criteria, so dependent tests may also fail when
+a shared prerequisite is mutated; these collateral failures are shown in the log.
+These mutations calibrate the stated local criteria, not untested host integration
+or every conceivable implementation fault.
