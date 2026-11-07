@@ -1,0 +1,26 @@
+packages/kernel/proof/mutations-node25.txt
+  h_f33e46a035b77c 2-200
+packages/kernel/proof/mutations.mjs
+  h_f33e46a035b77c 1,20-21,215,222-242
+packages/kernel/proof/mutations.txt
+  h_f33e46a035b77c 2-200
+packages/kernel/proof/r10-01-residual.mjs
+  h_f33e46a035b77c 1-96
+packages/kernel/proof/r10-01-residual.txt
+  h_f33e46a035b77c 1-25
+packages/kernel/proof/tests.txt
+  h_f33e46a035b77c 1-208,210,215
+receipts/feat-kernel-plugins.json
+  h_f33e46a035b77c 2,22,52,62,66,68,70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c4bc3326103e11acf77a1896c083c696252d88e9",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
