@@ -1,4 +1,6 @@
-// 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时;第五轮按 R4-01..R4-07 扩充,含 R4-M1=K92、R4-M2=K91;第六轮按 R5-01..R5-05 扩充,含 R5-M1=K111、R5-M2=K126;第七轮按 R6-01..R6-05 扩充,含 R6-M1=K142、R6-M2=K143;第八轮按 R7-01/02/04/05/06 扩充,含 R7-M1=K156、R7-M2=K157、R7-M3=K158;第九轮按 R8-01..R8-05 扩充,含 R8-M1=K173、R8-M2=K174、R8-M3=K175;第十轮按 R9-01/R9-02 扩充,含 R9-M1=K188、R9-M2=K177、R9-M3=K189;第十一轮按 R10-01/R10-02 扩充,含 R10-M1=K197、R10-M2=K198、R10-M3=K199,并按新实现改写 K184、K190–K196 的注入点),在隔离副本里跑本包测试,
+// 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时;第五轮按 R4-01..R4-07 扩充,含 R4-M1=K92、R4-M2=K91;第六轮按 R5-01..R5-05 扩充,含 R5-M1=K111、R5-M2=K126;第七轮按 R6-01..R6-05 扩充,含 R6-M1=K142、R6-M2=K143;第八轮按 R7-01/02/04/05/06 扩充,含 R7-M1=K156、R7-M2=K157、R7-M3=K158;第九轮按 R8-01..R8-05 扩充,含 R8-M1=K173、R8-M2=K174、R8-M3=K175;第十轮按 R9-01/R9-02 扩充,含 R9-M1=K188、R9-M2=K177、R9-M3=K189;第十一轮按 R10-01/R10-02 扩充,含 R10-M1=K197、R10-M2=K198、R10-M3=K199,并按新实现改写 K184、K190–K196 的注入点;
+// 第十二轮按 PR #6 第十一轮审查 R11-01..R11-03 扩充,含审查自造的存活单点故障 R11-M1=K210、R11-M3=K211,
+// 新实现带来的 K212–K214,并按新实现改写 K138、K204 的注入点),在隔离副本里跑本包测试,
 // 每个变异都必须让至少一条具名测试失败(文件级加载失败不算杀死)。注入点必须在源码里恰好出现 1 次。
 // 原样副本必须全绿(阴性对照)。
 // 每个变异在独立进程组里跑,超时(默认 300s,KERNEL_MUT_TIMEOUT_MS 可改)就杀掉整个进程组,记 ✗ 超时,不算被杀死。
@@ -163,7 +165,7 @@ const M = [
   ["K134 装配选项不过统一判定", "assemble.ts", "const po = plainData(optsInput, \"装配选项\", { topFunctions: true });", "const po = { ok: true as const, value: optsInput } as ReturnType<typeof plainData>;"],
   ["K135 入站事件不过统一判定", "classify.ts", "const plain = plainData(input, \"入站事件\");", "const plain = { ok: true as const, value: input } as ReturnType<typeof plainData>;"],
   ["K136 undefined 属性不按 JSON 规则去掉", "plain.ts", "    if (d.value === undefined) continue;\n", ""],
-  ["K138 放行数组上的额外属性", "plain.ts", "if (k !== \"length\" && !INDEX.test(k)) return", "if (false) return"],
+  ["K138 放行数组上的额外属性", "plain.ts", "if (!INDEX.test(k) || Number(k) >= len) return", "if (false) return"],
   // —— 原型链污染:中间表与结果不经过原型链
   ["K139 描述符表走原型链(原型污染)", "plain.ts", "  const table: Record<string, PropertyDescriptor> = Object.create(null);", "  const table: Record<string, PropertyDescriptor> = {};"],
   ["K140 数组结果用 push(原型 setter / 只读下标)", "own.ts", "  Object.defineProperty(out, out.length, dataDesc(v));", "  out.push(v);"],
@@ -235,11 +237,18 @@ const M = [
   ["K201 可写数据属性改值时连带重写 enumerable / configurable(R10-01 原错:不可配置时改不了)", "plugins.ts", "if (Reflect.defineProperty(o, key, descOf({ value: Promise }))) return", "if (Reflect.defineProperty(o, key, descOf({ value: Promise, writable: true, enumerable: false, configurable: true }))) return"],
   ["K202 可写数据属性挂处理后不写回原值", "plugins.ts", "return () => { Reflect.defineProperty(o, key, descOf({ value: own.value })); };", "return () => {};"],
   ["K203 不做方案 3(constructor 改不了时不改其 species)", "plugins.ts", "shadow(lookup(value, Symbol.species).chain, Symbol.species) : undefined);", "undefined : undefined);"],
-  ["K204 临时改写不跳过内置对象", "plugins.ts", "    if (INTRINSICS.has(o)) continue;\n", ""],
+  ["K204 临时改写不跳过内置对象", "plugins.ts", "    if (isIntrinsic(o)) continue;\n", ""],
   ["K205 原型链遇到 Proxy 不停,读其描述符(进陷阱)", "plugins.ts", "    if (types.isProxy(cur)) return { chain, desc: undefined, blocked: true };\n", ""],
   ["K206 species 是任何数据属性都当安全(会构造插件的类)", "plugins.ts", "  return \"value\" in s.desc && (s.desc.value === undefined || s.desc.value === null || s.desc.value === Promise);", "  return \"value\" in s.desc;"],
   ["K207 原型链上有 Proxy 时不换原型直接挂处理(Node 读内部异步 id 进陷阱)", "plugins.ts", "    if (!Reflect.setPrototypeOf(x, Promise.prototype)) return;\n", ""],
   ["K208 换原型挂处理后不换回", "plugins.ts", "    try { attachQuiet(x); } finally { Reflect.setPrototypeOf(x, proto); }", "    attachQuiet(x);"],
+  // —— 第十二轮:按 PR #6 第十一轮审查 R11-01 / R11-02 / R11-03 扩充,含审查自造的单点故障 R11-M1=K210、R11-M3=K211
+  ["K210 species 数据属性 null 不再视为安全(审查 R11-M1)", "plugins.ts", "  return \"value\" in s.desc && (s.desc.value === undefined || s.desc.value === null || s.desc.value === Promise);", "  return \"value\" in s.desc && (s.desc.value === undefined || s.desc.value === Promise);"],
+  ["K211 找不到 species 就判不安全(审查 R11-M3)", "plugins.ts", "  if (s.desc === undefined) return true;", "  if (s.desc === undefined) return false;"],
+  ["K212 宿主判定不看原型上的原生 constructor(另一 realm 的内置实例对象会被当成可改写目标)", "plugins.ts", "  const c = Object.getOwnPropertyDescriptor(o, \"constructor\");\n  return c !== undefined && \"value\" in c && isNativeFn(c.value);", "  return false;"],
+  ["K213 临时改写只按启动时闭包跳过内置对象(不认原生函数,也不认另一 realm 的内置对象)", "plugins.ts", "  if (INTRINSICS.has(o) || isNativeFn(o)) return true;\n  const c = Object.getOwnPropertyDescriptor(o, \"constructor\");\n  return c !== undefined && \"value\" in c && isNativeFn(c.value);", "  return INTRINSICS.has(o);"],
+  ["K215 启动时的访问器内置清单漏掉 Buffer(回到 R11-01 原错:Buffer 于是成了可改写目标)", "plugins.ts", "const ACCESSOR_HOSTS = [\"Buffer\", ", "const ACCESSOR_HOSTS = ["],
+  ["K214 数组键只查十进制文本,不查是否落在 length 内(回到 R11-02 原错)", "plain.ts", "if (!INDEX.test(k) || Number(k) >= len) return", "if (!INDEX.test(k)) return"],
 ];
 
 const TIMEOUT_MS = Number(process.env.KERNEL_MUT_TIMEOUT_MS ?? 300_000);
