@@ -1,0 +1,21 @@
+packages/domain/src/commitment-ledger.test.ts
+  s_b3f91a5bc41c26::t_23217fe2002b9a 19,191-192
+packages/domain/src/commitment-ledger.ts
+  s_b3f91a5bc41c26::t_23217fe2002b9a 20,42,106-107,129-130,194,200-202,204-218
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dd6f341f164ca94a5b7ad56646ba5ea2b0acf7bb",
+  "prompts": {},
+  "sessions": {
+    "s_b3f91a5bc41c26": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b56f-67fc-7e33-9369-6e24f8647d01",
+        "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
