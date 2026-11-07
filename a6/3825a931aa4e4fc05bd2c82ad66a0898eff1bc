@@ -1,0 +1,33 @@
+packages/domain/src/contact.test.ts
+  s_d25047fbd77bcf::t_8e1c49bdbb7fd1 10,1800-1904
+packages/domain/src/contact.ts
+  s_2b76d0c11814ef::t_46768a2f8bee5a 1-2,57,222,224,226,228,240,243,246,256,272,275,284
+packages/domain/src/helper.ts
+  s_2b76d0c11814ef::t_6fd354d8d33356 1-2,39,42
+packages/domain/src/plain.ts
+  s_2b76d0c11814ef::t_3f4489f65e3be8 1-2,39-54,57-58,65,68,128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a63825a931aa4e4fc05bd2c82ad66a0898eff1bc",
+  "prompts": {},
+  "sessions": {
+    "s_2b76d0c11814ef": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e27f86b9-9997-4938-bafd-73656cd07ca4",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_d25047fbd77bcf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b75e-31aa-71b0-bce6-1c7c30aa772b",
+        "model": "ai-iisbo/deepseek-v4.1-flash"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
