@@ -1,0 +1,19 @@
+scripts/gates/lib.ts
+  s_b309fa2a384a2f::t_4f24355267ecb1 132,137,139-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8a5d8723a25a3eb05ca8b19a3b0d223d34145242",
+  "prompts": {},
+  "sessions": {
+    "s_b309fa2a384a2f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b5ef-a452-78a2-8043-724f64e48a80",
+        "model": "ai-iisbo/[乾坤按量]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
