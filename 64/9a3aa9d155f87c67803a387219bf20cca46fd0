@@ -1,0 +1,22 @@
+packages/kernel/src/assemble.ts
+  h_f33e46a035b77c 1,15,52,69,71,74-75,79,83,87
+packages/kernel/src/classify.ts
+  h_f33e46a035b77c 1,11,39-40
+packages/kernel/src/plain.ts
+  h_f33e46a035b77c 1,7-8,20,23-24,27-28,32,36
+packages/kernel/src/plugins.test.ts
+  h_f33e46a035b77c 1384-1397,1423-1427,1429-1433,1436-1439,1445-1447,1449-1454,1459-1460,1462,1465-1466,1470-1481,1483,1491,1493,1500,1503,1510-1513,1517-1518,1530,1541,1552,1558,1586,1597,1601-1638
+packages/kernel/src/plugins.ts
+  h_f33e46a035b77c 1-3,8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "649a3aa9d155f87c67803a387219bf20cca46fd0",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

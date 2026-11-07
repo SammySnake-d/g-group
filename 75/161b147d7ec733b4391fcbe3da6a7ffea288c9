@@ -1,0 +1,14 @@
+packages/domain/src/plain.ts
+  h_f33e46a035b77c 36-37,39-42,70-77,80-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "75161b147d7ec733b4391fcbe3da6a7ffea288c9",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
