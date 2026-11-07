@@ -1,0 +1,22 @@
+reviews/feat-kernel-plugins.md
+  s_ae51a77ac1f48f::t_f2333043b6fd63 1424,1428
+  s_ae51a77ac1f48f::t_00f3f02de9765d 1399-1423,1425-1427,1429-1497
+receipts/feat-kernel-plugins.json
+  s_ae51a77ac1f48f::t_808762c77064f2 70-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fe4fa8205265f268e29f983ee0736e16f4987dc6",
+  "prompts": {},
+  "sessions": {
+    "s_ae51a77ac1f48f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b5ef-a44e-7b73-9609-382f8d76b296",
+        "model": "ai-iisbo/[乾坤按量]gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
