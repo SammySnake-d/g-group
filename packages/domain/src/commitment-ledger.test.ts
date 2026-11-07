@@ -16,7 +16,7 @@ const process = (seq = 1, taskId = "task-a"): Command => ({
 const progress = (id = "k1", taskId = "task-a", roundId = "r1", actor: Actor = contact): Command =>
   ({ type: "progress", actionId: `progress-${id}-${roundId}`, commitmentId: id, taskId, actor, roundId, text: "进展" });
 const bindCompute = (actionId: string, computeId: string | null, actor: Actor = contact): Command =>
-  ({ type: "bind-compute", actionId, commitmentId: "k1", taskId: "task-a", actor, computeId } as unknown as Command);
+  ({ type: "bind-compute", actionId, commitmentId: "k1", taskId: "task-a", actor, computeId });
 const close = (outcome: "done" | "revoked" | "superseded" | "blocked", artifact: string | null = null, actor: typeof contact | typeof user = contact): Command =>
   ({ type: "close", actionId: `close-${outcome}`, commitmentId: "k1", taskId: "task-a", actor, roundId: "r1", outcome, artifact, detail: outcome === "done" ? null : "明确原因" });
 function unwrap(result: Result): Ledger {
@@ -188,7 +188,8 @@ test("只有账本主人可绑定 Compute,绑定遵循版本和动作幂等", ()
 });
 
 test("Compute 只可报告绑定任务的承诺进展,不能了结承诺", () => {
-  const first = registered();
+  const initial = registered();
+  const first = unwrap(applyLedger(initial, initial.version, bindCompute("bind-worker", "worker")));
   const good = applyLedger(first, first.version, progress("k1", "task-a", "r1", compute));
   const wrong = applyLedger(first, first.version, progress("k1", "task-b", "r1", compute));
   const closed = applyLedger(first, first.version, { ...close("blocked"), actor: compute } as Command);

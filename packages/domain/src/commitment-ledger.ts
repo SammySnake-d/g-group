@@ -17,6 +17,7 @@ export interface Commitment {
   readonly text: string;
   readonly status: "active" | "done" | "revoked" | "superseded" | "blocked";
   readonly resolution: { readonly detail: string | null; readonly artifact: string | null } | null;
+  readonly computeId: string | null;
 }
 export interface Ledger {
   readonly ownerId: string;
@@ -38,6 +39,7 @@ export interface CandidatePolicy {
 export type Command =
   | { readonly type: "receive"; readonly actionId: string; readonly message: Omit<Message, "handled"> }
   | { readonly type: "process"; readonly actionId: string; readonly seq: number; readonly accepted: boolean; readonly commitments: readonly Proposal[] }
+  | { readonly type: "bind-compute"; readonly actionId: string; readonly commitmentId: string; readonly taskId: string; readonly actor: Actor; readonly computeId: string | null }
   | { readonly type: "progress"; readonly actionId: string; readonly commitmentId: string; readonly taskId: string; readonly actor: Actor; readonly roundId: string; readonly text: string }
   | { readonly type: "close"; readonly actionId: string; readonly commitmentId: string; readonly taskId: string; readonly actor: Actor; readonly roundId: string; readonly outcome: "done" | "revoked" | "superseded" | "blocked"; readonly artifact: string | null; readonly detail: string | null };
 export type Failure = { readonly ok: false; readonly reason: string };
@@ -101,8 +103,8 @@ function isLedger(x: unknown): x is Ledger {
       !text(x.ownerId) || !version(x.version) || !Array.isArray(x.messages) || !Array.isArray(x.commitments) ||
       !Array.isArray(x.actions) || !Array.isArray(x.activity)) return false;
   if (!x.messages.every((m: unknown) => message(m, true))) return false;
-  if (!x.commitments.every((c: unknown) => obj(c) && keys(c, ["id", "sourceSeq", "taskId", "text", "status", "resolution"]) &&
-      text(c.id) && seq(c.sourceSeq) && text(c.taskId) && text(c.text) &&
+  if (!x.commitments.every((c: unknown) => obj(c) && keys(c, ["id", "sourceSeq", "taskId", "text", "status", "resolution", "computeId"]) &&
+      text(c.id) && seq(c.sourceSeq) && text(c.taskId) && text(c.text) && maybeText(c.computeId) &&
       (c.status === "active" || c.status === "done" || c.status === "revoked" || c.status === "superseded" || c.status === "blocked") &&
       (c.resolution === null || (obj(c.resolution) && keys(c.resolution, ["detail", "artifact"]) && maybeText(c.resolution.detail) && maybeText(c.resolution.artifact))))) return false;
   if (!x.actions.every((a: unknown) => obj(a) && keys(a, ["id", "payload"]) && text(a.id) && typeof a.payload === "string") ||
@@ -124,6 +126,8 @@ function isCommand(x: unknown): x is Command {
   if (x.type === "receive") return keys(x, ["type", "actionId", "message"]) && message(x.message, false);
   if (x.type === "process") return keys(x, ["type", "actionId", "seq", "accepted", "commitments"]) && seq(x.seq) &&
     typeof x.accepted === "boolean" && Array.isArray(x.commitments) && x.commitments.every(proposal);
+  if (x.type === "bind-compute") return keys(x, ["type", "actionId", "commitmentId", "taskId", "actor", "computeId"]) &&
+    text(x.commitmentId) && text(x.taskId) && actor(x.actor) && maybeText(x.computeId);
   if (x.type === "progress") return keys(x, ["type", "actionId", "commitmentId", "taskId", "actor", "roundId", "text"]) &&
     text(x.commitmentId) && text(x.taskId) && actor(x.actor) && text(x.roundId) && text(x.text);
   return x.type === "close" && keys(x, ["type", "actionId", "commitmentId", "taskId", "actor", "roundId", "outcome", "artifact", "detail"]) &&
@@ -187,26 +191,32 @@ export function applyLedger(ledger: Ledger, expectedVersion: number, command: Co
     if (new Set(ids).size !== ids.length || ids.some((id) => commitments.some((c) => c.id === id))) return fail("commitment-id-conflict");
     if (input.commitments.some((c) => !m.text.includes(c.text))) return fail("commitment-text-not-source");
     messages = messages.map((entry) => entry.seq === m.seq ? { ...entry, handled: true } : entry);
-    commitments.push(...input.commitments.map((c) => ({ ...c, text: m.text.slice(m.text.indexOf(c.text), m.text.indexOf(c.text) + c.text.length), sourceSeq: m.seq, status: "active" as const, resolution: null })));
+    commitments.push(...input.commitments.map((c) => ({ ...c, text: m.text.slice(m.text.indexOf(c.text), m.text.indexOf(c.text) + c.text.length), sourceSeq: m.seq, status: "active" as const, resolution: null, computeId: null })));
   } else {
     const current = commitments.find((c) => c.id === input.commitmentId);
     if (!current) return fail("commitment-not-found");
     if (current.taskId !== input.taskId) return fail("task-mismatch");
     if (current.status !== "active") return fail("commitment-closed");
-    if (input.type === "progress") {
-      if (input.actor.kind === "user" || (input.actor.kind === "contact" && input.actor.id !== state.ownerId)) return fail("actor-not-allowed");
+    if (input.type === "bind-compute") {
+      if (input.actor.kind !== "contact" || input.actor.id !== state.ownerId) return fail("actor-not-allowed");
+      commitments = commitments.map((c) => c.id === current.id ? { ...c, computeId: input.computeId } : c);
     } else {
-      if (input.actor.kind === "compute" || (input.actor.kind === "contact" && input.actor.id !== state.ownerId) ||
-          (input.actor.kind === "user" && input.outcome !== "revoked")) return fail("actor-not-allowed");
-      if (input.outcome === "done") {
-        let exists = false;
-        try { exists = !!input.artifact && typeof artifactExists === "function" && !types.isProxy(artifactExists) && artifactExists(input.artifact) === true; } catch { /* unresolved is not completion */ }
-        if (!exists) return fail("artifact-not-found");
-      } else if (!input.detail || input.artifact !== null) return fail("resolution-required");
-      commitments = commitments.map((c) => c.id === current.id ? { ...c, status: input.outcome, resolution: { artifact: input.artifact, detail: input.detail } } : c);
+      if (input.type === "progress") {
+        if (input.actor.kind === "user" || (input.actor.kind === "contact" && input.actor.id !== state.ownerId) ||
+            (input.actor.kind === "compute" && input.actor.id !== current.computeId)) return fail("actor-not-allowed");
+      } else {
+        if (input.actor.kind === "compute" || (input.actor.kind === "contact" && input.actor.id !== state.ownerId) ||
+            (input.actor.kind === "user" && input.outcome !== "revoked")) return fail("actor-not-allowed");
+        if (input.outcome === "done") {
+          let exists = false;
+          try { exists = !!input.artifact && typeof artifactExists === "function" && !types.isProxy(artifactExists) && artifactExists(input.artifact) === true; } catch { /* unresolved is not completion */ }
+          if (!exists) return fail("artifact-not-found");
+        } else if (!input.detail || input.artifact !== null) return fail("resolution-required");
+        commitments = commitments.map((c) => c.id === current.id ? { ...c, status: input.outcome, resolution: { artifact: input.artifact, detail: input.detail } } : c);
+      }
+      activity.push({ roundId: input.roundId, commitmentId: current.id, taskId: current.taskId, actor: input.actor,
+        kind: input.type, text: input.type === "progress" ? input.text : input.detail });
     }
-    activity.push({ roundId: input.roundId, commitmentId: current.id, taskId: current.taskId, actor: input.actor,
-      kind: input.type, text: input.type === "progress" ? input.text : input.detail });
   }
   const next: Ledger = { ...state, version: state.version + 1, messages, commitments, activity,
     actions: [...state.actions, { id: input.actionId, payload }] };
