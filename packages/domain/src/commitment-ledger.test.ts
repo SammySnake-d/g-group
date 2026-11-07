@@ -15,6 +15,8 @@ const process = (seq = 1, taskId = "task-a"): Command => ({
 });
 const progress = (id = "k1", taskId = "task-a", roundId = "r1", actor: Actor = contact): Command =>
   ({ type: "progress", actionId: `progress-${id}-${roundId}`, commitmentId: id, taskId, actor, roundId, text: "进展" });
+const bindCompute = (actionId: string, computeId: string | null, actor: Actor = contact): Command =>
+  ({ type: "bind-compute", actionId, commitmentId: "k1", taskId: "task-a", actor, computeId } as unknown as Command);
 const close = (outcome: "done" | "revoked" | "superseded" | "blocked", artifact: string | null = null, actor: typeof contact | typeof user = contact): Command =>
   ({ type: "close", actionId: `close-${outcome}`, commitmentId: "k1", taskId: "task-a", actor, roundId: "r1", outcome, artifact, detail: outcome === "done" ? null : "明确原因" });
 function unwrap(result: Result): Ledger {
@@ -151,6 +153,38 @@ test("已了结承诺不能再次改成其他状态", () => {
 test("Compute 不得直接作为群消息发送者", () => {
   const result = applyLedger(emptyLedger("c"), 0, { type: "receive", actionId: "r", message: { ...message("m1", 1), sender: compute } });
   assert.deepEqual(result, { ok: false, reason: "sender-not-allowed" });
+});
+
+test("未绑定的 Compute 不可记进展,对账仍待处理", () => {
+  const first = registered();
+  const attempt = applyLedger(first, first.version, progress("k1", "task-a", "r1", compute));
+  assert.deepEqual(attempt, { ok: false, reason: "actor-not-allowed" });
+  assert.deepEqual(reconcileRound(first, "r1", ["k1"]), { ok: true, ready: false, pending: ["k1"] });
+});
+
+test("主人可绑定、替换和撤销 Compute,仅当前绑定可记进展", () => {
+  const first = registered();
+  const bound = unwrap(applyLedger(first, first.version, bindCompute("bind-1", "worker")));
+  assert.deepEqual(reconcileRound(bound, "r1", ["k1"]), { ok: true, ready: false, pending: ["k1"] });
+  assert.equal(applyLedger(bound, bound.version, progress("k1", "task-a", "r1", compute)).ok, true);
+  const replaced = unwrap(applyLedger(bound, bound.version, bindCompute("bind-2", "worker-2")));
+  assert.deepEqual(applyLedger(replaced, replaced.version, progress("k1", "task-a", "r2", compute)), { ok: false, reason: "actor-not-allowed" });
+  assert.equal(applyLedger(replaced, replaced.version, progress("k1", "task-a", "r2", { kind: "compute", id: "worker-2" })).ok, true);
+  const revoked = unwrap(applyLedger(replaced, replaced.version, bindCompute("bind-3", null)));
+  assert.deepEqual(applyLedger(revoked, revoked.version, progress("k1", "task-a", "r3", { kind: "compute", id: "worker-2" })), { ok: false, reason: "actor-not-allowed" });
+});
+
+test("只有账本主人可绑定 Compute,绑定遵循版本和动作幂等", () => {
+  const first = registered();
+  for (const actor of [user, compute, { kind: "contact", id: "other" } as const]) {
+    assert.deepEqual(applyLedger(first, first.version, bindCompute("bad", "worker", actor)), { ok: false, reason: "actor-not-allowed" });
+  }
+  assert.deepEqual(applyLedger(first, first.version + 1, bindCompute("future", "worker")), { ok: false, reason: "version-conflict" });
+  const command = bindCompute("bind", "worker");
+  const bound = unwrap(applyLedger(first, first.version, command));
+  const retry = applyLedger(bound, first.version, command);
+  assert.equal(retry.ok && retry.duplicate, true);
+  assert.deepEqual(applyLedger(bound, bound.version, bindCompute("bind", "worker-2")), { ok: false, reason: "action-id-conflict" });
 });
 
 test("Compute 只可报告绑定任务的承诺进展,不能了结承诺", () => {
