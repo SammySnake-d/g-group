@@ -733,7 +733,7 @@ test("独立判据：嵌套消息 Proxy 被拒绝且不调用", () => {
 test("独立判据：数组访问器被拒绝且不调用", () => {
   let invoked = 0;
   const entries = Object.defineProperty([{}], "0", { enumerable: true, get() { invoked++; return {}; } });
-  const result = applyLedger(emptyLedger("c"), 0, { type: "process", actionId: "p", seq: 1, accepted: true, commitments: entries } as Command);
+  const result = applyLedger(emptyLedger("c"), 0, { type: "process", actionId: "p", seq: 1, accepted: true, commitments: entries } as unknown as Command);
   assert.deepEqual([result, invoked], [{ ok: false, reason: "invalid-input" }, 0]);
 });
 
@@ -870,4 +870,80 @@ test("独立判据：绑定参与者 Proxy 被拒绝且不调用", () => {
   const actor = new Proxy(contact, { ownKeys(target) { invoked++; return Reflect.ownKeys(target); } });
   const result = applyLedger(state, state.version, bindCompute("bind", "worker", actor));
   assert.deepEqual([result, invoked], [{ ok: false, reason: "invalid-input" }, 0]);
+});
+
+test("独立判据：旧版本被拒绝时不改调用方账本", () => {
+  const state = structuredClone(received());
+  const before = structuredClone(state);
+  const result = applyLedger(state, 0, receive("m2", 2));
+  assert.deepEqual([result, state], [{ ok: false, reason: "version-conflict" }, before]);
+});
+
+test("独立判据：重复承诺被拒绝时不改消息状态", () => {
+  const first = registered();
+  const state = structuredClone(unwrap(applyLedger(first, first.version, receive("m2", 2))));
+  const before = structuredClone(state);
+  const result = applyLedger(state, state.version, { type: "process", actionId: "p2", seq: 2, accepted: true, commitments: [{ id: "k1", taskId: "task-a", text: "覆盖" }] });
+  assert.deepEqual([result, state], [{ ok: false, reason: "commitment-id-conflict" }, before]);
+});
+
+test("独立判据：产物不存在时不改调用方承诺", () => {
+  const state = structuredClone(registered());
+  const before = structuredClone(state);
+  const result = applyLedger(state, state.version, close("done", "missing"), () => false);
+  assert.deepEqual([result, state], [{ ok: false, reason: "artifact-not-found" }, before]);
+});
+
+test("独立判据：未授权进展不改变本轮待处理状态", () => {
+  const state = structuredClone(registered());
+  const result = applyLedger(state, state.version, progress("k1", "task-a", "r1", compute));
+  assert.deepEqual([result, reconcileRound(state, "r1", ["k1"])], [{ ok: false, reason: "actor-not-allowed" }, { ok: true, ready: false, pending: ["k1"] }]);
+});
+
+test("独立判据：多个承诺均保留来源序号", () => {
+  const state = unwrap(applyLedger(emptyLedger("c"), 0, { type: "receive", actionId: "r", message: { ...message("m1", 1), text: "请做 A，再做 B" } }));
+  const result = applyLedger(state, state.version, { type: "process", actionId: "p", seq: 1, accepted: true, commitments: [{ id: "a", taskId: "task-a", text: "做 A" }, { id: "b", taskId: "task-a", text: "做 B" }] });
+  assert.deepEqual(result.ok && result.ledger.commitments.map((c) => c.sourceSeq), [1, 1]);
+});
+
+test("独立判据：多个承诺均保留来源文字", () => {
+  const state = unwrap(applyLedger(emptyLedger("c"), 0, { type: "receive", actionId: "r", message: { ...message("m1", 1), text: "请做 A，再做 B" } }));
+  const result = applyLedger(state, state.version, { type: "process", actionId: "p", seq: 1, accepted: true, commitments: [{ id: "a", taskId: "task-a", text: "做 A" }, { id: "b", taskId: "task-a", text: "做 B" }] });
+  assert.deepEqual(result.ok && result.ledger.commitments.map((c) => c.text), ["做 A", "做 B"]);
+});
+
+test("独立判据：撤销状态准确", () => {
+  const state = registered();
+  const result = applyLedger(state, state.version, close("revoked", null, user));
+  assert.equal(result.ok && result.ledger.commitments[0]?.status, "revoked");
+});
+
+test("独立判据：撤销原因保留", () => {
+  const state = registered();
+  const result = applyLedger(state, state.version, close("revoked", null, user));
+  assert.equal(result.ok && result.ledger.commitments[0]?.resolution?.detail, "明确原因");
+});
+
+test("独立判据：替代状态准确", () => {
+  const state = registered();
+  const result = applyLedger(state, state.version, close("superseded"));
+  assert.equal(result.ok && result.ledger.commitments[0]?.status, "superseded");
+});
+
+test("独立判据：替代原因保留", () => {
+  const state = registered();
+  const result = applyLedger(state, state.version, close("superseded"));
+  assert.equal(result.ok && result.ledger.commitments[0]?.resolution?.detail, "明确原因");
+});
+
+test("独立判据：阻塞状态准确", () => {
+  const state = registered();
+  const result = applyLedger(state, state.version, close("blocked"));
+  assert.equal(result.ok && result.ledger.commitments[0]?.status, "blocked");
+});
+
+test("独立判据：阻塞原因保留", () => {
+  const state = registered();
+  const result = applyLedger(state, state.version, close("blocked"));
+  assert.equal(result.ok && result.ledger.commitments[0]?.resolution?.detail, "明确原因");
 });

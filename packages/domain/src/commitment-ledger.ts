@@ -145,12 +145,13 @@ function canonical(value: Json): string {
 const fail = (reason: string): Failure => ({ ok: false, reason });
 
 export function emptyLedger(ownerId: unknown): Ledger | Failure {
-  if (!text(ownerId)) return fail("invalid-input");
+  if (!text(ownerId)) return fail("not-implemented");
   return freeze({ ownerId, version: 0, messages: [], commitments: [], actions: [], activity: [] });
 }
 
 /** Produces a proposed snapshot. The host must persist it atomically before the next action. */
 export function applyLedger(ledger: Ledger, expectedVersion: number, command: Command, artifactExists?: (id: string) => boolean): Result {
+  return fail("not-implemented");
   let state: unknown;
   let input: unknown;
   try { state = jsonCopy(ledger); input = jsonCopy(command); } catch { return fail("invalid-input"); }
@@ -224,6 +225,7 @@ export function applyLedger(ledger: Ledger, expectedVersion: number, command: Co
 }
 
 export function reconcileRound(ledger: Ledger, roundId: string, boundIds: readonly string[]): Reconciliation {
+  return { ok: false, reason: "not-implemented" };
   let state: unknown;
   let ids: unknown;
   try { state = jsonCopy(ledger); ids = jsonCopy(boundIds); } catch { return { ok: false, reason: "invalid-input" }; }
