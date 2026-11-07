@@ -1423,12 +1423,14 @@ test("send / pull 返回带自有静态 Symbol.species getter 的 Promise 子类
 // —— R9-01 / R10-01(用户 g-group#3140 选 A:"能安全处理的都做"):拒收的外部 Promise 能不执行外部代码就挂空拒绝处理的都挂上;
 // 用户排除的三类(Proxy、不可配置 getter、冻结子类)只做记录性测试;另有几种残余形态做不到或要改写内置对象,只做记录性测试,待用户拍板。
 type Shape = "plain" | "then-getter" | "ctor-getter" | "ctor-getter-enum" | "ctor-data" | "ctor-other" | "ctor-fixed-writable" | "ctor-fixed-writable-enum"
-  | "ctor-fixed-writable-null" | "ctor-locked-other" | "ctor-locked-plain" | "ctor-locked-subclass" | "ctor-locked-species-data" | "proxy-proto" | "subclass" | "sealed-subclass" | "frozen-subclass"
+  | "ctor-fixed-writable-null" | "ctor-locked-other" | "ctor-locked-plain" | "ctor-locked-frozen-plain" | "ctor-locked-frozen-species-null"
+  | "ctor-locked-frozen-species-undefined" | "ctor-locked-subclass" | "ctor-locked-species-data" | "proxy-proto" | "subclass" | "sealed-subclass" | "frozen-subclass"
   | "proxy" | "ctor-getter-fixed" | "frozen-all" | "ctor-locked-null" | "ctor-locked-builtin" | "ctor-locked-frozen-subclass" | "ctor-locked-proxy";
 type ShapeCounters = { gets: number; traps: number; ctor: number; species: number };
 type Shaped = { value: unknown; raw: Promise<unknown>; ctorBefore: PropertyDescriptor | undefined; protoBefore: object | null; snapBefore: unknown[]; snap: () => unknown[]; cleanup: () => void };
 const HANDLED: readonly Shape[] = ["then-getter", "ctor-getter", "ctor-getter-enum", "ctor-data", "ctor-other", "ctor-fixed-writable", "ctor-fixed-writable-enum", "ctor-fixed-writable-null",
-  "ctor-locked-other", "ctor-locked-plain", "ctor-locked-subclass", "ctor-locked-species-data", "proxy-proto", "subclass", "sealed-subclass", "frozen-subclass"];
+  "ctor-locked-other", "ctor-locked-plain", "ctor-locked-frozen-plain", "ctor-locked-frozen-species-null", "ctor-locked-frozen-species-undefined",
+  "ctor-locked-subclass", "ctor-locked-species-data", "proxy-proto", "subclass", "sealed-subclass", "frozen-subclass"];
 const EXCLUDED: readonly Shape[] = ["proxy", "ctor-getter-fixed", "frozen-all"];
 const RESIDUAL: readonly Shape[] = ["ctor-locked-null", "ctor-locked-builtin", "ctor-locked-frozen-subclass", "ctor-locked-proxy"];
 /** 造一个外部返回值。不引用模块里的任何变量,子进程通过 toString 复用同一份代码。
@@ -1453,8 +1455,17 @@ function shapedPromise(shape: string, timing: string, c: ShapeCounters, pre = fa
   Object.defineProperty(OtherFixed, Symbol.species, { get() { if (!armed) return Promise; c.species++; throw new Error("不应读取 OtherFixed 的 species"); } });
   const SpeciesData = function SpeciesData() {};
   Object.defineProperty(SpeciesData, Symbol.species, { value: Bare, writable: true, enumerable: false, configurable: true });
+  // 第十一轮审查 R11-03 的两个存活单点故障所对应的形态:constructor 锁成冻结的普通函数。
+  // 内核不需要改写任何对象(speciesSafe 已能判定),缺的是测试真的激活那两条分支。
+  const PlainFrozen = Object.freeze(function PlainFrozen() {});                 // 链上没有 species
+  const PlainNullSpecies = function PlainNullSpecies() {};
+  Object.defineProperty(PlainNullSpecies, Symbol.species, { value: null, writable: false, enumerable: false, configurable: false }); // species 是只读数据属性 null
+  const PlainUndefSpecies = function PlainUndefSpecies() {};
+  Object.defineProperty(PlainUndefSpecies, Symbol.species, { value: undefined, writable: false, enumerable: false, configurable: false }); // species 是只读数据属性 undefined
+  Object.freeze(PlainNullSpecies);
+  Object.freeze(PlainUndefSpecies);
   const ProxyCtor = new Proxy(function Target() {}, { get(t, k, r) { if (armed) c.traps++; return Reflect.get(t, k, r); }, getOwnPropertyDescriptor(t, k) { if (armed) c.traps++; return Reflect.getOwnPropertyDescriptor(t, k); }, getPrototypeOf(t) { if (armed) c.traps++; return Reflect.getPrototypeOf(t); } });
-  const snap = () => [Sub, Sub.prototype, Bare, Bare.prototype, Other, OtherFixed, SpeciesData, Array, Promise].map((o) => [Object.getOwnPropertyDescriptor(o, "constructor"), Object.getOwnPropertyDescriptor(o, Symbol.species), Object.isExtensible(o)]);
+  const snap = () => [Sub, Sub.prototype, Bare, Bare.prototype, Other, OtherFixed, SpeciesData, PlainFrozen, PlainNullSpecies, PlainUndefSpecies, Array, Promise].map((o) => [Object.getOwnPropertyDescriptor(o, "constructor"), Object.getOwnPropertyDescriptor(o, Symbol.species), Object.isExtensible(o)]);
   const executor = (_ok: (v: unknown) => void, fail: (e: unknown) => void) => {
     if (timing === "now") fail(new Error("外部拒绝"));
     else setTimeout(() => fail(new Error("外部稍后拒绝")), 5);
@@ -1475,6 +1486,9 @@ function shapedPromise(shape: string, timing: string, c: ShapeCounters, pre = fa
   if (shape === "ctor-fixed-writable-null") Object.defineProperty(raw, "constructor", { value: null, writable: true, enumerable: true, configurable: false });
   if (shape === "ctor-locked-other") lock(Other);
   if (shape === "ctor-locked-plain") lock(Plain);
+  if (shape === "ctor-locked-frozen-plain") lock(PlainFrozen);
+  if (shape === "ctor-locked-frozen-species-null") lock(PlainNullSpecies);
+  if (shape === "ctor-locked-frozen-species-undefined") lock(PlainUndefSpecies);
   if (shape === "ctor-locked-subclass") lock(Bare);
   if (shape === "ctor-locked-species-data") lock(SpeciesData);
   if (shape === "proxy-proto") Object.setPrototypeOf(raw, new Proxy(Promise.prototype, { get(t, k, r) { if (armed) c.traps++; return Reflect.get(t, k, r); }, getOwnPropertyDescriptor(t, k) { if (armed) c.traps++; return Reflect.getOwnPropertyDescriptor(t, k); }, getPrototypeOf(t) { if (armed) c.traps++; return Reflect.getPrototypeOf(t); } }));
@@ -1542,7 +1556,7 @@ function shapedSubprocess(shape: Shape, observe = false): { code: number; lines:
 }
 const zero = { gets: 0, traps: 0, ctor: 0, species: 0 };
 
-test("send / pull 拒收十六种可安全处理的外部 Promise(自有 then getter;可配置 constructor getter 可枚举与否;constructor 为内置 Promise;别的类的可配置数据属性;不可配置但可写、值为 species 不可配置的类(可枚举与否)或 null 的数据属性;别的类的不可配置不可写数据属性;锁定指向无 species 的函数、未冻结子类或 species 为数据属性的类;原型是 Proxy 的可扩展实例;可扩展、仅不可扩展、冻结实例的子类)的已拒绝或稍后拒绝情形:结果为 non-promise-send / invalid-batch,访问器、子类构造、species 调用 0 次,实例 constructor 描述符、原型以及插件类与内置对象的描述符原样恢复(R9-01 / R10-01 阳性埋雷)", async () => {
+test("send / pull 拒收十九种可安全处理的外部 Promise(自有 then getter;可配置 constructor getter 可枚举与否;constructor 为内置 Promise;别的类的可配置数据属性;不可配置但可写、值为 species 不可配置的类(可枚举与否)或 null 的数据属性;别的类的不可配置不可写数据属性;锁定指向无 species 的函数、未冻结子类或 species 为数据属性的类;原型是 Proxy 的可扩展实例;可扩展、仅不可扩展、冻结实例的子类)的已拒绝或稍后拒绝情形:结果为 non-promise-send / invalid-batch,访问器、子类构造、species 调用 0 次,实例 constructor 描述符、原型以及插件类与内置对象的描述符原样恢复(R9-01 / R10-01 阳性埋雷)", async () => {
   for (const shape of HANDLED) for (const mode of ["send", "pull"] as const) for (const timing of ["now", "later"] as const) {
     const name = `${shape}/${mode}/${timing}`;
     const reg = createRegistry({ now: () => T0 });
@@ -1559,7 +1573,7 @@ test("send / pull 拒收十六种可安全处理的外部 Promise(自有 then ge
   }
 });
 
-test("无全局 unhandledRejection 处理器的子进程里,上述十六种形态在 send / pull × 立即 / 稍后拒绝下都被拒收且进程存活,访问器、子类构造、species 调用 0 次(R9-01 / R10-01 阳性埋雷)", async () => {
+test("无全局 unhandledRejection 处理器的子进程里,上述十九种形态在 send / pull × 立即 / 稍后拒绝下都被拒收且进程存活,访问器、子类构造、species 调用 0 次(R9-01 / R10-01 阳性埋雷)", async () => {
   const reg = createRegistry({ now: () => T0 });
   const { c } = plugShaped(reg, "pull", "ctor-getter", "now");
   const r = await callShaped(reg, "pull");
@@ -1639,4 +1653,319 @@ test("临时改写后恢复的 constructor 描述符逐旗标不变:可配置 ge
     await new Promise((ok) => setTimeout(ok, 20));
     assert.deepEqual(c, zero, name);
   }
+});
+
+// —— 第十一轮审查 R11-02:pull 容器也走同一套数组合同,超界数字键不能绕过额外键/访问器拒绝
+test("pull 返回的数组带 2^32-1 / 更大数字键上的访问器时整批拒绝(invalid-batch),getter 调用 0 次,事件 0 条(R11-02 阳性埋雷)", async () => {
+  const calls = { n: 0 };
+  for (const key of ["4294967295", "9007199254740992"]) {
+    const batch: unknown[] = [];
+    Object.defineProperty(batch, key, { enumerable: true, configurable: true, get() { calls.n++; return ev(); } });
+    const reg = createRegistry({ now: () => T0 });
+    reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: async () => batch });
+    const r = await reg.pull("p", "g");
+    assert.equal(r.ok, false, key);
+    if (!r.ok) {
+      assert.equal(r.reason, "invalid-batch", key);
+      assert.match(r.detail, new RegExp(`\\[${key}\\].*数组只能有下标元素`), key);
+    }
+  }
+  assert.equal(calls.n, 0);
+});
+
+test("单开关对照:pull 返回同样长度、带正常事件与普通对象额外字段的数组照常盖章,只有额外键换成超界数字名才整批拒收(R11-02 单开关对照)", async () => {
+  const okReg = createRegistry({ now: () => T0 });
+  okReg.register({ kind: "data-source", id: "p", sources: ["g"], pull: async () => [ev(), ev({ nativeId: "m-2" })] });
+  const ok = await okReg.pull("p", "g");
+  assert.equal(ok.ok, true);
+  if (ok.ok) assert.deepEqual([ok.events.length, ok.rejected.length], [2, 0]);
+  const tag = Object.assign([ev()], { tag: "x" });
+  const badReg = createRegistry({ now: () => T0 });
+  badReg.register({ kind: "data-source", id: "p", sources: ["g"], pull: async () => tag });
+  const bad = await badReg.pull("p", "g");
+  assert.equal(bad.ok, false);
+  if (!bad.ok) assert.match(bad.detail, /\[tag\].*数组只能有下标元素/);
+});
+
+// —— 第十一轮审查 R11-01:拒收外部 Promise 时临时改写的对象范围必须可靠地排除 Node 内置对象。
+// Buffer 在 globalThis 上是访问器属性,旧实现的手列构造器清单里没有它,于是「方案 3」把内置 Buffer[Symbol.species]
+// 临时改成数据属性 Promise,同一观察窗口里正常的缓冲区切片会抛错。下面用与审查同形的样例核对:
+// 拒收结果不变、观察窗口内宿主内置对象一个都不被改写、窗口内缓冲区切片照常成功。
+/** 宿主内置对象的采样集合:globalThis 自己的每个值(访问器属性只读一次)、它们的原型、函数的 prototype 属性。
+ *  不依赖被测实现的判定,用来独立核对"改写范围只在插件自己的对象上"。 */
+function hostObjects(): object[] {
+  const out: object[] = [];
+  const seen = new Set<unknown>();
+  const add = (v: unknown) => {
+    if (!((typeof v === "object" && v !== null) || typeof v === "function") || seen.has(v)) return;
+    seen.add(v);
+    out.push(v as object);
+  };
+  for (const k of Reflect.ownKeys(globalThis)) {
+    const d = Reflect.getOwnPropertyDescriptor(globalThis, k);
+    if (d === undefined) continue;
+    if ("value" in d) add(d.value);
+    else { try { add(Reflect.get(globalThis, k)); } catch { /* 宿主内置 getter 读不到就跳过 */ } }
+  }
+  add(globalThis);
+  for (const o of [...out]) {
+    add(Object.getPrototypeOf(o));
+    const pd = Reflect.getOwnPropertyDescriptor(o, "prototype");
+    if (pd !== undefined && "value" in pd) add(pd.value);
+  }
+  return out;
+}
+/** 每个宿主对象的 constructor / Symbol.species 描述符签名:值只写类型与函数名,不调用任何代码 */
+function hostSig(o: object): string {
+  const one = (d: PropertyDescriptor | undefined): string => {
+    if (d === undefined) return "-";
+    const v = "value" in d ? (typeof d.value === "function" ? `fn:${d.value.name || "?"}` : `${typeof d.value}:${String(d.value)}`) : "accessor";
+    return `${v}|${d.writable}|${d.enumerable}|${d.configurable}`;
+  };
+  return `${one(Reflect.getOwnPropertyDescriptor(o, "constructor"))}~${one(Reflect.getOwnPropertyDescriptor(o, Symbol.species))}`;
+}
+/** 采样:对象 → 签名。按对象身份对应,顺序来自 hostObjects() */
+function hostSnap(): Map<object, string> {
+  const m = new Map<object, string>();
+  for (const o of hostObjects()) m.set(o, hostSig(o));
+  return m;
+}
+function hostDiff(before: Map<object, string>, now: Map<object, string>, allow: ReadonlySet<object>): string[] {
+  const out: string[] = [];
+  for (const [o, sig] of now) {
+    if (allow.has(o)) continue;
+    const was = before.get(o);
+    if (was === undefined) continue;
+    if (was !== sig) out.push(`${Object.prototype.toString.call(o)}:${(o as { name?: string }).name ?? "?"} ${was} → ${sig}`);
+  }
+  return out;
+}
+/** 观察窗口:每个 PROMISE init 时采一次宿主内置对象签名,并做一次正常的内置缓冲区切片。只观察,不改任何东西。 */
+interface Window {
+  result: unknown;
+  /** 每一次 PROMISE init 的宿主内置对象签名快照(不是只采第一次:改写窗口可能落在第 n 个 Promise 上) */
+  snaps: Map<object, string>[];
+  /** 每次 init 时额外采样的对象签名,按采样顺序展平 */
+  extras: string[];
+  slices: { ok: number; failed: number; outputs: unknown[] };
+}
+async function inPromiseWindow(fn: () => Promise<unknown>, extra: readonly object[] = []): Promise<Window> {
+  const { createHook } = await import("node:async_hooks");
+  const sample = Buffer.from("neutral");
+  const slices = { ok: 0, failed: 0, outputs: [] as unknown[] };
+  const snaps: Map<object, string>[] = [];
+  const extras: string[] = [];
+  const hook = createHook({
+    init(_id: number, type: string) {
+      if (type !== "PROMISE") return;
+      snaps.push(hostSnap());
+      for (const o of extra) extras.push(hostSig(o));
+      try {
+        const cut = Reflect.apply(Uint8Array.prototype.slice, sample, [0]) as Buffer;
+        slices.ok++;
+        slices.outputs.push([Buffer.isBuffer(cut), cut.toString("utf8")]);
+      } catch { slices.failed++; }
+    },
+  });
+  hook.enable();
+  try { return { result: await fn(), snaps, extras, slices }; } finally { hook.disable(); }
+}
+/** 窗口里每一次采样都必须和窗口外一致(逐次比,不只看第一次) */
+function windowDiff(before: Map<object, string>, snaps: Map<object, string>[], allow: ReadonlySet<object>): string[] {
+  const out: string[] = [];
+  for (const snap of snaps) out.push(...hostDiff(before, snap, allow));
+  return out;
+}
+
+test("constructor 锁成 Node 内置 Buffer 的已拒收 Promise:仍按 non-promise-send / invalid-batch 拒收,无法不改内置对象就挂处理,观察窗口内 Buffer 与其余宿主内置对象一个都没被改写,窗口内的正常缓冲区切片照常成功(R11-01 阳性埋雷)", async () => {
+  // 与审查同形:构造器锁成内置 Buffer(不可配置、不可写)。测试进程自己先挂一个空拒绝处理(改形态之前),
+  // 免得本进程留下未处理拒绝;这不改变被测行为(内核的那次挂处理同样挂不上,结果仍是拒收)
+  const lockedBuffer = (): Promise<unknown> => {
+    let fail: (e: unknown) => void = () => {};
+    const p = new Promise((_ok, f) => { fail = f; });
+    Reflect.apply(Promise.prototype.then, p, [undefined, () => {}]);
+    Object.defineProperty(p, "constructor", { value: Buffer, writable: false, enumerable: false, configurable: false });
+    fail(new Error("外部拒绝"));
+    return p;
+  };
+  const speciesBefore = Object.getOwnPropertyDescriptor(Buffer, Symbol.species);
+  const before = hostSnap();
+  assert.ok(before.size > 50, "宿主内置对象采样太少,核对不了边界");
+  const reg = createRegistry({ now: () => T0 });
+  let made: Promise<unknown> | undefined;
+  reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => { made = lockedBuffer(); return made; } });
+  const run = await inPromiseWindow(() => reg.pull("p", "g"));
+  const r = run.result as { ok: boolean; reason?: string };
+  assert.deepEqual([r.ok, r.reason], [false, "invalid-batch"]);
+  assert.equal(Object.getOwnPropertyDescriptor(Buffer, Symbol.species) === undefined, speciesBefore === undefined);
+  assert.deepEqual(Object.getOwnPropertyDescriptor(Buffer, Symbol.species), speciesBefore);
+  assert.ok(run.snaps.length > 0, "观察窗口没有采到 PROMISE init");
+  assert.deepEqual(windowDiff(before, run.snaps, new Set()), []);
+  assert.deepEqual(hostDiff(before, hostSnap(), new Set()), []);
+  assert.deepEqual([run.slices.failed, run.slices.ok > 0], [0, true]);
+  assert.deepEqual(run.slices.outputs.every((x) => Array.isArray(x) && x[0] === true && x[1] === "neutral"), true);
+  assert.ok(made !== undefined);
+});
+
+test("拉取与发送都拒收同一形态,不能挂处理时由集成前的插件进程隔离兜底:本进程先确认拒收,装计数处理器的子进程里四种组合各留 1 个未处理拒绝,外部代码 0 次,内置 Buffer 不改写(R11-01 记录性)", async () => {
+  // 本进程先确认这一形态确实被拒收(与子进程同一形态),再看不能挂处理时留下多少未处理拒绝
+  const speciesBeforeLocal = Object.getOwnPropertyDescriptor(Buffer, Symbol.species);
+  const local = createRegistry({ now: () => T0 });
+  let fail: (e: unknown) => void = () => {};
+  const pending = new Promise((_ok, f) => { fail = f; });
+  Reflect.apply(Promise.prototype.then, pending, [undefined, () => {}]);
+  Object.defineProperty(pending, "constructor", { value: Buffer, writable: false, enumerable: false, configurable: false });
+  fail(new Error("外部拒绝"));
+  local.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => pending });
+  const localResult = await local.pull("p", "g");
+  assert.deepEqual([localResult.ok, localResult.ok === false && localResult.reason], [false, "invalid-batch"]);
+  assert.deepEqual(Object.getOwnPropertyDescriptor(Buffer, Symbol.species), speciesBeforeLocal);
+  const code = `
+    import { writeSync } from "node:fs";
+    import { createRegistry } from ${JSON.stringify(new URL("./plugins.ts", import.meta.url).href)};
+    let unhandled = 0;
+    process.on("unhandledRejection", () => { unhandled++; });
+    const speciesBefore = Object.getOwnPropertyDescriptor(Buffer, Symbol.species);
+    for (const mode of ["send", "pull"]) for (const timing of ["now", "later"]) {
+      const reg = createRegistry({ now: () => 0 });
+      const make = () => {
+        const p = timing === "now" ? Promise.reject(new Error("x")) : new Promise((_ok, fail) => setTimeout(() => fail(new Error("x")), 5));
+        Object.defineProperty(p, "constructor", { value: Buffer, writable: false, enumerable: false, configurable: false });
+        return p;
+      };
+      if (mode === "send") reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: make });
+      else reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: make });
+      const r = mode === "send" ? await reg.send("p", { action_id: "a", payload: "x" }) : await reg.pull("p", "g");
+      await new Promise((ok) => setTimeout(ok, 20));
+      writeSync(1, JSON.stringify({ mode, timing, reason: r.reason, state: mode === "send" ? reg.delivery("p", "a")?.state : null,
+        speciesIntact: JSON.stringify(Object.getOwnPropertyDescriptor(Buffer, Symbol.species)) === JSON.stringify(speciesBefore) }) + "\\n");
+    }
+    setTimeout(() => writeSync(1, JSON.stringify({ alive: true, unhandled }) + "\\n"), 80);
+  `;
+  const lines = execFileSync(process.execPath, ["--input-type=module", "-e", code], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })
+    .split("\n").filter(Boolean).map((l) => JSON.parse(l) as Record<string, unknown>);
+  assert.deepEqual(lines, [
+    { mode: "send", timing: "now", reason: "non-promise-send", state: "delivery-unknown", speciesIntact: true },
+    { mode: "send", timing: "later", reason: "non-promise-send", state: "delivery-unknown", speciesIntact: true },
+    { mode: "pull", timing: "now", reason: "invalid-batch", state: null, speciesIntact: true },
+    { mode: "pull", timing: "later", reason: "invalid-batch", state: null, speciesIntact: true },
+    { alive: true, unhandled: 4 },
+  ]);
+});
+
+test("方案 2 / 方案 3 改写窗口内的所有权边界:窗口里被改的只有插件自己的对象,宿主内置对象(Buffer、Math、JSON、Reflect、Atomics、TypedArray 原型、SharedArrayBuffer 等)逐个核对未被改动,窗口内缓冲区切片照常成功(R11-01 阳性埋雷)", async () => {
+  // 方案 3:constructor 锁成不可改写的插件类,该类自有不可配置的 species getter,只能临时把插件的 species 读成内置 Promise
+  const PluginClass = function PluginClass() {};
+  Object.defineProperty(PluginClass, Symbol.species, { get() { throw new Error("species 不应被调用"); } });
+  const allowed = new Set<object>([PluginClass]);
+  const before = hostSnap();
+  const reg = createRegistry({ now: () => T0 });
+  let made: Promise<unknown> | undefined;
+  reg.register({
+    kind: "data-source", id: "p", sources: ["g"],
+    pull: () => {
+      let fail: (e: unknown) => void = () => {};
+      const p = new Promise((_ok, f) => { fail = f; });
+      Reflect.apply(Promise.prototype.then, p, [undefined, () => {}]); // 测试进程自己先挂处理,改形态之前
+      Object.defineProperty(p, "constructor", { value: PluginClass, writable: false, enumerable: false, configurable: false });
+      fail(new Error("外部拒绝"));
+      made = p;
+      return p;
+    },
+  });
+  const run = await inPromiseWindow(() => reg.pull("p", "g"));
+  const r = run.result as { ok: boolean; reason?: string };
+  assert.deepEqual([r.ok, r.reason], [false, "invalid-batch"]);
+  assert.ok(run.snaps.length > 0, "观察窗口没有采到 PROMISE init");
+  // 宿主内置对象:窗口内每一次采样与窗口外都不许变;插件自己的类允许在窗口内被临时改写
+  assert.deepEqual(windowDiff(before, run.snaps, allowed), []);
+  assert.deepEqual(hostDiff(before, hostSnap(), new Set()), []);
+  // 窗口内正常缓冲区操作保持有效(切片成功、仍是 Buffer、内容不变)
+  assert.deepEqual([run.slices.failed, run.slices.ok > 0], [0, true]);
+  assert.deepEqual(run.slices.outputs.every((x) => Array.isArray(x) && x[0] === true && x[1] === "neutral"), true);
+  // 插件类事后原样恢复
+  const d = Object.getOwnPropertyDescriptor(PluginClass, Symbol.species);
+  assert.deepEqual([typeof d?.get, d?.configurable, d?.set === undefined, d?.enumerable, d?.writable], ["function", false, true, false, undefined]);
+  assert.ok(made !== undefined);
+});
+
+test("宿主内置构造器不能被当成可临时改写的目标:constructor 锁成另一 realm 的内置 Array 时仍被拒收,该 Array 与当前 realm 的全部宿主内置对象都不被改写(R11-01 单开关对照)", async () => {
+  const vm = await import("node:vm");
+  const foreign = vm.runInNewContext("Array") as unknown;
+  const real = foreign === Array;
+  assert.equal(real, false);
+  const foreignBefore = Object.getOwnPropertyDescriptor(foreign as object, Symbol.species);
+  const foreignSig = hostSig(foreign as object);
+  const before = hostSnap();
+  const reg = createRegistry({ now: () => T0 });
+  let made: Promise<unknown> | undefined;
+  reg.register({
+    kind: "data-source", id: "p", sources: ["g"],
+    pull: () => {
+      let fail: (e: unknown) => void = () => {};
+      const p = new Promise((_ok, f) => { fail = f; });
+      Reflect.apply(Promise.prototype.then, p, [undefined, () => {}]); // 测试进程自己先挂处理,改形态之前
+      Object.defineProperty(p, "constructor", { value: foreign, writable: false, enumerable: false, configurable: false });
+      fail(new Error("外部拒绝"));
+      made = p;
+      return p;
+    },
+  });
+  const run = await inPromiseWindow(() => reg.pull("p", "g"), [foreign as object]);
+  const r = run.result as { ok: boolean; reason?: string };
+  assert.deepEqual([r.ok, r.reason], [false, "invalid-batch"]);
+  // 观察窗口里(不是只在事后)另一 realm 的内置 Array 也不许被临时改写:每次 init 采样都得是原样
+  assert.ok(run.extras.length > 0, "观察窗口没有采到 PROMISE init");
+  assert.deepEqual(run.extras.filter((x) => x !== foreignSig), []);
+  assert.deepEqual(Object.getOwnPropertyDescriptor(foreign as object, Symbol.species), foreignBefore);
+  assert.deepEqual(windowDiff(before, run.snaps, new Set()), []);
+  assert.deepEqual([run.slices.failed, run.slices.ok > 0], [0, true]);
+  assert.ok(made !== undefined);
+});
+
+test("改写链上只剩另一 realm 的内置原型可动时仍然不动它:实例与中间对象都不可扩展,该原型的 constructor(原生函数)在观察窗口内始终是原来那个(R11-01 单开关对照)", async () => {
+  // 链:本 realm 的 Promise 实例 → 另一 realm 的普通对象 → 该 realm 的 Promise.prototype。
+  // 实例与中间对象都 preventExtensions,于是「方案 2」唯一能动的对象是 foreignProto(它的 constructor 是可写数据属性),
+  // 判定它属于宿主只能靠「constructor 是原生函数」这一条(它不在本 realm 的 globalThis 闭包里)。
+  const vm = await import("node:vm");
+  const ctx = vm.createContext({});
+  const foreignProto = vm.runInContext("Promise.prototype", ctx) as object;
+  const foreignCtor = vm.runInContext("Promise", ctx) as unknown;
+  const mid = vm.runInContext("({ })", ctx) as object;
+  Object.setPrototypeOf(mid, foreignProto);
+  Object.preventExtensions(mid);
+  const beforeOwn = Object.getOwnPropertyDescriptor(foreignProto, "constructor");
+  assert.equal(beforeOwn?.writable, true, "foreignProto.constructor 要是可写数据属性,变异版才动得了它");
+  // 观察窗口:每次 PROMISE init 记下 foreignProto.constructor 是不是原来那个原生函数
+  const { createHook } = await import("node:async_hooks");
+  const intact: boolean[] = [];
+  const hook = createHook({
+    init(_id: number, type: string) {
+      if (type !== "PROMISE") return;
+      intact.push(Reflect.getOwnPropertyDescriptor(foreignProto, "constructor")?.value === foreignCtor);
+    },
+  });
+  const reg = createRegistry({ now: () => T0 });
+  reg.register({
+    kind: "data-source", id: "p", sources: ["g"],
+    pull: () => {
+      let fail: (e: unknown) => void = () => {};
+      const p = new Promise((_ok, f) => { fail = f; });
+      Reflect.apply(Promise.prototype.then, p, [undefined, () => {}]); // 测试进程自己先挂处理,改原型之前
+      Object.setPrototypeOf(p, mid);
+      Object.preventExtensions(p);
+      fail(new Error("外部拒绝"));
+      return p;
+    },
+  });
+  hook.enable();
+  let r: Awaited<ReturnType<typeof reg.pull>>;
+  try { r = await reg.pull("p", "g"); } finally { hook.disable(); }
+  assert.deepEqual([r.ok, r.ok === false && r.reason], [false, "invalid-batch"]);
+  assert.ok(intact.length > 0, "观察窗口没有采到 PROMISE init");
+  assert.deepEqual(intact.filter((x) => x === false), []);
+  // 事后逐字段不变,也没有凭空多出别的键
+  assert.deepEqual(Object.getOwnPropertyDescriptor(foreignProto, "constructor"), beforeOwn);
+  assert.deepEqual(Reflect.ownKeys(foreignProto).map(String).sort(), Reflect.ownKeys(vm.runInContext("Promise.prototype", vm.createContext({}))).map(String).sort());
+  assert.equal(Object.hasOwn(mid, "constructor"), false);
 });

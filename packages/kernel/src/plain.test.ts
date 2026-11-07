@@ -343,3 +343,48 @@ test("数组下标都是可枚举数据属性时 plainItems 与 plainData 放行
   const d = plainData({ list: ["a", "b"] }, "x");
   assert.deepEqual(d.ok && { ...(d.value as object) }, { list: ["a", "b"] });
 });
+
+// —— 第十一轮审查 R11-02:数组只能有下标与 length。2^32-1 不是数组索引,更大的十进制数字名也不是;
+// 旧实现只用 /^(0|[1-9]\d*)$/ 判文本,这些键被当成下标放过去,后面的 0..length-1 循环又不会查它们的描述符,
+// 于是空数组上的这些键(哪怕挂着 getter)被静默净化成 ok:true/[]。
+test("数组上 2^32-1 与更大的十进制数字键上的访问器一律拒绝并点名路径,getter 调用 0 次(R11-02 阳性埋雷)", () => {
+  const calls = { n: 0 };
+  for (const key of ["4294967295", "9007199254740992"]) {
+    const arr: unknown[] = [];
+    Object.defineProperty(arr, key, { enumerable: true, configurable: true, get() { calls.n++; return "neutral"; } });
+    const it = plainItems(arr, "x");
+    assert.deepEqual(it.ok === false && [it.path, it.why], [`x[${key}]`, "数组只能有下标元素"], key);
+    const d = plainData({ list: arr }, "x");
+    assert.deepEqual(d.ok === false && [d.path, d.why], [`x.list[${key}]`, "数组只能有下标元素"], key);
+    const arr2 = plainData(arr, "x");
+    assert.deepEqual(arr2.ok === false && [arr2.path, arr2.why], [`x[${key}]`, "数组只能有下标元素"], key);
+  }
+  assert.equal(calls.n, 0);
+});
+
+test("appendOwn 的目标带 2^32-1 / 更大数字键时抛受控 TypeError,不写入、getter 调用 0 次(R11-02 阳性埋雷)", () => {
+  const calls = { n: 0 };
+  for (const key of ["4294967295", "9007199254740992"]) {
+    const arr: unknown[] = [];
+    Object.defineProperty(arr, key, { enumerable: true, configurable: true, get() { calls.n++; return "neutral"; } });
+    assert.throws(() => appendOwn(arr as unknown[], "z"), (e: unknown) => e instanceof TypeError && e.message === "appendOwn 的目标必须是普通数组", key);
+    assert.deepEqual([arr.length, Object.hasOwn(arr, 0)], [0, false], key);
+  }
+  assert.equal(calls.n, 0);
+});
+
+test("单开关对照:同一位置换成普通额外键、真下标或 length 内的数据属性时,拒绝原因与放行结果各不相同(R11-02 单开关对照)", () => {
+  const extra = Object.assign(["a"], { k: 1 });
+  const it = plainItems(extra, "x");
+  assert.deepEqual(it.ok === false && [it.path, it.why], ["x[k]", "数组只能有下标元素"]);
+  // 真下标上的访问器按"不允许 getter/setter"拒绝(不是被当成额外键,也不是被静默吞掉)
+  const accessor: unknown[] = [];
+  Object.defineProperty(accessor, "0", { enumerable: true, configurable: true, get() { return "neutral"; } });
+  const a = plainItems(accessor, "x");
+  assert.deepEqual(a.ok === false && [a.path, a.why], ["x[0]", "不允许 getter/setter"]);
+  // 同样的下标换成数据属性就照常放行,length 内的一切正常
+  const ok = plainItems(["a", "b"], "x");
+  assert.deepEqual(ok.ok && ok.items, ["a", "b"]);
+  const d = plainData({ list: ["a", "b"] }, "x");
+  assert.deepEqual(d.ok && { ...(d.value as object) }, { list: ["a", "b"] });
+});
