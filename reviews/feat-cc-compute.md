@@ -515,3 +515,91 @@ AC-07、AC-33④、V-06 整项仍未测：权威约束与副作用账、内核�
 | 临时目录 | 独立 TMPDIR 中全仓测试前后 `g-group-cc-*` / `fake-cc-*` 均为 0；变异各用独立 TMPDIR。审后删除本会话 clone、依赖与临时运行产物，只保留上述引用证据 |
 
 本轮未重跑作者全部 78 个变异，不把其自报当作独立观察；未重跑真实 Claude smoke。AC-07、AC-33④、V-06 的完整内核接线、真实 CLI 工具权限与模型事件映射仍未验证。未运行本轮完整 `--local`；夹具中的 G-PROVENANCE 负例不等于真实审查来源门禁已通过。用户已限定内置原型未被事先修改，停止按 mirasim 而非容器/后代树静止，本轮未以超出该边界的反例打回。
+
+---
+
+## 第七轮（2026-11-08）：Astra 独立复审
+
+**结论：REJECT。** 第六轮 R6-01、R6-02、R6-03 的既有反例已复核修复；但本轮在新克隆重新复现了两个运行缺陷：并发续接产生两个 CLI，停止只能覆盖其中一个；畸形但合法的 JSON 能使适配器宿主以未捕获异常退出。另外，一个额外放宽前导帧的单点变异在本包 84 条测试全绿时仍存活。完整测试全绿和作者已列变异的结果不能抵消这些反例。
+
+### 1. 对象、来源与证据
+
+- 开工前 `git ls-remote` 与 `gh pr view 7` 均确认 PR #7 为 `feat/cc-compute → feat/domain-core`，被审 HEAD 为 `17cf2a113ac9691416a273832f287e290dfad5a0`；基线 `afd02560f9546147da380382404eb6106222a9b8`。普通独立 HTTPS 克隆为 `/tmp/g-group-pr7-r7-astra-20261108-4efabb1d`，未使用共享 worktree。
+- 审查人 `astra`，会话 `codex:4efabb1d-4a4d-4887-a554-7e80c1166df1`，原生线程 `01a1b780-4bdd-7eb1-a370-253334ff593e`；本轮原始 `turn_context.model` 为 `ai-iisbo/[乾坤按量]gpt-6-astra`（OpenAI）。作者原始会话 `claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38` 记录的模型为 Claude Opus 5.5（Anthropic），跨厂商，无豁免。运行环境 Node `v22.22.0`，macOS arm64。
+- 需求依据固定于 `origin/docs/dev-handbook@3ae540eee9c193cda368bf24a75c3ccef4db4cf0` 的 `docs/spec/`；停止语义按用户 `g-group#2309` 及 brief 的 mirasim 主进程 TERM、到期组 KILL、主进程先退出取消升级；输入保证限定内置原型未被改的环境（`g-group#2662`）。本轮没有改写内置原型，没有以脱组后代或全树静止要求拒审。
+- 在本会话亲自运行 `node scripts/gates/run-all.ts --hash --branch=feat/cc-compute --base=origin/feat/domain-core`，原样输出（**不是 Git commit ID**）：
+
+  ```text
+  4a25c4c352f3d4cb67b1dd49ffb32dde5bd892fa52c15fa7141638df7d9082f2
+  ```
+
+- 证据目录 `$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr7-r7-astra/`，含 `identity.json`、本轮脚本、原始 TAP/命令日志、JSON 观察值及最终清理清单。只采用本轮亲自运行结果；没有读取或采用 Argon 的结论，也没有采用本地 pass 收据。上轮半成品不作为本轮证据。
+
+### 2. 必须返修
+
+#### R7-01 [P1] 受阻轮次的 resume 没有原子认领，重复续接与 stop 竞态失去进程控制
+
+位置：`packages/adapter-cc-compute/src/adapter.ts:348`，尤其是读取 `st.round`、判断 frozen、`await prev.done`、随后无条件 `launch` 的部分（356–366）；`launch` 在 287 行覆写唯一的 `st.round`，`stop` 在 373 行只取得该引用。
+
+**新克隆实测一：** 注入既有假 CLI，经真实 report MCP 受理 blocked 后，用 `Promise.all([resume(id,"中性续接甲"),resume(id,"中性续接乙")])` 同时续接。两次都返回 `{ok:true}`；记录有原 CLI 及两个不同的续接 CLI PID。随后 `stop(id)` 返回 `{ok:true}`，配置的 150ms 升级后再等到 700ms，两个续接进程中仍有一个存活。观察 PID 为原 `35432`、续接 `35473/35476`，stop 后 `35473` 仍活。它是适配器自己多启动的一次 CLI，不是用户已经明确不覆盖的脱组后代。审查脚本最终只清理本夹具的进程。
+
+**新克隆实测二：** blocked 后先调用 `const p = resume(id,"中性续接")`，不等待它完成便 `await stop(id)`，再等待 p。stop 和 resume 均回 `{ok:true}`，stop 已确认之后仍启动新 CLI（`22348`）且它在运行。这里不是要求 stopped 等全树退出，而是已确认停止的同一 Compute 被未失效的在途续接重新启动。
+
+**原因与返修要求：** 两个调用在同一个 `await prev.done` 前都通过资格检查；恢复后既不重新核对轮次身份，也不核对并发 stop。对每个 Compute 原子认领续接/代次，跨 await 后核验当前轮次与停止状态，保证同一轮最多一个启动者；落败请求明确拒绝，且 stop 能使尚未启动的续接失效。补双 resume、resume/stop、正常单次 resume 和后续所有已启动进程回收的正反对照。
+
+证据：`$E/concurrent-resume-observed.json`、`$E/resume-stop-observed.json`，脚本 `independent-probes.mjs`、`race-stop-probe.mjs`。现有顺序 resume 用例通过，未检出上述并发路径。
+
+#### R7-02 [P1] 对合法 JSON 中的对象字段做隐式字符串转换，异常逸出 stdout 回调并杀死宿主
+
+位置：`src/events.ts:49`（host.status 的错误说明）、`src/events.ts:66`（未认可前导帧的 type/subtype 说明）、`src/adapter.ts:294`（readline 回调无异常转失败边界）。
+
+**新克隆实测：** 用隔离宿主子进程加载原样适配器，注入假 CLI，仅输出以下 JSON 数据之一：
+
+```json
+{"type":{"toString":null}}
+```
+
+```json
+{"type":"system","subtype":"init","session_id":"neutral","tools":["mcp__host__report_progress"],"mcp_servers":[{"name":"host","status":{"toString":null}}]}
+```
+
+两个宿主进程均退出 1，stderr 为 `TypeError: Cannot convert object to primitive value`，分别定位到 `preInitFrame` 第 66 行和 `checkInit` 第 49 行；没有发出该 Compute 的 failed 事件。对照 JSON `null` 则宿主退出 0，适配器正常产出 failed。所有输入均由 JSON.stringify/JSON.parse 产生，没有 getter、Proxy、函数，也没有预先修改任何内置原型；对象自有的同名数据字段并不违反本轮环境边界。
+
+**返修要求：** 在类型判定后生成固定错误说明或使用不会对任意对象执行 ToPrimitive 的安全表示；将 stdout 解码/映射异常隔离到当前 Compute 的受控失败与回收，不能终止整个适配器宿主。补 type/subtype/status 的对象、数组、null 等形状及坏 JSON，验证宿主继续服务、当前实例 failed 且相关进程清理；保留正常 init/result 对照。
+
+证据：`$E/json-case-0.json`（null 对照）、`json-case-1.json`、`json-case-2.json`，含完整退出码和调用栈。只证明注入 runner 的协议边界缺陷，不声称本轮真实 Claude 模型输出过这些行。
+
+#### R7-03 [P2，测试缺口] 保留原白名单同时放宽 hook 前缀，84 条现有测试未检出
+
+位置：`src/events.ts:65` 的 `PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype)`，相关测试 `src/adapter.test.ts:839`、852、865。
+
+原版正确拒绝 `{"type":"system","subtype":"hook_neutral_unlisted"}`。独立 S04 只把这一处条件改为 `(PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype) || m.subtype.startsWith("hook"))`，没有删除原来认可的 ui_invalidate。变异 typecheck 退出 0；先跑现有 R3-03 三条全绿，再跑全本包 **84/84、0 skip/todo/cancelled、退出 0**，变异存活。独立同一输入在原版得到 rejected、变异得到 allowed。
+
+**返修要求：** 加入与认可帧仅差子类型的邻接反例（如 hook_neutral_unlisted），保留三种合法帧的阴性对照，并将这一单点故障纳入正式变异集。不把测试缺口描述成原版已经放宽。
+
+证据：`$E/S04-typecheck.log`、`S04-full-test.log`、`S04-independent-oracle.json`、`single-mutations.mjs`。
+
+### 3. 第六轮返修核对与本轮运行
+
+| 项目 | 本轮亲自观察 |
+|---|---|
+| 安装、typecheck、lint | `npm ci --no-audit --no-fund`、`npm run typecheck`、`npm run lint` 均退出 0 |
+| 全仓 `npm test` | 107/107 通过，0 failed/skipped/todo/cancelled；其中本包 84 条 |
+| 红提交 | 独立副本检出 `53fe6c69726ab651349f79d56dc1193e6b843fe6`，npm ci 退出 0；同一份本包测试 84 条全部按名失败，0 skip/todo/cancelled，退出 1；测试和假 CLI 文件红绿 diff 为空 |
+| R6-01 | 包根 API 的 getter/嵌套及撤销 Proxy 拒收，访问器/陷阱计数 0；firstPrompt/allowedTools/cliArgs/cliEnv/streamParser/terminalFor/resolveReapForceMs 合法对照及作者公开入口用例通过 |
+| R6-02 | 本轮独立 failed.violations 深冻结、splice 抛 TypeError、两次 settled 不变；全仓中的 stopped/双订阅者/rejectedReports 具名用例也通过 |
+| R6-03 | 直接 MCP 对前后空格、大小写、连字符及 null 工具名回 -32602 且不写日志；精确名称成功且只记 1 行。坏 JSON/null 请求被拒后同一服务器继续服务；策略对象递归冻结 |
+| 独立探针 | 第一脚本 6 项：3 对照通过、3 断言失败（并发 resume 及两种宿主 JSON 崩溃）；额外 resume/stop 竞态断言失败。R6 独立验证 14 项均通过 |
+| 五个独立单点变异 | S01 不启动续接、S02 忽略短 failed、S03 工具名前缀匹配、S05 success 反转，均 typecheck 0 且被现有具名测试检出；S04 typecheck 0、全本包 84/84 存活，见 R7-03。无超时或信号终止被计作杀死 |
+| 作者 M01–M96 | **96/96 具名杀死**，每项完整执行 84 条、无 skip/todo/cancelled，原样副本 84/84；驱动退出 0、无信号，耗时 2849.364 秒。仅在运行前的 runner 副本中把并发 4 降为 2、固定包路径并添加原始 TAP 保存，96 个注入点及判决逻辑不变；运行期间输入冻结。见 `author-mutations.log`、`author-m0.tap` 至 `author-m95.tap`、`mutation-summary.json` |
+| 八门禁独立双侧 | G-TRACE 缺证据、G-REVIEW 自审、G-RED 缺红、G-STUB 顶层预计算、G-TAUTO 恒真、G-WORKFLOW 不合规触发器、G-LAYER 反向依赖、G-PROVENANCE 缺 hash 调用，均在真实 CLI 下被目标门禁拦下；合规对照八门全绿 |
+| 填本轮 review 前真实 `run-all --local` | 退出 1；G-REVIEW 为“还没有独立审查”；其余七项显示绿。此时 review=null，G-PROVENANCE 没有核验本轮审查，不能把绿号当作来源证明；原始全文见 `local-gates-before.log` |
+| 填本轮 REJECT 后真实 `run-all --local` | 退出 1；G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER 通过；G-REVIEW 原样为“审查结论是 reject”；G-PROVENANCE 原样为“审查会话记录不存在:codex:4efabb1d-4a4d-4887-a554-7e80c1166df1”。本轮仍在运行、turns.jsonl 尚未落盘，不补写记录做绿；原始全文见 `local-gates-after.log`，内容 hash 与上文相同 |
+
+单点变异首次 typecheck 命令触发 TypeScript 6 的 TS5112（显式文件时须给 --ignoreConfig），属审查执行器错误，保留在 attempt1 日志；修正后重跑。S01 初次用 if(false) 形成不可达分支而失去 TS 缩窄，另以等价的无启动语句重做，最终 typecheck 0 与具名红结果见 `S01-final-*`。这些初次错误不计作产品缺陷或有效变异杀死。
+
+### 4. 未测与交付边界
+
+- 未调用真实 Claude 模型，AC-07、AC-33④、V-06 完整内核接线、真实工具授权及模型事件映射继续未测；假 CLI、init 列表和变异不冒充真实完整模型执行。最新文档的 AC-51 常驻/热换模能力也未由本片证明。
+- stopped 不代表全树静止；本轮 R7-01 针对适配器自身重复启动/恢复之后失去主进程控制，不是重新要求容器或杀死已披露的脱组后代。Windows 未测。
+- 只追加本节和填写收据 review，产品源码及原有测试保持原样。最终审查提交仅包含这两份文件；推送、远端回读及限定清理量由本线程最终回报及 `$E` 清单记录。
