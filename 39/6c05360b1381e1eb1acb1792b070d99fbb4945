@@ -1,0 +1,37 @@
+docs/spec/验收文档-v0.1.md
+  s_e38e1c670f5d35::t_63476cb824f902 51
+  s_e38e1c670f5d35::t_2bb858ba8231fb 185
+  s_e38e1c670f5d35::t_ac02e25b6ea330 3
+  s_e38e1c670f5d35::t_3479e82d85593b 1,8,45,128,130-131,149,155
+  s_e38e1c670f5d35::t_1e9fb462156aee 5,91
+  s_e38e1c670f5d35::t_1a9f012fc078e3 192,194
+  s_e38e1c670f5d35::t_ccab46b379ebc9 170-184,186-191,193,195-197
+docs/开发手册.md
+  s_e38e1c670f5d35::t_0c96ae572fae52 874
+  s_e38e1c670f5d35::t_83409413f38e64 31,86-89,94,127,157,160-161,163-164,631,634,844,848,870,872,876-880
+  s_e38e1c670f5d35::t_ec0eee47970a27 23-24
+docs/spec/需求文档.md
+  s_e38e1c670f5d35::t_0c74b2074fb74d 2350-2359,2361-2363
+  s_e38e1c670f5d35::t_0d0e18bf09a51f 10-11,221,240,242-245
+  s_e38e1c670f5d35::t_084f7afe78cdd0 5-6,246,1662,1711-1712,2360
+  s_e38e1c670f5d35::t_842b2ceb9d6371 3,945-946
+  s_e38e1c670f5d35::t_9baefbeb569d19 51,957-958,1110
+  s_e38e1c670f5d35::t_2445e9dae0e0cf 241,2795
+  s_e38e1c670f5d35::t_2d3e161db25b50 341,509,512,799,1391,1625,1633,1636,1816,1853,2533,2535,2538,2561,2565,2570,2575,2581-2582,2618,2796
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "396c05360b1381e1eb1acb1792b070d99fbb4945",
+  "prompts": {},
+  "sessions": {
+    "s_e38e1c670f5d35": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b780-4bf0-70c2-8dbb-ab44aaed3b18",
+        "model": "ai-iisbo/[乾坤按量]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
