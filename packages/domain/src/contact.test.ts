@@ -1762,3 +1762,37 @@ test("CH-43 状态逐项校验与长度无关:直接工具、能力资产、承�
     }
   }
 });
+
+test("CH-44 非普通对象同时作为函数 prototype 和普通字段的别名时，无论遍历顺序如何都必须拒收", () => {
+  // 构造一个非普通原型对象（Object.create 产生的对象，原型不是 Object.prototype/null）
+  const nonPlain = Object.create({ inherited: true });
+  const fn = function dummy() {};
+  fn.prototype = nonPlain;
+
+  // 测试三种遍历顺序：别名直接出现、函数先于别名、别名先于函数
+  const c = fullContact();
+
+  // 1. 非普通对象直接出现
+  const r1 = grantTool(c, { name: "tool1", bounded: true, ignored: { nonPlain } } as never);
+  assert.equal(r1.ok, false, "直接出现应拒收");
+  assert.match(!r1.ok ? r1.reason : "", /只接受普通数据/, "应报告非普通数据");
+
+  // 2. 函数先于别名（fn 先遍历，fn.prototype 指向 nonPlain）
+  const r2 = grantTool(c, { name: "tool2", bounded: true, ignored: { fn, nonPlain } } as never);
+  assert.equal(r2.ok, false, "函数先于别名应拒收");
+  assert.match(!r2.ok ? r2.reason : "", /只接受普通数据/, "应报告非普通数据");
+
+  // 3. 别名先于函数（nonPlain 先遍历并加入 seen，后续 fn.prototype 指向同一对象）
+  // 这是 bug 场景：如果别名先遍历，它会被正常检查并拒绝（或者如果作为被丢弃字段，会被加入 seen）
+  // 但如果它作为被丢弃字段先遍历，然后 fn.prototype 指向它，就可能被错误接受
+  const r3 = grantTool(c, { name: "tool3", bounded: true, ignored: { nonPlain, fn } } as never);
+  assert.equal(r3.ok, false, "别名先于函数应拒收");
+  assert.match(!r3.ok ? r3.reason : "", /只接受普通数据/, "应报告非普通数据");
+
+  // 确认普通对象照常接受（阴性对照）
+  const plainProto = {};
+  const plainFn = function dummy() {};
+  plainFn.prototype = plainProto;
+  const r4 = grantTool(c, { name: "tool4", bounded: true, ignored: { plainProto, plainFn } } as never);
+  assert.equal(r4.ok, true, "普通对象对照应通过");
+});
