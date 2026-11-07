@@ -6,7 +6,7 @@ import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { GIT_SAFE_ARGS, gitEnv, type Receipt } from "./lib.ts";
+import { GIT_SAFE_ARGS, gitEnv, type Receipt, sandboxPlan } from "./lib.ts";
 import * as judge from "./judge.ts";
 import { CASE_MARK, type CaseResult, evidence, type Kind, killedBy, parseGateOutput } from "./judge.ts";
 import { verdict as runnerVerdict } from "./test-runner.ts";
@@ -292,6 +292,52 @@ console.log(JSON.stringify(out));`;
     return bad.length ? bad.join("\n") : undefined;
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
+/**
+ * R7-01 跨平台核对 seatbelt 规则:CI 在 Linux 上走 docker,seatbelt 规则在那里不执行,上面的探针只能在 macOS 上发现规则被改坏。
+ * 这里不调 sandbox-exec,直接核对 sandboxPlan 按 seatbelt 生成的规则文本,任何平台都能跑。只用假 HOME 与中性内容的假文件。
+ * 假 HOME 是指向真目录的符号链接,规则须同时按原样路径和 realpath 写出。期望:
+ *  1. HOME 下点文件默认拒读(原样与 realpath 各一条正则);
+ *  2. 其后放行这次的工作副本与挂载的依赖(realpath);
+ *  3. 最后一条是固定拒读清单,排在放行之后,已知位置按原样与 realpath 都在。
+ */
+function seatbeltPlanCheck(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r701p-"));
+  const saved = { h: process.env.HOME, s: process.env.MIRASIM_SESSIONS, r: process.env.MIRASIM_ROOMS };
+  try {
+    const real = path.join(tmp, "home-real"), link = path.join(tmp, "home-link"), work = path.join(tmp, "work"), dep = path.join(tmp, "deps", "node_modules");
+    const listed = R7_DENY.slice(0, 3);
+    write(real, Object.fromEntries(listed.map((f) => [f, NEUTRAL])));
+    write(work, { "own.txt": NEUTRAL });
+    write(dep, R7_DEP);
+    fs.symlinkSync(real, link);
+    process.env.HOME = link;
+    delete process.env.MIRASIM_SESSIONS;
+    delete process.env.MIRASIM_ROOMS;
+    const plan = sandboxPlan(["-e", "0"], work, [dep], "seatbelt");
+    const rw = fs.realpathSync(work), rh = fs.realpathSync(real), rd = fs.realpathSync(dep);
+    const lines = (plan.profile ?? "").split("\n");
+    const bad: string[] = [];
+    if (plan.cmd !== "/usr/bin/sandbox-exec" || plan.argv[0] !== "-f" || plan.argv[1] !== plan.profilePath || plan.profilePath !== path.join(rw, ".gate-sandbox.sb")) bad.push(`执行计划不是 sandbox-exec -f <副本里的规则文件>:${JSON.stringify([plan.cmd, ...plan.argv.slice(0, 2)])}`);
+    const rx = (h: string) => `(regex #"^${h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/\\.")`;
+    const sub = (d: string) => `(subpath "${d}")`;
+    const dot = lines.findIndex((l) => l.startsWith("(deny file-read-data (regex"));
+    const allow = lines.findIndex((l) => l.startsWith("(allow file-read-data"));
+    const last = lines.length - 1;
+    if (dot < 0) bad.push("没有 HOME 点文件默认拒读规则");
+    else for (const h of [link, rh]) if (!lines[dot]!.includes(rx(h))) bad.push(`点文件默认拒读缺 ${h}`);
+    if (allow < 0) bad.push("没有放行规则");
+    else {
+      if (allow < dot) bad.push("放行规则排在点文件拒读之前");
+      for (const d of [rw, rd]) if (!lines[allow]!.includes(sub(d))) bad.push(`放行规则缺 ${d}`);
+    }
+    if (!lines[last]?.startsWith("(deny file-read-data (subpath") || last <= allow) bad.push(`最后一条不是排在放行之后的固定拒读清单:${lines[last]}`);
+    else for (const f of listed) for (const h of [link, rh]) { const d = path.join(h, f.split("/")[0]!); if (!lines[last]!.includes(sub(d))) bad.push(`固定拒读清单缺 ${d}`); }
+    return bad.length ? bad.join("\n") : undefined;
+  } finally {
+    for (const [k, v] of [["HOME", saved.h], ["MIRASIM_SESSIONS", saved.s], ["MIRASIM_ROOMS", saved.r]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
 // 完整入口:假 HOME 在样例目录下(TMPDIR 里,macOS 上未规范化的 /var 路径),门禁命令行就用这个 HOME
 const R7_HOME = (dir: string) => path.join(dir, "home");
 const R7_READ_TEST = (dir: string) => T(`test("adds", () => { const a = fs.readFileSync(${JSON.stringify(path.join(R7_HOME(dir), ".git-credentials"))}, "utf8"); const b = fs.readFileSync(${JSON.stringify(path.join(R7_HOME(dir), ".netrc"))}, "utf8"); console.log(a.length + b.length); assert.equal(add(1, 2), 3); });\n`, `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport fs from "node:fs";\nimport { add } from "./add.ts";\n`);
@@ -363,6 +409,7 @@ export const CASES: Case[] = [
   { name: "RR-02 没有沙箱就停", env: { GATE_SIMULATE_NO_SANDBOX: "1" }, expect: "没有可用沙箱" },
   { name: "RR-02 CI 设了沙箱镜像时,模拟无沙箱仍然停", env: { GATE_SIMULATE_NO_SANDBOX: "1", GATE_SANDBOX_IMAGE: "node:22.22.0-slim" }, expect: "没有可用沙箱" },
   { name: "R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载)", direct: sandboxReadProbe, expect: null },
+  { name: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", direct: seatbeltPlanCheck, expect: null },
   { name: "R7-01 完整入口:具名测试读假 HOME 的 .git-credentials/.netrc 被拒,门禁拦下", main: { ".gitignore": "node_modules\n" }, headFn: (dir) => ({ ...HEAD_OK, "packages/core/src/add.test.ts": R7_READ_TEST(dir) }), redFn: (dir) => ({ ...RED_OK, "packages/core/src/add.test.ts": R7_READ_TEST(dir) }), envFn: (dir) => ({ HOME: R7_HOME(dir) }), setup: R7_SETUP, expect: "现在没有恰好通过一次" },
   { name: "R7-01 完整入口对照:同一假 HOME 下,测试读工作副本文件、加载 HOME 点目录里的依赖照常放行", main: { ".gitignore": "node_modules\n" }, head: { ...HEAD_OK, "packages/core/src/add.test.ts": R7_OK_TEST, "packages/core/src/fixture.txt": NEUTRAL }, red: { ...RED_OK, "packages/core/src/add.test.ts": R7_OK_TEST, "packages/core/src/fixture.txt": NEUTRAL }, envFn: (dir) => ({ HOME: R7_HOME(dir) }), setup: R7_SETUP, expect: null },
   { name: "RR-05 相对路径的写操作算进产出厂商", authorRecord: { workdir: "/x/deliverables/g-group" }, authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/deliverables/g-group/a.ts" } }] }, { model: "gpt-6", toolCalls: [{ name: "apply_patch", input: "*** Begin Patch\n*** Update File: packages/core/src/add.ts\n*** End Patch" }] }], expect: "在作者的产出厂商集合" },

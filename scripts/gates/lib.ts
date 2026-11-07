@@ -1,5 +1,5 @@
 // 门禁公共层:把"被检查的仓库状态"抽象成 Ctx,真实运行从 git 构造,自检从夹具目录构造。
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, type SpawnSyncOptionsWithStringEncoding, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -126,6 +126,11 @@ function seatbeltProfile(work: string, mounts: string[] = []): string {
     `(allow file-read-data ${runtime.join(" ")})`,
     `(deny file-read-data ${[...new Set([...secret, ...secret.map(realOr)])].map((d) => `(subpath ${sbq(d)})`).join(" ")})`,
   ].join("\n");
+}
+/** 沙箱执行计划:要执行的命令、参数、选项;seatbelt 时带上规则文本和写入位置。纯函数,不执行、不写文件。 */
+export interface SandboxPlan { cmd: string; argv: string[]; opts: SpawnSyncOptionsWithStringEncoding; profile?: string; profilePath?: string }
+export function sandboxPlan(_args: string[], _work: string, _mounts: string[] = [], _mode: SandboxMode = sandboxMode()): SandboxPlan {
+  return { cmd: "", argv: [], opts: { encoding: "utf8" } };
 }
 export function sandboxed(args: string[], work: string, mounts: string[] = []) {
   const mode = sandboxMode();
