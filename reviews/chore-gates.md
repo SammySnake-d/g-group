@@ -804,3 +804,61 @@ INCOMPLETE_PROBE_EXIT=0
 ### 证据与交付
 
 原始日志、可复现驱动与 SHA-256 清单：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr1-r7-evidence-740bc8df/`，`MANIFEST.json`。核心证据为 `sandbox-probe.mjs` / `sandbox.json`、`prepare-sandbox-fixture.mjs` / `sandbox-e2e.json` / `sandbox-e2e.log`；其他为 `selftest.log`、`mutation.log`、`test.log`、`red.log`、`probes.*`、`G-*.json`、`ci.log`。仅追加本节并写收据 `review`，不改产品、门禁实现、作者声明或历史审查。按原则 67，推送核实后仅清掉本轮自建临时 clone、依赖及夹具目录，保留报告所引用的小型证据；清理结果见 `cleanup.json`，不触碰其他会话目录。
+
+## 第九轮独立复审（faf4b9e）
+
+### 结论
+
+**REJECT：R9-01、R9-02 的隔离回归可在既有检查中漏过，R9-03 是声明支持环境中的自检失败。** 七个指定变异在本机和所核对的 CI 日志中均由跨平台规则核对发现；这不等于其他单点故障也会被发现。下列改变仅注入独立临时副本，当前被审版本在所测假 HOME 对照中没有表现出对应放行，也没有读取真实账户文件。
+
+### R9-01 [P1] 跨平台规则核对接受额外的过宽放行范围
+
+位置：[selftest.ts:323](../scripts/gates/selftest.ts#L323)、[selftest.ts:331](../scripts/gates/selftest.ts#L331)、[lib.ts:140](../scripts/gates/lib.ts#L140)。规则核对确认工作副本和依赖的放行片段存在，但没有拒绝同一放行规则中额外出现的宽范围；收据也披露了附加项未覆盖这一限制。
+
+**复现：** 只在副本的执行计划中额外加入假 HOME 作为放行范围。设置镜像环境变量，仅运行现有跨平台规则核对时，1/1 通过、退出 0；这一步未调用 Docker，也不是一次 Linux 全量运行。另在真实 macOS 隔离中对同一假 HOME 和中性标记对照：原样版本的未列出点文件按链接路径和规范化路径均被拒读，单点故障版本均可读；工作副本和依赖两侧均可读，固定拒读项两侧均被拒。该故障在 macOS 真实隔离具名探针中被发现，但跨平台规则核对没有发现。
+
+**返修要求：** 对放行范围做能拒绝额外宽范围的跨平台校验，加入此单点故障和原样双侧对照；保留真实 macOS 隔离探针，不能把只核对已有片段视为规则整体未变。原始结果见 `home-plan-ci-summary.log`、`home-mount-compare.log`、`home-mount-macos-summary.log`。
+
+### R9-02 [P1] 联网隔离失效时完整自检仍通过
+
+位置：[lib.ts:123](../scripts/gates/lib.ts#L123)、[selftest.ts:244](../scripts/gates/selftest.ts#L244)。将副本中一处联网拒绝规则改为放行，其他代码不变；Node 22 下真实全量自检仍 **200/200、退出 0**。
+
+**行为对照：** 仅使用假 HOME 和本机临时回环夹具，数据为 `NEUTRAL_FIXTURE_NO_CREDENTIALS`。宿主对照可取得标记；原样隔离返回 `EPERM`；单点故障副本可取得同一标记。此结果证明该故障真实改变隔离行为，同时现有完整自检未发现；不声称原样版本允许联网。
+
+**返修要求：** 在真实隔离入口增加本机中性回环的允许/拒绝对照，并把联网规则失效加入具名变异校准；在容器路径分别验证相同边界，不把环境故障计为发现。见 `network-probe.log` 与 `fault-network-policy-full.log`。
+
+### R9-03 [P2] 动态链接 Node 的受支持环境无法运行真实隔离探针
+
+位置：[selftest.ts:254](../scripts/gates/selftest.ts#L254)、[package.json:5](../package.json#L5)。项目声明 Node `>=22.18`；本机 Homebrew Node `v25.8.1` 可运行类型检查、lint 和测试，但该探针只复制解释器本身到假 HOME，没有带上其相对加载的动态运行库，复制后的进程启动失败，尚未进入隔离行为核对。
+
+**复现：** Node 25 全量自检 199/200、退出 1；单独重跑同一具名探针仍退出 1，动态加载报告运行库缺失。Node `v22.22.0` 下同一具名探针通过，全量自检 200/200、退出 0。CI 固定 Node 22，不覆盖这一已声明支持的本机安装形态。
+
+**返修要求：** 让真实隔离探针在受支持的动态链接 Node 安装中也能启动，且继续覆盖假 HOME 内运行时与依赖的对照；若要收窄支持范围，须同步明确并实际约束运行时合同。见 `selftest.log`、`r7-node25.log`、`r7-node22.log` 和 `selftest-node22.log`。
+
+### 版本与复现
+
+- 独立 HTTPS clone，审查 HEAD `faf4b9e751aa231aaed7ff6be90df4ff2502115e`，`origin/main=412ce25278e3b0057e02d792a8394f98aaf21424`；开工前和复核时远端 HEAD 一致。审查会话 `codex:245a49a6-15ae-4163-b480-1ede701bfc06`，该轮实际模型 `ai-iisbo/[乾坤按量]gpt-6.1-terra`。本人在本会话执行要求的 hash 命令，输出 `afad2d9015d263ea84ad1575ad7de398d7ff43a83b67b842b148479324ea9a4b`。
+- `npm ci`、typecheck、lint 退出 0；`npm test` 8/8、0 fail、0 skip、0 todo、0 cancelled。Node 22 原样自检 200/200。作者的 98 个变异以并发 1、每个自检并发 1 逐项复跑，98/98 被具名测试发现；其中 7/7 指向跨平台规则核对。实际 CI run `42375072083` 对应同一 HEAD，日志亦为 200/200 和 98/98，含这 7 个具名发现。
+- 红提交 `6e1cb2a` 上新增跨平台具名测试退出 1，当前版本同名测试退出 0。独立假 HOME 的窄挂载与整目录挂载前后对照一致；仅测试了本机 macOS，Docker daemon 不可用，本机容器路径未实跑。
+- 对 G-TRACE、G-REVIEW、G-PROVENANCE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 各构造应失败输入，真实 CLI 均退出 1 且对应门禁拒绝；正常对照退出 0。四个独立单点故障中，规则写入缺失和执行器替换由 macOS 具名探针发现；放行范围故障的跨平台核对漏检，联网隔离故障的全量自检漏检，分别见 R9-01、R9-02。
+
+审查前按要求原样运行 `node scripts/gates/run-all.ts --local`，退出 1，输出如下；此时收据仍为第七轮旧结论，G-PROVENANCE 的结果不是本轮来源已认证：
+
+```text
+base=origin/main branch=chore/gates HEAD=faf4b9e751aa231aaed7ff6be90df4ff2502115e 受检文件 30 个 收据=receipts/chore-gates.json 门禁 8 个
+✓ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是仓库所有者对这个 PR 这一版的结构化批准
+✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据
+✗ G-REVIEW  R-01:审查人限 Codex/Astra/Claude/Argon(g-group#1531、g-group#2943、g-group#3199 原则 68,默认 Codex;Claude 审 Codex 写的 PR,Argon 备用),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)
+    - 审查结论是 reject
+    - 审查对应的内容 5e1740bb25d7 ≠ 当前 afad2d9015d2,审后改过受管内容,需要重审
+✓ G-RED  R-02:先红后绿,红提交上的测试与现在相同,现在的测试放到红提交实现上按名字失败、现在按名字通过
+✓ G-STUB  R-03 R-04:空实现红基线 + 返回值变异校准,桩下或错值下仍通过、没执行、加载失败的测试都判无效
+✓ G-TAUTO  R-04:拒绝同语反复测试(按 node:test 真实导入识别;无断言、自比较、恒真、不可达、不判源码结果、skip/only;运行时与静态逐条计数一致)
+✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限、不得写提交状态、不得用 pull_request_target
+✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)
+CONTENT_HASH=afad2d9015d263ea84ad1575ad7de398d7ff43a83b67b842b148479324ea9a4b
+```
+
+写入本轮收据后复跑 `node scripts/gates/run-all.ts --local --pr=1`，退出 1：G-REVIEW 因本轮 `reject` 拦截，G-PROVENANCE 报审查会话记录不存在，其余六道为 ✓，内容 hash 不变。本人的命令调用与模型可从当前会话观察，但来源门禁此时尚未验证通过；未伪造或补写会话记录。
+
+原始日志、夹具驱动和 SHA-256 清单保留在 `/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr1-r9-codex/`。只追加本节并更新收据的 `review`；不修改产品代码或门禁实现。审查收据写入后的本机门禁原样输出另见 `local-after.log`；清理记录见 `cleanup.json`。
