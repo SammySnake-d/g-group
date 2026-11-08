@@ -1,0 +1,51 @@
+apps/desktop/src/components/FilesMain.tsx
+  s_03527c71eef786::t_c822a8d3a8262e 5-10,15-16,37-46,52-53,66,82-83,90,92,99,104-105,107-108,114,120-129
+apps/desktop/src/components/Split.tsx
+  s_03527c71eef786::t_5fce9304a0ebd4 1-7
+apps/desktop/src/components/split/ActivityView.tsx
+  s_03527c71eef786::t_352139368a9ed3 1-96
+apps/desktop/src/components/split/ArtifactView.tsx
+  s_03527c71eef786::t_cdc80b56c5b49f 1-78
+apps/desktop/src/components/split/CheckpointView.tsx
+  s_03527c71eef786::t_f0450cf55b6233 1-36
+apps/desktop/src/components/split/ChecksView.tsx
+  s_03527c71eef786::t_27002b80182fcc 1-38
+apps/desktop/src/components/split/Collapse.tsx
+  s_03527c71eef786::t_675f5e878da6be 1-2
+apps/desktop/src/components/split/ComputeWork.tsx
+  s_03527c71eef786::t_83c9c4685fe238 1-106
+apps/desktop/src/components/split/DiffView.tsx
+  s_03527c71eef786::t_dba115ff8668e7 1-60
+apps/desktop/src/components/split/DocConflict.tsx
+  s_03527c71eef786::t_fbab25633b4278 1-54
+apps/desktop/src/components/split/Pip.tsx
+  s_03527c71eef786::t_6c6cc220aece68 1-45
+apps/desktop/src/components/split/Preview.tsx
+  s_03527c71eef786::t_6661c6a57c3e9b 1-33
+apps/desktop/src/components/split/SplitPane.tsx
+  s_03527c71eef786::t_085674582566f1 1-63
+apps/desktop/src/components/split/StepBar.tsx
+  s_03527c71eef786::t_2c95070bf4b20f 1-24
+apps/desktop/src/components/split/acts.ts
+  s_03527c71eef786::t_0373ad8014ffbb 1-19
+apps/desktop/src/components/split/constants.ts
+  s_03527c71eef786::t_4343213a62e65a 1-48
+apps/desktop/verify/mines.json
+  s_03527c71eef786::t_5af7a0fe1b1cef 55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f52c1fcacdffb8f7472063b90cf121540989347e",
+  "prompts": {},
+  "sessions": {
+    "s_03527c71eef786": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0a8f74fffd601798",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
