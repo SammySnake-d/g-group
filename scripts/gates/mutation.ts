@@ -117,8 +117,8 @@ export const MUTATIONS: Mutation[] = [
   // R7-01:沙箱读隔离
   { name: "沙箱不拒读 HOME 下的点文件", kill: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", target: ["DIRECT"], file: "lib.ts", from: /\n {4}`\(deny file-read-data \$\{homes\.map[^\n]*/, to: "" },
   { name: "点文件拒读只按未规范化的 HOME", kill: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", target: ["DIRECT"], file: "lib.ts", from: "const homes = [...new Set([home, realOr(home)])];", to: "const homes = [home];" },
-  { name: "沙箱不放行挂载的依赖", kill: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", target: ["DIRECT", "G-RED"], file: "lib.ts", from: "const runtime = [work, ...mounts].map(", to: "const runtime = [work].map(" },
-  { name: "sandboxed 不把挂载交给 seatbelt", kill: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", target: ["DIRECT", "G-RED"], file: "lib.ts", from: "seatbeltProfile(w, mounts)", to: "seatbeltProfile(w)" },
+  { name: "沙箱不放行挂载的依赖", kill: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", target: ["DIRECT", "G-RED"], file: "lib.ts", from: "const runtime = [...[work, ...mounts].map(", to: "const runtime = [...[work].map(" },
+  { name: "sandboxed 不把挂载交给 seatbelt", kill: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", target: ["DIRECT", "G-RED"], file: "lib.ts", from: "seatbeltProfile(w, mounts, exe)", to: "seatbeltProfile(w, [], exe)" },
   { name: "放行项盖过拒读清单(去掉末尾的拒读清单)", kill: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", target: ["DIRECT"], file: "lib.ts", from: /\n {4}`\(deny file-read-data \$\{\[\.\.\.new Set\(\[\.\.\.secret[^\n]*/, to: "" },
   { name: "拒读清单漏掉 .git-credentials 与 .netrc", kill: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", target: ["DIRECT"], file: "lib.ts", from: ", \".npmrc\", \".git-credentials\", \".netrc\"];", to: ", \".npmrc\"];" },
   { name: "拒读清单不按 realpath", kill: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", target: ["DIRECT"], file: "lib.ts", from: "[...new Set([...secret, ...secret.map(realOr)])]", to: "[...new Set(secret)]" },

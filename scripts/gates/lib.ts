@@ -115,15 +115,22 @@ const reEsc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const SECRET_IN_HOME = [".mirasim/sessions", ".mirasim/chat", ".ssh", ".config/gh", ".claude", ".codex", ".gnupg", ".aws", ".npmrc", ".git-credentials", ".netrc"];
 // R9-03:动态链接的 node(如 Homebrew)按 @loader_path 与 @loader_path/../lib 加载自带的 .dylib;运行时放在 HOME 点目录时
 // 这些库会被点文件默认拒读挡住,进程起不来。只逐个放行运行时 bin/ 与 ../lib/ 里的 .dylib 文件(literal,realpath),不放行目录。
-export function runtimeLibs(_exe: string = process.execPath): string[] {
-  return [];
+export function runtimeLibs(exe: string = process.execPath): string[] {
+  const bin = path.dirname(realOr(exe));
+  const out: string[] = [];
+  for (const d of [bin, path.join(path.dirname(bin), "lib")]) {
+    let es: fs.Dirent[] = [];
+    try { es = fs.readdirSync(d, { withFileTypes: true }); } catch { continue; }
+    for (const e of es) if (e.isFile() && e.name.endsWith(".dylib")) out.push(realOr(path.join(d, e.name)));
+  }
+  return [...new Set(out)];
 }
-function seatbeltProfile(work: string, mounts: string[] = []): string {
+function seatbeltProfile(work: string, mounts: string[] = [], exe: string = process.execPath): string {
   const home = path.resolve(os.homedir());
   const homes = [...new Set([home, realOr(home)])];
   const secret = SECRET_IN_HOME.map((d) => path.join(home, d));
   for (const v of [process.env.MIRASIM_SESSIONS, process.env.MIRASIM_ROOMS]) if (v) secret.push(v);
-  const runtime = [work, ...mounts].map((d) => `(subpath ${sbq(realOr(d))})`);
+  const runtime = [...[work, ...mounts].map((d) => `(subpath ${sbq(realOr(d))})`), ...runtimeLibs(exe).map((f) => `(literal ${sbq(f)})`)];
   return [
     "(version 1)", "(allow default)", "(deny network*)", "(deny file-write*)",
     `(allow file-write* (subpath ${sbq(work)}) (regex #"^/dev/"))`,
@@ -143,7 +150,7 @@ export function sandboxPlan(args: string[], work: string, mounts: string[] = [],
     return { cmd: "docker", argv: ["run", "--rm", "--network", "none", "--user", uid, "-e", `HOME=${w}`, "-e", `TMPDIR=${w}`, ...vols, "-w", w, process.env.GATE_SANDBOX_IMAGE!, "node", ...args], opts: { encoding: "utf8", timeout: 900_000, env: { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: w } } };
   }
   const profilePath = path.join(w, ".gate-sandbox.sb");
-  return { cmd: "/usr/bin/sandbox-exec", argv: ["-f", profilePath, exe, ...args], opts: { cwd: w, encoding: "utf8", timeout: 900_000, env: { PATH: `${path.dirname(exe)}:/usr/bin:/bin`, HOME: w, TMPDIR: w } }, profile: seatbeltProfile(w, mounts), profilePath };
+  return { cmd: "/usr/bin/sandbox-exec", argv: ["-f", profilePath, exe, ...args], opts: { cwd: w, encoding: "utf8", timeout: 900_000, env: { PATH: `${path.dirname(exe)}:/usr/bin:/bin`, HOME: w, TMPDIR: w } }, profile: seatbeltProfile(w, mounts, exe), profilePath };
 }
 export function sandboxed(args: string[], work: string, mounts: string[] = []) {
   const plan = sandboxPlan(args, work, mounts);
