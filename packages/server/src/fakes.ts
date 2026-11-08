@@ -1,5 +1,5 @@
 // 测试与 CLI 演示用的确定性替身:脚本化的联系人脑子、按剧本吐语义事件的 Compute 适配器。不连模型、不起进程。
-import type { ComputeAdapter, ComputeEvent, Refusal, SpawnOptions, SpawnResult, TurnModel } from "@g-group/adapter-cc-compute";
+import type { ComputeAdapter, ComputeEvent, QuiesceResult, Refusal, SpawnOptions, SpawnResult, TurnModel } from "@g-group/adapter-cc-compute";
 import type { ContactMind, Inbound, MindAction, RoundInput, RoundOutput } from "@g-group/kernel";
 
 /** 规则脑子:用户在私聊或 @ 它派活 → dispatch + commit + 回复;Compute 里程碑 → 汇报;完成 → 交付;失败 → 如实告知。 */
@@ -54,6 +54,10 @@ export function scriptedCompute(
     resumeScript?: (computeId: string, turn: TurnModel | undefined) => Omit<ComputeEvent, "computeId">[];
     /** false:扮演不声明按轮换模型能力的旧适配器(没有 capabilities)。 */
     modelAware?: boolean;
+    /** 停止确认(AC-23):给了就当作适配器的 quiesce;测试用它控制「进程什么时候真的退干净」 */
+    quiesce?: (computeId: string) => Promise<QuiesceResult>;
+    /** settled 之前等它(模拟 CLI 主进程退出得慢) */
+    settle?: (computeId: string) => Promise<void>;
   } = {},
 ) {
   const queue: ComputeEvent[] = [];
@@ -131,9 +135,11 @@ export function scriptedCompute(
         },
       };
     },
-    async settled() {
+    async settled(computeId) {
+      await opts.settle?.(computeId);
       return [];
     },
+    ...(opts.quiesce ? { quiesce: opts.quiesce } : {}),
     snapshot: () => ({ ok: false as const, reason: "not-quiescent" }),
     rejectedReports: () => [],
   } satisfies ComputeAdapter & { capabilities: { inSessionModelSwitch: boolean } };

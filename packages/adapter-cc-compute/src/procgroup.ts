@@ -19,3 +19,23 @@ export function signalGroup(pid: number | undefined, sig: NodeJS.Signals): void 
   }
   try { process.kill(pid, sig); } catch { /* 已退出 */ }
 }
+
+// ---- 停止确认(AC-23)。空壳(先红),实现见下一个提交 ----
+export interface ProcRow {
+  readonly pid: number;
+  readonly ppid: number;
+  readonly pgid: number;
+  readonly stat: string;
+}
+export function processTable(_run: () => string): readonly ProcRow[] | null {
+  return [];
+}
+export function treeOf(_root: number, _table: readonly ProcRow[]): readonly ProcRow[] {
+  return [];
+}
+export function stillAlive(_known: ProcRow, _table: readonly ProcRow[]): boolean {
+  return false;
+}
+export function treeByPgrep(_root: number, _pgrep: (args: readonly string[]) => readonly number[] | null): readonly ProcRow[] | null {
+  return [];
+}

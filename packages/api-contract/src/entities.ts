@@ -74,6 +74,8 @@ export const ContactView = obj({
   /** 已勾选的具名有界工具与 Compute 能力(skill/MCP),只读展示;授予走 contacts.update。 */
   tools: arr(str({ max: 200 })),
   computeAssets: arr(obj({ name: str({ max: 200 }), kind: oneOf(["mcp", "skill", "script"] as const) })),
+  /** 个人 Compute 槽位数(AC-23,D10 两级配额的个人档):同时最多几个 Compute;null/没有为宿主默认。 */
+  computeSlots: opt(nullable(int({ min: 1, max: 64 }))),
   activity: oneOf(CONTACT_ACTIVITY),
   createdAt: isoTime(),
   /** Compute 的生效值、完整解析链与能力声明里的支持性(可选,旧客户端忽略)。 */
@@ -110,6 +112,8 @@ export const RoomView = obj({
   announcementCount: opt(int({ min: 0 })),
   /** 移出中的成员(AC-49/D05):仍在 members 里,但这个群的新消息不再送达、发言与接新活被拒,等在途任务真实停止确认后才移除。 */
   leavingMembers: opt(arr(MemberRef)),
+  /** 群临时 Compute 槽位数(AC-23,只给本群任务借用,不跨群);私聊没有这个字段。 */
+  tempComputeSlots: opt(int({ min: 0, max: 64 })),
 });
 export type RoomView = Infer<typeof RoomView>;
 /** 群公告(U97/U86):一个群可有多条,当前有效的全部装配进联系人第 1 块「群规快照」位。version 每次改动 +1(CAS 用)。 */
@@ -286,6 +290,8 @@ export const TaskView = obj({
   ),
   /** 代码任务才有(宿主配了代码仓);普通任务不带这个字段。 */
   workspace: opt(WorkspaceView),
+  /** 在等什么(AC-23):排队等 Compute 槽位的原因,或「停止未确认」;没有在等为 null。 */
+  waitingFor: opt(nullable(str({ max: 500 }))),
   createdAt: isoTime(),
   updatedAt: isoTime(),
   /** 用户手动新建任务时填的描述,原样保留(AC-47);联系人派活建的任务没有这一项。 */
