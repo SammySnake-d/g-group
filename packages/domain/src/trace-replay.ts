@@ -158,9 +158,9 @@ export function replayLease(dump: unknown, order: readonly string[]): LeaseRepla
   let table: LeaseTable = new Map();
   const seen = new Map<string, { res: string; ver: number }>();
   const held = new Map<string, Map<string, number>>();
-  const heldOf = (h: string) => {
-    let m = held.get(h);
-    if (!m) held.set(h, (m = new Map()));
+  const heldOf = (h: string): Map<string, number> => {
+    const m = held.get(h) ?? new Map<string, number>();
+    held.set(h, m);
     return m;
   };
   const steps: StepVerdict[] = [];

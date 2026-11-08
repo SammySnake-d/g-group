@@ -61,7 +61,7 @@ export function acquireLease(table: LeaseTable, req: AcquireRequest): AcquireRes
   if (!isNat(req.expectedVer) || !isNat(req.rank)) return { ok: false, reason: "invalid-request", detail: "expectedVer 与 rank 必须是非负整数" };
   if (!Array.isArray(req.heldRanks) || !req.heldRanks.every(isNat)) return { ok: false, reason: "invalid-request", detail: "heldRanks 必须是非负整数数组" };
   // 全序:手里已有同序或更高序的资源,再要低序的就拒绝(不原地等,防环形等待)
-  const heldRank = req.heldRanks.reduce((m, r) => (r > m ? r : m), -1);
+  const heldRank = req.heldRanks.reduce((m, r) => Math.max(m, r), -1);
   if (heldRank >= req.rank) return { ok: false, reason: "reverse-order", rank: req.rank, heldRank };
   const cur = readLease(table, req.resource);
   if (cur.ver !== req.expectedVer) return { ok: false, reason: "version-conflict", currentVer: cur.ver };
