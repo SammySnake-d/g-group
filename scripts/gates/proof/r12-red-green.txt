@@ -1,0 +1,106 @@
+R12 专项验证（box2，Node v24.21.0，并发 2；原始输出）
+红提交 c3f97e7、f4742b0；实现绿 be35d7f；夹具补充 receiptPath 321b5d6。
+R12-01/02 的红为真实原实现缺陷；R12-04 既有守卫本来存在，红是新验证入口空壳，不冒充原实现缺陷；逐点变异是守卫的反向对照。
+红记录先于绿；绿阶段发现直接夹具少传 receiptPath 后补齐，未删改断言。
+
+红提交 f4742b0，退出 1：
+✗ 放行:R12-01 克隆清理前后同一记录结论一致 (1s)
+__GATE_CASE__{"name":"R12-01 克隆清理前后同一记录结论一致","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":false,"kind":"verdict","why":"同一记录清理前后未同时拦下:{\"before\":[\"审查厂商 anthropic 在作者的产出厂商集合 {anthropic,openai} 里\"],\"after\":[]}"}
+      | 失败类型 verdict:同一记录清理前后未同时拦下:{"before":["审查厂商 anthropic 在作者的产出厂商集合 {anthropic,openai} 里"],"after":[]}
+      | 同一记录清理前后未同时拦下:{"before":["审查厂商 anthropic 在作者的产出厂商集合 {anthropic,openai} 里"],"after":[]}
+✗ 放行:R12-01 中途换模型写入已清理克隆被拦 (2s)
+__GATE_CASE__{"name":"R12-01 中途换模型写入已清理克隆被拦","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":false,"kind":"verdict","why":"模型切换与同厂商对照不符:{\"bad\":{\"before\":[\"审查厂商 anthropic 在作者的产出厂商集合 {anthropic,openai} 里\"],\"after\":[]},\"good\":{\"before\":[],\"after\":[]}}"}
+      | 失败类型 verdict:模型切换与同厂商对照不符:{"bad":{"before":["审查厂商 anthropic 在作者的产出厂商集合 {anthropic,openai} 里"],"after":[]},"good":{"before":[],"after":[]}}
+      | 模型切换与同厂商对照不符:{"bad":{"before":["审查厂商 anthropic 在作者的产出厂商集合 {anthropic,openai} 里"],"after":[]},"good":{"before":[],"after":[]}}
+✗ 放行:R12-01 任一轮已证明目录用于整段会话 (1s)
+__GATE_CASE__{"name":"R12-01 任一轮已证明目录用于整段会话","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":false,"kind":"verdict","why":"整段会话目录取证不符:正=[],反=[]"}
+      | 失败类型 verdict:整段会话目录取证不符:正=[],反=[]
+      | 整段会话目录取证不符:正=[],反=[]
+✗ 放行:R12-01 未证明的已消失目录写入保守计入 (1s)
+__GATE_CASE__{"name":"R12-01 未证明的已消失目录写入保守计入","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":false,"kind":"verdict","why":"未知目录写入、明确非仓库写入或只读判定不符"}
+      | 失败类型 verdict:未知目录写入、明确非仓库写入或只读判定不符
+      | 未知目录写入、明确非仓库写入或只读判定不符
+✗ 放行:R12-02 返修换作者后前轮作者厂商的审查仍被拦 (1s)
+__GATE_CASE__{"name":"R12-02 返修换作者后前轮作者厂商的审查仍被拦","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":false,"kind":"verdict","why":"历史作者或对照判定不符:{\"bad\":[],\"good\":[]}"}
+      | 失败类型 verdict:历史作者或对照判定不符:{"bad":[],"good":[]}
+      | 历史作者或对照判定不符:{"bad":[],"good":[]}
+✗ 放行:R12-02 sessions 列表里的历次作者不能遗漏 (1s)
+__GATE_CASE__{"name":"R12-02 sessions 列表里的历次作者不能遗漏","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":false,"kind":"verdict","why":"历史作者或对照判定不符:{\"bad\":[],\"good\":[]}"}
+      | 失败类型 verdict:历史作者或对照判定不符:{"bad":[],"good":[]}
+      | 历史作者或对照判定不符:{"bad":[],"good":[]}
+✗ 放行:R12-02 前轮产出未证实时厂商保守计入 (1s)
+__GATE_CASE__{"name":"R12-02 前轮产出未证实时厂商保守计入","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":false,"kind":"verdict","why":"历史作者或对照判定不符:{\"bad\":[],\"good\":[]}"}
+      | 失败类型 verdict:历史作者或对照判定不符:{"bad":[],"good":[]}
+      | 历史作者或对照判定不符:{"bad":[],"good":[]}
+✗ 放行:R12-03 宿主路径记录须与同轮提交共同证明 (1s)
+__GATE_CASE__{"name":"R12-03 宿主路径记录须与同轮提交共同证明","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":false,"kind":"verdict","why":"宿主记录双侧不符:正=false,反=false"}
+      | 失败类型 verdict:宿主记录双侧不符:正=false,反=false
+      | 宿主记录双侧不符:正=false,反=false
+✗ 放行:R12-04 写入成功结果与失败结果双侧 (1s)
+__GATE_CASE__{"name":"R12-04 写入成功结果与失败结果双侧","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":false,"kind":"verdict","why":"写入证明双侧不符:正=false,反=false"}
+      | 失败类型 verdict:写入证明双侧不符:正=false,反=false
+      | 写入证明双侧不符:正=false,反=false
+✗ 放行:R12-04 写入受审改动与未改动文件双侧 (1s)
+__GATE_CASE__{"name":"R12-04 写入受审改动与未改动文件双侧","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":false,"kind":"verdict","why":"写入证明双侧不符:正=false,反=false"}
+      | 失败类型 verdict:写入证明双侧不符:正=false,反=false
+      | 写入证明双侧不符:正=false,反=false
+✗ 放行:R12-04 提交受审改动与基线文件双侧 (1s)
+__GATE_CASE__{"name":"R12-04 提交受审改动与基线文件双侧","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":false,"kind":"verdict","why":"提交证明双侧不符:正=[],反=[]"}
+      | 失败类型 verdict:提交证明双侧不符:正=[],反=[]
+      | 提交证明双侧不符:正=[],反=[]
+✗ 放行:R12-04 cat 只读与重定向写入双侧 (1s)
+__GATE_CASE__{"name":"R12-04 cat 只读与重定向写入双侧","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":false,"kind":"verdict","why":"只读与重定向写入未区分"}
+      | 失败类型 verdict:只读与重定向写入未区分
+      | 只读与重定向写入未区分
+✗ 放行:R12-04 HEAD 历史与其他引用提交双侧 (1s)
+__GATE_CASE__{"name":"R12-04 HEAD 历史与其他引用提交双侧","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":false,"kind":"verdict","why":"提交证明双侧不符:正=[],反=[]"}
+      | 失败类型 verdict:提交证明双侧不符:正=[],反=[]
+      | 提交证明双侧不符:正=[],反=[]
+✓ vendorOf(o1) = openai
+✓ vendorOf(gpt-6-astra) = openai
+✓ vendorOf(ai-iisbo/[乾坤按量]gpt-6-astra) = openai
+✓ vendorOf(claude-opus-5-5) = anthropic
+✓ vendorOf(grok-4.7) = xai
+✓ vendorOf(gemini-4-argon) = google
+✓ vendorOf(stealth/crouton-alpha) = unknown
+✓ vendorOf(undefined) = unknown
+自检失败
+自检耗时 6s:用例 13/13,并发 2(GATE_SELFTEST_JOBS),CPU 4,node v24.21.0
+
+绿提交 321b5d6，退出 0：
+✓ 放行:R12-01 克隆清理前后同一记录结论一致 (1s)
+__GATE_CASE__{"name":"R12-01 克隆清理前后同一记录结论一致","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R12-01 中途换模型写入已清理克隆被拦 (2s)
+__GATE_CASE__{"name":"R12-01 中途换模型写入已清理克隆被拦","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R12-01 任一轮已证明目录用于整段会话 (1s)
+__GATE_CASE__{"name":"R12-01 任一轮已证明目录用于整段会话","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R12-01 未证明的已消失目录写入保守计入 (1s)
+__GATE_CASE__{"name":"R12-01 未证明的已消失目录写入保守计入","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R12-02 返修换作者后前轮作者厂商的审查仍被拦 (1s)
+__GATE_CASE__{"name":"R12-02 返修换作者后前轮作者厂商的审查仍被拦","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R12-02 sessions 列表里的历次作者不能遗漏 (1s)
+__GATE_CASE__{"name":"R12-02 sessions 列表里的历次作者不能遗漏","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R12-02 前轮产出未证实时厂商保守计入 (1s)
+__GATE_CASE__{"name":"R12-02 前轮产出未证实时厂商保守计入","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R12-03 宿主路径记录须与同轮提交共同证明 (1s)
+__GATE_CASE__{"name":"R12-03 宿主路径记录须与同轮提交共同证明","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R12-04 写入成功结果与失败结果双侧 (1s)
+__GATE_CASE__{"name":"R12-04 写入成功结果与失败结果双侧","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R12-04 写入受审改动与未改动文件双侧 (1s)
+__GATE_CASE__{"name":"R12-04 写入受审改动与未改动文件双侧","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R12-04 提交受审改动与基线文件双侧 (1s)
+__GATE_CASE__{"name":"R12-04 提交受审改动与基线文件双侧","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R12-04 cat 只读与重定向写入双侧 (1s)
+__GATE_CASE__{"name":"R12-04 cat 只读与重定向写入双侧","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R12-04 HEAD 历史与其他引用提交双侧 (1s)
+__GATE_CASE__{"name":"R12-04 HEAD 历史与其他引用提交双侧","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ vendorOf(o1) = openai
+✓ vendorOf(gpt-6-astra) = openai
+✓ vendorOf(ai-iisbo/[乾坤按量]gpt-6-astra) = openai
+✓ vendorOf(claude-opus-5-5) = anthropic
+✓ vendorOf(grok-4.7) = xai
+✓ vendorOf(gemini-4-argon) = google
+✓ vendorOf(stealth/crouton-alpha) = unknown
+✓ vendorOf(undefined) = unknown
+自检通过
+自检耗时 7s:用例 13/13,并发 2(GATE_SELFTEST_JOBS),CPU 4,node v24.21.0
