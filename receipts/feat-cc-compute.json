@@ -45,10 +45,10 @@
  "waiver": null,
  "review": {
   "agent": "codex",
-  "session": "codex:37149125-ea23-48b8-ad8b-66fd9919117a",
+  "session": "codex:ecfab7df-e8ef-40d5-87fc-c0393a93cf82",
   "model": "gpt-6.1-terra",
-  "verdict": "REJECT",
-  "reviewed_hash": "b9b25e4829d2e3a25567ead048e8717b364d3274446dcbf477d317685c601f17",
-  "notes": "复现证据由前一审查会话 codex:972e9790-2598-463a-aefb-3a1839268a71 完成；本会话重算 hash 一致后定稿。R8-01：稀疏数组的越界数字键绕过纯数据检查。R8-02：深层汇报或 JSON-RPC id 未被拒收，造成服务异常。R8-03：缺少连接中但未就绪的邻接反例。R8-04：缺少空白汇报字段的邻接反例。"
+  "verdict": "reject",
+  "reviewed_hash": "21205082957f5b2d148aaab899b34abcdc942573dcc2a546ddaf1531650247cd",
+  "notes": "REJECT：R9-01 大整数请求编号失真及零编号缺测；R9-02 无效版本汇报被接受；R9-03 无编号消息产生无编号响应。hy4 H9-01 经 Codex 复现为测试覆盖缺口，已列 R9-04 非阻塞建议：现行已定 AC 未明确纯空白任务判据，不单独拒审。作者原清单 7 个 TS 变异无法编译，等价可编译变异均被具名测试发现；云端 G-PROVENANCE 因缺会话记录未验证。"
  }
 }

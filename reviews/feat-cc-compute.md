@@ -671,3 +671,73 @@ CONTENT_HASH=b9b25e4829d2e3a25567ead048e8717b364d3274446dcbf477d317685c601f17
   其中收据当时 `review:null`，G-PROVENANCE 直接返回，作者和本审查会话的来源都未在该次运行中核对；不能将其解释为审查来源已验证。另在独立的中性合成仓库、合成会话中分别为八个门禁构造一条失败输入：8/8 命中对应门禁失败；一个正向对照 8/8 放行。合成会话只用于门禁反例，不代表真实审查会话记录。
 - GitHub 对被审 SHA 的 `self-check` 为 completed/success；本机 `docker info` 退出 1，本地门禁未验证容器沙箱路径。本轮只使用假 CLI 与 MCP 协议夹具，没有完成真实 Claude CLI 上的工具约束与事件映射验收；Windows 未测。
 - 本轮可复查证据目录：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr7-r8-codex/`。
+
+## 第九轮（2026-11-09）：Codex 独立复审
+
+**结论：REJECT。** 被审 `c40ca4fce6388dc2456b106c448eb7b1b33bb346`，基线 `afd02560f9546147da380382404eb6106222a9b8`；本会话 `codex:ecfab7df-e8ef-40d5-87fc-c0393a93cf82`，实际模型 `gpt-6.1-terra`，独立执行 `node scripts/gates/run-all.ts --hash --branch=feat/cc-compute --base=origin/feat/domain-core` 得到 `reviewed_hash=21205082957f5b2d148aaab899b34abcdc942573dcc2a546ddaf1531650247cd`。在独立克隆和隔离假 HOME 下审查，未调用真实 Claude CLI。
+
+### R9-01 [P2] 合法大整数请求编号被静默改写，两个请求会收到相同编号
+
+**位置：** `packages/adapter-cc-compute/mcp/report-mcp.mjs:23,63,71–76`。
+
+**复现：** 用协议夹具依次发送 `tools/list` 请求，编号分别为 `9007199254740992` 与 `9007199254740993`；服务对两条都返回成功，但响应编号均为 `9007199254740992`。同批编号 `0` 与 `""` 正常回显。Node 将后一数字解析为同一个浮点数，`Number.isInteger` 又把它判为合格，因而无任何拒收或提示。MCP 2025-06-18 的 [RequestId 定义](https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/refs/tags/2025-06-18/schema/2025-06-18/schema.json)允许整数或字符串，[JSON-RPC 2.0](https://www.jsonrpc.org/specification)要求回复编号与请求对应；编号冲突可能使客户端无法匹配第二个响应（此后果为协议层推论，不声称已在真实客户端观察到）。macOS Node 25 与 box2 Node 24 均实际复现。原始输入输出见 `id-precision-input.jsonl`、`id-precision-output.jsonl` 与 box2 同名输出。
+
+**补充标定：** 自构 S01 仅让合法的数值编号 `0` 被拒收；原版接受，变异版回 `-32600`，本包 99 条测试在该变异下仍 99 通过。现有测试也未保护这一常用合法编号。
+
+**返修：** 在解析和回显时保留允许的整数编号原值，不能先丢失精度后再当成功回复；若需要限制支持范围，先明确合同并对不可精确保留的编号作受控拒收。补相邻整数、零、空字符串及普通编号的正反测试和单点变异。
+
+### R9-02 [P2] 缺失或错误的 JSON-RPC 版本仍被当作合规汇报记录
+
+**位置：** `packages/adapter-cc-compute/mcp/report-mcp.mjs:63–76,37–50`。
+
+**复现：** 同样的 `tools/call`，分别省略 `jsonrpc`、设置 `"jsonrpc":"1.0"` 与设置 `"jsonrpc":"2.0"`；三条都返回 `isError:false` 并各写一条 `valid:true` 的汇报日志。前两条不是合规 JSON-RPC 2.0 请求，MCP 对 [JSONRPCRequest](https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/refs/tags/2025-06-18/schema/2025-06-18/schema.json)要求版本字段为 `"2.0"`。本机与 box2 实际复现，原始输入、响应及中性记录分别见 `envelope-input.jsonl`、`envelope-output.jsonl`、`envelope-record.jsonl`。
+
+**返修：** 在处理或记账前校验协议封套，拒收缺失或不等于 `"2.0"` 的版本，不能声称已记录；补单开关正反对照及具名变异测试。
+
+### R9-03 [P2] 无编号通知被回复成缺编号的响应
+
+**位置：** `packages/adapter-cc-compute/mcp/report-mcp.mjs:30–50,71–76`。
+
+**复现：** 向服务发送正常 `notifications/initialized`、无 `id` 的 `tools/list` 和 `tools/call`，最后再发一个编号为 `17` 的合法请求。实际收到三条响应：前两条带 `result` 但都没有 `id`，最后一条为合法 `id:17` 的响应；无编号的 `tools/call` 还被记录成功。无 `id` 在 JSON-RPC 中是通知，服务不应回复；MCP 的成功响应也要求有 `id`。这会向客户端发送不符合响应格式的消息；是否导致具体客户端中断未测。原始输入输出见 `notification-input.jsonl`、`notification-output.jsonl`，本机与 box2 均复现。
+
+**返修：** 在派发前区分请求和通知；对无编号消息不得构造响应，也不能将缺编号的工具请求作为有效汇报登记。补正常通知、无编号工具方法和后续合法请求的连续对照及单点变异。
+
+### R9-04 [非阻塞校准建议] 空白任务拒收缺少邻接回归测试（hy4 发现、Codex 复现）
+
+**位置：** `packages/adapter-cc-compute/src/brief.ts:28` 及 `src/adapter.test.ts`。
+
+**复现：** 原实现对全空白 `brief.task` 返回拒收；在 box2 的隔离副本只去掉非空白判断，改后接受该输入，类型检查退出 0，而本包 99 条测试仍为 99 通过、0 失败、0 skip/todo。实际实现当前是正确拒收，不是当前产品会放行。证据为独立复现 `hy4-repro.json` 和 `hy4-repro.tap`。
+
+**处理边界：** 《验收文档》R-05 要求验收判据双侧标定，但 AC-33④ 没有明确列出 `brief.task` 纯空白的判据；不能只因实现中的额外校验就声称违反已定 AC。本项列为已复现的测试改进建议，**不单独作为拒审依据**；建议补纯空白拒收、非空任务放行及对应单点变异。
+
+### 复现与边界
+
+- 合同：开工前回读 `origin/docs/dev-handbook` 为 `a6ac7802b0716b74d3aba29f9fb1e9a89901ff30`，核对《验收文档》第 9 节及《需求文档》§8.1 的已定条目；未使用已排除的预改内置原型或插件交回值形态作为拒审理由。用户 #576 的续接口径另以假 CLI 实测：上一轮退出后再次显式续接可成功，不作为问题。
+- 独立 R8-01–04 对照在 box2 均按要求观察到拒收/放行；getter/Proxy 调用计数 0、合法 JSON `null` 不抛错、导出策略不可改。
+- box2、Node v24.21.0：typecheck 与 lint 退出 0；全仓测试 122/122 通过，fail/cancelled/skip/todo 均为 0。红提交 `9ed5a7347fe595d91df17b962f6cee6f28b2da24` 本包 99 条按名失败，第八轮新增 10/10 按名失败，无 skip/todo。
+- 作者 129 项原始单点变异在 box2 两并发逐项运行，原样副本 99/99，129/129 均完整执行 99 条并有具名失败。逐项具名测试另行定向重跑 129/129；其中 M18 与 M34 原定向失败涉及测试内部有界等待，另用同一变异的非等待断言/状态正反对照复核。
+- 补充类型核对：原 129 项中 104 个 TS 变异可编译、7 个（M12/M49/M62/M63/M64/M65/M89）不可编译，18 个为 mjs 不适用 TS 检查；本轮新增 M113–M129 中全部 7 个 TS 变异通过类型检查。对前述 7 个在独立副本改成运行语义等价、保留类型收窄的写法后，各自类型检查通过、完整 99 条测试且均被具名测试发现。建议作者将正式校准清单改为可编译写法；不把本次额外复核冒充作者原始脚本结果。
+- 自构 4 个单点故障：S01（拒收编号 0）存活，见 R9-01；S02（拒收约束版本 0）由 F-04 具名测试发现；S03（不接受含加号或数字的引用方案）和 S04（删去任务文本首尾空白）各 99/99 通过。后两项属于本实现的回归覆盖建议，未找到单独已定验收判据，不作为独立拒审理由。hy4 的 H9-01 经本会话独立复现，作为 R9-04 非阻塞建议。
+- 8 个独立合成门禁反例均命中对应门禁失败，合规对照 8/8 放行；合成会话只用于验证门禁，不代表真实来源。对诊断脚本把按名筛选的 1 条误判为 99 条的执行器错误，已保留原始 TAP 并按实际计划数重新核对；一次额外 M34 观察探针超时作废，所留本任务假 CLI 已回收，随后独立改用有界探针取得正反状态对照。
+- 云端原 HEAD 的 `--local` 原样输出如下（退出 1；G-REVIEW 是旧审查结论及旧 hash，云端假 HOME 未带真实会话记录，G-PROVENANCE 未验证来源，不可当通过）：
+
+```text
+base=origin/feat/domain-core branch=feat/cc-compute HEAD=c40ca4fce6388dc2456b106c448eb7b1b33bb346 受检文件 28 个 收据=receipts/feat-cc-compute.json 门禁 8 个
+✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据
+✗ G-REVIEW  R-01:审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)
+    - 审查结论是 REJECT
+    - 审查对应的内容 b9b25e4829d2 ≠ 当前 21205082957f,审后改过受管内容,需要重审
+✓ G-RED  R-02:先红后绿,新增/改动的每条测试在红提交上按名字失败、现在按名字通过
+✓ G-STUB  R-03:空实现红基线,桩下仍通过、加载失败、没执行到的测试都判无效
+✓ G-TAUTO  R-04:拒绝同语反复测试(按 node:test 真实导入识别;无断言、断言不判源码结果、恒定断言、skip/only)
+✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限或 pull_request_target
+✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)
+✗ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是用户本人对这一版的明确批准
+    - 作者会话记录不存在:claude:28d82518-be0a-4c7b-be7e-4a0f89835986
+    - 审查会话记录不存在:codex:37149125-ea23-48b8-ad8b-66fd9919117a
+CONTENT_HASH=21205082957f5b2d148aaab899b34abcdc942573dcc2a546ddaf1531650247cd
+```
+
+- 三个已记录的作者会话触及本仓库时的模型均为 Claude，审查模型为 OpenAI；本会话原始模型从 native turn context 核实。当前审查会话的 `turns.jsonl` 尚未落盘，签字后的 G-PROVENANCE 仍需在真实记录可读时核验。原 HEAD 的 GitHub self-check 已完成且为 success，不替代上述复现。
+- 真实 Claude CLI 的工具约束和事件映射、Windows 与容器沙箱路径未测。执行偏差：最初少量 R8、续接及协议点验在本机假 HOME/TMPDIR 下运行，不符合本机仅开发/推送钩子/hash 的要求；后已在 box2 重跑，全量测试、变异和 `--local` 始终在 box2。
+- 原始复现脚本、TAP、逐项结果、门禁输出与 SHA-256 归档见 `/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr7-r9-codex/`；无产品源码修改。
