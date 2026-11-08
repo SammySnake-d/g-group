@@ -35,14 +35,14 @@ function react(me: string, f: Inbound): MindAction[] {
     if (f.signal === "milestone") return [{ kind: "reply", roomId: f.roomId, text: `进度:${f.summary}`, replyToSeq: null }];
     if (f.signal === "completed") return [{ kind: "deliver", taskId: f.taskId, text: `做完了:${f.summary}` }];
     if (f.signal === "failed") return [{ kind: "reply", roomId: f.roomId, text: `任务没做成:${f.summary}`, replyToSeq: null }];
-    if (f.signal === "blocked") return [{ kind: "reply", roomId: f.roomId, text: `需要你帮忙:${f.summary}`, replyToSeq: null }];
+    // 受阻:宿主已替联系人 @提出者发了提问卡,这里不再重复喊;用户回答后由联系人 forward
   }
   if (f.kind === "schedule") return [{ kind: "reply", roomId: f.roomId, text: `定时到了:${f.prompt}`, replyToSeq: null }];
   return [];
 }
 
 /** 剧本式 Compute:spawn 后按 script 依次吐事件;可让 spawn 失败。 */
-export function scriptedCompute(opts: { script?: (computeId: string, brief: unknown) => Omit<ComputeEvent, "computeId">[]; failSpawn?: string; stepMs?: number } = {}) {
+export function scriptedCompute(opts: { script?: (computeId: string, brief: unknown) => Omit<ComputeEvent, "computeId">[]; onResume?: (computeId: string, text: string) => Omit<ComputeEvent, "computeId">[]; failSpawn?: string; stepMs?: number } = {}) {
   const queue: ComputeEvent[] = [];
   let wake: (() => void) | null = null;
   let closed = false;
@@ -80,6 +80,17 @@ export function scriptedCompute(opts: { script?: (computeId: string, brief: unkn
     },
     async resume(computeId, text) {
       resumed.push({ computeId, text });
+      const evs = (opts.onResume?.(computeId, text) ?? []).map((e) => ({ ...e, computeId }) as ComputeEvent);
+      if (evs.length) {
+        inflight++;
+        void (async () => {
+          for (const e of evs) {
+            await new Promise((r) => setTimeout(r, opts.stepMs ?? 1));
+            push(e);
+          }
+          inflight--;
+        })();
+      }
       return { ok: true };
     },
     async stop(computeId) {
