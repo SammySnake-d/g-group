@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { people } from '@/data'
 import { useApp } from '@/ctx'
@@ -5,7 +6,7 @@ import { Avatar } from '@/components/Avatar'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Segmented } from '@/components/ui/segmented'
-import { PageFooter, PageScroll, TextInput } from './kit/parts'
+import { PageFooter, PageScroll, TextInput, ctaDisabled } from './kit/parts'
 import { NEW_GROUP_POOL } from './constants'
 
 /* ---------- 发起群聊:群名可不填;勾人;底部选临时算力格数,主按钮写明还差什么 / 建好有几人 ---------- */
@@ -35,7 +36,7 @@ export function NewGroupPage() {
             options={NEW_GROUP_POOL.map((n) => ({ value: String(n), label: n === 0 ? '不给' : `${n} 格`, testid: `newgroup-pool-${n}` }))} />
           <span className="ml-auto min-w-0 truncate text-[12px] text-fg-3">人少时补算力，做完就还</span>
         </div>
-        <Button variant="primary" size="md" className="w-full tabular-nums" disabled={ids.length < 2} onClick={() => { createGroup(title.trim() || ids.map((i) => people[i].name).slice(0, 3).join('、'), ids, undefined, pool); closeAll() }}>
+        <Button variant="primary" size="md" className={cn('w-full tabular-nums', ctaDisabled)} disabled={ids.length < 2} onClick={() => { createGroup(title.trim() || ids.map((i) => people[i].name).slice(0, 3).join('、'), ids, undefined, pool); closeAll() }}>
           {ids.length < 2 ? '至少选 2 人' : `创建群聊（${ids.length + 1} 人）`}
         </Button>
       </PageFooter>

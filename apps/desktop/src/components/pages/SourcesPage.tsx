@@ -6,7 +6,7 @@ import { useApp } from '@/ctx'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ListItem } from '@/components/ui/list-row'
-import { Hint, PageFooter, PageScroll, Subhead } from './kit/parts'
+import { Hint, PageFooter, PageScroll, Subhead, ctaDisabled } from './kit/parts'
 
 const Letter = ({ l, muted }: { l: string; muted?: boolean }) => (
   <span aria-hidden className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-hover text-[13px] font-semibold', muted && 'text-fg-3')}>{l}</span>
@@ -53,7 +53,7 @@ export function SourcePage({ id }: { id: string }) {
         ))}
       </PageScroll>
       <PageFooter>
-        <Button data-testid="src-quote" variant="primary" size="md" className="w-full tabular-nums" disabled={!n} onClick={() => { quoteExternal(s.msgs!.filter((_, i) => sel[i]), s.app); closeAll() }}><Send />{n ? `带 ${n} 条进对话` : '勾选要带进对话的消息'}</Button>
+        <Button data-testid="src-quote" variant="primary" size="md" className={cn('w-full tabular-nums', ctaDisabled)} disabled={!n} onClick={() => { quoteExternal(s.msgs!.filter((_, i) => sel[i]), s.app); closeAll() }}><Send />{n ? `带 ${n} 条进对话` : '勾选要带进对话的消息'}</Button>
         <Hint className="mt-2 text-center text-[12px]">外部消息只当参考，不会让助手直接去执行</Hint>
       </PageFooter>
     </>

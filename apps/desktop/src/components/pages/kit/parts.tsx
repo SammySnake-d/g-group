@@ -28,6 +28,9 @@ export function Subhead({ children, className, right }: { children: ReactNode; c
   )
 }
 
+/** 底部主按钮在不可用时仍要读得清「还差什么」(如「至少选 2 人」):换成浅底弱字,不只是降透明度 */
+export const ctaDisabled = 'disabled:bg-hover disabled:text-fg-3 disabled:opacity-100 disabled:shadow-none'
+
 /** 固定在页面底部的操作区(主按钮 + 一句后果说明) */
 export function PageFooter({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn('shrink-0 border-t border-line p-3', className)}>{children}</div>

@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { SHAPES, SWATCHES } from '@/data'
 import { modelLabel } from '@/modelConfig'
@@ -6,7 +7,7 @@ import { Bot } from '@/components/Avatar'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Choice, ChoiceGroup } from './kit/choice'
-import { Field, Hint, PageFooter, PageScroll, TextInput } from './kit/parts'
+import { Field, Hint, PageFooter, PageScroll, TextInput, ctaDisabled } from './kit/parts'
 import { DEFAULT_SHAPE, DEFAULT_SWATCH_INDEX } from './constants'
 
 /* ---------- 添加联系人:先挑形象和颜色(大头像实时预览),再填名字和擅长什么;模型用全局默认 ---------- */
@@ -42,7 +43,7 @@ export function AddContactPage() {
         <Hint testid="add-model-note" className="mt-3 text-[12px]">说话用全局默认的 {modelLabel(modelSettings.defaultSpeakingModel, modelSettings)}，Compute 继承全局（{modelLabel(modelSettings.defaultComputeModel, modelSettings)}）。加好以后在它的工作台「设置」里改。</Hint>
       </PageScroll>
       <PageFooter>
-        <Button variant="primary" size="md" className="w-full" disabled={!name.trim()} onClick={() => createContact({ name: name.trim(), role: role.trim() || '通用助手', shape, color, model: modelSettings.defaultSpeakingModel, quota })}>添加</Button>
+        <Button variant="primary" size="md" className={cn('w-full', ctaDisabled)} disabled={!name.trim()} onClick={() => createContact({ name: name.trim(), role: role.trim() || '通用助手', shape, color, model: modelSettings.defaultSpeakingModel, quota })}>添加</Button>
       </PageFooter>
     </>
   )
