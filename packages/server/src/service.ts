@@ -81,17 +81,20 @@ export function createService(host: Host): Service {
     },
     "schedules.runNow": (p: { scheduleId: string }) => host.scheduler.runNow(p.scheduleId),
     "schedules.history": (p: { scheduleId: string; limit?: number }) => ({ runs: host.scheduler.history(p.scheduleId, p.limit ?? 50) }),
-    "plugins.marketplace": unavailable("插件市场"),
-    "plugins.list": () => ({ plugins: [] }),
-    "plugins.get": unavailable("插件"),
-    "plugins.install": unavailable("插件安装"),
-    "plugins.setEnabled": unavailable("插件启停"),
-    "plugins.configure": unavailable("插件配置"),
-    "plugins.update": unavailable("插件更新"),
-    "plugins.uninstall": unavailable("插件卸载"),
+    "plugins.marketplace": (p: { query?: string; kind?: string }) => ({ entries: host.plugins.marketplace(p) }),
+    "plugins.list": () => ({ plugins: host.plugins.list() }),
+    "plugins.get": (p: { pluginId: string }) => host.plugins.get(p.pluginId),
+    "plugins.install": (p: { source: Parameters<Host["plugins"]["install"]>[0]; grantedPermissions: string[] }) => host.plugins.install(p.source, p.grantedPermissions),
+    "plugins.setEnabled": (p: { pluginId: string; enabled: boolean }) => host.plugins.setEnabled(p.pluginId, p.enabled),
+    "plugins.configure": (p: { pluginId: string; config: unknown }) => host.plugins.configure(p.pluginId, p.config),
+    "plugins.update": (p: { pluginId: string; version?: string; grantedPermissions?: string[] }) => host.plugins.update(p.pluginId, p.version, p.grantedPermissions),
+    "plugins.uninstall": (p: { pluginId: string }) => {
+      host.plugins.uninstall(p.pluginId);
+      return { ok: true };
+    },
     "commands.list": (p: { roomId: string; prefix?: string }) => {
       host.roomView(p.roomId);
-      return { commands: BUILTIN_COMMANDS.filter((c) => !p.prefix || c.name.startsWith(p.prefix)) };
+      return { commands: [...BUILTIN_COMMANDS, ...host.plugins.commands()].filter((c) => !p.prefix || c.name.startsWith(p.prefix)) };
     },
     "settings.get": () => host.settings(),
     "settings.update": (p: Parameters<Host["updateSettings"]>[0]) => host.updateSettings(p),

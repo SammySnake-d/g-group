@@ -3,6 +3,7 @@
 //   → 宿主校验、分配 action_id、与游标/账本/任务同一事务落盘 → 起 Compute → Compute 语义事件回到联系人 → 联系人汇报/交付回聊天。
 // 规则:只有联系人对外说话(Compute 不直接发言,AC-03);游标只在一轮落盘后推进(AC-31);发送前检出更新的用户消息就放弃本轮重跑(AC-31 ④);
 // 发送入库端按 action_id 去重(AC-31 ③);消息接走即已读(AC-46)。
+import { dirname } from "node:path";
 import { appendEvent, loadLog, recordAction } from "@g-group/adapter-sqlite";
 import type { ComputeAdapter, ComputeEvent } from "@g-group/adapter-cc-compute";
 import type {
@@ -40,6 +41,7 @@ import {
 import { CONTACT_SYSTEM, CONTACT_TOOLS, type LedgerLine, type RoundAssembler, defaultAssemble } from "./assemble.ts";
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
+import { PluginStore } from "./plugins.ts";
 import { Scheduler } from "./schedules.ts";
 
 export interface HostOptions {
@@ -56,6 +58,10 @@ export interface HostOptions {
   readonly computeTools?: readonly string[];
   readonly assemble?: RoundAssembler;
   readonly now?: () => string;
+  /** 宿主数据目录(插件包装在这里);默认数据库文件所在目录。 */
+  readonly dataDir?: string;
+  /** 插件市场目录文件 catalog.json;不给就是空市场。 */
+  readonly catalogFile?: string | null;
   /** 定时用的时钟(毫秒);默认 Date.now。 */
   readonly clockMs?: () => number;
   readonly newId?: (prefix: string) => string;
@@ -143,6 +149,7 @@ export class Host {
   readonly userName: string;
   readonly loop: AttentionLoop;
   readonly scheduler: Scheduler;
+  readonly plugins: PluginStore;
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly newId: (prefix: string) => string;
@@ -188,6 +195,17 @@ export class Host {
         if ("removed" in s) this.bus.emit({ type: "schedule.removed", scheduleId: s.removed });
         else this.bus.emit({ type: "schedule.updated", schedule: s });
       },
+    });
+    this.plugins = new PluginStore({
+      db: this.db,
+      dataDir: opts.dataDir ?? dirname(opts.file),
+      catalogFile: opts.catalogFile ?? null,
+      now: this.now,
+      emit: (v) => {
+        if ("removed" in v) this.bus.emit({ type: "plugin.removed", pluginId: v.removed });
+        else this.bus.emit({ type: "plugin.updated", plugin: v });
+      },
+      commandsChanged: () => this.bus.emit({ type: "commands.changed", roomId: null, commands: null }),
     });
     // 启动时先处理宿主关着期间到期的定时(按容差与 missedPolicy),再按最早一次设计时器
     this.scheduler.tick();

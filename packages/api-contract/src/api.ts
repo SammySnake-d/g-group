@@ -178,7 +178,8 @@ export const METHODS = {
   ),
   "plugins.setEnabled": method(obj({ pluginId: id(), enabled: bool() }), PluginView),
   "plugins.configure": method(obj({ pluginId: id(), config: json() }), PluginView),
-  "plugins.update": method(obj({ pluginId: id(), version: opt(str({ max: 50 })) }), PluginView),
+  /** 新版本多声明的权限要在 grantedPermissions 里重新同意,否则 forbidden(detail.missing 列出缺的)。 */
+  "plugins.update": method(obj({ pluginId: id(), version: opt(str({ max: 50 })), grantedPermissions: opt(arr(str({ min: 1, max: 100 }))) }), PluginView),
   "plugins.uninstall": method(obj({ pluginId: id() }), Ok),
 
   // ---- Slash 命令 ----
