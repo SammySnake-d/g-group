@@ -17,6 +17,8 @@
 // 工具清单里没有 report_progress(RR-02 引用的真实 CLI 2.1.316 观察);服务器连上了但 tools/list 不含它时同样没有(R4-05)。
 // 剧本 reportGapMs:相邻两次汇报之间的间隔。
 // 剧本来自环境变量 FAKE_SCRIPT(JSON);每次启动把 pid/argv/env/cwd/首个提示追加到 FAKE_RECORD。
+// 剧本 byTask:{ "<任务原文>": 剧本 } 按首个提示里的任务原文选剧本,没命中用顶层剧本:同一个适配器(同一份 hostEnv)
+// 先后起的几个 Compute 可以走不同剧本(R7-02:一个 Compute 输出畸形 JSON 失败后,同一宿主的下一个 Compute 照常完成)。
 import { spawn } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -30,7 +32,8 @@ const allowed = (flag("--allowedTools") ?? "").split(",").filter(Boolean);
 const DEFAULT_SET = ["Bash", "Edit", "Read"];
 const builtins = (flag("--tools") ?? "").split(",").filter(Boolean).flatMap((t) => (t === "default" ? DEFAULT_SET : [t]));
 const script = JSON.parse(process.env.FAKE_SCRIPT ?? "{}");
-const plan = resume ? (script.resume ?? { reports: [], result: "success" }) : script;
+const byTask = !resume && script.byTask ? Object.entries(script.byTask).find(([task]) => prompt?.startsWith(`[任务]\n${task}\n`) || prompt === `[任务]\n${task}`) : undefined;
+const plan = resume ? (script.resume ?? { reports: [], result: "success" }) : (byTask?.[1] ?? script);
 
 // 挂起剧本在写记录之前就装好信号处理,避免测试读到记录后发的 SIGTERM 落在默认处理上。
 // graceful:收到 SIGTERM 后 300ms 才退出;stubborn:忽略 SIGTERM,只有 SIGKILL 能结束

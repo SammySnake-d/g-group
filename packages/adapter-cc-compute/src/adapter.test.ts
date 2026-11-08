@@ -2,7 +2,7 @@
 // 按 stream-json 输出,并按 --mcp-config 真的起 report_progress MCP 服务器、走 JSON-RPC 汇报。不 mock child_process。
 // 对应 AC-33 ④(brief 只收五个字段、凭据只给引用、工具子集、env 无明文)、V-06(completed 以 CLI 结果为准)、AC-07(交接快照)。
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -10,7 +10,7 @@ import { afterEach, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_REAP_FORCE_MS, DEFAULT_RUNNER, REPORT_MCP_PATH, createComputeAdapter, resolveReapForceMs } from "./adapter.ts";
 import { CC_BUILTIN_TOOLS, checkBrief, checkSnapshot, isCredentialRef } from "./brief.ts";
-import { PRE_INIT_SYSTEM_SUBTYPES, checkInit, preInitFrame, terminalFor } from "./events.ts";
+import { PRE_INIT_SYSTEM_SUBTYPES, checkInit, preInitFrame, streamParser, terminalFor } from "./events.ts";
 import { REPORT_KINDS, reportErrors, reportToolDefinition } from "./report-schema.ts";
 import * as root from "./index.ts";
 
@@ -1642,4 +1642,206 @@ test("R6-03:report MCP 只认精确的 report_progress:前后空格、制表/换
   assert.equal(r.replies.at(-1)!.result?.content?.[0]?.text, "已记录。");
   const recs = fs.readFileSync(log, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { valid: boolean; kind: string });
   assert.deepEqual(recs.map((x) => [x.valid, x.kind]), [[true, "started"]]);
+});
+
+// ---------------------------------------------------------------- 第七轮审查 R7-01 – R7-03
+// R7-01:同一 Compute 的续接与停止竞态;R7-02:CLI 输出里合法 JSON 的对象/数组字段不得让适配器宿主异常退出;
+// R7-03:init 之前认可帧的邻接反例。反例都不改动任何内置原型,输入全部是 JSON.parse 能产生的数据。
+
+/** 等这个 Compute 的某个事件(事件流从头重放,不丢事件);上限内没等到按名字失败 */
+async function waitEvent(a: Adapter, id: string, pred: (e: ComputeEventT) => boolean) {
+  const got = await within((async () => {
+    for await (const e of a.events()) if (e.computeId === id && pred(e)) return true;
+    return false;
+  })());
+  if (got !== true) throw new Error("等事件超时");
+}
+const BLOCKED_THEN_STUBBORN = { reports: [{ kind: "blocked", summary: "中性等待", needs: "中性条件" }], hang: "stubborn", resume: { reports: [], hang: "stubborn" } };
+
+test("R7-01:受阻后并发两次 resume 只受理一个、另一个立即被明确拒绝,只起一个续接 CLI;stop 后原 CLI 与续接 CLI 全部回收(正反对照)", async () => {
+  const f = fake(BLOCKED_THEN_STUBBORN, { reapForceMs: 300 });
+  const dir = path.dirname(f.record);
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  const first = await within(a.settled(r.computeId));
+  assert.deepEqual(first === "超时" ? [] : first.map((e) => e.kind), ["started", "blocked"]);
+  const original = launches(f.record)[0]!.pid;
+  const both = await within(Promise.all([a.resume(r.computeId, "中性续接甲"), a.resume(r.computeId, "中性续接乙")]));
+  assert.notEqual(both, "超时");
+  const results = both === "超时" ? [] : both;
+  // 恰好一个受理;落败者被明确拒绝,原因是已有续接在途
+  assert.deepEqual(results.map((x) => x.ok).sort(), [false, true]);
+  assert.deepEqual(results.find((x) => !x.ok), { ok: false, reason: "这个 Compute 正在续接,同一时刻只受理一个续接" });
+  // 起进程是同步的:两个 resume 都返回时,本测试的进程只剩获胜的那一个续接 CLI(原 CLI 已被 SIGKILL 并退出)
+  assert.equal(alive(original), false);
+  assert.equal(ownProcs(dir).length, 1);
+  // 获胜的续接真的在运行(正对照):started(resumed) 到达,启动记录恰好两条,续接提示是获胜者的文本
+  await waitEvent(a, r.computeId, (e) => e.kind === "started" && e.resumed);
+  const all = launches(f.record);
+  assert.equal(all.length, 2);
+  assert.equal(all[1]!.prompt, results[0]?.ok ? "中性续接甲" : "中性续接乙");
+  // stop 回收全部已启动的 CLI:原 CLI 与续接 CLI 都消失,进程表里不剩本测试的进程
+  assert.deepEqual(await a.stop(r.computeId), { ok: true });
+  for (const l of all) assert.equal(await gone(l.pid), true);
+  await waitFor(() => ownProcs(dir).length === 0);
+  const last = await within(a.settled(r.computeId));
+  assert.deepEqual(last === "超时" ? [] : last.map((e) => e.kind), ["started", "stopped"]);
+});
+
+test("R7-01:resume 在途(正等冻结的上一轮退出)时 stop:stop 受理,在途续接被明确拒绝,stop 确认之后不再起 CLI;原 CLI 回收、进程表里不剩本测试的进程(竞态对照)", async () => {
+  const f = fake(BLOCKED_THEN_STUBBORN, { reapForceMs: 300 });
+  const dir = path.dirname(f.record);
+  const a = createComputeAdapter(f.options);
+  const r = await a.spawn(brief());
+  assert.ok(r.ok);
+  await within(a.settled(r.computeId));
+  const original = launches(f.record)[0]!.pid;
+  // 不等 resume 完成就 stop:resume 已认领并对冻结的进程组发了 SIGKILL,正在等上一轮主进程退出
+  const pending = a.resume(r.computeId, "中性续接");
+  const stopped = await a.stop(r.computeId);
+  const resumed = await within(pending);
+  assert.deepEqual(stopped, { ok: true });
+  assert.notEqual(resumed, "超时");
+  assert.deepEqual(resumed, { ok: false, reason: "续接还没启动时这个 Compute 已被停止,这次续接作废" });
+  // 起进程是同步的:续接返回时若起过 CLI,它已在进程表里
+  assert.equal(await gone(original), true);
+  assert.deepEqual(ownProcs(dir), []);
+  // 有界观察:之后也不出现续接的启动记录,这一轮的事件只到 stopped,第二次 stop 被拒绝
+  await new Promise((ok) => setTimeout(ok, 500));
+  assert.equal(launches(f.record).length, 1);
+  assert.deepEqual(ownProcs(dir), []);
+  assert.deepEqual((await a.settled(r.computeId)).map((e) => e.kind), ["started", "blocked", "stopped"]);
+  assert.equal((await a.stop(r.computeId)).ok, false);
+});
+
+test("R7-02:init 前的帧与 init 里 type/subtype/host 状态是对象、数组、null 的合法 JSON 时 preInitFrame/checkInit 按合同拒收、给固定说明、不抛错;拒收回执的 text 是对象或数组时不拼接、不抛错;坏 JSON 与非对象照常拒收,合法字符串与 connected 的 init 照常(对照)", () => {
+  // 每个输入都由 JSON.parse 产生:对象自有的 toString/valueOf 数据字段,没有 getter、Proxy、函数,不改内置原型
+  assert.deepEqual(preInitFrame('{"type":{"toString":null}}'), { kind: "rejected", reason: "(对象)" });
+  assert.deepEqual(preInitFrame('{"type":"system","subtype":{"toString":null}}'), { kind: "rejected", reason: "system/(对象)" });
+  assert.deepEqual(preInitFrame('{"type":"system","subtype":{"toString":"hook_started","valueOf":"hook_started"}}'), { kind: "rejected", reason: "system/(对象)" });
+  assert.deepEqual(preInitFrame('{"type":[{"toString":null}],"subtype":"hook_started"}'), { kind: "rejected", reason: "(数组)/hook_started" });
+  assert.deepEqual(preInitFrame('{"type":"system","subtype":[{"valueOf":{}}]}'), { kind: "rejected", reason: "system/(数组)" });
+  assert.deepEqual(preInitFrame('{"type":null,"subtype":null}'), { kind: "rejected", reason: "null/null" });
+  assert.deepEqual(preInitFrame('{"type":7,"subtype":false}'), { kind: "rejected", reason: "7/false" });
+  assert.deepEqual(preInitFrame("{}"), { kind: "rejected", reason: "undefined" });
+  assert.deepEqual(preInitFrame('{"type":'), { kind: "rejected", reason: "不是 JSON" });
+  assert.deepEqual(preInitFrame("null"), { kind: "rejected", reason: "不是 JSON 对象" });
+  assert.deepEqual(preInitFrame('[{"toString":null}]'), { kind: "rejected", reason: "不是 JSON 对象" });
+  assert.deepEqual(preInitFrame('{"type":"system","subtype":"api_retry"}'), { kind: "rejected", reason: "system/api_retry" });
+  const init = (status: string) => JSON.parse(`{"type":"system","subtype":"init","session_id":"neutral","tools":["${REPORT}"],"mcp_servers":[{"name":"host","status":${status}}]}`) as Record<string, unknown>;
+  assert.deepEqual(checkInit(init('{"toString":null}')), { type: "bad-init", reason: "report_progress MCP 未连接(host 状态 (对象))" });
+  assert.deepEqual(checkInit(init('[{"toString":null}]')), { type: "bad-init", reason: "report_progress MCP 未连接(host 状态 (数组))" });
+  assert.deepEqual(checkInit(init("null")), { type: "bad-init", reason: "report_progress MCP 未连接(host 状态 缺失)" });
+  assert.deepEqual(checkInit(init('"failed"')), { type: "bad-init", reason: "report_progress MCP 未连接(host 状态 failed)" });
+  assert.deepEqual(checkInit(init('"connected"')), { type: "init", sessionId: "neutral", tools: [REPORT] });
+  // 拒收回执:text 是对象/数组的文本块不拼接,字符串文本照常拼成拒收原因
+  const parse = streamParser();
+  assert.deepEqual(parse(JSON.stringify({ type: "assistant", message: { content: [{ type: "tool_use", id: "toolu_neutral", name: REPORT, input: { kind: "milestone", summary: "中性" } }] } })), []);
+  assert.deepEqual(parse('{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_neutral","is_error":true,"content":[{"type":"text","text":{"toString":null}},{"type":"text","text":[{"valueOf":{}}]},{"type":"text","text":"中性拒收"}]}]}}'), [{ type: "rejected-report", kind: "milestone", reason: "中性拒收" }]);
+});
+
+/** 隔离的适配器宿主进程:同一个适配器依次跑 HOST_TASKS 里的每个任务、再跑 CONTROL_TASK,把每个 Compute 的事件与拒收记录写到 stdout */
+const HOST_SCRIPT = `const { createComputeAdapter } = await import(process.env.ADAPTER_URL);
+const a = createComputeAdapter(JSON.parse(process.env.ADAPTER_OPTIONS));
+const out = {};
+for (const task of [...JSON.parse(process.env.HOST_TASKS), process.env.CONTROL_TASK]) {
+  const r = await a.spawn({ task, rules: [], tools: [], credentialRefs: [], placement: "local" });
+  out[task] = r.ok ? { events: await a.settled(r.computeId), rejected: a.rejectedReports(r.computeId) } : { refused: r.reason };
+}
+process.stdout.write(JSON.stringify(out));
+`;
+/** 起宿主子进程并有界等待退出;超时整组 SIGKILL(宿主脚本在测试目录里,afterEach 也会按目录回收它和它起的 CLI) */
+function runHost(script: string, env: Record<string, string>, ms = 60_000) {
+  return new Promise<{ code: number | null; signal: string | null; stdout: string; stderr: string }>((resolve) => {
+    const child = spawn(process.execPath, [script], { env: { ...process.env, ...env }, stdio: ["ignore", "pipe", "pipe"], detached: true });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d: Buffer) => { stdout += d.toString("utf8"); });
+    child.stderr.on("data", (d: Buffer) => { stderr += d.toString("utf8"); });
+    const timer = setTimeout(() => { try { process.kill(-child.pid!, "SIGKILL"); } catch { /* 已退出 */ } }, ms);
+    child.on("close", (code, signal) => { clearTimeout(timer); resolve({ code, signal, stdout, stderr }); });
+  });
+}
+
+test("R7-02:适配器宿主子进程里,CLI 输出 type/subtype/host 状态为对象或数组、拒收回执 text 为对象、汇报 kind 嵌套过深的合法 JSON:宿主不退出,对应 Compute 各自 failed(或按合同记拒收)并回收 CLI,同一适配器随后的正常 Compute 照常 completed(正反对照)", async () => {
+  const deep = 20_000;
+  const toolUse = (id: string, input: string) => `{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"${id}","name":"${REPORT}","input":${input}}]}}`;
+  const rejected = (id: string, content: string) => `{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"${id}","is_error":true,"content":${content}}]}}`;
+  const badInit = (status: string) => `{"type":"system","subtype":"init","session_id":"neutral","tools":["${REPORT}"],"mcp_servers":[{"name":"host","status":${status}}]}`;
+  const preCases: Record<string, string> = {
+    "中性-type对象": '{"type":{"toString":null}}',
+    "中性-subtype对象": '{"type":"system","subtype":{"toString":null}}',
+    "中性-type数组": '{"type":[{"toString":null}]}',
+  };
+  const cases: Record<string, { preInit?: string[]; postInit?: string[] }> = {
+    ...Object.fromEntries(Object.entries(preCases).map(([t, line]) => [t, { preInit: [line] }])),
+    "中性-host状态对象": { preInit: [badInit('{"toString":null}')] },
+    "中性-host状态数组": { preInit: [badInit('[{"toString":null}]')] },
+    "中性-拒收text对象": { postInit: [toolUse("toolu_text", '{"kind":"milestone","summary":"中性"}'), rejected("toolu_text", '[{"type":"text","text":{"toString":null}},{"type":"text","text":"中性拒收"}]')] },
+    "中性-kind嵌套过深": { postInit: [toolUse("toolu_deep", `{"kind":${"[".repeat(deep)}${"]".repeat(deep)},"summary":"中性"}`), rejected("toolu_deep", '"中性拒收"')] },
+  };
+  const byTask: Record<string, unknown> = { "中性-对照": { reports: [{ kind: "milestone", stage: "中性", summary: "中性" }], result: "success", text: "完成" } };
+  for (const [task, c] of Object.entries(cases)) byTask[task] = { ...c, reports: [], result: "success", text: "完成" };
+  const f = fake({ byTask });
+  const host = path.join(path.dirname(f.record), "host.mjs");
+  fs.writeFileSync(host, HOST_SCRIPT);
+  const res = await runHost(host, { ADAPTER_URL: new URL("./index.ts", import.meta.url).href, ADAPTER_OPTIONS: JSON.stringify(f.options), HOST_TASKS: JSON.stringify(Object.keys(cases)), CONTROL_TASK: "中性-对照" });
+  // 宿主没有因未捕获异常退出
+  assert.equal(res.signal, null);
+  assert.equal(res.code, 0, res.stderr);
+  assert.doesNotMatch(res.stderr, /TypeError|RangeError/);
+  type Ev = { kind: string; reason?: string };
+  const out = JSON.parse(res.stdout) as Record<string, { events?: Ev[]; rejected?: { kind: unknown; reason: string }[]; refused?: string }>;
+  const kinds = (t: string) => (out[t]?.events ?? []).map((e) => e.kind);
+  const lastReason = (t: string) => out[t]?.events?.at(-1)?.reason ?? "";
+  // init 之前的畸形帧:failed,原因就是 preInitFrame 给的固定说明
+  for (const [t, line] of Object.entries(preCases)) {
+    const pre = preInitFrame(line);
+    assert.deepEqual(kinds(t), ["failed"], t);
+    assert.equal(lastReason(t), `CLI 在 init 之前输出了未认可的内容:${pre.kind === "rejected" ? pre.reason : "未拒收"}`, t);
+  }
+  assert.match(lastReason("中性-type对象"), /:\(对象\)$/);
+  // init 里 host 状态是对象/数组:init 无法核验 → failed
+  assert.deepEqual(kinds("中性-host状态对象"), ["failed"]);
+  assert.equal(lastReason("中性-host状态对象"), "CLI 的 init 无法核验:report_progress MCP 未连接(host 状态 (对象))");
+  assert.deepEqual(kinds("中性-host状态数组"), ["failed"]);
+  assert.equal(lastReason("中性-host状态数组"), "CLI 的 init 无法核验:report_progress MCP 未连接(host 状态 (数组))");
+  // 拒收回执的 text 是对象:不拼接、不抛错,只记一条拒收;milestone 不是受阻/放弃,CLI 成功结束 → completed
+  assert.deepEqual(kinds("中性-拒收text对象"), ["started", "completed"]);
+  assert.deepEqual(out["中性-拒收text对象"]?.rejected, [{ kind: "milestone", reason: "中性拒收" }]);
+  // kind 嵌套过深:记录拒收时拷贝栈溢出,异常被受控边界接住 → 只有这个 Compute 记违规并 failed
+  assert.deepEqual(kinds("中性-kind嵌套过深"), ["started", "failed"]);
+  assert.match(lastReason("中性-kind嵌套过深"), /^处理 CLI 输出时出错:/);
+  // 同一个适配器在这些失败之后照常服务(正对照)
+  assert.deepEqual(kinds("中性-对照"), ["started", "milestone", "completed"]);
+  // 每个启动过的 CLI 主进程都已退出(settled 在主进程退出后才返回)
+  const all = launches(f.record);
+  assert.equal(all.length, Object.keys(cases).length + 1);
+  for (const l of all) assert.equal(await gone(l.pid), true);
+});
+
+test("R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)", async () => {
+  const adjacent = ["hook_neutral_unlisted", "hook_started_extra", "hook_response2", "HOOK_STARTED", "Hook_response", " hook_started", "hook_started ", "hook", "hook_", "ui_invalidate_more", "UI_INVALIDATE", "ui", "invalidate"];
+  for (const subtype of adjacent) {
+    assert.deepEqual(preInitFrame(JSON.stringify({ type: "system", subtype, session_id: "s" })), { kind: "rejected", reason: `system/${subtype}` }, subtype);
+  }
+  // 三种认可帧保持放行(阴性对照)
+  for (const subtype of ["hook_started", "hook_response", "ui_invalidate"]) {
+    assert.deepEqual(preInitFrame(JSON.stringify({ type: "system", subtype, session_id: "s" })), { kind: "allowed" }, subtype);
+  }
+  const run = async (subtype: string) => {
+    const f = fake({ preInit: [JSON.stringify({ type: "system", subtype, session_id: "s" })], reports: [], result: "success", text: "完成" });
+    const a = createComputeAdapter(f.options);
+    const r = await a.spawn(brief());
+    assert.ok(r.ok);
+    const evs = await within(a.settled(r.computeId));
+    return evs === "超时" ? [] : evs;
+  };
+  const bad = await run("hook_neutral_unlisted");
+  assert.deepEqual(bad.map((e) => e.kind), ["failed"]);
+  const last = bad.at(-1);
+  assert.equal(last?.kind === "failed" ? last.reason : "", "CLI 在 init 之前输出了未认可的内容:system/hook_neutral_unlisted");
+  const good = await run("hook_started");
+  assert.deepEqual(good.map((e) => e.kind), ["started", "completed"]);
 });
