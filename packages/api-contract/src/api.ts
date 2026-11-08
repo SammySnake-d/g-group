@@ -5,8 +5,10 @@ import {
   AnnouncementView,
   CommitmentView,
   ComputeProgress,
+  ContactProfileView,
   ContactView,
   EFFORTS,
+  FileEntry,
   HARNESSES,
   HelperEntry,
   HelperNote,
@@ -46,7 +48,7 @@ export const METHODS = {
   "contacts.list": method(Empty, obj({ contacts: arr(ContactView) })),
   "contacts.get": method(obj({ contactId: id() }), ContactView),
   "contacts.create": method(
-    obj({ clientActionId: id(), name: str({ min: 1, max: 80 }), bio: opt(str({ max: 2000 })), speakingModel: opt(str({ max: 200 })), harness: opt(oneOf(HARNESSES)), computeModel: opt(ModelSlot) }),
+    obj({ clientActionId: id(), name: str({ min: 1, max: 80 }), bio: opt(str({ max: 2000 })), speakingModel: opt(str({ max: 200 })), harness: opt(oneOf(HARNESSES)), computeModel: opt(ModelSlot), persona: opt(str({ max: 20000 })) }),
     ContactView,
   ),
   "contacts.update": method(
@@ -60,9 +62,13 @@ export const METHODS = {
       computeModel: opt(ModelSlot),
       tools: opt(arr(str({ max: 200 }))),
       computeAssets: opt(arr(obj({ name: str({ max: 200 }), kind: oneOf(["mcp", "skill", "script"] as const) }))),
+      /** 预设(人设原文);改了下一轮第 1 块就用新值。 */
+      persona: opt(str({ max: 20000 })),
     }),
     ContactView,
   ),
+  /** 联系人主面板(AC-54):视图 + 预设 + 工作记忆 + 职责(承诺、在途任务、定时、所在会话)。 */
+  "contacts.profile": method(obj({ contactId: id() }), ContactProfileView),
   "contacts.remove": method(obj({ contactId: id() }), Ok),
 
   // ---- 会话 ----
@@ -123,6 +129,14 @@ export const METHODS = {
   /** 上传附件(渲染进程先把文件交给 preload 拿到本地路径)。 */
   "attachments.add": method(obj({ path: str({ min: 1, max: 4096 }) }), obj({ ref: id(), name: str(), mime: str(), bytes: int({ min: 0 }) })),
 
+  /** 会话里出现过的文件(附件 + 任务产出),按出现顺序;文件列表选中后用 files.read 取内容(AC-57)。 */
+  "files.list": method(obj({ roomId: id() }), obj({ files: arr(FileEntry) })),
+  /** 读文件内容:文本给 text,其余给 base64;超过 maxBytes(默认 1 MiB)截断并标 truncated。只能读用户所在会话里出现过的 ref。 */
+  "files.read": method(
+    obj({ ref: id(), maxBytes: opt(int({ min: 1, max: 16 * 1024 * 1024 })) }),
+    obj({ ref: id(), name: str({ max: 500 }), mime: str({ max: 200 }), bytes: int({ min: 0 }), encoding: oneOf(["text", "base64"] as const), content: str(), truncated: bool() }),
+  ),
+
   // ---- 卡片按钮(交付确认、提问回答、失败重试…),以对话消息形式记录 ----
   "cards.act": method(obj({ roomId: id(), seq: seq(), cardId: id(), actionId: id(), clientActionId: id(), text: opt(str({ max: 20000 })) }), MessageView),
 
@@ -155,7 +169,8 @@ export const METHODS = {
   "commitments.revoke": method(obj({ commitmentId: id(), clientActionId: id() }), CommitmentView),
 
   // ---- 定时(cron) ----
-  "schedules.list": method(obj({ contactId: opt(id()), roomId: opt(id()) }), obj({ schedules: arr(ScheduleView) })),
+  /** 三视角(AC-53):roomId=群视角,contactId=联系人视角,都不给=总览。order 默认 next-run(下次触发早的在前,停用的在后,同时按创建顺序);排序待定(D28 待确认 ②)。 */
+  "schedules.list": method(obj({ contactId: opt(id()), roomId: opt(id()), order: opt(oneOf(["next-run", "created"] as const)) }), obj({ schedules: arr(ScheduleView) })),
   /** 校验 cron + 时区并给出接下来 N 次触发时间;表单实时预览用,不落盘。 */
   "schedules.preview": method(
     obj({ cron: str({ min: 1, max: 200 }), tz: str({ min: 1, max: 64 }), count: opt(int({ min: 1, max: 20 })) }),

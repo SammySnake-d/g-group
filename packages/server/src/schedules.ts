@@ -93,7 +93,7 @@ export class Scheduler {
       createdAt: r.created_at,
     };
   }
-  list(q: { contactId?: string; roomId?: string }): ScheduleView[] {
+  list(q: { contactId?: string; roomId?: string; order?: "next-run" | "created" }): ScheduleView[] {
     return all<Row>(this.d.db, "SELECT * FROM gg_schedules ORDER BY created_at, id")
       .filter((r) => (!q.contactId || r.contact_id === q.contactId) && (!q.roomId || r.room_id === q.roomId))
       .map((r) => this.view(r));

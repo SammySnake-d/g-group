@@ -261,8 +261,51 @@ export const ScheduleView = obj({
   lastRun: nullable(obj({ at: isoTime(), status: oneOf(["ok", "failed", "missed", "running"] as const), messageSeq: nullable(seq()) })),
   commitmentId: nullable(id()),
   createdAt: isoTime(),
+  /** 所属会话名(AC-53 联系人视角看各条定时属于哪个群);会话已不存在时省略。 */
+  roomTitle: opt(str({ max: 200 })),
+  /** 执行定时的联系人名(AC-53 总览看是谁的定时);联系人已不存在时省略。 */
+  contactName: opt(str({ max: 80 })),
 });
 export type ScheduleView = Infer<typeof ScheduleView>;
+
+// ---------- 联系人资料(AC-54)----------
+/** 联系人主面板:预设与职责分开给(#1370 是否合并待确认);记忆含工作记忆(状态笔记),长期记忆位置留空待 AC-42。 */
+export const ContactProfileView = obj({
+  contact: ContactView,
+  /** 预设(人设原文),每轮第 1 块使用。 */
+  persona: str({ max: 20000 }),
+  memory: obj({
+    /** 工作记忆:联系人当前状态笔记与版本;还没写过为 null。 */
+    stateNote: nullable(obj({ text: str({ max: 100000 }), version: int({ min: 1 }) })),
+    /** 长期记忆(AC-42)占位:存储未接入前恒为 null。 */
+    longTerm: nullable(json()),
+  }),
+  duties: obj({
+    /** 进行中的承诺(status=active)。 */
+    commitments: arr(CommitmentView),
+    /** 在途任务(未到 T8/T10/T11)。 */
+    tasks: arr(TaskView),
+    schedules: arr(ScheduleView),
+    /** 所在会话。 */
+    rooms: arr(obj({ roomId: id(), kind: oneOf(ROOM_KINDS), title: str({ max: 200 }) })),
+  }),
+});
+export type ContactProfileView = Infer<typeof ContactProfileView>;
+
+// ---------- 会话文件(AC-57 文件列表与窗口联动)----------
+export const FileEntry = obj({
+  /** 附件为 att-…;任务产出为 task:<id>/result。files.read 用它取内容。 */
+  ref: id(),
+  name: str({ max: 500 }),
+  mime: str({ max: 200 }),
+  bytes: int({ min: 0 }),
+  source: oneOf(["attachment", "task-result"] as const),
+  /** 出现这个文件的消息序号(附件 = 带它的消息;任务产出 = 交付消息,没有交付消息时为派活消息)。 */
+  seq: seq(),
+  taskId: nullable(id()),
+  at: isoTime(),
+});
+export type FileEntry = Infer<typeof FileEntry>;
 
 // ---------- 插件 ----------
 export const PLUGIN_KINDS = ["data-source", "outbound-channel", "ui-extension"] as const;
