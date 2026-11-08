@@ -11,10 +11,13 @@
     "build:electron": "vite build -c vite.electron.config.ts && GG_ENTRY=preload vite build -c vite.electron.config.ts",
     "build": "npm run typecheck && npm run build:renderer && npm run build:electron",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.electron.json --noEmit",
-    "test:e2e": "playwright test",
-    "shots": "node -e \"process.env.GG_SHOTS||(console.error('先设 GG_SHOTS=截图输出目录'),process.exit(1))\" && playwright test --project=renderer",
+    "test:e2e": "node verify/serial.mjs npx playwright test",
+    "shots": "node -e \"process.env.GG_SHOTS||(console.error('先设 GG_SHOTS=截图输出目录'),process.exit(1))\" && node verify/serial.mjs npx playwright test --project=renderer",
     "start": "npm run build && env -u ELECTRON_RUN_AS_NODE electron .",
-    "verify:structure": "node verify/structure.mjs"
+    "verify:structure": "node verify/structure.mjs",
+    "e2e": "node verify/serial.mjs npx playwright test --project=renderer",
+    "e2e:electron": "node verify/serial.mjs npx playwright test --project=electron",
+    "verify:mutate": "node verify/serial.mjs node verify/mutate.mjs"
   },
   "dependencies": {
     "@animate-ui/react": "^2.4.2",
