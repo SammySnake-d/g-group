@@ -243,6 +243,33 @@ export const CommitmentView = obj({
 });
 export type CommitmentView = Infer<typeof CommitmentView>;
 
+// ---------- 共享文档(AC-21) ----------
+/** 群共享文档的权威版本。写入只经 docs.commit:带读到的 version 作 baseVersion,版本变了回 conflict(detail.currentVer),不静默覆盖。 */
+export const SharedDocView = obj({
+  id: id(),
+  /** 所属会话;null 表示不挂会话的个人文档。 */
+  roomId: nullable(id()),
+  title: str({ min: 1, max: 200 }),
+  content: str({ max: 1_000_000 }),
+  /** 权威版本号,新建为 1,每次生效的提交 +1。 */
+  version: int({ min: 1 }),
+  createdAt: isoTime(),
+  updatedAt: isoTime(),
+  updatedBy: MemberRef,
+});
+export type SharedDocView = Infer<typeof SharedDocView>;
+/** 版本链的一项(不含正文;正文用 docs.get 带 version 取)。 */
+export const SharedDocVersionView = obj({
+  version: int({ min: 1 }),
+  title: str({ min: 1, max: 200 }),
+  updatedBy: MemberRef,
+  at: isoTime(),
+  bytes: int({ min: 0 }),
+  /** 产生这一版的请求号(docs.create 为 create:<clientActionId>)。 */
+  requestId: id(),
+});
+export type SharedDocVersionView = Infer<typeof SharedDocVersionView>;
+
 // ---------- 定时(cron) ----------
 /** 定时归联系人(插件不能自带 schedule):联系人在某个会话里按 cron 执行一段指令。 */
 export const ScheduleView = obj({
