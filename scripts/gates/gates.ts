@@ -240,8 +240,11 @@ export function sameRepoClone(rootReal: string): (abs: string) => boolean {
   };
 }
 
-/** R11 目录身份边界的测试桩,后续由受检实现替换。 */
-export function isRepoPath(_abs: string, _rootReal: string, _proven: readonly string[], _clone: (abs: string) => boolean): boolean { return false; }
+/** 目录名不构成仓库身份;只认目标根、同轮已证明的目录或可核验的同仓库克隆。 */
+export function isRepoPath(abs: string, rootReal: string, proven: readonly string[], clone: (abs: string) => boolean): boolean {
+  const under = (a: string, d: string) => a === d || a.startsWith(d + path.sep);
+  return under(abs, rootReal) || proven.some((d) => under(abs, d)) || clone(abs);
+}
 
 /** 一条 shell 命令里每次 git 调用的执行目录:按 cd 链与 git -C 解析;git clone 不在目录里执行,跳过;判不了的记 undefined */
 export function gitDirs(command: string, cwd: string | undefined): (string | undefined)[] {
@@ -364,11 +367,10 @@ export const provenance: Gate = {
     const confirmed = new Set<Vendor>();
     if (!at.ok) out.push(p(g, `作者会话不可信:${at.why}`));
     else {
-      const under = (abs: string, d: string) => abs === d || abs.startsWith(d + path.sep);
       for (const t of at.turns) {
         // 已清理的目录证明只适用于产生这条提交记录的轮次,不扩散到之后的调用。
         const proven = attestedDirs([t], at.workdir, rootReal, ctx.changed);
-        const inRepo = (abs: string) => under(abs, rootReal) || proven.some((d) => under(abs, d)) || clone(abs);
+        const inRepo = (abs: string) => isRepoPath(abs, rootReal, proven, clone);
         const vendor = vendorOf(t.model);
         if (turnTouchesRepo(t, at.workdir, inRepo)) producers.add(vendor);
         if (proven.length || turnProvesWrite(t, at.workdir, ctx, inRepo)) confirmed.add(vendor);
