@@ -8,6 +8,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { createComputeAdapter } from "@g-group/adapter-cc-compute";
+import type { ContactView } from "@g-group/api-contract";
 import type { ContactMind } from "@g-group/kernel";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
@@ -26,16 +27,23 @@ const { values, positionals } = parseArgs({
 });
 const [cmd, ...rest] = positionals;
 
-async function makeMind(kind: string): Promise<() => ContactMind> {
+async function makeMind(kind: string): Promise<(c: ContactView) => ContactMind> {
   if (kind === "fake") return () => scriptedMind();
   if (kind === "pi") {
     const spec = "@g-group/adapter-pi-contact";
     const mod = (await import(spec)) as { createPiContactMind(o: Record<string, unknown>): ContactMind };
-    const apiKey = process.env.ANTHROPIC_AUTH_TOKEN ?? process.env.ANTHROPIC_API_KEY;
+    const bearer = process.env.ANTHROPIC_AUTH_TOKEN;
+    const apiKey = bearer ?? process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("--mind pi 需要 ANTHROPIC_AUTH_TOKEN 或 ANTHROPIC_API_KEY");
-    const model = values.model ?? process.env.ANTHROPIC_DEFAULT_SONNET_MODEL ?? "claude-sonnet-4-6";
-    const mind = mod.createPiContactMind({ provider: "anthropic", model, baseUrl: process.env.ANTHROPIC_BASE_URL, apiKey });
-    return () => mind;
+    const cache = new Map<string, ContactMind>();
+    return (c) => {
+      let m = cache.get(c.speakingModel);
+      if (!m) {
+        m = mod.createPiContactMind({ provider: "anthropic", model: c.speakingModel, baseUrl: process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
+        cache.set(c.speakingModel, m);
+      }
+      return m;
+    };
   }
   throw new Error(`未知 --mind ${kind}`);
 }
