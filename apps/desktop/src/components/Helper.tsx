@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { people, dutyByConv, dutyDefault, type PersonId, type Msg, type Conversation } from '@/data'
 import { useApp } from '@/ctx'
 import { Avatar, Bot } from './Avatar'
+import { openCronOverview } from '@/cronView'
 import { Checkbox } from '@/components/ui/checkbox'
 
 /* Helper：只为你服务；能读什么由入口决定；在哪叫就在哪答（概念卡第 3 张，#1340 #1353 #1365） */
@@ -338,7 +339,7 @@ export function HelperGlobal() {
     { id: 'contact', label: '新建联系人', hint: '打开新建联系人', icon: <UserPlus className="h-4 w-4" />, run: () => { close(); push({ t: 'addContact' }, true) } },
     { id: 'group', label: '发起群聊', hint: '选人建一个新群', icon: <Users className="h-4 w-4" />, run: () => { close(); push({ t: 'newGroup' }, true) } },
     { id: 'plugins', label: '装插件', hint: '去「插件」', icon: <Puzzle className="h-4 w-4" />, run: () => { setSection('plugins'); close() } },
-    { id: 'crons', label: '看所有定时', hint: '打开「进展」总览', icon: <Clock className="h-4 w-4" />, run: () => { setPanoOpen(true); close() } },
+    { id: 'crons', label: '看所有定时', hint: '打开「进展」，停在定时那一节', icon: <Clock className="h-4 w-4" />, run: () => { openCronOverview(setPanoOpen); close() } },
     { id: 'find', label: '找某次聊天', hint: `在「${titleOf(active)}」里搜`, icon: <Search className="h-4 w-4" />, run: () => { close(); setSection('chat'); push({ t: 'search', id: active }, true) } },
     { id: 'say', label: '代我在某个群发一句话', hint: '先出草稿，你点了才发', icon: <Send className="h-4 w-4" />, run: () => fill('代我在模型助手群聊说：') },
   ]

@@ -722,7 +722,7 @@ function CronTrail({ m, mine }: { m: Extract<Msg, { k: 'text' }>; mine: boolean 
 function DispLine({ m }: { m: Extract<Msg, { k: 'text' }> }) {
   const { setDisp, openSplit, jump, computes, crons } = useApp()
   const d = m.disp!
-  const refName = d.refKind === 'compute' ? computes[d.ref!]?.title : d.refKind === 'cron' ? (() => { const c = crons.find((x) => x.id === d.ref); return c ? `${c.repeat} ${c.time} 的定时` : '' })() : ''
+  const refName = d.refKind === 'compute' ? computes[d.ref!]?.title : d.refKind === 'cron' ? (() => { const c = crons.find((x) => x.id === d.ref); return c ? `${cronRule(c)} 的定时` : '' })() : ''
   const go = () => (d.refKind === 'compute' ? openSplit({ t: 'compute', id: d.ref! }) : d.refKind === 'cron' ? openSplit({ t: 'cron', id: d.ref! }) : d.ref && jump(d.ref))
   const short = (t?: string) => (t && t.length > 10 ? t.slice(0, 10) + '…' : t)
   const label = d.kind === 'merged' ? `合并到「${short(refName) || '…'}」` : d.kind === 'superseded' ? '被后面那条替代' : d.kind === 'doing' && refName ? `在做「${short(refName)}」` : d.kind === 'done' && refName ? `已做「${short(refName)}」` : dispText[d.kind]

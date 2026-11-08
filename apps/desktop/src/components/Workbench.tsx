@@ -3,7 +3,10 @@ import { AlertTriangle, Check, ChevronDown, ChevronRight, MessageSquare, Pencil 
 import { cn } from '@/lib/utils'
 import { people, innerLog, dutyDefault, dutyByConv, presetOf, MODELS, GLOBAL_MODEL, vendorOf, type PersonId, type Msg, type Compute, type Cron, type Conversation, type Pending } from '@/data'
 import { useApp, type WbTab } from '@/ctx'
-import { CronForm, cronRepeat, cronWhen } from './CronDetail'
+import { CronEditor } from './CronEditor'
+import { CronRow, convName } from './CronList'
+import { cronOrder, openCronOverview, useNow } from '@/cronView'
+import { localZoneLabel } from '@g-group/ui-core'
 import { Avatar, GroupAvatar, useLive } from './Avatar'
 import { MessageList } from './Messages'
 import { DetailPage } from './Overlays'
@@ -373,58 +376,40 @@ function Memory({ id }: { id: PersonId }) {
   )
 }
 
-/* ---------- 定时 ---------- */
+/* ---------- 定时：它在各个会话的全部定时，按会话分组（AC-53 联系人视角） ---------- */
 function Crons({ id }: { id: PersonId }) {
-  const { crons, convs, updateCron, toast, openConv, openSplit, addCron } = useApp()
+  const { crons, convs, openConv, addCron, setPanoOpen } = useApp()
+  const now = useNow()
   const [adding, setAdding] = useState(false)
-  const mine = crons.filter((c) => c.owner === id)
+  const mine = crons.filter((c) => c.owner === id).sort(cronOrder(now))
   const byConv = new Map<string, Cron[]>()
   for (const c of mine) byConv.set(c.conv, [...(byConv.get(c.conv) ?? []), c])
   const add = (
-    <div className="flex items-center justify-between">
-      <span className="text-[12.5px] text-fg-3">它的全部定时，按会话分组。点一行在右边看详情、改、看每次醒来做了什么</span>
-      <button data-testid="wb-cron-add" onClick={() => setAdding(true)} className="h-8 rounded-lg bg-hover px-3 text-[13px] font-medium hover:bg-sel">+ 新建定时</button>
+    <div className="flex items-center gap-3">
+      <div className="min-w-0 flex-1">
+        <div className="text-[12.5px] text-fg-2">{people[id].name} 在各个会话里的全部定时。点一行在右边看详情、改、看每次醒来做了什么</div>
+        <div data-testid="wb-cron-zone" className="text-[11.5px] text-fg-3">按本地时间（{localZoneLabel(now)}）· <button onClick={() => openCronOverview(setPanoOpen)} className="hover:text-fg hover:underline">所有人的定时在「进展」里看</button></div>
+      </div>
+      <button data-testid="wb-cron-add" onClick={() => setAdding(true)} className="h-8 shrink-0 rounded-lg bg-btn px-3 text-[13px] font-medium text-btn-fg hover:opacity-90">+ 新建定时</button>
     </div>
   )
-  const form = adding && <CronForm owner={id} onDone={(c) => { if (c) addCron(c as never, 'panel'); setAdding(false) }} />
+  const editor = <CronEditor open={adding} owner={id} onClose={() => setAdding(false)} onSave={(d) => { addCron(d, 'panel'); setAdding(false) }} />
   if (!mine.length)
-    return <div data-testid="wb-cron" className="space-y-3">{add}{form}<Card><div className="py-6 text-center text-[13px] text-fg-3">它还没有定时任务。在聊天里跟它说‘每天 8 点…’，或点「新建定时」</div></Card></div>
+    return <div data-testid="wb-cron" className="space-y-3">{add}{editor}<Card><div className="py-6 text-center text-[13px] text-fg-3">它还没有定时任务。在聊天里跟它说「每天 8 点…」，或点「新建定时」</div></Card></div>
   return (
     <div data-testid="wb-cron" className="space-y-4">
-      {add}{form}
+      {add}{editor}
       {[...byConv.entries()].map(([cid, list]) => {
         const conv = convs.find((c) => c.id === cid)
         return (
-          <Card key={cid} testid={`wb-cron-group-${cid}`}>
-            <div className="mb-2 flex items-center gap-2">
+          <Card key={cid} testid={`wb-cron-group-${cid}`} className="px-2 pb-2 pt-3">
+            <div className="mb-1 flex items-center gap-2 px-2.5">
               {conv?.kind === 'group' ? <GroupAvatar ids={conv.members} size={22} /> : null}
-              <span className="flex-1 truncate text-[13px] font-semibold">{conv ? (conv.kind === 'dm' ? `与 ${conv.title} 私聊` : conv.title) : cid}</span>
+              <span className="flex-1 truncate text-[13px] font-semibold">{convName(conv, cid)}</span>
+              <span className="text-[12px] text-fg-3">{list.length} 个</span>
               <button onClick={() => openConv(cid)} className="text-[12px] text-fg-3 hover:text-fg hover:underline">打开会话</button>
             </div>
-            <div className="space-y-1">
-              {[...list].sort((a, b) => a.time.localeCompare(b.time)).map((c) => {
-                const on = !c.paused
-                const err = c.state === 'error'
-                return (
-                  <div key={c.id} role="button" onClick={() => openSplit({ t: 'cron', id: c.id })} data-testid={`cron-${c.id}`} className={cn('flex cursor-pointer items-center gap-3 rounded-lg bg-bg px-3 py-2 hover:bg-hover', err && 'border-l-2 border-err', !on && 'opacity-60')}>
-                    <span className="w-11 shrink-0 font-mono text-[13px] tabular-nums">{cronWhen(c)}</span>
-                    <span className="w-12 shrink-0 text-[12px] text-fg-3">{cronRepeat(c)}</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[13.5px]">{c.text}</span>
-                        {c.uses?.map((u) => <span key={u} className="rounded bg-hover px-1.5 text-[11px] text-fg-2">{u}</span>)}
-                      </div>
-                      <div className={cn('mt-0.5 flex items-center gap-1 text-[12px]', err ? 'text-err' : c.state === 'skipped' ? 'italic text-fg-3' : 'text-fg-3')}>
-                        {err && <AlertTriangle className="h-3.5 w-3.5" />}
-                        <span className="truncate">{c.last ?? '还没跑过'}{on ? ` · 下次 ${c.next}` : ' · 已暂停'}{c.speak === 'only-if' ? ' · 有情况才说话' : ''}</span>
-                      </div>
-                    </div>
-                    {err && <button data-testid={`cron-retry-${c.id}`} onClick={(e) => { e.stopPropagation(); updateCron(c.id, { state: 'ok', last: '刚刚重试：成功' }); toast('已重试') }} className="h-7 shrink-0 rounded-full border border-err px-3 text-[12.5px] font-medium text-err hover:bg-err hover:text-white">重试</button>}
-                    <span onClick={(e) => e.stopPropagation()}><Switch data-testid={`cron-toggle-${c.id}`} checked={on} onCheckedChange={(v) => updateCron(c.id, { paused: !v })} /></span>
-                  </div>
-                )
-              })}
-            </div>
+            <div className="space-y-0.5">{list.map((c) => <CronRow key={c.id} c={c} now={now} showOwner={false} />)}</div>
           </Card>
         )
       })}

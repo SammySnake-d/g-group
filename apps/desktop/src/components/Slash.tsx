@@ -7,9 +7,8 @@ import { useApp } from '@/ctx'
 import { SOURCE_PAGE } from '@/commands'
 import { Avatar } from './Avatar'
 import { Tip } from './Messages'
-import { CronForm } from './CronDetail'
+import { CronEditor } from './CronEditor'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 
 /** 命令来源标记：内置 / 插件（品牌色字母 + 插件名）/ 助手（头像 + 名字） */
 export function SourceBadge({ src }: { src: SlashSource }) {
@@ -116,24 +115,14 @@ export function SourcePicker({ conv, className }: { conv: Conversation; classNam
   )
 }
 
-/** /schedule 打开的定时编辑：用现有的定时表单，按「何时 / 做什么」预填。
- *  入口是 ctx.openSchedule(草稿)；定时模块换了新编辑器时，读同一份 scheduleDraft 即可，不用改命令这头 */
+/** /schedule 打开的定时编辑:用定时模块的编辑器,按「何时 / 做什么」预填(cron 原样带入,中文钟点翻成表达式)。 */
 export function ScheduleDialog({ conv }: { conv: Conversation }) {
   const { scheduleDraft: d, openSchedule, addCron } = useApp()
   if (!d || d.conv !== conv.id) return null
   const hint = scheduleHint(d.when ?? '')
-  const init = { text: d.what ?? '', ...(hint.time ? { time: hint.time } : {}), ...(hint.repeat ? { repeat: hint.repeat } : {}) }
+  const [hh, mm] = (hint.time ?? '09:00').split(':').map(Number) as [number, number]
+  const dow = hint.repeat === '工作日' ? '1-5' : hint.repeat === '每周一' ? '1' : '*'
+  const expr = hint.cron ?? (hint.time ? `${mm} ${hh} * * ${dow}` : undefined)
   const peer = conv.kind === 'dm' ? conv.members.find((m) => m !== 'me' && !people[m]?.human) : undefined
-  return (
-    <Dialog open onOpenChange={(o) => { if (!o) openSchedule(null) }}>
-      <DialogContent data-testid="schedule-dialog" className="max-w-md gap-2 rounded-2xl border-line bg-elev p-5">
-        <DialogTitle className="text-[15px] font-semibold">新建定时</DialogTitle>
-        <DialogDescription className="text-[12.5px] leading-relaxed text-fg-2">
-          从 /schedule 带过来：何时「{d.when}」，做什么「{d.what}」。{peer ? '确认后保存。' : '选一位助手，确认后保存。'}
-        </DialogDescription>
-        {d.when && !hint.time && <div data-testid="schedule-note" className="text-[12px] leading-relaxed text-warm">{hint.cron ? `现在的定时表单只能填固定钟点，「${hint.cron}」这种要等新的定时编辑器；先按下面的钟点建，或取消。` : `没认出「${d.when}」里的钟点，先按 09:00 填了，改一下再保存。`}</div>}
-        <CronForm init={init} conv={d.conv} {...(peer ? { owner: peer } : {})} onDone={(c) => { if (c) addCron(c as never, 'panel'); openSchedule(null) }} />
-      </DialogContent>
-    </Dialog>
-  )
+  return <CronEditor open seed={{ text: d.what ?? '', ...(expr ? { expr } : {}) }} conv={d.conv} {...(peer ? { owner: peer } : {})} onClose={() => openSchedule(null)} onSave={(c) => { addCron(c, 'panel'); openSchedule(null) }} />
 }

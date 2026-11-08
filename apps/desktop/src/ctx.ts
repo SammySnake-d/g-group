@@ -138,7 +138,8 @@ export interface Ctx {
   /** 手动新建一项（群资料·清单·新建）：标题、描述分开存，指了人就直接进行中 */
   addTask: (t: { text: string; desc?: string; who?: PersonId; conv: string }) => string
   updateCron: (id: string, patch: Partial<Cron>) => void
-  addCron: (c: Omit<Cron, 'id' | 'state' | 'next' | 'day'>, via: 'chat' | 'panel') => string
+  /** 新建定时；下次运行由 trigger 现算，runs 从空开始 */
+  addCron: (c: Omit<Cron, 'id' | 'runs'>, via: 'chat' | 'panel') => string
   removeCron: (id: string) => void
   runCronNow: (id: string) => void
   updatePlugin: (id: string, patch: Partial<Plugin>) => void

@@ -105,21 +105,21 @@ test("↑↓ 和 Enter 选中 schedule 后输入框变成 /schedule ,高亮当�
   await expect(page.getByTestId("slash-missing")).toHaveText("还差 做什么");
   // 必填没填时回车不执行
   await page.keyboard.press("Enter");
-  await expect(page.getByTestId("schedule-dialog")).toHaveCount(0);
+  await expect(page.getByTestId("cron-editor")).toHaveCount(0);
   await expect(input).toHaveValue("/schedule 每天9点 ");
   await page.keyboard.type("写日报");
   await expect(page.getByTestId("slash-missing")).toHaveCount(0);
   await expect(page.getByTestId("send")).toBeEnabled();
   await page.keyboard.press("Enter");
-  // 打开定时编辑,按参数预填
-  const dlg = page.getByTestId("schedule-dialog");
+  // 打开定时编辑器(定时模块的新编辑器),按参数预填:做什么 + 翻成 cron 表达式
+  const dlg = page.getByTestId("cron-editor");
   await expect(dlg).toBeVisible();
-  await expect(dlg.getByTestId("cron-form-text")).toHaveValue("写日报");
-  await expect(dlg.getByTestId("cron-form-time")).toHaveValue("09:00");
-  await expect(dlg.getByTestId("cron-form-repeat")).toHaveValue("每天");
+  await expect(dlg.getByTestId("cron-editor-text")).toHaveValue("写日报");
+  await expect(dlg.getByTestId("cron-editor-expr")).toHaveValue("0 9 * * *");
+  await expect(dlg.getByTestId("cron-editor-desc")).toContainText("每天 09:00");
   await expect(input).toHaveValue("");
-  await dlg.getByTestId("cron-form-who-claude").click();
-  await dlg.getByTestId("cron-form-save").click();
+  await dlg.getByTestId("cron-editor-who-claude").click();
+  await dlg.getByTestId("cron-editor-save").click();
   await expect(dlg).toHaveCount(0);
   await expect(page.getByText("你给 Claude Code 加了定时：每天 09:00「写日报」")).toBeVisible();
 });

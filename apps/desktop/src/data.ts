@@ -1,6 +1,8 @@
 /* ============ 原型数据：联系人、Compute、会话、待你处理 ============
    每段数据旁边标了它服务的用户故事（US）与验收条目（AC），走查脚本按这些编号核对。 */
 
+import type { CronTrigger } from '@g-group/ui-core'
+
 export type PersonId = string
 
 export interface Person {
@@ -607,25 +609,53 @@ export const presetOf: Record<PersonId, string> = {
   gemini: '回答控制在三句以内。',
 }
 
-export type CronState = 'ok' | 'error' | 'skipped'
-/** 定时 = 联系人自己的闹钟（#1286）。uses 只写它用到哪个插件取数 / 发送 */
-/** 定时 = 联系人的自主唤醒（#1286 #1858）：谁、归属会话、何时醒、醒来做什么、什么时候才开口。每次醒来是一次 Run */
-/** notices：这次醒来宿主给它装配的公告版本（D02 第 2 条、U86：定时唤醒先装配当前群公告，不用建定时那会儿的旧版） */
+/** 定时 = 联系人自己的闹钟（#1286 #1858，D28.2：归联系人，插件只提供数据源和输出渠道）：谁、归属会话、怎么叫醒、醒来做什么、什么时候才开口。
+ *  trigger 是四种叫醒方式之一（ui-core/cron.ts）：cron 表达式重复 / 只跑一次 / 每 N 条消息 / 插件来源报来某件事。时刻一律按本地时区算。
+ *  下次运行、是否出错都由 trigger、paused、runs 现算，不另存（改时间、暂停、删除立刻反映到各个视角）。 */
+/** 每次醒来一条记录。at 是 ISO 时刻；result：发了消息 / 看过但没打扰你 / 失败。
+ *  notices：这次醒来宿主给它装配的公告版本（D02 第 2 条、U86、C-US26：定时唤醒先装配当前群公告，不用建定时那会儿的旧版） */
 export interface CronRun { at: string; result: 'said' | 'silent' | 'error'; note: string; msg?: string; notices?: Record<string, number> }
-export interface Cron { id: string; owner: PersonId; conv: string; text: string; repeat: '每天' | '每周一' | '工作日' | '一次'; time: string; next: string; day: '今天' | '明天' | '本周'; uses?: string[]; state: CronState; last?: string; speak?: 'always' | 'only-if'; paused?: boolean; srcMsg?: string; runs?: CronRun[]
-  /** #2273：除了到点醒来，也可以“每 N 条消息醒一次”或“某件事发生才醒”。同一种东西，只是叫醒它的方式不同 */
-  when?: { k: 'every'; n: number; seen: number } | { k: 'cond'; cond: string; src: string } }
+export interface Cron {
+  id: string; owner: PersonId; conv: string
+  /** 醒来做什么（可以多行） */
+  text: string
+  trigger: CronTrigger
+  /** 什么时候开口：每次都发结果 / 有情况才说 */
+  speak: 'always' | 'only-if'
+  paused?: boolean
+  /** 用到哪个插件取数 / 发送（展示用） */
+  uses?: string[]
+  /** 在聊天里说的那句（路径 A 建的定时才有） */
+  srcMsg?: string
+  /** 新的在前 */
+  runs: CronRun[]
+}
+
+/* 演示数据的时刻都相对“打开应用这一刻”算，存成 ISO（测试里固定时钟，结果就确定） */
+const T0 = new Date()
+/** 最近第 k 次（0 = 最近一次）每天 hh:mm 的时刻，一定早于现在 */
+const lastAt = (hm: string, k = 0) => {
+  const [h, m] = hm.split(':').map(Number)
+  const d = new Date(T0.getFullYear(), T0.getMonth(), T0.getDate(), h, m)
+  if (d.getTime() > T0.getTime()) d.setDate(d.getDate() - 1)
+  d.setDate(d.getDate() - k)
+  return d.toISOString()
+}
+/** 现在往前 mins 分钟 */
+const minsAgo = (mins: number) => new Date(T0.getTime() - mins * 60_000).toISOString()
+
 export const crons0: Cron[] = [
-  { id: 'cr1', owner: 'argon', conv: 'g-design', text: '总结飞书「产品讨论群」前一天的讨论', repeat: '每天', time: '08:00', next: '明天 08:00', day: '明天', uses: ['取：飞书', '发：本群'], state: 'ok', last: '今天 08:00 已发', speak: 'always', srcMsg: 'y8', runs: [{ at: '今天 08:00', result: 'said', note: '发了总结：12 条讨论，3 个结论', msg: 'y10' }, { at: '昨天 08:00', result: 'said', note: '发了总结：7 条讨论' }, { at: '前天 08:00', result: 'error', note: '飞书授权过期，你重新授权后补发了' }] },
-  { id: 'cr1b', owner: 'grok', conv: 'g-design', text: '汇总昨天新出的设计类文章', repeat: '每天', time: '08:00', next: '明天 08:00', day: '明天', uses: ['取：网页'], state: 'ok', last: '今天 08:00 已发' },
-  { id: 'cr1c', owner: 'claude', conv: 'g', text: '看一眼夜里的报错日志，有 P0 才叫你', repeat: '每天', time: '08:00', next: '明天 08:00', day: '明天', state: 'ok', last: '今天 08:00 无报错，没打扰你', speak: 'only-if', runs: [{ at: '今天 08:00', result: 'silent', note: '0 条报错', notices: { n1: 3, n2: 1, n3: 2 } }] },
-  { id: 'cr2', owner: 'codex', conv: 'g', text: '巡检首页首屏耗时，超过 1.5 秒就报', repeat: '每天', time: '09:30', next: '明天 09:30', day: '明天', state: 'ok', last: '今天 09:30 正常（0.9 秒），没打扰你', speak: 'only-if', runs: [{ at: '今天 09:30', result: 'silent', note: '0.9 秒，正常，没发消息', notices: { n1: 3, n2: 1, n3: 2 } }, { at: '昨天 09:30', result: 'silent', note: '1.0 秒，正常，没发消息', notices: { n1: 2, n2: 1, n3: 2 } }, { at: '前天 09:30', result: 'said', note: '3.1 秒，超了，在群里 @你', msg: 'g4', notices: { n1: 2, n2: 1, n3: 2 } }] },
-  { id: 'cr3', owner: 'grok', conv: 'g-design', text: '抓 GrokBot 官方博客新文章', repeat: '每天', time: '12:00', next: '今天 12:00', day: '今天', uses: ['取：网页'], state: 'error', last: '今天 12:00 失败：网页打不开', speak: 'only-if', runs: [{ at: '今天 12:00', result: 'error', note: '网页打不开（连接超时）' }, { at: '昨天 12:00', result: 'silent', note: '没有新文章' }] },
-  { id: 'cr4', owner: 'astra', conv: 'g', text: '复核本周所有已合入的改动', repeat: '每周一', time: '10:00', next: '下周一 10:00', day: '本周', state: 'ok' },
-  { id: 'cr5', owner: 'claude', conv: 'g', text: '把待验收的事汇总给你', repeat: '工作日', time: '18:00', next: '今天 18:00', day: '今天', uses: ['发：本群 @你'], state: 'ok' },
-  { id: 'cr7', owner: 'claude', conv: 'g', text: '依赖里出现严重级 CVE 就 @你，给出受影响的包和升级版本', repeat: '一次', time: '—', next: '有新公告时', day: '本周', uses: ['取：CVE 订阅'], state: 'ok', speak: 'only-if', when: { k: 'cond', cond: '出现严重级（CVSS ≥ 9）且命中本项目依赖的 CVE', src: 'CVE 订阅' }, last: '今天 07:40 看了 3 条新公告，都不命中，没打扰你', runs: [{ at: '今天 07:40', result: 'silent', note: '3 条新公告，都不命中本项目依赖' }, { at: '昨天 16:05', result: 'said', note: '命中 lodash 4.17.20 → 升到 4.17.21', msg: 'g2' }] },
-  { id: 'cr8', owner: 'argon', conv: 'g', text: '把这段讨论的动向写成一段摘要，挂到时间线上', repeat: '一次', time: '—', next: '再有 12 条', day: '本周', state: 'ok', when: { k: 'every', n: 30, seen: 18 }, uses: ['发：时间线'], last: '今天 01:10 写了第 4 段摘要', runs: [{ at: '今天 01:10', result: 'said', note: '第 4 段：飞书接入方案收敛到「勾选引用」' }] },
-  { id: 'cr6', owner: 'argon', conv: 'g', text: '更新需求文档的覆盖表', repeat: '每天', time: '22:00', next: '今天 22:00', day: '今天', state: 'skipped', last: '昨天 22:00 跳过：没有新改动' },
+  { id: 'cr1', owner: 'argon', conv: 'g-design', text: '总结飞书「产品讨论群」前一天的讨论', trigger: { kind: 'cron', expr: '0 8 * * *' }, uses: ['取：飞书', '发：本群'], speak: 'always', srcMsg: 'y8', runs: [{ at: lastAt('08:00'), result: 'said', note: '发了总结：12 条讨论，3 个结论', msg: 'y10' }, { at: lastAt('08:00', 1), result: 'said', note: '发了总结：7 条讨论' }, { at: lastAt('08:00', 2), result: 'error', note: '飞书授权过期，你重新授权后补发了' }] },
+  { id: 'cr1b', owner: 'grok', conv: 'g-design', text: '汇总昨天新出的设计类文章', trigger: { kind: 'cron', expr: '0 8 * * *' }, uses: ['取：网页'], speak: 'always', runs: [{ at: lastAt('08:00'), result: 'said', note: '汇总了 4 篇' }] },
+  { id: 'cr1c', owner: 'claude', conv: 'g', text: '看一眼夜里的报错日志，有 P0 才叫你', trigger: { kind: 'cron', expr: '0 8 * * *' }, speak: 'only-if', runs: [{ at: lastAt('08:00'), result: 'silent', note: '0 条报错', notices: { n1: 3, n2: 1, n3: 2 } }] },
+  { id: 'cr2', owner: 'codex', conv: 'g', text: '巡检首页首屏耗时，超过 1.5 秒就报', trigger: { kind: 'cron', expr: '30 9 * * *' }, speak: 'only-if', runs: [{ at: lastAt('09:30'), result: 'silent', note: '0.9 秒，正常，没发消息', notices: { n1: 3, n2: 1, n3: 2 } }, { at: lastAt('09:30', 1), result: 'silent', note: '1.0 秒，正常，没发消息', notices: { n1: 2, n2: 1, n3: 2 } }, { at: lastAt('09:30', 2), result: 'said', note: '3.1 秒，超了，在群里 @你', msg: 'g4', notices: { n1: 2, n2: 1, n3: 2 } }] },
+  { id: 'cr3', owner: 'grok', conv: 'g-design', text: '抓 GrokBot 官方博客新文章', trigger: { kind: 'cron', expr: '0 12 * * *' }, uses: ['取：网页'], speak: 'only-if', runs: [{ at: lastAt('12:00'), result: 'error', note: '网页打不开（连接超时）' }, { at: lastAt('12:00', 1), result: 'silent', note: '没有新文章' }] },
+  { id: 'cr4', owner: 'astra', conv: 'g', text: '复核本周所有已合入的改动', trigger: { kind: 'cron', expr: '0 10 * * 1' }, speak: 'always', runs: [] },
+  { id: 'cr5', owner: 'claude', conv: 'g', text: '把待验收的事汇总给你', trigger: { kind: 'cron', expr: '0 18 * * 1-5' }, uses: ['发：本群 @你'], speak: 'always', runs: [] },
+  { id: 'cr9', owner: 'astra', conv: 'g', text: '工作时间里每半小时看一眼 CI，有红灯就 @ 对应的人', trigger: { kind: 'cron', expr: '*/30 9-18 * * 1-5' }, speak: 'only-if', runs: [] },
+  { id: 'cr7', owner: 'claude', conv: 'g', text: '依赖里出现严重级 CVE 就 @你，给出受影响的包和升级版本', trigger: { kind: 'event', source: 'p-cve', cond: '出现严重级（CVSS ≥ 9）且命中本项目依赖的 CVE' }, uses: ['取：CVE 订阅'], speak: 'only-if', runs: [{ at: minsAgo(50), result: 'silent', note: '3 条新公告，都不命中本项目依赖' }, { at: lastAt('16:05', 1), result: 'said', note: '命中 lodash 4.17.20 → 升到 4.17.21', msg: 'g2' }] },
+  { id: 'cr8', owner: 'argon', conv: 'g', text: '把这段讨论的动向写成一段摘要，挂到时间线上', trigger: { kind: 'messages', n: 30, seen: 18 }, uses: ['发：时间线'], speak: 'always', runs: [{ at: minsAgo(70), result: 'said', note: '第 4 段：飞书接入方案收敛到「勾选引用」' }] },
+  { id: 'cr6', owner: 'argon', conv: 'g', text: '更新需求文档的覆盖表', trigger: { kind: 'cron', expr: '0 22 * * *' }, speak: 'only-if', runs: [{ at: lastAt('22:00'), result: 'silent', note: '没有新改动，跳过了' }] },
 ]
 
 /** 群清单：属于群，不属于任何助手（#1246）。状态是业务状态，执行尝试（Compute）挂在下面（Astra） */
