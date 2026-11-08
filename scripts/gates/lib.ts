@@ -57,8 +57,13 @@ export interface Gate {
 export const SPEC_FILE = "docs/spec/验收文档-v0.1.md";
 export const RECEIPT_DIR = "receipts";
 /** 只有这些路径的改动不需要收据与审查;其余一切(含 workflow、hook、脚本、依赖清单)都受管 */
-export const UNGOVERNED = [/^docs\//, /^reviews\//, /^receipts\//, /^README\.md$/];
-export const isGoverned = (f: string) => !UNGOVERNED.some((re) => re.test(f));
+const UNGOVERNED_SRC = ["^docs\\/", "^reviews\\/", "^receipts\\/", "^README\\.md$"];
+// R10-03:判定只用模块内部的私有正则;导出的是另一组正则,数组与每个元素都冻结,外部增删、改写元素都不影响判定
+const UNGOVERNED_OWN: readonly RegExp[] = UNGOVERNED_SRC.map((s) => new RegExp(s));
+/** 冻结数组与其中每个元素 */
+const frozenList = <T extends object>(xs: T[]): readonly T[] => Object.freeze(xs.map((x) => Object.freeze(x)));
+export const UNGOVERNED: readonly RegExp[] = frozenList(UNGOVERNED_SRC.map((s) => new RegExp(s)));
+export const isGoverned = (f: string) => !UNGOVERNED_OWN.some((re) => re.test(f));
 export const isTest = (f: string) => /^packages\/.+\.test\.ts$/.test(f);
 export const isSrc = (f: string) => /^packages\/.+\.ts$/.test(f) && !isTest(f) && !f.includes("/fixtures/");
 export const existing = (ctx: { files: string[] }, ps: string[]) => ps.filter((x) => ctx.files.includes(x));
@@ -91,7 +96,7 @@ export function gitEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
   return { ...env, GIT_CONFIG_NOSYSTEM: "1", HOME: isolatedHome, GATE_ISOLATED_HOME: isolatedHome, ...extra };
 }
 /** 在临时仓库里跑的 git 一律加上这些 -c:不跑任何 hook */
-export const GIT_SAFE_ARGS = ["-c", "core.hooksPath=/dev/null"];
+export const GIT_SAFE_ARGS: readonly string[] = Object.freeze(["-c", "core.hooksPath=/dev/null"]);
 
 export type SandboxMode = "docker" | "seatbelt";
 export function sandboxMode(): SandboxMode {
@@ -115,13 +120,26 @@ const reEsc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const SECRET_IN_HOME = [".mirasim/sessions", ".mirasim/chat", ".ssh", ".config/gh", ".claude", ".codex", ".gnupg", ".aws", ".npmrc", ".git-credentials", ".netrc"];
 // R9-03:动态链接的 node(如 Homebrew)按 @loader_path 与 @loader_path/../lib 加载自带的 .dylib;运行时放在 HOME 点目录时
 // 这些库会被点文件默认拒读挡住,进程起不来。只逐个放行运行时 bin/ 与 ../lib/ 里的 .dylib 文件(literal,realpath),不放行目录。
+// R10-05:目录项是符号链接时,放行它指向的实际文件(realpath),但只认运行时目录之内、名字以 .dylib 结尾的普通文件;
+// 指向运行时之外、目录、非 .dylib 或悬空的链接一律不放行。末尾的固定拒读清单照旧排在放行之后。
 export function runtimeLibs(exe: string = process.execPath): string[] {
   const bin = path.dirname(realOr(exe));
+  const top = path.dirname(bin);
   const out: string[] = [];
-  for (const d of [bin, path.join(path.dirname(bin), "lib")]) {
+  for (const d of [bin, path.join(top, "lib")]) {
     let es: fs.Dirent[] = [];
     try { es = fs.readdirSync(d, { withFileTypes: true }); } catch { continue; }
-    for (const e of es) if (e.isFile() && e.name.endsWith(".dylib")) out.push(realOr(path.join(d, e.name)));
+    for (const e of es) {
+      if (!e.name.endsWith(".dylib")) continue;
+      if (e.isFile()) { out.push(realOr(path.join(d, e.name))); continue; }
+      if (!e.isSymbolicLink()) continue;
+      let t: string;
+      try { t = fs.realpathSync(path.join(d, e.name)); } catch { continue; }
+      if (!t.endsWith(".dylib")) continue;
+      if (!t.startsWith(top + path.sep)) continue;
+      try { if (!fs.statSync(t).isFile()) continue; } catch { continue; }
+      out.push(t);
+    }
   }
   return [...new Set(out)];
 }
@@ -152,12 +170,46 @@ export function sandboxPlan(args: string[], work: string, mounts: string[] = [],
   const profilePath = path.join(w, ".gate-sandbox.sb");
   return { cmd: "/usr/bin/sandbox-exec", argv: ["-f", profilePath, exe, ...args], opts: { cwd: w, encoding: "utf8", timeout: 900_000, env: { PATH: `${path.dirname(exe)}:/usr/bin:/bin`, HOME: w, TMPDIR: w } }, profile: seatbeltProfile(w, mounts, exe), profilePath };
 }
-/** R10-04:容器命令逐项核对,返回问题列表(空 = 恰为预期)。work 与 mounts 是真实路径。 */
-export function containerPlanProblems(_argv: readonly string[], _work: string, _mounts: readonly string[]): string[] {
-  return [];
+/**
+ * R10-04:容器命令逐项核对,返回问题列表(空 = 恰为预期)。work 与 mounts 是真实路径。
+ * 只认 run 之后的 --rm、一处 --network none、--user、恰为 HOME/TMPDIR 的 -e、恰为副本与依赖各一次的 -v <p>:<p>、-w <副本>,
+ * 然后是 GATE_SANDBOX_IMAGE 与 node。其它任何参数(--mount、--volume、附着写法、--tmpfs、--volumes-from、--privileged…)一律判失败。
+ */
+export function containerPlanProblems(argv: readonly string[], work: string, mounts: readonly string[]): string[] {
+  const out: string[] = [];
+  if (argv[0] !== "run") return [`容器命令应以 run 开头,实际 ${argv[0]}`];
+  const want = [...new Set([work, ...mounts])].map((m) => `${m}:${m}`);
+  const vols: string[] = [], envs: string[] = [];
+  let net = 0, wd = 0, i = 1;
+  for (; i < argv.length && argv[i]!.startsWith("-"); i++) {
+    const a = argv[i]!, v = argv[i + 1];
+    if (a === "--rm") continue;
+    if (a === "--network") { net++; if (v !== "none") out.push(`联网参数应为 none,实际 ${v}`); i++; continue; }
+    if (a === "--user") { i++; continue; }
+    if (a === "-e") { envs.push(String(v)); i++; continue; }
+    if (a === "-v") {
+      if (v === undefined || !want.includes(v)) out.push(`预期之外的挂载 -v ${v}`);
+      else if (vols.includes(v)) out.push(`重复挂载 ${v}`);
+      vols.push(String(v)); i++; continue;
+    }
+    if (a === "-w") { wd++; if (v !== work) out.push(`工作目录应为 ${work},实际 ${v}`); i++; continue; }
+    out.push(`预期之外的容器参数 ${a}`);
+  }
+  if (net !== 1) out.push(`联网参数应恰有一处 --network none,实际 ${net} 处`);
+  if (wd !== 1) out.push(`工作目录参数应恰有一处,实际 ${wd} 处`);
+  for (const m of want) if (!vols.includes(m)) out.push(`缺少挂载 ${m}`);
+  const env = [`HOME=${work}`, `TMPDIR=${work}`];
+  if (envs.length !== env.length || env.some((e) => !envs.includes(e))) out.push(`环境变量应恰为 ${env.join(" ")},实际 ${envs.join(" ")}`);
+  if (argv[i] !== process.env.GATE_SANDBOX_IMAGE) out.push(`镜像应为 ${process.env.GATE_SANDBOX_IMAGE},实际 ${argv[i]}`);
+  if (argv[i + 1] !== "node") out.push(`镜像后应直接执行 node,实际 ${argv[i + 1]}`);
+  return out;
 }
 export function sandboxed(args: string[], work: string, mounts: string[] = []) {
   const plan = sandboxPlan(args, work, mounts);
+  if (plan.cmd === "docker") {
+    const bad = containerPlanProblems(plan.argv, fs.realpathSync(work), mounts.map((m) => fs.realpathSync(m)));
+    if (bad.length) throw new Error(`容器执行计划不符合预期,拒绝执行:${bad.join(";")}`);
+  }
   if (plan.profile !== undefined && plan.profilePath) fs.writeFileSync(plan.profilePath, plan.profile);
   return spawnSync(plan.cmd, plan.argv, plan.opts);
 }

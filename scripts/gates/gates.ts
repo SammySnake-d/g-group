@@ -24,7 +24,9 @@ export const POLICY: Readonly<Policy> = deepFreeze(JSON.parse(fs.readFileSync(pa
 const needsReceipt = (ctx: Ctx) => ctx.changed.some(isGoverned);
 const STATUSES = new Set(["通过", "失败", "未测", "不适用"]);
 const key = (t: NamedTest) => `${t.file} › ${t.name}`;
-export const WAIVER_RE = /^g-group#(\d+)$/;
+// R10-03:判定只用私有正则;导出的是冻结的另一份,外部改写它(加 test/exec、换原型)不影响判定
+const WAIVER_OWN = /^g-group#(\d+)$/;
+export const WAIVER_RE: RegExp = Object.freeze(new RegExp(WAIVER_OWN));
 
 // ---------------------------------------------------------------- R-06 R-08 R-15
 export const trace: Gate = {
@@ -65,7 +67,7 @@ export const review: Gate = {
     const va = vendorOf(author.model), vr = vendorOf(rv.model);
     if (va === "unknown") out.push(p(g, `作者模型厂商认不出:${author.model}`));
     if (vr === "unknown") out.push(p(g, `审查模型厂商认不出:${rv.model}`));
-    if (waiver && !WAIVER_RE.test(waiver.reason ?? "")) out.push(p(g, `豁免出处格式应为 g-group#<消息号>,实际 "${waiver.reason}"`));
+    if (waiver && !WAIVER_OWN.test(waiver.reason ?? "")) out.push(p(g, `豁免出处格式应为 g-group#<消息号>,实际 "${waiver.reason}"`));
     if (va !== "unknown" && va === vr && !waiver) out.push(p(g, `作者与审查同为 ${va},且没有用户豁免`));
     const h = ctx.contentHash();
     if (rv.reviewed_hash !== h) out.push(p(g, `审查对应的内容 ${String(rv.reviewed_hash).slice(0, 12)} ≠ 当前 ${h.slice(0, 12)},审后改过受管内容,需要重审`));
@@ -169,8 +171,9 @@ export function isHashCall(input: unknown): boolean {
 }
 
 /**
- * RR-15:路径所在目录是不是同一仓库的另一个 clone。按"根提交有交集或 remote 指向同一地址"判断;
- * 不在任何 git 仓库里 → 不是;git 判不了(读不出根提交、命令出错) → 按是处理(保守)。
+ * RR-15 / R10-01:路径所在目录是不是同一仓库的另一个 clone。按"根提交有交集或 remote 指向同一地址"判断,不看目录名。
+ * 不在任何 git 仓库里 → 不是;git 判不了(读不出根提交、还没有提交、命令出错) → 确认不了,不是。
+ * 只看现存的目录;已不存在的目录由 attestedDirs 按宿主记录里的证据判定。
  */
 type RepoId = { roots: Set<string>; remotes: Set<string> };
 const normRemote = (u: string) => u.trim().replace(/\.git$/, "").replace(/\/+$/, "").replace(/^git@([^:]+):/, "$1/").replace(/^[a-z+]+:\/\/(?:[^@/]+@)?/i, "").toLowerCase();
@@ -189,19 +192,75 @@ export function sameRepoClone(rootReal: string): (abs: string) => boolean {
   const own = repoIdAt(rootReal);
   const memo = new Map<string, boolean>();
   return (abs) => {
+    if (own === null || own === "unknown") return false;
     let d = abs;
     while (!fs.existsSync(d)) { const up = path.dirname(d); if (up === d) return false; d = up; }
-    try { if (!fs.statSync(d).isDirectory()) d = path.dirname(d); } catch { return true; }
+    try { if (!fs.statSync(d).isDirectory()) d = path.dirname(d); } catch { return false; }
     const hit = memo.get(d);
     if (hit !== undefined) return hit;
     const id = repoIdAt(d);
-    let same: boolean;
-    if (id === null) same = false;
-    else if (id === "unknown" || own === null || own === "unknown") same = true;
-    else same = [...id.roots].some((r) => own.roots.has(r)) || [...id.remotes].some((r) => own.remotes.has(r) || r === rootReal.toLowerCase());
+    const known = id !== null && id !== "unknown";
+    const same = known && ([...id.roots].some((r) => own.roots.has(r)) || [...id.remotes].some((r) => own.remotes.has(r) || r === rootReal.toLowerCase()));
     memo.set(d, same);
     return same;
   };
+}
+
+/** 一条 shell 命令里每次 git 调用的执行目录:按 cd 链与 git -C 解析;git clone 不在目录里执行,跳过;判不了的记 undefined */
+export function gitDirs(command: string, cwd: string | undefined): (string | undefined)[] {
+  const res = (base: string | undefined, p: string): string | undefined => {
+    const q = p.replace(/^["']|["']$/g, "");
+    if (q.startsWith("~/")) return path.join(realHome(), q.slice(2));
+    if (path.isAbsolute(q)) return path.normalize(q);
+    return base ? path.resolve(base, q) : undefined;
+  };
+  let dir = cwd;
+  const out: (string | undefined)[] = [];
+  for (const seg of command.split(/&&|\|\||[;|\n]/)) {
+    const s = seg.trim();
+    const cd = /^cd\s+("[^"]+"|'[^']+'|\S+)$/.exec(s);
+    if (cd) { dir = res(dir, cd[1]!); continue; }
+    if (!/^(?:\S*\/)?git(?:\s|$)/.test(s)) continue;
+    const t = s.split(/\s+/);
+    let at = dir, i = 1;
+    while (i < t.length && t[i]!.startsWith("-")) {
+      if (t[i] === "-C") { at = t[i + 1] === undefined ? undefined : res(at, t[i + 1]!); i += 2; }
+      else if (t[i] === "-c") i += 2;
+      else i++;
+    }
+    if (t[i] === "clone") continue;
+    out.push(at);
+  }
+  return out;
+}
+/** 本仓库 HEAD 历史上的全部提交号 */
+function headCommits(rootReal: string): string[] {
+  const r = spawnSync("git", [...GIT_SAFE_ARGS, "rev-list", "HEAD"], { cwd: rootReal, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
+  return r.status === 0 ? r.stdout.split("\n").filter(Boolean) : [];
+}
+/**
+ * R10-02:可持久核验的仓库身份。临时克隆清理后,目录不在了,只认宿主会话记录里的证据:
+ * 同一条工具调用里所有 git 调用都在同一个目录执行,且宿主记下的输出里有本仓库 HEAD 历史上的提交号(7–40 位,唯一对应一个提交)。
+ * 这样的目录现在已不存在时才按记录认作本仓库;现在还在的目录以现状为准(sameRepoClone),记录与现状矛盾时不认。
+ */
+export function attestedDirs(turns: Turn[], workdir: string | undefined, rootReal: string): string[] {
+  const commits = headCommits(rootReal);
+  const ours = (tok: string) => commits.filter((c) => c.startsWith(tok)).length === 1;
+  const out = new Set<string>();
+  for (const t of turns) for (const c of t.toolCalls ?? []) {
+    const inp = parseInput(c.input);
+    const cmd = [inp.command, inp.cmd, inp.raw].find((v) => typeof v === "string" || Array.isArray(v));
+    const text = Array.isArray(cmd) ? (cmd.length >= 3 && /^-\w*c$/.test(String(cmd[cmd.length - 2])) ? String(cmd[cmd.length - 1]) : cmd.map(String).join(" ")) : cmd;
+    if (typeof text !== "string") continue;
+    const cwd = [inp.cwd, inp.workdir, inp.working_directory].find((v): v is string => typeof v === "string") ?? workdir;
+    const dirs = gitDirs(text, cwd);
+    const d = dirs[0];
+    if (d === undefined || dirs.some((x) => x !== d)) continue;
+    if (!(strings(c.result).join("\n").match(/\b[0-9a-f]{7,40}\b/g) ?? []).some(ours)) continue;
+    if (fs.existsSync(d)) continue;
+    out.add(d);
+  }
+  return [...out];
 }
 
 export interface RoomEvent { seq: number; by: string; name?: string; kind: string; text?: string; target?: number; reply?: number; via?: unknown; forward?: unknown; quotes?: unknown }
@@ -243,14 +302,16 @@ export const provenance: Gate = {
     const base = sessionsRoot();
     if (author.session === rv.session) out.push(p(g, "作者和审查用的是同一个会话"));
 
-    const repoName = process.env.GATE_REPO_NAME ?? "g-group";
+    // R10-01/R10-02:不看目录名。本仓库目录、现存的同一仓库克隆(按仓库身份),或宿主记录证明过、现已清理的克隆目录
     const rootReal = fs.realpathSync(ctx.root);
     const clone = sameRepoClone(rootReal);
-    const inRepo = (abs: string) => abs.split(path.sep).includes(repoName) || abs === rootReal || abs.startsWith(rootReal + path.sep) || clone(abs);
     const at = loadSession(base, author.session);
     const producers = new Set<Vendor>();
     if (!at.ok) out.push(p(g, `作者会话不可信:${at.why}`));
     else {
+      const proven = attestedDirs(at.turns, at.workdir, rootReal);
+      const under = (abs: string, d: string) => abs === d || abs.startsWith(d + path.sep);
+      const inRepo = (abs: string) => under(abs, rootReal) || proven.some((d) => under(abs, d)) || clone(abs);
       for (const t of at.turns) if (turnTouchesRepo(t, at.workdir, inRepo)) producers.add(vendorOf(t.model));
       if (producers.size === 0) out.push(p(g, `作者会话 ${author.session} 里找不到对本仓库的任何操作`));
       if (producers.has("unknown")) out.push(p(g, "作者会话里有认不出厂商的产出轮次"));
@@ -287,7 +348,7 @@ export const provenance: Gate = {
     const sameVendor = reviewer !== "unknown" && producers.has(reviewer);
 
     if (waiver) {
-      const m = WAIVER_RE.exec(waiver.reason ?? "");
+      const m = WAIVER_OWN.exec(waiver.reason ?? "");
       const why = m ? waiverProblem(readRoomLog(roomsRoot(), "g-group"), Number(m[1]), waiver.by, ctx.pr, ctx.contentHash().slice(0, 12)) : "格式不对";
       if (why) out.push(p(g, `豁免出处 ${waiver.reason} ${why}`));
       else if (sameVendor) console.log(`[${g}] Waived(by_user ${waiver.by}):同厂商 ${reviewer},依据 ${waiver.reason}`);
