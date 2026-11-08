@@ -1,0 +1,19 @@
+apps/desktop/verify/structure-baseline.json
+  s_042e901c6ad028::t_3d71e99a05a13f 8,20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bcbda8e33f69ac652c165352f18cfbf0e0e0cbac",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
