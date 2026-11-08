@@ -10,6 +10,8 @@ import { appendEvent, loadLog, recordAction } from "@g-group/adapter-sqlite";
 import type { ComputeAdapter, ComputeEvent } from "@g-group/adapter-cc-compute";
 import type {
   CommitmentView,
+  DraftBody,
+  DraftView,
   ComputeProgress,
   ContactView,
   MessageView,
@@ -741,6 +743,14 @@ export class Host {
     this.bus.emit({ type: "message.updated", message: v });
     return v;
   }
+  // ======================= 输入框草稿(红提交空壳) =======================
+  draft(roomId: string): DraftView {
+    return { roomId, text: "", replyToSeq: null, replyAuthorId: null, quotedSeqs: [], mentions: [], draftVer: 0, updatedAt: null };
+  }
+  saveDraft(roomId: string, _expectedVer: number, _body: DraftBody): DraftView {
+    return this.draft(roomId);
+  }
+
   /** 附件:按内容 sha256 复制进数据目录,同一文件只存一份。 */
   addAttachment(file: string): { ref: string; name: string; mime: string; bytes: number } {
     if (!existsSync(file) || !statSync(file).isFile()) throw new HostError("invalid_params", `${file} 不是文件`);
