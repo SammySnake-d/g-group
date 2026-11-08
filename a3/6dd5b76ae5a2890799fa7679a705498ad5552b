@@ -1,0 +1,29 @@
+scripts/gates/lib.ts
+  s_28bebc745289eb::t_2c08597560b074 116-120,137-138,146
+scripts/gates/selftest.ts
+  s_b099f12605dd4d::t_3f4213e60aad4b 260-261,343-478,551-554
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a36dd5b76ae5a2890799fa7679a705498ad5552b",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_b099f12605dd4d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "60a67dd9-ce77-40d1-a314-0fe4d04f4589",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
