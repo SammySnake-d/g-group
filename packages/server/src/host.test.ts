@@ -167,7 +167,7 @@ test("模型提出的越界动作被拒收:来源不是本轮消息的派活、�
   dmId = host.openDm(c.id).id;
   host.send({ roomId: dmId, clientActionId: "x1", text: "随便聊聊" });
   await settle(host);
-  assert.deepEqual(reports, [`来源 ${dmId} #99 不是本轮新消息`, "承诺原文必须出自来源消息", "不是你的任务", "不在这个会话里"]);
+  assert.deepEqual(reports, [`来源 ${dmId} #99 不是本轮新消息`, "承诺原文必须出自来源消息或本轮自己的回复", "不是你的任务", "不在这个会话里"]);
   assert.equal(host.listTasks({}).length, 0);
   assert.equal(host.listCommitments({}).length, 0);
   assert.deepEqual(texts(host, dmId), ["user:随便聊聊"]);
@@ -282,5 +282,35 @@ test("宿主每轮用内核五块重拼:块号 1–5,两轮之间第 1 块逐字
   assert.match(reqs[1]!.blocks[3]!.text, /第二句/);
   assert.doesNotMatch(reqs[1]!.blocks[3]!.text, /第一句/);
   assert.deepEqual(reqs.map((r) => r.blocks.filter((b) => b.cacheBreakpoint).map((b) => b.block)), [[1], [1]]);
+  await host.close();
+});
+
+test("联系人自己回复里说的「写好告诉你」也登记进账本,挂在那条回复上,任务号随同轮派活", async () => {
+  let dmId = "";
+  const mind = () => ({
+    async round(i: RoundInput) {
+      const m = i.fresh.find((f) => f.kind === "message");
+      if (m?.kind !== "message") return { actions: [], stateNote: null };
+      return {
+        actions: [
+          { kind: "dispatch" as const, roomId: dmId, sourceSeq: m.seq, title: "写报告", task: "写报告" },
+          { kind: "commit" as const, roomId: dmId, sourceSeq: m.seq, text: "写好告诉你", taskId: null },
+          { kind: "reply" as const, roomId: dmId, text: "好的,写好告诉你。", replyToSeq: m.seq },
+        ],
+        stateNote: null,
+      };
+    },
+  });
+  const compute = scriptedCompute({ script: () => [{ kind: "started", sessionId: "s", resumed: false }] });
+  const host = new Host({ file: file(), mind, compute: () => compute.adapter, maxDeferMs: 5 });
+  const c = host.createContact({ name: "小克" });
+  dmId = host.openDm(c.id).id;
+  host.send({ roomId: dmId, clientActionId: "1", text: "帮我写份报告" });
+  await settle(host, compute);
+  const [task] = host.listTasks({});
+  const ks = host.listCommitments({ contactId: c.id });
+  const reply = host.listMessages(dmId, {}).messages.find((m) => m.text === "好的,写好告诉你。")!;
+  assert.deepEqual(ks.map((k) => [k.text, k.sourceSeq, k.taskId, k.status]), [["写好告诉你", reply.seq, task!.id, "active"]]);
+  compute.close();
   await host.close();
 });

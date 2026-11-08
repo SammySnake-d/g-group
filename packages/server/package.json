@@ -6,6 +6,7 @@
   "bin": { "gg": "./src/cli.ts" },
   "dependencies": {
     "@g-group/adapter-cc-compute": "*",
+    "@g-group/adapter-pi-contact": "*",
     "@g-group/adapter-sqlite": "*",
     "@g-group/api-contract": "*",
     "@g-group/domain": "*",
