@@ -2,6 +2,7 @@
 // 另给 AC-03 发言者核对:群消息的发言者只能是用户或联系人,Compute 实例不能出现在发言者里。
 import type { ContactView, MessageView, RoomView } from "@g-group/api-contract";
 import { all } from "./db.ts";
+import { HELPER_ID } from "./helper.ts";
 import type { Host } from "./host.ts";
 
 export interface DriveRun {
@@ -62,7 +63,11 @@ export function senderAudit(host: Host, roomId: string): { ok: boolean; checked:
   const computeIds = new Set(all<{ compute_id: string }>(host.db, "SELECT compute_id FROM gg_compute").map((r) => r.compute_id));
   const msgs = host.listMessages(roomId, { limit: 500 }).messages;
   const offenders: SenderOffender[] = [];
+  const bySeq = new Map(msgs.map((m) => [m.seq, m]));
   for (const m of msgs) {
+    // U94/AC-52:用户在聊天里 @Helper 时,Helper 回复那条消息是允许的公开发言;其余 helper 消息仍按 AC-03 判不合格
+    const asked = m.sender.kind === "helper" && m.replyToSeq !== null ? bySeq.get(m.replyToSeq) : undefined;
+    if (asked && asked.sender.kind === "user" && asked.mentions.some((x) => x.id === HELPER_ID)) continue;
     if (m.sender.kind !== "user" && m.sender.kind !== "contact") offenders.push({ seq: m.seq, sender: m.sender, reason: "发言者不是用户或联系人" });
     else if (computeIds.has(m.sender.id)) offenders.push({ seq: m.seq, sender: m.sender, reason: "发言者是 Compute 实例" });
   }
