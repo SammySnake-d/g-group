@@ -18,9 +18,9 @@ import { previewCron } from "./schedules.ts";
 
 type Handler = (p: never) => unknown;
 export const BUILTIN_COMMANDS: readonly SlashCommand[] = Object.freeze([
-  { name: "task", description: "派一个任务给会话里的联系人", args: [{ name: "contact", description: "交给谁", kind: "contact", required: false }, { name: "what", description: "要做什么", kind: "text", required: true }], source: "builtin", pluginId: null, targetContactId: null },
-  { name: "stop", description: "停止一个进行中的任务", args: [{ name: "task", description: "任务", kind: "text", required: true }], source: "builtin", pluginId: null, targetContactId: null },
-  { name: "remind", description: "让联系人按 cron 定时做事", args: [{ name: "cron", description: "cron 表达式", kind: "cron", required: true }, { name: "what", description: "做什么", kind: "text", required: true }], source: "builtin", pluginId: null, targetContactId: null },
+  { name: "task", description: "把一件事交给会话里的联系人(群里要选联系人)", args: [{ name: "contact", description: "交给谁", kind: "contact", required: false }, { name: "what", description: "要做什么", kind: "text", required: true }], source: "builtin", pluginId: null, targetContactId: null },
+  { name: "remind", description: "让联系人按 cron 定时做事", args: [{ name: "cron", description: "cron 表达式,如 0 8 * * *", kind: "cron", required: true }, { name: "what", description: "到点做什么", kind: "text", required: true }, { name: "contact", description: "谁来做", kind: "contact", required: false }], source: "builtin", pluginId: null, targetContactId: null },
+  { name: "stop", description: "停止一个进行中的任务", args: [{ name: "task", description: "任务 id 或标题里的词", kind: "text", required: true }], source: "builtin", pluginId: null, targetContactId: null },
 ]);
 
 export interface Service {

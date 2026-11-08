@@ -44,7 +44,7 @@ import { CONTACT_SYSTEM, CONTACT_TOOLS, type LedgerLine, type RoundAssembler, ke
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { PluginStore } from "./plugins.ts";
-import { Scheduler } from "./schedules.ts";
+import { Scheduler, checkCron } from "./schedules.ts";
 
 export interface HostOptions {
   readonly file: string;
@@ -556,6 +556,9 @@ export class Host {
       if (!msgs.some((m) => m.seq === q)) throw new HostError("invalid_params", `引用的 #${q} 不在这个会话里`);
     }
     if (!input.text.trim() && !input.attachments?.length) throw new HostError("invalid_params", "消息不能为空");
+    // 内置 slash 命令(像 Telegram 那样在输入框唤醒能力):先校验,不合格整条不发
+    const cmd = this.prepareBuiltin(room, input);
+    if (cmd.mention && !(input.mentions ?? []).some((m) => m.id === cmd.mention)) input = { ...input, mentions: [...(input.mentions ?? []), { id: cmd.mention, source: "auto" }] };
     for (const ref of input.attachments ?? []) if (!one(this.db, "SELECT 1 FROM gg_attachments WHERE ref = ?", ref)) throw new HostError("invalid_params", `附件 ${ref} 不存在,请先 attachments.add`);
     const r = tx(this.db, () =>
       this.appendMessageTx(room.id, me, {
@@ -573,10 +576,57 @@ export class Host {
     if (!r.duplicate) {
       // 自己发的消息自己已读
       this.markRead(room.id, me, r.seq);
+      cmd.after?.();
       this.afterAppend(room.id, r.seq, me);
     }
     const m = this.projected(room.id).find((x) => x.seq === r.seq)!;
     return this.messageView(room.id, m);
+  }
+
+  /**
+   * 内置命令:/task 把活交给某位联系人(自动 @ 它);/remind 让联系人按 cron 定时做事(宿主直接建定时);/stop 停掉一个任务。
+   * 插件命令照常作为带 command 的消息送达联系人。目标联系人:args.contact,私聊里缺省为对方。
+   */
+  private prepareBuiltin(room: RoomRow, input: SendInput): { mention?: string; after?: () => void } {
+    const c = input.command;
+    if (!c || !["task", "remind", "stop"].includes(c.name)) return {};
+    const args = (c.args && typeof c.args === "object" && !Array.isArray(c.args) ? c.args : {}) as Record<string, unknown>;
+    const str = (k: string) => (typeof args[k] === "string" ? (args[k] as string).trim() : "");
+    const target = (): string => {
+      const id = str("contact") || room.dm_contact || "";
+      if (!id) throw new HostError("invalid_params", `/${c.name} 在群里要指定 contact`);
+      if (!this.isMember(room.id, { kind: "contact", id })) throw new HostError("invalid_params", "这位联系人不在这个会话里");
+      return id;
+    };
+    if (c.name === "task") {
+      if (!str("what")) throw new HostError("invalid_params", "/task 要写做什么(what)");
+      return { mention: target() };
+    }
+    if (c.name === "remind") {
+      const contactId = target();
+      const cron = str("cron");
+      const what = str("what");
+      if (!cron || !what) throw new HostError("invalid_params", "/remind 要 cron 和 what");
+      const tz = str("tz") || this.settings().timezone;
+      checkCron(cron, tz);
+      return { mention: contactId, after: () => this.scheduler.create({ contactId, roomId: room.id, title: what.slice(0, 40), cron, tz, prompt: what }) };
+    }
+    const ref = str("task");
+    const live = this.listTasks({ roomId: room.id }).filter((t) => !TERMINAL.has(t.state) && t.state !== "T9_StopRequested");
+    const t = live.find((x) => x.id === ref) ?? (ref ? live.filter((x) => x.title.includes(ref)) : []).at(0);
+    if (!t) throw new HostError("not_found", ref ? `这个会话里没有进行中的任务「${ref}」` : "/stop 要指定任务");
+    return { after: () => this.stopTask(t.id, this.userId) };
+  }
+  /** 停止任务(不另发消息):状态机 Cancel → 停 Compute,任务卡收口。 */
+  stopTask(taskId: string, by: string) {
+    const effects: HostEffect[] = [];
+    tx(this.db, () => {
+      const { effects: eff } = this.stepTaskTx(taskId, { kind: "Cancel", by });
+      for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId, computeId: e.computeId });
+      run(this.db, "UPDATE gg_cards SET state = 'done' WHERE task_id = ? AND kind = 'task-status' AND state = 'open'", taskId);
+    });
+    this.emitTask(taskId);
+    void this.runEffects(effects);
   }
 
   receipts(roomId: string, seq: number): ReceiptView {
@@ -990,6 +1040,8 @@ export class Host {
       const dispatchedBySource = new Map<string, string>();
       const proposals = new Map<string, { id: string; taskId: string; text: string }[]>();
       const referenced = new Set<string>();
+      const ownCommits: { roomId: string; text: string; taskId: string | null; sourceKey: string }[] = [];
+      const replies: { roomId: string; seq: number; text: string }[] = [];
       let i = 0;
       for (const a of out.actions) {
         const actionId = `${roundId}:a${i++}`;
@@ -1000,6 +1052,7 @@ export class Host {
             if (!a.text.trim()) { reject("空消息"); break; }
             const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [] });
             appended.push({ roomId: a.roomId, seq: r.seq });
+            replies.push({ roomId: a.roomId, seq: r.seq, text: a.text });
             if (a.replyToSeq !== null) referenced.add(`${a.roomId}#${a.replyToSeq}`);
             break;
           }
@@ -1031,8 +1084,15 @@ export class Host {
           case "commit": {
             const src = freshMsgs.find((m) => m.roomId === a.roomId && m.seq === a.sourceSeq);
             if (!src) { reject(`来源 ${a.roomId} #${a.sourceSeq} 不是本轮新消息`); break; }
-            if (!src.text.includes(a.text)) { reject("承诺原文必须出自来源消息"); break; }
             const key = `${a.roomId}#${a.sourceSeq}`;
+            if (!src.text.includes(a.text)) {
+              // 联系人自己回复里说的「我会做 X」也要进账本(AC-40 ②):原文出自本轮同会话的 reply,就挂到那条回复上
+              const own = out.actions.some((x) => x.kind === "reply" && x.roomId === a.roomId && x.text.includes(a.text));
+              if (!own) { reject("承诺原文必须出自来源消息或本轮自己的回复"); break; }
+              ownCommits.push({ roomId: a.roomId, text: a.text, taskId: a.taskId ?? null, sourceKey: key });
+              referenced.add(key);
+              break;
+            }
             const taskId = a.taskId ?? dispatchedBySource.get(key) ?? `standing-${this.newId("k")}`;
             proposals.set(key, [...(proposals.get(key) ?? []), { id: this.newId("k"), taskId, text: a.text }]);
             referenced.add(key);
@@ -1094,6 +1154,20 @@ export class Host {
         const led = ledgerNow.get(m.roomId);
         if (led?.messages.some((x) => x.seq === m.seq && x.handled)) continue;
         push(m.roomId, { type: "process", actionId: `${roundId}:proc:${key}`, seq: m.seq, accepted: m.sender.kind === "user" && referenced.has(key), commitments: m.sender.kind === "user" && referenced.has(key) ? (proposals.get(key) ?? []) : [] });
+      }
+      // 联系人自己回复里的承诺:把那条回复记进账本,再以它为来源登记
+      const byReply = new Map<string, { roomId: string; seq: number; text: string; items: { id: string; taskId: string; text: string }[] }>();
+      for (const oc of ownCommits) {
+        const rep = replies.find((r) => r.roomId === oc.roomId && r.text.includes(oc.text));
+        if (!rep) continue;
+        const k = `${rep.roomId}#${rep.seq}`;
+        const entry = byReply.get(k) ?? { ...rep, items: [] };
+        entry.items.push({ id: this.newId("k"), taskId: oc.taskId ?? dispatchedBySource.get(oc.sourceKey) ?? `standing-${this.newId("k")}`, text: oc.text });
+        byReply.set(k, entry);
+      }
+      for (const [k, e] of byReply) {
+        push(e.roomId, { type: "receive", actionId: `${roundId}:recv-own:${k}`, message: { id: k, seq: e.seq, sender: { kind: "contact", id: contactId }, text: e.text, taskId: null, replyToSeq: null } });
+        push(e.roomId, { type: "process", actionId: `${roundId}:proc-own:${k}`, seq: e.seq, accepted: true, commitments: e.items });
       }
       for (const [roomId, cmds] of byRoom) this.ledgerTx(contactId, roomId, cmds);
       // 游标、待处理输入、状态笔记与本轮动作同一事务(D15.1)
