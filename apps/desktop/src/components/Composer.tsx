@@ -12,6 +12,7 @@ import { Tip } from './Messages'
 import { broken } from '@/mut'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ScheduleDialog, SlashMenu, SourceBadge, SourcePicker } from './Slash'
+import * as Concept from '@/concept'
 
 const EMOJIS = COMPOSER_EMOJI
 /** 输入框最多长到 8 行，再多就在框里滚动 */
@@ -197,13 +198,13 @@ export function Composer({ conv, draft, setDraft, quotes, onRemoveQuote, onSend,
           <SlashMenu items={shown} sel={sel} query={token.query} onHover={setSlashIdx} onPick={(e) => choose(e, 'click')} />
         )}
         {!menuOpen && at && cands.length > 0 && (
-          <div data-testid="at-picker" className="fade-up absolute bottom-full left-0 z-20 mb-1.5 w-60 rounded-xl border border-line bg-elev p-1 shadow-elev">
+          <div data-testid="at-picker" className="fade-up absolute bottom-full left-0 z-20 mb-1.5 w-64 rounded-xl border border-line bg-elev p-1 shadow-elev">
             <div className="px-2 pb-1 pt-0.5 text-[11.5px] text-fg-3">选择要 @ 的人</div>
             {cands.map((m, i) => (
               <button key={m} data-testid={`at-${m}`} onMouseDown={(e) => { e.preventDefault(); pickAt(m) }} className={cn('flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13.5px]', i === atIdx ? 'bg-hover' : 'hover:bg-hover')}>
                 <Avatar id={m} size={22} status={false} />
                 <span className="flex-1 truncate">{people[m].name}</span>
-                <span className="truncate text-[11.5px] text-fg-3">{m === 'helper' ? '软件助手 · 回复留在这里' : people[m].role}</span>
+                <Concept.DispatchLoad id={m} fallback={m === 'helper' ? '软件助手 · 回复留在这里' : people[m].role} />
               </button>
             ))}
           </div>

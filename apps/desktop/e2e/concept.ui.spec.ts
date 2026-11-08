@@ -164,5 +164,32 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.getByTestId("gaze-g12")).toHaveAttribute("data-watching", "0");
       await expect(page.getByTestId("gaze-g12")).toHaveAttribute("data-mood", "happy");
     });
+
+    test("派活前看一眼谁闲着:@ 列表每一行写着它此刻在等你几件、在做几件、空闲", async ({ page }) => {
+      await page.goto(`/?conv=g&freeze${q}`);
+      await composer(page).click();
+      await composer(page).pressSequentially("@");
+      const picker = page.getByTestId("at-picker");
+      await expect(picker).toBeVisible();
+      // 手上没活的写「空闲」;在做的写占了几格;有事等你的写等你几件
+      await expect(picker.getByTestId("load-astra")).toHaveText("空闲");
+      await expect(picker.getByTestId("load-astra")).toHaveAttribute("data-free", "1");
+      await expect(picker.getByTestId("load-claude")).toContainText(/在做 \d/);
+      await expect(picker.getByTestId("load-claude")).toHaveAttribute("title", /同时最多做 3 件/);
+      await expect(picker.getByTestId("load-argon")).toContainText("等你 3");
+      // Helper 不是干活的人,照旧写它是什么
+      await expect(picker.getByTestId("at-helper")).toContainText("软件助手");
+      await page.getByTestId("at-claude").hover();
+      await shot(page, `concept/load-${theme}`, 200);
+
+      // 是实时的:回答了 Argon 一件,@ 列表里它等你的数跟着少一件
+      await composer(page).fill("");
+      await page.locator("#m-g12").scrollIntoViewIfNeeded();
+      await page.getByTestId("quick-g12-0").click();
+      await composer(page).click();
+      await composer(page).fill("");
+      await composer(page).pressSequentially("@");
+      await expect(page.getByTestId("at-picker").getByTestId("load-argon")).toContainText("等你 2");
+    });
   });
 }
