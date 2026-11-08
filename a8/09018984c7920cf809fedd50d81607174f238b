@@ -1,0 +1,25 @@
+packages/server/src/assemble.ts
+  s_7f422c52350e16::t_9595c2326df480 3,14-18,23,98-130
+packages/server/src/host.test.ts
+  s_7f422c52350e16::t_28881898ecdcbb 268-286
+packages/server/src/host.ts
+  s_7f422c52350e16::t_7fccb386ba0c87 43,172,911-913,918-922
+receipts/feat-host-rounds.json
+  s_7f422c52350e16::t_b7fe633c61f1d9 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a809018984c7920cf809fedd50d81607174f238b",
+  "prompts": {},
+  "sessions": {
+    "s_7f422c52350e16": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18b4f4b0-3cf6-4d51-be92-ca20094b2ce3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
