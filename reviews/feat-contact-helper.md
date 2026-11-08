@@ -1305,3 +1305,71 @@ base=origin/feat/task-lifecycle branch=feat/contact-helper HEAD=931ae4db1136c563
     - 审查会话记录不存在:codex:f513b323-f16b-4b24-ad4f-bf4704e2331e
 CONTENT_HASH=13b684ef5e39ff54628c47f85bef008fe3f9525695e064fc46187df9a31d9de1
 ```
+
+## 第二十一轮：第二十轮返修独立复审（2026-11-09）
+
+结论：**APPROVE**。被审提交 `0f9b4c1ea2726b7ac03161dff32cde951f90301a`（红 `028f657` / 绿 `15b660c` / 变异与证据 `35b10b2` / 收据 `0f9b4c1`），开工时回读远端未变；基线 `origin/feat/task-lifecycle` = `ba90d6769992d2f3df2a571f846409afcafd644d`。本会话单独一次调用 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle`，输出 `c93c19157000550ed5095b46b832a30e66c7dab4320088a234f8834cfd530295`，与作者自报一致。审查者 `claude:2353d719-cdd5-4608-894a-8460db6c9810`，模型 `claude-opus-5-5`（Anthropic）；作者 `codex:46a146ce-8397-401d-aaca-87978445083d`，`gpt-6.1-terra`（OpenAI），跨厂商。合同依据按 `origin/docs/dev-handbook`（`a8d1f27`）《验收文档》第 9 节（`#2662` 只保证内置原型未被改写的环境）与《需求文档》§8.1 已定条目；本轮没有构造预先改写内置原型或已排除形态的反例。以下 `$E` 为 `/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-r21-claude/`，脚本都在 `$E`、在隔离副本运行，不改仓库源码。
+
+### 第二十轮返修项逐条核对
+
+- **R20-01 已修。** `plain.ts:104-106` 对带自有属性的同层生成器原型改为先查属性、再以非豁免上下文重查原型。独立探针 `$E/probe-r21.mjs`（输出 `probe-head.jsonl` / `probe-old.jsonl`）在 grantTool、routeHelper、confirmFinalReport 三入口跑 10 种伪原型：第二十轮原复现（同步、`{data:{note:'marker'}}`）、异步原始值、不可枚举、Symbol 键、带数据的数组、两个生成器共用、别名先后两种、深层嵌套、空伪原型函数再挂带数据伪原型函数。旧实现 `ce307ac` 上 8/10 三入口全放行（别名两例旧版已拒），本版 10/10 三入口全拒；正常同步/异步生成器与同层空对象两版都放行；引擎原型上的 getter、生成器 prototype 为 Proxy 时拒收且调用 0 次。
+- **R20-02 已补。** `contact.ts:341` 实现未改（本就整名比较）；新增 `contact.test.ts:2322`。审查 F1 原样注入（作者清单 CK184）在我的复跑中被该测试按名杀死。
+- **R20-03 已补。** `contact.ts:447` 实现未改；新增 `contact.test.ts:2330`、`:2342` 分别覆盖直接工具与 Compute 专用资产。审查 F5 原样注入（CK185）被这两条按名杀死。
+- 红提交 `028f657`：全量 324 条中 136 条失败，9 条 R20 新测试（TAP 119–127）全部按名失败，错误是空壳的 `未实现`，没有文件级失败（`$E/red-028f657.tap`）。
+
+### R21-01（非阻塞；接上宿主工具授权之前必须补）授权整名匹配缺后缀方向与首尾空白的反例
+
+- 位置：`packages/domain/src/contact.ts:341`（`canCallDirectly`）、`:447`（`briefFor` 授权子集）；测试 `contact.test.ts:2322/2330/2342`。实现正确：只授予 `get_weather` 时，`my_get_weather`、`weather`、`" get_weather"`、`"get_weather "` 都不能直接调用、也进不了 Compute 说明（探针 R20-02/R20-03 行）。
+- 复现：对这两处比较做机械扫描 `$E/sweep-auth-r21.mjs`（输出 `sweep-auth-r21.jsonl`）：两入口 × 8 种非整名比较，共 16 个单点注入，每个恰好 1 处，各跑完整 324 条测试（单并发）。前缀两方向、包含两方向、忽略大小写共 10 个被 R20-02、R20-03、CH-43 按名杀死；**后缀两方向（`名.endsWith(授权名)`、`授权名.endsWith(名)`）与去首尾空白比较在两个入口共 6 个存活**，均为 324 通过、0 失败、0 skip/todo。也就是说，比较若退化成后缀匹配，只授予 `get_weather` 时 `my_get_weather` 或 `weather` 可以被直接调用或写进 Compute 说明，现有测试不报错。另外自构 5 个单点故障（`$E/faults-r21.jsonl`）里 G1/G2 就是其中两个后缀故障；G3/G4（忽略大小写）被 CH-43 杀死，G5（同层伪原型只数可枚举字符串键）被「R20-01 同层伪原型的不可枚举与 Symbol 数据属性也拒绝」杀死。
+- 为什么不阻塞：第二十轮对 R20-02/03 的返修要求（扩展名、前缀、其他未授权名的具名断言，F1/F5 原样注入被具名测试杀死）已逐项照做并复现通过；新存活故障落在收据如实标「未测」的 AC-33 范围内，没有推翻收据里任何一条「通过」（R-02 已复核；R-05 的作者清单全杀已复跑核实，且这条判据已有被杀的阳性埋雷）。按 PR #8 第 4 轮同类处理：作者照上一轮完成判据做完后，新手工故障记为非阻塞必补项，不逐轮移动门槛。
+- 返修要求（闭合的完成判据）：在 R20-02 与 R20-03 两条（直接工具、专用资产各一）补后缀扩展（如 `my_get_weather`、`x_analysis_skill`）、后缀截断（如 `weather`、`skill`）、首尾带空白（如 `" get_weather"`、`"get_weather "`）的拒绝断言，保留完整名字放行对照；把上述 6 个注入加入 `mutations.mjs`；在新 HEAD 复跑 `$E/sweep-auth-r21.mjs`，应 16/16 被具名测试杀死。
+
+### R21-02（非阻塞；下次改收据时同步）收据第 7 栏 R-05 段沿用上一轮数字并写成「本 HEAD 实测」（hy4 发现、Claude 复现）
+
+- 位置：`receipts/feat-contact-helper.json` 的 `unverifiable` 字段「R-05:合并基线 origin/feat/task-lifecycle ba90d67 后…」一段（字符偏移约 4038–4200）。
+- 复现：该段写「本 HEAD 实测数组共 499 个具体变异、499 种不同注入……原样副本 315 绿。本片 contact/helper 部分 256 个(含 contact.ts 191、plain.ts 50……)」。本 HEAD 的 `mutations.mjs` 实为 502 项、502 种注入（contact.ts 193、plain.ts 51、helper.ts 14、index.ts 1，本片 259），`mutations.txt` 首行「共 502 个变异,502 种不同注入」、原样 324 绿；同一栏末尾的第二十一轮段落写的也是 502 / 324。R-05 的证据路径与证据内容正确，矛盾只在说明文字。
+- 返修要求：把该段数字改成本 HEAD 实测值，或明确标成「第二十轮时」的历史记录；不涉及代码与测试。
+
+### hy4 其余线索与补充观察
+
+- hy4 H21-02（PR 内的验收文档副本是「同步主稿 v3.19」，权威分支已是 v3.20，G-TRACE 只读副本）：复现属实，不列为问题。权威分支 `a8d1f27` 提交于 2026-11-09 00:48:49，晚于受审提交 `0f9b4c1`（00:01:57）；两版 AC/R/V 编号集合完全相同，`#2662` 合同段逐字相同，G-TRACE 结果不受影响。下次合并规范时同步即可。
+- 补充观察（不是返修项）：带条目的 `Map` 把原型改成 `Object.prototype` 或生成器同层后放进被丢弃字段，三入口放行。这和本层一贯的检查定义（Proxy、原型、访问器三项，「本层不承诺防御任意 JS 元编程对象」）一致，条目不经自有属性可达、也不进快照；R20-01 要求的是「带调用方普通数据属性」的伪原型，已满足。没有合同依据，不作为缺陷。
+
+### 执行与门禁
+
+- Node `v25.8.1`；独立克隆 `/tmp/gg-pr4-r21-claude`，`npm ci`、typecheck、lint（23 个文件）退出 0；`npm test` **324 通过、0 失败、0 cancelled、0 skip、0 todo**。GitHub `self-check` 在 `0f9b4c1` 上 completed/success。
+- 输入合同探针（`probe-head.jsonl`）：22 个 JSON null 入口组合都不抛；Proxy 入参在 5 个入口都拒、trap 0 次；getter 入参拒、调用 0 次；`FORBIDDEN_DIRECT_TOOLS` 冻结，push 抛错。
+- 作者变异清单复跑：自写运行器 `$E/mut-runner.mjs`（不复用作者 `run-mutations-bounded.mjs`；函数式替换注入，判定：退出码 1、测试总数与原样一致、fail>0、cancelled/skip/todo 为 0、失败条目全是具名测试），清单 SHA-256 `f20dbb77…`（与作者元数据一致）。本机（Node v25.8.1，两路、每路测试单并发）跑完 0–167、251–421 共 339 个后，按用户 01:57 定的「重活放云电脑」停掉本机进程，剩余 168–250、422–501 共 163 个在云电脑 box2（Node v24.21.0，1 路，`/workspace/dm1014-pr4-r21`）跑完；两处原样副本都是 324/324。合计 **502/502 被具名测试杀死**，每项注入恰好 1 处、每次完整执行 324 条、0 存活或异常、0 skip/todo/cancelled，逐项被杀状态与作者 `r20-mutation-events.jsonl` 一致；CK183 被 5 条 R20-01、CK184 被 R20-02、CK185 被 2 条 R20-03 按名杀死（`$E/mutation-summary.json`、`mut-local/`、`mut-box2/`）。
+- `npm run gates:selftest`：64 条 ✓、0 条 ✗，「自检通过」，退出 0（`$E/gates-selftest.log`）。
+- 8 个门禁各写一个应失败的输入（`$E/gate-negatives.sh`，隔离 worktree、假 `HOME`/`MIRASIM_SESSIONS`、中性标记内容，经真实 CLI `--local`；结果 `$E/gate-negatives.txt`、`neg-*.log`）：G-TRACE（AC-33 状态写「部分通过」）、G-REVIEW（审查模型与作者同为 openai）、G-RED（red.commit 指向绿提交 15b660c）、G-STUB（只断言加载期常量的测试）、G-TAUTO（`assert.equal(1, 1)`）、G-WORKFLOW（workflow 申请 write-all）、G-LAYER（domain 用相对路径引用 scripts/）、G-PROVENANCE（审查会话里 `--hash` 输出不等于 reviewed_hash）**8/8 被目标门禁按预期原因拦下**；来源门禁合规对照（同一假会话、输出等于 reviewed_hash）放行。首跑有 4 例因我的脚本把 node_modules 软链提交进去，门禁自身报 EISDIR/ENOTSUP，判无效，修正后整组重跑，首跑输出留在 `$E/neg-run1-invalid/`。
+- 写审查前的真实 `--local`（`$E/local-gates-before.log`）：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW（旧 Codex 审查 reject、同为 codex/openai、hash 不符）与 G-PROVENANCE（审查厂商 openai 在作者产出厂商集合里）按预期拦下。
+- 宿主实际工具注册、真实存储、调度、消息表与 UI 交互不在本纯领域层审查范围，收据已如实标未测，本轮不把纯函数子集当整项 AC 通过。
+
+### 写入本轮审查后的本地门禁原始输出
+
+收据 review 写入后，内容 hash 仍是 `c93c19157000550ed5095b46b832a30e66c7dab4320088a234f8834cfd530295`。按「重活放云电脑」，`--local` 在 box2 上用同一份收据跑（`$E/local-gates-after-box2.log`），退出 1：
+
+```text
+base=origin/feat/task-lifecycle branch=feat/contact-helper HEAD=0f9b4c1ea2726b7ac03161dff32cde951f90301a 受检文件 30 个 收据=receipts/feat-contact-helper.json 门禁 8 个
+✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据
+✓ G-REVIEW  R-01:审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)
+✓ G-RED  R-02:先红后绿,新增/改动的每条测试在红提交上按名字失败、现在按名字通过
+✓ G-STUB  R-03:空实现红基线,桩下仍通过、加载失败、没执行到的测试都判无效
+✓ G-TAUTO  R-04:拒绝同语反复测试(按 node:test 真实导入识别;无断言、断言不判源码结果、恒定断言、skip/only)
+✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限或 pull_request_target
+✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)
+✗ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是用户本人对这一版的明确批准
+    - 作者会话记录不存在:codex:46a146ce-8397-401d-aaca-87978445083d
+    - 审查会话记录不存在:claude:2353d719-cdd5-4608-894a-8460db6c9810
+CONTENT_HASH=c93c19157000550ed5095b46b832a30e66c7dab4320088a234f8834cfd530295
+exit=1
+```
+
+云端没有会话记录，G-PROVENANCE 在那里只能报记录不存在。G-PROVENANCE 读本机会话，故在本机用仓库里同一份门禁代码单跑这一项（`$E/provenance-only.mjs`，不跑测试；输出 `$E/provenance-after-local.log`）：
+
+```text
+✓ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是用户本人对这一版的明确批准
+CONTENT_HASH=c93c19157000550ed5095b46b832a30e66c7dab4320088a234f8834cfd530295
+```
+
+即作者 Codex（openai）与审查 Claude（anthropic）的判定都按会话原始记录通过；本会话上一段的记录已落盘，含那次单独的 `--hash` 调用。
