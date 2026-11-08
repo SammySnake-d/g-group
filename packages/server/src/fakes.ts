@@ -42,7 +42,7 @@ function react(me: string, f: Inbound): MindAction[] {
 }
 
 /** 剧本式 Compute:spawn 后按 script 依次吐事件;可让 spawn 失败。 */
-export function scriptedCompute(opts: { script?: (computeId: string, brief: unknown) => Omit<ComputeEvent, "computeId">[]; onResume?: (computeId: string, text: string) => Omit<ComputeEvent, "computeId">[]; failSpawn?: string; stepMs?: number } = {}) {
+export function scriptedCompute(opts: { script?: (computeId: string, brief: unknown) => Omit<ComputeEvent, "computeId">[]; onResume?: (computeId: string, text: string) => Omit<ComputeEvent, "computeId">[]; failSpawn?: string; stepMs?: number; idPrefix?: string } = {}) {
   const queue: ComputeEvent[] = [];
   let wake: (() => void) | null = null;
   let closed = false;
@@ -65,7 +65,7 @@ export function scriptedCompute(opts: { script?: (computeId: string, brief: unkn
   const adapter: ComputeAdapter = {
     async spawn(brief, o): Promise<SpawnResult> {
       if (opts.failSpawn) return { ok: false, reason: opts.failSpawn };
-      const computeId = `cp-${++n}`;
+      const computeId = `${opts.idPrefix ?? "cp"}-${++n}`;
       spawned.push({ computeId, brief, cwd: o?.cwd });
       const evs = script(computeId, brief).map((e) => ({ ...e, computeId }) as ComputeEvent);
       inflight++;
