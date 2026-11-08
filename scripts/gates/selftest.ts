@@ -849,6 +849,12 @@ function r12MissingDir(): string | undefined {
     return turnTouchesRepo(writeTurn(missing), undefined, no) && !turnTouchesRepo(writeTurn(existing), undefined, no) && !turnTouchesRepo(readTurn, undefined, no) ? undefined : "未知目录写入、明确非仓库写入或只读判定不符";
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
+function r12RelativeCwd(): string | undefined {
+  const inRepo = () => false;
+  const turn = (command: string) => ({ toolCalls: [{ name: "Bash", input: { cwd: "./unknown-dir", command } }] });
+  const write = turn("printf neutral > a.ts"), read = turn("cat a.ts");
+  return turnTouchesRepo(write, undefined, inRepo) && !turnTouchesRepo(read, undefined, inRepo) ? undefined : "无法定位的相对目录写入未保守计入或只读被误计";
+}
 function r12History(mode: "history" | "listed" | "none" | "unproven"): string[] {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-history-"));
   try {
@@ -942,6 +948,7 @@ export const CASES: Case[] = [
   { name: "R12-01 中途换模型写入已清理克隆被拦", direct: r12ModelSwitch, expect: null },
   { name: "R12-01 任一轮已证明目录用于整段会话", direct: r12SessionDirsCase, expect: null },
   { name: "R12-01 未证明的已消失目录写入保守计入", direct: r12MissingDir, expect: null },
+  { name: "R12-01 相对工作目录写入判不了时保守计入", direct: r12RelativeCwd, expect: null },
   { name: "R12-02 返修换作者后前轮作者厂商的审查仍被拦", direct: () => r12HistoryCase("history"), expect: null },
   { name: "R12-02 sessions 列表里的历次作者不能遗漏", direct: () => r12HistoryCase("listed"), expect: null },
   { name: "R12-02 前轮产出未证实时厂商保守计入", direct: () => r12HistoryCase("unproven"), expect: null },
