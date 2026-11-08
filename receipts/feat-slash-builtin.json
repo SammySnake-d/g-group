@@ -1,0 +1,12 @@
+{
+  "slice": "内置 slash 命令在输入框唤醒能力:/task 自动 @ 目标联系人交活、/remind 直接建 cron 定时(按设置时区)、/stop 按 id 或标题停任务;参数不合格整条不发",
+  "acceptance": [
+    { "id": "AC-34", "status": "未测", "reason": "入口明确:同一能力可从输入框 / 唤醒,有测试(slash.test.ts);整条用户故事走查需前端" }
+  ],
+  "author": { "agent": "claude", "session": "claude:18b4f4b0-3cf6-4d51-be92-ca20094b2ce3", "model": "fnqtz/claude-opus-5-5" },
+  "red": null,
+  "unverifiable": "先写后测(用户 #717);插件命令仍作为带 command 的消息送达联系人,插件运行时接入后再路由到插件",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

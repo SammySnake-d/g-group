@@ -1,0 +1,11 @@
+{
+  "id": "webhook-out",
+  "name": "Webhook 外发",
+  "version": "0.1.0",
+  "publisher": "g-group",
+  "description": "示例输出渠道插件:把联系人的汇报发到你配置的 Webhook(B2 不去重,结果未知时不自动重发;运行时尚未接入)。",
+  "kinds": ["outbound-channel"],
+  "permissions": [{ "key": "net:post", "description": "向你配置的 Webhook 地址发送消息" }],
+  "commands": [{ "name": "push", "description": "把这条消息推到 Webhook", "args": [] }],
+  "configSchema": { "type": "object", "properties": { "url": { "type": "string", "format": "uri" } }, "required": ["url"] }
+}
