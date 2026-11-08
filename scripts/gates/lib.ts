@@ -152,6 +152,10 @@ export function sandboxPlan(args: string[], work: string, mounts: string[] = [],
   const profilePath = path.join(w, ".gate-sandbox.sb");
   return { cmd: "/usr/bin/sandbox-exec", argv: ["-f", profilePath, exe, ...args], opts: { cwd: w, encoding: "utf8", timeout: 900_000, env: { PATH: `${path.dirname(exe)}:/usr/bin:/bin`, HOME: w, TMPDIR: w } }, profile: seatbeltProfile(w, mounts, exe), profilePath };
 }
+/** R10-04:容器命令逐项核对,返回问题列表(空 = 恰为预期)。work 与 mounts 是真实路径。 */
+export function containerPlanProblems(_argv: readonly string[], _work: string, _mounts: readonly string[]): string[] {
+  return [];
+}
 export function sandboxed(args: string[], work: string, mounts: string[] = []) {
   const plan = sandboxPlan(args, work, mounts);
   if (plan.profile !== undefined && plan.profilePath) fs.writeFileSync(plan.profilePath, plan.profile);

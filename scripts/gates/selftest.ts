@@ -6,7 +6,7 @@ import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { GIT_SAFE_ARGS, gitEnv, type Receipt, sandboxPlan } from "./lib.ts";
+import { containerPlanProblems, GIT_SAFE_ARGS, gitEnv, type Receipt, sandboxed, sandboxPlan } from "./lib.ts";
 import * as judge from "./judge.ts";
 import { CASE_MARK, type CaseResult, evidence, type Kind, killedBy, parseGateOutput } from "./judge.ts";
 import { verdict as runnerVerdict } from "./test-runner.ts";
@@ -40,7 +40,7 @@ interface Case {
   redFn?: (dir: string) => Files; // 需要知道样例目录的红提交内容(优先于 red)
   env?: Record<string, string>;
   envFn?: (dir: string) => Record<string, string>; // 需要知道样例目录的环境(合并在 env 之后)
-  authorRecord?: object; // 作者会话的 record.json
+  authorRecord?: object | ((repo: string) => object); // 作者会话的 record.json(需要样例仓库路径时给函数)
   setup?: (x: { dir: string; repo: string; sessions: string; hash: string }) => void; // 写完收据和会话后、跑门禁前
   postCheck?: (dir: string) => string | undefined; // 跑完后检查副作用,返回问题
   hostileGit?: boolean; // 在 GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE 指向另一个仓库的环境里跑
@@ -52,7 +52,7 @@ const MAIN: Files = { "docs/spec/验收文档-v0.1.md": SPEC, "README.md": "x\n"
 const HEAD_OK: Files = { "packages/core/src/add.ts": ADD_OK, "packages/core/src/add.test.ts": TEST_OK, "packages/core/proof/adds.txt": "adds ok\n" };
 const RED_OK: Files = { "packages/core/src/add.ts": ADD_EMPTY, "packages/core/src/add.test.ts": TEST_OK };
 const reviewerOk = (hash: string) => [{ model: "ai-x/gpt-6-astra", toolCalls: [{ name: "shell", input: "node scripts/gates/run-all.ts --hash --branch feat/x", result: hash }] }];
-const authorOk = (_repo: string) => [{ model: "ai-x/claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/deliverables/g-group/packages/core/src/add.ts" } }] }];
+const authorOk = (repo: string) => [{ model: "ai-x/claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts") } }] }];
 
 const sh = (cwd: string, ...args: string[]) => execFileSync("git", [...GIT_SAFE_ARGS, ...args], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env: gitEnv() }).trim();
 function write(root: string, files: Files) {
@@ -139,7 +139,7 @@ function runCaseInner(tmp: string, c: Case, i: number): Run {
       putTurns(r.review.session, (c.reviewerTurns ?? reviewerOk)(hash));
     }
     putTurns(r.author.session, (c.authorTurns ?? authorOk)(repo));
-    if (c.authorRecord) { const [h, id] = r.author.session.split(":"); write(path.join(sessions, h!, id!), { "record.json": JSON.stringify(c.authorRecord) }); }
+    if (c.authorRecord) { const [h, id] = r.author.session.split(":"); write(path.join(sessions, h!, id!), { "record.json": JSON.stringify(typeof c.authorRecord === "function" ? c.authorRecord(repo) : c.authorRecord) }); }
     c.setup?.({ dir, repo, sessions, hash });
     if (c.room) write(path.join(rooms, "g-group", "log"), { "00000001.jsonl": `${c.room(hash.slice(0, 12)).map((e) => JSON.stringify(e)).join("\n")}\n` });
     commit(repo, "receipt");
@@ -161,7 +161,7 @@ function runCaseInner(tmp: string, c: Case, i: number): Run {
 const R = (f: (r: Receipt) => void) => f;
 // 原则 68:作者是 Codex(OpenAI 模型、codex 会话);审查人是 Claude(Anthropic 模型、claude 会话)
 const CODEX_AUTHOR = (r: Receipt) => { r.author = { agent: "codex", session: "codex:a", model: "gpt-6" }; };
-const CODEX_AUTHOR_TURNS = (_repo: string) => [{ model: "ai-x/gpt-6", toolCalls: [{ name: "apply_patch", input: { path: "/x/deliverables/g-group/packages/core/src/add.ts" } }] }];
+const CODEX_AUTHOR_TURNS = (repo: string) => [{ model: "ai-x/gpt-6", toolCalls: [{ name: "apply_patch", input: { path: path.join(repo, "packages/core/src/add.ts") } }] }];
 const CLAUDE_REVIEW = (r: Receipt) => { r.review = { ...r.review!, agent: "claude", model: "claude-opus-5-5", session: "claude:rv1" }; };
 // g-group#3199:Argon 是 Google 模型、跑在 claude 会话里,派活卡片上的助手是 ai-argon
 const ARGON_REVIEW = (r: Receipt) => { r.review = { ...r.review!, agent: "argon", model: "gemini-4-argon", session: "claude:argon1" }; };
@@ -487,6 +487,170 @@ const R7_SETUP = ({ dir, repo }: { dir: string; repo: string }) => {
   fs.symlinkSync(nm, path.join(repo, "node_modules"));
 };
 
+/**
+ * R10-04:容器执行计划逐项核对。docker 参数必须恰为预期序列(只挂工作副本与依赖,--network none,固定环境与工作目录);
+ * containerPlanProblems 对另一种挂载形式(--mount、--volume、附着写法、--tmpfs、--volumes-from)、多挂、少挂、重复挂载与其它参数一律判失败。
+ * 只核对参数文本,任何平台都能跑;夹具目录只放中性内容。
+ */
+function containerPlanCheck(): string | undefined {
+  return withPlanFixture("gate-r1004-", ({ tmp, rw, rd, work, dep }) => {
+    const image = "r10-plan-fixture-image";
+    process.env.GATE_SANDBOX_IMAGE = image;
+    const bad: string[] = [];
+    const plan = sandboxPlan(["-e", "0"], work, [dep], "docker");
+    const uid = typeof process.getuid === "function" ? `${process.getuid()}:${process.getgid?.() ?? 0}` : "1000:1000";
+    const want = ["run", "--rm", "--network", "none", "--user", uid, "-e", `HOME=${rw}`, "-e", `TMPDIR=${rw}`, "-v", `${rw}:${rw}`, "-v", `${rd}:${rd}`, "-w", rw, image, "node", "-e", "0"];
+    if (plan.cmd !== "docker" || JSON.stringify(plan.argv) !== JSON.stringify(want)) bad.push(`容器执行计划应逐项为 ${JSON.stringify(want)},实际 ${JSON.stringify([plan.cmd, ...plan.argv])}`);
+    const own = containerPlanProblems(plan.argv, rw, [rd]);
+    if (own.length) bad.push(`实际执行计划被判有问题:${own.join(";")}`);
+    if (containerPlanProblems(want, rw, [rd]).length) bad.push("预期序列本身被判有问题");
+    const img = want.indexOf(image);
+    const extra = path.join(tmp, "home-real");
+    const variants: [string, string[]][] = [
+      ["--mount 只读绑定", [...want.slice(0, img), "--mount", `type=bind,source=${extra},target=/fixture-extra,readonly`, ...want.slice(img)]],
+      ["--mount= 写法", [...want.slice(0, img), `--mount=type=bind,source=${extra},target=/fixture-extra`, ...want.slice(img)]],
+      ["--mount tmpfs", [...want.slice(0, img), "--mount", "type=tmpfs,target=/fixture-extra", ...want.slice(img)]],
+      ["--volume", [...want.slice(0, img), "--volume", `${extra}:/fixture-extra:ro`, ...want.slice(img)]],
+      ["--volume= 写法", [...want.slice(0, img), `--volume=${extra}:/fixture-extra`, ...want.slice(img)]],
+      ["多一个 -v", [...want.slice(0, img), "-v", `${extra}:/fixture-extra`, ...want.slice(img)]],
+      ["-v 附着写法", [...want.slice(0, img), `-v${extra}:/fixture-extra`, ...want.slice(img)]],
+      ["副本挂到别的目标", [...want.slice(0, img), "-v", `${rw}:/fixture-extra`, ...want.slice(img)]],
+      ["重复挂依赖", [...want.slice(0, img), "-v", `${rd}:${rd}`, ...want.slice(img)]],
+      ["少挂依赖", [...want.slice(0, 12), ...want.slice(14)]],
+      ["--volumes-from", [...want.slice(0, img), "--volumes-from", "fixture-container", ...want.slice(img)]],
+      ["--tmpfs", [...want.slice(0, img), "--tmpfs", "/fixture-extra", ...want.slice(img)]],
+      ["--privileged", [...want.slice(0, img), "--privileged", ...want.slice(img)]],
+      ["多一个环境变量", [...want.slice(0, img), "-e", "FIXTURE=1", ...want.slice(img)]],
+      ["联网改成 host", want.map((x, i) => (i === 3 ? "host" : x))],
+      ["换了镜像", want.map((x, i) => (i === img ? "other-image" : x))],
+      ["镜像后不是 node", want.map((x, i) => (i === img + 1 ? "sh" : x))],
+    ];
+    for (const [k, argv] of variants) if (containerPlanProblems(argv, rw, [rd]).length === 0) bad.push(`${k} 没有判失败`);
+    return bad.length ? bad.join("\n") : undefined;
+  });
+}
+/**
+ * R10-04:容器侧实际挂载。只在容器模式(GATE_SANDBOX_IMAGE,CI)实跑:经真实 sandboxed 读容器内 /proc/self/mountinfo,
+ * 去掉容器自带的 /、/proc、/dev、/sys 与 /etc/hosts|hostname|resolv.conf 后,挂载点必须恰为工作副本与依赖。
+ * seatbelt 模式没有容器,这一项由上面的逐项核对管(本机没有 Docker 时如实记为未测)。
+ */
+function containerMountProbe(): string | undefined {
+  if (!process.env.GATE_SANDBOX_IMAGE) return undefined;
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r1004m-"));
+  try {
+    const work = path.join(tmp, "work"), dep = path.join(tmp, "deps", "node_modules");
+    write(work, { "own.txt": NEUTRAL });
+    write(dep, R7_DEP);
+    const reader = `import fs from "node:fs"; console.log(JSON.stringify(fs.readFileSync("/proc/self/mountinfo", "utf8").split("\\n").filter(Boolean).map((l) => l.split(" ")[4].replace(/\\\\040/g, " "))));`;
+    const r = sandboxed(["--input-type=module", "-e", reader], work, [dep]);
+    let ms: string[];
+    try { ms = JSON.parse((r.stdout ?? "").trim().split("\n").pop() ?? ""); } catch { return `容器内没读到挂载表(退出 ${r.status}):${(r.stdout ?? "").slice(-200)}${(r.stderr ?? "").slice(-300)}`; }
+    const own = ms.filter((m) => m !== "/" && !/^\/(proc|dev|sys)(\/|$)/.test(m) && !/^\/etc\/(hosts|hostname|resolv\.conf)$/.test(m));
+    const exp = [fs.realpathSync(work), fs.realpathSync(dep)];
+    return sameSet(own, exp) ? undefined : `容器内挂载点应恰为 ${JSON.stringify(exp)},实际 ${JSON.stringify(own)}`;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+/**
+ * R10-05:运行库是符号链接(lib/libx.dylib → runtime/libx.dylib)时,读放行列出链接指向的实际文件(literal,realpath);
+ * 只认指向运行时目录之内、名字以 .dylib 结尾的普通文件。指向运行时之外、目录、非 .dylib 文件或悬空的链接一律不放行。只核对规则文本,任何平台都能跑。
+ */
+function seatbeltRuntimeLibLinks(): string | undefined {
+  return withPlanFixture("gate-r1005-", ({ tmp, rw, rd, work, dep }) => {
+    const root = path.join(tmp, "rt");
+    write(root, { "bin/node": NEUTRAL, "bin/runtime/libside.fixture.dylib": NEUTRAL, "lib/runtime/libnode.fixture.dylib": NEUTRAL, "lib/runtime/notes.txt": NEUTRAL, "lib/runtime/dir.dylib/x.txt": NEUTRAL });
+    write(path.join(tmp, "outside"), { "libout.fixture.dylib": NEUTRAL });
+    const links: [string, string][] = [
+      ["bin/libside.fixture.dylib", "runtime/libside.fixture.dylib"], ["lib/libnode.fixture.dylib", "runtime/libnode.fixture.dylib"],
+      ["lib/libout.fixture.dylib", path.join(tmp, "outside", "libout.fixture.dylib")], ["lib/libtxt.fixture.dylib", "runtime/notes.txt"],
+      ["lib/libdir.fixture.dylib", "runtime/dir.dylib"], ["lib/libgone.fixture.dylib", "runtime/missing.dylib"],
+    ];
+    for (const [l, t] of links) fs.symlinkSync(t, path.join(root, l));
+    const r = fs.realpathSync(root);
+    const plan = sandboxPlan(["-e", "0"], work, [dep], "seatbelt", path.join(root, "bin", "node"));
+    const read = (plan.profile ?? "").split("\n").filter((l) => l.startsWith("(allow file-read"));
+    if (read.length !== 1) return `应恰有一条读放行,实际 ${read.length} 条`;
+    const got = sbFilters(read[0]!, "(allow file-read-data");
+    const exp = [`(subpath "${rw}")`, `(subpath "${rd}")`, `(literal "${path.join(r, "bin", "runtime", "libside.fixture.dylib")}")`, `(literal "${path.join(r, "lib", "runtime", "libnode.fixture.dylib")}")`];
+    if (!got) return `读放行行格式不对:${read[0]}`;
+    return sameSet(got, exp) ? undefined : `读放行范围应恰为 ${JSON.stringify(exp)},实际 ${JSON.stringify(got)}`;
+  });
+}
+/**
+ * R10-05:真实运行时按符号链接布局放进假 HOME 的点目录(每个运行库放进 runtime/,原位置换成指向它的相对链接),
+ * 宿主上直接启动须输出中性标记(对照);同一运行时经真实 sandboxed 启动也须输出中性标记,且发现的运行库数等于链接数。
+ * 静态链接的运行时没有运行库,按同一流程作对照。容器模式用镜像自带的 node,不涉及宿主运行库布局。
+ */
+function runtimeLinkProbe(): string | undefined {
+  if (process.env.GATE_SANDBOX_IMAGE) return undefined;
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r1005r-"));
+  try {
+    const real = path.join(tmp, "home-real"), link = path.join(tmp, "home-link"), work = path.join(tmp, "work");
+    write(work, { "own.txt": NEUTRAL });
+    fs.mkdirSync(real, { recursive: true });
+    fs.symlinkSync(real, link);
+    const prefix = path.join(real, ".runtime-link"), node = path.join(prefix, "bin", "node");
+    fs.mkdirSync(path.dirname(node), { recursive: true });
+    fs.copyFileSync(process.execPath, node, fs.constants.COPYFILE_FICLONE);
+    fs.chmodSync(node, 0o755);
+    let n = 0;
+    for (const [from, to] of dylibLayout(process.execPath, prefix)) {
+      const hidden = path.join(path.dirname(to), "runtime", path.basename(to));
+      fs.mkdirSync(path.dirname(hidden), { recursive: true });
+      fs.copyFileSync(from, hidden);
+      fs.symlinkSync(path.join("runtime", path.basename(to)), to);
+      n++;
+    }
+    const say = `console.log(${JSON.stringify(NEUTRAL)})`;
+    const host = spawnSync(node, ["-e", say], { encoding: "utf8", timeout: 60_000, env: { PATH: "/usr/bin:/bin", HOME: link } });
+    if (host.status !== 0 || (host.stdout ?? "").trim() !== NEUTRAL) throw new Error(`宿主上符号链接布局的运行时没起来(对照失败,退出 ${host.status} 信号 ${host.signal}):${(host.stderr ?? "").slice(-300)}`);
+    const driver = `const { sandboxed, runtimeLibs } = await import(${JSON.stringify(new URL(`file://${path.join(HERE, "lib.ts")}`).href)});
+const r = sandboxed(["-e", ${JSON.stringify(say)}], ${JSON.stringify(work)});
+console.log(JSON.stringify({ status: r.status, signal: r.signal, out: (r.stdout ?? "").trim(), err: (r.stderr ?? "").slice(-300), libs: runtimeLibs().length }));`;
+    const r = spawnSync(node, ["--input-type=module", "-e", driver], { encoding: "utf8", timeout: 120_000, env: { ...gitEnv(), PATH: `${path.dirname(node)}:/usr/bin:/bin`, HOME: link } });
+    let o: { status: number | null; signal: string | null; out: string; err: string; libs: number };
+    try { o = JSON.parse((r.stdout ?? "").trim().split("\n").pop() ?? ""); } catch { return `探针没有给出结果(退出 ${r.status}):${(r.stdout ?? "").slice(-300)}${(r.stderr ?? "").slice(-300)}`; }
+    const bad: string[] = [];
+    if (o.status !== 0 || o.out !== NEUTRAL) bad.push(`隔离内符号链接布局的运行时没起来(退出 ${o.status} 信号 ${o.signal}):${o.err}`);
+    if (o.libs !== n) bad.push(`发现的运行库 ${o.libs} 个,符号链接布局里有 ${n} 个`);
+    return bad.length ? bad.join("\n") : undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+// R10-01/R10-02:作者来源按仓库身份认,不看目录名。提交号取样例仓库自己的提交;夹具目录只放中性内容。
+const shortHead = (repo: string) => sh(repo, "rev-parse", "--short=7", "HEAD");
+const authorClone = (repo: string) => path.join(path.dirname(repo), "author-clone");
+/** 同一条作者记录:在独立克隆里提交并查看(宿主记录了 git 输出),再写克隆里的文件 */
+const cloneTurns = (out: (repo: string) => string) => (repo: string) => {
+  const c = authorClone(repo);
+  return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `cd ${c} && git commit -q -m green && git log --oneline -1` }, result: out(repo) }, { name: "Write", input: { file_path: path.join(c, "packages/core/src/add.ts") } }] }];
+};
+const makeClone = ({ dir, repo }: { dir: string; repo: string }) => { sh(dir, "clone", "-q", repo, authorClone(repo)); };
+const cleanClone = (x: { dir: string; repo: string }) => { makeClone(x); fs.rmSync(authorClone(x.repo), { recursive: true, force: true }); };
+/** 另建一个同名的 git 仓库(自己的根提交),返回它的短提交号 */
+function otherRepo(at: string, commits = true): string {
+  fs.mkdirSync(at, { recursive: true });
+  sh(at, "init", "-q", "-b", "main");
+  if (!commits) return "";
+  write(at, { "neutral.txt": `${NEUTRAL}\n` });
+  commit(at, "other");
+  return sh(at, "rev-parse", "--short=7", "HEAD");
+}
+// R10-03:同进程里改写导出的受管范围策略(数组增删、元素改写);只改导出对象本身,不改任何内置原型
+const POLICY_TRIES = `
+      const tries = [
+        () => lib.UNGOVERNED.push(/^packages\\//, /^scripts\\//), () => lib.UNGOVERNED.unshift(/./), () => lib.UNGOVERNED.splice(0, 1, /./), () => lib.UNGOVERNED.pop(),
+        () => { lib.UNGOVERNED[0] = /./; }, () => { lib.UNGOVERNED.length = 0; }, () => { lib.UNGOVERNED[1].test = () => true; },
+        () => { Object.defineProperty(lib.UNGOVERNED[2], "test", { value: () => true }); }, () => { Object.setPrototypeOf(lib.UNGOVERNED[3], { test: () => true }); }, () => { lib.UNGOVERNED[0].lastIndex = 3; },
+        () => { g.WAIVER_RE.test = () => true; }, () => { g.WAIVER_RE.exec = () => ["g-group#1", "1"]; }, () => { Object.setPrototypeOf(g.WAIVER_RE, { test: () => true, exec: () => ["g-group#1", "1"] }); },
+        () => lib.GIT_SAFE_ARGS.push("-c", "core.hooksPath=.githooks"), () => { lib.GIT_SAFE_ARGS.length = 0; }, () => { lib.GIT_SAFE_ARGS[1] = "core.hooksPath=.githooks"; },
+      ];
+      for (const t of tries) { try { t(); } catch {} }`;
+// 真实门禁入口用的预加载:只做放宽受管范围的改写(先改元素、再加范围),互不抵消;任何一项生效都会让受管改动不再需要收据
+const PRELOAD_TRIES = `
+      const tries = [
+        () => { lib.UNGOVERNED[1].test = () => true; }, () => { Object.defineProperty(lib.UNGOVERNED[2], "test", { value: () => true }); }, () => { Object.setPrototypeOf(lib.UNGOVERNED[3], { test: () => true }); },
+        () => { lib.UNGOVERNED[0] = /./; }, () => lib.UNGOVERNED.unshift(/./), () => lib.UNGOVERNED.push(/^packages\\//, /^scripts\\//, /^\\.github\\//),
+      ];
+      for (const t of tries) { try { t(); } catch {} }`;
 export const CASES: Case[] = [
   { name: "合规:先红后绿、跨厂商审查、来源核对通过", expect: null },
   { name: "合规:node:test 别名 + 断言", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`check("adds", () => { assert.equal(add(1, 2), 3); });\n`, `import { test as check } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`check("adds", () => { assert.equal(add(1, 2), 3); });\n`, `import { test as check } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\n`) }, expect: null },
@@ -514,9 +678,9 @@ export const CASES: Case[] = [
   { name: "F-04 历史出现过别家模型,算 hash 那一轮是同厂商", reviewerTurns: (h) => [{ model: "gpt-6-astra", toolCalls: [{ input: "ls", result: "old" }] }, { model: "claude-opus-5-5", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "实际是 anthropic" },
   { name: "审查会话算出的是别的 hash", reviewerTurns: () => [{ model: "gpt-6-astra", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: "0".repeat(64) }] }], expect: "审查会话里没有一次" },
   { name: "F-04 hash 只出现在聊天文本里", reviewerTurns: (h) => [{ model: "gpt-6-astra", text: `我审的是 ${h}`, toolCalls: [] }], expect: "审查会话里没有一次" },
-  { name: "作者自报与实际产出厂商不符", authorTurns: () => [{ model: "gpt-6", toolCalls: [{ input: "/x/g-group/packages/core/src/add.ts" }] }], receipt: R((r) => { r.review!.model = "gemini-4"; }), reviewerTurns: (h) => [{ model: "gemini-4", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "实际产出厂商是 openai" },
+  { name: "作者自报与实际产出厂商不符", authorTurns: (repo) => [{ model: "gpt-6", toolCalls: [{ input: `${repo}/packages/core/src/add.ts` }] }], receipt: R((r) => { r.review!.model = "gemini-4"; }), reviewerTurns: (h) => [{ model: "gemini-4", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "实际产出厂商是 openai" },
   { name: "作者会话没碰过本仓库", authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ input: "/x/g-group-requirements/a.md" }] }], expect: "找不到对本仓库的任何操作" },
-  { name: "作者中途换成审查同厂商(累积集合)", authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ input: "cd ~/g-group && vim x" }] }, { model: "gpt-6", toolCalls: [{ input: "/x/g-group/y" }] }, { model: "gemini-4", toolCalls: [{ input: "/x/g-group-requirements/z" }] }], expect: "在作者的产出厂商集合" },
+  { name: "作者中途换成审查同厂商(累积集合)", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ input: `cd ${repo} && vim x` }] }, { model: "gpt-6", toolCalls: [{ input: `${repo}/y` }] }, { model: "gemini-4", toolCalls: [{ input: "/x/g-group-requirements/z" }] }], expect: "在作者的产出厂商集合" },
 
   { name: "合规:仓库所有者对这个 PR 这一版结构化批准豁免", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `  批准豁免 PR#7 ${h}\n`)], expect: null },
   { name: "RR-13 指令前另有说明文字", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `这次同厂商审查可以\n批准豁免 PR#7 ${h}`)], expect: "不是一条格式为" },
@@ -551,12 +715,42 @@ export const CASES: Case[] = [
   { name: "R9-01 seatbelt 读放行范围恰为工作副本与挂载的依赖,多出的放行项(如整个 HOME)判失败", direct: seatbeltAllowExact, expect: null },
   { name: "R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖", direct: networkPlanCheck, expect: null },
   { name: "R9-02 真实隔离入口联网对照:宿主可取得本机回环夹具的中性标记,沙箱内被拒", direct: networkProbe, expect: null },
+  { name: "R10-04 容器执行计划逐项核对:只挂工作副本与依赖,另一种挂载形式(--mount/--volume/附着写法/--tmpfs/--volumes-from)、多挂少挂与其它参数判失败", direct: containerPlanCheck, expect: null },
+  { name: "R10-04 容器内实际挂载恰为工作副本与依赖(容器模式实跑)", direct: containerMountProbe, expect: null },
+  { name: "R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行", direct: seatbeltRuntimeLibLinks, expect: null },
+  { name: "R10-05 符号链接布局的运行时:宿主与真实隔离内都能启动并输出中性标记", direct: runtimeLinkProbe, expect: null },
+  { name: "R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论", direct: () => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const lib = await import(${JSON.stringify(path.join(HERE, "lib.ts"))});
+      const g = await import(${JSON.stringify(path.join(HERE, "gates.ts"))});${POLICY_TRIES}
+      const files = ["docs/a.md", "reviews/a.md", "receipts/a.json", "README.md", "scripts/gates/x.ts", "packages/core/src/a.ts", ".github/workflows/x.yml", "package.json"];
+      const trace = g.trace.run({ changed: ["scripts/gates/x.ts"], receipt: undefined, receiptPath: "receipts/feat-x.json" }).map((x) => x.msg);
+      const review = g.review.run({ changed: ["packages/core/src/a.ts"], receipt: { author: { agent: "claude", model: "claude-opus-5-5", session: "claude:a" }, review: { agent: "codex", model: "gpt-6", session: "codex:b", verdict: "approve", reviewed_hash: "h" }, waiver: { by: "x", reason: "fixture-not-a-ref" } }, contentHash: () => "h" }).map((x) => x.msg);
+      console.log(JSON.stringify({
+        frozen: Object.isFrozen(lib.UNGOVERNED) && lib.UNGOVERNED.every((x) => Object.isFrozen(x)) && Object.isFrozen(g.WAIVER_RE) && Object.isFrozen(lib.GIT_SAFE_ARGS),
+        src: lib.UNGOVERNED.map((x) => String(x)), gov: files.map((f) => lib.isGoverned(f)), safe: [...lib.GIT_SAFE_ARGS], trace, review,
+      }));`], { encoding: "utf8", timeout: 60_000 });
+    let o: { frozen: boolean; src: string[]; gov: boolean[]; safe: string[]; trace: string[]; review: string[] };
+    try { o = JSON.parse(r.stdout.trim().split("\n").pop() ?? ""); } catch { return `探针没跑通:${r.stdout}${r.stderr}`; }
+    const bad: string[] = [];
+    if (!o.frozen) bad.push("UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结");
+    if (o.src.join(" ") !== String.raw`/^docs\// /^reviews\// /^receipts\// /^README\.md$/`) bad.push(`UNGOVERNED 变成 ${o.src.join(" ")}`);
+    if (o.gov.join(",") !== "false,false,false,false,true,true,true,true") bad.push(`受管判定变成 ${o.gov}`);
+    if (o.safe.join(" ") !== "-c core.hooksPath=/dev/null") bad.push(`GIT_SAFE_ARGS 变成 ${o.safe.join(" ")}`);
+    if (!o.trace.some((m) => m.includes("缺收据"))) bad.push(`改写策略后受管改动没收据被放行:${JSON.stringify(o.trace)}`);
+    if (!o.review.some((m) => m.includes("豁免出处格式应为"))) bad.push(`改写豁免格式后格式不对的豁免被放行:${JSON.stringify(o.review)}`);
+    return bad.length ? bad.join(";") : undefined; }, expect: null },
+  { name: "R10-03 真实门禁:同进程改写受管范围策略后,受管改动没收据照样拦下", receipt: null, envFn: (dir) => {
+    const pre = path.join(dir, "policy-preload.mjs");
+    fs.writeFileSync(pre, `const lib = await import(${JSON.stringify(new URL(`file://${path.join(HERE, "lib.ts")}`).href)});\nconst g = await import(${JSON.stringify(new URL(`file://${path.join(HERE, "gates.ts")}`).href)});${PRELOAD_TRIES}\nif (process.argv.includes("--local")) (await import("node:fs")).writeFileSync(${JSON.stringify(path.join(dir, "policy-preload.ran"))}, "ran");\n`);
+    return { NODE_OPTIONS: `--import=${new URL(`file://${pre}`).href}` };
+  }, postCheck: (dir) => (fs.existsSync(path.join(dir, "policy-preload.ran")) ? undefined : "预加载没有在门禁进程里执行"), expect: "缺收据" },
   { name: "R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件", direct: seatbeltRuntimeLibs, expect: null },
   { name: "R7-01 完整入口:具名测试读假 HOME 的 .git-credentials/.netrc 被拒,门禁拦下", main: { ".gitignore": "node_modules\n" }, headFn: (dir) => ({ ...HEAD_OK, "packages/core/src/add.test.ts": R7_READ_TEST(dir) }), redFn: (dir) => ({ ...RED_OK, "packages/core/src/add.test.ts": R7_READ_TEST(dir) }), envFn: (dir) => ({ HOME: R7_HOME(dir) }), setup: R7_SETUP, expect: "现在没有恰好通过一次" },
   { name: "R7-01 完整入口对照:同一假 HOME 下,测试读工作副本文件、加载 HOME 点目录里的依赖照常放行", main: { ".gitignore": "node_modules\n" }, head: { ...HEAD_OK, "packages/core/src/add.test.ts": R7_OK_TEST, "packages/core/src/fixture.txt": NEUTRAL }, red: { ...RED_OK, "packages/core/src/add.test.ts": R7_OK_TEST, "packages/core/src/fixture.txt": NEUTRAL }, envFn: (dir) => ({ HOME: R7_HOME(dir) }), setup: R7_SETUP, expect: null },
-  { name: "RR-05 相对路径的写操作算进产出厂商", authorRecord: { workdir: "/x/deliverables/g-group" }, authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/deliverables/g-group/a.ts" } }] }, { model: "gpt-6", toolCalls: [{ name: "apply_patch", input: "*** Begin Patch\n*** Update File: packages/core/src/add.ts\n*** End Patch" }] }], expect: "在作者的产出厂商集合" },
-  { name: "RR-05 判不了路径的 shell 轮次也算进去", authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }, { model: "gpt-6", toolCalls: [{ name: "shell", input: { command: "sed -i s/a/b/ src/add.ts" } }] }], expect: "在作者的产出厂商集合" },
-  { name: "RR-05 工作目录在仓库外的相对写不算(阴性对照)", authorRecord: { workdir: "/x/other-project" }, authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }, { model: "gpt-6", toolCalls: [{ name: "apply_patch", input: { cwd: "/x/other-project", patch: "*** Update File: notes.md" } }] }], expect: null },
+  { name: "RR-05 相对路径的写操作算进产出厂商", authorRecord: (repo) => ({ workdir: repo }), authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "a.ts") } }] }, { model: "gpt-6", toolCalls: [{ name: "apply_patch", input: "*** Begin Patch\n*** Update File: packages/core/src/add.ts\n*** End Patch" }] }], expect: "在作者的产出厂商集合" },
+  { name: "RR-05 判不了路径的 shell 轮次也算进去", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "a.ts") } }] }, { model: "gpt-6", toolCalls: [{ name: "shell", input: { command: "sed -i s/a/b/ src/add.ts" } }] }], expect: "在作者的产出厂商集合" },
+  { name: "RR-05 工作目录在仓库外的相对写不算(阴性对照)", authorRecord: { workdir: "/x/other-project" }, authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "a.ts") } }] }, { model: "gpt-6", toolCalls: [{ name: "apply_patch", input: { cwd: "/x/other-project", patch: "*** Update File: notes.md" } }] }], expect: null },
   { name: "RR-04 自比较断言", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { assert.equal(add(1, 2), add(1, 2)); });\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { assert.equal(add(1, 2), add(1, 2)); });\n`) }, expect: "自比较或恒真" },
   { name: "RR-04 恒真关系断言", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { const v = add(1, 2); assert.ok(v === v); });\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { const v = add(1, 2); assert.ok(v === v); });\n`) }, expect: "自比较或恒真" },
   { name: "RR-04 不可达断言", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { add(1, 2); if (false) { assert.equal(add(1, 2), 3); } });\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { add(1, 2); if (false) { assert.equal(add(1, 2), 3); } });\n`) }, expect: "执行不到" },
@@ -835,10 +1029,35 @@ export const CASES: Case[] = [
   { name: "RR-14 真实 hash 输出被丢弃、再 echo hash", reviewerTurns: (h) => hashCall(`node scripts/gates/run-all.ts --hash >/dev/null; echo ${h}`)(h), expect: "审查会话里没有一次" },
   { name: "RR-14 node 先跑别的脚本、run-all 只是它的参数", reviewerTurns: hashCall("node /tmp/print-hash.mjs scripts/gates/run-all.ts --hash"), expect: "审查会话里没有一次" },
   { name: "RR-14 codex 真实形状的 hash 调用(阴性对照)", reviewerTurns: hashCall("node scripts/gates/run-all.ts --hash --branch=feat/x --base=main"), expect: null },
-  { name: "RR-15 后续轮次写进同仓库的另一个 clone", authorRecord: { workdir: "/tmp" }, authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }, { model: "gpt-6", toolCalls: [{ name: "Write", input: { file_path: path.join(path.dirname(repo), "other-clone", "packages/core/src/add.ts") } }] }],
+  { name: "RR-15 后续轮次写进同仓库的另一个 clone", authorRecord: { workdir: "/tmp" }, authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "a.ts") } }] }, { model: "gpt-6", toolCalls: [{ name: "Write", input: { file_path: path.join(path.dirname(repo), "other-clone", "packages/core/src/add.ts") } }] }],
     setup: ({ dir, repo }) => { sh(dir, "clone", "-q", repo, path.join(dir, "other-clone")); }, expect: "在作者的产出厂商集合" },
-  { name: "RR-15 后续轮次写进无关的 git 仓库(阴性对照)", authorRecord: { workdir: "/tmp" }, authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }, { model: "gpt-6", toolCalls: [{ name: "Write", input: { file_path: path.join(path.dirname(repo), "unrelated", "a.ts") } }] }],
+  { name: "RR-15 后续轮次写进无关的 git 仓库(阴性对照)", authorRecord: { workdir: "/tmp" }, authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "a.ts") } }] }, { model: "gpt-6", toolCalls: [{ name: "Write", input: { file_path: path.join(path.dirname(repo), "unrelated", "a.ts") } }] }],
     setup: ({ dir }) => { const u = path.join(dir, "unrelated"); fs.mkdirSync(u, { recursive: true }); sh(u, "init", "-q", "-b", "main"); write(u, { "x.txt": "x\n" }); commit(u, "x"); }, expect: null },
+  { name: "R10-01 作者只操作同名的非仓库目录(来源门禁拒绝)", authorTurns: (repo) => {
+    const other = path.join(path.dirname(repo), "unrelated", "g-group");
+    write(other, { "neutral.txt": NEUTRAL });
+    return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `cd ${other} && printf neutral` } }] }];
+  }, expect: "找不到对本仓库的任何操作" },
+  { name: "R10-01 作者只操作同名的另一个 git 仓库(来源门禁拒绝)", authorTurns: (repo) => {
+    const other = path.join(path.dirname(repo), "elsewhere", "g-group");
+    const sha = otherRepo(other);
+    return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `cd ${other} && git log --oneline -1` }, result: `${sha} other` }, { name: "Write", input: { file_path: path.join(other, "packages/core/src/add.ts") } }] }];
+  }, expect: "找不到对本仓库的任何操作" },
+  { name: "R10-01 作者只操作同名、还没有提交的 git 仓库(身份确认不了,来源门禁拒绝)", authorTurns: (repo) => {
+    const other = path.join(path.dirname(repo), "empty", "g-group");
+    otherRepo(other, false);
+    return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `cd ${other} && git status --short` }, result: "" }, { name: "Write", input: { file_path: path.join(other, "packages/core/src/add.ts") } }] }];
+  }, expect: "找不到对本仓库的任何操作" },
+  { name: "R10-01 同一仓库换了目录名的克隆按仓库身份认出(阴性对照)", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(authorClone(repo), "packages/core/src/add.ts") } }] }], setup: makeClone, expect: null },
+  { name: "R10-02 清理前:作者在独立克隆里提交,来源门禁认出(同一记录对照)", authorTurns: cloneTurns((repo) => `${shortHead(repo)} green`), setup: makeClone, expect: null },
+  { name: "R10-02 清理后:同一记录里 git 输出的本仓库提交号证明是本仓库,来源门禁仍认出", authorTurns: cloneTurns((repo) => `${shortHead(repo)} green`), setup: cleanClone, expect: null },
+  { name: "R10-02 克隆已清理、记录里没有本仓库的提交号(来源门禁拒绝)", authorTurns: cloneTurns(() => "nothing to commit, working tree clean"), setup: cleanClone, expect: "找不到对本仓库的任何操作" },
+  { name: "R10-02 克隆已清理、git 输出的是另一个仓库的提交号(来源门禁拒绝)", authorTurns: cloneTurns((repo) => `${otherRepo(path.join(path.dirname(repo), "foreign"))} other`), setup: cleanClone, expect: "找不到对本仓库的任何操作" },
+  { name: "R10-02 本仓库提交号出自现存的非仓库目录(现状与记录矛盾,来源门禁拒绝)", authorTurns: (repo) => {
+    const other = path.join(path.dirname(repo), "plain-dir");
+    write(other, { "neutral.txt": NEUTRAL });
+    return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `cd ${other} && git log --oneline -1` }, result: `${shortHead(repo)} green` }] }];
+  }, expect: "找不到对本仓库的任何操作" },
   { name: "审查人 codex 放行(g-group#1531 默认审查人)", receipt: R((r) => { r.review!.agent = "codex"; }), room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "codex:b", assistant: "ai-codex" } }], expect: null },
   { name: "审查人 astra 放行", room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "codex:b", assistant: "ai-astra" } }], expect: null },
   { name: "审查人 grok 被拦", receipt: R((r) => { r.review!.agent = "grok"; r.review!.model = "grok-4.7"; }), reviewerTurns: (h) => [{ model: "grok-4.7", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "审查人必须是" },
@@ -847,11 +1066,11 @@ export const CASES: Case[] = [
   { name: "原则 68 claude 审 codex 作者放行(claude 会话)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); CLAUDE_REVIEW(r); }), reviewerTurns: claudeReviewTurns,
     room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "claude:rv1", assistant: "ai-claude" } }], expect: null },
   { name: "原则 68 claude 审 claude 作者被拦(禁止自审)", receipt: R((r) => { CLAUDE_REVIEW(r); }), reviewerTurns: claudeReviewTurns, expect: "审查人与作者是同一个(claude)" },
-  { name: "原则 68 claude 审查照样要跨研发厂商:作者用 Anthropic 模型", authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }], receipt: R((r) => { r.author.agent = "deepseek"; r.author.session = "pi:a"; CLAUDE_REVIEW(r); }), reviewerTurns: claudeReviewTurns, expect: "同为 anthropic" },
+  { name: "原则 68 claude 审查照样要跨研发厂商:作者用 Anthropic 模型", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "a.ts") } }] }], receipt: R((r) => { r.author.agent = "deepseek"; r.author.session = "pi:a"; CLAUDE_REVIEW(r); }), reviewerTurns: claudeReviewTurns, expect: "同为 anthropic" },
   { name: "原则 68 claude 审查会话必须是 claude 会话", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); CLAUDE_REVIEW(r); r.review!.session = "codex:b"; }), reviewerTurns: claudeReviewTurns, expect: "必须是 claude 会话" },
   { name: "原则 68 argon 审 codex 作者放行(claude 会话,g-group#3199 备用审查人)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); ARGON_REVIEW(r); }), reviewerTurns: argonReviewTurns, room: ARGON_ROOM, expect: null },
   { name: "原则 68 argon 审 claude 作者放行(Google 审 Anthropic)", receipt: R((r) => { ARGON_REVIEW(r); }), reviewerTurns: argonReviewTurns, room: ARGON_ROOM, expect: null },
-  { name: "原则 68 argon 审 Google 作者被拦(同为 google)", authorTurns: () => [{ model: "ai-x/gemini-4-argon", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }], receipt: R((r) => { r.author.agent = "deepseek"; r.author.session = "pi:a"; r.author.model = "gemini-4-argon"; ARGON_REVIEW(r); }), reviewerTurns: argonReviewTurns, room: ARGON_ROOM, expect: "同为 google" },
+  { name: "原则 68 argon 审 Google 作者被拦(同为 google)", authorTurns: (repo) => [{ model: "ai-x/gemini-4-argon", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "a.ts") } }] }], receipt: R((r) => { r.author.agent = "deepseek"; r.author.session = "pi:a"; r.author.model = "gemini-4-argon"; ARGON_REVIEW(r); }), reviewerTurns: argonReviewTurns, room: ARGON_ROOM, expect: "同为 google" },
   { name: "原则 68 argon 审查会话必须是 claude 会话", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); ARGON_REVIEW(r); r.review!.session = "codex:b"; }), reviewerTurns: argonReviewTurns, expect: "必须是 claude 会话" },
   { name: "原则 68 argon-chat 当审查人被拦(不能执行命令)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); ARGON_REVIEW(r); r.review!.agent = "argon-chat"; }), reviewerTurns: argonReviewTurns, expect: "审查人必须是" },
   { name: "原则 68 astra 审 codex 作者被拦(同为 OpenAI)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); }), expect: "同为 openai" },
@@ -859,7 +1078,7 @@ export const CASES: Case[] = [
   { name: "审查会话不是 codex 会话", receipt: R((r) => { r.review!.session = "pi:b"; }), reviewerTurns: (h) => reviewerOk(h), expect: "必须是 codex 会话" },
   { name: "派活卡片显示会话属于别的助手", room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "codex:b", assistant: "ai-codex" } }], expect: "对不上" },
   { name: "自报 codex 但会话实际是 Anthropic 模型", receipt: R((r) => { r.review!.agent = "codex"; }), reviewerTurns: (h) => [{ model: "claude-opus-5-5", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "实际是 anthropic" },
-  { name: "跨厂商不变:作者用 OpenAI 模型时 Codex/Astra 审查同样被拦", authorTurns: () => [{ model: "gpt-6", toolCalls: [{ name: "Write", input: { file_path: "/x/g-group/a.ts" } }] }], receipt: R((r) => { r.author.model = "gpt-6"; }), expect: "同为 openai" },
+  { name: "跨厂商不变:作者用 OpenAI 模型时 Codex/Astra 审查同样被拦", authorTurns: (repo) => [{ model: "gpt-6", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "a.ts") } }] }], receipt: R((r) => { r.author.model = "gpt-6"; }), expect: "同为 openai" },
   { name: "F-05 node:test 别名、零断言、错误实现", head: { ...HEAD_OK, "packages/core/src/add.ts": "export function add(_a: number, _b: number): number { return 999; }\n", "packages/core/src/add.test.ts": `import { test as check } from "node:test";\nimport { add } from "./add.ts";\ncheck("adds", () => { add(1, 2); });\n` }, red: { ...RED_OK, "packages/core/src/add.ts": "export function add(): number { throw new Error('x'); }\n", "packages/core/src/add.test.ts": `import { test as check } from "node:test";\nimport { add } from "./add.ts";\ncheck("adds", () => { add(1, 2); });\n` }, expect: "没有任何断言" },
   { name: "间接注册测试绕过静态识别", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`const reg = test;\nreg("hidden", () => { add(1, 2); });\ntest("adds", () => { assert.equal(add(1, 2), 3); });\n`) }, expect: "运行时注册了" },
   { name: "F-07 断言只判复制的逻辑", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { void add; const actual = 1 + 2; assert.equal(actual, 3); });\n`) }, expect: "没有一条断言判的是被测源码" },
