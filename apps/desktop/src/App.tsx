@@ -4,6 +4,7 @@ import { Puzzle, X, Search, Plus, MessageCircle, Users, Activity, FolderOpen, Se
 import { cn } from '@/lib/utils'
 import { poolUsed, convs0, computes0, pending0, reactions0, boards0, commits0, playbook0, crons0, checklist0, plugins0, pulse0, people, artifacts, type Conversation, type Msg, type PersonId, type Compute, type Cron, type Pending, type QuoteRef, type Activity as Act } from '@/data'
 import { probeBackend, type BackendState } from '@/api/backend'
+import { INITIAL_MODEL_SETTINGS, type ModelSettings } from '@/modelConfig'
 import { AppCtx, type Ctx, type Page, type SplitTab, type Section, type WbTab, type ScheduleDraft } from '@/ctx'
 import { Workbench } from '@/components/Workbench'
 import { Panorama } from '@/components/Panorama'
@@ -92,6 +93,8 @@ export default function App() {
   const [editing, setEditing] = useState<string | null>(null)
   const [rewindAsk, setRewindAsk] = useState<string | null>(null)
   const [scheduleDraft, setScheduleDraft] = useState<ScheduleDraft | null>(null)
+  const [modelSettings, setModelSettings] = useState<ModelSettings>(INITIAL_MODEL_SETTINGS)
+  const [modelsRev, setModelsRev] = useState(0)
   const rewound = useRef<Record<string, { conv: string; msgs: Msg[]; pending: Pending[] }>>({})
   const [selecting, setSelecting] = useState(false)
   const { sel, toggle, clear } = useSelection()
@@ -341,7 +344,7 @@ export default function App() {
     },
     createContact: (p) => {
       const id = 'c-' + uid()
-      people[id] = { id, name: p.name, role: p.role, shape: p.shape, color: p.color, model: p.model, computeModel: 'inherit', computeQuota: p.quota, today: '¥0', month: '¥0', tools: people.claude.tools?.map((t) => ({ ...t, on: false })) }
+      people[id] = { id, name: p.name, role: p.role, shape: p.shape, color: p.color, model: p.model, harness: modelSettings.defaultHarness, computeModel: { mode: 'inherit' }, computeQuota: p.quota, today: '¥0', month: '¥0', tools: people.claude.tools?.map((t) => ({ ...t, on: false })) }
       const cid = 'dm-' + id
       setConvs((cs) => [{ id: cid, kind: 'dm', title: p.name, members: ['me', id], time: '刚刚', messages: [{ k: 'sys', id: 'n' + uid(), text: `你添加了 ${p.name}` }, { k: 'text', id: 'h' + uid(), from: id, text: `你好，我是 ${p.name}，${p.role}。有活直接说。` }] }, ...cs])
       setSection('chat'); setActive(cid); setStack([])
@@ -557,6 +560,17 @@ export default function App() {
     },
     crons, pulse, checklist, plugins, section, setSection, helperPanel, setHelperPanel, helperGlobal, setHelperGlobal, pushMsg,
     scheduleDraft, openSchedule: setScheduleDraft,
+    modelSettings, modelsRev,
+    saveModels: ({ settings, contacts, toast }) => {
+      if (settings) setModelSettings((m) => ({ ...m, ...settings }))
+      for (const c of contacts ?? []) {
+        Object.assign(people[c.id], c.patch)
+        const dm = convs.find((x) => x.kind === 'dm' && x.members.includes(c.id))
+        if (dm) pushMsg({ k: 'sys', id: 's' + uid(), text: `你改了 ${people[c.id].name} 的设置：${c.note}` }, dm.id)
+      }
+      setModelsRev((r) => r + 1)
+      setToastMsg(toast ?? '已保存')
+    },
     openWorkbench: (id, tab) => { setSection('contacts'); setContact(id); setWbTab(tab ?? 'overview'); setStack([]) },
     helperReply: (cid, ask) => {
       setTyping((t) => ({ ...t, [cid]: 'helper' }))
@@ -667,7 +681,7 @@ export default function App() {
       setConvs((cs) => cs.map((c) => (c.id === cid ? { ...c, messages: [{ k: 'sys', id: 's' + uid(), text: '你清空了这里的聊天记录（只影响你自己看到的；助手的记忆和资产不受影响）' }] } : c)))
       setStack([])
     },
-  }), [computes, pending, convs, boards, commits, playbook, reactions, active, dark, debug, typing, jump, openSplit, pushMsg, frozen, quotes, say, addAct, createGroup, clear, crons, pulse, checklist, plugins, section, helperPanel, helperGlobal, editing, rewindAsk, scheduleDraft])
+  }), [computes, pending, convs, boards, commits, playbook, reactions, active, dark, debug, typing, jump, openSplit, pushMsg, frozen, quotes, say, addAct, createGroup, clear, crons, pulse, checklist, plugins, section, helperPanel, helperGlobal, editing, rewindAsk, scheduleDraft, modelSettings, modelsRev])
   /* 走查用：模拟迟到的回答（AC-44⑤）。只挂在 window 上，界面里没有入口 */
   useEffect(() => { (window as unknown as { __gg?: unknown }).__gg = { returnHuman: ctx.returnHuman } }, [ctx])
   resolveRef.current = ctx.resolve as never

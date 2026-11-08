@@ -1,14 +1,14 @@
 import { useState, type ReactNode } from 'react'
 import { AlertTriangle, Check, ChevronDown, ChevronRight, MessageSquare, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { people, innerLog, dutyDefault, dutyByConv, presetOf, MODELS, GLOBAL_MODEL, vendorOf, type PersonId, type Msg, type Compute, type Cron, type Conversation, type Pending } from '@/data'
+import { people, innerLog, dutyDefault, dutyByConv, presetOf, type PersonId, type Msg, type Compute, type Cron, type Conversation, type Pending } from '@/data'
+import { ContactModelSettings } from './ModelSettings'
 import { useApp, type WbTab } from '@/ctx'
 import { CronForm, cronRepeat, cronWhen } from './CronDetail'
 import { Avatar, GroupAvatar, useLive } from './Avatar'
 import { MessageList } from './Messages'
 import { DetailPage } from './Overlays'
 import { Switch } from '@/components/ui/switch'
-import { Slider } from '@/components/ui/slider'
 import { candidate } from '@/mut'
 
 /* ---------- 小部件 ---------- */
@@ -440,49 +440,16 @@ function SRow({ label, children, testid }: { label: ReactNode; children?: ReactN
 function Settings({ id }: { id: PersonId }) {
   const { updatePerson } = useApp()
   const p = people[id]
-  const [talk, setTalk] = useState(p.model ?? GLOBAL_MODEL)
-  const [cm, setCm] = useState(p.computeModel ?? 'inherit')
-  const [quota, setQuota] = useState(p.computeQuota ?? 1)
   const [tools, setTools] = useState(p.tools ?? [])
   if (p.human) return <Card testid="wb-settings"><div className="text-[13px] text-fg-3">{p.name} 是真人，没有模型和工具设置。</div></Card>
-  const custom = cm !== 'inherit' && cm !== 'follow'
-  const effective = cm === 'inherit' ? GLOBAL_MODEL : cm === 'follow' ? talk : cm
-  const cmLabel = (v: string) => (v === 'inherit' ? '跟全局默认' : v === 'follow' ? '跟说话模型一样' : v)
-  const setCompute = (v: string) => { if (v === cm) return; updatePerson(id, { computeModel: v }, `干活用的模型 ${cmLabel(cm)} → ${cmLabel(v)}`); setCm(v) }
   const toggleTool = (name: string, on: boolean) => {
     const next = tools.map((t) => (t.name === name ? { ...t, on } : t))
     setTools(next)
     updatePerson(id, { tools: next }, `${on ? '打开' : '关掉'}了「${name}」`)
   }
-  const select = 'h-8 rounded-lg border border-line bg-bg px-2 text-[13px] outline-none focus:ring-2 focus:ring-ring'
   return (
     <div data-testid="wb-settings" className="space-y-4">
-      <Card>
-        <H>模型</H>
-        <SRow label="说话用的模型（在群里聊天、判断要不要接活）">
-          <select data-testid="set-talk-model" value={talk} onChange={(e) => { const m = e.target.value; updatePerson(id, { model: m }, `说话模型 ${talk} → ${m}`); setTalk(m) }} className={select}>
-            {MODELS.map((m) => <option key={m} value={m}>{m} · {vendorOf(m)}</option>)}
-          </select>
-        </SRow>
-        <div className="mb-1 mt-2 text-[12px] font-medium text-fg-3">Compute 用的模型（干活）</div>
-        <div role="radiogroup" className="space-y-0.5">
-          {[{ k: 'inherit', l: `跟全局默认（现在是 ${GLOBAL_MODEL}）` }, { k: 'follow', l: `跟说话模型一样（${talk}）` }].map((o) => (
-            <button key={o.k} role="radio" aria-checked={cm === o.k} data-testid={`set-cm-${o.k}`} onClick={() => setCompute(o.k)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13.5px] hover:bg-hover">
-              <span className={cn('grid h-4 w-4 place-items-center rounded-full border', cm === o.k ? 'border-fg' : 'border-fg-3')}>{cm === o.k && <span className="h-2 w-2 rounded-full bg-fg" />}</span>{o.l}
-            </button>
-          ))}
-          <div className="flex items-center gap-2 rounded-lg px-2 py-1.5">
-            <button role="radio" aria-checked={custom} data-testid="set-cm-custom" onClick={() => !custom && setCompute('Claude Opus 5.5')} className="flex flex-1 items-center gap-2 text-left text-[13.5px]">
-              <span className={cn('grid h-4 w-4 place-items-center rounded-full border', custom ? 'border-fg' : 'border-fg-3')}>{custom && <span className="h-2 w-2 rounded-full bg-fg" />}</span>单独指定
-            </button>
-            {custom && <select data-testid="set-cm-model" value={cm} onChange={(e) => setCompute(e.target.value)} className={select}>{MODELS.map((m) => <option key={m} value={m}>{m}</option>)}</select>}
-          </div>
-        </div>
-        <Note>实际用：{effective}。复核要换一家：{p.name} 的产出会交给不是 {vendorOf(effective)} 的模型复核。</Note>
-        <SRow label={`最多同时分几个 Compute · ${quota} 个`} testid="set-quota">
-          <div className="w-40"><Slider value={[quota]} min={1} max={5} step={1} onValueChange={(v) => setQuota(v[0])} onValueCommit={(v) => { if (v[0] !== p.computeQuota) updatePerson(id, { computeQuota: v[0] }, `最多同时 ${v[0]} 个 Compute`) }} /></div>
-        </SRow>
-      </Card>
+      <ContactModelSettings key={id} id={id} />
 
       <Card>
         <H>能用的技能和工具</H>

@@ -1,5 +1,6 @@
 /* ============ 原型数据：联系人、Compute、会话、待你处理 ============
    每段数据旁边标了它服务的用户故事（US）与验收条目（AC），走查脚本按这些编号核对。 */
+import type { ModelSlot, StallOverride } from '@g-group/ui-core'
 
 export type PersonId = string
 
@@ -10,8 +11,14 @@ export interface Person {
   color?: string
   initials?: string
   role: string
+  /** 说话模型（模型目录里的 id，见 modelConfig.ts）。联系人说话不选 Harness */
   model?: string
-  computeModel?: 'inherit' | 'follow' | string // AC-32 三态：继承全局 / 跟随说话模型 / 单独指定
+  /** Compute 用哪个 Harness（合同 HARNESSES） */
+  harness?: string
+  /** AC-32 Compute 模型三态：继承全局 / 跟随说话模型 / 单独指定；effort 跟着槽位走 */
+  computeModel?: ModelSlot
+  /** U92：按联系人单独设的卡死判定阈值；没设的项用默认 15 分钟 / 120 秒 */
+  stall?: StallOverride
   computeQuota?: number
   today?: string
   month?: string
@@ -34,16 +41,15 @@ const defaultTools = (): Person['tools'] => [
 
 export const people: Record<PersonId, Person> = {
   me: { id: 'me', name: '39impacts', initials: '39', role: '你', human: true, color: '#52525b' },
-  helper: { id: 'helper', name: 'Helper', shape: 'lightbulb', color: '#f8a01c', role: '帮你操作这个软件', model: 'Claude Haiku 5.5' },
-  claude: { id: 'claude', name: 'Claude Code', shape: 'chat', color: '#ff6a1a', role: '写代码、做审查', model: 'Claude Opus 5.5', computeModel: 'follow', computeQuota: 3, today: '¥3.20', month: '¥41.60', tools: defaultTools() },
-  argon: { id: 'argon', name: 'Argon', shape: 'book', color: '#a8693f', role: '整理文档、梳理需求', model: 'Gemini 4', computeModel: 'inherit', computeQuota: 2, today: '¥1.10', month: '¥18.40', tools: defaultTools() },
-  astra: { id: 'astra', name: 'Astra', shape: 'shield', color: '#1f7cf2', role: '独立复核', model: 'GPT-6', computeModel: 'inherit', computeQuota: 2, today: '¥0.80', month: '¥12.90', tools: defaultTools() },
-  codex: { id: 'codex', name: 'Codex', shape: 'controller', color: '#8b5cf6', role: '修 bug、性能优化', model: 'GPT-6.1', computeModel: 'follow', computeQuota: 2, today: '¥0.40', month: '¥9.70', tools: defaultTools() },
-  grok: { id: 'grok', name: 'Grok', shape: 'magnifier', color: '#14b3a5', role: '资料调研', model: 'Grok 5', computeModel: 'inherit', computeQuota: 1, today: '¥0.20', month: '¥2.10', tools: defaultTools() },
-  gemini: { id: 'gemini', name: 'Gemini Flash', shape: 'sprout', color: '#1fbf68', role: '轻量问答', model: 'Gemini Flash', computeModel: 'inherit', computeQuota: 1, today: '¥0', month: '¥0.60', tools: defaultTools() },
+  helper: { id: 'helper', name: 'Helper', shape: 'lightbulb', color: '#f8a01c', role: '帮你操作这个软件', model: 'claude-haiku-5-5' },
+  claude: { id: 'claude', name: 'Claude Code', shape: 'chat', color: '#ff6a1a', role: '写代码、做审查', model: 'claude-opus-5-5', harness: 'claude-code', computeModel: { mode: 'follow-speaking', effort: 'xhigh' }, computeQuota: 3, today: '¥3.20', month: '¥41.60', tools: defaultTools() },
+  argon: { id: 'argon', name: 'Argon', shape: 'book', color: '#a8693f', role: '整理文档、梳理需求', model: 'gemini-4', harness: 'claude-code', computeModel: { mode: 'explicit', model: 'claude-opus-5-5' }, computeQuota: 2, today: '¥1.10', month: '¥18.40', tools: defaultTools() },
+  astra: { id: 'astra', name: 'Astra', shape: 'shield', color: '#1f7cf2', role: '独立复核', model: 'gpt-6', harness: 'codex', computeModel: { mode: 'inherit' }, computeQuota: 2, today: '¥0.80', month: '¥12.90', tools: defaultTools() },
+  codex: { id: 'codex', name: 'Codex', shape: 'controller', color: '#8b5cf6', role: '修 bug、性能优化', model: 'gpt-6.1', harness: 'codex', computeModel: { mode: 'follow-speaking' }, computeQuota: 2, today: '¥0.40', month: '¥9.70', tools: defaultTools() },
+  grok: { id: 'grok', name: 'Grok', shape: 'magnifier', color: '#14b3a5', role: '资料调研', model: 'grok-5', harness: 'claude-code', computeModel: { mode: 'inherit' }, computeQuota: 1, today: '¥0.20', month: '¥2.10', tools: defaultTools() },
+  gemini: { id: 'gemini', name: 'Gemini Flash', shape: 'sprout', color: '#1fbf68', role: '轻量问答', model: 'gemini-flash', harness: 'claude-code', computeModel: { mode: 'inherit' }, computeQuota: 1, today: '¥0', month: '¥0.60', tools: defaultTools() },
   wang: { id: 'wang', name: '王一', initials: '王', role: '产品', human: true, color: '#0ea5e9' },
 }
-export const GLOBAL_MODEL = 'Claude Sonnet 5.5'
 const soulOf: Record<string, string> = {
   claude: '说话直接，先给结论再讲理由。不确定就说不确定。改代码前先说清楚要改哪里。',
   argon: '耐心、爱整理。习惯把讨论收成一段话的结论，再请你拍板。',
@@ -67,8 +73,6 @@ for (const id of Object.keys(soulOf)) {
 
 export const SHAPES = ['chat', 'book', 'shield', 'controller', 'magnifier', 'sprout', 'lightbulb', 'cloud', 'cat', 'bunny', 'star', 'rocket', 'mug', 'brain', 'ghost', 'camera', 'palette', 'paint-brush', 'watering-can', 'barbell', 'bull', 'witch-hat']
 export const SWATCHES = ['#ff6a1a', '#f2384b', '#f8a01c', '#1fbf68', '#14b3a5', '#1f7cf2', '#8b5cf6', '#ec4899', '#a8693f', '#7a7a7a']
-export const MODELS = ['Claude Opus 5.5', 'Claude Sonnet 5.5', 'Claude Haiku 5.5', 'GPT-6.1', 'GPT-6', 'Gemini 4', 'Gemini Flash', 'Grok 5', 'DeepSeek V4']
-export const vendorOf = (m: string) => (m.startsWith('Claude') ? 'Anthropic' : m.startsWith('GPT') ? 'OpenAI' : m.startsWith('Gemini') ? 'Google' : m.startsWith('Grok') ? 'xAI' : 'DeepSeek')
 
 /* ---------- Compute：联系人分出去干活的执行体（AC-03：Compute 不直接在群里说话） ---------- */
 export type CStatus = 'running' | 'waiting' | 'error' | 'done' | 'stopped'

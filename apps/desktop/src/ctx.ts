@@ -4,7 +4,6 @@ import type { PulseItem, Board, Commitment, Compute, Conversation, Pending, Pers
 /** 右侧浮层是一摞页面：打开新页压栈，返回/关闭只弹出一层（群资料 → 成员资料 → 关闭 = 回到群资料） */
 export type Page =
   | { t: 'person'; id: PersonId }
-  | { t: 'personModel'; id: PersonId }
   | { t: 'personTools'; id: PersonId }
   | { t: 'inner'; id: PersonId; conv: string } // 从群聊私信
   | { t: 'detail'; id: PersonId; conv: string; tab?: 'me' | 'agents' | 'work' | 'memory' } // 查看对话细节
@@ -155,6 +154,12 @@ export interface Ctx {
    *  定时编辑器读 scheduleDraft 预填（现在由输入框里的定时弹窗读，定时模块换新编辑器时接同一份） */
   scheduleDraft: ScheduleDraft | null
   openSchedule: (d: ScheduleDraft | null) => void
+  /** 模型配置（D07.4）：全局默认与模型目录。全软件只在设置页「默认」和联系人工作台「设置」两处改 */
+  modelSettings: import('./modelConfig').ModelSettings
+  /** 每保存一次模型配置 +1：别处打开着的配置页据此刷新 */
+  modelsRev: number
+  /** 一次写入：全局默认 + 若干联系人的模型字段（每位联系人在私聊里留一条记录） */
+  saveModels: (s: { settings?: Partial<import('./modelConfig').ModelSettings>; contacts?: { id: PersonId; patch: Partial<import('./data').Person>; note: string }[]; toast?: string }) => void
 }
 
 export interface ScheduleDraft { conv: string; when?: string; what?: string; via: 'slash' }
