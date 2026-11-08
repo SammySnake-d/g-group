@@ -60,7 +60,12 @@ export const COPY = {
   stalled: (min: number) => `${min} 分钟没动静`,
   stuckAt: (step: string) => `卡在「${step}」`,
   needsHuman: '要你来',
-  stopping: '正在停止',
+  /* 停止照 mirasim(需求 v3.20 §8.1 已定 16):助手启动的程序及子程序都确认退出才显示「已停止」,并注明范围 */
+  stopping: '正在停止…',
+  stoppingHint: '等助手启动的程序及其子程序都确认退出',
+  stopped: '已停止',
+  stoppedScope: '只保证到助手启动的那些程序',
+  jobStopping: '正在关',
   retry: '重试',
   switchModel: '换个模型',
   skip: '跳过',

@@ -1,4 +1,4 @@
-import { Hand, PauseCircle, RotateCw, TriangleAlert, type LucideIcon } from 'lucide-react'
+import { Hand, PauseCircle, RotateCw, Square, TriangleAlert, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Compute } from '@/data'
 import { cn } from '@/lib/utils'
@@ -10,7 +10,7 @@ import type { ComputeState } from '../StatusChip'
 
 export interface CardActions { retry?: () => void; switchModel?: () => void; skip?: () => void }
 
-interface Alert { icon: LucideIcon; tone: 'err' | 'warm'; title: string; detail?: string }
+interface Alert { icon: LucideIcon; tone: 'err' | 'warm' | 'neutral'; title: string; detail?: string }
 
 function alertOf(c: Compute, state: ComputeState): Alert | null {
   if (c.status === 'error') {
@@ -22,11 +22,13 @@ function alertOf(c: Compute, state: ComputeState): Alert | null {
     return { icon: PauseCircle, tone: 'warm', title: state.label, ...(step ? { detail: COPY.stuckAt(step) } : {}) }
   }
   if (state.key === 'human' && c.needsHuman) return { icon: Hand, tone: 'warm', title: COPY.needsHuman, detail: c.needsHuman.what }
+  if (state.key === 'stopping') return { icon: Square, tone: 'neutral', title: COPY.stopping, detail: COPY.stoppingHint }
+  if (c.status === 'stopped') return { icon: Square, tone: 'neutral', title: COPY.stopped, detail: COPY.stoppedScope }
   return null
 }
 
-const LINE = { err: 'border-err/30', warm: 'border-warm/30' }
-const INK = { err: 'text-err', warm: 'text-warm' }
+const LINE = { err: 'border-err/30', warm: 'border-warm/30', neutral: 'border-line' }
+const INK = { err: 'text-err', warm: 'text-warm', neutral: 'text-fg-2' }
 
 export function AlertStrip({ compute, state, actions }: { compute: Compute; state: ComputeState; actions?: CardActions }) {
   const a = alertOf(compute, state)
@@ -34,7 +36,7 @@ export function AlertStrip({ compute, state, actions }: { compute: Compute; stat
   const showActions = compute.status === 'error' && actions
   return (
     <div role="alert" className={cn('flex min-w-0 items-center gap-2 border-t px-3.5 py-2', LINE[a.tone])} data-testid="compute-card-alert" data-tone={a.tone}>
-      <a.icon aria-hidden className={cn('size-3.5 shrink-0', INK[a.tone])} strokeWidth={2.25} />
+      <a.icon aria-hidden className={cn('size-3.5 shrink-0', INK[a.tone], a.icon === Square && 'size-3 fill-current', state.key === 'stopping' && 'pulse-dot')} strokeWidth={2.25} />
       <div className="min-w-0 flex-1 text-[12.5px] leading-5">
         <span className={cn('font-medium', INK[a.tone])}>{a.title}</span>
         {a.detail && <span className="text-fg-2"> · {a.detail}</span>}

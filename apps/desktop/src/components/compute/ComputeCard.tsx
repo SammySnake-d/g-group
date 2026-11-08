@@ -37,8 +37,10 @@ export function ComputeCard({ compute: c, transcript, defaultOpen, onOpenSession
   const done = c.steps.filter((s) => s.state === 'done').length
   const work = useMemo(() => (transcript ? summarizeWork(transcript.events) : null), [transcript])
   const harness = transcript ? HARNESS_LABEL[transcript.meta.harness] : c.harness
-  const failAt = c.steps.findIndex((s) => s.state === 'fail')
-  const where = c.status === 'done' ? c.result ?? state.label : c.status === 'error' ? (failAt >= 0 ? COPY.stoppedAt(failAt + 1, c.steps.length) : state.label) : c.phase
+  /* 出错或停下:写停在第几步(原因在提示条里,不重复);做完:写结果;在跑:写当前阶段 */
+  const haltAt = c.steps.findIndex((s) => s.state === (c.status === 'error' ? 'fail' : 'now'))
+  const halted = c.status === 'error' || c.status === 'stopped'
+  const where = c.status === 'done' ? c.result ?? state.label : halted ? (haltAt >= 0 ? COPY.stoppedAt(haltAt + 1, c.steps.length) : state.label) : c.phase
   const meta = [
     { key: 'harness', text: harness, className: 'text-fg-2' },
     ...(c.status === 'running' && c.steps.length ? [{ key: 'step', text: COPY.step(Math.min(done + 1, c.steps.length), c.steps.length) }] : []),
@@ -79,7 +81,7 @@ export function ComputeCard({ compute: c, transcript, defaultOpen, onOpenSession
           <div className="space-y-2.5 border-t border-line px-4 pb-3 pt-2.5" data-testid="compute-card-body">
             {work && <p className="text-[12.5px] text-fg-2" data-testid="compute-card-work">{workLine(work)}</p>}
             <StepList steps={c.steps} />
-            {transcript && <BackgroundJobs jobs={transcript.meta.background} />}
+            {transcript && <BackgroundJobs jobs={transcript.meta.background} stopping={state.key === 'stopping'} />}
             <Facts items={foot} mono={false} className="block text-[11.5px]" />
           </div>
         </Disclosure.Content>

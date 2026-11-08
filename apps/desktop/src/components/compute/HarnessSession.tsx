@@ -31,12 +31,14 @@ export interface HarnessSessionProps {
   onJumpSource?: () => void
   /** 只读条「回群里 @XX」 */
   onTalk?: () => void
-  /** 打开时把焦点移进窗口(Esc 就能关);挂在分屏页签里切换时不要抢焦点,传 false */
+  /** 打开时把焦点移进窗口（Esc 就能关）；挂在分屏页签里切换时不要抢焦点 */
   autoFocus?: boolean
+  /** 嵌进已有标题与只读条的容器（分屏里 Compute 视图的「会话」页签）：不画自己的顶栏和只读条，只留对话流和状态行 */
+  embedded?: boolean
   className?: string
 }
 
-export function HarnessSession({ compute: c, transcript, sourceTitle, dm = false, now, onBack, onClose, onJumpSource, onTalk, autoFocus = false, className }: HarnessSessionProps) {
+export function HarnessSession({ compute: c, transcript, sourceTitle, dm = false, now, onBack, onClose, onJumpSource, onTalk, autoFocus = false, embedded = false, className }: HarnessSessionProps) {
   const ref = useRef<HTMLElement>(null)
   useEffect(() => {
     if (autoFocus) ref.current?.focus({ preventScroll: true })
@@ -57,7 +59,7 @@ export function HarnessSession({ compute: c, transcript, sourceTitle, dm = false
       data-testid="harness-session"
       data-compute={c.id}
     >
-      <SessionHeader harness={harness} title={c.title} state={state} crumbs={crumbs} {...(onBack ? { onBack } : {})} {...(onClose ? { onClose } : {})} />
+      {!embedded && <SessionHeader harness={harness} title={c.title} state={state} crumbs={crumbs} {...(onBack ? { onBack } : {})} {...(onClose ? { onClose } : {})} />}
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto" data-testid="session-body">
         {transcript && view ? (
           <div className="mx-auto w-full max-w-[760px] space-y-4 px-4 pb-4 pt-4">
@@ -78,6 +80,7 @@ export function HarnessSession({ compute: c, transcript, sourceTitle, dm = false
         background={transcript?.meta.background.filter((j) => j.state === 'running').length ?? 0}
         owner={owner}
         dm={dm}
+        readonly={!embedded}
         {...(onTalk ? { onTalk } : {})}
       />
     </section>

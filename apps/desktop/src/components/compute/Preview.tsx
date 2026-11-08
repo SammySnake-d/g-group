@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Bot } from '@/components/Avatar'
-import { computes0, convs0, people } from '@/data'
+import type { HarnessTranscript } from '@g-group/ui-core'
+import { computes0, convs0, people, type Compute } from '@/data'
 import { cn } from '@/lib/utils'
 import { ComputeCard } from './ComputeCard'
 import { HarnessSession } from './HarnessSession'
@@ -18,12 +19,23 @@ const PREVIEW_COPY = {
   talked: '接线后：回到派活的群或私聊，引用派活消息并 @ 它',
   noop: '接线后由消息流提供',
   dmTitle: (who: string) => `与 ${who} 私聊`,
+  interrupted: '已停止：这次调用被中断',
 } as const
 
-export function ComputePreview({ id }: { id: string }) {
-  const c = computes0[id] ?? computes0.login!
+/** 预览里模拟停止的两个阶段:停止中(程序还没都退出)/已停止(都确认退出,后台任务改成已收掉) */
+function simulate(c: Compute, t: HarnessTranscript | null, as: string | null): [Compute, HarnessTranscript | null] {
+  if (as === 'stopping') return [{ ...c, status: 'running', stopping: true }, t]
+  if (as !== 'stopped') return [c, t]
+  if (!t) return [{ ...c, status: 'stopped', stopping: false }, t]
+  /* 停下后:在跑的程序都已收掉,在跑的调用被中断 */
+  const meta = { ...t.meta, endedAt: new Date(DEMO_NOW).toISOString(), background: t.meta.background.map((j) => (j.state === 'running' ? { ...j, state: 'killed' as const } : j)) }
+  const events = t.events.map((e) => (e.kind === 'tool' && e.status === 'running' ? { ...e, status: 'failed' as const, output: PREVIEW_COPY.interrupted } : e))
+  return [{ ...c, status: 'stopped', stopping: false }, { ...t, meta, events }]
+}
+
+export function ComputePreview({ id, as = null }: { id: string; as?: string | null }) {
+  const [c, transcript] = simulate(computes0[id] ?? computes0.login!, demoSession(id), as)
   const owner = people[c.owner]
-  const transcript = demoSession(c.id)
   const [open, setOpen] = useState(false)
   const [note, setNote] = useState('')
   const conv = convs0.find((x) => x.id === c.conv)

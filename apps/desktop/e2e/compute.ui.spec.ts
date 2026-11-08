@@ -130,6 +130,25 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.getByTestId("session-talk")).toHaveText("回私聊 @Codex");
     });
 
+    test("停止照 mirasim(v3.20 §8.1 已定 16):停止中写「正在停止…」,确认退出才「已停止」并注明只保证到助手启动的程序", async ({ page }) => {
+      await page.goto(`/?preview=compute&id=login&as=stopping${theme === "dark" ? "&theme=dark" : ""}`);
+      const card = page.getByTestId("compute-card-login");
+      await expect(card.getByTestId("compute-status")).toHaveText("正在停止…");
+      await expect(card.getByTestId("compute-card-alert")).toContainText("等助手启动的程序及其子程序都确认退出");
+      await expect(card.getByTestId("compute-card-background")).toContainText("正在关");
+      await page.getByTestId("compute-card-open-session").click();
+      await expect(page.getByTestId("session-statusline")).toContainText("正在停止…");
+
+      await page.goto(`/?preview=compute&id=login&as=stopped${theme === "dark" ? "&theme=dark" : ""}`);
+      await expect(card.getByTestId("compute-status")).toHaveText("已停止");
+      await expect(card.getByTestId("compute-card-phase")).toHaveText("停在第 3/5 步");
+      await expect(card.getByTestId("compute-card-alert")).toContainText("只保证到助手启动的那些程序");
+      await page.getByTestId("compute-card-open-session").click();
+      await expect(page.getByTestId("session-status")).toHaveText("已停止");
+      await expect(page.getByTestId("session-statusline")).toContainText("已停止 · 只保证到助手启动的那些程序");
+      await shot(page, `compute/${theme}-stopped`, 400);
+    });
+
     test("每个演示 Compute 都能打开会话,对话流不空", async ({ page }) => {
       for (const id of IDS) {
         await open(page, id);

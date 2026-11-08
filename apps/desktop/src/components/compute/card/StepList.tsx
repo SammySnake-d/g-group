@@ -30,18 +30,19 @@ export function StepList({ steps }: { steps: { text: string; state: StepState }[
   )
 }
 
-export function BackgroundJobs({ jobs }: { jobs: BackgroundJob[] }) {
+/** stopping:Compute 正在停止,还在跑的程序显示「正在关」,确认退出后由后端改成「已收掉」 */
+export function BackgroundJobs({ jobs, stopping = false }: { jobs: BackgroundJob[]; stopping?: boolean }) {
   if (!jobs.length) return null
   return (
     <div className="space-y-0.5" data-testid="compute-card-background">
       <div className="text-[11px] text-fg-3">{COPY.background}</div>
       {jobs.map((j) => {
-        const s = JOB_STATE[j.state]
+        const s = stopping && j.state === 'running' ? { label: COPY.jobStopping, tone: 'neutral' as const } : JOB_STATE[j.state]
         return (
           <div key={j.id} className="flex min-w-0 items-center gap-2 text-[12px]">
             <StatusDot tone={s.tone} live={j.state === 'running'} />
             <span className="min-w-0 flex-1 truncate font-code text-[11.5px] text-fg-2">{j.command}</span>
-            <span className={cn('shrink-0 text-[11.5px]', j.state === 'running' ? 'text-run' : j.state === 'failed' ? 'text-err' : 'text-fg-3')}>{s.label}</span>
+            <span className={cn('shrink-0 text-[11.5px]', s.tone === 'run' ? 'text-run' : s.tone === 'err' ? 'text-err' : 'text-fg-3')}>{s.label}</span>
           </div>
         )
       })}

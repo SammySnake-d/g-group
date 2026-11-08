@@ -14,7 +14,7 @@ applyMotionCssVars()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {/* 开发预览(R5):?preview=compute&id=<computeId> 只渲染 Compute 卡与 harness 会话窗口,给 e2e 与截图用 */}
-    {query.get('preview') === 'compute' ? <ComputePreview id={query.get('id') ?? 'login'} /> : <App />}
+    {/* 开发预览(R5):?preview=compute&id=<computeId>[&as=stopping|stopped] 只渲染 Compute 卡与 harness 会话窗口,给 e2e 与截图用 */}
+    {query.get('preview') === 'compute' ? <ComputePreview id={query.get('id') ?? 'login'} as={query.get('as')} /> : <App />}
   </StrictMode>,
 )
