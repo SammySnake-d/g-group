@@ -44,7 +44,7 @@ import { CONTACT_SYSTEM, CONTACT_TOOLS, type LedgerLine, type RoundAssembler, ke
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { PluginStore } from "./plugins.ts";
-import { Scheduler } from "./schedules.ts";
+import { Scheduler, checkCron } from "./schedules.ts";
 
 export interface HostOptions {
   readonly file: string;
@@ -556,6 +556,9 @@ export class Host {
       if (!msgs.some((m) => m.seq === q)) throw new HostError("invalid_params", `引用的 #${q} 不在这个会话里`);
     }
     if (!input.text.trim() && !input.attachments?.length) throw new HostError("invalid_params", "消息不能为空");
+    // 内置 slash 命令(像 Telegram 那样在输入框唤醒能力):先校验,不合格整条不发
+    const cmd = this.prepareBuiltin(room, input);
+    if (cmd.mention && !(input.mentions ?? []).some((m) => m.id === cmd.mention)) input = { ...input, mentions: [...(input.mentions ?? []), { id: cmd.mention, source: "auto" }] };
     for (const ref of input.attachments ?? []) if (!one(this.db, "SELECT 1 FROM gg_attachments WHERE ref = ?", ref)) throw new HostError("invalid_params", `附件 ${ref} 不存在,请先 attachments.add`);
     const r = tx(this.db, () =>
       this.appendMessageTx(room.id, me, {
@@ -573,10 +576,57 @@ export class Host {
     if (!r.duplicate) {
       // 自己发的消息自己已读
       this.markRead(room.id, me, r.seq);
+      cmd.after?.();
       this.afterAppend(room.id, r.seq, me);
     }
     const m = this.projected(room.id).find((x) => x.seq === r.seq)!;
     return this.messageView(room.id, m);
+  }
+
+  /**
+   * 内置命令:/task 把活交给某位联系人(自动 @ 它);/remind 让联系人按 cron 定时做事(宿主直接建定时);/stop 停掉一个任务。
+   * 插件命令照常作为带 command 的消息送达联系人。目标联系人:args.contact,私聊里缺省为对方。
+   */
+  private prepareBuiltin(room: RoomRow, input: SendInput): { mention?: string; after?: () => void } {
+    const c = input.command;
+    if (!c || !["task", "remind", "stop"].includes(c.name)) return {};
+    const args = (c.args && typeof c.args === "object" && !Array.isArray(c.args) ? c.args : {}) as Record<string, unknown>;
+    const str = (k: string) => (typeof args[k] === "string" ? (args[k] as string).trim() : "");
+    const target = (): string => {
+      const id = str("contact") || room.dm_contact || "";
+      if (!id) throw new HostError("invalid_params", `/${c.name} 在群里要指定 contact`);
+      if (!this.isMember(room.id, { kind: "contact", id })) throw new HostError("invalid_params", "这位联系人不在这个会话里");
+      return id;
+    };
+    if (c.name === "task") {
+      if (!str("what")) throw new HostError("invalid_params", "/task 要写做什么(what)");
+      return { mention: target() };
+    }
+    if (c.name === "remind") {
+      const contactId = target();
+      const cron = str("cron");
+      const what = str("what");
+      if (!cron || !what) throw new HostError("invalid_params", "/remind 要 cron 和 what");
+      const tz = str("tz") || this.settings().timezone;
+      checkCron(cron, tz);
+      return { mention: contactId, after: () => this.scheduler.create({ contactId, roomId: room.id, title: what.slice(0, 40), cron, tz, prompt: what }) };
+    }
+    const ref = str("task");
+    const live = this.listTasks({ roomId: room.id }).filter((t) => !TERMINAL.has(t.state) && t.state !== "T9_StopRequested");
+    const t = live.find((x) => x.id === ref) ?? (ref ? live.filter((x) => x.title.includes(ref)) : []).at(0);
+    if (!t) throw new HostError("not_found", ref ? `这个会话里没有进行中的任务「${ref}」` : "/stop 要指定任务");
+    return { after: () => this.stopTask(t.id, this.userId) };
+  }
+  /** 停止任务(不另发消息):状态机 Cancel → 停 Compute,任务卡收口。 */
+  stopTask(taskId: string, by: string) {
+    const effects: HostEffect[] = [];
+    tx(this.db, () => {
+      const { effects: eff } = this.stepTaskTx(taskId, { kind: "Cancel", by });
+      for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId, computeId: e.computeId });
+      run(this.db, "UPDATE gg_cards SET state = 'done' WHERE task_id = ? AND kind = 'task-status' AND state = 'open'", taskId);
+    });
+    this.emitTask(taskId);
+    void this.runEffects(effects);
   }
 
   receipts(roomId: string, seq: number): ReceiptView {
