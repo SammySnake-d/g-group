@@ -70,10 +70,10 @@
   "waiver": null,
   "review": {
     "agent": "codex",
-    "session": "codex:6e2a9ebd-ea69-49ac-aaf7-3bb3e5c7edd5",
+    "session": "codex:3b86cc56-d935-4f27-b2e8-2d1a76da35e8",
     "model": "gpt-6.1-terra",
     "verdict": "reject",
-    "reviewed_hash": "999cdbc26456965da0daff45db052ab625a1a3d3ff2fe30a68878d5987676bfd",
-    "notes": "第十二轮 REJECT：R12-01 拒收 Promise 的异步追踪 getter 被调用且抛错可终止进程；R12-02 非 then/constructor getter 被接受；R12-03 伪造 bytes 令不同前缀哈希相同；R12-04 两个独立单点故障逃过全套测试。详情见 reviews/feat-kernel-plugins.md 第十二轮。"
+    "reviewed_hash": "b1d095ea65b5701d88ca16335004cafc15d9142a907f658658c1d9cc28206250",
+    "notes": "第十四轮 REJECT：R14-01 pull 同步数组违反新 Promise 合同；R14-02 三个单点故障逃过测试，含拒收期间临时改写；R14-03 超大超时被 Node 缩至 1ms。box2 Docker 被拦，G-STUB 负例和沙箱运行未验证；详情见第十四轮审查。"
   }
 }

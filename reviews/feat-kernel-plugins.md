@@ -1560,3 +1560,57 @@ NODE
 
 - 填入本轮 reject 后，在 `origin/feat/domain-core` 基线上再次执行 `--local --branch=feat/kernel-plugins --base=origin/feat/domain-core`：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 按 reject 失败；G-PROVENANCE 失败，明确报告 `审查会话不可信:会话记录不存在:codex:6e2a9ebd-ea69-49ac-aaf7-3bb3e5c7edd5`。本会话确实执行过哈希命令，但门禁所需的 `turns.jsonl` 在执行时未落盘，不能因此称来源验证通过，也未手写会话记录。完整输出 `gates-after-review.log`。
 - 填收据后另按字面运行 `node scripts/gates/run-all.ts --local`：分支为 feat/kernel-plugins，但命令仍默认 base=origin/main，将领域层 23 项测试也纳入 G-RED，G-PROVENANCE/G-REVIEW/G-RED/G-STUB 失败，其余通过；它不是 PR 的正确 base，完整原样输出 `gates-exact-after-review.log`。
+
+
+---
+
+# 第十四轮：Codex 独立复审
+
+**结论：REJECT。** `pull` 仍接受同步普通数组，违反最新「只接受普通原生 Promise，否则拒收」合同；新的测试集合还漏掉仍有效的拒收时不改写对象及普通 Promise 放行边界。另发现超大超时值会被 Node 缩成约 1 毫秒的低频问题。未采用先前审查者的结论或本地通过收据作为证明。
+
+## 对象与合同
+
+- 开工前及准备提交前远端 `feat/kernel-plugins` 均回读为 `0c078a8709c01c68832c555cf1c1912ff4288fad`；base `origin/feat/domain-core` 为 `afd02560f9546147da380382404eb6106222a9b8`。本轮独立 HTTPS 克隆，非共享 worktree。
+- 最新 `origin/docs/dev-handbook` 为 `a6ac7802b0716b74d3aba29f9fb1e9a89901ff30`：需求 §8.1 已定第 6、17 条与验收第 9 节为依据；候选条目不作门槛。不以被拒收的已失败 Promise 是否导致宿主退出作拒审理由，插件隔离 AC-58 属阶段 II 前置；不以预改内置原型的场景作反例。
+- 本会话 `codex:3b86cc56-d935-4f27-b2e8-2d1a76da35e8`，原生会话 turn_context 模型 `gpt-6.1-terra`；作者本轮会话记录的模型为 Claude。真实执行 `node scripts/gates/run-all.ts --hash --branch=feat/kernel-plugins --base=origin/feat/domain-core` 输出 **`b1d095ea65b5701d88ca16335004cafc15d9142a907f658658c1d9cc28206250`**。云端无本机 Mirasim 会话目录，G-PROVENANCE 未通过，不能将模型记录核对冒充门禁通过。
+- 证据与探针：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr6-r14-codex/`；box2 导出压缩包 SHA-256 `f72dff7ac9133e10fd522975f7f81f2bdfb0ce6c0291aefe8ee34b5b24309f1b`。涉及隔离的夹具只用假 HOME 与中性标记。
+
+## 必须返修
+
+### R14-01 [P2] pull 接受非 Promise 的同步普通数组，与新合同相反
+
+位置：`packages/kernel/src/plugins.ts:261-274`；相矛盾的旧断言 `packages/kernel/src/plugins.test.ts:1181-1183`。`isPlainPromise(returned)` 为 false 时，pull 仍把返回值交给 `plainItems`；只要同步值是普通数组，它就被当作事件批次处理。独立复现：插件 `pull: () => [event]`，Node 22.23.4 和 25.9.0 均返回 `ok:true` 并盖章 1 条事件；单开关改为 `pull: () => Promise.resolve([event])` 也正常成功（`evidence/repro-contract-node22.log`、`evidence/repro-contract-node25.log`）。这不是对被拒收 Promise 是否拖垮宿主的反例：问题是非 Promise 根本没有被拒收。
+
+返修：按需求 §8.1 第 17 条，在 pull 对非普通原生 Promise 的判断失败后直接返回 `invalid-batch`，不得继续处理或读取该值；将旧的「同步普通数组照常拉取」断言按新合同更新为拒收，并保留普通原生 Promise 及异常拒绝的正反对照，覆盖 send/pull 和空/非空同步数组。不删仍有效的断言以求变绿。
+
+### R14-02 [P2 / R-05] 替换测试后，仍有效的“拒收期间不改写”及合法属性边界有覆盖缺口
+
+位置：`packages/kernel/src/plugins.test.ts:1518-1520,1582-1614`；第十四轮替换测试的差异可由 `git diff 1ef0891..9e60c92 -- packages/kernel/src/plugins.test.ts` 核对。生成矩阵的属性一律设为 enumerable，且对象快照只在调用前后比对；旧测试中观察调用窗口的对象不变断言已删除。新合同取消的是拒收后替插件挂处理及宿主存活责任，**并未取消整个拒收期间不改写任何对象**。
+
+在互相隔离的副本各注入一个独立故障，原测试 Node 22 各 215/215 通过、0 skip/todo/cancelled（`evidence/manual-summary.log`、`evidence/manual-M1.log` 等）：
+
+1. **M1** 拒收有自有 then/constructor 的可扩展 Promise 时临时加自有属性再删掉，期间创建一次 Promise 供 async_hooks 同步观察；原测试仍 215 绿。独立观察器在真实运行中看到标记 1 次，而返回前后描述符相同（`evidence/manual-observe-M1.log`）。原版同一观察为 0 次（`evidence/manual-observe-original.log`）。这证明现有测试无法排除临时改写，不声称原产品发生了该改写。
+2. **M2** 额外拒绝不可枚举的自有数据属性：215 绿；同一合法原生 Promise 的 `extra` 数据属性设为不可枚举时，原版 pull 成功、故障版 `invalid-batch`（`evidence/manual-observe-M2.log`）。
+3. **M3** 追踪符号数值只接受整数：215 绿；同一合法原生 Promise 的同描述符追踪符号为 `1.5` 时，原版成功、故障版拒收（`evidence/manual-observe-M3.log`）。该样例没有改写任何内置原型或方法，符合本轮“数字或 undefined”的合同。
+4. **M4** 放过不可枚举访问器被 R12-02 具名测试按名杀死（214 绿、1 红），证明并非所有新故障都存活。
+
+返修：补运行窗口中对象不被临时改写的直接观察，至少覆盖 send/pull、宿主及插件相关对象；为不可枚举数据属性和非整数安全数字补双侧单开关及具名变异校准，保留现有访问器/Proxy 禁调用测试。隔离副本只用于校准，未改产品代码。
+
+### R14-03 [P3] 超出 Node 定时器上限的正数被当作合法配置，却几乎立即超时
+
+位置：`packages/kernel/src/plugins.ts:185,229`。`sendTimeoutMs` 接受任意有限正数，直接传给 `setTimeout`。独立双侧对照中 `2147483647` 毫秒配置下，40 毫秒后返回的正常回执被确认；仅将配置加 1，Node 22.23.4/25.9.0 均报告 `TimeoutOverflowWarning` 并将定时器设为 1ms，约 2ms 即返回 `delivery-unknown/timeout`，详情却声称等待超过 2147483648ms（`evidence/repro-timeout-node22.log`、`evidence/repro-timeout-node25.log`）。这是罕见超大配置的正确性问题，不涉及外部 Promise 拒收或宿主存活。
+
+返修：明确并校验可接受的定时器范围，或正确实现长时限；补上限及上限加一的双侧测试，不能把短等待写成实际等待了所配置的长时限。
+
+## 独立运行与上轮核对
+
+- box2：Node **22.23.4 / 25.9.0**（与作者声称的 22.22.0 / 25.8.1 小版本不同）。两版的 typecheck 和 lint 退出 0；`npm test` 各 **238/238**、0 fail/cancelled/skipped/todo；仅 kernel 各 **215/215**、同样无跳过。两条第十四轮新增测试在红提交 `9e60c92` 上均按名失败、0 文件级替代，绿版包含于上述 215 条。
+- 作者列出的 193 个单故障两版各独立运行：原样副本 215 绿、**193/193 被原样通过的具名测试发现、0 存活、0 超时**；逐条输出中每项绿加红均为 215 并含具名失败。日志 `evidence/mutation-node22.log`、`evidence/mutation-node25.log`。Node 22 的超时金丝雀约 5.1 秒被终止，按超时而非杀死记录（`evidence/canary.log`）。本轮自造 M1–M4 为额外校准，不冒充作者清单结果。
+- R12-01：新合同下，开 async_hooks 的真实追踪符号 getter、额外 setter、Proxy，send/pull 共 6 形态均拒收；getter/setter/Proxy 陷阱均 0，受检 Promise 描述符前后相同。只证明这些形态，并不把宿主存活作为验收。R12-02：自有访问器拒收及合法数据属性对照见上述运行和 R12-02 测试。R12-03：中文正文的错误 bytes 1/0/-1 经 serialize/prefixLength/prefixHash 均受控拒绝，正常对照见测试与 `repro-contract`。R12-04：整数 mention 得 E1，单改 end 为 2.5 得 E2 且分类器调用 1 次；空字符串附件 name/mime 原样盖章。K226/K228 等在作者清单中逐项复跑。合法嵌套 JSON null 保留，顶层 null 分类受控拒绝不抛，导出 EVENT_CODES/STABLE_ORDER 冻结；`evidence/repro-r12-node22.log` 与 `-node25.log`。
+- GitHub self-check run `42518955075` 对应上述待审 SHA，completed/success 且实际含安装、测试、门禁自检和变异步骤；此观察不代替本轮复现。
+
+## 门禁与环境缺口
+
+在 box2 按指定命令真实执行 `node scripts/gates/run-all.ts --local --branch=feat/kernel-plugins --base=origin/feat/domain-core`，退出 1，原样输出 `evidence/local-gates.log`：G-TRACE、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因原收据仍是旧轮 reject 且 hash 不同而失败；G-PROVENANCE 因云端无 Mirasim 会话目录失败；G-RED、G-STUB、G-TAUTO 报「没有可用沙箱」并停止各自校验。云端 `docker info` 报 Docker socket `permission denied`，属**被拦**，未尝试绕开或反复重试；作者所称 Docker 内 `assemble.test.ts` 工作区链接缺失无法独立核实，不采信为事实。
+
+每门用独立真实 Git 中性夹具喂入应失败输入：G-TRACE 错误验收 ID、G-REVIEW reject、G-RED 源码变更无测试、G-TAUTO 源码导入 node:test、G-WORKFLOW 写权限、G-LAYER 跨包相对路径、G-PROVENANCE 不存在的假会话，七门均显示对应理由并退出 1；G-STUB 的无效测试夹具因缺沙箱只得到门禁自身出错，**不能算负例已验证**。逐项原样输出见 `evidence/negative-G-*.log`。夹具使用假 HOME，未造写真实会话记录。审查结论依据 R14-01 和 R14-02 的实际复现，而不是这些环境错误。
