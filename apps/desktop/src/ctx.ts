@@ -151,7 +151,13 @@ export interface Ctx {
   revokePlugin: (id: string) => void
   reauthPlugin: (id: string) => void
   pushMsg: (m: import('./data').Msg, convId: string) => void
+  /** 定时草稿：/schedule 带过来的「何时 / 做什么」。openSchedule(草稿) 打开定时编辑并预填，null 关掉；
+   *  定时编辑器读 scheduleDraft 预填（现在由输入框里的定时弹窗读，定时模块换新编辑器时接同一份） */
+  scheduleDraft: ScheduleDraft | null
+  openSchedule: (d: ScheduleDraft | null) => void
 }
+
+export interface ScheduleDraft { conv: string; when?: string; what?: string; via: 'slash' }
 
 export type Section = 'chat' | 'contacts' | 'activity' | 'files' | 'plugins'
 export type WbTab = 'overview' | 'duty' | 'memory' | 'cron' | 'settings' | 'process'
