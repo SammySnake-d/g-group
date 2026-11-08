@@ -95,9 +95,11 @@ export type MindAction =
   | { readonly kind: "commit"; readonly roomId: string; readonly sourceSeq: number; readonly text: string; readonly taskId: string | null }
   | { readonly kind: "forward"; readonly taskId: string; readonly text: string }
   | { readonly kind: "deliver"; readonly taskId: string; readonly text: string }
-  | { readonly kind: "stop"; readonly taskId: string };
+  | { readonly kind: "stop"; readonly taskId: string }
+  // 用户对交付的普通回复(通过 / 要改)由联系人转成验收结论(AC-28/AC-56);来源必须是提出者本人在交付之后的直接消息,宿主核对
+  | { readonly kind: "verdict"; readonly taskId: string; readonly sourceSeq: number; readonly verdict: "accept" | "revise"; readonly feedback: string | null };
 export type MindActionKind = MindAction["kind"];
-export const MIND_ACTION_KINDS: readonly MindActionKind[] = Object.freeze(["reply", "dispatch", "commit", "forward", "deliver", "stop"]);
+export const MIND_ACTION_KINDS: readonly MindActionKind[] = Object.freeze(["reply", "dispatch", "commit", "forward", "deliver", "stop", "verdict"]);
 
 export interface RoundOutput {
   readonly actions: readonly MindAction[];

@@ -212,7 +212,7 @@ test("rewind 后联系人第 4 块不再有撤下的消息;新消息引用它,�
   await host.close();
 });
 
-test("rewind:已完成的 Compute 结果列在「已发生、未撤销」里;任务照样取消并等停止确认,交付卡收口,文案不声称结果被撤回", async () => {
+test("rewind:已完成的 Compute 结果列在「已发生、未撤销」里;任务照样取消并等停止确认,任务卡收口,文案不声称结果被撤回", async () => {
   const compute = scriptedCompute();
   const host = new Host({ file: file(), now: () => NOW, mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5 });
   const c = host.createContact({ name: "小克" });
@@ -238,7 +238,7 @@ test("rewind:已完成的 Compute 结果列在「已发生、未撤销」里;任
   assert.equal(stateOf(host, task.id), "T10_Cancelled");
   assert.deepEqual(compute.stopped, ["cp-1"]);
   const cards = host.listMessages(dm.id, {}).messages.filter((m) => m.card).map((m) => [m.seq, m.card!.kind, m.card!.state]);
-  assert.deepEqual(cards, [[4, "task-status", "expired"], [7, "delivery", "expired"]]);
+  assert.deepEqual(cards, [[4, "task-status", "expired"]], "交付是普通消息(AC-56),没有交付卡;任务卡收口");
   compute.close();
   await host.close();
 });

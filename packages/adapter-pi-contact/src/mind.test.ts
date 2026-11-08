@@ -7,7 +7,7 @@ import test from "node:test";
 import { inspect } from "node:util";
 import { BLOCK_LABELS, type BlockNo, type RoundBlock, type RoundInput } from "@g-group/kernel";
 import { createPiContactMind, PiContactMindError, type PiContactMindOptions, RoundAbortedError, renderBlock } from "./mind.ts";
-import { PI_CONTACT_TOOL_NAMES } from "./tools.ts";
+import { PI_CONTACT_TOOL_NAMES, parseToolCall, TOOL_DECLARATIONS } from "./tools.ts";
 
 const KEY = "sk-test-SECRET-7f3a9c";
 const MODEL = "test-model-1";
@@ -85,7 +85,7 @@ const live = () => new AbortController().signal;
 const texts = (c: string | Block[]) => (typeof c === "string" ? [c] : c.map((b) => b.text));
 const until = async (cond: () => boolean) => { while (!cond()) await new Promise((r) => setTimeout(r, 5)); };
 
-test("首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有七个具名工具", async () => {
+test("首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有八个具名工具", async () => {
   const fake = fakeAnthropic([{ text: "看过了,不用动作" }]);
   try {
     const out = await createPiContactMind(opts(fake)).round(input("r1"), live());
@@ -98,7 +98,7 @@ test("首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2�
     assert.deepEqual(body.messages.map((m) => ({ role: m.role, texts: texts(m.content) })), [
       { role: "user", texts: [2, 3, 4, 5].map((n) => `<block n="${n}" label="${BLOCK_LABELS[n as BlockNo]}">\nr1-第${n}块内容\n</block>`) },
     ]);
-    assert.deepEqual(body.tools?.map((t) => t.name), ["reply", "dispatch_compute", "commit", "forward", "deliver", "stop", "update_state_note"]);
+    assert.deepEqual(body.tools?.map((t) => t.name), ["reply", "dispatch_compute", "commit", "forward", "deliver", "stop", "verdict", "update_state_note"]);
     assert.deepEqual([...PI_CONTACT_TOOL_NAMES], body.tools?.map((t) => t.name));
     assert.equal(renderBlock(blocks("r1")[3]!), `<block n="4" label="新消息">\nr1-第4块内容\n</block>`);
   } finally {
@@ -359,4 +359,35 @@ test("第 1 块 cacheBreakpoint 为 false 时请求里不设缓存断点", async
   } finally {
     await fake.close();
   }
+});
+
+// AC-56 / AC-28:联系人把用户对交付的普通回复转成验收结论的工具 verdict。只校验形状,来源语义由宿主核对。
+test("verdict 工具:通过与修改意见都登记成 verdict 动作,修改意见可省略", () => {
+  assert.ok(PI_CONTACT_TOOL_NAMES.includes("verdict"));
+  assert.deepEqual(parseToolCall("verdict", { taskId: "t-1", sourceSeq: 9, verdict: "accept" }), {
+    ok: true,
+    value: { kind: "action", action: { kind: "verdict", taskId: "t-1", sourceSeq: 9, verdict: "accept", feedback: null } },
+  });
+  assert.deepEqual(parseToolCall("verdict", { taskId: "t-1", sourceSeq: 10, verdict: "revise", feedback: "标题加粗" }), {
+    ok: true,
+    value: { kind: "action", action: { kind: "verdict", taskId: "t-1", sourceSeq: 10, verdict: "revise", feedback: "标题加粗" } },
+  });
+  const decl = TOOL_DECLARATIONS.find((d) => d.name === "verdict")!;
+  assert.deepEqual(decl.parameters, {
+    type: "object",
+    properties: {
+      taskId: { type: "string", minLength: 1, description: "被验收的任务 id" },
+      sourceSeq: { type: "integer", minimum: 0, description: "用户表达通过或修改意见的那条消息的 seq(必须是提出者本人在交付之后发的)" },
+      verdict: { type: "string", enum: ["accept", "revise"], description: "accept:用户明确说通过;revise:用户要改" },
+      feedback: { type: ["string", "null"], minLength: 1, description: "revise 时用户要改什么(原话);accept 省略" },
+    },
+    required: ["taskId", "sourceSeq", "verdict"],
+    additionalProperties: false,
+  });
+});
+
+test("verdict 工具:应失败的输入——结论不是 accept/revise、缺来源、来源不是整数——都判参数错误", () => {
+  assert.deepEqual(parseToolCall("verdict", { taskId: "t-1", sourceSeq: 9, verdict: "maybe" }), { ok: false, why: "verdict 只能是 accept 或 revise" });
+  assert.deepEqual(parseToolCall("verdict", { taskId: "t-1", verdict: "accept" }), { ok: false, why: "缺字段 sourceSeq" });
+  assert.deepEqual(parseToolCall("verdict", { taskId: "t-1", sourceSeq: 1.5, verdict: "accept" }), { ok: false, why: "sourceSeq 必须是非负整数" });
 });

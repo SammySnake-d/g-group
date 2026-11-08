@@ -48,7 +48,8 @@ test("群聊 @ 联系人派活:Compute 执行,联系人在群里转述进度与�
     ],
     "进度与结果都由联系人在群里转述,Compute 的事件不直接成为群消息",
   );
-  assert.equal(msgs.at(-1)!.card?.kind, "delivery", "交付在群里");
+  assert.equal(msgs.at(-1)!.card, null, "交付是群里的一条普通消息,不挂验收卡(AC-56)");
+  assert.deepEqual(msgs.at(-1)!.mentions, [{ id: "me", source: "auto" }], "交付 @ 提出者");
   assert.deepEqual(run.transcript.map((m) => m.seq), msgs.map((m) => m.seq), "驱动返回的记录就是群里的全部消息");
   const audit = senderAudit(host, room.id);
   assert.equal(audit.ok, true);
