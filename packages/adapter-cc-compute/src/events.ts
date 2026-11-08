@@ -59,6 +59,15 @@ export function checkInit(m: Record<string, unknown>): StreamSignal {
   return { type: "init", sessionId: m.session_id, tools: [...m.tools] };
 }
 
+/** init 自报的实际加载清单(AC-29 观测点),只在 checkInit 判定合格之后读:MCP 服务器名与状态(没有名字记空名、
+ *  状态不是字符串记 "unknown"),skills(真实 CLI 2.1.319 带这个字段;缺失或不是字符串数组记为空) */
+export function initLoaded(m: Record<string, unknown>): { readonly mcpServers: readonly { readonly name: string; readonly status: string }[]; readonly skills: readonly string[] } {
+  const list = Array.isArray(m.mcp_servers) ? m.mcp_servers : [];
+  const mcpServers = list.map(asRecord).map((x) => ({ name: typeof x?.name === "string" ? x.name : "", status: typeof x?.status === "string" ? x.status : "unknown" }));
+  const skills = Array.isArray(m.skills) && m.skills.every((t) => typeof t === "string") ? [...(m.skills as string[])] : [];
+  return { mcpServers, skills };
+}
+
 /** init 之前真实 CLI 会输出的 system 帧(原型与 smoke 的 stream-json 里见过);其它一律不认可(R3-03)。冻结数组,导出后不可改 */
 export const PRE_INIT_SYSTEM_SUBTYPES: readonly string[] = Object.freeze(["hook_started", "hook_response", "ui_invalidate"]);
 
@@ -160,9 +169,4 @@ export function terminalFor(exitInput: Exit, resultInput: CliResult | undefined,
   if (facts.reportedFailure !== undefined) return fail(`Compute 汇报放弃:${facts.reportedFailure}`);
   if (facts.unresolved.length) return fail(`汇报被拒收且没有合规重报:${facts.unresolved.join(";")}`);
   return { kind: "completed", result: result.text };
-}
-
-/** init 自报的实际加载清单(AC-29 观测点)。空壳(先红),实现见下一个提交 */
-export function initLoaded(_m: Record<string, unknown>): { readonly mcpServers: readonly { readonly name: string; readonly status: string }[]; readonly skills: readonly string[] } {
-  return { mcpServers: [], skills: [] };
 }
