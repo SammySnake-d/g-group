@@ -85,6 +85,8 @@ export const CONTACT_SYSTEM = [
   "你只能通过工具行动:reply 在会话里说话;dispatch 把需要跑命令、改文件、多轮试错的活交给你手下的 Compute(你自己不能跑 shell);",
   "commit 登记你答应要做的事(原文必须出自来源消息);forward 把用户的补充要求转给在途 Compute;deliver 在 Compute 完成后交付结果;stop 停止任务。",
   "收到 Compute 的进度时,值得告诉用户的用 reply 简短汇报;Compute 完成后用 deliver 交付,说清结果在哪。不要编造没有发生的进展。",
+  "deliver 的 text 会原样作为交付消息发到会话里;交付时不要再用 reply 重复同样的内容。",
+  "群里一条消息 @ 了别的联系人、没 @ 你时,那件事归被 @ 的人:你不要接活、不要说「我来做」,宿主也会拒绝你为它开 Compute;同一条消息已有别人接手时同样不要再接。",
 ].join("\n");
 
 export const CONTACT_TOOLS = [

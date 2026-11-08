@@ -1,0 +1,43 @@
+# 2026-11-09 群聊派活真实运行 · 第 1 次(修复前,暴露缺口):真实 pi 联系人脑子 + 真实 Claude Code Compute
+# 命令: node packages/server/src/cli.ts group --db /tmp/gg-f-run/real/gg.db --mind pi --compute claude --cwd /tmp/gg-f-run/real/work --members 小克,小研 --to 小克 --timeout 900 "@小克 帮我在你的工作目录里写一个 group.txt,内容是 hi from group chat,写好在群里告诉我"
+# 代码: feat/group-dispatch 红提交 + drive.ts/cli.ts 实现,host.ts 未改(dev/integration 7811008 的接活逻辑);联系人与 Compute 模型都是 $ANTHROPIC_DEFAULT_SONNET_MODEL=fnqtz/claude-opus-5-5 经本机网关,令牌只经环境变量传入
+# 结论: AC-03 通过(9 条群消息发言者只有 user/contact);缺口:用户只 @ 了小克,没被 @ 的小研也建任务、起了第二个 Compute(联系人上下文里没有自己的名字和 id,分不清 @ 的是谁),两人交付后又各用 reply 重复了一遍结果
+# 下面是运行输出原文
+群 g-mw84rny9-2「项目群」成员: 小克、小研、我
+  → [contact] 小克: 接了任务:写 group.txt
+  → [contact] 小克: 好的,这就去写 group.txt,写好在群里告诉你。
+  · Compute started: 已开始
+  → [contact] 小研: 接了任务:写 group.txt
+  → [contact] 小研: 好的,这就写 group.txt,写好在群里告诉你。
+  · Compute started: 已开始
+  · Compute completed: 已创建 `group.txt`,用 `cat` 查看过，内容正确。
+
+- **绝对路径**:`/private/tmp/gg-f-run/real/work/t-mw84s62d-6/group.txt`
+- **内容**:`hi from group chat`(结尾有一个换行)
+  · Compute completed: 已在工作目录创建 `group.txt`,读回检查内容正确。
+
+- **绝对路径**:`/private/tmp/gg-f-run/real/work/t-mw84rz7n-3/group.txt`
+- **读回的内容**:`hi from group chat`(只有这一行)
+
+已向宿主汇报完成。
+  → [contact] 小研: group.txt 写好了，已经用 cat 核对过，内容没问题。
+- 路径:/private/tmp/gg-f-run/real/work/t-mw84s62d-6/group.txt
+- 内容:hi from group chat(结尾带一个换行)
+  → [contact] 小研: group.txt 写好了，路径是 /private/tmp/gg-f-run/real/work/t-mw84s62d-6/group.txt。内容是 hi from group chat,结尾带一个换行，已经用 cat 看过，没问题。
+  → [contact] 小克: group.txt 已写好:/private/tmp/gg-f-run/real/work/t-mw84rz7n-3/group.txt,内容为「hi from group chat」(单行,已读回核对)。
+  → [contact] 小克: group.txt 写好了,路径是 /private/tmp/gg-f-run/real/work/t-mw84rz7n-3/group.txt。内容只有一行「hi from group chat」,已经读回来核对过。
+—— 群记录 ——
+#1 我: @小克 帮我在你的工作目录里写一个 group.txt,内容是 hi from group chat,写好在群里告诉我
+#2 小克: 接了任务:写 group.txt  [卡片:task-status/open 取消任务]
+#3 小克: 好的,这就去写 group.txt,写好在群里告诉你。
+#4 小研: 接了任务:写 group.txt  [卡片:task-status/open 取消任务]
+#5 小研: 好的,这就写 group.txt,写好在群里告诉你。
+#6 小研: group.txt 写好了，已经用 cat 核对过，内容没问题。
+- 路径:/private/tmp/gg-f-run/real/work/t-mw84s62d-6/group.txt
+- 内容:hi from group chat(结尾带一个换行)  [卡片:delivery/open 豁免审查并通过|退回]
+#7 小研: group.txt 写好了，路径是 /private/tmp/gg-f-run/real/work/t-mw84s62d-6/group.txt。内容是 hi from group chat,结尾带一个换行，已经用 cat 看过，没问题。
+#8 小克: group.txt 已写好:/private/tmp/gg-f-run/real/work/t-mw84rz7n-3/group.txt,内容为「hi from group chat」(单行,已读回核对)。  [卡片:delivery/open 豁免审查并通过|退回]
+#9 小克: group.txt 写好了,路径是 /private/tmp/gg-f-run/real/work/t-mw84rz7n-3/group.txt。内容只有一行「hi from group chat」,已经读回来核对过。
+任务 t-mw84s62d-6 [T5_InReview] 写 group.txt 审查门=none 进度=started>completed
+任务 t-mw84rz7n-3 [T5_InReview] 写 group.txt 审查门=none 进度=started>completed
+—— AC-03 发言者核对:通过,共 9 条,发言者种类 user/contact ——

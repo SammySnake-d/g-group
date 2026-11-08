@@ -1,0 +1,30 @@
+# 2026-11-09 群聊派活真实运行 · 第 2 次(修复后):真实 pi 联系人脑子 + 真实 Claude Code Compute
+# 命令: node packages/server/src/cli.ts group --db /tmp/gg-f-run/real2/gg.db --mind pi --compute claude --cwd /tmp/gg-f-run/real2/work --members 小克,小研 --to 小克 --timeout 900 "@小克 帮我在你的工作目录里写一个 group.txt,内容是 hi from group chat,写好在群里告诉我"
+# 代码: feat/group-dispatch 绿提交的内容(宿主接活归属 claimBlockedTx、第 1 块写明联系人身份、系统提示加群里 @ 归属与交付不重复);模型同第 1 次
+# 下面是运行输出原文
+群 g-mw85169f-2「项目群」成员: 小克、小研、我
+  → [contact] 小克: 接了任务:写 group.txt
+  → [contact] 小克: 好的,这就写 group.txt,写好在群里告诉你。
+  · Compute started: 已开始
+  · Compute completed: 我在当前工作目录创建了 `group.txt`。用 `cat` 查看，内容是 `hi from group chat`，和要求一致。
+
+绝对路径：`/private/tmp/gg-f-run/real2/work/t-mw851ied-3/group.txt`
+
+已向宿主汇报任务完成。
+  → [contact] 小克: group.txt 已经写好，内容是 hi from group chat。用 cat 查过，和要求一致。
+文件位置：/private/tmp/gg-f-run/real2/work/t-mw851ied-3/group.txt
+—— 群记录 ——
+#1 我: @小克 帮我在你的工作目录里写一个 group.txt,内容是 hi from group chat,写好在群里告诉我
+#2 小克: 接了任务:写 group.txt  [卡片:task-status/open 取消任务]
+#3 小克: 好的,这就写 group.txt,写好在群里告诉你。
+#4 小克: group.txt 已经写好，内容是 hi from group chat。用 cat 查过，和要求一致。
+文件位置：/private/tmp/gg-f-run/real2/work/t-mw851ied-3/group.txt  [卡片:delivery/open 豁免审查并通过|退回]
+任务 t-mw851ied-3 [T5_InReview] 写 group.txt 审查门=none 进度=started>completed
+—— AC-03 发言者核对:通过,共 4 条,发言者种类 user/contact ——
+# —— 运行后读库核对(node:sqlite 直接查 /tmp/gg-f-run/real2/gg.db)——
+# events 发言者: [[1,"user","me"],[2,"contact","c-mw851696-0"],[3,"contact","c-mw851696-0"],[4,"contact","c-mw851696-0"]]
+# 联系人: [["contact:c-mw851696-0","小克"],["contact:c-mw85169e-1","小研"]]
+# gg_compute: [{"compute_id":"cc-26df1f92-e772-4a94-826f-8cbeda1aef76","task_id":"t-mw851ied-3","contact_id":"c-mw851696-0","status":"completed"}]
+# 被拒动作 gg_effects: []
+# group.txt 实际内容: hi from group chat
+# 结论: 只有被 @ 的小克接活、只起 1 个 Compute;小研本轮没有提出接活也没发言(没有被拒动作);交付只发一条;AC-03 发言者核对通过;任务停在 T5_InReview 等用户(交付卡仍是现有实现,交付改普通消息见 AC-56 切片)

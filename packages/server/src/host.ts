@@ -964,7 +964,7 @@ export class Host {
     const request = this.assemble({
       system: CONTACT_SYSTEM,
       tools: CONTACT_TOOLS,
-      persona: contact.persona,
+      persona: identityOf(contactId, contact),
       roomRules: rooms.map((r) => ({ roomId: r.id, title: r.title, rules: r.rules, version: r.rules_version })),
       ledger: ledgerLines,
       boundIds: ledgerLines.filter((l) => freshKeys.has(`${l.roomId}#${l.sourceSeq}`) || freshTasks.has(l.taskId)).map((l) => l.id),
@@ -998,6 +998,20 @@ export class Host {
     this.setActivity(contactId, null, "idle");
     await this.runEffects(done.effects);
     return "done";
+  }
+
+  /**
+   * 群里接活归属(只看元数据,D15.1):来源消息 @ 了别的联系人、没 @ 你,不归你;同一条消息已被别的联系人接手(未取消/失败),
+   * 先落盘的拿到(U47 抢答)。返回拒绝原因,可以接则返回 null。必须在事务里调用。
+   */
+  private claimBlockedTx(contactId: string, src: InboundMessage): string | null {
+    const contactsHere = new Set(this.members(src.roomId).filter((m) => m.kind === "contact").map((m) => m.id));
+    const mentioned = src.mentions.filter((id) => contactsHere.has(id));
+    if (mentioned.length && !mentioned.includes(contactId)) return `这条消息 @ 的是别的联系人,不是你(${src.roomId} #${src.seq})`;
+    const taken = listDocs<TaskDoc>(this.db, "task:").find(
+      (d) => d.value.roomId === src.roomId && d.value.sourceSeq === src.seq && d.value.task.owner !== null && d.value.task.owner !== contactId && d.value.task.state !== "T10_Cancelled" && d.value.task.state !== "T11_Failed",
+    );
+    return taken ? `${src.roomId} #${src.seq} 已由联系人 ${taken.value.task.owner} 接手(任务 ${taken.value.task.id})` : null;
   }
 
   private advanceCursorsTx(contactId: string, lastSeen: Record<string, number>) {
@@ -1060,6 +1074,8 @@ export class Host {
             const src = freshMsgs.find((m) => m.roomId === a.roomId && m.seq === a.sourceSeq);
             if (!src) { reject(`来源 ${a.roomId} #${a.sourceSeq} 不是本轮新消息`); break; }
             if (!a.task.trim() || !a.title.trim()) { reject("任务说明为空"); break; }
+            const claim = this.claimBlockedTx(contactId, src);
+            if (claim) { reject(claim); break; }
             const taskId = this.newId("t");
             const requester = src.sender.kind === "user" ? src.sender.id : this.userId;
             const t0 = newTask(taskId, requester);
@@ -1394,6 +1410,11 @@ export class Host {
     }
     this.db.close();
   }
+}
+
+/** 第 1 块人设:先写明这位联系人是谁(群里据此分清 @ 的是不是自己),再接用户设的人设原文。只随改名/改人设变,前缀缓存不受每轮影响。 */
+function identityOf(contactId: string, c: { name: string; persona: string }): string {
+  return [`你是「${c.name}」(联系人 id ${contactId})。消息里的 @ 列的是联系人 id。`, c.persona].filter((x) => x.trim()).join("\n");
 }
 
 type HostEffect =
