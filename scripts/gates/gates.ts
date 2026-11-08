@@ -121,6 +121,8 @@ function parseInput(x: unknown): Record<string, unknown> {
   }
   return (x && typeof x === "object" ? x : {}) as Record<string, unknown>;
 }
+// 来源身份使用系统 Git;不可用时 fail closed,不从会话可变 PATH 找替身。
+const TRUSTED_GIT = "/usr/bin/git";
 const WRITE_TOOLS = /^(write|edit|multiedit|notebookedit|apply_patch|applypatch|str_replace|fs_write|create_file|write_file|patch)$/i;
 const READ_TOOLS = /^(read|read_file|read_text_file|fs_read|grep|glob|ls|list_files)$/i;
 const SHELL_TOOLS = /^(bash|shell|execute_bash|exec_command|run_shell|local_shell|terminal)$/i;
@@ -176,7 +178,7 @@ function turnProvesWrite(t: Turn, workdir: string | undefined, ctx: Ctx, inRepo:
     if (!abs || !inRepo(abs)) continue;
     let d = path.dirname(abs);
     while (!fs.existsSync(d)) { const up = path.dirname(d); if (up === d) break; d = up; }
-    const top = spawnSync("git", [...GIT_SAFE_ARGS, "-c", "core.fsmonitor=false", "rev-parse", "--show-toplevel"], { cwd: d, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
+    const top = spawnSync(TRUSTED_GIT, [...GIT_SAFE_ARGS, "-c", "core.fsmonitor=false", "rev-parse", "--show-toplevel"], { cwd: d, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
     if (top.status !== 0) continue;
     try {
       if (!fs.lstatSync(abs).isFile()) continue;
@@ -214,13 +216,13 @@ export function isHashCall(input: unknown): boolean {
 type RepoId = { roots: Set<string> };
 /** Git 的历史覆写文件可伪造父关系;存在或无法检查时不认可任何历史证明。 */
 function hasHistoryOverride(dir: string): boolean {
-  const r = spawnSync("git", ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.fsmonitor=false", "rev-parse", "--git-path", "info/grafts"], { cwd: dir, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
+  const r = spawnSync(TRUSTED_GIT, ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.fsmonitor=false", "rev-parse", "--git-path", "info/grafts"], { cwd: dir, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
   if (r.status !== 0 || !r.stdout.trim()) return true;
   try { fs.lstatSync(path.resolve(dir, r.stdout.trim())); return true; }
   catch (e) { return (e as NodeJS.ErrnoException).code !== "ENOENT"; }
 }
 function repoIdAt(dir: string): RepoId | null | "unknown" {
-  const g = (...a: string[]) => spawnSync("git", ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.fsmonitor=false", "-c", "core.commitGraph=false", ...a], { cwd: dir, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
+  const g = (...a: string[]) => spawnSync(TRUSTED_GIT, ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.fsmonitor=false", "-c", "core.commitGraph=false", ...a], { cwd: dir, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
   const top = g("rev-parse", "--show-toplevel");
   if (top.status !== 0) return /not a git repository/i.test(top.stderr ?? "") ? null : "unknown";
   if (hasHistoryOverride(dir)) return "unknown";
@@ -284,7 +286,7 @@ export function gitDirs(command: string, cwd: string | undefined): (string | und
 /** 本仓库 HEAD 历史上的全部提交号 */
 function headCommits(rootReal: string): string[] {
   if (hasHistoryOverride(rootReal)) return [];
-  const r = spawnSync("git", ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.commitGraph=false", "rev-list", "HEAD"], { cwd: rootReal, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
+  const r = spawnSync(TRUSTED_GIT, ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.commitGraph=false", "rev-list", "HEAD"], { cwd: rootReal, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
   return r.status === 0 ? r.stdout.split("\n").filter(Boolean) : [];
 }
 /**
@@ -298,14 +300,14 @@ export function attestedDirs(turns: Turn[], _workdir: string | undefined, rootRe
   const out = new Set<string>();
   const exact = /^\/usr\/bin\/env -i \/usr\/bin\/git --no-pager --no-replace-objects -c core\.hooksPath=\/dev\/null -c core\.fsmonitor=false -c user\.name=[A-Za-z0-9._-]+ -c user\.email=[A-Za-z0-9._@-]+ -C (\/[A-Za-z0-9_./-]+) commit --no-gpg-sign -m [A-Za-z0-9._-]+$/;
   const inVersion = (sha: string): boolean => {
-    const diff = spawnSync("git", ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.commitGraph=false", "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "-z", sha], { cwd: rootReal, env: gitEnv(), timeout: 30_000 });
+    const diff = spawnSync(TRUSTED_GIT, ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.commitGraph=false", "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "-z", sha], { cwd: rootReal, env: gitEnv(), timeout: 30_000 });
     if (diff.status !== 0 || !diff.stdout) return false;
     for (const f of diff.stdout.toString("utf8").split("\0").filter(Boolean)) {
       if (!isGoverned(f) || (changed && !changed.includes(f))) continue;
       try {
         const file = path.join(rootReal, f);
         if (!fs.lstatSync(file).isFile() || !fs.realpathSync(file).startsWith(rootReal + path.sep)) continue;
-        const blob = spawnSync("git", ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.commitGraph=false", "show", `${sha}:${f}`], { cwd: rootReal, env: gitEnv(), timeout: 30_000 });
+        const blob = spawnSync(TRUSTED_GIT, ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.commitGraph=false", "show", `${sha}:${f}`], { cwd: rootReal, env: gitEnv(), timeout: 30_000 });
         if (blob.status === 0 && blob.stdout && blob.stdout.equals(fs.readFileSync(file))) return true;
       } catch { /* 缺文件或路径不能验证:不认 */ }
     }
