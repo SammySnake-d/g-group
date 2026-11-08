@@ -207,16 +207,24 @@ export function isHashCall(input: unknown): boolean {
 }
 
 /**
- * RR-15 / R10-01 / R11-01:现存仓库仅以共同根提交确认身份;remote 是可修改配置,不构成证明。
+ * RR-15 / R10-01 / R11-01:现存仓库仅以当前 HEAD 的真实共同根提交确认身份;remote 与额外引用不构成证明。
  * 不在任何 git 仓库里 → 不是;git 判不了(读不出根提交、还没有提交、命令出错) → 确认不了,不是。
  * 只看现存的目录;已不存在的目录由 attestedDirs 按宿主记录里的证据判定。
  */
 type RepoId = { roots: Set<string> };
+/** Git 的历史覆写文件可伪造父关系;存在或无法检查时不认可任何历史证明。 */
+function hasHistoryOverride(dir: string): boolean {
+  const r = spawnSync("git", ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.fsmonitor=false", "rev-parse", "--git-path", "info/grafts"], { cwd: dir, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
+  if (r.status !== 0 || !r.stdout.trim()) return true;
+  try { fs.lstatSync(path.resolve(dir, r.stdout.trim())); return true; }
+  catch (e) { return (e as NodeJS.ErrnoException).code !== "ENOENT"; }
+}
 function repoIdAt(dir: string): RepoId | null | "unknown" {
-  const g = (...a: string[]) => spawnSync("git", [...GIT_SAFE_ARGS, "-c", "core.fsmonitor=false", ...a], { cwd: dir, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
+  const g = (...a: string[]) => spawnSync("git", ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.fsmonitor=false", "-c", "core.commitGraph=false", ...a], { cwd: dir, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
   const top = g("rev-parse", "--show-toplevel");
   if (top.status !== 0) return /not a git repository/i.test(top.stderr ?? "") ? null : "unknown";
-  const roots = g("rev-list", "--max-parents=0", "--all");
+  if (hasHistoryOverride(dir)) return "unknown";
+  const roots = g("rev-list", "--max-parents=0", "HEAD");
   if (roots.status !== 0) return "unknown";
   const rs = new Set(roots.stdout.split("\n").filter(Boolean));
   if (rs.size === 0) return "unknown";
@@ -275,7 +283,8 @@ export function gitDirs(command: string, cwd: string | undefined): (string | und
 }
 /** 本仓库 HEAD 历史上的全部提交号 */
 function headCommits(rootReal: string): string[] {
-  const r = spawnSync("git", [...GIT_SAFE_ARGS, "rev-list", "HEAD"], { cwd: rootReal, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
+  if (hasHistoryOverride(rootReal)) return [];
+  const r = spawnSync("git", ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.commitGraph=false", "rev-list", "HEAD"], { cwd: rootReal, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
   return r.status === 0 ? r.stdout.split("\n").filter(Boolean) : [];
 }
 /**
@@ -289,14 +298,14 @@ export function attestedDirs(turns: Turn[], _workdir: string | undefined, rootRe
   const out = new Set<string>();
   const exact = /^\/usr\/bin\/env -i \/usr\/bin\/git --no-pager --no-replace-objects -c core\.hooksPath=\/dev\/null -c core\.fsmonitor=false -c user\.name=[A-Za-z0-9._-]+ -c user\.email=[A-Za-z0-9._@-]+ -C (\/[A-Za-z0-9_./-]+) commit --no-gpg-sign -m [A-Za-z0-9._-]+$/;
   const inVersion = (sha: string): boolean => {
-    const diff = spawnSync("git", [...GIT_SAFE_ARGS, "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "-z", sha], { cwd: rootReal, env: gitEnv(), timeout: 30_000 });
+    const diff = spawnSync("git", ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.commitGraph=false", "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "-z", sha], { cwd: rootReal, env: gitEnv(), timeout: 30_000 });
     if (diff.status !== 0 || !diff.stdout) return false;
     for (const f of diff.stdout.toString("utf8").split("\0").filter(Boolean)) {
       if (!isGoverned(f) || (changed && !changed.includes(f))) continue;
       try {
         const file = path.join(rootReal, f);
         if (!fs.lstatSync(file).isFile() || !fs.realpathSync(file).startsWith(rootReal + path.sep)) continue;
-        const blob = spawnSync("git", [...GIT_SAFE_ARGS, "show", `${sha}:${f}`], { cwd: rootReal, env: gitEnv(), timeout: 30_000 });
+        const blob = spawnSync("git", ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.commitGraph=false", "show", `${sha}:${f}`], { cwd: rootReal, env: gitEnv(), timeout: 30_000 });
         if (blob.status === 0 && blob.stdout && blob.stdout.equals(fs.readFileSync(file))) return true;
       } catch { /* 缺文件或路径不能验证:不认 */ }
     }
