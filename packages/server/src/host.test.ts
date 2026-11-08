@@ -265,3 +265,22 @@ test("服务层:按合同校验参数与结果;未知方法、非法参数、未
   assert.deepEqual((cmds.value as { commands: { name: string }[] }).commands.map((c) => c.name), ["remind"]);
   await host.close();
 });
+
+test("宿主每轮用内核五块重拼:块号 1–5,两轮之间第 1 块逐字节相同,旧消息不再进第 4 块", async () => {
+  const reqs: RoundInput["request"][] = [];
+  const host = new Host({ file: file(), mind: () => scriptedMind({ onRound: (i: RoundInput) => reqs.push(i.request) }), maxDeferMs: 5 });
+  const c = host.createContact({ name: "小克", persona: "说话简短" });
+  const dm = host.openDm(c.id);
+  host.send({ roomId: dm.id, clientActionId: "1", text: "第一句" });
+  await settle(host);
+  host.send({ roomId: dm.id, clientActionId: "2", text: "第二句" });
+  await settle(host);
+  assert.equal(reqs.length, 2);
+  for (const r of reqs) assert.deepEqual(r.blocks.map((b) => b.block), [1, 2, 3, 4, 5]);
+  assert.equal(reqs[0]!.blocks[0]!.text, reqs[1]!.blocks[0]!.text);
+  assert.match(reqs[0]!.blocks[0]!.text, /说话简短/);
+  assert.match(reqs[1]!.blocks[3]!.text, /第二句/);
+  assert.doesNotMatch(reqs[1]!.blocks[3]!.text, /第一句/);
+  assert.deepEqual(reqs.map((r) => r.blocks.filter((b) => b.cacheBreakpoint).map((b) => b.block)), [[1], [1]]);
+  await host.close();
+});
