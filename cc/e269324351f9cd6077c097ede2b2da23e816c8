@@ -1,0 +1,21 @@
+packages/domain/proof/auth-intent-mutations.mjs
+  s_3c546e74ce0380::t_1e8c65c64b09ae 1-113
+packages/domain/src/routing.ts
+  s_3c546e74ce0380::t_ff0d3ced60216d 66-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cce269324351f9cd6077c097ede2b2da23e816c8",
+  "prompts": {},
+  "sessions": {
+    "s_3c546e74ce0380": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28b20d82-0b77-4e95-af70-c248ba39ad5d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
