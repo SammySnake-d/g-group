@@ -157,6 +157,7 @@ export function turnTouchesRepo(t: Turn, workdir: string | undefined, inRepo: (a
     if (resolved.some((r) => r !== undefined && inRepo(r))) return true;
     const writes = WRITE_TOOLS.test(c.name ?? "") || SHELL_TOOLS.test(c.name ?? "");
     // 目录已经消失且身份未证明时属于判不了,不能因为事后清理而排除厂商。
+    if (writes && cwd && !path.isAbsolute(cwd)) return true;
     if (writes && cwd && path.isAbsolute(cwd) && !fs.existsSync(cwd)) return true;
     if (writes && resolved.some((r) => r !== undefined && !fs.existsSync(path.dirname(r)))) return true;
     if (writes && (cands.length === 0 ? !cwd : resolved.some((r) => r === undefined))) return true;
