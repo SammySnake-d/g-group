@@ -130,6 +130,9 @@ const SHELL_TOOLS = /^(bash|shell|execute_bash|exec_command|run_shell|local_shel
 export function turnTouchesRepo(t: Turn, workdir: string | undefined, inRepo: (abs: string) => boolean): boolean {
   for (const c of t.toolCalls ?? []) {
     const inp = parseInput(c.input);
+    const command = [inp.command, inp.cmd, inp.raw].find((v): v is string => typeof v === "string");
+    // 只认无 shell 组合的明确只读形式;其它 shell 调用仍作为可能写入保守处理。
+    if (SHELL_TOOLS.test(c.name ?? "") && command && /^(?:git\s+status(?:\s+(?:--short|-s|-sb|--porcelain(?:=v[12])?))*|git\s+log\s+--oneline\s+-1)\s*$/.test(command.trim())) continue;
     const cwd = [inp.cwd, inp.workdir, inp.working_directory].find((v): v is string => typeof v === "string") ?? workdir;
     const resolve = (p: string): string | undefined => {
       const q = p.replace(/^["']|["']$/g, "");
@@ -150,6 +153,37 @@ export function turnTouchesRepo(t: Turn, workdir: string | undefined, inRepo: (a
     if (resolved.some((r) => r !== undefined && inRepo(r))) return true;
     const writes = WRITE_TOOLS.test(c.name ?? "") || SHELL_TOOLS.test(c.name ?? "");
     if (writes && (cands.length === 0 ? !cwd : resolved.some((r) => r === undefined))) return true;
+  }
+  return false;
+}
+
+/**
+ * R11-05:未知调用只作潜在产出厂商保守拦截,不能单独证明作者。
+ * 明确的文件写入须有成功结果、内容与本次受管变更的当前文件逐字节一致。
+ * 未能解析的编辑、补丁与 shell 写入不推断为已证明,须有绑定版本的提交记录。
+ */
+function turnProvesWrite(t: Turn, workdir: string | undefined, ctx: Ctx, inRepo: (abs: string) => boolean): boolean {
+  for (const c of t.toolCalls ?? []) {
+    if (!/^(write|write_file|fs_write|create_file)$/i.test(c.name ?? "")) continue;
+    const inp = parseInput(c.input);
+    const raw = [inp.file_path, inp.path, inp.filePath, inp.target_file].find((v): v is string => typeof v === "string");
+    if (!raw || typeof inp.content !== "string" || typeof c.result !== "string") continue;
+    if (!/^(?:File (?:written|created|updated) successfully(?: at: [^\n]+)?|The file [^\n]+ has been (?:created|updated) successfully\.)\s*$/i.test(c.result)) continue;
+    const cwd = [inp.cwd, inp.workdir, inp.working_directory].find((v): v is string => typeof v === "string") ?? workdir;
+    const abs = path.isAbsolute(raw) ? path.normalize(raw) : cwd ? path.resolve(cwd, raw) : undefined;
+    if (!abs || !inRepo(abs)) continue;
+    let d = path.dirname(abs);
+    while (!fs.existsSync(d)) { const up = path.dirname(d); if (up === d) break; d = up; }
+    const top = spawnSync("git", [...GIT_SAFE_ARGS, "-c", "core.fsmonitor=false", "rev-parse", "--show-toplevel"], { cwd: d, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
+    if (top.status !== 0) continue;
+    try {
+      if (!fs.lstatSync(abs).isFile()) continue;
+      const rel = path.relative(fs.realpathSync(top.stdout.trim()), fs.realpathSync(abs)).split(path.sep).join("/");
+      if (rel.startsWith("../") || !isGoverned(rel) || !ctx.changed.includes(rel)) continue;
+      const own = path.join(ctx.root, rel), root = fs.realpathSync(ctx.root);
+      if (!fs.lstatSync(own).isFile() || !fs.realpathSync(own).startsWith(root + path.sep)) continue;
+      if (fs.readFileSync(own).equals(Buffer.from(inp.content, "utf8"))) return true;
+    } catch { /* 文件不在当前版本或路径不可信,不认 */ }
   }
   return false;
 }
@@ -237,25 +271,42 @@ function headCommits(rootReal: string): string[] {
   return r.status === 0 ? r.stdout.split("\n").filter(Boolean) : [];
 }
 /**
- * R10-02:可持久核验的仓库身份。临时克隆清理后,目录不在了,只认宿主会话记录里的证据:
- * 同一条工具调用里所有 git 调用都在同一个目录执行,且宿主记下的输出里有本仓库 HEAD 历史上的提交号(7–40 位,唯一对应一个提交)。
- * 这样的目录现在已不存在时才按记录认作本仓库;现在还在的目录以现状为准(sameRepoClone),记录与现状矛盾时不认。
+ * R11-02:已清理目录只采信固定系统 git 在隔离环境下直接完成的单条提交命令。
+ * 宿主记录必须保留完整命令与真实提交输出,提交号必须唯一对应受检历史;
+ * 提交修改过的受管文件还须与当前受检文件逐字节一致。其它历史记录明确不认。
  */
-export function attestedDirs(turns: Turn[], workdir: string | undefined, rootReal: string): string[] {
+export function attestedDirs(turns: Turn[], _workdir: string | undefined, rootReal: string, changed?: string[]): string[] {
   const commits = headCommits(rootReal);
   const ours = (tok: string) => commits.filter((c) => c.startsWith(tok)).length === 1;
   const out = new Set<string>();
+  const exact = /^\/usr\/bin\/env -i \/usr\/bin\/git --no-pager --no-replace-objects -c core\.hooksPath=\/dev\/null -c core\.fsmonitor=false -c user\.name=[A-Za-z0-9._-]+ -c user\.email=[A-Za-z0-9._@-]+ -C (\/[A-Za-z0-9_./-]+) commit --no-gpg-sign -m [A-Za-z0-9._-]+$/;
+  const inVersion = (sha: string): boolean => {
+    const diff = spawnSync("git", [...GIT_SAFE_ARGS, "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "-z", sha], { cwd: rootReal, env: gitEnv(), timeout: 30_000 });
+    if (diff.status !== 0 || !diff.stdout) return false;
+    for (const f of diff.stdout.toString("utf8").split("\0").filter(Boolean)) {
+      if (!isGoverned(f) || (changed && !changed.includes(f))) continue;
+      try {
+        const file = path.join(rootReal, f);
+        if (!fs.lstatSync(file).isFile() || !fs.realpathSync(file).startsWith(rootReal + path.sep)) continue;
+        const blob = spawnSync("git", [...GIT_SAFE_ARGS, "show", `${sha}:${f}`], { cwd: rootReal, env: gitEnv(), timeout: 30_000 });
+        if (blob.status === 0 && blob.stdout && blob.stdout.equals(fs.readFileSync(file))) return true;
+      } catch { /* 缺文件或路径不能验证:不认 */ }
+    }
+    return false;
+  };
   for (const t of turns) for (const c of t.toolCalls ?? []) {
+    if (!SHELL_TOOLS.test(c.name ?? "")) continue;
     const inp = parseInput(c.input);
-    const cmd = [inp.command, inp.cmd, inp.raw].find((v) => typeof v === "string" || Array.isArray(v));
-    const text = Array.isArray(cmd) ? (cmd.length >= 3 && /^-\w*c$/.test(String(cmd[cmd.length - 2])) ? String(cmd[cmd.length - 1]) : cmd.map(String).join(" ")) : cmd;
-    if (typeof text !== "string") continue;
-    const cwd = [inp.cwd, inp.workdir, inp.working_directory].find((v): v is string => typeof v === "string") ?? workdir;
-    const dirs = gitDirs(text, cwd);
-    const d = dirs[0];
-    if (d === undefined || dirs.some((x) => x !== d)) continue;
-    if (!(strings(c.result).join("\n").match(/\b[0-9a-f]{7,40}\b/g) ?? []).some(ours)) continue;
-    if (fs.existsSync(d)) continue;
+    const cmd = [inp.command, inp.cmd, inp.raw].find((v) => typeof v === "string");
+    const m = typeof cmd === "string" ? exact.exec(cmd) : null;
+    const d = m?.[1] && path.normalize(m[1]);
+    if (!d || typeof c.result !== "string") continue;
+    const result = /^\[[^\]\s]+ ([0-9a-f]{7,40})\] [^\n]*\n/.exec(c.result);
+    const tok = result?.[1];
+    if (!tok || !ours(tok)) continue;
+    const sha = commits.find((x) => x.startsWith(tok))!;
+    if (!inVersion(sha)) continue;
+    if (fs.existsSync(d) && !sameRepoClone(rootReal)(d)) continue;
     out.add(d);
   }
   return [...out];
@@ -305,13 +356,19 @@ export const provenance: Gate = {
     const clone = sameRepoClone(rootReal);
     const at = loadSession(base, author.session);
     const producers = new Set<Vendor>();
+    const confirmed = new Set<Vendor>();
     if (!at.ok) out.push(p(g, `作者会话不可信:${at.why}`));
     else {
-      const proven = attestedDirs(at.turns, at.workdir, rootReal);
       const under = (abs: string, d: string) => abs === d || abs.startsWith(d + path.sep);
-      const inRepo = (abs: string) => under(abs, rootReal) || proven.some((d) => under(abs, d)) || clone(abs);
-      for (const t of at.turns) if (turnTouchesRepo(t, at.workdir, inRepo)) producers.add(vendorOf(t.model));
-      if (producers.size === 0) out.push(p(g, `作者会话 ${author.session} 里找不到对本仓库的任何操作`));
+      for (const t of at.turns) {
+        // 已清理的目录证明只适用于产生这条提交记录的轮次,不扩散到之后的调用。
+        const proven = attestedDirs([t], at.workdir, rootReal, ctx.changed);
+        const inRepo = (abs: string) => under(abs, rootReal) || proven.some((d) => under(abs, d)) || clone(abs);
+        const vendor = vendorOf(t.model);
+        if (turnTouchesRepo(t, at.workdir, inRepo)) producers.add(vendor);
+        if (proven.length || turnProvesWrite(t, at.workdir, ctx, inRepo)) confirmed.add(vendor);
+      }
+      if (!confirmed.has(vendorOf(author.model))) out.push(p(g, `作者会话 ${author.session} 里找不到对本仓库的任何操作可证明写入了受审版本`));
       if (producers.has("unknown")) out.push(p(g, "作者会话里有认不出厂商的产出轮次"));
       if (producers.size && !producers.has(vendorOf(author.model))) out.push(p(g, `作者自报 ${author.model},会话里实际产出厂商是 ${[...producers].join(",")}`));
     }
