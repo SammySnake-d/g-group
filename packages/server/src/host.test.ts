@@ -258,8 +258,8 @@ test("服务层:按合同校验参数与结果;未知方法、非法参数、未
   assert.equal(!bad.ok && bad.error.code, "invalid_params");
   const nf = await svc.handle("rooms.get", { roomId: "nope" });
   assert.equal(!nf.ok && nf.error.code, "not_found");
-  const un = await svc.handle("messages.retract", { roomId, seq: 1 });
-  assert.equal(!un.ok && un.error.code, "unavailable");
+  const un = await svc.handle("tasks.answer", { taskId: "t-x", qId: "q", clientActionId: "a", answer: "好" });
+  assert.equal(!un.ok && un.error.code, "conflict");
   const cmds = await svc.handle("commands.list", { roomId, prefix: "re" });
   assert.ok(cmds.ok);
   assert.deepEqual((cmds.value as { commands: { name: string }[] }).commands.map((c) => c.name), ["remind"]);
