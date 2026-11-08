@@ -3,6 +3,8 @@
 // 注入点必须在源文件里恰好出现 1 次,否则判脚本失效。路径相对本包根目录。
 // 用法: node packages/adapter-cc-compute/proof/mutations.mjs
 // 并发默认 4;本机同时有别的测试在跑时用 CC_MUT_CONCURRENCY=2 降低并发(只影响调度,不改注入点与判决)。
+// CC_MUT_PROGRESS=<文件>:每个变异一出判决就追加一行到该文件(附全部变红的测试名;进程中途被结束也留下已完成的判决);
+// CC_MUT_ONLY=M113,M126:只跑列出的编号(原样副本照跑),用于补跑,不改注入点与判决。
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -75,7 +77,7 @@ const M = [
   ["M58 R4-01 访问器不拒收(当作缺失字段)", "src/plain.ts", 'if (isAccessor(d)) return bad(path, "不允许 getter/setter");', ""],
   ["M59 R4-01 不查原型(自定义原型放行)", "src/plain.ts", "if (isArray ? proto !== Array.prototype : proto !== Object.prototype && proto !== null) {", "if (false) {"],
   ["M60 R4-01 不可枚举属性放行", "src/plain.ts", 'if (!d.enumerable) return bad(path, "不允许不可枚举属性");', ""],
-  ["M61 R4-01 嵌套值不递归判定", "src/plain.ts", "const c = walk(d.value, path, depth + 1);", "const c: PlainResult = { ok: true, value: d.value };"],
+  ["M61 R4-01 嵌套值不递归判定", "src/plain.ts", "return walk(d.value, path, depth + 1);", "return { ok: true, value: d.value };"],
   ["M62 R4-01 checkBrief 不过纯数据判定", "src/brief.ts", 'const p = plainData(input, "brief");', 'const p: ReturnType<typeof plainData> = { ok: true, value: input };'],
   ["M63 R4-01 reportErrors 不过纯数据判定", "src/report-schema.ts", 'const p = plainData(input, "汇报");', 'const p: ReturnType<typeof plainData> = { ok: true, value: input };'],
   ["M64 R4-01 spawn 选项不过纯数据判定", "src/adapter.ts", 'const p = plainData(opts, "spawn 选项");', 'const p: ReturnType<typeof plainData> = { ok: true, value: opts };'],
@@ -88,7 +90,7 @@ const M = [
   ["M71 导出的 CC_BUILTIN_TOOLS 不冻结", "src/brief.ts", 'export const CC_BUILTIN_TOOLS: readonly string[] = Object.freeze(["Read",', 'export const CC_BUILTIN_TOOLS: readonly string[] = (["Read",'],
   ["M72 导出的 REPORT_KINDS 不冻结", "src/report-schema.ts", 'export const REPORT_KINDS: readonly string[] = Object.freeze(["started",', 'export const REPORT_KINDS: readonly string[] = (["started",'],
   ["M73 磁盘清理 CLI 退出后不删 g-group-cc-* 目录", "src/adapter.ts", "      removeDir();\n      round.exited = true;", "      round.exited = true;"],
-  ["M74 R5-01 纯数据判定丢弃值为 undefined 的对象自有属性(未声明字段绕过白名单)", "src/plain.ts", "      (out as Record<string, unknown>)[k] = undefined;\n      continue;", "      continue;"],
+  ["M74 R5-01 纯数据判定丢弃值为 undefined 的对象自有属性(未声明字段绕过白名单)", "src/plain.ts", "    out[k] = c.value;", "    if (c.value !== undefined) out[k] = c.value;"],
   ["M75 R5-01 spawn 选项 cwd 为 undefined 也拒收(可选字段 undefined 不按没给处理)", "src/adapter.ts", "if (o.cwd !== undefined && (typeof o.cwd !== \"string\" || !o.cwd))", "if (Object.hasOwn(o, \"cwd\") && (typeof o.cwd !== \"string\" || !o.cwd))"],
   ["M76 R5-01 汇报 stage 为 undefined 也报错(可选字段 undefined 不按没给处理)", "src/report-schema.ts", "if (a.stage !== undefined && !nonEmpty(a.stage))", "if (Object.hasOwn(a, \"stage\") && !nonEmpty(a.stage))"],
   ["M77 R5-02 tools/call 不核对工具名", "mcp/report-mcp.mjs", "    if (name !== tool.name) {", "    if (false) {"],
@@ -128,6 +130,25 @@ const M = [
   ["M110 R7-03 认可帧大小写不敏感", "src/events.ts", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype)) return { kind: \"allowed\" }", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype.toLowerCase())) return { kind: \"allowed\" }"],
   ["M111 R7-03 认可帧先去掉首尾空白", "src/events.ts", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype)) return { kind: \"allowed\" }", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype.trim())) return { kind: \"allowed\" }"],
   ["M112 R7-03 认可帧按子串匹配(截短的子类型放行)", "src/events.ts", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype)) return { kind: \"allowed\" }", "PRE_INIT_SYSTEM_SUBTYPES.some((s) => s.includes(m!.subtype as string))) return { kind: \"allowed\" }"],
+  // 以下对应第八轮 R8-01–R8-04(Codex 第八轮):数组逐键与逐下标核对、report MCP 的 id 核对与单个请求的受控边界、
+  // host 状态与空白字段的邻接放宽。第八轮 plain.ts 拆成 walkValue/walkRecord/walkArray,M61、M74 的注入点随之改写,含义不变
+  ["M113 R8-01 审查 R8-B:放行单个空位(下标键只比 length 少一个时跳过空位)", "src/plain.ts", '    if (!d) return bad(path, "不允许稀疏数组");', '    if (!d && Reflect.ownKeys(x).length - 1 !== length - 1) return bad(path, "不允许稀疏数组");\n    if (!d) continue;'],
+  ["M114 R8-01 空位一律跳过", "src/plain.ts", '    if (!d) return bad(path, "不允许稀疏数组");', "    if (!d) continue;"],
+  ["M115 R8-01 不查下标上界(越界数字键放行)", "src/plain.ts", "if (!INDEX.test(k) || Number(k) >= length) return", "if (!INDEX.test(k)) return"],
+  ["M116 R8-02 JSON-RPC id 不核对类型", "mcp/report-mcp.mjs", "    if (m.id !== undefined && !validId(m.id)) {", "    if (false) {"],
+  ["M117 R8-02 小数 id 放行", "mcp/report-mcp.mjs", "Number.isInteger(id)", 'typeof id === "number"'],
+  ["M118 R8-02 null id 放行", "mcp/report-mcp.mjs", "    if (m.id !== undefined && !validId(m.id)) {", "    if (m.id !== undefined && m.id !== null && !validId(m.id)) {"],
+  ["M119 R8-02 日志照写原始参数", "mcp/report-mcp.mjs", "...loggedArgs(a), ts:", "...a, ts:"],
+  ["M120 R8-02 日志参数不合格时仍原样展开", "mcp/report-mcp.mjs", "? p.value : { omitted:", "? p.value : a || { omitted:"],
+  ["M121 R8-02 日志的 ts/valid/errs 写在参数之前(参数能改写判定)", "mcp/report-mcp.mjs", "JSON.stringify({ ...loggedArgs(a), ts: new Date().toISOString(), valid: errs.length === 0, errs })", "JSON.stringify({ ts: new Date().toISOString(), valid: errs.length === 0, errs, ...loggedArgs(a) })"],
+  ["M122 R8-02 去掉每行的受控边界(异常越过这一行)", "mcp/report-mcp.mjs", "    // 受控边界:这一条请求处理失败只回 -32603,不越过这一行;进程继续处理后续请求\n", "    throw err;\n"],
+  ["M123 R8-02 受控边界不回复", "mcp/report-mcp.mjs", '    send({ jsonrpc: "2.0", id, error: { code: -32603,', '    void ({ jsonrpc: "2.0", id, error: { code: -32603,'],
+  ["M124 R8-02 受控边界的回复不带请求 id", "mcp/report-mcp.mjs", '    send({ jsonrpc: "2.0", id, error: { code: -32603,', '    send({ jsonrpc: "2.0", id: null, error: { code: -32603,'],
+  ["M125 R8-02 initialize 原样回显 protocolVersion", "mcp/report-mcp.mjs", 'typeof pv === "string" && pv ? pv : PROTOCOL_VERSION', "pv || PROTOCOL_VERSION"],
+  ["M126 R8-03 审查 R8-A:放行 host connecting", "src/events.ts", 'if (host?.status !== "connected") return', 'if (host?.status !== "connected" && host?.status !== "connecting") return'],
+  ["M127 R8-03 host 状态去空白、大小写不敏感", "src/events.ts", 'if (host?.status !== "connected") return', 'if (typeof host?.status !== "string" || host.status.trim().toLowerCase() !== "connected") return'],
+  ["M128 R8-04 审查 R8-C:放行空白汇报字段", "src/report-schema.ts", 'typeof x === "string" && x.trim() !== ""', 'typeof x === "string" && x !== ""'],
+  ["M129 R8-04 只去掉普通空格(制表、换行、全角空格仍放行)", "src/report-schema.ts", 'typeof x === "string" && x.trim() !== ""', 'typeof x === "string" && x.replaceAll(" ", "") !== ""'],
 ];
 
 // 不用 --test-timeout:在 node --test <file> 下它限制的是整个文件,文件超过上限会被整体取消(部分执行)。
@@ -182,9 +203,11 @@ const plan = Number(/^1\.\.(\d+)$/m.exec(clean.out ?? "")?.[1] ?? 0);
 const total = plan;
 const cleanOk = clean.code === 0 && !clean.timedOut && clean.failed.length === 0 && total > 0 && clean.passed.length === total;
 console.log(`${cleanOk ? "✓" : "✗"} 原样副本:${clean.passed.length} 绿 / ${clean.failed.length} 红,计划 ${total} 条,退出码 ${clean.code}${clean.timedOut ? "(超时)" : ""}`);
-if (!cleanOk) ok = false;
+if (!cleanOk) { ok = false; if (clean.failed.length) console.log(`  原样副本变红的测试:${JSON.stringify(clean.failed)}`); }
 const CONCURRENCY = Number(process.env.CC_MUT_CONCURRENCY) > 0 ? Math.floor(Number(process.env.CC_MUT_CONCURRENCY)) : 4;
 console.log(`并发 ${CONCURRENCY}`);
+const ONLY = (process.env.CC_MUT_ONLY ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+const PROGRESS = process.env.CC_MUT_PROGRESS;
 const results = new Array(M.length);
 let next = 0;
 async function worker() {
@@ -192,11 +215,16 @@ async function worker() {
     const i = next++;
     if (i >= M.length) return;
     const [name, file, from, to] = M[i];
+    if (ONLY.length && !ONLY.includes(name.split(" ")[0])) continue;
     const d = copy(`m${i}`);
     const f = path.join(d, file);
     const src = fs.readFileSync(f, "utf8");
     const hits = src.split(from).length - 1;
-    if (hits !== 1) { results[i] = `✗ ${name}:注入点出现 ${hits} 次,必须恰好 1 次(实现已变,更新本脚本)`; continue; }
+    if (hits !== 1) {
+      results[i] = `✗ ${name}:注入点出现 ${hits} 次,必须恰好 1 次(实现已变,更新本脚本)`;
+      if (PROGRESS) fs.appendFileSync(PROGRESS, `${results[i]}\n`);
+      continue;
+    }
     fs.writeFileSync(f, src.replace(from, to));
     const r = await run(d);
     const ran = r.passed.length + r.failed.length;
@@ -207,11 +235,13 @@ async function worker() {
     else if (r.failed.length === 0) verdict = `✗ ${name}:${r.passed.length} 绿 / 0 红,存活`;
     else verdict = `✓ ${name}:${r.passed.length} 绿 / ${r.failed.length} 红,被「${r.failed[0]}」发现`;
     results[i] = verdict;
+    // 落盘时附上全部变红的测试名:负载高时偶发的计时类失败与真正杀死它的具名测试可以分开核对
+    if (PROGRESS) fs.appendFileSync(PROGRESS, `${verdict}\t全部红:${JSON.stringify(r.failed)}\n`);
   }
 }
 await Promise.all(Array.from({ length: CONCURRENCY }, worker));
 for (const line of results.filter(Boolean)) { console.log(line); if (!line.startsWith("✓")) ok = false; }
 fs.rmSync(tmp, { recursive: true, force: true });
-console.log(`${M.length} 个变异`);
+console.log(ONLY.length ? `${M.length} 个变异,本次只跑 ${results.filter(Boolean).length} 个(CC_MUT_ONLY)` : `${M.length} 个变异`);
 console.log(ok ? "变异校准通过" : "变异校准失败");
 process.exit(ok ? 0 : 1);

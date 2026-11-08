@@ -2,543 +2,603 @@ TAP version 13
 # Subtest: brief 带 memory 或 soul 字段被拒绝,不起任何进程(AC-33 ④ 阳性埋雷)
 ok 1 - brief 带 memory 或 soul 字段被拒绝,不起任何进程(AC-33 ④ 阳性埋雷)
   ---
-  duration_ms: 186.071
+  duration_ms: 206.440209
   type: 'test'
   ...
 # Subtest: 同一 brief 只切凭据:明文 token 被拒绝,引用句柄放行(单开关)
 ok 2 - 同一 brief 只切凭据:明文 token 被拒绝,引用句柄放行(单开关)
   ---
-  duration_ms: 288.168708
+  duration_ms: 292.05825
   type: 'test'
   ...
 # Subtest: brief 的运行位置不是本机、工具名带逗号拼接时被拒绝
 ok 3 - brief 的运行位置不是本机、工具名带逗号拼接时被拒绝
   ---
-  duration_ms: 192.523125
+  duration_ms: 194.779917
   type: 'test'
   ...
 # Subtest: CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress
 ok 4 - CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress
   ---
-  duration_ms: 274.805084
+  duration_ms: 280.85075
   type: 'test'
   ...
 # Subtest: F-01:brief.tools 里的 CLI 控制词与非内置工具名一律拒绝、不起进程;具体内置工具名放行(正反对照)
 ok 5 - F-01:brief.tools 里的 CLI 控制词与非内置工具名一律拒绝、不起进程;具体内置工具名放行(正反对照)
   ---
-  duration_ms: 261.029333
+  duration_ms: 281.4775
   type: 'test'
   ...
 # Subtest: F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress
 ok 6 - F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress
   ---
-  duration_ms: 278.097625
+  duration_ms: 288.067875
   type: 'test'
   ...
 # Subtest: F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)
 ok 7 - F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)
   ---
-  duration_ms: 646.679333
+  duration_ms: 676.77125
   type: 'test'
   ...
 # Subtest: F-03:stop 立即产出 stopped;初始 SIGTERM 只发主进程,主进程按时退出就取消组 SIGKILL,同组孙进程收不到信号(与 mirasim 一致)
 ok 8 - F-03:stop 立即产出 stopped;初始 SIGTERM 只发主进程,主进程按时退出就取消组 SIGKILL,同组孙进程收不到信号(与 mirasim 一致)
   ---
-  duration_ms: 1941.418875
+  duration_ms: 1885.638208
   type: 'test'
   ...
 # Subtest: F-03 已知不覆盖(记录性,与 mirasim 一致):CLI 正常结束时不发任何信号,completed 立即产出,同组孙进程继续存活并能产生副作用
 ok 9 - F-03 已知不覆盖(记录性,与 mirasim 一致):CLI 正常结束时不发任何信号,completed 立即产出,同组孙进程继续存活并能产生副作用
   ---
-  duration_ms: 937.716167
+  duration_ms: 944.932458
   type: 'test'
   ...
 # Subtest: F-03:主进程无视 SIGTERM 时 reapForceMs 后对进程组 SIGKILL,同组孙进程一起消失;孙进程从没收到 SIGTERM
 ok 10 - F-03:主进程无视 SIGTERM 时 reapForceMs 后对进程组 SIGKILL,同组孙进程一起消失;孙进程从没收到 SIGTERM
   ---
-  duration_ms: 951.932875
+  duration_ms: 958.696125
   type: 'test'
   ...
 # Subtest: 子进程 env 不继承宿主进程环境里的明文密钥,凭据只以引用句柄出现
 ok 11 - 子进程 env 不继承宿主进程环境里的明文密钥,凭据只以引用句柄出现
   ---
-  duration_ms: 268.408541
+  duration_ms: 296.027416
   type: 'test'
   ...
 # Subtest: 正常多阶段:stream-json 与 report_progress 映射成 started → milestone×2 → completed
 ok 12 - 正常多阶段:stream-json 与 report_progress 映射成 started → milestone×2 → completed
   ---
-  duration_ms: 261.200583
+  duration_ms: 292.353417
   type: 'test'
   ...
 # Subtest: milestone 漏报、也没调 report_progress 的 completed 时,CLI 成功结束仍报 completed(V-06 约束)
 ok 13 - milestone 漏报、也没调 report_progress 的 completed 时,CLI 成功结束仍报 completed(V-06 约束)
   ---
-  duration_ms: 269.167125
+  duration_ms: 292.025208
   type: 'test'
   ...
 # Subtest: report_progress 服务器拒收的汇报(milestone 缺 stage)不产出事件
 ok 14 - report_progress 服务器拒收的汇报(milestone 缺 stage)不产出事件
   ---
-  duration_ms: 269.596208
+  duration_ms: 289.133792
   type: 'test'
   ...
 # Subtest: 服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照
 ok 15 - 服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照
   ---
-  duration_ms: 268.019875
+  duration_ms: 280.4545
   type: 'test'
   ...
 # Subtest: F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)
 ok 16 - F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)
   ---
-  duration_ms: 250.9195
+  duration_ms: 281.441333
   type: 'test'
   ...
 # Subtest: F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收
 ok 17 - F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收
   ---
-  duration_ms: 155.465083
+  duration_ms: 167.406125
   type: 'test'
   ...
 # Subtest: F-04:服务器校验失效、回执说已记录时,适配器自己的 schema 校验仍拒收不合规的 blocked
 ok 18 - F-04:服务器校验失效、回执说已记录时,适配器自己的 schema 校验仍拒收不合规的 blocked
   ---
-  duration_ms: 261.979041
+  duration_ms: 289.731625
   type: 'test'
   ...
 # Subtest: CLI 以权限拒绝回绝的 report_progress(内容合规,tool_result is_error)不产出事件,只记入拒收
 ok 19 - CLI 以权限拒绝回绝的 report_progress(内容合规,tool_result is_error)不产出事件,只记入拒收
   ---
-  duration_ms: 263.621167
+  duration_ms: 288.781917
   type: 'test'
   ...
 # Subtest: F-02:Compute 经 report_progress 明确汇报放弃,CLI 正常结束也报 failed 不报 completed
 ok 20 - F-02:Compute 经 report_progress 明确汇报放弃,CLI 正常结束也报 failed 不报 completed
   ---
-  duration_ms: 259.78175
+  duration_ms: 281.579291
   type: 'test'
   ...
 # Subtest: F-02:result 行 subtype 是 success 但 is_error 为 true → failed
 ok 21 - F-02:result 行 subtype 是 success 但 is_error 为 true → failed
   ---
-  duration_ms: 263.475125
+  duration_ms: 287.140375
   type: 'test'
   ...
 # Subtest: brief.tools 为空时 report_progress 仍挂载并被放行,汇报照常产出事件(阴性对照)
 ok 22 - brief.tools 为空时 report_progress 仍挂载并被放行,汇报照常产出事件(阴性对照)
   ---
-  duration_ms: 261.517292
+  duration_ms: 285.850833
   type: 'test'
   ...
 # Subtest: CLI 给出 success 结果但进程非零退出 → failed,不报 completed
 ok 23 - CLI 给出 success 结果但进程非零退出 → failed,不报 completed
   ---
-  duration_ms: 254.142833
+  duration_ms: 282.514625
   type: 'test'
   ...
 # Subtest: 退出码 0 但 CLI 没给结束结果或结果是出错 → failed
 ok 24 - 退出码 0 但 CLI 没给结束结果或结果是出错 → failed
   ---
-  duration_ms: 327.254625
+  duration_ms: 387.673333
   type: 'test'
   ...
 # Subtest: 进程被外部杀掉 → failed,带信号
 ok 25 - 进程被外部杀掉 → failed,带信号
   ---
-  duration_ms: 249.698416
+  duration_ms: 279.827917
   type: 'test'
   ...
 # Subtest: stop:SIGTERM 主进程后立即产出 stopped,不等进程退出;只产出一次,进程随后退出
 ok 26 - stop:SIGTERM 主进程后立即产出 stopped,不等进程退出;只产出一次,进程随后退出
   ---
-  duration_ms: 566.936625
+  duration_ms: 579.684375
   type: 'test'
   ...
 # Subtest: stop:主进程无视 SIGTERM 时 stopped 照样立即产出,reapForceMs 后对进程组 SIGKILL
 ok 27 - stop:主进程无视 SIGTERM 时 stopped 照样立即产出,reapForceMs 后对进程组 SIGKILL
   ---
-  duration_ms: 879.538667
+  duration_ms: 897.700708
   type: 'test'
   ...
 # Subtest: stop:默认升级间隔是 10 秒(对应 mirasim 的 MIRASIM_REAP_FORCE_MS),未到之前不发 SIGKILL
 ok 28 - stop:默认升级间隔是 10 秒(对应 mirasim 的 MIRASIM_REAP_FORCE_MS),未到之前不发 SIGKILL
   ---
-  duration_ms: 1787.515375
+  duration_ms: 1820.034125
   type: 'test'
   ...
 # Subtest: blocked 后 CLI 结束不报 completed;resume 用同一 CLI 会话续接后报 completed
 ok 29 - blocked 后 CLI 结束不报 completed;resume 用同一 CLI 会话续接后报 completed
   ---
-  duration_ms: 336.2785
+  duration_ms: 374.633125
   type: 'test'
   ...
 # Subtest: 运行中不能 resume;未知 Compute 不能 stop
 ok 30 - 运行中不能 resume;未知 Compute 不能 stop
   ---
-  duration_ms: 174.442583
+  duration_ms: 229.543875
   type: 'test'
   ...
 # Subtest: snapshot 取自事件流里 report_progress 的结构化字段
 ok 31 - snapshot 取自事件流里 report_progress 的结构化字段
   ---
-  duration_ms: 260.271375
+  duration_ms: 315.428625
   type: 'test'
   ...
 # Subtest: 没汇报过约束版本的 Compute 拿不到快照;缺 constraintVer 的 handoff 被 spawn 拒绝(AC-07 阳性埋雷)
 ok 32 - 没汇报过约束版本的 Compute 拿不到快照;缺 constraintVer 的 handoff 被 spawn 拒绝(AC-07 阳性埋雷)
   ---
-  duration_ms: 259.474417
+  duration_ms: 288.37675
   type: 'test'
   ...
 # Subtest: 带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里
 ok 33 - 带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里
   ---
-  duration_ms: 260.367917
+  duration_ms: 291.772167
   type: 'test'
   ...
 # Subtest: 没有 handoff 的 spawn:首个提示与装配清单都不含交接段(阴性对照)
 ok 34 - 没有 handoff 的 spawn:首个提示与装配清单都不含交接段(阴性对照)
   ---
-  duration_ms: 261.018458
+  duration_ms: 291.103959
   type: 'test'
   ...
 # Subtest: RR-01:被拒收的 blocked 未合规重报时,另一种合规汇报(completed)不能把它清掉 → failed
 ok 35 - RR-01:被拒收的 blocked 未合规重报时,另一种合规汇报(completed)不能把它清掉 → failed
   ---
-  duration_ms: 262.481666
+  duration_ms: 291.7895
   type: 'test'
   ...
 # Subtest: RR-01:被拒收的 blocked 之后只来一个合规 started,也不算解除(审查存活变异)
 ok 36 - RR-01:被拒收的 blocked 之后只来一个合规 started,也不算解除(审查存活变异)
   ---
-  duration_ms: 255.918208
+  duration_ms: 278.102667
   type: 'test'
   ...
 # Subtest: RR-01:被拒收的 blocked 由宿主显式 resume 解除,续接一轮正常完成(对照)
 ok 37 - RR-01:被拒收的 blocked 由宿主显式 resume 解除,续接一轮正常完成(对照)
   ---
-  duration_ms: 349.893917
+  duration_ms: 375.252875
   type: 'test'
   ...
 # Subtest: RR-01(非 mirasim 对照项):已受理 blocked 后对进程组 SIGSTOP 冻结,之后的 milestone/completed 与同组孙进程副作用都不发生
 ok 38 - RR-01(非 mirasim 对照项):已受理 blocked 后对进程组 SIGSTOP 冻结,之后的 milestone/completed 与同组孙进程副作用都不发生
   ---
-  duration_ms: 608.718
+  duration_ms: 654.160916
   type: 'test'
   ...
 # Subtest: RR-01:停在受阻的 Compute 可以被 stop,产出带 scope 的 stopped
 ok 39 - RR-01:停在受阻的 Compute 可以被 stop,产出带 scope 的 stopped
   ---
-  duration_ms: 242.442709
+  duration_ms: 269.741583
   type: 'test'
   ...
 # Subtest: RR-02:report_progress MCP 起不来时 init 里 host 为 failed → 回收进程组并 failed,不报 completed
 ok 40 - RR-02:report_progress MCP 起不来时 init 里 host 为 failed → 回收进程组并 failed,不报 completed
   ---
-  duration_ms: 204.8345
+  duration_ms: 225.262958
   type: 'test'
   ...
 # Subtest: RR-02:缺 init、tools 不是数组、tools 含非字符串 → failed;完整 init 对照 completed
 ok 41 - RR-02:缺 init、tools 不是数组、tools 含非字符串 → failed;完整 init 对照 completed
   ---
-  duration_ms: 687.723792
+  duration_ms: 758.901375
   type: 'test'
   ...
 # Subtest: RR-02:与真实 CLI 同形的 init(host status failed、工具里无 report_progress)判为无法核验;connected 的同形 init 放行
 ok 42 - RR-02:与真实 CLI 同形的 init(host status failed、工具里无 report_progress)判为无法核验;connected 的同形 init 放行
   ---
-  duration_ms: 109.533791
+  duration_ms: 110.05675
   type: 'test'
   ...
 # Subtest: RR-03 已知不覆盖(记录性,与 mirasim 一致):setsid 脱离进程组的孙进程在 stopped 之后仍存活并能产生副作用;stopped.scope=main-then-group
 ok 43 - RR-03 已知不覆盖(记录性,与 mirasim 一致):setsid 脱离进程组的孙进程在 stopped 之后仍存活并能产生副作用;stopped.scope=main-then-group
   ---
-  duration_ms: 626.063292
+  duration_ms: 650.410959
   type: 'test'
   ...
 # Subtest: RR-03 已知不覆盖(记录性):双 fork 后被收养的守护进程不在进程组内,stopped 只声明 scope=main-then-group
 ok 44 - RR-03 已知不覆盖(记录性):双 fork 后被收养的守护进程不在进程组内,stopped 只声明 scope=main-then-group
   ---
-  duration_ms: 605.313333
+  duration_ms: 642.135875
   type: 'test'
   ...
 # Subtest: RR-04:运行中、stopped 已产出但主进程未退出时快照都是 not-quiescent;主进程退出后才给出快照
 ok 45 - RR-04:运行中、stopped 已产出但主进程未退出时快照都是 not-quiescent;主进程退出后才给出快照
   ---
-  duration_ms: 593.730041
+  duration_ms: 640.322375
   type: 'test'
   ...
 # Subtest: RR-04:快照只看主进程已退出,不等进程组里仍在运行的孙进程(与 mirasim 一致)
 ok 46 - RR-04:快照只看主进程已退出,不等进程组里仍在运行的孙进程(与 mirasim 一致)
   ---
-  duration_ms: 253.441125
+  duration_ms: 272.453042
   type: 'test'
   ...
 # Subtest: RR-05:init 越界后用户 stop → 对外 stopped,违规保留在 violations[]
 ok 47 - RR-05:init 越界后用户 stop → 对外 stopped,违规保留在 violations[]
   ---
-  duration_ms: 1804.034833
+  duration_ms: 1813.993583
   type: 'test'
   ...
 # Subtest: RR-05:terminalFor 的优先级:停止 > 违规 > 进程失败 > 完成;违规保留在 violations,stopped.scope=main-then-group
 ok 48 - RR-05:terminalFor 的优先级:停止 > 违规 > 进程失败 > 完成;违规保留在 violations,stopped.scope=main-then-group
   ---
-  duration_ms: 114.227333
+  duration_ms: 113.886625
   type: 'test'
   ...
 # Subtest: RR-03:CLI 以 detached 启动、自成进程组(pgid 等于自己的 pid),组 SIGKILL 与冻结的信号才能对整组发
 ok 49 - RR-03:CLI 以 detached 启动、自成进程组(pgid 等于自己的 pid),组 SIGKILL 与冻结的信号才能对整组发
   ---
-  duration_ms: 277.2175
+  duration_ms: 275.44425
   type: 'test'
   ...
 # Subtest: R3-01:stopped 之后迟到的 milestone 不再产出事件,也不改变终态
 ok 50 - R3-01:stopped 之后迟到的 milestone 不再产出事件,也不改变终态
   ---
-  duration_ms: 741.804583
+  duration_ms: 714.229458
   type: 'test'
   ...
 # Subtest: R3-01:stopped 之后迟到的 blocked 不能把终态改回受阻、不发 SIGSTOP;第二次 stop 被拒绝
 ok 51 - R3-01:stopped 之后迟到的 blocked 不能把终态改回受阻、不发 SIGSTOP;第二次 stop 被拒绝
   ---
-  duration_ms: 697.474542
+  duration_ms: 704.760334
   type: 'test'
   ...
 # Subtest: R3-01:主进程在 stop 之后立即退出(退出竞态),终态仍只有一个 stopped
 ok 52 - R3-01:主进程在 stop 之后立即退出(退出竞态),终态仍只有一个 stopped
   ---
-  duration_ms: 262.24125
+  duration_ms: 268.567292
   type: 'test'
   ...
 # Subtest: R3-02:空白续接先校验、返回输入错误,冻结的主进程与同组孙进程保持暂停;合法续接再执行(单开关)
 ok 53 - R3-02:空白续接先校验、返回输入错误,冻结的主进程与同组孙进程保持暂停;合法续接再执行(单开关)
   ---
-  duration_ms: 341.304666
+  duration_ms: 378.679084
   type: 'test'
   ...
 # Subtest: R3-03:init 之前的 assistant 文本、非 JSON 行 → 回收并 failed,不报 started/completed
 ok 54 - R3-03:init 之前的 assistant 文本、非 JSON 行 → 回收并 failed,不报 started/completed
   ---
-  duration_ms: 389.638666
+  duration_ms: 447.975833
   type: 'test'
   ...
 # Subtest: R3-03:init 之前的 report_progress tool_use 不会在 init 之后配对生效 → failed,不产出 milestone
 ok 55 - R3-03:init 之前的 report_progress tool_use 不会在 init 之后配对生效 → failed,不产出 milestone
   ---
-  duration_ms: 250.284584
+  duration_ms: 282.915792
   type: 'test'
   ...
 # Subtest: R3-03:init 之前认可的 system 帧(hook_started/hook_response/ui_invalidate)放行,随后合法 init 正常完成(对照)
 ok 56 - R3-03:init 之前认可的 system 帧(hook_started/hook_response/ui_invalidate)放行,随后合法 init 正常完成(对照)
   ---
-  duration_ms: 266.160542
+  duration_ms: 288.952625
   type: 'test'
   ...
 # Subtest: R3-04:断言在假 CLI 写记录之前就失败时,afterEach 仍按测试目录回收进程
 ok 57 - R3-04:断言在假 CLI 写记录之前就失败时,afterEach 仍按测试目录回收进程
   ---
-  duration_ms: 415.208417
+  duration_ms: 437.090084
   type: 'test'
   ...
 # Subtest: R4-01:checkBrief 遇到字段/数组元素 getter、Proxy、撤销 Proxy、自定义原型 getter、不可枚举 setter 时不调用即拒收;纯 JSON brief 放行(对照)
 ok 58 - R4-01:checkBrief 遇到字段/数组元素 getter、Proxy、撤销 Proxy、自定义原型 getter、不可枚举 setter 时不调用即拒收;纯 JSON brief 放行(对照)
   ---
-  duration_ms: 106.986458
+  duration_ms: 115.194
   type: 'test'
   ...
 # Subtest: R4-01:spawn 的 brief、选项与 handoff(含嵌套数组)带 getter/Proxy/非预期字段时不调用即拒收、不起子进程;纯 JSON 选项与 handoff 正常启动(对照)
 ok 59 - R4-01:spawn 的 brief、选项与 handoff(含嵌套数组)带 getter/Proxy/非预期字段时不调用即拒收、不起子进程;纯 JSON 选项与 handoff 正常启动(对照)
   ---
-  duration_ms: 290.407958
+  duration_ms: 318.231958
   type: 'test'
   ...
 # Subtest: R4-01:checkSnapshot 直接调用:访问器、Proxy、撤销 Proxy、非预期字段与嵌套数组 Proxy 不调用即拒收;纯 JSON 快照放行(对照)
 ok 60 - R4-01:checkSnapshot 直接调用:访问器、Proxy、撤销 Proxy、非预期字段与嵌套数组 Proxy 不调用即拒收;纯 JSON 快照放行(对照)
   ---
-  duration_ms: 113.355958
+  duration_ms: 110.945
   type: 'test'
   ...
 # Subtest: R4-01:reportErrors 遇到 getter、Proxy、撤销 Proxy、嵌套数组访问器、不可枚举字段时返回错误且不调用;纯 JSON 汇报无错(对照)
 ok 61 - R4-01:reportErrors 遇到 getter、Proxy、撤销 Proxy、嵌套数组访问器、不可枚举字段时返回错误且不调用;纯 JSON 汇报无错(对照)
   ---
-  duration_ms: 116.044
+  duration_ms: 116.207334
   type: 'test'
   ...
 # Subtest: R4-01:适配器选项与状态参数(computeId、续接文本)带 getter/Proxy/toPrimitive 时不调用即拒收;纯数据的选项与续接正常(对照)
 ok 62 - R4-01:适配器选项与状态参数(computeId、续接文本)带 getter/Proxy/toPrimitive 时不调用即拒收;纯数据的选项与续接正常(对照)
   ---
-  duration_ms: 388.744917
+  duration_ms: 423.167292
   type: 'test'
   ...
 # Subtest: 导出的策略常量不可变:CC_BUILTIN_TOOLS、REPORT_KINDS、PRE_INIT_SYSTEM_SUBTYPES、DEFAULT_RUNNER 冻结,改写抛错且校验行为不变
 ok 63 - 导出的策略常量不可变:CC_BUILTIN_TOOLS、REPORT_KINDS、PRE_INIT_SYSTEM_SUBTYPES、DEFAULT_RUNNER 冻结,改写抛错且校验行为不变
   ---
-  duration_ms: 113.484
+  duration_ms: 113.6875
   type: 'test'
   ...
 # Subtest: R4-04:多凭据引用:每一个位置放非引用都被拒绝、不起进程;全部合法的多元素放行并原样进清单(对照)
 ok 64 - R4-04:多凭据引用:每一个位置放非引用都被拒绝、不起进程;全部合法的多元素放行并原样进清单(对照)
   ---
-  duration_ms: 288.151375
+  duration_ms: 285.930291
   type: 'test'
   ...
 # Subtest: R4-02:report MCP 收到合法 JSON null、其他原始值、数组与坏 JSON 时回 JSON-RPC 错误且进程继续可用,随后的合法请求照常处理(正反对照)
 ok 65 - R4-02:report MCP 收到合法 JSON null、其他原始值、数组与坏 JSON 时回 JSON-RPC 错误且进程继续可用,随后的合法请求照常处理(正反对照)
   ---
-  duration_ms: 217.421875
+  duration_ms: 217.064292
   type: 'test'
   ...
 # Subtest: R4-05:tools/list 直接 JSON-RPC 返回 report_progress 及与共享定义一致的 schema;未知方法回 method not found(对照)
 ok 66 - R4-05:tools/list 直接 JSON-RPC 返回 report_progress 及与共享定义一致的 schema;未知方法回 method not found(对照)
   ---
-  duration_ms: 172.497
+  duration_ms: 165.887791
   type: 'test'
   ...
 # Subtest: R4-05:经假 CLI 的工具发现:tools/list 列出 report_progress 时 init 带上它并 started→completed;tools/list 为空时 init 缺 report_progress → failed(正反对照)
 ok 67 - R4-05:经假 CLI 的工具发现:tools/list 列出 report_progress 时 init 带上它并 started→completed;tools/list 为空时 init 缺 report_progress → failed(正反对照)
   ---
-  duration_ms: 404.286708
+  duration_ms: 413.366833
   type: 'test'
   ...
 # Subtest: R4-05:REPORT_LOG:合法与非法调用各追加一行,valid/errs 与共享校验一致,无效请求不记;未设 REPORT_LOG 时不写任何文件(正反对照)
 ok 68 - R4-05:REPORT_LOG:合法与非法调用各追加一行,valid/errs 与共享校验一致,无效请求不记;未设 REPORT_LOG 时不写任何文件(正反对照)
   ---
-  duration_ms: 284.363083
+  duration_ms: 299.916792
   type: 'test'
   ...
 # Subtest: R4-03:resolveReapForceMs 与 mirasim Ukc 一致:未传显式值时合法正数环境值生效,缺失/无效/非正回落 10000;显式值优先
 ok 69 - R4-03:resolveReapForceMs 与 mirasim Ukc 一致:未传显式值时合法正数环境值生效,缺失/无效/非正回落 10000;显式值优先
   ---
-  duration_ms: 112.950458
+  duration_ms: 106.07825
   type: 'test'
   ...
 # Subtest: R4-03:未传 reapForceMs 时读 MIRASIM_REAP_FORCE_MS=400,主进程无视 SIGTERM 约 400ms 后整组 SIGKILL;显式 reapForceMs=5000 优先,1.5 秒后主进程仍在(对照)
 ok 70 - R4-03:未传 reapForceMs 时读 MIRASIM_REAP_FORCE_MS=400,主进程无视 SIGTERM 约 400ms 后整组 SIGKILL;显式 reapForceMs=5000 优先,1.5 秒后主进程仍在(对照)
   ---
-  duration_ms: 2398.794042
+  duration_ms: 2411.783
   type: 'test'
   ...
 # Subtest: R4-03:环境值无效(abc)且未传 reapForceMs 时回落默认 10000,1.5 秒后主进程仍在
 ok 71 - R4-03:环境值无效(abc)且未传 reapForceMs 时回落默认 10000,1.5 秒后主进程仍在
   ---
-  duration_ms: 1802.563416
+  duration_ms: 1781.822167
   type: 'test'
   ...
 # Subtest: 磁盘清理:每轮的 g-group-cc-* 临时目录运行中存在,CLI 结束、stop 或受阻后续接时删除;续接的新一轮另建目录并在结束后删除
 ok 72 - 磁盘清理:每轮的 g-group-cc-* 临时目录运行中存在,CLI 结束、stop 或受阻后续接时删除;续接的新一轮另建目录并在结束后删除
   ---
-  duration_ms: 1061.616625
+  duration_ms: 1054.328625
   type: 'test'
   ...
 # Subtest: R5-01:checkBrief、checkSnapshot、reportErrors 遇到值为 undefined 的未声明自有字段一律拒收;去掉该字段放行,声明过的可选字段为 undefined 按没给处理、必填字段为 undefined 拒收(单开关对照)
 ok 73 - R5-01:checkBrief、checkSnapshot、reportErrors 遇到值为 undefined 的未声明自有字段一律拒收;去掉该字段放行,声明过的可选字段为 undefined 按没给处理、必填字段为 undefined 拒收(单开关对照)
   ---
-  duration_ms: 113.082708
+  duration_ms: 113.238041
   type: 'test'
   ...
 # Subtest: R5-01:spawn 的 brief 带 memory/soul:undefined、选项或 handoff 带 outside:undefined 时拒收且不起进程(中性启动标记不出现);去掉该字段的同一输入照常启动,选项 cwd/handoff 为 undefined 按没给处理(单开关对照)
 ok 74 - R5-01:spawn 的 brief 带 memory/soul:undefined、选项或 handoff 带 outside:undefined 时拒收且不起进程(中性启动标记不出现);去掉该字段的同一输入照常启动,选项 cwd/handoff 为 undefined 按没给处理(单开关对照)
   ---
-  duration_ms: 286.151834
+  duration_ms: 304.720875
   type: 'test'
   ...
 # Subtest: R5-02:report MCP 的 tools/call 只认 report_progress:未知、缺失或非字符串工具名回 -32602 协议错误,不回已记录、不写 REPORT_LOG;同一参数换成合法名称照常接收并记录(单开关对照)
 ok 75 - R5-02:report MCP 的 tools/call 只认 report_progress:未知、缺失或非字符串工具名回 -32602 协议错误,不回已记录、不写 REPORT_LOG;同一参数换成合法名称照常接收并记录(单开关对照)
   ---
-  duration_ms: 231.596125
+  duration_ms: 247.251416
   type: 'test'
   ...
 # Subtest: R6-01:包根 firstPrompt 对 brief/交接快照的 getter、嵌套与已撤销 Proxy 不调用即抛受控 TypeError(计数 0);合法纯数据照常拼出首个提示,返回值深冻结
 ok 76 - R6-01:包根 firstPrompt 对 brief/交接快照的 getter、嵌套与已撤销 Proxy 不调用即抛受控 TypeError(计数 0);合法纯数据照常拼出首个提示,返回值深冻结
   ---
-  duration_ms: 113.690875
+  duration_ms: 112.256042
   type: 'test'
   ...
 # Subtest: R6-01:包根 allowedTools、cliArgs、toolOverreach 对 brief Proxy/getter 与非字符串状态参数不调用即抛受控 TypeError(计数 0);合法输入给出按 brief 收窄的工具清单与参数
 ok 77 - R6-01:包根 allowedTools、cliArgs、toolOverreach 对 brief Proxy/getter 与非字符串状态参数不调用即抛受控 TypeError(计数 0);合法输入给出按 brief 收窄的工具清单与参数
   ---
-  duration_ms: 115.696709
+  duration_ms: 116.312042
   type: 'test'
   ...
 # Subtest: R6-01:包根 cliEnv 对 hostEnv 的 getter、Proxy、非字符串或 undefined 值与非字符串 computeId 不调用即抛受控 TypeError(计数 0),与 createComputeAdapter 的 hostEnv 判定一致;合法 hostEnv 原样复制
 ok 78 - R6-01:包根 cliEnv 对 hostEnv 的 getter、Proxy、非字符串或 undefined 值与非字符串 computeId 不调用即抛受控 TypeError(计数 0),与 createComputeAdapter 的 hostEnv 判定一致;合法 hostEnv 原样复制
   ---
-  duration_ms: 127.887958
+  duration_ms: 121.768584
   type: 'test'
   ...
 # Subtest: R6-01:包根 streamParser 的输入行与 terminalFor 的退出/结果/事实参数遇到 Proxy、getter、嵌套 Proxy 不调用即抛受控 TypeError(计数 0);合法字符串行与纯数据照常解析和裁决
 ok 79 - R6-01:包根 streamParser 的输入行与 terminalFor 的退出/结果/事实参数遇到 Proxy、getter、嵌套 Proxy 不调用即抛受控 TypeError(计数 0);合法字符串行与纯数据照常解析和裁决
   ---
-  duration_ms: 124.35025
+  duration_ms: 121.766792
   type: 'test'
   ...
 # Subtest: R6-01:包根导出的每个函数逐个参数换成已撤销 Proxy、整体 Proxy、getter、嵌套 Proxy/已撤销 Proxy 或可转换对象时都拒收且访问器与陷阱计数为 0;同一组合法参数照常工作;导出函数清单与本表一致
 ok 80 - R6-01:包根导出的每个函数逐个参数换成已撤销 Proxy、整体 Proxy、getter、嵌套 Proxy/已撤销 Proxy 或可转换对象时都拒收且访问器与陷阱计数为 0;同一组合法参数照常工作;导出函数清单与本表一致
   ---
-  duration_ms: 126.924875
+  duration_ms: 120.940792
   type: 'test'
   ...
 # Subtest: R6-02:failed 事件及其 violations 深冻结:一个消费者 splice(0) 抛 TypeError,两次 settled() 与两个订阅者读到同一份违规
 ok 81 - R6-02:failed 事件及其 violations 深冻结:一个消费者 splice(0) 抛 TypeError,两次 settled() 与两个订阅者读到同一份违规
   ---
-  duration_ms: 282.723458
+  duration_ms: 297.280417
   type: 'test'
   ...
 # Subtest: R6-02:违规后 stop 的 stopped 事件及其 violations 深冻结:首个订阅者改写抛 TypeError,新订阅者与两次 settled() 仍看到原违规;停止优先、违规可审计
 ok 82 - R6-02:违规后 stop 的 stopped 事件及其 violations 深冻结:首个订阅者改写抛 TypeError,新订阅者与两次 settled() 仍看到原违规;停止优先、违规可审计
   ---
-  duration_ms: 3281.491167
+  duration_ms: 3312.795417
   type: 'test'
   ...
 # Subtest: R6-02:rejectedReports 记录里来自 JSON 的 kind(数组)深冻结,改写抛 TypeError,再次读取不变
 ok 83 - R6-02:rejectedReports 记录里来自 JSON 的 kind(数组)深冻结,改写抛 TypeError,再次读取不变
   ---
-  duration_ms: 279.954125
+  duration_ms: 286.106792
   type: 'test'
   ...
 # Subtest: R6-03:report MCP 只认精确的 report_progress:前后空格、制表/换行、大小写不同、连字符等近似名称回 -32602 且不写 REPORT_LOG,同一参数的精确名称照常接收并只记一行(直接 JSON-RPC 正反对照)
 ok 84 - R6-03:report MCP 只认精确的 report_progress:前后空格、制表/换行、大小写不同、连字符等近似名称回 -32602 且不写 REPORT_LOG,同一参数的精确名称照常接收并只记一行(直接 JSON-RPC 正反对照)
   ---
-  duration_ms: 327.997166
+  duration_ms: 278.75175
   type: 'test'
   ...
 # Subtest: R7-01:受阻后并发两次 resume 只受理一个、另一个立即被明确拒绝,只起一个续接 CLI;stop 后原 CLI 与续接 CLI 全部回收(正反对照)
 ok 85 - R7-01:受阻后并发两次 resume 只受理一个、另一个立即被明确拒绝,只起一个续接 CLI;stop 后原 CLI 与续接 CLI 全部回收(正反对照)
   ---
-  duration_ms: 754.835167
+  duration_ms: 770.725417
   type: 'test'
   ...
 # Subtest: R7-01:resume 在途(正等冻结的上一轮退出)时 stop:stop 受理,在途续接被明确拒绝,stop 确认之后不再起 CLI;原 CLI 回收、进程表里不剩本测试的进程(竞态对照)
 ok 86 - R7-01:resume 在途(正等冻结的上一轮退出)时 stop:stop 受理,在途续接被明确拒绝,stop 确认之后不再起 CLI;原 CLI 回收、进程表里不剩本测试的进程(竞态对照)
   ---
-  duration_ms: 870.2245
+  duration_ms: 887.490583
   type: 'test'
   ...
 # Subtest: R7-02:init 前的帧与 init 里 type/subtype/host 状态是对象、数组、null 的合法 JSON 时 preInitFrame/checkInit 按合同拒收、给固定说明、不抛错;拒收回执的 text 是对象或数组时不拼接、不抛错;坏 JSON 与非对象照常拒收,合法字符串与 connected 的 init 照常(对照)
 ok 87 - R7-02:init 前的帧与 init 里 type/subtype/host 状态是对象、数组、null 的合法 JSON 时 preInitFrame/checkInit 按合同拒收、给固定说明、不抛错;拒收回执的 text 是对象或数组时不拼接、不抛错;坏 JSON 与非对象照常拒收,合法字符串与 connected 的 init 照常(对照)
   ---
-  duration_ms: 108.817
+  duration_ms: 113.498542
   type: 'test'
   ...
 # Subtest: R7-02:适配器宿主子进程里,CLI 输出 type/subtype/host 状态为对象或数组、拒收回执 text 为对象、汇报 kind 嵌套过深的合法 JSON:宿主不退出,对应 Compute 各自 failed(或按合同记拒收)并回收 CLI,同一适配器随后的正常 Compute 照常 completed(正反对照)
 ok 88 - R7-02:适配器宿主子进程里,CLI 输出 type/subtype/host 状态为对象或数组、拒收回执 text 为对象、汇报 kind 嵌套过深的合法 JSON:宿主不退出,对应 Compute 各自 failed(或按合同记拒收)并回收 CLI,同一适配器随后的正常 Compute 照常 completed(正反对照)
   ---
-  duration_ms: 2938.887709
+  duration_ms: 3029.090166
   type: 'test'
   ...
 # Subtest: R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)
 ok 89 - R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)
   ---
-  duration_ms: 398.4885
+  duration_ms: 446.475166
   type: 'test'
   ...
-1..89
-# tests 89
+# Subtest: R8-01:有空位或越界数字键的数组(含无下标 0 另带 4294967295 的组合)在 checkBrief、checkSnapshot、reportErrors、firstPrompt 一律拒收;同值的密集数组照常放行并原样复制(正反对照)
+ok 90 - R8-01:有空位或越界数字键的数组(含无下标 0 另带 4294967295 的组合)在 checkBrief、checkSnapshot、reportErrors、firstPrompt 一律拒收;同值的密集数组照常放行并原样复制(正反对照)
+  ---
+  duration_ms: 104.426792
+  type: 'test'
+  ...
+# Subtest: R8-01:spawn 的 brief.rules 或 handoff.openQuestions 是有空位/越界键的数组时拒收、不启动 CLI(中性启动标记不出现);同值密集数组照常启动(正反对照)
+ok 91 - R8-01:spawn 的 brief.rules 或 handoff.openQuestions 是有空位/越界键的数组时拒收、不启动 CLI(中性启动标记不出现);同值密集数组照常启动(正反对照)
+  ---
+  duration_ms: 268.359334
+  type: 'test'
+  ...
+# Subtest: R8-02:report MCP 收到 kind 嵌套 12000 层的汇报:设与不设 REPORT_LOG 回复完全相同(拒收 isError),进程不退出、随后的合法汇报照常接收;日志里拒收那条只记有界说明不记原值,参数里的同名字段改不了判定(只切日志开关的正反对照)
+ok 92 - R8-02:report MCP 收到 kind 嵌套 12000 层的汇报:设与不设 REPORT_LOG 回复完全相同(拒收 isError),进程不退出、随后的合法汇报照常接收;日志里拒收那条只记有界说明不记原值,参数里的同名字段改不了判定(只切日志开关的正反对照)
+  ---
+  duration_ms: 298.120666
+  type: 'test'
+  ...
+# Subtest: R8-02:report MCP 的 JSON-RPC id 不是字符串或整数(嵌套 12000 层数组、对象、布尔、null、小数)时回 -32600 且 id 为 null、不处理不入日志,进程不退出;随后整数与字符串 id 的合法请求照常回复(设与不设 REPORT_LOG 对照)
+ok 93 - R8-02:report MCP 的 JSON-RPC id 不是字符串或整数(嵌套 12000 层数组、对象、布尔、null、小数)时回 -32600 且 id 为 null、不处理不入日志,进程不退出;随后整数与字符串 id 的合法请求照常回复(设与不设 REPORT_LOG 对照)
+  ---
+  duration_ms: 307.979334
+  type: 'test'
+  ...
+# Subtest: R8-02:单个请求处理失败(REPORT_LOG 指向目录写不进)时只回这一条的 -32603、不回已记录,进程不退出、随后的请求照常回复;同一请求不设日志时照常接收(对照);initialize 的 protocolVersion 不是字符串时回本服务器版本,字符串照常回显(对照)
+ok 94 - R8-02:单个请求处理失败(REPORT_LOG 指向目录写不进)时只回这一条的 -32603、不回已记录,进程不退出、随后的请求照常回复;同一请求不设日志时照常接收(对照);initialize 的 protocolVersion 不是字符串时回本服务器版本,字符串照常回显(对照)
+  ---
+  duration_ms: 385.625458
+  type: 'test'
+  ...
+# Subtest: R8-03:checkInit 只认 host 状态恰为 connected:connecting、pending、needs-auth 等其它状态与大小写/空白/截短变体一律 bad-init;同一 init 只把状态换成 connected 时放行(单开关对照)
+ok 95 - R8-03:checkInit 只认 host 状态恰为 connected:connecting、pending、needs-auth 等其它状态与大小写/空白/截短变体一律 bad-init;同一 init 只把状态换成 connected 时放行(单开关对照)
+  ---
+  duration_ms: 118.762083
+  type: 'test'
+  ...
+# Subtest: R8-03:端到端:CLI 的 init 自报 host 为 connecting 或 pending 时回收并 failed,不报 started/completed;同一剧本只把状态换成 connected 时 started→milestone→completed(单开关对照)
+ok 96 - R8-03:端到端:CLI 的 init 自报 host 为 connecting 或 pending 时回收并 failed,不报 started/completed;同一剧本只把状态换成 connected 时 started→milestone→completed(单开关对照)
+  ---
+  duration_ms: 590.459208
+  type: 'test'
+  ...
+# Subtest: R8-04:summary 为纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 reportErrors 与 report MCP 都拒收;同一汇报换成非空文本(含首尾空白的非空文本)接收(单开关对照)
+ok 97 - R8-04:summary 为纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 reportErrors 与 report MCP 都拒收;同一汇报换成非空文本(含首尾空白的非空文本)接收(单开关对照)
+  ---
+  duration_ms: 162.871417
+  type: 'test'
+  ...
+# Subtest: R8-04:blocked 的 needs 为纯空白时 reportErrors 与 report MCP 拒收,端到端不产出 blocked、记一条拒收、CLI 成功结束也 failed;同一剧本 needs 换成非空文本时产出 blocked(单开关对照)
+ok 98 - R8-04:blocked 的 needs 为纯空白时 reportErrors 与 report MCP 拒收,端到端不产出 blocked、记一条拒收、CLI 成功结束也 failed;同一剧本 needs 换成非空文本时产出 blocked(单开关对照)
+  ---
+  duration_ms: 496.422334
+  type: 'test'
+  ...
+# Subtest: R8-04:milestone 的 stage 为纯空白时 reportErrors 与 report MCP 拒收;同一汇报 stage 换成非空文本时接收(单开关对照)
+ok 99 - R8-04:milestone 的 stage 为纯空白时 reportErrors 与 report MCP 拒收;同一汇报 stage 换成非空文本时接收(单开关对照)
+  ---
+  duration_ms: 161.113542
+  type: 'test'
+  ...
+1..99
+# tests 99
 # suites 0
-# pass 89
+# pass 99
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 51124.062167
+# duration_ms 55383.266375
