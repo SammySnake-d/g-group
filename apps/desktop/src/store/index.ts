@@ -12,6 +12,10 @@ import { createPluginsSlice } from './slices/plugins'
 import { createScheduleSlice } from './slices/schedule'
 import { createSendSlice } from './slices/send'
 import { createTasksSlice } from './slices/tasks'
+import { installDemo } from '@/api/backend'
+import { demoSeed } from '@/api/demo-seed'
+import { crons0, pluginCatalog0, plugins0 } from '@/data'
+import { slashEntries } from './select'
 import type { AppState } from './state'
 import type { Ctx } from './types'
 
@@ -26,6 +30,16 @@ export const useAppStore = create<AppState>()((...a) => ({
   ...createPluginsSlice(...a),
   ...createModelsSlice(...a),
   ...createSendSlice(...a),
+}))
+
+/* 没连上后端时,call() 交给演示服务;种子是初始演示数据(和 store 的初值同一份),命令清单按会话现算 */
+installDemo(demoSeed({
+  crons: crons0, plugins: plugins0, catalog: pluginCatalog0,
+  commands: (roomId) => {
+    const s = useAppStore.getState()
+    const conv = s.convs.find((c) => c.id === roomId)
+    return conv ? slashEntries(s, conv).filter((e) => !e.disabled).map((e) => e.command) : []
+  },
 }))
 
 /** Ctx 的全部字段:useApp() 只订阅这些(壳内部的宽度、草稿、浮层栈变了,业务组件不跟着重渲染) */

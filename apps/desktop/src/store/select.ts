@@ -1,4 +1,6 @@
 // 由状态现算的派生值(选择器):不存副本,改了哪里各个视角立刻一致。
+import { availableCommands, type SlashEntry } from '@g-group/ui-core'
+import { allCommands, pluginStates } from '@/commands'
 import { people, type Conversation, type Msg } from '@/data'
 import type { AppState } from './state'
 
@@ -49,4 +51,10 @@ export function withUnreadDivider(c: Conversation, n?: number): Msg[] {
   const at = idx[Math.max(0, idx.length - n)]
   if (at === undefined) return c.messages
   return [...c.messages.slice(0, at), { k: 'sys', id: 'new-divider', text: '—— 以下是新消息 ——' } as Msg, ...c.messages.slice(at)]
+}
+
+/** 这个会话里的斜杠命令:内置 + 插件注册的 + 在场助手声明的;用不了的带灰显原因 */
+export function slashEntries(s: Pick<AppState, 'plugins' | 'pluginCatalog'>, conv: Conversation): SlashEntry[] {
+  const where = { scope: conv.kind, plugins: pluginStates(s.pluginCatalog, s.plugins, conv.id), assistants: conv.members.filter((m) => m !== 'me' && !people[m]?.human) }
+  return availableCommands(allCommands(s.pluginCatalog, s.plugins), where)
 }

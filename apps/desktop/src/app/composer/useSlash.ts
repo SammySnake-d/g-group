@@ -1,9 +1,13 @@
-import { availableCommands, completeToken, detectSlash, filterCommands, parseInvocation, parseSource, removeToken, type SlashEntry, type SlashInvocation } from '@g-group/ui-core'
+import { completeToken, detectSlash, filterCommands, parseInvocation, parseSource, removeToken, type SlashEntry, type SlashInvocation } from '@g-group/ui-core'
 import { useEffect, useMemo, useState } from 'react'
-import { allCommands, pluginStates, SOURCE_PAGE } from '@/commands'
+import { SOURCE_PAGE } from '@/commands'
 import { people, type Conversation } from '@/data'
 import { findInfo } from '@/pluginInfo'
 import { useApp } from '@/store'
+import { slashEntries } from '@/store/select'
+
+/** 后端这个会话没给这条命令 */
+const NOT_OFFERED = '后端在这个会话没提供这条命令'
 
 type Args = {
   conv: Conversation
@@ -20,15 +24,22 @@ type Args = {
 
 /** 斜杠命令:识别光标处的 /token、过滤菜单、解析参数、执行。Telegram 式:选中后在输入框里提示该填的参数 */
 export function useSlash({ conv, draft, setDraft, caret, focused, editing, placeCaret, onSend, inputRef }: Args) {
-  const { plugins, pluginCatalog, push, toast, summarize, addTask, setNotice, openSplit, openSchedule } = useApp((s) => ({
-    plugins: s.plugins, pluginCatalog: s.pluginCatalog, push: s.push, toast: s.toast, summarize: s.summarize, addTask: s.addTask, setNotice: s.setNotice, openSplit: s.openSplit, openSchedule: s.openSchedule,
+  const { plugins, pluginCatalog, offered, loadCommands, push, toast, summarize, addTask, setNotice, openSplit, openSchedule } = useApp((s) => ({
+    plugins: s.plugins, pluginCatalog: s.pluginCatalog, offered: s.roomCommands[conv.id], loadCommands: s.loadCommands,
+    push: s.push, toast: s.toast, summarize: s.summarize, addTask: s.addTask, setNotice: s.setNotice, openSplit: s.openSplit, openSchedule: s.openSchedule,
   }))
   const [slashIdx, setSlashIdx] = useState(0)
   const [dismissed, setDismissed] = useState<string | null>(null)
   const [nudge, setNudge] = useState(0)
-  const where = useMemo(() => ({ scope: conv.kind, plugins: pluginStates(pluginCatalog, plugins, conv.id), assistants: conv.members.filter((m) => m !== 'me' && !people[m]?.human) }), [conv.kind, conv.id, conv.members, pluginCatalog, plugins])
-  const entries = useMemo(() => availableCommands(allCommands(pluginCatalog, plugins), where), [pluginCatalog, plugins, where])
-  const assistantNames = useMemo(() => where.assistants.map((m) => people[m].name), [where])
+  /* 命令清单:本地按会话现算(含灰显原因);后端经 commands.list 给了这个会话的清单、且是按当前状态拉的,
+     本地能用而后端没给的就灰掉。合同只给能用的命令,中文名、别名、参数提示、灰显原因仍取本地(合同缺口) */
+  useEffect(() => { loadCommands(conv.id) }, [conv.id, conv.members, plugins, loadCommands])
+  const entries = useMemo(() => {
+    const local = slashEntries({ plugins, pluginCatalog }, conv)
+    if (!offered || offered.plugins !== plugins || offered.members !== conv.members) return local
+    return local.map((e) => (!e.disabled && !offered.names.includes(e.command.name) ? { ...e, disabled: NOT_OFFERED } : e))
+  }, [plugins, pluginCatalog, conv, offered])
+  const assistantNames = useMemo(() => conv.members.filter((m) => m !== 'me' && !people[m]?.human).map((m) => people[m].name), [conv.members])
   const token = editing ? null : detectSlash(draft, Math.min(caret, draft.length))
   const tokenKey = token ? `${token.start}:${token.query}` : ''
   const menuOpen = !!token && focused && dismissed !== tokenKey

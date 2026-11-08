@@ -123,3 +123,36 @@ test("键盘走通:分隔条 Tab 聚焦后 ←/→ 调宽并夹在范围里;会�
   await page.keyboard.press("ArrowUp");
   await expect(rows.first()).toBeFocused();
 });
+
+test("定时、插件、命令经接口合同:没连后端时走演示服务,建定时、删定时、停用插件、打 / 拉命令清单都有调用且都被接受", async ({ page }) => {
+  const calls = () => page.evaluate(() => (window as unknown as { __gg: { calls: () => { method: string; ok: boolean }[] } }).__gg.calls());
+  const made = async (method: string) => (await calls()).filter((c) => c.method === method);
+  await page.goto("/?freeze=1&conv=g");
+  const input = page.getByTestId("composer");
+  await input.click();
+  await page.keyboard.type("/");
+  await expect.poll(async () => (await made("commands.list")).length).toBeGreaterThan(0);
+  await page.keyboard.type("schedule 每天9点 写日报");
+  await page.keyboard.press("Enter");
+  const dlg = page.getByTestId("cron-editor");
+  await dlg.getByTestId("cron-editor-who-claude").click();
+  await dlg.getByTestId("cron-editor-save").click();
+  await expect(dlg).toHaveCount(0);
+  await expect.poll(() => made("schedules.create")).toEqual([{ method: "schedules.create", ok: true }]);
+
+  await page.getByTestId("head-side").click();
+  await page.getByTestId("side-tab-cron").click();
+  await page.getByTestId("cron-row-cr4").click();
+  await page.getByTestId("cron-delete").click();
+  await page.getByTestId("cron-delete-ok").click();
+  await expect(page.getByTestId("toast")).toHaveText("已删除定时");
+  await expect.poll(() => made("schedules.remove")).toEqual([{ method: "schedules.remove", ok: true }]);
+
+  await page.getByTestId("nav-plugins").click();
+  await page.getByTestId("plg-tab-installed").click();
+  const sw = page.getByTestId("plg-toggle-g-group.cve");
+  await sw.click();
+  await expect(sw).toHaveAttribute("aria-checked", "false");
+  await expect.poll(() => made("plugins.setEnabled")).toEqual([{ method: "plugins.setEnabled", ok: true }]);
+  expect((await calls()).every((c) => c.ok)).toBe(true);
+});

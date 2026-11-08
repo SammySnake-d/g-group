@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { probeBackend } from '@/api/backend'
+import { demoCalls, probeBackend } from '@/api/backend'
 import { useAppStore } from '@/store'
 import { startLiveDemo } from '@/store/live'
 
@@ -17,6 +17,6 @@ export function useShell() {
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [])
-  /* 走查用:模拟迟到的回答(AC-44⑤)。只挂在 window 上,界面里没有入口 */
-  useEffect(() => { (window as unknown as { __gg?: unknown }).__gg = { returnHuman: useAppStore.getState().returnHuman } }, [])
+  /* 走查用:模拟迟到的回答(AC-44⑤);核对演示服务收到了哪些合同调用。只挂在 window 上,界面里没有入口 */
+  useEffect(() => { (window as unknown as { __gg?: unknown }).__gg = { returnHuman: useAppStore.getState().returnHuman, calls: () => demoCalls().map((c) => ({ method: c.method, ok: c.ok })) } }, [])
 }
