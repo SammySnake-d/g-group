@@ -217,6 +217,26 @@ export const ComputeRunView = obj({
   startedAt: isoTime(),
   endedAt: nullable(isoTime()),
 });
+/** 代码任务的隔离工作树(R-Worktree,AC-22):W2 在改 → W3 钉住候选提交 → W4 合入中 → W6 已合入;W5 合入冲突或重验失败(目标分支未动)。 */
+export const WORKSPACE_STATES = ["W2_Active", "W3_Pinned", "W4_Integrating", "W5_Conflict", "W6_Merged"] as const;
+export const WorkspaceView = obj({
+  /** 工作树目录;W6 合入后已清理 */
+  dir: str({ max: 4096 }),
+  branch: str({ max: 300 }),
+  targetBranch: str({ max: 300 }),
+  /** 拉出工作树时目标分支的 head(H0) */
+  baseSha: str({ max: 64 }),
+  /** 审查与合入钉住的候选提交 */
+  candidateSha: nullable(str({ max: 64 })),
+  state: oneOf(WORKSPACE_STATES),
+  /** 最近一次合入时看到的目标分支 head */
+  targetHead: nullable(str({ max: 64 })),
+  /** 目标分支被推进后,基于哪个 head 合并并重跑了验证;快进合入为 null */
+  verifiedOn: nullable(str({ max: 64 })),
+  mergedSha: nullable(str({ max: 64 })),
+  conflict: nullable(obj({ kind: oneOf(["merge", "verify"] as const), detail: str({ max: 5000 }) })),
+});
+export type WorkspaceView = Infer<typeof WorkspaceView>;
 export const TaskView = obj({
   id: id(),
   title: str({ max: 500 }),
@@ -240,6 +260,8 @@ export const TaskView = obj({
   /** 由账本派生的累积生产厂商集合(跨厂商审查门禁按它判)。 */
   producerVendors: opt(arr(str({ max: 64 }), { max: 50 })),
   artifacts: arr(obj({ ref: id(), name: str({ max: 500 }), kind: oneOf(["file", "diff", "link", "text"] as const) })),
+  /** 代码任务才有(宿主配了代码仓);普通任务不带这个字段。 */
+  workspace: opt(WorkspaceView),
   createdAt: isoTime(),
   updatedAt: isoTime(),
   /** 用户手动新建任务时填的描述,原样保留(AC-47);联系人派活建的任务没有这一项。 */

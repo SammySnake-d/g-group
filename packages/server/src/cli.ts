@@ -5,6 +5,7 @@
 //   node packages/server/src/cli.ts group --db ./gg.db --members 小克,小研 --to 小克 "@小克 帮我在你的工作目录写 group.txt"
 // 选项:--mind fake|pi(默认 fake 规则脑子;pi 需要 @g-group/adapter-pi-contact 与模型网关环境变量)
 //       --compute fake|claude(默认 fake;claude 起真实 Claude Code CLI)  --cwd 目录(Compute 工作目录)  --timeout 秒
+//       --repo 仓库 --target 分支 [--verify "命令 参数…"](AC-22:每个任务一个 worktree 作 Compute 工作目录)  --accept(交付后豁免审查并验收,代码任务随即合入)
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -30,6 +31,10 @@ const { values, positionals } = parseArgs({
     title: { type: "string", default: "项目群" },
     /** 第一轮收尾后再以用户身份发的一条(如对交付回复「通过」或修改意见),发完再等收尾。 */
     reply: { type: "string" },
+    repo: { type: "string" },
+    target: { type: "string", default: "main" },
+    verify: { type: "string" },
+    accept: { type: "boolean", default: false },
   },
 });
 const [cmd, ...rest] = positionals;
@@ -95,6 +100,8 @@ function print(host: Host, roomId: string) {
   }
   for (const t of host.listTasks({ roomId })) {
     console.log(`任务 ${t.id} [${t.state}] ${t.title} 审查门=${t.reviewGate} 进度=${t.recentProgress.map((p) => p.kind).join(">")} Compute=${t.computeRuns.map((r) => r.computeId).join(",")}`);
+    const w = t.workspace;
+    if (w) console.log(`  工作树 ${w.state} 分支=${w.branch} base=${w.baseSha.slice(0, 12)} 候选=${w.candidateSha?.slice(0, 12) ?? "-"} 合入=${w.mergedSha?.slice(0, 12) ?? "-"} 重验基于=${w.verifiedOn?.slice(0, 12) ?? "-"}${w.conflict ? ` 冲突:${w.conflict.detail}` : ""}`);
   }
 }
 
@@ -144,6 +151,9 @@ async function main() {
           },
         }
       : {}),
+    ...(values.repo
+      ? { codeRepo: { repo: path.resolve(values.repo), targetBranch: values.target, ...(values.verify ? { verify: { command: values.verify.split(/\s+/)[0]!, args: values.verify.split(/\s+/).slice(1) } } : {}) } }
+      : {}),
     maxDeferMs: 200,
     onReport: (what, detail) => console.error(`[宿主] ${what}`, typeof detail === "object" ? JSON.stringify(detail) : detail),
   });
@@ -167,6 +177,20 @@ async function main() {
       console.log(`  ← 我: ${values.reply}`);
       const second = await sendAndWait(host, room.id, values.reply, { timeoutMs: Number(values.timeout) * 1000 });
       if (second.timedOut) console.error("超时,仍有任务在执行");
+    }
+    if (values.accept) {
+      const deadline = Date.now() + Number(values.timeout) * 1000;
+      for (const t of host.listTasks({ roomId: room.id }).filter((x) => x.state === "T5_InReview" || x.state === "T8a_Delivered")) {
+        console.log(`  ✓ 验收 ${t.id}(豁免审查)`);
+        host.taskDecision(t.id, "accept", `cli-accept-${t.id}`);
+      }
+      for (;;) {
+        await host.idle();
+        await new Promise((r) => setTimeout(r, 500));
+        const integrating = host.listTasks({ roomId: room.id }).some((t) => t.workspace?.state === "W4_Integrating");
+        if (!integrating && !host.loop.busy()) break;
+        if (Date.now() > deadline) break;
+      }
     }
     console.log("—— 会话 ——");
     print(host, room.id);

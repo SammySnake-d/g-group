@@ -33,6 +33,8 @@ node packages/server/src/cli.ts dm --db /tmp/gg.db --mind pi --compute claude --
 node packages/server/src/cli.ts log --db /tmp/gg.db
 # 群聊:建(或复用)群「项目群」,@ 小克派活,结束时打印群记录与 AC-03 发言者核对
 node packages/server/src/cli.ts group --db /tmp/gg.db --mind pi --compute claude --cwd /tmp/gg-work --members 小克,小研 --to 小克 "@小克 帮我…"
+# 代码任务(AC-22):每个任务一个 worktree,交付钉候选提交;--accept 豁免审查并验收,随即受控合入 main(主线已推进时跑 --verify 重验)
+node packages/server/src/cli.ts dm --db /tmp/gg.db --compute claude --repo /path/repo.git --target main --verify "npm test" --accept "..."
 ```
 
 ## 验收编号对照(收据均为「未测·待审」,测试在 src/*.test.ts)
@@ -51,9 +53,11 @@ node packages/server/src/cli.ts group --db /tmp/gg.db --mind pi --compute claude
 | cron + 时区定时、夏令时、错过只补一次 | AC-35 ① 宿主部分 | schedules.test.ts、kernel/cron.test.ts |
 | 插件市场/安装/版本更新 | AC-35 ⑤ | plugins.test.ts |
 | slash 命令唤醒能力 | AC-34 | slash.test.ts |
+| 代码任务独立 worktree、交付钉候选提交、验收后受控合入(主线未变快进,已推进则合并重验,冲突/重验失败不动主线) | AC-22 | worktree.test.ts、proof/worktree-merge.txt |
 
 ## 还没接的
 
 - `tasks.answer`(Compute 受阻提问 T4b)、跨厂商审查联系人自动送审、退回时恢复原 Compute 的条件 A/B 判定
 - 插件代码执行(要进程隔离)、从 URL 安装
+- 代码任务的合入状态在 R-Worktree 资源上(W2–W6),任务状态机还没有 T6 Integrating:审查豁免后任务先到 T8a,合入成功才记 T8 验收;任务取消/失败时工作树不自动归档
 - 关窗口/退出时在途任务的去留(技术栈文档要求先由用户确认)

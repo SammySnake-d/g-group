@@ -8,6 +8,9 @@
 //   W5 IntegrationConflict:合并冲突或重验失败,目标分支不动;不提交新候选就拒绝再合;
 //   W6 Merged:目标分支已推进,任务工作树目录清掉、任务分支保留。
 // 目标分支不能检出在某个非裸工作区里(update-ref 不会改那个工作区的文件,会让它与分支不一致),配置时就拒绝。
+import { execFileSync, spawn } from "node:child_process";
+import { existsSync, mkdirSync, rmSync } from "node:fs";
+import path from "node:path";
 
 export interface VerifySpec {
   readonly command: string;
@@ -50,26 +53,197 @@ export type IntegrateOutcome =
   | { readonly ok: true; readonly ws: Workspace; readonly mode: "fast-forward" | "merged-and-verified" | "no-change"; readonly attempts: number }
   | { readonly ok: false; readonly ws: Workspace; readonly reason: "not-pinned" | "unresolved-conflict" | "merge-conflict" | "verify-failed" | "target-busy"; readonly detail: string };
 
+const IDENTITY = ["-c", "user.name=g-group", "-c", "user.email=compute@g-group.local", "-c", "commit.gpgsign=false"];
+
+/** 子进程环境:去掉 GIT_DIR / GIT_WORK_TREE / GIT_INDEX_FILE 等,免得在钩子里运行时指到别的仓库 */
+function cleanEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const [k, v] of Object.entries(process.env)) if (!k.startsWith("GIT_") && v !== undefined) env[k] = v;
+  env.GIT_TERMINAL_PROMPT = "0";
+  return env;
+}
+function git(cwd: string, args: readonly string[]): string {
+  return execFileSync("git", [...IDENTITY, ...args], { cwd, encoding: "utf8", env: cleanEnv(), stdio: ["ignore", "pipe", "pipe"] }).trim();
+}
+function gitOk(cwd: string, args: readonly string[]): boolean {
+  try {
+    git(cwd, args);
+    return true;
+  } catch {
+    return false;
+  }
+}
+const errText = (e: unknown) => {
+  const x = e as { stderr?: string | Buffer; message?: string };
+  return (x.stderr ? String(x.stderr) : (x.message ?? String(e))).trim().slice(-2000);
+};
+
 export class Worktrees {
   readonly cfg: CodeRepoConfig;
   readonly root: string;
-  constructor(cfg: CodeRepoConfig, root: string, _opts: { maxAttempts?: number } = {}) {
-    this.cfg = cfg;
-    this.root = root;
+  private readonly maxAttempts: number;
+  /** 受控单通道:同一宿主内的合入一个接一个跑 */
+  private lane: Promise<unknown> = Promise.resolve();
+
+  constructor(cfg: CodeRepoConfig, root: string, opts: { maxAttempts?: number } = {}) {
+    this.cfg = { ...cfg, repo: path.resolve(cfg.repo) };
+    this.root = path.resolve(root);
+    this.maxAttempts = opts.maxAttempts ?? 5;
+    if (!/^[A-Za-z0-9._/-]+$/.test(cfg.targetBranch) || cfg.targetBranch.includes("..")) throw new Error(`目标分支名不合法:${cfg.targetBranch}`);
+    try {
+      git(this.cfg.repo, ["rev-parse", "--git-dir"]);
+    } catch (e) {
+      throw new Error(`${this.cfg.repo} 不是 git 仓库:${errText(e)}`);
+    }
+    this.targetHead();
+    const ref = `refs/heads/${cfg.targetBranch}`;
+    let wtPath = "";
+    let bare = false;
+    for (const line of git(this.cfg.repo, ["worktree", "list", "--porcelain"]).split("\n")) {
+      if (line.startsWith("worktree ")) {
+        wtPath = line.slice("worktree ".length);
+        bare = false;
+      } else if (line === "bare") bare = true;
+      else if (line === `branch ${ref}` && !bare) throw new Error(`目标分支 ${cfg.targetBranch} 检出在工作区 ${wtPath}:合入用 update-ref 推进,会让那个工作区的文件与分支不一致。请用裸仓库,或另设一个集成分支`);
+    }
+    mkdirSync(this.root, { recursive: true });
   }
+
   targetHead(): string {
-    throw new Error("未实现");
+    try {
+      return git(this.cfg.repo, ["rev-parse", "--verify", `refs/heads/${this.cfg.targetBranch}^{commit}`]);
+    } catch (e) {
+      throw new Error(`目标分支 ${this.cfg.targetBranch} 不存在:${errText(e)}`);
+    }
   }
-  branchOf(_taskId: string): string {
-    throw new Error("未实现");
+  branchOf(taskId: string): string {
+    return `gg/task-${taskId.replace(/[^A-Za-z0-9._-]/g, "-")}`;
   }
-  provision(_taskId: string, _existing?: Workspace | null): Workspace {
-    throw new Error("未实现");
+
+  /** W0 → W2:开独立工作树。同一任务重复申请返回已有的那个(W1 幂等);目录或分支已被占用就报冲突并清掉半成品。 */
+  provision(taskId: string, existing?: Workspace | null): Workspace {
+    if (existing && existing.state !== "W6_Merged" && existsSync(existing.dir)) return existing;
+    const dir = path.join(this.root, taskId.replace(/[^A-Za-z0-9._-]/g, "-"));
+    const branch = this.branchOf(taskId);
+    if (existsSync(dir)) throw new Error(`工作树目录 ${dir} 已被占用`);
+    if (gitOk(this.cfg.repo, ["rev-parse", "--verify", `refs/heads/${branch}`])) throw new Error(`任务分支 ${branch} 已存在`);
+    const base = this.targetHead();
+    try {
+      git(this.cfg.repo, ["worktree", "add", "-q", "-b", branch, dir, base]);
+    } catch (e) {
+      rmSync(dir, { recursive: true, force: true });
+      gitOk(this.cfg.repo, ["worktree", "prune"]);
+      throw new Error(`创建工作树失败:${errText(e)}`);
+    }
+    return { taskId, dir, branch, targetBranch: this.cfg.targetBranch, baseSha: base, candidateSha: null, state: "W2_Active", targetHead: null, verifiedOn: null, mergedSha: null, conflict: null };
   }
-  pin(_ws: Workspace, _message: string): Workspace {
-    throw new Error("未实现");
+
+  /** W2/W5 → W3:把工作区改动提交成候选提交并钉住。没有新改动就钉当前 HEAD。 */
+  pin(ws: Workspace, message: string): Workspace {
+    if (ws.state === "W6_Merged") throw new Error("工作树已合入并清理,不能再提交候选");
+    if (ws.state === "W4_Integrating") throw new Error("正在合入,不能换候选");
+    git(ws.dir, ["add", "-A"]);
+    if (!gitOk(ws.dir, ["diff", "--cached", "--quiet"])) git(ws.dir, ["commit", "-q", "-m", message]);
+    const sha = git(ws.dir, ["rev-parse", "HEAD"]);
+    // 冲突后没有新提交:候选不变,仍停在 W5,不能再合
+    if (ws.state === "W5_Conflict" && sha === ws.candidateSha) return ws;
+    return { ...ws, candidateSha: sha, state: "W3_Pinned", conflict: null };
   }
-  integrate(_ws: Workspace): Promise<IntegrateOutcome> {
-    return Promise.reject(new Error("未实现"));
+
+  /** W3 → W4 → W6 或 W5。串行执行;返回的 ws 是合入后的状态,调用方负责落盘。 */
+  integrate(ws: Workspace): Promise<IntegrateOutcome> {
+    const run = this.lane.then(() => this.integrateNow(ws));
+    this.lane = run.catch(() => {});
+    return run;
   }
+
+  private async integrateNow(ws: Workspace): Promise<IntegrateOutcome> {
+    if (ws.state === "W5_Conflict") return { ok: false, ws, reason: "unresolved-conflict", detail: "上次合入冲突或重验失败,还没提交新的候选提交,拒绝再合" };
+    if (ws.state !== "W3_Pinned" || !ws.candidateSha) return { ok: false, ws, reason: "not-pinned", detail: `工作树在 ${ws.state},没有钉住的候选提交` };
+    const cand = ws.candidateSha;
+    const ref = `refs/heads/${this.cfg.targetBranch}`;
+    for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
+      const head = this.targetHead();
+      // 候选已经在目标分支里:不用合
+      if (gitOk(this.cfg.repo, ["merge-base", "--is-ancestor", cand, head])) return { ok: true, ws: this.merged(ws, head, head, null), mode: "no-change", attempts: attempt };
+      // 主线未变(目标 head 是候选的祖先):快进
+      if (gitOk(this.cfg.repo, ["merge-base", "--is-ancestor", head, cand])) {
+        if (gitOk(this.cfg.repo, ["update-ref", ref, cand, head])) return { ok: true, ws: this.merged(ws, head, cand, null), mode: "fast-forward", attempts: attempt };
+        continue;
+      }
+      // 主线已推进到 H1:基于 H1 合并、重验
+      const idir = path.join(this.root, ".integrate", `${path.basename(ws.dir)}-${attempt}`);
+      rmSync(idir, { recursive: true, force: true });
+      mkdirSync(path.dirname(idir), { recursive: true });
+      git(this.cfg.repo, ["worktree", "add", "-q", "--detach", idir, head]);
+      try {
+        try {
+          git(idir, ["merge", "--no-ff", "--no-edit", "-m", `合入 ${ws.branch} → ${this.cfg.targetBranch}`, cand]);
+        } catch (e) {
+          let files = "";
+          try {
+            files = git(idir, ["diff", "--name-only", "--diff-filter=U"]);
+          } catch {
+            /* 读不到冲突文件就只报原文 */
+          }
+          gitOk(idir, ["merge", "--abort"]);
+          const detail = `基于 ${this.cfg.targetBranch}@${head.slice(0, 12)} 合并冲突${files ? `:${files.split("\n").join("、")}` : ""}(${errText(e).split("\n")[0]})`;
+          return { ok: false, ws: { ...ws, state: "W5_Conflict", targetHead: head, conflict: { kind: "merge", detail } }, reason: "merge-conflict", detail };
+        }
+        const merged = git(idir, ["rev-parse", "HEAD"]);
+        if (!this.cfg.verify) {
+          const detail = `${this.cfg.targetBranch} 已推进到 ${head.slice(0, 12)},但没有配置重验命令:不能把旧基线上的验证结果当成新基线的结果合入`;
+          return { ok: false, ws: { ...ws, state: "W5_Conflict", targetHead: head, conflict: { kind: "verify", detail } }, reason: "verify-failed", detail };
+        }
+        const v = await runVerify(this.cfg.verify, idir);
+        if (!v.ok) {
+          const detail = `基于 ${this.cfg.targetBranch}@${head.slice(0, 12)} 重验失败:${v.output}`;
+          return { ok: false, ws: { ...ws, state: "W5_Conflict", targetHead: head, conflict: { kind: "verify", detail } }, reason: "verify-failed", detail };
+        }
+        if (gitOk(this.cfg.repo, ["update-ref", ref, merged, head])) return { ok: true, ws: this.merged(ws, head, merged, head), mode: "merged-and-verified", attempts: attempt };
+        // 重验期间目标分支又被推进:CAS 失败,基于最新 head 重来
+      } finally {
+        gitOk(this.cfg.repo, ["worktree", "remove", "--force", idir]);
+        rmSync(idir, { recursive: true, force: true });
+      }
+    }
+    return { ok: false, ws, reason: "target-busy", detail: `目标分支在合入期间连续被推进 ${this.maxAttempts} 次,这次没合入,候选仍钉住,可以再试` };
+  }
+
+  /** W6:记下合入结果,清掉任务工作树目录(任务分支保留) */
+  private merged(ws: Workspace, head: string, mergedSha: string, verifiedOn: string | null): Workspace {
+    gitOk(this.cfg.repo, ["worktree", "remove", "--force", ws.dir]);
+    rmSync(ws.dir, { recursive: true, force: true });
+    gitOk(this.cfg.repo, ["worktree", "prune"]);
+    return { ...ws, state: "W6_Merged", targetHead: head, mergedSha, verifiedOn, conflict: null };
+  }
+}
+
+function runVerify(v: VerifySpec, cwd: string): Promise<{ ok: boolean; output: string }> {
+  return new Promise((resolve) => {
+    let out = "";
+    const child = spawn(v.command, [...(v.args ?? [])], { cwd, env: cleanEnv(), stdio: ["ignore", "pipe", "pipe"], detached: process.platform !== "win32" });
+    const keep = (d: Buffer) => {
+      out = (out + d.toString("utf8")).slice(-4000);
+    };
+    child.stdout.on("data", keep);
+    child.stderr.on("data", keep);
+    const timer = setTimeout(() => {
+      out += `\n重验超时(${v.timeoutMs ?? 600_000}ms),已停止`;
+      try {
+        if (child.pid && process.platform !== "win32") process.kill(-child.pid, "SIGKILL");
+        else child.kill("SIGKILL");
+      } catch {
+        /* 已退出 */
+      }
+    }, v.timeoutMs ?? 600_000);
+    child.on("error", (e) => {
+      clearTimeout(timer);
+      resolve({ ok: false, output: `重验命令起不来:${e.message}` });
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      resolve({ ok: code === 0, output: out.trim().slice(-2000) || `退出码 ${code}` });
+    });
+  });
 }

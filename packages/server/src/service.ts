@@ -92,6 +92,7 @@ export function createService(host: Host): Service {
     "tasks.cancel": (p: { taskId: string; clientActionId: string }) => host.taskDecision(p.taskId, "cancel", p.clientActionId),
     "tasks.create": (p: Parameters<Host["createTask"]>[0]) => host.createTask(p),
     "tasks.assign": (p: Parameters<Host["assignTask"]>[0]) => host.assignTask(p),
+    "tasks.integrate": (p: { taskId: string }) => host.integrateTask(p.taskId),
     "commitments.list": (p: Parameters<Host["listCommitments"]>[0]) => ({ commitments: host.listCommitments(p) }),
     "commitments.revoke": (p: { commitmentId: string }) => host.revokeCommitment(p.commitmentId),
     "docs.list": (p: { roomId?: string }) => ({ docs: host.docs.list(p) }),

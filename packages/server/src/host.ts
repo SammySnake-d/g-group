@@ -85,6 +85,7 @@ import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindR
 import { Scheduler, checkCron } from "./schedules.ts";
 import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, unindexTx } from "./search.ts";
 import { SharedDocs } from "./shared-docs.ts";
+import { type CodeRepoConfig, type Workspace, Worktrees } from "./worktree.ts";
 
 export interface HostOptions {
   readonly file: string;
@@ -96,6 +97,9 @@ export interface HostOptions {
   readonly compute?: (model: string) => ComputeAdapter;
   /** Compute 工作目录。 */
   readonly computeCwd?: (taskId: string) => string;
+  /** 代码仓(AC-22):给了就每个任务一个独立 git worktree 作 Compute 工作目录(优先于 computeCwd),
+   *  交付钉住候选提交,用户验收后受控合入目标分支;合入成功才算验收。 */
+  readonly codeRepo?: CodeRepoConfig;
   /** 派给 Compute 的内置工具白名单;默认 Read/Write/Edit/Glob/Grep/Bash。 */
   readonly computeTools?: readonly string[];
   readonly assemble?: RoundAssembler;
@@ -220,6 +224,7 @@ export class Host {
   private readonly exits: MemberExits;
   /** 共享文档单一提交点(AC-21):所有写入只经它 */
   readonly docs: SharedDocs;
+  readonly worktrees: Worktrees | null;
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly newId: (prefix: string) => string;
@@ -304,6 +309,7 @@ export class Host {
     });
     // 启动时派生镜像按权威版本修复(中断的导出、迟到的旧内容覆盖)
     this.docs.repairMirrors();
+    this.worktrees = opts.codeRepo ? new Worktrees(opts.codeRepo, join(opts.dataDir ?? dirname(opts.file), "worktrees")) : null;
     // 启动时先处理宿主关着期间到期的定时(按容差与 missedPolicy),再按最早一次设计时器
     this.scheduler.tick();
   }
@@ -1308,6 +1314,7 @@ export class Host {
       modelAttempts: (doc.models?.attempts ?? []).map((a) => ({ ...a })),
       producerVendors: [...producerVendors(doc.models ?? emptyModelRecord)],
       artifacts: doc.result ? [{ ref: `task:${t.id}/result`, name: "结果", kind: "text" }] : [],
+      ...this.workspaceField(t.id),
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
       ...(doc.description !== undefined ? { description: doc.description } : {}),
@@ -1333,6 +1340,75 @@ export class Host {
     const doc = this.taskDoc(id).value;
     // 任务每次变化后看负责人是否在这个群移出中:停止确认到了(T10/T11)才真正移出
     if (doc.task.owner) this.settleExit(doc.roomId, doc.task.owner);
+  }
+
+  // ======================= 代码工作树(R-Worktree,AC-22) =======================
+  workspace(taskId: string): { value: Workspace; ver: number } | undefined {
+    return getDoc<Workspace>(this.db, `ws:${taskId}`);
+  }
+  private workspaceField(taskId: string): { workspace?: NonNullable<TaskView["workspace"]> } {
+    const w = this.workspace(taskId)?.value;
+    if (!w) return {};
+    return { workspace: { dir: w.dir, branch: w.branch, targetBranch: w.targetBranch, baseSha: w.baseSha, candidateSha: w.candidateSha, state: w.state, targetHead: w.targetHead, verifiedOn: w.verifiedOn, mergedSha: w.mergedSha, conflict: w.conflict } };
+  }
+  /** Compute 工作目录:配了代码仓就是这个任务自己的 worktree(没有就现开),否则按 computeCwd。 */
+  private computeCwdFor(taskId: string): string | undefined {
+    if (!this.worktrees) return this.opts.computeCwd?.(taskId);
+    const cur = this.workspace(taskId);
+    const ws = this.worktrees.provision(taskId, cur?.value ?? null);
+    if (ws !== cur?.value) putDoc(this.db, `ws:${taskId}`, cur?.ver ?? 0, ws);
+    return ws.dir;
+  }
+  /** 受控合入(W3 → W4 → W6/W5)。审查已过、交付等确认(T8a)的代码任务才能合;合入成功才记验收并了结承诺,
+   *  冲突或重验失败如实告诉联系人,目标分支不动,任务停在 T8a 等退回修复(退回前再说通过也会被拒)。 */
+  async integrateTask(taskId: string, by: string = this.userId): Promise<TaskView> {
+    const wt = this.worktrees;
+    const cur = this.workspace(taskId);
+    if (!wt || !cur) throw new HostError("invalid_params", `任务 ${taskId} 没有代码工作树`);
+    const doc = this.taskDoc(taskId).value;
+    if (cur.value.state === "W6_Merged") return this.taskView(doc);
+    if (doc.task.state !== "T8a_Delivered") throw new HostError("conflict", `任务在 ${doc.task.state}:审查通过、交付之后才能合入`);
+    if (cur.value.state !== "W3_Pinned") throw new HostError("conflict", cur.value.state === "W5_Conflict" ? "上次合入冲突或重验失败,要先退回修复、提交新的候选" : `工作树在 ${cur.value.state},不能合入`);
+    const ver = putDoc(this.db, `ws:${taskId}`, cur.ver, { ...cur.value, state: "W4_Integrating" });
+    this.emitTask(taskId);
+    const r = await wt.integrate(cur.value);
+    const owner = doc.task.owner;
+    const at = this.now();
+    tx(this.db, () => {
+      putDoc(this.db, `ws:${taskId}`, ver, r.ws);
+      const t = this.taskDoc(taskId).value.task;
+      let summary: string;
+      if (r.ok) {
+        if (t.state === "T8a_Delivered" && t.delivery) this.stepTaskTx(taskId, { kind: "UserAccept", taskId, by, deliveryRound: t.delivery.round, commit: t.delivery.commit });
+        this.closeCommitmentsTx(owner, doc.roomId, taskId, "done");
+        run(this.db, "UPDATE gg_cards SET state = 'done' WHERE task_id = ? AND kind = 'task-status' AND state = 'open'", taskId);
+        summary = `已合入 ${r.ws.targetBranch}@${(r.ws.mergedSha ?? "").slice(0, 12)}(${r.mode === "fast-forward" ? "主线未变,快进" : r.mode === "no-change" ? "候选已在主线里" : `主线已推进到 ${(r.ws.verifiedOn ?? "").slice(0, 12)},合并后重验通过`})`;
+      } else {
+        summary = `合入失败,${r.ws.targetBranch} 未改动:${r.detail}${r.reason === "target-busy" ? "。可以再说一次通过重试" : "。需要退回,基于最新主线修复后重新交付"}`;
+      }
+      if (owner) {
+        const payload: Inbound = { kind: "compute", roomId: doc.roomId, taskId, computeId: t.computeId ?? "-", signal: r.ok ? "milestone" : "failed", summary, at };
+        run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", owner, doc.roomId, JSON.stringify(payload), at);
+      }
+    });
+    this.emitTask(taskId);
+    if (owner) this.loop.notify(owner, "now");
+    return this.taskView(this.taskDoc(taskId).value);
+  }
+  /** 代码任务的「通过」不能直接记验收:冲突未修或正在合入时拒绝,其余先豁免审查到 T8a 再发起合入。null = 不是待合入的代码任务。 */
+  private acceptCodeTaskTx(taskId: string, by: string): HostEffect[] | null {
+    const ws = this.workspace(taskId)?.value;
+    if (!ws || ws.state === "W6_Merged") return null;
+    if (ws.state === "W5_Conflict") throw new HostError("conflict", "上次合入冲突或重验失败,先退回让联系人基于最新主线修复、重新交付");
+    if (ws.state === "W4_Integrating") throw new HostError("conflict", "正在合入,等结果");
+    const t = this.taskDoc(taskId).value.task;
+    if (t.state === "T5_InReview") {
+      const owner = t.owner ? getDoc<ContactDoc>(this.db, `contact:${t.owner}`)?.value : undefined;
+      const { effects: eff } = this.stepTaskTx(taskId, { kind: "Review", reviewerId: by, reviewerModel: owner?.speakingModel ?? this.settings().defaultSpeakingModel, round: t.reviewRound, commit: t.reviewedCommit ?? "", constraintVer: t.constraintVer, waiverBy: by, verdict: "approve" });
+      const send = eff.find((e) => e.kind === "send-card");
+      if (send && send.kind === "send-card") this.stepTaskTx(taskId, { kind: "DeliveredCard", taskId, deliveryRound: send.deliveryRound, commit: send.commit });
+    } else if (t.state !== "T8a_Delivered") throw new HostError("conflict", `任务在 ${t.state},没有待确认的交付`);
+    return [{ kind: "integrate", taskId, by }];
   }
 
   // ======================= 承诺账本 =======================
@@ -1807,7 +1883,15 @@ export class Host {
             if (t.task.state !== "T3_Running" || !t.task.computeId) { reject(`任务在 ${t.task.state},不能交付`); break; }
             const computeRow = one<{ status: string; result: string | null }>(this.db, "SELECT status, result FROM gg_compute WHERE compute_id = ?", t.task.computeId);
             if (computeRow?.result == null) { reject("Compute 还没完成,不能交付"); break; }
-            const commit = `result:${t.task.computeId}`;
+            let commit = `result:${t.task.computeId}`;
+            const wsDoc = this.worktrees ? this.workspace(a.taskId) : undefined;
+            if (wsDoc && this.worktrees) {
+              // 代码任务:把工作区改动提交成候选并钉住 sha,审查与合入都认这个固定提交(W3)
+              const pinned = this.worktrees.pin(wsDoc.value, `${t.title}(任务 ${a.taskId})`);
+              if (pinned.state !== "W3_Pinned") { reject("上次合入冲突后没有新的改动,先基于最新主线修复"); break; }
+              putDoc(this.db, `ws:${a.taskId}`, wsDoc.ver, pinned);
+              commit = `git:${pinned.candidateSha}`;
+            }
             // 交付是普通消息(AC-56/U98):回复来源消息、@ 提出者,不挂验收卡;用户用普通回复表达通过或修改,由联系人提交 verdict。
             // 审查门(AC-26):还没有跨厂商审查联系人时任务停在 T5,提出者本人回复通过即豁免审查并验收,记为 waived-by-user
             const r = this.appendMessageTx(t.roomId, { kind: "contact", id: contactId }, {
@@ -1831,6 +1915,8 @@ export class Host {
             if (!src) { reject(`验收结论的来源 ${d.roomId} #${a.sourceSeq} 不是本轮新消息`); break; }
             if (src.sender.kind !== "user" || src.sender.id !== d.task.requester) { reject(`验收结论的来源 ${d.roomId} #${a.sourceSeq} 不是提出者本人的消息`); break; }
             if (src.seq <= (d.deliveredSeq ?? Number.POSITIVE_INFINITY)) { reject(`验收结论的来源 ${d.roomId} #${a.sourceSeq} 早于这次交付`); break; }
+            const wsv = a.verdict === "accept" ? this.workspace(a.taskId)?.value : undefined;
+            if (wsv && (wsv.state === "W5_Conflict" || wsv.state === "W4_Integrating")) { reject(wsv.state === "W5_Conflict" ? "上次合入冲突或重验失败,要先退回修复" : "正在合入"); break; }
             effects.push(...this.decideDeliveryTx(a.taskId, a.verdict === "accept" ? "accept" : "reject", src.sender.id, a.feedback?.trim() || src.text));
             referenced.add(`${d.roomId}#${src.seq}`);
             touchedTasks.add(a.taskId);
@@ -1974,6 +2060,8 @@ export class Host {
         else if (e.kind === "stop") {
           const a = this.adapterForCompute(e.computeId);
           if (a) await a.stop(e.computeId);
+        } else if (e.kind === "integrate") {
+          await this.integrateTask(e.taskId, e.by);
         }
       } catch (err) {
         this.report(`effect-${e.kind}`, err);
@@ -2075,7 +2163,12 @@ export class Host {
     const model = resolved?.model ?? e.model;
     const adapter = this.adapterFor(harness, model);
     if (!adapter) return fail("宿主没有配置 Compute 适配器");
-    const cwd = this.opts.computeCwd?.(e.taskId);
+    let cwd: string | undefined;
+    try {
+      cwd = this.computeCwdFor(e.taskId);
+    } catch (err) {
+      return fail(`工作目录准备失败:${err instanceof Error ? err.message : String(err)}`);
+    }
     const tools = [...(this.opts.computeTools ?? DEFAULT_COMPUTE_TOOLS)];
     // 首轮就带生效模型(AC-51 ①);只给声明了按轮换模型能力的适配器(旧的一次性适配器只收 cwd/handoff)
     const modelAware = isModelAware(adapter);
@@ -2170,6 +2263,9 @@ export class Host {
     const t = doc.task;
     const effects: HostEffect[] = [];
     if (decision === "accept") {
+      // 代码任务:审查(豁免)通过后先受控合入,合入成功才记验收(R-Worktree W3 → W4)
+      const code = this.acceptCodeTaskTx(taskId, by);
+      if (code) return code;
       if (t.state === "T5_InReview") {
         const owner = t.owner ? getDoc<ContactDoc>(this.db, `contact:${t.owner}`)?.value : undefined;
         const { effects: eff } = this.stepTaskTx(taskId, { kind: "Review", reviewerId: by, reviewerModel: owner?.speakingModel ?? this.settings().defaultSpeakingModel, round: t.reviewRound, commit: t.reviewedCommit ?? "", constraintVer: t.constraintVer, waiverBy: by, verdict: "approve" });
@@ -2310,7 +2406,8 @@ export type ModelChangeInput =
 type HostEffect =
   | { kind: "spawn"; taskId: string; requestId: string; contactId: string; model: string; brief: string; roomId: string }
   | { kind: "resume"; taskId: string; computeId: string; text: string }
-  | { kind: "stop"; taskId: string; computeId: string };
+  | { kind: "stop"; taskId: string; computeId: string }
+  | { kind: "integrate"; taskId: string; by: string };
 
 /** 召回清单的一项 → 第 5 块的一个指针。截断显式写出原长与续读游标;撤回与越权只给状态,不带原文和原长。 */
 export function renderRecall(it: RecallItem, sender: string): { ref: string; text: string } {
