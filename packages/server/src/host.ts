@@ -277,7 +277,7 @@ export class Host {
       now: this.now,
       newId: this.newId,
       checkRoom: (roomId) => void this.roomRow(roomId),
-      emit: () => {},
+      emit: (doc) => this.bus.emit({ type: "doc.updated", doc }),
       onReport: (what, detail) => this.report(what, detail),
     });
     // 启动时派生镜像按权威版本修复(中断的导出、迟到的旧内容覆盖)
