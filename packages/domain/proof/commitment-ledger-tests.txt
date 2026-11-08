@@ -85,3 +85,10 @@ npm run typecheck: exit 0; npm run lint: exit 0, 16 files checked; npm test: 199
 Serial mutation calibration: unchanged control 176/176; 176/176 named mappings; 190/190 killed, 0 survived.
 Round 2 review mutants R2-F01 through R2-F10 are included; each maps to a named test and diagnostic.
 The implementation is byte-identical to b37b2f0, and the full host-level AC-40 / AC-16 remain untested.
+
+Round 4 verification (previous figures above describe earlier runs)
+Retrospective red e58d1d78d325a7591b0dbdb5f811b7940ba5807b: 206 named failures, 0 passes, 0 file-level failures; the stub is after the original implementation.
+Green 632fea7becca780f1d972d830ea4b69aa462ef2d: 206/206 named passes; implementation identical to a0eff90.
+npm run typecheck and lint: exit 0; npm test: 229/229 pass, 0 failed, 0 skipped, 0 todo.
+Serial mutation calibration: unchanged control 206/206; 206/206 named mappings; 221/221 killed, 0 survived, including all R3-F01–R3-F27 with named diagnostics.
+R-05 remains untested in full: a passing listed mutation set alone does not prove calibration of every criterion.

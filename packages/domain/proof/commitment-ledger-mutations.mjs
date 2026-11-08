@@ -228,6 +228,39 @@ const criteria = [
   ["A06 同次登记编号可重复", "new Set(ids).size !== ids.length ||", "", "单次处理拒绝重复承诺编号", "commitment-id-conflict"],
   ["A07 对账编号可重复", " || new Set(ids).size !== ids.length", "", "对账拒绝重复绑定编号", "invalid-input"],
   ["A08 无任务来源不接受指定任务", "m.taskId !== null && c.taskId !== m.taskId", "c.taskId !== m.taskId", "无任务来源可登记指定任务承诺", "task-b"],
+  // Reviewer round 3: exact single-point injections and named diagnostics.
+  ["R3-F10 活动记录丢失文字","text: input.type === \"progress\" ? input.text : input.detail });","text: null });","进展活动逐字段保留绑定 Compute 内容","null"],
+  ["R3-F11 快照不校验承诺状态枚举","(c.status === \"active\" || c.status === \"done\" || c.status === \"revoked\" || c.status === \"superseded\" || c.status === \"blocked\") &&","typeof c.status === \"string\" &&","快照承诺状态必须属于五种状态","invalid-input"],
+  ["R3-F12 快照不校验活动种类","(a.kind === \"progress\" || a.kind === \"close\") && maybeText(a.text)","typeof a.kind === \"string\" && maybeText(a.text)","快照拒绝未知活动种类","invalid-input"],
+  ["R3-F13 外部输入接受 symbol 键","if (keys.some((key) => typeof key !== \"string\")) throw new TypeError(\"symbol key\");","","外部输入拒绝 symbol 键","invalid-input"],
+  ["R3-F14 外部输入接受稀疏数组"," || keys.length !== length + 1)) throw new TypeError(\"invalid array\");",")) throw new TypeError(\"invalid array\");","外部输入拒绝稀疏承诺数组","invalid-input"],
+  ["R3-F15 共享引用被当成循环","ancestors.delete(value);","","共享引用不是循环引用","false !== true"],
+  ["R3-F16 数组原型不校验","if (array ? proto !== Array.prototype : proto !== Object.prototype && proto !== null)","if (array ? false : proto !== Object.prototype && proto !== null)","外部输入拒绝数组子类","invalid-input"],
+  ["R3-F17 不可枚举数据属性被接受","if (!descriptor?.enumerable || !(\"value\" in descriptor)","if (!descriptor || !(\"value\" in descriptor)","外部输入拒绝不可枚举数据属性","invalid-input"],
+  ["R3-F18 序号接受 0","Number.isSafeInteger(x) && x > 0;","Number.isSafeInteger(x) && x >= 0;","接收拒绝零序号","invalid-input"],
+  ["R3-F19 快照不校验主人编号","!text(x.ownerId) || !version(x.version) ||","!version(x.version) ||","快照拒绝空主人编号","invalid-input"],
+  ["R3-F20 快照不校验版本号","!text(x.ownerId) || !version(x.version) ||","!text(x.ownerId) ||","快照拒绝负版本","invalid-input"],
+  ["R3-F21 进展接受空文字","text(x.roundId) && text(x.text);","text(x.roundId) && typeof x.text === \"string\";","进展拒绝空文字","invalid-input"],
+  ["R3-F22 快照消息 handled 不要求布尔","(!handled || typeof x.handled === \"boolean\")","true","快照消息处理标志必须是布尔","invalid-input"],
+  ["R3-F23 对账接受空轮次","if (!isLedger(state) || !text(roundId) ||","if (!isLedger(state) || typeof roundId !== \"string\" ||","对账拒绝空轮次","invalid-input"],
+  ["R3-F24 对账返回 pending 不冻结","pending: Object.freeze(pending) }","pending }","对账待处理数组被冻结","false !== true"],
+  ["R3-F25 创建账本不冻结","return freeze({ ownerId, version: 0, messages: [], commitments: [], actions: [], activity: [] });","return { ownerId, version: 0, messages: [], commitments: [], actions: [], activity: [] };","新建账本被冻结","false !== true"],
+  ["R3-F26 对账把同任务其他承诺的动作算作本承诺","a.roundId === roundId && a.commitmentId === id && a.taskId === c.taskId","a.roundId === roundId && a.taskId === c.taskId","同任务其他承诺的动作不能代替本承诺对账","pending"],
+  ["R3-F27A 绑定只核对编号不核对种类","if (input.actor.kind !== \"contact\" || input.actor.id !== state.ownerId) return fail(\"actor-not-allowed\");","if (input.actor.id !== state.ownerId) return fail(\"actor-not-allowed\");","主人同编号的用户不能绑定","actor-not-allowed"],
+  ["R3-F27B 绑定只核对编号不核对种类","if (input.actor.kind !== \"contact\" || input.actor.id !== state.ownerId) return fail(\"actor-not-allowed\");","if (input.actor.id !== state.ownerId) return fail(\"actor-not-allowed\");","主人同编号的 Compute 不能绑定","actor-not-allowed"],
+  ["R3-F01A 参与者种类不校验(任意 kind 均可)","(x.kind === \"user\" || x.kind === \"contact\" || x.kind === \"compute\") && text(x.id);","typeof x.kind === \"string\" && text(x.id);","接收拒绝未知发送者种类","invalid-input"],
+  ["R3-F01B 参与者种类不校验(任意 kind 均可)","(x.kind === \"user\" || x.kind === \"contact\" || x.kind === \"compute\") && text(x.id);","typeof x.kind === \"string\" && text(x.id);","绑定拒绝未知参与者种类","invalid-input"],
+  ["R3-F01C 参与者种类不校验(任意 kind 均可)","(x.kind === \"user\" || x.kind === \"contact\" || x.kind === \"compute\") && text(x.id);","typeof x.kind === \"string\" && text(x.id);","进展拒绝未知参与者种类","invalid-input"],
+  ["R3-F01D 参与者种类不校验(任意 kind 均可)","(x.kind === \"user\" || x.kind === \"contact\" || x.kind === \"compute\") && text(x.id);","typeof x.kind === \"string\" && text(x.id);","了结拒绝未知参与者种类","invalid-input"],
+  ["R3-F02 非主人联系人消息无承诺也不能标记已处理","if (m.sender.kind === \"contact\" && m.sender.id !== state.ownerId && input.commitments.length) return fail(\"actor-not-allowed\");","if (m.sender.kind === \"contact\" && m.sender.id !== state.ownerId) return fail(\"actor-not-allowed\");","其他联系人空承诺可标记已处理","false !== true"],
+  ["R3-F03 用户消息未接下且无承诺也不能标记已处理","if (m.sender.kind === \"user\" && !input.accepted && input.commitments.length) return fail(\"not-accepted\");","if (m.sender.kind === \"user\" && !input.accepted) return fail(\"not-accepted\");","用户未接下的空承诺可标记已处理","false !== true"],
+  ["R3-F04 快照不校验承诺来源序号","messages.some((m) => m.seq === c.sourceSeq && m.handled && m.text.includes(c.text))","messages.some((m) => m.handled && m.text.includes(c.text))","快照承诺来源序号必须对应来源消息","invalid-input"],
+  ["R3-F05 命令接受空动作号","if (!obj(x) || !text(x.actionId)) return false;","if (!obj(x) || typeof x.actionId !== \"string\") return false;","命令拒绝空动作编号","invalid-input"],
+  ["R3-F06 accepted 不要求布尔","typeof x.accepted === \"boolean\" && Array.isArray(x.commitments)","Array.isArray(x.commitments)","接下标志必须是布尔","invalid-input"],
+  ["R3-F07 了结结果不校验枚举","(x.outcome === \"done\" || x.outcome === \"revoked\" || x.outcome === \"superseded\" || x.outcome === \"blocked\") &&","typeof x.outcome === \"string\" &&","了结结果必须属于四种终态","invalid-input"],
+  ["R3-F08 活动记录种类恒为 progress","kind: input.type, text: input.type === \"progress\" ? input.text : input.detail });","kind: \"progress\", text: input.type === \"progress\" ? input.text : input.detail });","了结活动逐字段保留用户撤回内容","kind: 'progress'"],
+  ["R3-F09 活动记录参与者记成主人","taskId: current.taskId, actor: input.actor,","taskId: current.taskId, actor: { kind: \"contact\", id: state.ownerId },","进展活动逐字段保留绑定 Compute 内容","kind: 'contact'"],
+
 ];
 
 for (const [name, from, to, criterion, marker] of criteria) {
@@ -256,7 +289,7 @@ try {
     return dir;
   };
   const baseline = run(makeCopy("baseline"));
-  const baselineOk = baseline.status === 0 && baseline.passed.length === 176 && baseline.failed.length === 0;
+  const baselineOk = baseline.status === 0 && baseline.passed.length === 206 && baseline.failed.length === 0;
   console.log(`${baselineOk ? "PASS" : "FAIL"} 原样对照 ${baseline.passed.length} 通过 / ${baseline.failed.length} 失败`);
   if (!baselineOk) success = false;
   const named = new Set(mutants.map(([, , , expected]) => expected));
