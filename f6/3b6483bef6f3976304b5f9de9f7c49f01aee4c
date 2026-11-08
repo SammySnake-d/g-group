@@ -1,0 +1,31 @@
+apps/desktop/e2e/concept.ui.spec.ts
+  s_cb1a42da06940f::t_b8ad0009781f04 139-166
+apps/desktop/src/components/Messages.tsx
+  s_cb1a42da06940f::t_bea1a3f49935f6 78
+apps/desktop/src/concept/gaze/GazeAvatar.tsx
+  s_cb1a42da06940f::t_65dc12b4cc9a7c 1-116
+apps/desktop/src/concept/gaze/caret.ts
+  s_cb1a42da06940f::t_04b82a576a839e 1-20
+apps/desktop/src/concept/index.ts
+  s_cb1a42da06940f::t_63bf48da5fabd1 5
+apps/desktop/src/concept/ruler/WaitingRuler.tsx
+  s_cb1a42da06940f::t_de8eb4f66e81a6 9
+apps/desktop/src/concept/shared/waiting.ts
+  s_cb1a42da06940f::t_6f0f8da6d461b5 21,27,32-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f63b6483bef6f3976304b5f9de9f7c49f01aee4c",
+  "prompts": {},
+  "sessions": {
+    "s_cb1a42da06940f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ade26af15a1458fdd",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
