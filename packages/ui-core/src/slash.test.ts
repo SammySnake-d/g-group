@@ -12,15 +12,18 @@ import {
   matchTier,
   parseInvocation,
   parseSource,
+  pluginBlock,
   removeToken,
   scheduleHint,
   type SlashCommand,
+  type SlashEntry,
+  type SlashPluginState,
   toRunParams,
 } from "./slash.ts";
 
 const cmd = (name: string, title: string, desc: string, extra: Partial<SlashCommand> = {}): SlashCommand => ({ name, title, desc, args: [], source: "builtin", scope: "any", ...extra });
 
-const summary = cmd("summary", "总结未读", "把你不在时的消息总结成几条", { scope: "group" });
+const summary = cmd("summary", "总结未读", "把你不在时的消息总结成几条", { scope: "group", aliases: ["ketchup"] });
 const schedule = cmd("schedule", "定时", "到点叫某个助手做一件事", {
   args: [
     { name: "何时", kind: "time", required: true, hint: "每天 9:00、工作日 18:30 或 cron" },
@@ -38,7 +41,7 @@ const handoff = cmd("handoff", "交给助手", "@ 一位助手,把一件事交�
 });
 const files = cmd("files", "群文件", "看本群发过的文件");
 const pins = cmd("pins", "记下的事", "助手答应过、记在本群的事");
-const feishu = cmd("feishu", "引用飞书消息", "从飞书群里勾几条带进对话", { source: "plugin:p-feishu" });
+const feishu = cmd("feishu", "引用飞书消息", "从飞书群里勾几条带进对话", { source: "plugin:p-feishu", version: "1.4.2" });
 const mail = cmd("mail", "发邮件", "让有授权的助手替你发邮件", { source: "plugin:p-gmail", args: [{ name: "收件人", kind: "text", required: true, hint: "邮箱" }] });
 const review = cmd("review", "代码审查", "请 Claude Code 审查一段改动", { source: "assistant:claude", args: [{ name: "看什么", kind: "text", required: true, rest: true, hint: "分支或文件" }] });
 const deploy = cmd("deploy", "发布", "把分支发布到环境", {
@@ -47,7 +50,9 @@ const deploy = cmd("deploy", "发布", "把分支发布到环境", {
     { name: "份数", kind: "number", required: false, hint: "几台" },
   ],
 });
-const ALL = [summary, schedule, todo, notice, handoff, files, pins, feishu, mail, review, deploy];
+const on = (...cs: SlashCommand[]): SlashEntry[] => cs.map((command) => ({ command }));
+const ALL = on(summary, schedule, todo, notice, handoff, files, pins, feishu, mail, review, deploy);
+const plug = (id: string, name: string, patch: Partial<SlashPluginState> = {}): SlashPluginState => ({ id, name, installed: true, enabled: true, authorized: true, attached: true, version: "1.4.2", ...patch });
 
 test("isCommandName:小写字母数字和 -,不以 - 开头结尾,不超过 32 个字符", () => {
   assert.equal(isCommandName("summary"), true);
@@ -74,6 +79,12 @@ test("parseSource:拆出内置 / 插件 id / 助手 id,写错的认不出", () =
 test("checkCommand:合法定义没有问题;名字、来源、参数顺序、选项、剩余文本各自报出来", () => {
   assert.deepEqual(checkCommand(schedule), []);
   assert.deepEqual(checkCommand(deploy), []);
+  assert.deepEqual(checkCommand(summary), []);
+  assert.deepEqual(checkCommand(cmd("summary", "总结", "", { aliases: ["ketchup", "summary", "Ketchup", "ketchup"] })), [
+    "/summary 的别名「summary」重复",
+    "/summary 的别名「Ketchup」只能用小写字母、数字和 -",
+    "/summary 的别名「ketchup」重复",
+  ]);
   const bad = checkCommand({
     name: "Bad Name", title: " ", desc: "", source: "bot:x" as "builtin", scope: "room" as "any",
     args: [
@@ -96,14 +107,34 @@ test("checkCommand:合法定义没有问题;名字、来源、参数顺序、选
   ]);
 });
 
-test("availableCommands:按群/私聊、挂着的插件、在场的助手筛;同名内置优先;内置→插件→助手", () => {
+test("pluginBlock:没装 → 停用 → 授权失效 → 没挂在本会话 → 版本对不上,依次说明;都满足才能用", () => {
+  assert.equal(pluginBlock(feishu, plug("p-feishu", "飞书")), undefined);
+  assert.equal(pluginBlock(feishu, plug("p-feishu", "飞书", { installed: false, enabled: false })), "飞书 插件还没安装");
+  assert.equal(pluginBlock(feishu, plug("p-feishu", "飞书", { enabled: false, attached: false })), "飞书 插件已停用");
+  assert.equal(pluginBlock(feishu, plug("p-feishu", "飞书", { authorized: false, attached: false })), "飞书 的授权失效了,重新授权后才能用");
+  assert.equal(pluginBlock(feishu, plug("p-feishu", "飞书", { attached: false })), "飞书 没挂在这个会话");
+  assert.equal(pluginBlock(feishu, plug("p-feishu", "飞书", { version: "1.5.0" })), "飞书 已是 1.5.0,这条命令按 1.4.2 注册,要重新确认权限");
+  // 不带版本的命令不比版本
+  assert.equal(pluginBlock(mail, plug("p-gmail", "Gmail", { version: "9.9.9" })), undefined);
+});
+
+test("availableCommands:按群/私聊、在场的助手筛;插件命令不满足条件的灰显并写原因;同名内置优先;内置→插件→助手", () => {
   const dupe = cmd("files", "飞书文件", "飞书里的文件", { source: "plugin:p-feishu" });
   const broken = cmd("Oops", "坏的", "名字不合法");
-  const list = [review, feishu, dupe, summary, broken, mail, files];
-  const inGroup = availableCommands(list, { scope: "group", plugins: ["p-feishu"], assistants: ["claude"] });
-  assert.deepEqual(inGroup.map((c) => `${c.name}@${c.source}`), ["summary@builtin", "files@builtin", "feishu@plugin:p-feishu", "review@assistant:claude"]);
-  const inDm = availableCommands(list, { scope: "dm", plugins: ["p-gmail"], assistants: [] });
-  assert.deepEqual(inDm.map((c) => c.name), ["files", "mail"]);
+  const ghost = cmd("ghost", "未知插件", "插件状态里没有它", { source: "plugin:p-none" });
+  const list = [review, feishu, dupe, summary, broken, mail, files, ghost];
+  const plugins = [plug("p-feishu", "飞书"), plug("p-gmail", "Gmail", { attached: false })];
+  const inGroup = availableCommands(list, { scope: "group", plugins, assistants: ["claude"] });
+  assert.deepEqual(inGroup.map((e) => `${e.command.name}@${e.command.source}${e.disabled ? `(${e.disabled})` : ""}`), [
+    "summary@builtin",
+    "files@builtin",
+    "feishu@plugin:p-feishu",
+    "mail@plugin:p-gmail(Gmail 没挂在这个会话)",
+    "review@assistant:claude",
+  ]);
+  const inDm = availableCommands(list, { scope: "dm", plugins: [plug("p-gmail", "Gmail")], assistants: [] });
+  assert.deepEqual(inDm.map((e) => e.command.name), ["files", "mail"]);
+  assert.equal(inDm[1]?.disabled, undefined);
 });
 
 test("detectSlash:开头或空白后的 /xxx 才算,返回前缀和替换范围", () => {
@@ -139,22 +170,36 @@ test("matchTier:名字完全相同 0、前缀 1、名字或中文名包含 2、�
   assert.equal(matchTier(schedule, "助手"), 4);
   assert.equal(matchTier(schedule, "xyz"), -1);
   assert.equal(matchTier(schedule, "SCH"), 1);
+  // 别名也算名字
+  assert.equal(matchTier(summary, "ketchup"), 0);
+  assert.equal(matchTier(summary, "ket"), 1);
+  assert.equal(matchTier(summary, "chu"), 2);
 });
 
-test("filterCommands:前缀 > 包含 > 模糊 > 说明,同档按原顺序;中文名和说明也能搜;空输入全给", () => {
-  const list = [summary, schedule, todo, notice, handoff, files, pins, feishu];
-  assert.deepEqual(filterCommands(list, "sch").map((c) => c.name), ["schedule"]);
-  assert.deepEqual(filterCommands(list, "定时").map((c) => c.name), ["schedule"]);
-  assert.deepEqual(filterCommands(list, "公告").map((c) => c.name), ["notice"]);
-  assert.deepEqual(filterCommands(list, "飞书").map((c) => c.name), ["feishu"]);
+test("filterCommands:前缀 > 包含 > 模糊 > 说明,同档按原顺序;中文名、说明、别名都能搜;空输入全给", () => {
+  const list = on(summary, schedule, todo, notice, handoff, files, pins, feishu);
+  const names = (q: string) => filterCommands(list, q).map((e) => e.command.name);
+  assert.deepEqual(names("sch"), ["schedule"]);
+  assert.deepEqual(names("定时"), ["schedule"]);
+  assert.deepEqual(names("公告"), ["notice"]);
+  assert.deepEqual(names("飞书"), ["feishu"]);
+  assert.deepEqual(names("ketchup"), ["summary"]);
   // s 前缀:summary schedule;名字里含 s:files pins feishu;todo notice handoff 都没有 s
-  assert.deepEqual(filterCommands(list, "s").map((c) => c.name), ["summary", "schedule", "files", "pins", "feishu"]);
+  assert.deepEqual(names("s"), ["summary", "schedule", "files", "pins", "feishu"]);
   // 子序列:sdl 只在 schedule 里按顺序出现
-  assert.deepEqual(filterCommands(list, "sdl").map((c) => c.name), ["schedule"]);
+  assert.deepEqual(names("sdl"), ["schedule"]);
   // 「群」:中文名包含的(改群公告、群文件)排在只有说明包含的(加到清单、记下的事、引用飞书消息)前面
-  assert.deepEqual(filterCommands(list, "群").map((c) => c.name), ["notice", "files", "todo", "pins", "feishu"]);
-  assert.deepEqual(filterCommands(list, "").map((c) => c.name), ["summary", "schedule", "todo", "notice", "handoff", "files", "pins", "feishu"]);
-  assert.deepEqual(filterCommands(list, "zzz"), []);
+  assert.deepEqual(names("群"), ["notice", "files", "todo", "pins", "feishu"]);
+  assert.deepEqual(names(""), ["summary", "schedule", "todo", "notice", "handoff", "files", "pins", "feishu"]);
+  assert.deepEqual(names("zzz"), []);
+});
+
+test("filterCommands:灰显的排在能用的后面,不管匹配档次", () => {
+  const list: SlashEntry[] = [{ command: files, disabled: "插件已停用" }, { command: feishu }, { command: summary }, { command: pins, disabled: "没装" }];
+  assert.deepEqual(filterCommands(list, "").map((e) => e.command.name), ["feishu", "summary", "files", "pins"]);
+  // files 是名字前缀匹配,feishu 只是包含,但 files 灰显,所以排在后面
+  assert.deepEqual(filterCommands(list, "fi").map((e) => e.command.name), ["feishu", "files"]);
+  assert.deepEqual(filterCommands(list, "s").map((e) => e.command.name), ["summary", "feishu", "files", "pins"]);
 });
 
 test("formatUsage:必填用 <>,可选用 []", () => {
@@ -183,6 +228,8 @@ test("parseInvocation:不是命令、不认识的命令返回 null;大小写和�
   assert.equal(parseInvocation("", ALL), null);
   assert.equal(parseInvocation("  /TODO 买菜", ALL)?.values.内容, "买菜");
   assert.equal(parseInvocation("、todo 买菜", ALL)?.command.name, "todo");
+  // 别名执行的是同一条命令
+  assert.equal(parseInvocation("/ketchup", ALL)?.command.name, "summary");
 });
 
 test("parseInvocation:/schedule 逐步输入时,当前该填的参数一格格往后走", () => {
@@ -253,6 +300,17 @@ test("parseInvocation:choice 只认可选值(规范大小写)、number 要数字
   assert.equal(parseInvocation("/summary", ALL)!.ok, true);
 });
 
+test("parseInvocation:灰显的插件命令手打也执行不了,原因放在 blocked 和 errors 最前面", () => {
+  const list: SlashEntry[] = [{ command: mail, disabled: "Gmail 没挂在这个会话" }, { command: todo }];
+  const r = parseInvocation("/mail wang@team.com", list)!;
+  assert.equal(r.blocked, "Gmail 没挂在这个会话");
+  assert.deepEqual(r.errors, ["Gmail 没挂在这个会话"]);
+  assert.equal(r.ok, false);
+  const fine = parseInvocation("/todo 买菜", list)!;
+  assert.equal(fine.blocked, undefined);
+  assert.equal(fine.ok, true);
+});
+
 test("looksLikeTime:钟点、cron 五段、每天/工作日/明天这类说法算时间,别的不算", () => {
   assert.equal(looksLikeTime("9:30"), true);
   assert.equal(looksLikeTime("下午3点"), true);
@@ -283,4 +341,7 @@ test("toRunParams:交给后端的执行参数是纯数据,和解析结果脱钩"
   assert.deepEqual(p, { conv: "g", command: "todo", source: "builtin", values: { 内容: "买一台测试机" } });
   p.values.内容 = "改掉";
   assert.equal(inv.values.内容, "买一台测试机");
+  // 插件命令带上注册时的版本,宿主执行前再核
+  const fs = parseInvocation("/feishu", ALL)!;
+  assert.deepEqual(toRunParams(fs, "g"), { conv: "g", command: "feishu", source: "plugin:p-feishu", version: "1.4.2", values: {} });
 });

@@ -32,13 +32,34 @@ export interface SlashCommand {
   args: readonly SlashArg[];
   source: SlashSource;
   scope: SlashScope;
+  /** 别名,如 summary 也叫 ketchup;搜索和执行都认 */
+  aliases?: readonly string[];
+  /** 插件命令:注册这条命令时插件的版本。执行前要和插件当前版本对得上(不能绕过版本校验) */
+  version?: string;
 }
 
-/** 当前会话的情况:是群还是私聊、挂了哪些插件、有哪些助手 */
+/** 插件此刻的状态(宿主给):装没装、启没启用、授权在不在、挂没挂在当前会话、当前版本 */
+export interface SlashPluginState {
+  id: string;
+  name: string;
+  installed: boolean;
+  enabled: boolean;
+  authorized: boolean;
+  attached: boolean;
+  version: string;
+}
+
+/** 当前会话的情况:是群还是私聊、各插件的状态、在场的助手 */
 export interface SlashWhere {
   scope: "group" | "dm";
-  plugins: readonly string[];
+  plugins: readonly SlashPluginState[];
   assistants: readonly string[];
+}
+
+/** 菜单里的一条:disabled 有值 = 灰显,写明为什么现在不能用 */
+export interface SlashEntry {
+  command: SlashCommand;
+  disabled?: string;
 }
 
 /** 光标处识别出的命令片段:start 指向 /,end 是这个词的结尾(替换范围),query 是 / 到光标之间的文字 */
@@ -57,6 +78,8 @@ export interface SlashArgState {
 
 export interface SlashInvocation {
   command: SlashCommand;
+  /** 这条命令此刻不能用的原因(插件没装/停用/授权失效/没挂在本会话/版本变了);能用是 undefined */
+  blocked: string | undefined;
   args: SlashArgState[];
   /** 参数名 → 值,只含填了的 */
   values: Record<string, string>;
@@ -104,6 +127,12 @@ export function checkCommand(c: SlashCommand): string[] {
   if (!c.title.trim()) out.push(`/${c.name} 缺中文名`);
   if (!parseSource(c.source)) out.push(`/${c.name} 的来源「${c.source}」认不出`);
   if (!SCOPES.includes(c.scope)) out.push(`/${c.name} 的范围「${c.scope}」认不出`);
+  const names = new Set<string>([c.name]);
+  for (const al of c.aliases ?? []) {
+    if (!isCommandName(al)) out.push(`/${c.name} 的别名「${al}」只能用小写字母、数字和 -`);
+    else if (names.has(al)) out.push(`/${c.name} 的别名「${al}」重复`);
+    names.add(al);
+  }
   const seen = new Set<string>();
   let optionalSeen = false;
   c.args.forEach((a, i) => {
@@ -119,23 +148,38 @@ export function checkCommand(c: SlashCommand): string[] {
   return out;
 }
 
-/** 这个会话里能用的命令:定义合法、范围对得上、插件挂在本会话、助手在本会话;同名只留一条(内置优先)。
- *  顺序:内置 → 插件 → 助手,各组内保持给定顺序。 */
-export function availableCommands(all: readonly SlashCommand[], where: SlashWhere): SlashCommand[] {
+/** 插件命令此刻为什么不能用;能用返回 undefined。顺序:没装 → 停用 → 授权失效 → 没挂在本会话 → 版本对不上 */
+export function pluginBlock(c: SlashCommand, p: SlashPluginState): string | undefined {
+  if (!p.installed) return `${p.name} 插件还没安装`;
+  if (!p.enabled) return `${p.name} 插件已停用`;
+  if (!p.authorized) return `${p.name} 的授权失效了,重新授权后才能用`;
+  if (!p.attached) return `${p.name} 没挂在这个会话`;
+  if (c.version !== undefined && c.version !== p.version) return `${p.name} 已是 ${p.version},这条命令按 ${c.version} 注册,要重新确认权限`;
+  return undefined;
+}
+
+/** 这个会话的命令菜单:定义不合法、范围不对、助手不在场的不出现;插件命令都出现,但不满足条件的灰显并写明原因。
+ *  同名只留一条(内置优先)。顺序:内置 → 插件 → 助手,各组内保持给定顺序。 */
+export function availableCommands(all: readonly SlashCommand[], where: SlashWhere): SlashEntry[] {
   const rank = (c: SlashCommand) => (c.source === "builtin" ? 0 : c.source.startsWith("plugin:") ? 1 : 2);
-  const ok = all.filter((c) => {
-    if (checkCommand(c).length) return false;
-    if (c.scope !== "any" && c.scope !== where.scope) return false;
+  const out: SlashEntry[] = [];
+  for (const c of all) {
+    if (checkCommand(c).length) continue;
+    if (c.scope !== "any" && c.scope !== where.scope) continue;
     const src = parseSource(c.source);
-    if (src?.kind === "plugin") return where.plugins.includes(src.id);
-    if (src?.kind === "assistant") return where.assistants.includes(src.id);
-    return true;
-  });
-  const sorted = ok.map((c, i) => ({ c, i })).sort((a, b) => rank(a.c) - rank(b.c) || a.i - b.i).map((x) => x.c);
+    if (src?.kind === "assistant" && !where.assistants.includes(src.id)) continue;
+    if (src?.kind === "plugin") {
+      const p = where.plugins.find((x) => x.id === src.id);
+      if (!p) continue;
+      const why = pluginBlock(c, p);
+      out.push(why === undefined ? { command: c } : { command: c, disabled: why });
+    } else out.push({ command: c });
+  }
+  const sorted = out.map((e, i) => ({ e, i })).sort((a, b) => rank(a.e.command) - rank(b.e.command) || a.i - b.i).map((x) => x.e);
   const seen = new Set<string>();
-  return sorted.filter((c) => {
-    if (seen.has(c.name)) return false;
-    seen.add(c.name);
+  return sorted.filter((e) => {
+    if (seen.has(e.command.name)) return false;
+    seen.add(e.command.name);
     return true;
   });
 }
@@ -170,22 +214,24 @@ function isSubsequence(q: string, s: string) {
 export function matchTier(c: SlashCommand, query: string): number {
   const q = query.trim().toLowerCase();
   const title = c.title.toLowerCase();
-  if (c.name === q) return 0;
-  if (c.name.startsWith(q)) return 1;
-  if (c.name.includes(q) || title.includes(q)) return 2;
+  const names = [c.name, ...(c.aliases ?? [])];
+  if (names.includes(q)) return 0;
+  if (names.some((n) => n.startsWith(q))) return 1;
+  if (names.some((n) => n.includes(q)) || title.includes(q)) return 2;
   if (isSubsequence(q, c.name) || isSubsequence(q, title)) return 3;
   if (c.desc.toLowerCase().includes(q)) return 4;
   return -1;
 }
 
-/** 边输边过滤:按匹配档次排,同档保持原顺序;空输入返回全部 */
-export function filterCommands(cmds: readonly SlashCommand[], query: string): SlashCommand[] {
-  if (!query.trim()) return [...cmds];
-  return cmds
-    .map((c, i) => ({ c, i, t: matchTier(c, query) }))
+/** 边输边过滤:能用的在前、灰显的在后;各自按匹配档次排,同档保持原顺序;空输入不筛 */
+export function filterCommands(entries: readonly SlashEntry[], query: string): SlashEntry[] {
+  const off = (e: SlashEntry) => (e.disabled === undefined ? 0 : 1);
+  if (!query.trim()) return entries.map((e, i) => ({ e, i })).sort((a, b) => off(a.e) - off(b.e) || a.i - b.i).map((x) => x.e);
+  return entries
+    .map((e, i) => ({ e, i, t: matchTier(e.command, query) }))
     .filter((x) => x.t >= 0)
-    .sort((a, b) => a.t - b.t || a.i - b.i)
-    .map((x) => x.c);
+    .sort((a, b) => off(a.e) - off(b.e) || a.t - b.t || a.i - b.i)
+    .map((x) => x.e);
 }
 
 /** 用法串:/schedule <何时> <做什么>,可选参数用 [] */
@@ -268,15 +314,18 @@ export function scheduleHint(when: string): { time?: string; repeat?: "每天" |
   return out;
 }
 
-/** 解析输入框里的一条命令(以 /name 开头)。不是已知命令返回 null。默认光标在末尾。 */
-export function parseInvocation(text: string, cmds: readonly SlashCommand[], opts: SlashParseOptions = {}): SlashInvocation | null {
+/** 解析输入框里的一条命令(以 /name 或别名开头)。不是已知命令返回 null。默认光标在末尾。
+ *  灰显的命令也解析出来,但 blocked 写明原因、ok 为 false:手打也绕不过插件的安装、启用、授权、挂载和版本校验。 */
+export function parseInvocation(text: string, entries: readonly SlashEntry[], opts: SlashParseOptions = {}): SlashInvocation | null {
   const lead = text.length - text.trimStart().length;
   if (!isSlashAt(text, lead)) return null;
   let i = lead + 1;
   while (i < text.length && !isSpace(text[i])) i++;
   const name = text.slice(lead + 1, i).toLowerCase();
-  const command = cmds.find((c) => c.name === name);
-  if (!command) return null;
+  const entry = entries.find((e) => e.command.name === name) ?? entries.find((e) => e.command.aliases?.includes(name));
+  if (!entry) return null;
+  const command = entry.command;
+  const blocked = entry.disabled;
   const rest = text.slice(i);
   const people = opts.people ? [...opts.people].sort((a, b) => b.length - a.length) : undefined;
 
@@ -344,13 +393,15 @@ export function parseInvocation(text: string, cmds: readonly SlashCommand[], opt
     if (s.error) errors.push(s.error);
   }
   if (extra) errors.push(command.args.length ? `多了「${extra}」` : `/${command.name} 不带参数,多了「${extra}」`);
+  if (blocked !== undefined) errors.unshift(blocked);
 
   const values: Record<string, string> = {};
   for (const s of states) if (s.value !== undefined) values[s.arg.name] = s.value;
-  return { command, args: states, values, current, typing, missing, errors, extra, ok: !missing.length && !errors.length };
+  return { command, blocked, args: states, values, current, typing, missing, errors, extra, ok: !missing.length && !errors.length };
 }
 
-/** 交给后端执行时的参数(commands.run):纯数据 */
-export function toRunParams(inv: SlashInvocation, conv: string): { conv: string; command: string; source: SlashSource; values: Record<string, string> } {
-  return { conv, command: inv.command.name, source: inv.command.source, values: { ...inv.values } };
+/** 交给后端执行时的参数(commands.run):纯数据。插件命令带上注册时的版本,由宿主执行前再核一遍 */
+export function toRunParams(inv: SlashInvocation, conv: string): { conv: string; command: string; source: SlashSource; version?: string; values: Record<string, string> } {
+  const base = { conv, command: inv.command.name, source: inv.command.source, values: { ...inv.values } };
+  return inv.command.version === undefined ? base : { ...base, version: inv.command.version };
 }
