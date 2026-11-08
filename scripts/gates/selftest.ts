@@ -759,6 +759,14 @@ export const CASES: Case[] = [
   { name: "R11-05 写入内容与受审版本不符时拒绝", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: "neutral stale content" }, result: "File written successfully" }] }], expect: "找不到对本仓库的任何操作" },
   { name: "R11-05 成功写入且内容匹配受审版本可证明产出", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: ADD_OK }, result: "File written successfully" }] }], expect: null },
   { name: "R11-05 作者仅只读时来源拒绝", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { cwd: repo, command: "git status --short" }, result: "" }] }], expect: "找不到对本仓库的任何操作" },
+  { name: "R11-05 简单 cat、ls、pwd 只读命令不计产出", direct: () => {
+    const repo = path.resolve("/tmp/neutral-repo");
+    for (const command of ["cat neutral.txt", "ls -a", "pwd"]) {
+      const read = { toolCalls: [{ name: "Bash", input: { cwd: repo, command } }] };
+      if (turnTouchesRepo(read, undefined, (p) => p === repo || p.startsWith(`${repo}/`))) return `只读命令被计入产出:${command}`;
+    }
+    return undefined;
+  }, expect: null },
   { name: "R11-05 Read 工具只读文件不计产出", direct: () => {
     const repo = path.resolve("/tmp/neutral-repo");
     const read = { toolCalls: [{ name: "Read", input: { file_path: path.join(repo, "a.ts") } }] };
