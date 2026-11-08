@@ -81,6 +81,8 @@ export function createService(host: Host): Service {
       throw new HostError("conflict", "任务没有待回答的问题(Compute 受阻时由联系人在聊天里问你,直接回复即可)");
     },
     "tasks.cancel": (p: { taskId: string; clientActionId: string }) => host.taskDecision(p.taskId, "cancel", p.clientActionId),
+    "tasks.create": (p: Parameters<Host["createTask"]>[0]) => host.createTask(p),
+    "tasks.assign": (p: Parameters<Host["assignTask"]>[0]) => host.assignTask(p),
     "commitments.list": (p: Parameters<Host["listCommitments"]>[0]) => ({ commitments: host.listCommitments(p) }),
     "commitments.revoke": (p: { commitmentId: string }) => host.revokeCommitment(p.commitmentId),
     "schedules.list": (p: { contactId?: string; roomId?: string }) => ({ schedules: host.scheduler.list(p) }),

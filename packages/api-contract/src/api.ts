@@ -135,6 +135,17 @@ export const METHODS = {
   "tasks.reject": method(obj({ taskId: id(), clientActionId: id(), feedback: str({ min: 1, max: 20000 }) }), TaskView),
   "tasks.answer": method(obj({ taskId: id(), qId: id(), clientActionId: id(), answer: str({ min: 1, max: 20000 }) }), TaskView),
   "tasks.cancel": method(obj({ taskId: id(), clientActionId: id() }), TaskView),
+  /**
+   * 手动新建任务(AC-47 候选底座 / U14;也是 AC-52 Helper 把 CSV 转成本群任务的后端,逐行调用)。
+   * 以用户的一条对话消息记进会话(带任务卡,可取消);指定负责人时它必须是本会话的联系人成员,自动 @ 它、由它认领并起 Compute
+   * (brief = 标题 + 描述);不指定则停在 T1_Open,之后用 tasks.assign。表单字段、默认负责人未定,description/ownerContactId 都可选。clientActionId 幂等。
+   */
+  "tasks.create": method(
+    obj({ clientActionId: id(), roomId: id(), title: str({ min: 1, max: 500 }), description: opt(str({ max: 20000 })), ownerContactId: opt(id()) }),
+    TaskView,
+  ),
+  /** 给还没人负责(T1_Open)的任务指定负责人:以用户一条对话消息记录并 @ 它,由它认领并起 Compute。已有负责人 conflict;不是本会话联系人 invalid_params。clientActionId 幂等。 */
+  "tasks.assign": method(obj({ taskId: id(), contactId: id(), clientActionId: id() }), TaskView),
 
   // ---- 承诺账本 ----
   "commitments.list": method(obj({ contactId: opt(id()), roomId: opt(id()), status: opt(oneOf(["active", "done", "revoked", "superseded", "blocked"] as const)) }), obj({ commitments: arr(CommitmentView) })),

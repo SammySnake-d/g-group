@@ -893,6 +893,16 @@ export class Host {
     return this.ledgerOf(contactId, roomId).value.commitments.find((c) => c.id === commitmentId)?.taskId ?? "";
   }
 
+  // ======================= 手动新建任务(AC-47 候选底座 / U14)=======================
+  /** 用户手动新建任务;指定负责人时由它认领并起 Compute,否则停在 T1_Open。clientActionId 幂等。 */
+  createTask(_input: { clientActionId: string; roomId: string; title: string; description?: string; ownerContactId?: string }): TaskView {
+    throw new Error("未实现");
+  }
+  /** 给还没人负责的任务指定负责人,由它认领并起 Compute。clientActionId 幂等。 */
+  assignTask(_input: { taskId: string; contactId: string; clientActionId: string }): TaskView {
+    throw new Error("未实现");
+  }
+
   // ======================= 任务 =======================
   taskDoc(id: string): { value: TaskDoc; ver: number } {
     const d = getDoc<TaskDoc>(this.db, `task:${id}`);
