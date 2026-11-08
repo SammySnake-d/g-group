@@ -1,0 +1,19 @@
+receipts/feat-members-lifecycle.json
+  s_af07fdb734b55e::t_b62a215dbe87d8 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "399f6d9e86d5df9bb7e98f01453835e239bb08a6",
+  "prompts": {},
+  "sessions": {
+    "s_af07fdb734b55e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3c81b704d9af27a9",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
