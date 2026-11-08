@@ -1845,3 +1845,232 @@ test("R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_un
   const good = await run("hook_started");
   assert.deepEqual(good.map((e) => e.kind), ["started", "completed"]);
 });
+
+// ---------------------------------------------------------------- 第八轮审查 R8-01 – R8-04(Codex 第八轮)
+// 输入都只用中性文本;数组由 new Array + 赋值构造,不改动任何内置原型(g-group#2662)。
+
+/** 指定 length 的数组,再按键赋值;键可以是不在 0..length-1 里的数字样式字符串(真实数组不会因它们改 length) */
+function arrayOf(length: number, own: Record<string, unknown>): unknown[] {
+  const a: unknown[] = new Array(length);
+  for (const [k, v] of Object.entries(own)) (a as unknown as Record<string, unknown>)[k] = v;
+  return a;
+}
+/** 有空位或越界键的数组。前四种的自有下标键个数恰好等于 length(第八轮审查的组合形状),后几种是普通稀疏与单独越界键 */
+const irregularArrays = (): [string, unknown[]][] => [
+  ["无下标 0、带越界键 4294967295", arrayOf(1, { "4294967295": "中性规则" })],
+  ["无下标 0、带越界键 4294967296", arrayOf(1, { "4294967296": "中性规则" })],
+  ["中间空位、带越界键 4294967295", arrayOf(3, { 0: "中性甲", 2: "中性丙", "4294967295": "中性乙" })],
+  ["末尾空位、带越界键 99999999999999999999", arrayOf(2, { 0: "中性甲", "99999999999999999999": "中性乙" })],
+  ["只有一个空位(new Array(1))", arrayOf(1, {})],
+  ["下标 0 空位", arrayOf(2, { 1: "中性乙" })],
+  ["中间空位", arrayOf(3, { 0: "中性甲", 2: "中性丙" })],
+  ["末尾空位", arrayOf(2, { 0: "中性甲" })],
+  ["密集元素之外另带越界键 4294967295", arrayOf(1, { 0: "中性甲", "4294967295": "中性乙" })],
+];
+
+test("R8-01:有空位或越界数字键的数组(含无下标 0 另带 4294967295 的组合)在 checkBrief、checkSnapshot、reportErrors、firstPrompt 一律拒收;同值的密集数组照常放行并原样复制(正反对照)", () => {
+  for (const [name, bad] of irregularArrays()) {
+    const b = checkBrief(brief({ rules: bad }));
+    assert.equal(b.ok, false, name);
+    assert.match(b.ok ? "" : b.reason, /^brief 必须是纯数据:brief\.rules/, name);
+    const s = checkSnapshot({ constraintVer: 1, openQuestions: bad, doneSideEffects: [] });
+    assert.equal(s.ok, false, name);
+    assert.match(s.ok ? "" : s.reason, /^交接快照必须是纯数据:交接快照\.openQuestions/, name);
+    const e = reportErrors({ kind: "started", summary: "中性", doneSideEffects: bad });
+    assert.equal(e.length, 1, name);
+    assert.match(e[0] ?? "", /^汇报必须是纯数据:汇报\.doneSideEffects/, name);
+    assert.throws(() => root.firstPrompt(brief({ rules: bad }) as never), TypeError, name);
+  }
+  // 对照:同样的值放进密集数组照常放行,副本与输入逐项一致
+  const dense: [string, string[]][] = [["空数组", []], ["一项", ["中性规则"]], ["三项", ["中性甲", "中性乙", "中性丙"]], ["逐个赋值的密集数组", Object.assign(new Array<string>(2), { 0: "中性甲", 1: "中性乙" })]];
+  for (const [name, ok] of dense) {
+    const b = checkBrief(brief({ rules: ok }));
+    assert.ok(b.ok, name);
+    assert.deepEqual(b.ok ? [...b.brief.rules] : null, [...ok], name);
+    const s = checkSnapshot({ constraintVer: 1, openQuestions: ok, doneSideEffects: [] });
+    assert.deepEqual(s.ok ? [...s.snapshot.openQuestions] : null, [...ok], name);
+    assert.deepEqual(reportErrors({ kind: "started", summary: "中性", doneSideEffects: ok }), [], name);
+  }
+  assert.match(root.firstPrompt(brief({ rules: ["中性规则"] }) as never).prompt, /\[生效群规与硬约束\]\n- 中性规则/);
+});
+
+test("R8-01:spawn 的 brief.rules 或 handoff.openQuestions 是有空位/越界键的数组时拒收、不启动 CLI(中性启动标记不出现);同值密集数组照常启动(正反对照)", async () => {
+  const m = markerRunner();
+  const a = createComputeAdapter(m.options);
+  for (const [name, bad] of irregularArrays()) {
+    const r1 = await a.spawn(brief({ rules: bad }));
+    assert.equal(r1.ok, false, name);
+    assert.match(r1.ok ? "" : r1.reason, /brief\.rules/, name);
+    const r2 = await a.spawn(brief(), asOpts({ handoff: { constraintVer: 1, openQuestions: bad, doneSideEffects: [] } }));
+    assert.equal(r2.ok, false, name);
+    assert.match(r2.ok ? "" : r2.reason, /openQuestions/, name);
+  }
+  assert.equal(fs.existsSync(m.marker), false);
+  const ok1 = await a.spawn(brief({ rules: ["中性规则"] }));
+  assert.ok(ok1.ok);
+  await within(a.settled(ok1.computeId));
+  const ok2 = await a.spawn(brief(), asOpts({ handoff: { constraintVer: 1, openQuestions: ["中性问题"], doneSideEffects: [] } }));
+  assert.ok(ok2.ok);
+  await within(a.settled(ok2.computeId));
+  assert.equal(fs.readFileSync(m.marker, "utf8"), "launched\n".repeat(2));
+});
+
+const NEST = 12_000;
+const deepJson = `${"[".repeat(NEST)}${"]".repeat(NEST)}`;
+/** 合法 JSON:arguments.kind 嵌套 NEST 层数组 */
+const deepReportCall = (id: number) => `{"jsonrpc":"2.0","id":${id},"method":"tools/call","params":{"name":"report_progress","arguments":{"kind":${deepJson},"summary":"中性"}}}`;
+type LogRec = { ts: string; valid: boolean; errs: string[]; kind?: unknown; summary?: unknown; omitted?: unknown };
+const readLog = (file: string) => fs.readFileSync(file, "utf8").trim().split("\n").map((l) => JSON.parse(l) as LogRec);
+
+test("R8-02:report MCP 收到 kind 嵌套 12000 层的汇报:设与不设 REPORT_LOG 回复完全相同(拒收 isError),进程不退出、随后的合法汇报照常接收;日志里拒收那条只记有界说明不记原值,参数里的同名字段改不了判定(只切日志开关的正反对照)", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fake-cc-"));
+  ownDirs.add(dir);
+  const log = path.join(dir, "report.jsonl");
+  // 第 3 条:拒收的汇报自带 valid/errs/ts 字段;第 4 条:arguments 是数组。日志里这两条都必须如实记为拒收
+  const lines = [deepReportCall(1), call(2, { kind: "started", summary: "中性" }), call(3, { kind: "started", summary: "中性", valid: true, errs: [], ts: "中性" }), call(4, ["中性"])];
+  const quiet = rpc(lines);
+  const logged = rpc(lines, { REPORT_LOG: log });
+  for (const [name, r] of [["不设日志", quiet], ["设日志", logged]] as const) {
+    assert.equal(r.status, 0, `${name}:${r.stderr}`);
+    assert.equal(r.stderr, "", name);
+    assert.deepEqual(r.replies.map((x) => [x.id, x.error?.code ?? null, x.result?.isError ?? null]), [[1, null, true], [2, null, false], [3, null, true], [4, null, true]], name);
+    assert.match(r.replies[0]!.result?.content?.[0]?.text ?? "", /^已拒收:汇报必须是纯数据:汇报\.kind(\[0\])+ 嵌套过深或有循环引用/, name);
+  }
+  assert.deepEqual(logged.replies, quiet.replies);
+  const recs = readLog(log);
+  assert.equal(recs.length, 4);
+  assert.deepEqual([recs[0]!.valid, recs[0]!.errs, recs[0]!.kind, recs[0]!.summary], [false, reportErrors(JSON.parse(`{"kind":${deepJson},"summary":"中性"}`)), undefined, undefined]);
+  assert.equal(typeof recs[0]!.omitted, "string");
+  assert.deepEqual([recs[1]!.valid, recs[1]!.errs, recs[1]!.kind, recs[1]!.summary, recs[1]!.omitted], [true, [], "started", "中性", undefined]);
+  // 参数里的 valid/errs/ts 不能改写服务器写的判定;数组参数不按下标展开
+  assert.deepEqual([recs[2]!.valid, recs[2]!.errs, recs[2]!.kind], [false, reportErrors({ kind: "started", summary: "中性", valid: true, errs: [], ts: "中性" }), "started"]);
+  assert.notEqual(recs[2]!.ts, "中性");
+  assert.equal(Number.isNaN(Date.parse(recs[2]!.ts)), false);
+  assert.deepEqual([recs[3]!.valid, recs[3]!.errs, typeof recs[3]!.omitted, Object.hasOwn(recs[3]!, "0")], [false, ["汇报必须是对象"], "string", false]);
+  // 每行都有界:拒收那条不含原始嵌套
+  assert.ok(fs.readFileSync(log, "utf8").length < 4096);
+});
+
+test("R8-02:report MCP 的 JSON-RPC id 不是字符串或整数(嵌套 12000 层数组、对象、布尔、null、小数)时回 -32600 且 id 为 null、不处理不入日志,进程不退出;随后整数与字符串 id 的合法请求照常回复(设与不设 REPORT_LOG 对照)", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fake-cc-"));
+  ownDirs.add(dir);
+  const log = path.join(dir, "report.jsonl");
+  const badIds = [deepJson, '{"a":1}', "[1]", "true", "null", "1.5"];
+  const started = '{"name":"report_progress","arguments":{"kind":"started","summary":"中性"}}';
+  const lines = [
+    ...badIds.map((id) => `{"jsonrpc":"2.0","id":${id},"method":"tools/list"}`),
+    ...badIds.map((id) => `{"jsonrpc":"2.0","id":${id},"method":"tools/call","params":${started}}`),
+    list(7),
+    JSON.stringify({ jsonrpc: "2.0", id: "中性-编号", method: "tools/call", params: JSON.parse(started) }),
+  ];
+  const quiet = rpc(lines);
+  const logged = rpc(lines, { REPORT_LOG: log });
+  for (const [name, r] of [["不设日志", quiet], ["设日志", logged]] as const) {
+    assert.equal(r.status, 0, `${name}:${r.stderr}`);
+    assert.equal(r.stderr, "", name);
+    const bad = badIds.length * 2;
+    assert.deepEqual(r.replies.slice(0, bad).map((x) => [x.id, x.error?.code ?? null]), Array.from({ length: bad }, () => [null, -32600]), name);
+    assert.deepEqual(r.replies.slice(bad).map((x) => [x.id, x.error?.code ?? null]), [[7, null], ["中性-编号", null]], name);
+    assert.deepEqual(r.replies[bad]!.result?.tools, [reportToolDefinition()], name);
+    assert.equal(r.replies[bad + 1]!.result?.isError, false, name);
+  }
+  assert.deepEqual(logged.replies, quiet.replies);
+  // id 不合格的 tools/call 不入日志,只有字符串 id 的那一条
+  assert.deepEqual(readLog(log).map((x) => [x.valid, x.kind]), [[true, "started"]]);
+});
+
+test("R8-02:单个请求处理失败(REPORT_LOG 指向目录写不进)时只回这一条的 -32603、不回已记录,进程不退出、随后的请求照常回复;同一请求不设日志时照常接收(对照);initialize 的 protocolVersion 不是字符串时回本服务器版本,字符串照常回显(对照)", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fake-cc-"));
+  ownDirs.add(dir);
+  const lines = [call(1, { kind: "started", summary: "中性" }), list(2)];
+  const broken = rpc(lines, { REPORT_LOG: dir });
+  assert.equal(broken.status, 0, broken.stderr);
+  assert.deepEqual(broken.replies.map((x) => [x.id, x.error?.code ?? null]), [[1, -32603], [2, null]]);
+  assert.equal(broken.replies[0]!.result, undefined);
+  assert.deepEqual(broken.replies[1]!.result?.tools, [reportToolDefinition()]);
+  const quiet = rpc(lines);
+  assert.deepEqual(quiet.replies.map((x) => [x.id, x.error?.code ?? null, x.result?.isError ?? null]), [[1, null, false], [2, null, null]]);
+  const init = (id: number, pv: string) => `{"jsonrpc":"2.0","id":${id},"method":"initialize","params":{"protocolVersion":${pv}}}`;
+  const r = rpc([init(1, deepJson), init(2, '{"a":1}'), init(3, '"2025-03-26"'), list(4)]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stderr, "");
+  type InitReply = { protocolVersion?: unknown; serverInfo?: { name?: string } };
+  assert.deepEqual(r.replies.map((x) => [x.id, (x.result as InitReply | undefined)?.protocolVersion ?? null]), [[1, "2025-06-18"], [2, "2025-06-18"], [3, "2025-03-26"], [4, null]]);
+  assert.equal((r.replies[0]!.result as InitReply).serverInfo?.name, "host-report");
+});
+
+const NOT_CONNECTED = ["connecting", "pending", "needs-auth", "failed", "disabled", "Connected", "CONNECTED", " connected", "connected ", "connect", ""];
+
+test("R8-03:checkInit 只认 host 状态恰为 connected:connecting、pending、needs-auth 等其它状态与大小写/空白/截短变体一律 bad-init;同一 init 只把状态换成 connected 时放行(单开关对照)", () => {
+  const init = (status: unknown) => ({ type: "system", subtype: "init", session_id: "neutral", tools: [REPORT], mcp_servers: [{ name: "host", status }] });
+  for (const status of NOT_CONNECTED) {
+    assert.deepEqual(checkInit(init(status)), { type: "bad-init", reason: `report_progress MCP 未连接(host 状态 ${status})` }, JSON.stringify(status));
+  }
+  assert.deepEqual(checkInit(init("connected")), { type: "init", sessionId: "neutral", tools: [REPORT] });
+});
+
+test("R8-03:端到端:CLI 的 init 自报 host 为 connecting 或 pending 时回收并 failed,不报 started/completed;同一剧本只把状态换成 connected 时 started→milestone→completed(单开关对照)", async () => {
+  const run = async (status: string) => {
+    const line = JSON.stringify({ type: "system", subtype: "init", session_id: "neutral", tools: [REPORT], mcp_servers: [{ name: "host", status }] });
+    const f = fake({ init: "missing", preInit: [line], reports: [{ kind: "milestone", stage: "中性", summary: "中性" }], result: "success", text: "完成" });
+    const a = createComputeAdapter(f.options);
+    const r = await a.spawn(brief());
+    assert.ok(r.ok);
+    const evs = await within(a.settled(r.computeId));
+    return evs === "超时" ? [] : evs;
+  };
+  for (const status of ["connecting", "pending"]) {
+    const evs = await run(status);
+    assert.deepEqual(evs.map((e) => e.kind), ["failed"], status);
+    const last = evs.at(-1);
+    assert.equal(last?.kind === "failed" ? last.reason : "", `CLI 的 init 无法核验:report_progress MCP 未连接(host 状态 ${status})`, status);
+  }
+  assert.deepEqual((await run("connected")).map((e) => e.kind), ["started", "milestone", "completed"]);
+});
+
+const BLANKS = [" ", "   ", "\t", "\n", " \t\r\n", "\u3000", "\u00a0", "\ufeff"];
+
+test("R8-04:summary 为纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 reportErrors 与 report MCP 都拒收;同一汇报换成非空文本(含首尾空白的非空文本)接收(单开关对照)", () => {
+  for (const s of BLANKS) {
+    assert.deepEqual(reportErrors({ kind: "started", summary: s }), ["summary 须为非空字符串"], JSON.stringify(s));
+  }
+  for (const s of ["中性", " 中性 ", "\t中性\n"]) assert.deepEqual(reportErrors({ kind: "started", summary: s }), [], JSON.stringify(s));
+  const r = rpc([call(1, { kind: "started", summary: "  " }), call(2, { kind: "started", summary: " 中性 " })]);
+  assert.deepEqual(r.replies.map((x) => x.result?.isError), [true, false]);
+  assert.match(r.replies[0]!.result?.content?.[0]?.text ?? "", /summary 须为非空字符串/);
+});
+
+test("R8-04:blocked 的 needs 为纯空白时 reportErrors 与 report MCP 拒收,端到端不产出 blocked、记一条拒收、CLI 成功结束也 failed;同一剧本 needs 换成非空文本时产出 blocked(单开关对照)", async () => {
+  for (const s of BLANKS) {
+    assert.deepEqual(reportErrors({ kind: "blocked", summary: "中性", needs: s }), ["needs 须为非空字符串"], JSON.stringify(s));
+  }
+  assert.deepEqual(reportErrors({ kind: "blocked", summary: "中性", needs: " 中性条件 " }), []);
+  const r = rpc([call(1, { kind: "blocked", summary: "中性", needs: "　" }), call(2, { kind: "blocked", summary: "中性", needs: "中性条件" })]);
+  assert.deepEqual(r.replies.map((x) => x.result?.isError), [true, false]);
+  const run = async (needs: string) => {
+    const f = fake({ reports: [{ kind: "blocked", summary: "中性", needs }], result: "success", text: "完成" });
+    const a = createComputeAdapter(f.options);
+    const sp = await a.spawn(brief());
+    assert.ok(sp.ok);
+    const evs = await within(a.settled(sp.computeId));
+    return { evs: evs === "超时" ? [] : evs, rejected: a.rejectedReports(sp.computeId) };
+  };
+  const blank = await run("  ");
+  assert.deepEqual(blank.evs.map((e) => e.kind), ["started", "failed"]);
+  assert.deepEqual(blank.rejected.map((x) => x.kind), ["blocked"]);
+  assert.match(blank.rejected[0]?.reason ?? "", /needs 须为非空字符串/);
+  const good = await run("中性条件");
+  assert.deepEqual(good.evs.map((e) => e.kind), ["started", "blocked"]);
+  assert.equal(good.evs[1]?.kind === "blocked" ? good.evs[1].needs : "", "中性条件");
+  assert.deepEqual(good.rejected, []);
+});
+
+test("R8-04:milestone 的 stage 为纯空白时 reportErrors 与 report MCP 拒收;同一汇报 stage 换成非空文本时接收(单开关对照)", () => {
+  for (const s of BLANKS) {
+    assert.deepEqual(reportErrors({ kind: "milestone", summary: "中性", stage: s }), ["stage 须为非空字符串"], JSON.stringify(s));
+  }
+  assert.deepEqual(reportErrors({ kind: "milestone", summary: "中性", stage: " 中性阶段 " }), []);
+  const r = rpc([call(1, { kind: "milestone", summary: "中性", stage: "\t" }), call(2, { kind: "milestone", summary: "中性", stage: "中性阶段" })]);
+  assert.deepEqual(r.replies.map((x) => x.result?.isError), [true, false]);
+  assert.match(r.replies[0]!.result?.content?.[0]?.text ?? "", /stage 须为非空字符串/);
+});
