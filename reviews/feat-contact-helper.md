@@ -1150,3 +1150,51 @@ Claude Code 接续修 CH-39、CH-40；CH-36/CH-37、只读快照与已闭合的�
 - 写入本轮审查前，真实会话路径下的 `--local`：G-TRACE、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER、G-PROVENANCE 通过；G-REVIEW 因上一轮 reject/旧 hash 拦截，G-RED 因不存在的红提交拦截（`$E/local-gates-real-sessions.log`）。当时 G-PROVENANCE 核对的是上一轮审查，不能说本轮来源已获门禁验证。
 - 写入本轮 `review` 后再跑真实会话路径下的 `--local`（`$E/local-gates-after-review.log`）：G-TRACE、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 按 reject 拦截，G-RED 仍因红提交不存在拦截；G-PROVENANCE 找不到本轮会话的 `turns.jsonl`。本轮哈希调用和模型已在原生会话中实际观察，但不能因此声称该来源门禁已通过，需会话记录落盘后重核。
 - 真实存储、宿主授权与消息表写入/隔离、Compute 接线及调度端到端仍未验；本轮不把纯函数子集或有限变异说成整项 AC 已通过。仅追加本审查节并更新收据 `review`，不改产品代码、测试或作者证据。
+
+## 第十八轮：第十七轮返修独立复审（2026-11-08）
+
+**结论：REJECT。** 独立复现发现生成器 `prototype` 上的 Proxy 会在拒绝前触发 trap；定时表达式校验接受不可能的时间和零步长；本 PR 的 Helper 三入口未追溯到权威规范中的 AC-52。分别按下列问题返修。没有把未实现的跨层功能判为通过。
+
+### 受审对象与边界
+
+- 普通 HTTPS 独立克隆，受审 `HEAD=5ec1a4efdc99d251ab8ae5f18b09781be82a72af`；PR 基线 `origin/feat/task-lifecycle=ba90d6769992d2f3df2a571f846409afcafd644d`；需求与验收以 `origin/docs/dev-handbook=396c05360b1381e1eb1acb1792b070d99fbb4945` 的 `docs/spec/` 为准，不以标记为候选的条目验收。
+- 本会话直接执行 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle`，输出 `bea285db8c747a4c69e2b8e7dbc32d008133c594b46ab8a782002787dd36b759`。审查会话 `codex:5ba140f4-8671-4ef8-b6cd-f0cb38ef7a39`，原生 `turn_context` 模型 `gpt-6.1-terra`。
+- 以下证据目录记为 `$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-r18-codex`。探针不预先修改内置原型；输入合同按用户 `g-group#2662` 收窄，隔离夹具使用假 HOME、假会话和中性数据。
+
+### R18-01【输入合同】生成器的 prototype 是 Proxy 时先调用了 trap
+
+位置：`packages/domain/src/plain.ts:60-64,99-105`。处理生成器函数自有 `prototype` 描述符时，`engineGeneratorPrototype` 在 `nestedPlainError` 对下一项执行 `types.isProxy` 之前，就对外来值调用 `Object.getPrototypeOf(value)`。
+
+复现：在受审版本仓库根目录执行 `node "$E/prototype-input-probe.mjs"`。把生成器的 `prototype` 替换成带 `getPrototypeOf` trap 的 Proxy，再作为被丢弃字段传给 `routeHelper`，实际返回 `ok:false` 但 trap 计数为 **1**；换成抛错的 trap 时实际抛出 `Error: neutral-marker`，可撤销 Proxy 撤销后还会抛 `TypeError`。`grantTool` 和 `confirmFinalReport` 的同位置输入也各触发 1 次 trap。普通函数换非普通原型对照被拒，未替换的生成器对照通过。实际结果见 `$E/prototype-input-probe.jsonl`。没有证明其他副作用或授权提升。
+
+返修：读取外来 `prototype` 值的任何原型或属性之前，先无 trap 地拒绝 Proxy（包括已撤销的 Proxy）；公开入口应返回拒绝而不透传异常。补同步/异步生成器、可撤销 Proxy、计数型与抛错型 trap，覆盖 Helper、联系人参数及回执，并保留合法生成器及普通数据对照。不得弱化既有“Proxy 不调用即拒”合同。
+
+### R18-02【定时校验】仅校验字符形状，允许无法表示合法时间的表达式
+
+位置：`packages/domain/src/contact.ts:56,271-277,307-317`。`checkSchedule` 对五段只做正则形状检查，未检查各段取值范围或步长。
+
+复现：执行 `node "$E/cron-probe.mjs"`。`0 8 * * *` 对照被接受；`99 99 99 99 99` 和 `*/0 * * * *` 同样返回 `ok:true` 并被保存为承诺，用该返回状态再调用 `grantTool` 仍被当成有效状态接受。结果见 `$E/cron-probe.jsonl`；本机 `man 5 crontab` 中分钟允许范围为 0–59，摘录见 `$E/cron-man-ranges.txt`。此处只观察到无效定时被登记和恢复校验放行，**未运行实际调度器，也不声称已经发生漏触发**。
+
+返修：对声明支持的五段 cron 做实际语义校验，至少覆盖每段允许范围、递增区间和非零步长；登记与恢复状态使用一致判定。补非法范围/零步长以及合法边界、列表、范围和步长的具名测试；实际触发与时区/DST 验收仍按调度器切片单独标未测。
+
+### R18-03【验收追溯】Helper 三入口缺少 AC-52，现有本地规范副本也不认识它
+
+位置：`packages/domain/src/helper.ts:37-56`、`packages/domain/src/helper.test.ts:10-20`、`receipts/feat-contact-helper.json` 的 `acceptance` 和 `docs/spec/验收文档-v0.1.md`。权威规范 `origin/docs/dev-handbook:docs/spec/验收文档-v0.1.md:180` 的 AC-52 是非候选的 Helper 三种意图，直接对应本 PR 的三入口；但受审提交的规范副本及收据都没有 AC-52。
+
+复现见 `$E/spec-ac52.log` 和 `$E/ac52-trace-probe.jsonl`：对真实受审上下文仅在内存中补上 `{id:"AC-52",status:"未测",reason:"只验证路由，端到端未测"}`，实际 G-TRACE 返回 `AC-52 不在验收文档里`。这反映追溯缺失及当前门禁使用的规范副本落后，不代表 AC-52 的 P1 端到端功能已经实现或必须在本纯函数切片中全部实现。
+
+返修：同步或正确绑定本 PR 到权威规范，使 G-TRACE 能识别 AC-52；在收据中映射已实测的路由子集，完整 AC-52 仍如实标“未测”，列出按需读取有权聊天、消息落库与隔离、侧栏建群和 CSV 等尚未观察的边界，不得把子集冒充整项通过。
+
+### 第十七轮逐条复核与本轮执行结果
+
+- R17-01：旧的普通函数替换非普通 `prototype` 单路径已拒绝，合法生成器对照通过；但本轮新增的 R18-01 证明生成器 `prototype` 为 Proxy 时仍违反不调用即拒，故不能认定输入合同完全修好。
+- R17-02：`c848cca8d6278f3baf183353ab52125dec9ce6c8` 存在且在基线之后、受审 HEAD 之前；本 PR **120** 条新增/改动测试在该红提交均按名失败，在 HEAD 均按名通过；红、绿两侧这两个测试文件内容没有差异。无文件级加载失败。逐名见 `$E/red-green-named.jsonl` 及两份原始 TAP。
+- R17-03：对作者原变异清单只在临时运行器副本加 `--test-concurrency=1`，未改清单或产品源码；原样副本 **308 绿/0 红**，**450 个、450 种不同单点注入，450 个被具名测试杀死**，注入失败/存活 0，退出 0。四个重定位项 CK72a、CK72b、CK116、CK117 和访问器项 CK114 均被具名测试发现。差异与逐项输出见 `$E/domain-runner-concurrency.patch`、`$E/domain-mutations.log`。
+- R17-04：CK84 已恢复且单点命中；非法状态抛错变异导致 13 条具名测试失败，见同一逐项日志。
+- `npm ci`、typecheck、lint、`npm test` 均退出 0；后者 **308 通过、0 失败、0 skip、0 todo**。另自构造 5 个单点故障：全局路由改侧栏、去掉本人 ID 校验、回执相等边界改拒绝、返回路由不冻结、Compute 授权漏掉专属资产，5/5 各命中一次且被具名测试发现；原样对照 308 绿，见 `$E/independent-mutants.jsonl`。
+- 对 8 个门禁各写一个隔离负样例并走真实 CLI，8/8 对相应门禁报失败，1 个合规对照 8 项全通过；门禁 `--self-test` 的 5 个放行、51 个拦截及 8 个厂商映射对照均通过。假 HOME/假会话不能证明真实来源；见 `$E/gate-negative-probes.jsonl`、`$E/gate-selftest.log`。
+- 按要求直接运行 `node scripts/gates/run-all.ts --local`：默认 `base=origin/main`，G-REVIEW 与 G-RED 失败；G-RED 涉及相对该基线的 188 条测试，详见 `$E/local-gates-default.log`。以真实 PR 基线加 `--branch=feat/contact-helper --base=origin/feat/task-lifecycle` 再跑时，G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过，G-REVIEW 因当时尚无 review 拦截；G-PROVENANCE 当时因 review 为空直接返回，**不等于核验了本轮来源**，见 `$E/local-gates-feature-base.log`。
+- 自测 11 个含 JSON `null` 的入口未抛，244 个导出策略对象/行/格/函数成员冻结，见 `$E/policy-null-probes.jsonl`。GitHub `self-check` 对应受审 HEAD，列出的步骤均成功，见 `$E/github-self-check.json`；这些绿灯不能覆盖上述真实反例。
+- 本轮不验证真实存储、宿主授权、消息持久化隔离、真实调度或 P1 交互端到端；不把纯函数子集或有限变异当成整项 AC 通过。仅追加本节和更新收据的 `review`，未改产品源码、测试或作者证明。
+- 附加门禁变异校准在假 HOME 下单任务并发复跑：原样自检通过，20/20 个门禁变异被具名自检发现，非具名进程失败 0，退出 0；见 `$E/gate-mutation.log`。
+- 写入本轮 `review` 后，以真实会话路径及 PR 基线重跑本机门禁：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 `reject` 按预期拦截；G-PROVENANCE 报本轮会话记录不存在（执行时对应 `turns.jsonl` 尚未落盘）。本会话实际执行了哈希命令且原生模型记录可见，但**不能声称来源门禁通过**；待会话记录落盘后由后续流程核验。原始输出见 `$E/local-gates-after-review.log`。
