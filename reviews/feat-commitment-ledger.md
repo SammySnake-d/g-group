@@ -244,3 +244,127 @@
 - O2-2：红提交的空壳是在入口第一行 `return`，真实实现仍作为死代码留在文件里。G-STUB 和 G-RED 都认这种写法，测试也确实没有执行到实现；收据已如实标注「后补」。
 - O2-3：第一轮的 O-2（单字子串也算来源原文）、O-3（taskId 为 null 的消息可以登记任意 taskId 的承诺）仍然存在，收据 unverifiable 已点明 O-2；O-3 仍建议在收据里写一句语义说明。
 - O2-4：G-REVIEW 失败是本轮 reject 的预期结果。本轮的 G-PROVENANCE 需要在本会话 turns.jsonl 写盘后才能核对，审查提交后请调度用 `--local` 复核一次。
+
+## 第 3 轮（ed075ea）
+
+- 审查人：`claude`（跨厂商审 Codex 写的 PR，开发手册原则 68）；mirasim 会话 `claude:455a8a21-5a5d-461b-894f-ebb6fd47d7fa`，模型 `anyrouter/claude-opus-5-5`（Anthropic）。作者 `codex:ac6563f1-7fbc-4cad-80a3-85c21941315e`（OpenAI gpt-6.1-terra）。全部复现由本会话在独立克隆 `/tmp/gg-pr8-r3-claude-zg6f` 亲自执行（Node v22.22.0），没有用子代理；第 2 轮结论和作者自述只当线索，数字都重新跑过。证据目录：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr8-r3-claude/`。
+- 开工前回读远端：`refs/heads/feat/commitment-ledger` = `ed075ea0dee02885059a6b0c45931cc76a7e1a44`，与派单一致。
+- `node scripts/gates/run-all.ts --hash --branch=feat/commitment-ledger --base=origin/feat/domain-core` 原样输出（本会话单独一次工具调用）：
+
+  ```text
+  d79aa8cf7a1973c0e5d29037ee9428929744229641abfbb640b2e59ecfb2169a
+  ```
+
+  与作者自述的 `--hash` 一致。
+
+### 结论：REJECT（请求返修，只需补测试和变异，产品代码不用改）
+
+第 2 轮的 R2-01 至 R2-05 都已修好：第 2 轮审查方的 10 个单点故障在 ed075ea 上全部被具名测试发现；产品源码与 babeb29 逐字节相同，作者「产品源码未改」属实；作者自述的测试数、变异数、红绿和门禁结果全部复现一致。
+
+驳回理由仍是判别力不够，而且这次缺口落在 D23 的核心判据上。我另外构造了 27 个单点故障（R3-F01–F27），现有 176 条测试**一个都没发现**；逐个用探针对比，27 个故障在对应输入上都会改变行为，原实现对这些输入的处理全部正确（`11-probe.log`），所以仍然只是没有测试钉住，不是产品代码错。其中最要紧的四类：
+
+1. 参与者种类白名单是全部权限检查的前提（权限检查是黑名单写法），却没有测试：放开以后，`{kind:"admin"}` 可以把承诺了结为 done，`{kind:"system"}` 可以记进展、让对账判为就绪（D23-R3-01）。
+2. 没有承诺的消息能否标为已处理没有测试：坏掉以后，其他联系人的消息、用户没接下的要求永远停在未处理（D23-R3-02）。
+3. 对账没有钉住「动作必须属于这条承诺」：坏掉以后，同任务里只动了一条承诺，另一条也被判为本轮已处理（D23-R3-03）。
+4. 活动记录的内容从来没有被断言过（D23-R3-06）。
+
+另外用机械算子扫描定量：368 个单点变异，杀死 249、存活 119，其中 28 个用本轮探针输入可以观测到行为差异。收据 R-05「通过」仍不成立（D23-R3-07，即第 2 轮 R2-06 未解决）。
+
+### 复现数字
+
+| 项 | 结果 | 证据 |
+|---|---|---|
+| npm ci | exit 0 | — |
+| typecheck | exit 0 | `02-typecheck.log` |
+| lint（biome --error-on-warnings） | 检查 16 个文件，exit 0 | `03-lint.log` |
+| npm test | 199 tests / pass 199 / fail 0 / cancelled 0 / skipped 0 / todo 0；承诺账本测试 176/176 | `04-test.log`、`04b-ledger.tap` |
+| 作者变异 `commitment-ledger-mutations.mjs`（串行，每次一个副本） | 原样对照 176/0；具名映射 176/176；**190/190 KILLED**，每个都由指定测试按记录的诊断杀死；连同诊断文本与 `proof/commitment-ledger-mutations.txt` 逐行一致（diff 0 行）；耗时 28 秒 | `05-mutations.log`、`05-diff-vs-proof.txt` |
+| 最终红 c06c142 | 176 tests / 0 pass / 176 按名失败，文件级失败 0；相对 ec050a5 只改了三处入口空壳（`not-implemented`），已核对 diff | `06-c06c142.tap` |
+| 绿 d0d1ed9 | 176/176 通过；实现与 babeb29 逐字节相同 | `06-d0d1ed9.tap` |
+| 前一组红 7e08aa6 / d231afb、绿 ec050a5 | 166 按名失败 / 166 按名失败 / 166 通过，文件级失败 0 | `06-7e08aa6.tap`、`06-d231afb.tap`、`06-ec050a5.tap` |
+| `run-all.ts --local …` | G-TRACE ✓、G-REVIEW ✗（审查结论是 reject；审查钉的 67d420581502 ≠ 当前 d79aa8cf7a19）、G-RED ✓、G-STUB ✓、G-TAUTO ✓、G-WORKFLOW ✓、G-LAYER ✓、G-PROVENANCE ✓；exit 1；CONTENT_HASH=d79aa8cf7a1973c0e5d29037ee9428929744229641abfbb640b2e59ecfb2169a | `08-gates-local.log` |
+| `run-all.ts --self-test` | 自检通过，exit 0 | `12-gates-selftest.log` |
+| 门禁负例（本 PR 分支独立克隆，每个门禁一个单处改动的提交） | 8/8 都被对应门禁判为失败：G-TRACE（R-05→R-99：「R-99 不在验收文档里」）、G-REVIEW（审查人写成作者 codex：「审查人与作者是同一个」「同为 openai」）、G-RED（red.commit 改成绿提交 d0d1ed9：176 条逐条「在红提交上没有按名字失败」）、G-STUB（新增一条吞掉异常的测试：「在全部实现换成空桩后没有按名字失败」）、G-TAUTO（`assert.ok(true)`：「恒真/恒定断言」）、G-WORKFLOW（pull_request_target 加写权限：两条都判失败）、G-LAYER（新包不声明层级、相对路径跨包：「缺 name 或合法的 gGroup.layer」）、G-PROVENANCE（作者会话改成不存在的 id：「作者会话记录不存在」） | `13-gate-negatives.log`、`gate-neg.sh` |
+| 第 2 轮审查方故障在 ed075ea 上复跑 | 正对照 C00 与 R2-F01–F10 全部 DETECTED | `10-round2-faults-on-ed075ea.log` |
+| 第 3 轮审查方单点故障 | 正对照 C00 被发现；R3-F01–F27 发现 0 / 存活 27 / 无效 0 | `09-reviewer-mutations.log`、`reviewer-mutations.mjs` |
+| 存活故障的探针对比（原实现 vs 注入后） | 27/27 行为不同，原实现全部给出正确结果 | `11-probe.log`、`probe.mjs`、`probe-driver.mjs` |
+| 机械算子扫描（每个 `&&`/`||` 分量置中性值、每个带 return 的 if 条件置 false、每个比较运算翻转；单点注入） | 368 个：杀死 249、存活 119（其中 28 个探针可观测，落在 R3-F01–F07、F11、F12、F14、F17–F22、F26、F27 这 18 个故障对应的条件上）、无效 0 | `14-operator-sweep.log`、`operator-sweep.mjs` |
+| $TMPDIR | 本审查用的前缀（`pr8-r3-`、`d23-ledger-mut-`）全部没有残留；`gate-snap-tiIH0n`、`gate-stub-IwmpiL` 开工前就已存在，不是本审查留下的；总数 4310→4321，新增的都是其他会话的目录（magpie、abx、kernel-mut 等） | `00-tmpdir-before.txt`、`00-tmpdir-after.txt` |
+
+### 第 2 轮必须返修项核对
+
+| 编号 | 状态 | 依据 |
+|---|---|---|
+| R2-01 幂等载荷对数组无判别 | 已修 | 「同动作处理承诺元素内容冲突」「…元素个数冲突」；R2-F01A/B 被杀死，我的 R2-F01 也被发现 |
+| R2-02 来源原文必须出自来源消息 | 已修 | 「承诺原文不能取自另一条消息」；R2-F03 被杀死 |
+| R2-03 四种终态 | 已修 | done/revoked/superseded/blocked × progress/close/bind-compute 共 12 条独立测试，12 个变异都被杀死 |
+| R2-04 对账对撤销/替代/阻塞 | 已修 | 三条「…在别轮对账已就绪」；R2-F05 三个变体都被杀死 |
+| R2-05 快照不变量与多余字段 | 已修 | R2-F06–F10 都被杀死；作者另补 A01–A08（消息/承诺/动作编号唯一、终态缺了结、三种终态缺原因、单次处理重复编号、对账重复编号、无任务来源） |
+| R2-06 R-05「通过」 | **未修好** | 见 D23-R3-07 |
+
+### 「红桩后补」与 AC-40、AC-16 未测
+
+结论同第 2 轮：可以接受，不阻塞。c06c142 / d231afb / 7e08aa6 都只在入口第一行返回 `not-implemented`，证明补测确实激活了被测入口；收据 R-02 notes 与 unverifiable 都写明「不声称测试先于原实现」。AC-40、AC-16 记为「未测」，reason 写清了已测的领域子判据和未测的宿主端到端范围，候选项没有升为已定；合入后这两条仍须在接线切片里补做端到端验收。
+
+### 验收文档与输入合同
+
+- PR 里的验收文档是 v3.17 快照，`origin/docs/dev-handbook`（396c053，v3.19，与第 2 轮时相同）里 AC-40、AC-16、R-02、R-03、R-04、R-05 这 6 行逐行 sha 相同。
+- 输入合同（用户 g-group#2662）：getter/setter/Proxy 在三个入口和嵌套位置不调用即拒、合法 JSON null 不抛错、返回值深冻结、不冻结调用方输入，测试和变异都还在；本片仍只导出函数和类型，没有导出策略对象。原实现还拒收 symbol 键、稀疏数组、数组子类、不可枚举属性，但这几条没有测试（R3-F13、F14、F16、F17，并入 D23-R3-07）。内置原型被改写的环境不在合同内，本轮没有考察。
+
+### 问题清单
+
+#### D23-R3-01（必须返修）参与者种类白名单是全部权限检查的前提，没有测试
+- 位置：`commitment-ledger.ts:93-94`（`actor()` 的 kind 枚举）、`:201`（bind-compute 的 kind 检查）；`:205-209` 的 progress/close 权限是黑名单写法，只排除已知的三种种类。
+- 复现：R3-F01（`actor()` 接受任意 kind）SURVIVED。探针：`{kind:"admin",id:"x"}` 带产物 close done → 原实现 `invalid-input`，注入后 `ok`、承诺变成 done；`{kind:"system",id:"s"}` 记进展 → 注入后 `ok`，`reconcileRound(…,"r1",["k1"])` 判为就绪。R3-F27（bind-compute 只核对编号、不核对种类）SURVIVED。探针：`{kind:"user",id:"c"}`、`{kind:"compute",id:"c"}`（编号与主人相同）执行 bind-compute → 原实现 `actor-not-allowed`，注入后 `ok`。
+- 对照：D23 第 3 节「账本归联系人（`U84`），Compute 只回报对应条目进展」；AC-40 当前必过「承诺账本归联系人、Compute 只回报对应条目（`#1711`）」；R-11「只有正向用例的权限条目不算已验」。
+- 返修要求：receive、bind-compute、progress、close 各补一条「种类不在 user/contact/compute 之内 → `invalid-input`」测试；bind-compute 补「编号等于主人编号的 user、compute → `actor-not-allowed`」测试；R3-F01、R3-F27 加进变异清单，必须被具名测试杀死。
+
+#### D23-R3-02（必须返修）没有承诺的消息能否标为已处理，没有测试
+- 位置：`:187`、`:188` 中的 `&& input.commitments.length`。
+- 复现：R3-F02、R3-F03 都 SURVIVED。探针：其他联系人发的消息、用户没接下的消息，以 `commitments: []` 处理 → 原实现都返回 `ok`、`handled` 变成 true、不新增承诺；注入后分别返回 `actor-not-allowed`、`not-accepted`，消息永远停在未处理。现有测试里没有一次以空承诺数组调用 process。
+- 对照：D23 第 3 节「联系人推进 `processed_seq` 前，区间内每条消息必须有一条处置」（`noted` 也是处置）；brief「投递回执…先持久记录再处理」；AC-40 坏实现②「跳过一条消息直接推进游标 → 红」。
+- 返修要求：补「非主人联系人的消息以空承诺处理 → ok、已处理、无新承诺」「用户未接下的消息以空承诺处理 → 同上」两条测试，并加入 R3-F02、R3-F03。
+
+#### D23-R3-03（必须返修）对账没有钉住「动作必须属于这条承诺」
+- 位置：`:234` 的 `a.commitmentId === id`。
+- 复现：R3-F26 SURVIVED。探针：同一任务登记 k1、k2，本轮只对 k1 记进展，`reconcileRound(…,"r1",["k1","k2"])` → 原实现 `ready:false, pending:["k2"]`；注入后 `ready:true, pending:[]`。现有对账测试每次只绑定一条承诺，区分不出来。
+- 对照：D23 第 3 节「本轮绑定到的承诺没有动作时，不记完成」；brief「轮末对账（只对本轮绑定承诺）」。
+- 返修要求：补「同任务两条绑定承诺、本轮只动其中一条 → 另一条 pending」测试，并加入 R3-F26。
+
+#### D23-R3-04（必须返修）决定承诺登记与了结的布尔和枚举，没有测试
+- 位置：`:128`（`typeof x.accepted === "boolean"`）、`:135`（outcome 四选一）。
+- 复现：R3-F06 SURVIVED。探针：用户消息以 `accepted: "false"`（字符串）处理 → 原实现 `invalid-input`；注入后被当成已接下，登记了承诺。R3-F07 SURVIVED。探针：close 的 outcome 写成 `"paused"` → 原实现 `invalid-input`；注入后返回 `ok`、承诺状态变成 paused，而且返回的账本下一次调用就是 `invalid-input`，账本从此不可用。
+- 对照：D23 第 3 节「用户交办且助手接下的事」；AC-40 ②承诺登记、⑥「只能被完成、撤销、替代、报阻塞了结」。
+- 返修要求：补「accepted 不是布尔 → `invalid-input`」「outcome 不在四种之内 → `invalid-input`」测试，并加入 R3-F06、R3-F07。
+
+#### D23-R3-05（必须返修）快照里承诺的来源序号和状态，没有测试
+- 位置：`:118`（`m.seq === c.sourceSeq`）、`:108`（status 五选一）。
+- 复现：R3-F04 SURVIVED。探针：把承诺的 sourceSeq 改成不存在的 99（原文仍出现在另一条已处理消息里）→ 原实现 `invalid-input`；注入后照常接收新消息、对账照常挂起这条承诺。R3-F11 SURVIVED。探针：把承诺状态改成 `"paused"` 并带原因 → 原实现 `invalid-input`；注入后 `reconcileRound` 返回 `ready:true`，承诺静默不再挂起。
+- 对照：AC-40 证据栏「承诺账本（来源 seq、状态、了结方式）」；⑥「承诺不自动失效」；第 2 轮 R2-05 同类快照不变量。
+- 返修要求：两条篡改快照测试，断言 `invalid-input` 且不调用解析器，并加入 R3-F04、R3-F11。
+
+#### D23-R3-06（必须返修）活动记录的内容从来没有被断言
+- 位置：`:217-218`（progress / close 写入 activity）。
+- 复现：R3-F08（kind 恒为 progress）、R3-F09（actor 记成主人）、R3-F10（text 丢失）都 SURVIVED。测试文件从不读取返回账本的 `activity`，只在两条篡改快照里构造过它。探针：用户撤回被记成 progress；绑定的 Compute 报的进展被记成主人报的；进展文字变成 null，测试全绿。
+- 对照：AC-40 当前必过「Compute 只回报对应条目」：账本里记下的参与者是事后核对谁回报了什么的唯一依据；D23「完成判定看账本」。
+- 返修要求：补测试，逐字段断言 progress、close 写入的 activity 条目（roundId、commitmentId、taskId、actor、kind、text），并加入 R3-F08–F10。
+
+#### D23-R3-07（必须返修）收据 R-05「通过」仍不成立
+- 位置：`receipts/feat-commitment-ledger.json` 的 R-05 条目；涉及 `jsonCopy`（`:52-76`）、`actor/message/proposal`（`:93-99`）、`isLedger`（`:101-122`）、`isCommand`（`:124-137`）、`reconcileRound`（`:230`）、`emptyLedger`（`:149`）。
+- 复现：除上面六条外，R3-F05、R3-F12–F25 共 15 个手工故障也全部存活且探针可观测。其中 R3-F05（空动作号）、R3-F14（稀疏数组）、R3-F21（空进展文字）会让 applyLedger 返回 `ok`，但返回的账本下一次调用就是 `invalid-input`。机械算子扫描 368 个变异存活 119 个：28 个已由探针证明可观测（落在上述 18 个手工故障对应的条件上；R3-F08–F10、F13、F15、F16、F23–F25 不属于这三类算子，扫描里没有）；其余 91 个没有逐个判定，一部分是等价变异（例如 `__proto__`/`constructor`/`prototype` 键检查已被各对象的精确键集合覆盖，对账里的 `a.taskId === c.taskId` 已被 isLedger 不变量覆盖），另一部分只是探针没构造对应输入（例如 proposal 的 `text(x.id)`、close 的 `maybeText(x.detail)`、`x.type === "close"`）。收据把范围收窄成「只声明所列判据和算子已标定」，但 R-05 的定义是逐条判据，缺阳性埋雷的判据不算已标定，R-08 也不允许把未测写成通过。
+- 对照：R-05「每条判据至少一个阳性埋雷…缺一边 → 这条判据不算已标定」；R-08；第 2 轮 R2-06。
+- 返修要求（二选一）：
+  - (a) 推荐：在返修后的 HEAD 上复跑 `operator-sweep.mjs`（证据目录里，用法写在文件头），每个存活变异要么被具名测试按正确原因杀死并进作者变异清单，要么在证据里逐条写明等价理由（指出覆盖它的那条检查或不变量）。R3-F01–F27 已证明可观测，不能判等价。做完 R-05 维持「通过」，重新生成 proof。
+  - (b) 只完成 D23-R3-01 至 R3-06，把 R-05 改为「未测」，reason 点名还没标定的条件（可以直接引用扫描的存活清单），不得写成「通过」。
+
+### 观察项（不阻塞）
+
+- O3-1：第 1、2 轮的 O-3（taskId 为 null 的来源消息可以登记任意任务的承诺）已有测试「独立判据：无任务来源可登记指定任务承诺」，收据 unverifiable 也写了语义说明，可以关闭。
+- O3-2：isLedger 没有校验「承诺的 taskId 与来源消息的 taskId 一致（来源有 taskId 时）」和「非 done 终态的 artifact 为 null」。applyLedger 在登记、了结时会拦，只有外部快照会绕开。这是实现少一条不变量，不是测试缺口；快照只来自本函数输出时不会出现，建议存储接线切片补上，不阻塞本片。
+- O3-3：扫描显示有几处检查是冗余的（`Number.isFinite`、禁用键、对账里的 taskId 比较），以后可以简化，本片不要求改。
+- O3-4：PR 带的验收文档仍是 v3.17 快照（同 O2-1），本 PR 引用的 6 行与 v3.19 相同。
+- O3-5：本轮的 G-PROVENANCE 要等本会话 turns.jsonl 写盘后才能核对；审查提交推送后请调度用 `--local` 复核一次（同 O2-4）。
+
+### 证据目录
+
+`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr8-r3-claude/`：`00`–`14` 日志与 tap，脚本 `reviewer-mutations.mjs`（27 个单点故障）、`probe.mjs` + `probe-driver.mjs`（逐个故障对比原实现与注入后的行为）、`operator-sweep.mjs`（机械算子扫描，参数：仓库目录、probe.mjs 路径）、`gate-neg.sh`（门禁负例）。
