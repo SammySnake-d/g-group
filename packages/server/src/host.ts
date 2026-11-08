@@ -44,14 +44,17 @@ import {
   type Inbound,
   type InboundMessage,
   type MindAction,
+  type RoundOutput,
   type RoundStatus,
   type TimerApi,
   type RecallItem,
   type RecallRef,
   type RecallSource,
   type Urgency,
+  compactMaterial,
   createAttentionLoop,
   planRecall,
+  scrubRetracted,
 } from "@g-group/kernel";
 import { type AnnouncementOrder, AnnouncementStore } from "./announcements.ts";
 import {
@@ -110,6 +113,9 @@ export interface HostOptions {
   /** 群公告排序(列表与装配共用);默认按创建先后。排序规则待定(D28 待确认 ④),先做成参数。 */
   readonly announcementOrder?: AnnouncementOrder;
 }
+
+/** 状态笔记含撤回原文且无法精确移除时,整份作废后的占位(撤回优先,AC-08) */
+const VOIDED_NOTE = "(状态笔记含已撤回内容,已作废;请按承诺账本与新消息重写)";
 
 interface ContactDoc extends Omit<ContactView, "activity"> {
   readonly persona: string;
@@ -1267,9 +1273,63 @@ export class Host {
   }
 
   // ======================= 联系人一轮 =======================
-  /** 联系人当前的状态笔记(第 3 块原文);没有为 null。红提交:空壳。 */
-  stateNote(_contactId: string): string | null {
-    return null;
+  /** 联系人当前的状态笔记(第 3 块原文);没有为 null。 */
+  stateNote(contactId: string): string | null {
+    return getDoc<{ text: string }>(this.db, `note:${contactId}`)?.value.text ?? null;
+  }
+  /** 这些会话里被撤回消息的全部原文(含撤回前的编辑稿);撤回优先(AC-08),这些原文不能经状态笔记回到请求 */
+  private retractedTexts(roomIds: readonly string[]): string[] {
+    const out: string[] = [];
+    for (const roomId of roomIds) {
+      const { log } = loadLog(this.db.store, `room:${roomId}`);
+      const gone = new Set<number>();
+      for (const e of log.events) if (e.body.kind === "retract") gone.add(e.body.target);
+      if (gone.size === 0) continue;
+      for (const e of log.events) {
+        if (e.body.kind === "message" && gone.has(e.seq)) out.push(e.body.text);
+        if (e.body.kind === "edit" && gone.has(e.body.target)) out.push(e.body.text);
+      }
+    }
+    return out;
+  }
+  /** 笔记落盘或装配前移除撤回原文;精确替换不掉就整份作废并报告 */
+  private scrubNote(contactId: string, note: string, roomIds: readonly string[]): string {
+    const r = scrubRetracted(note, this.retractedTexts(roomIds));
+    if (r.leaked) {
+      this.report("state-note-voided", { contactId });
+      return VOIDED_NOTE;
+    }
+    if (r.hits > 0) this.report("state-note-scrubbed", { contactId, hits: r.hits });
+    return r.text;
+  }
+  /** 本轮要落盘的状态笔记:模型没写就请压缩器补写(同一说话模型的独立调用),超上限就缩写;最后移除撤回原文 */
+  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], signal: AbortSignal): Promise<string | null> {
+    const contactId = contact.id;
+    const prev = this.stateNote(contactId);
+    const compactor = this.opts.compactor?.(this.contactView(contact));
+    const profile = { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona };
+    const max = this.opts.stateNoteMaxBytes ?? null;
+    let note = out.stateNote;
+    if (note === null && compactor && fresh.length > 0) {
+      try {
+        note = await compactor.compact({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max }, signal);
+      } catch (e) {
+        this.report("compact-failed", { contactId, kind: "round-note", error: e instanceof Error ? e.message : String(e) });
+        note = null;
+      }
+    }
+    if (note !== null && max !== null && Buffer.byteLength(note, "utf8") > max) {
+      if (compactor) {
+        try {
+          const shorter = await compactor.compact({ contact: profile, kind: "shrink", previous: note, material: "", maxBytes: max }, signal);
+          if (Buffer.byteLength(shorter, "utf8") < Buffer.byteLength(note, "utf8")) note = shorter;
+        } catch (e) {
+          this.report("compact-failed", { contactId, kind: "shrink", error: e instanceof Error ? e.message : String(e) });
+        }
+      }
+      if (Buffer.byteLength(note, "utf8") > max) this.report("state-note-over-limit", { contactId, bytes: Buffer.byteLength(note, "utf8"), max });
+    }
+    return note === null ? null : this.scrubNote(contactId, note, roomIds);
   }
   private cursor(contactId: string, roomId: string): number {
     return one<{ processed_seq: number }>(this.db, "SELECT processed_seq FROM gg_cursor WHERE contact_id = ? AND room_id = ?", contactId, roomId)?.processed_seq ?? 0;
@@ -1375,7 +1435,14 @@ export class Host {
     const focusRoom = fresh.find((f) => f.kind === "message")?.roomId ?? fresh[0]?.roomId ?? null;
     this.setActivity(contactId, focusRoom, "thinking");
     const tasks = this.listTasks({ contactId }).filter((t) => !TERMINAL.has(t.state));
-    const note = getDoc<{ text: string }>(this.db, `note:${contactId}`);
+    let note = getDoc<{ text: string }>(this.db, `note:${contactId}`);
+    if (note) {
+      const clean = this.scrubNote(contactId, note.value.text, rooms.map((r) => r.id));
+      if (clean !== note.value.text) {
+        putDoc(this.db, `note:${contactId}`, note.ver, { text: clean });
+        note = getDoc<{ text: string }>(this.db, `note:${contactId}`);
+      }
+    }
     const ledgerLines = this.activeLedgerLines(contactId);
     const freshKeys = new Set(fresh.flatMap((f) => (f.kind === "message" ? [`${f.roomId}#${f.seq}`, ...(f.replyToSeq !== null ? [`${f.roomId}#${f.replyToSeq}`] : [])] : [])));
     const freshTasks = new Set(fresh.flatMap((f) => (f.kind === "compute" ? [f.taskId] : [])));
@@ -1438,7 +1505,9 @@ export class Host {
         }
       }
     }
-    const done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, out);
+    const stateNote = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), signal);
+    if (signal.aborted || this.closed) return "done";
+    const done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: out.actions, stateNote });
     this.expireRoundFailures(contactId);
     this.setActivity(contactId, null, "idle");
     await this.runEffects(done.effects);

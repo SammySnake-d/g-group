@@ -10,7 +10,7 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { createComputeAdapter } from "@g-group/adapter-cc-compute";
 import type { ContactView } from "@g-group/api-contract";
-import type { ContactMind } from "@g-group/kernel";
+import type { ContactCompactor, ContactMind } from "@g-group/kernel";
 import { ensureGroup, sendAndWait, senderAudit } from "./drive.ts";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
@@ -34,22 +34,35 @@ const { values, positionals } = parseArgs({
 });
 const [cmd, ...rest] = positionals;
 
-async function makeMind(kind: string): Promise<(c: ContactView) => ContactMind> {
-  if (kind === "fake") return () => scriptedMind();
+async function makeMind(kind: string): Promise<{ mind: (c: ContactView) => ContactMind; compactor?: (c: ContactView) => ContactCompactor }> {
+  if (kind === "fake") return { mind: () => scriptedMind() };
   if (kind === "pi") {
     // 字面量动态 import:按需加载 pi 依赖,G-LAYER 也能核对依赖方向
-    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as { createPiContactMind(o: Record<string, unknown>): ContactMind };
+    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as { createPiContactMind(o: Record<string, unknown>): ContactMind; createPiCompactor(o: Record<string, unknown>): ContactCompactor };
     const bearer = process.env.ANTHROPIC_AUTH_TOKEN;
     const apiKey = bearer ?? process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("--mind pi 需要 ANTHROPIC_AUTH_TOKEN 或 ANTHROPIC_API_KEY");
+    const opts = (model: string) => ({ provider: "anthropic", model, baseUrl: process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
     const cache = new Map<string, ContactMind>();
-    return (c) => {
-      let m = cache.get(c.speakingModel);
-      if (!m) {
-        m = mod.createPiContactMind({ provider: "anthropic", model: c.speakingModel, baseUrl: process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
-        cache.set(c.speakingModel, m);
-      }
-      return m;
+    const compactors = new Map<string, ContactCompactor>();
+    return {
+      mind: (c) => {
+        let m = cache.get(c.speakingModel);
+        if (!m) {
+          m = mod.createPiContactMind(opts(c.speakingModel));
+          cache.set(c.speakingModel, m);
+        }
+        return m;
+      },
+      // 状态笔记压缩:同一说话模型的独立调用(AC-32 ③)
+      compactor: (c) => {
+        let k = compactors.get(c.speakingModel);
+        if (!k) {
+          k = mod.createPiCompactor(opts(c.speakingModel));
+          compactors.set(c.speakingModel, k);
+        }
+        return k;
+      },
     };
   }
   throw new Error(`未知 --mind ${kind}`);
@@ -121,7 +134,7 @@ async function main() {
   const cwdRoot = values.cwd ? path.resolve(values.cwd) : undefined;
   const host = new Host({
     file: path.resolve(values.db),
-    mind: await makeMind(values.mind),
+    ...(await makeMind(values.mind)),
     compute: compute.factory,
     ...(cwdRoot
       ? {
