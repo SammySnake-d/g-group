@@ -171,22 +171,20 @@ export function isHashCall(input: unknown): boolean {
 }
 
 /**
- * RR-15 / R10-01:路径所在目录是不是同一仓库的另一个 clone。按"根提交有交集或 remote 指向同一地址"判断,不看目录名。
+ * RR-15 / R10-01 / R11-01:现存仓库仅以共同根提交确认身份;remote 是可修改配置,不构成证明。
  * 不在任何 git 仓库里 → 不是;git 判不了(读不出根提交、还没有提交、命令出错) → 确认不了,不是。
  * 只看现存的目录;已不存在的目录由 attestedDirs 按宿主记录里的证据判定。
  */
-type RepoId = { roots: Set<string>; remotes: Set<string> };
-const normRemote = (u: string) => u.trim().replace(/\.git$/, "").replace(/\/+$/, "").replace(/^git@([^:]+):/, "$1/").replace(/^[a-z+]+:\/\/(?:[^@/]+@)?/i, "").toLowerCase();
+type RepoId = { roots: Set<string> };
 function repoIdAt(dir: string): RepoId | null | "unknown" {
   const g = (...a: string[]) => spawnSync("git", [...GIT_SAFE_ARGS, "-c", "core.fsmonitor=false", ...a], { cwd: dir, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
   const top = g("rev-parse", "--show-toplevel");
   if (top.status !== 0) return /not a git repository/i.test(top.stderr ?? "") ? null : "unknown";
   const roots = g("rev-list", "--max-parents=0", "--all");
-  const remotes = g("remote", "-v");
-  if (roots.status !== 0 || remotes.status !== 0) return "unknown";
+  if (roots.status !== 0) return "unknown";
   const rs = new Set(roots.stdout.split("\n").filter(Boolean));
   if (rs.size === 0) return "unknown";
-  return { roots: rs, remotes: new Set(remotes.stdout.split("\n").map((l) => l.split(/\s+/)[1]).filter((u): u is string => !!u).map(normRemote)) };
+  return { roots: rs };
 }
 export function sameRepoClone(rootReal: string): (abs: string) => boolean {
   const own = repoIdAt(rootReal);
@@ -200,7 +198,7 @@ export function sameRepoClone(rootReal: string): (abs: string) => boolean {
     if (hit !== undefined) return hit;
     const id = repoIdAt(d);
     const known = id !== null && id !== "unknown";
-    const same = known && ([...id.roots].some((r) => own.roots.has(r)) || [...id.remotes].some((r) => own.remotes.has(r) || r === rootReal.toLowerCase()));
+    const same = known && ([...id.roots].some((r) => own.roots.has(r)));
     memo.set(d, same);
     return same;
   };

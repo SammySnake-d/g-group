@@ -64,15 +64,23 @@ function plainArray(x: unknown): unknown[] | undefined {
   // 先判 Proxy:撤销的 Proxy 上 Array.isArray 会抛错(R6-02)
   if (types.isProxy(x) || !Array.isArray(x) || Object.getPrototypeOf(x) !== Array.prototype) return undefined;
   const ds = Object.getOwnPropertyDescriptors(x);
-  const out: unknown[] = [];
-  for (const k of Reflect.ownKeys(ds)) {
-    if (k === "length") continue;
-    const d = ds[k as string]!;
-    if (typeof k !== "string" || !/^(0|[1-9]\d*)$/.test(k) || !("value" in d)) return undefined;
-    out[Number(k)] = d.value;
-  }
   const len = (Object.getOwnPropertyDescriptor(x, "length") as PropertyDescriptor).value as number;
-  return out.length === len && Object.keys(out).length === len ? out : undefined;
+  const keys = Reflect.ownKeys(ds);
+  // 长度以外只能有 0..length-1 的自有数据属性;先比数量,避免巨型稀疏数组逐项扫描。
+  if (keys.length !== len + 1) return undefined;
+  for (const k of keys) {
+    if (k === "length") continue;
+    if (typeof k !== "string" || !/^(0|[1-9]\d*)$/.test(k)) return undefined;
+    const n = Number(k), d = ds[k]!;
+    if (!Number.isInteger(n) || n < 0 || n >= len || String(n) !== k || !("value" in d)) return undefined;
+  }
+  const out: unknown[] = [];
+  for (let i = 0; i < len; i++) {
+    const d = ds[String(i)];
+    if (!d || !("value" in d)) return undefined;
+    out.push(d.value);
+  }
+  return out;
 }
 const strArray = (x: unknown) => { const a = plainArray(x); return a?.every((v) => typeof v === "string") ? (a as string[]) : undefined; };
 /** 校验并复制成全新的普通对象;不合格返回 undefined。不会调用 getter/setter/Proxy trap。 */
