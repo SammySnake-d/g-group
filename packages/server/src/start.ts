@@ -4,6 +4,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createComputeAdapter } from "@g-group/adapter-cc-compute";
+import type { ContactView } from "@g-group/api-contract";
 import type { ContactMind } from "@g-group/kernel";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
@@ -35,14 +36,23 @@ export async function startServer(o: StartOptions): Promise<Started> {
   const env = o.env ?? process.env;
   mkdirSync(o.dataDir, { recursive: true });
   const model = env.ANTHROPIC_DEFAULT_SONNET_MODEL;
-  let mind: () => ContactMind = () => scriptedMind();
+  let mind: (c: ContactView) => ContactMind = () => scriptedMind();
   if (o.mind === "pi") {
     const spec = "@g-group/adapter-pi-contact";
     const mod = (await import(spec)) as { createPiContactMind(opts: Record<string, unknown>): ContactMind };
-    const apiKey = env.ANTHROPIC_AUTH_TOKEN ?? env.ANTHROPIC_API_KEY;
+    const bearer = env.ANTHROPIC_AUTH_TOKEN;
+    const apiKey = bearer ?? env.ANTHROPIC_API_KEY;
     if (!apiKey || !model) throw new Error("mind=pi 需要 ANTHROPIC_AUTH_TOKEN(或 ANTHROPIC_API_KEY)与 ANTHROPIC_DEFAULT_SONNET_MODEL");
-    const m = mod.createPiContactMind({ provider: "anthropic", model, baseUrl: env.ANTHROPIC_BASE_URL, apiKey });
-    mind = () => m;
+    // 每位联系人用自己的说话模型(U68);同一模型复用一个实例
+    const cache = new Map<string, ContactMind>();
+    mind = (c) => {
+      let m = cache.get(c.speakingModel);
+      if (!m) {
+        m = mod.createPiContactMind({ provider: "anthropic", model: c.speakingModel, baseUrl: env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
+        cache.set(c.speakingModel, m);
+      }
+      return m;
+    };
   }
   const fake = o.compute === "claude" ? null : scriptedCompute({ stepMs: 300 });
   const compute = fake
