@@ -146,8 +146,8 @@ export const kernelAssemble: RoundAssembler = (ctx) => {
     processedSeq: { ...(ctx.processedSeq ?? {}) },
     fresh: [...ctx.fresh],
     pointers: [...ctx.tasks.map((t) => ({ ref: `在途任务 ${t.split(" ")[0]}`, text: t })), ...ctx.pointers],
-    budgetBytes: ROUND_BUDGET_BYTES,
+    budgetBytes: ctx.budgetBytes ?? ROUND_BUDGET_BYTES,
   });
-  if (!r.ok) throw new Error(`五块装配失败(${r.reason}):${r.detail}`);
+  if (!r.ok) throw r.reason === "over-budget" ? new RoundAssembleError(r.reason, r.detail, r.need, r.budget) : new RoundAssembleError(r.reason, r.detail);
   return r.request;
 };
