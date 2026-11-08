@@ -1,0 +1,13 @@
+{
+  "id": "rss-reader",
+  "name": "RSS 订阅",
+  "version": "0.1.0",
+  "publisher": "g-group",
+  "description": "示例数据源插件:按订阅地址拉取 RSS/Atom 条目交给联系人(插件运行时进程隔离尚未接入,当前只能安装、启停与配置)。",
+  "kinds": ["data-source"],
+  "permissions": [{ "key": "net:fetch", "description": "访问你配置的订阅地址" }],
+  "commands": [
+    { "name": "rss", "description": "看某个订阅的最新条目", "args": [{ "name": "feed", "description": "订阅名", "kind": "text", "required": false }] }
+  ],
+  "configSchema": { "type": "object", "properties": { "feeds": { "type": "array", "items": { "type": "string", "format": "uri" } } } }
+}

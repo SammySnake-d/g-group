@@ -36,6 +36,10 @@ CREATE TABLE IF NOT EXISTS gg_schedules (
   enabled INTEGER NOT NULL, tolerance_sec INTEGER NOT NULL, missed_policy TEXT NOT NULL, next_run_at TEXT, created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS gg_schedule_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, schedule_id TEXT NOT NULL, due_at TEXT NOT NULL, at TEXT NOT NULL, status TEXT NOT NULL, error TEXT);
+CREATE TABLE IF NOT EXISTS gg_plugins (
+  id TEXT PRIMARY KEY, version TEXT NOT NULL, source TEXT NOT NULL, origin TEXT NOT NULL, dir TEXT NOT NULL, enabled INTEGER NOT NULL,
+  status TEXT NOT NULL, error TEXT, manifest TEXT NOT NULL, config TEXT, granted TEXT NOT NULL, installed_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS gg_effects (action_id TEXT PRIMARY KEY, kind TEXT NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL, error TEXT, created_at TEXT NOT NULL);
 `;
 
