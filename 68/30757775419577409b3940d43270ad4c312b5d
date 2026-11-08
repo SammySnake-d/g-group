@@ -1,0 +1,16 @@
+packages/server/src/drive.test.ts
+  h_f33e46a035b77c 1-96
+packages/server/src/drive.ts
+  h_f33e46a035b77c 1-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6830757775419577409b3940d43270ad4c312b5d",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
