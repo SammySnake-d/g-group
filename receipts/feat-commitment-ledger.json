@@ -11,10 +11,10 @@
       "status": "未测",
       "reason": "领域入口要求可信产物解析器返回存在才登记 done;实际消息、文件或提交的解析器及结果对外发送尚未接入,完整验收未测。"
     },
-    { "id": "R-02", "status": "通过", "notes": "原功能 ff0255c→eb296c4、绑定功能 077f44b→dd6f341 先红后绿。本轮补测针对已有实现，先用后补空壳红 7e08aa6，修正类型后以 d231afb 复测全红，再恢复实现 ec050a5；自查补测的最终红 c06c142 176 条按名失败、绿 d0d1ed9 176 条通过。后补空壳只证明入口激活，不证明测试先于原功能实现；真实时间顺序见证据。", "evidence": "packages/domain/proof/commitment-ledger-round3-red-green.txt" },
+    {"id":"R-02","status":"通过","notes":"原功能 ff0255c→eb296c4、绑定功能 077f44b→dd6f341 先红后绿。本轮补测针对已有实现，先用后补空壳红 7e08aa6，修正类型后以 d231afb 复测全红，再恢复实现 ec050a5；自查补测的最终红 c06c142 176 条按名失败、绿 d0d1ed9 176 条通过。后补空壳只证明入口激活，不证明测试先于原功能实现；真实时间顺序见证据。 第 3 轮补测的红桩 e58d1d7 是既有实现后的激活对照，206 条按名失败；绿 632fea7 恢复既有实现、206 条通过。该对照不证明新测试先于原功能实现。","evidence":"packages/domain/proof/commitment-ledger-round4-red-green.txt"},
     { "id": "R-03", "status": "通过", "evidence": "packages/domain/proof/commitment-ledger-tests.txt" },
     { "id": "R-04", "status": "通过", "evidence": "packages/domain/proof/commitment-ledger-tests.txt" },
-    { "id": "R-05", "status": "通过", "notes": "原样阴性对照 176/176 通过、具名映射 176/176；串行注入 190 个单点故障全部由指定测试和该测试块内的诊断杀死，存活 0，含审查 R2-F01 至 R2-F10、四终态三操作及自查的快照不变量。只声明所列判据和算子已标定；依赖前置行为的其他失败在证据保留。", "evidence": "packages/domain/proof/commitment-ledger-mutations.txt" }
+    {"id":"R-05","status":"未测","reason":"选择第 3 轮 R3-07(b)：机械扫描 TOTAL 368 killed=279 survived=89 (其中探针可观测差异=0) invalid=0；存活条件尚未逐条由具名测试杀死或依据其他检查证明等价，例如 L90 drop-left(true) :: typeof x === \"number\"；L90 drop-right(true) :: Number.isSafeInteger(x)；L92 drop-right(true) :: expected.every((key) => Object.hasOwn(x, key))；L94 drop-right(true) :: text(x.id)。完整扫描见 packages/domain/proof/commitment-ledger-round4-sweep.txt，不能据此声称每条判据已标定。","notes":"原样阴性对照 206/206、具名映射 206/206；串行 221/221 个单点故障按指定测试及诊断杀死，含 R3-F01 至 R3-F27。该结果不等于 R-05 全部判据已完成双侧标定。","evidence":"packages/domain/proof/commitment-ledger-mutations.txt"}
   ],
   "candidate": {
     "status": "候选",
@@ -22,19 +22,21 @@
   },
   "author": {
     "agent": "codex",
-    "session": "codex:ac6563f1-7fbc-4cad-80a3-85c21941315e",
+    "session": "codex:8a88fc74-4b9f-48c1-9622-52d06aab6527",
     "model": "gpt-6.1-terra"
   },
-  "red": { "commit": "c06c1420eb5c2fb3960e2b71d8aba774d7de49fe" },
+  "red": { "commit": "e58d1d78d325a7591b0dbdb5f811b7940ba5807b" },
   "additional_red": [
     { "commit": "ba5fa58a3f204b61d42c810f82109b09fa3376c0", "green": "de6256dff22e3bab3fe11972c18bd1992e481ad2", "reason": "重投使用新动作号时必须保留该动作身份。" },
     { "commit": "82c321568c46a729e92a323b62de7b8fbbee6201", "green": "2291e2b70314a899c4fcbcd8dfe63c695aac8863", "reason": "承诺文字必须可追溯到来源原文,不能凭空生成。" },
     { "commit": "077f44b61f9eadefd5fc78d049d1432446857219", "green": "dd6f341f164ca94a5b7ad56646ba5ea2b0acf7bb", "reason": "Compute 绑定功能先按名失败再实现。" },
-    { "commit": "d231afb2b263ab4de4b4686ae7c7ae29111b153c", "green": "ec050a5460f66ab06c156599a8834cd87be50365", "reason": "审查第 2 轮补测的后补空壳红绿；初始红 7e08aa6，d231afb 仅更正反例的类型标注后重跑。" }
+    { "commit": "d231afb2b263ab4de4b4686ae7c7ae29111b153c", "green": "ec050a5460f66ab06c156599a8834cd87be50365", "reason": "审查第 2 轮补测的后补空壳红绿；初始红 7e08aa6，d231afb 仅更正反例的类型标注后重跑。" },
+    { "commit": "c06c1420eb5c2fb3960e2b71d8aba774d7de49fe", "green": "d0d1ed9e4e4ee78d76d6458039a2fa43da21be5c", "reason": "上一轮自查补测后补空壳红绿。" }
   ],
   "rework": { "agent": "codex", "session": "codex:f2b3dc7a-ec4a-4277-ba62-5bd978ce063e", "notes": "第一轮返修;保留原作者和原拒绝审查记录。" },
   "rework_round2": { "agent": "codex", "session": "codex:99008d31-cc72-445d-bd0a-b9cb0a8d1882", "notes": "保留原有场景,新增独立分项及执行过的对照。补测红提交是原实现之后的回溯性空壳,不改写历史。" },
   "rework_review_round2": { "agent": "codex", "session": "codex:ac6563f1-7fbc-4cad-80a3-85c21941315e", "model": "gpt-6.1-terra", "notes": "第 2 轮审查返修；前几轮作者均为 Codex：原作者 codex:2e5b967e-007c-43fe-84b4-58374f144f9a，后续返修 codex:f2b3dc7a-ec4a-4277-ba62-5bd978ce063e 和 codex:99008d31-cc72-445d-bd0a-b9cb0a8d1882。保留原审查字段。" },
+  "rework_review_round3": { "agent": "codex", "session": "codex:8a88fc74-4b9f-48c1-9622-52d06aab6527", "model": "gpt-6.1-terra", "notes": "第三轮返修；前几轮作者均为 Codex。后补红桩不改写原实现与测试的时间顺序；保留审查原字段。" },
   "unverifiable": "AC-40/AC-16:状态转移返回的只是拟提交快照;真实宿主必须先原子持久化接收记录,再在同一持久化事务内提交处理、动作去重和版本检查,并验证调用方身份与产物真实存在。纯函数不能保证崩溃恢复、并发写入的单一提交点、模型完整提取承诺或用户真正看到了结果。原文子串校验只能证明字面来源,不能证明提取完整或语义正确。来源消息 taskId 为 null 时，可登记任意合法 taskId 的承诺；是否还要由宿主进一步限制不在本片证明范围。新增 computeId 为承诺必填字段,旧快照若已持久化须先迁移,本片不接存储。PR #4 contact.ts 的 commitments 仍是另一套数据形状:id/sourceSeq/text 可对应,但 boundTaskIds/awaitingReport/reportedTaskIds/schedule 与这里单个 taskId 和 blocked/superseded 状态不一一对应;合并接线时必须明确单一账本权威、迁移和末次汇报语义,不能作为两份并列真源。R-02:后补测试的红桩不能证明这些测试先于原实现;R-05:已执行变异仅覆盖所列判据和算子,不能证明真实宿主或所有可能故障。",
   "waiver": null,
   "review": {"agent":"claude","session":"claude:455a8a21-5a5d-461b-894f-ebb6fd47d7fa","model":"anyrouter/claude-opus-5-5","verdict":"reject","reviewed_hash":"d79aa8cf7a1973c0e5d29037ee9428929744229641abfbb640b2e59ecfb2169a","notes":"第 3 轮 REJECT（ed075ea）：R2-01..R2-05 已修（第 2 轮 10 个故障在 ed075ea 上全被发现），产品源码与 babeb29 逐字节相同；复现 typecheck/lint 0、npm test 199/199（承诺账本 176/176）无 skip/todo、作者 190/190 变异按名杀死且与证据逐行一致、红 c06c142 176/176 按名失败、绿 d0d1ed9 176/176、--local 除 G-REVIEW 外全过、8 个门禁负例各自判败。审查方 27 个单点故障全部存活且探针可观测，原实现全部正确：未知参与者种类绕过权限与绑定只核编号（R3-01）、空承诺消息不能标已处理（R3-02）、对账动作不分承诺（R3-03）、accepted/outcome 校验（R3-04）、快照来源序号与状态（R3-05）、活动记录内容从未断言（R3-06）；机械算子扫描 368 个变异存活 119，R-05 通过仍不成立（R3-07）。只需补测试与变异，不改产品代码。见 reviews/feat-commitment-ledger.md 第 3 轮。"}
