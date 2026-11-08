@@ -122,6 +122,15 @@ export const MUTATIONS: Mutation[] = [
   { name: "放行项盖过拒读清单(去掉末尾的拒读清单)", kill: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", target: ["DIRECT"], file: "lib.ts", from: /\n {4}`\(deny file-read-data \$\{\[\.\.\.new Set\(\[\.\.\.secret[^\n]*/, to: "" },
   { name: "拒读清单漏掉 .git-credentials 与 .netrc", kill: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", target: ["DIRECT"], file: "lib.ts", from: ", \".npmrc\", \".git-credentials\", \".netrc\"];", to: ", \".npmrc\"];" },
   { name: "拒读清单不按 realpath", kill: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", target: ["DIRECT"], file: "lib.ts", from: "[...new Set([...secret, ...secret.map(realOr)])]", to: "[...new Set(secret)]" },
+  // R9-01..R9-03:放行范围、联网隔离、动态链接运行时
+  { name: "执行计划额外放行 HOME", kill: "R9-01 seatbelt 读放行范围恰为工作副本与挂载的依赖,多出的放行项(如整个 HOME)判失败", target: ["DIRECT"], file: "lib.ts", from: "profile: seatbeltProfile(w, mounts, exe), profilePath", to: "profile: seatbeltProfile(w, [...mounts, os.homedir()], exe), profilePath" },
+  { name: "seatbelt 放行联网", kill: "R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖", target: ["DIRECT"], file: "lib.ts", from: "\"(deny network*)\"", to: "\"(allow network*)\"" },
+  { name: "docker 不断网", kill: "R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖", target: ["DIRECT"], file: "lib.ts", from: "\"--network\", \"none\"", to: "\"--network\", \"host\"" },
+  { name: "docker 额外挂载 HOME", kill: "R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖", target: ["DIRECT"], file: "lib.ts", from: "[...new Set([w, ...mounts.map((m) => fs.realpathSync(m))])]", to: "[...new Set([w, os.homedir(), ...mounts.map((m) => fs.realpathSync(m))])]" },
+  { name: "不放行运行时自带的动态库", kill: "R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件", target: ["DIRECT"], file: "lib.ts", from: "...runtimeLibs(exe).map(", to: "...([] as string[]).map(" },
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 匹配/注入源码里的模板字符串原文
+  { name: "运行时库按目录放行", kill: "R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件", target: ["DIRECT"], file: "lib.ts", from: "`(literal ${sbq(f)})`", to: "`(subpath ${sbq(path.dirname(f))})`" },
+  { name: "运行时库不限 .dylib", kill: "R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件", target: ["DIRECT"], file: "lib.ts", from: "e.isFile() && e.name.endsWith(\".dylib\")", to: "e.isFile()" },
 ];
 
 /**

@@ -1,52 +1,52 @@
-✓ 放行:合规:先红后绿、跨厂商审查、来源核对通过 (2s)
+✓ 放行:合规:先红后绿、跨厂商审查、来源核对通过 (1s)
 __GATE_CASE__{"name":"合规:先红后绿、跨厂商审查、来源核对通过","direct":false,"expect":null,"exit":0,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":[],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 放行:合规:node:test 别名 + 断言 (2s)
+✓ 放行:合规:node:test 别名 + 断言 (1s)
 __GATE_CASE__{"name":"合规:node:test 别名 + 断言","direct":false,"expect":null,"exit":0,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":[],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 放行:合规:只改文档不需要收据 (1s)
+✓ 放行:合规:只改文档不需要收据 (0s)
 __GATE_CASE__{"name":"合规:只改文档不需要收据","direct":false,"expect":null,"exit":0,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":[],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 放行:合规(CI 模式,不跑来源核对) (2s)
+✓ 放行:合规(CI 模式,不跑来源核对) (1s)
 __GATE_CASE__{"name":"合规(CI 模式,不跑来源核对)","direct":false,"expect":null,"exit":0,"gates":{"G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":[],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:CI 模式下违规同样拦下 (1s)
 __GATE_CASE__{"name":"CI 模式下违规同样拦下","direct":false,"expect":"缺收据","exit":1,"gates":{"G-TRACE":"✗","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-TRACE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:改了代码没收据 (1s)
 __GATE_CASE__{"name":"改了代码没收据","direct":false,"expect":"缺收据","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✗","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-TRACE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:F-02 只改 workflow 没收据 (1s)
+✓ 拦下:F-02 只改 workflow 没收据 (0s)
 __GATE_CASE__{"name":"F-02 只改 workflow 没收据","direct":false,"expect":"缺收据","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✗","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-TRACE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:只改 package.json 没收据 (1s)
+✓ 拦下:只改 package.json 没收据 (0s)
 __GATE_CASE__{"name":"只改 package.json 没收据","direct":false,"expect":"缺收据","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✗","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-TRACE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:删掉源码也要收据 (1s)
+✓ 拦下:删掉源码也要收据 (0s)
 __GATE_CASE__{"name":"删掉源码也要收据","direct":false,"expect":"缺收据","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✗","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-TRACE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:条目不在验收文档 (2s)
+✓ 拦下:条目不在验收文档 (1s)
 __GATE_CASE__{"name":"条目不在验收文档","direct":false,"expect":"不在验收文档","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✗","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-TRACE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:状态不在四种之内 (2s)
+✓ 拦下:状态不在四种之内 (1s)
 __GATE_CASE__{"name":"状态不在四种之内","direct":false,"expect":"不是 通过/失败/未测/不适用","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✗","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-TRACE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:第 7 栏没点到条目 (2s)
+✓ 拦下:第 7 栏没点到条目 (1s)
 __GATE_CASE__{"name":"第 7 栏没点到条目","direct":false,"expect":"第 7 栏","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✗","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-TRACE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:作者自审 (2s)
+✓ 拦下:作者自审 (1s)
 __GATE_CASE__{"name":"作者自审","direct":false,"expect":"同一个","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✗","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-REVIEW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:同厂商审查且无豁免 (2s)
+✓ 拦下:同厂商审查且无豁免 (1s)
 __GATE_CASE__{"name":"同厂商审查且无豁免","direct":false,"expect":"没有用户豁免","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✗","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-REVIEW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:审查模型认不出 (2s)
+✓ 拦下:审查模型认不出 (1s)
 __GATE_CASE__{"name":"审查模型认不出","direct":false,"expect":"认不出","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✗","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-REVIEW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:审查结论 reject (2s)
+✓ 拦下:审查结论 reject (1s)
 __GATE_CASE__{"name":"审查结论 reject","direct":false,"expect":"审查结论是 reject","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✗","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-REVIEW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:审后又改代码 (2s)
 __GATE_CASE__{"name":"审后又改代码","direct":false,"expect":"需要重审","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✗","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-REVIEW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:审后改 workflow (2s)
+✓ 拦下:审后改 workflow (1s)
 __GATE_CASE__{"name":"审后改 workflow","direct":false,"expect":"需要重审","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✗","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-REVIEW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:F-01 审查会话不存在 (2s)
+✓ 拦下:F-01 审查会话不存在 (1s)
 __GATE_CASE__{"name":"F-01 审查会话不存在","direct":false,"expect":"审查会话里没有一次","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:F-01 审查会话里没算过这个 hash (2s)
+✓ 拦下:F-01 审查会话里没算过这个 hash (1s)
 __GATE_CASE__{"name":"F-01 审查会话里没算过这个 hash","direct":false,"expect":"审查会话里没有一次","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:F-04 历史出现过别家模型,算 hash 那一轮是同厂商 (2s)
+✓ 拦下:F-04 历史出现过别家模型,算 hash 那一轮是同厂商 (1s)
 __GATE_CASE__{"name":"F-04 历史出现过别家模型,算 hash 那一轮是同厂商","direct":false,"expect":"实际是 anthropic","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:审查会话算出的是别的 hash (2s)
+✓ 拦下:审查会话算出的是别的 hash (1s)
 __GATE_CASE__{"name":"审查会话算出的是别的 hash","direct":false,"expect":"审查会话里没有一次","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:F-04 hash 只出现在聊天文本里 (2s)
+✓ 拦下:F-04 hash 只出现在聊天文本里 (1s)
 __GATE_CASE__{"name":"F-04 hash 只出现在聊天文本里","direct":false,"expect":"审查会话里没有一次","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:作者自报与实际产出厂商不符 (2s)
+✓ 拦下:作者自报与实际产出厂商不符 (1s)
 __GATE_CASE__{"name":"作者自报与实际产出厂商不符","direct":false,"expect":"实际产出厂商是 openai","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:作者会话没碰过本仓库 (2s)
+✓ 拦下:作者会话没碰过本仓库 (1s)
 __GATE_CASE__{"name":"作者会话没碰过本仓库","direct":false,"expect":"找不到对本仓库的任何操作","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:作者中途换成审查同厂商(累积集合) (2s)
 __GATE_CASE__{"name":"作者中途换成审查同厂商(累积集合)","direct":false,"expect":"在作者的产出厂商集合","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
@@ -60,37 +60,37 @@ __GATE_CASE__{"name":"RR-13 先说不批准、下一行是格式行","direct":fa
 __GATE_CASE__{"name":"RR-13 整条消息是引用块里的指令","direct":false,"expect":"不是一条格式为","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:F-03 用户明确不批准豁免 (2s)
 __GATE_CASE__{"name":"F-03 用户明确不批准豁免","direct":false,"expect":"不是一条格式为","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:豁免是助手发的 (2s)
+✓ 拦下:豁免是助手发的 (1s)
 __GATE_CASE__{"name":"豁免是助手发的","direct":false,"expect":"不是仓库所有者","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:豁免没绑定这一版 (2s)
+✓ 拦下:豁免没绑定这一版 (1s)
 __GATE_CASE__{"name":"豁免没绑定这一版","direct":false,"expect":"≠ 当前","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:豁免给的是别的 PR (2s)
 __GATE_CASE__{"name":"豁免给的是别的 PR","direct":false,"expect":"不是本次的 PR#7","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:豁免之后被撤回 (2s)
+✓ 拦下:豁免之后被撤回 (1s)
 __GATE_CASE__{"name":"豁免之后被撤回","direct":false,"expect":"被retract","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-08 豁免写在引用示例里 (2s)
+✓ 拦下:RR-08 豁免写在引用示例里 (1s)
 __GATE_CASE__{"name":"RR-08 豁免写在引用示例里","direct":false,"expect":"不是一条格式为","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-08 豁免写在引用块里 (2s)
+✓ 拦下:RR-08 豁免写在引用块里 (1s)
 __GATE_CASE__{"name":"RR-08 豁免写在引用块里","direct":false,"expect":"不是一条格式为","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-08 豁免写在代码块里 (2s)
+✓ 拦下:RR-08 豁免写在代码块里 (1s)
 __GATE_CASE__{"name":"RR-08 豁免写在代码块里","direct":false,"expect":"不是一条格式为","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-08 另一个用户发的豁免 (2s)
+✓ 拦下:RR-08 另一个用户发的豁免 (1s)
 __GATE_CASE__{"name":"RR-08 另一个用户发的豁免","direct":false,"expect":"不是仓库所有者","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-08 冒用所有者名字的另一个 uid (2s)
+✓ 拦下:RR-08 冒用所有者名字的另一个 uid (1s)
 __GATE_CASE__{"name":"RR-08 冒用所有者名字的另一个 uid","direct":false,"expect":"不是仓库所有者","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-08 收据把豁免人写成别人 (2s)
+✓ 拦下:RR-08 收据把豁免人写成别人 (1s)
 __GATE_CASE__{"name":"RR-08 收据把豁免人写成别人","direct":false,"expect":"无权批准","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-08 豁免消息之后被引用 (2s)
+✓ 拦下:RR-08 豁免消息之后被引用 (1s)
 __GATE_CASE__{"name":"RR-08 豁免消息之后被引用","direct":false,"expect":"引用","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-08 豁免是代发的 (2s)
+✓ 拦下:RR-08 豁免是代发的 (1s)
 __GATE_CASE__{"name":"RR-08 豁免是代发的","direct":false,"expect":"转发或代发","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-01 harness 带路径穿越 (2s)
+✓ 拦下:RR-01 harness 带路径穿越 (1s)
 __GATE_CASE__{"name":"RR-01 harness 带路径穿越","direct":false,"expect":"格式必须是","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-01 harness 不在白名单 (2s)
+✓ 拦下:RR-01 harness 不在白名单 (1s)
 __GATE_CASE__{"name":"RR-01 harness 不在白名单","direct":false,"expect":"不在白名单","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-01 id 带多余冒号 (2s)
+✓ 拦下:RR-01 id 带多余冒号 (1s)
 __GATE_CASE__{"name":"RR-01 id 带多余冒号","direct":false,"expect":"格式必须是","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-01 会话文件软链到 PR 里的伪造记录 (2s)
+✓ 拦下:RR-01 会话文件软链到 PR 里的伪造记录 (1s)
 __GATE_CASE__{"name":"RR-01 会话文件软链到 PR 里的伪造记录","direct":false,"expect":"会话根目录之外","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:RR-02 测试往目录外写文件被沙箱挡住 (1s)
 __GATE_CASE__{"name":"RR-02 测试往目录外写文件被沙箱挡住","direct":false,"expect":"缺 red.commit","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-RED"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
@@ -100,101 +100,109 @@ __GATE_CASE__{"name":"RR-02 测试补造来源记录被挡住","direct":false,"e
 __GATE_CASE__{"name":"RR-02 没有沙箱就停","direct":false,"expect":"没有可用沙箱","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✗","G-TAUTO":"✗","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-RED","G-STUB","G-TAUTO"],"gateErrors":["G-RED","G-STUB","G-TAUTO"],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:RR-02 CI 设了沙箱镜像时,模拟无沙箱仍然停 (1s)
 __GATE_CASE__{"name":"RR-02 CI 设了沙箱镜像时,模拟无沙箱仍然停","direct":false,"expect":"没有可用沙箱","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✗","G-TAUTO":"✗","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-RED","G-STUB","G-TAUTO"],"gateErrors":["G-RED","G-STUB","G-TAUTO"],"complete":true,"pass":true,"kind":"ok"}
-✓ 放行:R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载) (2s)
+✓ 放行:R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载) (1s)
 __GATE_CASE__{"name":"R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载)","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
 ✓ 放行:R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath) (0s)
 __GATE_CASE__{"name":"R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R9-01 seatbelt 读放行范围恰为工作副本与挂载的依赖,多出的放行项(如整个 HOME)判失败 (0s)
+__GATE_CASE__{"name":"R9-01 seatbelt 读放行范围恰为工作副本与挂载的依赖,多出的放行项(如整个 HOME)判失败","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖 (0s)
+__GATE_CASE__{"name":"R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R9-02 真实隔离入口联网对照:宿主可取得本机回环夹具的中性标记,沙箱内被拒 (10s)
+__GATE_CASE__{"name":"R9-02 真实隔离入口联网对照:宿主可取得本机回环夹具的中性标记,沙箱内被拒","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
+✓ 放行:R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件 (0s)
+__GATE_CASE__{"name":"R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件","direct":true,"expect":null,"exit":null,"gates":{},"expectHit":[],"gateErrors":[],"complete":false,"pass":true,"kind":"ok"}
 ✓ 拦下:R7-01 完整入口:具名测试读假 HOME 的 .git-credentials/.netrc 被拒,门禁拦下 (1s)
 __GATE_CASE__{"name":"R7-01 完整入口:具名测试读假 HOME 的 .git-credentials/.netrc 被拒,门禁拦下","direct":false,"expect":"现在没有恰好通过一次","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✗","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-RED"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 放行:R7-01 完整入口对照:同一假 HOME 下,测试读工作副本文件、加载 HOME 点目录里的依赖照常放行 (2s)
+✓ 放行:R7-01 完整入口对照:同一假 HOME 下,测试读工作副本文件、加载 HOME 点目录里的依赖照常放行 (1s)
 __GATE_CASE__{"name":"R7-01 完整入口对照:同一假 HOME 下,测试读工作副本文件、加载 HOME 点目录里的依赖照常放行","direct":false,"expect":null,"exit":0,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":[],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-05 相对路径的写操作算进产出厂商 (2s)
+✓ 拦下:RR-05 相对路径的写操作算进产出厂商 (1s)
 __GATE_CASE__{"name":"RR-05 相对路径的写操作算进产出厂商","direct":false,"expect":"在作者的产出厂商集合","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-05 判不了路径的 shell 轮次也算进去 (2s)
+✓ 拦下:RR-05 判不了路径的 shell 轮次也算进去 (1s)
 __GATE_CASE__{"name":"RR-05 判不了路径的 shell 轮次也算进去","direct":false,"expect":"在作者的产出厂商集合","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 放行:RR-05 工作目录在仓库外的相对写不算(阴性对照) (2s)
+✓ 放行:RR-05 工作目录在仓库外的相对写不算(阴性对照) (1s)
 __GATE_CASE__{"name":"RR-05 工作目录在仓库外的相对写不算(阴性对照)","direct":false,"expect":null,"exit":0,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":[],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-04 自比较断言 (2s)
+✓ 拦下:RR-04 自比较断言 (1s)
 __GATE_CASE__{"name":"RR-04 自比较断言","direct":false,"expect":"自比较或恒真","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✗","G-TAUTO":"✗","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-TAUTO"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-04 恒真关系断言 (2s)
+✓ 拦下:RR-04 恒真关系断言 (1s)
 __GATE_CASE__{"name":"RR-04 恒真关系断言","direct":false,"expect":"自比较或恒真","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✗","G-TAUTO":"✗","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-TAUTO"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-04 不可达断言 (2s)
+✓ 拦下:RR-04 不可达断言 (1s)
 __GATE_CASE__{"name":"RR-04 不可达断言","direct":false,"expect":"执行不到","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✗","G-TAUTO":"✗","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-TAUTO"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-04 return 之后的断言 (2s)
+✓ 拦下:RR-04 return 之后的断言 (1s)
 __GATE_CASE__{"name":"RR-04 return 之后的断言","direct":false,"expect":"执行不到","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✗","G-TAUTO":"✗","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-TAUTO"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-04 断言没检查返回值(返回值变异存活) (2s)
+✓ 拦下:RR-04 断言没检查返回值(返回值变异存活) (1s)
 __GATE_CASE__{"name":"RR-04 断言没检查返回值(返回值变异存活)","direct":false,"expect":"返回错误值","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✗","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-STUB"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-06 同名间接测试零断言 (2s)
+✓ 拦下:RR-06 同名间接测试零断言 (1s)
 __GATE_CASE__{"name":"RR-06 同名间接测试零断言","direct":false,"expect":"运行时注册了 2 次","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✗","G-TAUTO":"✗","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-TAUTO"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-07 红提交上是另一份假断言 (2s)
+✓ 拦下:RR-07 红提交上是另一份假断言 (1s)
 __GATE_CASE__{"name":"RR-07 红提交上是另一份假断言","direct":false,"expect":"测试体和现在不同","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-RED"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-07 红提交实现已正确(现在的测试放上去不红) (2s)
+✓ 拦下:RR-07 红提交实现已正确(现在的测试放上去不红) (1s)
 __GATE_CASE__{"name":"RR-07 红提交实现已正确(现在的测试放上去不红)","direct":false,"expect":"放到红提交的实现上没有按名字失败","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✗","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-RED"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-03 带引号的写权限 (2s)
+✓ 拦下:RR-03 带引号的写权限 (1s)
 __GATE_CASE__{"name":"RR-03 带引号的写权限","direct":false,"expect":"申请了写权限 statuses","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-03 write-all 字符串权限 (2s)
+✓ 拦下:RR-03 write-all 字符串权限 (1s)
 __GATE_CASE__{"name":"RR-03 write-all 字符串权限","direct":false,"expect":"只允许 read-all","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-03 job 级写权限 (2s)
+✓ 拦下:RR-03 job 级写权限 (1s)
 __GATE_CASE__{"name":"RR-03 job 级写权限","direct":false,"expect":"申请了写权限 checks","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-03 job 名用表达式拼出受保护名 (2s)
+✓ 拦下:RR-03 job 名用表达式拼出受保护名 (1s)
 __GATE_CASE__{"name":"RR-03 job 名用表达式拼出受保护名","direct":false,"expect":"名字含表达式","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-03 job 名用折叠标量 (2s)
+✓ 拦下:RR-03 job 名用折叠标量 (1s)
 __GATE_CASE__{"name":"RR-03 job 名用折叠标量","direct":false,"expect":"冒充受保护检查名 provenance","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-03 权限经锚点合并进来 (2s)
+✓ 拦下:RR-03 权限经锚点合并进来 (1s)
 __GATE_CASE__{"name":"RR-03 权限经锚点合并进来","direct":false,"expect":"申请了写权限 statuses","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-03 别的 workflow 冒充 self-check (2s)
+✓ 拦下:RR-03 别的 workflow 冒充 self-check (1s)
 __GATE_CASE__{"name":"RR-03 别的 workflow 冒充 self-check","direct":false,"expect":"冒充受保护检查名 self-check","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 放行:RR-03 self-check.yml 自己产出 self-check(阴性对照) (2s)
+✓ 放行:RR-03 self-check.yml 自己产出 self-check(阴性对照) (1s)
 __GATE_CASE__{"name":"RR-03 self-check.yml 自己产出 self-check(阴性对照)","direct":false,"expect":null,"exit":0,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":[],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-09 门禁自检步骤加 if: false (2s)
+✓ 拦下:RR-09 门禁自检步骤加 if: false (1s)
 __GATE_CASE__{"name":"RR-09 门禁自检步骤加 if: false","direct":false,"expect":"带了 if","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-09 变异步骤按 PR 自己的路径判定跳过 (2s)
+✓ 拦下:RR-09 变异步骤按 PR 自己的路径判定跳过 (1s)
 __GATE_CASE__{"name":"RR-09 变异步骤按 PR 自己的路径判定跳过","direct":false,"expect":"带了 if","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-09 变异步骤 continue-on-error (2s)
+✓ 拦下:RR-09 变异步骤 continue-on-error (1s)
 __GATE_CASE__{"name":"RR-09 变异步骤 continue-on-error","direct":false,"expect":"带了 continue-on-error","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-09 缺变异步骤 (2s)
+✓ 拦下:RR-09 缺变异步骤 (1s)
 __GATE_CASE__{"name":"RR-09 缺变异步骤","direct":false,"expect":"缺必需步骤","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-09 变异命令后接 || true (2s)
+✓ 拦下:RR-09 变异命令后接 || true (1s)
 __GATE_CASE__{"name":"RR-09 变异命令后接 || true","direct":false,"expect":"缺必需步骤","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-09 job 加 continue-on-error (2s)
+✓ 拦下:RR-09 job 加 continue-on-error (1s)
 __GATE_CASE__{"name":"RR-09 job 加 continue-on-error","direct":false,"expect":"带了 continue-on-error","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-09 job 加 if (2s)
+✓ 拦下:RR-09 job 加 if (1s)
 __GATE_CASE__{"name":"RR-09 job 加 if","direct":false,"expect":"带了 if","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-09 self-check.yml 里没有 self-check job (2s)
+✓ 拦下:RR-09 self-check.yml 里没有 self-check job (1s)
 __GATE_CASE__{"name":"RR-09 self-check.yml 里没有 self-check job","direct":false,"expect":"缺 job self-check","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-09 package.json 把 gates:mutation 改成 true (2s)
+✓ 拦下:RR-09 package.json 把 gates:mutation 改成 true (1s)
 __GATE_CASE__{"name":"RR-09 package.json 把 gates:mutation 改成 true","direct":false,"expect":"scripts[\"gates:mutation\"] 必须是","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-09 package.json 把 gates:selftest 改掉 (2s)
+✓ 拦下:RR-09 package.json 把 gates:selftest 改掉 (1s)
 __GATE_CASE__{"name":"RR-09 package.json 把 gates:selftest 改掉","direct":false,"expect":"scripts[\"gates:selftest\"] 必须是","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 放行:RR-09 规范 self-check.yml(变异命令不带并发参数)+ 规范 scripts(阴性对照) (2s)
+✓ 放行:RR-09 规范 self-check.yml(变异命令不带并发参数)+ 规范 scripts(阴性对照) (1s)
 __GATE_CASE__{"name":"RR-09 规范 self-check.yml(变异命令不带并发参数)+ 规范 scripts(阴性对照)","direct":false,"expect":null,"exit":0,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":[],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 放行:RR-03 只读权限的普通 workflow(阴性对照) (2s)
+✓ 放行:RR-03 只读权限的普通 workflow(阴性对照) (1s)
 __GATE_CASE__{"name":"RR-03 只读权限的普通 workflow(阴性对照)","direct":false,"expect":null,"exit":0,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":[],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 放行:隔离:hook 环境的 GIT_DIR 指向别的仓库,门禁不碰它 (2s)
 __GATE_CASE__{"name":"隔离:hook 环境的 GIT_DIR 指向别的仓库,门禁不碰它","direct":false,"expect":null,"exit":0,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":[],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-09 self-check.yml 只 echo (2s)
+✓ 拦下:RR-09 self-check.yml 只 echo (1s)
 __GATE_CASE__{"name":"RR-09 self-check.yml 只 echo","direct":false,"expect":"缺必需步骤","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:RR-09 必需步骤换 shell (2s)
 __GATE_CASE__{"name":"RR-09 必需步骤换 shell","direct":false,"expect":"带了 shell","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:RR-09 job 用 defaults 换 shell (2s)
 __GATE_CASE__{"name":"RR-09 job 用 defaults 换 shell","direct":false,"expect":"带了 defaults","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-09 自检命令后接 || true (2s)
+✓ 拦下:RR-09 自检命令后接 || true (1s)
 __GATE_CASE__{"name":"RR-09 自检命令后接 || true","direct":false,"expect":"缺必需步骤","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:R4-01 self-check job env 设 GATE_ 开关缩小自检 (2s)
+✓ 拦下:R4-01 self-check job env 设 GATE_ 开关缩小自检 (1s)
 __GATE_CASE__{"name":"R4-01 self-check job env 设 GATE_ 开关缩小自检","direct":false,"expect":"设置了门禁开关 GATE_SELFTEST_ONLY","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:R4-01 self-check 步骤 env 设 GATE_MUTATION_ONLY (2s)
+✓ 拦下:R4-01 self-check 步骤 env 设 GATE_MUTATION_ONLY (1s)
 __GATE_CASE__{"name":"R4-01 self-check 步骤 env 设 GATE_MUTATION_ONLY","direct":false,"expect":"设置了门禁开关 GATE_MUTATION_ONLY","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:R4-01 self-check 顶层 env 设 GATE_MUTANT_TIMEOUT_MS (2s)
+✓ 拦下:R4-01 self-check 顶层 env 设 GATE_MUTANT_TIMEOUT_MS (1s)
 __GATE_CASE__{"name":"R4-01 self-check 顶层 env 设 GATE_MUTANT_TIMEOUT_MS","direct":false,"expect":"设置了门禁开关 GATE_MUTANT_TIMEOUT_MS","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 放行:R4-01 self-check job env 只设沙箱镜像(阴性对照) (2s)
+✓ 放行:R4-01 self-check job env 只设沙箱镜像(阴性对照) (1s)
 __GATE_CASE__{"name":"R4-01 self-check job env 只设沙箱镜像(阴性对照)","direct":false,"expect":null,"exit":0,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":[],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-09 必需步骤换 working-directory (2s)
+✓ 拦下:RR-09 必需步骤换 working-directory (1s)
 __GATE_CASE__{"name":"RR-09 必需步骤换 working-directory","direct":false,"expect":"带了 working-directory","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:RR-09 workflow 顶层 defaults 换 shell (2s)
+✓ 拦下:RR-09 workflow 顶层 defaults 换 shell (1s)
 __GATE_CASE__{"name":"RR-09 workflow 顶层 defaults 换 shell","direct":false,"expect":"顶层带了 defaults","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:g-group#2538 test 脚本改回裸 node --test(0 用例也判通过) (2s)
+✓ 拦下:g-group#2538 test 脚本改回裸 node --test(0 用例也判通过) (1s)
 __GATE_CASE__{"name":"g-group#2538 test 脚本改回裸 node --test(0 用例也判通过)","direct":false,"expect":"scripts[\"test\"] 必须是","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:g-group#2538 test 脚本改成 true (2s)
+✓ 拦下:g-group#2538 test 脚本改成 true (1s)
 __GATE_CASE__{"name":"g-group#2538 test 脚本改成 true","direct":false,"expect":"scripts[\"test\"] 必须是","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:g-group#2538 self-check 缺 npm test 步骤 (2s)
 __GATE_CASE__{"name":"g-group#2538 self-check 缺 npm test 步骤","direct":false,"expect":"缺必需步骤:run 为 npm test","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✗","G-LAYER":"✓"},"expectHit":["G-WORKFLOW"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
@@ -396,7 +404,7 @@ __GATE_CASE__{"name":"插件依赖另一个插件","direct":false,"expect":"不�
 __GATE_CASE__{"name":"相对路径跨包","direct":false,"expect":"跨出了包","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✗"},"expectHit":["G-LAYER"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ 拦下:依赖声明里反向引用 (2s)
 __GATE_CASE__{"name":"依赖声明里反向引用","direct":false,"expect":"依赖声明里引用了 kernel","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✗"},"expectHit":["G-LAYER"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
-✓ 拦下:包没声明层级 (1s)
+✓ 拦下:包没声明层级 (2s)
 __GATE_CASE__{"name":"包没声明层级","direct":false,"expect":"gGroup.layer","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✗"},"expectHit":["G-LAYER"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
 ✓ vendorOf(o1) = openai
 ✓ vendorOf(gpt-6-astra) = openai
@@ -407,4 +415,4 @@ __GATE_CASE__{"name":"包没声明层级","direct":false,"expect":"gGroup.layer"
 ✓ vendorOf(stealth/crouton-alpha) = unknown
 ✓ vendorOf(undefined) = unknown
 自检通过
-自检耗时 72s:用例 200/200,并发 4(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0
+自检耗时 129s:用例 204/204,并发 2(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0
