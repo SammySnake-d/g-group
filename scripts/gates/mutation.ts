@@ -29,7 +29,7 @@ export const MUTATIONS: Mutation[] = [
   { name: "执行器吞掉问题", kill: "CI 模式下违规同样拦下", target: ["RUNNER"], file: "lib.ts", from: "return { gate, problems: gate.run(ctx) };", to: "gate.run(ctx); return { gate, problems: [] };" },
   // biome-ignore lint/suspicious/noTemplateCurlyInString: 这里就是要匹配源码里的模板字符串原文
   { name: "执行器把门禁出错当放行", kill: "RR-02 没有沙箱就停", target: ["RUNNER"], file: "lib.ts", from: "catch (e) { return { gate, problems: [{ gate: gate.id, msg: `门禁自身出错:${(e as Error).message}` }] }; }", to: "catch { return { gate, problems: [] }; }" },
-  { name: "workflow/依赖清单不算受管", kill: "F-02 只改 workflow 没收据", target: ["G-TRACE"], file: "lib.ts", from: "export const isGoverned = (f: string) => !UNGOVERNED.some((re) => re.test(f));", to: "export const isGoverned = (f: string) => f.startsWith(\"packages/\");" },
+  { name: "workflow/依赖清单不算受管", kill: "F-02 只改 workflow 没收据", target: ["G-TRACE"], file: "lib.ts", from: "export const isGoverned = (f: string) => !UNGOVERNED_OWN.some((re) => re.test(f));", to: "export const isGoverned = (f: string) => f.startsWith(\"packages/\");" },
   { name: "来源核对不比对 hash", kill: "审查会话算出的是别的 hash", target: ["G-PROVENANCE"], file: "gates.ts", from: "str(c.result).trim() === rv.reviewed_hash", to: "true" },
   { name: "来源核对看全会话模型", kill: "F-04 历史出现过别家模型,算 hash 那一轮是同厂商", target: ["G-PROVENANCE"], file: "gates.ts", from: "const vs = new Set(hits.map((t) => vendorOf(t.model)));", to: "const vs = new Set([vendorOf(rv.model)]);" },
   { name: "豁免认消息里任意一行指令", kill: "RR-13 指令前另有说明文字", target: ["G-PROVENANCE"], file: "gates.ts", from: "const dm = DIRECTIVE.exec((msg.text ?? \"\").trim());", to: "const dm = (msg.text ?? \"\").split(\"\\n\").map((l) => DIRECTIVE.exec(l.trim())).find(Boolean) ?? null;" },
@@ -130,7 +130,28 @@ export const MUTATIONS: Mutation[] = [
   { name: "不放行运行时自带的动态库", kill: "R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件", target: ["DIRECT"], file: "lib.ts", from: "...runtimeLibs(exe).map(", to: "...([] as string[]).map(" },
   // biome-ignore lint/suspicious/noTemplateCurlyInString: 匹配/注入源码里的模板字符串原文
   { name: "运行时库按目录放行", kill: "R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件", target: ["DIRECT"], file: "lib.ts", from: "`(literal ${sbq(f)})`", to: "`(subpath ${sbq(path.dirname(f))})`" },
-  { name: "运行时库不限 .dylib", kill: "R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件", target: ["DIRECT"], file: "lib.ts", from: "e.isFile() && e.name.endsWith(\".dylib\")", to: "e.isFile()" },
+  { name: "运行时库不限 .dylib", kill: "R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件", target: ["DIRECT"], file: "lib.ts", from: "if (!e.name.endsWith(\".dylib\")) continue;", to: "" },
+  // R10-01..R10-05:来源仓库身份、导出策略不可变、容器参数逐项核对、运行库符号链接
+  { name: "来源按目录名认仓库", kill: "R10-01 作者只操作同名的非仓库目录(来源门禁拒绝)", target: ["G-PROVENANCE"], file: "gates.ts", from: "const inRepo = (abs: string) => under(abs, rootReal)", to: "const inRepo = (abs: string) => abs.split(path.sep).includes(\"g-group\") || under(abs, rootReal)" },
+  { name: "仓库身份判不了按同一仓库算", kill: "R10-01 作者只操作同名、还没有提交的 git 仓库(身份确认不了,来源门禁拒绝)", target: ["G-PROVENANCE"], file: "gates.ts", from: "const same = known && (", to: "const same = id === \"unknown\" || known && (" },
+  { name: "git 仓库不比仓库身份", kill: "R10-01 作者只操作同名的另一个 git 仓库(来源门禁拒绝)", target: ["G-PROVENANCE"], file: "gates.ts", from: "const same = known && (", to: "const same = known || (" },
+  { name: "不认宿主记录证明的已清理克隆", kill: "R10-02 清理后:同一记录里 git 输出的本仓库提交号证明是本仓库,来源门禁仍认出", target: ["G-PROVENANCE"], file: "gates.ts", from: " || proven.some((d) => under(abs, d)) || ", to: " || " },
+  { name: "记录里的提交号不核对属于本仓库", kill: "R10-02 克隆已清理、git 输出的是另一个仓库的提交号(来源门禁拒绝)", target: ["G-PROVENANCE"], file: "gates.ts", from: "const ours = (tok: string) => commits.filter((c) => c.startsWith(tok)).length === 1;", to: "const ours = (_tok: string) => true;" },
+  { name: "记录证据不看现状", kill: "R10-02 本仓库提交号出自现存的非仓库目录(现状与记录矛盾,来源门禁拒绝)", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (fs.existsSync(d)) continue;", to: "" },
+  { name: "受管范围导出不冻结", kill: "R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论", target: ["DIRECT"], file: "lib.ts", from: "export const UNGOVERNED: readonly RegExp[] = frozenList(UNGOVERNED_SRC.map((s) => new RegExp(s)));", to: "export const UNGOVERNED: readonly RegExp[] = UNGOVERNED_SRC.map((s) => new RegExp(s));" },
+  { name: "受管范围只冻结数组不冻结元素", kill: "R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论", target: ["DIRECT"], file: "lib.ts", from: "Object.freeze(xs.map((x) => Object.freeze(x)))", to: "Object.freeze([...xs])" },
+  { name: "受管判定直接用导出的未冻结数组", kill: "R10-03 真实门禁:同进程改写受管范围策略后,受管改动没收据照样拦下", target: ["G-TRACE"], file: "lib.ts", from: "export const UNGOVERNED: readonly RegExp[] = frozenList(UNGOVERNED_SRC.map((s) => new RegExp(s)));", to: "export const UNGOVERNED: readonly RegExp[] = UNGOVERNED_OWN as RegExp[];" },
+  { name: "豁免格式导出不冻结", kill: "R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论", target: ["DIRECT"], file: "gates.ts", from: "export const WAIVER_RE: RegExp = Object.freeze(new RegExp(WAIVER_OWN));", to: "export const WAIVER_RE: RegExp = new RegExp(WAIVER_OWN);" },
+  { name: "豁免格式判定直接用导出的未冻结正则", kill: "R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论", target: ["DIRECT"], file: "gates.ts", from: "export const WAIVER_RE: RegExp = Object.freeze(new RegExp(WAIVER_OWN));", to: "export const WAIVER_RE: RegExp = WAIVER_OWN;" },
+  { name: "git 安全参数不冻结", kill: "R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论", target: ["DIRECT"], file: "lib.ts", from: "Object.freeze([\"-c\", \"core.hooksPath=/dev/null\"])", to: "[\"-c\", \"core.hooksPath=/dev/null\"]" },
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 注入源码里的模板字符串原文
+  { name: "容器计划多出一处 --mount 只读挂载", kill: "R10-04 容器执行计划逐项核对:只挂工作副本与依赖,另一种挂载形式(--mount/--volume/附着写法/--tmpfs/--volumes-from)、多挂少挂与其它参数判失败", target: ["DIRECT"], file: "lib.ts", from: "...vols, \"-w\", w, process.env.GATE_SANDBOX_IMAGE!", to: "...vols, \"--mount\", `type=bind,source=${path.dirname(w)},target=/fixture-extra,readonly`, \"-w\", w, process.env.GATE_SANDBOX_IMAGE!" },
+  { name: "容器核对放过 --mount", kill: "R10-04 容器执行计划逐项核对:只挂工作副本与依赖,另一种挂载形式(--mount/--volume/附着写法/--tmpfs/--volumes-from)、多挂少挂与其它参数判失败", target: ["DIRECT"], file: "lib.ts", from: "    if (a === \"--rm\") continue;", to: "    if (a === \"--rm\" || a === \"--mount\") { i += a === \"--mount\" ? 1 : 0; continue; }" },
+  { name: "容器核对不限 -v 集合", kill: "R10-04 容器执行计划逐项核对:只挂工作副本与依赖,另一种挂载形式(--mount/--volume/附着写法/--tmpfs/--volumes-from)、多挂少挂与其它参数判失败", target: ["DIRECT"], file: "lib.ts", from: "if (v === undefined || !want.includes(v)) out.push(", to: "if (v === undefined) out.push(" },
+  { name: "运行库符号链接不放行", kill: "R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行", target: ["DIRECT"], file: "lib.ts", from: "if (!e.isSymbolicLink()) continue;", to: "continue;" },
+  { name: "运行库链接不限运行时目录", kill: "R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行", target: ["DIRECT"], file: "lib.ts", from: "if (!t.startsWith(top + path.sep)) continue;", to: "" },
+  { name: "运行库链接目标不限 .dylib", kill: "R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行", target: ["DIRECT"], file: "lib.ts", from: "if (!t.endsWith(\".dylib\")) continue;", to: "" },
+  { name: "运行库链接目标不限普通文件", kill: "R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行", target: ["DIRECT"], file: "lib.ts", from: "try { if (!fs.statSync(t).isFile()) continue; } catch { continue; }", to: "" },
 ];
 
 /**

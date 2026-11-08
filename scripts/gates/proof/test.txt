@@ -6,49 +6,49 @@ TAP version 13
 # Subtest: countTests 读顶层汇总行,忽略缩进的子测试汇总
 ok 1 - countTests 读顶层汇总行,忽略缩进的子测试汇总
   ---
-  duration_ms: 0.487833
+  duration_ms: 1.190209
   type: 'test'
   ...
 # Subtest: countTests 没有汇总行时给 undefined
 ok 2 - countTests 没有汇总行时给 undefined
   ---
-  duration_ms: 0.05425
+  duration_ms: 0.168292
   type: 'test'
   ...
 # Subtest: 0 条用例判失败
 ok 3 - 0 条用例判失败
   ---
-  duration_ms: 85.08325
+  duration_ms: 180.035125
   type: 'test'
   ...
 # Subtest: 1 条通过的用例判通过
 ok 4 - 1 条通过的用例判通过
   ---
-  duration_ms: 120.293708
+  duration_ms: 297.499125
   type: 'test'
   ...
 # Subtest: 全部 skip 判失败
 ok 5 - 全部 skip 判失败
   ---
-  duration_ms: 121.153292
+  duration_ms: 300.375084
   type: 'test'
   ...
 # Subtest: 全部 todo 判失败
 ok 6 - 全部 todo 判失败
   ---
-  duration_ms: 120.26325
+  duration_ms: 265.753291
   type: 'test'
   ...
 # Subtest: 通过与 skip 混合判失败
 ok 7 - 通过与 skip 混合判失败
   ---
-  duration_ms: 120.224875
+  duration_ms: 390.822167
   type: 'test'
   ...
 # Subtest: 有失败用例判失败
 ok 8 - 有失败用例判失败
   ---
-  duration_ms: 121.433458
+  duration_ms: 341.25575
   type: 'test'
   ...
 1..8
@@ -59,6 +59,6 @@ ok 8 - 有失败用例判失败
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 748.074833
+# duration_ms 1925.603417
 test-runner:实际执行并通过 8 条用例
 exit=0
