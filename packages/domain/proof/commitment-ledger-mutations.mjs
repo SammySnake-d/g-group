@@ -188,6 +188,46 @@ const criteria = [
   ["C98 对账空绑定列表抛错", 'if (!isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) return { ok: false, reason: "invalid-input" };', 'if (ids === null) throw new TypeError("null bindings threw");\n  if (!isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) return { ok: false, reason: "invalid-input" };', "对账入口拒绝空绑定列表", "null bindings threw"],
   ["C99 空所有者抛错", 'if (!text(ownerId)) return fail("invalid-input");', 'if (ownerId === null) throw new TypeError("null owner threw");\n  if (!text(ownerId)) return fail("invalid-input");', "创建账本拒绝空所有者", "null owner threw"],
   ["C100 空字符串所有者抛错", 'if (!text(ownerId)) return fail("invalid-input");', 'if (ownerId === "") throw new TypeError("empty owner threw");\n  if (!text(ownerId)) return fail("invalid-input");', "创建账本拒绝空字符串所有者", "empty owner threw"],
+
+  // Reviewer round 2 and individually scoped terminal/reconciliation checks.
+  ["R2-F01A 幂等载荷忽略数组", "if (Array.isArray(value)) return `[${value.map(canonical).join(\",\")}]`;", "if (Array.isArray(value)) return \"[]\";", "同动作处理承诺元素内容冲突", "action-id-conflict"],
+  ["R2-F01B 幂等载荷忽略数组", "if (Array.isArray(value)) return `[${value.map(canonical).join(\",\")}]`;", "if (Array.isArray(value)) return \"[]\";", "同动作处理承诺元素个数冲突", "action-id-conflict"],
+  ["R2-F02 幂等只比较动作类型", "if (previous) return previous.payload === payload ?", "if (previous) return JSON.parse(previous.payload).type === input.type ?", "绑定动作号不能用于另一载荷", "action-id-conflict"],
+  ["R2-F03 原文取自任意消息", "if (input.commitments.some((c) => !m.text.includes(c.text))) return fail(\"commitment-text-not-source\");", "if (input.commitments.some((c) => !messages.some((x) => x.text.includes(c.text)))) return fail(\"commitment-text-not-source\");", "承诺原文不能取自另一条消息", "commitment-text-not-source"],
+  ["R2-T-done-progress 终态允许 progress", "if (current.status !== \"active\") return fail(\"commitment-closed\");", "if (current.status !== \"active\" && !(current.status === \"done\" && input.type === \"progress\")) return fail(\"commitment-closed\");", "done 终态拒绝 progress", "commitment-closed"],
+  ["R2-T-done-close 终态允许 close", "if (current.status !== \"active\") return fail(\"commitment-closed\");", "if (current.status !== \"active\" && !(current.status === \"done\" && input.type === \"close\")) return fail(\"commitment-closed\");", "done 终态拒绝 close", "commitment-closed"],
+  ["R2-T-done-bind-compute 终态允许 bind-compute", "if (current.status !== \"active\") return fail(\"commitment-closed\");", "if (current.status !== \"active\" && !(current.status === \"done\" && input.type === \"bind-compute\")) return fail(\"commitment-closed\");", "done 终态拒绝 bind-compute", "commitment-closed"],
+  ["R2-T-revoked-progress 终态允许 progress", "if (current.status !== \"active\") return fail(\"commitment-closed\");", "if (current.status !== \"active\" && !(current.status === \"revoked\" && input.type === \"progress\")) return fail(\"commitment-closed\");", "revoked 终态拒绝 progress", "commitment-closed"],
+  ["R2-T-revoked-close 终态允许 close", "if (current.status !== \"active\") return fail(\"commitment-closed\");", "if (current.status !== \"active\" && !(current.status === \"revoked\" && input.type === \"close\")) return fail(\"commitment-closed\");", "revoked 终态拒绝 close", "commitment-closed"],
+  ["R2-T-revoked-bind-compute 终态允许 bind-compute", "if (current.status !== \"active\") return fail(\"commitment-closed\");", "if (current.status !== \"active\" && !(current.status === \"revoked\" && input.type === \"bind-compute\")) return fail(\"commitment-closed\");", "revoked 终态拒绝 bind-compute", "commitment-closed"],
+  ["R2-F04-superseded 不把 superseded 当终态", "if (current.status !== \"active\") return fail(\"commitment-closed\");", "if (current.status !== \"active\" && current.status !== \"superseded\") return fail(\"commitment-closed\");", "superseded 终态拒绝 progress", "commitment-closed"],
+  ["R2-T-superseded-close 终态允许 close", "if (current.status !== \"active\") return fail(\"commitment-closed\");", "if (current.status !== \"active\" && !(current.status === \"superseded\" && input.type === \"close\")) return fail(\"commitment-closed\");", "superseded 终态拒绝 close", "commitment-closed"],
+  ["R2-T-superseded-bind-compute 终态允许 bind-compute", "if (current.status !== \"active\") return fail(\"commitment-closed\");", "if (current.status !== \"active\" && !(current.status === \"superseded\" && input.type === \"bind-compute\")) return fail(\"commitment-closed\");", "superseded 终态拒绝 bind-compute", "commitment-closed"],
+  ["R2-F04-blocked 不把 blocked 当终态", "if (current.status !== \"active\") return fail(\"commitment-closed\");", "if (current.status !== \"active\" && current.status !== \"blocked\") return fail(\"commitment-closed\");", "blocked 终态拒绝 progress", "commitment-closed"],
+  ["R2-T-blocked-close 终态允许 close", "if (current.status !== \"active\") return fail(\"commitment-closed\");", "if (current.status !== \"active\" && !(current.status === \"blocked\" && input.type === \"close\")) return fail(\"commitment-closed\");", "blocked 终态拒绝 close", "commitment-closed"],
+  ["R2-T-blocked-bind-compute 终态允许 bind-compute", "if (current.status !== \"active\") return fail(\"commitment-closed\");", "if (current.status !== \"active\" && !(current.status === \"blocked\" && input.type === \"bind-compute\")) return fail(\"commitment-closed\");", "blocked 终态拒绝 bind-compute", "commitment-closed"],
+  ["R2-F05-revoked 对账错误挂起 revoked", "return c.status === \"active\" && !state.activity", "return c.status !== \"done\" && !state.activity", "revoked 承诺在别轮对账已就绪", "pending"],
+  ["R2-F05-superseded 对账错误挂起 superseded", "return c.status === \"active\" && !state.activity", "return (c.status === \"active\" || c.status === \"superseded\") && !state.activity", "superseded 承诺在别轮对账已就绪", "pending"],
+  ["R2-F05-blocked 对账错误挂起 blocked", "return c.status === \"active\" && !state.activity", "return (c.status === \"active\" || c.status === \"blocked\") && !state.activity", "blocked 承诺在别轮对账已就绪", "pending"],
+  ["R2-F06 快照序号可重复", "new Set(messages.map((m) => m.seq)).size === messages.length &&", "", "快照拒绝不同消息复用序号", "invalid-input"],
+  ["R2-F07 活动承诺带了结信息", "(c.status === \"active\" ? c.resolution === null : c.resolution !== null &&", "(c.status === \"active\" ? true : c.resolution !== null &&", "快照拒绝活动承诺携带了结信息", "invalid-input"],
+  ["R2-F08A 不拒多余字段", "Object.keys(x).length === expected.length && expected.every", "expected.every", "快照拒绝多余字段", "invalid-input"],
+  ["R2-F08B 不拒多余字段", "Object.keys(x).length === expected.length && expected.every", "expected.every", "命令拒绝多余字段", "invalid-input"],
+  ["R2-F09A 不校验活动归属", "x.activity.every((a: { commitmentId: string; taskId: string }) => commitments.some((c) => c.id === a.commitmentId && c.taskId === a.taskId));", "true;", "快照拒绝活动指向不存在承诺", "invalid-input"],
+  ["R2-F09B 不校验活动归属", "x.activity.every((a: { commitmentId: string; taskId: string }) => commitments.some((c) => c.id === a.commitmentId && c.taskId === a.taskId));", "true;", "快照拒绝活动指向不同任务的承诺", "invalid-input"],
+  ["R2-F10 来源可未处理", "messages.some((m) => m.seq === c.sourceSeq && m.handled && m.text.includes(c.text))", "messages.some((m) => m.seq === c.sourceSeq && m.text.includes(c.text))", "快照拒绝承诺来源消息尚未处理", "invalid-input"],
+
+  // Additional snapshot invariants found in the condition-by-condition audit.
+  ["A01 快照消息编号可重复", "new Set(messages.map((m) => m.id)).size === messages.length &&", "", "快照拒绝重复消息编号", "invalid-input"],
+  ["A02 快照承诺编号可重复", "new Set(commitments.map((c) => c.id)).size === commitments.length &&", "", "快照拒绝重复承诺编号", "invalid-input"],
+  ["A03 快照动作编号可重复", "new Set(actions.map((a) => a.id)).size === actions.length &&", "true &&", "快照拒绝重复动作编号", "invalid-input"],
+  ["A04 快照终态可缺了结", "(c.status === \"active\" ? c.resolution === null : c.resolution !== null &&", "(c.status === \"active\" ? c.resolution === null : c.resolution === null || c.resolution !== null &&", "快照拒绝终态缺少了结信息", "invalid-input"],
+  ["A05-revoked 快照终态可缺原因", "text(c.resolution.detail)", "true", "快照拒绝 revoked 缺少原因", "invalid-input"],
+  ["A05-superseded 快照终态可缺原因", "text(c.resolution.detail)", "true", "快照拒绝 superseded 缺少原因", "invalid-input"],
+  ["A05-blocked 快照终态可缺原因", "text(c.resolution.detail)", "true", "快照拒绝 blocked 缺少原因", "invalid-input"],
+  ["A06 同次登记编号可重复", "new Set(ids).size !== ids.length ||", "", "单次处理拒绝重复承诺编号", "commitment-id-conflict"],
+  ["A07 对账编号可重复", " || new Set(ids).size !== ids.length", "", "对账拒绝重复绑定编号", "invalid-input"],
+  ["A08 无任务来源不接受指定任务", "m.taskId !== null && c.taskId !== m.taskId", "c.taskId !== m.taskId", "无任务来源可登记指定任务承诺", "task-b"],
 ];
 
 for (const [name, from, to, criterion, marker] of criteria) {
@@ -216,7 +256,7 @@ try {
     return dir;
   };
   const baseline = run(makeCopy("baseline"));
-  const baselineOk = baseline.status === 0 && baseline.passed.length === 141 && baseline.failed.length === 0;
+  const baselineOk = baseline.status === 0 && baseline.passed.length === 176 && baseline.failed.length === 0;
   console.log(`${baselineOk ? "PASS" : "FAIL"} 原样对照 ${baseline.passed.length} 通过 / ${baseline.failed.length} 失败`);
   if (!baselineOk) success = false;
   const named = new Set(mutants.map(([, , , expected]) => expected));

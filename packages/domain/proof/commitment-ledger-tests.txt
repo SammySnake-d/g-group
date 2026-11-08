@@ -77,3 +77,11 @@ scenarios remain alongside isolated criteria, so dependent tests may also fail w
 a shared prerequisite is mutated; these collateral failures are shown in the log.
 These mutations calibrate the stated local criteria, not untested host integration
 or every conceivable implementation fault.
+
+Round 3 verification (previous figures above describe earlier runs)
+Final red c06c1420eb5c2fb3960e2b71d8aba774d7de49fe: 176 named failures, 0 passes, 0 file-level failures; retrospective stub after implementation.
+Final green d0d1ed9e4e4ee78d76d6458039a2fa43da21be5c: 176/176 named passes.
+npm run typecheck: exit 0; npm run lint: exit 0, 16 files checked; npm test: 199/199, 0 failed, 0 skipped.
+Serial mutation calibration: unchanged control 176/176; 176/176 named mappings; 190/190 killed, 0 survived.
+Round 2 review mutants R2-F01 through R2-F10 are included; each maps to a named test and diagnostic.
+The implementation is byte-identical to b37b2f0, and the full host-level AC-40 / AC-16 remain untested.
