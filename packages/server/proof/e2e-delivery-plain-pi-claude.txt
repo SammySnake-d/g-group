@@ -1,0 +1,32 @@
+# 2026-11-09 交付是普通消息(AC-56)+ 用户普通回复验收(AC-28)真实运行:真实 pi 联系人脑子 + 真实 Claude Code Compute,私聊
+# 命令: node packages/server/src/cli.ts dm --db /tmp/gg-f-run/real56/gg.db --mind pi --compute claude --cwd /tmp/gg-f-run/real56/work --timeout 900 --then "通过,谢谢" "帮我在你的工作目录里写一个 deliver.txt,内容是 delivered as a plain message,写好告诉我"
+# 代码: feat/delivery-plain(rebase 到 dev/integration 94595b8 之后);模型 $ANTHROPIC_DEFAULT_SONNET_MODEL=fnqtz/claude-opus-5-5 经本机网关,令牌只经环境变量
+# 结论: 交付 #4 是一条普通消息(无卡片)并 @ 我;我回「通过,谢谢」后联系人提交 verdict,任务 T8_Accepted、审查门 waived-by-user;任务卡收口为 done;对话里没有任何验收卡或按钮
+# 下面是运行输出原文
+  → 小克: 接了任务:写 deliver.txt
+  → 小克: 好的,这就去写 deliver.txt,写好告诉你。
+  · Compute started: 已开始
+  · Compute completed: 已在工作目录创建 deliver.txt,读回检查后内容与要求一致。
+
+- **绝对路径**:`/private/tmp/gg-f-run/real56/work/t-mw862l83-1/deliver.txt`
+- **内容**:`delivered as a plain message`
+
+文件共 28 字节，末尾没有换行符。已通过 report_progress 向宿主报告完成。
+  → 小克: deliver.txt 已经写好，读回检查过，内容和你要的一样。
+- 路径:/private/tmp/gg-f-run/real56/work/t-mw862l83-1/deliver.txt
+- 内容:delivered as a plain message(共 28 字节，末尾没有换行)
+你看一下，没问题就回我一声。
+  ← 我: 通过,谢谢
+  → 小克: 好的，已经按通过记下了，不客气。
+—— 会话 ——
+#1 我: 帮我在你的工作目录里写一个 deliver.txt,内容是 delivered as a plain message,写好告诉我
+#2 小克: 接了任务:写 deliver.txt  [卡片:task-status/done 取消任务]
+#3 小克: 好的,这就去写 deliver.txt,写好告诉你。
+#4 小克: deliver.txt 已经写好，读回检查过，内容和你要的一样。
+- 路径:/private/tmp/gg-f-run/real56/work/t-mw862l83-1/deliver.txt
+- 内容:delivered as a plain message(共 28 字节，末尾没有换行)
+你看一下，没问题就回我一声。  [@我]
+#5 我: 通过,谢谢
+#6 小克: 好的，已经按通过记下了，不客气。
+任务 t-mw862l83-1 [T8_Accepted] 写 deliver.txt 审查门=waived-by-user 进度=started>completed Compute=cc-55bbd57e-0780-4287-97ad-beb579f5237a
+# deliver.txt 实际内容: delivered as a plain message

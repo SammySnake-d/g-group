@@ -44,6 +44,7 @@ node packages/server/src/cli.ts group --db /tmp/gg.db --mind pi --compute claude
 | 全员送达、单飞攒批、入库去重、发送前撤销重跑 | AC-31 ①–④ | host.test.ts、kernel/attention.test.ts |
 | 接走即已读、群名单含联系人、表情不改已读 | AC-46 | host.test.ts、chat-ops.test.ts |
 | 无跨厂商审查人时用户豁免、如实记 waived-by-user | AC-26 ⑤ | host.test.ts |
+| 交付是普通消息并 @ 提出者;用户普通回复由联系人转成 verdict;沉默不通过;退回恢复原实例或携交接新开 | AC-56、AC-28 | delivery-plain.test.ts、proof/e2e-delivery-plain-pi-claude.txt |
 | 承诺随来源登记、验收后以产物了结、用户撤销 | AC-40 ② | host.test.ts、chat-ops.test.ts |
 | 五块重拼、前缀稳定、旧消息不进第 4 块 | AC-39、AC-40 ⑪ | host.test.ts、kernel/rounds.test.ts |
 | 编辑撤回只追加、撤回原文不再出现 | AC-05、AC-08 | chat-ops.test.ts |

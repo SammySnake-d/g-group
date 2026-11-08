@@ -28,6 +28,8 @@ const { values, positionals } = parseArgs({
     members: { type: "string", default: "小克,小研" },
     to: { type: "string" },
     title: { type: "string", default: "项目群" },
+    /** 第一轮收尾后再以用户身份发的一条(如对交付回复「通过」或修改意见),发完再等收尾。 */
+    then: { type: "string" },
   },
 });
 const [cmd, ...rest] = positionals;
@@ -75,10 +77,11 @@ function print(host: Host, roomId: string) {
   for (const m of host.listMessages(roomId, { limit: 500 }).messages) {
     const who = m.sender.kind === "user" ? "我" : (host.listContacts().find((c) => c.id === m.sender.id)?.name ?? m.sender.id);
     const card = m.card ? `  [卡片:${m.card.kind}/${m.card.state} ${m.card.actions.map((a) => a.label).join("|")}]` : "";
-    console.log(`#${m.seq} ${who}: ${m.text}${card}`);
+    const at = m.mentions.length ? `  [@${m.mentions.map((x) => (x.id === host.userId ? "我" : (host.listContacts().find((c) => c.id === x.id)?.name ?? x.id))).join(" @")}]` : "";
+    console.log(`#${m.seq} ${who}: ${m.text}${card}${at}`);
   }
   for (const t of host.listTasks({ roomId })) {
-    console.log(`任务 ${t.id} [${t.state}] ${t.title} 审查门=${t.reviewGate} 进度=${t.recentProgress.map((p) => p.kind).join(">")}`);
+    console.log(`任务 ${t.id} [${t.state}] ${t.title} 审查门=${t.reviewGate} 进度=${t.recentProgress.map((p) => p.kind).join(">")} Compute=${t.computeRuns.map((r) => r.computeId).join(",")}`);
   }
 }
 
@@ -97,6 +100,11 @@ async function runGroup(host: Host, model: string | undefined) {
   console.log(`群 ${room.id}「${room.title}」成员: ${room.members.map((m) => (m.kind === "user" ? "我" : nameOf(m.id))).join("、")}`);
   const run = await sendAndWait(host, room.id, text, { ...(values.to ? { mention: values.to } : {}), timeoutMs: Number(values.timeout) * 1000 });
   if (run.timedOut) console.error("超时,仍有任务在执行");
+  if (values.then) {
+    console.log(`  ← 我: ${values.then}`);
+    const next = await sendAndWait(host, room.id, values.then, { ...(values.to ? { mention: values.to } : {}), timeoutMs: Number(values.timeout) * 1000 });
+    if (next.timedOut) console.error("超时,仍有任务在执行");
+  }
   console.log("—— 群记录 ——");
   print(host, room.id);
   const audit = senderAudit(host, room.id);
@@ -140,18 +148,12 @@ async function main() {
       if (e.type === "message.appended" && e.message.sender.kind === "contact") console.log(`  → ${values.name}: ${e.message.text}`);
       if (e.type === "compute.progress") console.log(`  · Compute ${e.progress.kind}${e.progress.stage ? `(${e.progress.stage})` : ""}: ${e.progress.summary.slice(0, 200)}`);
     });
-    host.send({ roomId: room.id, clientActionId: `cli-${Date.now()}`, text });
-    const deadline = Date.now() + Number(values.timeout) * 1000;
-    // 等到联系人空闲、任务不在执行中
-    for (;;) {
-      await host.idle();
-      await new Promise((r) => setTimeout(r, 500));
-      const running = host.listTasks({ roomId: room.id }).some((t) => ["T1_Open", "T2_Claimed", "T3_Running"].includes(t.state));
-      if (!running && !host.loop.busy()) break;
-      if (Date.now() > deadline) {
-        console.error("超时,仍有任务在执行");
-        break;
-      }
+    const first = await sendAndWait(host, room.id, text, { timeoutMs: Number(values.timeout) * 1000 });
+    if (first.timedOut) console.error("超时,仍有任务在执行");
+    if (values.then) {
+      console.log(`  ← 我: ${values.then}`);
+      const second = await sendAndWait(host, room.id, values.then, { timeoutMs: Number(values.timeout) * 1000 });
+      if (second.timedOut) console.error("超时,仍有任务在执行");
     }
     console.log("—— 会话 ——");
     print(host, room.id);
