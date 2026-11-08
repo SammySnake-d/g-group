@@ -1,0 +1,30 @@
+packages/ui-core/src/cron.ts
+  s_58a77bc541c265::t_4d986fe03b26a6 56,78,95,97,103,109,117,131-248,252-258,261-290,293-294,309-313,316-322,331-338,341-342,347-362,365-371,375-377,380-393,396-407
+  s_58a77bc541c265::t_015538b7242e80 53-55
+  s_58a77bc541c265::t_a24bb5c679e4c5 57-59
+  s_58a77bc541c265::t_8d305d96293ecf 75-77
+  s_58a77bc541c265::t_7950eec6c12ac0 79-81,92-94
+  s_58a77bc541c265::t_c3cf0fdbf42252 96
+  s_58a77bc541c265::t_37ad7b0bb270ed 98
+  s_58a77bc541c265::t_39aee7580e7be9 101-102
+  s_58a77bc541c265::t_1c00c4d7765164 104-108
+  s_58a77bc541c265::t_b9cd26987c9033 110-112,114-116
+  s_58a77bc541c265::t_4376541a44aa66 118-120,128-130
+  s_58a77bc541c265::t_b62aea10e4f587 21-23,48,50-52,60,63-74,82-91,113,121-127,410-417,420-424
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0289848af5cf78654557b848115947dc5dec8f61",
+  "prompts": {},
+  "sessions": {
+    "s_58a77bc541c265": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a84c00f5de6dce335",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
