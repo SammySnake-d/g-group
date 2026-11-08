@@ -20,14 +20,19 @@ const ASK_BEFORE: readonly RegExp[] = Object.freeze([
 
 /** 群规里生效的「改前先问」那一行原文;没有返回 null。群规是用户写的自由文本,按行查。 */
 export function askBeforeWriteRule(rules: string): string | null {
-
-  throw new Error("未实现");
+  if (typeof rules !== "string") throw new TypeError("群规必须是字符串");
+  for (const raw of rules.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (line && ASK_BEFORE.some((re) => re.test(line))) return line;
+  }
+  return null;
 }
 
 /** 按群规收紧执行器工具:要先问且这一版没拿到授权,就去掉全部写工具;否则原样。返回冻结的新数组。 */
 export function gateTools(tools: readonly string[], askFirst: boolean, granted: boolean): readonly string[] {
-
-  throw new Error("未实现");
+  if (!Array.isArray(tools) || !tools.every((t) => typeof t === "string")) throw new TypeError("tools 必须是字符串数组");
+  if (typeof askFirst !== "boolean" || typeof granted !== "boolean") throw new TypeError("askFirst/granted 必须是布尔值");
+  return Object.freeze(askFirst && !granted ? tools.filter((t) => !WRITE_TOOLS.includes(t)) : [...tools]);
 }
 
 // ---------------------------------------------------------------- 表态识别
@@ -64,8 +69,16 @@ const clauses = (s: string): string[] =>
  * 每个分句都是拒绝才算 reject;混合、带条件、反问、或只有别的内容一律 unclear(不放行,交给追问)。
  */
 export function consentIntent(text: string): Intent {
-
-  throw new Error("未实现");
+  if (typeof text !== "string") throw new TypeError("text 必须是字符串");
+  const own = ownWords(text);
+  if (HEDGE.test(own.trim())) return "unclear";
+  const cs = clauses(own);
+  if (cs.length === 0) return "unclear";
+  const isApprove = (c: string) => APPROVE_WORDS.has(c) || (!NEGATOR.test(c) && CONSENT_VERB.test(c));
+  const isReject = (c: string) => REJECT_WORDS.has(c) || (NEGATOR.test(c) && CONSENT_VERB.test(c));
+  if (cs.every(isApprove)) return "approve";
+  if (cs.every(isReject)) return "reject";
+  return "unclear";
 }
 
 // ---------------------------------------------------------------- 待授权请求与答复绑定
@@ -122,8 +135,11 @@ const REQ_INPUT = {
 } as const;
 /** 登记一次待授权。字段不合格抛 TypeError(宿主内部调用,不是用户输入)。 */
 export function openRequest(input: { qId: string; taskId: string; constraintVer: number; action: string; principal: string; roomId: string; askedSeq: number }): AuthRequest {
-
-  throw new Error("未实现");
+  const n = normalize<typeof input>(input, REQ_INPUT, "待授权请求");
+  if (!n.ok) throw new TypeError(n.reason);
+  const r = n.value;
+  if (!isText(r.qId) || !isText(r.taskId) || !isNat(r.constraintVer) || !isText(r.action) || !isText(r.principal) || !isText(r.roomId) || !isPos(r.askedSeq)) throw new TypeError("待授权请求字段不合法");
+  return freeze({ ...r, state: "pending" as const, decidedBy: null, reason: null });
 }
 
 /** 取答复消息的纯数据快照:sender 与 replyToSeq/quotedSeqs 单独核对类型,不合格返回 null。 */
@@ -155,8 +171,35 @@ function readMessage(msg: unknown): ConsentMessage | null {
  * 5. 回复/引用了某次提问的,就是那一次(那次已了结或过期 → 不放行);没指明时只有一个候选才绑定,多个就追问。
  */
 export function resolveConsent(requests: readonly AuthRequest[], msg: ConsentMessage): Resolution {
-
-  throw new Error("未实现");
+  if (!Array.isArray(requests)) throw new TypeError("requests 必须是数组");
+  const m = readMessage(msg);
+  if (!m) return freeze({ kind: "none", reason: "答复消息字段不合法" });
+  if (m.sender.kind !== "user") return freeze({ kind: "none", reason: "只有用户本人能授权,联系人、Helper 或宿主的话不算" });
+  if (m.forwarded) return freeze({ kind: "none", reason: "转发的内容不是本人当前的授权" });
+  if (m.external) return freeze({ kind: "none", reason: "外部材料不产生授权" });
+  const intent = consentIntent(m.text);
+  if (intent === "unclear") return freeze({ kind: "none", reason: "没有干脆的同意或拒绝" });
+  const inRoom = requests.filter((r) => r.roomId === m.roomId);
+  const anchors = new Set<number>([...(m.replyToSeq !== null ? [m.replyToSeq] : []), ...m.quotedSeqs]);
+  const anchored = inRoom.filter((r) => anchors.has(r.askedSeq));
+  const live = (r: AuthRequest) => r.state === "pending" && r.principal === m.sender.id && r.askedSeq < m.seq;
+  const bind = (r: AuthRequest): Resolution => freeze({
+    kind: "decision", decision: intent,
+    binding: freeze({ taskId: r.taskId, qId: r.qId, constraintVer: r.constraintVer, action: r.action, authorizer: m.sender.id, roomId: m.roomId, seq: m.seq }),
+  });
+  if (anchored.length) {
+    const ok = anchored.filter(live);
+    if (ok.length === 1) return bind(ok[0]!);
+    if (ok.length > 1) return freeze({ kind: "ambiguous", candidates: freeze(ok.map((r) => r.qId)), decision: intent });
+    const any = anchored[0]!;
+    if (any.principal !== m.sender.id) return freeze({ kind: "none", reason: `只有 ${any.principal} 本人能答这次授权` });
+    return freeze({ kind: "none", reason: `所答的提问 ${any.qId} 已${any.state === "pending" ? "不在有效期" : any.state === "expired" ? "过期·未执行" : "处理过"}` });
+  }
+  const mine = inRoom.filter(live);
+  if (mine.length === 1) return bind(mine[0]!);
+  if (mine.length > 1) return freeze({ kind: "ambiguous", candidates: freeze(mine.map((r) => r.qId)), decision: intent });
+  if (inRoom.some((r) => r.state === "pending" && r.askedSeq < m.seq)) return freeze({ kind: "none", reason: "不是这次授权的授权人本人" });
+  return freeze({ kind: "none", reason: "没有待授权的动作" });
 }
 
 /** 任务当前的绑定快照:用来核对答复是否仍然有效(前提没变、没取消、版本没变)。 */
@@ -168,18 +211,36 @@ export interface TaskBinding { readonly taskId: string; readonly state: string; 
  * 已了结的请求再收到同一条答复幂等;收到另一条答复不改结论。
  */
 export function settleRequest(req: AuthRequest, binding: Binding, decision: "approve" | "reject", task: TaskBinding): { ok: true; request: AuthRequest; effective: boolean } | { ok: false; reason: string } {
-
-  throw new Error("未实现");
+  if (decision !== "approve" && decision !== "reject") return { ok: false, reason: "decision 只能是 approve/reject" };
+  if (binding.qId !== req.qId || binding.taskId !== req.taskId) return { ok: false, reason: "答复绑定的不是这次授权" };
+  if (binding.authorizer !== req.principal) return { ok: false, reason: `只有 ${req.principal} 本人能答这次授权` };
+  if (req.state !== "pending") {
+    const same = req.decidedBy !== null && req.decidedBy.roomId === binding.roomId && req.decidedBy.seq === binding.seq;
+    return same ? { ok: true, request: req, effective: false } : { ok: false, reason: `这次授权已${req.state === "expired" ? "过期·未执行" : "处理过"}` };
+  }
+  const expired = (reason: string) => ({ ok: true as const, effective: false, request: freeze({ ...req, state: "expired" as const, decidedBy: null, reason }) });
+  if (binding.constraintVer !== req.constraintVer) return expired(`答复针对 v${binding.constraintVer},请求是 v${req.constraintVer}`);
+  if (task.taskId !== req.taskId) return { ok: false, reason: "任务对不上" };
+  if (task.state !== "T4b_BlockedOnHuman") return expired(`任务已在 ${task.state},前提失效`);
+  if (task.pendingQId !== req.qId) return expired("任务当前等的不是这张卡");
+  if (task.constraintVer !== req.constraintVer) return expired(`任务已升到 v${task.constraintVer},这次授权针对 v${req.constraintVer}`);
+  return {
+    ok: true,
+    effective: true,
+    request: freeze({ ...req, state: decision === "approve" ? "granted" as const : "denied" as const, decidedBy: freeze({ roomId: binding.roomId, seq: binding.seq }), reason: null }),
+  };
 }
 
 /** 任务前提变了(改条件、取消、版本推进、卡被替换):把还 pending 的请求记为 expired。返回新数组,不改入参。 */
 export function expireStale(requests: readonly AuthRequest[], task: TaskBinding): readonly AuthRequest[] {
-
-  throw new Error("未实现");
+  return Object.freeze(requests.map((r) => {
+    if (r.state !== "pending" || r.taskId !== task.taskId) return r;
+    if (task.state === "T4b_BlockedOnHuman" && task.pendingQId === r.qId && task.constraintVer === r.constraintVer) return r;
+    return freeze({ ...r, state: "expired" as const, reason: "前提已变,过期·未执行" });
+  }));
 }
 
 /** 这一版有没有本人给过的写授权(granted 且版本等于当前版本)。 */
 export function hasGrant(requests: readonly AuthRequest[], taskId: string, constraintVer: number): boolean {
-
-  throw new Error("未实现");
+  return requests.some((r) => r.taskId === taskId && r.state === "granted" && r.constraintVer === constraintVer);
 }

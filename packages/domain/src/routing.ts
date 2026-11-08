@@ -21,8 +21,15 @@ const isText = (s: unknown): s is string => typeof s === "string" && s.trim().le
 const texts = (xs: unknown): xs is readonly string[] => Array.isArray(xs) && xs.every(isText);
 
 export function routeFollowUp(input: RouteInput, policy: RoutePolicy): RouteDecision {
-
-  throw new Error("未实现");
+  if (!ROUTE_POLICIES.includes(policy)) throw new TypeError(`未知策略 ${String(policy)}`);
+  if (typeof input !== "object" || input === null || !texts(input.liveTaskIds)) throw new TypeError("liveTaskIds 必须是非空字符串数组");
+  const live = [...new Set(input.liveTaskIds)];
+  if (input.anchorTaskId !== null && live.includes(input.anchorTaskId)) return Object.freeze({ kind: "attach", taskId: input.anchorTaskId });
+  if (live.length === 0) return Object.freeze({ kind: "none" });
+  if (live.length === 1) return Object.freeze({ kind: "attach", taskId: live[0]! });
+  if (policy === "ask-when-ambiguous") return Object.freeze({ kind: "ask", candidates: Object.freeze(live) });
+  const pick = input.guess !== null && live.includes(input.guess) ? input.guess : live[0]!;
+  return Object.freeze({ kind: "attach", taskId: pick });
 }
 
 /** 回放里的一条补充:系统怎么处理的、标注的正确归属、事后有没有被纠正(E5 改挂/撤销)。 */
@@ -46,13 +53,29 @@ export interface RoutingReport {
 
 /** 这条补充算不算挂错:挂到的不是标注归属;没挂(none)而标注属于某任务也算(该挂没挂);问过就由用户答复定归属,不算。 */
 export function misattachedOf(d: RouteDecision, truth: string | null): boolean {
-
-  throw new Error("未实现");
+  if (d.kind === "attach") return d.taskId !== truth;
+  if (d.kind === "none") return truth !== null;
+  return false;
 }
 
 export function routingReport(records: readonly RoutingRecord[]): RoutingReport {
-
-  throw new Error("未实现");
+  if (!Array.isArray(records)) throw new TypeError("records 必须是数组");
+  let clarifyAsks = 0;
+  let misattached = 0;
+  let misattachedUncorrected = 0;
+  const seen = new Set<string>();
+  for (const r of records) {
+    if (!isText(r.msgKey)) throw new TypeError("msgKey 必须是非空字符串");
+    if (seen.has(r.msgKey)) throw new TypeError(`回放里 ${r.msgKey} 重复`);
+    seen.add(r.msgKey);
+    const d = r.decision;
+    if (d.kind === "ask") clarifyAsks++;
+    if (misattachedOf(d, r.truth)) {
+      misattached++;
+      if (!r.corrected) misattachedUncorrected++;
+    }
+  }
+  return Object.freeze({ total: records.length, clarifyAsks, misattached, misattachedUncorrected });
 }
 
 export interface RoutingThresholds {
@@ -61,6 +84,9 @@ export interface RoutingThresholds {
 }
 /** 按给定阈值判;阈值待用户拍板,没给的那个数只报不判。 */
 export function judgeRouting(report: RoutingReport, thresholds: RoutingThresholds = {}): { readonly pass: boolean; readonly violations: readonly string[] } {
-
-  throw new Error("未实现");
+  const v: string[] = [];
+  const { maxClarifyAsks, maxMisattachedUncorrected } = thresholds;
+  if (maxClarifyAsks !== undefined && report.clarifyAsks > maxClarifyAsks) v.push(`追问 ${report.clarifyAsks} 次,超过阈值 ${maxClarifyAsks}`);
+  if (maxMisattachedUncorrected !== undefined && report.misattachedUncorrected > maxMisattachedUncorrected) v.push(`挂错且未纠正 ${report.misattachedUncorrected} 条,超过阈值 ${maxMisattachedUncorrected}`);
+  return Object.freeze({ pass: v.length === 0, violations: Object.freeze(v) });
 }

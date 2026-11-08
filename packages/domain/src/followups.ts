@@ -63,8 +63,8 @@ const build = (taskId: string, bindingVer: number, links: readonly Link[], pendi
 });
 
 export function emptyFollowUps(taskId: string): FollowUps {
-
-  throw new Error("未实现");
+  if (!isText(taskId)) throw new TypeError("taskId 必须是非空字符串");
+  return build(taskId, 0, [], null);
 }
 
 const maxVer = (fu: FollowUps): number => fu.links.reduce((m, l) => Math.max(m, l.ver), -1);
@@ -133,8 +133,21 @@ const requirementsOf = (links: readonly Link[]): Requirement[] => links.filter((
  * 同一条重复登记幂等;已改挂走的消息不能被同一路径挂回(要挂回走改挂);版本不能比已登记的更旧。
  */
 export function receiveFollowUp(state: FollowUps, input: { roomId: string; seq: number; text: string; ver: number }): FollowUpResult {
-
-  throw new Error("未实现");
+  const s = readState(state);
+  if (!s.ok) return fail(s.reason);
+  const n = normalize<{ roomId: string; seq: number; text: string; ver: number }>(input, MSG_SCHEMA, "补充消息");
+  if (!n.ok) return fail(n.reason);
+  const m = n.value;
+  if (!isText(m.roomId) || !isPos(m.seq) || !isText(m.text) || !isNat(m.ver)) return fail("补充消息字段不合法");
+  const fu = s.fu;
+  const i = find(fu, m.roomId, m.seq);
+  if (i >= 0) {
+    const l = fu.links[i]!;
+    if (l.state === "Rebound") return fail(`${keyOf(m.roomId, m.seq)} 已改挂到 ${l.reboundTo},不能直接挂回(请走改挂)`);
+    return done(fu);
+  }
+  if (m.ver < maxVer(fu)) return fail(`补充版本 v${m.ver} 比已登记的 v${maxVer(fu)} 旧,版本不能倒退`);
+  return done(build(fu.taskId, fu.bindingVer, [...fu.links, { roomId: m.roomId, seq: m.seq, text: m.text, state: "Received", ver: m.ver, appliedIn: null, appliedVer: null, reboundTo: null }], fu.pendingRollback));
 }
 
 /**
@@ -142,14 +155,26 @@ export function receiveFollowUp(state: FollowUps, input: { roomId: string; seq: 
  * 挂入版本比产物新的补充仍是 Received(新条件只送达、还没进产物,AC-45 ③)。等回滚期间不认任何产物。
  */
 export function applyArtifact(state: FollowUps, input: { artifact: string; artifactVer: number }): FollowUpResult & { readonly pending?: readonly Requirement[] } {
-
-  throw new Error("未实现");
+  const s = readState(state);
+  if (!s.ok) return fail(s.reason);
+  const n = normalize<{ artifact: string; artifactVer: number }>(input, { artifact: { kind: "string" }, artifactVer: { kind: "number" } }, "产物");
+  if (!n.ok) return fail(n.reason);
+  if (!isText(n.value.artifact)) return fail("产物引用不能为空:Applied 必须指向具体产物");
+  if (!isNat(n.value.artifactVer)) return fail("产物版本必须是非负整数");
+  const fu = s.fu;
+  if (fu.pendingRollback) return fail("等待旧执行器停止并回滚工作区,期间的产物不算落实");
+  const { artifact, artifactVer } = n.value;
+  const links = fu.links.map((l) => (l.state === "Received" && l.ver <= artifactVer ? { ...l, state: "Applied" as const, appliedIn: artifact, appliedVer: artifactVer } : l));
+  const pending = requirementsOf(links.filter((l) => l.state === "Received"));
+  const r = done(build(fu.taskId, fu.bindingVer, links, null));
+  return r.ok ? Object.freeze({ ...r, pending: Object.freeze(pending) }) : r;
 }
 
 /** 还没落实的补充(Received,且挂入版本不晚于 uptoVer;不给就看全部)。完成判定只看它是否为空(AC-16)。 */
 export function unappliedFollowUps(state: FollowUps, uptoVer?: number): readonly Requirement[] {
-
-  throw new Error("未实现");
+  const s = readState(state);
+  if (!s.ok) throw new TypeError(s.reason);
+  return Object.freeze(requirementsOf(s.fu.links.filter((l) => l.state === "Received" && (uptoVer === undefined || l.ver <= uptoVer))));
 }
 
 /** 源任务一侧改挂的前置校验:返回拒绝原因、"idempotent"(已改挂到同一去向)或 null(可以改挂)。不看版本。 */
@@ -172,21 +197,64 @@ const OUT_SCHEMA = { roomId: { kind: "string" }, seq: { kind: "number" }, toTask
  * 等 confirmRollbackStopped;没有执行器就直接发 restore-workspace。重复改挂到同一去向幂等。
  */
 export function rebindOut(state: FollowUps, input: { roomId: string; seq: number; toTaskId: string; expectedBindingVer: number }, newVer: number | null, computeId: string | null): FollowUpResult {
-
-  throw new Error("未实现");
+  const s = readState(state);
+  if (!s.ok) return fail(s.reason);
+  const n = normalize<{ roomId: string; seq: number; toTaskId: string; expectedBindingVer: number }>(input, OUT_SCHEMA, "改挂请求");
+  if (!n.ok) return fail(n.reason);
+  const c = n.value;
+  if (!isText(c.roomId) || !isPos(c.seq) || !isText(c.toTaskId) || !isNat(c.expectedBindingVer)) return fail("改挂请求字段不合法");
+  if (newVer !== null && !isNat(newVer)) return fail("新版本必须是非负整数或 null");
+  if (computeId !== null && !isText(computeId)) return fail("执行器 id 必须是非空字符串或 null");
+  const fu = s.fu;
+  const pre = checkOut(fu, c);
+  if (pre === "idempotent") return done(fu);
+  if (pre) return fail(pre);
+  const i = find(fu, c.roomId, c.seq);
+  const m = fu.links[i]!;
+  if (newVer !== null && newVer <= maxVer(fu)) return fail(`新版本 v${newVer} 不比已登记的 v${maxVer(fu)} 新:改挂必须产生单调递增的新版本`);
+  const wasApplied = m.state === "Applied";
+  const links = fu.links.map((l, j): Link => {
+    if (j === i) return { ...l, state: "Rebound", appliedIn: null, appliedVer: null, reboundTo: c.toTaskId };
+    // 工作区要回到 #m 之前:#m 之后已落实的补充随回滚失效,退回 Received 按新版本重做
+    if (wasApplied && j > i && l.state === "Applied" && newVer !== null) return { ...l, state: "Received", ver: newVer, appliedIn: null, appliedVer: null };
+    return l;
+  });
+  const next = (rb: Rollback | null) => build(fu.taskId, fu.bindingVer + 1, links, rb);
+  if (newVer === null) return done(next(null));
+  const requirements = requirementsOf(links);
+  if (!wasApplied) return done(next(null), [{ kind: "replay", taskId: fu.taskId, ver: newVer, requirements }]);
+  if (computeId) return done(next({ roomId: m.roomId, beforeSeq: m.seq, ver: newVer, computeId }), [{ kind: "stop-for-rollback", taskId: fu.taskId, computeId }]);
+  return done(next(null), [{ kind: "restore-workspace", taskId: fu.taskId, roomId: m.roomId, beforeSeq: m.seq, ver: newVer, requirements }]);
 }
 
 /** 旧执行器停止确认:只认待回滚记录里的那个执行器;对上了才发恢复工作区 + 重放,对不上(迟到或别的实例)幂等忽略。 */
 export function confirmRollbackStopped(state: FollowUps, computeId: string): FollowUpResult {
-
-  throw new Error("未实现");
+  const s = readState(state);
+  if (!s.ok) return fail(s.reason);
+  if (!isText(computeId)) return fail("执行器 id 必须是非空字符串");
+  const fu = s.fu;
+  const rb = fu.pendingRollback;
+  if (!rb || rb.computeId !== computeId) return done(fu);
+  return done(build(fu.taskId, fu.bindingVer, fu.links, null), [{ kind: "restore-workspace", taskId: fu.taskId, roomId: rb.roomId, beforeSeq: rb.beforeSeq, ver: rb.ver, requirements: requirementsOf(fu.links) }]);
 }
 
 const IN_SCHEMA = { roomId: { kind: "string" }, seq: { kind: "number" }, text: { kind: "string" }, fromTaskId: { kind: "string" }, ver: { kind: "number" } } as const;
 /** 目标任务一侧:#m 以目标任务的新版本登记为 Received(原来从这里改挂走的,重新激活),关联版本 +1,重放给目标执行器;重复幂等。 */
 export function rebindIn(state: FollowUps, input: { roomId: string; seq: number; text: string; fromTaskId: string; ver: number }): FollowUpResult {
-
-  throw new Error("未实现");
+  const s = readState(state);
+  if (!s.ok) return fail(s.reason);
+  const n = normalize<{ roomId: string; seq: number; text: string; fromTaskId: string; ver: number }>(input, IN_SCHEMA, "改挂请求");
+  if (!n.ok) return fail(n.reason);
+  const c = n.value;
+  if (!isText(c.roomId) || !isPos(c.seq) || !isText(c.text) || !isText(c.fromTaskId) || !isNat(c.ver)) return fail("改挂请求字段不合法");
+  const fu = s.fu;
+  if (c.fromTaskId === fu.taskId) return fail("不能从自己改挂到自己");
+  const i = find(fu, c.roomId, c.seq);
+  if (i >= 0 && fu.links[i]!.state !== "Rebound") return done(fu);
+  if (c.ver < maxVer(fu)) return fail(`目标版本 v${c.ver} 比已登记的 v${maxVer(fu)} 旧,版本不能倒退`);
+  const link: Link = { roomId: c.roomId, seq: c.seq, text: c.text, state: "Received", ver: c.ver, appliedIn: null, appliedVer: null, reboundTo: null };
+  const links = i >= 0 ? fu.links.map((l, j) => (j === i ? link : l)) : [...fu.links, link];
+  return done(build(fu.taskId, fu.bindingVer + 1, links, fu.pendingRollback), [{ kind: "replay", taskId: fu.taskId, ver: c.ver, requirements: requirementsOf(links) }]);
 }
 
 // ---------------------------------------------------------------- 与任务状态机合成
@@ -210,8 +278,40 @@ function bump(t: Task, by: string, computeResumable: boolean): { ok: true; task:
  * 重复改挂(#m 已在 A 上标为改挂到 B)整体幂等,两边版本都不再推进。B 已结束(停止中/终态)拒绝。
  */
 export function rebindFollowUp(from: Side, to: Side, input: { roomId: string; seq: number; expectedBindingVer: number; by: string; computeResumable: boolean }): RebindOutcome {
-
-  throw new Error("未实现");
+  const n = normalize<{ roomId: string; seq: number; expectedBindingVer: number; by: string; computeResumable: boolean }>(
+    input, { roomId: { kind: "string" }, seq: { kind: "number" }, expectedBindingVer: { kind: "number" }, by: { kind: "string" }, computeResumable: { kind: "boolean" } }, "改挂请求");
+  if (!n.ok) return n;
+  const c = n.value;
+  if (!isText(c.by)) return { ok: false, reason: "改挂请求缺发起人" };
+  const a = readState(from.followUps);
+  if (!a.ok) return a;
+  const b = readState(to.followUps);
+  if (!b.ok) return b;
+  if (a.fu.taskId !== from.task.id || b.fu.taskId !== to.task.id) return { ok: false, reason: "关联状态与任务对不上" };
+  const cmd = { roomId: c.roomId, seq: c.seq, toTaskId: to.task.id, expectedBindingVer: c.expectedBindingVer };
+  // 先做全部前置校验(不在 A 上、已改挂别处、关联版本冲突、B 已结束):不合格时两边任务状态一点都不动
+  const pre = checkOut(a.fu, cmd);
+  if (pre === "idempotent") {
+    const same = (s: Side): SideOut => ({ task: s.task, followUps: s.followUps, taskEffects: [], effects: [] });
+    return { ok: true, from: same(from), to: same(to), idempotent: true };
+  }
+  if (pre) return { ok: false, reason: pre };
+  if (NO_VERSION_STATES.has(to.task.state)) return { ok: false, reason: `目标任务 ${to.task.id} 已结束(${to.task.state}),不能收补充` };
+  const m = a.fu.links[find(a.fu, c.roomId, c.seq)]!;
+  const ba = bump(from.task, c.by, c.computeResumable);
+  if (!ba.ok) return ba;
+  const ra = rebindOut(a.fu, cmd, ba.ver, ba.task.computeId);
+  if (!ra.ok) return ra;
+  const bb = bump(to.task, c.by, true);
+  if (!bb.ok) return bb;
+  const rb = rebindIn(b.fu, { roomId: c.roomId, seq: c.seq, text: m.text, fromTaskId: from.task.id, ver: bb.ver ?? to.task.constraintVer });
+  if (!rb.ok) return rb;
+  return {
+    ok: true,
+    idempotent: false,
+    from: { task: ba.task, followUps: ra.value, taskEffects: ba.effects, effects: ra.effects },
+    to: { task: bb.task, followUps: rb.value, taskEffects: bb.effects, effects: rb.effects },
+  };
 }
 
 /**
@@ -219,12 +319,30 @@ export function rebindFollowUp(from: Side, to: Side, input: { roomId: string; se
  * 任务停止中或已结束时拒绝(要按新条件重做得新建任务)。
  */
 export function amendWithFollowUp(side: Side, input: { roomId: string; seq: number; text: string; by: string; computeResumable: boolean }): { ok: true; task: Task; followUps: FollowUps; taskEffects: readonly TaskEffect[] } | { ok: false; reason: string } {
-
-  throw new Error("未实现");
+  const n = normalize<{ roomId: string; seq: number; text: string; by: string; computeResumable: boolean }>(
+    input, { roomId: { kind: "string" }, seq: { kind: "number" }, text: { kind: "string" }, by: { kind: "string" }, computeResumable: { kind: "boolean" } }, "改条件");
+  if (!n.ok) return n;
+  const c = n.value;
+  if (!isText(c.by)) return { ok: false, reason: "改条件缺发起人" };
+  const s = readState(side.followUps);
+  if (!s.ok) return s;
+  if (s.fu.taskId !== side.task.id) return { ok: false, reason: "关联状态与任务对不上" };
+  const i = find(s.fu, c.roomId, c.seq);
+  if (i >= 0) {
+    if (s.fu.links[i]!.state === "Rebound") return { ok: false, reason: `${keyOf(c.roomId, c.seq)} 已改挂到 ${s.fu.links[i]!.reboundTo}` };
+    return { ok: true, task: side.task, followUps: s.fu, taskEffects: [] };
+  }
+  if (NO_VERSION_STATES.has(side.task.state)) return { ok: false, reason: `任务 ${side.task.id} 已结束(${side.task.state}),新条件要另起任务` };
+  const b = bump(side.task, c.by, c.computeResumable);
+  if (!b.ok) return b;
+  const r = receiveFollowUp(s.fu, { roomId: c.roomId, seq: c.seq, text: c.text, ver: b.ver! });
+  if (!r.ok) return r;
+  return { ok: true, task: b.task, followUps: r.value, taskEffects: b.effects };
 }
 
 /** 本任务全部有效补充(重放 / 交接给执行器用),按挂入顺序。 */
 export function activeRequirements(state: FollowUps): readonly Requirement[] {
-
-  throw new Error("未实现");
+  const s = readState(state);
+  if (!s.ok) throw new TypeError(s.reason);
+  return Object.freeze(requirementsOf(active(s.fu)));
 }
