@@ -1,0 +1,45 @@
+apps/desktop/src/app/composer/MentionMenu.tsx
+  s_12ccf69de2a7ec::t_99d1aa2c3617dc 1-22
+apps/desktop/src/app/composer/QuoteBar.tsx
+  s_12ccf69de2a7ec::t_8f5030fcbd4e50 1-33
+apps/desktop/src/app/composer/ScheduleDialog.tsx
+  s_12ccf69de2a7ec::t_0558962f1c9ed7 1-16
+apps/desktop/src/app/composer/SlashHint.tsx
+  s_12ccf69de2a7ec::t_ec00893391e2bc 1-42
+apps/desktop/src/app/composer/SlashMenu.tsx
+  s_12ccf69de2a7ec::t_5eb43cd4a208d6 1-47
+apps/desktop/src/app/composer/SourceBadge.tsx
+  s_12ccf69de2a7ec::t_17834c24827379 1-29
+apps/desktop/src/app/composer/SourcePicker.tsx
+  s_12ccf69de2a7ec::t_4c19993144ec36 1-55
+apps/desktop/src/app/composer/Toolbar.tsx
+  s_12ccf69de2a7ec::t_c9f11de1a75454 1-68
+apps/desktop/src/app/composer/useAutoHeight.ts
+  s_12ccf69de2a7ec::t_8d2a33c0b47735 1-30
+apps/desktop/src/app/composer/useMention.ts
+  s_12ccf69de2a7ec::t_d15c85587811ba 1-36
+apps/desktop/src/app/composer/useSlash.ts
+  s_12ccf69de2a7ec::t_724a460f3d30ec 1-122
+apps/desktop/src/components/Composer.tsx
+  s_12ccf69de2a7ec::t_327bd415aa174c 1-16,21,24,30-33,35-40,43,47-54,57-58,60,64-66,70,73-75,77,80,83-84,89
+apps/desktop/src/components/Slash.tsx
+  s_12ccf69de2a7ec::t_ab790127db1cb7 1-5
+apps/desktop/src/components/ui/command.tsx
+  s_12ccf69de2a7ec::t_8c4c81ccbf260e 1-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f4546b4219774a595039c253104dd49cae669753",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
