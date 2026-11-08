@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { X, Plus, ArrowUp, Check, ChevronRight, Search, Bell, LogOut, Sparkles, ChevronLeft, Link2, Unlink, Forward, Send, Puzzle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { artifacts, people, sources, SHAPES, SWATCHES, MODELS, GLOBAL_MODEL, vendorOf, innerLog, agentTalks, type PersonId, type Msg } from '@/data'
+import { artifacts, people, sources, SHAPES, SWATCHES, innerLog, agentTalks, type PersonId, type Msg } from '@/data'
+import { MODE_LABEL, modelLabel } from '@/modelConfig'
+import { GlobalModelDefaults } from './ModelSettings'
 import { ProcessView } from './Workbench'
 import { CloneFlow } from './CloneFlow'
 import { useApp, type Page } from '@/ctx'
@@ -16,7 +18,6 @@ export function pageTitle(p: Page, convs: { id: string; title: string }[]): stri
   const ct = (id: string) => convs.find((c) => c.id === id)?.title ?? ''
   switch (p.t) {
     case 'person': return people[p.id]?.name ?? '资料'
-    case 'personModel': return '模型'
     case 'personTools': return '技能和工具'
     case 'inner': return `${people[p.id].name} · 在${ct(p.conv)}`
     case 'detail': return `${people[p.id].name} · 对话细节`
@@ -85,7 +86,6 @@ export function FloatPanel({ stack, width, onResize }: { stack: Page[]; width: n
 function PageBody({ p }: { p: Page }) {
   switch (p.t) {
     case 'person': return <PersonPage id={p.id} />
-    case 'personModel': return <ModelPage id={p.id} />
     case 'personTools': return <ToolsPage id={p.id} />
     case 'inner': return <InnerPage id={p.id} conv={p.conv} />
     case 'detail': return <DetailPage id={p.id} conv={p.conv} tab={p.tab} />
@@ -142,7 +142,7 @@ const Scroll = ({ children, className }: { children: ReactNode; className?: stri
 
 /* ---------- 联系人资料 ---------- */
 function PersonPage({ id }: { id: PersonId }) {
-  const { computes, convs, openDm, mention, push, active } = useApp()
+  const { computes, convs, openDm, mention, push, active, openWorkbench, modelSettings } = useApp()
   const p = people[id]
   const live = useLive(id)
   const liveText = { idle: '空闲', running: '在干活', waiting: '在等你', error: '遇到问题' }[live]
@@ -170,9 +170,9 @@ function PersonPage({ id }: { id: PersonId }) {
       )}
       {p.model && (
         <Group title="设置">
-          <Row testid="person-model" label="说话用的模型" value={p.model} onClick={() => push({ t: 'personModel', id })} />
-          <Row label="干活用的模型" value={p.computeModel === 'inherit' ? '跟全局默认' : p.computeModel === 'follow' ? '跟说话模型一样' : p.computeModel} onClick={() => push({ t: 'personModel', id })} />
-          <Row label="最多同时分几个 Compute" value={`${p.computeQuota} 个`} onClick={() => push({ t: 'personModel', id })} />
+          {/* 模型只在工作台「设置」和设置页「默认」改（D07.4 规则 5），这里只显示、点了过去改 */}
+          <Row testid="person-model" label="模型" value={<span className="text-[12.5px]">{modelLabel(p.model, modelSettings)} · Compute {p.computeModel?.mode === 'explicit' ? modelLabel(p.computeModel.model, modelSettings) : MODE_LABEL[p.computeModel?.mode ?? 'inherit']}</span>} onClick={() => openWorkbench(id, 'settings')} />
+          <Row label="最多同时分几个 Compute" value={`${p.computeQuota} 个`} onClick={() => openWorkbench(id, 'settings')} />
           <Row testid="person-tools" label="能用的技能和工具" value={`${p.tools?.filter((t) => t.on).length} 个`} onClick={() => push({ t: 'personTools', id })} />
           {p.focus && <Row label="专职" value={p.focus} />}
         </Group>
@@ -188,31 +188,6 @@ function PersonPage({ id }: { id: PersonId }) {
           <Row label="本月" value={p.month} />
         </Group>
       )}
-    </Scroll>
-  )
-}
-
-/* AC-32：说话模型 / Compute 模型三态（继承全局、跟说话模型、单独指定） */
-function ModelPage({ id }: { id: PersonId }) {
-  const { updatePerson } = useApp()
-  const p = people[id]
-  const [talk, setTalk] = useState(p.model!)
-  const [cm, setCm] = useState(p.computeModel ?? 'inherit')
-  const [quota, setQuota] = useState(p.computeQuota ?? 1)
-  const effective = cm === 'inherit' ? GLOBAL_MODEL : cm === 'follow' ? talk : cm
-  return (
-    <Scroll className="px-1">
-      <Group title="说话用的模型（在群里聊天、判断要不要接活）">
-        {MODELS.map((m) => <Row key={m} testid={`model-${m}`} label={m} value={<span className="text-[12px]">{vendorOf(m)}</span>} onClick={() => { if (m !== talk) updatePerson(id, { model: m }, `说话模型 ${talk} → ${m}`); setTalk(m) }}>{talk === m && <Check className="h-4 w-4" />}</Row>)}
-      </Group>
-      <Group title="Compute 用的模型（干活）">
-        {[{ k: 'inherit', l: `跟全局默认（现在是 ${GLOBAL_MODEL}）` }, { k: 'follow', l: `跟说话模型一样（${talk}）` }].map((o) => <Row key={o.k} label={o.l} onClick={() => setCm(o.k)}>{cm === o.k && <Check className="h-4 w-4" />}</Row>)}
-        <Row label="单独指定" value={!['inherit', 'follow'].includes(cm) ? cm : undefined} onClick={() => setCm('Claude Opus 5.5')}>{!['inherit', 'follow'].includes(cm) && <Check className="h-4 w-4" />}</Row>
-      </Group>
-      <p className="mx-4 -mt-1 mb-3 text-[12px] text-fg-3">实际用：{effective}。复核要换一家：{p.name} 的产出会交给不是 {vendorOf(effective)} 的模型复核。</p>
-      <Group title={`最多同时分几个 Compute · ${quota} 个`}>
-        <div className="px-4 py-4"><Slider value={[quota]} min={1} max={5} step={1} onValueChange={(v) => setQuota(v[0])} /></div>
-      </Group>
     </Scroll>
   )
 }
@@ -572,10 +547,7 @@ function SettingsPage() {
           ))}
         </div>
       </Group>
-      <Group title="默认">
-        <Row label="全局默认模型" value={GLOBAL_MODEL} onClick={() => {}} />
-        <Row label="复核必须换一家模型"><Switch defaultChecked /></Row>
-      </Group>
+      <GlobalModelDefaults />
       <Group title="通知">
         <Row label="有事等我时提醒"><Switch defaultChecked /></Row>
         <Row label="出错时提醒"><Switch defaultChecked /></Row>
@@ -595,12 +567,11 @@ function SettingsPage() {
 
 /* ---------- 添加联系人 ---------- */
 function AddContactPage() {
-  const { createContact } = useApp()
+  const { createContact, modelSettings } = useApp()
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
   const [shape, setShape] = useState('cat')
   const [color, setColor] = useState('#ec4899')
-  const [model, setModel] = useState('Claude Sonnet 5.5')
   const [quota, setQuota] = useState(2)
   return (
     <>
@@ -614,14 +585,12 @@ function AddContactPage() {
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="比如：设计师" className="mt-1 h-10 w-full rounded-lg border border-line bg-bg px-3 text-[14px] outline-none focus:border-fg-3" />
         <label className="mt-3 block text-[12.5px] font-medium text-fg-2">擅长什么</label>
         <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="比如：画界面、做配色" className="mt-1 h-10 w-full rounded-lg border border-line bg-bg px-3 text-[14px] outline-none focus:border-fg-3" />
-        <label className="mt-3 block text-[12.5px] font-medium text-fg-2">说话用的模型</label>
-        <div className="mt-1 flex flex-wrap gap-1.5">{MODELS.slice(0, 6).map((m) => <button key={m} onClick={() => setModel(m)} className={cn('rounded-lg border px-2.5 py-1 text-[12.5px]', model === m ? 'border-fg bg-sel' : 'border-line text-fg-2 hover:bg-hover')}>{m}</button>)}</div>
         <div className="mt-4 flex items-center justify-between text-[12.5px] font-medium text-fg-2"><span>最多同时分几个 Compute</span><span className="text-fg">{quota} 个</span></div>
         <Slider value={[quota]} min={1} max={5} step={1} onValueChange={(v) => setQuota(v[0])} className="mt-3" />
-        <p className="mt-3 text-[12px] text-fg-3">Compute 用的模型默认跟全局（{GLOBAL_MODEL}），之后可在资料里改。</p>
+        <p data-testid="add-model-note" className="mt-3 text-[12px] leading-relaxed text-fg-3">说话用全局默认的 {modelLabel(modelSettings.defaultSpeakingModel, modelSettings)}，Compute 继承全局（{modelLabel(modelSettings.defaultComputeModel, modelSettings)}）。加好以后在它的工作台「设置」里改。</p>
       </Scroll>
       <div className="border-t border-line p-3">
-        <button disabled={!name.trim()} onClick={() => createContact({ name: name.trim(), role: role.trim() || '通用助手', shape, color, model, quota })} className="h-10 w-full rounded-xl bg-me text-[14px] font-medium text-me-fg disabled:bg-hover disabled:text-fg-3">添加</button>
+        <button disabled={!name.trim()} onClick={() => createContact({ name: name.trim(), role: role.trim() || '通用助手', shape, color, model: modelSettings.defaultSpeakingModel, quota })} className="h-10 w-full rounded-xl bg-me text-[14px] font-medium text-me-fg disabled:bg-hover disabled:text-fg-3">添加</button>
       </div>
     </>
   )
@@ -713,7 +682,7 @@ function SourcePage({ id }: { id: string }) {
 
 /* ---------- 查看对话细节：它和你 / 和其他助手 / 在做什么 / 它记住了什么 ---------- */
 export function DetailPage({ id, conv, tab: tab0, bare }: { id: PersonId; conv: string; tab?: 'me' | 'agents' | 'work' | 'memory'; bare?: boolean }) {
-  const { convs, computes, push, openDm, jump, closeAll } = useApp()
+  const { convs, computes, push, openDm, jump, closeAll, modelSettings } = useApp()
   const p = people[id]
   const [tab, setTab] = useState(tab0 ?? 'agents')
   const dm = convs.find((c) => c.kind === 'dm' && c.members.includes(id))
@@ -725,7 +694,7 @@ export function DetailPage({ id, conv, tab: tab0, bare }: { id: PersonId; conv: 
     <>
       {!bare && <><div className="flex items-center gap-3 px-4 pb-2" data-testid="detail">
         <Avatar id={id} size={36} />
-        <div className="min-w-0 flex-1"><div className="text-[13.5px] font-medium">{p.name}</div><div className="truncate text-[12px] text-fg-3">{p.role} · {p.model}</div></div>
+        <div className="min-w-0 flex-1"><div className="text-[13.5px] font-medium">{p.name}</div><div className="truncate text-[12px] text-fg-3">{p.role} · {modelLabel(p.model, modelSettings)}</div></div>
         <button onClick={() => push({ t: 'person', id })} className="h-7 rounded-md px-2 text-[12.5px] text-fg-2 hover:bg-hover hover:text-fg">资料 ›</button>
       </div>
       <div className="flex gap-1 border-b border-line px-3">
