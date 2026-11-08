@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { placeHoverBar, type BarPlacement } from '@g-group/ui-core'
-import { History, Hand, Pencil, AlertTriangle, ChevronRight, FileText, Globe, Table2, SmilePlus, Reply, MoreHorizontal, Quote as QuoteIcon, Copy, Check, Square, KeyRound, Pin, Forward, CheckSquare, Tag, Server, Bookmark, Undo2, Trash2, PenLine, AtSign, MessageSquare, Activity, IdCard, AlarmClock, PauseCircle } from 'lucide-react'
+import { History, Hand, Pencil, AlertTriangle, ChevronRight, FileText, Globe, Table2, SmilePlus, Reply, MoreHorizontal, Quote as QuoteIcon, Copy, Check, Square, KeyRound, Pin, Forward, CheckSquare, Tag, Server, Bookmark, Undo2, Trash2, PenLine, AtSign, MessageSquare, Activity, IdCard, AlarmClock, PauseCircle, ChevronDown, ListChecks } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { people, artifacts, dutyByConv, type Msg, type PersonId, type Compute, type QuoteRef, dispText } from '@/data'
 import { useApp } from '@/ctx'
@@ -55,7 +55,9 @@ function Row({ m, first, compact, highlight, selecting, checked, onSelect, trail
   const from = m.from
   const mine = from === 'me'
   const av = compact ? 26 : 32
-  const quotes = m.k === 'text' ? m.quotes : undefined
+  const { answers } = useApp()
+  // 回答消息显示成收起的卡片,卡片本身就写着回答的是哪个问题,不再叠一层引用
+  const quotes = m.k === 'text' && !(m.answerTo && answers[m.answerTo]) ? m.quotes : undefined
   return (
     <div
       id={'m-' + m.id}
@@ -337,7 +339,8 @@ export function PersonMenu({ id, children, side = 'top' }: { id: PersonId; child
 }
 
 function Body({ m }: { m: Bodied }) {
-  if (m.k === 'text') return <TextBubble m={m} />
+  const { answers } = useApp()
+  if (m.k === 'text') return m.answerTo && answers[m.answerTo] ? <AnswerPill m={m} /> : <TextBubble m={m} />
   if (m.k === 'compute') return <ComputeLine id={m.computeId} />
   if (m.k === 'file') return <FileCard id={m.artifactId} />
   if (m.k === 'board') return <BoardCard id={m.boardId} />
@@ -469,37 +472,101 @@ function ReplyingCard({ m }: { m: Extract<Msg, { k: 'replying' }> }) {
 /* 快捷回复（#1560）：决定是共享的上下文，所以点了就以你的名义在群里发一条“回复”，所有人都看得到。
    照 mirasim / Telegram 的 reply keyboard：选项贴在提问那条消息下面，是几颗轻按钮，不是一张卡。
    数字键 1-9 选、Enter 发推荐项；也可以直接在输入框里打字回答。答完按钮就消失，留下的是那条回复消息。 */
+/* A2UI 提问卡片(#823:参照 mirasim 可折叠的卡片,不做成一排气泡——选项一长就难看)。
+   挂在提问那条消息下面:标题 + 状态 + 折叠;选项短的排成一行小按钮,长的每项占一整行(圆点 + 可换行文字)。
+   点了以普通消息发出(U98:回复就是回答,不另造验收组件);答完卡片收起成「标题 · 你选了什么」,点开还能看全部选项。 */
+const isShort = (opts: string[]) => opts.length <= 3 && opts.every((o) => o.length <= 8)
+
 export function QuickReplies({ msgId }: { msgId: string }) {
-  const { pending, resolve, addQuote, convs } = useApp()
+  const { pending, resolve, addQuote, convs, answers } = useApp()
   const findMsg = (id: string) => { for (const c of convs) { const m = c.messages.find((x) => x.k === 'text' && x.id === id); if (m) return m as Extract<Msg, { k: 'text' }> } }
   const p = pending.find((x) => (x.kind === 'choice' && x.ask === msgId) || (x.kind === 'proposal' && x.ask === msgId))
-  if (!p) return null
-  if (p.kind === 'choice' && p.stale) return (
-    <div data-testid={`quick-${msgId}-stale`} className="mt-1.5 flex items-center gap-1.5 text-[12px] text-fg-3">
-      <span className="rounded-full border border-dashed border-fg-3/50 px-2 py-0.5 line-through decoration-fg-3/40">{p.options.join(' / ')}</span>
-      <span>已过期 · 未执行：你后面改了前提</span>
-    </div>
-  )
-  const opts: { label: string; primary?: boolean; run: () => void }[] =
-    p.kind === 'choice' ? p.options.map((o, i) => ({ label: o, primary: i === (p.recommend ?? -1), run: () => resolve(p.id, 'pick', i) }))
+  const done = answers[msgId]
+  const [open, setOpen] = useState<boolean | null>(null)
+  if (!p && !done) return null
+  const stale = p?.kind === 'choice' ? p.stale : undefined
+  const title = p && (p.kind === 'choice' || p.kind === 'proposal') ? p.title : done!.title
+  const opts: { label: string; primary?: boolean; run?: () => void }[] =
+    !p ? done!.options.map((o) => ({ label: o }))
+    : p.kind === 'choice' ? p.options.map((o, i) => ({ label: o, primary: i === (p.recommend ?? -1), run: () => resolve(p.id, 'pick', i) }))
     : p.kind === 'proposal' && p.gate ? [{ label: '同意，改吧', primary: true, run: () => resolve(p.id, 'ok') }, { label: '先别改', run: () => resolve(p.id, 'no') }]
     : p.kind === 'proposal' ? [{ label: '同意', primary: true, run: () => resolve(p.id, 'ok') }, { label: '先不改', run: () => resolve(p.id, 'no') }]
     : []
+  const live = !!p && !stale
+  const expanded = open ?? live
+  const short = isShort(opts.map((o) => o.label))
   return (
-    <div className="mb-1 mt-2 flex max-w-full items-center gap-2 fade-up" data-testid={`quick-${msgId}`} onClick={(e) => e.stopPropagation()}>
-      {/* 窄的时候选项横向滚，「自己回答」固定在最后、永远看得到 */}
-      <div className="no-scrollbar flex min-w-0 items-center gap-2 overflow-x-auto pb-px">
-      {opts.map((o, i) => (
-        <button key={o.label} data-testid={`quick-${msgId}-${i}`} onClick={o.run}
-          className={cn('h-[30px] shrink-0 whitespace-nowrap rounded-full border px-3 text-[13px] transition active:scale-[.97]', o.primary ? 'border-me bg-me/[.10] font-medium text-me hover:bg-me/[.16]' : 'border-fg-3/45 bg-bg text-fg hover:border-fg-2 hover:bg-hover')}>
-          {o.label}
-        </button>
-      ))}
-      </div>
-      <button data-testid={`quick-${msgId}-own`} onClick={() => { const m = findMsg(msgId); if (m) addQuote({ msgId, from: m.from, text: m.text.replace(/^@\S+\s/, ''), reply: true }) }}
-        className="flex h-[30px] shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 text-[13px] text-fg-2 transition hover:bg-hover hover:text-fg active:scale-[.97]" title="引用这条并 @ 它，你自己写回答">
-        <PenLine className="h-3.5 w-3.5" strokeWidth={1.75} />自己回答
+    <div data-testid={`ask-${msgId}`} data-state={live ? 'open' : stale ? 'stale' : 'answered'} data-expanded={expanded ? '1' : '0'} onClick={(e) => e.stopPropagation()}
+      className="fade-up mb-1 mt-1.5 w-[min(560px,100%)] overflow-hidden rounded-2xl border border-line bg-elev shadow-soft">
+      <button type="button" data-testid={`ask-${msgId}-head`} onClick={() => setOpen(!expanded)} className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left hover:bg-hover/50">
+        <span className={cn('grid h-7 w-7 shrink-0 place-items-center rounded-lg', live ? 'bg-brand-soft text-brand' : 'bg-hover text-fg-3')}><ListChecks className="h-4 w-4" strokeWidth={1.9} /></span>
+        <span className="min-w-0 flex-1">
+          <span className={cn('block truncate text-[13.5px] font-semibold', !live && 'text-fg-2')}>{title}</span>
+          {!expanded && done && <span data-testid={`ask-${msgId}-picked`} className="block truncate text-[12.5px] text-fg"><Check className="mr-1 inline h-3.5 w-3.5 -translate-y-px text-ok" strokeWidth={2.5} />{done.picked}</span>}
+        </span>
+        <span data-testid={`ask-${msgId}-status`} className={cn('shrink-0 rounded-full px-2 py-0.5 text-[11.5px]', live ? 'bg-warm-soft font-medium text-warm' : stale ? 'border border-dashed border-fg-3/50 text-fg-3' : 'bg-hover text-fg-2')}>
+          {live ? '等你选' : stale ? '已过期 · 未执行' : `你 ${done?.at ?? ''} · 已选`}
+        </span>
+        <ChevronDown className={cn('h-4 w-4 shrink-0 text-fg-3 transition', expanded && 'rotate-180')} />
       </button>
+      {expanded && (
+        <div className="border-t border-line px-3.5 pb-3 pt-2.5" data-testid={`ask-${msgId}-body`}>
+          {stale && <div className="mb-2 text-[12px] text-fg-3">你后面改了前提，这几个选项不再执行。</div>}
+          <div className={cn(short ? 'flex flex-wrap gap-2' : 'flex flex-col gap-1.5')} data-layout={short ? 'chips' : 'rows'}>
+            {opts.map((o, i) => {
+              const picked = done?.picked === o.label
+              const can = live && !!o.run
+              return short ? (
+                <button key={o.label} type="button" data-testid={`quick-${msgId}-${i}`} disabled={!can} onClick={o.run}
+                  className={cn('flex h-8 items-center gap-1.5 rounded-full border px-3.5 text-[13px] transition active:scale-[.97] disabled:cursor-default', picked ? 'border-fg bg-fg text-bg' : o.primary && can ? 'border-me/50 bg-me/[.08] font-medium text-me hover:bg-me/[.14]' : 'border-line text-fg hover:border-fg-3/60 hover:bg-hover', !can && !picked && 'opacity-60 hover:bg-transparent', stale && 'line-through')}>
+                  {picked && <Check className="h-3.5 w-3.5" strokeWidth={2.5} />}{o.label}
+                </button>
+              ) : (
+                <button key={o.label} type="button" data-testid={`quick-${msgId}-${i}`} disabled={!can} onClick={o.run}
+                  className={cn('group/o flex w-full items-start gap-2.5 rounded-xl border px-3 py-2 text-left text-[13.5px] leading-[1.55] transition disabled:cursor-default', picked ? 'border-fg/70 bg-hover' : 'border-line hover:border-fg-3/50 hover:bg-hover/70', !can && !picked && 'opacity-60 hover:border-line hover:bg-transparent', stale && 'line-through')}>
+                  <span className={cn('mt-[3px] grid h-4 w-4 shrink-0 place-items-center rounded-full border', picked ? 'border-fg bg-fg text-bg' : 'border-fg-3/70 group-hover/o:border-fg-2')}>{picked && <Check className="h-2.5 w-2.5" strokeWidth={3} />}</span>
+                  <span className="min-w-0 flex-1 break-words">{o.label}</span>
+                  {o.primary && can && <span className="mt-px shrink-0 rounded-md bg-me/10 px-1.5 text-[11px] font-medium text-me">推荐</span>}
+                </button>
+              )
+            })}
+          </div>
+          {live && (
+            <button type="button" data-testid={`quick-${msgId}-own`} onClick={() => { const m = findMsg(msgId); if (m) addQuote({ msgId, from: m.from, text: m.text.replace(/^@\S+\s/, ''), reply: true }) }}
+              className="mt-2 flex items-center gap-1 rounded-md px-1 text-[12.5px] text-fg-2 transition hover:text-fg" title="引用这条并 @ 它，你自己写回答">
+              <PenLine className="h-3.5 w-3.5" strokeWidth={1.75} />都不是，自己回答
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** 你对提问的回答:显示成收起的卡片(标题 + 你选的),点开看全部选项。正文仍是普通消息,联系人照常读 */
+function AnswerPill({ m }: { m: Extract<Msg, { k: 'text' }> }) {
+  const { answers, jump } = useApp()
+  const a = m.answerTo ? answers[m.answerTo] : undefined
+  const [open, setOpen] = useState(false)
+  if (!a) return null
+  return (
+    <div data-testid={`answer-${m.id}`} data-expanded={open ? '1' : '0'} className="w-[min(420px,100%)] overflow-hidden rounded-2xl border border-mine/25 bg-elev shadow-soft">
+      <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-center gap-2.5 px-3 py-2 text-left">
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-mine text-mine-fg"><ListChecks className="h-4 w-4" strokeWidth={1.9} /></span>
+        <span className="min-w-0 flex-1 truncate text-[13px] text-fg-2">{a.title}</span>
+        <span className="max-w-[45%] shrink-0 truncate text-[13.5px] font-semibold text-fg">{a.picked}</span>
+        <ChevronDown className={cn('h-4 w-4 shrink-0 text-fg-3 transition', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <div className="space-y-1 border-t border-line px-3 pb-2.5 pt-2" data-testid={`answer-${m.id}-body`}>
+          {a.options.map((o) => (
+            <div key={o} className={cn('flex items-start gap-2 text-[13px] leading-[1.5]', o === a.picked ? 'font-medium text-fg' : 'text-fg-3')}>
+              <span className={cn('mt-[3px] grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full border', o === a.picked ? 'border-fg bg-fg text-bg' : 'border-fg-3/60')}>{o === a.picked && <Check className="h-2 w-2" strokeWidth={3.5} />}</span>{o}
+            </div>
+          ))}
+          <button type="button" onClick={() => jump(m.answerTo!)} className="pt-1 text-[12px] text-me hover:underline">看原来的提问</button>
+        </div>
+      )}
     </div>
   )
 }

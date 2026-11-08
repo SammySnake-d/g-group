@@ -351,7 +351,7 @@ export interface QuoteRef { msgId: string; from: PersonId; text: string; reply?:
 export type Msg =
   | { k: 'date'; text: string }
   | { k: 'sys'; id: string; text: string; undo?: string; recalled?: string; rewind?: boolean }
-  | { k: 'text'; id: string; from: PersonId; text: string; edited?: boolean; at?: string; cron?: string; cronNew?: boolean; disp?: Disp; quotes?: QuoteRef[]; tag?: { task: string; state: string }; task?: string; helper?: { scope: string; card?: { kind: 'csv' | 'group' | 'send'; lines: string[]; done?: boolean } }; byHelper?: boolean; shot?: { title: string; compute: string } }
+  | { k: 'text'; id: string; from: PersonId; text: string; answerTo?: string; edited?: boolean; at?: string; cron?: string; cronNew?: boolean; disp?: Disp; quotes?: QuoteRef[]; tag?: { task: string; state: string }; task?: string; helper?: { scope: string; card?: { kind: 'csv' | 'group' | 'send'; lines: string[]; done?: boolean } }; byHelper?: boolean; shot?: { title: string; compute: string } }
   | { k: 'compute'; id: string; from: PersonId; computeId: string }
   | { k: 'file'; id: string; from: PersonId; artifactId: string }
   | { k: 'huddle'; id: string; who: PersonId[]; items: { id: string; from: PersonId; text: string }[]; conclusion: string }

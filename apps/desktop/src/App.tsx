@@ -57,6 +57,7 @@ const LIVE = [
 export default function App() {
   const [dark, setDark] = useState(qs.get('theme') === 'dark')
   const [backend, setBackend] = useState<BackendState>({ mode: 'checking' })
+  const [answers, setAnswers] = useState<Record<string, import('@/ctx').Answer>>({})
   useEffect(() => { void probeBackend().then(setBackend) }, [])
   const [debug, setDebug] = useState(false)
   const [section, setSection] = useState<Section>(((qs.get('section') === 'activity' ? 'chat' : qs.get('section')) as Section) ?? 'chat')
@@ -263,8 +264,10 @@ export default function App() {
       if (!p) return
       setPending((ps) => ps.filter((x) => x.id !== pid))
       if (p.kind === 'choice') {
-        const chosen = typeof value === 'number' ? p.options[value] : String(value)
-        pushMsg({ k: 'text', id: 'me-' + uid(), from: 'me', text: chosen, quotes: [{ msgId: p.ask, from: p.from, text: p.title, reply: true }] }, p.conv)
+        const chosen = typeof value === 'number' ? p.options[value]! : String(value)
+        const replyId = 'me-' + uid()
+        setAnswers((a) => ({ ...a, [p.ask]: { title: p.title, options: p.options, picked: chosen, at: new Date().toTimeString().slice(0, 5), replyId } }))
+        pushMsg({ k: 'text', id: replyId, from: 'me', text: chosen, answerTo: p.ask, quotes: [{ msgId: p.ask, from: p.from, text: p.title, reply: true }] }, p.conv)
         say(p.conv, p.from, '好，按这个来。我先写接入方案，写完发在这里。')
       } else if (p.kind === 'accept') {
         const c = computes[p.computeId]
@@ -294,13 +297,19 @@ export default function App() {
       } else if (p.kind === 'proposal' && p.gate) {
         /* AC-17 / AC-20：只有你本人同意才放行，而且只放行这一次；下一次写盘还会再问。
            #2435：点按钮或在对话里亲口说一句“同意”都算；value === 'said' 表示是你刚打字说的，那条消息已经发了，不再补一条 */
-        if (value !== 'said') pushMsg({ k: 'text', id: 'me-' + uid(), from: 'me', text: action === 'ok' ? '同意，改吧' : '先别改', quotes: [{ msgId: p.ask!, from: p.from, text: p.title, reply: true }] }, p.conv)
+        if (value !== 'said') {
+          const replyId = 'me-' + uid(), picked = action === 'ok' ? '同意，改吧' : '先别改'
+          setAnswers((a) => ({ ...a, [p.ask!]: { title: p.title, options: ['同意，改吧', '先别改'], picked, at: new Date().toTimeString().slice(0, 5), replyId } }))
+          pushMsg({ k: 'text', id: replyId, from: 'me', text: picked, answerTo: p.ask!, quotes: [{ msgId: p.ask!, from: p.from, text: p.title, reply: true }] }, p.conv)
+        }
         if (action === 'ok') {
           addAct(p.gate, { step: Math.max(0, computes[p.gate].steps.findIndex((x) => x.state === 'now')), kind: 'edit', title: `你同意后写入：${p.title}（只放行这一次）` })
           say(p.conv, p.from, '收到，写进去了。下次要改代码还会先问你。', 700)
         } else say(p.conv, p.from, '好，不改，这条要求先记着。', 700)
       } else if (p.kind === 'proposal') {
-        pushMsg({ k: 'text', id: 'me-' + uid(), from: 'me', text: action === 'ok' ? `同意：${p.title}` : `先不改：${p.title}` }, p.conv)
+        const replyId = 'me-' + uid(), picked = action === 'ok' ? '同意' : '先不改'
+        if (p.ask) setAnswers((a) => ({ ...a, [p.ask!]: { title: p.title, options: ['同意', '先不改'], picked, at: new Date().toTimeString().slice(0, 5), replyId } }))
+        pushMsg({ k: 'text', id: replyId, from: 'me', text: `${picked}：${p.title}`, ...(p.ask ? { answerTo: p.ask } : {}) }, p.conv)
       }
     },
     /* AC-23：停止分两步。按下只是“请求停止”，等当前那条命令真的结束、进程确认停了，才算停下并归还算力；不提前归还 */
@@ -562,7 +571,7 @@ export default function App() {
       if (active !== dm?.id && convs.find((c) => c.id === active)?.members.includes(pid)) pushMsg({ k: 'sys', id: 's' + uid(), text }, active)
       setToastMsg('已保存')
     },
-    crons, pulse, checklist, plugins, pluginCatalog: pluginCatalog0, section, setSection, helperPanel, setHelperPanel, helperGlobal, setHelperGlobal, pushMsg,
+    answers, crons, pulse, checklist, plugins, pluginCatalog: pluginCatalog0, section, setSection, helperPanel, setHelperPanel, helperGlobal, setHelperGlobal, pushMsg,
     scheduleDraft, openSchedule: setScheduleDraft,
     openWorkbench: (id, tab) => { setSection('contacts'); setContact(id); setWbTab(tab ?? 'overview'); setStack([]) },
     helperReply: (cid, ask) => {
@@ -872,8 +881,8 @@ export default function App() {
               { k: 'plugins', I: Puzzle, label: '插件' },
             ] as const).map((it) => (
               <Tip key={it.k} label={it.label} side="right">
-                <button data-testid={`nav-${it.k}`} onClick={() => (it.k === 'activity' ? setPanoOpen(true) : setSection(it.k))} data-on={(it.k === 'activity' ? panoOpen : section === it.k) ? '1' : '0'} className={cn('relative grid h-10 w-10 place-items-center rounded-xl transition', (it.k === 'activity' ? panoOpen : section === it.k) ? 'bg-rail-hover text-white before:absolute before:-left-[12px] before:top-2 before:h-6 before:w-[3px] before:rounded-r before:bg-brand' : 'text-rail-fg hover:bg-rail-hover hover:text-white')}>
-                  <it.I className="h-[20px] w-[20px]" strokeWidth={(it.k === 'activity' ? panoOpen : section === it.k) ? 2 : 1.75} />
+                <button data-testid={`nav-${it.k}`} onClick={() => (it.k === 'activity' ? setPanoOpen(true) : setSection(it.k))} data-on={(it.k === 'activity' ? panoOpen : section === it.k && !panoOpen) ? '1' : '0'} className={cn('relative grid h-10 w-10 place-items-center rounded-xl transition', (it.k === 'activity' ? panoOpen : section === it.k && !panoOpen) ? 'bg-rail-hover text-white before:absolute before:-left-[12px] before:top-2 before:h-6 before:w-[3px] before:rounded-r before:bg-brand' : 'text-rail-fg hover:bg-rail-hover hover:text-white')}>
+                  <it.I className="h-[20px] w-[20px]" strokeWidth={(it.k === 'activity' ? panoOpen : section === it.k && !panoOpen) ? 2 : 1.75} />
                   {'badge' in it && it.badge > 0 && <span className="absolute -right-0.5 -top-0.5 grid h-[17px] min-w-[17px] place-items-center rounded-full border-2 border-rail bg-brand px-1 text-[10px] font-semibold text-white">{it.badge}</span>}
                   {'dot' in it && it.dot && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border-2 border-rail bg-run" />}
                 </button>

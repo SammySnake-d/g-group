@@ -58,13 +58,18 @@ for (const theme of ["light", "dark"] as const) {
       expect(contrast(sub.fg, sub.bg), `次要文字 ${sub.fg} on ${sub.bg}`).toBeGreaterThanOrEqual(4.5);
     });
 
-    test(`快捷选项一行排下不折行,工具条不超过 5 个按钮`, async ({ page }) => {
-      const chips = page.locator("[data-testid^=quick-] button");
-      const n = await chips.count();
+    test(`提问卡片的选项不溢出卡片,工具条不超过 5 个按钮`, async ({ page }) => {
+      const cards = page.locator("[data-testid^=ask-][data-state]");
+      const n = await cards.count();
       expect(n).toBeGreaterThan(0);
       for (let i = 0; i < n; i++) {
-        const box = await chips.nth(i).boundingBox();
-        if (box) expect(box.height, `第 ${i} 个快捷选项折行了`).toBeLessThanOrEqual(34);
+        const c = cards.nth(i);
+        await c.scrollIntoViewIfNeeded();
+        const cb = (await c.boundingBox())!;
+        for (const o of await c.locator("[data-testid^=quick-]").all()) {
+          const b = (await o.boundingBox())!;
+          expect(b.x + b.width, `选项溢出了卡片`).toBeLessThanOrEqual(cb.x + cb.width + 0.5);
+        }
       }
       const anchor = page.locator("[data-scroll=chat] [data-anchor]").last();
       await anchor.hover({ position: { x: 6, y: 6 } });
