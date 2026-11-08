@@ -17,10 +17,6 @@ import type { Host } from "./host.ts";
 import { previewCron } from "./schedules.ts";
 
 type Handler = (p: never) => unknown;
-const unavailable = (what: string) => () => {
-  throw new HostError("unavailable", `${what} 尚未接入后端(P0 闭环之后的切片)`);
-};
-
 export const BUILTIN_COMMANDS: readonly SlashCommand[] = Object.freeze([
   { name: "task", description: "派一个任务给会话里的联系人", args: [{ name: "contact", description: "交给谁", kind: "contact", required: false }, { name: "what", description: "要做什么", kind: "text", required: true }], source: "builtin", pluginId: null, targetContactId: null },
   { name: "stop", description: "停止一个进行中的任务", args: [{ name: "task", description: "任务", kind: "text", required: true }], source: "builtin", pluginId: null, targetContactId: null },
@@ -39,25 +35,28 @@ export function createService(host: Host): Service {
     "contacts.get": (p: { contactId: string }) => host.contactView(host.contactDoc(p.contactId).value),
     "contacts.create": (p: Parameters<Host["createContact"]>[0]) => host.createContact(p),
     "contacts.update": ({ contactId, ...patch }: { contactId: string } & Parameters<Host["updateContact"]>[1]) => host.updateContact(contactId, patch),
-    "contacts.remove": unavailable("删除联系人"),
+    "contacts.remove": (p: { contactId: string }) => {
+      host.removeContact(p.contactId);
+      return { ok: true };
+    },
     "rooms.list": () => ({ rooms: host.roomsOfUser() }),
     "rooms.get": (p: { roomId: string }) => host.roomView(p.roomId),
     "rooms.openDm": (p: { contactId: string }) => host.openDm(p.contactId),
     "rooms.createGroup": (p: { title: string; members: { kind: "user" | "contact"; id: string }[] }) => host.createGroup(p.title, p.members),
     "rooms.update": ({ roomId, ...patch }: { roomId: string } & Parameters<Host["updateRoom"]>[1]) => host.updateRoom(roomId, patch),
     "rooms.addMembers": (p: { roomId: string; members: { kind: "user" | "contact"; id: string }[] }) => host.addMembers(p.roomId, p.members),
-    "rooms.removeMember": unavailable("移出成员"),
+    "rooms.removeMember": (p: { roomId: string; member: { kind: "user" | "contact"; id: string } }) => host.removeMember(p.roomId, p.member),
     "rooms.markRead": (p: { roomId: string; seq: number }) => {
       host.markRead(p.roomId, { kind: "user", id: host.userId }, p.seq);
       return { ok: true };
     },
     "messages.list": ({ roomId, ...q }: { roomId: string } & Parameters<Host["listMessages"]>[1]) => host.listMessages(roomId, q),
     "messages.send": (p: Parameters<Host["send"]>[0]) => host.send(p),
-    "messages.edit": unavailable("编辑消息"),
-    "messages.retract": unavailable("撤回消息"),
-    "messages.react": unavailable("表情回应"),
+    "messages.edit": (p: { roomId: string; seq: number; text: string }) => host.editMessage(p.roomId, p.seq, p.text),
+    "messages.retract": (p: { roomId: string; seq: number }) => host.retractMessage(p.roomId, p.seq),
+    "messages.react": (p: { roomId: string; seq: number; emoji: string; on: boolean }) => host.react(p.roomId, p.seq, p.emoji, p.on),
     "messages.receipts": (p: { roomId: string; seq: number }) => host.receipts(p.roomId, p.seq),
-    "attachments.add": unavailable("附件"),
+    "attachments.add": (p: { path: string }) => host.addAttachment(p.path),
     "cards.act": (p: Parameters<Host["cardAct"]>[0]) => host.cardAct(p),
     "tasks.list": (p: Parameters<Host["listTasks"]>[0] & { limit?: number }) => ({ tasks: host.listTasks(p).slice(0, p.limit ?? 200) }),
     "tasks.get": (p: { taskId: string }) => host.taskView(host.taskDoc(p.taskId).value),
@@ -65,12 +64,14 @@ export function createService(host: Host): Service {
       host.taskDoc(p.taskId);
       return { progress: host.progress(p.taskId, p.limit ?? 200) };
     },
-    "tasks.accept": unavailable("任务显式确认(请用交付卡片)"),
-    "tasks.reject": unavailable("任务显式退回(请用交付卡片)"),
-    "tasks.answer": unavailable("回答任务提问"),
-    "tasks.cancel": unavailable("取消任务(请用任务卡片)"),
+    "tasks.accept": (p: { taskId: string; clientActionId: string }) => host.taskDecision(p.taskId, "accept", p.clientActionId),
+    "tasks.reject": (p: { taskId: string; clientActionId: string; feedback: string }) => host.taskDecision(p.taskId, "reject", p.clientActionId, p.feedback),
+    "tasks.answer": () => {
+      throw new HostError("conflict", "任务没有待回答的问题(Compute 受阻时由联系人在聊天里问你,直接回复即可)");
+    },
+    "tasks.cancel": (p: { taskId: string; clientActionId: string }) => host.taskDecision(p.taskId, "cancel", p.clientActionId),
     "commitments.list": (p: Parameters<Host["listCommitments"]>[0]) => ({ commitments: host.listCommitments(p) }),
-    "commitments.revoke": unavailable("撤销承诺"),
+    "commitments.revoke": (p: { commitmentId: string }) => host.revokeCommitment(p.commitmentId),
     "schedules.list": (p: { contactId?: string; roomId?: string }) => ({ schedules: host.scheduler.list(p) }),
     "schedules.preview": (p: { cron: string; tz: string; count?: number }) => previewCron(p.cron, p.tz, p.count ?? 5, Date.now()),
     "schedules.create": ({ clientActionId: _c, ...p }: { clientActionId: string } & Parameters<Host["scheduler"]["create"]>[0]) => host.scheduler.create(p),

@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS gg_plugins (
   id TEXT PRIMARY KEY, version TEXT NOT NULL, source TEXT NOT NULL, origin TEXT NOT NULL, dir TEXT NOT NULL, enabled INTEGER NOT NULL,
   status TEXT NOT NULL, error TEXT, manifest TEXT NOT NULL, config TEXT, granted TEXT NOT NULL, installed_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS gg_attachments (ref TEXT PRIMARY KEY, name TEXT NOT NULL, mime TEXT NOT NULL, bytes INTEGER NOT NULL, path TEXT NOT NULL, added_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS gg_effects (action_id TEXT PRIMARY KEY, kind TEXT NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL, error TEXT, created_at TEXT NOT NULL);
 `;
 

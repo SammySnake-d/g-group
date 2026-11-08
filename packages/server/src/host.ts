@@ -3,7 +3,9 @@
 //   → 宿主校验、分配 action_id、与游标/账本/任务同一事务落盘 → 起 Compute → Compute 语义事件回到联系人 → 联系人汇报/交付回聊天。
 // 规则:只有联系人对外说话(Compute 不直接发言,AC-03);游标只在一轮落盘后推进(AC-31);发送前检出更新的用户消息就放弃本轮重跑(AC-31 ④);
 // 发送入库端按 action_id 去重(AC-31 ③);消息接走即已读(AC-46)。
-import { dirname } from "node:path";
+import { createHash } from "node:crypto";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { basename, dirname, extname, join } from "node:path";
 import { appendEvent, loadLog, recordAction } from "@g-group/adapter-sqlite";
 import type { ComputeAdapter, ComputeEvent } from "@g-group/adapter-cc-compute";
 import type {
@@ -129,6 +131,7 @@ export interface SendInput {
   quotedSeqs?: number[];
   mentions?: { id: string; source: "auto" | "manual" }[];
   command?: { name: string; args: unknown };
+  attachments?: string[];
 }
 
 const DEFAULT_SETTINGS: SettingsView = {
@@ -139,6 +142,7 @@ const DEFAULT_SETTINGS: SettingsView = {
   timezone: "Asia/Shanghai",
   models: [],
 };
+const MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp", ".pdf": "application/pdf", ".txt": "text/plain", ".md": "text/markdown", ".json": "application/json", ".csv": "text/csv", ".zip": "application/zip" };
 export const DEFAULT_COMPUTE_TOOLS: readonly string[] = Object.freeze(["Read", "Write", "Edit", "Glob", "Grep", "Bash"]);
 const TERMINAL: ReadonlySet<string> = new Set(["T8_Accepted", "T10_Cancelled", "T11_Failed"]);
 
@@ -255,11 +259,13 @@ export class Host {
     return d;
   }
   contactView(doc: ContactDoc): ContactView {
-    const { persona: _p, ...rest } = doc;
+    const { persona: _p, removed: _r, ...rest } = doc as ContactDoc & { removed?: boolean };
     return { ...rest, activity: this.activity.get(doc.id) ?? "idle" };
   }
   listContacts(): ContactView[] {
-    return listDocs<ContactDoc>(this.db, "contact:").map((d) => this.contactView(d.value));
+    return listDocs<ContactDoc & { removed?: boolean }>(this.db, "contact:")
+      .filter((d) => !d.value.removed)
+      .map((d) => this.contactView(d.value));
   }
   private setActivity(contactId: string, roomId: string | null, a: Activity) {
     if (this.activity.get(contactId) === a) return;
@@ -440,7 +446,9 @@ export class Host {
         const src = list.find((x) => x.seq === q);
         return { seq: q, senderName: src ? this.nameOf(src.sender) : "?", excerpt: src && !src.retracted ? src.text.slice(0, 200) : "", state: !src ? "denied" : src.retracted ? "retracted" : "ok" };
       }),
-      attachments: [],
+      attachments: (meta ? (JSON.parse(meta.attachments) as string[]) : [])
+        .map((ref) => one<{ ref: string; name: string; mime: string; bytes: number }>(this.db, "SELECT ref, name, mime, bytes FROM gg_attachments WHERE ref = ?", ref))
+        .filter((a): a is { ref: string; name: string; mime: string; bytes: number } => !!a),
       card: card
         ? {
             kind: card.kind as NonNullable<MessageView["card"]>["kind"],
@@ -478,7 +486,7 @@ export class Host {
   private appendMessageTx(
     roomId: string,
     sender: { kind: "user" | "contact" | "helper"; id: string },
-    f: { text: string; actionKey: string; clientActionId?: string | null; threadRootSeq?: number | null; replyToSeq?: number | null; quotedSeqs?: number[]; mentions?: MessageView["mentions"]; command?: { name: string; args: unknown } | null; card?: Omit<CardRow, "room_id" | "seq"> | null },
+    f: { text: string; actionKey: string; clientActionId?: string | null; attachments?: string[]; threadRootSeq?: number | null; replyToSeq?: number | null; quotedSeqs?: number[]; mentions?: MessageView["mentions"]; command?: { name: string; args: unknown } | null; card?: Omit<CardRow, "room_id" | "seq"> | null },
   ): { seq: number; duplicate: boolean } {
     const key = `msg:${roomId}:${f.actionKey}`;
     const prior = one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key);
@@ -488,13 +496,14 @@ export class Host {
     const quoted = [...new Set(f.quotedSeqs ?? [])];
     run(
       this.db,
-      "INSERT INTO gg_msg (room_id, seq, thread_root, reply_to, quoted, mentions, attachments, command, card_id, client_action_id) VALUES (?, ?, ?, ?, ?, ?, '[]', ?, ?, ?)",
+      "INSERT INTO gg_msg (room_id, seq, thread_root, reply_to, quoted, mentions, attachments, command, card_id, client_action_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       roomId,
       e.seq,
       f.threadRootSeq ?? null,
       f.replyToSeq ?? null,
       JSON.stringify(quoted),
       JSON.stringify(f.mentions ?? []),
+      JSON.stringify(f.attachments ?? []),
       f.command ? JSON.stringify(f.command) : null,
       f.card?.card_id ?? null,
       f.clientActionId ?? null,
@@ -546,10 +555,12 @@ export class Host {
     for (const q of [...(input.quotedSeqs ?? []), ...(input.replyToSeq != null ? [input.replyToSeq] : [])]) {
       if (!msgs.some((m) => m.seq === q)) throw new HostError("invalid_params", `引用的 #${q} 不在这个会话里`);
     }
-    if (!input.text.trim()) throw new HostError("invalid_params", "消息不能为空");
+    if (!input.text.trim() && !input.attachments?.length) throw new HostError("invalid_params", "消息不能为空");
+    for (const ref of input.attachments ?? []) if (!one(this.db, "SELECT 1 FROM gg_attachments WHERE ref = ?", ref)) throw new HostError("invalid_params", `附件 ${ref} 不存在,请先 attachments.add`);
     const r = tx(this.db, () =>
       this.appendMessageTx(room.id, me, {
-        text: input.text,
+        text: input.text.trim() ? input.text : `[附件 ${input.attachments!.length} 个]`,
+        attachments: input.attachments ?? [],
         actionKey: `user:${input.clientActionId}`,
         clientActionId: input.clientActionId,
         threadRootSeq: input.threadRootSeq ?? null,
@@ -585,6 +596,115 @@ export class Host {
     }
     const byMention = <T extends { mentioned: boolean }>(a: T, b: T) => Number(b.mentioned) - Number(a.mentioned);
     return { roomId, seq, read: read.sort(byMention), unread: unread.sort(byMention) };
+  }
+
+  /** 编辑自己的消息:追加编辑事件,不改旧事件;联系人下一轮收到「编辑了 #x」。 */
+  editMessage(roomId: string, seq: number, text: string): MessageView {
+    if (!text.trim()) throw new HostError("invalid_params", "消息不能为空");
+    this.appendUserEvent(roomId, { kind: "edit", target: seq, text });
+    return this.updatedView(roomId, seq);
+  }
+  /** 撤回自己的消息:原文不再进任何联系人的上下文(AC-08)。 */
+  retractMessage(roomId: string, seq: number): MessageView {
+    this.appendUserEvent(roomId, { kind: "retract", target: seq });
+    return this.updatedView(roomId, seq);
+  }
+  private appendUserEvent(roomId: string, body: { kind: "edit"; target: number; text: string } | { kind: "retract"; target: number }) {
+    this.roomRow(roomId);
+    try {
+      tx(this.db, () => {
+        appendEvent(this.db.store, `room:${roomId}`, { kind: "user", id: this.userId }, body, this.now());
+        run(this.db, "UPDATE gg_rooms SET updated_at = ? WHERE id = ?", this.now(), roomId);
+      });
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      if (code === "target-not-found" || code === "target-not-message") throw new HostError("not_found", `没有消息 #${body.target}`);
+      if (code === "not-original-sender") throw new HostError("forbidden", "只能改自己发的消息");
+      if (code === "target-retracted") throw new HostError("conflict", "这条已撤回");
+      throw e;
+    }
+    for (const mem of this.members(roomId)) if (mem.kind === "contact") this.loop.notify(mem.id, "batch");
+  }
+  private updatedView(roomId: string, seq: number): MessageView {
+    const m = this.projected(roomId).find((x) => x.seq === seq);
+    if (!m) throw new HostError("not_found", `没有消息 #${seq}`);
+    const v = this.messageView(roomId, m);
+    this.bus.emit({ type: "message.updated", message: v });
+    this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
+    return v;
+  }
+  /** 表情回应:普通回应,不改已读状态(AC-46 ⑦)。 */
+  react(roomId: string, seq: number, emoji: string, on: boolean): MessageView {
+    if (!this.projected(roomId).some((m) => m.seq === seq)) throw new HostError("not_found", `没有消息 #${seq}`);
+    if (on) run(this.db, "INSERT OR IGNORE INTO gg_reactions (room_id, seq, emoji, kind, member_id) VALUES (?, ?, ?, 'user', ?)", roomId, seq, emoji, this.userId);
+    else run(this.db, "DELETE FROM gg_reactions WHERE room_id = ? AND seq = ? AND emoji = ? AND kind = 'user' AND member_id = ?", roomId, seq, emoji, this.userId);
+    const m = this.projected(roomId).find((x) => x.seq === seq)!;
+    const v = this.messageView(roomId, m);
+    this.bus.emit({ type: "message.updated", message: v });
+    return v;
+  }
+  /** 附件:按内容 sha256 复制进数据目录,同一文件只存一份。 */
+  addAttachment(file: string): { ref: string; name: string; mime: string; bytes: number } {
+    if (!existsSync(file) || !statSync(file).isFile()) throw new HostError("invalid_params", `${file} 不是文件`);
+    const bytes = statSync(file).size;
+    if (bytes > 100 * 1024 * 1024) throw new HostError("invalid_params", "附件不能超过 100 MB");
+    const sha = createHash("sha256").update(readFileSync(file)).digest("hex");
+    const ref = `att-${sha.slice(0, 32)}`;
+    const name = basename(file);
+    const mime = MIME[extname(name).toLowerCase()] ?? "application/octet-stream";
+    const dir = join(this.opts.dataDir ?? dirname(this.opts.file), "attachments");
+    mkdirSync(dir, { recursive: true });
+    const target = join(dir, `${sha}${extname(name).toLowerCase()}`);
+    if (!existsSync(target)) copyFileSync(file, target);
+    run(this.db, "INSERT OR IGNORE INTO gg_attachments (ref, name, mime, bytes, path, added_at) VALUES (?, ?, ?, ?, ?, ?)", ref, name, mime, bytes, target, this.now());
+    return { ref, name, mime, bytes };
+  }
+  /** 移出群成员;私聊不能移。联系人在途任务不受影响,但不再收到这个群的新消息。 */
+  removeMember(roomId: string, m: Member): RoomView {
+    const r = this.roomRow(roomId);
+    if (r.kind === "dm") throw new HostError("forbidden", "私聊不能移出成员");
+    if (run(this.db, "DELETE FROM gg_members WHERE room_id = ? AND kind = ? AND member_id = ?", roomId, m.kind, m.id) !== 1) throw new HostError("not_found", "不是这个群的成员");
+    const view = this.roomView(roomId);
+    this.bus.emit({ type: "room.updated", room: view });
+    return view;
+  }
+  /** 删除联系人:有在途任务时拒绝;删除后从所有群移出,私聊记录保留。 */
+  removeContact(id: string) {
+    const cur = this.contactDoc(id);
+    const live = this.listTasks({ contactId: id }).filter((t) => !TERMINAL.has(t.state));
+    if (live.length) throw new HostError("conflict", `联系人还有 ${live.length} 个在途任务,先取消或等它完成`);
+    tx(this.db, () => {
+      putDoc(this.db, `contact:${id}`, cur.ver, { ...cur.value, removed: true });
+      run(this.db, "DELETE FROM gg_members WHERE kind = 'contact' AND member_id = ? AND room_id NOT IN (SELECT id FROM gg_rooms WHERE dm_contact = ?)", id, id);
+      run(this.db, "UPDATE gg_schedules SET enabled = 0 WHERE contact_id = ?", id);
+    });
+    this.bus.emit({ type: "contact.removed", contactId: id });
+  }
+  /** 用户撤销联系人的一条承诺(用户只能撤销,不能替联系人标完成)。 */
+  revokeCommitment(commitmentId: string): CommitmentView {
+    for (const d of listDocs<Ledger>(this.db, "ledger:")) {
+      const c = d.value.commitments.find((x) => x.id === commitmentId);
+      if (!c) continue;
+      const [, contactId, roomId] = d.key.split(":") as [string, string, string];
+      if (c.status !== "active") throw new HostError("conflict", `承诺已是 ${c.status}`);
+      tx(this.db, () =>
+        this.ledgerTx(contactId, roomId, [{ type: "close", actionId: `revoke:${commitmentId}`, commitmentId, taskId: c.taskId, actor: { kind: "user", id: this.userId }, roundId: `revoke:${commitmentId}`, outcome: "revoked", artifact: null, detail: "用户撤销" }]),
+      );
+      const v = this.listCommitments({ contactId, roomId }).find((x) => x.id === commitmentId)!;
+      this.bus.emit({ type: "commitment.updated", commitment: v });
+      this.loop.notify(contactId, "batch");
+      return v;
+    }
+    throw new HostError("not_found", `没有承诺 ${commitmentId}`);
+  }
+  /** 显式的任务验收/退回/取消入口:等同于点任务最新的那张卡片。 */
+  taskDecision(taskId: string, decision: "accept" | "reject" | "cancel", clientActionId: string, note?: string): TaskView {
+    const t = this.taskDoc(taskId).value;
+    const kind = decision === "cancel" ? "task-status" : "delivery";
+    const card = one<CardRow>(this.db, "SELECT * FROM gg_cards WHERE task_id = ? AND kind = ? AND state = 'open' ORDER BY seq DESC LIMIT 1", taskId, kind);
+    if (!card) throw new HostError("conflict", decision === "cancel" ? `任务在 ${t.task.state},不能取消` : `任务在 ${t.task.state},没有待确认的交付`);
+    this.cardAct({ roomId: card.room_id, seq: card.seq, cardId: card.card_id, actionId: decision, clientActionId, ...(note ? { text: note } : {}) });
+    return this.taskView(this.taskDoc(taskId).value);
   }
 
   // ======================= 任务 =======================
@@ -736,16 +856,38 @@ export class Host {
     const pointers: { ref: string; text: string }[] = [];
     for (const r of rooms) {
       const cur = this.cursor(contactId, r.id);
-      const msgs = this.projected(r.id);
-      const last = msgs.at(-1)?.seq ?? 0;
-      lastSeen[r.id] = last;
-      for (const m of msgs) {
-        if (m.seq <= cur || m.retracted) continue;
-        if (m.sender.kind === "contact" && m.sender.id === contactId) {
-          ownOnly.push({ roomId: r.id, seq: m.seq });
+      const { log } = loadLog(this.db.store, `room:${r.id}`);
+      const msgs = project(log);
+      lastSeen[r.id] = log.events.at(-1)?.seq ?? 0;
+      // 按事件扫:编辑与撤回是新事件(只追加),作为「编辑 #x 为…」「撤回了 #x」送达,不回头改旧消息
+      for (const ev of log.events) {
+        if (ev.seq <= cur) continue;
+        if (ev.sender.kind === "contact" && ev.sender.id === contactId) {
+          ownOnly.push({ roomId: r.id, seq: ev.seq });
           continue;
         }
-        const ib = this.toInbound(r.id, m);
+        let ib: InboundMessage;
+        if (ev.body.kind === "message") {
+          const m = msgs.find((x) => x.seq === ev.seq);
+          if (!m || m.retracted) continue;
+          ib = this.toInbound(r.id, m);
+        } else {
+          const target = ev.body.target;
+          const tm = msgs.find((x) => x.seq === target);
+          if (ev.body.kind === "edit" && tm?.retracted) continue;
+          ib = {
+            kind: "message",
+            roomId: r.id,
+            seq: ev.seq,
+            sender: { kind: ev.sender.kind, id: ev.sender.id, name: this.nameOf(ev.sender) },
+            text: ev.body.kind === "edit" ? `(编辑了 #${target})${ev.body.text}` : `(撤回了 #${target})`,
+            replyToSeq: target,
+            quotedSeqs: [],
+            mentions: [],
+            command: null,
+            at: ev.at,
+          };
+        }
         fresh.push(ib);
         for (const q of [...ib.quotedSeqs, ...(ib.replyToSeq !== null ? [ib.replyToSeq] : [])]) {
           const src = msgs.find((x) => x.seq === q);
@@ -789,7 +931,7 @@ export class Host {
     const hasEffects = out.actions.some((a) => a.kind !== "commit");
     if (hasEffects) {
       for (const r of rooms) {
-        const newer = this.projected(r.id).filter((m) => m.seq > (lastSeen[r.id] ?? 0) && m.sender.kind === "user");
+        const newer = loadLog(this.db.store, `room:${r.id}`).log.events.filter((m) => m.seq > (lastSeen[r.id] ?? 0) && m.sender.kind === "user");
         if (newer.length) {
           this.report("stale-round", { contactId, roomId: r.id, newer: newer.map((m) => m.seq) });
           return "stale";
