@@ -22,7 +22,7 @@
 // M30–M47 是联系人/Helper 作者埋雷;contact/helper 其余系列见各分组注释。为不和任务侧重名:
 // reviews/feat-contact-helper.md 第二轮的 N01–N05 记为 CN01–CN05,第三轮的 P01–P05 记为 CP01–CP05,第五轮的 Z01–Z05 记为 CZ01–CZ05,
 // 第六轮的 W01–W05 记为 CW01–CW05,第七轮的 V01–V08 记为 CV01–CV08,第八轮的 H05–H06 记为 CH05–CH06,第九轮的 J01–J05 记为 CJ01–CJ05,
-// 第十轮的 Y01–Y08 记为 CY01–CY08,Astra 第 6 节的 I01–I26 记为 CI01–CI26(与任务侧第十三轮 I01–I09 区分),第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK129;第十三轮独立变异 AD01–AD04 原样保留编号(任务侧无 AD 前缀);第十四轮独立变异 V01/V02/V03/V08 记为 AE01–AE04(与任务侧 V01–V10 区分);第十五轮独立变异 case-dir/case-receipt/case-revoke 与 R15-01–R15-03 记为 AF01–AF06;第十六轮:CK72 拆分为 CK72a(plainDataError)与 CK72b(nestedPlainError),各对应一处 Reflect.ownKeys 循环。第十七轮按 R17-03/R17-04:四个失效变异(CK72a、CK72b、CK116、CK117)按当前源码重新定位到仍存在的那一处注入点,语义不变;CK114 由新增的 CH-48 测试(函数自有访问器)杀死;CK84(confirmFinalReport 遇非法状态抛错而非按 CH-37 返回 {ok:false})按当前实现重新定位并恢复——CK84 测的是非法状态返回被改成抛错,与 CH-42 的回执检查不等价。同时新增 CK130–CK133(R17-01 修复的判别力:函数 prototype 通用例外、不要求宿主是生成器函数、别名再次出现时不查对象本身、生成器原型层不分同步/异步)。第十九轮新增 CK134–CK165(R18-01 生成器 prototype 先拒 Proxy、R18-02 cron 语义校验的范围/区间/步长单点注入)。第二十轮:R19-01 改写数组复制后,CK43、CJ01、CK48、CK65 按新源码重新定位到等价注入点,语义不变;新增 CK166–CK173(R19-01 数组复制短路)与 CK174(R19-02 等值区间)。原样副本必须全绿(阴性对照)。
+// 第十轮的 Y01–Y08 记为 CY01–CY08,Astra 第 6 节的 I01–I26 记为 CI01–CI26(与任务侧第十三轮 I01–I09 区分),第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK129;第十三轮独立变异 AD01–AD04 原样保留编号(任务侧无 AD 前缀);第十四轮独立变异 V01/V02/V03/V08 记为 AE01–AE04(与任务侧 V01–V10 区分);第十五轮独立变异 case-dir/case-receipt/case-revoke 与 R15-01–R15-03 记为 AF01–AF06;第十六轮:CK72 拆分为 CK72a(plainDataError)与 CK72b(nestedPlainError),各对应一处 Reflect.ownKeys 循环。第十七轮按 R17-03/R17-04:四个失效变异(CK72a、CK72b、CK116、CK117)按当前源码重新定位到仍存在的那一处注入点,语义不变;CK114 由新增的 CH-48 测试(函数自有访问器)杀死;CK84(confirmFinalReport 遇非法状态抛错而非按 CH-37 返回 {ok:false})按当前实现重新定位并恢复——CK84 测的是非法状态返回被改成抛错,与 CH-42 的回执检查不等价。同时新增 CK130–CK133(R17-01 修复的判别力:函数 prototype 通用例外、不要求宿主是生成器函数、别名再次出现时不查对象本身、生成器原型层不分同步/异步)。第十九轮新增 CK134–CK165(R18-01 生成器 prototype 先拒 Proxy、R18-02 cron 语义校验的范围/区间/步长单点注入)。第二十轮:R19-01 改写数组复制后,CK43、CJ01、CK48、CK65 按新源码重新定位到等价注入点,语义不变;新增 CK166–CK173(R19-01 数组复制短路)与 CK174(R19-02 等值区间);复核线索 A-D2(AC-33① 通用能力黑名单只做精确匹配)修复后 M32、CK87 重定位到 isForbiddenTool 调用处(语义不变),新增 CK175–CK182(比对键的小写/NFKC/分隔符、授予与恢复退回精确比对、前缀/子串误拒)。原样副本必须全绿(阴性对照)。
 // 用法: node packages/domain/proof/mutations.mjs
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -278,7 +278,7 @@ const M = [
   ["M28 vendor 两家都像时取第一家", "vendor.ts", "return hits.size === 1 ? [...hits][0]! : \"unknown\";", "return hits.size >= 1 ? [...hits][0]! : \"unknown\";"],
   ["M30 同 id 新建覆盖", "contact.ts", "if (d.contacts.has(c.id)) return { ok: false, reason: `联系人 ${c.id} 已存在,不能同 id 新建覆盖` };", ""],
   ["M31 改名时清空记忆", "contact.ts", "...(patch.name !== undefined ? { name: patch.name } : {}),", "...(patch.name !== undefined ? { name: patch.name, memory: \"\" } : {}),"],
-  ["M32 不查通用工具黑名单", "contact.ts", "if (FORBIDDEN_DIRECT_TOOLS.includes(tool.name)) return", "if (false) return"],
+  ["M32 不查通用工具黑名单", "contact.ts", "if (isForbiddenTool(tool.name)) return", "if (false) return"],
   ["M33 不查有界", "contact.ts", "if (!tool.bounded) return", "if (false) return"],
   ["M34 Compute 说明带上记忆", "contact.ts", "brief: Object.freeze({ task: r.task,", "brief: Object.freeze({ memory: c.memory, task: r.task,"],
   ["M35 工具不过白名单", "contact.ts", "const extra = r.tools.filter((t) => !allowed.has(t));", "const extra: string[] = [];"],
@@ -443,7 +443,7 @@ const M = [
   ["CK83 settleTask 状态不合法时抛 TypeError", "contact.ts", "\"任务 id 必须是字符串\" };\n  const s = readContact(state);\n  if (!s.ok) return s;", "\"任务 id 必须是字符串\" };\n  const s = readContact(state);\n  if (!s.ok) throw new TypeError(s.reason);"],
   ["CK85 状态里的工具不查有界", "contact.ts", "    if (t.bounded !== true) return `${at} 不是有界工具,不能当直接工具`;\n", ""],
   ["CK86 状态里的工具不查空名", "contact.ts", "    if (!t.name.trim()) return `${at} 工具名为空`;\n", ""],
-  ["CK87 状态里的工具不查禁项", "contact.ts", "    if (FORBIDDEN_DIRECT_TOOLS.includes(t.name)) return `${at} ${t.name} 是通用能力,不能在直接工具清单里`;\n", ""],
+  ["CK87 状态里的工具不查禁项", "contact.ts", "    if (isForbiddenTool(t.name)) return `${at} ${t.name} 是通用能力,不能在直接工具清单里`;\n", ""],
   ["CK88 状态里的工具不查与能力资产同名", "contact.ts", "    if (c.computeAssets.some((x) => x.name === t.name)) return `${at} ${t.name} 同时登记为 Compute 能力资产`;\n", ""],
   ["CK89 状态里的资产不查类别", "contact.ts", "    if (!ASSET_KINDS.has(a.kind)) return `${at} 的类别 ${a.kind} 不认识`;\n", ""],
   ["CK90 状态里的资产不查空名", "contact.ts", "    if (!a.name.trim()) return `${at} 能力资产名为空`;\n", ""],
@@ -549,6 +549,15 @@ const M = [
   ["CK172 下标通过后不查下标以外的访问器", "plain.ts", "  const bad = plainDataError(v, field, true, true);\n  if (bad) return { reason: bad };\n", ""],
   ["CK173 访问器下标当空位处理(不按访问器拒绝)", "plain.ts", "    if (d !== undefined && !Object.hasOwn(d, \"value\")) return { reason: `${field} 只接受普通数据数组(${i} 是访问器属性)` };\n", ""],
   ["CK174 等值区间 a-a 被当成倒置拒绝(R19-02 审查原样注入:> 改 >=)", "contact.ts", "if (Number(a) > Number(b)) return", "if (Number(a) >= Number(b)) return"],
+  // 第二十轮(复核线索 A-D2,AC-33①):CK175–CK182 对应通用能力黑名单的规范化整键比对。
+  ["CK175 黑名单比对键不转小写(BASH、Bash 放行)", "contact.ts", "name.normalize(\"NFKC\").toLowerCase().replace(/[^\\p{L}\\p{N}]/gu, \"\")", "name.normalize(\"NFKC\").replace(/[^\\p{L}\\p{N}]/gu, \"\")"],
+  ["CK176 黑名单比对键不做 NFKC(全角变体放行)", "contact.ts", "name.normalize(\"NFKC\").toLowerCase().replace(/[^\\p{L}\\p{N}]/gu, \"\")", "name.toLowerCase().replace(/[^\\p{L}\\p{N}]/gu, \"\")"],
+  ["CK177 黑名单比对键只去首尾空白(分隔符变体放行)", "contact.ts", "name.normalize(\"NFKC\").toLowerCase().replace(/[^\\p{L}\\p{N}]/gu, \"\")", "name.normalize(\"NFKC\").toLowerCase().trim()"],
+  ["CK178 黑名单比对键只去空白不去分隔符(run-command、run.command 放行)", "contact.ts", "name.normalize(\"NFKC\").toLowerCase().replace(/[^\\p{L}\\p{N}]/gu, \"\")", "name.normalize(\"NFKC\").toLowerCase().replace(/\\s/gu, \"\")"],
+  ["CK179 授予直接工具退回精确比对", "contact.ts", "if (isForbiddenTool(tool.name)) return", "if (FORBIDDEN_DIRECT_TOOLS.includes(tool.name)) return"],
+  ["CK180 恢复状态退回精确比对", "contact.ts", "    if (isForbiddenTool(t.name)) return `${at}", "    if (FORBIDDEN_DIRECT_TOOLS.includes(t.name)) return `${at}"],
+  ["CK181 黑名单按前缀比对(bash_history 被误拒)", "contact.ts", "const isForbiddenTool = (name: string): boolean => FORBIDDEN_KEYS.has(toolKey(name));", "const isForbiddenTool = (name: string): boolean => [...FORBIDDEN_KEYS].some((k) => toolKey(name).startsWith(k));"],
+  ["CK182 黑名单按子串比对(my_shell_notes 被误拒)", "contact.ts", "const isForbiddenTool = (name: string): boolean => FORBIDDEN_KEYS.has(toolKey(name));", "const isForbiddenTool = (name: string): boolean => [...FORBIDDEN_KEYS].some((k) => toolKey(name).includes(k));"],
 ];
 // 所测功能已按 g-group#2273 撤销(专职开关「只做这件事」整体删除),对应变异移出清单;运行时逐条打印说明,写进 mutations.txt。
 const REMOVED = [
