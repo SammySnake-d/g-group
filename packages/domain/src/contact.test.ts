@@ -2241,3 +2241,96 @@ test("CH-54 通用能力黑名单按规范化名字比对:大小写、首尾空�
     assert.equal(grantTool(js(g.ok ? g.contact : (null as never)) as never, { name: "weather", bounded: true }).ok, true, `对照 ${name} 恢复`);
   }
 });
+
+// 第二十一轮:R20-01 生成器原型必须为空;R20-02/03 两个独立授权入口必须整名匹配。
+type R20Generator = { prototype: unknown };
+const r20Generator = (asynchronous: boolean): R20Generator =>
+  (asynchronous ? async function* asyncGenerator() {} : function* syncGenerator() {}) as R20Generator;
+const r20FakePrototype = (asynchronous: boolean, value: unknown): R20Generator => {
+  const fn = r20Generator(asynchronous);
+  const engineLayer = Object.getPrototypeOf(fn.prototype as object) as object;
+  fn.prototype = Object.assign(Object.create(engineLayer), { data: value });
+  return fn;
+};
+const r20Entries = (fn: unknown) => {
+  const c = fullContact();
+  return [
+    ["grantTool", grantTool(c, { name: "tool_r20", bounded: true, ignored: { fn } } as never)],
+    ["routeHelper", routeHelper({ kind: "global", extra: { fn } } as never, { kind: "user", id: "u" }, "u")],
+    ["confirmFinalReport", confirmFinalReport(c, { taskId: "T", commitmentIds: ["k"], basedOnSeq: 1, extra: { fn } } as never)],
+  ] as const;
+};
+const r20RejectDataPrototype = (asynchronous: boolean, value: unknown) => {
+  for (const [entry, result] of r20Entries(r20FakePrototype(asynchronous, value))) {
+    assert.equal(result.ok, false, `${entry} 应拒绝带自有数据的非普通原型`);
+    assert.match(!result.ok ? result.reason : "", /\.prototype 只接受普通数据对象$/, `${entry} 应指出原型`);
+  }
+};
+
+test("R20-01 同步生成器同层伪原型带原始数据拒绝,三个入口均适用", () => {
+  r20RejectDataPrototype(false, 17);
+});
+test("R20-01 同步生成器同层伪原型带普通对象数据拒绝,三个入口均适用", () => {
+  r20RejectDataPrototype(false, { note: "marker" });
+});
+test("R20-01 异步生成器同层伪原型带原始数据拒绝,三个入口均适用", () => {
+  r20RejectDataPrototype(true, "marker");
+});
+test("R20-01 异步生成器同层伪原型带普通对象数据拒绝,三个入口均适用", () => {
+  r20RejectDataPrototype(true, { note: "marker" });
+});
+test("R20-01 引擎生成原型及同层空对象放行,自有访问器与 Proxy 不调用即拒", () => {
+  for (const asynchronous of [false, true]) {
+    const fn = r20Generator(asynchronous);
+    const empty = r20Generator(asynchronous);
+    empty.prototype = Object.create(Object.getPrototypeOf(empty.prototype as object));
+    for (const value of [fn, empty]) {
+      for (const [entry, result] of r20Entries(value)) assert.equal(result.ok, true, `${entry} 空原型对照`);
+    }
+    let getterCalls = 0;
+    const getter = r20Generator(asynchronous);
+    Object.defineProperty(getter.prototype as object, "data", { get() { getterCalls++; throw new Error("不应调用"); } });
+    for (const [entry, result] of r20Entries(getter)) assert.equal(result.ok, false, `${entry} 访问器拒绝`);
+    assert.equal(getterCalls, 0, "访问器调用次数");
+    const counter = { n: 0 };
+    const proxyValue = r20Generator(asynchronous);
+    Object.defineProperty(proxyValue.prototype as object, "data", { value: new Proxy({}, countingHandler(counter, "throw")) });
+    for (const [entry, result] of r20Entries(proxyValue)) assert.equal(result.ok, false, `${entry} 属性值 Proxy 拒绝`);
+    const proxyProto = r20Generator(asynchronous);
+    proxyProto.prototype = new Proxy({}, countingHandler(counter, "throw"));
+    for (const [entry, result] of r20Entries(proxyProto)) assert.equal(result.ok, false, `${entry} 原型 Proxy 拒绝`);
+    assert.equal(counter.n, 0, "Proxy trap 调用次数");
+  }
+});
+
+test("R20-02 联系人直接调用只认整名:扩展名、前缀与未授权名均拒绝", () => {
+  const c = unwrap(grantTool(mk().contacts.get("c-mi")!, { name: "get_weather", bounded: true }));
+  assert.equal(canCallDirectly(c, "get_weather"), true, "完整授权名");
+  for (const name of ["get_weather_extra", "get_weath", "send_email"]) {
+    assert.equal(canCallDirectly(c, name), false, `${name} 未授权`);
+  }
+});
+
+test("R20-03 Compute 说明的直接工具只认整名:扩展名、前缀与未授权名均拒绝", () => {
+  const c = unwrap(grantTool(mk().contacts.get("c-mi")!, { name: "get_weather", bounded: true }));
+  const request = (name: string) => ({ task: "t", rules: [], tools: [name], credentialRefs: [] });
+  const allowed = briefFor(c, request("get_weather"));
+  assert.equal(allowed.ok, true, "完整直接工具名");
+  assert.deepEqual(allowed.ok && allowed.brief.tools, ["get_weather"]);
+  for (const name of ["get_weather_extra", "get_weath", "send_email"]) {
+    const result = briefFor(c, request(name));
+    assert.deepEqual(result, { ok: false, reason: `工具 ${name} 超出联系人 c-mi 的授权集合` }, `${name} 不得进入说明`);
+  }
+});
+
+test("R20-03 Compute 说明的专用资产只认整名:扩展名、前缀与未授权名均拒绝", () => {
+  const c = unwrap(grantComputeAsset(mk().contacts.get("c-mi")!, { name: "analysis_skill", kind: "skill" }));
+  const request = (name: string) => ({ task: "t", rules: [], tools: [name], credentialRefs: [] });
+  const allowed = briefFor(c, request("analysis_skill"));
+  assert.equal(allowed.ok, true, "完整 Compute 资产名");
+  assert.deepEqual(allowed.ok && allowed.brief.tools, ["analysis_skill"]);
+  for (const name of ["analysis_skill_extra", "analysis_skil", "other_skill"]) {
+    const result = briefFor(c, request(name));
+    assert.deepEqual(result, { ok: false, reason: `工具 ${name} 超出联系人 c-mi 的授权集合` }, `${name} 不得进入说明`);
+  }
+});
