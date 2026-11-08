@@ -67,10 +67,10 @@
   "waiver": null,
   "review": {
     "agent": "codex",
-    "session": "codex:5d951824-bd36-4afe-ac5a-cf084bcb0000",
+    "session": "codex:a9f8d5da-7835-40ce-b450-580a94cb703c",
     "model": "gpt-6.1-terra",
     "verdict": "reject",
-    "reviewed_hash": "68bd4137cc4e2e42359d490d0afad4e2946c9b9dc41168acd000fdc7ad384de4",
-    "notes": "第十轮 REJECT：来源同名目录误认、清理克隆后失认；导出范围策略可变；容器额外挂载检查遗漏；动态运行库符号链接布局隔离启动失败。容器故障路径本机未测。"
+    "reviewed_hash": "10599221625330afb1bb0513b149e7326d1667647b506b7a329bce7031cc5bda",
+    "notes": "第十一轮 REJECT：R11-01 remote 误认仓库；R11-02 输出混入提交号误认；R11-03 稀疏数组误收判因；R11-04 执行前守卫故障未检出；R11-05 只读误计产出。"
   }
 }
