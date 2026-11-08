@@ -1,0 +1,28 @@
+receipts/feat-profile-views.json
+  s_7489a667d0db56::t_d854e9bd2f2288 1-14
+packages/server/src/files.test.ts
+  h_f33e46a035b77c 51
+packages/server/src/views.ts
+  h_f33e46a035b77c 50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "193e3680a345a2b1671a7808b2f769503c2a4279",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_7489a667d0db56": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2353d719-cdd5-4608-894a-8460db6c9810",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
