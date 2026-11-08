@@ -1,0 +1,254 @@
+原样副本自检耗时 100s
+✓ 原样副本自检通过
+变异 124 个,并发 2,每个变异的自检并发 4,CPU 8,node v22.22.0
+[1/124] ✓ 变异「本机模式不跑来源核对」(5s)被「合规:先红后绿、跨厂商审查、来源核对通过」发现:执行器:退出码 0→0,门禁 ✓PROVENANCE ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER
+[2/124] ✓ 变异「CI 模式不跑任何门禁」(5s)被「合规(CI 模式,不跑来源核对)」发现:执行器:退出码 0→0,门禁 ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → (无)
+[3/124] ✓ 变异「有问题也退出 0」(7s)被「CI 模式下违规同样拦下」发现:执行器:退出码 1→0,门禁 ✗TRACE ✓REVIEW ✗RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → ✗TRACE ✓REVIEW ✗RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER
+[4/124] ✓ 变异「执行器吞掉问题」(7s)被「CI 模式下违规同样拦下」发现:执行器:退出码 1→0,门禁 ✗TRACE ✓REVIEW ✗RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER
+[5/124] ✓ 变异「workflow/依赖清单不算受管」(6s)被「F-02 只改 workflow 没收据」发现:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+[6/124] ✓ 变异「执行器把门禁出错当放行」(7s)被「RR-02 没有沙箱就停」发现:执行器:退出码 1→0,门禁 ✓PROVENANCE ✓TRACE ✓REVIEW ✗RED ✗STUB ✗TAUTO ✓WORKFLOW ✓LAYER → ✓PROVENANCE ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER
+[7/124] ✓ 变异「来源核对不比对 hash」(9s)被「审查会话算出的是别的 hash」发现:G-PROVENANCE 不再按预期原因「审查会话里没有一次」拦下(✗ → ✓)
+[8/124] ✓ 变异「来源核对看全会话模型」(10s)被「F-04 历史出现过别家模型,算 hash 那一轮是同厂商」发现:G-PROVENANCE 不再按预期原因「实际是 anthropic」拦下(✗ → ✓)
+[9/124] ✓ 变异「豁免认消息里任意一行指令」(11s)被「RR-13 指令前另有说明文字」发现:G-PROVENANCE 不再按预期原因「不是一条格式为」拦下(✗ → ✓)
+[10/124] ✓ 变异「红提交只要求点名一条」(12s)被「红提交上第二条测试本来就绿」发现:G-RED 不再按预期原因「zero 放到红提交的实现上没有按名字失败」拦下(✗ → ✓)
+[11/124] ✓ 变异「空桩失败不按名字计数」(10s)被「F-07 测试只读顶层常量」发现:G-STUB 仍拦下但不再是预期原因「空桩后没有按名字失败」
+[12/124] ✓ 变异「断言不要求判源码结果」(9s)被「F-07 断言只判复制的逻辑」发现:G-TAUTO 不再按预期原因「没有一条断言判的是被测源码」拦下(✗ → ✓)
+[13/124] ✓ 变异「测试只认字面 test」(7s)被「合规:node:test 别名 + 断言」发现:G-RED 由放行变为拦下(不是门禁自身出错)
+[14/124] ✓ 变异「去掉审查人白名单检查」(10s)被「审查人 grok 被拦」发现:G-REVIEW 不再按预期原因「审查人必须是」拦下(✗ → ✓)
+[15/124] ✓ 变异「来源核对不查审查会话 harness」(10s)被「原则 68 claude 审查会话必须是 claude 会话」发现:G-PROVENANCE 不再按预期原因「必须是 claude 会话」拦下(✗ → ✓)
+[16/124] ✓ 变异「审查会话 harness 不按审查人区分」(10s)被「原则 68 claude 审 codex 作者放行(claude 会话)」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[17/124] ✓ 变异「claude 不受跨厂商约束」(9s)被「原则 68 claude 审查照样要跨研发厂商:作者用 Anthropic 模型」发现:G-REVIEW 不再按预期原因「同为 anthropic」拦下(✗ → ✓)
+[18/124] ✓ 变异「claude 可审 claude 作者」(10s)被「原则 68 claude 审 claude 作者被拦(禁止自审)」发现:G-REVIEW 仍拦下但不再是预期原因「审查人与作者是同一个(claude)」
+[19/124] ✓ 变异「名单漏掉 argon」(11s)被「原则 68 argon 审 codex 作者放行(claude 会话,g-group#3199 备用审查人)」发现:G-REVIEW 由放行变为拦下(不是门禁自身出错)
+[20/124] ✓ 变异「argon 会话回退成 codex」(14s)被「原则 68 argon 审 codex 作者放行(claude 会话,g-group#3199 备用审查人)」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[21/124] ✓ 变异「argon-chat 也进名单」(14s)被「原则 68 argon-chat 当审查人被拦(不能执行命令)」发现:G-REVIEW 不再按预期原因「审查人必须是」拦下(✗ → ✓)
+[22/124] ✓ 变异「不核对派活卡片」(9s)被「派活卡片显示会话属于别的助手」发现:G-PROVENANCE 不再按预期原因「对不上」拦下(✗ → ✓)
+[23/124] ✓ 变异「session 不做 realpath 包含检查」(10s)被「RR-01 会话文件软链到 PR 里的伪造记录」发现:G-PROVENANCE 不再按预期原因「会话根目录之外」拦下(✗ → ✓)
+[24/124] ✓ 变异「session harness 不查白名单」(10s)被「RR-01 harness 不在白名单」发现:G-PROVENANCE 仍拦下但不再是预期原因「不在白名单」
+[25/124] ✓ 变异「没有沙箱时回退宿主」(9s)被「RR-02 没有沙箱就停」发现:G-RED 不再按预期原因「没有可用沙箱」拦下(✗ → ✓)
+[26/124] ✓ 变异「workflow 不查写权限」(9s)被「RR-03 带引号的写权限」发现:G-WORKFLOW 不再按预期原因「申请了写权限 statuses」拦下(✗ → ✓)
+[27/124] ✓ 变异「workflow 不拒绝表达式名字」(9s)被「RR-03 job 名用表达式拼出受保护名」发现:G-WORKFLOW 不再按预期原因「名字含表达式」拦下(✗ → ✓)
+[28/124] ✓ 变异「不拦自比较断言」(9s)被「RR-04 自比较断言」发现:G-TAUTO 不再按预期原因「自比较或恒真」拦下(✗ → ✓)
+[29/124] ✓ 变异「不拦不可达断言」(10s)被「RR-04 不可达断言」发现:G-TAUTO 不再按预期原因「执行不到」拦下(✗ → ✓)
+[30/124] ✓ 变异「不做返回值变异校准」(9s)被「RR-04 断言没检查返回值(返回值变异存活)」发现:G-STUB 不再按预期原因「返回错误值」拦下(✗ → ✓)
+[31/124] ✓ 变异「相对路径写操作不算产出」(8s)被「RR-05 判不了路径的 shell 轮次也算进去」发现:G-PROVENANCE 不再按预期原因「在作者的产出厂商集合」拦下(✗ → ✓)
+[32/124] ✓ 变异「测试身份按集合比较(计数去重)」(9s)被「RR-06 同名间接测试零断言」发现:G-TAUTO 不再按预期原因「运行时注册了 2 次」拦下(✗ → ✓)
+[33/124] ✓ 变异「不核对红提交测试体」(8s)被「RR-07 红提交上是另一份假断言」发现:G-RED 仍拦下但不再是预期原因「测试体和现在不同」
+[34/124] ✓ 变异「豁免不核对 uid」(10s)被「RR-08 冒用所有者名字的另一个 uid」发现:G-PROVENANCE 不再按预期原因「不是仓库所有者」拦下(✗ → ✓)
+[35/124] ✓ 变异「豁免认引用里的文字」(9s)被「RR-13 整条消息是引用块里的指令」发现:G-PROVENANCE 不再按预期原因「不是一条格式为」拦下(✗ → ✓)
+[36/124] ✓ 变异「git 子进程继承 GIT_*」(7s)被「隔离:hook 环境的 GIT_DIR 指向别的仓库,门禁不碰它」发现:执行器:退出码 0→1,门禁 ✓PROVENANCE ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → (无);副作用检查失败:GIT_DIR 指向的另一个仓库被改动了
+[37/124] ✓ 变异「self-check 白名单放给所有文件」(8s)被「RR-03 别的 workflow 冒充 self-check」发现:G-WORKFLOW 不再按预期原因「冒充受保护检查名 self-check」拦下(✗ → ✓)
+[38/124] ✓ 变异「不检查 self-check 必需步骤」(8s)被「RR-09 self-check.yml 只 echo」发现:G-WORKFLOW 不再按预期原因「缺必需步骤」拦下(✗ → ✓)
+[39/124] ✓ 变异「不检查 self-check 步骤的 if」(10s)被「RR-09 门禁自检步骤加 if: false」发现:G-WORKFLOW 不再按预期原因「带了 if」拦下(✗ → ✓)
+[40/124] ✓ 变异「不检查 self-check job 的 if」(8s)被「RR-09 job 加 if」发现:G-WORKFLOW 不再按预期原因「带了 if」拦下(✗ → ✓)
+[41/124] ✓ 变异「不检查 self-check continue-on-error」(9s)被「RR-09 job 加 continue-on-error」发现:G-WORKFLOW 不再按预期原因「带了 continue-on-error」拦下(✗ → ✓)
+[42/124] ✓ 变异「变异命令允许任意后缀」(9s)被「RR-09 变异命令后接 || true」发现:G-WORKFLOW 不再按预期原因「缺必需步骤」拦下(✗ → ✓)
+[43/124] ✓ 变异「不检查 package.json 门禁脚本」(9s)被「RR-09 package.json 把 gates:mutation 改成 true」发现:G-WORKFLOW 不再按预期原因「scripts["gates:mutation"] 必须是」拦下(✗ → ✓)
+[44/124] ✓ 变异「不检查 self-check 的 shell/working-directory」(9s)被「RR-09 必需步骤换 shell」发现:G-WORKFLOW 不再按预期原因「带了 shell」拦下(✗ → ✓)
+[45/124] ✓ 变异「不检查 self-check 的 defaults」(8s)被「RR-09 job 用 defaults 换 shell」发现:G-WORKFLOW 不再按预期原因「带了 defaults」拦下(✗ → ✓)
+[46/124] ✓ 变异「红重放不覆盖测试依赖」(9s)被「RR-11 helper 在红提交上给了错期望值」发现:G-RED 不再按预期原因「没有按名字失败」拦下(✗ → ✓)
+[47/124] ✓ 变异「测试依赖只认非源码文件」(8s)被「RR-11 helper 在红提交上给了错期望值」发现:G-RED 不再按预期原因「没有按名字失败」拦下(✗ → ✓)
+[48/124] ✓ 变异「返回值变异退回按文件判定」(10s)被「RR-12 一条强测试 + 一条只断言 typeof」发现:G-STUB 不再按预期原因「返回错误值」拦下(✗ → ✓)
+[49/124] ✓ 变异「hash 调用认任意含 run-all --hash 的命令」(11s)被「RR-14 printf 打印 hash、run-all 只在注释里」发现:G-PROVENANCE 不再按预期原因「审查会话里没有一次」拦下(✗ → ✓)
+[50/124] ✓ 变异「hash 调用不拒 shell 元字符」(9s)被「RR-14 真实 hash 输出被丢弃、再 echo hash」发现:G-PROVENANCE 不再按预期原因「审查会话里没有一次」拦下(✗ → ✓)
+[51/124] ✓ 变异「hash 调用不要求 node 后紧跟 run-all」(9s)被「RR-14 node 先跑别的脚本、run-all 只是它的参数」发现:G-PROVENANCE 不再按预期原因「审查会话里没有一次」拦下(✗ → ✓)
+[52/124] ✓ 变异「产出厂商不认同仓库的另一个 clone」(8s)被「RR-15 后续轮次写进同仓库的另一个 clone」发现:G-PROVENANCE 仍拦下但不再是预期原因「在作者的产出厂商集合」
+[53/124] ✓ 变异「0 用例判通过」(7s)被「g-group#2538 测试入口 0 条用例判失败」发现:直接判定用例在变异下判失败:0 条用例没有判失败(退出 1)
+[54/124] ✓ 变异「读不到汇总行判通过」(5s)被「R4-02 判定:读不到汇总行判失败」发现:直接判定用例在变异下判失败:没有汇总行却判 通过
+[55/124] ✓ 变异「skip 计入用例数」(5s)被「R4-02 测试入口全部 skip 判失败」发现:直接判定用例在变异下判失败:全部 skip 没有按"没有实际执行"判失败(退出 0)
+[56/124] ✓ 变异「通过数为 0 也算执行」(6s)被「R4-02 测试入口全部 todo 判失败」发现:直接判定用例在变异下判失败:全部 todo 没有按"没有实际执行"判失败(退出 0)
+[57/124] ✓ 变异「不要求 test 脚本为规范值」(8s)被「g-group#2538 test 脚本改回裸 node --test(0 用例也判通过)」发现:G-WORKFLOW 仍拦下但不再是预期原因「scripts["test"] 必须是」
+[58/124] ✓ 变异「self-check 不要求 npm test 步骤」(8s)被「g-group#2538 self-check 缺 npm test 步骤」发现:G-WORKFLOW 不再按预期原因「缺必需步骤:run 为 npm test」拦下(✗ → ✓)
+[59/124] ✓ 变异「self-check 不查 GATE_* 环境开关」(9s)被「R4-01 self-check job env 设 GATE_ 开关缩小自检」发现:G-WORKFLOW 不再按预期原因「设置了门禁开关 GATE_SELFTEST_ONLY」拦下(✗ → ✓)
+[60/124] ✓ 变异「执行故障也算目标判因」(7s)被「R4-01 提示用例无关夹具故障不算发现」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:改了代码没收据 执行故障(error)
+[61/124] ✓ 变异「任意非零即算发现」(16s)被「R4-01 端到端:中性变异 + 提示用例夹具故障,变异校验必须判存活」发现:直接判定用例在变异下判失败:中性变异在提示用例夹具故障下被判成发现(退出 0)
+[62/124] ✓ 变异「任何门禁变了都算目标」(6s)被「R4-01 错的门禁变了不算发现目标」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+[63/124] ✓ 变异「门禁自身出错也算拦下」(5s)被「R4-01 目标门禁因自身出错拦下不算预期原因」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-RED 由放行变为拦下(不是门禁自身出错)
+[64/124] ✓ 变异「预期拦下变成门禁自身出错仍算发现」(5s)被「R5-01 目标门禁由预期拦下变为门禁自身出错不算发现」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-TRACE 仍拦下但不再是预期原因「缺收据」
+[65/124] ✓ 变异「门禁移出执行列表不算发现」(6s)被「R5-01 目标门禁从完整运行的执行列表里消失算发现」发现:直接判定用例在变异下判失败:门禁被移出执行列表却没算发现(判因 undefined)
+[66/124] ✓ 变异「目标门禁没跑也参与判定」(6s)被「R5-01 目标门禁没跑(观测缺失)不算发现」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-TRACE 从完整运行的执行列表里消失(没有运行)
+[67/124] ✓ 变异「输出完整性只看头部」(5s)被「R4-01 门禁输出解析:注册数与列出数一致且有 CONTENT_HASH 才算完整」发现:直接判定用例在变异下判失败:解析不对:{"full":{"gates":{"G-TRACE":"✓","G-RED":"✗"},"expectHit":["G-RED"],"gateErrors":[],"header":true,"complete":true},"
+[68/124] ✓ 变异「基线门禁出错一律排除」(5s)被「R5-01 基线就是按预期以门禁自身出错拦下(fail-closed)、变异后放行算发现」发现:直接判定用例在变异下判失败:预期的 fail-closed 拦下变成放行却没算发现
+[69/124] ✓ 变异「判因不核对退出码」(5s)被「R5-01 结构化判因与退出码不一致不算发现」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+[70/124] ✓ 变异「结构化结果不校验就收」(5s)被「R5-02 parseCases 遇到 null/数组/缺字段/错类型/非法枚举不抛错且全部拒收」发现:直接判定用例在变异下判失败:非法行被收下 9 条:[[],1,"x",{"name":"a"},{"name":"改了代码没收据","pass":"yes","kind":"ok","direct":false,"expect":"缺收据","exit":1,"gat
+[71/124] ✓ 变异「不拒 Proxy」(4s)被「R5-02 getter/setter/Proxy 回调 0 次且被拒收」发现:直接判定用例在变异下判失败:proxyObj:非法结果被当成证据:["G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)",null,{"case":"改了代码没收据","ev":"G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)"}]
+[72/124] ✓ 变异「不拒访问器属性」(4s)被「R5-02 getter/setter/Proxy 回调 0 次且被拒收」发现:直接判定用例在变异下判失败:setterObj:非法结果被当成证据:["G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)",null,{"case":"改了代码没收据","ev":"G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)"}]
+[73/124] ✓ 变异「导出策略不冻结」(4s)被「R5-03 改导出的策略对象不改变后续门禁行为」发现:直接判定用例在变异下判失败:allowedReviewers 变成 ;harnessOf 变成 claude/claude;PROTECTED_CONTEXTS 变成 ;LAYERS 变成 domain,kernel,adapter,plugin,app,evil;R
+[74/124] ✓ 变异「只冻结顶层」(4s)被「R5-03 改导出的策略对象不改变后续门禁行为」发现:直接判定用例在变异下判失败:allowedReviewers 变成 ;harnessOf 变成 claude/codex
+[75/124] ✓ 变异「注入点唯一性只查字符串」(5s)被「R5-04 正则注入点 0 次/多次在变异执行前拒绝,恰 1 次放行」发现:直接判定用例在变异下判失败:injectionCount 结果 [1,1,0,0,1,1,2,0,1]
+[76/124] ✓ 变异「门禁临时 HOME 退出不删」(7s)被「磁盘:门禁命令行与一条自检用例跑完不在 TMPDIR 留下 gate-home/gate-run/gate-snap/gate-selftest 目录」发现:直接判定用例在变异下判失败:留下了 1 个临时目录:gate-home-QHNRVM
+[77/124] ✓ 变异「从 ALL_GATES 删掉 trace」(5s)被「改了代码没收据」发现:G-TRACE 从完整运行的执行列表里消失(没有运行)
+[78/124] ✓ 变异「从 ALL_GATES 删掉 review」(5s)被「作者自审」发现:G-REVIEW 从完整运行的执行列表里消失(没有运行)
+[79/124] ✓ 变异「从 ALL_GATES 删掉 red」(5s)被「收据没写红提交」发现:G-RED 从完整运行的执行列表里消失(没有运行)
+[80/124] ✓ 变异「从 ALL_GATES 删掉 stub」(4s)被「F-07 测试只读顶层常量」发现:G-STUB 从完整运行的执行列表里消失(没有运行)
+[81/124] ✓ 变异「从 ALL_GATES 删掉 tautology」(5s)被「恒真断言」发现:G-TAUTO 从完整运行的执行列表里消失(没有运行)
+[82/124] ✓ 变异「从 ALL_GATES 删掉 workflow」(5s)被「PR 的 workflow 冒充受保护检查名」发现:G-WORKFLOW 从完整运行的执行列表里消失(没有运行)
+[83/124] ✓ 变异「从 ALL_GATES 删掉 layers(末项)」(5s)被「领域层反向依赖内核」发现:G-LAYER 从完整运行的执行列表里消失(没有运行)
+[84/124] ✓ 变异「变异侧输出不完整仍判因」(5s)被「R6-01 目标门禁仍在但变异侧输出不完整(缺 CONTENT_HASH/少列表项/截断)不算发现」发现:直接判定用例在变异下判失败:预期拦下→放行:不该算发现,却给出判因:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+[85/124] ✓ 变异「killedBy 先用 instanceof 判 Map」(4s)被「R6-02 killedBy 基线 Map 是 Proxy/撤销的 Proxy/伪 Map、结果数组是 Proxy 时 trap 回调 0 次、不抛错、不给判因」发现:直接判定用例在变异下判失败:基线 Map Proxy:抛错 中性标记:trap 被调用
+[86/124] ✓ 变异「数组校验先 Array.isArray 后判 Proxy」(4s)被「R6-02 killedBy 基线 Map 是 Proxy/撤销的 Proxy/伪 Map、结果数组是 Proxy 时 trap 回调 0 次、不抛错、不给判因」发现:直接判定用例在变异下判失败:结果数组撤销的 Proxy:抛错 Cannot perform 'IsArray' on a proxy that has been revoked
+[87/124] ✓ 变异「ALL_GATES 只冻结数组」(4s)被「R6-03 改 ALL_GATES/LOCAL_GATES 里的门禁对象(run/id/rule/加属性)不改变后续门禁行为」发现:直接判定用例在变异下判失败:门禁对象没有全部冻结;ALL_GATES 的 id 变成 G-Y,G-X,G-RED,G-STUB,G-TAUTO,G-WORKFLOW,G-LAYER;门禁对象被加上了属性;门禁的 run 被替换;改了门禁对象后非法审查人被
+[88/124] ✓ 变异「LOCAL_GATES 只冻结数组」(4s)被「R6-03 改 ALL_GATES/LOCAL_GATES 里的门禁对象(run/id/rule/加属性)不改变后续门禁行为」发现:直接判定用例在变异下判失败:门禁对象没有全部冻结;LOCAL_GATES 的 id 变成 G-Z;门禁对象被加上了属性;门禁的 run 被替换
+[89/124] ✓ 变异「零宽匹配按 UTF-16 单元前进」(5s)被「R6-04 正则注入计数:零宽 /u 按码点前进不死循环,sticky 与普通搜索计数一致」发现:直接判定用例在变异下判失败:injectionCount 结果 [1,null,null,null,3,null,2,2,0,2,2,1,1,0,2],应为 [1,2,2,4,3,2,2,2,0,2,2,1,1,0,2]
+[90/124] ✓ 变异「计数保留 sticky」(5s)被「R6-04 正则注入计数:零宽 /u 按码点前进不死循环,sticky 与普通搜索计数一致」发现:直接判定用例在变异下判失败:injectionCount 结果 [1,2,2,4,3,2,2,2,0,1,1,0,0,0,2],应为 [1,2,2,4,3,2,2,2,0,2,2,1,1,0,2]
+[91/124] ✓ 变异「注入保留 sticky」(5s)被「R6-04 sticky 正则注入点按计数时的同一语义替换」发现:直接判定用例在变异下判失败:inject 结果 ["x MARK y","x MARK y","x DONE y","x DONE y","a$$b"],应为 ["x DONE y","x DONE y","x DONE y","x DONE y","a$$b"]
+[92/124] ✓ 变异「沙箱不拒读 HOME 下的点文件」(4s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:没有 HOME 点文件默认拒读规则
+[93/124] ✓ 变异「点文件拒读只按未规范化的 HOME」(4s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:点文件默认拒读缺 /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-2iHGlD/home-real
+[94/124] ✓ 变异「沙箱不放行挂载的依赖」(4s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:放行规则缺 /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-BEX7Jc/deps/node_modules
+[95/124] ✓ 变异「sandboxed 不把挂载交给 seatbelt」(4s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:放行规则缺 /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-MFvFPI/deps/node_modules
+[96/124] ✓ 变异「放行项盖过拒读清单(去掉末尾的拒读清单)」(4s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:最后一条不是排在放行之后的固定拒读清单:(allow file-read-data (subpath "/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn
+[97/124] ✓ 变异「拒读清单漏掉 .git-credentials 与 .netrc」(4s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:固定拒读清单缺 /var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-71etox/home-link/.git-cred
+[98/124] ✓ 变异「拒读清单不按 realpath」(4s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:固定拒读清单缺 /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-GEVOhK/home-real/.git-credentials
+[99/124] ✓ 变异「执行计划额外放行 HOME」(4s)被「R9-01 seatbelt 读放行范围恰为工作副本与挂载的依赖,多出的放行项(如整个 HOME)判失败」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r901-y1281O/work\")","(subpath \"/pr
+[100/124] ✓ 变异「seatbelt 放行联网」(4s)被「R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖」发现:直接判定用例在变异下判失败:seatbelt 联网规则应恰为 (deny network*),实际 ["(allow network*)"]
+[101/124] ✓ 变异「docker 不断网」(5s)被「R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖」发现:直接判定用例在变异下判失败:docker 应恰有一处 --network none,实际 [["--network","host"]]
+[102/124] ✓ 变异「docker 额外挂载 HOME」(4s)被「R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖」发现:直接判定用例在变异下判失败:docker 挂载应恰为副本与依赖,实际 ["/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r902p-afV9tE
+[103/124] ✓ 变异「不放行运行时自带的动态库」(4s)被「R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r903-2MTVzV/work\")
+[104/124] ✓ 变异「运行时库按目录放行」(4s)被「R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r903-0KxLYe/work\")","
+[105/124] ✓ 变异「运行时库不限 .dylib」(5s)被「R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r903-ytKOHO/work\"
+[106/124] ✓ 变异「来源按目录名认仓库」(6s)被「R10-01 作者只操作同名的非仓库目录(来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+[107/124] ✓ 变异「仓库身份判不了按同一仓库算」(7s)被「R10-01 作者只操作同名、还没有提交的 git 仓库(身份确认不了,来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+[108/124] ✓ 变异「git 仓库不比仓库身份」(7s)被「R10-01 作者只操作同名的另一个 git 仓库(来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+[109/124] ✓ 变异「不认宿主记录证明的已清理克隆」(8s)被「R10-02 清理后:同一记录里 git 输出的本仓库提交号证明是本仓库,来源门禁仍认出」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[110/124] ✓ 变异「记录里的提交号不核对属于本仓库」(8s)被「R10-02 克隆已清理、git 输出的是另一个仓库的提交号(来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+[111/124] ✓ 变异「记录证据不看现状」(6s)被「R10-02 本仓库提交号出自现存的非仓库目录(现状与记录矛盾,来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+[112/124] ✓ 变异「受管范围导出不冻结」(5s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结;UNGOVERNED 变成 
+[113/124] ✓ 变异「受管范围只冻结数组不冻结元素」(5s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结;UNGOVERNED 变成 /^docs\// /^reviews\// /^receipts\// [object RegExp]
+[114/124] ✓ 变异「受管判定直接用导出的未冻结数组」(6s)被「R10-03 真实门禁:同进程改写受管范围策略后,受管改动没收据照样拦下」发现:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+[115/124] ✓ 变异「豁免格式导出不冻结」(5s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结
+[116/124] ✓ 变异「豁免格式判定直接用导出的未冻结正则」(4s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结;改写豁免格式后格式不对的豁免被放行:[]
+[117/124] ✓ 变异「git 安全参数不冻结」(5s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结;GIT_SAFE_ARGS 变成  core.hooksPath=.githooks
+[118/124] ✓ 变异「容器计划多出一处 --mount 只读挂载」(4s)被「R10-04 容器执行计划逐项核对:只挂工作副本与依赖,另一种挂载形式(--mount/--volume/附着写法/--tmpfs/--volumes-from)、多挂少挂与其它参数判失败」发现:直接判定用例在变异下判失败:容器执行计划应逐项为 ["run","--rm","--network","none","--user","501:20","-e","HOME=/p
+[119/124] ✓ 变异「容器核对放过 --mount」(4s)被「R10-04 容器执行计划逐项核对:只挂工作副本与依赖,另一种挂载形式(--mount/--volume/附着写法/--tmpfs/--volumes-from)、多挂少挂与其它参数判失败」发现:直接判定用例在变异下判失败:--mount 只读绑定 没有判失败
+[120/124] ✓ 变异「容器核对不限 -v 集合」(4s)被「R10-04 容器执行计划逐项核对:只挂工作副本与依赖,另一种挂载形式(--mount/--volume/附着写法/--tmpfs/--volumes-from)、多挂少挂与其它参数判失败」发现:直接判定用例在变异下判失败:多一个 -v 没有判失败
+[121/124] ✓ 变异「运行库符号链接不放行」(4s)被「R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r1005-kdh0tc/work\")","(su
+[122/124] ✓ 变异「运行库链接不限运行时目录」(4s)被「R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r1005-tgEcQl/work\")","(
+[123/124] ✓ 变异「运行库链接目标不限 .dylib」(4s)被「R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r1005-OkBjaD/work\")
+[124/124] ✓ 变异「运行库链接目标不限普通文件」(4s)被「R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r1005-RMvjN9/work\")","
+—— 汇总(总耗时 425s)——
+✓ 变异「CI 模式不跑任何门禁」(5s)被「合规(CI 模式,不跑来源核对)」发现:执行器:退出码 0→0,门禁 ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → (无)
+✓ 变异「本机模式不跑来源核对」(5s)被「合规:先红后绿、跨厂商审查、来源核对通过」发现:执行器:退出码 0→0,门禁 ✓PROVENANCE ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER
+✓ 变异「有问题也退出 0」(7s)被「CI 模式下违规同样拦下」发现:执行器:退出码 1→0,门禁 ✗TRACE ✓REVIEW ✗RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → ✗TRACE ✓REVIEW ✗RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER
+✓ 变异「执行器吞掉问题」(7s)被「CI 模式下违规同样拦下」发现:执行器:退出码 1→0,门禁 ✗TRACE ✓REVIEW ✗RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER
+✓ 变异「执行器把门禁出错当放行」(7s)被「RR-02 没有沙箱就停」发现:执行器:退出码 1→0,门禁 ✓PROVENANCE ✓TRACE ✓REVIEW ✗RED ✗STUB ✗TAUTO ✓WORKFLOW ✓LAYER → ✓PROVENANCE ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER
+✓ 变异「workflow/依赖清单不算受管」(6s)被「F-02 只改 workflow 没收据」发现:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+✓ 变异「来源核对不比对 hash」(9s)被「审查会话算出的是别的 hash」发现:G-PROVENANCE 不再按预期原因「审查会话里没有一次」拦下(✗ → ✓)
+✓ 变异「来源核对看全会话模型」(10s)被「F-04 历史出现过别家模型,算 hash 那一轮是同厂商」发现:G-PROVENANCE 不再按预期原因「实际是 anthropic」拦下(✗ → ✓)
+✓ 变异「豁免认消息里任意一行指令」(11s)被「RR-13 指令前另有说明文字」发现:G-PROVENANCE 不再按预期原因「不是一条格式为」拦下(✗ → ✓)
+✓ 变异「红提交只要求点名一条」(12s)被「红提交上第二条测试本来就绿」发现:G-RED 不再按预期原因「zero 放到红提交的实现上没有按名字失败」拦下(✗ → ✓)
+✓ 变异「空桩失败不按名字计数」(10s)被「F-07 测试只读顶层常量」发现:G-STUB 仍拦下但不再是预期原因「空桩后没有按名字失败」
+✓ 变异「断言不要求判源码结果」(9s)被「F-07 断言只判复制的逻辑」发现:G-TAUTO 不再按预期原因「没有一条断言判的是被测源码」拦下(✗ → ✓)
+✓ 变异「测试只认字面 test」(7s)被「合规:node:test 别名 + 断言」发现:G-RED 由放行变为拦下(不是门禁自身出错)
+✓ 变异「去掉审查人白名单检查」(10s)被「审查人 grok 被拦」发现:G-REVIEW 不再按预期原因「审查人必须是」拦下(✗ → ✓)
+✓ 变异「来源核对不查审查会话 harness」(10s)被「原则 68 claude 审查会话必须是 claude 会话」发现:G-PROVENANCE 不再按预期原因「必须是 claude 会话」拦下(✗ → ✓)
+✓ 变异「审查会话 harness 不按审查人区分」(10s)被「原则 68 claude 审 codex 作者放行(claude 会话)」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+✓ 变异「claude 不受跨厂商约束」(9s)被「原则 68 claude 审查照样要跨研发厂商:作者用 Anthropic 模型」发现:G-REVIEW 不再按预期原因「同为 anthropic」拦下(✗ → ✓)
+✓ 变异「claude 可审 claude 作者」(10s)被「原则 68 claude 审 claude 作者被拦(禁止自审)」发现:G-REVIEW 仍拦下但不再是预期原因「审查人与作者是同一个(claude)」
+✓ 变异「名单漏掉 argon」(11s)被「原则 68 argon 审 codex 作者放行(claude 会话,g-group#3199 备用审查人)」发现:G-REVIEW 由放行变为拦下(不是门禁自身出错)
+✓ 变异「argon 会话回退成 codex」(14s)被「原则 68 argon 审 codex 作者放行(claude 会话,g-group#3199 备用审查人)」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+✓ 变异「argon-chat 也进名单」(14s)被「原则 68 argon-chat 当审查人被拦(不能执行命令)」发现:G-REVIEW 不再按预期原因「审查人必须是」拦下(✗ → ✓)
+✓ 变异「不核对派活卡片」(9s)被「派活卡片显示会话属于别的助手」发现:G-PROVENANCE 不再按预期原因「对不上」拦下(✗ → ✓)
+✓ 变异「session 不做 realpath 包含检查」(10s)被「RR-01 会话文件软链到 PR 里的伪造记录」发现:G-PROVENANCE 不再按预期原因「会话根目录之外」拦下(✗ → ✓)
+✓ 变异「session harness 不查白名单」(10s)被「RR-01 harness 不在白名单」发现:G-PROVENANCE 仍拦下但不再是预期原因「不在白名单」
+✓ 变异「没有沙箱时回退宿主」(9s)被「RR-02 没有沙箱就停」发现:G-RED 不再按预期原因「没有可用沙箱」拦下(✗ → ✓)
+✓ 变异「workflow 不查写权限」(9s)被「RR-03 带引号的写权限」发现:G-WORKFLOW 不再按预期原因「申请了写权限 statuses」拦下(✗ → ✓)
+✓ 变异「workflow 不拒绝表达式名字」(9s)被「RR-03 job 名用表达式拼出受保护名」发现:G-WORKFLOW 不再按预期原因「名字含表达式」拦下(✗ → ✓)
+✓ 变异「不拦自比较断言」(9s)被「RR-04 自比较断言」发现:G-TAUTO 不再按预期原因「自比较或恒真」拦下(✗ → ✓)
+✓ 变异「不拦不可达断言」(10s)被「RR-04 不可达断言」发现:G-TAUTO 不再按预期原因「执行不到」拦下(✗ → ✓)
+✓ 变异「不做返回值变异校准」(9s)被「RR-04 断言没检查返回值(返回值变异存活)」发现:G-STUB 不再按预期原因「返回错误值」拦下(✗ → ✓)
+✓ 变异「相对路径写操作不算产出」(8s)被「RR-05 判不了路径的 shell 轮次也算进去」发现:G-PROVENANCE 不再按预期原因「在作者的产出厂商集合」拦下(✗ → ✓)
+✓ 变异「测试身份按集合比较(计数去重)」(9s)被「RR-06 同名间接测试零断言」发现:G-TAUTO 不再按预期原因「运行时注册了 2 次」拦下(✗ → ✓)
+✓ 变异「不核对红提交测试体」(8s)被「RR-07 红提交上是另一份假断言」发现:G-RED 仍拦下但不再是预期原因「测试体和现在不同」
+✓ 变异「豁免不核对 uid」(10s)被「RR-08 冒用所有者名字的另一个 uid」发现:G-PROVENANCE 不再按预期原因「不是仓库所有者」拦下(✗ → ✓)
+✓ 变异「豁免认引用里的文字」(9s)被「RR-13 整条消息是引用块里的指令」发现:G-PROVENANCE 不再按预期原因「不是一条格式为」拦下(✗ → ✓)
+✓ 变异「git 子进程继承 GIT_*」(7s)被「隔离:hook 环境的 GIT_DIR 指向别的仓库,门禁不碰它」发现:执行器:退出码 0→1,门禁 ✓PROVENANCE ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → (无);副作用检查失败:GIT_DIR 指向的另一个仓库被改动了
+✓ 变异「self-check 白名单放给所有文件」(8s)被「RR-03 别的 workflow 冒充 self-check」发现:G-WORKFLOW 不再按预期原因「冒充受保护检查名 self-check」拦下(✗ → ✓)
+✓ 变异「不检查 self-check 必需步骤」(8s)被「RR-09 self-check.yml 只 echo」发现:G-WORKFLOW 不再按预期原因「缺必需步骤」拦下(✗ → ✓)
+✓ 变异「不检查 self-check 步骤的 if」(10s)被「RR-09 门禁自检步骤加 if: false」发现:G-WORKFLOW 不再按预期原因「带了 if」拦下(✗ → ✓)
+✓ 变异「不检查 self-check job 的 if」(8s)被「RR-09 job 加 if」发现:G-WORKFLOW 不再按预期原因「带了 if」拦下(✗ → ✓)
+✓ 变异「不检查 self-check continue-on-error」(9s)被「RR-09 job 加 continue-on-error」发现:G-WORKFLOW 不再按预期原因「带了 continue-on-error」拦下(✗ → ✓)
+✓ 变异「变异命令允许任意后缀」(9s)被「RR-09 变异命令后接 || true」发现:G-WORKFLOW 不再按预期原因「缺必需步骤」拦下(✗ → ✓)
+✓ 变异「不检查 package.json 门禁脚本」(9s)被「RR-09 package.json 把 gates:mutation 改成 true」发现:G-WORKFLOW 不再按预期原因「scripts["gates:mutation"] 必须是」拦下(✗ → ✓)
+✓ 变异「不检查 self-check 的 shell/working-directory」(9s)被「RR-09 必需步骤换 shell」发现:G-WORKFLOW 不再按预期原因「带了 shell」拦下(✗ → ✓)
+✓ 变异「不检查 self-check 的 defaults」(8s)被「RR-09 job 用 defaults 换 shell」发现:G-WORKFLOW 不再按预期原因「带了 defaults」拦下(✗ → ✓)
+✓ 变异「红重放不覆盖测试依赖」(9s)被「RR-11 helper 在红提交上给了错期望值」发现:G-RED 不再按预期原因「没有按名字失败」拦下(✗ → ✓)
+✓ 变异「测试依赖只认非源码文件」(8s)被「RR-11 helper 在红提交上给了错期望值」发现:G-RED 不再按预期原因「没有按名字失败」拦下(✗ → ✓)
+✓ 变异「返回值变异退回按文件判定」(10s)被「RR-12 一条强测试 + 一条只断言 typeof」发现:G-STUB 不再按预期原因「返回错误值」拦下(✗ → ✓)
+✓ 变异「hash 调用认任意含 run-all --hash 的命令」(11s)被「RR-14 printf 打印 hash、run-all 只在注释里」发现:G-PROVENANCE 不再按预期原因「审查会话里没有一次」拦下(✗ → ✓)
+✓ 变异「hash 调用不拒 shell 元字符」(9s)被「RR-14 真实 hash 输出被丢弃、再 echo hash」发现:G-PROVENANCE 不再按预期原因「审查会话里没有一次」拦下(✗ → ✓)
+✓ 变异「hash 调用不要求 node 后紧跟 run-all」(9s)被「RR-14 node 先跑别的脚本、run-all 只是它的参数」发现:G-PROVENANCE 不再按预期原因「审查会话里没有一次」拦下(✗ → ✓)
+✓ 变异「产出厂商不认同仓库的另一个 clone」(8s)被「RR-15 后续轮次写进同仓库的另一个 clone」发现:G-PROVENANCE 仍拦下但不再是预期原因「在作者的产出厂商集合」
+✓ 变异「0 用例判通过」(7s)被「g-group#2538 测试入口 0 条用例判失败」发现:直接判定用例在变异下判失败:0 条用例没有判失败(退出 1)
+✓ 变异「读不到汇总行判通过」(5s)被「R4-02 判定:读不到汇总行判失败」发现:直接判定用例在变异下判失败:没有汇总行却判 通过
+✓ 变异「skip 计入用例数」(5s)被「R4-02 测试入口全部 skip 判失败」发现:直接判定用例在变异下判失败:全部 skip 没有按"没有实际执行"判失败(退出 0)
+✓ 变异「通过数为 0 也算执行」(6s)被「R4-02 测试入口全部 todo 判失败」发现:直接判定用例在变异下判失败:全部 todo 没有按"没有实际执行"判失败(退出 0)
+✓ 变异「不要求 test 脚本为规范值」(8s)被「g-group#2538 test 脚本改回裸 node --test(0 用例也判通过)」发现:G-WORKFLOW 仍拦下但不再是预期原因「scripts["test"] 必须是」
+✓ 变异「self-check 不要求 npm test 步骤」(8s)被「g-group#2538 self-check 缺 npm test 步骤」发现:G-WORKFLOW 不再按预期原因「缺必需步骤:run 为 npm test」拦下(✗ → ✓)
+✓ 变异「self-check 不查 GATE_* 环境开关」(9s)被「R4-01 self-check job env 设 GATE_ 开关缩小自检」发现:G-WORKFLOW 不再按预期原因「设置了门禁开关 GATE_SELFTEST_ONLY」拦下(✗ → ✓)
+✓ 变异「任意非零即算发现」(16s)被「R4-01 端到端:中性变异 + 提示用例夹具故障,变异校验必须判存活」发现:直接判定用例在变异下判失败:中性变异在提示用例夹具故障下被判成发现(退出 0)
+✓ 变异「执行故障也算目标判因」(7s)被「R4-01 提示用例无关夹具故障不算发现」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:改了代码没收据 执行故障(error)
+✓ 变异「任何门禁变了都算目标」(6s)被「R4-01 错的门禁变了不算发现目标」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+✓ 变异「门禁自身出错也算拦下」(5s)被「R4-01 目标门禁因自身出错拦下不算预期原因」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-RED 由放行变为拦下(不是门禁自身出错)
+✓ 变异「预期拦下变成门禁自身出错仍算发现」(5s)被「R5-01 目标门禁由预期拦下变为门禁自身出错不算发现」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-TRACE 仍拦下但不再是预期原因「缺收据」
+✓ 变异「目标门禁没跑也参与判定」(6s)被「R5-01 目标门禁没跑(观测缺失)不算发现」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-TRACE 从完整运行的执行列表里消失(没有运行)
+✓ 变异「门禁移出执行列表不算发现」(6s)被「R5-01 目标门禁从完整运行的执行列表里消失算发现」发现:直接判定用例在变异下判失败:门禁被移出执行列表却没算发现(判因 undefined)
+✓ 变异「输出完整性只看头部」(5s)被「R4-01 门禁输出解析:注册数与列出数一致且有 CONTENT_HASH 才算完整」发现:直接判定用例在变异下判失败:解析不对:{"full":{"gates":{"G-TRACE":"✓","G-RED":"✗"},"expectHit":["G-RED"],"gateErrors":[],"header":true,"complete":true},"
+✓ 变异「基线门禁出错一律排除」(5s)被「R5-01 基线就是按预期以门禁自身出错拦下(fail-closed)、变异后放行算发现」发现:直接判定用例在变异下判失败:预期的 fail-closed 拦下变成放行却没算发现
+✓ 变异「判因不核对退出码」(5s)被「R5-01 结构化判因与退出码不一致不算发现」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+✓ 变异「结构化结果不校验就收」(5s)被「R5-02 parseCases 遇到 null/数组/缺字段/错类型/非法枚举不抛错且全部拒收」发现:直接判定用例在变异下判失败:非法行被收下 9 条:[[],1,"x",{"name":"a"},{"name":"改了代码没收据","pass":"yes","kind":"ok","direct":false,"expect":"缺收据","exit":1,"gat
+✓ 变异「不拒 Proxy」(4s)被「R5-02 getter/setter/Proxy 回调 0 次且被拒收」发现:直接判定用例在变异下判失败:proxyObj:非法结果被当成证据:["G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)",null,{"case":"改了代码没收据","ev":"G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)"}]
+✓ 变异「不拒访问器属性」(4s)被「R5-02 getter/setter/Proxy 回调 0 次且被拒收」发现:直接判定用例在变异下判失败:setterObj:非法结果被当成证据:["G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)",null,{"case":"改了代码没收据","ev":"G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)"}]
+✓ 变异「导出策略不冻结」(4s)被「R5-03 改导出的策略对象不改变后续门禁行为」发现:直接判定用例在变异下判失败:allowedReviewers 变成 ;harnessOf 变成 claude/claude;PROTECTED_CONTEXTS 变成 ;LAYERS 变成 domain,kernel,adapter,plugin,app,evil;R
+✓ 变异「只冻结顶层」(4s)被「R5-03 改导出的策略对象不改变后续门禁行为」发现:直接判定用例在变异下判失败:allowedReviewers 变成 ;harnessOf 变成 claude/codex
+✓ 变异「注入点唯一性只查字符串」(5s)被「R5-04 正则注入点 0 次/多次在变异执行前拒绝,恰 1 次放行」发现:直接判定用例在变异下判失败:injectionCount 结果 [1,1,0,0,1,1,2,0,1]
+✓ 变异「门禁临时 HOME 退出不删」(7s)被「磁盘:门禁命令行与一条自检用例跑完不在 TMPDIR 留下 gate-home/gate-run/gate-snap/gate-selftest 目录」发现:直接判定用例在变异下判失败:留下了 1 个临时目录:gate-home-QHNRVM
+✓ 变异「从 ALL_GATES 删掉 trace」(5s)被「改了代码没收据」发现:G-TRACE 从完整运行的执行列表里消失(没有运行)
+✓ 变异「从 ALL_GATES 删掉 review」(5s)被「作者自审」发现:G-REVIEW 从完整运行的执行列表里消失(没有运行)
+✓ 变异「从 ALL_GATES 删掉 red」(5s)被「收据没写红提交」发现:G-RED 从完整运行的执行列表里消失(没有运行)
+✓ 变异「从 ALL_GATES 删掉 stub」(4s)被「F-07 测试只读顶层常量」发现:G-STUB 从完整运行的执行列表里消失(没有运行)
+✓ 变异「从 ALL_GATES 删掉 tautology」(5s)被「恒真断言」发现:G-TAUTO 从完整运行的执行列表里消失(没有运行)
+✓ 变异「从 ALL_GATES 删掉 workflow」(5s)被「PR 的 workflow 冒充受保护检查名」发现:G-WORKFLOW 从完整运行的执行列表里消失(没有运行)
+✓ 变异「从 ALL_GATES 删掉 layers(末项)」(5s)被「领域层反向依赖内核」发现:G-LAYER 从完整运行的执行列表里消失(没有运行)
+✓ 变异「变异侧输出不完整仍判因」(5s)被「R6-01 目标门禁仍在但变异侧输出不完整(缺 CONTENT_HASH/少列表项/截断)不算发现」发现:直接判定用例在变异下判失败:预期拦下→放行:不该算发现,却给出判因:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+✓ 变异「killedBy 先用 instanceof 判 Map」(4s)被「R6-02 killedBy 基线 Map 是 Proxy/撤销的 Proxy/伪 Map、结果数组是 Proxy 时 trap 回调 0 次、不抛错、不给判因」发现:直接判定用例在变异下判失败:基线 Map Proxy:抛错 中性标记:trap 被调用
+✓ 变异「数组校验先 Array.isArray 后判 Proxy」(4s)被「R6-02 killedBy 基线 Map 是 Proxy/撤销的 Proxy/伪 Map、结果数组是 Proxy 时 trap 回调 0 次、不抛错、不给判因」发现:直接判定用例在变异下判失败:结果数组撤销的 Proxy:抛错 Cannot perform 'IsArray' on a proxy that has been revoked
+✓ 变异「ALL_GATES 只冻结数组」(4s)被「R6-03 改 ALL_GATES/LOCAL_GATES 里的门禁对象(run/id/rule/加属性)不改变后续门禁行为」发现:直接判定用例在变异下判失败:门禁对象没有全部冻结;ALL_GATES 的 id 变成 G-Y,G-X,G-RED,G-STUB,G-TAUTO,G-WORKFLOW,G-LAYER;门禁对象被加上了属性;门禁的 run 被替换;改了门禁对象后非法审查人被
+✓ 变异「LOCAL_GATES 只冻结数组」(4s)被「R6-03 改 ALL_GATES/LOCAL_GATES 里的门禁对象(run/id/rule/加属性)不改变后续门禁行为」发现:直接判定用例在变异下判失败:门禁对象没有全部冻结;LOCAL_GATES 的 id 变成 G-Z;门禁对象被加上了属性;门禁的 run 被替换
+✓ 变异「零宽匹配按 UTF-16 单元前进」(5s)被「R6-04 正则注入计数:零宽 /u 按码点前进不死循环,sticky 与普通搜索计数一致」发现:直接判定用例在变异下判失败:injectionCount 结果 [1,null,null,null,3,null,2,2,0,2,2,1,1,0,2],应为 [1,2,2,4,3,2,2,2,0,2,2,1,1,0,2]
+✓ 变异「计数保留 sticky」(5s)被「R6-04 正则注入计数:零宽 /u 按码点前进不死循环,sticky 与普通搜索计数一致」发现:直接判定用例在变异下判失败:injectionCount 结果 [1,2,2,4,3,2,2,2,0,1,1,0,0,0,2],应为 [1,2,2,4,3,2,2,2,0,2,2,1,1,0,2]
+✓ 变异「注入保留 sticky」(5s)被「R6-04 sticky 正则注入点按计数时的同一语义替换」发现:直接判定用例在变异下判失败:inject 结果 ["x MARK y","x MARK y","x DONE y","x DONE y","a$$b"],应为 ["x DONE y","x DONE y","x DONE y","x DONE y","a$$b"]
+✓ 变异「沙箱不拒读 HOME 下的点文件」(4s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:没有 HOME 点文件默认拒读规则
+✓ 变异「点文件拒读只按未规范化的 HOME」(4s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:点文件默认拒读缺 /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-2iHGlD/home-real
+✓ 变异「沙箱不放行挂载的依赖」(4s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:放行规则缺 /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-BEX7Jc/deps/node_modules
+✓ 变异「sandboxed 不把挂载交给 seatbelt」(4s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:放行规则缺 /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-MFvFPI/deps/node_modules
+✓ 变异「放行项盖过拒读清单(去掉末尾的拒读清单)」(4s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:最后一条不是排在放行之后的固定拒读清单:(allow file-read-data (subpath "/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn
+✓ 变异「拒读清单漏掉 .git-credentials 与 .netrc」(4s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:固定拒读清单缺 /var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-71etox/home-link/.git-cred
+✓ 变异「拒读清单不按 realpath」(4s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:固定拒读清单缺 /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-GEVOhK/home-real/.git-credentials
+✓ 变异「执行计划额外放行 HOME」(4s)被「R9-01 seatbelt 读放行范围恰为工作副本与挂载的依赖,多出的放行项(如整个 HOME)判失败」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r901-y1281O/work\")","(subpath \"/pr
+✓ 变异「seatbelt 放行联网」(4s)被「R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖」发现:直接判定用例在变异下判失败:seatbelt 联网规则应恰为 (deny network*),实际 ["(allow network*)"]
+✓ 变异「docker 不断网」(5s)被「R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖」发现:直接判定用例在变异下判失败:docker 应恰有一处 --network none,实际 [["--network","host"]]
+✓ 变异「docker 额外挂载 HOME」(4s)被「R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖」发现:直接判定用例在变异下判失败:docker 挂载应恰为副本与依赖,实际 ["/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r902p-afV9tE
+✓ 变异「不放行运行时自带的动态库」(4s)被「R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r903-2MTVzV/work\")
+✓ 变异「运行时库按目录放行」(4s)被「R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r903-0KxLYe/work\")","
+✓ 变异「运行时库不限 .dylib」(5s)被「R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r903-ytKOHO/work\"
+✓ 变异「来源按目录名认仓库」(6s)被「R10-01 作者只操作同名的非仓库目录(来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+✓ 变异「仓库身份判不了按同一仓库算」(7s)被「R10-01 作者只操作同名、还没有提交的 git 仓库(身份确认不了,来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+✓ 变异「git 仓库不比仓库身份」(7s)被「R10-01 作者只操作同名的另一个 git 仓库(来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+✓ 变异「不认宿主记录证明的已清理克隆」(8s)被「R10-02 清理后:同一记录里 git 输出的本仓库提交号证明是本仓库,来源门禁仍认出」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+✓ 变异「记录里的提交号不核对属于本仓库」(8s)被「R10-02 克隆已清理、git 输出的是另一个仓库的提交号(来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+✓ 变异「记录证据不看现状」(6s)被「R10-02 本仓库提交号出自现存的非仓库目录(现状与记录矛盾,来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+✓ 变异「受管范围导出不冻结」(5s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结;UNGOVERNED 变成 
+✓ 变异「受管范围只冻结数组不冻结元素」(5s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结;UNGOVERNED 变成 /^docs\// /^reviews\// /^receipts\// [object RegExp]
+✓ 变异「受管判定直接用导出的未冻结数组」(6s)被「R10-03 真实门禁:同进程改写受管范围策略后,受管改动没收据照样拦下」发现:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+✓ 变异「豁免格式导出不冻结」(5s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结
+✓ 变异「豁免格式判定直接用导出的未冻结正则」(4s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结;改写豁免格式后格式不对的豁免被放行:[]
+✓ 变异「git 安全参数不冻结」(5s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结;GIT_SAFE_ARGS 变成  core.hooksPath=.githooks
+✓ 变异「容器计划多出一处 --mount 只读挂载」(4s)被「R10-04 容器执行计划逐项核对:只挂工作副本与依赖,另一种挂载形式(--mount/--volume/附着写法/--tmpfs/--volumes-from)、多挂少挂与其它参数判失败」发现:直接判定用例在变异下判失败:容器执行计划应逐项为 ["run","--rm","--network","none","--user","501:20","-e","HOME=/p
+✓ 变异「容器核对放过 --mount」(4s)被「R10-04 容器执行计划逐项核对:只挂工作副本与依赖,另一种挂载形式(--mount/--volume/附着写法/--tmpfs/--volumes-from)、多挂少挂与其它参数判失败」发现:直接判定用例在变异下判失败:--mount 只读绑定 没有判失败
+✓ 变异「容器核对不限 -v 集合」(4s)被「R10-04 容器执行计划逐项核对:只挂工作副本与依赖,另一种挂载形式(--mount/--volume/附着写法/--tmpfs/--volumes-from)、多挂少挂与其它参数判失败」发现:直接判定用例在变异下判失败:多一个 -v 没有判失败
+✓ 变异「运行库符号链接不放行」(4s)被「R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r1005-kdh0tc/work\")","(su
+✓ 变异「运行库链接不限运行时目录」(4s)被「R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r1005-tgEcQl/work\")","(
+✓ 变异「运行库链接目标不限 .dylib」(4s)被「R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r1005-OkBjaD/work\")
+✓ 变异「运行库链接目标不限普通文件」(4s)被「R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r1005-RMvjN9/work\")","
+变异校验通过
+exit=0

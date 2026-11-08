@@ -10,8 +10,8 @@
     { "id": "AC-21", "status": "未测", "reason": "依赖 CAS 原语,下一片做" },
     { "id": "AC-12", "status": "不适用", "reason": "...", "approver": "39impacts.talent g-group#..." }
   ],
-  "author": { "agent": "claude", "session": "claude:<会话id>", "model": "claude-opus-5-5" },
-  "red": { "commit": "<只含测试的那个提交>", "tests": ["测试名1", "测试名2"] },
+  "author": { "agent": "claude", "session": "claude:<本轮会话id>", "sessions": ["claude:<前轮会话id>", "claude:<本轮会话id>"], "model": "claude-opus-5-5" },
+  "red": { "commit": "<测试 + 空壳实现的那个提交>" },
   "unverifiable": "第 7 栏:我为什么相信这次绿,它可能被哪个检查骗过,必须点到一个具体条目 ID",
   "waiver": null,
   "review": {
@@ -23,6 +23,9 @@
 ```
 
 - `status` 只能是 通过 / 失败 / 未测 / 不适用(R-08)。通过必须有仓库内的证据文件;未测写原因;不适用写理由和批准人。
-- `session` 是 mirasim 会话 `<harness>:<id>`,对应 `~/.mirasim/sessions/<harness>/<id>/turns.jsonl`。G-PROVENANCE 用它核对实际模型,不认自报。
-- `waiver` 只有用户本人能给,`reason` 里要带群消息出处(例如 `g-group#1234`),记为 Waived,不算合规通过。
+- `session` 是 mirasim 会话 `<harness>:<id>`(harness 只能是 claude/codex/pi,id 只含字母、数字和 -;审查会话必须是 codex),对应 `~/.mirasim/sessions/<harness>/<id>/turns.jsonl`。G-PROVENANCE 用它核对实际模型,不认自报。
+- `author.session` 写本轮作者会话；`author.sessions` 可列出本版历次作者会话（含本轮）。来源核对也会读取受检 HEAD 历史中每版收据的 `author.session` 与 `author.sessions`，并入产出厂商集合，不能靠换作者移除旧厂商；记录缺失或厂商无法识别时拒绝。某历史会话不能证明写入受审版本时，按其记录中的模型厂商保守计入，不把它当成已证实的写入。
+- `red.commit`:门禁会自己算出本 PR 新增或改动了哪些测试(按文件 + 测试名,和 base 比对测试体),要求每一条都在这个提交上按名字失败。不用手写测试名。
+- `waiver` 只有仓库所有者 39impacts.talent(uid usr_4f6ca5e0d86b4a73b5575724ab172bb0)能给:`by` 写 `39impacts.talent`,`reason` 写 `g-group#<消息号>`。那条消息必须是所有者本人直接发的(不是转发或代发),正文里有且只有一处整行指令 `批准豁免 PR#<号> <当前内容 hash 前 12 位>`,不在引号、引用块或代码块里;之后被引用、编辑、撤回即失效。记为 Waived,不算合规通过。
+- `review.reviewed_hash` 必须是审查人在自己会话里跑 `run-all.ts --hash` 的输出。G-PROVENANCE 去会话原始记录里找这次工具调用,审查厂商取那一轮的模型。
 - 审查人的详细意见写在 `reviews/` 下;`reviews/` 和 `receipts/` 不进内容 hash,写审查意见不会让 hash 失效。

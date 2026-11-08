@@ -7,12 +7,18 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "node --test \"packages/**/*.test.ts\"",
+    "lint": "biome lint --error-on-warnings",
+    "test": "node scripts/gates/test-runner.ts \"packages/**/*.test.ts\" \"scripts/gates/*.test.ts\"",
     "gates": "node scripts/gates/run-all.ts",
-    "gates:selftest": "node scripts/gates/run-all.ts --self-test"
+    "gates:selftest": "node scripts/gates/run-all.ts --self-test",
+    "gates:mutation": "node scripts/gates/mutation.ts"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.6.5",
     "@types/node": "^22.20.5",
     "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
   }
 }

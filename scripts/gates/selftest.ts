@@ -1,0 +1,1590 @@
+// 门禁自检(R-05 双侧标定 / R-18 规则自身可信):
+// 每个样例都是一个真实 git 仓库(main → 红提交 → 绿提交 → 收据),用子进程调用真实命令行入口 run-all.ts,
+// 只看退出码和输出。合规样例必须放行,违规样例必须拦下且原因文字对。
+// 跑的是 import.meta.dirname 下的那份门禁代码,所以 mutation.ts 改坏一份副本后跑它的自检,必须失败。
+import { execFileSync, spawn, spawnSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { containerPlanProblems, GIT_SAFE_ARGS, gitEnv, type Ctx, type Party, type Receipt, sandboxed, sandboxPlan } from "./lib.ts";
+import * as judge from "./judge.ts";
+import { CASE_MARK, type CaseResult, evidence, type Kind, killedBy, parseGateOutput } from "./judge.ts";
+import { verdict as runnerVerdict } from "./test-runner.ts";
+import { vendorOf } from "./vendor.ts";
+import { attestedDirs, isRepoPath, provenance, r12CommitProof, r12SessionDirs, r12Touch, r12WriteProof, sameRepoClone, turnTouchesRepo } from "./gates.ts";
+
+const HERE = import.meta.dirname;
+const CLI = path.join(HERE, "run-all.ts");
+const GATE_IDS = ["G-TRACE", "G-REVIEW", "G-RED", "G-STUB", "G-TAUTO", "G-WORKFLOW", "G-LAYER", "G-PROVENANCE"];
+
+const SPEC = "# 验收\n| AC-01 示例 |\n| AC-02 示例 |\n";
+const PKG = (name: string, layer: string, extra: object = {}) => JSON.stringify({ name, gGroup: { layer }, ...extra });
+const ADD_OK = "export function add(a: number, b: number): number { return a + b; }\n";
+const ADD_EMPTY = "export function add(_a: number, _b: number): number { return 0; }\n";
+const T = (body: string, imports = `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\n`) => imports + body;
+const TEST_OK = T(`test("adds", () => { assert.equal(add(1, 2), 3); });\n`);
+const TRUSTED_WF = "name: trusted-gates\non: pull_request_target\npermissions: { contents: read }\njobs:\n  trusted-gates:\n    runs-on: ubuntu-latest\n    steps: [{ run: 'true' }]\n";
+
+type Files = Record<string, string | null>; // null = 删除
+interface Case {
+  name: string;
+  head?: Files; // 相对 main 的改动(绿提交)
+  red?: Files | null; // 红提交相对 main 的改动;null = 没有红提交
+  receipt?: ((r: Receipt) => void) | null; // null = 不写收据
+  reviewerTurns?: (hash: string) => object[]; // 审查会话内容
+  authorTurns?: (repo: string) => object[];
+  room?: (hash12: string) => object[];
+  after?: Files; // 审查之后又改的东西
+  local?: boolean; // 默认 true
+  expect: string | null; // null = 必须放行
+  headFn?: (dir: string) => Files; // 需要知道样例目录的绿提交内容
+  redFn?: (dir: string) => Files; // 需要知道样例目录的红提交内容(优先于 red)
+  env?: Record<string, string>;
+  envFn?: (dir: string) => Record<string, string>; // 需要知道样例目录的环境(合并在 env 之后)
+  authorRecord?: object | ((repo: string) => object); // 作者会话的 record.json(需要样例仓库路径时给函数)
+  setup?: (x: { dir: string; repo: string; sessions: string; hash: string }) => void; // 写完收据和会话后、跑门禁前
+  postCheck?: (dir: string) => string | undefined; // 跑完后检查副作用,返回问题
+  hostileGit?: boolean; // 在 GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE 指向另一个仓库的环境里跑
+  main?: Files; // main 上额外的文件
+  direct?: () => string | undefined; // 不建夹具仓库、直接检查;返回问题,undefined = 通过
+}
+
+const MAIN: Files = { "docs/spec/验收文档-v0.1.md": SPEC, "README.md": "x\n", "packages/core/package.json": PKG("@g-group/core", "domain"), ".github/workflows/trusted-gates.yml": TRUSTED_WF };
+const HEAD_OK: Files = { "packages/core/src/add.ts": ADD_OK, "packages/core/src/add.test.ts": TEST_OK, "packages/core/proof/adds.txt": "adds ok\n" };
+const RED_OK: Files = { "packages/core/src/add.ts": ADD_EMPTY, "packages/core/src/add.test.ts": TEST_OK };
+const reviewerOk = (hash: string) => [{ model: "ai-x/gpt-6-astra", toolCalls: [{ name: "shell", input: "node scripts/gates/run-all.ts --hash --branch feat/x", result: hash }] }];
+const authorOk = (repo: string) => [{ model: "ai-x/claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: fs.readFileSync(path.join(repo, "packages/core/src/add.ts"), "utf8") }, result: "File written successfully" }] }];
+
+const sh = (cwd: string, ...args: string[]) => execFileSync("git", [...GIT_SAFE_ARGS, ...args], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env: gitEnv() }).trim();
+function write(root: string, files: Files) {
+  for (const [f, t] of Object.entries(files)) {
+    const full = path.join(root, f);
+    if (t === null) { fs.rmSync(full, { force: true }); continue; }
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, t);
+  }
+}
+function commit(repo: string, msg: string): string {
+  sh(repo, "add", "-A");
+  sh(repo, "-c", "user.name=selftest", "-c", "user.email=s@t", "commit", "-q", "--allow-empty", "-m", msg);
+  return sh(repo, "rev-parse", "HEAD");
+}
+function cli(repo: string, env: NodeJS.ProcessEnv, ...args: string[]) {
+  const r = spawnSync(process.execPath, [CLI, "--repo", repo, "--base", "main", "--branch", "feat/x", "--pr", "7", ...args], { encoding: "utf8", env: gitEnv(env as Record<string, string>), timeout: 600_000 });
+  return { code: r.status, out: (r.stdout ?? "") + (r.stderr ?? "") };
+}
+
+type Run = CaseResult & { detail: string };
+function mk(c: Case, o: Partial<CaseResult> & { pass: boolean; kind: Kind; detail: string }): Run {
+  return { name: c.name, direct: !!c.direct, expect: c.expect, exit: null, gates: {}, expectHit: [], gateErrors: [], complete: false, ...o };
+}
+function runCase(tmp: string, c: Case, i: number): Run {
+  if (!c.hostileGit) return runCaseInner(tmp, c, i);
+  // 造一个"另一个仓库",把 GIT_* 指向它,模拟 pre-push hook 的环境;跑完它必须分毫未动
+  const other = path.join(tmp, `other${i}`);
+  fs.mkdirSync(other, { recursive: true });
+  sh(other, "init", "-q", "-b", "trunk");
+  write(other, { "keep.txt": "keep\n" });
+  commit(other, "keep");
+  const snapOf = () => [sh(other, "config", "--local", "--list"), sh(other, "for-each-ref"), sh(other, "rev-parse", "HEAD"), sh(other, "status", "--porcelain")].join("\n---\n");
+  const before = snapOf();
+  const saved = { d: process.env.GIT_DIR, w: process.env.GIT_WORK_TREE, x: process.env.GIT_INDEX_FILE };
+  process.env.GIT_DIR = path.join(other, ".git"); process.env.GIT_WORK_TREE = other; process.env.GIT_INDEX_FILE = path.join(other, ".git", "index");
+  let res: Run;
+  try { res = runCaseInner(tmp, c, i); }
+  finally {
+    for (const [k, v] of [["GIT_DIR", saved.d], ["GIT_WORK_TREE", saved.w], ["GIT_INDEX_FILE", saved.x]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+  }
+  const after = snapOf();
+  if (after !== before) return { ...res, pass: false, kind: "side", why: "GIT_DIR 指向的另一个仓库被改动了", detail: `GIT_DIR 指向的另一个仓库被改动了:\n${before}\n=====\n${after}` };
+  return res;
+}
+
+function runCaseInner(tmp: string, c: Case, i: number): Run {
+  if (c.direct) { const why = c.direct(); return mk(c, { pass: why === undefined, kind: why === undefined ? "ok" : "verdict", detail: why ?? "", ...(why === undefined ? {} : { why }) }); }
+  const dir = path.join(tmp, `c${i}`);
+  const repo = path.join(dir, "repo"), sessions = path.join(dir, "sessions"), rooms = path.join(dir, "rooms");
+  fs.mkdirSync(repo, { recursive: true });
+  sh(repo, "init", "-q", "-b", "main");
+  write(repo, { ...MAIN, ...c.main });
+  commit(repo, "main");
+  sh(repo, "checkout", "-q", "-b", "feat/x");
+  let redSha = "";
+  const red = c.redFn ? c.redFn(dir) : c.red === undefined ? RED_OK : c.red;
+  if (red) { write(repo, red); redSha = commit(repo, "red"); }
+  write(repo, c.headFn ? c.headFn(dir) : (c.head ?? HEAD_OK));
+  commit(repo, "green");
+  fs.mkdirSync(sessions, { recursive: true });
+  const env = { MIRASIM_SESSIONS: sessions, MIRASIM_ROOMS: rooms, GATE_OWNER_UID: OWNER_UID, GATE_OWNER_NAME: OWNER_NAME, ...c.env, ...c.envFn?.(dir) };
+  const putTurns = (session: string, turns: object[]) => {
+    const [h, id] = session.split(":");
+    write(path.join(sessions, h!, id!), { "turns.jsonl": `${turns.map((t) => JSON.stringify(t)).join("\n")}\n` });
+  };
+  if (c.receipt !== null) {
+    const r: Receipt = {
+      slice: "selftest",
+      acceptance: [{ id: "AC-01", status: "通过", evidence: "packages/core/proof/adds.txt" }, { id: "AC-02", status: "未测", reason: "本片不涉及" }],
+      author: { agent: "claude", session: "claude:a", model: "claude-opus-5-5" },
+      review: { agent: "astra", session: "codex:b", model: "gpt-6-astra", verdict: "approve", reviewed_hash: "", notes: "ok" },
+      red: redSha ? { commit: redSha } : null,
+      unverifiable: "AC-01 只验了整数相加",
+      waiver: null,
+    };
+    c.receipt?.(r);
+    const rel = "receipts/feat-x.json";
+    write(repo, { [rel]: JSON.stringify(r, null, 1) });
+    putTurns(r.author.session, (c.authorTurns ?? authorOk)(repo));
+    const hash = cli(repo, env, "--hash").out.trim();
+    if (r.review) {
+      if (!r.review.reviewed_hash) r.review.reviewed_hash = hash;
+      write(repo, { [rel]: JSON.stringify(r, null, 1) });
+      putTurns(r.review.session, (c.reviewerTurns ?? reviewerOk)(hash));
+    }
+    if (c.authorRecord) { const [h, id] = r.author.session.split(":"); write(path.join(sessions, h!, id!), { "record.json": JSON.stringify(typeof c.authorRecord === "function" ? c.authorRecord(repo) : c.authorRecord) }); }
+    c.setup?.({ dir, repo, sessions, hash });
+    if (c.room) write(path.join(rooms, "g-group", "log"), { "00000001.jsonl": `${c.room(hash.slice(0, 12)).map((e) => JSON.stringify(e)).join("\n")}\n` });
+    commit(repo, "receipt");
+  }
+  if (c.after) { write(repo, c.after); commit(repo, "after-review"); }
+  const res = c.local === false ? cli(repo, env) : cli(repo, env, "--local");
+  if (res.code === null) return mk(c, { pass: false, kind: "timeout", why: "门禁命令行超时", detail: res.out });
+  const g = parseGateOutput(res.out, c.expect);
+  const seen = { exit: res.code, gates: g.gates, expectHit: g.expectHit, gateErrors: g.gateErrors, complete: g.complete };
+  if (!g.header || (res.code !== 0 && res.code !== 1)) return mk(c, { ...seen, pass: false, kind: "crash", why: `门禁命令行没有正常跑完(退出 ${res.code})`, detail: res.out });
+  const side = c.postCheck?.(dir);
+  if (side) return mk(c, { ...seen, pass: false, kind: "side", why: side, detail: `${side}\n${res.out}` });
+  const pass = c.expect === null
+    ? res.code === 0 && (c.local === false ? GATE_IDS.slice(0, -1) : GATE_IDS).every((id) => res.out.includes(`✓ ${id} `))
+    : res.code === 1 && res.out.includes(c.expect);
+  return mk(c, { ...seen, pass, kind: pass ? "ok" : "verdict", detail: res.out, ...(pass ? {} : { why: c.expect === null ? "该放行的没放行" : `没有按「${c.expect}」拦下` }) });
+}
+
+const R = (f: (r: Receipt) => void) => f;
+// 原则 68:作者是 Codex(OpenAI 模型、codex 会话);审查人是 Claude(Anthropic 模型、claude 会话)
+const CODEX_AUTHOR = (r: Receipt) => { r.author = { agent: "codex", session: "codex:a", model: "gpt-6" }; };
+const CODEX_AUTHOR_TURNS = (repo: string) => [{ model: "ai-x/gpt-6", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: fs.readFileSync(path.join(repo, "packages/core/src/add.ts"), "utf8") }, result: "File written successfully" }] }];
+const CLAUDE_REVIEW = (r: Receipt) => { r.review = { ...r.review!, agent: "claude", model: "claude-opus-5-5", session: "claude:rv1" }; };
+// g-group#3199:Argon 是 Google 模型、跑在 claude 会话里,派活卡片上的助手是 ai-argon
+const ARGON_REVIEW = (r: Receipt) => { r.review = { ...r.review!, agent: "argon", model: "gemini-4-argon", session: "claude:argon1" }; };
+const argonReviewTurns = (h: string) => [{ model: "ai-iisbo-2/[vertex]gemini-4-argon", toolCalls: [{ name: "Bash", input: { command: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }, result: h }] }];
+const ARGON_ROOM = () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "claude:argon1", assistant: "ai-argon" } }];
+const claudeReviewTurns = (h: string) => [{ model: "ai-x/claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }, result: h }] }];
+const OWNER_UID = "usr_owner", OWNER_NAME = "39impacts.talent";
+const user = (seq: number, text: string, by = OWNER_UID, name = OWNER_NAME) => ({ v: 1, seq, by, name, kind: "message", text });
+const SAME = R((r) => { r.review!.model = "claude-sonnet-5-5"; r.waiver = { by: OWNER_NAME, reason: "g-group#900" }; });
+const sameTurns = (h: string) => [{ model: "claude-sonnet-5-5", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }];
+const WF = (y: string): Files => ({ ...HEAD_OK, ".github/workflows/x.yml": y });
+// RR-09:self-check.yml 必须无条件跑门禁自检与变异校验,package.json 对应脚本必须是规范值
+const SC_STEP_SELF = "      - name: 门禁自检\n        run: npm run gates:selftest\n";
+const SC_STEP_MUT = "      - name: 门禁变异校验\n        run: GATE_MUTATION_JOBS=4 npm run gates:mutation\n";
+// R4-01:变异判定的双侧样例(直接调用 judge.ts)
+const ALL_OK: Record<string, "✓" | "✗"> = Object.fromEntries(GATE_IDS.map((g) => [g, "✓" as const]));
+const BLOCKED = (o: Partial<CaseResult> = {}): CaseResult => ({ name: "改了代码没收据", pass: true, kind: "ok", direct: false, expect: "缺收据", exit: 1, gates: { ...ALL_OK, "G-TRACE": "✗" }, expectHit: ["G-TRACE"], gateErrors: [], complete: true, ...o });
+const ALLOWED = (o: Partial<CaseResult> = {}): CaseResult => ({ name: "合规:先红后绿、跨厂商审查、来源核对通过", pass: true, kind: "ok", direct: false, expect: null, exit: 0, gates: { ...ALL_OK }, expectHit: [], gateErrors: [], complete: true, ...o });
+const notKilled = (target: string[], base: CaseResult, mut: CaseResult) => { const ev = evidence(target, base, mut); return ev === undefined ? undefined : `不该算发现,却给出判因:${ev}`; };
+// R5-02:外部结构化结果的陷阱对象;计数器记录 getter/setter/Proxy 回调次数
+function traps() {
+  let calls = 0;
+  const getterObj = BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] }) as unknown as Record<string, unknown>;
+  Object.defineProperty(getterObj, "pass", { get: () => { calls++; return false; }, enumerable: true });
+  const setterObj = { ...BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] }) } as unknown as Record<string, unknown>;
+  Object.defineProperty(setterObj, "why", { set: () => { calls++; }, enumerable: true });
+  const proxyObj = new Proxy(BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] }), { get: (t, k) => { calls++; return Reflect.get(t, k); }, ownKeys: (t) => { calls++; return Reflect.ownKeys(t); }, getOwnPropertyDescriptor: (t, k) => { calls++; return Reflect.getOwnPropertyDescriptor(t, k); }, has: (t, k) => { calls++; return Reflect.has(t, k); }, getPrototypeOf: (t) => { calls++; return Reflect.getPrototypeOf(t); } });
+  const nestedGetter = BLOCKED({ pass: false, kind: "verdict", exit: 0, expectHit: [] }) as unknown as Record<string, unknown>;
+  nestedGetter.gates = Object.defineProperty({}, "G-TRACE", { get: () => { calls++; return "✓"; }, enumerable: true });
+  return { calls: () => calls, list: { getterObj, setterObj, proxyObj, nestedGetter } as Record<string, unknown> };
+}
+// 对外部结构化结果跑完整消费路径(evidence 当作变异结果、当作基线、killedBy),不得抛错、不得回调、不得给出判因
+function rejects(bad: unknown): string | undefined {
+  const asCase = bad as CaseResult;
+  try {
+    const a = evidence(["G-TRACE"], BLOCKED(), asCase);
+    const b = evidence(["G-TRACE"], asCase, BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] }));
+    const c = killedBy(["G-TRACE"], new Map([["改了代码没收据", BLOCKED()]]), [asCase]);
+    if (a !== undefined || b !== undefined || c !== undefined) return `非法结果被当成证据:${JSON.stringify([a, b, c])}`;
+  } catch (e) { return `消费非法结果时抛错:${(e as Error).message}`; }
+  return undefined;
+}
+const SC_STEP_TEST = "      - name: 测试\n        run: npm test\n";
+const SC_WF = (steps = SC_STEP_SELF + SC_STEP_MUT, jobExtra = "", testStep = SC_STEP_TEST) => `on: pull_request\npermissions: { contents: read }\njobs:\n  self-check:\n    runs-on: ubuntu-latest\n${jobExtra}    steps:\n${testStep}${steps}`;
+const TEST_SCRIPT = 'node scripts/gates/test-runner.ts "packages/**/*.test.ts" "scripts/gates/*.test.ts"';
+// g-group#2538:直接跑 test-runner.ts,0 条用例必须判失败
+function runTestRunner(files: Record<string, string>) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gate-runner-"));
+  try {
+    write(dir, files);
+    const r = spawnSync(process.execPath, [path.join(HERE, "test-runner.ts"), "*.test.ts"], { cwd: dir, encoding: "utf8", env: gitEnv(), timeout: 120_000 });
+    return { code: r.status, out: (r.stdout ?? "") + (r.stderr ?? "") };
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+const ROOT_PKG = (scripts: Record<string, string> = {}) => JSON.stringify({ name: "g-group", private: true, type: "module", scripts: { test: TEST_SCRIPT, "gates:selftest": "node scripts/gates/run-all.ts --self-test", "gates:mutation": "node scripts/gates/mutation.ts", ...scripts } });
+const SC = (wf: string, pkg = ROOT_PKG()): Files => ({ ...HEAD_OK, ".github/workflows/self-check.yml": wf, "package.json": pkg });
+// RR-11:测试经 helper 拿期望值
+const TEST_HELPER = (spec: string) => T(`import { expected } from "${spec}";\ntest("adds", () => { assert.equal(add(1, 2), expected); });\n`);
+// RR-12:同文件一强一弱
+const ADD2 = `${ADD_OK}export function difference(_a: number, _b: number): number { return 999; }\n`;
+const RED2 = `${ADD_EMPTY}export function difference(_a: number, _b: number): number { throw new Error("red"); }\n`;
+const TEST2 = (diffAssert: string) => `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport { add, difference } from "./add.ts";\ntest("addition", () => { assert.equal(add(1, 2), 3); });\ntest("difference", () => { ${diffAssert} });\n`;
+// RR-14:审查轮次的工具调用(codex 的真实形状:{ command, shell, cwd })
+const hashCall = (command: string) => (h: string) => [{ model: "gpt-6-astra", toolCalls: [{ name: "shell", input: { command, shell: "/bin/zsh -lc", cwd: "/x/review" }, result: h }] }];
+
+// R7-01:沙箱读隔离按实际 HOME 与规范化路径核对。只用假 HOME 和中性内容的假文件,不碰真实账户文件。
+const NEUTRAL = "NEUTRAL_FIXTURE_NO_CREDENTIALS";
+// 前五项是已知位置;后两项是不在任何固定清单里的点文件位置,用来核对"HOME 下点文件默认拒读"本身生效
+const R7_KNOWN = 5;
+const R7_DENY = [".git-credentials", ".netrc", ".ssh/key-fixture", ".mirasim/sessions/fixture", ".config/gh/hosts.yml", ".docker/config.json", ".config/fixture-tool/token"];
+const R7_DEP: Files = { "fixture-dep/package.json": JSON.stringify({ name: "fixture-dep", type: "module", main: "index.js" }), "fixture-dep/index.js": `export const v = ${JSON.stringify(NEUTRAL)};\n` };
+/**
+ * 假 HOME 是指向真目录的符号链接,真目录在 TMPDIR 下(macOS 上 /var → /private/var),同一个文件按三种写法各读一次:
+ * 链接路径、未规范化的真目录路径、realpath。node 可执行文件和依赖放进 HOME 的点目录(和本机一样:node 在 ~/.nvm、
+ * 仓库依赖在 ~/.mirasim/.../node_modules),用这份 node 调真实的 sandboxed;窄挂载只挂依赖,宽挂载挂到会话目录的上级,
+ * 整个 HOME 挂载时已知位置的固定清单仍须生效(显式挂载盖过点文件默认拒读)。
+ * 期望:拒读项(已知位置与未列出的点文件位置)每一项每种写法都 EPERM;工作副本文件、依赖文件可读,依赖能 import;沙箱进程退出 0。
+ * docker 模式(GATE_SANDBOX_IMAGE)下假 HOME 不挂进容器,拒读项读不到即可(错误码不限),放行项只认真实路径;宽挂载只在 seatbelt 下核对。
+ */
+function sandboxReadProbe(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r701-"));
+  try {
+    const docker = !!process.env.GATE_SANDBOX_IMAGE;
+    const real = path.join(tmp, "home-real"), link = path.join(tmp, "home-link"), work = path.join(tmp, "work");
+    const nm = path.join(real, ".mirasim", "repo", "node_modules");
+    write(real, Object.fromEntries(R7_DENY.map((f) => [f, NEUTRAL])));
+    write(nm, R7_DEP);
+    write(work, { "own.txt": NEUTRAL });
+    fs.symlinkSync(real, link);
+    let node = process.execPath;
+    if (!docker) {
+      node = path.join(real, ".nvm", "bin", "node");
+      fs.mkdirSync(path.dirname(node), { recursive: true });
+      fs.copyFileSync(process.execPath, node, fs.constants.COPYFILE_FICLONE);
+      fs.chmodSync(node, 0o755);
+      // R9-03:动态链接的 node(如 Homebrew)从 @loader_path 与 @loader_path/../lib 加载自带的 .dylib,按同样布局一起放进假 HOME 的点目录
+      for (const [from, to] of dylibLayout(process.execPath, path.dirname(path.dirname(node)))) fs.copyFileSync(from, to);
+    }
+    const forms = (rel: string) => (docker ? [path.join(fs.realpathSync(real), rel)] : [path.join(link, rel), path.join(real, rel), path.join(fs.realpathSync(real), rel)]);
+    const deny = R7_DENY.flatMap(forms);
+    const dep = path.join(".mirasim", "repo", "node_modules", "fixture-dep", "index.js");
+    const allow = [path.join(fs.realpathSync(work), "own.txt"), ...forms(dep)];
+    const reader = `import fs from "node:fs";
+const ps = JSON.parse(process.argv[1]);
+const out = {};
+for (const p of ps) { try { out[p] = fs.readFileSync(p, "utf8").includes(${JSON.stringify(NEUTRAL)}) ? "ok" : "wrong"; } catch (e) { out[p] = e.code ?? String(e); } }
+try { const m = await import(${JSON.stringify(new URL(`file://${path.join(fs.realpathSync(real), dep)}`).href)}); out.import = m.v === ${JSON.stringify(NEUTRAL)} ? "ok" : "wrong"; } catch (e) { out.import = e.code ?? String(e); }
+console.log(JSON.stringify(out));`;
+    // 宽挂载:挂到会话目录的上级;整个 HOME 挂载:点文件默认拒读被放行盖过时,拒读清单本身仍须生效
+    const probes: [string, string[]][] = [["窄挂载", [nm]], ...(docker ? [] : [["宽挂载", [path.join(real, ".mirasim")]], ["整个 HOME 挂载", [real]]] as [string, string[]][])];
+    const driver = `const { sandboxed } = await import(${JSON.stringify(new URL(`file://${path.join(HERE, "lib.ts")}`).href)});
+const out = {};
+for (const [k, mounts] of ${JSON.stringify(probes)}) { const r = sandboxed(["--input-type=module", "-e", ${JSON.stringify(reader)}, ${JSON.stringify(JSON.stringify([...deny, ...allow]))}], ${JSON.stringify(work)}, mounts); out[k] = { status: r.status, stdout: r.stdout, stderr: r.stderr }; }
+console.log(JSON.stringify(out));`;
+    const r = spawnSync(node, ["--input-type=module", "-e", driver], { encoding: "utf8", timeout: 120_000, env: { ...gitEnv(), PATH: `${path.dirname(node)}:/usr/bin:/bin`, HOME: link } });
+    const line = (r.stdout ?? "").trim().split("\n").pop() ?? "";
+    let res: Record<string, { status: number | null; stdout: string; stderr: string }>;
+    try { res = JSON.parse(line); } catch { return `探针没有给出结果(退出 ${r.status}):${(r.stdout ?? "").slice(-300)}${(r.stderr ?? "").slice(-300)}`; }
+    const bad: string[] = [];
+    for (const [k] of probes) {
+      const x = res[k];
+      if (x?.status !== 0) { bad.push(`${k}:沙箱进程退出 ${x?.status}:${(x?.stderr ?? "").split("\n").find((l) => l.trim()) ?? ""}`); continue; }
+      let got: Record<string, string>;
+      try { got = JSON.parse(x.stdout.trim().split("\n").pop() ?? ""); } catch { bad.push(`${k}:读取结果不是 JSON:${x.stdout.slice(-200)}`); continue; }
+      // 整个 HOME 都被显式挂载时放行项盖过点文件默认拒读,只核对已知位置的固定清单仍生效
+      const want = k === "整个 HOME 挂载" ? R7_DENY.slice(0, R7_KNOWN).flatMap(forms) : deny;
+      for (const f of want) if (docker ? got[f] === "ok" || got[f] === undefined : got[f] !== "EPERM") bad.push(`${k}:${f} 应拒读(EPERM),实际 ${got[f]}`);
+      for (const f of [...allow, "import"]) if (got[f] !== "ok") bad.push(`${k}:${f} 应可读,实际 ${got[f]}`);
+    }
+    return bad.length ? bad.join("\n") : undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+/**
+ * R7-01 跨平台核对 seatbelt 规则:CI 在 Linux 上走 docker,seatbelt 规则在那里不执行,上面的探针只能在 macOS 上发现规则被改坏。
+ * 这里不调 sandbox-exec,直接核对 sandboxPlan 按 seatbelt 生成的规则文本,任何平台都能跑。只用假 HOME 与中性内容的假文件。
+ * 假 HOME 是指向真目录的符号链接,规则须同时按原样路径和 realpath 写出。期望:
+ *  1. HOME 下点文件默认拒读(原样与 realpath 各一条正则);
+ *  2. 其后放行这次的工作副本与挂载的依赖(realpath);
+ *  3. 最后一条是固定拒读清单,排在放行之后,已知位置按原样与 realpath 都在。
+ */
+function seatbeltPlanCheck(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r701p-"));
+  const saved = { h: process.env.HOME, s: process.env.MIRASIM_SESSIONS, r: process.env.MIRASIM_ROOMS };
+  try {
+    const real = path.join(tmp, "home-real"), link = path.join(tmp, "home-link"), work = path.join(tmp, "work"), dep = path.join(tmp, "deps", "node_modules");
+    const listed = R7_DENY.slice(0, 3);
+    write(real, Object.fromEntries(listed.map((f) => [f, NEUTRAL])));
+    write(work, { "own.txt": NEUTRAL });
+    write(dep, R7_DEP);
+    fs.symlinkSync(real, link);
+    process.env.HOME = link;
+    delete process.env.MIRASIM_SESSIONS;
+    delete process.env.MIRASIM_ROOMS;
+    const plan = sandboxPlan(["-e", "0"], work, [dep], "seatbelt");
+    const rw = fs.realpathSync(work), rh = fs.realpathSync(real), rd = fs.realpathSync(dep);
+    const lines = (plan.profile ?? "").split("\n");
+    const bad: string[] = [];
+    if (plan.cmd !== "/usr/bin/sandbox-exec" || plan.argv[0] !== "-f" || plan.argv[1] !== plan.profilePath || plan.profilePath !== path.join(rw, ".gate-sandbox.sb")) bad.push(`执行计划不是 sandbox-exec -f <副本里的规则文件>:${JSON.stringify([plan.cmd, ...plan.argv.slice(0, 2)])}`);
+    const rx = (h: string) => `(regex #"^${h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/\\.")`;
+    const sub = (d: string) => `(subpath "${d}")`;
+    const dot = lines.findIndex((l) => l.startsWith("(deny file-read-data (regex"));
+    const allow = lines.findIndex((l) => l.startsWith("(allow file-read-data"));
+    const last = lines.length - 1;
+    if (dot < 0) bad.push("没有 HOME 点文件默认拒读规则");
+    else for (const h of [link, rh]) if (!lines[dot]!.includes(rx(h))) bad.push(`点文件默认拒读缺 ${h}`);
+    if (allow < 0) bad.push("没有放行规则");
+    else {
+      if (allow < dot) bad.push("放行规则排在点文件拒读之前");
+      for (const d of [rw, rd]) if (!lines[allow]!.includes(sub(d))) bad.push(`放行规则缺 ${d}`);
+    }
+    if (!lines[last]?.startsWith("(deny file-read-data (subpath") || last <= allow) bad.push(`最后一条不是排在放行之后的固定拒读清单:${lines[last]}`);
+    else for (const f of listed) for (const h of [link, rh]) { const d = path.join(h, f.split("/")[0]!); if (!lines[last]!.includes(sub(d))) bad.push(`固定拒读清单缺 ${d}`); }
+    return bad.length ? bad.join("\n") : undefined;
+  } finally {
+    for (const [k, v] of [["HOME", saved.h], ["MIRASIM_SESSIONS", saved.s], ["MIRASIM_ROOMS", saved.r]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+/** 运行时 bin/ 与 ../lib/ 下的 .dylib(按真实路径),及其放进 prefix 下同样布局的目标位置。自检自己算,不调被测的 runtimeLibs。 */
+function dylibLayout(exe: string, prefix: string): [string, string][] {
+  const bin = path.dirname(fs.realpathSync(exe));
+  const out: [string, string][] = [];
+  for (const [d, sub] of [[bin, "bin"], [path.join(path.dirname(bin), "lib"), "lib"]] as const) {
+    let es: fs.Dirent[] = [];
+    try { es = fs.readdirSync(d, { withFileTypes: true }); } catch { continue; }
+    for (const e of es) if (e.isFile() && e.name.endsWith(".dylib")) { fs.mkdirSync(path.join(prefix, sub), { recursive: true }); out.push([path.join(d, e.name), path.join(prefix, sub, e.name)]); }
+  }
+  return out;
+}
+/** 规则行 "(动作 操作 (subpath "...") (literal "...") ...)" 拆成过滤项;整行必须恰好由这些项组成,否则返回 undefined。 */
+function sbFilters(line: string, head: string): string[] | undefined {
+  if (!line.startsWith(`${head} `) || !line.endsWith(")")) return undefined;
+  const body = line.slice(head.length, -1);
+  const items = body.match(/ \((?:subpath|literal) "(?:[^"\\]|\\.)*"\)| \(regex #"(?:[^"\\]|\\.)*"\)/g) ?? [];
+  return items.join("") === body ? items.map((x) => x.trim()) : undefined;
+}
+const sameSet = (a: string[], b: string[]) => a.length === b.length && [...a].sort().join("\n") === [...b].sort().join("\n");
+/** 假运行时:prefix/bin/node(中性内容,不执行),可选带 .dylib 与非库文件。 */
+function fakeRuntime(root: string, libs: boolean): { exe: string; libs: string[] } {
+  const files: Files = { "bin/node": NEUTRAL };
+  if (libs) Object.assign(files, { "bin/libside.fixture.dylib": NEUTRAL, "lib/libnode.fixture.dylib": NEUTRAL, "lib/notes.txt": NEUTRAL, "lib/node_modules/x/index.js": NEUTRAL });
+  write(root, files);
+  const r = fs.realpathSync(root);
+  return { exe: path.join(root, "bin", "node"), libs: libs ? [path.join(r, "bin", "libside.fixture.dylib"), path.join(r, "lib", "libnode.fixture.dylib")] : [] };
+}
+/** 在临时目录、假 HOME(符号链接)下生成执行计划;mode 与 exe 由调用方给。只用中性内容。 */
+function withPlanFixture<T>(prefix: string, fn: (fx: { tmp: string; real: string; link: string; work: string; dep: string; rw: string; rh: string; rd: string }) => T): T {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  const saved = { h: process.env.HOME, s: process.env.MIRASIM_SESSIONS, r: process.env.MIRASIM_ROOMS, i: process.env.GATE_SANDBOX_IMAGE };
+  try {
+    const real = path.join(tmp, "home-real"), link = path.join(tmp, "home-link"), work = path.join(tmp, "work"), dep = path.join(tmp, "deps", "node_modules");
+    write(real, Object.fromEntries(R7_DENY.slice(0, 3).map((f) => [f, NEUTRAL])));
+    write(work, { "own.txt": NEUTRAL });
+    write(dep, R7_DEP);
+    fs.symlinkSync(real, link);
+    process.env.HOME = link;
+    delete process.env.MIRASIM_SESSIONS;
+    delete process.env.MIRASIM_ROOMS;
+    return fn({ tmp, real, link, work, dep, rw: fs.realpathSync(work), rh: fs.realpathSync(real), rd: fs.realpathSync(dep) });
+  } finally {
+    for (const [k, v] of [["HOME", saved.h], ["MIRASIM_SESSIONS", saved.s], ["MIRASIM_ROOMS", saved.r], ["GATE_SANDBOX_IMAGE", saved.i]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+/**
+ * R9-01:放行范围必须恰好是工作副本与挂载的依赖(静态链接的假运行时,没有要放行的库),多出任何一项(例如把 HOME 加进放行)都判失败;
+ * 整份规则里的 allow 只能是 allow default、写入副本与 /dev、这一条读放行。只核对规则文本,任何平台都能跑。
+ */
+function seatbeltAllowExact(): string | undefined {
+  return withPlanFixture("gate-r901-", ({ tmp, rw, rd, work, dep }) => {
+    const rt = fakeRuntime(path.join(tmp, "rt"), false);
+    const plan = sandboxPlan(["-e", "0"], work, [dep], "seatbelt", rt.exe);
+    const lines = (plan.profile ?? "").split("\n");
+    const bad: string[] = [];
+    if (plan.argv[2] !== rt.exe) bad.push(`执行的不是给定的运行时:${plan.argv[2]}`);
+    const allowLines = lines.filter((l) => l.startsWith("(allow"));
+    const want = ["(allow default)", `(allow file-write* (subpath "${rw}") (regex #"^/dev/"))`];
+    for (const w of want) if (!allowLines.includes(w)) bad.push(`缺放行行:${w}`);
+    const reads = allowLines.filter((l) => !want.includes(l));
+    if (reads.length !== 1) bad.push(`除 allow default 与写入放行外应恰有一条读放行,实际 ${reads.length} 条:${JSON.stringify(reads)}`);
+    else {
+      const got = sbFilters(reads[0]!, "(allow file-read-data");
+      const exp = [`(subpath "${rw}")`, `(subpath "${rd}")`];
+      if (!got) bad.push(`读放行行格式不对:${reads[0]}`);
+      else if (!sameSet(got, exp)) bad.push(`读放行范围应恰为 ${JSON.stringify(exp)},实际 ${JSON.stringify(got)}`);
+    }
+    return bad.length ? bad.join("\n") : undefined;
+  });
+}
+/** R9-03:动态链接的假运行时(bin/ 与 ../lib/ 下各有 .dylib,另有非库文件与目录),读放行须逐个列出这些 .dylib(literal,realpath),不放行目录与其它文件。 */
+function seatbeltRuntimeLibs(): string | undefined {
+  return withPlanFixture("gate-r903-", ({ tmp, rw, rd, work, dep }) => {
+    const rt = fakeRuntime(path.join(tmp, "rt"), true);
+    const plan = sandboxPlan(["-e", "0"], work, [dep], "seatbelt", rt.exe);
+    const read = (plan.profile ?? "").split("\n").filter((l) => l.startsWith("(allow file-read"));
+    if (read.length !== 1) return `应恰有一条读放行,实际 ${read.length} 条`;
+    const got = sbFilters(read[0]!, "(allow file-read-data");
+    const exp = [`(subpath "${rw}")`, `(subpath "${rd}")`, ...rt.libs.map((l) => `(literal "${l}")`)];
+    if (!got) return `读放行行格式不对:${read[0]}`;
+    return sameSet(got, exp) ? undefined : `读放行范围应恰为 ${JSON.stringify(exp)},实际 ${JSON.stringify(got)}`;
+  });
+}
+/** R9-02:联网隔离规则跨平台核对。seatbelt:恰有一条 (deny network*),没有任何别的联网规则;docker:恰有一处 --network none,挂载恰为副本与依赖。 */
+function networkPlanCheck(): string | undefined {
+  return withPlanFixture("gate-r902p-", ({ tmp, rw, rd, work, dep }) => {
+    const bad: string[] = [];
+    const rt = fakeRuntime(path.join(tmp, "rt"), false);
+    const sb = (sandboxPlan(["-e", "0"], work, [dep], "seatbelt", rt.exe).profile ?? "").split("\n");
+    const net = sb.filter((l) => /network/.test(l));
+    if (net.length !== 1 || net[0] !== "(deny network*)") bad.push(`seatbelt 联网规则应恰为 (deny network*),实际 ${JSON.stringify(net)}`);
+    process.env.GATE_SANDBOX_IMAGE = "r9-plan-fixture-image";
+    const d = sandboxPlan(["-e", "0"], work, [dep], "docker");
+    const a = d.argv;
+    const netIdx = a.flatMap((x, i) => (/^--net(work)?(=|$)/.test(x) ? [i] : []));
+    if (netIdx.length !== 1 || a[netIdx[0]!] !== "--network" || a[netIdx[0]! + 1] !== "none") bad.push(`docker 应恰有一处 --network none,实际 ${JSON.stringify(netIdx.map((i) => a.slice(i, i + 2)))}`);
+    const img = a.indexOf("r9-plan-fixture-image");
+    const opts = img < 0 ? a : a.slice(0, img);
+    if (img < 0) bad.push("docker 参数里没有镜像");
+    for (const x of opts) if (/^--(privileged|cap-add|add-host|net(work)?-alias|dns)/.test(x)) bad.push(`docker 多出了 ${x}`);
+    const vols = opts.flatMap((x, i) => (x === "-v" ? [opts[i + 1]!] : []));
+    if (!sameSet(vols, [`${rw}:${rw}`, `${rd}:${rd}`])) bad.push(`docker 挂载应恰为副本与依赖,实际 ${JSON.stringify(vols)}`);
+    return bad.length ? bad.join("\n") : undefined;
+  });
+}
+/**
+ * R9-02:真实隔离入口的联网对照。宿主上起本机回环夹具(只回中性标记),同一读取脚本:宿主直接跑须取得标记(对照,取不到算环境故障、抛错不算发现);
+ * 经真实 sandboxed 跑:seatbelt 下必须被拒(blocked:EPERM 等错误码),docker 下容器自带回环,取不到宿主夹具即可(这一侧区分不了联网规则,规则由跨平台核对管)。
+ */
+function networkProbe(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r902-"));
+  try {
+    const home = path.join(tmp, "home"), work = path.join(tmp, "work");
+    write(home, { "keep.txt": NEUTRAL });
+    write(work, { "own.txt": NEUTRAL });
+    const server = `import net from "node:net"; const s = net.createServer((c) => c.end(${JSON.stringify(NEUTRAL)})); s.listen(0, "127.0.0.1", () => console.log(s.address().port)); setTimeout(() => s.close(), 60000).unref();`;
+    const reader = `import net from "node:net"; const port = Number(process.argv[1]); let done = false; const fin = (x) => { if (done) return; done = true; console.log(x); s.destroy(); }; const s = net.connect({ host: "127.0.0.1", port }); let buf = ""; s.on("data", (d) => { buf += d; }); s.on("end", () => fin(buf === ${JSON.stringify(NEUTRAL)} ? "read" : "wrong")); s.on("error", (e) => fin("blocked:" + (e.code ?? e.message))); setTimeout(() => fin("timeout"), 3000).unref();`;
+    const driver = `import { spawn, spawnSync } from "node:child_process";
+const { sandboxed } = await import(${JSON.stringify(new URL(`file://${path.join(HERE, "lib.ts")}`).href)});
+const srv = spawn(process.execPath, ["--input-type=module", "-e", ${JSON.stringify(server)}], { stdio: ["ignore", "pipe", "inherit"] });
+const port = await new Promise((ok, no) => { srv.stdout.once("data", (d) => ok(String(d).trim())); srv.once("exit", () => no(new Error("夹具监听进程退出"))); setTimeout(() => no(new Error("夹具监听超时")), 10000); });
+const args = ["--input-type=module", "-e", ${JSON.stringify(reader)}, port];
+const host = spawnSync(process.execPath, args, { encoding: "utf8", timeout: 10000 });
+const box = sandboxed(args, ${JSON.stringify(work)});
+srv.kill();
+console.log(JSON.stringify({ host: { status: host.status, out: (host.stdout ?? "").trim() }, box: { status: box.status, out: (box.stdout ?? "").trim(), err: (box.stderr ?? "").slice(-300) } }));`;
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", driver], { encoding: "utf8", timeout: 120_000, env: { ...gitEnv(), HOME: home } });
+    let res: { host: { status: number; out: string }; box: { status: number | null; out: string; err: string } };
+    try { res = JSON.parse((r.stdout ?? "").trim().split("\n").pop() ?? ""); } catch { throw new Error(`联网探针没有给出结果(退出 ${r.status}):${(r.stderr ?? "").slice(-300)}`); }
+    if (res.host.status !== 0 || res.host.out !== "read") throw new Error(`宿主对照没有取得中性标记(环境故障,不算发现):${JSON.stringify(res.host)}`);
+    if (res.box.status !== 0) return `沙箱进程退出 ${res.box.status}:${res.box.err}`;
+    if (!res.box.out.startsWith("blocked:")) return `沙箱内应连不上宿主回环夹具,实际 ${res.box.out}`;
+    return undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+// 完整入口:假 HOME 在样例目录下(TMPDIR 里,macOS 上未规范化的 /var 路径),门禁命令行就用这个 HOME
+const R7_HOME = (dir: string) => path.join(dir, "home");
+const R7_READ_TEST = (dir: string) => T(`test("adds", () => { const a = fs.readFileSync(${JSON.stringify(path.join(R7_HOME(dir), ".git-credentials"))}, "utf8"); const b = fs.readFileSync(${JSON.stringify(path.join(R7_HOME(dir), ".netrc"))}, "utf8"); console.log(a.length + b.length); assert.equal(add(1, 2), 3); });\n`, `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport fs from "node:fs";\nimport { add } from "./add.ts";\n`);
+const R7_OK_TEST = T(`test("adds", () => { const own = fs.readFileSync(new URL("./fixture.txt", import.meta.url), "utf8"); console.log(own.length + v.length); assert.equal(add(1, 2), 3); });\n`, `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport fs from "node:fs";\nimport { v } from "fixture-dep";\nimport { add } from "./add.ts";\n`);
+const R7_SETUP = ({ dir, repo }: { dir: string; repo: string }) => {
+  write(R7_HOME(dir), Object.fromEntries(R7_DENY.map((f) => [f, NEUTRAL])));
+  const nm = path.join(R7_HOME(dir), ".mirasim", "deps", "node_modules");
+  write(nm, R7_DEP);
+  fs.symlinkSync(nm, path.join(repo, "node_modules"));
+};
+
+/**
+ * R10-04:容器执行计划逐项核对。docker 参数必须恰为预期序列(只挂工作副本与依赖,--network none,固定环境与工作目录);
+ * containerPlanProblems 对另一种挂载形式(--mount、--volume、附着写法、--tmpfs、--volumes-from)、多挂、少挂、重复挂载与其它参数一律判失败。
+ * 只核对参数文本,任何平台都能跑;夹具目录只放中性内容。
+ */
+function containerPlanCheck(): string | undefined {
+  return withPlanFixture("gate-r1004-", ({ tmp, rw, rd, work, dep }) => {
+    const image = "r10-plan-fixture-image";
+    process.env.GATE_SANDBOX_IMAGE = image;
+    const bad: string[] = [];
+    const plan = sandboxPlan(["-e", "0"], work, [dep], "docker");
+    const uid = typeof process.getuid === "function" ? `${process.getuid()}:${process.getgid?.() ?? 0}` : "1000:1000";
+    const want = ["run", "--rm", "--network", "none", "--user", uid, "-e", `HOME=${rw}`, "-e", `TMPDIR=${rw}`, "-v", `${rw}:${rw}`, "-v", `${rd}:${rd}`, "-w", rw, image, "node", "-e", "0"];
+    if (plan.cmd !== "docker" || JSON.stringify(plan.argv) !== JSON.stringify(want)) bad.push(`容器执行计划应逐项为 ${JSON.stringify(want)},实际 ${JSON.stringify([plan.cmd, ...plan.argv])}`);
+    const own = containerPlanProblems(plan.argv, rw, [rd]);
+    if (own.length) bad.push(`实际执行计划被判有问题:${own.join(";")}`);
+    if (containerPlanProblems(want, rw, [rd]).length) bad.push("预期序列本身被判有问题");
+    const img = want.indexOf(image);
+    const extra = path.join(tmp, "home-real");
+    const variants: [string, string[]][] = [
+      ["--mount 只读绑定", [...want.slice(0, img), "--mount", `type=bind,source=${extra},target=/fixture-extra,readonly`, ...want.slice(img)]],
+      ["--mount= 写法", [...want.slice(0, img), `--mount=type=bind,source=${extra},target=/fixture-extra`, ...want.slice(img)]],
+      ["--mount tmpfs", [...want.slice(0, img), "--mount", "type=tmpfs,target=/fixture-extra", ...want.slice(img)]],
+      ["--volume", [...want.slice(0, img), "--volume", `${extra}:/fixture-extra:ro`, ...want.slice(img)]],
+      ["--volume= 写法", [...want.slice(0, img), `--volume=${extra}:/fixture-extra`, ...want.slice(img)]],
+      ["多一个 -v", [...want.slice(0, img), "-v", `${extra}:/fixture-extra`, ...want.slice(img)]],
+      ["-v 附着写法", [...want.slice(0, img), `-v${extra}:/fixture-extra`, ...want.slice(img)]],
+      ["副本挂到别的目标", [...want.slice(0, img), "-v", `${rw}:/fixture-extra`, ...want.slice(img)]],
+      ["重复挂依赖", [...want.slice(0, img), "-v", `${rd}:${rd}`, ...want.slice(img)]],
+      ["少挂依赖", [...want.slice(0, 12), ...want.slice(14)]],
+      ["--volumes-from", [...want.slice(0, img), "--volumes-from", "fixture-container", ...want.slice(img)]],
+      ["--tmpfs", [...want.slice(0, img), "--tmpfs", "/fixture-extra", ...want.slice(img)]],
+      ["--privileged", [...want.slice(0, img), "--privileged", ...want.slice(img)]],
+      ["多一个环境变量", [...want.slice(0, img), "-e", "FIXTURE=1", ...want.slice(img)]],
+      ["联网改成 host", want.map((x, i) => (i === 3 ? "host" : x))],
+      ["换了镜像", want.map((x, i) => (i === img ? "other-image" : x))],
+      ["镜像后不是 node", want.map((x, i) => (i === img + 1 ? "sh" : x))],
+    ];
+    for (const [k, argv] of variants) if (containerPlanProblems(argv, rw, [rd]).length === 0) bad.push(`${k} 没有判失败`);
+    return bad.length ? bad.join("\n") : undefined;
+  });
+}
+/**
+ * R10-04:容器侧实际挂载。只在容器模式(GATE_SANDBOX_IMAGE,CI)实跑:经真实 sandboxed 读容器内 /proc/self/mountinfo,
+ * 去掉容器自带的 /、/proc、/dev、/sys 与 /etc/hosts|hostname|resolv.conf 后,挂载点必须恰为工作副本与依赖。
+ * seatbelt 模式没有容器,这一项由上面的逐项核对管(本机没有 Docker 时如实记为未测)。
+ */
+function containerMountProbe(): string | undefined {
+  if (!process.env.GATE_SANDBOX_IMAGE) return undefined;
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r1004m-"));
+  try {
+    const work = path.join(tmp, "work"), dep = path.join(tmp, "deps", "node_modules");
+    write(work, { "own.txt": NEUTRAL });
+    write(dep, R7_DEP);
+    const reader = `import fs from "node:fs"; console.log(JSON.stringify(fs.readFileSync("/proc/self/mountinfo", "utf8").split("\\n").filter(Boolean).map((l) => l.split(" ")[4].replace(/\\\\040/g, " "))));`;
+    const r = sandboxed(["--input-type=module", "-e", reader], work, [dep]);
+    let ms: string[];
+    try { ms = JSON.parse((r.stdout ?? "").trim().split("\n").pop() ?? ""); } catch { return `容器内没读到挂载表(退出 ${r.status}):${(r.stdout ?? "").slice(-200)}${(r.stderr ?? "").slice(-300)}`; }
+    const own = ms.filter((m) => m !== "/" && !/^\/(proc|dev|sys)(\/|$)/.test(m) && !/^\/etc\/(hosts|hostname|resolv\.conf)$/.test(m));
+    const exp = [fs.realpathSync(work), fs.realpathSync(dep)];
+    return sameSet(own, exp) ? undefined : `容器内挂载点应恰为 ${JSON.stringify(exp)},实际 ${JSON.stringify(own)}`;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+/**
+ * R10-05:运行库是符号链接(lib/libx.dylib → runtime/libx.dylib)时,读放行列出链接指向的实际文件(literal,realpath);
+ * 只认指向运行时目录之内、名字以 .dylib 结尾的普通文件。指向运行时之外、目录、非 .dylib 文件或悬空的链接一律不放行。只核对规则文本,任何平台都能跑。
+ */
+function seatbeltRuntimeLibLinks(): string | undefined {
+  return withPlanFixture("gate-r1005-", ({ tmp, rw, rd, work, dep }) => {
+    const root = path.join(tmp, "rt");
+    write(root, { "bin/node": NEUTRAL, "bin/runtime/libside.fixture.dylib": NEUTRAL, "lib/runtime/libnode.fixture.dylib": NEUTRAL, "lib/runtime/notes.txt": NEUTRAL, "lib/runtime/dir.dylib/x.txt": NEUTRAL });
+    write(path.join(tmp, "outside"), { "libout.fixture.dylib": NEUTRAL });
+    const links: [string, string][] = [
+      ["bin/libside.fixture.dylib", "runtime/libside.fixture.dylib"], ["lib/libnode.fixture.dylib", "runtime/libnode.fixture.dylib"],
+      ["lib/libout.fixture.dylib", path.join(tmp, "outside", "libout.fixture.dylib")], ["lib/libtxt.fixture.dylib", "runtime/notes.txt"],
+      ["lib/libdir.fixture.dylib", "runtime/dir.dylib"], ["lib/libgone.fixture.dylib", "runtime/missing.dylib"],
+    ];
+    for (const [l, t] of links) fs.symlinkSync(t, path.join(root, l));
+    const r = fs.realpathSync(root);
+    const plan = sandboxPlan(["-e", "0"], work, [dep], "seatbelt", path.join(root, "bin", "node"));
+    const read = (plan.profile ?? "").split("\n").filter((l) => l.startsWith("(allow file-read"));
+    if (read.length !== 1) return `应恰有一条读放行,实际 ${read.length} 条`;
+    const got = sbFilters(read[0]!, "(allow file-read-data");
+    const exp = [`(subpath "${rw}")`, `(subpath "${rd}")`, `(literal "${path.join(r, "bin", "runtime", "libside.fixture.dylib")}")`, `(literal "${path.join(r, "lib", "runtime", "libnode.fixture.dylib")}")`];
+    if (!got) return `读放行行格式不对:${read[0]}`;
+    return sameSet(got, exp) ? undefined : `读放行范围应恰为 ${JSON.stringify(exp)},实际 ${JSON.stringify(got)}`;
+  });
+}
+/**
+ * R10-05:真实运行时按符号链接布局放进假 HOME 的点目录(每个运行库放进 runtime/,原位置换成指向它的相对链接),
+ * 宿主上直接启动须输出中性标记(对照);同一运行时经真实 sandboxed 启动也须输出中性标记,且发现的运行库数等于链接数。
+ * 静态链接的运行时没有运行库,按同一流程作对照。容器模式用镜像自带的 node,不涉及宿主运行库布局。
+ */
+function runtimeLinkProbe(): string | undefined {
+  if (process.env.GATE_SANDBOX_IMAGE) return undefined;
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r1005r-"));
+  try {
+    const real = path.join(tmp, "home-real"), link = path.join(tmp, "home-link"), work = path.join(tmp, "work");
+    write(work, { "own.txt": NEUTRAL });
+    fs.mkdirSync(real, { recursive: true });
+    fs.symlinkSync(real, link);
+    const prefix = path.join(real, ".runtime-link"), node = path.join(prefix, "bin", "node");
+    fs.mkdirSync(path.dirname(node), { recursive: true });
+    fs.copyFileSync(process.execPath, node, fs.constants.COPYFILE_FICLONE);
+    fs.chmodSync(node, 0o755);
+    let n = 0;
+    for (const [from, to] of dylibLayout(process.execPath, prefix)) {
+      const hidden = path.join(path.dirname(to), "runtime", path.basename(to));
+      fs.mkdirSync(path.dirname(hidden), { recursive: true });
+      fs.copyFileSync(from, hidden);
+      fs.symlinkSync(path.join("runtime", path.basename(to)), to);
+      n++;
+    }
+    const say = `console.log(${JSON.stringify(NEUTRAL)})`;
+    const host = spawnSync(node, ["-e", say], { encoding: "utf8", timeout: 60_000, env: { PATH: "/usr/bin:/bin", HOME: link } });
+    if (host.status !== 0 || (host.stdout ?? "").trim() !== NEUTRAL) throw new Error(`宿主上符号链接布局的运行时没起来(对照失败,退出 ${host.status} 信号 ${host.signal}):${(host.stderr ?? "").slice(-300)}`);
+    const driver = `const { sandboxed, runtimeLibs } = await import(${JSON.stringify(new URL(`file://${path.join(HERE, "lib.ts")}`).href)});
+const r = sandboxed(["-e", ${JSON.stringify(say)}], ${JSON.stringify(work)});
+console.log(JSON.stringify({ status: r.status, signal: r.signal, out: (r.stdout ?? "").trim(), err: (r.stderr ?? "").slice(-300), libs: runtimeLibs().length }));`;
+    const r = spawnSync(node, ["--input-type=module", "-e", driver], { encoding: "utf8", timeout: 120_000, env: { ...gitEnv(), PATH: `${path.dirname(node)}:/usr/bin:/bin`, HOME: link } });
+    let o: { status: number | null; signal: string | null; out: string; err: string; libs: number };
+    try { o = JSON.parse((r.stdout ?? "").trim().split("\n").pop() ?? ""); } catch { return `探针没有给出结果(退出 ${r.status}):${(r.stdout ?? "").slice(-300)}${(r.stderr ?? "").slice(-300)}`; }
+    const bad: string[] = [];
+    if (o.status !== 0 || o.out !== NEUTRAL) bad.push(`隔离内符号链接布局的运行时没起来(退出 ${o.status} 信号 ${o.signal}):${o.err}`);
+    if (o.libs !== n) bad.push(`发现的运行库 ${o.libs} 个,符号链接布局里有 ${n} 个`);
+    return bad.length ? bad.join("\n") : undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+// R10-01/R10-02:作者来源按仓库身份认,不看目录名。提交号取样例仓库自己的提交;夹具目录只放中性内容。
+const shortHead = (repo: string) => sh(repo, "rev-parse", "--short=7", "HEAD");
+const authorClone = (repo: string) => path.join(path.dirname(repo), "author-clone");
+/** 同一条作者记录:在独立克隆里提交并查看(宿主记录了 git 输出),再写克隆里的文件 */
+const cloneTurns = (out: (repo: string) => string) => (repo: string) => {
+  const c = authorClone(repo);
+  return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `cd ${c} && git commit -q -m green && git log --oneline -1` }, result: out(repo) }, { name: "Write", input: { file_path: path.join(c, "packages/core/src/add.ts") } }] }];
+};
+// 真实、单命令的中性提交:输出来自固定 git 可执行文件,同一提交随后成为受检版本的祖先。
+const committedCloneTurns = (repo: string) => {
+  const c = authorClone(repo);
+  sh(path.dirname(repo), "clone", "-q", repo, c);
+  write(c, { "packages/core/src/add.ts": `${ADD_OK}// neutral fixture\n` });
+  sh(c, "add", "packages/core/src/add.ts");
+  const args = ["-i", "/usr/bin/git", "--no-pager", "--no-replace-objects", "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-C", c, "commit", "--no-gpg-sign", "-m", "fixture"];
+  const result = execFileSync("/usr/bin/env", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  sh(repo, "fetch", "-q", c, "HEAD"); sh(repo, "merge", "-q", "--ff-only", "FETCH_HEAD");
+  return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `/usr/bin/env ${args.join(" ")}` }, result }] }];
+};
+const makeClone = ({ dir, repo }: { dir: string; repo: string }) => { if (!fs.existsSync(authorClone(repo))) sh(dir, "clone", "-q", repo, authorClone(repo)); };
+const cleanClone = (x: { dir: string; repo: string }) => { makeClone(x); fs.rmSync(authorClone(x.repo), { recursive: true, force: true }); };
+/** 另建一个同名的 git 仓库(自己的根提交),返回它的短提交号 */
+function otherRepo(at: string, commits = true): string {
+  fs.mkdirSync(at, { recursive: true });
+  sh(at, "init", "-q", "-b", "main");
+  if (!commits) return "";
+  write(at, { "neutral.txt": `${NEUTRAL}\n` });
+  commit(at, "other");
+  return sh(at, "rev-parse", "--short=7", "HEAD");
+}
+// R10-03:同进程里改写导出的受管范围策略(数组增删、元素改写);只改导出对象本身,不改任何内置原型
+const POLICY_TRIES = `
+      const tries = [
+        () => lib.UNGOVERNED.push(/^packages\\//, /^scripts\\//), () => lib.UNGOVERNED.unshift(/./), () => lib.UNGOVERNED.splice(0, 1, /./), () => lib.UNGOVERNED.pop(),
+        () => { lib.UNGOVERNED[0] = /./; }, () => { lib.UNGOVERNED.length = 0; }, () => { lib.UNGOVERNED[1].test = () => true; },
+        () => { Object.defineProperty(lib.UNGOVERNED[2], "test", { value: () => true }); }, () => { Object.setPrototypeOf(lib.UNGOVERNED[3], { test: () => true }); }, () => { lib.UNGOVERNED[0].lastIndex = 3; },
+        () => { g.WAIVER_RE.test = () => true; }, () => { g.WAIVER_RE.exec = () => ["g-group#1", "1"]; }, () => { Object.setPrototypeOf(g.WAIVER_RE, { test: () => true, exec: () => ["g-group#1", "1"] }); },
+        () => lib.GIT_SAFE_ARGS.push("-c", "core.hooksPath=.githooks"), () => { lib.GIT_SAFE_ARGS.length = 0; }, () => { lib.GIT_SAFE_ARGS[1] = "core.hooksPath=.githooks"; },
+      ];
+      for (const t of tries) { try { t(); } catch {} }`;
+// 真实门禁入口用的预加载:只做放宽受管范围的改写(先改元素、再加范围),互不抵消;任何一项生效都会让受管改动不再需要收据
+const PRELOAD_TRIES = `
+      const tries = [
+        () => { lib.UNGOVERNED[1].test = () => true; }, () => { Object.defineProperty(lib.UNGOVERNED[2], "test", { value: () => true }); }, () => { Object.setPrototypeOf(lib.UNGOVERNED[3], { test: () => true }); },
+        () => { lib.UNGOVERNED[0] = /./; }, () => lib.UNGOVERNED.unshift(/./), () => lib.UNGOVERNED.push(/^packages\\//, /^scripts\\//, /^\\.github\\//),
+      ];
+      for (const t of tries) { try { t(); } catch {} }`;
+// R11:直接对照只使用临时仓库与中性夹具。
+function r11RepoIdentity(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-id-"));
+  try {
+    const repo = path.join(tmp, "target"), other = path.join(tmp, "other"), clone = path.join(tmp, "clone");
+    for (const d of [repo, other]) { fs.mkdirSync(d); sh(d, "init", "-q", "-b", "main"); write(d, { "neutral.txt": `${NEUTRAL}\n${path.basename(d)}\n` }); commit(d, "fixture"); }
+    sh(tmp, "clone", "-q", repo, clone);
+    const same = sameRepoClone(repo);
+    const before = same(other), good = same(clone);
+    sh(repo, "remote", "add", "origin", "https://example.invalid/fixture.git");
+    sh(other, "remote", "add", "origin", "https://example.invalid/fixture.git");
+    const after = sameRepoClone(repo)(other);
+    return before || after || !good ? `仓库身份不符:不同 remote=${before},同 remote=${after},共同历史=${good}` : undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r11ExtraReference(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-refs-"));
+  try {
+    const repo = path.join(tmp, "target"), other = path.join(tmp, "other"), clone = path.join(tmp, "clone");
+    fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main"); write(repo, { "neutral.txt": `${NEUTRAL} target\n` }); commit(repo, "target");
+    otherRepo(other); sh(other, "fetch", "-q", repo, "HEAD"); sh(other, "update-ref", "refs/tags/neutral-shared", "FETCH_HEAD"); sh(tmp, "clone", "-q", repo, clone);
+    const mb = spawnSync("git", [...GIT_SAFE_ARGS, "merge-base", "HEAD", "FETCH_HEAD"], { cwd: other, env: gitEnv() });
+    if (mb.status !== 1) throw new Error("中性仓库的 HEAD 历史并非不相交");
+    const same = sameRepoClone(repo);
+    return same(other) || !same(clone) ? "无关 HEAD 的额外引用被当成共同历史" : undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r11ForgedAncestor(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-ancestor-"));
+  try {
+    const repo = path.join(tmp, "target"), other = path.join(tmp, "other"), clone = path.join(tmp, "clone");
+    fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main"); write(repo, { "neutral.txt": `${NEUTRAL} target\n` }); commit(repo, "target"); otherRepo(other);
+    const original = sh(other, "rev-parse", "HEAD"); sh(other, "fetch", "-q", repo, "HEAD"); const target = sh(other, "rev-parse", "FETCH_HEAD");
+    if (original === target || /^parent /m.test(sh(other, "cat-file", "-p", original))) throw new Error("中性 HEAD 本应是无父提交");
+    write(path.join(other, ".git/info"), { grafts: `${original} ${target}\n` }); sh(tmp, "clone", "-q", repo, clone);
+    const same = sameRepoClone(repo);
+    return same(other) || !same(clone) ? "可修改的祖先覆写被当成真实共同历史" : undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r11ReplacedObject(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-replace-"));
+  try {
+    const repo = path.join(tmp, "target"), other = path.join(tmp, "other"), clone = path.join(tmp, "clone");
+    fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main"); write(repo, { "neutral.txt": `${NEUTRAL} target\n` }); commit(repo, "target");
+    write(repo, { "neutral-child.txt": `${NEUTRAL} child\n` }); commit(repo, "child"); otherRepo(other);
+    const original = sh(other, "rev-parse", "HEAD"); sh(other, "fetch", "-q", repo, "HEAD"); const target = sh(other, "rev-parse", "FETCH_HEAD");
+    if (original === target) throw new Error("中性 HEAD 不能相同"); sh(other, "replace", original, target); sh(tmp, "clone", "-q", repo, clone);
+    const same = sameRepoClone(repo);
+    return same(other) || !same(clone) ? "对象替换被当成真实共同历史" : undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r11UntrustedPath(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-path-")), saved = process.env.PATH;
+  try {
+    const repo = path.join(tmp, "target"), other = path.join(tmp, "other"), clone = path.join(tmp, "clone"), bin = path.join(tmp, "bin");
+    fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main"); write(repo, { "neutral.txt": `${NEUTRAL} target\n` }); commit(repo, "target"); otherRepo(other); sh(tmp, "clone", "-q", repo, clone);
+    const target = sh(repo, "rev-parse", "HEAD"); fs.mkdirSync(bin);
+    const fake = path.join(bin, "git"); fs.writeFileSync(fake, `#!/bin/sh\ncase "$*" in\n  *--show-toplevel*) /bin/pwd ;;\n  *--git-path*) printf '.git/info/grafts\\n' ;;\n  *rev-list*) printf '${target}\\n' ;;\n  *) exit 1 ;;\nesac\n`); fs.chmodSync(fake, 0o755);
+    process.env.PATH = `${bin}:/usr/bin:/bin`;
+    const same = sameRepoClone(repo);
+    return same(other) || !same(clone) ? "可修改 PATH 的替身被当成仓库身份证明" : undefined;
+  } finally { if (saved === undefined) delete process.env.PATH; else process.env.PATH = saved; fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r11Attestation(nonGit: boolean): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-attest-"));
+  try {
+    const repo = path.join(tmp, "target"), other = path.join(tmp, "other");
+    for (const d of [repo, other]) { fs.mkdirSync(d); sh(d, "init", "-q", "-b", "main"); write(d, { "neutral.txt": `${NEUTRAL}\n${path.basename(d)}\n` }); commit(d, "fixture"); }
+    const hash = sh(repo, "rev-parse", "HEAD");
+    const command = nonGit ? `printf 'NOTE %s\\n' ${hash}` : `git log --oneline -1; printf 'NOTE %s\\n' ${hash}`;
+    const r = spawnSync("/bin/sh", ["-c", command], { cwd: other, encoding: "utf8" });
+    if (r.status !== 0) throw new Error("中性对照命令失败");
+    const turns = [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command, cwd: other }, result: r.stdout }] }];
+    const before = attestedDirs(turns, undefined, repo);
+    fs.rmSync(other, { recursive: true, force: true });
+    const after = attestedDirs(turns, undefined, repo);
+    return before.length || after.length ? `无关记录被采信:清理前=${JSON.stringify(before)},清理后=${JSON.stringify(after)}` : undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r11Sparse(): string | undefined {
+  const sparse: string[] = []; sparse.length = 2; sparse[1] = "G-TRACE";
+  Object.defineProperty(sparse, "4294967295", { value: "neutral", enumerable: true });
+  const baseline = BLOCKED({ expectHit: sparse });
+  const mutant = BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] });
+  const legal = BLOCKED({ expectHit: ["G-TRACE", "neutral"] });
+  if (!judge.validCase(legal) || !evidence(["G-TRACE"], legal, mutant)) return "密集数组正控没有判因";
+  if (judge.validCase(baseline) || evidence(["G-TRACE"], baseline, mutant) || killedBy(["G-TRACE"], new Map([[baseline.name, baseline]]), [mutant])) return "稀疏数组被收下或产生判因";
+  return undefined;
+}
+function r11ReadOnly(): string | undefined {
+  const repo = path.resolve("/tmp/neutral-repo");
+  const inRepo = (p: string) => p === repo || p.startsWith(`${repo}/`);
+  const read = { model: "gpt-6", toolCalls: [{ name: "Bash", input: { cwd: repo, command: "git status --short" } }] };
+  const writeTurn = { model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "a.ts") } }] };
+  return turnTouchesRepo(read, undefined, inRepo) || !turnTouchesRepo(writeTurn, undefined, inRepo) ? "只读与写入没有区分" : undefined;
+}
+function r11Guard(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-guard-"));
+  try {
+    const work = path.join(tmp, "work"), dep = path.join(tmp, "dep"), bin = path.join(tmp, "bin");
+    for (const d of [work, dep, bin]) fs.mkdirSync(d);
+    const exe = path.join(bin, "docker");
+    fs.writeFileSync(exe, '#!/bin/sh\nprintf "NEUTRAL_FIXTURE_NO_CREDENTIALS\\n" > "$HOME/executor-called"\n'); fs.chmodSync(exe, 0o755);
+    const original = fs.readFileSync(path.join(HERE, "lib.ts"), "utf8");
+    const from = '"--network", "none"', to = '"--network", "host"';
+    if (original.split(from).length !== 2) throw new Error("计划注入点不唯一");
+    const marker = path.join(work, "executor-called");
+    for (const [label, src, expected] of [["正常", original, true], ["非法", original.replace(from, to), false]] as const) {
+      fs.rmSync(marker, { force: true });
+      const module = path.join(tmp, `${label}.ts`); fs.writeFileSync(module, src);
+      const script = `import { sandboxed } from ${JSON.stringify(module)}; try { const r = sandboxed(["-e", "0"], ${JSON.stringify(work)}, [${JSON.stringify(dep)}]); console.log("STATUS=" + r.status); } catch (e) { console.log("REFUSED=" + e.message); }`;
+      const r = spawnSync(process.execPath, ["--input-type=module", "-e", script], { encoding: "utf8", env: { ...gitEnv(), GATE_SANDBOX_IMAGE: "fixture-image", PATH: `${bin}:/usr/bin:/bin` }, timeout: 30000 });
+      const called = fs.existsSync(marker);
+      if (r.status !== 0 || called !== expected || (expected ? !r.stdout.includes("STATUS=0") : !r.stdout.includes("REFUSED="))) return `${label}计划:调用=${called},退出=${r.status},输出=${r.stdout}${r.stderr}`;
+    }
+    return undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+
+// R12:所有夹具只用临时仓库、临时会话和中性数据。
+const R12_FILE = "packages/core/src/current.ts";
+const R12_OLD = "packages/core/src/baseline.ts";
+const R12_CONTENT = `${NEUTRAL}\n`;
+const R12_HASH = "a".repeat(64);
+function r12Env<T>(sessions: string, rooms: string, fn: () => T): T {
+  const a = process.env.MIRASIM_SESSIONS, b = process.env.MIRASIM_ROOMS;
+  process.env.MIRASIM_SESSIONS = sessions; process.env.MIRASIM_ROOMS = rooms;
+  try { return fn(); } finally {
+    if (a === undefined) delete process.env.MIRASIM_SESSIONS; else process.env.MIRASIM_SESSIONS = a;
+    if (b === undefined) delete process.env.MIRASIM_ROOMS; else process.env.MIRASIM_ROOMS = b;
+  }
+}
+function r12Turns(root: string, session: string, turns: object[]) {
+  const [h, id] = session.split(":");
+  write(path.join(root, h!, id!), { "turns.jsonl": `${turns.map((x) => JSON.stringify(x)).join("\n")}\n` });
+}
+function r12Receipt(): Receipt {
+  return {
+    slice: "neutral", acceptance: [],
+    author: { agent: "codex", session: "codex:current", model: "gpt-6" },
+    review: { agent: "claude", session: "claude:review", model: "claude-opus-5-5", verdict: "approve", reviewed_hash: R12_HASH, notes: "neutral" },
+    red: null, unverifiable: "R-01 neutral", waiver: null,
+  };
+}
+function r12Ctx(repo: string, receipt: Receipt, changed = [R12_FILE]): Ctx {
+  return { root: repo, changed, receipt, receiptPath: "receipts/feat-x.json", contentHash: () => R12_HASH } as Ctx;
+}
+const r12Review = () => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: "node scripts/gates/run-all.ts --hash" }, result: R12_HASH }] }];
+function r12Run(ctx: Ctx): string[] { return provenance.run.call(provenance, ctx).map((x) => x.msg); }
+function r12CloneResult(switchModel: boolean): { before: string[]; after: string[] } {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-clone-"));
+  try {
+    const repo = path.join(tmp, "repo"), sessions = path.join(tmp, "sessions"), rooms = path.join(tmp, "rooms");
+    fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main");
+    write(repo, { "README.md": "neutral\n", "packages/core/src/add.ts": ADD_OK }); commit(repo, "base");
+    sh(repo, "checkout", "-q", "-b", "feat/x");
+    const commits = committedCloneTurns(repo).map((t) => ({ ...t, model: "gpt-6" }));
+    const clone = authorClone(repo);
+    const writing = { model: switchModel ? "claude-opus-5-5" : "gpt-6", toolCalls: [{ name: "Bash", input: { cwd: clone, command: "printf neutral > packages/core/src/add.ts" }, result: "" }] };
+    r12Turns(sessions, "codex:current", [writing, ...commits]); r12Turns(sessions, "claude:review", r12Review());
+    return r12Env(sessions, rooms, () => {
+      const ctx = r12Ctx(repo, r12Receipt(), ["packages/core/src/add.ts"]);
+      const before = r12Run(ctx); fs.rmSync(clone, { recursive: true, force: true });
+      const after = r12Run(ctx); return { before, after };
+    });
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r12CleanParity(): string | undefined {
+  const r = r12CloneResult(true), match = (xs: string[]) => xs.some((x) => x.includes("审查厂商 anthropic"));
+  return match(r.before) && match(r.after) ? undefined : `同一记录清理前后未同时拦下:${JSON.stringify(r)}`;
+}
+function r12ModelSwitch(): string | undefined {
+  const bad = r12CloneResult(true), good = r12CloneResult(false);
+  const match = (xs: string[]) => xs.some((x) => x.includes("审查厂商 anthropic"));
+  return match(bad.after) && !match(good.after) ? undefined : `模型切换与同厂商对照不符:${JSON.stringify({ bad, good })}`;
+}
+function r12MissingDir(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-missing-"));
+  try {
+    const missing = path.join(tmp, "gone"), existing = path.join(tmp, "other"); fs.mkdirSync(existing);
+    const writeTurn = (cwd: string) => ({ toolCalls: [{ name: "Bash", input: { cwd, command: "printf neutral > x.ts" } }] });
+    const readTurn = { toolCalls: [{ name: "Bash", input: { cwd: missing, command: "cat x.ts" } }] };
+    const no = () => false;
+    return turnTouchesRepo(writeTurn(missing), undefined, no) && !turnTouchesRepo(writeTurn(existing), undefined, no) && !turnTouchesRepo(readTurn, undefined, no) ? undefined : "未知目录写入、明确非仓库写入或只读判定不符";
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r12RelativeCwd(): string | undefined {
+  const inRepo = () => false;
+  const turn = (command: string) => ({ toolCalls: [{ name: "Bash", input: { cwd: "./unknown-dir", command } }] });
+  const write = turn("printf neutral > a.ts"), read = turn("cat a.ts");
+  return turnTouchesRepo(write, undefined, inRepo) && !turnTouchesRepo(read, undefined, inRepo) ? undefined : "无法定位的相对目录写入未保守计入或只读被误计";
+}
+function r12History(mode: "history" | "listed" | "none" | "unproven"): string[] {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-history-"));
+  try {
+    const repo = path.join(tmp, "repo"), sessions = path.join(tmp, "sessions"), rooms = path.join(tmp, "rooms");
+    fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main"); write(repo, { "README.md": "neutral\n" }); commit(repo, "base");
+    sh(repo, "checkout", "-q", "-b", "feat/x"); write(repo, { [R12_FILE]: R12_CONTENT }); commit(repo, "content");
+    const receipt = r12Receipt(), previous = { ...receipt, author: { agent: "claude", session: "claude:old", model: "claude-opus-5-5" } };
+    if (mode === "history" || mode === "unproven") { write(repo, { "receipts/feat-x.json": JSON.stringify(previous) }); commit(repo, "old receipt"); }
+    if (mode === "listed") (receipt.author as Party & { sessions: string[] }).sessions = ["claude:old"];
+    write(repo, { "receipts/feat-x.json": JSON.stringify(receipt) }); commit(repo, "current receipt");
+    const authorTurn = (model: string) => ({ model, toolCalls: [{ name: "Write", input: { file_path: path.join(repo, R12_FILE), content: R12_CONTENT }, result: "File written successfully" }] });
+    r12Turns(sessions, "codex:current", [authorTurn("gpt-6")]);
+    r12Turns(sessions, "claude:old", mode === "unproven" ? [{ model: "claude-opus-5-5", toolCalls: [{ name: "Read", input: { path: path.join(repo, R12_FILE) } }] }] : [authorTurn("claude-opus-5-5")]);
+    r12Turns(sessions, "claude:review", r12Review());
+    return r12Env(sessions, rooms, () => r12Run(r12Ctx(repo, receipt)));
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r12HistoryCase(mode: "history" | "listed" | "unproven"): string | undefined {
+  const bad = r12History(mode), good = r12History("none");
+  const match = (xs: string[]) => xs.some((x) => x.includes("审查厂商 anthropic"));
+  return match(bad) && !match(good) ? undefined : `历史作者或对照判定不符:${JSON.stringify({ bad, good })}`;
+}
+function r12WriteCase(which: "success" | "changed"): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-write-"));
+  try {
+    const repo = path.join(tmp, "repo"); fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main");
+    write(repo, { [R12_FILE]: R12_CONTENT, [R12_OLD]: R12_CONTENT }); commit(repo, "neutral");
+    const ctx = r12Ctx(repo, r12Receipt()), clone = sameRepoClone(repo);
+    const call = (f: string, result: string) => ({ toolCalls: [{ name: "Write", input: { file_path: path.join(repo, f), content: R12_CONTENT }, result }] });
+    const positive = r12WriteProof(call(R12_FILE, "File written successfully"), undefined, ctx, clone);
+    const negative = which === "success" ? r12WriteProof(call(R12_FILE, "write failed"), undefined, ctx, clone) : r12WriteProof(call(R12_OLD, "File written successfully"), undefined, ctx, clone);
+    return positive && !negative ? undefined : `写入证明双侧不符:正=${positive},反=${negative}`;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r12CommitCase(which: "changed" | "history"): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-commit-"));
+  try {
+    const repo = path.join(tmp, "repo"), clone = path.join(tmp, "clone"); fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main");
+    write(repo, { "README.md": "neutral\n" }); commit(repo, "root"); sh(tmp, "clone", "-q", repo, clone);
+    const make = (name: string) => {
+      sh(clone, "add", "-A");
+      const args = ["-i", "/usr/bin/git", "--no-pager", "--no-replace-objects", "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-C", clone, "commit", "--no-gpg-sign", "-m", name];
+      const result = execFileSync("/usr/bin/env", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+      return { model: "gpt-6", toolCalls: [{ name: "Bash", input: { command: `/usr/bin/env ${args.join(" ")}` }, result }] };
+    };
+    write(clone, { [R12_OLD]: R12_CONTENT }); const baseline = make("baseline"), baseSha = sh(clone, "rev-parse", "HEAD");
+    write(clone, { [R12_FILE]: R12_CONTENT }); const current = make("current");
+    sh(repo, "fetch", "-q", clone, "HEAD"); sh(repo, "merge", "-q", "--ff-only", "FETCH_HEAD");
+    sh(clone, "checkout", "-q", "-b", "side", baseSha); write(clone, { [R12_FILE]: R12_CONTENT }); const side = make("side");
+    sh(repo, "fetch", "-q", clone, "side:refs/heads/side"); fs.rmSync(clone, { recursive: true, force: true });
+    const positive = r12CommitProof([current], undefined, fs.realpathSync(repo), [R12_FILE]);
+    const negative = r12CommitProof([which === "changed" ? baseline : side], undefined, fs.realpathSync(repo), [R12_FILE]);
+    return positive.includes(clone) && negative.length === 0 ? undefined : `提交证明双侧不符:正=${JSON.stringify(positive)},反=${JSON.stringify(negative)}`;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r12HostWriteCase(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-host-"));
+  try {
+    const repo = path.join(tmp, "repo"); fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main");
+    write(repo, { "README.md": "neutral\n", "packages/core/src/add.ts": ADD_OK }); commit(repo, "base");
+    sh(repo, "checkout", "-q", "-b", "feat/x");
+    const commits = committedCloneTurns(repo), clone = authorClone(repo);
+    const host = (status: string) => ({ model: "gpt-6", toolCalls: [{ name: "Write", input: path.join(clone, "packages/core/src/add.ts"), status, result: null }, ...commits[0]!.toolCalls] });
+    const ctx = r12Ctx(repo, r12Receipt(), ["packages/core/src/add.ts"]), inside = (p: string) => isRepoPath(p, repo, [clone], sameRepoClone(repo));
+    const good = r12WriteProof(host("done"), undefined, ctx, inside), bad = r12WriteProof(host("failed"), undefined, ctx, inside);
+    return good && !bad ? undefined : `宿主记录双侧不符:正=${good},反=${bad}`;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r12SessionDirsCase(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-dirs-"));
+  try {
+    const repo = path.join(tmp, "repo"); fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main");
+    write(repo, { "README.md": "neutral\n", "packages/core/src/add.ts": ADD_OK }); commit(repo, "base");
+    sh(repo, "checkout", "-q", "-b", "feat/x");
+    const commits = committedCloneTurns(repo), clone = authorClone(repo);
+    const writeTurn = { model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { cwd: clone, command: "printf neutral > packages/core/src/add.ts" } }] };
+    fs.rmSync(clone, { recursive: true, force: true });
+    const yes = r12SessionDirs([writeTurn, ...commits], undefined, fs.realpathSync(repo), ["packages/core/src/add.ts"]);
+    const no = r12SessionDirs([writeTurn], undefined, fs.realpathSync(repo), ["packages/core/src/add.ts"]);
+    return yes.includes(clone) && no.length === 0 ? undefined : `整段会话目录取证不符:正=${JSON.stringify(yes)},反=${JSON.stringify(no)}`;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r12CatCase(): string | undefined {
+  const repo = path.resolve("/tmp/neutral-repo"); const inside = (p: string) => p === repo || p.startsWith(`${repo}/`);
+  const t = (command: string) => ({ toolCalls: [{ name: "Bash", input: { cwd: repo, command } }] });
+  return !r12Touch(t("cat a.txt"), undefined, inside) && r12Touch(t("cat a.txt > b.ts"), undefined, inside) ? undefined : "只读与重定向写入未区分";
+}
+
+export const CASES: Case[] = [
+  { name: "R12-01 克隆清理前后同一记录结论一致", direct: r12CleanParity, expect: null },
+  { name: "R12-01 中途换模型写入已清理克隆被拦", direct: r12ModelSwitch, expect: null },
+  { name: "R12-01 任一轮已证明目录用于整段会话", direct: r12SessionDirsCase, expect: null },
+  { name: "R12-01 未证明的已消失目录写入保守计入", direct: r12MissingDir, expect: null },
+  { name: "R12-01 相对工作目录写入判不了时保守计入", direct: r12RelativeCwd, expect: null },
+  { name: "R12-02 返修换作者后前轮作者厂商的审查仍被拦", direct: () => r12HistoryCase("history"), expect: null },
+  { name: "R12-02 sessions 列表里的历次作者不能遗漏", direct: () => r12HistoryCase("listed"), expect: null },
+  { name: "R12-02 前轮产出未证实时厂商保守计入", direct: () => r12HistoryCase("unproven"), expect: null },
+  { name: "R12-03 宿主路径记录须与同轮提交共同证明", direct: r12HostWriteCase, expect: null },
+  { name: "R12-04 写入成功结果与失败结果双侧", direct: () => r12WriteCase("success"), expect: null },
+  { name: "R12-04 写入受审改动与未改动文件双侧", direct: () => r12WriteCase("changed"), expect: null },
+  { name: "R12-04 提交受审改动与基线文件双侧", direct: () => r12CommitCase("changed"), expect: null },
+  { name: "R12-04 cat 只读与重定向写入双侧", direct: r12CatCase, expect: null },
+  { name: "R12-04 HEAD 历史与其他引用提交双侧", direct: () => r12CommitCase("history"), expect: null },
+  { name: "R11-01 remote 相同但历史不相交仍拒绝,共同历史放行", direct: r11RepoIdentity, expect: null },
+  { name: "R11-01 无关 HEAD 的额外引用不证明共同历史", direct: r11ExtraReference, expect: null },
+  { name: "R11-01 工作库的祖先覆写不证明共同历史", direct: r11ForgedAncestor, expect: null },
+  { name: "R11-01 对象替换不证明共同历史", direct: r11ReplacedObject, expect: null },
+  { name: "R11-01 可变 PATH 不能自报仓库身份", direct: r11UntrustedPath, expect: null },
+  { name: "R11-01 工作库祖先覆写经来源门禁拒绝", authorTurns: (repo) => {
+    const other = path.join(path.dirname(repo), "ancestor-override"); otherRepo(other);
+    const original = sh(other, "rev-parse", "HEAD"); sh(other, "fetch", "-q", repo, "HEAD"); const target = sh(other, "rev-parse", "FETCH_HEAD");
+    if (original === target || /^parent /m.test(sh(other, "cat-file", "-p", original))) throw new Error("中性 HEAD 本应是无父提交");
+    write(path.join(other, ".git/info"), { grafts: `${original} ${target}\n` }); write(other, { "packages/core/src/add.ts": ADD_OK });
+    return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(other, "packages/core/src/add.ts"), content: ADD_OK }, result: "File written successfully" }] }];
+  }, expect: "找不到对本仓库的任何操作" },
+  { name: "R11-01 无关 HEAD 的额外引用经来源门禁拒绝", authorTurns: (repo) => {
+    const other = path.join(path.dirname(repo), "extra-ref"); otherRepo(other);
+    sh(other, "fetch", "-q", repo, "HEAD"); sh(other, "update-ref", "refs/tags/neutral-shared", "FETCH_HEAD");
+    const mb = spawnSync("git", [...GIT_SAFE_ARGS, "merge-base", "HEAD", "FETCH_HEAD"], { cwd: other, env: gitEnv() });
+    if (mb.status !== 1) throw new Error("中性仓库的 HEAD 历史并非不相交");
+    write(other, { "packages/core/src/add.ts": ADD_OK });
+    return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(other, "packages/core/src/add.ts"), content: ADD_OK }, result: "File written successfully" }] }];
+  }, expect: "找不到对本仓库的任何操作" },
+  { name: "R11-01 目录标签不足以确认仓库路径", direct: () => {
+    const root = path.resolve("/tmp/fixture-target"), unrelated = path.resolve("/tmp/elsewhere/g-group/a.ts");
+    return !isRepoPath(path.join(root, "a.ts"), root, [], () => false) || isRepoPath(unrelated, root, [], () => false) ? "仓库路径边界不正确" : undefined;
+  }, expect: null },
+  { name: "R11-01 空仓库身份未知仍拒绝,共同历史放行", direct: () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-empty-"));
+    try {
+      const repo = path.join(tmp, "target"), empty = path.join(tmp, "empty"), copy = path.join(tmp, "clone");
+      otherRepo(repo); otherRepo(empty, false); sh(tmp, "clone", "-q", repo, copy);
+      const same = sameRepoClone(repo);
+      return same(empty) || !same(copy) ? "未知仓库或共同历史判断不正确" : undefined;
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  }, expect: null },
+  { name: "R11-01 同 remote 的无关仓库写入经来源门禁拒绝", authorTurns: (repo) => {
+    const other = path.join(path.dirname(repo), "independent");
+    otherRepo(other); write(other, { "packages/core/src/add.ts": ADD_OK });
+    sh(repo, "remote", "add", "origin", "https://example.invalid/fixture.git");
+    sh(other, "remote", "add", "origin", "https://example.invalid/fixture.git");
+    return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(other, "packages/core/src/add.ts"), content: ADD_OK }, result: "File written successfully" }] }];
+  }, expect: "找不到对本仓库的任何操作" },
+  { name: "R11-02 无关仓库输出附带目标提交号,清理前后均拒绝", direct: () => r11Attestation(false), expect: null },
+  { name: "R11-02 非 git 输出附带目标提交号,清理前后均拒绝", direct: () => r11Attestation(true), expect: null },
+  { name: "R11-03 稀疏数组加普通属性不得作为判因,密集数组放行", direct: r11Sparse, expect: null },
+  { name: "R11-04 真实执行出口拒绝非法计划且不调用执行器,正常计划调用", direct: r11Guard, expect: null },
+  { name: "R11-05 只读不算产出,写操作正控", direct: r11ReadOnly, expect: null },
+  { name: "R11-05 只读 git log 不计产出", direct: () => {
+    const repo = path.resolve("/tmp/neutral-repo");
+    const read = { toolCalls: [{ name: "Bash", input: { cwd: repo, command: "git log --oneline -1" } }] };
+    return turnTouchesRepo(read, undefined, (p) => p === repo || p.startsWith(`${repo}/`)) ? "只读日志被计入产出" : undefined;
+  }, expect: null },
+  { name: "R11-02 提交后的目录变成非仓库时不得沿用旧身份", authorTurns: committedCloneTurns, setup: (x) => { cleanClone(x); write(authorClone(x.repo), { "neutral.txt": NEUTRAL }); }, expect: "找不到对本仓库的任何操作" },
+  { name: "R11-02 旧提交文件不再属于受审版本时拒绝", authorTurns: committedCloneTurns, setup: (x) => { cleanClone(x); write(x.repo, { "packages/core/src/add.ts": `${ADD_OK}// newer version\n` }); commit(x.repo, "later"); }, expect: "找不到对本仓库的任何操作" },
+  { name: "R11-05 未知调用不能单独证明作者产出", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { cwd: repo, command: "printf neutral" }, result: "neutral" }] }], expect: "找不到对本仓库的任何操作" },
+  { name: "R11-05 写入内容与受审版本不符时拒绝", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: "neutral stale content" }, result: "File written successfully" }] }], expect: "找不到对本仓库的任何操作" },
+  { name: "R11-05 成功写入且内容匹配受审版本可证明产出", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: ADD_OK }, result: "File written successfully" }] }], expect: null },
+  { name: "R11-05 作者仅只读时来源拒绝", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { cwd: repo, command: "git status --short" }, result: "" }] }], expect: "找不到对本仓库的任何操作" },
+  { name: "R11-05 简单 cat、ls、pwd 只读命令不计产出", direct: () => {
+    const repo = path.resolve("/tmp/neutral-repo");
+    for (const command of ["cat neutral.txt", "ls -a", "pwd"]) {
+      const read = { toolCalls: [{ name: "Bash", input: { cwd: repo, command } }] };
+      if (turnTouchesRepo(read, undefined, (p) => p === repo || p.startsWith(`${repo}/`))) return `只读命令被计入产出:${command}`;
+    }
+    return undefined;
+  }, expect: null },
+  { name: "R11-05 Read 工具只读文件不计产出", direct: () => {
+    const repo = path.resolve("/tmp/neutral-repo");
+    const read = { toolCalls: [{ name: "Read", input: { file_path: path.join(repo, "a.ts") } }] };
+    return turnTouchesRepo(read, undefined, (p) => p === repo || p.startsWith(`${repo}/`)) ? "只读工具被计入产出" : undefined;
+  }, expect: null },
+  { name: "R11-05 跨厂商 Read 工具只读不计产出", authorTurns: (repo) => [...authorOk(repo), { model: "gpt-6", toolCalls: [{ name: "Read", input: { file_path: path.join(repo, "packages/core/src/add.ts") } }] }], expect: null },
+  { name: "R11-05 跨厂商只读不计产出", authorTurns: (repo) => [...authorOk(repo), { model: "gpt-6", toolCalls: [{ name: "Bash", input: { cwd: repo, command: "git status --short" }, result: "" }] }], expect: null },
+
+  { name: "合规:先红后绿、跨厂商审查、来源核对通过", expect: null },
+  { name: "合规:node:test 别名 + 断言", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`check("adds", () => { assert.equal(add(1, 2), 3); });\n`, `import { test as check } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`check("adds", () => { assert.equal(add(1, 2), 3); });\n`, `import { test as check } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\n`) }, expect: null },
+  { name: "合规:只改文档不需要收据", head: { "docs/spec/notes.md": "x\n" }, red: null, receipt: null, expect: null },
+
+  { name: "合规(CI 模式,不跑来源核对)", local: false, expect: null },
+  { name: "CI 模式下违规同样拦下", local: false, receipt: null, expect: "缺收据" },
+  { name: "改了代码没收据", receipt: null, expect: "缺收据" },
+  { name: "F-02 只改 workflow 没收据", head: { ".github/workflows/ci.yml": "on: pull_request\njobs: { x: { runs-on: ubuntu-latest, steps: [{ run: 'true' }] } }\n" }, red: null, receipt: null, expect: "缺收据" },
+  { name: "只改 package.json 没收据", head: { "package.json": "{}\n" }, red: null, receipt: null, expect: "缺收据" },
+  { name: "删掉源码也要收据", head: { "packages/core/package.json": null }, red: null, receipt: null, expect: "缺收据" },
+  { name: "条目不在验收文档", receipt: R((r) => { r.acceptance[0]!.id = "AC-99"; }), expect: "不在验收文档" },
+  { name: "状态不在四种之内", receipt: R((r) => { (r.acceptance[1] as { status: string }).status = "基本通过"; }), expect: "不是 通过/失败/未测/不适用" },
+  { name: "第 7 栏没点到条目", receipt: R((r) => { r.unverifiable = "应该没问题"; }), expect: "第 7 栏" },
+
+  { name: "作者自审", receipt: R((r) => { r.review!.agent = "claude"; }), expect: "同一个" },
+  { name: "同厂商审查且无豁免", receipt: R((r) => { r.review!.model = "claude-sonnet-5-5"; }), reviewerTurns: (h) => [{ model: "claude-sonnet-5-5", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "没有用户豁免" },
+  { name: "审查模型认不出", receipt: R((r) => { r.review!.model = "stealth/crouton-alpha"; }), expect: "认不出" },
+  { name: "审查结论 reject", receipt: R((r) => { r.review!.verdict = "reject"; }), expect: "审查结论是 reject" },
+  { name: "审后又改代码", after: { "packages/core/src/add.ts": `${ADD_OK}// x\n` }, expect: "需要重审" },
+  { name: "审后改 workflow", after: { ".github/workflows/trusted-gates.yml": `${TRUSTED_WF}# x\n` }, expect: "需要重审" },
+
+  { name: "F-01 审查会话不存在", receipt: R((r) => { r.review!.session = "codex:ghost"; }), reviewerTurns: () => [], expect: "审查会话里没有一次" },
+  { name: "F-01 审查会话里没算过这个 hash", reviewerTurns: () => [{ model: "gpt-6-astra", toolCalls: [{ input: "cat README.md", result: "x" }] }], expect: "审查会话里没有一次" },
+  { name: "F-04 历史出现过别家模型,算 hash 那一轮是同厂商", reviewerTurns: (h) => [{ model: "gpt-6-astra", toolCalls: [{ input: "ls", result: "old" }] }, { model: "claude-opus-5-5", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "实际是 anthropic" },
+  { name: "审查会话算出的是别的 hash", reviewerTurns: () => [{ model: "gpt-6-astra", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: "0".repeat(64) }] }], expect: "审查会话里没有一次" },
+  { name: "F-04 hash 只出现在聊天文本里", reviewerTurns: (h) => [{ model: "gpt-6-astra", text: `我审的是 ${h}`, toolCalls: [] }], expect: "审查会话里没有一次" },
+  { name: "作者自报与实际产出厂商不符", authorTurns: (repo) => [{ model: "gpt-6", toolCalls: [{ input: `${repo}/packages/core/src/add.ts` }] }], receipt: R((r) => { r.review!.model = "gemini-4"; }), reviewerTurns: (h) => [{ model: "gemini-4", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "实际产出厂商是 openai" },
+  { name: "作者会话没碰过本仓库", authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ input: "/x/g-group-requirements/a.md" }] }], expect: "找不到对本仓库的任何操作" },
+  { name: "作者中途换成审查同厂商(累积集合)", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ input: `cd ${repo} && vim x` }] }, { model: "gpt-6", toolCalls: [{ input: `${repo}/y` }] }, { model: "gemini-4", toolCalls: [{ input: "/x/g-group-requirements/z" }] }], expect: "在作者的产出厂商集合" },
+
+  { name: "合规:仓库所有者对这个 PR 这一版结构化批准豁免", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `  批准豁免 PR#7 ${h}\n`)], expect: null },
+  { name: "RR-13 指令前另有说明文字", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `这次同厂商审查可以\n批准豁免 PR#7 ${h}`)], expect: "不是一条格式为" },
+  { name: "RR-13 先说不批准、下一行是格式行", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `下面仅为格式演示，我不批准任何豁免：\n批准豁免 PR#7 ${h}`)], expect: "不是一条格式为" },
+  { name: "RR-13 整条消息是引用块里的指令", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `> 批准豁免 PR#7 ${h}`)], expect: "不是一条格式为" },
+  { name: "F-03 用户明确不批准豁免", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `必须跨厂商，不批准豁免。${h}`)], expect: "不是一条格式为" },
+  { name: "豁免是助手发的", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `批准豁免 PR#7 ${h}`, "ai-claude", OWNER_NAME)], expect: "不是仓库所有者" },
+  { name: "豁免没绑定这一版", receipt: SAME, reviewerTurns: sameTurns, room: () => [user(900, "批准豁免 PR#7 000000000000")], expect: "≠ 当前" },
+  { name: "豁免给的是别的 PR", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `批准豁免 PR#8 ${h}`)], expect: "不是本次的 PR#7" },
+  { name: "豁免之后被撤回", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `批准豁免 PR#7 ${h}`), { v: 1, seq: 901, by: OWNER_UID, name: OWNER_NAME, kind: "retract", target: 900 }], expect: "被retract" },
+  { name: "RR-08 豁免写在引用示例里", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `以下只是测试样例，不构成授权：「批准豁免 PR#7 ${h}」`)], expect: "不是一条格式为" },
+  { name: "RR-08 豁免写在引用块里", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `> 批准豁免 PR#7 ${h}\n别当真`)], expect: "不是一条格式为" },
+  { name: "RR-08 豁免写在代码块里", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `\`\`\`\n批准豁免 PR#7 ${h}\n\`\`\``)], expect: "不是一条格式为" },
+  { name: "RR-08 另一个用户发的豁免", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `批准豁免 PR#7 ${h}`, "usr_unrelated", "someone")], expect: "不是仓库所有者" },
+  { name: "RR-08 冒用所有者名字的另一个 uid", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `批准豁免 PR#7 ${h}`, "usr_unrelated", OWNER_NAME)], expect: "不是仓库所有者" },
+  { name: "RR-08 收据把豁免人写成别人", receipt: R((r) => { r.review!.model = "claude-sonnet-5-5"; r.waiver = { by: "someone", reason: "g-group#900" }; }), reviewerTurns: sameTurns, room: (h) => [user(900, `批准豁免 PR#7 ${h}`)], expect: "无权批准" },
+  { name: "RR-08 豁免消息之后被引用", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [user(900, `批准豁免 PR#7 ${h}`), { ...user(905, "转一下"), reply: 900 }], expect: "引用" },
+  { name: "RR-08 豁免是代发的", receipt: SAME, reviewerTurns: sameTurns, room: (h) => [{ ...user(900, `批准豁免 PR#7 ${h}`), via: "ai-x" }], expect: "转发或代发" },
+  { name: "RR-01 harness 带路径穿越", receipt: R((r) => { r.review!.session = "../evil:r"; }), reviewerTurns: () => [], expect: "格式必须是" },
+  { name: "RR-01 harness 不在白名单", receipt: R((r) => { r.review!.session = "evil:r"; }), reviewerTurns: () => [], expect: "不在白名单" },
+  { name: "RR-01 id 带多余冒号", receipt: R((r) => { r.review!.session = "codex:b:c"; }), reviewerTurns: () => [], expect: "格式必须是" },
+  { name: "RR-01 会话文件软链到 PR 里的伪造记录", headFn: () => ({ ...HEAD_OK, "reviews/forged/turns.jsonl": "{}\n" }), receipt: R((r) => { r.review!.session = "codex:link"; }), reviewerTurns: () => [],
+    setup: ({ repo, sessions, hash }) => { fs.writeFileSync(path.join(repo, "reviews/forged/turns.jsonl"), `${JSON.stringify(reviewerOk(hash)[0])}\n`); fs.mkdirSync(path.join(sessions, "codex", "link"), { recursive: true }); fs.rmSync(path.join(sessions, "codex", "link", "turns.jsonl"), { force: true }); fs.symlinkSync(path.join(repo, "reviews/forged/turns.jsonl"), path.join(sessions, "codex", "link", "turns.jsonl")); }, expect: "会话根目录之外" },
+  { name: "RR-02 测试往目录外写文件被沙箱挡住", headFn: (dir) => ({ ...HEAD_OK, "packages/core/src/add.test.ts": T(`import fs from "node:fs";\ntest("adds", () => { try { fs.writeFileSync(${JSON.stringify(path.join(dir, "escaped.txt"))}, "x"); } catch {} assert.equal(add(1, 2), 3); });\n`, `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\n`) }),
+    red: null, receipt: R((r) => { r.red = null; }), postCheck: (dir) => (fs.existsSync(path.join(dir, "escaped.txt")) ? "PR 测试在沙箱外写出了文件" : undefined), expect: "缺 red.commit" },
+  { name: "RR-02 测试补造来源记录被挡住", headFn: (dir) => ({ ...HEAD_OK, "packages/core/src/add.test.ts": T(`import fs from "node:fs";\ntest("adds", () => { try { fs.mkdirSync(${JSON.stringify(path.join(dir, "sessions", "codex", "late"))}, { recursive: true }); fs.writeFileSync(${JSON.stringify(path.join(dir, "sessions", "codex", "late", "turns.jsonl"))}, "{}"); } catch {} assert.equal(add(1, 2), 3); });\n`, `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\n`) }),
+    red: null, receipt: R((r) => { r.red = null; }), postCheck: (dir) => (fs.existsSync(path.join(dir, "sessions", "codex", "late", "turns.jsonl")) ? "PR 测试写进了会话目录" : undefined), expect: "缺 red.commit" },
+  { name: "RR-02 没有沙箱就停", env: { GATE_SIMULATE_NO_SANDBOX: "1" }, expect: "没有可用沙箱" },
+  { name: "RR-02 CI 设了沙箱镜像时,模拟无沙箱仍然停", env: { GATE_SIMULATE_NO_SANDBOX: "1", GATE_SANDBOX_IMAGE: "node:22.22.0-slim" }, expect: "没有可用沙箱" },
+  { name: "R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载)", direct: sandboxReadProbe, expect: null },
+  { name: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", direct: seatbeltPlanCheck, expect: null },
+  { name: "R9-01 seatbelt 读放行范围恰为工作副本与挂载的依赖,多出的放行项(如整个 HOME)判失败", direct: seatbeltAllowExact, expect: null },
+  { name: "R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖", direct: networkPlanCheck, expect: null },
+  { name: "R9-02 真实隔离入口联网对照:宿主可取得本机回环夹具的中性标记,沙箱内被拒", direct: networkProbe, expect: null },
+  { name: "R10-04 容器执行计划逐项核对:只挂工作副本与依赖,另一种挂载形式(--mount/--volume/附着写法/--tmpfs/--volumes-from)、多挂少挂与其它参数判失败", direct: containerPlanCheck, expect: null },
+  { name: "R10-04 容器内实际挂载恰为工作副本与依赖(容器模式实跑)", direct: containerMountProbe, expect: null },
+  { name: "R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行", direct: seatbeltRuntimeLibLinks, expect: null },
+  { name: "R10-05 符号链接布局的运行时:宿主与真实隔离内都能启动并输出中性标记", direct: runtimeLinkProbe, expect: null },
+  { name: "R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论", direct: () => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const lib = await import(${JSON.stringify(path.join(HERE, "lib.ts"))});
+      const g = await import(${JSON.stringify(path.join(HERE, "gates.ts"))});${POLICY_TRIES}
+      const files = ["docs/a.md", "reviews/a.md", "receipts/a.json", "README.md", "scripts/gates/x.ts", "packages/core/src/a.ts", ".github/workflows/x.yml", "package.json"];
+      const trace = g.trace.run({ changed: ["scripts/gates/x.ts"], receipt: undefined, receiptPath: "receipts/feat-x.json" }).map((x) => x.msg);
+      const review = g.review.run({ changed: ["packages/core/src/a.ts"], receipt: { author: { agent: "claude", model: "claude-opus-5-5", session: "claude:a" }, review: { agent: "codex", model: "gpt-6", session: "codex:b", verdict: "approve", reviewed_hash: "h" }, waiver: { by: "x", reason: "fixture-not-a-ref" } }, contentHash: () => "h" }).map((x) => x.msg);
+      console.log(JSON.stringify({
+        frozen: Object.isFrozen(lib.UNGOVERNED) && lib.UNGOVERNED.every((x) => Object.isFrozen(x)) && Object.isFrozen(g.WAIVER_RE) && Object.isFrozen(lib.GIT_SAFE_ARGS),
+        src: lib.UNGOVERNED.map((x) => String(x)), gov: files.map((f) => lib.isGoverned(f)), safe: [...lib.GIT_SAFE_ARGS], trace, review,
+      }));`], { encoding: "utf8", timeout: 60_000 });
+    let o: { frozen: boolean; src: string[]; gov: boolean[]; safe: string[]; trace: string[]; review: string[] };
+    try { o = JSON.parse(r.stdout.trim().split("\n").pop() ?? ""); } catch { return `探针没跑通:${r.stdout}${r.stderr}`; }
+    const bad: string[] = [];
+    if (!o.frozen) bad.push("UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结");
+    if (o.src.join(" ") !== String.raw`/^docs\// /^reviews\// /^receipts\// /^README\.md$/`) bad.push(`UNGOVERNED 变成 ${o.src.join(" ")}`);
+    if (o.gov.join(",") !== "false,false,false,false,true,true,true,true") bad.push(`受管判定变成 ${o.gov}`);
+    if (o.safe.join(" ") !== "-c core.hooksPath=/dev/null") bad.push(`GIT_SAFE_ARGS 变成 ${o.safe.join(" ")}`);
+    if (!o.trace.some((m) => m.includes("缺收据"))) bad.push(`改写策略后受管改动没收据被放行:${JSON.stringify(o.trace)}`);
+    if (!o.review.some((m) => m.includes("豁免出处格式应为"))) bad.push(`改写豁免格式后格式不对的豁免被放行:${JSON.stringify(o.review)}`);
+    return bad.length ? bad.join(";") : undefined; }, expect: null },
+  { name: "R10-03 真实门禁:同进程改写受管范围策略后,受管改动没收据照样拦下", receipt: null, envFn: (dir) => {
+    const pre = path.join(dir, "policy-preload.mjs");
+    fs.writeFileSync(pre, `const lib = await import(${JSON.stringify(new URL(`file://${path.join(HERE, "lib.ts")}`).href)});\nconst g = await import(${JSON.stringify(new URL(`file://${path.join(HERE, "gates.ts")}`).href)});${PRELOAD_TRIES}\nif (process.argv.includes("--local")) (await import("node:fs")).writeFileSync(${JSON.stringify(path.join(dir, "policy-preload.ran"))}, "ran");\n`);
+    return { NODE_OPTIONS: `--import=${new URL(`file://${pre}`).href}` };
+  }, postCheck: (dir) => (fs.existsSync(path.join(dir, "policy-preload.ran")) ? undefined : "预加载没有在门禁进程里执行"), expect: "缺收据" },
+  { name: "R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件", direct: seatbeltRuntimeLibs, expect: null },
+  { name: "R7-01 完整入口:具名测试读假 HOME 的 .git-credentials/.netrc 被拒,门禁拦下", main: { ".gitignore": "node_modules\n" }, headFn: (dir) => ({ ...HEAD_OK, "packages/core/src/add.test.ts": R7_READ_TEST(dir) }), redFn: (dir) => ({ ...RED_OK, "packages/core/src/add.test.ts": R7_READ_TEST(dir) }), envFn: (dir) => ({ HOME: R7_HOME(dir) }), setup: R7_SETUP, expect: "现在没有恰好通过一次" },
+  { name: "R7-01 完整入口对照:同一假 HOME 下,测试读工作副本文件、加载 HOME 点目录里的依赖照常放行", main: { ".gitignore": "node_modules\n" }, head: { ...HEAD_OK, "packages/core/src/add.test.ts": R7_OK_TEST, "packages/core/src/fixture.txt": NEUTRAL }, red: { ...RED_OK, "packages/core/src/add.test.ts": R7_OK_TEST, "packages/core/src/fixture.txt": NEUTRAL }, envFn: (dir) => ({ HOME: R7_HOME(dir) }), setup: R7_SETUP, expect: null },
+  { name: "RR-05 相对路径的写操作算进产出厂商", authorRecord: (repo) => ({ workdir: repo }), authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: fs.readFileSync(path.join(repo, "packages/core/src/add.ts"), "utf8") }, result: "File written successfully" }] }, { model: "gpt-6", toolCalls: [{ name: "apply_patch", input: "*** Begin Patch\n*** Update File: packages/core/src/add.ts\n*** End Patch" }] }], expect: "在作者的产出厂商集合" },
+  { name: "RR-05 判不了路径的 shell 轮次也算进去", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: fs.readFileSync(path.join(repo, "packages/core/src/add.ts"), "utf8") }, result: "File written successfully" }] }, { model: "gpt-6", toolCalls: [{ name: "shell", input: { command: "sed -i s/a/b/ src/add.ts" } }] }], expect: "在作者的产出厂商集合" },
+  { name: "RR-05 工作目录在仓库外的相对写不算(阴性对照)", authorRecord: (repo) => ({ workdir: path.join(path.dirname(repo), "other-project") }), authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: fs.readFileSync(path.join(repo, "packages/core/src/add.ts"), "utf8") }, result: "File written successfully" }] }, { model: "gpt-6", toolCalls: [{ name: "apply_patch", input: { cwd: path.join(path.dirname(repo), "other-project"), patch: "*** Update File: notes.md" } }] }], setup: ({ dir }) => { fs.mkdirSync(path.join(dir, "other-project")); }, expect: null },
+  { name: "RR-04 自比较断言", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { assert.equal(add(1, 2), add(1, 2)); });\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { assert.equal(add(1, 2), add(1, 2)); });\n`) }, expect: "自比较或恒真" },
+  { name: "RR-04 恒真关系断言", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { const v = add(1, 2); assert.ok(v === v); });\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { const v = add(1, 2); assert.ok(v === v); });\n`) }, expect: "自比较或恒真" },
+  { name: "RR-04 不可达断言", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { add(1, 2); if (false) { assert.equal(add(1, 2), 3); } });\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { add(1, 2); if (false) { assert.equal(add(1, 2), 3); } });\n`) }, expect: "执行不到" },
+  { name: "RR-04 return 之后的断言", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { add(1, 2); return; assert.equal(add(1, 2), 3); });\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { add(1, 2); return; assert.equal(add(1, 2), 3); });\n`) }, expect: "执行不到" },
+  { name: "RR-04 断言没检查返回值(返回值变异存活)", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { assert.equal(typeof add(1, 2), "number"); });\n`) }, red: { ...RED_OK, "packages/core/src/add.ts": "export function add(): number { throw new Error('x'); }\n", "packages/core/src/add.test.ts": T(`test("adds", () => { assert.equal(typeof add(1, 2), "number"); });\n`) }, expect: "返回错误值" },
+  { name: "RR-06 同名间接测试零断言", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { assert.equal(add(1, 2), 3); });\nconst register = test;\nregister("adds", () => { add(1, 2); });\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { assert.equal(add(1, 2), 3); });\nconst register = test;\nregister("adds", () => { add(1, 2); });\n`) }, expect: "运行时注册了 2 次" },
+  { name: "RR-07 红提交上是另一份假断言", red: { ...RED_OK, "packages/core/src/add.ts": ADD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { assert.equal(add(1, 2), -100); });\n`) }, expect: "测试体和现在不同" },
+  { name: "RR-07 红提交实现已正确(现在的测试放上去不红)", red: { ...RED_OK, "packages/core/src/add.ts": ADD_OK }, expect: "放到红提交的实现上没有按名字失败" },
+  { name: "RR-03 带引号的写权限", head: WF('on: pull_request\npermissions:\n  statuses: "write"\njobs: {}\n'), expect: "申请了写权限 statuses" },
+  { name: "RR-03 write-all 字符串权限", head: WF("on: pull_request\npermissions: write-all\njobs: {}\n"), expect: "只允许 read-all" },
+  { name: "RR-03 job 级写权限", head: WF("on: pull_request\njobs:\n  a:\n    permissions: { checks: write }\n    runs-on: ubuntu-latest\n    steps: [{ run: 'true' }]\n"), expect: "申请了写权限 checks" },
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 这里就是要构造含 GitHub 表达式的 workflow 原文
+  { name: "RR-03 job 名用表达式拼出受保护名", head: WF("on: pull_request\njobs:\n  aux:\n    name: ${{ format('pro{0}', 'venance') }}\n    runs-on: ubuntu-latest\n    steps: [{ run: 'true' }]\n"), expect: "名字含表达式" },
+  { name: "RR-03 job 名用折叠标量", head: WF("on: pull_request\njobs:\n  aux:\n    name: >-\n      provenance\n    runs-on: ubuntu-latest\n    steps: [{ run: 'true' }]\n"), expect: "冒充受保护检查名 provenance" },
+  { name: "RR-03 权限经锚点合并进来", head: WF("on: pull_request\nx-perm: &p\n  statuses: write\njobs:\n  a:\n    permissions:\n      <<: *p\n    runs-on: ubuntu-latest\n    steps: [{ run: 'true' }]\n"), expect: "申请了写权限 statuses" },
+  { name: "RR-03 别的 workflow 冒充 self-check", head: WF("on: pull_request\njobs:\n  self-check:\n    runs-on: ubuntu-latest\n    steps: [{ run: 'true' }]\n"), expect: "冒充受保护检查名 self-check" },
+  { name: "RR-03 self-check.yml 自己产出 self-check(阴性对照)", head: SC(SC_WF()), expect: null },
+  { name: "RR-09 门禁自检步骤加 if: false", head: SC(SC_WF(SC_STEP_SELF.replace("        run:", "        if: false\n        run:") + SC_STEP_MUT)), expect: "带了 if" },
+  { name: "RR-09 变异步骤按 PR 自己的路径判定跳过", head: SC(SC_WF(SC_STEP_SELF + SC_STEP_MUT.replace("        run:", "        if: steps.x.outputs.changed == 'true'\n        run:"))), expect: "带了 if" },
+  { name: "RR-09 变异步骤 continue-on-error", head: SC(SC_WF(SC_STEP_SELF + SC_STEP_MUT.replace("        run:", "        continue-on-error: true\n        run:"))), expect: "带了 continue-on-error" },
+  { name: "RR-09 缺变异步骤", head: SC(SC_WF(SC_STEP_SELF)), expect: "缺必需步骤" },
+  { name: "RR-09 变异命令后接 || true", head: SC(SC_WF(SC_STEP_SELF + SC_STEP_MUT.replace("gates:mutation\n", "gates:mutation || true\n"))), expect: "缺必需步骤" },
+  { name: "RR-09 job 加 continue-on-error", head: SC(SC_WF(undefined, "    continue-on-error: true\n")), expect: "带了 continue-on-error" },
+  { name: "RR-09 job 加 if", head: SC(SC_WF(undefined, "    if: false\n")), expect: "带了 if" },
+  { name: "RR-09 self-check.yml 里没有 self-check job", head: SC(SC_WF().replace("  self-check:", "  other:")), expect: "缺 job self-check" },
+  { name: "RR-09 package.json 把 gates:mutation 改成 true", head: SC(SC_WF(), ROOT_PKG({ "gates:mutation": "true" })), expect: 'scripts["gates:mutation"] 必须是' },
+  { name: "RR-09 package.json 把 gates:selftest 改掉", head: SC(SC_WF(), ROOT_PKG({ "gates:selftest": "node scripts/gates/run-all.ts" })), expect: 'scripts["gates:selftest"] 必须是' },
+  { name: "RR-09 规范 self-check.yml(变异命令不带并发参数)+ 规范 scripts(阴性对照)", head: SC(SC_WF(`${SC_STEP_SELF}      - run: npm run gates:mutation\n        timeout-minutes: 120\n`)), expect: null },
+  { name: "RR-03 只读权限的普通 workflow(阴性对照)", head: WF("on: pull_request\npermissions:\n  contents: read\njobs:\n  lint:\n    name: lint\n    runs-on: ubuntu-latest\n    steps: [{ run: 'true' }]\n"), expect: null },
+  { name: "隔离:hook 环境的 GIT_DIR 指向别的仓库,门禁不碰它", hostileGit: true, expect: null },
+  { name: "RR-09 self-check.yml 只 echo", head: SC(SC_WF("      - run: echo no-checks-were-run\n")), expect: "缺必需步骤" },
+  { name: "RR-09 必需步骤换 shell", head: SC(SC_WF(SC_STEP_SELF.replace("        run:", '        shell: "true {0}"\n        run:') + SC_STEP_MUT)), expect: "带了 shell" },
+  { name: "RR-09 job 用 defaults 换 shell", head: SC(SC_WF(undefined, '    defaults: { run: { shell: "true {0}" } }\n')), expect: "带了 defaults" },
+  { name: "RR-09 自检命令后接 || true", head: SC(SC_WF(SC_STEP_SELF.replace("gates:selftest\n", "gates:selftest || true\n") + SC_STEP_MUT)), expect: "缺必需步骤" },
+  { name: "R4-01 self-check job env 设 GATE_ 开关缩小自检", head: SC(SC_WF(undefined, '    env: { GATE_SELFTEST_ONLY: "^合规" }\n')), expect: "设置了门禁开关 GATE_SELFTEST_ONLY" },
+  { name: "R4-01 self-check 步骤 env 设 GATE_MUTATION_ONLY", head: SC(SC_WF(SC_STEP_SELF + SC_STEP_MUT.replace("        run:", '        env: { GATE_MUTATION_ONLY: "x" }\n        run:'))), expect: "设置了门禁开关 GATE_MUTATION_ONLY" },
+  { name: "R4-01 self-check 顶层 env 设 GATE_MUTANT_TIMEOUT_MS", head: SC(`env: { GATE_MUTANT_TIMEOUT_MS: "1" }\n${SC_WF()}`), expect: "设置了门禁开关 GATE_MUTANT_TIMEOUT_MS" },
+  { name: "R4-01 self-check job env 只设沙箱镜像(阴性对照)", head: SC(SC_WF(undefined, "    env: { GATE_SANDBOX_IMAGE: node:22.22.0-slim }\n")), expect: null },
+  { name: "RR-09 必需步骤换 working-directory", head: SC(SC_WF(SC_STEP_SELF + SC_STEP_MUT.replace("        run:", "        working-directory: fake\n        run:"))), expect: "带了 working-directory" },
+  { name: "RR-09 workflow 顶层 defaults 换 shell", head: SC(`defaults: { run: { shell: "true {0}" } }\n${SC_WF()}`), expect: "顶层带了 defaults" },
+  { name: "g-group#2538 test 脚本改回裸 node --test(0 用例也判通过)", head: SC(SC_WF(), ROOT_PKG({ test: 'node --test "packages/**/*.test.ts"' })), expect: 'scripts["test"] 必须是' },
+  { name: "g-group#2538 test 脚本改成 true", head: SC(SC_WF(), ROOT_PKG({ test: "true" })), expect: 'scripts["test"] 必须是' },
+  { name: "g-group#2538 self-check 缺 npm test 步骤", head: SC(SC_WF(undefined, "", "")), expect: "缺必需步骤:run 为 npm test" },
+  { name: "g-group#2538 测试入口 0 条用例判失败", direct: () => { const r = runTestRunner({}); return r.code === 1 && r.out.includes("跑了 0 条用例,不算通过") ? undefined : `0 条用例没有判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
+  { name: "g-group#2538 测试入口 1 条通过的用例判通过(阴性对照)", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest("ok", () => {});\n' }); return r.code === 0 ? undefined : `1 条通过的用例没有判通过(退出 ${r.code})\n${r.out}`; }, expect: null },
+  { name: "R5-01 目标门禁由预期拦下变为门禁自身出错不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-TRACE": "✗" }, expectHit: [], gateErrors: ["G-TRACE"] })), expect: null },
+  { name: "R5-01 目标门禁没跑(观测缺失)不算发现", direct: () => (() => { const { "G-TRACE": _t, ...rest } = ALL_OK; return notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: rest, expectHit: [], complete: false })); })(), expect: null },
+  { name: "R5-01 目标门禁从完整运行的执行列表里消失算发现", direct: () => { const { "G-TRACE": _t, ...rest } = ALL_OK; const ev = evidence(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: rest, expectHit: [], complete: true })); return ev?.includes("没有运行") ? undefined : `门禁被移出执行列表却没算发现(判因 ${ev})`; }, expect: null },
+  { name: "R4-01 门禁输出解析:注册数与列出数一致且有 CONTENT_HASH 才算完整", direct: () => {
+    const h = "base=main branch=x HEAD=y 受检文件 1 个 收据=无 门禁 2 个\n";
+    const full = parseGateOutput(`${h}✓ G-TRACE  r\n✗ G-RED  r\n    - 缺收据\nCONTENT_HASH=${"a".repeat(64)}\n`, "缺收据");
+    const cut = parseGateOutput(`${h}✓ G-TRACE  r\n`, "缺收据");
+    return full.complete && !cut.complete && full.expectHit.join() === "G-RED" ? undefined : `解析不对:${JSON.stringify({ full, cut })}`; }, expect: null },
+  { name: "R5-01 基线就是按预期以门禁自身出错拦下(fail-closed)、变异后放行算发现", direct: () => (evidence(["G-RED"], BLOCKED({ name: "RR-02 没有沙箱就停", expect: "没有可用沙箱", gates: { ...ALL_OK, "G-RED": "✗" }, expectHit: ["G-RED"], gateErrors: ["G-RED"] }), BLOCKED({ name: "RR-02 没有沙箱就停", expect: "没有可用沙箱", pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [], gateErrors: [] })) ? undefined : "预期的 fail-closed 拦下变成放行却没算发现"), expect: null },
+  { name: "R5-01 目标门禁真实放行算发现(对照)", direct: () => (evidence(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] })) ? undefined : "真实放行没算发现"), expect: null },
+  { name: "R5-01 目标门禁真实拒绝算发现(对照)", direct: () => (evidence(["G-RED"], ALLOWED(), ALLOWED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-RED": "✗" } })) ? undefined : "真实拒绝没算发现"), expect: null },
+  { name: "R5-01 命令行与夹具异常不算发现(对照)", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "crash", exit: 2, gates: {}, expectHit: [] })) ?? notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "error", exit: null, gates: {}, expectHit: [] })), expect: null },
+  { name: "R5-01 结构化判因与退出码不一致不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK }, expectHit: [] })), expect: null },
+  { name: "R5-02 parseCases 遇到 null/数组/缺字段/错类型/非法枚举不抛错且全部拒收", direct: () => {
+    const lines = ["null", "[]", "1", '"x"', '{"name":"a"}', JSON.stringify({ ...BLOCKED(), pass: "yes" }), JSON.stringify({ ...BLOCKED(), kind: "maybe" }), JSON.stringify({ ...BLOCKED(), gates: { "G-TRACE": "?" } }), JSON.stringify({ ...BLOCKED(), expectHit: "G-TRACE" }), JSON.stringify({ ...BLOCKED(), exit: "1" })].map((l) => CASE_MARK + l).join("\n");
+    try { const r = judge.parseCases(lines); if (r.length !== 0) return `非法行被收下 ${r.length} 条:${JSON.stringify(r).slice(0, 200)}`; } catch (e) { return `parseCases 抛错:${(e as Error).message}`; }
+    try { if (killedBy(["G-TRACE"], new Map([["改了代码没收据", BLOCKED()]]), judge.parseCases(lines)) !== undefined) return "非法行被当成证据"; } catch (e) { return `完整路径抛错:${(e as Error).message}`; }
+    return undefined; }, expect: null },
+  { name: "R5-02 parseCases 收下合法行(对照)", direct: () => { const r = judge.parseCases(CASE_MARK + JSON.stringify(BLOCKED())); return r.length === 1 && r[0]!.name === "改了代码没收据" ? undefined : `合法行没收下:${JSON.stringify(r)}`; }, expect: null },
+  { name: "R5-02 evidence/killedBy 遇到 null、数组、缺字段、非法枚举不抛错且不给判因", direct: () => {
+    for (const bad of [null, [], 1, {}, { ...BLOCKED(), expectHit: undefined }, { ...BLOCKED(), pass: false, kind: "maybe", exit: 0, gates: { ...ALL_OK }, expectHit: [] }, { ...BLOCKED(), pass: false, kind: "verdict", exit: 0, gates: { "G-TRACE": "?" }, expectHit: [] }]) { const why = rejects(bad); if (why) return `${JSON.stringify(bad)}:${why}`; }
+    return undefined; }, expect: null },
+  { name: "R5-02 getter/setter/Proxy 回调 0 次且被拒收", direct: () => {
+    const t = traps();
+    for (const [k, v] of Object.entries(t.list)) { const why = rejects(v); if (why) return `${k}:${why}`; }
+    return t.calls() === 0 ? undefined : `外部对象的 getter/setter/Proxy 被回调了 ${t.calls()} 次`; }, expect: null },
+  { name: "R6-01 目标门禁仍在但变异侧输出不完整(缺 CONTENT_HASH/少列表项/截断)不算发现", direct: () => {
+    // 同输入双侧:complete 只差这一位;不完整的变异观测一律先排除,不论目标门禁是否还在、结论怎么变
+    const variants: [string, CaseResult, CaseResult][] = [
+      ["预期拦下→放行", BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [], complete: false })],
+      ["预期拦下→放行(其他门禁仍拦,退出 1)", BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-RED": "✗" }, expectHit: [], complete: false })],
+      ["仍拦下但原因变了", BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 1, expectHit: [], complete: false })],
+      ["放行→拦下", ALLOWED(), ALLOWED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-TRACE": "✗" }, complete: false })],
+    ];
+    for (const [k, base, mut] of variants) { const why = notKilled(["G-TRACE"], base, mut); if (why) return `${k}:${why}`; }
+    return undefined; }, expect: null },
+  { name: "R6-01 同输入输出完整时目标变化仍算发现(对照)", direct: () => {
+    const variants: [string, CaseResult, CaseResult][] = [
+      ["预期拦下→放行", BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] })],
+      ["预期拦下→放行(其他门禁仍拦,退出 1)", BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-RED": "✗" }, expectHit: [] })],
+      ["仍拦下但原因变了", BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 1, expectHit: [] })],
+      ["放行→拦下", ALLOWED(), ALLOWED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-TRACE": "✗" } })],
+    ];
+    for (const [k, base, mut] of variants) if (!evidence(["G-TRACE"], base, mut)) return `${k}:完整输出的有效变化没算发现`;
+    return undefined; }, expect: null },
+  { name: "R6-02 killedBy 基线 Map 是 Proxy/撤销的 Proxy/伪 Map、结果数组是 Proxy 时 trap 回调 0 次、不抛错、不给判因", direct: () => {
+    let calls = 0;
+    const boom = () => { calls++; throw new Error("中性标记:trap 被调用"); };
+    const handler: ProxyHandler<object> = { getPrototypeOf: boom, get: boom, has: boom, ownKeys: boom, getOwnPropertyDescriptor: boom, apply: boom, construct: boom, set: boom, defineProperty: boom, deleteProperty: boom, isExtensible: boom, preventExtensions: boom, setPrototypeOf: boom };
+    const goodMap = () => new Map([["改了代码没收据", BLOCKED()]]);
+    const mut = [BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] })];
+    const revokedMap = Proxy.revocable(goodMap(), handler); revokedMap.revoke();
+    const revokedArr = Proxy.revocable([...mut], handler); revokedArr.revoke();
+    const nested = new Map<string, CaseResult>([["改了代码没收据", Object.defineProperty({ ...BLOCKED() }, "pass", { get: () => { calls++; return true; }, enumerable: true })]]);
+    const shapes: [string, unknown, unknown][] = [
+      ["基线 Map Proxy", new Proxy(goodMap(), handler), mut],
+      ["基线撤销的 Proxy", revokedMap.proxy, mut],
+      ["基线伪 Map(原型是 Map.prototype 但不是 Map)", Object.create(Map.prototype), mut],
+      ["基线 Map 的值带 getter", nested, mut],
+      ["结果数组 Proxy", goodMap(), new Proxy([...mut], handler)],
+      ["结果数组撤销的 Proxy", goodMap(), revokedArr.proxy],
+    ];
+    for (const [k, base, rs] of shapes) {
+      try { const r = killedBy(["G-TRACE"], base as Map<string, CaseResult>, rs as CaseResult[]); if (r !== undefined) return `${k}:被当成证据 ${JSON.stringify(r)}`; }
+      catch (e) { return `${k}:抛错 ${(e as Error).message}`; }
+    }
+    if (calls) return `trap/getter 被回调了 ${calls} 次`;
+    return killedBy(["G-TRACE"], goodMap(), mut) ? undefined : "合法 Map 对照没给判因"; }, expect: null },
+  { name: "R5-03 改导出的策略对象不改变后续门禁行为", direct: () => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const g = await import(${JSON.stringify(path.join(HERE, "gates.ts"))});
+      const tries = [
+        () => g.POLICY.allowedReviewers.push("unlisted"), () => { g.POLICY.allowedReviewers[0] = "unlisted"; }, () => { g.POLICY.allowedReviewers.length = 0; },
+        () => { g.POLICY.reviewerHarnessOf.unlisted = "claude"; }, () => { delete g.POLICY.reviewerHarnessOf.codex; }, () => { g.POLICY.assistantIds.unlisted = "ai-x"; }, () => { g.POLICY.reviewerHarness = "claude"; },
+        () => g.PROTECTED_CONTEXTS.pop(), () => { g.PROTECTED_CONTEXTS.length = 0; }, () => g.LAYERS.push("evil"), () => { g.REQUIRED_GATE_SCRIPTS.test = "true"; }, () => { delete g.REQUIRED_GATE_SCRIPTS["gates:mutation"]; }, () => { g.HARNESSES.add?.("evil"); g.HARNESSES.push?.("evil"); },
+      ];
+      for (const t of tries) { try { t(); } catch {} }
+      const out = { allowed: [...g.POLICY.allowedReviewers], harness: g.harnessOf("unlisted"), codex: g.harnessOf("codex"), ctx: [...g.PROTECTED_CONTEXTS], layers: [...g.LAYERS], scripts: { ...g.REQUIRED_GATE_SCRIPTS } };
+      const ctx = { changed: ["packages/core/src/a.ts"], receipt: { author: { agent: "claude", model: "claude-opus-5-5", session: "claude:a" }, review: { agent: "unlisted", model: "gpt-6", session: "codex:b", verdict: "approve", reviewed_hash: "h" }, waiver: null }, contentHash: () => "h" };
+      out.review = g.review.run(ctx).map((x) => x.msg);
+      out.harnesses = [...g.HARNESSES];
+      console.log(JSON.stringify(out));`], { encoding: "utf8", timeout: 60_000 });
+    let o: { allowed: string[]; harness: string; codex: string; ctx: string[]; layers: string[]; scripts: Record<string, string>; review: string[]; harnesses: string[] };
+    try { o = JSON.parse(r.stdout.trim().split("\n").pop() ?? ""); } catch { return `探针没跑通:${r.stdout}${r.stderr}`; }
+    const bad: string[] = [];
+    if (o.allowed.join(",") !== "codex,astra,claude,argon") bad.push(`allowedReviewers 变成 ${o.allowed}`);
+    if (o.harness !== "codex" || o.codex !== "codex") bad.push(`harnessOf 变成 ${o.harness}/${o.codex}`);
+    if (o.ctx.join(",") !== "trusted-gates,provenance,self-check") bad.push(`PROTECTED_CONTEXTS 变成 ${o.ctx}`);
+    if (o.layers.join(",") !== "domain,kernel,adapter,plugin,app") bad.push(`LAYERS 变成 ${o.layers}`);
+    if (Object.keys(o.scripts).length !== 3 || o.scripts.test === "true") bad.push(`REQUIRED_GATE_SCRIPTS 变成 ${JSON.stringify(o.scripts)}`);
+    if (o.harnesses.join(",") !== "claude,codex,pi") bad.push(`HARNESSES 变成 ${o.harnesses}`);
+    if (!o.review.some((m) => m.includes("审查人必须是"))) bad.push(`改了导出名单后 unlisted 审查人被放行:${JSON.stringify(o.review)}`);
+    return bad.length ? bad.join(";") : undefined; }, expect: null },
+  { name: "R6-03 改 ALL_GATES/LOCAL_GATES 里的门禁对象(run/id/rule/加属性)不改变后续门禁行为", direct: () => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const g = await import(${JSON.stringify(path.join(HERE, "gates.ts"))});
+      const ids0 = g.ALL_GATES.map((x) => x.id), local0 = g.LOCAL_GATES.map((x) => x.id), provRun = g.provenance.run, reviewRun = g.review.run;
+      const rv = g.ALL_GATES.find((x) => x.id === "G-REVIEW");
+      const tries = [
+        () => { rv.run = () => []; }, () => { g.review.run = () => []; }, () => { g.ALL_GATES[0].run = () => []; }, () => { g.layers.run = () => []; },
+        () => { rv.id = "G-X"; }, () => { g.trace.id = "G-Y"; }, () => { rv.rule = "改过"; }, () => { g.review.extra = 1; }, () => { g.ALL_GATES[2].extra = 1; },
+        () => { Object.defineProperty(rv, "run", { value: () => [] }); }, () => { delete g.review.run; }, () => { Object.setPrototypeOf(g.review, { run: () => [] }); },
+        () => { g.LOCAL_GATES[0].run = () => []; }, () => { g.provenance.id = "G-Z"; }, () => { g.LOCAL_GATES[0].extra = 1; },
+      ];
+      for (const t of tries) { try { t(); } catch {} }
+      const ctx = { changed: ["packages/core/src/a.ts"], receipt: { author: { agent: "claude", model: "claude-opus-5-5", session: "claude:a" }, review: { agent: "unlisted", model: "gpt-6", session: "codex:b", verdict: "approve", reviewed_hash: "h" }, waiver: null }, contentHash: () => "h" };
+      const out = {
+        frozen: [...g.ALL_GATES, ...g.LOCAL_GATES].every((x) => Object.isFrozen(x)) && Object.isFrozen(g.ALL_GATES) && Object.isFrozen(g.LOCAL_GATES),
+        ids: g.ALL_GATES.map((x) => x.id), ids0, local: g.LOCAL_GATES.map((x) => x.id), local0,
+        extra: [...g.ALL_GATES, ...g.LOCAL_GATES].some((x) => "extra" in x), provSame: g.LOCAL_GATES[0].run === provRun && g.provenance.run === provRun, reviewSame: g.review.run === reviewRun,
+        review: g.ALL_GATES.find((x) => x.id === "G-REVIEW")?.run(ctx).map((x) => x.msg) ?? [], review2: g.review.run(ctx).map((x) => x.msg),
+      };
+      console.log(JSON.stringify(out));`], { encoding: "utf8", timeout: 60_000 });
+    let o: { frozen: boolean; ids: string[]; ids0: string[]; local: string[]; local0: string[]; extra: boolean; provSame: boolean; reviewSame: boolean; review: string[]; review2: string[] };
+    try { o = JSON.parse(r.stdout.trim().split("\n").pop() ?? ""); } catch { return `探针没跑通:${r.stdout}${r.stderr}`; }
+    const bad: string[] = [];
+    if (!o.frozen) bad.push("门禁对象没有全部冻结");
+    if (o.ids.join(",") !== "G-TRACE,G-REVIEW,G-RED,G-STUB,G-TAUTO,G-WORKFLOW,G-LAYER" || o.ids.join(",") !== o.ids0.join(",")) bad.push(`ALL_GATES 的 id 变成 ${o.ids}`);
+    if (o.local.join(",") !== "G-PROVENANCE" || o.local.join(",") !== o.local0.join(",")) bad.push(`LOCAL_GATES 的 id 变成 ${o.local}`);
+    if (o.extra) bad.push("门禁对象被加上了属性");
+    if (!o.provSame || !o.reviewSame) bad.push("门禁的 run 被替换");
+    if (!o.review.some((m) => m.includes("审查人必须是")) || !o.review2.some((m) => m.includes("审查人必须是"))) bad.push(`改了门禁对象后非法审查人被放行:${JSON.stringify([o.review, o.review2])}`);
+    return bad.length ? bad.join(";") : undefined; }, expect: null },
+  { name: "R5-04 正则注入点 0 次/多次在变异执行前拒绝,恰 1 次放行", direct: () => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const m = await import(${JSON.stringify(path.join(HERE, "mutation.ts"))});
+      const src = "a MARK b MARK c ONE d";
+      const res = [/MARK/, /MARK/g, /NONE/, /NONE/g, /ONE/, /ONE/g, "MARK", "NONE", "ONE"].map((f) => m.injectionCount(src, f));
+      console.log(JSON.stringify(res));`], { encoding: "utf8", timeout: 60_000 });
+    const got = (r.stdout ?? "").trim().split("\n").pop() ?? "";
+    return got === "[2,2,0,0,1,1,2,0,1]" ? undefined : `injectionCount 结果 ${got || r.stderr.split("\n").find((l) => /Error/.test(l))}`; }, expect: null },
+  { name: "R5-04 MUTATIONS 每个注入点(字符串与正则)恰好匹配 1 次", direct: () => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const m = await import(${JSON.stringify(path.join(HERE, "mutation.ts"))});
+      const fs = await import("node:fs");
+      // 变异副本里,被注入的那个文件已经改过,那条变异的注入点自然对不上;原样副本上逐条核对才有意义
+      if (process.env.GATE_MUTANT_COPY === "1") { console.log("[]"); process.exit(0); }
+      const bad = m.MUTATIONS.filter((x) => m.injectionCount(fs.readFileSync(${JSON.stringify(HERE)} + "/" + x.file, "utf8"), x.from) !== 1).map((x) => x.name);
+      console.log(JSON.stringify(bad));`], { encoding: "utf8", timeout: 60_000 });
+    const got = (r.stdout ?? "").trim().split("\n").pop() ?? "";
+    return got === "[]" ? undefined : `注入点不唯一或检查不可用:${got || r.stderr.split("\n").find((l) => /Error/.test(l))}`; }, expect: null },
+  { name: "R6-04 正则注入计数:零宽 /u 按码点前进不死循环,sticky 与普通搜索计数一致", direct: () => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const m = await import(${JSON.stringify(path.join(HERE, "mutation.ts"))});
+      const E = "\\u{1F600}";
+      const rows = [
+        ["", /(?:)/u], [E, /(?:)/u], [E, /(?:)/gu], ["a" + E + "b", /(?:)/u], [E, /(?:)/], [E, /(?:)/v],
+        ["a" + E + "b" + E, new RegExp(E, "u")], ["a" + E + "b" + E, new RegExp(E, "gu")], ["ab", new RegExp(E, "u")],
+        ["MARK x MARK", /MARK/y], ["MARK x MARK", /MARK/gy], ["x MARK", /MARK/y], ["x MARK", /MARK/gy], ["x NONE", /MARK/y], ["MARKMARK", /MARK/y],
+      ];
+      console.log(JSON.stringify(rows.map(([s, f]) => m.injectionCount(s, f))));`], { encoding: "utf8", timeout: 10_000, killSignal: "SIGKILL" });
+    const got = (r.stdout ?? "").trim().split("\n").pop() ?? "";
+    const want = "[1,2,2,4,3,2,2,2,0,2,2,1,1,0,2]";
+    return got === want ? undefined : `injectionCount 结果 ${got || (r.error ? `没返回(${(r.error as NodeJS.ErrnoException).code ?? r.signal})` : r.stderr.split("\n").find((l) => /Error/.test(l)))},应为 ${want}`; }, expect: null },
+  { name: "R6-04 sticky 正则注入点按计数时的同一语义替换", direct: () => {
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const m = await import(${JSON.stringify(path.join(HERE, "mutation.ts"))});
+      console.log(JSON.stringify([m.inject("x MARK y", /MARK/y, "DONE"), m.inject("x MARK y", /MARK/gy, "DONE"), m.inject("x MARK y", /MARK/, "DONE"), m.inject("x MARK y", "MARK", "DONE"), m.inject("a$b", "$", "$&$&")]));`], { encoding: "utf8", timeout: 10_000, killSignal: "SIGKILL" });
+    const got = (r.stdout ?? "").trim().split("\n").pop() ?? "";
+    const want = JSON.stringify(["x DONE y", "x DONE y", "x DONE y", "x DONE y", "a$$b"]);
+    return got === want ? undefined : `inject 结果 ${got || r.stderr.split("\n").find((l) => /Error/.test(l))},应为 ${want}`; }, expect: null },
+  { name: "磁盘:门禁命令行与一条自检用例跑完不在 TMPDIR 留下 gate-home/gate-run/gate-snap/gate-selftest 目录", direct: () => {
+    const tmpd = fs.mkdtempSync(path.join(os.tmpdir(), "gate-leakprobe-"));
+    try {
+      // 不继承本进程的 GATE_ISOLATED_HOME:要看子进程自己建的 HOME 退出时删没删
+      const { GATE_ISOLATED_HOME: _h, ...rest } = gitEnv();
+      const env = { ...rest, TMPDIR: tmpd };
+      const i = CASES.findIndex((c) => c.name === "合规:先红后绿、跨厂商审查、来源核对通过");
+      const r = spawnSync(process.execPath, [path.join(HERE, "selftest.ts"), "--case", String(i)], { encoding: "utf8", env, timeout: 600_000 });
+      if (!(r.stdout ?? "").includes('"pass":true')) return `探针用例没通过:${(r.stdout ?? "").slice(-400)}${r.stderr}`;
+      const left = fs.readdirSync(tmpd).filter((f) => /^(gate-home-|gate-run-|gate-snap-|gate-selftest-|gate-xform-|cc-marker)/.test(f));
+      return left.length ? `留下了 ${left.length} 个临时目录:${left.slice(0, 6).join(", ")}` : undefined;
+    } finally { fs.rmSync(tmpd, { recursive: true, force: true }); } }, expect: null },
+  { name: "R4-01 提示用例无关夹具故障不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "error", exit: null, gates: {}, expectHit: [], why: "用例自身出错:模拟与变异无关的用例准备失败" })), expect: null },
+  { name: "R4-01 用例超时不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "timeout", exit: null, gates: {}, expectHit: [] })), expect: null },
+  { name: "R4-01 用例没给出结果(缺观察)不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "no-result", exit: null, gates: {}, expectHit: [] })), expect: null },
+  { name: "R4-01 门禁命令行崩溃不算发现", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "crash", exit: 134, gates: {}, expectHit: [] })), expect: null },
+  { name: "R4-01 错的门禁变了不算发现目标", direct: () => notKilled(["G-RED"], BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] })), expect: null },
+  { name: "R4-01 目标门禁因自身出错拦下不算预期原因", direct: () => notKilled(["G-RED"], ALLOWED(), ALLOWED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-RED": "✗" }, gateErrors: ["G-RED"] })), expect: null },
+  { name: "R4-01 同一变异无故障时不算发现(对照)", direct: () => notKilled(["G-TRACE"], BLOCKED(), BLOCKED()) ?? (killedBy(["G-TRACE"], new Map([["改了代码没收据", BLOCKED()]]), [BLOCKED()]) ? "全部通过却判了发现" : undefined), expect: null },
+  { name: "R4-01 目标门禁不再按预期原因拦下算发现", direct: () => { const ev = evidence(["G-TRACE"], BLOCKED(), BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] })); return ev?.includes("G-TRACE") ? undefined : `真正的目标故障没算发现(判因 ${ev})`; }, expect: null },
+  { name: "R4-01 目标门禁由放行变为拦下算发现", direct: () => { const ev = evidence(["G-RED"], ALLOWED(), ALLOWED({ pass: false, kind: "verdict", exit: 1, gates: { ...ALL_OK, "G-RED": "✗" } })); return ev?.includes("G-RED") ? undefined : `真正的目标故障没算发现(判因 ${ev})`; }, expect: null },
+  { name: "R4-01 端到端:中性变异 + 提示用例夹具故障,变异校验必须判存活", direct: () => {
+    // 这条用例会在副本里跑一整套变异校验,副本的自检里又有这条用例:嵌套一层后不再展开
+    if (process.env.GATE_SELFTEST_NESTED === "1") return undefined;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r401-"));
+    try {
+      const d = path.join(tmp, "gates");
+      fs.cpSync(HERE, path.join(d, "scripts/gates"), { recursive: true, filter: (src) => !src.includes(`${path.sep}proof`) });
+      fs.symlinkSync(path.resolve(HERE, "../../node_modules"), path.join(d, "node_modules"));
+      fs.writeFileSync(path.join(d, "package.json"), JSON.stringify({ type: "module" }));
+      const mf = path.join(d, "scripts/gates/mutation.ts");
+      const ms = fs.readFileSync(mf, "utf8");
+      const at = ms.indexOf("export const MUTATIONS: Mutation[] = [");
+      if (at < 0) return "mutation.ts 里找不到 MUTATIONS";
+      const end = ms.indexOf("\n];\n", at);
+      fs.writeFileSync(mf, `${ms.slice(0, at)}export const MUTATIONS: Mutation[] = [\n  { name: "中性注释变异", kill: "改了代码没收据", target: ["G-TRACE"], file: "gates.ts", from: "// 各条机械门禁。", to: "// 各条机械门禁(注释改了)。" },\n${ms.slice(end + 1)}`);
+      const st = path.join(d, "scripts/gates/selftest.ts");
+      const ss = fs.readFileSync(st, "utf8");
+      const hook = "function runCaseInner(tmp: string, c: Case, i: number): Run {\n";
+      if (!ss.includes(hook)) return "selftest.ts 里找不到 runCaseInner";
+      // 只在变异副本(注释被改过)里、只对提示用例,在准备阶段抛与变异无关的错
+      fs.writeFileSync(st, ss.replace(hook, `${hook}  if (c.name === "改了代码没收据" && fs.readFileSync(path.join(HERE, "gates.ts"), "utf8").includes("注释改了")) throw new Error("模拟与变异无关的用例准备失败");\n`));
+      // 外层的 GATE_*(只跑子集、目标、基线、提示)不能漏进这次内层变异校验
+      const outer = Object.fromEntries(Object.entries(gitEnv()).filter(([k]) => !/^GATE_(MUTATION|SELFTEST|MUTANT|CLEAN)_/.test(k)));
+      const r = spawnSync(process.execPath, [mf], { encoding: "utf8", env: { ...outer, ...{ GATE_MUTATION_JOBS: "1", GATE_SELFTEST_JOBS: "2", GATE_SELFTEST_NESTED: "1", GATE_SELFTEST_ONLY: "^(改了代码没收据|删掉源码也要收据|只改 package.json 没收据|合规:只改文档不需要收据)$" } }, timeout: 600_000 });
+      const out = (r.stdout ?? "") + (r.stderr ?? "");
+      if (!out.includes("✓ 原样副本自检通过")) return `原样对照没通过,反例不成立\n${out}`;
+      return r.status === 1 && /✗ 变异「中性注释变异」/.test(out) ? undefined : `中性变异在提示用例夹具故障下被判成发现(退出 ${r.status})\n${out}`;
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  }, expect: null },
+  { name: "R4-01 提示用例无关故障后由其余用例判定", direct: () => {
+    const other = BLOCKED({ name: "删掉源码也要收据" });
+    const k = killedBy(["G-TRACE"], new Map([["改了代码没收据", BLOCKED()], ["删掉源码也要收据", other]]), [BLOCKED({ pass: false, kind: "error", exit: null, gates: {}, expectHit: [], why: "用例自身出错" }), { ...other, pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] }]);
+    return k?.case === "删掉源码也要收据" ? undefined : `应由后面那条真实故障判定,实际 ${JSON.stringify(k)}`; }, expect: null },
+  { name: "R4-02 判定:读不到汇总行判失败", direct: () => { const why = runnerVerdict("TAP version 13\nok 1 - x\n"); return why?.includes("汇总行") ? undefined : `没有汇总行却判 ${why ?? "通过"}`; }, expect: "" },
+  { name: "R4-02 测试入口全部 skip 判失败", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest.skip("s", () => {});\n' }); return r.code === 1 && r.out.includes("没有实际执行") ? undefined : `全部 skip 没有按"没有实际执行"判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
+  { name: "R4-02 测试入口全部 todo 判失败", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest.todo("t");\n' }); return r.code === 1 && r.out.includes("没有实际执行") ? undefined : `全部 todo 没有按"没有实际执行"判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
+  { name: "R4-02 测试入口 skip 与 todo 混合判失败", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest.skip("s", () => {});\ntest.todo("t");\n' }); return r.code === 1 && r.out.includes("没有实际执行") ? undefined : `skip+todo 没有按"没有实际执行"判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
+  { name: "R4-02 测试入口通过与 skip 混合判失败", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest("ok", () => {});\ntest.skip("s", () => {});\n' }); return r.code === 1 && r.out.includes("没有实际执行") ? undefined : `通过+skip 没有按"没有实际执行"判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
+  { name: "g-group#2538 测试入口有失败用例判失败", direct: () => { const r = runTestRunner({ "a.test.ts": 'import { test } from "node:test";\ntest("bad", () => { throw new Error("x"); });\n' }); return r.code !== 0 && r.code !== null ? undefined : `失败用例没有判失败(退出 ${r.code})\n${r.out}`; }, expect: "" },
+  { name: "RR-10 把门禁文件改名移出受管目录(重命名检测会只报新路径)", main: { "scripts/gates/vendor.ts": "export const v = 1;\n" }, head: { "scripts/gates/vendor.ts": null, "docs/vendor.ts": "export const v = 1;\n" }, red: null, receipt: null, expect: "缺收据" },
+  { name: "RR-11 helper 在红提交上给了错期望值", head: { ...HEAD_OK, "packages/core/src/add.test.ts": TEST_HELPER("./expected.ts"), "packages/core/src/expected.ts": "export const expected = 3;\n" }, red: { ...RED_OK, "packages/core/src/add.ts": ADD_OK, "packages/core/src/add.test.ts": TEST_HELPER("./expected.ts"), "packages/core/src/expected.ts": "export const expected = -100;\n" }, expect: "没有按名字失败" },
+  { name: "RR-11 fixtures 下的 helper 在红提交上给了错期望值", head: { ...HEAD_OK, "packages/core/src/add.test.ts": TEST_HELPER("./fixtures/expected.ts"), "packages/core/src/fixtures/expected.ts": "export const expected = 3;\n" }, red: { ...RED_OK, "packages/core/src/add.ts": ADD_OK, "packages/core/src/add.test.ts": TEST_HELPER("./fixtures/expected.ts"), "packages/core/src/fixtures/expected.ts": "export const expected = -100;\n" }, expect: "没有按名字失败" },
+  { name: "RR-11 helper 两边一致、红提交是空壳实现(阴性对照)", head: { ...HEAD_OK, "packages/core/src/add.test.ts": TEST_HELPER("./fixtures/expected.ts"), "packages/core/src/fixtures/expected.ts": "export const expected = 3;\n" }, red: { ...RED_OK, "packages/core/src/add.test.ts": TEST_HELPER("./fixtures/expected.ts"), "packages/core/src/fixtures/expected.ts": "export const expected = 3;\n" }, expect: null },
+  { name: "RR-12 一条强测试 + 一条只断言 typeof", head: { ...HEAD_OK, "packages/core/src/add.ts": ADD2, "packages/core/src/add.test.ts": TEST2('assert.equal(typeof difference(9, 2), "number");') }, red: { ...RED_OK, "packages/core/src/add.ts": RED2, "packages/core/src/add.test.ts": TEST2('assert.equal(typeof difference(9, 2), "number");') }, expect: "返回错误值" },
+  { name: "RR-12 两条测试都判结果(阴性对照)", head: { ...HEAD_OK, "packages/core/src/add.ts": `${ADD_OK}export function difference(a: number, b: number): number { return a - b; }\n`, "packages/core/src/add.test.ts": TEST2("assert.equal(difference(9, 2), 7);") }, red: { ...RED_OK, "packages/core/src/add.ts": RED2, "packages/core/src/add.test.ts": TEST2("assert.equal(difference(9, 2), 7);") }, expect: null },
+  { name: "RR-14 printf 打印 hash、run-all 只在注释里", reviewerTurns: (h) => hashCall(`printf '%s\\n' '${h}' # node scripts/gates/run-all.ts --hash`)(h), expect: "审查会话里没有一次" },
+  { name: "RR-14 node -e 打印 hash、run-all 只是多余参数", reviewerTurns: (h) => hashCall(`node -e "console.log('${h}')" scripts/gates/run-all.ts --hash`)(h), expect: "审查会话里没有一次" },
+  { name: "RR-14 echo 后接真实 hash 命令", reviewerTurns: (h) => hashCall(`echo ${h} && node scripts/gates/run-all.ts --hash`)(h), expect: "审查会话里没有一次" },
+  { name: "RR-14 真实 hash 输出被丢弃、再 echo hash", reviewerTurns: (h) => hashCall(`node scripts/gates/run-all.ts --hash >/dev/null; echo ${h}`)(h), expect: "审查会话里没有一次" },
+  { name: "RR-14 node 先跑别的脚本、run-all 只是它的参数", reviewerTurns: hashCall("node /tmp/print-hash.mjs scripts/gates/run-all.ts --hash"), expect: "审查会话里没有一次" },
+  { name: "RR-14 codex 真实形状的 hash 调用(阴性对照)", reviewerTurns: hashCall("node scripts/gates/run-all.ts --hash --branch=feat/x --base=main"), expect: null },
+  { name: "RR-15 后续轮次写进同仓库的另一个 clone", authorRecord: { workdir: "/tmp" }, authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: fs.readFileSync(path.join(repo, "packages/core/src/add.ts"), "utf8") }, result: "File written successfully" }] }, { model: "gpt-6", toolCalls: [{ name: "Write", input: { file_path: path.join(path.dirname(repo), "other-clone", "packages/core/src/add.ts") } }] }],
+    setup: ({ dir, repo }) => { sh(dir, "clone", "-q", repo, path.join(dir, "other-clone")); }, expect: "在作者的产出厂商集合" },
+  { name: "RR-15 后续轮次写进无关的 git 仓库(阴性对照)", authorRecord: { workdir: "/tmp" }, authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: fs.readFileSync(path.join(repo, "packages/core/src/add.ts"), "utf8") }, result: "File written successfully" }] }, { model: "gpt-6", toolCalls: [{ name: "Write", input: { file_path: path.join(path.dirname(repo), "unrelated", "a.ts") } }] }],
+    setup: ({ dir }) => { const u = path.join(dir, "unrelated"); fs.mkdirSync(u, { recursive: true }); sh(u, "init", "-q", "-b", "main"); write(u, { "x.txt": "x\n" }); commit(u, "x"); }, expect: null },
+  { name: "R10-01 作者只操作同名的非仓库目录(来源门禁拒绝)", authorTurns: (repo) => {
+    const other = path.join(path.dirname(repo), "unrelated", "g-group");
+    write(other, { "neutral.txt": NEUTRAL });
+    return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `cd ${other} && printf neutral` } }] }];
+  }, expect: "找不到对本仓库的任何操作" },
+  { name: "R10-01 作者只操作同名的另一个 git 仓库(来源门禁拒绝)", authorTurns: (repo) => {
+    const other = path.join(path.dirname(repo), "elsewhere", "g-group");
+    const sha = otherRepo(other);
+    return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `cd ${other} && git log --oneline -1` }, result: `${sha} other` }, { name: "Write", input: { file_path: path.join(other, "packages/core/src/add.ts") } }] }];
+  }, expect: "找不到对本仓库的任何操作" },
+  { name: "R10-01 作者只操作同名、还没有提交的 git 仓库(身份确认不了,来源门禁拒绝)", authorTurns: (repo) => {
+    const other = path.join(path.dirname(repo), "empty", "g-group");
+    otherRepo(other, false);
+    return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `cd ${other} && git status --short` }, result: "" }, { name: "Write", input: { file_path: path.join(other, "packages/core/src/add.ts") } }] }];
+  }, expect: "找不到对本仓库的任何操作" },
+  { name: "R10-01 同一仓库换了目录名的克隆按仓库身份认出(阴性对照)", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(authorClone(repo), "packages/core/src/add.ts"), content: fs.readFileSync(path.join(repo, "packages/core/src/add.ts"), "utf8") }, result: "File written successfully" }] }], setup: makeClone, expect: null },
+  { name: "R10-02 清理前:作者在独立克隆里提交,来源门禁认出(同一记录对照)", authorTurns: committedCloneTurns, setup: makeClone, expect: null },
+  { name: "R10-02 清理后:同一记录里 git 输出的本仓库提交号证明是本仓库,来源门禁仍认出", authorTurns: committedCloneTurns, setup: cleanClone, expect: null },
+  { name: "R10-02 克隆已清理、记录里没有本仓库的提交号(来源门禁拒绝)", authorTurns: cloneTurns(() => "nothing to commit, working tree clean"), setup: cleanClone, expect: "找不到对本仓库的任何操作" },
+  { name: "R10-02 克隆已清理、git 输出的是另一个仓库的提交号(来源门禁拒绝)", authorTurns: cloneTurns((repo) => `${otherRepo(path.join(path.dirname(repo), "foreign"))} other`), setup: cleanClone, expect: "找不到对本仓库的任何操作" },
+  { name: "R10-02 本仓库提交号出自现存的非仓库目录(现状与记录矛盾,来源门禁拒绝)", authorTurns: (repo) => {
+    const other = path.join(path.dirname(repo), "plain-dir");
+    write(other, { "neutral.txt": NEUTRAL });
+    return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `cd ${other} && git log --oneline -1` }, result: `${shortHead(repo)} green` }] }];
+  }, expect: "找不到对本仓库的任何操作" },
+  { name: "审查人 codex 放行(g-group#1531 默认审查人)", receipt: R((r) => { r.review!.agent = "codex"; }), room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "codex:b", assistant: "ai-codex" } }], expect: null },
+  { name: "审查人 astra 放行", room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "codex:b", assistant: "ai-astra" } }], expect: null },
+  { name: "审查人 grok 被拦", receipt: R((r) => { r.review!.agent = "grok"; r.review!.model = "grok-4.7"; }), reviewerTurns: (h) => [{ model: "grok-4.7", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "审查人必须是" },
+  // 原则 68(g-group#2943、#3199):Claude 审 Codex 写的 PR;Argon(Google 模型、claude 会话、能执行命令)作备用审查人;
+  // argon-chat 不能执行命令,不当审查人;跨厂商与禁止自审不变
+  { name: "原则 68 claude 审 codex 作者放行(claude 会话)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); CLAUDE_REVIEW(r); }), reviewerTurns: claudeReviewTurns,
+    room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "claude:rv1", assistant: "ai-claude" } }], expect: null },
+  { name: "原则 68 claude 审 claude 作者被拦(禁止自审)", receipt: R((r) => { CLAUDE_REVIEW(r); }), reviewerTurns: claudeReviewTurns, expect: "审查人与作者是同一个(claude)" },
+  { name: "原则 68 claude 审查照样要跨研发厂商:作者用 Anthropic 模型", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: fs.readFileSync(path.join(repo, "packages/core/src/add.ts"), "utf8") }, result: "File written successfully" }] }], receipt: R((r) => { r.author.agent = "deepseek"; r.author.session = "pi:a"; CLAUDE_REVIEW(r); }), reviewerTurns: claudeReviewTurns, expect: "同为 anthropic" },
+  { name: "原则 68 claude 审查会话必须是 claude 会话", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); CLAUDE_REVIEW(r); r.review!.session = "codex:b"; }), reviewerTurns: claudeReviewTurns, expect: "必须是 claude 会话" },
+  { name: "原则 68 argon 审 codex 作者放行(claude 会话,g-group#3199 备用审查人)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); ARGON_REVIEW(r); }), reviewerTurns: argonReviewTurns, room: ARGON_ROOM, expect: null },
+  { name: "原则 68 argon 审 claude 作者放行(Google 审 Anthropic)", receipt: R((r) => { ARGON_REVIEW(r); }), reviewerTurns: argonReviewTurns, room: ARGON_ROOM, expect: null },
+  { name: "原则 68 argon 审 Google 作者被拦(同为 google)", authorTurns: (repo) => [{ model: "ai-x/gemini-4-argon", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: fs.readFileSync(path.join(repo, "packages/core/src/add.ts"), "utf8") }, result: "File written successfully" }] }], receipt: R((r) => { r.author.agent = "deepseek"; r.author.session = "pi:a"; r.author.model = "gemini-4-argon"; ARGON_REVIEW(r); }), reviewerTurns: argonReviewTurns, room: ARGON_ROOM, expect: "同为 google" },
+  { name: "原则 68 argon 审查会话必须是 claude 会话", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); ARGON_REVIEW(r); r.review!.session = "codex:b"; }), reviewerTurns: argonReviewTurns, expect: "必须是 claude 会话" },
+  { name: "原则 68 argon-chat 当审查人被拦(不能执行命令)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); ARGON_REVIEW(r); r.review!.agent = "argon-chat"; }), reviewerTurns: argonReviewTurns, expect: "审查人必须是" },
+  { name: "原则 68 astra 审 codex 作者被拦(同为 OpenAI)", authorTurns: CODEX_AUTHOR_TURNS, receipt: R((r) => { CODEX_AUTHOR(r); }), expect: "同为 openai" },
+  { name: "astra 审查会话不能是 claude 会话", receipt: R((r) => { r.review!.session = "claude:astra1"; }), reviewerTurns: (h) => reviewerOk(h), expect: "必须是 codex 会话" },
+  { name: "审查会话不是 codex 会话", receipt: R((r) => { r.review!.session = "pi:b"; }), reviewerTurns: (h) => reviewerOk(h), expect: "必须是 codex 会话" },
+  { name: "派活卡片显示会话属于别的助手", room: () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "codex:b", assistant: "ai-codex" } }], expect: "对不上" },
+  { name: "自报 codex 但会话实际是 Anthropic 模型", receipt: R((r) => { r.review!.agent = "codex"; }), reviewerTurns: (h) => [{ model: "claude-opus-5-5", toolCalls: [{ input: "node scripts/gates/run-all.ts --hash", result: h }] }], expect: "实际是 anthropic" },
+  { name: "跨厂商不变:作者用 OpenAI 模型时 Codex/Astra 审查同样被拦", authorTurns: (repo) => [{ model: "gpt-6", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: fs.readFileSync(path.join(repo, "packages/core/src/add.ts"), "utf8") }, result: "File written successfully" }] }], receipt: R((r) => { r.author.model = "gpt-6"; }), expect: "同为 openai" },
+  { name: "F-05 node:test 别名、零断言、错误实现", head: { ...HEAD_OK, "packages/core/src/add.ts": "export function add(_a: number, _b: number): number { return 999; }\n", "packages/core/src/add.test.ts": `import { test as check } from "node:test";\nimport { add } from "./add.ts";\ncheck("adds", () => { add(1, 2); });\n` }, red: { ...RED_OK, "packages/core/src/add.ts": "export function add(): number { throw new Error('x'); }\n", "packages/core/src/add.test.ts": `import { test as check } from "node:test";\nimport { add } from "./add.ts";\ncheck("adds", () => { add(1, 2); });\n` }, expect: "没有任何断言" },
+  { name: "间接注册测试绕过静态识别", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`const reg = test;\nreg("hidden", () => { add(1, 2); });\ntest("adds", () => { assert.equal(add(1, 2), 3); });\n`) }, expect: "运行时注册了" },
+  { name: "F-07 断言只判复制的逻辑", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { void add; const actual = 1 + 2; assert.equal(actual, 3); });\n`) }, expect: "没有一条断言判的是被测源码" },
+  { name: "恒真断言", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { assert.equal(add(1, 2), 3); assert.equal(1, 1); });\n`) }, expect: "恒真" },
+  { name: "提交了 skip 的测试", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { assert.equal(add(1, 2), 3); });\ntest.skip("later", () => { assert.equal(add(1, 1), 2); });\n`) }, expect: "不许提交" },
+  { name: "源码里偷偷导入 node:test", head: { ...HEAD_OK, "packages/core/src/add.ts": `import "node:test";\n${ADD_OK}` }, expect: "却导入了 node:test" },
+
+  { name: "F-06 同文件后补的测试没有红记录", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { assert.equal(add(1, 2), 3); });\ntest("negative", () => { assert.equal(add(-1, -2), -3); });\n`) }, expect: "negative 在红提交上不存在" },
+  { name: "红提交上测试本来就绿", red: { ...RED_OK, "packages/core/src/add.ts": ADD_OK }, expect: "adds 放到红提交的实现上没有按名字失败" },
+  { name: "红提交上第二条测试本来就绿", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { assert.equal(add(1, 2), 3); });\ntest("zero", () => { assert.equal(add(0, 0), 0); });\n`), "packages/core/proof/zero.txt": "zero ok\n" }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { assert.equal(add(1, 2), 3); });\ntest("zero", () => { assert.equal(add(0, 0), 0); });\n`) }, expect: "zero 放到红提交的实现上没有按名字失败" },
+  { name: "红提交只是加载失败", red: { "packages/core/src/add.test.ts": TEST_OK }, expect: "adds 放到红提交的实现上没有按名字失败" },
+  { name: "收据没写红提交", red: null, expect: "缺 red.commit" },
+  { name: "改源码不改测试", head: { "packages/core/src/add.ts": ADD_OK, "packages/core/src/add.test.ts": null }, red: null, receipt: R((r) => { r.acceptance = [{ id: "AC-02", status: "未测", reason: "x" }]; }), expect: "没有新增或改动任何测试" },
+
+  { name: "F-07 测试只读顶层常量", head: { ...HEAD_OK, "packages/core/src/add.ts": `${ADD_OK}export const initialized = add(1, 2);\n`, "packages/core/src/add.test.ts": `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport { initialized } from "./add.ts";\ntest("adds", () => { assert.equal(initialized, 3); });\n` }, red: { ...RED_OK, "packages/core/src/add.ts": `${ADD_EMPTY}export const initialized = add(1, 2);\n`, "packages/core/src/add.test.ts": `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport { initialized } from "./add.ts";\ntest("adds", () => { assert.equal(initialized, 3); });\n` }, expect: "空桩后没有按名字失败" },
+  { name: "空桩下测试自己 skip 掉", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", (t) => { try { add(1, 2); } catch { t.skip(); return; } assert.equal(add(1, 2), 3); });\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`test("adds", (t) => { try { add(1, 2); } catch { t.skip(); return; } assert.equal(add(1, 2), 3); });\n`) }, expect: "空桩后没有按名字失败" },
+  { name: "门禁自身出错按拦下处理", head: { ...HEAD_OK, "packages/core/package.json": "{ 坏的 json" }, expect: "门禁自身出错" },
+  { name: "吞掉异常的测试", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { let v = 3; try { v = add(1, 2); } catch {} assert.equal(v, 3); });\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`test("adds", () => { let v = 3; try { v = add(1, 2); } catch {} assert.equal(v, 3); });\n`) }, expect: "空桩后没有按名字失败" },
+
+  { name: "PR 的 workflow 冒充受保护检查名", head: { ...HEAD_OK, ".github/workflows/fake.yml": "on: pull_request\njobs:\n  provenance:\n    runs-on: ubuntu-latest\n    steps: [{ run: 'true' }]\n" }, expect: "受保护检查名 provenance" },
+  { name: "PR 的 workflow 写提交状态", head: { ...HEAD_OK, ".github/workflows/x.yml": "on: pull_request\njobs:\n  x:\n    runs-on: ubuntu-latest\n    steps: [{ run: 'gh api repos/o/r/statuses/abc' }]\n" }, expect: "在写提交状态" },
+  { name: "PR 的 workflow 申请写权限", head: { ...HEAD_OK, ".github/workflows/x.yml": "on: pull_request\npermissions: { statuses: write }\njobs: {}\n" }, expect: "申请了写权限" },
+  { name: "PR 的 workflow 用 pull_request_target", head: { ...HEAD_OK, ".github/workflows/x.yml": "on: pull_request_target\njobs: {}\n" }, expect: "用了 pull_request_target" },
+  { name: "删掉 trusted-gates.yml", head: { ...HEAD_OK, ".github/workflows/trusted-gates.yml": null }, expect: "缺 .github/workflows/trusted-gates.yml" },
+
+  { name: "领域层反向依赖内核", head: { ...HEAD_OK, "packages/kern/package.json": PKG("@g-group/kern", "kernel"), "packages/kern/src/k.ts": "export const k = 1;\n", "packages/core/src/bad.ts": `import { k } from "@g-group/kern";\nexport const b = k;\n` }, expect: "不能依赖 kernel" },
+  { name: "插件依赖另一个插件", head: { ...HEAD_OK, "packages/p1/package.json": PKG("@g-group/plugin-a", "plugin"), "packages/p2/package.json": PKG("@g-group/plugin-b", "plugin"), "packages/p2/src/x.ts": "export const x = 1;\n", "packages/p1/src/y.ts": `import { x } from "@g-group/plugin-b";\nexport const y = x;\n` }, expect: "不能依赖 plugin" },
+  { name: "相对路径跨包", head: { ...HEAD_OK, "packages/kern/package.json": PKG("@g-group/kern", "kernel"), "packages/kern/src/k.ts": `import { add } from "../../core/src/add.ts";\nexport const k = add;\n` }, expect: "跨出了包" },
+  { name: "依赖声明里反向引用", head: { ...HEAD_OK, "packages/kern/package.json": PKG("@g-group/kern", "kernel"), "packages/core/package.json": PKG("@g-group/core", "domain", { dependencies: { "@g-group/kern": "*" } }) }, expect: "依赖声明里引用了 kernel" },
+  { name: "包没声明层级", head: { ...HEAD_OK, "packages/core/package.json": JSON.stringify({ name: "@g-group/core" }) }, expect: "gGroup.layer" },
+];
+
+/**
+ * 有界并发(GATE_SELFTEST_JOBS,默认 min(4, CPU 数)):每个用例在自己的子进程、自己的临时目录里跑,
+ * 结果按用例顺序输出。GATE_SELFTEST_FAILFAST=1 时出现失败就不再启动新用例。
+ */
+const WORKER_TIMEOUT_MS = 900_000;
+function runCaseInWorker(i: number): Promise<Run & { secs: number }> {
+  const c0 = CASES[i]!;
+  const t0 = Date.now();
+  return timed(t0, new Promise((resolve) => {
+    const c = spawn(process.execPath, [path.join(HERE, "selftest.ts"), "--case", String(i)], { env: gitEnv() });
+    let out = "";
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; c.kill("SIGKILL"); }, WORKER_TIMEOUT_MS);
+    c.stdout.on("data", (d) => { out += d; });
+    c.stderr.on("data", (d) => { out += d; });
+    c.on("close", (code) => {
+      clearTimeout(timer);
+      const line = out.split("\n").reverse().find((l) => l.startsWith(RESULT_MARK));
+      if (timedOut) return resolve(mk(c0, { pass: false, kind: "timeout", why: `用例超时(${WORKER_TIMEOUT_MS / 1000}s)`, detail: out }));
+      if (!line) return resolve(mk(c0, { pass: false, kind: "no-result", why: `用例子进程没有给出结果(退出 ${code})`, detail: out }));
+      resolve(JSON.parse(line.slice(RESULT_MARK.length)) as Run);
+    });
+  }));
+}
+const timed = (t0: number, p: Promise<Run>) => p.then((r) => ({ ...r, secs: Math.round((Date.now() - t0) / 1000) }));
+const RESULT_MARK = "__GATE_SELFTEST_RESULT__";
+
+export async function selfTest(only?: (c: Case) => boolean): Promise<boolean> {
+  const t0 = Date.now();
+  let ok = true;
+  const failFast = process.env.GATE_SELFTEST_FAILFAST === "1";
+  // GATE_SELFTEST_ONLY=<正则>:只跑名字匹配的用例(本机诊断与端到端夹具用;self-check 里设它会被 G-WORKFLOW 拦下)
+  const onlyRe = process.env.GATE_SELFTEST_ONLY ? new RegExp(process.env.GATE_SELFTEST_ONLY) : undefined;
+  const idx = CASES.map((c, i) => [c, i] as const).filter(([c]) => (!only || only(c)) && (!onlyRe || onlyRe.test(c.name))).map(([, i]) => i);
+  // GATE_SELFTEST_FIRST=<用例名>:先跑这一条,其余照原顺序随后全跑。只改顺序,不跳过任何用例。
+  const first = process.env.GATE_SELFTEST_FIRST;
+  if (first) {
+    const fi = CASES.findIndex((c) => c.name === first);
+    if (fi < 0) { console.log(`✗ GATE_SELFTEST_FIRST 指向不存在的用例「${first}」`); console.log("自检失败"); return false; }
+    const at = idx.indexOf(fi);
+    if (at > 0) { idx.splice(at, 1); idx.unshift(fi); }
+  }
+  const width = Math.max(1, Math.min(Number(process.env.GATE_SELFTEST_JOBS ?? Math.min(4, os.availableParallelism())), idx.length || 1));
+  const results: ((Run & { secs: number }) | undefined)[] = new Array(CASES.length);
+  // 变异校验传入目标与原样基线:FAILFAST 只在出现"目标判因"时停;执行故障、非目标原因的失败继续往下跑
+  const target = process.env.GATE_SELFTEST_TARGET?.split(",").filter(Boolean);
+  const baseline = process.env.GATE_SELFTEST_BASELINE ? new Map((JSON.parse(fs.readFileSync(process.env.GATE_SELFTEST_BASELINE, "utf8")) as CaseResult[]).map((r) => [r.name, r])) : undefined;
+  const stopOn = (r: Run) => failFast && (target && baseline ? evidence(target, baseline.get(r.name), r) !== undefined : !r.pass);
+  let stop = false;
+  let next = 0;
+  let printed = 0;
+  const printOne = (i: number) => {
+    const c = CASES[i]!, r = results[i]!, { detail, secs, ...cr } = r;
+    console.log(`${r.pass ? "✓" : "✗"} ${c.expect === null ? "放行" : "拦下"}:${c.name} (${secs}s)`);
+    console.log(CASE_MARK + JSON.stringify(cr));
+    if (r.pass) return;
+    const ev = target && baseline ? evidence(target, baseline.get(r.name), r) : undefined;
+    // FAILFAST 也留判因证据:失败类型、原因、门禁结论;全量模式打印完整输出
+    console.log(`      | 失败类型 ${r.kind}${r.why ? `:${r.why.split("\n")[0]}` : ""}${ev ? `;目标判因:${ev}` : target ? ";不是目标判因" : ""}`);
+    const lines = detail.split("\n");
+    console.log((failFast ? lines.filter((l) => /^(✓|✗) G-|^ {4}- |Error|出错/.test(l)).slice(0, 12) : lines).map((l) => `      | ${l}`).join("\n"));
+  };
+  const flush = () => { while (printed < idx.length && results[idx[printed]!]) printOne(idx[printed++]!); };
+  await Promise.all(Array.from({ length: width }, async () => {
+    while (next < idx.length && !stop) {
+      const i = idx[next++]!;
+      const r = await runCaseInWorker(i);
+      results[i] = r;
+      if (!r.pass) ok = false;
+      if (stopOn(r)) stop = true;
+      flush();
+    }
+  }));
+  // FAILFAST 下没启动的用例不打印;已跑完的按顺序补齐
+  for (const i of idx) if (results[i] && idx.indexOf(i) >= printed) printOne(i);
+  for (const [m, v] of [["o1", "openai"], ["gpt-6-astra", "openai"], ["ai-iisbo/[乾坤按量]gpt-6-astra", "openai"], ["claude-opus-5-5", "anthropic"], ["grok-4.7", "xai"], ["gemini-4-argon", "google"], ["stealth/crouton-alpha", "unknown"], [undefined, "unknown"]] as const) {
+    const pass = vendorOf(m) === v;
+    if (!pass) ok = false;
+    console.log(`${pass ? "✓" : "✗"} vendorOf(${m}) = ${vendorOf(m)}`);
+  }
+  const ran = idx.filter((i) => results[i]).length;
+  console.log(ok ? "自检通过" : "自检失败");
+  console.log(`自检耗时 ${Math.round((Date.now() - t0) / 1000)}s:用例 ${ran}/${idx.length},并发 ${width}(GATE_SELFTEST_JOBS),CPU ${os.availableParallelism()},node ${process.version}`);
+  return ok;
+}
+
+// 子进程入口:只跑一个用例,把结果作为一行 JSON 打出来
+if (import.meta.main) {
+  const k = process.argv.indexOf("--case");
+  const i = k >= 0 ? Number(process.argv[k + 1]) : Number.NaN;
+  const c = CASES[i];
+  if (!c) { console.log(`未知用例 ${process.argv[k + 1]}`); process.exit(2); }
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-selftest-"));
+  let r: Run;
+  try { r = runCase(tmp, c, i); } catch (e) { r = mk(c, { pass: false, kind: "error", why: `用例自身出错:${(e as Error).message}`, detail: `用例自身出错:${(e as Error).stack ?? e}` }); }
+  finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  console.log(RESULT_MARK + JSON.stringify(r));
+  process.exit(0);
+}

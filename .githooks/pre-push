@@ -1,0 +1,7 @@
+#!/bin/sh
+# 推送前本地跑:类型检查、lint、测试、门禁自检。变异校验较慢,交给 CI 的 self-check。
+set -e
+npm run -s typecheck
+npm run -s lint
+npm test --silent
+npm run -s gates:selftest | grep -v '^✓'
