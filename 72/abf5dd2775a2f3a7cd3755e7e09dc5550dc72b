@@ -1,0 +1,23 @@
+packages/ui-core/src/cron.test.ts
+  s_042e901c6ad028::t_943de26a99bae5 1-255
+packages/ui-core/src/cron.ts
+  s_042e901c6ad028::t_e29e9aa5488ab2 1-123
+packages/ui-core/src/index.ts
+  s_042e901c6ad028::t_fcb2598f709d60 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "72abf5dd2775a2f3a7cd3755e7e09dc5550dc72b",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
