@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Search, X } from 'lucide-react'
 import { BUCKET_TILES, type BoardCounts, type BoardFilter, type BoardGroupBy, type BoardRange } from '@g-group/ui-core'
 import { Button } from '@/components/ui/button'
@@ -23,7 +24,30 @@ function arrowKeys(e: React.KeyboardEvent<HTMLElement>) {
   items[(i + (e.key === 'ArrowRight' ? 1 : items.length - 1)) % items.length]?.focus()
 }
 
+/**
+ * 搜索框里 Esc 先清搜索、不关看板(原型核对项)。遮罩是 Radix Dialog,它在 document 捕获阶段听 Esc,
+ * 输入框自己的 onKeyDown 来不及拦;所以只在「焦点在搜索框且有内容」时,于更早的 window 捕获阶段接住这一下。
+ */
+function useClearOnEscape(query: string, clear: () => void) {
+  const ref = useRef<HTMLInputElement>(null)
+  const latest = useRef(clear)
+  latest.current = clear
+  useEffect(() => {
+    if (!query) return
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || document.activeElement !== ref.current) return
+      e.stopPropagation()
+      e.preventDefault()
+      latest.current()
+    }
+    window.addEventListener('keydown', h, true)
+    return () => window.removeEventListener('keydown', h, true)
+  }, [query])
+  return ref
+}
+
 export function BoardHead({ filter, counts, set }: { filter: BoardFilter; counts: BoardCounts; set: (p: Partial<BoardFilter>) => void }) {
+  const search = useClearOnEscape(filter.query, () => set({ query: '' }))
   const tiles = BUCKET_TILES.filter((b) => !((b === 'failed' || b === 'stopped') && counts[b] === 0 && filter.bucket !== b))
   return (
     <header className="bd-head">
@@ -51,10 +75,8 @@ export function BoardHead({ filter, counts, set }: { filter: BoardFilter; counts
         <Segmented size="xs" ariaLabel="时间范围" value={filter.range} onChange={(v) => set({ range: v })} options={rangeOptions} />
         <label className="bd-search">
           <Search aria-hidden />
-          <input data-testid="pano-search" value={filter.query} placeholder={SEARCH_PLACEHOLDER} aria-label={SEARCH_PLACEHOLDER}
-            onChange={(e) => set({ query: e.target.value })}
-            // 搜索框里 Esc 先清搜索,不关看板(遮罩的 Esc 监听挂在 window 上,这里拦住冒泡)
-            onKeyDown={(e) => { if (e.key === 'Escape' && filter.query) { e.stopPropagation(); set({ query: '' }) } }} />
+          <input ref={search} data-testid="pano-search" value={filter.query} placeholder={SEARCH_PLACEHOLDER} aria-label={SEARCH_PLACEHOLDER}
+            onChange={(e) => set({ query: e.target.value })} />
           {filter.query && <IconButton label="清空搜索" size="icon-xs" tooltip={false} icon={<X />} onClick={() => set({ query: '' })} />}
         </label>
       </div>
