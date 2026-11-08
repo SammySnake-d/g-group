@@ -1,7 +1,7 @@
-# AC-10 红绿记录:同一组测试文件(当前 HEAD 的 lease.test.ts、trace-replay.test.ts)分别跑在红提交 af46c03 的空壳实现与绿提交 1d870f9 的实现上(变基到 94595b8 之前分别是 9966e99、589ee65,内容不变)
+# AC-10 红绿记录:同一组测试文件(当前 HEAD 的 lease.test.ts、trace-replay.test.ts)分别跑在红提交 351b7a4 的空壳实现与绿提交 3a98235 的实现上(最初提交为 9966e99、589ee65,之后两次变基到最新 dev/integration,内容不变)
 # 命令: node --test --test-concurrency=1 --test-reporter=spec src/lease.test.ts src/trace-replay.test.ts
 
-## 红:af46c03 空壳实现
+## 红:351b7a4 空壳实现
 ✖ LEASE-01 空闲资源基于快照版本授予:持有者登记、epoch+1、版本+1,不改入参表 (23.907791ms)
 ✖ LEASE-02 两个持有者基于同一快照申请:后到者收到版本冲突,租约仍归先到者(阳性埋雷:去掉版本校验就双持有) (0.558208ms)
 ✖ LEASE-03 资源被占用时基于最新版本申请:收到 held-by-other 排队,不写入 (1.75ms)
@@ -41,7 +41,7 @@
 ✖ TLA-10 多资源租约:去掉全序的逆序授予反例(先拿 b 再拿 a)在真实实现上第二次申请被当场拒绝 (0.400083ms)
 ✖ TLA-09 回放只收 TLC -dumpTrace json:格式不对或出现规格里没有的动作就抛 TypeError (0.319584ms)
 
-## 绿:1d870f9 实现
+## 绿:3a98235 实现
 ✔ LEASE-01 空闲资源基于快照版本授予:持有者登记、epoch+1、版本+1,不改入参表 (1.959166ms)
 ✔ LEASE-02 两个持有者基于同一快照申请:后到者收到版本冲突,租约仍归先到者(阳性埋雷:去掉版本校验就双持有) (0.293542ms)
 ✔ LEASE-03 资源被占用时基于最新版本申请:收到 held-by-other 排队,不写入 (0.210209ms)

@@ -23,7 +23,7 @@
     "model": "claude-opus-5-5"
   },
   "red": {
-    "commit": "af46c03f149598c1c4e812c2457b3ce71fbb8392"
+    "commit": "351b7a4a52fcd1b2561c32fd7bfedd605e0c20e9"
   },
   "unverifiable": "由 D 组会话(claude:616edc61-14d8-4e9e-9519-ec8c2abc9af7)的子代理编写。AC-10 的绿只证明三件事:① 规格是对协议的抽象,TLC 在有界模型(2–3 个联系人/持有者、3 个资源、1 条用户消息、复核/重读 1 次)内穷举无反例,更大规模未查;② 反例与见证 trace 在真实原语上回放结论一致(TLA-01–TLA-10),但回放的是领域原语,不是宿主整条路径:宿主的发言发布目前走 host.ts runRound 的「发送前检出更新的用户消息就放弃本轮」检查,不经 commitIn,这条路径没有被本片回放覆盖;③ lease.ts 是本片新增的底座原语,宿主还没接入(R-Quota/R-Worktree/R-Env 的槽位与环境租约仍未实现),AC-10 通过不等于第四台租约已落地。可能被骗过的地方:规格与回放的动作映射是人写的(trace-replay.ts),若映射错了模型与实现会一起错——变异 R02/R03/R05/R07 只证明映射里的版本与序号确实被用到。TLC 输出与 trace 在本机生成(TLC2 2026.11.06、java 17,-workers 1),CI 没有 java,不复跑 TLC,只复跑回放测试。",
   "waiver": null,
