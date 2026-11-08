@@ -2211,3 +2211,33 @@ test("CH-53 数组字段改为逐项判定后:下标以外的访问器(字符串
   assert.equal(commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: [], schedule: null, extra: ["a"] } as never).ok, true);
   assert.equal(grantTool({ ...st, extra: [["a"]] } as never, { name: "weather", bounded: true }).ok, true);
 });
+
+test("CH-54 通用能力黑名单按规范化名字比对:大小写、首尾空白(含制表符、换行、全角空格)、分隔符(_ - . 空格、去掉分隔符、驼峰)与全角变体,授予直接工具、恢复状态、canCallDirectly 与 briefFor 都拒绝;只是含禁项片段或带后缀的名字照常(对照)", () => {
+  const c = fullContact();
+  const st = js(c) as unknown as Record<string, unknown>;
+  const fullwidth = (s: string) => s.replace(/[!-~]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 0xfee0));
+  const camel = (s: string) => s.replace(/_([a-z])/g, (_, x: string) => x.toUpperCase());
+  const variants = (n: string): string[] => [
+    n.toUpperCase(), n[0]!.toUpperCase() + n.slice(1), `${n} `, ` ${n}`, `\t${n}\n`, `　${n}`, fullwidth(n), fullwidth(n.toUpperCase()),
+    n.replaceAll("_", "-"), n.replaceAll("_", "."), n.replaceAll("_", " "), n.replaceAll("_", ""), camel(n), camel(n).replace(/^./, (x) => x.toUpperCase()),
+  ];
+  // 题面复现样本(独立列出,不由上面的规则生成)
+  const reported = ["BASH", "Bash", "bash ", " shell ", "Run_Command", "browser\t"];
+  const all = [...new Set([...reported, ...SPEC_GENERAL_TOOLS.flatMap(variants)])].filter((v) => !SPEC_GENERAL_TOOLS.includes(v));
+  assert.ok(all.length >= 100, `变体数 ${all.length}`);
+  for (const v of all) {
+    const g = grantTool(c, { name: v, bounded: true });
+    assert.equal(reasonOf(g), `${v} 是通用能力,只能在 Compute 里用`, `授予 ${JSON.stringify(v)}`);
+    const forged = { ...st, tools: [{ name: v, bounded: true }] } as never;
+    assert.equal(reasonOf(grantTool(forged, { name: "weather", bounded: true })), `联系人状态.tools[0] ${v} 是通用能力,不能在直接工具清单里`, `恢复 ${JSON.stringify(v)}`);
+    assert.equal(canCallDirectly(forged, v), false, `canCallDirectly ${JSON.stringify(v)}`);
+    assert.equal(briefFor(forged, { task: "t", rules: [], tools: [v], credentialRefs: [] }).ok, false, `briefFor ${JSON.stringify(v)}`);
+  }
+  // 对照:名字里只是含有禁项片段、或带前后缀的有界工具照常授予、可直接调用并能恢复(整键比对,不按前缀或子串)
+  for (const name of ["bash_history", "shellcheck", "my_shell_notes", "browser_history", "exec_summary", "run_commands", "get_weather", "Get_Weather"]) {
+    const g = grantTool(c, { name, bounded: true });
+    assert.equal(g.ok, true, `对照 ${name}${g.ok ? "" : ` ${g.reason}`}`);
+    assert.equal(g.ok && canCallDirectly(g.contact, name), true, `对照 ${name} 可直接调用`);
+    assert.equal(grantTool(js(g.ok ? g.contact : (null as never)) as never, { name: "weather", bounded: true }).ok, true, `对照 ${name} 恢复`);
+  }
+});
