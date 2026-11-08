@@ -1,0 +1,14 @@
+packages/server/src/files.test.ts
+  h_f33e46a035b77c 51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ef5dd2f65ab52a0d8c2bf8d3a762e53fe68b5451",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
