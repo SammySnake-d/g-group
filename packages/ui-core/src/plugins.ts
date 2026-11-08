@@ -6,16 +6,17 @@
 
 export const PLUGIN_CATEGORIES = Object.freeze(["source", "outbound", "ui", "command"] as const);
 export type PluginCategory = (typeof PLUGIN_CATEGORIES)[number];
+// 需求 D04.2:三类插件(数据源 DataSource、输出渠道 OutboundChannel、右侧界面扩展 UIExtension),另加只贡献斜杠命令的命令插件
 export const CATEGORY_LABEL: Readonly<Record<PluginCategory, string>> = Object.freeze({
-  source: "取数据",
-  outbound: "发出去",
-  ui: "面板",
+  source: "数据源",
+  outbound: "输出渠道",
+  ui: "界面扩展",
   command: "命令",
 });
 export const CATEGORY_DESC: Readonly<Record<PluginCategory, string>> = Object.freeze({
-  source: "让助手读到外面的东西:别的聊天软件、网页、订阅",
-  outbound: "让助手往外发:邮件、请求、别的群",
-  ui: "在聊天旁边多一块面板",
+  source: "让助手读到外面的东西:别的聊天软件、网页、订阅。取来的内容一律标「不可信外部数据」,只当背景",
+  outbound: "让助手往外发:邮件、请求。要先按六项预授权说好发给谁、发什么、多频繁",
+  ui: "在聊天右侧多一块面板",
   command: "在输入框里用 / 唤起的一条能力",
 });
 
@@ -576,6 +577,52 @@ export function attachable(installs: readonly PluginInstall[], conv: string): Pl
   return installs.filter((s) => isInstalled(s) && !s.convs.includes(conv));
 }
 
+/** 本会话能用的插件:已启用、挂在这个聊天;给了类别只列这一类。输入框「+」列数据源时用 category = "source" */
+export function pluginsInConv(installs: readonly PluginInstall[], conv: string, category?: PluginCategory): PluginInstall[] {
+  return installs.filter((s) => s.phase === "enabled" && s.manifest !== null && s.convs.includes(conv) && (category === undefined || s.manifest.category === category));
+}
+
+export type CommandBlock = "unknown" | "not_installed" | "needs_update" | "disabled" | "not_attached" | "caller_not_allowed" | "permissions_pending";
+export type CommandCheck =
+  | { ok: true; plugin: string; command: PluginCommand }
+  | { ok: false; plugin: string | null; code: CommandBlock; reason: string };
+
+/**
+ * 斜杠命令能不能用(需求 I4①:命令插件不能绕过权限和版本校验)。按已装版本的清单找命令,依次要求:
+ * 已安装、已启用、挂在本会话、调用者在白名单、清单里的权限你都同意过。catalog 只用来说明「去装 / 去更新」。
+ */
+export function commandAvailability(
+  installs: readonly PluginInstall[],
+  name: string,
+  at: { conv: string; caller: string },
+  catalog: readonly PluginManifest[] = [],
+): CommandCheck {
+  const n = name.trim().replace(/^\//, "");
+  const owners = installs.filter((s) => isInstalled(s) && s.manifest?.contributes.commands.some((c) => c.name === n));
+  if (owners.length === 0) {
+    const listed = catalog.find((m) => m.contributes.commands.some((c) => c.name === n));
+    const mine = listed && installs.find((s) => s.id === listed.id && isInstalled(s));
+    if (listed && mine) return { ok: false, plugin: listed.id, code: "needs_update", reason: `/${n} 要把「${listed.name}」更新到 v${listed.version} 才有` };
+    if (listed) return { ok: false, plugin: listed.id, code: "not_installed", reason: `/${n} 来自「${listed.name}」,还没安装` };
+    return { ok: false, plugin: null, code: "unknown", reason: `没有 /${n} 这个命令` };
+  }
+  let first: CommandCheck | undefined;
+  for (const s of owners) {
+    const m = s.manifest!;
+    const command = m.contributes.commands.find((c) => c.name === n)!;
+    const block = (code: CommandBlock, reason: string): CommandCheck => ({ ok: false, plugin: s.id, code, reason });
+    const r =
+      s.phase !== "enabled" ? block("disabled", `「${m.name}」已停用,/${n} 用不了`)
+      : !s.convs.includes(at.conv) ? block("not_attached", `「${m.name}」没挂到这个聊天,/${n} 用不了`)
+      : !s.callers.includes(at.caller) ? block("caller_not_allowed", `${at.caller} 不在「${m.name}」的调用名单里`)
+      : permissionsToConsent(s.granted, m.permissions).length > 0 ? block("permissions_pending", `「${m.name}」有新权限等你同意,先暂停`)
+      : ({ ok: true, plugin: s.id, command } as const);
+    if (r.ok) return r;
+    first ??= r;
+  }
+  return first!;
+}
+
 // ---------------------------------------------------------------- 市场列表
 
 export type MarketFilter = "all" | "installed" | "updates";
@@ -657,4 +704,77 @@ export function marketCounts(catalog: readonly PluginManifest[], installs: reado
     updates: all.filter((it) => it.hasUpdate).length,
     byCategory,
   };
+}
+
+// ---------------------------------------------------------------- 输出渠道的外发预授权
+
+// 需求 US12 第 5 条:ScopedPreAuthGrant(commitment_id, sender_identity, recipient_allowlist, allowed_data_sources,
+// content_policy_tag, max_rate_per_hour)。每次实际发送前复核授权和插件版本;撤销或凭据失效立即阻断外发。
+export const CONTENT_POLICIES = Object.freeze(["summary", "summary-links", "full"] as const);
+export type ContentPolicy = (typeof CONTENT_POLICIES)[number];
+export const CONTENT_POLICY_LABEL: Readonly<Record<ContentPolicy, string>> = Object.freeze({
+  summary: "只发摘要,不带原文和附件",
+  "summary-links": "摘要,附原消息链接",
+  full: "可以带原文和附件(只限授权的数据源)",
+});
+export interface OutboundGrant {
+  /** 为哪项承诺外发(定时、告警规则) */
+  commitment: string;
+  /** 用哪个账号发 */
+  sender: string;
+  /** 收件白名单;对助手只读,它改不了 */
+  recipients: string[];
+  /** 能用哪些数据 */
+  sources: string[];
+  contentPolicy: ContentPolicy;
+  maxPerHour: number;
+  /** 授权时的插件版本;插件升级后要重新确认 */
+  pluginVersion: string;
+  /** 你撤销了,或凭据失效(OAuth 401)→ 外发立即阻断 */
+  revoked: boolean;
+}
+export type RecipientKind = "email" | "url";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const okRecipient = (r: string, kind: RecipientKind) => {
+  if (kind === "email") return EMAIL_RE.test(r);
+  try {
+    return new URL(r).protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+/** 一段文字(逗号、顿号、空白、换行分隔)→ 去重后的地址列表 */
+export function splitList(text: string): string[] {
+  return [...new Set(text.split(/[\s,;\u3001\uff0c\uff1b]+/).map((x) => x.trim()).filter(Boolean))];
+}
+
+/** 校验一份预授权,返回全部问题(空数组 = 通过) */
+export function validateGrant(g: OutboundGrant, kind: RecipientKind): string[] {
+  const errors: string[] = [];
+  if (!g.commitment.trim()) errors.push("要写清楚这份授权给哪项承诺用,比如「每天 8 点日报」");
+  if (!EMAIL_RE.test(g.sender.trim())) errors.push(g.sender.trim() ? `发件账号「${g.sender.trim()}」不是邮箱地址` : "要选发件账号");
+  if (g.recipients.length === 0) errors.push(kind === "email" ? "收件白名单至少要有一个邮箱" : "至少要有一个目标地址");
+  for (const r of g.recipients) if (!okRecipient(r, kind)) errors.push(kind === "email" ? `收件人「${r}」不是邮箱地址` : `目标地址「${r}」不是 https 地址`);
+  if (g.sources.length === 0) errors.push("至少选一个能用的数据源");
+  if (!(CONTENT_POLICIES as readonly string[]).includes(g.contentPolicy)) errors.push(`内容策略「${String(g.contentPolicy)}」不合法`);
+  if (!Number.isInteger(g.maxPerHour) || g.maxPerHour < 1 || g.maxPerHour > 60) errors.push("每小时上限要是 1–60 的整数");
+  return errors;
+}
+
+export type SendBlock = "plugin_unavailable" | "no_grant" | "blocked_on_auth" | "version_changed" | "recipient_not_allowed" | "source_not_allowed" | "rate_limited";
+export type SendCheck = { ok: true } | { ok: false; code: SendBlock; reason: string };
+
+/** 每次实际外发前的复核:插件可用、授权在且没被撤销、插件版本没变、收件人和数据源都在授权里、没超每小时上限 */
+export function checkSend(s: PluginInstall, grant: OutboundGrant | null, attempt: { recipients: readonly string[]; sources: readonly string[]; sentLastHour: number }): SendCheck {
+  const no = (code: SendBlock, reason: string): SendCheck => ({ ok: false, code, reason });
+  if (s.phase !== "enabled" || !s.manifest) return no("plugin_unavailable", `「${pluginName(s)}」不可用(${PHASE_LABEL[s.phase]}),外发暂停`);
+  if (!grant) return no("no_grant", "还没有外发预授权,一封也发不出去");
+  if (grant.revoked) return no("blocked_on_auth", "授权已失效或被撤销,外发已阻断,等你重新授权");
+  if (grant.pluginVersion !== s.manifest.version) return no("version_changed", `插件从 v${grant.pluginVersion} 变成了 v${s.manifest.version},外发授权要你重新确认`);
+  const badTo = attempt.recipients.filter((r) => !grant.recipients.includes(r));
+  if (badTo.length) return no("recipient_not_allowed", `${badTo.map((r) => `「${r}」`).join("")}不在收件白名单里`);
+  const badSrc = attempt.sources.filter((x) => !grant.sources.includes(x));
+  if (badSrc.length) return no("source_not_allowed", `数据源${badSrc.map((x) => `「${x}」`).join("")}不在授权范围里`);
+  if (attempt.sentLastHour >= grant.maxPerHour) return no("rate_limited", `这一小时已经发了 ${attempt.sentLastHour} 次,到上限 ${grant.maxPerHour} 了`);
+  return { ok: true };
 }

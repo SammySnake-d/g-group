@@ -4,6 +4,8 @@ import {
   attachable,
   canInvoke,
   changesSince,
+  checkSend,
+  commandAvailability,
   commandUsage,
   compareSemver,
   hasUpdate,
@@ -17,9 +19,13 @@ import {
   permissionsToConsent,
   pluginCommands,
   pluginReducer,
+  pluginsInConv,
   readInstallSource,
   seedInstalled,
+  splitList,
+  validateGrant,
   validateManifest,
+  type OutboundGrant,
   type PluginInstall,
   type PluginManifest,
   type PluginPermission,
@@ -137,7 +143,7 @@ test("validateManifest:缺字段逐个列出中文说明", () => {
 
 test("validateManifest:版本号、类别、id、简介长度不合法", () => {
   assert.deepEqual(validateManifest(raw({ version: "1.2" })), { ok: false, errors: ["版本号「1.2」不合法:要写成 主版本.次版本.修订号,比如 1.4.2"] });
-  assert.deepEqual(validateManifest(raw({ category: "widget" })), { ok: false, errors: ["类别「widget」不合法:只能是 source(取数据) / outbound(发出去) / ui(面板) / command(命令)"] });
+  assert.deepEqual(validateManifest(raw({ category: "widget" })), { ok: false, errors: ["类别「widget」不合法:只能是 source(数据源) / outbound(输出渠道) / ui(界面扩展) / command(命令)"] });
   assert.deepEqual(validateManifest(raw({ id: "Acme Notes" })), { ok: false, errors: ["插件 id「Acme Notes」不合法:只能用小写字母、数字、点和 -,3–64 位,比如 g-group.feishu"] });
   assert.deepEqual(validateManifest(raw({ summary: "很".repeat(81) })), { ok: false, errors: ["一句话简介太长:最多 80 字,现在 81 字"] });
   assert.deepEqual(validateManifest(raw({ changelog: [{ version: "0.1", date: "10/30", notes: [] }] })), {
@@ -449,4 +455,94 @@ test("marketList:按名称(中文按拼音)和最近更新排序", () => {
 test("marketCounts:总数、已安装、有更新、各类别数", () => {
   assert.deepEqual(marketCounts(CATALOG, INSTALLS), { all: 7, installed: 4, updates: 2, byCategory: { source: 2, outbound: 1, ui: 1, command: 3 } });
   assert.deepEqual(marketCounts(CATALOG, []), { all: 6, installed: 0, updates: 0, byCategory: { source: 2, outbound: 1, ui: 1, command: 2 } });
+});
+
+// ---------------------------------------------------------------- 命令可用性、本会话插件
+
+test("commandAvailability:已装、已启用、挂在本会话、调用者在白名单、权限都同意过,缺一不可", () => {
+  const at = { conv: "g", caller: "argon" };
+  const on = seedInstalled(mf({}), { enabled: true, convs: ["g"], callers: ["argon"] });
+  const ok = commandAvailability([on], "/feishu", at);
+  assert.equal(ok.ok, true);
+  assert.deepEqual(ok.ok && [ok.plugin, ok.command.name], ["g-group.feishu", "feishu"]);
+  const why = (installs: PluginInstall[], name = "feishu", where = at) => {
+    const r = commandAvailability(installs, name, where, CATALOG);
+    return r.ok ? "ok" : `${r.code}|${r.reason}`;
+  };
+  assert.equal(why([{ ...on, phase: "disabled" }]), "disabled|「飞书」已停用,/feishu 用不了");
+  assert.equal(why([on], "feishu", { conv: "g-design", caller: "argon" }), "not_attached|「飞书」没挂到这个聊天,/feishu 用不了");
+  assert.equal(why([on], "feishu", { conv: "g", caller: "codex" }), "caller_not_allowed|codex 不在「飞书」的调用名单里");
+  // 版本升级扩大了权限、还没同意 → 暂停,不能绕过
+  assert.equal(why([{ ...on, manifest: mf({ permissions: [READ, DOCS] }) }]), "permissions_pending|「飞书」有新权限等你同意,先暂停");
+  // 安装中、卸载中都不算装好
+  assert.equal(why([{ ...on, phase: "uninstalling" }]), "not_installed|/feishu 来自「飞书」,还没安装");
+  assert.equal(why([], "mail"), "not_installed|/mail 来自「Gmail」,还没安装");
+  // 新版本才有的命令:已装旧版 → 要更新
+  const oldGmail = seedInstalled(mf({ id: "g-group.gmail", name: "Gmail", version: "2.0.0", contributes: { commands: [], panels: [], events: [] } }), { enabled: true, convs: ["g"], callers: ["argon"] });
+  assert.equal(why([oldGmail], "mail"), "needs_update|/mail 要把「Gmail」更新到 v2.1.0 才有");
+  assert.equal(why([on], "nope"), "unknown|没有 /nope 这个命令");
+  // 两个插件都给了同名命令:有一个能用就用它
+  const other = seedInstalled(mf({ id: "acme.feishu", name: "飞书(社区版)" }), { enabled: false, convs: [], callers: [] });
+  const both = commandAvailability([other, on], "feishu", at);
+  assert.equal(both.ok && both.plugin, "g-group.feishu");
+  assert.equal(why([other]), "disabled|「飞书(社区版)」已停用,/feishu 用不了");
+});
+
+test("pluginsInConv:列出本会话可用的插件,可按类别只要数据源", () => {
+  const gmail = mf({ id: "g-group.gmail", name: "Gmail", category: "outbound" });
+  const tg = mf({ id: "x.telegram", name: "Telegram 群" });
+  const installs = [
+    seedInstalled(mf({}), { enabled: true, convs: ["g"], callers: [] }),
+    seedInstalled(gmail, { enabled: true, convs: ["g"], callers: [] }),
+    seedInstalled(tg, { enabled: false, convs: ["g"], callers: [] }),
+    seedInstalled(mf({ id: "g-group.cve", name: "CVE 订阅" }), { enabled: true, convs: ["g-design"], callers: [] }),
+  ];
+  assert.deepEqual(pluginsInConv(installs, "g").map((s) => s.id), ["g-group.feishu", "g-group.gmail"]);
+  assert.deepEqual(pluginsInConv(installs, "g", "source").map((s) => s.id), ["g-group.feishu"]);
+  assert.deepEqual(pluginsInConv(installs, "g-design", "source").map((s) => s.id), ["g-group.cve"]);
+  assert.deepEqual(pluginsInConv(installs, "dm-argon"), []);
+});
+
+// ---------------------------------------------------------------- 外发预授权
+
+const GRANT: OutboundGrant = {
+  commitment: "每天 8 点日报",
+  sender: "me@team.com",
+  recipients: ["wang@team.com"],
+  sources: ["本群消息", "g-group.cve"],
+  contentPolicy: "summary",
+  maxPerHour: 3,
+  pluginVersion: "2.1.0",
+  revoked: false,
+};
+
+test("splitList / validateGrant:六项都要说清楚,地址逐个校验", () => {
+  assert.deepEqual(splitList(" a@x.com,b@x.com\n c@x.com、a@x.com;d@x.com\uff0ce@x.com "), ["a@x.com", "b@x.com", "c@x.com", "d@x.com", "e@x.com"]);
+  assert.deepEqual(validateGrant(GRANT, "email"), []);
+  assert.deepEqual(validateGrant({ ...GRANT, commitment: " ", sender: "me", recipients: [], sources: [], maxPerHour: 0 }, "email"), [
+    "要写清楚这份授权给哪项承诺用,比如「每天 8 点日报」",
+    "发件账号「me」不是邮箱地址",
+    "收件白名单至少要有一个邮箱",
+    "至少选一个能用的数据源",
+    "每小时上限要是 1–60 的整数",
+  ]);
+  assert.deepEqual(validateGrant({ ...GRANT, sender: "", recipients: ["wang@team.com", "老王"], maxPerHour: 2.5 }, "email"), ["要选发件账号", "收件人「老王」不是邮箱地址", "每小时上限要是 1–60 的整数"]);
+  assert.deepEqual(validateGrant({ ...GRANT, recipients: ["https://hooks.example.com/a", "http://x.com"] }, "url"), ["目标地址「http://x.com」不是 https 地址"]);
+});
+
+test("checkSend:每次外发前复核授权、插件版本、收件人、数据源和频率", () => {
+  const gmail = seedInstalled(mf({ id: "g-group.gmail", name: "Gmail", category: "outbound", version: "2.1.0" }), { enabled: true, convs: ["g"], callers: ["argon"] });
+  const send = { recipients: ["wang@team.com"], sources: ["本群消息"], sentLastHour: 2 };
+  const why = (s: PluginInstall, g: OutboundGrant | null, a = send) => {
+    const r = checkSend(s, g, a);
+    return r.ok ? "ok" : `${r.code}|${r.reason}`;
+  };
+  assert.equal(why(gmail, GRANT), "ok");
+  assert.equal(why({ ...gmail, phase: "disabled" }, GRANT), "plugin_unavailable|「Gmail」不可用(已停用),外发暂停");
+  assert.equal(why(gmail, null), "no_grant|还没有外发预授权,一封也发不出去");
+  assert.equal(why(gmail, { ...GRANT, revoked: true }), "blocked_on_auth|授权已失效或被撤销,外发已阻断,等你重新授权");
+  assert.equal(why(gmail, { ...GRANT, pluginVersion: "2.0.0" }), "version_changed|插件从 v2.0.0 变成了 v2.1.0,外发授权要你重新确认");
+  assert.equal(why(gmail, GRANT, { ...send, recipients: ["wang@team.com", "hacker@evil.com"] }), "recipient_not_allowed|「hacker@evil.com」不在收件白名单里");
+  assert.equal(why(gmail, GRANT, { ...send, sources: ["~/.ssh"] }), "source_not_allowed|数据源「~/.ssh」不在授权范围里");
+  assert.equal(why(gmail, GRANT, { ...send, sentLastHour: 3 }), "rate_limited|这一小时已经发了 3 次,到上限 3 了");
 });
