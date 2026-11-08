@@ -690,6 +690,18 @@ function r11ExtraReference(): string | undefined {
     return same(other) || !same(clone) ? "无关 HEAD 的额外引用被当成共同历史" : undefined;
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
+function r11ForgedAncestor(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-ancestor-"));
+  try {
+    const repo = path.join(tmp, "target"), other = path.join(tmp, "other"), clone = path.join(tmp, "clone");
+    fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main"); write(repo, { "neutral.txt": `${NEUTRAL} target\n` }); commit(repo, "target"); otherRepo(other);
+    const original = sh(other, "rev-parse", "HEAD"); sh(other, "fetch", "-q", repo, "HEAD"); const target = sh(other, "rev-parse", "FETCH_HEAD");
+    if (original === target || /^parent /m.test(sh(other, "cat-file", "-p", original))) throw new Error("中性 HEAD 本应是无父提交");
+    write(path.join(other, ".git/info"), { grafts: `${original} ${target}\n` }); sh(tmp, "clone", "-q", repo, clone);
+    const same = sameRepoClone(repo);
+    return same(other) || !same(clone) ? "可修改的祖先覆写被当成真实共同历史" : undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
 function r11Attestation(nonGit: boolean): string | undefined {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-attest-"));
   try {
@@ -749,6 +761,14 @@ function r11Guard(): string | undefined {
 export const CASES: Case[] = [
   { name: "R11-01 remote 相同但历史不相交仍拒绝,共同历史放行", direct: r11RepoIdentity, expect: null },
   { name: "R11-01 无关 HEAD 的额外引用不证明共同历史", direct: r11ExtraReference, expect: null },
+  { name: "R11-01 工作库的祖先覆写不证明共同历史", direct: r11ForgedAncestor, expect: null },
+  { name: "R11-01 工作库祖先覆写经来源门禁拒绝", authorTurns: (repo) => {
+    const other = path.join(path.dirname(repo), "ancestor-override"); otherRepo(other);
+    const original = sh(other, "rev-parse", "HEAD"); sh(other, "fetch", "-q", repo, "HEAD"); const target = sh(other, "rev-parse", "FETCH_HEAD");
+    if (original === target || /^parent /m.test(sh(other, "cat-file", "-p", original))) throw new Error("中性 HEAD 本应是无父提交");
+    write(path.join(other, ".git/info"), { grafts: `${original} ${target}\n` }); write(other, { "packages/core/src/add.ts": ADD_OK });
+    return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(other, "packages/core/src/add.ts"), content: ADD_OK }, result: "File written successfully" }] }];
+  }, expect: "找不到对本仓库的任何操作" },
   { name: "R11-01 无关 HEAD 的额外引用经来源门禁拒绝", authorTurns: (repo) => {
     const other = path.join(path.dirname(repo), "extra-ref"); otherRepo(other);
     sh(other, "fetch", "-q", repo, "HEAD"); sh(other, "update-ref", "refs/tags/neutral-shared", "FETCH_HEAD");
