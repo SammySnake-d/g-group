@@ -899,8 +899,8 @@ function r12CommitCase(which: "changed" | "history"): string | undefined {
     sh(repo, "fetch", "-q", clone, "HEAD"); sh(repo, "merge", "-q", "--ff-only", "FETCH_HEAD");
     sh(clone, "checkout", "-q", "-b", "side", baseSha); write(clone, { [R12_FILE]: R12_CONTENT }); const side = make("side");
     sh(repo, "fetch", "-q", clone, "side:refs/heads/side"); fs.rmSync(clone, { recursive: true, force: true });
-    const positive = r12CommitProof([current], undefined, repo, [R12_FILE]);
-    const negative = r12CommitProof([which === "changed" ? baseline : side], undefined, repo, [R12_FILE]);
+    const positive = r12CommitProof([current], undefined, fs.realpathSync(repo), [R12_FILE]);
+    const negative = r12CommitProof([which === "changed" ? baseline : side], undefined, fs.realpathSync(repo), [R12_FILE]);
     return positive.includes(clone) && negative.length === 0 ? undefined : `提交证明双侧不符:正=${JSON.stringify(positive)},反=${JSON.stringify(negative)}`;
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
@@ -926,8 +926,8 @@ function r12SessionDirsCase(): string | undefined {
     const commits = committedCloneTurns(repo), clone = authorClone(repo);
     const writeTurn = { model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { cwd: clone, command: "printf neutral > packages/core/src/add.ts" } }] };
     fs.rmSync(clone, { recursive: true, force: true });
-    const yes = r12SessionDirs([writeTurn, ...commits], undefined, repo, ["packages/core/src/add.ts"]);
-    const no = r12SessionDirs([writeTurn], undefined, repo, ["packages/core/src/add.ts"]);
+    const yes = r12SessionDirs([writeTurn, ...commits], undefined, fs.realpathSync(repo), ["packages/core/src/add.ts"]);
+    const no = r12SessionDirs([writeTurn], undefined, fs.realpathSync(repo), ["packages/core/src/add.ts"]);
     return yes.includes(clone) && no.length === 0 ? undefined : `整段会话目录取证不符:正=${JSON.stringify(yes)},反=${JSON.stringify(no)}`;
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
