@@ -71,6 +71,11 @@ export interface HostOptions {
   /** 派给 Compute 的内置工具白名单;默认 Read/Write/Edit/Glob/Grep/Bash。 */
   readonly computeTools?: readonly string[];
   readonly assemble?: RoundAssembler;
+  /** 整轮五块字节预算(默认 ROUND_BUDGET_BYTES);数值待决(需求文档 v3.20 §8.1 待决 13)。 */
+  readonly roundBudgetBytes?: number;
+  /** 单轮回读预算 max_recall(默认 RECALL_BUDGET_BYTES)与每条引用保底切片(默认 RECALL_MIN_SLICE_BYTES);数值待决。 */
+  readonly recallBudgetBytes?: number;
+  readonly recallMinSliceBytes?: number;
   readonly now?: () => string;
   /** 宿主数据目录(插件包装在这里);默认数据库文件所在目录。 */
   readonly dataDir?: string;

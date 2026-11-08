@@ -28,6 +28,8 @@ export interface AssembleContext {
   readonly tasks: readonly string[];
   /** 被引用消息原文(第 5 块按需换入)。 */
   readonly pointers: readonly { readonly ref: string; readonly text: string }[];
+  /** 整轮五块的字节预算;不给用 ROUND_BUDGET_BYTES。数值待决(需求文档 v3.20 §8.1 待决 13)。 */
+  readonly budgetBytes?: number;
 }
 export type RoundAssembler = (ctx: AssembleContext) => RoundRequest;
 
@@ -100,8 +102,25 @@ export const CONTACT_TOOLS = [
   "verdict(taskId, sourceSeq, accept|revise, feedback?) — 记下提出者对交付的回复:通过或要改",
 ].join("\n");
 
-/** 预算:整个请求(五块文本之和)的 UTF-8 字节上限。超了显式失败,不静默截断(D06 §2)。 */
+/** 预算:整个请求(五块文本之和)的 UTF-8 字节上限。超了显式失败,不静默截断(D06 §2)。数值待决(需求文档 v3.20 §8.1 待决 13),宿主可用参数覆盖。 */
 export const ROUND_BUDGET_BYTES = 400_000;
+/** 单轮回读预算 max_recall(第 5 块被引用原文的 UTF-8 字节合计,D06.3 第 3–4 条)。数值待决(同上),宿主可用参数覆盖。 */
+export const RECALL_BUDGET_BYTES = 64_000;
+/** 每条有效引用的保底切片 min_slice_per_quote(UTF-8 字节,D06.3 第 4 条)。数值待决(同上)。 */
+export const RECALL_MIN_SLICE_BYTES = 512;
+
+/** 五块装配失败(超预算、输入不合格等):带内核给的原因,宿主据此显式失败,不截断、不吞。 */
+export class RoundAssembleError extends Error {
+  readonly reason: string;
+  readonly need: number | null;
+  readonly budget: number | null;
+  constructor(reason: string, detail: string, need: number | null = null, budget: number | null = null) {
+    super(`五块装配失败(${reason}):${detail}`);
+    this.reason = reason;
+    this.need = need;
+    this.budget = budget;
+  }
+}
 
 /**
  * 内核 assembleRound 的宿主适配:宿主状态 → RoundAssembleInput。
