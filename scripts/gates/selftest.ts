@@ -678,6 +678,18 @@ function r11RepoIdentity(): string | undefined {
     return before || after || !good ? `仓库身份不符:不同 remote=${before},同 remote=${after},共同历史=${good}` : undefined;
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
+function r11ExtraReference(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-refs-"));
+  try {
+    const repo = path.join(tmp, "target"), other = path.join(tmp, "other"), clone = path.join(tmp, "clone");
+    fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main"); write(repo, { "neutral.txt": `${NEUTRAL} target\n` }); commit(repo, "target");
+    otherRepo(other); sh(other, "fetch", "-q", repo, "HEAD"); sh(other, "update-ref", "refs/tags/neutral-shared", "FETCH_HEAD"); sh(tmp, "clone", "-q", repo, clone);
+    const mb = spawnSync("git", [...GIT_SAFE_ARGS, "merge-base", "HEAD", "FETCH_HEAD"], { cwd: other, env: gitEnv() });
+    if (mb.status !== 1) throw new Error("中性仓库的 HEAD 历史并非不相交");
+    const same = sameRepoClone(repo);
+    return same(other) || !same(clone) ? "无关 HEAD 的额外引用被当成共同历史" : undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
 function r11Attestation(nonGit: boolean): string | undefined {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-attest-"));
   try {
@@ -736,6 +748,15 @@ function r11Guard(): string | undefined {
 
 export const CASES: Case[] = [
   { name: "R11-01 remote 相同但历史不相交仍拒绝,共同历史放行", direct: r11RepoIdentity, expect: null },
+  { name: "R11-01 无关 HEAD 的额外引用不证明共同历史", direct: r11ExtraReference, expect: null },
+  { name: "R11-01 无关 HEAD 的额外引用经来源门禁拒绝", authorTurns: (repo) => {
+    const other = path.join(path.dirname(repo), "extra-ref"); otherRepo(other);
+    sh(other, "fetch", "-q", repo, "HEAD"); sh(other, "update-ref", "refs/tags/neutral-shared", "FETCH_HEAD");
+    const mb = spawnSync("git", [...GIT_SAFE_ARGS, "merge-base", "HEAD", "FETCH_HEAD"], { cwd: other, env: gitEnv() });
+    if (mb.status !== 1) throw new Error("中性仓库的 HEAD 历史并非不相交");
+    write(other, { "packages/core/src/add.ts": ADD_OK });
+    return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(other, "packages/core/src/add.ts"), content: ADD_OK }, result: "File written successfully" }] }];
+  }, expect: "找不到对本仓库的任何操作" },
   { name: "R11-01 目录标签不足以确认仓库路径", direct: () => {
     const root = path.resolve("/tmp/fixture-target"), unrelated = path.resolve("/tmp/elsewhere/g-group/a.ts");
     return !isRepoPath(path.join(root, "a.ts"), root, [], () => false) || isRepoPath(unrelated, root, [], () => false) ? "仓库路径边界不正确" : undefined;
