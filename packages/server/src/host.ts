@@ -415,6 +415,7 @@ export class Host {
       pendingForUser: pending,
       lastMessagePreview: last ? last.text.slice(0, 200) : null,
       updatedAt: r.updated_at,
+      announcementCount: r.kind === "group" ? this.announcements.count(roomId) : 0,
     };
   }
   markRead(roomId: string, m: Member, seq: number) {
@@ -977,7 +978,8 @@ export class Host {
       system: CONTACT_SYSTEM,
       tools: CONTACT_TOOLS,
       persona: identityOf(contactId, contact),
-      roomRules: rooms.map((r) => ({ roomId: r.id, title: r.title, rules: r.rules, version: r.rules_version })),
+      // 第 1 块群规快照 = 群规 + 当前全部有效公告(U86);版本只在两者真改时前进(U85/D22)
+      roomRules: rooms.map((r) => ({ roomId: r.id, title: r.title, ...this.announcements.snapshot(r.id, r.rules, r.rules_version) })),
       ledger: ledgerLines,
       boundIds: ledgerLines.filter((l) => freshKeys.has(`${l.roomId}#${l.sourceSeq}`) || freshTasks.has(l.taskId)).map((l) => l.id),
       processedSeq: Object.fromEntries(rooms.map((r) => [r.id, this.cursor(contactId, r.id)])),
