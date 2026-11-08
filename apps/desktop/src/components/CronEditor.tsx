@@ -1,6 +1,7 @@
 /* 定时编辑器（新建和修改共用）：做什么 → 由谁、在哪 → 什么时候醒 → 什么时候开口 → 开启。
    什么时候醒有四种：按时间重复（预设芯片 + 自定义 cron，逐段校验、人话说明、接下来几次）/ 只跑一次 / 每 N 条消息 / 某件事发生（插件来源）。
    时刻一律按本地时区算，界面写明是哪个时区。保存前整张校验，不合法保存按钮不可用。 */
+import { pinfo } from '@/pluginInfo'
 import { useRef, useState, type ReactNode } from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { AlertCircle, Megaphone, X } from 'lucide-react'
@@ -100,7 +101,7 @@ function EditorBody({ init, seed, conv, owner, onClose, onSave }: { init?: Cron;
 
   const g = convs.find((c) => c.id === where)
   const candidates = (g?.members ?? []).filter(isBot)
-  const sources = plugins.filter((p) => p.installed && p.kind === 'source' && !!where && p.convs.includes(where))
+  const sources = plugins.map(pinfo).filter((p) => p.installed && p.kind === 'source' && !!where && p.convs.includes(where))
   const trigger: CronTrigger =
     kind === 'cron' ? { kind, expr }
     : kind === 'once' ? { kind, at: onceAt }

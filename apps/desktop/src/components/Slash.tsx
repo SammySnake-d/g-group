@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { people, type Conversation } from '@/data'
 import { useApp } from '@/ctx'
 import { SOURCE_PAGE } from '@/commands'
+import { findInfo, pinfo } from '@/pluginInfo'
 import { Avatar } from './Avatar'
 import { Tip } from './Messages'
 import { CronEditor } from './CronEditor'
@@ -17,7 +18,7 @@ export function SourceBadge({ src }: { src: SlashSource }) {
   const box = 'flex shrink-0 items-center gap-1 rounded-md border border-line px-1.5 py-[1px] text-[11px] text-fg-2'
   if (!s || s.kind === 'builtin') return <span data-testid="slash-src" className="shrink-0 px-1.5 text-[11px] text-fg-3">内置</span>
   if (s.kind === 'plugin') {
-    const p = plugins.find((x) => x.id === s.id)
+    const p = findInfo(plugins, s.id)
     return (
       <span data-testid="slash-src" className={box}>
         <span className="grid h-3.5 w-3.5 place-items-center rounded-[4px] text-[8.5px] font-semibold leading-none text-white" style={{ background: p?.color }}>{p?.letter}</span>
@@ -82,9 +83,9 @@ export function SlashMenu({ items, sel, query, onHover, onPick }: { items: Slash
 export function SourcePicker({ conv, className }: { conv: Conversation; className: string }) {
   const { plugins, push, setSection } = useApp()
   const [open, setOpen] = useState(false)
-  const list = plugins.filter((p) => p.kind === 'source' && p.installed)
+  const list = plugins.map(pinfo).filter((p) => p.kind === 'source' && p.installed)
   const why = (p: (typeof list)[number]) => {
-    if ((p as { enabled?: boolean }).enabled === false) return '插件已停用'
+    if (!p.enabled) return '插件已停用'
     if (p.revoked) return '授权失效了，重新授权后才能取'
     if (!p.convs.includes(conv.id)) return '没挂在这个会话'
     if (!SOURCE_PAGE[p.id]) return '只推送提醒，没有可勾选的消息'

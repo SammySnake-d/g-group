@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { people, type Conversation, type QuoteRef, artifacts, type Artifact } from '@/data'
 import { useApp } from '@/ctx'
 import { allCommands, pluginStates, SOURCE_PAGE } from '@/commands'
+import { findInfo } from '@/pluginInfo'
 import { Avatar } from './Avatar'
 import { Tip } from './Messages'
 import { broken } from '@/mut'
@@ -21,7 +22,7 @@ export function Composer({ conv, draft, setDraft, quotes, onRemoveQuote, onSend,
   conv: Conversation; draft: string; setDraft: (v: string | ((d: string) => string)) => void; quotes: QuoteRef[]
   onRemoveQuote: (q: QuoteRef) => void; onSend: (text?: string) => void; inputRef: RefObject<HTMLTextAreaElement | null>
 }) {
-  const { push, pushMsg, toast, editing, setEditing, plugins, summarize, addTask, setNotice, openSplit, openSchedule } = useApp()
+  const { push, pushMsg, toast, editing, setEditing, plugins, pluginCatalog, summarize, addTask, setNotice, openSplit, openSchedule } = useApp()
   const fileRef = useRef<HTMLInputElement>(null)
   const imgRef = useRef<HTMLInputElement>(null)
   /* C-US19：截图、文件、图片都真的发出去，变成一条文件消息，同时进「文件」里，写明来自这个会话 */
@@ -48,8 +49,8 @@ export function Composer({ conv, draft, setDraft, quotes, onRemoveQuote, onSend,
   const [slashIdx, setSlashIdx] = useState(0)
   const [dismissed, setDismissed] = useState<string | null>(null)
   const [nudge, setNudge] = useState(0)
-  const where = useMemo(() => ({ scope: conv.kind, plugins: pluginStates(plugins, conv.id), assistants: conv.members.filter((m) => m !== 'me' && !people[m]?.human) }), [conv.kind, conv.id, conv.members, plugins])
-  const entries = useMemo(() => availableCommands(allCommands(plugins), where), [plugins, where])
+  const where = useMemo(() => ({ scope: conv.kind, plugins: pluginStates(pluginCatalog, plugins, conv.id), assistants: conv.members.filter((m) => m !== 'me' && !people[m]?.human) }), [conv.kind, conv.id, conv.members, pluginCatalog, plugins])
+  const entries = useMemo(() => availableCommands(allCommands(pluginCatalog, plugins), where), [pluginCatalog, plugins, where])
   const assistantNames = useMemo(() => where.assistants.map((m) => people[m].name), [where])
   const token = editing ? null : detectSlash(draft, Math.min(caret, draft.length))
   const tokenKey = token ? `${token.start}:${token.query}` : ''
@@ -79,8 +80,8 @@ export function Composer({ conv, draft, setDraft, quotes, onRemoveQuote, onSend,
     if (src?.kind === 'plugin') {
       const page = SOURCE_PAGE[src.id]
       if (page) { push({ t: 'source', id: page }, true); return true }
-      if (src.id === 'p-pulse') { openSplit({ t: 'group', id: conv.id, tab: 'plugin' }); return true }
-      toast(`插件命令要等后端连接：${plugins.find((p) => p.id === src.id)?.name ?? src.id} 的 /${c.name} 现在还不能真的执行`)
+      if (src.id === 'g-group.pulse') { openSplit({ t: 'group', id: conv.id, tab: 'plugin' }); return true }
+      toast(`插件命令要等后端连接：${findInfo(plugins, src.id)?.name ?? src.id} 的 /${c.name} 现在还不能真的执行`)
       return false
     }
     switch (c.name) {

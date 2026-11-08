@@ -34,8 +34,8 @@ test("打 / 弹出命令菜单:贴着输入框上沿、左对齐;每行有 /名�
   await expect(item(page, "mail").getByTestId("slash-src")).toHaveText(/插件 · Gmail$/);
   await expect(item(page, "review").getByTestId("slash-src")).toHaveText(/助手 · Claude Code$/);
   // Webhook 装了但没挂在本群、Telegram 没装:灰显并说明原因
-  await expect(item(page, "webhook").getByTestId("slash-disabled")).toHaveText("Webhook 没挂在这个会话");
-  await expect(item(page, "telegram").getByTestId("slash-disabled")).toHaveText("Telegram 群 插件还没安装");
+  await expect(item(page, "hook").getByTestId("slash-disabled")).toHaveText("Webhook 没挂在这个会话");
+  await expect(item(page, "tg").getByTestId("slash-disabled")).toHaveText("Telegram 群 插件还没安装");
   // Grok 不在这个群,它的命令不出现
   await expect(item(page, "research")).toHaveCount(0);
   // 位置:菜单下沿贴着输入框上沿(间隔 6px),左边和输入框对齐
@@ -184,6 +184,9 @@ test("插件命令:飞书打开勾选外部消息页;Gmail 如实说要等后端
   const input = await open(page);
   await page.keyboard.type("/feis");
   await expect(item(page, "feishu").getByTestId("slash-src")).toHaveText(/插件 · 飞书$/);
+  // 飞书的参数都是可选的:第一次回车选中填进输入框,再回车执行(不填就打开勾选页)
+  await page.keyboard.press("Enter");
+  await expect(input).toHaveValue("/feishu ");
   await page.keyboard.press("Enter");
   await expect(page.getByTestId("float")).toHaveAttribute("data-page", "source");
   await expect(page.getByTestId("srcmsg-0")).toBeVisible();
@@ -195,12 +198,12 @@ test("插件命令:飞书打开勾选外部消息页;Gmail 如实说要等后端
   await expect(page.getByTestId("toast")).toContainText("插件命令要等后端连接");
   await expect(input).toHaveValue("/mail wang@team.com 周报见附件");
   await input.fill("");
-  await page.keyboard.type("/webhook 结果");
+  await page.keyboard.type("/hook 结果");
   await expect(page.getByTestId("slash-hint")).toContainText("Webhook 没挂在这个会话");
   await expect(page.getByTestId("send")).toBeDisabled();
   await page.keyboard.press("Enter");
-  await expect(input).toHaveValue("/webhook 结果");
-  await expect(page.locator("[data-msg]").getByText("/webhook 结果")).toHaveCount(0);
+  await expect(input).toHaveValue("/hook 结果");
+  await expect(page.locator("[data-msg]").getByText("/hook 结果")).toHaveCount(0);
 });
 
 test("/handoff @助手 事:发出一条 @ 它的消息;@ 不在群里的人报错不发", async ({ page }) => {
@@ -258,8 +261,8 @@ test("外部来源的引用挂在引用条上,标「不可信·外部」;入口�
   await page.getByTestId("tool-plus").click();
   await expect(page.getByTestId("plus-menu")).toBeVisible();
   // CVE 订阅只推提醒,没有可勾的消息
-  await expect(page.getByTestId("plus-p-cve")).toBeDisabled();
-  await page.getByTestId("plus-p-feishu").click();
+  await expect(page.getByTestId("plus-g-group.cve")).toBeDisabled();
+  await page.getByTestId("plus-g-group.feishu").click();
   await page.getByTestId("srcmsg-0").click();
   await page.getByTestId("src-quote").click();
   const chip = page.getByTestId("quote-chip");

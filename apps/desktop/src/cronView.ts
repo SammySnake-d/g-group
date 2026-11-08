@@ -2,7 +2,8 @@
    下次运行、是否出错都由 trigger、paused、runs 现算——改时间、暂停、删除立刻反映出来（AC-35①）。 */
 import { useEffect, useState } from 'react'
 import { describeTrigger, formatRunAt, messagesLeft, triggerNext } from '@g-group/ui-core'
-import type { Cron, CronRun, Plugin } from './data'
+import type { Cron, CronRun, PluginState } from './data'
+import { findInfo } from './pluginInfo'
 
 /** 「现在」：每 20 秒刷新一次，让「下次运行」「接下来」跟着钟走 */
 export function useNow(ms = 20_000) {
@@ -29,11 +30,11 @@ export const cronExpr = (c: Cron) => (c.trigger.kind === 'cron' ? c.trigger.expr
 export const cronNextAt = (c: Cron, now: Date) => (c.paused ? null : triggerNext(c.trigger, now))
 
 /** 「下次 …」那一格的文字 */
-export function cronNextText(c: Cron, now: Date, plugins: Plugin[]): string {
+export function cronNextText(c: Cron, now: Date, plugins: PluginState[]): string {
   if (c.paused) return '已暂停'
   const t = c.trigger
   if (t.kind === 'messages') return `再有 ${messagesLeft(t)} 条消息`
-  if (t.kind === 'event') return `等「${plugins.find((p) => p.id === t.source)?.name ?? t.source}」报来新事`
+  if (t.kind === 'event') return `等「${findInfo(plugins, t.source)?.name ?? t.source}」报来新事`
   const at = triggerNext(t, now)
   if (at) return formatRunAt(at, now)
   return t.kind === 'once' ? '已跑完' : '不会再触发'
