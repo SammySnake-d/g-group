@@ -331,6 +331,11 @@ export function attestedDirs(turns: Turn[], _workdir: string | undefined, rootRe
   return [...out];
 }
 
+// R12 红阶段:新验证入口先用空壳,旧门禁保持原状。
+export function r12WriteProof(_t: Turn, _workdir: string | undefined, _ctx: Ctx, _inRepo: (abs: string) => boolean): boolean { return false; }
+export function r12CommitProof(_turns: Turn[], _workdir: string | undefined, _rootReal: string, _changed?: string[]): string[] { return []; }
+export function r12Touch(_t: Turn, _workdir: string | undefined, _inRepo: (abs: string) => boolean): boolean { return false; }
+
 export interface RoomEvent { seq: number; by: string; name?: string; kind: string; text?: string; target?: number; reply?: number; via?: unknown; forward?: unknown; quotes?: unknown }
 export function readRoomLog(rooms: string, room: string): RoomEvent[] {
   const dir = path.join(rooms, room, "log");

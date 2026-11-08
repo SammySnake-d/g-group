@@ -6,12 +6,12 @@ import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { containerPlanProblems, GIT_SAFE_ARGS, gitEnv, type Receipt, sandboxed, sandboxPlan } from "./lib.ts";
+import { containerPlanProblems, GIT_SAFE_ARGS, gitEnv, type Ctx, type Party, type Receipt, sandboxed, sandboxPlan } from "./lib.ts";
 import * as judge from "./judge.ts";
 import { CASE_MARK, type CaseResult, evidence, type Kind, killedBy, parseGateOutput } from "./judge.ts";
 import { verdict as runnerVerdict } from "./test-runner.ts";
 import { vendorOf } from "./vendor.ts";
-import { attestedDirs, isRepoPath, sameRepoClone, turnTouchesRepo } from "./gates.ts";
+import { attestedDirs, isRepoPath, provenance, r12CommitProof, r12Touch, r12WriteProof, sameRepoClone, turnTouchesRepo } from "./gates.ts";
 
 const HERE = import.meta.dirname;
 const CLI = path.join(HERE, "run-all.ts");
@@ -782,7 +782,146 @@ function r11Guard(): string | undefined {
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 
+// R12:所有夹具只用临时仓库、临时会话和中性数据。
+const R12_FILE = "packages/core/src/current.ts";
+const R12_OLD = "packages/core/src/baseline.ts";
+const R12_CONTENT = `${NEUTRAL}\n`;
+const R12_HASH = "a".repeat(64);
+function r12Env<T>(sessions: string, rooms: string, fn: () => T): T {
+  const a = process.env.MIRASIM_SESSIONS, b = process.env.MIRASIM_ROOMS;
+  process.env.MIRASIM_SESSIONS = sessions; process.env.MIRASIM_ROOMS = rooms;
+  try { return fn(); } finally {
+    if (a === undefined) delete process.env.MIRASIM_SESSIONS; else process.env.MIRASIM_SESSIONS = a;
+    if (b === undefined) delete process.env.MIRASIM_ROOMS; else process.env.MIRASIM_ROOMS = b;
+  }
+}
+function r12Turns(root: string, session: string, turns: object[]) {
+  const [h, id] = session.split(":");
+  write(path.join(root, h!, id!), { "turns.jsonl": `${turns.map((x) => JSON.stringify(x)).join("\n")}\n` });
+}
+function r12Receipt(): Receipt {
+  return {
+    slice: "neutral", acceptance: [],
+    author: { agent: "codex", session: "codex:current", model: "gpt-6" },
+    review: { agent: "claude", session: "claude:review", model: "claude-opus-5-5", verdict: "approve", reviewed_hash: R12_HASH, notes: "neutral" },
+    red: null, unverifiable: "R-01 neutral", waiver: null,
+  };
+}
+function r12Ctx(repo: string, receipt: Receipt, changed = [R12_FILE]): Ctx {
+  return { root: repo, changed, receipt, contentHash: () => R12_HASH } as Ctx;
+}
+const r12Review = () => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: "node scripts/gates/run-all.ts --hash" }, result: R12_HASH }] }];
+function r12Run(ctx: Ctx): string[] { return provenance.run.call(provenance, ctx).map((x) => x.msg); }
+function r12CloneResult(switchModel: boolean): { before: string[]; after: string[] } {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-clone-"));
+  try {
+    const repo = path.join(tmp, "repo"), sessions = path.join(tmp, "sessions"), rooms = path.join(tmp, "rooms");
+    fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main");
+    write(repo, { "README.md": "neutral\n", "packages/core/src/add.ts": ADD_OK }); commit(repo, "base");
+    sh(repo, "checkout", "-q", "-b", "feat/x");
+    const commits = committedCloneTurns(repo).map((t) => ({ ...t, model: "gpt-6" }));
+    const clone = authorClone(repo);
+    const writing = { model: switchModel ? "claude-opus-5-5" : "gpt-6", toolCalls: [{ name: "Bash", input: { cwd: clone, command: "printf neutral > packages/core/src/add.ts" }, result: "" }] };
+    r12Turns(sessions, "codex:current", [writing, ...commits]); r12Turns(sessions, "claude:review", r12Review());
+    return r12Env(sessions, rooms, () => {
+      const ctx = r12Ctx(repo, r12Receipt(), ["packages/core/src/add.ts"]);
+      const before = r12Run(ctx); fs.rmSync(clone, { recursive: true, force: true });
+      const after = r12Run(ctx); return { before, after };
+    });
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r12CleanParity(): string | undefined {
+  const r = r12CloneResult(true), match = (xs: string[]) => xs.some((x) => x.includes("审查厂商 anthropic"));
+  return match(r.before) && match(r.after) ? undefined : `同一记录清理前后未同时拦下:${JSON.stringify(r)}`;
+}
+function r12ModelSwitch(): string | undefined {
+  const bad = r12CloneResult(true), good = r12CloneResult(false);
+  const match = (xs: string[]) => xs.some((x) => x.includes("审查厂商 anthropic"));
+  return match(bad.after) && !match(good.after) ? undefined : `模型切换与同厂商对照不符:${JSON.stringify({ bad, good })}`;
+}
+function r12MissingDir(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-missing-"));
+  try {
+    const missing = path.join(tmp, "gone"), existing = path.join(tmp, "other"); fs.mkdirSync(existing);
+    const writeTurn = (cwd: string) => ({ toolCalls: [{ name: "Bash", input: { cwd, command: "printf neutral > x.ts" } }] });
+    const readTurn = { toolCalls: [{ name: "Bash", input: { cwd: missing, command: "cat x.ts" } }] };
+    const no = () => false;
+    return turnTouchesRepo(writeTurn(missing), undefined, no) && !turnTouchesRepo(writeTurn(existing), undefined, no) && !turnTouchesRepo(readTurn, undefined, no) ? undefined : "未知目录写入、明确非仓库写入或只读判定不符";
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r12History(mode: "history" | "listed" | "none" | "unproven"): string[] {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-history-"));
+  try {
+    const repo = path.join(tmp, "repo"), sessions = path.join(tmp, "sessions"), rooms = path.join(tmp, "rooms");
+    fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main"); write(repo, { "README.md": "neutral\n" }); commit(repo, "base");
+    sh(repo, "checkout", "-q", "-b", "feat/x"); write(repo, { [R12_FILE]: R12_CONTENT }); commit(repo, "content");
+    const receipt = r12Receipt(), previous = { ...receipt, author: { agent: "claude", session: "claude:old", model: "claude-opus-5-5" } };
+    if (mode === "history" || mode === "unproven") { write(repo, { "receipts/feat-x.json": JSON.stringify(previous) }); commit(repo, "old receipt"); }
+    if (mode === "listed") (receipt.author as Party & { sessions: string[] }).sessions = ["claude:old"];
+    write(repo, { "receipts/feat-x.json": JSON.stringify(receipt) }); commit(repo, "current receipt");
+    const authorTurn = (model: string) => ({ model, toolCalls: [{ name: "Write", input: { file_path: path.join(repo, R12_FILE), content: R12_CONTENT }, result: "File written successfully" }] });
+    r12Turns(sessions, "codex:current", [authorTurn("gpt-6")]);
+    r12Turns(sessions, "claude:old", mode === "unproven" ? [{ model: "claude-opus-5-5", toolCalls: [{ name: "Read", input: { path: path.join(repo, R12_FILE) } }] }] : [authorTurn("claude-opus-5-5")]);
+    r12Turns(sessions, "claude:review", r12Review());
+    return r12Env(sessions, rooms, () => r12Run(r12Ctx(repo, receipt)));
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r12HistoryCase(mode: "history" | "listed" | "unproven"): string | undefined {
+  const bad = r12History(mode), good = r12History("none");
+  const match = (xs: string[]) => xs.some((x) => x.includes("审查厂商 anthropic"));
+  return match(bad) && !match(good) ? undefined : `历史作者或对照判定不符:${JSON.stringify({ bad, good })}`;
+}
+function r12WriteCase(which: "success" | "changed"): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-write-"));
+  try {
+    const repo = path.join(tmp, "repo"); fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main");
+    write(repo, { [R12_FILE]: R12_CONTENT, [R12_OLD]: R12_CONTENT }); commit(repo, "neutral");
+    const ctx = r12Ctx(repo, r12Receipt()), clone = sameRepoClone(repo);
+    const call = (f: string, result: string) => ({ toolCalls: [{ name: "Write", input: { file_path: path.join(repo, f), content: R12_CONTENT }, result }] });
+    const positive = r12WriteProof(call(R12_FILE, "File written successfully"), undefined, ctx, clone);
+    const negative = which === "success" ? r12WriteProof(call(R12_FILE, "write failed"), undefined, ctx, clone) : r12WriteProof(call(R12_OLD, "File written successfully"), undefined, ctx, clone);
+    return positive && !negative ? undefined : `写入证明双侧不符:正=${positive},反=${negative}`;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r12CommitCase(which: "changed" | "history"): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-commit-"));
+  try {
+    const repo = path.join(tmp, "repo"), clone = path.join(tmp, "clone"); fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main");
+    write(repo, { "README.md": "neutral\n" }); commit(repo, "root"); sh(tmp, "clone", "-q", repo, clone);
+    const make = (name: string) => {
+      sh(clone, "add", "-A");
+      const args = ["-i", "/usr/bin/git", "--no-pager", "--no-replace-objects", "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-C", clone, "commit", "--no-gpg-sign", "-m", name];
+      const result = execFileSync("/usr/bin/env", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+      return { model: "gpt-6", toolCalls: [{ name: "Bash", input: { command: `/usr/bin/env ${args.join(" ")}` }, result }] };
+    };
+    write(clone, { [R12_OLD]: R12_CONTENT }); const baseline = make("baseline"), baseSha = sh(clone, "rev-parse", "HEAD");
+    write(clone, { [R12_FILE]: R12_CONTENT }); const current = make("current");
+    sh(repo, "fetch", "-q", clone, "HEAD"); sh(repo, "merge", "-q", "--ff-only", "FETCH_HEAD");
+    sh(clone, "checkout", "-q", "-b", "side", baseSha); write(clone, { [R12_FILE]: R12_CONTENT }); const side = make("side");
+    sh(repo, "fetch", "-q", clone, "side:refs/heads/side"); fs.rmSync(clone, { recursive: true, force: true });
+    const positive = r12CommitProof([current], undefined, repo, [R12_FILE]);
+    const negative = r12CommitProof([which === "changed" ? baseline : side], undefined, repo, [R12_FILE]);
+    return positive.includes(clone) && negative.length === 0 ? undefined : `提交证明双侧不符:正=${JSON.stringify(positive)},反=${JSON.stringify(negative)}`;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r12CatCase(): string | undefined {
+  const repo = path.resolve("/tmp/neutral-repo"); const inside = (p: string) => p === repo || p.startsWith(`${repo}/`);
+  const t = (command: string) => ({ toolCalls: [{ name: "Bash", input: { cwd: repo, command } }] });
+  return !r12Touch(t("cat a.txt"), undefined, inside) && r12Touch(t("cat a.txt > b.ts"), undefined, inside) ? undefined : "只读与重定向写入未区分";
+}
+
 export const CASES: Case[] = [
+  { name: "R12-01 克隆清理前后同一记录结论一致", direct: r12CleanParity, expect: null },
+  { name: "R12-01 中途换模型写入已清理克隆被拦", direct: r12ModelSwitch, expect: null },
+  { name: "R12-01 未证明的已消失目录写入保守计入", direct: r12MissingDir, expect: null },
+  { name: "R12-02 返修换作者后前轮作者厂商的审查仍被拦", direct: () => r12HistoryCase("history"), expect: null },
+  { name: "R12-02 sessions 列表里的历次作者不能遗漏", direct: () => r12HistoryCase("listed"), expect: null },
+  { name: "R12-02 前轮产出未证实时厂商保守计入", direct: () => r12HistoryCase("unproven"), expect: null },
+  { name: "R12-04 写入成功结果与失败结果双侧", direct: () => r12WriteCase("success"), expect: null },
+  { name: "R12-04 写入受审改动与未改动文件双侧", direct: () => r12WriteCase("changed"), expect: null },
+  { name: "R12-04 提交受审改动与基线文件双侧", direct: () => r12CommitCase("changed"), expect: null },
+  { name: "R12-04 cat 只读与重定向写入双侧", direct: r12CatCase, expect: null },
+  { name: "R12-04 HEAD 历史与其他引用提交双侧", direct: () => r12CommitCase("history"), expect: null },
   { name: "R11-01 remote 相同但历史不相交仍拒绝,共同历史放行", direct: r11RepoIdentity, expect: null },
   { name: "R11-01 无关 HEAD 的额外引用不证明共同历史", direct: r11ExtraReference, expect: null },
   { name: "R11-01 工作库的祖先覆写不证明共同历史", direct: r11ForgedAncestor, expect: null },
