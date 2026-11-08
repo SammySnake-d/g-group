@@ -49,10 +49,10 @@
   "waiver": null,
   "review": {
     "agent": "codex",
-    "session": "codex:5ba140f4-8671-4ef8-b6cd-f0cb38ef7a39",
+    "session": "codex:f0c5fbd5-ee53-494f-94b5-a9b19ac80317",
     "model": "gpt-6.1-terra",
     "verdict": "reject",
-    "reviewed_hash": "bea285db8c747a4c69e2b8e7dbc32d008133c594b46ab8a782002787dd36b759",
-    "notes": "第十八轮拒绝：R18-01 生成器 prototype Proxy 先触发 trap；R18-02 无效 cron 被接受；R18-03 Helper 三入口缺 AC-52 追溯。"
+    "reviewed_hash": "adb6e418f381565931fe43ca1782150ba87e07b2de8e3b579e527a57ae0806ba",
+    "notes": "第十九轮拒绝：R19-01 稀疏数组按声明长度全量复制，拒绝前可长时间阻塞并占用大量内存；R19-02 相等区间被错误拒绝的单点变异存活，需补回归判别。"
   }
 }

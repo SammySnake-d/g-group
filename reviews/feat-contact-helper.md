@@ -1198,3 +1198,44 @@ Claude Code 接续修 CH-39、CH-40；CH-36/CH-37、只读快照与已闭合的�
 - 本轮不验证真实存储、宿主授权、消息持久化隔离、真实调度或 P1 交互端到端；不把纯函数子集或有限变异当成整项 AC 通过。仅追加本节和更新收据的 `review`，未改产品源码、测试或作者证明。
 - 附加门禁变异校准在假 HOME 下单任务并发复跑：原样自检通过，20/20 个门禁变异被具名自检发现，非具名进程失败 0，退出 0；见 `$E/gate-mutation.log`。
 - 写入本轮 `review` 后，以真实会话路径及 PR 基线重跑本机门禁：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因本轮 `reject` 按预期拦截；G-PROVENANCE 报本轮会话记录不存在（执行时对应 `turns.jsonl` 尚未落盘）。本会话实际执行了哈希命令且原生模型记录可见，但**不能声称来源门禁通过**；待会话记录落盘后由后续流程核验。原始输出见 `$E/local-gates-after-review.log`。
+
+## 第十九轮：第十八轮返修独立复审（2026-11-08）
+
+**结论：REJECT。** 发现一个输入归一化的同步资源消耗问题和一个等值区间边界的测试判别缺口；下文 R19-01、R19-02 是本轮必须返修项，不把测试缺口描述为当前实现错误。
+
+### 受审对象与证据边界
+
+- 独立 HTTPS 克隆；受审 `HEAD=386cb96a4688eef68ac2b26396fc561896aa863d`，基线 `origin/feat/task-lifecycle=ba90d6769992d2f3df2a571f846409afcafd644d`，权威规范 `origin/docs/dev-handbook=396c05360b1381e1eb1acb1792b070d99fbb4945`。本会话执行要求的 `--hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 得到 `adb6e418f381565931fe43ca1782150ba87e07b2de8e3b579e527a57ae0806ba`；实际审查会话 `codex:f0c5fbd5-ee53-494f-94b5-a9b19ac80317`，原生 `turn_context` 模型 `gpt-6.1-terra`。
+- 证据目录 `$E=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-r19-codex`。隔离试验均使用假 HOME、中性数据；不预先改写内置原型，不读取真实凭据。无需将候选条目或尚未接线的端到端功能当成当前验收依据。
+
+### R19-01【输入归一化】稀疏数组按声明长度完整物化，拒绝前可长时间阻塞
+
+位置：`packages/domain/src/plain.ts:116-141`（`copyArray` 先按 `length` 全部 `defineProperty`，`readList` 之后才检查元素类型）；联系人 `commit` 的 `boundTaskIds` 可触发，状态中的对象数组等也共用复制路径。
+
+复现：用普通数组设置高下标再删除它，得到 `length=1_000_000`、0 个自有下标的稀疏数组，不使用 Proxy、访问器或原型改写，传给 `commit(..., {boundTaskIds: a, ...})`。原版最终返回拒绝，但在隔离 Node 子进程（`--max-old-space-size=192`）中约花 **782 ms**、堆使用量增加约 **37.5 MB**；相同构造、`length=5_000_000` 的数组 **4 秒内未返回**，由探针的父进程按超时发送 SIGTERM，不能断言其自然退出状态。见 `$E/sparse-dictionary-probe.mjs` 和 `$E/sparse-dictionary-probe.jsonl`。合法单元素对照通过。另用 `JSON.parse` 构造 100 万项数组（首项为合法 JSON 的 `null`、其余为字符串），本应因首项不符合字符串列表而拒绝，实测在归一化调用内约 **2125 ms**、堆使用量增加约 **161.6 MB** 才返回拒绝；单项 `null` 对照即刻拒绝，见 `$E/json-invalid-list-probe.jsonl`。复制代码只在隔离副本增加“遇缺失下标即返回”的单点因果对照后，相同 500 万输入在计时精度内 0 ms 返回拒绝，见 `$E/sparse-shortcircuit.patch`、`$E/sparse-shortcircuit-probe.jsonl`；这不是提交的产品修复，也不替代完整回归。
+
+影响：调用方可用本应拒绝的缺口数组放大同步 CPU 与内存消耗，阻塞调用线程；未演示真实服务崩溃或跨进程影响。返修：复制/校验时对缺口及其他可立即判无效项及时拒绝，或采取有明确合同的有界策略；覆盖字符串数组和对象数组、登记及恢复路径，保留全部 Proxy/访问器零调用与普通合法数组行为，增加能观察短路的回归验证。
+
+### R19-02【测试判别】合法等值区间的错误拒绝未被测试发现
+
+位置：`packages/domain/src/contact.ts:74-76`、`packages/domain/src/contact.test.ts:1997-2038`。原实现仅在起点 `>` 终点时拒绝，允许相等；合法范围边界测试没有辨别 `>` 与 `>=`。
+
+复现：只在隔离副本把 `Number(a) > Number(b)` 改为 `Number(a) >= Number(b)`，注入点恰好 1 处。原版登记及恢复 `5-5 * * * *` 均通过，变异版均拒绝；`5-6` 两版均通过、`6-5` 两版均拒绝。与此同时变异版全量 **310 通过、0 失败、0 skip、0 todo**，故现有测试未检出这个可观察的行为退化。见 `$E/equality-differential.jsonl`、`$E/I19-03.tap`、`$E/independent-mutants.jsonl`。当前实现本身并无这个错误。
+
+返修：为等值区间补具名合法对照及登记/恢复断言，并保留相邻递增与倒置区间对照；将上述单点变异纳入校准并证明被具名测试杀死，不以 482 项有限变异全杀推断这一边界已测。
+
+### 第十八轮逐项复核
+
+- R18-01：对旧版和本版执行同一探针：旧版 `getPrototypeOf` trap 为 1、抛错和撤销 Proxy 会抛；本版三入口对照 trap 为 0、撤销 Proxy 返回拒绝。独立扩充同步/异步生成器 × 计数/抛错/撤销 × 五入口共 **30** 个组合均拒绝且 trap 0，10 个正常生成器对照通过，见 `$E/prototype-input-probe-{old,current}.jsonl`、`$E/r18-independent.jsonl`。
+- R18-02：原版接受 `99 99 99 99 99`、`*/0 * * * *`、`5-2 * * * *`，本版均拒绝；独立 15 种合法/非法表达式在登记与恢复共 **30** 次判定无偏差，含五段上下界、列表、倒序和零步长。`0 0 31 2 *` 当前仍登记、恢复均接受；第十八轮返修明确至少要求各段范围、递增区间与非零步长，跨字段日历有效性及实际触发属后续调度器边界，故本轮**不因此打回**。R19-02 是上述已支持等值边界的测试缺口，不是将日历组合验收扩面。
+- R18-03：PR 所带 `docs/spec/需求文档.md`、`docs/spec/验收文档-v0.1.md` 与权威 396c053 对应文件一致；G-TRACE 实际识别 AC-52，收据标“未测”并限于 Helper 路由子集；不据此声称聊天授权、消息落库/隔离、侧栏交互或 CSV 等端到端完成。门禁读取的仍是 PR 副本。
+
+### 执行与门禁
+
+- `npm ci`、typecheck、lint、`npm test` 均退出 0；测试 **310 通过、0 失败、0 skip、0 todo**。合法 JSON null 的 16 个入口组合不抛；4 个导出策略根递归检查的 195 个对象/函数均冻结，见 `$E/contract-probes.jsonl`。
+- 红提交 `fa5f16e`：本 PR 相对基线 **122/122** 个新增或修改测试在红提交按名失败、在受审版按名通过，文件级加载失败 0；见 `$E/red-green-named.jsonl` 与两份 TAP。
+- 自构 5 个单点故障，4 个被具名测试发现，1 个存活即 R19-02；原样对照 310 绿。为 8 个门禁分别构造隔离负例，8/8 被相应门禁拦截，合规对照 8 项通过，见 `$E/independent-mutants.jsonl`、`$E/gate-negative-probes.jsonl`。
+- 作者 482 项变异的逐项复跑：在隔离副本中仅增加 `--test-concurrency=1`，不改作者清单及源码；**482 项、482 种不同注入，482/482 被具名测试杀死，注入异常/存活 0，原样副本 310 绿/0 红，退出 0**。逐条见 `$E/mutations-review.log`，运行器唯一差异见 `$E/mutation-concurrency.patch`。
+- GitHub `self-check` 针对 386cb96 为 completed/success，见 `$E/github-checks.json`；不能替代本次独立反例。
+- 首次真实 `--local --branch=feat/contact-helper --base=origin/feat/task-lifecycle`：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER、G-PROVENANCE 通过，G-REVIEW 因上一轮 reject 和旧 hash 失败，原文见 `$E/gates-local.log`。写入本轮 review 后重跑：前述六个非来源门禁通过；G-REVIEW 按本轮 reject 失败；G-PROVENANCE 未对作者报错，但本轮会话 `turns.jsonl` 尚未落盘而报“审查会话记录不存在”，原文见 `$E/gates-after-review.log`。故作者来源问题已复核，但**本轮审查来源门禁尚未通过**，需记录落盘后再核验，不能凭原生模型记录替代门禁绿灯。
+- 真实调度触发、时区/DST、存储接线、宿主授权、消息表隔离和 P1 交互均未实测；以上不是对这些整项验收的通过结论。本次仅提交本审查节和收据 `review`，未改产品代码、测试、其他分支或作者证明。
