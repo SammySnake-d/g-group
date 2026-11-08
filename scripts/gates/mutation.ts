@@ -137,7 +137,7 @@ export const MUTATIONS: Mutation[] = [
   { name: "R11-03 稀疏数组附带普通属性被收下", kill: "R11-03 稀疏数组加普通属性不得作为判因,密集数组放行", target: ["DIRECT"], file: "judge.ts", from: "function plainArray(x: unknown): unknown[] | undefined {\n  // 先判 Proxy:撤销的 Proxy 上 Array.isArray 会抛错(R6-02)\n  if (types.isProxy(x) || !Array.isArray(x) || Object.getPrototypeOf(x) !== Array.prototype) return undefined;\n  const ds = Object.getOwnPropertyDescriptors(x);\n  const len = (Object.getOwnPropertyDescriptor(x, \"length\") as PropertyDescriptor).value as number;\n  const keys = Reflect.ownKeys(ds);\n  // 长度以外只能有 0..length-1 的自有数据属性;先比数量,避免巨型稀疏数组逐项扫描。\n  if (keys.length !== len + 1) return undefined;\n  for (const k of keys) {\n    if (k === \"length\") continue;\n    if (typeof k !== \"string\" || !/^(0|[1-9]\\d*)$/.test(k)) return undefined;\n    const n = Number(k), d = ds[k]!;\n    if (!Number.isInteger(n) || n < 0 || n >= len || String(n) !== k || !(\"value\" in d)) return undefined;\n  }\n  const out: unknown[] = [];\n  for (let i = 0; i < len; i++) {\n    const d = ds[String(i)];\n    if (!d || !(\"value\" in d)) return undefined;\n    out.push(d.value);\n  }\n  return out;\n}", to: "function plainArray(x: unknown): unknown[] | undefined {\n  // 先判 Proxy:撤销的 Proxy 上 Array.isArray 会抛错(R6-02)\n  if (types.isProxy(x) || !Array.isArray(x) || Object.getPrototypeOf(x) !== Array.prototype) return undefined;\n  const ds = Object.getOwnPropertyDescriptors(x);\n  const out: unknown[] = [];\n  for (const k of Reflect.ownKeys(ds)) {\n    if (k === \"length\") continue;\n    const d = ds[k as string]!;\n    if (typeof k !== \"string\" || !/^(0|[1-9]\\d*)$/.test(k) || !(\"value\" in d)) return undefined;\n    out[Number(k)] = d.value;\n  }\n  const len = (Object.getOwnPropertyDescriptor(x, \"length\") as PropertyDescriptor).value as number;\n  return out.length === len && Object.keys(out).length === len ? out : undefined;\n}" },
   { name: "R11-04 跳过执行前容器计划守卫", kill: "R11-04 真实执行出口拒绝非法计划且不调用执行器,正常计划调用", target: ["DIRECT"], file: "lib.ts", from: "if (bad.length) throw new Error(", to: "if (false && bad.length) throw new Error(" },
   { name: "R11-05 只读调用算作产出", kill: "R11-05 只读不算产出,写操作正控", target: ["DIRECT"], file: "gates.ts", from: "if (SHELL_TOOLS.test(c.name ?? \"\") && command && /^(?:git\\s+status(?:\\s+(?:--short|-s|-sb|--porcelain(?:=v[12])?))*|git\\s+log\\s+--oneline\\s+-1|pwd|ls(?:\\s+(?:-[alhF]+|--|[A-Za-z0-9_./-]+))*|cat(?:\\s+(?:--|[A-Za-z0-9_./-]+))+)\\s*$/.test(command.trim())) continue;", to: "if (false && SHELL_TOOLS.test(c.name ?? \"\") && command && /^(?:git\\s+status(?:\\s+(?:--short|-s|-sb|--porcelain(?:=v[12])?))*|git\\s+log\\s+--oneline\\s+-1|pwd|ls(?:\\s+(?:-[alhF]+|--|[A-Za-z0-9_./-]+))*|cat(?:\\s+(?:--|[A-Za-z0-9_./-]+))+)\\s*$/.test(command.trim())) continue;" },
-  { name: "R11-05 未知调用算成已证明作者", kill: "R11-05 未知调用不能单独证明作者产出", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (turnTouchesRepo(t, at.workdir, inRepo)) producers.add(vendor);", to: "if (turnTouchesRepo(t, at.workdir, inRepo)) { producers.add(vendor); confirmed.add(vendor); }" },
+  { name: "R11-05 未知调用算成已证明作者", kill: "R11-05 未知调用不能单独证明作者产出", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (r12Touch(t, at.workdir, inSession)) sessionProducers.add(vendor);", to: "if (r12Touch(t, at.workdir, inSession)) { sessionProducers.add(vendor); confirmed.add(vendor); }" },
   { name: "R11-05 写入不与当前版本逐字节比较", kill: "R11-05 写入内容与受审版本不符时拒绝", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (fs.readFileSync(own).equals(Buffer.from(inp.content, \"utf8\"))) return true;", to: "if (true) return true;" },
   { name: "R11-05 Read 工具算作产出", kill: "R11-05 Read 工具只读文件不计产出", target: ["DIRECT"], file: "gates.ts", from: "if (READ_TOOLS.test(c.name ?? \"\")) continue;", to: "" },
   { name: "R11-05 普通只读命令算作产出", kill: "R11-05 简单 cat、ls、pwd 只读命令不计产出", target: ["DIRECT"], file: "gates.ts", from: "if (SHELL_TOOLS.test(c.name ?? \"\") && command && /^(?:git\\s+status(?:\\s+(?:--short|-s|-sb|--porcelain(?:=v[12])?))*|git\\s+log\\s+--oneline\\s+-1|pwd|ls(?:\\s+(?:-[alhF]+|--|[A-Za-z0-9_./-]+))*|cat(?:\\s+(?:--|[A-Za-z0-9_./-]+))+)\\s*$/.test(command.trim())) continue;", to: "if (SHELL_TOOLS.test(c.name ?? \"\") && command && /^(?:git\\s+status(?:\\s+(?:--short|-s|-sb|--porcelain(?:=v[12])?))*|git\\s+log\\s+--oneline\\s+-1)\\s*$/.test(command.trim())) continue;" },
@@ -149,7 +149,7 @@ export const MUTATIONS: Mutation[] = [
   { name: "来源按目录名认仓库", kill: "R11-01 目录标签不足以确认仓库路径", target: ["DIRECT"], file: "gates.ts", from: "return under(abs, rootReal) || proven.some((d) => under(abs, d)) || clone(abs);", to: "return abs.split(path.sep).includes(\"g-group\") || under(abs, rootReal) || proven.some((d) => under(abs, d)) || clone(abs);" },
   { name: "仓库身份判不了按同一仓库算", kill: "R11-01 空仓库身份未知仍拒绝,共同历史放行", target: ["DIRECT"], file: "gates.ts", from: "const same = known && (", to: "const same = id === \"unknown\" || known && (" },
   { name: "git 仓库不比仓库身份", kill: "R11-01 remote 相同但历史不相交仍拒绝,共同历史放行", target: ["DIRECT"], file: "gates.ts", from: "const same = known && (", to: "const same = known || (" },
-  { name: "不认宿主记录证明的已清理克隆", kill: "R10-02 清理后:同一记录里 git 输出的本仓库提交号证明是本仓库,来源门禁仍认出", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (proven.length || turnProvesWrite(t, at.workdir, ctx, inRepo)) confirmed.add(vendor);", to: "if (turnProvesWrite(t, at.workdir, ctx, inRepo)) confirmed.add(vendor);" },
+  { name: "不认宿主记录证明的已清理克隆", kill: "R10-02 清理后:同一记录里 git 输出的本仓库提交号证明是本仓库,来源门禁仍认出", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (proven.length || r12WriteProof(t, at.workdir, ctx, inTurn)) confirmed.add(vendor);", to: "if (r12WriteProof(t, at.workdir, ctx, inTurn)) confirmed.add(vendor);" },
   { name: "已清理目录证据不核对受审版本", kill: "R11-02 旧提交文件不再属于受审版本时拒绝", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (!inVersion(sha)) continue;", to: "" },
   { name: "记录证据不看现状", kill: "R11-02 提交后的目录变成非仓库时不得沿用旧身份", target: ["G-PROVENANCE"], file: "gates.ts", from: "if (fs.existsSync(d) && !sameRepoClone(rootReal)(d)) continue;", to: "" },
   { name: "受管范围导出不冻结", kill: "R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论", target: ["DIRECT"], file: "lib.ts", from: "export const UNGOVERNED: readonly RegExp[] = frozenList(UNGOVERNED_SRC.map((s) => new RegExp(s)));", to: "export const UNGOVERNED: readonly RegExp[] = UNGOVERNED_SRC.map((s) => new RegExp(s));" },
@@ -237,6 +237,140 @@ function runSelftest(dir: string) {
   const timedOut = (r.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT";
   return { code: r.status, out: (r.stdout ?? "") + (r.stderr ?? ""), timedOut };
 }
+
+// R12:逐条校准会话累计与来源守卫。
+MUTATIONS.push(...[
+  {
+    "name": "R12-01 清理后的目录写入不计",
+    "kill": "R12-01 克隆清理前后同一记录结论一致",
+    "target": [
+      "DIRECT"
+    ],
+    "file": "gates.ts",
+    "from": "if (r12Touch(t, at.workdir, inSession)) sessionProducers.add(vendor);",
+    "to": "if (r12Touch(t, at.workdir, inSession) && !(t.toolCalls ?? []).some((c) => { const i = parseInput(c.input); return typeof i.cwd === \"string\" && !fs.existsSync(i.cwd); })) sessionProducers.add(vendor);"
+  },
+  {
+    "name": "R12-01 中途换模型轮次不计",
+    "kill": "R12-01 中途换模型写入已清理克隆被拦",
+    "target": [
+      "DIRECT"
+    ],
+    "file": "gates.ts",
+    "from": "if (r12Touch(t, at.workdir, inSession)) sessionProducers.add(vendor);",
+    "to": "if (r12Touch(t, at.workdir, inSession) && vendor === vendorOf(author.model)) sessionProducers.add(vendor);"
+  },
+  {
+    "name": "R12-01 不累计会话目录证据",
+    "kill": "R12-01 任一轮已证明目录用于整段会话",
+    "target": [
+      "DIRECT"
+    ],
+    "file": "gates.ts",
+    "from": "export function r12SessionDirs(turns: Turn[], workdir: string | undefined, rootReal: string, changed?: string[]): string[] { return attestedDirs(turns, workdir, rootReal, changed); }",
+    "to": "export function r12SessionDirs(_turns: Turn[], _workdir: string | undefined, _rootReal: string, _changed?: string[]): string[] { return []; }"
+  },
+  {
+    "name": "R12-01 消失的未知目录不保守计入",
+    "kill": "R12-01 未证明的已消失目录写入保守计入",
+    "target": [
+      "DIRECT"
+    ],
+    "file": "gates.ts",
+    "from": "if (writes && cwd && path.isAbsolute(cwd) && !fs.existsSync(cwd)) return true;",
+    "to": "if (false) return true;"
+  },
+  {
+    "name": "R12-02 只认当前作者会话",
+    "kill": "R12-02 返修换作者后前轮作者厂商的审查仍被拦",
+    "target": [
+      "DIRECT"
+    ],
+    "file": "gates.ts",
+    "from": "const history = authorSessions(rootReal, ctx.receiptPath, author);",
+    "to": "const history = { sessions: [author.session], errors: [] as string[] };"
+  },
+  {
+    "name": "R12-02 忽略历次作者列表",
+    "kill": "R12-02 sessions 列表里的历次作者不能遗漏",
+    "target": [
+      "DIRECT"
+    ],
+    "file": "gates.ts",
+    "from": "if (x.sessions !== undefined) {",
+    "to": "if (false && x.sessions !== undefined) {"
+  },
+  {
+    "name": "R12-02 未证实历史作者不计",
+    "kill": "R12-02 前轮产出未证实时厂商保守计入",
+    "target": [
+      "DIRECT"
+    ],
+    "file": "gates.ts",
+    "from": "if (confirmed.size === 0) {",
+    "to": "if (false && confirmed.size === 0) {"
+  },
+  {
+    "name": "R12-03 不认同轮提交绑定的宿主记录",
+    "kill": "R12-03 宿主路径记录须与同轮提交共同证明",
+    "target": [
+      "DIRECT"
+    ],
+    "file": "gates.ts",
+    "from": "if (typeof inp.raw === \"string\" && path.isAbsolute(inp.raw) && c.status === \"done\" && c.result == null) {",
+    "to": "if (false && typeof inp.raw === \"string\" && path.isAbsolute(inp.raw) && c.status === \"done\" && c.result == null) {"
+  },
+  {
+    "name": "R12-04 写入证明不校验成功结果",
+    "kill": "R12-04 写入成功结果与失败结果双侧",
+    "target": [
+      "DIRECT"
+    ],
+    "file": "gates.ts",
+    "from": "if (!/^(?:File (?:written|created|updated) successfully(?: at: [^\\n]+)?|The file [^\\n]+ has been (?:created|updated) successfully\\.)\\s*$/i.test(c.result)) continue;",
+    "to": ""
+  },
+  {
+    "name": "R12-04 写入证明不核对受审改动文件",
+    "kill": "R12-04 写入受审改动与未改动文件双侧",
+    "target": [
+      "DIRECT"
+    ],
+    "file": "gates.ts",
+    "from": "if (rel.startsWith(\"../\") || !isGoverned(rel) || !ctx.changed.includes(rel)) continue;",
+    "to": "if (rel.startsWith(\"../\") || !isGoverned(rel)) continue;"
+  },
+  {
+    "name": "R12-04 提交证明不核对受审改动文件",
+    "kill": "R12-04 提交受审改动与基线文件双侧",
+    "target": [
+      "DIRECT"
+    ],
+    "file": "gates.ts",
+    "from": "if (!isGoverned(f) || (changed && !changed.includes(f))) continue;",
+    "to": "if (!isGoverned(f)) continue;"
+  },
+  {
+    "name": "R12-04 只读 cat 放行重定向写入",
+    "kill": "R12-04 cat 只读与重定向写入双侧",
+    "target": [
+      "DIRECT"
+    ],
+    "file": "gates.ts",
+    "from": "cat(?:\\s+(?:--|[A-Za-z0-9_./-]+))+)",
+    "to": "cat(?:\\s+(?:--|\\S+))+)"
+  },
+  {
+    "name": "R12-04 提交证明接受 HEAD 之外的提交",
+    "kill": "R12-04 HEAD 历史与其他引用提交双侧",
+    "target": [
+      "DIRECT"
+    ],
+    "file": "gates.ts",
+    "from": "\"rev-list\", \"HEAD\"], { cwd: rootReal",
+    "to": "\"rev-list\", \"--all\"], { cwd: rootReal"
+  }
+] as Mutation[]);
 
 export async function mutationTest(): Promise<boolean> {
   // kill 提示写错时,副本自检会因"用例不存在"失败,变异就会被误算成被发现:先核对,有错整次失败
