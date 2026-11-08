@@ -708,7 +708,7 @@ function r11ReadOnly(): string | undefined {
   const repo = path.resolve("/tmp/neutral-repo");
   const inRepo = (p: string) => p === repo || p.startsWith(`${repo}/`);
   const read = { model: "gpt-6", toolCalls: [{ name: "Bash", input: { cwd: repo, command: "git status --short" } }] };
-  const writeTurn = { model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: fs.readFileSync(path.join(repo, "packages/core/src/add.ts"), "utf8") }, result: "File written successfully" }] };
+  const writeTurn = { model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "a.ts") } }] };
   return turnTouchesRepo(read, undefined, inRepo) || !turnTouchesRepo(writeTurn, undefined, inRepo) ? "只读与写入没有区分" : undefined;
 }
 function r11Guard(): string | undefined {
@@ -741,6 +741,11 @@ export const CASES: Case[] = [
   { name: "R11-03 稀疏数组加普通属性不得作为判因,密集数组放行", direct: r11Sparse, expect: null },
   { name: "R11-04 真实执行出口拒绝非法计划且不调用执行器,正常计划调用", direct: r11Guard, expect: null },
   { name: "R11-05 只读不算产出,写操作正控", direct: r11ReadOnly, expect: null },
+  { name: "R11-05 只读 git log 不计产出", direct: () => {
+    const repo = path.resolve("/tmp/neutral-repo");
+    const read = { toolCalls: [{ name: "Bash", input: { cwd: repo, command: "git log --oneline -1" } }] };
+    return turnTouchesRepo(read, undefined, (p) => p === repo || p.startsWith(`${repo}/`)) ? "只读日志被计入产出" : undefined;
+  }, expect: null },
   { name: "R11-02 提交后的目录变成非仓库时不得沿用旧身份", authorTurns: committedCloneTurns, setup: (x) => { cleanClone(x); write(authorClone(x.repo), { "neutral.txt": NEUTRAL }); }, expect: "找不到对本仓库的任何操作" },
   { name: "R11-02 旧提交文件不再属于受审版本时拒绝", authorTurns: committedCloneTurns, setup: (x) => { cleanClone(x); write(x.repo, { "packages/core/src/add.ts": `${ADD_OK}// newer version\n` }); commit(x.repo, "later"); }, expect: "找不到对本仓库的任何操作" },
   { name: "R11-05 未知调用不能单独证明作者产出", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { cwd: repo, command: "printf neutral" }, result: "neutral" }] }], expect: "找不到对本仓库的任何操作" },
