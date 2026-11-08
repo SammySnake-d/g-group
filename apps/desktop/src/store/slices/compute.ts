@@ -1,9 +1,12 @@
-// Compute 与待你处理切片:回答提问、验收/退回、失败重试/跳过、写盘授权、停止/继续/补充/回滚、卡在验证码时交给你。
+// Compute 与等你回答切片:回答提问、验收/退回、失败重试/跳过、写盘授权、停止/继续/补充/回滚、卡在验证码时交给你。
 import { computes0, pending0, type Activity, type Compute } from '@/data'
 import { broken } from '@/mut'
 import { clock, frozen, later, uid } from '../boot'
 import { lens, type Slice } from '../state'
 import type { Ctx } from '../types'
+
+/** 停下后的说明:只保证到它启动的程序(v3.20 已定 16) */
+const STOPPED = '已停止 · 算力已归还（只保证到它启动的程序）'
 
 export type ComputeSlice = Pick<Ctx, 'computes' | 'pending' | 'answers' | 'resolve' | 'stop' | 'resume' | 'tell' | 'rollback' | 'hitCaptcha' | 'declineHuman' | 'takeHuman' | 'returnHuman'> & {
   /** 给某件 Compute 的过程追加一条(之前的「进行中」都收起) */
@@ -78,15 +81,16 @@ export const createComputeSlice: Slice<ComputeSlice> = (set, get) => {
       }
     },
 
-    /* AC-23:停止分两步。按下只是「请求停止」,等当前那条命令真的结束、进程确认停了,才算停下并归还算力;不提前归还 */
+    /* AC-23:停止分两步。按下只是「请求停止」,它启动的程序及子程序全部关掉、确认都退出了,才算停下并归还算力;不提前归还。
+       需求 v3.20 §8.1 已定 16(照 mirasim,不用容器):交给系统后台托管的程序找不到也关不掉,「已停止」注明只保证到它启动的那些程序 */
     stop: (cid) => {
       const at = get().computes[cid].steps.findIndex((s) => s.state === 'now')
-      if (broken('AC-23')) { patch(cid, () => ({ status: 'stopped', phase: '已停止 · 算力已归还' })); return }
-      patch(cid, () => ({ stopping: true, phase: '正在停止…等当前命令结束' }))
-      get().addAct(cid, { step: at, kind: 'user', title: '你按了停止。正在等当前命令结束，结束前不会归还算力' })
+      if (broken('AC-23')) { patch(cid, () => ({ status: 'stopped', phase: STOPPED })); return }
+      patch(cid, () => ({ stopping: true, phase: '正在停止…关掉它启动的程序' }))
+      get().addAct(cid, { step: at, kind: 'user', title: '你按了停止。正在关掉它启动的程序和子程序，都确认退出前不会归还算力' })
       setTimeout(() => {
-        patch(cid, () => ({ stopping: false, status: 'stopped', phase: '已停止 · 算力已归还' }))
-        get().addAct(cid, { step: at, kind: 'user', title: '进程已确认停止，算力已归还。已经改的文件保留，可以继续或回到检查点' })
+        patch(cid, () => ({ stopping: false, status: 'stopped', phase: STOPPED }))
+        get().addAct(cid, { step: at, kind: 'user', title: '它启动的程序和子程序都已确认退出，算力已归还（只保证到它启动的程序；交给系统后台托管的不在此列）。已经改的文件保留，可以继续或回到检查点' })
       }, frozen ? 600 : 1800)
     },
     resume: (cid) => {
