@@ -208,6 +208,11 @@ export class Host {
         run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", contactId, roomId, JSON.stringify(inbound), this.now());
       },
       notify: (contactId) => this.loop.notify(contactId, "now"),
+      label: (contactId, roomId) => {
+        const c = getDoc<ContactDoc>(this.db, `contact:${contactId}`)?.value;
+        const r = one<{ title: string }>(this.db, "SELECT title FROM gg_rooms WHERE id = ?", roomId);
+        return { ...(r ? { roomTitle: r.title } : {}), ...(c ? { contactName: c.name } : {}) };
+      },
       emit: (s) => {
         if ("removed" in s) this.bus.emit({ type: "schedule.removed", scheduleId: s.removed });
         else this.bus.emit({ type: "schedule.updated", schedule: s });

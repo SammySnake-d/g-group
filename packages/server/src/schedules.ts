@@ -41,6 +41,8 @@ export interface SchedulerDeps {
   readonly deliverTx: (contactId: string, roomId: string, inbound: Inbound) => void;
   readonly notify: (contactId: string) => void;
   readonly emit: (s: ScheduleView | { removed: string }) => void;
+  /** 视图里带上所属会话名与联系人名(AC-53);不存在的省略。 */
+  readonly label?: (contactId: string, roomId: string) => { roomTitle?: string; contactName?: string };
 }
 
 const MAX_TIMER = 2 ** 31 - 1;
@@ -91,10 +93,16 @@ export class Scheduler {
       lastRun: last ? { at: last.at, status: last.status, messageSeq: null } : null,
       commitmentId: null,
       createdAt: r.created_at,
+      ...(this.d.label?.(r.contact_id, r.room_id) ?? {}),
     };
   }
   list(q: { contactId?: string; roomId?: string; order?: "next-run" | "created" }): ScheduleView[] {
-    return all<Row>(this.d.db, "SELECT * FROM gg_schedules ORDER BY created_at, id")
+    // 默认按下次触发(停用/不再触发的排后),其次创建顺序;order=created 只按创建顺序。总览排序待定(D28 待确认 ②)
+    const sql =
+      q.order === "created"
+        ? "SELECT * FROM gg_schedules ORDER BY created_at, id"
+        : "SELECT * FROM gg_schedules ORDER BY (enabled = 0 OR next_run_at IS NULL), CASE WHEN enabled = 1 THEN next_run_at END, created_at, id";
+    return all<Row>(this.d.db, sql)
       .filter((r) => (!q.contactId || r.contact_id === q.contactId) && (!q.roomId || r.room_id === q.roomId))
       .map((r) => this.view(r));
   }
