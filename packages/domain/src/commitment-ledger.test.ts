@@ -1139,7 +1139,7 @@ test("独立判据：快照拒绝多余字段", () => {
 
 test("独立判据：命令拒绝多余字段", () => {
   const state = registered();
-  const command = { ...close("done", "artifact"), extra: "unexpected" } as Command;
+  const command = { ...close("done", "artifact"), extra: "unexpected" } as unknown as Command;
   let calls = 0;
   const result = applyLedger(state, state.version, command, () => { calls++; return true; });
   assert.deepEqual(result, { ok: false, reason: "invalid-input" });
