@@ -16,6 +16,7 @@ import {
   type DraftBody,
   type DraftView,
   type MessageView,
+  type ModelChangePreview,
   type ReceiptView,
   type RewindResult,
   type RoomView,
@@ -295,7 +296,7 @@ export class Host {
   }
 
   // ======================= 联系人 =======================
-  createContact(input: { clientActionId?: string; name: string; bio?: string; speakingModel?: string; harness?: ContactView["harness"]; computeModel?: ContactView["computeModel"]; persona?: string }): ContactView {
+  createContact(input: { clientActionId?: string; name: string; bio?: string; speakingModel?: string; harness?: ContactView["harness"]; computeModel?: ContactView["computeModel"]; persona?: string; confirmAffected?: boolean }): ContactView {
     const id = this.newId("c");
     const settings = this.settings();
     const doc: ContactDoc = {
@@ -316,7 +317,8 @@ export class Host {
     this.bus.emit({ type: "contact.updated", contact: view });
     return view;
   }
-  updateContact(id: string, patch: Partial<Omit<ContactDoc, "id" | "createdAt">>): ContactView {
+  updateContact(id: string, input: Partial<Omit<ContactDoc, "id" | "createdAt">> & { confirmAffected?: boolean }): ContactView {
+    const { confirmAffected: _confirm, ...patch } = input;
     const cur = this.contactDoc(id);
     const next: ContactDoc = { ...cur.value, ...patch, id, createdAt: cur.value.createdAt };
     putDoc(this.db, `contact:${id}`, cur.ver, next);
@@ -348,11 +350,21 @@ export class Host {
   settings(): SettingsView {
     return getDoc<SettingsView>(this.db, "settings")?.value ?? DEFAULT_SETTINGS;
   }
-  updateSettings(patch: Partial<SettingsView>): SettingsView {
+  updateSettings(input: Partial<SettingsView> & { confirmAffected?: boolean }): SettingsView {
+    const { confirmAffected: _confirm, ...patch } = input;
     const cur = getDoc<SettingsView>(this.db, "settings");
     const next = { ...(cur?.value ?? DEFAULT_SETTINGS), ...patch };
     putDoc(this.db, "settings", cur?.ver ?? 0, next);
     return next;
+  }
+  // ======================= 模型配置(AC-32) =======================
+  /** 保存前预检:不落盘。 */
+  previewModelChange(_change: ModelChangeInput): ModelChangePreview {
+    return { defaultsChanged: [], affected: [], conflicts: 0 };
+  }
+  /** 把模型 X 批量换成 Y:apply 不为 true 只预览。 */
+  batchReplaceModels(_from: string, _to: string, _o: { apply?: boolean; confirmAffected?: boolean } = {}): { applied: boolean; preview: ModelChangePreview } {
+    return { applied: false, preview: { defaultsChanged: [], affected: [], conflicts: 0 } };
   }
   computeModelOf(c: ContactDoc): string {
     const slot = c.computeModel;
@@ -1967,6 +1979,10 @@ function awaitingUser(d: TaskDoc): boolean {
   if (d.deliveredSeq == null) return false;
   return d.task.state === "T8a_Delivered" || d.task.state === "T5_InReview";
 }
+export type ModelChangeInput =
+  | { kind: "defaults"; defaultHarness?: SettingsView["defaultHarness"]; defaultSpeakingModel?: string; defaultComputeModel?: string; defaultEffort?: SettingsView["defaultEffort"] }
+  | { kind: "contact"; contactId: string; speakingModel?: string; harness?: ContactView["harness"]; computeModel?: ContactView["computeModel"] }
+  | { kind: "batch-replace"; from: string; to: string };
 
 type HostEffect =
   | { kind: "spawn"; taskId: string; requestId: string; contactId: string; model: string; brief: string; roomId: string }

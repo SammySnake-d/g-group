@@ -16,6 +16,7 @@ import {
   MarketplaceEntry,
   MemberRef,
   MessageView,
+  ModelChangePreview,
   ModelSlot,
   PluginView,
   ReceiptView,
@@ -52,7 +53,17 @@ export const METHODS = {
   "contacts.list": method(Empty, obj({ contacts: arr(ContactView) })),
   "contacts.get": method(obj({ contactId: id() }), ContactView),
   "contacts.create": method(
-    obj({ clientActionId: id(), name: str({ min: 1, max: 80 }), bio: opt(str({ max: 2000 })), speakingModel: opt(str({ max: 200 })), harness: opt(oneOf(HARNESSES)), computeModel: opt(ModelSlot), persona: opt(str({ max: 20000 })) }),
+    obj({
+      clientActionId: id(),
+      name: str({ min: 1, max: 80 }),
+      bio: opt(str({ max: 2000 })),
+      speakingModel: opt(str({ max: 200 })),
+      harness: opt(oneOf(HARNESSES)),
+      computeModel: opt(ModelSlot),
+      persona: opt(str({ max: 20000 })),
+      /** 预检发现会让 Compute 不兼容时,不带它保存被拒(conflict,detail.reason="model-incompatible",detail.preview);用户看过预览确认后带 true 再存。 */
+      confirmAffected: opt(bool()),
+    }),
     ContactView,
   ),
   "contacts.update": method(
@@ -68,6 +79,8 @@ export const METHODS = {
       computeAssets: opt(arr(obj({ name: str({ max: 200 }), kind: oneOf(["mcp", "skill", "script"] as const) }))),
       /** 预设(人设原文);改了下一轮第 1 块就用新值。 */
       persona: opt(str({ max: 20000 })),
+      /** 同 contacts.create。 */
+      confirmAffected: opt(bool()),
     }),
     ContactView,
   ),
@@ -292,11 +305,38 @@ export const METHODS = {
   "helper.history": method(obj({ entry: HelperEntry, ...Page }), obj({ notes: arr(HelperNote) })),
   /** 聊天里 @Helper 时的公开回复:作为 helper 发言者的一条消息回复那条 @ 它的用户消息。只有 mention 入口能用。 */
   "helper.post": method(obj({ entry: HelperEntry, text: str({ min: 1, max: 100000 }), clientActionId: id() }), MessageView),
+  // ---- 模型配置(AC-32)----
+  /** 保存前预检:按提议的改动算出每位联系人的生效值,列出受影响的下游与冲突;不落盘。 */
+  "models.preview": method(
+    obj({
+      change: tagged("kind", {
+        defaults: obj({ kind: lit("defaults"), defaultHarness: opt(oneOf(HARNESSES)), defaultSpeakingModel: opt(str({ max: 200 })), defaultComputeModel: opt(str({ max: 200 })), defaultEffort: opt(oneOf(EFFORTS)) }),
+        contact: obj({ kind: lit("contact"), contactId: id(), speakingModel: opt(str({ max: 200 })), harness: opt(oneOf(HARNESSES)), computeModel: opt(ModelSlot) }),
+        "batch-replace": obj({ kind: lit("batch-replace"), from: str({ min: 1, max: 200 }), to: str({ min: 1, max: 200 }) }),
+      } as const),
+    }),
+    ModelChangePreview,
+  ),
+  /** 把模型 X 批量换成 Y:apply 不为 true 时只预览;有冲突时不带 confirmAffected 应用被拒(conflict)。在途与历史任务的模型快照不改。 */
+  "models.batchReplace": method(
+    obj({ clientActionId: id(), from: str({ min: 1, max: 200 }), to: str({ min: 1, max: 200 }), apply: opt(bool()), confirmAffected: opt(bool()) }),
+    obj({ applied: bool(), preview: ModelChangePreview }),
+  ),
 
   // ---- 设置 ----
   "settings.get": method(Empty, SettingsView),
   "settings.update": method(
-    obj({ defaultHarness: opt(oneOf(HARNESSES)), defaultSpeakingModel: opt(str({ max: 200 })), defaultComputeModel: opt(str({ max: 200 })), defaultEffort: opt(oneOf(EFFORTS)), timezone: opt(str({ min: 1, max: 64 })) }),
+    obj({
+      defaultHarness: opt(oneOf(HARNESSES)),
+      defaultSpeakingModel: opt(str({ max: 200 })),
+      defaultComputeModel: opt(str({ max: 200 })),
+      defaultEffort: opt(oneOf(EFFORTS)),
+      timezone: opt(str({ min: 1, max: 64 })),
+      /** 模型能力声明(每个模型能在哪些 Harness 上跑),是三时机兼容性校验的判据;整表替换。 */
+      models: opt(arr(obj({ id: str({ min: 1, max: 200 }), label: str({ max: 200 }), vendor: str({ max: 64 }), harnesses: arr(oneOf(HARNESSES)) }), { max: 500 })),
+      /** 同 contacts.create:预检有冲突时不带 true 保存被拒。 */
+      confirmAffected: opt(bool()),
+    }),
     SettingsView,
   ),
 } as const;

@@ -12,6 +12,55 @@ export const ModelSlot = obj({
   model: opt(str({ max: 200 })),
   effort: opt(oneOf(EFFORTS)),
 });
+/** 一个槽位的生效值与完整解析链(AC-32 规则 5):界面原样显示 chain,例如「compute 跟随说话模型 → 说话模型 x」。 */
+export const MODEL_SUPPORT = ["supported", "unsupported", "undeclared"] as const;
+export const ResolvedModelView = obj({
+  harness: str({ max: 64 }),
+  model: str({ max: 200 }),
+  effort: str({ max: 32 }),
+  vendor: str({ max: 64 }),
+  modelSource: oneOf(["task", "explicit", "follow-speaking", "global"] as const),
+  effortSource: oneOf(["task", "compute-slot", "global"] as const),
+  chain: arr(str({ max: 300 }), { max: 10 }),
+});
+export type ResolvedModelView = Infer<typeof ResolvedModelView>;
+/** 不兼容时的两条修复路径:单独指定一个兼容的具体模型 / 更换支持该模型的 Harness。candidates 来自能力声明。 */
+export const ModelFixView = obj({ kind: oneOf(["explicit-compatible-model", "change-harness"] as const), candidates: arr(str({ max: 200 }), { max: 200 }) });
+/** 保存前预检 / 批量替换预览里的一位联系人(AC-32 ②、规则 6)。 */
+export const AffectedContactView = obj({
+  contactId: id(),
+  name: str({ max: 80 }),
+  /** explicit-reference:这位联系人的配置里直接写了被改的值;downstream:跟着上游(全局默认 / 说话模型)变 */
+  involvement: oneOf(["explicit-reference", "downstream"] as const),
+  changed: arr(oneOf(["speaking-model", "harness", "compute-model", "compute-effort"] as const), { max: 4 }),
+  speakingBefore: str({ max: 200 }),
+  speakingAfter: str({ max: 200 }),
+  before: ResolvedModelView,
+  after: ResolvedModelView,
+  support: oneOf(MODEL_SUPPORT),
+  /** 改完后这位联系人的 Compute 启动会被拦。 */
+  conflict: bool(),
+  fixes: arr(ModelFixView, { max: 2 }),
+});
+export const ModelChangePreview = obj({
+  defaultsChanged: arr(oneOf(["harness", "speakingModel", "computeModel", "effort"] as const), { max: 4 }),
+  affected: arr(AffectedContactView, { max: 10000 }),
+  conflicts: int({ min: 0 }),
+});
+export type ModelChangePreview = Infer<typeof ModelChangePreview>;
+/** 任务的不可变启动快照与只追加尝试账本(AC-32 ④、AC-51 ⑥)。 */
+export const ModelSnapshotView = obj({ harness: str({ max: 64 }), model: str({ max: 200 }), effort: str({ max: 32 }), vendor: str({ max: 64 }) });
+export const ModelAttemptView = obj({
+  seq: int({ min: 1 }),
+  computeId: str({ max: 200 }),
+  harness: str({ max: 64 }),
+  model: str({ max: 200 }),
+  effort: str({ max: 32 }),
+  vendor: str({ max: 64 }),
+  reason: oneOf(["start", "turn", "retry", "switch-retry", "observed"] as const),
+  at: isoTime(),
+});
+
 /** 联系人当前在做什么,驱动头像旁的「正在回复」等状态。 */
 export const CONTACT_ACTIVITY = ["idle", "reading", "thinking", "replying", "running-compute", "blocked", "offline"] as const;
 export const ContactView = obj({
@@ -27,6 +76,8 @@ export const ContactView = obj({
   computeAssets: arr(obj({ name: str({ max: 200 }), kind: oneOf(["mcp", "skill", "script"] as const) })),
   activity: oneOf(CONTACT_ACTIVITY),
   createdAt: isoTime(),
+  /** Compute 的生效值、完整解析链与能力声明里的支持性(可选,旧客户端忽略)。 */
+  computeResolved: opt(obj({ resolved: ResolvedModelView, support: oneOf(MODEL_SUPPORT) })),
 });
 export type ContactView = Infer<typeof ContactView>;
 
@@ -182,6 +233,12 @@ export const TaskView = obj({
   computeRuns: arr(ComputeRunView),
   /** 最近若干条进度,完整历史用 tasks.progress 分页取。 */
   recentProgress: arr(ComputeProgress, { max: 20 }),
+  /** 任务首次启动时的不可变模型快照;没启动过为 null(可选,旧客户端忽略)。 */
+  modelSnapshot: opt(nullable(ModelSnapshotView)),
+  /** 只追加的尝试账本:每次启动、每一轮输入、换模型重试各一条。 */
+  modelAttempts: opt(arr(ModelAttemptView, { max: 10000 })),
+  /** 由账本派生的累积生产厂商集合(跨厂商审查门禁按它判)。 */
+  producerVendors: opt(arr(str({ max: 64 }), { max: 50 })),
   artifacts: arr(obj({ ref: id(), name: str({ max: 500 }), kind: oneOf(["file", "diff", "link", "text"] as const) })),
   createdAt: isoTime(),
   updatedAt: isoTime(),

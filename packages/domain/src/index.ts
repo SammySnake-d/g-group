@@ -7,3 +7,5 @@ export * as contact from "./contact.ts";
 export * from "./helper.ts";
 export * from "./commitment-ledger.ts";
 export * from "./lease.ts";
+export * as modelConfig from "./model-config.ts";
+export * from "./model-ledger.ts";
