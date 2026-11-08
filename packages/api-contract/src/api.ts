@@ -8,6 +8,9 @@ import {
   ContactView,
   EFFORTS,
   HARNESSES,
+  HelperEntry,
+  HelperNote,
+  HelperRoute,
   MarketplaceEntry,
   MemberRef,
   MessageView,
@@ -218,6 +221,18 @@ export const METHODS = {
   // ---- Slash 命令 ----
   /** 当前会话可用命令(宿主内置 + 已启用插件 + 会话内联系人能力),输入框敲 / 时弹出。 */
   "commands.list": method(obj({ roomId: id(), prefix: opt(str({ max: 32 })) }), obj({ commands: arr(SlashCommand) })),
+
+  // ---- Helper(AC-52)----
+  /** Helper 这一次能读什么:全局入口默认不读任何聊天,readRoomIds 按需点名用户在场的聊天;侧栏/@ 读当前聊天。 */
+  "helper.context": method(
+    obj({ entry: HelperEntry, readRoomIds: opt(arr(id(), { max: 20 })), limit: opt(int({ min: 1, max: 500 })) }),
+    obj({ route: HelperRoute, rooms: arr(obj({ roomId: id(), title: str({ max: 200 }), messages: arr(MessageView) })) }),
+  ),
+  /** 全局面板 / 侧栏里记一条问答(不进会话、不送联系人)。clientActionId 幂等。mention 入口不能用。 */
+  "helper.note": method(obj({ entry: HelperEntry, role: oneOf(["user", "helper"] as const), text: str({ min: 1, max: 100000 }), clientActionId: id() }), HelperNote),
+  "helper.history": method(obj({ entry: HelperEntry, ...Page }), obj({ notes: arr(HelperNote) })),
+  /** 聊天里 @Helper 时的公开回复:作为 helper 发言者的一条消息回复那条 @ 它的用户消息。只有 mention 入口能用。 */
+  "helper.post": method(obj({ entry: HelperEntry, text: str({ min: 1, max: 100000 }), clientActionId: id() }), MessageView),
 
   // ---- 设置 ----
   "settings.get": method(Empty, SettingsView),

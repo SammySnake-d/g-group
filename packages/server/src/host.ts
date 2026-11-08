@@ -562,7 +562,7 @@ export class Host {
   }
 
   /** 发完一条消息之后:推事件、送达成员联系人的注意循环。 */
-  private afterAppend(roomId: string, seq: number, from: Member) {
+  private afterAppend(roomId: string, seq: number, from: { kind: Member["kind"] | "helper"; id: string }) {
     const msgs = this.projected(roomId);
     const m = msgs.find((x) => x.seq === seq);
     if (!m) return;
@@ -578,6 +578,14 @@ export class Host {
       const urgency: Urgency = direct && from.kind === "user" ? "now" : "batch";
       this.loop.notify(mem.id, urgency);
     }
+  }
+
+  /** Helper 在聊天里的公开回复(AC-52 @Helper):以 helper 发言者写一条消息,回复那条 @ 它的用户消息;clientActionId 幂等。 */
+  postAsHelper(roomId: string, helperId: string, text: string, replyToSeq: number, clientActionId: string): MessageView {
+    const from = { kind: "helper" as const, id: helperId };
+    const r = tx(this.db, () => this.appendMessageTx(roomId, from, { text, actionKey: `helper:${clientActionId}`, clientActionId, replyToSeq, quotedSeqs: [replyToSeq] }));
+    if (!r.duplicate) this.afterAppend(roomId, r.seq, from);
+    return this.messageView(roomId, this.projected(roomId).find((x) => x.seq === r.seq)!);
   }
 
   send(input: SendInput): MessageView {
