@@ -7,6 +7,8 @@ import { useApp } from '@/ctx'
 import { people, type Compute, type Msg, type Pending, type PersonId } from '@/data'
 import { isWaitingMsg } from '../shared/waiting'
 import { caretPoint } from './caret'
+import { continuesPrev, foldComputeTrails } from '@/components/messages/grouping'
+import type { Bodied } from '@/components/messages/types'
 
 /* 概念 · 目光
    g-group 的助手头像本来就有会动的眼睛(open-bot-avatar)。平时它们静止,省 CPU;
@@ -26,23 +28,16 @@ function target(): { x: number; y: number } | null {
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
 }
 
-/** 和消息流(Messages.tsx MessageList)的合并规则一致:同一个人 5 分钟内连着说、都不带引用、前一条没挂着等你的事或过程,
- *  就共用第一条的头像。所以这一串里任何一条在等你,头像都要看你 */
-function runOf(msgs: Msg[], msgId: string, from: PersonId, pending: Pending[], computes: Record<string, Compute>) {
-  const mins = (t?: string) => (t ? +t.slice(0, 2) * 60 + +t.slice(3, 5) : NaN)
-  const ends = (x: Msg) => 'id' in x && (pending.some((p) => 'ask' in p && p.ask === x.id) || Object.values(computes).some((c) => c.reportMsg === x.id))
-  const quoted = (x: Msg) => x.k === 'text' && !!x.quotes?.length
-  /* 已经汇报过的 Compute 不单独占一行(折进汇报消息),合并时也不算它 */
-  const ids0 = new Set(msgs.map((x) => ('id' in x ? x.id : '')))
-  const folded = new Set(Object.values(computes).filter((c) => c.reportMsg && ids0.has(c.reportMsg)).map((c) => c.id))
-  msgs = msgs.filter((x) => !(x.k === 'compute' && folded.has(x.computeId)))
-  const i = msgs.findIndex((m) => 'id' in m && m.id === msgId)
-  if (i < 0) return [msgId]
+/** 和消息流的合并规则是同一份(messages/grouping.ts):同一个人连着说的几条共用第一条的头像,
+ *  所以这一串里任何一条在等你,头像都要看你 */
+function runOf(all: Msg[], msgId: string, pending: Pending[], computes: Record<string, Compute>) {
+  const { list, trailOf } = foldComputeTrails(all, computes)
+  const endsTurn = (x: Msg) => 'id' in x && (pending.some((p) => 'ask' in p && p.ask === x.id) || !!trailOf[x.id])
+  const i = list.findIndex((m) => 'id' in m && m.id === msgId)
   const ids = [msgId]
-  for (let k = i + 1; k < msgs.length; k++) {
-    const prev = msgs[k - 1], m = msgs[k]
-    if (!('from' in m) || m.from !== from || !('id' in m) || ends(prev) || quoted(prev) || quoted(m)) break
-    if (prev.k === 'text' && m.k === 'text' && mins(m.at) - mins(prev.at) > 5) break
+  for (let k = i + 1; i >= 0 && k < list.length; k++) {
+    const m = list[k]
+    if (!('from' in m) || !('id' in m) || m.k === 'replying' || !continuesPrev(list[k - 1], m as Bodied, endsTurn)) break
     ids.push(m.id)
   }
   return ids
@@ -51,7 +46,7 @@ function runOf(msgs: Msg[], msgId: string, from: PersonId, pending: Pending[], c
 export function GazeAvatar({ msgId, id, size }: { msgId: string; id: PersonId; size: number }) {
   const { pending, checklist, computes, convs, active } = useApp()
   const msgs = convs.find((c) => c.id === active)?.messages ?? []
-  const waiting = runOf(msgs, msgId, id, pending, computes).some((x) => isWaitingMsg(x, pending, checklist, computes))
+  const waiting = runOf(msgs, msgId, pending, computes).some((x) => isWaitingMsg(x, pending, checklist, computes))
   /* 打开会话时就在等你的,才换成会看人的头像;其余照旧是静止头像(性能见 Avatar.tsx 的说明) */
   const [watched] = useState(waiting)
   const p = people[id]
