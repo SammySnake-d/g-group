@@ -39,6 +39,7 @@ import {
 } from "@g-group/domain";
 import {
   type AttentionLoop,
+  type ContactCompactor,
   type ContactMind,
   type Inbound,
   type InboundMessage,
@@ -100,6 +101,10 @@ export interface HostOptions {
   readonly clockMs?: () => number;
   readonly newId?: (prefix: string) => string;
   readonly maxDeferMs?: number;
+  /** 状态笔记压缩器(D06 第 2 小节第 3 块、D25 第 8 节):按联系人取,必须用它的说话模型做独立调用(AC-32 ③)。不给就不压缩。 */
+  readonly compactor?: (contact: ContactView) => ContactCompactor;
+  /** 状态笔记的 UTF-8 字节上限;超了请压缩器缩写,仍超就保留并报告,不截断。null / 不给:不设上限。 */
+  readonly stateNoteMaxBytes?: number | null;
   readonly timers?: TimerApi;
   readonly onReport?: (what: string, detail: unknown) => void;
   /** 群公告排序(列表与装配共用);默认按创建先后。排序规则待定(D28 待确认 ④),先做成参数。 */
@@ -1262,6 +1267,10 @@ export class Host {
   }
 
   // ======================= 联系人一轮 =======================
+  /** 联系人当前的状态笔记(第 3 块原文);没有为 null。红提交:空壳。 */
+  stateNote(_contactId: string): string | null {
+    return null;
+  }
   private cursor(contactId: string, roomId: string): number {
     return one<{ processed_seq: number }>(this.db, "SELECT processed_seq FROM gg_cursor WHERE contact_id = ? AND room_id = ?", contactId, roomId)?.processed_seq ?? 0;
   }
