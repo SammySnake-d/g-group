@@ -630,7 +630,7 @@ const committedCloneTurns = (repo: string) => {
   sh(path.dirname(repo), "clone", "-q", repo, c);
   write(c, { "packages/core/src/add.ts": `${ADD_OK}// neutral fixture\n` });
   sh(c, "add", "packages/core/src/add.ts");
-  const args = ["-i", "/usr/bin/git", "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-C", c, "commit", "--no-gpg-sign", "-m", "fixture"];
+  const args = ["-i", "/usr/bin/git", "--no-pager", "--no-replace-objects", "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-C", c, "commit", "--no-gpg-sign", "-m", "fixture"];
   const result = execFileSync("/usr/bin/env", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
   sh(repo, "fetch", "-q", c, "HEAD"); sh(repo, "merge", "-q", "--ff-only", "FETCH_HEAD");
   return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `/usr/bin/env ${args.join(" ")}` }, result }] }];
@@ -741,6 +741,11 @@ export const CASES: Case[] = [
   { name: "R11-03 稀疏数组加普通属性不得作为判因,密集数组放行", direct: r11Sparse, expect: null },
   { name: "R11-04 真实执行出口拒绝非法计划且不调用执行器,正常计划调用", direct: r11Guard, expect: null },
   { name: "R11-05 只读不算产出,写操作正控", direct: r11ReadOnly, expect: null },
+  { name: "R11-02 提交后的目录变成非仓库时不得沿用旧身份", authorTurns: committedCloneTurns, setup: (x) => { cleanClone(x); write(authorClone(x.repo), { "neutral.txt": NEUTRAL }); }, expect: "找不到对本仓库的任何操作" },
+  { name: "R11-02 旧提交文件不再属于受审版本时拒绝", authorTurns: committedCloneTurns, setup: (x) => { cleanClone(x); write(x.repo, { "packages/core/src/add.ts": `${ADD_OK}// newer version\n` }); commit(x.repo, "later"); }, expect: "找不到对本仓库的任何操作" },
+  { name: "R11-05 未知调用不能单独证明作者产出", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { cwd: repo, command: "printf neutral" }, result: "neutral" }] }], expect: "找不到对本仓库的任何操作" },
+  { name: "R11-05 写入内容与受审版本不符时拒绝", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: "neutral stale content" }, result: "File written successfully" }] }], expect: "找不到对本仓库的任何操作" },
+  { name: "R11-05 成功写入且内容匹配受审版本可证明产出", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "packages/core/src/add.ts"), content: ADD_OK }, result: "File written successfully" }] }], expect: null },
   { name: "R11-05 作者仅只读时来源拒绝", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { cwd: repo, command: "git status --short" }, result: "" }] }], expect: "找不到对本仓库的任何操作" },
   { name: "R11-05 跨厂商只读不计产出", authorTurns: (repo) => [...authorOk(repo), { model: "gpt-6", toolCalls: [{ name: "Bash", input: { cwd: repo, command: "git status --short" }, result: "" }] }], expect: null },
 
