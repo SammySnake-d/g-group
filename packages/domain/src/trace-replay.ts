@@ -117,6 +117,7 @@ export interface ClaimReplay {
   readonly state: Task["state"];
   readonly ver: number;
 }
+const CLAIM_OPS: ReadonlySet<string> = new Set(["read", "commit", "conflict", "rejected"]);
 export function replayClaim(dump: unknown, taskId = "t1", requester = "u1"): ClaimReplay {
   let cur: Versioned<Task> = cell(newTask(taskId, requester));
   const seen = new Map<string, Versioned<Task>>();
@@ -124,11 +125,12 @@ export function replayClaim(dump: unknown, taskId = "t1", requester = "u1"): Cla
   const steps: StepVerdict[] = [];
   for (const { index, act } of traceSteps(dump)) {
     const op = act.op as string;
+    if (!CLAIM_OPS.has(op)) throw new TypeError(`认领规格里没有动作 ${op}`);
     const who = str(act, "who");
     if (op === "read") {
       seen.set(who, cur);
       steps.push({ index, op, who, model: "read", real: "read", reason: null });
-    } else if (op === "commit" || op === "conflict" || op === "rejected") {
+    } else {
       const snap = seen.get(who) ?? cur;
       const out = apply(snap.value, { kind: "Claim", by: who });
       if (!out.ok) {
@@ -141,7 +143,7 @@ export function replayClaim(dump: unknown, taskId = "t1", requester = "u1"): Cla
         winners.push(who);
       }
       steps.push({ index, op, who, model: modelVerdict(op), real: r.ok ? "ok" : "conflict", reason: r.ok ? null : r.reason });
-    } else throw new TypeError(`认领规格里没有动作 ${op}`);
+    }
   }
   return { steps, winners, owner: cur.value.owner, state: cur.value.state, ver: cur.ver };
 }
@@ -153,6 +155,7 @@ export interface LeaseReplay {
   /** 真实实现里各持有者手上的资源与授予时的 epoch */
   readonly held: Readonly<Record<string, Readonly<Record<string, number>>>>;
 }
+const LEASE_OPS: ReadonlySet<string> = new Set(["read", "grant", "conflict", "release"]);
 /** order:资源全序(规格里的 ResSeq),下标就是 rank。 */
 export function replayLease(dump: unknown, order: readonly string[]): LeaseReplay {
   let table: LeaseTable = new Map();
@@ -166,6 +169,7 @@ export function replayLease(dump: unknown, order: readonly string[]): LeaseRepla
   const steps: StepVerdict[] = [];
   for (const { index, act } of traceSteps(dump)) {
     const op = act.op as string;
+    if (!LEASE_OPS.has(op)) throw new TypeError(`租约规格里没有动作 ${op}`);
     const who = str(act, "who");
     if (op === "read") {
       const res = str(act, "res");
@@ -180,7 +184,7 @@ export function replayLease(dump: unknown, order: readonly string[]): LeaseRepla
         mine.set(s.res, r.epoch);
       }
       steps.push({ index, op, who, model: modelVerdict(op), real: r.ok ? "ok" : r.reason === "version-conflict" ? "conflict" : "rejected", reason: r.ok ? null : r.reason });
-    } else if (op === "release") {
+    } else {
       const mine = heldOf(who);
       let reason: string | null = null;
       for (const [res, epoch] of mine) {
@@ -190,7 +194,7 @@ export function replayLease(dump: unknown, order: readonly string[]): LeaseRepla
       }
       if (reason === null) mine.clear();
       steps.push({ index, op, who, model: "ok", real: reason === null ? "ok" : "rejected", reason });
-    } else throw new TypeError(`租约规格里没有动作 ${op}`);
+    }
   }
   const heldOut: Record<string, Record<string, number>> = {};
   for (const [h, m] of held) heldOut[h] = Object.fromEntries(m);

@@ -26,6 +26,7 @@ const M = [
   ["L08 释放后不清持有者", "lease.ts", "{ holder: null, epoch: cur.epoch }", "{ holder: req.holder, epoch: cur.epoch }"],
   ["L09 不校验已持有序号", "lease.ts", '  if (!Array.isArray(req.heldRanks) || !req.heldRanks.every(isNat)) return { ok: false, reason: "invalid-request", detail: "heldRanks 必须是非负整数数组" };\n', ""],
   ["L10 读快照时持有者一律当空闲", "lease.ts", "holder: c?.value.holder ?? null,", "holder: null,"],
+  ["L11 最高序号初值改成 0(空手也不许申请序号 0)", "lease.ts", "return heldRanks.reduce((m, r) => Math.max(m, r), -1);", "return heldRanks.reduce((m, r) => Math.max(m, r), 0);"],
   ["R01 模型 conflict 当成 ok", "trace-replay.ts", 'op === "conflict" ? "conflict" : ', ""],
   ["R02 发布回放用当前版本提交(不带读到的版本)", "trace-replay.ts", "const r = commitIn(store, ROOM, b, `${who} 基于 v${b} 的草稿`);", "const r = commitIn(store, ROOM, verNow(), `${who} 基于 v${b} 的草稿`);"],
   ["R03 认领回放读最新版本而不是读到的快照", "trace-replay.ts", "const snap = seen.get(who) ?? cur;", "const snap = cur;"],
