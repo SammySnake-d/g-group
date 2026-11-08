@@ -31,6 +31,11 @@ CREATE TABLE IF NOT EXISTS gg_compute (
   status TEXT NOT NULL, started_at TEXT NOT NULL, ended_at TEXT, result TEXT
 );
 CREATE TABLE IF NOT EXISTS gg_progress (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, compute_id TEXT NOT NULL, kind TEXT NOT NULL, stage TEXT, summary TEXT NOT NULL, at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS gg_schedules (
+  id TEXT PRIMARY KEY, contact_id TEXT NOT NULL, room_id TEXT NOT NULL, title TEXT NOT NULL, cron TEXT NOT NULL, tz TEXT NOT NULL, prompt TEXT NOT NULL,
+  enabled INTEGER NOT NULL, tolerance_sec INTEGER NOT NULL, missed_policy TEXT NOT NULL, next_run_at TEXT, created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS gg_schedule_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, schedule_id TEXT NOT NULL, due_at TEXT NOT NULL, at TEXT NOT NULL, status TEXT NOT NULL, error TEXT);
 CREATE TABLE IF NOT EXISTS gg_effects (action_id TEXT PRIMARY KEY, kind TEXT NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL, error TEXT, created_at TEXT NOT NULL);
 `;
 

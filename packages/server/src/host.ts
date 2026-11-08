@@ -40,6 +40,7 @@ import {
 import { CONTACT_SYSTEM, CONTACT_TOOLS, type LedgerLine, type RoundAssembler, defaultAssemble } from "./assemble.ts";
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
+import { Scheduler } from "./schedules.ts";
 
 export interface HostOptions {
   readonly file: string;
@@ -55,6 +56,8 @@ export interface HostOptions {
   readonly computeTools?: readonly string[];
   readonly assemble?: RoundAssembler;
   readonly now?: () => string;
+  /** 定时用的时钟(毫秒);默认 Date.now。 */
+  readonly clockMs?: () => number;
   readonly newId?: (prefix: string) => string;
   readonly maxDeferMs?: number;
   readonly timers?: TimerApi;
@@ -139,6 +142,7 @@ export class Host {
   readonly userId: string;
   readonly userName: string;
   readonly loop: AttentionLoop;
+  readonly scheduler: Scheduler;
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly newId: (prefix: string) => string;
@@ -165,6 +169,28 @@ export class Host {
       run: (id, signal) => this.runRound(id, signal),
       onReport: (id, what, detail) => this.report(`attention:${what}:${id}`, detail),
     });
+    const timers: TimerApi = opts.timers ?? { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>) };
+    this.scheduler = new Scheduler({
+      db: this.db,
+      clockMs: opts.clockMs ?? Date.now,
+      timers,
+      newId: this.newId,
+      checkMember: (contactId, roomId) => {
+        this.contactDoc(contactId);
+        this.roomRow(roomId);
+        if (!this.isMember(roomId, { kind: "contact", id: contactId })) throw new HostError("forbidden", "联系人不在这个会话里");
+      },
+      deliverTx: (contactId, roomId, inbound) => {
+        run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", contactId, roomId, JSON.stringify(inbound), this.now());
+      },
+      notify: (contactId) => this.loop.notify(contactId, "now"),
+      emit: (s) => {
+        if ("removed" in s) this.bus.emit({ type: "schedule.removed", scheduleId: s.removed });
+        else this.bus.emit({ type: "schedule.updated", schedule: s });
+      },
+    });
+    // 启动时先处理宿主关着期间到期的定时(按容差与 missedPolicy),再按最早一次设计时器
+    this.scheduler.tick();
   }
 
   private report(what: string, detail: unknown) {
@@ -1115,6 +1141,7 @@ export class Host {
   }
   async close(): Promise<void> {
     this.closed = true;
+    this.scheduler.stop();
     await this.loop.stop();
     for (const a of this.adapters.values()) {
       for (const r of all<{ compute_id: string }>(this.db, "SELECT compute_id FROM gg_compute WHERE status IN ('starting','running')")) {
