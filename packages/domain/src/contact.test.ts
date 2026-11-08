@@ -2246,38 +2246,47 @@ test("CH-54 通用能力黑名单按规范化名字比对:大小写、首尾空�
 type R20Generator = { prototype: unknown };
 const r20Generator = (asynchronous: boolean): R20Generator =>
   (asynchronous ? async function* asyncGenerator() {} : function* syncGenerator() {}) as R20Generator;
-const r20FakePrototype = (asynchronous: boolean, value: unknown): R20Generator => {
+const r20FakePrototype = (asynchronous: boolean, value: unknown, key: PropertyKey = "data", enumerable = true): R20Generator => {
   const fn = r20Generator(asynchronous);
-  const engineLayer = Object.getPrototypeOf(fn.prototype as object) as object;
-  fn.prototype = Object.assign(Object.create(engineLayer), { data: value });
+  const prototype = Object.create(Object.getPrototypeOf(fn.prototype as object));
+  Object.defineProperty(prototype, key, { value, enumerable, writable: true, configurable: true });
+  fn.prototype = prototype;
   return fn;
 };
-const r20Entries = (fn: unknown) => {
+const r20Entries = (fn: unknown, calls: { grantTool: typeof grantTool; routeHelper: typeof routeHelper; confirmFinalReport: typeof confirmFinalReport }) => {
   const c = fullContact();
   return [
-    ["grantTool", grantTool(c, { name: "tool_r20", bounded: true, ignored: { fn } } as never)],
-    ["routeHelper", routeHelper({ kind: "global", extra: { fn } } as never, { kind: "user", id: "u" }, "u")],
-    ["confirmFinalReport", confirmFinalReport(c, { taskId: "T", commitmentIds: ["k"], basedOnSeq: 1, extra: { fn } } as never)],
+    ["grantTool", calls.grantTool(c, { name: "tool_r20", bounded: true, ignored: { fn } } as never)],
+    ["routeHelper", calls.routeHelper({ kind: "global", extra: { fn } } as never, { kind: "user", id: "u" }, "u")],
+    ["confirmFinalReport", calls.confirmFinalReport(c, { taskId: "T", commitmentIds: ["k"], basedOnSeq: 1, extra: { fn } } as never)],
   ] as const;
-};
-const r20RejectDataPrototype = (asynchronous: boolean, value: unknown) => {
-  for (const [entry, result] of r20Entries(r20FakePrototype(asynchronous, value))) {
-    assert.equal(result.ok, false, `${entry} 应拒绝带自有数据的非普通原型`);
-    assert.match(!result.ok ? result.reason : "", /\.prototype 只接受普通数据对象$/, `${entry} 应指出原型`);
-  }
 };
 
 test("R20-01 同步生成器同层伪原型带原始数据拒绝,三个入口均适用", () => {
-  r20RejectDataPrototype(false, 17);
+  const results = r20Entries(r20FakePrototype(false, 17), { grantTool, routeHelper, confirmFinalReport });
+  assert.deepEqual(results.map(([, result]) => result.ok), [false, false, false], "三个入口均须拒绝");
+  for (const [entry, result] of results) assert.match(!result.ok ? result.reason : "", /\.prototype 只接受普通数据对象$/, `${entry} 应指出原型`);
 });
 test("R20-01 同步生成器同层伪原型带普通对象数据拒绝,三个入口均适用", () => {
-  r20RejectDataPrototype(false, { note: "marker" });
+  const results = r20Entries(r20FakePrototype(false, { note: "marker" }), { grantTool, routeHelper, confirmFinalReport });
+  assert.deepEqual(results.map(([, result]) => result.ok), [false, false, false], "三个入口均须拒绝");
+  for (const [entry, result] of results) assert.match(!result.ok ? result.reason : "", /\.prototype 只接受普通数据对象$/, `${entry} 应指出原型`);
 });
 test("R20-01 异步生成器同层伪原型带原始数据拒绝,三个入口均适用", () => {
-  r20RejectDataPrototype(true, "marker");
+  const results = r20Entries(r20FakePrototype(true, "marker"), { grantTool, routeHelper, confirmFinalReport });
+  assert.deepEqual(results.map(([, result]) => result.ok), [false, false, false], "三个入口均须拒绝");
+  for (const [entry, result] of results) assert.match(!result.ok ? result.reason : "", /\.prototype 只接受普通数据对象$/, `${entry} 应指出原型`);
 });
 test("R20-01 异步生成器同层伪原型带普通对象数据拒绝,三个入口均适用", () => {
-  r20RejectDataPrototype(true, { note: "marker" });
+  const results = r20Entries(r20FakePrototype(true, { note: "marker" }), { grantTool, routeHelper, confirmFinalReport });
+  assert.deepEqual(results.map(([, result]) => result.ok), [false, false, false], "三个入口均须拒绝");
+  for (const [entry, result] of results) assert.match(!result.ok ? result.reason : "", /\.prototype 只接受普通数据对象$/, `${entry} 应指出原型`);
+});
+test("R20-01 同层伪原型的不可枚举与 Symbol 数据属性也拒绝", () => {
+  for (const [key, enumerable] of [["hidden", false], [Symbol("data"), true]] as const) {
+    const results = r20Entries(r20FakePrototype(false, 1, key, enumerable), { grantTool, routeHelper, confirmFinalReport });
+    assert.deepEqual(results.map(([, result]) => result.ok), [false, false, false], String(key));
+  }
 });
 test("R20-01 引擎生成原型及同层空对象放行,自有访问器与 Proxy 不调用即拒", () => {
   for (const asynchronous of [false, true]) {
@@ -2285,20 +2294,27 @@ test("R20-01 引擎生成原型及同层空对象放行,自有访问器与 Proxy
     const empty = r20Generator(asynchronous);
     empty.prototype = Object.create(Object.getPrototypeOf(empty.prototype as object));
     for (const value of [fn, empty]) {
-      for (const [entry, result] of r20Entries(value)) assert.equal(result.ok, true, `${entry} 空原型对照`);
+      const results = r20Entries(value, { grantTool, routeHelper, confirmFinalReport });
+      assert.deepEqual(results.map(([, result]) => result.ok), [true, true, true], "三个入口空原型对照");
     }
-    let getterCalls = 0;
-    const getter = r20Generator(asynchronous);
-    Object.defineProperty(getter.prototype as object, "data", { get() { getterCalls++; throw new Error("不应调用"); } });
-    for (const [entry, result] of r20Entries(getter)) assert.equal(result.ok, false, `${entry} 访问器拒绝`);
-    assert.equal(getterCalls, 0, "访问器调用次数");
+    let accessorCalls = 0;
+    for (const kind of ["get", "set"] as const) {
+      const accessor = r20Generator(asynchronous);
+      const hit = () => { accessorCalls++; throw new Error("不应调用"); };
+      Object.defineProperty(accessor.prototype as object, "data", kind === "get" ? { get: hit } : { set: hit });
+      const results = r20Entries(accessor, { grantTool, routeHelper, confirmFinalReport });
+      assert.deepEqual(results.map(([, result]) => result.ok), [false, false, false], `${kind} 访问器拒绝`);
+    }
+    assert.equal(accessorCalls, 0, "访问器调用次数");
     const counter = { n: 0 };
     const proxyValue = r20Generator(asynchronous);
     Object.defineProperty(proxyValue.prototype as object, "data", { value: new Proxy({}, countingHandler(counter, "throw")) });
-    for (const [entry, result] of r20Entries(proxyValue)) assert.equal(result.ok, false, `${entry} 属性值 Proxy 拒绝`);
+    const valueResults = r20Entries(proxyValue, { grantTool, routeHelper, confirmFinalReport });
+    assert.deepEqual(valueResults.map(([, result]) => result.ok), [false, false, false], "属性值 Proxy 拒绝");
     const proxyProto = r20Generator(asynchronous);
     proxyProto.prototype = new Proxy({}, countingHandler(counter, "throw"));
-    for (const [entry, result] of r20Entries(proxyProto)) assert.equal(result.ok, false, `${entry} 原型 Proxy 拒绝`);
+    const protoResults = r20Entries(proxyProto, { grantTool, routeHelper, confirmFinalReport });
+    assert.deepEqual(protoResults.map(([, result]) => result.ok), [false, false, false], "原型 Proxy 拒绝");
     assert.equal(counter.n, 0, "Proxy trap 调用次数");
   }
 });
