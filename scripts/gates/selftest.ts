@@ -257,6 +257,8 @@ function sandboxReadProbe(): string | undefined {
       fs.mkdirSync(path.dirname(node), { recursive: true });
       fs.copyFileSync(process.execPath, node, fs.constants.COPYFILE_FICLONE);
       fs.chmodSync(node, 0o755);
+      // R9-03:动态链接的 node(如 Homebrew)从 @loader_path 与 @loader_path/../lib 加载自带的 .dylib,按同样布局一起放进假 HOME 的点目录
+      for (const [from, to] of dylibLayout(process.execPath, path.dirname(path.dirname(node)))) fs.copyFileSync(from, to);
     }
     const forms = (rel: string) => (docker ? [path.join(fs.realpathSync(real), rel)] : [path.join(link, rel), path.join(real, rel), path.join(fs.realpathSync(real), rel)]);
     const deny = R7_DENY.flatMap(forms);
@@ -338,6 +340,142 @@ function seatbeltPlanCheck(): string | undefined {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 }
+/** 运行时 bin/ 与 ../lib/ 下的 .dylib(按真实路径),及其放进 prefix 下同样布局的目标位置。自检自己算,不调被测的 runtimeLibs。 */
+function dylibLayout(exe: string, prefix: string): [string, string][] {
+  const bin = path.dirname(fs.realpathSync(exe));
+  const out: [string, string][] = [];
+  for (const [d, sub] of [[bin, "bin"], [path.join(path.dirname(bin), "lib"), "lib"]] as const) {
+    let es: fs.Dirent[] = [];
+    try { es = fs.readdirSync(d, { withFileTypes: true }); } catch { continue; }
+    for (const e of es) if (e.isFile() && e.name.endsWith(".dylib")) { fs.mkdirSync(path.join(prefix, sub), { recursive: true }); out.push([path.join(d, e.name), path.join(prefix, sub, e.name)]); }
+  }
+  return out;
+}
+/** 规则行 "(动作 操作 (subpath "...") (literal "...") ...)" 拆成过滤项;整行必须恰好由这些项组成,否则返回 undefined。 */
+function sbFilters(line: string, head: string): string[] | undefined {
+  if (!line.startsWith(`${head} `) || !line.endsWith(")")) return undefined;
+  const body = line.slice(head.length, -1);
+  const items = body.match(/ \((?:subpath|literal) "(?:[^"\\]|\\.)*"\)| \(regex #"(?:[^"\\]|\\.)*"\)/g) ?? [];
+  return items.join("") === body ? items.map((x) => x.trim()) : undefined;
+}
+const sameSet = (a: string[], b: string[]) => a.length === b.length && [...a].sort().join("\n") === [...b].sort().join("\n");
+/** 假运行时:prefix/bin/node(中性内容,不执行),可选带 .dylib 与非库文件。 */
+function fakeRuntime(root: string, libs: boolean): { exe: string; libs: string[] } {
+  const files: Files = { "bin/node": NEUTRAL };
+  if (libs) Object.assign(files, { "bin/libside.fixture.dylib": NEUTRAL, "lib/libnode.fixture.dylib": NEUTRAL, "lib/notes.txt": NEUTRAL, "lib/node_modules/x/index.js": NEUTRAL });
+  write(root, files);
+  const r = fs.realpathSync(root);
+  return { exe: path.join(root, "bin", "node"), libs: libs ? [path.join(r, "bin", "libside.fixture.dylib"), path.join(r, "lib", "libnode.fixture.dylib")] : [] };
+}
+/** 在临时目录、假 HOME(符号链接)下生成执行计划;mode 与 exe 由调用方给。只用中性内容。 */
+function withPlanFixture<T>(prefix: string, fn: (fx: { tmp: string; real: string; link: string; work: string; dep: string; rw: string; rh: string; rd: string }) => T): T {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  const saved = { h: process.env.HOME, s: process.env.MIRASIM_SESSIONS, r: process.env.MIRASIM_ROOMS, i: process.env.GATE_SANDBOX_IMAGE };
+  try {
+    const real = path.join(tmp, "home-real"), link = path.join(tmp, "home-link"), work = path.join(tmp, "work"), dep = path.join(tmp, "deps", "node_modules");
+    write(real, Object.fromEntries(R7_DENY.slice(0, 3).map((f) => [f, NEUTRAL])));
+    write(work, { "own.txt": NEUTRAL });
+    write(dep, R7_DEP);
+    fs.symlinkSync(real, link);
+    process.env.HOME = link;
+    delete process.env.MIRASIM_SESSIONS;
+    delete process.env.MIRASIM_ROOMS;
+    return fn({ tmp, real, link, work, dep, rw: fs.realpathSync(work), rh: fs.realpathSync(real), rd: fs.realpathSync(dep) });
+  } finally {
+    for (const [k, v] of [["HOME", saved.h], ["MIRASIM_SESSIONS", saved.s], ["MIRASIM_ROOMS", saved.r], ["GATE_SANDBOX_IMAGE", saved.i]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+/**
+ * R9-01:放行范围必须恰好是工作副本与挂载的依赖(静态链接的假运行时,没有要放行的库),多出任何一项(例如把 HOME 加进放行)都判失败;
+ * 整份规则里的 allow 只能是 allow default、写入副本与 /dev、这一条读放行。只核对规则文本,任何平台都能跑。
+ */
+function seatbeltAllowExact(): string | undefined {
+  return withPlanFixture("gate-r901-", ({ tmp, rw, rd, work, dep }) => {
+    const rt = fakeRuntime(path.join(tmp, "rt"), false);
+    const plan = sandboxPlan(["-e", "0"], work, [dep], "seatbelt", rt.exe);
+    const lines = (plan.profile ?? "").split("\n");
+    const bad: string[] = [];
+    if (plan.argv[2] !== rt.exe) bad.push(`执行的不是给定的运行时:${plan.argv[2]}`);
+    const allowLines = lines.filter((l) => l.startsWith("(allow"));
+    const want = ["(allow default)", `(allow file-write* (subpath "${rw}") (regex #"^/dev/"))`];
+    for (const w of want) if (!allowLines.includes(w)) bad.push(`缺放行行:${w}`);
+    const reads = allowLines.filter((l) => !want.includes(l));
+    if (reads.length !== 1) bad.push(`除 allow default 与写入放行外应恰有一条读放行,实际 ${reads.length} 条:${JSON.stringify(reads)}`);
+    else {
+      const got = sbFilters(reads[0]!, "(allow file-read-data");
+      const exp = [`(subpath "${rw}")`, `(subpath "${rd}")`];
+      if (!got) bad.push(`读放行行格式不对:${reads[0]}`);
+      else if (!sameSet(got, exp)) bad.push(`读放行范围应恰为 ${JSON.stringify(exp)},实际 ${JSON.stringify(got)}`);
+    }
+    return bad.length ? bad.join("\n") : undefined;
+  });
+}
+/** R9-03:动态链接的假运行时(bin/ 与 ../lib/ 下各有 .dylib,另有非库文件与目录),读放行须逐个列出这些 .dylib(literal,realpath),不放行目录与其它文件。 */
+function seatbeltRuntimeLibs(): string | undefined {
+  return withPlanFixture("gate-r903-", ({ tmp, rw, rd, work, dep }) => {
+    const rt = fakeRuntime(path.join(tmp, "rt"), true);
+    const plan = sandboxPlan(["-e", "0"], work, [dep], "seatbelt", rt.exe);
+    const read = (plan.profile ?? "").split("\n").filter((l) => l.startsWith("(allow file-read"));
+    if (read.length !== 1) return `应恰有一条读放行,实际 ${read.length} 条`;
+    const got = sbFilters(read[0]!, "(allow file-read-data");
+    const exp = [`(subpath "${rw}")`, `(subpath "${rd}")`, ...rt.libs.map((l) => `(literal "${l}")`)];
+    if (!got) return `读放行行格式不对:${read[0]}`;
+    return sameSet(got, exp) ? undefined : `读放行范围应恰为 ${JSON.stringify(exp)},实际 ${JSON.stringify(got)}`;
+  });
+}
+/** R9-02:联网隔离规则跨平台核对。seatbelt:恰有一条 (deny network*),没有任何别的联网规则;docker:恰有一处 --network none,挂载恰为副本与依赖。 */
+function networkPlanCheck(): string | undefined {
+  return withPlanFixture("gate-r902p-", ({ tmp, rw, rd, work, dep }) => {
+    const bad: string[] = [];
+    const rt = fakeRuntime(path.join(tmp, "rt"), false);
+    const sb = (sandboxPlan(["-e", "0"], work, [dep], "seatbelt", rt.exe).profile ?? "").split("\n");
+    const net = sb.filter((l) => /network/.test(l));
+    if (net.length !== 1 || net[0] !== "(deny network*)") bad.push(`seatbelt 联网规则应恰为 (deny network*),实际 ${JSON.stringify(net)}`);
+    process.env.GATE_SANDBOX_IMAGE = "r9-plan-fixture-image";
+    const d = sandboxPlan(["-e", "0"], work, [dep], "docker");
+    const a = d.argv;
+    const netIdx = a.flatMap((x, i) => (/^--net(work)?(=|$)/.test(x) ? [i] : []));
+    if (netIdx.length !== 1 || a[netIdx[0]!] !== "--network" || a[netIdx[0]! + 1] !== "none") bad.push(`docker 应恰有一处 --network none,实际 ${JSON.stringify(netIdx.map((i) => a.slice(i, i + 2)))}`);
+    const img = a.indexOf("r9-plan-fixture-image");
+    const opts = img < 0 ? a : a.slice(0, img);
+    if (img < 0) bad.push("docker 参数里没有镜像");
+    for (const x of opts) if (/^--(privileged|cap-add|add-host|net(work)?-alias|dns)/.test(x)) bad.push(`docker 多出了 ${x}`);
+    const vols = opts.flatMap((x, i) => (x === "-v" ? [opts[i + 1]!] : []));
+    if (!sameSet(vols, [`${rw}:${rw}`, `${rd}:${rd}`])) bad.push(`docker 挂载应恰为副本与依赖,实际 ${JSON.stringify(vols)}`);
+    return bad.length ? bad.join("\n") : undefined;
+  });
+}
+/**
+ * R9-02:真实隔离入口的联网对照。宿主上起本机回环夹具(只回中性标记),同一读取脚本:宿主直接跑须取得标记(对照,取不到算环境故障、抛错不算发现);
+ * 经真实 sandboxed 跑:seatbelt 下必须被拒(blocked:EPERM 等错误码),docker 下容器自带回环,取不到宿主夹具即可(这一侧区分不了联网规则,规则由跨平台核对管)。
+ */
+function networkProbe(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r902-"));
+  try {
+    const home = path.join(tmp, "home"), work = path.join(tmp, "work");
+    write(home, { "keep.txt": NEUTRAL });
+    write(work, { "own.txt": NEUTRAL });
+    const server = `import net from "node:net"; const s = net.createServer((c) => c.end(${JSON.stringify(NEUTRAL)})); s.listen(0, "127.0.0.1", () => console.log(s.address().port)); setTimeout(() => s.close(), 60000).unref();`;
+    const reader = `import net from "node:net"; const port = Number(process.argv[1]); let done = false; const fin = (x) => { if (done) return; done = true; console.log(x); s.destroy(); }; const s = net.connect({ host: "127.0.0.1", port }); let buf = ""; s.on("data", (d) => { buf += d; }); s.on("end", () => fin(buf === ${JSON.stringify(NEUTRAL)} ? "read" : "wrong")); s.on("error", (e) => fin("blocked:" + (e.code ?? e.message))); setTimeout(() => fin("timeout"), 3000).unref();`;
+    const driver = `import { spawn, spawnSync } from "node:child_process";
+const { sandboxed } = await import(${JSON.stringify(new URL(`file://${path.join(HERE, "lib.ts")}`).href)});
+const srv = spawn(process.execPath, ["--input-type=module", "-e", ${JSON.stringify(server)}], { stdio: ["ignore", "pipe", "inherit"] });
+const port = await new Promise((ok, no) => { srv.stdout.once("data", (d) => ok(String(d).trim())); srv.once("exit", () => no(new Error("夹具监听进程退出"))); setTimeout(() => no(new Error("夹具监听超时")), 10000); });
+const args = ["--input-type=module", "-e", ${JSON.stringify(reader)}, port];
+const host = spawnSync(process.execPath, args, { encoding: "utf8", timeout: 10000 });
+const box = sandboxed(args, ${JSON.stringify(work)});
+srv.kill();
+console.log(JSON.stringify({ host: { status: host.status, out: (host.stdout ?? "").trim() }, box: { status: box.status, out: (box.stdout ?? "").trim(), err: (box.stderr ?? "").slice(-300) } }));`;
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", driver], { encoding: "utf8", timeout: 120_000, env: { ...gitEnv(), HOME: home } });
+    let res: { host: { status: number; out: string }; box: { status: number | null; out: string; err: string } };
+    try { res = JSON.parse((r.stdout ?? "").trim().split("\n").pop() ?? ""); } catch { throw new Error(`联网探针没有给出结果(退出 ${r.status}):${(r.stderr ?? "").slice(-300)}`); }
+    if (res.host.status !== 0 || res.host.out !== "read") throw new Error(`宿主对照没有取得中性标记(环境故障,不算发现):${JSON.stringify(res.host)}`);
+    if (res.box.status !== 0) return `沙箱进程退出 ${res.box.status}:${res.box.err}`;
+    if (!res.box.out.startsWith("blocked:")) return `沙箱内应连不上宿主回环夹具,实际 ${res.box.out}`;
+    return undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
 // 完整入口:假 HOME 在样例目录下(TMPDIR 里,macOS 上未规范化的 /var 路径),门禁命令行就用这个 HOME
 const R7_HOME = (dir: string) => path.join(dir, "home");
 const R7_READ_TEST = (dir: string) => T(`test("adds", () => { const a = fs.readFileSync(${JSON.stringify(path.join(R7_HOME(dir), ".git-credentials"))}, "utf8"); const b = fs.readFileSync(${JSON.stringify(path.join(R7_HOME(dir), ".netrc"))}, "utf8"); console.log(a.length + b.length); assert.equal(add(1, 2), 3); });\n`, `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport fs from "node:fs";\nimport { add } from "./add.ts";\n`);
@@ -410,6 +548,10 @@ export const CASES: Case[] = [
   { name: "RR-02 CI 设了沙箱镜像时,模拟无沙箱仍然停", env: { GATE_SIMULATE_NO_SANDBOX: "1", GATE_SANDBOX_IMAGE: "node:22.22.0-slim" }, expect: "没有可用沙箱" },
   { name: "R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载)", direct: sandboxReadProbe, expect: null },
   { name: "R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)", direct: seatbeltPlanCheck, expect: null },
+  { name: "R9-01 seatbelt 读放行范围恰为工作副本与挂载的依赖,多出的放行项(如整个 HOME)判失败", direct: seatbeltAllowExact, expect: null },
+  { name: "R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖", direct: networkPlanCheck, expect: null },
+  { name: "R9-02 真实隔离入口联网对照:宿主可取得本机回环夹具的中性标记,沙箱内被拒", direct: networkProbe, expect: null },
+  { name: "R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件", direct: seatbeltRuntimeLibs, expect: null },
   { name: "R7-01 完整入口:具名测试读假 HOME 的 .git-credentials/.netrc 被拒,门禁拦下", main: { ".gitignore": "node_modules\n" }, headFn: (dir) => ({ ...HEAD_OK, "packages/core/src/add.test.ts": R7_READ_TEST(dir) }), redFn: (dir) => ({ ...RED_OK, "packages/core/src/add.test.ts": R7_READ_TEST(dir) }), envFn: (dir) => ({ HOME: R7_HOME(dir) }), setup: R7_SETUP, expect: "现在没有恰好通过一次" },
   { name: "R7-01 完整入口对照:同一假 HOME 下,测试读工作副本文件、加载 HOME 点目录里的依赖照常放行", main: { ".gitignore": "node_modules\n" }, head: { ...HEAD_OK, "packages/core/src/add.test.ts": R7_OK_TEST, "packages/core/src/fixture.txt": NEUTRAL }, red: { ...RED_OK, "packages/core/src/add.test.ts": R7_OK_TEST, "packages/core/src/fixture.txt": NEUTRAL }, envFn: (dir) => ({ HOME: R7_HOME(dir) }), setup: R7_SETUP, expect: null },
   { name: "RR-05 相对路径的写操作算进产出厂商", authorRecord: { workdir: "/x/deliverables/g-group" }, authorTurns: () => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/deliverables/g-group/a.ts" } }] }, { model: "gpt-6", toolCalls: [{ name: "apply_patch", input: "*** Begin Patch\n*** Update File: packages/core/src/add.ts\n*** End Patch" }] }], expect: "在作者的产出厂商集合" },
