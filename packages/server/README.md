@@ -10,10 +10,14 @@
 ## 接到 Electron
 
 ```ts
-import { Host, createService, bindIpc } from "@g-group/server";
-const host = new Host({ file: path.join(app.getPath("userData"), "gg.db"), mind, compute, catalogFile });
-bindIpc(ipcMain, createService(host)); // gg:invoke / gg:subscribe / gg:unsubscribe / gg:event
+import { startServer } from "@g-group/server";
+// mind: "fake" 规则替身 | "pi" 真实联系人;compute: "fake" 剧本 | "claude" 真实 Claude Code
+const s = await startServer({ dataDir: app.getPath("userData"), mind: "fake", compute: "fake" });
+s.bind(ipcMain); // gg:invoke / gg:subscribe / gg:unsubscribe / gg:event
+app.on("before-quit", () => s.close());
 ```
+
+更细的控制直接用 `new Host({...})` + `createService(host)` + `bindIpc(ipcMain, service)`。
 
 preload 只暴露 `window.gg.invoke(method, params)` 与 `window.gg.subscribe(listener, { sinceEventSeq })`,类型见 `@g-group/api-contract` 的 `GGroupBridge`。
 
