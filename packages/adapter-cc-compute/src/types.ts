@@ -38,6 +38,21 @@ export interface AdapterOptions {
 export interface SpawnOptions {
   readonly handoff?: unknown;
   readonly cwd?: string;
+  /** 首轮用的生效模型(AC-51 ①);常驻适配器按它启动,一次性适配器忽略 */
+  readonly model?: string;
+  /** 首轮用的推理强度;常驻适配器按它启动 */
+  readonly effort?: string;
+}
+
+/** 这一轮的生效模型(AC-51、D27 第 4 节第 1 条):宿主每轮现场解析后交给适配器,适配器在轮边界与会话当前模型比对 */
+export interface TurnModel {
+  readonly model: string;
+  readonly effort?: string;
+}
+
+/** 适配器能力声明(D27 第 4 节第 5 条):inSessionModelSwitch=false 时换模型走兜底重启并接回同一会话 */
+export interface AdapterCapabilities {
+  readonly inSessionModelSwitch: boolean;
 }
 
 export interface ManifestSection {
@@ -54,16 +69,49 @@ export interface Manifest {
   readonly placement: Placement;
 }
 
-export type Refusal = { readonly ok: false; readonly reason: string };
+export type Refusal = {
+  readonly ok: false;
+  readonly reason: string;
+  /** model-switch-failed:轮边界换模型被 harness 拒绝或超时,这一轮输入没有发出、没有退回旧模型继续跑(AC-51 ④) */
+  readonly code?: "model-switch-failed";
+  /** 给用户的修复路径(D07.4 规则 2):单独指定兼容模型 / 更换 harness */
+  readonly fixes?: readonly ("explicit-compatible-model" | "change-harness")[];
+};
 export type SpawnResult = { readonly ok: true; readonly computeId: string; readonly manifest: Manifest } | Refusal;
 export type SnapshotResult = { readonly ok: true; readonly snapshot: HandoffSnapshot } | Refusal;
 
 export type ComputeEvent =
-  | { readonly computeId: string; readonly kind: "started"; readonly sessionId: string; readonly resumed: boolean }
+  | {
+      readonly computeId: string;
+      readonly kind: "started";
+      readonly sessionId: string;
+      readonly resumed: boolean;
+      /** harness 自报的会话当前模型(常驻适配器给出) */
+      readonly model?: string;
+      /** CLI 主进程 pid(常驻适配器给出;跨轮不变即同一进程) */
+      readonly pid?: number;
+    }
   | { readonly computeId: string; readonly kind: "milestone"; readonly stage: string; readonly summary: string }
   | { readonly computeId: string; readonly kind: "blocked"; readonly needs: string; readonly summary: string }
-  | { readonly computeId: string; readonly kind: "completed"; readonly result: string }
-  | { readonly computeId: string; readonly kind: "failed"; readonly reason: string; readonly code: number | null; readonly signal: string | null; readonly violations: readonly string[] }
+  | {
+      readonly computeId: string;
+      readonly kind: "completed";
+      readonly result: string;
+      /** 这一轮开始时会话的当前模型(harness 自报,常驻适配器给出) */
+      readonly model?: string;
+      /** 这一轮 harness 回报实际用过的模型(result.model_usage_since_last_result 的键),供宿主记 attempt_model_ledger(AC-51 ⑥) */
+      readonly models?: readonly string[];
+    }
+  | {
+      readonly computeId: string;
+      readonly kind: "failed";
+      readonly reason: string;
+      readonly code: number | null;
+      readonly signal: string | null;
+      readonly violations: readonly string[];
+      readonly model?: string;
+      readonly models?: readonly string[];
+    }
   | {
       readonly computeId: string;
       readonly kind: "stopped";
@@ -87,7 +135,11 @@ export type ComputeEventKind = ComputeEvent["kind"];
 
 export interface ComputeAdapter {
   spawn(brief: unknown, opts?: SpawnOptions): Promise<SpawnResult>;
-  resume(computeId: string, text: string): Promise<{ readonly ok: true } | Refusal>;
+  /** turn 是这一轮的生效模型(AC-51);常驻适配器在轮边界与会话当前模型比对,不同就在会话内换;一次性适配器忽略 */
+  resume(computeId: string, text: string, turn?: TurnModel): Promise<{ readonly ok: true } | Refusal>;
+  /** 插话进当前这一轮(D27 第 4 节第 3 条):用当前模型,不触发换模型 */
+  steer?(computeId: string, text: string): Promise<{ readonly ok: true } | Refusal>;
+  readonly capabilities?: AdapterCapabilities;
   stop(computeId: string): Promise<{ readonly ok: true } | Refusal>;
   /** 所有 Compute 的语义事件,从适配器创建起按发生顺序 */
   events(): AsyncIterable<ComputeEvent>;
