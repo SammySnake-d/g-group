@@ -1495,3 +1495,68 @@ NODE
 从该审查提交的仓库根目录安装依赖后，以证据目录的 `boundaries.mjs <repo>` 复现 R11-01/02，以 `own-mutations.mjs <repo>` 复现 R11-03（它只改临时副本并自动删除）。`independent-probes.mjs <repo> <node绝对路径>` 可重跑 44 个进程矩阵；故意复现残余样例的退出 1 不要误读为平台拦截。
 
 清理：本轮已绑定的临时 clone、故障副本、夹具和中断变异残留将在推送回读完成后删除，实际删除量另存证据收据；不删除其他助手或无法确认归属的临时目录。保留上述证据目录，不改其他工作区或现场服务。
+
+---
+
+# 第十二轮：Codex 独立复审
+
+**结论：REJECT。** 存在外部 Promise 访问器被执行并可能终止宿主、带访问器的 Promise 被当作正常回执/拉取结果、外部请求字节数错误导致前缀哈希误判，以及两个独立单点故障逃过现有测试的问题。以下结果只来自本轮执行，不采用旧子代理结论或本地通过收据。
+
+## 对象、范围与证据
+
+- 被审 `origin/feat/kernel-plugins` HEAD `8abfbae536452e5f729a7436f96896862716d8fe`；基线 `origin/feat/domain-core` 为 `afd02560f9546147da380382404eb6106222a9b8`。开工时远端回读一致。普通独立 HTTPS clone，不使用共享 worktree；产品源码和原测试未改。来源规范 `origin/docs/dev-handbook` 为 `396c05360b1381e1eb1acb1792b070d99fbb4945`，不把标记「候选」的条目作为验收标准。
+- 本次 Mirasim 会话 `codex:6e2a9ebd-ea69-49ac-aaf7-3bb3e5c7edd5`；实际原生会话 `01a1b9b7-2113-7aa3-8abe-7080e6cf07d8` 的 turn_context 模型为 `gpt-6.1-terra`。在本会话实际运行 `node scripts/gates/run-all.ts --hash --branch=feat/kernel-plugins --base=origin/feat/domain-core`，输出并钉住：`999cdbc26456965da0daff45db052ab625a1a3d3ff2fe30a68878d5987676bfd`。
+- 本轮原始日志与可重跑探针保留在 `/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr6-r12-codex/`。独立探针不预先改写任何内置原型；隔离验证仅使用假 HOME 与中性标记。
+
+## 独立复现
+
+- `npm ci` 退出 0；`npm run typecheck`、`npm run lint` 均退出 0，lint 检查 25 文件。`npm test` Node 22.22.0 和 25.8.1 各 240 通过、0 失败、0 cancelled、0 skipped、0 todo。日志 `npm-test-node22.log`、`npm-test-node25.log`。
+- 红提交 `6faf40311220b0f7f053f2bca8d8dc49ed1d4240` 的测试文件与当前相同；Node 22 上 217 条内核测试全按名失败；当前同名 217 全按名通过，集合双向差集各 0（`red-node22.tap`、`green-node22.tap`）。
+- 作者 203 项单故障：Node 22.22.0 原样副本 217 绿，203/203 被原样通过的具名测试杀死，0 存活、0 超时，退出 0（`mutations-node22.log`）；K210/K211 均被具名测试杀死。为降低本机并发，副本 runner 仅给 node:test 增加 `--test-concurrency=1`，其清单、注入、测试和杀死判据不变，差异见 `mutation-runner.diff`，产品源码与作者脚本未改。
+- 超时金丝雀：Node 22/25 均约 5 秒被终止并按超时而非杀死记录（`canary.log`）。
+- 上轮 R11-01：Node 22/25 的 send/pull 四次实测均拒收锁定 Buffer 的 Promise；async_hooks 观察窗口各 6/2 次，Buffer species 描述符变化 0，正常 Buffer 切片失败 0，事后属性相同（`boundaries-node22.log`、`boundaries-node25.log`）。但仅证明不改写 Buffer；该形态无全局处理器时分别返回拒绝后以未处理拒绝退出 1（`buffer-unhandled.log`）。它不属于已明确排除的三类，必须保留待用户决定/集成前隔离的边界，不能写成拒收已确保宿主存活。
+- R11-02：`2^32-1`、更大十进制名、额外字符串名和有效下标访问器分别经过 plainData、plainItems、appendOwn、pull 四条路径，Node 22/25 均拒绝、getter 0 次；普通数组对照放行、Proxy 陷阱 0 次。
+- R11-03：在隔离副本分别注入 species=null 的 M1 和缺省 species 的 M3，Node 25 原版的十九形态无全局处理器测试按名通过；两种故障各被同一具名测试按名杀死（`r11-baseline-node25.tap`、`r11-M1-node25.tap`、`r11-M3-node25.tap`）。
+- 合法嵌套 JSON null 保留，入站 null 不抛错地拒绝；EVENT_CODES、STABLE_ORDER 修改被阻止，Node 22/25 对照见 `null-policy.log`。这不是所有 API 对任意错误形状一律不抛错的声明：serialize/prefixLength/prefixHash 的顶层非对象输入现有合同是受控 TypeError。
+
+## 必须返修
+
+### R12-01 [P1] 已拒绝 Promise 的异步追踪符号 getter 在宿主中执行，抛错可终止进程
+
+位置：`packages/kernel/src/plugins.ts:41-43,161-175,343,389`。`quietRefused` 调用内置 `Promise.prototype.then` 时，已启用 async_hooks 的 Node 内部会读取该外部 Promise 的 `async_id_symbol`。独立探针不改内置原型：原生 Promise 上放可配置的 `then` getter（用来触发拒收）和同样可配置的自有 `async_id_symbol` getter；对照只把后者换为数据属性。Node 22/25 的 send、pull 对照均为 0 次，getter 版本均为 2 次，`then` getter 自身仍为 0 次；四个返回理由分别符合拒收分支（`promise-symbol-getter-node22.log`、`promise-symbol-getter-node25.log`）。把该 getter 换成抛出普通错误，四个独立子进程都在 `getOrSetAsyncId → trackPromise → Promise.then → attachQuiet` 退出 1，即使外层有 try/catch 和 unhandledRejection 监听（`promise-symbol-throws.log`）。这是实例自有访问器，不是预先改写内置原型，也不等于用户排除的不可配置 constructor getter。
+
+要求：拒收/处理所有受支持外部 Promise 前，不调用实例及相关链上的外部访问器；对无法安全挂处理的形态明确隔离边界并交用户决定，不能把可能退出的形态计作安全拒收。补 send/pull、Node 22/25、数据属性单开关及会抛错的无全局处理器子进程测试。
+
+### R12-02 [P2] 原生 Promise 的非 then/constructor 自有 getter 被接受
+
+位置：`packages/kernel/src/plugins.ts:31-37,343,389-390`。`isPlainPromise` 只检查 `then`、`constructor` 两个自有名称，不检查其他自有描述符。Node 22/25 两种路径的独立单开关对照中：在正常兑现的原生 Promise 上仅新增 `extra` 自有 getter，getter 调用 0，但 send 仍返回 confirmed，pull 仍返回成功；去掉 getter 同样成功（`promise-extra-getter.log`）。此处问题是**没有按合同拒绝带访问器的外部输入**，不是声称这个 `extra` getter 被调用。
+
+要求：不读取值地检查 Promise 自有描述符，对外部 getter/setter 显式拒绝；兼容运行时正常的异步追踪数据属性，并与 R12-01 的安全拒收一并验证。
+
+### R12-03 [P2] 外部请求的错误 bytes 被信任，前缀哈希可误判相同
+
+位置：`packages/kernel/src/assemble.ts:301-317,324-333`。`segmentsOf` 只检查 bytes 是整数，不检查非负或与 text 实际 UTF-8 字节一致。独立探针先用原版 assemble 构造真实的 A/B 请求，真实前缀哈希不同；将两份普通 JSON 副本的 `segments[0].bytes` 单独改为 0 后，两个不同的 11 字节 system 段都被 `prefixLength` 判为 0，`prefixHash` 错误地相同；bytes=-1 也被接受并返回 -1。Node 22/25 一致（`prefix-length-input.log`）。这个反例是外部传回的错误结构，不是声称 assemble 自己生成的冻结原版 bytes 有错。
+
+要求：对外部请求重新按 UTF-8 计算并核验每段长度和边界，或拒绝与正文不符/负数的 bytes；补合法中文 UTF-8、零值/负值和不同内容不得误判的单开关测试。
+
+### R12-04 [P2 / R-05] 两个独立单点故障逃过 240 条现有测试
+
+每种故障在各自隔离快照只替换一个注入点，五个故障 typecheck 均退出 0，原版基线 240 绿（`own-mutants.log` 及各 TAP）：
+
+1. O1 将 `classify.ts:51` 的 end 整数检查去掉：240 绿。对照 `text="@x "`、`end=2.5`，原版走语义分类 E2，故障版误判机械 E1 且分类器调用 0。
+2. O2 让 `plugins.ts:243` 拒绝合法空字符串附件名：240 绿。原版一条事件盖章成功，故障版事件 0、拒绝 1。
+3. O3 把 epoch 0 当非法墙钟：被 5 条具名测试发现；O4 接受空 edit 正文：被 1 条具名测试发现；O5 放行数组元素可枚举 getter：被 6 条具名测试发现。
+
+`own-mutant-behavior.log` 是 O1/O2 原版与单故障版的行为对照；这两项描述测试覆盖缺口，不把原版行为说成发生了上述故障。要求为非整数 mention 边界与可选空字符串附件名补双侧单开关，并将两个故障纳入校准。
+
+## 门禁与隔离
+
+- 按真实 PR base 显式运行 `node scripts/gates/run-all.ts --local --branch=feat/kernel-plugins --base=origin/feat/domain-core`：G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER 通过，G-REVIEW 因尚无本轮收据而失败；G-PROVENANCE 显示绿但因 review=null 提前返回，不可作为来源已验证。完整原样输出 `gates-bound.log`。
+- 按字面运行 `node scripts/gates/run-all.ts --local` 时初始检出为 detached HEAD，命令实际默认 `branch=HEAD`、`base=origin/main`、收据 `receipts/HEAD.json` 不存在，G-TRACE/G-RED/G-STUB 失败；那不是针对 PR 基线的有效门禁结果，原样保留 `gates-before.log`，未掩盖此次执行器参数错误。
+- GitHub self-check 查询确认 run `42422226052` 的 headSha 即 `8abfbae`、状态 completed/success，含安装、测试、门禁自检和门禁变异等实际步骤（`github-self-check.json`）；只作为 CI 观察，不代替本轮独立测试。
+- 门禁完整自检：103 个样例与 8 个厂商识别检查均通过，退出 0；原始输出 `gates-selftest.log`。
+- 八个门禁分别喂入独立真实 Git 夹具：错误验收状态、作者与审查同一人、会话不存在、缺红提交、只检查函数类型的测试、恒真断言、workflow 写权限、插件依赖插件。每个目标门禁都按对应原因失败且 CLI 退出 1（`gate-negatives.log` 和 `negative-G-*.log`）。每个夹具可能同时触发别的门禁，不能把它当成其他门禁的阳性通过。
+- 假 HOME 下受保护中性标记及其软链读均 EPERM，普通标记可读；工作目录内可写、外部写 EPERM（`sandbox.log`）。只证明这些隔离样例。
+
+- 填入本轮 reject 后，在 `origin/feat/domain-core` 基线上再次执行 `--local --branch=feat/kernel-plugins --base=origin/feat/domain-core`：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-REVIEW 按 reject 失败；G-PROVENANCE 失败，明确报告 `审查会话不可信:会话记录不存在:codex:6e2a9ebd-ea69-49ac-aaf7-3bb3e5c7edd5`。本会话确实执行过哈希命令，但门禁所需的 `turns.jsonl` 在执行时未落盘，不能因此称来源验证通过，也未手写会话记录。完整输出 `gates-after-review.log`。
+- 填收据后另按字面运行 `node scripts/gates/run-all.ts --local`：分支为 feat/kernel-plugins，但命令仍默认 base=origin/main，将领域层 23 项测试也纳入 G-RED，G-PROVENANCE/G-REVIEW/G-RED/G-STUB 失败，其余通过；它不是 PR 的正确 base，完整原样输出 `gates-exact-after-review.log`。
