@@ -1,0 +1,9 @@
+第二十一轮返修证据说明
+- r20-baseline-red.tap: 原代码 ce307ac 加最终新增测试,5 条 R20-01 按名失败;其余 4 条 R20 测试通过。
+- r20-f1-red.tap / r20-f5-red.tap: 仅在原实现注入审查 F1 / F5,注入点各 1 处;直接调用 1 条 / Compute 说明 2 条测试分别按名失败,退出码 1。原实现本就整名匹配,本对照不证明原实现存在前缀授权错误。
+- r20-stub-red.tap: 红提交 028f657 测试加空壳,9 条 R20 测试按名失败;其后绿提交 15b660c 恢复实现。首对红绿提交为 0a6d39e / 242cdbb;因 G-TAUTO 无法识别辅助函数内断言,未减少断言而改为在测试体中直接断言,再做第二对红绿。
+- r20-target-green.tap: 最终实现上 9 条 R20 与 CH-47/48/49 均通过。contact-helper-tests.txt 为 npm test 的完整 324 项通过输出。
+- 五份 TAP 日志为实际输出,仅移除了纯空白行尾部空格,其余文本不变,以满足仓库空白检查。
+- r20-mutation-report-raw.txt、r20-mutation-events.jsonl、r20-mutation-summary.json、r20-mutation-metadata.json 为有界变异运行器的完成输出;mutations.txt 在报告中附加旧清单里的 18 条已移除功能说明,不计入本轮结果。
+- 全量进程句柄在会话续接时失效,因此没有读到原进程退出码;完成工件中 502/502 项均有按名失败事件。重新核验事件、摘要、清单与 15 个源码文件 SHA-256 的命令退出 0,输出见 r20-mutation-verification.txt;不以此冒称原进程退出码已观察。
+- r20-contract-probes.mjs 改自第二十轮审查者的输入合同探针,仅将旧临时克隆绝对导入改成仓库内相对导入。r20-contract-probes.jsonl 为本轮实际输出:24 个 null 入口不抛,Proxy trap / getter 均 0 次,195 个策略对象均冻结。

@@ -1,0 +1,82 @@
+TAP version 13
+# Subtest: CH-47 函数自有 prototype 单一路径:调用方换上的非普通原型对象必须拒收,引擎生成的生成器原型与普通函数原型照常(对照)
+ok 1 - CH-47 函数自有 prototype 单一路径:调用方换上的非普通原型对象必须拒收,引擎生成的生成器原型与普通函数原型照常(对照)
+  ---
+  duration_ms: 3.122542
+  type: 'test'
+  ...
+# Subtest: CH-48 函数自有访问器:被丢弃字段里的函数带 getter/setter(含 Symbol 键、不可枚举)一律拒收且调用 0 次,函数的数据属性与引擎生成的 prototype 照常(对照)
+ok 2 - CH-48 函数自有访问器:被丢弃字段里的函数带 getter/setter(含 Symbol 键、不可枚举)一律拒收且调用 0 次,函数的数据属性与引擎生成的 prototype 照常(对照)
+  ---
+  duration_ms: 1.397125
+  type: 'test'
+  ...
+# Subtest: CH-49 生成器函数自有 prototype 是 Proxy(计数型、抛错型 trap、已撤销)时不调用即拒:同步/异步生成器在直接工具、承诺、联系人状态、Helper 入口与回执入口都返回 { ok:false } 不抛,trap 0 次;未替换的生成器与普通数据照常(对照)
+ok 3 - CH-49 生成器函数自有 prototype 是 Proxy(计数型、抛错型 trap、已撤销)时不调用即拒:同步/异步生成器在直接工具、承诺、联系人状态、Helper 入口与回执入口都返回 { ok:false } 不抛,trap 0 次;未替换的生成器与普通数据照常(对照)
+  ---
+  duration_ms: 2.076959
+  type: 'test'
+  ...
+# Subtest: R20-01 同步生成器同层伪原型带原始数据拒绝,三个入口均适用
+ok 4 - R20-01 同步生成器同层伪原型带原始数据拒绝,三个入口均适用
+  ---
+  duration_ms: 1.025458
+  type: 'test'
+  ...
+# Subtest: R20-01 同步生成器同层伪原型带普通对象数据拒绝,三个入口均适用
+ok 5 - R20-01 同步生成器同层伪原型带普通对象数据拒绝,三个入口均适用
+  ---
+  duration_ms: 0.231417
+  type: 'test'
+  ...
+# Subtest: R20-01 异步生成器同层伪原型带原始数据拒绝,三个入口均适用
+ok 6 - R20-01 异步生成器同层伪原型带原始数据拒绝,三个入口均适用
+  ---
+  duration_ms: 0.215041
+  type: 'test'
+  ...
+# Subtest: R20-01 异步生成器同层伪原型带普通对象数据拒绝,三个入口均适用
+ok 7 - R20-01 异步生成器同层伪原型带普通对象数据拒绝,三个入口均适用
+  ---
+  duration_ms: 0.172291
+  type: 'test'
+  ...
+# Subtest: R20-01 同层伪原型的不可枚举与 Symbol 数据属性也拒绝
+ok 8 - R20-01 同层伪原型的不可枚举与 Symbol 数据属性也拒绝
+  ---
+  duration_ms: 0.299
+  type: 'test'
+  ...
+# Subtest: R20-01 引擎生成原型及同层空对象放行,自有访问器与 Proxy 不调用即拒
+ok 9 - R20-01 引擎生成原型及同层空对象放行,自有访问器与 Proxy 不调用即拒
+  ---
+  duration_ms: 2.078292
+  type: 'test'
+  ...
+# Subtest: R20-02 联系人直接调用只认整名:扩展名、前缀与未授权名均拒绝
+ok 10 - R20-02 联系人直接调用只认整名:扩展名、前缀与未授权名均拒绝
+  ---
+  duration_ms: 0.197625
+  type: 'test'
+  ...
+# Subtest: R20-03 Compute 说明的直接工具只认整名:扩展名、前缀与未授权名均拒绝
+ok 11 - R20-03 Compute 说明的直接工具只认整名:扩展名、前缀与未授权名均拒绝
+  ---
+  duration_ms: 0.302167
+  type: 'test'
+  ...
+# Subtest: R20-03 Compute 说明的专用资产只认整名:扩展名、前缀与未授权名均拒绝
+ok 12 - R20-03 Compute 说明的专用资产只认整名:扩展名、前缀与未授权名均拒绝
+  ---
+  duration_ms: 0.163
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 182.549333
