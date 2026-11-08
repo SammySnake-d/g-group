@@ -1145,3 +1145,84 @@ test("独立判据：命令拒绝多余字段", () => {
   assert.deepEqual(result, { ok: false, reason: "invalid-input" });
   assert.equal(calls, 0);
 });
+
+test("独立判据：快照拒绝重复消息编号", () => {
+  const state = registered();
+  const forged = { ...state, messages: [...state.messages, { ...state.messages[0]!, seq: 2 }] };
+  let calls = 0;
+  const result = applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; });
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+test("独立判据：快照拒绝重复承诺编号", () => {
+  const state = registered();
+  const forged = { ...state, commitments: [...state.commitments, { ...state.commitments[0]! }] };
+  let calls = 0;
+  const result = applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; });
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+test("独立判据：快照拒绝重复动作编号", () => {
+  const state = registered();
+  const forged = { ...state, actions: [...state.actions, { ...state.actions[0]! }] };
+  let calls = 0;
+  const result = applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; });
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+test("独立判据：快照拒绝终态缺少了结信息", () => {
+  const state = registered();
+  const forged = { ...state, commitments: [{ ...state.commitments[0]!, status: "done" as const, resolution: null }] };
+  let calls = 0;
+  const result = applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; });
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+test("独立判据：快照拒绝 revoked 缺少原因", () => {
+  const state = registered();
+  const forged = { ...state, commitments: [{ ...state.commitments[0]!, status: "revoked" as const, resolution: { detail: null, artifact: null } }] };
+  let calls = 0;
+  const result = applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; });
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+test("独立判据：快照拒绝 superseded 缺少原因", () => {
+  const state = registered();
+  const forged = { ...state, commitments: [{ ...state.commitments[0]!, status: "superseded" as const, resolution: { detail: null, artifact: null } }] };
+  let calls = 0;
+  const result = applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; });
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+test("独立判据：快照拒绝 blocked 缺少原因", () => {
+  const state = registered();
+  const forged = { ...state, commitments: [{ ...state.commitments[0]!, status: "blocked" as const, resolution: { detail: null, artifact: null } }] };
+  let calls = 0;
+  const result = applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; });
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+test("独立判据：单次处理拒绝重复承诺编号", () => {
+  const state = received();
+  const command: Command = { type: "process", actionId: "duplicate-proposals", seq: 1, accepted: true,
+    commitments: [{ id: "k1", taskId: "task-a", text: "原文 m1" }, { id: "k1", taskId: "task-a", text: "原文 m1" }] };
+  assert.deepEqual(applyLedger(state, state.version, command), { ok: false, reason: "commitment-id-conflict" });
+});
+
+test("独立判据：对账拒绝重复绑定编号", () => {
+  const state = registered();
+  assert.deepEqual(reconcileRound(state, "r1", ["k1", "k1"]), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：无任务来源可登记指定任务承诺", () => {
+  const state = unwrap(applyLedger(emptyLedger("c"), 0, receive("m1", 1, null)));
+  const result = applyLedger(state, state.version, process(1, "task-b"));
+  assert.equal(result.ok && result.ledger.commitments[0]?.taskId, "task-b");
+});
