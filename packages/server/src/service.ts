@@ -17,6 +17,7 @@ import { HostError } from "./db.ts";
 import { type HelperEntryInput, HelperDesk } from "./helper.ts";
 import type { Host } from "./host.ts";
 import { previewCron } from "./schedules.ts";
+import { contactProfile, listFiles, readFile } from "./views.ts";
 
 type Handler = (p: never) => unknown;
 export const BUILTIN_COMMANDS: readonly SlashCommand[] = Object.freeze([
@@ -38,6 +39,7 @@ export function createService(host: Host): Service {
     "contacts.get": (p: { contactId: string }) => host.contactView(host.contactDoc(p.contactId).value),
     "contacts.create": (p: Parameters<Host["createContact"]>[0]) => host.createContact(p),
     "contacts.update": ({ contactId, ...patch }: { contactId: string } & Parameters<Host["updateContact"]>[1]) => host.updateContact(contactId, patch),
+    "contacts.profile": (p: { contactId: string }) => contactProfile(host, p.contactId),
     "contacts.remove": (p: { contactId: string }) => {
       host.removeContact(p.contactId);
       return { ok: true };
@@ -70,6 +72,8 @@ export function createService(host: Host): Service {
     "messages.react": (p: { roomId: string; seq: number; emoji: string; on: boolean }) => host.react(p.roomId, p.seq, p.emoji, p.on),
     "messages.receipts": (p: { roomId: string; seq: number }) => host.receipts(p.roomId, p.seq),
     "attachments.add": (p: { path: string }) => host.addAttachment(p.path),
+    "files.list": (p: { roomId: string }) => ({ files: listFiles(host, p.roomId) }),
+    "files.read": (p: { ref: string; maxBytes?: number }) => readFile(host, p.ref, p.maxBytes),
     "cards.act": (p: Parameters<Host["cardAct"]>[0]) => host.cardAct(p),
     "tasks.list": (p: Parameters<Host["listTasks"]>[0] & { limit?: number }) => ({ tasks: host.listTasks(p).slice(0, p.limit ?? 200) }),
     "tasks.get": (p: { taskId: string }) => host.taskView(host.taskDoc(p.taskId).value),
@@ -87,7 +91,7 @@ export function createService(host: Host): Service {
     "tasks.assign": (p: Parameters<Host["assignTask"]>[0]) => host.assignTask(p),
     "commitments.list": (p: Parameters<Host["listCommitments"]>[0]) => ({ commitments: host.listCommitments(p) }),
     "commitments.revoke": (p: { commitmentId: string }) => host.revokeCommitment(p.commitmentId),
-    "schedules.list": (p: { contactId?: string; roomId?: string }) => ({ schedules: host.scheduler.list(p) }),
+    "schedules.list": (p: { contactId?: string; roomId?: string; order?: "next-run" | "created" }) => ({ schedules: host.scheduler.list(p) }),
     "schedules.preview": (p: { cron: string; tz: string; count?: number }) => previewCron(p.cron, p.tz, p.count ?? 5, Date.now()),
     "schedules.create": ({ clientActionId: _c, ...p }: { clientActionId: string } & Parameters<Host["scheduler"]["create"]>[0]) => host.scheduler.create(p),
     "schedules.update": ({ scheduleId, ...patch }: { scheduleId: string } & Parameters<Host["scheduler"]["update"]>[1]) => host.scheduler.update(scheduleId, patch),
