@@ -11,7 +11,7 @@ import * as judge from "./judge.ts";
 import { CASE_MARK, type CaseResult, evidence, type Kind, killedBy, parseGateOutput } from "./judge.ts";
 import { verdict as runnerVerdict } from "./test-runner.ts";
 import { vendorOf } from "./vendor.ts";
-import { attestedDirs, isRepoPath, provenance, r12CommitProof, r12Touch, r12WriteProof, sameRepoClone, turnTouchesRepo } from "./gates.ts";
+import { attestedDirs, isRepoPath, provenance, r12CommitProof, r12SessionDirs, r12Touch, r12WriteProof, sameRepoClone, turnTouchesRepo } from "./gates.ts";
 
 const HERE = import.meta.dirname;
 const CLI = path.join(HERE, "run-all.ts");
@@ -904,6 +904,33 @@ function r12CommitCase(which: "changed" | "history"): string | undefined {
     return positive.includes(clone) && negative.length === 0 ? undefined : `提交证明双侧不符:正=${JSON.stringify(positive)},反=${JSON.stringify(negative)}`;
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
+function r12HostWriteCase(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-host-"));
+  try {
+    const repo = path.join(tmp, "repo"); fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main");
+    write(repo, { "README.md": "neutral\n", "packages/core/src/add.ts": ADD_OK }); commit(repo, "base");
+    sh(repo, "checkout", "-q", "-b", "feat/x");
+    const commits = committedCloneTurns(repo), clone = authorClone(repo);
+    const host = (status: string) => ({ model: "gpt-6", toolCalls: [{ name: "Write", input: path.join(clone, "packages/core/src/add.ts"), status, result: null }, ...commits[0]!.toolCalls] });
+    const ctx = r12Ctx(repo, r12Receipt(), ["packages/core/src/add.ts"]), inside = (p: string) => isRepoPath(p, repo, [clone], sameRepoClone(repo));
+    const good = r12WriteProof(host("done"), undefined, ctx, inside), bad = r12WriteProof(host("failed"), undefined, ctx, inside);
+    return good && !bad ? undefined : `宿主记录双侧不符:正=${good},反=${bad}`;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r12SessionDirsCase(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r12-dirs-"));
+  try {
+    const repo = path.join(tmp, "repo"); fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main");
+    write(repo, { "README.md": "neutral\n", "packages/core/src/add.ts": ADD_OK }); commit(repo, "base");
+    sh(repo, "checkout", "-q", "-b", "feat/x");
+    const commits = committedCloneTurns(repo), clone = authorClone(repo);
+    const writeTurn = { model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { cwd: clone, command: "printf neutral > packages/core/src/add.ts" } }] };
+    fs.rmSync(clone, { recursive: true, force: true });
+    const yes = r12SessionDirs([writeTurn, ...commits], undefined, repo, ["packages/core/src/add.ts"]);
+    const no = r12SessionDirs([writeTurn], undefined, repo, ["packages/core/src/add.ts"]);
+    return yes.includes(clone) && no.length === 0 ? undefined : `整段会话目录取证不符:正=${JSON.stringify(yes)},反=${JSON.stringify(no)}`;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
 function r12CatCase(): string | undefined {
   const repo = path.resolve("/tmp/neutral-repo"); const inside = (p: string) => p === repo || p.startsWith(`${repo}/`);
   const t = (command: string) => ({ toolCalls: [{ name: "Bash", input: { cwd: repo, command } }] });
@@ -913,10 +940,12 @@ function r12CatCase(): string | undefined {
 export const CASES: Case[] = [
   { name: "R12-01 克隆清理前后同一记录结论一致", direct: r12CleanParity, expect: null },
   { name: "R12-01 中途换模型写入已清理克隆被拦", direct: r12ModelSwitch, expect: null },
+  { name: "R12-01 任一轮已证明目录用于整段会话", direct: r12SessionDirsCase, expect: null },
   { name: "R12-01 未证明的已消失目录写入保守计入", direct: r12MissingDir, expect: null },
   { name: "R12-02 返修换作者后前轮作者厂商的审查仍被拦", direct: () => r12HistoryCase("history"), expect: null },
   { name: "R12-02 sessions 列表里的历次作者不能遗漏", direct: () => r12HistoryCase("listed"), expect: null },
   { name: "R12-02 前轮产出未证实时厂商保守计入", direct: () => r12HistoryCase("unproven"), expect: null },
+  { name: "R12-03 宿主路径记录须与同轮提交共同证明", direct: r12HostWriteCase, expect: null },
   { name: "R12-04 写入成功结果与失败结果双侧", direct: () => r12WriteCase("success"), expect: null },
   { name: "R12-04 写入受审改动与未改动文件双侧", direct: () => r12WriteCase("changed"), expect: null },
   { name: "R12-04 提交受审改动与基线文件双侧", direct: () => r12CommitCase("changed"), expect: null },
