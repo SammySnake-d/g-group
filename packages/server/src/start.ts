@@ -38,8 +38,8 @@ export async function startServer(o: StartOptions): Promise<Started> {
   const model = env.ANTHROPIC_DEFAULT_SONNET_MODEL;
   let mind: (c: ContactView) => ContactMind = () => scriptedMind();
   if (o.mind === "pi") {
-    const spec = "@g-group/adapter-pi-contact";
-    const mod = (await import(spec)) as { createPiContactMind(opts: Record<string, unknown>): ContactMind };
+    // 字面量动态 import:按需加载 pi 依赖,G-LAYER 也能核对依赖方向
+    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as { createPiContactMind(opts: Record<string, unknown>): ContactMind };
     const bearer = env.ANTHROPIC_AUTH_TOKEN;
     const apiKey = bearer ?? env.ANTHROPIC_API_KEY;
     if (!apiKey || !model) throw new Error("mind=pi 需要 ANTHROPIC_AUTH_TOKEN(或 ANTHROPIC_API_KEY)与 ANTHROPIC_DEFAULT_SONNET_MODEL");

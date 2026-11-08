@@ -35,8 +35,8 @@ const [cmd, ...rest] = positionals;
 async function makeMind(kind: string): Promise<(c: ContactView) => ContactMind> {
   if (kind === "fake") return () => scriptedMind();
   if (kind === "pi") {
-    const spec = "@g-group/adapter-pi-contact";
-    const mod = (await import(spec)) as { createPiContactMind(o: Record<string, unknown>): ContactMind };
+    // 字面量动态 import:按需加载 pi 依赖,G-LAYER 也能核对依赖方向
+    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as { createPiContactMind(o: Record<string, unknown>): ContactMind };
     const bearer = process.env.ANTHROPIC_AUTH_TOKEN;
     const apiKey = bearer ?? process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("--mind pi 需要 ANTHROPIC_AUTH_TOKEN 或 ANTHROPIC_API_KEY");
