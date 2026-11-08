@@ -19,7 +19,7 @@ const M = [
   ["A06 不按 Compute 启动时间过滤旧文件", "artifacts.ts", "st.mtimeMs >= sinceMs", "true"],
   ["A07 代码文件也进卡片", "host.ts", "this.worktrees.changedFiles(ws).filter(isReadable)", "this.worktrees.changedFiles(ws)"],
   ["A08 卡片读基线提交而不是候选提交", "host.ts", "const data = this.worktrees.readAt(ws.candidateSha, f);", "const data = this.worktrees.readAt(ws.baseSha, f);"],
-  ["A09 卡片不带工件", "host.ts", 'meta: JSON.stringify({ commit, deliveryStage: "review", artifacts: arts }),', 'meta: JSON.stringify({ commit, deliveryStage: "review" }),'],
+  ["A09 交付消息不带工件", "host.ts", 'if (arts.length && !r.duplicate) run(this.db, "INSERT OR IGNORE INTO gg_msg_artifacts', 'if (false) run(this.db, "INSERT OR IGNORE INTO gg_msg_artifacts'],
   ["A10 任务视图的文件工件不带 sha256", "host.ts", "kind: \"file\" as const, sha256: a.sha256, bytes", "kind: \"file\" as const, bytes"],
   ["A11 点开不带回正文", "host.ts", "text: textual && r.data.length <= MAX_INLINE_TEXT ? r.data.toString(\"utf8\") : null", "text: null"],
   ["A12 没有代码仓时不收工件", "host.ts", "    if (!cwd || !started) return out;", "    return out;"],
@@ -63,7 +63,9 @@ try {
     }
     fs.writeFileSync(f, src.replace(from, to));
     const r = run(d);
-    if (r.failed.length === 0) {
+    // 变异让测试卡住(等宿主安静超时)被整体超时杀掉时 TAP 不完整:通过数少于阴性对照也算被发现,单独标出
+    if (r.failed.length === 0 && r.passed.length < base.passed.length) log(`✓ ${name}:${r.passed.length} 绿 / 未跑完(退出码 ${r.code}),阴性对照 ${base.passed.length} 条全绿,变异下没有全部通过`);
+    else if (r.failed.length === 0) {
       log(`✗ ${name}:存活(${r.passed.length} 绿)`);
       ok = false;
     } else log(`✓ ${name}:${r.passed.length} 绿 / ${r.failed.length} 红,被「${r.failed[0]}」发现`);
