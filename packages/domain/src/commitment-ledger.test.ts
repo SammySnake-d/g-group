@@ -947,3 +947,201 @@ test("独立判据：阻塞原因保留", () => {
   const result = applyLedger(state, state.version, close("blocked"));
   assert.equal(result.ok && result.ledger.commitments[0]?.resolution?.detail, "明确原因");
 });
+
+// Round 2 reviewer cases: each assertion isolates one accepted behavior.
+test("独立判据：同动作处理承诺元素内容冲突", () => {
+  const state = registered();
+  const command: Command = { type: "process", actionId: "process-1", seq: 1, accepted: true,
+    commitments: [{ id: "changed", taskId: "task-a", text: "原文 m1" }] };
+  assert.deepEqual(applyLedger(state, state.version, command), { ok: false, reason: "action-id-conflict" });
+});
+
+test("独立判据：同动作处理承诺元素个数冲突", () => {
+  const state = registered();
+  const command: Command = { type: "process", actionId: "process-1", seq: 1, accepted: true,
+    commitments: [{ id: "k1", taskId: "task-a", text: "原文 m1" }, { id: "k2", taskId: "task-a", text: "原文 m1" }] };
+  assert.deepEqual(applyLedger(state, state.version, command), { ok: false, reason: "action-id-conflict" });
+});
+
+test("独立判据：承诺原文不能取自另一条消息", () => {
+  const first = received();
+  const state = unwrap(applyLedger(first, first.version, receive("m2", 2)));
+  const command: Command = { type: "process", actionId: "other-source", seq: 2, accepted: true,
+    commitments: [{ id: "other", taskId: "task-a", text: "原文 m1" }] };
+  assert.deepEqual(applyLedger(state, state.version, command), { ok: false, reason: "commitment-text-not-source" });
+});
+
+
+test("独立判据：done 终态拒绝 progress", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("done", "artifact"), () => true));
+  assert.deepEqual(applyLedger(state, state.version, progress("k1", "task-a", "r2"), () => true), { ok: false, reason: "commitment-closed" });
+});
+
+
+test("独立判据：done 终态拒绝 close", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("done", "artifact"), () => true));
+  assert.deepEqual(applyLedger(state, state.version, { ...close("done", "artifact"), actionId: "after-close" } as Command, () => true), { ok: false, reason: "commitment-closed" });
+});
+
+
+test("独立判据：done 终态拒绝 bind-compute", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("done", "artifact"), () => true));
+  assert.deepEqual(applyLedger(state, state.version, bindCompute("after-bind", "worker"), () => true), { ok: false, reason: "commitment-closed" });
+});
+
+
+test("独立判据：revoked 终态拒绝 progress", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("revoked"), () => true));
+  assert.deepEqual(applyLedger(state, state.version, progress("k1", "task-a", "r2"), () => true), { ok: false, reason: "commitment-closed" });
+});
+
+
+test("独立判据：revoked 终态拒绝 close", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("revoked"), () => true));
+  assert.deepEqual(applyLedger(state, state.version, { ...close("done", "artifact"), actionId: "after-close" } as Command, () => true), { ok: false, reason: "commitment-closed" });
+});
+
+
+test("独立判据：revoked 终态拒绝 bind-compute", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("revoked"), () => true));
+  assert.deepEqual(applyLedger(state, state.version, bindCompute("after-bind", "worker"), () => true), { ok: false, reason: "commitment-closed" });
+});
+
+
+test("独立判据：superseded 终态拒绝 progress", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("superseded"), () => true));
+  assert.deepEqual(applyLedger(state, state.version, progress("k1", "task-a", "r2"), () => true), { ok: false, reason: "commitment-closed" });
+});
+
+
+test("独立判据：superseded 终态拒绝 close", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("superseded"), () => true));
+  assert.deepEqual(applyLedger(state, state.version, { ...close("done", "artifact"), actionId: "after-close" } as Command, () => true), { ok: false, reason: "commitment-closed" });
+});
+
+
+test("独立判据：superseded 终态拒绝 bind-compute", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("superseded"), () => true));
+  assert.deepEqual(applyLedger(state, state.version, bindCompute("after-bind", "worker"), () => true), { ok: false, reason: "commitment-closed" });
+});
+
+
+test("独立判据：blocked 终态拒绝 progress", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("blocked"), () => true));
+  assert.deepEqual(applyLedger(state, state.version, progress("k1", "task-a", "r2"), () => true), { ok: false, reason: "commitment-closed" });
+});
+
+
+test("独立判据：blocked 终态拒绝 close", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("blocked"), () => true));
+  assert.deepEqual(applyLedger(state, state.version, { ...close("done", "artifact"), actionId: "after-close" } as Command, () => true), { ok: false, reason: "commitment-closed" });
+});
+
+
+test("独立判据：blocked 终态拒绝 bind-compute", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("blocked"), () => true));
+  assert.deepEqual(applyLedger(state, state.version, bindCompute("after-bind", "worker"), () => true), { ok: false, reason: "commitment-closed" });
+});
+
+
+test("独立判据：revoked 承诺在别轮对账已就绪", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("revoked")));
+  assert.deepEqual(reconcileRound(state, "r2", ["k1"]), { ok: true, ready: true, pending: [] });
+});
+
+
+test("独立判据：superseded 承诺在别轮对账已就绪", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("superseded")));
+  assert.deepEqual(reconcileRound(state, "r2", ["k1"]), { ok: true, ready: true, pending: [] });
+});
+
+
+test("独立判据：blocked 承诺在别轮对账已就绪", () => {
+  const before = registered();
+  const state = unwrap(applyLedger(before, before.version, close("blocked")));
+  assert.deepEqual(reconcileRound(state, "r2", ["k1"]), { ok: true, ready: true, pending: [] });
+});
+
+
+test("独立判据：快照拒绝不同消息复用序号", () => {
+  const state = registered();
+  const forged = { ...state, messages: [...state.messages, { ...state.messages[0]!, id: "m2" }] };
+  let calls = 0;
+  const result = applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; });
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+
+test("独立判据：快照拒绝活动承诺携带了结信息", () => {
+  const state = registered();
+  const forged = { ...state, commitments: [{ ...state.commitments[0]!, resolution: { detail: "原因", artifact: null } }] };
+  let calls = 0;
+  const result = applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; });
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+
+test("独立判据：快照拒绝活动指向不存在承诺", () => {
+  const state = registered();
+  const forged = { ...state, activity: [{ roundId: "r1", commitmentId: "missing", taskId: "task-a", actor: contact, kind: "progress" as const, text: "进展" }] };
+  let calls = 0;
+  const result = applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; });
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+
+test("独立判据：快照拒绝活动指向不同任务的承诺", () => {
+  const state = registered();
+  const forged = { ...state, activity: [{ roundId: "r1", commitmentId: "k1", taskId: "task-b", actor: contact, kind: "progress" as const, text: "进展" }] };
+  let calls = 0;
+  const result = applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; });
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+
+test("独立判据：快照拒绝承诺来源消息尚未处理", () => {
+  const state = registered();
+  const forged = { ...state, messages: [{ ...state.messages[0]!, handled: false }] };
+  let calls = 0;
+  const result = applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; });
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+
+test("独立判据：快照拒绝多余字段", () => {
+  const state = registered();
+  const forged = { ...state, extra: "unexpected" };
+  let calls = 0;
+  const result = applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; });
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+
+test("独立判据：命令拒绝多余字段", () => {
+  const state = registered();
+  const command = { ...close("done", "artifact"), extra: "unexpected" } as Command;
+  let calls = 0;
+  const result = applyLedger(state, state.version, command, () => { calls++; return true; });
+  assert.deepEqual(result, { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
