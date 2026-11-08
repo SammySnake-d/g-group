@@ -1,0 +1,14 @@
+scripts/gates/proof/r11-mutations.txt
+  h_f33e46a035b77c 3,42-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "16d152c972f89b656c71d71d58a97ccb87356938",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

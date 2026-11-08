@@ -1,0 +1,25 @@
+docs/spec/需求文档.md
+  s_5d26d2847e201d::t_c5c4a28976996e 3,237,2189,2238,2469-2471,2487-2488,2801-2802
+docs/spec/验收文档-v0.1.md
+  s_5d26d2847e201d::t_c642b9ce63248b 1,3,164,187,191,280
+docs/开发手册.md
+  s_5d26d2847e201d::t_8d5a3dd17ff9fa 795,844,898-936
+docs/概念卡.md
+  s_5d26d2847e201d::t_de9984b657e4c8 1,3-4,119-121,330,354
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a8d1f27f37fc7b745f4de601c0814f619b128556",
+  "prompts": {},
+  "sessions": {
+    "s_5d26d2847e201d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ea47c4b8-4a8e-434c-996a-8396c9f427b7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

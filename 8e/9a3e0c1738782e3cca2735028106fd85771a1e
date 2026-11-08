@@ -1,0 +1,18 @@
+scripts/gates/mutation.ts
+  h_f33e46a035b77c 139,142-143,145-147
+scripts/gates/proof/r11-mutations.txt
+  h_f33e46a035b77c 19-31
+scripts/gates/proof/r11-red-green.txt
+  h_f33e46a035b77c 97-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8e9a3e0c1738782e3cca2735028106fd85771a1e",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

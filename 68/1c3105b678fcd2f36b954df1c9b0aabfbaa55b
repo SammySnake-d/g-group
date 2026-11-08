@@ -1,0 +1,14 @@
+scripts/gates/proof/r11-red-green.txt
+  h_f33e46a035b77c 124-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "681c3105b678fcd2f36b954df1c9b0aabfbaa55b",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
