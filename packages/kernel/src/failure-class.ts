@@ -193,11 +193,15 @@ const SPECIFIC: ReadonlySet<ReasonClass> = new Set<ReasonClass>(["context_overfl
 /** 只按原文开头这么长匹配(原文照样整段保留) */
 const MATCH_CHARS = 8000;
 
+/** 一条原文规则是否命中(规则都不带 g/y 标志,test 不改 lastIndex) */
+function matches(p: RegExp, head: string): boolean {
+  return p.test(head);
+}
 function byText(text: string, only?: ReadonlySet<ReasonClass>): { reasonClass: ReasonClass; pattern: string } | null {
   const head = text.slice(0, MATCH_CHARS);
   for (const r of FAILURE_RULES) {
     if (only && !only.has(r.reasonClass)) continue;
-    const hit = r.patterns.find((p) => p.test(head));
+    const hit = r.patterns.find((p) => matches(p, head));
     if (hit) return { reasonClass: r.reasonClass, pattern: hit.source };
   }
   return null;
