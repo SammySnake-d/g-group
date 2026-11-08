@@ -1178,13 +1178,17 @@ test("pull 同步返回带 then getter 的对象(抛错或不抛错)或带自有
   assert.equal(counter.n, 0);
 });
 
-test("pull 返回合法原生 Promise 或同步普通数组时照常拉取(R7-01 单开关对照)", async () => {
-  for (const pull of [() => Promise.resolve([ev()]), async () => [ev()], () => [ev()]]) {
+test("pull 返回合法原生 Promise 时照常拉取;同步普通数组按合同只判定不处理,一律 invalid-batch(R7-01 单开关对照;第十五轮按需求 §8.1 已定第 17 条改为拒收,审查 R14-01)", async () => {
+  for (const pull of [() => Promise.resolve([ev()]), async () => [ev()]]) {
     const reg = createRegistry({ now: () => T0 });
     reg.register({ kind: "data-source", id: "s", sources: ["g1"], pull });
     const r = await reg.pull("s", "g1");
     assert.deepEqual(r.ok && r.events.map((e) => e.origin.nativeId), ["m-1"]);
   }
+  const reg = createRegistry({ now: () => T0 });
+  reg.register({ kind: "data-source", id: "s", sources: ["g1"], pull: () => [ev()] });
+  const r = await reg.pull("s", "g1");
+  assert.equal(r.ok === false && r.reason, "invalid-batch");
 });
 
 test("发送请求是 null、数字、字符串或数组时返回 invalid-payload 拒绝,不抛错,插件调用 0 次,不建账目(R7-06 阳性埋雷)", async () => {
@@ -1212,11 +1216,12 @@ test("pull 结果数组的下标是不可枚举数据属性时整批 invalid-bat
   const hidden: unknown[] = [ev()];
   Object.defineProperty(hidden, "1", { value: ev({ nativeId: "m-2" }), enumerable: false, writable: true, configurable: true });
   const reg = createRegistry({ now: () => T0 });
-  reg.register({ kind: "data-source", id: "s", sources: ["g1"], pull: () => hidden });
+  // 第十五轮起 pull 只接受普通原生 Promise(R14-01),批次包在 Promise 里交回,检查的仍是批次本身
+  reg.register({ kind: "data-source", id: "s", sources: ["g1"], pull: () => Promise.resolve(hidden) });
   const r = await reg.pull("s", "g1");
   assert.deepEqual(r, { ok: false, reason: "invalid-batch", detail: "pull 必须给出普通数据数组:pull 结果[1] 不允许不可枚举属性" });
   const okReg = createRegistry({ now: () => T0 });
-  okReg.register({ kind: "data-source", id: "s", sources: ["g1"], pull: () => [ev(), ev({ nativeId: "m-2" })] });
+  okReg.register({ kind: "data-source", id: "s", sources: ["g1"], pull: () => Promise.resolve([ev(), ev({ nativeId: "m-2" })]) });
   const fine = await okReg.pull("s", "g1");
   assert.deepEqual(fine.ok && fine.events.map((e) => e.origin.nativeId), ["m-1", "m-2"]);
 });
@@ -1798,4 +1803,194 @@ test("附件的可选 name、mime 是空字符串时照常盖章并原样保留;
   const r = await reg.pull("telegram", "g1");
   assert.deepEqual(r.ok && r.events.map((e) => [e.origin.nativeId, e.attachments]), [["a", [{ ref: "r1", name: "" }]], ["b", [{ ref: "r2", mime: "" }]]]);
   assert.deepEqual(r.ok && r.rejected, [{ index: 2, reason: "附件必须是 {ref, name?, mime?} 引用" }, { index: 3, reason: "附件必须是 {ref, name?, mime?} 引用" }]);
+});
+
+// —— 第十五轮:pull 同步值一律拒收(R14-01)、拒收期间的调用窗口观察与合法属性边界(R14-02)、发送超时的取值范围(R14-03)
+const NON_PROMISE_PULL = "pull 必须给出普通数据数组:pull 结果 不是普通原生 Promise;这一片只接受返回普通原生 Promise 的 pull,同步返回值、thenable 与改过的 Promise 都不读取、不处理";
+const NON_PROMISE_SEND = "这一片只支持返回原生 Promise 的 send;同步返回值、thenable 与改过 then 的 Promise 都不当作回执";
+
+test("send / pull 同步返回普通数组(空、非空、下标是 getter、Proxy 包装)一律拒收且不读取该值:pull 记 invalid-batch、send 记 non-promise-send,getter 与 Proxy 陷阱 0 次;同样内容包在普通原生 Promise 里照常确认 / 拉取,普通原生 Promise 的拒绝记 send-threw / pull-failed(第十五轮 R14-01 双侧对照)", async () => {
+  const counter = { n: 0 };
+  const receipt = { action_id: "a", receiptId: "r" };
+  const withGetter = (item: unknown): unknown[] => trapGetter([] as unknown[], "0", item, counter);
+  const proxied = (items: unknown[]): unknown[] => new Proxy(items, {
+    get(t, k, rr) { counter.n++; return Reflect.get(t, k, rr); }, has(t, k) { counter.n++; return Reflect.has(t, k); },
+    ownKeys(t) { counter.n++; return Reflect.ownKeys(t); }, getOwnPropertyDescriptor(t, k) { counter.n++; return Reflect.getOwnPropertyDescriptor(t, k); },
+    getPrototypeOf(t) { counter.n++; return Reflect.getPrototypeOf(t); },
+  });
+  for (const [name, make] of [
+    ["空数组", () => []], ["非空数组", () => [ev()]], ["下标 getter", () => withGetter(ev())], ["Proxy 数组", () => proxied([ev()])],
+  ] as const) {
+    const reg = createRegistry({ now: () => T0 });
+    reg.register({ kind: "data-source", id: "s", sources: ["g1"], pull: make });
+    assert.deepEqual(await reg.pull("s", "g1"), { ok: false, reason: "invalid-batch", detail: NON_PROMISE_PULL }, `pull/${name}`);
+  }
+  for (const [name, make] of [
+    ["空数组", () => []], ["非空数组", () => [receipt]], ["下标 getter", () => withGetter(receipt)], ["Proxy 数组", () => proxied([receipt])],
+  ] as const) {
+    const reg = createRegistry({ now: () => T0 });
+    reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: make });
+    assert.deepEqual(await reg.send("p", { action_id: "a", payload: "x" }), { ok: false, state: "delivery-unknown", reason: "non-promise-send", detail: NON_PROMISE_SEND }, `send/${name}`);
+  }
+  assert.equal(counter.n, 0, "被拒收的同步值不读取");
+  // 对照:同样的内容包在普通原生 Promise 里
+  for (const [name, batch, ids] of [["空", [], []], ["非空", [ev()], ["m-1"]]] as const) {
+    const reg = createRegistry({ now: () => T0 });
+    reg.register({ kind: "data-source", id: "s", sources: ["g1"], pull: () => Promise.resolve(batch) });
+    const r = await reg.pull("s", "g1");
+    assert.deepEqual(r.ok && [r.events.map((e) => e.origin.nativeId), r.rejected], [ids, []], `pull Promise/${name}`);
+  }
+  const failing = createRegistry({ now: () => T0 });
+  failing.register({ kind: "data-source", id: "s", sources: ["g1"], pull: () => Promise.reject(new Error("限流")) });
+  assert.deepEqual(await failing.pull("s", "g1"), { ok: false, reason: "pull-failed", detail: "限流" });
+  const sender = createRegistry({ now: () => T0 });
+  sender.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => Promise.resolve(receipt) });
+  sender.register({ kind: "outbound-channel", id: "q", endpoint: "A", idempotency: "none", send: () => Promise.reject(new Error("服务商拒绝")) });
+  assert.deepEqual(await sender.send("p", { action_id: "a", payload: "x" }), { ok: true, state: "confirmed", receipt, deduplicated: false });
+  assert.deepEqual(await sender.send("q", { action_id: "a", payload: "x" }), { ok: false, state: "delivery-unknown", reason: "send-threw", detail: "服务商拒绝" });
+});
+
+/** 内核调用窗口里的直接观察:钩子在每个异步资源创建、Promise 兑现、回调前后都把受检对象的原型、可扩展性与全部自有描述符
+ *  和调用前的快照逐项比一次(只读描述符,不调用任何代码),记下观察次数和出现变化的位置。钩子里不抛错。 */
+function windowWatch(objs: readonly object[]) {
+  const before = objs.map(ownSnap);
+  let looks = 0;
+  const changed: string[] = [];
+  const look = (where: string) => {
+    looks++;
+    objs.forEach((o, i) => { if (changed.length < 20 && !sameSnap(ownSnap(o), before[i] ?? [])) changed.push(`${where}:${i}`); });
+  };
+  const hook = createHook({ init() { look("init"); }, before() { look("before"); }, after() { look("after"); }, promiseResolve() { look("promiseResolve"); } });
+  return {
+    start() { hook.enable(); },
+    stop() { hook.disable(); look("end"); return { looks, changed }; },
+  };
+}
+/** 给一次内核调用加 2 秒等待上限:结果不对的实现(比如把拒收的值当 Promise 等)不会让测试一直挂着,而是得到一个不符合期望的结果 */
+async function bounded<T>(p: Promise<T>): Promise<T | { ok: false; reason: string }> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([p, new Promise<{ ok: false; reason: string }>((ok) => { timer = setTimeout(() => ok({ ok: false, reason: "测试等待超过 2 秒" }), 2000); })]);
+  } finally { clearTimeout(timer); }
+}
+/** 宿主侧要核对的内置对象 */
+const HOST_OBJECTS: readonly object[] = [Promise, Promise.prototype, Object.prototype, Function.prototype, Array.prototype];
+/** 调用窗口观察用的拒收形态:形态矩阵里不该被 await 的那些,只取已立即失败与已兑现两种结局、可写可配置一种描述符旗标(子集,控制用时) */
+function* refusedWindowShapes(): Generator<Shape> {
+  for (const s of shapeMatrix()) if (!plainShape(s) && s.end !== "reject-later" && (s.flags === "-" || s.flags === "cw")) yield s;
+}
+
+test("拒收期间不临时改写对象:内核 send / pull 调用窗口内,async_hooks 在每次异步资源创建、Promise 兑现、回调前后逐项比对插件交回的对象、Promise 子类及其 prototype、插件定义与插件函数、宿主内置 Promise / Object / Function / Array 原型,拒收形态 send / pull 各一遍都 0 处变化、每次调用至少观察 1 次;观察器自检:窗口内临时加再删一个属性会被看见(第十五轮 R14-02 审查 M1)", async () => {
+  // 自检:同样的观察器能看见「临时加属性、期间创建一个 Promise、再删掉」这种返回前后看不出的改写
+  const probe = Promise.resolve([]);
+  const self = windowWatch([probe]);
+  self.start();
+  Object.defineProperty(probe, "neutral_temporary", { value: 1, configurable: true });
+  void Promise.resolve();
+  Reflect.deleteProperty(probe, "neutral_temporary");
+  const seen = self.stop();
+  assert.equal(seen.changed.length > 0, true, "观察器看不见窗口内的临时改写");
+  assert.deepEqual(ownSnap(probe), ownSnap(probe), "返回后看不出");
+  const syms = await trackingSymbols();
+  const calls = { n: 0 };
+  let current: unknown;
+  const send = () => current;
+  const pull = () => current;
+  const senderDef = { kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send };
+  const pullerDef = { kind: "data-source", id: "p", sources: ["g"], pull };
+  const sender = createRegistry({ now: () => T0 });
+  const puller = createRegistry({ now: () => T0 });
+  sender.register(senderDef);
+  puller.register(pullerDef);
+  let checked = 0;
+  for (const s of refusedWindowShapes()) for (const mode of ["send", "pull"] as const) {
+    const name = `${mode}/${s.wrap}/${s.proto}/${s.key}:${s.desc}:${s.value}:${s.flags}/${s.seal}/${s.end}`;
+    const actionId = `w-${checked}`;
+    const made = makeShape(s, mode, actionId, syms, calls);
+    current = made.value;
+    made.arm();
+    const watch = windowWatch([...made.owners, mode === "send" ? senderDef : pullerDef, mode === "send" ? send : pull, ...HOST_OBJECTS]);
+    watch.start();
+    let r: { ok: boolean; reason?: string };
+    let seenNow: { looks: number; changed: string[] };
+    try { r = await bounded<{ ok: boolean; reason?: string }>(mode === "send" ? sender.send("p", { action_id: actionId, payload: "x" }) : puller.pull("p", "g")); } finally { seenNow = watch.stop(); }
+    // 每种形态当场断言:结果不对的实现可能在后面的形态上一直等,不能攒到最后
+    assert.equal(r.ok ? "ok" : r.reason, mode === "send" ? "non-promise-send" : "invalid-batch", name);
+    assert.equal(seenNow.looks >= 2, true, `${name}:窗口内没有观察点`);
+    assert.deepEqual(seenNow.changed, [], `${name}:窗口内对象被临时改写`);
+    assert.equal(calls.n, 0, `${name}:插件侧代码被执行`);
+    checked++;
+  }
+  await new Promise((ok) => setTimeout(ok, 20));
+  assert.equal(calls.n, 0, "插件侧代码被执行");
+  assert.equal(checked > 2000, true, `拒收形态只覆盖了 ${checked} 次`);
+});
+
+test("普通原生 Promise 带不可枚举的自有数据属性(字符串键、Symbol 键,可写或只读)照常确认 / 拉取;同一属性换成不可枚举的 getter 或 setter 就拒收、访问器 0 次(第十五轮 R14-02 审查 M2 双侧单开关)", async () => {
+  for (const key of ["extra", Symbol("extra")] as const) for (const kind of ["data", "data-readonly", "getter", "setter"] as const) {
+    const name = `${String(key)}/${kind}`;
+    let calls = 0;
+    const shape = <T extends Promise<unknown>>(p: T): T => {
+      const d: PropertyDescriptor = kind === "data" ? { value: "neutral", writable: true, configurable: true, enumerable: false }
+        : kind === "data-readonly" ? { value: "neutral", writable: false, configurable: false, enumerable: false }
+        : kind === "getter" ? { get() { calls++; return "neutral"; }, configurable: true, enumerable: false }
+        : { set() { calls++; }, configurable: true, enumerable: false };
+      Object.defineProperty(p, key, d);
+      return p;
+    };
+    const reg = createRegistry({ now: () => T0 });
+    reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => shape(Promise.resolve({ action_id: "a", receiptId: "r" })) });
+    reg.register({ kind: "data-source", id: "d", sources: ["g"], pull: () => shape(Promise.resolve([ev()])) });
+    const sent = await reg.send("p", { action_id: "a", payload: "x" });
+    const pulled = await reg.pull("d", "g");
+    if (kind === "data" || kind === "data-readonly") assert.deepEqual([sent.ok, pulled.ok && pulled.events.length], [true, 1], name);
+    else assert.deepEqual([sent.ok === false && sent.reason, pulled.ok === false && pulled.reason], ["non-promise-send", "invalid-batch"], name);
+    assert.equal(calls, 0, name);
+  }
+});
+
+test("追踪符号上是非整数数字(1.5、-0.5、1e-7、NaN、Infinity)时普通原生 Promise 照常确认 / 拉取;同一描述符换成数字字符串、BigInt 或带 valueOf 的对象就拒收、valueOf 0 次(第十五轮 R14-02 审查 M3 双侧单开关,合同是「数字或 undefined」不是整数)", async () => {
+  for (const description of ["async_id_symbol", "trigger_async_id_symbol"]) {
+    for (const [name, value, accepted] of [
+      ["1.5", 1.5, true], ["-0.5", -0.5, true], ["1e-7", 1e-7, true], ["NaN", Number.NaN, true], ["Infinity", Number.POSITIVE_INFINITY, true],
+      ["字符串 1.5", "1.5", false], ["BigInt", 7n, false], ["valueOf 对象", "valueof", false],
+    ] as const) {
+      const label = `${description}/${name}`;
+      let calls = 0;
+      const tricky = { valueOf() { calls++; return 1.5; }, [Symbol.toPrimitive]() { calls++; return 1.5; } };
+      // 插件自造同描述的符号(内核按描述认追踪键),不碰运行时自己的追踪符号
+      const shape = <T extends Promise<unknown>>(p: T): T => {
+        Object.defineProperty(p, Symbol(description), { value: value === "valueof" ? tricky : value, writable: true, enumerable: true, configurable: true });
+        return p;
+      };
+      const reg = createRegistry({ now: () => T0 });
+      reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => shape(Promise.resolve({ action_id: "a", receiptId: "r" })) });
+      reg.register({ kind: "data-source", id: "d", sources: ["g"], pull: () => shape(Promise.resolve([ev()])) });
+      const sent = await reg.send("p", { action_id: "a", payload: "x" });
+      const pulled = await reg.pull("d", "g");
+      if (accepted) assert.deepEqual([sent.ok, pulled.ok && pulled.events.length], [true, 1], label);
+      else assert.deepEqual([sent.ok === false && sent.reason, pulled.ok === false && pulled.reason], ["non-promise-send", "invalid-batch"], label);
+      assert.equal(calls, 0, label);
+    }
+  }
+});
+
+test("sendTimeoutMs 取 Node 定时器上限 2147483647 时可建注册表,30ms 后返回的回执照常确认、不出 TimeoutOverflowWarning;上限加一 2147483648、2147483647.5、0 以及 Infinity、NaN 在建注册表时抛受控 TypeError 并写明上限,不会被 Node 缩成 1 毫秒后立即判超时(第十五轮 R14-03 双侧)", async () => {
+  const warnings: string[] = [];
+  const onWarning = (w: Error) => { warnings.push(w.name); };
+  process.on("warning", onWarning);
+  try {
+    const reg = createRegistry({ now: () => T0, sendTimeoutMs: 2_147_483_647 });
+    reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: (q: { action_id: string }) => new Promise((ok) => { setTimeout(() => ok({ action_id: q.action_id, receiptId: "r" }), 30); }) });
+    assert.deepEqual(await reg.send("p", { action_id: "a", payload: "x" }), { ok: true, state: "confirmed", receipt: { action_id: "a", receiptId: "r" }, deduplicated: false });
+    await new Promise((ok) => setImmediate(ok));
+  } finally { process.off("warning", onWarning); }
+  assert.deepEqual(warnings.filter((w) => w === "TimeoutOverflowWarning"), []);
+  for (const bad of [2_147_483_648, 2_147_483_647.5, 0]) {
+    assert.throws(() => createRegistry({ sendTimeoutMs: bad }), (e: unknown) => e instanceof TypeError && e.message === "注册表选项 sendTimeoutMs 必须是大于 0、不超过 2147483647 的毫秒数(Node 定时器上限)", String(bad));
+  }
+  // 非有限数在统一的普通数据判定里就被拒(同样是受控 TypeError,点名字段)
+  for (const bad of [Number.POSITIVE_INFINITY, Number.NaN]) {
+    assert.throws(() => createRegistry({ sendTimeoutMs: bad }), (e: unknown) => e instanceof TypeError && /sendTimeoutMs/.test(e.message), String(bad));
+  }
 });
