@@ -1,0 +1,23 @@
+packages/server/src/host.ts
+  s_12ccf69de2a7ec::t_d83bb8d413a137 198-202
+packages/server/src/schedules.ts
+  s_12ccf69de2a7ec::t_0c185e1e56f292 44-45,96,100-105
+packages/server/src/views.ts
+  s_12ccf69de2a7ec::t_d00d016812dd85 4,6,9-32,34-59,61-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b8d55d3ead3f6bb90b4da863df1cbf6fb05e35f9",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

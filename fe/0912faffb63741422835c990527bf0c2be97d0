@@ -1,0 +1,21 @@
+receipts/feat-contact-helper.json
+  s_7489a667d0db56::t_4e2dce1a374622 52-57
+reviews/feat-contact-helper.md
+  s_7489a667d0db56::t_b77dfbfdec9dde 1308-1375
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fe0912faffb63741422835c990527bf0c2be97d0",
+  "prompts": {},
+  "sessions": {
+    "s_7489a667d0db56": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2353d719-cdd5-4608-894a-8460db6c9810",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
