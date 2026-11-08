@@ -23,6 +23,7 @@ import {
   RewindResult,
   RoomView,
   ScheduleView,
+  SearchHit,
   SettingsView,
   SlashCommand,
   SlashInvocation,
@@ -108,8 +109,8 @@ export const METHODS = {
    * 此时 hasMore 表示前面还有,hasMoreAfter 表示后面还有。
    */
   "messages.list": method(
-    obj({ roomId: id(), threadRootSeq: opt(nullable(seq())), beforeSeq: opt(seq()), afterSeq: opt(seq()), ...Page }),
-    obj({ messages: arr(MessageView), hasMore: bool() }),
+    obj({ roomId: id(), threadRootSeq: opt(nullable(seq())), beforeSeq: opt(seq()), afterSeq: opt(seq()), aroundSeq: opt(seq()), ...Page }),
+    obj({ messages: arr(MessageView), hasMore: bool(), hasMoreAfter: opt(bool()) }),
   ),
   /** 发送。clientActionId 由渲染进程生成,同一号重发返回同一条消息(不重复入库)。 */
   "messages.send": method(
@@ -156,7 +157,10 @@ export const METHODS = {
    * 撤回的消息搜不到;编辑过的按最新文字匹配。按时间倒序,nextCursor 不为 null 时带上它取下一页。
    * 指定 roomId 时只搜这个会话(不存在 not_found,不是成员 forbidden)。
    */
-  "search.messages": method(obj({}), obj({})),
+  "search.messages": method(
+    obj({ query: str({ min: 1, max: 200 }), roomId: opt(id()), cursor: opt(nullable(str({ max: 1000 }))), limit: opt(int({ min: 1, max: 100 })) }),
+    obj({ hits: arr(SearchHit), nextCursor: nullable(str({ max: 1000 })) }),
+  ),
 
   // ---- 卡片按钮(交付确认、提问回答、失败重试…),以对话消息形式记录 ----
   "cards.act": method(obj({ roomId: id(), seq: seq(), cardId: id(), actionId: id(), clientActionId: id(), text: opt(str({ max: 20000 })) }), MessageView),

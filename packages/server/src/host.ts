@@ -522,6 +522,7 @@ export class Host {
   }
   listMessages(roomId: string, q: { beforeSeq?: number; afterSeq?: number; aroundSeq?: number; limit?: number; threadRootSeq?: number | null }): { messages: MessageView[]; hasMore: boolean; hasMoreAfter?: boolean } {
     this.roomRow(roomId);
+    if (q.aroundSeq !== undefined && (q.beforeSeq !== undefined || q.afterSeq !== undefined)) throw new HostError("invalid_params", "aroundSeq 不能和 beforeSeq/afterSeq 同时用");
     const msgs = this.projected(roomId);
     let sel = msgs.filter((m) => (q.beforeSeq === undefined || m.seq < q.beforeSeq) && (q.afterSeq === undefined || m.seq > q.afterSeq));
     if (q.threadRootSeq !== undefined) {
@@ -529,6 +530,14 @@ export class Host {
       sel = sel.filter((m) => (roots.get(m.seq) ?? null) === q.threadRootSeq || (q.threadRootSeq !== null && m.seq === q.threadRootSeq));
     }
     const limit = q.limit ?? 100;
+    if (q.aroundSeq !== undefined) {
+      // 搜索结果跳转:以该条为中心取一页,包含它本身(AC-25)
+      const at = sel.findIndex((m) => m.seq === q.aroundSeq);
+      if (at < 0) throw new HostError("not_found", `这个会话里没有 #${q.aroundSeq}`);
+      const from = Math.max(0, Math.min(at - Math.floor((limit - 1) / 2), sel.length - limit));
+      const page = sel.slice(from, from + limit);
+      return { messages: page.map((m) => this.messageView(roomId, m, msgs)), hasMore: from > 0, hasMoreAfter: from + page.length < sel.length };
+    }
     const hasMore = sel.length > limit;
     const page = q.afterSeq !== undefined ? sel.slice(0, limit) : sel.slice(-limit);
     return { messages: page.map((m) => this.messageView(roomId, m, msgs)), hasMore };

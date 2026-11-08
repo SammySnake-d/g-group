@@ -365,6 +365,28 @@ export const SlashCommand = obj({
 });
 export type SlashCommand = Infer<typeof SlashCommand>;
 
+// ---------- 搜索(AC-25)----------
+/** 一条搜索结果:必带会话与 #seq,点了用 messages.list({ aroundSeq }) 跳回原位置。 */
+export const SearchHit = obj({
+  roomId: id(),
+  roomTitle: str({ max: 200 }),
+  seq: seq(),
+  /** 命中消息所在话题的根序号;主流消息为 null。 */
+  threadRootSeq: nullable(seq()),
+  sender: Sender,
+  senderName: str({ max: 80 }),
+  /** 以关键词为中心截的一段正文(空白压成一个空格),前后被截掉的用「…」表示。 */
+  snippet: str({ max: 500 }),
+  /** 每个关键词在 snippet 里的位置(UTF-16 下标),给界面高亮用。 */
+  highlights: arr(obj({ start: int({ min: 0 }), length: int({ min: 1 }) })),
+  /** 正文命中,或只有附件名命中。 */
+  matchedIn: oneOf(["text", "attachment"] as const),
+  /** 命中的附件文件名;没有附件命中为 null。 */
+  attachmentName: nullable(str({ max: 500 })),
+  at: isoTime(),
+});
+export type SearchHit = Infer<typeof SearchHit>;
+
 // ---------- 设置 ----------
 export const SettingsView = obj({
   defaultHarness: oneOf(HARNESSES),
