@@ -1,0 +1,14 @@
+scripts/gates/proof/r12-existing-control.txt
+  h_f33e46a035b77c 2,19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1022993b2ca9152d328af957e9b6d330fbd9bb69",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
