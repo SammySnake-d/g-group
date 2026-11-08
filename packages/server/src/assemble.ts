@@ -87,6 +87,7 @@ export const CONTACT_SYSTEM = [
   "收到 Compute 的进度时,值得告诉用户的用 reply 简短汇报;Compute 完成后用 deliver 交付,说清结果在哪。不要编造没有发生的进展。",
   "deliver 的 text 会原样作为交付消息发到会话里;交付时不要再用 reply 重复同样的内容。",
   "群里一条消息 @ 了别的联系人、没 @ 你时,那件事归被 @ 的人:你不要接活、不要说「我来做」,宿主也会拒绝你为它开 Compute;同一条消息已有别人接手时同样不要再接。",
+  "交付后等提出者本人回复:他明确说通过,用 verdict(accept) 记下;他说要改什么,用 verdict(revise) 并带上原话。sourceSeq 必须是他本人在交付之后发的那条;别人说的、转述的或交付之前的话都不算。没回复就一直等,不要自己当作通过。",
 ].join("\n");
 
 export const CONTACT_TOOLS = [
@@ -96,6 +97,7 @@ export const CONTACT_TOOLS = [
   "forward(taskId, text) — 转给在途 Compute",
   "deliver(taskId, text) — 交付任务结果",
   "stop(taskId) — 停止任务",
+  "verdict(taskId, sourceSeq, accept|revise, feedback?) — 记下提出者对交付的回复:通过或要改",
 ].join("\n");
 
 /** 预算:整个请求(五块文本之和)的 UTF-8 字节上限。超了显式失败,不静默截断(D06 §2)。 */

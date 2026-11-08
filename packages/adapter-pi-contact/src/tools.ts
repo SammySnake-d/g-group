@@ -1,4 +1,4 @@
-// 联系人的直接工具清单:六种 MindAction 各一个工具,外加 update_state_note。
+// 联系人的直接工具清单:七种 MindAction 各一个工具,外加 update_state_note。
 // 工具只校验参数形状、登记成 MindAction 并立即回「已登记」,不做任何 I/O;
 // 宿主在本轮结束后逐条校验(会话可见、任务归属、seq 在本轮输入里)、分配 action_id、落盘后才执行(runtime-ports.ts)。
 // 清单是封闭的:联系人没有 shell、文件读写、网络这类工具;要动手就用 dispatch_compute 开 Compute(AC-33)。
@@ -12,11 +12,12 @@ export const PI_CONTACT_TOOL_NAMES = Object.freeze([
   "forward",
   "deliver",
   "stop",
+  "verdict",
   "update_state_note",
 ] as const);
 export type PiContactToolName = (typeof PI_CONTACT_TOOL_NAMES)[number];
 
-type FieldKind = "text" | "seq" | "seqOrNull" | "textOrNull";
+type FieldKind = "text" | "seq" | "seqOrNull" | "textOrNull" | "verdict";
 interface FieldSpec {
   readonly kind: FieldKind;
   readonly required: boolean;
@@ -76,6 +77,15 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
       taskId: f("text", true, "任务 id"),
     },
   },
+  verdict: {
+    description: "记下提出者对你交付的回复:他明确说通过用 accept,他说要改用 revise 并带上原话。只认他本人在交付之后发的消息;没回复就一直等,不要自己当作通过。宿主核对来源后才生效。",
+    fields: {
+      taskId: f("text", true, "被验收的任务 id"),
+      sourceSeq: f("seq", true, "用户表达通过或修改意见的那条消息的 seq(必须是提出者本人在交付之后发的)"),
+      verdict: f("verdict", true, "accept:用户明确说通过;revise:用户要改"),
+      feedback: f("textOrNull", false, "revise 时用户要改什么(原话);accept 省略"),
+    },
+  },
   update_state_note: {
     description: "写新的状态笔记(下一轮第 3 块):当前在做什么、下一步、完成判据、相关指针、走不通的路;不复述过程。本轮多次调用以最后一次为准。",
     fields: {
@@ -90,6 +100,7 @@ const schemaOf = (s: FieldSpec): Record<string, unknown> => {
     case "textOrNull": return { type: ["string", "null"], minLength: 1, description: s.description };
     case "seq": return { type: "integer", minimum: 0, description: s.description };
     case "seqOrNull": return { type: ["integer", "null"], minimum: 0, description: s.description };
+    case "verdict": return { type: "string", enum: ["accept", "revise"], description: s.description };
   }
 };
 
@@ -137,7 +148,10 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
       else v[k] = null;
       continue;
     }
-    if (s.kind === "text" || s.kind === "textOrNull") {
+    if (s.kind === "verdict") {
+      if (x !== "accept" && x !== "revise") problems.push(`${k} 只能是 accept 或 revise`);
+      else v[k] = x;
+    } else if (s.kind === "text" || s.kind === "textOrNull") {
       if (typeof x !== "string") problems.push(`${k} 必须是字符串`);
       else if (x.trim() === "") problems.push(`${k} 不能为空白`);
       else v[k] = x;
@@ -159,6 +173,7 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
     case "forward": return act({ kind: "forward", taskId: s("taskId"), text: s("text") });
     case "deliver": return act({ kind: "deliver", taskId: s("taskId"), text: s("text") });
     case "stop": return act({ kind: "stop", taskId: s("taskId") });
+    case "verdict": return act({ kind: "verdict", taskId: s("taskId"), sourceSeq: n("sourceSeq"), verdict: s("verdict") as "accept" | "revise", feedback: sn("feedback") });
     case "update_state_note": return { ok: true, value: { kind: "note", note: s("note") } };
   }
 }
