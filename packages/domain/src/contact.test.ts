@@ -1,6 +1,7 @@
 // AC-01 联系人持久身份;AC-33 直接工具清单收窄、Compute 不继承记忆和性格、凭据只给引用、placement 契约;
 // 概念卡第 11 张:定时是联系人自己的承诺(带时区和误差),不是插件能力;AC-31⑤ 承诺终态自动回收。
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import * as contactModule from "./contact.ts";
@@ -2036,4 +2037,177 @@ test("CH-50 定时 cron 按语义校验:各段越界、区间倒置、零步长�
     const back = grantTool(js(r.ok ? r.contact : (null as never)) as never, { name: "weather", bounded: true });
     assert.equal(back.ok, true, `合法 ${cron} 恢复`);
   }
+});
+
+// ---------------------------------------------------------------- 第十九轮复审(R19-01 / R19-02)
+/** 统计 fn 执行期间对 target 的自有属性描述符读取次数(只计这一个数组;结束后一定恢复原函数)。用来观察复制是否在第一个无效项处短路。 */
+const descriptorReads = <T>(target: object, fn: () => T): { result: T; reads: number } => {
+  const orig = Object.getOwnPropertyDescriptor;
+  let reads = 0;
+  Object.getOwnPropertyDescriptor = ((o: object, k: PropertyKey) => {
+    if (o === target) reads++;
+    return orig(o, k);
+  }) as typeof Object.getOwnPropertyDescriptor;
+  try {
+    return { result: fn(), reads };
+  } finally {
+    Object.getOwnPropertyDescriptor = orig;
+  }
+};
+/** 声明长度 len、自有下标只有 own 里那些的普通稀疏数组(不用 Proxy、访问器或原型改写)。 */
+const sparseOf = (len: number, own: readonly unknown[] = []): unknown[] => {
+  const a: unknown[] = [...own];
+  a.length = len;
+  return a;
+};
+/** 合法 JSON 解析出的 n 项数组:首项 first,其余是字符串。 */
+const jsonList = (n: number, first: string): unknown[] => JSON.parse(`[${first}${',"x"'.repeat(n - 1)}]`) as unknown[];
+const reasonOf = (r: { ok: boolean; reason?: string }): string | false => !r.ok && (r.reason as string);
+/** 入口结果摘要:拒绝取理由;回执入口对字段类型不对的回执按 CH-42 既有约定 {ok:true} 原样返回状态,摘要成"状态不变"+承诺快照。 */
+const outcomeOf = (r: { ok: boolean; reason?: string; contact?: Contact }): string => (r.ok ? `状态不变 ${JSON.stringify(r.contact?.commitments)}` : (r.reason as string));
+
+test("CH-51 数组字段遇到空位或无效项当场拒绝,不按声明长度先复制:字符串数组与对象数组、登记与恢复状态都只读到第一个无效下标,理由与同构小数组一致;合法数组照常(对照)", () => {
+  const c = fullContact();
+  const st = js(c) as unknown as Record<string, unknown> & { commitments: Record<string, unknown>[] };
+  const k0 = st.commitments[0]!;
+  const big = 1_000_000;
+  // 对该数组的描述符读取上限:与声明长度无关的小常数(第一个无效下标之前的项 + length 与整份回执预检这类固定开销)
+  const READ_LIMIT = 8;
+  // [名称, 入口, 用某个数组值调用入口];回执入口对坏回执不拒绝而是原样返回状态(CH-42),其余入口都拒绝
+  const entries: [string, (a: unknown[]) => { ok: boolean; reason?: string; contact?: Contact }][] = [
+    ["登记 commit.boundTaskIds(字符串数组)", (a) => commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: a as never, schedule: null })],
+    ["派活 briefFor.rules(字符串数组)", (a) => briefFor(c, { task: "t", rules: a as never, tools: [], credentialRefs: [] })],
+    ["回执 confirmFinalReport.commitmentIds(字符串数组)", (a) => confirmFinalReport(c, { taskId: "T", commitmentIds: a as never, basedOnSeq: 5 })],
+    ["恢复 commitments[0].boundTaskIds(字符串数组)", (a) => grantTool({ ...st, commitments: [{ ...k0, boundTaskIds: a }] } as never, { name: "weather", bounded: true })],
+    ["恢复 tools(对象数组)", (a) => grantTool({ ...st, tools: a } as never, { name: "weather", bounded: true })],
+    ["恢复 commitments(对象数组)", (a) => grantTool({ ...st, commitments: a } as never, { name: "weather", bounded: true })],
+  ];
+  const unchanged = outcomeOf({ ok: true, contact: c });
+  for (const [name, call] of entries) {
+    const receipt = name.startsWith("回执");
+    // 小数组对照:拒绝入口给出理由,回执入口原样返回状态
+    const expectSmall = (r: string) => (receipt ? assert.equal(r, unchanged, `${name} 小数组对照状态不变`) : assert.ok(!r.startsWith("状态不变"), `${name} 小数组对照被拒`));
+    // 1) 0 个自有下标、length 100 万:只读第 0 个下标就停
+    const small = outcomeOf(call(sparseOf(2)));
+    expectSmall(small);
+    const a1 = sparseOf(big);
+    const r1 = descriptorReads(a1, () => call(a1));
+    assert.equal(outcomeOf(r1.result), small, `${name} 大稀疏数组结果`);
+    assert.ok(r1.reads <= READ_LIMIT, `${name} 大稀疏数组只读到第一个空位,实际读 ${r1.reads} 次`);
+    // 2) 第 1 个下标是空位:读到第 1 个就停
+    const first = name.includes("对象数组") ? (name.includes("tools") ? (st.tools as unknown[])[0] : k0) : "T";
+    const smallGap = outcomeOf(call(sparseOf(2, [first])));
+    expectSmall(smallGap);
+    const a2 = sparseOf(big, [first]);
+    const r2 = descriptorReads(a2, () => call(a2));
+    assert.equal(outcomeOf(r2.result), smallGap, `${name} 第 1 位空位结果`);
+    assert.ok(r2.reads <= READ_LIMIT, `${name} 第 1 位空位后不再往下读,实际读 ${r2.reads} 次`);
+    // 3) 合法 JSON 的 100 万项数组,首项 null:只读首项就停
+    const smallNull = outcomeOf(call(JSON.parse('[null,"x"]') as unknown[]));
+    expectSmall(smallNull);
+    const a3 = jsonList(big, "null");
+    const r3 = descriptorReads(a3, () => call(a3));
+    assert.equal(outcomeOf(r3.result), smallNull, `${name} 首项 null 大数组结果`);
+    // 回执入口按 CH-42 合同要先查整份回执里任何一层的 Proxy/访问器(首项 null 之后若有 Proxy 必须拒收),所以对调用方实际给出的
+    // 自有下标做一遍只读预检(每个下标 2 次描述符读取),不复制;其余入口在首项就停
+    const limit3 = receipt ? 2 * big + READ_LIMIT : READ_LIMIT;
+    assert.ok(r3.reads <= limit3, `${name} 首项 null 读取上限 ${limit3},实际读 ${r3.reads} 次`);
+  }
+  // 无效项在最后一位仍被拒绝(不是只看前几项)
+  const tailBad = [...Array.from({ length: 9_999 }, (_, i) => `T${i}`), 42];
+  assert.equal(reasonOf(commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: tailBad as never, schedule: null })), "boundTaskIds 里只能是字符串");
+  const tailGap = [...Array.from({ length: 9_999 }, (_, i) => `T${i}`)];
+  tailGap.length = 10_000;
+  assert.equal(reasonOf(commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: tailGap, schedule: null })), "boundTaskIds 里只能是字符串");
+  // 访问器照旧不调用即拒:无效项在访问器之前、之后都一样 0 次
+  let n = 0;
+  const withGetter = (head: unknown[]) => { const a: unknown[] = [...head]; Object.defineProperty(a, a.length, { enumerable: true, get: () => { n++; return "x"; } }); return a; };
+  assert.equal(commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: withGetter(["T"]) as never, schedule: null }).ok, false);
+  assert.equal(commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: withGetter([42]) as never, schedule: null }).ok, false);
+  assert.equal(grantTool({ ...st, tools: withGetter([(st.tools as unknown[])[0]]) } as never, { name: "weather", bounded: true }).ok, false);
+  assert.equal(n, 0, "访问器调用次数");
+  // 合法对照:1 万项字符串数组原样登记并能恢复;合法对象数组恢复照常
+  const many = Array.from({ length: 10_000 }, (_, i) => `T${i}`);
+  const ok = commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: many, schedule: null });
+  assert.equal(ok.ok, true);
+  const saved = ok.ok ? ok.contact.commitments.find((x) => x.id === "s") : undefined;
+  assert.deepEqual(saved?.boundTaskIds, many);
+  assert.ok(Object.isFrozen(saved?.boundTaskIds));
+  assert.equal(grantTool(js(ok.ok ? ok.contact : (null as never)) as never, { name: "weather", bounded: true }).ok, true);
+  const back = grantTool(st as never, { name: "weather", bounded: true });
+  assert.deepEqual(back.ok && back.contact.tools.map((t) => t.name), ["get_weather", "weather"]);
+});
+
+test("CH-51 声明长度 2^32-1 的空稀疏数组在隔离子进程(堆上限 64 MB)里登记、派活、回执与恢复状态都立即返回(回执按 CH-42 原样返回状态),进程正常退出", () => {
+  const url = new URL("./contact.ts", import.meta.url).href;
+  // 同进程小对照:同一构造的短数组照样被拒
+  assert.equal(commit(fullContact(), { id: "s", sourceSeq: 1, text: "t", boundTaskIds: sparseOf(3) as never, schedule: null }).ok, false);
+  const body = `
+const m = await import(process.env.CONTACT_URL);
+const sparse = () => { const a = []; a.length = 2 ** 32 - 1; return a; };
+const d = m.addContact(m.emptyDirectory(), { id: "c", name: "n", speakingModel: "x" });
+const g = m.grantTool(d.dir.contacts.get("c"), { name: "get_weather", bounded: true });
+const k = m.commit(g.contact, { id: "k", sourceSeq: 1, text: "t", boundTaskIds: ["T"], schedule: null }).contact;
+const st = JSON.parse(JSON.stringify(k));
+const w = { name: "weather", bounded: true };
+console.log(JSON.stringify({
+  commit: m.commit(k, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: sparse(), schedule: null }).ok,
+  brief: m.briefFor(k, { task: "t", rules: sparse(), tools: [], credentialRefs: [] }).ok,
+  receiptUnchanged: (() => { const r = m.confirmFinalReport(k, { taskId: "T", commitmentIds: sparse(), basedOnSeq: 5 }); return r.ok && JSON.stringify(r.contact) === JSON.stringify(k); })(),
+  restoreTools: m.grantTool({ ...st, tools: sparse() }, w).ok,
+  restoreCommitments: m.grantTool({ ...st, commitments: sparse() }, w).ok,
+  restoreBound: m.grantTool({ ...st, commitments: [{ ...st.commitments[0], boundTaskIds: sparse() }] }, w).ok,
+  legal: m.grantTool(st, w).ok,
+}));`;
+  const r = spawnSync(process.execPath, ["--max-old-space-size=64", "--input-type=module", "-e", body], { env: { ...process.env, CONTACT_URL: url }, encoding: "utf8", timeout: 20_000 });
+  assert.equal(r.signal, null, `子进程被信号终止(超时或崩溃):${r.stderr}`);
+  assert.equal(r.status, 0, `子进程退出码:${r.stderr}`);
+  assert.deepEqual(JSON.parse(r.stdout), { commit: false, brief: false, receiptUnchanged: true, restoreTools: false, restoreCommitments: false, restoreBound: false, legal: true });
+});
+
+test("CH-52 cron 等值区间 a-a 是合法区间:五段各取等值区间与列表里的等值区间在登记与恢复状态时都接受且原样保存;相邻递增照常、倒置拒绝(对照)", () => {
+  const c = fullContact();
+  const sched = (cron: string) => ({ cron, tz: "Asia/Shanghai", toleranceSec: 0 });
+  const k0 = (js(c) as unknown as { commitments: Record<string, unknown>[] }).commitments[0]!;
+  const equal = ["5-5 * * * *", "0-0 * * * *", "59-59 * * * *", "* 0-0 * * *", "* 23-23 * * *", "* * 1-1 * *", "* * 31-31 * *", "* * * 1-1 *", "* * * 12-12 *", "* * * * 0-0", "* * * * 7-7", "1,5-5,9 * * * *", "5-5/1 * * * *"];
+  for (const cron of [...equal, "5-6 * * * *"]) {
+    const r = commit(c, { id: "s", sourceSeq: 1, text: "定时", boundTaskIds: [], schedule: sched(cron) });
+    assert.equal(r.ok, true, `登记 ${cron}${r.ok ? "" : ` ${r.reason}`}`);
+    assert.equal(r.ok && r.contact.commitments.find((x) => x.id === "s")?.schedule?.cron, cron, `登记 ${cron} 原样保存`);
+    const g = grantTool({ ...js(c), commitments: [{ ...k0, schedule: sched(cron) }] } as never, { name: "weather", bounded: true });
+    assert.equal(g.ok, true, `恢复 ${cron}${g.ok ? "" : ` ${g.reason}`}`);
+    assert.equal(g.ok && g.contact.commitments[0]?.schedule?.cron, cron, `恢复 ${cron} 原样保存`);
+  }
+  for (const [cron, why] of [["6-5 * * * *", "第 1 段(分钟)的区间 6-5 起点大于终点"], ["* * * * 7-6", "第 5 段(星期)的区间 7-6 起点大于终点"]] as const) {
+    const want = `定时表达式 "${cron}" ${why}`;
+    assert.equal(reasonOf(commit(c, { id: "s", sourceSeq: 1, text: "定时", boundTaskIds: [], schedule: sched(cron) })), want, `登记 ${cron}`);
+    const g = grantTool({ ...js(c), commitments: [{ ...k0, schedule: sched(cron) }] } as never, { name: "weather", bounded: true });
+    assert.equal(reasonOf(g), `联系人状态.commitments[0] ${want}`, `恢复 ${cron}`);
+  }
+});
+
+test("CH-53 数组字段改为逐项判定后:下标以外的访问器(字符串键、Symbol 键、不可枚举)仍拒绝且 getter 0 次,被丢弃字段与下标外属性里原型不是 Array.prototype 的数组仍拒绝;同样内容的数据属性与普通数组照常(对照)", () => {
+  const c = fullContact();
+  const st = js(c) as unknown as Record<string, unknown>;
+  const tool0 = (st.tools as unknown[])[0];
+  let n = 0;
+  const withAcc = <T>(head: T[], key: PropertyKey, enumerable: boolean): T[] => { const a = [...head]; Object.defineProperty(a, key, { enumerable, configurable: true, get: () => { n++; return "x"; } }); return a; };
+  const viaCommit = (a: unknown) => commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: a as never, schedule: null });
+  const viaRestore = (a: unknown) => grantTool({ ...st, tools: a } as never, { name: "weather", bounded: true });
+  const sym = Symbol("s");
+  for (const [key, enumerable, label] of [["foo", true, "foo"], [sym, true, "Symbol(s)"], ["bar", false, "bar"]] as const) {
+    assert.equal(reasonOf(viaCommit(withAcc(["T"], key, enumerable))), `boundTaskIds 只接受普通数据数组(${label} 是访问器属性)`, `登记 ${label}`);
+    assert.equal(reasonOf(viaRestore(withAcc([tool0], key, enumerable))), `tools 只接受普通数据数组(${label} 是访问器属性)`, `恢复 ${label}`);
+  }
+  assert.equal(n, 0, "访问器调用次数");
+  // 原型不是 Array.prototype 的数组:放在被丢弃字段、数组下标以外的属性里都拒绝
+  const odd = (): string[] => Object.setPrototypeOf(["a"], Object.create(Array.prototype)) as string[];
+  assert.equal(reasonOf(commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: [], schedule: null, extra: odd() } as never)), "承诺.extra 只接受普通数据数组");
+  assert.equal(reasonOf(viaCommit(Object.assign(["T"], { foo: odd() }))), "boundTaskIds.foo 只接受普通数据数组");
+  assert.equal(reasonOf(grantTool({ ...st, extra: [odd()] } as never, { name: "weather", bounded: true })), "联系人状态.extra.0 只接受普通数据数组");
+  // 对照:同样内容的数据属性、普通数组照常
+  assert.equal(viaCommit(Object.assign(["T"], { foo: "x", [sym]: "y", bar: ["a"] })).ok, true);
+  assert.equal(viaRestore(Object.assign([tool0], { foo: "x" })).ok, true);
+  assert.equal(commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: [], schedule: null, extra: ["a"] } as never).ok, true);
+  assert.equal(grantTool({ ...st, extra: [["a"]] } as never, { name: "weather", bounded: true }).ok, true);
 });
