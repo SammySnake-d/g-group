@@ -183,6 +183,8 @@ export const TaskView = obj({
   artifacts: arr(obj({ ref: id(), name: str({ max: 500 }), kind: oneOf(["file", "diff", "link", "text"] as const) })),
   createdAt: isoTime(),
   updatedAt: isoTime(),
+  /** 用户手动新建任务时填的描述,原样保留(AC-47);联系人派活建的任务没有这一项。 */
+  description: opt(str({ max: 20000 })),
 });
 export type TaskView = Infer<typeof TaskView>;
 
