@@ -29,7 +29,7 @@ const { values, positionals } = parseArgs({
     to: { type: "string" },
     title: { type: "string", default: "项目群" },
     /** 第一轮收尾后再以用户身份发的一条(如对交付回复「通过」或修改意见),发完再等收尾。 */
-    then: { type: "string" },
+    reply: { type: "string" },
   },
 });
 const [cmd, ...rest] = positionals;
@@ -100,9 +100,9 @@ async function runGroup(host: Host, model: string | undefined) {
   console.log(`群 ${room.id}「${room.title}」成员: ${room.members.map((m) => (m.kind === "user" ? "我" : nameOf(m.id))).join("、")}`);
   const run = await sendAndWait(host, room.id, text, { ...(values.to ? { mention: values.to } : {}), timeoutMs: Number(values.timeout) * 1000 });
   if (run.timedOut) console.error("超时,仍有任务在执行");
-  if (values.then) {
-    console.log(`  ← 我: ${values.then}`);
-    const next = await sendAndWait(host, room.id, values.then, { ...(values.to ? { mention: values.to } : {}), timeoutMs: Number(values.timeout) * 1000 });
+  if (values.reply) {
+    console.log(`  ← 我: ${values.reply}`);
+    const next = await sendAndWait(host, room.id, values.reply, { ...(values.to ? { mention: values.to } : {}), timeoutMs: Number(values.timeout) * 1000 });
     if (next.timedOut) console.error("超时,仍有任务在执行");
   }
   console.log("—— 群记录 ——");
@@ -150,9 +150,9 @@ async function main() {
     });
     const first = await sendAndWait(host, room.id, text, { timeoutMs: Number(values.timeout) * 1000 });
     if (first.timedOut) console.error("超时,仍有任务在执行");
-    if (values.then) {
-      console.log(`  ← 我: ${values.then}`);
-      const second = await sendAndWait(host, room.id, values.then, { timeoutMs: Number(values.timeout) * 1000 });
+    if (values.reply) {
+      console.log(`  ← 我: ${values.reply}`);
+      const second = await sendAndWait(host, room.id, values.reply, { timeoutMs: Number(values.timeout) * 1000 });
       if (second.timedOut) console.error("超时,仍有任务在执行");
     }
     console.log("—— 会话 ——");
