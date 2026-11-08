@@ -114,6 +114,8 @@ export const MessageView = obj({
   /** 发送方客户端生成的动作号,重放时去重(AC-31 action_id)。 */
   clientActionId: nullable(id()),
   at: isoTime(),
+  /** 私聊 rewind 撤下的消息为 true(AC-48):记录保留、照常列出(界面可置灰),但不再作为任何联系人的当前上下文。缺省视为 false。 */
+  rewound: opt(bool()),
 });
 export type MessageView = Infer<typeof MessageView>;
 
@@ -183,6 +185,45 @@ export const TaskView = obj({
   updatedAt: isoTime(),
 });
 export type TaskView = Infer<typeof TaskView>;
+
+// ---------- 私聊 rewind(AC-48 / U26 / D05)----------
+/** 回退会影响到的东西。预览(rooms.rewindPreview)只读算出这份清单;执行(rooms.rewind)按它落盘并如实返回。 */
+const RewindFields = {
+  roomId: id(),
+  /** 回退点:这条及之前的消息保留,之后的撤下。 */
+  toSeq: seq(),
+  /** 将被撤下(执行结果里为已撤下)的消息;已在更早回退里撤下的不重复列。 */
+  messages: arr(obj({ seq: seq(), sender: Sender, excerpt: str({ max: 500 }) })),
+  /** 来源消息在回退点之后、将被取消的在途任务。执行结果里的 state 是取消后的真实状态:有 Compute 在跑时为 T9_StopRequested,等 Compute 确认停下才到 T10。 */
+  tasks: arr(obj({ taskId: id(), title: str({ max: 500 }), sourceSeq: seq(), state: oneOf(TASK_STATES) })),
+  /** 来源消息在回退点之后、将作废的未了结承诺(账本记为 revoked)。 */
+  commitments: arr(obj({ commitmentId: id(), contactId: id(), sourceSeq: seq(), taskId: nullable(id()), text: str({ max: 5000 }) })),
+  /**
+   * 已经发生、回退不会撤销的外部副作用:来源在回退点之后的任务已起过的 Compute(可能已改文件、调外部服务)及其已产出的结果。
+   * kind 目前只有 "compute";以后接入外发渠道等再加取值。
+   */
+  sideEffects: arr(
+    obj({
+      kind: str({ min: 1, max: 64 }),
+      taskId: id(),
+      taskTitle: str({ max: 500 }),
+      computeId: id(),
+      status: oneOf(["starting", "running", "blocked", "completed", "failed", "stopped"] as const),
+      result: nullable(str({ max: 20000 })),
+      startedAt: isoTime(),
+      endedAt: nullable(isoTime()),
+    }),
+  ),
+};
+export const RewindPreview = obj(RewindFields);
+export type RewindPreview = Infer<typeof RewindPreview>;
+export const RewindResult = obj({
+  ...RewindFields,
+  /** 宿主替用户记进会话的那条回退说明消息(决策是共享上下文;联系人经正常送达收到它并更新状态笔记)。 */
+  markerSeq: seq(),
+  at: isoTime(),
+});
+export type RewindResult = Infer<typeof RewindResult>;
 
 // ---------- 承诺账本 ----------
 export const CommitmentView = obj({

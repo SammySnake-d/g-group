@@ -59,6 +59,8 @@ export function createService(host: Host): Service {
       host.announcements.remove(p.announcementId, p.expectedVersion);
       return { ok: true };
     },
+    "rooms.rewindPreview": (p: { roomId: string; toSeq: number }) => host.rewindPreview(p.roomId, p.toSeq),
+    "rooms.rewind": (p: { roomId: string; toSeq: number; clientActionId: string }) => host.rewind(p),
     "messages.list": ({ roomId, ...q }: { roomId: string } & Parameters<Host["listMessages"]>[1]) => host.listMessages(roomId, q),
     "messages.send": (p: Parameters<Host["send"]>[0]) => host.send(p),
     "messages.edit": (p: { roomId: string; seq: number; text: string }) => host.editMessage(p.roomId, p.seq, p.text),

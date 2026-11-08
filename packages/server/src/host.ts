@@ -14,6 +14,7 @@ import type {
   ContactView,
   MessageView,
   ReceiptView,
+  RewindResult,
   RoomView,
   SettingsView,
   TaskView,
@@ -46,6 +47,7 @@ import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { PluginStore } from "./plugins.ts";
+import type { RewindPlan } from "./rewind.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
 
 export interface HostOptions {
@@ -816,6 +818,16 @@ export class Host {
     if (!card) throw new HostError("conflict", decision === "cancel" ? `任务在 ${t.task.state},不能取消` : `任务在 ${t.task.state},没有待确认的交付`);
     this.cardAct({ roomId: card.room_id, seq: card.seq, cardId: card.card_id, actionId: decision, clientActionId, ...(note ? { text: note } : {}) });
     return this.taskView(this.taskDoc(taskId).value);
+  }
+
+  // ======================= 私聊 rewind(AC-48)=======================
+  /** 只读预览回退会影响到的东西;不改任何状态。 */
+  rewindPreview(_roomId: string, _toSeq: number): RewindPlan {
+    throw new Error("未实现");
+  }
+  /** 执行回退:撤下之后的消息、取消来源于它们的在途任务、作废承诺,并替用户记一条回退说明;clientActionId 幂等。 */
+  rewind(_input: { roomId: string; toSeq: number; clientActionId: string }): RewindResult {
+    throw new Error("未实现");
   }
 
   // ======================= 任务 =======================
