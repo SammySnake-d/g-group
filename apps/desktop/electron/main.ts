@@ -6,7 +6,8 @@ import path from "node:path";
 import { app, BrowserWindow, ipcMain, protocol, session, shell } from "electron";
 import { IPC, isMethodName } from "@g-group/api-contract";
 import { checkIpcRequest, isTrustedOrigin } from "@g-group/ui-core";
-import { handleInvoke, subscribe } from "./bridge.ts";
+import { attachServer, handleInvoke, subscribe } from "./bridge.ts";
+import { startBackend } from "./backend.ts";
 
 const DEV_URL = process.env.GG_DEV_URL ?? "";
 const DEV_ORIGIN = DEV_URL ? new URL(DEV_URL).origin : undefined;
@@ -100,8 +101,14 @@ app.on("web-contents-created", (_e, contents) => {
   contents.on("will-attach-webview", (e) => e.preventDefault());
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   serveRenderer();
+  // 宿主服务(@g-group/server)在主进程内起:GG_BACKEND=server 时接上,否则如实回「后端未连接」走演示数据
+  const backend = await startBackend(app.getPath("userData"));
+  if (backend) {
+    attachServer(backend.service);
+    app.on("before-quit", () => void backend.close());
+  }
   // 渲染层不申请任何系统权限(摄像头、通知、定位……)
   session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
   createWindow();

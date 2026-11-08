@@ -1,0 +1,30 @@
+{
+  "slice": "pi 联系人适配器 @g-group/adapter-pi-contact(adapter 层):createPiContactMind(opts) 用 pi-agent-core 1.5.0 实现内核接缝 ContactMind。每轮新建 Agent,prepareRequest 把发给模型的上下文换成宿主五块(第 1 块作 system,带七个工具声明与缓存断点;第 2–5 块按序作一条 user 消息),同一轮工具往返后的请求保留本轮工具调用与结果;reply/dispatch_compute/commit/forward/deliver/stop 与 update_state_note 七个具名工具只校验参数形状、登记成 MindAction/stateNote 并回「已登记」,不做 I/O;signal 中止抛 RoundAbortedError;端点为 Anthropic Messages 兼容,HTTP 传输可经 opts.fetch 注入(默认 globalThis.fetch);密钥由调用方传入,只进请求头,错误信息里隐去",
+  "acceptance": [
+    {
+      "id": "AC-33",
+      "status": "未测",
+      "reason": "本片只覆盖 ① 的联系人侧一半:pi 联系人发给模型的工具清单恰好是七个具名有界工具,没有 shell、文件读写、网络工具(mind.test.ts「首个请求恰好是五块…」核对实际请求体的 tools);dispatch_compute 只登记 dispatch 动作,不起进程。② 四判据下是否真开 Compute 只有两次真实模型冒烟(scripts/smoke.ts,私聊「写 hello.txt」→ 两次都调了 dispatch_compute),不是判据级验收;③ 试错升级、④ Compute 侧子集继承与凭据引用、placement 契约都不在本片"
+    },
+    {
+      "id": "AC-39",
+      "status": "未测",
+      "reason": "本片只保证适配器把第 1 块原样放进 system 并带 cache_control(第 1 块 cacheBreakpoint 为 false 时不设),工具声明固定;pi-ai 的 anthropic 适配另在最后一个工具与最后一条 user 消息上各加一个断点,共 3 个(≤4)。相邻两轮前缀逐字节一致、命中率记录与可信度检查依赖五块装配与用量记录,不在本片,也没有真实端点上的缓存命中数据"
+    },
+    {
+      "id": "AC-40",
+      "status": "未测",
+      "reason": "本片只覆盖 ⑪ 重拼核对的适配器侧:假端点核对实际请求体,第二轮请求里没有第一轮的任何消息、同一轮工具往返后的第二次请求保留了本轮工具调用与结果(mind.test.ts)。处置完整、承诺账本、完成判定、运行中插入等其余子项在内核注意循环与账本切片"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:18b4f4b0-3cf6-4d51-be92-ca20094b2ce3",
+    "model": "fnqtz/claude-opus-5-5", "notes": "由该会话派出的子代理执行"
+  },
+  "red": null,
+  "unverifiable": "先写后测(用户 #717:先落代码,先红后绿与变异留到审查阶段补),没有红提交;作者自己做过 18 个手工单点变异(不替换上下文、丢本轮往返、不带工具声明、空白文本放行、多余字段放行、不隐去密钥、不挂 abort、完成后不查 abort、笔记取第一次、不查说话模型、不限请求数、断点不随第 1 块、块号不查、出错也返回、dispatch 字段错映射、bearer 仍发 x-api-key、fetch 非函数也收、不传 fetch),全部被本包测试杀死,未入仓,不能当 R-05 证据。所有行为测试跑在进程内的假 Anthropic SSE 端点上,经 opts.fetch 注入:请求体与请求头由 pi-ai 的 Anthropic 适配(官方 SDK)照常构造,只把网络套接字换成函数(门禁沙箱禁网,本地起 HTTP 服务在 seatbelt 下连不上);假端点按我理解的 Anthropic 流式格式回放,真实端点的边角(重试、流中断、thinking 块)没覆盖;真实端点只跑过冒烟(scripts/smoke.ts,两次都调了 dispatch_compute)。AC-33 的「没有 shell」只核对了本适配器注册的工具,宿主若另给 pi 传工具不在本片约束内。说话模型与 opts.model 逐字比对,不一致整轮拒绝;模型 id 的别名、带厂商前缀等写法差异会被误拒。AC-39 的断点位置由 pi-ai 决定(system 末尾、最后一个工具、最后一条 user 消息),本片没有逐字节对比相邻两轮前缀",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}
