@@ -1,0 +1,108 @@
+TAP version 13
+# Subtest: R20-03 Compute 说明的直接工具只认整名:扩展名、前缀与未授权名均拒绝
+not ok 1 - R20-03 Compute 说明的直接工具只认整名:扩展名、前缀与未授权名均拒绝
+  ---
+  duration_ms: 8.469792
+  type: 'test'
+  location: '/private/tmp/g-group-pr4-r21-codex-46a146ce/packages/domain/src/contact.test.ts:2330:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    get_weather_extra 不得进入说明
+    + actual - expected
+
+      {
+    +   brief: {
+    +     credentialRefs: [],
+    +     placement: 'local',
+    +     rules: [],
+    +     task: 't',
+    +     tools: [
+    +       'get_weather_extra'
+    +     ]
+    +   },
+    +   ok: true
+    -   ok: false,
+    -   reason: '工具 get_weather_extra 超出联系人 c-mi 的授权集合'
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    ok: false
+    reason: '工具 get_weather_extra 超出联系人 c-mi 的授权集合'
+  actual:
+    ok: true
+    brief:
+      task: 't'
+      rules:
+      tools:
+        0: 'get_weather_extra'
+      credentialRefs:
+      placement: 'local'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/g-group-pr4-r21-codex-46a146ce/packages/domain/src/contact.test.ts:2338:12)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: R20-03 Compute 说明的专用资产只认整名:扩展名、前缀与未授权名均拒绝
+not ok 2 - R20-03 Compute 说明的专用资产只认整名:扩展名、前缀与未授权名均拒绝
+  ---
+  duration_ms: 0.739083
+  type: 'test'
+  location: '/private/tmp/g-group-pr4-r21-codex-46a146ce/packages/domain/src/contact.test.ts:2342:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    analysis_skill_extra 不得进入说明
+    + actual - expected
+
+      {
+    +   brief: {
+    +     credentialRefs: [],
+    +     placement: 'local',
+    +     rules: [],
+    +     task: 't',
+    +     tools: [
+    +       'analysis_skill_extra'
+    +     ]
+    +   },
+    +   ok: true
+    -   ok: false,
+    -   reason: '工具 analysis_skill_extra 超出联系人 c-mi 的授权集合'
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    ok: false
+    reason: '工具 analysis_skill_extra 超出联系人 c-mi 的授权集合'
+  actual:
+    ok: true
+    brief:
+      task: 't'
+      rules:
+      tools:
+        0: 'analysis_skill_extra'
+      credentialRefs:
+      placement: 'local'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/g-group-pr4-r21-codex-46a146ce/packages/domain/src/contact.test.ts:2350:12)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 320.780167

@@ -1,0 +1,34 @@
+{
+  "total": 502,
+  "selected": 502,
+  "killed": 502,
+  "invalidOrSurvived": 0,
+  "targetOk": true,
+  "clean": {
+    "tests": 324,
+    "pass": 324,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "listSha256": "f20dbb7707eaf44e4c3aac474faa63f9bcfe1888d3c894b3a6a63bd0824aca92",
+  "sourceHashes": {
+    "cas.test.ts": "d4f4fbfea7241e13216733835cfede9b507d16b9f649a19381f9b0dc2e84a297",
+    "cas.ts": "dc91a5560149426531ae477f0a87b209e14103a820a0fc3d2862b29ea4bc779b",
+    "contact.test.ts": "c463316fa3d8e8486baf44b3b7ae1aa546637b635a75e2cda4c65bba5f07fa35",
+    "contact.ts": "c71cc8dc837fdf7eef20719ebfaea2038d2271d1291016d3cc9481fa8abc58b9",
+    "errors.ts": "6da7c830970dc7cd75165b61e7b8cfd365f6c6a4ee4cf1783c7ed1b0c24dfe4a",
+    "helper.test.ts": "0fef3f4684ac73d3e0d57b9b02710322621a98105f2e87459d672d09d3f7de66",
+    "helper.ts": "fab56ff0e44bd470796bf4d053860c5707cbbe15f2cea646fef9ed5280f591c4",
+    "index.ts": "2c6e0c19fcbcd011049afcad4e130136a418e11036d02cbd3ebca372ff17f7e8",
+    "log.test.ts": "83db7819c4777a60c03ff209e9e69b8b537fcef1372af1883fcc49c2c28c29c9",
+    "log.ts": "576d2f83706c034ceeae7acb2acdb78b951e8e380dd98c57fb304b714493f294",
+    "plain.ts": "2edfa9ebc0ea8482aac05fbf96d23292f8db1544b83156c52caa7d1c9be4c9a3",
+    "task.test.ts": "c84202b5af908e0e08a6a8e5735fa144733d999e98a225e5db49afdc16e022c2",
+    "task.ts": "2925762a5c2ec9610c7d3d88ff397e84acef368c058c44fa8dd0587e3d84de46",
+    "vendor.test.ts": "526ae7ed853337878c0051209976affc41f873eb5e78e763c61666098e14c6cd",
+    "vendor.ts": "19aaf7186b3894e1eb5668b826f7dbec0cf91e9cbb1e7c8a56096f199ae4519b"
+  },
+  "width": 2
+}

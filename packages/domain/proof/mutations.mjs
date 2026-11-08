@@ -558,6 +558,10 @@ const M = [
   ["CK180 恢复状态退回精确比对", "contact.ts", "    if (isForbiddenTool(t.name)) return `${at}", "    if (FORBIDDEN_DIRECT_TOOLS.includes(t.name)) return `${at}"],
   ["CK181 黑名单按前缀比对(bash_history 被误拒)", "contact.ts", "const isForbiddenTool = (name: string): boolean => FORBIDDEN_KEYS.has(toolKey(name));", "const isForbiddenTool = (name: string): boolean => [...FORBIDDEN_KEYS].some((k) => toolKey(name).startsWith(k));"],
   ["CK182 黑名单按子串比对(my_shell_notes 被误拒)", "contact.ts", "const isForbiddenTool = (name: string): boolean => FORBIDDEN_KEYS.has(toolKey(name));", "const isForbiddenTool = (name: string): boolean => [...FORBIDDEN_KEYS].some((k) => toolKey(name).includes(k));"],
+  // 第二十一轮(R20-01–03):空生成器原型例外与审查报告 F1/F5 的原样单点注入。
+  ["CK183 同层生成器原型带自有数据仍被放行", "plain.ts", 'if (engineProto && typeof x === "object" && Reflect.ownKeys(x).length > 0)', 'if (engineProto && typeof x === "object" && Reflect.ownKeys(x).length < 0)'],
+  ["CK184 直接调用按已授权工具名前缀放行(R20-02 F1)", "contact.ts", "return c.tools.some((t) => t.name === name);", "return c.tools.some((t) => name.startsWith(t.name));"],
+  ["CK185 Compute 授权子集按已授权名前缀放行(R20-03 F5)", "contact.ts", "!allowed.has(t)", "![...allowed].some((a) => t.startsWith(a))"],
 ];
 // 所测功能已按 g-group#2273 撤销(专职开关「只做这件事」整体删除),对应变异移出清单;运行时逐条打印说明,写进 mutations.txt。
 const REMOVED = [
