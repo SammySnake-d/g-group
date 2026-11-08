@@ -1,9 +1,11 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, Check, ChevronDown, ChevronRight, Loader2, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { people, dutyByConv, dutyDefault, type Compute, type Conversation, type PersonId } from '@/data'
+import { people, dutyByConv, dutyDefault, type Compute, type Conversation, type Cron, type PersonId } from '@/data'
 import { useApp } from '@/ctx'
-import { cronWhen, cronRepeat } from './CronDetail'
+import { formatRunAt } from '@g-group/ui-core'
+import { cronDay, cronExpr, cronFailed, cronLastText, cronNextAt, cronOverview, cronRule, cronWhen, useNow } from '@/cronView'
+import { ResultIcon } from './CronList'
 import { Avatar, GroupAvatar } from './Avatar'
 import { ProcessView } from './Workbench'
 
@@ -13,8 +15,6 @@ type Sel = { t: 'conv'; conv: string } | { t: 'person'; conv: string; pid: Perso
 
 /** 回到进展时保留筛选、选中和滚动位置（组件会随左侧切换重挂载） */
 const saved = { stat: null as StatKey | null, scope: 'all' as Scope, conv: '', person: '', range: 'week' as 'today' | 'week', sel: null as Sel, scrollTop: 0, openDone: [] as string[] }
-
-const NOW = '02:20'
 
 const convLabel = (c: Conversation) => {
   if (c.kind === 'group') return c.title
@@ -48,6 +48,8 @@ function Summary({ list }: { list: Compute[] }) {
 
 export function Panorama() {
   const { computes, convs, crons, checklist, pending, resolve } = useApp()
+  /* 从「全部定时」入口进来：筛到定时并滚到那一节（cronView.openCronOverview） */
+  if (cronOverview.focus) saved.stat = 'cron'
   const [stat, setStatS] = useState(saved.stat)
   const [scope, setScopeS] = useState(saved.scope)
   const [fConv, setFConvS] = useState(saved.conv)
@@ -63,11 +65,15 @@ export function Panorama() {
   const setRange = (v: 'today' | 'week') => { saved.range = v; setRangeS(v) }
   const setSel = (v: Sel) => { saved.sel = v; setSelS(v) }
   const toggleDone = (k: string) => { const n = openDone.includes(k) ? openDone.filter((x) => x !== k) : [...openDone, k]; saved.openDone = n; setOpenDoneS(n) }
-  useLayoutEffect(() => { if (scroller.current) scroller.current.scrollTop = saved.scrollTop }, [])
+  useLayoutEffect(() => {
+    if (cronOverview.focus) { cronOverview.focus = false; scroller.current?.querySelector('[data-testid="pano-cron"]')?.scrollIntoView({ block: 'start' }); return }
+    if (scroller.current) scroller.current.scrollTop = saved.scrollTop
+  }, [])
 
   const all = Object.values(computes)
   const total = counts(all)
-  const cronToday = crons.filter((c) => c.day === '今天').length
+  const now = useNow()
+  const cronToday = crons.filter((c) => cronDay(c, now) === '今天').length
   const activeConvs = convs.filter((c) => all.some((x) => x.conv === c.id) || checklist.some((t) => t.conv === c.id))
   const bots = Array.from(new Set(all.map((c) => c.owner).concat(checklist.flatMap((t) => (t.who ? [t.who] : [])))))
 
@@ -94,7 +100,7 @@ export function Panorama() {
 
   const errPending = (cid: string) => pending.find((p) => p.kind === 'error' && p.computeId === cid)
   const isSel = (s: Sel) => JSON.stringify(s) === JSON.stringify(sel)
-  const cronList = crons.filter((r) => convOk(r.conv) && personOk(r.owner) && (range === 'week' || r.day === '今天'))
+  const cronList = crons.filter((r) => convOk(r.conv) && personOk(r.owner) && (range === 'week' || cronDay(r, now) === '今天' || cronFailed(r)))
 
   return (
     <div className="flex min-w-0 flex-1" data-testid="panorama">
@@ -229,59 +235,68 @@ function ComputeCard({ c, sel, onPick, onRetry }: { c: Compute; sel: boolean; on
     </button>
   )
 }
-/* 看绿：正常、同一时间重复的折成一行“每天 08:00 ×3”，出错的永远单独一行（#1286） */
-function foldRows(rows: import('@/data').Cron[]) {
-  const out: { rows: import('@/data').Cron[] }[] = []
+/* 看绿：正常、同一时刻同一规则的折成一行“每天 08:00 ×3”，出错的永远单独一行（#1286） */
+function foldRows(rows: Cron[], now: Date) {
+  const key = (r: Cron) => `${cronWhen(r, now)}|${cronRule(r)}`
+  const out: { rows: Cron[] }[] = []
   for (const r of rows) {
-    const g = r.state === 'ok' ? out.find((x) => x.rows[0].state === 'ok' && x.rows[0].time === r.time && x.rows[0].repeat === r.repeat) : undefined
+    const g = !cronFailed(r) && !r.paused ? out.find((x) => !cronFailed(x.rows[0]) && !x.rows[0].paused && key(x.rows[0]) === key(r)) : undefined
     if (g) g.rows.push(r); else out.push({ rows: [r] })
   }
   return out
 }
-function FoldedCron({ rows, render }: { rows: import('@/data').Cron[]; render: (r: import('@/data').Cron) => React.ReactNode }) {
+function FoldedCron({ rows, render, now }: { rows: Cron[]; render: (r: Cron) => React.ReactNode; now: Date }) {
   const [open, setOpen] = useState(false)
   if (open) return <div>{rows.map((r) => render(r))}<button onClick={() => setOpen(false)} className="text-[12px] text-fg-3 hover:text-fg">收起</button></div>
   return (
-    <button data-testid={`pano-cron-fold-${rows[0].time}`} onClick={() => setOpen(true)} className="flex w-full items-center gap-2.5 py-1.5 text-left text-[13px] text-fg-2 hover:text-fg">
-      <span className="w-11 shrink-0 tabular-nums">{rows[0].time}</span>
+    <button data-testid={`pano-cron-fold-${cronWhen(rows[0], now)}`} onClick={() => setOpen(true)} className="flex w-full items-center gap-2.5 py-1.5 text-left text-[13px] text-fg-2 hover:text-fg">
+      <span className="w-11 shrink-0 tabular-nums">{cronWhen(rows[0], now)}</span>
       <span className="flex -space-x-1">{rows.map((r) => <Avatar key={r.id} id={r.owner} size={18} status={false} mood="idle" />)}</span>
-      <span className="flex-1">{rows[0].repeat} {rows[0].time} ×{rows.length} · 都正常</span>
+      <span className="flex-1">{cronRule(rows[0])} ×{rows.length} · 都正常</span>
       <ChevronRight className="h-3.5 w-3.5 text-fg-3" />
     </button>
   )
 }
 
-function CronTimeline({ list, scope, highlight }: { list: import('@/data').Cron[]; scope: Scope; highlight: boolean }) {
+/** 进展里的定时：所有会话、所有联系人，按今天 / 明天 / 本周 / 随时（按条数、按事件）排；可按会话或联系人筛 */
+function CronTimeline({ list, scope, highlight }: { list: Cron[]; scope: Scope; highlight: boolean }) {
   const { convs, openSplit, setPanoOpen } = useApp()
-  const days = (['今天', '明天', '本周'] as const).map((d) => ({ d, items: list.filter((r) => r.day === d && r.state !== 'error').sort((a, b) => a.time.localeCompare(b.time)) })).filter((x) => x.items.length)
+  const now = useNow()
+  const nowText = now.toTimeString().slice(0, 5)
+  const at = (r: Cron) => cronNextAt(r, now)?.getTime() ?? Number.MAX_SAFE_INTEGER
+  const days = (['今天', '明天', '本周', '随时'] as const).map((d) => ({ d, items: list.filter((r) => cronDay(r, now) === d && !cronFailed(r)).sort((a, b) => at(a) - at(b)) })).filter((x) => x.items.length)
   const label = (cid: string) => { const c = convs.find((x) => x.id === cid); return c ? convLabel(c) : cid }
-  const groupKey = (r: import('@/data').Cron) => (scope === 'person' ? people[r.owner].name : scope === 'conv' ? label(r.conv) : '')
-  const Row = (r: import('@/data').Cron) => (
-    <div key={r.id} role="button" onClick={() => { setPanoOpen(false); openSplit({ t: 'cron', id: r.id }) }} data-testid={`pano-cron-${r.id}`} className={cn('flex cursor-pointer items-center gap-2.5 rounded-md py-1.5 text-[13px] hover:bg-hover', r.state === 'error' && 'border-l-2 border-l-err pl-2', r.paused && 'opacity-55')}>
-      <span className="w-11 shrink-0 tabular-nums text-fg-2">{cronWhen(r)}</span>
-      <Avatar id={r.owner} size={18} status={false} mood="idle" />
-      <span className={cn('min-w-0 flex-1 truncate', r.state === 'error' ? 'text-err' : r.state === 'skipped' ? 'italic text-fg-3' : '')}>
-        {r.state === 'error' && <AlertTriangle className="mr-1 inline h-3 w-3" />}{r.text}
-      </span>
-      <span className="shrink-0 text-[12px] text-fg-3">{cronRepeat(r)}</span>
-      <span className="shrink-0 rounded bg-hover px-1.5 py-0.5 text-[11.5px] text-fg-2">{label(r.conv)}</span>
-      {r.last && <span className={cn('w-[180px] shrink-0 truncate text-right text-[12px]', r.state === 'error' ? 'text-err' : r.state === 'skipped' ? 'italic text-fg-3' : 'text-fg-3')}>{r.last}</span>}
-    </div>
-  )
+  const groupKey = (r: Cron) => (scope === 'person' ? people[r.owner].name : scope === 'conv' ? label(r.conv) : '')
+  const open = (r: Cron) => { setPanoOpen(false); openSplit({ t: 'cron', id: r.id }) }
+  const Row = (r: Cron) => {
+    const expr = cronExpr(r)
+    return (
+      <div key={r.id} role="button" onClick={() => open(r)} data-testid={`pano-cron-${r.id}`} className={cn('flex cursor-pointer items-center gap-2.5 rounded-md py-1.5 text-[13px] hover:bg-hover', r.paused && 'opacity-55')}>
+        <span className="w-11 shrink-0 tabular-nums text-fg-2">{cronWhen(r, now)}</span>
+        <Avatar id={r.owner} size={18} status={false} mood="idle" />
+        <span className="min-w-0 flex-1 truncate">{r.text}</span>
+        <span className="shrink-0 text-[12px] text-fg-2">{cronRule(r)}</span>
+        {expr && <code className="shrink-0 rounded bg-hover px-1.5 py-px font-mono text-[11px] text-fg-3">{expr}</code>}
+        <span className="shrink-0 rounded bg-hover px-1.5 py-0.5 text-[11.5px] text-fg-2">{label(r.conv)}</span>
+        <span className="flex w-[190px] shrink-0 items-center justify-end gap-1 truncate text-right text-[12px] text-fg-3"><ResultIcon r={r.runs[0]?.result} /><span className="truncate">{cronLastText(r, now)}</span></span>
+      </div>
+    )
+  }
+  const failed = list.filter(cronFailed)
   return (
-    <section data-testid="pano-cron" className={cn('mt-8 rounded-xl border p-4', highlight ? 'border-fg/40' : 'border-line')}>
-      <div className="flex items-baseline gap-2"><h2 className="text-[15px] font-semibold">定时</h2><span className="text-[12px] text-fg-3">今天 / 明天 / 本周 · 每条是某个联系人自己的闹钟</span></div>
-      {days.length === 0 && <div className="py-4 text-[13px] text-fg-3">这个筛选下没有定时</div>}
+    <section data-testid="pano-cron" className={cn('mt-8 scroll-mt-4 rounded-xl border p-4', highlight ? 'border-fg/40' : 'border-line')}>
+      <div className="flex items-baseline gap-2"><h2 className="text-[15px] font-semibold">定时</h2><span className="text-[12px] text-fg-3">所有会话 · 今天 / 明天 / 本周 / 随时 · 每条是某个联系人自己的闹钟 · 按本地时间</span></div>
+      {days.length === 0 && failed.length === 0 && <div className="py-4 text-[13px] text-fg-3">这个筛选下没有定时</div>}
       {/* 异常置顶（#1858）：出错的先看，不用在时间轴里找 */}
-      {list.some((r) => r.state === 'error') && (
+      {failed.length > 0 && (
         <div data-testid="pano-cron-errors" className="mt-3 rounded-lg bg-err-soft/50 px-2 py-1">
-          <div className="py-0.5 text-[12px] font-medium text-err">要处理 {list.filter((r) => r.state === 'error').length}</div>
-          {list.filter((r) => r.state === 'error').map((r) => (
-            <button key={'e' + r.id} data-testid={`pano-cron-err-${r.id}`} onClick={() => { setPanoOpen(false); openSplit({ t: 'cron', id: r.id }) }} className="flex w-full items-center gap-2.5 rounded-md py-1.5 text-left text-[13px] hover:bg-hover">
-              <span className="w-11 shrink-0 tabular-nums text-fg-2">{cronWhen(r)}</span><Avatar id={r.owner} size={18} status={false} mood="idle" />
+          <div className="py-0.5 text-[12px] font-medium text-err">要处理 {failed.length}</div>
+          {failed.map((r) => (
+            <button key={'e' + r.id} data-testid={`pano-cron-err-${r.id}`} onClick={() => open(r)} className="flex w-full items-center gap-2.5 rounded-md py-1.5 text-left text-[13px] hover:bg-hover">
+              <span className="w-11 shrink-0 tabular-nums text-fg-2">{cronWhen(r, now)}</span><Avatar id={r.owner} size={18} status={false} mood="idle" />
               <span className="min-w-0 flex-1 truncate text-err"><AlertTriangle className="mr-1 inline h-3 w-3" />{r.text}</span>
               <span className="shrink-0 rounded bg-hover px-1.5 py-0.5 text-[11.5px] text-fg-2">{label(r.conv)}</span>
-              <span className="shrink-0 text-[12px] text-err">{r.last}</span>
+              <span className="shrink-0 text-[12px] text-err">{r.runs[0] ? `${formatRunAt(new Date(r.runs[0].at), now)} ${r.runs[0].note}` : ''}</span>
             </button>
           ))}
         </div>
@@ -293,17 +308,17 @@ function CronTimeline({ list, scope, highlight }: { list: import('@/data').Cron[
             <div className="mb-1 text-[12px] font-medium text-fg-2">{d}</div>
             {keys.map((k) => {
               const rows = items.filter((r) => groupKey(r) === k)
-              const cut = d === '今天' ? rows.findIndex((r) => r.time >= NOW) : -1
+              const cut = d === '今天' ? rows.findIndex((r) => at(r) > now.getTime()) : -1
               return (
                 <div key={k || 'all'} className={cn(k && 'mb-2')}>
                   {k && <div className="py-1 text-[11.5px] text-fg-3">{k}</div>}
-                  {foldRows(rows).map((g) => (
+                  {foldRows(rows, now).map((g) => (
                     <div key={g.rows[0].id}>
-                      {rows.indexOf(g.rows[0]) === cut && <NowLine />}
-                      {g.rows.length > 1 ? <FoldedCron rows={g.rows} render={Row} /> : Row(g.rows[0])}
+                      {rows.indexOf(g.rows[0]) === cut && <NowLine text={nowText} />}
+                      {g.rows.length > 1 ? <FoldedCron rows={g.rows} render={Row} now={now} /> : Row(g.rows[0])}
                     </div>
                   ))}
-                  {d === '今天' && cut === -1 && <NowLine />}
+                  {d === '今天' && cut === -1 && <NowLine text={nowText} />}
                 </div>
               )
             })}
@@ -314,8 +329,8 @@ function CronTimeline({ list, scope, highlight }: { list: import('@/data').Cron[
   )
 }
 
-function NowLine() {
-  return <div data-testid="pano-now" className="my-1 flex items-center gap-2 text-[11.5px] font-medium text-err"><span className="h-1.5 w-1.5 rounded-full bg-err" />现在 {NOW}<span className="h-px flex-1 bg-err/50" /></div>
+function NowLine({ text }: { text: string }) {
+  return <div data-testid="pano-now" className="my-1 flex items-center gap-2 text-[11.5px] font-medium text-err"><span className="h-1.5 w-1.5 rounded-full bg-err" />现在 {text}<span className="h-px flex-1 bg-err/50" /></div>
 }
 
 function Detail({ sel }: { sel: Sel }) {

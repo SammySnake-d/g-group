@@ -3,7 +3,9 @@ import { Plus, ChevronRight, ChevronDown, Megaphone, ListChecks, Clock, Puzzle, 
 import { cn } from '@/lib/utils'
 import { people, artifacts, dutyByConv, poolUsed, type Conversation, type Msg } from '@/data'
 import { useApp } from '@/ctx'
-import { CronForm, TaskForm, cronRepeat, cronWhen } from './CronDetail'
+import { TaskForm } from './CronDetail'
+import { GroupCrons } from './CronList'
+import { cronFailed } from '@/cronView'
 import { Avatar, useLive } from './Avatar'
 import { PersonMenu, Tip } from './Messages'
 import { drag, startDrag, endDrag } from '@/drag'
@@ -19,16 +21,18 @@ export function GroupPane({ id, initial }: { id: string; initial?: GTab }) {
   if (!conv) return null
   return <GroupSide conv={conv} initial={initial} />
 }
+const lastTab: Record<string, GTab> = {}
 function GroupSide({ conv, initial }: { conv: Conversation; initial?: GTab }) {
-  const { computes, openSplit, push, commits, playbook, summarize, checklist, crons, plugins, claimTask, addTask, setSection, updateCron, addCron, pulse, jump, addMembers, removeMember } = useApp()
+  const { computes, openSplit, push, commits, playbook, summarize, checklist, crons, plugins, claimTask, addTask, setSection, pulse, jump, addMembers, removeMember } = useApp()
   /* AC-49 拖拽：从左侧联系人拖进来 = 拉进群；把成员拖到底部「移出群」 = 移出 */
   const [over, setOver] = useState<null | 'in' | 'dup' | 'out'>(null)
   const [dragging, setDragging] = useState(false)
   const [listOpen, setListOpen] = useState(true)
-  const [tab, setTab] = useState<GTab>(initial ?? 'members')
+  const [tab, setTabS] = useState<GTab>(initial ?? lastTab[conv.id] ?? 'members')
+  /* 记住每个群上次看的页签：从定时详情等别的分屏标签切回来，还停在原来那页 */
+  const setTab = (k: GTab) => { lastTab[conv.id] = k; setTabS(k) }
   const items = checklist.filter((t) => t.conv === conv.id)
-  const myCrons = crons.filter((c) => c.conv === conv.id).sort((a, b) => a.time.localeCompare(b.time))
-  const [adding, setAdding] = useState(false)
+  const myCrons = crons.filter((c) => c.conv === conv.id)
   const [addingTask, setAddingTask] = useState(false)
   const myPlugins = plugins.filter((p) => p.installed && p.convs.includes(conv.id))
   const [q, setQ] = useState('')
@@ -45,7 +49,7 @@ function GroupSide({ conv, initial }: { conv: Conversation; initial?: GTab }) {
           {([['members', `成员 ${conv.members.length}`], ['notice', `公告 ${(conv.notices ?? []).length || (conv.notice ? 1 : 0)}`], ['list', `清单 ${items.filter((t) => t.status === '已完成').length}/${items.length}`], ['cron', `定时 ${myCrons.length}`], ['plugin', `插件 ${myPlugins.length}`], ['tools', '工具']] as const).map(([k, l]) => (
             <button key={k} data-testid={`side-tab-${k}`} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cn('relative h-8 rounded-md px-2.5 text-[12.5px] transition', tab === k ? 'font-semibold text-fg' : 'text-fg-2 hover:text-fg')}>
               {l}{k === 'list' && items.some((t) => t.status === '待验收') && <span className="absolute right-0.5 top-1.5 h-1.5 w-1.5 rounded-full bg-warm-dot" />}
-              {k === 'cron' && myCrons.some((c) => c.state === 'error') && <span className="absolute right-0.5 top-1.5 h-1.5 w-1.5 rounded-full bg-err" />}
+              {k === 'cron' && myCrons.some(cronFailed) && <span className="absolute right-0.5 top-1.5 h-1.5 w-1.5 rounded-full bg-err" />}
               {tab === k && <span className="absolute inset-x-2.5 -bottom-px h-[2px] rounded-full bg-fg" />}
             </button>
           ))}
@@ -73,24 +77,7 @@ function GroupSide({ conv, initial }: { conv: Conversation; initial?: GTab }) {
       </section>
 
               </>}
-              {tab === 'cron' && <>
-      {/* 本群定时：只看本群的（#1286 群视角） */}
-      <section className="px-2 pb-2 pt-1" data-testid="side-crons">
-        <div className="mb-1 flex items-center px-2"><span className="flex-1 text-[13px] font-semibold">本群定时</span><span className="mr-2 text-[11.5px] text-fg-3" title="所有群的定时在左侧「进展」里">只看本群</span><button data-testid="side-cron-add" onClick={() => setAdding(true)} className="flex h-6 items-center gap-0.5 rounded-md px-1.5 text-[12px] text-fg-2 hover:bg-hover hover:text-fg"><Plus className="h-3.5 w-3.5" />新建</button></div>
-        {adding && <div className="px-1"><CronForm conv={conv.id} onDone={(c) => { if (c) addCron(c as never, 'panel'); setAdding(false) }} /></div>}
-        {myCrons.length === 0 && !adding && <div className="px-2 py-1 text-[12px] text-fg-3">还没有。跟某个助手说“每天 8 点…”，或点「新建」</div>}
-        {myCrons.map((c) => (
-          <div key={c.id} role="button" onClick={() => openSplit({ t: 'cron', id: c.id })} data-testid={`side-cron-${c.id}`} data-state={c.state} className={cn('flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-[12px] hover:bg-hover', c.state === 'error' && 'border-l-2 border-err', c.paused && 'opacity-55')}>
-            <span className="w-10 shrink-0 font-mono text-fg-2">{cronWhen(c)}</span>
-            <Avatar id={c.owner} size={16} />
-            <span className={cn('min-w-0 flex-1 truncate', c.state === 'error' ? 'text-err' : c.state === 'skipped' ? 'italic text-fg-3' : 'text-fg-2')}>{c.text}</span>
-            {c.state === 'error' && <button onClick={(e) => { e.stopPropagation(); updateCron(c.id, { state: 'ok', last: '刚刚 重试成功' }) }} className="shrink-0 text-[11.5px] font-medium text-err">重试</button>}
-            {c.state !== 'error' && <span className="shrink-0 text-[11px] text-fg-3">{cronRepeat(c)}</span>}
-          </div>
-        ))}
-      </section>
-
-              </>}
+              {tab === 'cron' && <GroupCrons conv={conv} />}
               {tab === 'plugin' && <>
       {/* 本群插件：挂在这个聊天上的（概念卡第 4 张） */}
       <section className="px-2 pb-2 pt-1" data-testid="side-plugins">
@@ -103,11 +90,11 @@ function GroupSide({ conv, initial }: { conv: Conversation; initial?: GTab }) {
       {/* #2273 U80：动向时间线插件挂在本群时，在这里展开；每段点了回到它总结的那段消息 */}
       {myPlugins.some((p) => p.id === 'p-pulse') && (() => {
         const list = pulse.filter((x) => x.conv === conv.id)
-        const cr = crons.find((c) => c.conv === conv.id && c.when?.k === 'every')
+        const cr = crons.find((c) => c.conv === conv.id && c.trigger.kind === 'messages')
         return (
           <section className="px-2 pb-3 pt-1" data-testid="side-pulse">
             <div className="mb-1.5 flex items-center px-2"><span className="flex-1 text-[13px] font-semibold">动向时间线</span>
-              {cr && cr.when?.k === 'every' && <button data-testid="side-pulse-rule" onClick={() => openSplit({ t: 'cron', id: cr.id })} className="text-[11.5px] text-fg-3 hover:text-fg">{people[cr.owner].name} · 每 {cr.when.n} 条一段 · 已 {cr.when.seen}/{cr.when.n} ›</button>}
+              {cr && cr.trigger.kind === 'messages' && <button data-testid="side-pulse-rule" onClick={() => openSplit({ t: 'cron', id: cr.id })} className="text-[11.5px] text-fg-3 hover:text-fg">{people[cr.owner].name} · 每 {cr.trigger.n} 条一段 · 已 {cr.trigger.seen}/{cr.trigger.n} ›</button>}
             </div>
             <ol className="ml-3 border-l border-line pl-3">
               {[...list].reverse().map((x) => (
@@ -296,7 +283,7 @@ export function TopStrip({ conv, onOpen }: { conv: Conversation; onOpen: (tab: G
   const done = it.filter((t) => t.status === '已完成').length
   const wait = it.filter((t) => t.status === '待验收').length
   const myCrons = crons.filter((c) => c.conv === conv.id)
-  const cronErr = myCrons.some((c) => c.state === 'error')
+  const cronErr = myCrons.some(cronFailed)
   const myPlugins = plugins.filter((p) => p.installed && p.convs.includes(conv.id))
   const cur = items[i % Math.max(1, items.length)]
   const Chip = ({ testid, onClick, children, tone }: { testid: string; onClick: () => void; children: ReactNode; tone?: 'warm' | 'err' }) => (

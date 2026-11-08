@@ -2,8 +2,10 @@ import { startDrag, endDrag } from '@/drag'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { X, Search, Plus, MessageCircle, Users, Activity, FolderOpen, Settings, ChevronsDown, Link2, UserPlus, UsersRound, Forward, Pin, BellOff, CheckCheck, PanelRight, Settings2, AtSign, AlarmClock } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { poolUsed, convs0, computes0, pending0, reactions0, boards0, commits0, playbook0, crons0, checklist0, plugins0, pulse0, people, artifacts, type Conversation, type Msg, type PersonId, type Compute, type Cron, type Pending, type QuoteRef, type Activity as Act } from '@/data'
+import { poolUsed, convs0, computes0, pending0, reactions0, boards0, commits0, playbook0, crons0, checklist0, plugins0, pulse0, people, artifacts, type Conversation, type Msg, type PersonId, type Compute, type Pending, type QuoteRef, type Activity as Act } from '@/data'
 import { AppCtx, type Ctx, type Page, type SplitTab, type Section, type WbTab } from '@/ctx'
+import { describeTrigger } from '@g-group/ui-core'
+import { cronFailed } from '@/cronView'
 import { Workbench } from '@/components/Workbench'
 import { Panorama } from '@/components/Panorama'
 import { HelperGlobal, HelperPanel } from '@/components/Helper'
@@ -113,13 +115,14 @@ export default function App() {
     /* #2273 U80：“每 N 条消息醒一次”。只数真人和助手说的话，不数系统灰字 */
     if (m.k !== 'text' && m.k !== 'file') return
     setCrons((l) => l.map((x) => {
-      if (x.conv !== cid || x.paused || x.when?.k !== 'every') return x
-      const w = x.when
+      if (x.conv !== cid || x.paused || x.trigger.kind !== 'messages') return x
+      const w = x.trigger
       const seen = w.seen + 1
-      if (seen < w.n) return { ...x, when: { ...w, seen }, next: `再有 ${w.n - seen} 条` }
-      const at = new Date().toTimeString().slice(0, 5)
+      if (seen < w.n) return { ...x, trigger: { ...w, seen } }
+      const now = new Date()
+      const at = now.toTimeString().slice(0, 5)
       setPulse((p) => [...p, { id: 'pl' + uid(), conv: cid, at: `今天 ${at}`, by: x.owner, text: '最近这段：' + ('text' in m ? m.text.replace(/@\S+\s*/g, '').slice(0, 24) : '传了文件') + '…', from: m.id, to: m.id, n: w.n }])
-      return { ...x, when: { ...w, seen: 0 }, next: `再有 ${w.n} 条`, last: `今天 ${at} 写了一段摘要`, runs: [{ at: `今天 ${at}`, result: 'said' as const, note: '满 ' + w.n + ' 条，写了一段摘要挂到时间线' }, ...(x.runs ?? [])].slice(0, 6) }
+      return { ...x, trigger: { ...w, seen: 0 }, runs: [{ at: now.toISOString(), result: 'said' as const, note: '满 ' + w.n + ' 条，写了一段摘要挂到时间线' }, ...x.runs].slice(0, 20) }
     }))
   }, [])
   /** AC-46 已读位置：只由宿主推进、只进不退。upto 省略 = 推到这个会话当前最后一条；at = 推进的时刻（第一次越过某条消息就是它的读到时间） */
@@ -583,21 +586,29 @@ export default function App() {
       pushMsg({ k: 'sys', id: 's' + uid(), text: who ? `你在清单里新建了「${t.text}」，交给 ${people[who].name}` : `你在清单里新建了「${t.text}」，待认领` }, t.conv)
       return id
     },
-    /* 定时（#1858）：在面板里改动，原会话只插一行居中灰字，不让助手发气泡刷屏 */
+    /* 定时（#1858）：在面板里改动，原会话只插一行居中灰字，不让助手发气泡刷屏。
+       下次运行由 trigger / paused 现算，改时间、暂停、删除各个视角立刻一致（AC-35① AC-53） */
     updateCron: (id, patch) => {
       const c = crons.find((x) => x.id === id)
-      setCrons((l) => l.map((x) => (x.id === id ? { ...x, ...patch, ...(patch.time || patch.repeat ? { next: `${patch.day ?? '明天'} ${patch.time ?? x.time}` } : {}) } : x)))
+      setCrons((l) => l.map((x) => (x.id === id ? { ...x, ...patch } : x)))
       if (!c) return
       const who = people[c.owner].name
-      const what = patch.paused === true ? '暂停了' : patch.paused === false ? '重新打开了' : patch.time || patch.repeat || patch.text ? `改成了 ${patch.repeat ?? c.repeat} ${patch.time ?? c.time}${patch.text && patch.text !== c.text ? `「${patch.text}」` : ''}` : ''
-      if (what) pushMsg({ k: 'sys', id: 's' + uid(), text: `你把 ${who} 的定时「${c.text}」${what}` }, c.conv)
+      const rule = patch.trigger ? describeTrigger(patch.trigger) : ''
+      const changes = [
+        patch.trigger && rule !== describeTrigger(c.trigger) ? `改成 ${rule}` : '',
+        patch.text && patch.text !== c.text ? `内容改成「${patch.text}」` : '',
+        patch.owner && patch.owner !== c.owner ? `交给 ${people[patch.owner].name}` : '',
+        patch.conv && patch.conv !== c.conv ? `挪到「${convs.find((x) => x.id === patch.conv)?.title ?? patch.conv}」` : '',
+        patch.speak && patch.speak !== c.speak ? (patch.speak === 'only-if' ? '改成有情况才说' : '改成每次都发结果') : '',
+      ].filter(Boolean)
+      const paused = patch.paused === true && !c.paused ? '暂停了' : patch.paused === false && c.paused ? '重新打开了' : ''
+      const what = [paused, changes.length ? changes.join('，') : ''].filter(Boolean).join('，')
+      if (what) pushMsg({ k: 'sys', id: 's' + uid(), text: `你把 ${who} 的定时「${c.text}」${what}` }, patch.conv ?? c.conv)
     },
     addCron: (c, via) => {
       const id = 'cr' + uid()
-      const now = new Date(); const [h, m] = c.time.split(':').map(Number)
-      const today = h * 60 + m > now.getHours() * 60 + now.getMinutes()
-      setCrons((l) => [...l, { ...c, id, state: 'ok', day: today ? '今天' : '明天', next: `${today ? '今天' : '明天'} ${c.time}`, runs: [] }])
-      if (via === 'panel') pushMsg({ k: 'sys', id: 's' + uid(), text: `你给 ${people[c.owner].name} 加了定时：${c.repeat} ${c.time}「${c.text}」` }, c.conv)
+      setCrons((l) => [...l, { ...c, id, runs: [] }])
+      if (via === 'panel') pushMsg({ k: 'sys', id: 's' + uid(), text: `你给 ${people[c.owner].name} 加了定时：${describeTrigger(c.trigger)}「${c.text}」${c.paused ? '（先不开）' : ''}` }, c.conv)
       return id
     },
     removeCron: (id) => {
@@ -611,9 +622,10 @@ export default function App() {
       const silent = c.speak === 'only-if'
       const mid = 'r-' + uid()
       const cv = convs.find((x) => x.id === c.conv)
-      const loaded = Object.fromEntries((cv?.notices ?? []).map((n) => [n.id, broken('AC-35-11') ? (c.runs?.[0]?.notices?.[n.id] ?? n.ver) : n.ver]))
-      setCrons((l) => l.map((x) => (x.id === id ? { ...x, state: 'ok', last: '刚刚 手动跑了一次', runs: [{ at: '刚刚', notices: loaded, result: (silent ? 'silent' : 'said') as 'silent' | 'said', note: silent ? '看过了，没有情况，没发消息' : '发了结果', msg: silent ? undefined : mid }, ...(x.runs ?? [])].slice(0, 5) } : x)))
-      if (!silent) say(c.conv, c.owner, `（手动试跑）${c.text}：已经做完，这是这次的结果。`, 900, { id: mid, cron: c.id, at: new Date().toTimeString().slice(0, 5) })
+      const loaded = Object.fromEntries((cv?.notices ?? []).map((n) => [n.id, broken('AC-35-11') ? (c.runs[0]?.notices?.[n.id] ?? n.ver) : n.ver]))
+      const now = new Date()
+      setCrons((l) => l.map((x) => (x.id === id ? { ...x, runs: [{ at: now.toISOString(), notices: loaded, result: (silent ? 'silent' : 'said') as 'silent' | 'said', note: silent ? '手动试跑：看过了，没有情况，没发消息' : '手动试跑：发了结果', ...(silent ? {} : { msg: mid }) }, ...x.runs].slice(0, 20) } : x)))
+      if (!silent) say(c.conv, c.owner, `（手动试跑）${c.text}：已经做完，这是这次的结果。`, 900, { id: mid, cron: c.id, at: now.toTimeString().slice(0, 5) })
       else setToastMsg(`${people[c.owner].name} 看过了，没有情况，所以没发消息`)
     },
     updatePlugin: (id, patch) => setPlugins((l) => l.map((x) => (x.id === id ? { ...x, ...patch } : x))),
@@ -715,7 +727,8 @@ export default function App() {
       let h = +tm[2]; if (/下午|晚上/.test(t) && h < 12) h += 12
       const time = `${String(h).padStart(2, '0')}:${String(+(tm[3] ?? 0)).padStart(2, '0')}`
       const what = t.replace(/@\S+\s*/g, '').replace(tm[0], '').replace(/^[，,。\s]+/, '').replace(/^(钟|分)?[，,\s]*/, '').trim() || '按你说的做'
-      const cid = ctx.addCron({ owner: tgt.id as PersonId, conv: active, text: what, repeat: tm[1] as Cron['repeat'], time, speak: /才|有.*再/.test(what) ? 'only-if' : 'always', srcMsg: id }, 'chat')
+      const expr = `${+(tm[3] ?? 0)} ${h} * * ${tm[1] === '工作日' ? '1-5' : tm[1] === '每周一' ? '1' : '*'}`
+      const cid = ctx.addCron({ owner: tgt.id as PersonId, conv: active, text: what, trigger: { kind: 'cron', expr }, speak: /才|有.*再/.test(what) ? 'only-if' : 'always', srcMsg: id }, 'chat')
       say(active, tgt.id as PersonId, `好，记成我的定时了：${tm[1]} ${time}，${what}。`, 900, { cron: cid, cronNew: true } as never)
       return
     }
@@ -906,7 +919,7 @@ export default function App() {
                     <button key={p.id} data-testid={`contact-${p.id}`} onClick={() => { setContact(p.id); setWbTab('overview') }} className={cn('flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left', contact === p.id ? 'bg-sel' : 'hover:bg-hover')}>
                       <Avatar id={p.id} size={36} />
                       <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-medium">{p.name}</div><div className="truncate text-[12px] text-fg-2">{p.role}</div></div>
-                      {(() => { const mine = crons.filter((c) => c.owner === p.id && !c.paused); const bad = mine.filter((c) => c.state === 'error').length
+                      {(() => { const mine = crons.filter((c) => c.owner === p.id && !c.paused); const bad = mine.filter(cronFailed).length
                         return mine.length ? <span data-testid={`contact-cron-${p.id}`} title="它的定时" className={cn('flex shrink-0 items-center gap-0.5 text-[11.5px] tabular-nums', bad ? 'font-medium text-err' : 'text-fg-3')}><AlarmClock className="h-3 w-3" />{bad ? `${bad} 异常` : mine.length}</span> : null })()}
                     </button>
                   ))}
