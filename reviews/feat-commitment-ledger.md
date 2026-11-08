@@ -368,3 +368,99 @@
 ### 证据目录
 
 `/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr8-r3-claude/`：`00`–`14` 日志与 tap，脚本 `reviewer-mutations.mjs`（27 个单点故障）、`probe.mjs` + `probe-driver.mjs`（逐个故障对比原实现与注入后的行为）、`operator-sweep.mjs`（机械算子扫描，参数：仓库目录、probe.mjs 路径）、`gate-neg.sh`（门禁负例）。
+
+## 第 4 轮（204c676）
+
+- 审查人：`claude`（跨厂商审 Codex 写的 PR，开发手册原则 68）；mirasim 会话 `claude:ae5ffc16-f948-4351-bc20-bac169dde454`，模型 `anyrouter/claude-opus-5-5`（Anthropic）。作者 `codex:8a88fc74-4b9f-48c1-9622-52d06aab6527`（OpenAI gpt-6.1-terra）。全部复现由本会话在独立克隆 `/tmp/gg-pr8-r4` 亲自执行（Node v22.22.0），没有用子代理；第 2、3 轮结论和作者自述只当线索，数字都重新跑过。证据目录：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr8-r4-claude/`。
+- 开工前回读远端：`refs/heads/feat/commitment-ledger` = `204c676f31bdf8e86c3af559b9eb2ae834b8f9ba`，与派单一致；写审查前再次回读，未变。
+- `node scripts/gates/run-all.ts --hash --branch=feat/commitment-ledger --base=origin/feat/domain-core` 原样输出（本会话单独一次工具调用）：
+
+  ```text
+  c04730dac843f89484420b43c3a036f0401d5c2eaa3033fbaf4f6f0fa91a5374
+  ```
+
+  与作者自述的 `--hash` 一致。
+
+### 结论：APPROVE
+
+第 3 轮的 D23-R3-01 至 R3-06 全部修好：我第 3 轮的 27 个单点故障在 204c676 上**全部被具名测试发现**（第 3 轮是 0/27）；R3-F01–F27（F01 拆成 A–D 四个入口、F27 拆成 A/B）都进了作者变异清单，31 条全部由指定测试按记录的诊断杀死。D23-R3-07 作者选了 (b)：收据 R-05 改为「未测」，reason 引用机械扫描的存活清单并写明「不能据此声称每条判据已标定」；全仓没有任何地方仍把当前 R-05 写成「通过」（`reviews/` 里出现的「R-05 通过」都是第 1–3 轮驳回时对旧收据的引述）。产品源码与 ed075ea（也即第 3 轮审查时）逐字节相同。作者自述的测试数、变异数、红绿、扫描数字全部复现一致。
+
+我另外自构 7 个单点故障，3 个被发现、4 个存活（D23-R4-01 至 R4-03），探针确认 4 个都能观测到行为差异、原实现全部正确，所以仍是测试没钉住，不是产品代码错。它们都落在收据已如实标「未测」的范围内（R-05 未测；AC-40 整项未测），收据没有任何一条「通过」被它们推翻，按第 3 轮给出的 (b) 完成判据不构成驳回理由；但其中 R4-01 落在 AC-40 当前必过⑨「补充不串到另一件任务」上，合入后必须在接线切片之前补上（见下）。
+
+### 复现数字
+
+| 项 | 结果 | 证据 |
+|---|---|---|
+| npm ci | exit 0 | — |
+| typecheck | exit 0 | `02-typecheck.log` |
+| lint（biome --error-on-warnings） | 检查 16 个文件，exit 0 | `03-lint.log` |
+| npm test | 229 tests / pass 229 / fail 0 / cancelled 0 / skipped 0 / todo 0；承诺账本测试 206/206 | `04-test.log` |
+| 作者变异 `commitment-ledger-mutations.mjs`（串行，每次一个副本） | 原样对照 206/0；具名映射 206/206；**221/221 KILLED**，0 存活；与 `proof/commitment-ledger-mutations.txt` 逐行一致（diff 0 行）；耗时约 108 秒 | `05-mutations.log` |
+| 其中 R3-F01–F27 | 31 条（F01A–D、F02–F26、F27A/B）全部 KILLED，每条由「独立判据：…」具名测试按记录的诊断杀死（如 F01A–D 各由接收/绑定/进展/了结的「拒绝未知参与者种类」以 `invalid-input` 杀死；F26 由「同任务其他承诺的动作不能代替本承诺对账」以 `pending` 杀死） | `05-mutations.log` |
+| 红 e58d1d7 | 206 tests / 0 pass / 206 按名失败，文件级失败 0；相对 632fea7 只改三处入口（emptyLedger 返回 `not-implemented` 且不冻结、applyLedger / reconcileRound 首行返回 `not-implemented`），已核对 diff | `06-e58d1d7.tap` |
+| 绿 632fea7 | 206/206 通过；`packages/domain/src` 相对 ed075ea 只增测试文件，相对 204c676 无差异 | `06-632fea7.tap` |
+| 第 3 轮审查方 27 个故障在 204c676 上复跑 | 正对照 C00 与 R3-F01–F27 **全部 DETECTED**（第 3 轮 0/27） | `09-r3-faults-on-204c676.log` |
+| 机械算子扫描（第 3 轮 `operator-sweep.mjs` 原样复跑） | 368 个：杀死 279、存活 89、探针可观测 0、无效 0；逐行（类别、行号、片段、结论）与作者 `proof/commitment-ledger-round4-sweep.txt` 一致（diff 0） | `14-operator-sweep.log` |
+| `run-all.ts --local …`（审查提交前） | G-TRACE ✓、G-REVIEW ✗（审查结论是 reject；审查钉的 d79aa8cf7a19 ≠ 当前 c04730dac843）、G-RED ✓、G-STUB ✓、G-TAUTO ✓、G-WORKFLOW ✓、G-LAYER ✓、G-PROVENANCE ✓；exit 1；CONTENT_HASH=c04730dac843f89484420b43c3a036f0401d5c2eaa3033fbaf4f6f0fa91a5374 | `08-gates-local.log` |
+| `run-all.ts --self-test` | 自检通过，exit 0 | `12-gates-selftest.log` |
+| 门禁负例（独立克隆，基于 204c676 每个门禁一个单处改动的提交） | 8/8 都被对应门禁判为失败：G-TRACE（R-05→R-99：「R-99 不在验收文档里」）、G-REVIEW（审查人写成作者 codex：「审查人与作者是同一个」「同为 openai」）、G-RED（red.commit 改成绿 632fea7：逐条「在红提交上没有按名字失败」）、G-STUB（吞异常测试：「在全部实现换成空桩后没有按名字失败」）、G-TAUTO（`assert.ok(true)`：「恒真/恒定断言」）、G-WORKFLOW（pull_request_target + 写权限：两条都判失败）、G-LAYER（新包无层级、相对路径跨包）、G-PROVENANCE（作者会话改成不存在的 id：「作者会话记录不存在」）。注：第 3 轮脚本的 G-TRACE 用例用 sed 匹配 `"id": "R-05"`，收据改成紧凑 JSON 后匹配不到、首跑是空改动（TARGET_PASSED），已改为 JSON 修改后重跑判失败，两次输出都保留 | `13-gate-negatives.log`、`13b-gate-neg-trace.log`、`gate-neg-r4.sh` |
+| 第 4 轮审查方新故障 | 正对照 C00 被发现；R4-F01–F07：发现 3（F03 主人联系人不能记进展、F04 重投不标重复、F07 用户撤回不写活动）、存活 4（F01、F02、F05、F06）、无效 0 | `16-r4-new-faults.log`、`reviewer-mutations-r4.mjs` |
+| 存活故障探针（原实现 vs 注入后） | 4/4 行为不同，原实现全部正确 | `17-r4-probe.log`、`probe-r4.mjs`、`probe-r4-driver.sh` |
+
+### 第 3 轮必须返修项核对
+
+| 编号 | 状态 | 依据 |
+|---|---|---|
+| R3-01 参与者种类白名单、绑定种类 | 已修 | 接收/绑定/进展/了结四条「拒绝未知参与者种类」、「主人同编号的用户/Compute 不能绑定」；R3-F01A–D、F27A/B 被杀死 |
+| R3-02 空承诺消息可标已处理 | 已修 | 「其他联系人空承诺可标记已处理」「用户未接下的空承诺可标记已处理」；R3-F02、F03 被杀死 |
+| R3-03 对账动作必须属于该承诺 | 已修 | 「同任务其他承诺的动作不能代替本承诺对账」；R3-F26 被杀死 |
+| R3-04 accepted 布尔、outcome 枚举 | 已修 | 「接下标志必须是布尔」「了结结果必须属于四种终态」；R3-F06、F07 被杀死 |
+| R3-05 快照来源序号与状态 | 已修 | 「快照承诺来源序号必须对应来源消息」「快照承诺状态必须属于五种状态」；R3-F04、F11 被杀死 |
+| R3-06 活动记录内容 | 已修 | 「进展活动逐字段保留绑定 Compute 内容」「了结活动逐字段保留用户撤回内容」；R3-F08–F10 被杀死；我的 R4-F07（用户撤回不写活动）也被它发现 |
+| R3-07 R-05 | 已按 (b) 处理 | 收据 R-05 `status: 未测`；reason 写明扫描 368/279/89/0，举出存活条件并指向完整清单 `proof/commitment-ledger-round4-sweep.txt`（89 条逐条列出），明说「存活条件尚未逐条由具名测试杀死或依据其他检查证明等价」「不能据此声称每条判据已标定」；notes 写明 221/221 不等于 R-05 全部判据已标定；`proof/commitment-ledger-tests.txt` 末行同样写「R-05 remains untested in full」。没有任何当前条目写成「通过」。缺点：reason 只能点名扫描算子覆盖到的条件，本轮 R4-F01、F02、F05、F06 这类「加条件/改返回」的故障不在扫描里，见 R4-04 |
+
+### 「红桩后补」与 AC-40、AC-16 未测
+
+可以接受，不阻塞（同第 2、3 轮）。e58d1d7 只在三处入口返回 `not-implemented`，证明补测激活了被测入口；收据 R-02 notes 写明「该对照不证明新测试先于原功能实现」。AC-40、AC-16 记「未测」，reason 写清已测领域子判据与未测的宿主端到端范围，候选项没有升为已定。
+
+### 验收文档与输入合同
+
+- 以 `origin/docs/dev-handbook` 的 `docs/spec/验收文档-v0.1.md` 为准：AC-40 当前必过为「账本归联系人、Compute 只回报对应条目；②⑥；⑧；⑨与坏实现⑧前半；⑬中 #1/#2/#133」，处置枚举、对账补次数、步骤边界、唤醒格式、短名为候选；收据的候选声明与此一致，没有把候选项当验收依据。R-05 / R-08 / R-11 原文与第 3 轮引用一致。
+- 输入合同（用户 g-group#2662）：getter/setter/Proxy 不调用即拒、合法 JSON null 不抛错、返回值深冻结、不冻结调用方输入的测试与变异都在，且本轮补上了 symbol 键、稀疏数组、数组子类、不可枚举属性（R3-F13、F14、F16、F17 被杀死）；本片仍只导出函数和类型，无策略对象。内置原型被改写的环境不在合同内，未考察。
+
+### 问题清单
+
+以下四条都是测试缺口，产品代码不用改；都在收据已标「未测」的范围内，**不阻塞本轮合入**。R4-01 落在 AC-40 当前必过上，必须在本账本接入宿主（存储/联系人运行时接线切片）之前补上并进变异清单；R4-02 至 R4-04 可与之同批。
+
+#### D23-R4-01（合入后、接线前必补）引用回复不带任务即可绕过串任务检查，没有测试
+- 位置：`commitment-ledger.ts:180`（`if (parent.taskId !== m.taskId) return fail("task-mismatch");`），与 `:189`（来源 taskId 为 null 时可登记任意任务的承诺）组合。
+- 复现：R4-F05 把 `:180` 改成 `if (m.taskId !== null && parent.taskId !== m.taskId)`，206 条测试全过。探针：联系人 c 的 task-a 消息 seq 1「审查汇报」；用户引用 seq 1 发「再看一遍变异」且 `taskId: null` → 原实现 `task-mismatch`；注入后 `ok`，再以 `task-shortcut` 登记承诺 → `ok`，补充进了快捷键任务。现有「引用审查汇报的补充不能绑到快捷键任务」只用了显式错误 taskId，没有覆盖 null。
+- 对照：验收文档 AC-40 当前必过「⑨与坏实现⑧前半『补充串到另一件任务』」；坏实现⑧ 重放 #1728；brief「对应 AC-40 当前必过…坏实现⑧前半」。
+- 返修要求：补「引用带任务的消息但自身 taskId 为 null → `task-mismatch`」测试，R4-F05 进作者变异清单并被它按名杀死。
+
+#### D23-R4-02（与 R4-01 同批）done 了结时的说明在账本里丢失，没有测试
+- 位置：`:215`（`resolution: { artifact: input.artifact, detail: input.detail }`）、`:218`（活动 `text: … input.detail`）。
+- 复现：R4-F01（done 时 resolution.detail 置 null）、R4-F02（done 活动 text 置 null）都 SURVIVED。探针：done + `detail: "合并于 abc"` → 原实现 resolution 与活动都保留该文字；注入后分别变成 null。现有 done 测试的 detail 都是 null，「了结活动逐字段」只测了用户撤回。
+- 对照：AC-40 证据栏「承诺账本（来源 seq、状态、了结方式）」。
+- 返修要求：补一条 done 带说明的测试，逐字段断言 resolution 和活动条目，R4-F01、F02 进变异清单。
+
+#### D23-R4-03（与 R4-01 同批）同一动作重试返回的账本不冻结，没有测试
+- 位置：`:160`（`previous.payload === payload ? { ok: true, ledger: freeze(state), duplicate: true }`）。
+- 复现：R4-F06 去掉此处 `freeze`，SURVIVED。探针：同一 close 动作重试 → 原实现 `frozen=true`、`commitments` 也冻结；注入后都是 false。现有冻结测试只覆盖首次提交、新建账本、对账 pending。
+- 对照：输入合同（用户 g-group#2662）返回值深冻结；现有测试「返回账本深冻结且不冻结调用方输入」只覆盖首次提交路径。
+- 返修要求：补「相同动作重试返回的账本深冻结」测试，R4-F06 进变异清单。
+
+#### D23-R4-04（不阻塞，记录）R-05「未测」的 reason 只覆盖扫描算子
+- 位置：收据 R-05 reason。
+- 说明：reason 列的是扫描的 89 个存活，扫描只做「删分量 / if 置 false / 翻转比较」三类算子；R4-01 至 R4-03 这类「加条件、改返回值、去 freeze」的故障不在其中。reason 没有声称扫描之外都已标定（「不能据此声称每条判据已标定」），所以不算误报；下次修订收据时请把本轮 4 个存活写进 reason 或补测后从中划掉。
+
+### 观察项（不阻塞）
+
+- O4-1：第 3 轮 O3-2（isLedger 不校验「承诺 taskId 与有任务的来源消息一致」「非 done 终态 artifact 为 null」）仍在，属于实现少不变量，建议存储接线切片补，不阻塞本片。
+- O4-2：扫描 89 个存活里有一批明显等价或被精确键集合覆盖（如 `__proto__`/`constructor`/`prototype` 键检查、`Number.isFinite`、对账里的 `a.taskId === c.taskId`），以后若想把 R-05 改「通过」，走第 3 轮 (a)：逐条杀死或逐条写等价理由。
+- O4-3：PR 带的验收文档仍是 v3.17 快照（同 O3-4）。
+- O4-4：本轮 G-PROVENANCE 要等本会话 turns.jsonl 写盘后才能核对；审查提交推送后请调度用 `--local` 复核一次（同 O3-5）。
+
+### 证据目录
+
+`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr8-r4-claude/`：`01`–`17` 日志与 tap；脚本 `reviewer-mutations.mjs`（第 3 轮 27 个故障，原样复跑）、`reviewer-mutations-r4.mjs`（本轮 7 个故障）、`probe-r4.mjs` + `probe-r4-driver.sh`（存活故障的原实现/注入后对比）、`operator-sweep.mjs` + `probe.mjs` + `probe-driver.mjs`（第 3 轮扫描，原样复跑）、`gate-neg-r4.sh`（门禁负例）。
