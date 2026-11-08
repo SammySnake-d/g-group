@@ -1,0 +1,37 @@
+packages/api-contract/src/api.ts
+  s_7f422c52350e16::t_6664d4ac601d5d 181-182
+packages/server/catalog/catalog.json
+  s_7f422c52350e16::t_cd258808cb11aa 1-6
+packages/server/catalog/rss-reader/plugin.json
+  s_7f422c52350e16::t_ab1c2922044b61 1-13
+packages/server/catalog/webhook-out/plugin.json
+  s_7f422c52350e16::t_f2ea688ba87f30 1-11
+packages/server/src/db.ts
+  s_7f422c52350e16::t_0e74ac060c2dce 39-42
+packages/server/src/host.ts
+  s_7f422c52350e16::t_183c8674196083 6,44,61-64,152,199-209
+packages/server/src/plugins.test.ts
+  s_7f422c52350e16::t_7f57e7f04fd446 1-117
+packages/server/src/plugins.ts
+  s_7f422c52350e16::t_0f650ae18b1f03 1-256
+packages/server/src/service.ts
+  s_7f422c52350e16::t_26dcbeb0ad89a4 84-94,97
+receipts/feat-plugins.json
+  s_7f422c52350e16::t_6084026f8e9a13 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e47a6565d4cdcc6e0368f8887d14cd0c88877d75",
+  "prompts": {},
+  "sessions": {
+    "s_7f422c52350e16": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18b4f4b0-3cf6-4d51-be92-ca20094b2ce3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
