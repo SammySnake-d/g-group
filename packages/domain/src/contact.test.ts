@@ -1931,3 +1931,109 @@ test("CH-48 函数自有访问器:被丢弃字段里的函数带 getter/setter(�
   assert.equal(ok.ok, true, "生成器对照");
   assert.equal(calls, 0, "生成器对照调用次数");
 });
+
+/** 全部 13 种 trap 都计数的 Proxy 处理器;mode 为 throw 时每个 trap 先计数再抛中性错误。 */
+const countingHandler = (counter: { n: number }, mode: "count" | "throw"): ProxyHandler<object> => {
+  const h = Object.create(null) as Record<string, unknown>;
+  for (const trap of ["getPrototypeOf", "setPrototypeOf", "isExtensible", "preventExtensions", "getOwnPropertyDescriptor", "defineProperty", "has", "get", "set", "deleteProperty", "ownKeys", "apply", "construct"]) {
+    h[trap] = (...args: unknown[]) => {
+      counter.n++;
+      if (mode === "throw") throw new Error("NEUTRAL_FIXTURE_NO_CREDENTIALS");
+      return (Reflect as unknown as Record<string, (...a: unknown[]) => unknown>)[trap]!(...args);
+    };
+  }
+  return h as ProxyHandler<object>;
+};
+
+test("CH-49 生成器函数自有 prototype 是 Proxy(计数型、抛错型 trap、已撤销)时不调用即拒:同步/异步生成器在直接工具、承诺、联系人状态、Helper 入口与回执入口都返回 { ok:false } 不抛,trap 0 次;未替换的生成器与普通数据照常(对照)", () => {
+  const c = fullContact();
+  const ENTRIES = ["grantTool", "commit", "联系人状态", "routeHelper", "confirmFinalReport"] as const;
+  const callEntry = (entry: (typeof ENTRIES)[number], fn: unknown): { ok: boolean; reason?: string } => {
+    if (entry === "grantTool") return grantTool(c, { name: "tool1", bounded: true, ignored: { fn } } as never) as never;
+    if (entry === "commit") return commit(c, { id: "k9", sourceSeq: 1, text: "t", boundTaskIds: [], schedule: null, ignored: [fn] } as never) as never;
+    if (entry === "联系人状态") return grantTool({ ...js(c), ignored: { fn } } as never, { name: "tool2", bounded: true }) as never;
+    if (entry === "routeHelper") return routeHelper({ kind: "global", extra: { fn } } as never, { kind: "user", id: "u" }, "u") as never;
+    return confirmFinalReport(c, { taskId: "T", commitmentIds: ["k"], basedOnSeq: 1, extra: { fn } } as never) as never;
+  };
+  const makers: [string, () => unknown][] = [
+    ["同步生成器", () => function* g() {}],
+    ["异步生成器", () => async function* ag() {}],
+  ];
+  for (const [kindLabel, make] of makers) {
+    for (const mode of ["count", "throw", "revoked"] as const) {
+      const counter = { n: 0 };
+      const fn = make() as { prototype: unknown };
+      if (mode === "revoked") {
+        const r = Proxy.revocable({}, countingHandler(counter, "count"));
+        r.revoke();
+        fn.prototype = r.proxy;
+      } else fn.prototype = new Proxy({}, countingHandler(counter, mode));
+      for (const entry of ENTRIES) {
+        counter.n = 0;
+        let r: { ok: boolean; reason?: string } | undefined;
+        assert.doesNotThrow(() => { r = callEntry(entry, fn); }, `${kindLabel} ${mode} ${entry} 不应抛错`);
+        assert.equal(r?.ok, false, `${kindLabel} ${mode} ${entry} 应拒收`);
+        assert.match(r?.reason ?? "", /\.prototype 只接受普通数据\(不能是 Proxy\)$/, `${kindLabel} ${mode} ${entry} 理由应指向 prototype 是 Proxy`);
+        assert.equal(counter.n, 0, `${kindLabel} ${mode} ${entry} trap 调用次数`);
+      }
+    }
+    // 对照:未替换的生成器原样接受,普通数据照常
+    for (const entry of ENTRIES) assert.equal(callEntry(entry, make()).ok, true, `${kindLabel} 未替换对照 ${entry}`);
+  }
+  for (const entry of ENTRIES) assert.equal(callEntry(entry, { a: [1, "x", null] }).ok, true, `普通数据对照 ${entry}`);
+  // 既有合同不弱化:函数本身是 Proxy、被丢弃字段直接是 Proxy 也照样不调用即拒
+  const counter = { n: 0 };
+  const proxied = new Proxy(function* g() {}, countingHandler(counter, "count"));
+  const direct = new Proxy({}, countingHandler(counter, "count"));
+  for (const v of [proxied, direct]) {
+    for (const entry of ENTRIES) {
+      counter.n = 0;
+      assert.equal(callEntry(entry, v).ok, false, `既有 Proxy 合同 ${entry}`);
+      assert.equal(counter.n, 0, `既有 Proxy 合同 ${entry} trap 调用次数`);
+    }
+  }
+});
+
+test("CH-50 定时 cron 按语义校验:各段越界、区间倒置、零步长、步长超界、单值带步长在登记与恢复状态时同样拒绝并指出段与原因;合法边界、列表、区间、步长照常(对照)", () => {
+  const c = fullContact();
+  const sched = (cron: string) => ({ cron, tz: "Asia/Shanghai", toleranceSec: 0 });
+  const bad: [string, string][] = [
+    ["99 99 99 99 99", "第 1 段(分钟)的 99 超出 0–59"],
+    ["60 * * * *", "第 1 段(分钟)的 60 超出 0–59"],
+    ["* 24 * * *", "第 2 段(小时)的 24 超出 0–23"],
+    ["* * 0 * *", "第 3 段(日)的 0 超出 1–31"],
+    ["* * 32 * *", "第 3 段(日)的 32 超出 1–31"],
+    ["* * * 0 *", "第 4 段(月)的 0 超出 1–12"],
+    ["* * * 13 *", "第 4 段(月)的 13 超出 1–12"],
+    ["* * * * 8", "第 5 段(星期)的 8 超出 0–7"],
+    ["1,2,99 * * * *", "第 1 段(分钟)的 99 超出 0–59"],
+    ["* * * * 1-9", "第 5 段(星期)的 9 超出 0–7"],
+    ["5-2 * * * *", "第 1 段(分钟)的区间 5-2 起点大于终点"],
+    ["* 23-0 * * *", "第 2 段(小时)的区间 23-0 起点大于终点"],
+    ["*/0 * * * *", "第 1 段(分钟)的步长 0 不在 1–59"],
+    ["0-59/0 * * * *", "第 1 段(分钟)的步长 0 不在 1–59"],
+    ["*/60 * * * *", "第 1 段(分钟)的步长 60 不在 1–59"],
+    ["5/10 * * * *", "第 1 段(分钟)的 5/10 只有 * 或区间后面才能带步长"],
+    ["00000000000000000000099 * * * *", "第 1 段(分钟)的 00000000000000000000099 超出 0–59"],
+  ];
+  const k0 = (js(c) as unknown as { commitments: Record<string, unknown>[] }).commitments[0]!;
+  for (const [cron, why] of bad) {
+    const want = `定时表达式 "${cron}" ${why}`;
+    const r = commit(c, { id: "s", sourceSeq: 1, text: "定时", boundTaskIds: [], schedule: sched(cron) });
+    assert.equal(r.ok, false, `登记 ${cron}`);
+    assert.equal(!r.ok && r.reason, want, `登记 ${cron} 理由`);
+    // 恢复状态用同一判定:状态里存着非法定时的承诺,入口拒绝并给出同样的理由
+    const st = { ...js(c), commitments: [{ ...k0, schedule: sched(cron) }] } as never;
+    const g = grantTool(st, { name: "weather", bounded: true });
+    assert.equal(g.ok, false, `恢复 ${cron}`);
+    assert.equal(!g.ok && g.reason, `联系人状态.commitments[0] ${want}`, `恢复 ${cron} 理由`);
+  }
+  const good = ["0 8 * * *", "0 0 1 1 0", "59 23 31 12 7", "0,15,30,45 * * * *", "1-5 9-17 * * 1-5", "*/15 */2 */10 */3 */2", "0-30/10 * * * *", "*/59 */23 */31 */12 */7", "0-59 0-23 1-31 1-12 0-7", "7 7 7 7 7", "05 08 * * *"];
+  for (const cron of good) {
+    const r = commit(c, { id: "s", sourceSeq: 1, text: "定时", boundTaskIds: [], schedule: sched(cron) });
+    assert.equal(r.ok, true, `合法 ${cron}${r.ok ? "" : ` ${r.reason}`}`);
+    // 登记产生的状态原样传回入口仍被接受(登记与恢复一致)
+    const back = grantTool(js(r.ok ? r.contact : (null as never)) as never, { name: "weather", bounded: true });
+    assert.equal(back.ok, true, `合法 ${cron} 恢复`);
+  }
+});
