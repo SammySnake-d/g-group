@@ -11,6 +11,7 @@ import * as judge from "./judge.ts";
 import { CASE_MARK, type CaseResult, evidence, type Kind, killedBy, parseGateOutput } from "./judge.ts";
 import { verdict as runnerVerdict } from "./test-runner.ts";
 import { vendorOf } from "./vendor.ts";
+import { attestedDirs, sameRepoClone, turnTouchesRepo } from "./gates.ts";
 
 const HERE = import.meta.dirname;
 const CLI = path.join(HERE, "run-all.ts");
@@ -651,7 +652,87 @@ const PRELOAD_TRIES = `
         () => { lib.UNGOVERNED[0] = /./; }, () => lib.UNGOVERNED.unshift(/./), () => lib.UNGOVERNED.push(/^packages\\//, /^scripts\\//, /^\\.github\\//),
       ];
       for (const t of tries) { try { t(); } catch {} }`;
+// R11:直接对照只使用临时仓库与中性夹具。
+function r11RepoIdentity(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-id-"));
+  try {
+    const repo = path.join(tmp, "target"), other = path.join(tmp, "other"), clone = path.join(tmp, "clone");
+    for (const d of [repo, other]) { fs.mkdirSync(d); sh(d, "init", "-q", "-b", "main"); write(d, { "neutral.txt": `${NEUTRAL}\n${path.basename(d)}\n` }); commit(d, "fixture"); }
+    sh(tmp, "clone", "-q", repo, clone);
+    const same = sameRepoClone(repo);
+    const before = same(other), good = same(clone);
+    sh(repo, "remote", "add", "origin", "https://example.invalid/fixture.git");
+    sh(other, "remote", "add", "origin", "https://example.invalid/fixture.git");
+    const after = sameRepoClone(repo)(other);
+    return before || after || !good ? `仓库身份不符:不同 remote=${before},同 remote=${after},共同历史=${good}` : undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r11Attestation(nonGit: boolean): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-attest-"));
+  try {
+    const repo = path.join(tmp, "target"), other = path.join(tmp, "other");
+    for (const d of [repo, other]) { fs.mkdirSync(d); sh(d, "init", "-q", "-b", "main"); write(d, { "neutral.txt": `${NEUTRAL}\n${path.basename(d)}\n` }); commit(d, "fixture"); }
+    const hash = sh(repo, "rev-parse", "HEAD");
+    const command = nonGit ? `printf 'NOTE %s\\n' ${hash}` : `git log --oneline -1; printf 'NOTE %s\\n' ${hash}`;
+    const r = spawnSync("/bin/sh", ["-c", command], { cwd: other, encoding: "utf8" });
+    if (r.status !== 0) throw new Error("中性对照命令失败");
+    const turns = [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command, cwd: other }, result: r.stdout }] }];
+    const before = attestedDirs(turns, undefined, repo);
+    fs.rmSync(other, { recursive: true, force: true });
+    const after = attestedDirs(turns, undefined, repo);
+    return before.length || after.length ? `无关记录被采信:清理前=${JSON.stringify(before)},清理后=${JSON.stringify(after)}` : undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+function r11Sparse(): string | undefined {
+  const sparse: string[] = []; sparse.length = 2; sparse[1] = "G-TRACE";
+  Object.defineProperty(sparse, "4294967295", { value: "neutral", enumerable: true });
+  const baseline = BLOCKED({ expectHit: sparse });
+  const mutant = BLOCKED({ pass: false, kind: "verdict", exit: 0, gates: { ...ALL_OK }, expectHit: [] });
+  const legal = BLOCKED({ expectHit: ["G-TRACE", "neutral"] });
+  if (!judge.validCase(legal) || !evidence(["G-TRACE"], legal, mutant)) return "密集数组正控没有判因";
+  if (judge.validCase(baseline) || evidence(["G-TRACE"], baseline, mutant) || killedBy(["G-TRACE"], new Map([[baseline.name, baseline]]), [mutant])) return "稀疏数组被收下或产生判因";
+  return undefined;
+}
+function r11ReadOnly(): string | undefined {
+  const repo = path.resolve("/tmp/neutral-repo");
+  const inRepo = (p: string) => p === repo || p.startsWith(`${repo}/`);
+  const read = { model: "gpt-6", toolCalls: [{ name: "Bash", input: { cwd: repo, command: "git status --short" } }] };
+  const writeTurn = { model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(repo, "a.ts") } }] };
+  return turnTouchesRepo(read, undefined, inRepo) || !turnTouchesRepo(writeTurn, undefined, inRepo) ? "只读与写入没有区分" : undefined;
+}
+function r11Guard(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-guard-"));
+  try {
+    const work = path.join(tmp, "work"), dep = path.join(tmp, "dep"), bin = path.join(tmp, "bin");
+    for (const d of [work, dep, bin]) fs.mkdirSync(d);
+    const exe = path.join(bin, "docker");
+    fs.writeFileSync(exe, '#!/bin/sh\nprintf "NEUTRAL_FIXTURE_NO_CREDENTIALS\\n" > "$HOME/executor-called"\n'); fs.chmodSync(exe, 0o755);
+    const original = fs.readFileSync(path.join(HERE, "lib.ts"), "utf8");
+    const from = '"--network", "none"', to = '"--network", "host"';
+    if (original.split(from).length !== 2) throw new Error("计划注入点不唯一");
+    const marker = path.join(work, "executor-called");
+    for (const [label, src, expected] of [["正常", original, true], ["非法", original.replace(from, to), false]] as const) {
+      fs.rmSync(marker, { force: true });
+      const module = path.join(tmp, `${label}.ts`); fs.writeFileSync(module, src);
+      const script = `import { sandboxed } from ${JSON.stringify(module)}; try { const r = sandboxed(["-e", "0"], ${JSON.stringify(work)}, [${JSON.stringify(dep)}]); console.log("STATUS=" + r.status); } catch (e) { console.log("REFUSED=" + e.message); }`;
+      const r = spawnSync(process.execPath, ["--input-type=module", "-e", script], { encoding: "utf8", env: { ...gitEnv(), GATE_SANDBOX_IMAGE: "fixture-image", PATH: `${bin}:/usr/bin:/bin` }, timeout: 30000 });
+      const called = fs.existsSync(marker);
+      if (r.status !== 0 || called !== expected || (expected ? !r.stdout.includes("STATUS=0") : !r.stdout.includes("REFUSED="))) return `${label}计划:调用=${called},退出=${r.status},输出=${r.stdout}${r.stderr}`;
+    }
+    return undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+
 export const CASES: Case[] = [
+  { name: "R11-01 remote 相同但历史不相交仍拒绝,共同历史放行", direct: r11RepoIdentity, expect: null },
+  { name: "R11-02 无关仓库输出附带目标提交号,清理前后均拒绝", direct: () => r11Attestation(false), expect: null },
+  { name: "R11-02 非 git 输出附带目标提交号,清理前后均拒绝", direct: () => r11Attestation(true), expect: null },
+  { name: "R11-03 稀疏数组加普通属性不得作为判因,密集数组放行", direct: r11Sparse, expect: null },
+  { name: "R11-04 真实执行出口拒绝非法计划且不调用执行器,正常计划调用", direct: r11Guard, expect: null },
+  { name: "R11-05 只读不算产出,写操作正控", direct: r11ReadOnly, expect: null },
+  { name: "R11-05 作者仅只读时来源拒绝", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { cwd: repo, command: "git status --short" }, result: "" }] }], expect: "找不到对本仓库的任何操作" },
+  { name: "R11-05 跨厂商只读不计产出", authorTurns: (repo) => [...authorOk(repo), { model: "gpt-6", toolCalls: [{ name: "Bash", input: { cwd: repo, command: "git status --short" }, result: "" }] }], expect: null },
+
   { name: "合规:先红后绿、跨厂商审查、来源核对通过", expect: null },
   { name: "合规:node:test 别名 + 断言", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`check("adds", () => { assert.equal(add(1, 2), 3); });\n`, `import { test as check } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`check("adds", () => { assert.equal(add(1, 2), 3); });\n`, `import { test as check } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\n`) }, expect: null },
   { name: "合规:只改文档不需要收据", head: { "docs/spec/notes.md": "x\n" }, red: null, receipt: null, expect: null },
