@@ -1,0 +1,69 @@
+apps/desktop/e2e/compute.ui.spec.ts
+  s_042e901c6ad028::t_12bb3e1af123f4 1-144
+apps/desktop/src/components/compute/ComputeCard.tsx
+  s_042e901c6ad028::t_d3d5505668b4f3 1-89
+apps/desktop/src/components/compute/HarnessSession.tsx
+  s_042e901c6ad028::t_3181960788b3de 1-85
+apps/desktop/src/components/compute/Preview.tsx
+  s_042e901c6ad028::t_5ac32d6d303d92 1-76
+apps/desktop/src/components/compute/StatusChip.tsx
+  s_042e901c6ad028::t_7848a6bc75a25f 1-33
+apps/desktop/src/components/compute/card/AlertStrip.tsx
+  s_042e901c6ad028::t_edf3d0c433f0ff 1-56
+apps/desktop/src/components/compute/card/StepList.tsx
+  s_042e901c6ad028::t_297b4cf5a1d8d9 1-50
+apps/desktop/src/components/compute/constants.ts
+  s_042e901c6ad028::t_859a73156c8e24 1-97
+apps/desktop/src/components/compute/demo-sessions.ts
+  s_042e901c6ad028::t_65b3c8669ab847 1-12
+apps/desktop/src/components/compute/demo/build.ts
+  s_042e901c6ad028::t_fd6234c6bcc4e1 1-111
+apps/desktop/src/components/compute/demo/code-sessions.ts
+  s_042e901c6ad028::t_49a4aeaf6f415e 1-70
+apps/desktop/src/components/compute/demo/codex-sessions.ts
+  s_042e901c6ad028::t_00efe4748ee3ad 1-51
+apps/desktop/src/components/compute/demo/web-sessions.ts
+  s_042e901c6ad028::t_0501f5b1484843 1-36
+apps/desktop/src/components/compute/index.ts
+  s_042e901c6ad028::t_a4577b27b08dc6 1-6
+apps/desktop/src/components/compute/parts.tsx
+  s_042e901c6ad028::t_ca7fcac1310d04 1-66
+apps/desktop/src/components/compute/session/AgentGroup.tsx
+  s_042e901c6ad028::t_8d9679a8c9fd42 1-64
+apps/desktop/src/components/compute/session/Deliverables.tsx
+  s_042e901c6ad028::t_95b067c79d4fb9 1-49
+apps/desktop/src/components/compute/session/Prose.tsx
+  s_042e901c6ad028::t_7c13e192cdbbe8 1-46
+apps/desktop/src/components/compute/session/SessionFooter.tsx
+  s_042e901c6ad028::t_4a53dd6378998c 1-43
+apps/desktop/src/components/compute/session/SessionHeader.tsx
+  s_042e901c6ad028::t_d006270122f11e 1-47
+apps/desktop/src/components/compute/session/ToolGroup.tsx
+  s_042e901c6ad028::t_1d6df4bc2b015a 1-96
+apps/desktop/src/components/compute/session/Transcript.tsx
+  s_042e901c6ad028::t_b0267a42474046 1-59
+apps/desktop/src/main.tsx
+  s_042e901c6ad028::t_f5706ca2441338 6,8,10,17-18
+packages/ui-core/src/index.ts
+  s_042e901c6ad028::t_d8a8cb03ee7b69 7
+packages/ui-core/src/transcript.test.ts
+  s_042e901c6ad028::t_88a43030c26862 1-167
+packages/ui-core/src/transcript.ts
+  s_042e901c6ad028::t_e0057119f42614 1-337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2d2185cc2b15519c37ff94fee4c275a96b4ec659",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
