@@ -1,26 +1,26 @@
 [
  {
   "id": "M-HOVER-1",
-  "desc": "悬浮工具条整体下移 48px(漂到下一条消息旁边)",
-  "file": "src/components/Messages.tsx",
+  "desc": "悬浮工具条整体上移 48px(飘离气泡,压不住上边缘,悬停链断开)",
+  "file": "src/components/messages/HoverBar.tsx",
   "find": "style={pos ? { left: pos.x, top: pos.y }",
-  "replace": "style={pos ? { left: pos.x, top: pos.y + 48 }",
+  "replace": "style={pos ? { left: pos.x, top: pos.y - 48 }",
   "spec": "e2e/layout.ui.spec.ts"
  },
  {
   "id": "M-HOVER-2",
-  "desc": "悬浮工具条离开气泡 40px",
-  "file": "src/components/Messages.tsx",
-  "find": "style={pos ? { left: pos.x, top: pos.y }",
-  "replace": "style={pos ? { left: pos.x + 40, top: pos.y }",
+  "desc": "工具条挪回气泡左侧外沿(#1032 之前的放法,指针要折返)",
+  "file": "../../packages/ui-core/src/anchor.ts",
+  "find": "const x = Math.max(minX, Math.min(aw - bar.width - BAR_INSET, maxX));",
+  "replace": "const x = Math.max(minX, -bar.width - 6);",
   "spec": "e2e/layout.ui.spec.ts"
  },
  {
   "id": "M-HOVER-3",
-  "desc": "自己的消息工具条放到右侧(盖住回执另一边)",
-  "file": "src/components/Messages.tsx",
-  "find": "{!compact && !selecting && <HoverBar m={m} mine={mine} reserve={28} />}",
-  "replace": "{!compact && !selecting && <HoverBar m={m} mine={false} reserve={28} />}",
+  "desc": "工具条对齐气泡起点而不是末端",
+  "file": "../../packages/ui-core/src/anchor.ts",
+  "find": "const x = Math.max(minX, Math.min(aw - bar.width - BAR_INSET, maxX));",
+  "replace": "const x = Math.max(minX, Math.min(BAR_INSET, maxX));",
   "spec": "e2e/layout.ui.spec.ts"
  },
  {
@@ -52,7 +52,7 @@
  {
   "id": "M-VIS-3",
   "desc": "单页分栏又套回页签按钮",
-  "file": "src/components/Split.tsx",
+  "file": "src/components/split/SplitPane.tsx",
   "find": "if (tabs.length === 1) return <div",
   "replace": "if (tabs.length === 99) return <div",
   "spec": "e2e/visual.ui.spec.ts",
@@ -70,7 +70,7 @@
  {
   "id": "M-A2UI-1",
   "desc": "长选项又挤成一排气泡",
-  "file": "src/components/Messages.tsx",
+  "file": "src/components/messages/ask/askModel.ts",
   "find": "const isShort = (opts: string[]) => opts.length <= 3 && opts.every((o) => o.length <= 8)",
   "replace": "const isShort = (opts: string[]) => opts.length >= 0",
   "spec": "e2e/a2ui.ui.spec.ts"
@@ -78,7 +78,7 @@
  {
   "id": "M-A2UI-2",
   "desc": "答完卡片不收起",
-  "file": "src/components/Messages.tsx",
+  "file": "src/components/messages/ask/AskCard.tsx",
   "find": "const expanded = open ?? live",
   "replace": "const expanded = open ?? true",
   "spec": "e2e/a2ui.ui.spec.ts"
@@ -86,7 +86,7 @@
  {
   "id": "M-A2UI-3",
   "desc": "回答消息没显示成收起卡片(回到普通气泡)",
-  "file": "src/components/Messages.tsx",
+  "file": "src/components/messages/Body.tsx",
   "find": "return m.answerTo && answers[m.answerTo] ? <AnswerPill m={m} /> : <TextBubble m={m} />",
   "replace": "return <TextBubble m={m} />",
   "spec": "e2e/a2ui.ui.spec.ts"
