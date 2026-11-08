@@ -1,6 +1,6 @@
 // 默认的五块重拼(需求文档 D06 §2)。内核的 assembleRound 合入后由宿主改用它;这里先给闭环一个可跑的最小实现,
 // 形状完全按 runtime-ports 的 RoundRequest:块号 1–5 固定顺序,只有第 1 块末尾是缓存断点,第 1 块不放任何易变内容。
-import { BLOCK_LABELS, type BlockNo, type Inbound, type RoundBlock, type RoundRequest } from "@g-group/kernel";
+import { BLOCK_LABELS, type BlockNo, type Inbound, type RoundBlock, type RoundRequest, assembleRound } from "@g-group/kernel";
 
 export interface LedgerLine {
   readonly id: string;
@@ -11,11 +11,16 @@ export interface LedgerLine {
   readonly status: string;
 }
 export interface AssembleContext {
+  /** 各会话 processed_seq;内核装配用它拒绝旧消息混进第 4 块(AC-40 ⑪)。 */
+  readonly processedSeq?: Readonly<Record<string, number>>;
+  /** 本轮绑定的承诺 id(新消息或 Compute 事件涉及的),放详情原文;其余一行索引。 */
+  readonly boundIds?: readonly string[];
+  readonly stateNoteVersion?: number;
   readonly system: string;
   readonly tools: string;
   readonly persona: string;
   /** 各会话的群公告/规矩原文,按会话 id 排序后放进第 1 块。 */
-  readonly roomRules: readonly { readonly roomId: string; readonly title: string; readonly rules: string }[];
+  readonly roomRules: readonly { readonly roomId: string; readonly title: string; readonly rules: string; readonly version?: number }[];
   readonly ledger: readonly LedgerLine[];
   readonly stateNote: string | null;
   readonly fresh: readonly Inbound[];
@@ -90,3 +95,36 @@ export const CONTACT_TOOLS = [
   "deliver(taskId, text) — 交付任务结果",
   "stop(taskId) — 停止任务",
 ].join("\n");
+
+/** 预算:整个请求(五块文本之和)的 UTF-8 字节上限。超了显式失败,不静默截断(D06 §2)。 */
+export const ROUND_BUDGET_BYTES = 400_000;
+
+/**
+ * 内核 assembleRound 的宿主适配:宿主状态 → RoundAssembleInput。
+ * 会话规矩暂以「规矩版本号」当 sourceSeq 放进第 1 块规矩槽(规矩原文按原样、不扫会变内容);
+ * 等规矩改由群里确认的消息登记(D06 §2 第 1 块「R1 Confirmed 规矩与用户纠正」)后换成来源消息 seq。
+ */
+export const kernelAssemble: RoundAssembler = (ctx) => {
+  const r = assembleRound({
+    prefix: {
+      system: ctx.system,
+      tools: ctx.tools,
+      persona: ctx.persona,
+      roomNotice: "",
+      rules: ctx.roomRules
+        .filter((x) => x.rules.trim())
+        .map((x) => ({ id: `room-rules:${x.roomId}`, kind: "rule" as const, sourceSeq: Math.max(1, x.version ?? 1), text: `${x.title}:${x.rules}` })),
+    },
+    ledger: {
+      open: ctx.ledger.map((l) => ({ id: l.id, sourceSeq: l.sourceSeq, taskId: l.taskId.startsWith("standing-") ? null : l.taskId, text: l.text, status: l.status })),
+      boundIds: [...(ctx.boundIds ?? [])],
+    },
+    stateNote: ctx.stateNote === null ? null : { version: ctx.stateNoteVersion ?? 1, text: ctx.stateNote },
+    processedSeq: { ...(ctx.processedSeq ?? {}) },
+    fresh: [...ctx.fresh],
+    pointers: [...ctx.tasks.map((t) => ({ ref: `在途任务 ${t.split(" ")[0]}`, text: t })), ...ctx.pointers],
+    budgetBytes: ROUND_BUDGET_BYTES,
+  });
+  if (!r.ok) throw new Error(`五块装配失败(${r.reason}):${r.detail}`);
+  return r.request;
+};
