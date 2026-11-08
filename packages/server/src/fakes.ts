@@ -37,6 +37,7 @@ function react(me: string, f: Inbound): MindAction[] {
     if (f.signal === "failed") return [{ kind: "reply", roomId: f.roomId, text: `任务没做成:${f.summary}`, replyToSeq: null }];
     if (f.signal === "blocked") return [{ kind: "reply", roomId: f.roomId, text: `需要你帮忙:${f.summary}`, replyToSeq: null }];
   }
+  if (f.kind === "schedule") return [{ kind: "reply", roomId: f.roomId, text: `定时到了:${f.prompt}`, replyToSeq: null }];
   return [];
 }
 

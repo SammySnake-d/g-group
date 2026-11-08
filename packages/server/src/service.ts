@@ -14,6 +14,7 @@ import {
 } from "@g-group/api-contract";
 import { HostError } from "./db.ts";
 import type { Host } from "./host.ts";
+import { previewCron } from "./schedules.ts";
 
 type Handler = (p: never) => unknown;
 const unavailable = (what: string) => () => {
@@ -70,13 +71,16 @@ export function createService(host: Host): Service {
     "tasks.cancel": unavailable("取消任务(请用任务卡片)"),
     "commitments.list": (p: Parameters<Host["listCommitments"]>[0]) => ({ commitments: host.listCommitments(p) }),
     "commitments.revoke": unavailable("撤销承诺"),
-    "schedules.list": unavailable("定时"),
-    "schedules.preview": unavailable("定时预览"),
-    "schedules.create": unavailable("定时"),
-    "schedules.update": unavailable("定时"),
-    "schedules.remove": unavailable("定时"),
-    "schedules.runNow": unavailable("定时"),
-    "schedules.history": unavailable("定时"),
+    "schedules.list": (p: { contactId?: string; roomId?: string }) => ({ schedules: host.scheduler.list(p) }),
+    "schedules.preview": (p: { cron: string; tz: string; count?: number }) => previewCron(p.cron, p.tz, p.count ?? 5, Date.now()),
+    "schedules.create": ({ clientActionId: _c, ...p }: { clientActionId: string } & Parameters<Host["scheduler"]["create"]>[0]) => host.scheduler.create(p),
+    "schedules.update": ({ scheduleId, ...patch }: { scheduleId: string } & Parameters<Host["scheduler"]["update"]>[1]) => host.scheduler.update(scheduleId, patch),
+    "schedules.remove": (p: { scheduleId: string }) => {
+      host.scheduler.remove(p.scheduleId);
+      return { ok: true };
+    },
+    "schedules.runNow": (p: { scheduleId: string }) => host.scheduler.runNow(p.scheduleId),
+    "schedules.history": (p: { scheduleId: string; limit?: number }) => ({ runs: host.scheduler.history(p.scheduleId, p.limit ?? 50) }),
     "plugins.marketplace": unavailable("插件市场"),
     "plugins.list": () => ({ plugins: [] }),
     "plugins.get": unavailable("插件"),
