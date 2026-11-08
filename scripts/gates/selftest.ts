@@ -736,6 +736,13 @@ function r11Guard(): string | undefined {
 
 export const CASES: Case[] = [
   { name: "R11-01 remote 相同但历史不相交仍拒绝,共同历史放行", direct: r11RepoIdentity, expect: null },
+  { name: "R11-01 同 remote 的无关仓库写入经来源门禁拒绝", authorTurns: (repo) => {
+    const other = path.join(path.dirname(repo), "independent");
+    otherRepo(other); write(other, { "packages/core/src/add.ts": ADD_OK });
+    sh(repo, "remote", "add", "origin", "https://example.invalid/fixture.git");
+    sh(other, "remote", "add", "origin", "https://example.invalid/fixture.git");
+    return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(other, "packages/core/src/add.ts"), content: ADD_OK }, result: "File written successfully" }] }];
+  }, expect: "找不到对本仓库的任何操作" },
   { name: "R11-02 无关仓库输出附带目标提交号,清理前后均拒绝", direct: () => r11Attestation(false), expect: null },
   { name: "R11-02 非 git 输出附带目标提交号,清理前后均拒绝", direct: () => r11Attestation(true), expect: null },
   { name: "R11-03 稀疏数组加普通属性不得作为判因,密集数组放行", direct: r11Sparse, expect: null },
