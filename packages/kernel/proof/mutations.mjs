@@ -2,7 +2,8 @@
 // 第十二轮按 PR #6 第十一轮审查 R11-01..R11-03 扩充,含审查自造的存活单点故障 R11-M1=K210、R11-M3=K211,
 // 新实现带来的 K212–K214,并按新实现改写 K138、K204 的注入点;第十三轮按 PR #6 第十二轮审查 R12-01..R12-04 扩充,
 // 含审查自造的存活单点故障 R12-O1=K228、R12-O2=K226,新实现带来的 K216–K225、K227、K229–K238,
-// 并按新实现改写 K155、K159、K184、K185、K207、K208 的注入点,语义不变),在隔离副本里跑本包测试,
+// 并按新实现改写 K155、K159、K184、K185、K207、K208 的注入点,语义不变;第十四轮按用户 2026-11-09 改的合同「拒收只判定、不处理」
+// 删掉拒收挂处理机制的 36 个变异,K30 改注入点到新实现,新增 K239–K241),在隔离副本里跑本包测试,
 // 每个变异都必须让至少一条具名测试失败(文件级加载失败不算杀死)。注入点必须在源码里恰好出现 1 次。
 // 原样副本必须全绿(阴性对照)。
 // 每个变异在独立进程组里跑,超时(默认 300s,KERNEL_MUT_TIMEOUT_MS 可改)就杀掉整个进程组,记 ✗ 超时,不算被杀死。
@@ -25,6 +26,7 @@ import path from "node:path";
 //       这是对有限样例和该合同的判断,不是兜底分支在所有环境中严格不可达的证明;
 //   K209 方案 3 不排除 Proxy 构造器(第十一轮,等价):lookup 第一步就对传入对象查 types.isProxy,值是 Proxy 时返回空链,
 //       shadow 对空链直接返回 undefined,去掉调用处的 !types.isProxy(value) 改不了行为(lookup 里那一步由 K205 覆盖);
+//   (K209 的说明只对第十一至十三轮的拒收挂处理机制成立;第十四轮整套机制已删,不再适用)
 //   K108 单调读数倒退仍放行:读数一倒退该动作就已标为时钟不可信并在窗口判断前返回,窗口判断里不会再见到负的 elapsed。
 const PKG = path.resolve(import.meta.dirname, "..");
 const ROOT = path.resolve(PKG, "../..");
@@ -55,7 +57,7 @@ const M = [
   ["K11 发送不要求 action_id", "plugins.ts", 'if (!isStr(actionId)) return { ok: false, state: "rejected", reason: "missing-action-id"', 'if (false) return { ok: false, state: "rejected", reason: "missing-action-id"'],
   ["K12 同一 action_id 已确认仍重复真发", "plugins.ts", "if (prior.state === \"confirmed\" && prior.receipt) return", "if (false) return"],
   ["K29 B2 结果未知时盲重试", "plugins.ts", "if (b.idempotency === \"none\") return", "if (false) return"],
-  ["K30 同步返回值当回执", "plugins.ts", "if (!isPlainPromise(pending)) { quietRefused(pending); return unknown(", "if (false) { quietRefused(pending); return unknown("],
+  ["K30 同步返回值当回执(第十四轮改注入点到新实现)", "plugins.ts", "if (!isPlainPromise(pending)) return unknown(\"non-promise-send\"", "if (false) return unknown(\"non-promise-send\""],
   ["K31 超时当成功", "plugins.ts", 'if (got === TIMEOUT) return unknown("timeout", ', 'if (got === TIMEOUT) got = { action_id: actionId, receiptId: "assumed" }; if (false) return unknown("timeout", '],
   ["K32 异步异常当成功", "plugins.ts", '    } catch (err) {\n      return unknown("send-threw", errText(err));', '    } catch {\n      got = { action_id: actionId, receiptId: "assumed" };'],
   ["K33 回执不校验 action_id", "plugins.ts", "if (!isObj(rc) || rc.action_id !== actionId || !isStr(rc.receiptId)) return", "if (!isObj(rc) || !isStr(rc.receiptId)) return"],
@@ -217,51 +219,18 @@ const M = [
   ["K180 首次发送不查墙钟(R8-03 原错)", "plugins.ts", "        if (isoOf(firstAttemptAt) === undefined) return", "        if (false) return"],
   ["K181 时钟读数不查类型原样返回(R8-03 原错)", "plugins.ts", "  return typeof v === \"number\" && Number.isFinite(v) ? v : Number.NaN;", "  return v as number;"],
   ["K182 墙钟不查 Date 范围", "plugins.ts", "  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();", "  return d.toISOString();"],
-  ["K183 拒收的原生 Promise 不挂拒绝处理(R8-04 原错)", "plugins.ts", "  Reflect.apply(Promise.prototype.then, x, [undefined, () => {}]);", "  void x;"],
-  ["K184 带任何 constructor 都直接用内置 then 挂处理(会执行插件访问器;第十一、十三轮改注入点到新实现)", "plugins.ts", "  if (known && speciesSafe(value)) return true;", "  if (true) return true;"],
-  ["K185 pull 拒收时不挂处理(R8-04 原错;第十三轮改注入点到新实现)", "plugins.ts", "      if (!native) quietRefused(returned);\n", ""],
-  ["K186 send 拒收时不挂处理(R8-04 原错)", "plugins.ts", "{ quietRefused(pending); return unknown(", "{ return unknown("],
   ["K187 首次单调读数原样存储(R8-03 原错)", "plugins.ts", "        const firstAttemptMonotonic = readClock(monotonic);", "        const firstAttemptMonotonic = monotonic();"],
   // —— 第十轮:按 PR #6 第九轮审查 R9-02 扩充,含审查自造 R9-M1=K188、R9-M3=K189(R9-M2 与 K177 注入点相同,见上)
   ["K188 墙钟只认整数毫秒(审查 R9-M1)", "plugins.ts", "  if (!Number.isFinite(ms)) return undefined;", "  if (!Number.isInteger(ms)) return undefined;"],
   ["K189 原生 Promise 判定不查原型,子类也 await(审查 R9-M3)", "plugins.ts", "  if (Object.getPrototypeOf(x) !== Promise.prototype) return false;\n", ""],
   // —— 第十轮:R9-01(用户 g-group#3140 选 A)单点故障;第十一轮按新实现改写注入点,语义不变
-  ["K190 不删临时 constructor(原本没有自有 constructor 时)", "plugins.ts", "return () => { Reflect.deleteProperty(o, key); };", "return () => {};"],
-  ["K191 方案 1 跳过值为内置 Promise 的 constructor", "plugins.ts", "  if (v === undefined || v === Promise) return true;", "  if (v === undefined) return true;"],
-  ["K192 临时属性用原型上的 constructor", "plugins.ts", "if (Reflect.defineProperty(o, key, descOf({ value: Promise, writable: true, enumerable: false,", "if (Reflect.defineProperty(o, key, descOf({ value: Object.getPrototypeOf(o).constructor, writable: true, enumerable: false,"],
-  ["K193 只做方案 1,不做临时改写", "plugins.ts", "  const undo = shadow(ctor.chain, \"constructor\") ??", "  const undo = undefined ??"],
-  ["K194 临时属性用 Object.defineProperty(改不了时抛错)", "plugins.ts", "      if (Reflect.defineProperty(o, key, descOf({ value: Promise, writable: true, enumerable: false, configurable: true })))", "      if (Object.defineProperty(o, key, descOf({ value: Promise, writable: true, enumerable: false, configurable: true })))"],
-  ["K195 可配置属性不恢复原描述符", "plugins.ts", "return () => { Reflect.defineProperty(o, key, descOf(own)); };", "return () => {};"],
-  ["K196 只看自有属性不走原型链,没有自有 constructor 就当默认构造器直接挂处理", "plugins.ts", "cur = Object.getPrototypeOf(cur)) {", "cur = null) {"],
   // —— 第十一轮:按 PR #6 第十轮审查 R10-01 / R10-02 扩充,含审查自造 R10-M1=K197、R10-M2=K198、R10-M3=K199
-  ["K197 恢复可配置 constructor 描述符时把 enumerable 改成 false(审查 R10-M1)", "plugins.ts", "return () => { Reflect.defineProperty(o, key, descOf(own)); };", "return () => { Reflect.defineProperty(o, key, descOf(Object.assign(Object.create(null), own, { enumerable: false }))); };"],
   ["K198 墙钟先向下取整再转时间(审查 R10-M2)", "plugins.ts", "  const d = new Date(ms);", "  const d = new Date(Math.floor(ms));"],
   ["K199 时钟读数只认整数(审查 R10-M3)", "plugins.ts", "  return typeof v === \"number\" && Number.isFinite(v) ? v : Number.NaN;", "  return typeof v === \"number\" && Number.isInteger(v) ? v : Number.NaN;"],
-  ["K200 不可配置但可写的数据属性不走只改值分支(R10-01 原错)", "plugins.ts", "    } else if (\"value\" in own && own.writable === true) {", "    } else if (false) {"],
-  ["K201 可写数据属性改值时连带重写 enumerable / configurable(R10-01 原错:不可配置时改不了)", "plugins.ts", "if (Reflect.defineProperty(o, key, descOf({ value: Promise }))) return", "if (Reflect.defineProperty(o, key, descOf({ value: Promise, writable: true, enumerable: false, configurable: true }))) return"],
-  ["K202 可写数据属性挂处理后不写回原值", "plugins.ts", "return () => { Reflect.defineProperty(o, key, descOf({ value: own.value })); };", "return () => {};"],
-  ["K203 不做方案 3(constructor 改不了时不改其 species)", "plugins.ts", "shadow(lookup(value, Symbol.species).chain, Symbol.species) : undefined);", "undefined : undefined);"],
-  ["K204 临时改写不跳过内置对象", "plugins.ts", "    if (isIntrinsic(o)) continue;\n", ""],
-  ["K205 原型链遇到 Proxy 不停,读其描述符(进陷阱)", "plugins.ts", "    if (types.isProxy(cur)) return { chain, desc: undefined, blocked: true };\n", ""],
-  ["K206 species 是任何数据属性都当安全(会构造插件的类)", "plugins.ts", "  return \"value\" in s.desc && (s.desc.value === undefined || s.desc.value === null || s.desc.value === Promise);", "  return \"value\" in s.desc;"],
-  ["K207 原型链上有 Proxy 时不换原型直接挂处理(Node 读内部异步 id 进陷阱;第十三轮改注入点到新实现)", "plugins.ts", "    if (!Reflect.setPrototypeOf(x, Promise.prototype)) return false;\n", ""],
-  ["K208 换原型挂处理后不换回(第十三轮改注入点到新实现)", "plugins.ts", "    pushOwn(restores, () => { Reflect.setPrototypeOf(x, proto); });\n", ""],
   // —— 第十二轮:按 PR #6 第十一轮审查 R11-01 / R11-02 / R11-03 扩充,含审查自造的单点故障 R11-M1=K210、R11-M3=K211
-  ["K210 species 数据属性 null 不再视为安全(审查 R11-M1)", "plugins.ts", "  return \"value\" in s.desc && (s.desc.value === undefined || s.desc.value === null || s.desc.value === Promise);", "  return \"value\" in s.desc && (s.desc.value === undefined || s.desc.value === Promise);"],
-  ["K211 找不到 species 就判不安全(审查 R11-M3)", "plugins.ts", "  if (s.desc === undefined) return true;", "  if (s.desc === undefined) return false;"],
-  ["K212 宿主判定不看原型上的原生 constructor(另一 realm 的内置实例对象会被当成可改写目标)", "plugins.ts", "  const c = Object.getOwnPropertyDescriptor(o, \"constructor\");\n  return c !== undefined && \"value\" in c && isNativeFn(c.value);", "  return false;"],
-  ["K213 临时改写只按启动时闭包跳过内置对象(不认原生函数,也不认另一 realm 的内置对象)", "plugins.ts", "  if (INTRINSICS.has(o) || isNativeFn(o)) return true;\n  const c = Object.getOwnPropertyDescriptor(o, \"constructor\");\n  return c !== undefined && \"value\" in c && isNativeFn(c.value);", "  return INTRINSICS.has(o);"],
-  ["K215 启动时的访问器内置清单漏掉 Buffer(回到 R11-01 原错:Buffer 于是成了可改写目标)", "plugins.ts", "const ACCESSOR_HOSTS = [\"Buffer\", ", "const ACCESSOR_HOSTS = ["],
   ["K214 数组键只查十进制文本,不查是否落在 length 内(回到 R11-02 原错)", "plain.ts", "if (!INDEX.test(k) || Number(k) >= len) return", "if (!INDEX.test(k)) return"],
   // —— 第十三轮:按 PR #6 第十二轮审查 R12-01..R12-04 扩充,含审查自造的单点故障 R12-O1=K228、R12-O2=K226
-  ["K216 实例自有的异步追踪符号是访问器或不安全值时不临时换掉(回到 R12-01 原错:Node 挂处理时调用插件访问器)", "plugins.ts", "    if (d === undefined || (\"value\" in d && safeId(d.value))) continue;", "    continue;"],
-  ["K217 临时换下的追踪符号访问器挂完不恢复", "plugins.ts", "    pushOwn(restores, () => { Reflect.defineProperty(x, k, descOf(d)); });\n", ""],
-  ["K218 临时数据属性一律用 undefined(Node 给派生 Promise 记的 triggerAsyncId 丢失)", "plugins.ts", "const value = live !== undefined && live.key === k ? live.id : undefined;", "const value = undefined;"],
-  ["K219 原型链安全判定不看追踪符号(链上访问器不换原型,Node 沿链调用插件 getter / setter)", "plugins.ts", "      if (d !== undefined && !(\"value\" in d && d.writable === true)) return false;\n", ""],
-  ["K220 原型链安全判定不认 Proxy(链上有 Proxy 也不换原型)", "plugins.ts", "    if (types.isProxy(o)) return false;\n", ""],
-  ["K221 开着钩子时不查实例能否新建 async_id(不可扩展又没有的照样挂处理,Node 在钩子里抛错)", "plugins.ts", "  if (live !== undefined && !Object.hasOwn(x, live.key) && !Object.isExtensible(x)) return false;\n", ""],
   ["K222 原生 Promise 判定不查可扩展(冻结的也 await,开着钩子时 Node 在钩子里抛错)", "plugins.ts", "  if (!Object.isExtensible(x)) return false;\n", ""],
-  ["K223 探针认不出 Node 的 async_id(当成没开钩子)", "plugins.ts", "if (key.description === \"async_id_symbol\" && d !== undefined", "if (key.description === \"async_id\" && d !== undefined"],
   ["K224 追踪键只认 async_id_symbol,漏掉 trigger_async_id_symbol", "plugins.ts", "new Set([\"async_id_symbol\", \"trigger_async_id_symbol\"])", "new Set([\"async_id_symbol\"])"],
   ["K225 原生 Promise 判定不查其它自有访问器(回到 R12-02 原错)", "plugins.ts", "    if (!(\"value\" in d)) return false;\n", ""],
   ["K226 拒绝合法的空字符串附件名(审查 R12-O2)", "plugins.ts", "if (a.name !== undefined && typeof a.name !== \"string\") return undefined;", "if (a.name !== undefined && (typeof a.name !== \"string\" || a.name === \"\")) return undefined;"],
@@ -273,10 +242,12 @@ const M = [
   ["K232 不查段顺序(tail 在前时前缀哈希盖到 tail 上)", "assemble.ts", "if (r === undefined || r < rank) throw", "if (r === undefined) throw"],
   ["K233 不查 section 取值(未知段名算进前缀)", "assemble.ts", "if (r === undefined || r < rank) throw", "if (r !== undefined && r < rank) throw"],
   ["K234 原生 Promise 判定不查追踪符号的值(值为带 valueOf 的对象也 await,Node 转数字时执行插件代码)", "plugins.ts", "    if (isTracking(k) && !safeId(d.value)) return false;\n", ""],
-  ["K235 拒收挂处理前只换追踪符号访问器,不换不安全的数据值", "plugins.ts", "(d === undefined || (\"value\" in d && safeId(d.value)))", "(d === undefined || \"value\" in d)"],
-  ["K236 不可配置但可写的追踪符号不走只改值分支(改不了,不挂处理)", "plugins.ts", "    if (\"value\" in d && d.writable === true && d.configurable !== true) {", "    if (false) {"],
-  ["K237 只改值分支挂完不写回原值", "plugins.ts", "      pushOwn(restores, () => { Reflect.defineProperty(x, k, descOf({ value: d.value })); });\n", ""],
   ["K238 追踪符号的值把 BigInt 也当安全(Node 转数字时抛 TypeError)", "plugins.ts", "typeof v === \"number\" || v === undefined;", "typeof v === \"number\" || typeof v === \"bigint\" || v === undefined;"],
+  // —— 第十四轮:用户 2026-11-09 按根因改合同(拒收只判定、不处理),删掉拒收挂处理机制及其 36 个变异(K183–K186、K190–K197、K200–K208、
+  // K210–K213、K215–K221、K223、K235–K237),下面三个变异各自回到一种「内核替插件的失败兜底」的做法,必须被具名测试杀死
+  ["K239 send 拒收后仍用内置 then 给它挂空拒绝处理(回到 R8-04 做法:会执行插件的访问器与子类构造)", "plugins.ts", "    if (!isPlainPromise(pending)) return unknown(", "    if (!isPlainPromise(pending) && types.isPromise(pending)) { try { Reflect.apply(Promise.prototype.then, pending, [undefined, () => {}]); } catch { /* 变异 */ } }\n    if (!isPlainPromise(pending)) return unknown("],
+  ["K240 pull 拒收后仍用内置 then 给它挂空拒绝处理", "plugins.ts", "      const native = isPlainPromise(returned);\n", "      const native = isPlainPromise(returned);\n      if (!native && types.isPromise(returned)) { try { Reflect.apply(Promise.prototype.then, returned, [undefined, () => {}]); } catch { /* 变异 */ } }\n"],
+  ["K241 建注册表时装全局 unhandledRejection 处理器吞掉插件的失败(改了宿主的全局失败语义)", "plugins.ts", "  const { now, monotonic, sendTimeoutMs } = registryOptions(opts);", "  process.on(\"unhandledRejection\", () => {});\n  const { now, monotonic, sendTimeoutMs } = registryOptions(opts);"],
 ];
 
 const TIMEOUT_MS = Number(process.env.KERNEL_MUT_TIMEOUT_MS ?? 300_000);
