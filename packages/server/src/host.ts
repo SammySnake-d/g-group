@@ -8,18 +8,23 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "nod
 import { basename, dirname, extname, join } from "node:path";
 import { appendEvent, loadLog, recordAction } from "@g-group/adapter-sqlite";
 import type { ComputeAdapter, ComputeEvent } from "@g-group/adapter-cc-compute";
-import type {
-  CommitmentView,
-  DraftBody,
-  DraftView,
-  ComputeProgress,
-  ContactView,
-  MessageView,
-  ReceiptView,
-  RewindResult,
-  RoomView,
-  SettingsView,
-  TaskView,
+import {
+  type ClientInputDraft,
+  type CommitmentView,
+  type ComputeProgress,
+  type ContactView,
+  type DraftBody,
+  type DraftView,
+  type MessageView,
+  type ReceiptView,
+  type RewindResult,
+  type RoomView,
+  type SettingsView,
+  type TaskView,
+  draftIssues,
+  draftPreview,
+  emptyDraft,
+  settleDraft,
 } from "@g-group/api-contract";
 import {
   type Ledger,
@@ -144,6 +149,8 @@ export interface SendInput {
   mentions?: { id: string; source: "auto" | "manual" }[];
   command?: { name: string; args: unknown };
   attachments?: string[];
+  /** 发送时输入框草稿的版本(AC-24);成功后只清这一版草稿。 */
+  draftVer?: number;
 }
 
 const DEFAULT_SETTINGS: SettingsView = {
@@ -424,6 +431,7 @@ export class Host {
     const openCards = one<{ n: number }>(this.db, "SELECT count(*) AS n FROM gg_cards WHERE room_id = ? AND state = 'open'", roomId)?.n ?? 0;
     // 等用户回复的交付(普通消息交付,没有卡片)也算一件待你处理的事
     const pending = openCards + listDocs<TaskDoc>(this.db, "task:").filter((d) => d.value.roomId === roomId && awaitingUser(d.value)).length;
+    const draft = getDoc<DraftView>(this.db, `draft:${roomId}`)?.value;
     return {
       id: r.id,
       kind: r.kind,
@@ -439,6 +447,7 @@ export class Host {
       unread: visible.filter((m) => m.seq > readSeq && !(m.sender.kind === "user" && m.sender.id === this.userId)).length,
       pendingForUser: pending,
       lastMessagePreview: last ? last.text.slice(0, 200) : null,
+      ...(draft ? { draftPreview: draftPreview(draft) } : {}),
       updatedAt: r.updated_at,
       announcementCount: r.kind === "group" ? this.announcements.count(roomId) : 0,
       leavingMembers: this.exits.leavingIn(roomId),
@@ -533,7 +542,8 @@ export class Host {
     if (prior) return { seq: (JSON.parse(prior.payload) as { seq: number }).seq, duplicate: true };
     const e = appendEvent(this.db.store, `room:${roomId}`, sender, { kind: "message", text: f.text }, this.now());
     recordAction(this.db.store, key, { seq: e.seq });
-    const quoted = [...new Set(f.quotedSeqs ?? [])];
+    // 回复 = @原作者 + 引用(AC-37 ①):主回复对象一定在引用里;引用保序去重
+    const quoted = [...new Set([...(f.quotedSeqs ?? []), ...(f.replyToSeq != null ? [f.replyToSeq] : [])])];
     run(
       this.db,
       "INSERT INTO gg_msg (room_id, seq, thread_root, reply_to, quoted, mentions, attachments, command, card_id, client_action_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -608,8 +618,10 @@ export class Host {
     const cmd = this.prepareBuiltin(room, input);
     if (cmd.mention && !(input.mentions ?? []).some((m) => m.id === cmd.mention)) input = { ...input, mentions: [...(input.mentions ?? []), { id: cmd.mention, source: "auto" }] };
     for (const ref of input.attachments ?? []) if (!one(this.db, "SELECT 1 FROM gg_attachments WHERE ref = ?", ref)) throw new HostError("invalid_params", `附件 ${ref} 不存在,请先 attachments.add`);
-    const r = tx(this.db, () =>
-      this.appendMessageTx(room.id, me, {
+    const submitted = { text: input.text, replyToSeq: input.replyToSeq ?? null, quotedSeqs: input.quotedSeqs ?? [], mentions: input.mentions ?? [] };
+    let settled: DraftView | null = null;
+    const r = tx(this.db, () => {
+      const appended = this.appendMessageTx(room.id, me, {
         text: input.text.trim() ? input.text : `[附件 ${input.attachments!.length} 个]`,
         attachments: input.attachments ?? [],
         actionKey: `user:${input.clientActionId}`,
@@ -619,8 +631,12 @@ export class Host {
         quotedSeqs: input.quotedSeqs ?? [],
         mentions: input.mentions ?? [],
         command: input.command ?? null,
-      }),
-    );
+      });
+      // 发送成功与草稿清理同一事务(AC-24):只清 draftVer 那一版,等回执期间新打的字保留
+      if (input.draftVer !== undefined) settled = this.settleDraftTx(room.id, { roomId: room.id, submittedVer: input.draftVer, submitted });
+      return appended;
+    });
+    if (settled) this.bus.emit({ type: "draft.updated", draft: settled });
     if (!r.duplicate) {
       // 自己发的消息自己已读
       this.markRead(room.id, me, r.seq);
@@ -743,12 +759,46 @@ export class Host {
     this.bus.emit({ type: "message.updated", message: v });
     return v;
   }
-  // ======================= 输入框草稿(红提交空壳) =======================
+  // ======================= 输入框草稿 =======================
+  // 客户端会话级未发送缓冲(AC-24、AC-37 ②;D11.5、C-US28):只存不送,绝不进联系人注意循环,也不产生会话事件。
+  /** 某会话的草稿;没存过返回 draftVer = 0 的空草稿。 */
   draft(roomId: string): DraftView {
-    return { roomId, text: "", replyToSeq: null, replyAuthorId: null, quotedSeqs: [], mentions: [], draftVer: 0, updatedAt: null };
+    this.userRoom(roomId);
+    return getDoc<DraftView>(this.db, `draft:${roomId}`)?.value ?? { ...emptyDraft(roomId), quotedSeqs: [], mentions: [], updatedAt: null };
   }
-  saveDraft(roomId: string, _expectedVer: number, _body: DraftBody): DraftView {
-    return this.draft(roomId);
+  /** 按 draftVer 做 CAS 保存:expectedVer 必须等于当前版本,新版本必须更大;否则 conflict 带当前草稿。 */
+  saveDraft(roomId: string, expectedVer: number, body: DraftBody): DraftView {
+    this.userRoom(roomId);
+    const bad = draftIssues({ roomId, ...body });
+    if (bad.length) throw new HostError("invalid_params", `草稿不合格:${bad.join(";")}`);
+    if (body.draftVer <= expectedVer) throw new HostError("invalid_params", `draftVer(${body.draftVer})必须大于 expectedVer(${expectedVer})`);
+    const saved = tx(this.db, () => {
+      const cur = getDoc<DraftView>(this.db, `draft:${roomId}`);
+      const curVer = cur?.value.draftVer ?? 0;
+      if (curVer !== expectedVer) throw new HostError("conflict", `草稿已被改过(当前版本 ${curVer})`, { current: cur?.value ?? this.draft(roomId) });
+      const next: DraftView = { roomId, text: body.text, replyToSeq: body.replyToSeq, replyAuthorId: body.replyAuthorId, quotedSeqs: [...body.quotedSeqs], mentions: body.mentions.map((m) => ({ id: m.id, source: m.source })), draftVer: body.draftVer, updatedAt: this.now() };
+      putDoc(this.db, `draft:${roomId}`, cur?.ver ?? 0, next);
+      return next;
+    });
+    this.bus.emit({ type: "draft.updated", draft: saved });
+    this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
+    return saved;
+  }
+  /** 发送回执清理草稿(在 send 的事务里调用);草稿没变返回 null。 */
+  private settleDraftTx(roomId: string, receipt: Parameters<typeof settleDraft>[1]): DraftView | null {
+    const cur = getDoc<DraftView>(this.db, `draft:${roomId}`);
+    if (!cur) return null;
+    const before: ClientInputDraft = cur.value;
+    const after = settleDraft(before, receipt);
+    if (after === before) return null;
+    const next: DraftView = { roomId, text: after.text, replyToSeq: after.replyToSeq, replyAuthorId: after.replyAuthorId, quotedSeqs: [...after.quotedSeqs], mentions: after.mentions.map((m) => ({ id: m.id, source: m.source })), draftVer: after.draftVer, updatedAt: this.now() };
+    putDoc(this.db, `draft:${roomId}`, cur.ver, next);
+    return next;
+  }
+  private userRoom(roomId: string): RoomRow {
+    const room = this.roomRow(roomId);
+    if (!this.isMember(room.id, { kind: "user", id: this.userId })) throw new HostError("forbidden", "你不在这个会话里");
+    return room;
   }
 
   /** 附件:按内容 sha256 复制进数据目录,同一文件只存一份。 */
