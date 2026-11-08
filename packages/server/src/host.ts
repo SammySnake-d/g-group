@@ -56,6 +56,7 @@ import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { PluginStore } from "./plugins.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
+import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, unindexTx } from "./search.ts";
 
 export interface HostOptions {
   readonly file: string;
@@ -195,6 +196,8 @@ export class Host {
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
     this.exits = new MemberExits({ db: this.db, now: this.now });
+    // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
+    ensureSearchIndex(this.db);
     this.bus = createBus(this.now);
     this.loop = createAttentionLoop({
       maxDeferMs: opts.maxDeferMs ?? 1500,
@@ -517,7 +520,7 @@ export class Host {
       ...(isRewound(this.db, roomId, m.seq) ? { rewound: true } : {}),
     };
   }
-  listMessages(roomId: string, q: { beforeSeq?: number; afterSeq?: number; limit?: number; threadRootSeq?: number | null }): { messages: MessageView[]; hasMore: boolean } {
+  listMessages(roomId: string, q: { beforeSeq?: number; afterSeq?: number; aroundSeq?: number; limit?: number; threadRootSeq?: number | null }): { messages: MessageView[]; hasMore: boolean; hasMoreAfter?: boolean } {
     this.roomRow(roomId);
     const msgs = this.projected(roomId);
     let sel = msgs.filter((m) => (q.beforeSeq === undefined || m.seq < q.beforeSeq) && (q.afterSeq === undefined || m.seq > q.afterSeq));
@@ -540,8 +543,10 @@ export class Host {
     const key = `msg:${roomId}:${f.actionKey}`;
     const prior = one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key);
     if (prior) return { seq: (JSON.parse(prior.payload) as { seq: number }).seq, duplicate: true };
-    const e = appendEvent(this.db.store, `room:${roomId}`, sender, { kind: "message", text: f.text }, this.now());
+    const at = this.now();
+    const e = appendEvent(this.db.store, `room:${roomId}`, sender, { kind: "message", text: f.text }, at);
     recordAction(this.db.store, key, { seq: e.seq });
+    indexMessageTx(this.db, { roomId, seq: e.seq, at, sender, threadRoot: f.threadRootSeq ?? null, text: f.text, attachments: f.attachments ?? [] });
     // 回复 = @原作者 + 引用(AC-37 ①):主回复对象一定在引用里;引用保序去重
     const quoted = [...new Set([...(f.quotedSeqs ?? []), ...(f.replyToSeq != null ? [f.replyToSeq] : [])])];
     run(
@@ -730,6 +735,9 @@ export class Host {
     try {
       tx(this.db, () => {
         appendEvent(this.db.store, `room:${roomId}`, { kind: "user", id: this.userId }, body, this.now());
+        // 搜索索引同一事务更新:编辑只留新文字,撤回删行(AC-08 索引不再返回原文)
+        if (body.kind === "edit") reindexEditTx(this.db, roomId, body.target, body.text);
+        else unindexTx(this.db, roomId, body.target);
         run(this.db, "UPDATE gg_rooms SET updated_at = ? WHERE id = ?", this.now(), roomId);
       });
     } catch (e) {
@@ -748,6 +756,10 @@ export class Host {
     this.bus.emit({ type: "message.updated", message: v });
     this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
     return v;
+  }
+  /** 搜索自己所在会话的消息与附件名(AC-25);撤回的搜不到,编辑过的按新文字。 */
+  searchMessages(q: SearchQuery): SearchPage {
+    return searchMessages(this.db, this.userId, q, (s) => this.nameOf(s));
   }
   /** 表情回应:普通回应,不改已读状态(AC-46 ⑦)。 */
   react(roomId: string, seq: number, emoji: string, on: boolean): MessageView {
