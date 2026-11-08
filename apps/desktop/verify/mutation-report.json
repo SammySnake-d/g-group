@@ -1,24 +1,24 @@
 {
-  "at": "2026-11-08T15:36:19.475Z",
+  "at": "2026-11-08T16:51:02.257Z",
   "results": [
     {
-      "id": "M-A2UI-1",
-      "desc": "长选项又挤成一排气泡",
-      "spec": "e2e/a2ui.ui.spec.ts",
+      "id": "M-RAIL-1",
+      "desc": "左侧导航退回深墨色竖条(和浅色页面割裂)",
+      "spec": "e2e/shell-look.ui.spec.ts",
       "ok": true,
       "why": "测试变红,抓到了"
     },
     {
-      "id": "M-A2UI-2",
-      "desc": "答完卡片不收起",
-      "spec": "e2e/a2ui.ui.spec.ts",
+      "id": "M-JUMP-1",
+      "desc": "回到最新挪回右下角",
+      "spec": "e2e/shell-look.ui.spec.ts",
       "ok": true,
       "why": "测试变红,抓到了"
     },
     {
-      "id": "M-A2UI-3",
-      "desc": "回答消息没显示成收起卡片(回到普通气泡)",
-      "spec": "e2e/a2ui.ui.spec.ts",
+      "id": "M-JUMP-2",
+      "desc": "回到最新离输入框太远(悬在阅读区中部)",
+      "spec": "e2e/shell-look.ui.spec.ts",
       "ok": true,
       "why": "测试变红,抓到了"
     }
