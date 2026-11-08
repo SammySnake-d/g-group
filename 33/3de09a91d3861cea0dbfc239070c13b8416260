@@ -1,0 +1,29 @@
+packages/api-contract/src/api.ts
+  s_25620647d6f8eb::t_ca71f758cec45e 15-16,74-77
+packages/api-contract/src/entities.ts
+  s_25620647d6f8eb::t_3ff74206b6a702 102-103,174-212
+packages/server/src/host.ts
+  s_25620647d6f8eb::t_01555a27052488 17,48,762-771
+packages/server/src/rewind.test.ts
+  s_25620647d6f8eb::t_dac6680540f032 1-374
+packages/server/src/rewind.ts
+  s_25620647d6f8eb::t_54756c8f7010cb 1-43
+packages/server/src/service.ts
+  s_25620647d6f8eb::t_9a9393c4fecdce 53-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "333de09a91d3861cea0dbfc239070c13b8416260",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
