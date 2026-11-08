@@ -1394,6 +1394,10 @@ export class Host {
             touchedTasks.add(a.taskId);
             break;
           }
+          case "verdict": {
+            reject("未实现");
+            break;
+          }
           case "stop": {
             const t = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
