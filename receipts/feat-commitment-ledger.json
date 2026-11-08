@@ -1,0 +1,43 @@
+{
+  "slice": "D23 领域纯函数:接收快照与处理分离、稳定动作和消息去重、联系人承诺登记、产物校验、任务隔离与本轮绑定对账;不接存储、内核或联系人运行时。",
+  "acceptance": [
+    {
+      "id": "AC-40",
+      "status": "未测",
+      "reason": "本片只测领域子判据:承诺登记和保留、Compute 不作为消息发送者、引用任务不串、对账仅检查绑定集合;尚未接真实消息、联系人、Compute、存储和实际用户界面,整项与 C1/C2 端到端未测。候选处置、补次数、边界、唤醒、短名仅有可替换类型形状,未实施、未升为已定。"
+    },
+    {
+      "id": "AC-16",
+      "status": "未测",
+      "reason": "领域入口要求可信产物解析器返回存在才登记 done;实际消息、文件或提交的解析器及结果对外发送尚未接入,完整验收未测。"
+    },
+    {"id":"R-02","status":"通过","notes":"原功能 ff0255c→eb296c4、绑定功能 077f44b→dd6f341 先红后绿。本轮补测针对已有实现，先用后补空壳红 7e08aa6，修正类型后以 d231afb 复测全红，再恢复实现 ec050a5；自查补测的最终红 c06c142 176 条按名失败、绿 d0d1ed9 176 条通过。后补空壳只证明入口激活，不证明测试先于原功能实现；真实时间顺序见证据。 第 3 轮补测的红桩 e58d1d7 是既有实现后的激活对照，206 条按名失败；绿 632fea7 恢复既有实现、206 条通过。该对照不证明新测试先于原功能实现。","evidence":"packages/domain/proof/commitment-ledger-round4-red-green.txt"},
+    { "id": "R-03", "status": "通过", "evidence": "packages/domain/proof/commitment-ledger-tests.txt" },
+    { "id": "R-04", "status": "通过", "evidence": "packages/domain/proof/commitment-ledger-tests.txt" },
+    {"id":"R-05","status":"未测","reason":"选择第 3 轮 R3-07(b)：机械扫描 TOTAL 368 killed=279 survived=89 (其中探针可观测差异=0) invalid=0；存活条件尚未逐条由具名测试杀死或依据其他检查证明等价，例如 L90 drop-left(true) :: typeof x === \"number\"；L90 drop-right(true) :: Number.isSafeInteger(x)；L92 drop-right(true) :: expected.every((key) => Object.hasOwn(x, key))；L94 drop-right(true) :: text(x.id)。完整扫描见 packages/domain/proof/commitment-ledger-round4-sweep.txt，不能据此声称每条判据已标定。","notes":"原样阴性对照 206/206、具名映射 206/206；串行 221/221 个单点故障按指定测试及诊断杀死，含 R3-F01 至 R3-F27。该结果不等于 R-05 全部判据已完成双侧标定。","evidence":"packages/domain/proof/commitment-ledger-mutations.txt"}
+  ],
+  "candidate": {
+    "status": "候选",
+    "description": "处置枚举、对账补次数、步骤边界、唤醒格式、短名标签仅提供 CandidatePolicy 的可替换字段形状;没有默认值、策略实例或行为。"
+  },
+  "author": {
+    "agent": "codex",
+    "session": "codex:8a88fc74-4b9f-48c1-9622-52d06aab6527",
+    "model": "gpt-6.1-terra"
+  },
+  "red": { "commit": "e58d1d78d325a7591b0dbdb5f811b7940ba5807b" },
+  "additional_red": [
+    { "commit": "ba5fa58a3f204b61d42c810f82109b09fa3376c0", "green": "de6256dff22e3bab3fe11972c18bd1992e481ad2", "reason": "重投使用新动作号时必须保留该动作身份。" },
+    { "commit": "82c321568c46a729e92a323b62de7b8fbbee6201", "green": "2291e2b70314a899c4fcbcd8dfe63c695aac8863", "reason": "承诺文字必须可追溯到来源原文,不能凭空生成。" },
+    { "commit": "077f44b61f9eadefd5fc78d049d1432446857219", "green": "dd6f341f164ca94a5b7ad56646ba5ea2b0acf7bb", "reason": "Compute 绑定功能先按名失败再实现。" },
+    { "commit": "d231afb2b263ab4de4b4686ae7c7ae29111b153c", "green": "ec050a5460f66ab06c156599a8834cd87be50365", "reason": "审查第 2 轮补测的后补空壳红绿；初始红 7e08aa6，d231afb 仅更正反例的类型标注后重跑。" },
+    { "commit": "c06c1420eb5c2fb3960e2b71d8aba774d7de49fe", "green": "d0d1ed9e4e4ee78d76d6458039a2fa43da21be5c", "reason": "上一轮自查补测后补空壳红绿。" }
+  ],
+  "rework": { "agent": "codex", "session": "codex:f2b3dc7a-ec4a-4277-ba62-5bd978ce063e", "notes": "第一轮返修;保留原作者和原拒绝审查记录。" },
+  "rework_round2": { "agent": "codex", "session": "codex:99008d31-cc72-445d-bd0a-b9cb0a8d1882", "notes": "保留原有场景,新增独立分项及执行过的对照。补测红提交是原实现之后的回溯性空壳,不改写历史。" },
+  "rework_review_round2": { "agent": "codex", "session": "codex:ac6563f1-7fbc-4cad-80a3-85c21941315e", "model": "gpt-6.1-terra", "notes": "第 2 轮审查返修；前几轮作者均为 Codex：原作者 codex:2e5b967e-007c-43fe-84b4-58374f144f9a，后续返修 codex:f2b3dc7a-ec4a-4277-ba62-5bd978ce063e 和 codex:99008d31-cc72-445d-bd0a-b9cb0a8d1882。保留原审查字段。" },
+  "rework_review_round3": { "agent": "codex", "session": "codex:8a88fc74-4b9f-48c1-9622-52d06aab6527", "model": "gpt-6.1-terra", "notes": "第三轮返修；前几轮作者均为 Codex。后补红桩不改写原实现与测试的时间顺序；保留审查原字段。" },
+  "unverifiable": "AC-40/AC-16:状态转移返回的只是拟提交快照;真实宿主必须先原子持久化接收记录,再在同一持久化事务内提交处理、动作去重和版本检查,并验证调用方身份与产物真实存在。纯函数不能保证崩溃恢复、并发写入的单一提交点、模型完整提取承诺或用户真正看到了结果。原文子串校验只能证明字面来源,不能证明提取完整或语义正确。来源消息 taskId 为 null 时，可登记任意合法 taskId 的承诺；是否还要由宿主进一步限制不在本片证明范围。新增 computeId 为承诺必填字段,旧快照若已持久化须先迁移,本片不接存储。PR #4 contact.ts 的 commitments 仍是另一套数据形状:id/sourceSeq/text 可对应,但 boundTaskIds/awaitingReport/reportedTaskIds/schedule 与这里单个 taskId 和 blocked/superseded 状态不一一对应;合并接线时必须明确单一账本权威、迁移和末次汇报语义,不能作为两份并列真源。R-02:后补测试的红桩不能证明这些测试先于原实现;R-05:已执行变异仅覆盖所列判据和算子,不能证明真实宿主或所有可能故障。",
+  "waiver": null,
+  "review": {"agent":"claude","session":"claude:ae5ffc16-f948-4351-bc20-bac169dde454","model":"anyrouter/claude-opus-5-5","verdict":"approve","reviewed_hash":"c04730dac843f89484420b43c3a036f0401d5c2eaa3033fbaf4f6f0fa91a5374","notes":"第 4 轮 APPROVE（204c676）：R3-01..R3-06 已修（第 3 轮 27 个故障在 204c676 上全被发现，R3-F01–F27 共 31 条进作者清单并按名杀死）；R3-07 按 (b) 处理，R-05 未测且 reason 引用扫描存活清单，无任何当前条目写成通过；产品源码与 ed075ea 逐字节相同。复现 typecheck/lint 0、npm test 229/229（账本 206/206）无 skip/todo、作者 221/221 变异按名杀死且与 proof 逐行一致、红 e58d1d7 206/206 按名失败、绿 632fea7 206/206、扫描 368/279/89/0 与 proof 一致、--local 除 G-REVIEW 外全过、8 个门禁负例各自判败。审查方新故障 7 个存活 4（探针均可观测、原实现正确），都在已标未测范围内、不阻塞：R4-01 引用回复 taskId 为 null 可绕过串任务检查（AC-40 当前必过⑨，接线前必补）；R4-02 done 说明丢失；R4-03 重试返回账本不冻结；R4-04 R-05 reason 只覆盖扫描算子。见 reviews/feat-commitment-ledger.md 第 4 轮。"}
+}

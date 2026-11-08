@@ -1,0 +1,34 @@
+// 主进程推给渲染进程的事件流。每条事件带全局递增的 eventSeq:渲染进程断线/刷新后用 sinceEventSeq 续订,
+// 服务端补发缺口;缺口太大(已丢弃)时回 resync=true,渲染进程重新 list。
+import { CommitmentView, ComputeProgress, CONTACT_ACTIVITY, ContactView, MemberRef, MessageView, PluginView, RoomView, ScheduleView, SlashCommand, TaskView } from "./entities.ts";
+import { arr, id, isoTime, nullable, obj, oneOf, seq, str, tagged, type Infer, lit } from "./schema.ts";
+
+const ev = <T extends string, S extends Record<string, Parameters<typeof obj>[0][string]>>(type: T, payload: S) =>
+  obj({ type: lit(type), eventSeq: seq(), at: isoTime(), ...payload });
+
+export const ServerEvent = tagged("type", {
+  "message.appended": ev("message.appended", { message: MessageView }),
+  /** 编辑、撤回、表情、卡片状态变化:整条替换。 */
+  "message.updated": ev("message.updated", { message: MessageView }),
+  "receipt.updated": ev("receipt.updated", { roomId: id(), member: MemberRef, readSeq: seq() }),
+  "room.updated": ev("room.updated", { room: RoomView }),
+  "room.removed": ev("room.removed", { roomId: id() }),
+  "contact.updated": ev("contact.updated", { contact: ContactView }),
+  "contact.removed": ev("contact.removed", { contactId: id() }),
+  /** 输入框上方「xx 正在回复…」;roomId 为 null 表示不在任何会话里活动。 */
+  "contact.activity": ev("contact.activity", { contactId: id(), roomId: nullable(id()), activity: oneOf(CONTACT_ACTIVITY) }),
+  "task.updated": ev("task.updated", { task: TaskView }),
+  "compute.progress": ev("compute.progress", { progress: ComputeProgress }),
+  "commitment.updated": ev("commitment.updated", { commitment: CommitmentView }),
+  "schedule.updated": ev("schedule.updated", { schedule: ScheduleView }),
+  "schedule.removed": ev("schedule.removed", { scheduleId: id() }),
+  "plugin.updated": ev("plugin.updated", { plugin: PluginView }),
+  "plugin.removed": ev("plugin.removed", { pluginId: id() }),
+  /** 某会话可用 slash 命令集合变了(插件启停、联系人能力变化),渲染进程刷新补全列表。 */
+  "commands.changed": ev("commands.changed", { roomId: nullable(id()), commands: nullable(arr(SlashCommand)) }),
+  /** 订阅续接失败(缺口已丢弃):渲染进程需全量重拉。 */
+  "stream.resync": ev("stream.resync", { reason: str({ max: 500 }) }),
+} as const);
+export type ServerEvent = Infer<typeof ServerEvent>;
+export type ServerEventType = ServerEvent["type"];
+export type EventOf<T extends ServerEventType> = Extract<ServerEvent, { type: T }>;

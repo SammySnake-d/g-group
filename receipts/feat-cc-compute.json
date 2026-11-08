@@ -1,0 +1,46 @@
+{
+ "slice": "Claude Code Compute 适配器(adapter 层)第一条路径,含 Codex 首轮 F-01–F-04、第二轮 RR-01/02/04/05、第三轮 R3-01–R3-04、第四轮 R4-01–R4-05、第五轮 R5-01/R5-02 返修;停止语义按 g-group#2309 对照 mirasim 0.0.774 z2(child,{graceMs:0,group:true}) 的 POSIX 路径:brief 只收五个字段、凭据只收引用、tools 只收具体内置工具名;默认 runner 起真实 claude -p --output-format stream-json --verbose --bare,挂 report_progress MCP,--tools/--allowedTools 按 brief.tools 收窄;init 之前只放行 hook_started/hook_response/ui_invalidate 三种 system 帧,其余输出判违规,必须先收到可校验的 init 才进入运行;汇报由服务器与适配器共用 schema 校验,被拒收的 blocked/failed 只有同种合规重报或宿主 resume 才解除;CLI detached 自成进程组;stop 立即产出 stopped(scope:\"main-then-group\")并封存这一轮,初始 SIGTERM 只发主进程,reapForceMs(默认 10000)后主进程仍未退出才对进程组 SIGKILL,主进程先退出就取消;CLI 正常结束不发信号;已受理 blocked 对进程组 SIGSTOP(非 mirasim 对照项);resume 先校验输入再处理冻结进程;对外终态 停止 > 违规 > 受阻 > 进程失败 > 汇报放弃 > 拒收未解决 > 完成;snapshot 只在终态且主进程已退出后成功。 第四轮:所有外部输入(brief、spawn 选项与 handoff、适配器选项、汇报、快照)读取前先按 src/plain.ts 纯数据合同判定(先 types.isProxy,原型 Object.prototype/null 或 Array.prototype,只看自有描述符,访问器含不可枚举 setter、Symbol 键、不可枚举属性、稀疏数组一律拒绝,判定时不读值、之后只读冻结副本),computeId/续接文本非字符串直接拒收;report MCP 对坏 JSON 回 -32700、对 null/原始值/数组回 -32600 并继续服务;reapForceMs 未显式给出时按 mirasim Ukc 每次回收读 MIRASIM_REAP_FORCE_MS(有限正数生效,否则 10000),显式优先;导出常量 CC_BUILTIN_TOOLS/REPORT_KINDS/PRE_INIT_SYSTEM_SUBTYPES/DEFAULT_RUNNER 冻结,CREDENTIAL_REF 改为 isCredentialRef;工具定义由 report-schema.ts 的 reportToolDefinition 统一提供;每轮的 g-group-cc-* 临时目录在 CLI 主进程退出时删除,测试的 fake-cc-* 在回收进程时删除。 第五轮:plain.ts 不再丢弃值为 undefined 的对象自有属性,作为自有键保留在冻结副本里,字段存在与否以安全取得的自有描述符为准,未声明字段值为 undefined 也被 brief/spawn 选项/handoff 快照/汇报/适配器选项的白名单拒绝、不起进程;声明过的可选字段(spawn 选项 cwd/handoff、汇报 stage/needs/constraintVer/openQuestions/doneSideEffects、适配器选项)为 undefined 按没给处理,必填字段为 undefined 按缺失拒收,数组元素为 undefined 仍拒绝;report MCP 的 tools/call 先核对 params.name,只认 report_progress,未知、缺失或非字符串名称回 -32602(MCP 2025-06-18 工具规范),不校验参数、不写 REPORT_LOG、不回“已记录”。 第六轮:R6-01 全部外部输入(firstPrompt/allowedTools/cliArgs/cliEnv/streamParser/terminalFor/resolveReapForceMs)读取前按 plain.ts 纯数据合同判定,getter/setter/Proxy 不调用即拒收、不起子进程;R6-02 对外事件 events 与 rejectedReports 深冻结,消费者无法清空或污染后续读取;R6-03 report MCP 工具名精确匹配(trim/大小写/连字符变体一律 -32602,不写 REPORT_LOG)。单点变异 M79–M96 覆盖三项,96 个变异全杀。 第七轮:R7-01 resume 对每个 Compute 原子认领续接(认领检查与置位之间没有 await),已有续接在等冻结的上一轮退出时别的 resume 立即以“正在续接”明确拒绝,同一轮最多一个启动者;跨过等待之后复核这一轮是否已被 stop,被停止就以“已被停止,这次续接作废”拒绝,stop 确认之后不再起 CLI;R7-02 events.ts 对外部 JSON 的 type/subtype/host 状态先判类型,字符串原样、其余原始值照写、对象与数组只给固定说明“(对象)”/“(数组)”,不再做隐式字符串转换,拒收回执只拼接字符串 text;适配器对 stdout 的每一行加受控边界,onLine 抛出的任何异常(含汇报 kind 嵌套过深时拷贝栈溢出)只记为当前 Compute 的违规“处理 CLI 输出时出错”,照常回收并 failed,不终止适配器宿主;R7-03 实现原本就是精确匹配认可清单,只补与认可帧仅差子类型的邻接反例测试。单点变异 M97–M112 覆盖三项(M108 即审查 S04 原样),112 个变异全杀。",
+ "acceptance": [
+  {
+   "id": "AC-33",
+   "status": "未测",
+   "reason": "本片只覆盖 ④ 的 Compute 侧子判据,在假 CLI 上通过(proof/tests.txt;mutations.txt 的 M01–M03、M09、M10、M16–M18、M36–M38、M51、M57–M67、M74–M78、M79–M96 被杀;外部输入的 getter/setter/Proxy 不调用即拒收、不起子进程,计数器为 0;未声明字段值为 undefined 也拒收、中性启动标记不出现;report MCP 未知工具名回 -32602 不入日志)。真实 CLI 上工具调用是否真被拒没有证据;①–③ 与“工具是联系人白名单子集”在 contact.briefFor(PR #4)与内核接线"
+  },
+  {
+   "id": "AC-07",
+   "status": "未测",
+   "reason": "快照与装配清单子判据在假 CLI 上通过(M07、M08、M14);snapshot 只在终态且主进程已退出后成功(M41、M42)。stopped 只表示已对主进程发 SIGTERM 并安排到期组 SIGKILL,快照不检查同组或脱组的其它进程。整项要求的“卸载或转交前必须写快照”“换 Compute 不换负责人”“已完成副作用不重做(副作用账)”依赖内核的转交流程与副作用账,本片没有"
+  },
+  {
+   "id": "V-06",
+   "status": "未测",
+   "reason": "completed 以 result、is_error 与退出码为准,milestone 漏报不影响(M04、M05、M20);汇报放弃、拒收未解决不报完成(M19、M21、M32、M33、M35);已受理 blocked 后停在受阻(M11、M34);stopped 之后迟到的输出不改终态(M47);init 前未认可的输出判违规(M49、M50);工具发现走 tools/list,清单缺 report_progress 时 init 判无法核验(M54)。三次真实 CLI smoke 都因模型网关 503 没跑到汇报(proof/smoke-real.txt),真实 CLI 上的事件映射没有证据。第七轮:受阻后并发续接只受理一个、在途续接被 stop 作废且不再起 CLI(M97–M100);CLI 输出里合法 JSON 的对象/数组字段不再使适配器宿主退出,当前 Compute 按违规回收并 failed、同一适配器继续服务(M101–M107);init 前认可帧的邻接放宽被具名测试杀死(M108–M112)。这些都在假 CLI 与隔离宿主子进程上验证,真实 CLI 仍未跑到"
+  },
+  {
+   "id": "R-02",
+   "status": "通过",
+   "evidence": "packages/adapter-cc-compute/proof/tests.txt"
+  },
+  {
+   "id": "R-03",
+   "status": "通过",
+   "evidence": "packages/adapter-cc-compute/proof/gates.txt"
+  },
+  {
+   "id": "R-05",
+   "status": "通过",
+   "evidence": "packages/adapter-cc-compute/proof/mutations.txt"
+  }
+ ],
+ "author": {
+  "agent": "claude",
+  "session": "claude:de049f29-0519-414a-9600-8afda5dfc50f",
+  "model": "claude-opus-5-5"
+ },
+ "red": {
+  "commit": "7c28b837bb616ba87ff91398cc0d90cb4817ad14"
+ },
+ "unverifiable": "停止语义按用户 g-group#2309「按照 mirasim 的做法来」,对照 mirasim 0.0.774 server-main.cjs(SHA-256 b342710f…)中 z2(child,{graceMs:0,group:true}) 的 POSIX 路径:主进程已退出时什么都不发;否则 l2 → MLe 只对主进程 child.kill('SIGTERM')(分支条件 group && !PU 在 POSIX 上为假,不是组 SIGTERM);forceMs(c2.forceMs ?? Ukc():显式优先,否则 Number(MIRASIM_REAP_FORCE_MS) 有限正数生效,否则 Lkc=1e4;第四轮 R4-03 起本适配器同样接上,见 resolveReapForceMs)后 k2 → FG 对进程组 process.kill(-pid,'SIGKILL');主进程 exit 时 j2 清掉计时器。scope 字段取名 \"main-then-group\" 如实反映这一点。上一版说的“对进程组 SIGTERM、与 mirasim 不多不少”是错的,Codex 第三轮已指出,本版更正。后果:主进程在 10 秒内按时退出时,同进程组的其它进程(MCP 服务器、Bash 起的子进程)收不到任何信号、可能继续运行;CLI 正常结束时也不发信号;脱离进程组的后代(setsid、双 fork 守护进程)任何情况下都不覆盖。这些以记录性测试固定为已知不覆盖。内核不得把 stopped 当作执行树已静止,更不是容器级静止;完全隔离归 placement=cloud_sandbox/容器,不在本片。快照(AC-07)只要求终态且主进程已退出。非 mirasim 对照项:已受理 blocked 时对进程组 SIGSTOP 冻结、resume 时对冻结的组 SIGKILL、stop 时对冻结的组 SIGKILL。mirasim 0.0.774 源码里 SIGSTOP 只在一处注释出现,SIGCONT 不出现,没有暂停进程的做法,所以这几处是本适配器自己的设计。R3-03 的 init 前认可清单(hook_started/hook_response/ui_invalidate)来自原型与 smoke 里见过的真实 CLI 2.1.316 前导帧,真实 CLI 若输出别的前导帧会被判违规(只会误拒,不会放宽)。F-03:改为事件屏障后负载下连跑 20 次全绿(proof/flake-20.txt,1 分钟 load 约 6–23,另一副本同时循环跑 npm test),只证明这台 8 核机器上的稳定性。R3-04:测试按自己的临时目录扫描进程表回收进程,不依赖假 CLI 写记录。所有行为测试跑在假 CLI 上:report_progress 经真实 MCP 服务器往返,孙进程与守护进程是真实进程,但 --tools(default 展开按 Codex 在真实 CLI 2.1.316 上的观察写死)、--allowedTools、dontAsk、--bare 是模拟的;AC-33 ④ 在真实 CLI 上是否真拒绝清单外调用、--bare 是否真不加载记忆,没有证据。V-06:三次真实 smoke 都因模型网关 503 未完成,真实 CLI 上的 milestone/blocked/completed/failed 映射与快照没跑到。Windows 未测。CC_BUILTIN_TOOLS 是手写白名单;F-04 的 schema 由服务器和适配器共用 src/report-schema.ts,两边同时写错会一起失效;hostEnv 里的明文由内核接线保证(AC-33);快照内容来自 Compute 自报。R-05 只覆盖 mutations.mjs 列出的 112 种故障(第七轮),超时、被信号结束、部分执行一律记为未杀死。 第四轮返修边界:(1) R4-01 纯数据合同只在内置原型未被改的环境下成立(用户 g-group#2662「1 缩小合同：只保证内置原型未被改的环境（建议）」),事先改 Object.prototype/Array.prototype 等的反例不在保证范围;测试覆盖 getter、不可枚举 setter、Proxy(计数所有陷阱)、撤销 Proxy、自定义原型 getter、非预期字段、toPrimitive/toString 状态参数,不声称覆盖全部 JS 元编程对象(例如冻结与否、类实例的私有字段只按原型拒绝)。适配器选项不合格时 createComputeAdapter 抛受控 TypeError(构造器没有返回值通道),其余入口返回拒绝。(2) R4-02:非对象请求回 id:null 的 JSON-RPC 错误;JSON-RPC 批量请求(数组)按无效请求拒绝,不支持批量。(3) R4-03:环境变量在每次回收时读取(与 z2 调用 Ukc 的时机一致);Windows 路径未测。(4) 磁盘清理:g-group-cc-* 在 CLI 主进程退出、收尾完成后删除;被 SIGSTOP 冻结、尚未被 resume/stop 的一轮目录保留到它退出;宿主进程自身崩溃时目录不删。测试只删自己 fake() 建的 fake-cc-* 目录,不碰既有旧目录(T-96 统一处理)。验收:跑本包测试前后数 os.tmpdir() 里 g-group-cc-* / fake-cc-* / cc-compute-mut-* 个数,前 g-group-cc-*=0 fake-cc-*=0 cc-compute-mut-*=4,后 g-group-cc-*=0 fake-cc-*=0 cc-compute-mut-*=4,不增加;第五轮(HEAD 46c5dbf)重测:前 g-group-cc-*=0 fake-cc-*=0 cc-compute-mut-*=4,后同样 0/0/4,不增加(cc-compute-mut-* 4 个是既有旧目录,不属本会话,未动);变异脚本每个副本用自己的 TMPDIR,变异体不清理目录也不往系统临时目录漏。(5) 历史 TDD 证据边界,如实记录、不改写历史、不补造先红:47f2106 首次实现时 mcp/report-mcp.mjs 已含 constraintVer/openQuestions/doneSideEffects 三字段的 schema 与校验,首红 21 条按名失败全部来自适配器空壳,没有针对这三个服务器字段的先红证据;fbac6de→98713f6 的 F-04 红绿证明的是共享校验器 report-schema.ts 与 F-04 回归测试的具名红绿(红版首次 RPC 即命中 reportErrors 空壳抛错),不证明三字段原始实现各自先红;服务器注释所称来自外部原型 g-group-prototype/report-mcp.mjs 的部分是复用,没有在本仓库先红,原型源码历史未比对。第四轮起对两字段加了正式单点变异 M52/M53、对 tools/list 与 REPORT_LOG 加了正反对照与 M54/M55,这是补回归与变异,不替代当时的先红证据;G-RED 只核对收据红提交上的测试按名失败,不核实每段代码最早编写前是否已有针对性失败测试。 第五轮返修边界:(1) R5-01 的先红:红提交 bc2f141 按本 PR 惯例让全部实现回到空壳(G-RED 要求 PR 内每条测试在红提交上按名失败),75 条按名失败、文件级失败 0;此外在旧实现(8b13205 的 src/ 与 mcp/)上只换入新测试文件,两条 R5-01 测试与一条 R5-02 测试各自按名失败(proof/r5-red-on-old-impl.txt),这是两项新问题各自独立的先红证据;变异 M74(丢弃 undefined 键,即旧行为)与 M77(不核对工具名,即旧行为)分别被对应具名测试杀死。(2) 可选字段 undefined 按没给处理是本包的明确选择(与 TypeScript 可选属性传 undefined 的常见写法一致),M75/M76 固定这一点;适配器选项 hostEnv 里值为 undefined 的键现在按“值必须是字符串”拒绝(此前被静默丢弃)。合同仍限定内置原型未被改的环境(g-group#2662)。(3) R5-02 只覆盖 report MCP 自身的 tools/call 分支;真实 CLI 是否会以未声明名称调用本服务器、以及适配器侧对非 mcp__host__report_progress 工具的映射未在真实 CLI 上验证。-32602 回复的 id 取请求的 id,缺 id 时为 null。 第七轮返修边界:(1) R7-01 只保证同一个适配器实例内、同一 Compute 的 resume 互斥与 stop 复核(单进程内同步认领);多个宿主进程或多个适配器实例操作同一 CLI 会话不在本片范围。落败的 resume 立即拒绝、不排队;在途续接被 stop 作废时,stopped 归在被停止的受阻那一轮;stop 之后、上一轮主进程已退出时宿主再显式 resume 仍按既有语义起新的一轮,本轮没有改。(2) R7-02 的固定说明覆盖本包对 CLI 输出做字符串化的三处(preInitFrame 的 type/subtype、checkInit 的 host 状态)与拒收回执 text 的拼接;受控边界只包 readline 每一行的处理(onLine),不包 stderr 与进程退出回调(它们不读 CLI 的 JSON 字段);嵌套过深的汇报 kind 由受控边界判为违规 failed(拷贝记录时栈溢出),不是按深度阈值拒收;report MCP 服务器是另一个进程,设了 REPORT_LOG 时对深嵌套参数的 JSON.stringify 没有加固,不影响适配器宿主。输入保证仍限定内置原型未被改的环境(g-group#2662)。隔离宿主子进程的测试证明的是注入 runner 的协议边界,不声称真实 Claude 模型输出过这些行。(3) R7-03 原实现本来就是精确匹配,本轮只补测试;它的先红证据是 M108(审查 S04 原样)被具名测试杀死,另有 M109–M112 覆盖前缀、大小写、空白、子串四种邻接放宽。独立先红见 packages/adapter-cc-compute/proof/r7-red-on-old-impl.txt:旧实现上 R7-01 两条、R7-02 两条按名失败,R7-03 通过;新增 16 个变异逐个 typecheck 退出 0。(4) 变异以 CC_MUT_CONCURRENCY=2 跑(本机同时有别的测试),只影响调度,不改注入点与判决。",
+ "waiver": null,
+ "review": null
+}
