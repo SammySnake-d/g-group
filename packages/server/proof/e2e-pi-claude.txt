@@ -1,0 +1,28 @@
+# 2026-11-08 真实 P0 闭环:pi 联系人脑子(@g-group/adapter-pi-contact,模型 $ANTHROPIC_DEFAULT_SONNET_MODEL 经网关,Bearer)+ 真实 Claude Code Compute
+# 命令: node packages/server/src/cli.ts dm --db /tmp/gg-e2e3/gg.db --mind pi --compute claude --cwd /tmp/gg-e2e3/work "帮我在你的工作目录里写一个 hello.txt,内容是 hi from g-group,写好告诉我"
+# 网关地址与令牌只经环境变量传入,未落盘;下面是运行输出原文
+  → 小克: 接了任务:写 hello.txt
+  → 小克: 好的，我现在去写 hello.txt，写好了告诉你。
+  · Compute started: 已开始
+  · Compute completed: 我已在当前工作目录创建 hello.txt,内容与要求一致（末尾带一个换行）。
+
+- **绝对路径**：`/private/tmp/gg-e2e3/work/t-mw7zep3g-1/hello.txt`
+- **cat 输出**：
+  ```
+  hi from g-group
+  ```
+
+已向宿主报告完成。
+  → 小克: hello.txt 写好了。
+路径:/private/tmp/gg-e2e3/work/t-mw7zep3g-1/hello.txt
+内容:hi from g-group(结尾有一个换行)
+—— 会话 ——
+#1 我: 帮我在你的工作目录里写一个 hello.txt,内容是 hi from g-group,写好告诉我
+#2 小克: 接了任务:写 hello.txt  [卡片:task-status/open 取消任务]
+#3 小克: 好的，我现在去写 hello.txt，写好了告诉你。
+#4 小克: hello.txt 写好了。
+路径:/private/tmp/gg-e2e3/work/t-mw7zep3g-1/hello.txt
+内容:hi from g-group(结尾有一个换行)  [卡片:delivery/open 豁免审查并通过|退回]
+任务 t-mw7zep3g-1 [T5_InReview] 写 hello.txt 审查门=none 进度=started>completed
+# hello.txt 实际内容: hi from g-group
+# 承诺账本: [["写好告诉我",1,"t-mw7zep3g-1","active"]]

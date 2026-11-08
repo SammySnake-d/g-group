@@ -64,8 +64,12 @@ export function closeStore(s: SqliteStore): void {
   s.db.close();
 }
 
-/** 写事务:BEGIN IMMEDIATE 一开始就拿写锁,读到的状态在提交前不会被别的连接改掉。 */
+/**
+ * 写事务:BEGIN IMMEDIATE 一开始就拿写锁,读到的状态在提交前不会被别的连接改掉。
+ * 可重入:已在事务里(宿主用 transaction 把多步包成一次原子提交)就直接执行,由最外层提交或回滚。
+ */
 function tx<T>(db: DatabaseSync, fn: () => T): T {
+  if (db.isTransaction) return fn();
   db.exec("BEGIN IMMEDIATE");
   try {
     const r = fn();
@@ -75,6 +79,16 @@ function tx<T>(db: DatabaseSync, fn: () => T): T {
     db.exec("ROLLBACK");
     throw e;
   }
+}
+
+/**
+ * 宿主的单一提交点:fn 里的 appendEvent / commitDoc / recordAction 与宿主自己的表写入在同一个写事务里,
+ * 要么全部落盘要么全部回滚(processed_seq + ΔState + 外发动作原子提交,D15.1)。fn 抛错即回滚并原样抛出。
+ * 注意:fn 内 commitDoc 返回 version-conflict 不会自动回滚,调用方要自己抛错放弃整次提交。
+ */
+export function transaction<T>(s: SqliteStore, fn: () => T): T {
+  if (s.db.isTransaction) throw new Error("transaction 不可嵌套:已在事务里");
+  return tx(s.db, fn);
 }
 
 interface EventRow { seq: number; at: string; sender_kind: string; sender_id: string; body: string; prev: string; hash: string }
