@@ -240,6 +240,9 @@ export function sameRepoClone(rootReal: string): (abs: string) => boolean {
   };
 }
 
+/** R11 目录身份边界的测试桩,后续由受检实现替换。 */
+export function isRepoPath(_abs: string, _rootReal: string, _proven: readonly string[], _clone: (abs: string) => boolean): boolean { return false; }
+
 /** 一条 shell 命令里每次 git 调用的执行目录:按 cd 链与 git -C 解析;git clone 不在目录里执行,跳过;判不了的记 undefined */
 export function gitDirs(command: string, cwd: string | undefined): (string | undefined)[] {
   const res = (base: string | undefined, p: string): string | undefined => {

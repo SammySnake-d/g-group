@@ -11,7 +11,7 @@ import * as judge from "./judge.ts";
 import { CASE_MARK, type CaseResult, evidence, type Kind, killedBy, parseGateOutput } from "./judge.ts";
 import { verdict as runnerVerdict } from "./test-runner.ts";
 import { vendorOf } from "./vendor.ts";
-import { attestedDirs, sameRepoClone, turnTouchesRepo } from "./gates.ts";
+import { attestedDirs, isRepoPath, sameRepoClone, turnTouchesRepo } from "./gates.ts";
 
 const HERE = import.meta.dirname;
 const CLI = path.join(HERE, "run-all.ts");
@@ -736,6 +736,19 @@ function r11Guard(): string | undefined {
 
 export const CASES: Case[] = [
   { name: "R11-01 remote 相同但历史不相交仍拒绝,共同历史放行", direct: r11RepoIdentity, expect: null },
+  { name: "R11-01 目录标签不足以确认仓库路径", direct: () => {
+    const root = path.resolve("/tmp/fixture-target"), unrelated = path.resolve("/tmp/elsewhere/g-group/a.ts");
+    return !isRepoPath(path.join(root, "a.ts"), root, [], () => false) || isRepoPath(unrelated, root, [], () => false) ? "仓库路径边界不正确" : undefined;
+  }, expect: null },
+  { name: "R11-01 空仓库身份未知仍拒绝,共同历史放行", direct: () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-empty-"));
+    try {
+      const repo = path.join(tmp, "target"), empty = path.join(tmp, "empty"), copy = path.join(tmp, "clone");
+      otherRepo(repo); otherRepo(empty, false); sh(tmp, "clone", "-q", repo, copy);
+      const same = sameRepoClone(repo);
+      return same(empty) || !same(copy) ? "未知仓库或共同历史判断不正确" : undefined;
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  }, expect: null },
   { name: "R11-01 同 remote 的无关仓库写入经来源门禁拒绝", authorTurns: (repo) => {
     const other = path.join(path.dirname(repo), "independent");
     otherRepo(other); write(other, { "packages/core/src/add.ts": ADD_OK });
