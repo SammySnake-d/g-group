@@ -23,9 +23,9 @@
     --brand: 13 82% 54%;
     --brand-fg: 0 0% 100%;
     --brand-soft: 16 90% 95.5%;
-    --rail: 232 22% 13%;
-    --rail-fg: 36 20% 78%;
-    --rail-hover: 232 18% 20%;
+    --rail: 38 20% 93.2%;
+    --rail-fg: 228 8% 42%;
+    --rail-hover: 36 18% 88.5%;
     --btn: 230 28% 17%;
     --btn-fg: 40 40% 97%;
     --fg: 230 22% 13%;
@@ -65,7 +65,12 @@
     --input: var(--line);
     --ring: var(--fg3);
     --radius: 0.75rem;
-    --shadow-elev: 0 1px 2px rgb(40 30 10 / 0.05), 0 10px 28px -8px rgb(40 30 10 / 0.16);
+    --shadow-elev: 0 0 0 1px rgb(40 30 10 / 0.04), 0 2px 4px -1px rgb(40 30 10 / 0.06), 0 12px 28px -8px rgb(40 30 10 / 0.18);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --dur-fast: 120ms;
+    --dur-base: 180ms;
+    --dur-slow: 240ms;
     --shadow-soft: 0 1px 0 rgb(40 30 10 / 0.04), 0 2px 6px -2px rgb(40 30 10 / 0.06);
     color-scheme: light;
   }
@@ -83,9 +88,9 @@
     --brand: 14 88% 62%;
     --brand-fg: 230 20% 8%;
     --brand-soft: 14 40% 14%;
-    --rail: 232 18% 5.5%;
-    --rail-fg: 36 12% 66%;
-    --rail-hover: 232 14% 13%;
+    --rail: 230 14% 6.5%;
+    --rail-fg: 228 8% 60%;
+    --rail-hover: 230 10% 14%;
     --btn: 40 30% 92%;
     --btn-fg: 230 22% 10%;
     --fg: 40 20% 92%;

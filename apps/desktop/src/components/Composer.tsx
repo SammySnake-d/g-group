@@ -1,3 +1,4 @@
+import { COMPOSER_EMOJI } from '@/config/emoji'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Smile, AtSign, Scissors, FolderClosed, Image as ImageIcon, History, X, Reply } from 'lucide-react'
 import { availableCommands, completeToken, detectSlash, filterCommands, parseInvocation, parseSource, removeToken, type SlashEntry, type SlashInvocation } from '@g-group/ui-core'
@@ -12,7 +13,7 @@ import { broken } from '@/mut'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ScheduleDialog, SlashMenu, SourceBadge, SourcePicker } from './Slash'
 
-const EMOJIS = ['😀', '😂', '🥹', '😊', '😉', '😍', '🤔', '😮', '😴', '😭', '😡', '👍', '👎', '👏', '🙏', '💪', '🎉', '❤️', '🔥', '✅', '❌', '👀', '🤝', '🫡']
+const EMOJIS = COMPOSER_EMOJI
 /** 输入框最多长到 8 行，再多就在框里滚动 */
 const MAX_LINES = 8
 

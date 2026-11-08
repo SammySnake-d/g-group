@@ -1,0 +1,43 @@
+{
+  "note": "历史文件的棘轮基线:只许变小;拆分后删掉对应条目",
+  "lines": {
+    "App.tsx": 1135,
+    "components/GroupSide.tsx": 412,
+    "components/Helper.tsx": 474,
+    "components/Messages.tsx": 813,
+    "components/ModelSettings.tsx": 638,
+    "components/Overlays.tsx": 897,
+    "components/Panorama.tsx": 471,
+    "components/Plugins.tsx": 789,
+    "components/Split.tsx": 476,
+    "components/Workbench.tsx": 577
+  },
+  "buttons": {
+    "App.tsx": 19,
+    "components/CloneFlow.tsx": 7,
+    "components/Composer.tsx": 12,
+    "components/CronDetail.tsx": 10,
+    "components/CronEditor.tsx": 6,
+    "components/CronList.tsx": 3,
+    "components/FilesMain.tsx": 3,
+    "components/GroupSide.tsx": 29,
+    "components/Helper.tsx": 13,
+    "components/Messages.tsx": 49,
+    "components/ModelSettings.tsx": 16,
+    "components/Overlays.tsx": 46,
+    "components/Panorama.tsx": 20,
+    "components/Plugins.tsx": 37,
+    "components/Receipt.tsx": 3,
+    "components/Slash.tsx": 4,
+    "components/Split.tsx": 31,
+    "components/Workbench.tsx": 27
+  },
+  "literals": {
+    "App.tsx": 4,
+    "components/Helper.tsx": 1,
+    "components/Messages.tsx": 4,
+    "components/Overlays.tsx": 5,
+    "components/Split.tsx": 3,
+    "pluginInfo.ts": 1
+  }
+}

@@ -1,9 +1,11 @@
 import { startDrag, endDrag } from '@/drag'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Puzzle, X, Search, Plus, MessageCircle, Users, Activity, FolderOpen, Settings, ChevronsDown, Link2, UserPlus, UsersRound, Forward, Pin, BellOff, CheckCheck, PanelRight, Settings2, AtSign, AlarmClock } from 'lucide-react'
+import { X, Search, Plus, Link2, UserPlus, UsersRound, Forward, Pin, BellOff, CheckCheck, PanelRight, Settings2, AtSign, AlarmClock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { poolUsed, convs0, computes0, pending0, reactions0, boards0, commits0, playbook0, crons0, checklist0, plugins0, pluginCatalog0, pulse0, people, artifacts, type PluginState, type Conversation, type Msg, type PersonId, type Compute, type Pending, type QuoteRef, type Activity as Act } from '@/data'
 import { probeBackend, type BackendState } from '@/api/backend'
+import { Rail } from '@/app/Rail'
+import { JumpToLatest } from '@/app/JumpToLatest'
 import { INITIAL_MODEL_SETTINGS, type ModelSettings } from '@/modelConfig'
 import { AppCtx, type Ctx, type Page, type SplitTab, type Section, type WbTab, type ScheduleDraft } from '@/ctx'
 import { describeTrigger } from '@g-group/ui-core'
@@ -882,40 +884,21 @@ export default function App() {
 
   return (
     <AppCtx.Provider value={ctx}>
-      <TooltipProvider>
+      <TooltipProvider delayDuration={500} skipDelayDuration={300}>
         <div className="relative flex h-full min-h-[640px] overflow-hidden bg-bg text-fg">
           {/* ============ 菜单栏 ============ */}
-          <nav className="flex w-[64px] shrink-0 flex-col items-center gap-1.5 bg-rail pb-3 pt-10 text-rail-fg" data-testid="rail">
-            <div className="mb-3 grid h-9 w-9 place-items-center rounded-[11px] bg-brand text-[17px] font-black italic leading-none tracking-tight text-brand-fg shadow-soft" title="g-group" data-testid="brand-mark">g</div>
-            {([
-              { k: 'chat', I: MessageCircle, label: '消息', badge: totals.wait + totals.err },
-              { k: 'contacts', I: Users, label: '通讯录' },
-              { k: 'activity', I: Activity, label: '进展', dot: totals.run > 0 },
-              { k: 'files', I: FolderOpen, label: '文件' },
-              { k: 'plugins', I: Puzzle, label: '插件' },
-            ] as const).map((it) => (
-              <Tip key={it.k} label={it.label} side="right">
-                <button data-testid={`nav-${it.k}`} onClick={() => (it.k === 'activity' ? setPanoOpen(true) : setSection(it.k))} data-on={(it.k === 'activity' ? panoOpen : section === it.k && !panoOpen) ? '1' : '0'} className={cn('relative grid h-10 w-10 place-items-center rounded-xl transition', (it.k === 'activity' ? panoOpen : section === it.k && !panoOpen) ? 'bg-rail-hover text-white before:absolute before:-left-[12px] before:top-2 before:h-6 before:w-[3px] before:rounded-r before:bg-brand' : 'text-rail-fg hover:bg-rail-hover hover:text-white')}>
-                  <it.I className="h-[20px] w-[20px]" strokeWidth={(it.k === 'activity' ? panoOpen : section === it.k && !panoOpen) ? 2 : 1.75} />
-                  {'badge' in it && it.badge > 0 && <span className="absolute -right-0.5 -top-0.5 grid h-[17px] min-w-[17px] place-items-center rounded-full border-2 border-rail bg-brand px-1 text-[10px] font-semibold text-white">{it.badge}</span>}
-                  {'dot' in it && it.dot && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border-2 border-rail bg-run" />}
-                </button>
-              </Tip>
-            ))}
-            <div className="flex-1" />
-            <Tip label="Helper（全局 · ⌘K）：默认不读任何聊天" side="right">
-              <button data-testid="nav-helper" onClick={() => setHelperGlobal((v) => !v)} className={cn('grid h-10 w-10 place-items-center rounded-xl hover:bg-rail-hover', helperGlobal && 'bg-rail-hover')}><Bot shape="lightbulb" color="#f8a01c" size={26} /></button>
-            </Tip>
-            {backend.mode !== 'connected' && (
-              <Tip label={backend.mode === 'checking' ? '正在连接后端…' : `后端未连接(${backend.reason}),界面里是演示数据`} side="right">
-                <span data-testid="backend-demo" data-mode={backend.mode} className="mb-1 rounded-md border border-rail-hover px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-rail-fg">演示</span>
-              </Tip>
-            )}
-            <Tip label="设置" side="right">
-              <button data-testid="nav-settings" onClick={() => setStack([{ t: 'settings' }])} className="grid h-10 w-10 place-items-center rounded-xl text-rail-fg hover:bg-rail-hover hover:text-white"><Settings className="h-[19px] w-[19px]" strokeWidth={1.75} /></button>
-            </Tip>
-            <div className="mt-1 rounded-full ring-2 ring-rail-hover" style={{ ['--avatar-ring' as string]: 'var(--rail)' }}><Avatar id="me" size={30} /></div>
-          </nav>
+          <Rail
+            section={section}
+            panoOpen={panoOpen}
+            badge={totals.wait + totals.err}
+            running={totals.run > 0}
+            helperOpen={helperGlobal}
+            backend={backend}
+            onSection={setSection}
+            onPano={() => setPanoOpen(true)}
+            onHelper={() => setHelperGlobal((v) => !v)}
+            onSettings={() => setStack([{ t: 'settings' }])}
+          />
 
           {/* ============ 列表栏（可调宽） ============ */}
           {section !== 'plugins' && <>
@@ -1059,9 +1042,7 @@ export default function App() {
                     {typing[active] && <div data-testid="typing"><MessageList msgs={[{ k: 'replying', id: 'typing', from: typing[active]!, quotes: (() => { const last = [...conv.messages].reverse().find((m) => m.k === 'text' && m.from === 'me') as Extract<Msg, { k: 'text' }> | undefined; return last ? [{ msgId: last.id, from: 'me', text: last.text }] : [] })(), phase: '在想', mins: 0, steps: ['读了最新几条消息', '判断要不要接这件事'] }]} conv={active} /></div>}
                   </div>
                 </div>
-                {!atBottom && (
-                  <button data-testid="to-bottom" onClick={() => scrollRef.current?.scrollTo({ top: 1e7, behavior: 'smooth' })} className="fade-up absolute bottom-3 right-5 flex h-8 items-center gap-1.5 rounded-full border border-line bg-elev px-3 text-[12.5px] text-me shadow-elev hover:brightness-105"><ChevronsDown className="h-3.5 w-3.5" />{newCount > 0 ? `${newCount} 条新消息` : '回到最新'}</button>
-                )}
+                <JumpToLatest show={!atBottom} count={newCount} onJump={() => scrollRef.current?.scrollTo({ top: 1e7, behavior: 'smooth' })} />
                 {mentionMe && (
                   <button data-testid="at-me" onClick={() => { jump(mentionMe); }} className="fade-up absolute right-5 top-3 flex h-8 items-center gap-1.5 rounded-full border border-warm/30 bg-warm-soft px-3 text-[12.5px] font-medium text-warm shadow-elev"><AtSign className="h-3.5 w-3.5" />有人 @ 了你</button>
                 )}

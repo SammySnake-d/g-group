@@ -232,7 +232,8 @@ test("引用条:卡片按内容收缩,× 紧挨引用文字;多条各占一行;�
   expect(gap).toBeLessThan(24);
   const truncated = await chips.first().getByTestId("quote-text").evaluate((el) => el.scrollWidth > el.clientWidth);
   if (!truncated) expect(area.x + area.width - (x.x + x.width)).toBeGreaterThan(40);
-  // 第二条引用:各占一行
+  // 第二条引用:各占一行(先等上一个右键菜单关掉,免得关闭动画里两个菜单同时在)
+  await expect(page.getByTestId("ctx-quote")).toHaveCount(0);
   await page.getByText("好，我分一个 Compute 去查。").click({ button: "right" });
   await page.getByTestId("ctx-quote").click();
   await expect(chips).toHaveCount(2);

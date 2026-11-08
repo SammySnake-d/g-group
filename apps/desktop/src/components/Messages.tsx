@@ -1,3 +1,4 @@
+import { REACTION_EMOJI } from '@/config/emoji'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { placeHoverBar, type BarPlacement } from '@g-group/ui-core'
 import { History, Hand, Pencil, AlertTriangle, ChevronRight, FileText, Globe, Table2, SmilePlus, Reply, MoreHorizontal, Quote as QuoteIcon, Copy, Check, Square, KeyRound, Pin, Forward, CheckSquare, Tag, Server, Bookmark, Undo2, Trash2, PenLine, AtSign, MessageSquare, Activity, IdCard, AlarmClock, PauseCircle, ChevronDown, ListChecks } from 'lucide-react'
@@ -172,7 +173,7 @@ function TaskTag({ msgId, tag }: { msgId: string; tag: { task: string; state: st
 }
 
 /* 悬停：表情 / 回复 / 引用 / 更多。你发的文字消息左下外侧挂着已读回执（AC-46），工具条再往左让开 28px，不盖住它 */
-const EMOJI = ['👍', '❤️', '😂', '👀', '🎉', '🙏']
+const EMOJI = REACTION_EMOJI
 function HoverBar({ m, mine, reserve }: { m: Bodied; mine: boolean; reserve: number }) {
   const { react, addQuote, setSelecting, push, active, recall } = useApp()
   const text = m.k === 'text' ? m.text.replace(/^@\S+\s/, '') : m.k === 'compute' ? '[Compute]' : m.k === 'file' ? '[文件]' : m.k === 'board' ? '[任务板]' : '[转发]'

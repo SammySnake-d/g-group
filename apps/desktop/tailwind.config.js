@@ -53,6 +53,8 @@ module.exports = {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      transitionTimingFunction: { out: "var(--ease-out)", "in-out": "var(--ease-in-out)" },
+      transitionDuration: { fast: "var(--dur-fast)", base: "var(--dur-base)", slow: "var(--dur-slow)" },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
