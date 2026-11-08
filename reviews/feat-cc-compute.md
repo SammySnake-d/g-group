@@ -603,3 +603,71 @@ AC-07、AC-33④、V-06 整项仍未测：权威约束与副作用账、内核�
 - 未调用真实 Claude 模型，AC-07、AC-33④、V-06 完整内核接线、真实工具授权及模型事件映射继续未测；假 CLI、init 列表和变异不冒充真实完整模型执行。最新文档的 AC-51 常驻/热换模能力也未由本片证明。
 - stopped 不代表全树静止；本轮 R7-01 针对适配器自身重复启动/恢复之后失去主进程控制，不是重新要求容器或杀死已披露的脱组后代。Windows 未测。
 - 只追加本节和填写收据 review，产品源码及原有测试保持原样。最终审查提交仅包含这两份文件；推送、远端回读及限定清理量由本线程最终回报及 `$E` 清单记录。
+
+
+## 第八轮（2026-11-08）：Codex 独立复审
+
+复现由前一审查会话 codex:972e9790-2598-463a-aefb-3a1839268a71 完成，本会话重算 hash 一致后定稿。
+
+**结论：REJECT。** 审查的是 `origin/feat/cc-compute` 的 `6c52402076ece6448451f03ebcbc8350137a0e6a`，基线 `origin/feat/domain-core` 为 `afd02560f9546147da380382404eb6106222a9b8`；本会话直接运行 `node scripts/gates/run-all.ts --hash --branch=feat/cc-compute --base=origin/feat/domain-core` 得到 `reviewed_hash=b9b25e4829d2e3a25567ead048e8717b364d3274446dcbf477d317685c601f17`。审查者 `codex:972e9790-2598-463a-aefb-3a1839268a71`，本轮实际模型 `gpt-6.1-terra`；独立临时克隆，未改产品代码。
+
+### R8-01 [P2] 稀疏数组混入超界数字键可绕过纯数据检查，错误 brief 仍会起 CLI
+
+**位置：** `packages/adapter-cc-compute/src/plain.ts:14,42-62`，调用影响见 `src/brief.ts:20-46`。
+
+`INDEX` 只检查十进制数字样式，不校验数组下标必须小于 `length` 且小于 `2^32-1`；同时以 `count === length` 代替逐下标检查。对 `rules = new Array(1); rules['4294967295'] = '中性规则'`，输入没有索引 0，却被 `plainData` 与 `checkBrief` 接受，复制时变成空规则数组。实测 `createComputeAdapter().spawn` 返回成功并启动 1 个隔离假 CLI，其首个提示的生效规则为 `(无)`。这违反本包自己写明的「数组不能稀疏、不能有下标以外的键」输入合同；不是要求容忍被修改的内置原型。`independent-repo-1.log`、`sparse-array-probe.log` 是本轮运行证据。
+
+**返修：** 在读取值之前以真实数组索引边界逐键核对，并逐个确认 `0..length-1` 都存在；异常键和空位一律拒收，不启动 CLI。补普通稀疏数组与 `4294967295` 等越界键的组合、brief/handoff/汇报入口及正常密集数组的正反对照。自构 `R8-B`（将单个空位放行）在不改测试的隔离副本中 89/89 通过、0 跳过而存活，须补具名测试杀掉它。
+
+### R8-02 [P2] 深层汇报或 JSON-RPC id 可让 MCP 服务崩溃而非拒收
+
+**位置：** `packages/adapter-cc-compute/mcp/report-mcp.mjs:14,29-30,40-45`，`reportErrors` 在 `src/report-schema.ts:47-49` 已能判嵌套过深，但随后第 43 行仍直接 `JSON.stringify` 原始参数并同步写日志；`send` 也会原样序列化外部 id。
+
+**复现：** 在假 HOME/TMPDIR 下向真实 `report-mcp.mjs` 依次发送合法 JSON 的 `tools/call(report_progress)`：第一条 `arguments.kind` 嵌套 12000 层数组，第二条为合法的 `started`。未设置 `REPORT_LOG` 时，第一条得到 `isError:true`、第二条得到 `isError:false`，进程退出 0；仅设置 `REPORT_LOG` 为测试目录内的中性文件时，服务在第 43 行抛 `RangeError: Maximum call stack size exceeded`、退出 1、两条均无响应（`mcp-deep-json.log`）。另外，不启用日志时，向 `tools/list` 传入 12000 层数组作为无效 JSON-RPC `id`，随后再发合法请求，进程在第 14 行 `JSON.stringify` 栈溢出、退出 1、两条均无响应（`mcp-deep-protocol.log`）。这是 MCP 子进程的独立问题，不是声称适配器宿主也崩溃。
+
+**返修：** 先验证 JSON-RPC id 的合法类型，对拒收数据的记录使用有界、安全的表示，并保证响应及日志序列化失败不会越过请求边界；无论是否启用日志，坏请求或汇报应有拒收响应，后续合法请求仍可处理。加入同一输入仅切换日志开关的正反对照与针对该路径的单点变异。
+
+### R8-03 [P2] 未覆盖「host 正在连接但并未 connected」的邻接反例
+
+**位置：** `packages/adapter-cc-compute/src/events.ts:51-59`；现有实现本身正确要求 `host.status === 'connected'`，问题在测试标定。
+
+**复现：** 单点变异 `R8-A` 把 `connecting` 也视作合格状态；同一 init 的工具清单保留 `report_progress`，原实现返回 `bad-init`，变异实现返回 `init`（`connecting-mutant-probe.log`）。本包 89 条测试在该变异上 89 绿、0 红、0 skip/todo、退出 0；变异也通过 TypeScript 检查。隔离假 CLI 端到端对照：原版该轮 `failed`，变异版却产出 `started/completed`（`calibration-e2e.log`）。现有“完全不校验 host”变异被杀不等于能发现这一相邻放宽。
+
+**返修：** 加入 `connecting` 等非 `connected` 状态的具名拒收测试及只把状态切到 `connected` 的放行对照，并让这一单点变异被对应测试按名杀死。
+
+### R8-04 [P2] 未覆盖空白汇报字段的邻接反例
+
+**位置：** `packages/adapter-cc-compute/src/report-schema.ts:41,55-60`；现有实现本身正确将纯空白视为无效，问题在测试标定。
+
+**复现：** 单点变异 `R8-C` 只将 `x.trim() !== ''` 改为 `x !== ''`。同样的输入中，原实现分别拒绝空白 `summary`、`blocked.needs` 和 `milestone.stage`，变异实现均返回空错误数组（`whitespace-mutant-probe.log`）。本包 89 条测试在该变异上 89 绿、0 红、0 skip/todo、退出 0；变异通过 TypeScript 检查。隔离假 CLI 端到端对照：原版对空白 `needs` 记录拒收并 `failed`，变异版却产生 `blocked`（`calibration-e2e.log`）。
+
+**返修：** 为三个字段分别补空白正反对照，确保空白 `needs` 不产生合规 blocked，且相应变异按名变红；保留当前实现对合法非空文本的接受。
+
+### 复现与边界
+
+- `npm run typecheck` 退出 0；`npm run lint` 退出 0（24 文件）；全仓 `npm test` 在假 HOME/TMPDIR 复跑退出 0：112 pass、0 fail、0 cancelled、0 skip、0 todo；Node `v25.8.1`。首次 `npm test` 是本审查执行器遗漏设置假 HOME，继承了真实 HOME；它使用本仓库的假 CLI/MCP 而非真实 Claude。已用假 HOME 复跑，但没有系统调用级跟踪，不能据此断言首次运行绝未触及 HOME。
+- 红提交 `7c28b837bb616ba87ff91398cc0d90cb4817ad14` 的 5 个 R7 新测试均按名失败；将新测试和夹具放入旧实现的独立副本时，R7-01 两条、R7-02 两条按名失败，R7-03 通过。R7-03 的先红来自单点变异：M108/S04 保留白名单并额外放宽 `hook*` 时，具名 R7-03 测试因 `hook_neutral_unlisted` 实得 `allowed` 而失败；原实现的同例为 `rejected`。
+- R7-01 新旧独立对照：旧版并发续接受理 2 个，stop 后 1 个续接 CLI 仍活；新版受理 1 个、拒绝 1 个，stop 后记录到的原轮和新轮 PID / 进程组均已退出。续接在途 stop 时，旧版在 stop 后再启动 CLI，新版拒绝续接且只启动原轮，原进程及组退出。
+- R7-02：对象、数组、null 的相关 JSON 输入在新版未杀宿主；对象/数组不再做隐式转换。对象型拒收回执被记录，深嵌套 kind 触发当前 Compute 的受控 failed，同一适配器随后正常 Compute completed。R7-03 多种非白名单前导帧被拒、白名单对照完成。
+- 用户已明确：stop 结束当前一轮，在途续接作废；上一轮退出后，联系人再次显式续接应被允许。实测 stop 后等上一轮主进程已退出再 resume，当前实现返回成功并启动新一轮，符合这一决定，不作为打回理由。进程信号升级仍按用户 #2309 的既定合同核验：主进程先退出则取消组升级，不把 stopped 等同于整个后代树已静止。
+- 自构四种类型可编译的单点故障：`R8-A`、`R8-B`、`R8-C` 在完整 89 条下存活；`R8-D`（续接会话号追加空白）被两条具名测试杀死，完整执行 89、0 skip/todo。
+- 新增 M97–M112 逐一在隔离副本执行 TypeScript 检查，16/16 退出 0。作者全部变异的低并发行为复跑：112/112 被具名测试杀死，每项 89 条完整执行，合计 skip/todo/cancelled 均为 0；驱动退出 0。首次运行中断且未写出逐项汇总，未计作通过；随后只在隔离 runner 副本加入逐项 TAP 与断点落盘并按两并发恢复，注入点、测试和判决未改。见 `author-mutation-ledger.jsonl`、`author-mutants/M001.tap`–`M112.tap`、`author-mutation-validation.log` 和 `durable-runner.patch`。
+- 本轮在原 HEAD 上执行 `node scripts/gates/run-all.ts --local --branch=feat/cc-compute --base=origin/feat/domain-core` 的原样结果：
+
+```text
+base=origin/feat/domain-core branch=feat/cc-compute HEAD=6c52402076ece6448451f03ebcbc8350137a0e6a 受检文件 27 个 收据=receipts/feat-cc-compute.json 门禁 8 个
+✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据
+✗ G-REVIEW  R-01:审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)
+    - 还没有独立审查
+✓ G-RED  R-02:先红后绿,新增/改动的每条测试在红提交上按名字失败、现在按名字通过
+✓ G-STUB  R-03:空实现红基线,桩下仍通过、加载失败、没执行到的测试都判无效
+✓ G-TAUTO  R-04:拒绝同语反复测试(按 node:test 真实导入识别;无断言、断言不判源码结果、恒定断言、skip/only)
+✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限或 pull_request_target
+✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)
+✓ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是用户本人对这一版的明确批准
+CONTENT_HASH=b9b25e4829d2e3a25567ead048e8717b364d3274446dcbf477d317685c601f17
+```
+
+  其中收据当时 `review:null`，G-PROVENANCE 直接返回，作者和本审查会话的来源都未在该次运行中核对；不能将其解释为审查来源已验证。另在独立的中性合成仓库、合成会话中分别为八个门禁构造一条失败输入：8/8 命中对应门禁失败；一个正向对照 8/8 放行。合成会话只用于门禁反例，不代表真实审查会话记录。
+- GitHub 对被审 SHA 的 `self-check` 为 completed/success；本机 `docker info` 退出 1，本地门禁未验证容器沙箱路径。本轮只使用假 CLI 与 MCP 协议夹具，没有完成真实 Claude CLI 上的工具约束与事件映射验收；Windows 未测。
+- 本轮可复查证据目录：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr7-r8-codex/`。
