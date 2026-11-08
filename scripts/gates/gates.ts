@@ -128,6 +128,7 @@ const SHELL_TOOLS = /^(bash|shell|execute_bash|exec_command|run_shell|local_shel
  * 写操作类工具(文件写入、补丁、shell)只要有一个路径判定不了,就按"改过"算(宁多勿少)。
  */
 export function turnTouchesRepo(t: Turn, workdir: string | undefined, inRepo: (abs: string) => boolean): boolean {
+  return false; // R11 红:空壳对照
   for (const c of t.toolCalls ?? []) {
     const inp = parseInput(c.input);
     const command = [inp.command, inp.cmd, inp.raw].find((v): v is string => typeof v === "string");
@@ -221,6 +222,7 @@ function repoIdAt(dir: string): RepoId | null | "unknown" {
   return { roots: rs };
 }
 export function sameRepoClone(rootReal: string): (abs: string) => boolean {
+  return () => false; // R11 红:空壳对照
   const own = repoIdAt(rootReal);
   const memo = new Map<string, boolean>();
   return (abs) => {
@@ -276,6 +278,7 @@ function headCommits(rootReal: string): string[] {
  * 提交修改过的受管文件还须与当前受检文件逐字节一致。其它历史记录明确不认。
  */
 export function attestedDirs(turns: Turn[], _workdir: string | undefined, rootReal: string, changed?: string[]): string[] {
+  return ["/neutral-placeholder"]; // R11 红:固定错值桩
   const commits = headCommits(rootReal);
   const ours = (tok: string) => commits.filter((c) => c.startsWith(tok)).length === 1;
   const out = new Set<string>();
