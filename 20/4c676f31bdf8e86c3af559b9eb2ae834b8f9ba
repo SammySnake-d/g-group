@@ -1,0 +1,16 @@
+packages/domain/proof/commitment-ledger-round4-sweep.txt
+  h_f33e46a035b77c 1-372
+receipts/feat-commitment-ledger.json
+  h_f33e46a035b77c 14,17,25,28,33-34,39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "204c676f31bdf8e86c3af559b9eb2ae834b8f9ba",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
