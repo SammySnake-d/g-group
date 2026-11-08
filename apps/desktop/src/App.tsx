@@ -4,7 +4,7 @@ import { Puzzle, X, Search, Plus, MessageCircle, Users, Activity, FolderOpen, Se
 import { cn } from '@/lib/utils'
 import { poolUsed, convs0, computes0, pending0, reactions0, boards0, commits0, playbook0, crons0, checklist0, plugins0, pulse0, people, artifacts, type Conversation, type Msg, type PersonId, type Compute, type Cron, type Pending, type QuoteRef, type Activity as Act } from '@/data'
 import { probeBackend, type BackendState } from '@/api/backend'
-import { AppCtx, type Ctx, type Page, type SplitTab, type Section, type WbTab } from '@/ctx'
+import { AppCtx, type Ctx, type Page, type SplitTab, type Section, type WbTab, type ScheduleDraft } from '@/ctx'
 import { Workbench } from '@/components/Workbench'
 import { Panorama } from '@/components/Panorama'
 import { HelperGlobal, HelperPanel } from '@/components/Helper'
@@ -91,6 +91,7 @@ export default function App() {
   const [typing, setTyping] = useState<Record<string, PersonId | null>>({})
   const [editing, setEditing] = useState<string | null>(null)
   const [rewindAsk, setRewindAsk] = useState<string | null>(null)
+  const [scheduleDraft, setScheduleDraft] = useState<ScheduleDraft | null>(null)
   const rewound = useRef<Record<string, { conv: string; msgs: Msg[]; pending: Pending[] }>>({})
   const [selecting, setSelecting] = useState(false)
   const { sel, toggle, clear } = useSelection()
@@ -555,6 +556,7 @@ export default function App() {
       setToastMsg('已保存')
     },
     crons, pulse, checklist, plugins, section, setSection, helperPanel, setHelperPanel, helperGlobal, setHelperGlobal, pushMsg,
+    scheduleDraft, openSchedule: setScheduleDraft,
     openWorkbench: (id, tab) => { setSection('contacts'); setContact(id); setWbTab(tab ?? 'overview'); setStack([]) },
     helperReply: (cid, ask) => {
       setTyping((t) => ({ ...t, [cid]: 'helper' }))
@@ -665,7 +667,7 @@ export default function App() {
       setConvs((cs) => cs.map((c) => (c.id === cid ? { ...c, messages: [{ k: 'sys', id: 's' + uid(), text: '你清空了这里的聊天记录（只影响你自己看到的；助手的记忆和资产不受影响）' }] } : c)))
       setStack([])
     },
-  }), [computes, pending, convs, boards, commits, playbook, reactions, active, dark, debug, typing, jump, openSplit, pushMsg, frozen, quotes, say, addAct, createGroup, clear, crons, pulse, checklist, plugins, section, helperPanel, helperGlobal, editing, rewindAsk])
+  }), [computes, pending, convs, boards, commits, playbook, reactions, active, dark, debug, typing, jump, openSplit, pushMsg, frozen, quotes, say, addAct, createGroup, clear, crons, pulse, checklist, plugins, section, helperPanel, helperGlobal, editing, rewindAsk, scheduleDraft])
   /* 走查用：模拟迟到的回答（AC-44⑤）。只挂在 window 上，界面里没有入口 */
   useEffect(() => { (window as unknown as { __gg?: unknown }).__gg = { returnHuman: ctx.returnHuman } }, [ctx])
   resolveRef.current = ctx.resolve as never
@@ -700,8 +702,9 @@ export default function App() {
   useEffect(() => { if (atBottom) setNewCount(0) }, [atBottom])
   useEffect(() => { lastLen.current = 0; setNewCount(0) }, [active])
 
-  const send = () => {
-    const t = draft.trim()
+  /* override：斜杠命令（/handoff、助手命令）把要发的话直接递过来，走同一条发送路径（引用、@ 交代都照常） */
+  const send = (override?: string) => {
+    const t = (override ?? draft).trim()
     if (editing) { ctx.editMsg(editing, t); return }
     if (!t && !q.length) return
     const id = 'me-' + uid()
