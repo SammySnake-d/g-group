@@ -581,7 +581,7 @@ function SettingsPage() {
         <Row label="出错时提醒"><Switch defaultChecked /></Row>
       </Group>
       <Group title="插件">
-        <Row testid="settings-plugins" label={<span className="flex items-center gap-2"><Puzzle className="h-4 w-4 text-fg-2" />插件中心</span>} value="装、更新、自己创建" onClick={() => { setSection('plugins'); closeAll() }} />
+        <Row testid="settings-plugins" label={<span className="flex items-center gap-2"><Puzzle className="h-4 w-4 text-fg-2" />插件中心</span>} value="市场、安装、更新" onClick={() => { setSection('plugins'); closeAll() }} />
       </Group>
       <Group title="连接">
         <Row label="外部来源" value="已连 2 个" onClick={() => push({ t: 'sources' })} />

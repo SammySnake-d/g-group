@@ -1,6 +1,8 @@
 /* ============ 原型数据：联系人、Compute、会话、待你处理 ============
    每段数据旁边标了它服务的用户故事（US）与验收条目（AC），走查脚本按这些编号核对。 */
 
+import { seedInstalled, type OutboundGrant, type PluginInstall, type PluginManifest, type RiskLevel } from '@g-group/ui-core'
+
 export type PersonId = string
 
 export interface Person {
@@ -641,12 +643,172 @@ export const checklist0: ListItem[] = [
   { id: 'u2', conv: 'g-design', text: '竞品对照', status: '已完成', who: 'astra', attempts: [] },
 ]
 
-/** 插件：数据源 / 输出渠道 / 界面扩展。安装、挂到哪个聊天、谁能调用、能发给谁是四道关（概念卡第 4 张） */
-export interface Plugin { id: string; name: string; kind: 'source' | 'outbound' | 'ui'; desc: string; letter: string; color: string; installed: boolean; convs: string[]; who?: PersonId[]; limit?: string; cred?: string; mine?: boolean
-  /** US12⑥（#2273）：先只显示版本号和有没有更新；市场以后再说 */
-  ver: string; latest?: string; changes?: string
-  /** AC-35⑤：凭据失效或被撤销 → 立即阻断外发，群里出修复卡 */
-  revoked?: boolean }
+/** 插件（概念卡第 4 张 + 需求 D04.2 三类插件 + 命令插件）。
+    市场目录 = 各插件最新版本的清单；本机安装状态由 ui-core 的 pluginReducer 推进。都是演示数据，后端接上后从 plugins.catalog 取 */
+export interface PluginState extends PluginInstall {
+  /** 凭据状态（只显示一句话，明文不在这里） */
+  cred?: string
+  /** 输出渠道的六项预授权；撤销或凭据失效时 revoked = true（AC-35⑤） */
+  grant?: OutboundGrant | null
+}
+const perm = (scope: string, detail: string, risk: RiskLevel) => ({ scope, detail, risk })
+const arg = (name: string, desc: string, required = true) => ({ name, desc, required })
+const cmd = (name: string, title: string, desc: string, args: { name: string; desc: string; required: boolean }[] = []) => ({ name, title, desc, args })
+const OFFICIAL = 'g-group 官方'
+const feishu: PluginManifest = {
+  id: 'g-group.feishu', name: '飞书', publisher: OFFICIAL, version: '1.5.0', category: 'source',
+  summary: '读飞书群消息，勾选几条带进对话',
+  description: '把飞书群接进来当参考资料。不做全量同步：你或助手用 /feishu 取最近几条，勾选后挂到输入框上方的引用条，原文链接保留。\n只读，不会替你在飞书里发言。',
+  icon: { letter: '飞', color: '#3370ff' },
+  permissions: [
+    perm('feishu.chats:list', '列出你加入了哪些飞书群（只看群名）', 'low'),
+    perm('feishu.messages:read', '读取你加入的飞书群里的消息', 'medium'),
+    perm('feishu.docs:read', '读取你有权限的飞书文档，用来展开消息里的文档链接', 'medium'),
+  ],
+  contributes: {
+    commands: [cmd('feishu', '取飞书消息', '从某个飞书群取最近几条消息，勾选后带进对话', [arg('群名', '飞书群的名字'), arg('条数', '默认 10 条', false)])],
+    panels: [],
+    events: [{ name: 'feishu.message', desc: '订阅的飞书群有新消息时通知挂了它的助手（只当背景，不自动开工）' }],
+  },
+  changelog: [
+    { version: '1.5.0', date: '2026-11-02', notes: ['能展开消息里的飞书文档链接（新增「读取飞书文档」权限）', '支持按话题勾选'] },
+    { version: '1.4.2', date: '2026-09-20', notes: ['修了长消息被截断'] },
+    { version: '1.4.0', date: '2026-08-30', notes: ['/feishu 可以指定条数'] },
+  ],
+}
+const gmail: PluginManifest = {
+  id: 'g-group.gmail', name: 'Gmail', publisher: OFFICIAL, version: '2.1.0', category: 'outbound',
+  summary: '替助手发邮件；发给谁、发什么、多频繁要先授权',
+  description: '用你的 Gmail 账号（OAuth）发邮件。助手只能在预授权的范围里发：收件人从白名单里取，助手改不了；正文只能用授权的数据源。\n授权失效或你撤销时，外发立即停下，群里出一张修复卡。',
+  icon: { letter: 'G', color: '#ea4335' },
+  permissions: [
+    perm('gmail.send', '以你的名义发送邮件（只发给预授权的收件人）', 'high'),
+    perm('gmail.contacts:read', '读取联系人邮箱，用来补全收件人', 'medium'),
+  ],
+  contributes: {
+    commands: [cmd('mail', '发邮件', '让助手按预授权起草并发出一封邮件', [arg('收件人', '必须在收件白名单里'), arg('主题', '不填就由助手起', false)])],
+    panels: [],
+    events: [{ name: 'mail.sent', desc: '邮件发出后在群里留一条记录' }, { name: 'mail.blocked', desc: '授权失效时在群里出修复卡' }],
+  },
+  changelog: [
+    { version: '2.1.0', date: '2026-08-01', notes: ['发送前复核授权和插件版本'] },
+    { version: '2.0.0', date: '2026-06-10', notes: ['改用 OAuth 登录'] },
+  ],
+}
+const webhook: PluginManifest = {
+  id: 'g-group.webhook', name: 'Webhook', publisher: OFFICIAL, version: '1.0.3', category: 'outbound',
+  summary: '把结果 POST 到你给的地址',
+  description: '把助手的结果以 JSON POST 到预先填好的 https 地址，常用来接自己的系统。只发到授权的地址。',
+  icon: { letter: 'W', color: '#52525b' },
+  permissions: [perm('net.post', '向你填写的地址发送 HTTP 请求（只发到授权的地址）', 'medium')],
+  contributes: { commands: [cmd('hook', '发到 Webhook', '把选中的消息或结果 POST 到授权的地址', [arg('内容', '不填就发最近一条结果', false)])], panels: [], events: [] },
+  changelog: [{ version: '1.0.3', date: '2026-05-12', notes: ['失败时重试 3 次，结果未知时不盲目重发'] }],
+}
+const telegram: PluginManifest = {
+  id: 'openbridge.telegram', name: 'Telegram 群', publisher: 'OpenBridge', version: '0.9.1', category: 'source',
+  summary: '读 Telegram 群消息，勾选几条带进对话',
+  description: '用你的 Telegram 账号读你加入的群和频道。取来的消息标「不可信外部数据」，只当背景参考。',
+  icon: { letter: 'T', color: '#229ed9' },
+  permissions: [
+    perm('tg.login', '用你的 Telegram 账号登录（会话密钥存在本机钥匙串）', 'high'),
+    perm('tg.messages:read', '读取你加入的 Telegram 群和频道里的消息', 'medium'),
+  ],
+  contributes: { commands: [cmd('tg', '取 Telegram 消息', '从某个 Telegram 群取最近几条消息', [arg('群名', 'Telegram 群或频道'), arg('条数', '默认 10 条', false)])], panels: [], events: [] },
+  changelog: [
+    { version: '0.9.1', date: '2026-10-08', notes: ['支持频道'] },
+    { version: '0.9.0', date: '2026-09-12', notes: ['第一个公开版本'] },
+  ],
+}
+const cve: PluginManifest = {
+  id: 'g-group.cve', name: 'CVE 订阅', publisher: OFFICIAL, version: '1.3.0', category: 'source',
+  summary: '有新漏洞公告就推给挂了它的助手，由它判断是否命中',
+  description: '订阅公开漏洞库。有新公告时叫醒挂了它的助手，由助手对照本群工作区的依赖判断要不要告诉你。严重度、时限这些是插件自己的配置。',
+  icon: { letter: 'C', color: '#b45309' },
+  permissions: [
+    perm('cve.feed', '读取公开漏洞库（NVD、GitHub Advisory）', 'low'),
+    perm('repo.deps:read', '读取本群工作区的依赖清单（package.json、lockfile）', 'medium'),
+  ],
+  contributes: {
+    commands: [cmd('cve', '查漏洞', '查某个包有没有已知漏洞', [arg('包名', '比如 lodash')])],
+    panels: [],
+    events: [{ name: 'cve.published', desc: '有新公告时叫醒挂了它的助手' }],
+  },
+  changelog: [
+    { version: '1.3.0', date: '2026-10-28', notes: ['加了 CVSS 分数，命中判断更准'] },
+    { version: '1.2.0', date: '2026-09-02', notes: ['支持 Go 和 Rust 依赖'] },
+  ],
+}
+const pulsePlugin: PluginManifest = {
+  id: 'g-group.pulse', name: '动向时间线', publisher: OFFICIAL, version: '0.3.1', category: 'ui',
+  summary: '群里每过一段讨论，助手写一段摘要，按时间排成一条线',
+  description: '在群资料·插件里展开一条时间线。每段摘要能点回它覆盖的那几条消息。摘要只读，不能替你批准或关闭任何待确认的事。',
+  icon: { letter: '线', color: '#0f766e' },
+  permissions: [perm('chat.messages:read', '读取本群消息（只在挂了它的群里）', 'medium'), perm('panel.render', '在群资料里加一块「动向时间线」面板', 'low')],
+  contributes: {
+    commands: [cmd('pulse', '写一段动向', '让助手现在就把最近这段讨论写成一段摘要')],
+    panels: [{ id: 'pulse', title: '动向时间线', desc: '群资料·插件页签里展开，点一段回到原消息' }],
+    events: [{ name: 'chat.every-n', desc: '本群每过 N 条消息叫醒助手写一段' }],
+  },
+  changelog: [{ version: '0.3.1', date: '2026-10-15', notes: ['每段摘要能点回原消息'] }],
+}
+const board: PluginManifest = {
+  id: 'g-group.board', name: '看板面板', publisher: OFFICIAL, version: '0.4.0', category: 'ui',
+  summary: '在群右侧加一块看板，清单按状态分列',
+  description: '把群清单按「待认领 / 进行中 / 已完成」分成三列，拖动卡片就能改状态。',
+  icon: { letter: '板', color: '#8b5cf6' },
+  permissions: [perm('checklist:read', '读取本群清单', 'low'), perm('checklist:write', '拖动卡片时改清单状态', 'medium')],
+  contributes: { commands: [cmd('board', '打开看板', '在右侧打开本群看板')], panels: [{ id: 'board', title: '看板', desc: '右侧面板' }], events: [] },
+  changelog: [{ version: '0.4.0', date: '2026-10-20', notes: ['卡片能拖动改状态'] }],
+}
+const github: PluginManifest = {
+  id: 'octolabs.github', name: 'GitHub', publisher: 'Octo Labs', version: '1.2.0', category: 'source',
+  summary: '把 issue、PR 和评论带进对话',
+  description: '读你授权仓库的 issue、PR 和评论，勾选后带进对话。可选：以你的账号在 PR 下回帖（高风险，默认不开）。',
+  icon: { letter: 'GH', color: '#24292f' },
+  permissions: [perm('gh.repo:read', '读取你授权仓库的 issue、PR 和评论', 'medium'), perm('gh.comment', '以你的账号在 issue / PR 下发评论', 'high')],
+  contributes: { commands: [cmd('gh', '取 issue / PR', '把某个 issue 或 PR 带进对话', [arg('仓库', 'owner/repo'), arg('编号', '不填就列最近 5 个', false)])], panels: [], events: [] },
+  changelog: [{ version: '1.2.0', date: '2026-10-30', notes: ['支持 Draft PR'] }],
+}
+const translate: PluginManifest = {
+  id: 'lingo.translate', name: '翻译', publisher: 'Lingo', version: '1.0.0', category: 'command',
+  summary: '把选中的消息翻译成别的语言',
+  description: '选中几条消息，用 /translate 翻译，结果只给你看，不发到群里。',
+  icon: { letter: '译', color: '#2563eb' },
+  permissions: [perm('translate.send', '把你选中的消息发给翻译服务（不含其它消息）', 'medium')],
+  contributes: { commands: [cmd('translate', '翻译', '把选中的消息翻译成目标语言', [arg('目标语言', '默认英文', false)])], panels: [], events: [] },
+  changelog: [{ version: '1.0.0', date: '2026-07-15', notes: ['第一个版本'] }],
+}
+const jira: PluginManifest = {
+  id: 'acme.jira', name: 'Jira', publisher: 'Acme 工具组', version: '0.6.0', category: 'command',
+  summary: '查需求单状态，把评论带进对话',
+  description: '用 /jira 单号 查一张单子的状态和最近评论。改状态、加评论需要高风险权限。',
+  icon: { letter: 'J', color: '#0052cc' },
+  permissions: [perm('jira.issues:read', '读取你有权限的 Jira 单', 'medium'), perm('jira.issues:write', '改单子状态、加评论', 'high')],
+  contributes: { commands: [cmd('jira', '查 Jira 单', '查一张单子的状态和最近评论', [arg('单号', '比如 APP-123')])], panels: [], events: [] },
+  changelog: [{ version: '0.6.0', date: '2026-10-02', notes: ['支持子任务'] }],
+}
+const web: PluginManifest = {
+  id: 'g-group.web', name: '网页抓取', publisher: OFFICIAL, version: '1.1.0', category: 'source',
+  summary: '打开一个网页，把正文带进对话',
+  description: '抓取一个公开网页的正文，标「不可信外部数据」后挂到引用条。不带你的登录态。',
+  icon: { letter: '网', color: '#0891b2' },
+  permissions: [perm('net.fetch', '访问公网网页（只读，不带你的登录态）', 'low')],
+  contributes: { commands: [cmd('web', '抓网页', '把一个网页的正文带进对话', [arg('网址', 'https 开头')])], panels: [], events: [] },
+  changelog: [{ version: '1.1.0', date: '2026-09-25', notes: ['去掉了广告和导航'] }],
+}
+export const pluginCatalog0: PluginManifest[] = [feishu, gmail, telegram, cve, github, web, pulsePlugin, board, webhook, translate, jira]
+/** 本机已装的旧版本：飞书 1.4.2（1.5.0 多要「读取飞书文档」）、CVE 1.2.0（权限没变） */
+const feishu142: PluginManifest = { ...feishu, version: '1.4.2', permissions: feishu.permissions.filter((p) => p.scope !== 'feishu.docs:read'), changelog: feishu.changelog.slice(1) }
+const cve120: PluginManifest = { ...cve, version: '1.2.0', changelog: cve.changelog.slice(1) }
+export const plugins0: PluginState[] = [
+  { ...seedInstalled(feishu142, { enabled: true, convs: ['g', 'g-design'], callers: ['argon', 'claude'] }), cred: '已登录 · 只读' },
+  { ...seedInstalled(gmail, { enabled: true, convs: ['g'], callers: ['argon'] }), cred: 'OAuth · 7 天后过期',
+    grant: { commitment: '每天 18:00 待验收汇总', sender: 'me@team.com', recipients: ['wang@team.com'], sources: ['本群消息'], contentPolicy: 'summary', maxPerHour: 3, pluginVersion: '2.1.0', revoked: false } },
+  { ...seedInstalled(webhook, { enabled: true, convs: [], callers: [] }), cred: '还没设地址', grant: null },
+  { ...seedInstalled(cve120, { enabled: true, convs: ['g'], callers: ['claude'] }), cred: '公开数据 · 不需要登录' },
+  { ...seedInstalled(pulsePlugin, { enabled: true, convs: ['g'], callers: ['argon'] }) },
+]
+
 /** 动向时间线插件（#2273 U80）：联系人每过 N 条消息写一段摘要，按时间排。每段指回它覆盖的那几条消息 */
 export interface PulseItem { id: string; conv: string; at: string; by: PersonId; text: string; from: string; to: string; n: number }
 export const pulse0: PulseItem[] = [
@@ -656,15 +818,6 @@ export const pulse0: PulseItem[] = [
   { id: 'pl4', conv: 'g', at: '今天 01:10', by: 'argon', text: '飞书接入方案收敛到「勾选引用」，不做全量同步', from: 'g10', to: 'g12', n: 30 },
 ]
 
-export const plugins0: Plugin[] = [
-  { id: 'p-feishu', name: '飞书', kind: 'source', desc: '读飞书群消息，可以勾选几条带进对话', letter: '飞', color: '#3370ff', installed: true, convs: ['g', 'g-design'], who: ['argon', 'claude'], cred: '已登录 · 只读', ver: '1.4.2', latest: '1.5.0', changes: '支持按话题勾选；修了长消息被截断' },
-  { id: 'p-gmail', name: 'Gmail', kind: 'outbound', desc: '替助手发邮件；收件人和频率要预先授权', letter: 'G', color: '#ea4335', installed: true, convs: ['g'], who: ['argon'], limit: '只发给 wang@team.com · 每小时最多 3 封', cred: 'OAuth · 7 天后过期', ver: '2.1.0' },
-  { id: 'p-hook', name: 'Webhook', kind: 'outbound', desc: '把结果 POST 到你给的地址', letter: 'W', color: '#52525b', installed: true, convs: [], cred: '未设置地址', ver: '1.0.3' },
-  { id: 'p-tg', name: 'Telegram 群', kind: 'source', desc: '读 Telegram 群消息', letter: 'T', color: '#229ed9', installed: false, convs: [], ver: '0.9.1' },
-  { id: 'p-cve', name: 'CVE 订阅', kind: 'source', desc: '有新漏洞公告就推给挂了它的联系人，由它判断是否命中', letter: 'C', color: '#b45309', installed: true, convs: ['g'], who: ['claude'], cred: '公开数据 · 不需要登录', ver: '1.2.0', latest: '1.3.0', changes: '加了 CVSS 分数，命中判断更准' },
-  { id: 'p-pulse', name: '动向时间线', kind: 'ui', desc: '群里每过一段讨论，联系人写一段摘要，按时间排成一条线', letter: '线', color: '#0f766e', installed: true, convs: ['g'], who: ['argon'], ver: '0.3.1' },
-  { id: 'p-board', name: '看板面板', kind: 'ui', desc: '在群右侧加一块看板', letter: '板', color: '#8b5cf6', installed: false, convs: [], ver: '0.4.0' },
-]
 
 /** U09：群临时算力现在借出去几格。只算借自本群池子、还没结束的 */
 export const poolUsed = (cs: Record<string, Compute>, conv: string) =>

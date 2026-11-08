@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react'
-import type { PulseItem, Board, Commitment, Compute, Conversation, Pending, PersonId, PlaybookItem, QuoteRef, Cron, ListItem, Plugin } from './data'
+import type { PulseItem, Board, Commitment, Compute, Conversation, Pending, PersonId, PlaybookItem, QuoteRef, Cron, ListItem, PluginState } from './data'
+import type { PluginAction, PluginManifest, PluginResult } from '@g-group/ui-core'
 
 /** 右侧浮层是一摞页面：打开新页压栈，返回/关闭只弹出一层（群资料 → 成员资料 → 关闭 = 回到群资料） */
 export type Page =
@@ -118,7 +119,10 @@ export interface Ctx {
   crons: Cron[]
   pulse: PulseItem[]
   checklist: ListItem[]
-  plugins: Plugin[]
+  /** 本机插件安装状态（ui-core 的 PluginInstall + 凭据说明 + 外发预授权） */
+  plugins: PluginState[]
+  /** 插件市场目录：各插件最新版本的清单 */
+  pluginCatalog: PluginManifest[]
   /** 左侧当前所在的一级区域；从“进展”“联系人”打开东西时不切走它（#1387） */
   section: Section
   setSection: (s: Section) => void
@@ -141,7 +145,12 @@ export interface Ctx {
   addCron: (c: Omit<Cron, 'id' | 'state' | 'next' | 'day'>, via: 'chat' | 'panel') => string
   removeCron: (id: string) => void
   runCronNow: (id: string) => void
-  updatePlugin: (id: string, patch: Partial<Plugin>) => void
+  /** 只改凭据说明、预授权这些附加信息；安装状态走 pluginAct */
+  updatePlugin: (id: string, patch: Partial<Pick<PluginState, 'cred' | 'grant'>>) => void
+  /** 推进插件生命周期（ui-core pluginReducer）。非法转移原样返回错误，不改状态；安装 / 卸载会在演示里稍后自动完成 */
+  pluginAct: (id: string, a: PluginAction) => PluginResult<PluginState>
+  /** 把 /命令 填进当前聊天的输入框（工具页签用；补全菜单在输入框那边） */
+  putCommand: (name: string) => void
   /** AC-35⑤：凭据失效（原型里用按钮模拟）/ 重新授权 */
   /** C-US15：卡在验证码 → 交给你；你接手、过了以后交还，它接着做 */
   hitCaptcha: (cid: string) => void

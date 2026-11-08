@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { Plus, ChevronRight, ChevronDown, Megaphone, ListChecks, Clock, Puzzle, Search, Pin, FolderGit2, BookOpen, Link2, Cpu, Copy, Sparkles, FileText } from 'lucide-react'
+import { Plus, ChevronRight, ChevronDown, Megaphone, ListChecks, Clock, Puzzle, Search, Pin, FolderGit2, BookOpen, Link2, Cpu, Copy, Sparkles, FileText, X, Store, type LucideIcon } from 'lucide-react'
+import { CATEGORY_LABEL, attachable, isInstalled, pluginCommands } from '@g-group/ui-core'
 import { cn } from '@/lib/utils'
 import { people, artifacts, dutyByConv, poolUsed, type Conversation, type Msg } from '@/data'
 import { useApp } from '@/ctx'
@@ -8,6 +9,9 @@ import { Avatar, useLive } from './Avatar'
 import { PersonMenu, Tip } from './Messages'
 import { drag, startDrag, endDrag } from '@/drag'
 import { broken } from '@/mut'
+import { Switch } from './ui/switch'
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
+import { PluginIcon, openPluginDetail } from './Plugins'
 
 /* QQ 式群聊右侧常驻栏：群公告（就地编辑）→ 在做的事 → 群成员（身份 + 状态，点头像出菜单） */
 type GTab = 'members' | 'notice' | 'list' | 'cron' | 'plugin' | 'tools'
@@ -20,7 +24,7 @@ export function GroupPane({ id, initial }: { id: string; initial?: GTab }) {
   return <GroupSide conv={conv} initial={initial} />
 }
 function GroupSide({ conv, initial }: { conv: Conversation; initial?: GTab }) {
-  const { computes, openSplit, push, commits, playbook, summarize, checklist, crons, plugins, claimTask, addTask, setSection, updateCron, addCron, pulse, jump, addMembers, removeMember } = useApp()
+  const { computes, openSplit, checklist, crons, plugins, claimTask, addTask, updateCron, addCron, pulse, jump, addMembers, removeMember } = useApp()
   /* AC-49 拖拽：从左侧联系人拖进来 = 拉进群；把成员拖到底部「移出群」 = 移出 */
   const [over, setOver] = useState<null | 'in' | 'dup' | 'out'>(null)
   const [dragging, setDragging] = useState(false)
@@ -30,10 +34,9 @@ function GroupSide({ conv, initial }: { conv: Conversation; initial?: GTab }) {
   const myCrons = crons.filter((c) => c.conv === conv.id).sort((a, b) => a.time.localeCompare(b.time))
   const [adding, setAdding] = useState(false)
   const [addingTask, setAddingTask] = useState(false)
-  const myPlugins = plugins.filter((p) => p.installed && p.convs.includes(conv.id))
+  const myPlugins = plugins.filter((p) => isInstalled(p) && p.convs.includes(conv.id))
   const [q, setQ] = useState('')
   const [searching, setSearching] = useState(false)
-  const myCommits = commits.filter((c) => c.conv === conv.id && c.on)
   const roleOrder = (m: string) => (conv.roles?.[m] === 'owner' ? 0 : conv.roles?.[m] === 'admin' ? 1 : people[m].human ? 3 : 2)
   const members = [...conv.members].sort((a, b) => roleOrder(a) - roleOrder(b)).filter((m) => !q || people[m].name.toLowerCase().includes(q.toLowerCase()))
   return (
@@ -92,20 +95,13 @@ function GroupSide({ conv, initial }: { conv: Conversation; initial?: GTab }) {
 
               </>}
               {tab === 'plugin' && <>
-      {/* 本群插件：挂在这个聊天上的（概念卡第 4 张） */}
-      <section className="px-2 pb-2 pt-1" data-testid="side-plugins">
-        <div className="mb-1 flex items-center px-2"><span className="flex-1 text-[13px] font-semibold">本群插件</span><button data-testid="side-plugin-add" onClick={() => setSection('plugins')} className="text-[12px] text-fg-3 hover:text-fg">添加 ›</button></div>
-        <div className="flex flex-wrap gap-1.5 px-2">
-          {myPlugins.map((p) => <span key={p.id} title={p.desc} className="flex items-center gap-1.5 rounded-full border border-line py-0.5 pl-0.5 pr-2 text-[12px]"><span className="grid h-5 w-5 place-items-center rounded-full text-[10px] font-semibold text-white" style={{ background: p.color }}>{p.letter}</span>{p.name}<span className="text-fg-3">{p.kind === 'source' ? '取' : p.kind === 'outbound' ? '发' : '面板'}</span></span>)}
-          {myPlugins.length === 0 && <span className="text-[12px] text-fg-3">没有挂插件</span>}
-        </div>
-      </section>
-      {/* #2273 U80：动向时间线插件挂在本群时，在这里展开；每段点了回到它总结的那段消息 */}
-      {myPlugins.some((p) => p.id === 'p-pulse') && (() => {
+      <PluginTab conv={conv} />
+      {/* #2273 U80：动向时间线插件挂在本群、启用着时，在这里展开；每段点了回到它总结的那段消息 */}
+      {myPlugins.some((p) => p.id === 'g-group.pulse' && p.phase === 'enabled') && (() => {
         const list = pulse.filter((x) => x.conv === conv.id)
         const cr = crons.find((c) => c.conv === conv.id && c.when?.k === 'every')
         return (
-          <section className="px-2 pb-3 pt-1" data-testid="side-pulse">
+          <section className="mt-1 border-t border-line px-2 pb-3 pt-3" data-testid="side-pulse">
             <div className="mb-1.5 flex items-center px-2"><span className="flex-1 text-[13px] font-semibold">动向时间线</span>
               {cr && cr.when?.k === 'every' && <button data-testid="side-pulse-rule" onClick={() => openSplit({ t: 'cron', id: cr.id })} className="text-[11.5px] text-fg-3 hover:text-fg">{people[cr.owner].name} · 每 {cr.when.n} 条一段 · 已 {cr.when.seen}/{cr.when.n} ›</button>}
             </div>
@@ -123,30 +119,8 @@ function GroupSide({ conv, initial }: { conv: Conversation; initial?: GTab }) {
           </section>
         )
       })()}
-
               </>}
-              {tab === 'tools' && <>
-      {/* 群工具：QQ 群应用的位置，换成 agent 群需要的 */}
-      <section className="grid grid-cols-4 gap-1 px-2 py-2" data-testid="side-tools">
-        {[
-          { I: Sparkles, l: '总结未读', a: () => summarize(conv.id), t: 'tool-summary' },
-          { I: BookOpen, l: `协作手册`, a: () => push({ t: 'playbook', id: conv.id }, true), t: 'tool-playbook', n: playbook.length },
-          { I: FileText, l: '群文件', a: () => push({ t: 'files', id: conv.id }, true), t: 'tool-files', n: artifacts.filter((a) => a.conv === conv.id).length },
-          { I: FolderGit2, l: '工作区', a: () => push({ t: 'workspace', id: conv.id }, true), t: 'tool-workspace' },
-          { I: Link2, l: '关联会话', a: () => push({ t: 'links', id: conv.id }, true), t: 'tool-links', n: conv.links?.length },
-          { I: Pin, l: '记下的事', a: () => push({ t: 'commits', id: conv.id }, true), t: 'tool-commits', n: myCommits.length },
-          { I: Cpu, l: '临时算力', a: () => push({ t: 'pool', id: conv.id }, true), t: 'tool-compute', sub: conv.tempCompute ? `${poolUsed(computes, conv.id)}/${conv.tempCompute.max}` : undefined },
-          { I: Copy, l: '复制团队', a: () => push({ t: 'clone', id: conv.id }, true), t: 'tool-clone' },
-        ].map((x) => (
-          <button key={x.l} data-testid={x.t} onClick={x.a} className="relative flex flex-col items-center gap-1 rounded-lg px-1 py-1.5 text-[11.5px] text-fg-2 hover:bg-hover hover:text-fg">
-            <x.I className="h-[18px] w-[18px]" strokeWidth={1.6} />
-            <span className="truncate">{x.l}</span>
-            {(x.n || x.sub) ? <span className="absolute right-1.5 top-0.5 text-[10px] text-fg-3">{x.sub ?? x.n}</span> : null}
-          </button>
-        ))}
-      </section>
-
-              </>}
+              {tab === 'tools' && <ToolsTab conv={conv} />}
               {tab === 'members' && <>
         <div className="mb-1 flex items-center px-4 pt-1.5">
           {searching ? (
@@ -174,6 +148,115 @@ function GroupSide({ conv, initial }: { conv: Conversation; initial?: GTab }) {
         </div>
       </section>
     </div>
+  )
+}
+
+/* 群资料·插件：本群挂了哪些插件。启停对所有聊天生效（插件是装在这台电脑上的）；从本群摘下只影响这里 */
+function PluginTab({ conv }: { conv: Conversation }) {
+  const { plugins, pluginAct, toast, setSection } = useApp()
+  const [picking, setPicking] = useState(false)
+  const mine = plugins.filter((p) => isInstalled(p) && p.manifest && p.convs.includes(conv.id))
+  const free = attachable(plugins, conv.id)
+  const act = (id: string, a: Parameters<typeof pluginAct>[1]) => { const r = pluginAct(id, a); if (!r.ok) toast(r.error) }
+  return (
+    <section className="px-2 pb-2 pt-1" data-testid="side-plugins">
+      <div className="mb-1 flex h-8 items-center px-2">
+        <span className="flex-1 text-[13px] font-semibold">本群插件 <span className="font-normal text-fg-3">{mine.length}</span></span>
+        <Popover open={picking} onOpenChange={setPicking}>
+          <PopoverTrigger asChild>
+            <button data-testid="side-plugin-add" className="flex h-7 items-center gap-1 rounded-md px-2 text-[12.5px] text-fg-2 hover:bg-hover hover:text-fg"><Plus className="h-3.5 w-3.5" />添加插件</button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-[290px] rounded-xl border-line bg-elev p-1.5 shadow-elev" data-testid="side-plugin-picker">
+            <div className="px-2 pb-1 pt-1 text-[11.5px] font-medium text-fg-3">已安装、还没挂到本群</div>
+            {free.length === 0 && <div className="px-2 py-2 text-[12.5px] text-fg-2">装好的插件都挂上了</div>}
+            {free.map((p) => (
+              <button key={p.id} data-testid={`side-plugin-pick-${p.id}`} onClick={() => { act(p.id, { type: 'attach', conv: conv.id }); setPicking(false) }} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-hover">
+                <PluginIcon m={p.manifest!} size={28} />
+                <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-medium">{p.manifest!.name}</span><span className="block truncate text-[11.5px] text-fg-3">{CATEGORY_LABEL[p.manifest!.category]}{p.phase === 'disabled' ? ' · 已停用' : ''}</span></span>
+                <span className="text-[12px] font-medium text-me">挂上</span>
+              </button>
+            ))}
+            <div className="mt-1 border-t border-line pt-1">
+              <button data-testid="side-plugin-market" onClick={() => { setPicking(false); setSection('plugins') }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[12.5px] text-fg-2 hover:bg-hover hover:text-fg"><Store className="h-4 w-4" /><span className="flex-1">去插件市场找更多</span><ChevronRight className="h-3.5 w-3.5" /></button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+      {mine.length === 0 && (
+        <div className="mx-2 rounded-xl border border-dashed border-line px-3 py-5 text-center text-[12.5px] text-fg-2">本群还没挂插件。<br />挂上以后，群里的助手才能用它。</div>
+      )}
+      <div className="space-y-0.5">
+        {mine.map((p) => {
+          const m = p.manifest!
+          const on = p.phase === 'enabled'
+          return (
+            <div key={p.id} data-testid={`side-plugin-${p.id}`} data-phase={p.phase} className="group flex items-center gap-2.5 rounded-xl px-2 py-2 hover:bg-hover">
+              <span className={cn(!on && 'opacity-50 grayscale')}><PluginIcon m={m} size={32} /></span>
+              <button onClick={() => openPluginDetail(setSection, p.id)} title="看插件详情" className="min-w-0 flex-1 text-left">
+                <span className="flex items-center gap-1.5"><span className="truncate text-[13px] font-medium">{m.name}</span><span className="shrink-0 rounded bg-hover px-1 text-[11px] text-fg-2 group-hover:bg-bg">{CATEGORY_LABEL[m.category]}</span></span>
+                <span className={cn('block truncate text-[11.5px]', on ? 'text-fg-3' : 'text-warm')}>
+                  {on ? (m.contributes.commands.map((c) => `/${c.name}`).join(' ') || m.contributes.panels.map((x) => `面板：${x.title}`).join(' ') || m.summary) : '已停用 · 所有聊天都暂时用不了'}
+                </span>
+              </button>
+              <Tip label={on ? '停用（所有聊天）' : '启用（所有聊天）'}>
+                <span><Switch data-testid={`side-plugin-toggle-${p.id}`} aria-label={`启用「${m.name}」（对所有聊天生效）`} checked={on} onCheckedChange={(v) => act(p.id, { type: v ? 'enable' : 'disable' })} className="scale-90" /></span>
+              </Tip>
+              <Tip label="从本群摘下">
+                <button data-testid={`side-plugin-detach-${p.id}`} aria-label={`把「${m.name}」从本群摘下`} onClick={() => act(p.id, { type: 'detach', conv: conv.id })} className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-fg-3 hover:bg-sel hover:text-fg"><X className="h-3.5 w-3.5" /></button>
+              </Tip>
+            </div>
+          )
+        })}
+      </div>
+      {mine.length > 0 && <p className="px-2 pt-2 text-[11.5px] text-fg-3">启停对所有聊天生效；「×」只从本群摘下。点名字看权限和命令。</p>}
+    </section>
+  )
+}
+
+/* 群资料·工具：每项写清楚做什么、来自哪里、对应哪条 / 命令，点了直接执行或打开对应页面。
+   插件带来的命令点了填进输入框（参数在那边补）；斜杠补全菜单在输入框里做 */
+type ToolRow = { key: string; I?: LucideIcon; icon?: ReactNode; title: string; cmd: string; desc: string; from: string; meta?: string; how: '执行' | '打开' | '填入输入框'; run: () => void }
+function ToolsTab({ conv }: { conv: Conversation }) {
+  const { computes, push, commits, playbook, summarize, plugins, putCommand } = useApp()
+  const nCommits = commits.filter((c) => c.conv === conv.id && c.on).length
+  const nFiles = artifacts.filter((a) => a.conv === conv.id).length
+  const builtin: ToolRow[] = [
+    { key: 'summary', I: Sparkles, title: '总结未读', cmd: 'summary', desc: '让 Helper 把你不在时的消息总结成几条要点，发在本群，每条能点回原消息', from: '内置', how: '执行', run: () => summarize(conv.id) },
+    { key: 'playbook', I: BookOpen, title: '协作手册', cmd: 'playbook', desc: '本群的约定和流程，助手接活前会读；改动要你批准', from: '内置', meta: `${playbook.length} 条`, how: '打开', run: () => push({ t: 'playbook', id: conv.id }, true) },
+    { key: 'files', I: FileText, title: '群文件', cmd: 'files', desc: '本群发过的文件和助手产出的文档', from: '内置', meta: `${nFiles} 个`, how: '打开', run: () => push({ t: 'files', id: conv.id }, true) },
+    { key: 'workspace', I: FolderGit2, title: '工作区', cmd: 'workspace', desc: '本群的代码目录，看各助手的提交', from: '内置', how: '打开', run: () => push({ t: 'workspace', id: conv.id }, true) },
+    { key: 'links', I: Link2, title: '关联会话', cmd: 'link', desc: '把私聊记录关联进来，本群的助手才看得到', from: '内置', meta: conv.links?.length ? `${conv.links.length} 个` : undefined, how: '打开', run: () => push({ t: 'links', id: conv.id }, true) },
+    { key: 'commits', I: Pin, title: '记下的事', cmd: 'commits', desc: '助手答应过的事，比如「有进度就 @你」', from: '内置', meta: `${nCommits} 条`, how: '打开', run: () => push({ t: 'commits', id: conv.id }, true) },
+    { key: 'compute', I: Cpu, title: '临时算力', cmd: 'compute', desc: '本群借给助手的临时算力，用完归还', from: '内置', meta: conv.tempCompute ? `${poolUsed(computes, conv.id)}/${conv.tempCompute.max} 在用` : '没开', how: '打开', run: () => push({ t: 'pool', id: conv.id }, true) },
+    { key: 'clone', I: Copy, title: '复制团队', cmd: 'clone', desc: '把成员和协作手册复制到新群；聊天、任务和凭据不带', from: '内置', how: '打开', run: () => push({ t: 'clone', id: conv.id }, true) },
+  ]
+  const fromPlugins: ToolRow[] = pluginCommands(plugins, conv.id).map((c) => {
+    const m = plugins.find((p) => p.id === c.plugin)!.manifest!
+    return { key: `${c.plugin}-${c.command.name}`, icon: <PluginIcon m={m} size={30} />, title: c.command.title, cmd: c.command.name, desc: c.command.desc, from: `来自插件「${c.pluginName}」`, how: '填入输入框', run: () => putCommand(c.command.name) }
+  })
+  const Row = ({ t }: { t: ToolRow }) => (
+    <button data-testid={`tool-${t.key}`} onClick={t.run} className="group flex w-full items-start gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-hover">
+      {t.icon ?? (t.I && <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-lg bg-hover text-fg-2 group-hover:bg-bg group-hover:text-fg"><t.I className="h-4 w-4" strokeWidth={1.75} /></span>)}
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5">
+          <span className="truncate text-[13px] font-medium">{t.title}</span>
+          <code data-testid={`tool-cmd-${t.key}`} className="shrink-0 rounded bg-hover px-1 font-mono text-[11px] text-fg-2 group-hover:bg-bg">/{t.cmd}</code>
+          {t.meta && <span className="shrink-0 text-[11px] text-fg-3">{t.meta}</span>}
+        </span>
+        <span className="mt-0.5 block text-[12px] leading-snug text-fg-2">{t.desc}</span>
+        {t.from !== '内置' && <span className="mt-0.5 block text-[11px] text-fg-3">{t.from}</span>}
+      </span>
+      <span className="mt-0.5 flex shrink-0 items-center text-[11.5px] text-fg-3 group-hover:text-fg">{t.how}<ChevronRight className="h-3.5 w-3.5" /></span>
+    </button>
+  )
+  return (
+    <section className="px-2 pb-3 pt-1" data-testid="side-tools">
+      <div className="px-2 pb-1 pt-1.5 text-[11.5px] font-medium text-fg-3">内置</div>
+      {builtin.map((t) => <Row key={t.key} t={t} />)}
+      <div className="px-2 pb-1 pt-4 text-[11.5px] font-medium text-fg-3">本群插件带来的</div>
+      {fromPlugins.length ? fromPlugins.map((t) => <Row key={t.key} t={t} />) : <div className="px-2 py-1 text-[12px] text-fg-3">本群挂的插件没有提供命令。在「插件」页签添加。</div>}
+      <p className="mx-2 mt-3 border-t border-line pt-2.5 text-[11.5px] leading-relaxed text-fg-3"><Puzzle className="mr-1 inline h-3 w-3" />在输入框里打 / 也能叫出这些命令。</p>
+    </section>
   )
 }
 
@@ -297,7 +380,7 @@ export function TopStrip({ conv, onOpen }: { conv: Conversation; onOpen: (tab: G
   const wait = it.filter((t) => t.status === '待验收').length
   const myCrons = crons.filter((c) => c.conv === conv.id)
   const cronErr = myCrons.some((c) => c.state === 'error')
-  const myPlugins = plugins.filter((p) => p.installed && p.convs.includes(conv.id))
+  const myPlugins = plugins.filter((p) => isInstalled(p) && p.convs.includes(conv.id))
   const cur = items[i % Math.max(1, items.length)]
   const Chip = ({ testid, onClick, children, tone }: { testid: string; onClick: () => void; children: ReactNode; tone?: 'warm' | 'err' }) => (
     <button data-testid={testid} onClick={onClick} className={cn('flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[12px] transition-colors', tone === 'warm' ? 'bg-warm-soft text-warm hover:brightness-95' : tone === 'err' ? 'bg-err/10 text-err hover:bg-err/15' : 'text-fg-2 hover:bg-hover hover:text-fg')}>{children}</button>

@@ -1,8 +1,8 @@
 import { startDrag, endDrag } from '@/drag'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { X, Search, Plus, MessageCircle, Users, Activity, FolderOpen, Settings, ChevronsDown, Link2, UserPlus, UsersRound, Forward, Pin, BellOff, CheckCheck, PanelRight, Settings2, AtSign, AlarmClock } from 'lucide-react'
+import { X, Search, Plus, MessageCircle, Users, Activity, FolderOpen, Puzzle, Settings, ChevronsDown, Link2, UserPlus, UsersRound, Forward, Pin, BellOff, CheckCheck, PanelRight, Settings2, AtSign, AlarmClock } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { poolUsed, convs0, computes0, pending0, reactions0, boards0, commits0, playbook0, crons0, checklist0, plugins0, pulse0, people, artifacts, type Conversation, type Msg, type PersonId, type Compute, type Cron, type Pending, type QuoteRef, type Activity as Act } from '@/data'
+import { poolUsed, convs0, computes0, pending0, reactions0, boards0, commits0, playbook0, crons0, checklist0, plugins0, pluginCatalog0, pulse0, people, artifacts, type PluginState, type Conversation, type Msg, type PersonId, type Compute, type Cron, type Pending, type QuoteRef, type Activity as Act } from '@/data'
 import { AppCtx, type Ctx, type Page, type SplitTab, type Section, type WbTab } from '@/ctx'
 import { Workbench } from '@/components/Workbench'
 import { Panorama } from '@/components/Panorama'
@@ -18,6 +18,7 @@ import { TopStrip, MemberStack } from '@/components/GroupSide'
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { broken, candidate } from '@/mut'
+import { notInstalled, pluginName, pluginReducer, type PluginAction } from '@g-group/ui-core'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 function HeadBtn({ tip, onClick, children, testid, active }: { tip: string; onClick: () => void; children: React.ReactNode; testid?: string; active?: boolean }) {
@@ -78,7 +79,10 @@ export default function App() {
   const [crons, setCrons] = useState(crons0)
   const [pulse, setPulse] = useState(pulse0)
   const [checklist, setChecklist] = useState(checklist0)
-  const [plugins, setPlugins] = useState(plugins0)
+  const [plugins, setPlugins] = useState<PluginState[]>(plugins0)
+  /* 插件状态的同步副本：同一拍里连着推进几次（比如装好后一次挂到几个聊天）不会互相覆盖 */
+  const pluginsRef = useRef<PluginState[]>(plugins0)
+  const commitPlugins = useCallback((f: (l: PluginState[]) => PluginState[]) => { pluginsRef.current = f(pluginsRef.current); setPlugins(pluginsRef.current) }, [])
   const [helperPanel, setHelperPanel] = useState(qs.get('hp') === '1')
   const [helperGlobal, setHelperGlobal] = useState(qs.get('hg') === '1')
   const [helperW, setHelperW] = useState(340)
@@ -551,7 +555,7 @@ export default function App() {
       if (active !== dm?.id && convs.find((c) => c.id === active)?.members.includes(pid)) pushMsg({ k: 'sys', id: 's' + uid(), text }, active)
       setToastMsg('已保存')
     },
-    crons, pulse, checklist, plugins, section, setSection, helperPanel, setHelperPanel, helperGlobal, setHelperGlobal, pushMsg,
+    crons, pulse, checklist, plugins, pluginCatalog: pluginCatalog0, section, setSection, helperPanel, setHelperPanel, helperGlobal, setHelperGlobal, pushMsg,
     openWorkbench: (id, tab) => { setSection('contacts'); setContact(id); setWbTab(tab ?? 'overview'); setStack([]) },
     helperReply: (cid, ask) => {
       setTyping((t) => ({ ...t, [cid]: 'helper' }))
@@ -616,7 +620,26 @@ export default function App() {
       if (!silent) say(c.conv, c.owner, `（手动试跑）${c.text}：已经做完，这是这次的结果。`, 900, { id: mid, cron: c.id, at: new Date().toTimeString().slice(0, 5) })
       else setToastMsg(`${people[c.owner].name} 看过了，没有情况，所以没发消息`)
     },
-    updatePlugin: (id, patch) => setPlugins((l) => l.map((x) => (x.id === id ? { ...x, ...patch } : x))),
+    updatePlugin: (id, patch) => commitPlugins((l) => l.map((x) => (x.id === id ? { ...x, ...patch } : x))),
+    pluginAct: (id, a) => {
+      const cur: PluginState = pluginsRef.current.find((x) => x.id === id) ?? notInstalled(id)
+      const r = pluginReducer(cur, a)
+      if (!r.ok) return r
+      commitPlugins((l) => (l.some((x) => x.id === id) ? l.map((x) => (x.id === id ? r.state : x)) : [...l, r.state]))
+      const name = pluginName(r.state)
+      /* 演示：安装 / 卸载过一会儿自动完成。后端接上后由 plugins.install / plugins.uninstall 的回执推进 */
+      const later = (b: PluginAction, ms: number) => setTimeout(() => commitPlugins((l) => l.map((x) => { if (x.id !== id) return x; const n = pluginReducer(x, b); return n.ok ? n.state : x })), frozen ? 0 : ms)
+      const title = (cid: string) => convs.find((c) => c.id === cid)?.title ?? cid
+      if (a.type === 'install') later({ type: 'install_done' }, 1200)
+      if (a.type === 'uninstall') { later({ type: 'uninstall_done' }, 700); cur.convs.forEach((cid) => pushMsg({ k: 'sys', id: 's' + uid(), text: `你卸载了插件「${name}」，这里不能再用它了` }, cid)) }
+      if (a.type === 'disable') setToastMsg(`已停用「${name}」，所有聊天里都暂时用不了`)
+      if (a.type === 'enable') setToastMsg(`已启用「${name}」`)
+      if (a.type === 'update') setToastMsg(`「${name}」更新到 v${a.manifest.version}`)
+      if (a.type === 'attach') { pushMsg({ k: 'sys', id: 's' + uid(), text: `你把插件「${name}」挂到了这里` }, a.conv); setToastMsg(`「${name}」挂到了「${title(a.conv)}」`) }
+      if (a.type === 'detach') { pushMsg({ k: 'sys', id: 's' + uid(), text: `你把插件「${name}」从这里摘下了` }, a.conv); setToastMsg(`「${name}」从「${title(a.conv)}」摘下了`) }
+      return r
+    },
+    putCommand: (name) => { setDraft((d) => `/${name} ${d.replace(/^\/[a-z0-9-]+\s*/, '')}`); setTimeout(() => inputRef.current?.focus(), 0) },
     hitCaptcha: (cid) => {
       const c = computes[cid]; if (!c) return
       /* AC-44：卡在人工验证码 → 进 BlockedOnHuman（不重试、不猜、不绕过）；由联系人 @你 并附截图，Compute 不直接发言 */
@@ -648,15 +671,16 @@ export default function App() {
     },
     revokePlugin: (id) => {
       const p = plugins.find((x) => x.id === id); if (!p) return
-      if (!broken('AC-35-5')) setPlugins((l) => l.map((x) => (x.id === id ? { ...x, revoked: true } : x)))
-      const who = p.who?.[0] ?? 'helper'
-      if (!broken('AC-35-5')) p.convs.forEach((cid) => pushMsg({ k: 'authfix', id: 'af' + uid(), from: who, plugin: id, text: `发不了邮件：${p.name} 授权过期了，外发已暂停，待发的先不发` }, cid))
+      const name = pluginName(p)
+      if (!broken('AC-35-5')) commitPlugins((l) => l.map((x) => (x.id === id ? { ...x, cred: '授权失效', grant: x.grant ? { ...x.grant, revoked: true } : x.grant } : x)))
+      const who = p.callers[0] ?? 'helper'
+      if (!broken('AC-35-5')) p.convs.forEach((cid) => pushMsg({ k: 'authfix', id: 'af' + uid(), from: who, plugin: id, text: `发不了邮件：${name} 授权过期了，外发已暂停，待发的先不发` }, cid))
     },
     reauthPlugin: (id) => {
       const p = plugins.find((x) => x.id === id); if (!p) return
-      setPlugins((l) => l.map((x) => (x.id === id ? { ...x, revoked: false, cred: 'OAuth · 刚重新授权 · 7 天后过期' } : x)))
+      commitPlugins((l) => l.map((x) => (x.id === id ? { ...x, cred: 'OAuth · 刚重新授权 · 7 天后过期', grant: x.grant ? { ...x.grant, revoked: false } : x.grant } : x)))
       setConvs((cs) => cs.map((c) => ({ ...c, messages: c.messages.map((m) => (m.k === 'authfix' && m.plugin === id ? { ...m, fixed: true } : m)) })))
-      p.convs.forEach((cid) => say(cid, p.who?.[0] ?? 'helper', `${p.name} 重新授权好了，暂停的外发接着发。`, 500))
+      p.convs.forEach((cid) => say(cid, p.callers[0] ?? 'helper', `${pluginName(p)} 重新授权好了，暂停的外发接着发。`, 500))
     },
     clearHistory: (cid) => {
       setConvs((cs) => cs.map((c) => (c.id === cid ? { ...c, messages: [{ k: 'sys', id: 's' + uid(), text: '你清空了这里的聊天记录（只影响你自己看到的；助手的记忆和资产不受影响）' }] } : c)))
@@ -825,6 +849,7 @@ export default function App() {
               { k: 'contacts', I: Users, label: '通讯录' },
               { k: 'activity', I: Activity, label: '进展', dot: totals.run > 0 },
               { k: 'files', I: FolderOpen, label: '文件' },
+              { k: 'plugins', I: Puzzle, label: '插件' },
             ] as const).map((it) => (
               <Tip key={it.k} label={it.label} side="right">
                 <button data-testid={`nav-${it.k}`} onClick={() => (it.k === 'activity' ? setPanoOpen(true) : setSection(it.k))} className={cn('relative grid h-10 w-10 place-items-center rounded-xl transition', (it.k === 'activity' ? panoOpen : section === it.k) ? 'bg-sel text-fg' : 'text-fg-2 hover:bg-hover hover:text-fg')}>
