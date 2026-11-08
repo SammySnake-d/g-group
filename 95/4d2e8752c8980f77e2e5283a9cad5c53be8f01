@@ -1,0 +1,23 @@
+packages/api-contract/src/entities.ts
+  s_cb1a42da06940f::t_95dbcb77e96b58 188-192
+packages/server/src/host.ts
+  s_cb1a42da06940f::t_1712009d2400a0 838,1010-1016,1049,1062-1064,1067
+packages/server/src/service.ts
+  s_cb1a42da06940f::t_0d72771dc2ffe8 73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "954d2e8752c8980f77e2e5283a9cad5c53be8f01",
+  "prompts": {},
+  "sessions": {
+    "s_cb1a42da06940f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ade26af15a1458fdd",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
