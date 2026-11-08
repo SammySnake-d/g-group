@@ -1,0 +1,11 @@
+base=origin/feat/domain-core branch=feat/cc-compute HEAD=e7d6f9c4539606476ed19a061d3bfbf8997aedaf 受检文件 27 个 收据=receipts/feat-cc-compute.json 门禁 8 个
+✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据
+✗ G-REVIEW  R-01:审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)
+    - 还没有独立审查
+✓ G-RED  R-02:先红后绿,新增/改动的每条测试在红提交上按名字失败、现在按名字通过
+✓ G-STUB  R-03:空实现红基线,桩下仍通过、加载失败、没执行到的测试都判无效
+✓ G-TAUTO  R-04:拒绝同语反复测试(按 node:test 真实导入识别;无断言、断言不判源码结果、恒定断言、skip/only)
+✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限或 pull_request_target
+✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)
+✓ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是用户本人对这一版的明确批准
+CONTENT_HASH=438e5b3bb117e2bfd3f7dfd20b606139780061319aa914dc7619d9370a5d978f

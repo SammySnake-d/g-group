@@ -1,0 +1,116 @@
+✓ 原样副本:89 绿 / 0 红,计划 89 条,退出码 0
+并发 2
+✓ M01 brief 放行 memory 等额外字段:86 绿 / 3 红,被「brief 带 memory 或 soul 字段被拒绝,不起任何进程(AC-33 ④ 阳性埋雷)」发现
+✓ M02 brief 放行明文凭据:87 绿 / 2 红,被「同一 brief 只切凭据:明文 token 被拒绝,引用句柄放行(单开关)」发现
+✓ M03 --allowedTools 不按 brief.tools:86 绿 / 3 红,被「CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress」发现
+✓ M04 没有 milestone 就不报 completed:75 绿 / 14 红,被「F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress」发现
+✓ M05 非零退出也报 completed:87 绿 / 2 红,被「CLI 给出 success 结果但进程非零退出 → failed,不报 completed」发现
+✓ M06 stop 等主进程退出后才报 stopped(不是 mirasim 的立即报):77 绿 / 12 红,被「F-03:主进程无视 SIGTERM 时 reapForceMs 后对进程组 SIGKILL,同组孙进程一起消失;孙进程从没收到 SIGTERM」发现
+✓ M07 快照缺 constraintVer 放行:87 绿 / 2 红,被「没汇报过约束版本的 Compute 拿不到快照;缺 constraintVer 的 handoff 被 spawn 拒绝(AC-07 阳性埋雷)」发现
+✓ M08 handoff 不写进首个提示:87 绿 / 2 红,被「带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里」发现
+✓ M09 env 继承宿主进程环境(带明文):88 绿 / 1 红,被「子进程 env 不继承宿主进程环境里的明文密钥,凭据只以引用句柄出现」发现
+✓ M10 --tools 不按 brief.tools:40 绿 / 49 红,被「CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress」发现
+✓ M11 已受理 blocked 不停在受阻:88 绿 / 1 红,被「RR-05:terminalFor 的优先级:停止 > 违规 > 进程失败 > 完成;违规保留在 violations,stopped.scope=main-then-group」发现
+✓ M12 被拒收的汇报也产出事件:86 绿 / 3 红,被「CLI 以权限拒绝回绝的 report_progress(内容合规,tool_result is_error)不产出事件,只记入拒收」发现
+✓ M13 到期不对进程组发 SIGKILL:83 绿 / 6 红,被「F-03:主进程无视 SIGTERM 时 reapForceMs 后对进程组 SIGKILL,同组孙进程一起消失;孙进程从没收到 SIGTERM」发现
+✓ M14 handoff 不列进装配清单:87 绿 / 2 红,被「带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里」发现
+✓ M15 resume 不带 CLI 会话号:84 绿 / 5 红,被「blocked 后 CLI 结束不报 completed;resume 用同一 CLI 会话续接后报 completed」发现
+✓ M16 F-01 brief.tools 放行 default 等非内置名:86 绿 / 3 红,被「brief 的运行位置不是本机、工具名带逗号拼接时被拒绝」发现
+✓ M17 F-01 空集时 --tools 给 default:86 绿 / 3 红,被「F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress」发现
+✓ M18 F-01 不核对 CLI init 的实际挂载清单:85 绿 / 4 红,被「F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)」发现
+✓ M19 F-02 忽略 Compute 汇报的 failed:88 绿 / 1 红,被「F-02:Compute 经 report_progress 明确汇报放弃,CLI 正常结束也报 failed 不报 completed」发现
+✓ M20 F-02 result 行不看 is_error:88 绿 / 1 红,被「F-02:result 行 subtype 是 success 但 is_error 为 true → failed」发现
+✓ M21 F-02 被拒收的 blocked 不记为未解决:84 绿 / 5 红,被「服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照」发现
+✓ M22 CLI 不自成进程组:84 绿 / 5 红,被「F-03:主进程无视 SIGTERM 时 reapForceMs 后对进程组 SIGKILL,同组孙进程一起消失;孙进程从没收到 SIGTERM」发现
+✓ M23 CLI 正常结束后仍对进程组发 SIGTERM(mirasim 不发):87 绿 / 2 红,被「F-03:stop 立即产出 stopped;初始 SIGTERM 只发主进程,主进程按时退出就取消组 SIGKILL,同组孙进程收不到信号(与 mirasim 一致)」发现
+✓ M24 初始 SIGTERM 发给进程组而不是只发主进程:87 绿 / 2 红,被「F-03:stop 立即产出 stopped;初始 SIGTERM 只发主进程,主进程按时退出就取消组 SIGKILL,同组孙进程收不到信号(与 mirasim 一致)」发现
+✓ M25 F-04 MCP 服务器不校验 schema:86 绿 / 3 红,被「F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收」发现
+✓ M26 F-04 适配器不做第二道 schema 校验:88 绿 / 1 红,被「F-04:服务器校验失效、回执说已记录时,适配器自己的 schema 校验仍拒收不合规的 blocked」发现
+✓ M27 F-04 needs 只查真假不查类型:83 绿 / 6 红,被「F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)」发现
+✓ M28 F-04 stage 只查真假不查类型:87 绿 / 2 红,被「F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)」发现
+✓ M29 F-04 constraintVer 不校验:87 绿 / 2 红,被「服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照」发现
+✓ M30 F-04 kind 不查枚举:84 绿 / 5 红,被「F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收」发现
+✓ M31 F-04 放行未知字段:87 绿 / 2 红,被「F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收」发现
+✓ M32 RR-01 合规 started 清掉被拒收的 blocked(审查存活变异):88 绿 / 1 红,被「RR-01:被拒收的 blocked 之后只来一个合规 started,也不算解除(审查存活变异)」发现
+✓ M33 RR-01 合规 completed 清掉被拒收的 blocked:88 绿 / 1 红,被「RR-01:被拒收的 blocked 未合规重报时,另一种合规汇报(completed)不能把它清掉 → failed」发现
+✓ M34 RR-01 受理 blocked 后不对进程组 SIGSTOP:87 绿 / 2 红,被「RR-01(非 mirasim 对照项):已受理 blocked 后对进程组 SIGSTOP 冻结,之后的 milestone/completed 与同组孙进程副作用都不发生」发现
+✓ M35 RR-01 resume 不解除被拒收的受阻:88 绿 / 1 红,被「RR-01:被拒收的 blocked 由宿主显式 resume 解除,续接一轮正常完成(对照)」发现
+✓ M36 RR-02 不要求 host MCP connected:85 绿 / 4 红,被「RR-02:report_progress MCP 起不来时 init 里 host 为 failed → 回收进程组并 failed,不报 completed」发现
+✓ M37 RR-02 不要求工具清单里有 report_progress:87 绿 / 2 红,被「RR-02:与真实 CLI 同形的 init(host status failed、工具里无 report_progress)判为无法核验;connected 的同形 init 放行」发现
+✓ M38 RR-02 tools 元素不查类型:88 绿 / 1 红,被「RR-02:与真实 CLI 同形的 init(host status failed、工具里无 report_progress)判为无法核验;connected 的同形 init 放行」发现
+✓ M39 信号只发给进程本身、不发给进程组:85 绿 / 4 红,被「F-03:主进程无视 SIGTERM 时 reapForceMs 后对进程组 SIGKILL,同组孙进程一起消失;孙进程从没收到 SIGTERM」发现
+✓ M40 stopped 不带 main-then-group 范围:84 绿 / 5 红,被「F-03:stop 立即产出 stopped;初始 SIGTERM 只发主进程,主进程按时退出就取消组 SIGKILL,同组孙进程收不到信号(与 mirasim 一致)」发现
+✓ M41 RR-04 运行中也给快照:87 绿 / 2 红,被「RR-01(非 mirasim 对照项):已受理 blocked 后对进程组 SIGSTOP 冻结,之后的 milestone/completed 与同组孙进程副作用都不发生」发现
+✓ M42 RR-04 快照不等主进程退出(只看终态):88 绿 / 1 红,被「RR-04:运行中、stopped 已产出但主进程未退出时快照都是 not-quiescent;主进程退出后才给出快照」发现
+✓ M43 RR-05 违规压过停止:88 绿 / 1 红,被「RR-05:terminalFor 的优先级:停止 > 违规 > 进程失败 > 完成;违规保留在 violations,stopped.scope=main-then-group」发现
+✓ M44 升级间隔不按配置(写死 10 秒):85 绿 / 4 红,被「F-03:主进程无视 SIGTERM 时 reapForceMs 后对进程组 SIGKILL,同组孙进程一起消失;孙进程从没收到 SIGTERM」发现
+✓ M45 RR-05 违规不留痕:80 绿 / 9 红,被「F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)」发现
+✓ M46 主进程先退出也不取消组 SIGKILL:88 绿 / 1 红,被「F-03:stop 立即产出 stopped;初始 SIGTERM 只发主进程,主进程按时退出就取消组 SIGKILL,同组孙进程收不到信号(与 mirasim 一致)」发现
+✓ M47 R3-01 stop 后不封存这一轮:87 绿 / 2 红,被「R3-01:stopped 之后迟到的 milestone 不再产出事件,也不改变终态」发现
+✓ M48 R3-02 空白续接先杀掉冻结的进程组再报错:88 绿 / 1 红,被「R3-02:空白续接先校验、返回输入错误,冻结的主进程与同组孙进程保持暂停;合法续接再执行(单开关)」发现
+✓ M49 R3-03 init 前未认可的输出放行:85 绿 / 4 红,被「R3-03:init 之前的 assistant 文本、非 JSON 行 → 回收并 failed,不报 started/completed」发现
+✓ M50 R3-03 init 前任何 system 帧都放行:86 绿 / 3 红,被「R3-03:init 之前认可的 system 帧(hook_started/hook_response/ui_invalidate)放行,随后合法 init 正常完成(对照)」发现
+✓ M51 R4-04 凭据校验只在数组长度为 1 时执行:88 绿 / 1 红,被「R4-04:多凭据引用:每一个位置放非引用都被拒绝、不起进程;全部合法的多元素放行并原样进清单(对照)」发现
+✓ M52 补充 删除 openQuestions 校验:88 绿 / 1 红,被「F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收」发现
+✓ M53 补充 删除 doneSideEffects 校验:88 绿 / 1 红,被「F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收」发现
+✓ M54 R4-05 tools/list 返回空数组:36 绿 / 53 红,被「F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress」发现
+✓ M55 R4-05 删除 REPORT_LOG 日志追加:86 绿 / 3 红,被「R4-05:REPORT_LOG:合法与非法调用各追加一行,valid/errs 与共享校验一致,无效请求不记;未设 REPORT_LOG 时不写任何文件(正反对照)」发现
+✓ M56 R4-02 非对象请求不拒绝(直接访问 m.method):87 绿 / 2 红,被「R4-02:report MCP 收到合法 JSON null、其他原始值、数组与坏 JSON 时回 JSON-RPC 错误且进程继续可用,随后的合法请求照常处理(正反对照)」发现
+✓ M57 R4-01 不先判 Proxy:79 绿 / 10 红,被「R4-01:checkBrief 遇到字段/数组元素 getter、Proxy、撤销 Proxy、自定义原型 getter、不可枚举 setter 时不调用即拒收;纯 JSON brief 放行(对照)」发现
+✓ M58 R4-01 访问器不拒收(当作缺失字段):85 绿 / 4 红,被「R4-01:spawn 的 brief、选项与 handoff(含嵌套数组)带 getter/Proxy/非预期字段时不调用即拒收、不起子进程;纯 JSON 选项与 handoff 正常启动(对照)」发现
+✓ M59 R4-01 不查原型(自定义原型放行):88 绿 / 1 红,被「R4-01:spawn 的 brief、选项与 handoff(含嵌套数组)带 getter/Proxy/非预期字段时不调用即拒收、不起子进程;纯 JSON 选项与 handoff 正常启动(对照)」发现
+✓ M60 R4-01 不可枚举属性放行:87 绿 / 2 红,被「R4-01:checkBrief 遇到字段/数组元素 getter、Proxy、撤销 Proxy、自定义原型 getter、不可枚举 setter 时不调用即拒收;纯 JSON brief 放行(对照)」发现
+✓ M61 R4-01 嵌套值不递归判定:79 绿 / 10 红,被「R4-01:checkBrief 遇到字段/数组元素 getter、Proxy、撤销 Proxy、自定义原型 getter、不可枚举 setter 时不调用即拒收;纯 JSON brief 放行(对照)」发现
+✓ M62 R4-01 checkBrief 不过纯数据判定:83 绿 / 6 红,被「R4-01:checkBrief 遇到字段/数组元素 getter、Proxy、撤销 Proxy、自定义原型 getter、不可枚举 setter 时不调用即拒收;纯 JSON brief 放行(对照)」发现
+✓ M63 R4-01 reportErrors 不过纯数据判定:87 绿 / 2 红,被「R4-01:reportErrors 遇到 getter、Proxy、撤销 Proxy、嵌套数组访问器、不可枚举字段时返回错误且不调用;纯 JSON 汇报无错(对照)」发现
+✓ M64 R4-01 spawn 选项不过纯数据判定:88 绿 / 1 红,被「R4-01:spawn 的 brief、选项与 handoff(含嵌套数组)带 getter/Proxy/非预期字段时不调用即拒收、不起子进程;纯 JSON 选项与 handoff 正常启动(对照)」发现
+✓ M65 R4-01 适配器选项不过纯数据判定:86 绿 / 3 红,被「R4-01:适配器选项与状态参数(computeId、续接文本)带 getter/Proxy/toPrimitive 时不调用即拒收;纯数据的选项与续接正常(对照)」发现
+✓ M66 R4-01 resume 不查状态参数类型:88 绿 / 1 红,被「R4-01:适配器选项与状态参数(computeId、续接文本)带 getter/Proxy/toPrimitive 时不调用即拒收;纯数据的选项与续接正常(对照)」发现
+✓ M67 R4-01 spawn 选项放行非预期字段:87 绿 / 2 红,被「R4-01:spawn 的 brief、选项与 handoff(含嵌套数组)带 getter/Proxy/非预期字段时不调用即拒收、不起子进程;纯 JSON 选项与 handoff 正常启动(对照)」发现
+✓ M68 R4-03 不读 MIRASIM_REAP_FORCE_MS:87 绿 / 2 红,被「R4-03:resolveReapForceMs 与 mirasim Ukc 一致:未传显式值时合法正数环境值生效,缺失/无效/非正回落 10000;显式值优先」发现
+✓ M69 R4-03 非正环境值也生效:88 绿 / 1 红,被「R4-03:resolveReapForceMs 与 mirasim Ukc 一致:未传显式值时合法正数环境值生效,缺失/无效/非正回落 10000;显式值优先」发现
+✓ M70 R4-03 环境值压过显式选项:87 绿 / 2 红,被「R4-03:resolveReapForceMs 与 mirasim Ukc 一致:未传显式值时合法正数环境值生效,缺失/无效/非正回落 10000;显式值优先」发现
+✓ M71 导出的 CC_BUILTIN_TOOLS 不冻结:88 绿 / 1 红,被「导出的策略常量不可变:CC_BUILTIN_TOOLS、REPORT_KINDS、PRE_INIT_SYSTEM_SUBTYPES、DEFAULT_RUNNER 冻结,改写抛错且校验行为不变」发现
+✓ M72 导出的 REPORT_KINDS 不冻结:88 绿 / 1 红,被「导出的策略常量不可变:CC_BUILTIN_TOOLS、REPORT_KINDS、PRE_INIT_SYSTEM_SUBTYPES、DEFAULT_RUNNER 冻结,改写抛错且校验行为不变」发现
+✓ M73 磁盘清理 CLI 退出后不删 g-group-cc-* 目录:88 绿 / 1 红,被「磁盘清理:每轮的 g-group-cc-* 临时目录运行中存在,CLI 结束、stop 或受阻后续接时删除;续接的新一轮另建目录并在结束后删除」发现
+✓ M74 R5-01 纯数据判定丢弃值为 undefined 的对象自有属性(未声明字段绕过白名单):86 绿 / 3 红,被「R5-01:checkBrief、checkSnapshot、reportErrors 遇到值为 undefined 的未声明自有字段一律拒收;去掉该字段放行,声明过的可选字段为 undefined 按没给处理、必填字段为 undefined 拒收(单开关对照)」发现
+✓ M75 R5-01 spawn 选项 cwd 为 undefined 也拒收(可选字段 undefined 不按没给处理):88 绿 / 1 红,被「R5-01:spawn 的 brief 带 memory/soul:undefined、选项或 handoff 带 outside:undefined 时拒收且不起进程(中性启动标记不出现);去掉该字段的同一输入照常启动,选项 cwd/handoff 为 undefined 按没给处理(单开关对照)」发现
+✓ M76 R5-01 汇报 stage 为 undefined 也报错(可选字段 undefined 不按没给处理):88 绿 / 1 红,被「R5-01:checkBrief、checkSnapshot、reportErrors 遇到值为 undefined 的未声明自有字段一律拒收;去掉该字段放行,声明过的可选字段为 undefined 按没给处理、必填字段为 undefined 拒收(单开关对照)」发现
+✓ M77 R5-02 tools/call 不核对工具名:87 绿 / 2 红,被「R5-02:report MCP 的 tools/call 只认 report_progress:未知、缺失或非字符串工具名回 -32602 协议错误,不回已记录、不写 REPORT_LOG;同一参数换成合法名称照常接收并记录(单开关对照)」发现
+✓ M78 R5-02 缺失或非字符串工具名放行:88 绿 / 1 红,被「R5-02:report MCP 的 tools/call 只认 report_progress:未知、缺失或非字符串工具名回 -32602 协议错误,不回已记录、不写 REPORT_LOG;同一参数换成合法名称照常接收并记录(单开关对照)」发现
+✓ M79 R6-01 firstPrompt 不先判 brief(直接读外部对象):87 绿 / 2 红,被「R6-01:包根 firstPrompt 对 brief/交接快照的 getter、嵌套与已撤销 Proxy 不调用即抛受控 TypeError(计数 0);合法纯数据照常拼出首个提示,返回值深冻结」发现
+✓ M80 R6-01 firstPrompt 不判交接快照:87 绿 / 2 红,被「R6-01:包根 firstPrompt 对 brief/交接快照的 getter、嵌套与已撤销 Proxy 不调用即抛受控 TypeError(计数 0);合法纯数据照常拼出首个提示,返回值深冻结」发现
+✓ M81 R6-01 allowedTools 不判 brief:87 绿 / 2 红,被「R6-01:包根 allowedTools、cliArgs、toolOverreach 对 brief Proxy/getter 与非字符串状态参数不调用即抛受控 TypeError(计数 0);合法输入给出按 brief 收窄的工具清单与参数」发现
+✓ M82 R6-01 toolOverreach 不判 initTools:87 绿 / 2 红,被「R6-01:包根 allowedTools、cliArgs、toolOverreach 对 brief Proxy/getter 与非字符串状态参数不调用即抛受控 TypeError(计数 0);合法输入给出按 brief 收窄的工具清单与参数」发现
+✓ M83 R6-01 cliArgs 不判 brief:87 绿 / 2 红,被「R6-01:包根 allowedTools、cliArgs、toolOverreach 对 brief Proxy/getter 与非字符串状态参数不调用即抛受控 TypeError(计数 0);合法输入给出按 brief 收窄的工具清单与参数」发现
+✓ M84 R6-01 cliArgs 的 prompt 隐式转换:87 绿 / 2 红,被「R6-01:包根 allowedTools、cliArgs、toolOverreach 对 brief Proxy/getter 与非字符串状态参数不调用即抛受控 TypeError(计数 0);合法输入给出按 brief 收窄的工具清单与参数」发现
+✓ M85 R6-01 cliEnv 的 hostEnv 不过纯数据判定:87 绿 / 2 红,被「R6-01:包根 cliEnv 对 hostEnv 的 getter、Proxy、非字符串或 undefined 值与非字符串 computeId 不调用即抛受控 TypeError(计数 0),与 createComputeAdapter 的 hostEnv 判定一致;合法 hostEnv 原样复制」发现
+✓ M86 R6-01 cliEnv 的 hostEnv 值不查字符串:88 绿 / 1 红,被「R6-01:包根 cliEnv 对 hostEnv 的 getter、Proxy、非字符串或 undefined 值与非字符串 computeId 不调用即抛受控 TypeError(计数 0),与 createComputeAdapter 的 hostEnv 判定一致;合法 hostEnv 原样复制」发现
+✓ M87 R6-01 cliEnv 的 computeId 隐式转换:87 绿 / 2 红,被「R6-01:包根 cliEnv 对 hostEnv 的 getter、Proxy、非字符串或 undefined 值与非字符串 computeId 不调用即抛受控 TypeError(计数 0),与 createComputeAdapter 的 hostEnv 判定一致;合法 hostEnv 原样复制」发现
+✓ M88 R6-01 streamParser 不判输入行类型:87 绿 / 2 红,被「R6-01:包根 streamParser 的输入行与 terminalFor 的退出/结果/事实参数遇到 Proxy、getter、嵌套 Proxy 不调用即抛受控 TypeError(计数 0);合法字符串行与纯数据照常解析和裁决」发现
+✓ M89 R6-01 terminalFor 参数不过纯数据判定:87 绿 / 2 红,被「R6-01:包根 streamParser 的输入行与 terminalFor 的退出/结果/事实参数遇到 Proxy、getter、嵌套 Proxy 不调用即抛受控 TypeError(计数 0);合法字符串行与纯数据照常解析和裁决」发现
+✓ M90 R6-01 terminalFor 的 stderrTail 不判类型:87 绿 / 2 红,被「R6-01:包根 streamParser 的输入行与 terminalFor 的退出/结果/事实参数遇到 Proxy、getter、嵌套 Proxy 不调用即抛受控 TypeError(计数 0);合法字符串行与纯数据照常解析和裁决」发现
+✓ M91 R6-01 resolveReapForceMs 显式值不判类型:88 绿 / 1 红,被「R6-01:包根导出的每个函数逐个参数换成已撤销 Proxy、整体 Proxy、getter、嵌套 Proxy/已撤销 Proxy 或可转换对象时都拒收且访问器与陷阱计数为 0;同一组合法参数照常工作;导出函数清单与本表一致」发现
+✓ M92 R6-01 resolveReapForceMs 环境值隐式转换:88 绿 / 1 红,被「R6-01:包根导出的每个函数逐个参数换成已撤销 Proxy、整体 Proxy、getter、嵌套 Proxy/已撤销 Proxy 或可转换对象时都拒收且访问器与陷阱计数为 0;同一组合法参数照常工作;导出函数清单与本表一致」发现
+✓ M93 R6-02 对外事件只冻外壳、violations 共用可变数组(旧行为):88 绿 / 1 红,被「R6-02:违规后 stop 的 stopped 事件及其 violations 深冻结:首个订阅者改写抛 TypeError,新订阅者与两次 settled() 仍看到原违规;停止优先、违规可审计」发现
+✓ M94 R6-02 rejectedReports 的 kind 不冻结:87 绿 / 2 红,被「R6-02:rejectedReports 记录里来自 JSON 的 kind(数组)深冻结,改写抛 TypeError,再次读取不变」发现
+✓ M95 R6-03 工具名先 trim(近似名当成已声明工具):88 绿 / 1 红,被「R6-03:report MCP 只认精确的 report_progress:前后空格、制表/换行、大小写不同、连字符等近似名称回 -32602 且不写 REPORT_LOG,同一参数的精确名称照常接收并只记一行(直接 JSON-RPC 正反对照)」发现
+✓ M96 R6-03 工具名大小写不敏感:88 绿 / 1 红,被「R6-03:report MCP 只认精确的 report_progress:前后空格、制表/换行、大小写不同、连字符等近似名称回 -32602 且不写 REPORT_LOG,同一参数的精确名称照常接收并只记一行(直接 JSON-RPC 正反对照)」发现
+✓ M97 R7-01 resume 不做认领检查(已有续接在途也受理):88 绿 / 1 红,被「R7-01:受阻后并发两次 resume 只受理一个、另一个立即被明确拒绝,只起一个续接 CLI;stop 后原 CLI 与续接 CLI 全部回收(正反对照)」发现
+✓ M98 R7-01 认领不置位(检查形同虚设):88 绿 / 1 红,被「R7-01:受阻后并发两次 resume 只受理一个、另一个立即被明确拒绝,只起一个续接 CLI;stop 后原 CLI 与续接 CLI 全部回收(正反对照)」发现
+✓ M99 R7-01 认领在等上一轮退出之前就释放:88 绿 / 1 红,被「R7-01:受阻后并发两次 resume 只受理一个、另一个立即被明确拒绝,只起一个续接 CLI;stop 后原 CLI 与续接 CLI 全部回收(正反对照)」发现
+✓ M100 R7-01 跨 await 不核对 stop(stop 确认后仍起 CLI):88 绿 / 1 红,被「R7-01:resume 在途(正等冻结的上一轮退出)时 stop:stop 受理,在途续接被明确拒绝,stop 确认之后不再起 CLI;原 CLI 回收、进程表里不剩本测试的进程(竞态对照)」发现
+✓ M101 R7-02 preInitFrame 对 type 做隐式字符串转换:87 绿 / 2 红,被「R7-02:init 前的帧与 init 里 type/subtype/host 状态是对象、数组、null 的合法 JSON 时 preInitFrame/checkInit 按合同拒收、给固定说明、不抛错;拒收回执的 text 是对象或数组时不拼接、不抛错;坏 JSON 与非对象照常拒收,合法字符串与 connected 的 init 照常(对照)」发现
+✓ M102 R7-02 preInitFrame 对 subtype 做隐式字符串转换:87 绿 / 2 红,被「R7-02:init 前的帧与 init 里 type/subtype/host 状态是对象、数组、null 的合法 JSON 时 preInitFrame/checkInit 按合同拒收、给固定说明、不抛错;拒收回执的 text 是对象或数组时不拼接、不抛错;坏 JSON 与非对象照常拒收,合法字符串与 connected 的 init 照常(对照)」发现
+✓ M103 R7-02 checkInit 对 host 状态做隐式字符串转换:87 绿 / 2 红,被「R7-02:init 前的帧与 init 里 type/subtype/host 状态是对象、数组、null 的合法 JSON 时 preInitFrame/checkInit 按合同拒收、给固定说明、不抛错;拒收回执的 text 是对象或数组时不拼接、不抛错;坏 JSON 与非对象照常拒收,合法字符串与 connected 的 init 照常(对照)」发现
+✓ M104 R7-02 拒收回执的 text 不判类型就拼接:87 绿 / 2 红,被「R7-02:init 前的帧与 init 里 type/subtype/host 状态是对象、数组、null 的合法 JSON 时 preInitFrame/checkInit 按合同拒收、给固定说明、不抛错;拒收回执的 text 是对象或数组时不拼接、不抛错;坏 JSON 与非对象照常拒收,合法字符串与 connected 的 init 照常(对照)」发现
+✓ M105 R7-02 安全说明对对象与数组仍做隐式转换:87 绿 / 2 红,被「R7-02:init 前的帧与 init 里 type/subtype/host 状态是对象、数组、null 的合法 JSON 时 preInitFrame/checkInit 按合同拒收、给固定说明、不抛错;拒收回执的 text 是对象或数组时不拼接、不抛错;坏 JSON 与非对象照常拒收,合法字符串与 connected 的 init 照常(对照)」发现
+✓ M106 R7-02 去掉 stdout 行的受控边界(异常逸出 readline 回调):88 绿 / 1 红,被「R7-02:适配器宿主子进程里,CLI 输出 type/subtype/host 状态为对象或数组、拒收回执 text 为对象、汇报 kind 嵌套过深的合法 JSON:宿主不退出,对应 Compute 各自 failed(或按合同记拒收)并回收 CLI,同一适配器随后的正常 Compute 照常 completed(正反对照)」发现
+✓ M107 R7-02 受控边界吞掉异常、不记违规:88 绿 / 1 红,被「R7-02:适配器宿主子进程里,CLI 输出 type/subtype/host 状态为对象或数组、拒收回执 text 为对象、汇报 kind 嵌套过深的合法 JSON:宿主不退出,对应 Compute 各自 failed(或按合同记拒收)并回收 CLI,同一适配器随后的正常 Compute 照常 completed(正反对照)」发现
+✓ M108 R7-03 init 前 hook 前缀一律放行(审查 S04):88 绿 / 1 红,被「R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)」发现
+✓ M109 R7-03 认可帧按前缀匹配(延长的子类型放行):88 绿 / 1 红,被「R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)」发现
+✓ M110 R7-03 认可帧大小写不敏感:88 绿 / 1 红,被「R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)」发现
+✓ M111 R7-03 认可帧先去掉首尾空白:88 绿 / 1 红,被「R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)」发现
+✓ M112 R7-03 认可帧按子串匹配(截短的子类型放行):88 绿 / 1 红,被「R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)」发现
+112 个变异
+变异校准通过
