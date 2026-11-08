@@ -4,8 +4,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { app, BrowserWindow, ipcMain, protocol, session, shell } from "electron";
-import { checkIpcRequest } from "@g-group/ui-core";
-import { handleCall } from "./bridge.ts";
+import { IPC, isMethodName } from "@g-group/api-contract";
+import { checkIpcRequest, isTrustedOrigin } from "@g-group/ui-core";
+import { handleInvoke, subscribe } from "./bridge.ts";
 
 const DEV_URL = process.env.GG_DEV_URL ?? "";
 const DEV_ORIGIN = DEV_URL ? new URL(DEV_URL).origin : undefined;
@@ -74,11 +75,25 @@ function createWindow() {
   return win;
 }
 
-ipcMain.handle("gg:call", async (event, req: unknown) => {
-  const senderUrl = event.senderFrame?.url ?? "";
-  const checked = checkIpcRequest(req, senderUrl, DEV_ORIGIN);
-  if (!checked.ok) return { ok: false, error: checked.error };
-  return handleCall(checked.method, checked.params, { version: app.getVersion(), electron: process.versions.electron ?? "", platform: process.platform });
+ipcMain.handle(IPC.invoke, async (event, req: unknown) => {
+  const checked = checkIpcRequest(req, event.senderFrame?.url ?? "", { isMethod: isMethodName, ...(DEV_ORIGIN ? { devOrigin: DEV_ORIGIN } : {}) });
+  if (!checked.ok) return { ok: false, error: { code: checked.error.startsWith("不认识的方法") ? "unknown_method" : "forbidden", message: checked.error } };
+  return handleInvoke(checked.method, checked.params);
+});
+
+// 事件流:每个渲染进程一份订阅,窗口关掉或取消时退订
+const subs = new Map<number, () => void>();
+ipcMain.on(IPC.subscribe, (event, opts: unknown) => {
+  if (!isTrustedOrigin(event.senderFrame?.url ?? "", DEV_ORIGIN)) return;
+  const wc = event.sender;
+  subs.get(wc.id)?.();
+  const since = typeof (opts as { sinceEventSeq?: unknown })?.sinceEventSeq === "number" ? (opts as { sinceEventSeq: number }).sinceEventSeq : undefined;
+  subs.set(wc.id, subscribe((ev) => { if (!wc.isDestroyed()) wc.send(IPC.event, ev); }, since));
+  wc.once("destroyed", () => { subs.get(wc.id)?.(); subs.delete(wc.id); });
+});
+ipcMain.on(IPC.unsubscribe, (event) => {
+  subs.get(event.sender.id)?.();
+  subs.delete(event.sender.id);
 });
 
 app.on("web-contents-created", (_e, contents) => {

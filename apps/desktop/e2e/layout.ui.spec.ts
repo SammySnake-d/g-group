@@ -37,11 +37,14 @@ async function checkBarsHugBubbles(page: Page, max = 14) {
 }
 
 test("悬浮工具条贴着每条消息的气泡(1440 宽)", async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto("/?conv=g");
   await checkBarsHugBubbles(page);
 });
 
 test("悬浮工具条在窄窗口和超宽窗口下也贴着气泡", async ({ page }) => {
+  // 两种宽度 × 逐条悬停,并行跑时 30 秒默认时限不够(只放宽时限,不动断言)
+  test.setTimeout(90_000);
   for (const width of [1024, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/?conv=g");

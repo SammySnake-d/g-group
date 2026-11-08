@@ -28,6 +28,9 @@
       ],
       "@g-group/ui-core": [
         "../../packages/ui-core/src/index.ts"
+      ],
+      "@g-group/api-contract": [
+        "../../packages/api-contract/src/index.ts"
       ]
     },
     "strict": true

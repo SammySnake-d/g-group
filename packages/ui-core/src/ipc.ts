@@ -1,27 +1,11 @@
-// Electron 主进程收到渲染层请求时的校验(技术栈与工程规则 §2:最小 preload + 校验 IPC 来源与参数)。
-// 只认白名单方法;参数必须是纯 JSON 数据(无原型链花样、无函数、有深度和体积上限);来源必须是本应用协议。
-
-export const IPC_METHODS = Object.freeze([
-  "app.info",
-  "conversations.list",
-  "messages.list",
-  "messages.send",
-  "schedules.list",
-  "schedules.save",
-  "schedules.remove",
-  "schedules.runNow",
-  "plugins.catalog",
-  "plugins.install",
-  "plugins.uninstall",
-  "plugins.setEnabled",
-  "commands.list",
-  "commands.run",
-] as const);
-export type IpcMethod = (typeof IPC_METHODS)[number];
+// Electron 主进程收到渲染层请求时的第一道校验(技术栈与工程规则 §2:最小 preload + 校验 IPC 来源与参数)。
+// 来源必须是本应用协议;请求必须是纯 JSON 数据(无访问器、无类实例、无函数、有深度和体积上限);
+// 方法名交给调用方判断(主进程用 @g-group/api-contract 的方法表),参数形状再由合同 schema 逐项校验。
 
 export const IPC_LIMITS = Object.freeze({ maxDepth: 32, maxBytes: 256 * 1024, maxKeys: 2000 });
 
-export type IpcCheck = { ok: true; method: IpcMethod; params: unknown } | { ok: false; error: string };
+export type IpcCheck = { ok: true; method: string; params: unknown } | { ok: false; error: string };
+export type IpcOptions = { isMethod: (name: string) => boolean; devOrigin?: string };
 
 /** 来源只认本应用的 app:// 协议(开发时额外认传入的 dev 源)。 */
 export function isTrustedOrigin(url: string, devOrigin?: string): boolean {
@@ -70,14 +54,14 @@ export function jsonProblem(value: unknown): string | undefined {
 }
 
 /** 校验一次渲染层调用:{ method, params }。 */
-export function checkIpcRequest(req: unknown, senderUrl: string, devOrigin?: string): IpcCheck {
-  if (!isTrustedOrigin(senderUrl, devOrigin)) return { ok: false, error: "来源不是本应用页面" };
+export function checkIpcRequest(req: unknown, senderUrl: string, opts: IpcOptions): IpcCheck {
+  if (!isTrustedOrigin(senderUrl, opts.devOrigin)) return { ok: false, error: "来源不是本应用页面" };
   if (req === null || typeof req !== "object" || Array.isArray(req)) return { ok: false, error: "请求必须是对象" };
   const shape = jsonProblem(req);
   if (shape) return { ok: false, error: `请求不是纯数据:${shape}` };
   const r = req as { method?: unknown; params?: unknown };
-  if (typeof r.method !== "string" || !(IPC_METHODS as readonly string[]).includes(r.method)) return { ok: false, error: `不认识的方法 ${String(r.method)}` };
+  if (typeof r.method !== "string" || !opts.isMethod(r.method)) return { ok: false, error: `不认识的方法 ${String(r.method)}` };
   const size = JSON.stringify(r.params ?? null).length;
   if (size > IPC_LIMITS.maxBytes) return { ok: false, error: `参数 ${size} 字节,超过上限 ${IPC_LIMITS.maxBytes}` };
-  return { ok: true, method: r.method as IpcMethod, params: r.params ?? null };
+  return { ok: true, method: r.method, params: r.params ?? null };
 }

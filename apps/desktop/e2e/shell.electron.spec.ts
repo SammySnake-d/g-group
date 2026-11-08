@@ -21,12 +21,20 @@ test("Electron 壳:安全基线开着,渲染层拿不到 Node,IPC 只认白名�
     // 渲染层没有 require / process
     expect(await win.evaluate(() => typeof (globalThis as { require?: unknown }).require)).toBe("undefined");
     expect(await win.evaluate(() => typeof (globalThis as { process?: unknown }).process)).toBe("undefined");
-    // 白名单方法可调;不认识的方法和非纯数据参数被主进程拒绝
-    const info = await win.evaluate(() => (window as unknown as { gGroup: { call: (m: string, p?: unknown) => Promise<unknown> } }).gGroup.call("app.info"));
-    expect(info).toMatchObject({ ok: true, data: { backend: "disconnected" } });
-    const bad = await win.evaluate(() => (window as unknown as { gGroup: { call: (m: string, p?: unknown) => Promise<unknown> } }).gGroup.call("fs.readFile", { path: "/etc/passwd" }));
-    expect(bad).toMatchObject({ ok: false });
-    expect(String((bad as { error: string }).error)).toContain("不认识的方法");
+    // 按接口合同暴露 window.gg;方法名、参数先在主进程校验,后端没接上时如实回 unavailable
+    type Gg = { apiVersion: string; invoke: (m: string, p?: unknown) => Promise<{ ok: boolean; error?: { code: string; message: string } }> };
+    const call = (m: string, p?: unknown) => win.evaluate(([m, p]) => (window as unknown as { gg: Gg }).gg.invoke(m as string, p), [m, p] as const);
+    expect(await win.evaluate(() => (window as unknown as { gg: Gg }).gg.apiVersion)).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(await call("session.hello", { clientApiVersion: "0.1.0" })).toEqual({ ok: false, error: { code: "unavailable", message: "后端未连接" } });
+    const unknown = await call("fs.readFile", { path: "/etc/passwd" });
+    expect(unknown.error?.code).toBe("unknown_method");
+    const badParams = await call("contacts.get", {});
+    expect(badParams.error?.code).toBe("invalid_params");
+    expect(badParams.error?.message).toContain("contactId");
+    // 没有 ipcRenderer / 旧的 gGroup 入口
+    expect(await win.evaluate(() => typeof (globalThis as { gGroup?: unknown }).gGroup)).toBe("undefined");
+    // 后端没接上:界面明确标出「演示」,不假装已连上
+    await expect(win.getByTestId("backend-demo")).toHaveAttribute("data-mode", "demo");
     // 页面渲染出来了(左栏会话列表)
     await expect(win.locator("#root")).not.toBeEmpty();
     // 外部跳转被拦,仍停在应用页

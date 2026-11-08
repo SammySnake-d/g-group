@@ -6,10 +6,22 @@
     "allowImportingTsExtensions": true,
     "strict": true,
     "noEmit": true,
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "skipLibCheck": true,
     "verbatimModuleSyntax": true,
-    "paths": { "@g-group/ui-core": ["../../packages/ui-core/src/index.ts"] }
+    "paths": {
+      "@g-group/ui-core": [
+        "../../packages/ui-core/src/index.ts"
+      ],
+      "@g-group/api-contract": [
+        "../../packages/api-contract/src/index.ts"
+      ]
+    }
   },
-  "include": ["electron/**/*.ts", "vite.electron.config.ts"]
+  "include": [
+    "electron/**/*.ts",
+    "vite.electron.config.ts"
+  ]
 }

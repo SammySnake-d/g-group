@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Puzzle, X, Search, Plus, MessageCircle, Users, Activity, FolderOpen, Settings, ChevronsDown, Link2, UserPlus, UsersRound, Forward, Pin, BellOff, CheckCheck, PanelRight, Settings2, AtSign, AlarmClock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { poolUsed, convs0, computes0, pending0, reactions0, boards0, commits0, playbook0, crons0, checklist0, plugins0, pulse0, people, artifacts, type Conversation, type Msg, type PersonId, type Compute, type Cron, type Pending, type QuoteRef, type Activity as Act } from '@/data'
+import { probeBackend, type BackendState } from '@/api/backend'
 import { AppCtx, type Ctx, type Page, type SplitTab, type Section, type WbTab } from '@/ctx'
 import { Workbench } from '@/components/Workbench'
 import { Panorama } from '@/components/Panorama'
@@ -52,6 +53,8 @@ const LIVE = [
 
 export default function App() {
   const [dark, setDark] = useState(qs.get('theme') === 'dark')
+  const [backend, setBackend] = useState<BackendState>({ mode: 'checking' })
+  useEffect(() => { void probeBackend().then(setBackend) }, [])
   const [debug, setDebug] = useState(false)
   const [section, setSection] = useState<Section>(((qs.get('section') === 'activity' ? 'chat' : qs.get('section')) as Section) ?? 'chat')
   // 进展全景是弹出遮罩，不是一级页面（#1618 用户改：进度不是需要时刻打开的）；关掉再开，筛选和滚动位置都还在（Panorama 模块级 saved）
@@ -840,6 +843,11 @@ export default function App() {
             <Tip label="Helper（全局 · ⌘K）：默认不读任何聊天" side="right">
               <button data-testid="nav-helper" onClick={() => setHelperGlobal((v) => !v)} className={cn('grid h-10 w-10 place-items-center rounded-xl hover:bg-rail-hover', helperGlobal && 'bg-rail-hover')}><Bot shape="lightbulb" color="#f8a01c" size={26} /></button>
             </Tip>
+            {backend.mode !== 'connected' && (
+              <Tip label={backend.mode === 'checking' ? '正在连接后端…' : `后端未连接(${backend.reason}),界面里是演示数据`} side="right">
+                <span data-testid="backend-demo" data-mode={backend.mode} className="mb-1 rounded-md border border-rail-hover px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-rail-fg">演示</span>
+              </Tip>
+            )}
             <Tip label="设置" side="right">
               <button data-testid="nav-settings" onClick={() => setStack([{ t: 'settings' }])} className="grid h-10 w-10 place-items-center rounded-xl text-rail-fg hover:bg-rail-hover hover:text-white"><Settings className="h-[19px] w-[19px]" strokeWidth={1.75} /></button>
             </Tip>
