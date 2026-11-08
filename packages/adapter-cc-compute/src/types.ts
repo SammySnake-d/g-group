@@ -176,8 +176,11 @@ export type QuiesceResult =
 
 export interface ComputeAdapter {
   spawn(brief: unknown, opts?: SpawnOptions): Promise<SpawnResult>;
-  /** turn 是这一轮的生效模型(AC-51);常驻适配器在轮边界与会话当前模型比对,不同就在会话内换;一次性适配器忽略 */
-  resume(computeId: string, text: string, turn?: TurnModel): Promise<{ readonly ok: true } | Refusal>;
+  /**
+   * turn 是这一轮的生效模型(AC-51);常驻适配器在轮边界与会话当前模型比对,不同就在会话内换;一次性适配器忽略。
+   * opts.tools:续接这一轮改用的内置工具清单(宿主按授权放宽或收紧,AC-17;不给就沿用原 brief)。不合 brief 合同就拒绝,不起进程
+   */
+  resume(computeId: string, text: string, turn?: TurnModel, opts?: { readonly tools?: readonly string[] }): Promise<{ readonly ok: true } | Refusal>;
   /** 插话进当前这一轮(D27 第 4 节第 3 条):用当前模型,不触发换模型 */
   steer?(computeId: string, text: string): Promise<{ readonly ok: true } | Refusal>;
   readonly capabilities?: AdapterCapabilities;

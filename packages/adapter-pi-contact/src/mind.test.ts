@@ -468,3 +468,11 @@ test("read_quote_parent 经宿主的本轮查询口往上读一级,结果作为�
     await fake.close();
   }
 });
+
+test("AC-45 forward 可带来源消息 seq:用户中途改条件时登记 sourceSeq,宿主据此升版;不带就是联系人自己的话", () => {
+  assert.deepEqual(parseToolCall("forward", { taskId: "t-1", text: "改成大阪", sourceSeq: 7 }), { ok: true, value: { kind: "action", action: { kind: "forward", taskId: "t-1", text: "改成大阪", sourceSeq: 7 } } });
+  const plain = parseToolCall("forward", { taskId: "t-1", text: "继续" });
+  assert.ok(plain.ok && plain.value.kind === "action");
+  assert.equal(Object.hasOwn(plain.value.action, "sourceSeq"), false);
+  assert.equal(parseToolCall("forward", { taskId: "t-1", text: "x", sourceSeq: -1 }).ok, false);
+});

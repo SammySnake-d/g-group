@@ -255,6 +255,8 @@ export const WorkspaceView = obj({
   conflict: nullable(obj({ kind: oneOf(["merge", "verify"] as const), detail: str({ max: 5000 }) })),
 });
 export type WorkspaceView = Infer<typeof WorkspaceView>;
+export const FOLLOW_UP_STATES = ["Received", "Applied", "Rebound"] as const;
+export const AUTHORIZATION_STATES = ["pending", "granted", "denied", "expired"] as const;
 export const TaskView = obj({
   id: id(),
   title: str({ max: 500 }),
@@ -320,6 +322,38 @@ export const TaskView = obj({
    * 每次任务文档落盘 +1,task.updated 事件带同一个值。比较新旧以它为准,不按到达顺序。
    */
   stateVer: opt(int({ min: 1 })),
+  /** 关联版本:改挂补充(tasks.rebindFollowUp)要带上当前值;任务还没有挂过补充时省略。 */
+  bindingVersion: opt(int({ min: 0 })),
+  /**
+   * 挂在这个任务上的补充消息(AC-15/16/45):Received = 已送达负责人;Applied = 已落实,appliedIn 指向含它的产物、appliedVersion 是产物版本;
+   * Rebound = 已改挂到 reboundTo。version 是挂进来时的任务版本。没有挂过补充时省略。
+   */
+  followUps: opt(arr(obj({
+    roomId: id(),
+    seq: seq(),
+    state: oneOf(FOLLOW_UP_STATES),
+    version: int({ min: 0 }),
+    appliedIn: nullable(str({ max: 500 })),
+    appliedVersion: nullable(int({ min: 0 })),
+    reboundTo: nullable(id()),
+  }))),
+  /**
+   * 授权记录(AC-17/19/20):群规「改前先问」时 Compute 要动手前登记一次。用户本人在对话里直接回复「同意」即可放行(按钮可选);
+   * 绑定 (qId, constraintVersion);前提变了记 expired(「已过期·未执行」)。没有过授权时省略。
+   */
+  authorizations: opt(arr(obj({
+    qId: id(),
+    action: str({ max: 5000 }),
+    constraintVersion: int({ min: 0 }),
+    state: oneOf(AUTHORIZATION_STATES),
+    /** 能授权的人(提出者本人) */
+    principalId: id(),
+    /** 提问消息 */
+    askedSeq: seq(),
+    /** 了结它的那条答复消息;未了结或过期为 null */
+    decidedSeq: nullable(seq()),
+    reason: nullable(str({ max: 2000 })),
+  }))),
 });
 export type TaskView = Infer<typeof TaskView>;
 

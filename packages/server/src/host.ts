@@ -3055,6 +3055,11 @@ export class Host {
     this.ledgerTx(contactId, roomId, cmds);
   }
 
+  /** E5b 改挂一条补充(AC-15):空壳,实现见下一个提交。 */
+  rebindFollowUp(_input: { roomId: string; seq: number; fromTaskId: string; toTaskId: string; expectedBindingVersion: number; clientActionId: string }): { from: TaskView; to: TaskView } {
+    throw new HostError("unavailable", "未实现");
+  }
+
   // ======================= 生命周期 =======================
   async idle(): Promise<void> {
     await this.loop.idle();
