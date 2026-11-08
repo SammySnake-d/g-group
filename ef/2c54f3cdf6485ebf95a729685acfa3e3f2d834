@@ -1,0 +1,41 @@
+apps/desktop/e2e/visual.ui.spec.ts
+  s_042e901c6ad028::t_0f704ba5e4c5c5 1-87
+apps/desktop/src/App.tsx
+  s_042e901c6ad028::t_5612d236457c47 3,311,796,829
+apps/desktop/src/components/Avatar.tsx
+  s_042e901c6ad028::t_378864acab586e 73
+apps/desktop/src/components/Messages.tsx
+  s_042e901c6ad028::t_ea2a673ef07e41 530
+apps/desktop/src/components/Overlays.tsx
+  s_042e901c6ad028::t_2a492e622e13e0 847
+apps/desktop/src/components/Panorama.tsx
+  s_042e901c6ad028::t_74bbe62686493e 206,341
+apps/desktop/src/components/Split.tsx
+  s_042e901c6ad028::t_fad101bc35e5dd 19-21,24,26,36
+apps/desktop/src/components/Workbench.tsx
+  s_042e901c6ad028::t_3b3c1cb878da62 132,152-153,162,164
+apps/desktop/src/main.tsx
+  s_042e901c6ad028::t_c94379fe5b1e9e 6-8
+apps/desktop/verify/mines.json
+  s_042e901c6ad028::t_7ace316f6f0968 1-10
+apps/desktop/verify/mutate.mjs
+  s_042e901c6ad028::t_5d905180ff652e 1-47
+apps/desktop/verify/mutation-report.json
+  s_042e901c6ad028::t_785a06c62c4ecc 1-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ef2c54f3cdf6485ebf95a729685acfa3e3f2d834",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
