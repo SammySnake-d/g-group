@@ -3,6 +3,7 @@
 import {
   ANNOUNCEMENT_ORDERS,
   AnnouncementView,
+  CapabilityLibraryView,
   CommitmentView,
   ComputeProgress,
   ContactProfileView,
@@ -87,6 +88,8 @@ export const METHODS = {
   /** 联系人主面板(AC-54):视图 + 预设 + 工作记忆 + 职责(承诺、在途任务、定时、所在会话)。 */
   "contacts.profile": method(obj({ contactId: id() }), ContactProfileView),
   "contacts.remove": method(obj({ contactId: id() }), Ok),
+  /** 全局能力库里可勾选的 skill 与 MCP(AC-29)。联系人的 Compute 只加载它勾选的那些,本机全局的默认不进入。 */
+  "capabilities.list": method(Empty, CapabilityLibraryView),
 
   // ---- 会话 ----
   "rooms.list": method(Empty, obj({ rooms: arr(RoomView) })),

@@ -80,6 +80,7 @@ import {
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
+import { CapabilityLibrary } from "./capabilities.ts";
 import { PluginStore } from "./plugins.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
@@ -229,6 +230,8 @@ export class Host {
   readonly docs: SharedDocs;
   readonly worktrees: Worktrees | null;
   readonly artifacts: ArtifactStore;
+  /** 全局能力库与联系人专属运行目录(AC-29) */
+  readonly capabilities: CapabilityLibrary;
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly newId: (prefix: string) => string;
@@ -283,6 +286,7 @@ export class Host {
         else this.bus.emit({ type: "schedule.updated", schedule: s });
       },
     });
+    this.capabilities = new CapabilityLibrary(opts.dataDir ?? dirname(opts.file));
     this.plugins = new PluginStore({
       db: this.db,
       dataDir: opts.dataDir ?? dirname(opts.file),

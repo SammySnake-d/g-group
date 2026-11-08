@@ -228,6 +228,8 @@ export const ComputeRunView = obj({
   status: oneOf(["starting", "running", "blocked", "completed", "failed", "stopped"] as const),
   startedAt: isoTime(),
   endedAt: nullable(isoTime()),
+  /** Compute 启动后实际加载的 skill 与 MCP 服务器(CLI 自报,AC-29);旧记录没有。 */
+  loaded: opt(obj({ skills: arr(str({ max: 200 })), mcpServers: arr(str({ max: 200 })) })),
 });
 /** 代码任务的隔离工作树(R-Worktree,AC-22):W2 在改 → W3 钉住候选提交 → W4 合入中 → W6 已合入;W5 合入冲突或重验失败(目标分支未动)。 */
 export const WORKSPACE_STATES = ["W2_Active", "W3_Pinned", "W4_Integrating", "W5_Conflict", "W6_Merged"] as const;
@@ -477,6 +479,14 @@ export const PluginView = obj({
   installedAt: isoTime(),
 });
 export type PluginView = Infer<typeof PluginView>;
+
+// ---------- 能力库(AC-29)----------
+/** 全局能力库:联系人设置页的勾选清单。勾选结果写进 ContactView.computeAssets(contacts.update)。 */
+export const CapabilityLibraryView = obj({
+  skills: arr(obj({ name: str({ min: 1, max: 64 }), description: str({ max: 2000 }) })),
+  mcp: arr(obj({ name: str({ min: 1, max: 64 }) })),
+});
+export type CapabilityLibraryView = Infer<typeof CapabilityLibraryView>;
 
 // ---------- Slash 命令 ----------
 export const SlashArg = obj({

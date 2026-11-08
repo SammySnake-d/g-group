@@ -161,3 +161,8 @@ export function terminalFor(exitInput: Exit, resultInput: CliResult | undefined,
   if (facts.unresolved.length) return fail(`汇报被拒收且没有合规重报:${facts.unresolved.join(";")}`);
   return { kind: "completed", result: result.text };
 }
+
+/** init 自报的实际加载清单(AC-29 观测点)。空壳(先红),实现见下一个提交 */
+export function initLoaded(_m: Record<string, unknown>): { readonly mcpServers: readonly { readonly name: string; readonly status: string }[]; readonly skills: readonly string[] } {
+  return { mcpServers: [], skills: [] };
+}
