@@ -133,13 +133,13 @@ function runCaseInner(tmp: string, c: Case, i: number): Run {
     c.receipt?.(r);
     const rel = "receipts/feat-x.json";
     write(repo, { [rel]: JSON.stringify(r, null, 1) });
+    putTurns(r.author.session, (c.authorTurns ?? authorOk)(repo));
     const hash = cli(repo, env, "--hash").out.trim();
     if (r.review) {
       if (!r.review.reviewed_hash) r.review.reviewed_hash = hash;
       write(repo, { [rel]: JSON.stringify(r, null, 1) });
       putTurns(r.review.session, (c.reviewerTurns ?? reviewerOk)(hash));
     }
-    putTurns(r.author.session, (c.authorTurns ?? authorOk)(repo));
     if (c.authorRecord) { const [h, id] = r.author.session.split(":"); write(path.join(sessions, h!, id!), { "record.json": JSON.stringify(typeof c.authorRecord === "function" ? c.authorRecord(repo) : c.authorRecord) }); }
     c.setup?.({ dir, repo, sessions, hash });
     if (c.room) write(path.join(rooms, "g-group", "log"), { "00000001.jsonl": `${c.room(hash.slice(0, 12)).map((e) => JSON.stringify(e)).join("\n")}\n` });
@@ -624,7 +624,18 @@ const cloneTurns = (out: (repo: string) => string) => (repo: string) => {
   const c = authorClone(repo);
   return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `cd ${c} && git commit -q -m green && git log --oneline -1` }, result: out(repo) }, { name: "Write", input: { file_path: path.join(c, "packages/core/src/add.ts") } }] }];
 };
-const makeClone = ({ dir, repo }: { dir: string; repo: string }) => { sh(dir, "clone", "-q", repo, authorClone(repo)); };
+// 真实、单命令的中性提交:输出来自固定 git 可执行文件,同一提交随后成为受检版本的祖先。
+const committedCloneTurns = (repo: string) => {
+  const c = authorClone(repo);
+  sh(path.dirname(repo), "clone", "-q", repo, c);
+  write(c, { "packages/core/src/add.ts": `${ADD_OK}// neutral fixture\n` });
+  sh(c, "add", "packages/core/src/add.ts");
+  const args = ["-i", "/usr/bin/git", "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-C", c, "commit", "--no-gpg-sign", "-m", "fixture"];
+  const result = execFileSync("/usr/bin/env", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  sh(repo, "fetch", "-q", c, "HEAD"); sh(repo, "merge", "-q", "--ff-only", "FETCH_HEAD");
+  return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `/usr/bin/env ${args.join(" ")}` }, result }] }];
+};
+const makeClone = ({ dir, repo }: { dir: string; repo: string }) => { if (!fs.existsSync(authorClone(repo))) sh(dir, "clone", "-q", repo, authorClone(repo)); };
 const cleanClone = (x: { dir: string; repo: string }) => { makeClone(x); fs.rmSync(authorClone(x.repo), { recursive: true, force: true }); };
 /** 另建一个同名的 git 仓库(自己的根提交),返回它的短提交号 */
 function otherRepo(at: string, commits = true): string {
@@ -1130,8 +1141,8 @@ export const CASES: Case[] = [
     return [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: `cd ${other} && git status --short` }, result: "" }, { name: "Write", input: { file_path: path.join(other, "packages/core/src/add.ts") } }] }];
   }, expect: "找不到对本仓库的任何操作" },
   { name: "R10-01 同一仓库换了目录名的克隆按仓库身份认出(阴性对照)", authorTurns: (repo) => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: path.join(authorClone(repo), "packages/core/src/add.ts") } }] }], setup: makeClone, expect: null },
-  { name: "R10-02 清理前:作者在独立克隆里提交,来源门禁认出(同一记录对照)", authorTurns: cloneTurns((repo) => `${shortHead(repo)} green`), setup: makeClone, expect: null },
-  { name: "R10-02 清理后:同一记录里 git 输出的本仓库提交号证明是本仓库,来源门禁仍认出", authorTurns: cloneTurns((repo) => `${shortHead(repo)} green`), setup: cleanClone, expect: null },
+  { name: "R10-02 清理前:作者在独立克隆里提交,来源门禁认出(同一记录对照)", authorTurns: committedCloneTurns, setup: makeClone, expect: null },
+  { name: "R10-02 清理后:同一记录里 git 输出的本仓库提交号证明是本仓库,来源门禁仍认出", authorTurns: committedCloneTurns, setup: cleanClone, expect: null },
   { name: "R10-02 克隆已清理、记录里没有本仓库的提交号(来源门禁拒绝)", authorTurns: cloneTurns(() => "nothing to commit, working tree clean"), setup: cleanClone, expect: "找不到对本仓库的任何操作" },
   { name: "R10-02 克隆已清理、git 输出的是另一个仓库的提交号(来源门禁拒绝)", authorTurns: cloneTurns((repo) => `${otherRepo(path.join(path.dirname(repo), "foreign"))} other`), setup: cleanClone, expect: "找不到对本仓库的任何操作" },
   { name: "R10-02 本仓库提交号出自现存的非仓库目录(现状与记录矛盾,来源门禁拒绝)", authorTurns: (repo) => {
