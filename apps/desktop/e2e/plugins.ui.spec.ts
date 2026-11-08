@@ -1,14 +1,10 @@
-import path from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
+import { shot } from './shots'
 
 // 插件:市场、安装流程、启停、卸载、更新、详情、群资料·插件 / 工具页签、从文件或地址安装。
-// 全部用点击和键盘驱动,断言用户看得到的结果。设了 GG_SHOTS_DIR 时顺手存走查截图。
-const SHOTS = process.env.GG_SHOTS_DIR
-const shot = async (page: Page, name: string) => {
-  if (!SHOTS) return
-  await page.waitForTimeout(400) // 等页签切换的淡入动画走完再拍
-  await page.screenshot({ path: path.join(SHOTS, `plugins-${name}.png`) })
-}
+// 全部用点击和键盘驱动,断言用户看得到的结果。设了 GG_SHOTS 时顺手存走查截图。
+// 等页签切换的淡入动画走完再拍
+const snap = (page: Page, name: string) => shot(page, `plugins-${name}`, 400)
 const openCenter = async (page: Page) => {
   await page.goto('/?section=plugins')
   await expect(page.getByTestId('plugin-center')).toBeVisible()
@@ -31,7 +27,7 @@ test('左侧导航进插件中心;市场按名称、简介、命令名搜索,按
   await page.getByTestId('nav-plugins').click()
   await expect(page.getByTestId('plugin-center')).toBeVisible()
   expect(await names(page)).toHaveLength(11)
-  await shot(page, 'market')
+  await snap(page, 'market')
 
   await typeIn(page, 'plg-search', '邮件')
   await expect.poll(() => names(page)).toEqual(['Gmail'])
@@ -73,7 +69,7 @@ test('安装:要逐条勾选全部权限才能确认,确认后安装中 → 已�
   await login.getByRole('checkbox').click()
   await expect(dlg.getByTestId('plg-consent-count')).toHaveText('已同意 1/2')
   await expect(ok).toBeDisabled()
-  await shot(page, 'consent')
+  await snap(page, 'consent')
   await dlg.getByTestId('plg-consent-perm-tg.messages:read').getByRole('checkbox').click()
   await expect(dlg.getByTestId('plg-consent-count')).toHaveText('已同意 2/2')
   await expect(ok).toBeEnabled()
@@ -122,7 +118,7 @@ test('停用 / 启用:开关切换状态,停用后标「已停用」', async ({ 
   await expect(row).toHaveAttribute('data-phase', 'disabled')
   await expect(page.getByTestId('plg-disabled-g-group.cve')).toHaveText('已停用')
   await expect(page.getByTestId('toast')).toHaveText('已停用「CVE 订阅」，所有聊天里都暂时用不了')
-  await shot(page, 'installed')
+  await snap(page, 'installed')
   await sw.click()
   await expect(sw).toHaveAttribute('aria-checked', 'true')
   await expect(row).toHaveAttribute('data-phase', 'enabled')
@@ -200,7 +196,7 @@ test('详情页:权限逐条带风险级别(高风险醒目)、提供的命令 /
   await expect(page.getByTestId('plg-perm-feishu.docs:read')).toContainText('v1.5.0 新增')
   await expect(page.getByTestId('plg-changelog')).toContainText('v1.4.2')
   await expect(page.getByTestId('plg-changelog')).toContainText('你装的')
-  await shot(page, 'detail')
+  await snap(page, 'detail')
   // 挂到聊天 / 摘下
   await page.getByTestId('plg-conv-add').click()
   await page.getByTestId('plg-conv-add-dm-argon').click()
@@ -264,7 +260,7 @@ test('群资料·插件页签:列出本群挂的插件,能把已安装的挂到�
   await expect(rows).toHaveCount(4)
   await expect(page.getByTestId('side-tab-plugin')).toHaveText('插件 4')
   await expect(page.getByTestId('side-plugin-g-group.webhook')).toHaveCount(0)
-  await shot(page, 'group-tab')
+  await snap(page, 'group-tab')
 
   await page.getByTestId('side-plugin-add').click()
   const picker = page.getByTestId('side-plugin-picker')
@@ -305,7 +301,7 @@ test('群资料·工具页签:每项写清做什么、来自哪里、对应的 /
   await expect(feishu).toContainText('来自插件「飞书」')
   await expect(page.getByTestId('tool-cmd-g-group.feishu-feishu')).toHaveText('/feishu')
   await expect(tools.getByText('来自插件「CVE 订阅」')).toBeVisible()
-  await shot(page, 'tools-tab')
+  await snap(page, 'tools-tab')
 
   await feishu.click()
   await expect(page.getByTestId('composer')).toHaveValue('/feishu ')

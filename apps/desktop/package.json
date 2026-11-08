@@ -12,7 +12,7 @@
     "build": "npm run typecheck && npm run build:renderer && npm run build:electron",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.electron.json --noEmit",
     "test:e2e": "playwright test",
-    "shots": "playwright test --project=shots",
+    "shots": "node -e \"process.env.GG_SHOTS||(console.error('先设 GG_SHOTS=截图输出目录'),process.exit(1))\" && playwright test --project=renderer",
     "start": "npm run build && env -u ELECTRON_RUN_AS_NODE electron .",
     "verify:structure": "node verify/structure.mjs"
   },

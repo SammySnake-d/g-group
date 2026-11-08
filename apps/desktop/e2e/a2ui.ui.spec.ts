@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { shot } from "./shots";
 
 // #823:「a2ui 应该参考 mirasim 这种可以折叠的形式，而不是做成气泡，做成气泡如果选项很长就不好看了」
-const OUT = process.env.GG_SHOTS ?? "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-desktop-ui/shots";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/?conv=g");
@@ -27,7 +27,7 @@ test("提问是挂在消息下的卡片:标题、等你选、整行选项(长选
     lastY = b.y;
   }
   await expect(rows.nth(0)).toContainText("推荐");
-  await page.screenshot({ path: `${OUT}/a2ui-open.png` });
+  await shot(page, "a2ui-open");
   // 自己回答 = 引用并 @ 提问的人
   await page.getByTestId("quick-g12-own").click();
   await expect(page.getByTestId("quote-chip")).toHaveCount(1);
@@ -63,7 +63,7 @@ test("选了以后:以普通消息发出,你的回答显示成收起的卡片;�
   await pill.locator("button").first().click();
   await expect(pill).toHaveAttribute("data-expanded", "1");
   await expect(pill.locator("[data-testid$=-body]")).toContainText("我勾选哪几条，就引用哪几条");
-  await page.screenshot({ path: `${OUT}/a2ui-answered.png` });
+  await shot(page, "a2ui-answered");
   // 提问卡片展开:选中的打勾,其余不能再点
   await page.getByTestId("ask-g12-head").click();
   await expect(card).toHaveAttribute("data-expanded", "1");

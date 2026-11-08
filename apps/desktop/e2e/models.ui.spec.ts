@@ -1,13 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
+import { shot } from "./shots";
 
 // 模型配置(需求 D07.4 规则 1/2/5/6、U93、U92;验收 R-17、AC-32、AC-51)。全部用真实点击、下拉选择、键盘输入驱动,断言用户看得到的结果。
 // 演示数据:Claude Code 说话 claude-opus-5-5、Compute 跟随说话模型、effort xhigh、Harness Claude Code,手上 3 个在跑的任务;
 // Argon 的 Compute 单独指定 claude-opus-5-5;Astra 在 Codex 上继承全局;全局默认 Compute 模型 claude-sonnet-5-5、effort high。
 // 目录:claude-opus-5-5 只能在 Claude Code 上跑,gpt-6 只能在 Codex 上跑,gemini-flash 只能用来说话。
-const SHOTS = process.env.GG_SHOTS_DIR;
-const shot = async (page: Page, name: string) => {
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png` });
-};
 
 const contactSettings = async (page: Page, id = "claude") => {
   await page.goto(`/?freeze=1&section=contacts&contact=${id}&wb=settings`);

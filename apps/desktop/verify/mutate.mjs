@@ -31,7 +31,8 @@ for (const m of mines.filter((x) => only.length === 0 || only.some((o) => x.id.s
     const r = spawnSync("npx", ["playwright", "test", "--project=renderer", m.spec, ...(m.grep ? ["--grep", m.grep] : [])], {
       cwd: root,
       encoding: "utf8",
-      env: { ...process.env, GG_PW_PORT: port },
+      // 埋雷时界面是故意改坏的,不存截图,免得坏图覆盖交付截图
+      env: { ...process.env, GG_PW_PORT: port, GG_SHOTS: "" },
     });
     const failed = r.status !== 0 && /\d+ failed/.test(r.stdout);
     results.push({ id: m.id, desc: m.desc, spec: m.spec, ok: failed, why: failed ? "测试变红,抓到了" : "测试仍然通过,这颗雷没被抓到" });

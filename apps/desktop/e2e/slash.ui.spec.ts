@@ -1,11 +1,8 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { shot } from "./shots";
 
 // 斜杠命令 + 引用条 + 输入框高度。全部用真实键盘、鼠标驱动,断言用户看得到的结果。
-// 设了 GG_SHOTS_DIR 就顺手存走查截图(1440×900 @2x,见 playwright.config.ts 的 renderer 项目)。
-const SHOTS = process.env.GG_SHOTS_DIR;
-const shot = async (page: Page, name: string) => {
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png` });
-};
+// 设了 GG_SHOTS 就顺手存走查截图(1440×900 @2x,见 playwright.config.ts 的 renderer 项目)。
 
 const open = async (page: Page, conv = "g") => {
   await page.goto(`/?freeze=1&conv=${conv}`);

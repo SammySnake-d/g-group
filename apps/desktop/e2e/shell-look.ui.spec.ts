@@ -1,9 +1,9 @@
 import { expect, type Page, test } from "@playwright/test";
+import { shot } from "./shots";
 
 // #929 两条反馈的可量化断言:
 //   ① 左侧导航和页面主题割裂 → 导航底色与聊天区底色的对比度必须很低(同一张纸),导航图标仍要看得清
 //   ② 回到最新放在角落、观察成本高 → 必须在阅读栏水平居中、紧贴输入框上方
-const OUT = process.env.GG_SHOTS ?? "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-desktop-ui/shots";
 
 function lum(rgb: string): number {
   const [r, g, b] = rgb.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number).map((v) => {
@@ -63,8 +63,7 @@ for (const theme of ["light", "dark"] as const) {
       expect(gap, "按钮底到输入框顶的距离").toBeGreaterThanOrEqual(4);
       expect(gap, "按钮底到输入框顶的距离").toBeLessThanOrEqual(48);
       expect(b.height, "按钮命中高度").toBeGreaterThanOrEqual(24);
-      await page.waitForTimeout(150);
-      await page.screenshot({ path: `${OUT}/walk/${theme}/w4-jump-latest.png` });
+      await shot(page, `walk/${theme}/w4-jump-latest`);
       await jump.click();
       await expect(jump).toHaveCount(0);
       const left = await scroller.evaluate((el) => el.scrollHeight - el.scrollTop - el.clientHeight);
