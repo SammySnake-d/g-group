@@ -3,7 +3,7 @@ import { examples, pointerGaze, type AvatarDefinition, type AvatarMotion } from 
 import { mountAvatar, type MountedAvatar } from 'open-bot-avatar/dom'
 import { gallery } from '@/avatars/gallery'
 import { Avatar } from '@/components/Avatar'
-import { useApp } from '@/ctx'
+import { useApp } from '@/store'
 import { people, type Compute, type Msg, type Pending, type PersonId } from '@/data'
 import { isWaitingMsg } from '../shared/waiting'
 import { caretPoint } from './caret'
@@ -44,9 +44,11 @@ function runOf(all: Msg[], msgId: string, pending: Pending[], computes: Record<s
 }
 
 export function GazeAvatar({ msgId, id, size }: { msgId: string; id: PersonId; size: number }) {
-  const { pending, checklist, computes, convs, active } = useApp()
-  const msgs = convs.find((c) => c.id === active)?.messages ?? []
-  const waiting = runOf(msgs, msgId, pending, computes).some((x) => isWaitingMsg(x, pending, checklist, computes))
+  /* 只订阅一个布尔值:这串消息里有没有在等你的(浅比较,别的状态变了不重画头像) */
+  const waiting = useApp((s) => {
+    const msgs = s.convs.find((c) => c.id === s.active)?.messages ?? []
+    return runOf(msgs, msgId, s.pending, s.computes).some((x) => isWaitingMsg(x, s.pending, s.checklist, s.computes))
+  })
   /* 打开会话时就在等你的,才换成会看人的头像;其余照旧是静止头像(性能见 Avatar.tsx 的说明) */
   const [watched] = useState(waiting)
   const p = people[id]

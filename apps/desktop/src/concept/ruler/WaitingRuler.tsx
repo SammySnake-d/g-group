@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type RefObject } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useApp } from '@/ctx'
+import { useApp } from '@/store'
 import type { Conversation } from '@/data'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ type Tick = WaitItem & { top: number }
 const KEY_HINT = '⌥↓ 下一件 · ⌥↑ 上一件'
 
 export function WaitingRuler({ conv, scrollRef }: { conv: Conversation; scrollRef: RefObject<HTMLDivElement | null> }) {
-  const { pending, checklist, computes, jump } = useApp()
+  const { pending, checklist, computes, jump } = useApp((s) => ({ pending: s.pending, checklist: s.checklist, computes: s.computes, jump: s.jump }))
   const items = useMemo(() => waitingIn(conv, pending, checklist, computes), [conv, pending, checklist, computes])
   const [ticks, setTicks] = useState<Tick[]>([])
 

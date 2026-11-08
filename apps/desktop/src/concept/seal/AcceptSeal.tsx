@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
-import { useApp } from '@/ctx'
+import { useApp } from '@/store'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { stamp, stampStill } from './motion'
 
@@ -9,7 +9,7 @@ import { stamp, stampStill } from './motion'
    那条汇报的落款处(气泡右下角)按下一枚柿红小印。只认清单里这件事真的到了「已完成」,不认已读、不认表情。
    打开会话时已经验收过的,印直接在那里,不再重放;只有你亲手验收的那一下才有「按下去」的动作。 */
 export function AcceptSeal({ computeId }: { computeId: string }) {
-  const { checklist, computes } = useApp()
+  const { checklist, computes } = useApp((s) => ({ checklist: s.checklist, computes: s.computes }))
   const item = checklist.find((x) => x.attempts.includes(computeId))
   const accepted = item?.status === '已完成'
   /* 挂载时就已验收 → 静止的印;挂载后才变成已验收 → 播一次按印 */

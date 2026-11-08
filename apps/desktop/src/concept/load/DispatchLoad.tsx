@@ -1,4 +1,4 @@
-import { useApp } from '@/ctx'
+import { useApp } from '@/store'
 import { people, type PersonId } from '@/data'
 import { cn } from '@/lib/utils'
 
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 type Fact = { tone: 'warm' | 'run' | 'err'; text: string; long: string }
 
 export function useLoad(id: PersonId): Fact[] | null {
-  const { computes, pending } = useApp()
+  const { computes, pending } = useApp((s) => ({ computes: s.computes, pending: s.pending }))
   const p = people[id]
   if (!p || p.human || id === 'helper') return null
   const mine = Object.values(computes).filter((c) => c.owner === id)

@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from 'react'
 import { animate, useReducedMotion } from 'motion/react'
-import { useApp } from '@/ctx'
+import { useApp } from '@/store'
 import type { Conversation, Msg } from '@/data'
 import { scale, spring } from '@/config/motion'
 
@@ -20,7 +20,7 @@ const quoteText = (m: Msg) => (m.k === 'text' ? m.text.replace(/^@\S+\s/, '') : 
 const SKIP = 'button, a, input, textarea, select, label, [role=button], [role=menuitem], [contenteditable=true], [data-no-dblreply]'
 
 export function DoubleClickReply({ conv, scrollRef, disabled }: { conv: Conversation; scrollRef: RefObject<HTMLDivElement | null>; disabled?: boolean }) {
-  const { addQuote, toast } = useApp()
+  const { addQuote, toast } = useApp((s) => ({ addQuote: s.addQuote, toast: s.toast }))
   const reduce = useReducedMotion()
   /* 监听器只挂一次,读最新的会话 / 开关 */
   const latest = useRef({ conv, disabled, addQuote, reduce, toast })
