@@ -15,10 +15,12 @@ export function SelectBar({ conv }: { conv: Conversation }) {
   }
   return (
     <div className="flex shrink-0 items-center gap-2 border-t border-line px-4 py-3" data-testid="select-bar">
-      <span className="flex-1 text-[13.5px] text-fg-2">已选 <span className="tabular-nums">{n}</span> 条</span>
+      <span className="text-[13.5px] text-fg-2">已选 <span className="tabular-nums">{n}</span> 条</span>
+      {/* 删除离常用操作远一点(Fitts:危险操作别和常用的挨着);删了能在提示条上撤销 */}
+      <Button data-testid="select-delete" variant="danger" size="md" className="px-3 text-[13px]" disabled={!n} onClick={() => { deleteMsgs([...selected]); setSelecting(false) }}>删除</Button>
+      <div className="flex-1" />
       <Button variant="ghost" size="md" className="px-3 text-[13px] font-normal text-fg" onClick={() => setSelecting(false)}>取消</Button>
       <Button data-testid="select-quote" variant="secondary" size="md" className="px-3 text-[13px]" disabled={!n} onClick={quote}>引用这 {n} 条</Button>
-      <Button data-testid="select-delete" variant="danger" size="md" className="px-3 text-[13px]" disabled={!n} onClick={() => { deleteMsgs([...selected]); setSelecting(false) }}>删除</Button>
       <Button data-testid="select-forward" variant="primary" size="md" className="px-3.5 text-[13px]" disabled={!n} onClick={() => push({ t: 'forwardPick', from: active, msgIds: [...selected] }, true)}><Forward />合并转发</Button>
     </div>
   )

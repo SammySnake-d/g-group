@@ -1,4 +1,5 @@
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { LAYOUT } from '@/config/layout'
 import { ListPane } from '@/app/list/ListPane'
 import { Divider } from '@/app/Divider'
 import { MainPane } from '@/app/MainPane'
@@ -13,9 +14,9 @@ import { totals } from '@/store/select'
    状态在 src/store(zustand 按领域切片),各区域自己订阅;这里只做组装。 */
 export default function App() {
   useShell()
-  const { section, panoOpen, helperGlobal, backend, badge, running, setSection, setPanoOpen, setHelperGlobal, push, resize } = useApp((s) => {
+  const { section, panoOpen, helperGlobal, backend, badge, running, listW, setSection, setPanoOpen, setHelperGlobal, push, resize } = useApp((s) => {
     const t = totals(s)
-    return { section: s.section, panoOpen: s.panoOpen, helperGlobal: s.helperGlobal, backend: s.backend, badge: t.wait + t.err, running: t.run > 0,
+    return { section: s.section, panoOpen: s.panoOpen, helperGlobal: s.helperGlobal, backend: s.backend, badge: t.wait + t.err, running: t.run > 0, listW: s.widths.list,
       setSection: s.setSection, setPanoOpen: s.setPanoOpen, setHelperGlobal: s.setHelperGlobal, push: s.push, resize: s.resize }
   })
   return (
@@ -25,7 +26,7 @@ export default function App() {
           onSection={setSection} onPano={() => setPanoOpen(true)} onHelper={() => setHelperGlobal(!helperGlobal)} onSettings={() => push({ t: 'settings' }, true)} />
         {section !== 'plugins' && <>
           <ListPane />
-          <Divider testid="div-list" onDrag={(dx) => resize('list', dx)} />
+          <Divider testid="div-list" label="拖动或按 ←/→ 调整列表宽度" value={listW} min={LAYOUT.list.min} max={LAYOUT.list.max} onDrag={(dx) => resize('list', dx)} />
         </>}
         <MainPane />
         <SplitArea />

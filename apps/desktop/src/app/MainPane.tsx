@@ -2,6 +2,7 @@ import { FilesMain } from '@/components/FilesMain'
 import { HelperPanel } from '@/components/Helper'
 import { PluginCenter } from '@/components/Plugins'
 import { Workbench } from '@/components/Workbench'
+import { LAYOUT } from '@/config/layout'
 import { useApp } from '@/store'
 import { activeConv } from '@/store/select'
 import { ChatView } from './chat/ChatView'
@@ -22,7 +23,7 @@ function HelperSide() {
   if (!open) return null
   return (
     <>
-      <Divider testid="div-helper" onDrag={(dx) => resize('helper', -dx)} />
+      <Divider testid="div-helper" label="拖动或按 ←/→ 调整 Helper 宽度" value={width} min={LAYOUT.helper.min} max={LAYOUT.helper.max} onDrag={(dx) => resize('helper', -dx)} />
       <HelperPanel conv={conv} width={width} />
     </>
   )

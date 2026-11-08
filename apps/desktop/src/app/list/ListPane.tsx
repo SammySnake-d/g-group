@@ -5,6 +5,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useApp } from '@/store'
+import { moveRowFocus } from '../ListRow'
 import { ContactList } from './ContactList'
 import { ConvList } from './ConvList'
 import { FileList } from './FileList'
@@ -35,7 +36,7 @@ export function ListPane() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className={cn('scroll-thin flex-1 overflow-y-auto pb-2', section !== 'chat' && 'px-1.5')} style={{ ['--avatar-ring' as string]: 'var(--side)' }}>
+      <div onKeyDown={moveRowFocus} className={cn('scroll-thin flex-1 overflow-y-auto pb-2', section !== 'chat' && 'px-1.5')} style={{ ['--avatar-ring' as string]: 'var(--side)' }}>
         {section === 'chat' && <ConvList query={query} />}
         {section === 'contacts' && <ContactList query={query} />}
         {section === 'files' && <FileList />}

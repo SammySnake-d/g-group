@@ -1,4 +1,5 @@
 import { SplitPane } from '@/components/Split'
+import { LAYOUT } from '@/config/layout'
 import { useApp } from '@/store'
 import { Divider } from './Divider'
 
@@ -8,7 +9,7 @@ export function SplitArea() {
   if (!tabs.length) return null
   return (
     <>
-      <Divider testid="div-split" onDrag={(dx) => resize('split', -dx)} />
+      <Divider testid="div-split" label="拖动或按 ←/→ 调整分栏宽度" value={width} min={LAYOUT.split.min} max={LAYOUT.split.max} onDrag={(dx) => resize('split', -dx)} />
       <SplitPane width={width} tabs={tabs} active={Math.min(tabIdx, tabs.length - 1)} onPick={pickTab} onClose={closeTab} onCloseAll={closeTabs} />
     </>
   )
