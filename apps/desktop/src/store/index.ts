@@ -66,8 +66,9 @@ const pickCtx = (s: AppState): Ctx => {
 }
 
 /** 读界面状态。不传参 = 整个 Ctx(和拆分前一样);传选择器 = 只订阅选中的那部分(浅比较) */
-export function useApp(): Ctx
+/* 无参签名放最后:ReturnType<typeof useApp> 取的是最后一个重载,外部(如 messages/disp.ts)靠它拿到 Ctx */
 export function useApp<T>(selector: (s: AppState) => T): T
+export function useApp(): Ctx
 export function useApp<T>(selector?: (s: AppState) => T) {
   return useAppStore(useShallow((selector ?? pickCtx) as (s: AppState) => T | Ctx))
 }
