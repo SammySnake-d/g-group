@@ -51,5 +51,47 @@ for (const theme of ["light", "dark"] as const) {
       await page.mouse.move(0, 0);
       await shot(page, `concept/seal-${theme}`, 0);
     });
+
+    test("双击就回复:指针在消息上双击 = 引用并 @ 作者,光标进输入框;按住 ⌥ 双击照常选词", async ({ page }) => {
+      await page.goto(`/?conv=g&freeze${q}`);
+      const bubble = page.locator('[data-anchor="g6"]');
+      // 第一次走远路(悬浮条「回复」):轻提示一次双击也能回复;第二次不再提示
+      await bubble.scrollIntoViewIfNeeded();
+      await bubble.hover({ position: { x: 8, y: 8 } });
+      await page.getByTestId("reply-g6").click();
+      await expect(page.getByTestId("toast")).toContainText("双击");
+      await page.getByTestId("quote-bar").getByRole("button").last().click();
+      await expect(page.getByTestId("quote-bar")).toHaveCount(0);
+      await composer(page).fill("");
+      await expect(page.getByTestId("toast")).toHaveCount(0, { timeout: 8000 });
+      await bubble.hover({ position: { x: 8, y: 8 } });
+      await page.getByTestId("reply-g6").click();
+      await page.waitForTimeout(300);
+      await expect(page.getByTestId("toast")).toHaveCount(0);
+      await page.getByTestId("quote-bar").getByRole("button").last().click();
+      await composer(page).fill("");
+      // 按住 ⌥ 双击:不回复(留给系统选词)
+      await bubble.dblclick({ position: { x: 220, y: 14 }, modifiers: ["Alt"] });
+      await expect(page.getByTestId("quote-bar")).toHaveCount(0);
+
+      // 直接双击:回复 Codex,草稿自动 @ 它,输入框拿到焦点,气泡给一下按下回馈
+      await bubble.dblclick({ position: { x: 220, y: 14 } });
+      await expect(page.getByTestId("quote-bar")).toBeVisible();
+      await expect(page.getByTestId("quote-bar")).toContainText("首屏");
+      await expect(composer(page)).toBeFocused();
+      await expect(composer(page)).toHaveValue(/^@Codex /);
+      await expect(bubble).toHaveAttribute("data-dblreply", "1");
+      expect(await page.evaluate(() => window.getSelection()?.toString() ?? "")).toBe("");
+
+      // 和悬浮条「回复」是同一个动作:换一条双击,回复对象跟着换(上一条降为普通引用,@ 也跟着换)
+      const other = page.locator('[data-anchor="g12"]');
+      await other.scrollIntoViewIfNeeded();
+      await other.dblclick({ position: { x: 200, y: 14 } });
+      await expect(composer(page)).toHaveValue(/^@Argon /);
+      await expect(composer(page)).not.toHaveValue(/@Codex/);
+      await expect(page.getByTestId("quote-bar")).toContainText("回复Argon");
+      await page.mouse.move(0, 0);
+      await shot(page, `concept/dblreply-${theme}`, 300);
+    });
   });
 }

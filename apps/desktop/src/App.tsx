@@ -6,6 +6,7 @@ import { poolUsed, convs0, computes0, pending0, reactions0, boards0, commits0, p
 import { probeBackend, type BackendState } from '@/api/backend'
 import { Rail } from '@/app/Rail'
 import { JumpToLatest } from '@/app/JumpToLatest'
+import * as Concept from '@/concept'
 import { INITIAL_MODEL_SETTINGS, type ModelSettings } from '@/modelConfig'
 import { AppCtx, type Ctx, type Page, type SplitTab, type Section, type WbTab, type ScheduleDraft } from '@/ctx'
 import { describeTrigger } from '@g-group/ui-core'
@@ -1043,11 +1044,11 @@ export default function App() {
                   </div>
                 </div>
                 <JumpToLatest show={!atBottom} count={newCount} onJump={() => scrollRef.current?.scrollTo({ top: 1e7, behavior: 'smooth' })} />
+                {/* 概念版(src/concept),每个点子一个组件 */}<Concept.DoubleClickReply conv={conv} scrollRef={scrollRef} disabled={selecting} />
                 {mentionMe && (
                   <button data-testid="at-me" onClick={() => { jump(mentionMe); }} className="fade-up absolute right-5 top-3 flex h-8 items-center gap-1.5 rounded-full border border-warm/30 bg-warm-soft px-3 text-[12.5px] font-medium text-warm shadow-elev"><AtSign className="h-3.5 w-3.5" />有人 @ 了你</button>
                 )}
               </div>
-
 
               {selecting ? (
                 <div className="flex shrink-0 items-center gap-2 border-t border-line px-4 py-3" data-testid="select-bar">
@@ -1116,7 +1117,6 @@ export default function App() {
     </AppCtx.Provider>
   )
 }
-
 
 /* 待你处理：停在输入框正上方，独立一张卡，一次一件；可以跳到原消息 */
 /* 置顶条（#1566，参照 mirasim / Telegram / QQ）：浮在消息流顶部的一条半透明窄条，左边一根竖线，
