@@ -1017,7 +1017,7 @@ export default function App() {
                   <button data-testid="select-forward" disabled={!sel.size} onClick={() => setStack([{ t: 'forwardPick', from: active, msgIds: [...sel] }])} className="flex h-9 items-center gap-1.5 rounded-lg bg-me px-3.5 text-[13px] font-medium text-me-fg disabled:opacity-40"><Forward className="h-4 w-4" />合并转发</button>
                 </div>
               ) : (
-                <div className="mx-auto w-full max-w-[var(--chat-col)] shrink-0 px-4 pb-4" data-testid="composer-column">
+                <div className="mx-auto w-full max-w-[var(--chat-col)] shrink-0 px-6" data-testid="composer-column">
                 <Composer conv={conv} draft={draft} setDraft={setDraft} quotes={q} inputRef={inputRef} onSend={send} onRemoveQuote={(x) => {
                   setQuotes((all) => ({ ...all, [active]: (all[active] ?? []).filter((y) => y.msgId !== x.msgId) }))
                   if (x.reply && x.from !== 'me') setDraft((d) => d.replace('@' + people[x.from].name + ' ', ''))

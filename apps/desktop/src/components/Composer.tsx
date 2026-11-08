@@ -188,9 +188,9 @@ export function Composer({ conv, draft, setDraft, quotes, onRemoveQuote, onSend,
 
   const tool = 'grid h-8 w-8 place-items-center rounded-md text-fg-2 transition hover:bg-hover hover:text-fg'
   return (
-    <div className="relative shrink-0 bg-bg px-4 pb-3 pt-1" data-testid="composer-wrap">
+    <div className="relative shrink-0 pb-4 pt-1" data-testid="composer-wrap">
       <ScheduleDialog conv={conv} />
-      <div ref={boxRef} data-testid="composer-box" className="relative rounded-xl border border-line bg-bg transition-colors focus-within:border-fg-3/60">
+      <div ref={boxRef} data-testid="composer-box" className="relative rounded-2xl border border-line bg-elev shadow-soft transition-colors focus-within:border-fg-3/50 focus-within:shadow-elev">
         {menuOpen && token && (
           <SlashMenu items={shown} sel={sel} query={token.query} onHover={setSlashIdx} onPick={(e) => choose(e, 'click')} />
         )}
