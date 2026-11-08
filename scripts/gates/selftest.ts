@@ -706,7 +706,8 @@ function r11ReplacedObject(): string | undefined {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-replace-"));
   try {
     const repo = path.join(tmp, "target"), other = path.join(tmp, "other"), clone = path.join(tmp, "clone");
-    fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main"); write(repo, { "neutral.txt": `${NEUTRAL} target\n` }); commit(repo, "target"); otherRepo(other);
+    fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main"); write(repo, { "neutral.txt": `${NEUTRAL} target\n` }); commit(repo, "target");
+    write(repo, { "neutral-child.txt": `${NEUTRAL} child\n` }); commit(repo, "child"); otherRepo(other);
     const original = sh(other, "rev-parse", "HEAD"); sh(other, "fetch", "-q", repo, "HEAD"); const target = sh(other, "rev-parse", "FETCH_HEAD");
     if (original === target) throw new Error("中性 HEAD 不能相同"); sh(other, "replace", original, target); sh(tmp, "clone", "-q", repo, clone);
     const same = sameRepoClone(repo);
