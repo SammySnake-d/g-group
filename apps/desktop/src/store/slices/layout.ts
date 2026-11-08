@@ -1,6 +1,7 @@
 // 界面布局切片:一级区域、右侧浮层栈、分栏页签、画中画、Helper 面板、各栏宽度、主题、提示条。
 import type { BackendState } from '@/api/backend'
 import { LAYOUT } from '@/config/layout'
+import { notify } from '@/hooks/use-toast'
 import type { PersonId } from '@/data'
 import { boot } from '../boot'
 import type { Slice } from '../state'
@@ -9,8 +10,6 @@ import type { Ctx, Page, Section, SplitTab, WbTab } from '../types'
 /** 分栏默认宽度沿用拆分前的 400(config/layout 的 split.initial 是 440,改不改由底座决定,见回报) */
 const SPLIT_INITIAL = 400
 export type Pane = 'list' | 'split' | 'helper'
-const TOAST_MS = 1600
-let toastTimer: ReturnType<typeof setTimeout> | undefined
 
 export type LayoutSlice = Pick<Ctx, 'dark' | 'debug' | 'setDark' | 'setDebug' | 'push' | 'back' | 'closeAll' | 'openSplit' | 'setPanoOpen' | 'section' | 'setSection'
   | 'helperPanel' | 'setHelperPanel' | 'helperGlobal' | 'setHelperGlobal' | 'showPip' | 'openContact' | 'openWorkbench' | 'toast'> & {
@@ -27,8 +26,6 @@ export type LayoutSlice = Pick<Ctx, 'dark' | 'debug' | 'setDark' | 'setDebug' | 
   wbTab: WbTab
   fileSel: string | null
   widths: Record<Pane | 'float', number>
-  /** 顶部提示条的文字(1.6 秒后消失) */
-  toastMsg: string | null
   setBackend: (b: BackendState) => void
   pickTab: (i: number) => void
   closeTab: (i: number) => void
@@ -68,12 +65,7 @@ export const createLayoutSlice: Slice<LayoutSlice> = (set, get) => ({
   setHelperPanel: (helperPanel) => set({ helperPanel }),
   setHelperGlobal: (helperGlobal) => set({ helperGlobal }),
   showPip: (pip) => set({ pip }),
-  toastMsg: null,
-  toast: (toastMsg) => {
-    clearTimeout(toastTimer)
-    set({ toastMsg })
-    toastTimer = setTimeout(() => set({ toastMsg: null }), TOAST_MS)
-  },
+  toast: (text) => notify(text),
 
   push: (p, root) => set((s) => ({ stack: root ? [p] : [...s.stack, p] })),
   back: () => set((s) => ({ stack: s.stack.slice(0, -1) })),

@@ -1,5 +1,6 @@
 // 消息操作切片:撤回、编辑、私聊回退、删除、转发、置顶、投票、改挂、群公告。
 import { people, type Msg, type Pending, type PersonId } from '@/data'
+import { notify } from '@/hooks/use-toast'
 import { broken } from '@/mut'
 import { uid } from '../boot'
 import { lens, type Slice } from '../state'
@@ -18,6 +19,27 @@ export const createMessagesSlice: Slice<MessagesSlice> = (set, get) => {
   /** 私聊回退时撤下的消息(可恢复),按回退那行系统消息的 id 存 */
   const rewound: Record<string, { conv: string; msgs: Msg[]; pending: Pending[] }> = {}
   const nowStep = (cid: string) => Math.max(0, get().computes[cid].steps.findIndex((s) => s.state === 'now'))
+  /* 删除只在你这边隐藏;提示条上可以撤销(Vercel:破坏性操作要可撤销)。每条记住它前面那条的 id,撤销时插回原位 */
+  const hide = (ids: string[], text: string) => {
+    const gone: { cid: string; after: string | null; m: Msg }[] = []
+    for (const c of get().convs) {
+      let prev: string | null = null
+      for (const m of c.messages) {
+        if (!('id' in m)) continue
+        if (ids.includes(m.id)) gone.push({ cid: c.id, after: prev, m })
+        prev = m.id
+      }
+    }
+    L.convs((cs) => cs.map((c) => ({ ...c, messages: c.messages.filter((m) => !('id' in m) || !ids.includes(m.id)) })))
+    const undo = () => L.convs((cs) => cs.map((c) => {
+      const mine = gone.filter((g) => g.cid === c.id)
+      if (!mine.length) return c
+      const msgs = [...c.messages]
+      for (const g of mine) msgs.splice(g.after ? msgs.findIndex((m) => 'id' in m && m.id === g.after) + 1 : 0, 0, g.m)
+      return { ...c, messages: msgs }
+    }))
+    notify(text, { action: { label: '撤销', onClick: undo } })
+  }
 
   return {
     rewindAsk: null,
@@ -107,14 +129,8 @@ export const createMessagesSlice: Slice<MessagesSlice> = (set, get) => {
       get().toast('已恢复撤下的消息')
     },
 
-    deleteMsgs: (ids) => {
-      L.convs((cs) => cs.map((c) => ({ ...c, messages: c.messages.filter((m) => !('id' in m) || !ids.includes(m.id)) })))
-      get().toast(`已删除 ${ids.length} 条，只在你这边看不到；别人那边还在`)
-    },
-    deleteMsg: (mid) => {
-      L.convs((cs) => cs.map((c) => ({ ...c, messages: c.messages.filter((m) => !('id' in m) || m.id !== mid) })))
-      get().toast('已删除，只在你这边看不到；别人那边还在')
-    },
+    deleteMsgs: (ids) => hide(ids, `已删除 ${ids.length} 条，只在你这边看不到；别人那边还在`),
+    deleteMsg: (mid) => hide([mid], '已删除，只在你这边看不到；别人那边还在'),
     clearHistory: (cid) => {
       L.convs((cs) => cs.map((c) => (c.id === cid ? { ...c, messages: [{ k: 'sys', id: 's' + uid(), text: '你清空了这里的聊天记录（只影响你自己看到的；助手的记忆和资产不受影响）' }] } : c)))
       set({ stack: [] })
