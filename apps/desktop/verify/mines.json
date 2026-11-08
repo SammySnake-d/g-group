@@ -26,7 +26,7 @@
  {
   "id": "M-COL-1",
   "desc": "阅读栏不限宽(回到横跨整个窗口)",
-  "file": "src/App.tsx",
+  "file": "src/app/chat/ChatView.tsx",
   "find": "[--chat-col:860px]",
   "replace": "[--chat-col:100%]",
   "spec": "e2e/layout.ui.spec.ts"
@@ -61,7 +61,7 @@
  {
   "id": "M-VIS-4",
   "desc": "顶部多出一条 60px 的横幅",
-  "file": "src/App.tsx",
+  "file": "src/app/chat/ChatView.tsx",
   "find": "<div className=\"relative min-h-0 flex-1\">",
   "replace": "<div style={{ height: 60 }} /><div className=\"relative min-h-0 flex-1\">",
   "spec": "e2e/visual.ui.spec.ts",
