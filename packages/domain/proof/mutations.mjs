@@ -22,7 +22,7 @@
 // M30–M47 是联系人/Helper 作者埋雷;contact/helper 其余系列见各分组注释。为不和任务侧重名:
 // reviews/feat-contact-helper.md 第二轮的 N01–N05 记为 CN01–CN05,第三轮的 P01–P05 记为 CP01–CP05,第五轮的 Z01–Z05 记为 CZ01–CZ05,
 // 第六轮的 W01–W05 记为 CW01–CW05,第七轮的 V01–V08 记为 CV01–CV08,第八轮的 H05–H06 记为 CH05–CH06,第九轮的 J01–J05 记为 CJ01–CJ05,
-// 第十轮的 Y01–Y08 记为 CY01–CY08,Astra 第 6 节的 I01–I26 记为 CI01–CI26(与任务侧第十三轮 I01–I09 区分),第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK129;第十三轮独立变异 AD01–AD04 原样保留编号(任务侧无 AD 前缀);第十四轮独立变异 V01/V02/V03/V08 记为 AE01–AE04(与任务侧 V01–V10 区分);第十五轮独立变异 case-dir/case-receipt/case-revoke 与 R15-01–R15-03 记为 AF01–AF06;第十六轮:CK72 拆分为 CK72a(plainDataError)与 CK72b(nestedPlainError),各对应一处 Reflect.ownKeys 循环。第十七轮按 R17-03/R17-04:四个失效变异(CK72a、CK72b、CK116、CK117)按当前源码重新定位到仍存在的那一处注入点,语义不变;CK114 由新增的 CH-48 测试(函数自有访问器)杀死;CK84(confirmFinalReport 遇非法状态抛错而非按 CH-37 返回 {ok:false})按当前实现重新定位并恢复——CK84 测的是非法状态返回被改成抛错,与 CH-42 的回执检查不等价。同时新增 CK130–CK133(R17-01 修复的判别力:函数 prototype 通用例外、不要求宿主是生成器函数、别名再次出现时不查对象本身、生成器原型层不分同步/异步)。第十九轮新增 CK134–CK165(R18-01 生成器 prototype 先拒 Proxy、R18-02 cron 语义校验的范围/区间/步长单点注入)。原样副本必须全绿(阴性对照)。
+// 第十轮的 Y01–Y08 记为 CY01–CY08,Astra 第 6 节的 I01–I26 记为 CI01–CI26(与任务侧第十三轮 I01–I09 区分),第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK129;第十三轮独立变异 AD01–AD04 原样保留编号(任务侧无 AD 前缀);第十四轮独立变异 V01/V02/V03/V08 记为 AE01–AE04(与任务侧 V01–V10 区分);第十五轮独立变异 case-dir/case-receipt/case-revoke 与 R15-01–R15-03 记为 AF01–AF06;第十六轮:CK72 拆分为 CK72a(plainDataError)与 CK72b(nestedPlainError),各对应一处 Reflect.ownKeys 循环。第十七轮按 R17-03/R17-04:四个失效变异(CK72a、CK72b、CK116、CK117)按当前源码重新定位到仍存在的那一处注入点,语义不变;CK114 由新增的 CH-48 测试(函数自有访问器)杀死;CK84(confirmFinalReport 遇非法状态抛错而非按 CH-37 返回 {ok:false})按当前实现重新定位并恢复——CK84 测的是非法状态返回被改成抛错,与 CH-42 的回执检查不等价。同时新增 CK130–CK133(R17-01 修复的判别力:函数 prototype 通用例外、不要求宿主是生成器函数、别名再次出现时不查对象本身、生成器原型层不分同步/异步)。第十九轮新增 CK134–CK165(R18-01 生成器 prototype 先拒 Proxy、R18-02 cron 语义校验的范围/区间/步长单点注入)。第二十轮:R19-01 改写数组复制后,CK43、CJ01、CK48、CK65 按新源码重新定位到等价注入点,语义不变;新增 CK166–CK173(R19-01 数组复制短路)与 CK174(R19-02 等值区间)。原样副本必须全绿(阴性对照)。
 // 用法: node packages/domain/proof/mutations.mjs
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -378,16 +378,16 @@ const M = [
   // 以下 CH05–CH06(报告原编号 H05–H06)取自 Codex 第八轮独立复审 reviews/feat-contact-helper.md CH-19(注入点与 independent-mutations-round8.json 一致;H01–H04、H07–H08 与已有变异同类且已被杀,不重复),CK40–CK45 是 CH-18 快照返修的埋雷
   ["CH05 凭据只校验第一项", "contact.ts", "const bad = r.credentialRefs.filter((x) => !CREDENTIAL_REF.test(x));", "const bad = r.credentialRefs.slice(0, 1).filter((x) => !CREDENTIAL_REF.test(x));"],
   ["CH06 凭据只校验 scheme 前缀", "contact.ts", "const CREDENTIAL_REF = /^[a-z][a-z0-9+.-]*:\\/\\/[^\\s]+$/;", "const CREDENTIAL_REF = /^[a-z][a-z0-9+.-]*:\\/\\//;"],
-  ["CK43 数组项不查是字符串", "plain.ts", "return out.every((x) => typeof x === \"string\") ? (out as string[]) :", "return true ? (out as string[]) :"],
+  ["CK43 数组项不查是字符串", "plain.ts", "(x) => (typeof x === \"string\" ? { ok: true, value: x } :", "(x) => (true ? { ok: true, value: x } :"],
   ["CK44 数组字段不查是数组", "plain.ts", "  if (!Array.isArray(v)) return { reason: `${field} 必须是${want}` };\n", ""],
   ["CK45 字符串字段不查类型(含 task)", "plain.ts", "case \"string\": return typeof v === \"string\" ? { ok: true, value: v } : { ok: false, reason: `${field} 必须是字符串` };", "case \"string\": return { ok: true, value: v };"],
   // 以下 CJ01–CJ05(报告原编号 J01–J05)取自 Codex 第九轮独立复审 reviews/feat-contact-helper.md CH-23(注入点与 independent-mutations-round9.json 一致),CK46–CK52 是 CH-20–22 统一规范化返修的埋雷;规范化后数组在入口已复制,CV06–CV08 与 I08、CK45 的注入点随源码改到等价位置
-  ["CJ01 字符串项检查漏掉首项", "plain.ts", "out.every((x) => typeof x === \"string\")", "out.slice(1).every((x) => typeof x === \"string\")"],
+  ["CJ01 字符串项检查漏掉首项", "plain.ts", "(x) => (typeof x === \"string\" ? { ok: true, value: x } :", "(x, i) => (i === 0 || typeof x === \"string\" ? { ok: true, value: x } :"],
   ["CJ02 数组检查接收类数组对象", "plain.ts", "if (!Array.isArray(v)) return { reason:", "if (!Array.isArray(v) && (typeof v !== \"object\" || v === null)) return { reason:"],
   ["CJ03 凭据引用正则不锚定开头", "contact.ts", "const CREDENTIAL_REF = /^[a-z][a-z0-9+.-]*:\\/\\/[^\\s]+$/;", "const CREDENTIAL_REF = /[a-z][a-z0-9+.-]*:\\/\\/[^\\s]+$/;"],
   ["CJ04 cloud_sandbox 静默改成 local", "contact.ts", "const placement = r.placement ?? \"local\";", "const placement = r.placement === \"cloud_sandbox\" ? \"local\" : r.placement ?? \"local\";"],
   ["CJ05 几乎跳过凭据拒绝", "contact.ts", "if (bad.length) return { ok: false, reason:", "if (bad.length > 99) return { ok: false, reason:"],
-  ["CK48 数组字段不复制、返回原数组", "plain.ts", "return out.every((x) => typeof x === \"string\") ? (out as string[]) :", "return out.every((x) => typeof x === \"string\") ? (v as string[]) :"],
+  ["CK48 数组字段不复制、返回原数组", "plain.ts", "(x) => (typeof x === \"string\" ? { ok: true, value: x } : { ok: false, reason: `${field} 里只能是字符串` }));\n  return Array.isArray(out) ? { ok: true, value: out }", "(x) => (typeof x === \"string\" ? { ok: true, value: x } : { ok: false, reason: `${field} 里只能是字符串` }));\n  return Array.isArray(out) ? { ok: true, value: v }"],
   ["CK49 显式 null 当成缺省", "plain.ts", "if (raw === undefined && isOptional(spec)) continue;", "if (raw == null && isOptional(spec)) continue;"],
   ["CK50 能力资产不查类别", "contact.ts", "  if (!ASSET_KINDS.has(a.kind)) return { ok: false, reason: `未知的能力资产类别 ${a.kind}` };\n", ""],
   ["CK52 不查访问器属性", "plain.ts", "    if (d && !Object.hasOwn(d, \"value\")) return `${what} 只接受普通数据${noun}(${String(key)} 是访问器属性)`;\n", ""],
@@ -406,7 +406,7 @@ const M = [
   ["AA04 addContact 不拒 Proxy", "plain.ts", "if (types.isProxy(input)) return { ok: false, reason:", "if (what !== \"联系人\" && types.isProxy(input)) return { ok: false, reason:"],
   ["AA05 updateContact 不拒 Proxy", "plain.ts", "if (types.isProxy(input)) return { ok: false, reason:", "if (what !== \"联系人修改\" && types.isProxy(input)) return { ok: false, reason:"],
   ["CK63 快照用普通对象并赋值写入(经原型链 setter)", "plain.ts", "const out = Object.create(null) as Record<string, unknown>;", "const out: Record<string, unknown> = {};"],
-  ["CK65 数组项用 push 写入(经原型链 setter)", "plain.ts", "    Object.defineProperty(out, i, dataDesc(d !== undefined && Object.hasOwn(d, \"value\") ? d.value : undefined, true));", "    out.push(d !== undefined && Object.hasOwn(d, \"value\") ? d.value : undefined);"],
+  ["CK65 数组项用 push 写入(经原型链 setter)", "plain.ts", "    Object.defineProperty(out, i, dataDesc(r.value, true));\n", "    out.push(r.value);\n"],
   ["CK66 Helper 不查 owner", "helper.ts", "  if (typeof owner !== \"string\" || !owner.trim()) return no(\"owner 必须是非空字符串\");\n", ""],
   ["CK67 Helper 不查调用方种类", "helper.ts", "  if (who.value.kind !== \"user\" && who.value.kind !== \"contact\") return no(`调用方种类 ${who.value.kind} 不认识`);\n", ""],
   ["CK68 Helper 不查调用方 id 非空", "helper.ts", "  if (!who.value.id.trim()) return no(\"调用方 id 不能为空\");\n", ""],
@@ -539,6 +539,16 @@ const M = [
   ["CK163 只查前四段", "contact.ts", "for (let i = 0; i < 5; i++) {\n    const e = cronFieldError", "for (let i = 0; i < 4; i++) {\n    const e = cronFieldError"],
   ["CK164 跳过第一段", "contact.ts", "for (let i = 0; i < 5; i++) {\n    const e = cronFieldError", "for (let i = 1; i < 5; i++) {\n    const e = cronFieldError"],
   ["CK165 * 也当单值判定(合法 */n 被拒)", "contact.ts", "    if (a !== undefined) {\n      if (Number(a) < lo", "    if (true) {\n      if (Number(a) < lo"],
+  // 第二十轮(R19-01/R19-02):CK166–CK173 对应 R19-01 数组复制短路(先物化再判、无效值或空位后继续读、对象/字符串路径各自退回两段式,及新顺序下的原型、访问器与下标外属性检查);CK174 是 R19-02 审查原样注入(等值区间被拒)。
+  ["CK166 回到先按声明长度复制、复制完再逐项判定(R19-01 审查指出的物化后才拒绝)", "plain.ts", "  const out: unknown[] = [];\n  for (let i = 0; i < len; i++) {\n    const d = Object.getOwnPropertyDescriptor(v, String(i));\n    if (d !== undefined && !Object.hasOwn(d, \"value\")) return { reason: `${field} 只接受普通数据数组(${i} 是访问器属性)` };\n    const r = item(d === undefined ? undefined : d.value, i);\n    if (!r.ok) return { reason: r.reason };\n    Object.defineProperty(out, i, dataDesc(r.value, true));\n  }\n", "  const raw: unknown[] = [];\n  for (let i = 0; i < len; i++) {\n    const d = Object.getOwnPropertyDescriptor(v, String(i));\n    if (d !== undefined && !Object.hasOwn(d, \"value\")) return { reason: `${field} 只接受普通数据数组(${i} 是访问器属性)` };\n    Object.defineProperty(raw, i, dataDesc(d === undefined ? undefined : d.value, true));\n  }\n  const out: unknown[] = [];\n  for (let i = 0; i < len; i++) {\n    const r = item(raw[i], i);\n    if (!r.ok) return { reason: r.reason };\n    Object.defineProperty(out, i, dataDesc(r.value, true));\n  }\n"],
+  ["CK167 首项 null 等无效值不当场停,读完剩余下标再拒绝", "plain.ts", "    if (!r.ok) return { reason: r.reason };\n", "    if (!r.ok) { if (d !== undefined) for (let j = i + 1; j < len; j++) Object.getOwnPropertyDescriptor(v, String(j)); return { reason: r.reason }; }\n"],
+  ["CK168 空位不当场停,读完剩余下标再拒绝", "plain.ts", "    if (!r.ok) return { reason: r.reason };\n", "    if (!r.ok) { if (d === undefined) for (let j = i + 1; j < len; j++) Object.getOwnPropertyDescriptor(v, String(j)); return { reason: r.reason }; }\n"],
+  ["CK169 对象数组退回两段式:先整份复制再逐项规范化", "plain.ts", "const out = copyArray(v, field, \"对象数组\", (x, i) => normalize(x, of, `${field}[${i}]`));\n", "const raw = copyArray(v, field, \"对象数组\", (x) => ({ ok: true, value: x }));\n  if (!Array.isArray(raw)) return { ok: false, reason: (raw as { reason: string }).reason };\n  const out: unknown[] = [];\n  for (let i = 0; i < raw.length; i++) { const n = normalize(raw[i], of, `${field}[${i}]`); if (!n.ok) return n; Object.defineProperty(out, i, dataDesc(n.value, true)); }\n"],
+  ["CK170 字符串数组退回两段式:先整份复制再查类型", "plain.ts", "(x) => (typeof x === \"string\" ? { ok: true, value: x } : { ok: false, reason: `${field} 里只能是字符串` }));\n  return Array.isArray(out) ? { ok: true, value: out }", "(x) => ({ ok: true, value: x }));\n  return Array.isArray(out) ? (out.every((x) => typeof x === \"string\") ? { ok: true, value: out } : { ok: false, reason: `${field} 里只能是字符串` })"],
+  ["CK171 逐项读取前不查数组原型", "plain.ts", "  if (Object.getPrototypeOf(v) !== Array.prototype) return { reason: `${field} 只接受普通数据数组` };\n", ""],
+  ["CK172 下标通过后不查下标以外的访问器", "plain.ts", "  const bad = plainDataError(v, field, true, true);\n  if (bad) return { reason: bad };\n", ""],
+  ["CK173 访问器下标当空位处理(不按访问器拒绝)", "plain.ts", "    if (d !== undefined && !Object.hasOwn(d, \"value\")) return { reason: `${field} 只接受普通数据数组(${i} 是访问器属性)` };\n", ""],
+  ["CK174 等值区间 a-a 被当成倒置拒绝(R19-02 审查原样注入:> 改 >=)", "contact.ts", "if (Number(a) > Number(b)) return", "if (Number(a) >= Number(b)) return"],
 ];
 // 所测功能已按 g-group#2273 撤销(专职开关「只做这件事」整体删除),对应变异移出清单;运行时逐条打印说明,写进 mutations.txt。
 const REMOVED = [
