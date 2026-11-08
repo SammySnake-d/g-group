@@ -90,6 +90,8 @@ interface TaskDoc {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly result: string | null;
+  /** 用户手动新建时填的描述,原样保留(AC-47)。 */
+  readonly description?: string;
 }
 interface CardRow {
   card_id: string;
@@ -894,13 +896,86 @@ export class Host {
   }
 
   // ======================= 手动新建任务(AC-47 候选底座 / U14)=======================
+  /** 负责人必须是这个会话的联系人成员。 */
+  private requireContactMember(roomId: string, contactId: string) {
+    if (!this.isMember(roomId, { kind: "contact", id: contactId })) throw new HostError("invalid_params", "这位联系人不在这个会话里");
+  }
+  /** 事务内:负责人认领任务,返回起 Compute 的副作用(与联系人 dispatch 同一条派发路径)。 */
+  private claimForTx(taskId: string, contactId: string): HostEffect[] {
+    const contact = this.contactDoc(contactId).value;
+    const { doc, effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: contactId });
+    return eff.flatMap((e): HostEffect[] => (e.kind === "spawn-compute" ? [{ kind: "spawn", taskId, requestId: e.requestId, contactId, model: this.computeModelOf(contact), brief: doc.brief, roomId: doc.roomId }] : []));
+  }
+  private actionTaskId(key: string): string | null {
+    const prior = one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key);
+    return prior ? (JSON.parse(prior.payload) as { taskId: string }).taskId : null;
+  }
+  /** 决策是共享上下文:消息落盘后推事件、送达联系人,再执行副作用。 */
+  private afterManual(roomId: string, seq: number, taskId: string, effects: HostEffect[]): TaskView {
+    const me: Member = { kind: "user", id: this.userId };
+    this.markRead(roomId, me, seq);
+    this.afterAppend(roomId, seq, me);
+    this.emitTask(taskId);
+    const view = this.taskView(this.taskDoc(taskId).value);
+    void this.runEffects(effects);
+    return view;
+  }
   /** 用户手动新建任务;指定负责人时由它认领并起 Compute,否则停在 T1_Open。clientActionId 幂等。 */
-  createTask(_input: { clientActionId: string; roomId: string; title: string; description?: string; ownerContactId?: string }): TaskView {
-    throw new Error("未实现");
+  createTask(input: { clientActionId: string; roomId: string; title: string; description?: string; ownerContactId?: string }): TaskView {
+    const room = this.roomRow(input.roomId);
+    const me: Member = { kind: "user", id: this.userId };
+    if (!this.isMember(room.id, me)) throw new HostError("forbidden", "你不在这个会话里");
+    const key = `task-create:${room.id}:${input.clientActionId}`;
+    const prior = this.actionTaskId(key);
+    if (prior) return this.taskView(this.taskDoc(prior).value);
+    const title = input.title.trim();
+    if (!title) throw new HostError("invalid_params", "任务标题不能为空");
+    const owner = input.ownerContactId;
+    if (owner !== undefined) this.requireContactMember(room.id, owner);
+    const description = input.description?.trim() ? input.description : undefined;
+    const brief = description ? `${title}\n\n${description}` : title;
+    const taskId = this.newId("t");
+    const effects: HostEffect[] = [];
+    const seq = tx(this.db, () => {
+      const s = this.appendMessageTx(room.id, me, {
+        text: description ? `新建任务:${title}\n${description}` : `新建任务:${title}`,
+        actionKey: `user:${input.clientActionId}`,
+        clientActionId: input.clientActionId,
+        mentions: owner !== undefined ? [{ id: owner, source: "auto" }] : [],
+        card: { card_id: this.newId("card"), kind: "task-status", task_id: taskId, title: title.slice(0, 200), body: brief.slice(0, 20000), state: "open", actions: JSON.stringify([{ actionId: "cancel", label: "取消任务", style: "danger" }]), meta: "{}" },
+      }).seq;
+      const doc: TaskDoc = { task: newTask(taskId, this.userId), title: title.slice(0, 500), roomId: room.id, sourceSeq: s, brief, createdAt: this.now(), updatedAt: this.now(), result: null, ...(description ? { description } : {}) };
+      putDoc(this.db, `task:${taskId}`, 0, doc);
+      if (owner !== undefined) effects.push(...this.claimForTx(taskId, owner));
+      recordAction(this.db.store, key, { taskId });
+      return s;
+    });
+    return this.afterManual(room.id, seq, taskId, effects);
   }
   /** 给还没人负责的任务指定负责人,由它认领并起 Compute。clientActionId 幂等。 */
-  assignTask(_input: { taskId: string; contactId: string; clientActionId: string }): TaskView {
-    throw new Error("未实现");
+  assignTask(input: { taskId: string; contactId: string; clientActionId: string }): TaskView {
+    const key = `task-assign:${input.clientActionId}`;
+    const prior = this.actionTaskId(key);
+    if (prior) return this.taskView(this.taskDoc(prior).value);
+    const doc = this.taskDoc(input.taskId).value;
+    this.requireContactMember(doc.roomId, input.contactId);
+    if (doc.task.state !== "T1_Open" || doc.task.owner !== null) throw new HostError("conflict", `任务在 ${doc.task.state},不能再指定负责人`);
+    const me: Member = { kind: "user", id: this.userId };
+    const effects: HostEffect[] = [];
+    const seq = tx(this.db, () => {
+      const s = this.appendMessageTx(doc.roomId, me, {
+        text: `把任务「${doc.title}」交给 ${this.nameOf({ kind: "contact", id: input.contactId })}`,
+        actionKey: `user:${input.clientActionId}`,
+        clientActionId: input.clientActionId,
+        replyToSeq: doc.sourceSeq,
+        quotedSeqs: [doc.sourceSeq],
+        mentions: [{ id: input.contactId, source: "auto" }],
+      }).seq;
+      effects.push(...this.claimForTx(input.taskId, input.contactId));
+      recordAction(this.db.store, key, { taskId: input.taskId });
+      return s;
+    });
+    return this.afterManual(doc.roomId, seq, input.taskId, effects);
   }
 
   // ======================= 任务 =======================
@@ -950,6 +1025,7 @@ export class Host {
       artifacts: doc.result ? [{ ref: `task:${t.id}/result`, name: "结果", kind: "text" }] : [],
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
+      ...(doc.description !== undefined ? { description: doc.description } : {}),
     };
   }
   progress(taskId: string, limit = 200): ComputeProgress[] {
@@ -1236,6 +1312,8 @@ export class Host {
             if (!a.task.trim() || !a.title.trim()) { reject("任务说明为空"); break; }
             const claim = this.claimBlockedTx(contactId, src);
             if (claim) { reject(claim); break; }
+            // 用户手动新建的任务:那条消息已经对应一个任务,联系人不能再拿它另建一个(AC-47)
+            if (one(this.db, "SELECT 1 FROM gg_cards WHERE room_id = ? AND seq = ? AND task_id IS NOT NULL", a.roomId, a.sourceSeq)) { reject("这条消息已经建过任务"); break; }
             const taskId = this.newId("t");
             const requester = src.sender.kind === "user" ? src.sender.id : this.userId;
             const t0 = newTask(taskId, requester);
