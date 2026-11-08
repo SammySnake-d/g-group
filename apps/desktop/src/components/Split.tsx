@@ -16,12 +16,14 @@ export function SplitPane({ tabs, active, onPick, onClose, onCloseAll, width }: 
   const tab = tabs[active]
   return (
     <section className="slide-in flex h-full shrink-0 flex-col border-l border-line bg-bg" style={{ width: width ?? 400 }} data-testid="split">
-      <div className="flex h-12 shrink-0 items-end gap-1 border-b border-line pl-2 pr-2">
-        <div className="no-scrollbar flex min-w-0 flex-1 items-end gap-0.5 overflow-x-auto">
+      {/* 只开了一页时不画页签,直接是标题 + 关闭(#719:群资料上面再套一层页签,两层页签叠在一起莫名其妙) */}
+      <div className={cn('flex h-[52px] shrink-0 items-center gap-1 border-b border-line pr-2', tabs.length > 1 ? 'pl-2' : 'pl-4')}>
+        <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" data-testid="split-tabs" data-count={tabs.length}>
           {tabs.map((t, i) => {
             const label = t.t === 'compute' ? computes[t.id]?.title : t.t === 'contact' ? people[t.id]?.name : t.t === 'group' ? '群资料' : t.t === 'cron' ? '定时' : artifacts.find((a) => a.id === t.id)?.name
+            if (tabs.length === 1) return <div key={t.t + t.id} data-testid={`split-tab-${t.t}-${t.id}`} className="min-w-0 truncate text-[15px] font-semibold tracking-[-0.01em]">{label}</div>
             return (
-              <div key={t.t + t.id} data-testid={`split-tab-${t.t}-${t.id}`} className={cn('group/t flex h-9 max-w-[220px] shrink-0 items-center gap-1.5 rounded-t-lg pl-3 pr-1 text-[13px]', i === active ? 'bg-hover font-medium text-fg' : 'text-fg-2 hover:text-fg')}>
+              <div key={t.t + t.id} data-testid={`split-tab-${t.t}-${t.id}`} className={cn('group/t flex h-8 max-w-[200px] shrink-0 items-center gap-1 rounded-lg border pl-2.5 pr-0.5 text-[12.5px] transition', i === active ? 'border-line bg-elev font-medium text-fg shadow-soft' : 'border-transparent text-fg-2 hover:bg-hover hover:text-fg')}>
                 <button onClick={() => onPick(i)} className="flex min-w-0 items-center gap-1.5">
                   <span className="truncate">{label}</span>
                 </button>
@@ -31,7 +33,7 @@ export function SplitPane({ tabs, active, onPick, onClose, onCloseAll, width }: 
           })}
         </div>
         <Tip label="关闭分屏（Esc）">
-          <button data-testid="split-close" onClick={onCloseAll} className="mb-1.5 grid h-8 w-8 place-items-center rounded-lg text-fg-2 hover:bg-hover hover:text-fg"><X className="h-[18px] w-[18px]" /></button>
+          <button data-testid="split-close" onClick={onCloseAll} className="grid h-8 w-8 place-items-center rounded-lg text-fg-2 hover:bg-hover hover:text-fg"><X className="h-[18px] w-[18px]" /></button>
         </Tip>
       </div>
       {tab?.t === 'compute' && <ComputeWork key={tab.id} id={tab.id} initial={tab.view} />}

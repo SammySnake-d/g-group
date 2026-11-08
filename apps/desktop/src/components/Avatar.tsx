@@ -70,7 +70,7 @@ export function Avatar({ id, size = 32, mood, follow = false, className, status 
           {p?.initials}
         </span>
       )}
-      {showDot && <span className={cn('absolute bottom-0 right-0 rounded-full border-2 border-[hsl(var(--avatar-ring,var(--bg)))]', liveDot[live], live === 'running' && 'pulse-dot')} style={{ width: d, height: d }} />}
+      {showDot && <span className={cn('absolute bottom-0 right-0 rounded-full border-2 border-[hsl(var(--avatar-ring,var(--bg)))]', liveDot[live])} style={{ width: d, height: d }} />}
     </span>
   )
 }

@@ -1,6 +1,6 @@
 import { startDrag, endDrag } from '@/drag'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { X, Search, Plus, MessageCircle, Users, Activity, FolderOpen, Settings, ChevronsDown, Link2, UserPlus, UsersRound, Forward, Pin, BellOff, CheckCheck, PanelRight, Settings2, AtSign, AlarmClock } from 'lucide-react'
+import { Puzzle, X, Search, Plus, MessageCircle, Users, Activity, FolderOpen, Settings, ChevronsDown, Link2, UserPlus, UsersRound, Forward, Pin, BellOff, CheckCheck, PanelRight, Settings2, AtSign, AlarmClock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { poolUsed, convs0, computes0, pending0, reactions0, boards0, commits0, playbook0, crons0, checklist0, plugins0, pulse0, people, artifacts, type Conversation, type Msg, type PersonId, type Compute, type Cron, type Pending, type QuoteRef, type Activity as Act } from '@/data'
 import { AppCtx, type Ctx, type Page, type SplitTab, type Section, type WbTab } from '@/ctx'
@@ -308,7 +308,7 @@ export default function App() {
       const c = computes[cid]
       const step = Math.max(0, c.steps.findIndex((s) => s.state === 'now'))
       addAct(cid, { step, kind: side ? 'ask' : 'user', title: side ? `你问：${text}` : `你补充：${text}（下一步生效）` })
-      if (side) setTimeout(() => addAct(cid, { step, kind: 'answer', title: c.status === 'running' ? `答：正在${c.phase}，还剩 ${c.steps.filter((s) => s.state === 'todo').length + 1} 步，大约 3 分钟` : '答：已经做完，在等你验收' }), frozen ? 0 : 900)
+      if (side) setTimeout(() => addAct(cid, { step, kind: 'answer', title: c.status === 'running' ? `答：正在${c.phase}，还剩 ${c.steps.filter((s) => s.state === 'todo').length + 1} 步，大约 3 分钟` : '答：已经做完，在等你回复' }), frozen ? 0 : 900)
     },
     rollback: (cid, cpId) => {
       const cp = computes[cid].checkpoints.find((x) => x.id === cpId)!
@@ -793,7 +793,7 @@ export default function App() {
     if (typing[c.id] && c.id !== active) return { tone: 'run' as const, text: `${people[typing[c.id]!].name} 正在输入…`, count: 0 }
     if (wait.length) {
       const p = wait[0]
-      const text = p.kind === 'choice' ? `${people[p.from].name} 在等你：${p.title}` : `${people[p.from].name} 做完了，等你验收`
+      const text = p.kind === 'choice' ? `${people[p.from].name} 在等你：${p.title}` : `${people[p.from].name} 做完了，在等你回复`
       return { tone: 'warm' as const, text, count: pend.length }
     }
     if (err) return { tone: 'err' as const, text: `${people[err.from].name} 遇到问题：${computes[(err as { computeId: string }).computeId].title}`, count: 1 }
@@ -826,6 +826,7 @@ export default function App() {
               { k: 'contacts', I: Users, label: '通讯录' },
               { k: 'activity', I: Activity, label: '进展', dot: totals.run > 0 },
               { k: 'files', I: FolderOpen, label: '文件' },
+              { k: 'plugins', I: Puzzle, label: '插件' },
             ] as const).map((it) => (
               <Tip key={it.k} label={it.label} side="right">
                 <button data-testid={`nav-${it.k}`} onClick={() => (it.k === 'activity' ? setPanoOpen(true) : setSection(it.k))} data-on={(it.k === 'activity' ? panoOpen : section === it.k) ? '1' : '0'} className={cn('relative grid h-10 w-10 place-items-center rounded-xl transition', (it.k === 'activity' ? panoOpen : section === it.k) ? 'bg-rail-hover text-white before:absolute before:-left-[12px] before:top-2 before:h-6 before:w-[3px] before:rounded-r before:bg-brand' : 'text-rail-fg hover:bg-rail-hover hover:text-white')}>

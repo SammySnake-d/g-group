@@ -844,7 +844,7 @@ function PinsPage({ id }: { id: string }) {
   const list = (g.pins ?? []).map((pid) => g.messages.find((m) => m.k === 'text' && m.id === pid)).filter(Boolean) as Extract<Msg, { k: 'text' }>[]
   return (
     <Scroll className="px-2">
-      <p className="mx-2 mb-2 text-[12px] text-fg-3">置顶这条的消息，助手接活前会和群公告一起读。</p>
+      <p className="mx-2 mb-2 text-[12px] text-fg-3">置顶只是方便你找回，不会当成群规；要助手照做的，写进群公告。</p>
       {list.map((m) => (
         <div key={m.id} className="group/p flex gap-2.5 rounded-xl px-2.5 py-2 hover:bg-hover">
           <Avatar id={m.from} size={26} status={false} />

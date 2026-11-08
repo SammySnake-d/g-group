@@ -527,7 +527,7 @@ function TextBubble({ m }: { m: Extract<Msg, { k: 'text' }> }) {
 }
 
 /* ============ Compute：在聊天里只占一行，点开在右侧分屏看 ============ */
-export const statusText = (c: Compute) => (c.status === 'done' ? c.result ?? '已完成' : c.status === 'error' ? '出错了' : c.status === 'stopped' ? '已停止' : c.status === 'waiting' ? '做完了，等你验收' : c.phase)
+export const statusText = (c: Compute) => (c.status === 'done' ? c.result ?? '已完成' : c.status === 'error' ? '出错了' : c.status === 'stopped' ? '已停止' : c.status === 'waiting' ? '做完了，等你回复' : c.phase)
 
 /** 状态的样子（概念卡第 13 张）：每种至少两个特征不同，不只靠颜色。等你=橙实心圆，出错=红三角，进行中=绿转环，做完=灰对勾 */
 export function StatusDot({ c, className }: { c: Compute; className?: string }) {

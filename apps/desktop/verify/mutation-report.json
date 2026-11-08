@@ -1,0 +1,61 @@
+{
+  "at": "2026-11-08T14:18:29.550Z",
+  "results": [
+    {
+      "id": "M-HOVER-1",
+      "desc": "悬浮工具条整体下移 48px(漂到下一条消息旁边)",
+      "spec": "e2e/layout.ui.spec.ts",
+      "ok": true,
+      "why": "测试变红,抓到了"
+    },
+    {
+      "id": "M-HOVER-2",
+      "desc": "悬浮工具条离开气泡 40px",
+      "spec": "e2e/layout.ui.spec.ts",
+      "ok": true,
+      "why": "测试变红,抓到了"
+    },
+    {
+      "id": "M-HOVER-3",
+      "desc": "自己的消息工具条放到右侧(盖住回执另一边)",
+      "spec": "e2e/layout.ui.spec.ts",
+      "ok": true,
+      "why": "测试变红,抓到了"
+    },
+    {
+      "id": "M-COL-1",
+      "desc": "阅读栏不限宽(回到横跨整个窗口)",
+      "spec": "e2e/layout.ui.spec.ts",
+      "ok": true,
+      "why": "测试变红,抓到了"
+    },
+    {
+      "id": "M-VIS-1",
+      "desc": "暗色正文变灰(对比度不够)",
+      "spec": "e2e/visual.ui.spec.ts",
+      "ok": true,
+      "why": "测试变红,抓到了"
+    },
+    {
+      "id": "M-VIS-2",
+      "desc": "亮色次要文字太浅",
+      "spec": "e2e/visual.ui.spec.ts",
+      "ok": true,
+      "why": "测试变红,抓到了"
+    },
+    {
+      "id": "M-VIS-3",
+      "desc": "单页分栏又套回页签按钮",
+      "spec": "e2e/visual.ui.spec.ts",
+      "ok": true,
+      "why": "测试变红,抓到了"
+    },
+    {
+      "id": "M-VIS-4",
+      "desc": "顶部多出一条 60px 的横幅",
+      "spec": "e2e/visual.ui.spec.ts",
+      "ok": true,
+      "why": "测试变红,抓到了"
+    }
+  ]
+}

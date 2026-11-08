@@ -203,7 +203,7 @@ function ComputeCard({ c, sel, onPick, onRetry }: { c: Compute; sel: boolean; on
     <div data-testid={`pano-compute-${c.id}`} onClick={onPick} role="button" className={cn(base, ring, 'cursor-pointer border-warm/40 bg-warm-soft')}>
       <span className="h-2 w-2 shrink-0 rounded-full bg-warm-dot" />
       <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{c.title}</span>
-      <span className="shrink-0 rounded-md bg-warm px-2 py-0.5 text-[12px] font-medium text-white">等你验收</span>
+      <span className="shrink-0 rounded-md bg-warm px-2 py-0.5 text-[12px] font-medium text-white">等你回复</span>
     </div>
   )
   if (c.status === 'error') return (
@@ -338,7 +338,7 @@ function Detail({ sel }: { sel: Sel }) {
         <Source id={c.conv} />
         <h3 className="mt-2 text-[16px] font-semibold leading-snug">{c.title}</h3>
         <div className="mt-1 flex items-center gap-1.5 text-[12.5px] text-fg-2"><Avatar id={c.owner} size={16} status={false} mood="idle" />{people[c.owner].name} · {c.elapsed} · {c.model}</div>
-        {acc && <div className="mt-3 flex items-center gap-2 rounded-lg bg-warm-soft p-2.5"><span className="flex-1 text-[13px] font-semibold text-warm">做完了，等你验收</span><button onClick={() => resolve(acc.id, 'back')} className="h-7 rounded-md px-2 text-[12.5px] hover:bg-bg/60">还要改</button><button onClick={() => resolve(acc.id, 'ok')} className="h-7 rounded-md bg-me px-2.5 text-[12.5px] font-medium text-me-fg">验收通过</button></div>}
+        {acc && <div className="mt-3 flex items-center gap-2 rounded-lg bg-warm-soft p-2.5" data-testid="pano-delivered"><span className="flex-1 text-[13px] font-semibold text-warm">做完了，在聊天里 @你了 · 回一句就行</span><button onClick={() => openConv(c.conv)} className="h-7 rounded-md bg-btn px-2.5 text-[12.5px] font-medium text-btn-fg">去回复</button></div>}
         {err && <div className="mt-3 flex items-center gap-2 rounded-lg border-l-2 border-l-err bg-err-soft p-2.5 text-[13px] text-err"><AlertTriangle className="h-3.5 w-3.5" /><span className="flex-1">{c.error ?? '出错了'}</span><button onClick={() => resolve(err.id, 'retry')} className="h-7 rounded-md border border-err/40 px-2 text-[12.5px] font-medium">重试</button></div>}
         <div className="mt-4 text-[12px] font-medium text-fg-3">步骤</div>
         <ol className="mt-1.5 space-y-1">

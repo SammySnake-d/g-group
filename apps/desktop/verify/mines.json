@@ -1,0 +1,10 @@
+[
+  { "id": "M-HOVER-1", "desc": "悬浮工具条整体下移 48px(漂到下一条消息旁边)", "file": "src/components/Messages.tsx", "find": "style={pos ? { left: pos.x, top: pos.y }", "replace": "style={pos ? { left: pos.x, top: pos.y + 48 }", "spec": "e2e/layout.ui.spec.ts" },
+  { "id": "M-HOVER-2", "desc": "悬浮工具条离开气泡 40px", "file": "src/components/Messages.tsx", "find": "style={pos ? { left: pos.x, top: pos.y }", "replace": "style={pos ? { left: pos.x + 40, top: pos.y }", "spec": "e2e/layout.ui.spec.ts" },
+  { "id": "M-HOVER-3", "desc": "自己的消息工具条放到右侧(盖住回执另一边)", "file": "src/components/Messages.tsx", "find": "{!compact && !selecting && <HoverBar m={m} mine={mine} reserve={28} />}", "replace": "{!compact && !selecting && <HoverBar m={m} mine={false} reserve={28} />}", "spec": "e2e/layout.ui.spec.ts" },
+  { "id": "M-COL-1", "desc": "阅读栏不限宽(回到横跨整个窗口)", "file": "src/App.tsx", "find": "[--chat-col:860px]", "replace": "[--chat-col:100%]", "spec": "e2e/layout.ui.spec.ts" },
+  { "id": "M-VIS-1", "desc": "暗色正文变灰(对比度不够)", "file": "src/index.css", "find": "    --fg: 40 20% 92%;", "replace": "    --fg: 40 6% 45%;", "spec": "e2e/visual.ui.spec.ts", "grep": "dark.*对比度" },
+  { "id": "M-VIS-2", "desc": "亮色次要文字太浅", "file": "src/index.css", "find": "    --fg2: 228 8% 40%;", "replace": "    --fg2: 228 8% 72%;", "spec": "e2e/visual.ui.spec.ts", "grep": "light.*对比度" },
+  { "id": "M-VIS-3", "desc": "单页分栏又套回页签按钮", "file": "src/components/Split.tsx", "find": "if (tabs.length === 1) return <div", "replace": "if (tabs.length === 99) return <div", "spec": "e2e/visual.ui.spec.ts", "grep": "单页分栏" },
+  { "id": "M-VIS-4", "desc": "顶部多出一条 60px 的横幅", "file": "src/App.tsx", "find": "<div className=\"relative min-h-0 flex-1\">", "replace": "<div style={{ height: 60 }} /><div className=\"relative min-h-0 flex-1\">", "spec": "e2e/visual.ui.spec.ts", "grep": "顶部占用" }
+]

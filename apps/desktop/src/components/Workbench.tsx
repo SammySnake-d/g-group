@@ -129,7 +129,7 @@ function Overview({ id }: { id: PersonId }) {
     <button data-testid={`wb-open-conv-${conv}`} onClick={(e) => { e.stopPropagation(); openConv(conv) }} className="shrink-0 text-[12px] text-fg-3 underline-offset-2 hover:text-fg hover:underline">打开会话</button>
   )
   const pendingTitle = (x: Pending) => (x.kind === 'choice' || x.kind === 'proposal' ? x.title : computes[x.computeId]?.title ?? '')
-  const pendingVerb = (x: Pending) => (x.kind === 'choice' ? '等你回答' : x.kind === 'proposal' ? '等你同意' : x.kind === 'accept' ? '做完了，等你验收' : '出错了，等你决定')
+  const pendingVerb = (x: Pending) => (x.kind === 'choice' ? '等你回答' : x.kind === 'proposal' ? '等你同意' : x.kind === 'accept' ? '做完了，在聊天里 @你了' : '出错了，等你决定')
   const waitCount = myPending.length + waitC.length
   return (
     <>
@@ -149,8 +149,8 @@ function Overview({ id }: { id: PersonId }) {
                   <div className={cn('text-[12px]', err ? 'text-err' : 'text-warm')}>{pendingVerb(x)}</div>
                 </div>
                 <Source conv={convOf(x.conv)} />
-                <button onClick={(e) => { e.stopPropagation(); if (cid) openSplit({ t: 'compute', id: cid }); else openConv(x.conv) }} className={cn('h-7 shrink-0 rounded-full px-3 text-[12.5px] font-medium', err ? 'bg-err text-white' : 'bg-warm text-white')}>
-                  {x.kind === 'accept' ? '去验收' : x.kind === 'error' ? '去处理' : '去回答'}
+                <button onClick={(e) => { e.stopPropagation(); if (cid && x.kind !== 'accept') openSplit({ t: 'compute', id: cid }); else openConv(x.conv) }} className={cn('h-7 shrink-0 rounded-full px-3 text-[12.5px] font-medium', err ? 'bg-err text-white' : 'bg-warm text-white')}>
+                  {x.kind === 'accept' ? '去回复' : x.kind === 'error' ? '去处理' : '去回答'}
                 </button>
                 {openLink(x.conv)}
               </div>
@@ -159,9 +159,9 @@ function Overview({ id }: { id: PersonId }) {
           {waitC.map((c) => (
             <div key={c.id} data-testid={`wb-wait-${c.id}`} role="button" onClick={() => openSplit({ t: 'compute', id: c.id })} className="flex cursor-pointer items-center gap-2 rounded-lg bg-warm-soft px-3 py-2">
               <span className="h-2 w-2 shrink-0 rounded-full bg-warm-dot" />
-              <div className="min-w-0 flex-1"><div className="truncate text-[13.5px] font-semibold">{c.title}</div><div className="text-[12px] text-warm">做完了，等你验收</div></div>
+              <div className="min-w-0 flex-1"><div className="truncate text-[13.5px] font-semibold">{c.title}</div><div className="text-[12px] text-warm">做完了，在聊天里 @你了</div></div>
               <Source conv={convOf(c.conv)} />
-              <button onClick={(e) => { e.stopPropagation(); openSplit({ t: 'compute', id: c.id }) }} className="h-7 shrink-0 rounded-full bg-warm px-3 text-[12.5px] font-medium text-white">去验收</button>
+              <button onClick={(e) => { e.stopPropagation(); openConv(c.conv) }} className="h-7 shrink-0 rounded-full bg-warm px-3 text-[12.5px] font-medium text-white">去回复</button>
               {openLink(c.conv)}
             </div>
           ))}
