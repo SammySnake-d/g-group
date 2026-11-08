@@ -97,6 +97,7 @@ function print(host: Host, roomId: string) {
     const card = m.card ? `  [卡片:${m.card.kind}/${m.card.state} ${m.card.actions.map((a) => a.label).join("|")}]` : "";
     const at = m.mentions.length ? `  [@${m.mentions.map((x) => (x.id === host.userId ? "我" : (host.listContacts().find((c) => c.id === x.id)?.name ?? x.id))).join(" @")}]` : "";
     console.log(`#${m.seq} ${who}: ${m.text}${card}${at}`);
+    for (const a of m.artifacts ?? []) console.log(`    工件 ${a.name} ${a.mime} ${a.bytes}B sha256=${a.sha256} ref=${a.ref} → ${host.getArtifact(a.ref).path}`);
   }
   for (const t of host.listTasks({ roomId })) {
     console.log(`任务 ${t.id} [${t.state}] ${t.title} 审查门=${t.reviewGate} 进度=${t.recentProgress.map((p) => p.kind).join(">")} Compute=${t.computeRuns.map((r) => r.computeId).join(",")}`);

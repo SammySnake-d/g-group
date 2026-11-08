@@ -54,10 +54,12 @@ node packages/server/src/cli.ts dm --db /tmp/gg.db --compute claude --repo /path
 | 插件市场/安装/版本更新 | AC-35 ⑤ | plugins.test.ts |
 | slash 命令唤醒能力 | AC-34 | slash.test.ts |
 | 代码任务独立 worktree、交付钉候选提交、验收后受控合入(主线未变快进,已推进则合并重验,冲突/重验失败不动主线) | AC-22 | worktree.test.ts、proof/worktree-merge.txt |
+| 交付时可读工件按 sha256 快照、卡片钉 hash、artifacts.get 点开 hash 一致、改工作区不改卡片、重发不生成第二个文件 | AC-04 | artifacts.test.ts、proof/artifacts.txt |
 
 ## 还没接的
 
 - `tasks.answer`(Compute 受阻提问 T4b)、跨厂商审查联系人自动送审、退回时恢复原 Compute 的条件 A/B 判定
 - 插件代码执行(要进程隔离)、从 URL 安装
+- 工件:没配代码仓时按「Compute 启动后改过的可读文件」收集,工作目录被别的任务同时写会混进来;Computer Use 缩略图未接
 - 代码任务的合入状态在 R-Worktree 资源上(W2–W6),任务状态机还没有 T6 Integrating:审查豁免后任务先到 T8a,合入成功才记 T8 验收;任务取消/失败时工作树不自动归档
 - 关窗口/退出时在途任务的去留(技术栈文档要求先由用户确认)

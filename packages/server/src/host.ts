@@ -86,6 +86,7 @@ import { Scheduler, checkCron } from "./schedules.ts";
 import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, unindexTx } from "./search.ts";
 import { SharedDocs } from "./shared-docs.ts";
 import { type CodeRepoConfig, type Workspace, Worktrees } from "./worktree.ts";
+import { type ArtifactRef, ArtifactStore, MAX_ARTIFACT_BYTES, MAX_ARTIFACTS, MAX_INLINE_TEXT, isReadable, recentReadable } from "./artifacts.ts";
 
 export interface HostOptions {
   readonly file: string;
@@ -148,6 +149,8 @@ interface TaskDoc {
   readonly deliveredSeq?: number | null;
   /** 不可变启动快照 + 只追加尝试账本(AC-32 ④、AC-51 ⑥);旧数据没有这个字段。 */
   readonly models?: TaskModelRecord;
+  /** 最近一次交付带回的工件快照(AC-04) */
+  readonly artifacts?: readonly ArtifactRef[];
 }
 interface CardRow {
   card_id: string;
@@ -225,6 +228,7 @@ export class Host {
   /** 共享文档单一提交点(AC-21):所有写入只经它 */
   readonly docs: SharedDocs;
   readonly worktrees: Worktrees | null;
+  readonly artifacts: ArtifactStore;
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly newId: (prefix: string) => string;
@@ -310,6 +314,7 @@ export class Host {
     // 启动时派生镜像按权威版本修复(中断的导出、迟到的旧内容覆盖)
     this.docs.repairMirrors();
     this.worktrees = opts.codeRepo ? new Worktrees(opts.codeRepo, join(opts.dataDir ?? dirname(opts.file), "worktrees")) : null;
+    this.artifacts = new ArtifactStore(this.db, join(opts.dataDir ?? dirname(opts.file), "artifacts"), this.now);
     // 启动时先处理宿主关着期间到期的定时(按容差与 missedPolicy),再按最早一次设计时器
     this.scheduler.tick();
   }
@@ -676,6 +681,7 @@ export class Host {
       clientActionId: meta?.client_action_id ?? null,
       at: one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${roomId}`, m.seq)?.at ?? this.now(),
       ...(isRewound(this.db, roomId, m.seq) ? { rewound: true } : {}),
+      ...(m.retracted ? {} : this.messageArtifacts(roomId, m.seq)),
     };
   }
   listMessages(roomId: string, q: { beforeSeq?: number; afterSeq?: number; aroundSeq?: number; limit?: number; threadRootSeq?: number | null }): { messages: MessageView[]; hasMore: boolean; hasMoreAfter?: boolean } {
@@ -1313,7 +1319,10 @@ export class Host {
       modelSnapshot: doc.models?.initial ? { ...doc.models.initial } : null,
       modelAttempts: (doc.models?.attempts ?? []).map((a) => ({ ...a })),
       producerVendors: [...producerVendors(doc.models ?? emptyModelRecord)],
-      artifacts: doc.result ? [{ ref: `task:${t.id}/result`, name: "结果", kind: "text" }] : [],
+      artifacts: [
+        ...(doc.result ? [{ ref: `task:${t.id}/result`, name: "结果", kind: "text" as const }] : []),
+        ...(doc.artifacts ?? []).map((a) => ({ ref: a.ref, name: a.name, kind: "file" as const, sha256: a.sha256, bytes: a.bytes, mime: a.mime })),
+      ],
       ...this.workspaceField(t.id),
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
@@ -1350,6 +1359,37 @@ export class Host {
     const w = this.workspace(taskId)?.value;
     if (!w) return {};
     return { workspace: { dir: w.dir, branch: w.branch, targetBranch: w.targetBranch, baseSha: w.baseSha, candidateSha: w.candidateSha, state: w.state, targetHead: w.targetHead, verifiedOn: w.verifiedOn, mergedSha: w.mergedSha, conflict: w.conflict } };
+  }
+  // ======================= 工件(AC-04) =======================
+  /** 交付消息带回的工件(AC-04);没有就不带这个字段 */
+  private messageArtifacts(roomId: string, seq: number): { artifacts?: ArtifactRef[] } {
+    const row = one<{ artifacts: string }>(this.db, "SELECT artifacts FROM gg_msg_artifacts WHERE room_id = ? AND seq = ?", roomId, seq);
+    return row ? { artifacts: JSON.parse(row.artifacts) as ArtifactRef[] } : {};
+  }
+  /** 收集本次交付的可读工件:代码任务读钉住的候选提交里改过的文件(不读工作区);
+   *  否则在 Compute 工作目录里找本任务 Compute 启动后改过的文件(按修改时间,局限见 recentReadable)。 */
+  private collectArtifacts(taskId: string): ArtifactRef[] {
+    const out: ArtifactRef[] = [];
+    const ws = this.workspace(taskId)?.value;
+    if (ws && this.worktrees && ws.candidateSha) {
+      for (const f of this.worktrees.changedFiles(ws).filter(isReadable).slice(0, MAX_ARTIFACTS)) {
+        const data = this.worktrees.readAt(ws.candidateSha, f);
+        if (data.length <= MAX_ARTIFACT_BYTES) out.push(this.artifacts.put(f, data));
+      }
+      return out;
+    }
+    const cwd = this.opts.computeCwd?.(taskId);
+    const started = one<{ s: string | null }>(this.db, "SELECT MIN(started_at) AS s FROM gg_compute WHERE task_id = ?", taskId)?.s;
+    if (!cwd || !started) return out;
+    for (const rel of recentReadable(cwd, Date.parse(started) - 2000)) out.push(this.artifacts.put(rel, readFileSync(join(cwd, rel))));
+    return out;
+  }
+  /** 读工件快照(卡片点开):内容 hash 与卡片里的一致;文本类小文件直接带回正文。 */
+  getArtifact(ref: string): ArtifactRef & { path: string; text: string | null } {
+    const r = this.artifacts.read(ref);
+    if (!r) throw new HostError("not_found", `没有工件 ${ref}`);
+    const textual = r.meta.mime.startsWith("text/") || r.meta.mime === "image/svg+xml";
+    return { ...r.meta, text: textual && r.data.length <= MAX_INLINE_TEXT ? r.data.toString("utf8") : null };
   }
   /** Compute 工作目录:配了代码仓就是这个任务自己的 worktree(没有就现开),否则按 computeCwd。 */
   private computeCwdFor(taskId: string): string | undefined {
@@ -1894,6 +1934,8 @@ export class Host {
             }
             // 交付是普通消息(AC-56/U98):回复来源消息、@ 提出者,不挂验收卡;用户用普通回复表达通过或修改,由联系人提交 verdict。
             // 审查门(AC-26):还没有跨厂商审查联系人时任务停在 T5,提出者本人回复通过即豁免审查并验收,记为 waived-by-user
+            // 可读工件按内容快照进库,交付消息钉住 ref + sha256(AC-04)
+            const arts = this.collectArtifacts(a.taskId);
             const r = this.appendMessageTx(t.roomId, { kind: "contact", id: contactId }, {
               text: a.text,
               actionKey: actionId,
@@ -1901,7 +1943,8 @@ export class Host {
               quotedSeqs: [t.sourceSeq],
               mentions: [{ id: t.task.requester, source: "auto" }],
             });
-            this.stepTaskTx(a.taskId, { kind: "SubmitForReview", commit, computeId: t.task.computeId, constraintVer: t.task.constraintVer }, { result: a.text, deliveredSeq: r.seq });
+            if (arts.length && !r.duplicate) run(this.db, "INSERT OR IGNORE INTO gg_msg_artifacts (room_id, seq, artifacts) VALUES (?, ?, ?)", t.roomId, r.seq, JSON.stringify(arts));
+            this.stepTaskTx(a.taskId, { kind: "SubmitForReview", commit, computeId: t.task.computeId, constraintVer: t.task.constraintVer }, { result: a.text, deliveredSeq: r.seq, artifacts: arts });
             appended.push({ roomId: t.roomId, seq: r.seq });
             touchedTasks.add(a.taskId);
             break;
