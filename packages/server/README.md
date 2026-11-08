@@ -31,6 +31,8 @@ node packages/server/src/cli.ts dm --db /tmp/gg.db --compute claude --cwd /tmp/g
 # 真实联系人脑子(需 @g-group/adapter-pi-contact)
 node packages/server/src/cli.ts dm --db /tmp/gg.db --mind pi --compute claude --cwd /tmp/gg-work "..."
 node packages/server/src/cli.ts log --db /tmp/gg.db
+# 群聊:建(或复用)群「项目群」,@ 小克派活,结束时打印群记录与 AC-03 发言者核对
+node packages/server/src/cli.ts group --db /tmp/gg.db --mind pi --compute claude --cwd /tmp/gg-work --members 小克,小研 --to 小克 "@小克 帮我…"
 ```
 
 ## 验收编号对照(收据均为「未测·待审」,测试在 src/*.test.ts)
@@ -38,6 +40,7 @@ node packages/server/src/cli.ts log --db /tmp/gg.db
 | 能力 | AC | 测试 |
 |---|---|---|
 | 私聊派活 → Compute → 进度 → 交付 → 确认 | AC-30 | host.test.ts、proof/e2e-claude-compute.txt |
+| 群里 @ 联系人派活 → Compute → 联系人在群里转述;Compute 不上群公屏;没被 @ 的不接、同一条只一人接 | AC-03、AC-30 | drive.test.ts、group-claim.test.ts、proof/e2e-group-pi-claude.txt(修复前 run1) |
 | 全员送达、单飞攒批、入库去重、发送前撤销重跑 | AC-31 ①–④ | host.test.ts、kernel/attention.test.ts |
 | 接走即已读、群名单含联系人、表情不改已读 | AC-46 | host.test.ts、chat-ops.test.ts |
 | 无跨厂商审查人时用户豁免、如实记 waived-by-user | AC-26 ⑤ | host.test.ts |
