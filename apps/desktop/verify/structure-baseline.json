@@ -1,26 +1,21 @@
 {
   "note": "历史文件的棘轮基线:只许变小;拆分后删掉对应条目",
   "lines": {
-    "App.tsx": 1135,
     "components/GroupSide.tsx": 412,
     "components/ModelSettings.tsx": 638,
     "components/Panorama.tsx": 471,
     "components/Plugins.tsx": 789
   },
   "buttons": {
-    "App.tsx": 19,
-    "components/Composer.tsx": 12,
     "components/CronDetail.tsx": 10,
     "components/CronEditor.tsx": 6,
     "components/CronList.tsx": 3,
     "components/GroupSide.tsx": 29,
     "components/ModelSettings.tsx": 16,
     "components/Panorama.tsx": 20,
-    "components/Plugins.tsx": 37,
-    "components/Slash.tsx": 4
+    "components/Plugins.tsx": 37
   },
   "literals": {
-    "App.tsx": 4,
     "pluginInfo.ts": 1
   }
 }
