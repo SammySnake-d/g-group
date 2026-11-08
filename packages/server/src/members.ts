@@ -4,7 +4,7 @@
 // 群临时算力池还没有实现:这里只是「停止确认后才释放」的底座;状态机在 StoppedConfirmed 时给出的 release-slot 是将来归还槽位的接点。
 // D05 的「交接 / 继续至检查点」两个选项是候选,本片只做停止。
 import type { MemberRef } from "@g-group/api-contract";
-import type { Db } from "./db.ts";
+import { type Db, all, one, run } from "./db.ts";
 
 /** 不再算在途的任务状态:已交付待确认/已验收(T8)、已取消(T10)、已失败(T11)。 */
 export const EXIT_SETTLED: ReadonlySet<string> = new Set(["T8a_Delivered", "T8_Accepted", "T10_Cancelled", "T11_Failed"]);
@@ -12,25 +12,30 @@ export const EXIT_SETTLED: ReadonlySet<string> = new Set(["T8a_Delivered", "T8_A
 export const LEAVING_REASON = "正在移出这个群,不能在这里发言或接新活";
 
 export class MemberExits {
-  readonly db: Db;
-  readonly now: () => string;
+  private readonly db: Db;
+  private readonly now: () => string;
   constructor(deps: { readonly db: Db; readonly now: () => string }) {
     this.db = deps.db;
     this.now = deps.now;
   }
-  isLeaving(_roomId: string, _contactId: string): boolean {
-    throw new Error("未实现");
+  isLeaving(roomId: string, contactId: string): boolean {
+    return !!one(this.db, "SELECT 1 FROM gg_member_exits WHERE room_id = ? AND contact_id = ?", roomId, contactId);
   }
-  leavingIn(_roomId: string): MemberRef[] {
-    throw new Error("未实现");
+  /** 这个群里移出中的成员(按开始先后)。 */
+  leavingIn(roomId: string): MemberRef[] {
+    return all<{ contact_id: string }>(this.db, "SELECT contact_id FROM gg_member_exits WHERE room_id = ? ORDER BY started_at, contact_id", roomId).map((r) => ({ kind: "contact", id: r.contact_id }));
   }
-  leavingRoomsOf(_contactId: string): Set<string> {
-    throw new Error("未实现");
+  /** 这位联系人正在移出的群。 */
+  leavingRoomsOf(contactId: string): Set<string> {
+    return new Set(all<{ room_id: string }>(this.db, "SELECT room_id FROM gg_member_exits WHERE contact_id = ?", contactId).map((r) => r.room_id));
   }
-  begin(_roomId: string, _contactId: string): void {
-    throw new Error("未实现");
+  begin(roomId: string, contactId: string): void {
+    run(this.db, "INSERT OR IGNORE INTO gg_member_exits (room_id, contact_id, started_at) VALUES (?, ?, ?)", roomId, contactId, this.now());
   }
-  finishTx(_roomId: string, _contactId: string): void {
-    throw new Error("未实现");
+  /** 删成员行、游标与移出标记(在事务里调用)。 */
+  finishTx(roomId: string, contactId: string): void {
+    run(this.db, "DELETE FROM gg_members WHERE room_id = ? AND kind = 'contact' AND member_id = ?", roomId, contactId);
+    run(this.db, "DELETE FROM gg_cursor WHERE room_id = ? AND contact_id = ?", roomId, contactId);
+    run(this.db, "DELETE FROM gg_member_exits WHERE room_id = ? AND contact_id = ?", roomId, contactId);
   }
 }
