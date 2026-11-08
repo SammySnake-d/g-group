@@ -39,14 +39,13 @@ export function Rail({ section, panoOpen, badge, running, helperOpen, backend, o
       ))}
       <div className="flex-1" />
       <IconButton data-testid="nav-helper" label="Helper（全局 · ⌘K）：默认不读任何聊天" side="right" size="icon-lg" active={helperOpen} onClick={onHelper} icon={<Bot shape={HELPER_MARK.shape} color={HELPER_MARK.color} size={26} />} />
-      {backend.mode !== 'connected' && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Chip data-testid="backend-demo" data-mode={backend.mode} variant="outline" size="xs" tabIndex={0} className="my-1 cursor-default">演示</Chip>
-          </TooltipTrigger>
-          <TooltipContent side="right">{backend.mode === 'checking' ? '正在连接后端…' : `后端未连接（${backend.reason}），界面里是演示数据`}</TooltipContent>
-        </Tooltip>
-      )}
+      {/* 界面数据还是演示数据时一直标「演示」;后端连上了也如实说明界面还没接真实数据(真实数据层接好后再去掉) */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Chip data-testid="backend-demo" data-mode={backend.mode} variant="outline" size="xs" tabIndex={0} className="my-1 cursor-default">演示</Chip>
+        </TooltipTrigger>
+        <TooltipContent side="right">{backend.mode === 'checking' ? '正在连接后端…' : backend.mode === 'connected' ? '后端已连接；界面还没接真实数据，这里仍是演示数据' : `后端未连接（${backend.reason}），界面里是演示数据`}</TooltipContent>
+      </Tooltip>
       <IconButton data-testid="nav-settings" label="设置" side="right" size="icon-lg" onClick={onSettings} icon={<Settings strokeWidth={1.75} />} />
       <div className={cn('mt-1 rounded-full ring-2 ring-rail-hover')} style={{ ['--avatar-ring' as string]: 'var(--rail)' }}><Avatar id="me" size={30} /></div>
     </nav>

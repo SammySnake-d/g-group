@@ -1,0 +1,14 @@
+{
+  "slice": "会话操作补齐合同:编辑/撤回(只追加事件,联系人按事件收到「编辑了/撤回了 #x」)、表情回应、附件(按内容去重存数据目录)、移出群成员、删除联系人、用户撤销承诺、任务显式验收/退回/取消入口",
+  "acceptance": [
+    { "id": "AC-08", "status": "未测", "reason": "撤回后视图与联系人输入不含原文有测试(chat-ops.test.ts);装配层逐字扫描由内核 assemble/rounds 负责" },
+    { "id": "AC-46", "status": "未测", "reason": "⑦ 表情不改已读有测试" },
+    { "id": "AC-28", "status": "未测", "reason": "显式验收入口等同交付卡、重复验收被拒有测试;退回后恢复原 Compute 的条件 A/B 未测" }
+  ],
+  "author": { "agent": "claude", "session": "claude:18b4f4b0-3cf6-4d51-be92-ca20094b2ce3", "model": "fnqtz/claude-opus-5-5" },
+  "red": null,
+  "unverifiable": "先写后测(用户 #717);tasks.answer 在 Compute 受阻提问(T4b)接通前如实返回 conflict",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}
