@@ -5,7 +5,7 @@
     { "id": "AC-36", "status": "未测", "reason": "只提供 retry_class 分类(Transient/Permanent/MidTurn/UnknownEffect)给兄弟切片的重试策略用,A×B 退避、熔断、失败卡不在本片" }
   ],
   "author": { "agent": "claude", "session": "claude:8db9faef-fb87-414b-b25d-2aa6747caad3", "model": "claude-opus-5-5" },
-  "red": { "commit": "a8a51e3" },
+  "red": { "commit": "e2baebe" },
   "unverifiable": "AC-43 ⑧:原文规则只按需求文档 D26 第 8.2/8.4 节列的例子与本机 mirasim 记录里出现过的原文写,真实 harness 换措辞时可能落到 unknown(会保留原文、不误归类,但画板只显示「未识别的失败」);变异校准只证明测试能发现所列 27 种故障,不证明原文覆盖率。502 EOF 那句按断流记、结构化给 502 时按上游不可用记,两者都是 Transient,是规则表里写明的选择",
   "waiver": null,
   "review": null,
