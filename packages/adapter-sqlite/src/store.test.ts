@@ -7,7 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { after, afterEach, test } from "node:test";
 import { DatabaseSync } from "node:sqlite";
-import { appendEvent, closeStore, commitDoc, listActions, loadLog, openStore, readDoc, recordAction } from "./index.ts";
+import { appendEvent, closeStore, commitDoc, listActions, loadLog, openStore, readDoc, recordAction, transaction } from "./index.ts";
 
 const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "adapter-sqlite-"));
 after(() => fs.rmSync(ROOT, { recursive: true, force: true }));
@@ -549,4 +549,37 @@ test("关闭再打开同一文件,事件、文档版本、动作都在", () => {
   assert.deepEqual(commitDoc(r, "主稿", 1, "过期"), { ok: false, reason: "version-conflict", currentVer: 2 });
   assert.deepEqual(listActions(r), [{ actionId: "act_1", payload: { text: "汇报" } }]);
   closeStore(r);
+});
+
+test("transaction:事件、文档、动作在一次提交里,中途抛错全部回滚;内部的单步写入不再各自提交", () => {
+  const file = dbFile();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const s = openStore(file);
+  try {
+    assert.throws(
+      () =>
+        transaction(s, () => {
+          appendEvent(s, "room:a", { kind: "user", id: "me" }, { kind: "message", text: "一" }, "2026-11-08T00:00:00Z");
+          assert.deepEqual(commitDoc(s, "cursor", 0, { seq: 1 }), { ok: true, ver: 1 });
+          assert.deepEqual(recordAction(s, "act-1", { seq: 1 }), { recorded: true });
+          throw new Error("落盘前崩溃");
+        }),
+      /落盘前崩溃/,
+    );
+    assert.equal(loadLog(s, "room:a").log.events.length, 0);
+    assert.equal(readDoc(s, "cursor"), undefined);
+    assert.deepEqual(listActions(s), []);
+    const seq = transaction(s, () => {
+      const e = appendEvent(s, "room:a", { kind: "user", id: "me" }, { kind: "message", text: "二" }, "2026-11-08T00:00:01Z");
+      commitDoc(s, "cursor", 0, { seq: e.seq });
+      recordAction(s, "act-2", { seq: e.seq });
+      return e.seq;
+    });
+    assert.equal(seq, 1);
+    assert.deepEqual(readDoc(s, "cursor"), { value: { seq: 1 }, ver: 1 });
+    assert.deepEqual(listActions(s), [{ actionId: "act-2", payload: { seq: 1 } }]);
+    assert.throws(() => transaction(s, () => transaction(s, () => 1)), /不可嵌套/);
+  } finally {
+    closeStore(s);
+  }
 });
