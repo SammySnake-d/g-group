@@ -808,7 +808,7 @@ function r12Receipt(): Receipt {
   };
 }
 function r12Ctx(repo: string, receipt: Receipt, changed = [R12_FILE]): Ctx {
-  return { root: repo, changed, receipt, contentHash: () => R12_HASH } as Ctx;
+  return { root: repo, changed, receipt, receiptPath: "receipts/feat-x.json", contentHash: () => R12_HASH } as Ctx;
 }
 const r12Review = () => [{ model: "claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: "node scripts/gates/run-all.ts --hash" }, result: R12_HASH }] }];
 function r12Run(ctx: Ctx): string[] { return provenance.run.call(provenance, ctx).map((x) => x.msg); }
