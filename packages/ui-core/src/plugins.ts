@@ -14,8 +14,8 @@ export const CATEGORY_LABEL: Readonly<Record<PluginCategory, string>> = Object.f
   command: "命令",
 });
 export const CATEGORY_DESC: Readonly<Record<PluginCategory, string>> = Object.freeze({
-  source: "让助手读到外面的东西:别的聊天软件、网页、订阅。取来的内容一律标「不可信外部数据」,只当背景",
-  outbound: "让助手往外发:邮件、请求。要先按六项预授权说好发给谁、发什么、多频繁",
+  source: "让助手读到外面的东西：别的聊天软件、网页、订阅。取来的内容一律标「不可信外部数据」，只当背景",
+  outbound: "让助手往外发：邮件、请求。要先按六项预授权说好发给谁、发什么、多频繁",
   ui: "在聊天右侧多一块面板",
   command: "在输入框里用 / 唤起的一条能力",
 });
@@ -35,7 +35,7 @@ export interface CommandArg {
   desc: string;
   required: boolean;
 }
-/** 插件贡献的斜杠命令:name 不带 /,只许小写字母、数字和 -,2–32 位 */
+/** 插件贡献的斜杠命令:name 不带 /,只许小写字母、数字和 -，2–32 位 */
 export interface PluginCommand {
   name: string;
   title: string;
@@ -163,7 +163,7 @@ const FIELD: Record<string, string> = {
   date: "日期",
   notes: "改动",
 };
-const missing = (where: string, k: string) => `${where}缺少字段 ${k}(${FIELD[k] ?? k})`;
+const missing = (where: string, k: string) => `${where}缺少字段 ${k}（${FIELD[k] ?? k}）`;
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const len = (s: string) => [...s].length;
 
@@ -178,14 +178,14 @@ export function validateManifest(input: unknown): ManifestCheck {
       return "";
     }
     if (typeof v !== "string") {
-      errors.push(`${where}${FIELD[k] ?? k}(${k})必须是文字`);
+      errors.push(`${where}${FIELD[k] ?? k}（${k}）必须是文字`);
       return "";
     }
     if (v.trim() === "") {
-      errors.push(`${where}${FIELD[k] ?? k}(${k})不能为空`);
+      errors.push(`${where}${FIELD[k] ?? k}（${k}）不能为空`);
       return "";
     }
-    if (max !== undefined && len(v) > max) errors.push(`${where}${FIELD[k] ?? k}太长:最多 ${max} 字,现在 ${len(v)} 字`);
+    if (max !== undefined && len(v) > max) errors.push(`${where}${FIELD[k] ?? k}太长：最多 ${max} 字，现在 ${len(v)} 字`);
     return v.trim();
   };
   const list = (o: Record<string, unknown>, k: string, where: string, required: boolean): unknown[] => {
@@ -195,70 +195,70 @@ export function validateManifest(input: unknown): ManifestCheck {
       return [];
     }
     if (!Array.isArray(v)) {
-      errors.push(`${where}${FIELD[k] ?? k}(${k})必须是数组`);
+      errors.push(`${where}${FIELD[k] ?? k}（${k}）必须是数组`);
       return [];
     }
     return v;
   };
 
   const id = text(input, "id", "");
-  if (id && (!PLUGIN_ID_RE.test(id) || id.length < 3 || id.length > 64)) errors.push(`插件 id「${id}」不合法:只能用小写字母、数字、点和 -,3–64 位,比如 g-group.feishu`);
+  if (id && (!PLUGIN_ID_RE.test(id) || id.length < 3 || id.length > 64)) errors.push(`插件 id「${id}」不合法：只能用小写字母、数字、点和 -，3–64 位，比如 g-group.feishu`);
   const name = text(input, "name", "", MANIFEST_LIMITS.name);
   const publisher = text(input, "publisher", "", MANIFEST_LIMITS.publisher);
   const version = text(input, "version", "");
-  if (version && !isValidSemver(version)) errors.push(`版本号「${version}」不合法:要写成 主版本.次版本.修订号,比如 1.4.2`);
+  if (version && !isValidSemver(version)) errors.push(`版本号「${version}」不合法：要写成 主版本.次版本.修订号，比如 1.4.2`);
   const category = text(input, "category", "");
   if (category && !(PLUGIN_CATEGORIES as readonly string[]).includes(category))
-    errors.push(`类别「${category}」不合法:只能是 ${PLUGIN_CATEGORIES.map((c) => `${c}(${CATEGORY_LABEL[c]})`).join(" / ")}`);
+    errors.push(`类别「${category}」不合法：只能是 ${PLUGIN_CATEGORIES.map((c) => `${c}（${CATEGORY_LABEL[c]}）`).join("、")}`);
   const summary = text(input, "summary", "", MANIFEST_LIMITS.summary);
   const description = text(input, "description", "", MANIFEST_LIMITS.description);
 
   let icon: PluginIcon = { letter: name ? [...name][0]! : "?", color: DEFAULT_ICON_COLOR };
   if (input.icon !== undefined) {
-    if (!isObj(input.icon)) errors.push("图标(icon)必须是对象:{ letter, color }");
+    if (!isObj(input.icon)) errors.push("图标（icon）必须是对象：{ letter, color }");
     else {
       const letter = typeof input.icon.letter === "string" && input.icon.letter.trim() ? input.icon.letter.trim() : icon.letter;
       const color = input.icon.color;
-      if (color !== undefined && (typeof color !== "string" || !COLOR_RE.test(color))) errors.push(`图标颜色「${String(color)}」不合法:要写成 #RRGGBB`);
-      if (len(letter) > 2) errors.push(`图标文字「${letter}」太长:最多 2 个字`);
+      if (color !== undefined && (typeof color !== "string" || !COLOR_RE.test(color))) errors.push(`图标颜色「${String(color)}」不合法：要写成 #RRGGBB`);
+      if (len(letter) > 2) errors.push(`图标文字「${letter}」太长：最多 2 个字`);
       icon = { letter, color: typeof color === "string" && COLOR_RE.test(color) ? color : DEFAULT_ICON_COLOR };
     }
   }
 
   const permissions: PluginPermission[] = [];
   const rawPerms = list(input, "permissions", "", true);
-  if (rawPerms.length > MANIFEST_LIMITS.permissions) errors.push(`权限太多:最多 ${MANIFEST_LIMITS.permissions} 项`);
+  if (rawPerms.length > MANIFEST_LIMITS.permissions) errors.push(`权限太多：最多 ${MANIFEST_LIMITS.permissions} 项`);
   const scopes = new Set<string>();
   rawPerms.forEach((p, i) => {
     const where = `权限第 ${i + 1} 项`;
     if (!isObj(p)) {
-      errors.push(`${where}必须是对象:{ scope, detail, risk }`);
+      errors.push(`${where}必须是对象：{ scope, detail, risk }`);
       return;
     }
     const scope = text(p, "scope", where);
     const detail = text(p, "detail", where);
     const risk = text(p, "risk", where);
     if (risk && !(RISK_LEVELS as readonly string[]).includes(risk))
-      errors.push(`${where}${scope ? `「${scope}」` : ""}的风险级别「${risk}」不合法:只能是 ${RISK_LEVELS.map((r) => `${r}(${RISK_LABEL[r]})`).join(" / ")}`);
+      errors.push(`${where}${scope ? `「${scope}」` : ""}的风险级别「${risk}」不合法：只能是 ${RISK_LEVELS.map((r) => `${r}（${RISK_LABEL[r]}）`).join("、")}`);
     if (scope && scopes.has(scope)) errors.push(`权限「${scope}」重复了`);
     if (scope) scopes.add(scope);
     if (scope && detail && (RISK_LEVELS as readonly string[]).includes(risk)) permissions.push({ scope, detail, risk: risk as RiskLevel });
   });
 
   const contributes: PluginContributes = { commands: [], panels: [], events: [] };
-  if (input.contributes !== undefined && !isObj(input.contributes)) errors.push("提供的能力(contributes)必须是对象:{ commands, panels, events }");
+  if (input.contributes !== undefined && !isObj(input.contributes)) errors.push("提供的能力（contributes）必须是对象：{ commands, panels, events }");
   const c = isObj(input.contributes) ? input.contributes : {};
   const rawCmds = list(c, "commands", "", false);
-  if (rawCmds.length > MANIFEST_LIMITS.commands) errors.push(`命令太多:最多 ${MANIFEST_LIMITS.commands} 条`);
+  if (rawCmds.length > MANIFEST_LIMITS.commands) errors.push(`命令太多：最多 ${MANIFEST_LIMITS.commands} 条`);
   const names = new Set<string>();
   rawCmds.forEach((x, i) => {
     const where = `命令第 ${i + 1} 条`;
     if (!isObj(x)) {
-      errors.push(`${where}必须是对象:{ name, title, desc, args }`);
+      errors.push(`${where}必须是对象：{ name, title, desc, args }`);
       return;
     }
     const n = text(x, "name", where);
-    if (n && !COMMAND_NAME_RE.test(n)) errors.push(`命令名「/${n}」不合法:只能用小写字母、数字和 -,2–32 位`);
+    if (n && !COMMAND_NAME_RE.test(n)) errors.push(`命令名「/${n}」不合法：只能用小写字母、数字和 -，2–32 位`);
     else if (n && names.has(n)) errors.push(`命令 /${n} 重复了`);
     if (n) names.add(n);
     const title = text(x, "title", where);
@@ -267,7 +267,7 @@ export function validateManifest(input: unknown): ManifestCheck {
     list(x, "args", where, false).forEach((a, j) => {
       const aw = `${where}的参数第 ${j + 1} 个`;
       if (!isObj(a)) {
-        errors.push(`${aw}必须是对象:{ name, desc, required }`);
+        errors.push(`${aw}必须是对象：{ name, desc, required }`);
         return;
       }
       const an = text(a, "name", aw);
@@ -280,7 +280,7 @@ export function validateManifest(input: unknown): ManifestCheck {
   list(c, "panels", "", false).forEach((x, i) => {
     const where = `面板第 ${i + 1} 块`;
     if (!isObj(x)) {
-      errors.push(`${where}必须是对象:{ id, title, desc }`);
+      errors.push(`${where}必须是对象：{ id, title, desc }`);
       return;
     }
     const pid = text(x, "id", where), title = text(x, "title", where);
@@ -290,7 +290,7 @@ export function validateManifest(input: unknown): ManifestCheck {
   list(c, "events", "", false).forEach((x, i) => {
     const where = `事件第 ${i + 1} 个`;
     if (!isObj(x)) {
-      errors.push(`${where}必须是对象:{ name, desc }`);
+      errors.push(`${where}必须是对象：{ name, desc }`);
       return;
     }
     const en = text(x, "name", where);
@@ -302,13 +302,13 @@ export function validateManifest(input: unknown): ManifestCheck {
   list(input, "changelog", "", false).forEach((x, i) => {
     const where = `更新日志第 ${i + 1} 条`;
     if (!isObj(x)) {
-      errors.push(`${where}必须是对象:{ version, date, notes }`);
+      errors.push(`${where}必须是对象：{ version, date, notes }`);
       return;
     }
     const v = text(x, "version", where);
-    if (v && !isValidSemver(v)) errors.push(`${where}的版本号「${v}」不合法:要写成 主版本.次版本.修订号`);
+    if (v && !isValidSemver(v)) errors.push(`${where}的版本号「${v}」不合法：要写成 主版本.次版本.修订号`);
     const date = text(x, "date", where);
-    if (date && !DATE_RE.test(date)) errors.push(`${where}的日期「${date}」不合法:要写成 YYYY-MM-DD`);
+    if (date && !DATE_RE.test(date)) errors.push(`${where}的日期「${date}」不合法：要写成 YYYY-MM-DD`);
     const notes = list(x, "notes", where, true).filter((n): n is string => typeof n === "string" && n.trim() !== "");
     if (v && isValidSemver(v) && date && DATE_RE.test(date)) changelog.push({ version: v, date, notes });
   });
@@ -323,10 +323,10 @@ export function validateManifest(input: unknown): ManifestCheck {
 /** JSON.parse 的英文报错 → 中文,尽量带上行列 */
 function jsonErrorText(msg: string) {
   const lc = /line (\d+) column (\d+)/.exec(msg);
-  if (lc) return `不是合法的 JSON:第 ${lc[1]} 行第 ${lc[2]} 列附近有错`;
+  if (lc) return `不是合法的 JSON：第 ${lc[1]} 行第 ${lc[2]} 列附近有错`;
   const tok = /Unexpected token '(.+?)'/.exec(msg);
-  if (tok) return `不是合法的 JSON:有不该出现的「${tok[1]}」`;
-  if (/end of (JSON|data)/i.test(msg)) return "不是合法的 JSON:内容不完整,可能少了括号或引号";
+  if (tok) return `不是合法的 JSON：有不该出现的「${tok[1]}」`;
+  if (/end of (JSON|data)/i.test(msg)) return "不是合法的 JSON：内容不完整，可能少了括号或引号";
   return "不是合法的 JSON";
 }
 
@@ -356,11 +356,11 @@ export function readInstallSource(raw: string): InstallSource {
   try {
     u = new URL(s);
   } catch {
-    return { kind: "invalid", error: "看不出是清单还是地址:粘贴清单 JSON(以 { 开头),或者 https:// 开头的地址" };
+    return { kind: "invalid", error: "看不出是清单还是地址：粘贴清单 JSON（以 { 开头），或者 https:// 开头的地址" };
   }
   const local = u.hostname === "localhost" || u.hostname === "127.0.0.1";
   if (u.protocol === "https:" || (u.protocol === "http:" && local)) return { kind: "url", url: u.href };
-  return { kind: "invalid", error: `只接受 https 地址,现在是「${u.protocol.replace(/:$/, "")}」` };
+  return { kind: "invalid", error: `只接受 https 地址，现在是「${u.protocol.replace(/:$/, "")}」` };
 }
 
 // ---------------------------------------------------------------- 权限比较
@@ -484,13 +484,13 @@ export const pluginName = (s: PluginInstall) => s.manifest?.name ?? s.pending?.n
 export function pluginReducer<S extends PluginInstall>(s: S, a: PluginAction): PluginResult<S> {
   const fail = (error: string, needsConsent: PluginPermission[] = []): PluginResult<S> => ({ ok: false, state: s, error, needsConsent });
   const ok = (patch: Partial<PluginInstall>): PluginResult<S> => ({ ok: true, state: { ...s, ...patch } });
-  if (!FROM[a.type].includes(s.phase)) return fail(`「${pluginName(s)}」现在是「${PHASE_LABEL[s.phase]}」,不能${ACTION_LABEL[a.type]}`);
+  if (!FROM[a.type].includes(s.phase)) return fail(`「${pluginName(s)}」现在是「${PHASE_LABEL[s.phase]}」，不能${ACTION_LABEL[a.type]}`);
   switch (a.type) {
     case "install": {
       if (a.manifest.id !== s.id) return fail(`清单 id「${a.manifest.id}」和要装的插件「${s.id}」不一致`);
       const agreed = new Set(a.consent);
       const left = a.manifest.permissions.filter((p) => !agreed.has(p.scope));
-      if (left.length) return fail(`还有 ${left.length} 项权限没同意:${left.map((p) => `「${p.detail}」`).join("")}`, left);
+      if (left.length) return fail(`还有 ${left.length} 项权限没同意：${left.map((p) => `「${p.detail}」`).join("")}`, left);
       return ok({ phase: "installing", pending: a.manifest, manifest: null, granted: a.manifest.permissions.map((p) => ({ ...p })), convs: [], callers: [] });
     }
     case "install_done":
@@ -503,14 +503,14 @@ export function pluginReducer<S extends PluginInstall>(s: S, a: PluginAction): P
       return ok({ phase: "disabled" });
     case "update": {
       const cur = s.manifest;
-      if (!cur) return fail(`「${pluginName(s)}」没有已装版本的清单,不能更新`);
+      if (!cur) return fail(`「${pluginName(s)}」没有已装版本的清单，不能更新`);
       if (a.manifest.id !== s.id) return fail(`清单 id「${a.manifest.id}」和要更新的插件「${s.id}」不一致`);
       const c = compareSemver(a.manifest.version, cur.version);
-      if (c === 0) return fail(`已经是 v${cur.version},不用更新`);
-      if (c < 0) return fail(`v${a.manifest.version} 比已装的 v${cur.version} 旧,不能降级`);
+      if (c === 0) return fail(`已经是 v${cur.version}，不用更新`);
+      if (c < 0) return fail(`v${a.manifest.version} 比已装的 v${cur.version} 旧，不能降级`);
       const agreed = new Set(a.consent);
       const need = permissionsToConsent(s.granted, a.manifest.permissions).filter((p) => !agreed.has(p.scope));
-      if (need.length) return fail(`v${a.manifest.version} 多要了 ${need.length} 项权限,要你重新同意`, need);
+      if (need.length) return fail(`v${a.manifest.version} 多要了 ${need.length} 项权限，要你重新同意`, need);
       return ok({ manifest: a.manifest, granted: a.manifest.permissions.map((p) => ({ ...p })) });
     }
     case "uninstall":
@@ -603,7 +603,7 @@ export function commandAvailability(
     const listed = catalog.find((m) => m.contributes.commands.some((c) => c.name === n));
     const mine = listed && installs.find((s) => s.id === listed.id && isInstalled(s));
     if (listed && mine) return { ok: false, plugin: listed.id, code: "needs_update", reason: `/${n} 要把「${listed.name}」更新到 v${listed.version} 才有` };
-    if (listed) return { ok: false, plugin: listed.id, code: "not_installed", reason: `/${n} 来自「${listed.name}」,还没安装` };
+    if (listed) return { ok: false, plugin: listed.id, code: "not_installed", reason: `/${n} 来自「${listed.name}」，还没安装` };
     return { ok: false, plugin: null, code: "unknown", reason: `没有 /${n} 这个命令` };
   }
   let first: CommandCheck | undefined;
@@ -612,10 +612,10 @@ export function commandAvailability(
     const command = m.contributes.commands.find((c) => c.name === n)!;
     const block = (code: CommandBlock, reason: string): CommandCheck => ({ ok: false, plugin: s.id, code, reason });
     const r =
-      s.phase !== "enabled" ? block("disabled", `「${m.name}」已停用,/${n} 用不了`)
-      : !s.convs.includes(at.conv) ? block("not_attached", `「${m.name}」没挂到这个聊天,/${n} 用不了`)
+      s.phase !== "enabled" ? block("disabled", `「${m.name}」已停用，/${n} 用不了`)
+      : !s.convs.includes(at.conv) ? block("not_attached", `「${m.name}」没挂到这个聊天，/${n} 用不了`)
       : !s.callers.includes(at.caller) ? block("caller_not_allowed", `${at.caller} 不在「${m.name}」的调用名单里`)
-      : permissionsToConsent(s.granted, m.permissions).length > 0 ? block("permissions_pending", `「${m.name}」有新权限等你同意,先暂停`)
+      : permissionsToConsent(s.granted, m.permissions).length > 0 ? block("permissions_pending", `「${m.name}」有新权限等你同意，先暂停`)
       : ({ ok: true, plugin: s.id, command } as const);
     if (r.ok) return r;
     first ??= r;
@@ -713,9 +713,9 @@ export function marketCounts(catalog: readonly PluginManifest[], installs: reado
 export const CONTENT_POLICIES = Object.freeze(["summary", "summary-links", "full"] as const);
 export type ContentPolicy = (typeof CONTENT_POLICIES)[number];
 export const CONTENT_POLICY_LABEL: Readonly<Record<ContentPolicy, string>> = Object.freeze({
-  summary: "只发摘要,不带原文和附件",
-  "summary-links": "摘要,附原消息链接",
-  full: "可以带原文和附件(只限授权的数据源)",
+  summary: "只发摘要，不带原文和附件",
+  "summary-links": "摘要，附原消息链接",
+  full: "可以带原文和附件（只限授权的数据源）",
 });
 export interface OutboundGrant {
   /** 为哪项承诺外发(定时、告警规则) */
@@ -751,8 +751,10 @@ export function splitList(text: string): string[] {
 /** 校验一份预授权,返回全部问题(空数组 = 通过) */
 export function validateGrant(g: OutboundGrant, kind: RecipientKind): string[] {
   const errors: string[] = [];
-  if (!g.commitment.trim()) errors.push("要写清楚这份授权给哪项承诺用,比如「每天 8 点日报」");
-  if (!EMAIL_RE.test(g.sender.trim())) errors.push(g.sender.trim() ? `发件账号「${g.sender.trim()}」不是邮箱地址` : "要选发件账号");
+  if (!g.commitment.trim()) errors.push("要写清楚这份授权给哪项承诺用，比如「每天 8 点日报」");
+  const sender = g.sender.trim();
+  if (!sender) errors.push(kind === "email" ? "要选发件账号" : "要写清楚用哪个身份发（比如签名密钥的名字）");
+  else if (kind === "email" && !EMAIL_RE.test(sender)) errors.push(`发件账号「${sender}」不是邮箱地址`);
   if (g.recipients.length === 0) errors.push(kind === "email" ? "收件白名单至少要有一个邮箱" : "至少要有一个目标地址");
   for (const r of g.recipients) if (!okRecipient(r, kind)) errors.push(kind === "email" ? `收件人「${r}」不是邮箱地址` : `目标地址「${r}」不是 https 地址`);
   if (g.sources.length === 0) errors.push("至少选一个能用的数据源");
@@ -767,14 +769,14 @@ export type SendCheck = { ok: true } | { ok: false; code: SendBlock; reason: str
 /** 每次实际外发前的复核:插件可用、授权在且没被撤销、插件版本没变、收件人和数据源都在授权里、没超每小时上限 */
 export function checkSend(s: PluginInstall, grant: OutboundGrant | null, attempt: { recipients: readonly string[]; sources: readonly string[]; sentLastHour: number }): SendCheck {
   const no = (code: SendBlock, reason: string): SendCheck => ({ ok: false, code, reason });
-  if (s.phase !== "enabled" || !s.manifest) return no("plugin_unavailable", `「${pluginName(s)}」不可用(${PHASE_LABEL[s.phase]}),外发暂停`);
-  if (!grant) return no("no_grant", "还没有外发预授权,一封也发不出去");
-  if (grant.revoked) return no("blocked_on_auth", "授权已失效或被撤销,外发已阻断,等你重新授权");
-  if (grant.pluginVersion !== s.manifest.version) return no("version_changed", `插件从 v${grant.pluginVersion} 变成了 v${s.manifest.version},外发授权要你重新确认`);
+  if (s.phase !== "enabled" || !s.manifest) return no("plugin_unavailable", `「${pluginName(s)}」不可用（${PHASE_LABEL[s.phase]}），外发暂停`);
+  if (!grant) return no("no_grant", "还没有外发预授权，一封也发不出去");
+  if (grant.revoked) return no("blocked_on_auth", "授权已失效或被撤销，外发已阻断，等你重新授权");
+  if (grant.pluginVersion !== s.manifest.version) return no("version_changed", `插件从 v${grant.pluginVersion} 变成了 v${s.manifest.version}，外发授权要你重新确认`);
   const badTo = attempt.recipients.filter((r) => !grant.recipients.includes(r));
   if (badTo.length) return no("recipient_not_allowed", `${badTo.map((r) => `「${r}」`).join("")}不在收件白名单里`);
   const badSrc = attempt.sources.filter((x) => !grant.sources.includes(x));
   if (badSrc.length) return no("source_not_allowed", `数据源${badSrc.map((x) => `「${x}」`).join("")}不在授权范围里`);
-  if (attempt.sentLastHour >= grant.maxPerHour) return no("rate_limited", `这一小时已经发了 ${attempt.sentLastHour} 次,到上限 ${grant.maxPerHour} 了`);
+  if (attempt.sentLastHour >= grant.maxPerHour) return no("rate_limited", `这一小时已经发了 ${attempt.sentLastHour} 次，到上限 ${grant.maxPerHour} 了`);
   return { ok: true };
 }

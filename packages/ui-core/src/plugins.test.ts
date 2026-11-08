@@ -125,30 +125,30 @@ test("validateManifest:缺字段逐个列出中文说明", () => {
   assert.deepEqual(validateManifest({ name: "x" }), {
     ok: false,
     errors: [
-      "缺少字段 id(插件 id)",
-      "缺少字段 publisher(发布者)",
-      "缺少字段 version(版本号)",
-      "缺少字段 category(类别)",
-      "缺少字段 summary(一句话简介)",
-      "缺少字段 description(详细说明)",
-      "缺少字段 permissions(权限列表)",
+      "缺少字段 id（插件 id）",
+      "缺少字段 publisher（发布者）",
+      "缺少字段 version（版本号）",
+      "缺少字段 category（类别）",
+      "缺少字段 summary（一句话简介）",
+      "缺少字段 description（详细说明）",
+      "缺少字段 permissions（权限列表）",
     ],
   });
   assert.deepEqual(validateManifest([1, 2]), { ok: false, errors: ["清单必须是一个 JSON 对象"] });
   assert.deepEqual(validateManifest(raw({ name: "  ", permissions: [{ scope: "a.b" }] })), {
     ok: false,
-    errors: ["名称(name)不能为空", "权限第 1 项缺少字段 detail(具体说明)", "权限第 1 项缺少字段 risk(风险级别)"],
+    errors: ["名称（name）不能为空", "权限第 1 项缺少字段 detail（具体说明）", "权限第 1 项缺少字段 risk（风险级别）"],
   });
 });
 
 test("validateManifest:版本号、类别、id、简介长度不合法", () => {
-  assert.deepEqual(validateManifest(raw({ version: "1.2" })), { ok: false, errors: ["版本号「1.2」不合法:要写成 主版本.次版本.修订号,比如 1.4.2"] });
-  assert.deepEqual(validateManifest(raw({ category: "widget" })), { ok: false, errors: ["类别「widget」不合法:只能是 source(数据源) / outbound(输出渠道) / ui(界面扩展) / command(命令)"] });
-  assert.deepEqual(validateManifest(raw({ id: "Acme Notes" })), { ok: false, errors: ["插件 id「Acme Notes」不合法:只能用小写字母、数字、点和 -,3–64 位,比如 g-group.feishu"] });
-  assert.deepEqual(validateManifest(raw({ summary: "很".repeat(81) })), { ok: false, errors: ["一句话简介太长:最多 80 字,现在 81 字"] });
+  assert.deepEqual(validateManifest(raw({ version: "1.2" })), { ok: false, errors: ["版本号「1.2」不合法：要写成 主版本.次版本.修订号，比如 1.4.2"] });
+  assert.deepEqual(validateManifest(raw({ category: "widget" })), { ok: false, errors: ["类别「widget」不合法：只能是 source（数据源）、outbound（输出渠道）、ui（界面扩展）、command（命令）"] });
+  assert.deepEqual(validateManifest(raw({ id: "Acme Notes" })), { ok: false, errors: ["插件 id「Acme Notes」不合法：只能用小写字母、数字、点和 -，3–64 位，比如 g-group.feishu"] });
+  assert.deepEqual(validateManifest(raw({ summary: "很".repeat(81) })), { ok: false, errors: ["一句话简介太长：最多 80 字，现在 81 字"] });
   assert.deepEqual(validateManifest(raw({ changelog: [{ version: "0.1", date: "10/30", notes: [] }] })), {
     ok: false,
-    errors: ["更新日志第 1 条的版本号「0.1」不合法:要写成 主版本.次版本.修订号", "更新日志第 1 条的日期「10/30」不合法:要写成 YYYY-MM-DD"],
+    errors: ["更新日志第 1 条的版本号「0.1」不合法：要写成 主版本.次版本.修订号", "更新日志第 1 条的日期「10/30」不合法：要写成 YYYY-MM-DD"],
   });
 });
 
@@ -163,34 +163,34 @@ test("validateManifest:权限风险级别只能是 low / medium / high,范围不
   assert.deepEqual(r, {
     ok: false,
     errors: [
-      "权限第 1 项「mail.send」的风险级别「critical」不合法:只能是 low(低) / medium(中) / high(高)",
-      "权限第 2 项「mail.read」的风险级别「高」不合法:只能是 low(低) / medium(中) / high(高)",
+      "权限第 1 项「mail.send」的风险级别「critical」不合法：只能是 low（低）、medium（中）、high（高）",
+      "权限第 2 项「mail.read」的风险级别「高」不合法：只能是 low（低）、medium（中）、high（高）",
       "权限「mail.read」重复了",
     ],
   });
 });
 
-test("validateManifest:命令名只许小写字母数字和 -,2–32 位,不能重复", () => {
+test("validateManifest:命令名只许小写字母数字和 -，2–32 位,不能重复", () => {
   const r = validateManifest(raw({
     contributes: { commands: [cmd("Mail"), cmd("m"), cmd("a".repeat(33)), cmd("send_mail"), cmd("mail-2"), cmd("mail-2"), cmd("ok-32".padEnd(32, "x"))] },
   }));
   assert.deepEqual(r, {
     ok: false,
     errors: [
-      "命令名「/Mail」不合法:只能用小写字母、数字和 -,2–32 位",
-      "命令名「/m」不合法:只能用小写字母、数字和 -,2–32 位",
-      `命令名「/${"a".repeat(33)}」不合法:只能用小写字母、数字和 -,2–32 位`,
-      "命令名「/send_mail」不合法:只能用小写字母、数字和 -,2–32 位",
+      "命令名「/Mail」不合法：只能用小写字母、数字和 -，2–32 位",
+      "命令名「/m」不合法：只能用小写字母、数字和 -，2–32 位",
+      `命令名「/${"a".repeat(33)}」不合法：只能用小写字母、数字和 -，2–32 位`,
+      "命令名「/send_mail」不合法：只能用小写字母、数字和 -，2–32 位",
       "命令 /mail-2 重复了",
     ],
   });
 });
 
 test("parseManifestText:JSON 语法错给中文位置,不是对象也拒", () => {
-  assert.deepEqual(parseManifestText('{"id": "a",}'), { ok: false, errors: ["不是合法的 JSON:第 1 行第 12 列附近有错"] });
-  assert.deepEqual(parseManifestText('{\n  "id": "a",\n}'), { ok: false, errors: ["不是合法的 JSON:第 3 行第 1 列附近有错"] });
-  assert.deepEqual(parseManifestText('{"a":}'), { ok: false, errors: ["不是合法的 JSON:有不该出现的「}」"] });
-  assert.deepEqual(parseManifestText(""), { ok: false, errors: ["不是合法的 JSON:内容不完整,可能少了括号或引号"] });
+  assert.deepEqual(parseManifestText('{"id": "a",}'), { ok: false, errors: ["不是合法的 JSON：第 1 行第 12 列附近有错"] });
+  assert.deepEqual(parseManifestText('{\n  "id": "a",\n}'), { ok: false, errors: ["不是合法的 JSON：第 3 行第 1 列附近有错"] });
+  assert.deepEqual(parseManifestText('{"a":}'), { ok: false, errors: ["不是合法的 JSON：有不该出现的「}」"] });
+  assert.deepEqual(parseManifestText(""), { ok: false, errors: ["不是合法的 JSON：内容不完整，可能少了括号或引号"] });
   assert.deepEqual(parseManifestText("[]"), { ok: false, errors: ["清单必须是一个 JSON 对象"] });
   const good = parseManifestText(JSON.stringify(raw()));
   assert.equal(good.ok && good.manifest.id, "acme.notes");
@@ -199,11 +199,11 @@ test("parseManifestText:JSON 语法错给中文位置,不是对象也拒", () =>
 test("readInstallSource:{ 开头当清单,https 当地址,其它说清楚为什么不行", () => {
   assert.deepEqual(readInstallSource("   "), { kind: "empty" });
   const m = readInstallSource(` ${JSON.stringify(raw({ version: "x" }))} `);
-  assert.deepEqual(m, { kind: "manifest", check: { ok: false, errors: ["版本号「x」不合法:要写成 主版本.次版本.修订号,比如 1.4.2"] } });
+  assert.deepEqual(m, { kind: "manifest", check: { ok: false, errors: ["版本号「x」不合法：要写成 主版本.次版本.修订号，比如 1.4.2"] } });
   assert.deepEqual(readInstallSource("https://plugins.example.com/feishu/manifest.json"), { kind: "url", url: "https://plugins.example.com/feishu/manifest.json" });
   assert.deepEqual(readInstallSource("http://localhost:8080/m.json"), { kind: "url", url: "http://localhost:8080/m.json" });
-  assert.deepEqual(readInstallSource("http://plugins.example.com/m.json"), { kind: "invalid", error: "只接受 https 地址,现在是「http」" });
-  assert.deepEqual(readInstallSource("飞书插件"), { kind: "invalid", error: "看不出是清单还是地址:粘贴清单 JSON(以 { 开头),或者 https:// 开头的地址" });
+  assert.deepEqual(readInstallSource("http://plugins.example.com/m.json"), { kind: "invalid", error: "只接受 https 地址，现在是「http」" });
+  assert.deepEqual(readInstallSource("飞书插件"), { kind: "invalid", error: "看不出是清单还是地址：粘贴清单 JSON（以 { 开头），或者 https:// 开头的地址" });
 });
 
 // ---------------------------------------------------------------- 权限比较
@@ -262,17 +262,17 @@ test("pluginReducer:非法转移返回错误,状态原样不动", () => {
   const installing = pluginReducer(none, { type: "install", manifest: m, consent: [READ.scope] }).state;
   const removing = pluginReducer(on, { type: "uninstall" }).state;
   const cases: [PluginInstall, Parameters<typeof pluginReducer>[1], string][] = [
-    [none, { type: "enable" }, "「g-group.feishu」现在是「未安装」,不能启用"],
-    [none, { type: "attach", conv: "g" }, "「g-group.feishu」现在是「未安装」,不能挂到聊天"],
-    [none, { type: "uninstall" }, "「g-group.feishu」现在是「未安装」,不能卸载"],
-    [off, { type: "disable" }, "「飞书」现在是「已停用」,不能停用"],
-    [on, { type: "enable" }, "「飞书」现在是「已启用」,不能启用"],
-    [on, { type: "install", manifest: m, consent: [READ.scope] }, "「飞书」现在是「已启用」,不能安装"],
-    [on, { type: "install_done" }, "「飞书」现在是「已启用」,不能完成安装"],
-    [installing, { type: "uninstall" }, "「飞书」现在是「安装中」,不能卸载"],
-    [installing, { type: "allow", caller: "argon" }, "「飞书」现在是「安装中」,不能加调用者"],
-    [removing, { type: "update", manifest: mf({ version: "2.0.0" }), consent: [] }, "「飞书」现在是「卸载中」,不能更新"],
-    [removing, { type: "detach", conv: "g" }, "「飞书」现在是「卸载中」,不能从聊天摘下"],
+    [none, { type: "enable" }, "「g-group.feishu」现在是「未安装」，不能启用"],
+    [none, { type: "attach", conv: "g" }, "「g-group.feishu」现在是「未安装」，不能挂到聊天"],
+    [none, { type: "uninstall" }, "「g-group.feishu」现在是「未安装」，不能卸载"],
+    [off, { type: "disable" }, "「飞书」现在是「已停用」，不能停用"],
+    [on, { type: "enable" }, "「飞书」现在是「已启用」，不能启用"],
+    [on, { type: "install", manifest: m, consent: [READ.scope] }, "「飞书」现在是「已启用」，不能安装"],
+    [on, { type: "install_done" }, "「飞书」现在是「已启用」，不能完成安装"],
+    [installing, { type: "uninstall" }, "「飞书」现在是「安装中」，不能卸载"],
+    [installing, { type: "allow", caller: "argon" }, "「飞书」现在是「安装中」，不能加调用者"],
+    [removing, { type: "update", manifest: mf({ version: "2.0.0" }), consent: [] }, "「飞书」现在是「卸载中」，不能更新"],
+    [removing, { type: "detach", conv: "g" }, "「飞书」现在是「卸载中」，不能从聊天摘下"],
   ];
   for (const [s, a, error] of cases) {
     const r = pluginReducer(s, a);
@@ -287,7 +287,7 @@ test("pluginReducer:安装必须同意清单里的全部权限,差几项就列�
   const s = notInstalled(m.id);
   const r = pluginReducer(s, { type: "install", manifest: m, consent: [READ.scope] });
   assert.equal(r.ok, false);
-  assert.equal(!r.ok && r.error, "还有 2 项权限没同意:「说明:feishu.docs:read」「说明:feishu.messages:send」");
+  assert.equal(!r.ok && r.error, "还有 2 项权限没同意：「说明:feishu.docs:read」「说明:feishu.messages:send」");
   assert.deepEqual(!r.ok && r.needsConsent, [DOCS, SEND]);
   assert.equal(r.state, s);
   const none = pluginReducer(s, { type: "install", manifest: m, consent: [] });
@@ -305,14 +305,14 @@ test("pluginReducer:安装必须同意清单里的全部权限,差几项就列�
 test("pluginReducer:更新要比已装新;新增或升高的权限要重新同意,返回差集", () => {
   const s = seedInstalled(mf({}), { enabled: false, convs: ["g"], callers: ["argon"] });
   const same = pluginReducer(s, { type: "update", manifest: mf({}), consent: [] });
-  assert.equal(!same.ok && same.error, "已经是 v1.4.2,不用更新");
+  assert.equal(!same.ok && same.error, "已经是 v1.4.2，不用更新");
   const older = pluginReducer(s, { type: "update", manifest: mf({ version: "1.3.0" }), consent: [] });
-  assert.equal(!older.ok && older.error, "v1.3.0 比已装的 v1.4.2 旧,不能降级");
+  assert.equal(!older.ok && older.error, "v1.3.0 比已装的 v1.4.2 旧，不能降级");
 
   const next = mf({ version: "1.5.0", permissions: [READ, DOCS] });
   const ask = pluginReducer(s, { type: "update", manifest: next, consent: [] });
   assert.equal(ask.ok, false);
-  assert.equal(!ask.ok && ask.error, "v1.5.0 多要了 1 项权限,要你重新同意");
+  assert.equal(!ask.ok && ask.error, "v1.5.0 多要了 1 项权限，要你重新同意");
   assert.deepEqual(!ask.ok && ask.needsConsent, [DOCS]);
   assert.equal(ask.state, s);
 
@@ -469,14 +469,14 @@ test("commandAvailability:已装、已启用、挂在本会话、调用者在白
     const r = commandAvailability(installs, name, where, CATALOG);
     return r.ok ? "ok" : `${r.code}|${r.reason}`;
   };
-  assert.equal(why([{ ...on, phase: "disabled" }]), "disabled|「飞书」已停用,/feishu 用不了");
-  assert.equal(why([on], "feishu", { conv: "g-design", caller: "argon" }), "not_attached|「飞书」没挂到这个聊天,/feishu 用不了");
+  assert.equal(why([{ ...on, phase: "disabled" }]), "disabled|「飞书」已停用，/feishu 用不了");
+  assert.equal(why([on], "feishu", { conv: "g-design", caller: "argon" }), "not_attached|「飞书」没挂到这个聊天，/feishu 用不了");
   assert.equal(why([on], "feishu", { conv: "g", caller: "codex" }), "caller_not_allowed|codex 不在「飞书」的调用名单里");
   // 版本升级扩大了权限、还没同意 → 暂停,不能绕过
-  assert.equal(why([{ ...on, manifest: mf({ permissions: [READ, DOCS] }) }]), "permissions_pending|「飞书」有新权限等你同意,先暂停");
+  assert.equal(why([{ ...on, manifest: mf({ permissions: [READ, DOCS] }) }]), "permissions_pending|「飞书」有新权限等你同意，先暂停");
   // 安装中、卸载中都不算装好
-  assert.equal(why([{ ...on, phase: "uninstalling" }]), "not_installed|/feishu 来自「飞书」,还没安装");
-  assert.equal(why([], "mail"), "not_installed|/mail 来自「Gmail」,还没安装");
+  assert.equal(why([{ ...on, phase: "uninstalling" }]), "not_installed|/feishu 来自「飞书」，还没安装");
+  assert.equal(why([], "mail"), "not_installed|/mail 来自「Gmail」，还没安装");
   // 新版本才有的命令:已装旧版 → 要更新
   const oldGmail = seedInstalled(mf({ id: "g-group.gmail", name: "Gmail", version: "2.0.0", contributes: { commands: [], panels: [], events: [] } }), { enabled: true, convs: ["g"], callers: ["argon"] });
   assert.equal(why([oldGmail], "mail"), "needs_update|/mail 要把「Gmail」更新到 v2.1.0 才有");
@@ -485,7 +485,7 @@ test("commandAvailability:已装、已启用、挂在本会话、调用者在白
   const other = seedInstalled(mf({ id: "acme.feishu", name: "飞书(社区版)" }), { enabled: false, convs: [], callers: [] });
   const both = commandAvailability([other, on], "feishu", at);
   assert.equal(both.ok && both.plugin, "g-group.feishu");
-  assert.equal(why([other]), "disabled|「飞书(社区版)」已停用,/feishu 用不了");
+  assert.equal(why([other]), "disabled|「飞书(社区版)」已停用，/feishu 用不了");
 });
 
 test("pluginsInConv:列出本会话可用的插件,可按类别只要数据源", () => {
@@ -520,14 +520,15 @@ test("splitList / validateGrant:六项都要说清楚,地址逐个校验", () =>
   assert.deepEqual(splitList(" a@x.com,b@x.com\n c@x.com、a@x.com;d@x.com\uff0ce@x.com "), ["a@x.com", "b@x.com", "c@x.com", "d@x.com", "e@x.com"]);
   assert.deepEqual(validateGrant(GRANT, "email"), []);
   assert.deepEqual(validateGrant({ ...GRANT, commitment: " ", sender: "me", recipients: [], sources: [], maxPerHour: 0 }, "email"), [
-    "要写清楚这份授权给哪项承诺用,比如「每天 8 点日报」",
+    "要写清楚这份授权给哪项承诺用，比如「每天 8 点日报」",
     "发件账号「me」不是邮箱地址",
     "收件白名单至少要有一个邮箱",
     "至少选一个能用的数据源",
     "每小时上限要是 1–60 的整数",
   ]);
   assert.deepEqual(validateGrant({ ...GRANT, sender: "", recipients: ["wang@team.com", "老王"], maxPerHour: 2.5 }, "email"), ["要选发件账号", "收件人「老王」不是邮箱地址", "每小时上限要是 1–60 的整数"]);
-  assert.deepEqual(validateGrant({ ...GRANT, recipients: ["https://hooks.example.com/a", "http://x.com"] }, "url"), ["目标地址「http://x.com」不是 https 地址"]);
+  assert.deepEqual(validateGrant({ ...GRANT, sender: "签名密钥 hook-1", recipients: ["https://hooks.example.com/a", "http://x.com"] }, "url"), ["目标地址「http://x.com」不是 https 地址"]);
+  assert.deepEqual(validateGrant({ ...GRANT, sender: " " }, "url"), ["要写清楚用哪个身份发（比如签名密钥的名字）", "目标地址「wang@team.com」不是 https 地址"]);
 });
 
 test("checkSend:每次外发前复核授权、插件版本、收件人、数据源和频率", () => {
@@ -538,11 +539,11 @@ test("checkSend:每次外发前复核授权、插件版本、收件人、数据�
     return r.ok ? "ok" : `${r.code}|${r.reason}`;
   };
   assert.equal(why(gmail, GRANT), "ok");
-  assert.equal(why({ ...gmail, phase: "disabled" }, GRANT), "plugin_unavailable|「Gmail」不可用(已停用),外发暂停");
-  assert.equal(why(gmail, null), "no_grant|还没有外发预授权,一封也发不出去");
-  assert.equal(why(gmail, { ...GRANT, revoked: true }), "blocked_on_auth|授权已失效或被撤销,外发已阻断,等你重新授权");
-  assert.equal(why(gmail, { ...GRANT, pluginVersion: "2.0.0" }), "version_changed|插件从 v2.0.0 变成了 v2.1.0,外发授权要你重新确认");
+  assert.equal(why({ ...gmail, phase: "disabled" }, GRANT), "plugin_unavailable|「Gmail」不可用（已停用），外发暂停");
+  assert.equal(why(gmail, null), "no_grant|还没有外发预授权，一封也发不出去");
+  assert.equal(why(gmail, { ...GRANT, revoked: true }), "blocked_on_auth|授权已失效或被撤销，外发已阻断，等你重新授权");
+  assert.equal(why(gmail, { ...GRANT, pluginVersion: "2.0.0" }), "version_changed|插件从 v2.0.0 变成了 v2.1.0，外发授权要你重新确认");
   assert.equal(why(gmail, GRANT, { ...send, recipients: ["wang@team.com", "hacker@evil.com"] }), "recipient_not_allowed|「hacker@evil.com」不在收件白名单里");
   assert.equal(why(gmail, GRANT, { ...send, sources: ["~/.ssh"] }), "source_not_allowed|数据源「~/.ssh」不在授权范围里");
-  assert.equal(why(gmail, GRANT, { ...send, sentLastHour: 3 }), "rate_limited|这一小时已经发了 3 次,到上限 3 了");
+  assert.equal(why(gmail, GRANT, { ...send, sentLastHour: 3 }), "rate_limited|这一小时已经发了 3 次，到上限 3 了");
 });
