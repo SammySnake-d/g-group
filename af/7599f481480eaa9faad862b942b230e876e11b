@@ -1,0 +1,89 @@
+packages/server/src/host.ts
+  s_042e901c6ad028::t_653aba56fb6341 16,236,259,308,320,343,395,1573-1577
+  s_19afb02e575b26::t_6e12c101d243f6 27,31-33,35,37,94-95,252-253,260,263-270,282-288,290,293-296,309,312-316,321-342,344-394,397,911-913,1414-1423,1429,1431-1436,1544-1572
+  s_25620647d6f8eb::t_3d20dbdefba413 27,31-33,35,37,94-95,252-253,260,263-270,282-288,290,293-296,309,312-316,321-342,344-394,397,911-913,1414-1423,1429,1431-1436,1544-1572
+packages/domain/src/model-ledger.ts
+  s_042e901c6ad028::t_1c4d7a5336d10c 1-5,7-36,46,51,55,62
+  s_19afb02e575b26::t_4f49839da771e3 6,37-45,47-50,52-54,56-61
+  s_25620647d6f8eb::t_d8ea01a8216d03 6,37-45,47-50,52-54,56-61
+packages/domain/src/model-config.ts
+  s_042e901c6ad028::t_d8c1d0315ccdbe 1-59,105,110,117,123,141,143-180,248
+  s_19afb02e575b26::t_90ca234bcf8460 60-104,106-109,111-116,118-122,124-140,142,181-247
+  s_25620647d6f8eb::t_fb3a66b5b67602 60-104,106-109,111-116,118-122,124-140,142,181-247
+packages/domain/src/model-ledger.test.ts
+  s_042e901c6ad028::t_44e974b20c9329 1-37
+packages/server/src/models.test.ts
+  s_042e901c6ad028::t_5bfc4d6ae24154 1-173,1-79,81-89,94-173
+packages/server/src/service.ts
+  s_042e901c6ad028::t_375f8b887a568e 100-102
+packages/api-contract/src/entities.ts
+  s_042e901c6ad028::t_4c3d853e0c259f 15-63,79-80,217-222
+packages/domain/src/model-config.test.ts
+  s_042e901c6ad028::t_abbe4c3c40213a 1-133
+packages/domain/src/index.ts
+  s_042e901c6ad028::t_bb858998bba723 9-10
+packages/api-contract/src/api.ts
+  s_042e901c6ad028::t_0b1a494725ccb0 12,43-52,66-67,201-218,222-232
+packages/server/src/cli.ts
+  s_19afb02e575b26::t_cf38ced2edfdf0 131
+  s_25620647d6f8eb::t_4264f1764e9295 131
+packages/server/src/start.ts
+  s_19afb02e575b26::t_2a373ff4f1828e 79
+  s_25620647d6f8eb::t_22ea8f3d449d7d 79
+packages/server/proof/model-config-mutations.mjs
+  s_19afb02e575b26::t_e7569ed4811adb 1-74
+  s_12ccf69de2a7ec::t_f7cf0953f5323f 1-37,39-74
+packages/server/src/fakes.ts
+  s_377be331e17ebd::t_8f8d160d00f15e 44-63,69-70,83-85,88,100-114,117,139,141
+  s_377be331e17ebd::t_4676de6b210f36 142
+packages/server/src/model-turns.test.ts
+  s_377be331e17ebd::t_b15c7952df17c9 1-208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "af7599f481480eaa9faad862b942b230e876e11b",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_19afb02e575b26": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac3c5d6dff8770595",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
