@@ -5,7 +5,7 @@
     { "id": "AC-40", "status": "未测", "reason": "只覆盖坏实现⑪的装配侧(请求只有五块、账本是原文、旧消息不进第 4 块)且有单测,审查未做;同一轮工具往返保留、处置、承诺登记、对账不在本片;⑪ 在验收文档里仍是候选" },
     { "id": "AC-41", "status": "未测", "reason": "只做最小版:被引用消息原文由调用方作为 pointers 放进第 5 块;quote_chain 的 K=3 广度优先、has_more_above、depth_total、in_context 去重、权限与撤回、read_quote_parent 都不在本片" }
   ],
-  "author": { "agent": "claude", "session": "claude:18b4f4b0-3cf6-4d51-be92-ca20094b2ce3（子代理）", "model": "fnqtz/claude-opus-5-5" },
+  "author": { "agent": "claude", "session": "claude:18b4f4b0-3cf6-4d51-be92-ca20094b2ce3", "model": "fnqtz/claude-opus-5-5", "notes": "由该会话派出的子代理执行" },
   "red": null,
   "unverifiable": "先写后测(用户 #717:先落代码,先红后绿与变异留到审查阶段补)。AC-39 ① 的会变内容扫描只扫系统提示词、工具声明、人设、群公告四段配置文本;规矩与纠正是来源消息原文,天然带 #seq、时刻,按设计不扫,所以调用方若把每轮会变的东西冒充规矩传进来,本片骗不过去,只能靠相邻请求前缀哈希观测发现。AC-40 ⑪ 只证明装配函数本身不夹带旧消息,宿主是否真的只用它拼请求,要等注意循环接线后核对",
   "waiver": null,
