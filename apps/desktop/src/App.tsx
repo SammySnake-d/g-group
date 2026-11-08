@@ -1044,7 +1044,7 @@ export default function App() {
                   </div>
                 </div>
                 <JumpToLatest show={!atBottom} count={newCount} onJump={() => scrollRef.current?.scrollTo({ top: 1e7, behavior: 'smooth' })} />
-                {/* 概念版(src/concept),每个点子一个组件 */}<Concept.DoubleClickReply conv={conv} scrollRef={scrollRef} disabled={selecting} />
+                {/* 概念版(src/concept),每个点子一个组件 */}<Concept.DoubleClickReply conv={conv} scrollRef={scrollRef} disabled={selecting} /><Concept.WaitingRuler conv={conv} scrollRef={scrollRef} />
                 {mentionMe && (
                   <button data-testid="at-me" onClick={() => { jump(mentionMe); }} className="fade-up absolute right-5 top-3 flex h-8 items-center gap-1.5 rounded-full border border-warm/30 bg-warm-soft px-3 text-[12.5px] font-medium text-warm shadow-elev"><AtSign className="h-3.5 w-3.5" />有人 @ 了你</button>
                 )}

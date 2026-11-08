@@ -93,5 +93,48 @@ for (const theme of ["light", "dark"] as const) {
       await page.mouse.move(0, 0);
       await shot(page, `concept/dblreply-${theme}`, 300);
     });
+
+    test("等你刻度:右缘刻度标出每件等你的事,点一下 / ⌥↓ 跳过去;办完刻度自己消失", async ({ page }) => {
+      await page.goto(`/?conv=g&freeze${q}`);
+      const ruler = page.getByTestId("waiting-ruler");
+      await expect(ruler).toBeVisible();
+      // 群里三件等你的事:Codex 做完等验收(g6)、Argon 等你选(g12)、Argon 等你同意(g13p),按消息先后排
+      const ticks = ruler.locator("[data-testid^=ruler-tick-]");
+      await expect(ticks).toHaveCount(3);
+      const ids = await ticks.evaluateAll((els) => els.map((e) => e.getAttribute("data-testid")!.replace("ruler-tick-", "")));
+      expect(ids).toEqual(["g6", "g12", "g13p"]);
+      await expect(page.getByTestId("ruler-tick-g6")).toHaveAttribute("data-kind", "accept");
+      await expect(page.getByTestId("ruler-tick-g12")).toHaveAttribute("data-kind", "ask");
+      // 刻度的上下位置和消息的先后一致(位置即信息)
+      const ys = await ticks.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
+      expect(ys[0]).toBeLessThan(ys[1]);
+      expect(ys[1]).toBeLessThan(ys[2]);
+
+      // 点刻度 → 跳到那条消息并高亮
+      await page.getByTestId("ruler-tick-g6").click();
+      await expect(page.locator("#m-g6")).toHaveAttribute("data-hl", "1");
+      await expect(page.locator("#m-g6")).toBeInViewport();
+      await page.waitForTimeout(800);
+      // 手不离键盘:⌥↓ 跳到下一件
+      await page.keyboard.press("Alt+ArrowDown");
+      await expect(page.locator("#m-g12")).toHaveAttribute("data-hl", "1");
+      await expect(page.locator("#m-g12")).toBeInViewport();
+      // 输入框里有字时 ⌥↓ 不抢(留给输入框自己的光标移动)
+      await composer(page).fill("写到一半");
+      await page.waitForTimeout(2000);
+      await page.keyboard.press("Alt+ArrowDown");
+      await page.waitForTimeout(300);
+      await expect(page.locator("[data-hl=\"1\"]")).toHaveCount(0);
+      await composer(page).fill("");
+
+      // 回答了 Argon 的提问 → 那道刻度消失,剩两件
+      await page.getByTestId("quick-g12-0").click();
+      await expect(page.getByTestId("ruler-tick-g12")).toHaveCount(0);
+      await expect(ticks).toHaveCount(2);
+
+      await page.getByTestId("ruler-tick-g13p").hover();
+      await expect(page.getByRole("tooltip").first()).toContainText("等你同意");
+      await shot(page, `concept/ruler-${theme}`, 300);
+    });
   });
 }
