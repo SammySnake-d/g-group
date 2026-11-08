@@ -37,26 +37,81 @@ export interface AcquireRequest {
 }
 export type AcquireResult = { readonly granted: Lease; readonly reused: boolean } | { readonly queued: string };
 
-/** 空壳(先红),实现见下一个提交 */
 export class QuotaTable {
-  constructor(_cfg: QuotaConfig) {}
-  acquire(_r: AcquireRequest): AcquireResult {
-    return { queued: "" };
+  private readonly cfg: QuotaConfig;
+  private leases: Lease[] = [];
+  private waiters: Waiter[] = [];
+  constructor(cfg: QuotaConfig) {
+    this.cfg = cfg;
   }
-  markStopping(_taskId: string): void {}
-  release(_leaseId: string): { readonly released: boolean; readonly granted: readonly Lease[] } {
-    return { released: false, granted: [] };
+  private used(scope: ScopeKey): number {
+    return this.leases.filter((l) => l.scope === scope).length;
   }
-  cancelWait(_taskId: string): boolean {
-    return false;
-  }
-  leaseOf(_taskId: string): Lease | undefined {
-    return undefined;
-  }
-  waitingReason(_taskId: string): string | null {
+  /** 能放进哪个槽位;排在前面、等同一个槽位的人(ahead)优先,不插队 */
+  private fit(r: AcquireRequest, ahead: readonly Waiter[]): ScopeKey | null {
+    const personal: ScopeKey = `personal:${r.contactId}`;
+    if (!ahead.some((w) => w.contactId === r.contactId) && this.used(personal) < this.cfg.personal(r.contactId)) return personal;
+    if (r.isGroup) {
+      const group: ScopeKey = `group:${r.roomId}`;
+      if (!ahead.some((w) => w.isGroup && w.roomId === r.roomId) && this.used(group) < this.cfg.group(r.roomId)) return group;
+    }
     return null;
   }
+  private grant(r: AcquireRequest, scope: ScopeKey): Lease {
+    const l: Lease = Object.freeze({ leaseId: `lease-${this.cfg.newId()}`, scope, taskId: r.taskId, contactId: r.contactId, roomId: r.roomId, stopping: false });
+    this.leases.push(l);
+    return l;
+  }
+  private why(r: AcquireRequest): string {
+    const elsewhere = this.leases.filter((l) => l.contactId === r.contactId && l.scope === `personal:${r.contactId}`).map((l) => l.roomId);
+    const where = elsewhere.length ? `个人算力正被 ${[...new Set(elsewhere)].join("、")} 里的任务占用` : "个人算力已满";
+    return r.isGroup ? `${where},本群临时 Compute 也满了;排队等,或转交别人` : `${where};排队等,或转交别人`;
+  }
+  /** 申请槽位。已持有就原样返回(不重复授予);排队中再申请不重复排 */
+  acquire(r: AcquireRequest): AcquireResult {
+    const held = this.leases.find((l) => l.taskId === r.taskId);
+    if (held) return { granted: held, reused: true };
+    const waiting = this.waiters.find((w) => w.taskId === r.taskId);
+    if (waiting) return { queued: waiting.reason };
+    const scope = this.fit(r, this.waiters);
+    if (scope) return { granted: this.grant(r, scope), reused: false };
+    const reason = this.why(r);
+    this.waiters.push(Object.freeze({ ...r, reason }));
+    return { queued: reason };
+  }
+  /** 停止请求已发出:标记,但仍占着槽位 */
+  markStopping(taskId: string): void {
+    this.leases = this.leases.map((l) => (l.taskId === taskId && !l.stopping ? Object.freeze({ ...l, stopping: true }) : l));
+  }
+  /** 确认已停止后释放。leaseId 不在(重复释放、迟到的旧租约号)就什么都不做。返回这次释放后新授予的排队者 */
+  release(leaseId: string): { readonly released: boolean; readonly granted: readonly Lease[] } {
+    const i = this.leases.findIndex((l) => l.leaseId === leaseId);
+    if (i < 0) return { released: false, granted: [] };
+    this.leases.splice(i, 1);
+    const granted: Lease[] = [];
+    const still: Waiter[] = [];
+    for (const w of this.waiters) {
+      // 排在前面、同样等这个槽位的人还在等,后面的就不越过它
+      const scope = this.fit(w, still);
+      if (scope) granted.push(this.grant(w, scope));
+      else still.push(w);
+    }
+    this.waiters = still;
+    return { released: true, granted };
+  }
+  /** 不再排队(任务取消) */
+  cancelWait(taskId: string): boolean {
+    const n = this.waiters.length;
+    this.waiters = this.waiters.filter((w) => w.taskId !== taskId);
+    return this.waiters.length !== n;
+  }
+  leaseOf(taskId: string): Lease | undefined {
+    return this.leases.find((l) => l.taskId === taskId);
+  }
+  waitingReason(taskId: string): string | null {
+    return this.waiters.find((w) => w.taskId === taskId)?.reason ?? null;
+  }
   view(): { readonly leases: readonly Lease[]; readonly waiting: readonly Waiter[] } {
-    return { leases: [], waiting: [] };
+    return { leases: [...this.leases], waiting: [...this.waiters] };
   }
 }
