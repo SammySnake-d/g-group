@@ -1,0 +1,13 @@
+{
+  "slice": "运行台账纯逻辑(主会话的子代理 α 所写):packages/kernel/src/run-ledger.ts,不做 I/O。四层五类单元(联系人轮次→Compute 会话→会话里的轮次→后台任务/子代理)带 parent_id、来源会话与 #seq、属于谁;七种固定状态,failed/interrupted 必带原因类别与原文(用 failure-class);父子一致与级联孤儿;按宿主启动号/进程存活核对孤儿;卡死判失败(只认真实事件,重试公告/心跳/存活不刷新,等人回答/工具在跑/首字节窗口内/休眠唤醒宽限期不计时,默认 15 分钟/120 秒可按联系人或上游单独设,两边都设取更宽的并记来源);私聊/群可见范围;重跑规则(只接受失败/中断/孤儿,人停拒绝,平台拒绝/上下文超长/会话丢失开新会话带原任务引用,租约防并发,自己名下自动重跑上限默认 2 次为参数,别人名下须明确发起并留群记录,每次重跑一条事件);同一会话同一上游同一原因的合并键;画板一行文字与色调(人停与失败分开)",
+  "acceptance": [
+    { "id": "AC-43", "status": "未测", "reason": "纯逻辑部分有 24 条具名测试(packages/kernel/src/run-ledger.test.ts)与变异校准(packages/kernel/proof/run-ledger-mutations.txt);宿主落盘、Compute/联系人轮次接线、周期核对、progress_* 工具与 runs.* 接口在后续切片 feat/run-ledger-host,画板截图是前端的事,整条 AC 尚未在真实运行上验;待审" },
+    { "id": "AC-14", "status": "未测", "reason": "I5 仍是候选;本片只交卡死/停滞判定的底座(stallCheck、合法等待态),停滞事件投给负责联系人在 feat/run-ledger-host" }
+  ],
+  "author": { "agent": "claude", "session": "claude:8db9faef-fb87-414b-b25d-2aa6747caad3", "model": "claude-opus-5-5" },
+  "red": { "commit": "6f33460" },
+  "unverifiable": "AC-43 ⑦/⑩:首字节窗口按「调用发出后超过窗口仍无任何回应就判 no_response」实现(用户 #2827 原话「模型调用发出后，等首字节多久算上游没回应：120 秒」),而 mirasim 是把首字节窗口当合法等待、到整轮阈值才收;两种读法在纯逻辑里都没有真实上游数据校准,只按原话取了前一种。两边都单独设阈值时取更宽的那个是本片自定的规则(文档只说可按联系人或上游单独设),需要审查确认。纯逻辑的绿不证明宿主真的在每个 harness 事件上调用了 noteActivity",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}
