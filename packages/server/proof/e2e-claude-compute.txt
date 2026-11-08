@@ -1,0 +1,11 @@
+# 2026-11-08 真实 Claude Code Compute 闭环(联系人脑子为规则替身 scriptedMind)
+# 命令: node packages/server/src/cli.ts dm --db /tmp/gg-e2e/gg.db --compute claude --cwd /tmp/gg-e2e/work "帮我在当前工作目录写一个 hello.txt,内容是 hi from compute"
+# 模型经 ANTHROPIC_DEFAULT_SONNET_MODEL 传入,网关地址与令牌只经环境变量,未落盘
+#1 我: 帮我在当前工作目录写一个 hello.txt,内容是 hi from compute
+#2 小克: 接了任务:在当前工作目录写一个 hello.txt,内容是 hi from compute  [卡片:task-status/open 取消任务]
+#3 小克: 好的,我安排 Compute 去在当前工作目录写一个 hello.txt,内容是 hi from compute,有进度告诉你。
+#4 小克: 做完了:我在当前工作目录建好了 `hello.txt`,内容是 `hi from compute`。之后读了一遍文件，内容没问题。
+
+文件路径：`/private/tmp/gg-e2e/work/t-mw7xrfrt-1/hello.txt`  [卡片:delivery/open 豁免审查并通过|退回]
+任务 t-mw7xrfrt-1 [T5_InReview] 在当前工作目录写一个 hello.txt,内容是 hi from compute 审查门=none 进度=started>completed
+# hello.txt 内容: hi from compute

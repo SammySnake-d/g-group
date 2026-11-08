@@ -1,0 +1,15 @@
+{
+  "name": "@g-group/server",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "bin": { "gg": "./src/cli.ts" },
+  "dependencies": {
+    "@g-group/adapter-cc-compute": "*",
+    "@g-group/adapter-sqlite": "*",
+    "@g-group/api-contract": "*",
+    "@g-group/domain": "*",
+    "@g-group/kernel": "*"
+  },
+  "gGroup": { "layer": "app" }
+}

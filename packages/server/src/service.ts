@@ -1,0 +1,145 @@
+// 按 @g-group/api-contract 对外:handle(method, params) 校验参数 → 调宿主 → 校验结果;subscribe 推事件流。
+// Electron 主进程用 bindIpc 把它挂到 ipcMain;CLI 与测试直接调 handle。
+import {
+  API_VERSION,
+  type ApiResult,
+  type ErrorCode,
+  type MethodName,
+  type ServerEvent,
+  type SlashCommand,
+  checkParams,
+  checkResult,
+  formatIssues,
+  isMethodName,
+} from "@g-group/api-contract";
+import { HostError } from "./db.ts";
+import type { Host } from "./host.ts";
+
+type Handler = (p: never) => unknown;
+const unavailable = (what: string) => () => {
+  throw new HostError("unavailable", `${what} 尚未接入后端(P0 闭环之后的切片)`);
+};
+
+export const BUILTIN_COMMANDS: readonly SlashCommand[] = Object.freeze([
+  { name: "task", description: "派一个任务给会话里的联系人", args: [{ name: "contact", description: "交给谁", kind: "contact", required: false }, { name: "what", description: "要做什么", kind: "text", required: true }], source: "builtin", pluginId: null, targetContactId: null },
+  { name: "stop", description: "停止一个进行中的任务", args: [{ name: "task", description: "任务", kind: "text", required: true }], source: "builtin", pluginId: null, targetContactId: null },
+  { name: "remind", description: "让联系人按 cron 定时做事", args: [{ name: "cron", description: "cron 表达式", kind: "cron", required: true }, { name: "what", description: "做什么", kind: "text", required: true }], source: "builtin", pluginId: null, targetContactId: null },
+]);
+
+export interface Service {
+  handle(method: string, params: unknown): Promise<ApiResult<MethodName>>;
+  subscribe(listener: (e: ServerEvent) => void, sinceEventSeq?: number): () => void;
+}
+
+export function createService(host: Host): Service {
+  const H: { [M in MethodName]: Handler } = {
+    "session.hello": () => ({ apiVersion: API_VERSION, serverTime: new Date().toISOString(), eventSeq: host.bus.head(), userId: host.userId }),
+    "contacts.list": () => ({ contacts: host.listContacts() }),
+    "contacts.get": (p: { contactId: string }) => host.contactView(host.contactDoc(p.contactId).value),
+    "contacts.create": (p: Parameters<Host["createContact"]>[0]) => host.createContact(p),
+    "contacts.update": ({ contactId, ...patch }: { contactId: string } & Parameters<Host["updateContact"]>[1]) => host.updateContact(contactId, patch),
+    "contacts.remove": unavailable("删除联系人"),
+    "rooms.list": () => ({ rooms: host.roomsOfUser() }),
+    "rooms.get": (p: { roomId: string }) => host.roomView(p.roomId),
+    "rooms.openDm": (p: { contactId: string }) => host.openDm(p.contactId),
+    "rooms.createGroup": (p: { title: string; members: { kind: "user" | "contact"; id: string }[] }) => host.createGroup(p.title, p.members),
+    "rooms.update": ({ roomId, ...patch }: { roomId: string } & Parameters<Host["updateRoom"]>[1]) => host.updateRoom(roomId, patch),
+    "rooms.addMembers": (p: { roomId: string; members: { kind: "user" | "contact"; id: string }[] }) => host.addMembers(p.roomId, p.members),
+    "rooms.removeMember": unavailable("移出成员"),
+    "rooms.markRead": (p: { roomId: string; seq: number }) => {
+      host.markRead(p.roomId, { kind: "user", id: host.userId }, p.seq);
+      return { ok: true };
+    },
+    "messages.list": ({ roomId, ...q }: { roomId: string } & Parameters<Host["listMessages"]>[1]) => host.listMessages(roomId, q),
+    "messages.send": (p: Parameters<Host["send"]>[0]) => host.send(p),
+    "messages.edit": unavailable("编辑消息"),
+    "messages.retract": unavailable("撤回消息"),
+    "messages.react": unavailable("表情回应"),
+    "messages.receipts": (p: { roomId: string; seq: number }) => host.receipts(p.roomId, p.seq),
+    "attachments.add": unavailable("附件"),
+    "cards.act": (p: Parameters<Host["cardAct"]>[0]) => host.cardAct(p),
+    "tasks.list": (p: Parameters<Host["listTasks"]>[0] & { limit?: number }) => ({ tasks: host.listTasks(p).slice(0, p.limit ?? 200) }),
+    "tasks.get": (p: { taskId: string }) => host.taskView(host.taskDoc(p.taskId).value),
+    "tasks.progress": (p: { taskId: string; limit?: number }) => {
+      host.taskDoc(p.taskId);
+      return { progress: host.progress(p.taskId, p.limit ?? 200) };
+    },
+    "tasks.accept": unavailable("任务显式确认(请用交付卡片)"),
+    "tasks.reject": unavailable("任务显式退回(请用交付卡片)"),
+    "tasks.answer": unavailable("回答任务提问"),
+    "tasks.cancel": unavailable("取消任务(请用任务卡片)"),
+    "commitments.list": (p: Parameters<Host["listCommitments"]>[0]) => ({ commitments: host.listCommitments(p) }),
+    "commitments.revoke": unavailable("撤销承诺"),
+    "schedules.list": unavailable("定时"),
+    "schedules.preview": unavailable("定时预览"),
+    "schedules.create": unavailable("定时"),
+    "schedules.update": unavailable("定时"),
+    "schedules.remove": unavailable("定时"),
+    "schedules.runNow": unavailable("定时"),
+    "schedules.history": unavailable("定时"),
+    "plugins.marketplace": unavailable("插件市场"),
+    "plugins.list": () => ({ plugins: [] }),
+    "plugins.get": unavailable("插件"),
+    "plugins.install": unavailable("插件安装"),
+    "plugins.setEnabled": unavailable("插件启停"),
+    "plugins.configure": unavailable("插件配置"),
+    "plugins.update": unavailable("插件更新"),
+    "plugins.uninstall": unavailable("插件卸载"),
+    "commands.list": (p: { roomId: string; prefix?: string }) => {
+      host.roomView(p.roomId);
+      return { commands: BUILTIN_COMMANDS.filter((c) => !p.prefix || c.name.startsWith(p.prefix)) };
+    },
+    "settings.get": () => host.settings(),
+    "settings.update": (p: Parameters<Host["updateSettings"]>[0]) => host.updateSettings(p),
+  };
+  const err = (code: ErrorCode, message: string, detail?: unknown): ApiResult<MethodName> => ({ ok: false, error: detail === undefined ? { code, message } : { code, message, detail } });
+  return {
+    async handle(method, params) {
+      if (!isMethodName(method)) return err("unknown_method", `没有方法 ${String(method)}`);
+      const p = checkParams(method, params);
+      if (!p.ok) return err("invalid_params", formatIssues(p.issues), p.issues);
+      try {
+        const value = await (H[method] as (x: unknown) => unknown)(p.value);
+        const r = checkResult(method, value);
+        if (!r.ok) return err("internal", `结果不符合合同:${formatIssues(r.issues)}`);
+        return { ok: true, value: r.value } as ApiResult<MethodName>;
+      } catch (e) {
+        if (e instanceof HostError) return err(e.code, e.message, e.detail);
+        return err("internal", e instanceof Error ? e.message : String(e));
+      }
+    },
+    subscribe: (l, since) => host.bus.subscribe(l, since),
+  };
+}
+
+/** Electron 主进程接线:ipcMain.handle(gg:invoke) + 每个 webContents 订阅事件。只依赖结构类型,不引 electron。 */
+export interface IpcMainLike {
+  handle(channel: string, fn: (event: { sender: WebContentsLike }, ...args: unknown[]) => unknown): void;
+  on(channel: string, fn: (event: { sender: WebContentsLike }, ...args: unknown[]) => void): void;
+}
+export interface WebContentsLike {
+  readonly id: number;
+  send(channel: string, payload: unknown): void;
+  once(event: "destroyed", fn: () => void): void;
+}
+export function bindIpc(ipc: IpcMainLike, service: Service, channels = { invoke: "gg:invoke", subscribe: "gg:subscribe", unsubscribe: "gg:unsubscribe", event: "gg:event" }) {
+  const subs = new Map<number, () => void>();
+  ipc.handle(channels.invoke, (_e, req) => {
+    const r = req as { method?: unknown; params?: unknown } | null;
+    return service.handle(typeof r?.method === "string" ? r.method : "", r?.params);
+  });
+  ipc.on(channels.subscribe, (e, opts) => {
+    subs.get(e.sender.id)?.();
+    const since = (opts as { sinceEventSeq?: unknown } | null)?.sinceEventSeq;
+    const off = service.subscribe((ev) => e.sender.send(channels.event, ev), typeof since === "number" ? since : undefined);
+    subs.set(e.sender.id, off);
+    e.sender.once("destroyed", () => {
+      off();
+      subs.delete(e.sender.id);
+    });
+  });
+  ipc.on(channels.unsubscribe, (e) => {
+    subs.get(e.sender.id)?.();
+    subs.delete(e.sender.id);
+  });
+}
