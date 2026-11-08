@@ -22,7 +22,7 @@
 // M30–M47 是联系人/Helper 作者埋雷;contact/helper 其余系列见各分组注释。为不和任务侧重名:
 // reviews/feat-contact-helper.md 第二轮的 N01–N05 记为 CN01–CN05,第三轮的 P01–P05 记为 CP01–CP05,第五轮的 Z01–Z05 记为 CZ01–CZ05,
 // 第六轮的 W01–W05 记为 CW01–CW05,第七轮的 V01–V08 记为 CV01–CV08,第八轮的 H05–H06 记为 CH05–CH06,第九轮的 J01–J05 记为 CJ01–CJ05,
-// 第十轮的 Y01–Y08 记为 CY01–CY08,Astra 第 6 节的 I01–I26 记为 CI01–CI26(与任务侧第十三轮 I01–I09 区分),第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK129;第十三轮独立变异 AD01–AD04 原样保留编号(任务侧无 AD 前缀);第十四轮独立变异 V01/V02/V03/V08 记为 AE01–AE04(与任务侧 V01–V10 区分);第十五轮独立变异 case-dir/case-receipt/case-revoke 与 R15-01–R15-03 记为 AF01–AF06;第十六轮:CK72 拆分为 CK72a(plainDataError)与 CK72b(nestedPlainError),各对应一处 Reflect.ownKeys 循环。第十七轮按 R17-03/R17-04:四个失效变异(CK72a、CK72b、CK116、CK117)按当前源码重新定位到仍存在的那一处注入点,语义不变;CK114 由新增的 CH-48 测试(函数自有访问器)杀死;CK84(confirmFinalReport 遇非法状态抛错而非按 CH-37 返回 {ok:false})按当前实现重新定位并恢复——CK84 测的是非法状态返回被改成抛错,与 CH-42 的回执检查不等价。同时新增 CK130–CK133(R17-01 修复的判别力:函数 prototype 通用例外、不要求宿主是生成器函数、别名再次出现时不查对象本身、生成器原型层不分同步/异步)。原样副本必须全绿(阴性对照)。
+// 第十轮的 Y01–Y08 记为 CY01–CY08,Astra 第 6 节的 I01–I26 记为 CI01–CI26(与任务侧第十三轮 I01–I09 区分),第四轮的 Q01–Q05 记为 CQ01–CQ05(与任务侧第十一轮 Q01–Q03 区分);contact 返修埋雷(最早 C01–C30,后改 K 系列)记为 CK01–CK129;第十三轮独立变异 AD01–AD04 原样保留编号(任务侧无 AD 前缀);第十四轮独立变异 V01/V02/V03/V08 记为 AE01–AE04(与任务侧 V01–V10 区分);第十五轮独立变异 case-dir/case-receipt/case-revoke 与 R15-01–R15-03 记为 AF01–AF06;第十六轮:CK72 拆分为 CK72a(plainDataError)与 CK72b(nestedPlainError),各对应一处 Reflect.ownKeys 循环。第十七轮按 R17-03/R17-04:四个失效变异(CK72a、CK72b、CK116、CK117)按当前源码重新定位到仍存在的那一处注入点,语义不变;CK114 由新增的 CH-48 测试(函数自有访问器)杀死;CK84(confirmFinalReport 遇非法状态抛错而非按 CH-37 返回 {ok:false})按当前实现重新定位并恢复——CK84 测的是非法状态返回被改成抛错,与 CH-42 的回执检查不等价。同时新增 CK130–CK133(R17-01 修复的判别力:函数 prototype 通用例外、不要求宿主是生成器函数、别名再次出现时不查对象本身、生成器原型层不分同步/异步)。第十九轮新增 CK134–CK165(R18-01 生成器 prototype 先拒 Proxy、R18-02 cron 语义校验的范围/区间/步长单点注入)。原样副本必须全绿(阴性对照)。
 // 用法: node packages/domain/proof/mutations.mjs
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -506,6 +506,39 @@ const M = [
   ["CK131 只要原型是引擎生成器原型就免查(不要求宿主函数是生成器函数)", "plain.ts", "  if (!types.isGeneratorFunction(fn)) return false;\n", ""],
   ["CK132 已访问过的对象不再检查本身(回退 CH-44:别名+prototype 时漏查)", "plain.ts", "    if (typeof x === \"object\") {\n      const bad = plainDataError(x, at, Array.isArray(x), engineProto);", "    if (typeof x === \"object\" && !alreadySeen) {\n      const bad = plainDataError(x, at, Array.isArray(x), engineProto);"],
   ["CK133 生成器原型层不分同步/异步", "plain.ts", "(types.isAsyncFunction(fn) ? ENGINE_ASYNC_GENERATOR_PROTO : ENGINE_GENERATOR_PROTO)", "ENGINE_GENERATOR_PROTO"],
+  // 第十九轮(R18-01/R18-02 单点注入):CK134 对应 R18-01 审查指出的先读 Proxy 原型;CK135 起对应 R18-02 的范围/区间/步长语义。
+  ["CK134 生成器 prototype 不先排除 Proxy(R18-01:读外来值原型时触发 trap)", "plain.ts", "  if (types.isProxy(value)) return false;\n", ""],
+  ["CK135 cron 只查形状不做语义校验(R18-02 原样)", "contact.ts", "    if (e) return `定时表达式 \"${s.cron}\" ${e}`;\n", ""],
+  ["CK136 commit 不查定时", "contact.ts", "  if (k.schedule) { const e = checkSchedule(k.schedule); if (e) return { ok: false, reason: e }; }\n", ""],
+  ["CK137 分钟上限放宽到 60", "contact.ts", "[\"分钟\", 0, 59]", "[\"分钟\", 0, 60]"],
+  ["CK138 分钟上限收紧到 58(合法边界被拒)", "contact.ts", "[\"分钟\", 0, 59]", "[\"分钟\", 0, 58]"],
+  ["CK139 分钟下限收紧到 1(合法边界被拒)", "contact.ts", "[\"分钟\", 0, 59]", "[\"分钟\", 1, 59]"],
+  ["CK140 小时上限放宽到 24", "contact.ts", "[\"小时\", 0, 23]", "[\"小时\", 0, 24]"],
+  ["CK141 小时上限收紧到 22", "contact.ts", "[\"小时\", 0, 23]", "[\"小时\", 0, 22]"],
+  ["CK142 小时下限收紧到 1", "contact.ts", "[\"小时\", 0, 23]", "[\"小时\", 1, 23]"],
+  ["CK143 日下限放宽到 0", "contact.ts", "[\"日\", 1, 31]", "[\"日\", 0, 31]"],
+  ["CK144 日下限收紧到 2", "contact.ts", "[\"日\", 1, 31]", "[\"日\", 2, 31]"],
+  ["CK145 日上限放宽到 32", "contact.ts", "[\"日\", 1, 31]", "[\"日\", 1, 32]"],
+  ["CK146 日上限收紧到 30", "contact.ts", "[\"日\", 1, 31]", "[\"日\", 1, 30]"],
+  ["CK147 月下限放宽到 0", "contact.ts", "[\"月\", 1, 12]", "[\"月\", 0, 12]"],
+  ["CK148 月下限收紧到 2", "contact.ts", "[\"月\", 1, 12]", "[\"月\", 2, 12]"],
+  ["CK149 月上限放宽到 13", "contact.ts", "[\"月\", 1, 12]", "[\"月\", 1, 13]"],
+  ["CK150 月上限收紧到 11", "contact.ts", "[\"月\", 1, 12]", "[\"月\", 1, 11]"],
+  ["CK151 星期上限放宽到 8", "contact.ts", "[\"星期\", 0, 7]", "[\"星期\", 0, 8]"],
+  ["CK152 星期上限收紧到 6", "contact.ts", "[\"星期\", 0, 7]", "[\"星期\", 0, 6]"],
+  ["CK153 星期下限收紧到 1", "contact.ts", "[\"星期\", 0, 7]", "[\"星期\", 1, 7]"],
+  ["CK154 单值不查下限", "contact.ts", "if (Number(a) < lo || Number(a) > hi) return", "if (Number(a) > hi) return"],
+  ["CK155 单值不查上限", "contact.ts", "if (Number(a) < lo || Number(a) > hi) return", "if (Number(a) < lo) return"],
+  ["CK156 区间终点不查上限", "contact.ts", "if (Number(b) > hi) return", "if (Number(b) < 0) return"],
+  ["CK157 区间不查起点大于终点", "contact.ts", "        if (Number(a) > Number(b)) return `${at}的区间 ${head} 起点大于终点`;\n", ""],
+  ["CK158 单值带步长放行", "contact.ts", "else if (step !== undefined) return `${at}的 ${item} 只有 * 或区间后面才能带步长`;", ""],
+  ["CK159 步长 0 放行(R18-02 原样)", "contact.ts", "Number(step) < 1 ||", "Number(step) < 0 ||"],
+  ["CK160 步长不查上限", "contact.ts", " || Number(step) > hi)) return `${at}的步长", ")) return `${at}的步长"],
+  ["CK161 步长等于上限被拒(合法边界)", "contact.ts", " || Number(step) > hi)) return `${at}的步长", " || Number(step) >= hi)) return `${at}的步长"],
+  ["CK162 列表只查第一项", "contact.ts", "for (const item of field.split(\",\"))", "for (const item of field.split(\",\").slice(0, 1))"],
+  ["CK163 只查前四段", "contact.ts", "for (let i = 0; i < 5; i++) {\n    const e = cronFieldError", "for (let i = 0; i < 4; i++) {\n    const e = cronFieldError"],
+  ["CK164 跳过第一段", "contact.ts", "for (let i = 0; i < 5; i++) {\n    const e = cronFieldError", "for (let i = 1; i < 5; i++) {\n    const e = cronFieldError"],
+  ["CK165 * 也当单值判定(合法 */n 被拒)", "contact.ts", "    if (a !== undefined) {\n      if (Number(a) < lo", "    if (true) {\n      if (Number(a) < lo"],
 ];
 // 所测功能已按 g-group#2273 撤销(专职开关「只做这件事」整体删除),对应变异移出清单;运行时逐条打印说明,写进 mutations.txt。
 const REMOVED = [
