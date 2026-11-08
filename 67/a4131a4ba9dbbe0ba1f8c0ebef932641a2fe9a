@@ -1,0 +1,95 @@
+apps/desktop/src/App.tsx
+  s_25b02f2fb0d35b::t_e44fd1654efc42 2-10,12-13,15-20,22-34
+apps/desktop/src/app/Divider.tsx
+  s_25b02f2fb0d35b::t_e0fa606ec134a8 1-18
+apps/desktop/src/app/ListRow.tsx
+  s_25b02f2fb0d35b::t_803c048682794a 1-14
+apps/desktop/src/app/MainPane.tsx
+  s_25b02f2fb0d35b::t_e74d92e09dc2b0 1-29
+apps/desktop/src/app/SplitArea.tsx
+  s_25b02f2fb0d35b::t_96966c686da2ad 1-15
+apps/desktop/src/app/chat/ChatHeader.tsx
+  s_25b02f2fb0d35b::t_b43eb98ec46beb 1-55
+apps/desktop/src/app/chat/ChatView.tsx
+  s_25b02f2fb0d35b::t_c9bead04cafd28 1-61
+apps/desktop/src/app/chat/ComposerSlot.tsx
+  s_25b02f2fb0d35b::t_2ed71d5ccdca12 1-18
+apps/desktop/src/app/chat/MentionMe.tsx
+  s_25b02f2fb0d35b::t_444b62cd6c9a4b 1-26
+apps/desktop/src/app/chat/SelectBar.tsx
+  s_25b02f2fb0d35b::t_599b1895b4532f 1-25
+apps/desktop/src/app/list/ContactList.tsx
+  s_25b02f2fb0d35b::t_065e962b23165d 1-57
+apps/desktop/src/app/list/ConvList.tsx
+  s_25b02f2fb0d35b::t_0e21ca043ccd80 1-59
+apps/desktop/src/app/list/FileList.tsx
+  s_25b02f2fb0d35b::t_b6e3d20935b1b0 1-29
+apps/desktop/src/app/list/ListPane.tsx
+  s_25b02f2fb0d35b::t_65f96585d7b3fa 1-45
+apps/desktop/src/app/list/labels.ts
+  s_25b02f2fb0d35b::t_418ab6c5d1d27b 1-9
+apps/desktop/src/app/overlays/Overlays.tsx
+  s_25b02f2fb0d35b::t_d9358ec677a222 1-25
+apps/desktop/src/app/overlays/PanoOverlay.tsx
+  s_25b02f2fb0d35b::t_26cde831c3d58e 1-28
+apps/desktop/src/app/overlays/RewindDialog.tsx
+  s_25b02f2fb0d35b::t_0716089bb1d279 1-26
+apps/desktop/src/app/useShell.ts
+  s_25b02f2fb0d35b::t_ed5139eab7283d 1-22
+apps/desktop/src/ctx.ts
+  s_25b02f2fb0d35b::t_16427461f6804f 1-4
+apps/desktop/src/store/boot.ts
+  s_25b02f2fb0d35b::t_eb80159a62bae3 1-36
+apps/desktop/src/store/demo.ts
+  s_25b02f2fb0d35b::t_6f7887e58ea89f 1-45
+apps/desktop/src/store/dom.ts
+  s_25b02f2fb0d35b::t_45feb742b44e50 1-8
+apps/desktop/src/store/index.ts
+  s_25b02f2fb0d35b::t_9f922da9184d48 1-61
+apps/desktop/src/store/live.ts
+  s_25b02f2fb0d35b::t_7989f39b751158 1-45
+apps/desktop/src/store/select.ts
+  s_25b02f2fb0d35b::t_bcf51043210f5a 1-52
+apps/desktop/src/store/slices/chat.ts
+  s_25b02f2fb0d35b::t_f11dc5efbf920f 1-169
+apps/desktop/src/store/slices/compute.ts
+  s_25b02f2fb0d35b::t_65c2b3b0aa590a 1-139
+apps/desktop/src/store/slices/layout.ts
+  s_25b02f2fb0d35b::t_05a0aabe62a1a9 1-113
+apps/desktop/src/store/slices/members.ts
+  s_25b02f2fb0d35b::t_87da0d560b8e3e 1-88
+apps/desktop/src/store/slices/messages.ts
+  s_25b02f2fb0d35b::t_452194f0285e9b 1-166
+apps/desktop/src/store/slices/models.ts
+  s_25b02f2fb0d35b::t_86d25e0a2b28d2 1-39
+apps/desktop/src/store/slices/plugins.ts
+  s_25b02f2fb0d35b::t_83338a5c0ee780 1-56
+apps/desktop/src/store/slices/schedule.ts
+  s_25b02f2fb0d35b::t_c33f639ec69d6b 1-83
+apps/desktop/src/store/slices/send.ts
+  s_25b02f2fb0d35b::t_fc39173bb171a0 1-120
+apps/desktop/src/store/slices/tasks.ts
+  s_25b02f2fb0d35b::t_8e6172a2b638f9 1-80
+apps/desktop/src/store/state.ts
+  s_25b02f2fb0d35b::t_4835a687896f96 1-28
+apps/desktop/src/store/types.ts
+  s_25b02f2fb0d35b::t_203d3f0521980d 1-183
+apps/desktop/verify/mines.json
+  s_25b02f2fb0d35b::t_98c0c64ae1bf26 29,64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "67a4131a4ba9dbbe0ba1f8c0ebef932641a2fe9a",
+  "prompts": {},
+  "sessions": {
+    "s_25b02f2fb0d35b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d0bff13-9adf-40ba-a795-53ae48143f57",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
