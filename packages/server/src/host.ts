@@ -1040,6 +1040,8 @@ export class Host {
       const dispatchedBySource = new Map<string, string>();
       const proposals = new Map<string, { id: string; taskId: string; text: string }[]>();
       const referenced = new Set<string>();
+      const ownCommits: { roomId: string; text: string; taskId: string | null; sourceKey: string }[] = [];
+      const replies: { roomId: string; seq: number; text: string }[] = [];
       let i = 0;
       for (const a of out.actions) {
         const actionId = `${roundId}:a${i++}`;
@@ -1050,6 +1052,7 @@ export class Host {
             if (!a.text.trim()) { reject("空消息"); break; }
             const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [] });
             appended.push({ roomId: a.roomId, seq: r.seq });
+            replies.push({ roomId: a.roomId, seq: r.seq, text: a.text });
             if (a.replyToSeq !== null) referenced.add(`${a.roomId}#${a.replyToSeq}`);
             break;
           }
@@ -1081,8 +1084,15 @@ export class Host {
           case "commit": {
             const src = freshMsgs.find((m) => m.roomId === a.roomId && m.seq === a.sourceSeq);
             if (!src) { reject(`来源 ${a.roomId} #${a.sourceSeq} 不是本轮新消息`); break; }
-            if (!src.text.includes(a.text)) { reject("承诺原文必须出自来源消息"); break; }
             const key = `${a.roomId}#${a.sourceSeq}`;
+            if (!src.text.includes(a.text)) {
+              // 联系人自己回复里说的「我会做 X」也要进账本(AC-40 ②):原文出自本轮同会话的 reply,就挂到那条回复上
+              const own = out.actions.some((x) => x.kind === "reply" && x.roomId === a.roomId && x.text.includes(a.text));
+              if (!own) { reject("承诺原文必须出自来源消息或本轮自己的回复"); break; }
+              ownCommits.push({ roomId: a.roomId, text: a.text, taskId: a.taskId ?? null, sourceKey: key });
+              referenced.add(key);
+              break;
+            }
             const taskId = a.taskId ?? dispatchedBySource.get(key) ?? `standing-${this.newId("k")}`;
             proposals.set(key, [...(proposals.get(key) ?? []), { id: this.newId("k"), taskId, text: a.text }]);
             referenced.add(key);
@@ -1144,6 +1154,20 @@ export class Host {
         const led = ledgerNow.get(m.roomId);
         if (led?.messages.some((x) => x.seq === m.seq && x.handled)) continue;
         push(m.roomId, { type: "process", actionId: `${roundId}:proc:${key}`, seq: m.seq, accepted: m.sender.kind === "user" && referenced.has(key), commitments: m.sender.kind === "user" && referenced.has(key) ? (proposals.get(key) ?? []) : [] });
+      }
+      // 联系人自己回复里的承诺:把那条回复记进账本,再以它为来源登记
+      const byReply = new Map<string, { roomId: string; seq: number; text: string; items: { id: string; taskId: string; text: string }[] }>();
+      for (const oc of ownCommits) {
+        const rep = replies.find((r) => r.roomId === oc.roomId && r.text.includes(oc.text));
+        if (!rep) continue;
+        const k = `${rep.roomId}#${rep.seq}`;
+        const entry = byReply.get(k) ?? { ...rep, items: [] };
+        entry.items.push({ id: this.newId("k"), taskId: oc.taskId ?? dispatchedBySource.get(oc.sourceKey) ?? `standing-${this.newId("k")}`, text: oc.text });
+        byReply.set(k, entry);
+      }
+      for (const [k, e] of byReply) {
+        push(e.roomId, { type: "receive", actionId: `${roundId}:recv-own:${k}`, message: { id: k, seq: e.seq, sender: { kind: "contact", id: contactId }, text: e.text, taskId: null, replyToSeq: null } });
+        push(e.roomId, { type: "process", actionId: `${roundId}:proc-own:${k}`, seq: e.seq, accepted: true, commitments: e.items });
       }
       for (const [roomId, cmds] of byRoom) this.ledgerTx(contactId, roomId, cmds);
       // 游标、待处理输入、状态笔记与本轮动作同一事务(D15.1)
