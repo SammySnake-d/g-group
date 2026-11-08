@@ -67,10 +67,10 @@
   "waiver": null,
   "review": {
     "agent": "codex",
-    "session": "codex:245a49a6-15ae-4163-b480-1ede701bfc06",
-    "model": "ai-iisbo/[乾坤按量]gpt-6.1-terra",
+    "session": "codex:5d951824-bd36-4afe-ac5a-cf084bcb0000",
+    "model": "gpt-6.1-terra",
     "verdict": "reject",
-    "reviewed_hash": "afad2d9015d263ea84ad1575ad7de398d7ff43a83b67b842b148479324ea9a4b",
-    "notes": "第九轮 REJECT:七个指定变异均由具名跨平台核对发现,但额外放行范围的单点故障未被该核对发现(R9-01);联网隔离单点故障在完整自检中存活(R9-02);声明支持的动态链接 Node 环境中隔离探针无法启动(R9-03)。本轮只用假 HOME、中性标记与本机夹具。详见 reviews/chore-gates.md 第九轮。"
+    "reviewed_hash": "68bd4137cc4e2e42359d490d0afad4e2946c9b9dc41168acd000fdc7ad384de4",
+    "notes": "第十轮 REJECT：来源同名目录误认、清理克隆后失认；导出范围策略可变；容器额外挂载检查遗漏；动态运行库符号链接布局隔离启动失败。容器故障路径本机未测。"
   }
 }
