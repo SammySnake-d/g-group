@@ -1027,3 +1027,130 @@ LOCAL_EXIT=1
 - CI `self-check` 在原始 HEAD 上 completed/success；CI 日志记录了容器内挂载正控。本机 Docker daemon 不可用，本轮未把 CI 结果冒称本机实测。五项发现均为独立复现，不依赖既有 pass 收据；只读与伪会话测试均使用临时中性夹具。
 - 完整证据：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr1-r11-codex/`。
 - 本轮收据填入后再次运行 `--local`：`G-PROVENANCE` 因本审查会话尚无落盘记录而失败，`G-REVIEW` 因本轮结论 reject 失败，其余六门禁通过；记录见证据目录 `local-gates-after-review.log`。本会话落盘后的来源核对未实测，不能写成通过。
+
+## 第十二轮独立复审（e871416）— REJECT
+
+- 审查人 Claude，会话 `claude:945466dc-9318-4837-9afe-e1c1b3bb224f`；算出 reviewed_hash 的那一轮实际模型 `fnqtz/claude-opus-5-5`，后续轮次因线路额度换到 `anyrouter/claude-opus-5-5`，同为 Anthropic。作者会话 `codex:47c6aa49-3c0e-42dd-8b44-a53d8d0e444e`（`gpt-6.1-terra`）。
+- 被审 `origin/chore/gates@e8714168a42edfa0ae3fd92a5c307269e0c96476`（开工前回读远端未变），基线 `origin/main@412ce25`，规范依据 `origin/docs/dev-handbook@a8d1f27` 的《验收文档》第 9 节、R-01/R-07/R-18 与《需求文档》§8.1 已定第 6 条。
+- 独立复算 `reviewed_hash=ca59518a43e59ddce65c72f2c3d991f0364c08877b1c4529d9f34f8d49254ad2`，与作者一致。
+- 审查资格先说明：本版受检内容 6676 行里有 5945 行最后改动在 `14f1e9c`（第十一轮，作者 Claude）及以前，`lib.ts`、`run-all.ts`、`vendor.ts`、`testlint.ts`、`test-runner.ts`、`scripts/merge.sh` 与 `14f1e9c` 逐字节相同。按 §8.1 第 6 条「审查必须由不同于本版产物所有参与生产模型厂商累积集合的模型执行」，Anthropic 在本版的产出厂商里，Claude 不能为本版签 APPROVE；本节的 REJECT 和问题清单照常有效，下一轮审查人见 R12-02 与文末待拍板项。
+
+### R12-01 [P1] 已清理克隆里的写入不再计入产出厂商（本轮回退）
+
+- 位置：`scripts/gates/gates.ts` 第 383–386 行（`attestedDirs([t], …)` 改成按单轮取证）与 `turnTouchesRepo` 第 156–159 行。
+- 复现（中性夹具，脚本与输出在证据目录 `fx-provenance.sh`、`fx-provenance.mts`、`r12-02-switch-model.log`）：临时仓库 + 临时会话根；作者会话三轮：① Anthropic 模型在独立克隆里用 shell 写入受管文件；② OpenAI 模型在同一克隆里用本轮认可的固定写法真实提交；③ OpenAI 模型 `git log --oneline -1`。提交拉回目标仓库后删除克隆；审查会话为 Anthropic。
+  - 当前 HEAD 门禁：克隆已删 → `✓ G-PROVENANCE`（产出厂商只剩 openai，Anthropic 审查放行）；同一份记录、克隆仍在 → `✗ 审查厂商 anthropic 在作者的产出厂商集合 {anthropic,openai} 里`。
+  - 第十一轮门禁（`14f1e9c`）：克隆已删 → `✗ … {anthropic,openai}`。
+  - 对照：①改成 OpenAI 模型写入，新旧门禁都放行。
+- 后果：同一会话、同一记录，结论只取决于事后有没有删克隆；而「做完清掉自己的临时克隆」是通用规则要求的固定动作。中途换模型写入的厂商从产出集合里消失，跨厂商硬门禁（R-01、§8.1 第 6 条）被放宽。第十一轮按会话累积取证时能拦下。
+- 返修：产出厂商的统计范围不能比第十一轮窄。已清理目录的取证（会话内任一轮证明过的目录）要用于整段会话的产出判定；单轮绑定只用于「可证明写入」这一侧。写操作类工具落在已不存在、又没被证明过的目录里，按「判不了」保守计入产出厂商。补「克隆清理前后同一记录结论一致」与「中途换模型写入已清理克隆被拦」两条具名用例，并加对应变异。
+
+### R12-02 [P1] 产出厂商只看收据里的一个作者会话，前几轮作者的产出不计入，本 PR 自己就会放行同厂商审查
+
+- 位置：`scripts/gates/gates.ts` 第 369–392 行（`provenance.run` 只加载 `ctx.receipt.author.session` 一个会话）。
+- 复现：本 PR 收据作者只写本轮 Codex 会话；前几轮作者会话 `claude:465b78cf…`、`claude:60a67dd9…`、`claude:68161be7…`、`claude:91b17b26…` 只出现在 notes 文字里，门禁不读。上面统计显示本版绝大部分内容出自这些轮次（第十一轮收据 `14f1e9c` 的 author 是 `claude:465b78cf…`，第十一轮 Codex 审查也确认「作者会话的模型为 Anthropic」）。写入本轮审查收据后实跑 `--local`，`G-PROVENANCE` 对 Claude 审查不报同厂商（见下文「写审查后」输出）——门禁会把一份按 §8.1 第 6 条不合格的 Anthropic 审查当成合格跨厂商审查。
+- 后果：作者换人返修一轮，就能把前几轮的产出厂商从集合里拿掉。#2/#3/#5 也一样：当前内容由多轮返修会话产出，收据只记了最早那个会话（见下文合并链核对）。
+- 返修：产出厂商必须按本版累积计算。最低要求：分支历史上任一版收据出现过的 `author.session`（以及收据里新增的 `author.sessions[]` 历次作者会话）都并入产出集合，只增不减；会话记录证明不了产出的，按「判不了」保守计入（作者自己在收据里也承认这四个会话「未证实当前受检版本的产出」，保守做法是计入，不是丢掉）。补「返修换作者后，前轮作者厂商的审查仍被拦」用例和变异。
+
+### R12-03 [P2，需拍板] 作者「可证明写入」只认一种未写入文档的固定提交写法，真实宿主记录几乎都证明不了
+
+- 位置：`scripts/gates/gates.ts` 第 169–193 行（`turnProvesWrite`）、第 297–331 行（`attestedDirs` 的 `exact` 正则）、第 389 行。
+- 复现：扫描本机全部 855 个会话记录：Claude 会话的 Write 调用 2154 次，记录里 input 只有路径、没有 content，`turnProvesWrite` 可用 0 次；符合 `exact` 固定写法的提交命令全机只有 7 次，都出自本轮作者会话。`README.md`、`docs/RECEIPT.md` 都没写这条写法要求。
+- 后果：作者用普通 `git commit`（哪怕输出的提交号在受检历史里、所改文件与当前逐字节一致）也证明不了产出；PR #8 就是这种情况（见下文）。「判断不了就保守拦截」是第十一轮返修要求允许的，本条不按缺陷强制返修，但它会挡住整条合并链，必须由用户拍板（见文末）。
+- 返修（按拍板结果二选一）：A）认普通提交记录：命令里有 `git … commit`、结果以 `[<分支> <提交号>]` 开头、提交号唯一对应受检历史、所改受管文件与当前逐字节一致即可；把写法写进 `docs/RECEIPT.md`。B）保持固定写法：写进 `docs/RECEIPT.md` 与 README，并给出已有 PR 的补证流程。`turnProvesWrite` 对真实宿主记录不可达，要么按真实记录格式实现，要么删掉并在收据如实写明。
+
+### R12-04 [P2] 来源门禁新增的 5 处守卫被跳过，现有自检都发现不了（前两处 hy4 发现、Claude 复现）
+
+- 位置：`scripts/gates/gates.ts` 第 175 行（写入成功结果检查）、第 182 行（`!ctx.changed.includes(rel)`）、第 306 行（`inVersion` 的 `changed` 过滤）、第 139 行（只读命令白名单里的 cat）、第 289 行（`headCommits` 只取 HEAD 历史）。
+- 复现（box2，Node 22.22.0，Docker 沙箱 `node:22.22.0-slim`；把单点故障作为独立变异加入作者清单副本，用真实变异入口跑，自检限定在来源相关的 91 条具名用例，原样对照 91/91 通过）：
+  - 「写入证明不校验成功结果」（第 175 行整条去掉）：91 条全过，存活。
+  - 「写入证明不核对受审改动文件」（第 182 行去掉 `!ctx.changed.includes(rel)`）：存活。
+  - 「提交证明不核对受审改动文件」（第 306 行去掉 `changed` 过滤）：存活。
+  - 「只读 cat 放行重定向写入」（只读白名单里 cat 的参数放宽成任意非空白，`cat a > 受管文件` 被当成只读）：存活。
+  - 「提交证明接受 HEAD 之外的提交」（`headCommits` 改成 `rev-list --all`）：存活。
+  - 5 个全部存活；原样输出 `faults-node22-docker.log`，注入脚本 `add-faults.mjs`。其余用例只测测试类门禁，不经过写入证明分支，限定范围不影响结论。
+- 后果：R-18「注入规则失效或跳过守卫，必须证明对应门禁会变红」不满足。逐处的实际影响：失败或伪造结果的写入可当成已证明作者；改写本 PR 没改动的受管文件（内容与当前相同）、或提交基线里的旧文件，也能证明作者身份；`cat … >` 写入受管文件不再计入产出厂商（直接放宽跨厂商门禁）；受检历史之外的提交也能作证。
+- 返修：为这 5 处各补一条具名双侧用例（成功结果 vs 非成功结果；本 PR 改动文件 vs 未改动但内容相同的文件；基线提交 vs 本 PR 提交；`cat` 只读 vs `cat … >` 写入；HEAD 历史内 vs 其他引用上的提交），并把这 5 个故障加入变异清单、要求被具名用例发现。
+
+### 逐条核对第十一轮意见
+
+| 条目 | 结论 | 依据 |
+|---|---|---|
+| R11-01 remote 冒认仓库 | 已修 | 独立中性探针：同 remote 无关历史不认、真克隆认（`direct-probe.log`）；红提交 3d61394 上本条 10 条用例全部按名失败；作者对应变异由具名用例发现（见变异复跑）。 |
+| R11-02 输出混入提交号 | 已修 | 独立探针：无关仓库输出附带目标提交号、目录已删 → `attestedDirs=[]`；红提交上本条 4 条用例全部按名失败。hy4 的 R12-HY4-01 不采纳，理由见收据 notes。 |
+| R11-03 稀疏数组 | 已修 | 独立探针：稀疏 + 越界属性拒收、密集数组收下；红提交上按名失败。 |
+| R11-04 执行前守卫 | 已修 | 新用例双侧校准替身执行器；`R11-04 跳过执行前容器计划守卫` 变异被发现；红提交上按名失败。 |
+| R11-05 只读误计产出 | 主体已修 | Read 工具、简单只读命令、git status/log 不计产出，真实写入正控通过；但新增的写入证明有 R12-03/R12-04，换模型写入已清理克隆的回退见 R12-01。红提交上 10 条中 4 条按名失败，其余 6 条是正控或缺口用例，有效性由对应变异证明。 |
+
+### 复现数字
+
+- `npm run typecheck`、`npm run lint` 退出 0；`npm test` 8/8，fail/cancelled/skipped/todo 均 0（本机 Node 25.8.1 与 box2 Node 22.22.0 各一遍）。
+- 门禁全量自检：本机 Homebrew Node 25.8.1（seatbelt 沙箱）245/245，退出 0，无 skip/todo；box2 Node 22.22.0 + Docker 沙箱：变异入口的原样对照即全量自检（245 条全部要有通过的结构化结果），耗时 1079s 通过。
+- 红提交 `3d61394`：R11 专项 26 条里 20 条按名失败，其余 6 条见上表；`--local` 的 G-RED 判通过。
+- 作者变异清单复跑（box2，Node 22.22.0 + Docker，并发 2）：137 个注入点均唯一，原样对照通过，137/137 被具名用例按目标判因发现，0 存活，变异阶段耗时 825s（`mutation-node22-docker.log`）。作者 proof 的 137/137 得到独立复现；hy4 在没有沙箱的云机上停在原样对照是环境原因。
+- 八个门禁各一个应失败输入，都在真实 `--local` 入口上由指定门禁判 ✗，退出 1（`gate-inputs.log`）：G-TRACE 证据路径不在仓库、G-REVIEW 审查人不在名单、G-PROVENANCE 会话 id 带路径片段、G-RED 新测试在红提交上不存在、G-STUB 测试不判计算结果、G-TAUTO 自比较断言、G-WORKFLOW 申请写权限、G-LAYER 相对路径跨包。
+- 输入合同（不改写内置原型，g-group#2662）：getter/setter/Proxy 回调 0 次且拒收，合法 JSON null 不抛错，导出的 POLICY/UNGOVERNED/WAIVER_RE/HARNESSES 改写均被拒（`direct-probe.log`）。
+- 容器路径：box2 有 Docker，本轮全量自检与变异在 Docker 沙箱里实跑（此前本机没有 daemon）。
+
+### 合并链核对（只读，未改任何分支）
+
+用本 PR HEAD 的门禁与第十一轮门禁（`14f1e9c`）分别对各 PR 当前 HEAD 跑 G-PROVENANCE、G-REVIEW（`merge-chain-provenance.log`）。四个 PR 的 reviewed_hash 都等于当前内容 hash，G-REVIEW 都过。
+
+| PR | 作者 / 审查 | 新规则 | 旧规则 | 判不过的原因 |
+|---|---|---|---|---|
+| #2 domain-core | claude:91b17b26 / astra | ✗ 作者证明不了写入受审版本 | ✓ | 规则误判为主：作者会话里有真实提交 `dd7bf7a`，提交号在受检历史里、其中 3 个受管文件与当前逐字节一致，但写法是普通 `git commit`，不合 R12-03 的固定写法；其余文件出自后续返修会话，收据没记（R12-02 同类）。 |
+| #3 task-lifecycle | claude:91b17b26 / codex | ✗ 同上 | ✓ | 记录本身证明不了：该会话没有任何提交与当前内容一致，当前内容出自后续返修会话，收据作者会话不完整。 |
+| #5 sqlite-storage | claude:91b17b26 / codex | ✗ 作者同 #3；审查会话找不到等于 reviewed_hash 的 hash 调用；审查厂商认不出 | ✗（后两条） | 作者同 #3。审查：记录里确有输出等于 reviewed_hash 的真实调用，但命令带 `PATH=…` 前缀，按 RR-14 只认简单命令，规则按设计不认（旧规则同样不认，不是本轮回退）。 |
+| #8 commitment-ledger | codex:8a88fc74 / claude | ✗ 作者证明不了；审查同 #5 | ✗（审查两条） | 作者：规则误判——会话里 4 次真实提交，提交号都在受检历史里且所改文件与当前逐字节一致，只因不是固定写法。审查：命令是 `cd … && node …`，同 #5，旧规则也不认。 |
+
+结论：按本 PR 的新规则，#2、#3、#5、#8 现在一个都合并不了；旧规则下 #2、#3 能过，#5、#8 本来就因审查 hash 调用写法过不了。没有自行放宽，处理方式交用户拍板（见文末）。
+
+### 门禁原样输出
+
+写审查前（本机，Node 25.8.1）：
+
+```text
+base=origin/main branch=chore/gates HEAD=e8714168a42edfa0ae3fd92a5c307269e0c96476 受检文件 34 个 收据=receipts/chore-gates.json 门禁 8 个
+✗ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是仓库所有者对这个 PR 这一版的结构化批准
+    - 审查厂商 openai 在作者的产出厂商集合 {openai} 里
+✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据
+✗ G-REVIEW  R-01:审查人限 Codex/Astra/Claude/Argon(g-group#1531、g-group#2943、g-group#3199 原则 68,默认 Codex;Claude 审 Codex 写的 PR,Argon 备用),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)
+    - 审查结论是 reject
+    - 审查人与作者是同一个(codex)
+    - 作者与审查同为 openai,且没有用户豁免
+    - 审查对应的内容 105992216253 ≠ 当前 ca59518a43e5,审后改过受管内容,需要重审
+✓ G-RED  R-02:先红后绿,红提交上的测试与现在相同,现在的测试放到红提交实现上按名字失败、现在按名字通过
+✓ G-STUB  R-03 R-04:空实现红基线 + 返回值变异校准,桩下或错值下仍通过、没执行、加载失败的测试都判无效
+✓ G-TAUTO  R-04:拒绝同语反复测试(按 node:test 真实导入识别;无断言、自比较、恒真、不可达、不判源码结果、skip/only;运行时与静态逐条计数一致)
+✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限、不得写提交状态、不得用 pull_request_target
+✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)
+CONTENT_HASH=ca59518a43e59ddce65c72f2c3d991f0364c08877b1c4529d9f34f8d49254ad2
+LOCAL_EXIT=1
+```
+
+写审查后（收据已填本轮审查、未提交时实跑）：新规则把作者判为 Codex、把本会话判为合格的跨厂商审查人（G-PROVENANCE ✓，本会话算 hash 那一轮的记录已落盘），G-REVIEW 只因结论 reject 失败。G-PROVENANCE 放行本审查正是 R12-02 的实例。
+
+```text
+base=origin/main branch=chore/gates HEAD=e8714168a42edfa0ae3fd92a5c307269e0c96476 受检文件 34 个 收据=receipts/chore-gates.json 门禁 8 个
+✓ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是仓库所有者对这个 PR 这一版的结构化批准
+✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据
+✗ G-REVIEW  R-01:审查人限 Codex/Astra/Claude/Argon(g-group#1531、g-group#2943、g-group#3199 原则 68,默认 Codex;Claude 审 Codex 写的 PR,Argon 备用),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)
+    - 审查结论是 reject
+✓ G-RED  R-02:先红后绿,红提交上的测试与现在相同,现在的测试放到红提交实现上按名字失败、现在按名字通过
+✓ G-STUB  R-03 R-04:空实现红基线 + 返回值变异校准,桩下或错值下仍通过、没执行、加载失败的测试都判无效
+✓ G-TAUTO  R-04:拒绝同语反复测试(按 node:test 真实导入识别;无断言、自比较、恒真、不可达、不判源码结果、skip/only;运行时与静态逐条计数一致)
+✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限、不得写提交状态、不得用 pull_request_target
+✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)
+CONTENT_HASH=ca59518a43e59ddce65c72f2c3d991f0364c08877b1c4529d9f34f8d49254ad2
+LOCAL_EXIT=1
+```
+
+### 待用户拍板
+
+1. PR #1 下一轮由谁审：按 §8.1 第 6 条，本版产出厂商含 Anthropic（前几轮）与 OpenAI（本轮），Claude、Codex、Astra 都不合格；可选 Argon（Google）审，或由仓库所有者对同厂商审查出结构化豁免。
+2. R12-03 的作者证明写法（A 认普通提交记录 / B 保持固定写法并补证），以及 #2/#3/#5/#8 怎样补来源（#5、#8 的审查人需在自己的会话里用简单命令重算一次 hash）。
+
+### 证据与清理
+
+- 证据：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr1-r12-claude/`。
+- 会话夹具只用临时中性数据，内容为 NEUTRAL_FIXTURE_NO_CREDENTIALS；没有改写任何真实会话记录。
