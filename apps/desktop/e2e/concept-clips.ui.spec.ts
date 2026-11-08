@@ -9,7 +9,7 @@ const VIEW = { width: 1280, height: 800 };
 
 async function open(browser: Browser, url: string) {
   if (DIR) fs.mkdirSync(DIR, { recursive: true });
-  const ctx = await browser.newContext({ viewport: VIEW, deviceScaleFactor: DIR ? 1 : 2, locale: "zh-CN", timezoneId: "Asia/Shanghai", ...(DIR ? { recordVideo: { dir: DIR, size: VIEW } } : {}) });
+  const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport: VIEW, deviceScaleFactor: DIR ? 1 : 2, locale: "zh-CN", timezoneId: "Asia/Shanghai", ...(DIR ? { recordVideo: { dir: DIR, size: VIEW } } : {}) });
   const page = await ctx.newPage();
   await page.goto(url);
   return { ctx, page };
@@ -103,7 +103,7 @@ test("动效 · 等你刻度:点刻度跳过去,⌥↓ 下一件,答完刻度淡
 
 test("动效 · 目光:打字时等你的头像眼睛跟着光标走(连拍)", async ({ browser }) => {
   for (const theme of ["light", "dark"]) {
-    const ctx = await browser.newContext({ viewport: VIEW, deviceScaleFactor: 3, locale: "zh-CN", timezoneId: "Asia/Shanghai" });
+    const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport: VIEW, deviceScaleFactor: 3, locale: "zh-CN", timezoneId: "Asia/Shanghai" });
     const page = await ctx.newPage();
     await page.goto(`/?conv=g&freeze${theme === "dark" ? "&theme=dark" : ""}`);
     const av = page.getByTestId("gaze-g13p");
