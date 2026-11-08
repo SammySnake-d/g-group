@@ -1239,3 +1239,69 @@ Claude Code 接续修 CH-39、CH-40；CH-36/CH-37、只读快照与已闭合的�
 - GitHub `self-check` 针对 386cb96 为 completed/success，见 `$E/github-checks.json`；不能替代本次独立反例。
 - 首次真实 `--local --branch=feat/contact-helper --base=origin/feat/task-lifecycle`：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER、G-PROVENANCE 通过，G-REVIEW 因上一轮 reject 和旧 hash 失败，原文见 `$E/gates-local.log`。写入本轮 review 后重跑：前述六个非来源门禁通过；G-REVIEW 按本轮 reject 失败；G-PROVENANCE 未对作者报错，但本轮会话 `turns.jsonl` 尚未落盘而报“审查会话记录不存在”，原文见 `$E/gates-after-review.log`。故作者来源问题已复核，但**本轮审查来源门禁尚未通过**，需记录落盘后再核验，不能凭原生模型记录替代门禁绿灯。
 - 真实调度触发、时区/DST、存储接线、宿主授权、消息表隔离和 P1 交互均未实测；以上不是对这些整项验收的通过结论。本次仅提交本审查节和收据 `review`，未改产品代码、测试、其他分支或作者证明。
+
+## 第二十轮：第十九轮返修及补充项独立复审
+
+结论：**REJECT**。被审提交 `931ae4db1136c56325453f8221998dc7dd37cf79`，基线 `origin/feat/task-lifecycle` = `ba90d6769992d2f3df2a571f846409afcafd644d`；本会话实际执行 `node scripts/gates/run-all.ts --hash --branch=feat/contact-helper --base=origin/feat/task-lifecycle` 得到 `13b684ef5e39ff54628c47f85bef008fe3f9525695e064fc46187df9a31d9de1`。审查者 `codex:f513b323-f16b-4b24-ad4f-bf4704e2331e`，原生会话模型 `gpt-6.1-terra`。以下 `$E` 为 `/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr4-r20-codex/`。
+
+### R20-01 — 带调用方数据的伪生成器原型仍被当成引擎原型放行
+
+位置：`packages/domain/src/plain.ts:61-66,94-108`；当前收据第 7 栏以及 `contact.test.ts:1845-1857` 声明与引擎生成原型结构无法区分的**空对象**可以放行，但带调用方自有数据的非普通原型对象须拒收。
+
+复现：在未改写任何内置原型或内置方法的进程里，创建 `function* f(){}`，令 `p = Object.assign(Object.create(Object.getPrototypeOf(f.prototype)), {data:{note:'marker'}})`，再令 `f.prototype = p`；把 `f` 作为被丢弃字段的值传入 `grantTool`、`routeHelper` 和 `confirmFinalReport`。这不是空对象，`p` 的原型不是 `Object.prototype` 或 `null`；三个入口在本版均返回 `ok:true`。对照：正常生成器三个入口均放行，另一种非普通原型均拒收，伪原型自身带 getter 时均拒收且 getter 调用 0 次。详见 `$E/boundary-probes.mjs` / `boundary-probes.jsonl`。原因是 `engineGeneratorPrototype` 只验证原型链，`engineProto` 令 `plainDataError` 跳过原型检查；后续仅递归检查自有数据的值，普通自有数据因此不触发拒绝。
+
+返修：让该例外符合声明的边界：结构上不可区分的空原型可继续放行，但带调用方普通数据属性的非普通原型不能借该例外通过；增加同步/异步、原始值和普通对象值的具名反例，并保持正常引擎原型及访问器/Proxy 0 次调用对照。不能以本例声称 getter 或 Proxy 被调用：实测它们仍被拒绝。
+
+### R20-02 — 联系人直接调用的精确授权缺少前缀反例
+
+位置：`packages/domain/src/contact.ts:335-341`，现有实现的 `t.name === name` 正确；问题在测试判别力。
+
+复现：只在隔离副本把这一处改成 `name.startsWith(t.name)`，其他源码和测试不变。给联系人只授予 `get_weather` 后，原版对 `get_weather_extra` 返回 `false`，变异版返回 `true`；变异版现有全量测试仍 **315 通过、0 失败、0 skip、0 todo**。注入点恰好一处，详见 `$E/independent-faults.mjs` 与 `independent-faults.jsonl` 的 F1。
+
+返修：增加具名行为测试，显式断言被授权名的扩展名、前缀和其他未授权名称均不可直接调用，同时保留精确名字允许的对照；把上述单点变异纳入校准并证明被具名测试杀死。本项不是说现有实现已错误放行，而是权限边界的回归缺口。
+
+### R20-03 — 派给 Compute 的授权子集缺少同方向前缀反例
+
+位置：`packages/domain/src/contact.ts:446-448`，现有实现的 `allowed.has(t)` 正确；问题在测试判别力，且与 R20-02 是独立入口。
+
+复现：只在隔离副本把 `!allowed.has(t)` 改为 `![...allowed].some((a) => t.startsWith(a))`。只授权 `get_weather` 时，请求 `get_weather_extra`：原版拒绝，变异版 `briefFor` 返回 `ok:true`；变异版全量测试仍 **315 通过、0 失败、0 skip、0 todo**。注入点恰好一处，详见 `$E/independent-faults.jsonl` 的 F5。
+
+返修：分别测试直接工具与 Compute 专用资产的授权名只作整名匹配，扩展名和未授权项不能进 brief；保留完整授权名成功对照，并保留此单点变异证明具名测试能杀死它。本项同样是回归缺口，不是对原版错误放行的指控。
+
+### 返修项的独立对照
+
+- R19-01：旧版 `8fdbdbc` 的 100 万及 `2^32-1` 长度空稀疏数组在 2.5 秒上限内未返回；本版同输入分别在被测函数内约 0.414/0.427 ms 返回拒绝。首项为 null 的 10 万项 JSON 数组：旧版约 809 ms，本版约 0.516 ms，均返回拒绝；短合法数组两版均接受。进程启动耗时与函数内时间分开记录，见 `$E/independent-probes.jsonl`。本次只据上述输入确认原稀疏物化问题关闭。
+- R19-02：五段各选一个等值区间，旧版与本版都接受，倒置区间两版都拒绝。单独把 `>` 变 `>=` 后，CH-52 在 `5-5` 按名失败，见 `$E/ck174-target.tap`。此项是测试修复，不是现有 cron 实现错误。
+- A-D2：`2f89e6a` 对 `BASH`、`Bash`、`bash `、` shell `、`Run_Command`、`browser\t` 的授予、直接调用、恢复均放行；本版六种全部拒绝，同样名字的前后缀正常工具 `bash_history`、`shellcheck` 仍可授予和恢复。该六类命名变体已修；仅按名称无法证明被改名的工具真实能力或宿主注册结果，收据也将真实宿主授权标为未测，不把这个边界说成端到端通过。
+- 补充观察：业务上非法的对象数组首项并不在 `copyArray` 的形状规范化阶段短路。例如恢复状态 `tools[0]` 是 `bash`、后接 99,999 个实际存在的普通工具时，本机约 924 ms 后才拒绝；仅一项时约 0.68 ms。这里耗时随**实际提供的元素**增加，不是 R19-01 的稀疏声明长度物化复发，也不据此臆造一个未约定的输入大小上限。
+
+### 执行与门禁
+
+- Node `v25.8.1`；独立克隆 `npm ci`、typecheck、lint 退出 0；`npm test` **315 通过、0 失败、0 cancelled、0 skip、0 todo**。GitHub self-check 对受审提交为 completed/success。
+- 独立输入合同探针：24 个 JSON null 入口组合均不抛；7 个 Proxy 输入均拒绝且 trap 0 次，3 个 getter 输入均拒绝且调用 0 次；4 个导出策略根递归涉及的 195 个对象/函数均冻结，尝试写禁项数组抛错且原值不变。详见 `$E/contract-probes.jsonl`。
+- 收据所指红提交 `4609350` 带当前测试；CH-51 两条及 CH-52/53/54 共 **5 条按名失败**，错误为红提交空壳的“未实现”，不是文件加载失败。红绿的具体功能差异另用上述真实旧版/本版对照证明。
+- 自构 5 个单点故障：F1、F5 存活，分别见 R20-02/03；F2（回执依据位置等值误拒）、F3（跳过有界检查）、F4（星期段误用分钟范围）分别被具名测试杀死；每次实际执行完整 315 测试；F1、F5 隔离副本的 TypeScript 类型检查也通过，排除仅因类型错误造成的假反例。详见 `$E/independent-faults.jsonl` 与 `surviving-faults-typecheck.log`。
+- `npm run gates:selftest` 的 56 个门禁样例与 8 个厂商识别对照全部通过，退出 0；日志见 `$E/gates-selftest.log`。
+- 为 8 个门禁各自写一个隔离负例，通过真实 CLI 运行，**8/8** 被目标门禁拦下、合规对照全部放行；使用假 HOME 与隔离的测试目录/会话数据。原样输出见 `$E/gate-negative-results.jsonl`。
+- 写审查前的真实 `--local --branch=feat/contact-helper --base=origin/feat/task-lifecycle`：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER、G-PROVENANCE 通过；G-REVIEW 因旧 review 的 reject 和旧 hash 拦下。作者会话已落盘，来源门禁未再对作者报错。原文见 `$E/local-gates-before.log`。
+- 作者变异清单逐项复跑：清单与受审源码清单字节一致（清单 SHA-256 `2f2ac448c900aa60193a5cd13a678afd0cfdc6c0508533165e7664fd98bbf2ee`）；隔离副本单并发运行完整测试，原样副本 315/315，**499/499 项被具名测试杀死**，每项注入点恰好一次，异常、文件级失败、cancelled、skip、todo 均为 0，退出 0，历时 4516.778 秒。逐项名字与测试计数见 `$E/mutation-events.jsonl`，汇总见 `mutation-summary.json`；R20-02/03 的独立变异不混入作者清单。
+- 宿主实际工具注册、真实存储、调度、消息表与 UI 交互未在本纯领域层审查中验证。
+
+### 写入本轮审查后的本地门禁原始输出
+
+退出码 1；G-REVIEW 因本轮拒审按预期拦下，G-PROVENANCE 未对作者报错，但本会话的 `turns.jsonl` 尚未落盘，故来源验证尚未通过，需会话结束后复验，不伪造记录。
+
+```text
+base=origin/feat/task-lifecycle branch=feat/contact-helper HEAD=931ae4db1136c56325453f8221998dc7dd37cf79 受检文件 16 个 收据=receipts/feat-contact-helper.json 门禁 8 个
+✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据
+✗ G-REVIEW  R-01:审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)
+    - 审查结论是 reject
+✓ G-RED  R-02:先红后绿,新增/改动的每条测试在红提交上按名字失败、现在按名字通过
+✓ G-STUB  R-03:空实现红基线,桩下仍通过、加载失败、没执行到的测试都判无效
+✓ G-TAUTO  R-04:拒绝同语反复测试(按 node:test 真实导入识别;无断言、断言不判源码结果、恒定断言、skip/only)
+✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限或 pull_request_target
+✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)
+✗ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是用户本人对这一版的明确批准
+    - 审查会话记录不存在:codex:f513b323-f16b-4b24-ad4f-bf4704e2331e
+CONTENT_HASH=13b684ef5e39ff54628c47f85bef008fe3f9525695e064fc46187df9a31d9de1
+```

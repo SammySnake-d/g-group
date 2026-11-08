@@ -50,10 +50,10 @@
   "waiver": null,
   "review": {
     "agent": "codex",
-    "session": "codex:f0c5fbd5-ee53-494f-94b5-a9b19ac80317",
+    "session": "codex:f513b323-f16b-4b24-ad4f-bf4704e2331e",
     "model": "gpt-6.1-terra",
     "verdict": "reject",
-    "reviewed_hash": "adb6e418f381565931fe43ca1782150ba87e07b2de8e3b579e527a57ae0806ba",
-    "notes": "第十九轮拒绝：R19-01 稀疏数组按声明长度全量复制，拒绝前可长时间阻塞并占用大量内存；R19-02 相等区间被错误拒绝的单点变异存活，需补回归判别。"
+    "reviewed_hash": "13b684ef5e39ff54628c47f85bef008fe3f9525695e064fc46187df9a31d9de1",
+    "notes": "第二十轮拒绝：R20-01 带普通自有数据的伪生成器原型仍被放行；R20-02 直接工具前缀误授权单点变异存活；R20-03 Compute 授权子集前缀误放行单点变异存活。315 项测试通过，作者 499 项变异均被具名测试杀死；本轮来源待会话记录落盘后核验。"
   }
 }
