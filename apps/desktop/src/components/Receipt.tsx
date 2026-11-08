@@ -5,13 +5,18 @@
    和 mirasim 不同的一处：群里的联系人全部进名单（mirasim 群聊名单只算人，照搬就看不出联系人读没读）。
    已读位置只由宿主推进（联系人这一轮回复落盘时），表情和模型说的「收到」都改不了它。 */
 import { useState } from 'react'
+import * as Tabs from '@animate-ui/react/primitives/radix-ui/tabs'
 import { people, type Conversation, type PersonId } from '@/data'
 import { useApp } from '@/ctx'
 import { broken } from '@/mut'
 import { cn } from '@/lib/utils'
 import { Avatar } from './Avatar'
+import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+
+/** 命中区:小图形本身不到 24px,用一圈透明伪元素把可点范围补够(Vercel「命中区 ≥24px」) */
+const HIT = "relative before:absolute before:-inset-[3px] before:content-['']"
 
 type Row = { id: PersonId; at?: string; called: boolean }
 export type Receipt = { read: Row[]; unread: Row[]; dm: boolean }
@@ -42,8 +47,8 @@ export function receiptOf(c: Conversation, msgId: string, from: PersonId, text: 
 export function ReceiptGlyph({ fraction, size = 14 }: { fraction: number; size?: number }) {
   if (fraction >= 1) return (
     <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden className="shrink-0">
-      <circle cx="8" cy="8" r="7.2" fill="hsl(var(--ok) / 0.2)" />
-      <path d="M4.8 8.3 7 10.4l4.3-4.6" fill="none" stroke="hsl(var(--ok))" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="8" cy="8" r="7.2" className="fill-ok/20" />
+      <path d="M4.8 8.3 7 10.4l4.3-4.6" fill="none" className="stroke-ok" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
   const f = Math.max(0, fraction), r = 4.7, a = f * 2 * Math.PI
@@ -51,41 +56,43 @@ export function ReceiptGlyph({ fraction, size = 14 }: { fraction: number; size?:
   const d = f > 0 ? `M8 8 L8 ${8 - r} A${r} ${r} 0 ${a > Math.PI ? 1 : 0} 1 ${x.toFixed(2)} ${y.toFixed(2)} Z` : null
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden className="shrink-0">
-      <circle cx="8" cy="8" r="6.6" fill="none" stroke="hsl(var(--fg3) / 0.7)" strokeWidth="1.5" />
-      {d && <path d={d} fill="hsl(var(--ok))" />}
+      <circle cx="8" cy="8" r="6.6" fill="none" className="stroke-fg-3/70" strokeWidth="1.5" />
+      {d && <path d={d} className="fill-ok" />}
     </svg>
   )
 }
 
-/** MI：已读情况浮层 */
+/** MI：已读情况浮层。已读 / 未读两页签用 Animate UI 的 Tabs(role=tab、方向键切换、选中底滑过去) */
 function ReceiptList({ rc, msgId }: { rc: Receipt; msgId: string }) {
   const [tab, setTab] = useState<'read' | 'unread'>('read')
-  const list = tab === 'read' ? rc.read : rc.unread
+  const lists = { read: rc.read, unread: rc.unread }
   return (
-    <div className="flex flex-col" data-testid={`receipts-${msgId}`} data-tab={tab}>
+    <Tabs.Root value={tab} onValueChange={(v) => setTab(v as 'read' | 'unread')} className="flex flex-col" data-testid={`receipts-${msgId}`} data-tab={tab}>
       <div className="px-3 pb-1.5 pt-3 text-[12px] font-medium text-fg-3">已读情况</div>
-      <div className="mx-3 mb-1.5 grid grid-cols-2 rounded-lg bg-hover p-0.5 text-[12.5px]" role="tablist">
+      <Tabs.List className="mx-3 mb-1.5 grid grid-cols-2 rounded-lg bg-hover p-0.5 text-[12.5px]">
         {(['read', 'unread'] as const).map((k) => (
-          <button key={k} role="tab" aria-selected={tab === k} data-testid={`receipts-tab-${k}`} onClick={() => setTab(k)}
-            className={cn('h-7 rounded-md transition', tab === k ? 'bg-elev font-medium text-fg shadow-sm' : 'text-fg-2 hover:text-fg')}>
-            {k === 'read' ? '已读' : '未读'} {k === 'read' ? rc.read.length : rc.unread.length}
-          </button>
+          <Tabs.Trigger key={k} value={k} data-testid={`receipts-tab-${k}`}
+            className="h-7 rounded-md tabular-nums text-fg-2 outline-none transition-colors duration-fast ease-out hover:text-fg focus-visible:ring-2 focus-visible:ring-ring/60 aria-selected:bg-elev aria-selected:font-medium aria-selected:text-fg aria-selected:shadow-soft">
+            {k === 'read' ? '已读' : '未读'} {lists[k].length}
+          </Tabs.Trigger>
         ))}
-      </div>
-      <div className="max-h-[248px] overflow-y-auto px-1 pb-1.5 scroll-thin">
-        {!list.length && <div className="px-2 py-1.5 text-[12.5px] text-fg-3" data-testid="receipts-empty">{tab === 'read' ? '还没有人读到' : '所有人都读了'}</div>}
-        {list.map((r) => (
-          <div key={r.id} className="flex h-8 items-center gap-2 rounded-md px-2" data-testid={`receipt-person-${r.id}`} data-called={r.called ? '1' : undefined}>
-            <Avatar id={r.id} size={22} status={false} mood="idle" />
-            <span className="flex min-w-0 flex-1 items-center gap-1.5">
-              <span className="min-w-0 truncate text-[13px] text-fg-2">{r.id === 'me' ? '你' : people[r.id]?.name}</span>
-              {r.called && <span role="img" aria-label="被@的人" className="shrink-0 rounded-[4px] bg-hover px-1 font-mono text-[11px] leading-4 text-fg-3">@</span>}
-            </span>
-            {r.at && <span className="shrink-0 font-mono text-[11px] tabular-nums text-fg-3">{r.at === '—' ? '已读' : `${r.at} 读到`}</span>}
-          </div>
-        ))}
-      </div>
-    </div>
+      </Tabs.List>
+      {(['read', 'unread'] as const).map((k) => (
+        <Tabs.Content key={k} value={k} className="max-h-[248px] overflow-y-auto px-1 pb-1.5 outline-none scroll-thin">
+          {!lists[k].length && <div className="px-2 py-1.5 text-[12.5px] text-fg-3" data-testid="receipts-empty">{k === 'read' ? '还没有人读到' : '所有人都读了'}</div>}
+          {lists[k].map((r) => (
+            <div key={r.id} className="flex h-8 items-center gap-2 rounded-md px-2" data-testid={`receipt-person-${r.id}`} data-called={r.called ? '1' : undefined}>
+              <Avatar id={r.id} size={22} status={false} mood="idle" />
+              <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="min-w-0 truncate text-[13px] text-fg-2">{r.id === 'me' ? '你' : people[r.id]?.name}</span>
+                {r.called && <span role="img" aria-label="被@的人" className="shrink-0 rounded-[4px] bg-hover px-1 font-mono text-[11px] leading-4 text-fg-3">@</span>}
+              </span>
+              {r.at && <span className="shrink-0 font-mono text-[11px] tabular-nums text-fg-3">{r.at === '—' ? '已读' : `${r.at} 读到`}</span>}
+            </div>
+          ))}
+        </Tabs.Content>
+      ))}
+    </Tabs.Root>
   )
 }
 
@@ -108,14 +115,14 @@ export function ReceiptButton({ msgId }: { msgId: string }) {
       <Tooltip delayDuration={250} open={open ? false : undefined}>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
-            <button type="button" data-testid={`receipt-${msgId}`} data-read={rc.read.length} data-unread={rc.unread.length}
+            <Button data-testid={`receipt-${msgId}`} data-read={rc.read.length} data-unread={rc.unread.length}
               aria-label={`已读 ${rc.read.length} 人，未读 ${rc.unread.length} 人`} onClick={(e) => e.stopPropagation()}
-              className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full transition-opacity hover:opacity-75">
+              variant={null} size={null} shape="pill" className={cn(HIT, 'grid h-[18px] w-[18px] place-items-center hover:opacity-75')}>
               <ReceiptGlyph fraction={n ? rc.read.length / n : 1} />
-            </button>
+            </Button>
           </PopoverTrigger>
         </TooltipTrigger>
-        <TooltipContent data-testid={`receipt-tip-${msgId}`} className="rounded-lg border-0 bg-fg px-2 py-1 text-xs text-bg">{tip}</TooltipContent>
+        <TooltipContent data-testid={`receipt-tip-${msgId}`}>{tip}</TooltipContent>
       </Tooltip>
       <PopoverContent side="top" align="end" className="w-[300px] rounded-xl border-line bg-elev p-0 shadow-elev" onClick={(e) => e.stopPropagation()}>
         <ReceiptList rc={rc} msgId={msgId} />
@@ -137,13 +144,14 @@ export function MentionDot({ msgId, who }: { msgId: string; who: PersonId }) {
       <Tooltip delayDuration={250} open={open ? false : undefined}>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
-            <button type="button" data-testid={`mention-dot-${msgId}-${who}`} data-read={read ? 'read' : 'unread'} aria-label={`${name} ${read ? '已读' : '未读'}`}
-              onClick={(e) => e.stopPropagation()} className="relative mx-[3px] inline-grid h-[5px] w-[5px] -translate-y-[2px] align-middle before:absolute before:-inset-[6px] before:content-['']">
+            <Button data-testid={`mention-dot-${msgId}-${who}`} data-read={read ? 'read' : 'unread'} aria-label={`${name} ${read ? '已读' : '未读'}`}
+              onClick={(e) => e.stopPropagation()} variant={null} size={null} shape="pill"
+              className="relative mx-[3px] inline-grid h-[5px] w-[5px] -translate-y-[2px] align-middle before:absolute before:-inset-[10px] before:content-['']">
               <span className={cn('h-[5px] w-[5px] rounded-full', read ? 'bg-ok ring-1 ring-me-fg/90' : 'border border-current opacity-70')} />
-            </button>
+            </Button>
           </PopoverTrigger>
         </TooltipTrigger>
-        <TooltipContent className="rounded-lg border-0 bg-fg px-2 py-1 text-xs text-bg">{name} {read ? '已读' : '未读'}</TooltipContent>
+        <TooltipContent>{name} {read ? '已读' : '未读'}</TooltipContent>
       </Tooltip>
       <PopoverContent side="top" align="start" className="w-[300px] rounded-xl border-line bg-elev p-0 shadow-elev" onClick={(e) => e.stopPropagation()}>
         <ReceiptList rc={rc} msgId={msgId} />
