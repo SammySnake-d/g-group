@@ -702,6 +702,17 @@ function r11ForgedAncestor(): string | undefined {
     return same(other) || !same(clone) ? "可修改的祖先覆写被当成真实共同历史" : undefined;
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
+function r11ReplacedObject(): string | undefined {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-replace-"));
+  try {
+    const repo = path.join(tmp, "target"), other = path.join(tmp, "other"), clone = path.join(tmp, "clone");
+    fs.mkdirSync(repo); sh(repo, "init", "-q", "-b", "main"); write(repo, { "neutral.txt": `${NEUTRAL} target\n` }); commit(repo, "target"); otherRepo(other);
+    const original = sh(other, "rev-parse", "HEAD"); sh(other, "fetch", "-q", repo, "HEAD"); const target = sh(other, "rev-parse", "FETCH_HEAD");
+    if (original === target) throw new Error("中性 HEAD 不能相同"); sh(other, "replace", original, target); sh(tmp, "clone", "-q", repo, clone);
+    const same = sameRepoClone(repo);
+    return same(other) || !same(clone) ? "对象替换被当成真实共同历史" : undefined;
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
 function r11Attestation(nonGit: boolean): string | undefined {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gate-r11-attest-"));
   try {
@@ -762,6 +773,7 @@ export const CASES: Case[] = [
   { name: "R11-01 remote 相同但历史不相交仍拒绝,共同历史放行", direct: r11RepoIdentity, expect: null },
   { name: "R11-01 无关 HEAD 的额外引用不证明共同历史", direct: r11ExtraReference, expect: null },
   { name: "R11-01 工作库的祖先覆写不证明共同历史", direct: r11ForgedAncestor, expect: null },
+  { name: "R11-01 对象替换不证明共同历史", direct: r11ReplacedObject, expect: null },
   { name: "R11-01 工作库祖先覆写经来源门禁拒绝", authorTurns: (repo) => {
     const other = path.join(path.dirname(repo), "ancestor-override"); otherRepo(other);
     const original = sh(other, "rev-parse", "HEAD"); sh(other, "fetch", "-q", repo, "HEAD"); const target = sh(other, "rev-parse", "FETCH_HEAD");
