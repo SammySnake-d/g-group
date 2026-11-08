@@ -1,0 +1,68 @@
+packages/kernel/src/failure-class.test.ts
+  s_25b02f2fb0d35b::t_35c4e8dd86f43f 1-161
+packages/kernel/src/failure-class.ts
+  s_25b02f2fb0d35b::t_04dd2e67c318e7 11,13-28,30-32,34,36-38,40,42,44-50,209-210,212-213,215,217,219-224,226,228-233,235,237-239,287
+  s_568736c9a90f61::t_d438063dd7ef89 1-10,12,29,33,35,39,41,43,51-195,200-203,205-208,211,214,216,218,225,227,234,236,240-286
+  s_377be331e17ebd::t_855a9e97d27676 196-199,204
+packages/kernel/src/index.ts
+  s_25b02f2fb0d35b::t_88bfbf07b73d69 9
+  s_f14c4f5d7f8b94::t_94d9bbe09e58d0 10
+receipts/feat-failure-class.json
+  s_f14c4f5d7f8b94::t_e48ca5d3bc7fd8 1-7,9-13
+packages/kernel/proof/failure-class-mutations.mjs
+  s_f14c4f5d7f8b94::t_8177d10dc40b92 1-103
+packages/kernel/proof/failure-class-mutations.txt
+  s_f14c4f5d7f8b94::t_dfeeeb04d80cb8 1-31
+packages/kernel/src/run-ledger.test.ts
+  s_f14c4f5d7f8b94::t_57d29fd455b823 1-463
+packages/kernel/src/run-ledger.ts
+  s_f14c4f5d7f8b94::t_cd4023bb62f14d 1-229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6f334600215c3eabdd62a99b9832c7daed199069",
+  "prompts": {},
+  "sessions": {
+    "s_25b02f2fb0d35b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d0bff13-9adf-40ba-a795-53ae48143f57",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_568736c9a90f61": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "945466dc-9318-4837-9afe-e1c1b3bb224f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_7489a667d0db56": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2353d719-cdd5-4608-894a-8460db6c9810",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_f14c4f5d7f8b94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a09f3a3f2092d0f50",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
