@@ -40,7 +40,7 @@ import {
   type Urgency,
   createAttentionLoop,
 } from "@g-group/kernel";
-import { CONTACT_SYSTEM, CONTACT_TOOLS, type LedgerLine, type RoundAssembler, defaultAssemble } from "./assemble.ts";
+import { CONTACT_SYSTEM, CONTACT_TOOLS, type LedgerLine, type RoundAssembler, kernelAssemble } from "./assemble.ts";
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { PluginStore } from "./plugins.ts";
@@ -169,7 +169,7 @@ export class Host {
     this.now = opts.now ?? (() => new Date().toISOString());
     let n = 0;
     this.newId = opts.newId ?? ((p) => `${p}-${Date.now().toString(36)}-${(n++).toString(36)}`);
-    this.assemble = opts.assemble ?? defaultAssemble;
+    this.assemble = opts.assemble ?? kernelAssemble;
     this.userId = opts.userId ?? "me";
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
@@ -908,12 +908,18 @@ export class Host {
     this.setActivity(contactId, focusRoom, "thinking");
     const tasks = this.listTasks({ contactId }).filter((t) => !TERMINAL.has(t.state));
     const note = getDoc<{ text: string }>(this.db, `note:${contactId}`);
+    const ledgerLines = this.activeLedgerLines(contactId);
+    const freshKeys = new Set(fresh.flatMap((f) => (f.kind === "message" ? [`${f.roomId}#${f.seq}`, ...(f.replyToSeq !== null ? [`${f.roomId}#${f.replyToSeq}`] : [])] : [])));
+    const freshTasks = new Set(fresh.flatMap((f) => (f.kind === "compute" ? [f.taskId] : [])));
     const request = this.assemble({
       system: CONTACT_SYSTEM,
       tools: CONTACT_TOOLS,
       persona: contact.persona,
-      roomRules: rooms.map((r) => ({ roomId: r.id, title: r.title, rules: r.rules })),
-      ledger: this.activeLedgerLines(contactId),
+      roomRules: rooms.map((r) => ({ roomId: r.id, title: r.title, rules: r.rules, version: r.rules_version })),
+      ledger: ledgerLines,
+      boundIds: ledgerLines.filter((l) => freshKeys.has(`${l.roomId}#${l.sourceSeq}`) || freshTasks.has(l.taskId)).map((l) => l.id),
+      processedSeq: Object.fromEntries(rooms.map((r) => [r.id, this.cursor(contactId, r.id)])),
+      stateNoteVersion: note?.ver ?? 0,
       stateNote: note?.value.text ?? null,
       fresh,
       tasks: tasks.map((t) => `${t.id} [${t.state}] ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
