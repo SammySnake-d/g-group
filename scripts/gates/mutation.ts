@@ -372,6 +372,8 @@ MUTATIONS.push(...[
   }
 ] as Mutation[]);
 
+MUTATIONS.push({ name: "R12-01 相对工作目录不保守计入", kill: "R12-01 相对工作目录写入判不了时保守计入", target: ["DIRECT"], file: "gates.ts", from: "if (writes && cwd && !path.isAbsolute(cwd)) return true;", to: "" });
+
 export async function mutationTest(): Promise<boolean> {
   // kill 提示写错时,副本自检会因"用例不存在"失败,变异就会被误算成被发现:先核对,有错整次失败
   const names = new Set(CASES.map((c) => c.name));
