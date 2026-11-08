@@ -1,11 +1,15 @@
 // 行为变异校准(R-05 阳性埋雷):对 kernel 包的实现逐个注入单一故障(第二轮按 PR #6 审查 F-01..F-06 扩充,含审查存活的 M1=K14、M2=K15;第三轮按 RR-01..RR-05 与 AC-39 扩充,含 R2-M1=K51、R2-M2=K52,删掉方向反了的旧 K36;第四轮按 R3-01..R3-07 扩充,含 R3-M1=K86、R3-M2=K87,每个变异有超时;第五轮按 R4-01..R4-07 扩充,含 R4-M1=K92、R4-M2=K91;第六轮按 R5-01..R5-05 扩充,含 R5-M1=K111、R5-M2=K126;第七轮按 R6-01..R6-05 扩充,含 R6-M1=K142、R6-M2=K143;第八轮按 R7-01/02/04/05/06 扩充,含 R7-M1=K156、R7-M2=K157、R7-M3=K158;第九轮按 R8-01..R8-05 扩充,含 R8-M1=K173、R8-M2=K174、R8-M3=K175;第十轮按 R9-01/R9-02 扩充,含 R9-M1=K188、R9-M2=K177、R9-M3=K189;第十一轮按 R10-01/R10-02 扩充,含 R10-M1=K197、R10-M2=K198、R10-M3=K199,并按新实现改写 K184、K190–K196 的注入点;
 // 第十二轮按 PR #6 第十一轮审查 R11-01..R11-03 扩充,含审查自造的存活单点故障 R11-M1=K210、R11-M3=K211,
-// 新实现带来的 K212–K214,并按新实现改写 K138、K204 的注入点),在隔离副本里跑本包测试,
+// 新实现带来的 K212–K214,并按新实现改写 K138、K204 的注入点;第十三轮按 PR #6 第十二轮审查 R12-01..R12-04 扩充,
+// 含审查自造的存活单点故障 R12-O1=K228、R12-O2=K226,新实现带来的 K216–K225、K227、K229–K238,
+// 并按新实现改写 K155、K159、K184、K185、K207、K208 的注入点,语义不变),在隔离副本里跑本包测试,
 // 每个变异都必须让至少一条具名测试失败(文件级加载失败不算杀死)。注入点必须在源码里恰好出现 1 次。
 // 原样副本必须全绿(阴性对照)。
 // 每个变异在独立进程组里跑,超时(默认 300s,KERNEL_MUT_TIMEOUT_MS 可改)就杀掉整个进程组,记 ✗ 超时,不算被杀死。
 // 用法: node packages/kernel/proof/mutations.mjs
 //       node packages/kernel/proof/mutations.mjs --canary-hang   注入一个必然卡住的变异,验证脚本能有界退出并把它记成超时
+// 环境变量:KERNEL_MUT_CONCURRENCY=N 给每个副本的 node --test 加 --test-concurrency=N(本机同时有别的测试时调低);
+//           KERNEL_MUT_ONLY=<正则> 只跑名字匹配的变异(调试用,正式校准不设)
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -183,12 +187,12 @@ const M = [
   ["K152 分类结果不过统一判定(R6-04 原错)", "classify.ts", "    const p = plainData(raw, \"分类结果\");", "    const p = { ok: true as const, value: raw } as ReturnType<typeof plainData>;"],
   ["K153 诊断不标访问器", "plain.ts", "isAccessor(d) ? JSON.stringify(\"[getter/setter]\") : render(d.value, seen, depth + 1)", "render(d.value, seen, depth + 1)"],
   ["K154 发送结果读 then 判 thenable(R6-04 原错)", "plugins.ts", "  if (!types.isPromise(x) || types.isProxy(x)) return false;", "  if (typeof x === \"object\" && x !== null && typeof (x as { then?: unknown }).then === \"function\") return true;\n  if (!types.isPromise(x) || types.isProxy(x)) return false;"],
-  ["K155 放行带自有 then 的 Promise", "plugins.ts", "  return !Object.hasOwn(x, \"then\") && !Object.hasOwn(x, \"constructor\");", "  return true;"],
+  ["K155 放行带自有 then 的 Promise(第十三轮改注入点到新实现)", "plugins.ts", "  if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) return false;\n", ""],
   // —— 第八轮:按 PR #6 第七轮审查 R7-01/02/04/05/06 扩充,含审查自造 R7-M1=K156、R7-M2=K157、R7-M3=K158
   ["K156 topFunctions:false 也放行顶层函数(审查 R7-M1)", "plain.ts", "  return value;\n}", "  return true;\n}"],
   ["K157 预算恰好等于所需字节也判超(审查 R7-M2)", "assemble.ts", "if (need > opts.budgetBytes) return", "if (need >= opts.budgetBytes) return"],
   ["K158 同一可见旧消息重复引用重复页入(审查 R7-M3)", "assemble.ts", "if (inHistory.has(seq) || paged.some((p) => p.seq === seq)) continue;", "if (inHistory.has(seq)) continue;"],
-  ["K159 pull 不判形态就 await(R7-01 原错)", "plugins.ts", "try { batch = isPlainPromise(returned) ? await returned : returned; }", "try { batch = await returned; }"],
+  ["K159 pull 不判形态就 await(R7-01 原错;第十三轮改注入点到新实现)", "plugins.ts", "try { batch = native ? await returned : returned; }", "try { batch = await returned; }"],
   ["K160 appendOwn 不查目标是数组(R7-02 原错)", "plain.ts", "  if (!items(out, \"appendOwn 的目标\").ok) throw new TypeError(\"appendOwn 的目标必须是普通数组\");\n", ""],
   ["K161 squash 不查字符串(R7-02 原错)", "assemble.ts", "  if (typeof t !== \"string\") throw new TypeError(\"squash 只接受字符串\");\n", ""],
   ["K162 判定选项只看 topFunctions 一个键(R7-02 原错)", "plain.ts", "    if (!d || isAccessor(d) || k !== \"topFunctions\") return undefined;", "    if (k !== \"topFunctions\") continue;\n    if (!d || isAccessor(d)) return undefined;"],
@@ -214,8 +218,8 @@ const M = [
   ["K181 时钟读数不查类型原样返回(R8-03 原错)", "plugins.ts", "  return typeof v === \"number\" && Number.isFinite(v) ? v : Number.NaN;", "  return v as number;"],
   ["K182 墙钟不查 Date 范围", "plugins.ts", "  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();", "  return d.toISOString();"],
   ["K183 拒收的原生 Promise 不挂拒绝处理(R8-04 原错)", "plugins.ts", "  Reflect.apply(Promise.prototype.then, x, [undefined, () => {}]);", "  void x;"],
-  ["K184 带任何 constructor 都直接用内置 then 挂处理(会执行插件访问器;第十一轮改注入点到新实现)", "plugins.ts", "  if (known && speciesSafe(value)) { attachQuiet(x); return; }", "  if (true) { attachQuiet(x); return; }"],
-  ["K185 pull 拒收时不挂处理(R8-04 原错)", "plugins.ts", "      if (!isPlainPromise(returned)) quietRefused(returned);\n", ""],
+  ["K184 带任何 constructor 都直接用内置 then 挂处理(会执行插件访问器;第十一、十三轮改注入点到新实现)", "plugins.ts", "  if (known && speciesSafe(value)) return true;", "  if (true) return true;"],
+  ["K185 pull 拒收时不挂处理(R8-04 原错;第十三轮改注入点到新实现)", "plugins.ts", "      if (!native) quietRefused(returned);\n", ""],
   ["K186 send 拒收时不挂处理(R8-04 原错)", "plugins.ts", "{ quietRefused(pending); return unknown(", "{ return unknown("],
   ["K187 首次单调读数原样存储(R8-03 原错)", "plugins.ts", "        const firstAttemptMonotonic = readClock(monotonic);", "        const firstAttemptMonotonic = monotonic();"],
   // —— 第十轮:按 PR #6 第九轮审查 R9-02 扩充,含审查自造 R9-M1=K188、R9-M3=K189(R9-M2 与 K177 注入点相同,见上)
@@ -240,8 +244,8 @@ const M = [
   ["K204 临时改写不跳过内置对象", "plugins.ts", "    if (isIntrinsic(o)) continue;\n", ""],
   ["K205 原型链遇到 Proxy 不停,读其描述符(进陷阱)", "plugins.ts", "    if (types.isProxy(cur)) return { chain, desc: undefined, blocked: true };\n", ""],
   ["K206 species 是任何数据属性都当安全(会构造插件的类)", "plugins.ts", "  return \"value\" in s.desc && (s.desc.value === undefined || s.desc.value === null || s.desc.value === Promise);", "  return \"value\" in s.desc;"],
-  ["K207 原型链上有 Proxy 时不换原型直接挂处理(Node 读内部异步 id 进陷阱)", "plugins.ts", "    if (!Reflect.setPrototypeOf(x, Promise.prototype)) return;\n", ""],
-  ["K208 换原型挂处理后不换回", "plugins.ts", "    try { attachQuiet(x); } finally { Reflect.setPrototypeOf(x, proto); }", "    attachQuiet(x);"],
+  ["K207 原型链上有 Proxy 时不换原型直接挂处理(Node 读内部异步 id 进陷阱;第十三轮改注入点到新实现)", "plugins.ts", "    if (!Reflect.setPrototypeOf(x, Promise.prototype)) return false;\n", ""],
+  ["K208 换原型挂处理后不换回(第十三轮改注入点到新实现)", "plugins.ts", "    pushOwn(restores, () => { Reflect.setPrototypeOf(x, proto); });\n", ""],
   // —— 第十二轮:按 PR #6 第十一轮审查 R11-01 / R11-02 / R11-03 扩充,含审查自造的单点故障 R11-M1=K210、R11-M3=K211
   ["K210 species 数据属性 null 不再视为安全(审查 R11-M1)", "plugins.ts", "  return \"value\" in s.desc && (s.desc.value === undefined || s.desc.value === null || s.desc.value === Promise);", "  return \"value\" in s.desc && (s.desc.value === undefined || s.desc.value === Promise);"],
   ["K211 找不到 species 就判不安全(审查 R11-M3)", "plugins.ts", "  if (s.desc === undefined) return true;", "  if (s.desc === undefined) return false;"],
@@ -249,16 +253,42 @@ const M = [
   ["K213 临时改写只按启动时闭包跳过内置对象(不认原生函数,也不认另一 realm 的内置对象)", "plugins.ts", "  if (INTRINSICS.has(o) || isNativeFn(o)) return true;\n  const c = Object.getOwnPropertyDescriptor(o, \"constructor\");\n  return c !== undefined && \"value\" in c && isNativeFn(c.value);", "  return INTRINSICS.has(o);"],
   ["K215 启动时的访问器内置清单漏掉 Buffer(回到 R11-01 原错:Buffer 于是成了可改写目标)", "plugins.ts", "const ACCESSOR_HOSTS = [\"Buffer\", ", "const ACCESSOR_HOSTS = ["],
   ["K214 数组键只查十进制文本,不查是否落在 length 内(回到 R11-02 原错)", "plain.ts", "if (!INDEX.test(k) || Number(k) >= len) return", "if (!INDEX.test(k)) return"],
+  // —— 第十三轮:按 PR #6 第十二轮审查 R12-01..R12-04 扩充,含审查自造的单点故障 R12-O1=K228、R12-O2=K226
+  ["K216 实例自有的异步追踪符号是访问器或不安全值时不临时换掉(回到 R12-01 原错:Node 挂处理时调用插件访问器)", "plugins.ts", "    if (d === undefined || (\"value\" in d && safeId(d.value))) continue;", "    continue;"],
+  ["K217 临时换下的追踪符号访问器挂完不恢复", "plugins.ts", "    pushOwn(restores, () => { Reflect.defineProperty(x, k, descOf(d)); });\n", ""],
+  ["K218 临时数据属性一律用 undefined(Node 给派生 Promise 记的 triggerAsyncId 丢失)", "plugins.ts", "const value = live !== undefined && live.key === k ? live.id : undefined;", "const value = undefined;"],
+  ["K219 原型链安全判定不看追踪符号(链上访问器不换原型,Node 沿链调用插件 getter / setter)", "plugins.ts", "      if (d !== undefined && !(\"value\" in d && d.writable === true)) return false;\n", ""],
+  ["K220 原型链安全判定不认 Proxy(链上有 Proxy 也不换原型)", "plugins.ts", "    if (types.isProxy(o)) return false;\n", ""],
+  ["K221 开着钩子时不查实例能否新建 async_id(不可扩展又没有的照样挂处理,Node 在钩子里抛错)", "plugins.ts", "  if (live !== undefined && !Object.hasOwn(x, live.key) && !Object.isExtensible(x)) return false;\n", ""],
+  ["K222 原生 Promise 判定不查可扩展(冻结的也 await,开着钩子时 Node 在钩子里抛错)", "plugins.ts", "  if (!Object.isExtensible(x)) return false;\n", ""],
+  ["K223 探针认不出 Node 的 async_id(当成没开钩子)", "plugins.ts", "if (key.description === \"async_id_symbol\" && d !== undefined", "if (key.description === \"async_id\" && d !== undefined"],
+  ["K224 追踪键只认 async_id_symbol,漏掉 trigger_async_id_symbol", "plugins.ts", "new Set([\"async_id_symbol\", \"trigger_async_id_symbol\"])", "new Set([\"async_id_symbol\"])"],
+  ["K225 原生 Promise 判定不查其它自有访问器(回到 R12-02 原错)", "plugins.ts", "    if (!(\"value\" in d)) return false;\n", ""],
+  ["K226 拒绝合法的空字符串附件名(审查 R12-O2)", "plugins.ts", "if (a.name !== undefined && typeof a.name !== \"string\") return undefined;", "if (a.name !== undefined && (typeof a.name !== \"string\" || a.name === \"\")) return undefined;"],
+  ["K227 拒绝合法的空字符串附件 mime", "plugins.ts", "if (a.mime !== undefined && typeof a.mime !== \"string\") return undefined;", "if (a.mime !== undefined && (typeof a.mime !== \"string\" || a.mime === \"\")) return undefined;"],
+  ["K228 点名 end 不查整数(审查 R12-O1)", "classify.ts", "!Number.isInteger(end)", "false"],
+  ["K229 点名 start 不查整数", "classify.ts", "!Number.isInteger(start)", "false"],
+  ["K230 外部请求不核对 bytes 与正文 UTF-8 字节数(回到 R12-03 原错)", "assemble.ts", "    if (sg.bytes !== real) throw new TypeError(", "    if (false) throw new TypeError("],
+  ["K231 按 UTF-16 长度核对 bytes(合法中文请求被拒)", "assemble.ts", "    const real = bytesOf(sg.text);", "    const real = sg.text.length;"],
+  ["K232 不查段顺序(tail 在前时前缀哈希盖到 tail 上)", "assemble.ts", "if (r === undefined || r < rank) throw", "if (r === undefined) throw"],
+  ["K233 不查 section 取值(未知段名算进前缀)", "assemble.ts", "if (r === undefined || r < rank) throw", "if (r !== undefined && r < rank) throw"],
+  ["K234 原生 Promise 判定不查追踪符号的值(值为带 valueOf 的对象也 await,Node 转数字时执行插件代码)", "plugins.ts", "    if (isTracking(k) && !safeId(d.value)) return false;\n", ""],
+  ["K235 拒收挂处理前只换追踪符号访问器,不换不安全的数据值", "plugins.ts", "(d === undefined || (\"value\" in d && safeId(d.value)))", "(d === undefined || \"value\" in d)"],
+  ["K236 不可配置但可写的追踪符号不走只改值分支(改不了,不挂处理)", "plugins.ts", "    if (\"value\" in d && d.writable === true && d.configurable !== true) {", "    if (false) {"],
+  ["K237 只改值分支挂完不写回原值", "plugins.ts", "      pushOwn(restores, () => { Reflect.defineProperty(x, k, descOf({ value: d.value })); });\n", ""],
+  ["K238 追踪符号的值把 BigInt 也当安全(Node 转数字时抛 TypeError)", "plugins.ts", "typeof v === \"number\" || v === undefined;", "typeof v === \"number\" || typeof v === \"bigint\" || v === undefined;"],
 ];
 
 const TIMEOUT_MS = Number(process.env.KERNEL_MUT_TIMEOUT_MS ?? 300_000);
+const CONCURRENCY = process.env.KERNEL_MUT_CONCURRENCY ? [`--test-concurrency=${Number(process.env.KERNEL_MUT_CONCURRENCY)}`] : [];
+const ONLY = process.env.KERNEL_MUT_ONLY ? new RegExp(process.env.KERNEL_MUT_ONLY) : undefined;
 const CANARY = process.argv.includes("--canary-hang");
 
 /** 跑一个副本的全部测试;超时杀掉整个进程组,返回 timedOut。 */
 function run(dir, timeoutMs = TIMEOUT_MS) {
   const files = fs.readdirSync(path.join(dir, "src")).filter((f) => f.endsWith(".test.ts")).map((f) => path.join("src", f));
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, ["--test", "--test-reporter=tap", ...files], { cwd: dir, detached: true, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(process.execPath, ["--test", ...CONCURRENCY, "--test-reporter=tap", ...files], { cwd: dir, detached: true, stdio: ["ignore", "pipe", "pipe"] });
     let out = "";
     let timedOut = false;
     child.stdout.on("data", (d) => { out += d; });
@@ -313,8 +343,10 @@ async function main() {
   console.log(`${cleanOk ? "✓" : "✗"} 原样副本:${clean.passed.length} 绿 / ${clean.failed.length} 红${clean.timedOut ? ",超时" : ""}`);
   if (!cleanOk) ok = false;
   let killedN = 0, survived = 0, timeouts = 0;
-  for (const [i, [name, file, from, to]] of M.entries()) {
-    const tag = `[${i + 1}/${M.length}]`;
+  const list = ONLY ? M.filter(([name]) => ONLY.test(name)) : M;
+  if (ONLY) console.log(`只跑名字匹配 ${ONLY} 的 ${list.length} 个变异(调试用,不是正式校准)`);
+  for (const [i, [name, file, from, to]] of list.entries()) {
+    const tag = `[${i + 1}/${list.length}]`;
     const d = copy(`m${i}`);
     const f = path.join(d, "src", file);
     const src = fs.readFileSync(f, "utf8");
@@ -338,7 +370,7 @@ async function main() {
     }
   }
   fs.rmSync(tmp, { recursive: true, force: true });
-  console.log(`合计 ${M.length}:杀死 ${killedN},存活 ${survived},超时 ${timeouts}`);
+  console.log(`合计 ${list.length}:杀死 ${killedN},存活 ${survived},超时 ${timeouts}`);
   console.log(ok ? "变异校准通过" : "变异校准失败");
   process.exit(ok ? 0 : 1);
 }
