@@ -53,8 +53,21 @@ export const RoomView = obj({
   pendingForUser: int({ min: 0 }),
   lastMessagePreview: nullable(str({ max: 500 })),
   updatedAt: isoTime(),
+  /** 当前有效群公告条数(AC-55);0 = 无公告空态。私聊恒为 0。 */
+  announcementCount: opt(int({ min: 0 })),
 });
 export type RoomView = Infer<typeof RoomView>;
+/** 群公告(U97/U86):一个群可有多条,当前有效的全部装配进联系人第 1 块「群规快照」位。version 每次改动 +1(CAS 用)。 */
+export const ANNOUNCEMENT_ORDERS = ["created-asc", "created-desc"] as const;
+export const AnnouncementView = obj({
+  id: id(),
+  roomId: id(),
+  text: str({ min: 1, max: 20000 }),
+  version: int({ min: 1 }),
+  createdAt: isoTime(),
+  updatedAt: isoTime(),
+});
+export type AnnouncementView = Infer<typeof AnnouncementView>;
 
 // ---------- 消息 ----------
 export const SENDER_KINDS = ["user", "contact", "helper", "system"] as const;

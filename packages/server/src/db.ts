@@ -42,6 +42,10 @@ CREATE TABLE IF NOT EXISTS gg_plugins (
 );
 CREATE TABLE IF NOT EXISTS gg_attachments (ref TEXT PRIMARY KEY, name TEXT NOT NULL, mime TEXT NOT NULL, bytes INTEGER NOT NULL, path TEXT NOT NULL, added_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS gg_effects (action_id TEXT PRIMARY KEY, kind TEXT NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL, error TEXT, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS gg_announcements (
+  ord INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, room_id TEXT NOT NULL, text TEXT NOT NULL, version INTEGER NOT NULL,
+  client_action_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, removed_at TEXT, UNIQUE (room_id, client_action_id)
+);
 `;
 
 export interface Db {
