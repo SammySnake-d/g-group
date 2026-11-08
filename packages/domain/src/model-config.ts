@@ -57,22 +57,92 @@ export type ComputeCheck =
   | { readonly ok: true; readonly support: "supported" | "undeclared"; readonly resolved: ResolvedCompute }
   | { readonly ok: false; readonly code: "model-incompatible"; readonly reason: string; readonly resolved: ResolvedCompute; readonly fixes: readonly ModelFix[] };
 
-// 空壳(红):签名在,返回假值。
-export function resolveCompute(_defaults: ModelDefaults, _contact: ContactModels, _override?: TaskModelOverride): ResolvedCompute {
-  return { harness: "", model: "", effort: "", vendor: vendorOf(undefined), modelSource: "global", effortSource: "global", chain: [] };
+const freeze = <T>(x: T): T => {
+  if (x && typeof x === "object" && !Object.isFrozen(x)) {
+    for (const v of Object.values(x)) freeze(v);
+    Object.freeze(x);
+  }
+  return x;
+};
+const nonEmpty = (s: string | undefined): s is string => typeof s === "string" && s.trim() !== "";
+
+/** Compute 生效值:每一轮现场调用,不缓存会话启动时的值(U93)。 */
+export function resolveCompute(defaults: ModelDefaults, contact: ContactModels, override?: TaskModelOverride): ResolvedCompute {
+  const slot = contact.computeModel;
+  const chain: string[] = [];
+  let model: string;
+  let modelSource: ModelSource;
+  if (override && nonEmpty(override.model)) {
+    model = override.model;
+    modelSource = "task";
+    chain.push(`任务单独指定 ${model}`);
+  } else if (slot.mode === "explicit" && nonEmpty(slot.model)) {
+    model = slot.model;
+    modelSource = "explicit";
+    chain.push(`compute 单独指定 ${model}`);
+  } else if (slot.mode === "follow-speaking") {
+    model = contact.speakingModel;
+    modelSource = "follow-speaking";
+    chain.push("compute 跟随说话模型", `说话模型 ${model}`);
+  } else {
+    model = defaults.computeModel;
+    modelSource = "global";
+    chain.push("compute 继承全局", `全局 Compute 默认 ${model}`);
+  }
+  let effort: string;
+  let effortSource: EffortSource;
+  if (override && nonEmpty(override.effort)) {
+    effort = override.effort;
+    effortSource = "task";
+  } else if (nonEmpty(slot.effort)) {
+    effort = slot.effort;
+    effortSource = "compute-slot";
+  } else {
+    effort = defaults.effort;
+    effortSource = "global";
+  }
+  return freeze({ harness: contact.harness, model, effort, vendor: vendorOf(model), modelSource, effortSource, chain });
 }
-export function compressionModel(_contact: ContactModels): { readonly model: string; readonly vendor: Vendor } {
-  return { model: "", vendor: "unknown" };
+
+/** 联系人上下文压缩用的模型:就是这个联系人的说话模型(规则 3),不另设全局杂活模型。 */
+export function compressionModel(contact: ContactModels): { readonly model: string; readonly vendor: Vendor } {
+  return freeze({ model: contact.speakingModel, vendor: vendorOf(contact.speakingModel) });
 }
-export function checkCompressionCall(_contact: ContactModels, _requestedModel: string): { readonly ok: true } | { readonly ok: false; readonly code: "compression-model-mismatch"; readonly reason: string } {
-  return { ok: false, code: "compression-model-mismatch", reason: "" };
+
+/** 压缩调用前的同模校验(给压缩流程的调用接口):要发的模型必须就是说话模型;失败重试也不能换成别的模型。 */
+export function checkCompressionCall(contact: ContactModels, requestedModel: string): { readonly ok: true } | { readonly ok: false; readonly code: "compression-model-mismatch"; readonly reason: string } {
+  const want = contact.speakingModel;
+  if (requestedModel === want) return { ok: true };
+  return freeze({ ok: false, code: "compression-model-mismatch", reason: `压缩必须用联系人 ${contact.name} 的说话模型 ${want},拒绝改用 ${requestedModel}(失败时保留原文,不换模型)` });
 }
-export function supportOf(_caps: readonly ModelCapability[], _harness: string, _model: string): Support {
-  return "undeclared";
+
+export function supportOf(caps: readonly ModelCapability[], harness: string, model: string): Support {
+  const decl = caps.find((c) => c.id === model);
+  if (!decl) return "undeclared";
+  return decl.harnesses.includes(harness) ? "supported" : "unsupported";
 }
-export function checkCompute(_caps: readonly ModelCapability[], resolved: ResolvedCompute): ComputeCheck {
-  return { ok: true, support: "undeclared", resolved };
+
+/** 两条修复路径的候选:能在这个 Harness 上跑的模型 / 能跑这个模型的 Harness(都来自能力声明)。 */
+function fixesFor(caps: readonly ModelCapability[], resolved: ResolvedCompute): ModelFix[] {
+  const models = caps.filter((c) => c.harnesses.includes(resolved.harness)).map((c) => c.id);
+  const harnesses = caps.find((c) => c.id === resolved.model)?.harnesses ?? [];
+  return [
+    { kind: "explicit-compatible-model", candidates: [...models] },
+    { kind: "change-harness", candidates: [...harnesses] },
+  ];
 }
+/** 拦截时给人看的原因:写明 Harness、模型和完整解析链,以及两条修复路径。 */
+export function incompatibleReason(resolved: ResolvedCompute): string {
+  return `Harness ${resolved.harness} 不支持模型 ${resolved.model}(${resolved.chain.join(" → ")}),本次不启动 Compute;可以单独指定一个兼容的模型,或更换支持该模型的 Harness`;
+}
+
+/** 三个时机共用的兼容性判定:不兼容就拦,并给出两条修复路径。 */
+export function checkCompute(caps: readonly ModelCapability[], resolved: ResolvedCompute): ComputeCheck {
+  const s = supportOf(caps, resolved.harness, resolved.model);
+  if (s !== "unsupported") return freeze({ ok: true, support: s, resolved });
+  return freeze({ ok: false, code: "model-incompatible", reason: incompatibleReason(resolved), resolved, fixes: fixesFor(caps, resolved) });
+}
+
 // ------------------------------------------------------------------ 上游改动预览与批量替换
 export type ModelChange =
   | { readonly kind: "defaults"; readonly patch: Partial<ModelDefaults> }
@@ -111,6 +181,71 @@ export interface ChangeOutcome {
   readonly contacts: readonly ContactModels[];
 }
 
-export function previewChange(defaults: ModelDefaults, contacts: readonly ContactModels[], _caps: readonly ModelCapability[], change: ModelChange): ChangeOutcome {
-  return { preview: { change, defaultsBefore: defaults, defaultsAfter: defaults, defaultsChanged: [], affected: [], conflicts: [] }, defaults, contacts };
+function applyToDefaults(d: ModelDefaults, change: ModelChange): ModelDefaults {
+  if (change.kind === "defaults") return { ...d, ...stripUndefined(change.patch) };
+  if (change.kind === "batch-replace") {
+    return {
+      ...d,
+      speakingModel: d.speakingModel === change.from ? change.to : d.speakingModel,
+      computeModel: d.computeModel === change.from ? change.to : d.computeModel,
+    };
+  }
+  return d;
+}
+function stripUndefined<T extends object>(o: T): Partial<T> {
+  return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
+}
+function applyToContact(c: ContactModels, change: ModelChange): { next: ContactModels; explicit: boolean } {
+  if (change.kind === "contact") {
+    if (change.contactId !== c.id) return { next: c, explicit: false };
+    return { next: { ...c, ...stripUndefined(change.patch) }, explicit: true };
+  }
+  if (change.kind === "batch-replace") {
+    const speaks = c.speakingModel === change.from;
+    const slot = c.computeModel;
+    const pinned = slot.mode === "explicit" && slot.model === change.from;
+    if (!speaks && !pinned) return { next: c, explicit: false };
+    return {
+      next: { ...c, speakingModel: speaks ? change.to : c.speakingModel, computeModel: pinned ? { ...slot, model: change.to } : slot },
+      explicit: true,
+    };
+  }
+  return { next: c, explicit: false };
+}
+
+/** 保存前预检(时机 ①②):算出改动后每位联系人的生效值,列出所有受影响的下游与冲突;不落盘。 */
+export function previewChange(defaults: ModelDefaults, contacts: readonly ContactModels[], caps: readonly ModelCapability[], change: ModelChange): ChangeOutcome {
+  const defaultsAfter = applyToDefaults(defaults, change);
+  const defaultsChanged = (Object.keys(defaults) as (keyof ModelDefaults)[]).filter((k) => defaults[k] !== defaultsAfter[k]);
+  const nextContacts: ContactModels[] = [];
+  const affected: AffectedContact[] = [];
+  for (const c of contacts) {
+    const { next: n, explicit } = applyToContact(c, change);
+    const next: ContactModels = { ...n, computeModel: { ...n.computeModel } };
+    nextContacts.push(next);
+    const before = resolveCompute(defaults, c);
+    const after = resolveCompute(defaultsAfter, next);
+    const changed: ChangedField[] = [];
+    if (c.speakingModel !== next.speakingModel) changed.push("speaking-model");
+    if (before.harness !== after.harness) changed.push("harness");
+    if (before.model !== after.model) changed.push("compute-model");
+    if (before.effort !== after.effort) changed.push("compute-effort");
+    if (changed.length === 0 && !explicit) continue;
+    const support = supportOf(caps, after.harness, after.model);
+    affected.push({
+      contactId: c.id,
+      name: c.name,
+      involvement: explicit ? "explicit-reference" : "downstream",
+      changed,
+      speakingBefore: c.speakingModel,
+      speakingAfter: next.speakingModel,
+      before,
+      after,
+      support,
+      conflict: support === "unsupported",
+      fixes: support === "unsupported" ? fixesFor(caps, after) : [],
+    });
+  }
+  const preview: ChangePreview = { change: structuredClone(change), defaultsBefore: { ...defaults }, defaultsAfter, defaultsChanged, affected, conflicts: affected.filter((a) => a.conflict) };
+  return freeze({ preview, defaults: defaultsAfter, contacts: nextContacts });
 }

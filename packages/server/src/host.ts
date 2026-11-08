@@ -32,11 +32,17 @@ import {
   type ProjectedMessage,
   type Task,
   type TaskEvent,
+  type TaskModelRecord,
   applyLedger,
   apply as applyTask,
   emptyLedger,
+  emptyModelRecord,
+  isAppendOnly,
+  modelConfig,
   newTask,
+  producerVendors,
   project,
+  recordAttempt,
 } from "@g-group/domain";
 import {
   type AttentionLoop,
@@ -123,6 +129,8 @@ interface TaskDoc {
   readonly description?: string;
   /** 交付消息的 seq(AC-56:交付是普通消息);用户的验收结论只认这之后的消息。旧数据没有这个字段。 */
   readonly deliveredSeq?: number | null;
+  /** 不可变启动快照 + 只追加尝试账本(AC-32 ④、AC-51 ⑥);旧数据没有这个字段。 */
+  readonly models?: TaskModelRecord;
 }
 interface CardRow {
   card_id: string;
@@ -312,15 +320,25 @@ export class Host {
       createdAt: this.now(),
       persona: input.persona ?? "",
     };
+    // 保存时机(AC-32 ②①):新联系人自己的 Compute 生效值不兼容就先拦,看过预览确认后才存
+    this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), [this.contactModels(doc)], this.caps(), { kind: "contact", contactId: id, patch: {} }), input.confirmAffected === true);
     putDoc(this.db, `contact:${id}`, 0, doc);
     const view = this.contactView(doc);
     this.bus.emit({ type: "contact.updated", contact: view });
     return view;
   }
   updateContact(id: string, input: Partial<Omit<ContactDoc, "id" | "createdAt">> & { confirmAffected?: boolean }): ContactView {
-    const { confirmAffected: _confirm, ...patch } = input;
+    const { confirmAffected, ...patch } = input;
     const cur = this.contactDoc(id);
     const next: ContactDoc = { ...cur.value, ...patch, id, createdAt: cur.value.createdAt };
+    if (patch.speakingModel !== undefined || patch.harness !== undefined || patch.computeModel !== undefined) {
+      const change: modelConfig.ModelChange = {
+        kind: "contact",
+        contactId: id,
+        patch: { speakingModel: next.speakingModel, harness: next.harness, computeModel: next.computeModel },
+      };
+      this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), this.liveContacts().map((c) => this.contactModels(c)), this.caps(), change), confirmAffected === true);
+    }
     putDoc(this.db, `contact:${id}`, cur.ver, next);
     const view = this.contactView(next);
     this.bus.emit({ type: "contact.updated", contact: view });
@@ -332,13 +350,21 @@ export class Host {
     return d;
   }
   contactView(doc: ContactDoc): ContactView {
-    const { persona: _p, removed: _r, ...rest } = doc as ContactDoc & { removed?: boolean };
-    return { ...rest, activity: this.activity.get(doc.id) ?? "idle" };
+    const { persona: _p, removed: _r, computeResolved: _cr, ...rest } = doc as ContactDoc & { removed?: boolean };
+    const resolved = this.resolveComputeFor(doc);
+    return {
+      ...rest,
+      activity: this.activity.get(doc.id) ?? "idle",
+      computeResolved: { resolved: resolvedView(resolved), support: modelConfig.supportOf(this.caps(), resolved.harness, resolved.model) },
+    };
   }
-  listContacts(): ContactView[] {
+  private liveContacts(): ContactDoc[] {
     return listDocs<ContactDoc & { removed?: boolean }>(this.db, "contact:")
       .filter((d) => !d.value.removed)
-      .map((d) => this.contactView(d.value));
+      .map((d) => d.value);
+  }
+  listContacts(): ContactView[] {
+    return this.liveContacts().map((d) => this.contactView(d));
   }
   private setActivity(contactId: string, roomId: string | null, a: Activity) {
     if (this.activity.get(contactId) === a) return;
@@ -351,26 +377,94 @@ export class Host {
     return getDoc<SettingsView>(this.db, "settings")?.value ?? DEFAULT_SETTINGS;
   }
   updateSettings(input: Partial<SettingsView> & { confirmAffected?: boolean }): SettingsView {
-    const { confirmAffected: _confirm, ...patch } = input;
+    const { confirmAffected, ...patch } = input;
     const cur = getDoc<SettingsView>(this.db, "settings");
     const next = { ...(cur?.value ?? DEFAULT_SETTINGS), ...patch };
+    // 上游改动(AC-32 ②):全局默认或能力声明变了,保存前按新值预检全部下游联系人
+    if (patch.defaultHarness !== undefined || patch.defaultSpeakingModel !== undefined || patch.defaultComputeModel !== undefined || patch.defaultEffort !== undefined || patch.models !== undefined) {
+      const change: modelConfig.ModelChange = { kind: "defaults", patch: defaultsOf(next) };
+      this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), this.liveContacts().map((c) => this.contactModels(c)), capsOf(next), change), confirmAffected === true);
+    }
     putDoc(this.db, "settings", cur?.ver ?? 0, next);
     return next;
   }
   // ======================= 模型配置(AC-32) =======================
-  /** 保存前预检:不落盘。 */
-  previewModelChange(_change: ModelChangeInput): ModelChangePreview {
-    return { defaultsChanged: [], affected: [], conflicts: 0 };
+  modelDefaults(): modelConfig.ModelDefaults {
+    return defaultsOf(this.settings());
   }
-  /** 把模型 X 批量换成 Y:apply 不为 true 只预览。 */
-  batchReplaceModels(_from: string, _to: string, _o: { apply?: boolean; confirmAffected?: boolean } = {}): { applied: boolean; preview: ModelChangePreview } {
-    return { applied: false, preview: { defaultsChanged: [], affected: [], conflicts: 0 } };
+  private caps(): modelConfig.ModelCapability[] {
+    return capsOf(this.settings());
+  }
+  private contactModels(c: ContactDoc): modelConfig.ContactModels {
+    return { id: c.id, name: c.name, speakingModel: c.speakingModel, harness: c.harness, computeModel: c.computeModel };
+  }
+  /** 这位联系人 Compute 此刻的生效值:每次现场解析,不复用启动时的值(U93)。 */
+  resolveComputeFor(c: ContactDoc, override?: modelConfig.TaskModelOverride): modelConfig.ResolvedCompute {
+    return modelConfig.resolveCompute(this.modelDefaults(), this.contactModels(c), override);
+  }
+  /** 预检有冲突且没确认:拒绝保存,错误里带完整预览(两条修复路径在每位冲突联系人的 fixes 里)。 */
+  private guardModelChange(out: modelConfig.ChangeOutcome, confirmed: boolean) {
+    const conflicts = out.preview.conflicts;
+    if (conflicts.length === 0 || confirmed) return;
+    throw new HostError("conflict", incompatibleMessage(conflicts), {
+      reason: "model-incompatible",
+      preview: previewView(out.preview),
+    });
+  }
+  private planModelChange(change: ModelChangeInput): modelConfig.ChangeOutcome {
+    const contacts = this.liveContacts();
+    let c: modelConfig.ModelChange;
+    if (change.kind === "defaults") {
+      const patch: Partial<modelConfig.ModelDefaults> = {
+        ...(change.defaultHarness !== undefined ? { harness: change.defaultHarness } : {}),
+        ...(change.defaultSpeakingModel !== undefined ? { speakingModel: change.defaultSpeakingModel } : {}),
+        ...(change.defaultComputeModel !== undefined ? { computeModel: change.defaultComputeModel } : {}),
+        ...(change.defaultEffort !== undefined ? { effort: change.defaultEffort } : {}),
+      };
+      c = { kind: "defaults", patch };
+    } else if (change.kind === "contact") {
+      if (!contacts.some((x) => x.id === change.contactId)) throw new HostError("not_found", `没有联系人 ${change.contactId}`);
+      c = {
+        kind: "contact",
+        contactId: change.contactId,
+        patch: {
+          ...(change.speakingModel !== undefined ? { speakingModel: change.speakingModel } : {}),
+          ...(change.harness !== undefined ? { harness: change.harness } : {}),
+          ...(change.computeModel !== undefined ? { computeModel: change.computeModel } : {}),
+        },
+      };
+    } else c = { kind: "batch-replace", from: change.from, to: change.to };
+    return modelConfig.previewChange(this.modelDefaults(), contacts.map((x) => this.contactModels(x)), this.caps(), c);
+  }
+  /** 保存前预检:不落盘。 */
+  previewModelChange(change: ModelChangeInput): ModelChangePreview {
+    return previewView(this.planModelChange(change).preview);
+  }
+  /** 把模型 X 批量换成 Y(规则 6):apply 不为 true 只预览;应用只改全局默认与显式写了 X 的联系人,在途与历史任务的模型记录不碰。 */
+  batchReplaceModels(from: string, to: string, o: { apply?: boolean; confirmAffected?: boolean } = {}): { applied: boolean; preview: ModelChangePreview } {
+    const out = this.planModelChange({ kind: "batch-replace", from, to });
+    const preview = previewView(out.preview);
+    if (o.apply !== true) return { applied: false, preview };
+    this.guardModelChange(out, o.confirmAffected === true);
+    const changedIds = new Set(out.preview.affected.filter((a) => a.involvement === "explicit-reference").map((a) => a.contactId));
+    const touched: ContactDoc[] = [];
+    tx(this.db, () => {
+      const cur = getDoc<SettingsView>(this.db, "settings");
+      const base = cur?.value ?? DEFAULT_SETTINGS;
+      putDoc(this.db, "settings", cur?.ver ?? 0, { ...base, defaultSpeakingModel: out.defaults.speakingModel, defaultComputeModel: out.defaults.computeModel });
+      for (const m of out.contacts) {
+        if (!changedIds.has(m.id)) continue;
+        const d = this.contactDoc(m.id);
+        const next: ContactDoc = { ...d.value, speakingModel: m.speakingModel, computeModel: m.computeModel as ContactDoc["computeModel"] };
+        putDoc(this.db, `contact:${m.id}`, d.ver, next);
+        touched.push(next);
+      }
+    });
+    for (const c of touched) this.bus.emit({ type: "contact.updated", contact: this.contactView(c) });
+    return { applied: true, preview };
   }
   computeModelOf(c: ContactDoc): string {
-    const slot = c.computeModel;
-    if (slot.mode === "explicit" && slot.model) return slot.model;
-    if (slot.mode === "follow-speaking") return c.speakingModel;
-    return this.settings().defaultComputeModel;
+    return this.resolveComputeFor(c).model;
   }
 
   // ======================= 会话 =======================
@@ -1197,6 +1291,9 @@ export class Host {
         endedAt: r.ended_at,
       })),
       recentProgress: progress,
+      modelSnapshot: doc.models?.initial ? { ...doc.models.initial } : null,
+      modelAttempts: (doc.models?.attempts ?? []).map((a) => ({ ...a })),
+      producerVendors: [...producerVendors(doc.models ?? emptyModelRecord)],
       artifacts: doc.result ? [{ ref: `task:${t.id}/result`, name: "结果", kind: "text" }] : [],
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
@@ -1809,15 +1906,30 @@ export class Host {
       this.emitTask(e.taskId);
       this.loop.notify(e.contactId, "now");
     };
+    // 启动前(AC-32 ② 第三个时机):按此刻配置现场解析生效值,不兼容就不起 Compute,不退回 Harness 默认模型
+    const owner = getDoc<ContactDoc>(this.db, `contact:${e.contactId}`)?.value;
+    const resolved = owner ? this.resolveComputeFor(owner) : null;
+    if (resolved) {
+      const chk = modelConfig.checkCompute(this.caps(), resolved);
+      if (!chk.ok) {
+        this.report("model-incompatible", { taskId: e.taskId, contactId: e.contactId, harness: resolved.harness, model: resolved.model, fixes: chk.fixes });
+        return fail(chk.reason);
+      }
+    }
     if (!adapter) return fail("宿主没有配置 Compute 适配器");
     const cwd = this.opts.computeCwd?.(e.taskId);
     const tools = [...(this.opts.computeTools ?? DEFAULT_COMPUTE_TOOLS)];
     const r = await adapter.spawn({ task: e.brief, rules: [], tools, credentialRefs: [], placement: "local" }, cwd ? { cwd } : {});
     if (!r.ok) return fail(r.reason);
+    const harness = resolved?.harness ?? "claude-code";
     const late: string[] = [];
     tx(this.db, () => {
-      run(this.db, "INSERT INTO gg_compute (compute_id, task_id, contact_id, room_id, harness, model, status, started_at) VALUES (?, ?, ?, ?, 'claude-code', ?, 'starting', ?)", r.computeId, e.taskId, e.contactId, e.roomId, e.model, this.now());
-      const { effects: eff } = this.stepTaskTx(e.taskId, { kind: "Dispatch", computeId: r.computeId, model: e.model, requestId: e.requestId });
+      run(this.db, "INSERT INTO gg_compute (compute_id, task_id, contact_id, room_id, harness, model, status, started_at) VALUES (?, ?, ?, ?, ?, ?, 'starting', ?)", r.computeId, e.taskId, e.contactId, e.roomId, harness, e.model, this.now());
+      // 首次启动写入不可变快照,账本追加一条 start(AC-32 ④)
+      const prev = this.taskDoc(e.taskId).value.models ?? emptyModelRecord;
+      const models = recordAttempt(prev, { computeId: r.computeId, harness, model: e.model, effort: resolved?.effort ?? this.settings().defaultEffort, reason: "start", at: this.now() });
+      if (!isAppendOnly(prev, models)) throw new HostError("internal", "模型账本只能追加");
+      const { effects: eff } = this.stepTaskTx(e.taskId, { kind: "Dispatch", computeId: r.computeId, model: e.model, requestId: e.requestId }, { models });
       for (const x of eff) if (x.kind === "stop-compute") late.push(x.computeId);
     });
     this.emitTask(e.taskId);
@@ -1972,6 +2084,39 @@ export class Host {
 /** 第 1 块人设:先写明这位联系人是谁(群里据此分清 @ 的是不是自己),再接用户设的人设原文。只随改名/改人设变,前缀缓存不受每轮影响。 */
 function identityOf(contactId: string, c: { name: string; persona: string }): string {
   return [`你是「${c.name}」(联系人 id ${contactId})。消息里的 @ 列的是联系人 id。`, c.persona].filter((x) => x.trim()).join("\n");
+}
+/** 保存被拒时给人看的说明:列出每位会冲突的联系人和原因。 */
+function incompatibleMessage(conflicts: readonly modelConfig.AffectedContact[]): string {
+  const names = conflicts.map((a) => `${a.name}(${a.after.harness} 不支持 ${a.after.model})`).join("、");
+  return `这次改动会让 ${conflicts.length} 位联系人的 Compute 与所选 Harness 不兼容:${names}。可以单独指定兼容的模型或更换 Harness;看过预览确认后再保存`;
+}
+function defaultsOf(s: SettingsView): modelConfig.ModelDefaults {
+  return { harness: s.defaultHarness, speakingModel: s.defaultSpeakingModel, computeModel: s.defaultComputeModel, effort: s.defaultEffort };
+}
+function capsOf(s: SettingsView): modelConfig.ModelCapability[] {
+  return s.models.map((m) => ({ id: m.id, harnesses: [...m.harnesses] }));
+}
+function resolvedView(r: modelConfig.ResolvedCompute) {
+  return { harness: r.harness, model: r.model, effort: r.effort, vendor: r.vendor, modelSource: r.modelSource, effortSource: r.effortSource, chain: [...r.chain] };
+}
+function previewView(p: modelConfig.ChangePreview): ModelChangePreview {
+  return {
+    defaultsChanged: [...p.defaultsChanged],
+    affected: p.affected.map((a) => ({
+      contactId: a.contactId,
+      name: a.name,
+      involvement: a.involvement,
+      changed: [...a.changed],
+      speakingBefore: a.speakingBefore,
+      speakingAfter: a.speakingAfter,
+      before: resolvedView(a.before),
+      after: resolvedView(a.after),
+      support: a.support,
+      conflict: a.conflict,
+      fixes: a.fixes.map((f) => ({ kind: f.kind, candidates: [...f.candidates] })),
+    })),
+    conflicts: p.conflicts.length,
+  };
 }
 
 /** 已交付、等提出者回复的任务(AC-56 普通消息交付):T8a,或还没有审查人、停在 T5 等本人豁免。旧数据(交付卡)不算,走卡片。 */
