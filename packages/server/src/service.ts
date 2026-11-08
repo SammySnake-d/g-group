@@ -46,7 +46,8 @@ export function createService(host: Host): Service {
     "rooms.createGroup": (p: { title: string; members: { kind: "user" | "contact"; id: string }[] }) => host.createGroup(p.title, p.members),
     "rooms.update": ({ roomId, ...patch }: { roomId: string } & Parameters<Host["updateRoom"]>[1]) => host.updateRoom(roomId, patch),
     "rooms.addMembers": (p: { roomId: string; members: { kind: "user" | "contact"; id: string }[] }) => host.addMembers(p.roomId, p.members),
-    "rooms.removeMember": (p: { roomId: string; member: { kind: "user" | "contact"; id: string } }) => host.removeMember(p.roomId, p.member),
+    "rooms.removeMember": (p: { roomId: string; member: { kind: "user" | "contact"; id: string }; stopTasks?: boolean }) =>
+      host.removeMember(p.roomId, p.member, p.stopTasks === undefined ? {} : { stopTasks: p.stopTasks }),
     "rooms.markRead": (p: { roomId: string; seq: number }) => {
       host.markRead(p.roomId, { kind: "user", id: host.userId }, p.seq);
       return { ok: true };

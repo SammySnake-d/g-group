@@ -44,6 +44,7 @@ import { type AnnouncementOrder, AnnouncementStore } from "./announcements.ts";
 import { CONTACT_SYSTEM, CONTACT_TOOLS, type LedgerLine, type RoundAssembler, kernelAssemble } from "./assemble.ts";
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
+import { MemberExits } from "./members.ts";
 import { PluginStore } from "./plugins.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
 
@@ -158,6 +159,7 @@ export class Host {
   readonly scheduler: Scheduler;
   readonly plugins: PluginStore;
   readonly announcements: AnnouncementStore;
+  readonly exits: MemberExits;
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly newId: (prefix: string) => string;
@@ -177,6 +179,7 @@ export class Host {
     this.userId = opts.userId ?? "me";
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
+    this.exits = new MemberExits({ db: this.db, now: this.now });
     this.bus = createBus(this.now);
     this.loop = createAttentionLoop({
       maxDeferMs: opts.maxDeferMs ?? 1500,
@@ -723,7 +726,7 @@ export class Host {
     return { ref, name, mime, bytes };
   }
   /** 移出群成员;私聊不能移。联系人在途任务不受影响,但不再收到这个群的新消息。 */
-  removeMember(roomId: string, m: Member): RoomView {
+  removeMember(roomId: string, m: Member, _opts: { stopTasks?: boolean } = {}): RoomView {
     const r = this.roomRow(roomId);
     if (r.kind === "dm") throw new HostError("forbidden", "私聊不能移出成员");
     if (run(this.db, "DELETE FROM gg_members WHERE room_id = ? AND kind = ? AND member_id = ?", roomId, m.kind, m.id) !== 1) throw new HostError("not_found", "不是这个群的成员");

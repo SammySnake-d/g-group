@@ -68,7 +68,11 @@ export const METHODS = {
   "rooms.createGroup": method(obj({ clientActionId: id(), title: str({ min: 1, max: 200 }), members: arr(MemberRef, { max: 100 }) }), RoomView),
   "rooms.update": method(obj({ roomId: id(), title: opt(str({ min: 1, max: 200 })), pinned: opt(bool()), muted: opt(bool()), rules: opt(str({ max: 20000 })), expectedRulesVersion: opt(int({ min: 0 })) }), RoomView),
   "rooms.addMembers": method(obj({ roomId: id(), members: arr(MemberRef, { max: 100 }) }), RoomView),
-  "rooms.removeMember": method(obj({ roomId: id(), member: MemberRef }), RoomView),
+  /**
+   * 移出成员。联系人在这个群有在途任务(T8/T10/T11 以外)时默认 conflict,detail.tasks 列出 {taskId,title,state};
+   * stopTasks=true 时先进「移出中」(RoomView.leavingMembers),在途任务 Cancel → 停 Compute,真实停止确认后才移除并推 room.updated。
+   */
+  "rooms.removeMember": method(obj({ roomId: id(), member: MemberRef, stopTasks: opt(bool()) }), RoomView),
   /** 用户自己的已读位置,只影响用户视图(AC-46)。 */
   "rooms.markRead": method(obj({ roomId: id(), seq: seq() }), Ok),
 

@@ -55,6 +55,8 @@ export const RoomView = obj({
   updatedAt: isoTime(),
   /** 当前有效群公告条数(AC-55);0 = 无公告空态。私聊恒为 0。 */
   announcementCount: opt(int({ min: 0 })),
+  /** 移出中的成员(AC-49/D05):仍在 members 里,但这个群的新消息不再送达、发言与接新活被拒,等在途任务真实停止确认后才移除。 */
+  leavingMembers: opt(arr(MemberRef)),
 });
 export type RoomView = Infer<typeof RoomView>;
 /** 群公告(U97/U86):一个群可有多条,当前有效的全部装配进联系人第 1 块「群规快照」位。version 每次改动 +1(CAS 用)。 */
