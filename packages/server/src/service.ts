@@ -79,7 +79,7 @@ export function createService(host: Host): Service {
     "files.read": (p: { ref: string; maxBytes?: number }) => readFile(host, p.ref, p.maxBytes),
     "cards.act": (p: Parameters<Host["cardAct"]>[0]) => host.cardAct(p),
     "tasks.list": (p: Parameters<Host["listTasks"]>[0] & { limit?: number }) => ({ tasks: host.listTasks(p).slice(0, p.limit ?? 200) }),
-    "tasks.get": (p: { taskId: string }) => host.taskView(host.taskDoc(p.taskId).value),
+    "tasks.get": (p: { taskId: string }) => host.taskViewById(p.taskId),
     "tasks.progress": (p: { taskId: string; limit?: number }) => {
       host.taskDoc(p.taskId);
       return { progress: host.progress(p.taskId, p.limit ?? 200) };
