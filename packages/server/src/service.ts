@@ -14,6 +14,7 @@ import {
 } from "@g-group/api-contract";
 import type { AnnouncementOrder } from "./announcements.ts";
 import { HostError } from "./db.ts";
+import { type HelperEntryInput, HelperDesk } from "./helper.ts";
 import type { Host } from "./host.ts";
 import { previewCron } from "./schedules.ts";
 
@@ -30,6 +31,7 @@ export interface Service {
 }
 
 export function createService(host: Host): Service {
+  const helper = new HelperDesk(host);
   const H: { [M in MethodName]: Handler } = {
     "session.hello": () => ({ apiVersion: API_VERSION, serverTime: new Date().toISOString(), eventSeq: host.bus.head(), userId: host.userId }),
     "contacts.list": () => ({ contacts: host.listContacts() }),
@@ -110,6 +112,10 @@ export function createService(host: Host): Service {
       host.roomView(p.roomId);
       return { commands: [...BUILTIN_COMMANDS, ...host.plugins.commands()].filter((c) => !p.prefix || c.name.startsWith(p.prefix)) };
     },
+    "helper.context": (p: { entry: HelperEntryInput; readRoomIds?: string[]; limit?: number }) => helper.context(p.entry, p.readRoomIds ?? [], p.limit ?? 100),
+    "helper.note": (p: { entry: HelperEntryInput; role: "user" | "helper"; text: string; clientActionId: string }) => helper.note(p.entry, p.role, p.text, p.clientActionId),
+    "helper.history": (p: { entry: HelperEntryInput; limit?: number }) => ({ notes: helper.history(p.entry, p.limit ?? 200) }),
+    "helper.post": (p: { entry: HelperEntryInput; text: string; clientActionId: string }) => helper.post(p.entry, p.text, p.clientActionId),
     "settings.get": () => host.settings(),
     "settings.update": (p: Parameters<Host["updateSettings"]>[0]) => host.updateSettings(p),
   };

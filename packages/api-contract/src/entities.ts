@@ -1,7 +1,7 @@
 // 渲染进程看到的实体视图。字段名对齐需求文档 v3.19 的概念:联系人、私聊/群聊、只追加消息(回复/多条引用)、
 // 任务四台状态机里的任务状态、Compute 进度四类语义事件、承诺账本、插件三类、定时(cron + 时区)与 slash 命令。
 // 这是「视图」不是领域对象:主进程从领域状态投影出来,渲染进程只读;所有修改都走 api.ts 的方法。
-import { arr, bool, id, int, isoTime, json, nullable, obj, oneOf, opt, seq, str, type Infer } from "./schema.ts";
+import { arr, bool, id, int, isoTime, json, lit, nullable, obj, oneOf, opt, seq, str, tagged, type Infer } from "./schema.ts";
 
 // ---------- 联系人 ----------
 export const HARNESSES = ["claude-code", "codex"] as const;
@@ -330,3 +330,29 @@ export const SettingsView = obj({
   models: arr(obj({ id: str({ min: 1, max: 200 }), label: str({ max: 200 }), vendor: str({ max: 64 }), harnesses: arr(oneOf(HARNESSES)) })),
 });
 export type SettingsView = Infer<typeof SettingsView>;
+
+// ---------- Helper(AC-52,U94/D28 第 1 条)----------
+/** Helper 的三种入口:全局(⌘K,初始不读任何聊天)、某聊天的侧栏(读当前聊天,对话不上公屏)、聊天里 @Helper(回复作为消息出现在这个聊天)。 */
+export const HelperEntry = tagged("kind", {
+  global: obj({ kind: lit("global") }),
+  sidebar: obj({ kind: lit("sidebar"), roomId: id() }),
+  mention: obj({ kind: lit("mention"), roomId: id(), seq: seq() }),
+} as const);
+export type HelperEntry = Infer<typeof HelperEntry>;
+/** 回复出现在哪、会不会成为会话消息、读的是哪个聊天(domain routeHelper 的结果)。 */
+export const HelperRoute = obj({
+  replyIn: oneOf(["global-panel", "conversation", "sidebar"] as const),
+  becomesMessage: bool(),
+  contextRoomId: nullable(id()),
+  replyToSeq: nullable(seq()),
+});
+/** 全局面板 / 侧栏里的一条问答记录;不是会话消息,联系人看不到。 */
+export const HelperNote = obj({
+  id: id(),
+  scope: oneOf(["global", "sidebar"] as const),
+  roomId: nullable(id()),
+  role: oneOf(["user", "helper"] as const),
+  text: str({ max: 100000 }),
+  at: isoTime(),
+});
+export type HelperNote = Infer<typeof HelperNote>;
