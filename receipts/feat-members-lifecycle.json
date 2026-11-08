@@ -1,0 +1,22 @@
+{
+  "slice": "群成员移出先停在途任务:有在途任务默认拒绝;stopTasks 时先进「移出中」(新消息不送达、发言与接新活被拒),在途任务 Cancel → 停 Compute,真实停止确认后才删成员;重复加入不重复、不挪游标,移出又拉回从当前末尾开始",
+  "acceptance": [
+    {
+      "id": "AC-49",
+      "status": "未测",
+      "reason": "成员部分有测试(packages/server/src/members-lifecycle.test.ts 四条:重复加入只有一个成员、移出又加回不处理离开期间旧消息;有在途任务不带 stopTasks 被拒;带 stopTasks 停止确认前成员仍在且标移出中、它在该群的新接活被拒,确认后移除且任务 T10;Compute 不回停止确认时成员一直不移除)。群临时算力池还没有实现,「资源正确」只做了停止确认后才释放的底座(状态机 StoppedConfirmed 给出的 release-slot 是归还接点);D05 的交接/继续至检查点选项与拖拽拉人踢人是候选(D28 待确认 ⑦),未做"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:ef07eb6a-5c4c-4ab7-bbcc-46df83c37b7d",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "be7471d0c3017d62a704c4200263b7b8367eb2ea"
+  },
+  "unverifiable": "子代理 f-rooms 代主会话写(AC-49)。停止确认用的是测试替身:真实 Claude Code Compute 的 stop 是否总会回 stopped/failed 没有在这里实测,若真实适配器丢了停止事件,成员会一直停在移出中(这是故意的:不确认就不释放),需要另有超时/人工处置;「在途」按任务状态 T8/T10/T11 以外判定,T8a 已交付待确认算不在途,即使原 Compute 实例可能还留着可续改",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

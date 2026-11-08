@@ -44,6 +44,7 @@ import { type AnnouncementOrder, AnnouncementStore } from "./announcements.ts";
 import { CONTACT_SYSTEM, CONTACT_TOOLS, type LedgerLine, type RoundAssembler, kernelAssemble } from "./assemble.ts";
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
+import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { PluginStore } from "./plugins.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
 
@@ -158,6 +159,7 @@ export class Host {
   readonly scheduler: Scheduler;
   readonly plugins: PluginStore;
   readonly announcements: AnnouncementStore;
+  private readonly exits: MemberExits;
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly newId: (prefix: string) => string;
@@ -177,6 +179,7 @@ export class Host {
     this.userId = opts.userId ?? "me";
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
+    this.exits = new MemberExits({ db: this.db, now: this.now });
     this.bus = createBus(this.now);
     this.loop = createAttentionLoop({
       maxDeferMs: opts.maxDeferMs ?? 1500,
@@ -348,11 +351,18 @@ export class Host {
     const r = this.roomRow(roomId);
     if (r.kind === "dm") throw new HostError("forbidden", "私聊不能加成员,请建群");
     for (const m of members) if (m.kind === "contact") this.contactDoc(m.id);
+    const leaving = members.filter((m) => m.kind === "contact" && this.exits.isLeaving(roomId, m.id));
+    if (leaving.length) throw new HostError("conflict", "联系人正在移出这个群,等它在这里的在途任务停下再拉回", { leaving: leaving.map((m) => m.id) });
     tx(this.db, () => {
-      for (const m of members) run(this.db, "INSERT OR IGNORE INTO gg_members (room_id, kind, member_id) VALUES (?, ?, ?)", roomId, m.kind, m.id);
-      // 新成员的游标从当前末尾开始:不追溯处理入群前的历史
+      // 真正新入群的联系人(含移出后又拉回的)游标从当前末尾开始:不追溯处理入群前与离开期间的消息(AC-49);
+      // 已在群里的重复拉入什么都不动,不挪它的游标
       const last = this.lastSeq(roomId);
-      for (const m of members) if (m.kind === "contact") run(this.db, "INSERT OR IGNORE INTO gg_cursor (contact_id, room_id, processed_seq) VALUES (?, ?, ?)", m.id, roomId, last);
+      for (const m of members) {
+        const added = run(this.db, "INSERT OR IGNORE INTO gg_members (room_id, kind, member_id) VALUES (?, ?, ?)", roomId, m.kind, m.id) === 1;
+        if (added && m.kind === "contact") {
+          run(this.db, "INSERT INTO gg_cursor (contact_id, room_id, processed_seq) VALUES (?, ?, ?) ON CONFLICT (contact_id, room_id) DO UPDATE SET processed_seq = excluded.processed_seq", m.id, roomId, last);
+        }
+      }
     });
     const view = this.roomView(roomId);
     this.bus.emit({ type: "room.updated", room: view });
@@ -416,6 +426,7 @@ export class Host {
       lastMessagePreview: last ? last.text.slice(0, 200) : null,
       updatedAt: r.updated_at,
       announcementCount: r.kind === "group" ? this.announcements.count(roomId) : 0,
+      leavingMembers: this.exits.leavingIn(roomId),
     };
   }
   markRead(roomId: string, m: Member, seq: number) {
@@ -552,7 +563,7 @@ export class Host {
     const room = this.roomRow(roomId);
     const repliedTo = view.replyToSeq !== null ? msgs.find((x) => x.seq === view.replyToSeq) : undefined;
     for (const mem of this.members(roomId)) {
-      if (mem.kind !== "contact" || (from.kind === "contact" && from.id === mem.id)) continue;
+      if (mem.kind !== "contact" || (from.kind === "contact" && from.id === mem.id) || this.exits.isLeaving(roomId, mem.id)) continue;
       // 调度只看元数据(@、私聊、回复对象),不读正文(D15.1)
       const direct = room.kind === "dm" || view.mentions.some((x) => x.id === mem.id) || (repliedTo?.sender.kind === "contact" && repliedTo.sender.id === mem.id);
       const urgency: Urgency = direct && from.kind === "user" ? "now" : "batch";
@@ -609,6 +620,7 @@ export class Host {
       const id = str("contact") || room.dm_contact || "";
       if (!id) throw new HostError("invalid_params", `/${c.name} 在群里要指定 contact`);
       if (!this.isMember(room.id, { kind: "contact", id })) throw new HostError("invalid_params", "这位联系人不在这个会话里");
+      if (this.exits.isLeaving(room.id, id)) throw new HostError("conflict", "这位联系人正在移出这个群,不能再交活");
       return id;
     };
     if (c.name === "task") {
@@ -722,14 +734,50 @@ export class Host {
     run(this.db, "INSERT OR IGNORE INTO gg_attachments (ref, name, mime, bytes, path, added_at) VALUES (?, ?, ?, ?, ?, ?)", ref, name, mime, bytes, target, this.now());
     return { ref, name, mime, bytes };
   }
-  /** 移出群成员;私聊不能移。联系人在途任务不受影响,但不再收到这个群的新消息。 */
-  removeMember(roomId: string, m: Member): RoomView {
+  /**
+   * 移出群成员;私聊不能移。联系人在这个群有在途任务(T8/T10/T11 以外)时默认拒绝,detail.tasks 列出;
+   * stopTasks=true 时先标「移出中」(新消息不送达、发言与接新活被拒),在途任务 Cancel → 停 Compute,
+   * 等每个任务都收到真实停止确认才删成员行(D05:取消请求本身不证明已释放)。它在别的群的任务不受影响。
+   */
+  removeMember(roomId: string, m: Member, opts: { stopTasks?: boolean } = {}): RoomView {
     const r = this.roomRow(roomId);
     if (r.kind === "dm") throw new HostError("forbidden", "私聊不能移出成员");
-    if (run(this.db, "DELETE FROM gg_members WHERE room_id = ? AND kind = ? AND member_id = ?", roomId, m.kind, m.id) !== 1) throw new HostError("not_found", "不是这个群的成员");
+    if (!this.isMember(roomId, m)) throw new HostError("not_found", "不是这个群的成员");
+    if (m.kind === "contact") {
+      // 已在移出中:不重复发停止
+      if (this.exits.isLeaving(roomId, m.id)) return this.roomView(roomId);
+      const live = this.liveTasksIn(roomId, m.id);
+      if (live.length) {
+        if (!opts.stopTasks) {
+          throw new HostError("conflict", `联系人在这个群还有 ${live.length} 个在途任务,先停止或等它完成;要一并停止请带 stopTasks`, { tasks: live.map((t) => ({ taskId: t.id, title: t.title, state: t.state })) });
+        }
+        this.exits.begin(roomId, m.id);
+        this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
+        for (const t of live) {
+          if (t.state === "T9_StopRequested") continue;
+          try {
+            this.stopTask(t.id, this.userId);
+          } catch (e) {
+            this.report("exit-stop-failed", { roomId, contactId: m.id, taskId: t.id, error: e instanceof Error ? e.message : String(e) });
+          }
+        }
+        this.settleExit(roomId, m.id);
+        return this.roomView(roomId);
+      }
+      tx(this.db, () => this.exits.finishTx(roomId, m.id));
+    } else run(this.db, "DELETE FROM gg_members WHERE room_id = ? AND kind = ? AND member_id = ?", roomId, m.kind, m.id);
     const view = this.roomView(roomId);
     this.bus.emit({ type: "room.updated", room: view });
     return view;
+  }
+  private liveTasksIn(roomId: string, contactId: string): TaskView[] {
+    return this.listTasks({ roomId, contactId }).filter((t) => !EXIT_SETTLED.has(t.state));
+  }
+  /** 移出中的成员:它在这个群的在途任务全部停稳(T8/T10/T11)才真正删成员行并推 room.updated。 */
+  private settleExit(roomId: string, contactId: string) {
+    if (!this.exits.isLeaving(roomId, contactId) || this.liveTasksIn(roomId, contactId).length) return;
+    tx(this.db, () => this.exits.finishTx(roomId, contactId));
+    this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
   }
   /** 删除联系人:有在途任务时拒绝;删除后从所有群移出,私聊记录保留。 */
   removeContact(id: string) {
@@ -835,7 +883,10 @@ export class Host {
       .map((d) => this.taskView(d));
   }
   private emitTask(id: string) {
-    this.bus.emit({ type: "task.updated", task: this.taskView(this.taskDoc(id).value) });
+    const doc = this.taskDoc(id).value;
+    this.bus.emit({ type: "task.updated", task: this.taskView(doc) });
+    // 任务每次变化后看负责人是否在这个群移出中:停止确认到了(T10/T11)才真正移出
+    if (doc.task.owner) this.settleExit(doc.roomId, doc.task.owner);
   }
 
   // ======================= 承诺账本 =======================
@@ -912,7 +963,9 @@ export class Host {
   async runRound(contactId: string, signal: AbortSignal): Promise<RoundStatus> {
     if (this.closed) return "done";
     const contact = this.contactDoc(contactId).value;
-    const rooms = this.roomsOfContact(contactId);
+    // 移出中的群不再送达新消息,也不再装配进它的上下文
+    const leavingRooms = this.exits.leavingRoomsOf(contactId);
+    const rooms = this.roomsOfContact(contactId).filter((r) => !leavingRooms.has(r.id));
     const fresh: Inbound[] = [];
     const ownOnly: { roomId: string; seq: number }[] = [];
     const lastSeen: Record<string, number> = {};
@@ -1045,6 +1098,8 @@ export class Host {
     out: { actions: readonly MindAction[]; stateNote: string | null },
   ): { effects: HostEffect[] } {
     const roomIds = new Set(this.roomsOfContact(contactId).map((r) => r.id));
+    // 移出中:这个群里的发言、登记承诺与接新活一律拒绝(D05「先禁止新群内接单与发言」)
+    const leavingRooms = this.exits.leavingRoomsOf(contactId);
     const freshMsgs = fresh.filter((f): f is InboundMessage => f.kind === "message");
     const effects: HostEffect[] = [];
     const appended: { roomId: string; seq: number }[] = [];
@@ -1076,6 +1131,7 @@ export class Host {
         const reject = (reason: string) => rejected.push({ action: a, reason });
         switch (a.kind) {
           case "reply": {
+            if (leavingRooms.has(a.roomId)) { reject(LEAVING_REASON); break; }
             if (!roomIds.has(a.roomId)) { reject("不在这个会话里"); break; }
             if (!a.text.trim()) { reject("空消息"); break; }
             const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [] });
@@ -1085,6 +1141,7 @@ export class Host {
             break;
           }
           case "dispatch": {
+            if (leavingRooms.has(a.roomId)) { reject(LEAVING_REASON); break; }
             const src = freshMsgs.find((m) => m.roomId === a.roomId && m.seq === a.sourceSeq);
             if (!src) { reject(`来源 ${a.roomId} #${a.sourceSeq} 不是本轮新消息`); break; }
             if (!a.task.trim() || !a.title.trim()) { reject("任务说明为空"); break; }
@@ -1112,6 +1169,7 @@ export class Host {
             break;
           }
           case "commit": {
+            if (leavingRooms.has(a.roomId)) { reject(LEAVING_REASON); break; }
             const src = freshMsgs.find((m) => m.roomId === a.roomId && m.seq === a.sourceSeq);
             if (!src) { reject(`来源 ${a.roomId} #${a.sourceSeq} 不是本轮新消息`); break; }
             const key = `${a.roomId}#${a.sourceSeq}`;

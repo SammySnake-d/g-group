@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS gg_announcements (
   ord INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, room_id TEXT NOT NULL, text TEXT NOT NULL, version INTEGER NOT NULL,
   client_action_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, removed_at TEXT, UNIQUE (room_id, client_action_id)
 );
+CREATE TABLE IF NOT EXISTS gg_member_exits (room_id TEXT NOT NULL, contact_id TEXT NOT NULL, started_at TEXT NOT NULL, PRIMARY KEY (room_id, contact_id));
 `;
 
 export interface Db {
