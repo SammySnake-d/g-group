@@ -1,0 +1,68 @@
+{
+  "slice": "第三台状态机(任务生命周期)主干的纯函数层:11 个状态 × 15 种事件的穷尽转移表,每格是转移、拒绝或忽略且写明原因,并对照一份独立于实现、逐格检查目标状态/副作用/版本/负责人/累积生产模型的需求期望;T5 跨厂商审查守卫(作者自审、累积生产厂商集合、unknown、提出者本人豁免记为 Waived),每次提审分配永不复用的审查轮次,回包须同时对上 (round, commit, constraintVer);通过时记下审查人模型与豁免人,交付后迟到的生产模型记录据此重判,结论不再成立就作废审查、同一产物以新轮次重新送审;累积生产集合收录任何曾回绑到本任务的实例报来的换模记录,从未回绑的孤儿不计;执行侧回包带来源实例与条件版本,在不接收它的状态里旧来源回包幂等忽略、当前来源的重复提问/提审才拒绝;认领即原子发出首派请求 L0,首派与返工新开都只凭当前请求号回绑,首派在途取消进 T9 等撤销确认或实例停止;每次审查通过分配永不复用的交付代次并请求发卡,发送确认、接受、退回、超时都须对上当前 (deliveryRound, commit)(当前代次的超时在 T8a 也被拒),已发过的旧代次在任何状态下幂等忽略、不打断批次,重审与返工清掉当前交付;交付待确认:用户一直不说话就停在 T8a,不超时、不归档,AcceptTimeout 在 T8a 拒绝,只有提出者确认到 T8_Accepted 或退回返工(AC-28①,用户 #2273);导出的 STATES、EVENT_KINDS、TABLE 及每行每格深冻结,进程内不能改写策略(用户 #2662);所有返工入口共用可恢复性契约;被撤销的旧启动与孤儿实例逐个登记,取消或失败后当前实例、当前启动、全部旧启动与孤儿各自确认停止才进终态并释放各自槽位;apply 入口先把事件规范化成冻结的纯数据快照(只接受普通数据对象,每个声明字段只读一次自有属性,未声明字段丢弃),对快照做表驱动的运行时事件形状校验,之后的状态转移只读快照(必填、类型、取值域),缺字段或错类型的外部输入一律拒绝,非字符串或原型链名字的事件种类也返回拒绝而不抛异常;已确认停止的实例记入退役账本,其迟到回包与重放不再阻断当前代次或二次释放槽位;交付代次须为本任务已分配过的正整数,未分配的在任何状态都拒绝,交付侧与停止确认事件带 taskId,错投到别的任务即拒绝;确认卡是冻结快照,非当前版本的回复幂等忽略。",
+  "acceptance": [
+    {
+      "id": "AC-09",
+      "status": "通过",
+      "evidence": "packages/domain/proof/task-lifecycle-tests.txt"
+    },
+    {
+      "id": "AC-26",
+      "status": "未测",
+      "reason": "纯函数层五组条件已过,M13–M17、M28、A14、B03 被杀;审查回包绑定 (round, commit, constraintVer),过期、未来轮次与 ABA 回包幂等忽略(N01/N02/A12/R10/R11/C05/C06 被杀);曾回绑的旧实例迟到的换模记录计入累积集合,孤儿不计(T01/T02/S11 被杀);审查通过后迟到的记录用原审查人模型重判,不再合规就作废并重审、变成需豁免且有豁免就改记 Waived(T03–T08 被杀)。整项观测点还包括任务不可变模型快照落盘、审查 Compute 实际模型的采集,要等存储层与 Compute 适配器"
+    },
+    {
+      "id": "AC-28",
+      "status": "未测",
+      "reason": "T8a 不超时不归档(用户 #2273):当前代次 AcceptTimeout 被拒,任务原样停在 T8a,只有提出者确认到 T8_Accepted(I01/I02/I09/M18 被杀;迟到 ProducerModelAdded 使审查不再跨厂商时 T8a 回 T5 重审,属 AC-26 原有路径);状态机层:9 个返工入口 × 可/不可恢复两侧逐一断言;恢复与改条件把新版本通知实例;不可恢复时发带请求号与条件版本的 spawn-compute,只认该请求号的实例回绑,同请求不同实例停止并登记;启动中改条件撤销重发并登记旧启动;多个孤儿/旧启动逐个确认,返工不丢未决孤儿;首派也走请求号(L0)且在途取消先进 T9;首派重发时可证明的旧版本/旧实例回包幂等忽略,不阻断新请求实例上线;交付侧事件绑定交付代次,旧卡的退回不作用于新版本(U01–U11、E01–E09 被杀)。M19、A05、A10、N03–N10、B01/B02/B04–B08、R03–R08、C01–C04/C09、S01–S07/S13/S14、D01–D11、T11–T15 被杀。整项要真的恢复原 Compute 实例并看到同一 compute_id 的恢复日志、交接摘要内容真实可用、宿主真的按请求号撤销启动并上报停止,要等 Claude Code 适配器"
+    },
+    {
+      "id": "AC-19",
+      "status": "未测",
+      "reason": "版本绑定判定已过:旧卡重发、旧卡号+旧版本迟到回复幂等忽略且不打断同批后续有效回复、当前版本错卡号仍拒、卡片冻结快照、卡片版本与任务版本比对、多次改条件后卡片绑定当时版本、旧执行器或旧版本的提问不形成卡片,等卡期间旧执行器的提问/提审回包不打断有效回复(M20/M25/A08/A09/N12–N14/R09/C07/S10/T09/T10 被杀);task_id 由调用方选择 Task 隐含承担,HumanReply 无 taskId 字段;整项观测点是卡片终态显示「已过期·未执行」与执行日志,要等内核与 UI"
+    },
+    {
+      "id": "R-09",
+      "status": "通过",
+      "evidence": "packages/domain/proof/task-lifecycle-tests.txt"
+    },
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "packages/domain/proof/task-lifecycle-tests.txt"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "packages/domain/proof/mutations.txt"
+    },
+    {
+      "id": "AC-15",
+      "status": "未测",
+      "reason": "E5b 单条补充改挂需要关联边 linked_msgs 与源/目标两个任务协同,下一片做"
+    },
+    {
+      "id": "AC-23",
+      "status": "未测",
+      "reason": "槽位表与进程状态要等资源状态机(第四台)和 Compute 适配器"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "03ffd6a9e9803ea716685c43486658f977e994c9"
+  },
+  "unverifiable": "第十三轮复审返修:红提交 03ffd6a(空壳,165 条具名失败,文件级失败 0);同一新测试套在 d8ad906 原实现上 187 绿 / 1 条具名失败(R13-CORR-01),存于 packages/domain/proof/red-against-d8ad906.tap。freezeTable 对漏格不抛(漏格只可能出自绕过类型的改动),以便 AC-09 测试报出空白格(M26)。第十三轮返修(c100498 的 approve 作废,待新版 AC 复审):①AC-28①(验收文档 148 行,v3.4 279c87e 起,用户 #2273)'用户一直不说话 → 停在 T8a,不超时、不归档',坏实现'等待中自动转 Accepted 或自动归档 → 红'。原实现在 T8a 收到当前代次 AcceptTimeout 转 T8_ArchivedUnverified,违反;现改为 T8a × AcceptTimeout 拒绝,原因含 #2273,任务与当前交付原样不动;离开 T8a 的路径只有:提出者确认(T8_Accepted)、提出者退回或改条件返工(T3),以及迟到的 ProducerModelAdded 使原审查不再跨厂商时回到 T5 以新轮次重审(R4-CORR-01 原有的跨厂商重判,不是超时归档);没有事件时任务一直停在 T8a。T8_ArchivedUnverified 因此不可达,已从 STATES、TABLE 和 VerificationBadge('unverified')中删除,状态数由 12 变为 11。AcceptTimeout 事件类型保留:旧代次照常幂等忽略,当前代次被拒;宿主即使发出也不会归档。AC-09 逐格期望里 T8a × AcceptTimeout 改为拒绝;依赖旧归档转换的 R-09/R4/R5/R6/R7 用例改写到超时被拒或已验收状态,断言未删。变异 M18/B07/F06/G03 改写到 T8a 拒绝超时与 T8_Accepted 上的同类故障(注入意图不变,不删除);新增 I01'T8a 收到 AcceptTimeout 直接转 T10_Cancelled 并清掉交付'(第十三轮复审前误名为'自动归档',已按实际注入更名)、I02'停在原状态但清掉当前交付'、I09'恢复旧的未核验归档(T8_ArchivedUnverified + unverified 标记,隔离注入用显式类型转换)',均被杀。②用户 #2662('1 缩小合同:只保证内置原型未被改的环境(建议)')与 PR #4 第十三轮顺带发现:包入口导出的 TABLE、行、格、STATES、EVENT_KINDS 原本可改,进程内改 TABLE.T1_Open.Dispatch 能让未认领任务 Dispatch 成功;现在全部深冻结,改写抛 TypeError,测试并断言未认领任务 Dispatch 仍被拒;新增变异 I03–I07 逐层去掉冻结,均被杀。第十三轮复审 R13-CORR-01:go 格引用的 run 函数本体原先未冻结(39 个不同函数对象可扩展),现由 freezeTable 一并冻结;新测试逐格断言 Object.isFrozen(cell.run) 且改写/新增属性抛 TypeError,新增变异 I08'run 函数不冻结'被杀。复审未证明改写 run 自身属性能改变 apply 的转移,这里只是补齐深冻结范围。'只保证内置原型未被改的环境'按用户原话记为合同边界,本轮不撤回第十一轮已有的原型污染防御(R11 测试照常通过),也不再新增此类防御。第十三轮首个红提交 93680a4(空壳,164 条具名失败,文件级失败 0);同一新测试套在 c100498 原实现上 179 绿 / 8 条具名失败,存于 packages/domain/proof/red-against-c100498.tap。变异共 243 个、243 种不同的 (file, from, to) 文本注入(mutations.mjs 现在拒绝重复注入),全部有具名测试失败。第十三轮复审 R13-TEST-01:上一版 B07 与 B06、G03 与 G02 字节相同,241 条只有 239 种不同注入,上一版'241 个'的说法不准确;现 B07 重定向为'T8a 不可恢复的退回强制按可恢复',G03 重定向为'T8a 的 UserAccept 不核 taskId(错任务放行)',编号保留。不同文本注入不等于语义必然独立。以下为前几轮说明:红基线的含义:第十一轮红提交 60389ce 把 task.ts/vendor.ts 整体换成空壳,161 条具名失败(文件级失败 0)多数报'未实现',它证明测试激活了源码(R-02/R-03),不逐条证明各缺陷。针对未修复旧行为的红另存于 packages/domain/proof/red-against-8e57583.tap——同一份新测试套在上一版实现 8e57583 上 182 绿 / 2 条具名失败,两条都是 R11-CORR-01(原型同名 computeResumable 的四种条件;任务字段与形状表 opt 的同名原型属性);新增的两条 R11-TEST-01 测试在 8e57583 上就通过,它们不是缺陷复现,而是为杀死 L02/L03/L04 补的标定。R11 的契约(R11-CORR-01):Object.prototype 上出现与字段同名的可写数据属性、setter 或不可写属性时,四个入口的结果与无污染时相同。实现上①snapshotOf 的临时必填字段表 req 改为 Object.assign(Object.create(null), shape.req),追加 computeResumable 不再经过继承的 setter 或因不可写抛错;②可选字段表改由 optOf 只读形状自有的 opt;③全仓同类排查:set 读 patch 字段原来用 'in' 与 '??'(会认 Object.prototype 上的 delivery/launch/approval/pendingQ/producerModels/revoked/orphans/retired/instances),改为 pick 只认自有属性。其余临时表与快照(snap、log.ts 的 snapshotBody/project、cas.ts)要么已是空原型,要么只用对象字面量和 Map,不经赋值追加,没有同类问题。测试用 spawnSync 在单独的 Node 子进程里临时改 Object.prototype,finally 中删除并核对已恢复,主进程原型从不改动;Review(reject) 的 computeResumable 取 true/false/缺失、有无 waiverBy 各一份,逐项对照无污染结果,并断言 true 发 resume-compute 保留 cc-1、false 发 spawn-compute 新开、缺失按'Review.computeResumable 缺失或取值非法(应为布尔)'拒绝,继承 setter 调用 0 次。前提仍是宿主进程的原型可能已被污染;没有证明普通 JSON 能建立这种污染。X03 重新评估(R11-TEST-01):第十轮'契约内输入不再抛错、X03 无可达输入'的结论不成立。修复后,原型污染的普通 JSON 事件不再走到 catch;但未初始化绑定的模块命名空间原型为 null、不是 Proxy,取描述符抛 ReferenceError,这是可达输入(夹具 packages/domain/src/fixtures/tdz-namespace.mjs),有测试('R11-TEST-01 外层兜底可达')在四个入口断言返回'事件无法校验'。所以 X03 不是等价变异,以 L04 名义恢复并被杀。上一轮的 red-against-24646a2.tap 保留为第十轮证据。以下为第十轮及更早的说明:红提交 ee72b47(第十轮)157 条具名失败;packages/domain/proof/red-against-24646a2.tap——第十轮测试套在 24646a2 上 174 绿 / 6 条具名失败,覆盖访问器字段被调用而非拒绝(含 getter 自身 call 被遮蔽)、未声明/不可枚举/symbol 键/仅 setter 的访问器、数组/函数/已撤销 Proxy 的拒绝原因、Review 通过时附加 computeResumable 被误拒。24646a2 已导出 normalizeEvent,无需垫片,实现原样。上一轮的 red-against-52eb37a.tap 对应已替换的测试版本,本轮删除。R10 的契约(取代 R9 契约中'访问器只调用一次 getter'与'读取出错即拒绝'两句):'普通数据对象'指 JSON 可产生的形状——不是 Proxy、原型为 Object.prototype 或 null、所有自有属性都是数据属性。入口顺序固定:①先 util.types.isProxy,任何 Proxy(对象、数组、函数、已撤销)在 normalizeEvent/validateEvent/apply/applyAll 四个入口一律给'只接受普通数据对象',不触发陷阱;②再判非对象/数组('事件不是对象')与原型;③再对 Reflect.ownKeys 的每个自有键(含不可枚举、symbol 键、未声明字段)取描述符,出现任何访问器(get 或 set)直接拒绝,原因'只接受普通数据对象(含访问器属性 键名)',永不调用 getter,字段值只取描述符的 value。④Review 先读 verdict:只有 reject 才声明并校验 computeResumable(布尔);approve 时它是未声明字段,任意数据值都直接丢弃、不读不校验。外层 try/catch 仍保留,为宿主特殊对象(如未初始化的模块命名空间,取描述符会抛错)兜底返回'事件无法校验';第十轮据'契约内输入走不到这里'删除了 X03,第十一轮证明这个判断错误,已作为 L04 恢复(见上)。领域层只接受 JSON 可产生的普通数据对象，不承诺防御任意 JS 元编程对象。R9 的契约:apply 入口先调用新导出的 normalizeEvent,把事件变成冻结、原型为 null 的纯数据快照,validateEvent 校验的就是这份快照,之后的错投检查、旧代次判定和所有状态转移、守卫只读快照,不再碰原对象。规范化分三步:①契约边界——领域层只接受 JSON 可产生的普通数据对象,先用 util.types.isProxy 判 Proxy(不触发陷阱),再要求原型为 Object.prototype 或 null,否则拒绝('只接受普通数据对象');自定义原型、类实例、Proxy 一律拒绝,领域层不承诺防御任意 JS 元编程对象。②每个声明字段只经 Object.getOwnPropertyDescriptor 读一次:数据属性取值,访问器只调用一次 getter,读取出错即拒绝('事件无法校验');原型链上继承来的字段(含 Object.prototype 被污染时)不算数;未声明字段一律丢弃,包括不声明 taskId 的事件上多出来的 taskId。③只有声明了 taskId 的五类事件做错投检查。测试里'继承字段'场景用临时往 Object.prototype 放同名字段来构造(普通对象在边界内,自定义原型对象在边界外直接拒绝),每个场景都通过 apply/applyAll 断言状态与副作用,并与省略、自有字段对照。R8 的契约:validateEvent 外层 try/catch 兜底,任何意外都返回'事件无法校验',自身绝不抛异常;事件种类必须是字符串,否则用固定文字'事件种类缺失或不是字符串'拒绝,不把不可信值格式化进原因;种类→形状改用 Map 查表,'__proto__'、'constructor'、'toString'、'hasOwnProperty' 等原型链名字查不到,按'未知的事件种类 \"名字\"'拒绝(名字经 JSON.stringify,不会抛);所有字段只读自有属性(Object.hasOwn),原型上继承来的同名字段不算数;非空字符串改为'去掉首尾空白后非空',全空白字符串拒绝,非 ASCII 合法。'事件无法校验'只说明读取字段时出错,不区分具体原因。R7 的契约:apply 入口先调用新导出的 validateEvent(e: unknown) 做运行时形状校验,表驱动定义每种事件的必填与可选字段及取值域(非空字符串/非负安全整数/正安全整数/布尔/枚举),缺失、null、错类型、越界、未知事件种类、非对象一律拒绝并点名字段,任务不变不发副作用;Review 在 verdict=reject 时还要求 computeResumable;多余字段不拒绝。之后带 taskId 的五类事件(四类交付事件与 StoppedConfirmed)必须等于本任务 ID;交付代次大于本任务已分配序号(从未分配的未来代次)在任何状态都拒绝,只有已分配的旧代次幂等忽略。形状校验只管结构和取值域,不验证字段内容的真实性(taskId、computeId、模型名等仍由宿主填写);宿主若绕过 apply 直接改 Task,不受此保护。R6 的契约:①新增 retired 账本:当前实例或孤儿实例收到停止确认后记入 retired,不再删除身份;retired 实例的迟到提问/提审在未回绑时可证明是旧回包、幂等忽略;它的重放上线只再发一次 stop-compute(幂等)而不重新登记,因此重放的停止确认不会第二次发 release-slot。retired 只增不减,当前没有生命周期上限(任务内实例数有限,先保证正确;有界回收要另行设计)。领域层只保证不重复发释放意图,宿主资源层对 release-slot 的幂等仍未验证。②交付代次在 apply 入口先校验为正安全整数,0、负数、小数、NaN、Infinity 一律拒绝;之后已分配的旧代次忽略、未分配的未来代次在交付状态拒绝。③跨任务边界:DeliveredCard/UserAccept/UserReject/AcceptTimeout/StoppedConfirmed 新增必填 taskId,send-card 带 taskId,入口发现 taskId 不是本任务即拒绝。这只是领域层的标识比对,taskId 由宿主填写,宿主路由与认证是否可信、跨层 A/B 同 commit 同代次错投的端到端测试,本片不验;HumanReply 与执行侧回包(Dispatch/NeedHuman/SubmitForReview/ProducerModelAdded/ExecFailed)仍不带 taskId,依赖调用方选对 Task。R5-CORR-01/02 的契约:每次审查通过分配新的、永不复用的 deliveryRound(只增不减的 deliverySeq),并发出 send-card(deliveryRound, commit, constraintVer);DeliveredCard/UserAccept/UserReject/AcceptTimeout 必须带 deliveryRound 与 commit。apply 入口先判:已分配过(代次 ≤ deliverySeq)但不是当前交付(代次或 commit 对不上、或当前没有交付)的事件一律原样忽略,所以旧卡回包不会让 applyAll 在中途失败而丢掉前面的结果;未分配过的代次在交付状态里按非法拒绝。重审与返工把当前交付清空,旧代次从此全部失效;这要求宿主把 send-card 里的代次原样带进发送回执与用户点击。宿主发卡前是否核对代次、卡片 UI 上旧卡是否标记失效,本片不验。applyAll 仍是'遇到第一个被拒就停、返回原因'的语义,不返回已应用的前缀;本轮只保证可证明为旧的事件不再被拒。R5-CORR-03:没有已绑定实例时(首派或返工新开在途),NeedHuman/SubmitForReview 若条件版本低于当前版本、或来自曾绑定/已登记为孤儿的别的实例,判为可证明的旧回包幂等忽略;来源未回绑且版本为当前版本的仍保守拒绝,不缓存。T9 中 ProducerModelAdded 仍一律忽略,'晚到记录不丢弃'只对 T3–T8 成立。R2-CORR-04 的设计取舍(沿用):每次 SubmitForReview 分配永不复用的 round,同 commit 同条件版本重新提审也必须重审。R3 的契约沿用:当前实例重复上线幂等,别的实例停止并登记孤儿;T9 要当前实例/启动与全部 revoked、orphans 各自确认才终态。以上全是领域层的标识串比对:不验证宿主上报的 computeId/requestId/constraintVer/model 真实性,没有 lease/epoch;冒用当前实例 ID 的旧实例识别不出来;update-constraints 与 resume-compute 里的版本只是通知;cancel-spawn 只是撤销意图;孤儿确认只认 computeId、旧启动确认只认 requestId,宿主若只报一种会让任务停在 T9 等待(偏保守);L1 仍在 revoked 未确认时 L2 绑定后可以提审,若两代执行器共享可写工作区,产物隔离要靠宿主,本片不验。AC-09 在本片指 11 个状态 × 15 种事件;需求文档第三台表还有 T2b、T4a/T4c、T6/T6b、T8b 和 E5/E7b/E10 等未建模,不能说整张需求表没有空白格。逐格期望 SPEC 是作者照 D20.3 主干手写,每格一个代表性任务和一个样例事件,条件分支靠具名测试补双侧对照。已知规格差异未解决:T9 下 Amend 被忽略,T10/T11 下 Amend 一律忽略,终态重开由哪个接口承担未定义;启动在途期间拒绝 NeedHuman/SubmitForReview,不缓存乱序事件。R-09 不再有超时归档,超时时长 N 不再需要。AC-26 的 vendorOf 对整个模型串做关键词匹配,渠道前缀或命名里的厂商关键词能影响推断,宿主必须提供可信、规范化的实际模型身份;豁免发起人的真实身份由宿主认证。computeResumable 由宿主报告,本片不验真假;withHandoff 只是意图标记。HumanReply 没有 taskId;派发/取消的并发竞态与 CAS 原子性未验;免审产出路径、正常交付后的真实停止与资源回收未覆盖;本轮未启动真实 Compute 进程。R-05 的变异校准第十一轮为 234 个单点变异(第十轮为 227 个,第十一轮新增 7 个;第十三轮再加 I01–I07 共 241 个):作者 M01–M29 共 34 个(含 domain-core 的 M01–M12),第一轮审查 A 14 个,第一轮修复 N 14 个,第二轮审查 B 9 个,第二轮修复 R 11 个,第三轮审查 C 9 个,第三轮修复 S 14 个,第四轮审查 D 11 个,第四轮修复 T 15 个,第五轮审查 E01–E10 去掉与 T04 相同的 E10 共 9 个,第五轮修复 U01–U11 共 11 个,第六轮审查 F01–F08 共 8 个(F09 阳性对照与 U08/U09 同类不重复),第六轮修复 V01–V10 共 10 个,第七轮审查 G01–G09 共 9 个(G10 与 V09 同一注入不重复),第七轮修复 W01–W11 共 11 个,第八轮审查 H01–H09 共 9 个(H10 为阳性对照不重复),第八轮修复 X01–X06 去掉 X03 共 5 个,第九轮审查 J01–J04 共 4 个(J05/J06 为对照不列入),第九轮规范化快照 Y02–Y05 共 4 个,普通数据对象边界 Z01–Z05 共 5 个(Z04 改为'先判类型/数组再判 Proxy',Z05 为'判 Proxy 前先枚举自有键'),第十轮审查 K01–K04 共 4 个(K05 与 Y02 同一注入、K06/K07 为 AC-09 对照,均不列入;其中只有 K02/K03 保持审查人第十轮的注入方向,K01 由'重复读取 requestId getter'改写为'放行 requestId 访问器',K04 由'读取并保留额外 getter'改写为'保留额外数据字段'。新契约拒绝访问器,原注入点已不存在,所以这两项是按原意图改写的,不是原样注入),第十轮修复 P01–P07 共 7 个,第十一轮审查 L01–L04 共 4 个(L01 有 waiverBy 时漏校验 computeResumable、L02 漏检不可枚举的 symbol 访问器、L03 漏检 symbol 键的仅 setter 访问器、L04 去掉外层 catch 即原 X03;L05 为阳性对照,与 P01 同类,不列入),第十一轮修复 Q01–Q03 共 3 个(临时必填字段表改回普通原型、set 用 in 认继承字段、opt 读继承属性);第十轮按新契约删除 2 个已不适用的变异:Y01'访问器读两次'(访问器一律拒绝、从不调用 getter,无可达输入)与 X03'去掉外层兜底'(第十轮理由是契约内输入不再抛错,第十一轮证明这个理由不成立,已作为 L04 恢复);W01/W08/H08/J01/J02/J03/X04/Z01–Z03 随实现改写重新指向新注入点。N13/D06/D07/E05/G05/W07/P07 随第十一轮 set 改用 pick、形状表改用 optOf 重新指向新注入点,注入语义不变。原样副本 184 绿,234 个全部有具名测试失败(文件级加载失败不计为杀死,注入点必须恰好出现一次)。U02 原注入点('forDelivery 不核代次')在入口拦截未分配代次后成为等价变异,改指入口判定。这只说明这 234 种故障能被发现,不等于每条规格已被充分标定。",
+  "waiver": null,
+  "review": {
+    "agent": "codex",
+    "session": "codex:494d03f8-8b47-4ae3-a080-43526db82afd",
+    "model": "gpt-6.1-terra",
+    "verdict": "approve",
+    "reviewed_hash": "42e48ec823478062730a0fb1dd3404578c18921259e29b3bac9720bc85b9058f",
+    "notes": "第十四轮独立复现 approve：逐格深冻结与单格变异、漏格 AC-09、243 种文本注入及八门禁负例均核验；不代表真实宿主或完整跨层 AC 已验收。来源硬门禁以实际运行结果为准；超时拒绝原因的路径表述有非阻断文字缺口，详见第十四轮报告。"
+  }
+}
