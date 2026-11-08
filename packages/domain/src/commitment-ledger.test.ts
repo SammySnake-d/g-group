@@ -1226,3 +1226,194 @@ test("独立判据：无任务来源可登记指定任务承诺", () => {
   const result = applyLedger(state, state.version, process(1, "task-b"));
   assert.equal(result.ok && result.ledger.commitments[0]?.taskId, "task-b");
 });
+
+// 第三轮审查：逐条钉住输入、快照、活动和对账的可观察行为。
+test("独立判据：接收拒绝未知发送者种类", () => {
+  const state = emptyLedger("c");
+  const command = { type: "receive", actionId: "bad-kind", message: { ...message("m1", 1), sender: { kind: "admin", id: "x" } } } as unknown as Command;
+  assert.deepEqual(applyLedger(state, state.version, command), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：绑定拒绝未知参与者种类", () => {
+  const state = registered();
+  const command = { ...bindCompute("bad-kind", "worker"), actor: { kind: "admin", id: "c" } } as unknown as Command;
+  assert.deepEqual(applyLedger(state, state.version, command), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：进展拒绝未知参与者种类", () => {
+  const state = registered();
+  const command = { ...progress(), actor: { kind: "system", id: "x" } } as unknown as Command;
+  assert.deepEqual(applyLedger(state, state.version, command), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：了结拒绝未知参与者种类", () => {
+  const state = registered();
+  const command = { ...close("done", "artifact"), actor: { kind: "admin", id: "x" } } as unknown as Command;
+  assert.deepEqual(applyLedger(state, state.version, command, () => true), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：主人同编号的用户不能绑定", () => {
+  const state = registered();
+  assert.deepEqual(applyLedger(state, state.version, bindCompute("user-owner-id", "worker", { kind: "user", id: "c" })), { ok: false, reason: "actor-not-allowed" });
+});
+
+test("独立判据：主人同编号的 Compute 不能绑定", () => {
+  const state = registered();
+  assert.deepEqual(applyLedger(state, state.version, bindCompute("compute-owner-id", "worker", { kind: "compute", id: "c" })), { ok: false, reason: "actor-not-allowed" });
+});
+
+test("独立判据：其他联系人空承诺可标记已处理", () => {
+  const initial = emptyLedger("c");
+  const state = unwrap(applyLedger(initial, initial.version, { type: "receive", actionId: "other", message: { ...message("m1", 1), sender: { kind: "contact", id: "other" } } }));
+  const result = applyLedger(state, state.version, { type: "process", actionId: "empty-other", seq: 1, accepted: false, commitments: [] });
+  assert.equal(result.ok, true);
+  if (result.ok) { assert.equal(result.ledger.messages[0]?.handled, true); assert.deepEqual(result.ledger.commitments, []); }
+});
+
+test("独立判据：用户未接下的空承诺可标记已处理", () => {
+  const state = received();
+  const result = applyLedger(state, state.version, { type: "process", actionId: "empty-user", seq: 1, accepted: false, commitments: [] });
+  assert.equal(result.ok, true);
+  if (result.ok) { assert.equal(result.ledger.messages[0]?.handled, true); assert.deepEqual(result.ledger.commitments, []); }
+});
+
+test("独立判据：同任务其他承诺的动作不能代替本承诺对账", () => {
+  const first = registered();
+  const secondMessage = unwrap(applyLedger(first, first.version, receive("m2", 2)));
+  const two = unwrap(applyLedger(secondMessage, secondMessage.version, process(2)));
+  const moved = unwrap(applyLedger(two, two.version, progress()));
+  assert.deepEqual(reconcileRound(moved, "r1", ["k1", "k2"]), { ok: true, ready: false, pending: ["k2"] });
+});
+
+test("独立判据：接下标志必须是布尔", () => {
+  const state = received();
+  const command = { ...process(), accepted: "false" } as unknown as Command;
+  assert.deepEqual(applyLedger(state, state.version, command), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：了结结果必须属于四种终态", () => {
+  const state = registered();
+  const command = { ...close("blocked"), outcome: "paused" } as unknown as Command;
+  assert.deepEqual(applyLedger(state, state.version, command), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：快照承诺来源序号必须对应来源消息", () => {
+  const state = registered();
+  const forged = { ...state, commitments: [{ ...state.commitments[0]!, sourceSeq: 99 }] };
+  let calls = 0;
+  assert.deepEqual(applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; }), { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+test("独立判据：快照承诺状态必须属于五种状态", () => {
+  const state = registered();
+  const forged = { ...state, commitments: [{ ...state.commitments[0]!, status: "paused", resolution: { detail: "原因", artifact: null } }] } as unknown as Ledger;
+  let calls = 0;
+  assert.deepEqual(applyLedger(forged, forged.version, close("done", "artifact"), () => { calls++; return true; }), { ok: false, reason: "invalid-input" });
+  assert.equal(calls, 0);
+});
+
+test("独立判据：进展活动逐字段保留绑定 Compute 内容", () => {
+  const state = registered();
+  const bound = unwrap(applyLedger(state, state.version, bindCompute("bind-for-activity", "worker")));
+  const result = applyLedger(bound, bound.version, progress("k1", "task-a", "r-progress", compute));
+  assert.equal(result.ok, true);
+  if (result.ok) assert.deepEqual(result.ledger.activity, [{ roundId: "r-progress", commitmentId: "k1", taskId: "task-a", actor: compute, kind: "progress", text: "进展" }]);
+});
+
+test("独立判据：了结活动逐字段保留用户撤回内容", () => {
+  const state = registered();
+  const result = applyLedger(state, state.version, close("revoked", null, user));
+  assert.equal(result.ok, true);
+  if (result.ok) assert.deepEqual(result.ledger.activity, [{ roundId: "r1", commitmentId: "k1", taskId: "task-a", actor: user, kind: "close", text: "明确原因" }]);
+});
+
+test("独立判据：命令拒绝空动作编号", () => {
+  const state = emptyLedger("c");
+  assert.deepEqual(applyLedger(state, state.version, { ...receive(), actionId: "" } as Command), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：快照拒绝未知活动种类", () => {
+  const state = registered();
+  const moved = unwrap(applyLedger(state, state.version, progress()));
+  const forged = { ...moved, activity: [{ ...moved.activity[0]!, kind: "other" }] } as unknown as Ledger;
+  assert.deepEqual(applyLedger(forged, forged.version, receive("m2", 2)), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：外部输入拒绝 symbol 键", () => {
+  const state = emptyLedger("c");
+  const command = { type: "receive", actionId: "symbol", message: { ...message("m1", 1), [Symbol("extra")]: "x" } } as Command;
+  assert.deepEqual(applyLedger(state, state.version, command), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：外部输入拒绝稀疏承诺数组", () => {
+  const state = received();
+  const entries: { id: string; taskId: string; text: string }[] = [];
+  entries[1] = { id: "k1", taskId: "task-a", text: "原文 m1" };
+  assert.deepEqual(applyLedger(state, state.version, { type: "process", actionId: "sparse", seq: 1, accepted: true, commitments: entries }), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：共享引用不是循环引用", () => {
+  const first = received();
+  const state = unwrap(applyLedger(first, first.version, receive("m2", 2)));
+  const sender = state.messages[0]!.sender;
+  const shared = { ...state, messages: state.messages.map((m) => ({ ...m, sender })) };
+  assert.equal(applyLedger(shared, shared.version, receive("m3", 3)).ok, true);
+});
+
+test("独立判据：外部输入拒绝数组子类", () => {
+  class Entries extends Array<{ id: string; taskId: string; text: string }> {}
+  const entries = new Entries();
+  entries.push({ id: "k1", taskId: "task-a", text: "原文 m1" });
+  const state = received();
+  assert.deepEqual(applyLedger(state, state.version, { type: "process", actionId: "array-class", seq: 1, accepted: true, commitments: entries }), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：外部输入拒绝不可枚举数据属性", () => {
+  const state = emptyLedger("c");
+  const command = Object.defineProperty({ type: "receive", message: message("m1", 1) }, "actionId", { value: "hidden", enumerable: false }) as unknown as Command;
+  assert.deepEqual(applyLedger(state, state.version, command), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：接收拒绝零序号", () => {
+  const state = emptyLedger("c");
+  assert.deepEqual(applyLedger(state, state.version, receive("m0", 0)), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：快照拒绝空主人编号", () => {
+  const state = registered();
+  const forged = { ...state, ownerId: "" };
+  assert.deepEqual(applyLedger(forged, forged.version, receive("m2", 2)), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：快照拒绝负版本", () => {
+  const state = registered();
+  const forged = { ...state, version: -1 };
+  assert.deepEqual(reconcileRound(forged, "r1", ["k1"]), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：进展拒绝空文字", () => {
+  const state = registered();
+  assert.deepEqual(applyLedger(state, state.version, { ...progress(), text: "" } as Command), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：快照消息处理标志必须是布尔", () => {
+  const state = registered();
+  const forged = { ...state, messages: [{ ...state.messages[0]!, handled: "yes" }] } as unknown as Ledger;
+  assert.deepEqual(applyLedger(forged, forged.version, receive("m2", 2)), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：对账拒绝空轮次", () => {
+  const state = registered();
+  assert.deepEqual(reconcileRound(state, "", ["k1"]), { ok: false, reason: "invalid-input" });
+});
+
+test("独立判据：对账待处理数组被冻结", () => {
+  const state = registered();
+  const result = reconcileRound(state, "r1", ["k1"]);
+  assert.equal(result.ok && Object.isFrozen(result.pending), true);
+});
+
+test("独立判据：新建账本被冻结", () => {
+  assert.equal(Object.isFrozen(createLedger("c")), true);
+});
