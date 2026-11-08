@@ -1,0 +1,44 @@
+docs/spec/需求文档.md
+  h_f33e46a035b77c 3,5-6,10-11,51,90-91,118-119,122-123,125,131-247,301,312,330-331,336,340-341,345-347,349,355-359,434,441,446,455,459,479,509,512,552,619,637,640,660,666,695,699-714,716,730,763,765,782,789,791,798-800,842,866-871,875,909-910,921,938,943,945-946,957-958,960-991,1110,1222-1223,1225,1391,1623,1625,1627,1633,1636-1637,1662,1665,1701,1711-1712,1743-1744,1778,1785,1789,1791-1793,1804,1813,1815-1817,1819-1821,1823,1825,1829-1831,1842,1844-1845,1853,1856,1863-1865,1895-1898,1920,1943,1948,1951,1968,1984,1996-2363,2390-2415,2439,2445,2454,2461,2464-2468,2470-2471,2477,2482,2494-2495,2531,2533,2535,2538,2540,2542,2557,2561,2563,2565,2569-2573,2575-2577,2581-2582,2610,2618,2774,2779-2796
+docs/spec/验收文档-v0.1.md
+  h_f33e46a035b77c 1,3,5,8,44-45,51,91,128,130-131,149,155-156,160-196,223,278-280,282-283,287
+docs/开发手册.md
+  h_f33e46a035b77c 1-897
+docs/概念卡.md
+  h_f33e46a035b77c 1-392
+packages/domain/proof/contact-helper-tests.txt
+  h_f33e46a035b77c 1-315
+packages/domain/proof/focus-removal-red-against-old-impl.tap
+  h_f33e46a035b77c 1-444
+packages/domain/proof/mutations.mjs
+  h_f33e46a035b77c 21-25,279-560,562-582,610
+packages/domain/proof/mutations.txt
+  h_f33e46a035b77c 1-519
+packages/domain/src/contact.test.ts
+  h_f33e46a035b77c 1-2243
+packages/domain/src/contact.ts
+  h_f33e46a035b77c 1-452
+packages/domain/src/helper.test.ts
+  h_f33e46a035b77c 1-275
+packages/domain/src/helper.ts
+  h_f33e46a035b77c 1-63
+packages/domain/src/index.ts
+  h_f33e46a035b77c 6-7
+packages/domain/src/plain.ts
+  h_f33e46a035b77c 1-195
+receipts/feat-contact-helper.json
+  h_f33e46a035b77c 1-59
+reviews/feat-contact-helper.md
+  h_f33e46a035b77c 1-1241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9c6f083d9995a9723eda4d2fd95bc2752f68c2d4",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

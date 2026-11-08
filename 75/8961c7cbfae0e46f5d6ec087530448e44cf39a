@@ -1,0 +1,36 @@
+packages/domain/proof/commitment-ledger-mutations.mjs
+  h_f33e46a035b77c 1-328
+packages/domain/proof/commitment-ledger-mutations.txt
+  h_f33e46a035b77c 1-224
+packages/domain/proof/commitment-ledger-round2-red-green.txt
+  h_f33e46a035b77c 1-296
+packages/domain/proof/commitment-ledger-round3-red-green.txt
+  h_f33e46a035b77c 1-373
+packages/domain/proof/commitment-ledger-round4-red-green.txt
+  h_f33e46a035b77c 1-430
+packages/domain/proof/commitment-ledger-round4-sweep.txt
+  h_f33e46a035b77c 1-372
+packages/domain/proof/commitment-ledger-tests.txt
+  h_f33e46a035b77c 1-94
+packages/domain/src/commitment-ledger.test.ts
+  h_f33e46a035b77c 1-1419
+packages/domain/src/commitment-ledger.ts
+  h_f33e46a035b77c 1-237
+packages/domain/src/index.ts
+  h_f33e46a035b77c 8
+receipts/feat-commitment-ledger.json
+  h_f33e46a035b77c 1-43
+reviews/feat-commitment-ledger.md
+  h_f33e46a035b77c 1-466
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "758961c7cbfae0e46f5d6ec087530448e44cf39a",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
