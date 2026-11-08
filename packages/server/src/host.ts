@@ -28,6 +28,7 @@ import {
   settleDraft,
 } from "@g-group/api-contract";
 import {
+  type AttemptReason,
   type Ledger,
   type ProjectedMessage,
   type Task,
@@ -40,6 +41,7 @@ import {
   isAppendOnly,
   modelConfig,
   newTask,
+  producerModels,
   producerVendors,
   project,
   recordAttempt,
@@ -1806,12 +1808,16 @@ export class Host {
   }
 
   // ======================= Compute =======================
-  private adapterFor(model: string): ComputeAdapter | null {
+  /**
+   * 适配器按 Harness 建一个、跨任务复用(AC-51):模型每一轮随输入交给它,不按模型另建实例。
+   * 没声明按轮换模型能力的旧适配器(一次性进程,模型写在进程环境里)只能按模型分实例,否则换了模型还在用旧模型。
+   */
+  private adapterFor(harness: string, model: string): ComputeAdapter | null {
     if (!this.opts.compute) return null;
-    let a = this.adapters.get(model);
+    let a = this.adapters.get(harness) ?? this.adapters.get(`${harness}:${model}`);
     if (!a) {
       a = this.opts.compute(model);
-      this.adapters.set(model, a);
+      this.adapters.set(isModelAware(a) ? harness : `${harness}:${model}`, a);
       this.pumps.push(this.pump(a));
     }
     return a;
@@ -1831,7 +1837,7 @@ export class Host {
     }
   }
   private onComputeEvent(ev: ComputeEvent) {
-    const row = one<{ task_id: string; contact_id: string; room_id: string }>(this.db, "SELECT task_id, contact_id, room_id FROM gg_compute WHERE compute_id = ?", ev.computeId);
+    const row = one<{ task_id: string; contact_id: string; room_id: string; harness: string }>(this.db, "SELECT task_id, contact_id, room_id, harness FROM gg_compute WHERE compute_id = ?", ev.computeId);
     if (!row) return;
     const at = this.now();
     const summary =
@@ -1857,6 +1863,19 @@ export class Host {
           taskChanged = true;
         }
       }
+      // harness 回报的实际模型(AC-51 ⑥):和账本里这个 Compute 最近一次不同、或从没出现过的,追加一条 observed
+      const reported = reportedModels(ev);
+      if (reported.length) {
+        const rec = this.taskDoc(row.task_id).value.models ?? emptyModelRecord;
+        const last = rec.attempts.filter((x) => x.computeId === ev.computeId).at(-1);
+        const seen = new Set(producerModels(rec));
+        for (const m of reported) {
+          if (ev.kind === "started" ? last?.model === m : seen.has(m)) continue;
+          seen.add(m);
+          this.recordTurnTx(row.task_id, ev.computeId, row.harness, m, last?.effort ?? this.settings().defaultEffort, "observed");
+          taskChanged = true;
+        }
+      }
       if (ev.kind !== "started") {
         const payload: Inbound = { kind: "compute", roomId: row.room_id, taskId: row.task_id, computeId: ev.computeId, signal: ev.kind, summary, at };
         run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", row.contact_id, row.room_id, JSON.stringify(payload), at);
@@ -1873,11 +1892,8 @@ export class Host {
     for (const e of effects) {
       try {
         if (e.kind === "spawn") await this.spawn(e);
-        else if (e.kind === "resume") {
-          const a = this.adapterForCompute(e.computeId);
-          const r = a ? await a.resume(e.computeId, e.text) : { ok: false as const, reason: "没有 Compute 适配器" };
-          if (!r.ok) this.report("resume-failed", { ...e, reason: r.reason });
-        } else if (e.kind === "stop") {
+        else if (e.kind === "resume") await this.computeTurn(e);
+        else if (e.kind === "stop") {
           const a = this.adapterForCompute(e.computeId);
           if (a) await a.stop(e.computeId);
         }
@@ -1887,11 +1903,72 @@ export class Host {
     }
   }
   private adapterForCompute(computeId: string): ComputeAdapter | null {
-    const row = one<{ model: string }>(this.db, "SELECT model FROM gg_compute WHERE compute_id = ?", computeId);
-    return row ? this.adapterFor(row.model) : null;
+    const row = one<{ harness: string; model: string }>(this.db, "SELECT harness, model FROM gg_compute WHERE compute_id = ?", computeId);
+    return row ? this.adapterFor(row.harness, row.model) : null;
+  }
+  /** 账本追加一条,并让任务状态机的生产模型集合同步(跨厂商审查门禁按它判);在事务里调。 */
+  private recordTurnTx(taskId: string, computeId: string, harness: string, model: string, effort: string, reason: AttemptReason) {
+    const cur = this.taskDoc(taskId);
+    const prev = cur.value.models ?? emptyModelRecord;
+    const models = recordAttempt(prev, { computeId, harness, model, effort, reason, at: this.now() });
+    if (!isAppendOnly(prev, models)) throw new HostError("internal", "模型账本只能追加");
+    let task = cur.value.task;
+    if (!task.producerModels.includes(model)) {
+      const o = applyTask(task, { kind: "ProducerModelAdded", model, computeId });
+      if (o.ok) task = o.task;
+      else this.report("producer-model-rejected", { taskId, model, reason: o.reason });
+    }
+    putDoc(this.db, `task:${taskId}`, cur.ver, { ...cur.value, task, models, updatedAt: this.now() });
+  }
+  /**
+   * 送进 Compute 的每一次后续输入(联系人转达、用户退回重试……)都走这里(AC-51 ①⑤):
+   * 按此刻的配置现场解析这一轮的 {model, effort},不兼容先拦;交给适配器在轮边界切换;切换失败这一轮不算发出,不退回旧模型。
+   */
+  private async computeTurn(e: { taskId: string; computeId: string; text: string }, reason: AttemptReason = "turn") {
+    const row = one<{ contact_id: string; room_id: string; harness: string; model: string }>(this.db, "SELECT contact_id, room_id, harness, model FROM gg_compute WHERE compute_id = ?", e.computeId);
+    const a = row ? this.adapterFor(row.harness, row.model) : null;
+    if (!row || !a) {
+      this.report("resume-failed", { ...e, reason: "没有 Compute 适配器" });
+      return;
+    }
+    const owner = getDoc<ContactDoc>(this.db, `contact:${row.contact_id}`)?.value;
+    const resolved = owner ? this.resolveComputeFor(owner) : null;
+    if (resolved) {
+      if (resolved.harness !== row.harness) {
+        return this.turnRefused(e.taskId, e.computeId, row, `这个 Compute 跑在 ${row.harness} 上,联系人已改用 ${resolved.harness};换 Harness 要在新 Harness 上开新会话(随 Codex 接入实现),这一轮没有发出`);
+      }
+      const chk = modelConfig.checkCompute(this.caps(), resolved);
+      if (!chk.ok) return this.turnRefused(e.taskId, e.computeId, row, chk.reason);
+      if (!isModelAware(a) && resolved.model !== row.model) {
+        return this.turnRefused(e.taskId, e.computeId, row, `这个 Compute 的适配器不支持会话内换模型,仍是启动时的 ${row.model},联系人已改用 ${resolved.model};这一轮没有发出,不沿用旧模型继续跑`);
+      }
+    }
+    const turn: TurnModel | undefined = resolved ? { model: resolved.model, effort: resolved.effort } : undefined;
+    const r = await (a.resume as (id: string, text: string, turn?: TurnModel) => Promise<{ ok: true } | TurnRefusal>)(e.computeId, e.text, turn);
+    if (!r.ok) {
+      if (r.code === "model-switch-failed") return this.turnRefused(e.taskId, e.computeId, row, `换模型没成功:${r.reason}。这一轮没有发出;可以单独指定一个兼容的模型,或更换支持该模型的 Harness`);
+      this.report("resume-failed", { ...e, reason: r.reason });
+      return;
+    }
+    if (resolved) {
+      tx(this.db, () => this.recordTurnTx(e.taskId, e.computeId, row.harness, resolved.model, resolved.effort, reason));
+      this.emitTask(e.taskId);
+    }
+  }
+  /** 这一轮没送进 Compute:原因记进进度,并告诉联系人(由它在聊天里给用户两条修复路径)。 */
+  private turnRefused(taskId: string, computeId: string, row: { contact_id: string; room_id: string }, why: string) {
+    const at = this.now();
+    this.report("turn-refused", { taskId, computeId, why });
+    tx(this.db, () => {
+      run(this.db, "INSERT INTO gg_progress (task_id, compute_id, kind, stage, summary, at) VALUES (?, ?, 'blocked', 'model', ?, ?)", taskId, computeId, why, at);
+      const payload: Inbound = { kind: "compute", roomId: row.room_id, taskId, computeId, signal: "blocked", summary: why, at };
+      run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", row.contact_id, row.room_id, JSON.stringify(payload), at);
+    });
+    this.bus.emit({ type: "compute.progress", progress: { computeId, taskId, kind: "blocked", stage: "model", summary: why, at } });
+    this.emitTask(taskId);
+    this.loop.notify(row.contact_id, "now");
   }
   private async spawn(e: Extract<HostEffect, { kind: "spawn" }>) {
-    const adapter = this.adapterFor(e.model);
     const fail = (reason: string) => {
       tx(this.db, () => {
         const { effects: eff } = this.stepTaskTx(e.taskId, { kind: "ExecFailed", requestId: e.requestId });
@@ -1916,20 +1993,25 @@ export class Host {
         return fail(chk.reason);
       }
     }
+    const harness = resolved?.harness ?? "claude-code";
+    const model = resolved?.model ?? e.model;
+    const adapter = this.adapterFor(harness, model);
     if (!adapter) return fail("宿主没有配置 Compute 适配器");
     const cwd = this.opts.computeCwd?.(e.taskId);
     const tools = [...(this.opts.computeTools ?? DEFAULT_COMPUTE_TOOLS)];
-    const r = await adapter.spawn({ task: e.brief, rules: [], tools, credentialRefs: [], placement: "local" }, cwd ? { cwd } : {});
+    // 首轮就带生效模型(AC-51 ①);只给声明了按轮换模型能力的适配器(旧的一次性适配器只收 cwd/handoff)
+    const modelAware = isModelAware(adapter);
+    const spawnOpts = { ...(cwd ? { cwd } : {}), ...(modelAware ? { model, ...(resolved ? { effort: resolved.effort } : {}) } : {}) };
+    const r = await adapter.spawn({ task: e.brief, rules: [], tools, credentialRefs: [], placement: "local" }, spawnOpts);
     if (!r.ok) return fail(r.reason);
-    const harness = resolved?.harness ?? "claude-code";
     const late: string[] = [];
     tx(this.db, () => {
-      run(this.db, "INSERT INTO gg_compute (compute_id, task_id, contact_id, room_id, harness, model, status, started_at) VALUES (?, ?, ?, ?, ?, ?, 'starting', ?)", r.computeId, e.taskId, e.contactId, e.roomId, harness, e.model, this.now());
+      run(this.db, "INSERT INTO gg_compute (compute_id, task_id, contact_id, room_id, harness, model, status, started_at) VALUES (?, ?, ?, ?, ?, ?, 'starting', ?)", r.computeId, e.taskId, e.contactId, e.roomId, harness, model, this.now());
       // 首次启动写入不可变快照,账本追加一条 start(AC-32 ④)
       const prev = this.taskDoc(e.taskId).value.models ?? emptyModelRecord;
-      const models = recordAttempt(prev, { computeId: r.computeId, harness, model: e.model, effort: resolved?.effort ?? this.settings().defaultEffort, reason: "start", at: this.now() });
+      const models = recordAttempt(prev, { computeId: r.computeId, harness, model, effort: resolved?.effort ?? this.settings().defaultEffort, reason: "start", at: this.now() });
       if (!isAppendOnly(prev, models)) throw new HostError("internal", "模型账本只能追加");
-      const { effects: eff } = this.stepTaskTx(e.taskId, { kind: "Dispatch", computeId: r.computeId, model: e.model, requestId: e.requestId }, { models });
+      const { effects: eff } = this.stepTaskTx(e.taskId, { kind: "Dispatch", computeId: r.computeId, model, requestId: e.requestId }, { models });
       for (const x of eff) if (x.kind === "stop-compute") late.push(x.computeId);
     });
     this.emitTask(e.taskId);
@@ -2090,6 +2172,24 @@ function incompatibleMessage(conflicts: readonly modelConfig.AffectedContact[]):
   const names = conflicts.map((a) => `${a.name}(${a.after.harness} 不支持 ${a.after.model})`).join("、");
   return `这次改动会让 ${conflicts.length} 位联系人的 Compute 与所选 Harness 不兼容:${names}。可以单独指定兼容的模型或更换 Harness;看过预览确认后再保存`;
 }
+/** 这一轮的生效模型(AC-51):宿主每次送进 Compute 的输入都带上。 */
+export interface TurnModel {
+  readonly model: string;
+  readonly effort?: string;
+}
+type TurnRefusal = { ok: false; reason: string; code?: string; fixes?: readonly string[] };
+/** 声明了按轮换模型能力(capabilities)的适配器:spawn 收 model/effort,resume 收这一轮的生效模型。 */
+function isModelAware(a: ComputeAdapter): boolean {
+  return "capabilities" in a && typeof (a as { capabilities?: unknown }).capabilities === "object";
+}
+/** 事件里 harness 回报的实际模型:started.model;completed/failed 的 models(这一轮 modelUsage 的键)。旧适配器没有这些字段。 */
+function reportedModels(ev: ComputeEvent): string[] {
+  const x = ev as ComputeEvent & { model?: unknown; models?: unknown };
+  if (ev.kind === "started") return typeof x.model === "string" && x.model ? [x.model] : [];
+  if (ev.kind === "completed" || ev.kind === "failed") return Array.isArray(x.models) ? x.models.filter((m): m is string => typeof m === "string" && m !== "") : [];
+  return [];
+}
+
 function defaultsOf(s: SettingsView): modelConfig.ModelDefaults {
   return { harness: s.defaultHarness, speakingModel: s.defaultSpeakingModel, computeModel: s.defaultComputeModel, effort: s.defaultEffort };
 }
