@@ -1,8 +1,4 @@
-warning: unable to find all commit-graph files
-warning: unable to find all commit-graph files
-base=origin/feat/domain-core branch=feat/cc-compute HEAD=e15479cd2050a75807e3411d3171f93658de0d93 受检文件 26 个 收据=receipts/feat-cc-compute.json 门禁 8 个
-warning: unable to find all commit-graph files
-warning: unable to find all commit-graph files
+base=origin/feat/domain-core branch=feat/cc-compute HEAD=e7d6f9c4539606476ed19a061d3bfbf8997aedaf 受检文件 27 个 收据=receipts/feat-cc-compute.json 门禁 8 个
 ✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据
 ✗ G-REVIEW  R-01:审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)
     - 还没有独立审查
@@ -12,4 +8,4 @@ warning: unable to find all commit-graph files
 ✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限或 pull_request_target
 ✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)
 ✓ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是用户本人对这一版的明确批准
-CONTENT_HASH=18a1aafe598b9f0307ceb7d760e007f247f59170490b1afc6168a5898ad2c1f1
+CONTENT_HASH=438e5b3bb117e2bfd3f7dfd20b606139780061319aa914dc7619d9370a5d978f
