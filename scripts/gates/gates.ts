@@ -122,6 +122,7 @@ function parseInput(x: unknown): Record<string, unknown> {
   return (x && typeof x === "object" ? x : {}) as Record<string, unknown>;
 }
 const WRITE_TOOLS = /^(write|edit|multiedit|notebookedit|apply_patch|applypatch|str_replace|fs_write|create_file|write_file|patch)$/i;
+const READ_TOOLS = /^(read|read_file|read_text_file|fs_read|grep|glob|ls|list_files)$/i;
 const SHELL_TOOLS = /^(bash|shell|execute_bash|exec_command|run_shell|local_shell|terminal)$/i;
 /**
  * 这一轮有没有改过本仓库:路径按工具 cwd、会话 workdir 解析成绝对路径再判断;
@@ -129,10 +130,11 @@ const SHELL_TOOLS = /^(bash|shell|execute_bash|exec_command|run_shell|local_shel
  */
 export function turnTouchesRepo(t: Turn, workdir: string | undefined, inRepo: (abs: string) => boolean): boolean {
   for (const c of t.toolCalls ?? []) {
+    if (READ_TOOLS.test(c.name ?? "")) continue;
     const inp = parseInput(c.input);
     const command = [inp.command, inp.cmd, inp.raw].find((v): v is string => typeof v === "string");
     // 只认无 shell 组合的明确只读形式;其它 shell 调用仍作为可能写入保守处理。
-    if (SHELL_TOOLS.test(c.name ?? "") && command && /^(?:git\s+status(?:\s+(?:--short|-s|-sb|--porcelain(?:=v[12])?))*|git\s+log\s+--oneline\s+-1)\s*$/.test(command.trim())) continue;
+    if (SHELL_TOOLS.test(c.name ?? "") && command && /^(?:git\s+status(?:\s+(?:--short|-s|-sb|--porcelain(?:=v[12])?))*|git\s+log\s+--oneline\s+-1|pwd|ls(?:\s+(?:-[alhF]+|--|[A-Za-z0-9_./-]+))*|cat(?:\s+(?:--|[A-Za-z0-9_./-]+))+)\s*$/.test(command.trim())) continue;
     const cwd = [inp.cwd, inp.workdir, inp.working_directory].find((v): v is string => typeof v === "string") ?? workdir;
     const resolve = (p: string): string | undefined => {
       const q = p.replace(/^["']|["']$/g, "");
