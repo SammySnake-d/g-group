@@ -733,3 +733,47 @@ test("同一条仍可见的已压缩旧消息被重复引用时只页入一次,�
   assert.deepEqual(twice.manifest.filter((m) => m.seq === 1), [{ seq: 1, bytes: once.manifest.find((m) => m.seq === 1)?.bytes, via: "page-in" }]);
   assert.equal(twice.totalBytes, once.totalBytes);
 });
+
+// —— 第十二轮审查 R12-03:serialize / prefixLength / prefixHash 的请求可能是外部传回的结构,不能信它自报的 bytes 与段边界
+/** 只有一段 system 的真实装配结果,经 JSON 往返成外部传回的普通副本 */
+const external = (system: string) => JSON.parse(JSON.stringify(ok(assemble({ events: [] }, { stable: [{ kind: "system", text: system }], quotes: [], budgetBytes: BIG })).request));
+
+test("外部请求把某段 bytes 改成 0、-1 或与正文 UTF-8 字节数不符时,serialize / prefixLength / prefixHash 都抛受控 TypeError,两份不同内容不会被算成相同前缀哈希;不改 bytes 的同一请求照常(R12-03 阳性埋雷 / 单开关对照)", () => {
+  const a = external("A");
+  const b = external("B");
+  assert.notEqual(prefixHash(a), prefixHash(b));
+  assert.equal(prefixLength(a), Buffer.byteLength(serialize(a), "utf8"));
+  for (const bytes of [0, -1, 10, 12]) {
+    for (const req of [structuredClone(a), structuredClone(b)]) {
+      req.segments[0].bytes = bytes;
+      for (const fn of [serialize, prefixLength, prefixHash] as const) {
+        assert.throws(() => fn(req), (e: unknown) => e instanceof TypeError && e.message.includes(`segments[0] 的 bytes 是 ${bytes},正文按 UTF-8 实际是 11 字节`), `${fn.name} ${bytes}`);
+      }
+    }
+  }
+});
+
+test("合法的中文 UTF-8 请求:每段 bytes 等于正文 UTF-8 字节数(不是 UTF-16 长度),经 JSON 往返后 serialize / prefixLength / prefixHash 照常且与原请求一致(R12-03 单开关对照)", () => {
+  const r = ok(assemble(history(), opts({ stable: [{ kind: "system", text: "你是群里的联系人,说中文" }, { kind: "persona", text: "语气平和" }], quotes: [1] })));
+  const copy = JSON.parse(JSON.stringify(r.request));
+  for (const sg of copy.segments) assert.equal(sg.bytes, Buffer.byteLength(sg.text, "utf8"));
+  assert.ok(copy.segments.some((sg: { text: string; bytes: number }) => sg.bytes !== sg.text.length), "样例里要有多字节字符,才分得出 UTF-8 与 UTF-16 长度");
+  assert.deepEqual([serialize(copy), prefixLength(copy), prefixHash(copy)], [serialize(r.request), prefixLength(r.request), prefixHash(r.request)]);
+  assert.equal(prefixLength(copy), Buffer.byteLength(r.request.segments.filter((sg) => sg.section !== "tail").map((sg) => sg.text).join(""), "utf8"));
+});
+
+test("外部请求的段顺序被调换(tail 放到最前)或 section 不是 stable / history / tail 时抛受控 TypeError,前缀哈希不会盖到 tail 上;原顺序照常(R12-03 阳性埋雷 / 单开关对照)", () => {
+  const r = ok(assemble(history(), opts({ quotes: [1] })));
+  const copy = JSON.parse(JSON.stringify(r.request));
+  assert.equal(copy.segments.at(-1).section, "tail");
+  assert.equal(prefixHash(copy), prefixHash(r.request));
+  const moved = structuredClone(copy);
+  moved.segments.unshift(moved.segments.pop());
+  const renamed = structuredClone(copy);
+  renamed.segments[0].section = "preamble";
+  for (const [req, i] of [[moved, 1], [renamed, 0]] as const) {
+    for (const fn of [serialize, prefixLength, prefixHash] as const) {
+      assert.throws(() => fn(req), (e: unknown) => e instanceof TypeError && e.message.includes(`segments[${i}] 的 section 必须是 stable / history / tail 之一,并按这个顺序排列`), fn.name);
+    }
+  }
+});

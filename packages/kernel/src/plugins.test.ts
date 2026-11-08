@@ -2,6 +2,7 @@
 // 定时归联系人不归插件;插件互不依赖;外部事件由宿主校验并盖章(来源、版本、事件类型、双时间、附件、不可信);
 // 外发按 action_id 记账,in-flight 后超时或异常记 DeliveryUnknown,B2 渠道拒绝盲重试。
 import assert from "node:assert/strict";
+import { createHook } from "node:async_hooks";
 import { execFileSync } from "node:child_process";
 import { test } from "node:test";
 import { createRegistry, SCHEDULE_REASON } from "./plugins.ts";
@@ -1968,4 +1969,347 @@ test("改写链上只剩另一 realm 的内置原型可动时仍然不动它:实
   assert.deepEqual(Object.getOwnPropertyDescriptor(foreignProto, "constructor"), beforeOwn);
   assert.deepEqual(Reflect.ownKeys(foreignProto).map(String).sort(), Reflect.ownKeys(vm.runInContext("Promise.prototype", vm.createContext({}))).map(String).sort());
   assert.equal(Object.hasOwn(mid, "constructor"), false);
+});
+
+// —— 第十二轮审查 R12-01 / R12-02:Node 给 Promise 记异步追踪的两个内部符号(描述为 async_id_symbol / trigger_async_id_symbol)。
+// 内置 then / await 挂处理时:已拒绝且没处理的 Promise 补挂处理,Node 的 C++ PromiseRejectCallback 沿原型链读这两个符号(不论开没开钩子);
+// 开着 async_hooks 时 getOrSetAsyncId 还读实例自有的 async_id,没有就沿链 [[Set]] 一个新的。插件开一次 async_hooks 就能拿到这两个真符号。
+// node:test 自己就开着 async_hooks(本进程里的 Promise 都带这两个自有数据属性);不开钩子的情形只在子进程里跑。
+/** 插件也拿得到的两个真实符号:开一次 async_hooks,看新建 Promise 上 Node 写的自有符号,拿完就关 */
+async function trackingSymbols(): Promise<{ asyncId: symbol; triggerId: symbol }> {
+  let found: symbol[] = [];
+  const hook = createHook({ init(_id: number, type: string, _trigger: number, resource: object) { if (type === "PROMISE" && found.length === 0) found = Object.getOwnPropertySymbols(resource); } });
+  hook.enable();
+  try { await Promise.resolve(); } finally { hook.disable(); }
+  const asyncId = found.find((s) => s.description === "async_id_symbol");
+  const triggerId = found.find((s) => s.description === "trigger_async_id_symbol");
+  if (asyncId === undefined || triggerId === undefined) throw new Error("没拿到 Node 的异步追踪符号");
+  return { asyncId, triggerId };
+}
+type R12Made = { value: Promise<unknown>; snap: () => { proto: unknown; chain: unknown[]; fixed: unknown[]; tracked: unknown[] }; before: { proto: unknown; chain: unknown[]; fixed: unknown[]; tracked: unknown[] } };
+/** 造一个第十二轮的外部返回值。不引用模块里的任何变量,子进程通过 toString 复用同一份代码。
+ *  访问器把值存在按实例的表里(读写行为与数据属性相同,即使被调用也不让 Node 的异步 id 错乱,便于本进程内只计数);
+ *  armed 之后每次读写都计数,throws 时还抛错。"-getter" 与 "-data" 是单开关两侧:只差追踪符号是访问器还是数字数据属性,
+ *  两侧都带自有 then getter(与审查探针同形,都走拒收分支)。async-getter-fixed:不可配置的 async_id 访问器(做不到,记录性)。
+ *  "-valueof":追踪符号是数据属性,值却是带 valueOf / Symbol.toPrimitive 的对象(Node 转数字时会调用,计入 gets):
+ *  async-valueof 可配置、async-valueof-fixed 不可配置但可写、trigger-valueof 放在 trigger_async_id 上、
+ *  async-valueof-locked 不可配置不可写(做不到,记录性);proto-valueof 把两个符号放在子类 prototype 上(可写数据属性)。
+ *  sealed-no-id:带 then getter、删掉自有追踪符号再 preventExtensions(开着钩子时 Node 要新建 id 却加不上,做不到,记录性)。
+ *  proto-accessor / proto-data:插件的 Promise 子类实例,两个追踪符号放在子类 prototype 上(实例自己的删掉),Node 读写时沿链找。
+ *  extra-getter:带自有 extra getter 的原生 Promise(R12-02 拒收后同样要安全挂处理)。pre:改形态前测试进程自己先挂处理。
+ *  snap:实例原型、子类 prototype 上两个符号、实例的 then / extra / constructor、实例自有两个符号的描述符。 */
+function r12Promise(shape: string, timing: string, syms: { asyncId: symbol; triggerId: symbol }, c: { gets: number; sets: number }, throws: boolean, pre = false): R12Made {
+  let armed = false;
+  const store = new WeakMap<object, Map<PropertyKey, unknown>>();
+  const slot = (o: object): Map<PropertyKey, unknown> => { let m = store.get(o); if (m === undefined) { m = new Map(); store.set(o, m); } return m; };
+  const hit = (what: "get" | "set") => {
+    if (!armed) return;
+    if (what === "get") c.gets++; else c.sets++;
+    if (throws) throw new Error(what === "get" ? "不应读取" : "不应写入");
+  };
+  const accessor = (key: PropertyKey, enumerable: boolean, configurable: boolean): PropertyDescriptor => ({
+    enumerable, configurable,
+    get(this: object) { hit("get"); return slot(this).get(key); },
+    set(this: object, v: unknown) { hit("set"); slot(this).set(key, v); },
+  });
+  const tricky = { valueOf() { hit("get"); return 7; }, [Symbol.toPrimitive]() { hit("get"); return 7; } };
+  class Sub extends Promise<unknown> {}
+  const executor = (_ok: (v: unknown) => void, fail: (e: unknown) => void) => {
+    if (timing === "now") fail(new Error("外部拒绝"));
+    else setTimeout(() => fail(new Error("外部稍后拒绝")), 5);
+  };
+  const raw: Promise<unknown> = shape.startsWith("proto-") ? new Sub(executor) : new Promise(executor);
+  if (pre) Reflect.apply(Promise.prototype.then, raw, [undefined, () => {}]);
+  const keys = [syms.asyncId, syms.triggerId];
+  const moveOut = (key: symbol) => {
+    const d = Object.getOwnPropertyDescriptor(raw, key);
+    slot(raw).set(key, d !== undefined && "value" in d ? d.value : undefined);
+    Reflect.deleteProperty(raw, key);
+  };
+  if (["async-getter", "async-data", "trigger-getter", "trigger-data", "async-getter-fixed", "sealed-no-id", "async-valueof", "async-valueof-fixed", "async-valueof-locked", "trigger-valueof"].includes(shape)) {
+    // biome-ignore lint/suspicious/noThenProperty: 与审查探针同形:自有 then getter 让单开关两侧都走拒收分支
+    Object.defineProperty(raw, "then", { configurable: true, get() { hit("get"); return undefined; } });
+  }
+  if (shape === "async-getter" || shape === "trigger-getter" || shape === "async-getter-fixed") {
+    const key = shape === "trigger-getter" ? syms.triggerId : syms.asyncId;
+    moveOut(key);
+    Object.defineProperty(raw, key, accessor(key, true, shape !== "async-getter-fixed"));
+  }
+  if (shape === "async-data" || shape === "trigger-data") {
+    const key = shape === "trigger-data" ? syms.triggerId : syms.asyncId;
+    moveOut(key);
+    Object.defineProperty(raw, key, { value: slot(raw).get(key), writable: true, enumerable: true, configurable: true });
+  }
+  if (shape === "async-valueof" || shape === "async-valueof-fixed" || shape === "async-valueof-locked" || shape === "trigger-valueof") {
+    const key = shape === "trigger-valueof" ? syms.triggerId : syms.asyncId;
+    moveOut(key);
+    Object.defineProperty(raw, key, { value: tricky, enumerable: true, writable: shape !== "async-valueof-locked", configurable: shape === "async-valueof" || shape === "trigger-valueof" });
+  }
+  if (shape === "sealed-no-id") { for (const key of keys) moveOut(key); Object.preventExtensions(raw); }
+  if (shape === "extra-getter") Object.defineProperty(raw, "extra", accessor("extra", true, true));
+  if (shape === "proto-accessor" || shape === "proto-data" || shape === "proto-valueof") {
+    for (const key of keys) {
+      moveOut(key);
+      if (shape === "proto-accessor") Object.defineProperty(Sub.prototype, key, accessor(key, false, true));
+      else Object.defineProperty(Sub.prototype, key, { value: shape === "proto-valueof" ? tricky : undefined, writable: true, enumerable: false, configurable: true });
+    }
+  }
+  const snap = () => ({
+    proto: Object.getPrototypeOf(raw),
+    chain: keys.map((k) => Object.getOwnPropertyDescriptor(Sub.prototype, k)),
+    fixed: ["then", "extra", "constructor"].map((k) => Object.getOwnPropertyDescriptor(raw, k)),
+    tracked: keys.map((k) => Object.getOwnPropertyDescriptor(raw, k)),
+  });
+  const before = snap();
+  armed = true;
+  return { value: raw, snap, before };
+}
+/** 本进程:在调用方建的注册表上注册返回某形态的插件(id "p"),调一次 send / pull;调用期间另装一个只记 triggerAsyncId 的 init 钩子 */
+async function r12InProcess(reg: ReturnType<typeof createRegistry>, mode: "send" | "pull", shape: string, timing: "now" | "later", syms: { asyncId: symbol; triggerId: symbol }, pre = false) {
+  const c = { gets: 0, sets: 0 };
+  let made: R12Made | undefined;
+  const make = () => { made = r12Promise(shape, timing, syms, c, false, pre); return made.value; };
+  if (mode === "send") reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: make });
+  else reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: make });
+  const triggers: unknown[] = [];
+  const hook = createHook({ init(_id: number, type: string, trigger: number) { if (type === "PROMISE") triggers.push(trigger); } });
+  hook.enable();
+  let r: Awaited<ReturnType<typeof callShaped>>;
+  try { r = await callShaped(reg, mode); } finally { hook.disable(); }
+  const during = { ...c };
+  await new Promise((ok) => setTimeout(ok, 20));
+  return { reason: r.ok ? "ok" : r.reason, state: mode === "send" ? reg.delivery("p", "a")?.state : null, during, after: c, made, badTriggers: triggers.filter((t) => !(typeof t === "number" && Number.isFinite(t))), triggers: triggers.length };
+}
+/** 独立子进程:先开一次钩子拿到两个真符号再关掉;hooks 为 "init" 时再常开一个空 init 钩子(模拟宿主开着 async_hooks)。
+ *  每个形态依次跑 send/pull × 立即/稍后拒绝,每种打印一行(计数取调用刚返回时),最后等 80ms 再打印存活。
+ *  默认不装 unhandledRejection 处理器(进程存活即没有未处理拒绝、也没有钩子里的未捕获异常);observe 时装一个只计数的处理器。 */
+function r12Subprocess(shapes: readonly string[], hooks: "off" | "init", throws: boolean, observe = false): { code: number; lines: unknown[] } {
+  const code = `
+    import { writeSync } from "node:fs";
+    import { createHook } from "node:async_hooks";
+    import { createRegistry } from ${JSON.stringify(new URL("./plugins.ts", import.meta.url).href)};
+    let unhandled = 0;
+    if (${observe}) process.on("unhandledRejection", () => { unhandled++; });
+    let found = [];
+    const probe = createHook({ init(_i, type, _t, resource) { if (type === "PROMISE" && found.length === 0) found = Object.getOwnPropertySymbols(resource); } }).enable();
+    await Promise.resolve();
+    probe.disable();
+    await new Promise((ok) => setImmediate(ok));
+    const syms = { asyncId: found.find((s) => s.description === "async_id_symbol"), triggerId: found.find((s) => s.description === "trigger_async_id_symbol") };
+    if (${JSON.stringify(hooks)} === "init") createHook({ init() {} }).enable();
+    const r12Promise = ${r12Promise.toString()};
+    for (const shape of ${JSON.stringify(shapes)}) for (const mode of ["send", "pull"]) for (const timing of ["now", "later"]) {
+      const c = { gets: 0, sets: 0 };
+      const make = () => r12Promise(shape, timing, syms, c, ${throws}).value;
+      const reg = createRegistry({ now: () => ${T0} });
+      if (mode === "send") reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: make });
+      else reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: make });
+      const r = mode === "send" ? await reg.send("p", { action_id: "a", payload: "x" }) : await reg.pull("p", "g");
+      const during = { gets: c.gets, sets: c.sets };
+      await new Promise((ok) => setTimeout(ok, 20));
+      writeSync(1, JSON.stringify({ shape, mode, timing, reason: r.reason, ...during }) + "\\n");
+    }
+    setTimeout(() => writeSync(1, JSON.stringify(${observe} ? { alive: true, unhandled } : { alive: true }) + "\\n"), 80);
+  `;
+  const parse = (s: string) => s.split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  try {
+    return { code: 0, lines: parse(execFileSync(process.execPath, ["--input-type=module", "-e", code], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })) };
+  } catch (e) {
+    return { code: (e as { status?: number }).status ?? -1, lines: parse((e as { stdout?: string }).stdout ?? "") };
+  }
+}
+const r12Lines = (shapes: readonly string[], extra: Record<string, unknown> = {}) => shapes.flatMap((shape) => (["send", "pull"] as const).flatMap((mode) =>
+  (["now", "later"] as const).map((timing) => ({ shape, mode, timing, reason: mode === "send" ? "non-promise-send" : "invalid-batch", gets: 0, sets: 0, ...extra }))));
+
+test("开着 async_hooks 时 send / pull 拒收自有 async_id 或 trigger_async_id 是访问器、或值为带 valueOf 的对象(可配置,或不可配置但可写;与审查同形,另带自有 then getter)、或带自有 extra getter 的已拒绝或稍后拒绝原生 Promise:外部代码(访问器、valueOf)调用 0 次,结果 non-promise-send / invalid-batch,实例描述符与原型原样恢复,宿主 init 钩子在调用期间看到的 triggerAsyncId 都是有限数字(R12-01 阳性埋雷)", async () => {
+  const syms = await trackingSymbols();
+  for (const shape of ["async-getter", "trigger-getter", "async-valueof", "async-valueof-fixed", "trigger-valueof", "extra-getter"]) for (const mode of ["send", "pull"] as const) for (const timing of ["now", "later"] as const) {
+    const name = `${shape}/${mode}/${timing}`;
+    const r = await r12InProcess(createRegistry({ now: () => T0 }), mode, shape, timing, syms);
+    assert.deepEqual([r.reason, r.state], [mode === "send" ? "non-promise-send" : "invalid-batch", mode === "send" ? "delivery-unknown" : null], name);
+    assert.deepEqual([r.during, r.after], [{ gets: 0, sets: 0 }, { gets: 0, sets: 0 }], name);
+    assert.ok(r.made, name);
+    assert.deepEqual(r.made.snap(), r.made.before, name);
+    assert.deepEqual([r.triggers > 0, r.badTriggers], [true, []], name);
+  }
+});
+
+test("单开关对照:同样的已拒绝或稍后拒绝原生 Promise(带自有 then getter),只把 async_id / trigger_async_id 换回数字数据属性,send / pull 照样拒收,外部代码 0 次,描述符不变,triggerAsyncId 都是有限数字(R12-01 单开关对照)", async () => {
+  const syms = await trackingSymbols();
+  for (const shape of ["async-data", "trigger-data"]) for (const mode of ["send", "pull"] as const) for (const timing of ["now", "later"] as const) {
+    const name = `${shape}/${mode}/${timing}`;
+    const r = await r12InProcess(createRegistry({ now: () => T0 }), mode, shape, timing, syms);
+    assert.deepEqual([r.reason, r.state], [mode === "send" ? "non-promise-send" : "invalid-batch", mode === "send" ? "delivery-unknown" : null], name);
+    assert.deepEqual(r.after, { gets: 0, sets: 0 }, name);
+    assert.ok(r.made, name);
+    assert.deepEqual(r.made.snap(), r.made.before, name);
+    assert.deepEqual(r.badTriggers, [], name);
+  }
+});
+
+test("无全局 unhandledRejection 处理器的子进程里(不开钩子、常开 init 钩子两种),自有 async_id / trigger_async_id 是会抛错的访问器或 valueOf 会抛错的对象值、或带会抛错的 extra getter 的已拒绝或稍后拒绝原生 Promise 在 send / pull 下都被拒收且进程存活,外部代码调用 0 次;同一形态换成数字数据属性也存活(R12-01 阳性埋雷 / 单开关对照)", async () => {
+  const syms = await trackingSymbols();
+  const local = await r12InProcess(createRegistry({ now: () => T0 }), "pull", "async-getter", "now", syms);
+  assert.deepEqual([local.reason, local.after], ["invalid-batch", { gets: 0, sets: 0 }]);
+  const shapes = ["async-getter", "async-data", "trigger-getter", "trigger-data", "async-valueof", "async-valueof-fixed", "trigger-valueof", "extra-getter"];
+  for (const hooks of ["off", "init"] as const) assert.deepEqual(r12Subprocess(shapes, hooks, true), { code: 0, lines: [...r12Lines(shapes), { alive: true }] }, hooks);
+});
+
+test("原型链上有 async_id / trigger_async_id 访问器的 Promise 子类实例:send / pull 拒收时临时换成内置原型再挂处理,访问器读写 0 次,实例原型与子类 prototype 原样恢复;子进程里访问器会抛错时(不开钩子 / 开 init 钩子)进程存活;链上换成可写数据属性(值为 undefined,或带会抛错的 valueOf 的对象)同样拒收、外部代码 0 次、存活(R12-01 阳性埋雷 / 单开关对照)", async () => {
+  const syms = await trackingSymbols();
+  for (const shape of ["proto-accessor", "proto-valueof", "proto-data"]) for (const mode of ["send", "pull"] as const) for (const timing of ["now", "later"] as const) {
+    const name = `${shape}/${mode}/${timing}`;
+    const r = await r12InProcess(createRegistry({ now: () => T0 }), mode, shape, timing, syms);
+    assert.equal(r.reason, mode === "send" ? "non-promise-send" : "invalid-batch", name);
+    assert.deepEqual(r.after, { gets: 0, sets: 0 }, name);
+    assert.ok(r.made, name);
+    const now = r.made.snap();
+    assert.deepEqual([now.proto, now.chain, now.fixed], [r.made.before.proto, r.made.before.chain, r.made.before.fixed], name);
+    assert.deepEqual(r.badTriggers, [], name);
+  }
+  const shapes = ["proto-accessor", "proto-valueof", "proto-data"];
+  for (const hooks of ["off", "init"] as const) assert.deepEqual(r12Subprocess(shapes, hooks, true), { code: 0, lines: [...r12Lines(shapes), { alive: true }] }, hooks);
+});
+
+test("做不到的形态(自有 async_id 是不可配置的访问器,或不可配置不可写、值为带 valueOf 的对象;开着钩子时实例不可扩展又没有自有 async_id):仍被拒收,内核调用期间外部代码 0 次、描述符不改;装计数处理器的子进程里各留下未处理拒绝、进程存活(R12-01 记录性,待用户拍板)", async () => {
+  const syms = await trackingSymbols();
+  for (const shape of ["async-getter-fixed", "async-valueof-locked", "sealed-no-id"]) for (const mode of ["send", "pull"] as const) for (const timing of ["now", "later"] as const) {
+    const name = `${shape}/${mode}/${timing}`;
+    const r = await r12InProcess(createRegistry({ now: () => T0 }), mode, shape, timing, syms, true);
+    assert.equal(r.reason, mode === "send" ? "non-promise-send" : "invalid-batch", name);
+    assert.deepEqual(r.during, { gets: 0, sets: 0 }, name);
+    assert.ok(r.made, name);
+    assert.deepEqual(r.made.snap(), r.made.before, name);
+  }
+  const shapes = ["async-getter-fixed", "async-valueof-locked", "sealed-no-id"];
+  assert.deepEqual(r12Subprocess(shapes, "init", false, true), { code: 0, lines: [...r12Lines(shapes), { alive: true, unhandled: 12 }] });
+});
+
+test("send / pull 返回不可扩展(preventExtensions 或冻结)的已兑现原生 Promise 时不 await:send 记 non-promise-send、pull 记 invalid-batch;子进程开着钩子且 Promise 没有自有 async_id 时进程存活;同一 Promise 不改可扩展性就照常确认 / 拉取(R12-01 阳性埋雷 / 单开关对照)", async () => {
+  for (const seal of ["none", "prevent", "freeze"] as const) {
+    const reg = createRegistry({ now: () => T0 });
+    const lock = <T extends Promise<unknown>>(p: T): T => (seal === "freeze" ? Object.freeze(p) : seal === "prevent" ? Object.preventExtensions(p) : p);
+    reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => lock(Promise.resolve({ action_id: "a", receiptId: "r" })) });
+    reg.register({ kind: "data-source", id: "d", sources: ["g"], pull: () => lock(Promise.resolve([ev()])) });
+    const sent = await reg.send("p", { action_id: "a", payload: "x" });
+    const pulled = await reg.pull("d", "g");
+    if (seal === "none") assert.deepEqual([sent.ok, pulled.ok && pulled.events.length], [true, 1], seal);
+    else assert.deepEqual([sent.ok === false && sent.reason, pulled.ok === false && pulled.reason], ["non-promise-send", "invalid-batch"], seal);
+  }
+  const code = `
+    import { writeSync } from "node:fs";
+    import { createHook } from "node:async_hooks";
+    import { createRegistry } from ${JSON.stringify(new URL("./plugins.ts", import.meta.url).href)};
+    createHook({ init() {} }).enable();
+    for (const frozen of [true, false]) for (const mode of ["send", "pull"]) {
+      const make = () => {
+        const p = Promise.resolve(mode === "send" ? { action_id: "a", receiptId: "r" } : []);
+        for (const k of Object.getOwnPropertySymbols(p)) Reflect.deleteProperty(p, k);
+        return frozen ? Object.freeze(p) : p;
+      };
+      const reg = createRegistry({ now: () => ${T0} });
+      if (mode === "send") reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: make });
+      else reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: make });
+      const r = mode === "send" ? await reg.send("p", { action_id: "a", payload: "x" }) : await reg.pull("p", "g");
+      writeSync(1, JSON.stringify({ frozen, mode, ok: r.ok, reason: r.reason ?? null }) + "\\n");
+    }
+    setTimeout(() => writeSync(1, JSON.stringify({ alive: true }) + "\\n"), 40);
+  `;
+  let out = "";
+  let status = 0;
+  try { out = execFileSync(process.execPath, ["--input-type=module", "-e", code], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }); } catch (e) { status = (e as { status?: number }).status ?? -1; out = (e as { stdout?: string }).stdout ?? ""; }
+  assert.deepEqual({ status, lines: out.split("\n").filter(Boolean).map((l) => JSON.parse(l)) }, { status: 0, lines: [
+    { frozen: true, mode: "send", ok: false, reason: "non-promise-send" }, { frozen: true, mode: "pull", ok: false, reason: "invalid-batch" },
+    { frozen: false, mode: "send", ok: true, reason: null }, { frozen: false, mode: "pull", ok: true, reason: null }, { alive: true },
+  ] });
+});
+
+test("send / pull 返回已兑现的原生 Promise,其自有 async_id 或 trigger_async_id 是带 valueOf 的对象或 BigInt 时不 await:send 记 non-promise-send、pull 记 invalid-batch,valueOf 调用 0 次;子进程开着钩子、valueOf 会抛错或值为 BigInt 时进程存活;同一 Promise 的值换回数字照常确认 / 拉取(R12-01 / R12-02 阳性埋雷 / 单开关对照)", async () => {
+  const syms = await trackingSymbols();
+  for (const which of ["asyncId", "triggerId"] as const) for (const kind of ["number", "valueof"] as const) {
+    const name = `${which}/${kind}`;
+    let calls = 0;
+    const tricky = { valueOf() { calls++; return 7; }, [Symbol.toPrimitive]() { calls++; return 7; } };
+    const shape = <T extends Promise<unknown>>(p: T): T => {
+      const key = syms[which];
+      const d = Object.getOwnPropertyDescriptor(p, key);
+      Object.defineProperty(p, key, { value: kind === "number" ? (d !== undefined && "value" in d ? d.value : 1) : tricky, writable: true, enumerable: true, configurable: true });
+      return p;
+    };
+    const reg = createRegistry({ now: () => T0 });
+    reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => shape(Promise.resolve({ action_id: "a", receiptId: "r" })) });
+    reg.register({ kind: "data-source", id: "d", sources: ["g"], pull: () => shape(Promise.resolve([ev()])) });
+    const sent = await reg.send("p", { action_id: "a", payload: "x" });
+    const pulled = await reg.pull("d", "g");
+    if (kind === "number") assert.deepEqual([sent.ok, pulled.ok && pulled.events.length], [true, 1], name);
+    else assert.deepEqual([sent.ok === false && sent.reason, pulled.ok === false && pulled.reason], ["non-promise-send", "invalid-batch"], name);
+    await new Promise((ok) => setTimeout(ok, 20));
+    assert.equal(calls, 0, name);
+  }
+  const code = `
+    import { writeSync } from "node:fs";
+    import { createHook } from "node:async_hooks";
+    import { createRegistry } from ${JSON.stringify(new URL("./plugins.ts", import.meta.url).href)};
+    createHook({ init() {} }).enable();
+    for (const which of ["async_id_symbol", "trigger_async_id_symbol"]) for (const kind of ["valueof", "bigint"]) for (const mode of ["send", "pull"]) {
+      let calls = 0;
+      const tricky = { valueOf() { calls++; throw new Error("不应转换"); }, [Symbol.toPrimitive]() { calls++; throw new Error("不应转换"); } };
+      const make = () => {
+        const p = Promise.resolve(mode === "send" ? { action_id: "a", receiptId: "r" } : []);
+        const key = Object.getOwnPropertySymbols(p).find((k) => k.description === which);
+        Object.defineProperty(p, key, { value: kind === "bigint" ? 7n : tricky, writable: true, enumerable: true, configurable: true });
+        return p;
+      };
+      const reg = createRegistry({ now: () => ${T0} });
+      if (mode === "send") reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: make });
+      else reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: make });
+      const r = mode === "send" ? await reg.send("p", { action_id: "a", payload: "x" }) : await reg.pull("p", "g");
+      await new Promise((ok) => setTimeout(ok, 10));
+      writeSync(1, JSON.stringify({ which, kind, mode, reason: r.reason ?? null, calls }) + "\\n");
+    }
+    setTimeout(() => writeSync(1, JSON.stringify({ alive: true }) + "\\n"), 40);
+  `;
+  let out = "";
+  let status = 0;
+  try { out = execFileSync(process.execPath, ["--input-type=module", "-e", code], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }); } catch (e) { status = (e as { status?: number }).status ?? -1; out = (e as { stdout?: string }).stdout ?? ""; }
+  const expect = ["async_id_symbol", "trigger_async_id_symbol"].flatMap((which) => ["valueof", "bigint"].flatMap((kind) => (["send", "pull"] as const).map((mode) => ({ which, kind, mode, reason: mode === "send" ? "non-promise-send" : "invalid-batch", calls: 0 }))));
+  assert.deepEqual({ status, lines: out.split("\n").filter(Boolean).map((l) => JSON.parse(l)) }, { status: 0, lines: [...expect, { alive: true }] });
+});
+
+test("send / pull 返回带自有访问器(可枚举 extra getter、不可枚举 getter、只有 setter)的已兑现原生 Promise 时不当回执也不当拉取结果:send 记 non-promise-send、pull 记 invalid-batch,访问器调用 0 次;同一 Promise 的 extra 换成数据属性(运行时自带的两个追踪符号也是数据属性)照常确认 / 拉取(R12-02 阳性埋雷 / 单开关对照)", async () => {
+  for (const kind of ["data", "getter", "hidden-getter", "setter"] as const) {
+    let calls = 0;
+    const shape = <T extends Promise<unknown>>(p: T): T => {
+      if (kind === "data") Object.defineProperty(p, "extra", { value: "neutral", enumerable: true, configurable: true, writable: true });
+      if (kind === "getter") Object.defineProperty(p, "extra", { enumerable: true, configurable: true, get() { calls++; return "neutral"; } });
+      if (kind === "hidden-getter") Object.defineProperty(p, "extra", { enumerable: false, configurable: true, get() { calls++; return "neutral"; } });
+      if (kind === "setter") Object.defineProperty(p, "extra", { enumerable: true, configurable: true, set() { calls++; } });
+      return p;
+    };
+    let returned: Promise<unknown> | undefined;
+    const reg = createRegistry({ now: () => T0 });
+    reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => { returned = shape(Promise.resolve({ action_id: "a", receiptId: "r" })); return returned; } });
+    reg.register({ kind: "data-source", id: "d", sources: ["g"], pull: () => shape(Promise.resolve([ev()])) });
+    const sent = await reg.send("p", { action_id: "a", payload: "x" });
+    const pulled = await reg.pull("d", "g");
+    if (kind === "data") {
+      assert.deepEqual([sent, pulled.ok && pulled.events.length], [{ ok: true, state: "confirmed", receipt: { action_id: "a", receiptId: "r" }, deduplicated: false }, 1], kind);
+      const own = returned ? Object.getOwnPropertySymbols(returned).map((k) => [k.description, "value" in (Object.getOwnPropertyDescriptor(returned as object, k) ?? {})]) : [];
+      assert.deepEqual(own, [["async_id_symbol", true], ["trigger_async_id_symbol", true]], "运行时自带的追踪符号是数据属性,照常放行");
+    } else {
+      assert.deepEqual([sent.ok === false && sent.reason, sent.ok === false && sent.state, pulled.ok === false && pulled.reason], ["non-promise-send", "delivery-unknown", "invalid-batch"], kind);
+    }
+    assert.equal(calls, 0, kind);
+  }
+});
+
+test("附件的可选 name、mime 是空字符串时照常盖章并原样保留;同一字段换成非字符串就拒收该条(R12-04 审查 R12-O2 单开关对照)", async () => {
+  const reg = createRegistry({ now: () => T0 });
+  reg.register(tg([
+    ev({ nativeId: "a", attachments: [{ ref: "r1", name: "" }] }), ev({ nativeId: "b", attachments: [{ ref: "r2", mime: "" }] }),
+    ev({ nativeId: "c", attachments: [{ ref: "r3", name: 1 }] }), ev({ nativeId: "d", attachments: [{ ref: "r4", mime: 1 }] }),
+  ]));
+  const r = await reg.pull("telegram", "g1");
+  assert.deepEqual(r.ok && r.events.map((e) => [e.origin.nativeId, e.attachments]), [["a", [{ ref: "r1", name: "" }]], ["b", [{ ref: "r2", mime: "" }]]]);
+  assert.deepEqual(r.ok && r.rejected, [{ index: 2, reason: "附件必须是 {ref, name?, mime?} 引用" }, { index: 3, reason: "附件必须是 {ref, name?, mime?} 引用" }]);
 });

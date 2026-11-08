@@ -266,3 +266,15 @@ test("导出的事件枚举是冻结的,调用方改不了;改动尝试之后分
   assert.throws(() => { (EVENT_CODES as unknown as string[]).push("E11"); }, TypeError);
   assert.equal(classifyInbound({ sender: user, text: "嗯" }, () => "E11").intent, "Uncertain");
 });
+
+// —— 第十二轮审查 R12-04:审查自造的单点故障 R12-O1(去掉点名 end 的整数检查)逃过了全部测试;start 同理补上
+test("点名范围的 start 或 end 是非整数(0.5、2.5)时不算有效点名:交给分类器(E2,调用 1 次),不机械判 E1;同一消息范围换回整数就是纯点名 E1、分类器 0 次(R12-04 审查 R12-O1 双侧单开关)", () => {
+  const whole = counting("E2");
+  const pure = classifyInbound({ sender: user, text: "@x ", mentions: [{ id: "x", name: "x", start: 0, end: 2 }] }, whole.fn);
+  assert.deepEqual([pure.intent, pure.via, pure.anchors.mentions.length, whole.calls()], ["E1", "mechanical", 1, 0]);
+  for (const [start, end] of [[0, 2.5], [0.5, 2]] as const) {
+    const c = counting("E2");
+    const r = classifyInbound({ sender: user, text: "@x ", mentions: [{ id: "x", name: "x", start, end }] }, c.fn);
+    assert.deepEqual([r.intent, r.via, r.anchors.mentions.length, c.calls()], ["E2", "semantic", 0, 1], `${start}..${end}`);
+  }
+});
