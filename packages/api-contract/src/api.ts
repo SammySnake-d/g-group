@@ -14,6 +14,8 @@ import {
   ModelSlot,
   PluginView,
   ReceiptView,
+  RewindPreview,
+  RewindResult,
   RoomView,
   ScheduleView,
   SettingsView,
@@ -75,6 +77,10 @@ export const METHODS = {
   "rooms.removeMember": method(obj({ roomId: id(), member: MemberRef, stopTasks: opt(bool()) }), RoomView),
   /** 用户自己的已读位置,只影响用户视图(AC-46)。 */
   "rooms.markRead": method(obj({ roomId: id(), seq: seq() }), Ok),
+  /** 私聊 rewind 预览(AC-48):只读,不改任何状态;用户看完不确认即取消。群聊 forbidden;回退点不是本会话的消息 invalid_params。 */
+  "rooms.rewindPreview": method(obj({ roomId: id(), toSeq: seq() }), RewindPreview),
+  /** 私聊 rewind 执行:回退点之后的消息撤下、来源于它们的在途任务取消、未了结承诺作废;已发生的外部副作用如实列出,不撤销。clientActionId 幂等。 */
+  "rooms.rewind": method(obj({ roomId: id(), toSeq: seq(), clientActionId: id() }), RewindResult),
 
   // ---- 群公告(AC-55,U97/U86):一个群可有多条;改动推 room.updated;联系人下一轮装配读当前全部有效公告 ----
   /** 当前有效公告;order 缺省按创建先后(created-asc)。私聊返回空数组。 */

@@ -47,6 +47,11 @@ CREATE TABLE IF NOT EXISTS gg_announcements (
   client_action_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, removed_at TEXT, UNIQUE (room_id, client_action_id)
 );
 CREATE TABLE IF NOT EXISTS gg_member_exits (room_id TEXT NOT NULL, contact_id TEXT NOT NULL, started_at TEXT NOT NULL, PRIMARY KEY (room_id, contact_id));
+-- 私聊 rewind(AC-48):每次回退撤下 (to_seq, upto_seq] 范围内的消息;result 是当时返回给用户的结果,同一 client_action_id 重放原样返回
+CREATE TABLE IF NOT EXISTS gg_rewinds (
+  room_id TEXT NOT NULL, client_action_id TEXT NOT NULL, to_seq INTEGER NOT NULL, upto_seq INTEGER NOT NULL, marker_seq INTEGER NOT NULL,
+  result TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY (room_id, client_action_id)
+);
 `;
 
 export interface Db {
