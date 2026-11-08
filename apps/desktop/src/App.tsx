@@ -819,7 +819,8 @@ export default function App() {
       <TooltipProvider>
         <div className="relative flex h-full min-h-[640px] overflow-hidden bg-bg text-fg">
           {/* ============ 菜单栏 ============ */}
-          <nav className="flex w-[60px] shrink-0 flex-col items-center gap-1 bg-side pb-3 pt-11">
+          <nav className="flex w-[64px] shrink-0 flex-col items-center gap-1.5 bg-rail pb-3 pt-10 text-rail-fg" data-testid="rail">
+            <div className="mb-3 grid h-9 w-9 place-items-center rounded-[11px] bg-brand text-[17px] font-black italic leading-none tracking-tight text-brand-fg shadow-soft" title="g-group" data-testid="brand-mark">g</div>
             {([
               { k: 'chat', I: MessageCircle, label: '消息', badge: totals.wait + totals.err },
               { k: 'contacts', I: Users, label: '通讯录' },
@@ -827,21 +828,21 @@ export default function App() {
               { k: 'files', I: FolderOpen, label: '文件' },
             ] as const).map((it) => (
               <Tip key={it.k} label={it.label} side="right">
-                <button data-testid={`nav-${it.k}`} onClick={() => (it.k === 'activity' ? setPanoOpen(true) : setSection(it.k))} className={cn('relative grid h-10 w-10 place-items-center rounded-xl transition', (it.k === 'activity' ? panoOpen : section === it.k) ? 'bg-sel text-fg' : 'text-fg-2 hover:bg-hover hover:text-fg')}>
+                <button data-testid={`nav-${it.k}`} onClick={() => (it.k === 'activity' ? setPanoOpen(true) : setSection(it.k))} data-on={(it.k === 'activity' ? panoOpen : section === it.k) ? '1' : '0'} className={cn('relative grid h-10 w-10 place-items-center rounded-xl transition', (it.k === 'activity' ? panoOpen : section === it.k) ? 'bg-rail-hover text-white before:absolute before:-left-[12px] before:top-2 before:h-6 before:w-[3px] before:rounded-r before:bg-brand' : 'text-rail-fg hover:bg-rail-hover hover:text-white')}>
                   <it.I className="h-[20px] w-[20px]" strokeWidth={(it.k === 'activity' ? panoOpen : section === it.k) ? 2 : 1.75} />
-                  {'badge' in it && it.badge > 0 && <span className="absolute -right-0.5 -top-0.5 grid h-[17px] min-w-[17px] place-items-center rounded-full border-2 border-side bg-warm-dot px-1 text-[10px] font-semibold text-white">{it.badge}</span>}
-                  {'dot' in it && it.dot && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border-2 border-side bg-run" />}
+                  {'badge' in it && it.badge > 0 && <span className="absolute -right-0.5 -top-0.5 grid h-[17px] min-w-[17px] place-items-center rounded-full border-2 border-rail bg-brand px-1 text-[10px] font-semibold text-white">{it.badge}</span>}
+                  {'dot' in it && it.dot && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border-2 border-rail bg-run" />}
                 </button>
               </Tip>
             ))}
             <div className="flex-1" />
             <Tip label="Helper（全局 · ⌘K）：默认不读任何聊天" side="right">
-              <button data-testid="nav-helper" onClick={() => setHelperGlobal((v) => !v)} className={cn('grid h-10 w-10 place-items-center rounded-xl hover:bg-hover', helperGlobal && 'bg-sel')}><Bot shape="lightbulb" color="#f8a01c" size={26} /></button>
+              <button data-testid="nav-helper" onClick={() => setHelperGlobal((v) => !v)} className={cn('grid h-10 w-10 place-items-center rounded-xl hover:bg-rail-hover', helperGlobal && 'bg-rail-hover')}><Bot shape="lightbulb" color="#f8a01c" size={26} /></button>
             </Tip>
             <Tip label="设置" side="right">
-              <button data-testid="nav-settings" onClick={() => setStack([{ t: 'settings' }])} className="grid h-10 w-10 place-items-center rounded-xl text-fg-2 hover:bg-hover hover:text-fg"><Settings className="h-[19px] w-[19px]" strokeWidth={1.75} /></button>
+              <button data-testid="nav-settings" onClick={() => setStack([{ t: 'settings' }])} className="grid h-10 w-10 place-items-center rounded-xl text-rail-fg hover:bg-rail-hover hover:text-white"><Settings className="h-[19px] w-[19px]" strokeWidth={1.75} /></button>
             </Tip>
-            <div className="mt-1"><Avatar id="me" size={30} /></div>
+            <div className="mt-1 rounded-full ring-2 ring-rail-hover" style={{ ['--avatar-ring' as string]: 'var(--rail)' }}><Avatar id="me" size={30} /></div>
           </nav>
 
           {/* ============ 列表栏（可调宽） ============ */}
@@ -946,7 +947,7 @@ export default function App() {
             : section === 'files' ? <FilesMain id={fileSel} />
             : (
             <>
-            <main className="flex min-w-[560px] flex-1 flex-col" data-testid="chat">
+            <main className="flex min-w-[520px] flex-1 flex-col bg-bg [--chat-col:860px]" data-testid="chat">
               <header className="flex h-[52px] shrink-0 items-center gap-2 border-b border-line pl-5 pr-3">
                 {peer ? (
                   <PersonMenu id={peer} side="bottom">
@@ -980,8 +981,8 @@ export default function App() {
 
               {conv.kind === 'group' && <TopStrip conv={conv} onOpen={(tab) => openSplit({ t: 'group', id: conv.id, tab })} />}
               <div className="relative min-h-0 flex-1">
-                <div ref={scrollRef} onScroll={(e) => { const el = e.currentTarget; setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80) }} className="scroll-thin h-full overflow-y-auto" style={{ ['--avatar-ring' as string]: 'var(--bg)' }}>
-                  <div className="px-5 pb-3 pt-1">
+                <div ref={scrollRef} data-scroll="chat" onScroll={(e) => { const el = e.currentTarget; setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80) }} className="scroll-thin h-full overflow-y-auto" style={{ ['--avatar-ring' as string]: 'var(--bg)' }}>
+                  <div className="mx-auto w-full max-w-[var(--chat-col)] px-6 pb-3 pt-1" data-testid="chat-column">
                     <MessageList msgs={withUnreadDivider(conv, unreadAt[conv.id])} highlight={highlight} selecting={selecting} selected={sel} onSelect={toggle} conv={conv.id} />
                     {typing[active] && <div data-testid="typing"><MessageList msgs={[{ k: 'replying', id: 'typing', from: typing[active]!, quotes: (() => { const last = [...conv.messages].reverse().find((m) => m.k === 'text' && m.from === 'me') as Extract<Msg, { k: 'text' }> | undefined; return last ? [{ msgId: last.id, from: 'me', text: last.text }] : [] })(), phase: '在想', mins: 0, steps: ['读了最新几条消息', '判断要不要接这件事'] }]} conv={active} /></div>}
                   </div>
@@ -1004,10 +1005,12 @@ export default function App() {
                   <button data-testid="select-forward" disabled={!sel.size} onClick={() => setStack([{ t: 'forwardPick', from: active, msgIds: [...sel] }])} className="flex h-9 items-center gap-1.5 rounded-lg bg-me px-3.5 text-[13px] font-medium text-me-fg disabled:opacity-40"><Forward className="h-4 w-4" />合并转发</button>
                 </div>
               ) : (
+                <div className="mx-auto w-full max-w-[var(--chat-col)] shrink-0 px-4 pb-4" data-testid="composer-column">
                 <Composer conv={conv} draft={draft} setDraft={setDraft} quotes={q} inputRef={inputRef} onSend={send} onRemoveQuote={(x) => {
                   setQuotes((all) => ({ ...all, [active]: (all[active] ?? []).filter((y) => y.msgId !== x.msgId) }))
                   if (x.reply && x.from !== 'me') setDraft((d) => d.replace('@' + people[x.from].name + ' ', ''))
                 }} />
+                </div>
               )}
             </main>
             {helperPanel && !splitOpen && (

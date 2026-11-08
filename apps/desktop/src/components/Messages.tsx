@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { placeHoverBar, type BarPlacement } from '@g-group/ui-core'
 import { History, Hand, Pencil, AlertTriangle, ChevronRight, FileText, Globe, Table2, SmilePlus, Reply, MoreHorizontal, Quote as QuoteIcon, Copy, Check, Square, KeyRound, Pin, Forward, CheckSquare, Tag, Server, Bookmark, Undo2, Trash2, PenLine, AtSign, MessageSquare, Activity, IdCard, AlarmClock, PauseCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { people, artifacts, dutyByConv, type Msg, type PersonId, type Compute, type QuoteRef, dispText } from '@/data'
@@ -86,12 +87,19 @@ function Row({ m, first, compact, highlight, selecting, checked, onSelect, trail
         )}
         {quotes && quotes.length > 0 && <SentQuotes quotes={quotes} mine={mine} />}
         {/* AC-46 / D09.3：你发的消息在气泡外侧底边挂一个回执按钮（你的消息靠右，外侧就是左边），不另占一行（原则 57） */}
+        {/* 悬浮工具条挂在气泡本身上(#719:要贴着消息,不能相对整列漂) */}
         {mine && m.k === 'text' ? (
-          <div className="relative flex max-w-full items-end">
+          <div className="relative flex max-w-full items-end" data-anchor={m.id}>
             <span className="absolute -left-[24px] bottom-[2px]" data-testid={`receipt-slot-${m.id}`}><ReceiptButton msgId={m.id} /></span>
             {children}
+            {!compact && !selecting && <HoverBar m={m} mine={mine} reserve={28} />}
           </div>
-        ) : children}
+        ) : (
+          <div className="relative max-w-full" data-anchor={m.id}>
+            {children}
+            {!compact && !selecting && <HoverBar m={m} mine={mine} reserve={0} />}
+          </div>
+        )}
         {m.k === 'text' && m.helper && <HelperExtra m={m} />}
         {m.k === 'text' && <QuickReplies msgId={m.id} />}
         {m.k === 'text' && m.tag && <TaskTag msgId={m.id} tag={m.tag} />}
@@ -109,7 +117,6 @@ function Row({ m, first, compact, highlight, selecting, checked, onSelect, trail
             <Reactions msgId={m.id} mine={mine} inline />
           </div>
         ) : <Reactions msgId={m.id} mine={mine} />}
-        {!compact && !selecting && <HoverBar m={m} mine={mine} />}
       </div>
     </div>
   )
@@ -164,11 +171,30 @@ function TaskTag({ msgId, tag }: { msgId: string; tag: { task: string; state: st
 
 /* 悬停：表情 / 回复 / 引用 / 更多。你发的文字消息左下外侧挂着已读回执（AC-46），工具条再往左让开 28px，不盖住它 */
 const EMOJI = ['👍', '❤️', '😂', '👀', '🎉', '🙏']
-function HoverBar({ m, mine }: { m: Bodied; mine: boolean }) {
+function HoverBar({ m, mine, reserve }: { m: Bodied; mine: boolean; reserve: number }) {
   const { react, addQuote, setSelecting, push, active, recall } = useApp()
   const text = m.k === 'text' ? m.text.replace(/^@\S+\s/, '') : m.k === 'compute' ? '[Compute]' : m.k === 'file' ? '[文件]' : m.k === 'board' ? '[任务板]' : '[转发]'
+  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<BarPlacement | null>(null)
+  // 每次鼠标进入这一行时按气泡和可视区的实际位置重新算(滚动、窗口宽度变化后也贴着)
+  useEffect(() => {
+    const bar = ref.current
+    const anchor = bar?.parentElement
+    const row = anchor?.closest('[data-msg]')
+    if (!bar || !anchor || !row) return
+    const place = () => {
+      const scroller = anchor.closest('[data-scroll]') ?? document.documentElement
+      const b = scroller.getBoundingClientRect()
+      const a = anchor.getBoundingClientRect()
+      setPos(placeHoverBar(a, { width: bar.offsetWidth, height: bar.offsetHeight }, { left: b.left, top: b.top, right: Math.min(b.right, window.innerWidth), bottom: Math.min(b.bottom, window.innerHeight) }, mine, reserve))
+    }
+    row.addEventListener('mouseenter', place)
+    row.addEventListener('focusin', place)
+    return () => { row.removeEventListener('mouseenter', place); row.removeEventListener('focusin', place) }
+  }, [mine, reserve])
   return (
-    <div className={cn('pointer-events-none absolute bottom-1 z-10 flex items-center gap-0.5 rounded-full border border-line bg-elev p-0.5 opacity-0 shadow-elev transition-opacity group-hover/row:pointer-events-auto group-hover/row:opacity-100 has-[[data-state=open]]:opacity-100', mine ? (m.k === 'text' ? 'left-0 -translate-x-[calc(100%+28px)]' : 'left-0 -translate-x-[calc(100%-10px)]') : 'right-0 translate-x-[calc(100%-10px)]')}>
+    <div ref={ref} data-testid={`hoverbar-${m.id}`} data-side={pos?.side} style={pos ? { left: pos.x, top: pos.y } : { left: mine ? undefined : '100%', right: mine ? '100%' : undefined, top: 2 }}
+      className="pointer-events-none absolute z-10 flex items-center gap-0.5 whitespace-nowrap rounded-full border border-line bg-elev p-0.5 opacity-0 shadow-elev transition-opacity duration-100 group-hover/row:pointer-events-auto group-hover/row:opacity-100 has-[[data-state=open]]:opacity-100">
       <Popover>
         <PopoverTrigger asChild>
           <button className="grid h-7 w-7 place-items-center rounded-full text-fg-2 hover:bg-hover hover:text-fg" title="表情"><SmilePlus className="h-4 w-4" strokeWidth={1.75} /></button>
@@ -486,7 +512,7 @@ function TextBubble({ m }: { m: Extract<Msg, { k: 'text' }> }) {
   /* AC-40⑦ / U88：联系人同时做几件事时，汇报开头带这件事的短名；点了看那件事 */
   const tk = m.task && candidate('U88') && !broken('AC-40-7') ? computes[m.task] : undefined
   return (
-    <div className={cn('break-words rounded-[18px] px-3.5 py-[7px] text-[14.5px] leading-[1.6]', mine ? 'bg-me text-me-fg' : 'bg-bubble text-fg')}>
+    <div className={cn('break-words rounded-[18px] px-3.5 py-[7px] text-[14.5px] leading-[1.6]', mine ? 'bg-mine text-mine-fg' : 'border border-theirs-line bg-theirs text-fg shadow-soft')}>
       {tk?.short && <button data-testid={`short-${m.id}`} onClick={(e) => { e.stopPropagation(); openSplit({ t: 'compute', id: tk.id }) }} className="mr-1.5 inline-flex h-[20px] translate-y-[-1px] items-center rounded-md bg-hover px-1.5 align-middle text-[12px] font-medium text-fg-2 hover:text-fg">{tk.short}</button>}
       <span className={cn('whitespace-pre-wrap', long && !open && 'line-clamp-3')}>{renderText(m.text.replace(tk?.short ? new RegExp('^' + tk.short + '[：:]\\s*') : /^$/, ''), mine, m.id)}</span>
       {m.edited && <span data-testid={`edited-${m.id}`} className={cn('ml-1.5 text-[11.5px]', mine ? 'text-me-fg/70' : 'text-fg-3')}>已编辑</span>}

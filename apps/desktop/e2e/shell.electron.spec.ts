@@ -13,7 +13,8 @@ test("Electron 壳:安全基线开着,渲染层拿不到 Node,IPC 只认白名�
     expect(win.url()).toBe("app://renderer/index.html");
     const prefs = await app.evaluate(({ BrowserWindow }) => {
       const w = BrowserWindow.getAllWindows()[0]!;
-      const p = w.webContents.getLastWebPreferences() as Record<string, unknown>;
+      // getLastWebPreferences 运行时存在,类型声明里没有
+      const p = (w.webContents as unknown as { getLastWebPreferences(): Record<string, unknown> }).getLastWebPreferences();
       return { contextIsolation: p.contextIsolation, nodeIntegration: p.nodeIntegration, sandbox: p.sandbox };
     });
     expect(prefs).toEqual({ contextIsolation: true, nodeIntegration: false, sandbox: true });

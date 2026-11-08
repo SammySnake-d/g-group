@@ -8,7 +8,10 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        bg: "hsl(var(--bg))", side: "hsl(var(--side))", bubble: "hsl(var(--bubble))",
+        bg: "hsl(var(--bg))", side: "hsl(var(--side))", bubble: "hsl(var(--bubble))", theirs: { DEFAULT: "hsl(var(--theirs))", line: "hsl(var(--theirs-line))" },
+        mine: { DEFAULT: "hsl(var(--mine))", fg: "hsl(var(--mine-fg))" },
+        brand: { DEFAULT: "hsl(var(--brand))", fg: "hsl(var(--brand-fg))", soft: "hsl(var(--brand-soft))" },
+        rail: { DEFAULT: "hsl(var(--rail))", fg: "hsl(var(--rail-fg))", hover: "hsl(var(--rail-hover))" },
         me: { DEFAULT: "hsl(var(--me))", fg: "hsl(var(--me-fg))" }, btn: { DEFAULT: "hsl(var(--btn))", fg: "hsl(var(--btn-fg))" },
         fg: { DEFAULT: "hsl(var(--fg))", 2: "hsl(var(--fg2))", 3: "hsl(var(--fg3))" },
         line: "hsl(var(--line))", hover: "hsl(var(--hover))", sel: "hsl(var(--sel))", elev: "hsl(var(--elev))", quote: "hsl(var(--quote))",
