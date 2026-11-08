@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { transition } from '@/config/motion'
-import { waitingIn, type WaitItem } from './waiting'
+import { waitingIn, type WaitItem } from '../shared/waiting'
 
 /* 概念 · 等你刻度(#1032 的同一类:少走路、少找)
    长群聊里,要你回的事散落在上上下下。聊天区右缘一条细轨,每件「等你」的事在它所在的位置画一道刻度:

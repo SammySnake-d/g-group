@@ -2,3 +2,4 @@
 export { AcceptSeal } from './seal/AcceptSeal'
 export { DoubleClickReply } from './dblreply/DoubleClickReply'
 export { WaitingRuler } from './ruler/WaitingRuler'
+export { GazeAvatar } from './gaze/GazeAvatar'

@@ -75,7 +75,7 @@ function Row({ m, first, compact, highlight, selecting, checked, onSelect, trail
         <div className="shrink-0 pt-0.5" style={{ width: av }}>
           {first && (
             <PersonMenu id={from}>
-              <button data-testid={`avatar-${from}-${m.id}`} className="block rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"><Avatar id={from} size={av} status={false} /></button>
+              <button data-testid={`avatar-${from}-${m.id}`} className="block rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"><Concept.GazeAvatar msgId={m.id} id={from} size={av} /></button>
             </PersonMenu>
           )}
         </div>

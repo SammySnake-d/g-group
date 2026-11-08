@@ -136,5 +136,33 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.getByRole("tooltip").first()).toContainText("等你同意");
       await shot(page, `concept/ruler-${theme}`, 300);
     });
+
+    test("目光:挂着等你的事的头像看向输入框,打字时眼睛跟着光标走;回答后眯眼笑", async ({ page }) => {
+      await page.goto(`/?conv=g&freeze${q}`);
+      const look = async (id: string) => (await page.getByTestId(`gaze-${id}`).getAttribute("data-look"))!.split(",").map(Number);
+      // 在等你的三条:Codex 做完等验收、Argon 等你选、Argon 等你同意;不等你的消息照旧是静止头像
+      for (const id of ["g6", "g12", "g13p"]) await expect(page.getByTestId(`gaze-${id}`)).toHaveAttribute("data-watching", "1");
+      await expect(page.locator("[data-testid^=gaze-]")).toHaveCount(3);
+      await page.locator("#m-g12").scrollIntoViewIfNeeded();
+      // 没点输入框时看向输入框(在头像的右下方),而且是静帧(省电,不逐帧动)
+      await expect.poll(async () => (await look("g12"))[1]).toBeGreaterThan(0.2);
+      await expect(page.getByTestId("gaze-g12")).toHaveAttribute("data-live", "0");
+      // 点进输入框打字:光标往右走,眼睛也往右
+      await composer(page).click();
+      await expect.poll(async () => (await look("g12"))[0], { timeout: 3000 }).toBeLessThan(0.6);
+      const x0 = (await look("g12"))[0];
+      await expect(page.getByTestId("gaze-g12")).toHaveAttribute("data-live", "1");
+      await composer(page).pressSequentially("先只接飞书，按我勾选的内容引用就行，全量同步以后再说");
+      await expect.poll(async () => (await look("g12"))[0]).toBeGreaterThan(x0 + 0.1);
+      await shot(page, `concept/gaze-${theme}`, 400);
+      await composer(page).fill("");
+      // 回答了第一件:Argon 合并在同一个头像下的第二件(等你同意)还在等,头像继续看你
+      await page.getByTestId("quick-g12-0").click();
+      await expect(page.getByTestId("gaze-g12")).toHaveAttribute("data-watching", "1");
+      // 两件都回了 → 不再盯着你,眯眼笑
+      await page.getByTestId("quick-g13p-0").click();
+      await expect(page.getByTestId("gaze-g12")).toHaveAttribute("data-watching", "0");
+      await expect(page.getByTestId("gaze-g12")).toHaveAttribute("data-mood", "happy");
+    });
   });
 }
