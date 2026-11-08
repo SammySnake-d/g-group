@@ -61,7 +61,6 @@ function plainData(x: unknown): Record<string, unknown> | undefined {
   return Object.fromEntries(Object.entries(ds).map(([k, d]) => [k, d.value]));
 }
 function plainArray(x: unknown): unknown[] | undefined {
-  return undefined; // R11 红:空壳对照
   // 先判 Proxy:撤销的 Proxy 上 Array.isArray 会抛错(R6-02)
   if (types.isProxy(x) || !Array.isArray(x) || Object.getPrototypeOf(x) !== Array.prototype) return undefined;
   const ds = Object.getOwnPropertyDescriptors(x);
