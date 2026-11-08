@@ -2,6 +2,7 @@
 // 每个变异都必须让至少一条具名测试失败,且全部测试都执行完(文件级失败、超时、强杀、部分执行都不算杀死)。原样副本必须全绿(阴性对照)。
 // 注入点必须在源文件里恰好出现 1 次,否则判脚本失效。路径相对本包根目录。
 // 用法: node packages/adapter-cc-compute/proof/mutations.mjs
+// 并发默认 4;本机同时有别的测试在跑时用 CC_MUT_CONCURRENCY=2 降低并发(只影响调度,不改注入点与判决)。
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -110,6 +111,23 @@ const M = [
   ["M94 R6-02 rejectedReports 的 kind 不冻结", "src/adapter.ts", "const rec = freezeDeep({ kind: structuredClone(s.kind), reason });", "const rec = Object.freeze({ kind: s.kind, reason });"],
   ["M95 R6-03 工具名先 trim(近似名当成已声明工具)", "mcp/report-mcp.mjs", "const name = m.params?.name;", "const name = typeof m.params?.name === \"string\" ? m.params.name.trim() : m.params?.name;"],
   ["M96 R6-03 工具名大小写不敏感", "mcp/report-mcp.mjs", "const name = m.params?.name;", "const name = typeof m.params?.name === \"string\" ? m.params.name.toLowerCase() : m.params?.name;"],
+  // 以下对应第七轮 R7-01–R7-03(Astra 第七轮):续接认领与 stop 复核、外部 JSON 字段的安全说明与受控边界、init 前认可帧的邻接放宽
+  ["M97 R7-01 resume 不做认领检查(已有续接在途也受理)", "src/adapter.ts", "if (st.resuming) return refuse(", "if (false) return refuse("],
+  ["M98 R7-01 认领不置位(检查形同虚设)", "src/adapter.ts", "        st.resuming = true;\n", ""],
+  ["M99 R7-01 认领在等上一轮退出之前就释放", "src/adapter.ts", "          await prev.done;\n        } finally {", "          st.resuming = false;\n          await prev.done;\n        } finally {"],
+  ["M100 R7-01 跨 await 不核对 stop(stop 确认后仍起 CLI)", "src/adapter.ts", "if (prev.stopRequested) return refuse(", "if (false) return refuse("],
+  ["M101 R7-02 preInitFrame 对 type 做隐式字符串转换", "src/events.ts", "`${describe(m.type)}${", "`${String(m.type)}${"],
+  ["M102 R7-02 preInitFrame 对 subtype 做隐式字符串转换", "src/events.ts", "`/${describe(m.subtype)}`", "`/${String(m.subtype)}`"],
+  ["M103 R7-02 checkInit 对 host 状态做隐式字符串转换", "src/events.ts", "host 状态 ${describe(host?.status ?? \"缺失\")}", "host 状态 ${String(host?.status ?? \"缺失\")}"],
+  ["M104 R7-02 拒收回执的 text 不判类型就拼接", "src/events.ts", "return typeof t === \"string\" ? t : \"\";", "return (t as string | undefined) ?? \"\";"],
+  ["M105 R7-02 安全说明对对象与数组仍做隐式转换", "src/events.ts", "      : Array.isArray(v) ? \"(数组)\" : \"(对象)\";", "      : String(v);"],
+  ["M106 R7-02 去掉 stdout 行的受控边界(异常逸出 readline 回调)", "src/adapter.ts", "        try {\n          onLine(st, round, parse, line, resumeSession !== undefined, (x) => { result = x; });\n        } catch (err) {\n          violate(round, `处理 CLI 输出时出错:${errorText(err)}`);\n        }", "        onLine(st, round, parse, line, resumeSession !== undefined, (x) => { result = x; });"],
+  ["M107 R7-02 受控边界吞掉异常、不记违规", "src/adapter.ts", "          violate(round, `处理 CLI 输出时出错:${errorText(err)}`);", "          void err;"],
+  ["M108 R7-03 init 前 hook 前缀一律放行(审查 S04)", "src/events.ts", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype)) return { kind: \"allowed\" }", "(PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype) || m.subtype.startsWith(\"hook\"))) return { kind: \"allowed\" }"],
+  ["M109 R7-03 认可帧按前缀匹配(延长的子类型放行)", "src/events.ts", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype)) return { kind: \"allowed\" }", "PRE_INIT_SYSTEM_SUBTYPES.some((s) => (m!.subtype as string).startsWith(s))) return { kind: \"allowed\" }"],
+  ["M110 R7-03 认可帧大小写不敏感", "src/events.ts", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype)) return { kind: \"allowed\" }", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype.toLowerCase())) return { kind: \"allowed\" }"],
+  ["M111 R7-03 认可帧先去掉首尾空白", "src/events.ts", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype)) return { kind: \"allowed\" }", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype.trim())) return { kind: \"allowed\" }"],
+  ["M112 R7-03 认可帧按子串匹配(截短的子类型放行)", "src/events.ts", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype)) return { kind: \"allowed\" }", "PRE_INIT_SYSTEM_SUBTYPES.some((s) => s.includes(m!.subtype as string))) return { kind: \"allowed\" }"],
 ];
 
 // 不用 --test-timeout:在 node --test <file> 下它限制的是整个文件,文件超过上限会被整体取消(部分执行)。
@@ -165,7 +183,8 @@ const total = plan;
 const cleanOk = clean.code === 0 && !clean.timedOut && clean.failed.length === 0 && total > 0 && clean.passed.length === total;
 console.log(`${cleanOk ? "✓" : "✗"} 原样副本:${clean.passed.length} 绿 / ${clean.failed.length} 红,计划 ${total} 条,退出码 ${clean.code}${clean.timedOut ? "(超时)" : ""}`);
 if (!cleanOk) ok = false;
-const CONCURRENCY = 4;
+const CONCURRENCY = Number(process.env.CC_MUT_CONCURRENCY) > 0 ? Math.floor(Number(process.env.CC_MUT_CONCURRENCY)) : 4;
+console.log(`并发 ${CONCURRENCY}`);
 const results = new Array(M.length);
 let next = 0;
 async function worker() {
