@@ -1,0 +1,53 @@
+package-lock.json
+  s_18f4e42a362f21::t_78abca8541f48b 77-80,89-92,151-153,162-174
+packages/adapter-sqlite/src/store.test.ts
+  s_18f4e42a362f21::t_7b4d78613a8525 10,553-585
+packages/adapter-sqlite/src/store.ts
+  s_18f4e42a362f21::t_b49846bd9f4b77 67-70,72,84-93
+packages/kernel/src/attention.test.ts
+  s_18f4e42a362f21::t_4f6b2ec48f0226 1-241
+packages/kernel/src/attention.ts
+  s_18f4e42a362f21::t_422fdc22414bed 1-187
+packages/kernel/src/index.ts
+  s_18f4e42a362f21::t_3193243427eb03 6
+packages/server/package.json
+  s_18f4e42a362f21::t_712ca93dcf40c6 1-15
+packages/server/proof/e2e-claude-compute.txt
+  s_18f4e42a362f21::t_3ff0899dc13969 1-11
+packages/server/src/assemble.ts
+  s_18f4e42a362f21::t_0e1ef66238b3bd 1-92
+packages/server/src/bus.ts
+  s_18f4e42a362f21::t_d86de8f634fb68 1-43
+packages/server/src/cli.ts
+  s_18f4e42a362f21::t_9a6bd593d5d227 1-130
+packages/server/src/db.ts
+  s_18f4e42a362f21::t_6148f25ab403db 1-88
+packages/server/src/fakes.ts
+  s_18f4e42a362f21::t_66c479a5ee3d8c 1-121
+packages/server/src/host.test.ts
+  s_18f4e42a362f21::t_43d4b1b24d043c 1-267
+packages/server/src/host.ts
+  s_18f4e42a362f21::t_28252877e2bb77 1-1135
+packages/server/src/index.ts
+  s_18f4e42a362f21::t_6b98896538bc97 1-5
+packages/server/src/service.ts
+  s_18f4e42a362f21::t_0edcae3aea650a 1-145
+receipts/feat-contact-runtime.json
+  s_18f4e42a362f21::t_44fd4891cce550 1-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3d268823a3df9b1d46ae9ea8af50b2e37946c4fc",
+  "prompts": {},
+  "sessions": {
+    "s_18f4e42a362f21": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a02374a8ddd5486aa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

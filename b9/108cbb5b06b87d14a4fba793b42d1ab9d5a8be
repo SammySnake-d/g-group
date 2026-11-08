@@ -1,0 +1,25 @@
+packages/server/README.md
+  s_7f422c52350e16::t_b4e5f771b68029 13-17,20-21
+packages/server/src/index.ts
+  s_7f422c52350e16::t_586276623a4c74 6
+packages/server/src/start.test.ts
+  s_7f422c52350e16::t_7f0432f6b6f53f 1-30
+packages/server/src/start.ts
+  s_7f422c52350e16::t_b19311be8d6513 1-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b9108cbb5b06b87d14a4fba793b42d1ab9d5a8be",
+  "prompts": {},
+  "sessions": {
+    "s_7f422c52350e16": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18b4f4b0-3cf6-4d51-be92-ca20094b2ce3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
