@@ -1,0 +1,20 @@
+packages/domain/proof/commitment-ledger-mutations.mjs
+  h_f33e46a035b77c 191-230,259
+packages/domain/proof/commitment-ledger-mutations.txt
+  h_f33e46a035b77c 1-2,4-5,9,11,13,21,28,30-31,35,43,46,48,58,60,64-67,70-71,85-86,106,117,124,157-193
+packages/domain/proof/commitment-ledger-round3-red-green.txt
+  h_f33e46a035b77c 1-373
+packages/domain/proof/commitment-ledger-tests.txt
+  h_f33e46a035b77c 80-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "511a44e0964d347d8e93fa8642cbe506dc66275d",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
