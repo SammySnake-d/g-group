@@ -244,6 +244,16 @@ export class PluginStore {
     this.d.emit({ removed: id });
     this.d.commandsChanged();
   }
+  /** 插件进程 pid(没在跑为 null)。空壳:进程隔离运行时下一提交接入。 */
+  pid(_id: string): number | null {
+    return null;
+  }
+  async pull(_id: string, _sourceId?: string): Promise<never> {
+    throw new HostError("unavailable", "插件运行时尚未接入");
+  }
+  async send(_id: string, _actionId: string, _payload: string): Promise<never> {
+    throw new HostError("unavailable", "插件运行时尚未接入");
+  }
   /** 已启用插件声明的 slash 命令。 */
   commands(): SlashCommand[] {
     const out: SlashCommand[] = [];

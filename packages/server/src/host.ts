@@ -153,6 +153,19 @@ export interface HostOptions {
   readonly announcementOrder?: AnnouncementOrder;
   /** 联系人没单独设时的个人 Compute 槽位数(AC-23);不给为不限 */
   readonly personalComputeSlots?: number;
+  /** 插件进程运行时参数:pull/启动的单次超时、外发超时、插件单行输出上限(字节)、宿主预加载模块、插件堆上限(MB)、外发超时后的宽限。 */
+  readonly pluginRuntime?: {
+    readonly callTimeoutMs?: number;
+    readonly sendTimeoutMs?: number;
+    readonly maxLineBytes?: number;
+    readonly preload?: string;
+    readonly maxHeapMb?: number;
+    readonly sendGraceMs?: number;
+  };
+  /** 从 URL 安装插件时的下载函数;默认全局 fetch。测试注入,不连网。 */
+  readonly pluginFetch?: (url: string) => Promise<Response>;
+  /** URL 安装的下载大小上限(字节),默认 20 MB;解包后上限为它的 4 倍。 */
+  readonly pluginDownloadMaxBytes?: number;
 }
 
 /** 记忆锚点:全局(进前缀)与「建议改人格」(只记录,不进任何一块) */
