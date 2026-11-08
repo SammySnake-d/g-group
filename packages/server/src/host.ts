@@ -53,6 +53,7 @@ import {
   type ContactMind,
   type Inbound,
   type InboundMessage,
+  type MemoryEntry,
   type MindAction,
   type RoundOutput,
   type RoundStatus,
@@ -126,6 +127,8 @@ export interface HostOptions {
   readonly compactor?: (contact: ContactView) => ContactCompactor;
   /** 状态笔记的 UTF-8 字节上限;超了请压缩器缩写,仍超就保留并报告,不截断。null / 不给:不设上限。 */
   readonly stateNoteMaxBytes?: number | null;
+  /** 会话中途的全局记忆变化在第 5 块累积到几条就并入第 1 块前缀(D25 第 6 节「快照加增量」)。默认 20。 */
+  readonly memoryFoldAfter?: number;
   readonly timers?: TimerApi;
   readonly onReport?: (what: string, detail: unknown) => void;
   /** 群公告排序(列表与装配共用);默认按创建先后。排序规则待定(D28 待确认 ④),先做成参数。 */
@@ -1641,6 +1644,18 @@ export class Host {
   }
 
   // ======================= 联系人一轮 =======================
+  /** 联系人的全部记忆(含已替代、降级)。红提交:空壳。 */
+  listMemories(_contactId: string): MemoryEntry[] {
+    return [];
+  }
+  /** 压缩检查记下的「建议改人格」(不进任何一块,人格本身不改)。红提交:空壳。 */
+  personaSuggestions(_contactId: string): string[] {
+    return [];
+  }
+  /** 删掉索引后从 md 真源重建,返回条目数。红提交:空壳。 */
+  rebuildMemoryIndex(_contactId: string): number {
+    return 0;
+  }
   /** 联系人当前的状态笔记(第 3 块原文);没有为 null。 */
   stateNote(contactId: string): string | null {
     return getDoc<{ text: string }>(this.db, `note:${contactId}`)?.value.text ?? null;
