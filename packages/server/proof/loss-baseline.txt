@@ -1,0 +1,40 @@
+# 连续投递丢要求基线(D23,AC-40):dev/integration 7811008,真实 pi 联系人,模型 fnqtz/claude-opus-5-5,2026-11-08T18:24:53.181Z
+# 命令: node packages/server/proof/loss-eval.mjs --reps 3 --label 基线-7811008 (网关地址与令牌只经环境变量传入)
+# 判法:每条要求一个正则,只在该要求生效之后联系人说出的话与派出的任务说明里找;改条件的只判新条件
+
+batch S1-三件并列 #1: 3/3
+batch S1-三件并列 #2: 3/3
+batch S1-三件并列 #3: 3/3
+batch S2-中途改条件 #1: 2/2
+batch S2-中途改条件 #2: 2/2
+batch S2-中途改条件 #3: 2/2
+batch S3-闲聊夹补充与改约定 #1: 3/3
+batch S3-闲聊夹补充与改约定 #2: 3/3
+batch S3-闲聊夹补充与改约定 #3: 3/3
+stream S1-三件并列 #1: 3/3
+stream S1-三件并列 #2: 3/3
+stream S1-三件并列 #3: 3/3
+stream S2-中途改条件 #1: 0/2 丢:改成按长度:fig kiwi banana、大写:FIG KIWI BANANA
+stream S2-中途改条件 #2: 0/2 丢:改成按长度:fig kiwi banana、大写:FIG KIWI BANANA
+stream S2-中途改条件 #3: 0/2 丢:改成按长度:fig kiwi banana、大写:FIG KIWI BANANA
+stream S3-闲聊夹补充与改约定 #1: 3/3
+stream S3-闲聊夹补充与改约定 #2: 2/3 丢:草稿改成周六上午十点
+stream S3-闲聊夹补充与改约定 #3: 1/3 丢:草稿改成周六上午十点、z 单词加中文意思
+interleave S1-三件并列 #1: 3/3
+interleave S1-三件并列 #2: 3/3
+interleave S1-三件并列 #3: 3/3
+interleave S2-中途改条件 #1: 2/2
+interleave S2-中途改条件 #2: 2/2
+interleave S2-中途改条件 #3: 2/2
+interleave S3-闲聊夹补充与改约定 #1: 3/3
+interleave S3-闲聊夹补充与改约定 #2: 3/3
+interleave S3-闲聊夹补充与改约定 #3: 3/3
+汇总: {"batch": {"total": 24, "lost": 0, "rate": 0}, "stream": {"total": 24, "lost": 9, "rate": 0.375}, "interleave": {"total": 24, "lost": 0, "rate": 0}, "all": {"total": 72, "lost": 9, "rate": 0.125}}
+
+## 丢失样例原文(stream S2 #1)
+#1 我: 把这几个词按字母倒序排一下:kiwi, banana, fig
+#2 小克: 按字母倒序排好了:kiwi, fig, banana
+#3 我: 等下,改成按长度从短到长排
+#4 小克: 好的,改成按长度从短到长。不过我这边找不到之前在做的排序任务,也没有相关记录。你要排的是哪份内容(文件、列表还是一段文本)?发我一下,或者告诉我位置,我马上按长度从短到长排。
+#5 我: 结果全部用大写字母写
+#6 小克: 记下了，结果会全部转成大写。我这边还是没拿到要处理的内容，麻烦把内容直接贴过来，或者告诉我文件在哪。拿到后我按长度从短到长排，长度一样的保持原来的顺序，最后全部转成大写给你。
