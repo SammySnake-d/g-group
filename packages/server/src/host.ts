@@ -47,7 +47,7 @@ import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { PluginStore } from "./plugins.ts";
-import type { RewindPlan } from "./rewind.ts";
+import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
 
 export interface HostOptions {
@@ -492,6 +492,7 @@ export class Host {
       retracted: m.retracted,
       clientActionId: meta?.client_action_id ?? null,
       at: one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${roomId}`, m.seq)?.at ?? this.now(),
+      ...(isRewound(this.db, roomId, m.seq) ? { rewound: true } : {}),
     };
   }
   listMessages(roomId: string, q: { beforeSeq?: number; afterSeq?: number; limit?: number; threadRootSeq?: number | null }): { messages: MessageView[]; hasMore: boolean } {
@@ -678,6 +679,7 @@ export class Host {
   /** 编辑自己的消息:追加编辑事件,不改旧事件;联系人下一轮收到「编辑了 #x」。 */
   editMessage(roomId: string, seq: number, text: string): MessageView {
     if (!text.trim()) throw new HostError("invalid_params", "消息不能为空");
+    if (isRewound(this.db, roomId, seq)) throw new HostError("conflict", `#${seq} 已回退,不能再编辑`);
     this.appendUserEvent(roomId, { kind: "edit", target: seq, text });
     return this.updatedView(roomId, seq);
   }
@@ -822,12 +824,73 @@ export class Host {
 
   // ======================= 私聊 rewind(AC-48)=======================
   /** 只读预览回退会影响到的东西;不改任何状态。 */
-  rewindPreview(_roomId: string, _toSeq: number): RewindPlan {
-    throw new Error("未实现");
+  rewindPreview(roomId: string, toSeq: number): RewindPlan {
+    const room = this.roomRow(roomId);
+    return planRewind(
+      {
+        room: { id: room.id, kind: room.kind },
+        messages: this.projected(roomId),
+        ranges: rewindRanges(this.db, roomId),
+        tasks: this.listTasks({ roomId }),
+        activeCommitments: this.listCommitments({ roomId, status: "active" }),
+        computeRuns: (taskId) => all(this.db, "SELECT compute_id, status, result, started_at, ended_at FROM gg_compute WHERE task_id = ? ORDER BY started_at, compute_id", taskId),
+      },
+      toSeq,
+    );
   }
-  /** 执行回退:撤下之后的消息、取消来源于它们的在途任务、作废承诺,并替用户记一条回退说明;clientActionId 幂等。 */
-  rewind(_input: { roomId: string; toSeq: number; clientActionId: string }): RewindResult {
-    throw new Error("未实现");
+  /**
+   * 执行回退:撤下之后的消息、取消来源于它们的在途任务(状态机 Cancel,有 Compute 就等真实停止确认)、作废承诺,
+   * 并以用户的一条对话消息记下回退说明(联系人经正常送达收到它、更新状态笔记;本轮途中的联系人因此放弃旧草稿重跑)。
+   * 已发生的外部副作用只列出,不撤销;长期记忆与资产不动。clientActionId 幂等:重放原样返回第一次的结果。
+   */
+  rewind(input: { roomId: string; toSeq: number; clientActionId: string }): RewindResult {
+    const prior = one<{ result: string }>(this.db, "SELECT result FROM gg_rewinds WHERE room_id = ? AND client_action_id = ?", input.roomId, input.clientActionId);
+    if (prior) return JSON.parse(prior.result) as RewindResult;
+    const plan = this.rewindPreview(input.roomId, input.toSeq);
+    const roomId = input.roomId;
+    const me: Member = { kind: "user", id: this.userId };
+    const upto = this.lastSeq(roomId);
+    const effects: HostEffect[] = [];
+    const result = tx(this.db, () => {
+      const tasks = plan.tasks.map((t) => {
+        const { doc, effects: eff } = this.stepTaskTx(t.taskId, { kind: "Cancel", by: this.userId });
+        for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId: t.taskId, computeId: e.computeId });
+        run(this.db, "UPDATE gg_cards SET state = 'expired' WHERE task_id = ? AND state = 'open'", t.taskId);
+        return { ...t, state: doc.task.state };
+      });
+      const byContact = new Map<string, Parameters<typeof applyLedger>[2][]>();
+      for (const k of plan.commitments) {
+        const cmd = { type: "close" as const, actionId: `rewind:${roomId}:${input.clientActionId}:${k.commitmentId}`, commitmentId: k.commitmentId, taskId: k.taskId ?? this.ledgerTaskId(k.contactId, roomId, k.commitmentId), actor: { kind: "user" as const, id: this.userId }, roundId: `rewind:${input.clientActionId}`, outcome: "revoked" as const, artifact: null, detail: `用户回退到 #${input.toSeq}` };
+        byContact.set(k.contactId, [...(byContact.get(k.contactId) ?? []), cmd]);
+      }
+      for (const [contactId, cmds] of byContact) this.ledgerTx(contactId, roomId, cmds);
+      const markerSeq = this.appendMessageTx(roomId, me, {
+        text: rewindNotice(plan),
+        actionKey: `rewind:${input.clientActionId}`,
+        clientActionId: input.clientActionId,
+        replyToSeq: input.toSeq,
+        quotedSeqs: [input.toSeq],
+        command: { name: "rewind", args: { toSeq: input.toSeq, uptoSeq: upto } },
+      }).seq;
+      const r: RewindResult = { ...plan, tasks, markerSeq, at: this.now() };
+      run(this.db, "INSERT INTO gg_rewinds (room_id, client_action_id, to_seq, upto_seq, marker_seq, result, at) VALUES (?, ?, ?, ?, ?, ?, ?)", roomId, input.clientActionId, input.toSeq, upto, markerSeq, JSON.stringify(r), r.at);
+      return r;
+    });
+    this.markRead(roomId, me, result.markerSeq);
+    const msgs = this.projected(roomId);
+    for (const m of plan.messages) {
+      const pm = msgs.find((x) => x.seq === m.seq);
+      if (pm) this.bus.emit({ type: "message.updated", message: this.messageView(roomId, pm, msgs) });
+    }
+    this.afterAppend(roomId, result.markerSeq, me);
+    for (const t of plan.tasks) this.emitTask(t.taskId);
+    const changed = new Set(plan.commitments.map((k) => k.commitmentId));
+    for (const k of this.listCommitments({ roomId })) if (changed.has(k.id)) this.bus.emit({ type: "commitment.updated", commitment: k });
+    void this.runEffects(effects);
+    return result;
+  }
+  private ledgerTaskId(contactId: string, roomId: string, commitmentId: string): string {
+    return this.ledgerOf(contactId, roomId).value.commitments.find((c) => c.id === commitmentId)?.taskId ?? "";
   }
 
   // ======================= 任务 =======================
@@ -986,6 +1049,8 @@ export class Host {
       const cur = this.cursor(contactId, r.id);
       const { log } = loadLog(this.db.store, `room:${r.id}`);
       const msgs = project(log);
+      // 私聊 rewind 撤下的消息(AC-48):不再送达,针对它们的编辑/撤回也不送达,引用它们也不换入
+      const rewound = rewindRanges(this.db, r.id);
       lastSeen[r.id] = log.events.at(-1)?.seq ?? 0;
       // 按事件扫:编辑与撤回是新事件(只追加),作为「编辑 #x 为…」「撤回了 #x」送达,不回头改旧消息
       for (const ev of log.events) {
@@ -995,6 +1060,7 @@ export class Host {
           continue;
         }
         let ib: InboundMessage;
+        if (inRanges(rewound, ev.body.kind === "message" ? ev.seq : ev.body.target)) continue;
         if (ev.body.kind === "message") {
           const m = msgs.find((x) => x.seq === ev.seq);
           if (!m || m.retracted) continue;
@@ -1019,7 +1085,7 @@ export class Host {
         fresh.push(ib);
         for (const q of [...ib.quotedSeqs, ...(ib.replyToSeq !== null ? [ib.replyToSeq] : [])]) {
           const src = msgs.find((x) => x.seq === q);
-          if (src && !src.retracted && src.seq <= cur && !pointers.some((p) => p.ref === `${r.id} #${q}`)) pointers.push({ ref: `${r.id} #${q}`, text: src.text });
+          if (src && !src.retracted && src.seq <= cur && !inRanges(rewound, src.seq) && !pointers.some((p) => p.ref === `${r.id} #${q}`)) pointers.push({ ref: `${r.id} #${q}`, text: src.text });
         }
       }
     }
@@ -1156,6 +1222,7 @@ export class Host {
             if (leavingRooms.has(a.roomId)) { reject(LEAVING_REASON); break; }
             const src = freshMsgs.find((m) => m.roomId === a.roomId && m.seq === a.sourceSeq);
             if (!src) { reject(`来源 ${a.roomId} #${a.sourceSeq} 不是本轮新消息`); break; }
+            if (isRewound(this.db, a.roomId, a.sourceSeq)) { reject("来源消息已回退"); break; }
             if (!a.task.trim() || !a.title.trim()) { reject("任务说明为空"); break; }
             const claim = this.claimBlockedTx(contactId, src);
             if (claim) { reject(claim); break; }
@@ -1184,6 +1251,7 @@ export class Host {
             if (leavingRooms.has(a.roomId)) { reject(LEAVING_REASON); break; }
             const src = freshMsgs.find((m) => m.roomId === a.roomId && m.seq === a.sourceSeq);
             if (!src) { reject(`来源 ${a.roomId} #${a.sourceSeq} 不是本轮新消息`); break; }
+            if (isRewound(this.db, a.roomId, a.sourceSeq)) { reject("来源消息已回退"); break; }
             const key = `${a.roomId}#${a.sourceSeq}`;
             if (!src.text.includes(a.text)) {
               // 联系人自己回复里说的「我会做 X」也要进账本(AC-40 ②):原文出自本轮同会话的 reply,就挂到那条回复上
@@ -1201,7 +1269,7 @@ export class Host {
           case "forward": {
             const t = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
-            if (!t.task.computeId || TERMINAL.has(t.task.state)) { reject("任务没有在途 Compute"); break; }
+            if (!t.task.computeId || TERMINAL.has(t.task.state) || t.task.state === "T9_StopRequested") { reject("任务没有在途 Compute"); break; }
             effects.push({ kind: "resume", taskId: a.taskId, computeId: t.task.computeId, text: a.text });
             break;
           }
@@ -1379,6 +1447,9 @@ export class Host {
         const { effects: eff } = this.stepTaskTx(e.taskId, { kind: "ExecFailed", requestId: e.requestId });
         // 启动本来就没成功:撤销请求当场确认(没有实例可停),任务落到 T11
         for (const x of eff) if (x.kind === "cancel-spawn") this.stepTaskTx(e.taskId, { kind: "StoppedConfirmed", taskId: e.taskId, requestId: x.requestId });
+        // 启动途中任务已被取消(T9 等的正是这次启动):启动失败即确认撤销,落到 T10
+        const cur = this.taskDoc(e.taskId).value.task;
+        if (cur.state === "T9_StopRequested" && cur.launch?.requestId === e.requestId) this.stepTaskTx(e.taskId, { kind: "StoppedConfirmed", taskId: e.taskId, requestId: e.requestId });
         const payload: Inbound = { kind: "compute", roomId: e.roomId, taskId: e.taskId, computeId: "-", signal: "failed", summary: `Compute 没起来:${reason}`, at: this.now() };
         run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", e.contactId, e.roomId, JSON.stringify(payload), this.now());
       });
@@ -1390,11 +1461,15 @@ export class Host {
     const tools = [...(this.opts.computeTools ?? DEFAULT_COMPUTE_TOOLS)];
     const r = await adapter.spawn({ task: e.brief, rules: [], tools, credentialRefs: [], placement: "local" }, cwd ? { cwd } : {});
     if (!r.ok) return fail(r.reason);
+    const late: string[] = [];
     tx(this.db, () => {
       run(this.db, "INSERT INTO gg_compute (compute_id, task_id, contact_id, room_id, harness, model, status, started_at) VALUES (?, ?, ?, ?, 'claude-code', ?, 'starting', ?)", r.computeId, e.taskId, e.contactId, e.roomId, e.model, this.now());
-      this.stepTaskTx(e.taskId, { kind: "Dispatch", computeId: r.computeId, model: e.model, requestId: e.requestId });
+      const { effects: eff } = this.stepTaskTx(e.taskId, { kind: "Dispatch", computeId: r.computeId, model: e.model, requestId: e.requestId });
+      for (const x of eff) if (x.kind === "stop-compute") late.push(x.computeId);
     });
     this.emitTask(e.taskId);
+    // 启动途中任务已被取消(如私聊 rewind):实例一上线就停,等它回报 stopped 再落 T10,不让它带着作废的请求跑下去
+    for (const id of late) await adapter.stop(id);
   }
 
   // ======================= 卡片与验收 =======================
