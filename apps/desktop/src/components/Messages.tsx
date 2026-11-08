@@ -13,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { broken, candidate } from '@/mut'
 import { ReceiptButton, MentionDot, receiptOf } from './Receipt'
-
+import * as Concept from '@/concept'
 type Bodied = Exclude<Msg, { k: 'date' | 'sys' | 'huddle' | 'commit' | 'asset' | 'replying' }>
 
 /* ============ 消息流：群聊、私聊、联系人资料共用 ============ */
@@ -99,7 +99,7 @@ function Row({ m, first, compact, highlight, selecting, checked, onSelect, trail
           </div>
         ) : (
           <div className="relative max-w-full" data-anchor={m.id}>
-            {children}
+            {children}{trail && <Concept.AcceptSeal computeId={trail} />}
             {!compact && !selecting && <HoverBar m={m} mine={mine} reserve={0} />}
           </div>
         )}
