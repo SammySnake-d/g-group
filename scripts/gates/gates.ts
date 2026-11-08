@@ -77,7 +77,7 @@ export const review: Gate = {
 
 // ---------------------------------------------------------------- R-01 R-07 R-10(仅本机,merge.sh 跑通后在 GitHub 上写 provenance 状态)
 // 本门禁在 --local 模式下排在所有门禁之前:会话与群聊记录在执行任何 PR 代码之前读完;PR 代码另在沙箱里跑,读写不到这些目录。
-interface ToolCall { name?: string; input?: unknown; result?: unknown }
+interface ToolCall { name?: string; input?: unknown; result?: unknown; status?: string }
 interface Turn { model?: string; toolCalls?: ToolCall[] }
 // 判定用的是内部私有快照;导出的只是冻结数组副本,改它不影响判定(R5-03:Set 冻结不住 add/delete)
 const HARNESS_LIST: readonly string[] = deepFreeze(["claude", "codex", "pi"]);
@@ -156,6 +156,9 @@ export function turnTouchesRepo(t: Turn, workdir: string | undefined, inRepo: (a
     if (cwd && path.isAbsolute(cwd) && inRepo(path.resolve(cwd))) return true;
     if (resolved.some((r) => r !== undefined && inRepo(r))) return true;
     const writes = WRITE_TOOLS.test(c.name ?? "") || SHELL_TOOLS.test(c.name ?? "");
+    // 目录已经消失且身份未证明时属于判不了,不能因为事后清理而排除厂商。
+    if (writes && cwd && path.isAbsolute(cwd) && !fs.existsSync(cwd)) return true;
+    if (writes && resolved.some((r) => r !== undefined && !fs.existsSync(path.dirname(r)))) return true;
     if (writes && (cands.length === 0 ? !cwd : resolved.some((r) => r === undefined))) return true;
   }
   return false;
@@ -170,6 +173,18 @@ function turnProvesWrite(t: Turn, workdir: string | undefined, ctx: Ctx, inRepo:
   for (const c of t.toolCalls ?? []) {
     if (!/^(write|write_file|fs_write|create_file)$/i.test(c.name ?? "")) continue;
     const inp = parseInput(c.input);
+    if (c.status !== undefined && c.status !== "done") continue;
+    // 宿主的 Write 记录通常只保留路径与 done,没有内容和返回正文。单靠它不能证明;
+    // 仅在同一轮还有已认证提交、该提交确实改了同一文件且与受审版本一致时可证明。
+    if (typeof inp.raw === "string" && path.isAbsolute(inp.raw) && c.status === "done" && c.result == null) {
+      const abs = path.normalize(inp.raw), root = fs.realpathSync(ctx.root);
+      for (const dir of attestedDirs([t], workdir, root, ctx.changed)) {
+        if (!abs.startsWith(dir + path.sep)) continue;
+        const rel = path.relative(dir, abs).split(path.sep).join("/");
+        if (ctx.changed.includes(rel) && attestedDirs([t], workdir, root, [rel]).includes(dir)) return true;
+      }
+      continue;
+    }
     const raw = [inp.file_path, inp.path, inp.filePath, inp.target_file].find((v): v is string => typeof v === "string");
     if (!raw || typeof inp.content !== "string" || typeof c.result !== "string") continue;
     if (!/^(?:File (?:written|created|updated) successfully(?: at: [^\n]+)?|The file [^\n]+ has been (?:created|updated) successfully\.)\s*$/i.test(c.result)) continue;
@@ -331,11 +346,11 @@ export function attestedDirs(turns: Turn[], _workdir: string | undefined, rootRe
   return [...out];
 }
 
-// R12 红阶段:新验证入口先用空壳,旧门禁保持原状。
-export function r12WriteProof(_t: Turn, _workdir: string | undefined, _ctx: Ctx, _inRepo: (abs: string) => boolean): boolean { return false; }
-export function r12CommitProof(_turns: Turn[], _workdir: string | undefined, _rootReal: string, _changed?: string[]): string[] { return []; }
-export function r12SessionDirs(_turns: Turn[], _workdir: string | undefined, _rootReal: string, _changed?: string[]): string[] { return []; }
-export function r12Touch(_t: Turn, _workdir: string | undefined, _inRepo: (abs: string) => boolean): boolean { return false; }
+// R12:这些验证入口与来源门禁使用同一实现,便于独立校准每处守卫。
+export function r12WriteProof(t: Turn, workdir: string | undefined, ctx: Ctx, inRepo: (abs: string) => boolean): boolean { return turnProvesWrite(t, workdir, ctx, inRepo); }
+export function r12CommitProof(turns: Turn[], workdir: string | undefined, rootReal: string, changed?: string[]): string[] { return attestedDirs(turns, workdir, rootReal, changed); }
+export function r12SessionDirs(turns: Turn[], workdir: string | undefined, rootReal: string, changed?: string[]): string[] { return attestedDirs(turns, workdir, rootReal, changed); }
+export function r12Touch(t: Turn, workdir: string | undefined, inRepo: (abs: string) => boolean): boolean { return turnTouchesRepo(t, workdir, inRepo); }
 
 export interface RoomEvent { seq: number; by: string; name?: string; kind: string; text?: string; target?: number; reply?: number; via?: unknown; forward?: unknown; quotes?: unknown }
 export function readRoomLog(rooms: string, room: string): RoomEvent[] {
@@ -367,6 +382,37 @@ export function waiverProblem(log: RoomEvent[], seq: number, by: string, pr: num
   return undefined;
 }
 
+/** 受检 HEAD 历史内此分支收据出现过的作者会话。缺失、损坏或不可核验不得静默跳过。 */
+function authorSessions(root: string, receiptPath: string, author: { session: string; sessions?: string[] }): { sessions: string[]; errors: string[] } {
+  const ids = new Set<string>(), errors: string[] = [];
+  const add = (a: unknown) => {
+    if (!a || typeof a !== "object" || Array.isArray(a)) { errors.push("历史收据缺作者"); return; }
+    const x = a as { session?: unknown; sessions?: unknown };
+    if (typeof x.session !== "string" || !x.session) errors.push("历史收据缺作者会话");
+    else ids.add(x.session);
+    if (x.sessions !== undefined) {
+      if (!Array.isArray(x.sessions) || x.sessions.some((s) => typeof s !== "string" || !s)) errors.push("作者 sessions 必须是会话字符串数组");
+      else for (const s of x.sessions) ids.add(s as string);
+    }
+  };
+  add(author);
+  if (hasHistoryOverride(root)) return { sessions: [...ids], errors: [...errors, "受检历史无法核验"] };
+  const git = (...args: string[]) => spawnSync(TRUSTED_GIT, ["--no-replace-objects", ...GIT_SAFE_ARGS, "-c", "core.commitGraph=false", ...args], { cwd: root, encoding: "utf8", env: gitEnv(), timeout: 30_000 });
+  const log = git("log", "--full-history", "--format=%H", "HEAD", "--", receiptPath);
+  if (log.status !== 0) return { sessions: [...ids], errors: [...errors, "读取收据历史失败"] };
+  for (const sha of log.stdout.split("\n").filter(Boolean)) {
+    const raw = git("show", `${sha}:${receiptPath}`);
+    if (raw.status !== 0) {
+      const entry = git("ls-tree", "--name-only", sha, "--", receiptPath);
+      if (entry.status !== 0 || entry.stdout.trim()) errors.push(`无法读取历史收据 ${sha.slice(0, 12)}`);
+      continue;
+    }
+    try { const r = JSON.parse(raw.stdout) as { author?: unknown }; add(r?.author); }
+    catch { errors.push(`历史收据不是有效 JSON ${sha.slice(0, 12)}`); }
+  }
+  return { sessions: [...ids], errors };
+}
+
 export const provenance: Gate = {
   id: "G-PROVENANCE", rule: "R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是仓库所有者对这个 PR 这一版的结构化批准",
   run(ctx) {
@@ -376,26 +422,39 @@ export const provenance: Gate = {
     const base = sessionsRoot();
     if (author.session === rv.session) out.push(p(g, "作者和审查用的是同一个会话"));
 
-    // R10-01/R10-02:不看目录名。本仓库目录、现存的同一仓库克隆(按仓库身份),或宿主记录证明过、现已清理的克隆目录
     const rootReal = fs.realpathSync(ctx.root);
     const clone = sameRepoClone(rootReal);
-    const at = loadSession(base, author.session);
+    const history = authorSessions(rootReal, ctx.receiptPath, author);
     const producers = new Set<Vendor>();
-    const confirmed = new Set<Vendor>();
-    if (!at.ok) out.push(p(g, `作者会话不可信:${at.why}`));
-    else {
+    for (const error of history.errors) out.push(p(g, error));
+    if (history.sessions.includes(rv.session) && author.session !== rv.session) out.push(p(g, "审查会话也出现在历次作者会话里"));
+    for (const session of history.sessions) {
+      const at = loadSession(base, session);
+      if (!at.ok) { out.push(p(g, `作者会话不可信:${at.why}`)); producers.add("unknown"); continue; }
+      const sessionDirs = r12SessionDirs(at.turns, at.workdir, rootReal, ctx.changed);
+      const sessionProducers = new Set<Vendor>(), confirmed = new Set<Vendor>();
       for (const t of at.turns) {
-        // 已清理的目录证明只适用于产生这条提交记录的轮次,不扩散到之后的调用。
-        const proven = attestedDirs([t], at.workdir, rootReal, ctx.changed);
-        const inRepo = (abs: string) => isRepoPath(abs, rootReal, proven, clone);
+        // 产出范围跨整段会话;能证明写入仍只认本轮证据。
+        const proven = r12CommitProof([t], at.workdir, rootReal, ctx.changed);
+        const inSession = (abs: string) => isRepoPath(abs, rootReal, sessionDirs, clone);
+        const inTurn = (abs: string) => isRepoPath(abs, rootReal, proven, clone);
         const vendor = vendorOf(t.model);
-        if (turnTouchesRepo(t, at.workdir, inRepo)) producers.add(vendor);
-        if (proven.length || turnProvesWrite(t, at.workdir, ctx, inRepo)) confirmed.add(vendor);
+        if (r12Touch(t, at.workdir, inSession)) sessionProducers.add(vendor);
+        if (proven.length || r12WriteProof(t, at.workdir, ctx, inTurn)) confirmed.add(vendor);
       }
-      if (!confirmed.has(vendorOf(author.model))) out.push(p(g, `作者会话 ${author.session} 里找不到对本仓库的任何操作可证明写入了受审版本`));
-      if (producers.has("unknown")) out.push(p(g, "作者会话里有认不出厂商的产出轮次"));
-      if (producers.size && !producers.has(vendorOf(author.model))) out.push(p(g, `作者自报 ${author.model},会话里实际产出厂商是 ${[...producers].join(",")}`));
+      for (const v of confirmed) sessionProducers.add(v);
+      // 会话有历史但无法证明受审产出:不能把它从跨厂商集合里移走。
+      if (confirmed.size === 0) {
+        if (at.turns.length === 0) sessionProducers.add("unknown");
+        for (const t of at.turns) sessionProducers.add(vendorOf(t.model));
+      }
+      for (const v of sessionProducers) producers.add(v);
+      if (session === author.session) {
+        if (!confirmed.has(vendorOf(author.model))) out.push(p(g, `作者会话 ${author.session} 里找不到对本仓库的任何操作可证明写入了受审版本`));
+        if (sessionProducers.size && !sessionProducers.has(vendorOf(author.model))) out.push(p(g, `作者自报 ${author.model},会话里实际产出厂商是 ${[...sessionProducers].join(",")}`));
+      }
     }
+    if (producers.has("unknown")) out.push(p(g, "作者会话里有认不出厂商的产出轮次"));
 
     // 审查:必须有一次工具调用,命令是 run-all.ts --hash,输出恰好等于 reviewed_hash;审查厂商取那一轮的模型
     const rt = loadSession(base, rv.session);

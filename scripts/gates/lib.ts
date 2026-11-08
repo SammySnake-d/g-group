@@ -12,7 +12,7 @@ export interface AcceptanceClaim {
   reason?: string;
   approver?: string;
 }
-export interface Party { agent: string; session: string; model: string }
+export interface Party { agent: string; session: string; model: string; sessions?: string[] }
 export interface Review extends Party { verdict: "approve" | "reject"; reviewed_hash: string; notes: string }
 export interface Receipt {
   slice: string;
