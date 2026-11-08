@@ -1,0 +1,37 @@
+packages/api-contract/src/api.ts
+  s_568736c9a90f61::t_ca5631a925a64d 120-126
+packages/api-contract/src/entities.ts
+  s_568736c9a90f61::t_6fdd6c5b2b5f28 63-72,85-86,198-208
+packages/server/README.md
+  s_568736c9a90f61::t_9aa61ea1df6965 56,62
+packages/server/proof/artifacts.txt
+  s_568736c9a90f61::t_d3ca098287f6f4 1-55
+packages/server/src/artifacts.ts
+  s_568736c9a90f61::t_1cf044aa3682bc 4-7,38,41,43-45,47,49-66,68-69,71-77,81-105
+packages/server/src/cli.ts
+  s_568736c9a90f61::t_b5be205c88d9e4 84
+packages/server/src/db.ts
+  s_568736c9a90f61::t_239f706f796f71 43
+packages/server/src/host.ts
+  s_568736c9a90f61::t_2a205986bb3a68 49,92-93,165,224,472,816-819,853-882,1257-1259,1272,1278
+packages/server/src/service.ts
+  s_568736c9a90f61::t_2d599d2d38ac31 74
+packages/server/src/worktree.ts
+  s_568736c9a90f61::t_0a809c787c6cdc 153-162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0c242618ab268bccc68040cab0b55fd70a513805",
+  "prompts": {},
+  "sessions": {
+    "s_568736c9a90f61": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "945466dc-9318-4837-9afe-e1c1b3bb224f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
