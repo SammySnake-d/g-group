@@ -1,0 +1,14 @@
+{
+  "slice": "联系人每轮五块重拼 assembleRound(packages/kernel/src/rounds.ts):固定前缀 / 承诺账本 / 状态笔记 / 新消息 / 指针与按需换入,输出 runtime-ports 的 RoundRequest;第 1 块只由 prefix 输入决定、配置文本混入会变内容显式拒绝、断点只在第 1 块末尾;账本原文复制、未绑定承诺只给一行索引;processed_seq 之前的旧消息不进第 4 块;basedOnSeq 按会话取第 4 块最大 seq;超预算显式失败;输入先过普通数据判定",
+  "acceptance": [
+    { "id": "AC-39", "status": "未测", "reason": "装配侧的前缀纪律(①第 1 块逐字节相同、配置文本会变内容拒绝;②账本/状态笔记/新消息不进前缀;③断点只在第 1 块)有单测,但审查与变异未做;命中率可观测、可信度检查、常驻会话与线路不在本片" },
+    { "id": "AC-40", "status": "未测", "reason": "只覆盖坏实现⑪的装配侧(请求只有五块、账本是原文、旧消息不进第 4 块)且有单测,审查未做;同一轮工具往返保留、处置、承诺登记、对账不在本片;⑪ 在验收文档里仍是候选" },
+    { "id": "AC-41", "status": "未测", "reason": "只做最小版:被引用消息原文由调用方作为 pointers 放进第 5 块;quote_chain 的 K=3 广度优先、has_more_above、depth_total、in_context 去重、权限与撤回、read_quote_parent 都不在本片" }
+  ],
+  "author": { "agent": "claude", "session": "claude:18b4f4b0-3cf6-4d51-be92-ca20094b2ce3（子代理）", "model": "fnqtz/claude-opus-5-5" },
+  "red": null,
+  "unverifiable": "先写后测(用户 #717:先落代码,先红后绿与变异留到审查阶段补)。AC-39 ① 的会变内容扫描只扫系统提示词、工具声明、人设、群公告四段配置文本;规矩与纠正是来源消息原文,天然带 #seq、时刻,按设计不扫,所以调用方若把每轮会变的东西冒充规矩传进来,本片骗不过去,只能靠相邻请求前缀哈希观测发现。AC-40 ⑪ 只证明装配函数本身不夹带旧消息,宿主是否真的只用它拼请求,要等注意循环接线后核对",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}
