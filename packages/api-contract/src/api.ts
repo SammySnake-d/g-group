@@ -1,6 +1,8 @@
 // 渲染进程经 preload 调用的方法表。每个方法 = 参数 schema + 结果 schema;主进程收到调用先校验参数,
 // 回包前校验结果,渲染进程收到回包可再校验一次(开发模式)。方法名「域.动作」,新增只加不改。
 import {
+  ANNOUNCEMENT_ORDERS,
+  AnnouncementView,
   CommitmentView,
   ComputeProgress,
   ContactView,
@@ -69,6 +71,16 @@ export const METHODS = {
   "rooms.removeMember": method(obj({ roomId: id(), member: MemberRef }), RoomView),
   /** 用户自己的已读位置,只影响用户视图(AC-46)。 */
   "rooms.markRead": method(obj({ roomId: id(), seq: seq() }), Ok),
+
+  // ---- 群公告(AC-55,U97/U86):一个群可有多条;改动推 room.updated;联系人下一轮装配读当前全部有效公告 ----
+  /** 当前有效公告;order 缺省按创建先后(created-asc)。私聊返回空数组。 */
+  "announcements.list": method(obj({ roomId: id(), order: opt(oneOf(ANNOUNCEMENT_ORDERS)) }), obj({ announcements: arr(AnnouncementView) })),
+  /** 新增一条,不覆盖已有的;同一 clientActionId 重发返回原条目。私聊 forbidden。 */
+  "announcements.add": method(obj({ roomId: id(), clientActionId: id(), text: str({ min: 1, max: 20000 }) }), AnnouncementView),
+  /** 改正文;expectedVersion 不符回 conflict(detail.currentVer)。正文没变不升版本。 */
+  "announcements.update": method(obj({ announcementId: id(), text: str({ min: 1, max: 20000 }), expectedVersion: opt(int({ min: 1 })) }), AnnouncementView),
+  /** 撤下一条(保留记录,不再显示和装配);expectedVersion 不符回 conflict。 */
+  "announcements.remove": method(obj({ announcementId: id(), expectedVersion: opt(int({ min: 1 })) }), Ok),
 
   // ---- 消息 ----
   "messages.list": method(

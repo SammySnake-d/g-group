@@ -12,6 +12,7 @@ import {
   formatIssues,
   isMethodName,
 } from "@g-group/api-contract";
+import type { AnnouncementOrder } from "./announcements.ts";
 import { HostError } from "./db.ts";
 import type { Host } from "./host.ts";
 import { previewCron } from "./schedules.ts";
@@ -48,6 +49,13 @@ export function createService(host: Host): Service {
     "rooms.removeMember": (p: { roomId: string; member: { kind: "user" | "contact"; id: string } }) => host.removeMember(p.roomId, p.member),
     "rooms.markRead": (p: { roomId: string; seq: number }) => {
       host.markRead(p.roomId, { kind: "user", id: host.userId }, p.seq);
+      return { ok: true };
+    },
+    "announcements.list": (p: { roomId: string; order?: AnnouncementOrder }) => ({ announcements: host.announcements.list(p.roomId, p.order) }),
+    "announcements.add": (p: { roomId: string; clientActionId: string; text: string }) => host.announcements.add(p.roomId, p.text, p.clientActionId),
+    "announcements.update": (p: { announcementId: string; text: string; expectedVersion?: number }) => host.announcements.update(p.announcementId, p.text, p.expectedVersion),
+    "announcements.remove": (p: { announcementId: string; expectedVersion?: number }) => {
+      host.announcements.remove(p.announcementId, p.expectedVersion);
       return { ok: true };
     },
     "messages.list": ({ roomId, ...q }: { roomId: string } & Parameters<Host["listMessages"]>[1]) => host.listMessages(roomId, q),

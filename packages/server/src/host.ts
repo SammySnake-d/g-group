@@ -40,6 +40,7 @@ import {
   type Urgency,
   createAttentionLoop,
 } from "@g-group/kernel";
+import { type AnnouncementOrder, AnnouncementStore } from "./announcements.ts";
 import { CONTACT_SYSTEM, CONTACT_TOOLS, type LedgerLine, type RoundAssembler, kernelAssemble } from "./assemble.ts";
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
@@ -70,6 +71,8 @@ export interface HostOptions {
   readonly maxDeferMs?: number;
   readonly timers?: TimerApi;
   readonly onReport?: (what: string, detail: unknown) => void;
+  /** 群公告排序(列表与装配共用);默认按创建先后。排序规则待定(D28 待确认 ④),先做成参数。 */
+  readonly announcementOrder?: AnnouncementOrder;
 }
 
 interface ContactDoc extends Omit<ContactView, "activity"> {
@@ -154,6 +157,7 @@ export class Host {
   readonly loop: AttentionLoop;
   readonly scheduler: Scheduler;
   readonly plugins: PluginStore;
+  readonly announcements: AnnouncementStore;
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly newId: (prefix: string) => string;
@@ -210,6 +214,14 @@ export class Host {
         else this.bus.emit({ type: "plugin.updated", plugin: v });
       },
       commandsChanged: () => this.bus.emit({ type: "commands.changed", roomId: null, commands: null }),
+    });
+    this.announcements = new AnnouncementStore({
+      db: this.db,
+      now: this.now,
+      newId: this.newId,
+      order: opts.announcementOrder ?? "created-asc",
+      roomKind: (roomId) => this.roomRow(roomId).kind,
+      changed: (roomId) => this.bus.emit({ type: "room.updated", room: this.roomView(roomId) }),
     });
     // 启动时先处理宿主关着期间到期的定时(按容差与 missedPolicy),再按最早一次设计时器
     this.scheduler.tick();
@@ -403,6 +415,7 @@ export class Host {
       pendingForUser: pending,
       lastMessagePreview: last ? last.text.slice(0, 200) : null,
       updatedAt: r.updated_at,
+      announcementCount: r.kind === "group" ? this.announcements.count(roomId) : 0,
     };
   }
   markRead(roomId: string, m: Member, seq: number) {
@@ -965,7 +978,8 @@ export class Host {
       system: CONTACT_SYSTEM,
       tools: CONTACT_TOOLS,
       persona: identityOf(contactId, contact),
-      roomRules: rooms.map((r) => ({ roomId: r.id, title: r.title, rules: r.rules, version: r.rules_version })),
+      // 第 1 块群规快照 = 群规 + 当前全部有效公告(U86);版本只在两者真改时前进(U85/D22)
+      roomRules: rooms.map((r) => ({ roomId: r.id, title: r.title, ...this.announcements.snapshot(r.id, r.rules, r.rules_version) })),
       ledger: ledgerLines,
       boundIds: ledgerLines.filter((l) => freshKeys.has(`${l.roomId}#${l.sourceSeq}`) || freshTasks.has(l.taskId)).map((l) => l.id),
       processedSeq: Object.fromEntries(rooms.map((r) => [r.id, this.cursor(contactId, r.id)])),
