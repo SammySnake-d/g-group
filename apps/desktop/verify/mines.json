@@ -52,7 +52,7 @@
  {
   "id": "M-VIS-3",
   "desc": "单页分栏又套回页签按钮",
-  "file": "src/components/Split.tsx",
+  "file": "src/components/split/SplitPane.tsx",
   "find": "if (tabs.length === 1) return <div",
   "replace": "if (tabs.length === 99) return <div",
   "spec": "e2e/visual.ui.spec.ts",
