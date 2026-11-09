@@ -1,0 +1,64 @@
+apps/desktop/e2e/compute.ui.spec.ts
+  h_f33e46a035b77c 1-163
+apps/desktop/src/components/compute/ComputeCard.tsx
+  h_f33e46a035b77c 1-91
+apps/desktop/src/components/compute/HarnessSession.tsx
+  h_f33e46a035b77c 1-88
+apps/desktop/src/components/compute/Preview.tsx
+  h_f33e46a035b77c 1-88
+apps/desktop/src/components/compute/StatusChip.tsx
+  h_f33e46a035b77c 1-33
+apps/desktop/src/components/compute/card/AlertStrip.tsx
+  h_f33e46a035b77c 1-58
+apps/desktop/src/components/compute/card/StepList.tsx
+  h_f33e46a035b77c 1-51
+apps/desktop/src/components/compute/constants.ts
+  h_f33e46a035b77c 1-102
+apps/desktop/src/components/compute/demo-sessions.ts
+  h_f33e46a035b77c 1-12
+apps/desktop/src/components/compute/demo/build.ts
+  h_f33e46a035b77c 1-111
+apps/desktop/src/components/compute/demo/code-sessions.ts
+  h_f33e46a035b77c 1-70
+apps/desktop/src/components/compute/demo/codex-sessions.ts
+  h_f33e46a035b77c 1-51
+apps/desktop/src/components/compute/demo/web-sessions.ts
+  h_f33e46a035b77c 1-36
+apps/desktop/src/components/compute/index.ts
+  h_f33e46a035b77c 1-6
+apps/desktop/src/components/compute/parts.tsx
+  h_f33e46a035b77c 1-66
+apps/desktop/src/components/compute/session/AgentGroup.tsx
+  h_f33e46a035b77c 1-64
+apps/desktop/src/components/compute/session/Deliverables.tsx
+  h_f33e46a035b77c 1-49
+apps/desktop/src/components/compute/session/Prose.tsx
+  h_f33e46a035b77c 1-46
+apps/desktop/src/components/compute/session/SessionFooter.tsx
+  h_f33e46a035b77c 1-47
+apps/desktop/src/components/compute/session/SessionHeader.tsx
+  h_f33e46a035b77c 1-47
+apps/desktop/src/components/compute/session/ToolGroup.tsx
+  h_f33e46a035b77c 1-96
+apps/desktop/src/components/compute/session/Transcript.tsx
+  h_f33e46a035b77c 1-59
+apps/desktop/src/main.tsx
+  h_f33e46a035b77c 6,8,10,17-18
+packages/ui-core/src/index.ts
+  h_f33e46a035b77c 7
+packages/ui-core/src/transcript.test.ts
+  h_f33e46a035b77c 1-167
+packages/ui-core/src/transcript.ts
+  h_f33e46a035b77c 1-337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "24568ee5395a9c97071e9fb52aee6c0c28f109e7",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

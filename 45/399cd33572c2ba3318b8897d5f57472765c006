@@ -1,0 +1,25 @@
+apps/desktop/e2e/compute.ui.spec.ts
+  s_9356e7c42cd5ff::t_c1b6e95167cb22 26
+apps/desktop/src/components/compute/ComputeCard.tsx
+  s_9356e7c42cd5ff::t_d19d7ba2bb7d44 44-45,69-70
+apps/desktop/src/components/compute/session/SessionFooter.tsx
+  s_9356e7c42cd5ff::t_c9b40068108de9 30-31,34,37
+apps/desktop/src/components/split/ComputeWork.tsx
+  s_9356e7c42cd5ff::t_1d407ff2e618fb 1,61-62,65-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "45399cd33572c2ba3318b8897d5f57472765c006",
+  "prompts": {},
+  "sessions": {
+    "s_9356e7c42cd5ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2b2d0a85716d2524",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

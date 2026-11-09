@@ -1,0 +1,275 @@
+apps/desktop/src/components/messages/Row.tsx
+  s_28bebc745289eb::t_ed0a943b196632 1-112
+apps/desktop/e2e/layout.ui.spec.ts
+  s_e7bd71499cd700::t_86f67a94ef37b6 2,5-6,15-36,51-52,55-56,62,68,78-94,96-110
+apps/desktop/src/components/CloneFlow.tsx
+  s_e7bd71499cd700::t_70526b7283ce13 1-2
+apps/desktop/src/components/FilesMain.tsx
+  s_e7bd71499cd700::t_edb82164403aef 5-10,15-16,37-46,52-53,66,82-83,90,92,99,104-105,107-108,114,120-129
+apps/desktop/src/components/Helper.tsx
+  s_e7bd71499cd700::t_e40657226d7704 1-3
+apps/desktop/src/components/Messages.tsx
+  s_e7bd71499cd700::t_9391f4bd422f7c 1-13
+apps/desktop/src/components/Overlays.tsx
+  s_e7bd71499cd700::t_07f7e01b3c4c76 1-4
+apps/desktop/src/components/Receipt.tsx
+  s_e7bd71499cd700::t_4d234b19cb6eb8 8,14,18-20,50-51,59-60,65,68,70,72,74-77,79-95,118,120,122,125,147-149,151,154
+apps/desktop/src/components/Split.tsx
+  s_e7bd71499cd700::t_026e972b0611db 1-7
+apps/desktop/src/components/Workbench.tsx
+  s_e7bd71499cd700::t_72bafc1dcd77d9 1-5
+apps/desktop/src/components/helper/ConfirmCards.tsx
+  s_e7bd71499cd700::t_9869ffa4484096 1-64
+apps/desktop/src/components/helper/GlobalCards.tsx
+  s_e7bd71499cd700::t_0c44308264e4f0 1-49
+apps/desktop/src/components/helper/HelperGlobal.tsx
+  s_e7bd71499cd700::t_6eef8676511cb0 1-175
+apps/desktop/src/components/helper/HelperPanel.tsx
+  s_e7bd71499cd700::t_31d2fda7a67d5e 1-116
+apps/desktop/src/components/helper/answers.ts
+  s_e7bd71499cd700::t_342f9612d04e03 1-87
+apps/desktop/src/components/helper/commands.tsx
+  s_e7bd71499cd700::t_0474aed9cefc96 1-33
+apps/desktop/src/components/helper/constants.ts
+  s_e7bd71499cd700::t_a9127154743b05 1-49
+apps/desktop/src/components/helper/parts.tsx
+  s_e7bd71499cd700::t_3c967c7d69ac8e 1-61
+apps/desktop/src/components/helper/store.ts
+  s_e7bd71499cd700::t_8932560b2736ee 1-13
+apps/desktop/src/components/helper/types.ts
+  s_e7bd71499cd700::t_de923353023d29 1-21
+apps/desktop/src/components/messages/Body.tsx
+  s_e7bd71499cd700::t_171868da205e17 1-24
+apps/desktop/src/components/messages/CronTrail.tsx
+  s_e7bd71499cd700::t_04788f5174b242 1-19
+apps/desktop/src/components/messages/DispLine.tsx
+  s_e7bd71499cd700::t_95bd929440d451 1-41
+apps/desktop/src/components/messages/HoverBar.tsx
+  s_e7bd71499cd700::t_e9f09c088f4b40 1-69
+apps/desktop/src/components/messages/MessageList.tsx
+  s_e7bd71499cd700::t_cda8910442e9e5 1-36
+apps/desktop/src/components/messages/MsgMenu.tsx
+  s_e7bd71499cd700::t_ffa70359fe856c 1-38
+apps/desktop/src/components/messages/PersonMenu.tsx
+  s_e7bd71499cd700::t_e86be65ae5c0f8 1-58
+apps/desktop/src/components/messages/Pressable.tsx
+  s_e7bd71499cd700::t_0bdbec96c32977 1-17
+apps/desktop/src/components/messages/Reactions.tsx
+  s_e7bd71499cd700::t_a83f124fd780c2 1-35
+apps/desktop/src/components/messages/SentQuotes.tsx
+  s_e7bd71499cd700::t_661407f06287af 1-30
+apps/desktop/src/components/messages/TaskTag.tsx
+  s_e7bd71499cd700::t_6de7465a6b5ac0 1-26
+apps/desktop/src/components/messages/TextBubble.tsx
+  s_e7bd71499cd700::t_d6b118a36a69d3 1-40
+apps/desktop/src/components/messages/Tip.tsx
+  s_e7bd71499cd700::t_42b2d2d38cedaa 1-13
+apps/desktop/src/components/messages/ask/AnswerPill.tsx
+  s_e7bd71499cd700::t_13333a12d04727 1-37
+apps/desktop/src/components/messages/ask/AskCard.tsx
+  s_e7bd71499cd700::t_acf37f01e4f0a9 1-61
+apps/desktop/src/components/messages/ask/AskOption.tsx
+  s_e7bd71499cd700::t_0f6181b140db9f 1-38
+apps/desktop/src/components/messages/ask/askModel.ts
+  s_e7bd71499cd700::t_dbf470b70324dd 1-41
+apps/desktop/src/components/messages/cards/Attachments.tsx
+  s_e7bd71499cd700::t_29ee930581cc12 1-58
+apps/desktop/src/components/messages/cards/AuthFix.tsx
+  s_e7bd71499cd700::t_b09bba964b9558 1-16
+apps/desktop/src/components/messages/cards/HelperExtra.tsx
+  s_e7bd71499cd700::t_0e48c6269d4a2b 1-33
+apps/desktop/src/components/messages/cards/ReplyingCard.tsx
+  s_e7bd71499cd700::t_929e6856844315 1-40
+apps/desktop/src/components/messages/cards/SummaryCard.tsx
+  s_e7bd71499cd700::t_0419e7b5fb318b 1-22
+apps/desktop/src/components/messages/cards/VoteCard.tsx
+  s_e7bd71499cd700::t_1a57a9430f4887 1-39
+apps/desktop/src/components/messages/compute/ComputeLine.tsx
+  s_e7bd71499cd700::t_0b380378925f82 1-75
+apps/desktop/src/components/messages/compute/StatusDot.tsx
+  s_e7bd71499cd700::t_1009119acb8863 1-15
+apps/desktop/src/components/messages/compute/useComputeView.ts
+  s_e7bd71499cd700::t_4c17e0c182ef18 1-31
+apps/desktop/src/components/messages/copy.ts
+  s_e7bd71499cd700::t_0acba91cb401a0 1-32
+apps/desktop/src/components/messages/disp.ts
+  s_e7bd71499cd700::t_bf24f2a0f9c72c 1-29
+apps/desktop/src/components/messages/grouping.ts
+  s_e7bd71499cd700::t_b4eeae17a4c2ce 1-23
+apps/desktop/src/components/messages/lines/SysLines.tsx
+  s_e7bd71499cd700::t_0274074c8b43d0 1-73
+apps/desktop/src/components/messages/mentions.tsx
+  s_e7bd71499cd700::t_2b798f3918199a 1-22
+apps/desktop/src/components/messages/menuStyle.ts
+  s_e7bd71499cd700::t_9aedea7547dd69 1-8
+apps/desktop/src/components/messages/motion.ts
+  s_e7bd71499cd700::t_e690055505428b 1-25
+apps/desktop/src/components/messages/types.ts
+  s_e7bd71499cd700::t_3e9b05e50731b3 1-6
+apps/desktop/src/components/messages/useBarPlacement.ts
+  s_e7bd71499cd700::t_20fb55eb3fa442 1-26
+apps/desktop/src/components/messages/useSelection.ts
+  s_e7bd71499cd700::t_6e296d30f9a4e6 1-8
+apps/desktop/src/components/pages/AddContactPage.tsx
+  s_e7bd71499cd700::t_dade49e924985e 1-50
+apps/desktop/src/components/pages/CommitsPage.tsx
+  s_e7bd71499cd700::t_6a6a970427f519 1-36
+apps/desktop/src/components/pages/DetailPage.tsx
+  s_e7bd71499cd700::t_7a78d0d73d3b03 1-135
+apps/desktop/src/components/pages/FilesPage.tsx
+  s_e7bd71499cd700::t_7538d2a460147e 1-24
+apps/desktop/src/components/pages/FloatPanel.tsx
+  s_e7bd71499cd700::t_3cce406fd706b5 1-75
+apps/desktop/src/components/pages/ForwardPages.tsx
+  s_e7bd71499cd700::t_30c750ff18b809 1-32
+apps/desktop/src/components/pages/GroupPage.tsx
+  s_e7bd71499cd700::t_b8c6b0e3abfe98 1-66
+apps/desktop/src/components/pages/HelperPage.tsx
+  s_e7bd71499cd700::t_967772dc0b5e26 1-74
+apps/desktop/src/components/pages/HuddlePage.tsx
+  s_e7bd71499cd700::t_9cef09b286fc11 1-28
+apps/desktop/src/components/pages/InnerPage.tsx
+  s_e7bd71499cd700::t_c1c1fed17c504a 1-72
+apps/desktop/src/components/pages/LinksPage.tsx
+  s_e7bd71499cd700::t_7531af59724d24 1-44
+apps/desktop/src/components/pages/NewGroupPage.tsx
+  s_e7bd71499cd700::t_22cace5bc7bb45 1-45
+apps/desktop/src/components/pages/PageBody.tsx
+  s_e7bd71499cd700::t_039a31f2c61d27 1-59
+apps/desktop/src/components/pages/PersonPage.tsx
+  s_e7bd71499cd700::t_6c233a3a64b6d4 1-79
+apps/desktop/src/components/pages/PinsPage.tsx
+  s_e7bd71499cd700::t_27a8cfa1e1f323 1-29
+apps/desktop/src/components/pages/PlaybookPage.tsx
+  s_e7bd71499cd700::t_95fb5663e11a58 1-33
+apps/desktop/src/components/pages/PoolPage.tsx
+  s_e7bd71499cd700::t_5ec072395e679e 1-64
+apps/desktop/src/components/pages/SearchPage.tsx
+  s_e7bd71499cd700::t_9e48164fa919c7 1-36
+apps/desktop/src/components/pages/SettingsPage.tsx
+  s_e7bd71499cd700::t_b179735ae8b3e9 1-51
+apps/desktop/src/components/pages/SourcesPage.tsx
+  s_e7bd71499cd700::t_8242c26eb6f410 1-61
+apps/desktop/src/components/pages/TalkPage.tsx
+  s_e7bd71499cd700::t_16fed093e297e8 1-30
+apps/desktop/src/components/pages/WorkspacePage.tsx
+  s_e7bd71499cd700::t_1495f2aa763795 1-32
+apps/desktop/src/components/pages/clone/CloneFlow.tsx
+  s_e7bd71499cd700::t_a96826feab36ee 1-82
+apps/desktop/src/components/pages/clone/CloneSteps.tsx
+  s_e7bd71499cd700::t_d7d60f84700152 1-120
+apps/desktop/src/components/pages/clone/CloneSummary.tsx
+  s_e7bd71499cd700::t_21b4aeb50e3165 1-24
+apps/desktop/src/components/pages/clone/constants.ts
+  s_e7bd71499cd700::t_64de7c6593431b 1-19
+apps/desktop/src/components/pages/clone/items.ts
+  s_e7bd71499cd700::t_0bbbb5bd6b3c19 1-18
+apps/desktop/src/components/pages/constants.ts
+  s_e7bd71499cd700::t_3cee5b4cf95f6f 1-63
+apps/desktop/src/components/pages/helperReply.ts
+  s_e7bd71499cd700::t_e27b61404fb029 1-17
+apps/desktop/src/components/pages/kit/choice.tsx
+  s_e7bd71499cd700::t_846c54098b8856 1-22
+apps/desktop/src/components/pages/kit/collapse.tsx
+  s_e7bd71499cd700::t_df9a649a0f9159 1-14
+apps/desktop/src/components/pages/kit/conv-item.tsx
+  s_e7bd71499cd700::t_e28fa090af133b 1-18
+apps/desktop/src/components/pages/kit/motion.ts
+  s_e7bd71499cd700::t_9d922c7c72a27e 1-38
+apps/desktop/src/components/pages/kit/parts.tsx
+  s_e7bd71499cd700::t_ca228d6780ca03 1-60
+apps/desktop/src/components/pages/kit/tabs.tsx
+  s_e7bd71499cd700::t_06c089d73393b6 1-56
+apps/desktop/src/components/pages/titles.ts
+  s_e7bd71499cd700::t_5cbabb44a9b52f 1-41
+apps/desktop/src/components/split/ActivityView.tsx
+  s_e7bd71499cd700::t_d2f2a932d9cfcd 1-96
+apps/desktop/src/components/split/ArtifactView.tsx
+  s_e7bd71499cd700::t_307af794a673c0 1-78
+apps/desktop/src/components/split/CheckpointView.tsx
+  s_e7bd71499cd700::t_0bab7e8b738b62 1-36
+apps/desktop/src/components/split/ChecksView.tsx
+  s_e7bd71499cd700::t_2bc7b295496ee6 1-38
+apps/desktop/src/components/split/Collapse.tsx
+  s_e7bd71499cd700::t_a4deb4d77bb60a 1-2
+apps/desktop/src/components/split/ComputeWork.tsx
+  s_e7bd71499cd700::t_e3f353b0896fc7 1-106
+apps/desktop/src/components/split/DiffView.tsx
+  s_e7bd71499cd700::t_55bf401b4b572e 1-60
+apps/desktop/src/components/split/DocConflict.tsx
+  s_e7bd71499cd700::t_b78a74d0e17fd8 1-54
+apps/desktop/src/components/split/Pip.tsx
+  s_e7bd71499cd700::t_0ec3edfaf36a93 1-45
+apps/desktop/src/components/split/Preview.tsx
+  s_e7bd71499cd700::t_62d5a6c666c9d1 1-33
+apps/desktop/src/components/split/SplitPane.tsx
+  s_e7bd71499cd700::t_17ca5e6fc2b0f5 1-63
+apps/desktop/src/components/split/StepBar.tsx
+  s_e7bd71499cd700::t_2d1718921c3735 1-24
+apps/desktop/src/components/split/acts.ts
+  s_e7bd71499cd700::t_0c6749d50d876e 1-19
+apps/desktop/src/components/split/constants.ts
+  s_e7bd71499cd700::t_c4bd43671a8829 1-48
+apps/desktop/src/components/ui/list-row.tsx
+  s_e7bd71499cd700::t_12af125d13e6c4 1-103
+apps/desktop/src/components/ui/spinner.tsx
+  s_e7bd71499cd700::t_7143a665afedb2 1-33
+apps/desktop/src/components/workbench/ContactPane.tsx
+  s_e7bd71499cd700::t_da3b6d59461f4c 1-59
+apps/desktop/src/components/workbench/Crons.tsx
+  s_e7bd71499cd700::t_33cc3683c11e28 1-58
+apps/desktop/src/components/workbench/DoingRow.tsx
+  s_e7bd71499cd700::t_c39bc581e123bc 1-33
+apps/desktop/src/components/workbench/Duty.tsx
+  s_e7bd71499cd700::t_2c4bbf199894ba 1-100
+apps/desktop/src/components/workbench/Memory.tsx
+  s_e7bd71499cd700::t_66f62378c3847e 1-49
+apps/desktop/src/components/workbench/Overview.tsx
+  s_e7bd71499cd700::t_718e1463711585 1-129
+apps/desktop/src/components/workbench/ProcessView.tsx
+  s_e7bd71499cd700::t_3312e0d08a44d9 1-75
+apps/desktop/src/components/workbench/Settings.tsx
+  s_e7bd71499cd700::t_a5544c5506f358 1-55
+apps/desktop/src/components/workbench/Workbench.tsx
+  s_e7bd71499cd700::t_e5dd59e5ae507e 1-72
+apps/desktop/src/components/workbench/constants.ts
+  s_e7bd71499cd700::t_f54a87bd1d0c35 1-50
+apps/desktop/src/components/workbench/parts.tsx
+  s_e7bd71499cd700::t_42a44f1f15a327 1-88
+apps/desktop/src/components/workbench/status.ts
+  s_e7bd71499cd700::t_b843c8db3863bd 1-18
+apps/desktop/src/concept/gaze/GazeAvatar.tsx
+  s_e7bd71499cd700::t_9506cdb0acbccf 10-11,31-36,38-40,49
+apps/desktop/verify/mines.json
+  s_e7bd71499cd700::t_c01ff0d3ae7be1 4-5,7,12-15,20-23,55,73,81,89
+apps/desktop/verify/structure-baseline.json
+  s_e7bd71499cd700::t_9feb2f4b194d3d 8,20
+packages/ui-core/src/anchor.test.ts
+  s_e7bd71499cd700::t_d4726989330c45 3,5,9,11-17,20,22-25,28,30-32,35-41,44-59
+packages/ui-core/src/anchor.ts
+  s_e7bd71499cd700::t_f919025131b83d 1-6,10,13-18,20-21,24-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "76a3fcf44cd20a9fad73bc49327c6c99776cf0b3",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_e7bd71499cd700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8db9faef-fb87-414b-b25d-2aa6747caad3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

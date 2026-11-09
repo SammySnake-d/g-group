@@ -1,0 +1,35 @@
+apps/desktop/e2e/shell-flow.ui.spec.ts
+  s_29fa229c8c70ee::t_997c27eabf18bf 1-125
+apps/desktop/src/App.tsx
+  s_29fa229c8c70ee::t_a0b62c10dc51a7 2,17,19,29
+apps/desktop/src/app/Divider.tsx
+  s_29fa229c8c70ee::t_c97232bea54912 3-10,19-21,23-26
+apps/desktop/src/app/ListRow.tsx
+  s_29fa229c8c70ee::t_0530a48d72de21 10,15-24
+apps/desktop/src/app/MainPane.tsx
+  s_29fa229c8c70ee::t_3bc17ae441bd25 5,26
+apps/desktop/src/app/SplitArea.tsx
+  s_29fa229c8c70ee::t_5f087d9e0b2581 2,12
+apps/desktop/src/app/chat/MentionMe.tsx
+  s_29fa229c8c70ee::t_0d48be6425e455 11,16,19
+apps/desktop/src/app/chat/SelectBar.tsx
+  s_29fa229c8c70ee::t_482bb1ca1c1ea9 18-21
+apps/desktop/src/app/list/ListPane.tsx
+  s_29fa229c8c70ee::t_6ae425ada87710 8,39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8901a79c57b9b317a8b7e14973c1d59f6614f740",
+  "prompts": {},
+  "sessions": {
+    "s_29fa229c8c70ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6f12fa99094fd0fa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

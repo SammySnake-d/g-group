@@ -1,0 +1,19 @@
+apps/desktop/src/concept/ruler/WaitingRuler.tsx
+  s_d2325b58e7599b::t_98badcc1038ad6 1,24-26,51-60,69-78,82,97,109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7027057e1ff7790c9ca4748f5d4785bc69d7b37d",
+  "prompts": {},
+  "sessions": {
+    "s_d2325b58e7599b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab4bd987aebe6bf5e",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+apps/desktop/e2e/concept.ui.spec.ts
+  s_d2325b58e7599b::t_1436bf45c093ff 96-138
+apps/desktop/src/App.tsx
+  s_d2325b58e7599b::t_e6de385523251e 1047
+apps/desktop/src/concept/index.ts
+  s_d2325b58e7599b::t_2edb27d55adfeb 4
+apps/desktop/src/concept/ruler/WaitingRuler.tsx
+  s_d2325b58e7599b::t_5cc8b8487ffb5c 1-106
+apps/desktop/src/concept/ruler/waiting.ts
+  s_d2325b58e7599b::t_00bbac4cb4c5eb 1-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b4261293df3915b0bda6ffe1f0741d63cf8b4f18",
+  "prompts": {},
+  "sessions": {
+    "s_d2325b58e7599b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab4bd987aebe6bf5e",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,150 @@
+packages/adapter-cc-compute/src/adapter.ts
+  h_f33e46a035b77c 291
+packages/adapter-cc-compute/src/attachments.test.ts
+  h_f33e46a035b77c 1-81
+packages/adapter-cc-compute/src/events.ts
+  h_f33e46a035b77c 21
+packages/adapter-cc-compute/src/report-schema.ts
+  h_f33e46a035b77c 7,18,30,47,65
+packages/adapter-cc-compute/src/types.ts
+  h_f33e46a035b77c 131
+packages/adapter-pi-contact/src/compact.test.ts
+  h_f33e46a035b77c 90-117
+packages/adapter-pi-contact/src/compact.ts
+  h_f33e46a035b77c 7,58-104,121-123,125-126,146-157
+packages/adapter-pi-contact/src/mind.test.ts
+  h_f33e46a035b77c 88,101,394-470
+packages/adapter-pi-contact/src/mind.ts
+  h_f33e46a035b77c 12,174,187,196-205,230
+packages/adapter-pi-contact/src/tools.ts
+  h_f33e46a035b77c 1,17-20,24,35,94-127,143-145,169-173,189,200-208,233-237
+packages/api-contract/src/entities.ts
+  h_f33e46a035b77c 271-289
+packages/kernel/src/compact.ts
+  h_f33e46a035b77c 30-33
+packages/kernel/src/fixtures/quote-chain-2071.json
+  h_f33e46a035b77c 1-111
+packages/kernel/src/index.ts
+  h_f33e46a035b77c 14-15
+packages/kernel/src/memory.test.ts
+  h_f33e46a035b77c 1-196
+packages/kernel/src/memory.ts
+  h_f33e46a035b77c 1-205
+packages/kernel/src/quote-chain.test.ts
+  h_f33e46a035b77c 1-101
+packages/kernel/src/quote-chain.ts
+  h_f33e46a035b77c 1-111
+packages/kernel/src/rounds.ts
+  h_f33e46a035b77c 39-40,134-140,236-240
+packages/kernel/src/runtime-ports.ts
+  h_f33e46a035b77c 100-112,114,122-129,131-132,166-188,191-192
+packages/server/proof/compute-help-mutations.mjs
+  h_f33e46a035b77c 1-105
+packages/server/proof/compute-help-mutations.txt
+  h_f33e46a035b77c 1-31
+packages/server/proof/compute-input-mutations.mjs
+  h_f33e46a035b77c 1-82
+packages/server/proof/compute-input-mutations.txt
+  h_f33e46a035b77c 1-12
+packages/server/proof/cross-vendor-review-mutations.mjs
+  h_f33e46a035b77c 1-87
+packages/server/proof/cross-vendor-review-mutations.txt
+  h_f33e46a035b77c 1-29
+packages/server/proof/e2e-help-review-run1.txt
+  h_f33e46a035b77c 1-77
+packages/server/proof/e2e-help-review-run2.txt
+  h_f33e46a035b77c 1-37
+packages/server/proof/e2e-help-review-run3.txt
+  h_f33e46a035b77c 1-78
+packages/server/proof/e2e-help-review-run4.txt
+  h_f33e46a035b77c 1-118
+packages/server/proof/e2e-help-review-run5.txt
+  h_f33e46a035b77c 1-205
+packages/server/proof/e2e-help-review.ts
+  h_f33e46a035b77c 1-203
+packages/server/proof/e2e-model-hotswap.txt
+  h_f33e46a035b77c 1-36
+packages/server/proof/memory-mutations.mjs
+  h_f33e46a035b77c 1-136
+packages/server/proof/memory-mutations.txt
+  h_f33e46a035b77c 1-54
+packages/server/proof/model-hotswap-wire-mutations.mjs
+  h_f33e46a035b77c 1-52
+packages/server/proof/model-hotswap-wire-mutations.txt
+  h_f33e46a035b77c 1-9
+packages/server/proof/pref-before-after.txt
+  h_f33e46a035b77c 1-113
+packages/server/proof/pref-eval.mjs
+  h_f33e46a035b77c 1-99
+packages/server/proof/quote-chain-mutations.mjs
+  h_f33e46a035b77c 1-103
+packages/server/proof/quote-chain-mutations.txt
+  h_f33e46a035b77c 1-30
+packages/server/proof/review-actual-mutations.mjs
+  h_f33e46a035b77c 1-61
+packages/server/proof/review-actual-mutations.txt
+  h_f33e46a035b77c 1-11
+packages/server/scripts/e2e-model-hotswap.ts
+  h_f33e46a035b77c 1-107
+packages/server/src/assemble.ts
+  h_f33e46a035b77c 33-34,97,109-112,150
+packages/server/src/cli.ts
+  h_f33e46a035b77c 12,80
+packages/server/src/compute-input.test.ts
+  h_f33e46a035b77c 1-100
+packages/server/src/compute.test.ts
+  h_f33e46a035b77c 1-46
+packages/server/src/compute.ts
+  h_f33e46a035b77c 1-28
+packages/server/src/db.ts
+  h_f33e46a035b77c 6,71-75
+packages/server/src/fakes.ts
+  h_f33e46a035b77c 38-40,57-60,99,117
+packages/server/src/help.test.ts
+  h_f33e46a035b77c 1-296
+packages/server/src/host.test.ts
+  h_f33e46a035b77c 10,12,42,263,286-287
+packages/server/src/host.ts
+  h_f33e46a035b77c 10-11,41,66-77,119,121,164-169,190-198,245-259,299-309,338,357-360,374,455,1430-1431,1434-1487,1511,1513-1522,1552-1555,1571-1576,1732-1853,1884,1891-1913,1932,2075-2086,2090,2103,2119-2120,2141,2143,2224,2324-2343,2374,2377-2380,2399-2409,2450-2455,2501-2502,2512-2514,2541-2574,2592-2594,2601-2605,2616-2640,2645,2662-2668,2670-2671,2841-2842,2863,2881-3020,3049-3053,3079,3096-3103,3828,3830-3831,3994
+packages/server/src/memory-store.ts
+  h_f33e46a035b77c 1-62
+packages/server/src/memory.test.ts
+  h_f33e46a035b77c 1-320
+packages/server/src/quote-chain.test.ts
+  h_f33e46a035b77c 1-123
+packages/server/src/review-actual.test.ts
+  h_f33e46a035b77c 1-85
+packages/server/src/review.test.ts
+  h_f33e46a035b77c 1-277
+packages/server/src/review.ts
+  h_f33e46a035b77c 1-81
+packages/server/src/service.ts
+  h_f33e46a035b77c 90
+packages/server/src/start.ts
+  h_f33e46a035b77c 8,25-26,73-74,90
+receipts/feat-compute-help.json
+  h_f33e46a035b77c 1-22
+receipts/feat-cross-vendor-review.json
+  h_f33e46a035b77c 1-27
+receipts/feat-g-compute-input-cap.json
+  h_f33e46a035b77c 1-12
+receipts/feat-g-memory.json
+  h_f33e46a035b77c 1-15
+receipts/feat-g-quote-chain.json
+  h_f33e46a035b77c 1-13
+receipts/feat-model-hotswap-wire.json
+  h_f33e46a035b77c 1-16
+receipts/feat-review-actual-model.json
+  h_f33e46a035b77c 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "35e3aea2a8922235ad62ce4166fcddb5cfafbe8f",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

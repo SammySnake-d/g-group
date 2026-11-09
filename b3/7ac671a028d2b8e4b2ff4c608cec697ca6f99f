@@ -1,0 +1,39 @@
+packages/adapter-cc-compute/proof/mutations.mjs
+  h_f33e46a035b77c 8,29,68,82-85,109,139-141,146-147,153-174,222-234,236-240,269-274
+packages/adapter-cc-compute/proof/r9-red-on-old-impl.txt
+  h_f33e46a035b77c 1-45
+packages/adapter-cc-compute/proof/tests.txt
+  s_28bebc745289eb::t_ffc0c855b540e5 5,11,17,23,29,35,41,47,53,59,65,71,77,83,89,95,101,107,113,119,125,131,137,143,149,155,161,167,173,179,185,191,197,203,209,215,221,227,233,239,245,251,257,263,269,275,281,287,293,299,305,311,317,323,329,335,341,347,353,359,365,371,377,383,389,395,401,407,413,419,425,431,437,443,449,455,461,467,473,479,485,491,497,503,509,515,521,527,533,539,545,551,557,563,569,575,581,587,593,596-627,629,634
+packages/adapter-cc-compute/proof/mutations.txt
+  s_4ad1dfe0ee6569::t_bee29123db3899 1,3-16,18-30,32-34,36-187,189-339,341-348
+  s_4ad1dfe0ee6569::t_9c20c0fe60d464 350-355
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b37ac671a028d2b8e4b2ff4c608cec697ca6f99f",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_4ad1dfe0ee6569": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef07eb6a-5c4c-4ab7-bbcc-46df83c37b7d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

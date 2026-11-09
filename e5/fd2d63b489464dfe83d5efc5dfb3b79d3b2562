@@ -1,0 +1,25 @@
+apps/desktop/e2e/concept-clips.ui.spec.ts
+  s_25620647d6f8eb::t_9a62a6816b965a 11-12,15,66-67,77,84-85,91
+apps/desktop/src/concept/dblreply/DoubleClickReply.tsx
+  s_25620647d6f8eb::t_e87b2e4c15841a 6,47
+apps/desktop/src/concept/seal/motion.ts
+  s_25620647d6f8eb::t_b519437bd948ac 2,10
+apps/desktop/src/concept/shared/slowmo.ts
+  s_25620647d6f8eb::t_614312efeb4fdf 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e5fd2d63b489464dfe83d5efc5dfb3b79d3b2562",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

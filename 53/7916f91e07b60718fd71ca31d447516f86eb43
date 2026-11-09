@@ -1,0 +1,21 @@
+packages/ui-core/src/plugins.test.ts
+  s_18f4e42a362f21::t_44cc4181f37cc5 7-8,22,25-26,28,146,459-548
+packages/ui-core/src/plugins.ts
+  s_18f4e42a362f21::t_70c74e57f4ccc2 9,11-13,17-19,580-625,708-780
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "537916f91e07b60718fd71ca31d447516f86eb43",
+  "prompts": {},
+  "sessions": {
+    "s_18f4e42a362f21": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a02374a8ddd5486aa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
