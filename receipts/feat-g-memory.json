@@ -1,0 +1,15 @@
+{
+  "slice": "联系人记忆读写(D25)与压缩触发写记忆(用户 #1196、协调 #1250):每条记忆一个 md 文件做真源,gg_memory 是可重建索引;remember 写入在锚点邻域判关系(复述只挂佐证、改变出新版本并标旧条目已替代、细化、两边都是用户原话的冲突 @ 用户拍板),写下即生效;每轮按本轮锚点硬筛、断崖截断读回第 5 块,全局条目按快照进第 1 块、中途变化只追加在第 5 块、到阈值并入前缀;没说「以后都/所有」不记全局;每轮结束由宿主固定调一次该联系人说话模型的 reflect(同一次调用写状态笔记、检查有没有值得记的、最多一条人格建议,人格本身不改);memory_feedback 用后反馈与降级;read_memory 本轮查询口",
+  "acceptance": [
+    { "id": "AC-42", "status": "未测", "reason": "坏实现 ①–⑩ 都有具名测试(packages/kernel/src/memory.test.ts、packages/server/src/memory.test.ts),47 个变异全杀;未经独立审查。邻域大小、读取预算、降级次数(暂定连续 3 次)、全局变化折叠阈值(暂定 20 条)是助手暂定值,待按 D25 第 10 节用本机原始记录回放后定" },
+    { "id": "AC-39", "status": "未测", "reason": "只覆盖记忆一侧:会话中途的全局记忆变化不改第 1 块(memory.test.ts「全局条目进第 1 块…前缀逐字节不变」),到阈值并入时前缀如实变化;命中率观测不在本片" },
+    { "id": "AC-32", "status": "未测", "reason": "只做 ③ 的调用方:reflect 用联系人说话模型独立调用、模型不一致不发(packages/adapter-pi-contact/src/compact.test.ts);配置与失配拦截归 D 件" },
+    { "id": "R-05", "status": "通过", "notes": "47 个单点故障在 box4 串行全部被具名测试杀死,原样副本全绿;全量测试在 box4 通过", "evidence": "packages/server/proof/memory-mutations.txt" }
+  ],
+  "author": { "agent": "claude", "session": "claude:366a4421-c4e1-455e-85a2-0721597033e5", "model": "claude-opus-5-5" },
+  "red": { "commit": "c839f3dae699a73535b30403f57226e357739683" },
+  "unverifiable": "AC-42:单测里的模型动作是脚本给的,证明的是宿主照模型给的关系正确落地,证明不了真实模型会不会选对关系(复述/改变/冲突)与锚点;真实运行见 packages/server/proof/pref-before-after.txt(改前 44/48、改后 48/48 照做),只覆盖「8 轮后偏好还在」,样本 3 场景各 2 次。读取排序的字面重合是相邻二字匹配,语义相关但字面不同的条目会排后,靠断崖后的 id 清单与 read_memory 兜底",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}
