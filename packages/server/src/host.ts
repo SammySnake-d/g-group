@@ -143,6 +143,8 @@ export interface HostOptions {
   readonly memoryFoldAfter?: number;
   /** 引用链原文的字节预算(D24 第 3 节:与直接引用共用回读预算);不给用 RECALL_BUDGET_BYTES。数值待实测。 */
   readonly quoteChainBudgetBytes?: number;
+  /** 给 Compute(harness)的单次输入 UTF-8 字节上限(§8.1 待决 13):派活说明与转交补充超过就显式拒绝,不截断。不给=不设上限,数字待用户定。红提交:空壳。 */
+  readonly computeInputMaxBytes?: number | null;
   readonly timers?: TimerApi;
   readonly onReport?: (what: string, detail: unknown) => void;
   /** 群公告排序(列表与装配共用);默认按创建先后。排序规则待定(D28 待确认 ④),先做成参数。 */
