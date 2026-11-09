@@ -1,0 +1,66 @@
+packages/server/src/worktree.ts
+  s_25620647d6f8eb::t_6b44b0e4872616 1-10,14-55,81-83,110,112,118,121,139,211,219-220
+  s_40ddef7d1d7537::t_9ebfa9f81d2e0e 11-13,56-80,84-109,111,113-117,119-120,122-138,140-210,212-218,221-249
+packages/server/src/worktree.test.ts
+  s_25620647d6f8eb::t_e0ab3420f3f020 1-10,11-365,367-397,399-428,429-433,436-456
+packages/api-contract/src/api.ts
+  s_40ddef7d1d7537::t_d665f5b2fac3f6 193-195
+packages/api-contract/src/entities.ts
+  s_40ddef7d1d7537::t_db143565f70c25 169-188,206-207
+packages/server/README.md
+  s_40ddef7d1d7537::t_a81e41a0364cd0 36-37,56,62
+packages/server/proof/worktree-merge.txt
+  s_40ddef7d1d7537::t_d5267e5c166cfd 3-4,6-8,10,14,16-19,21,25,27-30,32-34,49-50,52,54,56,58,70-72,74,78,80-85
+  s_ae065512e1088f::t_ff51bb726ea2c0 1-2,5,9,11-13,15,20,22-24,26,31,35-48,51,53,55,57,59-69,73,75-77,79,86-88
+packages/server/src/cli.ts
+  s_40ddef7d1d7537::t_e42e09543e039d 8,34-37,103-104,154-156,181,183-194
+packages/server/src/host.ts
+  s_40ddef7d1d7537::t_bb5f8d093f1c46 79,91-93,216,301,1206,1234-1250,1254-1265,1266-1270,1272,1274-1275,1277-1282,1283-1286,1302,1775-1783,1938,1967-1972,2148
+packages/server/src/service.ts
+  s_40ddef7d1d7537::t_de43b770f38e1b 95
+packages/server/proof/worktree-mutations.mjs
+  h_f33e46a035b77c 26-27,29-30,71-73
+  s_ae065512e1088f::t_b092e9301d28a6 1-25,28,31-70,74-85
+receipts/feat-worktree-merge.json
+  s_ae065512e1088f::t_8c2349c9ea244d 1-3,5-6,8-12
+  h_f33e46a035b77c 4
+packages/api-contract/src/workspace.test.ts
+  h_f33e46a035b77c 1-3,4,5-7,8-9,10-15,16-17,18-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "871d7ae83f462ab6406e9a2e93eaccb9464acfcc",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_40ddef7d1d7537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_ae065512e1088f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a79b7ed6217c51390",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
