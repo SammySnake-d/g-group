@@ -85,7 +85,7 @@ const live = () => new AbortController().signal;
 const texts = (c: string | Block[]) => (typeof c === "string" ? [c] : c.map((b) => b.text));
 const until = async (cond: () => boolean) => { while (!cond()) await new Promise((r) => setTimeout(r, 5)); };
 
-test("首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有十一个具名工具", async () => {
+test("首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有十二个具名工具", async () => {
   const fake = fakeAnthropic([{ text: "看过了,不用动作" }]);
   try {
     const out = await createPiContactMind(opts(fake)).round(input("r1"), live());
@@ -98,7 +98,7 @@ test("首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2�
     assert.deepEqual(body.messages.map((m) => ({ role: m.role, texts: texts(m.content) })), [
       { role: "user", texts: [2, 3, 4, 5].map((n) => `<block n="${n}" label="${BLOCK_LABELS[n as BlockNo]}">\nr1-第${n}块内容\n</block>`) },
     ]);
-    assert.deepEqual(body.tools?.map((t) => t.name), ["reply", "dispatch_compute", "commit", "forward", "deliver", "stop", "verdict", "update_state_note", "remember", "memory_feedback", "read_memory"]);
+    assert.deepEqual(body.tools?.map((t) => t.name), ["reply", "dispatch_compute", "commit", "forward", "deliver", "stop", "verdict", "update_state_note", "remember", "memory_feedback", "read_memory", "read_quote_parent"]);
     assert.deepEqual([...PI_CONTACT_TOOL_NAMES], body.tools?.map((t) => t.name));
     assert.equal(renderBlock(blocks("r1")[3]!), `<block n="4" label="新消息">\nr1-第4块内容\n</block>`);
   } finally {
@@ -450,4 +450,21 @@ test("记忆工具参数在登记口逐字段校验(不只靠模型侧 schema):�
   assert.deepEqual(parseToolCall("read_memory", { id: "m-1" }), { ok: true, value: { kind: "read", id: "m-1" } });
   const ok = parseToolCall("remember", { roomId: "g1", title: "x", text: "y", anchors: ["room:g1"], relation: "refine", target: "m-1" });
   assert.deepEqual(ok, { ok: true, value: { kind: "action", action: { kind: "remember", roomId: "g1", sourceSeq: null, title: "x", text: "y", anchors: ["room:g1"], quote: null, relation: "refine", target: "m-1" } } });
+});
+
+test("read_quote_parent 经宿主的本轮查询口往上读一级,结果作为工具结果;参数形状不对不调用", async () => {
+  const fake = fakeAnthropic([{ calls: [{ name: "read_quote_parent", input: { roomId: "g1", seq: 7 } }, { name: "read_quote_parent", input: { roomId: "g1", seq: -1 } }] }, { text: "好" }]);
+  try {
+    const asked: [string, number][] = [];
+    const tools = { readMemory: async () => null, readQuoteParent: async (roomId: string, seq: number) => { asked.push([roomId, seq]); return "L1 #6 · 我 · t · via #7 · inline\n父句"; } };
+    const out = await createPiContactMind(opts(fake)).round(input("r1"), live(), tools);
+    assert.deepEqual(out.actions, []);
+    assert.deepEqual(asked, [["g1", 7]]);
+    const results = fake.seen[1]!.body.messages[2]!.content as Block[];
+    assert.match(JSON.stringify(results[0]!.content), /父句/);
+    assert.deepEqual(results.map((b) => b.is_error === true), [false, true]);
+    assert.deepEqual(parseToolCall("read_quote_parent", { roomId: "g1", seq: 7 }), { ok: true, value: { kind: "read-quote", roomId: "g1", seq: 7 } });
+  } finally {
+    await fake.close();
+  }
 });

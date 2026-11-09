@@ -17,6 +17,7 @@ export const PI_CONTACT_TOOL_NAMES = Object.freeze([
   "remember",
   "memory_feedback",
   "read_memory",
+  "read_quote_parent",
 ] as const);
 export type PiContactToolName = (typeof PI_CONTACT_TOOL_NAMES)[number];
 
@@ -117,6 +118,13 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
       id: f("text", true, "记忆 id"),
     },
   },
+  read_quote_parent: {
+    description: "引用链往上读一级(D24):返回这条消息直接引用的那几条,每条标明状态和还有没有上一级。第 5 块引用链里标了 has_more_above、而你还没看懂时再用;一次只给一级。",
+    fields: {
+      roomId: f("text", true, "会话 id"),
+      seq: f("seq", true, "要往上读的那条消息的 seq"),
+    },
+  },
   update_state_note: {
     description: "写新的状态笔记(下一轮第 3 块):当前在做什么、下一步、完成判据、相关指针、走不通的路;不复述过程。本轮多次调用以最后一次为准。",
     fields: {
@@ -161,7 +169,8 @@ export const TOOL_DECLARATIONS: readonly ToolDeclaration[] = Object.freeze(
 export type Registered =
   | { readonly kind: "action"; readonly action: MindAction }
   | { readonly kind: "note"; readonly note: string }
-  | { readonly kind: "read"; readonly id: string };
+  | { readonly kind: "read"; readonly id: string }
+  | { readonly kind: "read-quote"; readonly roomId: string; readonly seq: number };
 export type ParseResult = { readonly ok: true; readonly value: Registered } | { readonly ok: false; readonly why: string };
 
 const isRecord = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
@@ -225,6 +234,7 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
       return act({ kind: "remember", roomId: s("roomId"), sourceSeq: nn("sourceSeq"), title: s("title"), text: s("text"), anchors: v.anchors as readonly string[], quote: sn("quote"), relation: sn("relation") as "change" | "refine" | "conflict" | null, target: sn("target") });
     case "memory_feedback": return act({ kind: "memory-use", id: s("id"), good: v.good as boolean, note: sn("note") });
     case "read_memory": return { ok: true, value: { kind: "read", id: s("id") } };
+    case "read_quote_parent": return { ok: true, value: { kind: "read-quote", roomId: s("roomId"), seq: n("seq") } };
   }
 }
 const act = (action: MindAction): ParseResult => ({ ok: true, value: { kind: "action", action: Object.freeze(action) } });

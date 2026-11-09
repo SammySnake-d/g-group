@@ -193,6 +193,11 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
       execute: async (_id: string, params: unknown): Promise<AgentToolResult<null>> => {
         const r = parseToolCall(d.name, params);
         if (!r.ok) return { content: [{ type: "text", text: `未登记:参数不合形状(${r.why})。请按工具说明修正后重新调用。` }], details: null, isError: true };
+        if (r.value.kind === "read-quote") {
+          const got = tools?.readQuoteParent ? await tools.readQuoteParent(r.value.roomId, r.value.seq) : null;
+          if (got === null) return { content: [{ type: "text", text: tools?.readQuoteParent ? `读不到 ${r.value.roomId} #${r.value.seq}` : "本轮没有引用链查询口" }], details: null, isError: true };
+          return { content: [{ type: "text", text: got }], details: null };
+        }
         if (r.value.kind === "read") {
           const got = tools ? await tools.readMemory(r.value.id) : null;
           if (got === null) return { content: [{ type: "text", text: tools ? `没有这条记忆:${r.value.id}` : "本轮没有可用的记忆查询口" }], details: null, isError: true };
