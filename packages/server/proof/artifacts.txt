@@ -1,43 +1,46 @@
-# 2026-11-09 AC-04 工件回传:真实 Claude Code Compute 在任务 worktree 里写 docs/summary.md 与 src/util.ts,交付卡只带可读工件并钉 sha256(联系人脑子为规则替身 scriptedMind)
-# 模型经 ANTHROPIC_DEFAULT_SONNET_MODEL 传入,网关地址与令牌只经环境变量,未落盘。仓库是临时裸仓库 /tmp/gg-art-proof/repo.git。
+# 2026-11-09 AC-04 工件回传:真实 Claude Code Compute 在任务 worktree 里写 docs/summary.md 与 src/util.ts,交付消息(AC-56 普通消息)只带可读工件并钉 sha256(联系人脑子为规则替身 scriptedMind)
+# 基线 dev/integration bf8a947 + feat/worktree-merge + 本分支。模型经 ANTHROPIC_DEFAULT_SONNET_MODEL 传入,网关地址与令牌只经环境变量,未落盘。仓库是临时裸仓库 /tmp/gg-art-proof/repo.git。CLI 打印「工件」行 = 交付消息 MessageView.artifacts。
 $ node packages/server/src/cli.ts dm --db /tmp/gg-art-proof/gg.db --compute claude --repo /tmp/gg-art-proof/repo.git --target main --accept --timeout 900 "帮我在当前工作目录写一个 docs/summary.md,第一行是 # 工件回传验证,第二行是 artifact proof,再在 src/util.ts 写一行 export const ok = true;"
+[宿主] recall {"contactId":"c-mw8majvn-0","roundId":"c-mw8majvn-0:r1:mw8majvr","items":[]}
   → 小克: 接了任务:在当前工作目录写一个 docs/summary.md,第一行是 # 工件回传验证
   → 小克: 好的,我安排 Compute 去在当前工作目录写一个 docs/summary.md,第一行是 # 工件回传验证,第二行是 artifact proof,再在 src/util.ts 写一行 export const ok = true;,有进度告诉你。
   · Compute started: 已开始
-  · Compute completed: 我在当前工作目录建好了两个文件，并核对过内容，和要求一致：
+  · Compute completed: 我新建了这两个文件，并检查了文件的实际字节，内容符合要求：
 
 - **`docs/summary.md`**：第一行是 `# 工件回传验证`，第二行是 `artifact proof`。
-- **`src/util.ts`**：只有一行 `export const ok = true;`。
+- **`src/util.ts`**：只有一行 `export const ok = true;`
 
-原来没有 `docs/` 和 `src/` 目录，这次一并建了。两个文件还没提交到 git。已向宿主报告完
-  → 小克: 做完了:我在当前工作目录建好了两个文件，并核对过内容，和要求一致：
+原来没有 `docs/` 和 `src/` 这两个目录，是一起新建的。文件还没有提交到 git。
+[宿主] recall {"contactId":"c-mw8majvn-0","roundId":"c-mw8majvn-0:r2:mw8maz5z","items":[]}
+  → 小克: 做完了:我新建了这两个文件，并检查了文件的实际字节，内容符合要求：
 
 - **`docs/summary.md`**：第一行是 `# 工件回传验证`，第二行是 `artifact proof`。
-- **`src/util.ts`**：只有一行 `export const ok = true;`。
+- **`src/util.ts`**：只有一行 `export const ok = true;`
 
-原来没有 `docs/` 和 `src/` 目录，这次一并建了。两个文件还没提交到 git。已向宿主报告完成。
-  ✓ 验收 t-mw85y1jk-1(豁免审查)
-  → 小克: 收到:豁免审查并通过
-  → 小克: 进度:已合入 main@b22661a8aaef(主线未变,快进)
+原来没有 `docs/` 和 `src/` 这两个目录，是一起新建的。文件还没有提交到 git。
+  ✓ 验收 t-mw8majvu-1(豁免审查)
+[宿主] recall {"contactId":"c-mw8majvn-0","roundId":"c-mw8majvn-0:r3:mw8mazqm","items":[{"roomId":"dm-c-mw8majvn-0","seq":4,"primary":true,"state":"Full","bytes":360,"totalBytes":360,"nextCursor":null}]}
+  → 小克: 收到:通过
+[宿主] recall {"contactId":"c-mw8majvn-0","roundId":"c-mw8majvn-0:r4:mw8mazv9","items":[]}
+  → 小克: 进度:已合入 main@cccd487862c5(主线未变,快进)
 —— 会话 ——
 #1 我: 帮我在当前工作目录写一个 docs/summary.md,第一行是 # 工件回传验证,第二行是 artifact proof,再在 src/util.ts 写一行 export const ok = true;
-#2 小克: 接了任务:在当前工作目录写一个 docs/summary.md,第一行是 # 工件回传验证  [卡片:task-status/open 取消任务]
+#2 小克: 接了任务:在当前工作目录写一个 docs/summary.md,第一行是 # 工件回传验证  [卡片:task-status/done 取消任务]
 #3 小克: 好的,我安排 Compute 去在当前工作目录写一个 docs/summary.md,第一行是 # 工件回传验证,第二行是 artifact proof,再在 src/util.ts 写一行 export const ok = true;,有进度告诉你。
-#4 小克: 做完了:我在当前工作目录建好了两个文件，并核对过内容，和要求一致：
+#4 小克: 做完了:我新建了这两个文件，并检查了文件的实际字节，内容符合要求：
 
 - **`docs/summary.md`**：第一行是 `# 工件回传验证`，第二行是 `artifact proof`。
-- **`src/util.ts`**：只有一行 `export const ok = true;`。
+- **`src/util.ts`**：只有一行 `export const ok = true;`
 
-原来没有 `docs/` 和 `src/` 目录，这次一并建了。两个文件还没提交到 git。已向宿主报告完成。  [卡片:delivery/done 豁免审查并通过|退回]
+原来没有 `docs/` 和 `src/` 这两个目录，是一起新建的。文件还没有提交到 git。  [@我]
     工件 docs/summary.md text/markdown 36B sha256=315e74906e0da4ca50fdc14e7de515c75d238fc697a138daf7fa03dfb3cd647e ref=art-315e74906e0da4ca50fdc14e7de515c7.md → /tmp/gg-art-proof/artifacts/315e74906e0da4ca50fdc14e7de515c75d238fc697a138daf7fa03dfb3cd647e.md
-#5 我: 豁免审查并通过
-#6 小克: 收到:豁免审查并通过
-#7 小克: 进度:已合入 main@b22661a8aaef(主线未变,快进)
-任务 t-mw85y1jk-1 [T8_Accepted] 在当前工作目录写一个 docs/summary.md,第一行是 # 工件回传验证 审查门=waived-by-user 进度=started>completed
-  工作树 W6_Merged 分支=gg/task-t-mw85y1jk-1 base=19178be8cf51 候选=b22661a8aaef 合入=b22661a8aaef 重验基于=-
-node packages/server/src/cli.ts dm --db $P/gg.db --compute claude --repo       2.68s user 2.28s system 23% cpu 20.840 total
+#5 我: 通过
+#6 小克: 收到:通过
+#7 小克: 进度:已合入 main@cccd487862c5(主线未变,快进)
+任务 t-mw8majvu-1 [T8_Accepted] 在当前工作目录写一个 docs/summary.md,第一行是 # 工件回传验证 审查门=waived-by-user 进度=started>completed Compute=cc-96665199-75ca-4263-b658-2066b4dc762c
+  工作树 W6_Merged 分支=gg/task-t-mw8majvu-1 base=ddcff1a1b408 候选=cccd487862c5 合入=cccd487862c5 重验基于=-
 
-# 核对:卡片里的 sha256 = 快照文件的 sha256 = 候选提交(已合入 main)里 docs/summary.md 的 sha256;src/util.ts 不进卡片;库里只有这一份
+# 核对:交付消息里的 sha256 = 快照文件的 sha256 = 候选提交(已合入 main)里 docs/summary.md 的 sha256;src/util.ts 不进工件;库里只有这一份
 $ shasum -a 256 /tmp/gg-art-proof/artifacts/315e74906e0da4ca50fdc14e7de515c75d238fc697a138daf7fa03dfb3cd647e.md
 315e74906e0da4ca50fdc14e7de515c75d238fc697a138daf7fa03dfb3cd647e  /tmp/gg-art-proof/artifacts/315e74906e0da4ca50fdc14e7de515c75d238fc697a138daf7fa03dfb3cd647e.md
 $ git -C repo.git cat-file blob main:docs/summary.md | shasum -a 256
@@ -48,7 +51,7 @@ artifact proof
 $ ls artifacts/
 315e74906e0da4ca50fdc14e7de515c75d238fc697a138daf7fa03dfb3cd647e.md
 $ git -C repo.git show --stat --format=%s main
-在当前工作目录写一个 docs/summary.md,第一行是 # 工件回传验证(任务 t-mw85y1jk-1)
+在当前工作目录写一个 docs/summary.md,第一行是 # 工件回传验证(任务 t-mw8majvu-1)
 
  docs/summary.md | 2 ++
  src/util.ts     | 1 +
