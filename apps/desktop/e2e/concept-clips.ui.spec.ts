@@ -8,10 +8,11 @@ const DIR = process.env.GG_SHOTS ? path.join(process.env.GG_SHOTS, "concept") : 
 const VIEW = { width: 1280, height: 800 };
 const THEMES = ["light", "dark"] as const;
 
-async function open(browser: Browser, theme: string, opts: { scale?: number } = {}) {
+/** slowmo:按库的 tempo 规则把概念版动效放慢 N 倍(只为在慢机器上拍清过程,形状不变) */
+async function open(browser: Browser, theme: string, opts: { scale?: number; slowmo?: number } = {}) {
   const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport: VIEW, deviceScaleFactor: opts.scale ?? 2, locale: "zh-CN", timezoneId: "Asia/Shanghai" });
   const page = await ctx.newPage();
-  await page.goto(`/?conv=g&freeze${theme === "dark" ? "&theme=dark" : ""}`);
+  await page.goto(`/?conv=g&freeze${theme === "dark" ? "&theme=dark" : ""}${opts.slowmo ? `&slowmo=${opts.slowmo}` : ""}`);
   return page;
 }
 
@@ -60,11 +61,10 @@ async function around(page: Page, sel: string, padX: number, padY: number): Prom
   const x = Math.max(0, b.x - padX), y = Math.max(0, b.y - padY);
   return { x, y, width: Math.min(VIEW.width - x, b.width + padX * 2), height: Math.min(VIEW.height - y, b.height + padY * 2) };
 }
-const scaleOf = (page: Page, sel: string) => page.locator(sel).evaluate((el) => { const m = new DOMMatrix(getComputedStyle(el).transform); return Math.hypot(m.a, m.b); });
 
 for (const theme of THEMES) {
-  test(`连拍 · 朱印验收(${theme}):印从纸面上方落下、压实,停在 1`, async ({ browser }) => {
-    const page = await open(browser, theme);
+  test(`连拍 · 朱印验收(${theme}):印从纸面上方落下、压实,停在 1(慢放 5 倍)`, async ({ browser }) => {
+    const page = await open(browser, theme, { slowmo: 5 });
     const bubble = page.locator('[data-anchor="g6"]');
     await bubble.scrollIntoViewIfNeeded();
     await bubble.hover({ position: { x: 8, y: 8 } });
@@ -74,21 +74,21 @@ for (const theme of THEMES) {
     const clip = await around(page, '[data-anchor="g6"]', 70, 50);
     await page.mouse.move(5, 5);
     // 回车的同时开始按帧采样:落下途中缩放大于 1,最后停在 1;同时收下这段时间里真实画出来的帧
-    const [s] = await Promise.all([sampleScale(page, "[data-testid=seal-perf]", 900), screencast(page, "seal", theme, 900, () => box(page).press("Enter"))]);
+    const [s] = await Promise.all([sampleScale(page, "[data-testid=seal-perf]", 3000), screencast(page, "seal", theme, 3000, () => box(page).press("Enter"))]);
     expect(s.max).toBeGreaterThan(1.01);
     expect(Math.abs(s.last - 1)).toBeLessThan(0.01);
     await frame(page, "seal", theme, "end", clip);
     await page.context().close();
   });
 
-  test(`连拍 · 双击就回复(${theme}):双击 → 气泡按下 → 弹回,引用进输入框`, async ({ browser }) => {
-    const page = await open(browser, theme);
+  test(`连拍 · 双击就回复(${theme}):双击 → 气泡按下 → 弹回,引用进输入框(慢放 5 倍)`, async ({ browser }) => {
+    const page = await open(browser, theme, { slowmo: 5 });
     const bubble = page.locator('[data-anchor="g6"]');
     await bubble.scrollIntoViewIfNeeded();
     const b = (await bubble.boundingBox())!;
     const clip: Clip = { x: 0, y: Math.max(0, b.y - 50), width: VIEW.width, height: VIEW.height - Math.max(0, b.y - 50) };
     await frame(page, "dblreply", theme, 1, clip);
-    const [s] = await Promise.all([sampleScale(page, '[data-anchor="g6"]', 700), screencast(page, "dblreply", theme, 700, () => page.mouse.dblclick(b.x + b.width * 0.4, b.y + b.height * 0.3))]);
+    const [s] = await Promise.all([sampleScale(page, '[data-anchor="g6"]', 2500), screencast(page, "dblreply", theme, 2500, () => page.mouse.dblclick(b.x + b.width * 0.4, b.y + b.height * 0.3))]);
     expect(s.min).toBeLessThan(0.995);
     expect(Math.abs(s.last - 1)).toBeLessThan(0.005);
     await expect(bubble).toHaveAttribute("data-dblreply", "1");

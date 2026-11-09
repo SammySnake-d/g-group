@@ -3,6 +3,7 @@ import { animate, useReducedMotion } from 'motion/react'
 import { useApp } from '@/store'
 import type { Conversation, Msg } from '@/data'
 import { scale, spring } from '@/config/motion'
+import { slow } from '../shared/slowmo'
 
 /* 概念 · 双击就回复(#1032「移动到消息 → 再移动到旁边的按钮,这段路程是成本」)
    指针已经在消息上了,就地双击 = 回复它(引用 + @ 作者 + 光标进输入框),一步也不用挪。
@@ -43,7 +44,7 @@ export function DoubleClickReply({ conv, scrollRef, disabled }: { conv: Conversa
       addQuote({ msgId: m.id, from: m.from, text, reply: true })
       anchor.dataset.dblreply = '1'
       if (reduce) return
-      void animate(anchor, { scale: scale.press }, spring.press).then(() => animate(anchor, { scale: 1 }, spring.press))
+      void animate(anchor, { scale: scale.press }, slow(spring.press)).then(() => animate(anchor, { scale: 1 }, slow(spring.press)))
     }
     /* 第一次点悬浮条「回复」(走了远路):提示一次就记住 */
     const onClick = (e: MouseEvent) => {
