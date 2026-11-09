@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useApp } from '@/store'
 import type { Conversation } from '@/data'
@@ -21,6 +21,9 @@ export function WaitingRuler({ conv, scrollRef }: { conv: Conversation; scrollRe
   const { pending, checklist, computes, jump } = useApp((s) => ({ pending: s.pending, checklist: s.checklist, computes: s.computes, jump: s.jump }))
   const items = useMemo(() => waitingIn(conv, pending, checklist, computes), [conv, pending, checklist, computes])
   const [ticks, setTicks] = useState<Tick[]>([])
+  /* 上一次从刻度跳到的那件:你没自己滚过,⌥↓ 就从它数下一件(不受平滑滚动走到一半的影响);你一滚就改回按可视区中线数 */
+  const last = useRef<string | null>(null)
+  const go = useCallback((id: string) => { last.current = id; jump(id) }, [jump])
 
   /* 刻度位置 = 那条消息在整段聊天里的高度比例;内容尺寸变了(图片、展开、窗口宽度)就重算 */
   const measure = useCallback(() => {
@@ -45,7 +48,16 @@ export function WaitingRuler({ conv, scrollRef }: { conv: Conversation; scrollRe
     return () => ro.disconnect()
   }, [measure, scrollRef])
 
-  /* ⌥↓ / ⌥↑:以当前可视区中线为基准,跳到下一件 / 上一件 */
+  useEffect(() => {
+    const root = scrollRef.current
+    if (!root) return
+    const forget = () => { last.current = null }
+    root.addEventListener('wheel', forget, { passive: true })
+    root.addEventListener('touchmove', forget, { passive: true })
+    return () => { root.removeEventListener('wheel', forget); root.removeEventListener('touchmove', forget) }
+  }, [scrollRef])
+
+  /* ⌥↓ / ⌥↑:跳到下一件 / 上一件(接着上一次跳到的那件数;没有就以可视区中线为基准) */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!e.altKey || e.metaKey || e.ctrlKey || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') || !ticks.length) return
@@ -54,14 +66,20 @@ export function WaitingRuler({ conv, scrollRef }: { conv: Conversation; scrollRe
       const root = scrollRef.current
       if (!root) return
       e.preventDefault()
-      const mid = (root.scrollTop + root.clientHeight / 2) / root.scrollHeight
-      const eps = 1 / root.scrollHeight
-      const next = e.key === 'ArrowDown' ? ticks.find((t) => t.top > mid + eps) ?? ticks[0] : [...ticks].reverse().find((t) => t.top < mid - eps) ?? ticks[ticks.length - 1]
-      jump(next.msgId)
+      const down = e.key === 'ArrowDown'
+      const at = last.current ? ticks.findIndex((t) => t.msgId === last.current) : -1
+      let next: Tick
+      if (at >= 0) next = ticks[(at + (down ? 1 : ticks.length - 1)) % ticks.length]
+      else {
+        const mid = (root.scrollTop + root.clientHeight / 2) / root.scrollHeight
+        const eps = 1 / root.scrollHeight
+        next = down ? ticks.find((t) => t.top > mid + eps) ?? ticks[0] : [...ticks].reverse().find((t) => t.top < mid - eps) ?? ticks[ticks.length - 1]
+      }
+      go(next.msgId)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [ticks, jump, scrollRef])
+  }, [ticks, go, scrollRef])
 
   if (!ticks.length) return null
   return (
@@ -76,7 +94,7 @@ export function WaitingRuler({ conv, scrollRef }: { conv: Conversation; scrollRe
                 size="icon-xs"
                 aria-label={t.label}
                 aria-keyshortcuts="Alt+ArrowDown Alt+ArrowUp"
-                onClick={() => jump(t.msgId)}
+                onClick={() => go(t.msgId)}
                 className="group/tick pointer-events-auto absolute right-0 h-4 w-6 -translate-y-1/2 rounded-sm hover:bg-transparent"
                 style={{ top: `${t.top * 100}%` }}
               >
@@ -88,7 +106,7 @@ export function WaitingRuler({ conv, scrollRef }: { conv: Conversation; scrollRe
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1, transition: transition.fade }}
                   exit={{ opacity: 0, transition: transition.popOut }}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); jump(t.msgId) } }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(t.msgId) } }}
                 >
                   <span className={cn('block h-[3px] w-3 rounded-full transition-[width,background-color] duration-fast ease-out group-hover/tick:w-5', t.kind === 'error' ? 'bg-err' : 'bg-warm-dot')} />
                 </motion.span>
