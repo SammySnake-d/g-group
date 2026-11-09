@@ -1,0 +1,19 @@
+# 真实 Claude Code 的「发请求」与「正在重试」帧(运行台账卡死检测的输入形状依据)
+
+抓取:2026-11-09T01:59:41Z,本机 2.1.319 (Claude Code)。主会话的子代理 α 所写。
+命令(假 HOME,只放一个空的 ~/.claude/OVERRIDE.md;网关指向本机不监听的 127.0.0.1:9,不发出任何模型请求;timeout 40 秒后结束):
+  env -i PATH=$PATH HOME=<假目录> ANTHROPIC_BASE_URL=http://127.0.0.1:9 ANTHROPIC_API_KEY=dummy-not-a-key timeout 40 claude -p "只回复 ok" --bare --permission-mode dontAsk --output-format stream-json --verbose --include-partial-messages
+退出码 124(被 timeout 结束):CLI 一直在重试连不上的端点,没有任何 assistant 输出、也不退出——正是 AC-43 坏实现 ⑪「只报重试、始终没有输出」的样子。
+
+## 原始行(init 行含本机 skills 名单,不收录;其余原样)
+{"type":"system","subtype":"status","status":"requesting","session_id":"7617b383-47b1-433f-b3cb-a08c064ce492","uuid":"4dd2780a-c010-480d-befa-0a043b16a5a3"}
+{"type":"system","subtype":"api_retry","attempt":1,"max_retries":10,"retry_delay_ms":573,"error_status":null,"error":"unknown","session_id":"7617b383-47b1-433f-b3cb-a08c064ce492","uuid":"49e265a6-4197-4f98-a180-6d5e97731ec9"}
+{"type":"system","subtype":"api_retry","attempt":2,"max_retries":10,"retry_delay_ms":1149,"error_status":null,"error":"unknown","session_id":"7617b383-47b1-433f-b3cb-a08c064ce492","uuid":"5a35606d-39c7-4100-8dc2-12ecdf8e9745"}
+{"type":"system","subtype":"api_retry","attempt":3,"max_retries":10,"retry_delay_ms":2372,"error_status":null,"error":"unknown","session_id":"7617b383-47b1-433f-b3cb-a08c064ce492","uuid":"ba7b985a-beda-4477-b923-b3f90d2fd76e"}
+{"type":"system","subtype":"api_retry","attempt":4,"max_retries":10,"retry_delay_ms":4285,"error_status":null,"error":"unknown","session_id":"7617b383-47b1-433f-b3cb-a08c064ce492","uuid":"9dde4a14-d652-4d16-a219-ab4d27437fdb"}
+{"type":"system","subtype":"api_retry","attempt":5,"max_retries":10,"retry_delay_ms":9732,"error_status":null,"error":"unknown","session_id":"7617b383-47b1-433f-b3cb-a08c064ce492","uuid":"ed1687b0-1fd3-4c2c-8d59-602494753a23"}
+{"type":"system","subtype":"api_retry","attempt":6,"max_retries":10,"retry_delay_ms":17546,"error_status":null,"error":"unknown","session_id":"7617b383-47b1-433f-b3cb-a08c064ce492","uuid":"2c0bd8dc-85cd-4349-9a2a-142dbae6024a"}
+{"type":"system","subtype":"api_retry","attempt":7,"max_retries":10,"retry_delay_ms":32760,"error_status":null,"error":"unknown","session_id":"7617b383-47b1-433f-b3cb-a08c064ce492","uuid":"f05a3310-30f8-40d3-b696-a6bff0ea1d99"}
+
+## 统计
+status requesting: 1;api_retry: 7;assistant/stream_event: 0
