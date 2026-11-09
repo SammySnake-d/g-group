@@ -1,0 +1,23 @@
+packages/adapter-cc-compute/proof/ac51-resident-real.txt
+  s_88e839422e0e49::t_ea747e21f76cc1 1-57
+packages/adapter-cc-compute/proof/resident-mutations.mjs
+  s_88e839422e0e49::t_8b6ad159a0b904 1-106
+packages/adapter-cc-compute/smoke/resident-real.mjs
+  s_88e839422e0e49::t_118e6af04c04de 1-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "96d0a2394d8f678b65ef1c613f4e27837723521f",
+  "prompts": {},
+  "sessions": {
+    "s_88e839422e0e49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a93fae1902dacb138",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

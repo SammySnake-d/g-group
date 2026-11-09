@@ -1,0 +1,19 @@
+packages/domain/proof/auth-intent-tests.txt
+  s_40ddef7d1d7537::t_589005380ae906 21,23,26-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3e262d6a3aae9fbf98fcce9f7feca3fb652afc5f",
+  "prompts": {},
+  "sessions": {
+    "s_40ddef7d1d7537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

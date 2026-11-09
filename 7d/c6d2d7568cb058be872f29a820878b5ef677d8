@@ -1,0 +1,25 @@
+packages/server/proof/loss-baseline.txt
+  s_377be331e17ebd::t_72aacfb9803070 1-40
+packages/server/proof/loss-eval.mjs
+  s_377be331e17ebd::t_841e2f3f064d6a 1-184
+packages/server/proof/state-note-mutations.mjs
+  s_377be331e17ebd::t_2252ad9a7e0305 1-105
+receipts/feat-g-state-note.json
+  s_377be331e17ebd::t_2719ab6b301200 1-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7dc6d2d7568cb058be872f29a820878b5ef677d8",
+  "prompts": {},
+  "sessions": {
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

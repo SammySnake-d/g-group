@@ -1,0 +1,29 @@
+packages/api-contract/src/events.ts
+  s_a3e46876f3c339::t_c46b57db0f35db 4,29-42
+packages/kernel/src/attention-retry.test.ts
+  s_a3e46876f3c339::t_43423fbcae8aa9 1-112
+packages/kernel/src/attention.ts
+  s_a3e46876f3c339::t_94acd747aeedce 29-30
+packages/server/src/fakes.ts
+  s_a3e46876f3c339::t_70643e065d184a 44-56,65,67-68,72-81,94,98,100-101,105
+packages/server/src/host.ts
+  s_a3e46876f3c339::t_500cb785a390da 35-36,79-90
+packages/server/src/retry.test.ts
+  s_a3e46876f3c339::t_c4272c75d680f8 1-576
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "72d58d51800fc70b7fba6246a0fe624dd426be8c",
+  "prompts": {},
+  "sessions": {
+    "s_a3e46876f3c339": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afab83f69c52efc38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+packages/server/proof/auth-intent-tests.txt
+  s_25620647d6f8eb::t_be5dc666ee3e52 1-40
+receipts/feat-auth-host.json
+  s_25620647d6f8eb::t_50ba435e2b916c 1-19
+packages/server/proof/real-auth-run.txt
+  s_25620647d6f8eb::t_10bf7e76846dac 2-3,5,10-11,13-15,17-18,21-25,30,32,35-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a96b5bd7469d57abfc6b9abd7bb65545dc2904bf",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

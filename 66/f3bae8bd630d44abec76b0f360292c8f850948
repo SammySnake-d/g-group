@@ -1,0 +1,21 @@
+packages/server/proof/loss-before-after.txt
+  s_377be331e17ebd::t_376270dc5df22e 1-89
+receipts/feat-g-state-note.json
+  s_377be331e17ebd::t_9683c403b631ce 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "66f3bae8bd630d44abec76b0f360292c8f850948",
+  "prompts": {},
+  "sessions": {
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

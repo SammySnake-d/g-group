@@ -1,0 +1,30 @@
+receipts/feat-auth-domain.json
+  s_12ccf69de2a7ec::t_fe28798ea6893d 1-19
+packages/domain/proof/auth-intent-tests.txt
+  s_12ccf69de2a7ec::t_07cef741f089ab 1-43
+packages/domain/proof/auth-intent-mutations.txt
+  s_12ccf69de2a7ec::t_142a921dca3ee2 1-53
+packages/domain/src/routing.test.ts
+  h_f33e46a035b77c 47,49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e78d69c0cf5238f512ede76a452ca5f5eb4b3f20",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
