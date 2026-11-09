@@ -1,0 +1,16 @@
+packages/adapter-cc-compute/proof/mutations.mjs
+  h_f33e46a035b77c 8,29,68,82-85,109,139-141,146-147,153-174,222-234,236-240,269-274
+packages/adapter-cc-compute/proof/r9-red-on-old-impl.txt
+  h_f33e46a035b77c 1-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "addd4e0232ab7ba61d5eab30f2fa096661f40034",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

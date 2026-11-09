@@ -1,0 +1,31 @@
+apps/desktop/e2e/plugins.ui.spec.ts
+  s_714fa08b922bb0::t_0ad5b2fd1b8ba5 1-361
+apps/desktop/src/App.tsx
+  s_714fa08b922bb0::t_68d4e84db7232e 3,5,21,82-85,558,623-642,674-677,681,683,852
+apps/desktop/src/components/GroupSide.tsx
+  s_714fa08b922bb0::t_f7692288953a48 2-3,12-14,27,37,98-100,104,123,154-262,383
+apps/desktop/src/components/Overlays.tsx
+  s_714fa08b922bb0::t_08c2bcb5ec125a 584
+apps/desktop/src/components/Plugins.tsx
+  s_714fa08b922bb0::t_fc4bb6eb59b108 1-8,10-15,17-228,232-241,243-290,292-303,305-310,314-372,375-382,384-386,388-432,435-475,477-487,494-496,498-530,535-546,549-559,561-669,674-788
+apps/desktop/src/ctx.ts
+  s_714fa08b922bb0::t_56bad92006c819 2-3,122-125,148-153
+apps/desktop/src/data.ts
+  s_714fa08b922bb0::t_81ee74bf4b8a74 4-5,646-811
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "610d2586645877c1bf31c39bc4517b3b6fbba5dc",
+  "prompts": {},
+  "sessions": {
+    "s_714fa08b922bb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a7ed5acffda8b70b2",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+packages/server/src/compute.ts
+  s_25620647d6f8eb::t_d28b1f531df664 3,5-10
+  s_25620647d6f8eb::t_4f9d635b5d2925 1-2,4,11-12
+packages/server/src/compute.test.ts
+  s_25620647d6f8eb::t_953ce2f2f755ce 1-20
+  s_25620647d6f8eb::t_5b6cc4726ea5d7 21-23
+  s_25620647d6f8eb::t_3e71680eaf0d9f 24-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e215ba839dd908d0878d98dea529c0499e218a3c",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

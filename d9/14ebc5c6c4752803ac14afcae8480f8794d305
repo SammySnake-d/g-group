@@ -1,0 +1,23 @@
+apps/desktop/package.json
+  s_042e901c6ad028::t_f1c7dca1cac730 14-15,17-20
+apps/desktop/playwright.config.ts
+  s_042e901c6ad028::t_97e380894db188 6-8,10,14-15,30
+apps/desktop/verify/serial.mjs
+  s_042e901c6ad028::t_f3799f7b492537 1-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d914ebc5c6c4752803ac14afcae8480f8794d305",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,103 @@
+apps/desktop/e2e/layout.ui.spec.ts
+  s_b9f95f0d0a5dd1::t_4e871c6a6821ff 2,5-6,15-36,51-52,55-56,62,68,78-94,96-110
+apps/desktop/src/components/Messages.tsx
+  s_b9f95f0d0a5dd1::t_bbb76a46dccc7e 1-13
+apps/desktop/src/components/Receipt.tsx
+  s_b9f95f0d0a5dd1::t_b07158c48cf209 8,14,18-20,50-51,59-60,65,68,70,72,74-77,79-95,118,120,122,125,147-149,151,154
+apps/desktop/src/components/messages/Body.tsx
+  s_b9f95f0d0a5dd1::t_9bd1d184e6d55e 1-24
+apps/desktop/src/components/messages/CronTrail.tsx
+  s_b9f95f0d0a5dd1::t_ef5cad343cf270 1-19
+apps/desktop/src/components/messages/DispLine.tsx
+  s_b9f95f0d0a5dd1::t_91447a77632a80 1-41
+apps/desktop/src/components/messages/HoverBar.tsx
+  s_b9f95f0d0a5dd1::t_5fee4094cc6e37 1-69
+apps/desktop/src/components/messages/MessageList.tsx
+  s_b9f95f0d0a5dd1::t_8e8fc150796dcd 1-36
+apps/desktop/src/components/messages/MsgMenu.tsx
+  s_b9f95f0d0a5dd1::t_bb7507673a254d 1-38
+apps/desktop/src/components/messages/PersonMenu.tsx
+  s_b9f95f0d0a5dd1::t_a10bd77169f85d 1-58
+apps/desktop/src/components/messages/Pressable.tsx
+  s_b9f95f0d0a5dd1::t_0fb698b752139e 1-17
+apps/desktop/src/components/messages/Reactions.tsx
+  s_b9f95f0d0a5dd1::t_52fa020dda236c 1-35
+apps/desktop/src/components/messages/Row.tsx
+  s_b9f95f0d0a5dd1::t_fffd9e9a81f30d 1-112
+apps/desktop/src/components/messages/SentQuotes.tsx
+  s_b9f95f0d0a5dd1::t_9ae0e8a03007b5 1-30
+apps/desktop/src/components/messages/TaskTag.tsx
+  s_b9f95f0d0a5dd1::t_33ca1ccf4284b5 1-26
+apps/desktop/src/components/messages/TextBubble.tsx
+  s_b9f95f0d0a5dd1::t_becbb3072ab513 1-40
+apps/desktop/src/components/messages/Tip.tsx
+  s_b9f95f0d0a5dd1::t_6ab93b38eed79b 1-13
+apps/desktop/src/components/messages/ask/AnswerPill.tsx
+  s_b9f95f0d0a5dd1::t_031a8541cb506b 1-37
+apps/desktop/src/components/messages/ask/AskCard.tsx
+  s_b9f95f0d0a5dd1::t_d0c5a36e18fae6 1-61
+apps/desktop/src/components/messages/ask/AskOption.tsx
+  s_b9f95f0d0a5dd1::t_01a71dc34800ba 1-38
+apps/desktop/src/components/messages/ask/askModel.ts
+  s_b9f95f0d0a5dd1::t_20e425c2ce6cb4 1-41
+apps/desktop/src/components/messages/cards/Attachments.tsx
+  s_b9f95f0d0a5dd1::t_949b655d3fdceb 1-58
+apps/desktop/src/components/messages/cards/AuthFix.tsx
+  s_b9f95f0d0a5dd1::t_7d5db84ab73662 1-16
+apps/desktop/src/components/messages/cards/HelperExtra.tsx
+  s_b9f95f0d0a5dd1::t_386a6225ecca14 1-33
+apps/desktop/src/components/messages/cards/ReplyingCard.tsx
+  s_b9f95f0d0a5dd1::t_e194e3bbfa369b 1-40
+apps/desktop/src/components/messages/cards/SummaryCard.tsx
+  s_b9f95f0d0a5dd1::t_2ca39119f598d5 1-22
+apps/desktop/src/components/messages/cards/VoteCard.tsx
+  s_b9f95f0d0a5dd1::t_6369c6c7b1c2ff 1-39
+apps/desktop/src/components/messages/compute/ComputeLine.tsx
+  s_b9f95f0d0a5dd1::t_146b7bf93c78b9 1-75
+apps/desktop/src/components/messages/compute/StatusDot.tsx
+  s_b9f95f0d0a5dd1::t_3cc14b5cb5cd99 1-15
+apps/desktop/src/components/messages/compute/useComputeView.ts
+  s_b9f95f0d0a5dd1::t_9116beccb3c986 1-31
+apps/desktop/src/components/messages/copy.ts
+  s_b9f95f0d0a5dd1::t_3e102a56470c13 1-32
+apps/desktop/src/components/messages/disp.ts
+  s_b9f95f0d0a5dd1::t_7cce5e4600683f 1-29
+apps/desktop/src/components/messages/grouping.ts
+  s_b9f95f0d0a5dd1::t_108d5f052991a7 1-23
+apps/desktop/src/components/messages/lines/SysLines.tsx
+  s_b9f95f0d0a5dd1::t_deeebdbfa679a7 1-73
+apps/desktop/src/components/messages/mentions.tsx
+  s_b9f95f0d0a5dd1::t_eb253008e958a8 1-22
+apps/desktop/src/components/messages/menuStyle.ts
+  s_b9f95f0d0a5dd1::t_37c66abb5f17fc 1-8
+apps/desktop/src/components/messages/motion.ts
+  s_b9f95f0d0a5dd1::t_2fb3160b2d396e 1-25
+apps/desktop/src/components/messages/types.ts
+  s_b9f95f0d0a5dd1::t_8ccc0ee6f421e9 1-6
+apps/desktop/src/components/messages/useBarPlacement.ts
+  s_b9f95f0d0a5dd1::t_375844714360ff 1-26
+apps/desktop/src/components/messages/useSelection.ts
+  s_b9f95f0d0a5dd1::t_05d072a522cffe 1-8
+apps/desktop/verify/mines.json
+  s_b9f95f0d0a5dd1::t_660449046c33a1 4-5,7,12-15,20-23,73,81,89
+packages/ui-core/src/anchor.test.ts
+  s_b9f95f0d0a5dd1::t_4adbb74360ce5d 3,5,9,11-17,20,22-25,28,30-32,35-41,44-59
+packages/ui-core/src/anchor.ts
+  s_b9f95f0d0a5dd1::t_1a6b572c077863 1-6,10,13-18,20-21,24-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "39a07261d12b71a1f4c75140e6d16a379993e21d",
+  "prompts": {},
+  "sessions": {
+    "s_b9f95f0d0a5dd1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a30fe816dbb77027f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

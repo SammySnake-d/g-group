@@ -1,0 +1,45 @@
+apps/desktop/e2e/member-stack.ui.spec.ts
+  s_4ad1dfe0ee6569::t_5b87b95132fe3e 1-55
+apps/desktop/src/components/GroupSide.tsx
+  s_4ad1dfe0ee6569::t_256331882d7749 1-4
+apps/desktop/src/components/group/ChecklistTab.tsx
+  s_4ad1dfe0ee6569::t_be770912de805f 1-57
+apps/desktop/src/components/group/GroupPane.tsx
+  s_4ad1dfe0ee6569::t_938e64b8ead623 1-72
+apps/desktop/src/components/group/MemberStack.tsx
+  s_4ad1dfe0ee6569::t_c95b6bf43b5f7a 1-49
+apps/desktop/src/components/group/MembersTab.tsx
+  s_4ad1dfe0ee6569::t_4066174345d3da 1-70
+apps/desktop/src/components/group/NoticeBlock.tsx
+  s_4ad1dfe0ee6569::t_a58f92fa73a127 1-117
+apps/desktop/src/components/group/PluginTab.tsx
+  s_4ad1dfe0ee6569::t_dcdfa7bacddcf4 1-80
+apps/desktop/src/components/group/PulseTimeline.tsx
+  s_4ad1dfe0ee6569::t_1e3eda5dd99824 1-34
+apps/desktop/src/components/group/TaskForm.tsx
+  s_4ad1dfe0ee6569::t_7bf6ae63660ab5 1-48
+apps/desktop/src/components/group/ToolsTab.tsx
+  s_4ad1dfe0ee6569::t_f28e2b4e034d8f 1-63
+apps/desktop/src/components/group/TopStrip.tsx
+  s_4ad1dfe0ee6569::t_432bca08dc56e5 1-65
+apps/desktop/src/components/group/constants.ts
+  s_4ad1dfe0ee6569::t_ebea6b6adb8ff6 1-70
+apps/desktop/src/components/group/notices.ts
+  s_4ad1dfe0ee6569::t_73ab4fa81ea733 1-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7cb48aaa18420d963f241b5365aa63af1e26e127",
+  "prompts": {},
+  "sessions": {
+    "s_4ad1dfe0ee6569": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef07eb6a-5c4c-4ab7-bbcc-46df83c37b7d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

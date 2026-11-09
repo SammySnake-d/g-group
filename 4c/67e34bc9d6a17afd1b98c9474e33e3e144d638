@@ -1,0 +1,49 @@
+apps/desktop/src/components/CronDetail.tsx
+  s_042e901c6ad028::t_186668fb425a34 1-3
+apps/desktop/src/components/CronEditor.tsx
+  s_042e901c6ad028::t_aa59a5581f6151 1-2
+apps/desktop/src/components/CronList.tsx
+  s_042e901c6ad028::t_469995df92d935 1-5
+apps/desktop/src/components/cron/CronDetail.tsx
+  s_042e901c6ad028::t_c961c41219708e 1-87
+apps/desktop/src/components/cron/CronEditor.tsx
+  s_042e901c6ad028::t_a0876c7b67a645 1-30
+apps/desktop/src/components/cron/CronExprField.tsx
+  s_042e901c6ad028::t_75513db7edf9d4 1-79
+apps/desktop/src/components/cron/CronNotices.tsx
+  s_042e901c6ad028::t_df4e86ddbba173 1-28
+apps/desktop/src/components/cron/CronRow.tsx
+  s_042e901c6ad028::t_d6b6a26e4e0552 1-63
+apps/desktop/src/components/cron/CronRuns.tsx
+  s_042e901c6ad028::t_931de566f8ac68 1-61
+apps/desktop/src/components/cron/DeleteCronDialog.tsx
+  s_042e901c6ad028::t_4bc59b9b8ac38d 1-27
+apps/desktop/src/components/cron/EditorBody.tsx
+  s_042e901c6ad028::t_7c51e62c682174 1-139
+apps/desktop/src/components/cron/GroupCrons.tsx
+  s_042e901c6ad028::t_2c8b3951dfa298 1-38
+apps/desktop/src/components/cron/ResultIcon.tsx
+  s_042e901c6ad028::t_d1f63f4bd45f0f 1-11
+apps/desktop/src/components/cron/TriggerFields.tsx
+  s_042e901c6ad028::t_c354c490997fee 1-54
+apps/desktop/src/components/cron/constants.ts
+  s_042e901c6ad028::t_c1a8c9a0c3aa4c 1-106
+apps/desktop/src/components/cron/util.ts
+  s_042e901c6ad028::t_0a44e30db1e051 1-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4c67e34bc9d6a17afd1b98c9474e33e3e144d638",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
