@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils'
 import { people } from '@/data'
 import { useApp } from '@/ctx'
 import { candidate } from '@/mut'
-import { Avatar } from '@/components/Avatar'
 import { ReceiptButton } from '@/components/Receipt'
 import { Button } from '@/components/ui/button'
 import { Chip } from '@/components/ui/chip'
@@ -18,6 +17,7 @@ import { CronTrail } from './CronTrail'
 import { DispLine } from './DispLine'
 import { AskCard } from './ask/AskCard'
 import { HelperExtra } from './cards/HelperExtra'
+import * as Concept from '@/concept'
 import { ComputeLine } from './compute/ComputeLine'
 import type { Bodied } from './types'
 
@@ -49,7 +49,7 @@ export function Row({ m, first, compact, highlight, selecting, checked, onSelect
         <div className="shrink-0 pt-0.5" style={{ width: av }}>
           {first && (
             <PersonMenu id={from}>
-              <Button data-testid={`avatar-${from}-${m.id}`} aria-label={people[from]?.name} variant={null} size={null} shape="pill" className="block"><Avatar id={from} size={av} status={false} /></Button>
+              <Button data-testid={`avatar-${from}-${m.id}`} aria-label={people[from]?.name} variant={null} size={null} shape="pill" className="block"><Concept.GazeAvatar msgId={m.id} id={from} size={av} /></Button>
             </PersonMenu>
           )}
         </div>
@@ -67,7 +67,7 @@ export function Row({ m, first, compact, highlight, selecting, checked, onSelect
           </div>
         ) : (
           <div className="relative max-w-full" data-anchor={m.id}>
-            {children}
+            {children}{trail && <Concept.AcceptSeal computeId={trail} />}
             {!compact && !selecting && <HoverBar m={m} mine={mine} />}
           </div>
         )}

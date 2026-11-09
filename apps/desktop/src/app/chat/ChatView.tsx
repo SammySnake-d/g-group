@@ -10,6 +10,7 @@ import { ChatHeader } from './ChatHeader'
 import { ComposerSlot } from './ComposerSlot'
 import { MentionMe } from './MentionMe'
 import { SelectBar } from './SelectBar'
+import * as Concept from '@/concept'
 
 type TextMsg = Extract<Msg, { k: 'text' }>
 /** 离底部不到这么多就算「在最新」 */
@@ -95,6 +96,9 @@ export function ChatView() {
         </div>
         <JumpToLatest show={!atBottom} count={newCount} onJump={() => toBottom(true)} />
         <MentionMe conv={conv} show={!atBottom} />
+        {/* 概念版(src/concept):双击就回复、等你刻度 */}
+        <Concept.DoubleClickReply conv={conv} scrollRef={scrollRef} disabled={selecting} />
+        <Concept.WaitingRuler conv={conv} scrollRef={scrollRef} />
       </div>
       {selecting ? <SelectBar conv={conv} /> : <ComposerSlot conv={conv} />}
     </main>
