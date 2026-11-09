@@ -1,0 +1,19 @@
+package-lock.json
+  s_b07977d47b253e::t_d66b7577e5221f 451-484,502-620
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "06bd7da49cd1f6332163ada2ade5fe1e112e6732",
+  "prompts": {},
+  "sessions": {
+    "s_b07977d47b253e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c14f-fcec-7dd3-93dc-f113b9f16247",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
