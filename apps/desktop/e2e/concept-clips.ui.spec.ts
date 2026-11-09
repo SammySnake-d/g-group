@@ -58,31 +58,8 @@ async function frame(page: Page, name: string, theme: string, n: number | string
 }
 
 const box = (page: Page) => page.locator("[data-testid=composer-box] textarea");
-async function around(page: Page, sel: string, padX: number, padY: number): Promise<Clip> {
-  const b = (await page.locator(sel).boundingBox())!;
-  const x = Math.max(0, b.x - padX), y = Math.max(0, b.y - padY);
-  return { x, y, width: Math.min(VIEW.width - x, b.width + padX * 2), height: Math.min(VIEW.height - y, b.height + padY * 2) };
-}
 
 for (const theme of THEMES) {
-  test(`连拍 · 朱印验收(${theme}):印从纸面上方落下、压实,停在 1(慢放 5 倍)`, async ({ browser }) => {
-    const page = await open(browser, theme, { slowmo: 5 });
-    const bubble = page.locator('[data-anchor="g6"]');
-    await bubble.scrollIntoViewIfNeeded();
-    await bubble.hover({ position: { x: 8, y: 8 } });
-    await page.getByTestId("reply-g6").click();
-    await box(page).press("End");
-    await box(page).pressSequentially("通过");
-    const clip = await around(page, '[data-anchor="g6"]', 70, 50);
-    await page.mouse.move(5, 5);
-    // 回车的同时开始按帧采样:落下途中缩放大于 1,最后停在 1;同时收下这段时间里真实画出来的帧
-    const [s] = await Promise.all([sampleScale(page, "[data-testid=seal-perf]", 3000), screencast(page, "seal", theme, 3000, () => box(page).press("Enter"))]);
-    expect(s.max).toBeGreaterThan(1.01);
-    expect(Math.abs(s.last - 1)).toBeLessThan(0.01);
-    await frame(page, "seal", theme, "end", clip);
-    await page.context().close();
-  });
-
   test(`连拍 · 双击就回复(${theme}):双击 → 气泡按下 → 弹回,引用进输入框(慢放 5 倍)`, async ({ browser }) => {
     const page = await open(browser, theme, { slowmo: 5 });
     const bubble = page.locator('[data-anchor="g6"]');

@@ -67,7 +67,7 @@ export function Row({ m, first, compact, highlight, selecting, checked, onSelect
           </div>
         ) : (
           <div className="relative max-w-full" data-anchor={m.id}>
-            {children}{trail && <Concept.AcceptSeal computeId={trail} />}
+            {children}
             {!compact && !selecting && <HoverBar m={m} mine={mine} />}
           </div>
         )}
