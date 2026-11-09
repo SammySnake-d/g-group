@@ -11,9 +11,11 @@ const THEMES = ["light", "dark"] as const;
 async function open(browser: Browser, theme: string, opts: { clock?: boolean; scale?: number } = {}) {
   const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport: VIEW, deviceScaleFactor: opts.scale ?? 2, locale: "zh-CN", timezoneId: "Asia/Shanghai" });
   const page = await ctx.newPage();
-  if (opts.clock) await page.clock.install();
+  const t0 = new Date("2026-11-09T02:20:00+08:00").getTime();
+  if (opts.clock) await page.clock.install({ time: t0 });
   await page.goto(`/?conv=g&freeze${theme === "dark" ? "&theme=dark" : ""}`);
-  if (opts.clock) await page.clock.runFor(500);
+  /* 停住动画时钟:之后只有 runFor 才往前走,帧是确定的 */
+  if (opts.clock) await page.clock.pauseAt(t0 + 2000);
   return page;
 }
 
@@ -39,17 +41,20 @@ for (const theme of THEMES) {
     const bubble = page.locator('[data-anchor="g6"]');
     await bubble.scrollIntoViewIfNeeded();
     await bubble.hover({ position: { x: 8, y: 8 } });
+    await page.clock.runFor(300);
     await page.getByTestId("reply-g6").click();
+    await page.clock.runFor(20);
     await box(page).press("End");
     await box(page).pressSequentially("通过");
     await box(page).press("Enter");
+    await page.clock.runFor(1);
     await expect(page.getByTestId("seal-perf")).toBeAttached();
     await page.mouse.move(5, 5);
     await bubble.scrollIntoViewIfNeeded();
     const clip = await around(page, '[data-anchor="g6"]', 70, 50);
     // 动画时钟一格一格拨:落下途中缩放大于 1,最后停在 1
     const seen: number[] = [];
-    for (const [n, ms] of [[1, 0], [2, 50], [3, 80], [4, 600]] as const) {
+    for (const [n, ms] of [[1, 16], [2, 48], [3, 80], [4, 800]] as const) {
       await page.clock.runFor(ms);
       seen.push(await scaleOf(page, "[data-testid=seal-perf]"));
       await frame(page, "seal", theme, n, clip);
