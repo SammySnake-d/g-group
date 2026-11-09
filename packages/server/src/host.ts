@@ -53,6 +53,13 @@ import {
   type ContactMind,
   type Inbound,
   type InboundMessage,
+  type MemoryEntry,
+  type ReflectResult,
+  type RoundTools,
+  planMemoryWrite,
+  prefixMemories,
+  recordMemoryUse,
+  selectMemories,
   type MindAction,
   type RoundOutput,
   type RoundStatus,
@@ -82,6 +89,7 @@ import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
+import { MemoryStore } from "./memory-store.ts";
 import { PluginStore } from "./plugins.ts";
 import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief, reviewModelProblem } from "./review.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
@@ -126,6 +134,8 @@ export interface HostOptions {
   readonly compactor?: (contact: ContactView) => ContactCompactor;
   /** 状态笔记的 UTF-8 字节上限;超了请压缩器缩写,仍超就保留并报告,不截断。null / 不给:不设上限。 */
   readonly stateNoteMaxBytes?: number | null;
+  /** 会话中途的全局记忆变化在第 5 块累积到几条就并入第 1 块前缀(D25 第 6 节「快照加增量」)。默认 20。 */
+  readonly memoryFoldAfter?: number;
   readonly timers?: TimerApi;
   readonly onReport?: (what: string, detail: unknown) => void;
   /** 群公告排序(列表与装配共用);默认按创建先后。排序规则待定(D28 待确认 ④),先做成参数。 */
@@ -133,6 +143,12 @@ export interface HostOptions {
   /** 联系人没单独设时的个人 Compute 槽位数(AC-23);不给为不限 */
   readonly personalComputeSlots?: number;
 }
+
+/** 记忆锚点:全局(进前缀)与「建议改人格」(只记录,不进任何一块) */
+const GLOBAL_ANCHOR = "global";
+const PERSONA_ANCHOR = "persona-suggestion";
+/** 用户原话里说了这类词才允许记成全局(D25 第 10 节场景 B) */
+const GLOBAL_WORDS = /以后|所有|一律|始终|永远|每次|always|from now on/i;
 
 /** 状态笔记含撤回原文且无法精确移除时,整份作废后的占位(撤回优先,AC-08) */
 const VOIDED_NOTE = "(状态笔记含已撤回内容,已作废;请按承诺账本与新消息重写)";
@@ -273,6 +289,7 @@ export class Host {
   private readonly stopUnconfirmed = new Map<string, string>();
   private readonly opts: HostOptions;
   private readonly now: () => string;
+  private readonly memory: MemoryStore;
   private readonly newId: (prefix: string) => string;
   private readonly assemble: RoundAssembler;
   private readonly activity = new Map<string, Activity>();
@@ -297,6 +314,7 @@ export class Host {
     this.exits = new MemberExits({ db: this.db, now: this.now });
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
+    this.memory = new MemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d));
     this.bus = createBus(this.now);
     this.loop = createAttentionLoop({
       maxDeferMs: opts.maxDeferMs ?? 1500,
@@ -1641,6 +1659,107 @@ export class Host {
   }
 
   // ======================= 联系人一轮 =======================
+  /** 联系人的全部记忆(含已替代、降级),按创建时间排序。 */
+  listMemories(contactId: string): MemoryEntry[] {
+    return this.memory.list(contactId);
+  }
+  /** 压缩检查记下的「建议改人格」(不进任何一块,人格本身不改)。 */
+  personaSuggestions(contactId: string): string[] {
+    return this.memory.list(contactId).filter((e) => e.anchors.includes(PERSONA_ANCHOR) && e.status === "active").map((e) => e.body);
+  }
+  /** 删掉索引后从 md 真源重建,返回条目数。 */
+  rebuildMemoryIndex(contactId: string): number {
+    return this.memory.rebuild(contactId);
+  }
+  /** 一条记忆的全文与状态,给 read_memory 用;没有返回 null */
+  private renderMemory(contactId: string, id: string): string | null {
+    const e = this.memory.get(contactId, id);
+    if (!e || e.anchors.includes(PERSONA_ANCHOR)) return null;
+    const status = e.status === "active" ? "生效" : e.status === "degraded" ? "降级(多次用后结果不好,仅供参考)" : e.status === "revoked" ? "已撤销" : `已替代(由 ${e.supersededBy ?? "?"} 替代,以新条目为准)`;
+    const rel = [
+      e.supersedes.length ? `替代了 ${e.supersedes.join("、")}` : "",
+      e.refines.length ? `细化 ${e.refines.join("、")}` : "",
+      e.conflictsWith.length ? `与 ${e.conflictsWith.join("、")} 冲突,待用户拍板` : "",
+    ].filter(Boolean);
+    return `〔记忆 ${e.id} · ${e.title}〕状态:${status}${rel.length ? `;${rel.join(";")}` : ""}\n锚点:${e.anchors.join(" ")}\n${e.body}`;
+  }
+  /** 本轮锚点:新输入所在会话、发送人、涉及的任务 */
+  private roundAnchors(fresh: readonly Inbound[]): string[] {
+    const out = new Set<string>();
+    for (const f of fresh) {
+      out.add(`room:${f.roomId}`);
+      if (f.kind === "message") out.add(`${f.sender.kind === "user" ? "user" : f.sender.kind}:${f.sender.id}`);
+      if (f.kind === "compute") out.add(`task:${f.taskId}`);
+    }
+    return [...out];
+  }
+  /** 本轮记忆装配:第 1 块的全局快照、第 5 块的读取结果与未并入前缀的全局变化(D25 第 6 节「快照加增量」) */
+  private memoryForRound(contactId: string, fresh: readonly Inbound[]): { prefix: { id: string; title: string; text: string }[]; pointers: { ref: string; text: string }[] } {
+    const list = this.memory.list(contactId);
+    const now = this.now();
+    const cur = prefixMemories(list, now).map((e) => ({ id: e.id, title: e.title, text: e.body }));
+    const key = (x: { id: string; title: string; text: string }) => `${x.id}\u0000${x.title}\u0000${x.text}`;
+    const doc = getDoc<{ entries: { id: string; title: string; text: string }[] }>(this.db, `memprefix:${contactId}`);
+    let snap = doc?.value.entries ?? cur;
+    if (!doc) putDoc(this.db, `memprefix:${contactId}`, 0, { entries: cur });
+    const snapKeys = new Set(snap.map(key));
+    const curKeys = new Set(cur.map(key));
+    let added = cur.filter((x) => !snapKeys.has(key(x)));
+    let removed = snap.filter((x) => !curKeys.has(key(x)));
+    if (doc && added.length + removed.length >= (this.opts.memoryFoldAfter ?? 20)) {
+      putDoc(this.db, `memprefix:${contactId}`, doc.ver, { entries: cur });
+      snap = cur;
+      added = [];
+      removed = [];
+    }
+    const pointers: { ref: string; text: string }[] = [];
+    if (added.length + removed.length > 0) {
+      const lines = [...added.map((x) => `+ 〔记忆 ${x.id} · ${x.title}〕${x.text}`), ...removed.map((x) => `- 〔记忆 ${x.id} · ${x.title}〕已不再适用`)];
+      pointers.push({ ref: "记忆变化(全局,尚未并入前缀,以这里为准)", text: lines.join("\n") });
+    }
+    const text = fresh.map((f) => (f.kind === "message" ? f.text : f.kind === "compute" ? f.summary : f.prompt)).join("\n");
+    const sel = selectMemories(list, { anchors: this.roundAnchors(fresh), text, now });
+    for (const e of sel.expanded) pointers.push({ ref: `记忆 ${e.id} · ${e.title}`, text: `${e.body}${e.status === "degraded" ? "\n(降级:多次用后结果不好,仅供参考)" : ""}${e.conflictsWith.length ? `\n(与 ${e.conflictsWith.join("、")} 冲突,待用户拍板)` : ""}` });
+    if (sel.listed.length) pointers.push({ ref: "其余相关记忆(用 read_memory 按 id 读全文)", text: sel.listed.map((x) => `${x.id}:${x.title}`).join("\n") });
+    return { prefix: snap, pointers };
+  }
+  /** 写一条记忆(remember 动作或压缩检查给的记忆点);不合规返回原因 */
+  private rememberTx(contactId: string, a: Extract<MindAction, { kind: "remember" }>, roomIds: Set<string>, actionId: string, appended: { roomId: string; seq: number }[]): string | null {
+    if (!roomIds.has(a.roomId)) return "不在这个会话里";
+    let userQuote = false;
+    if (a.sourceSeq !== null) {
+      const src = this.projected(a.roomId).find((m) => m.seq === a.sourceSeq);
+      if (!src || src.retracted) return `来源 ${a.roomId} #${a.sourceSeq} 不存在或已撤回`;
+      if (a.quote !== null) {
+        if (src.sender.kind !== "user" || !src.text.includes(a.quote)) return "quote 必须是来源用户消息里的原话";
+        userQuote = true;
+      }
+    } else if (a.quote !== null) return "给了 quote 却没有来源 seq";
+    let anchors = [...new Set(a.anchors.map((x) => x.trim()).filter(Boolean))].filter((x) => x !== PERSONA_ANCHOR);
+    if (anchors.includes(GLOBAL_ANCHOR) && !(userQuote && GLOBAL_WORDS.test(a.quote ?? ""))) {
+      // 作用域坍缩(D25 第 10 节场景 B):用户没说「以后都/所有」,不记全局,挂到当前会话
+      anchors = [...new Set([...anchors.filter((x) => x !== GLOBAL_ANCHOR), `room:${a.roomId}`])];
+      this.report("memory-scope-narrowed", { contactId, title: a.title });
+    }
+    const plan = planMemoryWrite(
+      this.memory.list(contactId),
+      { title: a.title, body: a.text, anchors, source: a.sourceSeq === null ? null : { roomId: a.roomId, seq: a.sourceSeq, userQuote }, relation: a.relation === null ? null : { kind: a.relation, target: a.target ?? "" } },
+      this.now(),
+      () => this.newId("m"),
+    );
+    if (plan.kind === "invalid") return plan.why;
+    for (const e of plan.changed) this.memory.put(contactId, e);
+    if (plan.kind === "ask-user") {
+      const old = this.memory.get(contactId, plan.target);
+      const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, {
+        text: `记忆冲突,请你拍板:「${plan.entry.body}」(${plan.entry.id})和之前记下的「${old?.body ?? "?"}」(${plan.target})都来自你的原话,以哪条为准?`,
+        actionKey: `${actionId}:memory-conflict`,
+        mentions: [{ id: this.userId, source: "auto" }],
+      });
+      appended.push({ roomId: a.roomId, seq: r.seq });
+    }
+    return null;
+  }
   /** 联系人当前的状态笔记(第 3 块原文);没有为 null。 */
   stateNote(contactId: string): string | null {
     return getDoc<{ text: string }>(this.db, `note:${contactId}`)?.value.text ?? null;
@@ -1671,14 +1790,36 @@ export class Host {
     return r.text;
   }
   /** 本轮要落盘的状态笔记:模型没写就请压缩器补写(同一说话模型的独立调用),超上限就缩写;最后移除撤回原文 */
-  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], signal: AbortSignal): Promise<string | null> {
+  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], signal: AbortSignal): Promise<{ note: string | null; remember: MindAction[]; persona: string | null }> {
     const contactId = contact.id;
     const prev = this.stateNote(contactId);
     const compactor = this.opts.compactor?.(this.contactView(contact));
     const profile = { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona };
     const max = this.opts.stateNoteMaxBytes ?? null;
     let note = out.stateNote;
-    if (note === null && compactor && fresh.length > 0) {
+    const remember: MindAction[] = [];
+    let persona: string | null = null;
+    // 每轮结束、原文移出窗口前由代码固定发起一次检查(用户 #1196、协调 #1250):同一次调用写笔记、检查有没有值得记的、最多一条人格建议
+    let reflected = false;
+    if (compactor?.reflect && fresh.length > 0) {
+      const list = this.memory.list(contactId);
+      const anchors = this.roundAnchors(fresh);
+      const neighbors = list
+        .filter((e) => (e.status === "active" || e.status === "degraded") && !e.anchors.includes(PERSONA_ANCHOR) && e.anchors.some((x) => anchors.includes(x) || x === GLOBAL_ANCHOR))
+        .map((e) => ({ id: e.id, title: e.title, body: e.body }));
+      try {
+        const r: ReflectResult = await compactor.reflect({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max, neighbors, noteWritten: out.stateNote }, signal);
+        reflected = true;
+        if (note === null) note = r.note;
+        const lastUser = [...fresh].reverse().find((f): f is InboundMessage => f.kind === "message" && f.sender.kind === "user");
+        const roomId = lastUser?.roomId ?? fresh[0]!.roomId;
+        for (const m of r.memories) remember.push({ kind: "remember", roomId, sourceSeq: lastUser?.seq ?? null, title: m.title, text: m.text, anchors: m.anchors, quote: null, relation: m.relation, target: m.target });
+        persona = r.personaSuggestion;
+      } catch (e) {
+        this.report("reflect-failed", { contactId, error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+    if (note === null && !reflected && compactor && fresh.length > 0) {
       try {
         note = await compactor.compact({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max }, signal);
       } catch (e) {
@@ -1697,7 +1838,7 @@ export class Host {
       }
       if (Buffer.byteLength(note, "utf8") > max) this.report("state-note-over-limit", { contactId, bytes: Buffer.byteLength(note, "utf8"), max });
     }
-    return note === null ? null : this.scrubNote(contactId, note, roomIds);
+    return { note: note === null ? null : this.scrubNote(contactId, note, roomIds), remember, persona };
   }
   private cursor(contactId: string, roomId: string): number {
     return one<{ processed_seq: number }>(this.db, "SELECT processed_seq FROM gg_cursor WHERE contact_id = ? AND room_id = ?", contactId, roomId)?.processed_seq ?? 0;
@@ -1828,9 +1969,11 @@ export class Host {
     }
     this.report("recall", { contactId, roundId, items: plan.items.map(({ text: _t, ...rest }) => rest) });
     const pointers = plan.items.map((it) => renderRecall(it, sources.get(`${it.roomId}#${it.seq}`)?.sender ?? "?"));
+    const mem = this.memoryForRound(contactId, fresh);
     let request: ReturnType<RoundAssembler>;
     try {
       request = this.assemble({
+        memories: mem.prefix,
       system: CONTACT_SYSTEM,
       tools: CONTACT_TOOLS,
       persona: identityOf(contactId, contact),
@@ -1843,7 +1986,7 @@ export class Host {
       stateNote: note?.value.text ?? null,
       fresh,
       tasks: tasks.map((t) => `${t.id} [${t.state}] ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
-      pointers,
+      pointers: [...pointers, ...mem.pointers],
       budgetBytes: this.opts.roundBudgetBytes ?? ROUND_BUDGET_BYTES,
       });
     } catch (e) {
@@ -1856,7 +1999,8 @@ export class Host {
     }
     let out: Awaited<ReturnType<ContactMind["round"]>>;
     try {
-      out = await this.opts.mind(this.contactView(contact)).round({ contact: { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona }, request, fresh }, signal);
+      const tools: RoundTools = { readMemory: async (id: string) => this.renderMemory(contactId, id) };
+      out = await this.opts.mind(this.contactView(contact)).round({ contact: { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona }, request, fresh }, signal, tools);
     } catch (e) {
       this.setActivity(contactId, null, "idle");
       throw e;
@@ -1873,9 +2017,9 @@ export class Host {
         }
       }
     }
-    const stateNote = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), signal);
+    const settled = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), signal);
     if (signal.aborted || this.closed) return "done";
-    const done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: out.actions, stateNote });
+    const done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona });
     this.expireRoundFailures(contactId);
     this.setActivity(contactId, null, "idle");
     await this.runEffects(done.effects);
@@ -1956,7 +2100,7 @@ export class Host {
     fresh: Inbound[],
     inbox: { id: number }[],
     lastSeen: Record<string, number>,
-    out: { actions: readonly MindAction[]; stateNote: string | null },
+    out: { actions: readonly MindAction[]; stateNote: string | null; personaSuggestion?: string | null },
   ): { effects: HostEffect[] } {
     const roomIds = new Set(this.roomsOfContact(contactId).map((r) => r.id));
     // 移出中:这个群里的发言、登记承诺与接新活一律拒绝(D05「先禁止新群内接单与发言」)
@@ -2128,6 +2272,17 @@ export class Host {
             touchedTasks.add(a.taskId);
             break;
           }
+          case "remember": {
+            const why = this.rememberTx(contactId, a, roomIds, actionId, appended);
+            if (why) reject(why);
+            break;
+          }
+          case "memory-use": {
+            const e = this.memory.get(contactId, a.id);
+            if (!e || e.anchors.includes(PERSONA_ANCHOR)) { reject(`没有记忆 ${a.id}`); break; }
+            this.memory.put(contactId, recordMemoryUse(e, { at: this.now(), good: a.good, ...(a.note !== null ? { note: a.note } : {}) }, this.now()));
+            break;
+          }
           case "stop": {
             const t = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
@@ -2164,6 +2319,12 @@ export class Host {
       // 游标、待处理输入、状态笔记与本轮动作同一事务(D15.1)
       this.advanceCursorsTx(contactId, lastSeen);
       for (const ib of inbox) run(this.db, "UPDATE gg_inbox SET consumed = 1 WHERE id = ?", ib.id);
+      if (out.personaSuggestion) {
+        // 人格不随压缩改(在固定前缀里,改了缓存全失效);只记一条建议,同一建议只挂佐证
+        const plan = planMemoryWrite(this.memory.list(contactId), { title: "建议改人格", body: out.personaSuggestion, anchors: [PERSONA_ANCHOR], source: null, relation: null }, this.now(), () => this.newId("m"));
+        if (plan.kind !== "invalid") for (const e of plan.changed) this.memory.put(contactId, e);
+        this.report("persona-suggestion", { contactId, text: out.personaSuggestion });
+      }
       if (out.stateNote !== null) {
         const cur = getDoc<{ text: string }>(this.db, `note:${contactId}`);
         putDoc(this.db, `note:${contactId}`, cur?.ver ?? 0, { text: out.stateNote });

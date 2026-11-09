@@ -87,3 +87,31 @@ test("压缩器只用联系人的说话模型:请求里的说话模型与压缩�
   const c3 = createPiCompactor({ provider: "fake", model: MODEL, baseUrl: "http://fake.invalid", apiKey: KEY, fetch: empty.fetch });
   await assert.rejects(c3.compact(req(), new AbortController().signal), (e: unknown) => e instanceof PiContactMindError && e.code === "provider-error" && /空/.test(e.message));
 });
+
+test("reflect:一次调用同时出笔记、记忆点和人格建议;请求带人设、本轮材料、邻域记忆与「模型已写笔记」;输出按 JSON 解析,形状不对如实报错", async () => {
+  const good = JSON.stringify({ note: "新笔记", memories: [{ title: "部署规矩", text: "部署前先跑测试", anchors: ["room:dm-1"], relation: "change", target: "m-1" }], personaSuggestion: null });
+  const f = fake({ text: `好的:\n${good}` });
+  const c = createPiCompactor({ provider: "fake", model: MODEL, baseUrl: "http://fake.invalid", apiKey: KEY, fetch: f.fetch });
+  const out = await c.reflect!({ ...req(), neighbors: [{ id: "m-1", title: "部署", body: "部署前不用测试" }], noteWritten: null }, new AbortController().signal);
+  assert.deepEqual(out, { note: "新笔记", memories: [{ title: "部署规矩", text: "部署前先跑测试", anchors: ["room:dm-1"], relation: "change", target: "m-1" }], personaSuggestion: null });
+  assert.equal(f.seen.length, 1);
+  assert.equal(f.seen[0]!.body.tools, undefined);
+  const u = textOf(f.seen[0]!.body.messages[0]!.content);
+  const sys = (f.seen[0]!.body.system ?? []).map((s) => s.text).join("\n");
+  assert.match(u, /说话简短/, "带该联系人的人设/职责,按它的特性记");
+  assert.match(u, /m-1 · 部署:部署前不用测试/);
+  assert.match(u, /改成按长度排/);
+  assert.match(sys, /没有值得记的就给空数组/);
+  assert.match(sys, /不要改人格/);
+  const kept = fake({ text: JSON.stringify({ note: "检查想改的", memories: [], personaSuggestion: "短一点" }) });
+  const c2 = createPiCompactor({ provider: "fake", model: MODEL, baseUrl: "http://fake.invalid", apiKey: KEY, fetch: kept.fetch });
+  const o2 = await c2.reflect!({ ...req(), neighbors: [], noteWritten: "模型自己写的" }, new AbortController().signal);
+  assert.equal(o2.note, null, "模型已写笔记时不覆盖");
+  assert.match(textOf(kept.seen[0]!.body.messages[0]!.content), /模型自己写的/);
+  for (const bad of ["不是 JSON", JSON.stringify({ note: 1, memories: [], personaSuggestion: null }), JSON.stringify({ note: null, memories: [{ title: "x" }], personaSuggestion: null }), JSON.stringify({ note: null, memories: [{ title: "x", text: "y", anchors: ["room:a"], relation: "替换", target: "m-1" }], personaSuggestion: null })]) {
+    const fb = fake({ text: bad });
+    const cb = createPiCompactor({ provider: "fake", model: MODEL, baseUrl: "http://fake.invalid", apiKey: KEY, fetch: fb.fetch });
+    await assert.rejects(cb.reflect!({ ...req(), neighbors: [], noteWritten: null }, new AbortController().signal), (e: unknown) => e instanceof PiContactMindError && e.code === "provider-error", bad);
+  }
+  await assert.rejects(c.reflect!({ ...req({ contact: { id: "c", name: "x", speakingModel: "other", persona: "" } }), neighbors: [], noteWritten: null }, new AbortController().signal), (e: unknown) => e instanceof PiContactMindError && e.code === "model-mismatch");
+});

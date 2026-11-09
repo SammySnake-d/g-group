@@ -9,7 +9,7 @@
 import { Agent, type AgentMessage, type AgentTool, type AgentToolResult, type StreamFn } from "@earendil-works/pi-agent-core";
 import { type AssistantMessage, type Model, type SimpleStreamOptions, type SystemMessage, toToolDeclaration, type UserMessage } from "@earendil-works/pi-ai";
 import { anthropicMessagesApi } from "@earendil-works/pi-ai/api/anthropic-messages.lazy";
-import { BLOCK_LABELS, type BlockNo, type ContactMind, type MindAction, plainData, type RoundBlock, type RoundInput, type RoundOutput } from "@g-group/kernel";
+import { BLOCK_LABELS, type BlockNo, type ContactMind, type MindAction, plainData, type RoundBlock, type RoundInput, type RoundOutput, type RoundTools } from "@g-group/kernel";
 import { parseToolCall, TOOL_DECLARATIONS } from "./tools.ts";
 
 export interface PiContactMindOptions {
@@ -171,7 +171,7 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
   const api = anthropicMessagesApi();
   const declarations = TOOL_DECLARATIONS.map((d) => toToolDeclaration({ name: d.name, description: d.description, parameters: d.parameters }));
 
-  async function round(input: RoundInput, signal: AbortSignal): Promise<RoundOutput> {
+  async function round(input: RoundInput, signal: AbortSignal, tools?: RoundTools): Promise<RoundOutput> {
     if (!(signal instanceof AbortSignal)) throw new PiContactMindError("invalid-request", "signal 必须是 AbortSignal");
     if (signal.aborted) throw new RoundAbortedError();
     const { blocks } = readRound(input, cfg.model);
@@ -184,7 +184,7 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
 
     const actions: MindAction[] = [];
     let stateNote: string | null = null;
-    const tools: AgentTool[] = TOOL_DECLARATIONS.map((d) => ({
+    const agentTools: AgentTool[] = TOOL_DECLARATIONS.map((d) => ({
       name: d.name,
       label: d.name,
       description: d.description,
@@ -193,6 +193,11 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
       execute: async (_id: string, params: unknown): Promise<AgentToolResult<null>> => {
         const r = parseToolCall(d.name, params);
         if (!r.ok) return { content: [{ type: "text", text: `未登记:参数不合形状(${r.why})。请按工具说明修正后重新调用。` }], details: null, isError: true };
+        if (r.value.kind === "read") {
+          const got = tools ? await tools.readMemory(r.value.id) : null;
+          if (got === null) return { content: [{ type: "text", text: tools ? `没有这条记忆:${r.value.id}` : "本轮没有可用的记忆查询口" }], details: null, isError: true };
+          return { content: [{ type: "text", text: got }], details: null };
+        }
         if (r.value.kind === "note") {
           stateNote = r.value.note;
           return { content: [{ type: "text", text: "状态笔记已登记。" }], details: null };
@@ -217,7 +222,7 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
       cacheRetention: b1.cacheBreakpoint ? cfg.cacheRetention : "none",
     });
     const agent = new Agent({
-      initialState: { model, tools, thinkingLevel: "off" },
+      initialState: { model, tools: agentTools, thinkingLevel: "off" },
       streamFn,
       toolExecution: "sequential",
       prepareRequest: ({ context }) => {
