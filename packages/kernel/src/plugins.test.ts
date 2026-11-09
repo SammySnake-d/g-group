@@ -2070,7 +2070,15 @@ test("拒收期间不同步临时改写宿主内置对象:独立 worker 里冻�
     assert.equal(out[`send/${name}`], "non-promise-send", `send/${name}`);
     assert.equal(out[`pull/${name}`], "invalid-batch", `pull/${name}`);
   }
+  // 未冻结的真实内核作独立对照:不能只凭 worker 自报,还要验证冻结前后同一普通 Promise 合同一致。
+  const control = createRegistry({ now: () => 0 });
+  control.register({ kind: "outbound-channel", id: "send", endpoint: "A", idempotency: "none", send: async () => ({ action_id: "ok-1", receiptId: "r" }) });
+  control.register({ kind: "data-source", id: "pull", sources: ["g"], pull: async () => [] });
+  const controlSend = await control.send("send", { action_id: "ok-1", payload: "x" });
+  const controlPull = await control.pull("pull", "g");
+  assert.deepEqual([controlSend.ok && controlSend.state, controlPull.ok], ["confirmed", true], "未冻结的真实内核对照");
   assert.deepEqual(out.plain, ["confirmed", true], "冻结后普通原生 Promise 照常确认 / 拉取");
+  assert.deepEqual(out.plain, [controlSend.ok && controlSend.state, controlPull.ok], "冻结与未冻结两侧的真实内核结果相同");
   assert.equal(out.calls, 0, "插件侧代码被执行");
 });
 
