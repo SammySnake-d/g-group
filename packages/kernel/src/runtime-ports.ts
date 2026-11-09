@@ -123,6 +123,8 @@ export interface RoundOutput {
 export interface RoundTools {
   /** 按 id 读一条记忆全文(含状态与关系);没有这条或无权读返回 null */
   readMemory(id: string): Promise<string | null>;
+  /** 引用链往上读一级(D24 read_quote_parent):这条消息直接引用的那几条;会话不可读返回 null */
+  readQuoteParent?(roomId: string, seq: number): Promise<string | null>;
 }
 
 export interface ContactMind {

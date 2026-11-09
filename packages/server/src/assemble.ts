@@ -109,6 +109,7 @@ export const CONTACT_TOOLS = [
   "remember(roomId, title, text, anchors, sourceSeq?, quote?, relation?, target?) — 记下以后用得上的记忆(写下即生效)",
   "memory_feedback(id, good, note?) — 记一笔某条记忆这次用得好不好",
   "read_memory(id) — 按 id 读一条记忆全文",
+  "read_quote_parent(roomId, seq) — 引用链往上读一级",
 ].join("\n");
 
 /** 预算:整个请求(五块文本之和)的 UTF-8 字节上限。超了显式失败,不静默截断(D06 §2)。数值待决(需求文档 v3.20 §8.1 待决 13),宿主可用参数覆盖。 */
