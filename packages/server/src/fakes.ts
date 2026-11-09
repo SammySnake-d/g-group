@@ -1,5 +1,5 @@
 // 测试与 CLI 演示用的确定性替身:脚本化的联系人脑子、按剧本吐语义事件的 Compute 适配器。不连模型、不起进程。
-import type { ComputeAdapter, ComputeEvent, SpawnResult } from "@g-group/adapter-cc-compute";
+import type { ComputeAdapter, ComputeEvent, Refusal, SpawnResult, TurnModel } from "@g-group/adapter-cc-compute";
 import type { ContactMind, Inbound, MindAction, RoundInput, RoundOutput } from "@g-group/kernel";
 
 /** 规则脑子:用户在私聊或 @ 它派活 → dispatch + commit + 回复;Compute 里程碑 → 汇报;完成 → 交付;失败 → 如实告知。 */
@@ -41,12 +41,7 @@ function react(me: string, f: Inbound): MindAction[] {
   return [];
 }
 
-/** 这一轮的生效模型(AC-51):宿主每次输入都带上。 */
-export interface TurnModel {
-  readonly model: string;
-  readonly effort?: string;
-}
-type ResumeRefusal = { ok: false; reason: string; code?: string; fixes?: readonly string[] };
+type ResumeRefusal = Refusal;
 
 /** 剧本式 Compute:spawn 后按 script 依次吐事件;可让 spawn 失败。记录每次 spawn/resume 带来的生效模型;resumeResult 可让某次续接被拒(如换模型失败)。 */
 export function scriptedCompute(
