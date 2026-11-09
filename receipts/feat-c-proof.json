@@ -1,0 +1,26 @@
+{
+  "slice": "补 #41(AC-22 worktree 合流)与 #42(AC-04 工件回传)收据引用却没进仓库的变异校准结果;两份变异脚本给单条测试加超时并强制退出,卡住的测试按名字判失败,「没跑完」不再算杀死",
+  "acceptance": [
+    {
+      "id": "AC-22",
+      "status": "未测",
+      "reason": "本片只补证据:packages/server/proof/worktree-mutations.txt(17 个变异全被具名测试杀死,阴性对照 10 条全绿);行为与测试见 receipts/feat-worktree-merge.json;待审"
+    },
+    {
+      "id": "AC-04",
+      "status": "未测",
+      "reason": "本片只补证据:packages/server/proof/artifacts-mutations.txt(12 个变异全被具名测试杀死,阴性对照 5 条全绿;A08 上次靠整份超时记成已发现,这次按名字失败);行为与测试见 receipts/feat-artifacts.json;待审"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:a300aa9e-eccb-4ec8-b983-75a3ff723e24",
+    "model": "claude-opus-5-5"
+  },
+  "author_notes": "#41/#42 由 claude:d8a7aa23-47af-454b-95e5-c7f8adf89c7c 的子代理写成,收尾时网关 503 中断,变异结果留在 box3 没提交;本会话接手补交。",
+  "red": null,
+  "unverifiable": "AC-04:变异只在 box3(Linux + Node 24)上跑,单条测试 120 秒超时;机器负载很高时正常测试也可能超时被判失败,阴性对照全绿只证明这一次没有。AC-22:快进路径「读到 head 之后、update-ref 之前被抢」仍没有注入点,见 receipts/feat-worktree-merge.json 第 7 栏。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}
