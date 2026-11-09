@@ -9,7 +9,7 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { createComputeAdapter } from "@g-group/adapter-cc-compute";
+import { claudeCompute } from "./compute.ts";
 import type { ContactView } from "@g-group/api-contract";
 import type { ContactCompactor, ContactMind } from "@g-group/kernel";
 import { ensureGroup, sendAndWait, senderAudit } from "./drive.ts";
@@ -77,17 +77,7 @@ function makeCompute(kind: string) {
     const c = scriptedCompute({ stepMs: 50 });
     return { factory: () => c.adapter, close: () => c.close() };
   }
-  if (kind === "claude") {
-    const pass = ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"];
-    return {
-      factory: (model: string) => {
-        const hostEnv: Record<string, string> = { ANTHROPIC_MODEL: model };
-        for (const k of pass) if (process.env[k]) hostEnv[k] = process.env[k]!;
-        return createComputeAdapter({ hostEnv });
-      },
-      close: () => {},
-    };
-  }
+  if (kind === "claude") return { factory: claudeCompute(process.env), close: () => {} };
   throw new Error(`未知 --compute ${kind}`);
 }
 

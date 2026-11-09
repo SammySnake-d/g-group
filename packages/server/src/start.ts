@@ -3,9 +3,9 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createComputeAdapter } from "@g-group/adapter-cc-compute";
 import type { ContactView } from "@g-group/api-contract";
 import type { ContactCompactor, ContactMind } from "@g-group/kernel";
+import { claudeCompute } from "./compute.ts";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
 import { type IpcMainLike, type Service, bindIpc, createService } from "./service.ts";
@@ -70,11 +70,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
   const fake = o.compute === "claude" ? null : scriptedCompute({ stepMs: 300 });
   const compute = fake
     ? () => fake.adapter
-    : (m: string) => {
-        const hostEnv: Record<string, string> = { ANTHROPIC_MODEL: m };
-        for (const k of ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"]) if (env[k]) hostEnv[k] = env[k]!;
-        return createComputeAdapter({ hostEnv });
-      };
+    : claudeCompute(env);
   const work = path.join(o.dataDir, "compute");
   const host = new Host({
     file: path.join(o.dataDir, "gg.db"),

@@ -3063,8 +3063,10 @@ export class Host {
     this.closed = true;
     this.scheduler.stop();
     await this.loop.stop();
+    // 一次性适配器只有在跑的才有进程;常驻适配器一轮做完(completed)、停在受阻(blocked)时进程仍在,关闭时一并停掉,不留后台进程
     for (const a of this.adapters.values()) {
-      for (const r of all<{ compute_id: string }>(this.db, "SELECT compute_id FROM gg_compute WHERE status IN ('starting','running') UNION ALL SELECT compute_id FROM gg_reviews WHERE status = 'running'")) {
+      const statuses = isModelAware(a) ? "('starting','running','blocked','completed')" : "('starting','running')";
+      for (const r of all<{ compute_id: string }>(this.db, `SELECT compute_id FROM gg_compute WHERE status IN ${statuses} UNION ALL SELECT compute_id FROM gg_reviews WHERE status = 'running'`)) {
         try {
           await a.stop(r.compute_id);
         } catch {
