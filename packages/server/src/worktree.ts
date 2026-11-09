@@ -150,6 +150,16 @@ export class Worktrees {
     return { ...ws, candidateSha: sha, state: "W3_Pinned", conflict: null };
   }
 
+  /** 候选提交里相对 base 新增或改过的文件(仓库内相对路径) */
+  changedFiles(ws: Workspace): string[] {
+    if (!ws.candidateSha) return [];
+    return git(this.cfg.repo, ["diff", "--name-only", "--no-renames", "--diff-filter=AM", ws.baseSha, ws.candidateSha]).split("\n").filter(Boolean);
+  }
+  /** 读某个提交里文件的原始字节(不读工作区:卡片钉在提交上) */
+  readAt(sha: string, file: string): Buffer {
+    return execFileSync("git", ["cat-file", "blob", `${sha}:${file}`], { cwd: this.cfg.repo, env: cleanEnv(), maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] });
+  }
+
   /** W3 → W4 → W6 或 W5。串行执行;返回的 ws 是合入后的状态,调用方负责落盘。 */
   integrate(ws: Workspace): Promise<IntegrateOutcome> {
     const run = this.lane.then(() => this.integrateNow(ws));

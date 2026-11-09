@@ -207,6 +207,13 @@ export const METHODS = {
    *  冲突或重验失败返回 workspace.state=W5_Conflict(目标分支未动)。验收交付卡时宿主会自动发起,这里是重试入口。 */
   "tasks.integrate": method(obj({ taskId: id(), clientActionId: id() }), TaskView),
 
+  // ---- 工件 ----
+  /** 点开交付卡里的工件(AC-04):返回快照的本地路径与 sha256(与卡片里的相同);文本类 ≤1 MB 直接带回正文,其余 text 为 null。 */
+  "artifacts.get": method(
+    obj({ ref: id() }),
+    obj({ ref: id(), name: str({ max: 500 }), mime: str({ max: 200 }), bytes: int({ min: 0 }), sha256: str({ min: 64, max: 64, pattern: /^[0-9a-f]{64}$/ }), path: str({ max: 4096 }), text: nullable(str({ max: 1_048_576 })) }),
+  ),
+
   // ---- 承诺账本 ----
   "commitments.list": method(obj({ contactId: opt(id()), roomId: opt(id()), status: opt(oneOf(["active", "done", "revoked", "superseded", "blocked"] as const)) }), obj({ commitments: arr(CommitmentView) })),
   "commitments.revoke": method(obj({ commitmentId: id(), clientActionId: id() }), CommitmentView),
