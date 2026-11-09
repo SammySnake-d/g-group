@@ -13,7 +13,7 @@ const TIMEOUT_MS = Number(process.env.MUT_TIMEOUT_MS ?? 300_000);
 const H = "packages/server/src/host.ts";
 
 const M = [
-  ["C01 不设上限也拒", H, "    if (max === null) return null;", "    if (max === null) return \"\";"],
+  ["C01 不设上限也拒", H, "    if (max === null) return null;", "    if (max === null) return \" 不设上限也拒\";"],
   ["C02 按字符数不按字节", H, "    const n = Buffer.byteLength(text, \"utf8\");", "    const n = text.length;"],
   ["C03 等于上限也拒", H, "    return n > max ?", "    return n >= max - 1 ?"],
   ["C04 派活不查上限", H, "    if (over) return fail(`派活说明${over}`);", ""],
