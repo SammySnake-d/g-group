@@ -1,0 +1,21 @@
+packages/server/proof/auth-intent-tests.txt
+  s_40ddef7d1d7537::t_6080e2f375e313 1,26-27,30-32,34-35
+receipts/feat-auth-host.json
+  s_40ddef7d1d7537::t_53e43acf035f0f 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e9c5c52ae36158d20d277799330ad8d6cec12d3e",
+  "prompts": {},
+  "sessions": {
+    "s_40ddef7d1d7537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

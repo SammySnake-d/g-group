@@ -1,0 +1,19 @@
+receipts/feat-auth-host.json
+  s_a3e46876f3c339::t_1fec333c801127 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a71adc2f0c8bf230f382d748bb20f6345578f828",
+  "prompts": {},
+  "sessions": {
+    "s_a3e46876f3c339": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afab83f69c52efc38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

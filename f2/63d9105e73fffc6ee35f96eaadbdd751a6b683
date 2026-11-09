@@ -1,0 +1,21 @@
+packages/server/proof/e2e-help-review-run4.txt
+  s_a4449a4186dc65::t_6a181e6b410bba 1-118
+packages/server/proof/e2e-help-review.ts
+  s_a4449a4186dc65::t_36d6273cea4516 167-175
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f263d9105e73fffc6ee35f96eaadbdd751a6b683",
+  "prompts": {},
+  "sessions": {
+    "s_a4449a4186dc65": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "35085604-c627-4b24-9468-35e58c5689f4",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

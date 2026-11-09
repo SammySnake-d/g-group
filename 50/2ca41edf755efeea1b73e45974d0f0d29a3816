@@ -1,0 +1,14 @@
+receipts/feat-artifacts.json
+  h_f33e46a035b77c 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "502ca41edf755efeea1b73e45974d0f0d29a3816",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

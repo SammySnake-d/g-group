@@ -1,0 +1,19 @@
+receipts/feat-cross-vendor-review.json
+  s_5e6dee5b83c808::t_814461089900e5 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d5e1d8d4caf6584c50163acf8ee9254f72a105ad",
+  "prompts": {},
+  "sessions": {
+    "s_5e6dee5b83c808": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28d82518-be0a-4c7b-be7e-4a0f89835986",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

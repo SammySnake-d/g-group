@@ -1,0 +1,16 @@
+packages/adapter-cc-compute/src/adapter.ts
+  h_f33e46a035b77c 364
+packages/server/src/host.ts
+  h_f33e46a035b77c 1796
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ec1d227a86d102c252bed26607c9a77e40bb89eb",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
