@@ -1,5 +1,5 @@
 // 测试与 CLI 演示用的确定性替身:脚本化的联系人脑子、按剧本吐语义事件的 Compute 适配器。不连模型、不起进程。
-import type { ComputeAdapter, ComputeEvent, SpawnResult } from "@g-group/adapter-cc-compute";
+import type { ComputeAdapter, ComputeEvent, Refusal, SpawnResult, TurnModel } from "@g-group/adapter-cc-compute";
 import type { ContactMind, Inbound, MindAction, RoundInput, RoundOutput } from "@g-group/kernel";
 
 /** 规则脑子:用户在私聊或 @ 它派活 → dispatch + commit + 回复;Compute 里程碑 → 汇报;完成 → 交付;失败 → 如实告知。 */
@@ -41,15 +41,30 @@ function react(me: string, f: Inbound): MindAction[] {
   return [];
 }
 
-/** 剧本式 Compute:spawn 后按 script 依次吐事件;可让 spawn 失败。 */
-export function scriptedCompute(opts: { script?: (computeId: string, brief: unknown) => Omit<ComputeEvent, "computeId">[]; failSpawn?: string; stepMs?: number } = {}) {
+type ResumeRefusal = Refusal;
+
+/** 剧本式 Compute:spawn 后按 script 依次吐事件;可让 spawn 失败。记录每次 spawn/resume 带来的生效模型;resumeResult 可让某次续接被拒(如换模型失败)。 */
+export function scriptedCompute(
+  opts: {
+    script?: (computeId: string, brief: unknown) => Omit<ComputeEvent, "computeId">[];
+    failSpawn?: string;
+    stepMs?: number;
+    resumeResult?: (computeId: string, text: string, turn: TurnModel | undefined) => ResumeRefusal | null;
+    /** 续接后吐的事件(例如 harness 回报这一轮实际用过的模型)。 */
+    resumeScript?: (computeId: string, turn: TurnModel | undefined) => Omit<ComputeEvent, "computeId">[];
+    /** false:扮演不声明按轮换模型能力的旧适配器(没有 capabilities)。 */
+    modelAware?: boolean;
+  } = {},
+) {
   const queue: ComputeEvent[] = [];
   let wake: (() => void) | null = null;
   let closed = false;
   let n = 0;
   let inflight = 0;
-  const spawned: { computeId: string; brief: unknown; cwd: string | undefined }[] = [];
+  const spawned: { computeId: string; brief: unknown; cwd: string | undefined; model: string | undefined; effort: string | undefined }[] = [];
   const resumed: { computeId: string; text: string }[] = [];
+  /** 每次被受理的续接带来的生效模型(与 resumed 一一对应);旧适配器的调用方不传就是 undefined。 */
+  const turns: { computeId: string; turn: TurnModel | undefined }[] = [];
   const stopped: string[] = [];
   const push = (e: ComputeEvent) => {
     queue.push(e);
@@ -62,11 +77,12 @@ export function scriptedCompute(opts: { script?: (computeId: string, brief: unkn
       { kind: "milestone", stage: "写文件", summary: "已写好 hello.txt" },
       { kind: "completed", result: `完成:${(brief as { task: string }).task}` },
     ]);
-  const adapter: ComputeAdapter = {
-    async spawn(brief, o): Promise<SpawnResult> {
+  const adapter = {
+    capabilities: { inSessionModelSwitch: true },
+    async spawn(brief: unknown, o?: { cwd?: string; model?: string; effort?: string }): Promise<SpawnResult> {
       if (opts.failSpawn) return { ok: false, reason: opts.failSpawn };
       const computeId = `cp-${++n}`;
-      spawned.push({ computeId, brief, cwd: o?.cwd });
+      spawned.push({ computeId, brief, cwd: o?.cwd, model: o?.model, effort: o?.effort });
       const evs = script(computeId, brief).map((e) => ({ ...e, computeId }) as ComputeEvent);
       inflight++;
       void (async () => {
@@ -78,11 +94,25 @@ export function scriptedCompute(opts: { script?: (computeId: string, brief: unkn
       })();
       return { ok: true, computeId, manifest: { computeId, sections: [], allowedTools: [], credentialRefs: [], placement: "local" } };
     },
-    async resume(computeId, text) {
+    async resume(computeId: string, text: string, turn?: TurnModel): Promise<{ ok: true } | ResumeRefusal> {
+      const refused = opts.resumeResult?.(computeId, text, turn) ?? null;
+      if (refused) return refused;
       resumed.push({ computeId, text });
+      turns.push({ computeId, turn });
+      const evs = (opts.resumeScript?.(computeId, turn) ?? []).map((e) => ({ ...e, computeId }) as ComputeEvent);
+      if (evs.length) {
+        inflight++;
+        void (async () => {
+          for (const e of evs) {
+            await new Promise((r) => setTimeout(r, opts.stepMs ?? 1));
+            push(e);
+          }
+          inflight--;
+        })();
+      }
       return { ok: true };
     },
-    async stop(computeId) {
+    async stop(computeId: string) {
       stopped.push(computeId);
       push({ computeId, kind: "stopped", code: null, signal: null, scope: "main-then-group", violations: [] });
       return { ok: true };
@@ -104,13 +134,15 @@ export function scriptedCompute(opts: { script?: (computeId: string, brief: unkn
     async settled() {
       return [];
     },
-    snapshot: () => ({ ok: false, reason: "not-quiescent" }),
+    snapshot: () => ({ ok: false as const, reason: "not-quiescent" }),
     rejectedReports: () => [],
-  };
+  } satisfies ComputeAdapter & { capabilities: { inSessionModelSwitch: boolean } };
+  if (opts.modelAware === false) Reflect.deleteProperty(adapter, "capabilities");
   return {
     adapter,
     spawned,
     resumed,
+    turns,
     stopped,
     /** 所有剧本事件都已吐出且被消费。 */
     drained: () => inflight === 0 && queue.length === 0,
