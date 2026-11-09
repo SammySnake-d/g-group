@@ -40,10 +40,12 @@ import {
   applyLedger,
   vendorOf,
   apply as applyTask,
+  authz,
   emptyLedger,
   emptyModelRecord,
   isAppendOnly,
   modelConfig,
+  followups as fu,
   newTask,
   producerModels,
   producerVendors,
@@ -219,6 +221,18 @@ interface TaskDoc {
   readonly models?: TaskModelRecord;
   /** 最近一次交付带回的工件快照(AC-04) */
   readonly artifacts?: readonly ArtifactRef[];
+}
+/** 补充关联边 + Compute 轮次版本(AC-15/16/45):rounds 是已开始、还没结束的轮次各自依据的约束版本(先进先出),
+ *  resultVer 是最近一次完成的产出依据的版本,queued 是 Compute 在运行时没送进去、等这一轮结束再续接的补充。 */
+interface FollowDoc {
+  readonly state: fu.FollowUps;
+  readonly rounds: readonly number[];
+  readonly resultVer: number | null;
+  readonly queued: readonly string[];
+}
+/** 本任务的待授权请求与了结记录(AC-17/19/20)。 */
+interface AuthzDoc {
+  readonly requests: readonly authz.AuthRequest[];
 }
 interface CardRow {
   card_id: string;
@@ -965,7 +979,12 @@ export class Host {
       // 自己发的消息自己已读
       this.markRead(room.id, me, r.seq);
       cmd.after?.();
+      // 本人在对话里的「同意/不同意」:机械地对到待授权上,不要求点卡(AC-17/19/20)
+      const consent = this.consentFromMessage(room.id, r.seq);
       this.afterAppend(room.id, r.seq, me);
+      for (const a of consent.appended) this.afterAppend(a.roomId, a.seq, a.sender);
+      for (const id of consent.tasks) this.emitTask(id);
+      if (consent.effects.length) void this.runEffects(consent.effects);
     }
     const m = this.projected(room.id).find((x) => x.seq === r.seq)!;
     return this.messageView(room.id, m);
@@ -1475,9 +1494,16 @@ export class Host {
     this.taskDoc(taskId);
     const card = this.questionCard(taskId, qId);
     if (!card) throw new HostError("not_found", `任务 ${taskId} 没有问题 ${qId}`);
+    // 授权提问(AC-17/19):回答原文按本人表态映射成同意/不行;含义不清不放行
+    let actionId = "answer";
+    if (isAuthzCard(card)) {
+      const intent = authz.consentIntent(answer);
+      if (intent === "unclear") throw new HostError("invalid_params", "这是授权提问,请明确回答同意或不同意");
+      actionId = intent === "approve" ? "approve" : "reject";
+    }
     if (card.state === "open") {
       try {
-        this.cardAct({ roomId: card.room_id, seq: card.seq, cardId: card.card_id, actionId: "answer", clientActionId, text: answer });
+        this.cardAct({ roomId: card.room_id, seq: card.seq, cardId: card.card_id, actionId, clientActionId, ...(actionId === "answer" ? { text: answer } : {}) });
       } catch (e) {
         // 同一张卡正被另一次回答领取:那一次生效,这一次幂等忽略
         if (!(e instanceof HostError && e.code === "conflict" && this.questionCard(taskId, qId)?.state !== "open")) throw e;
@@ -1508,7 +1534,7 @@ export class Host {
       ownerContactId: t.owner,
       state: t.state,
       constraintVersion: t.constraintVer,
-      pendingQuestion: t.pendingQ ? { qId: t.pendingQ.qId, text: this.questionText(t.id, t.pendingQ.qId) } : null,
+      pendingQuestion: t.pendingQ ? { qId: t.pendingQ.qId, text: this.authzOf(t.id).value.requests.find((r) => r.qId === t.pendingQ!.qId)?.action ?? this.questionText(t.id, t.pendingQ.qId) } : null,
       reviewGate: t.reviewGate,
       reviews: all<ReviewRow>(this.db, "SELECT * FROM gg_reviews WHERE task_id = ? ORDER BY started_at, rowid", t.id).map((r) => ({
         round: r.round,
@@ -1547,6 +1573,7 @@ export class Host {
       updatedAt: doc.updatedAt,
       ...(doc.description !== undefined ? { description: doc.description } : {}),
       stateVer: ver ?? this.taskDoc(t.id).ver,
+      ...this.intentView(t.id),
     };
   }
   private questionText(taskId: string, qId: string): string {
@@ -2323,9 +2350,20 @@ export class Host {
             if (!t.task.computeId || TERMINAL.has(t.task.state) || t.task.state === "T9_StopRequested") { reject("任务没有在途 Compute"); break; }
             const over = this.overComputeInput(a.text);
             if (over) { reject(`转交的补充${over}`); break; }
+            if (a.sourceSeq !== undefined) {
+              // 用户中途补充/改条件(E3):原位升版、登记关联边、新约束送进同一个 Compute(AC-45 ②、AC-16)
+              const r = this.amendFromFollowUpTx(a.taskId, t, a.sourceSeq, a.text, freshMsgs);
+              if (!r.ok) { reject(r.reason); break; }
+              effects.push(...r.effects);
+              referenced.add(`${t.roomId}#${a.sourceSeq}`);
+              touchedTasks.add(a.taskId);
+              break;
+            }
             if (t.task.state === "T4b_BlockedOnHuman" && t.task.pendingQ) {
               // 等人回答时(AC-44 ③):只有提出者本轮在任务会话里、提问卡之后说的话能当回答转达;联系人不能自己编答案
               const q = t.task.pendingQ;
+              // 改代码前的授权提问(AC-17/20):只认用户本人在会话里的直接表态,由宿主机械绑定;联系人转达的不算授权
+              if (this.isAuthzQuestion(a.taskId, q.qId)) { reject("这是改代码前的授权提问,用户本人直接回复「同意」或「不行」由宿主绑定处理,不经联系人转达"); break; }
               const card = this.questionCard(a.taskId, q.qId);
               const answered = freshMsgs.some((m) => m.roomId === t.roomId && m.sender.kind === "user" && m.sender.id === t.task.requester && (!card || m.seq > card.seq));
               if (!answered) { reject("任务在等用户回答,只能转达提出者本轮在会话里的回答"); break; }
@@ -2350,6 +2388,14 @@ export class Host {
             if (t.task.state !== "T3_Running" || !t.task.computeId) { reject(`任务在 ${t.task.state},不能交付`); break; }
             const computeRow = one<{ status: string; result: string | null }>(this.db, "SELECT status, result FROM gg_compute WHERE compute_id = ?", t.task.computeId);
             if (computeRow?.result == null) { reject("Compute 还没完成,不能交付"); break; }
+            // 结果必须是按当前条件版本做出来的:新条件只送达、还没进产物,不算完成(AC-45 ③、AC-16)
+            const follow = this.followOf(a.taskId);
+            const resultVer = follow.value.resultVer ?? t.task.constraintVer;
+            if (resultVer !== t.task.constraintVer) {
+              reject(`结果依据的是 v${resultVer},当前条件已是 v${t.task.constraintVer},新条件还没落实`);
+              if (follow.value.queued.length) effects.push(...this.flushQueuedTx(a.taskId, t.task.computeId));
+              break;
+            }
             let commit = `result:${t.task.computeId}`;
             const wsDoc = this.worktrees ? this.workspace(a.taskId) : undefined;
             if (wsDoc && this.worktrees) {
@@ -2372,6 +2418,9 @@ export class Host {
             });
             if (arts.length && !r.duplicate) run(this.db, "INSERT OR IGNORE INTO gg_msg_artifacts (room_id, seq, artifacts) VALUES (?, ?, ?)", t.roomId, r.seq, JSON.stringify(arts));
             const { effects: sub } = this.stepTaskTx(a.taskId, { kind: "SubmitForReview", commit, computeId: t.task.computeId, constraintVer: t.task.constraintVer }, { result: a.text, deliveredSeq: r.seq, artifacts: arts });
+            // 落实:这一版产物覆盖到的补充标 Applied,指向产物与版本
+            const applied = fu.applyArtifact(follow.value.state, { artifact: `${commit}@v${resultVer}`, artifactVer: resultVer });
+            if (applied.ok) this.putFollowTx(a.taskId, follow, { ...follow.value, state: applied.value });
             appended.push({ roomId: t.roomId, seq: r.seq });
             touchedTasks.add(a.taskId);
             // 审查门(AC-26):有跨厂商审查联系人就交给它审,审过才进 T8a 待确认;没有合格审查人,任务停在 T5 等提出者本人回复(豁免,记 waived-by-user)
@@ -2512,7 +2561,10 @@ export class Host {
     // 受阻带的截图:事务外先按内容入库(只收工作目录里的图片)
     const shots = ev.kind === "blocked" && ev.attachments?.length ? this.workdirImages(row.task_id, ev.attachments) : [];
     let asked: { roomId: string; seq: number; contactId: string; qId: string } | null = null;
+    const intent: { effects: HostEffect[]; appended: { roomId: string; seq: number; sender: Member }[]; quiet: boolean; note: string } = { effects: [], appended: [], quiet: false, note: "" };
     tx(this.db, () => {
+      // 轮次版本、排队补充、授权提问、改挂回滚(AC-15/17/45)
+      this.intentOnComputeEventTx(row, ev, intent);
       run(this.db, "INSERT INTO gg_progress (task_id, compute_id, kind, stage, summary, at) VALUES (?, ?, ?, ?, ?, ?)", row.task_id, ev.computeId, ev.kind, stage, summary, at);
       // AC-29 观测点:Compute 启动后实际加载的 skill/MCP 清单(CLI init 自报),每次启动/续接覆盖为最新一次
       if (ev.kind === "started" && ev.loaded) {
@@ -2588,10 +2640,10 @@ export class Host {
         }
       }
       // 被容错接住的失败不转给联系人(静默退避期间不打断;出卡由宿主机械完成)
-      if (ev.kind !== "started" && !handled) {
+      if (ev.kind !== "started" && !handled && !intent.quiet) {
         const a = asked as { qId: string } | null;
         const note = a ? `(宿主已替你在会话里 @提出者 发了提问卡 ${a.qId},等用户回答;用户在聊天里回答时用 forward 原样转给 Compute,不要自己猜答案)` : "";
-        const payload: Inbound = { kind: "compute", roomId: row.room_id, taskId: row.task_id, computeId: ev.computeId, signal: ev.kind, summary: summary + note, at };
+        const payload: Inbound = { kind: "compute", roomId: row.room_id, taskId: row.task_id, computeId: ev.computeId, signal: ev.kind, summary: summary + note + intent.note, at };
         run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", row.contact_id, row.room_id, JSON.stringify(payload), at);
       }
     });
@@ -2605,12 +2657,14 @@ export class Host {
     }
     this.emitTask(row.task_id);
     if (taskChanged) this.emitTask(row.task_id);
+    for (const a of intent.appended) this.afterAppend(a.roomId, a.seq, a.sender);
+    if (intent.effects.length) void this.runEffects(intent.effects);
     if (recovered !== null) {
       this.emitRetry({ scope: "task", contactId: row.contact_id, taskId: row.task_id, roomId: row.room_id, state: "cleared", attempt: 0, limit: 0, label: "已恢复" });
       this.upstreamOk(recovered);
     }
     if (handled) return this.afterComputeFailure(row, handled);
-    if (ev.kind !== "started") this.loop.notify(row.contact_id, ev.kind === "milestone" ? "batch" : "now");
+    if (ev.kind !== "started" && !intent.quiet) this.loop.notify(row.contact_id, ev.kind === "milestone" ? "batch" : "now");
   }
 
   /** 把 Compute 报的相对路径解析到任务工作目录里;目录外(含符号链接指出去)、非图片、过大的一律丢弃并报告。返回附件 ref。 */
@@ -2644,7 +2698,10 @@ export class Host {
         if (e.kind === "spawn") await this.spawn(e);
         else if (e.kind === "review") await this.spawnReview(e);
         else if (e.kind === "resume") await this.resumeCompute(e);
-        else if (e.kind === "stop") {
+        else if (e.kind === "halt") {
+          const a = this.adapterForCompute(e.computeId);
+          if (a) await a.stop(e.computeId);
+        } else if (e.kind === "stop") {
           const a = this.adapterForCompute(e.computeId);
           this.quota.markStopping(e.taskId);
           const r = a ? await a.stop(e.computeId) : { ok: false as const, reason: "没有 Compute 适配器" };
@@ -2712,7 +2769,10 @@ export class Host {
       }
     }
     const turn: TurnModel | undefined = resolved ? { model: resolved.model, effort: resolved.effort } : undefined;
-    const r = await (a.resume as (id: string, text: string, turn?: TurnModel) => Promise<{ ok: true } | TurnRefusal>)(e.computeId, e.text, turn);
+    // 续接时按当前版本重新核工具:群规要求先问且这一版没有本人授权,写工具一律收走(AC-17)
+    const tools = this.computeToolsFor(e.taskId);
+    const r = await (a.resume as (id: string, text: string, turn?: TurnModel, o?: { tools?: readonly string[] }) => Promise<{ ok: true } | TurnRefusal>)(e.computeId, e.text, turn, { tools });
+    this.afterResume(e, r);
     if (!r.ok) {
       if (r.code === "model-switch-failed") return this.turnRefused(e.taskId, e.computeId, row, `换模型没成功:${r.reason}。这一轮没有发出;可以单独指定一个兼容的模型,或更换支持该模型的 Harness`);
       this.report("resume-failed", { ...e, reason: r.reason });
@@ -2846,7 +2906,10 @@ export class Host {
     } catch (err) {
       return fail(`工作目录准备失败:${err instanceof Error ? err.message : String(err)}`);
     }
-    const tools = [...(this.opts.computeTools ?? DEFAULT_COMPUTE_TOOLS)];
+    // 群规「改代码前先问我」生效且这一版没有本人授权:不给写工具,并把群规写进 brief(AC-17)
+    const tools = [...this.computeToolsFor(e.taskId)];
+    const rules = this.roomRuleLines(e.roomId);
+    const launchVer = this.taskDoc(e.taskId).value.task.launch?.constraintVer ?? this.taskDoc(e.taskId).value.task.constraintVer;
     // 首轮就带生效模型(AC-51 ①);只给声明了按轮换模型能力的适配器(旧的一次性适配器只收 cwd/handoff)
     const modelAware = isModelAware(adapter);
     // 能力默认隔离加白名单(AC-29):只把联系人勾选的 skill/MCP 放进它的专属运行目录;缺项不启动
@@ -2860,7 +2923,7 @@ export class Host {
     if (!isoOk && picked.length) return fail(`这个 Compute 适配器还不支持勾选的 skill/MCP(${picked.map((x) => x.name).join("、")}),不带着缺项启动`);
     const iso = isoOk ? { configDir: prep.home.configDir, pluginDirs: [...prep.home.pluginDirs], mcpServers: prep.home.mcpServers } : {};
     const spawnOpts = { ...(cwd ? { cwd } : {}), ...(modelAware ? { model, ...(resolved ? { effort: resolved.effort } : {}) } : {}), ...iso };
-    const r = await adapter.spawn({ task: e.brief, rules: [HUMAN_VERIFICATION_RULE], tools, credentialRefs: [], placement: "local" }, spawnOpts);
+    const r = await adapter.spawn({ task: e.brief, rules: [HUMAN_VERIFICATION_RULE, ...rules], tools, credentialRefs: [], placement: "local" }, spawnOpts);
     if (!r.ok) return fail(r.reason);
     const late: string[] = [];
     this.launchEpoch.set(e.taskId, (this.launchEpoch.get(e.taskId) ?? 0) + 1);
@@ -2872,6 +2935,9 @@ export class Host {
       if (!isAppendOnly(prev, models)) throw new HostError("internal", "模型账本只能追加");
       const { effects: eff } = this.stepTaskTx(e.taskId, { kind: "Dispatch", computeId: r.computeId, model, requestId: e.requestId }, { models });
       for (const x of eff) if (x.kind === "stop-compute") late.push(x.computeId);
+      // 新实例的第一轮依据启动时的约束版本
+      const f = this.followOf(e.taskId);
+      this.putFollowTx(e.taskId, f, { ...f.value, rounds: [launchVer], resultVer: null });
     });
     this.emitTask(e.taskId);
     // 启动途中任务已被取消(如私聊 rewind):实例一上线就停,等它回报 stopped 再落 T10,不让它带着作废的请求跑下去
@@ -3063,7 +3129,8 @@ export class Host {
         msgSeq = this.appendMessageTx(card.room_id, me, { text, actionKey: `user:${input.clientActionId}`, clientActionId: input.clientActionId, replyToSeq: card.seq, quotedSeqs: [card.seq] }).seq;
         if (failure) afterFailure = this.applyFailureDecisionTx(failure);
         else {
-          if (card.task_id) effects.push(...this.applyCardDecisionTx(card, input.actionId, input.text ?? ""));
+          if (card.task_id && isAuthzCard(card)) effects.push(...this.answerQuestionCardTx(card, input.actionId, msgSeq));
+          else if (card.task_id) effects.push(...this.applyCardDecisionTx(card, input.actionId, input.text ?? ""));
           if (card.kind === "failure") this.applyRoundFailureTx(card, input.actionId);
         }
         run(this.db, "UPDATE gg_cards SET state = 'done' WHERE card_id = ?", input.cardId);
@@ -3168,8 +3235,7 @@ export class Host {
     this.ledgerTx(contactId, roomId, cmds);
   }
 
-  // ======================= 失败轮次容错(AC-36) =======================
-  // 联系人一轮或任务的 Compute 失败之后怎么办(是否失败、什么原因由 kernel 的失败分类器判):
+  // ======================= 失败轮次容错(AC-36) ================  // 联系人一轮或任务的 Compute 失败之后怎么办(是否失败、什么原因由 kernel 的失败分类器判):
   //   A1×(B0|B1) 静默指数退避(状态行「重连中 k/N」,不出卡);耗尽、A2/A3、B2 由宿主机械出 1 张原位可恢复失败卡;
   //   同一上游上不同成员连续失败或 A2 触发共享熔断:暂停后台重试,全群合并 1 张群级卡,半开探测成功后交回成员续跑(A2 只能由用户发起探测)。
   //   失败卡按钮走 cards.act 的 CAS 领取;[跳过本轮]只把游标推到失败批次末尾,失败期间新到的消息留给下一轮。
@@ -3814,6 +3880,276 @@ export class Host {
     if (one(this.db, "SELECT 1 FROM gg_inbox WHERE contact_id = ? AND consumed = 0 LIMIT 1", contactId)) return true;
     return this.roomsOfContact(contactId).some((r) => this.lastSeq(r.id) > this.cursor(contactId, r.id));
   }
+  // ======================= 授权与意图(AC-15/16/17/19/20/45) =======================
+  private followOf(taskId: string): { value: FollowDoc; ver: number } {
+    return getDoc<FollowDoc>(this.db, `follow:${taskId}`) ?? { value: { state: fu.emptyFollowUps(taskId), rounds: [], resultVer: null, queued: [] }, ver: 0 };
+  }
+  private putFollowTx(taskId: string, cur: { ver: number }, next: FollowDoc) {
+    putDoc(this.db, `follow:${taskId}`, cur.ver, next);
+  }
+  private authzOf(taskId: string): { value: AuthzDoc; ver: number } {
+    return getDoc<AuthzDoc>(this.db, `authz:${taskId}`) ?? { value: { requests: [] }, ver: 0 };
+  }
+  /** 写任务文档(CAS):用于领域层合成函数已经算好的新任务(改条件、改挂)。 */
+  private saveTaskTx(id: string, cur: { value: TaskDoc; ver: number }, task: Task) {
+    if (task === cur.value.task) return;
+    putDoc(this.db, `task:${id}`, cur.ver, { ...cur.value, task, updatedAt: this.now() });
+  }
+  private roomRuleLines(roomId: string): string[] {
+    return this.roomRow(roomId).rules.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  }
+  /** 这个任务现在能给 Compute 的工具:群规要求「改前先问」且当前版本没有本人授权,就收走全部写工具。 */
+  computeToolsFor(taskId: string): readonly string[] {
+    const doc = this.taskDoc(taskId).value;
+    const base = this.opts.computeTools ?? DEFAULT_COMPUTE_TOOLS;
+    const askFirst = authz.askBeforeWriteRule(this.roomRow(doc.roomId).rules) !== null;
+    const granted = authz.hasGrant(this.authzOf(taskId).value.requests, taskId, doc.task.constraintVer);
+    return authz.gateTools(base, askFirst, granted);
+  }
+  /** 任务视图里的关联边与授权记录(合同里的可选字段)。 */
+  private intentView(taskId: string): Pick<TaskView, "followUps" | "bindingVersion" | "authorizations"> {
+    const f = getDoc<FollowDoc>(this.db, `follow:${taskId}`)?.value;
+    const z = getDoc<AuthzDoc>(this.db, `authz:${taskId}`)?.value;
+    return {
+      ...(f
+        ? {
+            bindingVersion: f.state.bindingVer,
+            followUps: f.state.links.map((l) => ({ roomId: l.roomId, seq: l.seq, state: l.state, version: l.ver, appliedIn: l.appliedIn, appliedVersion: l.appliedVer, reboundTo: l.reboundTo })),
+          }
+        : {}),
+      ...(z ? { authorizations: z.requests.map((r) => ({ qId: r.qId, action: r.action, constraintVersion: r.constraintVer, state: r.state, principalId: r.principal, askedSeq: r.askedSeq, decidedSeq: r.decidedBy?.seq ?? null, reason: r.reason })) } : {}),
+    };
+  }
+  /** 把任务状态机的副作用翻成宿主副作用;text 是交给 Compute 的续接说明。 */
+  private taskEffectsToHost(taskId: string, effs: readonly { kind: string; computeId?: string; requestId?: string }[], text: string): HostEffect[] {
+    const doc = this.taskDoc(taskId).value;
+    const out: HostEffect[] = [];
+    for (const e of effs) {
+      if ((e.kind === "update-constraints" || e.kind === "resume-compute") && e.computeId) out.push({ kind: "resume", taskId, computeId: e.computeId, text });
+      else if (e.kind === "stop-compute" && e.computeId) out.push({ kind: "stop", taskId, computeId: e.computeId });
+      else if (e.kind === "spawn-compute" && e.requestId && doc.task.owner) {
+        const contact = this.contactDoc(doc.task.owner).value;
+        out.push({ kind: "spawn", taskId, requestId: e.requestId, contactId: doc.task.owner, model: this.computeModelOf(contact), brief: `${doc.brief}\n\n${text}`, roomId: doc.roomId });
+      }
+    }
+    return out;
+  }
+  /** 这个问题是不是改代码前的授权提问(登记在授权记录里)。 */
+  private isAuthzQuestion(taskId: string, qId: string): boolean {
+    return this.authzOf(taskId).value.requests.some((r) => r.qId === qId);
+  }
+  /** 这条消息已经作为某次授权的答复被了结:不再当成新条件(否则会把刚授权的版本顶掉)。 */
+  private answeredConsent(roomId: string, seq: number): boolean {
+    return listDocs<AuthzDoc>(this.db, "authz:").some((d) => d.value.requests.some((r) => r.decidedBy?.roomId === roomId && r.decidedBy.seq === seq));
+  }
+  /** 这条消息此刻挂在哪个别的任务上(Received/Applied);没有返回 null。 */
+  private linkedElsewhere(roomId: string, seq: number, taskId: string): string | null {
+    for (const d of listDocs<FollowDoc>(this.db, "follow:")) {
+      if (d.value.state.taskId === taskId) continue;
+      if (d.value.state.links.some((l) => l.roomId === roomId && l.seq === seq && l.state !== "Rebound")) return d.value.state.taskId;
+    }
+    return null;
+  }
+  /** E3 用户中途改条件:原位升版 + 登记 Received + 新约束送进同一个 Compute;前提变了的待授权记过期。 */
+  private amendFromFollowUpTx(taskId: string, t: TaskDoc, sourceSeq: number, text: string, fresh: InboundMessage[]): { ok: true; effects: HostEffect[] } | { ok: false; reason: string } {
+    const src = fresh.find((m) => m.roomId === t.roomId && m.seq === sourceSeq);
+    if (src?.sender.kind !== "user") return { ok: false, reason: `补充来源 #${sourceSeq} 必须是任务所在会话里本轮的用户新消息` };
+    if (this.answeredConsent(t.roomId, sourceSeq)) return { ok: false, reason: `#${sourceSeq} 是授权答复,宿主已处理,不当作新条件` };
+    const other = this.linkedElsewhere(t.roomId, sourceSeq, taskId);
+    if (other) return { ok: false, reason: `#${sourceSeq} 已挂在任务 ${other} 上;挂错了请让用户改挂` };
+    const cur = this.taskDoc(taskId);
+    const f = this.followOf(taskId);
+    const r = fu.amendWithFollowUp({ task: cur.value.task, followUps: f.value.state }, { roomId: t.roomId, seq: sourceSeq, text: src.text, by: src.sender.id, computeResumable: true });
+    if (!r.ok) return r;
+    if (r.task === cur.value.task) return { ok: true, effects: [] };
+    this.saveTaskTx(taskId, cur, r.task);
+    this.putFollowTx(taskId, f, { ...f.value, state: r.followUps });
+    this.expireAuthzTx(taskId);
+    return { ok: true, effects: this.taskEffectsToHost(taskId, r.taskEffects, `${text}\n(用户补充 #${sourceSeq},任务条件已更新到 v${r.task.constraintVer},之后的产出必须体现它)`) };
+  }
+  /** 前提变了的待授权记为过期·未执行,对应的提问卡标 expired。 */
+  private expireAuthzTx(taskId: string) {
+    const cur = this.authzOf(taskId);
+    if (!cur.value.requests.some((r) => r.state === "pending")) return;
+    const t = this.taskDoc(taskId).value.task;
+    const next = authz.expireStale(cur.value.requests, { taskId, state: t.state, constraintVer: t.constraintVer, pendingQId: t.pendingQ?.qId ?? null });
+    if (next.every((r, i) => r === cur.value.requests[i])) return;
+    putDoc(this.db, `authz:${taskId}`, cur.ver, { requests: next });
+    for (const r of next) if (r.state === "expired") run(this.db, "UPDATE gg_cards SET state = 'expired' WHERE task_id = ? AND kind = 'question' AND state = 'open' AND json_extract(meta, '$.qId') = ?", taskId, r.qId);
+  }
+  /** Compute 运行中拒绝续接的补充先排队,等这一轮结束再一次送进去(新约束不丢,AC-45 ②)。 */
+  private afterResume(e: { taskId: string; text: string }, r: { ok: true } | { ok: false; reason: string }) {
+    try {
+      tx(this.db, () => {
+        const f = this.followOf(e.taskId);
+        if (r.ok) this.putFollowTx(e.taskId, f, { ...f.value, rounds: [...f.value.rounds, this.taskDoc(e.taskId).value.task.constraintVer] });
+        else if (/还在运行/.test(r.reason)) this.putFollowTx(e.taskId, f, { ...f.value, queued: [...f.value.queued, e.text] });
+      });
+    } catch (err) {
+      this.report("follow-round", err);
+    }
+  }
+  private flushQueuedTx(taskId: string, computeId: string): HostEffect[] {
+    const f = this.followOf(taskId);
+    if (!f.value.queued.length) return [];
+    this.putFollowTx(taskId, f, { ...f.value, queued: [] });
+    return [{ kind: "resume", taskId, computeId, text: f.value.queued.join("\n\n") }];
+  }
+  /** Compute 事件里与意图相关的部分:轮次结束记版本、排队补充续上、改前先问时把受阻变成授权提问、改挂回滚等停止确认。 */
+  private intentOnComputeEventTx(row: { task_id: string; contact_id: string; room_id: string }, ev: ComputeEvent, out: { effects: HostEffect[]; appended: { roomId: string; seq: number; sender: Member }[]; quiet: boolean; note: string }) {
+    const taskId = row.task_id;
+    const f = this.followOf(taskId);
+    const t = this.taskDoc(taskId).value;
+    if (ev.kind === "stopped" && f.value.state.pendingRollback?.computeId === ev.computeId) {
+      const r = fu.confirmRollbackStopped(f.value.state, ev.computeId);
+      if (r.ok) {
+        this.putFollowTx(taskId, f, { ...f.value, state: r.value, rounds: [] });
+        for (const e of r.effects) if (e.kind === "restore-workspace") out.effects.push({ kind: "resume", taskId, computeId: ev.computeId, text: restoreText(e) });
+        out.quiet = true;
+      }
+      return;
+    }
+    if (ev.kind !== "completed" && ev.kind !== "blocked" && ev.kind !== "failed") return;
+    const [ver, ...rest] = f.value.rounds;
+    const next: FollowDoc = { ...f.value, rounds: rest, resultVer: ev.kind === "completed" && ver !== undefined ? ver : f.value.resultVer };
+    this.putFollowTx(taskId, f, next);
+    if (ev.kind === "completed" && next.queued.length && t.task.computeId === ev.computeId) out.effects.push(...this.flushQueuedTx(taskId, ev.computeId));
+    if (ev.kind === "blocked") this.raiseAuthorizationTx(t, ev, out);
+  }
+  /** 群规要求先问、这一版还没授权、当前实例受阻:任务进 T4b,负责人在会话里提问(可直接回复「同意」,按钮可选)。 */
+  private raiseAuthorizationTx(doc: TaskDoc, ev: Extract<ComputeEvent, { kind: "blocked" }>, out: { appended: { roomId: string; seq: number; sender: Member }[]; note: string }) {
+    const t = doc.task;
+    const rule = authz.askBeforeWriteRule(this.roomRow(doc.roomId).rules);
+    if (!rule || t.state !== "T3_Running" || t.computeId !== ev.computeId || !t.owner) return;
+    if (authz.hasGrant(this.authzOf(t.id).value.requests, t.id, t.constraintVer)) return;
+    const qId = this.newId("q");
+    this.stepTaskTx(t.id, { kind: "NeedHuman", qId, computeId: ev.computeId, constraintVer: t.constraintVer });
+    const owner: Member = { kind: "contact", id: t.owner };
+    const cardId = this.newId("card");
+    const action = ev.needs.trim() || ev.summary;
+    const seq = this.appendMessageTx(doc.roomId, owner, {
+      text: `「${doc.title}」要动手改了,群规是「${rule}」,先问你:${action}\n同意就直接回复「同意」(不用点按钮);不同意回复「不行」。`,
+      actionKey: `authz:${t.id}:${qId}`,
+      replyToSeq: doc.sourceSeq,
+      quotedSeqs: [doc.sourceSeq],
+      mentions: [{ id: t.requester, source: "auto" }],
+      card: {
+        card_id: cardId, kind: "question", task_id: t.id, title: `需要你同意:${action}`.slice(0, 200), body: `任务「${doc.title}」第 ${t.constraintVer} 版。${ev.summary}`.slice(0, 20000), state: "open",
+        actions: JSON.stringify([{ actionId: "approve", label: "同意", style: "primary" }, { actionId: "reject", label: "不同意", style: "danger" }]),
+        // authz:改代码前的授权提问;按钮与自然语言答复都走 settleConsentTx,不走一般提问卡的「回答」(AC-44)
+        meta: JSON.stringify({ qId, constraintVer: t.constraintVer, authz: true }),
+      },
+    }).seq;
+    const z = this.authzOf(t.id);
+    const req = authz.openRequest({ qId, taskId: t.id, constraintVer: t.constraintVer, action, principal: t.requester, roomId: doc.roomId, askedSeq: seq });
+    putDoc(this.db, `authz:${t.id}`, z.ver, { requests: [...z.value.requests, req] });
+    out.appended.push({ roomId: doc.roomId, seq, sender: owner });
+    out.note = `(宿主已替你在会话里 @提出者 发了授权提问 ${qId}:用户本人直接回复「同意」或「不行」由宿主绑定处理,不要 forward 这条答复,也不要自己替用户同意)`;
+  }
+  /** 一条用户消息:对到待授权上;放行时续接 Compute 并换上写工具,拒绝时取消,多个候选时追问。 */
+  private consentFromMessage(roomId: string, seq: number): { effects: HostEffect[]; appended: { roomId: string; seq: number; sender: Member }[]; tasks: string[] } {
+    const out = { effects: [] as HostEffect[], appended: [] as { roomId: string; seq: number; sender: Member }[], tasks: [] as string[] };
+    const docs = listDocs<AuthzDoc>(this.db, "authz:").filter((d) => d.value.requests.some((r) => r.roomId === roomId && r.state === "pending"));
+    if (!docs.length) return out;
+    const m = this.projected(roomId).find((x) => x.seq === seq);
+    if (!m) return out;
+    const meta = one<MsgMeta>(this.db, "SELECT * FROM gg_msg WHERE room_id = ? AND seq = ?", roomId, seq);
+    tx(this.db, () => {
+      for (const d of docs) this.expireAuthzTx(d.value.requests[0]!.taskId);
+      const requests = listDocs<AuthzDoc>(this.db, "authz:").flatMap((d) => d.value.requests);
+      const res = authz.resolveConsent(requests, {
+        roomId, seq, sender: { kind: m.sender.kind, id: m.sender.id }, text: m.text,
+        replyToSeq: meta?.reply_to ?? null, quotedSeqs: meta ? (JSON.parse(meta.quoted) as number[]) : [],
+        // 宿主目前没有转发入口;外部数据源的内容不经 send 进会话
+        forwarded: false, external: false,
+      });
+      if (res.kind === "decision") this.settleConsentTx(res.binding, res.decision, out);
+      else if (res.kind === "ambiguous") {
+        const reqs = requests.filter((r) => res.candidates.includes(r.qId));
+        const owner = this.taskDoc(reqs[0]!.taskId).value.task.owner;
+        if (!owner) return;
+        const list = reqs.map((r, i) => `${i + 1}. 「${this.taskDoc(r.taskId).value.title}」:${r.action}(提问 #${r.askedSeq})`).join("\n");
+        const sender: Member = { kind: "contact", id: owner };
+        const a = this.appendMessageTx(roomId, sender, { text: `你这句「${m.text.slice(0, 40)}」对应哪一件?现在有 ${reqs.length} 件等你同意,请回复对应的那条提问:\n${list}`, actionKey: `authz-ask:${roomId}:${seq}`, replyToSeq: seq, quotedSeqs: [seq], mentions: [{ id: m.sender.id, source: "auto" }] });
+        out.appended.push({ roomId, seq: a.seq, sender });
+      }
+    });
+    return out;
+  }
+  /** 了结一次授权:再核一遍任务此刻的 (q, 版本, 状态);有效才推进状态机。 */
+  private settleConsentTx(binding: authz.Binding, decision: "approve" | "reject", out: { effects: HostEffect[]; tasks: string[] }) {
+    const z = this.authzOf(binding.taskId);
+    const req = z.value.requests.find((r) => r.qId === binding.qId);
+    if (!req) return;
+    const doc = this.taskDoc(binding.taskId).value;
+    const t = doc.task;
+    const s = authz.settleRequest(req, binding, decision, { taskId: t.id, state: t.state, constraintVer: t.constraintVer, pendingQId: t.pendingQ?.qId ?? null });
+    if (!s.ok) return;
+    putDoc(this.db, `authz:${t.id}`, z.ver, { requests: z.value.requests.map((r) => (r.qId === req.qId ? s.request : r)) });
+    run(this.db, "UPDATE gg_cards SET state = ? WHERE task_id = ? AND kind = 'question' AND state IN ('open', 'claimed') AND json_extract(meta, '$.qId') = ?", s.effective ? "done" : "expired", t.id, req.qId);
+    out.tasks.push(t.id);
+    if (!s.effective) return;
+    const { effects: eff } = this.stepTaskTx(t.id, { kind: "HumanReply", qId: req.qId, constraintVer: req.constraintVer, answer: decision });
+    if (decision === "approve" && t.computeId) {
+      out.effects.push({ kind: "resume", taskId: t.id, computeId: t.computeId, text: `用户本人已同意:${req.action}(任务第 ${req.constraintVer} 版,答复 #${binding.seq})。写工具已放开,只做这一项已授权的改动,做完报 completed。` });
+    }
+    out.effects.push(...this.taskEffectsToHost(t.id, eff, ""));
+  }
+  /** 提问卡上的按钮:以点击产生的那条用户消息为答复,走同一条了结路径。 */
+  private answerQuestionCardTx(card: CardRow, actionId: string, msgSeq: number): HostEffect[] {
+    if (actionId !== "approve" && actionId !== "reject") return [];
+    const meta = JSON.parse(card.meta) as { qId?: string };
+    const req = this.authzOf(card.task_id!).value.requests.find((r) => r.qId === meta.qId);
+    if (!req) return [];
+    const out = { effects: [] as HostEffect[], tasks: [] as string[] };
+    this.settleConsentTx({ taskId: req.taskId, qId: req.qId, constraintVer: req.constraintVer, action: req.action, authorizer: this.userId, roomId: card.room_id, seq: msgSeq }, actionId, out);
+    return out.effects;
+  }
+
+  /**
+   * E5b 改挂一条补充(AC-15):#m 从任务 A 移到任务 B。A 不取消,版本 +1,按新版本重放其余补充(含 #m 之后的 #n);
+   * #m 已落实时先停 A 的执行器,停止确认后再让它回到 #m 之前并重做。expectedBindingVersion 对不上按冲突拒绝,重复改挂幂等。
+   */
+  rebindFollowUp(input: { roomId: string; seq: number; fromTaskId: string; toTaskId: string; expectedBindingVersion: number; clientActionId: string }): { from: TaskView; to: TaskView } {
+    if (input.fromTaskId === input.toTaskId) throw new HostError("invalid_params", "不能改挂到同一个任务");
+    const effects: HostEffect[] = [];
+    tx(this.db, () => {
+      const prior = one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", `rebind:${input.clientActionId}`);
+      if (prior) return;
+      const a = this.taskDoc(input.fromTaskId);
+      const b = this.taskDoc(input.toTaskId);
+      if (b.value.roomId !== input.roomId) throw new HostError("invalid_params", `任务 ${input.toTaskId} 不在这个会话里`);
+      const fa = this.followOf(input.fromTaskId);
+      const fb = this.followOf(input.toTaskId);
+      const r = fu.rebindFollowUp({ task: a.value.task, followUps: fa.value.state }, { task: b.value.task, followUps: fb.value.state }, {
+        roomId: input.roomId, seq: input.seq, expectedBindingVer: input.expectedBindingVersion, by: this.userId, computeResumable: true,
+      });
+      if (!r.ok) throw new HostError(/关联版本已变/.test(r.reason) ? "conflict" : "invalid_params", r.reason, /关联版本已变/.test(r.reason) ? { currentVer: fa.value.state.bindingVer } : undefined);
+      recordAction(this.db.store, `rebind:${input.clientActionId}`, { from: input.fromTaskId, to: input.toTaskId });
+      if (r.idempotent) return;
+      this.saveTaskTx(input.fromTaskId, a, r.from.task);
+      this.saveTaskTx(input.toTaskId, b, r.to.task);
+      this.putFollowTx(input.fromTaskId, fa, { ...fa.value, state: r.from.followUps });
+      this.putFollowTx(input.toTaskId, fb, { ...fb.value, state: r.to.followUps });
+      this.expireAuthzTx(input.fromTaskId);
+      this.expireAuthzTx(input.toTaskId);
+      const halting = r.from.effects.some((e) => e.kind === "stop-for-rollback");
+      for (const e of r.from.effects) {
+        if (e.kind === "stop-for-rollback") effects.push({ kind: "halt", taskId: input.fromTaskId, computeId: e.computeId });
+        else if (e.kind === "replay" || e.kind === "restore-workspace") {
+          const text = e.kind === "replay" ? replayText(e, input.seq) : restoreText(e);
+          effects.push(...this.taskEffectsToHost(input.fromTaskId, r.from.taskEffects, text));
+        }
+      }
+      // 停旧执行器等回滚时,先不续接 A;停止确认后由 confirmRollbackStopped 发恢复 + 重放
+      if (!halting && !r.from.effects.length) effects.push(...this.taskEffectsToHost(input.fromTaskId, r.from.taskEffects, `用户把 #${input.seq} 改挂到别的任务了,它不再是本任务的要求。`));
+      for (const e of r.to.effects) if (e.kind === "replay") effects.push(...this.taskEffectsToHost(input.toTaskId, r.to.taskEffects, `用户把 #${input.seq} 改挂到本任务:${e.requirements.find((x) => x.seq === input.seq)?.text ?? ""}\n(任务条件已更新到 v${e.ver})`));
+    });
+    this.emitTask(input.fromTaskId);
+    this.emitTask(input.toTaskId);
+    void this.runEffects(effects);
+    return { from: this.taskView(this.taskDoc(input.fromTaskId).value), to: this.taskView(this.taskDoc(input.toTaskId).value) };
+  }
 
   // ======================= 生命周期 =======================
   async idle(): Promise<void> {
@@ -3995,7 +4331,9 @@ type HostEffect =
   | { kind: "resume"; taskId: string; computeId: string; text: string }
   | { kind: "stop"; taskId: string; computeId: string }
   | { kind: "integrate"; taskId: string; by: string }
-  | { kind: "cancel-spawn"; taskId: string; requestId: string };
+  | { kind: "cancel-spawn"; taskId: string; requestId: string }
+  /** 停下旧执行器但不取消任务(改挂后要回滚工作区,AC-15) */
+  | { kind: "halt"; taskId: string; computeId: string };
 
 /** 召回清单的一项 → 第 5 块的一个指针。截断显式写出原长与续读游标;撤回与越权只给状态,不带原文和原长。 */
 export function renderRecall(it: RecallItem, sender: string): { ref: string; text: string } {
@@ -4007,4 +4345,23 @@ export function renderRecall(it: RecallItem, sender: string): { ref: string; tex
   }
   if (it.state === "DeletedOrWithdrawn") return { ref, text: "DeletedOrWithdrawn · 这条已撤回或已删除,不提供原文" };
   return { ref, text: "AccessDenied · 不在本会话或无权读取,已拒绝" };
+}
+/** 改挂后按新版本重放:告诉 Compute 移走了哪条、现在全部有效的补充是什么。 */
+function replayText(e: Extract<fu.FollowUpEffect, { kind: "replay" }>, removedSeq: number): string {
+  const list = e.requirements.map((r) => `- #${r.seq} ${r.text}`).join("\n") || "(没有其它补充)";
+  return `用户把 #${removedSeq} 改挂到别的任务了,它不再是本任务的要求。任务条件更新到 v${e.ver},现在全部有效的补充:\n${list}`;
+}
+/** 停稳之后回到 #m 之前:撤掉为 #m 做的改动,再按清单重做其后的补充。 */
+function restoreText(e: Extract<fu.FollowUpEffect, { kind: "restore-workspace" }>): string {
+  const list = e.requirements.map((r) => `- #${r.seq} ${r.text}`).join("\n") || "(没有其它补充)";
+  return `工作区要回到 #${e.beforeSeq} 之前:撤掉为 #${e.beforeSeq} 做的改动(它已改挂到别的任务),再按 v${e.ver} 的补充清单重做:\n${list}`;
+}
+/** 改代码前的授权提问卡(meta.authz):与 AC-44 的一般提问卡区分路由。 */
+function isAuthzCard(card: { kind: string; meta: string }): boolean {
+  if (card.kind !== "question") return false;
+  try {
+    return (JSON.parse(card.meta) as { authz?: unknown }).authz === true;
+  } catch {
+    return false;
+  }
 }

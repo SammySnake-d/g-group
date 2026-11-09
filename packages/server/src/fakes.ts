@@ -52,8 +52,10 @@ export function scriptedCompute(
     failSpawn?: string;
     stepMs?: number;
     resumeResult?: (computeId: string, text: string, turn: TurnModel | undefined) => ResumeRefusal | null;
-    /** 续接后吐的事件(例如 harness 回报这一轮实际用过的模型)。 */
-    resumeScript?: (computeId: string, turn: TurnModel | undefined) => Omit<ComputeEvent, "computeId">[];
+    /** 续接后吐的事件(例如 harness 回报这一轮实际用过的模型);text 是续接内容,tools 是这次续接给的工具清单(AC-17)。 */
+    resumeScript?: (computeId: string, turn: TurnModel | undefined, text: string, tools: readonly string[] | undefined) => Omit<ComputeEvent, "computeId">[];
+    /** 这一轮事件还没吐完时拒绝续接,与真实适配器「这个 Compute 还在运行,等它结束这一轮再续」一致(AC-45 排队)。 */
+    refuseWhileRunning?: boolean;
     /** 续接后吐的事件,能看到续接带进来的文字(AC-44 回答、审查打回意见)。 */
     onResume?: (computeId: string, text: string) => Omit<ComputeEvent, "computeId">[];
     /** computeId 前缀(默认 cp);同一测试里用两个替身(执行与审查)时避免撞号。 */
@@ -74,7 +76,12 @@ export function scriptedCompute(
   let n = 0;
   let inflight = 0;
   const spawned: { computeId: string; brief: unknown; cwd: string | undefined; model: string | undefined; effort: string | undefined; opts: SpawnOptions | undefined }[] = [];
-  const resumed: { computeId: string; text: string }[] = [];
+  /** 续接记录;续接换了工具清单(宿主按授权放开或收回写工具,AC-17)时才带 tools */
+  const resumed: { computeId: string; text: string; tools?: readonly string[] }[] = [];
+  /** 每个实例这一轮还没吐完的事件批数(refuseWhileRunning 用) */
+  const busy = new Map<string, number>();
+  /** 每个实例当前的工具清单 */
+  const toolsOf = new Map<string, string>();
   /** 每次被受理的续接带来的生效模型(与 resumed 一一对应);旧适配器的调用方不传就是 undefined。 */
   const turns: { computeId: string; turn: TurnModel | undefined }[] = [];
   const stopped: string[] = [];
@@ -84,6 +91,19 @@ export function scriptedCompute(
     if (e.kind === "started") ended.delete(e.computeId);
     queue.push(e);
     wake?.();
+  };
+  const play = (computeId: string, evs: ComputeEvent[]) => {
+    if (!evs.length) return;
+    inflight++;
+    busy.set(computeId, (busy.get(computeId) ?? 0) + 1);
+    void (async () => {
+      for (const e of evs) {
+        await new Promise((r) => setTimeout(r, opts.stepMs ?? 1));
+        push(e);
+      }
+      busy.set(computeId, (busy.get(computeId) ?? 1) - 1);
+      inflight--;
+    })();
   };
   const script =
     opts.script ??
@@ -98,33 +118,19 @@ export function scriptedCompute(
       if (opts.failSpawn) return { ok: false, reason: opts.failSpawn };
       const computeId = `${opts.idPrefix ?? "cp"}-${++n}`;
       spawned.push({ computeId, brief, cwd: o?.cwd, model: o?.model, effort: o?.effort, opts: o });
-      const evs = script(computeId, brief).map((e) => ({ ...e, computeId }) as ComputeEvent);
-      inflight++;
-      void (async () => {
-        for (const e of evs) {
-          await new Promise((r) => setTimeout(r, opts.stepMs ?? 1));
-          push(e);
-        }
-        inflight--;
-      })();
+      toolsOf.set(computeId, JSON.stringify((brief as { tools?: unknown }).tools ?? null));
+      play(computeId, script(computeId, brief).map((e) => ({ ...e, computeId }) as ComputeEvent));
       return { ok: true, computeId, manifest: { computeId, sections: [], allowedTools: [], credentialRefs: [], placement: "local" } };
     },
-    async resume(computeId: string, text: string, turn?: TurnModel): Promise<{ ok: true } | ResumeRefusal> {
+    async resume(computeId: string, text: string, turn?: TurnModel, o?: { readonly tools?: readonly string[] }): Promise<{ ok: true } | ResumeRefusal> {
+      if (opts.refuseWhileRunning && (busy.get(computeId) ?? 0) > 0) return { ok: false, reason: "这个 Compute 还在运行,等它结束这一轮再续" };
       const refused = opts.resumeResult?.(computeId, text, turn) ?? null;
       if (refused) return refused;
-      resumed.push({ computeId, text });
+      const changed = o?.tools !== undefined && JSON.stringify(o.tools) !== toolsOf.get(computeId);
+      if (o?.tools) toolsOf.set(computeId, JSON.stringify(o.tools));
+      resumed.push({ computeId, text, ...(changed && o?.tools ? { tools: [...o.tools] } : {}) });
       turns.push({ computeId, turn });
-      const evs = [...(opts.resumeScript?.(computeId, turn) ?? []), ...(opts.onResume?.(computeId, text) ?? [])].map((e) => ({ ...e, computeId }) as ComputeEvent);
-      if (evs.length) {
-        inflight++;
-        void (async () => {
-          for (const e of evs) {
-            await new Promise((r) => setTimeout(r, opts.stepMs ?? 1));
-            push(e);
-          }
-          inflight--;
-        })();
-      }
+      play(computeId, [...(opts.resumeScript?.(computeId, turn, text, o?.tools) ?? []), ...(opts.onResume?.(computeId, text) ?? [])].map((e) => ({ ...e, computeId }) as ComputeEvent));
       return { ok: true };
     },
     async stop(computeId: string) {
@@ -163,6 +169,8 @@ export function scriptedCompute(
     turns,
     stopped,
     /** 所有剧本事件都已吐出且被消费。 */
+    /** 这个实例此刻生效的工具清单(派发时的 brief,或最近一次续接换上的)。 */
+    currentTools: (computeId: string): string[] => JSON.parse(toolsOf.get(computeId) ?? "null") ?? [],
     drained: () => inflight === 0 && queue.length === 0,
     close() {
       closed = true;
