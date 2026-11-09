@@ -1,0 +1,29 @@
+packages/domain/proof/mutations.mjs
+  s_8d15bc1ea77c30::t_6e90db090fb724 17-19,52,97,185,200,263-269
+packages/domain/proof/mutations.txt
+  s_8d15bc1ea77c30::t_de371ea620a750 1-242
+packages/domain/proof/task-lifecycle-tests.txt
+  s_8d15bc1ea77c30::t_e8542469761fbf 1-188,190,195
+packages/domain/src/task.ts
+  s_8d15bc1ea77c30::t_1283a725cdc167 1-3,6-7,9,102-125,127-568
+packages/domain/src/vendor.ts
+  s_8d15bc1ea77c30::t_3fa91c839f3a47 1,4-18
+receipts/feat-task-lifecycle.json
+  s_8d15bc1ea77c30::t_f201def445527f 2,17,56,58,60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0defc7a601594027b0633c3144b1532795dad2da",
+  "prompts": {},
+  "sessions": {
+    "s_8d15bc1ea77c30": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "400d978d-ec1f-46cc-82b5-50fc388ded6d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

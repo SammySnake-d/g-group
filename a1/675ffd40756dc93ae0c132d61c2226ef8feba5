@@ -1,0 +1,23 @@
+packages/kernel/src/index.ts
+  s_7f422c52350e16::t_71ba9a3ebb3825 5
+packages/kernel/src/runtime-ports.ts
+  s_7f422c52350e16::t_349840237bc2cf 1-111
+receipts/feat-runtime-ports.json
+  s_7f422c52350e16::t_6318910c2331f7 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a1675ffd40756dc93ae0c132d61c2226ef8feba5",
+  "prompts": {},
+  "sessions": {
+    "s_7f422c52350e16": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18b4f4b0-3cf6-4d51-be92-ca20094b2ce3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

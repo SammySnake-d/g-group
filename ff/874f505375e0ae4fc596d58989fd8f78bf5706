@@ -1,0 +1,21 @@
+packages/kernel/proof/retry-policy-mutations.mjs
+  s_042e901c6ad028::t_5417a9ea447fcd 1-140
+  s_042e901c6ad028::t_f4b5eb0b2d6294 141-143
+  s_042e901c6ad028::t_d2f5a376b68f0d 144-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff874f505375e0ae4fc596d58989fd8f78bf5706",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

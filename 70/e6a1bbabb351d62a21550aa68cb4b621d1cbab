@@ -1,0 +1,14 @@
+packages/server/src/rewind.test.ts
+  h_f33e46a035b77c 392
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "70e6a1bbabb351d62a21550aa68cb4b621d1cbab",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

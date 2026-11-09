@@ -1,0 +1,14 @@
+packages/adapter-cc-compute/proof/gates.txt
+  h_f33e46a035b77c 2-3,6,13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "942659ce747581ceac0a72019524ef1f3915d737",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

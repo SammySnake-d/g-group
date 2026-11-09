@@ -1,0 +1,29 @@
+packages/domain/proof/red-against-8e57583.tap
+  s_b517c605a7c83f::t_90c5c4ebbc5cd3 1-1582
+packages/domain/src/fixtures/tdz-namespace.d.mts
+  s_b517c605a7c83f::t_4d511d4deea100 1-2
+packages/domain/src/fixtures/tdz-namespace.mjs
+  s_b517c605a7c83f::t_9ef1abcdddb71c 1-6
+packages/domain/src/task.test.ts
+  s_b517c605a7c83f::t_60dc154a98f524 7,1796-1939
+packages/domain/src/task.ts
+  s_b517c605a7c83f::t_5be9e116937c94 1,100-105
+packages/domain/src/vendor.ts
+  s_b517c605a7c83f::t_f2c499990b0877 1,4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "60389cef32338a988aa2cb2fc1919cee4dd26460",
+  "prompts": {},
+  "sessions": {
+    "s_b517c605a7c83f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adbd1c9c28bef0051",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

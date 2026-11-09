@@ -1,0 +1,16 @@
+scripts/gates/proof/r11-provenance.txt
+  h_f33e46a035b77c 7
+scripts/gates/proof/r11-red-green.txt
+  h_f33e46a035b77c 184-212
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "17376c0bf14aeb8b35d0ae35630f8a572a59a4d3",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+receipts/chore-gates.json
+  h_f33e46a035b77c 62,66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "14f1e9ce8b9f0d6865ea058d9f6b8b423a2c6ff3",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

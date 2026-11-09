@@ -1,0 +1,35 @@
+scripts/gates/mutation.ts
+  s_ae51a77ac1f48f::t_1b8656cdbdd804 118-124
+scripts/gates/proof/lint.txt
+  s_c26df142923f90::t_f8e40af6022d39 1
+scripts/gates/proof/mutation.txt
+  s_c26df142923f90::t_1c0be85deb4a30 1,4-11,13-17,19-20,25-31,34-41,43-62,64-70,73-76,79-81,84-90,95-108,110,112-116,118-119,124-130,133-140,142,145-162,164-169,172-175,178-180,183-189,194-200
+scripts/gates/proof/selftest.txt
+  s_c26df142923f90::t_3fb8074a8c9959 63,95,97,105-107,299,301,393,399,410
+scripts/gates/proof/test.txt
+  s_c26df142923f90::t_5e892bdec3c10f 9,15,21,27,33,39,45,51,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "faad0b1927cca5699b6be4042ac85a44a910b14c",
+  "prompts": {},
+  "sessions": {
+    "s_ae51a77ac1f48f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b5ef-a44e-7b73-9609-382f8d76b296",
+        "model": "ai-iisbo/[乾坤按量]gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_c26df142923f90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1fd7608a-120a-4bbb-92d3-ffa9b797b509",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

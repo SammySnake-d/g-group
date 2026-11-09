@@ -1,0 +1,35 @@
+packages/api-contract/package.json
+  s_7f422c52350e16::t_ea83d33ae3d8b7 1-7
+packages/api-contract/src/api.ts
+  s_7f422c52350e16::t_7493fa8dafeb14 1-212
+packages/api-contract/src/bridge.ts
+  s_7f422c52350e16::t_2c63b3c6e48d42 1-49
+packages/api-contract/src/contract.test.ts
+  s_7f422c52350e16::t_1c6cdb225d26bd 1-129
+packages/api-contract/src/entities.ts
+  s_7f422c52350e16::t_b9b0f1b42f8ced 1-274
+packages/api-contract/src/events.ts
+  s_7f422c52350e16::t_e874214b5907b9 1-34
+packages/api-contract/src/index.ts
+  s_7f422c52350e16::t_d6404911ca27a8 1-5
+packages/api-contract/src/schema.ts
+  s_7f422c52350e16::t_c0659ae3119d4a 1-215
+receipts/feat-api-contract.json
+  s_7f422c52350e16::t_52c56569de055a 1-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f4f0f15d008e3ffca5f839af6c59111dc70e01df",
+  "prompts": {},
+  "sessions": {
+    "s_7f422c52350e16": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18b4f4b0-3cf6-4d51-be92-ca20094b2ce3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

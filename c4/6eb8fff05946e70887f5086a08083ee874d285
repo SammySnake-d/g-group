@@ -1,0 +1,55 @@
+.github/workflows/self-check.yml
+  s_2ab1927e7a7069::t_c30c7a3163adba 13-14,21-22
+.github/workflows/trusted-gates.yml
+  s_2ab1927e7a7069::t_a453d61530da7f 36-37
+README.md
+  s_2ab1927e7a7069::t_8319fdcef93cff 19,34,36,47-52
+docs/RECEIPT.md
+  s_2ab1927e7a7069::t_7c45b35a44ed0d 26,28
+package-lock.json
+  s_2ab1927e7a7069::t_3243839d5f0f9a 8-10,249-263
+package.json
+  s_2ab1927e7a7069::t_229fdd7c491312 20-22
+receipts/chore-gates.json
+  s_2ab1927e7a7069::t_d37919501c8d33 66,68-69
+scripts/gates/gates.ts
+  s_2ab1927e7a7069::t_ba5bf801749d46 7,12-15,47,55,68-96,99-143,145,152-180,183,188-189,191-194,196,198,205,207-209,211-221,229,235-237,244-251,254,259-260,266,275-276,283-298,308-309,315,318,329-383,385,392-403,405,412,417,420-427,435-456,458,463-491
+scripts/gates/lib.ts
+  s_2ab1927e7a7069::t_56a4964a78ae29 46-47,70-137,146-149,189-190,196,202-203,205,209,211,214,217,220
+scripts/gates/mutation.ts
+  s_2ab1927e7a7069::t_6b5c59024908f7 8,17,25-27,30-48,55,62,71
+scripts/gates/policy.json
+  s_2ab1927e7a7069::t_dc4786b4d4e471 1
+scripts/gates/proof/lint.txt
+  s_2ab1927e7a7069::t_798d0579e4753a 1-2
+scripts/gates/proof/mutation.txt
+  s_2ab1927e7a7069::t_c410ea237e47ca 6,11-12,15-32
+scripts/gates/proof/selftest.txt
+  s_2ab1927e7a7069::t_1c9241a0017fe8 27,31,33-76,85
+scripts/gates/proof/typecheck.txt
+  s_2ab1927e7a7069::t_6190badf1b4a7c 1
+scripts/gates/run-all.ts
+  s_2ab1927e7a7069::t_5d0ff52eb0c52c 10,14,25-27,29-30,37-39
+scripts/gates/selftest.ts
+  s_2ab1927e7a7069::t_60f55ba7bee271 9,36-41,50,65,70-91,102,104-105,130-131,137-138,147-151,184-237,245-248
+scripts/gates/testlint.ts
+  s_2ab1927e7a7069::t_abce46d5b65a63 11-12,102-103,114-143,147-189,191-192,194-195,234-235
+scripts/merge.sh
+  s_2ab1927e7a7069::t_8f7658fd7eecfd 10-12,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c46eb8fff05946e70887f5086a08083ee874d285",
+  "prompts": {},
+  "sessions": {
+    "s_2ab1927e7a7069": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adc0efe61df1558bc",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

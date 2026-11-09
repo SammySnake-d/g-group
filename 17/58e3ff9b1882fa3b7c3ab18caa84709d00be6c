@@ -1,0 +1,19 @@
+receipts/feat-adapter-pi-contact.json
+  s_714fa08b922bb0::t_76540dae1ff1e1 22-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1758e3ff9b1882fa3b7c3ab18caa84709d00be6c",
+  "prompts": {},
+  "sessions": {
+    "s_714fa08b922bb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a7ed5acffda8b70b2",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

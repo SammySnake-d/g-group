@@ -1,0 +1,33 @@
+packages/server/proof/loss-baseline.txt
+  s_28bebc745289eb::t_32fed12b6f5250 1-40
+packages/server/proof/loss-eval.mjs
+  s_28bebc745289eb::t_f53aa1b7f477bc 1-184
+packages/server/proof/state-note-mutations.txt
+  s_28bebc745289eb::t_bbdc5cf9161978 1-35
+receipts/feat-g-state-note.json
+  s_568736c9a90f61::t_a5735c9836ebe9 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2dd29c9ffbdb2f34829695dc2504a3c5e2bb17e1",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_568736c9a90f61": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "945466dc-9318-4837-9afe-e1c1b3bb224f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

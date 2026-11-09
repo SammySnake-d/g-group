@@ -1,0 +1,23 @@
+packages/domain/proof/mutations.mjs
+  s_677b2cd67e9f04::t_d5342f834b0ff2 25,461-475
+packages/domain/proof/mutations.txt
+  s_677b2cd67e9f04::t_968608bbb26d60 1-2,21-440
+receipts/feat-contact-helper.json
+  s_677b2cd67e9f04::t_ea938c0b46d1ee 7,12,22,41,43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9c719fc31b756f10d85439f0eea9ea2d9281a57b",
+  "prompts": {},
+  "sessions": {
+    "s_677b2cd67e9f04": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1aff5-be5f-7ff1-a153-0a17c97be283",
+        "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

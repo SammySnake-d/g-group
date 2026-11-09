@@ -1,0 +1,31 @@
+packages/adapter-cc-compute/package.json
+  s_b56805cea91f5b::t_4db544bfc48546 5
+packages/adapter-cc-compute/src/resident-entry.ts
+  s_b56805cea91f5b::t_bb703ec140abf1 1-7
+packages/adapter-cc-compute/src/resident.test.ts
+  s_b56805cea91f5b::t_975a5790482599 1-420
+packages/adapter-cc-compute/src/resident.ts
+  s_b56805cea91f5b::t_e822088660e4fa 1-30
+packages/adapter-cc-compute/src/turn-model.ts
+  s_b56805cea91f5b::t_f9e6c9cd447240 1-25
+packages/adapter-cc-compute/src/types.ts
+  s_b56805cea91f5b::t_86a1dc9e967335 41-55,72-79,84-93,96-114,138-142
+packages/adapter-cc-compute/test-support/fake-claude-resident.mjs
+  s_b56805cea91f5b::t_c123ccb076a4b4 1-175
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6f3e9646cc84a6138df0956e29f612632b117988",
+  "prompts": {},
+  "sessions": {
+    "s_b56805cea91f5b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aac562a73e2c57e10",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

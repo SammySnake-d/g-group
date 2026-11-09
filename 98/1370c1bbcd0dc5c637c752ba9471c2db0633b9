@@ -1,0 +1,21 @@
+packages/adapter-cc-compute/proof/mutations.mjs
+  s_2950c8e8f91d67::t_fbd211fb6dce83 26,36-37,45,54,60-65
+packages/adapter-cc-compute/proof/mutations.txt
+  s_2950c8e8f91d67::t_24c4fd27316973 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "981370c1bbcd0dc5c637c752ba9471c2db0633b9",
+  "prompts": {},
+  "sessions": {
+    "s_2950c8e8f91d67": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a224e5bbe1fb8b394",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

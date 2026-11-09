@@ -1,0 +1,23 @@
+packages/domain/src/index.ts
+  s_40ddef7d1d7537::t_2695465c2fe3a2 9
+packages/domain/src/lease.ts
+  s_40ddef7d1d7537::t_206e86a57a07dd 9,50-56,58-72,74-83
+packages/domain/src/trace-replay.ts
+  s_40ddef7d1d7537::t_f7dfcc28b3f7f8 8-10,30-43,45-51,53-62,64-69,71-72,75,79-108,110-111,114,120-146,148-149,153,156-197
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "589ee65d2785aef6d2c795ed90383973d2d42ef1",
+  "prompts": {},
+  "sessions": {
+    "s_40ddef7d1d7537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

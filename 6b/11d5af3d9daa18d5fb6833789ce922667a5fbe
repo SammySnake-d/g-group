@@ -1,0 +1,21 @@
+receipts/feat-g-state-note.json
+  s_377be331e17ebd::t_0ec5fc03694e3b 21-23
+packages/server/proof/state-note-mutations.txt
+  s_377be331e17ebd::t_511a0990b771ba 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6b11d5af3d9daa18d5fb6833789ce922667a5fbe",
+  "prompts": {},
+  "sessions": {
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

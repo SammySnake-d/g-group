@@ -1,0 +1,19 @@
+receipts/feat-kernel-plugins.json
+  s_9f1ed16ea82bf1::t_239e43aa48f484 2,22,62,64,67,69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4cbc0a07aac27e9d2ea93a8807a337bb1b6a1528",
+  "prompts": {},
+  "sessions": {
+    "s_9f1ed16ea82bf1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2bba5a07-840f-466f-a9fc-9931f0ec0e6e",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
