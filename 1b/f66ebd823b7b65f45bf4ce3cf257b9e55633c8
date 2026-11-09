@@ -1,0 +1,14 @@
+scripts/gates/mutation.ts
+  h_f33e46a035b77c 140,152,241-374
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1bf66ebd823b7b65f45bf4ce3cf257b9e55633c8",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

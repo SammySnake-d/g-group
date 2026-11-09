@@ -1,0 +1,23 @@
+packages/adapter-pi-contact/src/tools.ts
+  s_12ccf69de2a7ec::t_9fbd830517a103 1,15,20,80-88,103,151-154,176
+packages/server/src/assemble.ts
+  s_12ccf69de2a7ec::t_55e5fd8026238c 90,100
+packages/server/src/host.ts
+  s_12ccf69de2a7ec::t_48fb9ba0c22d18 87-88,391-393,754-758,760,763-786,1159,1161-1162,1168,1170,1176-1186,1389-1402,1405,1410,1413-1433,1438-1443,1479-1484
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9eb838ca05d53dabc0ea490febb8628d6b4e8bfe",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
