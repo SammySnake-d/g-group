@@ -56,6 +56,8 @@ export function scriptedCompute(
     resumeScript?: (computeId: string, turn: TurnModel | undefined) => Omit<ComputeEvent, "computeId">[];
     /** 续接后吐的事件,能看到续接带进来的文字(AC-44 回答、审查打回意见)。 */
     onResume?: (computeId: string, text: string) => Omit<ComputeEvent, "computeId">[];
+    /** computeId 前缀(默认 cp);同一测试里用两个替身(执行与审查)时避免撞号。 */
+    idPrefix?: string;
     /** false:扮演不声明按轮换模型能力的旧适配器(没有 capabilities)。 */
     modelAware?: boolean;
   } = {},
@@ -85,7 +87,7 @@ export function scriptedCompute(
     capabilities: { inSessionModelSwitch: true },
     async spawn(brief: unknown, o?: { cwd?: string; model?: string; effort?: string }): Promise<SpawnResult> {
       if (opts.failSpawn) return { ok: false, reason: opts.failSpawn };
-      const computeId = `cp-${++n}`;
+      const computeId = `${opts.idPrefix ?? "cp"}-${++n}`;
       spawned.push({ computeId, brief, cwd: o?.cwd, model: o?.model, effort: o?.effort });
       const evs = script(computeId, brief).map((e) => ({ ...e, computeId }) as ComputeEvent);
       inflight++;

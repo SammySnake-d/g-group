@@ -35,6 +35,7 @@ import {
   type TaskEvent,
   type TaskModelRecord,
   applyLedger,
+  vendorOf,
   apply as applyTask,
   emptyLedger,
   emptyModelRecord,
@@ -81,6 +82,7 @@ import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { PluginStore } from "./plugins.ts";
+import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief } from "./review.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
 import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, unindexTx } from "./search.ts";
@@ -167,6 +169,21 @@ interface MsgMeta {
   card_id: string | null;
   client_action_id: string | null;
 }
+interface ReviewRow {
+  compute_id: string;
+  task_id: string;
+  reviewer_id: string;
+  owner_id: string;
+  room_id: string;
+  model: string;
+  round: number;
+  commit_ref: string;
+  constraint_ver: number;
+  status: string;
+  notes: string;
+  started_at: string;
+  ended_at: string | null;
+}
 interface RoomRow {
   id: string;
   kind: "dm" | "group";
@@ -242,6 +259,8 @@ export class Host {
   private closed = false;
   /** 事务里改了状态、提交后要推 message.updated 的卡片(提问卡过期等)。 */
   private cardUpdates: { roomId: string; seq: number }[] = [];
+  /** 事务里标为 stopped、提交后要真正停掉的审查 Compute(任务离开这一轮审查时)。 */
+  private reviewStops: { taskId: string; computeId: string }[] = [];
 
   constructor(opts: HostOptions) {
     this.opts = opts;
@@ -317,6 +336,7 @@ export class Host {
     });
     // 启动时派生镜像按权威版本修复(中断的导出、迟到的旧内容覆盖)
     this.docs.repairMirrors();
+    this.recoverReviews();
     // 启动时先处理宿主关着期间到期的定时(按容差与 missedPolicy),再按最早一次设计时器
     this.scheduler.tick();
   }
@@ -1281,6 +1301,7 @@ export class Host {
     const doc: TaskDoc = { ...cur.value, ...extra, task: out.task, updatedAt: this.now() };
     putDoc(this.db, `task:${id}`, cur.ver, doc);
     this.expireQuestionsTx(id, out.task);
+    this.retireReviewsTx(id, out.task);
     return { doc, effects: out.effects };
   }
   /**
@@ -1298,6 +1319,14 @@ export class Host {
     for (const c of stale) {
       run(this.db, "UPDATE gg_cards SET state = 'expired', body = body || ? WHERE card_id = ? AND state = 'open'", EXPIRED_NOTE, c.card_id);
       this.cardUpdates.push({ roomId: c.room_id, seq: c.seq });
+    }
+  }
+  /** 任务不再停在某一轮审查上(取消、改条件返工、换了新一轮):那一轮还在跑的审查标 stopped,提交后停掉它的 Compute。 */
+  private retireReviewsTx(taskId: string, t: Task) {
+    const live = t.state === "T5_InReview" ? t.reviewRound : -1;
+    for (const r of all<{ compute_id: string }>(this.db, "SELECT compute_id FROM gg_reviews WHERE task_id = ? AND status = 'running' AND round != ?", taskId, live)) {
+      run(this.db, "UPDATE gg_reviews SET status = 'stopped', ended_at = ? WHERE compute_id = ? AND status = 'running'", this.now(), r.compute_id);
+      this.reviewStops.push({ taskId, computeId: r.compute_id });
     }
   }
   private flushCardUpdates() {
@@ -1354,6 +1383,16 @@ export class Host {
       constraintVersion: t.constraintVer,
       pendingQuestion: t.pendingQ ? { qId: t.pendingQ.qId, text: this.questionText(t.id, t.pendingQ.qId) } : null,
       reviewGate: t.reviewGate,
+      reviews: all<ReviewRow>(this.db, "SELECT * FROM gg_reviews WHERE task_id = ? ORDER BY started_at, rowid", t.id).map((r) => ({
+        round: r.round,
+        reviewerContactId: r.reviewer_id,
+        model: r.model,
+        vendor: vendorOf(r.model),
+        status: r.status as NonNullable<TaskView["reviews"]>[number]["status"],
+        notes: r.notes.slice(0, 20000),
+        startedAt: r.started_at,
+        endedAt: r.ended_at,
+      })),
       computeRuns: runs.map((r) => ({
         computeId: r.compute_id,
         harness: r.harness as "claude-code",
@@ -1394,6 +1433,11 @@ export class Host {
   }
   private emitTask(id: string) {
     this.flushCardUpdates();
+    if (this.reviewStops.length) {
+      const stops = this.reviewStops;
+      this.reviewStops = [];
+      void this.runEffects(stops.map((s) => ({ kind: "stop" as const, ...s })));
+    }
     this.bus.emit({ type: "task.updated", task: this.taskViewById(id) });
     const doc = this.taskDoc(id).value;
     // 任务每次变化后看负责人是否在这个群移出中:停止确认到了(T10/T11)才真正移出
@@ -1900,9 +1944,13 @@ export class Host {
               quotedSeqs: [t.sourceSeq],
               mentions: [{ id: t.task.requester, source: "auto" }],
             });
-            this.stepTaskTx(a.taskId, { kind: "SubmitForReview", commit, computeId: t.task.computeId, constraintVer: t.task.constraintVer }, { result: a.text, deliveredSeq: r.seq });
+            const { effects: sub } = this.stepTaskTx(a.taskId, { kind: "SubmitForReview", commit, computeId: t.task.computeId, constraintVer: t.task.constraintVer }, { result: a.text, deliveredSeq: r.seq });
             appended.push({ roomId: t.roomId, seq: r.seq });
             touchedTasks.add(a.taskId);
+            // 审查门(AC-26):有跨厂商审查联系人就交给它审,审过才进 T8a 待确认;没有合格审查人,任务停在 T5 等提出者本人回复(豁免,记 waived-by-user)
+            const req = sub.find((x): x is Extract<typeof x, { kind: "request-review" }> => x.kind === "request-review");
+            const reviewer = req ? this.reviewerFor(this.taskDoc(a.taskId).value.task, t.roomId) : null;
+            if (req && reviewer) effects.push({ kind: "review", taskId: a.taskId, roomId: t.roomId, ownerId: contactId, reviewerId: reviewer.contactId, model: reviewer.model, round: req.round, commit: req.commit, constraintVer: req.constraintVer, brief: reviewBrief({ title: t.title, requirement: t.brief, delivery: a.text }) });
             break;
           }
           case "verdict": {
@@ -1998,6 +2046,8 @@ export class Host {
     }
   }
   private onComputeEvent(ev: ComputeEvent) {
+    const rv = one<ReviewRow>(this.db, "SELECT * FROM gg_reviews WHERE compute_id = ?", ev.computeId);
+    if (rv) return this.onReviewEvent(rv, ev);
     const row = one<{ task_id: string; contact_id: string; room_id: string; harness: string }>(this.db, "SELECT task_id, contact_id, room_id, harness FROM gg_compute WHERE compute_id = ?", ev.computeId);
     if (!row) return;
     const at = this.now();
@@ -2122,6 +2172,7 @@ export class Host {
     for (const e of effects) {
       try {
         if (e.kind === "spawn") await this.spawn(e);
+        else if (e.kind === "review") await this.spawnReview(e);
         else if (e.kind === "resume") await this.computeTurn(e);
         else if (e.kind === "stop") {
           const a = this.adapterForCompute(e.computeId);
@@ -2133,7 +2184,8 @@ export class Host {
     }
   }
   private adapterForCompute(computeId: string): ComputeAdapter | null {
-    const row = one<{ harness: string; model: string }>(this.db, "SELECT harness, model FROM gg_compute WHERE compute_id = ?", computeId);
+    // 审查 Compute 记在 gg_reviews,跑在 Claude Code 上
+    const row = one<{ harness: string; model: string }>(this.db, "SELECT harness, model FROM gg_compute WHERE compute_id = ? UNION ALL SELECT 'claude-code' AS harness, model FROM gg_reviews WHERE compute_id = ?", computeId, computeId);
     return row ? this.adapterFor(row.harness, row.model) : null;
   }
   /** 账本追加一条,并让任务状态机的生产模型集合同步(跨厂商审查门禁按它判);在事务里调。 */
@@ -2247,6 +2299,137 @@ export class Host {
     this.emitTask(e.taskId);
     // 启动途中任务已被取消(如私聊 rewind):实例一上线就停,等它回报 stopped 再落 T10,不让它带着作废的请求跑下去
     for (const id of late) await adapter.stop(id);
+  }
+
+  // ======================= 跨厂商审查(AC-26) =======================
+  /** 本任务的合格审查人:除作者外的联系人,按它的 Compute 模型判厂商;同会话成员优先(review.ts pickReviewer)。 */
+  private reviewerFor(t: Task, roomId: string): { contactId: string; model: string } | null {
+    const cands = listDocs<ContactDoc & { removed?: boolean }>(this.db, "contact:")
+      .filter((d) => !d.value.removed)
+      .map((d) => ({ contactId: d.value.id, model: this.computeModelOf(d.value), inRoom: this.isMember(roomId, { kind: "contact", id: d.value.id }) }));
+    return pickReviewer(cands, t.producerModels, t.owner);
+  }
+  /** 起审查 Compute:审查人的 Compute 模型、只读工具、同一个任务工作目录。起不来就交给提出者豁免。 */
+  private async spawnReview(e: Extract<HostEffect, { kind: "review" }>) {
+    const adapter = this.adapterFor("claude-code", e.model);
+    if (!adapter) return this.reviewFallback(e.taskId, e.round, "宿主没有配置 Compute 适配器");
+    const cwd = this.opts.computeCwd?.(e.taskId);
+    // 按 Harness 复用的适配器(AC-51)要在 spawn 时带上审查人的模型,否则会落到执行者的模型上
+    const r = await adapter.spawn({ task: e.brief, rules: [], tools: [...REVIEW_TOOLS], credentialRefs: [], placement: "local" }, { ...(cwd ? { cwd } : {}), ...(isModelAware(adapter) ? { model: e.model } : {}) });
+    if (!r.ok) return this.reviewFallback(e.taskId, e.round, `审查 Compute 没起来:${r.reason}`);
+    const t = this.taskDoc(e.taskId).value.task;
+    const live = t.state === "T5_InReview" && t.reviewRound === e.round;
+    run(
+      this.db,
+      "INSERT INTO gg_reviews (compute_id, task_id, reviewer_id, owner_id, room_id, model, round, commit_ref, constraint_ver, status, started_at, ended_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      r.computeId, e.taskId, e.reviewerId, e.ownerId, e.roomId, e.model, e.round, e.commit, e.constraintVer, live ? "running" : "stopped", this.now(), live ? null : this.now(),
+    );
+    // 起的过程中任务已经离开这一轮审查(取消、返工):立刻停掉
+    if (!live) await adapter.stop(r.computeId);
+    this.emitTask(e.taskId);
+  }
+  /** 审查 Compute 的事件:完成 → 读结论推进 T5;失败/受阻/结论认不出 → 记没做成,交给提出者豁免;任务已离开这一轮 → 忽略。 */
+  private onReviewEvent(rv: ReviewRow, ev: ComputeEvent) {
+    if (rv.status !== "running" || ev.kind === "started" || ev.kind === "milestone") return;
+    const doc = this.taskDoc(rv.task_id).value;
+    const t = doc.task;
+    const current = t.state === "T5_InReview" && t.reviewRound === rv.round && t.reviewedCommit === rv.commit_ref && t.constraintVer === rv.constraint_ver;
+    const end = (status: string, notes: string) => run(this.db, "UPDATE gg_reviews SET status = ?, notes = ?, ended_at = ? WHERE compute_id = ? AND status = 'running'", status, notes, this.now(), rv.compute_id);
+    if (!current) {
+      end("stopped", "任务已离开这一轮审查");
+      this.emitTask(rv.task_id);
+      return;
+    }
+    if (ev.kind !== "completed") {
+      const why = ev.kind === "failed" ? `审查 Compute 失败:${ev.reason}` : ev.kind === "blocked" ? `审查 Compute 受阻:${ev.needs}` : "审查 Compute 被停止";
+      end(ev.kind === "stopped" ? "stopped" : "failed", why);
+      if (ev.kind === "blocked") void this.runEffects([{ kind: "stop", taskId: rv.task_id, computeId: rv.compute_id }]);
+      this.reviewFallback(rv.task_id, rv.round, why);
+      return;
+    }
+    const v = parseVerdict(ev.result);
+    if (!v) {
+      const why = `审查结论认不出(第一行应是 APPROVE 或 REJECT):${ev.result.slice(0, 200)}`;
+      end("failed", why);
+      this.reviewFallback(rv.task_id, rv.round, why);
+      return;
+    }
+    const reviewer = getDoc<ContactDoc>(this.db, `contact:${rv.reviewer_id}`)?.value;
+    const who = `${reviewer?.name ?? rv.reviewer_id}(${rv.model},${vendorOf(rv.model)})`;
+    const effects: HostEffect[] = [];
+    let posted: { roomId: string; seq: number } | null = null;
+    tx(this.db, () => {
+      // 先记结论,再推进状态机(否则离开 T5 时这条审查会被当成过期的停掉)
+      end(v.verdict === "approve" ? "approved" : "rejected", v.notes);
+      const base = { kind: "Review" as const, reviewerId: rv.reviewer_id, reviewerModel: rv.model, round: rv.round, commit: rv.commit_ref, constraintVer: rv.constraint_ver };
+      if (v.verdict === "approve") {
+        const { effects: eff } = this.stepTaskTx(rv.task_id, { ...base, verdict: "approve" });
+        const send = eff.find((x): x is Extract<typeof x, { kind: "send-card" }> => x.kind === "send-card");
+        if (!send) return;
+        // 审过后由负责联系人发一条普通消息 @提出者(AC-28 / AC-56,不挂验收卡);发出即 T8a 待确认,沉默不通过,提出者用普通回复通过或提修改
+        const r = this.appendMessageTx(doc.roomId, { kind: "contact", id: rv.owner_id }, {
+          text: `@${this.nameOf({ kind: "user", id: t.requester })} 「${doc.title}」已由 ${who} 跨厂商审查通过${v.notes ? `:${v.notes}` : ""}。确认没问题就回复通过,要改哪里直接说。`,
+          actionKey: `review-ok:${rv.task_id}:${rv.round}`,
+          replyToSeq: doc.deliveredSeq ?? doc.sourceSeq,
+          quotedSeqs: [doc.deliveredSeq ?? doc.sourceSeq],
+          mentions: [{ id: t.requester, source: "auto" }],
+        });
+        posted = { roomId: doc.roomId, seq: r.seq };
+        this.stepTaskTx(rv.task_id, { kind: "DeliveredCard", taskId: rv.task_id, deliveryRound: send.deliveryRound, commit: send.commit });
+        return;
+      }
+      // 打回(AC-26 / #820):可恢复就续接原 Compute 带审查意见改,不可恢复带交接新开;负责联系人收到一条进度,自己决定怎么跟用户说
+      const { effects: eff } = this.stepTaskTx(rv.task_id, { ...base, verdict: "reject", computeResumable: this.computeResumable(t.computeId) });
+      const text = `跨厂商审查人 ${who} 打回了这次交付:${v.notes || "(没写理由)"}\n请按意见修改,改完重新报 completed。`;
+      for (const x of eff) {
+        if (x.kind === "resume-compute") {
+          // 恢复原实例:旧结果作废,等它这次的完成事件才能再交付
+          run(this.db, "UPDATE gg_compute SET status = 'running', result = NULL, ended_at = NULL WHERE compute_id = ?", x.computeId);
+          effects.push({ kind: "resume", taskId: rv.task_id, computeId: x.computeId, text });
+        }
+        if (x.kind === "spawn-compute") effects.push({ kind: "spawn", taskId: rv.task_id, requestId: x.requestId, contactId: rv.owner_id, model: this.computeModelOf(this.contactDoc(rv.owner_id).value), brief: `${doc.brief}\n\n${text}`, roomId: doc.roomId });
+      }
+      const payload: Inbound = { kind: "compute", roomId: doc.roomId, taskId: rv.task_id, computeId: t.computeId ?? "-", signal: "milestone", summary: `跨厂商审查(${who})打回:${v.notes || "(没写理由)"};已把意见转给 Compute 继续改`, at: this.now() };
+      run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", rv.owner_id, doc.roomId, JSON.stringify(payload), this.now());
+    });
+    const p = posted as { roomId: string; seq: number } | null;
+    if (p) {
+      this.markRead(p.roomId, { kind: "contact", id: rv.owner_id }, p.seq);
+      this.afterAppend(p.roomId, p.seq, { kind: "contact", id: rv.owner_id });
+    } else if (v.verdict === "reject") this.loop.notify(rv.owner_id, "now");
+    this.emitTask(rv.task_id);
+    void this.runEffects(effects);
+  }
+  /** 审查没做成:任务还停在这一轮审查上,就由负责联系人发一条普通消息 @提出者说明;提出者回复通过即本人豁免(waived-by-user,不当合规),也可以说要改的地方。 */
+  private reviewFallback(taskId: string, round: number, reason: string) {
+    const doc = this.taskDoc(taskId).value;
+    const t = doc.task;
+    if (t.state !== "T5_InReview" || t.reviewRound !== round || !t.owner) {
+      this.emitTask(taskId);
+      return;
+    }
+    const owner = t.owner;
+    const r = tx(this.db, () =>
+      this.appendMessageTx(doc.roomId, { kind: "contact", id: owner }, {
+        text: `@${this.nameOf({ kind: "user", id: t.requester })} 「${doc.title}」的跨厂商审查没做成:${reason.slice(0, 2000)}。你可以直接回复通过(记为你本人豁免审查,不算合规审查),或说要改的地方。`,
+        actionKey: `review-fallback:${taskId}:${round}`,
+        replyToSeq: doc.deliveredSeq ?? doc.sourceSeq,
+        quotedSeqs: [doc.deliveredSeq ?? doc.sourceSeq],
+        mentions: [{ id: t.requester, source: "auto" }],
+      }),
+    );
+    if (!r.duplicate) {
+      this.markRead(doc.roomId, { kind: "contact", id: owner }, r.seq);
+      this.afterAppend(doc.roomId, r.seq, { kind: "contact", id: owner });
+    }
+    this.emitTask(taskId);
+  }
+  /** 宿主重启:上次还在跑的审查 Compute 已经不在了,记 interrupted,任务还停在那一轮审查上就交给提出者豁免,不让它卡在 T5。 */
+  private recoverReviews() {
+    for (const r of all<ReviewRow>(this.db, "SELECT * FROM gg_reviews WHERE status = 'running'")) {
+      run(this.db, "UPDATE gg_reviews SET status = 'interrupted', notes = ?, ended_at = ? WHERE compute_id = ?", "宿主重启时审查 Compute 已不在", this.now(), r.compute_id);
+      this.reviewFallback(r.task_id, r.round, "宿主重启时审查 Compute 已不在");
+    }
   }
 
   // ======================= 卡片与验收 =======================
@@ -2395,7 +2578,7 @@ export class Host {
     this.scheduler.stop();
     await this.loop.stop();
     for (const a of this.adapters.values()) {
-      for (const r of all<{ compute_id: string }>(this.db, "SELECT compute_id FROM gg_compute WHERE status IN ('starting','running')")) {
+      for (const r of all<{ compute_id: string }>(this.db, "SELECT compute_id FROM gg_compute WHERE status IN ('starting','running') UNION ALL SELECT compute_id FROM gg_reviews WHERE status = 'running'")) {
         try {
           await a.stop(r.compute_id);
         } catch {
@@ -2475,6 +2658,7 @@ export type ModelChangeInput =
 
 type HostEffect =
   | { kind: "spawn"; taskId: string; requestId: string; contactId: string; model: string; brief: string; roomId: string }
+  | { kind: "review"; taskId: string; roomId: string; ownerId: string; reviewerId: string; model: string; round: number; commit: string; constraintVer: number; brief: string }
   | { kind: "resume"; taskId: string; computeId: string; text: string }
   | { kind: "stop"; taskId: string; computeId: string };
 
