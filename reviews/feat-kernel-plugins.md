@@ -1614,3 +1614,72 @@ NODE
 在 box2 按指定命令真实执行 `node scripts/gates/run-all.ts --local --branch=feat/kernel-plugins --base=origin/feat/domain-core`，退出 1，原样输出 `evidence/local-gates.log`：G-TRACE、G-WORKFLOW、G-LAYER 通过；G-REVIEW 因原收据仍是旧轮 reject 且 hash 不同而失败；G-PROVENANCE 因云端无 Mirasim 会话目录失败；G-RED、G-STUB、G-TAUTO 报「没有可用沙箱」并停止各自校验。云端 `docker info` 报 Docker socket `permission denied`，属**被拦**，未尝试绕开或反复重试；作者所称 Docker 内 `assemble.test.ts` 工作区链接缺失无法独立核实，不采信为事实。
 
 每门用独立真实 Git 中性夹具喂入应失败输入：G-TRACE 错误验收 ID、G-REVIEW reject、G-RED 源码变更无测试、G-TAUTO 源码导入 node:test、G-WORKFLOW 写权限、G-LAYER 跨包相对路径、G-PROVENANCE 不存在的假会话，七门均显示对应理由并退出 1；G-STUB 的无效测试夹具因缺沙箱只得到门禁自身出错，**不能算负例已验证**。逐项原样输出见 `evidence/negative-G-*.log`。夹具使用假 HOME，未造写真实会话记录。审查结论依据 R14-01 和 R14-02 的实际复现，而不是这些环境错误。
+
+
+---
+
+# 第十五轮：Codex 独立复审
+
+**结论：REJECT。** 拒收窗口的同步临时改写可以逃过现有测试；本轮新增的观察器自检含自比较断言；Docker 沙箱无法解析工作区包，G-RED 无法对装配测试完成具名红绿验证；挂载的依赖目录也未实施只读；G-STUB 还会漏报部分测试文件加载失败。以下结果来自本会话独立克隆与 box2 实测；不把测试故障注入误称为原产品实际发生故障。
+
+- 审查对象：`4cbc0a07aac27e9d2ea93a8807a337bb1b6a1528`，base `origin/feat/domain-core`（`afd02560f9546147da380382404eb6106222a9b8`）；合同来自 `origin/docs/dev-handbook` 的 `a6ac7802b0716b74d3aba29f9fb1e9a89901ff30`，只采用需求 §8.1 已定项和验收第 9 节。被拒收失败 Promise 的宿主存活交插件隔离；预改内置原型不在输入合同内，均未作为拒审理由。
+- 本会话 `codex:8996dcdc-9e97-48ab-8665-cc5b06ad1f96`，原生会话 `turn_context` 实际模型 `gpt-6.1-terra`；实际执行 `node scripts/gates/run-all.ts --hash --branch=feat/kernel-plugins --base=origin/feat/domain-core` 输出 `006d2eb8ed42c7952e9423198471c49c079e241e9064247bad4ac2d7feff104f`。作者会话的实际仓库操作模型包含 Claude 与 DeepSeek；审查模型为 OpenAI，厂商不同。
+- 证据目录：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr6-r15-codex/`。所有注入在独立副本中，未改产品源码。
+
+## 必须返修
+
+### R15-01 [P2 / R-05] 调用窗口的同步临时改写可逃过观察器和全套测试
+
+位置：`packages/kernel/src/plugins.test.ts:1853-1869,1883-1921`；待保护的拒收分支 `packages/kernel/src/plugins.ts:47-57`。`windowWatch` 仅在 `async_hooks` 的 `init`、`before`、`after`、`promiseResolve` 与结束时读取快照，两个事件之间的同步写入不会触发观察。观察器自检在临时写和恢复之间额外创建 Promise，因而只能证明有异步事件时能看见，不证明无事件的同步窗口。
+
+在 box2、Node 22.23.4 的独立内核副本分别注入单点故障：① 拒收带自有 `then`/`constructor` 的可扩展 Promise 时同步添加中性自有属性并立即删除，不创建异步资源；② 在同一分支同步给 `Promise.prototype` 加同一属性再删。两种故障下完整内核测试均 **220 绿 / 0 红 / 0 skip / 0 todo**，原样副本也是 220 绿。两种修改均发生在内核拒收过程中，不是预先改写内置原型的环境反例。独立的观察器对照在 Node 22.23.4 和 25.9.0 均显示：无异步事件时 `changed=[]`，插入 Promise 事件时有 `init`/`promiseResolve` 变化记录。复现脚本 `own-faults.mjs`、`observer-control.mjs`；六份原始 TAP 日志在 `extracted/own-faults/`，归档 `own-faults-evidence.tar.gz` SHA-256 `ea1550de7ab2a844db7a72d6f5035ca39e6f6c8f51923922a1a4e22967982094`。
+
+返修：用能判定同步临时写入的独立观察/埋雷方法覆盖插件对象及内置对象，正反对照分别覆盖无异步事件和有事件的窗口，并把两类故障纳入具名变异校准。不能只增加调用前后快照，也不能把“期间创建异步资源”当作所有同步改写的必备条件。
+
+### R15-02 [P2 / R-04] 观察器自检存在自比较断言，G-TAUTO 静态检查报错
+
+位置：`packages/kernel/src/plugins.test.ts:1893`。`assert.deepEqual(ownSnap(probe), ownSnap(probe), "返回后看不出")` 两侧是同一对象的同一时点快照，没有保存写入前快照，不能证明恢复前后相同。box2 上对该实际测试文件运行本版 `lintTestFile`，返回 1 条错误，明确指出这条自比较断言（`extracted/log/local-gates.log`）；完整 `--local` 门禁结果另据实际运行记录。
+
+返修：在临时写入之前保存独立基线，恢复后与基线比较，同时保留窗口观察和真实被测行为断言；重跑 G-TAUTO、红绿及变异，不通过删除或弱化有效断言换绿。
+
+### R15-03 [P2] Docker 沙箱的工作区依赖链接指向未挂载的宿主目录，装配测试未执行
+
+位置：`scripts/gates/lib.ts:107-114,123-149` 的 `sandboxed`、`freshCopy`、`nmMount` 和 `runNodeTests`。临时副本中的 `node_modules` 指向宿主原仓库的 `node_modules`；其 `@g-group/domain -> ../../packages/domain` 链接会解析到原仓库的 `packages/domain`，但容器只挂载临时副本与 `node_modules`，没有该宿主目录。该隔离逻辑是本 PR 相对 base 的新增代码。
+
+在 box2 使用临时进程组权限、无网络 Docker 和假 HOME，调用该版 `runNodeTests` 实跑 `packages/kernel/src/assemble.test.ts`：`exitOk=false`，0 条具名通过、1 个文件级失败，原始错误为 `ERR_MODULE_NOT_FOUND: Cannot find package '@g-group/domain'`；宿主链接及解析出的目标路径已独立核对（`extracted/log/assemble-sandbox.log`）。同一设置下完整 `--local` 的 G-RED 报装配测试未按名通过/失败，G-TAUTO 报静态测试未在运行时执行；G-STUB 虽显示绿，不能据此称该文件已运行。两版宿主上的 243 条测试通过不替代沙箱内证据。
+
+返修：在不扩大宿主文件访问或关闭隔离的前提下，使工作区包依赖在临时副本/容器中解析到相应副本；补一个真正跨 workspace 包导入的沙箱夹具，并在红提交和绿提交分别验证具名测试确实执行及按名红绿，重新运行 G-RED、G-STUB、G-TAUTO。不得用跳过测试或改弱门禁换绿。
+
+### R15-04 [P1] Docker 沙箱把宿主依赖目录以可写方式挂载，测试可改动后续门禁依赖
+
+位置：`scripts/gates/lib.ts:111-114,121-135,141-149`。`freshCopy` 把临时副本的 `node_modules` 指向原目录，注释称只读；但 Docker 的 `-v` 挂载没有只读选项。容器以调用者 UID/GID 运行时，对该 UID 可写的依赖文件仍然可写，不限于本次临时副本。它可能改变后续门禁读取的依赖，也可能持久改变该任务的原依赖目录；本项不声称可读宿主凭据、联网或改写未挂载路径。
+
+独立实测只用任务目录内的假 HOME、假 `node_modules` 和内容 `NEUTRAL_FIXTURE_NO_CREDENTIALS` 的中性标记；经本版 `sandboxed()` 使用无网络 Docker、原样挂载参数运行：容器写临时工作目录的正对照成功，同时写入副本外假依赖目录也成功，容器退出 0，宿主随后读到新增的中性标记；检查脚本因此退出 1。没有访问真实账户文件或改真实依赖（`sandbox-readonly-neutral.mjs`、`sandbox-readonly-neutral.log`）。
+
+返修：使被检查测试只能改自己的临时副本，将共享依赖设为内核强制只读或使用真正隔离的依赖副本；在保证 R15-03 的 workspace 解析可用时保留网络和敏感目录隔离。补相同环境下的工作目录写入正对照和外部假依赖写入应失败负例，确保真实 Docker 门禁按结果判定。
+
+### R15-05 [P2 / R-03] G-STUB 忽略部分基线文件加载失败，可给出虚假的通过
+
+位置：`scripts/gates/gates.ts:388-403`。G-STUB 只在全部文件合计 `baseline.passed.length === 0` 时拒绝，否则仅以通过的具名测试建立基线，未检查 `baseline.exitOk`、`baseline.failed` 或每个文件是否实际执行；后续空桩与返回值变异因此根本不核对基线加载失败的文件。
+
+独立真实 Docker 夹具包含一条可运行并调用被测函数的具名测试和另一份导入不存在的中性模块的测试文件：基线返回 `exitOk=false`，前者具名通过，后者为 `<文件级失败>`；本版 `G-STUB.run` 实际返回 `problems=[]`，检查脚本为指出漏检退出 1（`stub-partial-load.mjs`、`stub-partial-load.log`）。这与常规的“不调用实现”负例被成功拦下并不矛盾：两者分别验证部分加载失败和空桩仍绿。完整本轮门禁中的装配测试也出现文件级依赖加载失败，因此不能把该轮 G-STUB 的绿当作所有文件已被校准。
+
+返修：任一基线文件加载失败、退出异常、应执行测试缺失或 skip/todo 时显式拒绝，按文件及测试名核对基线、空桩和错值变异的执行计数；补上述两文件负例和全文件正常的正对照，不以其他文件的绿掩盖失败。
+
+## 复验记录
+
+- GitHub `self-check` run `42539374095` 的 head SHA 为 `4cbc0a07aac27e9d2ea93a8807a337bb1b6a1528`，状态 `completed/success`（`github-self-check.json`）；它不替代本轮对真实 PR 的完整门禁结果。
+- typecheck、lint 均退出 0。box2 的 Node 22.23.4 / 25.9.0 各自 `npm test`：243/243 通过，0 fail/cancelled/skipped/todo。
+- 红提交 `915fd028d48cd58c14f1e0cc7675406c4a6b5cfb` 上插件测试 98 条全部按名失败，包括本轮新增 5 条及 R7-01、R8-05 的调整后断言，0 skip/todo。
+- R14-01：同步普通数组按已定合同改成拒收；R8-05 的不可枚举下标/普通数组批次都包入原生 Promise，原正反断言仍在。R14-03 的上限与上限加一双侧测试已并入上述红绿运行。R14-02 的不可枚举数据属性和非整数数字双侧测试已并入上述红绿运行。两版上 K242 被同步数组拒收对照发现；K243 被拒收窗口观察测试发现；K244 被不可枚举数据属性双侧测试发现；K245 被非整数追踪数字双侧测试发现；K246 和 K247 均被超时上限双侧测试发现。这里的 K243 包含异步事件，因此不覆盖 R15-01 的无事件反例。
+- 另造五个单点故障：同步临时改写插件 Promise 与宿主 Promise 原型各 220 绿；源标识改成大小写不敏感被具名测试发现（219 绿 / 1 红）；挂载点改成大小写不敏感 220 绿；载荷指纹改成大小写不敏感被具名测试发现（219 绿 / 1 红）。挂载点大小写目前仅记录为测试边界，不把未明确的大小写规则当作已定合同。
+
+- box2 实际 `--local --branch=feat/kernel-plugins --base=origin/feat/domain-core` 已退出 1：G-TRACE、G-STUB、G-WORKFLOW、G-LAYER 显示通过；G-REVIEW 因本轮 reject 按预期失败；G-PROVENANCE 因云端无 Mirasim 会话根目录失败；G-RED 失败并列出 136 项问题，G-TAUTO 失败并列出 69 项问题。G-TAUTO 的第一项是 R15-02 的自比较，另有 `assemble.test.ts` 静态识别的具名测试没有运行时记录。G-STUB 的通过不证明该文件执行过；已用该版 runNodeTests 在 Docker 沙箱内独立定位为 R15-03 的工作区依赖模块未找到。完整原始日志为 `extracted/log/local-gates.log`。
+- 上述门禁使用 Docker 和临时进程组权限、假 HOME；没有把 G-PROVENANCE 或 G-RED 的失败说成通过。当前会话的本机原始记录已落盘，含一次输出恰等于 reviewed_hash 的 `run-all.ts --hash` 调用；这不等于云端的 G-PROVENANCE 已通过。
+
+- 独立门禁负例：G-TRACE 验收 ID 不存在、G-REVIEW 写审同人、G-PROVENANCE 假会话不存在、G-RED 缺红提交、G-TAUTO 恒真断言、G-WORKFLOW 禁止事件、G-LAYER 逆向依赖，7/7 均按对应理由失败；输出 `extracted/log/gate-negative7.log`。G-STUB 的“不调用实现、空桩下仍通过”负例也已在 Docker 沙箱按目标理由失败，至此八门负例 8/8；`gate-negative-stub.log`。
+- 前述完整门禁、七门负例、红测及两版本测试原始日志已从 box2 取回，压缩包 `early-evidence.tar.gz` SHA-256 `733e104f4fd1167f64a852a77331278ef68b6b99797e328987b75a35ab101623`，解包于 `extracted/log/`。
+
+- 作者变异清单 Node 22.23.4：原样副本 220 绿；199/199 被具名测试发现，0 存活、0 超时。以本版 `mutations.mjs` 的 199 个唯一 ID 与原始日志逐一比对，无缺项、重复项或缺少具名发现者；`extracted/log/mutation22.log`，归档 `author-completed.tar.gz` SHA-256 `98a255cfb89b0de8dac781e0168df81366c49d84b76ec614d07c67bedbecc894`。Node 25 分段结果见下。
+
+- 作者变异清单 Node 25.9.0：为遵守并发限制，先保留原批次完成的 15 项（原批次随后有意中止、退出 143），再单跑 K242–K247 共 6 项，最后只跑剩余 178 项。三段原样副本均 220 绿；合并逐条核对作者清单的 199 个唯一 ID，199/199 由具名测试发现、0 存活、0 超时、0 缺项、0 重复。最后一段退出 0；前段被中止的状态如实保留，不把分段说成一次完整官方运行。原始日志 `extracted/log/mutation25.log`、`mutation25-k242-247.log`、`mutation25-resume.log`；后段归档 `final-evidence.tar.gz` SHA-256 `950bb8c78612c89f4bc894938da3b5cf6d93eaec456c5622254ae1ac16a8e32a`。

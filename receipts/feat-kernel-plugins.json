@@ -70,10 +70,10 @@
   "waiver": null,
   "review": {
     "agent": "codex",
-    "session": "codex:3b86cc56-d935-4f27-b2e8-2d1a76da35e8",
+    "session": "codex:8996dcdc-9e97-48ab-8665-cc5b06ad1f96",
     "model": "gpt-6.1-terra",
     "verdict": "reject",
-    "reviewed_hash": "b1d095ea65b5701d88ca16335004cafc15d9142a907f658658c1d9cc28206250",
-    "notes": "第十四轮 REJECT：R14-01 pull 同步数组违反新 Promise 合同；R14-02 三个单点故障逃过测试，含拒收期间临时改写；R14-03 超大超时被 Node 缩至 1ms。box2 Docker 被拦，G-STUB 负例和沙箱运行未验证；详情见第十四轮审查。"
+    "reviewed_hash": "006d2eb8ed42c7952e9423198471c49c079e241e9064247bad4ac2d7feff104f",
+    "notes": "第十五轮 REJECT：R15-01 同步临时改写漏检；R15-02 自比较断言；R15-03 Docker 工作区依赖无法解析；R15-04 Docker 依赖挂载可写；R15-05 G-STUB 漏报部分文件加载失败。完整复现见审查。"
   }
 }
