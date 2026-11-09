@@ -5,6 +5,7 @@
 // 并发默认 4;本机同时有别的测试在跑时用 CC_MUT_CONCURRENCY=2 降低并发(只影响调度,不改注入点与判决)。
 // CC_MUT_PROGRESS=<文件>:每个变异一出判决就追加一行到该文件(附全部变红的测试名;进程中途被结束也留下已完成的判决);
 // CC_MUT_ONLY=M113,M126:只跑列出的编号(原样副本照跑),用于补跑,不改注入点与判决。
+// 第九轮起每个变异注入后先做静态检查(.ts 跑 tsc,.mjs 跑 node --check),不通过记为不可编译、不计为杀死。
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -25,7 +26,7 @@ const M = [
   ["M09 env 继承宿主进程环境(带明文)", "src/cli.ts", "    ...hostEnv,", "    ...process.env,\n    ...hostEnv,"],
   ["M10 --tools 不按 brief.tools", "src/cli.ts", '"--tools", brief.tools.join(","),', '"--tools", "default",'],
   ["M11 已受理 blocked 不停在受阻", "src/events.ts", 'if (facts.pausedBlocked) return { kind: "paused-blocked" };', ""],
-  ["M12 被拒收的汇报也产出事件", "src/events.ts", "        if (b.is_error === true) {", "        if (false) {"],
+  ["M12 被拒收的汇报也产出事件", "src/events.ts", "        if (b.is_error === true) {", "        if (b.is_error === true && Boolean(0)) {"],
   ["M13 到期不对进程组发 SIGKILL", "src/adapter.ts", 'const timer = setTimeout(() => signalGroup(round.pid, "SIGKILL"), reapForceMs);', "const timer = setTimeout(() => {}, reapForceMs);"],
   ["M14 handoff 不列进装配清单", "src/cli.ts", 'sections.push({ name: "handoff",', 'void ({ name: "handoff",'],
   ["M15 resume 不带 CLI 会话号", "src/cli.ts", '...(resumeSession ? ["--resume", resumeSession] : []),', ""],
@@ -64,7 +65,7 @@ const M = [
   ["M46 主进程先退出也不取消组 SIGKILL", "src/adapter.ts", '    p.once("exit", () => clearTimeout(timer));', ""],
   ["M47 R3-01 stop 后不封存这一轮", "src/adapter.ts", "      round.halted = true;\n      // 冻结的进程组", "      // 冻结的进程组"],
   ["M48 R3-02 空白续接先杀掉冻结的进程组再报错", "src/adapter.ts", '      if (!text.trim()) return refuse("续接的内容不能为空");', '      if (!text.trim()) { if (st.round && !st.round.exited) signalGroup(st.round.pid, "SIGKILL"); return refuse("续接的内容不能为空"); }'],
-  ["M49 R3-03 init 前未认可的输出放行", "src/adapter.ts", 'if (pre.kind === "rejected") { violate(', "if (false) { violate("],
+  ["M49 R3-03 init 前未认可的输出放行", "src/adapter.ts", 'if (pre.kind === "rejected") { violate(', 'if (pre.kind === "rejected" && Boolean(0)) { violate('],
   ["M50 R3-03 init 前任何 system 帧都放行", "src/events.ts", "PRE_INIT_SYSTEM_SUBTYPES.includes(m.subtype)) return", "true) return"],
   // 以下对应第四轮 R4-01–R4-05、第四轮补充、磁盘清理与导出常量冻结
   ["M51 R4-04 凭据校验只在数组长度为 1 时执行", "src/brief.ts", "const plaintext = credentialRefs.filter((c) => !isCredentialRef(c));", "const plaintext = credentialRefs.length === 1 ? credentialRefs.filter((c) => !isCredentialRef(c)) : [];"],
@@ -78,10 +79,10 @@ const M = [
   ["M59 R4-01 不查原型(自定义原型放行)", "src/plain.ts", "if (isArray ? proto !== Array.prototype : proto !== Object.prototype && proto !== null) {", "if (false) {"],
   ["M60 R4-01 不可枚举属性放行", "src/plain.ts", 'if (!d.enumerable) return bad(path, "不允许不可枚举属性");', ""],
   ["M61 R4-01 嵌套值不递归判定", "src/plain.ts", "return walk(d.value, path, depth + 1);", "return { ok: true, value: d.value };"],
-  ["M62 R4-01 checkBrief 不过纯数据判定", "src/brief.ts", 'const p = plainData(input, "brief");', 'const p: ReturnType<typeof plainData> = { ok: true, value: input };'],
-  ["M63 R4-01 reportErrors 不过纯数据判定", "src/report-schema.ts", 'const p = plainData(input, "汇报");', 'const p: ReturnType<typeof plainData> = { ok: true, value: input };'],
-  ["M64 R4-01 spawn 选项不过纯数据判定", "src/adapter.ts", 'const p = plainData(opts, "spawn 选项");', 'const p: ReturnType<typeof plainData> = { ok: true, value: opts };'],
-  ["M65 R4-01 适配器选项不过纯数据判定", "src/adapter.ts", 'const p = plainData(options, "适配器选项");', 'const p: ReturnType<typeof plainData> = { ok: true, value: options };'],
+  ["M62 R4-01 checkBrief 不过纯数据判定", "src/brief.ts", 'const p = plainData(input, "brief");', 'const p: ReturnType<typeof plainData> = ((value: unknown): ReturnType<typeof plainData> => ({ ok: true, value }))(input);'],
+  ["M63 R4-01 reportErrors 不过纯数据判定", "src/report-schema.ts", 'const p = plainData(input, "汇报");', 'const p: ReturnType<typeof plainData> = ((value: unknown): ReturnType<typeof plainData> => ({ ok: true, value }))(input);'],
+  ["M64 R4-01 spawn 选项不过纯数据判定", "src/adapter.ts", 'const p = plainData(opts, "spawn 选项");', 'const p: ReturnType<typeof plainData> = ((value: unknown): ReturnType<typeof plainData> => ({ ok: true, value }))(opts);'],
+  ["M65 R4-01 适配器选项不过纯数据判定", "src/adapter.ts", 'const p = plainData(options, "适配器选项");', 'const p: ReturnType<typeof plainData> = ((value: unknown): ReturnType<typeof plainData> => ({ ok: true, value }))(options);'],
   ["M66 R4-01 resume 不查状态参数类型", "src/adapter.ts", 'if (typeof computeId !== "string" || typeof text !== "string") return refuse(', "if (false) return refuse("],
   ["M67 R4-01 spawn 选项放行非预期字段", "src/adapter.ts", "if (extra.length) return refuse(`spawn 选项只收", "if (false) return refuse(`spawn 选项只收"],
   ["M68 R4-03 不读 MIRASIM_REAP_FORCE_MS", "src/adapter.ts", "return Number.isFinite(n) && n > 0 ? n : DEFAULT_REAP_FORCE_MS;", "return DEFAULT_REAP_FORCE_MS;"],
@@ -105,7 +106,7 @@ const M = [
   ["M86 R6-01 cliEnv 的 hostEnv 值不查字符串", "src/cli.ts", " || !Object.values(p.value).every((v) => typeof v === \"string\")) throw new TypeError(\"cliEnv", ") throw new TypeError(\"cliEnv"],
   ["M87 R6-01 cliEnv 的 computeId 隐式转换", "src/cli.ts", "const computeId = safeString(computeIdInput, \"cliEnv 的 computeId\");", "const computeId = String(computeIdInput);"],
   ["M88 R6-01 streamParser 不判输入行类型", "src/events.ts", "    if (typeof line !== \"string\") throw new TypeError(\"streamParser 的输入行必须是字符串\");\n", ""],
-  ["M89 R6-01 terminalFor 参数不过纯数据判定", "src/events.ts", "const p = plainData(x, name);", "const p: ReturnType<typeof plainData> = { ok: true, value: x };"],
+  ["M89 R6-01 terminalFor 参数不过纯数据判定", "src/events.ts", "const p = plainData(x, name);", "const p: ReturnType<typeof plainData> = ((value: unknown): ReturnType<typeof plainData> => ({ ok: true, value }))(x);"],
   ["M90 R6-01 terminalFor 的 stderrTail 不判类型", "src/events.ts", "  if (typeof stderrTailInput !== \"string\") throw new TypeError(\"terminalFor 的 stderrTail 必须是字符串\");\n", ""],
   ["M91 R6-01 resolveReapForceMs 显式值不判类型", "src/adapter.ts", "  if (explicit !== undefined && !(typeof explicit === \"number\" && Number.isFinite(explicit) && explicit >= 0)) throw new TypeError(\"reapForceMs 必须是非负有限数\");\n", ""],
   ["M92 R6-01 resolveReapForceMs 环境值隐式转换", "src/adapter.ts", "  if (env !== undefined && typeof env !== \"string\") throw new TypeError(\"MIRASIM_REAP_FORCE_MS 必须是字符串\");\n", ""],
@@ -135,20 +136,42 @@ const M = [
   ["M113 R8-01 审查 R8-B:放行单个空位(下标键只比 length 少一个时跳过空位)", "src/plain.ts", '    if (!d) return bad(path, "不允许稀疏数组");', '    if (!d && Reflect.ownKeys(x).length - 1 !== length - 1) return bad(path, "不允许稀疏数组");\n    if (!d) continue;'],
   ["M114 R8-01 空位一律跳过", "src/plain.ts", '    if (!d) return bad(path, "不允许稀疏数组");', "    if (!d) continue;"],
   ["M115 R8-01 不查下标上界(越界数字键放行)", "src/plain.ts", "if (!INDEX.test(k) || Number(k) >= length) return", "if (!INDEX.test(k)) return"],
-  ["M116 R8-02 JSON-RPC id 不核对类型", "mcp/report-mcp.mjs", "    if (m.id !== undefined && !validId(m.id)) {", "    if (false) {"],
-  ["M117 R8-02 小数 id 放行", "mcp/report-mcp.mjs", "Number.isInteger(id)", 'typeof id === "number"'],
-  ["M118 R8-02 null id 放行", "mcp/report-mcp.mjs", "    if (m.id !== undefined && !validId(m.id)) {", "    if (m.id !== undefined && m.id !== null && !validId(m.id)) {"],
+  ["M116 R8-02 JSON-RPC id 不核对类型(其它类型原样回显)", "mcp/report-mcp.mjs", '  if (typeof id !== "number") return undefined;', '  if (typeof id !== "number") return JSON.stringify(id);'],
+  ["M117 R8-02 小数 id 放行", "mcp/report-mcp.mjs", "return src !== undefined && integerSource(src) ? src : undefined;", "return src;"],
+  ["M118 R8-02 null id 放行", "mcp/report-mcp.mjs", '  if (typeof id !== "number") return undefined;', '  if (typeof id !== "number") return id === null ? "null" : undefined;'],
   ["M119 R8-02 日志照写原始参数", "mcp/report-mcp.mjs", "...loggedArgs(a), ts:", "...a, ts:"],
   ["M120 R8-02 日志参数不合格时仍原样展开", "mcp/report-mcp.mjs", "? p.value : { omitted:", "? p.value : a || { omitted:"],
   ["M121 R8-02 日志的 ts/valid/errs 写在参数之前(参数能改写判定)", "mcp/report-mcp.mjs", "JSON.stringify({ ...loggedArgs(a), ts: new Date().toISOString(), valid: errs.length === 0, errs })", "JSON.stringify({ ts: new Date().toISOString(), valid: errs.length === 0, errs, ...loggedArgs(a) })"],
   ["M122 R8-02 去掉每行的受控边界(异常越过这一行)", "mcp/report-mcp.mjs", "    // 受控边界:这一条请求处理失败只回 -32603,不越过这一行;进程继续处理后续请求\n", "    throw err;\n"],
-  ["M123 R8-02 受控边界不回复", "mcp/report-mcp.mjs", '    send({ jsonrpc: "2.0", id, error: { code: -32603,', '    void ({ jsonrpc: "2.0", id, error: { code: -32603,'],
-  ["M124 R8-02 受控边界的回复不带请求 id", "mcp/report-mcp.mjs", '    send({ jsonrpc: "2.0", id, error: { code: -32603,', '    send({ jsonrpc: "2.0", id: null, error: { code: -32603,'],
+  ["M123 R8-02 受控边界不回复", "mcp/report-mcp.mjs", "    send(wire, { error: { code: -32603,", "    void (wire, { error: { code: -32603,"],
+  ["M124 R8-02 受控边界的回复不带请求 id", "mcp/report-mcp.mjs", "    send(wire, { error: { code: -32603,", '    send("null", { error: { code: -32603,'],
   ["M125 R8-02 initialize 原样回显 protocolVersion", "mcp/report-mcp.mjs", 'typeof pv === "string" && pv ? pv : PROTOCOL_VERSION', "pv || PROTOCOL_VERSION"],
   ["M126 R8-03 审查 R8-A:放行 host connecting", "src/events.ts", 'if (host?.status !== "connected") return', 'if (host?.status !== "connected" && host?.status !== "connecting") return'],
   ["M127 R8-03 host 状态去空白、大小写不敏感", "src/events.ts", 'if (host?.status !== "connected") return', 'if (typeof host?.status !== "string" || host.status.trim().toLowerCase() !== "connected") return'],
   ["M128 R8-04 审查 R8-C:放行空白汇报字段", "src/report-schema.ts", 'typeof x === "string" && x.trim() !== ""', 'typeof x === "string" && x !== ""'],
   ["M129 R8-04 只去掉普通空格(制表、换行、全角空格仍放行)", "src/report-schema.ts", 'typeof x === "string" && x.trim() !== ""', 'typeof x === "string" && x.replaceAll(" ", "") !== ""'],
+  // 以下对应第九轮 R9-01–R9-04(Codex 第九轮):请求编号原文、协议版本、请求与通知之分、空白任务与凭据引用方案名的邻接
+  ["M130 R9-01 审查 S01:零编号拒收", "mcp/report-mcp.mjs", '  if (digits === "") return true;', '  if (digits === "") return false;'],
+  ["M131 R9-01 数值编号按浮点值回显(丢精度,第八轮行为)", "mcp/report-mcp.mjs", "return src !== undefined && integerSource(src) ? src : undefined;", "return src !== undefined && integerSource(src) ? JSON.stringify(id) : undefined;"],
+  ["M132 R9-01 按解析后的浮点值判整数", "mcp/report-mcp.mjs", "return src !== undefined && integerSource(src) ? src : undefined;", "return src !== undefined && Number.isInteger(id) ? src : undefined;"],
+  ["M133 R9-01 只收安全整数范围(大整数拒收)", "mcp/report-mcp.mjs", "return src !== undefined && integerSource(src) ? src : undefined;", "return src !== undefined && integerSource(src) && Number.isSafeInteger(id) ? src : undefined;"],
+  ["M134 R9-01 重复的顶层 id 取第一个", "mcp/report-mcp.mjs", '    if (key === "id") found = line.slice(start, i);', '    if (key === "id" && found === undefined) found = line.slice(start, i);'],
+  ["M135 R9-01 嵌套值不整段跳过(内层同名字段也算)", "mcp/report-mcp.mjs", '      else if (c === "{" || c === "[") { depth++; i++; }', '      else if (c === "{" || c === "[") { i++; }'],
+  ["M136 R9-01 空字符串编号拒收", "mcp/report-mcp.mjs", '  if (typeof id === "string") return JSON.stringify(id);', '  if (typeof id === "string") return id === "" ? undefined : JSON.stringify(id);'],
+  ["M137 R9-01 带小数点的整数写法(10.0)拒收", "mcp/report-mcp.mjs", "  if (!m) return false;", "  if (!m || m[2] !== undefined) return false;"],
+  ["M138 R9-01 指数写法(1E2)不认", "mcp/report-mcp.mjs", "(?:[eE]([+-]?[0-9]+))?$/;", "$/;"],
+  ["M139 R9-02 不核对 jsonrpc 版本", "mcp/report-mcp.mjs", '    if (m.jsonrpc !== "2.0") {', "    if (false) {"],
+  ["M140 R9-02 缺失版本放行", "mcp/report-mcp.mjs", '    if (m.jsonrpc !== "2.0") {', '    if (m.jsonrpc !== undefined && m.jsonrpc !== "2.0") {'],
+  ["M141 R9-02 版本宽松比较(数字 2、\"2\" 放行)", "mcp/report-mcp.mjs", '    if (m.jsonrpc !== "2.0") {', "    if (m.jsonrpc != 2) {"],
+  ["M142 R9-02 版本先去首尾空白", "mcp/report-mcp.mjs", '    if (m.jsonrpc !== "2.0") {', '    if (String(m.jsonrpc).trim() !== "2.0") {'],
+  ["M143 R9-02 只对 tools/call 核对版本", "mcp/report-mcp.mjs", '    if (m.jsonrpc !== "2.0") {', '    if (m.method === "tools/call" && m.jsonrpc !== "2.0") {'],
+  ["M144 R9-03 不区分通知(无编号消息也进入编号核对并被回复)", "mcp/report-mcp.mjs", '    if (!Object.hasOwn(m, "id")) return;\n', ""],
+  ["M145 R9-03 通知照常派发、只是不回复(无编号汇报仍入日志)", "mcp/report-mcp.mjs", '    if (!Object.hasOwn(m, "id")) return;', '    if (!Object.hasOwn(m, "id")) { handle(m, () => {}); return; }'],
+  ["M146 R9-03 只把 notifications/ 开头的方法当通知", "mcp/report-mcp.mjs", '    if (!Object.hasOwn(m, "id")) return;', '    if (!Object.hasOwn(m, "id") && String(m.method).startsWith("notifications/")) return;'],
+  ["M147 R9-03 编号为 null 也按通知处理(不回复)", "mcp/report-mcp.mjs", '    if (!Object.hasOwn(m, "id")) return;', "    if (m.id === undefined || m.id === null) return;"],
+  ["M148 R9-04 hy4 H9-01:去掉 task 的非空白判断", "src/brief.ts", 'if (typeof task !== "string" || !task.trim()) return refuse(', 'if (typeof task !== "string" || !task) return refuse('],
+  ["M149 R9-04 审查 S04:放行的 task 去掉首尾空白", "src/brief.ts", "      task,\n      rules: Object.freeze([...rules]),", "      task: task.trim(),\n      rules: Object.freeze([...rules]),"],
+  ["M150 R9 补充 审查 S03:凭据引用方案名只收字母", "src/brief.ts", "const CREDENTIAL_REF = /^[a-z][a-z0-9+.-]*:", "const CREDENTIAL_REF = /^[a-z][a-z]*:"],
 ];
 
 // 不用 --test-timeout:在 node --test <file> 下它限制的是整个文件,文件超过上限会被整体取消(部分执行)。
@@ -196,8 +219,25 @@ const copy = (name) => {
   fs.symlinkSync(path.join(ROOT, "node_modules"), path.join(d, "node_modules"));
   return d;
 };
+// 第九轮起:注入后先做静态检查,变异体必须能编译/能加载,才进入行为判决(审查第九轮发现原清单 7 个 .ts 变异不可编译)
+const TSC = path.join(ROOT, "node_modules", ".bin", "tsc");
+const ROOT_TSCONFIG = JSON.parse(fs.readFileSync(path.join(ROOT, "tsconfig.json"), "utf8"));
+function staticCheck(dir, file) {
+  if (file.endsWith(".mjs")) {
+    const c = spawnSync(process.execPath, ["--check", path.join(dir, file)], { encoding: "utf8" });
+    return { ok: c.status === 0, what: "node --check", detail: (c.stderr ?? "").trim().split("\n")[0] ?? "" };
+  }
+  const cfg = path.join(dir, "tsconfig.mut.json");
+  if (!fs.existsSync(cfg)) fs.writeFileSync(cfg, JSON.stringify({ compilerOptions: ROOT_TSCONFIG.compilerOptions, include: ["src/**/*.ts"] }));
+  const c = spawnSync(TSC, ["-p", cfg], { cwd: dir, encoding: "utf8", timeout: 180_000 });
+  return { ok: c.status === 0 && !c.signal, what: "tsc 类型检查", detail: `${c.stdout ?? ""}${c.stderr ?? ""}`.trim().split("\n").slice(0, 2).join(" / ") };
+}
 let ok = true;
-const clean = await run(copy("clean"));
+const cleanDir = copy("clean");
+const cleanTsc = staticCheck(cleanDir, "src/adapter.ts");
+console.log(`${cleanTsc.ok ? "✓" : "✗"} 原样副本 tsc 类型检查${cleanTsc.ok ? "通过" : `失败:${cleanTsc.detail}`}`);
+if (!cleanTsc.ok) ok = false;
+const clean = await run(cleanDir);
 // 应有的测试条数取自 TAP 计划行 "1..N",不取原样副本自己的通过数,以免原样副本也被截断时基准跟着变小
 const plan = Number(/^1\.\.(\d+)$/m.exec(clean.out ?? "")?.[1] ?? 0);
 const total = plan;
@@ -226,6 +266,12 @@ async function worker() {
       continue;
     }
     fs.writeFileSync(f, src.replace(from, to));
+    const compiled = staticCheck(d, file);
+    if (!compiled.ok) {
+      results[i] = `✗ ${name}:注入后${compiled.what}不通过,不计为杀死:${compiled.detail}`;
+      if (PROGRESS) fs.appendFileSync(PROGRESS, `${results[i]}\n`);
+      continue;
+    }
     const r = await run(d);
     const ran = r.passed.length + r.failed.length;
     let verdict;
