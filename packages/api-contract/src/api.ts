@@ -211,6 +211,14 @@ export const METHODS = {
   /** 代码任务受控合入目标分支(AC-22):审查通过、交付后才能合;主线未变快进,主线已推进则合并后重验;
    *  冲突或重验失败返回 workspace.state=W5_Conflict(目标分支未动)。验收交付卡时宿主会自动发起,这里是重试入口。 */
   "tasks.integrate": method(obj({ taskId: id(), clientActionId: id() }), TaskView),
+  /**
+   * 改挂一条补充(E5b,AC-15):把会话 roomId 里的 #seq 从 fromTaskId 移到 toTaskId。源任务不取消,版本 +1 并重放其余补充;
+   * expectedBindingVersion 取源任务 TaskView.bindingVersion(没有就是 0),对不上返回 conflict(detail.currentVer);同一 clientActionId 或重复改挂幂等。
+   */
+  "tasks.rebindFollowUp": method(
+    obj({ roomId: id(), seq: seq(), fromTaskId: id(), toTaskId: id(), expectedBindingVersion: int({ min: 0 }), clientActionId: id() }),
+    obj({ from: TaskView, to: TaskView }),
+  ),
 
   // ---- 工件 ----
   /** 点开交付卡里的工件(AC-04):返回快照的本地路径与 sha256(与卡片里的相同);文本类 ≤1 MB 直接带回正文,其余 text 为 null。 */

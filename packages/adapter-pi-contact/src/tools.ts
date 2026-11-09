@@ -67,6 +67,7 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
     fields: {
       taskId: f("text", true, "在途任务 id"),
       text: f("text", true, "要转交的原文"),
+      sourceSeq: f("seqOrNull", false, "这段转交出自任务所在会话里哪条用户消息的 seq;是用户中途补充或改条件时必填,宿主据此给任务升版并登记;只是你自己的话就省略"),
     },
   },
   deliver: {
@@ -225,7 +226,10 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
     case "reply": return act({ kind: "reply", roomId: s("roomId"), text: s("text"), replyToSeq: nn("replyToSeq") });
     case "dispatch_compute": return act({ kind: "dispatch", roomId: s("roomId"), sourceSeq: n("sourceSeq"), title: s("title"), task: s("task") });
     case "commit": return act({ kind: "commit", roomId: s("roomId"), sourceSeq: n("sourceSeq"), text: s("text"), taskId: sn("taskId") });
-    case "forward": return act({ kind: "forward", taskId: s("taskId"), text: s("text") });
+    case "forward": {
+      const src = nn("sourceSeq");
+      return act({ kind: "forward", taskId: s("taskId"), text: s("text"), ...(src !== null ? { sourceSeq: src } : {}) });
+    }
     case "deliver": return act({ kind: "deliver", taskId: s("taskId"), text: s("text") });
     case "stop": return act({ kind: "stop", taskId: s("taskId") });
     case "verdict": return act({ kind: "verdict", taskId: s("taskId"), sourceSeq: n("sourceSeq"), verdict: s("verdict") as "accept" | "revise", feedback: sn("feedback") });

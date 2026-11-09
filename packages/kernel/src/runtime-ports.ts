@@ -93,7 +93,8 @@ export type MindAction =
   | { readonly kind: "reply"; readonly roomId: string; readonly text: string; readonly replyToSeq: number | null }
   | { readonly kind: "dispatch"; readonly roomId: string; readonly sourceSeq: number; readonly title: string; readonly task: string }
   | { readonly kind: "commit"; readonly roomId: string; readonly sourceSeq: number; readonly text: string; readonly taskId: string | null }
-  | { readonly kind: "forward"; readonly taskId: string; readonly text: string }
+  // sourceSeq:这段转交来自任务所在会话里哪条用户消息;给了就是用户中途改条件(E3),宿主据此原位升版并登记关联边(AC-45/AC-16)
+  | { readonly kind: "forward"; readonly taskId: string; readonly text: string; readonly sourceSeq?: number }
   | { readonly kind: "deliver"; readonly taskId: string; readonly text: string }
   | { readonly kind: "stop"; readonly taskId: string }
   // 用户对交付的普通回复(通过 / 要改)由联系人转成验收结论(AC-28/AC-56);来源必须是提出者本人在交付之后的直接消息,宿主核对
