@@ -26,6 +26,8 @@ export interface AttentionOptions {
   readonly maxDeferMs: number;
   /** 一轮抛错后多久重试(毫秒),默认 1000。 */
   readonly retryMs?: number;
+  /** 一轮抛错后多久重试(AC-36);返回 null 表示不自动重跑。 */
+  readonly retryAfter?: (contactId: string, error: unknown) => number | null;
   /** 连续 stale 的重跑上限,默认 3。 */
   readonly maxStaleReruns?: number;
   readonly timers?: TimerApi;

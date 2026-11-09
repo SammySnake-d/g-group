@@ -2,7 +2,7 @@
 // 服务端补发缺口;缺口太大(已丢弃)时回 resync=true,渲染进程重新 list。
 import { CommitmentView, ComputeProgress, CONTACT_ACTIVITY, ContactView, MemberRef, MessageView, PluginView, RoomView, ScheduleView, SharedDocView, SlashCommand, TaskView } from "./entities.ts";
 import { DraftView } from "./draft.ts";
-import { arr, id, isoTime, nullable, obj, oneOf, seq, str, tagged, type Infer, lit } from "./schema.ts";
+import { arr, id, int, isoTime, nullable, obj, oneOf, seq, str, tagged, type Infer, lit } from "./schema.ts";
 
 const ev = <T extends string, S extends Record<string, Parameters<typeof obj>[0][string]>>(type: T, payload: S) =>
   obj({ type: lit(type), eventSeq: seq(), at: isoTime(), ...payload });
@@ -31,6 +31,20 @@ export const ServerEvent = tagged("type", {
   "plugin.removed": ev("plugin.removed", { pluginId: id() }),
   /** 某会话可用 slash 命令集合变了(插件启停、联系人能力变化),渲染进程刷新补全列表。 */
   "commands.changed": ev("commands.changed", { roomId: nullable(id()), commands: nullable(arr(SlashCommand)) }),
+  /**
+   * 失败轮次的自动重试与失败卡状态(AC-36):retrying 时状态行显示「重连中 attempt/limit」(不出卡);card 表示已出原位失败卡;
+   * paused 表示被共享上游熔断暂停(全群只出 1 张群级卡);cleared 表示已恢复或已处理。scope=contact 是联系人一轮,task 是任务的 Compute。
+   */
+  "retry.updated": ev("retry.updated", {
+    scope: oneOf(["contact", "task"] as const),
+    contactId: id(),
+    taskId: nullable(id()),
+    roomId: nullable(id()),
+    state: oneOf(["retrying", "card", "paused", "cleared"] as const),
+    attempt: int({ min: 0 }),
+    limit: int({ min: 0 }),
+    label: str({ max: 200 }),
+  }),
   /** 订阅续接失败(缺口已丢弃):渲染进程需全量重拉。 */
   "stream.resync": ev("stream.resync", { reason: str({ max: 500 }) }),
 } as const);

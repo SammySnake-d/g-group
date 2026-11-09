@@ -48,6 +48,8 @@ import {
 } from "@g-group/domain";
 import {
   type AttentionLoop,
+  type BreakerPolicy,
+  type RetryPolicy,
   type ContactCompactor,
   type ContactMind,
   type Inbound,
@@ -126,6 +128,18 @@ export interface HostOptions {
   readonly stateNoteMaxBytes?: number | null;
   readonly timers?: TimerApi;
   readonly onReport?: (what: string, detail: unknown) => void;
+  /** AC-36 静默退避参数。 */
+  readonly retry?: Partial<RetryPolicy>;
+  /** AC-36 共享上游熔断参数。 */
+  readonly breaker?: Partial<BreakerPolicy>;
+  /** 同一输入允许的启动回收次数(F12)。 */
+  readonly maxCrashRecoveries?: number;
+  /** Compute 的 CLI 自己对 API 错误重试的次数(F3)。 */
+  readonly computeHarnessRetries?: number;
+  /** 上游键。 */
+  readonly upstreamOf?: (model: string) => string;
+  /** 退避抖动用的随机数。 */
+  readonly random?: () => number;
   /** 群公告排序(列表与装配共用);默认按创建先后。排序规则待定(D28 待确认 ④),先做成参数。 */
   readonly announcementOrder?: AnnouncementOrder;
   /** 联系人没单独设时的个人 Compute 槽位数(AC-23);不给为不限 */

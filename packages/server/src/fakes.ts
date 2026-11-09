@@ -58,6 +58,8 @@ export function scriptedCompute(
     quiesce?: (computeId: string) => Promise<QuiesceResult>;
     /** settled 之前等它(模拟 CLI 主进程退出得慢) */
     settle?: (computeId: string) => Promise<void>;
+    /** 和真实一次性适配器一样:这一轮已经以 completed/failed 结束的实例,stop 返回拒绝(没有在运行的进程),不再报 stopped */
+    refuseStopAfterExit?: boolean;
   } = {},
 ) {
   const queue: ComputeEvent[] = [];
@@ -70,7 +72,10 @@ export function scriptedCompute(
   /** 每次被受理的续接带来的生效模型(与 resumed 一一对应);旧适配器的调用方不传就是 undefined。 */
   const turns: { computeId: string; turn: TurnModel | undefined }[] = [];
   const stopped: string[] = [];
+  const ended = new Set<string>();
   const push = (e: ComputeEvent) => {
+    if (e.kind === "completed" || e.kind === "failed") ended.add(e.computeId);
+    if (e.kind === "started") ended.delete(e.computeId);
     queue.push(e);
     wake?.();
   };
@@ -117,6 +122,7 @@ export function scriptedCompute(
       return { ok: true };
     },
     async stop(computeId: string) {
+      if (opts.refuseStopAfterExit && ended.has(computeId)) return { ok: false as const, reason: `Compute ${computeId} 没有在运行的进程` };
       stopped.push(computeId);
       push({ computeId, kind: "stopped", code: null, signal: null, scope: "main-then-group", violations: [] });
       return { ok: true };
