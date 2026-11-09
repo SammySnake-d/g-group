@@ -14,7 +14,9 @@ import { createService } from "./service.ts";
 import { Worktrees } from "./worktree.ts";
 
 const tmp = mkdtempSync(path.join(tmpdir(), "gg-wt-"));
-after(() => rmSync(tmp, { recursive: true, force: true }));
+// git ≥ 2.4x 提交后会在后台起 `git maintenance run --auto --detach` 往 .git/objects/pack 写文件,删临时目录时撞上就 ENOTEMPTY:
+// 遇到 ENOTEMPTY/EBUSY 重试(Node rmSync 自带),不把清理的竞态当成测试失败
+after(() => rmSync(tmp, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }));
 const NEUTRAL = "NEUTRAL_FIXTURE_NO_CREDENTIALS";
 const env = (() => {
   const e: NodeJS.ProcessEnv = {};
