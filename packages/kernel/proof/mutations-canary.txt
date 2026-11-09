@@ -1,6 +1,2 @@
-(node:1510111) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
-(Use `node --trace-warnings ...` to show where the warning was created)
-node v22.23.4,每个变异超时 300.0s
-✓ 金丝雀(必然卡住的变异):超时被杀,用时 5.0s,记 ✗ 超时、不算杀死
-node v25.9.0,每个变异超时 300.0s
+node v22.22.0,每个变异超时 300.0s
 ✓ 金丝雀(必然卡住的变异):超时被杀,用时 5.0s,记 ✗ 超时、不算杀死
