@@ -1,0 +1,545 @@
+# AC-25 基础搜索真实运行 2026-11-08T18:08:43.944Z node v25.8.1
+数据库 /var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gg-e-search-run-JMeKXY/gg.db
+
+### contacts.create {"clientActionId":"c1","name":"小克"}
+{
+  "ok": true,
+  "value": {
+    "id": "c-mw85btqy-0",
+    "name": "小克",
+    "avatar": null,
+    "bio": "",
+    "speakingModel": "claude-sonnet-4-6",
+    "harness": "claude-code",
+    "computeModel": {
+      "mode": "inherit"
+    },
+    "tools": [],
+    "computeAssets": [],
+    "activity": "idle",
+    "createdAt": "2026-11-08T18:08:44.122Z"
+  }
+}
+
+### rooms.createGroup {"clientActionId":"g1","title":"登录组","members":[{"kind":"contact","id":"c-mw85btqy-0"}]}
+{
+  "ok": true,
+  "value": {
+    "id": "g-mw85btr1-1",
+    "kind": "group",
+    "title": "登录组",
+    "avatar": null,
+    "members": [
+      {
+        "kind": "contact",
+        "id": "c-mw85btqy-0"
+      },
+      {
+        "kind": "user",
+        "id": "me"
+      }
+    ],
+    "rules": "",
+    "rulesVersion": 0,
+    "pinned": false,
+    "muted": false,
+    "lastSeq": 0,
+    "readSeq": 0,
+    "unread": 0,
+    "pendingForUser": 0,
+    "lastMessagePreview": null,
+    "updatedAt": "2026-11-08T18:08:44.125Z"
+  }
+}
+
+### rooms.openDm {"contactId":"c-mw85btqy-0"}
+{
+  "ok": true,
+  "value": {
+    "id": "dm-c-mw85btqy-0",
+    "kind": "dm",
+    "title": "小克",
+    "avatar": null,
+    "members": [
+      {
+        "kind": "contact",
+        "id": "c-mw85btqy-0"
+      },
+      {
+        "kind": "user",
+        "id": "me"
+      }
+    ],
+    "rules": "",
+    "rulesVersion": 0,
+    "pinned": false,
+    "muted": false,
+    "lastSeq": 0,
+    "readSeq": 0,
+    "unread": 0,
+    "pendingForUser": 0,
+    "lastMessagePreview": null,
+    "updatedAt": "2026-11-08T18:08:44.126Z"
+  }
+}
+
+### messages.send {"roomId":"g-mw85btr1-1","clientActionId":"m1","text":"登录接口限流阈值先定 200 QPS"}
+{
+  "ok": true,
+  "value": {
+    "roomId": "g-mw85btr1-1",
+    "seq": 1,
+    "threadRootSeq": null,
+    "sender": {
+      "kind": "user",
+      "id": "me"
+    },
+    "text": "登录接口限流阈值先定 200 QPS",
+    "mentions": [],
+    "replyToSeq": null,
+    "quotedSeqs": [],
+    "quotes": [],
+    "attachments": [],
+    "card": null,
+    "command": null,
+    "reactions": [],
+    "edited": false,
+    "retracted": false,
+    "clientActionId": "m1",
+    "at": "2026-11-08T18:08:44.127Z"
+  }
+}
+
+### messages.send {"roomId":"g-mw85btr1-1","clientActionId":"m2","text":"限流再压测一轮","threadRootSeq":1}
+{
+  "ok": true,
+  "value": {
+    "roomId": "g-mw85btr1-1",
+    "seq": 2,
+    "threadRootSeq": 1,
+    "sender": {
+      "kind": "user",
+      "id": "me"
+    },
+    "text": "限流再压测一轮",
+    "mentions": [],
+    "replyToSeq": null,
+    "quotedSeqs": [],
+    "quotes": [],
+    "attachments": [],
+    "card": null,
+    "command": null,
+    "reactions": [],
+    "edited": false,
+    "retracted": false,
+    "clientActionId": "m2",
+    "at": "2026-11-08T18:08:44.131Z"
+  }
+}
+
+### messages.send {"roomId":"g-mw85btr1-1","clientActionId":"m3","text":"限流开关口令 NEUTRAL_FIXTURE_NO_CREDENTIALS"}
+{
+  "ok": true,
+  "value": {
+    "roomId": "g-mw85btr1-1",
+    "seq": 3,
+    "threadRootSeq": null,
+    "sender": {
+      "kind": "user",
+      "id": "me"
+    },
+    "text": "限流开关口令 NEUTRAL_FIXTURE_NO_CREDENTIALS",
+    "mentions": [],
+    "replyToSeq": null,
+    "quotedSeqs": [],
+    "quotes": [],
+    "attachments": [],
+    "card": null,
+    "command": null,
+    "reactions": [],
+    "edited": false,
+    "retracted": false,
+    "clientActionId": "m3",
+    "at": "2026-11-08T18:08:44.137Z"
+  }
+}
+
+### attachments.add {"path":"/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gg-e-search-run-JMeKXY/压测报告-1108.md"}
+{
+  "ok": true,
+  "value": {
+    "ref": "att-58cdcf378c1a9a323b71722fb72ac66a",
+    "name": "压测报告-1108.md",
+    "mime": "text/markdown",
+    "bytes": 32
+  }
+}
+
+### messages.send {"roomId":"dm-c-mw85btqy-0","clientActionId":"m4","text":"报告在附件里","attachments":["att-58cdcf378c1a9a323b71722fb72ac66a"]}
+{
+  "ok": true,
+  "value": {
+    "roomId": "dm-c-mw85btqy-0",
+    "seq": 1,
+    "threadRootSeq": null,
+    "sender": {
+      "kind": "user",
+      "id": "me"
+    },
+    "text": "报告在附件里",
+    "mentions": [],
+    "replyToSeq": null,
+    "quotedSeqs": [],
+    "quotes": [],
+    "attachments": [
+      {
+        "ref": "att-58cdcf378c1a9a323b71722fb72ac66a",
+        "name": "压测报告-1108.md",
+        "mime": "text/markdown",
+        "bytes": 32
+      }
+    ],
+    "card": null,
+    "command": null,
+    "reactions": [],
+    "edited": false,
+    "retracted": false,
+    "clientActionId": "m4",
+    "at": "2026-11-08T18:08:44.140Z"
+  }
+}
+
+### search.messages {"query":"限流"}
+{
+  "ok": true,
+  "value": {
+    "hits": [
+      {
+        "roomId": "g-mw85btr1-1",
+        "roomTitle": "登录组",
+        "seq": 3,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "senderName": "我",
+        "snippet": "限流开关口令 NEUTRAL_FIXTURE_NO_CREDENTIALS",
+        "highlights": [
+          {
+            "start": 0,
+            "length": 2
+          }
+        ],
+        "matchedIn": "text",
+        "attachmentName": null,
+        "at": "2026-11-08T18:08:44.137Z"
+      },
+      {
+        "roomId": "g-mw85btr1-1",
+        "roomTitle": "登录组",
+        "seq": 2,
+        "threadRootSeq": 1,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "senderName": "我",
+        "snippet": "限流再压测一轮",
+        "highlights": [
+          {
+            "start": 0,
+            "length": 2
+          }
+        ],
+        "matchedIn": "text",
+        "attachmentName": null,
+        "at": "2026-11-08T18:08:44.131Z"
+      },
+      {
+        "roomId": "g-mw85btr1-1",
+        "roomTitle": "登录组",
+        "seq": 1,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "senderName": "我",
+        "snippet": "登录接口限流阈值先定 200 QPS",
+        "highlights": [
+          {
+            "start": 4,
+            "length": 2
+          }
+        ],
+        "matchedIn": "text",
+        "attachmentName": null,
+        "at": "2026-11-08T18:08:44.127Z"
+      }
+    ],
+    "nextCursor": null
+  }
+}
+
+### search.messages {"query":"压测报告"}
+{
+  "ok": true,
+  "value": {
+    "hits": [
+      {
+        "roomId": "dm-c-mw85btqy-0",
+        "roomTitle": "小克",
+        "seq": 1,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "senderName": "我",
+        "snippet": "报告在附件里",
+        "highlights": [],
+        "matchedIn": "attachment",
+        "attachmentName": "压测报告-1108.md",
+        "at": "2026-11-08T18:08:44.140Z"
+      }
+    ],
+    "nextCursor": null
+  }
+}
+
+### messages.list {"roomId":"g-mw85btr1-1","aroundSeq":1,"limit":3}
+{
+  "ok": true,
+  "value": {
+    "messages": [
+      {
+        "roomId": "g-mw85btr1-1",
+        "seq": 1,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "text": "登录接口限流阈值先定 200 QPS",
+        "mentions": [],
+        "replyToSeq": null,
+        "quotedSeqs": [],
+        "quotes": [],
+        "attachments": [],
+        "card": null,
+        "command": null,
+        "reactions": [],
+        "edited": false,
+        "retracted": false,
+        "clientActionId": "m1",
+        "at": "2026-11-08T18:08:44.127Z"
+      },
+      {
+        "roomId": "g-mw85btr1-1",
+        "seq": 2,
+        "threadRootSeq": 1,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "text": "限流再压测一轮",
+        "mentions": [],
+        "replyToSeq": null,
+        "quotedSeqs": [],
+        "quotes": [],
+        "attachments": [],
+        "card": null,
+        "command": null,
+        "reactions": [],
+        "edited": false,
+        "retracted": false,
+        "clientActionId": "m2",
+        "at": "2026-11-08T18:08:44.131Z"
+      },
+      {
+        "roomId": "g-mw85btr1-1",
+        "seq": 3,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "text": "限流开关口令 NEUTRAL_FIXTURE_NO_CREDENTIALS",
+        "mentions": [],
+        "replyToSeq": null,
+        "quotedSeqs": [],
+        "quotes": [],
+        "attachments": [],
+        "card": null,
+        "command": null,
+        "reactions": [],
+        "edited": false,
+        "retracted": false,
+        "clientActionId": "m3",
+        "at": "2026-11-08T18:08:44.137Z"
+      }
+    ],
+    "hasMore": false,
+    "hasMoreAfter": false
+  }
+}
+
+### messages.retract {"roomId":"g-mw85btr1-1","seq":3}
+{
+  "ok": true,
+  "value": {
+    "roomId": "g-mw85btr1-1",
+    "seq": 3,
+    "threadRootSeq": null,
+    "sender": {
+      "kind": "user",
+      "id": "me"
+    },
+    "text": "",
+    "mentions": [],
+    "replyToSeq": null,
+    "quotedSeqs": [],
+    "quotes": [],
+    "attachments": [],
+    "card": null,
+    "command": null,
+    "reactions": [],
+    "edited": false,
+    "retracted": true,
+    "clientActionId": "m3",
+    "at": "2026-11-08T18:08:44.137Z"
+  }
+}
+
+### search.messages {"query":"NEUTRAL_FIXTURE"}
+{
+  "ok": true,
+  "value": {
+    "hits": [],
+    "nextCursor": null
+  }
+}
+
+### 索引表里含撤回原文的行数
+{
+  "n": 0
+}
+
+### search.messages {"query":"限流"}
+{
+  "ok": true,
+  "value": {
+    "hits": [
+      {
+        "roomId": "g-mw85btr1-1",
+        "roomTitle": "登录组",
+        "seq": 2,
+        "threadRootSeq": 1,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "senderName": "我",
+        "snippet": "限流再压测一轮",
+        "highlights": [
+          {
+            "start": 0,
+            "length": 2
+          }
+        ],
+        "matchedIn": "text",
+        "attachmentName": null,
+        "at": "2026-11-08T18:08:44.131Z"
+      },
+      {
+        "roomId": "g-mw85btr1-1",
+        "roomTitle": "登录组",
+        "seq": 1,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "senderName": "我",
+        "snippet": "登录接口限流阈值先定 200 QPS",
+        "highlights": [
+          {
+            "start": 4,
+            "length": 2
+          }
+        ],
+        "matchedIn": "text",
+        "attachmentName": null,
+        "at": "2026-11-08T18:08:44.127Z"
+      }
+    ],
+    "nextCursor": null
+  }
+}
+
+### 已删除派生索引表 gg_search,重开宿主
+
+### search.messages {"query":"限流"}
+{
+  "ok": true,
+  "value": {
+    "hits": [
+      {
+        "roomId": "g-mw85btr1-1",
+        "roomTitle": "登录组",
+        "seq": 2,
+        "threadRootSeq": 1,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "senderName": "我",
+        "snippet": "限流再压测一轮",
+        "highlights": [
+          {
+            "start": 0,
+            "length": 2
+          }
+        ],
+        "matchedIn": "text",
+        "attachmentName": null,
+        "at": "2026-11-08T18:08:44.131Z"
+      },
+      {
+        "roomId": "g-mw85btr1-1",
+        "roomTitle": "登录组",
+        "seq": 1,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "senderName": "我",
+        "snippet": "登录接口限流阈值先定 200 QPS",
+        "highlights": [
+          {
+            "start": 4,
+            "length": 2
+          }
+        ],
+        "matchedIn": "text",
+        "attachmentName": null,
+        "at": "2026-11-08T18:08:44.127Z"
+      }
+    ],
+    "nextCursor": null
+  }
+}
+
+### 重建前后「限流」结果一致
+true
+
+### search.messages {"query":"NEUTRAL_FIXTURE"}
+{
+  "ok": true,
+  "value": {
+    "hits": [],
+    "nextCursor": null
+  }
+}
