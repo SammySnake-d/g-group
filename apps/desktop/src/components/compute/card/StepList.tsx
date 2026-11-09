@@ -30,17 +30,18 @@ export function StepList({ steps }: { steps: { text: string; state: StepState }[
   )
 }
 
-/** stopping:Compute 正在停止,还在跑的程序显示「正在关」,确认退出后由后端改成「已收掉」 */
-export function BackgroundJobs({ jobs, stopping = false }: { jobs: BackgroundJob[]; stopping?: boolean }) {
+/** halt：Compute 正在停止时还在跑的程序显示「正在关」；已经停下（或出错）后，记录里还标着在跑的按「已收掉」显示 */
+export function BackgroundJobs({ jobs, halt }: { jobs: BackgroundJob[]; halt?: 'stopping' | 'stopped' }) {
   if (!jobs.length) return null
   return (
     <div className="space-y-0.5" data-testid="compute-card-background">
       <div className="text-[11px] text-fg-3">{COPY.background}</div>
       {jobs.map((j) => {
-        const s = stopping && j.state === 'running' ? { label: COPY.jobStopping, tone: 'neutral' as const } : JOB_STATE[j.state]
+        const live = j.state === 'running'
+        const s = live && halt === 'stopping' ? { label: COPY.jobStopping, tone: 'neutral' as const } : live && halt === 'stopped' ? JOB_STATE.killed : JOB_STATE[j.state]
         return (
           <div key={j.id} className="flex min-w-0 items-center gap-2 text-[12px]">
-            <StatusDot tone={s.tone} live={j.state === 'running'} />
+            <StatusDot tone={s.tone} live={s.tone === 'run'} />
             <span className="min-w-0 flex-1 truncate font-code text-[11.5px] text-fg-2">{j.command}</span>
             <span className={cn('shrink-0 text-[11.5px]', s.tone === 'run' ? 'text-run' : s.tone === 'err' ? 'text-err' : 'text-fg-3')}>{s.label}</span>
           </div>

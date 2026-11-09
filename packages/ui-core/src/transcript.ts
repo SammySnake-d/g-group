@@ -304,6 +304,16 @@ export function collectDeliverables(events: readonly TranscriptEvent[]): Deliver
   return [...map.values()];
 }
 
+/** Compute 已经停下或出错,记录里还标着「在跑」的调用其实被中断了:显示成失败,原因放在输出第一行(折叠行上露出的就是它),不再转圈。子代理里的同样处理 */
+export function interruptRunning(events: readonly TranscriptEvent[], note: string): TranscriptEvent[] {
+  const settle = (t: ToolEvent): ToolEvent => (t.status === "running" ? { ...t, status: "failed", output: t.output ? `${note}\n${t.output}` : note } : t);
+  return events.map((e) => {
+    if (e.kind === "tool") return settle(e);
+    if (e.kind === "agent" && e.status === "running") return { ...e, status: "failed", ...(e.trail ? { trail: e.trail.map(settle) } : {}) };
+    return e;
+  });
+}
+
 /* ---------------- 分页合并 ---------------- */
 
 /** 增量取到的一页并进已有事件:同 id 以新的为准(在跑的调用会更新状态),按 seq 排 */

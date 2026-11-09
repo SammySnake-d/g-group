@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { SquareTerminal } from 'lucide-react'
-import { changedFiles, collectDeliverables, formatDuration, groupTranscript, sessionElapsedMs, summarizeWork, type HarnessTranscript } from '@g-group/ui-core'
+import { changedFiles, collectDeliverables, formatDuration, groupTranscript, interruptRunning, sessionElapsedMs, summarizeWork, type HarnessTranscript } from '@g-group/ui-core'
 import { EmptyState } from '@/components/ui/section'
 import { people, type Compute } from '@/data'
 import { cn } from '@/lib/utils'
@@ -45,7 +45,10 @@ export function HarnessSession({ compute: c, transcript, sourceTitle, dm = false
   }, [autoFocus])
   const owner = people[c.owner]?.name ?? c.owner
   const state = computeState(c)
-  const events = transcript?.events
+  /* 停下或出错了：记录里还标着在跑的调用其实被中断了（后端接上后由事件本身更新，这里兜底） */
+  const settled = c.status === 'stopped' || c.status === 'error'
+  const raw = transcript?.events
+  const events = useMemo(() => (raw && settled ? interruptRunning(raw, COPY.interrupted) : raw), [raw, settled])
   const view = useMemo(() => (events ? { blocks: groupTranscript(events), work: summarizeWork(events), deliverables: collectDeliverables(events), changes: changedFiles(events) } : null), [events])
   const crumbs: Crumb[] = [{ label: sourceTitle, ...(onJumpSource ? { onClick: onJumpSource } : {}) }, { label: owner }, { label: c.short ?? c.title }]
   const harness = transcript ? HARNESS_LABEL[transcript.meta.harness] : c.harness
@@ -77,7 +80,7 @@ export function HarnessSession({ compute: c, transcript, sourceTitle, dm = false
         turns={transcript?.meta.turns ?? 1}
         calls={view?.work.calls ?? 0}
         agents={view?.work.agents ?? 0}
-        background={transcript?.meta.background.filter((j) => j.state === 'running').length ?? 0}
+        background={settled ? 0 : transcript?.meta.background.filter((j) => j.state === 'running').length ?? 0}
         owner={owner}
         dm={dm}
         readonly={!embedded}

@@ -26,14 +26,15 @@ export function SessionFooter({ state, elapsed, turns, calls, agents, background
     { key: 'calls', text: COPY.calls(calls) },
     ...(agents > 0 ? [{ key: 'agents', text: COPY.agents(agents) }] : []),
     ...(background > 0 && state.key !== 'stopping' ? [{ key: 'bg', text: COPY.backgroundN(background) }] : []),
-    ...(state.key === 'stopping' ? [{ key: 'stop', text: `${COPY.stopping} ${COPY.stoppingHint}`, className: 'font-sans text-fg-2' }] : []),
-    ...(state.key === 'stopped' ? [{ key: 'stop', text: `${COPY.stopped} · ${COPY.stoppedScope}`, className: 'font-sans text-fg-2' }] : []),
   ]
+  /* 停止说明单独一段,窄分屏里换到下一行,不被截掉 */
+  const note = state.key === 'stopping' ? `${COPY.stopping} ${COPY.stoppingHint}` : state.key === 'stopped' ? `${COPY.stopped} · ${COPY.stoppedScope}` : ''
   return (
     <footer className="shrink-0 border-t border-line">
-      <div className={cn('flex min-w-0 items-center gap-1.5 px-4 pt-2', !readonly && 'pb-2')} data-testid="session-statusline">
+      <div className={cn('flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 px-4 pt-2', !readonly && 'pb-2')} data-testid="session-statusline">
         <StateIcon state={state} />
         <Facts items={facts} className="text-[11.5px]" />
+        {note && <span className="min-w-0 text-[11.5px] text-fg-2">{note}</span>}
       </div>
       {readonly && <div className="flex min-w-0 items-center gap-2 px-4 pb-2.5 pt-1.5" data-testid="session-readonly">
         <span className="min-w-0 flex-1 truncate text-[12.5px] text-fg-3">{COPY.readonly(owner)}</span>

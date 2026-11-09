@@ -26,7 +26,7 @@ export function MessageList({ msgs: all, compact = false, highlight, selecting, 
         if (m.k === 'replying') return <ReplyingCard key={m.id} m={m} />
         const row = (
           <Row key={m.id} m={m} first={!continuesPrev(msgs[i - 1], m, endsTurn)} compact={compact} highlight={highlight === m.id} selecting={selecting} checked={selected?.has(m.id)} onSelect={onSelect} trail={trailOf[m.id]}>
-            <Body m={m} />
+            <Body m={m} compact={compact} />
           </Row>
         )
         return compact || selecting ? row : <MsgMenu key={m.id} m={m}>{row}</MsgMenu>

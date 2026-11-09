@@ -546,7 +546,7 @@ export const innerLog: Record<string, { conv: string; at: string; text: string; 
     { conv: 'g', at: '01:47', text: 'Compute 做完，Astra 复核通过 → 在群里 @你 请你验收' },
   ],
   astra: [{ conv: 'g', at: '01:46', text: '复核 Codex 的「首页打开太慢」：换 GPT-6 跑了一遍，通过' }],
-  grok: [{ conv: 'g-design', at: '02:03', text: '打开网页失败 3 次 → 报给你，等你决定重试还是换模型' }],
+  grok: [{ conv: 'g-design', at: '02:03', text: '打开网页失败 3 次 → 报给你，等你决定重试还是换模型', computeId: 'scrape' }],
 }
 
 /** 助手之间的对话（GrokBot 式：主流只显示一行，原话在这里） */

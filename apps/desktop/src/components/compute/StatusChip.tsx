@@ -12,7 +12,7 @@ export const STALL_MIN = 10
 
 export function computeState(c: Compute): ComputeState {
   if (c.status === 'running' && c.stopping) return { key: 'stopping', label: COPY.stopping, tone: 'neutral' }
-  if (c.status === 'running' && c.needsHuman && !c.needsHuman.taken) return { key: 'human', label: COPY.needsHuman, tone: 'warm' }
+  if (c.status === 'running' && c.needsHuman) return c.needsHuman.taken ? { key: 'human-taken', label: COPY.humanTaken, tone: 'warm' } : { key: 'human', label: COPY.needsHuman, tone: 'warm' }
   if (c.status === 'running' && (c.idleMin ?? 0) >= STALL_MIN) return { key: 'stalled', label: COPY.stalled(c.idleMin ?? 0), tone: 'warm' }
   return { key: c.status, ...STATUS[c.status] }
 }
