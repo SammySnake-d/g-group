@@ -1,0 +1,22 @@
+packages/server/src/fakes.ts
+  s_377be331e17ebd::t_8f8d160d00f15e 44-63,69-70,83-85,88,100-114,117,139,141
+  s_377be331e17ebd::t_4676de6b210f36 142
+packages/server/src/model-turns.test.ts
+  s_377be331e17ebd::t_b15c7952df17c9 1-208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c969a2f62b48a9fd1ba8b1250e8d19774c984b11",
+  "prompts": {},
+  "sessions": {
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

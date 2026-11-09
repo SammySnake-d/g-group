@@ -1,0 +1,19 @@
+packages/server/proof/compute-help-mutations.mjs
+  s_9356e7c42cd5ff::t_3e5fc2e614bda3 1-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4e400418a8e9e52325d0ef29a9daf1ab9563dc5d",
+  "prompts": {},
+  "sessions": {
+    "s_9356e7c42cd5ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2b2d0a85716d2524",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

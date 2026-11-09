@@ -1,0 +1,21 @@
+packages/server/proof/e2e-help-review-run5.txt
+  s_377be331e17ebd::t_f116ac9e5c64cc 1-205
+receipts/feat-cross-vendor-review.json
+  s_377be331e17ebd::t_bc0c70539a0716 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a40b24542f7c019cdc8776ccf300dc77f536d8ff",
+  "prompts": {},
+  "sessions": {
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

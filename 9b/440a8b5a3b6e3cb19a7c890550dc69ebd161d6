@@ -1,0 +1,27 @@
+packages/domain/src/model-config.ts
+  s_377be331e17ebd::t_f0c5638f2c8786 60-104,106-109,111-116,118-122,124-136,138-145,184-250
+packages/domain/src/model-ledger.ts
+  s_377be331e17ebd::t_b2408bdf93adac 6,37-45,47-50,52-54,56-61
+packages/server/src/cli.ts
+  s_377be331e17ebd::t_5ece0f364e5388 139
+packages/server/src/host.ts
+  s_377be331e17ebd::t_99c43d9967f883 35,39-41,43,45,131-132,309-310,317,320-327,339-345,347,350-353,366,369-373,378-398,400-450,453,1274-1276,1889-1898,1904,1907-1911,2068-2100
+packages/server/src/start.ts
+  s_377be331e17ebd::t_9e129057500517 79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9b440a8b5a3b6e3cb19a7c890550dc69ebd161d6",
+  "prompts": {},
+  "sessions": {
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

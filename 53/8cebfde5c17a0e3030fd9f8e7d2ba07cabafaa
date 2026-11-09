@@ -1,0 +1,21 @@
+packages/server/proof/compute-help-mutations.txt
+  s_e7bd71499cd700::t_145dd60291258b 1-30
+receipts/feat-compute-help.json
+  s_e7bd71499cd700::t_75c941ce106a13 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "538cebfde5c17a0e3030fd9f8e7d2ba07cabafaa",
+  "prompts": {},
+  "sessions": {
+    "s_e7bd71499cd700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8db9faef-fb87-414b-b25d-2aa6747caad3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

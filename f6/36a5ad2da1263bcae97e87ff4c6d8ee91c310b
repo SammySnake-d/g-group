@@ -1,0 +1,81 @@
+packages/kernel/src/retry-policy.test.ts
+  s_042e901c6ad028::t_c4f6f9eee48797 1-392
+  s_042e901c6ad028::t_ee9f3218bc9552 393-395
+  s_042e901c6ad028::t_f5cd46baec0731 396-428
+packages/kernel/src/index.ts
+  s_042e901c6ad028::t_9d2c0e54c90571 12
+packages/kernel/src/retry-policy.ts
+  s_25620647d6f8eb::t_2650a3a700c409 10,18-32,34,37,38-39,56-58,60-67,68-69,70-78,79-82,83-92,94-103,117-137,145-165,168-186,196-215,223-226,236-246,247-269,270-273,281-284,285-298,302,303-318,320-333,336-340,344-347,349-354,355-364,394,410
+  s_042e901c6ad028::t_60b7400ad2b216 1-9,11-17,33,35-36,40-55,59,93,104-116,138-144,166-167,187-195,216-222,227-235,274-280,299-301,319,334-335,341-343,348,365-393,418-423,436
+  s_25620647d6f8eb::t_99224322bbb388 395-397,407-409
+  s_25620647d6f8eb::t_9851ef0da0cdb0 411-413
+  s_25620647d6f8eb::t_616e875eb96d8b 398-406,414-417,424-435
+packages/kernel/proof/retry-policy-mutations.mjs
+  s_042e901c6ad028::t_5417a9ea447fcd 1-140
+  s_042e901c6ad028::t_f4b5eb0b2d6294 141-143
+  s_042e901c6ad028::t_d2f5a376b68f0d 144-145
+packages/kernel/proof/retry-policy-mutations.txt
+  s_45f973090a4dd5::t_e3415fdf6bd0cc 1,3-62
+receipts/feat-retry-policy.json
+  s_28bebc745289eb::t_41e61989dc2695 1-15,17-23
+packages/api-contract/src/events.ts
+  s_a3e46876f3c339::t_c46b57db0f35db 5,34-47
+packages/kernel/src/attention-retry.test.ts
+  s_a3e46876f3c339::t_43423fbcae8aa9 1-112
+packages/kernel/src/attention.ts
+  s_a3e46876f3c339::t_94acd747aeedce 29-30
+packages/server/src/fakes.ts
+  s_a3e46876f3c339::t_70643e065d184a 44-56,65,67-68,72-81,94,98,100-101,105
+packages/server/src/host.ts
+  s_a3e46876f3c339::t_500cb785a390da 42-43,107-118
+packages/server/src/retry.test.ts
+  s_a3e46876f3c339::t_c4272c75d680f8 1-141,143-577
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f636a5ad2da1263bcae97e87ff4c6d8ee91c310b",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_45f973090a4dd5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a51cdc3b09003b508",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_a3e46876f3c339": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afab83f69c52efc38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
