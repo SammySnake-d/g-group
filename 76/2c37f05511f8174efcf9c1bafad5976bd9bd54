@@ -1,0 +1,14 @@
+scripts/gates/proof/r12-symlink.txt
+  h_f33e46a035b77c 1-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "762c37f05511f8174efcf9c1bafad5976bd9bd54",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

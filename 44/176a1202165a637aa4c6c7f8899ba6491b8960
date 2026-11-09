@@ -1,0 +1,14 @@
+scripts/gates/proof/r12-cloud-environment.txt
+  h_f33e46a035b77c 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "44176a1202165a637aa4c6c7f8899ba6491b8960",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
