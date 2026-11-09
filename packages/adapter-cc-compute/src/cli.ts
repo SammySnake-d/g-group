@@ -147,6 +147,8 @@ export function cliArgs(input: Brief, promptInput: string, mcpConfigPathInput: s
     "-p", prompt,
     ...(resumeSession ? ["--resume", resumeSession] : []),
     "--output-format", "stream-json", "--verbose",
+    // 流式增量:模型开始回应(首字节)和长输出进行中都有行可看,宿主的整轮卡死检测才不会把长生成误判成没回应(D26 第 8.3 节)
+    "--include-partial-messages",
     // --bare:不读 CLAUDE.md、auto-memory、hooks 与插件,Compute 不带宿主一侧的记忆
     "--bare",
     // --bare 下 skill 只从 --plugin-dir 加载:只给联系人勾选的那些(AC-29,V-02 实测)

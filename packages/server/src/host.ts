@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { appendEvent, loadLog, recordAction } from "@g-group/adapter-sqlite";
-import type { ComputeAdapter, ComputeEvent } from "@g-group/adapter-cc-compute";
+import type { ComputeActivity, ComputeAdapter, ComputeEvent } from "@g-group/adapter-cc-compute";
 import {
   type ClientInputDraft,
   type CommitmentView,
@@ -23,6 +23,8 @@ import {
   type ReceiptView,
   type RewindResult,
   type RoomView,
+  type RunHint,
+  type RunView,
   type SettingsView,
   type TaskView,
   draftIssues,
@@ -81,6 +83,11 @@ import {
   type RetryPolicy,
   type RoundOutput,
   type RoundStatus,
+  type RunFailure,
+  type RunStatus,
+  type RunUnit,
+  type StallVerdict,
+  type ThresholdConfig,
   type TimerApi,
   type RecallItem,
   type RecallRef,
@@ -93,14 +100,21 @@ import {
   claimFailureCard,
   classifyFailure,
   crashRecover,
+  DEFAULT_RERUN_LIMIT,
+  compactMaterial,
   createAttentionLoop,
+  failFastOf,
+  isLiveRun as isLive,
   planRecall,
   decideRetry,
   effectOf,
   healOf,
   skipTarget,
-  compactMaterial,
+  planRerun,
+  runDisplay,
+  runFailure,
   scrubRetracted,
+  visibleRuns,
 } from "@g-group/kernel";
 import { type AnnouncementOrder, AnnouncementStore } from "./announcements.ts";
 import {
@@ -123,6 +137,7 @@ import { PluginStore } from "./plugins.ts";
 import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief, reviewModelProblem } from "./review.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
 import { QuotaTable } from "./quota.ts";
+import { RunStore } from "./runs.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
 import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, unindexTx } from "./search.ts";
 import { SharedDocs } from "./shared-docs.ts";
@@ -187,6 +202,14 @@ export interface HostOptions {
   readonly upstreamOf?: (model: string) => string;
   /** 退避抖动用的随机数,默认 Math.random。 */
   readonly random?: () => number;
+  /** 卡死阈值(默认一轮 15 分钟无进展 / 首字节 120 秒,#2827);可按联系人或按上游(模型)单独设,未设的用默认 */
+  readonly runThresholds?: ThresholdConfig | (() => ThresholdConfig);
+  /** 运行台账核对周期(毫秒),默认 30 秒 */
+  readonly runCheckMs?: number;
+  /** 本次宿主启动号(存活核对用);默认新生成 */
+  readonly bootId?: string;
+  /** 自己名下自动重跑上限,默认 2 次(助手建议,用户未定,#2646) */
+  readonly rerunLimit?: number;
 }
 
 /** 记忆锚点:全局(进前缀)与「建议改人格」(只记录,不进任何一块) */
@@ -357,8 +380,6 @@ export class Host {
   private readonly pumps: Promise<void>[] = [];
   private roundNo = 0;
   private closed = false;
-  /** 本次启动编号:在途轮次标记里写它,重启后据此认出上次留下的未提交轮次(F12)。 */
-  private readonly bootId: string;
   private readonly retryPolicy: RetryPolicy;
   private readonly breakerPolicy: BreakerPolicy;
   private readonly timersApi: TimerApi;
@@ -372,6 +393,22 @@ export class Host {
   private cardUpdates: { roomId: string; seq: number }[] = [];
   /** 事务里标为 stopped、提交后要真正停掉的审查 Compute(任务离开这一轮审查时)。 */
   private reviewStops: { taskId: string; computeId: string }[] = [];
+  /** 运行台账(AC-43):全景画板、runs.* 接口与联系人第 5 块读同一张 */
+  readonly runs: RunStore;
+  readonly bootId: string;
+  /** computeId → 台账里的会话与当前轮次 */
+  private readonly computeRuns = new Map<string, { sessionId: string; turnId: string }>();
+  /** computeId:toolId → 后台任务 / 子代理单元 */
+  private readonly toolRuns = new Map<string, { runId: string; subagent: boolean }>();
+  /** 宿主判卡死(或确定不会自愈的错误)后正在停的 Compute:停下后按这个原因写失败 */
+  private readonly stalling = new Map<string, { failure: RunFailure; verdict: StallVerdict | null }>();
+  private readonly stallReported = new Set<string>();
+  /** 在跑的联系人轮次被判卡死时,用它中止这一轮 */
+  private readonly roundStalls = new Map<string, (v: StallVerdict) => void>();
+  /** 谁请求停的(用户或联系人),停下后记 user_stopped */
+  private readonly stopBy = new Map<string, string>();
+  /** 联系人下一轮是对哪个失败轮次的重跑 */
+  private readonly pendingRerun = new Map<string, { rerunOf: string; attempt: number }>();
 
   constructor(opts: HostOptions) {
     this.opts = opts;
@@ -387,7 +424,8 @@ export class Host {
     ensureSearchIndex(this.db);
     this.memory = new MemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d));
     this.bus = createBus(this.now);
-    this.bootId = this.newId("boot");
+    // 本次启动编号:在途轮次标记(F12)与运行台账存活核对(AC-43)共用
+    this.bootId = opts.bootId ?? this.newId("boot");
     const policy = checkRetryPolicy({ ...DEFAULT_RETRY_POLICY, ...(opts.retry ?? {}) });
     if (!policy.ok) throw new HostError("invalid_params", `重试参数不合格:${policy.reason}`);
     this.retryPolicy = policy.policy;
@@ -467,6 +505,23 @@ export class Host {
     this.worktrees = opts.codeRepo ? new Worktrees(opts.codeRepo, join(opts.dataDir ?? dirname(opts.file), "worktrees")) : null;
     this.artifacts = new ArtifactStore(this.db, join(opts.dataDir ?? dirname(opts.file), "artifacts"), this.now);
     this.recoverReviews();
+    // 运行台账:上一次启动留下的在跑单元先核对成孤儿(AC-43 ①),再起周期核对(卡死判失败,AC-43 ⑦)
+    const th = opts.runThresholds;
+    this.runs = new RunStore({
+      db: this.db,
+      bootId: this.bootId,
+      clockMs: opts.clockMs ?? Date.now,
+      timers,
+      newId: this.newId,
+      thresholds: typeof th === "function" ? th : () => th ?? {},
+      ...(opts.runCheckMs !== undefined ? { checkMs: opts.runCheckMs } : {}),
+      changed: (us) => {
+        for (const u of us) this.bus.emit({ type: "run.updated", run: this.runs.view(u) });
+      },
+      stalled: (u, v) => this.onRunStall(u, v),
+    });
+    this.recoverRuns();
+    this.runs.startTicker();
     // 启动时先处理宿主关着期间到期的定时(按容差与 missedPolicy),再按最早一次设计时器
     this.scheduler.tick();
     // 启动回收(F4/F6/F12):上次留下的未提交轮次按 crash_recovery_count 决定续跑或熔断出卡;磁盘上还没被领走的输入交给联系人
@@ -1030,7 +1085,10 @@ export class Host {
     const effects: HostEffect[] = [];
     tx(this.db, () => {
       const { effects: eff } = this.stepTaskTx(taskId, { kind: "Cancel", by });
-      for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId, computeId: e.computeId });
+      for (const e of eff) if (e.kind === "stop-compute") {
+        this.stopBy.set(e.computeId, by);
+        effects.push({ kind: "stop", taskId, computeId: e.computeId });
+      }
       for (const e of eff) if (e.kind === "cancel-spawn") effects.push({ kind: "cancel-spawn", taskId, requestId: e.requestId });
       this.afterCancelTx(taskId);
       run(this.db, "UPDATE gg_cards SET state = 'done' WHERE task_id = ? AND kind = 'task-status' AND state = 'open'", taskId);
@@ -1605,6 +1663,206 @@ export class Host {
     const doc = this.taskDoc(id).value;
     // 任务每次变化后看负责人是否在这个群移出中:停止确认到了(T10/T11)才真正移出
     if (doc.task.owner) this.settleExit(doc.roomId, doc.task.owner);
+    this.syncTaskRuns(id, doc.task.state);
+  }
+  /** 任务落到终态:台账里它还活着的 Compute 会话跟着收口(验收 → done;取消 → 已停止;失败 → failed) */
+  private syncTaskRuns(taskId: string, state: string) {
+    if (!TERMINAL.has(state)) return;
+    for (const u of this.runs.liveByTask(taskId)) {
+      if (u.layer !== "compute-session") continue;
+      if (state === "T8_Accepted") this.runs.end(u.id, "done", {}, { taskState: state });
+      else if (state === "T10_Cancelled") this.runs.end(u.id, "interrupted", { failure: runFailure(classifyFailure({ text: "任务已取消", userStopped: true })) }, { taskState: state });
+      else this.runs.end(u.id, "failed", { failure: runFailure(classifyFailure({ text: "任务已失败" })) }, { taskState: state });
+    }
+  }
+
+  // ======================= 运行台账(AC-43、AC-14) =======================
+  /** 启动核对:上一次启动留下的在跑单元成孤儿「宿主进程退出」;其中还在跑或受阻的任务按现有状态机走 ExecFailed(进程已不在,停止当场确认),
+   *  负责联系人收到一条停滞事件,在会话里报卡点、决定要不要重跑——用户不必手发「继续」 */
+  private recoverRuns() {
+    const orphans = this.runs.reconcileBoot();
+    const owners = new Set<string>();
+    for (const u of orphans) {
+      if (u.layer !== "compute-session" || !u.taskId || !u.computeId) continue;
+      const doc = getDoc<TaskDoc>(this.db, `task:${u.taskId}`)?.value;
+      if (!doc || doc.task.computeId !== u.computeId || (doc.task.state !== "T3_Running" && doc.task.state !== "T4b_BlockedOnHuman")) continue;
+      // Compute 已经报了完成、只是联系人还没领走(终态在磁盘待领取表里,AC-36 F6 补领):不是孤儿失败
+      if (one(this.db, "SELECT 1 FROM gg_compute WHERE compute_id = ? AND status = 'completed'", u.computeId)) continue;
+      const taskId = u.taskId;
+      const computeId = u.computeId;
+      tx(this.db, () => {
+        this.stepTaskTx(taskId, { kind: "ExecFailed", computeId });
+        if (this.taskDoc(taskId).value.task.state === "T9_StopRequested") this.stepTaskTx(taskId, { kind: "StoppedConfirmed", taskId, computeId });
+        run(this.db, "UPDATE gg_compute SET status = 'failed', ended_at = ? WHERE compute_id = ? AND status IN ('starting','running','blocked')", this.now(), computeId);
+        this.inboxTx(u.contactId, u.roomId, {
+          kind: "compute",
+          roomId: u.roomId,
+          taskId,
+          computeId,
+          signal: "stalled",
+          summary: `没跑完:${u.note ?? "宿主进程退出"}(上次启动留下的 Compute 成了孤儿,任务已按失败收口;台账单元 ${u.id},可用 progress_rerun 重跑)`,
+          at: this.now(),
+        });
+      });
+      owners.add(u.contactId);
+    }
+    for (const c of owners) this.loop.notify(c, "now");
+  }
+  private runVisible(u: RunUnit, viewer: Parameters<typeof visibleRuns>[1]) {
+    return visibleRuns([u], viewer).length === 1;
+  }
+  /**
+   * 第 5 块「运行台账」:这位联系人在各个会话里按可见范围看得到的 Compute 会话(宿主机械过滤,D26 第 4 节):在跑的和 24 小时内结束的,
+   * 每个会话最多 10 条,原文截到 160 字。联系人轮次每轮一条、只是噪声,不进第 5 块(runs.* 与画板照样能看全部);第 5 块不能把整轮挤超预算。
+   */
+  private runLinesFor(contactId: string, rooms: readonly RoomRow[]): string[] {
+    const now = this.clock();
+    const out: string[] = [];
+    for (const r of rooms) {
+      const units = this.runs.visible({ kind: "contact", contactId, roomId: r.id, roomKind: r.kind });
+      for (const u of units.filter((x) => x.layer === "compute-session" && (isLive(x.status) || (x.endedAt !== null && now - x.endedAt < 24 * 3600_000))).slice(-10)) {
+        const d = runDisplay(u, now);
+        out.push(
+          `${u.id} ${LAYER_NAMES[u.layer]}「${d.text}」会话 ${u.roomId}${u.sourceSeq !== null ? ` #${u.sourceSeq}` : ""} 属于 ${u.contactId}${u.taskId ? ` 任务 ${u.taskId}` : ""}` +
+            `${u.failure ? ` 原因 ${u.failure.reasonClass}(${u.failure.retryClass}):${u.failure.raw.slice(0, 160)}` : ""}${u.note ? ` 说明:${u.note.slice(0, 80)}` : ""}${u.rerunOf ? ` 重跑自 ${u.rerunOf}` : ""}`,
+        );
+      }
+    }
+    return out;
+  }
+  /** Compute 里的轮次、后台任务、子代理按它所属的会话重跑 */
+  private rerunTarget(u: RunUnit): RunUnit {
+    let cur: RunUnit | null = u;
+    while (cur && cur.layer !== "compute-session" && cur.layer !== "contact-round" && cur.parentId) cur = this.runs.get(cur.parentId);
+    return cur && (cur.layer === "compute-session" || cur.layer === "contact-round") ? cur : u;
+  }
+  /**
+   * 重跑一个单元(D26 第 5 节,AC-43 ⑤):先按规则判(kernel planRerun),再领租约(同一单元同时只一个重跑),写一条重跑事件;
+   * 联系人轮次:让那位联系人重新跑一轮(失败那轮的输入还在,游标没推进);Compute 会话:按原任务开新任务和新会话,带原任务引用与上次失败原因。
+   * 别人名下的(明确发起的)在会话里留记录;不知道副作用做没做完的先说明;拒绝且有「未做:原因」的报到会话里。必须在事务里调用。
+   */
+  private rerunTx(
+    target: RunUnit,
+    req: { initiator: { kind: "user" | "contact"; id: string }; trigger: "auto" | "explicit"; actor: { kind: "user" | "contact"; id: string }; roomId: string; basisSeq: number | null; key: string },
+  ):
+    | { ok: true; effects: HostEffect[]; appended: { roomId: string; seq: number }[]; tasks: string[]; mode: "same_session" | "new_session"; taskId: string | null; attempt: number; notify: string | null }
+    | { ok: false; reason: string; notDone: string | null; appended: { roomId: string; seq: number }[] } {
+    const unit = this.rerunTarget(target);
+    const appended: { roomId: string; seq: number }[] = [];
+    const say = (text: string, suffix: string) => {
+      const r = this.appendMessageTx(req.roomId, req.actor, { text, actionKey: `${req.key}:${suffix}` });
+      appended.push({ roomId: req.roomId, seq: r.seq });
+    };
+    const chain = this.runs.chain(unit.id);
+    const autoReruns = this.runs.countEvents(chain.map((u) => u.id), "rerun", (d) => d.countsTowardLimit === true);
+    let sameUpstreamFailures = 0;
+    for (const u of chain) {
+      if (u.status !== "failed" || u.upstream !== unit.upstream) break;
+      sameUpstreamFailures++;
+    }
+    const at = this.clock();
+    const plan = planRerun({ unit, autoReruns, limit: this.opts.rerunLimit ?? DEFAULT_RERUN_LIMIT, lease: this.runs.lease(unit.id), sameUpstreamFailures }, { at, initiator: req.initiator, trigger: req.trigger });
+    const refuse = (reason: string, notDone: string | null) => {
+      if (notDone) say(notDone, "notdone");
+      this.runs.addEventTx(unit.id, "rerun-refused", { reason, notDone, initiator: req.initiator, actor: req.actor, trigger: req.trigger, basisSeq: req.basisSeq });
+      return { ok: false as const, reason, notDone, appended };
+    };
+    if (!plan.ok) return refuse(plan.reason, plan.notDone);
+    let src: TaskDoc | undefined;
+    if (unit.layer !== "contact-round") {
+      src = unit.taskId ? getDoc<TaskDoc>(this.db, `task:${unit.taskId}`)?.value : undefined;
+      if (!src) return refuse("找不到原任务", null);
+      if (!TERMINAL.has(src.task.state)) {
+        // 原任务停在 AC-36 原位失败卡上(这一实例已失败、等用户选):重跑接管这张卡——卡作废、原任务按失败收口,再开新任务
+        const f = this.failureRow("task", src.task.id);
+        if (!(f?.status === "card" && f.compute_id && src.task.computeId === f.compute_id)) return refuse(`原任务还在进行(${src.task.state}),先停掉或等它结束`, null);
+      }
+    }
+    if (!this.runs.claimLeaseTx(unit.id, plan.lease.holder, plan.lease.until)) return refuse("lease-held", null);
+    const superseded = src && !TERMINAL.has(src.task.state) ? src.task.id : null;
+    if (superseded) this.supersedeFailureCardTx(superseded);
+    const effects: HostEffect[] = [];
+    const tasks: string[] = superseded ? [superseded] : [];
+    let taskId: string | null = null;
+    const why = unit.failure ? `${unit.failure.label}:${unit.failure.raw.slice(0, 300)}` : (unit.note ?? "没跑完");
+    if (plan.explainFirst) say(`重跑前说明:上次「${unit.failure?.label ?? "失败"}」,副作用做没做完不清楚(原文:${(unit.failure?.raw ?? "").slice(0, 300)}),这次重跑可能会重复已做的部分。`, "explain");
+    if (src) {
+      const owner = src.task.owner ?? unit.contactId;
+      taskId = this.newId("t");
+      const brief = `${src.brief}
+
+[重跑说明] 这是任务 ${src.task.id} 的第 ${plan.event.attempt} 次重跑${plan.mode === "new_session" ? "(开新会话,不接着原会话)" : ""};上次结果:${why}。已经做过的副作用先核对再继续。`;
+      const doc0: TaskDoc = { task: newTask(taskId, src.task.requester), title: src.title, roomId: src.roomId, sourceSeq: src.sourceSeq, brief, createdAt: this.now(), updatedAt: this.now(), result: null };
+      putDoc(this.db, `task:${taskId}`, 0, doc0);
+      const { effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: owner });
+      for (const e of eff) if (e.kind === "spawn-compute") effects.push({ kind: "spawn", taskId, requestId: e.requestId, contactId: owner, model: this.computeModelOf(this.contactDoc(owner).value), brief, roomId: src.roomId, rerunOf: unit.id, attempt: plan.event.attempt });
+      const r = this.appendMessageTx(src.roomId, { kind: "contact", id: owner }, {
+        text: `重跑任务:${src.title}(第 ${plan.event.attempt} 次,依据台账 ${unit.id})`,
+        actionKey: `${req.key}:card`,
+        replyToSeq: src.sourceSeq,
+        quotedSeqs: [src.sourceSeq],
+        card: { card_id: this.newId("card"), kind: "task-status", task_id: taskId, title: src.title.slice(0, 200), body: brief.slice(0, 20000), state: "open", actions: JSON.stringify([{ actionId: "cancel", label: "取消任务", style: "danger" }]), meta: JSON.stringify({ rerunOf: unit.id }) },
+      });
+      appended.push({ roomId: src.roomId, seq: r.seq });
+      tasks.push(taskId);
+    } else this.pendingRerun.set(unit.contactId, { rerunOf: unit.id, attempt: plan.event.attempt });
+    if (plan.announce) {
+      const who = req.initiator.kind === "user" ? this.userName : this.nameOf({ kind: "contact", id: req.initiator.id });
+      say(`重跑了 ${this.nameOf({ kind: "contact", id: unit.contactId })} 名下的${src ? `任务「${src.title}」` : "联系人轮次"}(发起:${who}${req.basisSeq !== null ? `,依据 #${req.basisSeq}` : ""};依据失败记录 ${unit.id}:${why})`, "announce");
+    }
+    this.runs.addEventTx(unit.id, "rerun", { ...plan.event, actor: req.actor, basisSeq: req.basisSeq, countsTowardLimit: plan.countsTowardLimit, announce: plan.announce, newTaskId: taskId, lease: plan.lease });
+    return { ok: true, effects, appended, tasks, mode: plan.mode, taskId, attempt: plan.event.attempt, notify: src ? null : unit.contactId };
+  }
+
+  /** 重跑接管原位失败卡(在事务里):卡作废、在途失败清掉、原任务按失败收口(进程已不在,停止当场确认) */
+  private supersedeFailureCardTx(taskId: string) {
+    const f = this.failureRow("task", taskId);
+    if (f?.status !== "card" || !f.compute_id) return;
+    if (f.card_id) {
+      const c = one<{ room_id: string; seq: number }>(this.db, "SELECT room_id, seq FROM gg_cards WHERE card_id = ? AND state = 'open'", f.card_id);
+      if (c && run(this.db, "UPDATE gg_cards SET state = 'expired' WHERE card_id = ? AND state = 'open'", f.card_id) === 1) this.cardUpdates.push({ roomId: c.room_id, seq: c.seq });
+    }
+    run(this.db, "DELETE FROM gg_failures WHERE scope = 'task' AND subject = ?", taskId);
+    const t = this.taskDoc(taskId).value.task;
+    if (t.computeId === f.compute_id && !TERMINAL.has(t.state) && t.state !== "T9_StopRequested") {
+      this.stepTaskTx(taskId, { kind: "ExecFailed", computeId: f.compute_id });
+      if (this.taskDoc(taskId).value.task.state === "T9_StopRequested") this.stepTaskTx(taskId, { kind: "StoppedConfirmed", taskId, computeId: f.compute_id });
+    }
+  }
+  /** 这位联系人、这个上游此刻生效的卡死阈值(默认 15 分钟 / 120 秒,#2827)与来源 */
+  runThresholds(contactId: string, upstream: string | null) {
+    return this.runs.thresholdsFor(contactId, upstream);
+  }
+  /** 全景画板与 runs.list:用户本人看全部;同一上游同一原因的失败合并成群级提示 */
+  listRuns(q: { roomId?: string; contactId?: string; statuses?: readonly RunStatus[]; limit?: number }): { runs: RunView[]; hints: RunHint[] } {
+    const units = this.runs.visible({ kind: "user" }, { ...(q.roomId ? { roomId: q.roomId } : {}), ...(q.contactId ? { contactId: q.contactId } : {}) }).filter((u) => !q.statuses || q.statuses.includes(u.status));
+    // 群级提示按会话 / 联系人轮次合并(Compute 轮次的失败与它所属的会话是同一件事,不重复计)
+    return { runs: units.slice(-(q.limit ?? 500)).map((u) => this.runs.view(u)), hints: this.runs.hints(units.filter((u) => u.layer === "compute-session" || u.layer === "contact-round")) };
+  }
+  getRun(runId: string): { run: RunView; children: RunView[]; events: { runId: string; kind: string; detail: unknown; at: string }[] } {
+    const u = this.runs.get(runId);
+    if (!u) throw new HostError("not_found", `台账里没有单元 ${runId}`);
+    return { run: this.runs.view(u), children: this.runs.childIds(runId).map((id) => this.runs.get(id)).filter((x): x is RunUnit => !!x).map((x) => this.runs.view(x)), events: this.runs.events(runId, 50) };
+  }
+  /** 用户本人在画板上明确发起重跑(runs.rerun);同一 clientActionId 重发返回同一结果 */
+  rerunRun(runId: string, clientActionId: string): { runId: string; mode: "same_session" | "new_session"; taskId: string | null; attempt: number } {
+    const key = `rerun:${clientActionId}`;
+    const prior = one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key);
+    if (prior) return JSON.parse(prior.payload) as { runId: string; mode: "same_session" | "new_session"; taskId: string | null; attempt: number };
+    const u = this.runs.get(runId);
+    if (!u) throw new HostError("not_found", `台账里没有单元 ${runId}`);
+    const target = this.rerunTarget(u);
+    const res = tx(this.db, () => {
+      const r = this.rerunTx(target, { initiator: { kind: "user", id: this.userId }, trigger: "explicit", actor: { kind: "user", id: this.userId }, roomId: target.roomId, basisSeq: null, key: `user-rerun:${clientActionId}` });
+      if (r.ok) recordAction(this.db.store, key, { runId: target.id, mode: r.mode, taskId: r.taskId, attempt: r.attempt });
+      return r;
+    });
+    for (const a of res.appended) this.afterAppend(a.roomId, a.seq, { kind: "user", id: this.userId });
+    if (!res.ok) throw new HostError("conflict", `不能重跑:${res.reason}`, { reason: res.reason, notDone: res.notDone });
+    for (const t of res.tasks) this.emitTask(t);
+    if (res.notify) this.loop.notify(res.notify, "now");
+    void this.runEffects(res.effects);
+    return { runId: target.id, mode: res.mode, taskId: res.taskId, attempt: res.attempt };
   }
 
   // ======================= 代码工作树(R-Worktree,AC-22) =======================
@@ -2072,6 +2330,19 @@ export class Host {
     const roundId = `${contactId}:r${++this.roundNo}:${Date.now().toString(36)}`;
     // 接走即已读(AC-46 ④):开始这一轮就推进已读位置,与 processed_seq 无关
     for (const r of rooms) if (fresh.some((f) => f.kind === "message" && f.roomId === r.id)) this.markRead(r.id, { kind: "contact", id: contactId }, lastSeen[r.id] ?? 0);
+    // 运行台账:这一轮是一个联系人轮次单元,来源是它接到的第一条新消息(D26 第 3 节)
+    const firstMsg = fresh.find((f): f is InboundMessage => f.kind === "message");
+    const rerunOf = this.pendingRerun.get(contactId);
+    this.pendingRerun.delete(contactId);
+    const unit = this.runs.start({
+      layer: "contact-round",
+      parentId: null,
+      roomId: focusRoom ?? rooms[0]?.id ?? `dm-${contactId}`,
+      sourceSeq: firstMsg?.seq ?? null,
+      contactId,
+      upstream: model,
+      ...(rerunOf ? { rerunOf: rerunOf.rerunOf, attempt: rerunOf.attempt } : {}),
+    });
     this.setActivity(contactId, focusRoom, "thinking");
     const tasks = this.listTasks({ contactId }).filter((t) => !TERMINAL.has(t.state));
     let note = getDoc<{ text: string }>(this.db, `note:${contactId}`);
@@ -2129,28 +2400,53 @@ export class Host {
       tasks: tasks.map((t) => `${t.id} [${t.state}] ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
       pointers: [...pointers, ...mem.pointers],
       budgetBytes: this.opts.roundBudgetBytes ?? ROUND_BUDGET_BYTES,
+      runs: this.runLinesFor(contactId, rooms),
       });
     } catch (e) {
       // 整轮超预算(D06 §2):显式失败——不截断、不调模型、游标不推进;出失败卡交用户重试或跳过,不在后台反复重跑
       if (e instanceof RoundAssembleError && e.reason === "over-budget" && e.need !== null && e.budget !== null) {
+        this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: `这一轮上下文超预算:${e.message}` })) });
         return this.failRound(contactId, roundId, focusRoom ?? fresh[0]!.roomId, lastSeen, inbox, { reason: "over-budget", need: e.need, budget: e.budget, detail: e.message });
       }
       this.setActivity(contactId, null, "idle");
+      this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
       throw e;
     }
     // 在途轮次标记(F12):本轮提交时与游标同一事务删掉;宿主中途退出,重启时据此认出未提交轮次并计 crash_recovery_count
     this.markRunning(contactId, JSON.stringify({ processed: processedNow, inbox: inboxEnd }), focusRoom, lastSeen, inboxEnd);
+    // 整轮卡死判失败(D26 第 8.3 节):周期核对判出这一轮卡死时中止它,不等脑子自己返回
+    const ac = new AbortController();
+    const relay = () => ac.abort();
+    signal.addEventListener("abort", relay, { once: true });
+    let stall: StallVerdict | null = null;
+    const stalled = new Promise<never>((_, reject) => {
+      this.roundStalls.set(unit.id, (v) => {
+        stall = v;
+        ac.abort();
+        reject(new RoundStalledError(v));
+      });
+    });
+    stalled.catch(() => {});
+    // 宿主关闭时也不等一个不理会中止的脑子:轮次留在运行中,下次启动核对成孤儿
+    const closing = new Promise<never>((_, reject) => signal.addEventListener("abort", () => reject(new Error("宿主中止本轮")), { once: true }));
+    closing.catch(() => {});
     let out: Awaited<ReturnType<ContactMind["round"]>>;
     try {
       // 每一轮现场定生效模型(原则 70):用户在失败卡上显式选了备用模型才换,只用于重跑这一批;自动重试永远用原模型(严禁静默换模)
       const tools: RoundTools = { readMemory: async (id: string) => this.renderMemory(contactId, id), readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq) };
-      out = await this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, signal, tools);
+      out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, ac.signal, tools), stalled, closing]);
     } catch (e) {
       this.setActivity(contactId, null, "idle");
-      // 宿主中止(停机、发送前撤销)不是失败
+      if (stall) this.runs.failStalled(unit.id, stall);
+      else if (!signal.aborted && !this.closed) this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
+      // 宿主中止(停机、发送前撤销)不是失败;卡死判定(RoundStalledError 带 stall)交 AC-36 按「整轮已判失败」处理,不静默重试同一轮
       if (signal.aborted || this.closed) return "done";
       return this.onContactFailure(contactId, contact.name, e, { upstream, focusRoom, lastSeen, inboxEnd });
+    } finally {
+      this.roundStalls.delete(unit.id);
+      signal.removeEventListener("abort", relay);
     }
+    // 宿主关闭中止的轮次不改台账:留在运行中,下次启动核对成孤儿「宿主进程退出」
     if (signal.aborted || this.closed) return "done";
     // 模型回了话:这个上游是好的(熔断半开探测成功就恢复,交回被暂停的成员)
     this.upstreamOk(upstream);
@@ -2161,16 +2457,25 @@ export class Host {
         const newer = loadLog(this.db.store, `room:${r.id}`).log.events.filter((m) => m.seq > (lastSeen[r.id] ?? 0) && m.sender.kind === "user");
         if (newer.length) {
           this.report("stale-round", { contactId, roomId: r.id, newer: newer.map((m) => m.seq) });
+          this.runs.settle(unit.id, { stale: true, note: "发送前检出更新的用户消息,本轮结果放弃并重跑" });
           return "stale";
         }
       }
     }
     const settled = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), signal);
     if (signal.aborted || this.closed) return "done";
-    const done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona });
+    let done: { effects: HostEffect[] };
+    try {
+      done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona });
+    } catch (e) {
+      this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
+      throw e;
+    }
     this.expireRoundFailures(contactId);
     this.setActivity(contactId, null, "idle");
-    await this.runEffects(done.effects);
+    // 这一轮起的 Compute 会话挂在这个轮次下面(父子一致:Compute 还在跑,轮次就等它,不记 done)
+    await this.runEffects(done.effects.map((e) => (e.kind === "spawn" && !e.parentRunId ? { ...e, parentRunId: unit.id } : e)));
+    this.runs.settle(unit.id);
     return "done";
   }
 
@@ -2259,6 +2564,7 @@ export class Host {
     const touchedTasks = new Set<string>();
     const rejected: { action: MindAction; reason: string }[] = [];
     let hadFailure = false as boolean;
+    const notifyAfter: string[] = [];
     tx(this.db, () => {
       // 账本:本轮新消息先 receive
       const byRoom = new Map<string, Parameters<typeof applyLedger>[2][]>();
@@ -2460,10 +2766,35 @@ export class Host {
             const t = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
             const { effects: eff } = this.stepTaskTx(a.taskId, { kind: "Cancel", by: contactId });
-            for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId: a.taskId, computeId: e.computeId });
+            for (const e of eff) if (e.kind === "stop-compute") {
+              this.stopBy.set(e.computeId, contactId);
+              effects.push({ kind: "stop", taskId: a.taskId, computeId: e.computeId });
+            }
             for (const e of eff) if (e.kind === "cancel-spawn") effects.push({ kind: "cancel-spawn", taskId: a.taskId, requestId: e.requestId });
             this.afterCancelTx(a.taskId);
             touchedTasks.add(a.taskId);
+            break;
+          }
+          case "rerun": {
+            // progress_rerun(D26 第 5 节):可见范围由宿主按会话机械判;依据消息只能是本轮新消息
+            if (!roomIds.has(a.roomId)) { reject("不在这个会话里"); break; }
+            const room = this.roomRow(a.roomId);
+            const unit = this.runs.get(a.runId);
+            if (!unit || !this.runVisible(unit, { kind: "contact", contactId, roomId: a.roomId, roomKind: room.kind })) { reject(`在 ${a.roomId} 看不到单元 ${a.runId}`); break; }
+            let initiator: { kind: "user" | "contact"; id: string } = { kind: "contact", id: contactId };
+            let trigger: "auto" | "explicit" = "auto";
+            if (a.basisSeq !== null) {
+              const basis = freshMsgs.find((m) => m.roomId === a.roomId && m.seq === a.basisSeq);
+              if (!basis || basis.sender.kind === "helper" || basis.sender.kind === "system" || (basis.sender.kind === "contact" && basis.sender.id === contactId)) { reject(`依据 ${a.roomId} #${a.basisSeq} 不是本轮别人发的新消息`); break; }
+              trigger = "explicit";
+              if (basis.sender.kind === "user") initiator = { kind: "user", id: basis.sender.id };
+            }
+            const r = this.rerunTx(unit, { initiator, trigger, actor: { kind: "contact", id: contactId }, roomId: a.roomId, basisSeq: a.basisSeq, key: actionId });
+            appended.push(...r.appended);
+            if (!r.ok) { reject(`不重跑:${r.reason}`); break; }
+            effects.push(...r.effects);
+            for (const t of r.tasks) touchedTasks.add(t);
+            if (r.notify) notifyAfter.push(r.notify);
             break;
           }
         }
@@ -2514,6 +2845,7 @@ export class Host {
     if (hadFailure) this.emitRetry({ scope: "contact", contactId, taskId: null, roomId: null, state: "cleared", attempt: 0, limit: 0, label: "已恢复" });
     for (const a of appended) this.afterAppend(a.roomId, a.seq, { kind: "contact", id: contactId });
     for (const id of touchedTasks) this.emitTask(id);
+    for (const c of notifyAfter) this.loop.notify(c, "now");
     return { effects };
   }
 
@@ -2529,8 +2861,162 @@ export class Host {
       a = this.opts.compute(model);
       this.adapters.set(isModelAware(a) ? harness : `${harness}:${model}`, a);
       this.pumps.push(this.pump(a));
+      if (typeof a.activity === "function") this.pumps.push(this.pumpActivity(a));
     }
     return a;
+  }
+  /** harness 流里的活动(卡死检测用,D26 第 8.3 节):只改台账进展,不进联系人上下文 */
+  private async pumpActivity(a: ComputeAdapter) {
+    try {
+      for await (const x of a.activity!()) {
+        if (this.closed) break;
+        try {
+          this.onComputeActivity(x);
+        } catch (e) {
+          this.report("compute-activity", e);
+        }
+      }
+    } catch (e) {
+      if (!this.closed) this.report("compute-activity-pump", e);
+    }
+  }
+  private onComputeActivity(x: ComputeActivity) {
+    const m = this.computeRuns.get(x.computeId);
+    if (!m) return;
+    const turn = this.runs.get(m.turnId);
+    if (!turn) return;
+    if (x.kind === "retry") {
+      // 「正在重试」公告不刷新计时;确定不会自愈的错误(鉴权、额度、上下文超长……)不等阈值,一报就判
+      this.runs.activity(m.turnId, { kind: "retry", error: x.error, httpStatus: x.httpStatus });
+      const ff = failFastOf({ kind: "retry", error: x.error, httpStatus: x.httpStatus });
+      if (ff) void this.stopComputeFor(x.computeId, { failure: ff, verdict: null });
+      return;
+    }
+    if (x.kind === "model_call") {
+      this.runs.activity(m.turnId, { kind: "model_call" });
+      return;
+    }
+    if (x.kind === "tool_start") {
+      this.runs.activity(m.turnId, { kind: "tool_start", toolId: x.toolId });
+      if (x.background || x.subagent) {
+        const u = this.runs.start({ layer: x.subagent ? "subagent" : "background", parentId: m.turnId, roomId: turn.roomId, sourceSeq: turn.sourceSeq, contactId: turn.contactId, taskId: turn.taskId, computeId: x.computeId, upstream: turn.upstream });
+        this.toolRuns.set(`${x.computeId}:${x.toolId}`, { runId: u.id, subagent: x.subagent });
+      }
+      return;
+    }
+    if (x.kind === "tool_end") {
+      this.runs.activity(m.turnId, { kind: "tool_end", toolId: x.toolId });
+      const t = this.toolRuns.get(`${x.computeId}:${x.toolId}`);
+      // 子代理随 Task 工具的结果结束;后台命令的 tool_result 只是「已在后台启动」,单元继续跑到所属轮次结束
+      if (t?.subagent) {
+        if (x.isError) this.runs.end(t.runId, "failed", { failure: runFailure(classifyFailure({ text: "子代理以错误结束" })) });
+        else this.runs.end(t.runId, "done");
+        this.toolRuns.delete(`${x.computeId}:${x.toolId}`);
+      }
+      return;
+    }
+    this.runs.activity(m.turnId, { kind: "progress", what: x.what });
+    if (x.what === "subagent") for (const [k, t] of this.toolRuns) if (t.subagent && k.startsWith(`${x.computeId}:`)) this.runs.activity(t.runId, { kind: "progress", what: "subagent" });
+  }
+  /** 台账:Compute 的语义事件 → 会话 / 轮次的状态(状态由宿主从 harness 事件核对,不由联系人自报) */
+  private ledgerComputeEvent(ev: ComputeEvent) {
+    const m = this.computeRuns.get(ev.computeId);
+    if (!m) return;
+    switch (ev.kind) {
+      case "started":
+      case "milestone":
+        this.runs.activity(m.turnId, { kind: "progress", what: "semantic" });
+        return;
+      case "blocked":
+        this.runs.setStatus(m.turnId, "waiting_user", {}, { needs: ev.needs });
+        this.runs.setStatus(m.sessionId, "waiting_user");
+        return;
+      case "completed":
+        this.runs.end(m.turnId, "done");
+        this.runs.setStatus(m.sessionId, "waiting_user", {}, { note: "Compute 已完成,等交付与验收" });
+        return;
+      case "failed": {
+        const failure = runFailure(classifyFailure({ text: ev.reason }));
+        this.runs.end(m.turnId, "failed", { failure });
+        // AC-36 静默退避续跑中:会话还没结束(同一实例马上续跑),只记这一轮失败;
+        // 出了原位失败卡、被共享熔断暂停(同一上游合成一条群级提示)或没被接住的,会话记失败;之后在原位续跑的开接续单元(ledgerResume)
+        const f = one<{ status: string; compute_id: string | null }>(this.db, "SELECT status, compute_id FROM gg_failures WHERE scope = 'task' AND subject = (SELECT task_id FROM gg_compute WHERE compute_id = ?)", ev.computeId);
+        if (f && f.compute_id === ev.computeId && f.status === "retrying") {
+          this.runs.setStatus(m.sessionId, "running", { note: "自动重试中" });
+          return;
+        }
+        this.runs.end(m.sessionId, "failed", { failure });
+        return;
+      }
+      case "stopped": {
+        const s = this.stalling.get(ev.computeId);
+        if (s) {
+          this.finishStall(ev.computeId, s);
+          return;
+        }
+        const by = this.stopBy.get(ev.computeId);
+        const failure = runFailure(classifyFailure({ text: by && by !== this.userId ? `联系人 ${by} 停止了任务` : "用户停止了任务", userStopped: true }));
+        this.runs.end(m.turnId, "interrupted", { failure });
+        this.runs.end(m.sessionId, "interrupted", { failure }, { by: by ?? null });
+        return;
+      }
+    }
+  }
+  /** 判卡死后:先停这一轮(任务按现有状态机走 ExecFailed),再写失败与原因(D26 第 8.3 节「到阈值」) */
+  private onRunStall(u: RunUnit, v: StallVerdict) {
+    if (u.layer === "contact-round") {
+      const abort = this.roundStalls.get(u.id);
+      if (abort) abort(v);
+      else this.runs.failStalled(u.id, v);
+      return;
+    }
+    if (u.layer === "compute-turn" && u.computeId && this.computeRuns.get(u.computeId)?.turnId === u.id) {
+      void this.stopComputeFor(u.computeId, { failure: v.failure, verdict: v });
+      return;
+    }
+    this.runs.failStalled(u.id, v);
+  }
+  private async stopComputeFor(computeId: string, s: { failure: RunFailure; verdict: StallVerdict | null }) {
+    if (this.stalling.has(computeId)) return;
+    this.stalling.set(computeId, s);
+    const row = one<{ task_id: string }>(this.db, "SELECT task_id FROM gg_compute WHERE compute_id = ?", computeId);
+    const effects: HostEffect[] = [];
+    if (row) {
+      tx(this.db, () => {
+        const t = this.taskDoc(row.task_id).value.task;
+        if (t.computeId === computeId && !TERMINAL.has(t.state) && t.state !== "T9_StopRequested") {
+          const { effects: eff } = this.stepTaskTx(row.task_id, { kind: "ExecFailed", computeId });
+          for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId: row.task_id, computeId: e.computeId });
+        }
+      });
+      this.emitTask(row.task_id);
+      if (!effects.length) effects.push({ kind: "stop", taskId: row.task_id, computeId });
+    }
+    await this.runEffects(effects);
+    // 适配器没报 stopped(拒绝停、或这一轮已经结束)也要写失败
+    this.finishStall(computeId, s);
+  }
+  /** 写停下来的原因;联系人收到一条停滞事件去会话里报卡点(AC-14),只发一次 */
+  private finishStall(computeId: string, s: { failure: RunFailure; verdict: StallVerdict | null }) {
+    const m = this.computeRuns.get(computeId);
+    if (!m) return;
+    const turn = this.runs.get(m.turnId);
+    if (s.verdict && turn && isLive(turn.status)) this.runs.failStalled(m.turnId, s.verdict);
+    else this.runs.end(m.turnId, "failed", { failure: s.failure });
+    this.runs.end(m.sessionId, "failed", { failure: s.failure });
+    if (this.stallReported.has(computeId)) return;
+    this.stallReported.add(computeId);
+    const row = one<{ task_id: string; contact_id: string; room_id: string }>(this.db, "SELECT task_id, contact_id, room_id FROM gg_compute WHERE compute_id = ?", computeId);
+    if (!row) return;
+    const u = this.runs.get(m.turnId);
+    const took = u ? runDisplay(u, Date.parse(this.now())).text : s.failure.label;
+    const last = u ? new Date(u.progress.lastProgressAt).toISOString() : "?";
+    const summary = `${took};${s.failure.raw}(最后进展 ${last}${s.verdict ? `,判定阈值 ${Math.round(s.verdict.thresholdMs / 1000)} 秒` : ""};台账单元 ${m.sessionId},可用 progress_rerun 重跑)`;
+    tx(this.db, () => this.inboxTx(row.contact_id, row.room_id, { kind: "compute", roomId: row.room_id, taskId: row.task_id, computeId, signal: "stalled", summary, at: this.now() }));
+    this.loop.notify(row.contact_id, "now");
+  }
+  private inboxTx(contactId: string, roomId: string, payload: Inbound) {
+    run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", contactId, roomId, JSON.stringify(payload), this.now());
   }
   private async pump(a: ComputeAdapter) {
     try {
@@ -2639,14 +3125,21 @@ export class Host {
           taskChanged = true;
         }
       }
-      // 被容错接住的失败不转给联系人(静默退避期间不打断;出卡由宿主机械完成)
-      if (ev.kind !== "started" && !handled && !intent.quiet) {
+      // 被容错接住的失败不转给联系人(静默退避期间不打断;出卡由宿主机械完成);
+      // 宿主判卡死后停下的:停滞事件由 finishStall 发一次(带原因),这里不再发「已停止」
+      const h = handled as ComputeFailureOutcome | null;
+      if (ev.kind !== "started" && (!h || h.kind === "card") && !intent.quiet && !(ev.kind === "stopped" && this.stalling.has(ev.computeId))) {
         const a = asked as { qId: string } | null;
-        const note = a ? `(宿主已替你在会话里 @提出者 发了提问卡 ${a.qId},等用户回答;用户在聊天里回答时用 forward 原样转给 Compute,不要自己猜答案)` : "";
+        const note = a
+          ? `(宿主已替你在会话里 @提出者 发了提问卡 ${a.qId},等用户回答;用户在聊天里回答时用 forward 原样转给 Compute,不要自己猜答案)`
+          : h?.kind === "card"
+            ? "(宿主已在会话里出了原位失败卡,等用户选重试 / 换模型 / 不重试;按运行台账规则也可以重跑,重跑会接管这张卡)"
+            : "";
         const payload: Inbound = { kind: "compute", roomId: row.room_id, taskId: row.task_id, computeId: ev.computeId, signal: ev.kind, summary: summary + note + intent.note, at };
         run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", row.contact_id, row.room_id, JSON.stringify(payload), at);
       }
     });
+    this.ledgerComputeEvent(ev);
     if (ev.kind === "failed" || ev.kind === "stopped" || ev.kind === "completed") void this.afterRound(row.task_id, ev.computeId, ev.kind, this.launchEpoch.get(row.task_id) ?? 0);
     const progress: ComputeProgress = { computeId: ev.computeId, taskId: row.task_id, kind: ev.kind, ...(stage ? { stage } : {}), summary, at };
     this.bus.emit({ type: "compute.progress", progress });
@@ -2663,7 +3156,12 @@ export class Host {
       this.emitRetry({ scope: "task", contactId: row.contact_id, taskId: row.task_id, roomId: row.room_id, state: "cleared", attempt: 0, limit: 0, label: "已恢复" });
       this.upstreamOk(recovered);
     }
-    if (handled) return this.afterComputeFailure(row, handled);
+    if (handled) {
+      this.afterComputeFailure(row, handled);
+      // 出了原位失败卡:负责联系人收到失败信号(上面已入它的待处理),由它决定报给用户或按台账规则重跑;退避 / 熔断暂停期间不打断
+      if ((handled as ComputeFailureOutcome).kind === "card") this.loop.notify(row.contact_id, "now");
+      return;
+    }
     if (ev.kind !== "started" && !intent.quiet) this.loop.notify(row.contact_id, ev.kind === "milestone" ? "batch" : "now");
   }
 
@@ -2778,6 +3276,8 @@ export class Host {
       this.report("resume-failed", { ...e, reason: r.reason });
       return false;
     }
+    // 台账:续接成功,上一轮结束,同一会话开新一轮
+    this.ledgerResume(e.computeId);
     if (resolved) {
       tx(this.db, () => this.recordTurnTx(e.taskId, e.computeId, row.harness, resolved.model, resolved.effort, reason));
       this.emitTask(e.taskId);
@@ -2866,11 +3366,33 @@ export class Host {
     if (await this.computeTurn(e)) this.launchEpoch.set(e.taskId, (this.launchEpoch.get(e.taskId) ?? 0) + 1);
     else this.giveBack(e.taskId);
   }
+  /** 续接成功:上一轮结束(停在受阻的这一轮已经做完),同一会话开新一轮 */
+  private ledgerResume(computeId: string) {
+    const m = this.computeRuns.get(computeId);
+    if (!m) return;
+    const old = this.runs.get(m.turnId);
+    if (old && isLive(old.status)) this.runs.end(old.id, "done", {}, { note: "续接,开新一轮" });
+    let session = this.runs.get(m.sessionId);
+    if (!session) return;
+    if (!isLive(session.status)) {
+      // 原位失败卡上点了[重试]/[换模型重试](AC-36):同一实例续跑,台账开一个接续的会话单元,原会话的失败记录保留
+      if (session.status !== "failed") return;
+      session = this.runs.start({ layer: "compute-session", parentId: session.parentId, roomId: session.roomId, sourceSeq: session.sourceSeq, contactId: session.contactId, taskId: session.taskId, computeId, upstream: session.upstream, rerunOf: session.id, attempt: session.attempt });
+    } else if (session.status !== "running") this.runs.setStatus(session.id, "running");
+    const turn = this.runs.start({ layer: "compute-turn", parentId: session.id, roomId: session.roomId, sourceSeq: session.sourceSeq, contactId: session.contactId, taskId: session.taskId, computeId, upstream: session.upstream });
+    this.computeRuns.set(computeId, { sessionId: session.id, turnId: turn.id });
+  }
   private async spawn(e: Extract<HostEffect, { kind: "spawn" }>) {
     if (!this.takeSlot(e, e.contactId, e.roomId)) return;
+    const ledger = (computeId: string | null, upstream: string) => {
+      const doc = this.taskDoc(e.taskId).value;
+      return this.runs.start({ layer: "compute-session", parentId: e.parentRunId ?? null, roomId: e.roomId, sourceSeq: doc.sourceSeq, contactId: e.contactId, taskId: e.taskId, computeId, upstream, ...(e.rerunOf ? { rerunOf: e.rerunOf, attempt: e.attempt ?? 1 } : {}) });
+    };
     const fail = (reason: string) => {
       // 没起来:没有进程要等,槽位当场归还
       this.giveBack(e.taskId);
+      const s = ledger(null, e.model);
+      this.runs.end(s.id, "failed", { failure: runFailure(classifyFailure({ text: `Compute 没起来:${reason}` })) });
       tx(this.db, () => {
         const { effects: eff } = this.stepTaskTx(e.taskId, { kind: "ExecFailed", requestId: e.requestId });
         // 启动本来就没成功:撤销请求当场确认(没有实例可停),任务落到 T11
@@ -2939,6 +3461,9 @@ export class Host {
       const f = this.followOf(e.taskId);
       this.putFollowTx(e.taskId, f, { ...f.value, rounds: [launchVer], resultVer: null });
     });
+    const session = ledger(r.computeId, model);
+    const turn = this.runs.start({ layer: "compute-turn", parentId: session.id, roomId: e.roomId, sourceSeq: session.sourceSeq, contactId: e.contactId, taskId: e.taskId, computeId: r.computeId, upstream: model });
+    this.computeRuns.set(r.computeId, { sessionId: session.id, turnId: turn.id });
     this.emitTask(e.taskId);
     // 启动途中任务已被取消(如私聊 rewind):实例一上线就停,等它回报 stopped 再落 T10,不让它带着作废的请求跑下去
     for (const id of late) await adapter.stop(id);
@@ -3155,7 +3680,10 @@ export class Host {
     const effects: HostEffect[] = [];
     if (card.kind === "task-status" && actionId === "cancel") {
       const { effects: eff } = this.stepTaskTx(taskId, { kind: "Cancel", by: this.userId });
-      for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId, computeId: e.computeId });
+      for (const e of eff) if (e.kind === "stop-compute") {
+        this.stopBy.set(e.computeId, this.userId);
+        effects.push({ kind: "stop", taskId, computeId: e.computeId });
+      }
       for (const e of eff) if (e.kind === "cancel-spawn") effects.push({ kind: "cancel-spawn", taskId, requestId: e.requestId });
       this.afterCancelTx(taskId);
       return effects;
@@ -4159,6 +4687,7 @@ export class Host {
     this.closed = true;
     for (const h of this.hostTimers.values()) this.timersApi.clear(h);
     this.hostTimers.clear();
+    this.runs.stopTicker();
     this.scheduler.stop();
     await this.loop.stop();
     // 一次性适配器只有在跑的才有进程;常驻适配器一轮做完(completed)、停在受阻(blocked)时进程仍在,关闭时一并停掉,不留后台进程
@@ -4173,6 +4702,21 @@ export class Host {
       }
     }
     this.db.close();
+  }
+}
+
+const LAYER_NAMES: Readonly<Record<RunUnit["layer"], string>> = Object.freeze({ "contact-round": "联系人轮次", "compute-session": "Compute 会话", "compute-turn": "Compute 轮次", background: "后台任务", subagent: "子代理" });
+const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+/** 联系人轮次被宿主判卡死(D26 第 8.3 节)。注意循环收到它按出错处理 */
+export class RoundStalledError extends Error {
+  readonly verdict: StallVerdict;
+  /** 卡死情形(给失败重试一侧按 D26 第 8.3 节分类用:不再静默重试同一轮) */
+  readonly stall: StallVerdict["kind"];
+  constructor(v: StallVerdict) {
+    super(`联系人轮次卡住:${v.failure.label}(${v.failure.raw})`);
+    this.name = "RoundStalledError";
+    this.verdict = v;
+    this.stall = v.kind;
   }
 }
 
@@ -4326,7 +4870,7 @@ const isRetryCardMeta = (meta: string): boolean => {
 const switchModels = (actions: readonly CardActionRow[]): string[] => actions.filter((a) => a.actionId.startsWith("switch-model:")).map((a) => a.actionId.slice("switch-model:".length));
 
 type HostEffect =
-  | { kind: "spawn"; taskId: string; requestId: string; contactId: string; model: string; brief: string; roomId: string }
+  | { kind: "spawn"; taskId: string; requestId: string; contactId: string; model: string; brief: string; roomId: string; parentRunId?: string; rerunOf?: string; attempt?: number }
   | { kind: "review"; taskId: string; roomId: string; ownerId: string; reviewerId: string; model: string; round: number; commit: string; constraintVer: number; brief: string }
   | { kind: "resume"; taskId: string; computeId: string; text: string }
   | { kind: "stop"; taskId: string; computeId: string }

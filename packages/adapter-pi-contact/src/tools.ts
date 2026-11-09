@@ -18,6 +18,7 @@ export const PI_CONTACT_TOOL_NAMES = Object.freeze([
   "memory_feedback",
   "read_memory",
   "read_quote_parent",
+  "progress_rerun",
 ] as const);
 export type PiContactToolName = (typeof PI_CONTACT_TOOL_NAMES)[number];
 
@@ -90,6 +91,15 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
       sourceSeq: f("seq", true, "用户表达通过或修改意见的那条消息的 seq(必须是提出者本人在交付之后发的)"),
       verdict: f("verdict", true, "accept:用户明确说通过;revise:用户要改"),
       feedback: f("textOrNull", false, "revise 时用户要改什么(原话);accept 省略"),
+    },
+  },
+  progress_rerun: {
+    description:
+      "重跑运行台账(第 5 块「运行台账」)里失败、中断或没跑完的单元。自己名下的可以自己决定重跑,有次数上限;别人名下的只有本轮有人明确要求时才能重跑,basisSeq 写那条要求的消息,宿主会在群里留记录。人停的不能自动重跑。",
+    fields: {
+      runId: f("text", true, "台账里单元的 id"),
+      roomId: f("text", true, "在哪个会话里发起(决定你能看到哪些单元)"),
+      basisSeq: f("seqOrNull", false, "本轮里明确要求重跑的那条消息的 seq;自己决定重跑就省略"),
     },
   },
   remember: {
@@ -233,6 +243,7 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
     case "deliver": return act({ kind: "deliver", taskId: s("taskId"), text: s("text") });
     case "stop": return act({ kind: "stop", taskId: s("taskId") });
     case "verdict": return act({ kind: "verdict", taskId: s("taskId"), sourceSeq: n("sourceSeq"), verdict: s("verdict") as "accept" | "revise", feedback: sn("feedback") });
+    case "progress_rerun": return act({ kind: "rerun", runId: s("runId"), roomId: s("roomId"), basisSeq: nn("basisSeq") });
     case "update_state_note": return { ok: true, value: { kind: "note", note: s("note") } };
     case "remember":
       return act({ kind: "remember", roomId: s("roomId"), sourceSeq: nn("sourceSeq"), title: s("title"), text: s("text"), anchors: v.anchors as readonly string[], quote: sn("quote"), relation: sn("relation") as "change" | "refine" | "conflict" | null, target: sn("target") });

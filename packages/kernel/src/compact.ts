@@ -31,6 +31,8 @@ function renderAction(a: MindAction): string {
       return `- remember「${a.title}」${a.relation === null ? "" : ` ${a.relation}→${a.target ?? "?"}`}:${a.text}\n`;
     case "memory-use":
       return `- memory-use ${a.id}:${a.good ? "好" : "不好"}${a.note === null ? "" : `(${a.note})`}\n`;
+    case "rerun":
+      return `- rerun → ${a.roomId}${a.basisSeq === null ? "" : ` #${a.basisSeq}`}:单元 ${a.runId}\n`;
   }
 }
 

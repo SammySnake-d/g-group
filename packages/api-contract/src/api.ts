@@ -24,6 +24,10 @@ import {
   RewindPreview,
   RewindResult,
   RoomView,
+  RUN_STATUSES,
+  RunEventView,
+  RunHint,
+  RunView,
   ScheduleView,
   SearchHit,
   SettingsView,
@@ -225,6 +229,15 @@ export const METHODS = {
   "artifacts.get": method(
     obj({ ref: id() }),
     obj({ ref: id(), name: str({ max: 500 }), mime: str({ max: 200 }), bytes: int({ min: 0 }), sha256: str({ min: 64, max: 64, pattern: /^[0-9a-f]{64}$/ }), path: str({ max: 4096 }), text: nullable(str({ max: 1_048_576 })) }),
+  ),
+
+  // ---- 运行台账(AC-43):全景画板与查询读同一张台账;用户本人看全部 ----
+  "runs.list": method(obj({ roomId: opt(id()), contactId: opt(id()), statuses: opt(arr(oneOf(RUN_STATUSES))), ...Page }), obj({ runs: arr(RunView), hints: arr(RunHint) })),
+  "runs.get": method(obj({ runId: id() }), obj({ run: RunView, children: arr(RunView), events: arr(RunEventView) })),
+  /** 重跑失败 / 中断 / 没跑完的单元(用户本人明确发起);拒绝时 conflict,detail 带 reason 与「未做:原因」 */
+  "runs.rerun": method(
+    obj({ runId: id(), clientActionId: id() }),
+    obj({ runId: id(), mode: oneOf(["same_session", "new_session"] as const), taskId: nullable(id()), attempt: int({ min: 1 }) }),
   ),
 
   // ---- 承诺账本 ----
