@@ -93,6 +93,7 @@ export function createService(host: Host): Service {
     "tasks.assign": (p: Parameters<Host["assignTask"]>[0]) => host.assignTask(p),
     "tasks.integrate": (p: { taskId: string }) => host.integrateTask(p.taskId),
     "artifacts.get": (p: { ref: string }) => host.getArtifact(p.ref),
+    "tasks.rebindFollowUp": (p: Parameters<Host["rebindFollowUp"]>[0]) => host.rebindFollowUp(p),
     "commitments.list": (p: Parameters<Host["listCommitments"]>[0]) => ({ commitments: host.listCommitments(p) }),
     "commitments.revoke": (p: { commitmentId: string }) => host.revokeCommitment(p.commitmentId),
     "docs.list": (p: { roomId?: string }) => ({ docs: host.docs.list(p) }),

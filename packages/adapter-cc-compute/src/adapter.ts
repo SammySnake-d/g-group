@@ -163,7 +163,8 @@ interface Round {
 
 interface ComputeState {
   readonly id: string;
-  readonly brief: Brief;
+  /** 续接时宿主可以换工具清单(授权放行或收紧),其余字段不变 */
+  brief: Brief;
   readonly cwd: string;
   /** 勾选能力(AC-29),每一轮(含续接)都按它起 CLI */
   readonly iso: Isolation;
@@ -439,13 +440,26 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       return { ok: true, computeId: id, manifest };
     },
 
-    async resume(computeId: string, text: string) {
+    async resume(computeId: string, text: string, _turn?: unknown, opts?: unknown) {
       // 状态参数也是外部输入:不是字符串就拒收,不做任何隐式转换(toString/toPrimitive 不调用)
       if (typeof computeId !== "string" || typeof text !== "string") return refuse("computeId 与续接内容必须是字符串");
       const st = computes.get(computeId);
       if (!st) return refuse(`未知的 Compute ${computeId}`);
       // 先校验输入与前置条件,任何信号和状态变更都在校验之后(R3-02)
       if (!text.trim()) return refuse("续接的内容不能为空");
+      // 换工具清单(宿主按授权放行写工具或收回):选项按纯数据合同判定,新 brief 整体过 checkBrief,不合格不起进程
+      let nextBrief: Brief | null = null;
+      if (opts !== undefined) {
+        const o = plainData(opts, "续接选项");
+        if (!o.ok || !isPlainRecord(o.value)) return refuse("续接选项必须是纯数据对象");
+        const extra = Object.keys(o.value).filter((k) => k !== "tools");
+        if (extra.length) return refuse(`续接选项只认 tools,多了 ${extra.join(", ")}`);
+        if (o.value.tools !== undefined) {
+          const b = checkBrief({ ...st.brief, tools: o.value.tools });
+          if (!b.ok) return refuse(`续接的工具清单不合格:${b.reason}`);
+          nextBrief = b.brief;
+        }
+      }
       if (!st.sessionId) return refuse("上一轮没有拿到 CLI 会话号,无法续接");
       // 同一 Compute 同一时刻只受理一个续接(R7-01):已有续接在等上一轮退出时立即拒绝,不排队、不另起 CLI
       if (st.resuming) return refuse("这个 Compute 正在续接,同一时刻只受理一个续接");
@@ -467,6 +481,7 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       }
       // 宿主显式续接即解除上一轮被拒收的受阻/放弃(RR-01)
       st.unresolved = [];
+      if (nextBrief) st.brief = nextBrief;
       launch(st, text, st.sessionId);
       return { ok: true };
     },
