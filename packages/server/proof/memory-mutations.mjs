@@ -49,7 +49,7 @@ const M = [
   // —— pi 工具
   ["M24 锚点可为空", T, "if (!Array.isArray(x) || x.length === 0 ||", "if (!Array.isArray(x) ||"],
   ["M25 关系不查枚举", T, "if (!(RELATIONS as readonly unknown[]).includes(x)) problems.push", "if (false) problems.push"],
-  ["M26 good 不查布尔", T, 'if (typeof x !== "boolean") problems.push(`${k} 必须是布尔值`);', ""],
+  ["M26 good 不查布尔", T, 'if (typeof x !== "boolean") problems.push(`${k} 必须是布尔值`);', 'if (false) problems.push(`${k} 必须是布尔值`);'],
   ["M27 read_memory 不经查询口", MI, "const got = tools ? await tools.readMemory(r.value.id) : null;", "const got = null as string | null;"],
   // —— pi reflect
   ["M28 模型已写笔记仍覆盖", P, "note: noteWritten ? null : ((o.note as string | null) ?? null)", "note: (o.note as string | null) ?? null"],
