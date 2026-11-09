@@ -1,10 +1,11 @@
+import { useState } from 'react'
 import { Puzzle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useApp } from '@/ctx'
 import { Avatar } from '@/components/Avatar'
 import { GlobalModelDefaults } from '@/components/ModelSettings'
 import { Surface } from '@/components/ui/surface'
-import { Switch } from '@/components/ui/switch'
+import { Switch } from '@astryxdesign/core/Switch'
 import { ListGroup, ListRow } from '@/components/ui/list-row'
 import { Choice, ChoiceGroup } from './kit/choice'
 import { Hint, PageScroll } from './kit/parts'
@@ -13,6 +14,10 @@ import { THEMES } from './constants'
 /* ---------- 设置:账号 → 外观 → 默认模型 → 通知 → 插件 → 连接 → 高级 ---------- */
 export function SettingsPage() {
   const { dark, setDark, debug, setDebug, push, setSection, closeAll } = useApp()
+  // 保持原页面的临时通知偏好语义；这次只迁移控件，不扩展持久化/后端契约。
+  const [waitingNotice, setWaitingNotice] = useState(true)
+  const [errorNotice, setErrorNotice] = useState(true)
+  const switchTheme = '[--color-accent:hsl(var(--me))] [--color-on-accent:hsl(var(--bg))]'
   return (
     <PageScroll>
       <Surface elevation="sunken" className="mx-3 mb-3 flex items-center gap-3 p-3">
@@ -34,8 +39,8 @@ export function SettingsPage() {
       </ListGroup>
       <GlobalModelDefaults />
       <ListGroup title="通知">
-        <ListRow label="有事等我时提醒"><Switch aria-label="有事等我时提醒" defaultChecked /></ListRow>
-        <ListRow label="出错时提醒"><Switch aria-label="出错时提醒" defaultChecked /></ListRow>
+        <ListRow label="有事等我时提醒"><Switch label="有事等我时提醒" isLabelHidden size="sm" className={switchTheme} value={waitingNotice} onChange={setWaitingNotice} /></ListRow>
+        <ListRow label="出错时提醒"><Switch label="出错时提醒" isLabelHidden size="sm" className={switchTheme} value={errorNotice} onChange={setErrorNotice} /></ListRow>
       </ListGroup>
       <ListGroup title="插件">
         <ListRow testid="settings-plugins" label={<span className="flex items-center gap-2"><Puzzle className="h-4 w-4 shrink-0 text-fg-2" />插件中心</span>} value="市场、安装、更新" onClick={() => { setSection('plugins'); closeAll() }} />
@@ -44,7 +49,7 @@ export function SettingsPage() {
         <ListRow label="外部来源" value="已连 2 个" onClick={() => push({ t: 'sources' })} />
         <ListRow label="模型服务" value="3 个" onClick={() => {}} />
       </ListGroup>
-      <ListGroup title="高级"><ListRow label="调试模式"><Switch aria-label="调试模式" checked={debug} onCheckedChange={setDebug} /></ListRow></ListGroup>
+      <ListGroup title="高级"><ListRow label="调试模式"><Switch label="调试模式" isLabelHidden size="sm" className={switchTheme} value={debug} onChange={setDebug} /></ListRow></ListGroup>
       <Hint className="px-6 text-[12px]">调试模式会在 Compute 里显示内部编号等排查信息，平时不需要打开。</Hint>
     </PageScroll>
   )

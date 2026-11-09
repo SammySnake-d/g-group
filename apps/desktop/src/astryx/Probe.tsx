@@ -23,7 +23,7 @@ export function AstryxProbe() {
       </section>
       <section className="flex items-center gap-3">
         <DropdownMenu
-          button={{ label: '更多', 'data-testid': 'ax-menu' } as never}
+          button={{ label: '更多', 'data-testid': 'ax-menu' }}
           items={[
             { label: '打开会话', onClick: () => setPicked('打开会话') },
             { label: '复制', onClick: () => setPicked('复制') },

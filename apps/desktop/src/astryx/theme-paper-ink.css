@@ -1,7 +1,9 @@
 /* 「纸·墨·柿」作为 Astryx 主题:只覆盖 Astryx 的语义 token,值全部指向我们自己的变量
    (亮暗两套已经在 index.css 里按 .dark 切换),不改 Astryx 组件源码,升级时这份文件不动。
    neutral 主题做底,我们只盖颜色、字体、圆角、阴影。 */
-@layer astryx-theme {
+/* neutral 使用 @scope/:scope；同层同权重时 scope proximity 会胜过后写的普通选择器。
+   独立覆盖层高于 astryx-theme，工具类仍在层外；不靠 !important 或修改库源码。 */
+@layer paper-ink {
   [data-astryx-theme] {
     --font-family-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     --font-family-heading: var(--font-family-body);

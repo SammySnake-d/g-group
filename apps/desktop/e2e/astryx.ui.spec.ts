@@ -60,3 +60,40 @@ for (const theme of ["light", "dark"] as const) {
     });
   });
 }
+
+for (const theme of ["light", "dark"] as const) {
+  test(`设置页 Astryx ${theme}：通知独立切换、调试状态跨导航保留、外观切换不中断操作`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(String(e)));
+    page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto(theme === "dark" ? "/?theme=dark" : "/");
+    await page.getByTestId("nav-settings").click();
+    const waiting = page.getByRole("switch", { name: "有事等我时提醒" });
+    const error = page.getByRole("switch", { name: "出错时提醒" });
+    const debug = page.getByRole("switch", { name: "调试模式", exact: true });
+    await expect(waiting).toBeChecked();
+    await expect(error).toBeChecked();
+    await expect(debug).not.toBeChecked();
+    await waiting.focus();
+    await page.keyboard.press("Space");
+    await expect(waiting).not.toBeChecked();
+    await expect(error).toBeChecked();
+    await error.click();
+    await expect(error).not.toBeChecked();
+    await debug.click();
+    await expect(debug).toBeChecked();
+    // 外观选项仍使用已验收的预览卡，不为迁移重做布局。
+    await page.getByRole("radio", { name: theme === "light" ? "深色" : "浅色", exact: true }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme === "light" ? "dark" : "light");
+    await expect(waiting).not.toBeChecked();
+    await expect(debug).toBeChecked();
+    await page.getByTestId("nav-files").click();
+    await page.getByTestId("nav-settings").click();
+    await expect(debug).toBeChecked();
+    await debug.focus();
+    await page.keyboard.press("Space");
+    await expect(debug).not.toBeChecked();
+    expect(errors, errors.join("\n")).toEqual([]);
+  });
+}
