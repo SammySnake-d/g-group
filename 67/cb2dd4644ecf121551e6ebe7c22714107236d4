@@ -1,0 +1,29 @@
+packages/server/proof/memory-mutations.txt
+  s_a3e46876f3c339::t_8ab37583704c41 1,4-7,9-10,12-30,32-50
+receipts/feat-g-memory.json
+  s_042e901c6ad028::t_b1a83497e35389 10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "67cb2dd4644ecf121551e6ebe7c22714107236d4",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_a3e46876f3c339": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afab83f69c52efc38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+packages/api-contract/src/entities.ts
+  h_f33e46a035b77c 233-251
+packages/server/proof/cross-vendor-review-mutations.mjs
+  h_f33e46a035b77c 1-87
+packages/server/proof/e2e-help-review-run1.txt
+  h_f33e46a035b77c 1-77
+packages/server/proof/e2e-help-review-run2.txt
+  h_f33e46a035b77c 1-37
+packages/server/proof/e2e-help-review-run3.txt
+  h_f33e46a035b77c 1-78
+packages/server/proof/e2e-help-review-run4.txt
+  h_f33e46a035b77c 1-118
+packages/server/proof/e2e-help-review-run5.txt
+  h_f33e46a035b77c 1-205
+packages/server/proof/e2e-help-review.ts
+  h_f33e46a035b77c 1-203
+packages/server/src/db.ts
+  h_f33e46a035b77c 6,55-59
+packages/server/src/fakes.ts
+  h_f33e46a035b77c 59-60,90
+packages/server/src/host.ts
+  h_f33e46a035b77c 38,85,172-186,262-263,339,1304,1324-1331,1386-1395,1436-1440,1947,1950-1953,2049-2050,2175,2187-2188,2304-2434,2581,2661
+packages/server/src/review.test.ts
+  h_f33e46a035b77c 1-277
+packages/server/src/review.ts
+  h_f33e46a035b77c 1-66
+receipts/feat-cross-vendor-review.json
+  h_f33e46a035b77c 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3a5c242d62a51f64fc5e6b3db87d7460821cc958",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
