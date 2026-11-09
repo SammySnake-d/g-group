@@ -1,0 +1,16 @@
+receipts/feat-kernel-plugins.json
+  h_f33e46a035b77c 73,76-77,79
+reviews/feat-kernel-plugins.md
+  h_f33e46a035b77c 1563-1616
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4421df4f34659160768778f7d7748249d00580e1",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
