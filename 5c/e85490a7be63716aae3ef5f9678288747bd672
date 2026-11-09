@@ -1,0 +1,21 @@
+apps/desktop/docs/astra-files-design.md
+  s_c20562a127f0af::t_c96c5b08c0beb4 35
+apps/desktop/src/components/FilesMain.tsx
+  s_c20562a127f0af::t_b258c56e837430 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5ce85490a7be63716aae3ef5f9678288747bd672",
+  "prompts": {},
+  "sessions": {
+    "s_c20562a127f0af": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c16c-e991-72f1-9871-6d60d8855ee8",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
