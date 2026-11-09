@@ -32,7 +32,7 @@ ClickableCard、TextInput、ToggleButtonGroup、Button、Dialog 均为 Astryx �
 | 相关消息永久占一列 | 阅读为主，对话按需展开 | frontend-logic-design：详情层次；apple-design：认知与操作邻近 |
 | 只跳回原消息 | 预填引用并 @ 作者，用户自己决定发送 | meta-development：复用 openConv/addQuote 状态原语，闭环不另造发信入口 |
 | 每张文件常显预览按钮 | 鼠标悬停/键盘焦点才显，触控保留 | emil-design-eng、Vercel：高频面安静，入口对键盘可达 |
-| Astryx 指针弹窗默认 400ms | 引用项目 --dur-base/--dur-fast，键盘无动画 | animate / review-animations：响应预算；choreograph：只动容器，不给正文排队 |
+| Astryx 指针弹窗默认 400ms | 用库实际消费的 --duration-medium-max 引用项目 --dur-base，键盘无动画 | animate / review-animations：响应预算；choreograph：只动容器，不给正文排队 |
 | 单个结果铺满横向空间 | auto-fill 保留内容尺度；长标题双行，阅读页完整换行 | break-ui；design-atlas 内容尺度 |
 
 未增加拖拽/手势：gestures 的首条是复用成熟交互，不为用技能而强加手势。find-animation-opportunities 淘汰了逐卡入场、搜索结果飞入和翻阅的弹跳；卡片按压与弹窗反馈继续由 Astryx 负责。

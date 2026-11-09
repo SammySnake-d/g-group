@@ -18,7 +18,7 @@ export function FilesMain({ id }: { id: string | null }) {
   const a = collection.find((f) => f.id === id)
   return <>
     {a ? <FileReader key={a.id} artifact={a} onBack={() => setFileSel(null)} /> : <FileShelf collection={collection} query={query} onQuery={setQuery} kind={kind} onKind={setKind} onOpen={setFileSel} onPeek={(item, keyboard = false) => { setKeyboardPeek(keyboard); setPeek(item) }} />}
-    <Dialog className={keyboardPeek ? "animate-none [--duration-enter:0ms] [--duration-exit:0ms]" : "[--duration-enter:var(--dur-base)] [--duration-exit:var(--dur-fast)]"} isOpen={!!peek} onOpenChange={(v) => { if (!v) setPeek(null) }} width="min(900px, calc(100vw - 48px))" maxHeight="85dvh" padding={0} aria-label={peek?.name ?? '文件预览'}>
+    <Dialog className={keyboardPeek ? "animate-none [--duration-medium-max:0ms]" : "[--duration-medium-max:var(--dur-base)]"} isOpen={!!peek} onOpenChange={(v) => { if (!v) setPeek(null) }} width="min(900px, calc(100vw - 48px))" maxHeight="85dvh" padding={0} aria-label={peek?.name ?? '文件预览'}>
       {peek && <div className="flex h-[72dvh] min-h-0"><FileReader key={peek.id} artifact={peek} onBack={() => setPeek(null)} compact /></div>}
     </Dialog>
   </>
