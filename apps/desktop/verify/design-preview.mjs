@@ -24,7 +24,7 @@ try {
   await dialog.waitFor()
   result.motion = await dialog.evaluate((el) => ({ animationDuration: getComputedStyle(el).animationDuration, animationName: getComputedStyle(el).animationName }))
   await page.keyboard.press('Escape')
-  await page.getByTestId('shelf-a1').getByRole('heading').click()
+  await page.getByTestId('shelf-a1').getByRole('heading', { level: 2 }).click()
   await page.getByTestId('file-discuss').click()
   await page.getByTestId('composer').waitFor()
   assert.match(await page.getByTestId('composer').inputValue(), /@Astra/)
@@ -50,7 +50,7 @@ try {
       assert.equal(await page.locator('[data-testid^=shelf-]').count(), 48)
     }
     if (mode === 'worst') {
-      await page.getByTestId('shelf-a1').getByRole('heading').click()
+      await page.getByTestId('shelf-a1').getByRole('heading', { level: 2 }).click()
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     }
     await page.screenshot({ path: path.join(out, 'design-preview', `${mode}.png`) })
