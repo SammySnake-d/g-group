@@ -12,7 +12,7 @@
 // 落败的 resume 立即被明确拒绝;等冻结的上一轮退出之后重新核对这一轮有没有被 stop,stop 确认之后不再起新的 CLI。
 // CLI 输出(R7-02):stdout 的每一行在受控边界里处理,任何解码/映射异常都只让当前 Compute 记违规、回收并 failed,
 // 不逸出 readline 回调、不终止适配器宿主;错误说明对外部 JSON 的对象/数组字段只给固定说明,不做隐式字符串转换。
-import { type ChildProcess, spawn as spawnChild } from "node:child_process";
+import { type ChildProcess, execFileSync, spawn as spawnChild } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -23,8 +23,8 @@ import { checkBrief, checkSnapshot } from "./brief.ts";
 import { HOST_MCP, MCP_SERVER_NAME, allowedTools, cliArgs, cliEnv, firstPrompt, skillCatalog, skillsSection, toolOverreach } from "./cli.ts";
 import { type AcceptedReport, initLoaded, preInitFrame, streamParser, type Terminal, terminalFor } from "./events.ts";
 import { freezeDeep, isPlainRecord, plainData } from "./plain.ts";
-import { IS_WINDOWS, signalGroup } from "./procgroup.ts";
-import type { AdapterOptions, Brief, ClaudeRunner, ComputeAdapter, ComputeEvent, HandoffSnapshot, Manifest, McpServerSpec, Refusal, RejectedReport } from "./types.ts";
+import { IS_WINDOWS, type ProcRow, processTable, signalGroup, stillAlive, treeByPgrep, treeOf } from "./procgroup.ts";
+import type { AdapterOptions, Brief, ClaudeRunner, ComputeAdapter, ComputeEvent, HandoffSnapshot, Manifest, McpServerSpec, QuiesceResult, Refusal, RejectedReport } from "./types.ts";
 
 export const REPORT_MCP_PATH = fileURLToPath(new URL("../mcp/report-mcp.mjs", import.meta.url));
 export const DEFAULT_RUNNER: ClaudeRunner = Object.freeze({ command: "claude", args: Object.freeze([]) });
@@ -157,6 +157,8 @@ interface Round {
   pausedBlocked: boolean;
   readonly violations: string[];
   reportedFailure: string | undefined;
+  /** 停止时按进程表记下的后代与同组成员(AC-23 停止确认要逐个确认它们退出);null 表示停止时读不到进程表 */
+  tree: readonly ProcRow[] | null;
 }
 
 interface ComputeState {
@@ -194,6 +196,25 @@ const eventCopy = (e: ComputeEvent): ComputeEvent => {
   return out as ComputeEvent;
 };
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+/** 当前进程表(停止确认用);只读 ps,不发信号 */
+const procs = () => processTable(() => execFileSync("ps", ["-A", "-o", "pid=,ppid=,pgid=,stat="], { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }));
+/** pgrep:有匹配给 pid 列表,没有匹配(退出码 1)给 [],其它失败给 null */
+const pgrep = (args: readonly string[]): readonly number[] | null => {
+  try {
+    return execFileSync("pgrep", [...args], { encoding: "utf8" }).split("\n").filter((l) => /^\d+$/.test(l.trim())).map((l) => Number(l.trim()));
+  } catch (e) {
+    return (e as { status?: unknown }).status === 1 ? [] : null;
+  }
+};
+/** root 的后代与同组成员:先用 ps,读不到退到 pgrep;都读不到返回 null */
+const treeNow = (root: number): readonly ProcRow[] | null => {
+  const t = procs();
+  return t ? treeOf(root, t) : treeByPgrep(root, pgrep);
+};
+/** 进程还在不在(pid 被复用的可能在秒级窗口里忽略;EPERM 也算还在) */
+const pidAlive = (pid: number): boolean => {
+  try { process.kill(pid, 0); return true; } catch (e) { return (e as { code?: unknown }).code === "EPERM"; }
+};
 /** 异常的说明:只读真正 Error 的字符串 message,不对未知值做隐式字符串转换 */
 const errorText = (err: unknown): string => (err instanceof Error && typeof err.message === "string" ? err.message : "非 Error 异常");
 
@@ -342,7 +363,7 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
     const round: Round = {
       events: [], done: new Promise((r) => { finish = r; }), paused, markPaused: () => markPaused(),
       pid: child.pid, child, proc: child, exited: false, finished: false, terminal: null,
-      reaping: false, stopRequested: false, initOk: false, halted: false, pausedBlocked: false, violations: [], reportedFailure: undefined,
+      reaping: false, stopRequested: false, initOk: false, halted: false, pausedBlocked: false, violations: [], reportedFailure: undefined, tree: [],
     };
     st.round = round;
     const parse = streamParser();
@@ -458,6 +479,8 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       if (round.finished && round.terminal !== "paused-blocked") return refuse(`Compute ${computeId} 没有在运行的进程`);
       const frozen = round.terminal === "paused-blocked" && !round.exited;
       round.stopRequested = true;
+      // 停止确认要用(AC-23):发信号之前记下主进程的后代与同组成员,主进程退出后它们会被过继,事后按父子链就找不到了
+      if (!IS_WINDOWS && round.pid !== undefined && !round.exited) round.tree = treeNow(round.pid);
       // 封存这一轮(R3-01):stopped 之后的任何 stdout/tool_result 都不再产事件、改状态或发信号
       round.halted = true;
       // 冻结的进程组收不到 SIGTERM:直接对组 SIGKILL(非 mirasim 对照项);否则走 mirasim 的 z2:SIGTERM 主进程,到期组 SIGKILL
@@ -476,6 +499,40 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       const round = computes.get(computeId)?.round;
       // 主进程退出,或停在受阻(进程被冻结、不会退出)时返回;每次给当前的事件列表,停在受阻后被 stop 时 stopped 追加在后面
       return round ? Promise.race([round.done, round.paused]).then(() => Object.freeze([...round.events])) : [];
+    },
+
+    async quiesce(computeId: string, timeoutMs = 5000): Promise<QuiesceResult> {
+      if (typeof computeId !== "string") return { ok: false, reason: "computeId 必须是字符串", remaining: [] };
+      if (typeof timeoutMs !== "number" || !(timeoutMs >= 0)) return { ok: false, reason: "timeoutMs 必须是非负数", remaining: [] };
+      const round = computes.get(computeId)?.round;
+      if (!round) return { ok: false, reason: `未知的 Compute ${computeId}`, remaining: [] };
+      if (!round.finished || (round.terminal === "paused-blocked" && !round.stopRequested)) return { ok: false, reason: "这一轮还没结束(运行中或停在受阻),先停止", remaining: [] };
+      const pid = round.pid;
+      // 主进程退出:stop 之后由 reap 保证(reapForceMs 后组 SIGKILL);这里再给 timeoutMs 的余量
+      const limit = resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS) + timeoutMs;
+      if (!IS_WINDOWS && pid !== undefined && !round.exited && round.tree !== null && round.tree.length === 0) round.tree = treeNow(pid);
+      let timer: NodeJS.Timeout | undefined;
+      const exited = await Promise.race([round.done.then(() => true), new Promise<boolean>((r) => { timer = setTimeout(() => r(false), limit); timer.unref(); })]);
+      clearTimeout(timer);
+      if (!exited) return { ok: false, reason: "CLI 主进程没有退出", remaining: pid === undefined ? [] : [pid] };
+      if (IS_WINDOWS || pid === undefined) return { ok: true, killed: 0 };
+      // 主进程退出后:停止时记下的后代 + 此刻还在同组的成员,还活着的全部 SIGKILL,轮询到都退出。
+      // 停止时和此刻都读不到进程表就不能确认(读不到 ≠ 没有)
+      const now = treeNow(pid);
+      if (round.tree === null && now === null) return { ok: false, reason: "读不到进程表,无法确认它启动的子进程都已退出", remaining: [] };
+      const known = new Map<number, ProcRow>();
+      for (const r of [...(round.tree ?? []), ...(now ?? [])]) known.set(r.pid, r);
+      const killed = new Set<number>();
+      const t0 = Date.now();
+      for (;;) {
+        const table = procs();
+        const alive = [...known.values()].filter((r) => (table && r.pgid !== -1 ? stillAlive(r, table) : pidAlive(r.pid)));
+        if (!alive.length) return { ok: true, killed: killed.size };
+        if (Date.now() - t0 > timeoutMs) return { ok: false, reason: `还有 ${alive.length} 个进程没退出`, remaining: alive.map((r) => r.pid) };
+        signalGroup(pid, "SIGKILL");
+        for (const r of alive) { try { process.kill(r.pid, "SIGKILL"); killed.add(r.pid); } catch { /* 刚退出 */ } }
+        await delay(50);
+      }
     },
 
     rejectedReports(computeId: string) {

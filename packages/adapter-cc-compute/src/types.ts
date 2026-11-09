@@ -169,6 +169,11 @@ export type ComputeEvent =
 
 export type ComputeEventKind = ComputeEvent["kind"];
 
+/** 停止确认的结果(AC-23):ok 表示 CLI 主进程已退出,它启动的、按父子链与进程组找得到的进程也都已退出 */
+export type QuiesceResult =
+  | { readonly ok: true; readonly killed: number }
+  | { readonly ok: false; readonly reason: string; readonly remaining: readonly number[] };
+
 export interface ComputeAdapter {
   spawn(brief: unknown, opts?: SpawnOptions): Promise<SpawnResult>;
   /** turn 是这一轮的生效模型(AC-51);常驻适配器在轮边界与会话当前模型比对,不同就在会话内换;一次性适配器忽略 */
@@ -186,6 +191,12 @@ export interface ComputeAdapter {
   snapshot(computeId: string): SnapshotResult;
   /** 被拒收(服务器 isError,或回执合规但内容不合 schema)的汇报记录,按发生顺序;它们不产出语义事件 */
   rejectedReports(computeId: string): readonly RejectedReport[];
+  /**
+   * 停止确认(AC-23,需求 §8.1 第 16 条):这一轮终态(stopped/failed/completed)之后调用。等 CLI 主进程退出,
+   * 再把停止时与此刻按父子链、进程组找到的还活着的进程 SIGKILL,轮询到都退出或 timeoutMs(默认 5000)到期。
+   * 父子链在停止前就断了的(双 fork 守护进程、交给系统托管)找不到,不在保证范围。可选:旧替身没有时宿主退回 settled。
+   */
+  quiesce?(computeId: string, timeoutMs?: number): Promise<QuiesceResult>;
 }
 
 export interface RejectedReport {
