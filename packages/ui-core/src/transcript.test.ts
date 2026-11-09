@@ -7,6 +7,7 @@ import {
   digest,
   formatDuration,
   groupTranscript,
+  interruptRunning,
   mergeEvents,
   sessionElapsedMs,
   summarizeWork,
@@ -164,4 +165,19 @@ test("digest:取输出第一行非空内容,超长截断加省略号,按字符�
   assert.equal(digest(undefined), "");
   assert.equal(digest("深色主题对比度不够", 5), "深色主题…");
   assert.equal(digest("abcde", 5), "abcde");
+});
+
+test("interruptRunning:停下后在跑的调用改成失败并附原因,子代理与它的调用一起处理;做完的不动,原数组不变", () => {
+  const running = tool(1, "Bash", { status: "running", output: "… 运行中" });
+  const events: TranscriptEvent[] = [tool(0, "Read"), running, agent(2, "running", [tool(3, "Grep", { status: "running" })]), agent(4, "done")];
+  const out = interruptRunning(events, "已中断");
+  const [read, bash, sub, finished] = out;
+  assert.ok(read?.kind === "tool" && bash?.kind === "tool" && sub?.kind === "agent" && finished?.kind === "agent");
+  assert.equal(read.status, "ok");
+  assert.equal(bash.status, "failed");
+  assert.equal(bash.output, "已中断\n… 运行中");
+  assert.equal(sub.status, "failed");
+  assert.deepEqual(sub.trail?.map((t) => [t.status, t.output]), [["failed", "已中断"]]);
+  assert.equal(finished.status, "done");
+  assert.equal(running.status, "running");
 });

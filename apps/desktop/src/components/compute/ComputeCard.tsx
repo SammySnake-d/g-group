@@ -34,6 +34,7 @@ const wantsAttention = (c: Compute) => c.status === 'running' || c.status === 'e
 export function ComputeCard({ compute: c, transcript, defaultOpen, onOpenSession, actions, now, className }: ComputeCardProps) {
   const [open, setOpen] = useState(defaultOpen ?? wantsAttention(c))
   const state = computeState(c)
+  const halt = state.key === 'stopping' ? 'stopping' : c.status === 'stopped' || c.status === 'error' ? 'stopped' : undefined
   const done = c.steps.filter((s) => s.state === 'done').length
   const work = useMemo(() => (transcript ? summarizeWork(transcript.events) : null), [transcript])
   const harness = transcript ? HARNESS_LABEL[transcript.meta.harness] : c.harness
@@ -55,7 +56,7 @@ export function ComputeCard({ compute: c, transcript, defaultOpen, onOpenSession
     <Surface elevation="flat" radius="lg" className={cn('w-full max-w-[560px] overflow-hidden', className)} data-testid={`compute-card-${c.id}`} data-state={state.key}>
       <Disclosure.Root open={open} onOpenChange={setOpen}>
         <div className="flex min-w-0 items-start gap-1 py-1.5 pl-1.5 pr-2">
-          <Disclosure.Trigger className="group/row flex min-w-0 flex-1 items-start gap-1.5 rounded-md px-1.5 py-1 text-left transition-colors duration-fast ease-out hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60" data-testid="compute-card-toggle">
+          <Disclosure.Trigger className="group/disc flex min-w-0 flex-1 items-start gap-1.5 rounded-md px-1.5 py-1 text-left transition-colors duration-fast ease-out hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60" data-testid="compute-card-toggle">
             <Caret className="mt-[5px]" />
             <span className="min-w-0 flex-1">
               <span className="flex min-w-0 items-center gap-2">
@@ -81,7 +82,7 @@ export function ComputeCard({ compute: c, transcript, defaultOpen, onOpenSession
           <div className="space-y-2.5 border-t border-line px-4 pb-3 pt-2.5" data-testid="compute-card-body">
             {work && <p className="text-[12.5px] text-fg-2" data-testid="compute-card-work">{workLine(work)}</p>}
             <StepList steps={c.steps} />
-            {transcript && <BackgroundJobs jobs={transcript.meta.background} stopping={state.key === 'stopping'} />}
+            {transcript && <BackgroundJobs jobs={transcript.meta.background} {...(halt ? { halt } : {})} />}
             <Facts items={foot} mono={false} className="block text-[11.5px]" />
           </div>
         </Disclosure.Content>

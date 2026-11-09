@@ -35,7 +35,8 @@ export type Page =
   | { t: 'task'; id: string }
 
 export type SplitTab = { t: 'compute'; id: string; view?: CView } | { t: 'artifact'; id: string } | { t: 'contact'; id: PersonId; conv?: string; tab?: 'here' | 'talks' | 'process' | 'duty' | 'memory' } | { t: 'cron'; id: string } | { t: 'group'; id: string; tab?: 'members' | 'notice' | 'list' | 'cron' | 'plugin' | 'tools' }
-export type CView = 'activity' | 'diff' | 'preview' | 'checks' | 'checkpoints'
+/** Compute 视图页签;'session' = harness 原始会话(#1005,默认选中) */
+export type CView = 'session' | 'activity' | 'diff' | 'preview' | 'checks' | 'checkpoints'
 
 /** A2UI 提问卡片的回答记录(按提问消息 id):卡片答完收起成「标题 · 选了什么」,你的回答消息也显示成同一张收起的卡片 */
 export interface Answer { title: string; options: string[]; picked: string; at: string; replyId: string }

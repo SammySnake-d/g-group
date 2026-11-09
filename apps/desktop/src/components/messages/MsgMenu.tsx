@@ -1,16 +1,17 @@
 /* 右键菜单(QQ 桌面版习惯):表情 / 回复 / 复制 / 转发 / 收藏 / 多选 / 引用 / 置顶或回到这里 / 编辑 / 撤回 / 删除 */
 import type { ReactNode } from 'react'
-import { Bookmark, CheckSquare, Copy, Forward, History, Pencil, Pin, Quote as QuoteIcon, Reply, Trash2, Undo2 } from 'lucide-react'
+import { Bookmark, CheckSquare, Copy, Forward, History, Pencil, Pin, Quote as QuoteIcon, Reply, Trash2, Undo2, Zap } from 'lucide-react'
 import { useApp } from '@/ctx'
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { cn } from '@/lib/utils'
 import { MENU_EMOJI, quoteText } from './copy'
+import { OPEN_SESSION } from './compute/ComputeCardFor'
 import { MENU_DANGER, MENU_ITEM, MENU_SEP, MENU_SURFACE } from './menuStyle'
 import type { Bodied } from './types'
 
 
 export function MsgMenu({ m, children }: { m: Bodied; children: ReactNode }) {
-  const { addQuote, setSelecting, push, active, recall, react, toast, pinMsg, deleteMsg, setEditing, reedit, setRewindAsk } = useApp()
+  const { addQuote, setSelecting, push, active, recall, react, toast, pinMsg, deleteMsg, setEditing, reedit, setRewindAsk, openSplit } = useApp()
   const mine = m.from === 'me'
   const text = quoteText(m)
   return (
@@ -21,6 +22,7 @@ export function MsgMenu({ m, children }: { m: Bodied; children: ReactNode }) {
         <div className="flex gap-0.5 px-1 pb-1">{MENU_EMOJI.map((e) => <ContextMenuItem key={e} onSelect={() => react(m.id, e)} className="grid h-8 w-8 place-items-center rounded-md p-0 text-[17px] focus:bg-sel data-[highlighted]:bg-sel">{e}</ContextMenuItem>)}</div>
         <ContextMenuSeparator className={MENU_SEP} />
         <ContextMenuItem data-testid="ctx-reply" className={MENU_ITEM} onSelect={() => addQuote({ msgId: m.id, from: m.from, text, reply: true })}><Reply />回复</ContextMenuItem>
+        {m.k === 'compute' && <ContextMenuItem data-testid="ctx-open-session" className={MENU_ITEM} onSelect={() => openSplit({ t: 'compute', id: m.computeId, view: 'session' })}><Zap />{OPEN_SESSION}</ContextMenuItem>}
         <ContextMenuItem data-testid="ctx-copy" className={MENU_ITEM} onSelect={() => { navigator.clipboard?.writeText(text).catch(() => {}); toast('已复制') }}><Copy />复制</ContextMenuItem>
         <ContextMenuItem data-testid="ctx-forward" className={MENU_ITEM} onSelect={() => push({ t: 'forwardPick', from: active, msgIds: [m.id] }, true)}><Forward />转发</ContextMenuItem>
         <ContextMenuItem data-testid="ctx-fav" className={MENU_ITEM} onSelect={() => toast('已收藏，在「文件 › 收藏」里')}><Bookmark />收藏</ContextMenuItem>

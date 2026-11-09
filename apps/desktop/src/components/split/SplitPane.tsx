@@ -51,7 +51,7 @@ export function SplitPane({ tabs, active, onPick, onClose, onCloseAll, width }: 
           <IconButton data-testid="split-close" label="关闭分屏（Esc）" icon={<X />} onClick={onCloseAll} />
         </div>
         <TabsPrimitive.Content value={String(active)} tabIndex={-1} className="flex min-h-0 flex-1 flex-col outline-none">
-          {tab?.t === 'compute' && <ComputeWork key={tab.id} id={tab.id} initial={tab.view} />}
+          {tab?.t === 'compute' && <ComputeWork key={tab.id} id={tab.id} {...(tab.view ? { view: tab.view } : {})} />}
           {tab?.t === 'artifact' && <ArtifactView key={tab.id} id={tab.id} />}
           {tab?.t === 'cron' && <CronDetail key={tab.id} id={tab.id} />}
           {tab?.t === 'group' && <GroupPane key={tab.id + (tab.tab ?? '')} id={tab.id} initial={tab.tab} />}

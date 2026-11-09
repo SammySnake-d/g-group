@@ -5,7 +5,7 @@
    - 显隐:纯 CSS——指到这一行就出现(淡入走 duration-fast token),离开立刻消失;键盘焦点在条里、或表情/更多开着时保持显示。
      每天几十次的操作,不加缩放和位移(Emil 的频率表)。 */
 import { useState } from 'react'
-import { CheckSquare, Copy, Forward, MoreHorizontal, Quote as QuoteIcon, Reply, SmilePlus, Undo2 } from 'lucide-react'
+import { CheckSquare, Copy, Forward, MoreHorizontal, Quote as QuoteIcon, Reply, SmilePlus, Undo2, Zap } from 'lucide-react'
 import { BAR_INSET, BAR_OVERLAP } from '@g-group/ui-core'
 import { REACTION_EMOJI } from '@/config/emoji'
 import { cn } from '@/lib/utils'
@@ -15,6 +15,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { quoteText } from './copy'
+import { OPEN_SESSION } from './compute/ComputeCardFor'
 import { MENU_DANGER, MENU_ITEM, MENU_SEP, MENU_SURFACE } from './menuStyle'
 import { useBarPlacement } from './useBarPlacement'
 import type { Bodied } from './types'
@@ -26,7 +27,7 @@ const VERB = 'rounded-md hover:bg-sel data-[state=open]:bg-sel data-[state=open]
 const REVEAL = 'pointer-events-none opacity-0 transition-opacity duration-0 group-hover/row:pointer-events-auto group-hover/row:opacity-100 group-hover/row:duration-fast has-[:focus-visible]:pointer-events-auto has-[:focus-visible]:opacity-100 has-[[data-state=open]]:pointer-events-auto has-[[data-state=open]]:opacity-100'
 
 export function HoverBar({ m, mine }: { m: Bodied; mine: boolean }) {
-  const { react, reactions, addQuote, setSelecting, push, active, recall, toast } = useApp()
+  const { react, reactions, addQuote, setSelecting, push, active, recall, toast, openSplit } = useApp()
   const text = quoteText(m)
   const { ref, pos } = useBarPlacement()
   const [emojiOpen, setEmojiOpen] = useState(false)
@@ -60,6 +61,8 @@ export function HoverBar({ m, mine }: { m: Bodied; mine: boolean }) {
           <DropdownMenuItem className={MENU_ITEM} onSelect={() => push({ t: 'forwardPick', from: active, msgIds: [m.id] }, true)}><Forward />转发</DropdownMenuItem>
           <DropdownMenuItem data-testid={`multi-${m.id}`} className={MENU_ITEM} onSelect={() => setSelecting(true)}><CheckSquare />多选</DropdownMenuItem>
           <DropdownMenuItem className={MENU_ITEM} onSelect={() => { navigator.clipboard?.writeText(text).catch(() => {}); toast('已复制') }}><Copy />复制</DropdownMenuItem>
+          {/* #1005 照 mirasim:「更多」里也能打开会话,进分屏的「会话」页签 */}
+          {m.k === 'compute' && <DropdownMenuItem data-testid={`more-open-session-${m.id}`} className={MENU_ITEM} onSelect={() => openSplit({ t: 'compute', id: m.computeId, view: 'session' })}><Zap />{OPEN_SESSION}</DropdownMenuItem>}
           {mine && <DropdownMenuSeparator className={MENU_SEP} />}
           {mine && <DropdownMenuItem className={cn(MENU_ITEM, MENU_DANGER)} onSelect={() => recall(m.id)}><Undo2 />撤回</DropdownMenuItem>}
         </DropdownMenuContent>

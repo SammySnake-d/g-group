@@ -1,6 +1,6 @@
 /* ============ Compute:在聊天里只占一行,点开在右侧分屏看 ============
-   这一块(ComputeLine / StatusDot / useComputeView)只做了机械迁移:拆文件、换原语,视觉保持原样。
-   用户 #1005 要求重做 Compute 卡,由 R5 在 src/components/compute/ 里做 ComputeCard,合并后整块替换这里。 */
+   消息流里保持一行(leader 定);行尾末端是「打开会话」(#1005 照 mirasim、#1032 就近),点了打开分屏并选中「会话」页签。
+   完整过程面板(compact)里换成 ComputeCard,见 ComputeCardFor。 */
 import type { MouseEvent } from 'react'
 import { ChevronRight, Hand, PauseCircle } from 'lucide-react'
 import { people } from '@/data'
@@ -10,8 +10,11 @@ import { Button } from '@/components/ui/button'
 import { Pressable } from '../Pressable'
 import { StatusDot } from './StatusDot'
 import { useComputeView } from './useComputeView'
+import { OpenSessionButton } from './ComputeCardFor'
 
 const LINE = 'flex max-w-full shrink gap-1.5 rounded-full text-[12.5px]'
+/** 一行 + 行尾「打开会话」 */
+const WITH_END = 'flex min-w-0 max-w-full items-center gap-1'
 const stop = (run: () => void) => (e: MouseEvent) => { e.stopPropagation(); run() }
 
 export function ComputeLine({ id }: { id: string }) {
@@ -23,10 +26,10 @@ export function ComputeLine({ id }: { id: string }) {
 
   /* AC-14 停滞:换成黄色一行写明多久没动、卡在哪一步;联系人会自己出来 @你 */
   if (view === 'stalled') return (
-    <Pressable data-testid={`compute-line-${id}`} data-state="stalled" onClick={open} className={`${LINE} bg-warm-soft py-0.5 pl-2 pr-2.5`}>
+    <div className={WITH_END}><Pressable data-testid={`compute-line-${id}`} data-state="stalled" onClick={open} className={`${LINE} bg-warm-soft py-0.5 pl-2 pr-2.5`}>
       <PauseCircle className="h-3.5 w-3.5 text-warm" /><span className="truncate font-medium">{c.title}</span>
       <span className="shrink-0 text-warm">· <span className="tabular-nums">{c.idleMin}</span> 分钟没动静 · 卡在「{c.steps.find((x) => x.state === 'now')?.text}」</span>
-    </Pressable>
+    </Pressable><OpenSessionButton id={id} /></div>
   )
 
   /* C-US15:卡在只有人能过的一步,原地交给你;接手后小窗打开,过了点交还 */
@@ -41,6 +44,7 @@ export function ComputeLine({ id }: { id: string }) {
           <Button data-testid={`human-take-${id}`} onClick={stop(() => takeHuman(id))} variant="primary" size="xs" shape="pill" className="h-6 text-[12px]">我来输入</Button>
           <Button data-testid={`human-decline-${id}`} onClick={stop(() => declineHuman(id))} variant="ghost" size="xs" shape="pill" className="h-6 px-2 text-[12px] font-normal">不做了</Button>
         </>}
+      <OpenSessionButton id={id} className="rounded-full" />
     </div>
   )
 
@@ -53,23 +57,24 @@ export function ComputeLine({ id }: { id: string }) {
       {err && <Button data-testid={`retry-${id}`} onClick={stop(() => resolve(err.id, 'retry'))} variant="danger" size="xs" className="ml-1 border border-err/40">重试</Button>}
       {err && !broken('AC-36') && <Button data-testid={`switch-${id}`} onClick={stop(() => resolve(err.id, 'switch'))} variant="ghost" size="xs" className="px-2 font-normal">换个模型</Button>}
       {err && !broken('AC-36') && <Button data-testid={`skip-${id}`} onClick={stop(() => resolve(err.id, 'skip'))} variant="ghost" size="xs" className="px-2 font-normal">跳过</Button>}
+      <OpenSessionButton id={id} />
     </div>
   )
 
   if (view === 'done') return (
-    <Pressable data-testid={`compute-line-${id}`} data-state="done" onClick={open} className={`${LINE} truncate px-2 py-0.5 text-[12px] text-fg-3 hover:bg-hover`}>
+    <div className={WITH_END}><Pressable data-testid={`compute-line-${id}`} data-state="done" onClick={open} className={`${LINE} truncate px-2 py-0.5 text-[12px] text-fg-3 hover:bg-hover`}>
       <StatusDot c={c} className="h-3 w-3" /><span className="truncate">{c.title}</span><span className="shrink-0">· {c.result ?? '已完成'}</span>
-    </Pressable>
+    </Pressable><OpenSessionButton id={id} /></div>
   )
 
   return (
-    <Pressable data-testid={`compute-line-${id}`} data-state={c.status} data-cver={c.cver ?? 1} onClick={open} className={`${LINE} group/c -ml-0.5 gap-2 truncate py-1 pl-2.5 pr-2 text-[13px] text-fg-2 hover:bg-hover`}>
+    <div className={WITH_END}><Pressable data-testid={`compute-line-${id}`} data-state={c.status} data-cver={c.cver ?? 1} onClick={open} className={`${LINE} group/c -ml-0.5 gap-2 truncate py-1 pl-2.5 pr-2 text-[13px] text-fg-2 hover:bg-hover`}>
       <StatusDot c={c} />
       <span className="truncate font-medium text-fg">{c.title}</span>
       <span className="shrink-0 text-run" data-testid={`compute-phase-${id}`}>{c.status === 'stopped' ? '已停止' : c.phase}</span>
       {c.status === 'running' && <span className="shrink-0 tabular-nums text-fg-3">第 {Math.min(stepsDone + 1, c.steps.length)}/{c.steps.length} 步 · {c.elapsed}</span>}
       <ChevronRight className="h-3.5 w-3.5 text-fg-3 transition-transform duration-fast ease-out group-hover/c:translate-x-0.5" />
       {id === 'logs' && c.status === 'running' && <span data-testid="demo-captcha" role="button" onClick={stop(() => hitCaptcha(id))} className="ml-1 shrink-0 rounded px-1.5 text-[11.5px] text-fg-3 hover:bg-hover hover:text-fg">演示：遇到验证码</span>}
-    </Pressable>
+    </Pressable><OpenSessionButton id={id} /></div>
   )
 }

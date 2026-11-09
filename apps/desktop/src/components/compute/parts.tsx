@@ -9,11 +9,11 @@ import { TOOL_ICON } from './constants'
 
 /** 整行可点的折叠触发区（#1032：展开的触发区整行可点）。焦点环与按钮原语一致 */
 export const rowTrigger =
-  'group/row flex min-h-6 w-full min-w-0 items-center gap-1.5 rounded-md text-left transition-colors duration-fast ease-out hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60'
+  'group/disc flex min-h-6 w-full min-w-0 items-center gap-1.5 rounded-md text-left transition-colors duration-fast ease-out hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60'
 
 /** 展开箭头：收起朝右，展开转 90°(mirasim pi)；转动时长取库 token */
 export function Caret({ className }: { className?: string }) {
-  return <ChevronRight aria-hidden strokeWidth={2.4} className={cn('size-[11px] shrink-0 text-fg-3 transition-transform duration-fast ease-out group-data-[state=open]/row:rotate-90', className)} />
+  return <ChevronRight aria-hidden strokeWidth={2.4} className={cn('size-[11px] shrink-0 text-fg-3 transition-transform duration-fast ease-out group-data-[state=open]/disc:rotate-90', className)} />
 }
 
 export type IconTone = 'dim' | 'active' | 'err'

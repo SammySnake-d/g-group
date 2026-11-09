@@ -41,7 +41,7 @@ function AgentRow({ agent: a }: { agent: AgentEvent }) {
     <Acc.Item value={a.id} className="relative min-w-0 pl-3" data-testid="agent-row" data-status={a.status}>
       <span aria-hidden className={cn('absolute bottom-2 left-[2px] top-2 w-px', running ? 'bg-run/45' : 'bg-line')} />
       <Acc.Header className="min-w-0">
-        <Acc.Trigger className={cn('group/row flex w-full min-w-0 items-center gap-1.5 rounded-lg bg-me/[0.07] px-2 py-1 text-left transition-colors duration-fast ease-out hover:bg-me/[0.11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60')}>
+        <Acc.Trigger className={cn('group/disc flex w-full min-w-0 items-center gap-1.5 rounded-lg bg-me/[0.07] px-2 py-1 text-left transition-colors duration-fast ease-out hover:bg-me/[0.11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60')}>
           <CornerDownRight aria-hidden strokeWidth={2.2} className={cn('size-[13px] shrink-0', running ? 'text-run' : failed ? 'text-err' : 'text-fg-3')} />
           <span className={cn('min-w-0 flex-1 truncate text-[12px]', running ? 'text-fg-2' : 'text-fg-2/80')}>{a.label}</span>
           <Facts items={facts} className="ml-2" />
