@@ -164,7 +164,15 @@ try {
   answeredAt = Date.now();
   const r = await svc.handle("tasks.answer", { taskId: t1.id, qId: t1.pendingQuestion!.qId, clientActionId: "e2e-answer", answer: `短信验证码是 ${smsCode}` });
   log(`tasks.answer → ${r.ok ? `ok,任务 ${(r.value as { state: string }).state}` : `失败 ${r.error.code} ${r.error.message}`}`);
-  await until("交付并审完", () => ["T8a_Delivered", "T10_Cancelled", "T11_Failed"].includes(task()?.state ?? "") || (task()?.state === "T5_InReview" && (task()?.reviews ?? []).some((x) => x.status !== "running")), 20 * 60_000);
+  // 审完:进了 T8a 或终态;或停在 T5 且最近一次审查没做成(交给提出者豁免)。打回(rejected)后会返工再送审,继续等
+  const settled = () => {
+    const t = task();
+    if (!t) return false;
+    if (["T8a_Delivered", "T10_Cancelled", "T11_Failed"].includes(t.state)) return true;
+    const last = (t.reviews ?? []).at(-1);
+    return t.state === "T5_InReview" && !!last && !["running", "rejected"].includes(last.status);
+  };
+  await until("交付并审完", settled, 30 * 60_000);
   const t2 = task()!;
   log(`任务状态 ${t2.state} 审查门 ${t2.reviewGate} 审查记录 ${JSON.stringify(t2.reviews)}`);
   if (t2.state === "T8a_Delivered") {
