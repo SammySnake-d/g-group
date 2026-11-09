@@ -44,7 +44,7 @@ export function assessTap(run: TapRun, expected?: readonly string[], target?: Fa
     const detail = rest.split(/^# Subtest:|^1\.\./m)[0]!;
     const value = (key: string) => new RegExp(`^  ${key}: ['"]([^'"\\n]+)['"]$`, "m").exec(detail)?.[1];
     if (value("failureType") !== "testCodeFailure") problems.push(`非测试代码失败:${row[3]}`);
-    if (row[3] === target?.name && value("code") === target.code && (!target.errorName || value("name") === target.errorName)) matched = true;
+    if (target && row[3] === target.name && value("code") === target.code && (!target.errorName || value("name") === target.errorName)) matched = true;
   }
   if (/^Bail out!/m.test(run.out)) problems.push("TAP 提前结束");
   const valid = problems.length === 0;

@@ -187,7 +187,7 @@ const M = [
   ["M159 R10-01 不比对基线具名清单", "test-support/tap-result.ts", "if (expected && (names.length !== expected.length || names.some((name, i) => name !== expected[i]))) problems.push(\"具名测试与基线不一致\");", ""],
   ["M160 R10-01 不核对进程状态", "test-support/tap-result.ts", "if (run.timedOut || run.signal !== null || run.code !== (failed.length ? 1 : 0)) problems.push(\"超时/信号/退出码不符\");", ""],
   ["M161 R10-01 不核对失败类型", "test-support/tap-result.ts", "if (value(\"failureType\") !== \"testCodeFailure\") problems.push(`非测试代码失败:${row[3]}`);", ""],
-  ["M162 R10-01 用无关具名失败代替目标", "test-support/tap-result.ts", "row[3] === target?.name", "target !== undefined"],
+  ["M162 R10-01 用无关具名失败代替目标", "test-support/tap-result.ts", "row[3] === target.name", "true"],
   ["M163 R10-01 不核对目标错误码", "test-support/tap-result.ts", "value(\"code\") === target.code", "true"],
   ["M164 R10-01 不核对目标异常类型", "test-support/tap-result.ts", "(!target.errorName || value(\"name\") === target.errorName)", "true"],
   ["M165 R10-01 把文件加载失败当具名失败", "test-support/tap-result.ts", "if (names.some((name) => /^\\/|\\.test\\.[cm]?[jt]s$/.test(name))) problems.push(\"文件级失败\");", ""],
