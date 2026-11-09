@@ -28,6 +28,11 @@ export function pickReviewer(candidates: readonly ReviewCandidate[], producerMod
   return ok.find((c) => c.inRoom) ?? ok[0] ?? null;
 }
 
+/** 实际审查模型是否合格(红:空壳)。 */
+export function reviewModelProblem(_models: readonly string[], _producerModels: readonly string[]): string | null {
+  return null;
+}
+
 /** 去掉 markdown 加粗、行内代码、引用与列表记号,只留文字。 */
 const plainLine = (l: string): string => l.replace(/[*_`~]/g, "").replace(/^[\s>#\-•]+/, "").trim();
 /** 结论行:以 APPROVE / REJECT 开头(完整的词),同一行冒号后是意见的开头。 */
