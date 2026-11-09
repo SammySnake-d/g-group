@@ -23,6 +23,7 @@ import {
   RewindResult,
   RoomView,
   ScheduleView,
+  SearchHit,
   SettingsView,
   SlashCommand,
   SlashInvocation,
@@ -103,9 +104,13 @@ export const METHODS = {
   "announcements.remove": method(obj({ announcementId: id(), expectedVersion: opt(int({ min: 1 })) }), Ok),
 
   // ---- 消息 ----
+  /**
+   * 翻页取消息。aroundSeq(与 beforeSeq/afterSeq 互斥):返回以该条为中心、包含该条的一页,搜索结果跳转用;
+   * 此时 hasMore 表示前面还有,hasMoreAfter 表示后面还有。
+   */
   "messages.list": method(
-    obj({ roomId: id(), threadRootSeq: opt(nullable(seq())), beforeSeq: opt(seq()), afterSeq: opt(seq()), ...Page }),
-    obj({ messages: arr(MessageView), hasMore: bool() }),
+    obj({ roomId: id(), threadRootSeq: opt(nullable(seq())), beforeSeq: opt(seq()), afterSeq: opt(seq()), aroundSeq: opt(seq()), ...Page }),
+    obj({ messages: arr(MessageView), hasMore: bool(), hasMoreAfter: opt(bool()) }),
   ),
   /** 发送。clientActionId 由渲染进程生成,同一号重发返回同一条消息(不重复入库)。 */
   "messages.send": method(
@@ -144,6 +149,17 @@ export const METHODS = {
   "files.read": method(
     obj({ ref: id(), maxBytes: opt(int({ min: 1, max: 16 * 1024 * 1024 })) }),
     obj({ ref: id(), name: str({ max: 500 }), mime: str({ max: 200 }), bytes: int({ min: 0 }), encoding: oneOf(["text", "base64"] as const), content: str(), truncated: bool() }),
+  ),
+
+  // ---- 搜索(AC-25)----
+  /**
+   * 在自己所在的会话里按关键词搜消息正文与附件名;空白分隔的多个词全部命中才算,% _ 按字面匹配。
+   * 撤回的消息搜不到;编辑过的按最新文字匹配。按时间倒序,nextCursor 不为 null 时带上它取下一页。
+   * 指定 roomId 时只搜这个会话(不存在 not_found,不是成员 forbidden)。
+   */
+  "search.messages": method(
+    obj({ query: str({ min: 1, max: 200 }), roomId: opt(id()), cursor: opt(nullable(str({ max: 1000 }))), limit: opt(int({ min: 1, max: 100 })) }),
+    obj({ hits: arr(SearchHit), nextCursor: nullable(str({ max: 1000 })) }),
   ),
 
   // ---- 卡片按钮(交付确认、提问回答、失败重试…),以对话消息形式记录 ----

@@ -1,0 +1,28 @@
+{
+  "slice": "基础搜索:用户在自己所在的会话里按关键词搜消息正文与附件名,每条结果带 roomId + #seq,用 messages.list({ aroundSeq }) 跳回原位置;派生索引与消息写入/编辑/撤回同一事务更新,撤回即删索引行(不留原文),可从只追加日志全量重建",
+  "acceptance": [
+    {
+      "id": "AC-25",
+      "status": "未测",
+      "reason": "后端部分已做并验证:search.messages 每条带 roomId/seq/threadRootSeq,messages.list aroundSeq 返回含焦点消息的一页(packages/server/src/search.test.ts 9 条、packages/api-contract/src/search-contract.test.ts 2 条;真实服务层运行 packages/server/proof/e-search-run.txt;变异 10/10 被具名测试杀死,box4 上跑,packages/server/proof/e-search-mutations.txt)。验收层是 X(结果列表点击跳转后焦点消息的界面快照),要等桌面前端接上后走查,后端单独不能判通过"
+    },
+    {
+      "id": "AC-08",
+      "status": "未测",
+      "reason": "本片只覆盖「删除后索引不得再返回原文」:撤回在同一事务里删掉 gg_search 行,重建时也跳过撤回消息(search.test.ts「撤回后搜不到,派生索引表里也不再有原文」「索引重建…撤回的不回来」;proof/e-search-run.txt 索引表含原文行数 0)。派生草稿与依赖提议失效、已发生副作用标记、删 K 不丢后续约束不在本片"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:f5d9723d-a248-4483-95eb-5ba31b3fda33",
+    "model": "fnqtz/claude-opus-5-5",
+    "notes": "由该会话派出的子代理执行"
+  },
+  "red": {
+    "commit": "ece1d111fb8348ed00f7a73485cbd356fab41693"
+  },
+  "unverifiable": "AC-25:匹配用 LIKE 子串(不分词、不做相关度排序),结果只按时间倒序;中文同义词、错别字搜不到,这是「基础搜索」的有意边界,测试只能证明子串语义正确,不能证明用户觉得「找得到」。AC-08 的索引侧只验证了撤回路径;如果以后出现撤回之外的删除入口(比如删会话、删联系人带走私聊),必须同样调 unindexTx,现有测试抓不到漏调",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}
