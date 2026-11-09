@@ -6,6 +6,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
+import type { ContactMind } from "@g-group/kernel";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
 import { REVIEW_TOOLS, parseVerdict, pickReviewer } from "./review.ts";
@@ -32,8 +33,8 @@ const CLAUDE = "claude-sonnet-4-6";
 const GPT = "agentrouter/gpt-6.1-sol";
 /** 执行 Compute 用 claude;审查 Compute 用审查人的模型。verdicts 依次给出每次审查的结论原文。 */
 /** H 是被测的宿主类(显式传入,测试断言的都是它的结果)。 */
-function world(H: typeof Host, opts: { verdicts?: string[]; reviewFails?: boolean; reviewer?: { name: string; model: string } | null; extra?: { name: string; model: string }[]; ownerModel?: string } = {}) {
-  const exec = scriptedCompute({ modelAware: false, onResume: () => [{ kind: "completed", result: "按审查意见改好了" }] });
+function world(H: typeof Host, opts: { verdicts?: string[]; reviewFails?: boolean; reviewer?: { name: string; model: string } | null; extra?: { name: string; model: string }[]; ownerModel?: string; resumeHangs?: boolean; mind?: () => ContactMind; onReport?: (what: string, detail: unknown) => void } = {}) {
+  const exec = scriptedCompute({ modelAware: false, onResume: () => (opts.resumeHangs ? [] : [{ kind: "completed", result: "按审查意见改好了" }]) });
   const verdicts = [...(opts.verdicts ?? ["APPROVE\n产物与要求一致"])];
   const review = scriptedCompute({
     modelAware: false,
@@ -46,7 +47,8 @@ function world(H: typeof Host, opts: { verdicts?: string[]; reviewFails?: boolea
   const models: string[] = [];
   const host = new H({
     file: file(),
-    mind: () => scriptedMind(),
+    mind: opts.mind ?? (() => scriptedMind()),
+    ...(opts.onReport ? { onReport: opts.onReport } : {}),
     compute: (m) => {
       models.push(m);
       return m === (opts.ownerModel ?? CLAUDE) ? exec.adapter : review.adapter;
@@ -171,6 +173,32 @@ test("AC-26 审查打回 → 回 T3,原 Compute 带审查意见续改;改完再�
   const t = w.host.taskView(w.host.taskDoc(task.id).value);
   assert.equal(t.state, "T8a_Delivered");
   assert.deepEqual(t.reviews?.map((r) => r.status), ["rejected", "approved"]);
+  await close(w);
+});
+
+test("AC-26 打回后、Compute 重新完成前,联系人拿旧结果再交付被拒:任务留在 T3,不重新送审(旧结果已作废)", async () => {
+  const reports: { what: string; detail: unknown }[] = [];
+  let taskId = "";
+  const base = scriptedMind();
+  /** 收到用户「再交付」就拿任务直接 deliver(不等 Compute 重新完成) */
+  const mind = (): ContactMind => ({
+    async round(input, signal) {
+      const out = await base.round(input, signal);
+      const again = input.fresh.some((f) => f.kind === "message" && f.text === "再交付");
+      return again ? { ...out, actions: [...out.actions, { kind: "deliver", taskId, text: "还是上次那份" }] } : out;
+    },
+  });
+  const w = world(Host, { verdicts: ["REJECT\n文件末尾缺换行"], resumeHangs: true, mind, onReport: (what, detail) => reports.push({ what, detail }) });
+  const task = await deliver(w);
+  taskId = task.id;
+  assert.equal(w.exec.resumed.length, 1, "打回后续接原 Compute");
+  assert.equal(w.host.taskDoc(task.id).value.task.state, "T3_Running");
+  w.host.send({ roomId: w.dm.id, clientActionId: "u2", text: "再交付" });
+  await settle(w.host, w.exec, w.review);
+  const t = w.host.taskView(w.host.taskDoc(task.id).value);
+  assert.equal(t.state, "T3_Running", "旧结果不能再交付");
+  assert.equal(w.review.spawned.length, 1, "没有拿旧结果重新送审");
+  assert.ok(reports.some((r) => r.what === "action-rejected" && /Compute 还没完成/.test(JSON.stringify(r.detail))), "交付被拒并说明原因");
   await close(w);
 });
 
