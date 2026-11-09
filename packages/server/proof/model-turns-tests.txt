@@ -1,4 +1,4 @@
-# AC-51 宿主侧具名测试运行原文(本机单文件快速验证,node v22.22.0,基于 origin/dev/integration bf8a947 + feat/model-config;全量测试在云电脑 box3 跑)
+# AC-51 宿主侧具名测试运行原文(本机单文件快速验证,node v22.22.0,基于 origin/dev/integration 6952560 + feat/model-config;全量测试在云电脑 box3 跑)
 ok 1 - 私聊:联系人改了 Compute 模型,下一次转给 Compute 的输入就带新模型;同一 Compute 续接不另起,适配器实例按 Harness 复用
 ok 2 - 群聊主流、任务话题与退回重试:改了全局默认后,继承它的联系人每种入口的下一次输入都带新模型(埋雷:重试走另一条路径不带模型必红)
 ok 3 - 只改 effort:下一轮 effort 变、模型不变;模型和 effort 都没改,下一轮照原值带上(由适配器判定无需切换)
