@@ -1,0 +1,27 @@
+packages/api-contract/src/api.ts
+  s_12ccf69de2a7ec::t_d323da7e2dad34 18-19,123-139
+packages/api-contract/src/events.ts
+  s_12ccf69de2a7ec::t_e2399aaf497c54 3,23-24
+packages/server/src/host.ts
+  s_12ccf69de2a7ec::t_11392b27d8fb78 223
+packages/server/src/service.ts
+  s_12ccf69de2a7ec::t_e9eca9ecb75c2b 75-79
+packages/server/src/shared-docs.ts
+  s_12ccf69de2a7ec::t_9a9c63c30c4598 1-9,11-19,22-30,39,41,43,46,52,57-72,75-93,95-110,112-114,116-145,147-173,175-183,185-189,191-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "145660ebd386b8ae43afdc3656e3234e45523637",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

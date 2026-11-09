@@ -1,0 +1,21 @@
+packages/api-contract/src/contract.test.ts
+  s_19afb02e575b26::t_8d2ee0e21f8889 148-162
+packages/server/src/same-entity.test.ts
+  s_19afb02e575b26::t_a171f50507487a 1-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0ad5f7489e2c95217fa8f7908a6ad3d0633ab324",
+  "prompts": {},
+  "sessions": {
+    "s_19afb02e575b26": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac3c5d6dff8770595",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
