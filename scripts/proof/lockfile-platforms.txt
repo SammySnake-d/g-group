@@ -12,3 +12,6 @@
 #   改前锁文件  npm 11.19.0:npm error code EUSAGE(package.json 与锁文件不同步)
 #   改后锁文件  npm 11.19.0:added 100 packages,node_modules/@biomejs/ = biome cli-linux-x64 cli-linux-x64-musl
 # 云电脑 box3/box4/box2 当时解析不了 github.com(DNS 失败),Linux 上的真实运行以本 PR 的 GitHub self-check 为准(结果见下一行起追加)。
+# GitHub self-check(ubuntu,Linux 上的真实运行):run 42670501718,被测提交 13eb715,conclusion=success,耗时 10m9s;
+#   步骤:npm ci=success、类型检查=success、lint=success、测试=success、门禁自检=success、门禁变异校验=success。
+#   对照:同一 workflow 在改前的 dev/integration 系 PR 上(如 #47 run 42555015126)lint 报 Cannot find module '@biomejs/cli-linux-x64/biome' 失败。
