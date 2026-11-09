@@ -1,0 +1,23 @@
+packages/server/proof/cross-vendor-review-mutations.txt
+  s_00309a6b1778cc::t_303bc5748962e9 1-4,11,21-22,29
+packages/server/proof/retry-host-mutations.txt
+  s_00309a6b1778cc::t_1979be5750c25f 1-34
+packages/server/proof/run-ledger-host-mutations.txt
+  s_00309a6b1778cc::t_65256eab57e2f6 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "20c2a5be4cd90a75dbd9792e7149c0ace9d87320",
+  "prompts": {},
+  "sessions": {
+    "s_00309a6b1778cc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5b44653a-2923-45fd-97d0-f25479b43797",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
