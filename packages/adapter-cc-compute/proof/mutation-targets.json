@@ -748,5 +748,85 @@
     "name": "R9 补充:凭据引用的方案名可带数字、加号、点、连字符(s3://、git+ssh://、x.y-z://)时放行;方案名以数字开头、带大写或下划线、缺 :// 或路径为空时拒收(正反对照)",
     "code": "ERR_ASSERTION",
     "errorName": "AssertionError"
+  },
+  "M151": {
+    "name": "R10-01/跳过:真实 TAP 跳过项使原样与故障副本均无效",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M152": {
+    "name": "R10-02:转义的顶层 id 键按解码值识别,重复转义键取最后一个且嵌套同名键不影响",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M153": {
+    "name": "R10-03:版本与通知六格交叉保持先核对版本,无效通知回错误且不登记,有效通知静默且不登记",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M154": {
+    "name": "R10-01/计划汇总:缺失重复或错误的 TAP 计划与汇总都拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M155": {
+    "name": "R10-01/计划汇总:缺失重复或错误的 TAP 计划与汇总都拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M156": {
+    "name": "R10-01/计划汇总:缺失重复或错误的 TAP 计划与汇总都拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M157": {
+    "name": "R10-01/指令:即使汇总声称零跳过,结果行 SKIP 或 TODO 指令仍拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M158": {
+    "name": "R10-01/逐名:条数相同但名字或序号不一致以及重复名字均拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M159": {
+    "name": "R10-01/逐名:条数相同但名字或序号不一致以及重复名字均拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M160": {
+    "name": "R10-01/进程:超时信号异常退出码和截断均不能成为有效判决",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M161": {
+    "name": "R10-01/原因:只有指定名字及指定错误码匹配才算发现,无关失败不能替代",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M162": {
+    "name": "R10-01/原因:只有指定名字及指定错误码匹配才算发现,无关失败不能替代",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M163": {
+    "name": "R10-01/原因:只有指定名字及指定错误码匹配才算发现,无关失败不能替代",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M164": {
+    "name": "R10-01/原因:只有指定名字及指定错误码匹配才算发现,无关失败不能替代",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M165": {
+    "name": "R10-01/文件失败:加载异常或提前退出不算测试代码断言失败",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M166": {
+    "name": "R10-01/全执行:真实 TAP 的完整基线与指定断言失败分别认可,同名全绿不算发现故障",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
   }
 }

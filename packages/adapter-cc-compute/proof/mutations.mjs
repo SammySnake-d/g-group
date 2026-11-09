@@ -176,6 +176,22 @@ const M = [
   ["M148 R9-04 hy4 H9-01:去掉 task 的非空白判断", "src/brief.ts", 'if (typeof task !== "string" || !task.trim()) return refuse(', 'if (typeof task !== "string" || !task) return refuse('],
   ["M149 R9-04 审查 S04:放行的 task 去掉首尾空白", "src/brief.ts", "      task,\n      rules: Object.freeze([...rules]),", "      task: task.trim(),\n      rules: Object.freeze([...rules]),"],
   ["M150 R9 补充 审查 S03:凭据引用方案名只收字母", "src/brief.ts", "const CREDENTIAL_REF = /^[a-z][a-z0-9+.-]*:", "const CREDENTIAL_REF = /^[a-z][a-z]*:"],
+  ["M151 R10-01 退回仅按结果行计数的旧判决", "test-support/tap-result.ts", "const valid = problems.length === 0;", "const valid = !run.timedOut && !run.signal && rows.length === total;"],
+  ["M152 R10-02 审查 S04 不解码转义的键名", "mcp/report-mcp.mjs", "const key = JSON.parse(str());", "const key = str().slice(1, -1);"],
+  ["M153 R10-03 hy4 H10-01 仅对带编号请求核对版本", "mcp/report-mcp.mjs", "if (m.jsonrpc !== \"2.0\") {", "if (Object.hasOwn(m, \"id\") && m.jsonrpc !== \"2.0\") {"],
+  ["M154 R10-01 不核对计划和总数", "test-support/tap-result.ts", "if (total <= 0 || rows.length !== total || summary(\"tests\") !== total || summary(\"suites\") !== 0) problems.push(\"计划/测试总数/扁平结构不符\");", ""],
+  ["M155 R10-01 不核对通过失败汇总", "test-support/tap-result.ts", "if (summary(\"pass\") !== passed.length || summary(\"fail\") !== failed.length) problems.push(\"通过/失败汇总不符\");", ""],
+  ["M156 R10-01 不核对跳过待办取消汇总", "test-support/tap-result.ts", "if (summary(\"skipped\") !== 0 || summary(\"todo\") !== 0 || summary(\"cancelled\") !== 0) problems.push(\"跳过/待办/取消非零或缺失\");", ""],
+  ["M157 R10-01 不核对行内指令", "test-support/tap-result.ts", "if (rows.some((m) => /\\s#\\s*(?:SKIP|TODO)\\b/i.test(m[3]!))) problems.push(\"结果行含跳过/待办指令\");", ""],
+  ["M158 R10-01 不核对结果序号", "test-support/tap-result.ts", "rows.some((m, i) => Number(m[2]) !== i + 1)", "false"],
+  ["M159 R10-01 不比对基线具名清单", "test-support/tap-result.ts", "if (expected && (names.length !== expected.length || names.some((name, i) => name !== expected[i]))) problems.push(\"具名测试与基线不一致\");", ""],
+  ["M160 R10-01 不核对进程状态", "test-support/tap-result.ts", "if (run.timedOut || run.signal !== null || run.code !== (failed.length ? 1 : 0)) problems.push(\"超时/信号/退出码不符\");", ""],
+  ["M161 R10-01 不核对失败类型", "test-support/tap-result.ts", "if (value(\"failureType\") !== \"testCodeFailure\") problems.push(`非测试代码失败:${row[3]}`);", ""],
+  ["M162 R10-01 用无关具名失败代替目标", "test-support/tap-result.ts", "row[3] === target?.name", "target !== undefined"],
+  ["M163 R10-01 不核对目标错误码", "test-support/tap-result.ts", "value(\"code\") === target.code", "true"],
+  ["M164 R10-01 不核对目标异常类型", "test-support/tap-result.ts", "(!target.errorName || value(\"name\") === target.errorName)", "true"],
+  ["M165 R10-01 把文件加载失败当具名失败", "test-support/tap-result.ts", "if (names.some((name) => /^\\/|\\.test\\.[cm]?[jt]s$/.test(name))) problems.push(\"文件级失败\");", ""],
+  ["M166 R10-01 完整阳性被误拒收", "test-support/tap-result.ts", "killed: valid && matched", "killed: false"],
 ];
 
 // 不用 --test-timeout:在 node --test <file> 下它限制的是整个文件,文件超过上限会被整体取消(部分执行)。
