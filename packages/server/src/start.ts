@@ -22,6 +22,8 @@ export interface StartOptions {
   /** 插件市场目录文件;默认包内示例市场。 */
   readonly catalogFile?: string;
   readonly onReport?: (what: string, detail: unknown) => void;
+  /** 给 Compute 的单次输入字节上限(§8.1 待决 13);不给=不设上限 */
+  readonly computeInputMaxBytes?: number | null;
 }
 export interface Started {
   readonly host: Host;
@@ -87,6 +89,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
       return d;
     },
     ...(o.onReport ? { onReport: o.onReport } : {}),
+    ...(o.computeInputMaxBytes !== undefined ? { computeInputMaxBytes: o.computeInputMaxBytes } : {}),
   });
   if (model) host.updateSettings({ defaultSpeakingModel: model, defaultComputeModel: model, confirmAffected: true });
   const service = createService(host);

@@ -143,7 +143,7 @@ export interface HostOptions {
   readonly memoryFoldAfter?: number;
   /** 引用链原文的字节预算(D24 第 3 节:与直接引用共用回读预算);不给用 RECALL_BUDGET_BYTES。数值待实测。 */
   readonly quoteChainBudgetBytes?: number;
-  /** 给 Compute(harness)的单次输入 UTF-8 字节上限(§8.1 待决 13):派活说明与转交补充超过就显式拒绝,不截断。不给=不设上限,数字待用户定。红提交:空壳。 */
+  /** 给 Compute(harness)的单次输入 UTF-8 字节上限(§8.1 待决 13):派活说明与转交补充超过就显式拒绝,不截断。不给=不设上限,数字待用户定。 */
   readonly computeInputMaxBytes?: number | null;
   readonly timers?: TimerApi;
   readonly onReport?: (what: string, detail: unknown) => void;
@@ -2243,6 +2243,8 @@ export class Host {
             const t = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
             if (!t.task.computeId || TERMINAL.has(t.task.state) || t.task.state === "T9_StopRequested") { reject("任务没有在途 Compute"); break; }
+            const over = this.overComputeInput(a.text);
+            if (over) { reject(`转交的补充${over}`); break; }
             if (t.task.state === "T4b_BlockedOnHuman" && t.task.pendingQ) {
               // 等人回答时(AC-44 ③):只有提出者本轮在任务会话里、提问卡之后说的话能当回答转达;联系人不能自己编答案
               const q = t.task.pendingQ;
@@ -2556,6 +2558,13 @@ export class Host {
       }
     }
   }
+  /** 给 harness 的单次输入超上限时返回原因(含字节数与上限),没超或没设上限返回 null。不截断(§8.1 待决 13) */
+  private overComputeInput(text: string): string | null {
+    const max = this.opts.computeInputMaxBytes ?? null;
+    if (max === null) return null;
+    const n = Buffer.byteLength(text, "utf8");
+    return n > max ? ` ${n} 字节,超过给 Compute 的单次输入上限 ${max} 字节;不截断,请拆小或调大上限` : null;
+  }
   private adapterForCompute(computeId: string): ComputeAdapter | null {
     // 审查 Compute 记在 gg_reviews,跑在 Claude Code 上
     const row = one<{ harness: string; model: string }>(this.db, "SELECT harness, model FROM gg_compute WHERE compute_id = ? UNION ALL SELECT 'claude-code' AS harness, model FROM gg_reviews WHERE compute_id = ?", computeId, computeId);
@@ -2725,6 +2734,8 @@ export class Host {
     const model = resolved?.model ?? e.model;
     const adapter = this.adapterFor(harness, model);
     if (!adapter) return fail("宿主没有配置 Compute 适配器");
+    const over = this.overComputeInput(e.brief);
+    if (over) return fail(`派活说明${over}`);
     let cwd: string | undefined;
     try {
       cwd = this.computeCwdFor(e.taskId);
