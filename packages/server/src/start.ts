@@ -76,7 +76,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
     },
     ...(o.onReport ? { onReport: o.onReport } : {}),
   });
-  if (model) host.updateSettings({ defaultSpeakingModel: model, defaultComputeModel: model });
+  if (model) host.updateSettings({ defaultSpeakingModel: model, defaultComputeModel: model, confirmAffected: true });
   const service = createService(host);
   return {
     host,
