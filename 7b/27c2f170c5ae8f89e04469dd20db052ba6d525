@@ -1,0 +1,19 @@
+packages/server/proof/compute-help-mutations.txt
+  s_e7bd71499cd700::t_3af97bef8693d7 1-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7b27c2f170c5ae8f89e04469dd20db052ba6d525",
+  "prompts": {},
+  "sessions": {
+    "s_e7bd71499cd700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8db9faef-fb87-414b-b25d-2aa6747caad3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
