@@ -93,10 +93,14 @@ function run(dir) {
 }
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "state-note-mut-"));
+// 副本自带 node_modules:第三方依赖链接到原仓库,@g-group/* 链到副本自己的 packages,跨包导入也能看到注入的故障
 function copy(name) {
   const d = path.join(tmp, name);
   fs.cpSync(ROOT, d, { recursive: true, filter: (s) => !/(^|[/\\])(node_modules|\.git|proof)([/\\]|$)/.test(path.relative(ROOT, s)) });
-  fs.symlinkSync(path.join(ROOT, "node_modules"), path.join(d, "node_modules"));
+  const nm = path.join(d, "node_modules");
+  fs.mkdirSync(path.join(nm, "@g-group"), { recursive: true });
+  for (const e of fs.readdirSync(path.join(ROOT, "node_modules"))) if (e !== "@g-group") fs.symlinkSync(path.join(ROOT, "node_modules", e), path.join(nm, e));
+  for (const pkg of fs.readdirSync(path.join(d, "packages"))) fs.symlinkSync(path.join("..", "..", "packages", pkg), path.join(nm, "@g-group", pkg));
   return d;
 }
 
@@ -108,7 +112,9 @@ console.log(`node ${process.version}`);
 console.log(`${cleanOk ? "✓" : "✗"} 原样副本:${clean.passed.length} 绿 / ${clean.failed.length} 红`);
 if (!cleanOk) ok = false;
 let killed = 0, survived = 0, timeouts = 0;
+const ONLY = process.env.MUT_ONLY ? process.env.MUT_ONLY.split(",") : null;
 for (const [i, [name, file, from, to]] of M.entries()) {
+  if (ONLY && !ONLY.some((p) => name.startsWith(p))) continue;
   const tag = `[${i + 1}/${M.length}]`;
   const d = copy(`m${i}`);
   const f = path.join(d, file);
