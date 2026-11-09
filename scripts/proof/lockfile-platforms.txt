@@ -1,0 +1,14 @@
+# 锁文件补齐 biome 各平台可选依赖(2026-11-10,会话 claude:6cc08ff4-6b3e-4c77-8c0c-740d8ab6b882)
+# 问题:dev/integration 的 package-lock.json 从 7e99503(merge feat/kernel-plugins,2026-11-08 21:42)起,
+#   node_modules/@biomejs/biome 的 10 个 optionalDependencies 只剩 cli-darwin-arm64 有条目(在 macOS 上带着 node_modules 重算锁文件时被丢掉)。
+#   后果:GitHub self-check(ubuntu,npm 10)npm ci 不装 Linux 版 biome,lint 报 Cannot find module '@biomejs/cli-linux-x64/biome';
+#   npm 11(云电脑 Node 24)npm ci 直接 EUSAGE「Missing: @biomejs/cli-android-arm64@2.6.6 from lock file」。所有进 dev/integration 的 PR self-check 都红。
+# 改法:只删锁文件里 node_modules/@biomejs/* 条目,npm install --package-lock-only 按原版本 2.6.6 重算。
+#   结果只新增 9 个条目(cli-android-arm64/x64、cli-darwin-x64、cli-linux-arm64(-musl)、cli-linux-x64(-musl)、cli-win32-arm64/x64),
+#   其余 package-lock.json 条目一字不变,biome 仍是 2.6.6。
+# 核对(本机 macOS,用同一份 package.json,按 Linux 平台装:npm ci --os=linux --cpu=x64 --libc=glibc --ignore-scripts):
+#   改前锁文件  npm 10.9.4:exit 0,node_modules/@biomejs/ 只有 biome(没有 cli-linux-x64,即 CI 报错的原因)
+#   改后锁文件  npm 10.9.4:exit 0,node_modules/@biomejs/ = biome cli-linux-x64 cli-linux-x64-musl
+#   改前锁文件  npm 11.19.0:npm error code EUSAGE(package.json 与锁文件不同步)
+#   改后锁文件  npm 11.19.0:added 100 packages,node_modules/@biomejs/ = biome cli-linux-x64 cli-linux-x64-musl
+# 云电脑 box3/box4/box2 当时解析不了 github.com(DNS 失败),Linux 上的真实运行以本 PR 的 GitHub self-check 为准(结果见下一行起追加)。
