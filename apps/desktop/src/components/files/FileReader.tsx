@@ -1,5 +1,6 @@
 import { ArrowLeft, ArrowUpRight, CornerUpLeft, MessageSquare, X } from 'lucide-react'
 import { Button } from '@astryxdesign/core/Button'
+import { ToggleButton } from '@astryxdesign/core/ToggleButton'
 import { ClickableCard } from '@astryxdesign/core/ClickableCard'
 import { useState } from 'react'
 import { people, type Artifact } from '@/data'
@@ -18,7 +19,7 @@ export function FileReader({ artifact: a, onBack, compact = false }: { artifact:
       <Button label={compact ? '关闭预览' : '全部文件'} isIconOnly variant="ghost" icon={compact ? <X /> : <ArrowLeft />} onClick={onBack} />
       <div className="flex min-w-0 items-center gap-2" data-testid="file-source"><Avatar id={a.by} size={24} status={false} mood="idle" /><span className="truncate text-[14px]">{people[a.by].name}</span><span className="text-fg-3">/</span><span className="truncate text-[14px] text-fg-2">{label}</span></div>
       <div className="ml-auto flex shrink-0 items-center gap-1.5">
-        {!compact && <Button label="相关对话" variant="ghost" isIconOnly icon={<MessageSquare />} isPressed={contextOpen} onClick={() => setContextOpen(!contextOpen)} data-testid="file-context-toggle" />}
+        {!compact && <ToggleButton label="相关对话" isIconOnly icon={<MessageSquare />} isPressed={contextOpen} onPressedChange={setContextOpen} data-testid="file-context-toggle" />}
         <Button label="接着聊" icon={<CornerUpLeft />} variant="primary" onClick={() => discussFile(a)} isDisabled={!conv} data-testid="file-discuss" />
       </div>
     </header>

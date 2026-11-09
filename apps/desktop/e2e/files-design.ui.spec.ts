@@ -40,7 +40,7 @@ for (const theme of ['light', 'dark'] as const) {
     await page.getByTestId('file-discuss').click();
     await expect(page.getByTestId('chat-column')).toBeVisible();
     await expect(page.getByTestId('quote-text')).toContainText('IM 竞品交互对照');
-    const composer = page.getByTestId('composer').locator('textarea');
+    const composer = page.getByTestId('composer');
     await expect(composer).toHaveValue(/@Astra/);
     await expect(composer).toBeFocused();
     await shot(page, `files-design/${theme}/continue-chat`, 300);
@@ -56,7 +56,7 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.locator('[data-testid^="shelf-a"]')).toHaveCount(1);
     await page.getByRole('button', { name: '打开VPS · 香港 1 号机', exact: true }).click();
     await page.getByTestId('file-discuss').click();
-    const composer = page.getByTestId('composer').locator('textarea');
+    const composer = page.getByTestId('composer');
     await expect(composer).toHaveValue(/@Helper.*VPS · 香港 1 号机/);
     await expect(page.getByTestId('quote-text')).toHaveCount(0);
     // 动作只预填；没有自动生成一条用户消息。

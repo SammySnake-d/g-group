@@ -32,7 +32,7 @@ export type LayoutSlice = Pick<Ctx, 'dark' | 'debug' | 'setDark' | 'setDebug' | 
   closeTabs: () => void
   pickContact: (id: PersonId) => void
   setWbTab: (t: WbTab) => void
-  setFileSel: (id: string) => void
+  setFileSel: (id: string | null) => void
   /** 拖动分隔条:按位移调宽,夹在 config/layout 的范围里 */
   resize: (pane: Pane, delta: number) => void
   setFloatWidth: (w: number) => void
