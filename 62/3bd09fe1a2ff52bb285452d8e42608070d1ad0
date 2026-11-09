@@ -1,0 +1,61 @@
+packages/server/src/worktree.ts
+  s_25620647d6f8eb::t_6b44b0e4872616 1-10,14-55,81-83,110,112,118,121,139,211,219-220
+  s_40ddef7d1d7537::t_9ebfa9f81d2e0e 11-13,56-80,84-109,111,113-117,119-120,122-138,140-210,212-218,221-249
+packages/server/src/worktree.test.ts
+  s_25620647d6f8eb::t_e0ab3420f3f020 1-10,11-460
+packages/api-contract/src/api.ts
+  s_40ddef7d1d7537::t_d665f5b2fac3f6 132-134
+packages/api-contract/src/entities.ts
+  s_40ddef7d1d7537::t_db143565f70c25 165-184,202-203
+packages/server/README.md
+  s_40ddef7d1d7537::t_a81e41a0364cd0 36-37,55,61
+packages/server/proof/worktree-merge.txt
+  s_40ddef7d1d7537::t_d5267e5c166cfd 1-98
+packages/server/src/cli.ts
+  s_40ddef7d1d7537::t_e42e09543e039d 8,32-35,87-88,133-135,166-178
+packages/server/src/host.ts
+  s_40ddef7d1d7537::t_bb5f8d093f1c46 50,62-64,167,234,872,899-970,1281-1289,1440-1441,1466-1471,1526-1537,1601-1602
+packages/server/src/service.ts
+  s_40ddef7d1d7537::t_de43b770f38e1b 82
+receipts/feat-worktree-merge.json
+  s_ae065512e1088f::t_8c2349c9ea244d 1-3,5-6,8-12
+packages/server/proof/worktree-mutations.mjs
+  s_ae065512e1088f::t_b092e9301d28a6 1-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "623bd09fe1a2ff52bb285452d8e42608070d1ad0",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_40ddef7d1d7537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_ae065512e1088f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a79b7ed6217c51390",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

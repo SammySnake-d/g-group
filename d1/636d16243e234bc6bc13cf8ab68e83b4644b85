@@ -1,0 +1,19 @@
+packages/server/proof/plugin-exec.txt
+  s_19afb02e575b26::t_272204b40916f2 1-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d1636d16243e234bc6bc13cf8ab68e83b4644b85",
+  "prompts": {},
+  "sessions": {
+    "s_19afb02e575b26": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac3c5d6dff8770595",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+packages/server/proof/ac29-capability-isolation.txt
+  s_12ccf69de2a7ec::t_adc1d4cc5b75c4 1-28
+packages/server/proof/ac29-real-run.ts
+  s_12ccf69de2a7ec::t_c0723098105131 1-64
+packages/server/proof/echo-mcp.mjs
+  s_12ccf69de2a7ec::t_86fc8fe88b0ffc 1-10
+packages/server/proof/v02-config-dir.txt
+  s_12ccf69de2a7ec::t_5ce07545eb05ef 1-31
+receipts/feat-compute-iso.json
+  s_12ccf69de2a7ec::t_8727c23251419b 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "07a40e82b113efe9e3016c6c9a71e7dc5354c2ad",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

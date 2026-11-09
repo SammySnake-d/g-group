@@ -1,0 +1,21 @@
+packages/server/src/worktree.ts
+  s_25620647d6f8eb::t_6b44b0e4872616 1-75
+packages/server/src/worktree.test.ts
+  s_25620647d6f8eb::t_e0ab3420f3f020 1-474
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e9280cb109e9fa6bb83a74296f816a281beab4b6",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
