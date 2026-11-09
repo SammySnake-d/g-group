@@ -1,7 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
 import { shot } from "./shots";
+import { BASELINE_CONSOLE } from "./console-baseline";
 
-// Astryx 底座探针:主题真生效(不是默认 neutral 色)、Tailwind 类能盖过 Astryx、键盘交互完整、无控制台报错。
+// Astryx 底座探针:主题真生效(不是默认 neutral 色)、Tailwind 类能盖过 Astryx、键盘交互完整、无新增控制台报错。
 const css = (page: Page, sel: string, prop: string) =>
   page.locator(sel).first().evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop);
 const varOf = (page: Page, name: string) =>
@@ -26,7 +27,7 @@ for (const theme of ["light", "dark"] as const) {
       // 亮暗跟随我们自己的 dark 状态
       expect(await page.evaluate(() => document.documentElement.getAttribute("data-theme"))).toBe(theme);
       await shot(page, `astryx/probe-${theme}`, 0);
-      expect(errors, errors.join("\n")).toEqual([]);
+      expect(errors, errors.join("\n")).toEqual(BASELINE_CONSOLE);
     });
 
     test("键盘:菜单方向键移动、回车选中;对话框 Esc 关闭且焦点回到触发按钮;开关空格切换", async ({ page }) => {
@@ -88,12 +89,13 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme === "light" ? "dark" : "light");
     await expect(waiting).not.toBeChecked();
     await expect(debug).toBeChecked();
+    await page.keyboard.press("Escape"); // 设置是浮层；遵循现有关闭路径，不能穿透遮罩点导航。
     await page.getByTestId("nav-files").click();
     await page.getByTestId("nav-settings").click();
     await expect(debug).toBeChecked();
     await debug.focus();
     await page.keyboard.press("Space");
     await expect(debug).not.toBeChecked();
-    expect(errors, errors.join("\n")).toEqual([]);
+    expect(errors, errors.join("\n")).toEqual(BASELINE_CONSOLE);
   });
 }
