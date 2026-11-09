@@ -1,0 +1,31 @@
+packages/domain/proof/tla-mutations.mjs
+  s_28bebc745289eb::t_bfe705294e6a81 29
+packages/domain/src/lease.ts
+  s_29fa229c8c70ee::t_a50236952e272d 59-63,69
+packages/domain/src/trace-replay.ts
+  s_29fa229c8c70ee::t_7081ffad9316d4 120,128,133,146,158,172,187,197
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dd3dc817d2d9528e59cfa0b0f4fd90e6e491d849",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_29fa229c8c70ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6f12fa99094fd0fa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

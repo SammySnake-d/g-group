@@ -1,0 +1,14 @@
+packages/server/src/manual-task.test.ts
+  h_f33e46a035b77c 70-71,107-108,126-127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "981935ca7debcf27ed604758efb6903643d458cb",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
