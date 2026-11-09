@@ -1,0 +1,40 @@
+packages/api-contract/src/entities.ts
+  s_12ccf69de2a7ec::t_3a906abff33aa9 149-150,247-254
+packages/server/src/capabilities.test.ts
+  s_12ccf69de2a7ec::t_82e1f3104bb976 1-173
+packages/adapter-cc-compute/src/types.ts
+  s_12ccf69de2a7ec::t_1f768f9ab87da2 38-44,48-66,70,81-86,94-101
+packages/adapter-cc-compute/test-support/fake-claude.mjs
+  s_12ccf69de2a7ec::t_bab45310644290 127-139,141-142
+packages/adapter-cc-compute/src/isolation.test.ts
+  s_12ccf69de2a7ec::t_d8bfdb04ccb982 1-148
+  s_12ccf69de2a7ec::t_c5186722049ecf 149-151
+  s_12ccf69de2a7ec::t_0d9cda2dc93855 152-154
+packages/server/src/service.ts
+  s_12ccf69de2a7ec::t_52c964b6cf7821 38
+packages/server/src/capabilities.ts
+  s_12ccf69de2a7ec::t_af585a20702f70 16-33,35-37
+  s_12ccf69de2a7ec::t_65c9ce92ccedd2 1-15,34
+packages/server/src/fakes.ts
+  s_12ccf69de2a7ec::t_93567fb2300ced 2,51,69
+packages/api-contract/src/api.ts
+  s_12ccf69de2a7ec::t_7a4327f868351a 4,61-62
+packages/server/src/host.ts
+  s_12ccf69de2a7ec::t_09cfc0dfb49264 46,158-159,206
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "54af0373c7dd1213a0b63e96afa7e55239a42ae9",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
