@@ -3,7 +3,7 @@
 //   - 消息结构化字段(回复、引用、@、卡片、命令):gg_msg,按 (room, seq) 一行,与正文同事务写入;
 //   - 发送去重:adapter-sqlite 的 actions 表(入库端 action_id 唯一,AC-31 ③);
 //   - 版本化文档(联系人、任务、状态笔记、承诺账本、设置):adapter-sqlite 的 docs 表(CAS,AC-21);
-//   - 其余索引表(会话、成员、游标、已读、待处理输入、Compute、进度、卡片)由本文件建。
+//   - 其余索引表(会话、成员、游标、已读、待处理输入、Compute、进度、卡片、跨厂商审查)由本文件建。
 import { type SqliteStore, closeStore, commitDoc, openStore, readDoc, transaction } from "@g-group/adapter-sqlite";
 
 const SCHEMA = `
@@ -51,6 +51,11 @@ CREATE TABLE IF NOT EXISTS gg_member_exits (room_id TEXT NOT NULL, contact_id TE
 CREATE TABLE IF NOT EXISTS gg_rewinds (
   room_id TEXT NOT NULL, client_action_id TEXT NOT NULL, to_seq INTEGER NOT NULL, upto_seq INTEGER NOT NULL, marker_seq INTEGER NOT NULL,
   result TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY (room_id, client_action_id)
+);
+CREATE TABLE IF NOT EXISTS gg_reviews (
+  compute_id TEXT PRIMARY KEY, task_id TEXT NOT NULL, reviewer_id TEXT NOT NULL, owner_id TEXT NOT NULL, room_id TEXT NOT NULL, model TEXT NOT NULL,
+  round INTEGER NOT NULL, commit_ref TEXT NOT NULL, constraint_ver INTEGER NOT NULL, status TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '',
+  started_at TEXT NOT NULL, ended_at TEXT
 );
 `;
 
