@@ -45,10 +45,10 @@
  "waiver": null,
  "review": {
   "agent": "codex",
-  "session": "codex:ecfab7df-e8ef-40d5-87fc-c0393a93cf82",
-  "model": "gpt-6.1-terra",
+  "session": "codex:99e1e373-a51d-455f-b0ed-ac827f183b43",
+  "model": "shayu/gpt-6-astra",
   "verdict": "reject",
-  "reviewed_hash": "21205082957f5b2d148aaab899b34abcdc942573dcc2a546ddaf1531650247cd",
-  "notes": "REJECT：R9-01 大整数请求编号失真及零编号缺测；R9-02 无效版本汇报被接受；R9-03 无编号消息产生无编号响应。hy4 H9-01 经 Codex 复现为测试覆盖缺口，已列 R9-04 非阻塞建议：现行已定 AC 未明确纯空白任务判据，不单独拒审。作者原清单 7 个 TS 变异无法编译，等价可编译变异均被具名测试发现；云端 G-PROVENANCE 因缺会话记录未验证。"
+  "reviewed_hash": "9550d53998ffc4d05471810ed74ca0dec424239334b8a366506ec6b1cb22ed45",
+  "notes": "REJECT：R10-01 [P2] 作者变异判决把真实TAP跳过项计为通过，独立合成反例证实。有效段150/150均完整执行104条并有对应具名失败，不把此数字等同于执行器无缺陷。R9-01～04已复核；7个改写变异注入点与语义等价且静态检查后被具名测试发现。R10-02合法转义id键缺测、R10-03版本与通知交叉缺测均非阻塞；H10-01为hy4发现、Codex复现，采纳为R10-03，无其它编号发现。协议协商及封套形状另记非阻塞边界，未测真实CLI。前段gpt-6.1-terra、续接定稿shayu/gpt-6-astra，均OpenAI；云端G-PROVENANCE缺原始会话记录，未宣称通过。证据deliverables/g-group-pr7-r10-codex/；原版32项摘要不补数、102/104基线导致的3项段作废，最终逐项TAP已独立核验。"
  }
 }
