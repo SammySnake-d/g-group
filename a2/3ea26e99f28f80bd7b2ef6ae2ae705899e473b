@@ -1,0 +1,33 @@
+packages/api-contract/src/entities.ts
+  s_28bebc745289eb::t_5c1ff24427e728 199-225
+packages/server/src/host.ts
+  s_28bebc745289eb::t_7284183bd65f6b 49,162-163,229-239
+packages/server/src/shared-docs.ts
+  s_28bebc745289eb::t_bde31f0a0b6ce3 1-52
+packages/server/src/shared-docs.test.ts
+  s_cb1a42da06940f::t_083d279cb566c3 1-215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a23ea26e99f28f80bd7b2ef6ae2ae705899e473b",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_cb1a42da06940f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ade26af15a1458fdd",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

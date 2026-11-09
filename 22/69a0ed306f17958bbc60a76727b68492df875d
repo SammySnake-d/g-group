@@ -1,0 +1,23 @@
+packages/kernel/src/index.ts
+  s_042e901c6ad028::t_9d2c0e54c90571 9
+packages/kernel/src/retry-policy.test.ts
+  s_042e901c6ad028::t_c4f6f9eee48797 1-392
+packages/kernel/src/retry-policy.ts
+  s_042e901c6ad028::t_60b7400ad2b216 1-245
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2269a0ed306f17958bbc60a76727b68492df875d",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

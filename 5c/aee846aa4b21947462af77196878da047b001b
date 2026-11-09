@@ -1,0 +1,21 @@
+packages/domain/src/lease.ts
+  s_29fa229c8c70ee::t_fcc79472c5e46f 64
+packages/domain/src/trace-replay.ts
+  s_29fa229c8c70ee::t_24523f745d8a60 161-163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5caee846aa4b21947462af77196878da047b001b",
+  "prompts": {},
+  "sessions": {
+    "s_29fa229c8c70ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6f12fa99094fd0fa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

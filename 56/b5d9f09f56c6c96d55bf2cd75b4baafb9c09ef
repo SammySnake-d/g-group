@@ -1,0 +1,16 @@
+node_modules
+  h_f33e46a035b77c 1
+receipts/feat-contact-helper.json
+  h_f33e46a035b77c 47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "56b5d9f09f56c6c96d55bf2cd75b4baafb9c09ef",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

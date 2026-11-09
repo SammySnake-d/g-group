@@ -1,0 +1,19 @@
+packages/server/src/host.ts
+  s_25620647d6f8eb::t_0fc969c30b9b99 31,44,1791-1795,1797,1800,1820,1846-1858,1875-1876,1886-1949,1976-1978,1982-1985,1989,1992,1994,2155-2172
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b82371d9b26828f9fb55d4a8d30ee723d6f9ce28",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

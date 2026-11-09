@@ -1,0 +1,19 @@
+packages/kernel/src/run-ledger.ts
+  s_25620647d6f8eb::t_1c8297e20d06a0 1-14,18-25,31-38,50-60,131-137,139-170,180-200,204-217,219-264,266,275-292,301-329,333-338,379-417,427-437,439-446,448-466
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b57c7340078e0e40c1ece21b3b0997dc735f96c7",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

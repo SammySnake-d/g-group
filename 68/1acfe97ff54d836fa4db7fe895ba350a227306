@@ -1,0 +1,19 @@
+receipts/feat-failure-class.json
+  s_7489a667d0db56::t_81eee597166cad 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "681acfe97ff54d836fa4db7fe895ba350a227306",
+  "prompts": {},
+  "sessions": {
+    "s_7489a667d0db56": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2353d719-cdd5-4608-894a-8460db6c9810",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

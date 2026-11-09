@@ -1,0 +1,19 @@
+receipts/feat-model-config.json
+  s_5e6dee5b83c808::t_4847b4a2a55da3 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6cd1c4630d9d646f6232ae1d703c0d6c00ab496b",
+  "prompts": {},
+  "sessions": {
+    "s_5e6dee5b83c808": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28d82518-be0a-4c7b-be7e-4a0f89835986",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
