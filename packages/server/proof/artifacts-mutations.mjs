@@ -26,7 +26,7 @@ const M = [
 ];
 
 function run(dir) {
-  const r = spawnSync(process.execPath, ["--no-warnings", "--test", "--test-reporter=tap", "--test-concurrency=1", TEST], { cwd: dir, encoding: "utf8", timeout: 900_000 });
+  const r = spawnSync(process.execPath, ["--no-warnings", "--test", "--test-reporter=tap", "--test-concurrency=1", "--test-timeout=120000", "--test-force-exit", TEST], { cwd: dir, encoding: "utf8", timeout: 900_000 });
   const failed = [...(r.stdout ?? "").matchAll(/^not ok \d+ - (.+)$/gm)].map((m) => m[1]);
   const passed = [...(r.stdout ?? "").matchAll(/^ok \d+ - (.+)$/gm)].map((m) => m[1]);
   return { code: r.status, failed, passed };
@@ -63,9 +63,9 @@ try {
     }
     fs.writeFileSync(f, src.replace(from, to));
     const r = run(d);
-    // 变异让测试卡住(等宿主安静超时)被整体超时杀掉时 TAP 不完整:通过数少于阴性对照也算被发现,单独标出
-    if (r.failed.length === 0 && r.passed.length < base.passed.length) log(`✓ ${name}:${r.passed.length} 绿 / 未跑完(退出码 ${r.code}),阴性对照 ${base.passed.length} 条全绿,变异下没有全部通过`);
-    else if (r.failed.length === 0) {
+    // 单条测试超过 120 秒按名字判失败(--test-timeout),跑完强制退出(--test-force-exit),不留卡住的测试进程;
+    // 没有任何具名测试失败就算存活——「没跑完」不算被具名测试杀死
+    if (r.failed.length === 0) {
       log(`✗ ${name}:存活(${r.passed.length} 绿)`);
       ok = false;
     } else log(`✓ ${name}:${r.passed.length} 绿 / ${r.failed.length} 红,被「${r.failed[0]}」发现`);
