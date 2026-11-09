@@ -1,4 +1,4 @@
-# 2026-11-09 box4(Simular 云电脑,Ubuntu 24.04,2 核,node v24)上运行 node packages/server/proof/state-note-mutations.mjs,基于 feat/g-state-note(9472046 的实现;变基前 d43c569)
+# 2026-11-09 box4(Simular 云电脑,Ubuntu 24.04,2 核,node v24)上运行 node packages/server/proof/state-note-mutations.mjs,基于 feat/g-state-note(bf56015 的实现;变基前 d43c569)
 node v24.21.0
 ✓ 原样副本:10 绿 / 0 红
 ✓ [1/28] S01 材料漏掉本轮新输入:用时 1.2s,被「压缩材料:按到达顺序列出本轮新输入原文(带消息序号与发送人),再列联系人本轮每个动作的原文」发现
