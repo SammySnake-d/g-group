@@ -1,0 +1,25 @@
+packages/api-contract/src/entities.ts
+  s_25620647d6f8eb::t_acd3e8ee6b3039 180-198
+packages/server/src/fakes.ts
+  s_25620647d6f8eb::t_47797a48cfc26c 45,68
+packages/server/src/review.test.ts
+  s_25620647d6f8eb::t_46110ffa4c2c38 1-276
+packages/server/src/review.ts
+  s_25620647d6f8eb::t_b495d6e6bf3341 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2e775053dbaf638f716e13e222f40a9be83917fc",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

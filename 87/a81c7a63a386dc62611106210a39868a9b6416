@@ -1,0 +1,19 @@
+packages/domain/proof/tla-mutations.mjs
+  s_1a1c57e452f0ac::t_33c9c8377df6be 1-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87a81c7a63a386dc62611106210a39868a9b6416",
+  "prompts": {},
+  "sessions": {
+    "s_1a1c57e452f0ac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bb1481df-1722-468e-8712-58091c1f37df",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

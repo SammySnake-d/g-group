@@ -1,0 +1,19 @@
+receipts/feat-e-drafts.json
+  s_24fe7bdb8f33d1::t_4fcdf42c012fa5 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ab9225d95712f8dcccf018b6a42ba707e0c9897e",
+  "prompts": {},
+  "sessions": {
+    "s_24fe7bdb8f33d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "916d81ff-b061-40ec-bc42-4c63cb76bdc9",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

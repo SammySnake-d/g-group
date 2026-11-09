@@ -1,0 +1,31 @@
+packages/server/proof/model-config-mutations.txt
+  s_28bebc745289eb::t_95aa6b29894cdd 1-31
+packages/server/proof/model-config-tests.txt
+  s_28bebc745289eb::t_92e075b22faf84 1-21
+receipts/feat-model-config.json
+  s_25620647d6f8eb::t_d73e14180ea63d 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "484761d2891878e66b0e01f95ceb51a355ec3e88",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

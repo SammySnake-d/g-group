@@ -1,0 +1,14 @@
+scripts/gates/gates.ts
+  h_f33e46a035b77c 133-135,160-190,274-276,278,282-296,298,300-309,359,363-371
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "60d8f7a513e32226ec4581dbaba79ca422b96033",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

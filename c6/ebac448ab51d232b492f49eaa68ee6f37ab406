@@ -1,0 +1,50 @@
+packages/api-contract/src/api.ts
+  h_f33e46a035b77c 206-215
+packages/api-contract/src/artifacts.test.ts
+  h_f33e46a035b77c 1-28
+packages/api-contract/src/entities.ts
+  h_f33e46a035b77c 131-140,182-183,232-251,293-305
+packages/api-contract/src/workspace.test.ts
+  h_f33e46a035b77c 1-19
+packages/server/README.md
+  h_f33e46a035b77c 36-37,56-57,63-64
+packages/server/proof/artifacts-mutations.mjs
+  h_f33e46a035b77c 1-80
+packages/server/proof/artifacts.txt
+  h_f33e46a035b77c 1-58
+packages/server/proof/worktree-merge.txt
+  h_f33e46a035b77c 1-88
+packages/server/proof/worktree-mutations.mjs
+  h_f33e46a035b77c 1-85
+packages/server/src/artifacts.test.ts
+  h_f33e46a035b77c 1-315
+packages/server/src/artifacts.ts
+  h_f33e46a035b77c 1-106
+packages/server/src/cli.ts
+  h_f33e46a035b77c 8,34-37,100,104-105,155-157,182-195
+packages/server/src/db.ts
+  h_f33e46a035b77c 43-44
+packages/server/src/host.ts
+  h_f33e46a035b77c 90-91,103-105,154-155,258-259,348-349,717,1421-1425,1463-1562,2053-2061,2064-2065,2073-2074,2092-2093,2309-2310,2413-2418,2667-2669,2811-2812
+packages/server/src/service.ts
+  h_f33e46a035b77c 93-94
+packages/server/src/worktree.test.ts
+  h_f33e46a035b77c 1-456
+packages/server/src/worktree.ts
+  h_f33e46a035b77c 1-259
+receipts/feat-artifacts.json
+  h_f33e46a035b77c 1-12
+receipts/feat-worktree-merge.json
+  h_f33e46a035b77c 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c6ebac448ab51d232b492f49eaa68ee6f37ab406",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

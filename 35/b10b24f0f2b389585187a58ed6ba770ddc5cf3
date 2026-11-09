@@ -1,0 +1,46 @@
+packages/domain/proof/contact-helper-tests.txt
+  h_f33e46a035b77c 1-336
+packages/domain/proof/mutations.mjs
+  h_f33e46a035b77c 561-564
+packages/domain/proof/mutations.txt
+  h_f33e46a035b77c 1-3,22-523
+packages/domain/proof/r20-baseline-red.tap
+  h_f33e46a035b77c 1-232
+packages/domain/proof/r20-contract-probes.jsonl
+  h_f33e46a035b77c 1-35
+packages/domain/proof/r20-contract-probes.mjs
+  h_f33e46a035b77c 1-27
+packages/domain/proof/r20-f1-red.tap
+  h_f33e46a035b77c 1-34
+packages/domain/proof/r20-f5-red.tap
+  h_f33e46a035b77c 1-108
+packages/domain/proof/r20-mutation-events.jsonl
+  h_f33e46a035b77c 1-502
+packages/domain/proof/r20-mutation-metadata.json
+  h_f33e46a035b77c 1-34
+packages/domain/proof/r20-mutation-report-raw.txt
+  h_f33e46a035b77c 1-505
+packages/domain/proof/r20-mutation-summary.json
+  h_f33e46a035b77c 1-34
+packages/domain/proof/r20-mutation-verification.txt
+  h_f33e46a035b77c 1-4
+packages/domain/proof/r20-proof-notes.txt
+  h_f33e46a035b77c 1-9
+packages/domain/proof/r20-stub-red.tap
+  h_f33e46a035b77c 1-195
+packages/domain/proof/r20-target-green.tap
+  h_f33e46a035b77c 1-82
+packages/domain/proof/run-mutations-bounded.mjs
+  h_f33e46a035b77c 1-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "35b10b24f0f2b389585187a58ed6ba770ddc5cf3",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

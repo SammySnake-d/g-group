@@ -1,0 +1,19 @@
+packages/server/proof/memory-mutations.txt
+  s_a3e46876f3c339::t_8ab37583704c41 1,4-7,9-10,12-30,32-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ebc8afd4a78eb15c5b5cd60844f7ee62bea4a5c0",
+  "prompts": {},
+  "sessions": {
+    "s_a3e46876f3c339": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afab83f69c52efc38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

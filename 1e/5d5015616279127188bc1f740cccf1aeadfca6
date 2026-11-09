@@ -1,0 +1,27 @@
+packages/server/proof/e2e-help-review-run1.txt
+  s_81e22ac695f42c::t_3121a5252357d5 1-77
+packages/server/proof/e2e-help-review-run2.txt
+  s_81e22ac695f42c::t_4aec763f9f861c 1-37
+packages/server/proof/e2e-help-review-run3.txt
+  s_81e22ac695f42c::t_17bef5b5323bb2 1-78
+packages/server/proof/e2e-help-review.ts
+  s_81e22ac695f42c::t_100779e39bd516 1-195
+receipts/feat-cross-vendor-review.json
+  s_81e22ac695f42c::t_dd4b4d084a9a31 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1e5d5015616279127188bc1f740cccf1aeadfca6",
+  "prompts": {},
+  "sessions": {
+    "s_81e22ac695f42c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c33e53ae-da9e-48e5-91f7-434363726d86",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

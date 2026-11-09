@@ -1,0 +1,39 @@
+packages/server/proof/artifacts-mutations.mjs
+  s_19afb02e575b26::t_b52f5ff7145943 1-21,23-65,69-80
+  s_5e6dee5b83c808::t_f5d385e4749aa8 66-68
+  h_f33e46a035b77c 22
+receipts/feat-artifacts.json
+  s_19afb02e575b26::t_1ad28fcd46e9b1 1,3,5-6,8-12
+  h_f33e46a035b77c 2,4,7
+packages/server/src/artifacts.test.ts
+  h_f33e46a035b77c 11,125-126,128-129,134,149-150,155,164-166,168-170,171-174,180,186-188,193-194,200-203,205-207,208,211,213,215,217-219,222,223-224,228,230-231,236-239,241-243,244,245,248,250-251,253,256-257,262,279-281,283-286,287-290,292-293,298-301,303-304,305,306-307,310,313-314
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "234cf2f243ffb95613d71849f023409eca14cda6",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_19afb02e575b26": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac3c5d6dff8770595",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_5e6dee5b83c808": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28d82518-be0a-4c7b-be7e-4a0f89835986",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

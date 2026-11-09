@@ -1,0 +1,21 @@
+packages/server/proof/compute-input-mutations.txt
+  s_377be331e17ebd::t_e0cee503834862 1-12
+receipts/feat-g-compute-input-cap.json
+  s_377be331e17ebd::t_591c475742640f 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dc49b59d6497275717fdd439fee075694d271b8f",
+  "prompts": {},
+  "sessions": {
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

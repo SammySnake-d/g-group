@@ -1,0 +1,14 @@
+docs/RECEIPT.md
+  h_f33e46a035b77c 13,27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b716cccfccfe7c563a572a5415abe4d7a8171a17",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

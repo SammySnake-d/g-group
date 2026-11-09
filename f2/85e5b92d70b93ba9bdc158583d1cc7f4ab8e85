@@ -1,0 +1,27 @@
+packages/adapter-cc-compute/src/adapter.ts
+  s_40ddef7d1d7537::t_c56ee0f17b7220 226
+packages/adapter-cc-compute/src/report-schema.ts
+  s_40ddef7d1d7537::t_763effb5c94aa0 7,18,30,47,65
+packages/server/src/assemble.ts
+  s_40ddef7d1d7537::t_37889d96338d7b 93
+packages/server/src/host.ts
+  s_40ddef7d1d7537::t_adbe719eccf91c 7-8,186-196,218-219,1150,1153-1198,1216,1234-1237,1254,1657-1674,1795-1797,1809-1842,1852-1854,1860-1864,1870-1894,1935,1973-1977,1998,2013-2020
+packages/server/src/service.ts
+  s_40ddef7d1d7537::t_a16d19e834007d 89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f285e5b92d70b93ba9bdc158583d1cc7f4ab8e85",
+  "prompts": {},
+  "sessions": {
+    "s_40ddef7d1d7537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
