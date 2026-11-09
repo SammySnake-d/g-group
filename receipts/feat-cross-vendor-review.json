@@ -1,0 +1,27 @@
+{
+  "slice": "跨厂商审查联系人:交付(deliver,普通消息 @提出者)后按累积生产厂商挑审查人(排除作者、unknown、与任一生产厂商同源,同会话成员优先),用它的 Compute 模型在同一任务工作目录起只读审查 Compute(Read/Glob/Grep);结论 APPROVE → T5 守卫判 compliant → T7 → 负责联系人发普通消息 @提出者「已由 X 跨厂商审查通过」→ T8a 待确认(不挂验收卡,沿用 dev/integration 已有的普通回复交付模型);REJECT → 原 Compute 可恢复就带意见续接(旧结果作废)、不可恢复带交接新开,改完重新送审;结论判读去掉加粗等标记后认行首或冒号后的 APPROVE/REJECT,前后矛盾或认不出不猜;没有合格审查人、审查 Compute 失败/受阻/结论认不出、宿主重启时已不在 → 发普通消息说明,提出者回复通过即本人豁免(waived-by-user),不当合规;任务离开这一轮审查时停掉审查 Compute。新表 gg_reviews,合同 TaskView 加可选 reviews。主会话 claude:8db9faef-fb87-414b-b25d-2aa6747caad3 自己写(非子代理)。",
+  "acceptance": [
+    {
+      "id": "AC-26",
+      "status": "未测",
+      "reason": "确定性层:packages/server/src/review.test.ts 13 条覆盖 ① 作者不当审查人、② 同厂商不起审查(提出者回复通过记 waived-by-user)、③ unknown 不当审查人、④ 跨厂商审过记 compliant 进 T8a、F13 半途换模累积 {A,B} 都排除(含「前半程 openai、换回 claude」只看末次模型的反例)、打回续接原 Compute、审查失败/结论认不出/重启中断交给豁免;门禁判定本身仍在 @g-group/domain task.ts T5 守卫(既有测试)。坏实现 24 个变异见 packages/server/proof/cross-vendor-review-mutations.txt。真实运行原文 packages/server/proof/e2e-help-review-run{1,3,4}.txt:run1 GLM 审查人真实起了只读审查 Compute 并给出 APPROVE(当时判读只认行首而退回豁免,没有误判通过,据此改了判读);run3 GLM 线路密钥被网关停用,审查 Compute 失败,宿主发「没做成」交给豁免;run4 改用 DeepSeek 审查人(结果见该文件,若不存在即未跑)。待跨厂商审查"
+    },
+    {
+      "id": "AC-28",
+      "status": "未测",
+      "reason": "本片只补「审过 → T7 → 普通消息 @提出者 → T8a 待确认、沉默不通过、tasks.accept 确认 → T8、打回续接原 Compute」(review.test.ts AC-28 一条 + AC-26 打回一条);普通回复的通过/修改由 dev/integration 已有的 verdict 动作与 decideDeliveryTx 处理,本片没有改"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:8db9faef-fb87-414b-b25d-2aa6747caad3",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "771b784"
+  },
+  "unverifiable": "AC-26 ④ 的「实际审查模型」取宿主起审查 Compute 时下发的模型(审查人的 Compute 模型,经 hostEnv ANTHROPIC_MODEL),没有从 Claude Code 的 init/assistant/result 帧回读实际模型(本机实测这三处都带 model 字段,可以接,但本片没接);若网关或 CLI 静默换模,门禁会按下发的模型放行,测试证明不了。审查结论靠结论行机械判读,审查质量(有没有真的打开文件核对)只能看审查 Compute 的原文。挑人只在宿主已登记的联系人里挑,不判断审查人懂不懂这个领域。审查进行中提出者若直接回复通过,按既有交付模型记本人豁免(waived-by-user),在途审查随任务离开 T5 被停掉。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}
