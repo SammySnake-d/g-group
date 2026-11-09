@@ -1,0 +1,33 @@
+packages/adapter-pi-contact/src/compact.ts
+  s_377be331e17ebd::t_2fe00607347de7 58-104,121-123,125-126,146-155
+packages/adapter-pi-contact/src/mind.ts
+  s_377be331e17ebd::t_81702a69f42a64 12,174,187,196-200,225
+packages/adapter-pi-contact/src/tools.ts
+  s_377be331e17ebd::t_d48d034b5f581c 1,17-19,23,34,93-119,135-137,161-164,180,191-199,224-227
+packages/kernel/src/memory.ts
+  s_377be331e17ebd::t_1bde7191d4a185 1-10,20,47-56,58-93,95-105,107-137,139-155,157-199
+packages/kernel/src/rounds.ts
+  s_377be331e17ebd::t_2e651849246317 39-40,134-140,236-240
+packages/server/src/assemble.ts
+  s_377be331e17ebd::t_87722182f13d15 33-34,109-111,149
+packages/server/src/host.ts
+  s_377be331e17ebd::t_60bd25f88185bd 57-62,92,147-152,292,317,1662-1761,1793,1800-1822,1841,1972,1989,2002-2003,2020,2022,2103,2275-2285,2322-2327
+packages/server/src/memory-store.ts
+  s_377be331e17ebd::t_a2eb80212d8437 1-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "208a35304e799efa0153285c6aa5d2efce9b79ee",
+  "prompts": {},
+  "sessions": {
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
