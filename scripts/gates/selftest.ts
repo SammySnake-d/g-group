@@ -39,6 +39,7 @@ interface Case {
   setup?: (x: { dir: string; repo: string; sessions: string; hash: string }) => void; // 写完收据和会话后、跑门禁前
   postCheck?: (dir: string) => string | undefined; // 跑完后检查副作用,返回问题
   hostileGit?: boolean; // 在 GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE 指向另一个仓库的环境里跑
+  prepare?: (repo: string) => void; // 全部提交之后、跑门禁前,在工作树里放不进版本库的东西(如依赖目录)
 }
 
 const MAIN: Files = { "docs/spec/验收文档-v0.1.md": SPEC, "README.md": "x\n", "packages/core/package.json": PKG("@g-group/core", "domain"), ".github/workflows/trusted-gates.yml": TRUSTED_WF };
@@ -46,6 +47,17 @@ const HEAD_OK: Files = { "packages/core/src/add.ts": ADD_OK, "packages/core/src/
 const RED_OK: Files = { "packages/core/src/add.ts": ADD_EMPTY, "packages/core/src/add.test.ts": TEST_OK };
 const reviewerOk = (hash: string) => [{ model: "ai-x/gpt-6-astra", toolCalls: [{ name: "shell", input: "node scripts/gates/run-all.ts --hash --branch feat/x", result: hash }] }];
 const authorOk = (_repo: string) => [{ model: "ai-x/claude-opus-5-5", toolCalls: [{ name: "Write", input: { file_path: "/x/deliverables/g-group/packages/core/src/add.ts" } }] }];
+
+const NEUTRAL = "NEUTRAL_FIXTURE_NO_CREDENTIALS\n";
+const USE_OK = `import { add } from "@g-group/core";\nexport function twice(a: number): number { return add(a, a); }\n`;
+const USE_EMPTY = "export function twice(_a: number): number { return 0; }\n";
+const XPKG = (use: string): Files => ({ ...HEAD_OK, "packages/core/package.json": PKG("@g-group/core", "domain", { exports: "./src/add.ts" }), "packages/app/package.json": PKG("@g-group/app", "kernel", { dependencies: { "@g-group/core": "*" } }), "packages/app/src/use.ts": use, "packages/app/src/use.test.ts": `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport { twice } from "./use.ts";\ntest("twice via workspace", () => { assert.equal(twice(4), 8); });\n`, "packages/app/proof/twice.txt": "twice ok\n" });
+/** 仿 npm 工作区:node_modules/@g-group/core -> ../../packages/core(相对软链,不进版本库) */
+const linkWorkspace = (repo: string) => { fs.mkdirSync(path.join(repo, "node_modules", "@g-group"), { recursive: true }); fs.symlinkSync("../../packages/core", path.join(repo, "node_modules", "@g-group", "core")); };
+/** 假依赖目录,内容只是中性标记 */
+const fakeDep = (repo: string) => { fs.mkdirSync(path.join(repo, "node_modules", "fake-dep"), { recursive: true }); fs.writeFileSync(path.join(repo, "node_modules", "fake-dep", "neutral-marker.txt"), NEUTRAL); };
+const LOADFAIL = `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\nimport { missing } from "./neutral-missing.ts";\ntest("never loads", () => { assert.equal(add(missing, 1), 2); });\n`;
+const SKIPPED = T(`test("adds", () => { assert.equal(add(1, 2), 3); });\ntest("later", (t) => { t.skip("x"); assert.equal(add(1, 1), 2); });\n`);
 
 const sh = (cwd: string, ...args: string[]) => execFileSync("git", [...GIT_SAFE_ARGS, ...args], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env: gitEnv() }).trim();
 function write(root: string, files: Files) {
@@ -133,6 +145,7 @@ function runCaseInner(tmp: string, c: Case, i: number): { pass: boolean; detail:
     commit(repo, "receipt");
   }
   if (c.after) { write(repo, c.after); commit(repo, "after-review"); }
+  c.prepare?.(repo);
   const res = c.local === false ? cli(repo, env) : cli(repo, env, "--local");
   const side = c.postCheck?.(dir);
   if (side) return { pass: false, detail: `${side}\n${res.out}` };
@@ -266,6 +279,13 @@ export const CASES: Case[] = [
   { name: "相对路径跨包", head: { ...HEAD_OK, "packages/kern/package.json": PKG("@g-group/kern", "kernel"), "packages/kern/src/k.ts": `import { add } from "../../core/src/add.ts";\nexport const k = add;\n` }, expect: "跨出了包" },
   { name: "依赖声明里反向引用", head: { ...HEAD_OK, "packages/kern/package.json": PKG("@g-group/kern", "kernel"), "packages/core/package.json": PKG("@g-group/core", "domain", { dependencies: { "@g-group/kern": "*" } }) }, expect: "依赖声明里引用了 kernel" },
   { name: "包没声明层级", head: { ...HEAD_OK, "packages/core/package.json": JSON.stringify({ name: "@g-group/core" }) }, expect: "gGroup.layer" },
+  // —— 第十五轮 R15-03/R15-04/R15-05(Docker 沙箱下才区分得开的两条在 box2 上用 GATE_SANDBOX_IMAGE 跑)
+  { name: "R15-03 跨工作区包导入的测试在沙箱副本里解析到副本内的包,按名红绿", head: XPKG(USE_OK), red: { ...XPKG(USE_EMPTY), ...RED_OK }, prepare: linkWorkspace, expect: null },
+  { name: "R15-04 测试写本次副本成功、写宿主依赖目录应失败(依赖只读提供)", headFn: (dir) => ({ ...HEAD_OK, "packages/core/src/add.test.ts": T(`import fs from "node:fs";\ntest("adds", () => { fs.writeFileSync("neutral-control.txt", "NEUTRAL_FIXTURE_NO_CREDENTIALS"); assert.equal(fs.readFileSync("neutral-control.txt", "utf8"), "NEUTRAL_FIXTURE_NO_CREDENTIALS"); for (const f of [${JSON.stringify(path.join(dir, "repo", "node_modules", "fake-dep", "neutral-marker.txt"))}, "node_modules/fake-dep/neutral-marker.txt"]) { try { fs.appendFileSync(f, "NEUTRAL_SANDBOX_WRITE"); } catch {} } assert.equal(add(1, 2), 3); });\n`, `import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\n`) }),
+    red: null, receipt: R((r) => { r.red = null; }), prepare: fakeDep, postCheck: (dir) => (fs.readFileSync(path.join(dir, "repo", "node_modules", "fake-dep", "neutral-marker.txt"), "utf8") !== NEUTRAL ? "沙箱里的测试改到了副本之外的依赖目录" : undefined), expect: "缺 red.commit" },
+  { name: "R15-05 一份测试文件通过、另一份加载失败,G-STUB 显式拒绝", head: { ...HEAD_OK, "packages/core/src/load.test.ts": LOADFAIL }, red: { ...RED_OK, "packages/core/src/load.test.ts": LOADFAIL }, expect: "文件加载失败,里面的测试没有执行" },
+  { name: "R15-05 运行时 skip 掉的测试算应执行缺失", head: { ...HEAD_OK, "packages/core/src/add.test.ts": SKIPPED }, red: { ...RED_OK, "packages/core/src/add.test.ts": SKIPPED }, expect: "应执行但在真实实现上没有通过" },
+  { name: "R15-05 两份测试文件都正常执行(阴性对照)", head: { ...HEAD_OK, "packages/core/src/add2.test.ts": T(`test("adds zero", () => { assert.equal(add(0, 5), 5); });\n`) }, red: { ...RED_OK, "packages/core/src/add2.test.ts": T(`test("adds zero", () => { assert.equal(add(0, 5), 5); });\n`) }, expect: null },
 ];
 
 export function selfTest(only?: (c: Case) => boolean): boolean {

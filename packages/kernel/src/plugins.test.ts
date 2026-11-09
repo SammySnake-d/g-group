@@ -5,6 +5,8 @@ import assert from "node:assert/strict";
 import { createHook } from "node:async_hooks";
 import { execFileSync } from "node:child_process";
 import { test } from "node:test";
+import v8 from "node:v8";
+import { Worker } from "node:worker_threads";
 import { createRegistry, SCHEDULE_REASON } from "./plugins.ts";
 
 const T0 = Date.parse("2026-11-05T08:00:10Z");
@@ -1885,12 +1887,14 @@ test("拒收期间不临时改写对象:内核 send / pull 调用窗口内,async
   const probe = Promise.resolve([]);
   const self = windowWatch([probe]);
   self.start();
+  // 写入前另存独立基线(第十五轮 R15-02:不再拿同一时点的两份快照自比)
+  const probeBase = ownSnap(probe);
   Object.defineProperty(probe, "neutral_temporary", { value: 1, configurable: true });
   void Promise.resolve();
   Reflect.deleteProperty(probe, "neutral_temporary");
   const seen = self.stop();
   assert.equal(seen.changed.length > 0, true, "观察器看不见窗口内的临时改写");
-  assert.deepEqual(ownSnap(probe), ownSnap(probe), "返回后看不出");
+  assert.equal(sameSnap(ownSnap(probe), probeBase), true, "恢复后与写入前的独立基线逐项相同,只看返回后的快照看不出这次改写");
   const syms = await trackingSymbols();
   const calls = { n: 0 };
   let current: unknown;
@@ -1924,6 +1928,146 @@ test("拒收期间不临时改写对象:内核 send / pull 调用窗口内,async
   await new Promise((ok) => setTimeout(ok, 20));
   assert.equal(calls.n, 0, "插件侧代码被执行");
   assert.equal(checked > 2000, true, `拒收形态只覆盖了 ${checked} 次`);
+});
+
+/** 同步写入的独立观察(第十五轮 R15-01):不靠异步事件。V8 给每个对象一张「形状表」(隐藏类),加一个自有属性、删掉它、
+ *  换原型都会让对象换到另一张表,删回原样也回不到原来那张;同法造出的两个孪生对象起初共用同一张表。
+ *  (换原型再换回:Node 22 换到新表,Node 24 实测回到原表,所以不算在这个观察能看见的范围里。)
+ *  所以拒收后比较「被检对象」与「从没交给内核的孪生对象」是否还共用同一张表,窗口里有没有异步事件都看得见同步临时写入。
+ *  打开 V8 的内建语法只为读这两个只读判定,不改任何对象。 */
+v8.setFlagsFromString("--allow-natives-syntax");
+const sameShapeTable = new Function("a", "b", "return %HaveSameMap(a, b)") as (a: object, b: object) => boolean;
+const fastTable = new Function("a", "return %HasFastProperties(a)") as (a: object) => boolean;
+
+test("拒收期间插件对象不被同步临时改写:同法造孪生形态,内核拒收其中一个后与从没交给内核的孪生对象仍共用同一张 V8 形状表、自有描述符与写入前的独立基线逐项相同(send / pull 各一遍,不依赖异步事件);观察自检正反对照:窗口里同步 defineProperty 加再删、赋值加再 delete,无异步事件与有异步事件两种窗口都被看见,不写的窗口两种都不报(第十五轮 R15-01、R15-02)", async () => {
+  const syms = await trackingSymbols();
+  const calls = { n: 0 };
+  const twins = () => {
+    const s: Shape = { wrap: "none", proto: "promise", key: "then", desc: "data", value: "plugin-fn", flags: "cw", seal: "extensible", end: "fulfill" };
+    const a = makeShape(s, "send", "self", syms, calls), b = makeShape(s, "send", "self", syms, calls);
+    return { a: a.value as object, b: b.value as object };
+  };
+  // 观察自检:三种写法 × 有无异步事件(换原型再换回在 Node 24 上会回到原表,不作为这个观察能看见的写法),每次都先另存独立基线,恢复后与基线相同,而形状表能看出改过
+  const writes: [string, (o: object) => void][] = [
+    ["defineProperty 加再删", (o) => { Object.defineProperty(o, "neutral_temporary", { value: 1, configurable: true }); Reflect.deleteProperty(o, "neutral_temporary"); }],
+    ["赋值加再 delete", (o) => { Reflect.set(o, "neutral_temporary", 1); Reflect.deleteProperty(o, "neutral_temporary"); }],
+    ["不写(阴性对照)", () => {}],
+  ];
+  for (const [what, write] of writes) for (const withEvent of [false, true]) {
+    const { a, b } = twins();
+    assert.equal(sameShapeTable(a, b) && fastTable(a), true, `${what}:孪生对象起初应共用同一张快速形状表`);
+    const base = ownSnap(a);
+    write(a);
+    if (withEvent) await Promise.resolve();
+    assert.equal(sameSnap(ownSnap(a), base), true, `${what}:恢复后与独立基线相同`);
+    assert.equal(sameShapeTable(a, b), what.startsWith("不写"), `${what}/${withEvent ? "有" : "无"}异步事件:形状表${what.startsWith("不写") ? "不应" : "应"}看出窗口内的同步写入`);
+  }
+  // 被测:可扩展、不经 Proxy 的拒收形态(Proxy 形态的写入由计数陷阱看见,不可扩展形态无法加属性)
+  let current: unknown;
+  const sender = createRegistry({ now: () => T0 });
+  const puller = createRegistry({ now: () => T0 });
+  sender.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => current });
+  puller.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => current });
+  let checked = 0, ownThen = 0;
+  for (const s of shapeMatrix()) {
+    if (plainShape(s) || s.wrap !== "none" || s.seal !== "extensible" || s.end === "reject-later" || !(s.flags === "-" || s.flags === "cw")) continue;
+    for (const mode of ["send", "pull"] as const) {
+      const name: string = `${mode}/${s.proto}/${s.key}:${s.desc}:${s.value}:${s.flags}/${s.end}`;
+      const actionId = `t-${checked}`;
+      const made = makeShape(s, mode, actionId, syms, calls), twin = makeShape(s, mode, actionId, syms, calls);
+      const subject = made.value as object, other = twin.value as object;
+      // 孪生对象没共用快速形状表的形态这个观察不适用:原型为 null、各自的子类或代理原型时 V8 每次换原型都另建一张表(实测),这些形态只有异步窗口观察
+      if (!(sameShapeTable(subject, other) && fastTable(subject))) continue;
+      const base = ownSnap(subject);
+      current = subject;
+      made.arm();
+      const r = await bounded<{ ok: boolean; reason?: string }>(mode === "send" ? sender.send("p", { action_id: actionId, payload: "x" }) : puller.pull("p", "g"));
+      assert.equal(r.ok ? "ok" : r.reason, mode === "send" ? "non-promise-send" : "invalid-batch", name);
+      assert.equal(sameShapeTable(subject, other), true, `${name}:拒收窗口内对象被同步改写过(形状表与孪生对象不同)`);
+      assert.equal(sameSnap(ownSnap(subject), base), true, `${name}:自有描述符与独立基线不同`);
+      assert.equal(calls.n, 0, `${name}:插件侧代码被执行`);
+      checked++;
+      if ((s.key === "then" || s.key === "constructor") && s.desc === "data") ownThen++;
+    }
+  }
+  assert.equal(checked >= 60 && ownThen >= 40, true, `适用的拒收形态只覆盖了 ${checked} 次(其中带自有 then / constructor 数据属性 ${ownThen} 次)`);
+});
+
+/** 在独立 worker 里冻结宿主内置对象后跑内核拒收:冻结后任何对它们的定义、赋值、删除要么当场抛错(改变内核结果),
+ *  要么不生效,窗口里有没有异步事件都一样。冻结只发生在这个 worker 的独立全局里,不影响测试进程。 */
+function frozenHostRun(): Promise<Record<string, unknown>> {
+  const url = new URL("./plugins.ts", import.meta.url).href;
+  const src = `(async () => {
+  const { parentPort } = require("node:worker_threads");
+  const out = {};
+  try {
+    const { createRegistry } = await import(${JSON.stringify(url)});
+    const FROZEN = [Promise, Promise.prototype, Object, Object.prototype, Function.prototype, Array, Array.prototype, Reflect];
+    for (const o of FROZEN) Object.freeze(o);
+    out.frozen = FROZEN.every((o) => Object.isFrozen(o));
+    // 埋雷自检:无异步事件与有异步事件两种窗口里,对冻结内置对象的同步定义都当场抛错;Reflect 写法返回 false 且不生效
+    for (const withEvent of [false, true]) {
+      let threw = "none";
+      try { if (withEvent) void Promise.resolve(); Object.defineProperty(Promise.prototype, "neutral_temporary", { value: 1, configurable: true }); } catch (e) { threw = e.constructor.name; }
+      out["mine:" + withEvent] = threw;
+    }
+    out.reflectWrite = [Reflect.defineProperty(Promise.prototype, "neutral_temporary", { value: 1, configurable: true }), Object.hasOwn(Promise.prototype, "neutral_temporary")];
+    let calls = 0;
+    const hit = () => { calls++; };
+    const fn = function pluginFn() { hit(); };
+    const mk = (end) => { const p = end === "reject" ? Promise.reject(new Error("外部拒绝")) : Promise.resolve([]); Promise.prototype.then.call(p, undefined, () => {}); return p; };
+    const shapes = {
+      "自有 then": () => { const p = mk("reject"); Object.defineProperty(p, "then", { value: fn, writable: true, configurable: true }); return p; },
+      "自有 constructor": () => { const p = mk("fulfill"); Object.defineProperty(p, "constructor", { value: fn, writable: true, configurable: true }); return p; },
+      "then getter": () => { const p = mk("fulfill"); Object.defineProperty(p, "then", { get() { hit(); return undefined; }, configurable: true }); return p; },
+      "原型为 null": () => { const p = mk("reject"); Object.setPrototypeOf(p, null); return p; },
+      "不可扩展": () => { const p = mk("fulfill"); Object.preventExtensions(p); return p; },
+      "追踪键带 valueOf": () => { const p = mk("fulfill"); Object.defineProperty(p, "extra", { get() { hit(); }, configurable: true }); return p; },
+      "Proxy": () => new Proxy(mk("fulfill"), { get(t, k) { hit(); return Reflect.get(t, k); } }),
+      "同步数组": () => [],
+      "同步对象": () => ({ then: fn }),
+    };
+    let current;
+    const sender = createRegistry({ now: () => 0 });
+    const puller = createRegistry({ now: () => 0 });
+    sender.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => current });
+    puller.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => current });
+    let n = 0;
+    for (const [name, make] of Object.entries(shapes)) for (const mode of ["send", "pull"]) {
+      current = make();
+      try {
+        const r = mode === "send" ? await sender.send("p", { action_id: "w" + n++, payload: "x" }) : await puller.pull("p", "g");
+        out[mode + "/" + name] = r.ok ? "ok" : r.reason;
+      } catch (e) { out[mode + "/" + name] = "抛错:" + (e && e.constructor && e.constructor.name); }
+    }
+    // 阳性对照:冻结后普通原生 Promise 照常确认 / 拉取,说明冻结本身不妨碍内核正常路径
+    current = Promise.resolve({ action_id: "ok-1", receiptId: "r" });
+    const okSend = await sender.send("p", { action_id: "ok-1", payload: "x" });
+    current = Promise.resolve([]);
+    const okPull = await puller.pull("p", "g");
+    out.plain = [okSend.ok && okSend.state, okPull.ok];
+    out.calls = calls;
+  } catch (e) { out.error = String(e && e.stack || e); }
+  parentPort.postMessage(out);
+})();`;
+  return new Promise((ok, fail) => {
+    const w = new Worker(src, { eval: true });
+    w.once("message", (m: Record<string, unknown>) => { void w.terminate(); ok(m); });
+    w.once("error", fail);
+  });
+}
+
+test("拒收期间不同步临时改写宿主内置对象:独立 worker 里冻结 Promise / Promise.prototype / Object / Object.prototype / Function.prototype / Array / Array.prototype / Reflect 后,九种拒收形态 send / pull 各一遍结果仍是 non-promise-send / invalid-batch、不抛错、插件侧代码 0 次,普通原生 Promise 照常确认 / 拉取;埋雷自检:无异步事件与有异步事件两种窗口里同步定义都当场抛错,Reflect 写法不生效(第十五轮 R15-01)", async () => {
+  const out = await frozenHostRun();
+  assert.equal(out.error, undefined, String(out.error));
+  assert.equal(out.frozen, true);
+  assert.deepEqual([out["mine:false"], out["mine:true"], out.reflectWrite], ["TypeError", "TypeError", [false, false]], "埋雷自检");
+  for (const name of ["自有 then", "自有 constructor", "then getter", "原型为 null", "不可扩展", "追踪键带 valueOf", "Proxy", "同步数组", "同步对象"]) {
+    assert.equal(out[`send/${name}`], "non-promise-send", `send/${name}`);
+    assert.equal(out[`pull/${name}`], "invalid-batch", `pull/${name}`);
+  }
+  assert.deepEqual(out.plain, ["confirmed", true], "冻结后普通原生 Promise 照常确认 / 拉取");
+  assert.equal(out.calls, 0, "插件侧代码被执行");
 });
 
 test("普通原生 Promise 带不可枚举的自有数据属性(字符串键、Symbol 键,可写或只读)照常确认 / 拉取;同一属性换成不可枚举的 getter 或 setter 就拒收、访问器 0 次(第十五轮 R14-02 审查 M2 双侧单开关)", async () => {
