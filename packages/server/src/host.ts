@@ -4,8 +4,8 @@
 // 规则:只有联系人对外说话(Compute 不直接发言,AC-03);游标只在一轮落盘后推进(AC-31);发送前检出更新的用户消息就放弃本轮重跑(AC-31 ④);
 // 发送入库端按 action_id 去重(AC-31 ③);消息接走即已读(AC-46)。
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
-import { basename, dirname, extname, join } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { appendEvent, loadLog, recordAction } from "@g-group/adapter-sqlite";
 import type { ComputeAdapter, ComputeEvent } from "@g-group/adapter-cc-compute";
 import {
@@ -206,6 +206,17 @@ const DEFAULT_SETTINGS: SettingsView = {
 };
 const MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp", ".pdf": "application/pdf", ".txt": "text/plain", ".md": "text/markdown", ".json": "application/json", ".csv": "text/csv", ".zip": "application/zip" };
 export const DEFAULT_COMPUTE_TOOLS: readonly string[] = Object.freeze(["Read", "Write", "Edit", "Glob", "Grep", "Bash"]);
+/**
+ * 派给 Compute 的人工验证规则(AC-44 ①,C-US15):遇到必须由人完成的验证就截图、报 blocked 停下,
+ * 不反复尝试、不猜、不用打码服务;宿主收到 blocked 让任务进 T4b,由联系人 @提出者发提问卡。
+ */
+export const HUMAN_VERIFICATION_RULE: string =
+  "遇到验证码、短信或邮箱验证、人机校验等必须由人完成的验证时:不要反复尝试,不要猜,不要调用打码服务或任何代解服务,也不要换别的办法跳过这一步;" +
+  "把当前画面截图保存到工作目录,调用 report_progress 报 kind=blocked,needs 写清需要用户做什么,attachments 填截图文件的相对路径,然后停下等待。用户的回答会续接到本会话。";
+/** 提问卡附件只收工作目录里的图片(AC-44 ② 截图)。 */
+const QUESTION_IMAGE_EXT: ReadonlySet<string> = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"]);
+const QUESTION_ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024;
+const EXPIRED_NOTE = "\n(已过期·未执行)";
 const TERMINAL: ReadonlySet<string> = new Set(["T8_Accepted", "T10_Cancelled", "T11_Failed"]);
 
 export class Host {
@@ -229,6 +240,8 @@ export class Host {
   private readonly pumps: Promise<void>[] = [];
   private roundNo = 0;
   private closed = false;
+  /** 事务里改了状态、提交后要推 message.updated 的卡片(提问卡过期等)。 */
+  private cardUpdates: { roomId: string; seq: number }[] = [];
 
   constructor(opts: HostOptions) {
     this.opts = opts;
@@ -1267,7 +1280,54 @@ export class Host {
     if (!out.ok) throw new HostError("conflict", `任务 ${id} 拒绝 ${ev.kind}:${out.reason}`);
     const doc: TaskDoc = { ...cur.value, ...extra, task: out.task, updatedAt: this.now() };
     putDoc(this.db, `task:${id}`, cur.ver, doc);
+    this.expireQuestionsTx(id, out.task);
     return { doc, effects: out.effects };
+  }
+  /**
+   * 提问卡只在任务停在 T4b 且 q_id 就是它时有效(AC-44 ⑤):任务取消、回到执行、换了新问题,仍开着的旧提问卡一律标
+   * 「已过期·未执行」,之后在上面的点击与 tasks.answer 幂等忽略。正在被领取(claimed)的卡由领取方收尾,不在这里改。
+   */
+  private expireQuestionsTx(taskId: string, t: Task) {
+    const live = t.state === "T4b_BlockedOnHuman" ? (t.pendingQ?.qId ?? null) : null;
+    const stale = all<{ card_id: string; room_id: string; seq: number }>(
+      this.db,
+      "SELECT card_id, room_id, seq FROM gg_cards WHERE task_id = ? AND kind = 'question' AND state = 'open' AND json_extract(meta, '$.qId') IS NOT ?",
+      taskId,
+      live,
+    );
+    for (const c of stale) {
+      run(this.db, "UPDATE gg_cards SET state = 'expired', body = body || ? WHERE card_id = ? AND state = 'open'", EXPIRED_NOTE, c.card_id);
+      this.cardUpdates.push({ roomId: c.room_id, seq: c.seq });
+    }
+  }
+  private flushCardUpdates() {
+    const ups = this.cardUpdates;
+    this.cardUpdates = [];
+    for (const u of ups) {
+      const m = this.projected(u.roomId).find((x) => x.seq === u.seq);
+      if (m) this.bus.emit({ type: "message.updated", message: this.messageView(u.roomId, m) });
+    }
+  }
+  private questionCard(taskId: string, qId: string): CardRow | undefined {
+    return one<CardRow>(this.db, "SELECT * FROM gg_cards WHERE task_id = ? AND kind = 'question' AND json_extract(meta, '$.qId') = ?", taskId, qId);
+  }
+  /**
+   * tasks.answer(AC-44 ③⑤):回答当前待回答的问题,等同于在提问卡上点「回答」。
+   * 问题号不存在 → not_found;问题已回答、已过期,或任务已离开 T4b → 幂等忽略,返回任务当前视图,不送进 Compute。
+   */
+  answerTask(taskId: string, qId: string, clientActionId: string, answer: string): TaskView {
+    this.taskDoc(taskId);
+    const card = this.questionCard(taskId, qId);
+    if (!card) throw new HostError("not_found", `任务 ${taskId} 没有问题 ${qId}`);
+    if (card.state === "open") {
+      try {
+        this.cardAct({ roomId: card.room_id, seq: card.seq, cardId: card.card_id, actionId: "answer", clientActionId, text: answer });
+      } catch (e) {
+        // 同一张卡正被另一次回答领取:那一次生效,这一次幂等忽略
+        if (!(e instanceof HostError && e.code === "conflict" && this.questionCard(taskId, qId)?.state !== "open")) throw e;
+      }
+    }
+    return this.taskView(this.taskDoc(taskId).value);
   }
   /** 按 id 读权威任务文档(正文与版本同一次读出)投影成视图;群入口、侧边栏、事件都走这里或 listTasks,不读缓存副本(AC-02) */
   taskViewById(id: string): TaskView {
@@ -1292,7 +1352,7 @@ export class Host {
       ownerContactId: t.owner,
       state: t.state,
       constraintVersion: t.constraintVer,
-      pendingQuestion: t.pendingQ ? { qId: t.pendingQ.qId, text: "" } : null,
+      pendingQuestion: t.pendingQ ? { qId: t.pendingQ.qId, text: this.questionText(t.id, t.pendingQ.qId) } : null,
       reviewGate: t.reviewGate,
       computeRuns: runs.map((r) => ({
         computeId: r.compute_id,
@@ -1314,6 +1374,10 @@ export class Host {
       stateVer: ver ?? this.taskDoc(t.id).ver,
     };
   }
+  private questionText(taskId: string, qId: string): string {
+    const c = this.questionCard(taskId, qId);
+    return c ? String((JSON.parse(c.meta) as { needs?: string }).needs ?? "").slice(0, 5000) : "";
+  }
   progress(taskId: string, limit = 200): ComputeProgress[] {
     return all<{ compute_id: string; kind: ComputeProgress["kind"]; stage: string | null; summary: string; at: string }>(
       this.db,
@@ -1329,6 +1393,7 @@ export class Host {
       .map((d) => this.taskView(d.value, d.ver));
   }
   private emitTask(id: string) {
+    this.flushCardUpdates();
     this.bus.emit({ type: "task.updated", task: this.taskViewById(id) });
     const doc = this.taskDoc(id).value;
     // 任务每次变化后看负责人是否在这个群移出中:停止确认到了(T10/T11)才真正移出
@@ -1798,6 +1863,24 @@ export class Host {
             const t = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
             if (!t.task.computeId || TERMINAL.has(t.task.state) || t.task.state === "T9_StopRequested") { reject("任务没有在途 Compute"); break; }
+            if (t.task.state === "T4b_BlockedOnHuman" && t.task.pendingQ) {
+              // 等人回答时(AC-44 ③):只有提出者本轮在任务会话里、提问卡之后说的话能当回答转达;联系人不能自己编答案
+              const q = t.task.pendingQ;
+              const card = this.questionCard(a.taskId, q.qId);
+              const answered = freshMsgs.some((m) => m.roomId === t.roomId && m.sender.kind === "user" && m.sender.id === t.task.requester && (!card || m.seq > card.seq));
+              if (!answered) { reject("任务在等用户回答,只能转达提出者本轮在会话里的回答"); break; }
+              // 先把卡标为已处理,再推进状态机(否则离开 T4b 时它会被当成旧卡过期)
+              if (card && run(this.db, "UPDATE gg_cards SET state = 'done' WHERE card_id = ? AND state = 'open'", card.card_id) === 1) this.cardUpdates.push({ roomId: card.room_id, seq: card.seq });
+              this.stepTaskTx(a.taskId, { kind: "HumanReply", qId: q.qId, constraintVer: q.constraintVer, answer: "approve" });
+              effects.push({ kind: "resume", taskId: a.taskId, computeId: t.task.computeId, text: `用户对问题 ${q.qId} 的回答(联系人转达):${a.text}` });
+              touchedTasks.add(a.taskId);
+              break;
+            }
+            // 提问卡上的回答宿主已经续接给 Compute;那条回答也作为对话消息送到了联系人这里。本轮提出者在任务会话里说的
+            // 只有这些卡片回答时,联系人再 forward 就是把同一个回答第二次送进 Compute(验证码可能被重复提交),拒收(AC-44 ③)
+            const fromRequester = freshMsgs.filter((m) => m.roomId === t.roomId && m.sender.kind === "user" && m.sender.id === t.task.requester);
+            const cardAnswer = (m: InboundMessage) => m.replyToSeq !== null && !!one(this.db, "SELECT 1 FROM gg_cards WHERE room_id = ? AND seq = ? AND task_id = ? AND kind = 'question' AND state = 'done'", m.roomId, m.replyToSeq, a.taskId);
+            if (fromRequester.length > 0 && fromRequester.every(cardAnswer)) { reject("这条回答已经通过提问卡转给 Compute,不再重复转发"); break; }
             effects.push({ kind: "resume", taskId: a.taskId, computeId: t.task.computeId, text: a.text });
             break;
           }
@@ -1922,6 +2005,9 @@ export class Host {
       ev.kind === "started" ? "已开始" : ev.kind === "milestone" ? ev.summary : ev.kind === "blocked" ? `受阻:${ev.needs}。${ev.summary}` : ev.kind === "completed" ? ev.result : ev.kind === "failed" ? `失败:${ev.reason}` : "已停止";
     const stage = ev.kind === "milestone" ? ev.stage : null;
     let taskChanged = false;
+    // 受阻带的截图:事务外先按内容入库(只收工作目录里的图片)
+    const shots = ev.kind === "blocked" && ev.attachments?.length ? this.workdirImages(row.task_id, ev.attachments) : [];
+    let asked: { roomId: string; seq: number; contactId: string; qId: string } | null = null;
     tx(this.db, () => {
       run(this.db, "INSERT INTO gg_progress (task_id, compute_id, kind, stage, summary, at) VALUES (?, ?, ?, ?, ?, ?)", row.task_id, ev.computeId, ev.kind, stage, summary, at);
       const status = ev.kind === "started" || ev.kind === "milestone" ? "running" : ev.kind;
@@ -1930,6 +2016,40 @@ export class Host {
         const t = this.taskDoc(row.task_id).value.task;
         if (t.computeId === ev.computeId && !TERMINAL.has(t.state) && t.state !== "T9_StopRequested") {
           this.stepTaskTx(row.task_id, { kind: "ExecFailed", computeId: ev.computeId });
+          taskChanged = true;
+        }
+      }
+      // 受阻(AC-44 ①②):当前实例、当前版本在执行中报受阻 → 任务进 T4b(q_id),由负责的联系人 @提出者 发提问卡(附截图)。
+      // 宿主不重试、不重派、不替用户续接;旧实例或别的状态下的受阻只记进度。
+      if (ev.kind === "blocked") {
+        const doc = this.taskDoc(row.task_id).value;
+        const t = doc.task;
+        if (t.state === "T3_Running" && t.computeId === ev.computeId) {
+          const qId = this.newId("q");
+          this.stepTaskTx(row.task_id, { kind: "NeedHuman", qId, computeId: ev.computeId, constraintVer: t.constraintVer });
+          const who = { kind: "user" as const, id: t.requester };
+          const r = this.appendMessageTx(doc.roomId, { kind: "contact", id: row.contact_id }, {
+            text: `@${this.nameOf(who)} ${ev.needs}`,
+            actionKey: `ask:${row.task_id}:${qId}`,
+            replyToSeq: doc.sourceSeq,
+            quotedSeqs: [doc.sourceSeq],
+            mentions: [{ id: t.requester, source: "auto" }],
+            attachments: shots,
+            card: {
+              card_id: this.newId("card"),
+              kind: "question",
+              task_id: row.task_id,
+              title: `需要你:${ev.needs}`.slice(0, 200),
+              body: ev.summary.slice(0, 20000),
+              state: "open",
+              actions: JSON.stringify([
+                { actionId: "answer", label: "回答", style: "primary" },
+                { actionId: "reject", label: "不做了", style: "danger" },
+              ]),
+              meta: JSON.stringify({ qId, constraintVer: t.constraintVer, computeId: ev.computeId, needs: ev.needs }),
+            },
+          });
+          asked = { roomId: doc.roomId, seq: r.seq, contactId: row.contact_id, qId };
           taskChanged = true;
         }
       }
@@ -1955,17 +2075,49 @@ export class Host {
         }
       }
       if (ev.kind !== "started") {
-        const payload: Inbound = { kind: "compute", roomId: row.room_id, taskId: row.task_id, computeId: ev.computeId, signal: ev.kind, summary, at };
+        const a = asked as { qId: string } | null;
+        const note = a ? `(宿主已替你在会话里 @提出者 发了提问卡 ${a.qId},等用户回答;用户在聊天里回答时用 forward 原样转给 Compute,不要自己猜答案)` : "";
+        const payload: Inbound = { kind: "compute", roomId: row.room_id, taskId: row.task_id, computeId: ev.computeId, signal: ev.kind, summary: summary + note, at };
         run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", row.contact_id, row.room_id, JSON.stringify(payload), at);
       }
     });
     const progress: ComputeProgress = { computeId: ev.computeId, taskId: row.task_id, kind: ev.kind, ...(stage ? { stage } : {}), summary, at };
     this.bus.emit({ type: "compute.progress", progress });
+    const q = asked as { roomId: string; seq: number; contactId: string } | null;
+    if (q) {
+      this.markRead(q.roomId, { kind: "contact", id: q.contactId }, q.seq);
+      this.afterAppend(q.roomId, q.seq, { kind: "contact", id: q.contactId });
+    }
     this.emitTask(row.task_id);
     if (taskChanged) this.emitTask(row.task_id);
     if (ev.kind !== "started") this.loop.notify(row.contact_id, ev.kind === "milestone" ? "batch" : "now");
   }
 
+  /** 把 Compute 报的相对路径解析到任务工作目录里;目录外(含符号链接指出去)、非图片、过大的一律丢弃并报告。返回附件 ref。 */
+  private workdirImages(taskId: string, rels: readonly string[]): string[] {
+    const cwd = this.opts.computeCwd?.(taskId);
+    if (!cwd) return [];
+    const refs: string[] = [];
+    let base: string;
+    try {
+      base = realpathSync(cwd);
+    } catch {
+      return [];
+    }
+    for (const rel of rels) {
+      try {
+        const real = realpathSync(resolve(base, rel));
+        if (!real.startsWith(base + sep)) throw new Error("不在工作目录里");
+        if (!QUESTION_IMAGE_EXT.has(extname(real).toLowerCase())) throw new Error("不是图片");
+        const st = statSync(real);
+        if (!st.isFile() || st.size > QUESTION_ATTACHMENT_MAX_BYTES) throw new Error("不是文件或超过 20 MB");
+        refs.push(this.addAttachment(real).ref);
+      } catch (e) {
+        this.report("question-attachment-dropped", { taskId, path: rel, reason: e instanceof Error ? e.message : String(e) });
+      }
+    }
+    return refs;
+  }
   private async runEffects(effects: HostEffect[]) {
     for (const e of effects) {
       try {
@@ -2080,7 +2232,7 @@ export class Host {
     // 首轮就带生效模型(AC-51 ①);只给声明了按轮换模型能力的适配器(旧的一次性适配器只收 cwd/handoff)
     const modelAware = isModelAware(adapter);
     const spawnOpts = { ...(cwd ? { cwd } : {}), ...(modelAware ? { model, ...(resolved ? { effort: resolved.effort } : {}) } : {}) };
-    const r = await adapter.spawn({ task: e.brief, rules: [], tools, credentialRefs: [], placement: "local" }, spawnOpts);
+    const r = await adapter.spawn({ task: e.brief, rules: [HUMAN_VERIFICATION_RULE], tools, credentialRefs: [], placement: "local" }, spawnOpts);
     if (!r.ok) return fail(r.reason);
     const late: string[] = [];
     tx(this.db, () => {
@@ -2122,6 +2274,11 @@ export class Host {
     const actions = JSON.parse(card.actions) as { actionId: string; label: string }[];
     const act = actions.find((a) => a.actionId === input.actionId);
     if (!act) throw new HostError("invalid_params", `卡片没有动作 ${input.actionId}`);
+    // 提问卡(AC-44 ⑤):任务离开 T4b 或换了问题时,旧卡已在同一事务里标为过期(expireQuestionsTx);过期卡上的点击幂等忽略,不记对话消息、不送进 Compute
+    if (card.kind === "question" && card.state === "expired") {
+      return this.messageView(card.room_id, this.projected(card.room_id).find((m) => m.seq === card.seq)!);
+    }
+    if (card.kind === "question" && input.actionId === "answer" && !input.text?.trim()) throw new HostError("invalid_params", "回答不能为空");
     // CAS 领取:open → claimed,连点只有第一次生效(AC-36 ⑤)
     if (run(this.db, "UPDATE gg_cards SET state = 'claimed' WHERE card_id = ? AND state = 'open'", input.cardId) !== 1) throw new HostError("conflict", "这张卡已经处理过了");
     const me: Member = { kind: "user", id: this.userId };
@@ -2142,6 +2299,7 @@ export class Host {
     this.markRead(card.room_id, me, msgSeq);
     this.afterAppend(card.room_id, msgSeq, me);
     if (card.task_id) this.emitTask(card.task_id);
+    this.flushCardUpdates();
     const updated = this.projected(card.room_id).find((m) => m.seq === card.seq);
     if (updated) this.bus.emit({ type: "message.updated", message: this.messageView(card.room_id, updated) });
     void this.runEffects(effects);
@@ -2153,6 +2311,14 @@ export class Host {
     const effects: HostEffect[] = [];
     if (card.kind === "task-status" && actionId === "cancel") {
       const { effects: eff } = this.stepTaskTx(taskId, { kind: "Cancel", by: this.userId });
+      for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId, computeId: e.computeId });
+      return effects;
+    }
+    if (card.kind === "question") {
+      // 回答绑定 (task_id, q_id, constraint_ver)(AC-44 ③ / AC-19):回答 → T3 并把原文续接给同一个 Compute;不做了 → 取消并停 Compute(④)
+      const q = JSON.parse(card.meta) as { qId: string; constraintVer: number };
+      const { effects: eff } = this.stepTaskTx(taskId, { kind: "HumanReply", qId: q.qId, constraintVer: q.constraintVer, answer: actionId === "answer" ? "approve" : "reject" });
+      if (actionId === "answer" && t.computeId) effects.push({ kind: "resume", taskId, computeId: t.computeId, text: `用户对问题 ${q.qId} 的回答:${note.trim()}` });
       for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId, computeId: e.computeId });
       return effects;
     }

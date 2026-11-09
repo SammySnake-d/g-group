@@ -35,7 +35,9 @@ function react(me: string, f: Inbound): MindAction[] {
     if (f.signal === "milestone") return [{ kind: "reply", roomId: f.roomId, text: `进度:${f.summary}`, replyToSeq: null }];
     if (f.signal === "completed") return [{ kind: "deliver", taskId: f.taskId, text: `做完了:${f.summary}` }];
     if (f.signal === "failed") return [{ kind: "reply", roomId: f.roomId, text: `任务没做成:${f.summary}`, replyToSeq: null }];
-    if (f.signal === "blocked") return [{ kind: "reply", roomId: f.roomId, text: `需要你帮忙:${f.summary}`, replyToSeq: null }];
+    // 受阻:宿主已替联系人 @提出者发了提问卡(inbox 摘要里有说明)就不再重复喊,用户回答后由联系人 forward;
+    // 其余受阻(如换模型被 harness 拒)照旧如实告诉用户
+    if (f.signal === "blocked" && !f.summary.includes("宿主已替你在会话里")) return [{ kind: "reply", roomId: f.roomId, text: `需要你帮忙:${f.summary}`, replyToSeq: null }];
   }
   if (f.kind === "schedule") return [{ kind: "reply", roomId: f.roomId, text: `定时到了:${f.prompt}`, replyToSeq: null }];
   return [];
@@ -52,6 +54,8 @@ export function scriptedCompute(
     resumeResult?: (computeId: string, text: string, turn: TurnModel | undefined) => ResumeRefusal | null;
     /** 续接后吐的事件(例如 harness 回报这一轮实际用过的模型)。 */
     resumeScript?: (computeId: string, turn: TurnModel | undefined) => Omit<ComputeEvent, "computeId">[];
+    /** 续接后吐的事件,能看到续接带进来的文字(AC-44 回答、审查打回意见)。 */
+    onResume?: (computeId: string, text: string) => Omit<ComputeEvent, "computeId">[];
     /** false:扮演不声明按轮换模型能力的旧适配器(没有 capabilities)。 */
     modelAware?: boolean;
   } = {},
@@ -99,7 +103,7 @@ export function scriptedCompute(
       if (refused) return refused;
       resumed.push({ computeId, text });
       turns.push({ computeId, turn });
-      const evs = (opts.resumeScript?.(computeId, turn) ?? []).map((e) => ({ ...e, computeId }) as ComputeEvent);
+      const evs = [...(opts.resumeScript?.(computeId, turn) ?? []), ...(opts.onResume?.(computeId, text) ?? [])].map((e) => ({ ...e, computeId }) as ComputeEvent);
       if (evs.length) {
         inflight++;
         void (async () => {

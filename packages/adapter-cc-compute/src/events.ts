@@ -18,6 +18,7 @@ export interface AcceptedReport {
   readonly constraintVer?: number;
   readonly openQuestions?: readonly string[];
   readonly doneSideEffects?: readonly string[];
+  readonly attachments?: readonly string[];
 }
 
 export type StreamSignal =

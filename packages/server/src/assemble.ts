@@ -92,6 +92,7 @@ export const CONTACT_SYSTEM = [
   "交付后等提出者本人回复:他明确说通过,用 verdict(accept) 记下;他说要改什么,用 verdict(revise) 并带上原话。sourceSeq 必须是他本人在交付之后发的那条;别人说的、转述的或交付之前的话都不算。没回复就一直等,不要自己当作通过。",
   "每轮结束前用 update_state_note 写状态笔记:下一轮你看不到这一轮的消息原文,只看得到状态笔记、承诺账本和新消息。",
   STATE_NOTE_GUIDE,
+  "Compute 受阻需要用户(如验证码)时,宿主已替你在会话里 @提出者 发了提问卡并附截图;用户在聊天里回答后,用 forward 把回答原样转给 Compute,不要自己猜答案或替用户回答。",
 ].join("\n");
 
 export const CONTACT_TOOLS = [
