@@ -16,6 +16,7 @@ import {
   type DraftBody,
   type DraftView,
   type MessageView,
+  type ModelChangePreview,
   type ReceiptView,
   type RewindResult,
   type RoomView,
@@ -27,30 +28,42 @@ import {
   settleDraft,
 } from "@g-group/api-contract";
 import {
+  type AttemptReason,
   type Ledger,
   type ProjectedMessage,
   type Task,
   type TaskEvent,
+  type TaskModelRecord,
   applyLedger,
   apply as applyTask,
   emptyLedger,
+  emptyModelRecord,
+  isAppendOnly,
+  modelConfig,
   newTask,
+  producerModels,
+  producerVendors,
   project,
+  recordAttempt,
 } from "@g-group/domain";
 import {
   type AttentionLoop,
+  type ContactCompactor,
   type ContactMind,
   type Inbound,
   type InboundMessage,
   type MindAction,
+  type RoundOutput,
   type RoundStatus,
   type TimerApi,
   type RecallItem,
   type RecallRef,
   type RecallSource,
   type Urgency,
+  compactMaterial,
   createAttentionLoop,
   planRecall,
+  scrubRetracted,
 } from "@g-group/kernel";
 import { type AnnouncementOrder, AnnouncementStore } from "./announcements.ts";
 import {
@@ -67,10 +80,15 @@ import {
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
+import { CapabilityLibrary } from "./capabilities.ts";
 import { PluginStore } from "./plugins.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
+import { QuotaTable } from "./quota.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
 import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, unindexTx } from "./search.ts";
+import { SharedDocs } from "./shared-docs.ts";
+import { type CodeRepoConfig, type Workspace, Worktrees } from "./worktree.ts";
+import { type ArtifactRef, ArtifactStore, MAX_ARTIFACT_BYTES, MAX_ARTIFACTS, MAX_INLINE_TEXT, isReadable, recentReadable } from "./artifacts.ts";
 
 export interface HostOptions {
   readonly file: string;
@@ -82,6 +100,9 @@ export interface HostOptions {
   readonly compute?: (model: string) => ComputeAdapter;
   /** Compute 工作目录。 */
   readonly computeCwd?: (taskId: string) => string;
+  /** 代码仓(AC-22):给了就每个任务一个独立 git worktree 作 Compute 工作目录(优先于 computeCwd),
+   *  交付钉住候选提交,用户验收后受控合入目标分支;合入成功才算验收。 */
+  readonly codeRepo?: CodeRepoConfig;
   /** 派给 Compute 的内置工具白名单;默认 Read/Write/Edit/Glob/Grep/Bash。 */
   readonly computeTools?: readonly string[];
   readonly assemble?: RoundAssembler;
@@ -99,11 +120,20 @@ export interface HostOptions {
   readonly clockMs?: () => number;
   readonly newId?: (prefix: string) => string;
   readonly maxDeferMs?: number;
+  /** 状态笔记压缩器(D06 第 2 小节第 3 块、D25 第 8 节):按联系人取,必须用它的说话模型做独立调用(AC-32 ③)。不给就不压缩。 */
+  readonly compactor?: (contact: ContactView) => ContactCompactor;
+  /** 状态笔记的 UTF-8 字节上限;超了请压缩器缩写,仍超就保留并报告,不截断。null / 不给:不设上限。 */
+  readonly stateNoteMaxBytes?: number | null;
   readonly timers?: TimerApi;
   readonly onReport?: (what: string, detail: unknown) => void;
   /** 群公告排序(列表与装配共用);默认按创建先后。排序规则待定(D28 待确认 ④),先做成参数。 */
   readonly announcementOrder?: AnnouncementOrder;
+  /** 联系人没单独设时的个人 Compute 槽位数(AC-23);不给为不限 */
+  readonly personalComputeSlots?: number;
 }
+
+/** 状态笔记含撤回原文且无法精确移除时,整份作废后的占位(撤回优先,AC-08) */
+const VOIDED_NOTE = "(状态笔记含已撤回内容,已作废;请按承诺账本与新消息重写)";
 
 interface ContactDoc extends Omit<ContactView, "activity"> {
   readonly persona: string;
@@ -121,6 +151,10 @@ interface TaskDoc {
   readonly description?: string;
   /** 交付消息的 seq(AC-56:交付是普通消息);用户的验收结论只认这之后的消息。旧数据没有这个字段。 */
   readonly deliveredSeq?: number | null;
+  /** 不可变启动快照 + 只追加尝试账本(AC-32 ④、AC-51 ⑥);旧数据没有这个字段。 */
+  readonly models?: TaskModelRecord;
+  /** 最近一次交付带回的工件快照(AC-04) */
+  readonly artifacts?: readonly ArtifactRef[];
 }
 interface CardRow {
   card_id: string;
@@ -195,6 +229,20 @@ export class Host {
   readonly plugins: PluginStore;
   readonly announcements: AnnouncementStore;
   private readonly exits: MemberExits;
+  /** 共享文档单一提交点(AC-21):所有写入只经它 */
+  readonly docs: SharedDocs;
+  readonly worktrees: Worktrees | null;
+  readonly artifacts: ArtifactStore;
+  /** 全局能力库与联系人专属运行目录(AC-29) */
+  readonly capabilities: CapabilityLibrary;
+  /** Compute 槽位租约(AC-23):个人槽位 + 本群临时槽位,确认停下才归还 */
+  readonly quota: QuotaTable;
+  /** 等槽位的启动/续接:槽位空出来按先来先到执行 */
+  private readonly pendingLaunch = new Map<string, HostEffect>();
+  /** 每个任务第几次起 CLI(启动或续接);某一轮的收尾只在它仍是最新一轮时归还槽位 */
+  private readonly launchEpoch = new Map<string, number>();
+  /** 停止没确认下来的原因(进程没退干净),任务视图里显示 */
+  private readonly stopUnconfirmed = new Map<string, string>();
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly newId: (prefix: string) => string;
@@ -249,6 +297,12 @@ export class Host {
         else this.bus.emit({ type: "schedule.updated", schedule: s });
       },
     });
+    this.capabilities = new CapabilityLibrary(opts.dataDir ?? dirname(opts.file));
+    this.quota = new QuotaTable({
+      personal: (contactId) => getDoc<ContactDoc>(this.db, `contact:${contactId}`)?.value.computeSlots ?? opts.personalComputeSlots ?? Number.POSITIVE_INFINITY,
+      group: (roomId) => getDoc<{ slots: number }>(this.db, `room-slots:${roomId}`)?.value.slots ?? 0,
+      newId: () => this.newId("l"),
+    });
     this.plugins = new PluginStore({
       db: this.db,
       dataDir: opts.dataDir ?? dirname(opts.file),
@@ -268,6 +322,19 @@ export class Host {
       roomKind: (roomId) => this.roomRow(roomId).kind,
       changed: (roomId) => this.bus.emit({ type: "room.updated", room: this.roomView(roomId) }),
     });
+    this.docs = new SharedDocs({
+      db: this.db,
+      dataDir: opts.dataDir ?? dirname(opts.file),
+      now: this.now,
+      newId: this.newId,
+      checkRoom: (roomId) => void this.roomRow(roomId),
+      emit: (doc) => this.bus.emit({ type: "doc.updated", doc }),
+      onReport: (what, detail) => this.report(what, detail),
+    });
+    // 启动时派生镜像按权威版本修复(中断的导出、迟到的旧内容覆盖)
+    this.docs.repairMirrors();
+    this.worktrees = opts.codeRepo ? new Worktrees(opts.codeRepo, join(opts.dataDir ?? dirname(opts.file), "worktrees")) : null;
+    this.artifacts = new ArtifactStore(this.db, join(opts.dataDir ?? dirname(opts.file), "artifacts"), this.now);
     // 启动时先处理宿主关着期间到期的定时(按容差与 missedPolicy),再按最早一次设计时器
     this.scheduler.tick();
   }
@@ -281,7 +348,7 @@ export class Host {
   }
 
   // ======================= 联系人 =======================
-  createContact(input: { clientActionId?: string; name: string; bio?: string; speakingModel?: string; harness?: ContactView["harness"]; computeModel?: ContactView["computeModel"]; persona?: string }): ContactView {
+  createContact(input: { clientActionId?: string; name: string; bio?: string; speakingModel?: string; harness?: ContactView["harness"]; computeModel?: ContactView["computeModel"]; persona?: string; confirmAffected?: boolean }): ContactView {
     const id = this.newId("c");
     const settings = this.settings();
     const doc: ContactDoc = {
@@ -297,14 +364,25 @@ export class Host {
       createdAt: this.now(),
       persona: input.persona ?? "",
     };
+    // 保存时机(AC-32 ②①):新联系人自己的 Compute 生效值不兼容就先拦,看过预览确认后才存
+    this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), [this.contactModels(doc)], this.caps(), { kind: "contact", contactId: id, patch: {} }), input.confirmAffected === true);
     putDoc(this.db, `contact:${id}`, 0, doc);
     const view = this.contactView(doc);
     this.bus.emit({ type: "contact.updated", contact: view });
     return view;
   }
-  updateContact(id: string, patch: Partial<Omit<ContactDoc, "id" | "createdAt">>): ContactView {
+  updateContact(id: string, input: Partial<Omit<ContactDoc, "id" | "createdAt">> & { confirmAffected?: boolean }): ContactView {
+    const { confirmAffected, ...patch } = input;
     const cur = this.contactDoc(id);
     const next: ContactDoc = { ...cur.value, ...patch, id, createdAt: cur.value.createdAt };
+    if (patch.speakingModel !== undefined || patch.harness !== undefined || patch.computeModel !== undefined) {
+      const change: modelConfig.ModelChange = {
+        kind: "contact",
+        contactId: id,
+        patch: { speakingModel: next.speakingModel, harness: next.harness, computeModel: next.computeModel },
+      };
+      this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), this.liveContacts().map((c) => this.contactModels(c)), this.caps(), change), confirmAffected === true);
+    }
     putDoc(this.db, `contact:${id}`, cur.ver, next);
     const view = this.contactView(next);
     this.bus.emit({ type: "contact.updated", contact: view });
@@ -316,13 +394,21 @@ export class Host {
     return d;
   }
   contactView(doc: ContactDoc): ContactView {
-    const { persona: _p, removed: _r, ...rest } = doc as ContactDoc & { removed?: boolean };
-    return { ...rest, activity: this.activity.get(doc.id) ?? "idle" };
+    const { persona: _p, removed: _r, computeResolved: _cr, ...rest } = doc as ContactDoc & { removed?: boolean };
+    const resolved = this.resolveComputeFor(doc);
+    return {
+      ...rest,
+      activity: this.activity.get(doc.id) ?? "idle",
+      computeResolved: { resolved: resolvedView(resolved), support: modelConfig.supportOf(this.caps(), resolved.harness, resolved.model) },
+    };
   }
-  listContacts(): ContactView[] {
+  private liveContacts(): ContactDoc[] {
     return listDocs<ContactDoc & { removed?: boolean }>(this.db, "contact:")
       .filter((d) => !d.value.removed)
-      .map((d) => this.contactView(d.value));
+      .map((d) => d.value);
+  }
+  listContacts(): ContactView[] {
+    return this.liveContacts().map((d) => this.contactView(d));
   }
   private setActivity(contactId: string, roomId: string | null, a: Activity) {
     if (this.activity.get(contactId) === a) return;
@@ -334,17 +420,95 @@ export class Host {
   settings(): SettingsView {
     return getDoc<SettingsView>(this.db, "settings")?.value ?? DEFAULT_SETTINGS;
   }
-  updateSettings(patch: Partial<SettingsView>): SettingsView {
+  updateSettings(input: Partial<SettingsView> & { confirmAffected?: boolean }): SettingsView {
+    const { confirmAffected, ...patch } = input;
     const cur = getDoc<SettingsView>(this.db, "settings");
     const next = { ...(cur?.value ?? DEFAULT_SETTINGS), ...patch };
+    // 上游改动(AC-32 ②):全局默认或能力声明变了,保存前按新值预检全部下游联系人
+    if (patch.defaultHarness !== undefined || patch.defaultSpeakingModel !== undefined || patch.defaultComputeModel !== undefined || patch.defaultEffort !== undefined || patch.models !== undefined) {
+      const change: modelConfig.ModelChange = { kind: "defaults", patch: defaultsOf(next) };
+      this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), this.liveContacts().map((c) => this.contactModels(c)), capsOf(next), change), confirmAffected === true);
+    }
     putDoc(this.db, "settings", cur?.ver ?? 0, next);
     return next;
   }
+  // ======================= 模型配置(AC-32) =======================
+  modelDefaults(): modelConfig.ModelDefaults {
+    return defaultsOf(this.settings());
+  }
+  private caps(): modelConfig.ModelCapability[] {
+    return capsOf(this.settings());
+  }
+  private contactModels(c: ContactDoc): modelConfig.ContactModels {
+    return { id: c.id, name: c.name, speakingModel: c.speakingModel, harness: c.harness, computeModel: c.computeModel };
+  }
+  /** 这位联系人 Compute 此刻的生效值:每次现场解析,不复用启动时的值(U93)。 */
+  resolveComputeFor(c: ContactDoc, override?: modelConfig.TaskModelOverride): modelConfig.ResolvedCompute {
+    return modelConfig.resolveCompute(this.modelDefaults(), this.contactModels(c), override);
+  }
+  /** 预检有冲突且没确认:拒绝保存,错误里带完整预览(两条修复路径在每位冲突联系人的 fixes 里)。 */
+  private guardModelChange(out: modelConfig.ChangeOutcome, confirmed: boolean) {
+    const conflicts = out.preview.conflicts;
+    if (conflicts.length === 0 || confirmed) return;
+    throw new HostError("conflict", incompatibleMessage(conflicts), {
+      reason: "model-incompatible",
+      preview: previewView(out.preview),
+    });
+  }
+  private planModelChange(change: ModelChangeInput): modelConfig.ChangeOutcome {
+    const contacts = this.liveContacts();
+    let c: modelConfig.ModelChange;
+    if (change.kind === "defaults") {
+      const patch: Partial<modelConfig.ModelDefaults> = {
+        ...(change.defaultHarness !== undefined ? { harness: change.defaultHarness } : {}),
+        ...(change.defaultSpeakingModel !== undefined ? { speakingModel: change.defaultSpeakingModel } : {}),
+        ...(change.defaultComputeModel !== undefined ? { computeModel: change.defaultComputeModel } : {}),
+        ...(change.defaultEffort !== undefined ? { effort: change.defaultEffort } : {}),
+      };
+      c = { kind: "defaults", patch };
+    } else if (change.kind === "contact") {
+      if (!contacts.some((x) => x.id === change.contactId)) throw new HostError("not_found", `没有联系人 ${change.contactId}`);
+      c = {
+        kind: "contact",
+        contactId: change.contactId,
+        patch: {
+          ...(change.speakingModel !== undefined ? { speakingModel: change.speakingModel } : {}),
+          ...(change.harness !== undefined ? { harness: change.harness } : {}),
+          ...(change.computeModel !== undefined ? { computeModel: change.computeModel } : {}),
+        },
+      };
+    } else c = { kind: "batch-replace", from: change.from, to: change.to };
+    return modelConfig.previewChange(this.modelDefaults(), contacts.map((x) => this.contactModels(x)), this.caps(), c);
+  }
+  /** 保存前预检:不落盘。 */
+  previewModelChange(change: ModelChangeInput): ModelChangePreview {
+    return previewView(this.planModelChange(change).preview);
+  }
+  /** 把模型 X 批量换成 Y(规则 6):apply 不为 true 只预览;应用只改全局默认与显式写了 X 的联系人,在途与历史任务的模型记录不碰。 */
+  batchReplaceModels(from: string, to: string, o: { apply?: boolean; confirmAffected?: boolean } = {}): { applied: boolean; preview: ModelChangePreview } {
+    const out = this.planModelChange({ kind: "batch-replace", from, to });
+    const preview = previewView(out.preview);
+    if (o.apply !== true) return { applied: false, preview };
+    this.guardModelChange(out, o.confirmAffected === true);
+    const changedIds = new Set(out.preview.affected.filter((a) => a.involvement === "explicit-reference").map((a) => a.contactId));
+    const touched: ContactDoc[] = [];
+    tx(this.db, () => {
+      const cur = getDoc<SettingsView>(this.db, "settings");
+      const base = cur?.value ?? DEFAULT_SETTINGS;
+      putDoc(this.db, "settings", cur?.ver ?? 0, { ...base, defaultSpeakingModel: out.defaults.speakingModel, defaultComputeModel: out.defaults.computeModel });
+      for (const m of out.contacts) {
+        if (!changedIds.has(m.id)) continue;
+        const d = this.contactDoc(m.id);
+        const next: ContactDoc = { ...d.value, speakingModel: m.speakingModel, computeModel: m.computeModel as ContactDoc["computeModel"] };
+        putDoc(this.db, `contact:${m.id}`, d.ver, next);
+        touched.push(next);
+      }
+    });
+    for (const c of touched) this.bus.emit({ type: "contact.updated", contact: this.contactView(c) });
+    return { applied: true, preview };
+  }
   computeModelOf(c: ContactDoc): string {
-    const slot = c.computeModel;
-    if (slot.mode === "explicit" && slot.model) return slot.model;
-    if (slot.mode === "follow-speaking") return c.speakingModel;
-    return this.settings().defaultComputeModel;
+    return this.resolveComputeFor(c).model;
   }
 
   // ======================= 会话 =======================
@@ -410,8 +574,13 @@ export class Host {
     this.bus.emit({ type: "room.updated", room: view });
     return view;
   }
-  updateRoom(roomId: string, patch: { title?: string; pinned?: boolean; muted?: boolean; rules?: string; expectedRulesVersion?: number }): RoomView {
+  updateRoom(roomId: string, patch: { title?: string; pinned?: boolean; muted?: boolean; rules?: string; expectedRulesVersion?: number; tempComputeSlots?: number }): RoomView {
     const r = this.roomRow(roomId);
+    if (patch.tempComputeSlots !== undefined) {
+      if (r.kind !== "group") throw new HostError("invalid_params", "私聊没有群临时 Compute 槽位");
+      const cur = getDoc<{ slots: number }>(this.db, `room-slots:${roomId}`);
+      putDoc(this.db, `room-slots:${roomId}`, cur?.ver ?? 0, { slots: patch.tempComputeSlots });
+    }
     if (patch.rules !== undefined && patch.expectedRulesVersion !== undefined && patch.expectedRulesVersion !== r.rules_version) {
       throw new HostError("conflict", "群规已被别人改过", { currentVer: r.rules_version });
     }
@@ -473,6 +642,7 @@ export class Host {
       updatedAt: r.updated_at,
       announcementCount: r.kind === "group" ? this.announcements.count(roomId) : 0,
       leavingMembers: this.exits.leavingIn(roomId),
+      ...(r.kind === "group" ? { tempComputeSlots: getDoc<{ slots: number }>(this.db, `room-slots:${roomId}`)?.value.slots ?? 0 } : {}),
     };
   }
   markRead(roomId: string, m: Member, seq: number) {
@@ -537,6 +707,7 @@ export class Host {
       clientActionId: meta?.client_action_id ?? null,
       at: one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${roomId}`, m.seq)?.at ?? this.now(),
       ...(isRewound(this.db, roomId, m.seq) ? { rewound: true } : {}),
+      ...(m.retracted ? {} : this.messageArtifacts(roomId, m.seq)),
     };
   }
   listMessages(roomId: string, q: { beforeSeq?: number; afterSeq?: number; aroundSeq?: number; limit?: number; threadRootSeq?: number | null }): { messages: MessageView[]; hasMore: boolean; hasMoreAfter?: boolean } {
@@ -721,6 +892,7 @@ export class Host {
     tx(this.db, () => {
       const { effects: eff } = this.stepTaskTx(taskId, { kind: "Cancel", by });
       for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId, computeId: e.computeId });
+      for (const e of eff) if (e.kind === "cancel-spawn") effects.push({ kind: "cancel-spawn", taskId, requestId: e.requestId });
       run(this.db, "UPDATE gg_cards SET state = 'done' WHERE task_id = ? AND kind = 'task-status' AND state = 'open'", taskId);
     });
     this.emitTask(taskId);
@@ -942,7 +1114,7 @@ export class Host {
     const card = one<CardRow>(this.db, "SELECT * FROM gg_cards WHERE task_id = ? AND kind = ? AND state = 'open' ORDER BY seq DESC LIMIT 1", taskId, kind);
     if (card) {
       this.cardAct({ roomId: card.room_id, seq: card.seq, cardId: card.card_id, actionId: decision, clientActionId, ...(note ? { text: note } : {}) });
-      return this.taskView(this.taskDoc(taskId).value);
+      return this.taskViewById(taskId);
     }
     if (decision === "cancel" || !awaitingUser(doc)) throw new HostError("conflict", decision === "cancel" ? `任务在 ${doc.task.state},不能取消` : `任务在 ${doc.task.state},没有待确认的交付`);
     const me: Member = { kind: "user", id: this.userId };
@@ -964,7 +1136,7 @@ export class Host {
       this.emitTask(taskId);
       void this.runEffects(effects);
     }
-    return this.taskView(this.taskDoc(taskId).value);
+    return this.taskViewById(taskId);
   }
 
   // ======================= 私聊 rewind(AC-48)=======================
@@ -1136,7 +1308,13 @@ export class Host {
     putDoc(this.db, `task:${id}`, cur.ver, doc);
     return { doc, effects: out.effects };
   }
-  taskView(doc: TaskDoc): TaskView {
+  /** 按 id 读权威任务文档(正文与版本同一次读出)投影成视图;群入口、侧边栏、事件都走这里或 listTasks,不读缓存副本(AC-02) */
+  taskViewById(id: string): TaskView {
+    const d = this.taskDoc(id);
+    return this.taskView(d.value, d.ver);
+  }
+  /** ver 不给时按 id 读当前权威版本 */
+  taskView(doc: TaskDoc, ver?: number): TaskView {
     const runs = all<{ compute_id: string; harness: string; model: string; status: string; started_at: string; ended_at: string | null }>(
       this.db,
       "SELECT * FROM gg_compute WHERE task_id = ? ORDER BY started_at",
@@ -1155,20 +1333,33 @@ export class Host {
       constraintVersion: t.constraintVer,
       pendingQuestion: t.pendingQ ? { qId: t.pendingQ.qId, text: "" } : null,
       reviewGate: t.reviewGate,
-      computeRuns: runs.map((r) => ({
-        computeId: r.compute_id,
-        harness: r.harness as "claude-code",
-        model: r.model,
-        placement: "local",
-        status: r.status as TaskView["computeRuns"][number]["status"],
-        startedAt: r.started_at,
-        endedAt: r.ended_at,
-      })),
+      computeRuns: runs.map((r) => {
+        const loaded = getDoc<{ skills: string[]; mcpServers: string[] }>(this.db, `compute-loaded:${r.compute_id}`)?.value;
+        return {
+          computeId: r.compute_id,
+          harness: r.harness as "claude-code",
+          model: r.model,
+          placement: "local" as const,
+          status: r.status as TaskView["computeRuns"][number]["status"],
+          startedAt: r.started_at,
+          endedAt: r.ended_at,
+          ...(loaded ? { loaded } : {}),
+        };
+      }),
       recentProgress: progress,
-      artifacts: doc.result ? [{ ref: `task:${t.id}/result`, name: "结果", kind: "text" }] : [],
+      modelSnapshot: doc.models?.initial ? { ...doc.models.initial } : null,
+      modelAttempts: (doc.models?.attempts ?? []).map((a) => ({ ...a })),
+      producerVendors: [...producerVendors(doc.models ?? emptyModelRecord)],
+      artifacts: [
+        ...(doc.result ? [{ ref: `task:${t.id}/result`, name: "结果", kind: "text" as const }] : []),
+        ...(doc.artifacts ?? []).map((a) => ({ ref: a.ref, name: a.name, kind: "file" as const, sha256: a.sha256, bytes: a.bytes, mime: a.mime })),
+      ],
+      ...this.workspaceField(t.id),
+      waitingFor: this.quota.waitingReason(t.id) ?? this.stopUnconfirmed.get(t.id) ?? null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
       ...(doc.description !== undefined ? { description: doc.description } : {}),
+      stateVer: ver ?? this.taskDoc(t.id).ver,
     };
   }
   progress(taskId: string, limit = 200): ComputeProgress[] {
@@ -1181,16 +1372,115 @@ export class Host {
   }
   listTasks(q: { roomId?: string; contactId?: string; states?: string[] }): TaskView[] {
     return listDocs<TaskDoc>(this.db, "task:")
-      .map((d) => d.value)
-      .filter((d) => (!q.roomId || d.roomId === q.roomId) && (!q.contactId || d.task.owner === q.contactId) && (!q.states || q.states.includes(d.task.state)))
-      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-      .map((d) => this.taskView(d));
+      .filter(({ value: d }) => (!q.roomId || d.roomId === q.roomId) && (!q.contactId || d.task.owner === q.contactId) && (!q.states || q.states.includes(d.task.state)))
+      .sort((a, b) => (a.value.createdAt < b.value.createdAt ? 1 : -1))
+      .map((d) => this.taskView(d.value, d.ver));
   }
   private emitTask(id: string) {
+    this.bus.emit({ type: "task.updated", task: this.taskViewById(id) });
     const doc = this.taskDoc(id).value;
-    this.bus.emit({ type: "task.updated", task: this.taskView(doc) });
     // 任务每次变化后看负责人是否在这个群移出中:停止确认到了(T10/T11)才真正移出
     if (doc.task.owner) this.settleExit(doc.roomId, doc.task.owner);
+  }
+
+  // ======================= 代码工作树(R-Worktree,AC-22) =======================
+  workspace(taskId: string): { value: Workspace; ver: number } | undefined {
+    return getDoc<Workspace>(this.db, `ws:${taskId}`);
+  }
+  private workspaceField(taskId: string): { workspace?: NonNullable<TaskView["workspace"]> } {
+    const w = this.workspace(taskId)?.value;
+    if (!w) return {};
+    return { workspace: { dir: w.dir, branch: w.branch, targetBranch: w.targetBranch, baseSha: w.baseSha, candidateSha: w.candidateSha, state: w.state, targetHead: w.targetHead, verifiedOn: w.verifiedOn, mergedSha: w.mergedSha, conflict: w.conflict } };
+  }
+  // ======================= 工件(AC-04) =======================
+  /** 交付消息带回的工件(AC-04);没有就不带这个字段 */
+  private messageArtifacts(roomId: string, seq: number): { artifacts?: ArtifactRef[] } {
+    const row = one<{ artifacts: string }>(this.db, "SELECT artifacts FROM gg_msg_artifacts WHERE room_id = ? AND seq = ?", roomId, seq);
+    return row ? { artifacts: JSON.parse(row.artifacts) as ArtifactRef[] } : {};
+  }
+  /** 收集本次交付的可读工件:代码任务读钉住的候选提交里改过的文件(不读工作区);
+   *  否则在 Compute 工作目录里找本任务 Compute 启动后改过的文件(按修改时间,局限见 recentReadable)。 */
+  private collectArtifacts(taskId: string): ArtifactRef[] {
+    const out: ArtifactRef[] = [];
+    const ws = this.workspace(taskId)?.value;
+    if (ws && this.worktrees && ws.candidateSha) {
+      for (const f of this.worktrees.changedFiles(ws).filter(isReadable).slice(0, MAX_ARTIFACTS)) {
+        const data = this.worktrees.readAt(ws.candidateSha, f);
+        if (data.length <= MAX_ARTIFACT_BYTES) out.push(this.artifacts.put(f, data));
+      }
+      return out;
+    }
+    const cwd = this.opts.computeCwd?.(taskId);
+    const started = one<{ s: string | null }>(this.db, "SELECT MIN(started_at) AS s FROM gg_compute WHERE task_id = ?", taskId)?.s;
+    if (!cwd || !started) return out;
+    for (const rel of recentReadable(cwd, Date.parse(started) - 2000)) out.push(this.artifacts.put(rel, readFileSync(join(cwd, rel))));
+    return out;
+  }
+  /** 读工件快照(卡片点开):内容 hash 与卡片里的一致;文本类小文件直接带回正文。 */
+  getArtifact(ref: string): ArtifactRef & { path: string; text: string | null } {
+    const r = this.artifacts.read(ref);
+    if (!r) throw new HostError("not_found", `没有工件 ${ref}`);
+    const textual = r.meta.mime.startsWith("text/") || r.meta.mime === "image/svg+xml";
+    return { ...r.meta, text: textual && r.data.length <= MAX_INLINE_TEXT ? r.data.toString("utf8") : null };
+  }
+  /** Compute 工作目录:配了代码仓就是这个任务自己的 worktree(没有就现开),否则按 computeCwd。 */
+  private computeCwdFor(taskId: string): string | undefined {
+    if (!this.worktrees) return this.opts.computeCwd?.(taskId);
+    const cur = this.workspace(taskId);
+    const ws = this.worktrees.provision(taskId, cur?.value ?? null);
+    if (ws !== cur?.value) putDoc(this.db, `ws:${taskId}`, cur?.ver ?? 0, ws);
+    return ws.dir;
+  }
+  /** 受控合入(W3 → W4 → W6/W5)。审查已过、交付等确认(T8a)的代码任务才能合;合入成功才记验收并了结承诺,
+   *  冲突或重验失败如实告诉联系人,目标分支不动,任务停在 T8a 等退回修复(退回前再说通过也会被拒)。 */
+  async integrateTask(taskId: string, by: string = this.userId): Promise<TaskView> {
+    const wt = this.worktrees;
+    const cur = this.workspace(taskId);
+    if (!wt || !cur) throw new HostError("invalid_params", `任务 ${taskId} 没有代码工作树`);
+    const doc = this.taskDoc(taskId).value;
+    if (cur.value.state === "W6_Merged") return this.taskView(doc);
+    if (doc.task.state !== "T8a_Delivered") throw new HostError("conflict", `任务在 ${doc.task.state}:审查通过、交付之后才能合入`);
+    if (cur.value.state !== "W3_Pinned") throw new HostError("conflict", cur.value.state === "W5_Conflict" ? "上次合入冲突或重验失败,要先退回修复、提交新的候选" : `工作树在 ${cur.value.state},不能合入`);
+    const ver = putDoc(this.db, `ws:${taskId}`, cur.ver, { ...cur.value, state: "W4_Integrating" });
+    this.emitTask(taskId);
+    const r = await wt.integrate(cur.value);
+    const owner = doc.task.owner;
+    const at = this.now();
+    tx(this.db, () => {
+      putDoc(this.db, `ws:${taskId}`, ver, r.ws);
+      const t = this.taskDoc(taskId).value.task;
+      let summary: string;
+      if (r.ok) {
+        if (t.state === "T8a_Delivered" && t.delivery) this.stepTaskTx(taskId, { kind: "UserAccept", taskId, by, deliveryRound: t.delivery.round, commit: t.delivery.commit });
+        this.closeCommitmentsTx(owner, doc.roomId, taskId, "done");
+        run(this.db, "UPDATE gg_cards SET state = 'done' WHERE task_id = ? AND kind = 'task-status' AND state = 'open'", taskId);
+        summary = `已合入 ${r.ws.targetBranch}@${(r.ws.mergedSha ?? "").slice(0, 12)}(${r.mode === "fast-forward" ? "主线未变,快进" : r.mode === "no-change" ? "候选已在主线里" : `主线已推进到 ${(r.ws.verifiedOn ?? "").slice(0, 12)},合并后重验通过`})`;
+      } else {
+        summary = `合入失败,${r.ws.targetBranch} 未改动:${r.detail}${r.reason === "target-busy" ? "。可以再说一次通过重试" : "。需要退回,基于最新主线修复后重新交付"}`;
+      }
+      if (owner) {
+        const payload: Inbound = { kind: "compute", roomId: doc.roomId, taskId, computeId: t.computeId ?? "-", signal: r.ok ? "milestone" : "failed", summary, at };
+        run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", owner, doc.roomId, JSON.stringify(payload), at);
+      }
+    });
+    this.emitTask(taskId);
+    if (owner) this.loop.notify(owner, "now");
+    return this.taskView(this.taskDoc(taskId).value);
+  }
+  /** 代码任务的「通过」不能直接记验收:冲突未修或正在合入时拒绝,其余先豁免审查到 T8a 再发起合入。null = 不是待合入的代码任务。 */
+  private acceptCodeTaskTx(taskId: string, by: string): HostEffect[] | null {
+    const ws = this.workspace(taskId)?.value;
+    if (!ws || ws.state === "W6_Merged") return null;
+    if (ws.state === "W5_Conflict") throw new HostError("conflict", "上次合入冲突或重验失败,先退回让联系人基于最新主线修复、重新交付");
+    if (ws.state === "W4_Integrating") throw new HostError("conflict", "正在合入,等结果");
+    const t = this.taskDoc(taskId).value.task;
+    if (t.state === "T5_InReview") {
+      const owner = t.owner ? getDoc<ContactDoc>(this.db, `contact:${t.owner}`)?.value : undefined;
+      const { effects: eff } = this.stepTaskTx(taskId, { kind: "Review", reviewerId: by, reviewerModel: owner?.speakingModel ?? this.settings().defaultSpeakingModel, round: t.reviewRound, commit: t.reviewedCommit ?? "", constraintVer: t.constraintVer, waiverBy: by, verdict: "approve" });
+      const send = eff.find((e) => e.kind === "send-card");
+      if (send && send.kind === "send-card") this.stepTaskTx(taskId, { kind: "DeliveredCard", taskId, deliveryRound: send.deliveryRound, commit: send.commit });
+    } else if (t.state !== "T8a_Delivered") throw new HostError("conflict", `任务在 ${t.state},没有待确认的交付`);
+    return [{ kind: "integrate", taskId, by }];
   }
 
   // ======================= 承诺账本 =======================
@@ -1242,6 +1532,64 @@ export class Host {
   }
 
   // ======================= 联系人一轮 =======================
+  /** 联系人当前的状态笔记(第 3 块原文);没有为 null。 */
+  stateNote(contactId: string): string | null {
+    return getDoc<{ text: string }>(this.db, `note:${contactId}`)?.value.text ?? null;
+  }
+  /** 这些会话里被撤回消息的全部原文(含撤回前的编辑稿);撤回优先(AC-08),这些原文不能经状态笔记回到请求 */
+  private retractedTexts(roomIds: readonly string[]): string[] {
+    const out: string[] = [];
+    for (const roomId of roomIds) {
+      const { log } = loadLog(this.db.store, `room:${roomId}`);
+      const gone = new Set<number>();
+      for (const e of log.events) if (e.body.kind === "retract") gone.add(e.body.target);
+      if (gone.size === 0) continue;
+      for (const e of log.events) {
+        if (e.body.kind === "message" && gone.has(e.seq)) out.push(e.body.text);
+        if (e.body.kind === "edit" && gone.has(e.body.target)) out.push(e.body.text);
+      }
+    }
+    return out;
+  }
+  /** 笔记落盘或装配前移除撤回原文;精确替换不掉就整份作废并报告 */
+  private scrubNote(contactId: string, note: string, roomIds: readonly string[]): string {
+    const r = scrubRetracted(note, this.retractedTexts(roomIds));
+    if (r.leaked) {
+      this.report("state-note-voided", { contactId });
+      return VOIDED_NOTE;
+    }
+    if (r.hits > 0) this.report("state-note-scrubbed", { contactId, hits: r.hits });
+    return r.text;
+  }
+  /** 本轮要落盘的状态笔记:模型没写就请压缩器补写(同一说话模型的独立调用),超上限就缩写;最后移除撤回原文 */
+  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], signal: AbortSignal): Promise<string | null> {
+    const contactId = contact.id;
+    const prev = this.stateNote(contactId);
+    const compactor = this.opts.compactor?.(this.contactView(contact));
+    const profile = { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona };
+    const max = this.opts.stateNoteMaxBytes ?? null;
+    let note = out.stateNote;
+    if (note === null && compactor && fresh.length > 0) {
+      try {
+        note = await compactor.compact({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max }, signal);
+      } catch (e) {
+        this.report("compact-failed", { contactId, kind: "round-note", error: e instanceof Error ? e.message : String(e) });
+        note = null;
+      }
+    }
+    if (note !== null && max !== null && Buffer.byteLength(note, "utf8") > max) {
+      if (compactor) {
+        try {
+          const shorter = await compactor.compact({ contact: profile, kind: "shrink", previous: note, material: "", maxBytes: max }, signal);
+          if (Buffer.byteLength(shorter, "utf8") < Buffer.byteLength(note, "utf8")) note = shorter;
+        } catch (e) {
+          this.report("compact-failed", { contactId, kind: "shrink", error: e instanceof Error ? e.message : String(e) });
+        }
+      }
+      if (Buffer.byteLength(note, "utf8") > max) this.report("state-note-over-limit", { contactId, bytes: Buffer.byteLength(note, "utf8"), max });
+    }
+    return note === null ? null : this.scrubNote(contactId, note, roomIds);
+  }
   private cursor(contactId: string, roomId: string): number {
     return one<{ processed_seq: number }>(this.db, "SELECT processed_seq FROM gg_cursor WHERE contact_id = ? AND room_id = ?", contactId, roomId)?.processed_seq ?? 0;
   }
@@ -1346,7 +1694,14 @@ export class Host {
     const focusRoom = fresh.find((f) => f.kind === "message")?.roomId ?? fresh[0]?.roomId ?? null;
     this.setActivity(contactId, focusRoom, "thinking");
     const tasks = this.listTasks({ contactId }).filter((t) => !TERMINAL.has(t.state));
-    const note = getDoc<{ text: string }>(this.db, `note:${contactId}`);
+    let note = getDoc<{ text: string }>(this.db, `note:${contactId}`);
+    if (note) {
+      const clean = this.scrubNote(contactId, note.value.text, rooms.map((r) => r.id));
+      if (clean !== note.value.text) {
+        putDoc(this.db, `note:${contactId}`, note.ver, { text: clean });
+        note = getDoc<{ text: string }>(this.db, `note:${contactId}`);
+      }
+    }
     const ledgerLines = this.activeLedgerLines(contactId);
     const freshKeys = new Set(fresh.flatMap((f) => (f.kind === "message" ? [`${f.roomId}#${f.seq}`, ...(f.replyToSeq !== null ? [`${f.roomId}#${f.replyToSeq}`] : [])] : [])));
     const freshTasks = new Set(fresh.flatMap((f) => (f.kind === "compute" ? [f.taskId] : [])));
@@ -1409,7 +1764,9 @@ export class Host {
         }
       }
     }
-    const done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, out);
+    const stateNote = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), signal);
+    if (signal.aborted || this.closed) return "done";
+    const done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: out.actions, stateNote });
     this.expireRoundFailures(contactId);
     this.setActivity(contactId, null, "idle");
     await this.runEffects(done.effects);
@@ -1598,9 +1955,19 @@ export class Host {
             if (t.task.state !== "T3_Running" || !t.task.computeId) { reject(`任务在 ${t.task.state},不能交付`); break; }
             const computeRow = one<{ status: string; result: string | null }>(this.db, "SELECT status, result FROM gg_compute WHERE compute_id = ?", t.task.computeId);
             if (computeRow?.result == null) { reject("Compute 还没完成,不能交付"); break; }
-            const commit = `result:${t.task.computeId}`;
+            let commit = `result:${t.task.computeId}`;
+            const wsDoc = this.worktrees ? this.workspace(a.taskId) : undefined;
+            if (wsDoc && this.worktrees) {
+              // 代码任务:把工作区改动提交成候选并钉住 sha,审查与合入都认这个固定提交(W3)
+              const pinned = this.worktrees.pin(wsDoc.value, `${t.title}(任务 ${a.taskId})`);
+              if (pinned.state !== "W3_Pinned") { reject("上次合入冲突后没有新的改动,先基于最新主线修复"); break; }
+              putDoc(this.db, `ws:${a.taskId}`, wsDoc.ver, pinned);
+              commit = `git:${pinned.candidateSha}`;
+            }
             // 交付是普通消息(AC-56/U98):回复来源消息、@ 提出者,不挂验收卡;用户用普通回复表达通过或修改,由联系人提交 verdict。
             // 审查门(AC-26):还没有跨厂商审查联系人时任务停在 T5,提出者本人回复通过即豁免审查并验收,记为 waived-by-user
+            // 可读工件按内容快照进库,交付消息钉住 ref + sha256(AC-04)
+            const arts = this.collectArtifacts(a.taskId);
             const r = this.appendMessageTx(t.roomId, { kind: "contact", id: contactId }, {
               text: a.text,
               actionKey: actionId,
@@ -1608,7 +1975,8 @@ export class Host {
               quotedSeqs: [t.sourceSeq],
               mentions: [{ id: t.task.requester, source: "auto" }],
             });
-            this.stepTaskTx(a.taskId, { kind: "SubmitForReview", commit, computeId: t.task.computeId, constraintVer: t.task.constraintVer }, { result: a.text, deliveredSeq: r.seq });
+            if (arts.length && !r.duplicate) run(this.db, "INSERT OR IGNORE INTO gg_msg_artifacts (room_id, seq, artifacts) VALUES (?, ?, ?)", t.roomId, r.seq, JSON.stringify(arts));
+            this.stepTaskTx(a.taskId, { kind: "SubmitForReview", commit, computeId: t.task.computeId, constraintVer: t.task.constraintVer }, { result: a.text, deliveredSeq: r.seq, artifacts: arts });
             appended.push({ roomId: t.roomId, seq: r.seq });
             touchedTasks.add(a.taskId);
             break;
@@ -1622,6 +1990,8 @@ export class Host {
             if (!src) { reject(`验收结论的来源 ${d.roomId} #${a.sourceSeq} 不是本轮新消息`); break; }
             if (src.sender.kind !== "user" || src.sender.id !== d.task.requester) { reject(`验收结论的来源 ${d.roomId} #${a.sourceSeq} 不是提出者本人的消息`); break; }
             if (src.seq <= (d.deliveredSeq ?? Number.POSITIVE_INFINITY)) { reject(`验收结论的来源 ${d.roomId} #${a.sourceSeq} 早于这次交付`); break; }
+            const wsv = a.verdict === "accept" ? this.workspace(a.taskId)?.value : undefined;
+            if (wsv && (wsv.state === "W5_Conflict" || wsv.state === "W4_Integrating")) { reject(wsv.state === "W5_Conflict" ? "上次合入冲突或重验失败,要先退回修复" : "正在合入"); break; }
             effects.push(...this.decideDeliveryTx(a.taskId, a.verdict === "accept" ? "accept" : "reject", src.sender.id, a.feedback?.trim() || src.text));
             referenced.add(`${d.roomId}#${src.seq}`);
             touchedTasks.add(a.taskId);
@@ -1632,6 +2002,7 @@ export class Host {
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
             const { effects: eff } = this.stepTaskTx(a.taskId, { kind: "Cancel", by: contactId });
             for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId: a.taskId, computeId: e.computeId });
+            for (const e of eff) if (e.kind === "cancel-spawn") effects.push({ kind: "cancel-spawn", taskId: a.taskId, requestId: e.requestId });
             touchedTasks.add(a.taskId);
             break;
           }
@@ -1677,12 +2048,16 @@ export class Host {
   }
 
   // ======================= Compute =======================
-  private adapterFor(model: string): ComputeAdapter | null {
+  /**
+   * 适配器按 Harness 建一个、跨任务复用(AC-51):模型每一轮随输入交给它,不按模型另建实例。
+   * 没声明按轮换模型能力的旧适配器(一次性进程,模型写在进程环境里)只能按模型分实例,否则换了模型还在用旧模型。
+   */
+  private adapterFor(harness: string, model: string): ComputeAdapter | null {
     if (!this.opts.compute) return null;
-    let a = this.adapters.get(model);
+    let a = this.adapters.get(harness) ?? this.adapters.get(`${harness}:${model}`);
     if (!a) {
       a = this.opts.compute(model);
-      this.adapters.set(model, a);
+      this.adapters.set(isModelAware(a) ? harness : `${harness}:${model}`, a);
       this.pumps.push(this.pump(a));
     }
     return a;
@@ -1702,7 +2077,7 @@ export class Host {
     }
   }
   private onComputeEvent(ev: ComputeEvent) {
-    const row = one<{ task_id: string; contact_id: string; room_id: string }>(this.db, "SELECT task_id, contact_id, room_id FROM gg_compute WHERE compute_id = ?", ev.computeId);
+    const row = one<{ task_id: string; contact_id: string; room_id: string; harness: string }>(this.db, "SELECT task_id, contact_id, room_id, harness FROM gg_compute WHERE compute_id = ?", ev.computeId);
     if (!row) return;
     const at = this.now();
     const summary =
@@ -1711,6 +2086,11 @@ export class Host {
     let taskChanged = false;
     tx(this.db, () => {
       run(this.db, "INSERT INTO gg_progress (task_id, compute_id, kind, stage, summary, at) VALUES (?, ?, ?, ?, ?, ?)", row.task_id, ev.computeId, ev.kind, stage, summary, at);
+      // AC-29 观测点:Compute 启动后实际加载的 skill/MCP 清单(CLI init 自报),每次启动/续接覆盖为最新一次
+      if (ev.kind === "started" && ev.loaded) {
+        const cur = getDoc<{ skills: string[]; mcpServers: string[] }>(this.db, `compute-loaded:${ev.computeId}`);
+        putDoc(this.db, `compute-loaded:${ev.computeId}`, cur?.ver ?? 0, { skills: [...ev.loaded.skills], mcpServers: [...ev.loaded.mcpServers] });
+      }
       const status = ev.kind === "started" || ev.kind === "milestone" ? "running" : ev.kind;
       run(this.db, "UPDATE gg_compute SET status = ?, ended_at = CASE WHEN ? IN ('completed','failed','stopped') THEN ? ELSE ended_at END, result = CASE WHEN ? = 'completed' THEN ? ELSE result END WHERE compute_id = ?", status, ev.kind, at, ev.kind, summary, ev.computeId);
       if (ev.kind === "failed") {
@@ -1720,11 +2100,18 @@ export class Host {
           taskChanged = true;
         }
       }
-      // 实例已停(stopped)或失败退出:在等停止确认的任务据此确认,落到 T10/T11
-      if (ev.kind === "failed" || ev.kind === "stopped") {
-        const t = this.taskDoc(row.task_id).value.task;
-        if (t.state === "T9_StopRequested" && (t.computeId === ev.computeId || t.orphans.includes(ev.computeId))) {
-          this.stepTaskTx(row.task_id, { kind: "StoppedConfirmed", taskId: row.task_id, computeId: ev.computeId });
+      // 实例停止(stopped)或失败:这只是「停止已请求/这一轮结束」,不是确认停下(AC-23)。确认在 afterRound 里等进程都退出后再做
+      if (ev.kind === "failed" || ev.kind === "stopped") this.quota.markStopping(row.task_id);
+      // harness 回报的实际模型(AC-51 ⑥):和账本里这个 Compute 最近一次不同、或从没出现过的,追加一条 observed
+      const reported = reportedModels(ev);
+      if (reported.length) {
+        const rec = this.taskDoc(row.task_id).value.models ?? emptyModelRecord;
+        const last = rec.attempts.filter((x) => x.computeId === ev.computeId).at(-1);
+        const seen = new Set(producerModels(rec));
+        for (const m of reported) {
+          if (ev.kind === "started" ? last?.model === m : seen.has(m)) continue;
+          seen.add(m);
+          this.recordTurnTx(row.task_id, ev.computeId, row.harness, m, last?.effort ?? this.settings().defaultEffort, "observed");
           taskChanged = true;
         }
       }
@@ -1733,6 +2120,7 @@ export class Host {
         run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", row.contact_id, row.room_id, JSON.stringify(payload), at);
       }
     });
+    if (ev.kind === "failed" || ev.kind === "stopped" || ev.kind === "completed") void this.afterRound(row.task_id, ev.computeId, ev.kind, this.launchEpoch.get(row.task_id) ?? 0);
     const progress: ComputeProgress = { computeId: ev.computeId, taskId: row.task_id, kind: ev.kind, ...(stage ? { stage } : {}), summary, at };
     this.bus.emit({ type: "compute.progress", progress });
     this.emitTask(row.task_id);
@@ -1744,13 +2132,16 @@ export class Host {
     for (const e of effects) {
       try {
         if (e.kind === "spawn") await this.spawn(e);
-        else if (e.kind === "resume") {
+        else if (e.kind === "resume") await this.resumeCompute(e);
+        else if (e.kind === "stop") {
           const a = this.adapterForCompute(e.computeId);
-          const r = a ? await a.resume(e.computeId, e.text) : { ok: false as const, reason: "没有 Compute 适配器" };
-          if (!r.ok) this.report("resume-failed", { ...e, reason: r.reason });
-        } else if (e.kind === "stop") {
-          const a = this.adapterForCompute(e.computeId);
-          if (a) await a.stop(e.computeId);
+          this.quota.markStopping(e.taskId);
+          const r = a ? await a.stop(e.computeId) : { ok: false as const, reason: "没有 Compute 适配器" };
+          // 这一轮早已结束(没有在跑的进程,例如交付后取消):没有 stopped 事件会来,直接走停止确认
+          if (!r.ok) void this.afterRound(e.taskId, e.computeId, "stopped", this.launchEpoch.get(e.taskId) ?? 0);
+        } else if (e.kind === "cancel-spawn") this.cancelQueuedSpawn(e);
+        else if (e.kind === "integrate") {
+          await this.integrateTask(e.taskId, e.by);
         }
       } catch (err) {
         this.report(`effect-${e.kind}`, err);
@@ -1758,12 +2149,146 @@ export class Host {
     }
   }
   private adapterForCompute(computeId: string): ComputeAdapter | null {
-    const row = one<{ model: string }>(this.db, "SELECT model FROM gg_compute WHERE compute_id = ?", computeId);
-    return row ? this.adapterFor(row.model) : null;
+    const row = one<{ harness: string; model: string }>(this.db, "SELECT harness, model FROM gg_compute WHERE compute_id = ?", computeId);
+    return row ? this.adapterFor(row.harness, row.model) : null;
+  }
+  /** 账本追加一条,并让任务状态机的生产模型集合同步(跨厂商审查门禁按它判);在事务里调。 */
+  private recordTurnTx(taskId: string, computeId: string, harness: string, model: string, effort: string, reason: AttemptReason) {
+    const cur = this.taskDoc(taskId);
+    const prev = cur.value.models ?? emptyModelRecord;
+    const models = recordAttempt(prev, { computeId, harness, model, effort, reason, at: this.now() });
+    if (!isAppendOnly(prev, models)) throw new HostError("internal", "模型账本只能追加");
+    let task = cur.value.task;
+    if (!task.producerModels.includes(model)) {
+      const o = applyTask(task, { kind: "ProducerModelAdded", model, computeId });
+      if (o.ok) task = o.task;
+      else this.report("producer-model-rejected", { taskId, model, reason: o.reason });
+    }
+    putDoc(this.db, `task:${taskId}`, cur.ver, { ...cur.value, task, models, updatedAt: this.now() });
+  }
+  /**
+   * 送进 Compute 的每一次后续输入(联系人转达、用户退回重试……)都走这里(AC-51 ①⑤):
+   * 按此刻的配置现场解析这一轮的 {model, effort},不兼容先拦;交给适配器在轮边界切换;切换失败这一轮不算发出,不退回旧模型。
+   */
+  private async computeTurn(e: { taskId: string; computeId: string; text: string }, reason: AttemptReason = "turn"): Promise<boolean> {
+    const row = one<{ contact_id: string; room_id: string; harness: string; model: string }>(this.db, "SELECT contact_id, room_id, harness, model FROM gg_compute WHERE compute_id = ?", e.computeId);
+    const a = row ? this.adapterFor(row.harness, row.model) : null;
+    if (!row || !a) {
+      this.report("resume-failed", { ...e, reason: "没有 Compute 适配器" });
+      return false;
+    }
+    const owner = getDoc<ContactDoc>(this.db, `contact:${row.contact_id}`)?.value;
+    const resolved = owner ? this.resolveComputeFor(owner) : null;
+    if (resolved) {
+      if (resolved.harness !== row.harness) {
+        return this.turnRefused(e.taskId, e.computeId, row, `这个 Compute 跑在 ${row.harness} 上,联系人已改用 ${resolved.harness};换 Harness 要在新 Harness 上开新会话(随 Codex 接入实现),这一轮没有发出`);
+      }
+      const chk = modelConfig.checkCompute(this.caps(), resolved);
+      if (!chk.ok) { this.turnRefused(e.taskId, e.computeId, row, chk.reason); return false; }
+      if (!isModelAware(a) && resolved.model !== row.model) {
+        return this.turnRefused(e.taskId, e.computeId, row, `这个 Compute 的适配器不支持会话内换模型,仍是启动时的 ${row.model},联系人已改用 ${resolved.model};这一轮没有发出,不沿用旧模型继续跑`);
+      }
+    }
+    const turn: TurnModel | undefined = resolved ? { model: resolved.model, effort: resolved.effort } : undefined;
+    const r = await (a.resume as (id: string, text: string, turn?: TurnModel) => Promise<{ ok: true } | TurnRefusal>)(e.computeId, e.text, turn);
+    if (!r.ok) {
+      if (r.code === "model-switch-failed") return this.turnRefused(e.taskId, e.computeId, row, `换模型没成功:${r.reason}。这一轮没有发出;可以单独指定一个兼容的模型,或更换支持该模型的 Harness`);
+      this.report("resume-failed", { ...e, reason: r.reason });
+      return false;
+    }
+    if (resolved) {
+      tx(this.db, () => this.recordTurnTx(e.taskId, e.computeId, row.harness, resolved.model, resolved.effort, reason));
+      this.emitTask(e.taskId);
+    }
+    return true;
+  }
+  /** 这一轮没送进 Compute:原因记进进度,并告诉联系人(由它在聊天里给用户两条修复路径)。 */
+  private turnRefused(taskId: string, computeId: string, row: { contact_id: string; room_id: string }, why: string): false {
+    const at = this.now();
+    this.report("turn-refused", { taskId, computeId, why });
+    tx(this.db, () => {
+      run(this.db, "INSERT INTO gg_progress (task_id, compute_id, kind, stage, summary, at) VALUES (?, ?, 'blocked', 'model', ?, ?)", taskId, computeId, why, at);
+      const payload: Inbound = { kind: "compute", roomId: row.room_id, taskId, computeId, signal: "blocked", summary: why, at };
+      run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", row.contact_id, row.room_id, JSON.stringify(payload), at);
+    });
+    this.bus.emit({ type: "compute.progress", progress: { computeId, taskId, kind: "blocked", stage: "model", summary: why, at } });
+    this.emitTask(taskId);
+    this.loop.notify(row.contact_id, "now");
+    return false;
+  }
+  /** 申请槽位(AC-23):拿到就返回 true;没拿到就把这次启动/续接挂起排队,返回 false */
+  private takeSlot(e: Extract<HostEffect, { kind: "spawn" | "resume" }>, contactId: string, roomId: string): boolean {
+    const isGroup = one<{ kind: string }>(this.db, "SELECT kind FROM gg_rooms WHERE id = ?", roomId)?.kind === "group";
+    const got = this.quota.acquire({ taskId: e.taskId, contactId, roomId, isGroup });
+    if ("granted" in got) return true;
+    this.pendingLaunch.set(e.taskId, e);
+    this.emitTask(e.taskId);
+    return false;
+  }
+  /** 归还这个任务的槽位,把空出来的给排队的下一个(们) */
+  private giveBack(taskId: string) {
+    const lease = this.quota.leaseOf(taskId);
+    if (!lease) return;
+    const { granted } = this.quota.release(lease.leaseId);
+    for (const g of granted) {
+      const next = this.pendingLaunch.get(g.taskId);
+      this.pendingLaunch.delete(g.taskId);
+      if (next) void this.runEffects([next]);
+      else this.quota.release(g.leaseId);
+    }
+  }
+  /** 一轮结束后的收尾(AC-23):等进程真的都退出(停止/失败时找出它启动的子进程一并关掉)再确认停止、归还槽位。
+   *  epoch 是这一轮开始时的序号;期间任务又起了新一轮(续接),这次收尾就不动槽位 */
+  private async afterRound(taskId: string, computeId: string, kind: "failed" | "stopped" | "completed", epoch: number) {
+    const a = this.adapterForCompute(computeId);
+    let ok = true;
+    let why = "";
+    if (a) {
+      if (kind !== "completed" && a.quiesce) {
+        const q = await a.quiesce(computeId);
+        if (!q.ok) { ok = false; why = `${q.reason}${q.remaining.length ? `(pid ${q.remaining.join(",")})` : ""}`; }
+      } else await a.settled(computeId);
+    }
+    if (this.closed) return;
+    if (!ok) {
+      this.stopUnconfirmed.set(taskId, `停止未确认:${why}`);
+      this.report("stop-unconfirmed", { taskId, computeId, reason: why });
+      this.emitTask(taskId);
+      return;
+    }
+    this.stopUnconfirmed.delete(taskId);
+    tx(this.db, () => {
+      const t = this.taskDoc(taskId).value.task;
+      if (t.state === "T9_StopRequested" && (t.computeId === computeId || t.orphans.includes(computeId))) this.stepTaskTx(taskId, { kind: "StoppedConfirmed", taskId, computeId });
+    });
+    // 这一轮的进程都已退出:槽位归还;任务之后续接同一实例(退回、回答问题)时重新申请
+    if ((this.launchEpoch.get(taskId) ?? 0) === epoch) this.giveBack(taskId);
+    this.emitTask(taskId);
+  }
+  /** 取消还在排队(或启动没成功)的启动请求:不再排队,当场确认撤销 */
+  private cancelQueuedSpawn(e: Extract<HostEffect, { kind: "cancel-spawn" }>) {
+    const queued = this.pendingLaunch.get(e.taskId);
+    if (queued?.kind !== "spawn" || queued.requestId !== e.requestId) return;
+    this.pendingLaunch.delete(e.taskId);
+    this.quota.cancelWait(e.taskId);
+    tx(this.db, () => {
+      this.stepTaskTx(e.taskId, { kind: "StoppedConfirmed", taskId: e.taskId, requestId: e.requestId });
+    });
+    this.emitTask(e.taskId);
+  }
+  private async resumeCompute(e: Extract<HostEffect, { kind: "resume" }>) {
+    const row = one<{ contact_id: string; room_id: string }>(this.db, "SELECT contact_id, room_id FROM gg_compute WHERE compute_id = ?", e.computeId);
+    if (!row) return this.report("resume-failed", { ...e, reason: "没有这个 Compute" });
+    if (!this.takeSlot(e, row.contact_id, row.room_id)) return;
+    // 续接这一轮(AC-51 现场解析生效模型在 computeTurn 里);没送进 Compute 就当场归还槽位
+    if (await this.computeTurn(e)) this.launchEpoch.set(e.taskId, (this.launchEpoch.get(e.taskId) ?? 0) + 1);
+    else this.giveBack(e.taskId);
   }
   private async spawn(e: Extract<HostEffect, { kind: "spawn" }>) {
-    const adapter = this.adapterFor(e.model);
+    if (!this.takeSlot(e, e.contactId, e.roomId)) return;
     const fail = (reason: string) => {
+      // 没起来:没有进程要等,槽位当场归还
+      this.giveBack(e.taskId);
       tx(this.db, () => {
         const { effects: eff } = this.stepTaskTx(e.taskId, { kind: "ExecFailed", requestId: e.requestId });
         // 启动本来就没成功:撤销请求当场确认(没有实例可停),任务落到 T11
@@ -1777,15 +2302,51 @@ export class Host {
       this.emitTask(e.taskId);
       this.loop.notify(e.contactId, "now");
     };
+    // 启动前(AC-32 ② 第三个时机):按此刻配置现场解析生效值,不兼容就不起 Compute,不退回 Harness 默认模型
+    const owner = getDoc<ContactDoc>(this.db, `contact:${e.contactId}`)?.value;
+    const resolved = owner ? this.resolveComputeFor(owner) : null;
+    if (resolved) {
+      const chk = modelConfig.checkCompute(this.caps(), resolved);
+      if (!chk.ok) {
+        this.report("model-incompatible", { taskId: e.taskId, contactId: e.contactId, harness: resolved.harness, model: resolved.model, fixes: chk.fixes });
+        return fail(chk.reason);
+      }
+    }
+    const harness = resolved?.harness ?? "claude-code";
+    const model = resolved?.model ?? e.model;
+    const adapter = this.adapterFor(harness, model);
     if (!adapter) return fail("宿主没有配置 Compute 适配器");
-    const cwd = this.opts.computeCwd?.(e.taskId);
+    let cwd: string | undefined;
+    try {
+      cwd = this.computeCwdFor(e.taskId);
+    } catch (err) {
+      return fail(`工作目录准备失败:${err instanceof Error ? err.message : String(err)}`);
+    }
     const tools = [...(this.opts.computeTools ?? DEFAULT_COMPUTE_TOOLS)];
-    const r = await adapter.spawn({ task: e.brief, rules: [], tools, credentialRefs: [], placement: "local" }, cwd ? { cwd } : {});
+    // 首轮就带生效模型(AC-51 ①);只给声明了按轮换模型能力的适配器(旧的一次性适配器只收 cwd/handoff)
+    const modelAware = isModelAware(adapter);
+    // 能力默认隔离加白名单(AC-29):只把联系人勾选的 skill/MCP 放进它的专属运行目录;缺项不启动
+    const contact = getDoc<ContactDoc>(this.db, `contact:${e.contactId}`)?.value;
+    const picked = (contact?.computeAssets ?? []).filter((x) => x.kind !== "script");
+    const prep = this.capabilities.prepare(e.contactId, contact?.harness ?? "claude-code", contact?.computeAssets ?? []);
+    if (!prep.ok) return fail(`勾选的能力不可用:${prep.missing.join("、")}`);
+    // 一次性适配器收专属配置目录与勾选能力;声明能力的适配器(常驻)要显式声明 isolation 才收。
+    // 不收的适配器:勾选了 skill/MCP 就明确失败,不带着缺项启动
+    const isoOk = !modelAware || (adapter as { capabilities?: { isolation?: unknown } }).capabilities?.isolation === true;
+    if (!isoOk && picked.length) return fail(`这个 Compute 适配器还不支持勾选的 skill/MCP(${picked.map((x) => x.name).join("、")}),不带着缺项启动`);
+    const iso = isoOk ? { configDir: prep.home.configDir, pluginDirs: [...prep.home.pluginDirs], mcpServers: prep.home.mcpServers } : {};
+    const spawnOpts = { ...(cwd ? { cwd } : {}), ...(modelAware ? { model, ...(resolved ? { effort: resolved.effort } : {}) } : {}), ...iso };
+    const r = await adapter.spawn({ task: e.brief, rules: [], tools, credentialRefs: [], placement: "local" }, spawnOpts);
     if (!r.ok) return fail(r.reason);
     const late: string[] = [];
+    this.launchEpoch.set(e.taskId, (this.launchEpoch.get(e.taskId) ?? 0) + 1);
     tx(this.db, () => {
-      run(this.db, "INSERT INTO gg_compute (compute_id, task_id, contact_id, room_id, harness, model, status, started_at) VALUES (?, ?, ?, ?, 'claude-code', ?, 'starting', ?)", r.computeId, e.taskId, e.contactId, e.roomId, e.model, this.now());
-      const { effects: eff } = this.stepTaskTx(e.taskId, { kind: "Dispatch", computeId: r.computeId, model: e.model, requestId: e.requestId });
+      run(this.db, "INSERT INTO gg_compute (compute_id, task_id, contact_id, room_id, harness, model, status, started_at) VALUES (?, ?, ?, ?, ?, ?, 'starting', ?)", r.computeId, e.taskId, e.contactId, e.roomId, harness, model, this.now());
+      // 首次启动写入不可变快照,账本追加一条 start(AC-32 ④)
+      const prev = this.taskDoc(e.taskId).value.models ?? emptyModelRecord;
+      const models = recordAttempt(prev, { computeId: r.computeId, harness, model, effort: resolved?.effort ?? this.settings().defaultEffort, reason: "start", at: this.now() });
+      if (!isAppendOnly(prev, models)) throw new HostError("internal", "模型账本只能追加");
+      const { effects: eff } = this.stepTaskTx(e.taskId, { kind: "Dispatch", computeId: r.computeId, model, requestId: e.requestId }, { models });
       for (const x of eff) if (x.kind === "stop-compute") late.push(x.computeId);
     });
     this.emitTask(e.taskId);
@@ -1850,6 +2411,7 @@ export class Host {
     if (card.kind === "task-status" && actionId === "cancel") {
       const { effects: eff } = this.stepTaskTx(taskId, { kind: "Cancel", by: this.userId });
       for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId, computeId: e.computeId });
+      for (const e of eff) if (e.kind === "cancel-spawn") effects.push({ kind: "cancel-spawn", taskId, requestId: e.requestId });
       return effects;
     }
     if (card.kind !== "delivery" || (actionId !== "accept" && actionId !== "reject")) return effects;
@@ -1866,6 +2428,9 @@ export class Host {
     const t = doc.task;
     const effects: HostEffect[] = [];
     if (decision === "accept") {
+      // 代码任务:审查(豁免)通过后先受控合入,合入成功才记验收(R-Worktree W3 → W4)
+      const code = this.acceptCodeTaskTx(taskId, by);
+      if (code) return code;
       if (t.state === "T5_InReview") {
         const owner = t.owner ? getDoc<ContactDoc>(this.db, `contact:${t.owner}`)?.value : undefined;
         const { effects: eff } = this.stepTaskTx(taskId, { kind: "Review", reviewerId: by, reviewerModel: owner?.speakingModel ?? this.settings().defaultSpeakingModel, round: t.reviewRound, commit: t.reviewedCommit ?? "", constraintVer: t.constraintVer, waiverBy: by, verdict: "approve" });
@@ -1941,17 +2506,74 @@ export class Host {
 function identityOf(contactId: string, c: { name: string; persona: string }): string {
   return [`你是「${c.name}」(联系人 id ${contactId})。消息里的 @ 列的是联系人 id。`, c.persona].filter((x) => x.trim()).join("\n");
 }
+/** 保存被拒时给人看的说明:列出每位会冲突的联系人和原因。 */
+function incompatibleMessage(conflicts: readonly modelConfig.AffectedContact[]): string {
+  const names = conflicts.map((a) => `${a.name}(${a.after.harness} 不支持 ${a.after.model})`).join("、");
+  return `这次改动会让 ${conflicts.length} 位联系人的 Compute 与所选 Harness 不兼容:${names}。可以单独指定兼容的模型或更换 Harness;看过预览确认后再保存`;
+}
+/** 这一轮的生效模型(AC-51):宿主每次送进 Compute 的输入都带上。 */
+export interface TurnModel {
+  readonly model: string;
+  readonly effort?: string;
+}
+type TurnRefusal = { ok: false; reason: string; code?: string; fixes?: readonly string[] };
+/** 声明了按轮换模型能力(capabilities)的适配器:spawn 收 model/effort,resume 收这一轮的生效模型。 */
+function isModelAware(a: ComputeAdapter): boolean {
+  return "capabilities" in a && typeof (a as { capabilities?: unknown }).capabilities === "object";
+}
+/** 事件里 harness 回报的实际模型:started.model;completed/failed 的 models(这一轮 modelUsage 的键)。旧适配器没有这些字段。 */
+function reportedModels(ev: ComputeEvent): string[] {
+  const x = ev as ComputeEvent & { model?: unknown; models?: unknown };
+  if (ev.kind === "started") return typeof x.model === "string" && x.model ? [x.model] : [];
+  if (ev.kind === "completed" || ev.kind === "failed") return Array.isArray(x.models) ? x.models.filter((m): m is string => typeof m === "string" && m !== "") : [];
+  return [];
+}
+
+function defaultsOf(s: SettingsView): modelConfig.ModelDefaults {
+  return { harness: s.defaultHarness, speakingModel: s.defaultSpeakingModel, computeModel: s.defaultComputeModel, effort: s.defaultEffort };
+}
+function capsOf(s: SettingsView): modelConfig.ModelCapability[] {
+  return s.models.map((m) => ({ id: m.id, harnesses: [...m.harnesses] }));
+}
+function resolvedView(r: modelConfig.ResolvedCompute) {
+  return { harness: r.harness, model: r.model, effort: r.effort, vendor: r.vendor, modelSource: r.modelSource, effortSource: r.effortSource, chain: [...r.chain] };
+}
+function previewView(p: modelConfig.ChangePreview): ModelChangePreview {
+  return {
+    defaultsChanged: [...p.defaultsChanged],
+    affected: p.affected.map((a) => ({
+      contactId: a.contactId,
+      name: a.name,
+      involvement: a.involvement,
+      changed: [...a.changed],
+      speakingBefore: a.speakingBefore,
+      speakingAfter: a.speakingAfter,
+      before: resolvedView(a.before),
+      after: resolvedView(a.after),
+      support: a.support,
+      conflict: a.conflict,
+      fixes: a.fixes.map((f) => ({ kind: f.kind, candidates: [...f.candidates] })),
+    })),
+    conflicts: p.conflicts.length,
+  };
+}
 
 /** 已交付、等提出者回复的任务(AC-56 普通消息交付):T8a,或还没有审查人、停在 T5 等本人豁免。旧数据(交付卡)不算,走卡片。 */
 function awaitingUser(d: TaskDoc): boolean {
   if (d.deliveredSeq == null) return false;
   return d.task.state === "T8a_Delivered" || d.task.state === "T5_InReview";
 }
+export type ModelChangeInput =
+  | { kind: "defaults"; defaultHarness?: SettingsView["defaultHarness"]; defaultSpeakingModel?: string; defaultComputeModel?: string; defaultEffort?: SettingsView["defaultEffort"] }
+  | { kind: "contact"; contactId: string; speakingModel?: string; harness?: ContactView["harness"]; computeModel?: ContactView["computeModel"] }
+  | { kind: "batch-replace"; from: string; to: string };
 
 type HostEffect =
   | { kind: "spawn"; taskId: string; requestId: string; contactId: string; model: string; brief: string; roomId: string }
   | { kind: "resume"; taskId: string; computeId: string; text: string }
-  | { kind: "stop"; taskId: string; computeId: string };
+  | { kind: "stop"; taskId: string; computeId: string }
+  | { kind: "integrate"; taskId: string; by: string }
+  | { kind: "cancel-spawn"; taskId: string; requestId: string };
 
 /** 召回清单的一项 → 第 5 块的一个指针。截断显式写出原长与续读游标;撤回与越权只给状态,不带原文和原长。 */
 export function renderRecall(it: RecallItem, sender: string): { ref: string; text: string } {

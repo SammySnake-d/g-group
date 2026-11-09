@@ -3,6 +3,7 @@
 import {
   ANNOUNCEMENT_ORDERS,
   AnnouncementView,
+  CapabilityLibraryView,
   CommitmentView,
   ComputeProgress,
   ContactProfileView,
@@ -16,6 +17,7 @@ import {
   MarketplaceEntry,
   MemberRef,
   MessageView,
+  ModelChangePreview,
   ModelSlot,
   PluginView,
   ReceiptView,
@@ -25,6 +27,8 @@ import {
   ScheduleView,
   SearchHit,
   SettingsView,
+  SharedDocVersionView,
+  SharedDocView,
   SlashCommand,
   SlashInvocation,
   TASK_STATES,
@@ -50,7 +54,17 @@ export const METHODS = {
   "contacts.list": method(Empty, obj({ contacts: arr(ContactView) })),
   "contacts.get": method(obj({ contactId: id() }), ContactView),
   "contacts.create": method(
-    obj({ clientActionId: id(), name: str({ min: 1, max: 80 }), bio: opt(str({ max: 2000 })), speakingModel: opt(str({ max: 200 })), harness: opt(oneOf(HARNESSES)), computeModel: opt(ModelSlot), persona: opt(str({ max: 20000 })) }),
+    obj({
+      clientActionId: id(),
+      name: str({ min: 1, max: 80 }),
+      bio: opt(str({ max: 2000 })),
+      speakingModel: opt(str({ max: 200 })),
+      harness: opt(oneOf(HARNESSES)),
+      computeModel: opt(ModelSlot),
+      persona: opt(str({ max: 20000 })),
+      /** 预检发现会让 Compute 不兼容时,不带它保存被拒(conflict,detail.reason="model-incompatible",detail.preview);用户看过预览确认后带 true 再存。 */
+      confirmAffected: opt(bool()),
+    }),
     ContactView,
   ),
   "contacts.update": method(
@@ -66,12 +80,18 @@ export const METHODS = {
       computeAssets: opt(arr(obj({ name: str({ max: 200 }), kind: oneOf(["mcp", "skill", "script"] as const) }))),
       /** 预设(人设原文);改了下一轮第 1 块就用新值。 */
       persona: opt(str({ max: 20000 })),
+      /** 同 contacts.create。 */
+      confirmAffected: opt(bool()),
+      /** 个人 Compute 槽位数(AC-23);null 恢复宿主默认。 */
+      computeSlots: opt(nullable(int({ min: 1, max: 64 }))),
     }),
     ContactView,
   ),
   /** 联系人主面板(AC-54):视图 + 预设 + 工作记忆 + 职责(承诺、在途任务、定时、所在会话)。 */
   "contacts.profile": method(obj({ contactId: id() }), ContactProfileView),
   "contacts.remove": method(obj({ contactId: id() }), Ok),
+  /** 全局能力库里可勾选的 skill 与 MCP(AC-29)。联系人的 Compute 只加载它勾选的那些,本机全局的默认不进入。 */
+  "capabilities.list": method(Empty, CapabilityLibraryView),
 
   // ---- 会话 ----
   "rooms.list": method(Empty, obj({ rooms: arr(RoomView) })),
@@ -79,7 +99,7 @@ export const METHODS = {
   /** 打开与某联系人的私聊;已存在则返回原会话。 */
   "rooms.openDm": method(obj({ contactId: id() }), RoomView),
   "rooms.createGroup": method(obj({ clientActionId: id(), title: str({ min: 1, max: 200 }), members: arr(MemberRef, { max: 100 }) }), RoomView),
-  "rooms.update": method(obj({ roomId: id(), title: opt(str({ min: 1, max: 200 })), pinned: opt(bool()), muted: opt(bool()), rules: opt(str({ max: 20000 })), expectedRulesVersion: opt(int({ min: 0 })) }), RoomView),
+  "rooms.update": method(obj({ roomId: id(), title: opt(str({ min: 1, max: 200 })), pinned: opt(bool()), muted: opt(bool()), rules: opt(str({ max: 20000 })), expectedRulesVersion: opt(int({ min: 0 })), tempComputeSlots: opt(int({ min: 0, max: 64 })) }), RoomView),
   "rooms.addMembers": method(obj({ roomId: id(), members: arr(MemberRef, { max: 100 }) }), RoomView),
   /**
    * 移出成员。联系人在这个群有在途任务(T8/T10/T11 以外)时默认 conflict,detail.tasks 列出 {taskId,title,state};
@@ -188,10 +208,37 @@ export const METHODS = {
   ),
   /** 给还没人负责(T1_Open)的任务指定负责人:以用户一条对话消息记录并 @ 它,由它认领并起 Compute。已有负责人 conflict;不是本会话联系人 invalid_params。clientActionId 幂等。 */
   "tasks.assign": method(obj({ taskId: id(), contactId: id(), clientActionId: id() }), TaskView),
+  /** 代码任务受控合入目标分支(AC-22):审查通过、交付后才能合;主线未变快进,主线已推进则合并后重验;
+   *  冲突或重验失败返回 workspace.state=W5_Conflict(目标分支未动)。验收交付卡时宿主会自动发起,这里是重试入口。 */
+  "tasks.integrate": method(obj({ taskId: id(), clientActionId: id() }), TaskView),
+
+  // ---- 工件 ----
+  /** 点开交付卡里的工件(AC-04):返回快照的本地路径与 sha256(与卡片里的相同);文本类 ≤1 MB 直接带回正文,其余 text 为 null。 */
+  "artifacts.get": method(
+    obj({ ref: id() }),
+    obj({ ref: id(), name: str({ max: 500 }), mime: str({ max: 200 }), bytes: int({ min: 0 }), sha256: str({ min: 64, max: 64, pattern: /^[0-9a-f]{64}$/ }), path: str({ max: 4096 }), text: nullable(str({ max: 1_048_576 })) }),
+  ),
 
   // ---- 承诺账本 ----
   "commitments.list": method(obj({ contactId: opt(id()), roomId: opt(id()), status: opt(oneOf(["active", "done", "revoked", "superseded", "blocked"] as const)) }), obj({ commitments: arr(CommitmentView) })),
   "commitments.revoke": method(obj({ commitmentId: id(), clientActionId: id() }), CommitmentView),
+
+  // ---- 共享文档(AC-21:单一提交点,带基线版本提交,版本冲突不静默覆盖) ----
+  "docs.list": method(obj({ roomId: opt(id()) }), obj({ docs: arr(SharedDocView) })),
+  /** 读权威版本;给 version 读版本链里的那一版。 */
+  "docs.get": method(obj({ docId: id(), version: opt(int({ min: 1 })) }), SharedDocView),
+  /** 新建,版本为 1;同一 clientActionId 重发返回同一份文档。 */
+  "docs.create": method(obj({ clientActionId: id(), title: str({ min: 1, max: 200 }), content: str({ max: 1_000_000 }), roomId: opt(nullable(id())) }), SharedDocView),
+  /**
+   * 提交修改:baseVersion = 读到的 version。版本已变 → 错误 conflict,detail.currentVer 是当前版本,什么都不写;
+   * 同一 requestId 重试 → replayed=true、committedVersion 为当初生效的版本,不重复写;同一 requestId 换了内容 → conflict。
+   */
+  "docs.commit": method(
+    obj({ docId: id(), requestId: id(), baseVersion: int({ min: 1 }), content: str({ max: 1_000_000 }), title: opt(str({ min: 1, max: 200 })) }),
+    obj({ doc: SharedDocView, committedVersion: int({ min: 1 }), replayed: bool() }),
+  ),
+  /** 版本链,从新到旧。 */
+  "docs.history": method(obj({ docId: id(), ...Page }), obj({ versions: arr(SharedDocVersionView) })),
 
   // ---- 定时(cron) ----
   /** 三视角(AC-53):roomId=群视角,contactId=联系人视角,都不给=总览。order 默认 next-run(下次触发早的在前,停用的在后,同时按创建顺序);排序待定(D28 待确认 ②)。 */
@@ -273,11 +320,38 @@ export const METHODS = {
   "helper.history": method(obj({ entry: HelperEntry, ...Page }), obj({ notes: arr(HelperNote) })),
   /** 聊天里 @Helper 时的公开回复:作为 helper 发言者的一条消息回复那条 @ 它的用户消息。只有 mention 入口能用。 */
   "helper.post": method(obj({ entry: HelperEntry, text: str({ min: 1, max: 100000 }), clientActionId: id() }), MessageView),
+  // ---- 模型配置(AC-32)----
+  /** 保存前预检:按提议的改动算出每位联系人的生效值,列出受影响的下游与冲突;不落盘。 */
+  "models.preview": method(
+    obj({
+      change: tagged("kind", {
+        defaults: obj({ kind: lit("defaults"), defaultHarness: opt(oneOf(HARNESSES)), defaultSpeakingModel: opt(str({ max: 200 })), defaultComputeModel: opt(str({ max: 200 })), defaultEffort: opt(oneOf(EFFORTS)) }),
+        contact: obj({ kind: lit("contact"), contactId: id(), speakingModel: opt(str({ max: 200 })), harness: opt(oneOf(HARNESSES)), computeModel: opt(ModelSlot) }),
+        "batch-replace": obj({ kind: lit("batch-replace"), from: str({ min: 1, max: 200 }), to: str({ min: 1, max: 200 }) }),
+      } as const),
+    }),
+    ModelChangePreview,
+  ),
+  /** 把模型 X 批量换成 Y:apply 不为 true 时只预览;有冲突时不带 confirmAffected 应用被拒(conflict)。在途与历史任务的模型快照不改。 */
+  "models.batchReplace": method(
+    obj({ clientActionId: id(), from: str({ min: 1, max: 200 }), to: str({ min: 1, max: 200 }), apply: opt(bool()), confirmAffected: opt(bool()) }),
+    obj({ applied: bool(), preview: ModelChangePreview }),
+  ),
 
   // ---- 设置 ----
   "settings.get": method(Empty, SettingsView),
   "settings.update": method(
-    obj({ defaultHarness: opt(oneOf(HARNESSES)), defaultSpeakingModel: opt(str({ max: 200 })), defaultComputeModel: opt(str({ max: 200 })), defaultEffort: opt(oneOf(EFFORTS)), timezone: opt(str({ min: 1, max: 64 })) }),
+    obj({
+      defaultHarness: opt(oneOf(HARNESSES)),
+      defaultSpeakingModel: opt(str({ max: 200 })),
+      defaultComputeModel: opt(str({ max: 200 })),
+      defaultEffort: opt(oneOf(EFFORTS)),
+      timezone: opt(str({ min: 1, max: 64 })),
+      /** 模型能力声明(每个模型能在哪些 Harness 上跑),是三时机兼容性校验的判据;整表替换。 */
+      models: opt(arr(obj({ id: str({ min: 1, max: 200 }), label: str({ max: 200 }), vendor: str({ max: 64 }), harnesses: arr(oneOf(HARNESSES)) }), { max: 500 })),
+      /** 同 contacts.create:预检有冲突时不带 true 保存被拒。 */
+      confirmAffected: opt(bool()),
+    }),
     SettingsView,
   ),
 } as const;

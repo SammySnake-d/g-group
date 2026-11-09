@@ -252,7 +252,8 @@ function renderStateNote(n: RoundStateNote | null) {
   return n === null ? "[状态笔记]\n(尚无)\n" : `[状态笔记 v${n.version}]\n${n.text}\n`;
 }
 
-function renderInbound(x: Inbound) {
+/** 一条输入在第 4 块里的呈现(消息带 #seq、会话、发送人、时刻与引用;Compute 事件与定时触发各有标签),压缩材料也用它 */
+export function renderInboundText(x: Inbound): string {
   if (x.kind === "message") {
     const s = x.sender;
     let head = `#${x.seq} · ${x.roomId} · ${s.name}(${s.kind}:${s.id}) · ${x.at}`;
@@ -269,7 +270,7 @@ function renderInbound(x: Inbound) {
 function renderFresh(fresh: readonly Inbound[]) {
   if (fresh.length === 0) return "[新消息]\n(无)\n";
   let t = "[新消息](processed_seq 之后,按到达顺序,原文)\n";
-  for (const x of fresh) t += renderInbound(x);
+  for (const x of fresh) t += renderInboundText(x);
   return t;
 }
 
