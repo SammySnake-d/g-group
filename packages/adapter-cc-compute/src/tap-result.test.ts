@@ -54,7 +54,7 @@ test("R10-01/文件失败:加载异常或提前退出不算测试代码断言失
 });
 test("R10-01/计划汇总:缺失重复或错误的 TAP 计划与汇总都拒收", () => {
   const run = red();
-  for (const out of [run.out.replace(/^1\.\.2$/m, "1..3"), run.out.replace(/^1\.\.2\n/m, ""), `${run.out}\n1..2\n`, run.out.replace(/^# tests 2$/m, "# tests 1"), run.out.replace(/^# fail 1$/m, "# fail 0"), run.out.replace(/^# skipped 0\n/m, ""), `${run.out}\n# pass 1\n`]) {
+  for (const out of [run.out.replace(/^1\.\.2$/m, "1..3"), run.out.replace(/^1\.\.2\n/m, ""), `${run.out}\n1..2\n`, run.out.replace(/^# tests 2$/m, "# tests 1"), run.out.replace(/^# fail 1$/m, "# fail 0"), run.out.replace(/^# skipped 0\n/m, ""), `${run.out}\n# pass 1\n`, ...["skipped", "todo", "cancelled", "suites"].map((key) => run.out.replace(`# ${key} 0`, `# ${key} 1`))]) {
     assert.equal(assessTap({ ...run, out }, names, target).valid, false, out);
   }
 });
@@ -74,6 +74,7 @@ test("R10-01/原因:只有指定名字及指定错误码匹配才算发现,无�
   const run = red();
   assert.equal(assessTap(run, names, { name: "对照", code: "ERR_ASSERTION" }).killed, false);
   assert.equal(assessTap(run, names, { name: "目标", code: "ERR_OTHER" }).killed, false);
+  assert.equal(assessTap(run, names, { name: "目标", code: "ERR_ASSERTION", errorName: "TypeError" }).killed, false);
   assert.equal(assessTap({ ...run, out: run.out.replace("testCodeFailure", "cancelledByParent") }, names, target).valid, false);
 });
 test("R10-01/指令:即使汇总声称零跳过,结果行 SKIP 或 TODO 指令仍拒收", () => {
