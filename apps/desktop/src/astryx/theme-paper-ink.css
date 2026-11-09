@@ -9,6 +9,17 @@
     --font-family-heading: var(--font-family-body);
     --font-family-code: "SF Mono", ui-monospace, Menlo, "JetBrains Mono", monospace;
 
+    /* 沿用现有 Tailwind preflight 的 1.5 行高，避免 neutral 的排版默认值推动旧页面。 */
+    --text-heading-1-leading: 1.5;
+    --text-heading-2-leading: 1.5;
+    --text-heading-3-leading: 1.5;
+    --text-heading-4-leading: 1.5;
+    --text-heading-5-leading: 1.5;
+    --text-heading-6-leading: 1.5;
+    --text-body-leading: 1.5;
+    --text-supporting-leading: 1.5;
+    --text-code-leading: 1.5;
+
     --color-background-surface: hsl(var(--bg));
     --color-background-body: hsl(var(--bg));
     --color-background-card: hsl(var(--theirs));
