@@ -7,7 +7,7 @@ import { FileReader } from './files/FileReader'
 import { fileDataset } from './files/fixtures'
 import { boot } from '@/store/boot'
 
-// 一页两种工作姿态：先认出交付物，再安静读；说话回到它所属的对话。
+// 先认出交付物；正文与消息链共同保留协作来处，说话回到原对话。
 export function FilesMain({ id }: { id: string | null }) {
   const setFileSel = useApp((s) => s.setFileSel)
   const [query, setQuery] = useState('')

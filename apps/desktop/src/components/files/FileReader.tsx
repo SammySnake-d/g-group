@@ -3,7 +3,8 @@ import { Button } from '@astryxdesign/core/Button'
 import { ToggleButton } from '@astryxdesign/core/ToggleButton'
 import { Card } from '@astryxdesign/core/Card'
 import { ClickableCard } from '@astryxdesign/core/ClickableCard'
-import { useState } from 'react'
+import { cn } from '@/lib/utils'
+import { useFileContextPanel } from './useFileContextPanel'
 import { people, type Artifact } from '@/data'
 import { useApp } from '@/store'
 import { Avatar } from '../Avatar'
@@ -12,7 +13,9 @@ import { discussFile, fileContext, messageText, sourceLabel } from './context'
 
 export function FileReader({ artifact: a, onBack, compact = false }: { artifact: Artifact; onBack: () => void; compact?: boolean }) {
   const { convs, jump, openConv } = useApp()
-  const [contextOpen, setContextOpen] = useState(false)
+  const context = useFileContextPanel()
+  const contextOpen = !compact && context.open
+  const setContextOpen = context.setOpen
   const { conv, source, related } = fileContext(a, convs)
   const label = sourceLabel(conv)
   return <div data-testid="files-main" data-file={a.id} data-prototype="file-reader" className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-side/40">
@@ -31,9 +34,9 @@ export function FileReader({ artifact: a, onBack, compact = false }: { artifact:
           <div data-testid="file-preview"><FileBody artifact={a} /></div>
         </Card>
       </main>
-      {contextOpen && <aside data-testid="file-related" className="scroll-thin w-[290px] shrink-0 overflow-y-auto border-l border-line bg-side p-4 max-[1150px]:w-60 max-[900px]:absolute max-[900px]:bottom-0 max-[900px]:right-0 max-[900px]:top-[72px] max-[900px]:z-10 max-[900px]:w-[min(290px,80%)] max-[900px]:shadow-elev">
-        <div className="mb-5 flex items-center justify-between"><h2 className="text-[15px] font-semibold">对话</h2><Button label="收起对话" isIconOnly variant="ghost" icon={<X />} onClick={() => setContextOpen(false)} /></div>
-        <div className="space-y-3">{related.map((m) => <ClickableCard key={m.id} label={`查看原消息：${messageText(m)}`} padding={3} onClick={() => jump(m.id)} data-testid={`file-related-${m.id}`} className="bg-elev">
+      {contextOpen && <aside data-testid="file-related" className="scroll-thin w-[260px] shrink-0 overflow-y-auto border-l border-line bg-side p-4 max-[1150px]:w-60 max-[900px]:absolute max-[900px]:bottom-0 max-[900px]:right-0 max-[900px]:top-[72px] max-[900px]:z-10 max-[900px]:w-[min(290px,80%)] max-[900px]:shadow-elev">
+        <div className="mb-5 flex items-center justify-between"><h2 className="text-[15px] font-semibold">相关消息</h2><Button label="收起对话" isIconOnly variant="ghost" icon={<X />} onClick={() => setContextOpen(false)} /></div>
+        <div className="space-y-3">{related.map((m) => <ClickableCard key={m.id} label={`查看原消息：${messageText(m)}`} padding={3} onClick={() => jump(m.id)} data-testid={`file-related-${m.id}`} data-current={m.id === source?.id ? 'true' : undefined} aria-current={m.id === source?.id ? 'true' : undefined} className={cn('bg-elev', m.id === source?.id && 'bg-sel ring-1 ring-inset ring-line')}>
           {'from' in m && <div className="mb-2 flex items-center gap-2 text-[13px]"><Avatar id={m.from} size={20} status={false} mood="idle" /><span>{people[m.from].name}</span></div>}
           <p className="line-clamp-5 text-[14px] leading-relaxed">{messageText(m)}</p>
         </ClickableCard>)}</div>

@@ -26,7 +26,6 @@ export function Rail({ section, panoOpen, badge, running, helperOpen, backend, o
   const on = (k: NavKey) => (k === 'activity' ? panoOpen : section === k && !panoOpen)
   return (
     <nav aria-label="主导航" data-testid="rail" className="flex w-[64px] shrink-0 flex-col items-center gap-1 border-r border-line bg-rail pb-3 pt-10">
-      <div data-testid="brand-mark" title="g-group" className="mb-3 grid h-9 w-9 select-none place-items-center rounded-[10px] bg-brand text-[17px] font-black italic leading-none tracking-tight text-brand-fg shadow-soft ring-1 ring-inset ring-black/10">g</div>
       {NAV_ITEMS.map((it) => (
         <div key={it.key} className="relative">
           {on(it.key) && <span aria-hidden className="absolute -left-[12px] top-2 h-6 w-[3px] rounded-r bg-brand" />}

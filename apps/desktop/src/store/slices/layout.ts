@@ -25,6 +25,9 @@ export type LayoutSlice = Pick<Ctx, 'dark' | 'debug' | 'setDark' | 'setDebug' | 
   contact: PersonId
   wbTab: WbTab
   fileSel: string | null
+  /** null 跟随窗口；手动选择在本次应用会话内保留。 */
+  fileContextPreference: boolean | null
+  setFileContextPreference: (open: boolean) => void
   widths: Record<Pane | 'float', number>
   setBackend: (b: BackendState) => void
   pickTab: (i: number) => void
@@ -53,6 +56,7 @@ export const createLayoutSlice: Slice<LayoutSlice> = (set, get) => ({
   contact: boot.contact,
   wbTab: boot.wbTab,
   fileSel: boot.file,
+  fileContextPreference: null,
   helperPanel: boot.helperPanel,
   helperGlobal: boot.helperGlobal,
   widths: { list: LAYOUT.list.initial, split: SPLIT_INITIAL, float: LAYOUT.float.initial, helper: LAYOUT.helper.initial },
@@ -85,6 +89,7 @@ export const createLayoutSlice: Slice<LayoutSlice> = (set, get) => ({
   pickContact: (contact) => set({ contact, wbTab: 'overview' }),
   setWbTab: (wbTab) => set({ wbTab }),
   setFileSel: (fileSel) => set({ fileSel }),
+  setFileContextPreference: (fileContextPreference) => set({ fileContextPreference }),
 
   resize: (pane, delta) => set((s) => {
     const r = LAYOUT[pane]

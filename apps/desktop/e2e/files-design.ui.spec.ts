@@ -34,8 +34,8 @@ for (const theme of ['light', 'dark'] as const) {
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('files-main')).toHaveAttribute('data-file', 'a1');
     await shot(page, `files-design/${theme}/reader`, 300);
-    await page.getByTestId('file-context-toggle').click();
     await expect(page.getByTestId('file-related-g2')).toBeVisible();
+    await expect(page.getByTestId('file-related-g2')).toHaveAttribute('data-current', 'true');
     await shot(page, `files-design/${theme}/context`, 300);
     await page.getByRole('button', { name: '收起对话' }).click();
     await page.getByTestId('file-discuss').click();
