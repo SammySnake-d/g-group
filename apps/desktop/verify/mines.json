@@ -114,5 +114,13 @@
   "find": "absolute inset-x-0 bottom-3 flex justify-center",
   "replace": "absolute inset-x-0 bottom-40 flex justify-center",
   "spec": "e2e/shell-look.ui.spec.ts"
+ },
+ {
+  "id": "M-STICK-1",
+  "desc": "去掉贴底跟随:内容展开变高后视图离开底部",
+  "file": "src/app/chat/ChatView.tsx",
+  "find": "const ro = new ResizeObserver(() => { if (stick.current || following.current) el.scrollTo({ top: 1e7 }) })",
+  "replace": "const ro = new ResizeObserver(() => {})",
+  "spec": "e2e/shell-look.ui.spec.ts"
  }
 ]

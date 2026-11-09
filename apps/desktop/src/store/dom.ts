@@ -5,4 +5,10 @@ export const composerInput: { current: HTMLTextAreaElement | null } = { current:
 /** 下一拍再聚焦:等草稿、引用条先渲染出来 */
 export const focusComposer = () => setTimeout(() => composerInput.current?.focus(), 0)
 
-export const scrollToMsg = (msgId: string) => document.getElementById('m-' + msgId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+/** 聊天区的「贴底跟随」:ChatView 挂上;跳到某条旧消息前先松开,免得内容变高时又被拽回底部 */
+export const chatFollow: { release: () => void } = { release: () => {} }
+
+export const scrollToMsg = (msgId: string) => {
+  chatFollow.release()
+  document.getElementById('m-' + msgId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}

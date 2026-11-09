@@ -3,6 +3,7 @@ import { TopStrip } from '@/components/GroupSide'
 import { MessageList } from '@/components/Messages'
 import type { Msg } from '@/data'
 import { useApp } from '@/store'
+import { chatFollow } from '@/store/dom'
 import { activeConv, withUnreadDivider } from '@/store/select'
 import { JumpToLatest } from '../JumpToLatest'
 import { ChatHeader } from './ChatHeader'
@@ -26,9 +27,42 @@ export function ChatView() {
   const [atBottom, setAtBottom] = useState(true)
   const [newCount, setNewCount] = useState(0)
   const lastLen = useRef(0)
-  const toBottom = (smooth?: boolean) => scrollRef.current?.scrollTo({ top: 1e7, ...(smooth ? { behavior: 'smooth' as const } : {}) })
+  const colRef = useRef<HTMLDivElement>(null)
+  /* 贴底:在底部时内容变高(提问卡展开、图片加载、新消息长高)也跟着贴底;用户自己往上翻了就不跟。
+     following = 我们主动发起的滚到底还没滚完(平滑滚动途中的 scroll 事件不算用户离开底部) */
+  const stick = useRef(true)
+  const following = useRef(false)
+  const toBottom = (smooth?: boolean) => {
+    following.current = true
+    scrollRef.current?.scrollTo({ top: 1e7, ...(smooth ? { behavior: 'smooth' as const } : {}) })
+  }
+  const onScroll = (el: HTMLDivElement) => {
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM
+    if (following.current && !near) return
+    stick.current = near
+    setAtBottom(near)
+  }
 
-  useEffect(() => { toBottom(); setAtBottom(true) }, [active])
+  useEffect(() => { stick.current = true; toBottom(); setAtBottom(true) }, [active])
+  useEffect(() => {
+    const el = scrollRef.current, col = colRef.current
+    if (!el || !col) return
+    const done = () => { following.current = false; onScroll(el) }
+    // 用户主动滚动(滚轮、触摸、键盘)立刻结束「跟随」
+    const userScroll = () => { following.current = false }
+    const ro = new ResizeObserver(() => { if (stick.current || following.current) el.scrollTo({ top: 1e7 }) })
+    ro.observe(col)
+    chatFollow.release = () => { following.current = false; stick.current = false }
+    el.addEventListener('scrollend', done)
+    for (const ev of ['wheel', 'touchstart', 'keydown'] as const) el.addEventListener(ev, userScroll, { passive: true })
+    return () => {
+      ro.disconnect()
+      chatFollow.release = () => {}
+      el.removeEventListener('scrollend', done)
+      for (const ev of ['wheel', 'touchstart', 'keydown'] as const) el.removeEventListener(ev, userScroll)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   /* 新消息:在底部(或是自己发的)就跟着滚,否则攒成「N 条新消息」 */
   useEffect(() => {
     const grew = conv.messages.length - lastLen.current
@@ -46,8 +80,8 @@ export function ChatView() {
       <ChatHeader conv={conv} />
       {conv.kind === 'group' && <TopStrip conv={conv} onOpen={(tab) => openSplit({ t: 'group', id: conv.id, tab })} />}
       <div className="relative min-h-0 flex-1">
-        <div ref={scrollRef} data-scroll="chat" onScroll={(e) => { const el = e.currentTarget; setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM) }} className="scroll-thin h-full overflow-y-auto" style={{ ['--avatar-ring' as string]: 'var(--bg)' }}>
-          <div className="mx-auto w-full max-w-[var(--chat-col)] px-6 pb-3 pt-1" data-testid="chat-column">
+        <div ref={scrollRef} data-scroll="chat" onScroll={(e) => onScroll(e.currentTarget)} className="scroll-thin h-full overflow-y-auto" style={{ ['--avatar-ring' as string]: 'var(--bg)' }}>
+          <div ref={colRef} className="mx-auto w-full max-w-[var(--chat-col)] px-6 pb-3 pt-1" data-testid="chat-column">
             <MessageList msgs={withUnreadDivider(conv, unreadAt)} highlight={highlight} selecting={selecting} selected={selected} onSelect={toggleSelected} conv={conv.id} />
             {typing && <div data-testid="typing"><MessageList msgs={[{ k: 'replying', id: 'typing', from: typing, quotes: lastMineMsg ? [{ msgId: lastMineMsg.id, from: 'me', text: lastMineMsg.text }] : [], phase: '在想', mins: 0, steps: ['读了最新几条消息', '判断要不要接这件事'] }]} conv={active} /></div>}
           </div>

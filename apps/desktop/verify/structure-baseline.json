@@ -3,7 +3,6 @@
   "lines": {
     "components/GroupSide.tsx": 412,
     "components/ModelSettings.tsx": 638,
-    "components/Panorama.tsx": 471,
     "components/Plugins.tsx": 789
   },
   "buttons": {
@@ -12,7 +11,6 @@
     "components/CronList.tsx": 3,
     "components/GroupSide.tsx": 29,
     "components/ModelSettings.tsx": 16,
-    "components/Panorama.tsx": 20,
     "components/Plugins.tsx": 37
   },
   "literals": {
