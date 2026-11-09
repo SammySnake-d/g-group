@@ -4,11 +4,22 @@
     {
       "id": "AC-51",
       "status": "未测",
-      "reason": "经宿主真实运行(packages/server/proof/e2e-model-hotswap.txt):① 改模型后下一次输入网关记录的请求模型就是新值(退回重试入口;私聊/群聊/任务话题入口走同一 computeTurn,见 model-turns.test.ts);② 同一会话 id、同一 PID(started 只一次),换到 B 后答出 A 那一轮的暗号并写进 code.txt;⑥ 账本 start=A、turn=B,累积厂商 {deepseek, openai}。③在途不打断、④切换被拒不静默、⑤兜底重启只在适配器假 CLI 测试里验证(feat/cc-resident),本机网关接受任何模型 id、复现不出真实拒绝;⑦换 harness 随 Codex 接入。网关把所有请求实际交给同一个上游模型(served 字段),只证明 Claude Code 发出的请求模型跟上了。待审查"
+      "reason": "经宿主真实运行(packages/server/proof/e2e-model-hotswap.txt):① 改模型后下一次输入网关记录的请求模型就是新值(退回重试入口;私聊/群聊/任务话题入口走同一 computeTurn,见 model-turns.test.ts);② 同一会话 id、同一 PID(started 只一次),换到 B 后答出 A 那一轮的暗号并写进 code.txt;⑥ 账本 start=A、turn=B,累积厂商 {deepseek, openai}。③在途不打断、⑤兜底重启只在适配器假 CLI 测试里验证(feat/cc-resident);④切换被拒不静默已有一次真实触发(packages/server/proof/e2e-model-hotswap-refused.txt:换到 workbuddy-ai/deepseek-v4.1-flash-sg 时上游 429,set_model 回 error,宿主这一轮不发出、记 blocked/model 进度、联系人给两条修复路径,网关在切换探测后无请求、账本只有 start);⑦换 harness 随 Codex 接入。第一次实跑的网关把所有请求实际交给同一个上游模型(served 字段),只证明 Claude Code 发出的请求模型跟上了;补跑时只有 anyrouter 一条上游可用,同一会话里换成功且实际服务模型也跟着变仍未证明。待审查"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "packages/server/proof/model-hotswap-wire-mutations.txt"
     }
   ],
-  "author": { "agent": "claude", "session": "claude:616edc61-14d8-4e9e-9519-ec8c2abc9af7", "model": "claude-opus-5-5" },
-  "red": { "commit": "fcd8039" },
+  "author": {
+    "agent": "claude",
+    "session": "claude:616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "fcd8039"
+  },
   "unverifiable": "AC-51 ① 的真实观测点是网关逐请求记录,本机网关把所有请求路由到同一个上游(served=claude-opus-5-5),所以「新模型真的在服务」没被证明,只证明了 Claude Code 每轮发出的 model 字段跟着宿主走;空闲回收阈值 10 分钟是资源策略参数,没有用户拍板,可调",
   "waiver": null,
   "review": null,
