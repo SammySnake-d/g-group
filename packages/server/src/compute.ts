@@ -19,8 +19,10 @@ export function claudeAdapterOptions(env: Readonly<Record<string, string | undef
   return { hostEnv, idleReclaimMs };
 }
 
-/** 适配器工厂:宿主按 Harness 只调一次;收到的模型参数不固定进实例,每一轮的模型随输入给。 */
-export function claudeCompute(env: Readonly<Record<string, string | undefined>>): (model: string) => ComputeAdapter {
-  const opts = claudeAdapterOptions(env);
+/** 适配器工厂:宿主按 Harness 只调一次;收到的模型参数不固定进实例,每一轮的模型随输入给。
+ * extraEnv 是宿主定的进程级策略变量(如 AC-36 F3 的 CLAUDE_CODE_MAX_RETRIES),不得含模型。 */
+export function claudeCompute(env: Readonly<Record<string, string | undefined>>, extraEnv: Readonly<Record<string, string>> = {}): (model: string) => ComputeAdapter {
+  const base = claudeAdapterOptions(env);
+  const opts = { ...base, hostEnv: { ...base.hostEnv, ...extraEnv } };
   return () => createResidentComputeAdapter(opts);
 }

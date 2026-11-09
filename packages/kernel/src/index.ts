@@ -9,7 +9,7 @@ export * from "./attention.ts";
 export * from "./cron.ts";
 export * from "./failure-class.ts";
 export * from "./run-ledger.ts";
-export * from "./retry-policy.ts";
 export * from "./compact.ts";
+export * from "./retry-policy.ts";
 export * from "./memory.ts";
 export * from "./quote-chain.ts";
