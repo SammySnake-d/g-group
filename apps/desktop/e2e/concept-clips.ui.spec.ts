@@ -31,18 +31,20 @@ async function sampleScale(page: Page, sel: string, ms: number) {
 }
 
 /** 真实帧连拍:用 Chrome 的 screencast 把动作前后 ms 毫秒里浏览器真的画出来的每一帧收下来(和录像同源,不重放、不模拟),
- *  存成 <name>-cast-<theme>-<序号>.png;没设 GG_SHOTS 时只执行动作 */
+ *  存成 <name>-cast-<theme>-<序号>.jpg;没设 GG_SHOTS 时只执行动作 */
 async function screencast(page: Page, name: string, theme: string, ms: number, act: () => Promise<unknown>) {
   if (!DIR) return act();
   fs.mkdirSync(DIR, { recursive: true });
   const cdp = await page.context().newCDPSession(page);
   const frames: Buffer[] = [];
   cdp.on("Page.screencastFrame", (f) => { frames.push(Buffer.from(f.data, "base64")); void cdp.send("Page.screencastFrameAck", { sessionId: f.sessionId }).catch(() => {}); });
-  await cdp.send("Page.startScreencast", { format: "png", everyNthFrame: 1 });
+  await cdp.send("Page.startScreencast", { format: "jpeg", quality: 85, everyNthFrame: 1 });
   const r = await act();
   await page.waitForTimeout(ms);
   await cdp.send("Page.stopScreencast");
-  frames.forEach((b, i) => fs.writeFileSync(path.join(DIR, `${name}-cast-${theme}-${String(i).padStart(2, "0")}.png`), b));
+  /* 只留均匀分布的 14 帧(取回云端截图包要走网络,全留太大) */
+  const keep = frames.length <= 14 ? frames : Array.from({ length: 14 }, (_, i) => frames[Math.round((i * (frames.length - 1)) / 13)]);
+  keep.forEach((b, i) => fs.writeFileSync(path.join(DIR, `${name}-cast-${theme}-${String(i).padStart(2, "0")}.jpg`), b));
   await cdp.detach();
   return r;
 }
