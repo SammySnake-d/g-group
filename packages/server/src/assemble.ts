@@ -1,6 +1,6 @@
 // 默认的五块重拼(需求文档 D06 §2)。内核的 assembleRound 合入后由宿主改用它;这里先给闭环一个可跑的最小实现,
 // 形状完全按 runtime-ports 的 RoundRequest:块号 1–5 固定顺序,只有第 1 块末尾是缓存断点,第 1 块不放任何易变内容。
-import { BLOCK_LABELS, type BlockNo, type Inbound, type RoundBlock, type RoundRequest, assembleRound } from "@g-group/kernel";
+import { BLOCK_LABELS, type BlockNo, type Inbound, type RoundBlock, type RoundRequest, STATE_NOTE_GUIDE, assembleRound } from "@g-group/kernel";
 
 export interface LedgerLine {
   readonly id: string;
@@ -90,6 +90,8 @@ export const CONTACT_SYSTEM = [
   "deliver 的 text 会原样作为交付消息发到会话里;交付时不要再用 reply 重复同样的内容。",
   "群里一条消息 @ 了别的联系人、没 @ 你时,那件事归被 @ 的人:你不要接活、不要说「我来做」,宿主也会拒绝你为它开 Compute;同一条消息已有别人接手时同样不要再接。",
   "交付后等提出者本人回复:他明确说通过,用 verdict(accept) 记下;他说要改什么,用 verdict(revise) 并带上原话。sourceSeq 必须是他本人在交付之后发的那条;别人说的、转述的或交付之前的话都不算。没回复就一直等,不要自己当作通过。",
+  "每轮结束前用 update_state_note 写状态笔记:下一轮你看不到这一轮的消息原文,只看得到状态笔记、承诺账本和新消息。",
+  STATE_NOTE_GUIDE,
 ].join("\n");
 
 export const CONTACT_TOOLS = [
@@ -100,6 +102,7 @@ export const CONTACT_TOOLS = [
   "deliver(taskId, text) — 交付任务结果",
   "stop(taskId) — 停止任务",
   "verdict(taskId, sourceSeq, accept|revise, feedback?) — 记下提出者对交付的回复:通过或要改",
+  "update_state_note(note) — 写状态笔记(下一轮第 3 块)",
 ].join("\n");
 
 /** 预算:整个请求(五块文本之和)的 UTF-8 字节上限。超了显式失败,不静默截断(D06 §2)。数值待决(需求文档 v3.20 §8.1 待决 13),宿主可用参数覆盖。 */

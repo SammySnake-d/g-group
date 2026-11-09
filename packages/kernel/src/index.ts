@@ -9,3 +9,4 @@ export * from "./attention.ts";
 export * from "./cron.ts";
 export * from "./failure-class.ts";
 export * from "./run-ledger.ts";
+export * from "./compact.ts";

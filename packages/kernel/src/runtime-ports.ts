@@ -111,3 +111,38 @@ export interface ContactMind {
   /** 跑一轮。signal 触发时应尽快放弃(宿主发现发送前出现更新的用户消息,会中止重跑)。 */
   round(input: RoundInput, signal: AbortSignal): Promise<RoundOutput>;
 }
+
+/**
+ * 状态笔记的写法(D06 第 2 小节第 3 块,借 NVIDIA 附录 A;D25 第 8 节交接笔记同构)。
+ * 联系人每轮结束前按它写;宿主替联系人压缩时也交给压缩器照它写。只写下一轮继续要用的事实,不复述过程。
+ */
+export const STATE_NOTE_GUIDE: string = [
+  "状态笔记是下一轮你唯一能看到的工作记忆(另有承诺账本原文与新消息);按下面五项写,只写之后还要用的事实,不复述过程:",
+  "1 在做什么:对方还没了结的每条要求,连同它依赖的对象、数值、条件原文要点(如要排序的词、改过的时间),标来源 #seq;",
+  "2 下一步;",
+  "3 完成判据;",
+  "4 相关指针:#seq、任务号、文件路径;",
+  "5 走不通的路。",
+  "被后来的消息改掉的条件只留新的,写明「#x 改了 #y」。",
+].join("\n");
+
+/** 压缩的种类:round-note 联系人本轮没写笔记,由宿主据本轮材料补写;shrink 笔记超过上限,缩写 */
+export type CompactKind = "round-note" | "shrink";
+/**
+ * 一次状态笔记压缩(D06 第 2 小节、D25 第 8 节;AC-32 ③)。
+ * 必须用 contact.speakingModel 发起独立、无状态的一次调用:不进联系人会话、不带工具、不改第 1 块前缀;
+ * 失败就抛错,宿主保留旧笔记,不换别的模型或厂商重试。
+ */
+export interface CompactRequest {
+  readonly contact: ContactProfile;
+  readonly kind: CompactKind;
+  /** 旧状态笔记;没有为 null */
+  readonly previous: string | null;
+  /** round-note:本轮新输入原文与联系人本轮动作(compactMaterial 生成);shrink:"" */
+  readonly material: string;
+  /** 新笔记的 UTF-8 字节上限;null 不设 */
+  readonly maxBytes: number | null;
+}
+export interface ContactCompactor {
+  compact(req: CompactRequest, signal: AbortSignal): Promise<string>;
+}
