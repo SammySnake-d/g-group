@@ -1,98 +1,88 @@
-# 2026-11-09 AC-22 真实 Claude Code Compute 在独立 worktree 里改、钉候选提交、受控合入(联系人脑子为规则替身 scriptedMind)
-# 模型经 ANTHROPIC_DEFAULT_SONNET_MODEL 传入,网关地址与令牌只经环境变量,未落盘。仓库是临时裸仓库 /tmp/gg-wt-proof/repo.git(main 上只有中性 README)。
+# 2026-11-09 AC-22 真实 Claude Code Compute 在独立 worktree 里改、钉候选提交、受控合入(联系人脑子为规则替身 scriptedMind;交付按 AC-56 是普通消息,--accept 走 tasks.accept 显式入口回「通过」)
+# 基线 dev/integration bf8a947 + 本分支。模型经 ANTHROPIC_DEFAULT_SONNET_MODEL 传入,网关地址与令牌只经环境变量,未落盘。仓库是临时裸仓库 /tmp/gg-wt-proof/repo.git(main 上只有中性 README)。
 # 运行一:派活 A,不验收(停在 T5,工作树 W3 钉住候选)
 $ node packages/server/src/cli.ts dm --db /tmp/gg-wt-proof/gg.db --compute claude --repo /tmp/gg-wt-proof/repo.git --target main --timeout 900 "帮我在当前工作目录写一个 notes-a.md,内容只有一行:worktree proof A"
+[宿主] recall {"contactId":"c-mw8m94jh-0","roundId":"c-mw8m94jh-0:r1:mw8m94jn","items":[]}
   → 小克: 接了任务:在当前工作目录写一个 notes-a.md,内容只有一行:worktree pr
   → 小克: 好的,我安排 Compute 去在当前工作目录写一个 notes-a.md,内容只有一行:worktree proof A,有进度告诉你。
   · Compute started: 已开始
-  · Compute completed: 我在当前工作目录 `/private/tmp/gg-wt-proof/worktrees/t-mw85ekaj-1` 下新建了 `notes-a.md`，读回内容确认只有一行：
+  · Compute completed: 我在当前工作目录 `/private/tmp/gg-wt-proof/worktrees/t-mw8m94ju-1` 下创建了 `notes-a.md`。读回检查过,文件只有一行 `worktree proof A`。
 
-```
-worktree proof A
-```
+已向宿主汇报开始和完成。
+[宿主] recall {"contactId":"c-mw8m94jh-0","roundId":"c-mw8m94jh-0:r2:mw8m9gyr","items":[]}
+  → 小克: 做完了:我在当前工作目录 `/private/tmp/gg-wt-proof/worktrees/t-mw8m94ju-1` 下创建了 `notes-a.md`。读回检查过,文件只有一行 `worktree proof A`。
 
-这个文件原来不存在，没有覆盖已有内容。我已经向宿主报了任务完成，并记下了这次新建文件的操作。
-  → 小克: 做完了:我在当前工作目录 `/private/tmp/gg-wt-proof/worktrees/t-mw85ekaj-1` 下新建了 `notes-a.md`，读回内容确认只有一行：
-
-```
-worktree proof A
-```
-
-这个文件原来不存在，没有覆盖已有内容。我已经向宿主报了任务完成，并记下了这次新建文件的操作。
+已向宿主汇报开始和完成。
 —— 会话 ——
 #1 我: 帮我在当前工作目录写一个 notes-a.md,内容只有一行:worktree proof A
 #2 小克: 接了任务:在当前工作目录写一个 notes-a.md,内容只有一行:worktree pr  [卡片:task-status/open 取消任务]
 #3 小克: 好的,我安排 Compute 去在当前工作目录写一个 notes-a.md,内容只有一行:worktree proof A,有进度告诉你。
-#4 小克: 做完了:我在当前工作目录 `/private/tmp/gg-wt-proof/worktrees/t-mw85ekaj-1` 下新建了 `notes-a.md`，读回内容确认只有一行：
+#4 小克: 做完了:我在当前工作目录 `/private/tmp/gg-wt-proof/worktrees/t-mw8m94ju-1` 下创建了 `notes-a.md`。读回检查过,文件只有一行 `worktree proof A`。
 
-```
-worktree proof A
-```
+已向宿主汇报开始和完成。  [@我]
+任务 t-mw8m94ju-1 [T5_InReview] 在当前工作目录写一个 notes-a.md,内容只有一行:worktree pr 审查门=none 进度=started>completed Compute=cc-425b7f70-5c69-4df2-8e60-d717352067f1
+  工作树 W3_Pinned 分支=gg/task-t-mw8m94ju-1 base=1562d76193fe 候选=2c82cd376a8b 合入=- 重验基于=-
 
-这个文件原来不存在，没有覆盖已有内容。我已经向宿主报了任务完成，并记下了这次新建文件的操作。  [卡片:delivery/open 豁免审查并通过|退回]
-任务 t-mw85ekaj-1 [T5_InReview] 在当前工作目录写一个 notes-a.md,内容只有一行:worktree pr 审查门=none 进度=started>completed
-  工作树 W3_Pinned 分支=gg/task-t-mw85ekaj-1 base=050fa0a26d78 候选=f02a2a27292a 合入=- 重验基于=-
-node packages/server/src/cli.ts dm --db $P/gg.db --compute claude --repo       2.72s user 2.41s system 14% cpu 34.260 total
-
-# 模拟别的任务先合入:在 main 上加 other.md(H1=0de689c5876393c7f5c202e49f32f1248a24727a)
+# 模拟别的任务先合入:在 main 上加 other.md(H1=ebe30658a3352cc9ea517a00c3bcba6408d6627c)
 $ git -C repo.git worktree add --detach adv main; 写 adv/other.md; git -C adv commit -m '别的任务先合入 other.md'; git -C repo.git update-ref refs/heads/main <新提交>
 
 # 运行二:派活 B 并验收全部交付(--accept),配了重验命令 ls notes-a.md other.md(在合并结果里两个文件都在才退出 0)
 $ node packages/server/src/cli.ts dm --db /tmp/gg-wt-proof/gg.db --compute claude --repo /tmp/gg-wt-proof/repo.git --target main --verify "ls notes-a.md other.md" --accept --timeout 900 "帮我在当前工作目录写一个 notes-b.md,内容只有一行:worktree proof B"
+[宿主] recall {"contactId":"c-mw8m94jh-0","roundId":"c-mw8m94jh-0:r1:mw8m9j62","items":[]}
   → 小克: 接了任务:在当前工作目录写一个 notes-b.md,内容只有一行:worktree pr
   → 小克: 好的,我安排 Compute 去在当前工作目录写一个 notes-b.md,内容只有一行:worktree proof B,有进度告诉你。
   · Compute started: 已开始
-  · Compute completed: 我在当前工作目录 `/private/tmp/gg-wt-proof/worktrees/t-mw85fh64-0` 创建了 `notes-b.md`,内容只有一行 `worktree proof B`。写完后读回检查过，内容一致。已向宿主报告完成。
-  → 小克: 做完了:我在当前工作目录 `/private/tmp/gg-wt-proof/worktrees/t-mw85fh64-0` 创建了 `notes-b.md`,内容只有一行 `worktree proof B`。写完后读回检查过，内容一致。已向宿主报告完成。
-  ✓ 验收 t-mw85fh64-0(豁免审查)
-  ✓ 验收 t-mw85ekaj-1(豁免审查)
-[宿主] stale-round {"contactId":"c-mw85eka9-0","roomId":"dm-c-mw85eka9-0","newer":[10]}
-  → 小克: 收到:豁免审查并通过
-  → 小克: 收到:豁免审查并通过
-  → 小克: 进度:已合入 main@933e53ff7dbc(主线未变,快进)
-  → 小克: 进度:已合入 main@c9b4e4056e5c(主线已推进到 933e53ff7dbc,合并后重验通过)
+  · Compute completed: 我在当前工作目录 `/private/tmp/gg-wt-proof/worktrees/t-mw8m9j6i-0` 下新建了 `notes-b.md`,内容只有一行 `worktree proof B`。写完后读回文件确认过,内容正确。也已经向宿主报告任务完成,并登记了新建这个文件。
+[宿主] recall {"contactId":"c-mw8m94jh-0","roundId":"c-mw8m94jh-0:r2:mw8m9x6l","items":[]}
+  → 小克: 做完了:我在当前工作目录 `/private/tmp/gg-wt-proof/worktrees/t-mw8m9j6i-0` 下新建了 `notes-b.md`,内容只有一行 `worktree proof B`。写完后读回文件确认过,内容正确。也已经向宿主报告任务完成,并登记了新建这个文件。
+  ✓ 验收 t-mw8m9j6i-0(豁免审查)
+[宿主] recall {"contactId":"c-mw8m94jh-0","roundId":"c-mw8m94jh-0:r3:mw8m9xon","items":[{"roomId":"dm-c-mw8m94jh-0","seq":8,"primary":true,"state":"Full","bytes":267,"totalBytes":267,"nextCursor":null}]}
+  ✓ 验收 t-mw8m94ju-1(豁免审查)
+[宿主] stale-round {"contactId":"c-mw8m94jh-0","roomId":"dm-c-mw8m94jh-0","newer":[10]}
+[宿主] recall {"contactId":"c-mw8m94jh-0","roundId":"c-mw8m94jh-0:r4:mw8m9xuu","items":[{"roomId":"dm-c-mw8m94jh-0","seq":8,"primary":true,"state":"Full","bytes":267,"totalBytes":267,"nextCursor":null},{"roomId":"dm-c-mw8m94jh-0","seq":4,"primary":true,"state":"Full","bytes":207,"totalBytes":207,"nextCursor":null}]}
+  → 小克: 收到:通过
+  → 小克: 收到:通过
+[宿主] recall {"contactId":"c-mw8m94jh-0","roundId":"c-mw8m94jh-0:r5:mw8m9xv0","items":[]}
+  → 小克: 进度:已合入 main@eaf764b3c33c(主线未变,快进)
+[宿主] recall {"contactId":"c-mw8m94jh-0","roundId":"c-mw8m94jh-0:r6:mw8m9ybo","items":[]}
+  → 小克: 进度:已合入 main@8b3c59b0a494(主线已推进到 eaf764b3c33c,合并后重验通过)
 —— 会话 ——
 #1 我: 帮我在当前工作目录写一个 notes-a.md,内容只有一行:worktree proof A
-#2 小克: 接了任务:在当前工作目录写一个 notes-a.md,内容只有一行:worktree pr  [卡片:task-status/open 取消任务]
+#2 小克: 接了任务:在当前工作目录写一个 notes-a.md,内容只有一行:worktree pr  [卡片:task-status/done 取消任务]
 #3 小克: 好的,我安排 Compute 去在当前工作目录写一个 notes-a.md,内容只有一行:worktree proof A,有进度告诉你。
-#4 小克: 做完了:我在当前工作目录 `/private/tmp/gg-wt-proof/worktrees/t-mw85ekaj-1` 下新建了 `notes-a.md`，读回内容确认只有一行：
+#4 小克: 做完了:我在当前工作目录 `/private/tmp/gg-wt-proof/worktrees/t-mw8m94ju-1` 下创建了 `notes-a.md`。读回检查过,文件只有一行 `worktree proof A`。
 
-```
-worktree proof A
-```
-
-这个文件原来不存在，没有覆盖已有内容。我已经向宿主报了任务完成，并记下了这次新建文件的操作。  [卡片:delivery/done 豁免审查并通过|退回]
+已向宿主汇报开始和完成。  [@我]
 #5 我: 帮我在当前工作目录写一个 notes-b.md,内容只有一行:worktree proof B
-#6 小克: 接了任务:在当前工作目录写一个 notes-b.md,内容只有一行:worktree pr  [卡片:task-status/open 取消任务]
+#6 小克: 接了任务:在当前工作目录写一个 notes-b.md,内容只有一行:worktree pr  [卡片:task-status/done 取消任务]
 #7 小克: 好的,我安排 Compute 去在当前工作目录写一个 notes-b.md,内容只有一行:worktree proof B,有进度告诉你。
-#8 小克: 做完了:我在当前工作目录 `/private/tmp/gg-wt-proof/worktrees/t-mw85fh64-0` 创建了 `notes-b.md`,内容只有一行 `worktree proof B`。写完后读回检查过，内容一致。已向宿主报告完成。  [卡片:delivery/done 豁免审查并通过|退回]
-#9 我: 豁免审查并通过
-#10 我: 豁免审查并通过
-#11 小克: 收到:豁免审查并通过
-#12 小克: 收到:豁免审查并通过
-#13 小克: 进度:已合入 main@933e53ff7dbc(主线未变,快进)
-#14 小克: 进度:已合入 main@c9b4e4056e5c(主线已推进到 933e53ff7dbc,合并后重验通过)
-任务 t-mw85fh64-0 [T8_Accepted] 在当前工作目录写一个 notes-b.md,内容只有一行:worktree pr 审查门=waived-by-user 进度=started>completed
-  工作树 W6_Merged 分支=gg/task-t-mw85fh64-0 base=0de689c58763 候选=933e53ff7dbc 合入=933e53ff7dbc 重验基于=-
-任务 t-mw85ekaj-1 [T8_Accepted] 在当前工作目录写一个 notes-a.md,内容只有一行:worktree pr 审查门=waived-by-user 进度=started>completed
-  工作树 W6_Merged 分支=gg/task-t-mw85ekaj-1 base=050fa0a26d78 候选=f02a2a27292a 合入=c9b4e4056e5c 重验基于=933e53ff7dbc
-node packages/server/src/cli.ts dm --db $P/gg.db --compute claude --repo       2.73s user 2.60s system 20% cpu 26.148 total
+#8 小克: 做完了:我在当前工作目录 `/private/tmp/gg-wt-proof/worktrees/t-mw8m9j6i-0` 下新建了 `notes-b.md`,内容只有一行 `worktree proof B`。写完后读回文件确认过,内容正确。也已经向宿主报告任务完成,并登记了新建这个文件。  [@我]
+#9 我: 通过
+#10 我: 通过
+#11 小克: 收到:通过
+#12 小克: 收到:通过
+#13 小克: 进度:已合入 main@eaf764b3c33c(主线未变,快进)
+#14 小克: 进度:已合入 main@8b3c59b0a494(主线已推进到 eaf764b3c33c,合并后重验通过)
+任务 t-mw8m9j6i-0 [T8_Accepted] 在当前工作目录写一个 notes-b.md,内容只有一行:worktree pr 审查门=waived-by-user 进度=started>completed Compute=cc-e9b71f49-37f9-4a7f-bee0-832345734864
+  工作树 W6_Merged 分支=gg/task-t-mw8m9j6i-0 base=ebe30658a335 候选=eaf764b3c33c 合入=eaf764b3c33c 重验基于=-
+任务 t-mw8m94ju-1 [T8_Accepted] 在当前工作目录写一个 notes-a.md,内容只有一行:worktree pr 审查门=waived-by-user 进度=started>completed Compute=cc-425b7f70-5c69-4df2-8e60-d717352067f1
+  工作树 W6_Merged 分支=gg/task-t-mw8m94ju-1 base=1562d76193fe 候选=2c82cd376a8b 合入=8b3c59b0a494 重验基于=eaf764b3c33c
 
 # 结果核对
 $ git -C repo.git log --oneline --graph main
-*   c9b4e40 合入 gg/task-t-mw85ekaj-1 → main
+*   8b3c59b 合入 gg/task-t-mw8m94ju-1 → main
 |\  
-| * f02a2a2 在当前工作目录写一个 notes-a.md,内容只有一行:worktree pr(任务 t-mw85ekaj-1)
-* | 933e53f 在当前工作目录写一个 notes-b.md,内容只有一行:worktree pr(任务 t-mw85fh64-0)
-* | 0de689c 别的任务先合入 other.md
+| * 2c82cd3 在当前工作目录写一个 notes-a.md,内容只有一行:worktree pr(任务 t-mw8m94ju-1)
+* | eaf764b 在当前工作目录写一个 notes-b.md,内容只有一行:worktree pr(任务 t-mw8m9j6i-0)
+* | ebe3065 别的任务先合入 other.md
 |/  
-* 050fa0a init
+* 1562d76 init
 $ git -C repo.git show main:notes-a.md; git -C repo.git show main:notes-b.md; git -C repo.git show main:other.md
 worktree proof A
 worktree proof B
 NEUTRAL_FIXTURE_NO_CREDENTIALS other
 $ git -C repo.git worktree list   # 合入后任务工作树已清理,任务分支保留
 /private/tmp/gg-wt-proof/repo.git (bare)
-  gg/task-t-mw85ekaj-1
-  gg/task-t-mw85fh64-0
-# 读法:B 的 base 是 H1、候选直接以 H1 为祖先 → 快进(933e53f);A 的 base 是 H0(050fa0a),目标已推进 → 在独立集成工作树里基于 933e53f 合并、跑重验命令通过后 CAS 推进到 c9b4e40。
+  gg/task-t-mw8m94ju-1
+  gg/task-t-mw8m9j6i-0
+# 读法:B 的 base 是 H1、候选以 H1 为祖先 → 快进;A 的 base 是 H0,目标已推进 → 在独立集成工作树里基于 B 合入后的 head 合并、跑重验命令通过后 CAS 推进(合并提交第一父 = 重验基于的 head)。
