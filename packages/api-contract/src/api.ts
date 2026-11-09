@@ -29,6 +29,7 @@ import {
   TASK_STATES,
   TaskView,
 } from "./entities.ts";
+import { DraftBody, DraftView } from "./draft.ts";
 import { arr, bool, id, int, isoTime, json, lit, nullable, obj, oneOf, opt, type Schema, seq, str, tagged } from "./schema.ts";
 
 /** 合同版本:破坏性改动加主版本;渲染进程启动时用 session.hello 核对。 */
@@ -119,6 +120,8 @@ export const METHODS = {
       attachments: opt(arr(id(), { max: 20 })),
       /** 在输入框里选了 slash 命令时带上;text 仍是用户看到的原文(如 "/summary 今天")。 */
       command: opt(SlashInvocation),
+      /** 发送时输入框草稿的 draftVer(AC-24);成功后服务端只清这一版草稿,等回执期间新打的字保留。不带则不动草稿。 */
+      draftVer: opt(int({ min: 0 })),
     }),
     MessageView,
   ),
@@ -126,6 +129,12 @@ export const METHODS = {
   "messages.retract": method(obj({ roomId: id(), seq: seq() }), MessageView),
   "messages.react": method(obj({ roomId: id(), seq: seq(), emoji: str({ min: 1, max: 32 }), on: bool() }), MessageView),
   "messages.receipts": method(obj({ roomId: id(), seq: seq() }), ReceiptView),
+  // ---- 输入框草稿(AC-24、AC-37 ②:按会话持久化,切窗口与重启都不丢;不是消息,不送达任何联系人) ----
+  /** 取某会话的草稿;没有时返回 draftVer = 0 的空草稿。 */
+  "drafts.get": method(obj({ roomId: id() }), DraftView),
+  /** 按 draftVer 做 CAS:expectedVer 必须等于服务端当前版本(没有草稿为 0),draft.draftVer 必须更大;否则 conflict,detail.current 是当前草稿。 */
+  "drafts.save": method(obj({ roomId: id(), expectedVer: int({ min: 0 }), draft: DraftBody }), DraftView),
+
   /** 上传附件(渲染进程先把文件交给 preload 拿到本地路径)。 */
   "attachments.add": method(obj({ path: str({ min: 1, max: 4096 }) }), obj({ ref: id(), name: str(), mime: str(), bytes: int({ min: 0 }) })),
 

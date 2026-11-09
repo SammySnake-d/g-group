@@ -1,0 +1,75 @@
+# 运行环境:main linux/x64 node v24.21.0
+# 基线(未变异):退出码 0,失败 0 条
+
+## M1 引用不去重
+文件:packages/api-contract/src/draft.ts
+改动:"if (d.quotedSeqs.includes(op.seq)) return d;" → ""
+结果:被杀死(退出码 1)
+  ✖ AC-37 ① 回复消息 10 后连续引用 12/15/18 并重复引用 12:reply=10、quoted=[10,12,15,18] 保序去重,只自动 @Claude Code
+  ✖ AC-37 ① a) 再对消息 12 点回复切换主回复:消息 10 降为普通引用留在原位,auto @ 从 Claude Code 换成 Argon,手打的 @Argon 不动
+  ✖ AC-37 ① b) 点当前主回复消息 12 的 [×]:清掉 reply 与它注入的 auto @Argon,用户手打的同一个人的 @Argon 保留
+  ✖ AC-37 ① c) 删尽所有引用块后 reply 为空、quoted=[],手打 @ 仍在
+  ✖ AC-37 ② 逐条 [×]:删普通引用 18 只移除 18,主回复 10 与 auto @ 不动;再引用 18 追加在末尾
+  ✖ 切换主回复到同一作者的另一条(12→18 都是 Argon):auto @Argon 只有一条,不重复也不丢
+  ✖ 回复自己的消息或宿主卡片不自动 @ 任何人;从联系人消息切到自己的消息时撤掉原 auto @
+  ✖ 用户手动删掉主回复的 auto @ 后主回复保留;之后再切主回复不会误删手打 @
+  ✖ 纯函数:不改入参;未改动返回原对象,改动后 draftVer + 1;入参不合格抛错
+  ✖ draftToSend 带出 messages.send 字段与 draftVer;draftIssues 逐条指出不合格的草稿
+
+## M2 删主回复连手打 @ 一起删
+文件:packages/api-contract/src/draft.ts
+改动:"replyAuthorId: null, mentions: withoutAuto(d.mentions, d.replyAuthorId) }" → "replyAuthorId: null, mentions: d.mentions.filter((m) => m.id !== d.replyAuthorId) }"
+结果:被杀死(退出码 1)
+  ✖ AC-37 ① b) 点当前主回复消息 12 的 [×]:清掉 reply 与它注入的 auto @Argon,用户手打的同一个人的 @Argon 保留
+
+## M3 切换主回复残留旧 auto @
+文件:packages/api-contract/src/draft.ts
+改动:"const mentions = withoutAuto(d.mentions, d.replyAuthorId);" → "const mentions = [...d.mentions];"
+结果:被杀死(退出码 1)
+  ✖ AC-37 ① a) 再对消息 12 点回复切换主回复:消息 10 降为普通引用留在原位,auto @ 从 Claude Code 换成 Argon,手打的 @Argon 不动
+  ✖ AC-37 ① b) 点当前主回复消息 12 的 [×]:清掉 reply 与它注入的 auto @Argon,用户手打的同一个人的 @Argon 保留
+  ✖ 切换主回复到同一作者的另一条(12→18 都是 Argon):auto @Argon 只有一条,不重复也不丢
+  ✖ 回复自己的消息或宿主卡片不自动 @ 任何人;从联系人消息切到自己的消息时撤掉原 auto @
+
+## M4 回执不比版本、整份清空
+文件:packages/api-contract/src/draft.ts
+改动:"if (d.draftVer <= r.submittedVer) {" → "if (true) {"
+结果:被杀死(退出码 1)
+  ✖ AC-24 迟到回执(S24-B):草稿版本等于或早于发送版本整份清空;等回执期间改过就只去掉已发部分,新打的字和新引用保留
+  ✖ 迟到回执:别的会话的回执不动本草稿;回执期间新选的主回复与它的 auto @ 保留
+  ✖ AC-24 发送带 draftVer:版本一致整份清空;等回执期间草稿已更新只去掉已发部分(S24-B);不带 draftVer 不动草稿
+
+## M5 迟到回执把新打的字也清掉
+文件:packages/api-contract/src/draft.ts
+改动:"const text = s.text !== \"\" && d.text.startsWith(s.text) ? d.text.slice(s.text.length).replace(/^\\s+/, \"\") : d.text;" → "const text = \"\";"
+结果:被杀死(退出码 1)
+  ✖ AC-24 迟到回执(S24-B):草稿版本等于或早于发送版本整份清空;等回执期间改过就只去掉已发部分,新打的字和新引用保留
+  ✖ 迟到回执:别的会话的回执不动本草稿;回执期间新选的主回复与它的 auto @ 保留
+  ✖ AC-24 发送带 draftVer:版本一致整份清空;等回执期间草稿已更新只去掉已发部分(S24-B);不带 draftVer 不动草稿
+
+## M6 草稿 CAS 不比版本
+文件:packages/server/src/host.ts
+改动:"if (curVer !== expectedVer) throw" → "if (false) throw"
+结果:被杀死(退出码 1)
+  ✖ drafts.save 按 draftVer CAS:旧版本写入返回 conflict 并带当前草稿,不静默覆盖;版本不前进与不合格草稿被拒
+
+## M7 主回复不补进引用
+文件:packages/server/src/host.ts
+改动:"...(f.replyToSeq != null ? [f.replyToSeq] : [])" → ""
+结果:被杀死(退出码 1)
+  ✖ AC-37 ① 发送落盘:reply_to_seq 与 quoted_seqs 正交存储,引用保序去重,主回复不在引用里时补在末尾;auto/manual @ 原样保留,重启后不变
+
+## M8 不带 draftVer 的发送也清草稿
+文件:packages/server/src/host.ts
+改动:"if (input.draftVer !== undefined) settled = this.settleDraftTx(room.id, { roomId: room.id, submittedVer: input.draftVer, submitted });" → "settled = this.settleDraftTx(room.id, { roomId: room.id, submittedVer: input.draftVer ?? Number.MAX_SAFE_INTEGER, submitted });"
+结果:被杀死(退出码 1)
+  ✖ 草稿不是消息:反复保存不产生会话事件、不进待处理输入、不触发联系人轮次;对照:真发一条就触发
+  ✖ AC-24 发送带 draftVer:版本一致整份清空;等回执期间草稿已更新只去掉已发部分(S24-B);不带 draftVer 不动草稿
+
+## M9 保存草稿当成消息发出(进注意循环)
+文件:packages/server/src/host.ts
+改动:"    this.bus.emit({ type: \"draft.updated\", draft: saved });\n" → "    this.bus.emit({ type: \"draft.updated\", draft: saved });\n    this.send({ roomId, clientActionId: `draft-${body.draftVer}`, text: body.text || \"草稿\" });\n"
+结果:被杀死(退出码 1)
+  ✖ 草稿不是消息:反复保存不产生会话事件、不进待处理输入、不触发联系人轮次;对照:真发一条就触发
+
+# 合计:9 个变异,杀死 9,存活 0

@@ -52,6 +52,8 @@ export const RoomView = obj({
   /** 有需要用户处理的事(交付待确认、提问、失败卡)时 > 0,会话列表显示红点。 */
   pendingForUser: int({ min: 0 }),
   lastMessagePreview: nullable(str({ max: 500 })),
+  /** 输入框里有未发送草稿时的「[草稿] …」提示(AC-24);存过草稿后清空为 null,从没存过时不出现。 */
+  draftPreview: opt(nullable(str({ max: 500 }))),
   updatedAt: isoTime(),
   /** 当前有效群公告条数(AC-55);0 = 无公告空态。私聊恒为 0。 */
   announcementCount: opt(int({ min: 0 })),
