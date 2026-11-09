@@ -203,6 +203,16 @@ export const METHODS = {
   ),
   /** 给还没人负责(T1_Open)的任务指定负责人:以用户一条对话消息记录并 @ 它,由它认领并起 Compute。已有负责人 conflict;不是本会话联系人 invalid_params。clientActionId 幂等。 */
   "tasks.assign": method(obj({ taskId: id(), contactId: id(), clientActionId: id() }), TaskView),
+  /** 代码任务受控合入目标分支(AC-22):审查通过、交付后才能合;主线未变快进,主线已推进则合并后重验;
+   *  冲突或重验失败返回 workspace.state=W5_Conflict(目标分支未动)。验收交付卡时宿主会自动发起,这里是重试入口。 */
+  "tasks.integrate": method(obj({ taskId: id(), clientActionId: id() }), TaskView),
+
+  // ---- 工件 ----
+  /** 点开交付卡里的工件(AC-04):返回快照的本地路径与 sha256(与卡片里的相同);文本类 ≤1 MB 直接带回正文,其余 text 为 null。 */
+  "artifacts.get": method(
+    obj({ ref: id() }),
+    obj({ ref: id(), name: str({ max: 500 }), mime: str({ max: 200 }), bytes: int({ min: 0 }), sha256: str({ min: 64, max: 64, pattern: /^[0-9a-f]{64}$/ }), path: str({ max: 4096 }), text: nullable(str({ max: 1_048_576 })) }),
+  ),
 
   // ---- 承诺账本 ----
   "commitments.list": method(obj({ contactId: opt(id()), roomId: opt(id()), status: opt(oneOf(["active", "done", "revoked", "superseded", "blocked"] as const)) }), obj({ commitments: arr(CommitmentView) })),

@@ -128,6 +128,16 @@ export type AnnouncementView = Infer<typeof AnnouncementView>;
 export const SENDER_KINDS = ["user", "contact", "helper", "system"] as const;
 export const Sender = obj({ kind: oneOf(SENDER_KINDS), id: id() });
 export const Attachment = obj({ ref: id(), name: str({ max: 500 }), mime: str({ max: 200 }), bytes: int({ min: 0 }) });
+/** 交付带回的工件快照(AC-04):按内容 sha256 存一份,卡片钉住 hash;点开用 artifacts.get。 */
+export const ArtifactRef = obj({
+  ref: id(),
+  /** Compute 工作目录里的相对路径 */
+  name: str({ max: 500 }),
+  mime: str({ max: 200 }),
+  bytes: int({ min: 0 }),
+  sha256: str({ min: 64, max: 64, pattern: /^[0-9a-f]{64}$/ }),
+});
+export type ArtifactRef = Infer<typeof ArtifactRef>;
 /** 消息里的结构化卡片:任务状态卡、交付卡、提问卡、失败可重试卡。按钮的点击走 cards.act,以对话消息形式记录。 */
 export const CARD_KINDS = ["task-status", "delivery", "question", "failure", "schedule-fired", "plugin-result"] as const;
 export const CardAction = obj({ actionId: id(), label: str({ min: 1, max: 40 }), style: oneOf(["primary", "default", "danger"] as const) });
@@ -169,6 +179,8 @@ export const MessageView = obj({
   at: isoTime(),
   /** 私聊 rewind 撤下的消息为 true(AC-48):记录保留、照常列出(界面可置灰),但不再作为任何联系人的当前上下文。缺省视为 false。 */
   rewound: opt(bool()),
+  /** 交付消息带回的工件快照(AC-04,U45):卡片引用 ref + sha256,点开用 artifacts.get;没有工件的消息不带这个字段。 */
+  artifacts: opt(arr(ArtifactRef, { max: 20 })),
 });
 export type MessageView = Infer<typeof MessageView>;
 
@@ -217,6 +229,26 @@ export const ComputeRunView = obj({
   startedAt: isoTime(),
   endedAt: nullable(isoTime()),
 });
+/** 代码任务的隔离工作树(R-Worktree,AC-22):W2 在改 → W3 钉住候选提交 → W4 合入中 → W6 已合入;W5 合入冲突或重验失败(目标分支未动)。 */
+export const WORKSPACE_STATES = ["W2_Active", "W3_Pinned", "W4_Integrating", "W5_Conflict", "W6_Merged"] as const;
+export const WorkspaceView = obj({
+  /** 工作树目录;W6 合入后已清理 */
+  dir: str({ max: 4096 }),
+  branch: str({ max: 300 }),
+  targetBranch: str({ max: 300 }),
+  /** 拉出工作树时目标分支的 head(H0) */
+  baseSha: str({ max: 64 }),
+  /** 审查与合入钉住的候选提交 */
+  candidateSha: nullable(str({ max: 64 })),
+  state: oneOf(WORKSPACE_STATES),
+  /** 最近一次合入时看到的目标分支 head */
+  targetHead: nullable(str({ max: 64 })),
+  /** 目标分支被推进后,基于哪个 head 合并并重跑了验证;快进合入为 null */
+  verifiedOn: nullable(str({ max: 64 })),
+  mergedSha: nullable(str({ max: 64 })),
+  conflict: nullable(obj({ kind: oneOf(["merge", "verify"] as const), detail: str({ max: 5000 }) })),
+});
+export type WorkspaceView = Infer<typeof WorkspaceView>;
 export const TaskView = obj({
   id: id(),
   title: str({ max: 500 }),
@@ -258,7 +290,19 @@ export const TaskView = obj({
   modelAttempts: opt(arr(ModelAttemptView, { max: 10000 })),
   /** 由账本派生的累积生产厂商集合(跨厂商审查门禁按它判)。 */
   producerVendors: opt(arr(str({ max: 64 }), { max: 50 })),
-  artifacts: arr(obj({ ref: id(), name: str({ max: 500 }), kind: oneOf(["file", "diff", "link", "text"] as const) })),
+  artifacts: arr(
+    obj({
+      ref: id(),
+      name: str({ max: 500 }),
+      kind: oneOf(["file", "diff", "link", "text"] as const),
+      /** file 工件的内容 hash、大小与类型(AC-04),与 artifacts.get 读出的一致 */
+      sha256: opt(str({ min: 64, max: 64, pattern: /^[0-9a-f]{64}$/ })),
+      bytes: opt(int({ min: 0 })),
+      mime: opt(str({ max: 200 })),
+    }),
+  ),
+  /** 代码任务才有(宿主配了代码仓);普通任务不带这个字段。 */
+  workspace: opt(WorkspaceView),
   createdAt: isoTime(),
   updatedAt: isoTime(),
   /** 用户手动新建任务时填的描述,原样保留(AC-47);联系人派活建的任务没有这一项。 */
