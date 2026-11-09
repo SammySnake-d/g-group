@@ -78,7 +78,7 @@ export function scriptedCompute(
       { kind: "completed", result: `完成:${(brief as { task: string }).task}` },
     ]);
   const adapter = {
-    capabilities: { inSessionModelSwitch: true },
+    capabilities: { inSessionModelSwitch: true, isolation: true },
     async spawn(brief: unknown, o?: { cwd?: string; model?: string; effort?: string }): Promise<SpawnResult> {
       if (opts.failSpawn) return { ok: false, reason: opts.failSpawn };
       const computeId = `cp-${++n}`;

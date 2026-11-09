@@ -2233,9 +2233,11 @@ export class Host {
     const picked = (contact?.computeAssets ?? []).filter((x) => x.kind !== "script");
     const prep = this.capabilities.prepare(e.contactId, contact?.harness ?? "claude-code", contact?.computeAssets ?? []);
     if (!prep.ok) return fail(`勾选的能力不可用:${prep.missing.join("、")}`);
-    // 常驻适配器(按轮换模型)还不收专属配置目录与勾选能力:勾选了 skill/MCP 就明确失败,不带着缺项启动
-    if (modelAware && picked.length) return fail(`这个 Compute 适配器还不支持勾选的 skill/MCP(${picked.map((x) => x.name).join("、")}),不带着缺项启动`);
-    const iso = modelAware ? {} : { configDir: prep.home.configDir, pluginDirs: [...prep.home.pluginDirs], mcpServers: prep.home.mcpServers };
+    // 一次性适配器收专属配置目录与勾选能力;声明能力的适配器(常驻)要显式声明 isolation 才收。
+    // 不收的适配器:勾选了 skill/MCP 就明确失败,不带着缺项启动
+    const isoOk = !modelAware || (adapter as { capabilities?: { isolation?: unknown } }).capabilities?.isolation === true;
+    if (!isoOk && picked.length) return fail(`这个 Compute 适配器还不支持勾选的 skill/MCP(${picked.map((x) => x.name).join("、")}),不带着缺项启动`);
+    const iso = isoOk ? { configDir: prep.home.configDir, pluginDirs: [...prep.home.pluginDirs], mcpServers: prep.home.mcpServers } : {};
     const spawnOpts = { ...(cwd ? { cwd } : {}), ...(modelAware ? { model, ...(resolved ? { effort: resolved.effort } : {}) } : {}), ...iso };
     const r = await adapter.spawn({ task: e.brief, rules: [], tools, credentialRefs: [], placement: "local" }, spawnOpts);
     if (!r.ok) return fail(r.reason);

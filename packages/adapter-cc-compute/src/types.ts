@@ -73,6 +73,8 @@ export interface TurnModel {
 /** 适配器能力声明(D27 第 4 节第 5 条):inSessionModelSwitch=false 时换模型走兜底重启并接回同一会话 */
 export interface AdapterCapabilities {
   readonly inSessionModelSwitch: boolean;
+  /** 收专属配置目录与勾选的 skill/MCP(SpawnOptions 的 configDir/pluginDirs/mcpServers,AC-29);不声明为不收 */
+  readonly isolation?: boolean;
 }
 
 /** CLI init 自报的实际加载清单(AC-29 观测点) */
