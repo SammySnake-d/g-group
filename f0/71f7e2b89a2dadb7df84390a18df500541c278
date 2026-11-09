@@ -1,0 +1,74 @@
+packages/kernel/src/index.ts
+  s_af07fdb734b55e::t_ef25df4841eaca 10
+packages/kernel/src/compact.ts
+  s_28bebc745289eb::t_0bff11ea8aec55 28-31
+packages/server/src/memory.test.ts
+  s_af07fdb734b55e::t_5dc7abe10bc6b3 1-245,253,256-257,260,262,264,271,275,281-282,285-286,288,298-299,301,303,309,314,317-318
+  s_af07fdb734b55e::t_802fddd82f4c03 246-248,250-252
+  s_af07fdb734b55e::t_039fe27dd5f3f2 254-255
+  s_af07fdb734b55e::t_0377990c480eba 258-259
+  s_af07fdb734b55e::t_4da397cd834769 261
+  s_af07fdb734b55e::t_2a0a5ff13229d1 263
+  s_af07fdb734b55e::t_a64bc7cd3cfad9 265-270
+  s_af07fdb734b55e::t_92ae47179b5d0e 272-274
+  s_af07fdb734b55e::t_683d9195fa96f2 276-280
+  s_af07fdb734b55e::t_f05ea446777f2b 283-284
+  s_af07fdb734b55e::t_702aa396856ea9 287
+  s_af07fdb734b55e::t_3a0a856820b097 289-291,295-297
+  s_af07fdb734b55e::t_6d64c9c0e7582f 300
+  s_af07fdb734b55e::t_760b3efebfc416 302
+  s_af07fdb734b55e::t_e96397a1628000 304-308
+  s_af07fdb734b55e::t_829cd522d91c2a 310-313
+  s_af07fdb734b55e::t_e104752bbb3ff5 315-316
+  s_af07fdb734b55e::t_47e8ae5eb33f33 249,292-294
+packages/adapter-pi-contact/src/compact.ts
+  s_377be331e17ebd::t_6a6abc53ec27ab 7,96-99
+packages/adapter-pi-contact/src/mind.test.ts
+  s_28bebc745289eb::t_ab54c1c3577c16 88,101,363-412
+packages/server/src/host.ts
+  s_28bebc745289eb::t_94741fa17ada3e 39,84-85,1030-1041
+packages/kernel/src/memory.ts
+  s_af07fdb734b55e::t_4e63f5f8d78d66 1-54
+packages/kernel/src/runtime-ports.ts
+  s_af07fdb734b55e::t_574bde8c04a659 98-110,112,120-125,127-128,169,179,184
+  s_af07fdb734b55e::t_71d8168fef2ab6 166-168
+  s_af07fdb734b55e::t_170e21fca75831 170-172,176-178
+  s_af07fdb734b55e::t_d44002516ae435 180-183
+  s_af07fdb734b55e::t_baf0b00f1cd079 162-165,173-175,187-188
+packages/kernel/src/memory.test.ts
+  s_af07fdb734b55e::t_58d1f947177132 1-183
+packages/adapter-pi-contact/src/compact.test.ts
+  s_af07fdb734b55e::t_fcc0a88d6769a6 90-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f071f7e2b89a2dadb7df84390a18df500541c278",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_af07fdb734b55e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3c81b704d9af27a9",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

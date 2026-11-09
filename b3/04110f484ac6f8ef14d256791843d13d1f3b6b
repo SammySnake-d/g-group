@@ -1,0 +1,99 @@
+packages/server/src/host.ts
+  s_042e901c6ad028::t_653aba56fb6341 16,236,259,308,320,342,394,1577-1581
+  s_19afb02e575b26::t_6e12c101d243f6 27,31-33,35,37,94-95,252-253,260,263-270,282-288,290,293-296,309,312-316,321-337,339-341,343-393,396,910-912,1413-1422,1428,1430-1435,1548-1576
+  s_25620647d6f8eb::t_3d20dbdefba413 27,31-33,35,37,94-95,252-253,260,263-270,282-288,290,293-296,309,312-316,321-337,339-341,343-393,396,910-912,1413-1422,1428,1430-1435,1548-1576
+packages/domain/src/model-ledger.ts
+  s_042e901c6ad028::t_1c4d7a5336d10c 1-5,7-36,46,51,55,62
+  s_19afb02e575b26::t_4f49839da771e3 6,37-45,47-50,52-54,56-61
+  s_25620647d6f8eb::t_d8ea01a8216d03 6,37-45,47-50,52-54,56-61
+packages/domain/src/model-config.ts
+  s_042e901c6ad028::t_d8c1d0315ccdbe 1-59,105,110,117,123,137,144,146-183,251
+  s_19afb02e575b26::t_90ca234bcf8460 60-104,106-109,111-116,118-122,124,139-142,145,184-233,235-243,247-250
+  s_25620647d6f8eb::t_fb3a66b5b67602 60-104,106-109,111-116,118-122,124,139-142,145,184-233,235-243,247-250
+packages/domain/src/model-ledger.test.ts
+  s_042e901c6ad028::t_44e974b20c9329 1-37
+packages/server/src/models.test.ts
+  s_042e901c6ad028::t_5bfc4d6ae24154 1-33,36-38,43-48,50-63,68-71,73-92,73-83,85-92,97-126,101-126,131-166,171-183,188-190
+packages/server/src/service.ts
+  s_042e901c6ad028::t_375f8b887a568e 100-102
+packages/api-contract/src/entities.ts
+  s_042e901c6ad028::t_4c3d853e0c259f 15-63,79-80,217-222
+packages/domain/src/model-config.test.ts
+  s_042e901c6ad028::t_abbe4c3c40213a 1-58,60-133
+packages/domain/src/index.ts
+  s_042e901c6ad028::t_bb858998bba723 9-10
+packages/api-contract/src/api.ts
+  s_042e901c6ad028::t_0b1a494725ccb0 12,43-52,66-67,201-218,222-232
+packages/server/src/cli.ts
+  s_19afb02e575b26::t_cf38ced2edfdf0 131
+  s_25620647d6f8eb::t_4264f1764e9295 131
+packages/server/src/start.ts
+  s_19afb02e575b26::t_2a373ff4f1828e 79
+  s_25620647d6f8eb::t_22ea8f3d449d7d 79
+packages/server/proof/model-config-mutations.mjs
+  s_19afb02e575b26::t_e7569ed4811adb 1-20,22-74
+  s_12ccf69de2a7ec::t_f7cf0953f5323f 1-20,22-37,39-74
+receipts/feat-model-config.json
+  s_25620647d6f8eb::t_d73e14180ea63d 1-10,12-16
+packages/server/src/fakes.ts
+  s_377be331e17ebd::t_8f8d160d00f15e 44-63,69-70,83-85,88,100-114,117,139,141
+  s_377be331e17ebd::t_4676de6b210f36 142
+packages/server/src/model-turns.test.ts
+  s_377be331e17ebd::t_b15c7952df17c9 1-208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b304110f484ac6f8ef14d256791843d13d1f3b6b",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_19afb02e575b26": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac3c5d6dff8770595",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

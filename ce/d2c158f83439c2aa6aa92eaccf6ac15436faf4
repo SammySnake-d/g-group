@@ -1,0 +1,35 @@
+packages/adapter-cc-compute/src/procgroup.ts
+  s_12ccf69de2a7ec::t_3242ba8805fb18 22-41
+packages/adapter-cc-compute/src/quiesce.test.ts
+  s_12ccf69de2a7ec::t_6906b3b359bffc 1-106
+packages/adapter-cc-compute/src/types.ts
+  s_12ccf69de2a7ec::t_4a78fadb3469b6 170-174,192-197
+packages/api-contract/src/api.ts
+  s_12ccf69de2a7ec::t_da02cfb7e51e65 72-73,89
+packages/api-contract/src/entities.ts
+  s_12ccf69de2a7ec::t_51c1be61a765a0 28-29,64-65,192-193
+packages/server/src/fakes.ts
+  s_12ccf69de2a7ec::t_e3743d97472f65 2,45-55,114-115,118
+packages/server/src/lease.test.ts
+  s_12ccf69de2a7ec::t_34da82227aa088 1-155
+packages/server/src/quota.test.ts
+  s_12ccf69de2a7ec::t_bda6d020c6e49e 1-81
+packages/server/src/quota.ts
+  s_12ccf69de2a7ec::t_2f0f2bb1cc6608 1-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ced2c158f83439c2aa6aa92eaccf6ac15436faf4",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

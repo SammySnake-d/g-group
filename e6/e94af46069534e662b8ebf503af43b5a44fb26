@@ -1,0 +1,14 @@
+receipts/feat-worktree-merge.json
+  h_f33e46a035b77c 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e6e94af46069534e662b8ebf503af43b5a44fb26",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
