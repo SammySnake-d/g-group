@@ -1,5 +1,5 @@
 // 测试与 CLI 演示用的确定性替身:脚本化的联系人脑子、按剧本吐语义事件的 Compute 适配器。不连模型、不起进程。
-import type { ComputeAdapter, ComputeEvent, SpawnResult } from "@g-group/adapter-cc-compute";
+import type { ComputeAdapter, ComputeEvent, QuiesceResult, Refusal, SpawnOptions, SpawnResult, TurnModel } from "@g-group/adapter-cc-compute";
 import type { ContactMind, Inbound, MindAction, RoundInput, RoundOutput } from "@g-group/kernel";
 
 /** 规则脑子:用户在私聊或 @ 它派活 → dispatch + commit + 回复;Compute 里程碑 → 汇报;完成 → 交付;失败 → 如实告知。 */
@@ -35,25 +35,70 @@ function react(me: string, f: Inbound): MindAction[] {
     if (f.signal === "milestone") return [{ kind: "reply", roomId: f.roomId, text: `进度:${f.summary}`, replyToSeq: null }];
     if (f.signal === "completed") return [{ kind: "deliver", taskId: f.taskId, text: `做完了:${f.summary}` }];
     if (f.signal === "failed") return [{ kind: "reply", roomId: f.roomId, text: `任务没做成:${f.summary}`, replyToSeq: null }];
-    if (f.signal === "blocked") return [{ kind: "reply", roomId: f.roomId, text: `需要你帮忙:${f.summary}`, replyToSeq: null }];
+    // 受阻:宿主已替联系人 @提出者发了提问卡(inbox 摘要里有说明)就不再重复喊,用户回答后由联系人 forward;
+    // 其余受阻(如换模型被 harness 拒)照旧如实告诉用户
+    if (f.signal === "blocked" && !f.summary.includes("宿主已替你在会话里")) return [{ kind: "reply", roomId: f.roomId, text: `需要你帮忙:${f.summary}`, replyToSeq: null }];
   }
   if (f.kind === "schedule") return [{ kind: "reply", roomId: f.roomId, text: `定时到了:${f.prompt}`, replyToSeq: null }];
   return [];
 }
 
-/** 剧本式 Compute:spawn 后按 script 依次吐事件;可让 spawn 失败。 */
-export function scriptedCompute(opts: { script?: (computeId: string, brief: unknown) => Omit<ComputeEvent, "computeId">[]; failSpawn?: string; stepMs?: number } = {}) {
+type ResumeRefusal = Refusal;
+
+/** 剧本式 Compute:spawn 后按 script 依次吐事件;可让 spawn 失败。记录每次 spawn/resume 带来的生效模型;resumeResult 可让某次续接被拒(如换模型失败)。 */
+export function scriptedCompute(
+  opts: {
+    script?: (computeId: string, brief: unknown) => Omit<ComputeEvent, "computeId">[];
+    failSpawn?: string;
+    stepMs?: number;
+    resumeResult?: (computeId: string, text: string, turn: TurnModel | undefined) => ResumeRefusal | null;
+    /** 续接后吐的事件(例如 harness 回报这一轮实际用过的模型);text 是续接内容,tools 是这次续接给的工具清单(AC-17)。 */
+    resumeScript?: (computeId: string, turn: TurnModel | undefined, text: string, tools: readonly string[] | undefined) => Omit<ComputeEvent, "computeId">[];
+    /** 这一轮事件还没吐完时拒绝续接,与真实适配器「这个 Compute 还在运行,等它结束这一轮再续」一致(AC-45 排队)。 */
+    refuseWhileRunning?: boolean;
+    /** 续接后吐的事件,能看到续接带进来的文字(AC-44 回答、审查打回意见)。 */
+    onResume?: (computeId: string, text: string) => Omit<ComputeEvent, "computeId">[];
+    /** computeId 前缀(默认 cp);同一测试里用两个替身(执行与审查)时避免撞号。 */
+    idPrefix?: string;
+    /** false:扮演不声明按轮换模型能力的旧适配器(没有 capabilities)。 */
+    modelAware?: boolean;
+    /** 停止确认(AC-23):给了就当作适配器的 quiesce;测试用它控制「进程什么时候真的退干净」 */
+    quiesce?: (computeId: string) => Promise<QuiesceResult>;
+    /** settled 之前等它(模拟 CLI 主进程退出得慢) */
+    settle?: (computeId: string) => Promise<void>;
+  } = {},
+) {
   const queue: ComputeEvent[] = [];
   let wake: (() => void) | null = null;
   let closed = false;
   let n = 0;
   let inflight = 0;
-  const spawned: { computeId: string; brief: unknown; cwd: string | undefined }[] = [];
-  const resumed: { computeId: string; text: string }[] = [];
+  const spawned: { computeId: string; brief: unknown; cwd: string | undefined; model: string | undefined; effort: string | undefined; opts: SpawnOptions | undefined }[] = [];
+  /** 续接记录;续接换了工具清单(宿主按授权放开或收回写工具,AC-17)时才带 tools */
+  const resumed: { computeId: string; text: string; tools?: readonly string[] }[] = [];
+  /** 每个实例这一轮还没吐完的事件批数(refuseWhileRunning 用) */
+  const busy = new Map<string, number>();
+  /** 每个实例当前的工具清单 */
+  const toolsOf = new Map<string, string>();
+  /** 每次被受理的续接带来的生效模型(与 resumed 一一对应);旧适配器的调用方不传就是 undefined。 */
+  const turns: { computeId: string; turn: TurnModel | undefined }[] = [];
   const stopped: string[] = [];
   const push = (e: ComputeEvent) => {
     queue.push(e);
     wake?.();
+  };
+  const play = (computeId: string, evs: ComputeEvent[]) => {
+    if (!evs.length) return;
+    inflight++;
+    busy.set(computeId, (busy.get(computeId) ?? 0) + 1);
+    void (async () => {
+      for (const e of evs) {
+        await new Promise((r) => setTimeout(r, opts.stepMs ?? 1));
+        push(e);
+      }
+      busy.set(computeId, (busy.get(computeId) ?? 1) - 1);
+      inflight--;
+    })();
   };
   const script =
     opts.script ??
@@ -62,27 +107,28 @@ export function scriptedCompute(opts: { script?: (computeId: string, brief: unkn
       { kind: "milestone", stage: "写文件", summary: "已写好 hello.txt" },
       { kind: "completed", result: `完成:${(brief as { task: string }).task}` },
     ]);
-  const adapter: ComputeAdapter = {
-    async spawn(brief, o): Promise<SpawnResult> {
+  const adapter = {
+    capabilities: { inSessionModelSwitch: true, isolation: true },
+    async spawn(brief: unknown, o?: { cwd?: string; model?: string; effort?: string }): Promise<SpawnResult> {
       if (opts.failSpawn) return { ok: false, reason: opts.failSpawn };
-      const computeId = `cp-${++n}`;
-      spawned.push({ computeId, brief, cwd: o?.cwd });
-      const evs = script(computeId, brief).map((e) => ({ ...e, computeId }) as ComputeEvent);
-      inflight++;
-      void (async () => {
-        for (const e of evs) {
-          await new Promise((r) => setTimeout(r, opts.stepMs ?? 1));
-          push(e);
-        }
-        inflight--;
-      })();
+      const computeId = `${opts.idPrefix ?? "cp"}-${++n}`;
+      spawned.push({ computeId, brief, cwd: o?.cwd, model: o?.model, effort: o?.effort, opts: o });
+      toolsOf.set(computeId, JSON.stringify((brief as { tools?: unknown }).tools ?? null));
+      play(computeId, script(computeId, brief).map((e) => ({ ...e, computeId }) as ComputeEvent));
       return { ok: true, computeId, manifest: { computeId, sections: [], allowedTools: [], credentialRefs: [], placement: "local" } };
     },
-    async resume(computeId, text) {
-      resumed.push({ computeId, text });
+    async resume(computeId: string, text: string, turn?: TurnModel, o?: { readonly tools?: readonly string[] }): Promise<{ ok: true } | ResumeRefusal> {
+      if (opts.refuseWhileRunning && (busy.get(computeId) ?? 0) > 0) return { ok: false, reason: "这个 Compute 还在运行,等它结束这一轮再续" };
+      const refused = opts.resumeResult?.(computeId, text, turn) ?? null;
+      if (refused) return refused;
+      const changed = o?.tools !== undefined && JSON.stringify(o.tools) !== toolsOf.get(computeId);
+      if (o?.tools) toolsOf.set(computeId, JSON.stringify(o.tools));
+      resumed.push({ computeId, text, ...(changed && o?.tools ? { tools: [...o.tools] } : {}) });
+      turns.push({ computeId, turn });
+      play(computeId, [...(opts.resumeScript?.(computeId, turn, text, o?.tools) ?? []), ...(opts.onResume?.(computeId, text) ?? [])].map((e) => ({ ...e, computeId }) as ComputeEvent));
       return { ok: true };
     },
-    async stop(computeId) {
+    async stop(computeId: string) {
       stopped.push(computeId);
       push({ computeId, kind: "stopped", code: null, signal: null, scope: "main-then-group", violations: [] });
       return { ok: true };
@@ -101,18 +147,24 @@ export function scriptedCompute(opts: { script?: (computeId: string, brief: unkn
         },
       };
     },
-    async settled() {
+    async settled(computeId) {
+      await opts.settle?.(computeId);
       return [];
     },
-    snapshot: () => ({ ok: false, reason: "not-quiescent" }),
+    ...(opts.quiesce ? { quiesce: opts.quiesce } : {}),
+    snapshot: () => ({ ok: false as const, reason: "not-quiescent" }),
     rejectedReports: () => [],
-  };
+  } satisfies ComputeAdapter & { capabilities: { inSessionModelSwitch: boolean } };
+  if (opts.modelAware === false) Reflect.deleteProperty(adapter, "capabilities");
   return {
     adapter,
     spawned,
     resumed,
+    turns,
     stopped,
     /** 所有剧本事件都已吐出且被消费。 */
+    /** 这个实例此刻生效的工具清单(派发时的 brief,或最近一次续接换上的)。 */
+    currentTools: (computeId: string): string[] => JSON.parse(toolsOf.get(computeId) ?? "null") ?? [],
     drained: () => inflight === 0 && queue.length === 0,
     close() {
       closed = true;

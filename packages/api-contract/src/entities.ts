@@ -12,6 +12,55 @@ export const ModelSlot = obj({
   model: opt(str({ max: 200 })),
   effort: opt(oneOf(EFFORTS)),
 });
+/** 一个槽位的生效值与完整解析链(AC-32 规则 5):界面原样显示 chain,例如「compute 跟随说话模型 → 说话模型 x」。 */
+export const MODEL_SUPPORT = ["supported", "unsupported", "undeclared"] as const;
+export const ResolvedModelView = obj({
+  harness: str({ max: 64 }),
+  model: str({ max: 200 }),
+  effort: str({ max: 32 }),
+  vendor: str({ max: 64 }),
+  modelSource: oneOf(["task", "explicit", "follow-speaking", "global"] as const),
+  effortSource: oneOf(["task", "compute-slot", "global"] as const),
+  chain: arr(str({ max: 300 }), { max: 10 }),
+});
+export type ResolvedModelView = Infer<typeof ResolvedModelView>;
+/** 不兼容时的两条修复路径:单独指定一个兼容的具体模型 / 更换支持该模型的 Harness。candidates 来自能力声明。 */
+export const ModelFixView = obj({ kind: oneOf(["explicit-compatible-model", "change-harness"] as const), candidates: arr(str({ max: 200 }), { max: 200 }) });
+/** 保存前预检 / 批量替换预览里的一位联系人(AC-32 ②、规则 6)。 */
+export const AffectedContactView = obj({
+  contactId: id(),
+  name: str({ max: 80 }),
+  /** explicit-reference:这位联系人的配置里直接写了被改的值;downstream:跟着上游(全局默认 / 说话模型)变 */
+  involvement: oneOf(["explicit-reference", "downstream"] as const),
+  changed: arr(oneOf(["speaking-model", "harness", "compute-model", "compute-effort"] as const), { max: 4 }),
+  speakingBefore: str({ max: 200 }),
+  speakingAfter: str({ max: 200 }),
+  before: ResolvedModelView,
+  after: ResolvedModelView,
+  support: oneOf(MODEL_SUPPORT),
+  /** 改完后这位联系人的 Compute 启动会被拦。 */
+  conflict: bool(),
+  fixes: arr(ModelFixView, { max: 2 }),
+});
+export const ModelChangePreview = obj({
+  defaultsChanged: arr(oneOf(["harness", "speakingModel", "computeModel", "effort"] as const), { max: 4 }),
+  affected: arr(AffectedContactView, { max: 10000 }),
+  conflicts: int({ min: 0 }),
+});
+export type ModelChangePreview = Infer<typeof ModelChangePreview>;
+/** 任务的不可变启动快照与只追加尝试账本(AC-32 ④、AC-51 ⑥)。 */
+export const ModelSnapshotView = obj({ harness: str({ max: 64 }), model: str({ max: 200 }), effort: str({ max: 32 }), vendor: str({ max: 64 }) });
+export const ModelAttemptView = obj({
+  seq: int({ min: 1 }),
+  computeId: str({ max: 200 }),
+  harness: str({ max: 64 }),
+  model: str({ max: 200 }),
+  effort: str({ max: 32 }),
+  vendor: str({ max: 64 }),
+  reason: oneOf(["start", "turn", "retry", "switch-retry", "observed"] as const),
+  at: isoTime(),
+});
+
 /** 联系人当前在做什么,驱动头像旁的「正在回复」等状态。 */
 export const CONTACT_ACTIVITY = ["idle", "reading", "thinking", "replying", "running-compute", "blocked", "offline"] as const;
 export const ContactView = obj({
@@ -25,8 +74,12 @@ export const ContactView = obj({
   /** 已勾选的具名有界工具与 Compute 能力(skill/MCP),只读展示;授予走 contacts.update。 */
   tools: arr(str({ max: 200 })),
   computeAssets: arr(obj({ name: str({ max: 200 }), kind: oneOf(["mcp", "skill", "script"] as const) })),
+  /** 个人 Compute 槽位数(AC-23,D10 两级配额的个人档):同时最多几个 Compute;null/没有为宿主默认。 */
+  computeSlots: opt(nullable(int({ min: 1, max: 64 }))),
   activity: oneOf(CONTACT_ACTIVITY),
   createdAt: isoTime(),
+  /** Compute 的生效值、完整解析链与能力声明里的支持性(可选,旧客户端忽略)。 */
+  computeResolved: opt(obj({ resolved: ResolvedModelView, support: oneOf(MODEL_SUPPORT) })),
 });
 export type ContactView = Infer<typeof ContactView>;
 
@@ -59,6 +112,8 @@ export const RoomView = obj({
   announcementCount: opt(int({ min: 0 })),
   /** 移出中的成员(AC-49/D05):仍在 members 里,但这个群的新消息不再送达、发言与接新活被拒,等在途任务真实停止确认后才移除。 */
   leavingMembers: opt(arr(MemberRef)),
+  /** 群临时 Compute 槽位数(AC-23,只给本群任务借用,不跨群);私聊没有这个字段。 */
+  tempComputeSlots: opt(int({ min: 0, max: 64 })),
 });
 export type RoomView = Infer<typeof RoomView>;
 /** 群公告(U97/U86):一个群可有多条,当前有效的全部装配进联系人第 1 块「群规快照」位。version 每次改动 +1(CAS 用)。 */
@@ -77,6 +132,16 @@ export type AnnouncementView = Infer<typeof AnnouncementView>;
 export const SENDER_KINDS = ["user", "contact", "helper", "system"] as const;
 export const Sender = obj({ kind: oneOf(SENDER_KINDS), id: id() });
 export const Attachment = obj({ ref: id(), name: str({ max: 500 }), mime: str({ max: 200 }), bytes: int({ min: 0 }) });
+/** 交付带回的工件快照(AC-04):按内容 sha256 存一份,卡片钉住 hash;点开用 artifacts.get。 */
+export const ArtifactRef = obj({
+  ref: id(),
+  /** Compute 工作目录里的相对路径 */
+  name: str({ max: 500 }),
+  mime: str({ max: 200 }),
+  bytes: int({ min: 0 }),
+  sha256: str({ min: 64, max: 64, pattern: /^[0-9a-f]{64}$/ }),
+});
+export type ArtifactRef = Infer<typeof ArtifactRef>;
 /** 消息里的结构化卡片:任务状态卡、交付卡、提问卡、失败可重试卡。按钮的点击走 cards.act,以对话消息形式记录。 */
 export const CARD_KINDS = ["task-status", "delivery", "question", "failure", "schedule-fired", "plugin-result"] as const;
 export const CardAction = obj({ actionId: id(), label: str({ min: 1, max: 40 }), style: oneOf(["primary", "default", "danger"] as const) });
@@ -118,6 +183,8 @@ export const MessageView = obj({
   at: isoTime(),
   /** 私聊 rewind 撤下的消息为 true(AC-48):记录保留、照常列出(界面可置灰),但不再作为任何联系人的当前上下文。缺省视为 false。 */
   rewound: opt(bool()),
+  /** 交付消息带回的工件快照(AC-04,U45):卡片引用 ref + sha256,点开用 artifacts.get;没有工件的消息不带这个字段。 */
+  artifacts: opt(arr(ArtifactRef, { max: 20 })),
 });
 export type MessageView = Infer<typeof MessageView>;
 
@@ -165,7 +232,31 @@ export const ComputeRunView = obj({
   status: oneOf(["starting", "running", "blocked", "completed", "failed", "stopped"] as const),
   startedAt: isoTime(),
   endedAt: nullable(isoTime()),
+  /** Compute 启动后实际加载的 skill 与 MCP 服务器(CLI 自报,AC-29);旧记录没有。 */
+  loaded: opt(obj({ skills: arr(str({ max: 200 })), mcpServers: arr(str({ max: 200 })) })),
 });
+/** 代码任务的隔离工作树(R-Worktree,AC-22):W2 在改 → W3 钉住候选提交 → W4 合入中 → W6 已合入;W5 合入冲突或重验失败(目标分支未动)。 */
+export const WORKSPACE_STATES = ["W2_Active", "W3_Pinned", "W4_Integrating", "W5_Conflict", "W6_Merged"] as const;
+export const WorkspaceView = obj({
+  /** 工作树目录;W6 合入后已清理 */
+  dir: str({ max: 4096 }),
+  branch: str({ max: 300 }),
+  targetBranch: str({ max: 300 }),
+  /** 拉出工作树时目标分支的 head(H0) */
+  baseSha: str({ max: 64 }),
+  /** 审查与合入钉住的候选提交 */
+  candidateSha: nullable(str({ max: 64 })),
+  state: oneOf(WORKSPACE_STATES),
+  /** 最近一次合入时看到的目标分支 head */
+  targetHead: nullable(str({ max: 64 })),
+  /** 目标分支被推进后,基于哪个 head 合并并重跑了验证;快进合入为 null */
+  verifiedOn: nullable(str({ max: 64 })),
+  mergedSha: nullable(str({ max: 64 })),
+  conflict: nullable(obj({ kind: oneOf(["merge", "verify"] as const), detail: str({ max: 5000 }) })),
+});
+export type WorkspaceView = Infer<typeof WorkspaceView>;
+export const FOLLOW_UP_STATES = ["Received", "Applied", "Rebound"] as const;
+export const AUTHORIZATION_STATES = ["pending", "granted", "denied", "expired"] as const;
 export const TaskView = obj({
   id: id(),
   title: str({ max: 500 }),
@@ -179,14 +270,90 @@ export const TaskView = obj({
   /** T4b 时联系人在问用户的问题。 */
   pendingQuestion: nullable(obj({ qId: id(), text: str({ max: 5000 }) })),
   reviewGate: oneOf(["none", "compliant", "waived-by-user"] as const),
+  /**
+   * 跨厂商独立审查记录(AC-26),按发起顺序;没有审查过为空或不给。model/vendor 是实际起审查 Compute 用的模型与它的研发厂商。
+   * status:running 审查中 / approved 通过 / rejected 打回 / failed 没做成(Compute 失败或结论认不出)/ stopped 任务取消时停掉 / interrupted 宿主重启时已不在。
+   */
+  reviews: opt(
+    arr(
+      obj({
+        round: int({ min: 1 }),
+        reviewerContactId: id(),
+        model: str({ max: 200 }),
+        vendor: str({ max: 64 }),
+        status: oneOf(["running", "approved", "rejected", "failed", "stopped", "interrupted"] as const),
+        notes: str({ max: 20000 }),
+        startedAt: isoTime(),
+        endedAt: nullable(isoTime()),
+      }),
+      { max: 50 },
+    ),
+  ),
   computeRuns: arr(ComputeRunView),
   /** 最近若干条进度,完整历史用 tasks.progress 分页取。 */
   recentProgress: arr(ComputeProgress, { max: 20 }),
-  artifacts: arr(obj({ ref: id(), name: str({ max: 500 }), kind: oneOf(["file", "diff", "link", "text"] as const) })),
+  /** 任务首次启动时的不可变模型快照;没启动过为 null(可选,旧客户端忽略)。 */
+  modelSnapshot: opt(nullable(ModelSnapshotView)),
+  /** 只追加的尝试账本:每次启动、每一轮输入、换模型重试各一条。 */
+  modelAttempts: opt(arr(ModelAttemptView, { max: 10000 })),
+  /** 由账本派生的累积生产厂商集合(跨厂商审查门禁按它判)。 */
+  producerVendors: opt(arr(str({ max: 64 }), { max: 50 })),
+  artifacts: arr(
+    obj({
+      ref: id(),
+      name: str({ max: 500 }),
+      kind: oneOf(["file", "diff", "link", "text"] as const),
+      /** file 工件的内容 hash、大小与类型(AC-04),与 artifacts.get 读出的一致 */
+      sha256: opt(str({ min: 64, max: 64, pattern: /^[0-9a-f]{64}$/ })),
+      bytes: opt(int({ min: 0 })),
+      mime: opt(str({ max: 200 })),
+    }),
+  ),
+  /** 代码任务才有(宿主配了代码仓);普通任务不带这个字段。 */
+  workspace: opt(WorkspaceView),
+  /** 在等什么(AC-23):排队等 Compute 槽位的原因,或「停止未确认」;没有在等为 null。 */
+  waitingFor: opt(nullable(str({ max: 500 }))),
   createdAt: isoTime(),
   updatedAt: isoTime(),
   /** 用户手动新建任务时填的描述,原样保留(AC-47);联系人派活建的任务没有这一项。 */
   description: opt(str({ max: 20000 })),
+  /**
+   * 权威任务文档的版本号(AC-02):群聊主窗口与「从群聊私信」侧边栏读的是同一份文档,同一时刻版本相同;
+   * 每次任务文档落盘 +1,task.updated 事件带同一个值。比较新旧以它为准,不按到达顺序。
+   */
+  stateVer: opt(int({ min: 1 })),
+  /** 关联版本:改挂补充(tasks.rebindFollowUp)要带上当前值;任务还没有挂过补充时省略。 */
+  bindingVersion: opt(int({ min: 0 })),
+  /**
+   * 挂在这个任务上的补充消息(AC-15/16/45):Received = 已送达负责人;Applied = 已落实,appliedIn 指向含它的产物、appliedVersion 是产物版本;
+   * Rebound = 已改挂到 reboundTo。version 是挂进来时的任务版本。没有挂过补充时省略。
+   */
+  followUps: opt(arr(obj({
+    roomId: id(),
+    seq: seq(),
+    state: oneOf(FOLLOW_UP_STATES),
+    version: int({ min: 0 }),
+    appliedIn: nullable(str({ max: 500 })),
+    appliedVersion: nullable(int({ min: 0 })),
+    reboundTo: nullable(id()),
+  }))),
+  /**
+   * 授权记录(AC-17/19/20):群规「改前先问」时 Compute 要动手前登记一次。用户本人在对话里直接回复「同意」即可放行(按钮可选);
+   * 绑定 (qId, constraintVersion);前提变了记 expired(「已过期·未执行」)。没有过授权时省略。
+   */
+  authorizations: opt(arr(obj({
+    qId: id(),
+    action: str({ max: 5000 }),
+    constraintVersion: int({ min: 0 }),
+    state: oneOf(AUTHORIZATION_STATES),
+    /** 能授权的人(提出者本人) */
+    principalId: id(),
+    /** 提问消息 */
+    askedSeq: seq(),
+    /** 了结它的那条答复消息;未了结或过期为 null */
+    decidedSeq: nullable(seq()),
+    reason: nullable(str({ max: 2000 })),
+  }))),
 });
 export type TaskView = Infer<typeof TaskView>;
 
@@ -242,6 +409,33 @@ export const CommitmentView = obj({
   updatedAt: isoTime(),
 });
 export type CommitmentView = Infer<typeof CommitmentView>;
+
+// ---------- 共享文档(AC-21) ----------
+/** 群共享文档的权威版本。写入只经 docs.commit:带读到的 version 作 baseVersion,版本变了回 conflict(detail.currentVer),不静默覆盖。 */
+export const SharedDocView = obj({
+  id: id(),
+  /** 所属会话;null 表示不挂会话的个人文档。 */
+  roomId: nullable(id()),
+  title: str({ min: 1, max: 200 }),
+  content: str({ max: 1_000_000 }),
+  /** 权威版本号,新建为 1,每次生效的提交 +1。 */
+  version: int({ min: 1 }),
+  createdAt: isoTime(),
+  updatedAt: isoTime(),
+  updatedBy: MemberRef,
+});
+export type SharedDocView = Infer<typeof SharedDocView>;
+/** 版本链的一项(不含正文;正文用 docs.get 带 version 取)。 */
+export const SharedDocVersionView = obj({
+  version: int({ min: 1 }),
+  title: str({ min: 1, max: 200 }),
+  updatedBy: MemberRef,
+  at: isoTime(),
+  bytes: int({ min: 0 }),
+  /** 产生这一版的请求号(docs.create 为 create:<clientActionId>)。 */
+  requestId: id(),
+});
+export type SharedDocVersionView = Infer<typeof SharedDocVersionView>;
 
 // ---------- 定时(cron) ----------
 /** 定时归联系人(插件不能自带 schedule):联系人在某个会话里按 cron 执行一段指令。 */
@@ -344,6 +538,14 @@ export const PluginView = obj({
   installedAt: isoTime(),
 });
 export type PluginView = Infer<typeof PluginView>;
+
+// ---------- 能力库(AC-29)----------
+/** 全局能力库:联系人设置页的勾选清单。勾选结果写进 ContactView.computeAssets(contacts.update)。 */
+export const CapabilityLibraryView = obj({
+  skills: arr(obj({ name: str({ min: 1, max: 64 }), description: str({ max: 2000 }) })),
+  mcp: arr(obj({ name: str({ min: 1, max: 64 }) })),
+});
+export type CapabilityLibraryView = Infer<typeof CapabilityLibraryView>;
 
 // ---------- Slash 命令 ----------
 export const SlashArg = obj({

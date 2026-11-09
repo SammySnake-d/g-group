@@ -1,0 +1,17 @@
+{
+  "slice": "Claude Code 常驻 Compute 适配器(adapter 层,AC-51 适配器侧):createResidentComputeAdapter 一个 Compute 一个常驻 CLI(claude -p --input-format stream-json --output-format stream-json,首次 --session-id、接回 --resume 同一 id,沿用 --bare/--strict-mcp-config + report_progress MCP/--tools/--allowedTools/dontAsk 隔离参数),跨轮同一 PID、同一会话 id;resume 第三参是这一轮宿主解析的生效模型 {model, effort},与会话当前模型(每轮 init 的 model、set_model 回包)不同就在轮边界发 control_request set_model,只改 effort 发 apply_flag_settings {effortLevel},没变不发任何切换请求;轮中来的 resume 排到这一轮 result 之后才切换;steer 以 priority:now 插进当前一轮、不换模型;切换被拒或超时返回 code:model-switch-failed 与两条修复路径,这一轮输入不写入,超时后当前模型记为不明;能力声明 inSessionModelSwitch:false 或切换请求本身不可用时轮边界结束旧进程、--resume 同一会话带新模型重启;idleReclaimMs 空闲回收后下一轮用同一会话 id 带这一轮生效模型恢复;受阻不冻结进程;completed/failed 带 model(这一轮开始时会话模型)与 models(model_usage_since_last_result 的键)供宿主记 attempt_model_ledger。运行时函数从子路径入口 @g-group/adapter-cc-compute/resident 导出(包根导出函数清单由 R6-01 表核对,不动),包根 types.ts 只做向后兼容增量(SpawnOptions.model/effort、TurnModel、resume 第三参、steer?、capabilities?、started.model/pid、completed/failed 的 model/models、Refusal 的 code/fixes);现有 createComputeAdapter 行为与测试不变。",
+  "acceptance": [
+    {
+      "id": "AC-51",
+      "status": "未测",
+      "reason": "适配器侧:真实 Claude Code 2.1.319 经 createResidentComputeAdapter 跑 5 轮(proof/ac51-resident-real.txt):同一 pid、同一会话 id、started 只 1 次;网关记录的请求模型逐轮跟随 resume 带的生效模型,换模型后答出第 1 轮暗号;只改 effort 走 apply_flag_settings、网关 effort 由 high 变 low、未重启;每轮 completed 带 model/models。该网关端点把所有请求路由到 claude-opus-5-5(served 列),只证明 CLI 发出的请求模型跟上了。④ 切换被拒在这台机器上复现不出(网关接受任何模型 id,set_model 都回 success),③ 在途不打断、④ 被拒/超时不发出、⑤ 兜底重启与空闲回收恢复只在假 CLI 上验证(resident.test.ts,假 CLI 按 11-07 实测的 check_failed 形状与中途 set_model 立即生效的行为);变异 proof/resident-mutations.txt。整条判据要求私聊、群聊主流、任务话题、重试四种入口经宿主每轮带生效模型,宿主侧接线在 feat/model-turns(主会话)与 start.ts 接入另做,本片未跑经宿主的端到端;⑦ 换 harness 随 Codex 接入,未做"
+    },
+    { "id": "R-05", "status": "通过", "evidence": "packages/adapter-cc-compute/proof/resident-mutations.txt" }
+  ],
+  "author": { "agent": "claude", "session": "claude:616edc61-14d8-4e9e-9519-ec8c2abc9af7", "model": "claude-opus-5-5" },
+  "red": { "commit": "6f3e9646cc84a6138df0956e29f612632b117988" },
+  "unverifiable": "由 D 组会话的子代理编写。我相信这次绿,是因为真实 CLI 那次实跑里网关逐请求记录的 req 列和 resume 带的模型一一对应、pid 与会话 id 五轮不变;但 AC-51 ④ 的拒绝路径只在假 CLI 上验证过,假 CLI 回包形状取自 11-07 实测(error_code:check_failed),如果新版 Claude Code 改了拒绝回包的形状(例如不带 error_code、只在 error 文字里说明),switchRefusalKind 会把它当模型被拒而不是切换不可用,这一处可能被骗过;另外 effort 会话内切换依赖 apply_flag_settings 的 effortLevel 键,只在 2.1.319 上实测过一次",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

@@ -40,6 +40,7 @@ export function createService(host: Host): Service {
     "contacts.create": (p: Parameters<Host["createContact"]>[0]) => host.createContact(p),
     "contacts.update": ({ contactId, ...patch }: { contactId: string } & Parameters<Host["updateContact"]>[1]) => host.updateContact(contactId, patch),
     "contacts.profile": (p: { contactId: string }) => contactProfile(host, p.contactId),
+    "capabilities.list": () => host.capabilities.list(),
     "contacts.remove": (p: { contactId: string }) => {
       host.removeContact(p.contactId);
       return { ok: true };
@@ -79,21 +80,27 @@ export function createService(host: Host): Service {
     "files.read": (p: { ref: string; maxBytes?: number }) => readFile(host, p.ref, p.maxBytes),
     "cards.act": (p: Parameters<Host["cardAct"]>[0]) => host.cardAct(p),
     "tasks.list": (p: Parameters<Host["listTasks"]>[0] & { limit?: number }) => ({ tasks: host.listTasks(p).slice(0, p.limit ?? 200) }),
-    "tasks.get": (p: { taskId: string }) => host.taskView(host.taskDoc(p.taskId).value),
+    "tasks.get": (p: { taskId: string }) => host.taskViewById(p.taskId),
     "tasks.progress": (p: { taskId: string; limit?: number }) => {
       host.taskDoc(p.taskId);
       return { progress: host.progress(p.taskId, p.limit ?? 200) };
     },
     "tasks.accept": (p: { taskId: string; clientActionId: string }) => host.taskDecision(p.taskId, "accept", p.clientActionId),
     "tasks.reject": (p: { taskId: string; clientActionId: string; feedback: string }) => host.taskDecision(p.taskId, "reject", p.clientActionId, p.feedback),
-    "tasks.answer": () => {
-      throw new HostError("conflict", "任务没有待回答的问题(Compute 受阻时由联系人在聊天里问你,直接回复即可)");
-    },
+    "tasks.answer": (p: { taskId: string; qId: string; clientActionId: string; answer: string }) => host.answerTask(p.taskId, p.qId, p.clientActionId, p.answer),
     "tasks.cancel": (p: { taskId: string; clientActionId: string }) => host.taskDecision(p.taskId, "cancel", p.clientActionId),
     "tasks.create": (p: Parameters<Host["createTask"]>[0]) => host.createTask(p),
     "tasks.assign": (p: Parameters<Host["assignTask"]>[0]) => host.assignTask(p),
+    "tasks.integrate": (p: { taskId: string }) => host.integrateTask(p.taskId),
+    "artifacts.get": (p: { ref: string }) => host.getArtifact(p.ref),
+    "tasks.rebindFollowUp": (p: Parameters<Host["rebindFollowUp"]>[0]) => host.rebindFollowUp(p),
     "commitments.list": (p: Parameters<Host["listCommitments"]>[0]) => ({ commitments: host.listCommitments(p) }),
     "commitments.revoke": (p: { commitmentId: string }) => host.revokeCommitment(p.commitmentId),
+    "docs.list": (p: { roomId?: string }) => ({ docs: host.docs.list(p) }),
+    "docs.get": (p: { docId: string; version?: number }) => host.docs.get(p.docId, p.version),
+    "docs.create": (p: { clientActionId: string; title: string; content: string; roomId?: string | null }) => host.docs.create(p, { kind: "user", id: host.userId }),
+    "docs.commit": (p: { docId: string; requestId: string; baseVersion: number; content: string; title?: string }) => host.docs.commit(p, { kind: "user", id: host.userId }),
+    "docs.history": (p: { docId: string; limit?: number }) => ({ versions: host.docs.history(p.docId, p.limit ?? 50) }),
     "schedules.list": (p: { contactId?: string; roomId?: string; order?: "next-run" | "created" }) => ({ schedules: host.scheduler.list(p) }),
     "schedules.preview": (p: { cron: string; tz: string; count?: number }) => previewCron(p.cron, p.tz, p.count ?? 5, Date.now()),
     "schedules.create": ({ clientActionId: _c, ...p }: { clientActionId: string } & Parameters<Host["scheduler"]["create"]>[0]) => host.scheduler.create(p),
@@ -123,6 +130,9 @@ export function createService(host: Host): Service {
     "helper.note": (p: { entry: HelperEntryInput; role: "user" | "helper"; text: string; clientActionId: string }) => helper.note(p.entry, p.role, p.text, p.clientActionId),
     "helper.history": (p: { entry: HelperEntryInput; limit?: number }) => ({ notes: helper.history(p.entry, p.limit ?? 200) }),
     "helper.post": (p: { entry: HelperEntryInput; text: string; clientActionId: string }) => helper.post(p.entry, p.text, p.clientActionId),
+    "models.preview": (p: { change: Parameters<Host["previewModelChange"]>[0] }) => host.previewModelChange(p.change),
+    "models.batchReplace": (p: { from: string; to: string; apply?: boolean; confirmAffected?: boolean }) =>
+      host.batchReplaceModels(p.from, p.to, { ...(p.apply !== undefined ? { apply: p.apply } : {}), ...(p.confirmAffected !== undefined ? { confirmAffected: p.confirmAffected } : {}) }),
     "settings.get": () => host.settings(),
     "settings.update": (p: Parameters<Host["updateSettings"]>[0]) => host.updateSettings(p),
   };

@@ -7,8 +7,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 import type { RoundInput } from "@g-group/kernel";
+import { CONTACT_SYSTEM } from "./assemble.ts";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
-import { Host } from "./host.ts";
+import { HUMAN_VERIFICATION_RULE, Host } from "./host.ts";
 import { createService } from "./service.ts";
 
 const dir = mkdtempSync(path.join(tmpdir(), "gg-host-"));
@@ -38,7 +39,7 @@ test("私聊派活闭环:接任务 → Compute 进度回聊天 → 普通消息�
   await settle(host, compute);
 
   assert.equal(compute.spawned.length, 1);
-  assert.deepEqual(compute.spawned[0]!.brief, { task: "写一个 hello.txt", rules: [], tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash"], credentialRefs: [], placement: "local" });
+  assert.deepEqual(compute.spawned[0]!.brief, { task: "写一个 hello.txt", rules: [HUMAN_VERIFICATION_RULE], tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash"], credentialRefs: [], placement: "local" });
   assert.match(compute.spawned[0]!.cwd ?? "", /^\/tmp\/gg\/t-/);
   const [task] = host.listTasks({ roomId: dm.id });
   assert.ok(task);
@@ -259,7 +260,7 @@ test("服务层:按合同校验参数与结果;未知方法、非法参数、未
   const nf = await svc.handle("rooms.get", { roomId: "nope" });
   assert.equal(!nf.ok && nf.error.code, "not_found");
   const un = await svc.handle("tasks.answer", { taskId: "t-x", qId: "q", clientActionId: "a", answer: "好" });
-  assert.equal(!un.ok && un.error.code, "conflict");
+  assert.equal(!un.ok && un.error.code, "not_found", "没有这个任务");
   const cmds = await svc.handle("commands.list", { roomId, prefix: "re" });
   assert.ok(cmds.ok);
   assert.deepEqual((cmds.value as { commands: { name: string }[] }).commands.map((c) => c.name), ["remind"]);
@@ -282,6 +283,8 @@ test("宿主每轮用内核五块重拼:块号 1–5,两轮之间第 1 块逐字
   assert.match(reqs[1]!.blocks[3]!.text, /第二句/);
   assert.doesNotMatch(reqs[1]!.blocks[3]!.text, /第一句/);
   assert.deepEqual(reqs.map((r) => r.blocks.filter((b) => b.cacheBreakpoint).map((b) => b.block)), [[1], [1]]);
+  assert.ok(reqs[0]!.blocks[0]!.text.includes(CONTACT_SYSTEM), "第 1 块带联系人系统提示原文");
+  assert.match(CONTACT_SYSTEM, /提问卡/, "系统提示说明了 Compute 受阻时宿主已发提问卡、用户回答由联系人 forward 转达(AC-44 ③)");
   await host.close();
 });
 

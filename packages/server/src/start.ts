@@ -3,9 +3,9 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createComputeAdapter } from "@g-group/adapter-cc-compute";
 import type { ContactView } from "@g-group/api-contract";
-import type { ContactMind } from "@g-group/kernel";
+import type { ContactCompactor, ContactMind } from "@g-group/kernel";
+import { claudeCompute } from "./compute.ts";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
 import { type IpcMainLike, type Service, bindIpc, createService } from "./service.ts";
@@ -22,6 +22,8 @@ export interface StartOptions {
   /** 插件市场目录文件;默认包内示例市场。 */
   readonly catalogFile?: string;
   readonly onReport?: (what: string, detail: unknown) => void;
+  /** 给 Compute 的单次输入字节上限(§8.1 待决 13);不给=不设上限 */
+  readonly computeInputMaxBytes?: number | null;
 }
 export interface Started {
   readonly host: Host;
@@ -37,9 +39,10 @@ export async function startServer(o: StartOptions): Promise<Started> {
   mkdirSync(o.dataDir, { recursive: true });
   const model = env.ANTHROPIC_DEFAULT_SONNET_MODEL;
   let mind: (c: ContactView) => ContactMind = () => scriptedMind();
+  let compactor: ((c: ContactView) => ContactCompactor) | undefined;
   if (o.mind === "pi") {
     // 字面量动态 import:按需加载 pi 依赖,G-LAYER 也能核对依赖方向
-    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as { createPiContactMind(opts: Record<string, unknown>): ContactMind };
+    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as { createPiContactMind(opts: Record<string, unknown>): ContactMind; createPiCompactor(opts: Record<string, unknown>): ContactCompactor };
     const bearer = env.ANTHROPIC_AUTH_TOKEN;
     const apiKey = bearer ?? env.ANTHROPIC_API_KEY;
     if (!apiKey || !model) throw new Error("mind=pi 需要 ANTHROPIC_AUTH_TOKEN(或 ANTHROPIC_API_KEY)与 ANTHROPIC_DEFAULT_SONNET_MODEL");
@@ -53,21 +56,28 @@ export async function startServer(o: StartOptions): Promise<Started> {
       }
       return m;
     };
+    // 状态笔记压缩:同一说话模型的独立调用(AC-32 ③),同一模型复用一个实例
+    const compactors = new Map<string, ContactCompactor>();
+    compactor = (c) => {
+      let k = compactors.get(c.speakingModel);
+      if (!k) {
+        k = mod.createPiCompactor({ provider: "anthropic", model: c.speakingModel, baseUrl: env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
+        compactors.set(c.speakingModel, k);
+      }
+      return k;
+    };
   }
   const fake = o.compute === "claude" ? null : scriptedCompute({ stepMs: 300 });
   const compute = fake
     ? () => fake.adapter
-    : (m: string) => {
-        const hostEnv: Record<string, string> = { ANTHROPIC_MODEL: m };
-        for (const k of ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"]) if (env[k]) hostEnv[k] = env[k]!;
-        return createComputeAdapter({ hostEnv });
-      };
+    : claudeCompute(env);
   const work = path.join(o.dataDir, "compute");
   const host = new Host({
     file: path.join(o.dataDir, "gg.db"),
     dataDir: o.dataDir,
     catalogFile: o.catalogFile ?? SAMPLE_CATALOG,
     mind,
+    ...(compactor ? { compactor } : {}),
     compute,
     computeCwd: (taskId) => {
       const d = path.join(work, taskId);
@@ -75,8 +85,9 @@ export async function startServer(o: StartOptions): Promise<Started> {
       return d;
     },
     ...(o.onReport ? { onReport: o.onReport } : {}),
+    ...(o.computeInputMaxBytes !== undefined ? { computeInputMaxBytes: o.computeInputMaxBytes } : {}),
   });
-  if (model) host.updateSettings({ defaultSpeakingModel: model, defaultComputeModel: model });
+  if (model) host.updateSettings({ defaultSpeakingModel: model, defaultComputeModel: model, confirmAffected: true });
   const service = createService(host);
   return {
     host,
