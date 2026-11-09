@@ -33,7 +33,11 @@ const M = [
     ["    if (!current) {\n      if (run(", "    if (false) {\n      if (run("],
     ["{ status: card.state, ownerUserId: this.userId,", '{ status: "open", ownerUserId: this.userId,'],
   ], T_HOST, "A27-05 [重试本轮]连同失败期间新到的消息一起重跑;再失败出新卡,点旧卡被拒;连点只生效一次", "⑦ Callback 无 CAS 领取锁"],
-  ["H08 半途换模不进累积生产集合", HOST, [['if (d.action === "switch-model" && d.targetModel && f.compute_id) this.stepTaskTx(taskId, { kind: "ProducerModelAdded", model: d.targetModel, computeId: f.compute_id });', ""]], T_HOST,
+  // 合入 AC-51 后,换模续跑这一轮由 recordTurnTx 再记一次生产模型;两处都去掉才是「半途换模只记末次厂商」
+  ["H08 半途换模不进累积生产集合", HOST, [
+    ['if (d.action === "switch-model" && d.targetModel && f.compute_id) this.stepTaskTx(taskId, { kind: "ProducerModelAdded", model: d.targetModel, computeId: f.compute_id });', ""],
+    ["    if (!task.producerModels.includes(model)) {\n      const o = applyTask(task, { kind: \"ProducerModelAdded\", model, computeId });", "    if (reason !== \"switch-retry\" && !task.producerModels.includes(model)) {\n      const o = applyTask(task, { kind: \"ProducerModelAdded\", model, computeId });"],
+  ], T_HOST,
     "F13 半途换模:[换模型重试]选了厂商 B 才换,累积生产集合变成 {A, B},T5 审查同时拒绝 A、B 与 unknown,只放第三家", "⑦ 半途换模只记末次厂商"],
   ["H09 去掉 crash_recovery_count 上限", HOST, [["const max = this.opts.maxCrashRecoveries ?? 1;", "const max = 99;"]], T_HOST,
     "F12 同一毒丸输入让宿主连续退出:第 1 次重启自动续跑,第 2 次熔断 CrashLoopBlocked 出卡;新成功轮次清零计数", "⑥ 去掉 crash_recovery_count 上限"],
@@ -54,7 +58,7 @@ const M = [
   ["H28 被信号结束也当 CLI 重试过(进程被杀不续跑)", HOST, [["const harnessAttempts = ev.signal === null ? Math.max(0, this.opts.computeHarnessRetries ?? 0) : 0;", "const harnessAttempts = Math.max(0, this.opts.computeHarnessRetries ?? 0);"]], T_HOST,
     "F3 被信号结束的执行器崩溃(不是 CLI 里的上游错误)不算 CLI 重试过:宿主照常在同一会话续跑", "F3 只统一 CLI 真重试过的部分"],
   ["H17 停止任务不清在途失败", HOST, [["      this.afterCancelTx(taskId);\n      run(this.db, \"UPDATE gg_cards SET state = 'done' WHERE task_id = ? AND kind = 'task-status' AND state = 'open'\", taskId);", "      run(this.db, \"UPDATE gg_cards SET state = 'done' WHERE task_id = ? AND kind = 'task-status' AND state = 'open'\", taskId);"]], T_HOST,
-    "F7 用户主动停止不是失败:Compute 失败后等续跑期间用户停掉任务,不再续跑、不出失败卡,任务落 T10 而不是 T11", "F7 用户中断"],
+    "F7 原位失败卡开着时用户停掉任务:卡作废不能再点,在途失败清掉,任务落 T10;之后不续跑、不再出卡", "F7 用户中断"],
   ["H18 Compute 失败直接判 T11(不在 T11 前拦)", HOST, [['      if (ev.kind === "failed") handled = this.onComputeFailureTx(row, ev);\n', ""]], T_HOST,
     "Compute 执行器中途崩溃(可自愈):对同一实例 resume 续跑(同一 CLI 会话),不从头 spawn,任务不进 T11,不打断联系人", "F1 Compute 瞬态静默续跑"],
   ["H19 [不重试了]不判失败", HOST, [['          this.stepTaskTx(taskId, { kind: "ExecFailed", computeId: f.compute_id });\n', ""]], T_HOST,

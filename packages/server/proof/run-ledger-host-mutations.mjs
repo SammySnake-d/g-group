@@ -16,7 +16,11 @@ const S = "src/runs.ts";
 const M = [
   ["H01 启动不核对上次留下的 running(坏实现 ①)", "server", [[H, "    this.recoverRuns();\n", ""]], SERVER],
   ["H02 孤儿化的任务不发停滞事件,要用户手发「继续」(AC-14)", "server", [[H, "        this.inboxTx(u.contactId, u.roomId, {", "        if (false) this.inboxTx(u.contactId, u.roomId, {"]], SERVER],
-  ["H03 人停的记成别的原因(坏实现 ②⑥)", "server", [[H, '"用户停止了任务", userStopped: true }));', '"用户停止了任务" }));']], SERVER],
+  // 人停有两条收口路:实例回报 stopped,和任务落 T10 时 syncTaskRuns 收口;分类器也按原文认「用户停止」,所以坏实现是两处都不说是人停的
+  ["H03 人停的记成别的原因(坏实现 ②⑥)", "server", [
+    [H, 'classifyFailure({ text: by && by !== this.userId ? `联系人 ${by} 停止了任务` : "用户停止了任务", userStopped: true })', 'classifyFailure({ text: "进程已退出" })'],
+    [H, 'classifyFailure({ text: "任务已取消", userStopped: true })', 'classifyFailure({ text: "进程已退出" })'],
+  ], SERVER],
   ["H04 子任务在跑父会话记完成(坏实现 ③)", "server", [[S, "    if (this.liveDescendants(id).length === 0) {\n      this.setStatus(id, \"done\", {}, detail);\n      return;\n    }\n    this.settled.add(id);", "    this.setStatus(id, \"done\", {}, detail);\n    if (this.live.has(id)) return;\n    this.settled.add(id);"]], SERVER],
   ["H05 私聊里查到别的群的单元(坏实现 ④)", "server", [[H, '      const units = this.runs.visible({ kind: "contact", contactId, roomId: r.id, roomKind: r.kind });', '      const units = this.runs.visible({ kind: "user" });']], SERVER],
   ["H06 平台拒绝的在原会话继续(坏实现 ⑤)", "server", [[H, '${plan.mode === "new_session" ? "(开新会话,不接着原会话)" : ""}', ""]], SERVER],

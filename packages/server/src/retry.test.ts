@@ -563,6 +563,26 @@ test("F7 用户主动停止不是失败:Compute 失败后等续跑期间用户�
   await host.close();
 });
 
+test("F7 原位失败卡开着时用户停掉任务:卡作废不能再点,在途失败清掉,任务落 T10;之后不续跑、不再出卡", async () => {
+  const compute = fake({ ...CRASH_SCRIPT, refuseStopAfterExit: true });
+  const host = mk(Host, { mind: () => scriptedMind(), compute: () => compute.adapter, retry: { baseDelayMs: 5, maxDelayMs: 5, jitter: 0, maxAutoRetries: 0 } });
+  const c = host.createContact({ name: "小克" });
+  const dm = host.openDm(c.id).id;
+  host.send({ roomId: dm, clientActionId: "u1", text: "帮我写一个 hello.txt" });
+  await until(() => failureCards(host, dm).length === 1, "自动重试取 0 次,失败当场出原位卡");
+  const card = failureCards(host, dm)[0]!;
+  assert.equal(card.card!.state, "open");
+  const t = host.listTasks({})[0]!;
+  host.stopTask(t.id, "me");
+  await sleep(60);
+  await host.idle();
+  assert.equal(host.listTasks({})[0]?.state, "T10_Cancelled");
+  assert.equal(failureCards(host, dm)[0]!.card!.state, "expired", "停掉任务后失败卡作废");
+  assert.throws(() => host.cardAct({ roomId: dm, seq: card.seq, cardId: card.card!.cardId, actionId: "retry", clientActionId: "late" }), /已经处理过|已过期/);
+  assert.equal(compute.resumed.length, 0, "点不了重试,也不续跑");
+  assert.equal(failureCards(host, dm).length, 1, "不再出新卡");
+});
+
 test("F6 Compute 终态通知丢失(ack 前宿主退出):重启后从磁盘待领取表补领结果交给联系人,不重跑 Compute,不需要人类再发言", async () => {
   const f = file();
   const compute1 = fake();

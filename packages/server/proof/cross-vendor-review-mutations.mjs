@@ -32,7 +32,7 @@ const mutants = [
   ["R01 去掉审查人≠作者", REVIEW, "return c.contactId !== ownerId && v !== \"unknown\" && !producers.has(v);", "return v !== \"unknown\" && !producers.has(v);", T.pick],
   ["R02 只查联系人 ID、不查厂商", REVIEW, "return c.contactId !== ownerId && v !== \"unknown\" && !producers.has(v);", "return c.contactId !== ownerId;", T.same],
   ["R03 unknown 厂商的审查人放行", REVIEW, "return c.contactId !== ownerId && v !== \"unknown\" && !producers.has(v);", "return c.contactId !== ownerId && !producers.has(v);", T.unknown],
-  ["R04 只比末次生产模型(F13)", REVIEW, "const producers = new Set(producerModels.map(vendorOf));", "const producers = new Set(producerModels.slice(-1).map(vendorOf));", T.pick],
+  ["R04 只比末次生产模型(F13)", REVIEW, "const producers = new Set(producerModels.map(vendorOf));\n  if (producers.size === 0 || producers.has(\"unknown\")) return null;", "const producers = new Set(producerModels.slice(-1).map(vendorOf));\n  if (producers.size === 0 || producers.has(\"unknown\")) return null;", T.pick],
   ["R05 生产模型里有 unknown 仍放行", REVIEW, "if (producers.size === 0 || producers.has(\"unknown\")) return null;", "if (producers.size === 0) return null;", T.pick],
   ["R06 不优先同会话成员", REVIEW, "return ok.find((c) => c.inRoom) ?? ok[0] ?? null;", "return ok[0] ?? null;", T.pick],
   ["R07 按说话模型判审查厂商", HOST, ".map((d) => ({ contactId: d.value.id, model: this.computeModelOf(d.value), inRoom:", ".map((d) => ({ contactId: d.value.id, model: d.value.speakingModel, inRoom:", T.pass],
