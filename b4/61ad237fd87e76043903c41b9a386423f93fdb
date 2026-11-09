@@ -1,0 +1,96 @@
+packages/domain/src/followups.test.ts
+  s_40ddef7d1d7537::t_4c150020e6c81d 1-248
+packages/domain/src/index.ts
+  s_40ddef7d1d7537::t_12bd2beb03c821 9-11
+packages/domain/src/routing.test.ts
+  s_40ddef7d1d7537::t_898568cec15964 1-57
+packages/domain/src/routing.ts
+  s_40ddef7d1d7537::t_c1e892d880938f 1-23,40-54,74-78
+  s_29fa229c8c70ee::t_ea723e566b5ad0 33-39,61-73,79-81,82-86,87
+  s_29fa229c8c70ee::t_d344baa0b7b09f 58-60
+  s_29fa229c8c70ee::t_c97fd941492a12 24-32,55-57
+packages/domain/src/authorization.test.ts
+  s_40ddef7d1d7537::t_94829ce8a37756 1-158
+  s_40ddef7d1d7537::t_96c08a81cf1901 159-161
+  s_40ddef7d1d7537::t_dbd3d58efcce90 162
+packages/domain/src/authorization.ts
+  s_29fa229c8c70ee::t_fa6c0651dcabb8 27,29-32,38-40,84-93,153-157,184-202,214-231,232-235,236-237,241-244,246
+  s_40ddef7d1d7537::t_ac9cb1e520afa5 1-22,36-37,41-71,82-83,94-137,143-152,158-173,203-213
+  s_29fa229c8c70ee::t_fa975afe8b60e1 24-26
+  s_29fa229c8c70ee::t_126e1bb7106160 28
+  s_29fa229c8c70ee::t_c0dad2ac62799a 181-183
+  s_29fa229c8c70ee::t_9f540b5ebddf82 238-240
+  s_29fa229c8c70ee::t_c8bb47f99273a1 23,33-35,72-81,138-142,174-180,245
+packages/domain/src/followups.ts
+  s_40ddef7d1d7537::t_e26b380d01d6ff 1-65,68-135,178-182,196-199,229-231,239-243,258-267,348
+  s_29fa229c8c70ee::t_dd15389df04b2f 136-137,139,142,144,148,151-157,158-159,161,164,171-174,175-176,183-195,200-201,203-204,208,212,228,232-238,244-257,268-280,281-314,315-321,322-340,341-344,345-347
+  s_29fa229c8c70ee::t_cdf8e72ec4dce4 138
+  s_29fa229c8c70ee::t_5ab53a36e0df80 140-141
+  s_29fa229c8c70ee::t_6041a3bb8c4da8 143
+  s_29fa229c8c70ee::t_5a1183eaaca395 145-147
+  s_29fa229c8c70ee::t_6a2f50ee5089b4 149-150
+  s_29fa229c8c70ee::t_69de5786f52d19 160
+  s_29fa229c8c70ee::t_3fd18d324af357 162-163
+  s_29fa229c8c70ee::t_58741dfab3f83b 165-167
+  s_29fa229c8c70ee::t_39803a2df42a88 177
+  s_29fa229c8c70ee::t_bd492f0198698d 202
+  s_29fa229c8c70ee::t_0eb5ac9e62f103 205-207
+  s_29fa229c8c70ee::t_e127f14c5a0519 209-211
+  s_29fa229c8c70ee::t_530928f8a1c3c3 213-215
+  s_29fa229c8c70ee::t_abf9400205d525 66-67,168-170,216-227
+packages/domain/proof/auth-intent-mutations.mjs
+  s_40ddef7d1d7537::t_1b83c86472cdbd 1-111
+  s_40ddef7d1d7537::t_19c2e4a916df44 112
+packages/adapter-cc-compute/src/adapter.test.ts
+  s_f61b680c67b1d6::t_0ce84183ef5736 505-544
+packages/adapter-cc-compute/src/types.ts
+  s_f61b680c67b1d6::t_9212a3a8107e0d 90-91
+packages/adapter-pi-contact/src/mind.test.ts
+  s_f61b680c67b1d6::t_eaf55da89d1331 10,363-370
+packages/api-contract/src/api.ts
+  s_f61b680c67b1d6::t_fce502dbac3c07 128-135
+packages/api-contract/src/entities.ts
+  s_f61b680c67b1d6::t_241f3a44f44f57 163-164,184-215
+packages/kernel/src/runtime-ports.ts
+  s_f61b680c67b1d6::t_8d2190eca25a7e 96-97
+packages/server/src/fakes.ts
+  s_f61b680c67b1d6::t_639f4205ed4f4a 45-49,56-69,87,90-93
+packages/server/src/host.ts
+  s_f61b680c67b1d6::t_83a710549fc3d6 1408-1412
+packages/server/src/intent.test.ts
+  s_f61b680c67b1d6::t_2bf3d7a56dd0be 1-486
+packages/server/src/service.ts
+  s_f61b680c67b1d6::t_c592858d7414d5 81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b461ad237fd87e76043903c41b9a386423f93fdb",
+  "prompts": {},
+  "sessions": {
+    "s_29fa229c8c70ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6f12fa99094fd0fa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_40ddef7d1d7537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_f61b680c67b1d6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3906c70af06d9f1a",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+packages/domain/proof/auth-intent-mutations.txt
+  s_40ddef7d1d7537::t_307e63afe73305 7-8,10-11,14-18
+packages/domain/proof/auth-intent-tests.txt
+  s_40ddef7d1d7537::t_589005380ae906 21,23,26-28
+receipts/feat-auth-domain.json
+  s_40ddef7d1d7537::t_b7335a6f91c721 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2d6a494cf8e5fbc545b9fa0276e8c6035945ee23",
+  "prompts": {},
+  "sessions": {
+    "s_40ddef7d1d7537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
