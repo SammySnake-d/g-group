@@ -1,0 +1,18 @@
+packages/server/src/drive.ts
+  h_f33e46a035b77c 1-30
+packages/server/src/drive.test.ts
+  h_f33e46a035b77c 1-96
+packages/server/src/group-claim.test.ts
+  h_f33e46a035b77c 1-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "28ba24d4d7d037feaa4beeca48247de2d9e236cb",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

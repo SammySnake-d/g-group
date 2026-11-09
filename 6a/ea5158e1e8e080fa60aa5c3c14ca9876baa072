@@ -1,0 +1,54 @@
+packages/api-contract/src/api.ts
+  s_25620647d6f8eb::t_b34d9571a428f2 8,11,46,60-61,65-66,123-130,152-153
+packages/api-contract/src/entities.ts
+  s_25620647d6f8eb::t_304f0376bfbf4e 221-224,228-266
+packages/server/src/files.test.ts
+  s_25620647d6f8eb::t_c400d4be1964f9 1-24,27-33,35-37,41-64,66-74,78-83,85-87,89-90,92-97,101-124
+  s_28bebc745289eb::t_b9426a317258f7 65,84,88,91
+packages/server/src/profile.test.ts
+  s_25620647d6f8eb::t_d98d924ca335e0 1-89
+packages/server/src/schedule-views.test.ts
+  s_25620647d6f8eb::t_023351f1d5a7b2 1-16,18,20-23,25,29-45,47-49,52-72,75-88
+packages/server/src/schedules.ts
+  s_25620647d6f8eb::t_1c263b0bd8aba1 99
+  s_12ccf69de2a7ec::t_0c185e1e56f292 44-45,96,100-105
+packages/server/src/service.ts
+  s_25620647d6f8eb::t_a0190ff743a67b 19,40,71-72,88
+packages/server/src/views.ts
+  s_25620647d6f8eb::t_1577cb9a5a9838 1-3,5,7-8,33,60,77
+  s_12ccf69de2a7ec::t_d00d016812dd85 4,6,9-32,34-59,61-76
+packages/server/src/host.ts
+  s_12ccf69de2a7ec::t_d83bb8d413a137 205-209
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6aea5158e1e8e080fa60aa5c3c14ca9876baa072",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
