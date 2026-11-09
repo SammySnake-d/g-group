@@ -5,3 +5,4 @@ export * from "./cron.ts";
 export * from "./plugins.ts";
 export * from "./models.ts";
 export * from "./transcript.ts";
+export * from "./board.ts";
