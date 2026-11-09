@@ -128,7 +128,8 @@ export function rebuildSearchIndex(db: Db) {
         n++;
       }
     }
-    run(db, "INSERT INTO gg_search_meta (k, v) VALUES ('version', ?) ON CONFLICT (k) DO UPDATE SET v = excluded.v", String(SEARCH_INDEX_VERSION));
+    // 版本行必须恰好写入一行(插入或覆盖);没写进就不能把索引当成已按当前版本重建
+    if (run(db, "INSERT INTO gg_search_meta (k, v) VALUES ('version', ?) ON CONFLICT (k) DO UPDATE SET v = excluded.v", String(SEARCH_INDEX_VERSION)) !== 1) throw new Error("搜索索引版本行没有写入,重建未完成");
     return n;
   });
 }

@@ -97,6 +97,7 @@ import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
 import { MemoryStore } from "./memory-store.ts";
+import { PluginRuntime } from "./plugin-runtime.ts";
 import { PluginStore } from "./plugins.ts";
 import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief, reviewModelProblem } from "./review.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
@@ -153,6 +154,19 @@ export interface HostOptions {
   readonly announcementOrder?: AnnouncementOrder;
   /** 联系人没单独设时的个人 Compute 槽位数(AC-23);不给为不限 */
   readonly personalComputeSlots?: number;
+  /** 插件进程运行时参数:pull/启动的单次超时、外发超时、插件单行输出上限(字节)、宿主预加载模块(测试替换插件里的 fetch)。 */
+  readonly pluginRuntime?: {
+    readonly callTimeoutMs?: number;
+    readonly sendTimeoutMs?: number;
+    readonly maxLineBytes?: number;
+    readonly preload?: string;
+    readonly maxHeapMb?: number;
+    readonly sendGraceMs?: number;
+  };
+  /** 从 URL 安装插件时的下载函数;默认全局 fetch。测试注入,不连网。 */
+  readonly pluginFetch?: (url: string) => Promise<Response>;
+  /** URL 安装的下载大小上限(字节),默认 20 MB;解包后上限为它的 4 倍。 */
+  readonly pluginDownloadMaxBytes?: number;
 }
 
 /** 记忆锚点:全局(进前缀)与「建议改人格」(只记录,不进任何一块) */
@@ -389,6 +403,9 @@ export class Host {
         else this.bus.emit({ type: "plugin.updated", plugin: v });
       },
       commandsChanged: () => this.bus.emit({ type: "commands.changed", roomId: null, commands: null }),
+      runtime: new PluginRuntime({ now: opts.clockMs ?? Date.now, ...opts.pluginRuntime }),
+      ...(opts.pluginFetch ? { fetch: opts.pluginFetch } : {}),
+      ...(opts.pluginDownloadMaxBytes !== undefined ? { maxDownloadBytes: opts.pluginDownloadMaxBytes } : {}),
     });
     this.announcements = new AnnouncementStore({
       db: this.db,
@@ -3397,9 +3414,12 @@ export class Host {
   async idle(): Promise<void> {
     await this.loop.idle();
   }
+  /** 关闭宿主;重复调用直接返回。 */
   async close(): Promise<void> {
+    if (this.closed) return;
     this.closed = true;
     this.scheduler.stop();
+    this.plugins.close();
     await this.loop.stop();
     // 一次性适配器只有在跑的才有进程;常驻适配器一轮做完(completed)、停在受阻(blocked)时进程仍在,关闭时一并停掉,不留后台进程
     for (const a of this.adapters.values()) {

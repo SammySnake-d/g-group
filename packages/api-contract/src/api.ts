@@ -9,6 +9,7 @@ import {
   ContactProfileView,
   ContactView,
   EFFORTS,
+  ExternalEventView,
   FileEntry,
   HARNESSES,
   HelperEntry,
@@ -300,7 +301,8 @@ export const METHODS = {
       source: tagged("kind", {
         marketplace: obj({ kind: lit("marketplace"), id: id(), version: opt(str({ max: 50 })) }),
         "local-path": obj({ kind: lit("local-path"), path: str({ min: 1, max: 4096 }) }),
-        url: obj({ kind: lit("url"), url: str({ min: 1, max: 4096, pattern: /^https:\/\// }) }),
+        /** sha256(可选,64 位小写十六进制):给了就必须与下载内容一致,否则 forbidden;不给则记下实际 hash、标未核对。 */
+        url: obj({ kind: lit("url"), url: str({ min: 1, max: 4096, pattern: /^https:\/\// }), sha256: opt(str({ pattern: /^[0-9a-f]{64}$/ })) }),
       } as const),
       /** 用户在安装确认框里勾选同意的权限键;少于插件声明的权限时安装被拒。 */
       grantedPermissions: arr(str({ min: 1, max: 100 })),
@@ -312,6 +314,28 @@ export const METHODS = {
   /** 新版本多声明的权限要在 grantedPermissions 里重新同意,否则 forbidden(detail.missing 列出缺的)。 */
   "plugins.update": method(obj({ pluginId: id(), version: opt(str({ max: 50 })), grantedPermissions: opt(arr(str({ min: 1, max: 100 }))) }), PluginView),
   "plugins.uninstall": method(obj({ pluginId: id() }), Ok),
+  /** 在隔离进程里运行数据源插件,拉一次外部事件(宿主盖章、标不可信)。不给 sourceId 就拉插件声明的全部来源;
+   *  单个来源失败进 failures,不合契约的事件进 rejected,不影响其它来源。插件停用 → conflict;没有 entry → unavailable。 */
+  "plugins.pull": method(
+    obj({ pluginId: id(), sourceId: opt(str({ min: 1, max: 4096 })) }),
+    obj({
+      events: arr(ExternalEventView),
+      rejected: arr(obj({ sourceId: str({ max: 4096 }), index: int({ min: 0 }), reason: str({ max: 2000 }) })),
+      failures: arr(obj({ sourceId: str({ max: 4096 }), reason: str({ max: 100 }), detail: str({ max: 2000 }) })),
+    }),
+  ),
+  /** 经输出渠道插件外发一次。actionId 由调用方生成并在重试时复用:已确认的复用回执不再发;结果未知时 B2 渠道拒绝自动重发,
+   *  B1 只在服务商幂等保留期内用同一 actionId 重试。state=rejected 是宿主没发(reason 说明,如 payload-mismatch)。 */
+  "plugins.send": method(
+    obj({ pluginId: id(), actionId: id(), payload: str({ min: 1, max: 100000 }) }),
+    obj({
+      state: oneOf(["confirmed", "delivery-unknown", "rejected"] as const),
+      receiptId: nullable(str({ max: 2000 })),
+      deduplicated: bool(),
+      reason: nullable(str({ max: 100 })),
+      detail: nullable(str({ max: 2000 })),
+    }),
+  ),
 
   // ---- Slash 命令 ----
   /** 当前会话可用命令(宿主内置 + 已启用插件 + 会话内联系人能力),输入框敲 / 时弹出。 */
