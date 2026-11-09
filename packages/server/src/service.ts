@@ -118,6 +118,8 @@ export function createService(host: Host): Service {
     "plugins.setEnabled": (p: { pluginId: string; enabled: boolean }) => host.plugins.setEnabled(p.pluginId, p.enabled),
     "plugins.configure": (p: { pluginId: string; config: unknown }) => host.plugins.configure(p.pluginId, p.config),
     "plugins.update": (p: { pluginId: string; version?: string; grantedPermissions?: string[] }) => host.plugins.update(p.pluginId, p.version, p.grantedPermissions),
+    "plugins.pull": (p: { pluginId: string; sourceId?: string }) => host.plugins.pull(p.pluginId, p.sourceId),
+    "plugins.send": (p: { pluginId: string; actionId: string; payload: string }) => host.plugins.send(p.pluginId, p.actionId, p.payload),
     "plugins.uninstall": (p: { pluginId: string }) => {
       host.plugins.uninstall(p.pluginId);
       return { ok: true };

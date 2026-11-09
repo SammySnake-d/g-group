@@ -3,9 +3,34 @@
   "name": "Webhook 外发",
   "version": "0.1.0",
   "publisher": "g-group",
-  "description": "示例输出渠道插件:把联系人的汇报发到你配置的 Webhook(B2 不去重,结果未知时不自动重发;运行时尚未接入)。",
-  "kinds": ["outbound-channel"],
-  "permissions": [{ "key": "net:post", "description": "向你配置的 Webhook 地址发送消息" }],
-  "commands": [{ "name": "push", "description": "把这条消息推到 Webhook", "args": [] }],
-  "configSchema": { "type": "object", "properties": { "url": { "type": "string", "format": "uri" } }, "required": ["url"] }
+  "description": "示例输出渠道插件:把消息 POST 到你配置的 Webhook。B2 不去重,结果未知时不自动重发。在宿主起的隔离进程里运行(只读本包目录、不能写文件或起子进程);网络未隔离,按 net:post 权限声明。",
+  "kinds": [
+    "outbound-channel"
+  ],
+  "permissions": [
+    {
+      "key": "net:post",
+      "description": "向你配置的 Webhook 地址发送消息"
+    }
+  ],
+  "commands": [
+    {
+      "name": "push",
+      "description": "把这条消息推到 Webhook",
+      "args": []
+    }
+  ],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "format": "uri"
+      }
+    },
+    "required": [
+      "url"
+    ]
+  },
+  "entry": "index.mjs"
 }

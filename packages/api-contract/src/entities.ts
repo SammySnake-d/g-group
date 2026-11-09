@@ -536,6 +536,10 @@ export const PluginView = obj({
   config: nullable(json()),
   commands: arr(str({ max: 64 })),
   installedAt: isoTime(),
+  /** 清单带 entry、能在隔离进程里执行(plugins.pull / plugins.send 可用)。旧宿主不给。 */
+  executable: opt(bool()),
+  /** 只有 URL 安装才有:下载内容的 sha256;verified 表示安装时与用户给定的值核对过。 */
+  integrity: opt(obj({ sha256: str({ pattern: /^[0-9a-f]{64}$/ }), verified: bool() })),
 });
 export type PluginView = Infer<typeof PluginView>;
 
@@ -546,6 +550,23 @@ export const CapabilityLibraryView = obj({
   mcp: arr(obj({ name: str({ min: 1, max: 64 }) })),
 });
 export type CapabilityLibraryView = Infer<typeof CapabilityLibraryView>;
+
+/** 插件数据源交来的外部事件(宿主盖过章):来源可追溯,内容永远是不可信数据,只给人看或交给联系人当数据,不当指令。 */
+export const ExternalEventView = obj({
+  origin: obj({ plugin: id(), source: str({ min: 1, max: 4096 }), nativeId: str({ min: 1, max: 4096 }) }),
+  /** 源端版本号:同一 nativeId 每次 create/edit/delete 各一个 */
+  sourceVersion: str({ min: 1, max: 4096 }),
+  eventType: oneOf(["create", "edit", "delete"] as const),
+  author: str({ max: 2000 }),
+  content: str({ max: 100000 }),
+  /** 源端发生时间 */
+  occurredAt: isoTime(),
+  /** 宿主收到时间(宿主时钟,不取插件自报) */
+  receivedAt: isoTime(),
+  attachments: arr(obj({ ref: str({ min: 1, max: 4096 }), name: opt(str({ max: 500 })), mime: opt(str({ max: 200 })) }), { max: 100 }),
+  trust: lit("untrusted"),
+});
+export type ExternalEventView = Infer<typeof ExternalEventView>;
 
 // ---------- Slash 命令 ----------
 export const SlashArg = obj({
