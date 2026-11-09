@@ -3,6 +3,7 @@
 import type { Section, SplitTab, WbTab } from './types'
 
 const qs = new URLSearchParams(location.search)
+if (import.meta.env.MODE === 'design' && !qs.has('section')) qs.set('section', 'files')
 
 /** 冻结:演示里的定时推进、延迟回复都立即发生(走查截图要稳定) */
 export const frozen = qs.get('freeze') !== null
@@ -22,6 +23,7 @@ function splitFromUrl(): SplitTab[] {
 }
 
 export const boot = {
+  fileFixture: (import.meta.env.DEV || import.meta.env.MODE === 'design') ? qs.get('files-fixture') : null,
   dark: qs.get('theme') === 'dark',
   /** ?section=activity 是旧链接:进展全景已经改成弹出遮罩(#1618),左侧停在聊天 */
   section: ((qs.get('section') === 'activity' ? 'chat' : qs.get('section')) as Section) ?? 'chat',

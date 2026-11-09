@@ -25,6 +25,7 @@ for (const theme of ['light', 'dark'] as const) {
     await page.keyboard.press('Space');
     const peek = page.getByRole('dialog', { name: 'IM 竞品交互对照' });
     await expect(peek).toBeVisible();
+    expect(await peek.evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
     await shot(page, `files-design/${theme}/quick-look`, 300);
     await page.keyboard.press('Escape');
     await expect(peek).toBeHidden();
@@ -50,11 +51,11 @@ for (const theme of ['light', 'dark'] as const) {
   test(`文件设计 ${theme}：没有原消息时不伪造引用、不发送，目录筛选可恢复`, async ({ page }) => {
     await page.goto(`/?section=files${theme === 'dark' ? '&theme=dark' : ''}`);
     await page.getByRole('searchbox', { name: '搜索文件' }).fill('VPS');
-    await page.getByRole('button', { name: '打开VPS · 香港 1 号机', exact: true }).click();
+    await page.getByTestId('shelf-a4').getByRole('heading').click();
     await page.getByRole('button', { name: '全部文件', exact: true }).click();
     await expect(page.getByRole('searchbox', { name: '搜索文件' })).toHaveValue('VPS');
     await expect(page.locator('[data-testid^="shelf-a"]')).toHaveCount(1);
-    await page.getByRole('button', { name: '打开VPS · 香港 1 号机', exact: true }).click();
+    await page.getByTestId('shelf-a4').getByRole('heading').click();
     await page.getByTestId('file-discuss').click();
     const composer = page.getByTestId('composer');
     await expect(composer).toHaveValue(/@Helper.*VPS · 香港 1 号机/);
@@ -71,7 +72,7 @@ test('文件设计：1024 窗口仍能完整浏览和阅读，无横向溢出', 
   await expect(page.locator('[data-testid^="shelf-a"]')).toHaveCount(5);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
   await shot(page, 'files-design/narrow/catalog', 300);
-  await page.getByRole('button', { name: '打开IM 竞品交互对照', exact: true }).click();
+  await page.getByTestId('shelf-a1').getByRole('heading').click();
   await expect(page.getByTestId('file-preview')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
   await shot(page, 'files-design/narrow/reader', 300);
