@@ -1,5 +1,6 @@
 // AC-51 经宿主的真实端到端:Host + 真实 Claude Code 常驻 Compute(claudeCompute)+ 规则替身联系人脑子。
 // 私聊派活(模型 A,记住暗号)→ 交付 → 用户把联系人的 Compute 改成模型 B → 用户退回「把暗号写进 code.txt」
+// (B 被 harness 拒绝时第 2 轮不发出,脚本照样打印进度、消息与网关记录)
 // → 宿主现场解析出 B 交给同一个 Compute,适配器在轮边界会话内换模型 → 核对:同一会话、同一进程(started 只一次)、
 // code.txt 里是暗号(上下文还在)、任务账本 start=A / turn=B、网关逐请求记录的请求模型。
 // 用法: node packages/server/scripts/e2e-model-hotswap.ts <模型A> <模型B>
@@ -59,7 +60,14 @@ try {
   host.updateContact(c.id, { computeModel: { mode: "explicit", model: B }, confirmAffected: true });
   say(`用户把联系人的 Compute 改成 ${B};解析链:${host.contactView(host.contactDoc(c.id).value).computeResolved?.resolved.chain.join(" → ")}`);
   host.taskDecision(task.id, "reject", "u2", "把我让你记住的暗号写进当前目录的 code.txt,只写暗号本身,写好汇报完成");
-  await wait("第 2 轮完成", () => events.filter((e) => e.kind === "completed").length >= 2);
+  // 第 2 轮两种结局都要看:换模型成功并完成,或 harness 拒绝新模型(宿主这一轮不发出、联系人说明原因,AC-51 ④)
+  try {
+    await wait("第 2 轮完成或换模型被拒", () => events.filter((e) => e.kind === "completed").length >= 2 || host.progress(task.id).some((p) => p.kind === "blocked" && p.stage === "model"));
+  } catch (err) {
+    say(`第 2 轮等待结束:${(err as Error).message}`);
+  }
+  say(`第 2 轮后任务状态 ${host.taskView(host.taskDoc(task.id).value).state}`);
+  say(`进度:${JSON.stringify(host.progress(task.id).map((p) => ({ kind: p.kind, stage: p.stage, summary: p.summary })))}`);
   await host.idle();
   const view = host.taskView(host.taskDoc(task.id).value);
   const code = path.join(root, "work", "code.txt");
