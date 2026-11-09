@@ -45,11 +45,25 @@ import {
   type MindAction,
   type RoundStatus,
   type TimerApi,
+  type RecallItem,
+  type RecallRef,
+  type RecallSource,
   type Urgency,
   createAttentionLoop,
+  planRecall,
 } from "@g-group/kernel";
 import { type AnnouncementOrder, AnnouncementStore } from "./announcements.ts";
-import { CONTACT_SYSTEM, CONTACT_TOOLS, type LedgerLine, type RoundAssembler, kernelAssemble } from "./assemble.ts";
+import {
+  CONTACT_SYSTEM,
+  CONTACT_TOOLS,
+  type LedgerLine,
+  RECALL_BUDGET_BYTES,
+  RECALL_MIN_SLICE_BYTES,
+  ROUND_BUDGET_BYTES,
+  type RoundAssembler,
+  RoundAssembleError,
+  kernelAssemble,
+} from "./assemble.ts";
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
@@ -71,6 +85,11 @@ export interface HostOptions {
   /** 派给 Compute 的内置工具白名单;默认 Read/Write/Edit/Glob/Grep/Bash。 */
   readonly computeTools?: readonly string[];
   readonly assemble?: RoundAssembler;
+  /** 整轮五块字节预算(默认 ROUND_BUDGET_BYTES);数值待决(需求文档 v3.20 §8.1 待决 13)。 */
+  readonly roundBudgetBytes?: number;
+  /** 单轮回读预算 max_recall(默认 RECALL_BUDGET_BYTES)与每条引用保底切片(默认 RECALL_MIN_SLICE_BYTES);数值待决。 */
+  readonly recallBudgetBytes?: number;
+  readonly recallMinSliceBytes?: number;
   readonly now?: () => string;
   /** 宿主数据目录(插件包装在这里);默认数据库文件所在目录。 */
   readonly dataDir?: string;
@@ -1229,16 +1248,24 @@ export class Host {
   private inbox(contactId: string): { id: number; room_id: string; payload: string }[] {
     return all(this.db, "SELECT id, room_id, payload FROM gg_inbox WHERE contact_id = ? AND consumed = 0 ORDER BY id", contactId);
   }
+  /** 一条消息落盘的回复与引用(原样,不过滤):给引用召回规划逐条判定,伪造或越界的引用在那里显式 AccessDenied。 */
+  private rawRefs(roomId: string, seq: number): { replyTo: number | null; quoted: number[] } {
+    const meta = one<MsgMeta>(this.db, "SELECT reply_to, quoted FROM gg_msg WHERE room_id = ? AND seq = ?", roomId, seq);
+    return { replyTo: meta?.reply_to ?? null, quoted: meta ? (JSON.parse(meta.quoted) as number[]) : [] };
+  }
   private toInbound(roomId: string, m: ProjectedMessage): InboundMessage {
     const meta = one<MsgMeta>(this.db, "SELECT * FROM gg_msg WHERE room_id = ? AND seq = ?", roomId, m.seq);
+    // 第 4 块只标指向更早消息的引用(五块装配的输入合同);指向本条之后的引用不可能是真引用,交召回规划判 AccessDenied
+    const earlier = (q: number) => Number.isSafeInteger(q) && q >= 1 && q < m.seq;
+    const replyTo = meta?.reply_to ?? null;
     return {
       kind: "message",
       roomId,
       seq: m.seq,
       sender: { kind: m.sender.kind, id: m.sender.id, name: this.nameOf(m.sender) },
       text: m.text,
-      replyToSeq: meta?.reply_to ?? null,
-      quotedSeqs: meta ? (JSON.parse(meta.quoted) as number[]) : [],
+      replyToSeq: replyTo !== null && earlier(replyTo) ? replyTo : null,
+      quotedSeqs: meta ? (JSON.parse(meta.quoted) as number[]).filter(earlier) : [],
       mentions: meta ? (JSON.parse(meta.mentions) as { id: string }[]).map((x) => x.id) : [],
       command: meta?.command ? (JSON.parse(meta.command) as { name: string; args: unknown }) : null,
       at: one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${roomId}`, m.seq)?.at ?? this.now(),
@@ -1254,7 +1281,9 @@ export class Host {
     const fresh: Inbound[] = [];
     const ownOnly: { roomId: string; seq: number }[] = [];
     const lastSeen: Record<string, number> = {};
-    const pointers: { ref: string; text: string }[] = [];
+    // 被引用消息的确定性 Page-in(D06.3):逐条收集引用,统一交召回规划判权限、撤回与公平预算
+    const refs: RecallRef[] = [];
+    const sources = new Map<string, RecallSource & { sender: string }>();
     for (const r of rooms) {
       const cur = this.cursor(contactId, r.id);
       const { log } = loadLog(this.db.store, `room:${r.id}`);
@@ -1293,9 +1322,15 @@ export class Host {
           };
         }
         fresh.push(ib);
-        for (const q of [...ib.quotedSeqs, ...(ib.replyToSeq !== null ? [ib.replyToSeq] : [])]) {
+        const raw = ev.body.kind === "message" ? this.rawRefs(r.id, ev.seq) : { replyTo: ev.body.target, quoted: [] };
+        for (const q of [...(raw.replyTo !== null ? [raw.replyTo] : []), ...raw.quoted]) {
           const src = msgs.find((x) => x.seq === q);
-          if (src && !src.retracted && src.seq <= cur && !inRanges(rewound, src.seq) && !pointers.some((p) => p.ref === `${r.id} #${q}`)) pointers.push({ ref: `${r.id} #${q}`, text: src.text });
+          // 已在本批第 4 块里的消息不再换入(AC-06:引用窗口内消息不触发 Page-in)
+          if (src && !src.retracted && fresh.some((f) => f.kind === "message" && f.roomId === r.id && f.seq === q)) continue;
+          refs.push({ fromRoomId: r.id, roomId: r.id, seq: q, primary: q === raw.replyTo });
+          // 私聊 rewind 撤下的消息(AC-48)不换入原文:按撤回处理,只给占位,原文不进召回规划
+          const gone = !!src && inRanges(rewound, src.seq);
+          if (src && !sources.has(`${r.id}#${q}`)) sources.set(`${r.id}#${q}`, { roomId: r.id, seq: q, text: gone ? "" : src.text, retracted: src.retracted || gone, sender: this.nameOf(src.sender) });
         }
       }
     }
@@ -1315,7 +1350,23 @@ export class Host {
     const ledgerLines = this.activeLedgerLines(contactId);
     const freshKeys = new Set(fresh.flatMap((f) => (f.kind === "message" ? [`${f.roomId}#${f.seq}`, ...(f.replyToSeq !== null ? [`${f.roomId}#${f.replyToSeq}`] : [])] : [])));
     const freshTasks = new Set(fresh.flatMap((f) => (f.kind === "compute" ? [f.taskId] : [])));
-    const request = this.assemble({
+    const plan = planRecall({
+      refs,
+      readableRooms: rooms.map((r) => r.id),
+      sources: [...sources.values()].map(({ sender: _s, ...src }) => src),
+      budgetBytes: this.opts.recallBudgetBytes ?? RECALL_BUDGET_BYTES,
+      minSliceBytes: this.opts.recallMinSliceBytes ?? RECALL_MIN_SLICE_BYTES,
+    });
+    if (!plan.ok) {
+      if (plan.reason === "over-budget") return this.failRound(contactId, roundId, focusRoom ?? fresh[0]!.roomId, lastSeen, inbox, { reason: "recall-over-budget", need: plan.need, budget: plan.budget, detail: plan.detail });
+      this.setActivity(contactId, null, "idle");
+      throw new Error(`引用召回规划失败:${plan.detail}`);
+    }
+    this.report("recall", { contactId, roundId, items: plan.items.map(({ text: _t, ...rest }) => rest) });
+    const pointers = plan.items.map((it) => renderRecall(it, sources.get(`${it.roomId}#${it.seq}`)?.sender ?? "?"));
+    let request: ReturnType<RoundAssembler>;
+    try {
+      request = this.assemble({
       system: CONTACT_SYSTEM,
       tools: CONTACT_TOOLS,
       persona: identityOf(contactId, contact),
@@ -1329,7 +1380,16 @@ export class Host {
       fresh,
       tasks: tasks.map((t) => `${t.id} [${t.state}] ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
       pointers,
-    });
+      budgetBytes: this.opts.roundBudgetBytes ?? ROUND_BUDGET_BYTES,
+      });
+    } catch (e) {
+      // 整轮超预算(D06 §2):显式失败——不截断、不调模型、游标不推进;出失败卡交用户重试或跳过,不在后台反复重跑
+      if (e instanceof RoundAssembleError && e.reason === "over-budget" && e.need !== null && e.budget !== null) {
+        return this.failRound(contactId, roundId, focusRoom ?? fresh[0]!.roomId, lastSeen, inbox, { reason: "over-budget", need: e.need, budget: e.budget, detail: e.message });
+      }
+      this.setActivity(contactId, null, "idle");
+      throw e;
+    }
     let out: Awaited<ReturnType<ContactMind["round"]>>;
     try {
       out = await this.opts.mind(this.contactView(contact)).round({ contact: { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona }, request, fresh }, signal);
@@ -1350,6 +1410,7 @@ export class Host {
       }
     }
     const done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, out);
+    this.expireRoundFailures(contactId);
     this.setActivity(contactId, null, "idle");
     await this.runEffects(done.effects);
     return "done";
@@ -1367,6 +1428,52 @@ export class Host {
       (d) => d.value.roomId === src.roomId && d.value.sourceSeq === src.seq && d.value.task.owner !== null && d.value.task.owner !== contactId && d.value.task.state !== "T10_Cancelled" && d.value.task.state !== "T11_Failed",
     );
     return taken ? `${src.roomId} #${src.seq} 已由联系人 ${taken.value.task.owner} 接手(任务 ${taken.value.task.id})` : null;
+  }
+
+  /**
+   * 一轮装配超预算的显式失败:在会话里出一张这位联系人的失败卡(说明超了多少、请分批),不截断、不调模型、游标不推进。
+   * 这位联系人已有没处理的同类失败卡就只更新它(记下最新一批的位置),不重复出卡。返回 "done":不让注意循环在后台反复重跑,
+   * 新输入来了或用户点「重试」才再试;点「跳过本轮」才把这批标为已处理。
+   */
+  private failRound(contactId: string, roundId: string, roomId: string, lastSeen: Record<string, number>, inbox: { id: number }[], f: { reason: string; need: number; budget: number; detail: string }): RoundStatus {
+    const name = this.contactDoc(contactId).value.name;
+    const meta = { kind: "round-over-budget", contactId, lastSeen, inboxIds: inbox.map((i) => i.id), reason: f.reason, need: f.need, budget: f.budget };
+    const what = f.reason === "recall-over-budget" ? "被引用消息的回读" : "这一轮要读的上下文";
+    const body = `${name}${what}需要 ${f.need} 字节,预算 ${f.budget} 字节,超出 ${f.need - f.budget} 字节。没有截断任何内容,也没有调用模型;这批输入还在。请分批:把长内容拆成几条发,或少引用几条;然后点「重试」,或点「跳过本轮」把这批标为已处理。\n${f.detail}`.slice(0, 20000);
+    const open = all<CardRow>(this.db, "SELECT * FROM gg_cards WHERE kind = 'failure' AND state = 'open' ORDER BY seq").find((c) => {
+      const m = JSON.parse(c.meta) as { kind?: string; contactId?: string };
+      return m.kind === "round-over-budget" && m.contactId === contactId;
+    });
+    this.report("round-failed", { contactId, roundId, reason: f.reason, need: f.need, budget: f.budget });
+    if (open) {
+      run(this.db, "UPDATE gg_cards SET body = ?, meta = ? WHERE card_id = ?", body, JSON.stringify(meta), open.card_id);
+      const m = this.projected(open.room_id).find((x) => x.seq === open.seq);
+      if (m) this.bus.emit({ type: "message.updated", message: this.messageView(open.room_id, m) });
+    } else {
+      const me: Member = { kind: "contact", id: contactId };
+      const r = tx(this.db, () =>
+        this.appendMessageTx(roomId, me, {
+          text: "这一轮没跑成:上下文超预算",
+          actionKey: `roundfail:${roundId}`,
+          card: {
+            card_id: this.newId("card"),
+            kind: "failure",
+            task_id: null,
+            title: "这一轮没跑成:上下文超预算",
+            body,
+            state: "open",
+            actions: JSON.stringify([
+              { actionId: "retry", label: "重试", style: "primary" },
+              { actionId: "skip", label: "跳过本轮", style: "danger" },
+            ]),
+            meta: JSON.stringify(meta),
+          },
+        }),
+      );
+      this.afterAppend(roomId, r.seq, me);
+    }
+    this.setActivity(contactId, roomId, "blocked");
+    return "done";
   }
 
   private advanceCursorsTx(contactId: string, lastSeen: Record<string, number>) {
@@ -1688,6 +1795,23 @@ export class Host {
 
   // ======================= 卡片与验收 =======================
   /** 用户点卡片按钮;以对话消息形式记录(决策是共享上下文)。 */
+  /** 这位联系人一轮跑成了:之前那批已一并处理,没处理的超预算失败卡收口为过期。 */
+  private expireRoundFailures(contactId: string) {
+    for (const c of all<CardRow>(this.db, "SELECT * FROM gg_cards WHERE kind = 'failure' AND state = 'open'")) {
+      const m = JSON.parse(c.meta) as { kind?: string; contactId?: string };
+      if (m.kind !== "round-over-budget" || m.contactId !== contactId) continue;
+      run(this.db, "UPDATE gg_cards SET state = 'expired' WHERE card_id = ? AND state = 'open'", c.card_id);
+      const msg = this.projected(c.room_id).find((x) => x.seq === c.seq);
+      if (msg) this.bus.emit({ type: "message.updated", message: this.messageView(c.room_id, msg) });
+    }
+  }
+  /** 整轮超预算失败卡:「跳过本轮」把那一批标为已处理(推进游标、消费收件箱),由用户显式决定;「重试」不改状态,回复消息会叫醒联系人再试。 */
+  private applyRoundFailureTx(card: CardRow, actionId: string) {
+    const meta = JSON.parse(card.meta) as { kind?: string; contactId?: string; lastSeen?: Record<string, number>; inboxIds?: number[] };
+    if (meta.kind !== "round-over-budget" || !meta.contactId || actionId !== "skip") return;
+    this.advanceCursorsTx(meta.contactId, meta.lastSeen ?? {});
+    for (const id of meta.inboxIds ?? []) run(this.db, "UPDATE gg_inbox SET consumed = 1 WHERE id = ?", id);
+  }
   cardAct(input: { roomId: string; seq: number; cardId: string; actionId: string; clientActionId: string; text?: string }): MessageView {
     const card = one<CardRow>(this.db, "SELECT * FROM gg_cards WHERE card_id = ?", input.cardId);
     if (!card || card.room_id !== input.roomId || card.seq !== input.seq) throw new HostError("not_found", "卡片不存在");
@@ -1704,6 +1828,7 @@ export class Host {
         const text = input.text?.trim() ? `${act.label}:${input.text.trim()}` : act.label;
         msgSeq = this.appendMessageTx(card.room_id, me, { text, actionKey: `user:${input.clientActionId}`, clientActionId: input.clientActionId, replyToSeq: card.seq, quotedSeqs: [card.seq] }).seq;
         if (card.task_id) effects.push(...this.applyCardDecisionTx(card, input.actionId, input.text ?? ""));
+        if (card.kind === "failure") this.applyRoundFailureTx(card, input.actionId);
         run(this.db, "UPDATE gg_cards SET state = 'done' WHERE card_id = ?", input.cardId);
       });
     } catch (e) {
@@ -1827,3 +1952,15 @@ type HostEffect =
   | { kind: "spawn"; taskId: string; requestId: string; contactId: string; model: string; brief: string; roomId: string }
   | { kind: "resume"; taskId: string; computeId: string; text: string }
   | { kind: "stop"; taskId: string; computeId: string };
+
+/** 召回清单的一项 → 第 5 块的一个指针。截断显式写出原长与续读游标;撤回与越权只给状态,不带原文和原长。 */
+export function renderRecall(it: RecallItem, sender: string): { ref: string; text: string } {
+  const ref = `${it.roomId} #${it.seq}${it.primary ? "(主回复)" : ""}`;
+  if (it.state === "Full") return { ref, text: `Full · ${sender} 原文(${it.bytes} 字节):${it.text}` };
+  if (it.state === "TruncatedSlice") {
+    const c = it.nextCursor!;
+    return { ref, text: `TruncatedSlice · ${sender} 原文前 ${it.bytes}/${it.totalBytes} 字节(未完,续读游标 offset=${c.offset},还剩 ${c.remainingBytes} 字节):${it.text}` };
+  }
+  if (it.state === "DeletedOrWithdrawn") return { ref, text: "DeletedOrWithdrawn · 这条已撤回或已删除,不提供原文" };
+  return { ref, text: "AccessDenied · 不在本会话或无权读取,已拒绝" };
+}
