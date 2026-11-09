@@ -2216,3 +2216,36 @@ test("R9 补充:凭据引用的方案名可带数字、加号、点、连字符(
   for (const ref of ["s3://bucket/key", "git+ssh://host/repo", "x.y-z://a", "vault://team/upload-token"]) assert.equal(isCredentialRef(ref), true, ref);
   for (const ref of ["3s://bucket/key", "Vault://team/x", "va_ult://team/x", "vault:/team/x", "vault://", "vault:// x"]) assert.equal(isCredentialRef(ref), false, ref);
 });
+
+// R10-02/03 原实现正确,这是邻接形态补测,不声称原产品行为错误。
+test("R10-02:转义的顶层 id 键按解码值识别,重复转义键取最后一个且嵌套同名键不影响", () => {
+  const lines = [
+    String.raw`{"jsonrpc":"2.0","\u0069d":8,"method":"tools/list"}`,
+    String.raw`{"jsonrpc":"2.0","id":1,"\u0069\u0064":9007199254740993,"method":"tools/list"}`,
+    String.raw`{"jsonrpc":"2.0","\u0069d":3,"id":9007199254740995,"method":"tools/list"}`,
+    String.raw`{"jsonrpc":"2.0","params":{"\u0069d":4,"x":[{"id":5}]},"i\u0064":9007199254740997,"method":"tools/list"}`,
+    String.raw`{"jsonrpc":"2.0","\u0069d":9007199254740999,"params":{"id":6},"method":"tools/list"}`,
+  ];
+  const r = rpcRaw(lines);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stderr, "");
+  assert.deepEqual(r.lines.map(replyIdSource), ["8", "9007199254740993", "9007199254740995", "9007199254740997", "9007199254740999"]);
+  for (const line of r.lines) assert.deepEqual(replyOf(line).result?.tools, [reportToolDefinition()]);
+});
+
+test("R10-03:版本与通知六格交叉保持先核对版本,无效通知回错误且不登记,有效通知静默且不登记", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fake-cc-"));
+  ownDirs.add(dir);
+  const log = path.join(dir, "report.jsonl");
+  const lines = [undefined, "1.0", "2.0"].flatMap((version, i) => [false, true].map((withId) => JSON.stringify({
+    ...(version === undefined ? {} : { jsonrpc: version }), ...(withId ? { id: i + 1 } : {}),
+    method: "tools/call", params: { name: "report_progress", arguments: { kind: "started", summary: "交叉对照" } },
+  })));
+  const r = rpcRaw(lines, { REPORT_LOG: log });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stderr, "");
+  assert.deepEqual(r.lines.map(replyIdSource), ["null", "null", "null", "null", "3"]);
+  assert.deepEqual(r.lines.map((line) => [replyOf(line).error?.code ?? null, replyOf(line).result?.isError ?? null]), [[-32600, null], [-32600, null], [-32600, null], [-32600, null], [null, false]]);
+  assert.deepEqual(readLog(log).map((x) => [x.valid, x.summary]), [[true, "交叉对照"]]);
+  assert.deepEqual(reportErrors({ kind: "started", summary: "交叉对照" }), []);
+});
