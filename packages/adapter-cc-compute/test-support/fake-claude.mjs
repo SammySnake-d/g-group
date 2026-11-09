@@ -124,9 +124,22 @@ const mcp = connected ? client : null;
 const listed = mcp ? await Promise.race([mcp.call("tools/list", {}), new Promise((r) => setTimeout(() => r(null), 3000).unref())]) : null;
 const discovered = Array.isArray(listed?.result?.tools) ? listed.result.tools.filter((t) => typeof t?.name === "string").map((t) => `mcp__host__${t.name}`) : [];
 
-const initTools = [...builtins, ...(plan.extraInitTools ?? []), ...discovered];
+// 勾选能力(AC-29):--mcp-config 里 host 以外的服务器照真实 CLI 列进 init(不真起进程;状态取剧本 mcpStatus,默认 connected),
+// 每个已连上的服务器暴露一个 mcp__<名>__echo;剧本 extraInitMcp 模拟 CLI 多挂了未勾选的服务器。
+// skill 照真实 CLI 2.1.319 在 --bare 下的实测行为(proof/v02-config-dir.txt):只加载 --plugin-dir 里的,
+// 名字是 <插件名>:<skill 目录名>;~/.claude/skills 与 CLAUDE_CONFIG_DIR/skills 都不读。剧本 extraInitSkills 模拟多加载的 skill。
+const cfgAll = cfgPath ? JSON.parse(fs.readFileSync(cfgPath, "utf8")) : null;
+const pickedMcp = Object.keys(cfgAll?.mcpServers ?? {}).filter((n) => n !== "host");
+const mcpStatus = (n) => plan.mcpStatus?.[n] ?? "connected";
+const pluginDirs = argv.flatMap((a, i) => (a === "--plugin-dir" ? [argv[i + 1]] : []));
+const pluginSkills = pluginDirs.flatMap((d) => {
+  const name = JSON.parse(fs.readFileSync(`${d}/.claude-plugin/plugin.json`, "utf8")).name;
+  return fs.existsSync(`${d}/skills`) ? fs.readdirSync(`${d}/skills`).filter((s) => fs.existsSync(`${d}/skills/${s}/SKILL.md`)).sort().map((s) => `${name}:${s}`) : [];
+});
+const initTools = [...builtins, ...(plan.extraInitTools ?? []), ...discovered, ...pickedMcp.filter((n) => mcpStatus(n) === "connected").map((n) => `mcp__${n}__echo`)];
 const init = { type: "system", subtype: "init", cwd: process.cwd(), session_id: sid, tools: initTools,
-  mcp_servers: client ? [{ name: "host", status: connected ? "connected" : "failed", source: "dynamic" }] : [], permissionMode: flag("--permission-mode") ?? "default" };
+  mcp_servers: [...(client ? [{ name: "host", status: connected ? "connected" : "failed", source: "dynamic" }] : []), ...pickedMcp.map((n) => ({ name: n, status: mcpStatus(n) })), ...(plan.extraInitMcp ?? []).map((n) => ({ name: n, status: "connected" }))],
+  skills: [...pluginSkills, ...(plan.extraInitSkills ?? [])], permissionMode: flag("--permission-mode") ?? "default" };
 if (plan.init === "noTools") init.tools = "Read,Write";
 if (plan.init === "badTools") init.tools = [...initTools, 42];
 // 剧本 preInit:init 之前原样输出的行(字符串);postInit:init 之后、汇报之前原样输出的行(R3-03)

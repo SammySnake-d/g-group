@@ -3,6 +3,7 @@
 import {
   ANNOUNCEMENT_ORDERS,
   AnnouncementView,
+  CapabilityLibraryView,
   CommitmentView,
   ComputeProgress,
   ContactProfileView,
@@ -81,12 +82,16 @@ export const METHODS = {
       persona: opt(str({ max: 20000 })),
       /** 同 contacts.create。 */
       confirmAffected: opt(bool()),
+      /** 个人 Compute 槽位数(AC-23);null 恢复宿主默认。 */
+      computeSlots: opt(nullable(int({ min: 1, max: 64 }))),
     }),
     ContactView,
   ),
   /** 联系人主面板(AC-54):视图 + 预设 + 工作记忆 + 职责(承诺、在途任务、定时、所在会话)。 */
   "contacts.profile": method(obj({ contactId: id() }), ContactProfileView),
   "contacts.remove": method(obj({ contactId: id() }), Ok),
+  /** 全局能力库里可勾选的 skill 与 MCP(AC-29)。联系人的 Compute 只加载它勾选的那些,本机全局的默认不进入。 */
+  "capabilities.list": method(Empty, CapabilityLibraryView),
 
   // ---- 会话 ----
   "rooms.list": method(Empty, obj({ rooms: arr(RoomView) })),
@@ -94,7 +99,7 @@ export const METHODS = {
   /** 打开与某联系人的私聊;已存在则返回原会话。 */
   "rooms.openDm": method(obj({ contactId: id() }), RoomView),
   "rooms.createGroup": method(obj({ clientActionId: id(), title: str({ min: 1, max: 200 }), members: arr(MemberRef, { max: 100 }) }), RoomView),
-  "rooms.update": method(obj({ roomId: id(), title: opt(str({ min: 1, max: 200 })), pinned: opt(bool()), muted: opt(bool()), rules: opt(str({ max: 20000 })), expectedRulesVersion: opt(int({ min: 0 })) }), RoomView),
+  "rooms.update": method(obj({ roomId: id(), title: opt(str({ min: 1, max: 200 })), pinned: opt(bool()), muted: opt(bool()), rules: opt(str({ max: 20000 })), expectedRulesVersion: opt(int({ min: 0 })), tempComputeSlots: opt(int({ min: 0, max: 64 })) }), RoomView),
   "rooms.addMembers": method(obj({ roomId: id(), members: arr(MemberRef, { max: 100 }) }), RoomView),
   /**
    * 移出成员。联系人在这个群有在途任务(T8/T10/T11 以外)时默认 conflict,detail.tasks 列出 {taskId,title,state};

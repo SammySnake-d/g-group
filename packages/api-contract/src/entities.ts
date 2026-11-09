@@ -74,6 +74,8 @@ export const ContactView = obj({
   /** 已勾选的具名有界工具与 Compute 能力(skill/MCP),只读展示;授予走 contacts.update。 */
   tools: arr(str({ max: 200 })),
   computeAssets: arr(obj({ name: str({ max: 200 }), kind: oneOf(["mcp", "skill", "script"] as const) })),
+  /** 个人 Compute 槽位数(AC-23,D10 两级配额的个人档):同时最多几个 Compute;null/没有为宿主默认。 */
+  computeSlots: opt(nullable(int({ min: 1, max: 64 }))),
   activity: oneOf(CONTACT_ACTIVITY),
   createdAt: isoTime(),
   /** Compute 的生效值、完整解析链与能力声明里的支持性(可选,旧客户端忽略)。 */
@@ -110,6 +112,8 @@ export const RoomView = obj({
   announcementCount: opt(int({ min: 0 })),
   /** 移出中的成员(AC-49/D05):仍在 members 里,但这个群的新消息不再送达、发言与接新活被拒,等在途任务真实停止确认后才移除。 */
   leavingMembers: opt(arr(MemberRef)),
+  /** 群临时 Compute 槽位数(AC-23,只给本群任务借用,不跨群);私聊没有这个字段。 */
+  tempComputeSlots: opt(int({ min: 0, max: 64 })),
 });
 export type RoomView = Infer<typeof RoomView>;
 /** 群公告(U97/U86):一个群可有多条,当前有效的全部装配进联系人第 1 块「群规快照」位。version 每次改动 +1(CAS 用)。 */
@@ -228,6 +232,8 @@ export const ComputeRunView = obj({
   status: oneOf(["starting", "running", "blocked", "completed", "failed", "stopped"] as const),
   startedAt: isoTime(),
   endedAt: nullable(isoTime()),
+  /** Compute 启动后实际加载的 skill 与 MCP 服务器(CLI 自报,AC-29);旧记录没有。 */
+  loaded: opt(obj({ skills: arr(str({ max: 200 })), mcpServers: arr(str({ max: 200 })) })),
 });
 /** 代码任务的隔离工作树(R-Worktree,AC-22):W2 在改 → W3 钉住候选提交 → W4 合入中 → W6 已合入;W5 合入冲突或重验失败(目标分支未动)。 */
 export const WORKSPACE_STATES = ["W2_Active", "W3_Pinned", "W4_Integrating", "W5_Conflict", "W6_Merged"] as const;
@@ -303,6 +309,8 @@ export const TaskView = obj({
   ),
   /** 代码任务才有(宿主配了代码仓);普通任务不带这个字段。 */
   workspace: opt(WorkspaceView),
+  /** 在等什么(AC-23):排队等 Compute 槽位的原因,或「停止未确认」;没有在等为 null。 */
+  waitingFor: opt(nullable(str({ max: 500 }))),
   createdAt: isoTime(),
   updatedAt: isoTime(),
   /** 用户手动新建任务时填的描述,原样保留(AC-47);联系人派活建的任务没有这一项。 */
@@ -496,6 +504,14 @@ export const PluginView = obj({
   installedAt: isoTime(),
 });
 export type PluginView = Infer<typeof PluginView>;
+
+// ---------- 能力库(AC-29)----------
+/** 全局能力库:联系人设置页的勾选清单。勾选结果写进 ContactView.computeAssets(contacts.update)。 */
+export const CapabilityLibraryView = obj({
+  skills: arr(obj({ name: str({ min: 1, max: 64 }), description: str({ max: 2000 }) })),
+  mcp: arr(obj({ name: str({ min: 1, max: 64 }) })),
+});
+export type CapabilityLibraryView = Infer<typeof CapabilityLibraryView>;
 
 // ---------- Slash 命令 ----------
 export const SlashArg = obj({

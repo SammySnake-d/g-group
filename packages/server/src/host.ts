@@ -81,9 +81,11 @@ import {
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
+import { CapabilityLibrary } from "./capabilities.ts";
 import { PluginStore } from "./plugins.ts";
 import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief, reviewModelProblem } from "./review.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
+import { QuotaTable } from "./quota.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
 import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, unindexTx } from "./search.ts";
 import { SharedDocs } from "./shared-docs.ts";
@@ -128,6 +130,8 @@ export interface HostOptions {
   readonly onReport?: (what: string, detail: unknown) => void;
   /** 群公告排序(列表与装配共用);默认按创建先后。排序规则待定(D28 待确认 ④),先做成参数。 */
   readonly announcementOrder?: AnnouncementOrder;
+  /** 联系人没单独设时的个人 Compute 槽位数(AC-23);不给为不限 */
+  readonly personalComputeSlots?: number;
 }
 
 /** 状态笔记含撤回原文且无法精确移除时,整份作废后的占位(撤回优先,AC-08) */
@@ -257,6 +261,16 @@ export class Host {
   readonly docs: SharedDocs;
   readonly worktrees: Worktrees | null;
   readonly artifacts: ArtifactStore;
+  /** 全局能力库与联系人专属运行目录(AC-29) */
+  readonly capabilities: CapabilityLibrary;
+  /** Compute 槽位租约(AC-23):个人槽位 + 本群临时槽位,确认停下才归还 */
+  readonly quota: QuotaTable;
+  /** 等槽位的启动/续接:槽位空出来按先来先到执行 */
+  private readonly pendingLaunch = new Map<string, HostEffect>();
+  /** 每个任务第几次起 CLI(启动或续接);某一轮的收尾只在它仍是最新一轮时归还槽位 */
+  private readonly launchEpoch = new Map<string, number>();
+  /** 停止没确认下来的原因(进程没退干净),任务视图里显示 */
+  private readonly stopUnconfirmed = new Map<string, string>();
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly newId: (prefix: string) => string;
@@ -314,6 +328,12 @@ export class Host {
         if ("removed" in s) this.bus.emit({ type: "schedule.removed", scheduleId: s.removed });
         else this.bus.emit({ type: "schedule.updated", schedule: s });
       },
+    });
+    this.capabilities = new CapabilityLibrary(opts.dataDir ?? dirname(opts.file));
+    this.quota = new QuotaTable({
+      personal: (contactId) => getDoc<ContactDoc>(this.db, `contact:${contactId}`)?.value.computeSlots ?? opts.personalComputeSlots ?? Number.POSITIVE_INFINITY,
+      group: (roomId) => getDoc<{ slots: number }>(this.db, `room-slots:${roomId}`)?.value.slots ?? 0,
+      newId: () => this.newId("l"),
     });
     this.plugins = new PluginStore({
       db: this.db,
@@ -587,8 +607,13 @@ export class Host {
     this.bus.emit({ type: "room.updated", room: view });
     return view;
   }
-  updateRoom(roomId: string, patch: { title?: string; pinned?: boolean; muted?: boolean; rules?: string; expectedRulesVersion?: number }): RoomView {
+  updateRoom(roomId: string, patch: { title?: string; pinned?: boolean; muted?: boolean; rules?: string; expectedRulesVersion?: number; tempComputeSlots?: number }): RoomView {
     const r = this.roomRow(roomId);
+    if (patch.tempComputeSlots !== undefined) {
+      if (r.kind !== "group") throw new HostError("invalid_params", "私聊没有群临时 Compute 槽位");
+      const cur = getDoc<{ slots: number }>(this.db, `room-slots:${roomId}`);
+      putDoc(this.db, `room-slots:${roomId}`, cur?.ver ?? 0, { slots: patch.tempComputeSlots });
+    }
     if (patch.rules !== undefined && patch.expectedRulesVersion !== undefined && patch.expectedRulesVersion !== r.rules_version) {
       throw new HostError("conflict", "群规已被别人改过", { currentVer: r.rules_version });
     }
@@ -650,6 +675,7 @@ export class Host {
       updatedAt: r.updated_at,
       announcementCount: r.kind === "group" ? this.announcements.count(roomId) : 0,
       leavingMembers: this.exits.leavingIn(roomId),
+      ...(r.kind === "group" ? { tempComputeSlots: getDoc<{ slots: number }>(this.db, `room-slots:${roomId}`)?.value.slots ?? 0 } : {}),
     };
   }
   markRead(roomId: string, m: Member, seq: number) {
@@ -899,6 +925,7 @@ export class Host {
     tx(this.db, () => {
       const { effects: eff } = this.stepTaskTx(taskId, { kind: "Cancel", by });
       for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId, computeId: e.computeId });
+      for (const e of eff) if (e.kind === "cancel-spawn") effects.push({ kind: "cancel-spawn", taskId, requestId: e.requestId });
       run(this.db, "UPDATE gg_cards SET state = 'done' WHERE task_id = ? AND kind = 'task-status' AND state = 'open'", taskId);
     });
     this.emitTask(taskId);
@@ -1405,15 +1432,19 @@ export class Host {
         startedAt: r.started_at,
         endedAt: r.ended_at,
       })),
-      computeRuns: runs.map((r) => ({
-        computeId: r.compute_id,
-        harness: r.harness as "claude-code",
-        model: r.model,
-        placement: "local",
-        status: r.status as TaskView["computeRuns"][number]["status"],
-        startedAt: r.started_at,
-        endedAt: r.ended_at,
-      })),
+      computeRuns: runs.map((r) => {
+        const loaded = getDoc<{ skills: string[]; mcpServers: string[] }>(this.db, `compute-loaded:${r.compute_id}`)?.value;
+        return {
+          computeId: r.compute_id,
+          harness: r.harness as "claude-code",
+          model: r.model,
+          placement: "local" as const,
+          status: r.status as TaskView["computeRuns"][number]["status"],
+          startedAt: r.started_at,
+          endedAt: r.ended_at,
+          ...(loaded ? { loaded } : {}),
+        };
+      }),
       recentProgress: progress,
       modelSnapshot: doc.models?.initial ? { ...doc.models.initial } : null,
       modelAttempts: (doc.models?.attempts ?? []).map((a) => ({ ...a })),
@@ -1423,6 +1454,7 @@ export class Host {
         ...(doc.artifacts ?? []).map((a) => ({ ref: a.ref, name: a.name, kind: "file" as const, sha256: a.sha256, bytes: a.bytes, mime: a.mime })),
       ],
       ...this.workspaceField(t.id),
+      waitingFor: this.quota.waitingReason(t.id) ?? this.stopUnconfirmed.get(t.id) ?? null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
       ...(doc.description !== undefined ? { description: doc.description } : {}),
@@ -2101,6 +2133,7 @@ export class Host {
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
             const { effects: eff } = this.stepTaskTx(a.taskId, { kind: "Cancel", by: contactId });
             for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId: a.taskId, computeId: e.computeId });
+            for (const e of eff) if (e.kind === "cancel-spawn") effects.push({ kind: "cancel-spawn", taskId: a.taskId, requestId: e.requestId });
             touchedTasks.add(a.taskId);
             break;
           }
@@ -2189,6 +2222,11 @@ export class Host {
     let asked: { roomId: string; seq: number; contactId: string; qId: string } | null = null;
     tx(this.db, () => {
       run(this.db, "INSERT INTO gg_progress (task_id, compute_id, kind, stage, summary, at) VALUES (?, ?, ?, ?, ?, ?)", row.task_id, ev.computeId, ev.kind, stage, summary, at);
+      // AC-29 观测点:Compute 启动后实际加载的 skill/MCP 清单(CLI init 自报),每次启动/续接覆盖为最新一次
+      if (ev.kind === "started" && ev.loaded) {
+        const cur = getDoc<{ skills: string[]; mcpServers: string[] }>(this.db, `compute-loaded:${ev.computeId}`);
+        putDoc(this.db, `compute-loaded:${ev.computeId}`, cur?.ver ?? 0, { skills: [...ev.loaded.skills], mcpServers: [...ev.loaded.mcpServers] });
+      }
       const status = ev.kind === "started" || ev.kind === "milestone" ? "running" : ev.kind;
       run(this.db, "UPDATE gg_compute SET status = ?, ended_at = CASE WHEN ? IN ('completed','failed','stopped') THEN ? ELSE ended_at END, result = CASE WHEN ? = 'completed' THEN ? ELSE result END WHERE compute_id = ?", status, ev.kind, at, ev.kind, summary, ev.computeId);
       if (ev.kind === "failed") {
@@ -2232,14 +2270,8 @@ export class Host {
           taskChanged = true;
         }
       }
-      // 实例已停(stopped)或失败退出:在等停止确认的任务据此确认,落到 T10/T11
-      if (ev.kind === "failed" || ev.kind === "stopped") {
-        const t = this.taskDoc(row.task_id).value.task;
-        if (t.state === "T9_StopRequested" && (t.computeId === ev.computeId || t.orphans.includes(ev.computeId))) {
-          this.stepTaskTx(row.task_id, { kind: "StoppedConfirmed", taskId: row.task_id, computeId: ev.computeId });
-          taskChanged = true;
-        }
-      }
+      // 实例停止(stopped)或失败:这只是「停止已请求/这一轮结束」,不是确认停下(AC-23)。确认在 afterRound 里等进程都退出后再做
+      if (ev.kind === "failed" || ev.kind === "stopped") this.quota.markStopping(row.task_id);
       // harness 回报的实际模型(AC-51 ⑥):和账本里这个 Compute 最近一次不同、或从没出现过的,追加一条 observed
       const reported = reportedModels(ev);
       if (reported.length) {
@@ -2260,6 +2292,7 @@ export class Host {
         run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", row.contact_id, row.room_id, JSON.stringify(payload), at);
       }
     });
+    if (ev.kind === "failed" || ev.kind === "stopped" || ev.kind === "completed") void this.afterRound(row.task_id, ev.computeId, ev.kind, this.launchEpoch.get(row.task_id) ?? 0);
     const progress: ComputeProgress = { computeId: ev.computeId, taskId: row.task_id, kind: ev.kind, ...(stage ? { stage } : {}), summary, at };
     this.bus.emit({ type: "compute.progress", progress });
     const q = asked as { roomId: string; seq: number; contactId: string } | null;
@@ -2302,11 +2335,15 @@ export class Host {
       try {
         if (e.kind === "spawn") await this.spawn(e);
         else if (e.kind === "review") await this.spawnReview(e);
-        else if (e.kind === "resume") await this.computeTurn(e);
+        else if (e.kind === "resume") await this.resumeCompute(e);
         else if (e.kind === "stop") {
           const a = this.adapterForCompute(e.computeId);
-          if (a) await a.stop(e.computeId);
-        } else if (e.kind === "integrate") {
+          this.quota.markStopping(e.taskId);
+          const r = a ? await a.stop(e.computeId) : { ok: false as const, reason: "没有 Compute 适配器" };
+          // 这一轮早已结束(没有在跑的进程,例如交付后取消):没有 stopped 事件会来,直接走停止确认
+          if (!r.ok) void this.afterRound(e.taskId, e.computeId, "stopped", this.launchEpoch.get(e.taskId) ?? 0);
+        } else if (e.kind === "cancel-spawn") this.cancelQueuedSpawn(e);
+        else if (e.kind === "integrate") {
           await this.integrateTask(e.taskId, e.by);
         }
       } catch (err) {
@@ -2337,12 +2374,12 @@ export class Host {
    * 送进 Compute 的每一次后续输入(联系人转达、用户退回重试……)都走这里(AC-51 ①⑤):
    * 按此刻的配置现场解析这一轮的 {model, effort},不兼容先拦;交给适配器在轮边界切换;切换失败这一轮不算发出,不退回旧模型。
    */
-  private async computeTurn(e: { taskId: string; computeId: string; text: string }, reason: AttemptReason = "turn") {
+  private async computeTurn(e: { taskId: string; computeId: string; text: string }, reason: AttemptReason = "turn"): Promise<boolean> {
     const row = one<{ contact_id: string; room_id: string; harness: string; model: string }>(this.db, "SELECT contact_id, room_id, harness, model FROM gg_compute WHERE compute_id = ?", e.computeId);
     const a = row ? this.adapterFor(row.harness, row.model) : null;
     if (!row || !a) {
       this.report("resume-failed", { ...e, reason: "没有 Compute 适配器" });
-      return;
+      return false;
     }
     const owner = getDoc<ContactDoc>(this.db, `contact:${row.contact_id}`)?.value;
     const resolved = owner ? this.resolveComputeFor(owner) : null;
@@ -2351,7 +2388,7 @@ export class Host {
         return this.turnRefused(e.taskId, e.computeId, row, `这个 Compute 跑在 ${row.harness} 上,联系人已改用 ${resolved.harness};换 Harness 要在新 Harness 上开新会话(随 Codex 接入实现),这一轮没有发出`);
       }
       const chk = modelConfig.checkCompute(this.caps(), resolved);
-      if (!chk.ok) return this.turnRefused(e.taskId, e.computeId, row, chk.reason);
+      if (!chk.ok) { this.turnRefused(e.taskId, e.computeId, row, chk.reason); return false; }
       if (!isModelAware(a) && resolved.model !== row.model) {
         return this.turnRefused(e.taskId, e.computeId, row, `这个 Compute 的适配器不支持会话内换模型,仍是启动时的 ${row.model},联系人已改用 ${resolved.model};这一轮没有发出,不沿用旧模型继续跑`);
       }
@@ -2361,15 +2398,16 @@ export class Host {
     if (!r.ok) {
       if (r.code === "model-switch-failed") return this.turnRefused(e.taskId, e.computeId, row, `换模型没成功:${r.reason}。这一轮没有发出;可以单独指定一个兼容的模型,或更换支持该模型的 Harness`);
       this.report("resume-failed", { ...e, reason: r.reason });
-      return;
+      return false;
     }
     if (resolved) {
       tx(this.db, () => this.recordTurnTx(e.taskId, e.computeId, row.harness, resolved.model, resolved.effort, reason));
       this.emitTask(e.taskId);
     }
+    return true;
   }
   /** 这一轮没送进 Compute:原因记进进度,并告诉联系人(由它在聊天里给用户两条修复路径)。 */
-  private turnRefused(taskId: string, computeId: string, row: { contact_id: string; room_id: string }, why: string) {
+  private turnRefused(taskId: string, computeId: string, row: { contact_id: string; room_id: string }, why: string): false {
     const at = this.now();
     this.report("turn-refused", { taskId, computeId, why });
     tx(this.db, () => {
@@ -2380,9 +2418,81 @@ export class Host {
     this.bus.emit({ type: "compute.progress", progress: { computeId, taskId, kind: "blocked", stage: "model", summary: why, at } });
     this.emitTask(taskId);
     this.loop.notify(row.contact_id, "now");
+    return false;
+  }
+  /** 申请槽位(AC-23):拿到就返回 true;没拿到就把这次启动/续接挂起排队,返回 false */
+  private takeSlot(e: Extract<HostEffect, { kind: "spawn" | "resume" }>, contactId: string, roomId: string): boolean {
+    const isGroup = one<{ kind: string }>(this.db, "SELECT kind FROM gg_rooms WHERE id = ?", roomId)?.kind === "group";
+    const got = this.quota.acquire({ taskId: e.taskId, contactId, roomId, isGroup });
+    if ("granted" in got) return true;
+    this.pendingLaunch.set(e.taskId, e);
+    this.emitTask(e.taskId);
+    return false;
+  }
+  /** 归还这个任务的槽位,把空出来的给排队的下一个(们) */
+  private giveBack(taskId: string) {
+    const lease = this.quota.leaseOf(taskId);
+    if (!lease) return;
+    const { granted } = this.quota.release(lease.leaseId);
+    for (const g of granted) {
+      const next = this.pendingLaunch.get(g.taskId);
+      this.pendingLaunch.delete(g.taskId);
+      if (next) void this.runEffects([next]);
+      else this.quota.release(g.leaseId);
+    }
+  }
+  /** 一轮结束后的收尾(AC-23):等进程真的都退出(停止/失败时找出它启动的子进程一并关掉)再确认停止、归还槽位。
+   *  epoch 是这一轮开始时的序号;期间任务又起了新一轮(续接),这次收尾就不动槽位 */
+  private async afterRound(taskId: string, computeId: string, kind: "failed" | "stopped" | "completed", epoch: number) {
+    const a = this.adapterForCompute(computeId);
+    let ok = true;
+    let why = "";
+    if (a) {
+      if (kind !== "completed" && a.quiesce) {
+        const q = await a.quiesce(computeId);
+        if (!q.ok) { ok = false; why = `${q.reason}${q.remaining.length ? `(pid ${q.remaining.join(",")})` : ""}`; }
+      } else await a.settled(computeId);
+    }
+    if (this.closed) return;
+    if (!ok) {
+      this.stopUnconfirmed.set(taskId, `停止未确认:${why}`);
+      this.report("stop-unconfirmed", { taskId, computeId, reason: why });
+      this.emitTask(taskId);
+      return;
+    }
+    this.stopUnconfirmed.delete(taskId);
+    tx(this.db, () => {
+      const t = this.taskDoc(taskId).value.task;
+      if (t.state === "T9_StopRequested" && (t.computeId === computeId || t.orphans.includes(computeId))) this.stepTaskTx(taskId, { kind: "StoppedConfirmed", taskId, computeId });
+    });
+    // 这一轮的进程都已退出:槽位归还;任务之后续接同一实例(退回、回答问题)时重新申请
+    if ((this.launchEpoch.get(taskId) ?? 0) === epoch) this.giveBack(taskId);
+    this.emitTask(taskId);
+  }
+  /** 取消还在排队(或启动没成功)的启动请求:不再排队,当场确认撤销 */
+  private cancelQueuedSpawn(e: Extract<HostEffect, { kind: "cancel-spawn" }>) {
+    const queued = this.pendingLaunch.get(e.taskId);
+    if (queued?.kind !== "spawn" || queued.requestId !== e.requestId) return;
+    this.pendingLaunch.delete(e.taskId);
+    this.quota.cancelWait(e.taskId);
+    tx(this.db, () => {
+      this.stepTaskTx(e.taskId, { kind: "StoppedConfirmed", taskId: e.taskId, requestId: e.requestId });
+    });
+    this.emitTask(e.taskId);
+  }
+  private async resumeCompute(e: Extract<HostEffect, { kind: "resume" }>) {
+    const row = one<{ contact_id: string; room_id: string }>(this.db, "SELECT contact_id, room_id FROM gg_compute WHERE compute_id = ?", e.computeId);
+    if (!row) return this.report("resume-failed", { ...e, reason: "没有这个 Compute" });
+    if (!this.takeSlot(e, row.contact_id, row.room_id)) return;
+    // 续接这一轮(AC-51 现场解析生效模型在 computeTurn 里);没送进 Compute 就当场归还槽位
+    if (await this.computeTurn(e)) this.launchEpoch.set(e.taskId, (this.launchEpoch.get(e.taskId) ?? 0) + 1);
+    else this.giveBack(e.taskId);
   }
   private async spawn(e: Extract<HostEffect, { kind: "spawn" }>) {
+    if (!this.takeSlot(e, e.contactId, e.roomId)) return;
     const fail = (reason: string) => {
+      // 没起来:没有进程要等,槽位当场归还
+      this.giveBack(e.taskId);
       tx(this.db, () => {
         const { effects: eff } = this.stepTaskTx(e.taskId, { kind: "ExecFailed", requestId: e.requestId });
         // 启动本来就没成功:撤销请求当场确认(没有实例可停),任务落到 T11
@@ -2419,10 +2529,21 @@ export class Host {
     const tools = [...(this.opts.computeTools ?? DEFAULT_COMPUTE_TOOLS)];
     // 首轮就带生效模型(AC-51 ①);只给声明了按轮换模型能力的适配器(旧的一次性适配器只收 cwd/handoff)
     const modelAware = isModelAware(adapter);
-    const spawnOpts = { ...(cwd ? { cwd } : {}), ...(modelAware ? { model, ...(resolved ? { effort: resolved.effort } : {}) } : {}) };
+    // 能力默认隔离加白名单(AC-29):只把联系人勾选的 skill/MCP 放进它的专属运行目录;缺项不启动
+    const contact = getDoc<ContactDoc>(this.db, `contact:${e.contactId}`)?.value;
+    const picked = (contact?.computeAssets ?? []).filter((x) => x.kind !== "script");
+    const prep = this.capabilities.prepare(e.contactId, contact?.harness ?? "claude-code", contact?.computeAssets ?? []);
+    if (!prep.ok) return fail(`勾选的能力不可用:${prep.missing.join("、")}`);
+    // 一次性适配器收专属配置目录与勾选能力;声明能力的适配器(常驻)要显式声明 isolation 才收。
+    // 不收的适配器:勾选了 skill/MCP 就明确失败,不带着缺项启动
+    const isoOk = !modelAware || (adapter as { capabilities?: { isolation?: unknown } }).capabilities?.isolation === true;
+    if (!isoOk && picked.length) return fail(`这个 Compute 适配器还不支持勾选的 skill/MCP(${picked.map((x) => x.name).join("、")}),不带着缺项启动`);
+    const iso = isoOk ? { configDir: prep.home.configDir, pluginDirs: [...prep.home.pluginDirs], mcpServers: prep.home.mcpServers } : {};
+    const spawnOpts = { ...(cwd ? { cwd } : {}), ...(modelAware ? { model, ...(resolved ? { effort: resolved.effort } : {}) } : {}), ...iso };
     const r = await adapter.spawn({ task: e.brief, rules: [HUMAN_VERIFICATION_RULE], tools, credentialRefs: [], placement: "local" }, spawnOpts);
     if (!r.ok) return fail(r.reason);
     const late: string[] = [];
+    this.launchEpoch.set(e.taskId, (this.launchEpoch.get(e.taskId) ?? 0) + 1);
     tx(this.db, () => {
       run(this.db, "INSERT INTO gg_compute (compute_id, task_id, contact_id, room_id, harness, model, status, started_at) VALUES (?, ?, ?, ?, ?, ?, 'starting', ?)", r.computeId, e.taskId, e.contactId, e.roomId, harness, model, this.now());
       // 首次启动写入不可变快照,账本追加一条 start(AC-32 ④)
@@ -2640,6 +2761,7 @@ export class Host {
     if (card.kind === "task-status" && actionId === "cancel") {
       const { effects: eff } = this.stepTaskTx(taskId, { kind: "Cancel", by: this.userId });
       for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId, computeId: e.computeId });
+      for (const e of eff) if (e.kind === "cancel-spawn") effects.push({ kind: "cancel-spawn", taskId, requestId: e.requestId });
       return effects;
     }
     if (card.kind === "question") {
@@ -2809,7 +2931,8 @@ type HostEffect =
   | { kind: "review"; taskId: string; roomId: string; ownerId: string; reviewerId: string; model: string; round: number; commit: string; constraintVer: number; brief: string }
   | { kind: "resume"; taskId: string; computeId: string; text: string }
   | { kind: "stop"; taskId: string; computeId: string }
-  | { kind: "integrate"; taskId: string; by: string };
+  | { kind: "integrate"; taskId: string; by: string }
+  | { kind: "cancel-spawn"; taskId: string; requestId: string };
 
 /** 召回清单的一项 → 第 5 块的一个指针。截断显式写出原长与续读游标;撤回与越权只给状态,不带原文和原长。 */
 export function renderRecall(it: RecallItem, sender: string): { ref: string; text: string } {
