@@ -1,0 +1,29 @@
+receipts/feat-worktree-merge.json
+  s_ae065512e1088f::t_8c2349c9ea244d 1-12
+packages/server/proof/worktree-mutations.mjs
+  s_ae065512e1088f::t_b092e9301d28a6 1-25,28,31-70,74-85
+  h_f33e46a035b77c 26-27,29-30,71-73
+packages/server/src/worktree.test.ts
+  h_f33e46a035b77c 366,398,434-435
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ebbe5687ce4e2702c4178ce3d5ca02bacf59eff2",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_ae065512e1088f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a79b7ed6217c51390",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
