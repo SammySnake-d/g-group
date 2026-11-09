@@ -1,0 +1,14 @@
+scripts/gates/proof/r12-full-mutation.txt
+  h_f33e46a035b77c 1-158
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "65c08d6d6440a19cc74eab1afa12cd419a825ae2",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+packages/kernel/proof/mutations-node25.txt
+  s_25b02f2fb0d35b::t_467e62749f2fd7 2-196
+packages/kernel/proof/mutations.mjs
+  s_25b02f2fb0d35b::t_cc7f92907beabf 5-6,29,60,246-250
+packages/kernel/proof/mutations.txt
+  s_25b02f2fb0d35b::t_1166dd4c58d93c 2-196
+packages/kernel/proof/tests-node25.txt
+  s_25b02f2fb0d35b::t_2ff0da5360d169 1-216,218,223
+packages/kernel/proof/tests.txt
+  s_25b02f2fb0d35b::t_8d477646c3a0f3 1-216,218,223
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "75ddc00ab65aeaa61b7aac7879db46c9a4138b7d",
+  "prompts": {},
+  "sessions": {
+    "s_25b02f2fb0d35b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d0bff13-9adf-40ba-a795-53ae48143f57",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/server/src/same-entity.test.ts
+  s_cb1a42da06940f::t_1a26189233760f 1-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "840a524de5c102b129d432b497861376ac7d384c",
+  "prompts": {},
+  "sessions": {
+    "s_cb1a42da06940f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ade26af15a1458fdd",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

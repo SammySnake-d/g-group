@@ -1,0 +1,24 @@
+receipts/feat-manual-task.json
+  s_03527c71eef786::t_35f3a529726bad 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "256a7cedd50eec627e5e29211bea92d1c2d419b2",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_03527c71eef786": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0a8f74fffd601798",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

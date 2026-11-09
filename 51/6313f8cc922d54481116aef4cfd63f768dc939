@@ -1,0 +1,37 @@
+packages/server/src/host.ts
+  s_28bebc745289eb::t_a4a5540ee13855 1392,1394
+packages/server/src/plugins.test.ts
+  s_28bebc745289eb::t_848ec7a2827459 5,7,9,11-12
+packages/api-contract/src/plugin-contract.test.ts
+  s_cb1a42da06940f::t_3ddfa40768fabe 1-39
+packages/server/proof/plugin-exec-mut.mjs
+  s_cb1a42da06940f::t_d9551fddefd138 1-63
+packages/server/src/plugin-runtime.test.ts
+  s_cb1a42da06940f::t_b3951cc66d0b47 7,12,18,26,42,174-175,180,188-189,193-194,199,227
+packages/server/src/test-kit.ts
+  s_cb1a42da06940f::t_ee2a6beeb0cc79 1-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "516313f8cc922d54481116aef4cfd63f768dc939",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_cb1a42da06940f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ade26af15a1458fdd",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

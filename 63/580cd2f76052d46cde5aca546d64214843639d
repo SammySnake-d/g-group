@@ -1,0 +1,21 @@
+packages/kernel/proof/run-ledger-mutations.mjs
+  s_f14c4f5d7f8b94::t_307a9bcbfd689e 1-116
+receipts/feat-run-ledger.json
+  s_f14c4f5d7f8b94::t_e8940df61cd9e3 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "63580cd2f76052d46cde5aca546d64214843639d",
+  "prompts": {},
+  "sessions": {
+    "s_f14c4f5d7f8b94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a09f3a3f2092d0f50",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
