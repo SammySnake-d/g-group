@@ -71,6 +71,7 @@ import { PluginStore } from "./plugins.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
 import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, unindexTx } from "./search.ts";
+import { SharedDocs } from "./shared-docs.ts";
 
 export interface HostOptions {
   readonly file: string;
@@ -195,6 +196,8 @@ export class Host {
   readonly plugins: PluginStore;
   readonly announcements: AnnouncementStore;
   private readonly exits: MemberExits;
+  /** 共享文档单一提交点(AC-21):所有写入只经它 */
+  readonly docs: SharedDocs;
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly newId: (prefix: string) => string;
@@ -268,6 +271,17 @@ export class Host {
       roomKind: (roomId) => this.roomRow(roomId).kind,
       changed: (roomId) => this.bus.emit({ type: "room.updated", room: this.roomView(roomId) }),
     });
+    this.docs = new SharedDocs({
+      db: this.db,
+      dataDir: opts.dataDir ?? dirname(opts.file),
+      now: this.now,
+      newId: this.newId,
+      checkRoom: (roomId) => void this.roomRow(roomId),
+      emit: (doc) => this.bus.emit({ type: "doc.updated", doc }),
+      onReport: (what, detail) => this.report(what, detail),
+    });
+    // 启动时派生镜像按权威版本修复(中断的导出、迟到的旧内容覆盖)
+    this.docs.repairMirrors();
     // 启动时先处理宿主关着期间到期的定时(按容差与 missedPolicy),再按最早一次设计时器
     this.scheduler.tick();
   }
