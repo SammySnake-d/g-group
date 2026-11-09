@@ -43,7 +43,7 @@ test("R10-01/待办:真实 TAP 的通过和失败待办都不算执行完成", (
   }
 });
 test("R10-01/取消:真实未完成 Promise 的取消结果不算具名发现", () => {
-  const run = fixture("test('目标', () => new Promise(() => {})); test('对照', () => {});");
+  const run = fixture("const controller = new AbortController(); setTimeout(() => controller.abort(), 10); test('目标', { signal: controller.signal }, () => new Promise(() => {})); test('对照', () => {});");
   assert.equal(assessTap(run, names, target).valid, false, run.out);
 });
 test("R10-01/文件失败:加载异常或提前退出不算测试代码断言失败", () => {
