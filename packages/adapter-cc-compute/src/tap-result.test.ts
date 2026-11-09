@@ -12,7 +12,9 @@ function fixture(body: string): TapRun {
   try {
     const file = path.join(dir, "case.test.mjs");
     fs.writeFileSync(file, `import { test } from 'node:test'; import assert from 'node:assert/strict';\n${body}\n`);
-    const r = spawnSync(process.execPath, ["--test", "--test-reporter=tap", file], { encoding: "utf8", timeout: 10_000 });
+    const env = { ...process.env };
+    delete env.NODE_TEST_CONTEXT;
+    const r = spawnSync(process.execPath, ["--test", "--test-reporter=tap", file], { encoding: "utf8", timeout: 10_000, env });
     assert.equal(r.error, undefined, r.stderr);
     return { out: r.stdout, code: r.status, signal: r.signal, timedOut: false };
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
