@@ -1,0 +1,51 @@
+packages/domain/proof/tla-red-green.txt
+  s_29fa229c8c70ee::t_b55a614fedff00 1-64
+packages/domain/proof/tlc-Claim-nocas.txt
+  s_29fa229c8c70ee::t_1bde201a13576a 1-90
+packages/domain/proof/tlc-Claim-single.txt
+  s_29fa229c8c70ee::t_f19051e4cef81b 1-45
+packages/domain/proof/tlc-Claim-witness.txt
+  s_29fa229c8c70ee::t_36dbf3a0f7c7ce 1-109
+packages/domain/proof/tlc-Claim.txt
+  s_29fa229c8c70ee::t_5993bf84b2b448 1-45
+packages/domain/proof/tlc-Lease-nocas.txt
+  s_29fa229c8c70ee::t_0a1b1d09973061 1-100
+packages/domain/proof/tlc-Lease-noorder-reverse.txt
+  s_29fa229c8c70ee::t_30809cf8955893 1-99
+packages/domain/proof/tlc-Lease-noorder.txt
+  s_29fa229c8c70ee::t_966d8f94737d4e 1-127
+packages/domain/proof/tlc-Lease-single.txt
+  s_29fa229c8c70ee::t_251eebabded063 1-45
+packages/domain/proof/tlc-Lease-witness.txt
+  s_29fa229c8c70ee::t_e424ba97773295 1-231
+packages/domain/proof/tlc-Lease.txt
+  s_29fa229c8c70ee::t_713965ae762b8b 1-45
+packages/domain/proof/tlc-Publish-nocas-double.txt
+  s_29fa229c8c70ee::t_0d6564fd031e62 1-84
+packages/domain/proof/tlc-Publish-nocas.txt
+  s_29fa229c8c70ee::t_07e84a5f18d202 1-76
+packages/domain/proof/tlc-Publish-single.txt
+  s_29fa229c8c70ee::t_b719abc284fdb3 1-45
+packages/domain/proof/tlc-Publish-witness.txt
+  s_29fa229c8c70ee::t_856ec0e80b7a43 1-93
+packages/domain/proof/tlc-Publish.txt
+  s_29fa229c8c70ee::t_5e5a762c27d478 1-45
+packages/domain/proof/tlc-summary.txt
+  s_29fa229c8c70ee::t_64a17fe219dd8d 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6e1f71e4b5b9b51ebfcf5c817be7c9559b12ef69",
+  "prompts": {},
+  "sessions": {
+    "s_29fa229c8c70ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6f12fa99094fd0fa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
