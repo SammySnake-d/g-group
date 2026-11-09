@@ -8,6 +8,7 @@
 import { REPORT_TOOL } from "./cli.ts";
 import { isPlainRecord, plainData } from "./plain.ts";
 import { reportErrors } from "./report-schema.ts";
+import type { ActivitySignal } from "./types.ts";
 
 /** 通过 report_progress schema 校验的一次汇报 */
 export interface AcceptedReport {
@@ -115,6 +116,11 @@ export function streamParser(): (line: string) => StreamSignal[] {
     if (m.type === "result") out.push({ type: "result", success: m.subtype === "success" && m.is_error !== true, text: typeof m.result === "string" ? m.result : "" });
     return out;
   };
+}
+
+/** 一行 CLI 输出里的活动(空壳:签名在,返回假值) */
+export function activityOf(_line: string): readonly ActivitySignal[] {
+  return [];
 }
 
 export type Terminal =

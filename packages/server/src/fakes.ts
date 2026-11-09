@@ -1,5 +1,5 @@
 // 测试与 CLI 演示用的确定性替身:脚本化的联系人脑子、按剧本吐语义事件的 Compute 适配器。不连模型、不起进程。
-import type { ComputeAdapter, ComputeEvent, QuiesceResult, Refusal, SpawnOptions, SpawnResult, TurnModel } from "@g-group/adapter-cc-compute";
+import type { ComputeActivity, ComputeAdapter, ComputeEvent, QuiesceResult, Refusal, SpawnOptions, SpawnResult, TurnModel } from "@g-group/adapter-cc-compute";
 import type { ContactMind, Inbound, MindAction, RoundInput, RoundOutput } from "@g-group/kernel";
 
 /** 规则脑子:用户在私聊或 @ 它派活 → dispatch + commit + 回复;Compute 里程碑 → 汇报;完成 → 交付;失败 → 如实告知。 */
@@ -38,6 +38,7 @@ function react(me: string, f: Inbound): MindAction[] {
     // 受阻:宿主已替联系人 @提出者发了提问卡(inbox 摘要里有说明)就不再重复喊,用户回答后由联系人 forward;
     // 其余受阻(如换模型被 harness 拒)照旧如实告诉用户
     if (f.signal === "blocked" && !f.summary.includes("宿主已替你在会话里")) return [{ kind: "reply", roomId: f.roomId, text: `需要你帮忙:${f.summary}`, replyToSeq: null }];
+    if (f.signal === "stalled") return [{ kind: "reply", roomId: f.roomId, text: `任务卡住了:${f.summary}`, replyToSeq: null }];
   }
   if (f.kind === "schedule") return [{ kind: "reply", roomId: f.roomId, text: `定时到了:${f.prompt}`, replyToSeq: null }];
   return [];
@@ -72,6 +73,8 @@ export function scriptedCompute(
 ) {
   const queue: ComputeEvent[] = [];
   let wake: (() => void) | null = null;
+  const acts: ComputeActivity[] = [];
+  let actWake: (() => void) | null = null;
   let closed = false;
   let n = 0;
   let inflight = 0;
@@ -160,6 +163,20 @@ export function scriptedCompute(
     ...(opts.quiesce ? { quiesce: opts.quiesce } : {}),
     snapshot: () => ({ ok: false as const, reason: "not-quiescent" }),
     rejectedReports: () => [],
+    activity() {
+      return {
+        [Symbol.asyncIterator]() {
+          return {
+            async next(): Promise<IteratorResult<ComputeActivity>> {
+              while (!acts.length && !closed) await new Promise<void>((r) => (actWake = r));
+              actWake = null;
+              if (closed && !acts.length) return { done: true, value: undefined };
+              return { done: false, value: acts.shift()! };
+            },
+          };
+        },
+      };
+    },
   } satisfies ComputeAdapter & { capabilities: { inSessionModelSwitch: boolean } };
   if (opts.modelAware === false) Reflect.deleteProperty(adapter, "capabilities");
   return {
@@ -171,10 +188,20 @@ export function scriptedCompute(
     /** 所有剧本事件都已吐出且被消费。 */
     /** 这个实例此刻生效的工具清单(派发时的 brief,或最近一次续接换上的)。 */
     currentTools: (computeId: string): string[] => JSON.parse(toolsOf.get(computeId) ?? "null") ?? [],
-    drained: () => inflight === 0 && queue.length === 0,
+    drained: () => inflight === 0 && queue.length === 0 && acts.length === 0,
+    /** 按需补发一条语义事件(剧本之外,测试用) */
+    emit(e: ComputeEvent) {
+      push(e);
+    },
+    /** 模拟 harness 流里的活动(卡死检测用) */
+    pushActivity(a: ComputeActivity) {
+      acts.push(a);
+      actWake?.();
+    },
     close() {
       closed = true;
       wake?.();
+      actWake?.();
     },
   };
 }
