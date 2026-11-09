@@ -7,7 +7,7 @@
     { "id": "R-05", "status": "通过", "notes": "47 个单点故障在 box4 串行全部被具名测试杀死,原样副本全绿;全量测试在 box4 通过", "evidence": "packages/server/proof/memory-mutations.txt" }
   ],
   "author": { "agent": "claude", "session": "claude:366a4421-c4e1-455e-85a2-0721597033e5", "model": "claude-opus-5-5" },
-  "red": { "commit": "fe9a07f0d700c51d5dc77ab03a4b6b259fc4c3c1" },
+  "red": { "commit": "c839f3dae699a73535b30403f57226e357739683" },
   "unverifiable": "AC-42:单测里的模型动作是脚本给的,证明的是宿主照模型给的关系正确落地,证明不了真实模型会不会选对关系(复述/改变/冲突)与锚点;真实运行见 packages/server/proof/pref-before-after.txt(改前 44/48、改后 48/48 照做),只覆盖「8 轮后偏好还在」,样本 3 场景各 2 次。读取排序的字面重合是相邻二字匹配,语义相关但字面不同的条目会排后,靠断崖后的 id 清单与 read_memory 兜底",
   "waiver": null,
   "review": null,
