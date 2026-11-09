@@ -128,7 +128,7 @@ export type ComputeEvent =
       readonly loaded?: LoadedCapabilities;
     }
   | { readonly computeId: string; readonly kind: "milestone"; readonly stage: string; readonly summary: string }
-  | { readonly computeId: string; readonly kind: "blocked"; readonly needs: string; readonly summary: string }
+  | { readonly computeId: string; readonly kind: "blocked"; readonly needs: string; readonly summary: string; /** 工作目录内文件的相对路径(截图等),原样转交宿主 */ readonly attachments?: readonly string[] }
   | {
       readonly computeId: string;
       readonly kind: "completed";

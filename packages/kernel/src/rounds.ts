@@ -36,6 +36,8 @@ export interface RoundPrefix {
   /** 群公告原文;私聊或没有公告给 "" */
   readonly roomNotice: string;
   readonly rules: readonly PrefixRule[];
+  /** 联系人的全局记忆(D25 第 6 节:每轮都适用的才进前缀,按会话快照放入,中途变化走第 5 块);不给即没有 */
+  readonly memories?: readonly { readonly id: string; readonly title: string; readonly text: string }[];
 }
 /** 一条未了结承诺。text 是账本里的原文,代码原样复制 */
 export interface LedgerEntry {
@@ -128,6 +130,13 @@ function checkPrefix(p: unknown): string | undefined {
     if (!isStr(r.text) || r.text === "") return `${at}.text 必须是非空字符串(来源消息原文)`;
     if (ids.has(r.id)) return `规矩 id ${r.id} 重复`;
     ids.add(r.id);
+  }
+  if (p.memories !== undefined) {
+    if (!Array.isArray(p.memories)) return "prefix.memories 必须是数组";
+    for (let i = 0; i < p.memories.length; i++) {
+      const m: unknown = p.memories[i];
+      if (!isRec(m) || !isLine(m.id) || !isLine(m.title) || !isStr(m.text) || m.text === "") return `prefix.memories[${i}] 必须是 {id, title: 单行非空, text: 非空}`;
+    }
   }
   return undefined;
 }
@@ -223,6 +232,11 @@ function renderPrefix(p: RoundPrefix) {
   if (rules.length > 0) {
     t += "[已确认规矩与用户纠正(原文)]\n";
     for (const r of rules) t += `〔${r.kind === "rule" ? "规矩" : "纠正"} ${r.id} · 来源 #${r.sourceSeq}〕\n${r.text}\n`;
+  }
+  const mems = p.memories ?? [];
+  if (mems.length > 0) {
+    t += "[联系人记忆(全局,每轮适用)]\n";
+    for (const m of mems) t += `〔记忆 ${m.id} · ${m.title}〕\n${m.text}\n`;
   }
   return t;
 }

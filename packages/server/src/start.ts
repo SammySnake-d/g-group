@@ -3,9 +3,9 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createComputeAdapter } from "@g-group/adapter-cc-compute";
 import type { ContactView } from "@g-group/api-contract";
 import { type ContactCompactor, type ContactMind, DEFAULT_RETRY_POLICY } from "@g-group/kernel";
+import { claudeCompute } from "./compute.ts";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
 import { type IpcMainLike, type Service, bindIpc, createService } from "./service.ts";
@@ -22,6 +22,8 @@ export interface StartOptions {
   /** 插件市场目录文件;默认包内示例市场。 */
   readonly catalogFile?: string;
   readonly onReport?: (what: string, detail: unknown) => void;
+  /** 给 Compute 的单次输入字节上限(§8.1 待决 13);不给=不设上限 */
+  readonly computeInputMaxBytes?: number | null;
 }
 export interface Started {
   readonly host: Host;
@@ -68,12 +70,8 @@ export async function startServer(o: StartOptions): Promise<Started> {
   const fake = o.compute === "claude" ? null : scriptedCompute({ stepMs: 300 });
   const compute = fake
     ? () => fake.adapter
-    : (m: string) => {
-        // 统一重试权(AC-36 F3):CLI 自己对上游错误重试的次数就是宿主的自动重试上限,宿主不再叠加(computeHarnessRetries 同值)
-        const hostEnv: Record<string, string> = { ANTHROPIC_MODEL: m, CLAUDE_CODE_MAX_RETRIES: String(DEFAULT_RETRY_POLICY.maxAutoRetries) };
-        for (const k of ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"]) if (env[k]) hostEnv[k] = env[k]!;
-        return createComputeAdapter({ hostEnv });
-      };
+    : // 统一重试权(AC-36 F3):CLI 自己对上游错误重试的次数就是宿主的自动重试上限,宿主不再叠加(computeHarnessRetries 同值)
+      claudeCompute(env, { CLAUDE_CODE_MAX_RETRIES: String(DEFAULT_RETRY_POLICY.maxAutoRetries) });
   const work = path.join(o.dataDir, "compute");
   const host = new Host({
     file: path.join(o.dataDir, "gg.db"),
@@ -89,6 +87,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
     },
     ...(o.onReport ? { onReport: o.onReport } : {}),
     computeHarnessRetries: fake ? 0 : DEFAULT_RETRY_POLICY.maxAutoRetries,
+    ...(o.computeInputMaxBytes !== undefined ? { computeInputMaxBytes: o.computeInputMaxBytes } : {}),
   });
   if (model) host.updateSettings({ defaultSpeakingModel: model, defaultComputeModel: model, confirmAffected: true });
   const service = createService(host);

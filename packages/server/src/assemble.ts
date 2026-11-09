@@ -30,6 +30,8 @@ export interface AssembleContext {
   readonly pointers: readonly { readonly ref: string; readonly text: string }[];
   /** 整轮五块的字节预算;不给用 ROUND_BUDGET_BYTES。数值待决(需求文档 v3.20 §8.1 待决 13)。 */
   readonly budgetBytes?: number;
+  /** 联系人的全局记忆快照(D25 第 6 节):进第 1 块;中途变化由宿主放进 pointers,不改这里。 */
+  readonly memories?: readonly { readonly id: string; readonly title: string; readonly text: string }[];
 }
 export type RoundAssembler = (ctx: AssembleContext) => RoundRequest;
 
@@ -92,6 +94,7 @@ export const CONTACT_SYSTEM = [
   "交付后等提出者本人回复:他明确说通过,用 verdict(accept) 记下;他说要改什么,用 verdict(revise) 并带上原话。sourceSeq 必须是他本人在交付之后发的那条;别人说的、转述的或交付之前的话都不算。没回复就一直等,不要自己当作通过。",
   "每轮结束前用 update_state_note 写状态笔记:下一轮你看不到这一轮的消息原文,只看得到状态笔记、承诺账本和新消息。",
   STATE_NOTE_GUIDE,
+  "Compute 受阻需要用户(如验证码)时,宿主已替你在会话里 @提出者 发了提问卡并附截图;用户在聊天里回答后,用 forward 把回答原样转给 Compute,不要自己猜答案或替用户回答。",
 ].join("\n");
 
 export const CONTACT_TOOLS = [
@@ -103,6 +106,10 @@ export const CONTACT_TOOLS = [
   "stop(taskId) — 停止任务",
   "verdict(taskId, sourceSeq, accept|revise, feedback?) — 记下提出者对交付的回复:通过或要改",
   "update_state_note(note) — 写状态笔记(下一轮第 3 块)",
+  "remember(roomId, title, text, anchors, sourceSeq?, quote?, relation?, target?) — 记下以后用得上的记忆(写下即生效)",
+  "memory_feedback(id, good, note?) — 记一笔某条记忆这次用得好不好",
+  "read_memory(id) — 按 id 读一条记忆全文",
+  "read_quote_parent(roomId, seq) — 引用链往上读一级",
 ].join("\n");
 
 /** 预算:整个请求(五块文本之和)的 UTF-8 字节上限。超了显式失败,不静默截断(D06 §2)。数值待决(需求文档 v3.20 §8.1 待决 13),宿主可用参数覆盖。 */
@@ -140,6 +147,7 @@ export const kernelAssemble: RoundAssembler = (ctx) => {
       rules: ctx.roomRules
         .filter((x) => x.rules.trim())
         .map((x) => ({ id: `room-rules:${x.roomId}`, kind: "rule" as const, sourceSeq: Math.max(1, x.version ?? 1), text: `${x.title}:${x.rules}` })),
+      ...(ctx.memories && ctx.memories.length > 0 ? { memories: [...ctx.memories] } : {}),
     },
     ledger: {
       open: ctx.ledger.map((l) => ({ id: l.id, sourceSeq: l.sourceSeq, taskId: l.taskId.startsWith("standing-") ? null : l.taskId, text: l.text, status: l.status })),

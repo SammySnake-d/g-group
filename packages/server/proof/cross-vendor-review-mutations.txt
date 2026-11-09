@@ -1,0 +1,29 @@
+# 跨厂商审查(AC-26/AC-28)变异校准原文
+# 跑在云电脑 box3(Ubuntu 24.04、2 核、Node v24.21.0),提交串 f99e1d5(与合入时的源码逐字相同,只差基线),命令: node packages/server/proof/cross-vendor-review-mutations.mjs
+# 结果:24 个变异 23 个被具名测试杀死;R24「打回续接时不作废旧结果」存活——没有测试覆盖「打回后、Compute 重新完成前,联系人拿旧结果再交付会被拒」。实现里有这一步(UPDATE gg_compute SET result = NULL),但没有具名测试证明;列为待补
+PASS 基线 packages/server/src/review.test.ts: 通过 13 失败 0
+KILLED R01 去掉审查人≠作者: 被「pickReviewer:排除作者、unknown、与累积生产厂商任一同源(F13 半途换模 {A,B} 都不行);同会话成员优先」杀死;同时失败 1 条
+KILLED R02 只查联系人 ID、不查厂商: 被「AC-26 ② 只有同厂商的联系人 → 不起审查 Compute,交给提出者本人豁免,记 waived-by-user」杀死;同时失败 3 条
+KILLED R03 unknown 厂商的审查人放行: 被「AC-26 ③ 审查联系人的模型认不出厂商(unknown)→ 不当审查人」杀死;同时失败 2 条
+KILLED R04 只比末次生产模型(F13): 被「pickReviewer:排除作者、unknown、与累积生产厂商任一同源(F13 半途换模 {A,B} 都不行);同会话成员优先」杀死;同时失败 1 条
+KILLED R05 生产模型里有 unknown 仍放行: 被「pickReviewer:排除作者、unknown、与累积生产厂商任一同源(F13 半途换模 {A,B} 都不行);同会话成员优先」杀死;同时失败 1 条
+KILLED R06 不优先同会话成员: 被「pickReviewer:排除作者、unknown、与累积生产厂商任一同源(F13 半途换模 {A,B} 都不行);同会话成员优先」杀死;同时失败 1 条
+KILLED R07 按说话模型判审查厂商: 被「AC-26 ④ 有跨厂商审查联系人:交付后用它的 Compute 模型起只读审查 Compute,审过 → T8a 待确认,reviewGate 记 compliant」杀死;同时失败 9 条
+KILLED R08 审查 Compute 拿到写工具: 被「AC-26 ④ 有跨厂商审查联系人:交付后用它的 Compute 模型起只读审查 Compute,审过 → T8a 待确认,reviewGate 记 compliant」杀死;同时失败 1 条
+KILLED R09 审过的交付不 @ 提出者: 被「AC-26 ④ 有跨厂商审查联系人:交付后用它的 Compute 模型起只读审查 Compute,审过 → T8a 待确认,reviewGate 记 compliant」杀死;同时失败 1 条
+KILLED R23 审过的交付挂回验收卡: 被「AC-26 ④ 有跨厂商审查联系人:交付后用它的 Compute 模型起只读审查 Compute,审过 → T8a 待确认,reviewGate 记 compliant」杀死;同时失败 2 条
+KILLED R10 审过后不进 T8a 待确认: 被「AC-26 ④ 有跨厂商审查联系人:交付后用它的 Compute 模型起只读审查 Compute,审过 → T8a 待确认,reviewGate 记 compliant」杀死;同时失败 3 条
+KILLED R11 认不出的结论当通过: 被「审查结论既不是 APPROVE 也不是 REJECT → 当审查没做成,不猜成通过」杀死;同时失败 2 条
+KILLED R12 结论词不要求在行首(子串匹配): 被「parseVerdict:结论行以 APPROVE / REJECT 开头,或在冒号后以它结尾(去掉加粗等标记,大小写不敏感);前后矛盾或认不出返回 null」杀死;同时失败 1 条
+KILLED R21 前后矛盾的结论取第一条: 被「parseVerdict:结论行以 APPROVE / REJECT 开头,或在冒号后以它结尾(去掉加粗等标记,大小写不敏感);前后矛盾或认不出返回 null」杀死;同时失败 1 条
+KILLED R22 不去掉加粗等标记: 被「parseVerdict:结论行以 APPROVE / REJECT 开头,或在冒号后以它结尾(去掉加粗等标记,大小写不敏感);前后矛盾或认不出返回 null」杀死;同时失败 1 条
+KILLED R13 审查失败不交给提出者: 被「审查 Compute 失败 → 不当通过,交给提出者本人豁免或退回,说明审查没做成」杀死;同时失败 1 条
+KILLED R14 打回不续接原 Compute(当不可恢复新开): 被「AC-26 审查打回 → 回 T3,原 Compute 带审查意见续改;改完再交付重新送审,第二次审过才进 T8a」杀死;同时失败 1 条
+SURVIVED R24 续接时不作废旧结果(联系人可拿旧结果再交付): exit=0 失败=[] 加载失败=false
+KILLED R15 打回不把意见带给 Compute: 被「AC-26 审查打回 → 回 T3,原 Compute 带审查意见续改;改完再交付重新送审,第二次审过才进 T8a」杀死;同时失败 1 条
+KILLED R16 任务离开审查不停审查 Compute: 被「审查中取消任务 → 审查 Compute 也被停止」杀死;同时失败 1 条
+KILLED R17 重启不恢复在跑的审查: 被「重启时审查 Compute 已不在 → 这次审查记中断,交给提出者本人豁免或退回,任务不卡在 T5」杀死;同时失败 1 条
+KILLED R18 审查记录不带意见: 被「AC-26 TaskView.reviews 记下审查人、实际审查模型与厂商、结论和意见」杀死;同时失败 1 条
+KILLED R19 审查人自报模型当实际模型: 被「AC-26 TaskView.reviews 记下审查人、实际审查模型与厂商、结论和意见」杀死;同时失败 2 条
+KILLED R20 审过就直接记验收通过(沉默通过): 被「AC-28 审过后提出者确认 → T8_Accepted,reviewGate 仍是 compliant,承诺了结;沉默不自动通过」杀死;同时失败 3 条
+FAIL 变异校准未通过

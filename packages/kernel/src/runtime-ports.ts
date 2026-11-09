@@ -97,9 +97,21 @@ export type MindAction =
   | { readonly kind: "deliver"; readonly taskId: string; readonly text: string }
   | { readonly kind: "stop"; readonly taskId: string }
   // 用户对交付的普通回复(通过 / 要改)由联系人转成验收结论(AC-28/AC-56);来源必须是提出者本人在交付之后的直接消息,宿主核对
-  | { readonly kind: "verdict"; readonly taskId: string; readonly sourceSeq: number; readonly verdict: "accept" | "revise"; readonly feedback: string | null };
+  | { readonly kind: "verdict"; readonly taskId: string; readonly sourceSeq: number; readonly verdict: "accept" | "revise"; readonly feedback: string | null }
+  | {
+      readonly kind: "remember";
+      readonly roomId: string;
+      readonly sourceSeq: number | null;
+      readonly title: string;
+      readonly text: string;
+      readonly anchors: readonly string[];
+      readonly quote: string | null;
+      readonly relation: "change" | "refine" | "conflict" | null;
+      readonly target: string | null;
+    }
+  | { readonly kind: "memory-use"; readonly id: string; readonly good: boolean; readonly note: string | null };
 export type MindActionKind = MindAction["kind"];
-export const MIND_ACTION_KINDS: readonly MindActionKind[] = Object.freeze(["reply", "dispatch", "commit", "forward", "deliver", "stop", "verdict"]);
+export const MIND_ACTION_KINDS: readonly MindActionKind[] = Object.freeze(["reply", "dispatch", "commit", "forward", "deliver", "stop", "verdict", "remember", "memory-use"]);
 
 export interface RoundOutput {
   readonly actions: readonly MindAction[];
@@ -107,9 +119,17 @@ export interface RoundOutput {
   readonly stateNote: string | null;
 }
 
+/** 本轮内可用的只读查询口(宿主提供):联系人在同一轮的工具往返里按 id 取全文,不是动作、不落盘 */
+export interface RoundTools {
+  /** 按 id 读一条记忆全文(含状态与关系);没有这条或无权读返回 null */
+  readMemory(id: string): Promise<string | null>;
+  /** 引用链往上读一级(D24 read_quote_parent):这条消息直接引用的那几条;会话不可读返回 null */
+  readQuoteParent?(roomId: string, seq: number): Promise<string | null>;
+}
+
 export interface ContactMind {
-  /** 跑一轮。signal 触发时应尽快放弃(宿主发现发送前出现更新的用户消息,会中止重跑)。 */
-  round(input: RoundInput, signal: AbortSignal): Promise<RoundOutput>;
+  /** 跑一轮。signal 触发时应尽快放弃(宿主发现发送前出现更新的用户消息,会中止重跑)。tools 是本轮内的只读查询口,可不给。 */
+  round(input: RoundInput, signal: AbortSignal, tools?: RoundTools): Promise<RoundOutput>;
 }
 
 /**
@@ -143,6 +163,31 @@ export interface CompactRequest {
   /** 新笔记的 UTF-8 字节上限;null 不设 */
   readonly maxBytes: number | null;
 }
+/** 压缩时顺手检查出的一条记忆点(按该联系人的职责写它自己的),由宿主按 D25 写入判关系落地 */
+export interface CompactMemory {
+  readonly title: string;
+  readonly text: string;
+  readonly anchors: readonly string[];
+  readonly relation: "change" | "refine" | "conflict" | null;
+  readonly target: string | null;
+}
+/**
+ * 每轮结束、原文移出窗口前由宿主固定发起的一次检查(用户 #1196,协调 #1250):同一次调用里写状态笔记(模型已写就不覆盖)、
+ * 检查「有没有值得记的」、最多给一条「建议改人格」(人格本身不改)。用联系人自己的说话模型,独立无状态调用。
+ */
+export interface ReflectRequest extends CompactRequest {
+  /** 邻域记忆(本轮锚点相交的生效条目),供判断复述、改变、细化、冲突 */
+  readonly neighbors: readonly { readonly id: string; readonly title: string; readonly body: string }[];
+  /** 模型本轮自己写的状态笔记;不为 null 时检查不得覆盖它 */
+  readonly noteWritten: string | null;
+}
+export interface ReflectResult {
+  readonly note: string | null;
+  readonly memories: readonly CompactMemory[];
+  readonly personaSuggestion: string | null;
+}
 export interface ContactCompactor {
   compact(req: CompactRequest, signal: AbortSignal): Promise<string>;
+  /** 有就每轮调用(取代只在缺笔记时调的 compact);没有就退回 compact */
+  reflect?(req: ReflectRequest, signal: AbortSignal): Promise<ReflectResult>;
 }

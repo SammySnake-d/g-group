@@ -288,7 +288,7 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
     if (r.kind === "milestone" && r.stage !== undefined) emit(round, { computeId: st.id, kind: "milestone", stage: r.stage, summary: r.summary });
     if (r.kind === "failed") round.reportedFailure = r.summary;
     if (r.kind === "blocked" && r.needs !== undefined) {
-      emit(round, { computeId: st.id, kind: "blocked", needs: r.needs, summary: r.summary });
+      emit(round, { computeId: st.id, kind: "blocked", needs: r.needs, summary: r.summary, ...(r.attachments !== undefined ? { attachments: Object.freeze([...r.attachments]) } : {}) });
       // 受理 blocked 后机械地停在受阻:对进程组 SIGSTOP 冻结。这是**非 mirasim 对照项**:mirasim 0.0.774 没有暂停进程的做法
       // (源码里 SIGSTOP 只出现在一处注释,SIGCONT 没有出现)。之后的任何汇报与 result 都不处理,
       // 直到宿主显式 resume(校验通过后 SIGKILL 冻结的进程组,再用同一 CLI 会话号续接)或 stop(对冻结的进程组 SIGKILL)

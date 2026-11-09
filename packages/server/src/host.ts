@@ -7,8 +7,8 @@
 // 或被同一上游的共享熔断暂停(全群合并 1 张群级卡);出卡由宿主机械完成,不靠已挂的联系人脑子自报。
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
-import { basename, dirname, extname, join } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { appendEvent, loadLog, recordAction } from "@g-group/adapter-sqlite";
 import type { ComputeAdapter, ComputeEvent } from "@g-group/adapter-cc-compute";
 import {
@@ -38,6 +38,7 @@ import {
   type TaskEvent,
   type TaskModelRecord,
   applyLedger,
+  vendorOf,
   apply as applyTask,
   emptyLedger,
   emptyModelRecord,
@@ -62,6 +63,18 @@ import {
   type HealClass,
   type Inbound,
   type InboundMessage,
+  type MemoryEntry,
+  type QuoteMsg,
+  buildQuoteChain,
+  quoteParent,
+  renderLevels,
+  renderQuoteChain,
+  type ReflectResult,
+  type RoundTools,
+  planMemoryWrite,
+  prefixMemories,
+  recordMemoryUse,
+  selectMemories,
   type MindAction,
   type RetryPolicy,
   type RoundOutput,
@@ -103,7 +116,9 @@ import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
+import { MemoryStore } from "./memory-store.ts";
 import { PluginStore } from "./plugins.ts";
+import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief, reviewModelProblem } from "./review.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
 import { QuotaTable } from "./quota.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
@@ -146,6 +161,12 @@ export interface HostOptions {
   readonly compactor?: (contact: ContactView) => ContactCompactor;
   /** 状态笔记的 UTF-8 字节上限;超了请压缩器缩写,仍超就保留并报告,不截断。null / 不给:不设上限。 */
   readonly stateNoteMaxBytes?: number | null;
+  /** 会话中途的全局记忆变化在第 5 块累积到几条就并入第 1 块前缀(D25 第 6 节「快照加增量」)。默认 20。 */
+  readonly memoryFoldAfter?: number;
+  /** 引用链原文的字节预算(D24 第 3 节:与直接引用共用回读预算);不给用 RECALL_BUDGET_BYTES。数值待实测。 */
+  readonly quoteChainBudgetBytes?: number;
+  /** 给 Compute(harness)的单次输入 UTF-8 字节上限(§8.1 待决 13):派活说明与转交补充超过就显式拒绝,不截断。不给=不设上限,数字待用户定。 */
+  readonly computeInputMaxBytes?: number | null;
   readonly timers?: TimerApi;
   readonly onReport?: (what: string, detail: unknown) => void;
   /** 群公告排序(列表与装配共用);默认按创建先后。排序规则待定(D28 待确认 ④),先做成参数。 */
@@ -165,6 +186,15 @@ export interface HostOptions {
   /** 退避抖动用的随机数,默认 Math.random。 */
   readonly random?: () => number;
 }
+
+/** 记忆锚点:全局(进前缀)与「建议改人格」(只记录,不进任何一块) */
+const GLOBAL_ANCHOR = "global";
+/** 引用链默认级数(用户 #2115 确认 K=3)与往上扫描深度上限(D24 建议 32) */
+const QUOTE_CHAIN_K = 3;
+const QUOTE_SCAN_CAP = 32;
+const PERSONA_ANCHOR = "persona-suggestion";
+/** 用户原话里说了这类词才允许记成全局(D25 第 10 节场景 B) */
+const GLOBAL_WORDS = /以后|所有|一律|始终|永远|每次|always|from now on/i;
 
 /** 状态笔记含撤回原文且无法精确移除时,整份作废后的占位(撤回优先,AC-08) */
 const VOIDED_NOTE = "(状态笔记含已撤回内容,已作废;请按承诺账本与新消息重写)";
@@ -212,6 +242,21 @@ interface MsgMeta {
   card_id: string | null;
   client_action_id: string | null;
 }
+interface ReviewRow {
+  compute_id: string;
+  task_id: string;
+  reviewer_id: string;
+  owner_id: string;
+  room_id: string;
+  model: string;
+  round: number;
+  commit_ref: string;
+  constraint_ver: number;
+  status: string;
+  notes: string;
+  started_at: string;
+  ended_at: string | null;
+}
 interface RoomRow {
   id: string;
   kind: "dm" | "group";
@@ -251,6 +296,17 @@ const DEFAULT_SETTINGS: SettingsView = {
 };
 const MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp", ".pdf": "application/pdf", ".txt": "text/plain", ".md": "text/markdown", ".json": "application/json", ".csv": "text/csv", ".zip": "application/zip" };
 export const DEFAULT_COMPUTE_TOOLS: readonly string[] = Object.freeze(["Read", "Write", "Edit", "Glob", "Grep", "Bash"]);
+/**
+ * 派给 Compute 的人工验证规则(AC-44 ①,C-US15):遇到必须由人完成的验证就截图、报 blocked 停下,
+ * 不反复尝试、不猜、不用打码服务;宿主收到 blocked 让任务进 T4b,由联系人 @提出者发提问卡。
+ */
+export const HUMAN_VERIFICATION_RULE: string =
+  "遇到验证码、短信或邮箱验证、人机校验等必须由人完成的验证时:不要反复尝试,不要猜,不要调用打码服务或任何代解服务,也不要换别的办法跳过这一步;" +
+  "把当前画面截图保存到工作目录,调用 report_progress 报 kind=blocked,needs 写清需要用户做什么,attachments 填截图文件的相对路径,然后停下等待。用户的回答会续接到本会话。";
+/** 提问卡附件只收工作目录里的图片(AC-44 ② 截图)。 */
+const QUESTION_IMAGE_EXT: ReadonlySet<string> = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"]);
+const QUESTION_ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024;
+const EXPIRED_NOTE = "\n(已过期·未执行)";
 const TERMINAL: ReadonlySet<string> = new Set(["T8_Accepted", "T10_Cancelled", "T11_Failed"]);
 
 export class Host {
@@ -279,6 +335,7 @@ export class Host {
   private readonly stopUnconfirmed = new Map<string, string>();
   private readonly opts: HostOptions;
   private readonly now: () => string;
+  private readonly memory: MemoryStore;
   private readonly newId: (prefix: string) => string;
   private readonly assemble: RoundAssembler;
   private readonly activity = new Map<string, Activity>();
@@ -297,6 +354,10 @@ export class Host {
   /** 用户在群级卡上点了[重试]、下一次放行按用户发起的探测处理的上游。 */
   private readonly manualProbe = new Set<string>();
   private readonly random: () => number;
+  /** 事务里改了状态、提交后要推 message.updated 的卡片(提问卡过期等)。 */
+  private cardUpdates: { roomId: string; seq: number }[] = [];
+  /** 事务里标为 stopped、提交后要真正停掉的审查 Compute(任务离开这一轮审查时)。 */
+  private reviewStops: { taskId: string; computeId: string }[] = [];
 
   constructor(opts: HostOptions) {
     this.opts = opts;
@@ -310,6 +371,7 @@ export class Host {
     this.exits = new MemberExits({ db: this.db, now: this.now });
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
+    this.memory = new MemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d));
     this.bus = createBus(this.now);
     this.bootId = this.newId("boot");
     const policy = checkRetryPolicy({ ...DEFAULT_RETRY_POLICY, ...(opts.retry ?? {}) });
@@ -390,6 +452,7 @@ export class Host {
     this.docs.repairMirrors();
     this.worktrees = opts.codeRepo ? new Worktrees(opts.codeRepo, join(opts.dataDir ?? dirname(opts.file), "worktrees")) : null;
     this.artifacts = new ArtifactStore(this.db, join(opts.dataDir ?? dirname(opts.file), "artifacts"), this.now);
+    this.recoverReviews();
     // 启动时先处理宿主关着期间到期的定时(按容差与 missedPolicy),再按最早一次设计时器
     this.scheduler.tick();
     // 启动回收(F4/F6/F12):上次留下的未提交轮次按 crash_recovery_count 决定续跑或熔断出卡;磁盘上还没被领走的输入交给联系人
@@ -1364,7 +1427,63 @@ export class Host {
     if (!out.ok) throw new HostError("conflict", `任务 ${id} 拒绝 ${ev.kind}:${out.reason}`);
     const doc: TaskDoc = { ...cur.value, ...extra, task: out.task, updatedAt: this.now() };
     putDoc(this.db, `task:${id}`, cur.ver, doc);
+    this.expireQuestionsTx(id, out.task);
+    this.retireReviewsTx(id, out.task);
     return { doc, effects: out.effects };
+  }
+  /**
+   * 提问卡只在任务停在 T4b 且 q_id 就是它时有效(AC-44 ⑤):任务取消、回到执行、换了新问题,仍开着的旧提问卡一律标
+   * 「已过期·未执行」,之后在上面的点击与 tasks.answer 幂等忽略。正在被领取(claimed)的卡由领取方收尾,不在这里改。
+   */
+  private expireQuestionsTx(taskId: string, t: Task) {
+    const live = t.state === "T4b_BlockedOnHuman" ? (t.pendingQ?.qId ?? null) : null;
+    const stale = all<{ card_id: string; room_id: string; seq: number }>(
+      this.db,
+      "SELECT card_id, room_id, seq FROM gg_cards WHERE task_id = ? AND kind = 'question' AND state = 'open' AND json_extract(meta, '$.qId') IS NOT ?",
+      taskId,
+      live,
+    );
+    for (const c of stale) {
+      run(this.db, "UPDATE gg_cards SET state = 'expired', body = body || ? WHERE card_id = ? AND state = 'open'", EXPIRED_NOTE, c.card_id);
+      this.cardUpdates.push({ roomId: c.room_id, seq: c.seq });
+    }
+  }
+  /** 任务不再停在某一轮审查上(取消、改条件返工、换了新一轮):那一轮还在跑的审查标 stopped,提交后停掉它的 Compute。 */
+  private retireReviewsTx(taskId: string, t: Task) {
+    const live = t.state === "T5_InReview" ? t.reviewRound : -1;
+    for (const r of all<{ compute_id: string }>(this.db, "SELECT compute_id FROM gg_reviews WHERE task_id = ? AND status = 'running' AND round != ?", taskId, live)) {
+      run(this.db, "UPDATE gg_reviews SET status = 'stopped', ended_at = ? WHERE compute_id = ? AND status = 'running'", this.now(), r.compute_id);
+      this.reviewStops.push({ taskId, computeId: r.compute_id });
+    }
+  }
+  private flushCardUpdates() {
+    const ups = this.cardUpdates;
+    this.cardUpdates = [];
+    for (const u of ups) {
+      const m = this.projected(u.roomId).find((x) => x.seq === u.seq);
+      if (m) this.bus.emit({ type: "message.updated", message: this.messageView(u.roomId, m) });
+    }
+  }
+  private questionCard(taskId: string, qId: string): CardRow | undefined {
+    return one<CardRow>(this.db, "SELECT * FROM gg_cards WHERE task_id = ? AND kind = 'question' AND json_extract(meta, '$.qId') = ?", taskId, qId);
+  }
+  /**
+   * tasks.answer(AC-44 ③⑤):回答当前待回答的问题,等同于在提问卡上点「回答」。
+   * 问题号不存在 → not_found;问题已回答、已过期,或任务已离开 T4b → 幂等忽略,返回任务当前视图,不送进 Compute。
+   */
+  answerTask(taskId: string, qId: string, clientActionId: string, answer: string): TaskView {
+    this.taskDoc(taskId);
+    const card = this.questionCard(taskId, qId);
+    if (!card) throw new HostError("not_found", `任务 ${taskId} 没有问题 ${qId}`);
+    if (card.state === "open") {
+      try {
+        this.cardAct({ roomId: card.room_id, seq: card.seq, cardId: card.card_id, actionId: "answer", clientActionId, text: answer });
+      } catch (e) {
+        // 同一张卡正被另一次回答领取:那一次生效,这一次幂等忽略
+        if (!(e instanceof HostError && e.code === "conflict" && this.questionCard(taskId, qId)?.state !== "open")) throw e;
+      }
+    }
+    return this.taskView(this.taskDoc(taskId).value);
   }
   /** 按 id 读权威任务文档(正文与版本同一次读出)投影成视图;群入口、侧边栏、事件都走这里或 listTasks,不读缓存副本(AC-02) */
   taskViewById(id: string): TaskView {
@@ -1389,8 +1508,18 @@ export class Host {
       ownerContactId: t.owner,
       state: t.state,
       constraintVersion: t.constraintVer,
-      pendingQuestion: t.pendingQ ? { qId: t.pendingQ.qId, text: "" } : null,
+      pendingQuestion: t.pendingQ ? { qId: t.pendingQ.qId, text: this.questionText(t.id, t.pendingQ.qId) } : null,
       reviewGate: t.reviewGate,
+      reviews: all<ReviewRow>(this.db, "SELECT * FROM gg_reviews WHERE task_id = ? ORDER BY started_at, rowid", t.id).map((r) => ({
+        round: r.round,
+        reviewerContactId: r.reviewer_id,
+        model: r.model,
+        vendor: vendorOf(r.model),
+        status: r.status as NonNullable<TaskView["reviews"]>[number]["status"],
+        notes: r.notes.slice(0, 20000),
+        startedAt: r.started_at,
+        endedAt: r.ended_at,
+      })),
       computeRuns: runs.map((r) => {
         const loaded = getDoc<{ skills: string[]; mcpServers: string[] }>(this.db, `compute-loaded:${r.compute_id}`)?.value;
         return {
@@ -1420,6 +1549,10 @@ export class Host {
       stateVer: ver ?? this.taskDoc(t.id).ver,
     };
   }
+  private questionText(taskId: string, qId: string): string {
+    const c = this.questionCard(taskId, qId);
+    return c ? String((JSON.parse(c.meta) as { needs?: string }).needs ?? "").slice(0, 5000) : "";
+  }
   progress(taskId: string, limit = 200): ComputeProgress[] {
     return all<{ compute_id: string; kind: ComputeProgress["kind"]; stage: string | null; summary: string; at: string }>(
       this.db,
@@ -1435,6 +1568,12 @@ export class Host {
       .map((d) => this.taskView(d.value, d.ver));
   }
   private emitTask(id: string) {
+    this.flushCardUpdates();
+    if (this.reviewStops.length) {
+      const stops = this.reviewStops;
+      this.reviewStops = [];
+      void this.runEffects(stops.map((s) => ({ kind: "stop" as const, ...s })));
+    }
     this.bus.emit({ type: "task.updated", task: this.taskViewById(id) });
     const doc = this.taskDoc(id).value;
     // 任务每次变化后看负责人是否在这个群移出中:停止确认到了(T10/T11)才真正移出
@@ -1590,6 +1729,128 @@ export class Host {
   }
 
   // ======================= 联系人一轮 =======================
+  /** 联系人的全部记忆(含已替代、降级),按创建时间排序。 */
+  listMemories(contactId: string): MemoryEntry[] {
+    return this.memory.list(contactId);
+  }
+  /** 压缩检查记下的「建议改人格」(不进任何一块,人格本身不改)。 */
+  personaSuggestions(contactId: string): string[] {
+    return this.memory.list(contactId).filter((e) => e.anchors.includes(PERSONA_ANCHOR) && e.status === "active").map((e) => e.body);
+  }
+  /** 删掉索引后从 md 真源重建,返回条目数。 */
+  rebuildMemoryIndex(contactId: string): number {
+    return this.memory.rebuild(contactId);
+  }
+  /** 一个会话里可作引用链节点的消息:最新文字、撤回标记、它引用了哪些;rewind 撤下的不收(当作看不见,AC-48) */
+  private quoteMsgs(roomId: string): QuoteMsg[] {
+    const rewound = rewindRanges(this.db, roomId);
+    const out: QuoteMsg[] = [];
+    for (const m of this.projected(roomId)) {
+      if (inRanges(rewound, m.seq)) continue;
+      const meta = one<MsgMeta>(this.db, "SELECT * FROM gg_msg WHERE room_id = ? AND seq = ?", roomId, m.seq);
+      const quoted = [...(meta?.reply_to != null ? [meta.reply_to] : []), ...(meta ? (JSON.parse(meta.quoted) as number[]) : [])];
+      const at = one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${roomId}`, m.seq)?.at ?? "";
+      out.push({ seq: m.seq, author: this.nameOf(m.sender), at, text: m.text, quoted, retracted: m.retracted });
+    }
+    return out;
+  }
+  /** read_quote_parent:只返回直接上一级;会话不是联系人的就返回 null */
+  private readQuoteParent(contactId: string, roomId: string, seq: number): string | null {
+    if (!this.roomsOfContact(contactId).some((r) => r.id === roomId)) return null;
+    const msgs = this.quoteMsgs(roomId);
+    if (!msgs.some((m) => m.seq === seq)) return null;
+    const levels = quoteParent({ seq, messages: msgs, inContext: [], budgetBytes: this.opts.quoteChainBudgetBytes ?? RECALL_BUDGET_BYTES });
+    return levels.length ? renderLevels(levels) : `#${seq} 没有引用上一级`;
+  }
+  /** 一条记忆的全文与状态,给 read_memory 用;没有返回 null */
+  private renderMemory(contactId: string, id: string): string | null {
+    const e = this.memory.get(contactId, id);
+    if (!e || e.anchors.includes(PERSONA_ANCHOR)) return null;
+    const status = e.status === "active" ? "生效" : e.status === "degraded" ? "降级(多次用后结果不好,仅供参考)" : e.status === "revoked" ? "已撤销" : `已替代(由 ${e.supersededBy ?? "?"} 替代,以新条目为准)`;
+    const rel = [
+      e.supersedes.length ? `替代了 ${e.supersedes.join("、")}` : "",
+      e.refines.length ? `细化 ${e.refines.join("、")}` : "",
+      e.conflictsWith.length ? `与 ${e.conflictsWith.join("、")} 冲突,待用户拍板` : "",
+    ].filter(Boolean);
+    return `〔记忆 ${e.id} · ${e.title}〕状态:${status}${rel.length ? `;${rel.join(";")}` : ""}\n锚点:${e.anchors.join(" ")}\n${e.body}`;
+  }
+  /** 本轮锚点:新输入所在会话、发送人、涉及的任务 */
+  private roundAnchors(fresh: readonly Inbound[]): string[] {
+    const out = new Set<string>();
+    for (const f of fresh) {
+      out.add(`room:${f.roomId}`);
+      if (f.kind === "message") out.add(`${f.sender.kind === "user" ? "user" : f.sender.kind}:${f.sender.id}`);
+      if (f.kind === "compute") out.add(`task:${f.taskId}`);
+    }
+    return [...out];
+  }
+  /** 本轮记忆装配:第 1 块的全局快照、第 5 块的读取结果与未并入前缀的全局变化(D25 第 6 节「快照加增量」) */
+  private memoryForRound(contactId: string, fresh: readonly Inbound[]): { prefix: { id: string; title: string; text: string }[]; pointers: { ref: string; text: string }[] } {
+    const list = this.memory.list(contactId);
+    const now = this.now();
+    const cur = prefixMemories(list, now).map((e) => ({ id: e.id, title: e.title, text: e.body }));
+    const key = (x: { id: string; title: string; text: string }) => `${x.id}\u0000${x.title}\u0000${x.text}`;
+    const doc = getDoc<{ entries: { id: string; title: string; text: string }[] }>(this.db, `memprefix:${contactId}`);
+    let snap = doc?.value.entries ?? cur;
+    if (!doc) putDoc(this.db, `memprefix:${contactId}`, 0, { entries: cur });
+    const snapKeys = new Set(snap.map(key));
+    const curKeys = new Set(cur.map(key));
+    let added = cur.filter((x) => !snapKeys.has(key(x)));
+    let removed = snap.filter((x) => !curKeys.has(key(x)));
+    if (doc && added.length + removed.length >= (this.opts.memoryFoldAfter ?? 20)) {
+      putDoc(this.db, `memprefix:${contactId}`, doc.ver, { entries: cur });
+      snap = cur;
+      added = [];
+      removed = [];
+    }
+    const pointers: { ref: string; text: string }[] = [];
+    if (added.length + removed.length > 0) {
+      const lines = [...added.map((x) => `+ 〔记忆 ${x.id} · ${x.title}〕${x.text}`), ...removed.map((x) => `- 〔记忆 ${x.id} · ${x.title}〕已不再适用`)];
+      pointers.push({ ref: "记忆变化(全局,尚未并入前缀,以这里为准)", text: lines.join("\n") });
+    }
+    const text = fresh.map((f) => (f.kind === "message" ? f.text : f.kind === "compute" ? f.summary : f.prompt)).join("\n");
+    const sel = selectMemories(list, { anchors: this.roundAnchors(fresh), text, now });
+    for (const e of sel.expanded) pointers.push({ ref: `记忆 ${e.id} · ${e.title}`, text: `${e.body}${e.status === "degraded" ? "\n(降级:多次用后结果不好,仅供参考)" : ""}${e.conflictsWith.length ? `\n(与 ${e.conflictsWith.join("、")} 冲突,待用户拍板)` : ""}` });
+    if (sel.listed.length) pointers.push({ ref: "其余相关记忆(用 read_memory 按 id 读全文)", text: sel.listed.map((x) => `${x.id}:${x.title}`).join("\n") });
+    return { prefix: snap, pointers };
+  }
+  /** 写一条记忆(remember 动作或压缩检查给的记忆点);不合规返回原因 */
+  private rememberTx(contactId: string, a: Extract<MindAction, { kind: "remember" }>, roomIds: Set<string>, actionId: string, appended: { roomId: string; seq: number }[]): string | null {
+    if (!roomIds.has(a.roomId)) return "不在这个会话里";
+    let userQuote = false;
+    if (a.sourceSeq !== null) {
+      const src = this.projected(a.roomId).find((m) => m.seq === a.sourceSeq);
+      if (!src || src.retracted) return `来源 ${a.roomId} #${a.sourceSeq} 不存在或已撤回`;
+      if (a.quote !== null) {
+        if (src.sender.kind !== "user" || !src.text.includes(a.quote)) return "quote 必须是来源用户消息里的原话";
+        userQuote = true;
+      }
+    } else if (a.quote !== null) return "给了 quote 却没有来源 seq";
+    let anchors = [...new Set(a.anchors.map((x) => x.trim()).filter(Boolean))].filter((x) => x !== PERSONA_ANCHOR);
+    if (anchors.includes(GLOBAL_ANCHOR) && !(userQuote && GLOBAL_WORDS.test(a.quote ?? ""))) {
+      // 作用域坍缩(D25 第 10 节场景 B):用户没说「以后都/所有」,不记全局,挂到当前会话
+      anchors = [...new Set([...anchors.filter((x) => x !== GLOBAL_ANCHOR), `room:${a.roomId}`])];
+      this.report("memory-scope-narrowed", { contactId, title: a.title });
+    }
+    const plan = planMemoryWrite(
+      this.memory.list(contactId),
+      { title: a.title, body: a.text, anchors, source: a.sourceSeq === null ? null : { roomId: a.roomId, seq: a.sourceSeq, userQuote }, relation: a.relation === null ? null : { kind: a.relation, target: a.target ?? "" } },
+      this.now(),
+      () => this.newId("m"),
+    );
+    if (plan.kind === "invalid") return plan.why;
+    for (const e of plan.changed) this.memory.put(contactId, e);
+    if (plan.kind === "ask-user") {
+      const old = this.memory.get(contactId, plan.target);
+      const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, {
+        text: `记忆冲突,请你拍板:「${plan.entry.body}」(${plan.entry.id})和之前记下的「${old?.body ?? "?"}」(${plan.target})都来自你的原话,以哪条为准?`,
+        actionKey: `${actionId}:memory-conflict`,
+        mentions: [{ id: this.userId, source: "auto" }],
+      });
+      appended.push({ roomId: a.roomId, seq: r.seq });
+    }
+    return null;
+  }
   /** 联系人当前的状态笔记(第 3 块原文);没有为 null。 */
   stateNote(contactId: string): string | null {
     return getDoc<{ text: string }>(this.db, `note:${contactId}`)?.value.text ?? null;
@@ -1620,14 +1881,36 @@ export class Host {
     return r.text;
   }
   /** 本轮要落盘的状态笔记:模型没写就请压缩器补写(同一说话模型的独立调用),超上限就缩写;最后移除撤回原文 */
-  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], signal: AbortSignal): Promise<string | null> {
+  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], signal: AbortSignal): Promise<{ note: string | null; remember: MindAction[]; persona: string | null }> {
     const contactId = contact.id;
     const prev = this.stateNote(contactId);
     const compactor = this.opts.compactor?.(this.contactView(contact));
     const profile = { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona };
     const max = this.opts.stateNoteMaxBytes ?? null;
     let note = out.stateNote;
-    if (note === null && compactor && fresh.length > 0) {
+    const remember: MindAction[] = [];
+    let persona: string | null = null;
+    // 每轮结束、原文移出窗口前由代码固定发起一次检查(用户 #1196、协调 #1250):同一次调用写笔记、检查有没有值得记的、最多一条人格建议
+    let reflected = false;
+    if (compactor?.reflect && fresh.length > 0) {
+      const list = this.memory.list(contactId);
+      const anchors = this.roundAnchors(fresh);
+      const neighbors = list
+        .filter((e) => (e.status === "active" || e.status === "degraded") && !e.anchors.includes(PERSONA_ANCHOR) && e.anchors.some((x) => anchors.includes(x) || x === GLOBAL_ANCHOR))
+        .map((e) => ({ id: e.id, title: e.title, body: e.body }));
+      try {
+        const r: ReflectResult = await compactor.reflect({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max, neighbors, noteWritten: out.stateNote }, signal);
+        reflected = true;
+        if (note === null) note = r.note;
+        const lastUser = [...fresh].reverse().find((f): f is InboundMessage => f.kind === "message" && f.sender.kind === "user");
+        const roomId = lastUser?.roomId ?? fresh[0]!.roomId;
+        for (const m of r.memories) remember.push({ kind: "remember", roomId, sourceSeq: lastUser?.seq ?? null, title: m.title, text: m.text, anchors: m.anchors, quote: null, relation: m.relation, target: m.target });
+        persona = r.personaSuggestion;
+      } catch (e) {
+        this.report("reflect-failed", { contactId, error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+    if (note === null && !reflected && compactor && fresh.length > 0) {
       try {
         note = await compactor.compact({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max }, signal);
       } catch (e) {
@@ -1646,7 +1929,7 @@ export class Host {
       }
       if (Buffer.byteLength(note, "utf8") > max) this.report("state-note-over-limit", { contactId, bytes: Buffer.byteLength(note, "utf8"), max });
     }
-    return note === null ? null : this.scrubNote(contactId, note, roomIds);
+    return { note: note === null ? null : this.scrubNote(contactId, note, roomIds), remember, persona };
   }
   private cursor(contactId: string, roomId: string): number {
     return one<{ processed_seq: number }>(this.db, "SELECT processed_seq FROM gg_cursor WHERE contact_id = ? AND room_id = ?", contactId, roomId)?.processed_seq ?? 0;
@@ -1789,9 +2072,22 @@ export class Host {
     }
     this.report("recall", { contactId, roundId, items: plan.items.map(({ text: _t, ...rest }) => rest) });
     const pointers = plan.items.map((it) => renderRecall(it, sources.get(`${it.roomId}#${it.seq}`)?.sender ?? "?"));
+    // 引用链(D24/AC-41):带引用的新消息附前 K 级,放在第 5 块(新消息之后,不进前缀);已换入或同在本轮的标 in_context
+    const paged = new Set(plan.items.filter((it) => it.state === "Full" || it.state === "TruncatedSlice").map((it) => `${it.roomId}#${it.seq}`));
+    const chainMsgs = new Map<string, QuoteMsg[]>();
+    for (const f of fresh) {
+      if (f.kind !== "message" || (f.replyToSeq === null && f.quotedSeqs.length === 0)) continue;
+      const qm = chainMsgs.get(f.roomId) ?? this.quoteMsgs(f.roomId);
+      chainMsgs.set(f.roomId, qm);
+      const inContext = [...qm.filter((m) => paged.has(`${f.roomId}#${m.seq}`)).map((m) => m.seq), ...fresh.flatMap((x) => (x.kind === "message" && x.roomId === f.roomId ? [x.seq] : []))];
+      const chain = buildQuoteChain({ fromSeq: f.seq, refs: [...(f.replyToSeq !== null ? [f.replyToSeq] : []), ...f.quotedSeqs], messages: qm, inContext, k: QUOTE_CHAIN_K, scanCap: QUOTE_SCAN_CAP, budgetBytes: this.opts.quoteChainBudgetBytes ?? RECALL_BUDGET_BYTES });
+      if (chain) pointers.push({ ref: `${f.roomId} #${f.seq} 的引用链`, text: renderQuoteChain(chain) });
+    }
+    const mem = this.memoryForRound(contactId, fresh);
     let request: ReturnType<RoundAssembler>;
     try {
       request = this.assemble({
+        memories: mem.prefix,
       system: CONTACT_SYSTEM,
       tools: CONTACT_TOOLS,
       persona: identityOf(contactId, contact),
@@ -1804,7 +2100,7 @@ export class Host {
       stateNote: note?.value.text ?? null,
       fresh,
       tasks: tasks.map((t) => `${t.id} [${t.state}] ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
-      pointers,
+      pointers: [...pointers, ...mem.pointers],
       budgetBytes: this.opts.roundBudgetBytes ?? ROUND_BUDGET_BYTES,
       });
     } catch (e) {
@@ -1820,7 +2116,8 @@ export class Host {
     let out: Awaited<ReturnType<ContactMind["round"]>>;
     try {
       // 每一轮现场定生效模型(原则 70):用户在失败卡上显式选了备用模型才换,只用于重跑这一批;自动重试永远用原模型(严禁静默换模)
-      out = await this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, signal);
+      const tools: RoundTools = { readMemory: async (id: string) => this.renderMemory(contactId, id), readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq) };
+      out = await this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, signal, tools);
     } catch (e) {
       this.setActivity(contactId, null, "idle");
       // 宿主中止(停机、发送前撤销)不是失败
@@ -1841,9 +2138,9 @@ export class Host {
         }
       }
     }
-    const stateNote = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), signal);
+    const settled = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), signal);
     if (signal.aborted || this.closed) return "done";
-    const done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: out.actions, stateNote });
+    const done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona });
     this.expireRoundFailures(contactId);
     this.setActivity(contactId, null, "idle");
     await this.runEffects(done.effects);
@@ -1924,7 +2221,7 @@ export class Host {
     fresh: Inbound[],
     inbox: { id: number }[],
     lastSeen: Record<string, number>,
-    out: { actions: readonly MindAction[]; stateNote: string | null },
+    out: { actions: readonly MindAction[]; stateNote: string | null; personaSuggestion?: string | null },
   ): { effects: HostEffect[] } {
     const roomIds = new Set(this.roomsOfContact(contactId).map((r) => r.id));
     // 移出中:这个群里的发言、登记承诺与接新活一律拒绝(D05「先禁止新群内接单与发言」)
@@ -2024,6 +2321,26 @@ export class Host {
             const t = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
             if (!t.task.computeId || TERMINAL.has(t.task.state) || t.task.state === "T9_StopRequested") { reject("任务没有在途 Compute"); break; }
+            const over = this.overComputeInput(a.text);
+            if (over) { reject(`转交的补充${over}`); break; }
+            if (t.task.state === "T4b_BlockedOnHuman" && t.task.pendingQ) {
+              // 等人回答时(AC-44 ③):只有提出者本轮在任务会话里、提问卡之后说的话能当回答转达;联系人不能自己编答案
+              const q = t.task.pendingQ;
+              const card = this.questionCard(a.taskId, q.qId);
+              const answered = freshMsgs.some((m) => m.roomId === t.roomId && m.sender.kind === "user" && m.sender.id === t.task.requester && (!card || m.seq > card.seq));
+              if (!answered) { reject("任务在等用户回答,只能转达提出者本轮在会话里的回答"); break; }
+              // 先把卡标为已处理,再推进状态机(否则离开 T4b 时它会被当成旧卡过期)
+              if (card && run(this.db, "UPDATE gg_cards SET state = 'done' WHERE card_id = ? AND state = 'open'", card.card_id) === 1) this.cardUpdates.push({ roomId: card.room_id, seq: card.seq });
+              this.stepTaskTx(a.taskId, { kind: "HumanReply", qId: q.qId, constraintVer: q.constraintVer, answer: "approve" });
+              effects.push({ kind: "resume", taskId: a.taskId, computeId: t.task.computeId, text: `用户对问题 ${q.qId} 的回答(联系人转达):${a.text}` });
+              touchedTasks.add(a.taskId);
+              break;
+            }
+            // 提问卡上的回答宿主已经续接给 Compute;那条回答也作为对话消息送到了联系人这里。本轮提出者在任务会话里说的
+            // 只有这些卡片回答时,联系人再 forward 就是把同一个回答第二次送进 Compute(验证码可能被重复提交),拒收(AC-44 ③)
+            const fromRequester = freshMsgs.filter((m) => m.roomId === t.roomId && m.sender.kind === "user" && m.sender.id === t.task.requester);
+            const cardAnswer = (m: InboundMessage) => m.replyToSeq !== null && !!one(this.db, "SELECT 1 FROM gg_cards WHERE room_id = ? AND seq = ? AND task_id = ? AND kind = 'question' AND state = 'done'", m.roomId, m.replyToSeq, a.taskId);
+            if (fromRequester.length > 0 && fromRequester.every(cardAnswer)) { reject("这条回答已经通过提问卡转给 Compute,不再重复转发"); break; }
             effects.push({ kind: "resume", taskId: a.taskId, computeId: t.task.computeId, text: a.text });
             break;
           }
@@ -2054,9 +2371,13 @@ export class Host {
               mentions: [{ id: t.task.requester, source: "auto" }],
             });
             if (arts.length && !r.duplicate) run(this.db, "INSERT OR IGNORE INTO gg_msg_artifacts (room_id, seq, artifacts) VALUES (?, ?, ?)", t.roomId, r.seq, JSON.stringify(arts));
-            this.stepTaskTx(a.taskId, { kind: "SubmitForReview", commit, computeId: t.task.computeId, constraintVer: t.task.constraintVer }, { result: a.text, deliveredSeq: r.seq, artifacts: arts });
+            const { effects: sub } = this.stepTaskTx(a.taskId, { kind: "SubmitForReview", commit, computeId: t.task.computeId, constraintVer: t.task.constraintVer }, { result: a.text, deliveredSeq: r.seq, artifacts: arts });
             appended.push({ roomId: t.roomId, seq: r.seq });
             touchedTasks.add(a.taskId);
+            // 审查门(AC-26):有跨厂商审查联系人就交给它审,审过才进 T8a 待确认;没有合格审查人,任务停在 T5 等提出者本人回复(豁免,记 waived-by-user)
+            const req = sub.find((x): x is Extract<typeof x, { kind: "request-review" }> => x.kind === "request-review");
+            const reviewer = req ? this.reviewerFor(this.taskDoc(a.taskId).value.task, t.roomId) : null;
+            if (req && reviewer) effects.push({ kind: "review", taskId: a.taskId, roomId: t.roomId, ownerId: contactId, reviewerId: reviewer.contactId, model: reviewer.model, round: req.round, commit: req.commit, constraintVer: req.constraintVer, brief: reviewBrief({ title: t.title, requirement: t.brief, delivery: a.text }) });
             break;
           }
           case "verdict": {
@@ -2073,6 +2394,17 @@ export class Host {
             effects.push(...this.decideDeliveryTx(a.taskId, a.verdict === "accept" ? "accept" : "reject", src.sender.id, a.feedback?.trim() || src.text));
             referenced.add(`${d.roomId}#${src.seq}`);
             touchedTasks.add(a.taskId);
+            break;
+          }
+          case "remember": {
+            const why = this.rememberTx(contactId, a, roomIds, actionId, appended);
+            if (why) reject(why);
+            break;
+          }
+          case "memory-use": {
+            const e = this.memory.get(contactId, a.id);
+            if (!e || e.anchors.includes(PERSONA_ANCHOR)) { reject(`没有记忆 ${a.id}`); break; }
+            this.memory.put(contactId, recordMemoryUse(e, { at: this.now(), good: a.good, ...(a.note !== null ? { note: a.note } : {}) }, this.now()));
             break;
           }
           case "stop": {
@@ -2115,6 +2447,12 @@ export class Host {
       // 这一批提交成功:在途失败(残留瞬态错误、换模覆盖)清掉,在途轮次标记与 crash_recovery_count 清零(F12「新成功轮次重置计数」)
       hadFailure = run(this.db, "DELETE FROM gg_failures WHERE scope = 'contact' AND subject = ?", contactId) > 0;
       run(this.db, "DELETE FROM gg_round_guard WHERE contact_id = ?", contactId);
+      if (out.personaSuggestion) {
+        // 人格不随压缩改(在固定前缀里,改了缓存全失效);只记一条建议,同一建议只挂佐证
+        const plan = planMemoryWrite(this.memory.list(contactId), { title: "建议改人格", body: out.personaSuggestion, anchors: [PERSONA_ANCHOR], source: null, relation: null }, this.now(), () => this.newId("m"));
+        if (plan.kind !== "invalid") for (const e of plan.changed) this.memory.put(contactId, e);
+        this.report("persona-suggestion", { contactId, text: out.personaSuggestion });
+      }
       if (out.stateNote !== null) {
         const cur = getDoc<{ text: string }>(this.db, `note:${contactId}`);
         putDoc(this.db, `note:${contactId}`, cur?.ver ?? 0, { text: out.stateNote });
@@ -2160,6 +2498,8 @@ export class Host {
     }
   }
   private onComputeEvent(ev: ComputeEvent) {
+    const rv = one<ReviewRow>(this.db, "SELECT * FROM gg_reviews WHERE compute_id = ?", ev.computeId);
+    if (rv) return this.onReviewEvent(rv, ev);
     const row = one<{ task_id: string; contact_id: string; room_id: string; harness: string }>(this.db, "SELECT task_id, contact_id, room_id, harness FROM gg_compute WHERE compute_id = ?", ev.computeId);
     if (!row) return;
     const at = this.now();
@@ -2169,6 +2509,9 @@ export class Host {
     let taskChanged = false;
     let handled = null as ComputeFailureOutcome | null;
     let recovered = null as string | null;
+    // 受阻带的截图:事务外先按内容入库(只收工作目录里的图片)
+    const shots = ev.kind === "blocked" && ev.attachments?.length ? this.workdirImages(row.task_id, ev.attachments) : [];
+    let asked: { roomId: string; seq: number; contactId: string; qId: string } | null = null;
     tx(this.db, () => {
       run(this.db, "INSERT INTO gg_progress (task_id, compute_id, kind, stage, summary, at) VALUES (?, ?, ?, ?, ?, ?)", row.task_id, ev.computeId, ev.kind, stage, summary, at);
       // AC-29 观测点:Compute 启动后实际加载的 skill/MCP 清单(CLI init 自报),每次启动/续接覆盖为最新一次
@@ -2195,6 +2538,40 @@ export class Host {
           taskChanged = true;
         }
       }
+      // 受阻(AC-44 ①②):当前实例、当前版本在执行中报受阻 → 任务进 T4b(q_id),由负责的联系人 @提出者 发提问卡(附截图)。
+      // 宿主不重试、不重派、不替用户续接;旧实例或别的状态下的受阻只记进度。
+      if (ev.kind === "blocked") {
+        const doc = this.taskDoc(row.task_id).value;
+        const t = doc.task;
+        if (t.state === "T3_Running" && t.computeId === ev.computeId) {
+          const qId = this.newId("q");
+          this.stepTaskTx(row.task_id, { kind: "NeedHuman", qId, computeId: ev.computeId, constraintVer: t.constraintVer });
+          const who = { kind: "user" as const, id: t.requester };
+          const r = this.appendMessageTx(doc.roomId, { kind: "contact", id: row.contact_id }, {
+            text: `@${this.nameOf(who)} ${ev.needs}`,
+            actionKey: `ask:${row.task_id}:${qId}`,
+            replyToSeq: doc.sourceSeq,
+            quotedSeqs: [doc.sourceSeq],
+            mentions: [{ id: t.requester, source: "auto" }],
+            attachments: shots,
+            card: {
+              card_id: this.newId("card"),
+              kind: "question",
+              task_id: row.task_id,
+              title: `需要你:${ev.needs}`.slice(0, 200),
+              body: ev.summary.slice(0, 20000),
+              state: "open",
+              actions: JSON.stringify([
+                { actionId: "answer", label: "回答", style: "primary" },
+                { actionId: "reject", label: "不做了", style: "danger" },
+              ]),
+              meta: JSON.stringify({ qId, constraintVer: t.constraintVer, computeId: ev.computeId, needs: ev.needs }),
+            },
+          });
+          asked = { roomId: doc.roomId, seq: r.seq, contactId: row.contact_id, qId };
+          taskChanged = true;
+        }
+      }
       // 实例停止(stopped)或失败:这只是「停止已请求/这一轮结束」,不是确认停下(AC-23)。确认在 afterRound 里等进程都退出后再做
       if (ev.kind === "failed" || ev.kind === "stopped") this.quota.markStopping(row.task_id);
       // harness 回报的实际模型(AC-51 ⑥):和账本里这个 Compute 最近一次不同、或从没出现过的,追加一条 observed
@@ -2212,13 +2589,20 @@ export class Host {
       }
       // 被容错接住的失败不转给联系人(静默退避期间不打断;出卡由宿主机械完成)
       if (ev.kind !== "started" && !handled) {
-        const payload: Inbound = { kind: "compute", roomId: row.room_id, taskId: row.task_id, computeId: ev.computeId, signal: ev.kind, summary, at };
+        const a = asked as { qId: string } | null;
+        const note = a ? `(宿主已替你在会话里 @提出者 发了提问卡 ${a.qId},等用户回答;用户在聊天里回答时用 forward 原样转给 Compute,不要自己猜答案)` : "";
+        const payload: Inbound = { kind: "compute", roomId: row.room_id, taskId: row.task_id, computeId: ev.computeId, signal: ev.kind, summary: summary + note, at };
         run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", row.contact_id, row.room_id, JSON.stringify(payload), at);
       }
     });
     if (ev.kind === "failed" || ev.kind === "stopped" || ev.kind === "completed") void this.afterRound(row.task_id, ev.computeId, ev.kind, this.launchEpoch.get(row.task_id) ?? 0);
     const progress: ComputeProgress = { computeId: ev.computeId, taskId: row.task_id, kind: ev.kind, ...(stage ? { stage } : {}), summary, at };
     this.bus.emit({ type: "compute.progress", progress });
+    const q = asked as { roomId: string; seq: number; contactId: string } | null;
+    if (q) {
+      this.markRead(q.roomId, { kind: "contact", id: q.contactId }, q.seq);
+      this.afterAppend(q.roomId, q.seq, { kind: "contact", id: q.contactId });
+    }
     this.emitTask(row.task_id);
     if (taskChanged) this.emitTask(row.task_id);
     if (recovered !== null) {
@@ -2229,10 +2613,36 @@ export class Host {
     if (ev.kind !== "started") this.loop.notify(row.contact_id, ev.kind === "milestone" ? "batch" : "now");
   }
 
+  /** 把 Compute 报的相对路径解析到任务工作目录里;目录外(含符号链接指出去)、非图片、过大的一律丢弃并报告。返回附件 ref。 */
+  private workdirImages(taskId: string, rels: readonly string[]): string[] {
+    const cwd = this.opts.computeCwd?.(taskId);
+    if (!cwd) return [];
+    const refs: string[] = [];
+    let base: string;
+    try {
+      base = realpathSync(cwd);
+    } catch {
+      return [];
+    }
+    for (const rel of rels) {
+      try {
+        const real = realpathSync(resolve(base, rel));
+        if (!real.startsWith(base + sep)) throw new Error("不在工作目录里");
+        if (!QUESTION_IMAGE_EXT.has(extname(real).toLowerCase())) throw new Error("不是图片");
+        const st = statSync(real);
+        if (!st.isFile() || st.size > QUESTION_ATTACHMENT_MAX_BYTES) throw new Error("不是文件或超过 20 MB");
+        refs.push(this.addAttachment(real).ref);
+      } catch (e) {
+        this.report("question-attachment-dropped", { taskId, path: rel, reason: e instanceof Error ? e.message : String(e) });
+      }
+    }
+    return refs;
+  }
   private async runEffects(effects: HostEffect[]) {
     for (const e of effects) {
       try {
         if (e.kind === "spawn") await this.spawn(e);
+        else if (e.kind === "review") await this.spawnReview(e);
         else if (e.kind === "resume") await this.resumeCompute(e);
         else if (e.kind === "stop") {
           const a = this.adapterForCompute(e.computeId);
@@ -2249,8 +2659,16 @@ export class Host {
       }
     }
   }
+  /** 给 harness 的单次输入超上限时返回原因(含字节数与上限),没超或没设上限返回 null。不截断(§8.1 待决 13) */
+  private overComputeInput(text: string): string | null {
+    const max = this.opts.computeInputMaxBytes ?? null;
+    if (max === null) return null;
+    const n = Buffer.byteLength(text, "utf8");
+    return n > max ? ` ${n} 字节,超过给 Compute 的单次输入上限 ${max} 字节;不截断,请拆小或调大上限` : null;
+  }
   private adapterForCompute(computeId: string): ComputeAdapter | null {
-    const row = one<{ harness: string; model: string }>(this.db, "SELECT harness, model FROM gg_compute WHERE compute_id = ?", computeId);
+    // 审查 Compute 记在 gg_reviews,跑在 Claude Code 上
+    const row = one<{ harness: string; model: string }>(this.db, "SELECT harness, model FROM gg_compute WHERE compute_id = ? UNION ALL SELECT 'claude-code' AS harness, model FROM gg_reviews WHERE compute_id = ?", computeId, computeId);
     return row ? this.adapterFor(row.harness, row.model) : null;
   }
   /** 账本追加一条,并让任务状态机的生产模型集合同步(跨厂商审查门禁按它判);在事务里调。 */
@@ -2420,6 +2838,8 @@ export class Host {
     const model = resolved?.model ?? e.model;
     const adapter = this.adapterFor(harness, model);
     if (!adapter) return fail("宿主没有配置 Compute 适配器");
+    const over = this.overComputeInput(e.brief);
+    if (over) return fail(`派活说明${over}`);
     let cwd: string | undefined;
     try {
       cwd = this.computeCwdFor(e.taskId);
@@ -2440,7 +2860,7 @@ export class Host {
     if (!isoOk && picked.length) return fail(`这个 Compute 适配器还不支持勾选的 skill/MCP(${picked.map((x) => x.name).join("、")}),不带着缺项启动`);
     const iso = isoOk ? { configDir: prep.home.configDir, pluginDirs: [...prep.home.pluginDirs], mcpServers: prep.home.mcpServers } : {};
     const spawnOpts = { ...(cwd ? { cwd } : {}), ...(modelAware ? { model, ...(resolved ? { effort: resolved.effort } : {}) } : {}), ...iso };
-    const r = await adapter.spawn({ task: e.brief, rules: [], tools, credentialRefs: [], placement: "local" }, spawnOpts);
+    const r = await adapter.spawn({ task: e.brief, rules: [HUMAN_VERIFICATION_RULE], tools, credentialRefs: [], placement: "local" }, spawnOpts);
     if (!r.ok) return fail(r.reason);
     const late: string[] = [];
     this.launchEpoch.set(e.taskId, (this.launchEpoch.get(e.taskId) ?? 0) + 1);
@@ -2456,6 +2876,146 @@ export class Host {
     this.emitTask(e.taskId);
     // 启动途中任务已被取消(如私聊 rewind):实例一上线就停,等它回报 stopped 再落 T10,不让它带着作废的请求跑下去
     for (const id of late) await adapter.stop(id);
+  }
+
+  // ======================= 跨厂商审查(AC-26) =======================
+  /** 本任务的合格审查人:除作者外的联系人,按它的 Compute 模型判厂商;同会话成员优先(review.ts pickReviewer)。 */
+  private reviewerFor(t: Task, roomId: string): { contactId: string; model: string } | null {
+    const cands = listDocs<ContactDoc & { removed?: boolean }>(this.db, "contact:")
+      .filter((d) => !d.value.removed)
+      .map((d) => ({ contactId: d.value.id, model: this.computeModelOf(d.value), inRoom: this.isMember(roomId, { kind: "contact", id: d.value.id }) }));
+    return pickReviewer(cands, t.producerModels, t.owner);
+  }
+  /** 起审查 Compute:审查人的 Compute 模型、只读工具、同一个任务工作目录。起不来就交给提出者豁免。 */
+  private async spawnReview(e: Extract<HostEffect, { kind: "review" }>) {
+    const adapter = this.adapterFor("claude-code", e.model);
+    if (!adapter) return this.reviewFallback(e.taskId, e.round, "宿主没有配置 Compute 适配器");
+    const cwd = this.opts.computeCwd?.(e.taskId);
+    // 按 Harness 复用的适配器(AC-51)要在 spawn 时带上审查人的模型,否则会落到执行者的模型上
+    const r = await adapter.spawn({ task: e.brief, rules: [], tools: [...REVIEW_TOOLS], credentialRefs: [], placement: "local" }, { ...(cwd ? { cwd } : {}), ...(isModelAware(adapter) ? { model: e.model } : {}) });
+    if (!r.ok) return this.reviewFallback(e.taskId, e.round, `审查 Compute 没起来:${r.reason}`);
+    const t = this.taskDoc(e.taskId).value.task;
+    const live = t.state === "T5_InReview" && t.reviewRound === e.round;
+    run(
+      this.db,
+      "INSERT INTO gg_reviews (compute_id, task_id, reviewer_id, owner_id, room_id, model, round, commit_ref, constraint_ver, status, started_at, ended_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      r.computeId, e.taskId, e.reviewerId, e.ownerId, e.roomId, e.model, e.round, e.commit, e.constraintVer, live ? "running" : "stopped", this.now(), live ? null : this.now(),
+    );
+    // 起的过程中任务已经离开这一轮审查(取消、返工):立刻停掉
+    if (!live) await adapter.stop(r.computeId);
+    this.emitTask(e.taskId);
+  }
+  /** 审查 Compute 的事件:完成 → 读结论推进 T5;失败/受阻/结论认不出 → 记没做成,交给提出者豁免;任务已离开这一轮 → 忽略。 */
+  private onReviewEvent(rv: ReviewRow, ev: ComputeEvent) {
+    if (rv.status !== "running" || ev.kind === "started" || ev.kind === "milestone") return;
+    const doc = this.taskDoc(rv.task_id).value;
+    const t = doc.task;
+    const current = t.state === "T5_InReview" && t.reviewRound === rv.round && t.reviewedCommit === rv.commit_ref && t.constraintVer === rv.constraint_ver;
+    const end = (status: string, notes: string) => run(this.db, "UPDATE gg_reviews SET status = ?, notes = ?, ended_at = ? WHERE compute_id = ? AND status = 'running'", status, notes, this.now(), rv.compute_id);
+    if (!current) {
+      end("stopped", "任务已离开这一轮审查");
+      this.emitTask(rv.task_id);
+      return;
+    }
+    if (ev.kind !== "completed") {
+      const why = ev.kind === "failed" ? `审查 Compute 失败:${ev.reason}` : ev.kind === "blocked" ? `审查 Compute 受阻:${ev.needs}` : "审查 Compute 被停止";
+      end(ev.kind === "stopped" ? "stopped" : "failed", why);
+      if (ev.kind === "blocked") void this.runEffects([{ kind: "stop", taskId: rv.task_id, computeId: rv.compute_id }]);
+      this.reviewFallback(rv.task_id, rv.round, why);
+      return;
+    }
+    // 实际审查模型(AC-26):harness 回报了就以回报为准,没回报(旧适配器)才用下发的模型;不合格的这次审查不算数
+    const actual = ev.models?.length ? [...ev.models] : [rv.model];
+    const bad = reviewModelProblem(actual, t.producerModels);
+    if (bad) {
+      end("failed", bad);
+      this.reviewFallback(rv.task_id, rv.round, bad);
+      return;
+    }
+    if (actual[0] !== rv.model) run(this.db, "UPDATE gg_reviews SET model = ? WHERE compute_id = ?", actual[0]!, rv.compute_id);
+    const v = parseVerdict(ev.result);
+    if (!v) {
+      const why = `审查结论认不出(第一行应是 APPROVE 或 REJECT):${ev.result.slice(0, 200)}`;
+      end("failed", why);
+      this.reviewFallback(rv.task_id, rv.round, why);
+      return;
+    }
+    const reviewer = getDoc<ContactDoc>(this.db, `contact:${rv.reviewer_id}`)?.value;
+    const who = `${reviewer?.name ?? rv.reviewer_id}(${actual.join("、")},${vendorOf(actual[0])})`;
+    const effects: HostEffect[] = [];
+    let posted: { roomId: string; seq: number } | null = null;
+    tx(this.db, () => {
+      // 先记结论,再推进状态机(否则离开 T5 时这条审查会被当成过期的停掉)
+      end(v.verdict === "approve" ? "approved" : "rejected", v.notes);
+      const base = { kind: "Review" as const, reviewerId: rv.reviewer_id, reviewerModel: actual[0]!, round: rv.round, commit: rv.commit_ref, constraintVer: rv.constraint_ver };
+      if (v.verdict === "approve") {
+        const { effects: eff } = this.stepTaskTx(rv.task_id, { ...base, verdict: "approve" });
+        const send = eff.find((x): x is Extract<typeof x, { kind: "send-card" }> => x.kind === "send-card");
+        if (!send) return;
+        // 审过后由负责联系人发一条普通消息 @提出者(AC-28 / AC-56,不挂验收卡);发出即 T8a 待确认,沉默不通过,提出者用普通回复通过或提修改
+        const r = this.appendMessageTx(doc.roomId, { kind: "contact", id: rv.owner_id }, {
+          text: `@${this.nameOf({ kind: "user", id: t.requester })} 「${doc.title}」已由 ${who} 跨厂商审查通过${v.notes ? `:${v.notes}` : ""}。确认没问题就回复通过,要改哪里直接说。`,
+          actionKey: `review-ok:${rv.task_id}:${rv.round}`,
+          replyToSeq: doc.deliveredSeq ?? doc.sourceSeq,
+          quotedSeqs: [doc.deliveredSeq ?? doc.sourceSeq],
+          mentions: [{ id: t.requester, source: "auto" }],
+        });
+        posted = { roomId: doc.roomId, seq: r.seq };
+        this.stepTaskTx(rv.task_id, { kind: "DeliveredCard", taskId: rv.task_id, deliveryRound: send.deliveryRound, commit: send.commit });
+        return;
+      }
+      // 打回(AC-26 / #820):可恢复就续接原 Compute 带审查意见改,不可恢复带交接新开;负责联系人收到一条进度,自己决定怎么跟用户说
+      const { effects: eff } = this.stepTaskTx(rv.task_id, { ...base, verdict: "reject", computeResumable: this.computeResumable(t.computeId) });
+      const text = `跨厂商审查人 ${who} 打回了这次交付:${v.notes || "(没写理由)"}\n请按意见修改,改完重新报 completed。`;
+      for (const x of eff) {
+        if (x.kind === "resume-compute") {
+          // 恢复原实例:旧结果作废,等它这次的完成事件才能再交付
+          run(this.db, "UPDATE gg_compute SET status = 'running', result = NULL, ended_at = NULL WHERE compute_id = ?", x.computeId);
+          effects.push({ kind: "resume", taskId: rv.task_id, computeId: x.computeId, text });
+        }
+        if (x.kind === "spawn-compute") effects.push({ kind: "spawn", taskId: rv.task_id, requestId: x.requestId, contactId: rv.owner_id, model: this.computeModelOf(this.contactDoc(rv.owner_id).value), brief: `${doc.brief}\n\n${text}`, roomId: doc.roomId });
+      }
+      const payload: Inbound = { kind: "compute", roomId: doc.roomId, taskId: rv.task_id, computeId: t.computeId ?? "-", signal: "milestone", summary: `跨厂商审查(${who})打回:${v.notes || "(没写理由)"};已把意见转给 Compute 继续改`, at: this.now() };
+      run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", rv.owner_id, doc.roomId, JSON.stringify(payload), this.now());
+    });
+    const p = posted as { roomId: string; seq: number } | null;
+    if (p) {
+      this.markRead(p.roomId, { kind: "contact", id: rv.owner_id }, p.seq);
+      this.afterAppend(p.roomId, p.seq, { kind: "contact", id: rv.owner_id });
+    } else if (v.verdict === "reject") this.loop.notify(rv.owner_id, "now");
+    this.emitTask(rv.task_id);
+    void this.runEffects(effects);
+  }
+  /** 审查没做成:任务还停在这一轮审查上,就由负责联系人发一条普通消息 @提出者说明;提出者回复通过即本人豁免(waived-by-user,不当合规),也可以说要改的地方。 */
+  private reviewFallback(taskId: string, round: number, reason: string) {
+    const doc = this.taskDoc(taskId).value;
+    const t = doc.task;
+    if (t.state !== "T5_InReview" || t.reviewRound !== round || !t.owner) {
+      this.emitTask(taskId);
+      return;
+    }
+    const owner = t.owner;
+    const r = tx(this.db, () =>
+      this.appendMessageTx(doc.roomId, { kind: "contact", id: owner }, {
+        text: `@${this.nameOf({ kind: "user", id: t.requester })} 「${doc.title}」的跨厂商审查没做成:${reason.slice(0, 2000)}。你可以直接回复通过(记为你本人豁免审查,不算合规审查),或说要改的地方。`,
+        actionKey: `review-fallback:${taskId}:${round}`,
+        replyToSeq: doc.deliveredSeq ?? doc.sourceSeq,
+        quotedSeqs: [doc.deliveredSeq ?? doc.sourceSeq],
+        mentions: [{ id: t.requester, source: "auto" }],
+      }),
+    );
+    if (!r.duplicate) {
+      this.markRead(doc.roomId, { kind: "contact", id: owner }, r.seq);
+      this.afterAppend(doc.roomId, r.seq, { kind: "contact", id: owner });
+    }
+    this.emitTask(taskId);
+  }
+  /** 宿主重启:上次还在跑的审查 Compute 已经不在了,记 interrupted,任务还停在那一轮审查上就交给提出者豁免,不让它卡在 T5。 */
+  private recoverReviews() {
+    for (const r of all<ReviewRow>(this.db, "SELECT * FROM gg_reviews WHERE status = 'running'")) {
+      run(this.db, "UPDATE gg_reviews SET status = 'interrupted', notes = ?, ended_at = ? WHERE compute_id = ?", "宿主重启时审查 Compute 已不在", this.now(), r.compute_id);
+      this.reviewFallback(r.task_id, r.round, "宿主重启时审查 Compute 已不在");
+    }
   }
 
   // ======================= 卡片与验收 =======================
@@ -2486,6 +3046,11 @@ export class Host {
     // 可恢复失败卡(AC-36 A27-05):领取规则与 kernel claimFailureCard 一致,过期代次、未授权、静默换模在领取之前就拒绝
     // (超预算失败卡 round-over-budget 另走 applyRoundFailureTx)
     const failure = card.kind === "failure" && isRetryCardMeta(card.meta) ? this.checkFailureClaim(card, input.actionId) : null;
+    // 提问卡(AC-44 ⑤):任务离开 T4b 或换了问题时,旧卡已在同一事务里标为过期(expireQuestionsTx);过期卡上的点击幂等忽略,不记对话消息、不送进 Compute
+    if (card.kind === "question" && card.state === "expired") {
+      return this.messageView(card.room_id, this.projected(card.room_id).find((m) => m.seq === card.seq)!);
+    }
+    if (card.kind === "question" && input.actionId === "answer" && !input.text?.trim()) throw new HostError("invalid_params", "回答不能为空");
     // CAS 领取:open → claimed,连点只有第一次生效(AC-36 ⑤)
     if (run(this.db, "UPDATE gg_cards SET state = 'claimed' WHERE card_id = ? AND state = 'open'", input.cardId) !== 1) throw new HostError("conflict", "这张卡已经处理过了");
     const me: Member = { kind: "user", id: this.userId };
@@ -2511,6 +3076,7 @@ export class Host {
     afterFailure?.();
     this.afterAppend(card.room_id, msgSeq, me);
     if (card.task_id) this.emitTask(card.task_id);
+    this.flushCardUpdates();
     const updated = this.projected(card.room_id).find((m) => m.seq === card.seq);
     if (updated) this.bus.emit({ type: "message.updated", message: this.messageView(card.room_id, updated) });
     void this.runEffects(effects);
@@ -2525,6 +3091,14 @@ export class Host {
       for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId, computeId: e.computeId });
       for (const e of eff) if (e.kind === "cancel-spawn") effects.push({ kind: "cancel-spawn", taskId, requestId: e.requestId });
       this.afterCancelTx(taskId);
+      return effects;
+    }
+    if (card.kind === "question") {
+      // 回答绑定 (task_id, q_id, constraint_ver)(AC-44 ③ / AC-19):回答 → T3 并把原文续接给同一个 Compute;不做了 → 取消并停 Compute(④)
+      const q = JSON.parse(card.meta) as { qId: string; constraintVer: number };
+      const { effects: eff } = this.stepTaskTx(taskId, { kind: "HumanReply", qId: q.qId, constraintVer: q.constraintVer, answer: actionId === "answer" ? "approve" : "reject" });
+      if (actionId === "answer" && t.computeId) effects.push({ kind: "resume", taskId, computeId: t.computeId, text: `用户对问题 ${q.qId} 的回答:${note.trim()}` });
+      for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId, computeId: e.computeId });
       return effects;
     }
     if (card.kind !== "delivery" || (actionId !== "accept" && actionId !== "reject")) return effects;
@@ -3251,8 +3825,10 @@ export class Host {
     this.hostTimers.clear();
     this.scheduler.stop();
     await this.loop.stop();
+    // 一次性适配器只有在跑的才有进程;常驻适配器一轮做完(completed)、停在受阻(blocked)时进程仍在,关闭时一并停掉,不留后台进程
     for (const a of this.adapters.values()) {
-      for (const r of all<{ compute_id: string }>(this.db, "SELECT compute_id FROM gg_compute WHERE status IN ('starting','running')")) {
+      const statuses = isModelAware(a) ? "('starting','running','blocked','completed')" : "('starting','running')";
+      for (const r of all<{ compute_id: string }>(this.db, `SELECT compute_id FROM gg_compute WHERE status IN ${statuses} UNION ALL SELECT compute_id FROM gg_reviews WHERE status = 'running'`)) {
         try {
           await a.stop(r.compute_id);
         } catch {
@@ -3415,6 +3991,7 @@ const switchModels = (actions: readonly CardActionRow[]): string[] => actions.fi
 
 type HostEffect =
   | { kind: "spawn"; taskId: string; requestId: string; contactId: string; model: string; brief: string; roomId: string }
+  | { kind: "review"; taskId: string; roomId: string; ownerId: string; reviewerId: string; model: string; round: number; commit: string; constraintVer: number; brief: string }
   | { kind: "resume"; taskId: string; computeId: string; text: string }
   | { kind: "stop"; taskId: string; computeId: string }
   | { kind: "integrate"; taskId: string; by: string }

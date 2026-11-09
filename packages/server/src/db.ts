@@ -3,7 +3,7 @@
 //   - 消息结构化字段(回复、引用、@、卡片、命令):gg_msg,按 (room, seq) 一行,与正文同事务写入;
 //   - 发送去重:adapter-sqlite 的 actions 表(入库端 action_id 唯一,AC-31 ③);
 //   - 版本化文档(联系人、任务、状态笔记、承诺账本、设置):adapter-sqlite 的 docs 表(CAS,AC-21);
-//   - 其余索引表(会话、成员、游标、已读、待处理输入、Compute、进度、卡片)由本文件建;
+//   - 其余索引表(会话、成员、游标、已读、待处理输入、Compute、进度、卡片、跨厂商审查)由本文件建;
 //   - 失败轮次容错(AC-36):gg_failures 每个联系人/任务一行在途失败(自动重试中、已出卡、被熔断暂停),失败批次末尾与卡片代次;
 //     gg_breakers 每个上游一行共享熔断状态;gg_round_guard 每个联系人一行在途轮次标记与 crash_recovery_count(启动回收防毒丸)。
 import { type SqliteStore, closeStore, commitDoc, openStore, readDoc, transaction } from "@g-group/adapter-sqlite";
@@ -67,6 +67,11 @@ CREATE TABLE IF NOT EXISTS gg_breakers (upstream TEXT PRIMARY KEY, state TEXT NO
 CREATE TABLE IF NOT EXISTS gg_round_guard (
   contact_id TEXT PRIMARY KEY, running INTEGER NOT NULL, boot_id TEXT NOT NULL, batch_key TEXT NOT NULL, room_id TEXT,
   batch_end TEXT NOT NULL DEFAULT '{}', inbox_end INTEGER NOT NULL DEFAULT 0, crash_key TEXT, crash_count INTEGER NOT NULL DEFAULT 0, started_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS gg_reviews (
+  compute_id TEXT PRIMARY KEY, task_id TEXT NOT NULL, reviewer_id TEXT NOT NULL, owner_id TEXT NOT NULL, room_id TEXT NOT NULL, model TEXT NOT NULL,
+  round INTEGER NOT NULL, commit_ref TEXT NOT NULL, constraint_ver INTEGER NOT NULL, status TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '',
+  started_at TEXT NOT NULL, ended_at TEXT
 );
 `;
 

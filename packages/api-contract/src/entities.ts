@@ -268,6 +268,25 @@ export const TaskView = obj({
   /** T4b 时联系人在问用户的问题。 */
   pendingQuestion: nullable(obj({ qId: id(), text: str({ max: 5000 }) })),
   reviewGate: oneOf(["none", "compliant", "waived-by-user"] as const),
+  /**
+   * 跨厂商独立审查记录(AC-26),按发起顺序;没有审查过为空或不给。model/vendor 是实际起审查 Compute 用的模型与它的研发厂商。
+   * status:running 审查中 / approved 通过 / rejected 打回 / failed 没做成(Compute 失败或结论认不出)/ stopped 任务取消时停掉 / interrupted 宿主重启时已不在。
+   */
+  reviews: opt(
+    arr(
+      obj({
+        round: int({ min: 1 }),
+        reviewerContactId: id(),
+        model: str({ max: 200 }),
+        vendor: str({ max: 64 }),
+        status: oneOf(["running", "approved", "rejected", "failed", "stopped", "interrupted"] as const),
+        notes: str({ max: 20000 }),
+        startedAt: isoTime(),
+        endedAt: nullable(isoTime()),
+      }),
+      { max: 50 },
+    ),
+  ),
   computeRuns: arr(ComputeRunView),
   /** 最近若干条进度,完整历史用 tasks.progress 分页取。 */
   recentProgress: arr(ComputeProgress, { max: 20 }),
