@@ -1,0 +1,27 @@
+1) drafts.save 群草稿(回复 #1 + 引用 #2 #3,auto @Claude Code,手打 @Argon):
+{"roomId":"g-mw85cye3-2","text":"关于登录模块,我认为还要加上","replyToSeq":1,"replyAuthorId":"c-mw85cye1-0","quotedSeqs":[1,2,3],"mentions":[{"id":"c-mw85cye1-0","source":"auto"},{"id":"c-mw85cye2-1","source":"manual"}],"draftVer":6,"updatedAt":"<时间>"}
+
+2) drafts.save 私聊草稿:
+{"roomId":"dm-c-mw85cye2-1","text":"私聊里回一句","replyToSeq":null,"replyAuthorId":null,"quotedSeqs":[],"mentions":[],"draftVer":1,"updatedAt":"<时间>"}
+
+3) 另一个窗口拿旧版本写(expectedVer 0):
+{"code":"conflict","message":"草稿已被改过(当前版本 6)","detail":{"current":{"roomId":"g-mw85cye3-2","text":"关于登录模块,我认为还要加上","replyToSeq":1,"replyAuthorId":"c-mw85cye1-0","quotedSeqs":[1,2,3],"mentions":[{"id":"c-mw85cye1-0","source":"auto"},{"id":"c-mw85cye2-1","source":"manual"}],"draftVer":6,"updatedAt":"<时间>"}}}
+
+草稿操作期间联系人轮次增量:0;群日志末尾 seq:3
+
+4) 重启宿主后 drafts.get 群草稿:
+{"roomId":"g-mw85cye3-2","text":"关于登录模块,我认为还要加上","replyToSeq":1,"replyAuthorId":"c-mw85cye1-0","quotedSeqs":[1,2,3],"mentions":[{"id":"c-mw85cye1-0","source":"auto"},{"id":"c-mw85cye2-1","source":"manual"}],"draftVer":6,"updatedAt":"<时间>"}
+
+5) 重启后 drafts.get 私聊草稿:
+{"roomId":"dm-c-mw85cye2-1","text":"私聊里回一句","replyToSeq":null,"replyAuthorId":null,"quotedSeqs":[],"mentions":[],"draftVer":1,"updatedAt":"<时间>"}
+
+6) rooms.list 的草稿提示:[["登录模块","[草稿] 关于登录模块,我认为还要加上"],["Argon","[草稿] 私聊里回一句"]]
+
+7) 点发送(draftVer 6)前,用户已继续打字并存了 v7:
+{"roomId":"g-mw85cye3-2","text":"关于登录模块,我认为还要加上\n限流阈值","replyToSeq":1,"replyAuthorId":"c-mw85cye1-0","quotedSeqs":[1,2,3],"mentions":[{"id":"c-mw85cye1-0","source":"auto"},{"id":"c-mw85cye2-1","source":"manual"}],"draftVer":7,"updatedAt":"<时间>"}
+
+8) messages.send(draftVer 6)落盘:{"seq":4,"replyToSeq":1,"quotedSeqs":[1,2,3],"mentions":[{"id":"c-mw85cye1-0","source":"auto"},{"id":"c-mw85cye2-1","source":"manual"}]}
+
+9) 迟到回执后的草稿(只去掉已发部分,v7 新打的「限流阈值」保留):
+{"roomId":"g-mw85cye3-2","text":"限流阈值","replyToSeq":null,"replyAuthorId":null,"quotedSeqs":[],"mentions":[],"draftVer":8,"updatedAt":"<时间>"}
+

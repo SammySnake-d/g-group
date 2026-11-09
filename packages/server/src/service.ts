@@ -71,6 +71,8 @@ export function createService(host: Host): Service {
     "messages.retract": (p: { roomId: string; seq: number }) => host.retractMessage(p.roomId, p.seq),
     "messages.react": (p: { roomId: string; seq: number; emoji: string; on: boolean }) => host.react(p.roomId, p.seq, p.emoji, p.on),
     "messages.receipts": (p: { roomId: string; seq: number }) => host.receipts(p.roomId, p.seq),
+    "drafts.get": (p: { roomId: string }) => host.draft(p.roomId),
+    "drafts.save": (p: { roomId: string; expectedVer: number; draft: Parameters<Host["saveDraft"]>[2] }) => host.saveDraft(p.roomId, p.expectedVer, p.draft),
     "attachments.add": (p: { path: string }) => host.addAttachment(p.path),
     "files.list": (p: { roomId: string }) => ({ files: listFiles(host, p.roomId) }),
     "files.read": (p: { ref: string; maxBytes?: number }) => readFile(host, p.ref, p.maxBytes),

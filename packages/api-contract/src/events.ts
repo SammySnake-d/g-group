@@ -1,6 +1,7 @@
 // 主进程推给渲染进程的事件流。每条事件带全局递增的 eventSeq:渲染进程断线/刷新后用 sinceEventSeq 续订,
 // 服务端补发缺口;缺口太大(已丢弃)时回 resync=true,渲染进程重新 list。
 import { CommitmentView, ComputeProgress, CONTACT_ACTIVITY, ContactView, MemberRef, MessageView, PluginView, RoomView, ScheduleView, SlashCommand, TaskView } from "./entities.ts";
+import { DraftView } from "./draft.ts";
 import { arr, id, isoTime, nullable, obj, oneOf, seq, str, tagged, type Infer, lit } from "./schema.ts";
 
 const ev = <T extends string, S extends Record<string, Parameters<typeof obj>[0][string]>>(type: T, payload: S) =>
@@ -13,6 +14,8 @@ export const ServerEvent = tagged("type", {
   "receipt.updated": ev("receipt.updated", { roomId: id(), member: MemberRef, readSeq: seq() }),
   "room.updated": ev("room.updated", { room: RoomView }),
   "room.removed": ev("room.removed", { roomId: id() }),
+  /** 某会话的输入框草稿变了(另一个窗口保存、发送回执清理):渲染进程按 draftVer 合并。 */
+  "draft.updated": ev("draft.updated", { draft: DraftView }),
   "contact.updated": ev("contact.updated", { contact: ContactView }),
   "contact.removed": ev("contact.removed", { contactId: id() }),
   /** 输入框上方「xx 正在回复…」;roomId 为 null 表示不在任何会话里活动。 */
