@@ -69,7 +69,7 @@ import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { PluginStore } from "./plugins.ts";
-import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief } from "./review.ts";
+import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief, reviewModelProblem } from "./review.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
 import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, unindexTx } from "./search.ts";
@@ -2061,6 +2061,15 @@ export class Host {
       this.reviewFallback(rv.task_id, rv.round, why);
       return;
     }
+    // 实际审查模型(AC-26):harness 回报了就以回报为准,没回报(旧适配器)才用下发的模型;不合格的这次审查不算数
+    const actual = ev.models?.length ? [...ev.models] : [rv.model];
+    const bad = reviewModelProblem(actual, t.producerModels);
+    if (bad) {
+      end("failed", bad);
+      this.reviewFallback(rv.task_id, rv.round, bad);
+      return;
+    }
+    if (actual[0] !== rv.model) run(this.db, "UPDATE gg_reviews SET model = ? WHERE compute_id = ?", actual[0]!, rv.compute_id);
     const v = parseVerdict(ev.result);
     if (!v) {
       const why = `审查结论认不出(第一行应是 APPROVE 或 REJECT):${ev.result.slice(0, 200)}`;
@@ -2069,13 +2078,13 @@ export class Host {
       return;
     }
     const reviewer = getDoc<ContactDoc>(this.db, `contact:${rv.reviewer_id}`)?.value;
-    const who = `${reviewer?.name ?? rv.reviewer_id}(${rv.model},${vendorOf(rv.model)})`;
+    const who = `${reviewer?.name ?? rv.reviewer_id}(${actual.join("、")},${vendorOf(actual[0])})`;
     const effects: HostEffect[] = [];
     let posted: { roomId: string; seq: number } | null = null;
     tx(this.db, () => {
       // 先记结论,再推进状态机(否则离开 T5 时这条审查会被当成过期的停掉)
       end(v.verdict === "approve" ? "approved" : "rejected", v.notes);
-      const base = { kind: "Review" as const, reviewerId: rv.reviewer_id, reviewerModel: rv.model, round: rv.round, commit: rv.commit_ref, constraintVer: rv.constraint_ver };
+      const base = { kind: "Review" as const, reviewerId: rv.reviewer_id, reviewerModel: actual[0]!, round: rv.round, commit: rv.commit_ref, constraintVer: rv.constraint_ver };
       if (v.verdict === "approve") {
         const { effects: eff } = this.stepTaskTx(rv.task_id, { ...base, verdict: "approve" });
         const send = eff.find((x): x is Extract<typeof x, { kind: "send-card" }> => x.kind === "send-card");

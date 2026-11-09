@@ -28,8 +28,18 @@ export function pickReviewer(candidates: readonly ReviewCandidate[], producerMod
   return ok.find((c) => c.inRoom) ?? ok[0] ?? null;
 }
 
-/** 实际审查模型是否合格(红:空壳)。 */
-export function reviewModelProblem(_models: readonly string[], _producerModels: readonly string[]): string | null {
+/**
+ * 实际审查模型是否合格(AC-26「不能只静态比对、忽略审查 Compute 实际模型」):harness 回报的每一个实际模型都要认得出厂商,
+ * 且不在累积生产厂商里。有问题返回人话说明(点名是哪个模型、什么厂商),合格返回 null。一个都没有也算有问题。
+ */
+export function reviewModelProblem(models: readonly string[], producerModels: readonly string[]): string | null {
+  if (models.length === 0) return "没有回报任何实际审查模型";
+  const producers = new Set(producerModels.map(vendorOf));
+  for (const m of models) {
+    const v = vendorOf(m);
+    if (v === "unknown") return `实际审查模型 ${m} 认不出研发厂商`;
+    if (producers.has(v)) return `实际审查模型 ${m}(${v})与生产厂商 {${[...producers].join(",")}} 同源`;
+  }
   return null;
 }
 
