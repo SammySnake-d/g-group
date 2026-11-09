@@ -1,0 +1,35 @@
+apps/desktop/e2e/compute.ui.spec.ts
+  s_568736c9a90f61::t_90be85169d524a 133-151
+apps/desktop/src/components/compute/ComputeCard.tsx
+  s_568736c9a90f61::t_e554bb55718e37 40-43,84
+apps/desktop/src/components/compute/HarnessSession.tsx
+  s_568736c9a90f61::t_887d4d4a4c6d94 34,36-37,41,62,83
+apps/desktop/src/components/compute/Preview.tsx
+  s_568736c9a90f61::t_661ddfd80b3f33 5-6,22,25-37
+apps/desktop/src/components/compute/card/AlertStrip.tsx
+  s_568736c9a90f61::t_2ac1c27e1f0b49 1,13,25-26,30-31,39
+apps/desktop/src/components/compute/card/StepList.tsx
+  s_568736c9a90f61::t_6d39c84e9bdb51 33-34,40,45
+apps/desktop/src/components/compute/constants.ts
+  s_568736c9a90f61::t_97c87683ec6f18 63-68
+apps/desktop/src/components/compute/session/SessionFooter.tsx
+  s_568736c9a90f61::t_c5142a74bb2ec4 3,13,20-21,28-30,34,38,44
+apps/desktop/src/main.tsx
+  s_568736c9a90f61::t_a16072de29f7fd 17-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5e767b833b39f2d6dcb791195b8007e2bc6d8c0a",
+  "prompts": {},
+  "sessions": {
+    "s_568736c9a90f61": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "945466dc-9318-4837-9afe-e1c1b3bb224f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

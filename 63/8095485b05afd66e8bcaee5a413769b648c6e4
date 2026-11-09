@@ -1,0 +1,23 @@
+packages/ui-core/src/index.ts
+  s_3b5d10b45e836f::t_d59da3bb3fca77 2
+packages/ui-core/src/slash.test.ts
+  s_3b5d10b45e836f::t_bd557b6755f5c9 1-286
+packages/ui-core/src/slash.ts
+  s_3b5d10b45e836f::t_0d59ddbd1c9698 1-356
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "638095485b05afd66e8bcaee5a413769b648c6e4",
+  "prompts": {},
+  "sessions": {
+    "s_3b5d10b45e836f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a30b7025d5a25b157",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

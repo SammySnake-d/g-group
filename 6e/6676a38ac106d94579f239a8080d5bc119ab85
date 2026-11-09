@@ -1,0 +1,19 @@
+apps/desktop/src/components/progress/BoardHead.tsx
+  s_03527c71eef786::t_1ad7d81eeb720e 1,27-48,50,78-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6e6676a38ac106d94579f239a8080d5bc119ab85",
+  "prompts": {},
+  "sessions": {
+    "s_03527c71eef786": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0a8f74fffd601798",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

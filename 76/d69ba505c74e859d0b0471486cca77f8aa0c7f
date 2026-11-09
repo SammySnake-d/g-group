@@ -1,0 +1,23 @@
+apps/desktop/e2e/shell-look.ui.spec.ts
+  s_042e901c6ad028::t_6f6e346d01815f 1-74
+apps/desktop/verify/mines.json
+  s_042e901c6ad028::t_695261ab43871b 2-117
+apps/desktop/verify/mutation-report.json
+  s_042e901c6ad028::t_664074be0bfa01 2,5-7,12-14,19-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "76d69ba505c74e859d0b0471486cca77f8aa0c7f",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

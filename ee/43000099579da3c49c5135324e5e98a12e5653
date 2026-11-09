@@ -1,0 +1,19 @@
+packages/ui-core/src/cron.ts
+  s_58a77bc541c265::t_4d986fe03b26a6 21-23,48,50-60,63-98,101-248,252-258,261-290,293-294,309-313,316-322,331-338,341-342,347-362,365-371,375-377,380-393,396-407
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ee43000099579da3c49c5135324e5e98a12e5653",
+  "prompts": {},
+  "sessions": {
+    "s_58a77bc541c265": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a84c00f5de6dce335",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

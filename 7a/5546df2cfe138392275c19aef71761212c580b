@@ -1,0 +1,21 @@
+apps/desktop/src/components/ui/field.tsx
+  s_7489a667d0db56::t_818344a34437ec 1-149
+apps/desktop/src/components/ui/modal.tsx
+  s_7489a667d0db56::t_b16cf34de26ba4 1-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7a5546df2cfe138392275c19aef71761212c580b",
+  "prompts": {},
+  "sessions": {
+    "s_7489a667d0db56": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2353d719-cdd5-4608-894a-8460db6c9810",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
