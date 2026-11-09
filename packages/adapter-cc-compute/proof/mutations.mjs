@@ -2,7 +2,7 @@
 // 每个变异都必须让至少一条具名测试失败,且全部测试都执行完(文件级失败、超时、强杀、部分执行都不算杀死)。原样副本必须全绿(阴性对照)。
 // 注入点必须在源文件里恰好出现 1 次,否则判脚本失效。路径相对本包根目录。
 // 用法: node packages/adapter-cc-compute/proof/mutations.mjs
-// 并发默认 4;本机同时有别的测试在跑时用 CC_MUT_CONCURRENCY=2 降低并发(只影响调度,不改注入点与判决)。
+// 并发默认 2;本机同时有别的测试在跑时用 CC_MUT_CONCURRENCY=2 降低并发(只影响调度,不改注入点与判决)。
 // CC_MUT_PROGRESS=<文件>:每个变异一出判决就追加一行到该文件(附全部变红的测试名;进程中途被结束也留下已完成的判决);
 // CC_MUT_ONLY=M113,M126:只跑列出的编号(原样副本照跑),用于补跑,不改注入点与判决。
 // 第九轮起每个变异注入后先做静态检查(.ts 跑 tsc,.mjs 跑 node --check),不通过记为不可编译、不计为杀死。
@@ -10,9 +10,13 @@ import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { assessTap } from "../test-support/tap-result.ts";
 
 const PKG = path.resolve(import.meta.dirname, "..");
 const ROOT = path.resolve(PKG, "../..");
+const TARGETS = JSON.parse(fs.readFileSync(new URL("./mutation-targets.json", import.meta.url), "utf8"));
+const EVIDENCE = process.env.CC_MUT_EVIDENCE;
+if (EVIDENCE) fs.mkdirSync(EVIDENCE, { recursive: true });
 
 const M = [
   ["M01 brief 放行 memory 等额外字段", "src/brief.ts", "if (extra.length) return refuse(`brief", "if (false) return refuse(`brief"],
@@ -188,17 +192,18 @@ function reapDir(dir) {
     if (m && Number(m[1]) > 1 && Number(m[1]) !== process.pid && m[2].includes(needle)) { try { process.kill(Number(m[1]), "SIGKILL"); } catch {} }
   }
 }
-function run(dir) {
-  const files = fs.readdirSync(path.join(dir, "src")).filter((f) => f.endsWith(".test.ts")).map((f) => path.join("src", f));
+function run(dir, id) {
+  const files = fs.readdirSync(path.join(dir, "src")).filter((f) => f.endsWith(".test.ts")).sort().map((f) => path.join("src", f));
   return new Promise((resolve) => {
     // 每个副本自己的 TMPDIR(在副本目录里):被测代码与测试建的 g-group-cc-* / fake-cc-* 都落在这里,
     // 变异体即使不清理目录(M73)也随副本一起删掉,不往系统临时目录漏(g-group#2900,原则 67)
     const tmpdir = path.join(dir, ".tmp");
     fs.mkdirSync(tmpdir, { recursive: true });
-    const child = spawn(process.execPath, ["--test", "--test-reporter=tap", ...files], { cwd: dir, detached: true, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, TMPDIR: tmpdir } });
+    const child = spawn(process.execPath, ["--test", "--test-reporter=tap", "--test-concurrency=1", ...files], { cwd: dir, detached: true, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, TMPDIR: tmpdir } });
     let out = "";
+    let err = "";
     child.stdout.on("data", (d) => { out += d; });
-    child.stderr.on("data", () => {});
+    child.stderr.on("data", (d) => { err += d; });
     let timedOut = false;
     const timer = setTimeout(() => { timedOut = true; try { process.kill(-child.pid, "SIGKILL"); } catch {} }, TIMEOUT_MS);
     // close 而非 exit:exit 可能先于 stdout 读完触发,TAP 输出会被截断
@@ -206,8 +211,12 @@ function run(dir) {
       clearTimeout(timer);
       try { process.kill(-child.pid, "SIGKILL"); } catch {}
       reapDir(dir);
-      const named = (re) => [...out.matchAll(re)].map((m) => m[1]).filter((n) => !/^\/|\.test\.ts$/.test(n));
-      resolve({ code, signal, timedOut, out, failed: named(/^not ok \d+ - (.+)$/gm), passed: named(/^ok \d+ - (.+)$/gm) });
+      if (EVIDENCE) {
+        fs.writeFileSync(path.join(EVIDENCE, `${id}.tap`), out);
+        fs.writeFileSync(path.join(EVIDENCE, `${id}.stderr`), err);
+        fs.writeFileSync(path.join(EVIDENCE, `${id}.json`), JSON.stringify({ code, signal, timedOut }));
+      }
+      resolve({ code, signal, timedOut, out });
     });
   });
 }
@@ -237,14 +246,17 @@ const cleanDir = copy("clean");
 const cleanTsc = staticCheck(cleanDir, "src/adapter.ts");
 console.log(`${cleanTsc.ok ? "✓" : "✗"} 原样副本 tsc 类型检查${cleanTsc.ok ? "通过" : `失败:${cleanTsc.detail}`}`);
 if (!cleanTsc.ok) ok = false;
-const clean = await run(cleanDir);
-// 应有的测试条数取自 TAP 计划行 "1..N",不取原样副本自己的通过数,以免原样副本也被截断时基准跟着变小
-const plan = Number(/^1\.\.(\d+)$/m.exec(clean.out ?? "")?.[1] ?? 0);
-const total = plan;
-const cleanOk = clean.code === 0 && !clean.timedOut && clean.failed.length === 0 && total > 0 && clean.passed.length === total;
-console.log(`${cleanOk ? "✓" : "✗"} 原样副本:${clean.passed.length} 绿 / ${clean.failed.length} 红,计划 ${total} 条,退出码 ${clean.code}${clean.timedOut ? "(超时)" : ""}`);
-if (!cleanOk) { ok = false; if (clean.failed.length) console.log(`  原样副本变红的测试:${JSON.stringify(clean.failed)}`); }
-const CONCURRENCY = Number(process.env.CC_MUT_CONCURRENCY) > 0 ? Math.floor(Number(process.env.CC_MUT_CONCURRENCY)) : 4;
+const clean = await run(cleanDir, "clean");
+const baseline = assessTap(clean);
+const total = baseline.names.length;
+const cleanOk = cleanTsc.ok && baseline.valid && clean.code === 0 && baseline.failed.length === 0;
+console.log(`${cleanOk ? "✓" : "✗"} 原样副本:${baseline.passed.length} 绿 / ${baseline.failed.length} 红,完整 ${total} 条,退出码 ${clean.code}`);
+if (!cleanOk) {
+  console.log(`无效基线,停止校准:${JSON.stringify(baseline.problems)};失败:${JSON.stringify(baseline.failed)}`);
+  fs.rmSync(tmp, { recursive: true, force: true });
+  process.exit(1);
+}
+const CONCURRENCY = Number(process.env.CC_MUT_CONCURRENCY) > 0 ? Math.floor(Number(process.env.CC_MUT_CONCURRENCY)) : 2;
 console.log(`并发 ${CONCURRENCY}`);
 const ONLY = (process.env.CC_MUT_ONLY ?? "").split(",").map((x) => x.trim()).filter(Boolean);
 const PROGRESS = process.env.CC_MUT_PROGRESS;
@@ -272,17 +284,17 @@ async function worker() {
       if (PROGRESS) fs.appendFileSync(PROGRESS, `${results[i]}\n`);
       continue;
     }
-    const r = await run(d);
-    const ran = r.passed.length + r.failed.length;
-    let verdict;
-    if (r.timedOut) verdict = `✗ ${name}:超时 ${TIMEOUT_MS}ms 被强杀,不计为杀死(已执行 ${ran}/${total})`;
-    else if (r.signal) verdict = `✗ ${name}:测试进程被信号 ${r.signal} 结束,不计为杀死(已执行 ${ran}/${total})`;
-    else if (ran !== total) verdict = `✗ ${name}:只执行了 ${ran}/${total} 条测试(部分执行),不计为杀死`;
-    else if (r.failed.length === 0) verdict = `✗ ${name}:${r.passed.length} 绿 / 0 红,存活`;
-    else verdict = `✓ ${name}:${r.passed.length} 绿 / ${r.failed.length} 红,被「${r.failed[0]}」发现`;
+    const id = name.split(" ")[0];
+    const target = TARGETS[id];
+    if (!target || !baseline.names.includes(target.name)) throw new Error(`${id} 缺少有效具名目标`);
+    const r = await run(d, id);
+    const judged = assessTap(r, baseline.names, target);
+    const verdict = judged.killed
+      ? `✓ ${name}:${judged.passed.length} 绿 / ${judged.failed.length} 红,被「${target.name}」发现(${target.code})`
+      : `✗ ${name}:不计为杀死:${JSON.stringify(judged.problems)},指定目标未匹配或执行无效`;
     results[i] = verdict;
     // 落盘时附上全部变红的测试名:负载高时偶发的计时类失败与真正杀死它的具名测试可以分开核对
-    if (PROGRESS) fs.appendFileSync(PROGRESS, `${verdict}\t全部红:${JSON.stringify(r.failed)}\n`);
+    if (PROGRESS) fs.appendFileSync(PROGRESS, `${verdict}\t全部红:${JSON.stringify(judged.failed)}\n`);
   }
 }
 await Promise.all(Array.from({ length: CONCURRENCY }, worker));
