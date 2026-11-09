@@ -3,20 +3,47 @@ import path from "node:path";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
 // 概念版的动效证据(连拍):每条用例本身都断言动效确实发生;设了 GG_SHOTS 时把帧存到 <GG_SHOTS>/concept/<点子>-frame-<主题>-<序号>.png。
-// 云端没有 ffmpeg,不录视频;落印、按下回馈用 page.clock 把动画时钟一格一格往前拨,拍到动画中间的帧。
+// 云端没有 ffmpeg,不录视频。动效是否发生由页面内按帧采样断言(真实时间);中间帧用 Chrome screencast 收真实画出的帧。
 const DIR = process.env.GG_SHOTS ? path.join(process.env.GG_SHOTS, "concept") : null;
 const VIEW = { width: 1280, height: 800 };
 const THEMES = ["light", "dark"] as const;
 
-async function open(browser: Browser, theme: string, opts: { clock?: boolean; scale?: number } = {}) {
+async function open(browser: Browser, theme: string, opts: { scale?: number } = {}) {
   const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport: VIEW, deviceScaleFactor: opts.scale ?? 2, locale: "zh-CN", timezoneId: "Asia/Shanghai" });
   const page = await ctx.newPage();
-  const t0 = new Date("2026-11-09T02:20:00+08:00").getTime();
-  if (opts.clock) await page.clock.install({ time: t0 });
   await page.goto(`/?conv=g&freeze${theme === "dark" ? "&theme=dark" : ""}`);
-  /* 停住动画时钟:之后只有 runFor 才往前走,帧是确定的 */
-  if (opts.clock) await page.clock.pauseAt(t0 + 2000);
   return page;
+}
+
+/** 在页面里按帧采样某个元素的缩放(动画是真实时间跑的,不靠假时钟):返回采样期间的最小、最大值和最后一个值 */
+async function sampleScale(page: Page, sel: string, ms: number) {
+  return page.evaluate(([sel, ms]) => new Promise<{ min: number; max: number; last: number }>((done) => {
+    let min = Infinity, max = -Infinity, last = NaN
+    const t0 = performance.now()
+    const tick = () => {
+      const el = document.querySelector(sel as string)
+      if (el) { const m = new DOMMatrix(getComputedStyle(el).transform); last = Math.hypot(m.a, m.b); min = Math.min(min, last); max = Math.max(max, last) }
+      if (performance.now() - t0 < (ms as number)) requestAnimationFrame(tick); else done({ min, max, last })
+    }
+    tick()
+  }), [sel, ms] as const);
+}
+
+/** 真实帧连拍:用 Chrome 的 screencast 把动作前后 ms 毫秒里浏览器真的画出来的每一帧收下来(和录像同源,不重放、不模拟),
+ *  存成 <name>-cast-<theme>-<序号>.png;没设 GG_SHOTS 时只执行动作 */
+async function screencast(page: Page, name: string, theme: string, ms: number, act: () => Promise<unknown>) {
+  if (!DIR) return act();
+  fs.mkdirSync(DIR, { recursive: true });
+  const cdp = await page.context().newCDPSession(page);
+  const frames: Buffer[] = [];
+  cdp.on("Page.screencastFrame", (f) => { frames.push(Buffer.from(f.data, "base64")); void cdp.send("Page.screencastFrameAck", { sessionId: f.sessionId }).catch(() => {}); });
+  await cdp.send("Page.startScreencast", { format: "png", everyNthFrame: 1 });
+  const r = await act();
+  await page.waitForTimeout(ms);
+  await cdp.send("Page.stopScreencast");
+  frames.forEach((b, i) => fs.writeFileSync(path.join(DIR, `${name}-cast-${theme}-${String(i).padStart(2, "0")}.png`), b));
+  await cdp.detach();
+  return r;
 }
 
 type Clip = { x: number; y: number; width: number; height: number };
@@ -37,50 +64,36 @@ const scaleOf = (page: Page, sel: string) => page.locator(sel).evaluate((el) => 
 
 for (const theme of THEMES) {
   test(`连拍 · 朱印验收(${theme}):印从纸面上方落下、压实,停在 1`, async ({ browser }) => {
-    const page = await open(browser, theme, { clock: true });
+    const page = await open(browser, theme);
     const bubble = page.locator('[data-anchor="g6"]');
     await bubble.scrollIntoViewIfNeeded();
     await bubble.hover({ position: { x: 8, y: 8 } });
-    await page.clock.runFor(300);
     await page.getByTestId("reply-g6").click();
-    await page.clock.runFor(20);
     await box(page).press("End");
     await box(page).pressSequentially("通过");
-    await box(page).press("Enter");
-    await page.clock.runFor(1);
-    await expect(page.getByTestId("seal-perf")).toBeAttached();
-    await page.mouse.move(5, 5);
-    await bubble.scrollIntoViewIfNeeded();
     const clip = await around(page, '[data-anchor="g6"]', 70, 50);
-    // 动画时钟一格一格拨:落下途中缩放大于 1,最后停在 1
-    const seen: number[] = [];
-    for (const [n, ms] of [[1, 16], [2, 48], [3, 80], [4, 800]] as const) {
-      await page.clock.runFor(ms);
-      seen.push(await scaleOf(page, "[data-testid=seal-perf]"));
-      await frame(page, "seal", theme, n, clip);
-    }
-    expect(Math.max(...seen.slice(0, 3))).toBeGreaterThan(1.01);
-    expect(Math.abs(seen[3] - 1)).toBeLessThan(0.01);
+    await page.mouse.move(5, 5);
+    // 回车的同时开始按帧采样:落下途中缩放大于 1,最后停在 1;同时收下这段时间里真实画出来的帧
+    const [s] = await Promise.all([sampleScale(page, "[data-testid=seal-perf]", 900), screencast(page, "seal", theme, 900, () => box(page).press("Enter"))]);
+    expect(s.max).toBeGreaterThan(1.01);
+    expect(Math.abs(s.last - 1)).toBeLessThan(0.01);
+    await frame(page, "seal", theme, "end", clip);
     await page.context().close();
   });
 
   test(`连拍 · 双击就回复(${theme}):双击 → 气泡按下 → 弹回,引用进输入框`, async ({ browser }) => {
-    const page = await open(browser, theme, { clock: true });
+    const page = await open(browser, theme);
     const bubble = page.locator('[data-anchor="g6"]');
     await bubble.scrollIntoViewIfNeeded();
     const b = (await bubble.boundingBox())!;
     const clip: Clip = { x: 0, y: Math.max(0, b.y - 50), width: VIEW.width, height: VIEW.height - Math.max(0, b.y - 50) };
     await frame(page, "dblreply", theme, 1, clip);
-    await page.mouse.dblclick(b.x + b.width * 0.4, b.y + b.height * 0.3);
+    const [s] = await Promise.all([sampleScale(page, '[data-anchor="g6"]', 700), screencast(page, "dblreply", theme, 700, () => page.mouse.dblclick(b.x + b.width * 0.4, b.y + b.height * 0.3))]);
+    expect(s.min).toBeLessThan(0.995);
+    expect(Math.abs(s.last - 1)).toBeLessThan(0.005);
     await expect(bubble).toHaveAttribute("data-dblreply", "1");
-    await page.clock.runFor(30);
-    const pressed = await scaleOf(page, '[data-anchor="g6"]');
-    await frame(page, "dblreply", theme, 2, clip);
-    await page.clock.runFor(800);
-    await frame(page, "dblreply", theme, 3, clip);
-    expect(pressed).toBeLessThan(1);
-    expect(await scaleOf(page, '[data-anchor="g6"]')).toBeCloseTo(1, 2);
     await expect(page.getByTestId("quote-bar")).toBeVisible();
+    await frame(page, "dblreply", theme, 2, clip);
     await page.context().close();
   });
 
