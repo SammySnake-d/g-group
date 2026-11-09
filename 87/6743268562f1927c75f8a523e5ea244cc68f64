@@ -1,0 +1,29 @@
+packages/server/proof/run-ledger-host-mutations.mjs
+  s_00309a6b1778cc::t_4a8245c70b627c 1-118
+packages/server/proof/run-ledger-real.txt
+  s_00309a6b1778cc::t_ee37e66eee2869 1-80
+packages/server/proof/run-ledger-real-frames.txt
+  s_00309a6b1778cc::t_0639c1e9dac83a 1-19
+packages/server/proof/run-ledger-real.mjs
+  s_00309a6b1778cc::t_dd4be4d0e6dfe5 1-87
+receipts/feat-run-ledger-host.json
+  s_00309a6b1778cc::t_16a76be8259504 1-28
+packages/server/proof/run-ledger-real-after-retry.txt
+  s_00309a6b1778cc::t_158cf2dbbe8542 1-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "876743268562f1927c75f8a523e5ea244cc68f64",
+  "prompts": {},
+  "sessions": {
+    "s_00309a6b1778cc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5b44653a-2923-45fd-97d0-f25479b43797",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
