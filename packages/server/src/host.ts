@@ -54,6 +54,11 @@ import {
   type Inbound,
   type InboundMessage,
   type MemoryEntry,
+  type QuoteMsg,
+  buildQuoteChain,
+  quoteParent,
+  renderLevels,
+  renderQuoteChain,
   type ReflectResult,
   type RoundTools,
   planMemoryWrite,
@@ -136,6 +141,8 @@ export interface HostOptions {
   readonly stateNoteMaxBytes?: number | null;
   /** 会话中途的全局记忆变化在第 5 块累积到几条就并入第 1 块前缀(D25 第 6 节「快照加增量」)。默认 20。 */
   readonly memoryFoldAfter?: number;
+  /** 引用链原文的字节预算(D24 第 3 节:与直接引用共用回读预算);不给用 RECALL_BUDGET_BYTES。数值待实测。 */
+  readonly quoteChainBudgetBytes?: number;
   readonly timers?: TimerApi;
   readonly onReport?: (what: string, detail: unknown) => void;
   /** 群公告排序(列表与装配共用);默认按创建先后。排序规则待定(D28 待确认 ④),先做成参数。 */
@@ -146,6 +153,9 @@ export interface HostOptions {
 
 /** 记忆锚点:全局(进前缀)与「建议改人格」(只记录,不进任何一块) */
 const GLOBAL_ANCHOR = "global";
+/** 引用链默认级数(用户 #2115 确认 K=3)与往上扫描深度上限(D24 建议 32) */
+const QUOTE_CHAIN_K = 3;
+const QUOTE_SCAN_CAP = 32;
 const PERSONA_ANCHOR = "persona-suggestion";
 /** 用户原话里说了这类词才允许记成全局(D25 第 10 节场景 B) */
 const GLOBAL_WORDS = /以后|所有|一律|始终|永远|每次|always|from now on/i;
@@ -1671,6 +1681,27 @@ export class Host {
   rebuildMemoryIndex(contactId: string): number {
     return this.memory.rebuild(contactId);
   }
+  /** 一个会话里可作引用链节点的消息:最新文字、撤回标记、它引用了哪些;rewind 撤下的不收(当作看不见,AC-48) */
+  private quoteMsgs(roomId: string): QuoteMsg[] {
+    const rewound = rewindRanges(this.db, roomId);
+    const out: QuoteMsg[] = [];
+    for (const m of this.projected(roomId)) {
+      if (inRanges(rewound, m.seq)) continue;
+      const meta = one<MsgMeta>(this.db, "SELECT * FROM gg_msg WHERE room_id = ? AND seq = ?", roomId, m.seq);
+      const quoted = [...(meta?.reply_to != null ? [meta.reply_to] : []), ...(meta ? (JSON.parse(meta.quoted) as number[]) : [])];
+      const at = one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${roomId}`, m.seq)?.at ?? "";
+      out.push({ seq: m.seq, author: this.nameOf(m.sender), at, text: m.text, quoted, retracted: m.retracted });
+    }
+    return out;
+  }
+  /** read_quote_parent:只返回直接上一级;会话不是联系人的就返回 null */
+  private readQuoteParent(contactId: string, roomId: string, seq: number): string | null {
+    if (!this.roomsOfContact(contactId).some((r) => r.id === roomId)) return null;
+    const msgs = this.quoteMsgs(roomId);
+    if (!msgs.some((m) => m.seq === seq)) return null;
+    const levels = quoteParent({ seq, messages: msgs, inContext: [], budgetBytes: this.opts.quoteChainBudgetBytes ?? RECALL_BUDGET_BYTES });
+    return levels.length ? renderLevels(levels) : `#${seq} 没有引用上一级`;
+  }
   /** 一条记忆的全文与状态,给 read_memory 用;没有返回 null */
   private renderMemory(contactId: string, id: string): string | null {
     const e = this.memory.get(contactId, id);
@@ -1969,6 +2000,17 @@ export class Host {
     }
     this.report("recall", { contactId, roundId, items: plan.items.map(({ text: _t, ...rest }) => rest) });
     const pointers = plan.items.map((it) => renderRecall(it, sources.get(`${it.roomId}#${it.seq}`)?.sender ?? "?"));
+    // 引用链(D24/AC-41):带引用的新消息附前 K 级,放在第 5 块(新消息之后,不进前缀);已换入或同在本轮的标 in_context
+    const paged = new Set(plan.items.filter((it) => it.state === "Full" || it.state === "TruncatedSlice").map((it) => `${it.roomId}#${it.seq}`));
+    const chainMsgs = new Map<string, QuoteMsg[]>();
+    for (const f of fresh) {
+      if (f.kind !== "message" || (f.replyToSeq === null && f.quotedSeqs.length === 0)) continue;
+      const qm = chainMsgs.get(f.roomId) ?? this.quoteMsgs(f.roomId);
+      chainMsgs.set(f.roomId, qm);
+      const inContext = [...qm.filter((m) => paged.has(`${f.roomId}#${m.seq}`)).map((m) => m.seq), ...fresh.flatMap((x) => (x.kind === "message" && x.roomId === f.roomId ? [x.seq] : []))];
+      const chain = buildQuoteChain({ fromSeq: f.seq, refs: [...(f.replyToSeq !== null ? [f.replyToSeq] : []), ...f.quotedSeqs], messages: qm, inContext, k: QUOTE_CHAIN_K, scanCap: QUOTE_SCAN_CAP, budgetBytes: this.opts.quoteChainBudgetBytes ?? RECALL_BUDGET_BYTES });
+      if (chain) pointers.push({ ref: `${f.roomId} #${f.seq} 的引用链`, text: renderQuoteChain(chain) });
+    }
     const mem = this.memoryForRound(contactId, fresh);
     let request: ReturnType<RoundAssembler>;
     try {
@@ -1999,7 +2041,7 @@ export class Host {
     }
     let out: Awaited<ReturnType<ContactMind["round"]>>;
     try {
-      const tools: RoundTools = { readMemory: async (id: string) => this.renderMemory(contactId, id) };
+      const tools: RoundTools = { readMemory: async (id: string) => this.renderMemory(contactId, id), readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq) };
       out = await this.opts.mind(this.contactView(contact)).round({ contact: { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona }, request, fresh }, signal, tools);
     } catch (e) {
       this.setActivity(contactId, null, "idle");
