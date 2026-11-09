@@ -2074,3 +2074,145 @@ test("R8-04:milestone 的 stage 为纯空白时 reportErrors 与 report MCP 拒�
   assert.deepEqual(r.replies.map((x) => x.result?.isError), [true, false]);
   assert.match(r.replies[0]!.result?.content?.[0]?.text ?? "", /stage 须为非空字符串/);
 });
+
+// 第九轮 R9-01–R9-03:report MCP 的 JSON-RPC 封套(版本、请求编号原文、请求与通知之分)。
+// 编号要看回复原文:大整数一经 JSON.parse 就成了浮点数,相邻整数会读成同一个值,所以这里逐行保留原文。
+/** 向真实 report MCP 子进程逐行写入,原样取回每一行回复文本 */
+function rpcRaw(lines: string[], env: Record<string, string> = {}) {
+  const out = spawnSync(process.execPath, [REPORT_MCP_PATH], { input: `${lines.join("\n")}\n`, encoding: "utf8", env: { PATH: process.env.PATH ?? "", ...env }, timeout: 10_000 });
+  return { status: out.status, stderr: out.stderr, lines: out.stdout.trim() ? out.stdout.trim().split("\n") : [] };
+}
+/** 一行回复里顶层 id 的原文(JSON.parse 的源文本访问,不经浮点数);没有顶层 id 时为 undefined */
+function replyIdSource(line: string): string | undefined {
+  const seen: [unknown, string | undefined][] = [];
+  const top = JSON.parse(line, function (this: unknown, key: string, value: unknown, ctx?: { source?: string }) {
+    if (key === "id") seen.push([this, ctx?.source ?? JSON.stringify(value)]);
+    return value;
+  }) as unknown;
+  return seen.find(([holder]) => holder === top)?.[1];
+}
+const replyOf = (line: string) => JSON.parse(line) as RpcReply;
+const listRaw = (idSource: string) => `{"jsonrpc":"2.0","id":${idSource},"method":"tools/list"}`;
+const callRaw = (idSource: string, summary = "中性") => `{"jsonrpc":"2.0","id":${idSource},"method":"tools/call","params":{"name":"report_progress","arguments":{"kind":"started","summary":${JSON.stringify(summary)}}}}`;
+
+test("R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fake-cc-"));
+  ownDirs.add(dir);
+  const log = path.join(dir, "report.jsonl");
+  const good = ["9007199254740992", "9007199254740993", "-9007199254740993", "0", '""', "7", '"中性-编号"', "1E2", "10.0", "123456789012345678901234567890"];
+  const fractional = ["1.5", "1e-1", "-0.5", "9007199254740993.5"];
+  const lines = [
+    ...good.map(listRaw),
+    ...fractional.map(listRaw),
+    ...fractional.map((id) => callRaw(id, "小数编号")),
+    // 重复的顶层 id:JSON.parse 取最后一个,回复也必须是最后一个的原文
+    '{"jsonrpc":"2.0","id":1,"method":"tools/list","id":9007199254740995}',
+    // params 里有同名 id 字段、而且写在顶层 id 之前:回复只认顶层的那个
+    '{"jsonrpc":"2.0","method":"tools/list","params":{"id":5,"x":[{"id":6},"id"]},"id":9007199254740997}',
+    callRaw("9007199254740992", "相邻编号一"),
+    callRaw("9007199254740993", "相邻编号二"),
+  ];
+  const r = rpcRaw(lines, { REPORT_LOG: log });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stderr, "");
+  assert.equal(r.lines.length, lines.length);
+  const ids = r.lines.map(replyIdSource);
+  // 接收的编号逐个原样回显,结果是工具清单
+  assert.deepEqual(ids.slice(0, good.length), good);
+  for (const line of r.lines.slice(0, good.length)) assert.deepEqual(replyOf(line).result?.tools, [reportToolDefinition()], line);
+  // 相邻大整数的两条回复编号不同
+  assert.notEqual(ids[0], ids[1]);
+  // 小数写法:-32600、id 为 null、不处理
+  const bad = r.lines.slice(good.length, good.length + fractional.length * 2);
+  assert.deepEqual(bad.map((l) => [replyIdSource(l), replyOf(l).error?.code ?? null, replyOf(l).result ?? null]), bad.map(() => ["null", -32600, null]));
+  const rest = r.lines.slice(good.length + fractional.length * 2);
+  assert.deepEqual(rest.map(replyIdSource), ["9007199254740995", "9007199254740997", "9007199254740992", "9007199254740993"]);
+  assert.deepEqual(rest.map((l) => replyOf(l).result?.isError ?? null), [null, null, false, false]);
+  // 日志只有两条相邻编号的合规汇报,小数编号的不入日志
+  assert.deepEqual(readLog(log).map((x) => [x.valid, x.summary]), [[true, "相邻编号一"], [true, "相邻编号二"]]);
+});
+
+test("R9-02:report MCP 先核对 jsonrpc 版本:缺失、\"1.0\"、数字 2、\"2\"、\"2.0 \"、null 的 tools/call、tools/list、initialize 一律回 -32600、id 为 null、不回已记录、不入日志;同一组请求只把版本换成 \"2.0\" 时照常回复并只记合规那一条(单开关对照)", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fake-cc-"));
+  ownDirs.add(dir);
+  const log = path.join(dir, "report.jsonl");
+  const versions: unknown[] = [undefined, "1.0", 2, "2", "2.0 ", null];
+  const group = (v: unknown, base: number, summary: string) => {
+    const env = (o: Record<string, unknown>) => JSON.stringify(v === undefined ? o : { jsonrpc: v, ...o });
+    return [
+      env({ id: base + 1, method: "tools/call", params: { name: "report_progress", arguments: { kind: "started", summary } } }),
+      env({ id: base + 2, method: "tools/list" }),
+      env({ id: base + 3, method: "initialize", params: { protocolVersion: "2025-06-18" } }),
+    ];
+  };
+  const lines = [...versions.flatMap((v, i) => group(v, i * 10, `版本对照${i}`)), ...group("2.0", 100, "合规版本")];
+  const r = rpc(lines, { REPORT_LOG: log });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stderr, "");
+  assert.equal(r.replies.length, lines.length);
+  const off = versions.length * 3;
+  assert.deepEqual(r.replies.slice(0, off).map((x) => [x.id, x.error?.code ?? null, x.result ?? null]), Array.from({ length: off }, () => [null, -32600, null]));
+  for (const x of r.replies.slice(0, off)) assert.match(x.error?.message ?? "", /jsonrpc/);
+  assert.deepEqual(r.replies.slice(off).map((x) => [x.id, x.error?.code ?? null]), [[101, null], [102, null], [103, null]]);
+  assert.equal(r.replies[off]!.result?.isError, false);
+  assert.equal(r.replies[off]!.result?.content?.[0]?.text, "已记录。");
+  // 合规那一组的回复与共享定义一致:汇报本身合规(共享校验无错),工具清单就是共享工具定义
+  assert.deepEqual(reportErrors({ kind: "started", summary: "合规版本" }), []);
+  assert.deepEqual(r.replies[off + 1]!.result?.tools, [reportToolDefinition()]);
+  assert.deepEqual(readLog(log).map((x) => [x.valid, x.summary]), [[true, "合规版本"]]);
+});
+
+test("R9-03:无编号消息按通知处理:正常 notifications/initialized、notifications/cancelled、无编号的 tools/list、无编号的合规 tools/call、无编号的未知方法都不回复、不入日志;随后编号 17 的合法请求照常回复并入日志,编号为 null 的请求仍回 -32600(连续对照)", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fake-cc-"));
+  ownDirs.add(dir);
+  const log = path.join(dir, "report.jsonl");
+  const notices = [
+    { jsonrpc: "2.0", method: "notifications/initialized" },
+    { jsonrpc: "2.0", method: "notifications/cancelled", params: { requestId: 3, reason: "中性" } },
+    { jsonrpc: "2.0", method: "tools/list" },
+    { jsonrpc: "2.0", method: "tools/call", params: { name: "report_progress", arguments: { kind: "started", summary: "无编号汇报" } } },
+    { jsonrpc: "2.0", method: "neutral/unlisted" },
+  ].map((o) => JSON.stringify(o));
+  const lines = [...notices, call(17, { kind: "started", summary: "编号汇报" }), '{"jsonrpc":"2.0","id":null,"method":"tools/list"}', list(18)];
+  const r = rpcRaw(lines, { REPORT_LOG: log });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stderr, "");
+  // 每条回复都带顶层 id;五条通知没有任何回复
+  assert.deepEqual(r.lines.map(replyIdSource), ["17", "null", "18"]);
+  const replies = r.lines.map(replyOf);
+  assert.deepEqual(replies.map((x) => [x.error?.code ?? null, x.result?.isError ?? null]), [[null, false], [-32600, null], [null, null]]);
+  assert.deepEqual(replies[2]!.result?.tools, [reportToolDefinition()]);
+  // 只有编号 17 的那条进日志
+  assert.deepEqual(readLog(log).map((x) => [x.valid, x.summary]), [[true, "编号汇报"]]);
+  // 单开关对照:同一条无编号的 tools/call 只加上编号,就照常回复并入日志
+  const log2 = path.join(dir, "report2.jsonl");
+  const withId = JSON.stringify({ ...(JSON.parse(notices[3]!) as object), id: 19 });
+  const r2 = rpcRaw([notices[3]!, withId], { REPORT_LOG: log2 });
+  assert.deepEqual(r2.lines.map(replyIdSource), ["19"]);
+  assert.deepEqual(readLog(log2).map((x) => [x.valid, x.summary]), [[true, "无编号汇报"]]);
+});
+
+test("R9-04:brief.task 为空串或纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 checkBrief 拒收、spawn 不起 CLI;同一 brief 只把 task 换成非空文本(含首尾空白)时放行,task 原样保留、不去首尾空白(单开关对照)", async () => {
+  for (const t of ["", ...BLANKS]) {
+    const r = checkBrief(brief({ task: t }));
+    assert.equal(r.ok, false, JSON.stringify(t));
+    assert.match(r.ok ? "" : r.reason, /brief\.task 必须是非空字符串/, JSON.stringify(t));
+  }
+  const padded = " 中性任务\n";
+  assert.deepEqual(checkBrief(brief({ task: padded })), { ok: true, brief: brief({ task: padded }) });
+  const f = fake({ reports: [], result: "success" });
+  const a = createComputeAdapter(f.options);
+  const blank = await a.spawn(brief({ task: "\u3000" }));
+  assert.equal(blank.ok, false);
+  assert.match(blank.ok ? "" : blank.reason, /brief\.task/);
+  assert.equal(fs.existsSync(f.record), false);
+  const ok = await a.spawn(brief({ task: padded }));
+  assert.equal(ok.ok, true);
+  if (ok.ok) await a.settled(ok.computeId);
+  assert.equal(launches(f.record).length, 1);
+});
+
+test("R9 补充:凭据引用的方案名可带数字、加号、点、连字符(s3://、git+ssh://、x.y-z://)时放行;方案名以数字开头、带大写或下划线、缺 :// 或路径为空时拒收(正反对照)", () => {
+  for (const ref of ["s3://bucket/key", "git+ssh://host/repo", "x.y-z://a", "vault://team/upload-token"]) assert.equal(isCredentialRef(ref), true, ref);
+  for (const ref of ["3s://bucket/key", "Vault://team/x", "va_ult://team/x", "vault:/team/x", "vault://", "vault:// x"]) assert.equal(isCredentialRef(ref), false, ref);
+});
