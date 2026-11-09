@@ -3,6 +3,9 @@
 //   → 宿主校验、分配 action_id、与游标/账本/任务同一事务落盘 → 起 Compute → Compute 语义事件回到联系人 → 联系人汇报/交付回聊天。
 // 规则:只有联系人对外说话(Compute 不直接发言,AC-03);游标只在一轮落盘后推进(AC-31);发送前检出更新的用户消息就放弃本轮重跑(AC-31 ④);
 // 发送入库端按 action_id 去重(AC-31 ③);消息接走即已读(AC-46)。
+// 失败轮次 A×B 容错(AC-36,「失败轮次容错」一节):联系人一轮或 Compute 失败后按 kernel retry-policy 决定静默退避重试、出原位失败卡,
+// 或被同一上游的共享熔断暂停(全群合并 1 张群级卡);出卡由宿主机械完成,不靠已挂的联系人脑子自报。
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, extname, join } from "node:path";
@@ -47,14 +50,20 @@ import {
   recordAttempt,
 } from "@g-group/domain";
 import {
-  type AttentionLoop,
+  BREAKER_CLOSED,
   type BreakerPolicy,
-  type RetryPolicy,
+  type BreakerState,
+  type AttentionLoop,
   type ContactCompactor,
   type ContactMind,
+  DEFAULT_BREAKER_POLICY,
+  DEFAULT_RETRY_POLICY,
+  type FailureClass,
+  type HealClass,
   type Inbound,
   type InboundMessage,
   type MindAction,
+  type RetryPolicy,
   type RoundOutput,
   type RoundStatus,
   type TimerApi,
@@ -62,9 +71,20 @@ import {
   type RecallRef,
   type RecallSource,
   type Urgency,
-  compactMaterial,
+  breakerAdmit,
+  breakerFailure,
+  breakerSuccess,
+  checkRetryPolicy,
+  claimFailureCard,
+  classifyFailure,
+  crashRecover,
   createAttentionLoop,
   planRecall,
+  decideRetry,
+  effectOf,
+  healOf,
+  skipTarget,
+  compactMaterial,
   scrubRetracted,
 } from "@g-group/kernel";
 import { type AnnouncementOrder, AnnouncementStore } from "./announcements.ts";
@@ -128,22 +148,22 @@ export interface HostOptions {
   readonly stateNoteMaxBytes?: number | null;
   readonly timers?: TimerApi;
   readonly onReport?: (what: string, detail: unknown) => void;
-  /** AC-36 静默退避参数。 */
-  readonly retry?: Partial<RetryPolicy>;
-  /** AC-36 共享上游熔断参数。 */
-  readonly breaker?: Partial<BreakerPolicy>;
-  /** 同一输入允许的启动回收次数(F12)。 */
-  readonly maxCrashRecoveries?: number;
-  /** Compute 的 CLI 自己对 API 错误重试的次数(F3)。 */
-  readonly computeHarnessRetries?: number;
-  /** 上游键。 */
-  readonly upstreamOf?: (model: string) => string;
-  /** 退避抖动用的随机数。 */
-  readonly random?: () => number;
   /** 群公告排序(列表与装配共用);默认按创建先后。排序规则待定(D28 待确认 ④),先做成参数。 */
   readonly announcementOrder?: AnnouncementOrder;
   /** 联系人没单独设时的个人 Compute 槽位数(AC-23);不给为不限 */
   readonly personalComputeSlots?: number;
+  /** AC-36 静默退避参数(默认值是占位,验收文档第 9 节 F8 待定)。 */
+  readonly retry?: Partial<RetryPolicy>;
+  /** AC-36 共享上游熔断参数(默认值是占位,第 9 节 F10 待定)。 */
+  readonly breaker?: Partial<BreakerPolicy>;
+  /** 同一输入允许的启动回收次数(crash_recovery_count 上限,F12),默认 1。 */
+  readonly maxCrashRecoveries?: number;
+  /** Compute 的 CLI 自己对 API 错误重试的次数(start.ts 经 CLAUDE_CODE_MAX_RETRIES 交给 CLI),与宿主共用同一预算(F3),默认 0。 */
+  readonly computeHarnessRetries?: number;
+  /** 上游键:同一个键的联系人与 Compute 共享熔断;默认按模型 id。 */
+  readonly upstreamOf?: (model: string) => string;
+  /** 退避抖动用的随机数,默认 Math.random。 */
+  readonly random?: () => number;
 }
 
 /** 状态笔记含撤回原文且无法精确移除时,整份作废后的占位(撤回优先,AC-08) */
@@ -266,6 +286,17 @@ export class Host {
   private readonly pumps: Promise<void>[] = [];
   private roundNo = 0;
   private closed = false;
+  /** 本次启动编号:在途轮次标记里写它,重启后据此认出上次留下的未提交轮次(F12)。 */
+  private readonly bootId: string;
+  private readonly retryPolicy: RetryPolicy;
+  private readonly breakerPolicy: BreakerPolicy;
+  private readonly timersApi: TimerApi;
+  private readonly clock: () => number;
+  /** 宿主自己的计时器:Compute 续跑退避、熔断半开探测。关闭时全部清掉。 */
+  private readonly hostTimers = new Map<string, unknown>();
+  /** 用户在群级卡上点了[重试]、下一次放行按用户发起的探测处理的上游。 */
+  private readonly manualProbe = new Set<string>();
+  private readonly random: () => number;
 
   constructor(opts: HostOptions) {
     this.opts = opts;
@@ -280,13 +311,23 @@ export class Host {
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
     this.bus = createBus(this.now);
+    this.bootId = this.newId("boot");
+    const policy = checkRetryPolicy({ ...DEFAULT_RETRY_POLICY, ...(opts.retry ?? {}) });
+    if (!policy.ok) throw new HostError("invalid_params", `重试参数不合格:${policy.reason}`);
+    this.retryPolicy = policy.policy;
+    this.breakerPolicy = { ...DEFAULT_BREAKER_POLICY, ...(opts.breaker ?? {}) };
+    this.clock = opts.clockMs ?? Date.now;
+    this.random = opts.random ?? Math.random;
     this.loop = createAttentionLoop({
       maxDeferMs: opts.maxDeferMs ?? 1500,
       ...(opts.timers ? { timers: opts.timers } : {}),
       run: (id, signal) => this.runRound(id, signal),
+      // 联系人一轮失败后多久重跑由失败策略定(AC-36):RoundRetry 带退避延迟;已出卡或被熔断暂停的一轮不抛错。其余(宿主自身出错)按 1 秒兜底
+      retryAfter: (_id, e) => (e instanceof RoundRetry ? e.delayMs : 1000),
       onReport: (id, what, detail) => this.report(`attention:${what}:${id}`, detail),
     });
     const timers: TimerApi = opts.timers ?? { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>) };
+    this.timersApi = timers;
     this.scheduler = new Scheduler({
       db: this.db,
       clockMs: opts.clockMs ?? Date.now,
@@ -351,6 +392,8 @@ export class Host {
     this.artifacts = new ArtifactStore(this.db, join(opts.dataDir ?? dirname(opts.file), "artifacts"), this.now);
     // 启动时先处理宿主关着期间到期的定时(按容差与 missedPolicy),再按最早一次设计时器
     this.scheduler.tick();
+    // 启动回收(F4/F6/F12):上次留下的未提交轮次按 crash_recovery_count 决定续跑或熔断出卡;磁盘上还没被领走的输入交给联系人
+    this.reconcileOnStart();
   }
 
   private report(what: string, detail: unknown) {
@@ -907,6 +950,7 @@ export class Host {
       const { effects: eff } = this.stepTaskTx(taskId, { kind: "Cancel", by });
       for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId, computeId: e.computeId });
       for (const e of eff) if (e.kind === "cancel-spawn") effects.push({ kind: "cancel-spawn", taskId, requestId: e.requestId });
+      this.afterCancelTx(taskId);
       run(this.db, "UPDATE gg_cards SET state = 'done' WHERE task_id = ? AND kind = 'task-status' AND state = 'open'", taskId);
     });
     this.emitTask(taskId);
@@ -1702,10 +1746,22 @@ export class Host {
       if (ownOnly.length) tx(this.db, () => this.advanceCursorsTx(contactId, lastSeen));
       return "done";
     }
+    const focusRoom = fresh.find((f) => f.kind === "message")?.roomId ?? fresh[0]?.roomId ?? null;
+    // 失败轮次容错(AC-36):已出失败卡的联系人停在原位等用户处理(新消息留着,不被吞也不被接走);
+    // 共享熔断打开时不调模型,暂停到半开探测或用户在群级卡上点重试
+    const processedNow: Record<string, number> = Object.fromEntries(rooms.map((r) => [r.id, this.cursor(contactId, r.id)]));
+    const inboxEnd = inbox.at(-1)?.id ?? 0;
+    const prior = this.failureRow("contact", contactId);
+    if (prior?.status === "card") return "done";
+    const model = prior?.model_override ?? contact.speakingModel;
+    const upstream = this.upstreamKey(model);
+    if (!this.admitUpstream(upstream, "interactive")) {
+      this.pauseBehindBreaker("contact", contactId, contactId, upstream, focusRoom, prior ? null : processedNow, inboxEnd);
+      return "done";
+    }
     const roundId = `${contactId}:r${++this.roundNo}:${Date.now().toString(36)}`;
     // 接走即已读(AC-46 ④):开始这一轮就推进已读位置,与 processed_seq 无关
     for (const r of rooms) if (fresh.some((f) => f.kind === "message" && f.roomId === r.id)) this.markRead(r.id, { kind: "contact", id: contactId }, lastSeen[r.id] ?? 0);
-    const focusRoom = fresh.find((f) => f.kind === "message")?.roomId ?? fresh[0]?.roomId ?? null;
     this.setActivity(contactId, focusRoom, "thinking");
     const tasks = this.listTasks({ contactId }).filter((t) => !TERMINAL.has(t.state));
     let note = getDoc<{ text: string }>(this.db, `note:${contactId}`);
@@ -1759,14 +1815,21 @@ export class Host {
       this.setActivity(contactId, null, "idle");
       throw e;
     }
+    // 在途轮次标记(F12):本轮提交时与游标同一事务删掉;宿主中途退出,重启时据此认出未提交轮次并计 crash_recovery_count
+    this.markRunning(contactId, JSON.stringify({ processed: processedNow, inbox: inboxEnd }), focusRoom, lastSeen, inboxEnd);
     let out: Awaited<ReturnType<ContactMind["round"]>>;
     try {
-      out = await this.opts.mind(this.contactView(contact)).round({ contact: { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona }, request, fresh }, signal);
+      // 每一轮现场定生效模型(原则 70):用户在失败卡上显式选了备用模型才换,只用于重跑这一批;自动重试永远用原模型(严禁静默换模)
+      out = await this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, signal);
     } catch (e) {
       this.setActivity(contactId, null, "idle");
-      throw e;
+      // 宿主中止(停机、发送前撤销)不是失败
+      if (signal.aborted || this.closed) return "done";
+      return this.onContactFailure(contactId, contact.name, e, { upstream, focusRoom, lastSeen, inboxEnd });
     }
     if (signal.aborted || this.closed) return "done";
+    // 模型回了话:这个上游是好的(熔断半开探测成功就恢复,交回被暂停的成员)
+    this.upstreamOk(upstream);
     // 发送前检查(AC-31 ④):本轮开始后又来了用户消息,就放弃本轮结果重跑,旧草稿不上屏
     const hasEffects = out.actions.some((a) => a.kind !== "commit");
     if (hasEffects) {
@@ -1871,6 +1934,7 @@ export class Host {
     const appended: { roomId: string; seq: number }[] = [];
     const touchedTasks = new Set<string>();
     const rejected: { action: MindAction; reason: string }[] = [];
+    let hadFailure = false as boolean;
     tx(this.db, () => {
       // 账本:本轮新消息先 receive
       const byRoom = new Map<string, Parameters<typeof applyLedger>[2][]>();
@@ -2017,6 +2081,7 @@ export class Host {
             const { effects: eff } = this.stepTaskTx(a.taskId, { kind: "Cancel", by: contactId });
             for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId: a.taskId, computeId: e.computeId });
             for (const e of eff) if (e.kind === "cancel-spawn") effects.push({ kind: "cancel-spawn", taskId: a.taskId, requestId: e.requestId });
+            this.afterCancelTx(a.taskId);
             touchedTasks.add(a.taskId);
             break;
           }
@@ -2047,6 +2112,9 @@ export class Host {
       // 游标、待处理输入、状态笔记与本轮动作同一事务(D15.1)
       this.advanceCursorsTx(contactId, lastSeen);
       for (const ib of inbox) run(this.db, "UPDATE gg_inbox SET consumed = 1 WHERE id = ?", ib.id);
+      // 这一批提交成功:在途失败(残留瞬态错误、换模覆盖)清掉,在途轮次标记与 crash_recovery_count 清零(F12「新成功轮次重置计数」)
+      hadFailure = run(this.db, "DELETE FROM gg_failures WHERE scope = 'contact' AND subject = ?", contactId) > 0;
+      run(this.db, "DELETE FROM gg_round_guard WHERE contact_id = ?", contactId);
       if (out.stateNote !== null) {
         const cur = getDoc<{ text: string }>(this.db, `note:${contactId}`);
         putDoc(this.db, `note:${contactId}`, cur?.ver ?? 0, { text: out.stateNote });
@@ -2056,6 +2124,7 @@ export class Host {
       }
     });
     for (const r of rejected) this.report("action-rejected", { contactId, ...r });
+    if (hadFailure) this.emitRetry({ scope: "contact", contactId, taskId: null, roomId: null, state: "cleared", attempt: 0, limit: 0, label: "已恢复" });
     for (const a of appended) this.afterAppend(a.roomId, a.seq, { kind: "contact", id: contactId });
     for (const id of touchedTasks) this.emitTask(id);
     return { effects };
@@ -2098,6 +2167,8 @@ export class Host {
       ev.kind === "started" ? "已开始" : ev.kind === "milestone" ? ev.summary : ev.kind === "blocked" ? `受阻:${ev.needs}。${ev.summary}` : ev.kind === "completed" ? ev.result : ev.kind === "failed" ? `失败:${ev.reason}` : "已停止";
     const stage = ev.kind === "milestone" ? ev.stage : null;
     let taskChanged = false;
+    let handled = null as ComputeFailureOutcome | null;
+    let recovered = null as string | null;
     tx(this.db, () => {
       run(this.db, "INSERT INTO gg_progress (task_id, compute_id, kind, stage, summary, at) VALUES (?, ?, ?, ?, ?, ?)", row.task_id, ev.computeId, ev.kind, stage, summary, at);
       // AC-29 观测点:Compute 启动后实际加载的 skill/MCP 清单(CLI init 自报),每次启动/续接覆盖为最新一次
@@ -2107,7 +2178,17 @@ export class Host {
       }
       const status = ev.kind === "started" || ev.kind === "milestone" ? "running" : ev.kind;
       run(this.db, "UPDATE gg_compute SET status = ?, ended_at = CASE WHEN ? IN ('completed','failed','stopped') THEN ? ELSE ended_at END, result = CASE WHEN ? = 'completed' THEN ? ELSE result END WHERE compute_id = ?", status, ev.kind, at, ev.kind, summary, ev.computeId);
-      if (ev.kind === "failed") {
+      // 失败轮次容错(AC-36):当前实例执行失败(不是越界违规)先按 A×B 决定续跑、出卡或被熔断暂停,在 T11 之前拦下;决定不了的照旧走 ExecFailed
+      if (ev.kind === "failed") handled = this.onComputeFailureTx(row, ev);
+      // 续跑后有了真实进展:这一次的失败了结,上游是好的
+      if (ev.kind === "milestone" || ev.kind === "blocked" || ev.kind === "completed") {
+        const f = this.failureRow("task", row.task_id);
+        if (f && f.status === "retrying" && f.compute_id === ev.computeId) {
+          run(this.db, "DELETE FROM gg_failures WHERE scope = 'task' AND subject = ?", row.task_id);
+          recovered = f.upstream;
+        }
+      }
+      if (ev.kind === "failed" && !handled) {
         const t = this.taskDoc(row.task_id).value.task;
         if (t.computeId === ev.computeId && !TERMINAL.has(t.state) && t.state !== "T9_StopRequested") {
           this.stepTaskTx(row.task_id, { kind: "ExecFailed", computeId: ev.computeId });
@@ -2129,7 +2210,8 @@ export class Host {
           taskChanged = true;
         }
       }
-      if (ev.kind !== "started") {
+      // 被容错接住的失败不转给联系人(静默退避期间不打断;出卡由宿主机械完成)
+      if (ev.kind !== "started" && !handled) {
         const payload: Inbound = { kind: "compute", roomId: row.room_id, taskId: row.task_id, computeId: ev.computeId, signal: ev.kind, summary, at };
         run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", row.contact_id, row.room_id, JSON.stringify(payload), at);
       }
@@ -2139,6 +2221,11 @@ export class Host {
     this.bus.emit({ type: "compute.progress", progress });
     this.emitTask(row.task_id);
     if (taskChanged) this.emitTask(row.task_id);
+    if (recovered !== null) {
+      this.emitRetry({ scope: "task", contactId: row.contact_id, taskId: row.task_id, roomId: row.room_id, state: "cleared", attempt: 0, limit: 0, label: "已恢复" });
+      this.upstreamOk(recovered);
+    }
+    if (handled) return this.afterComputeFailure(row, handled);
     if (ev.kind !== "started") this.loop.notify(row.contact_id, ev.kind === "milestone" ? "batch" : "now");
   }
 
@@ -2192,7 +2279,10 @@ export class Host {
       return false;
     }
     const owner = getDoc<ContactDoc>(this.db, `contact:${row.contact_id}`)?.value;
-    const resolved = owner ? this.resolveComputeFor(owner) : null;
+    const base = owner ? this.resolveComputeFor(owner) : null;
+    // AC-36 [换模型重试]:用户在失败卡上显式选的备用模型只用于重跑这一批(记在在途失败里,成功后清掉),其余照联系人配置
+    const override = this.failureRow("task", e.taskId)?.model_override ?? null;
+    const resolved = base && override ? { ...base, model: override } : base;
     if (resolved) {
       if (resolved.harness !== row.harness) {
         return this.turnRefused(e.taskId, e.computeId, row, `这个 Compute 跑在 ${row.harness} 上,联系人已改用 ${resolved.harness};换 Harness 要在新 Harness 上开新会话(随 Codex 接入实现),这一轮没有发出`);
@@ -2393,17 +2483,24 @@ export class Host {
     const actions = JSON.parse(card.actions) as { actionId: string; label: string }[];
     const act = actions.find((a) => a.actionId === input.actionId);
     if (!act) throw new HostError("invalid_params", `卡片没有动作 ${input.actionId}`);
+    // 可恢复失败卡(AC-36 A27-05):领取规则与 kernel claimFailureCard 一致,过期代次、未授权、静默换模在领取之前就拒绝
+    // (超预算失败卡 round-over-budget 另走 applyRoundFailureTx)
+    const failure = card.kind === "failure" && isRetryCardMeta(card.meta) ? this.checkFailureClaim(card, input.actionId) : null;
     // CAS 领取:open → claimed,连点只有第一次生效(AC-36 ⑤)
     if (run(this.db, "UPDATE gg_cards SET state = 'claimed' WHERE card_id = ? AND state = 'open'", input.cardId) !== 1) throw new HostError("conflict", "这张卡已经处理过了");
     const me: Member = { kind: "user", id: this.userId };
     let msgSeq = 0;
     const effects: HostEffect[] = [];
+    let afterFailure = null as (() => void) | null;
     try {
       tx(this.db, () => {
         const text = input.text?.trim() ? `${act.label}:${input.text.trim()}` : act.label;
         msgSeq = this.appendMessageTx(card.room_id, me, { text, actionKey: `user:${input.clientActionId}`, clientActionId: input.clientActionId, replyToSeq: card.seq, quotedSeqs: [card.seq] }).seq;
-        if (card.task_id) effects.push(...this.applyCardDecisionTx(card, input.actionId, input.text ?? ""));
-        if (card.kind === "failure") this.applyRoundFailureTx(card, input.actionId);
+        if (failure) afterFailure = this.applyFailureDecisionTx(failure);
+        else {
+          if (card.task_id) effects.push(...this.applyCardDecisionTx(card, input.actionId, input.text ?? ""));
+          if (card.kind === "failure") this.applyRoundFailureTx(card, input.actionId);
+        }
         run(this.db, "UPDATE gg_cards SET state = 'done' WHERE card_id = ?", input.cardId);
       });
     } catch (e) {
@@ -2411,6 +2508,7 @@ export class Host {
       throw e;
     }
     this.markRead(card.room_id, me, msgSeq);
+    afterFailure?.();
     this.afterAppend(card.room_id, msgSeq, me);
     if (card.task_id) this.emitTask(card.task_id);
     const updated = this.projected(card.room_id).find((m) => m.seq === card.seq);
@@ -2426,6 +2524,7 @@ export class Host {
       const { effects: eff } = this.stepTaskTx(taskId, { kind: "Cancel", by: this.userId });
       for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId, computeId: e.computeId });
       for (const e of eff) if (e.kind === "cancel-spawn") effects.push({ kind: "cancel-spawn", taskId, requestId: e.requestId });
+      this.afterCancelTx(taskId);
       return effects;
     }
     if (card.kind !== "delivery" || (actionId !== "accept" && actionId !== "reject")) return effects;
@@ -2495,12 +2594,661 @@ export class Host {
     this.ledgerTx(contactId, roomId, cmds);
   }
 
+  // ======================= 失败轮次容错(AC-36) =======================
+  // 联系人一轮或任务的 Compute 失败之后怎么办(是否失败、什么原因由 kernel 的失败分类器判):
+  //   A1×(B0|B1) 静默指数退避(状态行「重连中 k/N」,不出卡);耗尽、A2/A3、B2 由宿主机械出 1 张原位可恢复失败卡;
+  //   同一上游上不同成员连续失败或 A2 触发共享熔断:暂停后台重试,全群合并 1 张群级卡,半开探测成功后交回成员续跑(A2 只能由用户发起探测)。
+  //   失败卡按钮走 cards.act 的 CAS 领取;[跳过本轮]只把游标推到失败批次末尾,失败期间新到的消息留给下一轮。
+  private upstreamKey(model: string): string {
+    try {
+      const k = this.opts.upstreamOf?.(model);
+      return typeof k === "string" && k ? k : model;
+    } catch {
+      return model;
+    }
+  }
+  private failureRow(scope: "contact" | "task", subject: string): FailureRow | undefined {
+    return one<FailureRow>(this.db, "SELECT * FROM gg_failures WHERE scope = ? AND subject = ?", scope, subject);
+  }
+  private upsertFailureTx(f: Omit<FailureRow, "created_at" | "updated_at">) {
+    const at = this.now();
+    run(
+      this.db,
+      `INSERT INTO gg_failures (scope, subject, contact_id, status, heal, effect, reason_class, label, fix, raw, attempts, attempt_seq, batch_end, inbox_end, room_id, upstream, card_id, model_override, compute_id, delivery_unknown, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (scope, subject) DO UPDATE SET contact_id = excluded.contact_id, status = excluded.status, heal = excluded.heal, effect = excluded.effect,
+         reason_class = excluded.reason_class, label = excluded.label, fix = excluded.fix, raw = excluded.raw, attempts = excluded.attempts, attempt_seq = excluded.attempt_seq,
+         batch_end = excluded.batch_end, inbox_end = excluded.inbox_end, room_id = excluded.room_id, upstream = excluded.upstream, card_id = excluded.card_id,
+         model_override = excluded.model_override, compute_id = excluded.compute_id, delivery_unknown = excluded.delivery_unknown, updated_at = excluded.updated_at`,
+      f.scope, f.subject, f.contact_id, f.status, f.heal, f.effect, f.reason_class, f.label, f.fix, f.raw.slice(0, 20000), f.attempts, f.attempt_seq, f.batch_end, f.inbox_end,
+      f.room_id, f.upstream, f.card_id, f.model_override, f.compute_id, f.delivery_unknown, at, at,
+    );
+  }
+  private breakerRow(upstream: string): { state: BreakerState; card_id: string | null; room_id: string | null } {
+    const r = one<{ state: string; card_id: string | null; room_id: string | null }>(this.db, "SELECT state, card_id, room_id FROM gg_breakers WHERE upstream = ?", upstream);
+    return r ? { state: JSON.parse(r.state) as BreakerState, card_id: r.card_id, room_id: r.room_id } : { state: BREAKER_CLOSED, card_id: null, room_id: null };
+  }
+  /** 写熔断状态;card 给了就一并改群级卡指针(null 表示当前没有可点的群级卡)。 */
+  private saveBreaker(upstream: string, state: BreakerState, card?: { card_id: string | null; room_id: string | null }) {
+    const keep = card ? 0 : 1;
+    run(
+      this.db,
+      `INSERT INTO gg_breakers (upstream, state, card_id, room_id, updated_at) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT (upstream) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at,
+         card_id = CASE WHEN ? = 1 THEN gg_breakers.card_id ELSE excluded.card_id END, room_id = CASE WHEN ? = 1 THEN gg_breakers.room_id ELSE excluded.room_id END`,
+      upstream, JSON.stringify(state), card?.card_id ?? null, card?.room_id ?? null, this.now(), keep, keep,
+    );
+  }
+  /** 共享熔断放行(F10):关闭放行;打开时暂停;冷却到期或用户在群级卡上点了重试才放 1 个半开探测,放行的探测记进状态。 */
+  private admitUpstream(upstream: string, priority: "interactive" | "background"): boolean {
+    const b = this.breakerRow(upstream);
+    if (b.state.status === "closed") return true;
+    const r = breakerAdmit(b.state, { nowMs: this.clock(), priority, manual: this.manualProbe.has(upstream) }, this.breakerPolicy);
+    if (!r.ok) {
+      this.report("breaker-state-invalid", { upstream, reason: r.reason });
+      return true;
+    }
+    if (r.admit) {
+      this.saveBreaker(upstream, r.state);
+      this.manualProbe.delete(upstream);
+    }
+    return r.admit;
+  }
+  /** 这个上游有一次成功:熔断回到关闭;从打开/半开恢复时群级卡作废(自动恢复抢先,之后的点击被拒),被暂停的成员续跑。 */
+  private upstreamOk(upstream: string) {
+    const b = this.breakerRow(upstream);
+    if (b.state.status === "closed" && b.state.failures === 0) return;
+    const r = breakerSuccess(b.state);
+    if (!r.ok) return;
+    const contacts: string[] = [];
+    const tasks: string[] = [];
+    tx(this.db, () => {
+      this.saveBreaker(upstream, r.state, { card_id: null, room_id: null });
+      if (!r.recovered) return;
+      if (b.card_id) run(this.db, "UPDATE gg_cards SET state = 'expired' WHERE card_id = ? AND state = 'open'", b.card_id);
+      for (const m of r.resume) {
+        const [kind, id] = splitMember(m);
+        if (kind === "contact" && run(this.db, "DELETE FROM gg_failures WHERE scope = 'contact' AND subject = ? AND status = 'paused'", id)) contacts.push(id);
+        if (kind === "task" && run(this.db, "UPDATE gg_failures SET status = 'retrying', attempts = 0, updated_at = ? WHERE scope = 'task' AND subject = ? AND status = 'paused'", this.now(), id)) tasks.push(id);
+      }
+    });
+    this.clearHostTimer(`breaker:${upstream}`);
+    this.manualProbe.delete(upstream);
+    if (!r.recovered) return;
+    if (b.card_id) this.emitCardUpdated(b.card_id);
+    for (const id of contacts) {
+      this.emitRetry({ scope: "contact", contactId: id, taskId: null, roomId: null, state: "cleared", attempt: 0, limit: 0, label: "已恢复" });
+      this.loop.notify(id, "now");
+    }
+    for (const id of tasks) this.scheduleComputeResume(id, 0);
+  }
+  /** 被打开的共享熔断挡住:记成暂停的成员(恢复后续跑),不调模型、不出自己的卡。batchEnd 为 null 时沿用已有失败记录的失败批次。 */
+  private pauseBehindBreaker(scope: "contact" | "task", subject: string, contactId: string, upstream: string, roomId: string | null, batchEnd: Record<string, number> | null, inboxEnd: number) {
+    const member = `${scope}:${subject}`;
+    tx(this.db, () => {
+      const b = this.breakerRow(upstream);
+      if (!b.state.members.includes(member)) this.saveBreaker(upstream, { ...b.state, members: [...b.state.members, member] });
+      const f = this.failureRow(scope, subject);
+      if (f) run(this.db, "UPDATE gg_failures SET status = 'paused', updated_at = ? WHERE scope = ? AND subject = ?", this.now(), scope, subject);
+      else
+        this.upsertFailureTx({
+          scope, subject, contact_id: contactId, status: "paused", heal: "A1", effect: "B0", reason_class: "upstream_unavailable", label: b.state.reason ?? "上游暂停", fix: "", raw: "",
+          attempts: 0, attempt_seq: 0, batch_end: JSON.stringify(batchEnd ?? {}), inbox_end: inboxEnd, room_id: roomId, upstream, card_id: null, model_override: null, compute_id: null, delivery_unknown: 0,
+        });
+    });
+    this.emitRetry({ scope, contactId, taskId: scope === "task" ? subject : null, roomId, state: "paused", attempt: 0, limit: 0, label: "共用的上游暂停中" });
+  }
+  private setHostTimer(key: string, ms: number, fn: () => void) {
+    this.clearHostTimer(key);
+    if (this.closed) return;
+    this.hostTimers.set(
+      key,
+      this.timersApi.set(() => {
+        this.hostTimers.delete(key);
+        if (!this.closed) fn();
+      }, Math.max(0, ms)),
+    );
+  }
+  private clearHostTimer(key: string) {
+    const h = this.hostTimers.get(key);
+    if (h !== undefined) this.timersApi.clear(h);
+    this.hostTimers.delete(key);
+  }
+  /** 熔断冷却到期放 1 个半开探测(A2 打开的不自动探测,严禁对 403 自动重试)。 */
+  private armBreakerProbe(upstream: string) {
+    const key = `breaker:${upstream}`;
+    if (this.closed || this.hostTimers.has(key)) return;
+    const b = this.breakerRow(upstream);
+    if (b.state.status === "closed" || b.state.manualOnly) return;
+    const wait = (b.state.openedAt ?? this.clock()) + this.breakerPolicy.cooldownMs - this.clock();
+    this.setHostTimer(key, wait, () => this.probeMembers(upstream));
+  }
+  /** 叫醒被暂停的成员:第一个拿到半开探测,其余仍被挡住;探测失败会重新打开并再排一次探测。 */
+  private probeMembers(upstream: string) {
+    const b = this.breakerRow(upstream);
+    if (b.state.status === "closed") return;
+    for (const m of b.state.members) {
+      const [kind, id] = splitMember(m);
+      if (kind === "contact") this.loop.notify(id, "now");
+      if (kind === "task" && run(this.db, "UPDATE gg_failures SET status = 'retrying', updated_at = ? WHERE scope = 'task' AND subject = ? AND status = 'paused'", this.now(), id)) this.scheduleComputeResume(id, 0);
+    }
+  }
+  private emitRetry(e: { scope: "contact" | "task"; contactId: string; taskId: string | null; roomId: string | null; state: "retrying" | "card" | "paused" | "cleared"; attempt: number; limit: number; label: string }) {
+    this.bus.emit({ type: "retry.updated", ...e, label: e.label.slice(0, 200) });
+  }
+  private emitCardUpdated(cardId: string) {
+    const c = one<{ room_id: string; seq: number }>(this.db, "SELECT room_id, seq FROM gg_cards WHERE card_id = ?", cardId);
+    if (!c) return;
+    const m = this.projected(c.room_id).find((x) => x.seq === c.seq);
+    if (m) this.bus.emit({ type: "message.updated", message: this.messageView(c.room_id, m) });
+  }
+  /**
+   * 失败原文 → 原因类别(kernel 失败分类器:结构化字段优先、原文规则其次,认不出记 unknown 并留原文)。
+   * 宿主卡死判定给出的失败(错误对象带 stall: no_response/stalled/stream_dropped)按「整轮已判失败」处理,不再静默重试同一轮(D26 §8.3)。
+   */
+  private classify(err: unknown): FailureClass {
+    let text = "";
+    let httpStatus: number | null = null;
+    let kind: string | null = null;
+    let stall: "no_response" | "stalled" | "stream_dropped" | null = null;
+    try {
+      text = err instanceof Error ? err.message || err.name : typeof err === "string" ? err : (JSON.stringify(err) ?? String(err));
+      const e = (typeof err === "object" && err !== null ? err : {}) as { status?: unknown; httpStatus?: unknown; statusCode?: unknown; kind?: unknown; stall?: unknown };
+      const st = e.status ?? e.httpStatus ?? e.statusCode;
+      if (typeof st === "number" && Number.isInteger(st)) httpStatus = st;
+      if (typeof e.kind === "string") kind = e.kind;
+      if (e.stall === "no_response" || e.stall === "stalled" || e.stall === "stream_dropped") stall = e.stall;
+    } catch {
+      text ||= "(读不出错误内容)";
+    }
+    return classifyFailure({ text, httpStatus, kind, stall });
+  }
+  private failureActions(kind: "contact" | "task", currentModel: string): CardActionRow[] {
+    const base: CardActionRow[] =
+      kind === "contact"
+        ? [{ actionId: "retry", label: "重试本轮", style: "primary" }, { actionId: "skip", label: "跳过本轮", style: "default" }]
+        : [{ actionId: "retry", label: "重试(同一会话续跑)", style: "primary" }, { actionId: "give-up", label: "不重试了", style: "danger" }];
+    // 换模型重试:列出可选的备用模型,用户选了才换(严禁静默换模)
+    const models = this.settings().models.filter((m) => m.id !== currentModel).slice(0, 4);
+    return [...base, ...models.map((m): CardActionRow => ({ actionId: `switch-model:${m.id}`, label: `换成 ${m.label || m.id} 重试`.slice(0, 40), style: "default" }))];
+  }
+  private failureBody(cause: string, cls: Pick<FailureClass, "fix" | "raw">, attempts: number, extra = ""): string {
+    const why =
+      cause === "exhausted" ? `已自动重试 ${attempts} 次仍然失败。`
+        : cause === "permanent" ? "这类错误自动重试也不会好,没有自动重试。"
+          : cause === "stall" ? "这一轮卡住没有进展,已判失败,没有再静默重试。"
+            : cause === "delivery-unknown" ? "不确定这一轮已经做了哪些外部动作,为免重复,没有自动重发。"
+              : cause === "crash-loop" ? "宿主处理这批消息时连续退出,为免无限重启,先停在这里。"
+                : "没能继续。";
+    const fix = cls.fix && cls.fix !== "—" ? `\n修法:${cls.fix}` : "";
+    return `${why}${fix}${extra ? `\n${extra}` : ""}\n\n原文:\n${cls.raw.slice(0, 8000) || "(没有原文)"}`.slice(0, 20000);
+  }
+  /** 宿主机械出一张原位失败卡(发送者记为出问题的联系人,不经它的脑子)。必须在事务里调用。 */
+  private postFailureCardTx(roomId: string, senderContactId: string, taskId: string | null, title: string, body: string, actions: CardActionRow[], meta: FailureCardMeta): { roomId: string; seq: number; cardId: string } {
+    const cardId = this.newId("card");
+    const r = this.appendMessageTx(roomId, { kind: "contact", id: senderContactId }, {
+      text: title.slice(0, 200),
+      actionKey: `failure:${cardId}`,
+      card: { card_id: cardId, kind: "failure", task_id: taskId, title: title.slice(0, 200), body, state: "open", actions: JSON.stringify(actions.slice(0, 6)), meta: JSON.stringify(meta) },
+    });
+    return { roomId, seq: r.seq, cardId };
+  }
+  private memberName(m: string): string {
+    const [kind, id] = splitMember(m);
+    if (kind === "contact") return getDoc<ContactDoc>(this.db, `contact:${id}`)?.value.name ?? id;
+    return `任务「${getDoc<TaskDoc>(this.db, `task:${id}`)?.value.title ?? id}」`;
+  }
+  /** 全群合并的 1 张群级卡(F10/F2)。必须在事务里调用。 */
+  private groupCardTx(upstream: string, state: BreakerState, roomId: string, senderContactId: string, cls: Pick<FailureClass, "label" | "fix" | "raw">): { roomId: string; seq: number; cardId: string } {
+    const names = state.members.map((m) => this.memberName(m)).join("、");
+    const title = `${cls.label}:共用这个上游的${state.members.length > 1 ? ` ${state.members.length} 位成员` : "成员"}先暂停`;
+    const how = state.manualOnly ? "鉴权或额度有问题,不会自动重试;修好以后点「重试」。" : "连续失败,后台重试已暂停;过一会儿会自动探测一次,恢复后接着处理,也可以现在点「重试」。";
+    const body = this.failureBody("", { fix: cls.fix, raw: cls.raw }, 0, `${names} 用的上游 ${upstream} ${how}`).replace(/^没能继续。\n?/, "");
+    const actions: CardActionRow[] = [{ actionId: "retry", label: "重试", style: "primary" }, { actionId: "skip", label: "跳过失败的这批消息", style: "default" }];
+    return this.postFailureCardTx(roomId, senderContactId, null, title, body, actions, { scope: "breaker", subject: upstream, contactId: senderContactId, upstream, attemptSeq: 0, models: [] });
+  }
+  /** 在途轮次标记(F12):本轮开始写、提交时删;宿主中途退出就留在库里,重启时据此认出未提交轮次。 */
+  private markRunning(contactId: string, batchKey: string, roomId: string | null, lastSeen: Record<string, number>, inboxEnd: number) {
+    run(
+      this.db,
+      `INSERT INTO gg_round_guard (contact_id, running, boot_id, batch_key, room_id, batch_end, inbox_end, crash_key, crash_count, started_at) VALUES (?, 1, ?, ?, ?, ?, ?, NULL, 0, ?)
+       ON CONFLICT (contact_id) DO UPDATE SET running = 1, boot_id = excluded.boot_id, batch_key = excluded.batch_key, room_id = excluded.room_id,
+         batch_end = excluded.batch_end, inbox_end = excluded.inbox_end, started_at = excluded.started_at`,
+      contactId, this.bootId, batchKey, roomId, JSON.stringify(lastSeen), inboxEnd, this.now(),
+    );
+  }
+  private clearRunningTx(contactId: string) {
+    run(this.db, "UPDATE gg_round_guard SET running = 0 WHERE contact_id = ?", contactId);
+  }
+
+  /** 联系人一轮失败:按 A×B 决定静默退避(抛 RoundRetry 交注意循环按延迟重跑)、出原位失败卡,或被共享熔断暂停;后两种返回 done 停在原位。 */
+  private onContactFailure(contactId: string, name: string, err: unknown, ctx: { upstream: string; focusRoom: string | null; lastSeen: Record<string, number>; inboxEnd: number }): RoundStatus {
+    const cls = this.classify(err);
+    const heal = healOf(cls.reasonClass);
+    if (heal === "user_stopped") {
+      // 用户主动中断不是失败(F7):清掉残留的瞬态错误,0 重试 0 出卡
+      tx(this.db, () => {
+        run(this.db, "DELETE FROM gg_failures WHERE scope = 'contact' AND subject = ?", contactId);
+        this.clearRunningTx(contactId);
+      });
+      this.emitRetry({ scope: "contact", contactId, taskId: null, roomId: ctx.focusRoom, state: "cleared", attempt: 0, limit: 0, label: cls.label });
+      return "done";
+    }
+    const prev = this.failureRow("contact", contactId);
+    const continuing = prev?.status === "retrying" || prev?.status === "paused";
+    const attempts = prev?.status === "retrying" ? prev.attempts : 0;
+    // 失败批次末尾 failed_batch_end_seq:同一次失败的后续重试沿用第一次失败时的位置,失败期间新到的消息不算进去
+    const batchEnd = continuing && prev.batch_end !== "{}" ? prev.batch_end : JSON.stringify(ctx.lastSeen);
+    const inboxEnd = continuing && prev.inbox_end ? prev.inbox_end : ctx.inboxEnd;
+    const room = ctx.focusRoom ?? prev?.room_id ?? this.roomsOfContact(contactId)[0]?.id ?? null;
+    const model = prev?.model_override ?? null;
+    const b = this.breakerRow(ctx.upstream);
+    const br = breakerFailure(b.state, { nowMs: this.clock(), heal, member: `contact:${contactId}`, reason: cls.label }, this.breakerPolicy);
+    const row = (status: FailureRow["status"], over: Partial<FailureRow> = {}): Omit<FailureRow, "created_at" | "updated_at"> => ({
+      scope: "contact", subject: contactId, contact_id: contactId, status, heal, effect: "B0", reason_class: cls.reasonClass, label: cls.label, fix: cls.fix, raw: cls.raw,
+      attempts, attempt_seq: prev?.attempt_seq ?? 0, batch_end: batchEnd, inbox_end: inboxEnd, room_id: room, upstream: ctx.upstream, card_id: null, model_override: model, compute_id: null, delivery_unknown: 0, ...over,
+    });
+    if (br.ok && br.state.status !== "closed") {
+      // 共享熔断打开:暂停,不出自己的卡;当前没有可点的群级卡(刚打开,或用户发起的探测又失败了)才出 1 张
+      let card = null as { roomId: string; seq: number; cardId: string } | null;
+      tx(this.db, () => {
+        this.upsertFailureTx(row("paused"));
+        this.clearRunningTx(contactId);
+        if (room && (br.opened || !b.card_id)) {
+          card = this.groupCardTx(ctx.upstream, br.state, room, contactId, cls);
+          this.saveBreaker(ctx.upstream, br.state, { card_id: card.cardId, room_id: room });
+        } else this.saveBreaker(ctx.upstream, br.state);
+      });
+      if (card) this.afterAppend(card.roomId, card.seq, { kind: "contact", id: contactId });
+      this.armBreakerProbe(ctx.upstream);
+      this.emitRetry({ scope: "contact", contactId, taskId: null, roomId: room, state: "paused", attempt: 0, limit: 0, label: cls.label });
+      return "done";
+    }
+    const d = decideRetry({ heal, effect: "B0", attempts, harnessAttempts: 0, stallJudged: cls.via === "stall" }, this.retryPolicy, this.random);
+    if (d.kind === "retry") {
+      tx(this.db, () => {
+        this.upsertFailureTx(row("retrying", { attempts: d.attempt }));
+        if (br.ok) this.saveBreaker(ctx.upstream, br.state);
+        this.clearRunningTx(contactId);
+      });
+      this.emitRetry({ scope: "contact", contactId, taskId: null, roomId: room, state: "retrying", attempt: d.attempt, limit: d.limit, label: cls.label });
+      throw new RoundRetry(d.delayMs, cls.label);
+    }
+    const cause = d.kind === "card" ? d.cause : "permanent";
+    let card = null as { roomId: string; seq: number; cardId: string } | null;
+    tx(this.db, () => {
+      const attemptSeq = (prev?.attempt_seq ?? 0) + 1;
+      if (room) {
+        const contact = getDoc<ContactDoc>(this.db, `contact:${contactId}`)?.value;
+        const current = model ?? contact?.speakingModel ?? "";
+        const actions = this.failureActions("contact", current);
+        card = this.postFailureCardTx(room, contactId, null, `${name} 这一轮没回成:${cls.label}`, this.failureBody(cause, cls, attempts), actions, {
+          scope: "contact", subject: contactId, contactId, upstream: ctx.upstream, attemptSeq, models: switchModels(actions),
+        });
+      }
+      this.upsertFailureTx(row("card", { attempt_seq: attemptSeq, card_id: card?.cardId ?? null }));
+      if (br.ok) this.saveBreaker(ctx.upstream, br.state);
+      this.clearRunningTx(contactId);
+    });
+    if (card) this.afterAppend(card.roomId, card.seq, { kind: "contact", id: contactId });
+    this.emitRetry({ scope: "contact", contactId, taskId: null, roomId: room, state: "card", attempt: attempts, limit: 0, label: cls.label });
+    return "done";
+  }
+
+  /** 当前实例执行失败(在事务里):按 A×B 决定同一会话续跑、出卡或被熔断暂停;返回 null 表示照旧走 ExecFailed(越界违规、不在执行中等)。 */
+  private onComputeFailureTx(row: { task_id: string; contact_id: string; room_id: string }, ev: Extract<ComputeEvent, { kind: "failed" }>): ComputeFailureOutcome | null {
+    if (ev.violations.length) return null;
+    const doc = this.taskDoc(row.task_id).value;
+    const t = doc.task;
+    if (t.computeId !== ev.computeId || (t.state !== "T3_Running" && t.state !== "T4b_BlockedOnHuman")) return null;
+    const cls = classifyFailure({ text: ev.reason, httpStatus: null, kind: null });
+    const heal = healOf(cls.reasonClass);
+    if (heal === "user_stopped") return null;
+    const prev = this.failureRow("task", row.task_id);
+    const attempts = prev?.status === "retrying" ? prev.attempts : 0;
+    // 维度 B:已经有过真实进展的,工作区可能已有改动,按可对账的 B1 处理;分类器判不知道副作用做没做完的一律 B2
+    const progressed = !!one(this.db, "SELECT 1 FROM gg_progress WHERE compute_id = ? AND kind IN ('milestone', 'blocked') LIMIT 1", ev.computeId);
+    const effect = effectOf(progressed ? "B1" : "B0", cls.retryClass);
+    const model = prev?.model_override ?? one<{ model: string }>(this.db, "SELECT model FROM gg_compute WHERE compute_id = ?", ev.computeId)?.model ?? "";
+    const upstream = this.upstreamKey(model);
+    // 统一重试权(F3):CLI 自己按 CLAUDE_CODE_MAX_RETRIES 重试过上游错误,计入同一预算,宿主不再叠加。
+    // 适配器的失败原因常常只有「进程以 N 退出」、看不出是不是上游错误(实测:上游一直 502 时也是这样),所以只要不是被信号结束,都按 CLI 已用掉预算算
+    const harnessAttempts = ev.signal === null ? Math.max(0, this.opts.computeHarnessRetries ?? 0) : 0;
+    const b = this.breakerRow(upstream);
+    const br = breakerFailure(b.state, { nowMs: this.clock(), heal, member: `task:${row.task_id}`, reason: cls.label }, this.breakerPolicy);
+    const base = (status: FailureRow["status"], over: Partial<FailureRow> = {}): Omit<FailureRow, "created_at" | "updated_at"> => ({
+      scope: "task", subject: row.task_id, contact_id: row.contact_id, status, heal, effect, reason_class: cls.reasonClass, label: cls.label, fix: cls.fix, raw: cls.raw,
+      attempts, attempt_seq: prev?.attempt_seq ?? 0, batch_end: "{}", inbox_end: 0, room_id: doc.roomId, upstream, card_id: null, model_override: prev?.model_override ?? null,
+      compute_id: ev.computeId, delivery_unknown: effect === "B2" ? 1 : 0, ...over,
+    });
+    if (br.ok && br.state.status !== "closed") {
+      this.upsertFailureTx(base("paused"));
+      let card = null as { roomId: string; seq: number; cardId: string } | null;
+      if (br.opened || !b.card_id) {
+        card = this.groupCardTx(upstream, br.state, doc.roomId, row.contact_id, cls);
+        this.saveBreaker(upstream, br.state, { card_id: card.cardId, room_id: doc.roomId });
+      } else this.saveBreaker(upstream, br.state);
+      return { kind: "paused", upstream, card, label: cls.label };
+    }
+    if (br.ok) this.saveBreaker(upstream, br.state);
+    const d = decideRetry({ heal, effect, attempts, harnessAttempts }, this.retryPolicy, this.random);
+    if (d.kind === "retry") {
+      this.upsertFailureTx(base("retrying", { attempts: d.attempt }));
+      return { kind: "retry", delayMs: d.delayMs, attempt: d.attempt, limit: d.limit, label: cls.label };
+    }
+    const cause = d.kind === "card" ? d.cause : "permanent";
+    const attemptSeq = (prev?.attempt_seq ?? 0) + 1;
+    const actions = this.failureActions("task", model);
+    const card = this.postFailureCardTx(doc.roomId, row.contact_id, row.task_id, `任务「${doc.title}」执行中断:${cls.label}`, this.failureBody(cause, cls, attempts + harnessAttempts), actions, {
+      scope: "task", subject: row.task_id, contactId: row.contact_id, upstream, attemptSeq, models: switchModels(actions),
+    });
+    this.upsertFailureTx(base("card", { attempt_seq: attemptSeq, card_id: card.cardId }));
+    return { kind: "card", card, label: cls.label };
+  }
+  private afterComputeFailure(row: { task_id: string; contact_id: string; room_id: string }, o: ComputeFailureOutcome) {
+    const roomId = this.taskDoc(row.task_id).value.roomId;
+    if (o.kind === "retry") {
+      this.emitRetry({ scope: "task", contactId: row.contact_id, taskId: row.task_id, roomId, state: "retrying", attempt: o.attempt, limit: o.limit, label: o.label });
+      this.scheduleComputeResume(row.task_id, o.delayMs);
+      return;
+    }
+    if (o.card) this.afterAppend(o.card.roomId, o.card.seq, { kind: "contact", id: row.contact_id });
+    this.emitRetry({ scope: "task", contactId: row.contact_id, taskId: row.task_id, roomId, state: o.kind === "paused" ? "paused" : "card", attempt: 0, limit: 0, label: o.label });
+    if (o.kind === "paused") this.armBreakerProbe(o.upstream);
+  }
+  private scheduleComputeResume(taskId: string, ms: number, note?: string) {
+    this.setHostTimer(`task:${taskId}`, ms, () => void this.retryCompute(taskId, note));
+  }
+  /**
+   * 续跑同一实例(Tier 1:同一 CLI 会话 --resume,不从头 spawn,已落盘的步骤不重跑);续不上就出卡交用户。
+   * 走和其它续接同一条路:先拿 Compute 槽位(AC-23,没空位就排队),这一轮的生效模型由 computeTurn 现场解析并记进尝试账本(AC-51/AC-32)。
+   */
+  private async retryCompute(taskId: string, note?: string) {
+    if (this.closed) return;
+    const f = this.failureRow("task", taskId);
+    if (f?.status !== "retrying" || !f.compute_id) return;
+    const doc = getDoc<TaskDoc>(this.db, `task:${taskId}`)?.value;
+    if (!doc || doc.task.computeId !== f.compute_id || (doc.task.state !== "T3_Running" && doc.task.state !== "T4b_BlockedOnHuman")) {
+      run(this.db, "DELETE FROM gg_failures WHERE scope = 'task' AND subject = ?", taskId);
+      return;
+    }
+    if (!this.admitUpstream(f.upstream, "background")) return this.pauseBehindBreaker("task", taskId, f.contact_id, f.upstream, doc.roomId, null, 0);
+    const e = { kind: "resume" as const, taskId, computeId: f.compute_id, text: this.resumePrompt(taskId, f, note) };
+    if (!this.takeSlot(e, f.contact_id, doc.roomId)) return;
+    let r: { ok: true } | { ok: false; reason: string };
+    try {
+      r = (await this.computeTurn(e, f.model_override ? "switch-retry" : "retry")) ? { ok: true } : { ok: false, reason: "这一轮没能送进 Compute(见进度)" };
+    } catch (err) {
+      r = { ok: false, reason: err instanceof Error ? err.message : String(err) };
+    }
+    if (r.ok) {
+      this.launchEpoch.set(taskId, (this.launchEpoch.get(taskId) ?? 0) + 1);
+      return;
+    }
+    this.giveBack(taskId);
+    if (r.ok || this.closed) return;
+    // 续不上(例如上一轮没拿到 CLI 会话号):不另起一个从头跑的 Compute,出卡交用户
+    let card = null as { roomId: string; seq: number; cardId: string } | null;
+    tx(this.db, () => {
+      const cur = this.failureRow("task", taskId);
+      if (cur?.status !== "retrying") return;
+      const attemptSeq = cur.attempt_seq + 1;
+      const model = cur.model_override ?? one<{ model: string }>(this.db, "SELECT model FROM gg_compute WHERE compute_id = ?", f.compute_id)?.model ?? "";
+      const actions = this.failureActions("task", model);
+      card = this.postFailureCardTx(doc.roomId, cur.contact_id, taskId, `任务「${doc.title}」续跑不了:${cur.label}`, this.failureBody("", { fix: cur.fix, raw: cur.raw }, cur.attempts, `续跑被拒:${r.reason}`).replace(/^没能继续。\n?/, ""), actions, {
+        scope: "task", subject: taskId, contactId: cur.contact_id, upstream: cur.upstream, attemptSeq, models: switchModels(actions),
+      });
+      run(this.db, "UPDATE gg_failures SET status = 'card', attempt_seq = ?, card_id = ?, updated_at = ? WHERE scope = 'task' AND subject = ?", attemptSeq, card.cardId, this.now(), taskId);
+    });
+    if (card) {
+      this.afterAppend(card.roomId, card.seq, { kind: "contact", id: f.contact_id });
+      this.emitRetry({ scope: "task", contactId: f.contact_id, taskId, roomId: doc.roomId, state: "card", attempt: f.attempts, limit: 0, label: f.label });
+    }
+  }
+  private resumePrompt(taskId: string, f: FailureRow, note?: string): string {
+    const head = note ? `${note}(上一轮中断原因:${f.label})。` : `上一轮执行中断(${f.label}),这是第 ${f.attempts} 次自动续跑。`;
+    return [
+      head,
+      "这是同一个会话,对话历史还在:已经确认做完的步骤不要重做,从中断的地方接着做。",
+      "动手改文件之前先看一眼工作区现状,已经写进去的改动不要再追加一遍;已经发出去的消息或外部动作不要再发一遍。",
+      this.workspaceNote(taskId),
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+  /** 窗口 ② 对账(A27-03 底座):把工作区 git status 摘要带进续跑提示,防止把已写入的补丁重复追加第二遍;不是 git 仓库或读不到就不带。 */
+  private workspaceNote(taskId: string): string {
+    let cwd: string | undefined;
+    try {
+      cwd = this.opts.computeCwd?.(taskId);
+    } catch {
+      return "";
+    }
+    if (!cwd || !existsSync(cwd)) return "";
+    // 剥掉 GIT_* 环境:宿主在 git 钩子或别的仓库环境里运行时,不能读到宿主自己的仓库
+    const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith("GIT_")));
+    const r = spawnSync("git", ["-C", cwd, "status", "--porcelain=v1", "--untracked-files=all"], { encoding: "utf8", timeout: 5000, env });
+    if (r.status !== 0 || typeof r.stdout !== "string") return "";
+    const lines = r.stdout.split("\n").filter(Boolean);
+    if (!lines.length) return "工作区现状:没有未提交的改动。";
+    return `工作区现状(git status,共 ${lines.length} 项):\n${lines.slice(0, 50).join("\n")}${lines.length > 50 ? "\n…" : ""}`;
+  }
+  /** 任务被取消(F7):在途失败(残留瞬态错误、待续跑)一并清掉,不再续跑、不出失败卡;失败退出的实例已经没有进程,当场确认停止。必须在事务里调用。 */
+  private afterCancelTx(taskId: string) {
+    const f = this.failureRow("task", taskId);
+    if (!f) return;
+    run(this.db, "DELETE FROM gg_failures WHERE scope = 'task' AND subject = ?", taskId);
+    if (f.card_id) run(this.db, "UPDATE gg_cards SET state = 'expired' WHERE card_id = ? AND state = 'open'", f.card_id);
+    const t = this.taskDoc(taskId).value.task;
+    const dead = f.compute_id ? one<{ status: string }>(this.db, "SELECT status FROM gg_compute WHERE compute_id = ?", f.compute_id)?.status === "failed" : false;
+    if (t.state === "T9_StopRequested" && f.compute_id && t.computeId === f.compute_id && dead) this.stepTaskTx(taskId, { kind: "StoppedConfirmed", taskId, computeId: f.compute_id });
+  }
+  /** 失败卡点击的领取判定(与 kernel claimFailureCard 同一规则);卡已过期(失败已恢复或已有新的一张)直接拒。 */
+  private checkFailureClaim(card: CardRow, actionId: string): FailureDecision {
+    const meta = JSON.parse(card.meta) as FailureCardMeta;
+    const switching = actionId.startsWith("switch-model:");
+    const action = (switching ? "switch-model" : actionId) as FailureDecision["action"];
+    const targetModel = switching ? actionId.slice("switch-model:".length) : null;
+    let current = false;
+    let attemptSeq = meta.attemptSeq;
+    let row: FailureRow | undefined;
+    if (meta.scope === "breaker") {
+      const b = this.breakerRow(meta.upstream);
+      current = b.card_id === card.card_id && b.state.status !== "closed";
+    } else {
+      row = this.failureRow(meta.scope, meta.subject);
+      current = !!row && row.card_id === card.card_id && row.status === "card";
+      attemptSeq = row?.attempt_seq ?? attemptSeq;
+    }
+    // 已被点过(连点、与自动恢复竞争)按 CAS 规则拒;还开着但失败已恢复或已有新的一张,就作废这张
+    if (card.state !== "open") throw new HostError("conflict", "这张卡已经处理过了");
+    if (!current) {
+      if (run(this.db, "UPDATE gg_cards SET state = 'expired' WHERE card_id = ? AND state = 'open'", card.card_id)) this.emitCardUpdated(card.card_id);
+      throw new HostError("conflict", "这张卡已过期(失败已恢复,或已经有了新的一张)");
+    }
+    const r = claimFailureCard(
+      { status: card.state, ownerUserId: this.userId, contactId: meta.contactId, attemptSeq, allowedModels: meta.models },
+      { by: { kind: "user", id: this.userId }, attemptSeq: meta.attemptSeq, action, targetModel },
+    );
+    if (!r.ok) {
+      if (r.reason === "not-open") throw new HostError("conflict", "这张卡已经处理过了");
+      if (r.reason === "stale-attempt") throw new HostError("conflict", "这张卡已过期(有了新的一次尝试)");
+      if (r.reason === "forbidden") throw new HostError("forbidden", r.detail);
+      throw new HostError("invalid_params", r.detail);
+    }
+    return { card, meta, action, targetModel: r.targetModel, row };
+  }
+  /** 执行失败卡上的选择(在 cards.act 的事务里);返回事务提交后要做的事。 */
+  private applyFailureDecisionTx(d: FailureDecision): () => void {
+    const at = this.now();
+    const { meta } = d;
+    if (meta.scope === "contact") {
+      const contactId = meta.subject;
+      const f = d.row!;
+      if (d.action === "skip") {
+        // [跳过本轮] 只推到失败批次末尾 failed_batch_end_seq;失败期间新到的消息(seq 更大)留给下一轮(A27-05)
+        const rooms = this.roomsOfContact(contactId);
+        const target = skipTarget(Object.fromEntries(rooms.map((r) => [r.id, this.cursor(contactId, r.id)])), JSON.parse(f.batch_end));
+        if (target.ok) this.advanceCursorsTx(contactId, { ...target.cursors });
+        run(this.db, "UPDATE gg_inbox SET consumed = 1 WHERE contact_id = ? AND consumed = 0 AND id <= ?", contactId, f.inbox_end);
+        run(this.db, "DELETE FROM gg_failures WHERE scope = 'contact' AND subject = ?", contactId);
+        run(this.db, "DELETE FROM gg_round_guard WHERE contact_id = ?", contactId);
+        return () => {
+          this.emitRetry({ scope: "contact", contactId, taskId: null, roomId: f.room_id, state: "cleared", attempt: 0, limit: 0, label: "已跳过" });
+          this.loop.notify(contactId, "now");
+        };
+      }
+      // [重试本轮] / [换模型重试]:同一批输入连同失败期间新到的消息重新跑,自动退避预算重新算;只有显式选了才换模型
+      run(
+        this.db,
+        "UPDATE gg_failures SET status = 'retrying', attempts = 0, card_id = NULL, batch_end = '{}', inbox_end = 0, model_override = COALESCE(?, model_override), updated_at = ? WHERE scope = 'contact' AND subject = ?",
+        d.targetModel, at, contactId,
+      );
+      return () => this.loop.notify(contactId, "now");
+    }
+    if (meta.scope === "task") {
+      const taskId = meta.subject;
+      const f = d.row!;
+      if (d.action === "give-up") {
+        run(this.db, "DELETE FROM gg_failures WHERE scope = 'task' AND subject = ?", taskId);
+        const t = this.taskDoc(taskId).value.task;
+        if (f.compute_id && t.computeId === f.compute_id && !TERMINAL.has(t.state) && t.state !== "T9_StopRequested") {
+          this.stepTaskTx(taskId, { kind: "ExecFailed", computeId: f.compute_id });
+          // 失败退出的实例已经没有进程:当场确认停止,任务落到 T11
+          if (this.taskDoc(taskId).value.task.state === "T9_StopRequested") this.stepTaskTx(taskId, { kind: "StoppedConfirmed", taskId, computeId: f.compute_id });
+        }
+        const doc = this.taskDoc(taskId).value;
+        const payload: Inbound = { kind: "compute", roomId: doc.roomId, taskId, computeId: f.compute_id ?? "-", signal: "failed", summary: `失败:${f.label}(用户选了不重试)`, at };
+        run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", f.contact_id, doc.roomId, JSON.stringify(payload), at);
+        return () => {
+          this.emitTask(taskId);
+          this.emitRetry({ scope: "task", contactId: f.contact_id, taskId, roomId: doc.roomId, state: "cleared", attempt: 0, limit: 0, label: "不重试了" });
+          this.loop.notify(f.contact_id, "now");
+        };
+      }
+      // 半途换模(F13):新模型并入累积生产集合,T5 审查门据此同时拒绝两家厂商;启动快照不在本片(AC-32)
+      if (d.action === "switch-model" && d.targetModel && f.compute_id) this.stepTaskTx(taskId, { kind: "ProducerModelAdded", model: d.targetModel, computeId: f.compute_id });
+      run(this.db, "UPDATE gg_failures SET status = 'retrying', attempts = 0, card_id = NULL, model_override = COALESCE(?, model_override), updated_at = ? WHERE scope = 'task' AND subject = ?", d.targetModel, at, taskId);
+      const note = d.action === "switch-model" ? `用户选了换成 ${d.targetModel} 重试这一轮` : "用户点了重试";
+      const breakerOpen = this.breakerRow(f.upstream).state.status !== "closed";
+      return () => {
+        this.emitTask(taskId);
+        if (breakerOpen) this.manualProbe.add(f.upstream);
+        this.scheduleComputeResume(taskId, 0, note);
+      };
+    }
+    // 群级卡
+    const upstream = meta.upstream;
+    const b = this.breakerRow(upstream);
+    const contacts: string[] = [];
+    const tasks: string[] = [];
+    for (const m of b.state.members) {
+      const [kind, id] = splitMember(m);
+      if (kind === "contact") contacts.push(id);
+      if (kind === "task") tasks.push(id);
+    }
+    if (d.action === "retry") {
+      // 用户在群级卡上点[重试]:不等冷却,放 1 个半开探测;其余成员等探测结果。这张卡用掉了,探测再失败会出新的一张
+      for (const id of contacts) run(this.db, "UPDATE gg_failures SET status = 'retrying', attempts = 0, updated_at = ? WHERE scope = 'contact' AND subject = ? AND status = 'paused'", at, id);
+      for (const id of tasks) run(this.db, "UPDATE gg_failures SET status = 'retrying', attempts = 0, updated_at = ? WHERE scope = 'task' AND subject = ? AND status = 'paused'", at, id);
+      this.saveBreaker(upstream, b.state, { card_id: null, room_id: null });
+      return () => {
+        this.manualProbe.add(upstream);
+        for (const id of contacts) this.loop.notify(id, "now");
+        for (const id of tasks) this.scheduleComputeResume(id, 0, "用户点了重试");
+      };
+    }
+    // [跳过]:联系人成员各自只跳过自己失败的那一批;任务成员各出自己的卡由用户逐个定;熔断清零
+    const cards: { roomId: string; seq: number; sender: string }[] = [];
+    for (const id of contacts) {
+      const f = this.failureRow("contact", id);
+      if (!f) continue;
+      const rooms = this.roomsOfContact(id);
+      const target = skipTarget(Object.fromEntries(rooms.map((r) => [r.id, this.cursor(id, r.id)])), JSON.parse(f.batch_end));
+      if (target.ok) this.advanceCursorsTx(id, { ...target.cursors });
+      run(this.db, "UPDATE gg_inbox SET consumed = 1 WHERE contact_id = ? AND consumed = 0 AND id <= ?", id, f.inbox_end);
+      run(this.db, "DELETE FROM gg_failures WHERE scope = 'contact' AND subject = ?", id);
+      run(this.db, "DELETE FROM gg_round_guard WHERE contact_id = ?", id);
+    }
+    for (const id of tasks) {
+      const f = this.failureRow("task", id);
+      const doc = getDoc<TaskDoc>(this.db, `task:${id}`)?.value;
+      if (!f || !doc) continue;
+      const attemptSeq = f.attempt_seq + 1;
+      const model = f.model_override ?? one<{ model: string }>(this.db, "SELECT model FROM gg_compute WHERE compute_id = ?", f.compute_id ?? "")?.model ?? "";
+      const actions = this.failureActions("task", model);
+      const c = this.postFailureCardTx(doc.roomId, f.contact_id, id, `任务「${doc.title}」执行中断:${f.label}`, this.failureBody(f.heal === "A2" || f.heal === "A3" ? "permanent" : "exhausted", { fix: f.fix, raw: f.raw }, f.attempts), actions, {
+        scope: "task", subject: id, contactId: f.contact_id, upstream, attemptSeq, models: switchModels(actions),
+      });
+      run(this.db, "UPDATE gg_failures SET status = 'card', attempt_seq = ?, card_id = ?, updated_at = ? WHERE scope = 'task' AND subject = ?", attemptSeq, c.cardId, at, id);
+      cards.push({ roomId: c.roomId, seq: c.seq, sender: f.contact_id });
+    }
+    this.saveBreaker(upstream, BREAKER_CLOSED, { card_id: null, room_id: null });
+    return () => {
+      this.clearHostTimer(`breaker:${upstream}`);
+      for (const c of cards) this.afterAppend(c.roomId, c.seq, { kind: "contact", id: c.sender });
+      for (const id of contacts) {
+        this.emitRetry({ scope: "contact", contactId: id, taskId: null, roomId: null, state: "cleared", attempt: 0, limit: 0, label: "已跳过" });
+        this.loop.notify(id, "now");
+      }
+    };
+  }
+  /** 启动回收(F4/F6/F12):上次留下的在途轮次按 crash_recovery_count 续跑或熔断出卡;磁盘上没被领走的输入交给联系人;等续跑的任务、被暂停的成员接着排。 */
+  private reconcileOnStart() {
+    const cards: { roomId: string; seq: number; contactId: string }[] = [];
+    const max = this.opts.maxCrashRecoveries ?? 1;
+    tx(this.db, () => {
+      // 新进程里不会有在途的半开探测
+      for (const b of all<{ upstream: string; state: string }>(this.db, "SELECT upstream, state FROM gg_breakers")) {
+        const st = JSON.parse(b.state) as BreakerState;
+        if (st.probeInFlight) this.saveBreaker(b.upstream, { ...st, probeInFlight: false });
+      }
+      for (const g of all<GuardRow>(this.db, "SELECT * FROM gg_round_guard WHERE running = 1")) {
+        const r = crashRecover({ key: g.crash_key, count: g.crash_count }, { key: g.batch_key, effect: "B0" }, max);
+        if (!r.ok) continue;
+        run(this.db, "UPDATE gg_round_guard SET running = 0, crash_key = ?, crash_count = ? WHERE contact_id = ?", r.state.key, r.state.count, g.contact_id);
+        if (r.decision !== "blocked") continue;
+        // 同一输入第 2 次让宿主退出:CrashLoopBlocked,出卡停在原位,不再自启续跑
+        const contact = getDoc<ContactDoc & { removed?: boolean }>(this.db, `contact:${g.contact_id}`)?.value;
+        const room = g.room_id ?? this.roomsOfContact(g.contact_id)[0]?.id ?? null;
+        if (!contact || contact.removed || !room) continue;
+        const prev = this.failureRow("contact", g.contact_id);
+        const attemptSeq = (prev?.attempt_seq ?? 0) + 1;
+        const cls = { label: "处理这批消息时宿主连续退出", fix: "先跳过这一批,或换个模型重试", raw: `crash_recovery_count=${r.state.count}(同一批输入已让宿主退出 ${r.state.count} 次)` };
+        const actions = this.failureActions("contact", prev?.model_override ?? contact.speakingModel);
+        const upstream = this.upstreamKey(prev?.model_override ?? contact.speakingModel);
+        const c = this.postFailureCardTx(room, g.contact_id, null, `${contact.name} 这一轮没回成:${cls.label}`, this.failureBody("crash-loop", cls, 0), actions, {
+          scope: "contact", subject: g.contact_id, contactId: g.contact_id, upstream, attemptSeq, models: switchModels(actions),
+        });
+        this.upsertFailureTx({
+          scope: "contact", subject: g.contact_id, contact_id: g.contact_id, status: "card", heal: "unknown", effect: "B0", reason_class: "crash_loop", label: cls.label, fix: cls.fix, raw: cls.raw,
+          attempts: 0, attempt_seq: attemptSeq, batch_end: g.batch_end, inbox_end: g.inbox_end, room_id: room, upstream, card_id: c.cardId, model_override: prev?.model_override ?? null, compute_id: null, delivery_unknown: 0,
+        });
+        cards.push({ roomId: c.roomId, seq: c.seq, contactId: g.contact_id });
+      }
+    });
+    for (const c of cards) {
+      this.afterAppend(c.roomId, c.seq, { kind: "contact", id: c.contactId });
+      this.emitRetry({ scope: "contact", contactId: c.contactId, taskId: null, roomId: c.roomId, state: "card", attempt: 0, limit: 0, label: "处理这批消息时宿主连续退出" });
+    }
+    // 磁盘上还没被领走的输入(F4 未提交轮次、F6 丢了通知的 Compute 终态):不等人类新发言,直接交给联系人
+    for (const c of this.listContacts()) if (this.hasPendingInput(c.id)) this.loop.notify(c.id, "now");
+    for (const f of all<{ subject: string }>(this.db, "SELECT subject FROM gg_failures WHERE scope = 'task' AND status = 'retrying'")) this.scheduleComputeResume(f.subject, 0);
+    for (const b of all<{ upstream: string }>(this.db, "SELECT upstream FROM gg_breakers")) this.armBreakerProbe(b.upstream);
+  }
+  private hasPendingInput(contactId: string): boolean {
+    if (one(this.db, "SELECT 1 FROM gg_inbox WHERE contact_id = ? AND consumed = 0 LIMIT 1", contactId)) return true;
+    return this.roomsOfContact(contactId).some((r) => this.lastSeq(r.id) > this.cursor(contactId, r.id));
+  }
+
   // ======================= 生命周期 =======================
   async idle(): Promise<void> {
     await this.loop.idle();
   }
   async close(): Promise<void> {
     this.closed = true;
+    for (const h of this.hostTimers.values()) this.timersApi.clear(h);
+    this.hostTimers.clear();
     this.scheduler.stop();
     await this.loop.stop();
     for (const a of this.adapters.values()) {
@@ -2581,6 +3329,89 @@ export type ModelChangeInput =
   | { kind: "defaults"; defaultHarness?: SettingsView["defaultHarness"]; defaultSpeakingModel?: string; defaultComputeModel?: string; defaultEffort?: SettingsView["defaultEffort"] }
   | { kind: "contact"; contactId: string; speakingModel?: string; harness?: ContactView["harness"]; computeModel?: ContactView["computeModel"] }
   | { kind: "batch-replace"; from: string; to: string };
+/** 联系人一轮失败、策略决定静默退避重跑:注意循环按 delayMs 再跑这一轮(AC-36 F1)。 */
+class RoundRetry extends Error {
+  readonly delayMs: number;
+  constructor(delayMs: number, label: string) {
+    super(`自动重试:${label}`);
+    this.name = "RoundRetry";
+    this.delayMs = delayMs;
+  }
+}
+/** gg_failures 一行:一个联系人或任务的在途失败。 */
+interface FailureRow {
+  scope: "contact" | "task";
+  subject: string;
+  contact_id: string;
+  /** retrying:静默退避中;card:已出原位失败卡、停在原位等用户;paused:被共享熔断暂停 */
+  status: "retrying" | "card" | "paused";
+  heal: HealClass | string;
+  effect: string;
+  reason_class: string;
+  label: string;
+  fix: string;
+  raw: string;
+  attempts: number;
+  attempt_seq: number;
+  /** 失败批次末尾 failed_batch_end_seq(各会话),JSON */
+  batch_end: string;
+  inbox_end: number;
+  room_id: string | null;
+  upstream: string;
+  card_id: string | null;
+  model_override: string | null;
+  compute_id: string | null;
+  delivery_unknown: number;
+  created_at: string;
+  updated_at: string;
+}
+interface GuardRow {
+  contact_id: string;
+  running: number;
+  boot_id: string;
+  batch_key: string;
+  room_id: string | null;
+  batch_end: string;
+  inbox_end: number;
+  crash_key: string | null;
+  crash_count: number;
+  started_at: string;
+}
+interface FailureCardMeta {
+  scope: "contact" | "task" | "breaker";
+  /** 联系人 id、任务 id,或群级卡的上游键 */
+  subject: string;
+  contactId: string;
+  upstream: string;
+  attemptSeq: number;
+  models: string[];
+}
+interface FailureDecision {
+  card: CardRow;
+  meta: FailureCardMeta;
+  action: "retry" | "skip" | "give-up" | "switch-model";
+  targetModel: string | null;
+  row: FailureRow | undefined;
+}
+type CardActionRow = { actionId: string; label: string; style: "primary" | "default" | "danger" };
+type ComputeFailureOutcome =
+  | { kind: "retry"; delayMs: number; attempt: number; limit: number; label: string }
+  | { kind: "paused"; upstream: string; card: { roomId: string; seq: number } | null; label: string }
+  | { kind: "card"; card: { roomId: string; seq: number }; label: string };
+const splitMember = (m: string): [string, string] => {
+  const i = m.indexOf(":");
+  return i < 0 ? [m, ""] : [m.slice(0, i), m.slice(i + 1)];
+};
+/** 本节出的失败卡(联系人一轮、任务的 Compute、群级熔断卡);别的失败卡(如整轮超预算)不归这里处理。 */
+const isRetryCardMeta = (meta: string): boolean => {
+  try {
+    const m = JSON.parse(meta) as { scope?: unknown };
+    return m.scope === "contact" || m.scope === "task" || m.scope === "breaker";
+  } catch {
+    return false;
+  }
+};
+const switchModels = (actions: readonly CardActionRow[]): string[] => actions.filter((a) => a.actionId.startsWith("switch-model:")).map((a) => a.actionId.slice("switch-model:".length));
 
 type HostEffect =
   | { kind: "spawn"; taskId: string; requestId: string; contactId: string; model: string; brief: string; roomId: string }

@@ -4,7 +4,8 @@
 //   - urgency=now(被 @、私聊、Compute 终态/受阻、用户控制指令)立刻跑;urgency=batch(群里未 @ 的消息、进度里程碑)攒批,
 //     最迟 maxDeferMs 后必跑(有界攒批,防无限延期);
 //   - 一轮返回 "stale"(发送前检出更新的用户消息,AC-31 ④)就立刻重跑,连续 stale 超过 maxStaleReruns 次后按 "done" 处理并报告,防止活锁;
-//   - 一轮抛错不影响别的联系人,也不丢脏标记:报告后按 retryMs 退避重试。
+//   - 一轮抛错不影响别的联系人,也不丢脏标记:报告后按 retryAfter 给的延迟退避重试(AC-36:宿主按失败策略算,返回 null 表示不再自动重试,
+//     只等新的 now 通知或宿主显式 notify);不给 retryAfter 时按 retryMs。
 // 计时器、时钟都可注入,测试用假计时器逐步推进。
 
 export type Urgency = "now" | "batch";
@@ -24,9 +25,12 @@ export interface AttentionOptions {
   readonly run: (contactId: string, signal: AbortSignal) => Promise<RoundStatus>;
   /** 未 @ 消息的攒批上界(毫秒)。 */
   readonly maxDeferMs: number;
-  /** 一轮抛错后多久重试(毫秒),默认 1000。 */
+  /** 一轮抛错后多久重试(毫秒),默认 1000。给了 retryAfter 时不用它。 */
   readonly retryMs?: number;
-  /** 一轮抛错后多久重试(AC-36);返回 null 表示不自动重跑。 */
+  /**
+   * 一轮抛错后多久重试(AC-36):返回毫秒数就按它退避重跑;返回 null 就不自动重跑(失败已出卡或被共享熔断暂停,
+   * 等用户处理或宿主显式 notify)。自身抛错或返回非法值时按 retryMs。
+   */
   readonly retryAfter?: (contactId: string, error: unknown) => number | null;
   /** 连续 stale 的重跑上限,默认 3。 */
   readonly maxStaleReruns?: number;
@@ -58,6 +62,11 @@ interface Slot {
   count: number;
 }
 
+/** 失败策略给的退避延迟:有限非负数照用,其余(NaN、负数、无穷、非数字)按 retryMs 兜底。 */
+function validDelay(ms: unknown, retryMs: number): number {
+  return typeof ms === "number" && Number.isFinite(ms) && ms >= 0 ? ms : retryMs;
+}
+
 export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
   if (!(opts.maxDeferMs >= 0) || !Number.isFinite(opts.maxDeferMs)) throw new RangeError("maxDeferMs 必须是有限非负数");
   const timers = opts.timers ?? realTimers;
@@ -80,6 +89,16 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
       opts.onReport?.(id, what, detail);
     } catch {
       /* 报告回调出错不影响调度 */
+    }
+  };
+  const delayAfter = (id: string, e: unknown): number | null => {
+    if (!opts.retryAfter) return retryMs;
+    try {
+      const ms = opts.retryAfter(id, e);
+      if (ms === null) return null;
+      return validDelay(ms, retryMs);
+    } catch {
+      return retryMs;
     }
   };
   const isBusy = () => [...slots.values()].some((s) => s.running !== null || s.timer !== null || s.dirty !== null);
@@ -114,10 +133,12 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
     s.count++;
     s.running = (async () => {
       let status: RoundStatus | "error" = "done";
+      let failure: unknown;
       try {
         status = await opts.run(id, controller.signal);
       } catch (e) {
         status = "error";
+        failure = e;
         report(id, "error", e);
       }
       s.running = null;
@@ -133,8 +154,9 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
       }
       s.staleRuns = 0;
       if (status === "error") {
-        // 出错的这轮没推进游标,输入还在;退避后重跑。期间来的 now 通知照样能提前触发。
-        if (s.timer === null) arm(id, s, retryMs, "retry");
+        // 出错的这轮没推进游标,输入还在;按失败策略退避后重跑,或者不再自动重跑。期间来的 now 通知照样能提前触发。
+        const ms = delayAfter(id, failure);
+        if (ms !== null && s.timer === null) arm(id, s, ms, "retry");
         s.dirty = null;
         return settleWaiters();
       }

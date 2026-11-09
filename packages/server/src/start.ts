@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createComputeAdapter } from "@g-group/adapter-cc-compute";
 import type { ContactView } from "@g-group/api-contract";
-import type { ContactCompactor, ContactMind } from "@g-group/kernel";
+import { type ContactCompactor, type ContactMind, DEFAULT_RETRY_POLICY } from "@g-group/kernel";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
 import { type IpcMainLike, type Service, bindIpc, createService } from "./service.ts";
@@ -69,7 +69,8 @@ export async function startServer(o: StartOptions): Promise<Started> {
   const compute = fake
     ? () => fake.adapter
     : (m: string) => {
-        const hostEnv: Record<string, string> = { ANTHROPIC_MODEL: m };
+        // 统一重试权(AC-36 F3):CLI 自己对上游错误重试的次数就是宿主的自动重试上限,宿主不再叠加(computeHarnessRetries 同值)
+        const hostEnv: Record<string, string> = { ANTHROPIC_MODEL: m, CLAUDE_CODE_MAX_RETRIES: String(DEFAULT_RETRY_POLICY.maxAutoRetries) };
         for (const k of ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"]) if (env[k]) hostEnv[k] = env[k]!;
         return createComputeAdapter({ hostEnv });
       };
@@ -87,6 +88,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
       return d;
     },
     ...(o.onReport ? { onReport: o.onReport } : {}),
+    computeHarnessRetries: fake ? 0 : DEFAULT_RETRY_POLICY.maxAutoRetries,
   });
   if (model) host.updateSettings({ defaultSpeakingModel: model, defaultComputeModel: model, confirmAffected: true });
   const service = createService(host);
