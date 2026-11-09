@@ -1,0 +1,22 @@
+packages/server/proof/review-actual-mutations.mjs
+  h_f33e46a035b77c 1-61
+packages/server/src/host.ts
+  h_f33e46a035b77c 85,2350-2358,2367,2373
+packages/server/src/review-actual.test.ts
+  h_f33e46a035b77c 1-85
+packages/server/src/review.ts
+  h_f33e46a035b77c 31-45
+receipts/feat-review-actual-model.json
+  h_f33e46a035b77c 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "55db0eef6da5e92b51ffec40b2655520bee31474",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

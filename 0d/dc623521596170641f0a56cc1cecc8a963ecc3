@@ -1,0 +1,14 @@
+packages/domain/src/routing.test.ts
+  h_f33e46a035b77c 47,49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0ddc623521596170641f0a56cc1cecc8a963ecc3",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/server/proof/model-config-mutations.mjs
+  s_19afb02e575b26::t_e7569ed4811adb 1-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "76693679d75767513dc4999c96523e4ef02e2ede",
+  "prompts": {},
+  "sessions": {
+    "s_19afb02e575b26": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac3c5d6dff8770595",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

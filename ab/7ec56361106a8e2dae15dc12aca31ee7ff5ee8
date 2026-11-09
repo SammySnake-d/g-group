@@ -1,0 +1,16 @@
+packages/adapter-cc-compute/src/resume-tools.test.ts
+  h_f33e46a035b77c 1-79
+packages/server/src/intent.test.ts
+  h_f33e46a035b77c 13,55-64,93,101-102,108,111,117,129,139,144,157,160,164,170,175,185,191-192,198,207,247,252,257,263,477,484-485,516,530,542,551,559-564
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ab7ec56361106a8e2dae15dc12aca31ee7ff5ee8",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

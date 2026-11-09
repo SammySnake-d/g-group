@@ -1,0 +1,19 @@
+packages/server/proof/cross-vendor-review-mutations.mjs
+  s_7e0c5bbe16b27d::t_7cc4e58cb8d301 1-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "16f8b9743b840c88ad315cb60d547f319cd6a510",
+  "prompts": {},
+  "sessions": {
+    "s_7e0c5bbe16b27d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac415d54dda55267d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

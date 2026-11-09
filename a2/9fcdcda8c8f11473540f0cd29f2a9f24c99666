@@ -1,0 +1,26 @@
+receipts/feat-auth-host.json
+  s_40ddef7d1d7537::t_8090af3b1f7f37 14
+packages/server/src/intent.test.ts
+  h_f33e46a035b77c 283-336
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a29fcdcda8c8f11473540f0cd29f2a9f24c99666",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_40ddef7d1d7537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

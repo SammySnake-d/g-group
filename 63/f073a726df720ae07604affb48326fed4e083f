@@ -1,0 +1,14 @@
+packages/server/src/worktree.test.ts
+  h_f33e46a035b77c 366,398,434-435
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "63f073a726df720ae07604affb48326fed4e083f",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

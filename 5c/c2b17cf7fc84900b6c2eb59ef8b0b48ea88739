@@ -1,0 +1,28 @@
+packages/server/proof/artifacts-mutations.mjs
+  s_19afb02e575b26::t_b52f5ff7145943 1-78
+receipts/feat-artifacts.json
+  s_19afb02e575b26::t_1ad28fcd46e9b1 1-12
+packages/server/src/artifacts.test.ts
+  h_f33e46a035b77c 11,240-242,249
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5cc2b17cf7fc84900b6c2eb59ef8b0b48ea88739",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_19afb02e575b26": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac3c5d6dff8770595",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
