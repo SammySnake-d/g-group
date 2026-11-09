@@ -1,0 +1,80 @@
+# 运行台账真实运行(AC-43 ⑦⑩⑪、AC-14):真实 Claude Code 2.1.319 (Claude Code) Compute + 确定性联系人脑子
+# 跑于 2026-11-09T02:48:30Z,主会话的子代理 α 所写。脚本 packages/server/proof/run-ledger-real.mjs;阈值:首字节 20 秒、整轮 45 秒,核对周期 2 秒。
+# B/C 用假 HOME(只有空的 .claude/OVERRIDE.md,否则本机 ~/.claude 设置会覆盖网关地址):
+#   HOME=<假目录> node packages/server/proof/run-ledger-real.mjs <工作目录> B C
+# A 用本机正常配置走真实网关:node packages/server/proof/run-ledger-real.mjs <工作目录> A
+# 网关地址与令牌只经环境变量传入,未落盘;下面是运行输出原文(去掉 node 的实验特性警告)
+
+## B 上游收下请求后既不回应也不断开(本机黑洞端口)+ C 上游连不上(127.0.0.1:9)
+[+0.0s] 黑洞端口 127.0.0.1:57420:接受连接、读走请求、从不回话也不断开
+[+0.0s] == 情形 B
+[+0.0s] run.updated contact-round run-mw8n85hj-2 running 「运行中 · 已跑 0 秒」
+[+0.0s] run.updated compute-session run-mw8n85i1-6 running 「运行中 · 已跑 0 秒」
+[+0.0s] run.updated compute-turn run-mw8n85i1-7 running 「运行中 · 已跑 0 秒」
+[+22.1s] run.updated compute-turn run-mw8n85i1-7 failed 「失败 · 上游没回应 · 用时 22 秒」 no_response
+[+22.1s] run.updated compute-session run-mw8n85i1-6 failed 「失败 · 上游没回应 · 用时 22 秒」 no_response
+[+22.1s] run.updated contact-round run-mw8n85hj-2 done 「完成 · 用时 22 秒」
+[+22.1s] run.updated contact-round run-mw8n8mhc-8 running 「运行中 · 已跑 0 秒」
+[+22.1s] run.updated contact-round run-mw8n8mhc-8 done 「完成 · 用时 0 秒」
+[+25.2s] 活动流计数 {"model_call":1}
+[+25.2s] 台账 contact-round run-mw8n85hj-2 父=- done 「完成 · 用时 22 秒」 原因=- 阈值=-(-) 最后进展=2026-11-09T02:29:45.799Z 判定=-
+[+25.2s] 台账 compute-session run-mw8n85i1-6 父=run-mw8n85hj-2 failed 「失败 · 上游没回应 · 用时 22 秒」 原因=no_response 阈值=-(-) 最后进展=2026-11-09T02:29:45.817Z 判定=-
+[+25.2s]   原文:模型调用发出后 21 秒没有任何回应(首字节窗口 20 秒,按默认值)
+[+25.2s] 台账 compute-turn run-mw8n85i1-7 父=run-mw8n85i1-6 failed 「失败 · 上游没回应 · 用时 22 秒」 原因=no_response 阈值=20000(default) 最后进展=2026-11-09T02:29:46.411Z 判定=2026-11-09T02:30:07.818Z
+[+25.2s]   原文:模型调用发出后 21 秒没有任何回应(首字节窗口 20 秒,按默认值)
+[+25.2s] 台账 contact-round run-mw8n8mhc-8 父=- done 「完成 · 用时 0 秒」 原因=- 阈值=-(-) 最后进展=2026-11-09T02:30:07.824Z 判定=-
+[+25.2s] 任务 t-mw8n85hn-3 T11_Failed
+[+25.2s] #1 user: 帮我查一下今天的天气
+[+25.2s] #2 contact: 接了任务:查一下今天的天气
+[+25.2s] #3 contact: 好的,我安排 Compute 去查一下今天的天气,有进度告诉你。
+[+25.2s] #4 contact: 任务卡住了:失败 · 上游没回应 · 用时 22 秒;模型调用发出后 21 秒没有任何回应(首字节窗口 20 秒,按默认值)(最后进展 2026-11-09T02:29:46.411Z,判定阈值 20 秒;台账单元 run-mw8n85i1-6,可用 progress_rerun 重跑)
+[+25.2s] 黑洞端口收到连接 2 个
+[+25.2s] == 情形 C
+[+25.2s] run.updated contact-round run-mw8n8ow2-2 running 「运行中 · 已跑 0 秒」
+[+25.2s] run.updated compute-session run-mw8n8ow9-6 running 「运行中 · 已跑 0 秒」
+[+25.2s] run.updated compute-turn run-mw8n8ow9-7 running 「运行中 · 已跑 0 秒」
+[+71.2s] run.updated compute-turn run-mw8n8ow9-7 failed 「失败 · 上游一直断流 · 用时 46 秒」 stream_dropped
+[+71.2s] run.updated compute-session run-mw8n8ow9-6 failed 「失败 · 上游一直断流 · 用时 46 秒」 stream_dropped
+[+71.2s] run.updated contact-round run-mw8n8ow2-2 done 「完成 · 用时 46 秒」
+[+71.2s] run.updated contact-round run-mw8n9of6-8 running 「运行中 · 已跑 0 秒」
+[+71.2s] run.updated contact-round run-mw8n9of6-8 done 「完成 · 用时 0 秒」
+[+74.4s] 活动流计数 {"model_call":1,"retry":7}
+[+74.4s] 台账 contact-round run-mw8n8ow2-2 父=- done 「完成 · 用时 46 秒」 原因=- 阈值=-(-) 最后进展=2026-11-09T02:30:10.946Z 判定=-
+[+74.4s] 台账 compute-session run-mw8n8ow9-6 父=run-mw8n8ow2-2 failed 「失败 · 上游一直断流 · 用时 46 秒」 原因=stream_dropped 阈值=-(-) 最后进展=2026-11-09T02:30:10.953Z 判定=-
+[+74.4s]   原文:harness 重试 7 次之间一直没有输出,0.8 分钟没有进展(阈值 0.8 分钟,按默认值);最近一次重试:API 重试 第 7/10 次:unknown
+[+74.4s] 台账 compute-turn run-mw8n8ow9-7 父=run-mw8n8ow9-6 failed 「失败 · 上游一直断流 · 用时 46 秒」 原因=stream_dropped 阈值=45000(default) 最后进展=2026-11-09T02:30:11.491Z 判定=2026-11-09T02:30:56.991Z
+[+74.4s]   原文:harness 重试 7 次之间一直没有输出,0.8 分钟没有进展(阈值 0.8 分钟,按默认值);最近一次重试:API 重试 第 7/10 次:unknown
+[+74.4s] 台账 contact-round run-mw8n9of6-8 父=- done 「完成 · 用时 0 秒」 原因=- 阈值=-(-) 最后进展=2026-11-09T02:30:56.994Z 判定=-
+[+74.4s] 任务 t-mw8n8ow3-3 T11_Failed
+[+74.4s] #1 user: 帮我查一下今天的天气
+[+74.4s] #2 contact: 接了任务:查一下今天的天气
+[+74.4s] #3 contact: 好的,我安排 Compute 去查一下今天的天气,有进度告诉你。
+[+74.4s] #4 contact: 任务卡住了:失败 · 上游一直断流 · 用时 46 秒;harness 重试 7 次之间一直没有输出,0.8 分钟没有进展(阈值 0.8 分钟,按默认值);最近一次重试:API 重试 第 7/10 次:unknown(最后进展 2026-11-09T02:30:11.491Z,判定阈值 45 秒;台账单元 run-mw8n8ow9-6,可用 progress_rerun 重跑)
+[+74.4s] 结束
+EXIT=0
+
+## A 正常(真实网关、真实模型)
+[+0.0s] == 情形 A
+[+0.0s] run.updated contact-round run-mw8n9r3r-2 running 「运行中 · 已跑 0 秒」
+[+0.0s] run.updated compute-session run-mw8n9r4c-6 running 「运行中 · 已跑 0 秒」
+[+0.0s] run.updated compute-turn run-mw8n9r4d-7 running 「运行中 · 已跑 0 秒」
+[+21.0s] run.updated compute-turn run-mw8n9r4d-7 done 「完成 · 用时 20 秒」
+[+21.0s] run.updated compute-session run-mw8n9r4c-6 waiting_user 「等你回答 · 已跑 20 秒」
+[+21.0s] run.updated contact-round run-mw8na79u-8 running 「运行中 · 已跑 0 秒」
+[+21.0s] run.updated contact-round run-mw8na79u-8 done 「完成 · 用时 0 秒」
+[+24.1s] 活动流计数 {"model_call":3,"progress":117,"tool_start":3,"tool_end":3}
+[+24.1s] 台账 contact-round run-mw8n9r3r-2 父=- running 「运行中 · 已跑 24 秒 · 等子任务」 原因=- 阈值=-(-) 最后进展=2026-11-09T02:31:00.471Z 判定=-
+[+24.1s] 台账 compute-session run-mw8n9r4c-6 父=run-mw8n9r3r-2 waiting_user 「等你回答 · 已跑 24 秒」 原因=- 阈值=-(-) 最后进展=2026-11-09T02:31:00.492Z 判定=-
+[+24.1s] 台账 compute-turn run-mw8n9r4d-7 父=run-mw8n9r4c-6 done 「完成 · 用时 20 秒」 原因=- 阈值=-(-) 最后进展=2026-11-09T02:31:21.340Z 判定=-
+[+24.1s] 台账 contact-round run-mw8na79u-8 父=- done 「完成 · 用时 0 秒」 原因=- 阈值=-(-) 最后进展=2026-11-09T02:31:21.426Z 判定=-
+[+24.1s] 任务 t-mw8n9r3v-3 T5_InReview
+[+24.1s] #1 user: 帮我在工作目录里写一个 hello.txt,内容是 hi from run ledger
+[+24.1s] #2 contact: 接了任务:在工作目录里写一个 hello.txt,内容是 hi from run ledg
+[+24.1s] #3 contact: 好的,我安排 Compute 去在工作目录里写一个 hello.txt,内容是 hi from run ledger,有进度告诉你。
+[+24.1s] #4 contact: 做完了:我在工作目录里创建了 `hello.txt`,内容是 `hi from run ledger`。读回文件检查过，内容正确，末尾带一个换行。
+
+文件路径:`/private/tmp/gg-b-alpha-tools/real/A/t-mw8n9r3v-3/hello.txt`
+
+已经向宿主报告任务完成，也登记了创建这个文件的操作。
+[+24.1s] 结束
+EXIT=0

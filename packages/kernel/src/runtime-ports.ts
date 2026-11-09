@@ -25,7 +25,8 @@ export interface InboundMessage {
   readonly command: { readonly name: string; readonly args: unknown } | null;
   readonly at: string;
 }
-export type ComputeSignal = "started" | "milestone" | "blocked" | "completed" | "failed" | "stopped";
+/** stalled:宿主判定这个 Compute 停滞(整轮卡死判失败,或宿主重启后成了孤儿),发给负责联系人报卡点(AC-14、D26 第 8.3 节) */
+export type ComputeSignal = "started" | "milestone" | "blocked" | "completed" | "failed" | "stopped" | "stalled";
 export interface InboundCompute {
   readonly kind: "compute";
   readonly roomId: string;
@@ -87,7 +88,9 @@ export interface RoundInput {
  * commit:登记承诺(AC-40②),text 必须是来源消息或本轮 reply 的原文子串;
  * forward:把用户追加的要求/回答转给在途 Compute(resume);
  * deliver:交付任务结果(T7→T8a 待确认,AC-28);
- * stop:请求停止任务的 Compute。
+ * stop:请求停止任务的 Compute;
+ * rerun:重跑运行台账里失败 / 中断 / 没跑完的单元(progress_rerun,D26 第 5 节)。basisSeq 是本轮里明确要求重跑的那条消息;
+ *   不给就是自己决定的自动重跑(只能重跑自己名下的,有次数上限),别人名下的必须给 basisSeq,宿主在群里留记录。
  */
 export type MindAction =
   | { readonly kind: "reply"; readonly roomId: string; readonly text: string; readonly replyToSeq: number | null }
@@ -110,9 +113,10 @@ export type MindAction =
       readonly relation: "change" | "refine" | "conflict" | null;
       readonly target: string | null;
     }
-  | { readonly kind: "memory-use"; readonly id: string; readonly good: boolean; readonly note: string | null };
+  | { readonly kind: "memory-use"; readonly id: string; readonly good: boolean; readonly note: string | null }
+  | { readonly kind: "rerun"; readonly runId: string; readonly roomId: string; readonly basisSeq: number | null };
 export type MindActionKind = MindAction["kind"];
-export const MIND_ACTION_KINDS: readonly MindActionKind[] = Object.freeze(["reply", "dispatch", "commit", "forward", "deliver", "stop", "verdict", "remember", "memory-use"]);
+export const MIND_ACTION_KINDS: readonly MindActionKind[] = Object.freeze(["reply", "dispatch", "commit", "forward", "deliver", "stop", "verdict", "remember", "memory-use", "rerun"]);
 
 export interface RoundOutput {
   readonly actions: readonly MindAction[];

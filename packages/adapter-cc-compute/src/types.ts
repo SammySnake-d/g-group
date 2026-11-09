@@ -174,6 +174,23 @@ export type QuiesceResult =
   | { readonly ok: true; readonly killed: number }
   | { readonly ok: false; readonly reason: string; readonly remaining: readonly number[] };
 
+/**
+ * harness 流里的一件事(需求文档 D26 第 8.3 节整轮卡死检测用;不是语义事件,不进联系人上下文):
+ *   model_call:模型调用已发出(CLI 的 system/status requesting),开始首字节窗口;
+ *   progress:有真实输出(流式增量、文本、思考、子代理的消息);
+ *   tool_start / tool_end:工具调用开始与结束(工具在跑是合法等待);background 是 Bash 后台命令,subagent 是 Task/Agent 子代理;
+ *   retry:harness 宣布在重试(system/api_retry),不算进展。
+ */
+export type ComputeActivity =
+  | { readonly computeId: string; readonly kind: "model_call" }
+  | { readonly computeId: string; readonly kind: "progress"; readonly what: "text" | "thinking" | "subagent" | "output" }
+  | { readonly computeId: string; readonly kind: "tool_start"; readonly toolId: string; readonly name: string; readonly background: boolean; readonly subagent: boolean }
+  | { readonly computeId: string; readonly kind: "tool_end"; readonly toolId: string; readonly isError: boolean }
+  | { readonly computeId: string; readonly kind: "retry"; readonly error: string; readonly httpStatus: number | null };
+type WithoutComputeId<T> = T extends unknown ? Omit<T, "computeId"> : never;
+/** 一行 CLI 输出里认出的活动(还没挂上 computeId) */
+export type ActivitySignal = WithoutComputeId<ComputeActivity>;
+
 export interface ComputeAdapter {
   spawn(brief: unknown, opts?: SpawnOptions): Promise<SpawnResult>;
   /**
@@ -187,6 +204,8 @@ export interface ComputeAdapter {
   stop(computeId: string): Promise<{ readonly ok: true } | Refusal>;
   /** 所有 Compute 的语义事件,从适配器创建起按发生顺序 */
   events(): AsyncIterable<ComputeEvent>;
+  /** 可选:harness 流里的活动(卡死检测用),从开始迭代起按发生顺序;不回放迭代之前的活动 */
+  activity?(): AsyncIterable<ComputeActivity>;
   /** 这一轮产出终态(或停在受阻)且 CLI 主进程已退出后,返回这一轮的事件 */
   settled(computeId: string): Promise<readonly ComputeEvent[]>;
   /** 只在终态(stopped/completed/failed)且 CLI 主进程已退出之后成功;否则 {ok:false, reason:"not-quiescent"}。

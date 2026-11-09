@@ -1,0 +1,48 @@
+# 运行台账真实运行 B/C 在接上 AC-36 宿主容错之后的代码上重跑(合并验证树 aa5d46e,2026-11-09T13:31Z,新会话 claude:5b44653a-2923-45fd-97d0-f25479b43797)
+# 真实 Claude Code 2.1.319;假 HOME(只有空的 .claude/OVERRIDE.md);B 黑洞端口、C 关闭端口;阈值同原文(首字节 20 秒、整轮 45 秒)
+# 命令:HOME=<假目录> node packages/server/proof/run-ledger-real.mjs <工作目录> B C;下面是输出原文(去掉 node 实验特性警告)
+[+0.0s] 黑洞端口 127.0.0.1:50026:接受连接、读走请求、从不回话也不断开
+[+0.0s] == 情形 B
+[+0.0s] run.updated contact-round run-mw9avyjq-2 running 「运行中 · 已跑 0 秒」
+[+0.0s] run.updated compute-session run-mw9avyk0-7 running 「运行中 · 已跑 0 秒」
+[+0.0s] run.updated compute-turn run-mw9avyk0-8 running 「运行中 · 已跑 0 秒」
+[+22.1s] run.updated compute-turn run-mw9avyk0-8 failed 「失败 · 上游没回应 · 用时 22 秒」 no_response
+[+22.1s] run.updated compute-session run-mw9avyk0-7 failed 「失败 · 上游没回应 · 用时 22 秒」 no_response
+[+22.1s] run.updated contact-round run-mw9avyjq-2 done 「完成 · 用时 22 秒」
+[+22.1s] run.updated contact-round run-mw9awfkg-9 running 「运行中 · 已跑 0 秒」
+[+22.1s] run.updated contact-round run-mw9awfkg-9 done 「完成 · 用时 0 秒」
+[+25.1s] 活动流计数 {"model_call":1}
+[+25.1s] 台账 contact-round run-mw9avyjq-2 父=- done 「完成 · 用时 22 秒」 原因=- 阈值=-(-) 最后进展=2026-11-09T13:32:07.718Z 判定=-
+[+25.1s] 台账 compute-session run-mw9avyk0-7 父=run-mw9avyjq-2 failed 「失败 · 上游没回应 · 用时 22 秒」 原因=no_response 阈值=-(-) 最后进展=2026-11-09T13:32:07.728Z 判定=-
+[+25.1s]   原文:模型调用发出后 21 秒没有任何回应(首字节窗口 20 秒,按默认值)
+[+25.1s] 台账 compute-turn run-mw9avyk0-8 父=run-mw9avyk0-7 failed 「失败 · 上游没回应 · 用时 22 秒」 原因=no_response 阈值=20000(default) 最后进展=2026-11-09T13:32:08.246Z 判定=2026-11-09T13:32:29.735Z
+[+25.1s]   原文:模型调用发出后 21 秒没有任何回应(首字节窗口 20 秒,按默认值)
+[+25.1s] 台账 contact-round run-mw9awfkg-9 父=- done 「完成 · 用时 0 秒」 原因=- 阈值=-(-) 最后进展=2026-11-09T13:32:29.776Z 判定=-
+[+25.1s] 任务 t-mw9avyjt-3 T11_Failed
+[+25.1s] #1 user: 帮我查一下今天的天气
+[+25.1s] #2 contact: 接了任务:查一下今天的天气
+[+25.1s] #3 contact: 好的,我安排 Compute 去查一下今天的天气,有进度告诉你。
+[+25.1s] #4 contact: 任务卡住了:失败 · 上游没回应 · 用时 22 秒;模型调用发出后 21 秒没有任何回应(首字节窗口 20 秒,按默认值)(最后进展 2026-11-09T13:32:08.246Z,判定阈值 20 秒;台账单元 run-mw9avyk0-7,可用 progress_rerun 重跑)
+[+25.1s] 黑洞端口收到连接 2 个
+[+25.1s] == 情形 C
+[+25.1s] run.updated contact-round run-mw9awhxg-2 running 「运行中 · 已跑 0 秒」
+[+25.1s] run.updated compute-session run-mw9awhxn-7 running 「运行中 · 已跑 0 秒」
+[+25.1s] run.updated compute-turn run-mw9awhxn-8 running 「运行中 · 已跑 0 秒」
+[+71.2s] run.updated compute-turn run-mw9awhxn-8 failed 「失败 · 上游一直断流 · 用时 46 秒」 stream_dropped
+[+71.2s] run.updated compute-session run-mw9awhxn-7 failed 「失败 · 上游一直断流 · 用时 46 秒」 stream_dropped
+[+71.2s] run.updated contact-round run-mw9awhxg-2 done 「完成 · 用时 46 秒」
+[+71.2s] run.updated contact-round run-mw9axhh6-9 running 「运行中 · 已跑 0 秒」
+[+71.2s] run.updated contact-round run-mw9axhh6-9 done 「完成 · 用时 0 秒」
+[+74.3s] 活动流计数 {"model_call":1,"retry":7}
+[+74.3s] 台账 contact-round run-mw9awhxg-2 父=- done 「完成 · 用时 46 秒」 原因=- 阈值=-(-) 最后进展=2026-11-09T13:32:32.836Z 判定=-
+[+74.3s] 台账 compute-session run-mw9awhxn-7 父=run-mw9awhxg-2 failed 「失败 · 上游一直断流 · 用时 46 秒」 原因=stream_dropped 阈值=-(-) 最后进展=2026-11-09T13:32:32.843Z 判定=-
+[+74.3s]   原文:harness 重试 7 次之间一直没有输出,0.8 分钟没有进展(阈值 0.8 分钟,按默认值);最近一次重试:API 重试 第 7/10 次:unknown
+[+74.3s] 台账 compute-turn run-mw9awhxn-8 父=run-mw9awhxn-7 failed 「失败 · 上游一直断流 · 用时 46 秒」 原因=stream_dropped 阈值=45000(default) 最后进展=2026-11-09T13:32:33.143Z 判定=2026-11-09T13:33:18.869Z
+[+74.3s]   原文:harness 重试 7 次之间一直没有输出,0.8 分钟没有进展(阈值 0.8 分钟,按默认值);最近一次重试:API 重试 第 7/10 次:unknown
+[+74.3s] 台账 contact-round run-mw9axhh6-9 父=- done 「完成 · 用时 0 秒」 原因=- 阈值=-(-) 最后进展=2026-11-09T13:33:18.906Z 判定=-
+[+74.3s] 任务 t-mw9awhxi-3 T11_Failed
+[+74.3s] #1 user: 帮我查一下今天的天气
+[+74.3s] #2 contact: 接了任务:查一下今天的天气
+[+74.3s] #3 contact: 好的,我安排 Compute 去查一下今天的天气,有进度告诉你。
+[+74.3s] #4 contact: 任务卡住了:失败 · 上游一直断流 · 用时 46 秒;harness 重试 7 次之间一直没有输出,0.8 分钟没有进展(阈值 0.8 分钟,按默认值);最近一次重试:API 重试 第 7/10 次:unknown(最后进展 2026-11-09T13:32:33.143Z,判定阈值 45 秒;台账单元 run-mw9awhxn-7,可用 progress_rerun 重跑)
+[+74.3s] 结束

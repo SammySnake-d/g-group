@@ -95,7 +95,7 @@ const VOLATILE_PATTERNS: readonly [string, RegExp][] = [
 ];
 const PREFIX_TEXT_PARTS: readonly PrefixTextPart[] = ["system", "tools", "persona", "roomNotice"];
 const SENDER_KINDS: readonly InboundSenderKind[] = ["user", "contact", "helper", "system"];
-const SIGNALS: readonly ComputeSignal[] = ["started", "milestone", "blocked", "completed", "failed", "stopped"];
+const SIGNALS: readonly ComputeSignal[] = ["started", "milestone", "blocked", "completed", "failed", "stopped", "stalled"];
 
 const bytesOf = (s: string) => Buffer.byteLength(s, "utf8");
 const isRec = (x: unknown): x is Readonly<Record<string, unknown>> => typeof x === "object" && x !== null && !Array.isArray(x);

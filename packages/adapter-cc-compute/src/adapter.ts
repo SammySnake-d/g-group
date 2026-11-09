@@ -21,10 +21,10 @@ import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { checkBrief, checkSnapshot } from "./brief.ts";
 import { HOST_MCP, MCP_SERVER_NAME, allowedTools, cliArgs, cliEnv, firstPrompt, skillCatalog, skillsSection, toolOverreach } from "./cli.ts";
-import { type AcceptedReport, initLoaded, preInitFrame, streamParser, type Terminal, terminalFor } from "./events.ts";
+import { type AcceptedReport, activityOf, initLoaded, preInitFrame, streamParser, type Terminal, terminalFor } from "./events.ts";
 import { freezeDeep, isPlainRecord, plainData } from "./plain.ts";
 import { IS_WINDOWS, type ProcRow, processTable, signalGroup, stillAlive, treeByPgrep, treeOf } from "./procgroup.ts";
-import type { AdapterOptions, Brief, ClaudeRunner, ComputeAdapter, ComputeEvent, HandoffSnapshot, Manifest, McpServerSpec, QuiesceResult, Refusal, RejectedReport } from "./types.ts";
+import type { AdapterOptions, Brief, ClaudeRunner, ComputeActivity, ComputeAdapter, ComputeEvent, HandoffSnapshot, Manifest, McpServerSpec, QuiesceResult, Refusal, RejectedReport } from "./types.ts";
 
 export const REPORT_MCP_PATH = fileURLToPath(new URL("../mcp/report-mcp.mjs", import.meta.url));
 export const DEFAULT_RUNNER: ClaudeRunner = Object.freeze({ command: "claude", args: Object.freeze([]) });
@@ -240,11 +240,39 @@ function eventHub() {
   };
 }
 
+/** 活动流:只发给正在迭代的订阅者,不留历史(流式增量很多,不像语义事件那样整份保留);每个订阅者最多积压 10000 条 */
+function activityHub() {
+  const subs = new Set<{ queue: ComputeActivity[]; wake: (() => void) | null }>();
+  return {
+    push(a: ComputeActivity) {
+      for (const s of subs) {
+        if (s.queue.length < 10_000) s.queue.push(a);
+        const w = s.wake;
+        s.wake = null;
+        w?.();
+      }
+    },
+    async *iterate(): AsyncGenerator<ComputeActivity> {
+      const s: { queue: ComputeActivity[]; wake: (() => void) | null } = { queue: [], wake: null };
+      subs.add(s);
+      try {
+        for (;;) {
+          while (s.queue.length) yield s.queue.shift()!;
+          await new Promise<void>((r) => { s.wake = r; });
+        }
+      } finally {
+        subs.delete(s);
+      }
+    },
+  };
+}
+
 export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapter {
   const cfg = adapterConfig(options);
   const runner = cfg.runner;
   const server = cfg.server;
   const hub = eventHub();
+  const acts = activityHub();
   const computes = new Map<string, ComputeState>();
 
   /** 对外事件只发一份深冻结的快照(R6-02):violations 等数组是本轮记录的副本并冻结,
@@ -380,6 +408,12 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
         } catch (err) {
           violate(round, `处理 CLI 输出时出错:${errorText(err)}`);
         }
+        // 活动(卡死检测用):只在 init 核验通过、这一轮还没停下时发;解析失败不影响语义事件
+        if (round.initOk && !round.halted) {
+          try {
+            for (const a of activityOf(line)) acts.push(Object.freeze({ computeId: st.id, ...a }) as ComputeActivity);
+          } catch { /* 活动只是计时依据 */ }
+        }
       });
       rl.on("close", () => r());
     });
@@ -508,6 +542,8 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
     },
 
     events: () => hub.iterate(),
+
+    activity: () => acts.iterate(),
 
     async settled(computeId: string) {
       if (typeof computeId !== "string") return [];
