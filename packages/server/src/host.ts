@@ -956,7 +956,7 @@ export class Host {
     const card = one<CardRow>(this.db, "SELECT * FROM gg_cards WHERE task_id = ? AND kind = ? AND state = 'open' ORDER BY seq DESC LIMIT 1", taskId, kind);
     if (card) {
       this.cardAct({ roomId: card.room_id, seq: card.seq, cardId: card.card_id, actionId: decision, clientActionId, ...(note ? { text: note } : {}) });
-      return this.taskView(this.taskDoc(taskId).value);
+      return this.taskViewById(taskId);
     }
     if (decision === "cancel" || !awaitingUser(doc)) throw new HostError("conflict", decision === "cancel" ? `任务在 ${doc.task.state},不能取消` : `任务在 ${doc.task.state},没有待确认的交付`);
     const me: Member = { kind: "user", id: this.userId };
@@ -978,7 +978,7 @@ export class Host {
       this.emitTask(taskId);
       void this.runEffects(effects);
     }
-    return this.taskView(this.taskDoc(taskId).value);
+    return this.taskViewById(taskId);
   }
 
   // ======================= 私聊 rewind(AC-48)=======================
@@ -1150,7 +1150,13 @@ export class Host {
     putDoc(this.db, `task:${id}`, cur.ver, doc);
     return { doc, effects: out.effects };
   }
-  taskView(doc: TaskDoc): TaskView {
+  /** 按 id 读权威任务文档(正文与版本同一次读出)投影成视图;群入口、侧边栏、事件都走这里或 listTasks,不读缓存副本(AC-02) */
+  taskViewById(id: string): TaskView {
+    const d = this.taskDoc(id);
+    return this.taskView(d.value, d.ver);
+  }
+  /** ver 不给时按 id 读当前权威版本 */
+  taskView(doc: TaskDoc, ver?: number): TaskView {
     const runs = all<{ compute_id: string; harness: string; model: string; status: string; started_at: string; ended_at: string | null }>(
       this.db,
       "SELECT * FROM gg_compute WHERE task_id = ? ORDER BY started_at",
@@ -1183,6 +1189,7 @@ export class Host {
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
       ...(doc.description !== undefined ? { description: doc.description } : {}),
+      stateVer: ver ?? this.taskDoc(t.id).ver,
     };
   }
   progress(taskId: string, limit = 200): ComputeProgress[] {
@@ -1195,14 +1202,13 @@ export class Host {
   }
   listTasks(q: { roomId?: string; contactId?: string; states?: string[] }): TaskView[] {
     return listDocs<TaskDoc>(this.db, "task:")
-      .map((d) => d.value)
-      .filter((d) => (!q.roomId || d.roomId === q.roomId) && (!q.contactId || d.task.owner === q.contactId) && (!q.states || q.states.includes(d.task.state)))
-      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-      .map((d) => this.taskView(d));
+      .filter(({ value: d }) => (!q.roomId || d.roomId === q.roomId) && (!q.contactId || d.task.owner === q.contactId) && (!q.states || q.states.includes(d.task.state)))
+      .sort((a, b) => (a.value.createdAt < b.value.createdAt ? 1 : -1))
+      .map((d) => this.taskView(d.value, d.ver));
   }
   private emitTask(id: string) {
+    this.bus.emit({ type: "task.updated", task: this.taskViewById(id) });
     const doc = this.taskDoc(id).value;
-    this.bus.emit({ type: "task.updated", task: this.taskView(doc) });
     // 任务每次变化后看负责人是否在这个群移出中:停止确认到了(T10/T11)才真正移出
     if (doc.task.owner) this.settleExit(doc.roomId, doc.task.owner);
   }

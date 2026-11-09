@@ -187,6 +187,11 @@ export const TaskView = obj({
   updatedAt: isoTime(),
   /** 用户手动新建任务时填的描述,原样保留(AC-47);联系人派活建的任务没有这一项。 */
   description: opt(str({ max: 20000 })),
+  /**
+   * 权威任务文档的版本号(AC-02):群聊主窗口与「从群聊私信」侧边栏读的是同一份文档,同一时刻版本相同;
+   * 每次任务文档落盘 +1,task.updated 事件带同一个值。比较新旧以它为准,不按到达顺序。
+   */
+  stateVer: opt(int({ min: 1 })),
 });
 export type TaskView = Infer<typeof TaskView>;
 
