@@ -3,7 +3,8 @@
 // 新实现带来的 K212–K214,并按新实现改写 K138、K204 的注入点;第十三轮按 PR #6 第十二轮审查 R12-01..R12-04 扩充,
 // 含审查自造的存活单点故障 R12-O1=K228、R12-O2=K226,新实现带来的 K216–K225、K227、K229–K238,
 // 并按新实现改写 K155、K159、K184、K185、K207、K208 的注入点,语义不变;第十四轮按用户 2026-11-09 改的合同「拒收只判定、不处理」
-// 删掉拒收挂处理机制的 36 个变异,K30 改注入点到新实现,新增 K239–K241),在隔离副本里跑本包测试,
+// 删掉拒收挂处理机制的 36 个变异,K30 改注入点到新实现,新增 K239–K241;第十五轮按第十四轮审查 R14-01..R14-03 扩充,含审查自造的存活单点故障 M1=K243、M2=K244、M3=K245,
+// R14-01 原错 K242、R14-03 原错 K246 与上限差一 K247,并按新实现改写 K159、K240 的注入点),在隔离副本里跑本包测试,
 // 每个变异都必须让至少一条具名测试失败(文件级加载失败不算杀死)。注入点必须在源码里恰好出现 1 次。
 // 原样副本必须全绿(阴性对照)。
 // 每个变异在独立进程组里跑,超时(默认 300s,KERNEL_MUT_TIMEOUT_MS 可改)就杀掉整个进程组,记 ✗ 超时,不算被杀死。
@@ -194,7 +195,7 @@ const M = [
   ["K156 topFunctions:false 也放行顶层函数(审查 R7-M1)", "plain.ts", "  return value;\n}", "  return true;\n}"],
   ["K157 预算恰好等于所需字节也判超(审查 R7-M2)", "assemble.ts", "if (need > opts.budgetBytes) return", "if (need >= opts.budgetBytes) return"],
   ["K158 同一可见旧消息重复引用重复页入(审查 R7-M3)", "assemble.ts", "if (inHistory.has(seq) || paged.some((p) => p.seq === seq)) continue;", "if (inHistory.has(seq)) continue;"],
-  ["K159 pull 不判形态就 await(R7-01 原错;第十三轮改注入点到新实现)", "plugins.ts", "try { batch = native ? await returned : returned; }", "try { batch = await returned; }"],
+  ["K159 pull 不判形态就 await(R7-01 原错;第十三轮、第十五轮改注入点到新实现)", "plugins.ts", "      if (!isPlainPromise(returned)) return { ok: false, reason: \"invalid-batch\", detail: NON_PROMISE_PULL };\n", ""],
   ["K160 appendOwn 不查目标是数组(R7-02 原错)", "plain.ts", "  if (!items(out, \"appendOwn 的目标\").ok) throw new TypeError(\"appendOwn 的目标必须是普通数组\");\n", ""],
   ["K161 squash 不查字符串(R7-02 原错)", "assemble.ts", "  if (typeof t !== \"string\") throw new TypeError(\"squash 只接受字符串\");\n", ""],
   ["K162 判定选项只看 topFunctions 一个键(R7-02 原错)", "plain.ts", "    if (!d || isAccessor(d) || k !== \"topFunctions\") return undefined;", "    if (k !== \"topFunctions\") continue;\n    if (!d || isAccessor(d)) return undefined;"],
@@ -246,8 +247,15 @@ const M = [
   // —— 第十四轮:用户 2026-11-09 按根因改合同(拒收只判定、不处理),删掉拒收挂处理机制及其 36 个变异(K183–K186、K190–K197、K200–K208、
   // K210–K213、K215–K221、K223、K235–K237),下面三个变异各自回到一种「内核替插件的失败兜底」的做法,必须被具名测试杀死
   ["K239 send 拒收后仍用内置 then 给它挂空拒绝处理(回到 R8-04 做法:会执行插件的访问器与子类构造)", "plugins.ts", "    if (!isPlainPromise(pending)) return unknown(", "    if (!isPlainPromise(pending) && types.isPromise(pending)) { try { Reflect.apply(Promise.prototype.then, pending, [undefined, () => {}]); } catch { /* 变异 */ } }\n    if (!isPlainPromise(pending)) return unknown("],
-  ["K240 pull 拒收后仍用内置 then 给它挂空拒绝处理", "plugins.ts", "      const native = isPlainPromise(returned);\n", "      const native = isPlainPromise(returned);\n      if (!native && types.isPromise(returned)) { try { Reflect.apply(Promise.prototype.then, returned, [undefined, () => {}]); } catch { /* 变异 */ } }\n"],
+  ["K240 pull 拒收后仍用内置 then 给它挂空拒绝处理(第十五轮改注入点到新实现)", "plugins.ts", "      if (!isPlainPromise(returned)) return { ok: false, reason: \"invalid-batch\", detail: NON_PROMISE_PULL };\n", "      if (!isPlainPromise(returned) && types.isPromise(returned)) { try { Reflect.apply(Promise.prototype.then, returned, [undefined, () => {}]); } catch { /* 变异 */ } }\n      if (!isPlainPromise(returned)) return { ok: false, reason: \"invalid-batch\", detail: NON_PROMISE_PULL };\n"],
   ["K241 建注册表时装全局 unhandledRejection 处理器吞掉插件的失败(改了宿主的全局失败语义)", "plugins.ts", "  const { now, monotonic, sendTimeoutMs } = registryOptions(opts);", "  process.on(\"unhandledRejection\", () => {});\n  const { now, monotonic, sendTimeoutMs } = registryOptions(opts);"],
+  // —— 第十五轮(第十四轮审查 R14-01..R14-03)
+  ["K242 pull 判定失败后仍把同步普通数组当批次处理并盖章(回到 R14-01 原错)", "plugins.ts", "      if (!isPlainPromise(returned)) return { ok: false, reason: \"invalid-batch\"", "      if (!isPlainPromise(returned) && !Array.isArray(returned)) return { ok: false, reason: \"invalid-batch\""],
+  ["K243 拒收有自有 then/constructor 的可扩展 Promise 时临时加自有属性、期间创建一个 Promise、再删掉(审查 M1:返回前后看不出)", "plugins.ts", "  if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) return false;", "  if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) {\n    if (Object.isExtensible(x)) { Object.defineProperty(x, \"__neutral_temporary__\", { value: 1, configurable: true }); void Promise.resolve(); Reflect.deleteProperty(x, \"__neutral_temporary__\"); }\n    return false;\n  }"],
+  ["K244 额外拒绝不可枚举的自有数据属性(审查 M2:合同只要求都是数据属性)", "plugins.ts", "    if (!(\"value\" in d)) return false;\n", "    if (!(\"value\" in d)) return false;\n    if (typeof k === \"string\" && !d.enumerable) return false;\n"],
+  ["K245 追踪符号上的数字只接受整数(审查 M3:合同是数字或 undefined)", "plugins.ts", "typeof v === \"number\" || v === undefined;", "(typeof v === \"number\" && Number.isInteger(v)) || v === undefined;"],
+  ["K246 sendTimeoutMs 不查上限(回到 R14-03 原错:超过 Node 定时器上限被缩成 1 毫秒)", "plugins.ts", "o.sendTimeoutMs > 0 && o.sendTimeoutMs <= MAX_SEND_TIMEOUT_MS)", "o.sendTimeoutMs > 0)"],
+  ["K247 sendTimeoutMs 上限差一(把合法的 2147483647 也拒了)", "plugins.ts", "o.sendTimeoutMs > 0 && o.sendTimeoutMs <= MAX_SEND_TIMEOUT_MS)", "o.sendTimeoutMs > 0 && o.sendTimeoutMs < MAX_SEND_TIMEOUT_MS)"],
 ];
 
 const TIMEOUT_MS = Number(process.env.KERNEL_MUT_TIMEOUT_MS ?? 300_000);
