@@ -1,0 +1,21 @@
+packages/server/src/artifacts.test.ts
+  s_138f3ca4816f31::t_f92a04d72cb6f5 17-19
+packages/server/src/worktree.test.ts
+  s_138f3ca4816f31::t_1b9f7886a2ed2e 17-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bb881f27bc2795b70f202cc9f3e81bf4bf99608a",
+  "prompts": {},
+  "sessions": {
+    "s_138f3ca4816f31": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a300aa9e-eccb-4ec8-b983-75a3ff723e24",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

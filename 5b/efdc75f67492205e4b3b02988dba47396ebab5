@@ -1,0 +1,40 @@
+packages/api-contract/src/events.ts
+  h_f33e46a035b77c 5,34-47
+packages/kernel/src/attention-retry.test.ts
+  h_f33e46a035b77c 1-112
+packages/kernel/src/attention.ts
+  h_f33e46a035b77c 7-8,28,30-34,65-69,94-103,136,141,157-159
+packages/kernel/src/index.ts
+  h_f33e46a035b77c 13
+packages/server/proof/ac36-real-run.ts
+  h_f33e46a035b77c 1-138
+packages/server/proof/ac36-real-run.txt
+  h_f33e46a035b77c 1-28
+packages/server/proof/retry-host-mutations.mjs
+  h_f33e46a035b77c 1-162
+packages/server/src/compute.ts
+  h_f33e46a035b77c 22-26
+packages/server/src/db.ts
+  h_f33e46a035b77c 6-8,59-70
+packages/server/src/fakes.ts
+  h_f33e46a035b77c 69-70,88,90-91,137
+packages/server/src/host.ts
+  h_f33e46a035b77c 6-8,56-58,62-65,81,89-95,98-102,192-203,374-384,404-410,415-416,420,489-490,1052,2076-2088,2158-2159,2162,2164,2167-2169,2172-2173,2278,2482,2513-2515,2531,2576-2577,2593-2603,2659-2660,2679-2683,2774-2777,3129-3131,3142,3147-3152,3160,3177,3255-3899,4179-4180,4264-4346
+packages/server/src/retry.test.ts
+  h_f33e46a035b77c 1-619
+packages/server/src/start.ts
+  h_f33e46a035b77c 7,73-74,89
+receipts/feat-retry-host.json
+  h_f33e46a035b77c 1-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5befdc75f67492205e4b3b02988dba47396ebab5",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
