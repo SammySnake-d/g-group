@@ -294,7 +294,7 @@ export const red: Gate = {
         fs.mkdirSync(path.dirname(redFile), { recursive: true });
         fs.writeFileSync(redFile, ctx.read(f) ?? "");
       }
-      const then = countKeys(runNodeTests(snap.dir, files).failed);
+      const then = countKeys(runNodeTests(snap.dir, files, [], ctx.root).failed);
       for (const t of tests) if (then.get(key(t)) !== 1) out.push(p(g, `${key(t)} 放到红提交的实现上没有按名字失败(文件加载失败不算,红提交要带空壳实现)`));
     } finally { snap.cleanup(); }
     return out;
@@ -377,7 +377,7 @@ function runTransformed(ctx: Ctx, files: string[], transform: (code: string, f: 
     copyTree(ctx.root, tmp, ctx.files);
     for (const f of ctx.files.filter(isSrc)) fs.writeFileSync(path.join(tmp, f), transform(fs.readFileSync(path.join(tmp, f), "utf8"), f));
     fs.writeFileSync(path.join(tmp, "__gate_arm.mjs"), ARM_SRC);
-    return runNodeTests(tmp, files, ["--import", "./__gate_arm.mjs"]);
+    return runNodeTests(tmp, files, ["--import", "./__gate_arm.mjs"], ctx.root);
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 
@@ -391,6 +391,15 @@ export const stub: Gate = {
     if (baseline.passed.length === 0) return [p(g, "改动的测试文件在真实实现上没有任何具名测试通过")];
     const base = countKeys(baseline.passed);
     for (const [k, n] of base) if (n !== 1) out.push(p(g, `${k} 在真实实现上通过了 ${n} 次,测试身份不唯一`));
+    // R15-05:基线逐文件、逐测试名核对,任一文件加载失败、退出异常、应执行的测试缺失或被 skip/todo,都不能拿别的文件的绿掩盖
+    if (!baseline.exitOk) out.push(p(g, "真实实现上的基线运行退出异常(有文件加载失败或测试失败),不能据此校准"));
+    for (const t of baseline.failed) out.push(p(g, t.name === "<文件级失败>" ? `${t.file} 在真实实现上文件加载失败,里面的测试没有执行` : `${key(t)} 在真实实现上失败`));
+    for (const f of files) {
+      const want = analyzeTestFile(ctx.read(f) ?? "", f).tests.map((t) => `${f} › ${t.name}`);
+      if (![...base.keys()].some((k) => k.startsWith(`${f} › `))) out.push(p(g, `${f} 在真实实现上没有任何具名测试通过`));
+      for (const k of want) if (!base.has(k)) out.push(p(g, `${k} 应执行但在真实实现上没有通过(缺失、skip 或 todo)`));
+    }
+    if (out.length) return out;
     const stubbed = countKeys(runTransformed(ctx, files, stubSource).failed);
     for (const [k, n] of base) if ((stubbed.get(k) ?? 0) !== n) out.push(p(g, `${k} 在全部实现换成空桩后没有按名字失败(仍通过、没执行或文件加载失败),没有测到被测代码`));
     // 返回值变异:只要源码里有可变异的 return,改动的测试文件里至少要有一条在错值下失败
@@ -398,6 +407,8 @@ export const stub: Gate = {
     const mutated = runTransformed(ctx, files, (c, f) => { const r = mutateReturns(c, f); mutable += r.count; return r.code; });
     if (mutable > 0) {
       const killed = countKeys(mutated.failed);
+      const ran = countKeys([...mutated.passed, ...mutated.failed]);
+      for (const [k, n] of base) if ((ran.get(k) ?? 0) !== n) out.push(p(g, `${k} 在返回值变异下没有执行(缺失或文件加载失败),执行计数 ${ran.get(k) ?? 0}`));
       for (const f of files) {
         const mine = [...base.keys()].filter((k) => k.startsWith(`${f} › `));
         if (mine.length && !mine.some((k) => (killed.get(k) ?? 0) > 0)) out.push(p(g, `${f} 的测试在被测函数返回错误值(不抛错)时全部仍通过,没有检查计算结果`));

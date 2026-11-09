@@ -109,7 +109,9 @@ export function sandboxed(args: string[], work: string, mounts: string[] = []) {
   const w = fs.realpathSync(work);
   const env = { PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`, HOME: w, TMPDIR: w };
   if (mode === "docker") {
-    const vols = [...new Set([w, ...mounts.map((m) => fs.realpathSync(m))])].flatMap((m) => ["-v", `${m}:${m}`]);
+    // 只有本次副本可写;依赖等其它挂载一律内核只读(R15-04)
+    const ro = [...new Set(mounts.map((m) => fs.realpathSync(m)))].filter((m) => m !== w);
+    const vols = [["-v", `${w}:${w}`], ...ro.map((m) => ["-v", `${m}:${m}:ro`])].flat();
     const uid = typeof process.getuid === "function" ? `${process.getuid()}:${process.getgid?.() ?? 0}` : "1000:1000";
     return spawnSync("docker", ["run", "--rm", "--network", "none", "--user", uid, "-e", `HOME=${w}`, "-e", `TMPDIR=${w}`, ...vols, "-w", w, process.env.GATE_SANDBOX_IMAGE!, "node", ...args], { encoding: "utf8", timeout: 900_000, env: { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: w } });
   }
@@ -118,9 +120,11 @@ export function sandboxed(args: string[], work: string, mounts: string[] = []) {
   return spawnSync("/usr/bin/sandbox-exec", ["-f", prof, process.execPath, ...args], { cwd: w, encoding: "utf8", timeout: 900_000, env });
 }
 
-// 把一棵树(不含 .git、node_modules)复制到新的临时目录;node_modules 以只读软链提供。
-// 每次跑 PR 测试都在新副本里跑,测试改不到被检查的原树,也改不到后面门禁要读的东西。
-export function freshCopy(src: string): string {
+// 把一棵树(不含 .git、node_modules)复制到新的临时目录;依赖目录在副本里重建(第十五轮 R15-03/R15-04):
+// 指回 depsRoot 内部的工作区包链接(如 @g-group/domain -> ../../packages/domain)改成指向副本里对应的包,
+// 其余依赖逐项软链到宿主依赖目录,该目录在沙箱里只读挂载(见 depMounts、sandboxed)。
+// 每次跑 PR 测试都在新副本里跑,测试改不到被检查的原树,也改不到后面门禁要读的依赖。
+export function freshCopy(src: string, depsRoot: string = src): string {
   const dst = fs.mkdtempSync(path.join(os.tmpdir(), "gate-run-"));
   const walk = (rel: string) => {
     for (const e of fs.readdirSync(path.join(src, rel), { withFileTypes: true })) {
@@ -131,22 +135,47 @@ export function freshCopy(src: string): string {
     }
   };
   walk("");
-  const nm = path.join(src, "node_modules");
-  if (fs.existsSync(nm)) fs.symlinkSync(fs.realpathSync(nm), path.join(dst, "node_modules"));
+  mirrorDeps(depsRoot, dst);
   return dst;
+}
+/** 在副本里建 node_modules 目录(不是整体软链):工作区包链到副本内的同名路径,其余链到宿主依赖的真实路径 */
+function mirrorDeps(depsRoot: string, dst: string): void {
+  const nm = path.join(depsRoot, "node_modules");
+  if (!fs.existsSync(nm)) return;
+  const realRoot = fs.realpathSync(depsRoot), realNm = fs.realpathSync(nm);
+  const link = (entry: string, to: string) => {
+    const from = path.join(nm, entry);
+    let target: string;
+    try { target = fs.realpathSync(from); } catch { return; } // 断链不提供
+    // 工作区链接按链接文字就地解析(依赖目录本身是软链时 realpath 会跑到别处),落在仓库内、依赖目录外就改指副本
+    const lexical = fs.lstatSync(from).isSymbolicLink() ? path.resolve(path.dirname(from), fs.readlinkSync(from)) : from;
+    const within = (p: string, root: string) => p === root || p.startsWith(`${root}${path.sep}`);
+    const rootAbs = path.resolve(depsRoot), nmAbs = path.resolve(nm);
+    const dest = within(lexical, rootAbs) && !within(lexical, nmAbs) ? path.join(dst, path.relative(rootAbs, lexical))
+      : within(target, realRoot) && !within(target, realNm) ? path.join(dst, path.relative(realRoot, target)) : target;
+    fs.symlinkSync(dest, to);
+  };
+  fs.mkdirSync(path.join(dst, "node_modules"));
+  for (const e of fs.readdirSync(nm)) {
+    if (e.startsWith("@") && fs.lstatSync(path.join(nm, e)).isDirectory()) {
+      fs.mkdirSync(path.join(dst, "node_modules", e));
+      for (const c of fs.readdirSync(path.join(nm, e))) link(path.join(e, c), path.join(dst, "node_modules", e, c));
+    } else link(e, path.join(dst, "node_modules", e));
+  }
 }
 
 // 用 node --test 的 TAP 输出解析"每个文件里哪些具名测试通过/失败"。
 // 只认测试真的注册并执行后的结果;文件加载失败时 TAP 里只有文件级失败,不会出现具名测试。
-const nmMount = (root: string) => { const nm = path.join(root, "node_modules"); return fs.existsSync(nm) ? [fs.realpathSync(nm)] : []; };
+/** 沙箱里要只读提供的宿主依赖目录(副本里的依赖链接指向它) */
+export const depMounts = (depsRoot: string) => { const nm = path.join(depsRoot, "node_modules"); return fs.existsSync(nm) ? [fs.realpathSync(nm)] : []; };
 
-export function runNodeTests(root: string, files: string[], extraArgs: string[] = []): TestRun {
+export function runNodeTests(root: string, files: string[], extraArgs: string[] = [], depsRoot: string = root): TestRun {
   const passed: NamedTest[] = [], failed: NamedTest[] = [];
   let output = "", exitOk = true;
   for (const file of files) {
-    const work = freshCopy(root);
+    const work = freshCopy(root, depsRoot);
     let r: ReturnType<typeof sandboxed>;
-    try { r = sandboxed([...extraArgs, "--test", "--test-reporter=tap", "--test-concurrency=1", file], work, nmMount(work)); }
+    try { r = sandboxed([...extraArgs, "--test", "--test-reporter=tap", "--test-concurrency=1", file], work, depMounts(depsRoot)); }
     finally { fs.rmSync(work, { recursive: true, force: true }); }
     output += `### ${file}\n${r.stdout ?? ""}${r.stderr ?? ""}`;
     if (r.status !== 0) exitOk = false;
