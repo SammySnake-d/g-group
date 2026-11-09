@@ -1,5 +1,5 @@
 // 测试与 CLI 演示用的确定性替身:脚本化的联系人脑子、按剧本吐语义事件的 Compute 适配器。不连模型、不起进程。
-import type { ComputeAdapter, ComputeEvent, Refusal, SpawnResult, TurnModel } from "@g-group/adapter-cc-compute";
+import type { ComputeAdapter, ComputeEvent, Refusal, SpawnOptions, SpawnResult, TurnModel } from "@g-group/adapter-cc-compute";
 import type { ContactMind, Inbound, MindAction, RoundInput, RoundOutput } from "@g-group/kernel";
 
 /** 规则脑子:用户在私聊或 @ 它派活 → dispatch + commit + 回复;Compute 里程碑 → 汇报;完成 → 交付;失败 → 如实告知。 */
@@ -61,7 +61,7 @@ export function scriptedCompute(
   let closed = false;
   let n = 0;
   let inflight = 0;
-  const spawned: { computeId: string; brief: unknown; cwd: string | undefined; model: string | undefined; effort: string | undefined }[] = [];
+  const spawned: { computeId: string; brief: unknown; cwd: string | undefined; model: string | undefined; effort: string | undefined; opts: SpawnOptions | undefined }[] = [];
   const resumed: { computeId: string; text: string }[] = [];
   /** 每次被受理的续接带来的生效模型(与 resumed 一一对应);旧适配器的调用方不传就是 undefined。 */
   const turns: { computeId: string; turn: TurnModel | undefined }[] = [];
@@ -78,11 +78,11 @@ export function scriptedCompute(
       { kind: "completed", result: `完成:${(brief as { task: string }).task}` },
     ]);
   const adapter = {
-    capabilities: { inSessionModelSwitch: true },
+    capabilities: { inSessionModelSwitch: true, isolation: true },
     async spawn(brief: unknown, o?: { cwd?: string; model?: string; effort?: string }): Promise<SpawnResult> {
       if (opts.failSpawn) return { ok: false, reason: opts.failSpawn };
       const computeId = `cp-${++n}`;
-      spawned.push({ computeId, brief, cwd: o?.cwd, model: o?.model, effort: o?.effort });
+      spawned.push({ computeId, brief, cwd: o?.cwd, model: o?.model, effort: o?.effort, opts: o });
       const evs = script(computeId, brief).map((e) => ({ ...e, computeId }) as ComputeEvent);
       inflight++;
       void (async () => {

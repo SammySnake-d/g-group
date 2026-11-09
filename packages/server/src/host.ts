@@ -80,6 +80,7 @@ import {
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
+import { CapabilityLibrary } from "./capabilities.ts";
 import { PluginStore } from "./plugins.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
@@ -229,6 +230,8 @@ export class Host {
   readonly docs: SharedDocs;
   readonly worktrees: Worktrees | null;
   readonly artifacts: ArtifactStore;
+  /** 全局能力库与联系人专属运行目录(AC-29) */
+  readonly capabilities: CapabilityLibrary;
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly newId: (prefix: string) => string;
@@ -283,6 +286,7 @@ export class Host {
         else this.bus.emit({ type: "schedule.updated", schedule: s });
       },
     });
+    this.capabilities = new CapabilityLibrary(opts.dataDir ?? dirname(opts.file));
     this.plugins = new PluginStore({
       db: this.db,
       dataDir: opts.dataDir ?? dirname(opts.file),
@@ -1306,15 +1310,19 @@ export class Host {
       constraintVersion: t.constraintVer,
       pendingQuestion: t.pendingQ ? { qId: t.pendingQ.qId, text: "" } : null,
       reviewGate: t.reviewGate,
-      computeRuns: runs.map((r) => ({
-        computeId: r.compute_id,
-        harness: r.harness as "claude-code",
-        model: r.model,
-        placement: "local",
-        status: r.status as TaskView["computeRuns"][number]["status"],
-        startedAt: r.started_at,
-        endedAt: r.ended_at,
-      })),
+      computeRuns: runs.map((r) => {
+        const loaded = getDoc<{ skills: string[]; mcpServers: string[] }>(this.db, `compute-loaded:${r.compute_id}`)?.value;
+        return {
+          computeId: r.compute_id,
+          harness: r.harness as "claude-code",
+          model: r.model,
+          placement: "local" as const,
+          status: r.status as TaskView["computeRuns"][number]["status"],
+          startedAt: r.started_at,
+          endedAt: r.ended_at,
+          ...(loaded ? { loaded } : {}),
+        };
+      }),
       recentProgress: progress,
       modelSnapshot: doc.models?.initial ? { ...doc.models.initial } : null,
       modelAttempts: (doc.models?.attempts ?? []).map((a) => ({ ...a })),
@@ -2053,6 +2061,11 @@ export class Host {
     let taskChanged = false;
     tx(this.db, () => {
       run(this.db, "INSERT INTO gg_progress (task_id, compute_id, kind, stage, summary, at) VALUES (?, ?, ?, ?, ?, ?)", row.task_id, ev.computeId, ev.kind, stage, summary, at);
+      // AC-29 观测点:Compute 启动后实际加载的 skill/MCP 清单(CLI init 自报),每次启动/续接覆盖为最新一次
+      if (ev.kind === "started" && ev.loaded) {
+        const cur = getDoc<{ skills: string[]; mcpServers: string[] }>(this.db, `compute-loaded:${ev.computeId}`);
+        putDoc(this.db, `compute-loaded:${ev.computeId}`, cur?.ver ?? 0, { skills: [...ev.loaded.skills], mcpServers: [...ev.loaded.mcpServers] });
+      }
       const status = ev.kind === "started" || ev.kind === "milestone" ? "running" : ev.kind;
       run(this.db, "UPDATE gg_compute SET status = ?, ended_at = CASE WHEN ? IN ('completed','failed','stopped') THEN ? ELSE ended_at END, result = CASE WHEN ? = 'completed' THEN ? ELSE result END WHERE compute_id = ?", status, ev.kind, at, ev.kind, summary, ev.computeId);
       if (ev.kind === "failed") {
@@ -2215,7 +2228,17 @@ export class Host {
     const tools = [...(this.opts.computeTools ?? DEFAULT_COMPUTE_TOOLS)];
     // 首轮就带生效模型(AC-51 ①);只给声明了按轮换模型能力的适配器(旧的一次性适配器只收 cwd/handoff)
     const modelAware = isModelAware(adapter);
-    const spawnOpts = { ...(cwd ? { cwd } : {}), ...(modelAware ? { model, ...(resolved ? { effort: resolved.effort } : {}) } : {}) };
+    // 能力默认隔离加白名单(AC-29):只把联系人勾选的 skill/MCP 放进它的专属运行目录;缺项不启动
+    const contact = getDoc<ContactDoc>(this.db, `contact:${e.contactId}`)?.value;
+    const picked = (contact?.computeAssets ?? []).filter((x) => x.kind !== "script");
+    const prep = this.capabilities.prepare(e.contactId, contact?.harness ?? "claude-code", contact?.computeAssets ?? []);
+    if (!prep.ok) return fail(`勾选的能力不可用:${prep.missing.join("、")}`);
+    // 一次性适配器收专属配置目录与勾选能力;声明能力的适配器(常驻)要显式声明 isolation 才收。
+    // 不收的适配器:勾选了 skill/MCP 就明确失败,不带着缺项启动
+    const isoOk = !modelAware || (adapter as { capabilities?: { isolation?: unknown } }).capabilities?.isolation === true;
+    if (!isoOk && picked.length) return fail(`这个 Compute 适配器还不支持勾选的 skill/MCP(${picked.map((x) => x.name).join("、")}),不带着缺项启动`);
+    const iso = isoOk ? { configDir: prep.home.configDir, pluginDirs: [...prep.home.pluginDirs], mcpServers: prep.home.mcpServers } : {};
+    const spawnOpts = { ...(cwd ? { cwd } : {}), ...(modelAware ? { model, ...(resolved ? { effort: resolved.effort } : {}) } : {}), ...iso };
     const r = await adapter.spawn({ task: e.brief, rules: [], tools, credentialRefs: [], placement: "local" }, spawnOpts);
     if (!r.ok) return fail(r.reason);
     const late: string[] = [];

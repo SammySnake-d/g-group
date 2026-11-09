@@ -35,6 +35,13 @@ export interface AdapterOptions {
   readonly reportServer?: { readonly command: string; readonly args?: readonly string[] };
 }
 
+/** 联系人勾选的 MCP 服务器怎么启动(AC-29)。command 是可执行文件,args/env 原样交给 CLI 的 --mcp-config */
+export interface McpServerSpec {
+  readonly command: string;
+  readonly args?: readonly string[];
+  readonly env?: Readonly<Record<string, string>>;
+}
+
 export interface SpawnOptions {
   readonly handoff?: unknown;
   readonly cwd?: string;
@@ -42,6 +49,19 @@ export interface SpawnOptions {
   readonly model?: string;
   /** 首轮用的推理强度;常驻适配器按它启动 */
   readonly effort?: string;
+  /**
+   * 联系人专属配置目录(AC-29,绝对路径):作为 CLAUDE_CONFIG_DIR 交给 CLI,设置与会话记录都落在这里,不读写本机 ~/.claude。
+   * 盖过 hostEnv 里的同名变量。
+   */
+  readonly configDir?: string;
+  /**
+   * 勾选的 skill 所在的插件目录(绝对路径,每个经 --plugin-dir 交给 CLI)。
+   * --bare 下 CLI 不读 ~/.claude/skills 也不读 CLAUDE_CONFIG_DIR/skills,只有 --plugin-dir 里的 skill 会加载
+   * (V-02,2026-11-09 真实 CLI 2.1.319 实测,packages/server/proof/v02-config-dir.txt)。
+   */
+  readonly pluginDirs?: readonly string[];
+  /** 勾选的 MCP 服务器,和 host(report_progress)一起写进 --mcp-config;名字 host 保留。CLI 只连这些(--strict-mcp-config) */
+  readonly mcpServers?: Readonly<Record<string, McpServerSpec>>;
 }
 
 /** 这一轮的生效模型(AC-51、D27 第 4 节第 1 条):宿主每轮现场解析后交给适配器,适配器在轮边界与会话当前模型比对 */
@@ -53,10 +73,18 @@ export interface TurnModel {
 /** 适配器能力声明(D27 第 4 节第 5 条):inSessionModelSwitch=false 时换模型走兜底重启并接回同一会话 */
 export interface AdapterCapabilities {
   readonly inSessionModelSwitch: boolean;
+  /** 收专属配置目录与勾选的 skill/MCP(SpawnOptions 的 configDir/pluginDirs/mcpServers,AC-29);不声明为不收 */
+  readonly isolation?: boolean;
+}
+
+/** CLI init 自报的实际加载清单(AC-29 观测点) */
+export interface LoadedCapabilities {
+  readonly skills: readonly string[];
+  readonly mcpServers: readonly string[];
 }
 
 export interface ManifestSection {
-  readonly name: "task" | "rules" | "handoff" | "credentialRefs";
+  readonly name: "task" | "rules" | "handoff" | "credentialRefs" | "skills";
   readonly detail: Readonly<Record<string, unknown>>;
 }
 
@@ -67,6 +95,12 @@ export interface Manifest {
   readonly allowedTools: readonly string[];
   readonly credentialRefs: readonly string[];
   readonly placement: Placement;
+  /** 交给 CLI 的勾选 MCP 服务器名(不含 host);本适配器总是给出,可选只为兼容旧替身 */
+  readonly mcpServers?: readonly string[];
+  /** 交给 CLI 的插件目录 */
+  readonly pluginDirs?: readonly string[];
+  /** CLAUDE_CONFIG_DIR;没给为 null */
+  readonly configDir?: string | null;
 }
 
 export type Refusal = {
@@ -90,6 +124,8 @@ export type ComputeEvent =
       readonly model?: string;
       /** CLI 主进程 pid(常驻适配器给出;跨轮不变即同一进程) */
       readonly pid?: number;
+      /** init 自报实际加载的 skill 与 MCP 服务器(AC-29);旧替身可以不带 */
+      readonly loaded?: LoadedCapabilities;
     }
   | { readonly computeId: string; readonly kind: "milestone"; readonly stage: string; readonly summary: string }
   | { readonly computeId: string; readonly kind: "blocked"; readonly needs: string; readonly summary: string }
