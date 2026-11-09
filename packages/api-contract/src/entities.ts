@@ -646,3 +646,65 @@ export const HelperNote = obj({
   at: isoTime(),
 });
 export type HelperNote = Infer<typeof HelperNote>;
+// ---------- 运行台账(AC-43,需求文档 D26):全景画板和联系人的查询读同一张台账 ----------
+/** 单元四层五类:联系人轮次 → Compute 会话 → 会话里的轮次 → 后台任务 / 子代理 */
+export const RUN_LAYERS = ["contact-round", "compute-session", "compute-turn", "background", "subagent"] as const;
+export const RUN_STATUSES = ["queued", "running", "waiting_user", "done", "failed", "interrupted", "orphaned"] as const;
+/** D26 第 8.4 节原因类别(与 @g-group/kernel 的规则表同一份名单) */
+export const RUN_REASON_CLASSES = [
+  "upstream_unavailable", "rate_limited", "no_response", "stream_dropped", "stalled", "context_overflow", "auth_or_quota",
+  "invalid_request", "harness_crashed", "session_lost", "platform_refused", "user_stopped", "unknown",
+] as const;
+/** 能否自动重试(AC-36),与原因类别分开存 */
+export const RUN_RETRY_CLASSES = ["Transient", "Permanent", "MidTurn", "UnknownEffect"] as const;
+/** 画板色调:人停的(stopped)与失败(failed)分开 */
+export const RUN_TONES = ["queued", "running", "waiting", "done", "failed", "stopped", "orphaned"] as const;
+export const RunView = obj({
+  id: id(),
+  layer: oneOf(RUN_LAYERS),
+  parentId: nullable(id()),
+  children: arr(id(), { max: 1000 }),
+  /** 来源:哪个群或私聊、哪条消息 */
+  roomId: id(),
+  sourceSeq: nullable(seq()),
+  /** 属于谁(联系人) */
+  contactId: id(),
+  taskId: nullable(id()),
+  computeId: nullable(id()),
+  /** 上游(模型 / 网关),同一上游同一原因的失败合并成一条群级提示 */
+  upstream: nullable(str({ max: 400 })),
+  status: oneOf(RUN_STATUSES),
+  tone: oneOf(RUN_TONES),
+  /** 画板一行:「失败 · 原因 · 用时」「已停止」「没跑完 · 宿主进程退出」「运行中 · 已跑 N 分」 */
+  text: str({ max: 2000 }),
+  reasonClass: nullable(oneOf(RUN_REASON_CLASSES)),
+  /** 原因类别的人话 */
+  label: nullable(str({ max: 200 })),
+  /** 原因原文(折叠在详情里) */
+  raw: nullable(str({ max: 20000 })),
+  retryClass: nullable(oneOf(RUN_RETRY_CLASSES)),
+  rulesVersion: nullable(str({ max: 50 })),
+  /** 孤儿原因等说明 */
+  note: nullable(str({ max: 2000 })),
+  startedAt: isoTime(),
+  endedAt: nullable(isoTime()),
+  durationMs: int({ min: 0 }),
+  lastProgressAt: isoTime(),
+  /** 判卡死用的阈值与来源(按默认 / 按联系人 / 按上游单独设) */
+  thresholdMs: nullable(int({ min: 0 })),
+  thresholdSource: nullable(oneOf(["default", "contact", "upstream"] as const)),
+  judgedAt: nullable(isoTime()),
+  /** 在跑时正处于的合法等待(不计时) */
+  waiting: nullable(oneOf(["waiting_user", "tool_running", "first_byte", "sleep_grace", "children"] as const)),
+  /** 在跑时已计入的无进展时长 */
+  idleMs: int({ min: 0 }),
+  rerunOf: nullable(id()),
+  attempt: int({ min: 0 }),
+  updatedAt: isoTime(),
+});
+export type RunView = Infer<typeof RunView>;
+export const RunEventView = obj({ runId: id(), kind: str({ max: 50 }), detail: json(), at: isoTime() });
+export type RunEventView = Infer<typeof RunEventView>;
+/** 群级提示:同一会话里同一上游同一原因的多条失败合并成一条 */
+export const RunHint = obj({ roomId: id(), upstream: str({ max: 400 }), reasonClass: oneOf(RUN_REASON_CLASSES), label: str({ max: 200 }), runIds: arr(id(), { max: 1000 }) });
+export type RunHint = Infer<typeof RunHint>;
