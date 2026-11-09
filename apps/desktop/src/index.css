@@ -1,4 +1,12 @@
+@import './astryx/layers.css';
+@import '@astryxdesign/core/astryx.css';
+@import '@astryxdesign/theme-neutral/theme.css';
+@import './astryx/theme-paper-ink.css';
+
+/* Tailwind 3 的基础重置进最低层,否则它(不在层里)会静默压过 Astryx 全部主题样式(astryx#3374) */
+@layer tw-preflight {
 @tailwind base;
+}
 @tailwind components;
 @tailwind utilities;
 

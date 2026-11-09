@@ -1,0 +1,4 @@
+/* 层叠顺序必须最先声明(Astryx 迁移文档「Tailwind v3 coexistence」):
+   Tailwind 3 的基础重置放进最低层 tw-preflight,Astryx 的三层在它之上;
+   Tailwind 工具类不进层(unlayered),永远压过 Astryx——边距、按钮形态照旧用 Tailwind 改。 */
+@layer tw-preflight, reset, astryx-base, astryx-theme;

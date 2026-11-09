@@ -21,6 +21,8 @@
   },
   "dependencies": {
     "@animate-ui/react": "^2.4.2",
+    "@astryxdesign/core": "^0.7.11",
+    "@astryxdesign/theme-neutral": "^0.7.11",
     "@floating-ui/react": "^0.27.20",
     "@radix-ui/react-checkbox": "^1.4.1",
     "@radix-ui/react-context-menu": "^2.4.1",
@@ -36,6 +38,7 @@
     "@radix-ui/react-toggle": "^1.2.1",
     "@radix-ui/react-toggle-group": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.4.1",
+    "@stylexjs/stylex": "^0.19.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

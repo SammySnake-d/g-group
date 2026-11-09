@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { AstryxRoot } from './astryx/AstryxRoot'
+import { AstryxProbe } from './astryx/Probe'
 import { applyMotionCssVars } from './config/motion'
 
 // 首帧前就定好主题,避免先亮后暗闪一下
@@ -12,6 +14,6 @@ applyMotionCssVars()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <AstryxRoot>{new URLSearchParams(location.search).get('preview') === 'astryx' ? <AstryxProbe /> : <App />}</AstryxRoot>
   </StrictMode>,
 )

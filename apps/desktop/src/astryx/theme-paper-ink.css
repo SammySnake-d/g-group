@@ -1,0 +1,47 @@
+/* 「纸·墨·柿」作为 Astryx 主题:只覆盖 Astryx 的语义 token,值全部指向我们自己的变量
+   (亮暗两套已经在 index.css 里按 .dark 切换),不改 Astryx 组件源码,升级时这份文件不动。
+   neutral 主题做底,我们只盖颜色、字体、圆角、阴影。 */
+@layer astryx-theme {
+  [data-astryx-theme] {
+    --font-family-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --font-family-heading: var(--font-family-body);
+    --font-family-code: "SF Mono", ui-monospace, Menlo, "JetBrains Mono", monospace;
+
+    --color-background-surface: hsl(var(--bg));
+    --color-background-body: hsl(var(--bg));
+    --color-background-card: hsl(var(--theirs));
+    --color-background-popover: hsl(var(--elev));
+    --color-background-muted: hsl(var(--side));
+
+    /* 主操作是墨色(--btn),柿红只给品牌信号 */
+    --color-accent: hsl(var(--btn));
+    --color-on-accent: hsl(var(--btn-fg));
+    --color-accent-muted: hsl(var(--sel));
+    --color-text-accent: hsl(var(--me));
+    --color-icon-accent: hsl(var(--me));
+
+    --color-text-primary: hsl(var(--fg));
+    --color-text-secondary: hsl(var(--fg2));
+    --color-text-disabled: hsl(var(--fg3));
+    --color-icon-primary: hsl(var(--fg));
+    --color-icon-secondary: hsl(var(--fg2));
+    --color-icon-disabled: hsl(var(--fg3));
+
+    --color-border: hsl(var(--line));
+    --color-border-emphasized: hsl(var(--theirs-line));
+
+    --color-error: hsl(var(--err));
+    --color-error-muted: hsl(var(--err-soft));
+    --color-text-error: hsl(var(--err));
+    --color-success: hsl(var(--ok));
+    --color-text-success: hsl(var(--ok));
+    --color-warning: hsl(var(--warm));
+    --color-warning-muted: hsl(var(--warm-soft));
+    --color-info: hsl(var(--me));
+
+    --radius-inner: 0.375rem;
+    --radius-element: 0.5rem;
+    --radius-container: 0.75rem;
+    --shadow-med: var(--shadow-elev);
+  }
+}
