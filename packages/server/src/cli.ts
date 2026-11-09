@@ -149,7 +149,7 @@ async function main() {
   });
   try {
     const model = values.model ?? process.env.ANTHROPIC_DEFAULT_SONNET_MODEL;
-    if (model) host.updateSettings({ defaultComputeModel: model, defaultSpeakingModel: model });
+    if (model) host.updateSettings({ defaultComputeModel: model, defaultSpeakingModel: model, confirmAffected: true });
     if (cmd === "group") return await runGroup(host, model);
     let contact = host.listContacts().find((c) => c.name === values.name);
     contact ??= host.createContact({ name: values.name });
