@@ -23,6 +23,7 @@ for (const theme of ["light", "dark"] as const) {
       expect(ob.x - (lb.x + lb.width)).toBeLessThan(12);
       expect(Math.abs(ob.y + ob.height / 2 - (lb.y + lb.height / 2))).toBeLessThan(4);
       expect(ob.height).toBeGreaterThanOrEqual(24);
+      await line.scrollIntoViewIfNeeded();
       await shot(page, `compute/${theme}-chat-line`);
 
       await open.click();

@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowUpRight, Clock, Coins, Cpu, PictureInPicture2, Play, RotateCw, Square, SquareTerminal } from 'lucide-react'
+import { AlertCircle, ArrowUpRight, Clock, PictureInPicture2, Play, RotateCw, Square, SquareTerminal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { people, type Compute } from '@/data'
 import { useApp, type CView } from '@/ctx'
@@ -58,13 +58,12 @@ export function ComputeWork({ id, view = 'session' }: { id: string; view?: CView
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-fg-2">
             {c.status !== 'waiting' && c.status !== 'error' && <span className="flex items-center gap-1.5"><StatusDot c={c} /><span className={cn(c.status === 'running' && 'text-run')}>{statusText(c)}</span></span>}
             <Meta icon={<Clock />}>{c.elapsed}</Meta>
-            <Meta icon={<Coins />}>{c.cost}</Meta>
-            <Meta icon={<SquareTerminal />}><span data-testid="compute-harness">{c.harness}</span></Meta>
-            <Meta icon={<Cpu />}>{c.model}</Meta>
+            {/* harness 就是这个 Compute 本身(#1005);花费按 #877 不放 */}
+            <Meta icon={<SquareTerminal />}><span data-testid="compute-harness">{c.harness}</span><span className="text-fg-3/70"> · </span>{c.model}</Meta>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[12px] text-fg-3" data-testid="compute-source">
-            <span className="max-w-full truncate rounded bg-hover px-1.5 py-px text-fg-2">来自「{convs.find((x) => x.id === c.conv)?.title}」</span>{owner} 分出的 Compute ·{' '}
-            <span data-testid="compute-placement" title="以后可以切到云端托管或自带机器" className="rounded border border-line px-1 text-fg-2">运行在：本机</span> ·{' '}
+            <span className="max-w-full truncate rounded bg-hover px-1.5 py-px text-fg-2" title={`${owner} 分出的 Compute`}>来自「{conv?.title}」</span>
+            <span data-testid="compute-placement" title="以后可以切到云端托管或自带机器" className="rounded border border-line px-1 text-fg-2">运行在：本机</span>
             <Button variant="link" onClick={() => jump(c.askMsg)} className="h-auto gap-0.5 px-0 text-[12px] font-normal text-fg-3 hover:text-fg [&_svg]:size-3">看派活的原消息<ArrowUpRight /></Button>
             {c.reportMsg && <> · <Button variant="link" onClick={() => jump(c.reportMsg!)} className="h-auto gap-0.5 px-0 text-[12px] font-normal text-fg-3 hover:text-fg [&_svg]:size-3">看群里的汇报<ArrowUpRight /></Button></>}
           </div>

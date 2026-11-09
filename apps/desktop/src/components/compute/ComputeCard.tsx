@@ -41,7 +41,8 @@ export function ComputeCard({ compute: c, transcript, defaultOpen, onOpenSession
   /* 出错或停下:写停在第几步(原因在提示条里,不重复);做完:写结果;在跑:写当前阶段 */
   const haltAt = c.steps.findIndex((s) => s.state === (c.status === 'error' ? 'fail' : 'now'))
   const halted = c.status === 'error' || c.status === 'stopped'
-  const where = c.status === 'done' ? c.result ?? state.label : halted ? (haltAt >= 0 ? COPY.stoppedAt(haltAt + 1, c.steps.length) : state.label) : c.phase
+  /* 停止中:阶段说明就在提示条里,头部不重复 */
+  const where = state.key === 'stopping' ? '' : c.status === 'done' ? c.result ?? state.label : halted ? (haltAt >= 0 ? COPY.stoppedAt(haltAt + 1, c.steps.length) : state.label) : c.phase
   const meta = [
     { key: 'harness', text: harness, className: 'text-fg-2' },
     ...(c.status === 'running' && c.steps.length ? [{ key: 'step', text: COPY.step(Math.min(done + 1, c.steps.length), c.steps.length) }] : []),
@@ -65,8 +66,8 @@ export function ComputeCard({ compute: c, transcript, defaultOpen, onOpenSession
               </span>
               <span className="mt-0.5 flex min-w-0 items-center gap-1 text-[12px] text-fg-3">
                 <Facts items={meta} mono={false} className="text-[12px]" />
-                <span aria-hidden className="text-fg-3/50">·</span>
-                <span className="min-w-0 truncate" data-testid="compute-card-phase">{where}</span>
+                {where && <span aria-hidden className="text-fg-3/50">·</span>}
+                {where && <span className="min-w-0 truncate" data-testid="compute-card-phase">{where}</span>}
               </span>
             </span>
           </Disclosure.Trigger>
