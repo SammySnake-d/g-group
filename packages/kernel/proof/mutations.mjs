@@ -4,7 +4,7 @@
 // 含审查自造的存活单点故障 R12-O1=K228、R12-O2=K226,新实现带来的 K216–K225、K227、K229–K238,
 // 并按新实现改写 K155、K159、K184、K185、K207、K208 的注入点,语义不变;第十四轮按用户 2026-11-09 改的合同「拒收只判定、不处理」
 // 删掉拒收挂处理机制的 36 个变异,K30 改注入点到新实现,新增 K239–K241;第十五轮按第十四轮审查 R14-01..R14-03 扩充,含审查自造的存活单点故障 M1=K243、M2=K244、M3=K245,
-// R14-01 原错 K242、R14-03 原错 K246 与上限差一 K247,并按新实现改写 K159、K240 的注入点),在隔离副本里跑本包测试,
+// R14-01 原错 K242、R14-03 原错 K246 与上限差一 K247,并按新实现改写 K159、K240 的注入点;第十六轮按第十五轮审查 R15-01 加审查的两类同步临时改写 K248、K249),在隔离副本里跑本包测试,
 // 每个变异都必须让至少一条具名测试失败(文件级加载失败不算杀死)。注入点必须在源码里恰好出现 1 次。
 // 原样副本必须全绿(阴性对照)。
 // 每个变异在独立进程组里跑,超时(默认 300s,KERNEL_MUT_TIMEOUT_MS 可改)就杀掉整个进程组,记 ✗ 超时,不算被杀死。
@@ -256,6 +256,9 @@ const M = [
   ["K245 追踪符号上的数字只接受整数(审查 M3:合同是数字或 undefined)", "plugins.ts", "typeof v === \"number\" || v === undefined;", "(typeof v === \"number\" && Number.isInteger(v)) || v === undefined;"],
   ["K246 sendTimeoutMs 不查上限(回到 R14-03 原错:超过 Node 定时器上限被缩成 1 毫秒)", "plugins.ts", "o.sendTimeoutMs > 0 && o.sendTimeoutMs <= MAX_SEND_TIMEOUT_MS)", "o.sendTimeoutMs > 0)"],
   ["K247 sendTimeoutMs 上限差一(把合法的 2147483647 也拒了)", "plugins.ts", "o.sendTimeoutMs > 0 && o.sendTimeoutMs <= MAX_SEND_TIMEOUT_MS)", "o.sendTimeoutMs > 0 && o.sendTimeoutMs < MAX_SEND_TIMEOUT_MS)"],
+  // 第十六轮按第十五轮审查 R15-01:拒收过程中同步临时改写、期间不产生异步事件(审查注入原样)
+  ["K248 拒收时同步给插件 Promise 加再删中性自有属性(审查 R15 注入①)", "plugins.ts", 'if (Object.hasOwn(x, "then") || Object.hasOwn(x, "constructor")) return false;', 'if (Object.hasOwn(x, "then") || Object.hasOwn(x, "constructor")) { if (Object.isExtensible(x)) { Object.defineProperty(x, "__neutral_temporary__", { value: 1, configurable: true }); Reflect.deleteProperty(x, "__neutral_temporary__"); } return false; }'],
+  ["K249 拒收时同步给 Promise.prototype 加再删中性属性(审查 R15 注入②)", "plugins.ts", 'if (Object.hasOwn(x, "then") || Object.hasOwn(x, "constructor")) return false;', 'if (Object.hasOwn(x, "then") || Object.hasOwn(x, "constructor")) { Object.defineProperty(Promise.prototype, "__neutral_temporary__", { value: 1, configurable: true }); Reflect.deleteProperty(Promise.prototype, "__neutral_temporary__"); return false; }'],
 ];
 
 const TIMEOUT_MS = Number(process.env.KERNEL_MUT_TIMEOUT_MS ?? 300_000);

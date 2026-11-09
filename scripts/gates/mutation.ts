@@ -46,6 +46,13 @@ export const MUTATIONS: Mutation[] = [
   { name: "豁免认引用里的文字", file: "gates.ts", from: "if (!fence && !l.startsWith(\">\")) lines.push(l);", to: "lines.push(l.replace(/^[>「]+|」$/g, \"\"));" },
   { name: "git 子进程继承 GIT_*", file: "lib.ts", from: "if (!k.startsWith(\"GIT_\") && v !== undefined) env[k] = v;", to: "if (v !== undefined) env[k] = v;" },
   { name: "self-check 白名单放给所有文件", file: "gates.ts", from: "if (c === \"self-check\" && f === \".github/workflows/self-check.yml\" && id === \"self-check\") continue;", to: "if (c === \"self-check\") continue;" },
+  // 第十五轮 R15-03/04/05
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 匹配源码里的模板字符串原文
+  { name: "依赖目录可写挂载(去掉 :ro)", file: "lib.ts", from: "`${m}:${m}:ro`", to: "`${m}:${m}`" },
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 匹配源码里的模板字符串原文
+  { name: "副本不重建工作区链接(依赖一律指回宿主)", file: "lib.ts", from: "fs.symlinkSync(dest, to);", to: "void dest; fs.symlinkSync(target, to);" },
+  { name: "G-STUB 不查基线文件加载失败", file: "gates.ts", from: "for (const t of baseline.failed) out.push(", to: "for (const t of [] as NamedTest[]) out.push(" },
+  { name: "G-STUB 不查应执行测试缺失", file: "gates.ts", from: "for (const k of want) if (!base.has(k))", to: "for (const k of want) if (false && !base.has(k))" },
   ...GATE_NAMES.map((g) => ({ name: `从 ALL_GATES 删掉 ${g}`, file: "gates.ts", from: new RegExp(`(ALL_GATES: Gate\\[\\] = \\[[^\\]]*?)\\b${g}, ?`), to: "$1" })),
   { name: "从 ALL_GATES 删掉 layers(末项)", file: "gates.ts", from: /, layers\];/, to: "];" },
 ];
