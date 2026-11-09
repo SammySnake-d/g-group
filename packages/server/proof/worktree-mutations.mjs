@@ -31,7 +31,7 @@ const M = [
 ];
 
 function run(dir) {
-  const r = spawnSync(process.execPath, ["--no-warnings", "--test", "--test-reporter=tap", "--test-concurrency=1", TEST], { cwd: dir, encoding: "utf8", timeout: 900_000 });
+  const r = spawnSync(process.execPath, ["--no-warnings", "--test", "--test-reporter=tap", "--test-concurrency=1", "--test-timeout=120000", "--test-force-exit", TEST], { cwd: dir, encoding: "utf8", timeout: 900_000 });
   const failed = [...(r.stdout ?? "").matchAll(/^not ok \d+ - (.+)$/gm)].map((m) => m[1]);
   const passed = [...(r.stdout ?? "").matchAll(/^ok \d+ - (.+)$/gm)].map((m) => m[1]);
   return { code: r.status, failed, passed };
