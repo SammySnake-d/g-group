@@ -46,11 +46,19 @@ export function ChatView() {
   useEffect(() => {
     const el = scrollRef.current, col = colRef.current
     if (!el || !col) return
-    const done = () => { following.current = false; onScroll(el) }
+    // 主动滚到底刚结束时内容又长高了(scrollend 先于 ResizeObserver 回调到达):不是用户离开底部,再追一次
+    const done = () => {
+      const was = following.current
+      following.current = false
+      if (was && el.scrollHeight - el.scrollTop - el.clientHeight >= NEAR_BOTTOM) { toBottom(); return }
+      onScroll(el)
+    }
     // 用户主动滚动(滚轮、触摸、键盘)立刻结束「跟随」
     const userScroll = () => { following.current = false }
     const ro = new ResizeObserver(() => { if (stick.current || following.current) el.scrollTo({ top: 1e7 }) })
     ro.observe(col)
+    // 视口自己变矮(顶栏、群资料头部等晚一步长高)时内容不变,也要跟着贴底
+    ro.observe(el)
     chatFollow.release = () => { following.current = false; stick.current = false }
     el.addEventListener('scrollend', done)
     for (const ev of ['wheel', 'touchstart', 'keydown'] as const) el.addEventListener(ev, userScroll, { passive: true })
