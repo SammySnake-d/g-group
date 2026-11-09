@@ -1,0 +1,16 @@
+packages/server/proof/cross-vendor-review-mutations.mjs
+  h_f33e46a035b77c 20,49
+packages/server/src/review.test.ts
+  h_f33e46a035b77c 9,36-37,50-51,179-204
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1be07aa3520a1a466821402663e139916600d107",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
