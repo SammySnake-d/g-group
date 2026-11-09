@@ -6,7 +6,12 @@
 //       在分数最大落差处截断(不用固定条数或固定阈值,#2391),内容重复的只展开一条,其余给 id 加标题。
 //   前缀:prefixMemories 只收生效的全局条目(每轮都适用的才进前缀,不设 token 上限)。
 //   反馈:recordMemoryUse 记 uses;连续 DEGRADE_AFTER 次结果不好降级(不删除),降级后一次好结果恢复。
-import { squash } from "./assemble.ts";
+import { INVISIBLE_SOURCE } from "./assemble.ts";
+
+// 去掉空白与零宽字符后比对(与 assemble.ts 撤回比对同一套字符)。复述判定、去重、字面重合都对两边同样处理,
+// 不写返回类型标注:G-STUB 的返回值变异对两边同时生效时改不了行为(等价变异),这里不让它把对称用法误报成「没测计算结果」
+const INVIS = new RegExp(INVISIBLE_SOURCE, "gu");
+const squash = (t: string) => t.replace(INVIS, "");
 
 export type MemoryStatus = "active" | "superseded" | "revoked" | "degraded";
 export interface MemorySource { readonly roomId: string; readonly seq: number; readonly userQuote: boolean }
@@ -142,7 +147,7 @@ export function planMemoryWrite(entries: readonly MemoryEntry[], w: MemoryWrite,
 const inWindow = (e: MemoryEntry, now: string) => (e.validFrom === null || e.validFrom <= now) && (e.validTo === null || e.validTo > now);
 
 /** 本轮文字与条目的字面重合:本轮文字的相邻二字与英文词,在条目标题+正文里出现的个数 */
-function overlap(text: string, e: MemoryEntry): number {
+function overlap(text: string, e: MemoryEntry) {
   const t = squash(text).toLowerCase();
   if (t === "") return 0;
   const hay = squash(`${e.title}${e.body}`).toLowerCase();
@@ -155,7 +160,7 @@ function overlap(text: string, e: MemoryEntry): number {
   return n;
 }
 
-function score(e: MemoryEntry, anchors: readonly string[], text: string): number {
+function score(e: MemoryEntry, anchors: readonly string[], text: string) {
   const hits = e.anchors.filter((a) => anchors.includes(a)).length;
   const good = e.uses.filter((u) => u.good).length;
   const badN = e.uses.length - good;
