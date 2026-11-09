@@ -2050,11 +2050,15 @@ function frozenHostRun(): Promise<Record<string, unknown>> {
   } catch (e) { out.error = String(e && e.stack || e); }
   parentPort.postMessage(out);
 })();`;
-  return new Promise((ok, fail) => {
-    const w = new Worker(src, { eval: true });
-    w.once("message", (m: Record<string, unknown>) => { void w.terminate(); ok(m); });
+  const w = new Worker(src, { eval: true });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return new Promise<Record<string, unknown>>((ok, fail) => {
+    w.once("message", ok);
     w.once("error", fail);
-  });
+    w.once("exit", (code) => fail(new Error(`冻结宿主探针未返回结果就退出: ${code}`)));
+    // K154 等错误实现可能一直 await 插件 thenable;应让本条具名测试失败,而不是拖到整轮变异超时。
+    timer = setTimeout(() => fail(new Error("冻结宿主探针 10 秒内未返回")), 10_000);
+  }).finally(async () => { clearTimeout(timer); await w.terminate(); });
 }
 
 test("拒收期间不同步临时改写宿主内置对象:独立 worker 里冻结 Promise / Promise.prototype / Object / Object.prototype / Function.prototype / Array / Array.prototype / Reflect 后,九种拒收形态 send / pull 各一遍结果仍是 non-promise-send / invalid-batch、不抛错、插件侧代码 0 次,普通原生 Promise 照常确认 / 拉取;埋雷自检:无异步事件与有异步事件两种窗口里同步定义都当场抛错,Reflect 写法不生效(第十五轮 R15-01)", async () => {
