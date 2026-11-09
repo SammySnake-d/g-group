@@ -23,6 +23,7 @@ try {
   const dialog = page.getByRole('dialog')
   await dialog.waitFor()
   result.motion = await dialog.evaluate((el) => ({ animationDuration: getComputedStyle(el).animationDuration, animationName: getComputedStyle(el).animationName }))
+  assert.ok(parseFloat(result.motion.animationDuration) <= 0.3, '预览沿用项目动效 token，不用库默认的 400ms')
   await page.keyboard.press('Escape')
   await page.getByTestId('shelf-a1').getByRole('heading', { level: 2 }).click()
   await page.getByTestId('file-discuss').click()

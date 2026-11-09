@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { mergeConfig } from 'vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
-import base from './vite.config'
+import base from './vite.config.ts'
 
 // 独立离线评审产物：内联资源。只在该导出中删除禁止内联脚本的生产 meta，生产配置不动。
 export default mergeConfig(base, {

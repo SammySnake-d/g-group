@@ -23,3 +23,20 @@
 
 ## 组件边界
 ClickableCard、TextInput、ToggleButtonGroup、Button、Dialog 均为 Astryx 原件；不修改组件库源码，不手写相同交互。布局与纸面表达是本页组合设计。
+
+## 技能落点与自审
+
+| 原先 | 现在 | 依据 |
+|---|---|---|
+| 进入文件页要先读空态说明 | 默认看到可操作的真实内容节选 | product-not-report：对象与下一动作先行；impeccable Operate/Read |
+| 相关消息永久占一列 | 阅读为主，对话按需展开 | frontend-logic-design：详情层次；apple-design：认知与操作邻近 |
+| 只跳回原消息 | 预填引用并 @ 作者，用户自己决定发送 | meta-development：复用 openConv/addQuote 状态原语，闭环不另造发信入口 |
+| 每张文件常显预览按钮 | 鼠标悬停/键盘焦点才显，触控保留 | emil-design-eng、Vercel：高频面安静，入口对键盘可达 |
+| Astryx 指针弹窗默认 400ms | 引用项目 --dur-base/--dur-fast，键盘无动画 | animate / review-animations：响应预算；choreograph：只动容器，不给正文排队 |
+| 单个结果铺满横向空间 | auto-fill 保留内容尺度；长标题双行，阅读页完整换行 | break-ui；design-atlas 内容尺度 |
+
+未增加拖拽/手势：gestures 的首条是复用成熟交互，不为用技能而强加手势。find-animation-opportunities 淘汰了逐卡入场、搜索结果飞入和翻阅的弹跳；卡片按压与弹窗反馈继续由 Astryx 负责。
+
+Break-ui：文件名/时间为现有字符串，前端类型未声明长度上限；作者为 PersonId，类别为四种枚举。检查 0/1/1200 条、真实长文件名、1024/1440/1920 宽度。1200 条按 24 条增量显示，不让 1200 份预览和头像同时挂载。桌面试跑未声称手机、RTL、200% 浏览器缩放或 Safari 已验收。
+
+模板身份：既有演示数据继续使用；缺原消息时不伪造引用。界面里没有设计依据、审查表或开发指标。
