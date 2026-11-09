@@ -1,0 +1,23 @@
+packages/domain/src/authorization.ts
+  s_65b7b49770f8fb::t_59b6ac3bcc40bf 23-28,33-35,72-81,138-142,174-202,214-231,236-240,245
+packages/domain/src/followups.ts
+  s_65b7b49770f8fb::t_c94b05f3785408 66-67,136-150,158-170,175-177,200-227,232-238,244-257,281-314,322-340,345-347
+packages/domain/src/routing.ts
+  s_65b7b49770f8fb::t_c1b53317592803 24-32,56-58,62-78,87-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c72cfb2817fff54b8a05164281e557504ac3820a",
+  "prompts": {},
+  "sessions": {
+    "s_65b7b49770f8fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f5d9723d-a248-4483-95eb-5ba31b3fda33",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

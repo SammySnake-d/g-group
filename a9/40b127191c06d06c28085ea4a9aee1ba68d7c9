@@ -1,0 +1,31 @@
+packages/domain/src/authorization.test.ts
+  s_40ddef7d1d7537::t_d2f809b01cc3c3 1-170
+packages/domain/src/authorization.ts
+  s_40ddef7d1d7537::t_94e6639b90a9e4 1-185
+packages/domain/src/followups.test.ts
+  s_40ddef7d1d7537::t_d9c9d7bed18c20 1-248
+packages/domain/src/followups.ts
+  s_40ddef7d1d7537::t_4c3dc732e83b9e 1-230
+packages/domain/src/index.ts
+  s_40ddef7d1d7537::t_17f4f41c00ea1f 9-11
+packages/domain/src/routing.test.ts
+  s_40ddef7d1d7537::t_389c11c227e530 1-65
+packages/domain/src/routing.ts
+  s_40ddef7d1d7537::t_7a43f66830064e 1-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a940b127191c06d06c28085ea4a9aee1ba68d7c9",
+  "prompts": {},
+  "sessions": {
+    "s_40ddef7d1d7537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+packages/domain/src/routing.ts
+  s_29fa229c8c70ee::t_ea723e566b5ad0 61-73,82-86
+  s_29fa229c8c70ee::t_d344baa0b7b09f 58-60
+  s_29fa229c8c70ee::t_c97fd941492a12 24-32,55-57
+packages/domain/src/followups.ts
+  s_29fa229c8c70ee::t_dd15389df04b2f 136-137,139,142,144,148,158-159,161,164,175-176,200-201,203-204,208,212,232-238,244-257,281-314,322-340,345-347
+  s_29fa229c8c70ee::t_cdf8e72ec4dce4 138
+  s_29fa229c8c70ee::t_5ab53a36e0df80 140-141
+  s_29fa229c8c70ee::t_6041a3bb8c4da8 143
+  s_29fa229c8c70ee::t_5a1183eaaca395 145-147
+  s_29fa229c8c70ee::t_6a2f50ee5089b4 149-150
+  s_29fa229c8c70ee::t_69de5786f52d19 160
+  s_29fa229c8c70ee::t_3fd18d324af357 162-163
+  s_29fa229c8c70ee::t_58741dfab3f83b 165-167
+  s_29fa229c8c70ee::t_39803a2df42a88 177
+  s_29fa229c8c70ee::t_bd492f0198698d 202
+  s_29fa229c8c70ee::t_0eb5ac9e62f103 205-207
+  s_29fa229c8c70ee::t_e127f14c5a0519 209-211
+  s_29fa229c8c70ee::t_530928f8a1c3c3 213-215
+  s_29fa229c8c70ee::t_abf9400205d525 66-67,168-170,216-227
+packages/domain/src/authorization.ts
+  s_29fa229c8c70ee::t_fa6c0651dcabb8 27,184-202,214-231,236-237
+  s_29fa229c8c70ee::t_fa975afe8b60e1 24-26
+  s_29fa229c8c70ee::t_126e1bb7106160 28
+  s_29fa229c8c70ee::t_c0dad2ac62799a 181-183
+  s_29fa229c8c70ee::t_9f540b5ebddf82 238-240
+  s_29fa229c8c70ee::t_c8bb47f99273a1 23,33-35,72-81,138-142,174-180,245
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b0978a3e4ab29101759b318a8bdcfeb269dbbbb9",
+  "prompts": {},
+  "sessions": {
+    "s_29fa229c8c70ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6f12fa99094fd0fa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
