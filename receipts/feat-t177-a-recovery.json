@@ -1,0 +1,24 @@
+{
+  "slice": "A / AC-15 按 appliedVer 和已确认交付历史恢复任务工作树；备份 ref、持久恢复意图、停止与合入栅栏、未核验分支。详见 receipts/evidence/t177-a/SCOPE.md",
+  "acceptance": [
+    {
+      "id": "AC-15",
+      "status": "未测",
+      "reason": "候选实现已覆盖 A-1～A-5 与 A01～A19 的指定文件/领域边界；最终测试与变异收据待本轮云端返回。无代码仓/缺历史按批准条件标宿主未核验；真实 harness 重放 sending 到确认之间的结果未知边界不声称端到端恰好一次。",
+      "evidence": "receipts/evidence/t177-a/SCOPE.md"
+    }
+  ],
+  "author": {
+    "agent": "astra",
+    "session": "codex:63240562-6769-4e58-afdd-835948217589",
+    "model": "unknown-runtime-metadata-pending"
+  },
+  "red": {
+    "commit": "4a6d8a97266479839097689783b5852811707f3d"
+  },
+  "unverifiable": "AC-15：确定性 Compute 替身不能证明真实 harness 的跨进程送达恰好一次；sending 未确认重启明确阻塞，不自动重复发送。系统断电/文件系统损坏和外部非文件副作用未测。R-02：最终红锚点含首次绿之后追加的强化判据，时间顺序见 SCOPE.md，不伪称全部先红。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "作者名按当前用户要求写 astra，不冒用通用 brief 的 Claude 身份。运行中会话尚无 turns.jsonl，未取得实际模型元数据，作者 model 暂记 unknown，后续仅按原始运行记录补齐；不自审。Codex 主验收与 hy4 辅审由用户另派；Claude Code 看记录终审。"
+}
