@@ -255,7 +255,13 @@ export function ctxFromGit(root: string, base: string, branch: string, pr?: numb
 export function copyTree(src: string, dst: string, files: string[]) {
   for (const f of files) {
     fs.mkdirSync(path.dirname(path.join(dst, f)), { recursive: true });
-    fs.copyFileSync(path.join(src, f), path.join(dst, f));
+    const from = path.join(src, f), root = fs.realpathSync(src);
+    const resolved = fs.realpathSync(from);
+    // freshCopy 不提供符号链接;变换前也不能先把外部文件解引用成普通文件再交给它。
+    if (!fs.lstatSync(from).isFile() || !(resolved === root || resolved.startsWith(`${root}${path.sep}`))) {
+      throw new Error(`拒绝复制非普通文件或仓库外路径:${f}`);
+    }
+    fs.copyFileSync(from, path.join(dst, f));
   }
   const nm = path.join(src, "node_modules");
   if (fs.existsSync(nm) && !fs.existsSync(path.join(dst, "node_modules"))) fs.symlinkSync(fs.realpathSync(nm), path.join(dst, "node_modules"));
