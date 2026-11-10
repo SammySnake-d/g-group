@@ -1,9 +1,9 @@
-import { Fragment } from 'react'
 import { Button } from '@astryxdesign/core/Button'
 import { HoverCard } from '@astryxdesign/core/HoverCard'
 import { OverflowList } from '@astryxdesign/core/OverflowList'
 import { Popover } from '@astryxdesign/core/Popover'
 import { cn } from '@/lib/utils'
+import { FileText } from 'lucide-react'
 import { people, type Artifact } from '@/data'
 import { useApp } from '@/store'
 import { Avatar } from '../Avatar'
@@ -15,7 +15,9 @@ const who = (h: Hop) => (h.from ? people[h.from].name : '系统')
 function HopWords({ hop }: { hop: Hop }) {
   return <div className="max-w-[320px] space-y-1.5 text-[13px] leading-relaxed">
     <div className="font-semibold">{who(hop)}</div>
-    {hop.msgs.map((m) => <p key={m.id} className="line-clamp-4 whitespace-pre-line text-fg-2">{messageText(m)}</p>)}
+    {hop.msgs.map((m) => m.k === 'file'
+      ? <p key={m.id} className="flex items-center gap-1.5 text-fg"><FileText className="h-3.5 w-3.5 shrink-0 text-fg-2" /><span className="truncate">{messageText(m)}</span></p>
+      : <p key={m.id} className="line-clamp-4 whitespace-pre-line text-fg-2">{messageText(m).replace(/\n{2,}/g, '\n')}</p>)}
   </div>
 }
 
@@ -24,7 +26,7 @@ function HopButton({ hop, onGo }: { hop: Hop; onGo: (id: string) => void }) {
     <Button variant="ghost" size="sm" label={`${who(hop)}${hop.verb ? ' ' + hop.verb : ''}，回到原消息`} onClick={() => onGo(hop.target.id)}
       data-testid={`file-hop-${hop.target.id}`} data-source={hop.isSource ? 'true' : undefined}
       className="gap-1.5 px-1.5">
-      <span className="inline-flex items-center gap-1.5">
+      <span className="flex items-center gap-1.5">
         {hop.from && <Avatar id={hop.from} size={20} status={false} mood="idle" />}
         {hop.verb && <span className={cn('text-[13px]', hop.isSource ? 'font-medium text-fg' : 'text-fg-2')}>{hop.verb}</span>}
       </span>
@@ -57,14 +59,12 @@ export function Provenance({ artifact: a }: { artifact: Artifact }) {
           </span>
         </Button> })}
       </div>}>
-        <Button variant="ghost" size="sm" label={`还有 ${rest.length} 处`} data-testid="file-hops-more" className="self-center"><span className="text-[13px] tabular-nums text-fg-2">+{rest.length}</span></Button>
+        <Button variant="ghost" size="sm" label={`还有 ${rest.length} 处`} data-testid="file-hops-more"><span className="text-[13px] tabular-nums text-fg-2">+{rest.length}</span></Button>
       </Popover>}>
-      {hops.map((h, i) => <Fragment key={h.key}>
-        <span className="flex items-center self-center">
-          {i > 0 && <span aria-hidden className="mx-0.5 h-px w-2.5 bg-line" />}
-          <HopButton hop={h} onGo={jump} />
-        </span>
-      </Fragment>)}
+      {hops.map((h, i) => <span key={h.key} className="flex items-center">
+        {i > 0 && <span aria-hidden className="mx-0.5 h-px w-2.5 bg-line" />}
+        <HopButton hop={h} onGo={jump} />
+      </span>)}
     </OverflowList>}
   </div>
 }

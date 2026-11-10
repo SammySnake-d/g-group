@@ -74,6 +74,6 @@ test('来处：窄窗放不下时收进「+N」,收起的那几站仍能跳;页�
   const menu = page.getByRole('dialog', { name: '其余来处' });
   await expect(menu).toBeVisible();
   await shot(page, 'provenance/narrow/more', 300);
-  await menu.getByRole('button').last().click();
+  await menu.getByRole('button', { name: /回到原消息$/ }).last().click();
   await expect(page.getByTestId('chat-column')).toBeVisible();
 });
