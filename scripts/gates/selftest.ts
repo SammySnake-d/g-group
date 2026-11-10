@@ -164,6 +164,12 @@ const sameTurns = (h: string) => [{ model: "claude-sonnet-5-5", toolCalls: [{ in
 const WF = (y: string): Files => ({ ...HEAD_OK, ".github/workflows/x.yml": y });
 
 export const CASES: Case[] = [
+  { name: "R17-04 跟踪的外部符号链接不能在变换副本中被解引用成普通文件", head: { ...HEAD_OK, "packages/core/proof/neutral-link.txt": NEUTRAL }, setup: ({ dir, repo }) => {
+    const home = path.join(dir, "fake-home"); fs.mkdirSync(home);
+    const marker = path.join(home, "neutral-marker.txt"); fs.writeFileSync(marker, NEUTRAL);
+    const link = path.join(repo, "packages/core/proof/neutral-link.txt"); fs.unlinkSync(link); fs.symlinkSync(marker, link);
+  }, expect: "拒绝复制非普通文件或仓库外路径" },
+  { name: "R17-04 仓库内普通中性文件照常复制与执行(阴性对照)", head: { ...HEAD_OK, "packages/core/proof/neutral-link.txt": NEUTRAL }, expect: null },
   { name: "合规:先红后绿、跨厂商审查、来源核对通过", expect: null },
   { name: "合规:node:test 别名 + 断言", head: { ...HEAD_OK, "packages/core/src/add.test.ts": T(`check("adds", () => { assert.equal(add(1, 2), 3); });\n`, `import { test as check } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\n`) }, red: { ...RED_OK, "packages/core/src/add.test.ts": T(`check("adds", () => { assert.equal(add(1, 2), 3); });\n`, `import { test as check } from "node:test";\nimport assert from "node:assert/strict";\nimport { add } from "./add.ts";\n`) }, expect: null },
   { name: "合规:只改文档不需要收据", head: { "docs/spec/notes.md": "x\n" }, red: null, receipt: null, expect: null },

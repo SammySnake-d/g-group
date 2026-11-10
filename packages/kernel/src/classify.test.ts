@@ -278,3 +278,22 @@ test("点名范围的 start 或 end 是非整数(0.5、2.5)时不算有效点名
     assert.deepEqual([r.intent, r.via, r.anchors.mentions.length, c.calls()], ["E2", "semantic", 0, 1], `${start}..${end}`);
   }
 });
+
+
+test("R17-03 有效点名混入一个无效范围就走语义:保留有效锚点、E2/semantic/调用一次;移除无效项则 E1/mechanical/零调用(R16-02 单开关)", () => {
+  const valid = { id: "a", name: "甲", start: 0, end: 2 };
+  for (const invalid of [
+    { ...valid, end: 99 }, { ...valid, start: -1 }, { ...valid, start: 0.5 },
+    { ...valid, end: 1.5 }, { ...valid, name: "乙" }, { ...valid, id: "" },
+  ]) {
+    for (const mixed of [false, true]) {
+      const c = counting("E2");
+      const r = classifyInbound({ sender: user, text: "@甲", mentions: mixed ? [valid, invalid] : [valid] }, c.fn);
+      assert.equal(r.intent, mixed ? "E2" : "E1", JSON.stringify(invalid));
+      assert.equal(r.via, mixed ? "semantic" : "mechanical");
+      assert.deepEqual(r.anchors.mentions, [valid]);
+      assert.deepEqual(r.anchors.quotes, []);
+      assert.equal(c.calls(), mixed ? 1 : 0);
+    }
+  }
+});

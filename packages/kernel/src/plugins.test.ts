@@ -2150,3 +2150,81 @@ test("sendTimeoutMs 取 Node 定时器上限 2147483647 时可建注册表,30ms 
     assert.throws(() => createRegistry({ sendTimeoutMs: bad }), (e: unknown) => e instanceof TypeError && /sendTimeoutMs/.test(e.message), String(bad));
   }
 });
+
+// 第十七轮 R16-01:在源码同步停点上观察,既有数据属性改值后恢复不会改变形状表。
+interface SyncWindowRow { changed: string[]; pauses: number; events: number; restored: boolean; observerError?: string }
+interface SyncWindowResult {
+  productPoints: number; controlPoints: number; hostCount: number; includesMap: boolean; includesWeakMap: boolean;
+  controls: (SyncWindowRow & { what: string; withEvent: boolean; exception?: string })[];
+  actual: (SyncWindowRow & { mode: string; key: string; withHook: boolean; result: { ok: boolean; reason: string } })[];
+}
+let syncWindowResult: Promise<SyncWindowResult> | undefined;
+function syncWindow(): Promise<SyncWindowResult> {
+  if (syncWindowResult) return syncWindowResult;
+  const w = new Worker(new URL("../fixtures/sync-window.mjs", import.meta.url));
+  let timer: ReturnType<typeof setTimeout>;
+  syncWindowResult = new Promise<SyncWindowResult>((ok, fail) => {
+    w.once("message", ok);
+    w.once("error", fail);
+    w.once("exit", (code) => fail(new Error(`同步观察器未交回结果:${code}`)));
+    timer = setTimeout(() => fail(new Error("同步观察器 20 秒内未交回结果")), 20_000);
+  }).finally(async () => { clearTimeout(timer); await w.terminate(); });
+  return syncWindowResult;
+}
+
+test("R17-01 拒收不临时改写已有可写数据属性:实际源码同步停点观察 send/pull、自有 then/constructor、开关异步钩子;赋值/defineProperty/Reflect.set 的有事件与无事件双侧控制", async () => {
+  const reg = createRegistry();
+  const p = Promise.resolve([]);
+  Object.defineProperty(p, "then", { value: () => {}, writable: true, configurable: true });
+  reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => p });
+  const direct = await reg.pull("p", "g");
+  assert.equal(direct.ok === false && direct.reason, "invalid-batch", "未启用调试器的实际内核对照");
+  const out = await syncWindow();
+  assert.equal(out.productPoints > 0 && out.controlPoints > 0, true, "观察器必须挂到真实源码停点");
+  for (const row of out.controls.filter((r) => r.what === "clean" || r.what.startsWith("value-"))) {
+    assert.equal(row.exception, undefined, row.what);
+    assert.equal(row.observerError, undefined, row.what);
+    assert.equal(row.pauses > 0, true, row.what);
+    assert.equal(row.events > 0, row.withEvent, row.what);
+    assert.deepEqual(row.changed, row.what === "clean" ? [] : ["returned"], row.what);
+    assert.equal(row.restored, true, "返回后的独立快照看不出临时写入,同步停点应看到");
+  }
+  assert.equal(out.controls.filter((r) => r.what === "clean" || r.what.startsWith("value-")).length, 8);
+  assert.equal(out.actual.length, 8);
+  for (const row of out.actual) {
+    assert.equal(row.observerError, undefined);
+    assert.equal(row.pauses > 0, true);
+    assert.equal(row.events > 0, row.withHook);
+    assert.equal(row.result.ok, false);
+    assert.equal(row.result.reason, row.mode === "send" ? "non-promise-send" : direct.ok === false && direct.reason);
+    assert.equal(row.changed.includes("returned"), false, JSON.stringify(row));
+    assert.equal(row.restored, true);
+  }
+});
+
+test("R17-02 拒收不临时改写内置对象:由原生构造器描述符闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull", async () => {
+  const reg = createRegistry();
+  reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => [] });
+  const direct = await reg.send("p", { action_id: "a", payload: "x" });
+  assert.equal(direct.ok === false && direct.reason, "non-promise-send", "未启用调试器的实际内核对照");
+  const out = await syncWindow();
+  assert.deepEqual([out.includesMap, out.includesWeakMap], [true, true], "动态闭包必须包含审查指出的对象");
+  for (const row of out.controls.filter((r) => !r.what.startsWith("value-"))) {
+    assert.equal(row.exception, undefined, row.what);
+    assert.equal(row.observerError, undefined, row.what);
+    assert.equal(row.pauses > 0, true, row.what);
+    assert.equal(row.events > 0, row.withEvent, row.what);
+    assert.deepEqual(row.changed, row.what === "clean" ? [] : ["builtin"], row.what);
+    assert.equal(row.restored, true, "返回后恢复原样不能代替同步停点观察");
+  }
+  assert.equal(out.controls.filter((r) => !r.what.startsWith("value-")).length, 6);
+  assert.equal(out.actual.length, 8);
+  for (const row of out.actual) {
+    assert.equal(row.observerError, undefined);
+    assert.equal(row.pauses > 0, true);
+    assert.equal(row.result.ok, false);
+    assert.equal(row.result.reason, row.mode === "send" ? direct.ok === false && direct.reason : "invalid-batch");
+    assert.equal(row.changed.includes("builtin"), false, JSON.stringify(row));
+    assert.equal(row.restored, true);
+  }
+});
