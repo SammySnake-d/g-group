@@ -17,8 +17,8 @@ async function until(fn:()=>boolean) { const end=Date.now()+5000; while(!fn()) {
 function setup(mode: string) {
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),"r11-neutral-")); dirs.push(dir);
   const cwd=path.join(dir,"cwd"); fs.mkdirSync(cwd);
-  const a=createComputeAdapter({runner:{command:process.execPath,args:[fixture]},hostEnv:{HOME:dir,ROUND_MODE:mode},reapForceMs:150});
-  return {a,dir,cwd};
+  const options={runner:{command:process.execPath,args:[fixture]},hostEnv:{HOME:dir,ROUND_MODE:mode},reapForceMs:150};
+  return {options,dir,cwd};
 }
 const lines=(dir:string)=>fs.readFileSync(path.join(dir,"launches"),"utf8").trim().split("\n").map(l=>JSON.parse(l) as {pid:number;args:string[];resumed:boolean});
 const state=(pid:number)=>{try{return execFileSync("ps",["-o","stat=","-p",String(pid)],{encoding:"utf8"}).trim();}catch{return "";}};
@@ -38,7 +38,7 @@ async function started(a:ReturnType<typeof createComputeAdapter>,id:string) {
 }
 
 test("R11-01 快照只在同组后代确已结束后放行",async()=>{
-  const {a,dir,cwd}=setup("group-quick"); const r=await a.spawn(b,{cwd,handoff:zero}); assert.ok(r.ok);
+  const {options,dir,cwd}=setup("group-quick"); const a=createComputeAdapter(options); const r=await a.spawn(b,{cwd,handoff:zero}); assert.ok(r.ok);
   await started(a,r.computeId); assert.ok((await a.stop(r.computeId)).ok); await a.settled(r.computeId);
   const child=Number(fs.readFileSync(path.join(dir,"child"),"utf8")); assert.ok(active(child));
   fs.writeFileSync(path.join(dir,"trigger"),""); await until(()=>fs.existsSync(path.join(dir,"marker")));
@@ -49,7 +49,7 @@ test("R11-01 快照只在同组后代确已结束后放行",async()=>{
 });
 test("R11-01 续接等待同组停止确认且组回收后仍可新开一轮",async()=>{
   for(const mode of ["group-quick","group-force"]) {
-    const {a,dir,cwd}=setup(mode); const r=await a.spawn(b,{cwd,handoff:zero}); assert.ok(r.ok);
+    const {options,dir,cwd}=setup(mode); const a=createComputeAdapter(options); const r=await a.spawn(b,{cwd,handoff:zero}); assert.ok(r.ok);
     await started(a,r.computeId); await a.stop(r.computeId); await a.settled(r.computeId);
     const child=Number(fs.readFileSync(path.join(dir,"child"),"utf8"));
     if(mode==="group-quick") {
@@ -62,7 +62,7 @@ test("R11-01 续接等待同组停止确认且组回收后仍可新开一轮",as
   }
 });
 test("R11-02 NUL 续接在受阻轮回收及状态变更之前拒绝，普通续接成功",async()=>{
-  const {a,dir,cwd}=setup("blocked"); const r=await a.spawn(b,{cwd}); assert.ok(r.ok);
+  const {options,dir,cwd}=setup("blocked"); const a=createComputeAdapter(options); const r=await a.spawn(b,{cwd}); assert.ok(r.ok);
   const before=await a.settled(r.computeId); assert.equal(before.at(-1)?.kind,"blocked"); const pid=lines(dir)[0]!.pid;
   await until(()=>state(pid).startsWith("T"));
   const no=await a.resume(r.computeId,"NEUTRAL\0FIXTURE").catch(e=>({ok:false,thrown:e}));
@@ -72,14 +72,14 @@ test("R11-02 NUL 续接在受阻轮回收及状态变更之前拒绝，普通续
 });
 test("R11-02 CLI 会话号含 NUL 不产出 started 且不能成为续接参数",async()=>{
   for(const mode of ["nul-session","normal"]) {
-    const {a,dir,cwd}=setup(mode); const r=await a.spawn(b,{cwd}); assert.ok(r.ok); const es=await a.settled(r.computeId);
+    const {options,dir,cwd}=setup(mode); const a=createComputeAdapter(options); const r=await a.spawn(b,{cwd}); assert.ok(r.ok); const es=await a.settled(r.computeId);
     if(mode==="nul-session") {assert.equal(es.some(e=>e.kind==="started"),false); assert.equal(es.at(-1)?.kind,"failed"); assert.equal((await a.resume(r.computeId,"NEUTRAL_FIXTURE_NO_CREDENTIALS")).ok,false); assert.equal(lines(dir).length,1);}
     else {assert.equal(es.at(-1)?.kind,"completed"); assert.ok((await a.resume(r.computeId,"NEUTRAL_FIXTURE_NO_CREDENTIALS")).ok); await a.settled(r.computeId); assert.equal(lines(dir).length,2);}
   }
   assert.equal(checkInit({session_id:"neutral\0session",tools:["mcp__host__report_progress"],mcp_servers:[{name:"host",status:"connected"}]}).type,"bad-init");
 });
 test("R11-02 启动失败受控拒绝并保留旧轮及拒收记录，修复目录后可再续接",async()=>{
-  const {a,dir,cwd}=setup("rejected"); const r=await a.spawn(b,{cwd,handoff:zero}); assert.ok(r.ok); const before=await a.settled(r.computeId);
+  const {options,dir,cwd}=setup("rejected"); const a=createComputeAdapter(options); const r=await a.spawn(b,{cwd,handoff:zero}); assert.ok(r.ok); const before=await a.settled(r.computeId);
   assert.equal(before.at(-1)?.kind,"failed"); const rejects=a.rejectedReports(r.computeId); assert.equal(rejects.length,1);
   const invalid = createComputeAdapter({ runner: { command: process.execPath, args: ["\0"] }, hostEnv: { HOME: dir } });
   const denied = await invalid.spawn(b, { cwd }).catch(e => ({ ok: false, thrown: e }));
@@ -92,10 +92,10 @@ test("R11-02 启动失败受控拒绝并保留旧轮及拒收记录，修复目�
 });
 test("R11-03 版本零交接接受且原样装配，不改变负版本拒收",async()=>{
   assert.ok(checkSnapshot(zero).ok); assert.equal(checkSnapshot({...zero,constraintVer:-1}).ok,false);
-  const {a,dir,cwd}=setup("normal"); const r=await a.spawn(b,{cwd,handoff:zero}); assert.ok(r.ok); await a.settled(r.computeId);
+  const {options,dir,cwd}=setup("normal"); const a=createComputeAdapter(options); const r=await a.spawn(b,{cwd,handoff:zero}); assert.ok(r.ok); await a.settled(r.computeId);
   assert.deepEqual(a.snapshot(r.computeId),{ok:true,snapshot:zero}); assert.ok(lines(dir)[0]?.args.some(x=>x.includes("约束版本: 0")));
 });
 test("R11-03 无交接时汇报版本零被保存并进入快照",async()=>{
-  const {a,cwd}=setup("zero-report"); const r=await a.spawn(b,{cwd}); assert.ok(r.ok); await a.settled(r.computeId);
+  const {options,cwd}=setup("zero-report"); const a=createComputeAdapter(options); const r=await a.spawn(b,{cwd}); assert.ok(r.ok); await a.settled(r.computeId);
   assert.deepEqual(a.snapshot(r.computeId),{ok:true,snapshot:zero});
 });
