@@ -1,0 +1,13 @@
+node v24.21.0,每个变异超时 300.0s
+✓ 原样副本:225 绿 / 0 红
+只跑名字匹配 /^K25[0-7] / 的 8 个变异(调试用,不是正式校准)
+✓ [2/8] K251 Map.prototype 同步加再删(R16-01/H16-P2):224 绿 / 1 红,用时 11.8s,被「R17-02 拒收不临时改写内置对象:由原生构造器描述符闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull」发现
+✓ [1/8] K250 已有可写自有数据属性改值再恢复(R16-01/H16-P1):224 绿 / 1 红,用时 12.4s,被「R17-01 拒收不临时改写已有可写数据属性:实际源码同步停点观察 send/pull、自有 then/constructor、开关异步钩子;赋值/defineProperty/Reflect.set 的有事件与无事件双侧控制」发现
+✓ [3/8] K253 赋值改已有自有值再恢复:224 绿 / 1 红,用时 12.0s,被「R17-01 拒收不临时改写已有可写数据属性:实际源码同步停点观察 send/pull、自有 then/constructor、开关异步钩子;赋值/defineProperty/Reflect.set 的有事件与无事件双侧控制」发现
+✓ [4/8] K254 Reflect.set 改已有自有值再恢复:224 绿 / 1 红,用时 12.1s,被「R17-01 拒收不临时改写已有可写数据属性:实际源码同步停点观察 send/pull、自有 then/constructor、开关异步钩子;赋值/defineProperty/Reflect.set 的有事件与无事件双侧控制」发现
+✓ [6/8] K256 改已有值期间产生异步事件再恢复:223 绿 / 2 红,用时 9.5s,被「R17-01 拒收不临时改写已有可写数据属性:实际源码同步停点观察 send/pull、自有 then/constructor、开关异步钩子;赋值/defineProperty/Reflect.set 的有事件与无事件双侧控制」发现
+✓ [5/8] K255 WeakMap.prototype Reflect 同步加再删:224 绿 / 1 红,用时 12.1s,被「R17-02 拒收不临时改写内置对象:由原生构造器描述符闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull」发现
+✓ [7/8] K257 Map.prototype 改写期间产生异步事件再恢复:224 绿 / 1 红,用时 13.6s,被「R17-02 拒收不临时改写内置对象:由原生构造器描述符闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull」发现
+✓ [8/8] K252 混合点名删除 invalidMentions 条件(R16-02):224 绿 / 1 红,用时 13.9s,被「R17-03 有效点名混入一个无效范围就走语义:保留有效锚点、E2/semantic/调用一次;移除无效项则 E1/mechanical/零调用(R16-02 单开关)」发现
+合计 8:杀死 8,存活 0,超时 0
+变异校准通过

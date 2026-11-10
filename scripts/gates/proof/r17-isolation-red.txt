@@ -1,0 +1,22 @@
+✗ 拦下:R17-04 跟踪的外部符号链接不能在变换副本中被解引用成普通文件
+      | base=main branch=feat/x HEAD=23949cdab6bf4b5f266ca9ca90de6a9338439e43 受检文件 5 个 收据=receipts/feat-x.json 门禁 8 个
+      | ✓ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是仓库所有者对这个 PR 这一版的结构化批准
+      | ✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据
+      | ✓ G-REVIEW  R-01:审查人限 Codex 或 Astra(g-group#1531,默认 Codex),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)
+      | ✓ G-RED  R-02:先红后绿,红提交上的测试与现在相同,现在的测试放到红提交实现上按名字失败、现在按名字通过
+      | ✓ G-STUB  R-03 R-04:空实现红基线 + 返回值变异校准,桩下或错值下仍通过、没执行、加载失败的测试都判无效
+      | ✓ G-TAUTO  R-04:拒绝同语反复测试(按 node:test 真实导入识别;无断言、自比较、恒真、不可达、不判源码结果、skip/only;运行时与静态逐条计数一致)
+      | ✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限、不得写提交状态、不得用 pull_request_target
+      | ✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)
+      | CONTENT_HASH=745e79bfde09ba2a6900f407a832e9b3506d28e9c1230b21f1447ac74d98b394
+      |
+✓ 放行:R17-04 仓库内普通中性文件照常复制与执行(阴性对照)
+✓ vendorOf(o1) = openai
+✓ vendorOf(gpt-6-astra) = openai
+✓ vendorOf(ai-iisbo/[乾坤按量]gpt-6-astra) = openai
+✓ vendorOf(claude-opus-5-5) = anthropic
+✓ vendorOf(grok-4.7) = xai
+✓ vendorOf(gemini-4-argon) = google
+✓ vendorOf(stealth/crouton-alpha) = unknown
+✓ vendorOf(undefined) = unknown
+自检失败

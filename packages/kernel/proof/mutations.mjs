@@ -259,6 +259,16 @@ const M = [
   // 第十六轮按第十五轮审查 R15-01:拒收过程中同步临时改写、期间不产生异步事件(审查注入原样)
   ["K248 拒收时同步给插件 Promise 加再删中性自有属性(审查 R15 注入①)", "plugins.ts", 'if (Object.hasOwn(x, "then") || Object.hasOwn(x, "constructor")) return false;', 'if (Object.hasOwn(x, "then") || Object.hasOwn(x, "constructor")) { if (Object.isExtensible(x)) { Object.defineProperty(x, "__neutral_temporary__", { value: 1, configurable: true }); Reflect.deleteProperty(x, "__neutral_temporary__"); } return false; }'],
   ["K249 拒收时同步给 Promise.prototype 加再删中性属性(审查 R15 注入②)", "plugins.ts", 'if (Object.hasOwn(x, "then") || Object.hasOwn(x, "constructor")) return false;', 'if (Object.hasOwn(x, "then") || Object.hasOwn(x, "constructor")) { Object.defineProperty(Promise.prototype, "__neutral_temporary__", { value: 1, configurable: true }); Reflect.deleteProperty(Promise.prototype, "__neutral_temporary__"); return false; }'],
+  // 第十七轮:审查两个存活故障 + 分流单开关,指定发现者;不同写法与事件控制。
+  ["K250 已有可写自有数据属性改值再恢复(R16-01/H16-P1)", "plugins.ts", "if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) return false;", "if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) { for (const k of Reflect.ownKeys(x)) { const d = Object.getOwnPropertyDescriptor(x, k); if (d === undefined || !(\"value\" in d) || !d.writable) continue; const old = d.value; Object.defineProperty(x, k, { ...d, value: 1 }); Object.defineProperty(x, k, { ...d, value: old }); } return false; }", "R17-01"],
+  ["K251 Map.prototype 同步加再删(R16-01/H16-P2)", "plugins.ts", "if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) return false;", "if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) { Object.defineProperty(Map.prototype, \"__neutral_temporary__\", { value: 1, configurable: true }); Reflect.deleteProperty(Map.prototype, \"__neutral_temporary__\"); return false; }", "R17-02"],
+  ["K253 赋值改已有自有值再恢复", "plugins.ts", "if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) return false;", "if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) { const d = Object.getOwnPropertyDescriptor(x, \"then\"); if (d && \"value\" in d && d.writable) { const o = x as unknown as {then: unknown}; const old = o.then; o.then = 1; o.then = old; } return false; }", "R17-01"],
+  ["K254 Reflect.set 改已有自有值再恢复", "plugins.ts", "if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) return false;", "if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) { const d = Object.getOwnPropertyDescriptor(x, \"then\"); if (d && \"value\" in d && d.writable) { const old = d.value; Reflect.set(x, \"then\", 1); Reflect.set(x, \"then\", old); } return false; }", "R17-01"],
+  ["K255 WeakMap.prototype Reflect 同步加再删", "plugins.ts", "if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) return false;", "if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) { Reflect.defineProperty(WeakMap.prototype, \"__neutral_temporary__\", { value: 1, configurable: true }); Reflect.deleteProperty(WeakMap.prototype, \"__neutral_temporary__\"); return false; }", "R17-02"],
+  ["K256 改已有值期间产生异步事件再恢复", "plugins.ts", "if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) return false;", "if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) { for (const k of Reflect.ownKeys(x)) { const d = Object.getOwnPropertyDescriptor(x, k); if (d === undefined || !(\"value\" in d) || !d.writable) continue; Object.defineProperty(x, k, { ...d, value: 1 }); void Promise.resolve(); Object.defineProperty(x, k, d); } return false; }", "R17-01"],
+  ["K257 Map.prototype 改写期间产生异步事件再恢复", "plugins.ts", "if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) return false;", "if (Object.hasOwn(x, \"then\") || Object.hasOwn(x, \"constructor\")) { Object.defineProperty(Map.prototype, \"__neutral_temporary__\", { value: 1, configurable: true }); void Promise.resolve(); Reflect.deleteProperty(Map.prototype, \"__neutral_temporary__\"); return false; }", "R17-02"],
+  ["K252 混合点名删除 invalidMentions 条件(R16-02)", "classify.ts", " || a.invalidMentions > 0", "", "R17-03"],
+
 ];
 
 const TIMEOUT_MS = Number(process.env.KERNEL_MUT_TIMEOUT_MS ?? 300_000);
@@ -271,10 +281,10 @@ function run(dir, timeoutMs = TIMEOUT_MS) {
   const files = fs.readdirSync(path.join(dir, "src")).filter((f) => f.endsWith(".test.ts")).map((f) => path.join("src", f));
   return new Promise((resolve) => {
     const child = spawn(process.execPath, ["--test", ...CONCURRENCY, "--test-reporter=tap", ...files], { cwd: dir, detached: true, stdio: ["ignore", "pipe", "pipe"] });
-    let out = "";
+    let out = "", stderr = "";
     let timedOut = false;
     child.stdout.on("data", (d) => { out += d; });
-    child.stderr.on("data", () => {});
+    child.stderr.on("data", (d) => { stderr += d; });
     const kill = () => { try { process.kill(-child.pid, "SIGKILL"); } catch { /* 已退出 */ } };
     const timer = setTimeout(() => { timedOut = true; kill(); }, timeoutMs);
     child.on("close", (code) => {
@@ -282,7 +292,7 @@ function run(dir, timeoutMs = TIMEOUT_MS) {
       kill(); // 回收可能残留的孙进程
       const failed = [...out.matchAll(/^not ok \d+ - (.+)$/gm)].map((m) => m[1]);
       const passed = [...out.matchAll(/^ok \d+ - (.+)$/gm)].map((m) => m[1]);
-      resolve({ code, failed, passed, timedOut });
+      resolve({ code, failed, passed, timedOut, out, stderr });
     });
   });
 }
@@ -297,6 +307,9 @@ const copy = (name) => {
 const count = (s, sub) => s.split(sub).length - 1;
 const secs = (ms) => `${(ms / 1000).toFixed(1)}s`;
 
+const LOG_DIR = process.env.KERNEL_MUT_LOG_DIR;
+if (LOG_DIR) fs.mkdirSync(LOG_DIR, { recursive: true });
+function save(tag, r) { if (LOG_DIR) fs.writeFileSync(path.join(LOG_DIR, `${tag}.tap`), r.out + r.stderr + `\nEXIT=${r.code} TIMEOUT=${r.timedOut}\n`); }
 async function main() {
   console.log(`node ${process.version},每个变异超时 ${secs(TIMEOUT_MS)}`);
   if (CANARY) {
@@ -320,14 +333,20 @@ async function main() {
   }
   let ok = true;
   const clean = await run(copy("clean"));
+  save("clean", clean);
   const named = new Set(clean.passed);
   const cleanOk = !clean.timedOut && clean.code === 0 && clean.failed.length === 0 && clean.passed.length > 0;
   console.log(`${cleanOk ? "✓" : "✗"} 原样副本:${clean.passed.length} 绿 / ${clean.failed.length} 红${clean.timedOut ? ",超时" : ""}`);
-  if (!cleanOk) ok = false;
+  if (!cleanOk) { fs.rmSync(tmp, { recursive: true, force: true }); console.log("原样副本失败,本段标定无效"); process.exit(1); }
   let killedN = 0, survived = 0, timeouts = 0;
   const list = ONLY ? M.filter(([name]) => ONLY.test(name)) : M;
   if (ONLY) console.log(`只跑名字匹配 ${ONLY} 的 ${list.length} 个变异(调试用,不是正式校准)`);
-  for (const [i, [name, file, from, to]] of list.entries()) {
+  let next = 0;
+  const width = Math.max(1, Math.min(2, Number(process.env.KERNEL_MUT_JOBS ?? 1)));
+  await Promise.all(Array.from({ length: width }, async () => {
+   while (next < list.length) {
+    const i = next++;
+    const [name, file, from, to, designated] = list[i];
     const tag = `[${i + 1}/${list.length}]`;
     const d = copy(`m${i}`);
     const f = path.join(d, "src", file);
@@ -337,20 +356,23 @@ async function main() {
     fs.writeFileSync(f, src.replace(from, to));
     const t0 = Date.now();
     const r = await run(d);
+    save(name.split(" ")[0], r);
     fs.rmSync(d, { recursive: true, force: true });
     // 只有原样副本里通过的具名测试变红才算杀死;文件级失败、超时都不算
-    const kills = r.failed.filter((t) => named.has(t));
+    const kills = r.failed.filter((t) => named.has(t) && (!designated || t.startsWith(designated)));
+    const countOk = r.passed.length + r.failed.length === clean.passed.length && /^# cancelled 0$/m.test(r.out) && /^# skipped 0$/m.test(r.out) && /^# todo 0$/m.test(r.out);
     if (r.timedOut) {
       ok = false; timeouts++;
       console.log(`✗ ${tag} ${name}:超时 ${secs(TIMEOUT_MS)} 被强制结束,不算杀死(超时前 ${r.passed.length} 绿 / ${r.failed.length} 红)`);
-    } else if (kills.length > 0) {
+    } else if (countOk && kills.length > 0) {
       killedN++;
       console.log(`✓ ${tag} ${name}:${r.passed.length} 绿 / ${r.failed.length} 红,用时 ${secs(Date.now() - t0)},被「${kills[0]}」发现`);
     } else {
       ok = false; survived++;
-      console.log(`✗ ${tag} ${name}:${r.passed.length} 绿 / ${r.failed.length} 红,存活(或只有文件级失败)`);
+      console.log(`✗ ${tag} ${name}:${r.passed.length} 绿 / ${r.failed.length} 红,存活(或缺指定发现者/完整执行计数不符)`);
     }
-  }
+   }
+  }));
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log(`合计 ${list.length}:杀死 ${killedN},存活 ${survived},超时 ${timeouts}`);
   console.log(ok ? "变异校准通过" : "变异校准失败");

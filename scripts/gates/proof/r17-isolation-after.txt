@@ -1,0 +1,1 @@
+{"rejected":"拒绝复制非普通文件或仓库外路径:link.txt","status":0,"stdout":"{\"outside\":\"ENOENT\",\"inside\":\"NEUTRAL_INSIDE\",\"copied\":null}\n","stderr":""}

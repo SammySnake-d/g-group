@@ -1,0 +1,15 @@
+{
+  "red_commit": "8dab2f491b4c7945b3fdc70bb60d3f42672799ad",
+  "green_source_commit": "6f201a8f112f263f38e2b84293a6d0cdc5cb5fc4",
+  "red_named_failed": 225,
+  "red_duplicate_names": 0,
+  "green_repo_named_passed": 248,
+  "green_kernel_named_passed": 225,
+  "red_names_missing_green": [],
+  "named_added": [
+    "R17-01",
+    "R17-02",
+    "R17-03"
+  ],
+  "note": "旧实现的后补红基线；保留所有旧测试。新测试体自红提交未改；后来只添加测试体外 lint 目的注释。"
+}

@@ -13,6 +13,9 @@ const ROOT = path.resolve(HERE, "../..");
 interface Mutation { name: string; file: string; from: string | RegExp; to: string }
 const GATE_NAMES = ["trace", "review", "red", "stub", "tautology", "workflow"]; // layers 是末项,单独一条
 export const MUTATIONS: Mutation[] = [
+  // 第十七轮:复制链在沙箱前不得把链接解引用成普通文件。
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 注入点须匹配源码中的模板字符串。
+  { name: "copyTree 不查链接与仓库外路径", file: "lib.ts", from: 'if (!fs.lstatSync(from).isFile() || !(resolved === root || resolved.startsWith(`${root}${path.sep}`)))', to: "if (false)" },
   { name: "CI 模式不跑任何门禁", file: "run-all.ts", from: ": ALL_GATES;", to: ": [];" },
   { name: "本机模式不跑来源核对", file: "run-all.ts", from: "[...LOCAL_GATES, ...ALL_GATES]", to: "ALL_GATES" },
   { name: "有问题也退出 0", file: "run-all.ts", from: "results.some((r) => r.problems.length) ? 1 : 0", to: "0" },
