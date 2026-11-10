@@ -1,0 +1,33 @@
+packages/kernel/fixtures/sync-window.mjs
+  s_707da87feee227::t_611ed47f16b6dd 1-113
+packages/kernel/src/assemble.ts
+  s_707da87feee227::t_1b2a075052111e 1,15,52,69,71,74-75,79,83,87
+packages/kernel/src/classify.test.ts
+  s_707da87feee227::t_07cdf7d3e24947 281-299
+packages/kernel/src/classify.ts
+  s_707da87feee227::t_80be87f4824082 1,11,39-40
+packages/kernel/src/plain.ts
+  s_707da87feee227::t_52c4eff7fa0e32 1,7-8,20,23-24,27-28,32,36
+packages/kernel/src/plugins.test.ts
+  s_707da87feee227::t_67e460fabaf7c5 2153-2230
+packages/kernel/src/plugins.ts
+  s_707da87feee227::t_94561f870c7ab6 1-3,8
+scripts/gates/selftest.ts
+  s_707da87feee227::t_397e78a9bfcb20 167-172
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8dab2f491b4c7945b3fdc70bb60d3f42672799ad",
+  "prompts": {},
+  "sessions": {
+    "s_707da87feee227": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c65d-2dc4-7f63-a331-e0399ce6a347",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
