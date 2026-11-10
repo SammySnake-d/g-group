@@ -4,8 +4,8 @@
     {
       "id": "AC-15",
       "status": "未测",
-      "reason": "候选实现已覆盖 A-1～A-5 与 A01～A19 的指定文件/领域边界；最终测试与变异收据待本轮云端返回。无代码仓/缺历史按批准条件标宿主未核验；真实 harness 重放 sending 到确认之间的结果未知边界不声称端到端恰好一次。",
-      "evidence": "receipts/evidence/t177-a/SCOPE.md"
+      "reason": "候选实现子范围：box3 全量 1503/1503；最终 30 条新增测试在红锚点按名失败，30/30 定点变异由对应具名测试杀死，前后原样对照各 30/30；typecheck/lint 通过。整体 AC-15 仍不把无代码仓/缺历史文字路径当文件恢复通过；真实 harness 在 sending 与确认间的结果未知边界保留显式阻塞，不声称跨进程恰好一次。",
+      "evidence": "receipts/evidence/t177-a/summary.json"
     }
   ],
   "author": {
@@ -20,5 +20,5 @@
   "waiver": null,
   "review": null,
   "review_status": "待审",
-  "notes": "作者名按当前用户要求写 astra，不冒用通用 brief 的 Claude 身份。运行中会话尚无 turns.jsonl，未取得实际模型元数据，作者 model 暂记 unknown，后续仅按原始运行记录补齐；不自审。Codex 主验收与 hy4 辅审由用户另派；Claude Code 看记录终审。"
+  "notes": "作者名按当前用户要求写 astra，不冒用通用 brief 的 Claude 身份。运行中会话尚无 turns.jsonl，未取得实际模型元数据，作者 model 暂记 unknown，后续仅按原始运行记录补齐；不自审。Codex 主验收与 hy4 辅审由用户另派；Claude Code 看记录终审。 原始日志压缩归档 cloud-evidence.tgz，SHA-256 见 summary.json；可解包复核，早期无效签名变异存活记录也保留。"
 }

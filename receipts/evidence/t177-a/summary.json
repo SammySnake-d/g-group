@@ -1,0 +1,362 @@
+{
+  "candidate": "fbd8ef8f6ed3d97ca6a736c3c6e429aa432f7e35",
+  "red_commit": "10091aa629070354fbb0f8616f3d93270818d580",
+  "green_commit": "dac72e92bf59aea16f49d02b8e919e21ccc09408",
+  "box": "box3",
+  "baseline": {
+    "tests": 1473,
+    "pass": 1473,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "red": {
+    "tests": 30,
+    "pass": 0,
+    "fail": 30,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "full": {
+    "tests": 1503,
+    "pass": 1503,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "mutation_control": {
+    "tests": 30,
+    "pass": 30,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "mutation_after_control": {
+    "tests": 30,
+    "pass": 30,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "mutations": [
+    {
+      "id": "A04H-quiesce",
+      "file": "packages/server/src/host.ts",
+      "designated": "A04H ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A04H stopped 事件不等于子进程清空必须等 quiesce 确认才写 Git"
+      ]
+    },
+    {
+      "id": "A15Q-quota",
+      "file": "packages/server/src/host.ts",
+      "designated": "A15Q ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A15Q 恢复后的重放仍申请现有 Compute 槽位"
+      ]
+    },
+    {
+      "id": "A01-order",
+      "file": "packages/domain/src/followups.ts",
+      "designated": "A01 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A01 同一交付中挂得更早的补充也退回 Received"
+      ]
+    },
+    {
+      "id": "A02-later",
+      "file": "packages/domain/src/followups.ts",
+      "designated": "A02 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A02 严格按 appliedVer 回退而非挂入顺序"
+      ]
+    },
+    {
+      "id": "A03-artifact",
+      "file": "packages/domain/src/followups.ts",
+      "designated": "A03 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A03 恢复携带原交付身份且重放不等于落实"
+      ]
+    },
+    {
+      "id": "A04-identity",
+      "file": "packages/domain/src/followups.ts",
+      "designated": "A04 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A04 停止确认前无恢复且确认透传原交付身份"
+      ]
+    },
+    {
+      "id": "A18-domain",
+      "file": "packages/domain/src/followups.ts",
+      "designated": "A18 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A18 已合入只移走并升版其余 Applied 不动也不重放"
+      ]
+    },
+    {
+      "id": "A19-domain",
+      "file": "packages/domain/src/followups.ts",
+      "designated": "A19 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A19 宿主不核验仍按交付版本退回而不拒绝改挂"
+      ]
+    },
+    {
+      "id": "A05-duplicate",
+      "file": "packages/server/src/recovery.ts",
+      "designated": "A05 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A05 同版本两次交付保留历史且 action 幂等"
+      ]
+    },
+    {
+      "id": "A06-atomic",
+      "file": "packages/server/src/recovery.ts",
+      "designated": "A06 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A06 DB 失败回滚交付历史和工作树文档"
+      ]
+    },
+    {
+      "id": "A07-artifact",
+      "file": "packages/server/src/recovery.ts",
+      "designated": "A07 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A07 首次回 base 后续取严格前驱且历史对不上拒绝"
+      ]
+    },
+    {
+      "id": "A08-source",
+      "file": "packages/server/src/worktree.ts",
+      "designated": "A08 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A08 文件恢复含新增删除中文路径且 HEAD 不动"
+      ]
+    },
+    {
+      "id": "A09-ignored",
+      "file": "packages/server/src/worktree.ts",
+      "designated": "A09 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A09 ignored 目标分支与另一工作树保持原样"
+      ]
+    },
+    {
+      "id": "A10-untracked",
+      "file": "packages/server/src/worktree.ts",
+      "designated": "A10 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A10 backup ref 另开工作树可恢复未跟踪用户字节"
+      ]
+    },
+    {
+      "id": "A11-force-signature",
+      "file": "packages/server/src/worktree.ts",
+      "designated": "A11 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A11 开启签名也能备份且真实 index 不变重复 ref 不覆盖"
+      ]
+    },
+    {
+      "id": "A12-error",
+      "file": "packages/server/src/recovery.ts",
+      "designated": "A12 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A12 备份后恢复失败重开数据库仍用原 target 和 backup"
+      ]
+    },
+    {
+      "id": "A13-once",
+      "file": "packages/server/src/recovery.ts",
+      "designated": "A13 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A13 完成与待重放写入同事务重复消费不重复排队"
+      ]
+    },
+    {
+      "id": "A14-atomic",
+      "file": "packages/server/src/recovery.ts",
+      "designated": "A14 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A14 完成事务失败不完成不丢恢复意图"
+      ]
+    },
+    {
+      "id": "A16-candidate",
+      "file": "packages/server/src/worktree.ts",
+      "designated": "A16 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A16 W5 恢复作废候选审查且下一次 pin 沿原分支前进"
+      ]
+    },
+    {
+      "id": "A05H-history",
+      "file": "packages/server/src/host.ts",
+      "designated": "A05H ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A05H 真实交付把候选与 appliedVer 同事务登记历史"
+      ]
+    },
+    {
+      "id": "A01H-double-revert",
+      "file": "packages/server/src/host.ts",
+      "designated": "A01H ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A01H 宿主恢复后不再要求 Compute 自己撤改且列出重做清单"
+      ]
+    },
+    {
+      "id": "A15-fence",
+      "file": "packages/server/src/host.ts",
+      "designated": "A15 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A15 恢复失败时禁止改挂合入和新的 Compute 写入"
+      ]
+    },
+    {
+      "id": "A17-merge",
+      "file": "packages/server/src/host.ts",
+      "designated": "A17 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A17 W4 拒绝改挂两边版本和关联边均不变"
+      ]
+    },
+    {
+      "id": "A18H-mode",
+      "file": "packages/server/src/host.ts",
+      "designated": "A18H ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A18H W6 不恢复不重放源任务并告知撤回另开任务"
+      ]
+    },
+    {
+      "id": "A19H-text",
+      "file": "packages/server/src/host.ts",
+      "designated": "A19H ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A19H 无代码仓文字和任务卡片均写宿主未核验"
+      ]
+    },
+    {
+      "id": "A19L-missing",
+      "file": "packages/server/src/recovery.ts",
+      "designated": "A19L ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A19L 升级缺历史正常改挂但标宿主未核验不猜 base"
+      ]
+    },
+    {
+      "id": "A12I-startup",
+      "file": "packages/server/src/host.ts",
+      "designated": "A12I ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A12I 意图提交后宿主退出重启完成恢复"
+      ]
+    },
+    {
+      "id": "A12B-backup",
+      "file": "packages/server/src/worktree.ts",
+      "designated": "A12B ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A12B 备份后宿主退出重启复用同一备份"
+      ]
+    },
+    {
+      "id": "A12P-repeat",
+      "file": "packages/server/src/worktree.ts",
+      "designated": "A12P ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A12P 恢复中宿主退出重启幂等恢复同一目标"
+      ]
+    },
+    {
+      "id": "A12D-completion",
+      "file": "packages/server/src/recovery.ts",
+      "designated": "A12D ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "A12D 文件已恢复而完成未提交时重启不重新备份"
+      ]
+    }
+  ],
+  "typecheck_exit": 0,
+  "lint_exit": 0,
+  "source_restored_exit": 0,
+  "evidence_archive_sha256": "190d3b0a81a9a675d75a21528954f70584fa2e1291543ef7eeea67160bf577db",
+  "evidence_archive_bytes": 198289,
+  "previous_surviving_mutant": {
+    "id": "A11-signature",
+    "file": "packages/server/src/worktree.ts",
+    "designated": "A11 ",
+    "status": "survived",
+    "exit": 0,
+    "failed": []
+  },
+  "local_gates": "local-gates.txt; 7 pass, G-REVIEW pending; G-PROVENANCE has no review to verify"
+}
