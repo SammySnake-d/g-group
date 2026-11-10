@@ -1,0 +1,27 @@
+box4; 精化测试的绿、变异:3b07e17; 类型/lint/全量:9e306b7(随后仅测试 import 从门面改为直接模块,测试体未变)
+
+> typecheck
+> tsc -p tsconfig.json
+
+
+> lint
+> biome lint --error-on-warnings
+
+Checked 198 files in 584ms. No fixes applied.
+
+全量 npm test 输出末尾:
+ok 1469 - 有失败用例判失败
+  ---
+  duration_ms: 329.678171
+  type: 'test'
+  ...
+1..1469
+# tests 1469
+# suites 0
+# pass 1469
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 166486.263998
+test-runner:实际执行并通过 1469 条用例
