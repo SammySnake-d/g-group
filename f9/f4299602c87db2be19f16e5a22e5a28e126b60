@@ -1,0 +1,19 @@
+packages/server/proof/run-wake-mutations.mjs
+  s_b868c547610ebf::t_25b52c5ead17fc 1-133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f9f4299602c87db2be19f16e5a22e5a28e126b60",
+  "prompts": {},
+  "sessions": {
+    "s_b868c547610ebf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a2a925fa-da86-4354-83c7-0c217a13e607",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
