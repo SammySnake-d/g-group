@@ -165,7 +165,7 @@
     "errorName": "AssertionError"
   },
   "M34": {
-    "name": "R7-01:受阻后并发两次 resume 只受理一个、另一个立即被明确拒绝,只起一个续接 CLI;stop 后原 CLI 与续接 CLI 全部回收(正反对照)",
+    "name": "RR-01(非 mirasim 对照项):已受理 blocked 后对进程组 SIGSTOP 冻结,之后的 milestone/completed 与同组孙进程副作用都不发生",
     "code": "ERR_ASSERTION",
     "errorName": "AssertionError"
   },
@@ -490,7 +490,7 @@
     "errorName": "AssertionError"
   },
   "M99": {
-    "name": "R6-02:违规后 stop 的 stopped 事件及其 violations 深冻结:首个订阅者改写抛 TypeError,新订阅者与两次 settled() 仍看到原违规;停止优先、违规可审计",
+    "name": "R7-01:受阻后并发两次 resume 只受理一个、另一个立即被明确拒绝,只起一个续接 CLI;stop 后原 CLI 与续接 CLI 全部回收(正反对照)",
     "code": "ERR_ASSERTION",
     "errorName": "AssertionError"
   },
