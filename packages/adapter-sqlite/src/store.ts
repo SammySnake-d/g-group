@@ -1,4 +1,4 @@
-// SQLite 存储适配器:会话事件只追加(AC-05)、系统状态的版本校验 CAS、外发动作入库端 action_id 去重(AC-31③)。
+// SQLite 存储适配器:会话事件只追加(AC-05)、文档单一提交点 CAS(AC-21)、外发动作入库端 action_id 去重(AC-31③)。
 // 用 Node 内置 node:sqlite,一个数据库文件就是宿主的权威落盘;关闭再打开同一文件,状态都在。
 import { DatabaseSync } from "node:sqlite";
 import { append, type EventBody, type Log, type LogEvent, type Sender, type VerifyResult, type Versioned, verify } from "@g-group/domain";

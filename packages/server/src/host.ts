@@ -142,6 +142,7 @@ import { QuotaTable } from "./quota.ts";
 import { DEFAULT_RUN_CHECK_MS, RunStore, checkRunWake } from "./runs.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
 import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, unindexTx } from "./search.ts";
+import { SharedDocs } from "./shared-docs.ts";
 import { type CodeRepoConfig, type Workspace, Worktrees } from "./worktree.ts";
 import { type ArtifactRef, ArtifactStore, MAX_ARTIFACT_BYTES, MAX_ARTIFACTS, MAX_INLINE_TEXT, isReadable, recentReadable } from "./artifacts.ts";
 
@@ -372,6 +373,8 @@ export class Host {
   readonly plugins: PluginStore;
   readonly announcements: AnnouncementStore;
   private readonly exits: MemberExits;
+  /** 共享文档单一提交点(AC-21):所有写入只经它 */
+  readonly docs: SharedDocs;
   readonly worktrees: Worktrees | null;
   readonly artifacts: ArtifactStore;
   /** 全局能力库与联系人专属运行目录(AC-29) */
@@ -509,6 +512,17 @@ export class Host {
       roomKind: (roomId) => this.roomRow(roomId).kind,
       changed: (roomId) => this.bus.emit({ type: "room.updated", room: this.roomView(roomId) }),
     });
+    this.docs = new SharedDocs({
+      db: this.db,
+      dataDir: opts.dataDir ?? dirname(opts.file),
+      now: this.now,
+      newId: this.newId,
+      checkRoom: (roomId) => void this.roomRow(roomId),
+      emit: (doc) => this.bus.emit({ type: "doc.updated", doc }),
+      onReport: (what, detail) => this.report(what, detail),
+    });
+    // 启动时派生镜像按权威版本修复(中断的导出、迟到的旧内容覆盖)
+    this.docs.repairMirrors();
     this.worktrees = opts.codeRepo ? new Worktrees(opts.codeRepo, join(opts.dataDir ?? dirname(opts.file), "worktrees")) : null;
     this.artifacts = new ArtifactStore(this.db, join(opts.dataDir ?? dirname(opts.file), "artifacts"), this.now);
     this.recoverReviews();

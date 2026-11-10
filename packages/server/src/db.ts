@@ -2,7 +2,7 @@
 //   - 会话消息正文:adapter-sqlite 的只追加事件表(session = room:<id>,hash 链,AC-05);
 //   - 消息结构化字段(回复、引用、@、卡片、命令):gg_msg,按 (room, seq) 一行,与正文同事务写入;
 //   - 发送去重:adapter-sqlite 的 actions 表(入库端 action_id 唯一,AC-31 ③);
-//   - 版本化文档(联系人、任务、状态笔记、承诺账本、设置):adapter-sqlite 的 docs 表(系统状态的版本校验 CAS);
+//   - 版本化文档(联系人、任务、状态笔记、承诺账本、设置):adapter-sqlite 的 docs 表(CAS,AC-21);
 //   - 其余索引表(会话、成员、游标、已读、待处理输入、Compute、进度、卡片、跨厂商审查)由本文件建;
 //   - 失败轮次容错(AC-36):gg_failures 每个联系人/任务一行在途失败(自动重试中、已出卡、被熔断暂停),失败批次末尾与卡片代次;
 //     gg_breakers 每个上游一行共享熔断状态;gg_round_guard 每个联系人一行在途轮次标记与 crash_recovery_count(启动回收防毒丸)。

@@ -1,4 +1,4 @@
-// 单一并发原语:基于版本号的比较并提交。发言发布、任务认领、系统状态的版本校验都走它。
+// 单一并发原语:基于版本号的比较并提交(AC-21)。发言发布、任务认领、共享文档提交都走它。
 // 纯函数:不改入参,返回新值;调用方把"读到的版本"作为 expectedVer 交回来,版本变了就冲突,绝不静默覆盖。
 export interface Versioned<T> { readonly value: T; readonly ver: number }
 export type CommitResult<T> = { ok: true; cell: Versioned<T> } | { ok: false; reason: "version-conflict"; currentVer: number };

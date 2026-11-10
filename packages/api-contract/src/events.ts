@@ -1,6 +1,6 @@
 // 主进程推给渲染进程的事件流。每条事件带全局递增的 eventSeq:渲染进程断线/刷新后用 sinceEventSeq 续订,
 // 服务端补发缺口;缺口太大(已丢弃)时回 resync=true,渲染进程重新 list。
-import { CommitmentView, ComputeProgress, CONTACT_ACTIVITY, ContactView, MemberRef, MessageView, PluginView, RoomView, RunView, ScheduleView, SlashCommand, TaskView } from "./entities.ts";
+import { CommitmentView, ComputeProgress, CONTACT_ACTIVITY, ContactView, MemberRef, MessageView, PluginView, RoomView, RunView, ScheduleView, SharedDocView, SlashCommand, TaskView } from "./entities.ts";
 import { DraftView } from "./draft.ts";
 import { arr, id, int, isoTime, nullable, obj, oneOf, seq, str, tagged, type Infer, lit } from "./schema.ts";
 
@@ -25,6 +25,8 @@ export const ServerEvent = tagged("type", {
   /** 运行台账里一个单元的状态变了(全景画板刷新这一行) */
   "run.updated": ev("run.updated", { run: RunView }),
   "commitment.updated": ev("commitment.updated", { commitment: CommitmentView }),
+  /** 共享文档有新的生效版本(重放、冲突不发)。 */
+  "doc.updated": ev("doc.updated", { doc: SharedDocView }),
   "schedule.updated": ev("schedule.updated", { schedule: ScheduleView }),
   "schedule.removed": ev("schedule.removed", { scheduleId: id() }),
   "plugin.updated": ev("plugin.updated", { plugin: PluginView }),

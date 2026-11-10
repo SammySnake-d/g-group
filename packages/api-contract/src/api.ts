@@ -32,6 +32,8 @@ import {
   ScheduleView,
   SearchHit,
   SettingsView,
+  SharedDocVersionView,
+  SharedDocView,
   SlashCommand,
   SlashInvocation,
   TASK_STATES,
@@ -242,6 +244,23 @@ export const METHODS = {
   // ---- 承诺账本 ----
   "commitments.list": method(obj({ contactId: opt(id()), roomId: opt(id()), status: opt(oneOf(["active", "done", "revoked", "superseded", "blocked"] as const)) }), obj({ commitments: arr(CommitmentView) })),
   "commitments.revoke": method(obj({ commitmentId: id(), clientActionId: id() }), CommitmentView),
+
+  // ---- 共享文档(AC-21:单一提交点,带基线版本提交,版本冲突不静默覆盖) ----
+  "docs.list": method(obj({ roomId: opt(id()) }), obj({ docs: arr(SharedDocView) })),
+  /** 读权威版本;给 version 读版本链里的那一版。 */
+  "docs.get": method(obj({ docId: id(), version: opt(int({ min: 1 })) }), SharedDocView),
+  /** 新建,版本为 1;同一 clientActionId 重发返回同一份文档。 */
+  "docs.create": method(obj({ clientActionId: id(), title: str({ min: 1, max: 200 }), content: str({ max: 1_000_000 }), roomId: opt(nullable(id())) }), SharedDocView),
+  /**
+   * 提交修改:baseVersion = 读到的 version。版本已变 → 错误 conflict,detail.currentVer 是当前版本,什么都不写;
+   * 同一 requestId 重试 → replayed=true、committedVersion 为当初生效的版本,不重复写;同一 requestId 换了内容 → conflict。
+   */
+  "docs.commit": method(
+    obj({ docId: id(), requestId: id(), baseVersion: int({ min: 1 }), content: str({ max: 1_000_000 }), title: opt(str({ min: 1, max: 200 })) }),
+    obj({ doc: SharedDocView, committedVersion: int({ min: 1 }), replayed: bool() }),
+  ),
+  /** 版本链,从新到旧。 */
+  "docs.history": method(obj({ docId: id(), ...Page }), obj({ versions: arr(SharedDocVersionView) })),
 
   // ---- 定时(cron) ----
   /** 三视角(AC-53):roomId=群视角,contactId=联系人视角,都不给=总览。order 默认 next-run(下次触发早的在前,停用的在后,同时按创建顺序);排序待定(D28 待确认 ②)。 */

@@ -1,7 +1,7 @@
 // P1:撤销的共享文档不再出现在公开合同中。
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkEvent, isMethodName, METHOD_NAMES } from "./index.ts";
+import { checkEvent, formatIssues, isMethodName, METHOD_NAMES } from "./index.ts";
 
 test("P1 合同没有 docs 方法", () => {
   assert.deepEqual(METHOD_NAMES.filter((name) => name.startsWith("docs.")), []);
@@ -20,4 +20,5 @@ test("P1 合同拒绝 doc.updated 事件", () => {
   assert.equal(r.ok, false);
   assert.deepEqual(r.ok ? [] : r.issues.map((issue) => issue.path), ["type"]);
   assert.equal(r.ok ? true : r.issues.some((issue) => issue.message.includes("doc.updated")), false);
+  assert.equal(formatIssues(r.ok ? [] : r.issues), `type: ${r.ok ? "" : r.issues[0]!.message}`);
 });
