@@ -33,3 +33,7 @@ R15-03/04/05 分别在真实容器校验工作区依赖解析到副本、依赖�
 作者 astra / codex:5593bcd9-26ef-4286-92ec-0a8c25bcce2a / shayu/gpt-6-astra；历史作者 Claude、DeepSeek、Astra。review 字段保留第十六轮原样。写审分离：本文件是返修证据，不是 APPROVE。
 
 仓库内文本证据仅去行尾空白以满足 Git 检查；完整原始 TAP/状态码保留在 evidence-r17.tgz（SHA-256 38e6ace70c271a72827cc4254c6be48250eda016c0fa124198698c5066fece1d），不改测试结果。
+
+## 最终门禁阻塞
+
+最终 `--local` 使用 `flock -w 3600 /workspace/.heavy.lock` 排队；锁持续由另一 PR 审查持有。超过等待窗口后队列进程已退出，CLI 输出及状态文件未创建，因此八门都没有本候选的最终运行结果，不能把 118 条门禁自检代替它。R-03/R-04 如实改为未测。不跳过门禁强推：尚未推送、未更新 pipeline；既有远端仍 ee1b1f4。原始证据、独立克隆及 bundle 保留以供继续，Claude 原克隆按用户条件只在推送回读成功后清理。
