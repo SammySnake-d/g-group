@@ -2172,6 +2172,7 @@ function syncWindow(): Promise<SyncWindowResult> {
   return syncWindowResult;
 }
 
+// biome-ignore lint/suspicious/noThenProperty: 本具名测试有意构造应拒收的自有 then 数据属性。
 test("R17-01 拒收不临时改写已有可写数据属性:实际源码同步停点观察 send/pull、自有 then/constructor、开关异步钩子;赋值/defineProperty/Reflect.set 的有事件与无事件双侧控制", async () => {
   const reg = createRegistry();
   const p = Promise.resolve([]);
