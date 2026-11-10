@@ -81,6 +81,9 @@ test("R11-02 CLI 会话号含 NUL 不产出 started 且不能成为续接参数"
 test("R11-02 启动失败受控拒绝并保留旧轮及拒收记录，修复目录后可再续接",async()=>{
   const {a,dir,cwd}=setup("rejected"); const r=await a.spawn(b,{cwd,handoff:zero}); assert.ok(r.ok); const before=await a.settled(r.computeId);
   assert.equal(before.at(-1)?.kind,"failed"); const rejects=a.rejectedReports(r.computeId); assert.equal(rejects.length,1);
+  const invalid = createComputeAdapter({ runner: { command: process.execPath, args: ["\0"] }, hostEnv: { HOME: dir } });
+  const denied = await invalid.spawn(b, { cwd }).catch(e => ({ ok: false, thrown: e }));
+  assert.equal(denied.ok, false); assert.equal("thrown" in denied, false);
   fs.rmdirSync(cwd);
   const no=await a.resume(r.computeId,"NEUTRAL_FIXTURE_NO_CREDENTIALS"); assert.equal(no.ok,false);
   assert.deepEqual(await a.settled(r.computeId),before); assert.deepEqual(a.rejectedReports(r.computeId),rejects); assert.equal(lines(dir).length,1);

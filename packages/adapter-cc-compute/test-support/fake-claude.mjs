@@ -68,7 +68,7 @@ if (process.env.FAKE_RECORD) {
 // 不再往 stdout 打前导行(R3-03:init 之前的未认可输出会被判违规);测试拿到 started/completed 时 pid 文件一定已经存在。
 const markerCode = (marker, ignoreTerm) => `const fs = require("node:fs"); let stopping = false;
 process.on("SIGTERM", () => { fs.writeFileSync(${JSON.stringify(`${marker}.term`)}, ""); if (${ignoreTerm === true}) return; stopping = true; process.exit(0); });
-setInterval(() => { if (!stopping && fs.existsSync(${JSON.stringify(`${marker}.trigger`)}) && !fs.existsSync(${JSON.stringify(marker)})) fs.writeFileSync(${JSON.stringify(marker)}, "副作用"); }, 20);`;
+setInterval(() => { if (!stopping && fs.existsSync(${JSON.stringify(`${marker}.trigger`)}) && !fs.existsSync(${JSON.stringify(marker)})) fs.writeFileSync(${JSON.stringify(marker)}, "NEUTRAL_FIXTURE_NO_CREDENTIALS"); }, 20);`;
 if (plan.grandchild) {
   const { marker, setsid, ignoreTerm } = plan.grandchild;
   const gc = spawn(process.execPath, ["-e", markerCode(marker, ignoreTerm)], { stdio: "ignore", detached: setsid === true });

@@ -93,8 +93,9 @@ export interface ComputeAdapter {
   events(): AsyncIterable<ComputeEvent>;
   /** 这一轮产出终态(或停在受阻)且 CLI 主进程已退出后,返回这一轮的事件 */
   settled(computeId: string): Promise<readonly ComputeEvent[]>;
-  /** 只在终态(stopped/completed/failed)且 CLI 主进程已退出之后成功;否则 {ok:false, reason:"not-quiescent"}。
-   *  不检查同组或脱组的其它进程,见 stopped.scope */
+  /** 只在终态(stopped/completed/failed)、CLI 主进程已退出且 POSIX 同组确已不存在时成功;否则 {ok:false, reason:"not-quiescent"}。
+   *  适配器只确认其实际创建的进程组；脱组后代、容器隔离、槽位归还与权威版本判定归内核/执行环境。
+   *  stopped/settled 不是这个确认；Windows 无同组证据时保持未确认。 */
   snapshot(computeId: string): SnapshotResult;
   /** 被拒收(服务器 isError,或回执合规但内容不合 schema)的汇报记录,按发生顺序;它们不产出语义事件 */
   rejectedReports(computeId: string): readonly RejectedReport[];

@@ -723,7 +723,7 @@ test("RR-04:运行中、stopped 已产出但主进程未退出时快照都是 no
   assert.deepEqual(a.snapshot(r.computeId), { ok: true, snapshot: handoff });
 });
 
-test("RR-04:快照只看主进程已退出,不等进程组里仍在运行的孙进程(与 mirasim 一致)", async () => {
+test("RR-04/R11-01:保留正常结束不发信号，但快照须等同组孙进程确已退出", async () => {
   const handoff = { constraintVer: 2, openQuestions: [], doneSideEffects: [] };
   const f = fake({ reports: [], result: "success", grandchild: { marker: "@MARKER@", ignoreTerm: true } }, { reapForceMs: 5000 });
   const a = createComputeAdapter(f.options);
@@ -731,6 +731,10 @@ test("RR-04:快照只看主进程已退出,不等进程组里仍在运行的孙�
   assert.ok(r.ok);
   assert.equal((await a.settled(r.computeId)).at(-1)?.kind, "completed");
   assert.equal(alive(grandchildPid(f.record)), true);
+  assert.deepEqual(a.snapshot(r.computeId), { ok: false, reason: "not-quiescent" });
+  process.kill(grandchildPid(f.record), "SIGKILL");
+  assert.equal(await gone(grandchildPid(f.record)), true);
+  await waitFor(() => a.snapshot(r.computeId).ok);
   assert.deepEqual(a.snapshot(r.computeId), { ok: true, snapshot: handoff });
 });
 
