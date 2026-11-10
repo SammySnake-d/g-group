@@ -29,8 +29,6 @@ export interface Rollback {
   readonly beforeSeq: number;
   readonly ver: number;
   readonly computeId: string;
-  readonly fromAppliedVer: number | null;
-  readonly fromArtifact: string | null;
 }
 export interface FollowUps {
   readonly taskId: string;
@@ -46,7 +44,7 @@ export type FollowUpEffect =
   /** 先停旧执行器(不是取消任务),停稳后才能回滚工作区 */
   | { readonly kind: "stop-for-rollback"; readonly taskId: string; readonly computeId: string }
   /** 旧执行器已确认停止(或本来就没有):从 #beforeSeq 之前的检查点恢复工作区,再按 ver 重放 requirements */
-  | { readonly kind: "restore-workspace"; readonly taskId: string; readonly roomId: string; readonly beforeSeq: number; readonly ver: number; readonly fromAppliedVer: number | null; readonly fromArtifact: string | null; readonly requirements: readonly Requirement[] };
+  | { readonly kind: "restore-workspace"; readonly taskId: string; readonly roomId: string; readonly beforeSeq: number; readonly ver: number; readonly requirements: readonly Requirement[] };
 export type FollowUpResult = { readonly ok: true; readonly value: FollowUps; readonly effects: readonly FollowUpEffect[] } | { readonly ok: false; readonly reason: string };
 
 const fail = (reason: string): FollowUpResult => ({ ok: false, reason });
@@ -96,7 +94,7 @@ function readState(input: unknown): { ok: true; fu: FollowUps } | { ok: false; r
   let pendingRollback: Rollback | null = null;
   if (rbRaw !== null) {
     if (!isObj(rbRaw)) return { ok: false, reason: "待回滚记录必须是对象或 null" };
-    const r = { roomId: own(rbRaw, "roomId"), beforeSeq: own(rbRaw, "beforeSeq"), ver: own(rbRaw, "ver"), computeId: own(rbRaw, "computeId"), fromAppliedVer: own(rbRaw, "fromAppliedVer") ?? null, fromArtifact: own(rbRaw, "fromArtifact") ?? null };
+    const r = { roomId: own(rbRaw, "roomId"), beforeSeq: own(rbRaw, "beforeSeq"), ver: own(rbRaw, "ver"), computeId: own(rbRaw, "computeId") };
     if (!isText(r.roomId) || !isPos(r.beforeSeq) || !isNat(r.ver) || !isText(r.computeId)) return { ok: false, reason: "待回滚记录字段不合法" };
     pendingRollback = r as Rollback;
   }
@@ -198,7 +196,7 @@ const OUT_SCHEMA = { roomId: { kind: "string" }, seq: { kind: "number" }, toTask
  * #m 已 Applied(工作区里有它):#m 之后已落实的补充一并退回 Received(要随回滚重做);旧执行器还在就先发 stop-for-rollback,
  * 等 confirmRollbackStopped;没有执行器就直接发 restore-workspace。重复改挂到同一去向幂等。
  */
-export function rebindOut(state: FollowUps, input: { roomId: string; seq: number; toTaskId: string; expectedBindingVer: number }, newVer: number | null, computeId: string | null, recoveryMode: "host" | "merged" | "unverified" = "unverified"): FollowUpResult {
+export function rebindOut(state: FollowUps, input: { roomId: string; seq: number; toTaskId: string; expectedBindingVer: number }, newVer: number | null, computeId: string | null): FollowUpResult {
   const s = readState(state);
   if (!s.ok) return fail(s.reason);
   const n = normalize<{ roomId: string; seq: number; toTaskId: string; expectedBindingVer: number }>(input, OUT_SCHEMA, "改挂请求");
@@ -218,15 +216,15 @@ export function rebindOut(state: FollowUps, input: { roomId: string; seq: number
   const links = fu.links.map((l, j): Link => {
     if (j === i) return { ...l, state: "Rebound", appliedIn: null, appliedVer: null, reboundTo: c.toTaskId };
     // 工作区要回到 #m 之前:#m 之后已落实的补充随回滚失效,退回 Received 按新版本重做
-    if (recoveryMode !== "merged" && wasApplied && l.state === "Applied" && l.appliedVer! >= m.appliedVer! && newVer !== null) return { ...l, state: "Received", ver: newVer, appliedIn: null, appliedVer: null };
+    if (wasApplied && j > i && l.state === "Applied" && newVer !== null) return { ...l, state: "Received", ver: newVer, appliedIn: null, appliedVer: null };
     return l;
   });
   const next = (rb: Rollback | null) => build(fu.taskId, fu.bindingVer + 1, links, rb);
-  if (newVer === null || recoveryMode === "merged") return done(next(null));
+  if (newVer === null) return done(next(null));
   const requirements = requirementsOf(links);
   if (!wasApplied) return done(next(null), [{ kind: "replay", taskId: fu.taskId, ver: newVer, requirements }]);
-  if (computeId) return done(next({ roomId: m.roomId, beforeSeq: m.seq, ver: newVer, computeId, fromAppliedVer: m.appliedVer, fromArtifact: m.appliedIn }), [{ kind: "stop-for-rollback", taskId: fu.taskId, computeId }]);
-  return done(next(null), [{ kind: "restore-workspace", taskId: fu.taskId, roomId: m.roomId, beforeSeq: m.seq, ver: newVer, fromAppliedVer: m.appliedVer, fromArtifact: m.appliedIn, requirements }]);
+  if (computeId) return done(next({ roomId: m.roomId, beforeSeq: m.seq, ver: newVer, computeId }), [{ kind: "stop-for-rollback", taskId: fu.taskId, computeId }]);
+  return done(next(null), [{ kind: "restore-workspace", taskId: fu.taskId, roomId: m.roomId, beforeSeq: m.seq, ver: newVer, requirements }]);
 }
 
 /** 旧执行器停止确认:只认待回滚记录里的那个执行器;对上了才发恢复工作区 + 重放,对不上(迟到或别的实例)幂等忽略。 */
@@ -237,7 +235,7 @@ export function confirmRollbackStopped(state: FollowUps, computeId: string): Fol
   const fu = s.fu;
   const rb = fu.pendingRollback;
   if (!rb || rb.computeId !== computeId) return done(fu);
-  return done(build(fu.taskId, fu.bindingVer, fu.links, null), [{ kind: "restore-workspace", taskId: fu.taskId, roomId: rb.roomId, beforeSeq: rb.beforeSeq, ver: rb.ver, fromAppliedVer: rb.fromAppliedVer, fromArtifact: rb.fromArtifact, requirements: requirementsOf(fu.links) }]);
+  return done(build(fu.taskId, fu.bindingVer, fu.links, null), [{ kind: "restore-workspace", taskId: fu.taskId, roomId: rb.roomId, beforeSeq: rb.beforeSeq, ver: rb.ver, requirements: requirementsOf(fu.links) }]);
 }
 
 const IN_SCHEMA = { roomId: { kind: "string" }, seq: { kind: "number" }, text: { kind: "string" }, fromTaskId: { kind: "string" }, ver: { kind: "number" } } as const;
@@ -280,12 +278,11 @@ function bump(t: Task, by: string, computeResumable: boolean): { ok: true; task:
  * 重复改挂(#m 已在 A 上标为改挂到 B)整体幂等,两边版本都不再推进。B 已结束(停止中/终态)拒绝。
  */
 export function rebindFollowUp(from: Side, to: Side, input: { roomId: string; seq: number; expectedBindingVer: number; by: string; computeResumable: boolean; recoveryMode?: "host" | "merged" | "unverified" }): RebindOutcome {
-  const n = normalize<{ roomId: string; seq: number; expectedBindingVer: number; by: string; computeResumable: boolean; recoveryMode?: "host" | "merged" | "unverified" }>(
-    input, { roomId: { kind: "string" }, seq: { kind: "number" }, expectedBindingVer: { kind: "number" }, by: { kind: "string" }, computeResumable: { kind: "boolean" }, recoveryMode: { kind: "string", optional: true } }, "改挂请求");
+  const n = normalize<{ roomId: string; seq: number; expectedBindingVer: number; by: string; computeResumable: boolean }>(
+    input, { roomId: { kind: "string" }, seq: { kind: "number" }, expectedBindingVer: { kind: "number" }, by: { kind: "string" }, computeResumable: { kind: "boolean" } }, "改挂请求");
   if (!n.ok) return n;
   const c = n.value;
   if (!isText(c.by)) return { ok: false, reason: "改挂请求缺发起人" };
-  if (c.recoveryMode !== undefined && !["host", "merged", "unverified"].includes(c.recoveryMode)) return { ok: false, reason: "恢复模式不合法" };
   const a = readState(from.followUps);
   if (!a.ok) return a;
   const b = readState(to.followUps);
@@ -303,7 +300,7 @@ export function rebindFollowUp(from: Side, to: Side, input: { roomId: string; se
   const m = a.fu.links[find(a.fu, c.roomId, c.seq)]!;
   const ba = bump(from.task, c.by, c.computeResumable);
   if (!ba.ok) return ba;
-  const ra = rebindOut(a.fu, cmd, ba.ver, ba.task.computeId, c.recoveryMode);
+  const ra = rebindOut(a.fu, cmd, ba.ver, ba.task.computeId);
   if (!ra.ok) return ra;
   const bb = bump(to.task, c.by, true);
   if (!bb.ok) return bb;
@@ -312,7 +309,7 @@ export function rebindFollowUp(from: Side, to: Side, input: { roomId: string; se
   return {
     ok: true,
     idempotent: false,
-    from: { task: ba.task, followUps: ra.value, taskEffects: c.recoveryMode === "merged" ? [] : ba.effects, effects: ra.effects },
+    from: { task: ba.task, followUps: ra.value, taskEffects: ba.effects, effects: ra.effects },
     to: { task: bb.task, followUps: rb.value, taskEffects: bb.effects, effects: rb.effects },
   };
 }

@@ -155,3 +155,25 @@ test("A12D 文件已恢复而完成未提交时重启不重新备份", async () 
   const r = await crashAndRestart("restored");
   assert.deepEqual(r, { exit: 74, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS", remainingBytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS other" });
 });
+test("A04H stopped 事件不等于子进程清空必须等 quiesce 确认才写 Git", async () => {
+  const s = await scene(); let release!: () => void;
+  const stopped = new Promise<void>(resolve => { release = resolve; });
+  Reflect.set(s.compute.adapter, "quiesce", async () => { await stopped; return { ok: true }; });
+  const backup = s.host.worktrees!.backup.bind(s.host.worktrees); let writes = 0;
+  s.host.worktrees!.backup = ws => { writes++; return backup(ws); };
+  try {
+    s.rebind(); await settle(s.host, s.compute);
+    assert.equal(writes, 0, "子进程尚未确认退出，Git 写操作必须为零");
+    release(); await settle(s.host, s.compute);
+    assert.ok(writes > 0);
+  } finally { release(); }
+});
+test("A15Q 恢复后的重放仍申请现有 Compute 槽位", async () => {
+  const s = await scene();
+  const quota = Reflect.get(s.host, "quota") as { acquire: (input: { taskId: string; contactId: string; roomId: string; isGroup: boolean }) => unknown };
+  const acquire = quota.acquire.bind(quota); let acquired = 0;
+  quota.acquire = input => { if (input.taskId === s.A.id) acquired++; return acquire(input); };
+  s.rebind(); await settle(s.host, s.compute);
+  assert.ok(acquired > 0, "恢复重放不能绕开正常续接的配额调度");
+  assert.match(s.compute.resumed.filter(r => r.computeId === s.A.computeRuns[0]!.computeId).at(-1)!.text, /宿主已把工作区/);
+});
