@@ -14,17 +14,17 @@ let num = 0;
 const text = "NEUTRAL_FIXTURE_NO_CREDENTIALS";
 const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith("GIT_")));
 function git(cwd: string, ...args: string[]) { return execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.local", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", ...args], { cwd, env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim(); }
-function fixture() {
+function fixture(WorktreeClass: typeof Worktrees, RecoveryClass: typeof RecoveryStore) {
   const dir = path.join(tmp, String(++num)); mkdirSync(dir);
   git(dir, "init", "-q", "-b", "seed");
   writeFileSync(path.join(dir, "中文 空格.txt"), text); writeFileSync(path.join(dir, ".gitignore"), "ignored\n");
   writeFileSync(path.join(dir, "deleted"), text);
   git(dir, "add", "-A"); git(dir, "commit", "-qm", "base"); git(dir, "branch", "main");
-  const wt = new Worktrees({ repo: dir, targetBranch: "main" }, path.join(dir, "trees"));
+  const wt = new WorktreeClass({ repo: dir, targetBranch: "main" }, path.join(dir, "trees"));
   const ws = wt.provision("A");
   const db = openDb(path.join(dir, "state.db")); after(() => db.close());
   putDoc(db, "ws:A", 0, ws);
-  const store = new RecoveryStore(db, wt);
+  const store = new RecoveryClass(db, wt);
   return { dir, wt, ws, db, store };
 }
 function recovery(ws: Workspace): RecoveryWorkspace { return { ...ws, recovery: { ver: 3, backupRef: "refs/gg/backup/41/3" } }; }
@@ -38,18 +38,18 @@ function change(s: ReturnType<typeof fixture>) {
   return ws;
 }
 test("A05 同版本两次交付保留历史且 action 幂等", () => {
-  const s = fixture();
+  const s = fixture(Worktrees, RecoveryStore);
   for (const deliveryId of ["one", "two", "two"]) s.store.record({ taskId: "A", deliveryId, resultVer: 1, artifact: `git:${s.ws.baseSha}@v1`, candidateSha: s.ws.baseSha });
   assert.deepEqual(s.store.history("A").map(c => [c.deliveryId, c.ordinal]), [["one", 1], ["two", 2]]);
 });
 test("A06 DB 失败回滚交付历史和工作树文档", () => {
-  const s = fixture();
+  const s = fixture(Worktrees, RecoveryStore);
   assert.throws(() => tx(s.db, () => { s.store.record({ taskId: "A", deliveryId: "one", resultVer: 1, artifact: "a", candidateSha: s.ws.baseSha }); putDoc(s.db, "ws:A", 1, { ...s.ws, state: "W3_Pinned" }); throw new Error("db-fixture"); }), /db-fixture/);
   assert.deepEqual(s.store.history("A"), []);
   assert.equal(getDoc<Workspace>(s.db, "ws:A")!.value.state, "W2_Active");
 });
 test("A07 首次回 base 后续取严格前驱且历史对不上拒绝", () => {
-  const s = fixture();
+  const s = fixture(Worktrees, RecoveryStore);
   s.store.record({ taskId: "A", deliveryId: "first", resultVer: 1, artifact: "a", candidateSha: s.ws.baseSha });
   const ws = change(s);
   s.store.record({ taskId: "A", deliveryId: "second", resultVer: 2, artifact: "b", candidateSha: ws.candidateSha! });
@@ -63,7 +63,7 @@ test("A07 首次回 base 后续取严格前驱且历史对不上拒绝", () => {
   assert.equal(s.store.target({ ...ws, taskId: "legacy" }, 2, "b"), null);
 });
 test("A08 文件恢复含新增删除中文路径且 HEAD 不动", () => {
-  const s = fixture(); const ws = change(s); const before = git(ws.dir, "rev-parse", "HEAD");
+  const s = fixture(Worktrees, RecoveryStore); const ws = change(s); const before = git(ws.dir, "rev-parse", "HEAD");
   s.wt.backup(recovery(ws)); const out = s.wt.restoreTo(recovery(ws), ws.baseSha);
   assert.equal(readFileSync(path.join(ws.dir, "中文 空格.txt"), "utf8"), text);
   assert.equal(existsSync(path.join(ws.dir, "added")), false);
@@ -73,20 +73,20 @@ test("A08 文件恢复含新增删除中文路径且 HEAD 不动", () => {
   assert.equal(readFileSync(path.join(ws.dir, "deleted"), "utf8"), text);
 });
 test("A09 ignored 目标分支与另一工作树保持原样", () => {
-  const s = fixture(); const ws = change(s); const other = s.wt.provision("B"); const target = s.wt.targetHead();
+  const s = fixture(Worktrees, RecoveryStore); const ws = change(s); const other = s.wt.provision("B"); const target = s.wt.targetHead();
   s.wt.backup(recovery(ws)); s.wt.restoreTo(recovery(ws), ws.baseSha);
   assert.equal(readFileSync(path.join(ws.dir, "ignored"), "utf8"), `${text} ignored`);
   assert.equal(readFileSync(path.join(other.dir, "中文 空格.txt"), "utf8"), text);
   assert.equal(s.wt.targetHead(), target);
 });
 test("A10 backup ref 另开工作树可恢复未跟踪用户字节", () => {
-  const s = fixture(); const ws = change(s); const b = s.wt.backup(recovery(ws));
+  const s = fixture(Worktrees, RecoveryStore); const ws = change(s); const b = s.wt.backup(recovery(ws));
   const out = path.join(s.dir, "backup"); git(s.dir, "worktree", "add", "--detach", out, b.backupRef);
   assert.equal(readFileSync(path.join(out, "untracked"), "utf8"), `${text} user`);
   assert.equal(existsSync(path.join(out, "ignored")), false);
 });
 test("A11 开启签名也能备份且真实 index 不变重复 ref 不覆盖", () => {
-  const s = fixture(); const ws = change(s);
+  const s = fixture(Worktrees, RecoveryStore); const ws = change(s);
   git(s.dir, "config", "commit.gpgsign", "true"); git(s.dir, "config", "gpg.program", "/does-not-exist");
   const index = git(ws.dir, "rev-parse", "--git-path", "index"); const before = readFileSync(index);
   const one = s.wt.backup(recovery(ws)); writeFileSync(path.join(ws.dir, "untracked"), "later");
@@ -94,7 +94,7 @@ test("A11 开启签名也能备份且真实 index 不变重复 ref 不覆盖", (
   assert.equal(one.backupSha, two.backupSha); assert.deepEqual(readFileSync(index), before);
 });
 test("A12 备份后恢复失败重开数据库仍用原 target 和 backup", () => {
-  const s = fixture(); const ws = change(s); putDoc(s.db, "ws:A", 1, ws);
+  const s = fixture(Worktrees, RecoveryStore); const ws = change(s); putDoc(s.db, "ws:A", 1, ws);
   s.store.enqueue({ taskId: "A", ver: 3, targetSha: ws.baseSha, actionId: "r" });
   const restore = s.wt.restoreTo.bind(s.wt); s.wt.restoreTo = () => { throw new Error("restore-fixture"); };
   assert.throws(() => s.store.execute("A", () => {}), /restore-fixture/);
@@ -108,20 +108,20 @@ test("A12 备份后恢复失败重开数据库仍用原 target 和 backup", () =
   assert.equal(s.store.current("A")!.phase, "done");
 });
 test("A13 完成与待重放写入同事务重复消费不重复排队", () => {
-  const s = fixture(); const ws = change(s); putDoc(s.db, "ws:A", 1, ws);
+  const s = fixture(Worktrees, RecoveryStore); const ws = change(s); putDoc(s.db, "ws:A", 1, ws);
   s.store.enqueue({ taskId: "A", ver: 3, targetSha: ws.baseSha, actionId: "r" });
   let count = 0; s.store.execute("A", () => { count++; }); s.store.execute("A", () => { count++; });
   assert.equal(count, 1); assert.equal(s.store.current("A")!.phase, "done");
 });
 test("A14 完成事务失败不完成不丢恢复意图", () => {
-  const s = fixture(); const ws = change(s); putDoc(s.db, "ws:A", 1, ws);
+  const s = fixture(Worktrees, RecoveryStore); const ws = change(s); putDoc(s.db, "ws:A", 1, ws);
   s.store.enqueue({ taskId: "A", ver: 3, targetSha: ws.baseSha, actionId: "r" });
   assert.throws(() => s.store.execute("A", () => { throw new Error("complete-fixture"); }), /complete-fixture/);
   assert.equal(s.store.current("A")!.phase, "pending");
   assert.equal(getDoc<Workspace>(s.db, "ws:A")!.value.state, "W3_Pinned");
 });
 test("A16 W5 恢复作废候选审查且下一次 pin 沿原分支前进", () => {
-  const s = fixture(); const ws = { ...change(s), state: "W5_Conflict" as const }; const head = git(ws.dir, "rev-parse", "HEAD");
+  const s = fixture(Worktrees, RecoveryStore); const ws = { ...change(s), state: "W5_Conflict" as const }; const head = git(ws.dir, "rev-parse", "HEAD");
   s.wt.backup(recovery(ws)); const out = s.wt.restoreTo(recovery(ws), ws.baseSha);
   assert.equal(out.candidateSha, null); assert.equal(out.state, "W2_Active");
   const pinned = s.wt.pin(out, "new"); assert.equal(git(ws.dir, "rev-parse", "HEAD^"), head); assert.notEqual(pinned.candidateSha, ws.candidateSha);

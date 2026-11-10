@@ -22,7 +22,7 @@ async function settle(host: Host, compute: ReturnType<typeof scriptedCompute>) {
   }
   throw new Error("宿主未收敛");
 }
-async function scene(code = true) {
+async function scene(HostClass: typeof Host, code = true) {
   const data = path.join(root, String(++n)); mkdirSync(data);
   const repo = path.join(data, "repo"); mkdirSync(repo);
   git(repo, "init", "-q", "-b", "seed"); writeFileSync(path.join(repo, "base"), "NEUTRAL_FIXTURE_NO_CREDENTIALS"); writeFileSync(path.join(repo, "other"), "NEUTRAL_FIXTURE_NO_CREDENTIALS other"); git(repo, "add", "-A"); git(repo, "commit", "-qm", "base"); git(repo, "branch", "main");
@@ -39,7 +39,7 @@ async function scene(code = true) {
     }
     return { actions, stateNote: null };
   } };
-  const host = new Host({ file: path.join(data, "gg.db"), dataDir: data, mind: () => mind, compute: () => compute.adapter, maxDeferMs: 5, ...(code ? { codeRepo: { repo, targetBranch: "main" } } : {}) });
+  const host = new HostClass({ file: path.join(data, "gg.db"), dataDir: data, mind: () => mind, compute: () => compute.adapter, maxDeferMs: 5, ...(code ? { codeRepo: { repo, targetBranch: "main" } } : {}) });
   after(async () => { await host.close(); compute.close(); });
   const c = host.createContact({ name: "开发" }); const dm = host.openDm(c.id);
   host.send({ roomId: dm.id, clientActionId: "a", text: "A" }); host.send({ roomId: dm.id, clientActionId: "b", text: "B" }); await settle(host, compute);
@@ -54,14 +54,14 @@ async function scene(code = true) {
   return { host, compute, repo, A: host.taskViewById(A.id), B, rebind, data };
 }
 test("A05H 真实交付把候选与 appliedVer 同事务登记历史", async () => {
-  const s = await scene();
+  const s = await scene(Host);
   const h = getDoc<DeliveryCheckpoint[]>(s.host.db, `delivery-history:${s.A.id}`)?.value;
   assert.equal(h?.length, 1);
   assert.equal(h![0]!.artifact, s.A.followUps![0]!.appliedIn);
   assert.equal(h![0]!.candidateSha, s.A.workspace!.candidateSha);
 });
 test("A01H 宿主恢复后不再要求 Compute 自己撤改且列出重做清单", async () => {
-  const s = await scene(); s.rebind(); await settle(s.host, s.compute);
+  const s = await scene(Host); s.rebind(); await settle(s.host, s.compute);
   const text = s.compute.resumed.filter(r => r.computeId === s.A.computeRuns[0]!.computeId).at(-1)!.text;
   assert.match(text, /宿主已把工作区/); assert.doesNotMatch(text, /撤掉为/);
   assert.match(text, /仍在工作区里的/); assert.match(text, /要重做的/); assert.match(text, /refs\/gg\/backup\//);
@@ -69,7 +69,7 @@ test("A01H 宿主恢复后不再要求 Compute 自己撤改且列出重做清单
   assert.equal(s.host.taskViewById(s.A.id).followUps![0]!.state, "Received");
 });
 test("A15 恢复失败时禁止改挂合入和新的 Compute 写入", async () => {
-  const s = await scene(); s.host.worktrees!.backup = () => { throw new Error("backup-fixture"); };
+  const s = await scene(Host); s.host.worktrees!.backup = () => { throw new Error("backup-fixture"); };
   s.rebind(); await settle(s.host, s.compute);
   const before = s.compute.resumed.length;
   assert.throws(() => s.host.rebindFollowUp({ roomId: s.A.roomId, seq: s.A.followUps![0]!.seq, fromTaskId: s.A.id, toTaskId: s.B.id, expectedBindingVersion: 1, clientActionId: "again" }), /恢复/);
@@ -78,34 +78,34 @@ test("A15 恢复失败时禁止改挂合入和新的 Compute 写入", async () =
   assert.match(s.host.taskViewById(s.A.id).waitingFor ?? "", /backup-fixture/);
 });
 test("A17 W4 拒绝改挂两边版本和关联边均不变", async () => {
-  const s = await scene(); const ws = s.host.workspace(s.A.id)!; putDoc(s.host.db, `ws:${s.A.id}`, ws.ver, { ...ws.value, state: "W4_Integrating" });
+  const s = await scene(Host); const ws = s.host.workspace(s.A.id)!; putDoc(s.host.db, `ws:${s.A.id}`, ws.ver, { ...ws.value, state: "W4_Integrating" });
   assert.throws(s.rebind, /合入/);
   assert.equal(s.host.taskViewById(s.A.id).constraintVersion, s.A.constraintVersion);
   assert.equal(s.host.taskViewById(s.B.id).constraintVersion, s.B.constraintVersion);
 });
 test("A18H W6 不恢复不重放源任务并告知撤回另开任务", async () => {
-  const s = await scene(); const ws = s.host.workspace(s.A.id)!; putDoc(s.host.db, `ws:${s.A.id}`, ws.ver, { ...ws.value, state: "W6_Merged" });
+  const s = await scene(Host); const ws = s.host.workspace(s.A.id)!; putDoc(s.host.db, `ws:${s.A.id}`, ws.ver, { ...ws.value, state: "W6_Merged" });
   const before = s.compute.resumed.filter(r => r.computeId === s.A.computeRuns[0]!.computeId).length;
   s.rebind(); await settle(s.host, s.compute);
   assert.equal(s.compute.resumed.filter(r => r.computeId === s.A.computeRuns[0]!.computeId).length, before);
   assert.match(s.host.taskViewById(s.A.id).waitingFor ?? "", /已合入.*另开任务/);
 });
 test("A19H 无代码仓文字和任务卡片均写宿主未核验", async () => {
-  const s = await scene(false); s.rebind(); await settle(s.host, s.compute);
+  const s = await scene(Host, false); s.rebind(); await settle(s.host, s.compute);
   const text = s.compute.resumed.filter(r => r.computeId === s.A.computeRuns[0]!.computeId).at(-1)!.text;
   assert.match(text, /宿主未核验/);
   assert.match(s.host.taskViewById(s.A.id).waitingFor ?? "", /宿主未核验/);
   assert.ok(all<{ body: string }>(s.host.db, "SELECT body FROM gg_cards WHERE task_id = ?", s.A.id).some(c => /宿主未核验/.test(c.body)));
 });
 test("A19L 升级缺历史正常改挂但标宿主未核验不猜 base", async () => {
-  const s = await scene(); run(s.host.db, "DELETE FROM docs WHERE key = ?", `delivery-history:${s.A.id}`);
+  const s = await scene(Host); run(s.host.db, "DELETE FROM docs WHERE key = ?", `delivery-history:${s.A.id}`);
   s.rebind(); await settle(s.host, s.compute);
   assert.match(s.host.taskViewById(s.A.id).waitingFor ?? "", /宿主未核验/);
   assert.equal(readFileSync(path.join(s.A.workspace!.dir, "base"), "utf8"), "NEUTRAL_FIXTURE_NO_CREDENTIALS changed");
 });
 
-async function crashAndRestart(stage: string) {
-  const s = await scene();
+async function crashAndRestart(HostClass: typeof Host, stage: string) {
+  const s = await scene(HostClass);
   s.host.worktrees!.backup = () => { throw new Error("pause-before-backup"); };
   s.rebind(); await settle(s.host, s.compute);
   const intent = s.host.recovery!.current(s.A.id);
@@ -140,36 +140,37 @@ await h.close(); c.close();
   return { exit, phase: finish.intent.phase, sameTarget: finish.intent.targetSha === intent.targetSha, sameBackup: refBefore === null || finish.intent.backupSha === refBefore, resumes: finish.resumed, repeated: repeated.resumed, bytes: readFileSync(path.join(s.A.workspace!.dir, "base"), "utf8"), remainingBytes: readFileSync(path.join(s.A.workspace!.dir, "other"), "utf8") };
 }
 test("A12I 意图提交后宿主退出重启完成恢复", async () => {
-  const r = await crashAndRestart("intent");
+  const r = await crashAndRestart(Host, "intent");
   assert.deepEqual(r, { exit: 71, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS", remainingBytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS other" });
 });
 test("A12B 备份后宿主退出重启复用同一备份", async () => {
-  const r = await crashAndRestart("backup");
+  const r = await crashAndRestart(Host, "backup");
   assert.deepEqual(r, { exit: 72, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS", remainingBytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS other" });
 });
 test("A12P 恢复中宿主退出重启幂等恢复同一目标", async () => {
-  const r = await crashAndRestart("partial");
+  const r = await crashAndRestart(Host, "partial");
   assert.deepEqual(r, { exit: 73, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS", remainingBytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS other" });
 });
 test("A12D 文件已恢复而完成未提交时重启不重新备份", async () => {
-  const r = await crashAndRestart("restored");
+  const r = await crashAndRestart(Host, "restored");
   assert.deepEqual(r, { exit: 74, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS", remainingBytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS other" });
 });
 test("A04H stopped 事件不等于子进程清空必须等 quiesce 确认才写 Git", async () => {
-  const s = await scene(); let release!: () => void;
+  const s = await scene(Host); let release!: () => void;
   const stopped = new Promise<void>(resolve => { release = resolve; });
   Reflect.set(s.compute.adapter, "quiesce", async () => { await stopped; return { ok: true }; });
   const backup = s.host.worktrees!.backup.bind(s.host.worktrees); let writes = 0;
   s.host.worktrees!.backup = ws => { writes++; return backup(ws); };
   try {
     s.rebind(); await settle(s.host, s.compute);
+    assert.equal(s.host.recovery!.current(s.A.id), null, "停止未确认不登记可执行恢复意图");
     assert.equal(writes, 0, "子进程尚未确认退出，Git 写操作必须为零");
     release(); await settle(s.host, s.compute);
     assert.ok(writes > 0);
   } finally { release(); }
 });
 test("A15Q 恢复后的重放仍申请现有 Compute 槽位", async () => {
-  const s = await scene();
+  const s = await scene(Host);
   const quota = Reflect.get(s.host, "quota") as { acquire: (input: { taskId: string; contactId: string; roomId: string; isGroup: boolean }) => unknown };
   const acquire = quota.acquire.bind(quota); let acquired = 0;
   quota.acquire = input => { if (input.taskId === s.A.id) acquired++; return acquire(input); };
