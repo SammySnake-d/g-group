@@ -828,5 +828,60 @@
     "name": "R10-01/全执行:真实 TAP 的完整基线与指定断言失败分别认可,同名全绿不算发现故障",
     "code": "ERR_ASSERTION",
     "errorName": "AssertionError"
+  },
+  "M167": {
+    "name": "R11-01 快照只在同组后代确已结束后放行",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M168": {
+    "name": "R11-01 快照只在同组后代确已结束后放行",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M169": {
+    "name": "R11-01 续接等待同组停止确认且组回收后仍可新开一轮",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M170": {
+    "name": "R11-01 快照只在同组后代确已结束后放行",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M171": {
+    "name": "R11-01 续接等待同组停止确认且组回收后仍可新开一轮",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M172": {
+    "name": "R11-02 NUL 续接在受阻轮回收及状态变更之前拒绝，普通续接成功",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M173": {
+    "name": "R11-02 CLI 会话号含 NUL 不产出 started 且不能成为续接参数",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M174": {
+    "name": "R11-02 启动失败受控拒绝并保留旧轮及拒收记录，修复目录后可再续接",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M175": {
+    "name": "R11-02 启动失败受控拒绝并保留旧轮及拒收记录，修复目录后可再续接",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M176": {
+    "name": "R11-03 无交接时汇报版本零被保存并进入快照",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M177": {
+    "name": "R11-03 版本零交接接受且原样装配，不改变负版本拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
   }
 }
