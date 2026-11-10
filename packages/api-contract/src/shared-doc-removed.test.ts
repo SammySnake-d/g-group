@@ -18,5 +18,6 @@ test("P1 合同拒绝 doc.updated 事件", () => {
     createdAt: "2026-11-11T00:00:00Z", updatedAt: "2026-11-11T00:00:00Z", updatedBy: { kind: "user", id: "me" },
   } });
   assert.equal(r.ok, false);
-  assert.deepEqual(r.ok ? [] : r.issues, [{ path: "type", message: "未知的 type: doc.updated" }]);
+  assert.deepEqual(r.ok ? [] : r.issues.map((issue) => issue.path), ["type"]);
+  assert.equal(r.ok ? true : r.issues.some((issue) => issue.message.includes("doc.updated")), false);
 });

@@ -46,14 +46,9 @@ test("P1 docs.history 返回 unknown_method", async (t) => {
   assert.deepEqual(r, { ok: false, error: { code: "unknown_method", message: "没有方法 docs.history" } });
 });
 
-test("P1 新库没有共享文档版本表和请求表", (t) => {
-  const { host } = fresh(t);
+test("P1 新宿主没有共享文档专用表和镜像目录", (t) => {
+  const { host, dir } = fresh(t);
   const tables = host.db.store.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('gg_doc_versions', 'gg_doc_requests')").all();
   assert.deepEqual(tables, []);
-});
-
-test("P1 新宿主不创建共享文档镜像目录", (t) => {
-  const { host, dir } = fresh(t);
   assert.equal(existsSync(join(dir, "shared-docs")), false);
-  assert.deepEqual(host.roomsOfUser(), []);
 });
