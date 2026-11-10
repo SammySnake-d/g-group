@@ -33,7 +33,7 @@ for (const theme of ['light', 'dark'] as const) {
     const peek = page.getByRole('dialog', { name: 'IM 竞品交互对照' });
     await expect(peek).toBeVisible();
     expect(await peek.evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
-    await expect(peek.getByTestId('file-hop-g2')).toBeVisible();
+    await expect(peek.getByTestId('file-hop-g2').filter({ visible: true })).toBeVisible();
     await shot(page, `files-design/${theme}/quick-look`, 300);
     await page.keyboard.press('Escape');
     await expect(peek).toBeHidden();
@@ -80,7 +80,7 @@ test('文件设计：1024 窗口仍能完整浏览和阅读，无横向溢出', 
   await shot(page, 'files-design/narrow/catalog', 300);
   await page.getByTestId('shelf-a1').getByRole('heading', { level: 2 }).click();
   await expect(page.getByTestId('file-preview')).toBeVisible();
-  await expect(page.locator('[data-testid^="file-hop-"]')).toHaveCount(3);
+  await expect(page.locator('[data-testid^="file-hop-"]').filter({ visible: true })).toHaveCount(3);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
   await shot(page, 'files-design/narrow/reader', 300);
 });

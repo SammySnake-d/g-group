@@ -47,7 +47,7 @@ export function Provenance({ artifact: a }: { artifact: Artifact }) {
         </Button>
       : <span className="px-2 text-[14px] text-fg-2">{sourceLabel(conv)}</span>}
     {hops.length > 0 && <span aria-hidden className="h-4 w-px shrink-0 bg-line" />}
-    {hops.length > 0 && <OverflowList gap={0} minVisibleItems={1} className="min-w-0 flex-1" data-testid="file-hops"
+    {hops.length > 0 && <OverflowList gap={0} minVisibleItems={1} className="min-w-0 flex-1 items-center" data-testid="file-hops"
       overflowRenderer={(rest) => <Popover placement="below" alignment="start" label="其余来处" content={<div className="flex flex-col py-1">
         {rest.map(({ index }) => { const h = hops[index]; return <Button key={h.key} variant="ghost" size="sm" label={`${who(h)}${h.verb ? ' ' + h.verb : ''}，回到原消息`} onClick={() => jump(h.target.id)} className="justify-start">
           <span className="flex min-w-0 max-w-[300px] items-center gap-2 text-[13px]">
@@ -57,10 +57,10 @@ export function Provenance({ artifact: a }: { artifact: Artifact }) {
           </span>
         </Button> })}
       </div>}>
-        <Button variant="ghost" size="sm" label={`还有 ${rest.length} 处`} data-testid="file-hops-more"><span className="text-[13px] tabular-nums text-fg-2">+{rest.length}</span></Button>
+        <Button variant="ghost" size="sm" label={`还有 ${rest.length} 处`} data-testid="file-hops-more" className="self-center"><span className="text-[13px] tabular-nums text-fg-2">+{rest.length}</span></Button>
       </Popover>}>
       {hops.map((h, i) => <Fragment key={h.key}>
-        <span className="flex items-center">
+        <span className="flex items-center self-center">
           {i > 0 && <span aria-hidden className="mx-0.5 h-px w-2.5 bg-line" />}
           <HopButton hop={h} onGo={jump} />
         </span>
