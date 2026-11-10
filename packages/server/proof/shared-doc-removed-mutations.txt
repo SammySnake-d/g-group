@@ -1,0 +1,11 @@
+{"control":{"code":0,"passed":8,"failed":[]}}
+{"name":"恢复 docs.list","target":"P1 docs.list 返回 unknown_method","killed":true,"code":1,"passed":5,"failed":["P1 合同没有 docs 方法","P1 docs.list 返回 unknown_method","P1 新宿主没有共享文档专用表和镜像目录"]}
+{"name":"恢复 docs.get","target":"P1 docs.get 返回 unknown_method","killed":true,"code":1,"passed":5,"failed":["P1 合同没有 docs 方法","P1 docs.get 返回 unknown_method","P1 新宿主没有共享文档专用表和镜像目录"]}
+{"name":"恢复 docs.create","target":"P1 docs.create 返回 unknown_method","killed":true,"code":1,"passed":5,"failed":["P1 合同没有 docs 方法","P1 docs.create 返回 unknown_method","P1 新宿主没有共享文档专用表和镜像目录"]}
+{"name":"恢复 docs.commit","target":"P1 docs.commit 返回 unknown_method","killed":true,"code":1,"passed":5,"failed":["P1 合同没有 docs 方法","P1 docs.commit 返回 unknown_method","P1 新宿主没有共享文档专用表和镜像目录"]}
+{"name":"恢复 docs.history","target":"P1 docs.history 返回 unknown_method","killed":true,"code":1,"passed":5,"failed":["P1 合同没有 docs 方法","P1 docs.history 返回 unknown_method","P1 新宿主没有共享文档专用表和镜像目录"]}
+{"name":"恢复 gg_doc_versions 建表","target":"P1 新宿主没有共享文档专用表和镜像目录","killed":true,"code":1,"passed":7,"failed":["P1 新宿主没有共享文档专用表和镜像目录"]}
+{"name":"恢复 gg_doc_requests 建表","target":"P1 新宿主没有共享文档专用表和镜像目录","killed":true,"code":1,"passed":7,"failed":["P1 新宿主没有共享文档专用表和镜像目录"]}
+{"name":"恢复 doc.updated 事件","target":"P1 合同拒绝 doc.updated 事件","killed":true,"code":1,"passed":7,"failed":["P1 合同拒绝 doc.updated 事件"]}
+{"name":"恢复镜像目录初始化","target":"P1 新宿主没有共享文档专用表和镜像目录","killed":true,"code":1,"passed":7,"failed":["P1 新宿主没有共享文档专用表和镜像目录"]}
+变异 9 / 杀死 9 / 存活 0

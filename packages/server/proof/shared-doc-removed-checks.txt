@@ -1,0 +1,28 @@
+box4, HEAD aef4027, Node 24.21.0
+
+
+> typecheck
+> tsc -p tsconfig.json
+
+
+> lint
+> biome lint --error-on-warnings
+
+Checked 198 files in 577ms. No fixes applied.
+
+全量 npm test 输出末尾:
+ok 1469 - 有失败用例判失败
+  ---
+  duration_ms: 280.76739
+  type: 'test'
+  ...
+1..1469
+# tests 1469
+# suites 0
+# pass 1469
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 159738.168218
+test-runner:实际执行并通过 1469 条用例

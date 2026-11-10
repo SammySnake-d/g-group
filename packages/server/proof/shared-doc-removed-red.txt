@@ -1,0 +1,326 @@
+TAP version 13
+# Subtest: P1 合同没有 docs 方法
+not ok 1 - P1 合同没有 docs 方法
+  ---
+  duration_ms: 3.629541
+  type: 'test'
+  location: '/private/tmp/gg-positioning-244789b8-p1/packages/api-contract/src/shared-doc-removed.test.ts:6:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'docs.list',
+    +   'docs.get',
+    +   'docs.create',
+    +   'docs.commit',
+    +   'docs.history'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'docs.list'
+    1: 'docs.get'
+    2: 'docs.create'
+    3: 'docs.commit'
+    4: 'docs.history'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-positioning-244789b8-p1/packages/api-contract/src/shared-doc-removed.test.ts:7:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: P1 合同拒绝 doc.updated 事件
+not ok 2 - P1 合同拒绝 doc.updated 事件
+  ---
+  duration_ms: 0.465042
+  type: 'test'
+  location: '/private/tmp/gg-positioning-244789b8-p1/packages/api-contract/src/shared-doc-removed.test.ts:15:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-positioning-244789b8-p1/packages/api-contract/src/shared-doc-removed.test.ts:20:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: P1 docs.list 返回 unknown_method
+not ok 3 - P1 docs.list 返回 unknown_method
+  ---
+  duration_ms: 12.496208
+  type: 'test'
+  location: '/private/tmp/gg-positioning-244789b8-p1/packages/server/src/shared-doc-removed.test.ts:19:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+    +   ok: true,
+    +   value: {
+    +     docs: []
+    -   error: {
+    -     code: 'unknown_method',
+    -     message: '没有方法 docs.list'
+        },
+    -   ok: false
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    ok: false
+    error:
+      code: 'unknown_method'
+      message: '没有方法 docs.list'
+  actual:
+    ok: true
+    value:
+      docs:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-positioning-244789b8-p1/packages/server/src/shared-doc-removed.test.ts:22:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: P1 docs.get 返回 unknown_method
+not ok 4 - P1 docs.get 返回 unknown_method
+  ---
+  duration_ms: 6.951917
+  type: 'test'
+  location: '/private/tmp/gg-positioning-244789b8-p1/packages/server/src/shared-doc-removed.test.ts:25:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+        error: {
+    +     code: 'not_found',
+    +     message: '没有共享文档 d1'
+    -     code: 'unknown_method',
+    -     message: '没有方法 docs.get'
+        },
+        ok: false
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    ok: false
+    error:
+      code: 'unknown_method'
+      message: '没有方法 docs.get'
+  actual:
+    ok: false
+    error:
+      code: 'not_found'
+      message: '没有共享文档 d1'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-positioning-244789b8-p1/packages/server/src/shared-doc-removed.test.ts:28:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: P1 docs.create 返回 unknown_method
+not ok 5 - P1 docs.create 返回 unknown_method
+  ---
+  duration_ms: 9.031625
+  type: 'test'
+  location: '/private/tmp/gg-positioning-244789b8-p1/packages/server/src/shared-doc-removed.test.ts:31:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+    +   ok: true,
+    +   value: {
+    +     content: 'NEUTRAL_FIXTURE_NO_CREDENTIALS',
+    +     createdAt: '2026-11-10T19:22:59.027Z',
+    +     id: 'd-mwb2v0ib-1',
+    +     roomId: null,
+    +     title: '中性样例',
+    +     updatedAt: '2026-11-10T19:22:59.027Z',
+    +     updatedBy: {
+    +       id: 'me',
+    +       kind: 'user'
+    +     },
+    +     version: 1
+    -   error: {
+    -     code: 'unknown_method',
+    -     message: '没有方法 docs.create'
+        },
+    -   ok: false
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    ok: false
+    error:
+      code: 'unknown_method'
+      message: '没有方法 docs.create'
+  actual:
+    ok: true
+    value:
+      id: 'd-mwb2v0ib-1'
+      roomId: ~
+      title: '中性样例'
+      content: 'NEUTRAL_FIXTURE_NO_CREDENTIALS'
+      version: 1
+      createdAt: '2026-11-10T19:22:59.027Z'
+      updatedAt: '2026-11-10T19:22:59.027Z'
+      updatedBy:
+        kind: 'user'
+        id: 'me'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-positioning-244789b8-p1/packages/server/src/shared-doc-removed.test.ts:34:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: P1 docs.commit 返回 unknown_method
+not ok 6 - P1 docs.commit 返回 unknown_method
+  ---
+  duration_ms: 6.890667
+  type: 'test'
+  location: '/private/tmp/gg-positioning-244789b8-p1/packages/server/src/shared-doc-removed.test.ts:37:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+        error: {
+    +     code: 'not_found',
+    +     message: '没有共享文档 d1'
+    -     code: 'unknown_method',
+    -     message: '没有方法 docs.commit'
+        },
+        ok: false
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    ok: false
+    error:
+      code: 'unknown_method'
+      message: '没有方法 docs.commit'
+  actual:
+    ok: false
+    error:
+      code: 'not_found'
+      message: '没有共享文档 d1'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-positioning-244789b8-p1/packages/server/src/shared-doc-removed.test.ts:40:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: P1 docs.history 返回 unknown_method
+not ok 7 - P1 docs.history 返回 unknown_method
+  ---
+  duration_ms: 6.524167
+  type: 'test'
+  location: '/private/tmp/gg-positioning-244789b8-p1/packages/server/src/shared-doc-removed.test.ts:43:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+        error: {
+    +     code: 'not_found',
+    +     message: '没有共享文档 d1'
+    -     code: 'unknown_method',
+    -     message: '没有方法 docs.history'
+        },
+        ok: false
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    ok: false
+    error:
+      code: 'unknown_method'
+      message: '没有方法 docs.history'
+  actual:
+    ok: false
+    error:
+      code: 'not_found'
+      message: '没有共享文档 d1'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-positioning-244789b8-p1/packages/server/src/shared-doc-removed.test.ts:46:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: P1 新宿主没有共享文档专用表和镜像目录
+not ok 8 - P1 新宿主没有共享文档专用表和镜像目录
+  ---
+  duration_ms: 7.220042
+  type: 'test'
+  location: '/private/tmp/gg-positioning-244789b8-p1/packages/server/src/shared-doc-removed.test.ts:49:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   [Object: null prototype] {
+    +     name: 'gg_doc_versions'
+    +   },
+    +   [Object: null prototype] {
+    +     name: 'gg_doc_requests'
+    +   }
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      name: 'gg_doc_versions'
+    1:
+      name: 'gg_doc_requests'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-positioning-244789b8-p1/packages/server/src/shared-doc-removed.test.ts:52:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 0
+# fail 8
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 288.237708

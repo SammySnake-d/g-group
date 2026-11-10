@@ -1,0 +1,118 @@
+TAP version 13
+# Subtest: P1 合同没有 docs 方法
+ok 1 - P1 合同没有 docs 方法
+  ---
+  duration_ms: 1.07768
+  type: 'test'
+  ...
+# Subtest: P1 合同拒绝 doc.updated 事件
+ok 2 - P1 合同拒绝 doc.updated 事件
+  ---
+  duration_ms: 0.36273
+  type: 'test'
+  ...
+# Subtest: TLA-01 发言发布:去掉 CAS 的 TLC 反例(读到 v0 → 用户新消息 → 发旧稿)在真实 commitIn 上被拒,旧稿不上屏
+ok 3 - TLA-01 发言发布:去掉 CAS 的 TLC 反例(读到 v0 → 用户新消息 → 发旧稿)在真实 commitIn 上被拒,旧稿不上屏
+  ---
+  duration_ms: 2.72327
+  type: 'test'
+  ...
+# Subtest: TLA-02 发言发布:去掉 CAS 的双写反例(两人都基于 v0 发布)在真实实现上只有先提交者成功
+ok 4 - TLA-02 发言发布:去掉 CAS 的双写反例(两人都基于 v0 发布)在真实实现上只有先提交者成功
+  ---
+  duration_ms: 0.60152
+  type: 'test'
+  ...
+# Subtest: TLA-03 发言发布:带 CAS 的 TLC 见证行为(冲突 → 复核重读 → 发布)在真实实现上逐步一致(阴性对照)
+ok 5 - TLA-03 发言发布:带 CAS 的 TLC 见证行为(冲突 → 复核重读 → 发布)在真实实现上逐步一致(阴性对照)
+  ---
+  duration_ms: 0.50481
+  type: 'test'
+  ...
+# Subtest: TLA-04 排他认领:去掉 CAS 的 TLC 反例(两人都读到 T1 后先后提交)在真实实现上第二人收到冲突,只有一个负责人
+ok 6 - TLA-04 排他认领:去掉 CAS 的 TLC 反例(两人都读到 T1 后先后提交)在真实实现上第二人收到冲突,只有一个负责人
+  ---
+  duration_ms: 1.14039
+  type: 'test'
+  ...
+# Subtest: TLA-05 排他认领:带 CAS 的 TLC 见证行为(冲突 → 重读 → 状态机拒绝重复认领)在真实实现上逐步一致(阴性对照)
+ok 7 - TLA-05 排他认领:带 CAS 的 TLC 见证行为(冲突 → 重读 → 状态机拒绝重复认领)在真实实现上逐步一致(阴性对照)
+  ---
+  duration_ms: 0.66678
+  type: 'test'
+  ...
+# Subtest: TLA-06 多资源租约:去掉 CAS 的双持有反例在真实租约原语上后提交者收到冲突,资源只归先到者
+ok 8 - TLA-06 多资源租约:去掉 CAS 的双持有反例在真实租约原语上后提交者收到冲突,资源只归先到者
+  ---
+  duration_ms: 0.87686
+  type: 'test'
+  ...
+# Subtest: TLA-07 多资源租约:去掉全序的死锁反例在真实实现上被全序规则打破:逆序申请当场拒绝,释放后对方继续
+ok 9 - TLA-07 多资源租约:去掉全序的死锁反例在真实实现上被全序规则打破:逆序申请当场拒绝,释放后对方继续
+  ---
+  duration_ms: 0.70101
+  type: 'test'
+  ...
+# Subtest: TLA-08 多资源租约:带 CAS 与全序的 TLC 见证行为(后提交者冲突 → 先到者用完释放 → 冲突方重读拿齐)在真实实现上逐步一致(阴性对照)
+ok 10 - TLA-08 多资源租约:带 CAS 与全序的 TLC 见证行为(后提交者冲突 → 先到者用完释放 → 冲突方重读拿齐)在真实实现上逐步一致(阴性对照)
+  ---
+  duration_ms: 0.76772
+  type: 'test'
+  ...
+# Subtest: TLA-10 多资源租约:去掉全序的逆序授予反例(先拿 b 再拿 a)在真实实现上第二次申请被当场拒绝
+ok 11 - TLA-10 多资源租约:去掉全序的逆序授予反例(先拿 b 再拿 a)在真实实现上第二次申请被当场拒绝
+  ---
+  duration_ms: 0.54909
+  type: 'test'
+  ...
+# Subtest: TLA-09 回放只收 TLC -dumpTrace json:格式不对或出现规格里没有的动作就抛 TypeError
+ok 12 - TLA-09 回放只收 TLC -dumpTrace json:格式不对或出现规格里没有的动作就抛 TypeError
+  ---
+  duration_ms: 1.26359
+  type: 'test'
+  ...
+# Subtest: P1 docs.list 返回 unknown_method
+ok 13 - P1 docs.list 返回 unknown_method
+  ---
+  duration_ms: 52.42351
+  type: 'test'
+  ...
+# Subtest: P1 docs.get 返回 unknown_method
+ok 14 - P1 docs.get 返回 unknown_method
+  ---
+  duration_ms: 34.85597
+  type: 'test'
+  ...
+# Subtest: P1 docs.create 返回 unknown_method
+ok 15 - P1 docs.create 返回 unknown_method
+  ---
+  duration_ms: 35.17197
+  type: 'test'
+  ...
+# Subtest: P1 docs.commit 返回 unknown_method
+ok 16 - P1 docs.commit 返回 unknown_method
+  ---
+  duration_ms: 30.75367
+  type: 'test'
+  ...
+# Subtest: P1 docs.history 返回 unknown_method
+ok 17 - P1 docs.history 返回 unknown_method
+  ---
+  duration_ms: 30.65178
+  type: 'test'
+  ...
+# Subtest: P1 新宿主没有共享文档专用表和镜像目录
+ok 18 - P1 新宿主没有共享文档专用表和镜像目录
+  ---
+  duration_ms: 34.42661
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 873.43535
