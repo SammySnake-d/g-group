@@ -26,7 +26,8 @@ async function scene(code = true) {
   const data = path.join(root, String(++n)); mkdirSync(data);
   const repo = path.join(data, "repo"); mkdirSync(repo);
   git(repo, "init", "-q", "-b", "seed"); writeFileSync(path.join(repo, "base"), "NEUTRAL_FIXTURE_NO_CREDENTIALS"); git(repo, "add", "-A"); git(repo, "commit", "-qm", "base"); git(repo, "branch", "main");
-  const compute = scriptedCompute({ script: () => [{ kind: "started", sessionId: "s", resumed: false }, { kind: "blocked", needs: "补充", summary: "等待" }], resumeScript: () => [{ kind: "blocked", needs: "补充", summary: "等待" }] });
+  let ready = false;
+  const compute = scriptedCompute({ script: () => [{ kind: "started", sessionId: "s", resumed: false }, { kind: "completed", result: "初版" }], resumeScript: () => [{ kind: "started", sessionId: "s", resumed: true }, { kind: "completed", result: "补充版" }] });
   const mind: ContactMind = { async round(input) {
     const actions: MindAction[] = [];
     for (const f of input.fresh) {
@@ -34,7 +35,7 @@ async function scene(code = true) {
         if (f.text === "A" || f.text === "B") actions.push({ kind: "dispatch", roomId: f.roomId, sourceSeq: f.seq, title: f.text, task: f.text });
         if (f.text.startsWith("补")) { const t = host.listTasks({}).find(t => t.title === "A"); if (t) actions.push({ kind: "forward", taskId: t.id, sourceSeq: f.seq, text: f.text }); }
       }
-      if (f.kind === "compute" && f.signal === "completed") actions.push({ kind: "deliver", taskId: f.taskId, text: "交付" });
+      if (ready && f.kind === "compute" && f.signal === "completed") actions.push({ kind: "deliver", taskId: f.taskId, text: "交付" });
     }
     return { actions, stateNote: null };
   } };
@@ -46,7 +47,9 @@ async function scene(code = true) {
   const m = host.send({ roomId: dm.id, clientActionId: "second", text: "补二" }); await settle(host, compute);
   const A = host.listTasks({}).find(t => t.title === "A")!; const B = host.listTasks({}).find(t => t.title === "B")!;
   if (code) writeFileSync(path.join(A.workspace!.dir, "base"), "NEUTRAL_FIXTURE_NO_CREDENTIALS changed");
+  ready = true;
   compute.emit({ kind: "completed", computeId: A.computeRuns[0]!.computeId, result: "完成" }); await settle(host, compute);
+  ready = false;
   const rebind = () => host.rebindFollowUp({ roomId: dm.id, seq: m.seq, fromTaskId: A.id, toTaskId: B.id, expectedBindingVersion: 0, clientActionId: "move" });
   return { host, compute, repo, A: host.taskViewById(A.id), B, rebind, data };
 }
