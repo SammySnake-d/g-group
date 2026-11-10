@@ -1,0 +1,192 @@
+{
+  "kind": "文档级机械核验，不是产品测试或独立审稿",
+  "base_commit": "07e08d0",
+  "branch": "docs/tool-boundaries-20261110",
+  "checks": [
+    {
+      "check": "需求版本升为 v3.25",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "工作区默认位置与其他项目目录写入 D10",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "命令行路径实测归属 Claude Code 且待实现",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "共编决定删除代码而非降可选",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "R-Doc 状态机行已移除",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "AC-21 明确撤销并保留删除证据缺口",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "C-US11 撤销 C-US12 保留独立调研",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "系统状态 CAS 没有随共编删除",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "US8 单写者保留且不经共编服务",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "共享清单有才显示写入概念卡与验收",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "US14 保留目标且第三项以后再定",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "审查 C2 误用方法论理由得到原位更正",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "2099 四问单列候选",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "2116 四点及 2120 修正单列候选",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "人类研究外推注明是推断 未新核验",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "原四类内容及批准不再做 AC-38 门禁",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "前端 AC 保留固定 CLI 亮暗 Trace 完整链路与反例",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "Roadmap 手册方案仍是候选不进 MVP",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "2126 分工写入开发手册且旧路由不再生效",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "分工写入需求工程纪律与技术规则",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "三份文件 Compute 判据均改为写文件或改项目",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "授权判据包含项目代码与临时目录对照",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "版本记录明确 598 与 2103 差异",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "原话附录 #1976 逐字核对",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "原话附录 #2060 逐字核对",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "原话附录 #2067 逐字核对",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "原话附录 #2103 逐字核对",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "原话附录 #2119 逐字核对",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "原话附录 #2124 逐字核对",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "原话附录 #2126 逐字核对",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    },
+    {
+      "check": "2116 全部 12 个资料链接保存",
+      "baseline_v3_24": false,
+      "candidate_v3_25": true
+    }
+  ],
+  "invariants": {
+    "## 9. 文档验收与协作记录 保持原文": true,
+    "## 附录 A · 保持原文": true,
+    "### D03 · 保持原文": true,
+    "##### 4.1 候选视角 保持原文": true,
+    "历史原话附录逐字保留": true,
+    "US14 前端验证段原文保留": true,
+    "原稿副本字节未变": true,
+    "正文文件 UTF8 无替换字符且围栏闭合": true,
+    "git diff --check 通过": true,
+    "仅修改五份指定文档": true
+  },
+  "hashes": {
+    "docs/spec/需求文档.md": "ba4a592c171bd927aa194ccda031e16ccd0d56f66b571c8b63324f18a866e0b4",
+    "docs/概念卡.md": "43bf557716a84e24ceda1c6b28e45777a8734be6051cdc837b3c0f890766e636",
+    "docs/spec/验收文档-v0.1.md": "ac3a4cbe8ce105c5535a2098391170762bf2abc2d7e28a6e27b829e9bc2653e5",
+    "docs/spec/技术栈与工程规则.md": "43dce1307114f54e605ee78ff8fe54916a52b29cbb274dd69681854419620c66",
+    "docs/开发手册.md": "53d7238559af9ac4be1edbb31bd62d8ef2a0a50b3d1a3d5a1360efdb67df19d5"
+  },
+  "verification_notes": [
+    "首次核验退出 1：#2126 的聊天导出新增了两条 Mira Bot 反应标记，初版正文提取器未去除；修正提取器后重跑，附录原话未修改。"
+  ],
+  "not_tested": [
+    "产品行为",
+    "共编代码实际删除",
+    "Compute 路径限制",
+    "原论文与产品链接现状",
+    "Claude Code 独立审稿",
+    "开发四阶段链路执行"
+  ]
+}
