@@ -17,7 +17,10 @@ import {
   type ThresholdConfig,
   type TimerApi,
   type Transition,
-  DEFAULT_SLEEP_GRACE_MS,
+  type WakePolicy,
+  type WakeState,
+  WAKE_INITIAL,
+  checkWakePolicy,
   failureGroups,
   isLiveRun,
   newRun,
@@ -28,8 +31,9 @@ import {
   setStatus,
   stallCheck,
   visibleRuns,
+  wakeTick,
 } from "@g-group/kernel";
-import { type Db, all, one, run, tx } from "./db.ts";
+import { type Db, HostError, all, one, run, tx } from "./db.ts";
 
 const RUN_SCHEMA = `
 CREATE TABLE IF NOT EXISTS gg_runs (
@@ -58,7 +62,11 @@ export interface RunStoreOptions {
   /** 卡死阈值配置(默认 15 分钟 / 120 秒;可按联系人或按上游单独设) */
   readonly thresholds: () => ThresholdConfig;
   readonly checkMs?: number;
-  readonly sleepGraceMs?: number;
+  /**
+   * 休眠唤醒检测与宽限(AC-36 ⑤ F11):相邻两次核对相隔超过 jumpMs 判为刚从休眠醒来,之后 graceMs 内不判卡死。
+   * 默认取内核 DEFAULT_WAKE_POLICY(跳变 60 秒、宽限 3 分钟,占位值);jumpMs 不得小于核对周期的 2 倍,构造时校验
+   */
+  readonly wake?: WakePolicy;
   /** 同一启动里核对执行进程是否还在;不给就只核对启动号 */
   readonly alive?: (pid: number) => boolean;
   /** 在跑单元的进展落盘最短间隔,默认 5 秒 */
@@ -67,6 +75,17 @@ export interface RunStoreOptions {
   readonly changed?: (units: readonly RunUnit[]) => void;
   /** 判出卡死:宿主先停这一轮,再调 failStalled 写失败 */
   readonly stalled?: (unit: RunUnit, verdict: StallVerdict) => void;
+}
+
+/**
+ * 校验休眠门参数并对上核对周期,不合格抛 invalid_params。宿主构造时先调一次(在打开别的资源之前拒绝),台账构造时再调一次。
+ * jumpMs 低于 2 个核对周期时,正常核对的间隔(一个周期加上计时器的延迟)也会被当成休眠唤醒,宽限门会一直开着、卡死永远判不出
+ */
+export function checkRunWake(checkMs: number, wake: unknown): WakePolicy {
+  const c = checkWakePolicy(wake);
+  if (!c.ok) throw new HostError("invalid_params", `休眠门参数不合格:${c.reason}`);
+  if (c.policy.jumpMs < checkMs * 2) throw new HostError("invalid_params", `休眠门参数不合格:jumpMs(${c.policy.jumpMs} 毫秒)不得小于核对周期的 2 倍(${checkMs * 2} 毫秒),否则正常核对的间隔也会被当成休眠唤醒`);
+  return c.policy;
 }
 
 export interface RunEventRow {
@@ -87,8 +106,9 @@ export class RunStore {
   /** 已判卡死、等宿主写失败的单元(不重复判) */
   private readonly judging = new Set<string>();
   private timer: unknown = null;
-  private lastTick: number;
-  private awakeSince: number | null = null;
+  /** 休眠门:内核 wakeTick 是唯一的休眠检测器,stallCheck 是唯一的宽限消费者 */
+  private readonly wakePolicy: WakePolicy;
+  private wake: WakeState;
   readonly checkMs: number;
 
   constructor(opts: RunStoreOptions) {
@@ -96,12 +116,14 @@ export class RunStore {
     this.db = opts.db;
     this.db.store.db.exec(RUN_SCHEMA);
     this.checkMs = opts.checkMs ?? DEFAULT_RUN_CHECK_MS;
+    this.wakePolicy = checkRunWake(this.checkMs, opts.wake);
     for (const r of all<{ unit: string; settled: number }>(this.db, `SELECT unit, settled FROM gg_runs WHERE status IN ${LIVE_SQL} ORDER BY rowid`)) {
       const u = JSON.parse(r.unit) as RunUnit;
       this.live.set(u.id, u);
       if (r.settled) this.settled.add(u.id);
     }
-    this.lastTick = opts.clockMs();
+    // 构造即采样:之后第一拍和构造时刻比,宿主刚启动就遇上休眠也能检出
+    this.wake = wakeTick(WAKE_INITIAL, opts.clockMs(), this.wakePolicy);
   }
 
   private iso(ms: number) {
@@ -322,13 +344,12 @@ export class RunStore {
   /** 一个核对周期:时钟跳变记休眠唤醒;同一启动里进程已不在的成孤儿;在跑的轮次判卡死 */
   tick(): void {
     const now = this.now();
-    if (now - this.lastTick > this.checkMs * 2 + 60_000) this.awakeSince = now;
-    this.lastTick = now;
+    this.wake = wakeTick(this.wake, now, this.wakePolicy);
     if (this.opts.alive) this.persistOrphans(reconcileOrphans([...this.live.values()], { bootId: this.opts.bootId, at: now, alive: this.opts.alive }), "pid");
     for (const u of [...this.live.values()]) {
       if (this.judging.has(u.id) || this.settled.has(u.id)) continue;
       const th = resolveThresholds(this.opts.thresholds(), u.contactId, u.upstream);
-      const c = stallCheck(u, now, th, { awakeSince: this.awakeSince, graceMs: this.opts.sleepGraceMs ?? DEFAULT_SLEEP_GRACE_MS });
+      const c = stallCheck(u, now, th, this.sleep());
       if (!c.verdict) continue;
       this.judging.add(u.id);
       this.addEvent(u.id, "stall-judged", {
@@ -348,6 +369,10 @@ export class RunStore {
       }
     }
   }
+  /** 交给 stallCheck 的休眠宽限:最近一次检出醒来的时刻与宽限时长 */
+  private sleep() {
+    return { awakeSince: this.wake.awakeSince, graceMs: this.wakePolicy.graceMs };
+  }
   /** 宿主停完这一轮后写失败 */
   failStalled(id: string, verdict: StallVerdict): Transition {
     const r = this.end(id, "failed", { failure: verdict.failure, verdict }, { stall: verdict.kind });
@@ -361,7 +386,7 @@ export class RunStore {
   liveCheck(u: RunUnit): { waiting: RunView["waiting"]; idleMs: number } {
     if (!isLiveRun(u.status)) return { waiting: null, idleMs: 0 };
     if (this.settled.has(u.id)) return { waiting: "children", idleMs: 0 };
-    const c = stallCheck(u, this.now(), resolveThresholds(this.opts.thresholds(), u.contactId, u.upstream), { awakeSince: this.awakeSince, graceMs: this.opts.sleepGraceMs ?? DEFAULT_SLEEP_GRACE_MS });
+    const c = stallCheck(u, this.now(), resolveThresholds(this.opts.thresholds(), u.contactId, u.upstream), this.sleep());
     return { waiting: c.waiting, idleMs: Math.max(0, Math.round(c.idleMs)) };
   }
   /** 起周期核对。计时器不单独撑住进程(unref):宿主关了或测试结束,不因为它挂着 */

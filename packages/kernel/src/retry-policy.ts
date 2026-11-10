@@ -317,19 +317,25 @@ export interface WakeState {
   readonly awakeSince: number | null;
 }
 export const WAKE_INITIAL: WakeState = Object.freeze({ lastTickMs: null, awakeSince: null });
+/**
+ * 休眠门参数合同:未给的字段取默认值,返回冻结副本;不合格返回原因。
+ * 宿主构造运行台账时用它校验,不合格当场拒绝——wakeTick 对非法参数静默退回初始态,交给它休眠检测会永久失效。
+ */
+export function checkWakePolicy(x: unknown): { ok: true; policy: WakePolicy } | { ok: false; reason: string } {
+  if (x === undefined) return { ok: true, policy: DEFAULT_WAKE_POLICY };
+  const r = record(x, "休眠门参数");
+  if (!r.ok) return r;
+  const v = { ...DEFAULT_WAKE_POLICY, ...r.v } as Rec;
+  if (!isPosFinite(v.jumpMs) || !isNat(v.graceMs)) return { ok: false, reason: "jumpMs 必须是正数、graceMs 必须是非负整数" };
+  return { ok: true, policy: Object.freeze({ jumpMs: v.jumpMs, graceMs: v.graceMs }) };
+}
 function checkWake(state: unknown, policy: unknown): { ok: true; s: WakeState; p: WakePolicy } | { ok: false; reason: string } {
   const s = record(state, "休眠门状态");
   if (!s.ok) return s;
   if (!(s.v.lastTickMs === null || isFiniteNum(s.v.lastTickMs)) || !(s.v.awakeSince === null || isFiniteNum(s.v.awakeSince))) return { ok: false, reason: "休眠门状态字段非法" };
-  let p: WakePolicy = DEFAULT_WAKE_POLICY;
-  if (policy !== undefined) {
-    const r = record(policy, "休眠门参数");
-    if (!r.ok) return r;
-    const v = { ...DEFAULT_WAKE_POLICY, ...r.v } as Rec;
-    if (!isPosFinite(v.jumpMs) || !isNat(v.graceMs)) return { ok: false, reason: "jumpMs 必须是正数、graceMs 必须是非负整数" };
-    p = { jumpMs: v.jumpMs, graceMs: v.graceMs };
-  }
-  return { ok: true, s: s.v as unknown as WakeState, p };
+  const p = checkWakePolicy(policy);
+  if (!p.ok) return p;
+  return { ok: true, s: s.v as unknown as WakeState, p: p.policy };
 }
 /** 周期采样一次时钟:与上次采样相隔超过 jumpMs(合盖休眠、时钟跳变)就记 awakeSince = now。时钟回拨也按跳变处理。 */
 export function wakeTick(state: unknown, nowMs: number, policy?: unknown): WakeState {

@@ -89,6 +89,7 @@ import {
   type StallVerdict,
   type ThresholdConfig,
   type TimerApi,
+  type WakePolicy,
   type RecallItem,
   type RecallRef,
   type RecallSource,
@@ -138,7 +139,7 @@ import { PluginStore } from "./plugins.ts";
 import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief, reviewModelProblem } from "./review.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
 import { QuotaTable } from "./quota.ts";
-import { RunStore } from "./runs.ts";
+import { DEFAULT_RUN_CHECK_MS, RunStore, checkRunWake } from "./runs.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
 import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, unindexTx } from "./search.ts";
 import { SharedDocs } from "./shared-docs.ts";
@@ -220,6 +221,8 @@ export interface HostOptions {
   readonly runThresholds?: ThresholdConfig | (() => ThresholdConfig);
   /** 运行台账核对周期(毫秒),默认 30 秒 */
   readonly runCheckMs?: number;
+  /** 运行台账的休眠唤醒检测与宽限(AC-36 ⑤ F11):默认跳变 60 秒、宽限 3 分钟(占位,验收文档第 9 节);jumpMs 不得小于核对周期的 2 倍 */
+  readonly runWakePolicy?: Partial<WakePolicy>;
   /** 本次宿主启动号(存活核对用);默认新生成 */
   readonly bootId?: string;
   /** 自己名下自动重跑上限,默认 2 次(助手建议,用户未定,#2646) */
@@ -444,6 +447,7 @@ export class Host {
     if (!policy.ok) throw new HostError("invalid_params", `重试参数不合格:${policy.reason}`);
     this.retryPolicy = policy.policy;
     this.breakerPolicy = { ...DEFAULT_BREAKER_POLICY, ...(opts.breaker ?? {}) };
+    const runWake = checkRunWake(opts.runCheckMs ?? DEFAULT_RUN_CHECK_MS, opts.runWakePolicy);
     this.clock = opts.clockMs ?? Date.now;
     this.random = opts.random ?? Math.random;
     this.loop = createAttentionLoop({
@@ -532,6 +536,7 @@ export class Host {
       newId: this.newId,
       thresholds: typeof th === "function" ? th : () => th ?? {},
       ...(opts.runCheckMs !== undefined ? { checkMs: opts.runCheckMs } : {}),
+      wake: runWake,
       changed: (us) => {
         for (const u of us) this.bus.emit({ type: "run.updated", run: this.runs.view(u) });
       },
