@@ -14,7 +14,7 @@
     "model": "unknown-runtime-metadata-pending"
   },
   "red": {
-    "commit": "4a6d8a97266479839097689783b5852811707f3d"
+    "commit": "10091aa629070354fbb0f8616f3d93270818d580"
   },
   "unverifiable": "AC-15：确定性 Compute 替身不能证明真实 harness 的跨进程送达恰好一次；sending 未确认重启明确阻塞，不自动重复发送。系统断电/文件系统损坏和外部非文件副作用未测。R-02：最终红锚点含首次绿之后追加的强化判据，时间顺序见 SCOPE.md，不伪称全部先红。",
   "waiver": null,

@@ -22,7 +22,7 @@ const cases = [
  ['A08-source', W, '`--source=${sha}`', '`--source=HEAD`', wt, 'A08 '],
  ['A09-ignored', W, '"--exclude-standard", "-z"', '"-z"', wt, 'A09 '],
  ['A10-untracked', W, 'g(["add", "-A", "--", "."]);', 'g(["add", "-u", "--", "."]);', wt, 'A10 '],
- ['A11-signature', W, 'g(["commit-tree", "--no-gpg-sign", tree, "-p", "HEAD", "-m", message])', 'g(["-c", "commit.gpgsign=true", "commit-tree", tree, "-p", "HEAD", "-m", message])', wt, 'A11 '],
+ ['A11-force-signature', W, 'g(["commit-tree", "--no-gpg-sign", tree, "-p", "HEAD", "-m", message])', 'g(["commit-tree", "-S", tree, "-p", "HEAD", "-m", message])', wt, 'A11 '],
  ['A12-error', R, '{ ...cur.value, error: String(error) }', '{ ...cur.value, phase: "done", error: String(error) }', wt, 'A12 '],
  ['A13-once', R, 'if (!intent || intent.phase === "done") return;', 'if (!intent) return;', wt, 'A13 '],
  ['A14-atomic', R, 'done(completed, restored);', 'this.db.store.db.exec("COMMIT; BEGIN"); done(completed, restored);', wt, 'A14 '],
