@@ -14,9 +14,9 @@
     "model": "gpt-6-astra"
   },
   "red": {
-    "commit": "1e4724a"
+    "commit": "dd7d2c3"
   },
-  "unverifiable": "AC-21 已撤销,不把删除标为原功能通过。删除类的等价先红:原实现上 8 条新验收按名失败(1e4724a),删除后全绿;第一次测试提交 a750721 中镜像目录检查原本已绿,随后在产品修改前按方案第 3 点与新库专用表合并为一条验收,没有伪造其先红。旧库 gg_doc_versions/gg_doc_requests、shared: 文档、shared-docs/*.md 镜像未迁移、未清理;原收据与证据在 60fe356。阴性对照引用 trace-replay.test.ts 的 TLA-04/TLA-05,通用 CAS 实现未改。变异恢复真实旧入口时同时恢复其类型与专用存储依赖,会连带触发合同及专用表测试;逐项失败名见 shared-doc-removed-mutations.txt。未自审、未合并、未关闭 PR #33;AC-21 文档合入后证据回填仍待集成负责人处理。",
+  "unverifiable": "AC-21 已撤销,不把删除标为原功能通过。删除类的等价先红:原实现上 8 条新验收按名失败(1e4724a),删除后全绿;第一次测试提交 a750721 中镜像目录检查原本已绿,随后在产品修改前按方案第 3 点与新库专用表合并为一条验收,没有伪造其先红。旧库 gg_doc_versions/gg_doc_requests、shared: 文档、shared-docs/*.md 镜像未迁移、未清理;原收据与证据在 60fe356。阴性对照引用 trace-replay.test.ts 的 TLA-04/TLA-05,通用 CAS 实现未改。变异恢复真实旧入口时同时恢复其类型与专用存储依赖,会连带触发合同及专用表测试;逐项失败名见 shared-doc-removed-mutations.txt。未自审、未合并、未关闭 PR #33;AC-21 文档合入后证据回填仍待集成负责人处理。 精化测试时把 Host/createService 构造放到测试体供静态追踪,增加真实错误的格式断言,没有删除或减弱断言。dd7d2c3 是首次实现之后精化测试的基线红对照,4a27fa1 恢复相同删除实现;不声称这次对照早于首次实现。云端 Docker 原门禁只挂载 node_modules,工作区链接指向挂载外导致文件级失败;运行时使用 proof/shared-doc-removed-docker.py 在每个 gate 临时副本重新建立 workspace 链接,只指向该红/绿/变异副本,外部依赖仍走原挂载,不改门禁检查或受检源文件。Docker socket 使用系统 docker 组权限,不改变容器网络与读写边界。",
   "waiver": null,
   "review": null,
   "review_status": "待 Codex 主审 + hy4 辅审,之后 Claude Code 读记录终审",
