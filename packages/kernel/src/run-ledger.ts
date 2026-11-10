@@ -12,6 +12,7 @@
 //     明确发起才执行并在群里留记录;每次重跑给出一条事件。
 //   - 同一会话里同一上游同一原因的多条失败合并成一条群级提示。
 import { type AutoRerun, classifyFailure, type FailureClass, type ReasonClass, type RetryClass } from "./failure-class.ts";
+import { DEFAULT_WAKE_POLICY } from "./retry-policy.ts";
 
 export type RunLayer = "contact-round" | "compute-session" | "compute-turn" | "background" | "subagent";
 export type RunStatus = "queued" | "running" | "waiting_user" | "done" | "failed" | "interrupted" | "orphaned";
@@ -34,8 +35,8 @@ export const DEFAULT_STALL_THRESHOLDS: Readonly<StallThresholds> = Object.freeze
 export const DEFAULT_RERUN_LIMIT = 2;
 /** 重跑租约默认有效期 */
 export const DEFAULT_RERUN_LEASE_MS = 10 * 60_000;
-/** 休眠唤醒后的宽限期默认值(D15.1 第六层 ① 举例 3 分钟) */
-export const DEFAULT_SLEEP_GRACE_MS = 3 * 60_000;
+/** 休眠唤醒后的宽限期默认值(D15.1 第六层 ① 举例 3 分钟);只有一个来源:内核休眠门 DEFAULT_WAKE_POLICY.graceMs */
+export const DEFAULT_SLEEP_GRACE_MS = DEFAULT_WAKE_POLICY.graceMs;
 
 export interface RunFailure {
   readonly reasonClass: ReasonClass;
