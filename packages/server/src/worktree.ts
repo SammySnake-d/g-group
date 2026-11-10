@@ -9,7 +9,7 @@
 //   W6 Merged:目标分支已推进,任务工作树目录清掉、任务分支保留。
 // 目标分支不能检出在某个非裸工作区里(update-ref 不会改那个工作区的文件,会让它与分支不一致),配置时就拒绝。
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 
 export interface VerifySpec {
@@ -111,60 +111,9 @@ export class Worktrees {
     mkdirSync(this.root, { recursive: true });
   }
 
-  /** AC-15:只建无分支备份提交，真实 index / HEAD 均不动。 */
-  backup(ws: RecoveryWorkspace): { backupRef: string; backupSha: string } {
-    this.validateRecovery(ws, ws.baseSha);
-    const expected = `refs/gg/backup/${Buffer.from(ws.taskId).toString("hex")}/${ws.recovery.ver}`;
-    if (ws.recovery.backupRef !== expected || !Number.isSafeInteger(ws.recovery.ver) || ws.recovery.ver < 0) throw new Error("backup-ref 归属不符");
-    git(ws.dir, ["check-ref-format", expected]);
-    const message = `gg recovery ${ws.taskId} v${ws.recovery.ver} base ${ws.baseSha}`;
-    const existing = () => {
-      const sha = git(ws.dir, ["rev-parse", "--verify", `${expected}^{commit}`]);
-      if (git(ws.dir, ["show", "-s", "--format=%B", sha]) !== message) throw new Error("backup-ref 归属不符");
-      return { backupRef: expected, backupSha: sha };
-    };
-    if (gitOk(ws.dir, ["show-ref", "--verify", "--quiet", expected])) return existing();
-    const gd = git(ws.dir, ["rev-parse", "--absolute-git-dir"]);
-    const tmp = mkdtempSync(path.join(gd, "gg-backup-"));
-    try {
-      const env = { ...cleanEnv(), GIT_INDEX_FILE: path.join(tmp, "index") };
-      const g = (args: string[]) => execFileSync("git", [...IDENTITY, ...args], { cwd: ws.dir, env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-      g(["read-tree", "HEAD"]);
-      g(["add", "-A", "--", "."]);
-      const tree = g(["write-tree"]);
-      const sha = g(["commit-tree", "--no-gpg-sign", tree, "-p", "HEAD", "-m", message]);
-      try { g(["update-ref", expected, sha, "0".repeat(sha.length)]); }
-      catch { return existing(); }
-      return { backupRef: expected, backupSha: sha };
-    } finally { rmSync(tmp, { recursive: true, force: true }); }
-  }
-
-  /** 只恢复 index/文件，不 reset、不移动分支；忽略路径从不清理。 */
-  restoreTo(ws: RecoveryWorkspace, sha: string): Workspace {
-    this.validateRecovery(ws, sha);
-    // 没有可追溯备份绝不动文件；复用已有 ref，不覆盖恢复前字节。
-    this.backup(ws);
-    git(ws.dir, ["restore", `--source=${sha}`, "--staged", "--worktree", "--", "."]);
-    const untracked = execFileSync("git", ["ls-files", "-o", "--exclude-standard", "-z"], { cwd: ws.dir, env: cleanEnv(), encoding: "utf8" });
-    for (const rel of untracked.split("\0").filter(Boolean)) {
-      const file = path.resolve(ws.dir, rel);
-      if (!file.startsWith(path.resolve(ws.dir) + path.sep)) throw new Error("恢复清理路径越界");
-      // ls-files 不遍历符号链接；unlink/rm 删除链接本身，不跟随它。
-      rmSync(file, { recursive: true, force: true });
-    }
-    return { ...ws, state: "W2_Active", candidateSha: null, conflict: null, targetHead: null, verifiedOn: null, mergedSha: null };
-  }
-
-  validateRecovery(ws: Workspace, sha: string): void {
-    if (!["W2_Active", "W3_Pinned", "W5_Conflict"].includes(ws.state)) throw new Error(`工作树 ${ws.state} 不可恢复`);
-    const expectedDir = path.join(this.root, ws.taskId.replace(/[^A-Za-z0-9._-]/g, "-"));
-    if (path.resolve(ws.dir) !== expectedDir || realpathSync(ws.dir) !== realpathSync(expectedDir)) throw new Error("工作树路径不匹配");
-    if (git(ws.dir, ["symbolic-ref", "--short", "HEAD"]) !== ws.branch || ws.branch !== this.branchOf(ws.taskId)) throw new Error("工作树分支不匹配");
-    const common = git(ws.dir, ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
-    const owner = git(this.cfg.repo, ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
-    if (realpathSync(common) !== realpathSync(owner)) throw new Error("工作树仓库不匹配");
-    if (!/^[0-9a-f]{40,64}$/.test(sha) || !gitOk(ws.dir, ["cat-file", "-e", `${sha}^{commit}`]) || !gitOk(ws.dir, ["merge-base", "--is-ancestor", ws.baseSha, sha]) || !gitOk(ws.dir, ["merge-base", "--is-ancestor", sha, "HEAD"])) throw new Error("checkpoint-unavailable: 目标提交不可达");
-  }
+  backup(_ws: RecoveryWorkspace): { backupRef: string; backupSha: string } { throw new Error("A 待实现 backup"); }
+  restoreTo(_ws: RecoveryWorkspace, _sha: string): Workspace { throw new Error("A 待实现 restoreTo"); }
+  validateRecovery(_ws: Workspace, _sha: string): void { throw new Error("A 待实现 validateRecovery"); }
 
   targetHead(): string {
     try {

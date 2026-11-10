@@ -18,6 +18,7 @@ function fixture() {
   const dir = path.join(tmp, String(++num)); mkdirSync(dir);
   git(dir, "init", "-q", "-b", "seed");
   writeFileSync(path.join(dir, "中文 空格.txt"), text); writeFileSync(path.join(dir, ".gitignore"), "ignored\n");
+  writeFileSync(path.join(dir, "deleted"), text);
   git(dir, "add", "-A"); git(dir, "commit", "-qm", "base"); git(dir, "branch", "main");
   const wt = new Worktrees({ repo: dir, targetBranch: "main" }, path.join(dir, "trees"));
   const ws = wt.provision("A");
@@ -30,6 +31,7 @@ function recovery(ws: Workspace): RecoveryWorkspace { return { ...ws, recovery: 
 function change(s: ReturnType<typeof fixture>) {
   writeFileSync(path.join(s.ws.dir, "中文 空格.txt"), `${text} changed`);
   writeFileSync(path.join(s.ws.dir, "added"), text);
+  rmSync(path.join(s.ws.dir, "deleted"));
   const ws = s.wt.pin(s.ws, "delivery");
   writeFileSync(path.join(ws.dir, "untracked"), `${text} user`);
   writeFileSync(path.join(ws.dir, "ignored"), `${text} ignored`);
@@ -53,6 +55,10 @@ test("A07 首次回 base 后续取严格前驱且历史对不上拒绝", () => {
   s.store.record({ taskId: "A", deliveryId: "second", resultVer: 2, artifact: "b", candidateSha: ws.candidateSha! });
   assert.equal(s.store.target(ws, 1, "a"), ws.baseSha);
   assert.equal(s.store.target(ws, 2, "b"), ws.baseSha);
+  writeFileSync(path.join(ws.dir, "third"), text);
+  const third = s.wt.pin(ws, "third");
+  s.store.record({ taskId: "A", deliveryId: "third", resultVer: 3, artifact: "c", candidateSha: third.candidateSha! });
+  assert.equal(s.store.target(third, 3, "c"), ws.candidateSha);
   assert.throws(() => s.store.target(ws, 2, "foreign"), /checkpoint-unavailable/);
   assert.equal(s.store.target({ ...ws, taskId: "legacy" }, 2, "b"), null);
 });
@@ -64,6 +70,7 @@ test("A08 文件恢复含新增删除中文路径且 HEAD 不动", () => {
   assert.equal(existsSync(path.join(ws.dir, "untracked")), false);
   assert.equal(git(ws.dir, "rev-parse", "HEAD"), before);
   assert.equal(out.state, "W2_Active");
+  assert.equal(readFileSync(path.join(ws.dir, "deleted"), "utf8"), text);
 });
 test("A09 ignored 目标分支与另一工作树保持原样", () => {
   const s = fixture(); const ws = change(s); const other = s.wt.provision("B"); const target = s.wt.targetHead();

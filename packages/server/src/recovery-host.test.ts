@@ -25,7 +25,7 @@ async function settle(host: Host, compute: ReturnType<typeof scriptedCompute>) {
 async function scene(code = true) {
   const data = path.join(root, String(++n)); mkdirSync(data);
   const repo = path.join(data, "repo"); mkdirSync(repo);
-  git(repo, "init", "-q", "-b", "seed"); writeFileSync(path.join(repo, "base"), "NEUTRAL_FIXTURE_NO_CREDENTIALS"); git(repo, "add", "-A"); git(repo, "commit", "-qm", "base"); git(repo, "branch", "main");
+  git(repo, "init", "-q", "-b", "seed"); writeFileSync(path.join(repo, "base"), "NEUTRAL_FIXTURE_NO_CREDENTIALS"); writeFileSync(path.join(repo, "other"), "NEUTRAL_FIXTURE_NO_CREDENTIALS other"); git(repo, "add", "-A"); git(repo, "commit", "-qm", "base"); git(repo, "branch", "main");
   let ready = false;
   const compute = scriptedCompute({ script: () => [{ kind: "started", sessionId: "s", resumed: false }, { kind: "completed", result: "初版" }], resumeScript: () => [{ kind: "started", sessionId: "s", resumed: true }, { kind: "completed", result: "补充版" }] });
   const mind: ContactMind = { async round(input) {
@@ -46,7 +46,7 @@ async function scene(code = true) {
   host.send({ roomId: dm.id, clientActionId: "first", text: "补一" }); await settle(host, compute);
   const m = host.send({ roomId: dm.id, clientActionId: "second", text: "补二" }); await settle(host, compute);
   const A = host.listTasks({}).find(t => t.title === "A")!; const B = host.listTasks({}).find(t => t.title === "B")!;
-  if (code) writeFileSync(path.join(A.workspace!.dir, "base"), "NEUTRAL_FIXTURE_NO_CREDENTIALS changed");
+  if (code) { writeFileSync(path.join(A.workspace!.dir, "base"), "NEUTRAL_FIXTURE_NO_CREDENTIALS changed"); writeFileSync(path.join(A.workspace!.dir, "other"), "changed other"); }
   ready = true;
   compute.emit({ kind: "completed", computeId: A.computeRuns[0]!.computeId, result: "完成" }); await settle(host, compute);
   ready = false;
@@ -137,21 +137,21 @@ await h.close(); c.close();
   const refBefore = (() => { try { return git(s.repo, "rev-parse", "--verify", intent.backupRef); } catch { return null; } })();
   const finish = JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e", script, s.data, s.repo, s.A.id, "finish"], { env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 20_000 }).trim()) as { intent: { phase: string; targetSha: string; backupSha: string }; resumed: number };
   const repeated = JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e", script, s.data, s.repo, s.A.id, "finish"], { env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 20_000 }).trim()) as { resumed: number };
-  return { exit, phase: finish.intent.phase, sameTarget: finish.intent.targetSha === intent.targetSha, sameBackup: refBefore === null || finish.intent.backupSha === refBefore, resumes: finish.resumed, repeated: repeated.resumed, bytes: readFileSync(path.join(s.A.workspace!.dir, "base"), "utf8") };
+  return { exit, phase: finish.intent.phase, sameTarget: finish.intent.targetSha === intent.targetSha, sameBackup: refBefore === null || finish.intent.backupSha === refBefore, resumes: finish.resumed, repeated: repeated.resumed, bytes: readFileSync(path.join(s.A.workspace!.dir, "base"), "utf8"), remainingBytes: readFileSync(path.join(s.A.workspace!.dir, "other"), "utf8") };
 }
 test("A12I 意图提交后宿主退出重启完成恢复", async () => {
   const r = await crashAndRestart("intent");
-  assert.deepEqual(r, { exit: 71, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS" });
+  assert.deepEqual(r, { exit: 71, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS", remainingBytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS other" });
 });
 test("A12B 备份后宿主退出重启复用同一备份", async () => {
   const r = await crashAndRestart("backup");
-  assert.deepEqual(r, { exit: 72, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS" });
+  assert.deepEqual(r, { exit: 72, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS", remainingBytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS other" });
 });
 test("A12P 恢复中宿主退出重启幂等恢复同一目标", async () => {
   const r = await crashAndRestart("partial");
-  assert.deepEqual(r, { exit: 73, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS" });
+  assert.deepEqual(r, { exit: 73, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS", remainingBytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS other" });
 });
 test("A12D 文件已恢复而完成未提交时重启不重新备份", async () => {
   const r = await crashAndRestart("restored");
-  assert.deepEqual(r, { exit: 74, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS" });
+  assert.deepEqual(r, { exit: 74, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS", remainingBytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS other" });
 });
