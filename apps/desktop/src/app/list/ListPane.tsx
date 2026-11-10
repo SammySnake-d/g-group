@@ -12,8 +12,10 @@ import { FileList } from './FileList'
 
 /** 列表栏(可调宽):搜索 + 新建,下面按左侧所在区域列会话 / 通讯录 / 文件 */
 export function ListPane() {
-  const { section, width, push } = useApp((s) => ({ section: s.section, width: s.widths.list, push: s.push }))
-  const [query, setQuery] = useState('')
+  const { section, width, push, fileQuery, setFileQuery } = useApp((s) => ({ section: s.section, width: s.widths.list, push: s.push, fileQuery: s.fileQuery, setFileQuery: s.setFileQuery }))
+  const [localQuery, setLocalQuery] = useState('')
+  // 文件区的搜索词放在 store 里:列表和右边的文件总览按同一个词筛
+  const [query, setQuery] = section === 'files' ? [fileQuery, setFileQuery] : [localQuery, setLocalQuery]
   return (
     <aside className="flex shrink-0 flex-col bg-side" style={{ width }} data-testid="list">
       <div className="flex h-12 items-center gap-2 px-3 pt-1">
@@ -39,7 +41,7 @@ export function ListPane() {
       <div onKeyDown={moveRowFocus} className={cn('scroll-thin flex-1 overflow-y-auto pb-2', section !== 'chat' && 'px-1.5')} style={{ ['--avatar-ring' as string]: 'var(--side)' }}>
         {section === 'chat' && <ConvList query={query} />}
         {section === 'contacts' && <ContactList query={query} />}
-        {section === 'files' && <FileList />}
+        {section === 'files' && <FileList query={query} />}
       </div>
     </aside>
   )

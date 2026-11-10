@@ -25,9 +25,12 @@ export type LayoutSlice = Pick<Ctx, 'dark' | 'debug' | 'setDark' | 'setDebug' | 
   contact: PersonId
   wbTab: WbTab
   fileSel: string | null
-  /** null 跟随窗口；手动选择在本次应用会话内保留。 */
-  fileContextPreference: boolean | null
-  setFileContextPreference: (open: boolean) => void
+  /** 列表栏在文件区的搜索词:列表和文件总览共用一份 */
+  fileQuery: string
+  setFileQuery: (q: string) => void
+  /** 从文件的来处跳进聊天时记下从哪份文件来,聊天里给一个回去的入口;换了对话或导航就作废 */
+  fileReturn: { file: string; conv: string } | null
+  setFileReturn: (r: { file: string; conv: string } | null) => void
   widths: Record<Pane | 'float', number>
   setBackend: (b: BackendState) => void
   pickTab: (i: number) => void
@@ -56,7 +59,8 @@ export const createLayoutSlice: Slice<LayoutSlice> = (set, get) => ({
   contact: boot.contact,
   wbTab: boot.wbTab,
   fileSel: boot.file,
-  fileContextPreference: null,
+  fileQuery: '',
+  fileReturn: null,
   helperPanel: boot.helperPanel,
   helperGlobal: boot.helperGlobal,
   widths: { list: LAYOUT.list.initial, split: SPLIT_INITIAL, float: LAYOUT.float.initial, helper: LAYOUT.helper.initial },
@@ -64,7 +68,7 @@ export const createLayoutSlice: Slice<LayoutSlice> = (set, get) => ({
   setBackend: (backend) => set({ backend }),
   setDark: (dark) => { set({ dark }); document.documentElement.classList.toggle('dark', dark) },
   setDebug: (debug) => set({ debug }),
-  setSection: (section) => set({ section }),
+  setSection: (section) => set({ section, fileReturn: null }),
   setPanoOpen: (panoOpen) => set({ panoOpen }),
   setHelperPanel: (helperPanel) => set({ helperPanel }),
   setHelperGlobal: (helperGlobal) => set({ helperGlobal }),
@@ -89,7 +93,8 @@ export const createLayoutSlice: Slice<LayoutSlice> = (set, get) => ({
   pickContact: (contact) => set({ contact, wbTab: 'overview' }),
   setWbTab: (wbTab) => set({ wbTab }),
   setFileSel: (fileSel) => set({ fileSel }),
-  setFileContextPreference: (fileContextPreference) => set({ fileContextPreference }),
+  setFileQuery: (fileQuery) => set({ fileQuery }),
+  setFileReturn: (fileReturn) => set({ fileReturn }),
 
   resize: (pane, delta) => set((s) => {
     const r = LAYOUT[pane]

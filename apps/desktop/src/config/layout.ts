@@ -4,8 +4,6 @@ export const LAYOUT = {
   chatColumn: 860,
   /** 开着分栏时聊天区至少留这么宽 */
   chatMin: 520,
-  /** 文件正文与消息链并排的最小窗口宽度；手动开合优先于自动判断。 */
-  fileContextMinWidth: 1150,
   list: { min: 220, max: 420, initial: 272 },
   split: { min: 340, max: 720, initial: 440 },
   float: { min: 320, max: 560, initial: 400 },

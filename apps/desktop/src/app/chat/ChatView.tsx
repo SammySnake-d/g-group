@@ -6,6 +6,7 @@ import { useApp } from '@/store'
 import { chatFollow } from '@/store/dom'
 import { activeConv, withUnreadDivider } from '@/store/select'
 import { JumpToLatest } from '../JumpToLatest'
+import { FileReturn } from '@/components/files/FileReturn'
 import { ChatHeader } from './ChatHeader'
 import { ComposerSlot } from './ComposerSlot'
 import { MentionMe } from './MentionMe'
@@ -95,6 +96,7 @@ export function ChatView() {
           </div>
         </div>
         <JumpToLatest show={!atBottom} count={newCount} onJump={() => toBottom(true)} />
+        <FileReturn conv={conv.id} />
         <MentionMe conv={conv} show={!atBottom} />
         {/* 概念版(src/concept):双击就回复、等你刻度 */}
         <Concept.DoubleClickReply conv={conv} scrollRef={scrollRef} disabled={selecting} />
