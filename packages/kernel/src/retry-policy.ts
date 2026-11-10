@@ -317,6 +317,11 @@ export interface WakeState {
   readonly awakeSince: number | null;
 }
 export const WAKE_INITIAL: WakeState = Object.freeze({ lastTickMs: null, awakeSince: null });
+/** 休眠门参数合同(宿主构造运行台账时校验,不合格当场拒绝):未给的字段取默认值,返回冻结副本。空壳,待实现。 */
+export function checkWakePolicy(x: unknown): { ok: true; policy: WakePolicy } | { ok: false; reason: string } {
+  void x;
+  throw new Error("未实现");
+}
 function checkWake(state: unknown, policy: unknown): { ok: true; s: WakeState; p: WakePolicy } | { ok: false; reason: string } {
   const s = record(state, "休眠门状态");
   if (!s.ok) return s;

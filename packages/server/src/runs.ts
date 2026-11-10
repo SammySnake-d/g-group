@@ -17,6 +17,7 @@ import {
   type ThresholdConfig,
   type TimerApi,
   type Transition,
+  type WakePolicy,
   DEFAULT_SLEEP_GRACE_MS,
   failureGroups,
   isLiveRun,
@@ -59,6 +60,8 @@ export interface RunStoreOptions {
   readonly thresholds: () => ThresholdConfig;
   readonly checkMs?: number;
   readonly sleepGraceMs?: number;
+  /** 休眠唤醒检测与宽限(F11)。空壳,待实现 */
+  readonly wake?: WakePolicy;
   /** 同一启动里核对执行进程是否还在;不给就只核对启动号 */
   readonly alive?: (pid: number) => boolean;
   /** 在跑单元的进展落盘最短间隔,默认 5 秒 */

@@ -89,6 +89,7 @@ import {
   type StallVerdict,
   type ThresholdConfig,
   type TimerApi,
+  type WakePolicy,
   type RecallItem,
   type RecallRef,
   type RecallSource,
@@ -220,6 +221,8 @@ export interface HostOptions {
   readonly runThresholds?: ThresholdConfig | (() => ThresholdConfig);
   /** 运行台账核对周期(毫秒),默认 30 秒 */
   readonly runCheckMs?: number;
+  /** 运行台账的休眠唤醒检测与宽限(F11)。空壳,待实现 */
+  readonly runWakePolicy?: Partial<WakePolicy>;
   /** 本次宿主启动号(存活核对用);默认新生成 */
   readonly bootId?: string;
   /** 自己名下自动重跑上限,默认 2 次(助手建议,用户未定,#2646) */
