@@ -1,0 +1,27 @@
+packages/kernel/src/assemble.ts
+  s_707da87feee227::t_b9de8a23792cb0 14-17,54-56,73-154,156-157,160-296,299-329,331,334,336,339,341-343
+packages/kernel/src/classify.ts
+  s_707da87feee227::t_ef200bb872530d 9,11-12,40-115
+packages/kernel/src/plain.ts
+  s_707da87feee227::t_1f05aa00c55995 6-8,11-12,21-40,42-43,46-77,80-85,88-164,166-203,206,208-214
+packages/kernel/src/plugins.ts
+  s_707da87feee227::t_2f6e111da6a81f 1-23,27-196,198-341
+scripts/gates/lib.ts
+  s_707da87feee227::t_16b63f98ee79a4 258-264
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "896baa310a26903d99e41477dec85b6d970c873e",
+  "prompts": {},
+  "sessions": {
+    "s_707da87feee227": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c65d-2dc4-7f63-a331-e0399ce6a347",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
