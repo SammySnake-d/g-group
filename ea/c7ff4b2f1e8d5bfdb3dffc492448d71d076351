@@ -1,0 +1,52 @@
+packages/kernel/proof/r17-notes.md
+  s_707da87feee227::t_fa2a59e9b12fc9 1-33
+  s_707da87feee227::t_0fb396d6c4084c 34-35
+packages/kernel/proof/mutations.mjs
+  s_707da87feee227::t_896f0850bac396 262-271,284,287,295,310-312,336,340,344-349,359,362-363,367,372,374-375
+packages/kernel/proof/r17-invisible-boundary.txt
+  s_707da87feee227::t_7b86e829da6490 1-6
+packages/kernel/proof/r17-mutations.txt
+  s_707da87feee227::t_2a088dbd650377 1-213
+packages/kernel/proof/r17-red-green.json
+  s_707da87feee227::t_a4ae807fd0a9de 1-15
+packages/kernel/proof/r17-red-tests.txt
+  s_707da87feee227::t_bca991cbd115c2 1-4434
+packages/kernel/proof/r17-targeted-mutations.txt
+  s_707da87feee227::t_2b7c454ccddd89 1-13
+packages/kernel/proof/r17-tests-node22.txt
+  s_707da87feee227::t_22d8104e2a4d80 1-1498
+packages/kernel/proof/r17-tests-node24.txt
+  s_707da87feee227::t_c0f7408220e6a5 1-1498
+scripts/gates/mutation.ts
+  s_707da87feee227::t_23aad0adc35d8a 16-18
+scripts/gates/proof/r17-container-calibration.mjs
+  s_707da87feee227::t_c9dfaac1af86e8 1-45
+scripts/gates/proof/r17-container-calibration.txt
+  s_707da87feee227::t_0ec3564d14f9fc 1-7
+scripts/gates/proof/r17-gate-negatives.txt
+  s_707da87feee227::t_6e378b0ca4ec55 1-9
+scripts/gates/proof/r17-isolation-after.txt
+  s_707da87feee227::t_4f539fa7b962a7 1
+scripts/gates/proof/r17-isolation-before.txt
+  s_707da87feee227::t_fafca56d9814c5 1
+scripts/gates/proof/r17-isolation-red.txt
+  s_707da87feee227::t_ca6fe8c588654a 1-22
+scripts/gates/proof/r17-selftest.txt
+  s_707da87feee227::t_2aa4b28c3bbbc0 1-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "eac7ff4b2f1e8d5bfdb3dffc492448d71d076351",
+  "prompts": {},
+  "sessions": {
+    "s_707da87feee227": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c65d-2dc4-7f63-a331-e0399ce6a347",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
