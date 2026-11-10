@@ -614,8 +614,9 @@ test("RR-01(非 mirasim 对照项):已受理 blocked 后对进程组 SIGSTOP 冻
   assert.deepEqual(evs === "超时" ? [] : evs.map((e) => e.kind), ["started", "blocked"]);
   const cli = launches(f.record)[0]!.pid;
   const gc = grandchildPid(f.record);
-  await waitFor(() => procStat(cli).startsWith("T") && procStat(gc).startsWith("T"));
+  // 先触发并观察被禁止的真实副作用,不以通用等待超时代替 M34 的行为断言。
   assert.equal(await sideEffect(f.marker, 300), false);
+  await waitFor(() => procStat(cli).startsWith("T") && procStat(gc).startsWith("T"));
   assert.deepEqual(a.snapshot(r.computeId), { ok: false, reason: "not-quiescent" });
   assert.deepEqual(await a.stop(r.computeId), { ok: true });
   assert.equal(await gone(cli), true);
