@@ -1,0 +1,20 @@
+packages/server/src/recovery-host.test.ts
+  s_e21a7b024276d2::t_11069c33ad4d07 158-177,179
+  s_e21a7b024276d2::t_00563a2a9f2fa3 178
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4a6d8a97266479839097689783b5852811707f3d",
+  "prompts": {},
+  "sessions": {
+    "s_e21a7b024276d2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c6e6-9a06-7441-b5e9-c070695d078b",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
