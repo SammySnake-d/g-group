@@ -25,6 +25,7 @@ function fixture(WorktreeClass: typeof Worktrees, RecoveryClass: typeof Recovery
   const db = openDb(path.join(dir, "state.db")); after(() => db.close());
   putDoc(db, "ws:A", 0, ws);
   const store = new RecoveryClass(db, wt);
+  store.initialize(ws);
   return { dir, wt, ws, db, store };
 }
 function recovery(ws: Workspace): RecoveryWorkspace { return { ...ws, recovery: { ver: 3, backupRef: "refs/gg/backup/41/3" } }; }
@@ -125,4 +126,17 @@ test("A16 W5 恢复作废候选审查且下一次 pin 沿原分支前进", () =>
   s.wt.backup(recovery(ws)); const out = s.wt.restoreTo(recovery(ws), ws.baseSha);
   assert.equal(out.candidateSha, null); assert.equal(out.state, "W2_Active");
   const pinned = s.wt.pin(out, "new"); assert.equal(git(ws.dir, "rev-parse", "HEAD^"), head); assert.notEqual(pinned.candidateSha, ws.candidateSha);
+});
+test("A07L 升级旧工作树的首条新历史不能冒充完整交付历史", () => {
+  const s = fixture(Worktrees, RecoveryStore);
+  s.db.store.db.prepare("DELETE FROM docs WHERE key = ?").run("delivery-origin:A");
+  const ws = change(s);
+  s.store.record({ taskId: "A", deliveryId: "after-upgrade", resultVer: 2, artifact: "new", candidateSha: ws.candidateSha! });
+  assert.equal(s.store.target(ws, 2, "new"), null, "缺少第一份交付之前的可核验前驱，必须保持宿主未核验");
+  assert.equal(s.store.target(ws, 1, "legacy"), null, "升级前的未记录产物不能冒充历史损坏");
+  assert.throws(() => s.store.target(ws, 3, "foreign"), /checkpoint-unavailable/);
+  writeFileSync(path.join(ws.dir, "newer"), text);
+  const newer = s.wt.pin(ws, "newer");
+  s.store.record({ taskId: "A", deliveryId: "newer", resultVer: 3, artifact: "newer", candidateSha: newer.candidateSha! });
+  assert.equal(s.store.target(newer, 3, "newer"), ws.candidateSha, "后续已有确定前驱的区间仍可核验");
 });

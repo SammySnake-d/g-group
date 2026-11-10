@@ -178,3 +178,10 @@ test("A15Q 恢复后的重放仍申请现有 Compute 槽位", async () => {
   assert.ok(acquired > 0, "恢复重放不能绕开正常续接的配额调度");
   assert.match(s.compute.resumed.filter(r => r.computeId === s.A.computeRuns[0]!.computeId).at(-1)!.text, /宿主已把工作区/);
 });
+test("A04E 已退出执行器拒绝 stop 后仍经 settled 确认再恢复", async () => {
+  const s = await scene(Host);
+  Reflect.set(s.compute.adapter, "stop", async () => ({ ok: false, reason: "这个 Compute 没有在运行的进程" }));
+  s.rebind(); await settle(s.host, s.compute);
+  assert.equal(s.host.workspace(s.A.id)!.value.state, "W2_Active");
+  assert.equal(readFileSync(path.join(s.A.workspace!.dir, "base"), "utf8"), "NEUTRAL_FIXTURE_NO_CREDENTIALS");
+});
