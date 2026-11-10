@@ -74,10 +74,10 @@
   "waiver": null,
   "review": {
     "agent": "codex",
-    "session": "codex:8996dcdc-9e97-48ab-8665-cc5b06ad1f96",
-    "model": "gpt-6.1-terra",
+    "session": "codex:638924e7-9670-4775-9619-788c18d2d5d1",
+    "model": "shayu/gpt-6.1-terra",
     "verdict": "reject",
-    "reviewed_hash": "006d2eb8ed42c7952e9423198471c49c079e241e9064247bad4ac2d7feff104f",
-    "notes": "第十五轮 REJECT：R15-01 同步临时改写漏检；R15-02 自比较断言；R15-03 Docker 工作区依赖无法解析；R15-04 Docker 依赖挂载可写；R15-05 G-STUB 漏报部分文件加载失败。完整复现见审查。"
+    "reviewed_hash": "9a1608401383b78945bb9782548edf3c21ac415d7c867f811d0f594484dd0a18",
+    "notes": "第十六轮 REJECT：R16-01 hy4 发现并由 Codex 复现同步写入测试缺口；R16-02 有效与无效点名混合的单点故障逃过测试。box1 无 Docker，R15-03～05 容器复核与 3/8 门禁负例未完成，勿视为完整验收；同厂商不构成跨厂商放行。详见审查。"
   }
 }

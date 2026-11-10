@@ -1683,3 +1683,36 @@ NODE
 - 作者变异清单 Node 22.23.4：原样副本 220 绿；199/199 被具名测试发现，0 存活、0 超时。以本版 `mutations.mjs` 的 199 个唯一 ID 与原始日志逐一比对，无缺项、重复项或缺少具名发现者；`extracted/log/mutation22.log`，归档 `author-completed.tar.gz` SHA-256 `98a255cfb89b0de8dac781e0168df81366c49d84b76ec614d07c67bedbecc894`。Node 25 分段结果见下。
 
 - 作者变异清单 Node 25.9.0：为遵守并发限制，先保留原批次完成的 15 项（原批次随后有意中止、退出 143），再单跑 K242–K247 共 6 项，最后只跑剩余 178 项。三段原样副本均 220 绿；合并逐条核对作者清单的 199 个唯一 ID，199/199 由具名测试发现、0 存活、0 超时、0 缺项、0 重复。最后一段退出 0；前段被中止的状态如实保留，不把分段说成一次完整官方运行。原始日志 `extracted/log/mutation25.log`、`mutation25-k242-247.log`、`mutation25-resume.log`；后段归档 `final-evidence.tar.gz` SHA-256 `950bb8c78612c89f4bc894938da3b5cf6d93eaec456c5622254ae1ac16a8e32a`。
+
+## 第十六轮独立审查 — REJECT（存在未完成的沙箱复核）
+
+被审 HEAD `c2bd16274948f603967c9c688a9f8b51fa210947`，base `afd02560f9546147da380382404eb6106222a9b8`，规范 `origin/docs/dev-handbook` `f12aa3b25ab6ef2dd193180c1111181c753b464f`；本会话独立重算 `reviewed_hash=9a1608401383b78945bb9782548edf3c21ac415d7c867f811d0f594484dd0a18`。审查会话 `codex:638924e7-9670-4775-9619-788c18d2d5d1`，实际模型 `shayu/gpt-6.1-terra`。以下两个经实跑证实的测试缺口足以拒绝；**本轮不等于完整验收**，R15-03、R15-04、R15-05 的真实容器复核及三门负例仍待完成，不得视为已经修好。
+
+### R16-01 [P2 / R-05 / R15-01] 两种同步临时写入逃过测试（hy4 发现、Codex 复现）
+
+位置：`packages/kernel/src/plugins.ts:45-56`，`packages/kernel/src/plugins.test.ts:1933-1996,1998-2083`。规范对拒收的插件返回值要求不改写任何对象，包含插件对象和 JS 内置对象；用户排除的是环境预先改写内置原型，不是内核自己在拒收窗口内写入。第十五轮要求在有/无异步事件窗口中有独立观察与正反对照。
+
+在 box1 的独立副本中逐一注入一个故障：① 在拒收分支把已有可写自有数据属性的值临时改掉再恢复；② 给 `Map.prototype` 临时加属性再删除。各自独立子进程均观察到 `writes=1`、结果 `non-promise-send`；原样对照 `writes=0`。两种故障各自运行全部 222 条内核测试，均为 `222 pass / 0 fail / 0 skipped / 0 todo`、退出 0。相同实验中的原样副本 222 绿；增加再删除插件自有属性的阳性对照 `221 pass / 1 fail`，被对应的具名同步观察测试发现。完整 TAP 与脚本在 `deliverables/g-group-pr6-r16-codex/box1-evidence/` 的 `hy4-out/` 和 `results/hy4-h16.log`。
+
+值改后恢复不改变可观察到的 V8 形状表，返回后描述符又恢复；现有异步事件采样也不能保证看见无事件同步窗口。`Map.prototype` 不在当前冻结/快照清单内。这里证明的是**这些被注入的故障可逃过现有测试**，不是声称未变异的产品已经执行了这些写入。
+
+返修要求：覆盖已有属性值写后恢复与未列入观察清单的内置对象写后恢复，以真实的同步窗口观察或等价可判定机制建立无事件/有事件的双侧控制，并把上述单点故障纳入具名标定；不能用返回后的同一份快照自比较代替窗口观察。
+
+### R16-02 [P2 / R-05] 有效与无效点名混合时的分流判断缺少单开关覆盖
+
+位置：`packages/kernel/src/classify.ts:55-59,72-75,104`，`packages/kernel/src/classify.test.ts:175-190`。该实现明确规定：只要存在无效点名，就不走纯点名的机械 E1，而调用语义分类器；已有测试分别覆盖无效点名、有效纯点名，但未覆盖两者混合且正文被有效点名完整覆盖的情况。
+
+在独立副本仅删除 `a.invalidMentions > 0` 条件，全部内核测试仍为 `222 pass / 0 fail / 0 skipped / 0 todo`。对文本 `@甲`，给一个有效 `@甲` 范围及一个越界无效范围、分类器返回 E2：原版结果 `E2 / semantic / 调用 1 次`，单点故障版为 `E1 / mechanical / 调用 0 次`；去掉那一个无效范围后两版都为 `E1 / mechanical / 调用 0 次`。故障确实改变行为，不是等价变异。证据 `results/codex-faults.log`、`results/mixed-mention-probe.log` 和 `codex-faults-out/C16-invalid-mention.log`。
+
+返修要求：为有效加无效范围混合补具名单开关测试，断言 intent、via、有效锚点和分类器调用次数；将该单点故障纳入变异标定，保留纯有效范围的阴性对照。
+
+### 复验结果与未完成边界
+
+- box1 / Node 24.21.0，受检 HEAD 与本地一致；typecheck、lint 均退出 0。`npm test` 为 245 pass / 0 fail / 0 cancelled / 0 skipped / 0 todo。内核绿测 222 pass；红提交 `00cddfe5df0f7d8e0076572a674b7ec04bdbc893` 为 222 个具名失败、0 pass、0 skip/todo；红绿测试文件无字节差异，222 个测试名双向差集及重复数均为 0。
+- 作者 201 项变异全部串行运行；清单和输出分别 201 个唯一 ID、无缺项或重复，201 个均有具名发现者，每项通过数与失败数合计为 222，0 存活、0 超时。脚本没有为每个变异保留完整 TAP 或逐项 skip/todo 明细，不将这些未记录的字段冒称实测。另造 4 个单点故障：3 个被具名测试发现，R16-02 的 1 个存活。
+- R15-01 的原加删属性故障 K248/K249 均被具名测试发现，但同族两种新故障仍存活，见 R16-01。R15-02 已有写前 `probeBase`，原自比较不存在，对实际文件运行 `lintTestFile` 返回 0 项；完整 G-TAUTO 的运行时部分未验证。R15-03 的 `@g-group/domain` 副本链接实测指向副本内包，但未在容器中运行；R15-04 的挂载代码有 `:ro`，R15-05 的基线代码增加了退出及逐文件核查，二者均未完成真实 Docker 反例验证。
+- 实际 `--local` 退出 1：G-TRACE、G-WORKFLOW、G-LAYER 通过；G-PROVENANCE 因 box1 无会话根目录失败；G-REVIEW 因保留旧 reject、旧 hash 及同厂商失败；G-RED、G-STUB、G-TAUTO 因没有 Docker/sandbox-exec 而 fail closed，未执行真实沙箱测试。门禁自检退出 1，同样有无沙箱导致的正例放行失败；八门负例仅 5/8 按目标理由被拦，另 3 项是无沙箱错误而不是有效负例。
+- 当前作者 `gpt-6-astra` 与审查模型均被门禁识别为 OpenAI，本次 REJECT 不构成跨厂商放行；不虚报豁免或 G-PROVENANCE 通过。被审原文件与收据内容未因复现而修改；变异只写入临时副本。
+- 待核实的隔离风险（不计作已证明的沙箱突破）：在假 HOME 和中性标记夹具中，跟踪的指向仓库外文件的符号链接，经 `scripts/gates/lib.ts:255-258` 的 `copyTree` 后变成普通文件，且内容保留到 `freshCopy`；`scripts/gates/gates.ts:374-380` 在沙箱运行前调用该复制链。这段 `copyTree` 在 base 已存在；因 box1 没有 Docker，本轮没有实际在容器内执行读取，须用真实沙箱与中性夹具补正反对照，不能把推测升级为已证实泄露。
+- 低频待厘清：被撤回消息若仅含 U+200B 或 U+0085，规范化结果为空；独立运行显示同字符仍可出现在 `volatile` 正文，普通可见文本对照被拦。此项只陈述边界现象，不作为本轮拒审依据。
+- 证据归档 `deliverables/g-group-pr6-r16-codex/box1-evidence.tgz` SHA-256 `84f947461bd0f20a36630091afef60a1e3a51b99fc41e72e83597a0169ee909a`；完整结果另解包于同目录 `box1-evidence/`。
