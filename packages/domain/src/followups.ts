@@ -277,7 +277,7 @@ function bump(t: Task, by: string, computeResumable: boolean): { ok: true; task:
  * A 不取消:A 推进 v_A_new = 当前版本 + 1,保留并重放 #m 之后的 #n;B 推进自己的版本并收下 #m。
  * 重复改挂(#m 已在 A 上标为改挂到 B)整体幂等,两边版本都不再推进。B 已结束(停止中/终态)拒绝。
  */
-export function rebindFollowUp(from: Side, to: Side, input: { roomId: string; seq: number; expectedBindingVer: number; by: string; computeResumable: boolean }): RebindOutcome {
+export function rebindFollowUp(from: Side, to: Side, input: { roomId: string; seq: number; expectedBindingVer: number; by: string; computeResumable: boolean; recoveryMode?: "host" | "merged" | "unverified" }): RebindOutcome {
   const n = normalize<{ roomId: string; seq: number; expectedBindingVer: number; by: string; computeResumable: boolean }>(
     input, { roomId: { kind: "string" }, seq: { kind: "number" }, expectedBindingVer: { kind: "number" }, by: { kind: "string" }, computeResumable: { kind: "boolean" } }, "改挂请求");
   if (!n.ok) return n;

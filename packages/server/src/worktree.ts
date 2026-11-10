@@ -78,6 +78,8 @@ const errText = (e: unknown) => {
   return (x.stderr ? String(x.stderr) : (x.message ?? String(e))).trim().slice(-2000);
 };
 
+export type RecoveryWorkspace = Workspace & { readonly recovery: { readonly ver: number; readonly backupRef: string } };
+
 export class Worktrees {
   readonly cfg: CodeRepoConfig;
   readonly root: string;
@@ -108,6 +110,10 @@ export class Worktrees {
     }
     mkdirSync(this.root, { recursive: true });
   }
+
+  backup(_ws: RecoveryWorkspace): { backupRef: string; backupSha: string } { throw new Error("A 待实现 backup"); }
+  restoreTo(_ws: RecoveryWorkspace, _sha: string): Workspace { throw new Error("A 待实现 restoreTo"); }
+  validateRecovery(_ws: Workspace, _sha: string): void { throw new Error("A 待实现 validateRecovery"); }
 
   targetHead(): string {
     try {
