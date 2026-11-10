@@ -1,3 +1,4 @@
+import { RecoveryStore, type RestoreIntent } from "./recovery.ts";
 // 本地宿主:把领域状态机、SQLite 存储、联系人注意循环、Compute 适配器和承诺账本拼成 P0 最小闭环(AC-30):
 //   用户在私聊/群里发消息 → 机械送达每位成员联系人的注意循环 → 联系人一轮(五块重拼 → ContactMind)提出动作
 //   → 宿主校验、分配 action_id、与游标/账本/任务同一事务落盘 → 起 Compute → Compute 语义事件回到联系人 → 联系人汇报/交付回聊天。
@@ -376,6 +377,7 @@ export class Host {
   /** 共享文档单一提交点(AC-21):所有写入只经它 */
   readonly docs: SharedDocs;
   readonly worktrees: Worktrees | null;
+  readonly recovery: RecoveryStore | null;
   readonly artifacts: ArtifactStore;
   /** 全局能力库与联系人专属运行目录(AC-29) */
   readonly capabilities: CapabilityLibrary;
@@ -524,6 +526,7 @@ export class Host {
     // 启动时派生镜像按权威版本修复(中断的导出、迟到的旧内容覆盖)
     this.docs.repairMirrors();
     this.worktrees = opts.codeRepo ? new Worktrees(opts.codeRepo, join(opts.dataDir ?? dirname(opts.file), "worktrees")) : null;
+    this.recovery = this.worktrees ? new RecoveryStore(this.db, this.worktrees) : null;
     this.artifacts = new ArtifactStore(this.db, join(opts.dataDir ?? dirname(opts.file), "artifacts"), this.now);
     this.recoverReviews();
     // 运行台账:上一次启动留下的在跑单元先核对成孤儿(AC-43 ①),再起周期核对(卡死判失败,AC-43 ⑦)
@@ -547,6 +550,7 @@ export class Host {
     // 启动时先处理宿主关着期间到期的定时(按容差与 missedPolicy),再按最早一次设计时器
     this.scheduler.tick();
     // 启动回收(F4/F6/F12):上次留下的未提交轮次按 crash_recovery_count 决定续跑或熔断出卡;磁盘上还没被领走的输入交给联系人
+    this.recoverWorkspaces();
     this.reconcileOnStart();
   }
 
@@ -1648,7 +1652,7 @@ export class Host {
         ...(doc.artifacts ?? []).map((a) => ({ ref: a.ref, name: a.name, kind: "file" as const, sha256: a.sha256, bytes: a.bytes, mime: a.mime })),
       ],
       ...this.workspaceField(t.id),
-      waitingFor: this.quota.waitingReason(t.id) ?? this.stopUnconfirmed.get(t.id) ?? null,
+      waitingFor: this.recoveryStatus(t.id) ?? this.quota.waitingReason(t.id) ?? this.stopUnconfirmed.get(t.id) ?? null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
       ...(doc.description !== undefined ? { description: doc.description } : {}),
@@ -1929,6 +1933,7 @@ export class Host {
   }
   /** Compute 工作目录:配了代码仓就是这个任务自己的 worktree(没有就现开),否则按 computeCwd。 */
   private computeCwdFor(taskId: string): string | undefined {
+    this.assertRecoveryReady(taskId);
     if (!this.worktrees) return this.opts.computeCwd?.(taskId);
     const cur = this.workspace(taskId);
     const ws = this.worktrees.provision(taskId, cur?.value ?? null);
@@ -1938,6 +1943,7 @@ export class Host {
   /** 受控合入(W3 → W4 → W6/W5)。审查已过、交付等确认(T8a)的代码任务才能合;合入成功才记验收并了结承诺,
    *  冲突或重验失败如实告诉联系人,目标分支不动,任务停在 T8a 等退回修复(退回前再说通过也会被拒)。 */
   async integrateTask(taskId: string, by: string = this.userId): Promise<TaskView> {
+    this.assertRecoveryReady(taskId);
     const wt = this.worktrees;
     const cur = this.workspace(taskId);
     if (!wt || !cur) throw new HostError("invalid_params", `任务 ${taskId} 没有代码工作树`);
@@ -2711,6 +2717,7 @@ export class Host {
             break;
           }
           case "deliver": {
+            if (this.recoveryBlocked(a.taskId)) { reject("工作区恢复尚未完成，不能交付"); break; }
             const t = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
             if (t.task.state !== "T3_Running" || !t.task.computeId) { reject(`任务在 ${t.task.state},不能交付`); break; }
@@ -2732,6 +2739,7 @@ export class Host {
               if (pinned.state !== "W3_Pinned") { reject("上次合入冲突后没有新的改动,先基于最新主线修复"); break; }
               putDoc(this.db, `ws:${a.taskId}`, wsDoc.ver, pinned);
               commit = `git:${pinned.candidateSha}`;
+              this.recovery!.record({ taskId: a.taskId, deliveryId: actionId, resultVer, artifact: `${commit}@v${resultVer}`, candidateSha: pinned.candidateSha! });
             }
             // 交付是普通消息(AC-56/U98):回复来源消息、@ 提出者,不挂验收卡;用户用普通回复表达通过或修改,由联系人提交 verdict。
             // 审查门(AC-26):还没有跨厂商审查联系人时任务停在 T5,提出者本人回复通过即豁免审查并验收,记为 waived-by-user
@@ -3215,7 +3223,8 @@ export class Host {
   private async runEffects(effects: HostEffect[]) {
     for (const e of effects) {
       try {
-        if (e.kind === "spawn") await this.spawn(e);
+        if (e.kind === "recover-workspace") await this.executeRecovery(e.taskId);
+        else if (e.kind === "spawn") await this.spawn(e);
         else if (e.kind === "review") await this.spawnReview(e);
         else if (e.kind === "resume") await this.resumeCompute(e);
         else if (e.kind === "halt") {
@@ -3266,7 +3275,8 @@ export class Host {
    * 送进 Compute 的每一次后续输入(联系人转达、用户退回重试……)都走这里(AC-51 ①⑤):
    * 按此刻的配置现场解析这一轮的 {model, effort},不兼容先拦;交给适配器在轮边界切换;切换失败这一轮不算发出,不退回旧模型。
    */
-  private async computeTurn(e: { taskId: string; computeId: string; text: string }, reason: AttemptReason = "turn"): Promise<boolean> {
+  private async computeTurn(e: { taskId: string; computeId: string; text: string; recoveryReplayId?: string }, reason: AttemptReason = "turn"): Promise<boolean> {
+    this.assertRecoveryReady(e.taskId, e.recoveryReplayId);
     const row = one<{ contact_id: string; room_id: string; harness: string; model: string }>(this.db, "SELECT contact_id, room_id, harness, model FROM gg_compute WHERE compute_id = ?", e.computeId);
     const a = row ? this.adapterFor(row.harness, row.model) : null;
     if (!row || !a) {
@@ -3405,6 +3415,7 @@ export class Host {
     this.computeRuns.set(computeId, { sessionId: session.id, turnId: turn.id });
   }
   private async spawn(e: Extract<HostEffect, { kind: "spawn" }>) {
+    this.assertRecoveryReady(e.taskId, e.recoveryReplayId);
     if (!this.takeSlot(e, e.contactId, e.roomId)) return;
     const ledger = (computeId: string | null, upstream: string) => {
       const doc = this.taskDoc(e.taskId).value;
@@ -4554,7 +4565,13 @@ export class Host {
       const r = fu.confirmRollbackStopped(f.value.state, ev.computeId);
       if (r.ok) {
         this.putFollowTx(taskId, f, { ...f.value, state: r.value, rounds: [] });
-        for (const e of r.effects) if (e.kind === "restore-workspace") out.effects.push({ kind: "resume", taskId, computeId: ev.computeId, text: restoreText(e) });
+        for (const e of r.effects) if (e.kind === "restore-workspace") {
+          const plan = getDoc<RecoveryPlan>(this.db, `restore-plan:${taskId}`)?.value;
+          if (plan?.targetSha && this.recovery) {
+            this.recovery.enqueue({ taskId, ver: e.ver, targetSha: plan.targetSha, actionId: plan.actionId });
+            out.effects.push({ kind: "recover-workspace", taskId });
+          } else out.effects.push({ kind: "resume", taskId, computeId: ev.computeId, text: restoreText(e) });
+        }
         out.quiet = true;
       }
       return;
@@ -4669,10 +4686,24 @@ export class Host {
       const a = this.taskDoc(input.fromTaskId);
       const b = this.taskDoc(input.toTaskId);
       if (b.value.roomId !== input.roomId) throw new HostError("invalid_params", `任务 ${input.toTaskId} 不在这个会话里`);
+      const priorLink = this.followOf(input.fromTaskId).value.state.links.find(l => l.roomId === input.roomId && l.seq === input.seq);
+      if (priorLink?.state === "Rebound" && priorLink.reboundTo === input.toTaskId) {
+        recordAction(this.db.store, `rebind:${input.clientActionId}`, { from: input.fromTaskId, to: input.toTaskId });
+        return;
+      }
+      this.assertRecoveryReady(input.fromTaskId);
+      this.assertRecoveryReady(input.toTaskId);
+      const ws = this.workspace(input.fromTaskId)?.value;
+      if (ws?.state === "W4_Integrating") throw new HostError("conflict", "工作树正在合入，不能改挂");
       const fa = this.followOf(input.fromTaskId);
+      const link = fa.value.state.links.find(l => l.roomId === input.roomId && l.seq === input.seq);
+      let targetSha: string | null = null;
+      const merged = ws?.state === "W6_Merged";
+      if (!merged && ws && this.recovery && link?.state === "Applied") targetSha = this.recovery.target(ws, link.appliedVer!, link.appliedIn!);
+      const recoveryMode = merged ? "merged" : targetSha ? "host" : "unverified";
       const fb = this.followOf(input.toTaskId);
       const r = fu.rebindFollowUp({ task: a.value.task, followUps: fa.value.state }, { task: b.value.task, followUps: fb.value.state }, {
-        roomId: input.roomId, seq: input.seq, expectedBindingVer: input.expectedBindingVersion, by: this.userId, computeResumable: true,
+        roomId: input.roomId, seq: input.seq, expectedBindingVer: input.expectedBindingVersion, by: this.userId, computeResumable: true, recoveryMode,
       });
       if (!r.ok) throw new HostError(/关联版本已变/.test(r.reason) ? "conflict" : "invalid_params", r.reason, /关联版本已变/.test(r.reason) ? { currentVer: fa.value.state.bindingVer } : undefined);
       recordAction(this.db.store, `rebind:${input.clientActionId}`, { from: input.fromTaskId, to: input.toTaskId });
@@ -4683,22 +4714,110 @@ export class Host {
       this.putFollowTx(input.toTaskId, fb, { ...fb.value, state: r.to.followUps });
       this.expireAuthzTx(input.fromTaskId);
       this.expireAuthzTx(input.toTaskId);
+      if (link?.state === "Applied") {
+        const notice = merged ? "已合入，撤回要另开任务" : targetSha ? "工作区恢复中，等待旧执行器停止确认" : "宿主未核验：按文字撤改和重放，本任务 AC-15 文件恢复未覆盖";
+        this.recoveryNoticeTx(input.fromTaskId, notice);
+        if (targetSha) {
+          const key = `restore-plan:${input.fromTaskId}`;
+          const old = getDoc<RecoveryPlan>(this.db, key);
+          putDoc(this.db, key, old?.ver ?? 0, { targetSha, actionId: `rebind:${input.clientActionId}`, ver: r.from.task.constraintVer, fromAppliedVer: link.appliedVer, effects: this.taskEffectsToHost(input.fromTaskId, r.from.taskEffects, "") });
+        }
+      }
       const halting = r.from.effects.some((e) => e.kind === "stop-for-rollback");
       for (const e of r.from.effects) {
         if (e.kind === "stop-for-rollback") effects.push({ kind: "halt", taskId: input.fromTaskId, computeId: e.computeId });
         else if (e.kind === "replay" || e.kind === "restore-workspace") {
-          const text = e.kind === "replay" ? replayText(e, input.seq) : restoreText(e);
-          effects.push(...this.taskEffectsToHost(input.fromTaskId, r.from.taskEffects, text));
+          if (e.kind === "restore-workspace" && targetSha && this.recovery) {
+            this.recovery.enqueue({ taskId: input.fromTaskId, ver: e.ver, targetSha, actionId: `rebind:${input.clientActionId}` });
+            effects.push({ kind: "recover-workspace", taskId: input.fromTaskId });
+          } else {
+            const text = e.kind === "replay" ? replayText(e, input.seq) : restoreText(e);
+            effects.push(...this.taskEffectsToHost(input.fromTaskId, r.from.taskEffects, text));
+          }
         }
       }
       // 停旧执行器等回滚时,先不续接 A;停止确认后由 confirmRollbackStopped 发恢复 + 重放
-      if (!halting && !r.from.effects.length) effects.push(...this.taskEffectsToHost(input.fromTaskId, r.from.taskEffects, `用户把 #${input.seq} 改挂到别的任务了,它不再是本任务的要求。`));
+      if (!merged && !halting && !r.from.effects.length) effects.push(...this.taskEffectsToHost(input.fromTaskId, r.from.taskEffects, `用户把 #${input.seq} 改挂到别的任务了,它不再是本任务的要求。`));
       for (const e of r.to.effects) if (e.kind === "replay") effects.push(...this.taskEffectsToHost(input.toTaskId, r.to.taskEffects, `用户把 #${input.seq} 改挂到本任务:${e.requirements.find((x) => x.seq === input.seq)?.text ?? ""}\n(任务条件已更新到 v${e.ver})`));
     });
     this.emitTask(input.fromTaskId);
     this.emitTask(input.toTaskId);
     void this.runEffects(effects);
     return { from: this.taskView(this.taskDoc(input.fromTaskId).value), to: this.taskView(this.taskDoc(input.toTaskId).value) };
+  }
+
+  private recoveryStatus(taskId: string): string | null {
+    const intent = this.recovery?.current(taskId);
+    if (intent?.phase === "pending") return `工作区恢复未完成：${intent.error ?? "等待恢复"}；备份 ${intent.backupRef}`;
+    return getDoc<string>(this.db, `restore-notice:${taskId}`)?.value ?? null;
+  }
+  private recoveryBlocked(taskId: string, replayId?: string): boolean {
+    if (this.followOf(taskId).value.state.pendingRollback) return true;
+    if (this.recovery?.current(taskId)?.phase === "pending") return true;
+    return all<{ action_id: string }>(this.db, "SELECT action_id FROM gg_effects WHERE kind = 'recovery-replay' AND json_extract(payload, '$.taskId') = ? AND status != 'done'", taskId).some(r => r.action_id !== replayId);
+  }
+  private assertRecoveryReady(taskId: string, replayId?: string): void {
+    if (this.recoveryBlocked(taskId, replayId)) throw new HostError("conflict", this.recoveryStatus(taskId) ?? "工作区恢复或重放尚未完成");
+  }
+  private recoveryNoticeTx(taskId: string, text: string): void {
+    const key = `restore-notice:${taskId}`;
+    const old = getDoc<string>(this.db, key);
+    putDoc(this.db, key, old?.ver ?? 0, text);
+    const doc = this.taskDoc(taskId).value;
+    run(this.db, "UPDATE gg_cards SET body = ? WHERE task_id = ? AND kind = 'task-status'", `${doc.brief}\n\n${text}`, taskId);
+    if (doc.task.owner) this.appendMessageTx(doc.roomId, { kind: "contact", id: doc.task.owner }, { text: `(宿主) ${text}`, actionKey: `${key}:${doc.task.constraintVer}:${text}` });
+  }
+  /** 恢复结果、W2 与持久待重放在同一个 SQLite 事务；Git I/O 在外面。 */
+  private async executeRecovery(taskId: string): Promise<void> {
+    const store = this.recovery;
+    if (!store) return;
+    try {
+      store.execute(taskId, (intent: RestoreIntent) => {
+        const plan = getDoc<RecoveryPlan>(this.db, `restore-plan:${taskId}`)?.value;
+        if (!plan) throw new Error("恢复重放计划不存在");
+        const f = this.followOf(taskId);
+        const list = (state: string) => f.value.state.links.filter(l => l.state === state).map(l => `- #${l.seq} ${l.text}`).join("\n") || "(无)";
+        const text = `宿主已把工作区回到 v${plan.fromAppliedVer} 交付之前（备份 ref ${intent.backupRef}）。任务条件 v${intent.ver}。\n仍在工作区里的：\n${list("Applied")}\n要重做的：\n${list("Received")}\n旧候选和审查已作废，完成后重新交付。`;
+        for (const [i, effect] of plan.effects.entries()) {
+          if (effect.kind !== "resume" && effect.kind !== "spawn") continue;
+          const actionId = `${intent.actionId}:replay:${i}`;
+          const payload = effect.kind === "resume" ? { ...effect, text, recoveryReplayId: actionId } : { ...effect, brief: `${this.taskDoc(taskId).value.brief}\n${text}`, recoveryReplayId: actionId };
+          run(this.db, "INSERT OR IGNORE INTO gg_effects (action_id, kind, payload, status, error, created_at) VALUES (?, 'recovery-replay', ?, 'pending', NULL, ?)", actionId, JSON.stringify(payload), this.now());
+        }
+        this.putFollowTx(taskId, f, { ...f.value, rounds: [], resultVer: null, queued: [] });
+        this.recoveryNoticeTx(taskId, text);
+      });
+      await this.drainRecoveryReplays(taskId);
+    } catch (error) {
+      this.report("workspace-recovery", { taskId, error: String(error) });
+      tx(this.db, () => this.recoveryNoticeTx(taskId, `工作区恢复失败：${String(error)}；${store.current(taskId)?.backupRef ?? "尚无备份"}`));
+    }
+    this.emitTask(taskId);
+  }
+  private async drainRecoveryReplays(taskId: string): Promise<void> {
+    for (const row of all<{ action_id: string; payload: string }>(this.db, "SELECT action_id, payload FROM gg_effects WHERE kind = 'recovery-replay' AND status = 'pending' AND json_extract(payload, '$.taskId') = ?", taskId)) {
+      const e = JSON.parse(row.payload) as Extract<HostEffect, { kind: "resume" | "spawn" }>;
+      if (!run(this.db, "UPDATE gg_effects SET status = 'sending' WHERE action_id = ? AND status = 'pending'", row.action_id)) continue;
+      // 外部 harness 不提供持久幂等确认：在 sending 边界崩溃时必须显式阻塞，不伪称已重放。
+      let ok = false;
+      if (e.kind === "resume") ok = await this.computeTurn(e);
+      else { await this.spawn(e); ok = this.taskDoc(taskId).value.task.state === "T3_Running"; }
+      run(this.db, "UPDATE gg_effects SET status = ?, error = ? WHERE action_id = ?", ok ? "done" : "blocked", ok ? null : "重放未确认，禁止自动重复发送", row.action_id);
+      if (!ok) throw new Error("恢复后重放未确认，禁止自动重复发送");
+    }
+  }
+  private recoverWorkspaces(): void {
+    if (!this.recovery) return;
+    for (const row of all<{ action_id: string; payload: string }>(this.db, "SELECT action_id, payload FROM gg_effects WHERE kind = 'recovery-replay' AND status = 'sending'")) {
+      const effect = JSON.parse(row.payload) as HostEffect;
+      run(this.db, "UPDATE gg_effects SET status = 'blocked', error = '宿主重启，重放送达结果未知' WHERE action_id = ?", row.action_id);
+      tx(this.db, () => this.recoveryNoticeTx(effect.taskId, "宿主重启，恢复后的重放送达结果未知；已阻止自动重发"));
+    }
+    for (const row of listDocs<string>(this.db, "restore-current:")) {
+      const taskId = row.key.slice("restore-current:".length);
+      // executeRecovery 在第一次 await 之前同步完成 Git 恢复；入口放行前栅栏已落盘。
+      void this.executeRecovery(taskId);
+    }
   }
 
   // ======================= 生命周期 =======================
@@ -4894,10 +5013,13 @@ const isRetryCardMeta = (meta: string): boolean => {
 };
 const switchModels = (actions: readonly CardActionRow[]): string[] => actions.filter((a) => a.actionId.startsWith("switch-model:")).map((a) => a.actionId.slice("switch-model:".length));
 
+interface RecoveryPlan { targetSha: string; actionId: string; ver: number; fromAppliedVer: number; effects: HostEffect[] }
+
 type HostEffect =
-  | { kind: "spawn"; taskId: string; requestId: string; contactId: string; model: string; brief: string; roomId: string; parentRunId?: string; rerunOf?: string; attempt?: number }
+  | { kind: "recover-workspace"; taskId: string }
+  | { kind: "spawn"; taskId: string; requestId: string; contactId: string; model: string; brief: string; roomId: string; parentRunId?: string; rerunOf?: string; attempt?: number; recoveryReplayId?: string }
   | { kind: "review"; taskId: string; roomId: string; ownerId: string; reviewerId: string; model: string; round: number; commit: string; constraintVer: number; brief: string }
-  | { kind: "resume"; taskId: string; computeId: string; text: string }
+  | { kind: "resume"; taskId: string; computeId: string; text: string; recoveryReplayId?: string }
   | { kind: "stop"; taskId: string; computeId: string }
   | { kind: "integrate"; taskId: string; by: string }
   | { kind: "cancel-spawn"; taskId: string; requestId: string }
@@ -4923,7 +5045,7 @@ function replayText(e: Extract<fu.FollowUpEffect, { kind: "replay" }>, removedSe
 /** 停稳之后回到 #m 之前:撤掉为 #m 做的改动,再按清单重做其后的补充。 */
 function restoreText(e: Extract<fu.FollowUpEffect, { kind: "restore-workspace" }>): string {
   const list = e.requirements.map((r) => `- #${r.seq} ${r.text}`).join("\n") || "(没有其它补充)";
-  return `工作区要回到 #${e.beforeSeq} 之前:撤掉为 #${e.beforeSeq} 做的改动(它已改挂到别的任务),再按 v${e.ver} 的补充清单重做:\n${list}`;
+  return `宿主未核验。工作区要回到 #${e.beforeSeq} 之前:撤掉为 #${e.beforeSeq} 做的改动(它已改挂到别的任务),再按 v${e.ver} 的补充清单重做:\n${list}`;
 }
 /** 改代码前的授权提问卡(meta.authz):与 AC-44 的一般提问卡区分路由。 */
 function isAuthzCard(card: { kind: string; meta: string }): boolean {
