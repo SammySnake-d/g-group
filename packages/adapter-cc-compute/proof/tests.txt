@@ -1,13 +1,888 @@
-第十轮返修 / R-02 实测（box2，Node v24.21.0）
-本包测试数：116；新增 R10-01 判决器测试 10、R10-02/03 协议回归 2。
-首轮红 89705bf：116 项按名失败；绿 800a885：116/116。
-最终红 82d6bac：116 项按名失败；绿 7191a75 后的 e4cefdc 原样副本：116/116。
-两组逐名集合与顺序一致；无文件级失败、跳过、取消、待办。
-红证据是本轮空壳校准，不伪称这些既有功能最初实现前已先红。
-最终红与首次红差异仅 M34 既有副作用断言前移，所有旧断言保留。
-原始 TAP 与逐名核对：r10-execution.tar.gz/evidence/red-v2.tap、evidence/tap-v3/clean.tap、accepted-evidence.json。
-最终类型一致红 c271da3：typecheck 退出0，116/116逐名失败；绿0b18387与e4cefdc实现/测试逐字相同。
-全仓共有139项。前两次分别138/139（子夹具10秒启动超时、旧RR-01初始化未产出started）。
-固定三次串行稳定性检查：139/139、139/139、138/139；第三次旧stop测试等started超时。
-因此有两次全仓通过，但不能声称稳定全绿；不加skip、不放宽断言、不隐藏三次失败。
-原始证据：evidence/red-typed.tap、red-typecheck.log、all-tests.tap、all-tests-final.tap、stability-1/2/3.tap。
+第十一轮返修：固定392bff4；完整空壳红e2722ed按名123失败，当前本包123/123、全仓146/146。原始红绿及中间失败在r11-execution.tar.gz。
+
+TAP version 13
+# Subtest: brief 带 memory 或 soul 字段被拒绝,不起任何进程(AC-33 ④ 阳性埋雷)
+ok 1 - brief 带 memory 或 soul 字段被拒绝,不起任何进程(AC-33 ④ 阳性埋雷)
+  ---
+  duration_ms: 138.114546
+  type: 'test'
+  ...
+# Subtest: 同一 brief 只切凭据:明文 token 被拒绝,引用句柄放行(单开关)
+ok 2 - 同一 brief 只切凭据:明文 token 被拒绝,引用句柄放行(单开关)
+  ---
+  duration_ms: 320.080207
+  type: 'test'
+  ...
+# Subtest: brief 的运行位置不是本机、工具名带逗号拼接时被拒绝
+ok 3 - brief 的运行位置不是本机、工具名带逗号拼接时被拒绝
+  ---
+  duration_ms: 130.143323
+  type: 'test'
+  ...
+# Subtest: CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress
+ok 4 - CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress
+  ---
+  duration_ms: 305.873505
+  type: 'test'
+  ...
+# Subtest: F-01:brief.tools 里的 CLI 控制词与非内置工具名一律拒绝、不起进程;具体内置工具名放行(正反对照)
+ok 5 - F-01:brief.tools 里的 CLI 控制词与非内置工具名一律拒绝、不起进程;具体内置工具名放行(正反对照)
+  ---
+  duration_ms: 272.574289
+  type: 'test'
+  ...
+# Subtest: F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress
+ok 6 - F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress
+  ---
+  duration_ms: 299.745591
+  type: 'test'
+  ...
+# Subtest: F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)
+ok 7 - F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)
+  ---
+  duration_ms: 633.953787
+  type: 'test'
+  ...
+# Subtest: F-03:stop 立即产出 stopped;初始 SIGTERM 只发主进程,主进程按时退出就取消组 SIGKILL,同组孙进程收不到信号(与 mirasim 一致)
+ok 8 - F-03:stop 立即产出 stopped;初始 SIGTERM 只发主进程,主进程按时退出就取消组 SIGKILL,同组孙进程收不到信号(与 mirasim 一致)
+  ---
+  duration_ms: 1899.513695
+  type: 'test'
+  ...
+# Subtest: F-03 已知不覆盖(记录性,与 mirasim 一致):CLI 正常结束时不发任何信号,completed 立即产出,同组孙进程继续存活并能产生副作用
+ok 9 - F-03 已知不覆盖(记录性,与 mirasim 一致):CLI 正常结束时不发任何信号,completed 立即产出,同组孙进程继续存活并能产生副作用
+  ---
+  duration_ms: 921.240089
+  type: 'test'
+  ...
+# Subtest: F-03:主进程无视 SIGTERM 时 reapForceMs 后对进程组 SIGKILL,同组孙进程一起消失;孙进程从没收到 SIGTERM
+ok 10 - F-03:主进程无视 SIGTERM 时 reapForceMs 后对进程组 SIGKILL,同组孙进程一起消失;孙进程从没收到 SIGTERM
+  ---
+  duration_ms: 900.556829
+  type: 'test'
+  ...
+# Subtest: 子进程 env 不继承宿主进程环境里的明文密钥,凭据只以引用句柄出现
+ok 11 - 子进程 env 不继承宿主进程环境里的明文密钥,凭据只以引用句柄出现
+  ---
+  duration_ms: 294.423877
+  type: 'test'
+  ...
+# Subtest: 正常多阶段:stream-json 与 report_progress 映射成 started → milestone×2 → completed
+ok 12 - 正常多阶段:stream-json 与 report_progress 映射成 started → milestone×2 → completed
+  ---
+  duration_ms: 290.690333
+  type: 'test'
+  ...
+# Subtest: milestone 漏报、也没调 report_progress 的 completed 时,CLI 成功结束仍报 completed(V-06 约束)
+ok 13 - milestone 漏报、也没调 report_progress 的 completed 时,CLI 成功结束仍报 completed(V-06 约束)
+  ---
+  duration_ms: 294.049463
+  type: 'test'
+  ...
+# Subtest: report_progress 服务器拒收的汇报(milestone 缺 stage)不产出事件
+ok 14 - report_progress 服务器拒收的汇报(milestone 缺 stage)不产出事件
+  ---
+  duration_ms: 288.435148
+  type: 'test'
+  ...
+# Subtest: 服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照
+ok 15 - 服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照
+  ---
+  duration_ms: 285.403039
+  type: 'test'
+  ...
+# Subtest: F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)
+ok 16 - F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)
+  ---
+  duration_ms: 255.087
+  type: 'test'
+  ...
+# Subtest: F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收
+ok 17 - F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收
+  ---
+  duration_ms: 208.320309
+  type: 'test'
+  ...
+# Subtest: F-04:服务器校验失效、回执说已记录时,适配器自己的 schema 校验仍拒收不合规的 blocked
+ok 18 - F-04:服务器校验失效、回执说已记录时,适配器自己的 schema 校验仍拒收不合规的 blocked
+  ---
+  duration_ms: 280.236842
+  type: 'test'
+  ...
+# Subtest: CLI 以权限拒绝回绝的 report_progress(内容合规,tool_result is_error)不产出事件,只记入拒收
+ok 19 - CLI 以权限拒绝回绝的 report_progress(内容合规,tool_result is_error)不产出事件,只记入拒收
+  ---
+  duration_ms: 295.870522
+  type: 'test'
+  ...
+# Subtest: F-02:Compute 经 report_progress 明确汇报放弃,CLI 正常结束也报 failed 不报 completed
+ok 20 - F-02:Compute 经 report_progress 明确汇报放弃,CLI 正常结束也报 failed 不报 completed
+  ---
+  duration_ms: 291.122043
+  type: 'test'
+  ...
+# Subtest: F-02:result 行 subtype 是 success 但 is_error 为 true → failed
+ok 21 - F-02:result 行 subtype 是 success 但 is_error 为 true → failed
+  ---
+  duration_ms: 299.096405
+  type: 'test'
+  ...
+# Subtest: brief.tools 为空时 report_progress 仍挂载并被放行,汇报照常产出事件(阴性对照)
+ok 22 - brief.tools 为空时 report_progress 仍挂载并被放行,汇报照常产出事件(阴性对照)
+  ---
+  duration_ms: 298.180394
+  type: 'test'
+  ...
+# Subtest: CLI 给出 success 结果但进程非零退出 → failed,不报 completed
+ok 23 - CLI 给出 success 结果但进程非零退出 → failed,不报 completed
+  ---
+  duration_ms: 292.368291
+  type: 'test'
+  ...
+# Subtest: 退出码 0 但 CLI 没给结束结果或结果是出错 → failed
+ok 24 - 退出码 0 但 CLI 没给结束结果或结果是出错 → failed
+  ---
+  duration_ms: 308.290147
+  type: 'test'
+  ...
+# Subtest: 进程被外部杀掉 → failed,带信号
+ok 25 - 进程被外部杀掉 → failed,带信号
+  ---
+  duration_ms: 266.564311
+  type: 'test'
+  ...
+# Subtest: stop:SIGTERM 主进程后立即产出 stopped,不等进程退出;只产出一次,进程随后退出
+ok 26 - stop:SIGTERM 主进程后立即产出 stopped,不等进程退出;只产出一次,进程随后退出
+  ---
+  duration_ms: 582.778796
+  type: 'test'
+  ...
+# Subtest: stop:主进程无视 SIGTERM 时 stopped 照样立即产出,reapForceMs 后对进程组 SIGKILL
+ok 27 - stop:主进程无视 SIGTERM 时 stopped 照样立即产出,reapForceMs 后对进程组 SIGKILL
+  ---
+  duration_ms: 865.208441
+  type: 'test'
+  ...
+# Subtest: stop:默认升级间隔是 10 秒(对应 mirasim 的 MIRASIM_REAP_FORCE_MS),未到之前不发 SIGKILL
+ok 28 - stop:默认升级间隔是 10 秒(对应 mirasim 的 MIRASIM_REAP_FORCE_MS),未到之前不发 SIGKILL
+  ---
+  duration_ms: 1787.12326
+  type: 'test'
+  ...
+# Subtest: blocked 后 CLI 结束不报 completed;resume 用同一 CLI 会话续接后报 completed
+ok 29 - blocked 后 CLI 结束不报 completed;resume 用同一 CLI 会话续接后报 completed
+  ---
+  duration_ms: 480.61074
+  type: 'test'
+  ...
+# Subtest: 运行中不能 resume;未知 Compute 不能 stop
+ok 30 - 运行中不能 resume;未知 Compute 不能 stop
+  ---
+  duration_ms: 130.374251
+  type: 'test'
+  ...
+# Subtest: snapshot 取自事件流里 report_progress 的结构化字段
+ok 31 - snapshot 取自事件流里 report_progress 的结构化字段
+  ---
+  duration_ms: 300.64378
+  type: 'test'
+  ...
+# Subtest: 没汇报过约束版本的 Compute 拿不到快照;缺 constraintVer 的 handoff 被 spawn 拒绝(AC-07 阳性埋雷)
+ok 32 - 没汇报过约束版本的 Compute 拿不到快照;缺 constraintVer 的 handoff 被 spawn 拒绝(AC-07 阳性埋雷)
+  ---
+  duration_ms: 322.471535
+  type: 'test'
+  ...
+# Subtest: 带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里
+ok 33 - 带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里
+  ---
+  duration_ms: 321.946978
+  type: 'test'
+  ...
+# Subtest: 没有 handoff 的 spawn:首个提示与装配清单都不含交接段(阴性对照)
+ok 34 - 没有 handoff 的 spawn:首个提示与装配清单都不含交接段(阴性对照)
+  ---
+  duration_ms: 326.357404
+  type: 'test'
+  ...
+# Subtest: RR-01:被拒收的 blocked 未合规重报时,另一种合规汇报(completed)不能把它清掉 → failed
+ok 35 - RR-01:被拒收的 blocked 未合规重报时,另一种合规汇报(completed)不能把它清掉 → failed
+  ---
+  duration_ms: 338.387017
+  type: 'test'
+  ...
+# Subtest: RR-01:被拒收的 blocked 之后只来一个合规 started,也不算解除(审查存活变异)
+ok 36 - RR-01:被拒收的 blocked 之后只来一个合规 started,也不算解除(审查存活变异)
+  ---
+  duration_ms: 317.594376
+  type: 'test'
+  ...
+# Subtest: RR-01:被拒收的 blocked 由宿主显式 resume 解除,续接一轮正常完成(对照)
+ok 37 - RR-01:被拒收的 blocked 由宿主显式 resume 解除,续接一轮正常完成(对照)
+  ---
+  duration_ms: 550.140257
+  type: 'test'
+  ...
+# Subtest: RR-01(非 mirasim 对照项):已受理 blocked 后对进程组 SIGSTOP 冻结,之后的 milestone/completed 与同组孙进程副作用都不发生
+ok 38 - RR-01(非 mirasim 对照项):已受理 blocked 后对进程组 SIGSTOP 冻结,之后的 milestone/completed 与同组孙进程副作用都不发生
+  ---
+  duration_ms: 652.13591
+  type: 'test'
+  ...
+# Subtest: RR-01:停在受阻的 Compute 可以被 stop,产出带 scope 的 stopped
+ok 39 - RR-01:停在受阻的 Compute 可以被 stop,产出带 scope 的 stopped
+  ---
+  duration_ms: 274.070777
+  type: 'test'
+  ...
+# Subtest: RR-02:report_progress MCP 起不来时 init 里 host 为 failed → 回收进程组并 failed,不报 completed
+ok 40 - RR-02:report_progress MCP 起不来时 init 里 host 为 failed → 回收进程组并 failed,不报 completed
+  ---
+  duration_ms: 194.526144
+  type: 'test'
+  ...
+# Subtest: RR-02:缺 init、tools 不是数组、tools 含非字符串 → failed;完整 init 对照 completed
+ok 41 - RR-02:缺 init、tools 不是数组、tools 含非字符串 → failed;完整 init 对照 completed
+  ---
+  duration_ms: 864.405923
+  type: 'test'
+  ...
+# Subtest: RR-02:与真实 CLI 同形的 init(host status failed、工具里无 report_progress)判为无法核验;connected 的同形 init 放行
+ok 42 - RR-02:与真实 CLI 同形的 init(host status failed、工具里无 report_progress)判为无法核验;connected 的同形 init 放行
+  ---
+  duration_ms: 105.446063
+  type: 'test'
+  ...
+# Subtest: RR-03 已知不覆盖(记录性,与 mirasim 一致):setsid 脱离进程组的孙进程在 stopped 之后仍存活并能产生副作用;stopped.scope=main-then-group
+ok 43 - RR-03 已知不覆盖(记录性,与 mirasim 一致):setsid 脱离进程组的孙进程在 stopped 之后仍存活并能产生副作用;stopped.scope=main-then-group
+  ---
+  duration_ms: 621.851277
+  type: 'test'
+  ...
+# Subtest: RR-03 已知不覆盖(记录性):双 fork 后被收养的守护进程不在进程组内,stopped 只声明 scope=main-then-group
+ok 44 - RR-03 已知不覆盖(记录性):双 fork 后被收养的守护进程不在进程组内,stopped 只声明 scope=main-then-group
+  ---
+  duration_ms: 622.710054
+  type: 'test'
+  ...
+# Subtest: RR-04:运行中、stopped 已产出但主进程未退出时快照都是 not-quiescent;主进程退出后才给出快照
+ok 45 - RR-04:运行中、stopped 已产出但主进程未退出时快照都是 not-quiescent;主进程退出后才给出快照
+  ---
+  duration_ms: 619.092894
+  type: 'test'
+  ...
+# Subtest: RR-04/R11-01:保留正常结束不发信号，但快照须等同组孙进程确已退出
+ok 46 - RR-04/R11-01:保留正常结束不发信号，但快照须等同组孙进程确已退出
+  ---
+  duration_ms: 345.507016
+  type: 'test'
+  ...
+# Subtest: RR-05:init 越界后用户 stop → 对外 stopped,违规保留在 violations[]
+ok 47 - RR-05:init 越界后用户 stop → 对外 stopped,违规保留在 violations[]
+  ---
+  duration_ms: 1778.228541
+  type: 'test'
+  ...
+# Subtest: RR-05:terminalFor 的优先级:停止 > 违规 > 进程失败 > 完成;违规保留在 violations,stopped.scope=main-then-group
+ok 48 - RR-05:terminalFor 的优先级:停止 > 违规 > 进程失败 > 完成;违规保留在 violations,stopped.scope=main-then-group
+  ---
+  duration_ms: 106.374188
+  type: 'test'
+  ...
+# Subtest: RR-03:CLI 以 detached 启动、自成进程组(pgid 等于自己的 pid),组 SIGKILL 与冻结的信号才能对整组发
+ok 49 - RR-03:CLI 以 detached 启动、自成进程组(pgid 等于自己的 pid),组 SIGKILL 与冻结的信号才能对整组发
+  ---
+  duration_ms: 288.18088
+  type: 'test'
+  ...
+# Subtest: R3-01:stopped 之后迟到的 milestone 不再产出事件,也不改变终态
+ok 50 - R3-01:stopped 之后迟到的 milestone 不再产出事件,也不改变终态
+  ---
+  duration_ms: 709.072622
+  type: 'test'
+  ...
+# Subtest: R3-01:stopped 之后迟到的 blocked 不能把终态改回受阻、不发 SIGSTOP;第二次 stop 被拒绝
+ok 51 - R3-01:stopped 之后迟到的 blocked 不能把终态改回受阻、不发 SIGSTOP;第二次 stop 被拒绝
+  ---
+  duration_ms: 667.915126
+  type: 'test'
+  ...
+# Subtest: R3-01:主进程在 stop 之后立即退出(退出竞态),终态仍只有一个 stopped
+ok 52 - R3-01:主进程在 stop 之后立即退出(退出竞态),终态仍只有一个 stopped
+  ---
+  duration_ms: 273.388257
+  type: 'test'
+  ...
+# Subtest: R3-02:空白续接先校验、返回输入错误,冻结的主进程与同组孙进程保持暂停;合法续接再执行(单开关)
+ok 53 - R3-02:空白续接先校验、返回输入错误,冻结的主进程与同组孙进程保持暂停;合法续接再执行(单开关)
+  ---
+  duration_ms: 458.956103
+  type: 'test'
+  ...
+# Subtest: R3-03:init 之前的 assistant 文本、非 JSON 行 → 回收并 failed,不报 started/completed
+ok 54 - R3-03:init 之前的 assistant 文本、非 JSON 行 → 回收并 failed,不报 started/completed
+  ---
+  duration_ms: 448.325072
+  type: 'test'
+  ...
+# Subtest: R3-03:init 之前的 report_progress tool_use 不会在 init 之后配对生效 → failed,不产出 milestone
+ok 55 - R3-03:init 之前的 report_progress tool_use 不会在 init 之后配对生效 → failed,不产出 milestone
+  ---
+  duration_ms: 273.265062
+  type: 'test'
+  ...
+# Subtest: R3-03:init 之前认可的 system 帧(hook_started/hook_response/ui_invalidate)放行,随后合法 init 正常完成(对照)
+ok 56 - R3-03:init 之前认可的 system 帧(hook_started/hook_response/ui_invalidate)放行,随后合法 init 正常完成(对照)
+  ---
+  duration_ms: 290.09629
+  type: 'test'
+  ...
+# Subtest: R3-04:断言在假 CLI 写记录之前就失败时,afterEach 仍按测试目录回收进程
+ok 57 - R3-04:断言在假 CLI 写记录之前就失败时,afterEach 仍按测试目录回收进程
+  ---
+  duration_ms: 287.450058
+  type: 'test'
+  ...
+# Subtest: R4-01:checkBrief 遇到字段/数组元素 getter、Proxy、撤销 Proxy、自定义原型 getter、不可枚举 setter 时不调用即拒收;纯 JSON brief 放行(对照)
+ok 58 - R4-01:checkBrief 遇到字段/数组元素 getter、Proxy、撤销 Proxy、自定义原型 getter、不可枚举 setter 时不调用即拒收;纯 JSON brief 放行(对照)
+  ---
+  duration_ms: 106.726872
+  type: 'test'
+  ...
+# Subtest: R4-01:spawn 的 brief、选项与 handoff(含嵌套数组)带 getter/Proxy/非预期字段时不调用即拒收、不起子进程;纯 JSON 选项与 handoff 正常启动(对照)
+ok 59 - R4-01:spawn 的 brief、选项与 handoff(含嵌套数组)带 getter/Proxy/非预期字段时不调用即拒收、不起子进程;纯 JSON 选项与 handoff 正常启动(对照)
+  ---
+  duration_ms: 278.148221
+  type: 'test'
+  ...
+# Subtest: R4-01:checkSnapshot 直接调用:访问器、Proxy、撤销 Proxy、非预期字段与嵌套数组 Proxy 不调用即拒收;纯 JSON 快照放行(对照)
+ok 60 - R4-01:checkSnapshot 直接调用:访问器、Proxy、撤销 Proxy、非预期字段与嵌套数组 Proxy 不调用即拒收;纯 JSON 快照放行(对照)
+  ---
+  duration_ms: 105.499058
+  type: 'test'
+  ...
+# Subtest: R4-01:reportErrors 遇到 getter、Proxy、撤销 Proxy、嵌套数组访问器、不可枚举字段时返回错误且不调用;纯 JSON 汇报无错(对照)
+ok 61 - R4-01:reportErrors 遇到 getter、Proxy、撤销 Proxy、嵌套数组访问器、不可枚举字段时返回错误且不调用;纯 JSON 汇报无错(对照)
+  ---
+  duration_ms: 107.399164
+  type: 'test'
+  ...
+# Subtest: R4-01:适配器选项与状态参数(computeId、续接文本)带 getter/Proxy/toPrimitive 时不调用即拒收;纯数据的选项与续接正常(对照)
+ok 62 - R4-01:适配器选项与状态参数(computeId、续接文本)带 getter/Proxy/toPrimitive 时不调用即拒收;纯数据的选项与续接正常(对照)
+  ---
+  duration_ms: 453.703333
+  type: 'test'
+  ...
+# Subtest: 导出的策略常量不可变:CC_BUILTIN_TOOLS、REPORT_KINDS、PRE_INIT_SYSTEM_SUBTYPES、DEFAULT_RUNNER 冻结,改写抛错且校验行为不变
+ok 63 - 导出的策略常量不可变:CC_BUILTIN_TOOLS、REPORT_KINDS、PRE_INIT_SYSTEM_SUBTYPES、DEFAULT_RUNNER 冻结,改写抛错且校验行为不变
+  ---
+  duration_ms: 106.738415
+  type: 'test'
+  ...
+# Subtest: R4-04:多凭据引用:每一个位置放非引用都被拒绝、不起进程;全部合法的多元素放行并原样进清单(对照)
+ok 64 - R4-04:多凭据引用:每一个位置放非引用都被拒绝、不起进程;全部合法的多元素放行并原样进清单(对照)
+  ---
+  duration_ms: 269.528254
+  type: 'test'
+  ...
+# Subtest: R4-02:report MCP 收到合法 JSON null、其他原始值、数组与坏 JSON 时回 JSON-RPC 错误且进程继续可用,随后的合法请求照常处理(正反对照)
+ok 65 - R4-02:report MCP 收到合法 JSON null、其他原始值、数组与坏 JSON 时回 JSON-RPC 错误且进程继续可用,随后的合法请求照常处理(正反对照)
+  ---
+  duration_ms: 292.333077
+  type: 'test'
+  ...
+# Subtest: R4-05:tools/list 直接 JSON-RPC 返回 report_progress 及与共享定义一致的 schema;未知方法回 method not found(对照)
+ok 66 - R4-05:tools/list 直接 JSON-RPC 返回 report_progress 及与共享定义一致的 schema;未知方法回 method not found(对照)
+  ---
+  duration_ms: 192.855534
+  type: 'test'
+  ...
+# Subtest: R4-05:经假 CLI 的工具发现:tools/list 列出 report_progress 时 init 带上它并 started→completed;tools/list 为空时 init 缺 report_progress → failed(正反对照)
+ok 67 - R4-05:经假 CLI 的工具发现:tools/list 列出 report_progress 时 init 带上它并 started→completed;tools/list 为空时 init 缺 report_progress → failed(正反对照)
+  ---
+  duration_ms: 421.409516
+  type: 'test'
+  ...
+# Subtest: R4-05:REPORT_LOG:合法与非法调用各追加一行,valid/errs 与共享校验一致,无效请求不记;未设 REPORT_LOG 时不写任何文件(正反对照)
+ok 68 - R4-05:REPORT_LOG:合法与非法调用各追加一行,valid/errs 与共享校验一致,无效请求不记;未设 REPORT_LOG 时不写任何文件(正反对照)
+  ---
+  duration_ms: 327.3729
+  type: 'test'
+  ...
+# Subtest: R4-03:resolveReapForceMs 与 mirasim Ukc 一致:未传显式值时合法正数环境值生效,缺失/无效/非正回落 10000;显式值优先
+ok 69 - R4-03:resolveReapForceMs 与 mirasim Ukc 一致:未传显式值时合法正数环境值生效,缺失/无效/非正回落 10000;显式值优先
+  ---
+  duration_ms: 105.553713
+  type: 'test'
+  ...
+# Subtest: R4-03:未传 reapForceMs 时读 MIRASIM_REAP_FORCE_MS=400,主进程无视 SIGTERM 约 400ms 后整组 SIGKILL;显式 reapForceMs=5000 优先,1.5 秒后主进程仍在(对照)
+ok 70 - R4-03:未传 reapForceMs 时读 MIRASIM_REAP_FORCE_MS=400,主进程无视 SIGTERM 约 400ms 后整组 SIGKILL;显式 reapForceMs=5000 优先,1.5 秒后主进程仍在(对照)
+  ---
+  duration_ms: 2350.975533
+  type: 'test'
+  ...
+# Subtest: R4-03:环境值无效(abc)且未传 reapForceMs 时回落默认 10000,1.5 秒后主进程仍在
+ok 71 - R4-03:环境值无效(abc)且未传 reapForceMs 时回落默认 10000,1.5 秒后主进程仍在
+  ---
+  duration_ms: 1776.124538
+  type: 'test'
+  ...
+# Subtest: 磁盘清理:每轮的 g-group-cc-* 临时目录运行中存在,CLI 结束、stop 或受阻后续接时删除;续接的新一轮另建目录并在结束后删除
+ok 72 - 磁盘清理:每轮的 g-group-cc-* 临时目录运行中存在,CLI 结束、stop 或受阻后续接时删除;续接的新一轮另建目录并在结束后删除
+  ---
+  duration_ms: 1119.568167
+  type: 'test'
+  ...
+# Subtest: R5-01:checkBrief、checkSnapshot、reportErrors 遇到值为 undefined 的未声明自有字段一律拒收;去掉该字段放行,声明过的可选字段为 undefined 按没给处理、必填字段为 undefined 拒收(单开关对照)
+ok 73 - R5-01:checkBrief、checkSnapshot、reportErrors 遇到值为 undefined 的未声明自有字段一律拒收;去掉该字段放行,声明过的可选字段为 undefined 按没给处理、必填字段为 undefined 拒收(单开关对照)
+  ---
+  duration_ms: 106.288184
+  type: 'test'
+  ...
+# Subtest: R5-01:spawn 的 brief 带 memory/soul:undefined、选项或 handoff 带 outside:undefined 时拒收且不起进程(中性启动标记不出现);去掉该字段的同一输入照常启动,选项 cwd/handoff 为 undefined 按没给处理(单开关对照)
+ok 74 - R5-01:spawn 的 brief 带 memory/soul:undefined、选项或 handoff 带 outside:undefined 时拒收且不起进程(中性启动标记不出现);去掉该字段的同一输入照常启动,选项 cwd/handoff 为 undefined 按没给处理(单开关对照)
+  ---
+  duration_ms: 264.531139
+  type: 'test'
+  ...
+# Subtest: R5-02:report MCP 的 tools/call 只认 report_progress:未知、缺失或非字符串工具名回 -32602 协议错误,不回已记录、不写 REPORT_LOG;同一参数换成合法名称照常接收并记录(单开关对照)
+ok 75 - R5-02:report MCP 的 tools/call 只认 report_progress:未知、缺失或非字符串工具名回 -32602 协议错误,不回已记录、不写 REPORT_LOG;同一参数换成合法名称照常接收并记录(单开关对照)
+  ---
+  duration_ms: 229.505966
+  type: 'test'
+  ...
+# Subtest: R6-01:包根 firstPrompt 对 brief/交接快照的 getter、嵌套与已撤销 Proxy 不调用即抛受控 TypeError(计数 0);合法纯数据照常拼出首个提示,返回值深冻结
+ok 76 - R6-01:包根 firstPrompt 对 brief/交接快照的 getter、嵌套与已撤销 Proxy 不调用即抛受控 TypeError(计数 0);合法纯数据照常拼出首个提示,返回值深冻结
+  ---
+  duration_ms: 105.862454
+  type: 'test'
+  ...
+# Subtest: R6-01:包根 allowedTools、cliArgs、toolOverreach 对 brief Proxy/getter 与非字符串状态参数不调用即抛受控 TypeError(计数 0);合法输入给出按 brief 收窄的工具清单与参数
+ok 77 - R6-01:包根 allowedTools、cliArgs、toolOverreach 对 brief Proxy/getter 与非字符串状态参数不调用即抛受控 TypeError(计数 0);合法输入给出按 brief 收窄的工具清单与参数
+  ---
+  duration_ms: 106.805891
+  type: 'test'
+  ...
+# Subtest: R6-01:包根 cliEnv 对 hostEnv 的 getter、Proxy、非字符串或 undefined 值与非字符串 computeId 不调用即抛受控 TypeError(计数 0),与 createComputeAdapter 的 hostEnv 判定一致;合法 hostEnv 原样复制
+ok 78 - R6-01:包根 cliEnv 对 hostEnv 的 getter、Proxy、非字符串或 undefined 值与非字符串 computeId 不调用即抛受控 TypeError(计数 0),与 createComputeAdapter 的 hostEnv 判定一致;合法 hostEnv 原样复制
+  ---
+  duration_ms: 108.833241
+  type: 'test'
+  ...
+# Subtest: R6-01:包根 streamParser 的输入行与 terminalFor 的退出/结果/事实参数遇到 Proxy、getter、嵌套 Proxy 不调用即抛受控 TypeError(计数 0);合法字符串行与纯数据照常解析和裁决
+ok 79 - R6-01:包根 streamParser 的输入行与 terminalFor 的退出/结果/事实参数遇到 Proxy、getter、嵌套 Proxy 不调用即抛受控 TypeError(计数 0);合法字符串行与纯数据照常解析和裁决
+  ---
+  duration_ms: 108.580872
+  type: 'test'
+  ...
+# Subtest: R6-01:包根导出的每个函数逐个参数换成已撤销 Proxy、整体 Proxy、getter、嵌套 Proxy/已撤销 Proxy 或可转换对象时都拒收且访问器与陷阱计数为 0;同一组合法参数照常工作;导出函数清单与本表一致
+ok 80 - R6-01:包根导出的每个函数逐个参数换成已撤销 Proxy、整体 Proxy、getter、嵌套 Proxy/已撤销 Proxy 或可转换对象时都拒收且访问器与陷阱计数为 0;同一组合法参数照常工作;导出函数清单与本表一致
+  ---
+  duration_ms: 108.85835
+  type: 'test'
+  ...
+# Subtest: R6-02:failed 事件及其 violations 深冻结:一个消费者 splice(0) 抛 TypeError,两次 settled() 与两个订阅者读到同一份违规
+ok 81 - R6-02:failed 事件及其 violations 深冻结:一个消费者 splice(0) 抛 TypeError,两次 settled() 与两个订阅者读到同一份违规
+  ---
+  duration_ms: 262.055294
+  type: 'test'
+  ...
+# Subtest: R6-02:违规后 stop 的 stopped 事件及其 violations 深冻结:首个订阅者改写抛 TypeError,新订阅者与两次 settled() 仍看到原违规;停止优先、违规可审计
+ok 82 - R6-02:违规后 stop 的 stopped 事件及其 violations 深冻结:首个订阅者改写抛 TypeError,新订阅者与两次 settled() 仍看到原违规;停止优先、违规可审计
+  ---
+  duration_ms: 3265.586379
+  type: 'test'
+  ...
+# Subtest: R6-02:rejectedReports 记录里来自 JSON 的 kind(数组)深冻结,改写抛 TypeError,再次读取不变
+ok 83 - R6-02:rejectedReports 记录里来自 JSON 的 kind(数组)深冻结,改写抛 TypeError,再次读取不变
+  ---
+  duration_ms: 280.087022
+  type: 'test'
+  ...
+# Subtest: R6-03:report MCP 只认精确的 report_progress:前后空格、制表/换行、大小写不同、连字符等近似名称回 -32602 且不写 REPORT_LOG,同一参数的精确名称照常接收并只记一行(直接 JSON-RPC 正反对照)
+ok 84 - R6-03:report MCP 只认精确的 report_progress:前后空格、制表/换行、大小写不同、连字符等近似名称回 -32602 且不写 REPORT_LOG,同一参数的精确名称照常接收并只记一行(直接 JSON-RPC 正反对照)
+  ---
+  duration_ms: 214.904776
+  type: 'test'
+  ...
+# Subtest: R7-01:受阻后并发两次 resume 只受理一个、另一个立即被明确拒绝,只起一个续接 CLI;stop 后原 CLI 与续接 CLI 全部回收(正反对照)
+ok 85 - R7-01:受阻后并发两次 resume 只受理一个、另一个立即被明确拒绝,只起一个续接 CLI;stop 后原 CLI 与续接 CLI 全部回收(正反对照)
+  ---
+  duration_ms: 739.198498
+  type: 'test'
+  ...
+# Subtest: R7-01:resume 在途(正等冻结的上一轮退出)时 stop:stop 受理,在途续接被明确拒绝,stop 确认之后不再起 CLI;原 CLI 回收、进程表里不剩本测试的进程(竞态对照)
+ok 86 - R7-01:resume 在途(正等冻结的上一轮退出)时 stop:stop 受理,在途续接被明确拒绝,stop 确认之后不再起 CLI;原 CLI 回收、进程表里不剩本测试的进程(竞态对照)
+  ---
+  duration_ms: 802.607521
+  type: 'test'
+  ...
+# Subtest: R7-02:init 前的帧与 init 里 type/subtype/host 状态是对象、数组、null 的合法 JSON 时 preInitFrame/checkInit 按合同拒收、给固定说明、不抛错;拒收回执的 text 是对象或数组时不拼接、不抛错;坏 JSON 与非对象照常拒收,合法字符串与 connected 的 init 照常(对照)
+ok 87 - R7-02:init 前的帧与 init 里 type/subtype/host 状态是对象、数组、null 的合法 JSON 时 preInitFrame/checkInit 按合同拒收、给固定说明、不抛错;拒收回执的 text 是对象或数组时不拼接、不抛错;坏 JSON 与非对象照常拒收,合法字符串与 connected 的 init 照常(对照)
+  ---
+  duration_ms: 106.095743
+  type: 'test'
+  ...
+# Subtest: R7-02:适配器宿主子进程里,CLI 输出 type/subtype/host 状态为对象或数组、拒收回执 text 为对象、汇报 kind 嵌套过深的合法 JSON:宿主不退出,对应 Compute 各自 failed(或按合同记拒收)并回收 CLI,同一适配器随后的正常 Compute 照常 completed(正反对照)
+ok 88 - R7-02:适配器宿主子进程里,CLI 输出 type/subtype/host 状态为对象或数组、拒收回执 text 为对象、汇报 kind 嵌套过深的合法 JSON:宿主不退出,对应 Compute 各自 failed(或按合同记拒收)并回收 CLI,同一适配器随后的正常 Compute 照常 completed(正反对照)
+  ---
+  duration_ms: 3486.360284
+  type: 'test'
+  ...
+# Subtest: R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)
+ok 89 - R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)
+  ---
+  duration_ms: 487.168624
+  type: 'test'
+  ...
+# Subtest: R8-01:有空位或越界数字键的数组(含无下标 0 另带 4294967295 的组合)在 checkBrief、checkSnapshot、reportErrors、firstPrompt 一律拒收;同值的密集数组照常放行并原样复制(正反对照)
+ok 90 - R8-01:有空位或越界数字键的数组(含无下标 0 另带 4294967295 的组合)在 checkBrief、checkSnapshot、reportErrors、firstPrompt 一律拒收;同值的密集数组照常放行并原样复制(正反对照)
+  ---
+  duration_ms: 107.565067
+  type: 'test'
+  ...
+# Subtest: R8-01:spawn 的 brief.rules 或 handoff.openQuestions 是有空位/越界键的数组时拒收、不启动 CLI(中性启动标记不出现);同值密集数组照常启动(正反对照)
+ok 91 - R8-01:spawn 的 brief.rules 或 handoff.openQuestions 是有空位/越界键的数组时拒收、不启动 CLI(中性启动标记不出现);同值密集数组照常启动(正反对照)
+  ---
+  duration_ms: 217.60903
+  type: 'test'
+  ...
+# Subtest: R8-02:report MCP 收到 kind 嵌套 12000 层的汇报:设与不设 REPORT_LOG 回复完全相同(拒收 isError),进程不退出、随后的合法汇报照常接收;日志里拒收那条只记有界说明不记原值,参数里的同名字段改不了判定(只切日志开关的正反对照)
+ok 92 - R8-02:report MCP 收到 kind 嵌套 12000 层的汇报:设与不设 REPORT_LOG 回复完全相同(拒收 isError),进程不退出、随后的合法汇报照常接收;日志里拒收那条只记有界说明不记原值,参数里的同名字段改不了判定(只切日志开关的正反对照)
+  ---
+  duration_ms: 349.117904
+  type: 'test'
+  ...
+# Subtest: R8-02:report MCP 的 JSON-RPC id 不是字符串或整数(嵌套 12000 层数组、对象、布尔、null、小数)时回 -32600 且 id 为 null、不处理不入日志,进程不退出;随后整数与字符串 id 的合法请求照常回复(设与不设 REPORT_LOG 对照)
+ok 93 - R8-02:report MCP 的 JSON-RPC id 不是字符串或整数(嵌套 12000 层数组、对象、布尔、null、小数)时回 -32600 且 id 为 null、不处理不入日志,进程不退出;随后整数与字符串 id 的合法请求照常回复(设与不设 REPORT_LOG 对照)
+  ---
+  duration_ms: 346.452468
+  type: 'test'
+  ...
+# Subtest: R8-02:单个请求处理失败(REPORT_LOG 指向目录写不进)时只回这一条的 -32603、不回已记录,进程不退出、随后的请求照常回复;同一请求不设日志时照常接收(对照);initialize 的 protocolVersion 不是字符串时回本服务器版本,字符串照常回显(对照)
+ok 94 - R8-02:单个请求处理失败(REPORT_LOG 指向目录写不进)时只回这一条的 -32603、不回已记录,进程不退出、随后的请求照常回复;同一请求不设日志时照常接收(对照);initialize 的 protocolVersion 不是字符串时回本服务器版本,字符串照常回显(对照)
+  ---
+  duration_ms: 436.124605
+  type: 'test'
+  ...
+# Subtest: R8-03:checkInit 只认 host 状态恰为 connected:connecting、pending、needs-auth 等其它状态与大小写/空白/截短变体一律 bad-init;同一 init 只把状态换成 connected 时放行(单开关对照)
+ok 95 - R8-03:checkInit 只认 host 状态恰为 connected:connecting、pending、needs-auth 等其它状态与大小写/空白/截短变体一律 bad-init;同一 init 只把状态换成 connected 时放行(单开关对照)
+  ---
+  duration_ms: 105.771206
+  type: 'test'
+  ...
+# Subtest: R8-03:端到端:CLI 的 init 自报 host 为 connecting 或 pending 时回收并 failed,不报 started/completed;同一剧本只把状态换成 connected 时 started→milestone→completed(单开关对照)
+ok 96 - R8-03:端到端:CLI 的 init 自报 host 为 connecting 或 pending 时回收并 failed,不报 started/completed;同一剧本只把状态换成 connected 时 started→milestone→completed(单开关对照)
+  ---
+  duration_ms: 593.321811
+  type: 'test'
+  ...
+# Subtest: R8-04:summary 为纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 reportErrors 与 report MCP 都拒收;同一汇报换成非空文本(含首尾空白的非空文本)接收(单开关对照)
+ok 97 - R8-04:summary 为纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 reportErrors 与 report MCP 都拒收;同一汇报换成非空文本(含首尾空白的非空文本)接收(单开关对照)
+  ---
+  duration_ms: 205.42424
+  type: 'test'
+  ...
+# Subtest: R8-04:blocked 的 needs 为纯空白时 reportErrors 与 report MCP 拒收,端到端不产出 blocked、记一条拒收、CLI 成功结束也 failed;同一剧本 needs 换成非空文本时产出 blocked(单开关对照)
+ok 98 - R8-04:blocked 的 needs 为纯空白时 reportErrors 与 report MCP 拒收,端到端不产出 blocked、记一条拒收、CLI 成功结束也 failed;同一剧本 needs 换成非空文本时产出 blocked(单开关对照)
+  ---
+  duration_ms: 542.180056
+  type: 'test'
+  ...
+# Subtest: R8-04:milestone 的 stage 为纯空白时 reportErrors 与 report MCP 拒收;同一汇报 stage 换成非空文本时接收(单开关对照)
+ok 99 - R8-04:milestone 的 stage 为纯空白时 reportErrors 与 report MCP 拒收;同一汇报 stage 换成非空文本时接收(单开关对照)
+  ---
+  duration_ms: 205.34308
+  type: 'test'
+  ...
+# Subtest: R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)
+ok 100 - R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)
+  ---
+  duration_ms: 215.954378
+  type: 'test'
+  ...
+# Subtest: R9-02:report MCP 先核对 jsonrpc 版本:缺失、"1.0"、数字 2、"2"、"2.0 "、null 的 tools/call、tools/list、initialize 一律回 -32600、id 为 null、不回已记录、不入日志;同一组请求只把版本换成 "2.0" 时照常回复并只记合规那一条(单开关对照)
+ok 101 - R9-02:report MCP 先核对 jsonrpc 版本:缺失、"1.0"、数字 2、"2"、"2.0 "、null 的 tools/call、tools/list、initialize 一律回 -32600、id 为 null、不回已记录、不入日志;同一组请求只把版本换成 "2.0" 时照常回复并只记合规那一条(单开关对照)
+  ---
+  duration_ms: 219.60092
+  type: 'test'
+  ...
+# Subtest: R9-03:无编号消息按通知处理:正常 notifications/initialized、notifications/cancelled、无编号的 tools/list、无编号的合规 tools/call、无编号的未知方法都不回复、不入日志;随后编号 17 的合法请求照常回复并入日志,编号为 null 的请求仍回 -32600(连续对照)
+ok 102 - R9-03:无编号消息按通知处理:正常 notifications/initialized、notifications/cancelled、无编号的 tools/list、无编号的合规 tools/call、无编号的未知方法都不回复、不入日志;随后编号 17 的合法请求照常回复并入日志,编号为 null 的请求仍回 -32600(连续对照)
+  ---
+  duration_ms: 323.192931
+  type: 'test'
+  ...
+# Subtest: R9-04:brief.task 为空串或纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 checkBrief 拒收、spawn 不起 CLI;同一 brief 只把 task 换成非空文本(含首尾空白)时放行,task 原样保留、不去首尾空白(单开关对照)
+ok 103 - R9-04:brief.task 为空串或纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 checkBrief 拒收、spawn 不起 CLI;同一 brief 只把 task 换成非空文本(含首尾空白)时放行,task 原样保留、不去首尾空白(单开关对照)
+  ---
+  duration_ms: 264.330222
+  type: 'test'
+  ...
+# Subtest: R9 补充:凭据引用的方案名可带数字、加号、点、连字符(s3://、git+ssh://、x.y-z://)时放行;方案名以数字开头、带大写或下划线、缺 :// 或路径为空时拒收(正反对照)
+ok 104 - R9 补充:凭据引用的方案名可带数字、加号、点、连字符(s3://、git+ssh://、x.y-z://)时放行;方案名以数字开头、带大写或下划线、缺 :// 或路径为空时拒收(正反对照)
+  ---
+  duration_ms: 105.530535
+  type: 'test'
+  ...
+# Subtest: R10-02:转义的顶层 id 键按解码值识别,重复转义键取最后一个且嵌套同名键不影响
+ok 105 - R10-02:转义的顶层 id 键按解码值识别,重复转义键取最后一个且嵌套同名键不影响
+  ---
+  duration_ms: 200.454676
+  type: 'test'
+  ...
+# Subtest: R10-03:版本与通知六格交叉保持先核对版本,无效通知回错误且不登记,有效通知静默且不登记
+ok 106 - R10-03:版本与通知六格交叉保持先核对版本,无效通知回错误且不登记,有效通知静默且不登记
+  ---
+  duration_ms: 216.2392
+  type: 'test'
+  ...
+# Subtest: R11-01 快照只在同组后代确已结束后放行
+ok 107 - R11-01 快照只在同组后代确已结束后放行
+  ---
+  duration_ms: 127.0266
+  type: 'test'
+  ...
+# Subtest: R11-01 续接等待同组停止确认且组回收后仍可新开一轮
+ok 108 - R11-01 续接等待同组停止确认且组回收后仍可新开一轮
+  ---
+  duration_ms: 564.42189
+  type: 'test'
+  ...
+# Subtest: R11-02 NUL 续接在受阻轮回收及状态变更之前拒绝，普通续接成功
+ok 109 - R11-02 NUL 续接在受阻轮回收及状态变更之前拒绝，普通续接成功
+  ---
+  duration_ms: 139.864684
+  type: 'test'
+  ...
+# Subtest: R11-02 CLI 会话号含 NUL 不产出 started 且不能成为续接参数
+ok 110 - R11-02 CLI 会话号含 NUL 不产出 started 且不能成为续接参数
+  ---
+  duration_ms: 232.694544
+  type: 'test'
+  ...
+# Subtest: R11-02 启动失败受控拒绝并保留旧轮及拒收记录，修复目录后可再续接
+ok 111 - R11-02 启动失败受控拒绝并保留旧轮及拒收记录，修复目录后可再续接
+  ---
+  duration_ms: 150.592866
+  type: 'test'
+  ...
+# Subtest: R11-03 版本零交接接受且原样装配，不改变负版本拒收
+ok 112 - R11-03 版本零交接接受且原样装配，不改变负版本拒收
+  ---
+  duration_ms: 66.485283
+  type: 'test'
+  ...
+# Subtest: R11-03 无交接时汇报版本零被保存并进入快照
+ok 113 - R11-03 无交接时汇报版本零被保存并进入快照
+  ---
+  duration_ms: 62.049618
+  type: 'test'
+  ...
+# Subtest: R10-01/全执行:真实 TAP 的完整基线与指定断言失败分别认可,同名全绿不算发现故障
+ok 114 - R10-01/全执行:真实 TAP 的完整基线与指定断言失败分别认可,同名全绿不算发现故障
+  ---
+  duration_ms: 651.353311
+  type: 'test'
+  ...
+# Subtest: R10-01/跳过:真实 TAP 跳过项使原样与故障副本均无效
+ok 115 - R10-01/跳过:真实 TAP 跳过项使原样与故障副本均无效
+  ---
+  duration_ms: 516.698839
+  type: 'test'
+  ...
+# Subtest: R10-01/待办:真实 TAP 的通过和失败待办都不算执行完成
+ok 116 - R10-01/待办:真实 TAP 的通过和失败待办都不算执行完成
+  ---
+  duration_ms: 380.120242
+  type: 'test'
+  ...
+# Subtest: R10-01/取消:真实未完成 Promise 的取消结果不算具名发现
+ok 117 - R10-01/取消:真实未完成 Promise 的取消结果不算具名发现
+  ---
+  duration_ms: 201.43788
+  type: 'test'
+  ...
+# Subtest: R10-01/文件失败:加载异常或提前退出不算测试代码断言失败
+ok 118 - R10-01/文件失败:加载异常或提前退出不算测试代码断言失败
+  ---
+  duration_ms: 343.151043
+  type: 'test'
+  ...
+# Subtest: R10-01/计划汇总:缺失重复或错误的 TAP 计划与汇总都拒收
+ok 119 - R10-01/计划汇总:缺失重复或错误的 TAP 计划与汇总都拒收
+  ---
+  duration_ms: 217.779466
+  type: 'test'
+  ...
+# Subtest: R10-01/逐名:条数相同但名字或序号不一致以及重复名字均拒收
+ok 120 - R10-01/逐名:条数相同但名字或序号不一致以及重复名字均拒收
+  ---
+  duration_ms: 202.056792
+  type: 'test'
+  ...
+# Subtest: R10-01/进程:超时信号异常退出码和截断均不能成为有效判决
+ok 121 - R10-01/进程:超时信号异常退出码和截断均不能成为有效判决
+  ---
+  duration_ms: 174.686161
+  type: 'test'
+  ...
+# Subtest: R10-01/原因:只有指定名字及指定错误码匹配才算发现,无关失败不能替代
+ok 122 - R10-01/原因:只有指定名字及指定错误码匹配才算发现,无关失败不能替代
+  ---
+  duration_ms: 181.528925
+  type: 'test'
+  ...
+# Subtest: R10-01/指令:即使汇总声称零跳过,结果行 SKIP 或 TODO 指令仍拒收
+ok 123 - R10-01/指令:即使汇总声称零跳过,结果行 SKIP 或 TODO 指令仍拒收
+  ---
+  duration_ms: 186.744412
+  type: 'test'
+  ...
+# Subtest: 基于当前版本提交成功,版本号加一且写入新内容
+ok 124 - 基于当前版本提交成功,版本号加一且写入新内容
+  ---
+  duration_ms: 1.686692
+  type: 'test'
+  ...
+# Subtest: 两人基于同一版本修改,后提交者收到版本冲突(阳性埋雷:去掉版本校验就会静默覆盖)
+ok 125 - 两人基于同一版本修改,后提交者收到版本冲突(阳性埋雷:去掉版本校验就会静默覆盖)
+  ---
+  duration_ms: 0.313037
+  type: 'test'
+  ...
+# Subtest: 提交不改入参单元
+ok 126 - 提交不改入参单元
+  ---
+  duration_ms: 0.211714
+  type: 'test'
+  ...
+# Subtest: 多文档存储:同一版本、同一提案只切文档键,改不同文档互不冲突且内容都写入(阴性对照)
+ok 127 - 多文档存储:同一版本、同一提案只切文档键,改不同文档互不冲突且内容都写入(阴性对照)
+  ---
+  duration_ms: 0.278138
+  type: 'test'
+  ...
+# Subtest: 多文档存储:成功和冲突两条路径都不改输入 Store
+ok 128 - 多文档存储:成功和冲突两条路径都不改输入 Store
+  ---
+  duration_ms: 0.210622
+  type: 'test'
+  ...
+# Subtest: 多文档存储:同一文档基于旧版本提交被拒绝,不存在的文档按版本 0 新建并写入内容
+ok 129 - 多文档存储:同一文档基于旧版本提交被拒绝,不存在的文档按版本 0 新建并写入内容
+  ---
+  duration_ms: 0.280481
+  type: 'test'
+  ...
+# Subtest: 追加的事件序号递增并串成 hash 链
+ok 130 - 追加的事件序号递增并串成 hash 链
+  ---
+  duration_ms: 1.978769
+  type: 'test'
+  ...
+# Subtest: 原地改写旧记录正文会被 hash 链查出(阳性埋雷)
+ok 131 - 原地改写旧记录正文会被 hash 链查出(阳性埋雷)
+  ---
+  duration_ms: 0.31462
+  type: 'test'
+  ...
+# Subtest: 单条 hash 自洽但与前一条脱链会被查出(阳性埋雷)
+ok 132 - 单条 hash 自洽但与前一条脱链会被查出(阳性埋雷)
+  ---
+  duration_ms: 1.097627
+  type: 'test'
+  ...
+# Subtest: 编辑是一条新事件,调用前的整份日志快照逐字节不变,投影显示新文字
+ok 133 - 编辑是一条新事件,调用前的整份日志快照逐字节不变,投影显示新文字
+  ---
+  duration_ms: 1.118453
+  type: 'test'
+  ...
+# Subtest: 撤回只追加撤回事件,投影标记已撤回,调用前快照不变
+ok 134 - 撤回只追加撤回事件,投影标记已撤回,调用前快照不变
+  ---
+  duration_ms: 0.377756
+  type: 'test'
+  ...
+# Subtest: 追加后再改调用方手里的 message body,已提交历史、投影和 hash 都不变
+ok 135 - 追加后再改调用方手里的 message body,已提交历史、投影和 hash 都不变
+  ---
+  duration_ms: 0.322667
+  type: 'test'
+  ...
+# Subtest: 追加后再改调用方手里的 edit body 与 sender,已提交历史不变
+ok 136 - 追加后再改调用方手里的 edit body 与 sender,已提交历史不变
+  ---
+  duration_ms: 1.898668
+  type: 'test'
+  ...
+# Subtest: 已提交事件本身冻结:不能改 seq、hash 等字段
+ok 137 - 已提交事件本身冻结:不能改 seq、hash 等字段
+  ---
+  duration_ms: 0.589322
+  type: 'test'
+  ...
+# Subtest: 已提交事件的 body 冻结
+ok 138 - 已提交事件的 body 冻结
+  ---
+  duration_ms: 0.427082
+  type: 'test'
+  ...
+# Subtest: 已提交事件的 sender 冻结
+ok 139 - 已提交事件的 sender 冻结
+  ---
+  duration_ms: 0.489214
+  type: 'test'
+  ...
+# Subtest: 日志的事件数组冻结:不能追加或替换
+ok 140 - 日志的事件数组冻结:不能追加或替换
+  ---
+  duration_ms: 0.321636
+  type: 'test'
+  ...
+# Subtest: 日志外壳冻结:不能把 events 换成另一份数组
+ok 141 - 日志外壳冻结:不能把 events 换成另一份数组
+  ---
+  duration_ms: 0.204126
+  type: 'test'
+  ...
+# Subtest: 投影只读:多次投影不改记录(阴性对照)
+ok 142 - 投影只读:多次投影不改记录(阴性对照)
+  ---
+  duration_ms: 0.298817
+  type: 'test'
+  ...
+# Subtest: 同一条消息只切发言者种类:compute 被拒绝,contact 可以发出(AC-03 单开关)
+ok 143 - 同一条消息只切发言者种类:compute 被拒绝,contact 可以发出(AC-03 单开关)
+  ---
+  duration_ms: 0.563382
+  type: 'test'
+  ...
+# Subtest: 被 @ 的 Helper 可以在会话里就地作答
+ok 144 - 被 @ 的 Helper 可以在会话里就地作答
+  ---
+  duration_ms: 0.161317
+  type: 'test'
+  ...
+# Subtest: 只有原发言者能编辑或撤回自己的消息
+ok 145 - 只有原发言者能编辑或撤回自己的消息
+  ---
+  duration_ms: 0.408372
+  type: 'test'
+  ...
+# Subtest: 编辑或撤回的目标必须是存在且未撤回的消息
+ok 146 - 编辑或撤回的目标必须是存在且未撤回的消息
+  ---
+  duration_ms: 0.330035
+  type: 'test'
+  ...
+1..146
+# tests 146
+# suites 0
+# pass 146
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 55980.877058
