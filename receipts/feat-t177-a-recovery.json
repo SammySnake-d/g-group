@@ -4,7 +4,7 @@
     {
       "id": "AC-15",
       "status": "未测",
-      "reason": "候选实现子范围：box3 全量 1503/1503；最终 30 条新增测试在红锚点按名失败，30/30 定点变异由对应具名测试杀死，前后原样对照各 30/30；typecheck/lint 通过。整体 AC-15 仍不把无代码仓/缺历史文字路径当文件恢复通过；真实 harness 在 sending 与确认间的结果未知边界保留显式阻塞，不声称跨进程恰好一次。",
+      "reason": "此前 30 项候选快照在 box3 全量 1503/1503、30/30 变异通过，证据保留。当前追加 A07L（升级后部分历史不能冒充完整）和 A04E（执行器已退出仍确认停稳）的修复及具名红，32 项快照尚待云端全量/变异。无代码仓/缺历史仍标宿主未核验；真实 harness 发送结果未知边界不承诺恰好一次。",
       "evidence": "receipts/evidence/t177-a/summary.json"
     }
   ],
@@ -14,7 +14,7 @@
     "model": "unknown-runtime-metadata-pending"
   },
   "red": {
-    "commit": "10091aa629070354fbb0f8616f3d93270818d580"
+    "commit": "77ba6af3c68905aca30c2bb9669f4bf99cebf140"
   },
   "unverifiable": "AC-15：确定性 Compute 替身不能证明真实 harness 的跨进程送达恰好一次；sending 未确认重启明确阻塞，不自动重复发送。系统断电/文件系统损坏和外部非文件副作用未测。R-02：最终红锚点含首次绿之后追加的强化判据，时间顺序见 SCOPE.md，不伪称全部先红。",
   "waiver": null,

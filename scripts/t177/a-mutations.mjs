@@ -8,6 +8,8 @@ mkdirSync(out, { recursive: true });
 const D = 'packages/domain/src/followups.ts', W = 'packages/server/src/worktree.ts', R = 'packages/server/src/recovery.ts', H = 'packages/server/src/host.ts';
 const dt = 'packages/domain/src/recovery.test.ts', wt = 'packages/server/src/recovery.test.ts', ht = 'packages/server/src/recovery-host.test.ts';
 const cases = [
+ ['A07L-partial-history', R, 'if (!prior && origin === undefined) return null;', 'if (false) return null;', wt, 'A07L '],
+ ['A04E-already-exited', H, 'if (!stopped.ok && a) await this.afterRound(', 'if (false) await this.afterRound(', ht, 'A04E '],
  ['A04H-quiesce', H, 'const q = await a.quiesce(computeId);', 'const q = { ok: true as const };', ht, 'A04H '],
  ['A15Q-quota', H, 'if (e.kind === "resume") await this.resumeCompute(e);\n      else await this.spawn(e);', 'if (e.kind === "resume") await this.computeTurn(e);\n      else await this.spawn(e);', ht, 'A15Q '],
  ['A01-order', D, 'l.appliedVer! >= m.appliedVer!', 'j > i', dt, 'A01 '],
