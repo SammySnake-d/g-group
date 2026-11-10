@@ -103,3 +103,55 @@ test("A19L 升级缺历史正常改挂但标宿主未核验不猜 base", async (
   assert.match(s.host.taskViewById(s.A.id).waitingFor ?? "", /宿主未核验/);
   assert.equal(readFileSync(path.join(s.A.workspace!.dir, "base"), "utf8"), "NEUTRAL_FIXTURE_NO_CREDENTIALS changed");
 });
+
+async function crashAndRestart(stage: string) {
+  const s = await scene();
+  s.host.worktrees!.backup = () => { throw new Error("pause-before-backup"); };
+  s.rebind(); await settle(s.host, s.compute);
+  const intent = s.host.recovery!.current(s.A.id);
+  assert.ok(intent, "必须已有落盘恢复意图才允许模拟宿主退出");
+  await s.host.close(); s.compute.close();
+  const script = `
+import { Host } from './packages/server/src/host.ts';
+import { Worktrees } from './packages/server/src/worktree.ts';
+import { RecoveryStore } from './packages/server/src/recovery.ts';
+import { scriptedCompute } from './packages/server/src/fakes.ts';
+import { execFileSync } from 'node:child_process';
+const [data, repo, taskId, stage] = process.argv.slice(1);
+const backup = Worktrees.prototype.backup;
+const restore = Worktrees.prototype.restoreTo;
+const execute = RecoveryStore.prototype.execute;
+if (stage === 'intent') RecoveryStore.prototype.execute = function(...args) { process.exit(71); };
+if (stage === 'backup') Worktrees.prototype.backup = function(ws) { backup.call(this, ws); process.exit(72); };
+if (stage === 'partial') Worktrees.prototype.restoreTo = function(ws, sha) { execFileSync('git', ['restore', '--source=' + sha, '--staged', '--worktree', '--', 'base'], { cwd: ws.dir }); process.exit(73); };
+if (stage === 'restored') Worktrees.prototype.restoreTo = function(ws, sha) { restore.call(this, ws, sha); process.exit(74); };
+const c = scriptedCompute({ resumeScript: () => [] });
+const h = new Host({ file: data + '/gg.db', dataDir: data, codeRepo: { repo, targetBranch: 'main' }, mind: () => ({ async round() { return { actions: [], stateNote: null }; } }), compute: () => c.adapter, maxDeferMs: 1 });
+await new Promise(r => setTimeout(r, 50)); await h.idle();
+console.log(JSON.stringify({ intent: h.recovery.current(taskId), resumed: c.resumed.length }));
+await h.close(); c.close();
+`;
+  let exit: number | null = null;
+  try { execFileSync(process.execPath, ["--input-type=module", "-e", script, s.data, s.repo, s.A.id, stage], { env, stdio: ["ignore", "pipe", "pipe"], timeout: 20_000 }); }
+  catch (e) { exit = (e as { status: number }).status; }
+  const refBefore = (() => { try { return git(s.repo, "rev-parse", "--verify", intent.backupRef); } catch { return null; } })();
+  const finish = JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e", script, s.data, s.repo, s.A.id, "finish"], { env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 20_000 }).trim()) as { intent: { phase: string; targetSha: string; backupSha: string }; resumed: number };
+  const repeated = JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e", script, s.data, s.repo, s.A.id, "finish"], { env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 20_000 }).trim()) as { resumed: number };
+  return { exit, phase: finish.intent.phase, sameTarget: finish.intent.targetSha === intent.targetSha, sameBackup: refBefore === null || finish.intent.backupSha === refBefore, resumes: finish.resumed, repeated: repeated.resumed, bytes: readFileSync(path.join(s.A.workspace!.dir, "base"), "utf8") };
+}
+test("A12I 意图提交后宿主退出重启完成恢复", async () => {
+  const r = await crashAndRestart("intent");
+  assert.deepEqual(r, { exit: 71, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS" });
+});
+test("A12B 备份后宿主退出重启复用同一备份", async () => {
+  const r = await crashAndRestart("backup");
+  assert.deepEqual(r, { exit: 72, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS" });
+});
+test("A12P 恢复中宿主退出重启幂等恢复同一目标", async () => {
+  const r = await crashAndRestart("partial");
+  assert.deepEqual(r, { exit: 73, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS" });
+});
+test("A12D 文件已恢复而完成未提交时重启不重新备份", async () => {
+  const r = await crashAndRestart("restored");
+  assert.deepEqual(r, { exit: 74, phase: "done", sameTarget: true, sameBackup: true, resumes: 1, repeated: 0, bytes: "NEUTRAL_FIXTURE_NO_CREDENTIALS" });
+});
