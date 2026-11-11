@@ -15,8 +15,10 @@ import {
 import type { AnnouncementOrder } from "./announcements.ts";
 import { HostError } from "./db.ts";
 import { type HelperEntryInput, HelperDesk } from "./helper.ts";
+import { HelperAgent, type ServiceCaller } from "./helper-agent.ts";
 import type { Host } from "./host.ts";
 import { previewCron } from "./schedules.ts";
+import { importCsvTasks } from "./task-import.ts";
 import { contactProfile, listFiles, readFile } from "./views.ts";
 
 type Handler = (p: never) => unknown;
@@ -26,13 +28,17 @@ export const BUILTIN_COMMANDS: readonly SlashCommand[] = Object.freeze([
   { name: "stop", description: "停止一个进行中的任务", args: [{ name: "task", description: "任务 id 或标题里的词", kind: "text", required: true }], source: "builtin", pluginId: null, targetContactId: null },
 ]);
 
+export type { ServiceCaller } from "./helper-agent.ts";
 export interface Service {
-  handle(method: string, params: unknown): Promise<ApiResult<MethodName>>;
+  /** caller 缺省是用户本人;Helper 的工具调用带 caller=helper,服务层按 HELPER_OPS 与排除清单判定(helperGate)。 */
+  handle(method: string, params: unknown, caller?: ServiceCaller): Promise<ApiResult<MethodName>>;
   subscribe(listener: (e: ServerEvent) => void, sinceEventSeq?: number): () => void;
 }
 
 export function createService(host: Host): Service {
   const helper = new HelperDesk(host);
+  // Helper 的工具经同一个 handle 执行(参数合同与宿主权限照旧);构造在 handle 定义之后
+  let agent: HelperAgent;
   const H: { [M in MethodName]: Handler } = {
     "session.hello": () => ({ apiVersion: API_VERSION, serverTime: new Date().toISOString(), eventSeq: host.bus.head(), userId: host.userId }),
     "contacts.list": () => ({ contacts: host.listContacts() }),
@@ -48,7 +54,8 @@ export function createService(host: Host): Service {
     "rooms.list": () => ({ rooms: host.roomsOfUser() }),
     "rooms.get": (p: { roomId: string }) => host.roomView(p.roomId),
     "rooms.openDm": (p: { contactId: string }) => host.openDm(p.contactId),
-    "rooms.createGroup": (p: { title: string; members: { kind: "user" | "contact"; id: string }[] }) => host.createGroup(p.title, p.members),
+    "rooms.createGroup": (p: { clientActionId: string; title: string; members: { kind: "user" | "contact"; id: string }[]; fromRoomId?: string; backgroundSeqs?: number[] }) =>
+      host.createGroup(p.title, p.members, { clientActionId: p.clientActionId, ...(p.fromRoomId !== undefined ? { fromRoomId: p.fromRoomId } : {}), ...(p.backgroundSeqs !== undefined ? { backgroundSeqs: p.backgroundSeqs } : {}) }),
     "rooms.update": ({ roomId, ...patch }: { roomId: string } & Parameters<Host["updateRoom"]>[1]) => host.updateRoom(roomId, patch),
     "rooms.addMembers": (p: { roomId: string; members: { kind: "user" | "contact"; id: string }[] }) => host.addMembers(p.roomId, p.members),
     "rooms.removeMember": (p: { roomId: string; member: { kind: "user" | "contact"; id: string }; stopTasks?: boolean }) =>
@@ -90,6 +97,7 @@ export function createService(host: Host): Service {
     "tasks.answer": (p: { taskId: string; qId: string; clientActionId: string; answer: string }) => host.answerTask(p.taskId, p.qId, p.clientActionId, p.answer),
     "tasks.cancel": (p: { taskId: string; clientActionId: string }) => host.taskDecision(p.taskId, "cancel", p.clientActionId),
     "tasks.create": (p: Parameters<Host["createTask"]>[0]) => host.createTask(p),
+    "tasks.importCsv": (p: { clientActionId: string; roomId: string; csv: string; titleColumn?: string; assigneeColumn?: string }) => importCsvTasks(host, p),
     "tasks.assign": (p: Parameters<Host["assignTask"]>[0]) => host.assignTask(p),
     "tasks.integrate": (p: { taskId: string }) => host.integrateTask(p.taskId),
     "artifacts.get": (p: { ref: string }) => host.getArtifact(p.ref),
@@ -135,6 +143,7 @@ export function createService(host: Host): Service {
     "helper.note": (p: { entry: HelperEntryInput; role: "user" | "helper"; text: string; clientActionId: string }) => helper.note(p.entry, p.role, p.text, p.clientActionId),
     "helper.history": (p: { entry: HelperEntryInput; limit?: number }) => ({ notes: helper.history(p.entry, p.limit ?? 200) }),
     "helper.post": (p: { entry: HelperEntryInput; text: string; clientActionId: string }) => helper.post(p.entry, p.text, p.clientActionId),
+    "helper.ask": (p: { entry: HelperEntryInput; text: string; clientActionId: string }) => agent.ask(p.entry, p.text, p.clientActionId),
     "models.preview": (p: { change: Parameters<Host["previewModelChange"]>[0] }) => host.previewModelChange(p.change),
     "models.batchReplace": (p: { from: string; to: string; apply?: boolean; confirmAffected?: boolean }) =>
       host.batchReplaceModels(p.from, p.to, { ...(p.apply !== undefined ? { apply: p.apply } : {}), ...(p.confirmAffected !== undefined ? { confirmAffected: p.confirmAffected } : {}) }),
@@ -142,21 +151,23 @@ export function createService(host: Host): Service {
     "settings.update": (p: Parameters<Host["updateSettings"]>[0]) => host.updateSettings(p),
   };
   const err = (code: ErrorCode, message: string, detail?: unknown): ApiResult<MethodName> => ({ ok: false, error: detail === undefined ? { code, message } : { code, message, detail } });
+  const handle = async (method: string, params: unknown, _caller?: ServiceCaller): Promise<ApiResult<MethodName>> => {
+    if (!isMethodName(method)) return err("unknown_method", `没有方法 ${String(method)}`);
+    const p = checkParams(method, params);
+    if (!p.ok) return err("invalid_params", formatIssues(p.issues), p.issues);
+    try {
+      const value = await (H[method] as (x: unknown) => unknown)(p.value);
+      const r = checkResult(method, value);
+      if (!r.ok) return err("internal", `结果不符合合同:${formatIssues(r.issues)}`);
+      return { ok: true, value: r.value } as ApiResult<MethodName>;
+    } catch (e) {
+      if (e instanceof HostError) return err(e.code, e.message, e.detail);
+      return err("internal", e instanceof Error ? e.message : String(e));
+    }
+  };
+  agent = new HelperAgent(host, helper, handle);
   return {
-    async handle(method, params) {
-      if (!isMethodName(method)) return err("unknown_method", `没有方法 ${String(method)}`);
-      const p = checkParams(method, params);
-      if (!p.ok) return err("invalid_params", formatIssues(p.issues), p.issues);
-      try {
-        const value = await (H[method] as (x: unknown) => unknown)(p.value);
-        const r = checkResult(method, value);
-        if (!r.ok) return err("internal", `结果不符合合同:${formatIssues(r.issues)}`);
-        return { ok: true, value: r.value } as ApiResult<MethodName>;
-      } catch (e) {
-        if (e instanceof HostError) return err(e.code, e.message, e.detail);
-        return err("internal", e instanceof Error ? e.message : String(e));
-      }
-    },
+    handle,
     subscribe: (l, since) => host.bus.subscribe(l, since),
   };
 }

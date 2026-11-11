@@ -61,6 +61,7 @@ import {
   type AttentionLoop,
   type ContactCompactor,
   type ContactMind,
+  type HelperMind,
   DEFAULT_BREAKER_POLICY,
   DEFAULT_RETRY_POLICY,
   type FailureClass,
@@ -152,6 +153,8 @@ export interface HostOptions {
   readonly userName?: string;
   /** 每位联系人的脑子;同一个实现可服务多位联系人(round 输入里带联系人档案)。 */
   readonly mind: (contact: ContactView) => ContactMind;
+  /** Helper 的脑子(AC-52,U04):按模型取(全局默认说话模型,U70 不另设模型槽);不给则 helper.ask 不可用、@Helper 不自动回复。 */
+  readonly helperMind?: (model: string) => HelperMind;
   /** 按模型取 Compute 适配器;不给则派活直接失败(任务进 T11 并告诉联系人)。 */
   readonly compute?: (model: string) => ComputeAdapter;
   /** Compute 工作目录。 */
@@ -413,6 +416,7 @@ export class Host {
   /** 运行台账(AC-43):全景画板、runs.* 接口与联系人第 5 块读同一张 */
   readonly runs: RunStore;
   readonly bootId: string;
+  readonly helperMind: ((model: string) => HelperMind) | null;
   /** computeId → 台账里的会话与当前轮次 */
   private readonly computeRuns = new Map<string, { sessionId: string; turnId: string }>();
   /** computeId:toolId → 后台任务 / 子代理单元 */
@@ -429,6 +433,7 @@ export class Host {
 
   constructor(opts: HostOptions) {
     this.opts = opts;
+    this.helperMind = opts.helperMind ?? null;
     this.now = opts.now ?? (() => new Date().toISOString());
     let n = 0;
     this.newId = opts.newId ?? ((p) => `${p}-${Date.now().toString(36)}-${(n++).toString(36)}`);
@@ -751,7 +756,7 @@ export class Host {
     this.bus.emit({ type: "room.updated", room: view });
     return view;
   }
-  createGroup(title: string, members: Member[]): RoomView {
+  createGroup(title: string, members: Member[], _opts: { clientActionId?: string; fromRoomId?: string; backgroundSeqs?: readonly number[] } = {}): RoomView {
     for (const m of members) if (m.kind === "contact") this.contactDoc(m.id);
     const id = this.newId("g");
     const at = this.now();

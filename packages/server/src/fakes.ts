@@ -1,6 +1,6 @@
 // 测试与 CLI 演示用的确定性替身:脚本化的联系人脑子、按剧本吐语义事件的 Compute 适配器。不连模型、不起进程。
 import type { ComputeActivity, ComputeAdapter, ComputeEvent, QuiesceResult, Refusal, SpawnOptions, SpawnResult, TurnModel } from "@g-group/adapter-cc-compute";
-import type { ContactMind, Inbound, MindAction, RoundInput, RoundOutput } from "@g-group/kernel";
+import type { ContactMind, HelperMind, HelperMindInput, Inbound, MindAction, RoundInput, RoundOutput } from "@g-group/kernel";
 
 /** 规则脑子:用户在私聊或 @ 它派活 → dispatch + commit + 回复;Compute 里程碑 → 汇报;完成 → 交付;失败 → 如实告知。 */
 export function scriptedMind(opts: { delayMs?: number; onRound?: (input: RoundInput) => void } = {}): ContactMind {
@@ -204,4 +204,9 @@ export function scriptedCompute(
       actWake?.();
     },
   };
+}
+
+/** Helper 的规则替身。空壳:待实现。 */
+export function scriptedHelperMind(_opts: { onRun?: (input: HelperMindInput) => void } = {}): HelperMind {
+  return { run: async () => ({ reply: "", calls: [] }) };
 }

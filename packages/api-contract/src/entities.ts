@@ -646,6 +646,12 @@ export const HelperNote = obj({
   at: isoTime(),
 });
 export type HelperNote = Infer<typeof HelperNote>;
+/** Helper 这一次做过的一个操作:op 是服务方法名(工具名不在清单时是工具名),ok 是否执行成功,summary 一句话结果。 */
+export const HelperOpResult = obj({ op: str({ min: 1, max: 200 }), ok: bool(), summary: str({ max: 4000 }) });
+export type HelperOpResult = Infer<typeof HelperOpResult>;
+/** 这次 Helper 请求带进模型的会话与消息(AC-52 观测点):entry 入口给的当前聊天,read_room 模型点名读的,search 搜索命中的。 */
+export const HelperContextItem = obj({ roomId: id(), via: oneOf(["entry", "read_room", "search"] as const), seqs: arr(seq()) });
+export type HelperContextItem = Infer<typeof HelperContextItem>;
 // ---------- 运行台账(AC-43,需求文档 D26):全景画板和联系人的查询读同一张台账 ----------
 /** 单元四层五类:联系人轮次 → Compute 会话 → 会话里的轮次 → 后台任务 / 子代理 */
 export const RUN_LAYERS = ["contact-round", "compute-session", "compute-turn", "background", "subagent"] as const;
