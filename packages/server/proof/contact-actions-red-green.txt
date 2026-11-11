@@ -1,0 +1,91 @@
+# 本机(macOS)运行:sh packages/server/proof/contact-actions-red-green.sh 3d3ec895 97bbd4a7(并发 1)
+# node v22.22.0;红 3d3ec895 / 绿 97bbd4a7;两者之间的源码差异:packages/adapter-pi-contact/src/tools.ts packages/server/src/assemble.ts packages/server/src/contact-actions.ts 
+# 测试文件红绿是否逐字相同:相同
+#   packages/server/src/contact-actions.test.ts sha256 5eed6fe2837dbdff
+#   packages/adapter-pi-contact/src/claim-tool.test.ts sha256 d76aa121fb7fdd6f
+#   packages/adapter-pi-contact/src/mind.test.ts sha256 21068774aa6dbbfa
+## 红:packages/adapter-pi-contact/src/tools.ts
+packages/server/src/assemble.ts
+packages/server/src/contact-actions.ts 取红提交的版本
+not ok 1 - claim_task 在工具清单里,声明只有必填的 taskId;登记成 claim 动作
+not ok 2 - claim_task 应失败的输入:缺 taskId、空白、多余字段、不是字符串——都不登记
+not ok 3 - reply 可带 mentions:登记成去重后的 id 列表;不带 mentions 时动作里没有这个字段;空数组或空白 id 不登记
+not ok 4 - pi 联系人一轮里调 claim_task 与带 mentions 的 reply:两件都进本轮动作,工具结果是「已登记」不是错误
+not ok 5 - 首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有十四个具名工具(含 read_quote_parent、progress_rerun,末尾是 claim_task)
+ok 6 - 同一轮工具往返后的二次请求保留本轮的工具调用和结果,五块原样不重拼
+ok 7 - 七个工具的调用按出现顺序登记成对应的 MindAction 与状态笔记,状态笔记以最后一次为准
+ok 8 - 参数不合形状的工具调用不登记,以错误结果告知模型;同批合格的照常登记
+ok 9 - 每轮重拼:第二轮的请求里没有第一轮的任何消息,只有第二轮的五块
+ok 10 - signal 已中止时不发请求,直接抛 RoundAbortedError
+ok 11 - 请求进行中 abort:本轮立即放弃并抛 RoundAbortedError,已登记的动作不返回
+ok 12 - apiKey 只出现在发给端点的请求头里,不出现在返回值、mind 对象和错误里
+ok 13 - authHeader 为 bearer 时密钥放进 Authorization: Bearer,不发 x-api-key
+ok 14 - 五块不合格或说话模型对不上:整轮拒绝且不发请求
+ok 15 - 选项不合格时 createPiContactMind 抛 invalid-options,错误里不带密钥
+ok 16 - 一轮请求数到上限模型仍在调工具:整轮以 request-limit 失败,不再发请求
+ok 17 - 第 1 块 cacheBreakpoint 为 false 时请求里不设缓存断点
+ok 18 - verdict 工具:通过与修改意见都登记成 verdict 动作,修改意见可省略
+ok 19 - verdict 工具:应失败的输入——结论不是 accept/revise、缺来源、来源不是整数——都判参数错误
+ok 20 - remember 与 memory_feedback 登记成 remember / memory-use 动作;参数形状不对(锚点为空、关系不在枚举、good 不是布尔)不登记
+ok 21 - read_memory 在本轮内经宿主给的读取口取全文,结果作为工具结果进下一次请求;没有这条或没给读取口时以错误结果告知
+ok 22 - 记忆工具参数在登记口逐字段校验(不只靠模型侧 schema):锚点为空或含空白、关系不在枚举、good 不是布尔都判参数错误
+ok 23 - read_quote_parent 经宿主的本轮查询口往上读一级,结果作为工具结果;参数形状不对不调用
+ok 24 - AC-45 forward 可带来源消息 seq:用户中途改条件时登记 sourceSeq,宿主据此升版;不带就是联系人自己的话
+not ok 25 - 群里 3 个面板任务:两位联系人各认领一个成功,第 5 块列出可认领的任务;认领后各起一个 Compute 并交付,第三个仍是 T1 没人负责
+not ok 26 - US1 原样:对面板任务那条消息 dispatch 被拒「这条消息已经建过任务」,下一轮第 5 块同时看到被拒原因与可认领的任务,改用 claim_task 认领成功
+not ok 27 - 两位联系人同时认领同一个任务:只成功一个、只起一个 Compute,另一个被拒并收到原因(下一轮第 5 块)
+not ok 28 - 认领应失败的输入:不在这个会话的联系人、已有人负责、已取消、没有这个任务——一律被拒、原因准确,负责人与 Compute 都不变
+not ok 29 - 被拒的动作下一轮在第 5 块出现一次、原因准确,提交成功之后不再重复;第 1 块逐字不变(AC-39 ①)
+not ok 30 - 带着回告的那一轮被放弃(发送前来了更新的用户消息):回告不算给过,重跑的那一轮照样带上
+not ok 31 - reply 带 mentions:写进消息 mentions(与用户发消息的 @ 同一形状),被 @ 的联系人照现有规则收到并看到 @ 它;非成员被拒、消息不发
+not ok 32 - 一次用户纠错 → constraint_ver 恰好 +1:同一轮 verdict(revise) 在前、forward 带同一条 sourceSeq 在后(复现 US7/US10 的 0→2)
+not ok 33 - 一次用户纠错 → constraint_ver 恰好 +1:forward 带 sourceSeq 在前、verdict(revise) 同一条在后,退回意见并进同一次续接、不被拒
+# tests 33
+# pass 19
+# fail 14
+# cancelled 0
+# skipped 0
+# todo 0
+## 绿:packages/adapter-pi-contact/src/tools.ts
+packages/server/src/assemble.ts
+packages/server/src/contact-actions.ts 取绿提交的版本
+ok 1 - claim_task 在工具清单里,声明只有必填的 taskId;登记成 claim 动作
+ok 2 - claim_task 应失败的输入:缺 taskId、空白、多余字段、不是字符串——都不登记
+ok 3 - reply 可带 mentions:登记成去重后的 id 列表;不带 mentions 时动作里没有这个字段;空数组或空白 id 不登记
+ok 4 - pi 联系人一轮里调 claim_task 与带 mentions 的 reply:两件都进本轮动作,工具结果是「已登记」不是错误
+ok 5 - 首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有十四个具名工具(含 read_quote_parent、progress_rerun,末尾是 claim_task)
+ok 6 - 同一轮工具往返后的二次请求保留本轮的工具调用和结果,五块原样不重拼
+ok 7 - 七个工具的调用按出现顺序登记成对应的 MindAction 与状态笔记,状态笔记以最后一次为准
+ok 8 - 参数不合形状的工具调用不登记,以错误结果告知模型;同批合格的照常登记
+ok 9 - 每轮重拼:第二轮的请求里没有第一轮的任何消息,只有第二轮的五块
+ok 10 - signal 已中止时不发请求,直接抛 RoundAbortedError
+ok 11 - 请求进行中 abort:本轮立即放弃并抛 RoundAbortedError,已登记的动作不返回
+ok 12 - apiKey 只出现在发给端点的请求头里,不出现在返回值、mind 对象和错误里
+ok 13 - authHeader 为 bearer 时密钥放进 Authorization: Bearer,不发 x-api-key
+ok 14 - 五块不合格或说话模型对不上:整轮拒绝且不发请求
+ok 15 - 选项不合格时 createPiContactMind 抛 invalid-options,错误里不带密钥
+ok 16 - 一轮请求数到上限模型仍在调工具:整轮以 request-limit 失败,不再发请求
+ok 17 - 第 1 块 cacheBreakpoint 为 false 时请求里不设缓存断点
+ok 18 - verdict 工具:通过与修改意见都登记成 verdict 动作,修改意见可省略
+ok 19 - verdict 工具:应失败的输入——结论不是 accept/revise、缺来源、来源不是整数——都判参数错误
+ok 20 - remember 与 memory_feedback 登记成 remember / memory-use 动作;参数形状不对(锚点为空、关系不在枚举、good 不是布尔)不登记
+ok 21 - read_memory 在本轮内经宿主给的读取口取全文,结果作为工具结果进下一次请求;没有这条或没给读取口时以错误结果告知
+ok 22 - 记忆工具参数在登记口逐字段校验(不只靠模型侧 schema):锚点为空或含空白、关系不在枚举、good 不是布尔都判参数错误
+ok 23 - read_quote_parent 经宿主的本轮查询口往上读一级,结果作为工具结果;参数形状不对不调用
+ok 24 - AC-45 forward 可带来源消息 seq:用户中途改条件时登记 sourceSeq,宿主据此升版;不带就是联系人自己的话
+ok 25 - 群里 3 个面板任务:两位联系人各认领一个成功,第 5 块列出可认领的任务;认领后各起一个 Compute 并交付,第三个仍是 T1 没人负责
+ok 26 - US1 原样:对面板任务那条消息 dispatch 被拒「这条消息已经建过任务」,下一轮第 5 块同时看到被拒原因与可认领的任务,改用 claim_task 认领成功
+ok 27 - 两位联系人同时认领同一个任务:只成功一个、只起一个 Compute,另一个被拒并收到原因(下一轮第 5 块)
+ok 28 - 认领应失败的输入:不在这个会话的联系人、已有人负责、已取消、没有这个任务——一律被拒、原因准确,负责人与 Compute 都不变
+ok 29 - 被拒的动作下一轮在第 5 块出现一次、原因准确,提交成功之后不再重复;第 1 块逐字不变(AC-39 ①)
+ok 30 - 带着回告的那一轮被放弃(发送前来了更新的用户消息):回告不算给过,重跑的那一轮照样带上
+ok 31 - reply 带 mentions:写进消息 mentions(与用户发消息的 @ 同一形状),被 @ 的联系人照现有规则收到并看到 @ 它;非成员被拒、消息不发
+ok 32 - 一次用户纠错 → constraint_ver 恰好 +1:同一轮 verdict(revise) 在前、forward 带同一条 sourceSeq 在后(复现 US7/US10 的 0→2)
+ok 33 - 一次用户纠错 → constraint_ver 恰好 +1:forward 带 sourceSeq 在前、verdict(revise) 同一条在后,退回意见并进同一次续接、不被拒
+# tests 33
+# pass 33
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# 脚本最后的 git status --short -- packages 只列出当时还没提交的 proof 文件,源码已还原到绿提交版本
