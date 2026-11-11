@@ -56,6 +56,8 @@ export interface ChannelInfo {
 }
 /** 外发闸门:返回结果就不投递、原样返回;返回 null 才交给内核。同步调用,与投递之间没有 await。 */
 export type SendGate = (ch: ChannelInfo) => SendResult | null;
+/** 这一次投递交给插件进程的原始调用(红提交空壳:还不交出)。 */
+export type RawSink = (raw: Promise<unknown>) => void;
 type Describe =
   | { readonly kind: "data-source"; readonly sources: readonly string[] }
   | { readonly kind: "outbound-channel"; readonly idempotency: "none" | "action-id"; readonly idempotencyWindowMs: number | null; readonly endpoint: string | null };
@@ -328,7 +330,7 @@ export class PluginRuntime {
     return out;
   }
 
-  async send(t: PluginTarget, actionId: string, payload: string, gate?: SendGate): Promise<SendResult> {
+  async send(t: PluginTarget, actionId: string, payload: string, gate?: SendGate, _onRaw?: RawSink): Promise<SendResult> {
     const l = await this.ensure(t);
     if (l.desc.kind !== "outbound-channel") throw new HostError("invalid_params", `插件 ${t.id} 不是输出渠道`);
     if (l.desc.endpoint === null) throw new HostError("invalid_params", `插件 ${t.id} 还没有接收端,先在配置里填写`);

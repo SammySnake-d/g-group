@@ -14,7 +14,7 @@ import path from "node:path";
 import type { MarketplaceEntry, PluginView, SlashCommand } from "@g-group/api-contract";
 import { SlashCommand as SlashCommandSchema, arr, formatIssues, json, obj, oneOf, opt, str } from "@g-group/api-contract";
 import { type Db, HostError, all, one, run } from "./db.ts";
-import { type OutboxClaim, type OutboxResult, type OutboxView, PluginOutbox, printOf } from "./plugin-outbox.ts";
+import { type LateReceiptView, type OutboxClaim, type OutboxResult, type OutboxView, PluginOutbox, printOf } from "./plugin-outbox.ts";
 import type { PluginRuntime, PluginTarget } from "./plugin-runtime.ts";
 import { extractTo, readTgz } from "./untar.ts";
 
@@ -376,6 +376,10 @@ export class PluginStore {
   /** 一个外发动作的落盘记录;没有就是 undefined。卸载后仍在。 */
   delivery(id: string, actionId: string): OutboxView | undefined {
     return this.outbox.view(id, actionId);
+  }
+  /** 一个外发动作的迟到应答记录(红提交空壳)。 */
+  lateReceipts(id: string, actionId: string): LateReceiptView[] {
+    return this.outbox.lateReceipts(id, actionId);
   }
   /** 外发表所在库的持久化级别(WAL、synchronous)读回。 */
   durability() {

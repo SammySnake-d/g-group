@@ -63,6 +63,24 @@ export interface OutboxClaim {
 }
 /** 宿主层的外发结果:内核的三态之外,多一种「宿主重启后这一行已记为未知,迟到的结果不改写」。 */
 export type OutboxResult = SendResult | { ok: false; state: "delivery-unknown"; reason: "host-restarted"; detail: string };
+/** 一条迟到应答的记录(红提交空壳)。 */
+export interface LateReceiptView {
+  readonly pluginId: string;
+  readonly actionId: string;
+  readonly attempt: string;
+  readonly cause: string;
+  readonly stateAtArrival: OutboxState | null;
+  readonly reasonAtArrival: string | null;
+  readonly installId: string | null;
+  readonly version: string | null;
+  readonly endpoint: string | null;
+  readonly boot: string;
+  readonly receivedAt: string;
+  readonly receiptId: string | null;
+  readonly actionMatches: boolean;
+  readonly replySha256: string;
+  readonly replyBytes: number;
+}
 
 interface Row {
   plugin_id: string;
@@ -206,6 +224,14 @@ export class PluginOutbox {
         c.actionId,
         c.token,
       );
+  }
+
+  /** 记一条迟到应答(红提交空壳:不记)。 */
+  recordLate(_c: OutboxClaim, _cause: string, _reply: unknown) {}
+
+  /** 一个动作的全部迟到应答(红提交空壳)。 */
+  lateReceipts(_pluginId: string, _actionId: string): LateReceiptView[] {
+    return [];
   }
 
   /** 把内核这一次的结果落到认领的行上;行已被别的启动改成结果未知时不改写,按表里的状态返回。 */
