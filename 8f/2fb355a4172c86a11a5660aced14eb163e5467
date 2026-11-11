@@ -1,0 +1,25 @@
+packages/server/proof/memory-hygiene-mutations.txt
+  s_11402f16ea5415::t_7b899081490782 1-30
+packages/server/proof/memory-hygiene-real.ts
+  s_11402f16ea5415::t_d41bbc881f2ded 1-149
+packages/server/proof/memory-hygiene-real.txt
+  s_11402f16ea5415::t_41e858d293c1ca 1-43
+receipts/feat-memory-hygiene.json
+  s_11402f16ea5415::t_3e23370db934d8 7,12,17,26,32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8f2fb355a4172c86a11a5660aced14eb163e5467",
+  "prompts": {},
+  "sessions": {
+    "s_11402f16ea5415": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a7e51a4d4c085a4d6",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
