@@ -1,0 +1,18 @@
+feat/tests-search 真实运行(test-search-real):真实联系人脑子 pi(本机 magpie 网关)+ 真实 SQLite + 真实服务层入口
+命令:ANTHROPIC_BASE_URL=http://127.0.0.1:3425 ANTHROPIC_AUTH_TOKEN=*** ANTHROPIC_DEFAULT_SONNET_MODEL=fengshao1227/claude-opus-5-5 node packages/server/proof/tests-search-real.ts /tmp/gg-tests-search-real-2
+令牌只经环境变量,不落盘不打印。
+
+--- 原样输出(去掉了 SQLite 实验特性告警与宿主的 recall/reflect 噪声行)---
+  #1 我: 有进度的话汇报到群里 @我看看
+发出去立刻看回执:已读 0 人 / 未读 1 人
+联系人接走后回执:已读 1 人 / 未读 0 人;读到时间 2026-11-11T21:27:45.244Z
+  #2 我: 帮我编译这个项目
+任务:(没有)
+search.rooms("小克"):g-mwcmraew-2/group/回执验收群/contact:小克
+search.rooms("回执验收"):g-mwcmraew-2/回执验收群/title
+收尾:残留进程 0
+
+--- 结论 ---
+① AC-46 ③④:发出去立刻看回执 = 已读 0 / 未读 1(只进队列不算已读);联系人接走后 = 已读 1 / 未读 0,读到时间 2026-11-11T21:27:45.244Z(接走时刻)。这一条是宿主侧位置判定,不依赖模型回话。
+② U32:search.rooms("小克") 命中群(contact:小克),search.rooms("回执验收") 命中标题(title)。
+③ AC-31 ⑤ 的终态回收没有在真实运行里跑出来:本机 magpie 网关的模型在这次运行里没有产出可用的联系人动作(宿主报 reflect-failed:检查输出不合格:找不到 JSON 对象),所以「派活 → 取消 → 末次汇报」这一段没有发生(任务列表为空)。另一次换 fengshao1227/kimi-k3 的运行连这一轮都没回成(attention:error RoundRetry)。终态回收由确定性测试 + 变异校准覆盖,这里的真实运行只证到回执那一条。

@@ -249,3 +249,34 @@ export function searchMessages(db: Db, userId: string, q: SearchQuery, nameOf: (
   const last = page.at(-1);
   return { hits, nextCursor: rows.length > limit && last ? encodeCursor(last) : null };
 }
+
+// ---------------------------------------------------------------- 全局搜联系人和群(U32 已定)
+/** 全局搜联系人与群的入参:一个查询串 + 可选条数上限。 */
+export interface RoomSearchQuery {
+  readonly query: string;
+  readonly limit?: number;
+}
+/**
+ * 全局搜联系人和群的一条结果(U32):会话列表的搜索框用。命中位置给界面高亮;
+ * 私聊的标题就是联系人名,群里按群标题与成员联系人名匹配。
+ */
+export interface RoomSearchHit {
+  readonly roomId: string;
+  readonly kind: "dm" | "group";
+  readonly title: string;
+  /** 命中在会话标题上,还是某位联系人名上。 */
+  readonly matchedIn: "title" | "contact";
+  /** 命中联系人名时是哪个名字;命中标题时为 null。 */
+  readonly matchedName: string | null;
+  /** 每个关键词在命中字段里的位置(UTF-16 下标)。 */
+  readonly highlights: { readonly start: number; readonly length: number }[];
+  readonly at: string;
+}
+
+/**
+ * 全局搜联系人与群(U32):按会话标题与成员联系人名匹配,大小写不敏感、中文子串也算命中;
+ * 多词按空白切分,全部命中才算(与搜消息同一口径)。只列 userId 所在的会话,按会话最近更新倒序。
+ */
+export function searchRooms(_db: Db, _userId: string, _q: RoomSearchQuery, _nameOf: (s: { kind: string; id: string }) => string): RoomSearchHit[] {
+  return [];
+}

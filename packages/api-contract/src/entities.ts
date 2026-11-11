@@ -638,6 +638,25 @@ export const SearchHit = obj({
 });
 export type SearchHit = Infer<typeof SearchHit>;
 
+/**
+ * 全局搜联系人和群的一条结果(U32 已定):会话列表的搜索框用。
+ * 私聊的标题就是联系人名,群里按群标题与成员联系人名匹配(大小写不敏感、中文子串)。
+ */
+export const RoomSearchHit = obj({
+  roomId: id(),
+  kind: oneOf(ROOM_KINDS),
+  title: str({ max: 200 }),
+  /** 命中在会话标题上,还是某位联系人名上。 */
+  matchedIn: oneOf(["title", "contact"] as const),
+  /** 命中联系人名时是哪个名字;命中标题时为 null。 */
+  matchedName: nullable(str({ max: 80 })),
+  /** 每个关键词在命中字段里的位置(UTF-16 下标),给界面高亮用。 */
+  highlights: arr(obj({ start: int({ min: 0 }), length: int({ min: 1 }) })),
+  /** 会话最近更新时间(排序依据)。 */
+  at: isoTime(),
+});
+export type RoomSearchHit = Infer<typeof RoomSearchHit>;
+
 // ---------- 设置 ----------
 export const SettingsView = obj({
   defaultHarness: oneOf(HARNESSES),

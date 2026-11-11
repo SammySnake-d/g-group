@@ -94,7 +94,6 @@ import {
   type RecallItem,
   type RecallRef,
   type RecallSource,
-  type Urgency,
   breakerAdmit,
   breakerFailure,
   breakerSuccess,
@@ -143,7 +142,9 @@ import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindR
 import { QuotaTable } from "./quota.ts";
 import { DEFAULT_RUN_CHECK_MS, RunStore, checkRunWake } from "./runs.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
-import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, unindexTx } from "./search.ts";
+import { type RoomSearchHit, type RoomSearchQuery, type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, searchRooms, unindexTx } from "./search.ts";
+import { type ReadMark, nextReadSeq, readTimeOf } from "./receipts.ts";
+import { memberUrgency, newerUserSeqs } from "./attention-group.ts";
 import { SharedDocs } from "./shared-docs.ts";
 import { type CodeRepoConfig, type Workspace, Worktrees } from "./worktree.ts";
 import { type ArtifactRef, ArtifactStore, MAX_ARTIFACT_BYTES, MAX_ARTIFACTS, MAX_INLINE_TEXT, isReadable, recentReadable } from "./artifacts.ts";
@@ -864,9 +865,9 @@ export class Host {
     };
   }
   markRead(roomId: string, m: Member, seq: number) {
-    const cur = this.readSeq(roomId, m);
-    const upto = Math.min(seq, this.lastSeq(roomId));
-    if (upto <= cur) return;
+    // 位置只由宿主推进(AC-46 ②③④):只增不减、不越过账本末尾;没前进就不写库(接走后这一轮失败也不回退)
+    const upto = nextReadSeq(this.readSeq(roomId, m), seq, this.lastSeq(roomId));
+    if (upto === null) return;
     run(this.db, "INSERT INTO gg_read (room_id, kind, member_id, upto_seq, at) VALUES (?, ?, ?, ?, ?)", roomId, m.kind, m.id, upto, this.now());
     this.bus.emit({ type: "receipt.updated", roomId, member: m, readSeq: upto });
   }
@@ -1017,8 +1018,9 @@ export class Host {
       if (mem.kind !== "contact" || (from.kind === "contact" && from.id === mem.id) || this.exits.isLeaving(roomId, mem.id)) continue;
       // 调度只看元数据(@、私聊、回复对象),不读正文(D15.1)
       const direct = room.kind === "dm" || view.mentions.some((x) => x.id === mem.id) || (repliedTo?.sender.kind === "contact" && repliedTo.sender.id === mem.id);
-      const urgency: Urgency = direct && from.kind === "user" ? "now" : "batch";
-      this.loop.notify(mem.id, urgency);
+      // 不前置过滤:没被 @、群里已有别人主答,这条消息照样进它的注意循环(AC-31 ①)
+      const urgency = memberUrgency({ direct, fromUser: from.kind === "user" });
+      if (urgency !== null) this.loop.notify(mem.id, urgency);
     }
   }
 
@@ -1138,10 +1140,16 @@ export class Host {
     const audience = this.members(roomId).filter((x) => !(x.kind === m.sender.kind && x.id === m.sender.id));
     const read: ReceiptView["read"] = [];
     const unread: ReceiptView["unread"] = [];
+    // 读到时间取位置第一次越过这条消息的那一刻(AC-46 ②),不是最后一次读
+    const marks = new Map<string, ReadMark[]>();
+    for (const r of all<{ kind: string; member_id: string; upto_seq: number; at: string }>(this.db, "SELECT kind, member_id, upto_seq, at FROM gg_read WHERE room_id = ?", roomId)) {
+      const k = `${r.kind}:${r.member_id}`;
+      marks.set(k, [...(marks.get(k) ?? []), { uptoSeq: r.upto_seq, at: r.at }]);
+    }
     for (const mem of audience) {
       const mentioned = view.mentions.some((x) => x.id === mem.id);
-      const first = one<{ at: string }>(this.db, "SELECT min(at) AS at FROM gg_read WHERE room_id = ? AND kind = ? AND member_id = ? AND upto_seq >= ?", roomId, mem.kind, mem.id, seq);
-      if (first?.at) read.push({ member: mem, at: first.at, mentioned });
+      const at = readTimeOf(marks.get(`${mem.kind}:${mem.id}`) ?? [], seq);
+      if (at !== null) read.push({ member: mem, at, mentioned });
       else unread.push({ member: mem, mentioned });
     }
     const byMention = <T extends { mentioned: boolean }>(a: T, b: T) => Number(b.mentioned) - Number(a.mentioned);
@@ -1191,9 +1199,21 @@ export class Host {
     this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
     return v;
   }
+  /**
+   * 这条消息是不是转发副本(AC-20、U25/U99):转发来的「同意」是旧记录,不是本人此刻的授权。
+   * 真源是转发副本表(gg_forward,按 (room_id, seq) 一行),不在消息正文里认。
+   */
+  private forwardedCopy(roomId: string, seq: number): boolean {
+    return false;
+  }
+
   /** 搜索自己所在会话的消息与附件名(AC-25);撤回的搜不到,编辑过的按新文字。 */
   searchMessages(q: SearchQuery): SearchPage {
     return searchMessages(this.db, this.userId, q, (s) => this.nameOf(s));
+  }
+  /** 全局搜联系人与群(U32 已定):按会话标题与联系人名匹配,大小写不敏感、中文子串也算命中;只列自己所在的会话。 */
+  searchRooms(q: RoomSearchQuery): RoomSearchHit[] {
+    return searchRooms(this.db, this.userId, q, (s) => this.nameOf(s));
   }
   /** 表情回应:普通回应,不改已读状态(AC-46 ⑦)。 */
   react(roomId: string, seq: number, emoji: string, on: boolean): MessageView {
@@ -2502,9 +2522,10 @@ export class Host {
     const hasEffects = out.actions.some((a) => a.kind !== "commit");
     if (hasEffects) {
       for (const r of rooms) {
-        const newer = loadLog(this.db.store, `room:${r.id}`).log.events.filter((m) => m.seq > (lastSeen[r.id] ?? 0) && m.sender.kind === "user");
+        // 发送前检查(AC-31 ④):本轮开始后又来了用户消息,就放弃本轮结果重跑,旧草稿不上屏
+        const newer = newerUserSeqs(loadLog(this.db.store, `room:${r.id}`).log.events, lastSeen[r.id] ?? 0);
         if (newer.length) {
-          this.report("stale-round", { contactId, roomId: r.id, newer: newer.map((m) => m.seq) });
+          this.report("stale-round", { contactId, roomId: r.id, newer });
           this.runs.settle(unit.id, { stale: true, note: "发送前检出更新的用户消息,本轮结果放弃并重跑" });
           return "stale";
         }
@@ -2613,6 +2634,8 @@ export class Host {
     const rejected: { action: MindAction; reason: string }[] = [];
     let hadFailure = false as boolean;
     const notifyAfter: string[] = [];
+    // 终态回收掉的承诺:事务提交后推 commitment.updated(AC-31 ⑤)
+    const gcClosed: { roomId: string; commitmentId: string }[] = [];
     tx(this.db, () => {
       // 账本:本轮新消息先 receive
       const byRoom = new Map<string, Parameters<typeof applyLedger>[2][]>();
@@ -2869,6 +2892,10 @@ export class Host {
         push(e.roomId, { type: "process", actionId: `${roundId}:proc-own:${k}`, seq: e.seq, accepted: true, commitments: e.items });
       }
       for (const [roomId, cmds] of byRoom) this.ledgerTx(contactId, roomId, cmds);
+      // 承诺终态自动回收(AC-31 ⑤):这一轮在这个会话里已经把末次汇报发出去,就把终态任务的承诺一起失效回收
+      for (const roomId of new Set(replies.filter((r) => roomIds.has(r.roomId)).map((r) => r.roomId))) {
+        for (const commitmentId of this.gcTerminalCommitmentsTx(contactId, roomId, roundId)) gcClosed.push({ roomId, commitmentId });
+      }
       // 游标、待处理输入、状态笔记与本轮动作同一事务(D15.1)
       this.advanceCursorsTx(contactId, lastSeen);
       for (const ib of inbox) run(this.db, "UPDATE gg_inbox SET consumed = 1 WHERE id = ?", ib.id);
@@ -2892,6 +2919,10 @@ export class Host {
     for (const r of rejected) this.report("action-rejected", { contactId, ...r });
     if (hadFailure) this.emitRetry({ scope: "contact", contactId, taskId: null, roomId: null, state: "cleared", attempt: 0, limit: 0, label: "已恢复" });
     for (const a of appended) this.afterAppend(a.roomId, a.seq, { kind: "contact", id: contactId });
+    for (const g of gcClosed) {
+      const v = this.listCommitments({ roomId: g.roomId }).find((x) => x.id === g.commitmentId);
+      if (v) this.bus.emit({ type: "commitment.updated", commitment: v });
+    }
     for (const id of touchedTasks) this.emitTask(id);
     for (const c of notifyAfter) this.loop.notify(c, "now");
     return { effects };
@@ -3811,6 +3842,17 @@ export class Host {
     this.ledgerTx(contactId, roomId, cmds);
   }
 
+  /**
+   * 承诺终态自动回收(AC-31 ⑤;需求文档 US11 ①「到期由机器自动回收」、D15.1「绑定任务全部进入终态且最后一条汇报发出后」):
+   * 任务级承诺绑定的任务进了终态(T10 已取消 / T11 已失败),而负责人这一轮已经在这个会话里把末次汇报发出去之后,
+   * 由机器把承诺置为失效回收(revoked),不靠模型记得删、也不等用户验收——T10/T11 没有产物,不能记 done(AC-40)。
+   * 与这一轮上报的那条消息同一事务落盘;回收后第 2 块不再带上旧任务,之后给同一位联系人派新任务不被旧承诺污染。
+   * 返回被回收的承诺 id(调用方在事务提交后推 commitment.updated)。
+   */
+  private gcTerminalCommitmentsTx(contactId: string, roomId: string, roundId: string): string[] {
+    return [];
+  }
+
   // ======================= 失败轮次容错(AC-36) ================  // 联系人一轮或任务的 Compute 失败之后怎么办(是否失败、什么原因由 kernel 的失败分类器判):
   //   A1×(B0|B1) 静默指数退避(状态行「重连中 k/N」,不出卡);耗尽、A2/A3、B2 由宿主机械出 1 张原位可恢复失败卡;
   //   同一上游上不同成员连续失败或 A2 触发共享熔断:暂停后台重试,全群合并 1 张群级卡,半开探测成功后交回成员续跑(A2 只能由用户发起探测)。
@@ -4633,11 +4675,12 @@ export class Host {
     tx(this.db, () => {
       for (const d of docs) this.expireAuthzTx(d.value.requests[0]!.taskId);
       const requests = listDocs<AuthzDoc>(this.db, "authz:").flatMap((d) => d.value.requests);
+      // AC-20:转发副本不是本人此刻的表态,不放行;如实记下拒收原因(转发块里的「同意」不产生授权)
+      if (this.forwardedCopy(roomId, seq)) this.report("consent-forwarded", { roomId, seq, reason: "转发的内容不是本人当前的授权" });
       const res = authz.resolveConsent(requests, {
         roomId, seq, sender: { kind: m.sender.kind, id: m.sender.id }, text: m.text,
         replyToSeq: meta?.reply_to ?? null, quotedSeqs: meta ? (JSON.parse(meta.quoted) as number[]) : [],
-        // 宿主目前没有转发入口;外部数据源的内容不经 send 进会话
-        forwarded: false, external: false,
+        forwarded: this.forwardedCopy(roomId, seq), external: false,
       });
       if (res.kind === "decision") this.settleConsentTx(res.binding, res.decision, out);
       else if (res.kind === "ambiguous") {

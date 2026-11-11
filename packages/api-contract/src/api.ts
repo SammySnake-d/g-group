@@ -25,6 +25,7 @@ import {
   RewindPreview,
   RewindResult,
   RoomView,
+  RoomSearchHit,
   RUN_STATUSES,
   RunEventView,
   RunHint,
@@ -203,6 +204,14 @@ export const METHODS = {
   "search.messages": method(
     obj({ query: str({ min: 1, max: 200 }), roomId: opt(id()), cursor: opt(nullable(str({ max: 1000 }))), limit: opt(int({ min: 1, max: 100 })) }),
     obj({ hits: arr(SearchHit), nextCursor: nullable(str({ max: 1000 })) }),
+  ),
+  /**
+   * 全局搜联系人和群(U32 已定):按会话标题与联系人名匹配(大小写不敏感、中文子串),只列自己所在的会话,
+   * 按会话最近更新倒序。聊天窗口里搜记录用 search.messages(AC-25)。
+   */
+  "search.rooms": method(
+    obj({ query: str({ min: 1, max: 200 }), limit: opt(int({ min: 1, max: 100 })) }),
+    obj({ rooms: arr(RoomSearchHit) }),
   ),
 
   // ---- 卡片按钮(交付确认、提问回答、失败重试…),以对话消息形式记录 ----
