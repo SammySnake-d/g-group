@@ -1716,3 +1716,28 @@ NODE
 - 待核实的隔离风险（不计作已证明的沙箱突破）：在假 HOME 和中性标记夹具中，跟踪的指向仓库外文件的符号链接，经 `scripts/gates/lib.ts:255-258` 的 `copyTree` 后变成普通文件，且内容保留到 `freshCopy`；`scripts/gates/gates.ts:374-380` 在沙箱运行前调用该复制链。这段 `copyTree` 在 base 已存在；因 box1 没有 Docker，本轮没有实际在容器内执行读取，须用真实沙箱与中性夹具补正反对照，不能把推测升级为已证实泄露。
 - 低频待厘清：被撤回消息若仅含 U+200B 或 U+0085，规范化结果为空；独立运行显示同字符仍可出现在 `volatile` 正文，普通可见文本对照被拦。此项只陈述边界现象，不作为本轮拒审依据。
 - 证据归档 `deliverables/g-group-pr6-r16-codex/box1-evidence.tgz` SHA-256 `84f947461bd0f20a36630091afef60a1e3a51b99fc41e72e83597a0169ee909a`；完整结果另解包于同目录 `box1-evidence/`。
+
+## 第十七轮独立审查 — REJECT（同步观察仍有同 realm 内置对象盲区）
+
+受审 `a60746f4db82f151af9e88cb195da8d98491277c`，基线 `origin/feat/domain-core` `afd02560f9546147da380382404eb6106222a9b8`；本会话独立计算的 reviewed_hash：`178c91f257c126ccf252a99136cf1f8d0e2f34625b5200dae20345d508ec6d46`。审查：Codex，`codex:15a7e32d-94c3-42a5-9919-a9285ed34f6a`，`shayu/gpt-6.1-terra`。作者与审查模型均为 OpenAI；本审查不构成跨厂商放行，不自授豁免。
+
+### 审查 R17-A1 [P2 / R-05 / R16-01] 同步观察遗漏普通全局命名空间对象
+
+位置：`packages/kernel/fixtures/sync-window.mjs:24-40`、`packages/kernel/src/plugins.test.ts:2208-2232`；单点故障注入位置为 `packages/kernel/src/plugins.ts:48`。观察器仅从 `globalThis` 上值为原生函数的属性出发，未把非函数的全局对象作为根；因此 `JSON` 和 `Intl.DateTimeFormat.prototype` 这两个同 realm、未被预先改写的内置对象没有被当前观察集合覆盖。
+
+在相互隔离的内核副本里，分别只把 `isPlainPromise` 的自有 `then`/`constructor` 拒收分支改成：同步给 `JSON` 或 `Intl.DateTimeFormat.prototype` 定义一个可配置的中性属性，立即删除，再按原样返回 `false`。原样副本和两份故障副本各完整执行 225 条内核测试，均为 `225 pass / 0 fail / 0 cancelled / 0 skipped / 0 todo`，进程退出 0。两个故障均存活。
+
+为确认故障确实发生，而非等价或注入点失效，在上述测试之后，另在观察器副本的监视集合中加入这两个对象：原样源码的 send/pull × then/constructor × async_hooks 开关共 8 组均 `changed=[]`；两份故障源码各自 8 组均在真实源码停点观察到 `changed=["builtin"]`，返回后 `restored=true`。观察器副本的扩充仅用于这个独立阳性观察，不用于前述 225 项原测试的判定。这里没有预先改写内置原型，也没有声称未变异的产品源码发生了写入；证明的是同 realm 全局内置对象的同步写后恢复能够骗过现有测试。作者已披露观察只覆盖有限停点和样例，但这两种常用命名空间不属于所列的跨 realm、符号闭包或宿主扩展；已定合同仍要求拒收时不改写任何对象。
+
+返修要求：把同 realm 非构造函数命名空间及其原生对象纳入有界、可解释的观察/标定范围，至少以这两个故障作具名正例，保留未写入阴性对照和有/无异步事件的窗口对照；不得用返回后已恢复的快照代替同步窗口。说明观测仍是有限范围，不需声称穷举所有对象。完整 TAP 与扩充观察器原始输出分别见证据归档的 `out/custom/host-json.tap`、`out/custom/host-intl.tap` 和对应 `*-observer.log`。
+
+### 复验与边界
+
+- box2 Node 24.21.0 typecheck、lint 均退出 0；全仓 Node 24 与 Docker Node 22.22.0 各 `248 pass / 0 fail / 0 cancelled / 0 skipped / 0 todo`。红提交 `8dab2f491b4c7945b3fdc70bb60d3f42672799ad` 的 225 条测试全部按名失败，0 pass/skip/todo/cancelled；225 个名字均在绿提交通过列表中。红绿测试体只差 3 行 lint 注释，后补红对照不证明旧实现初次开发遵循 TDD。
+- 作者清单 209 个变异全部重跑，原样内核副本 225 绿；209/209 被原样通过的具名测试发现、0 存活、0 超时。另逐份解析 209 份 TAP，检查各 225 项、退出码、失败名称、skip/todo/cancelled 与 K250–K257 指定发现者，未发现不一致。R16-01 的 K250/K251 分别被 R17-01/R17-02 发现；R16-02 的 K252 被 R17-03 发现。独立行为探针中，一个有效加多个无效范围保留有效锚点并走 `E2/semantic/1 次`，纯有效对照走 `E1/mechanical/0 次`。
+- 自造 5 个单点故障：上述 JSON 和 Intl 两项存活；无效点名阈值改为 `> 1` 与引用数量阈值改为 `> 1` 分别被 R17-03 和既有引用单开关测试发现；去掉插件 id 的纯空白检查亦存活，原版拒绝纯空白 id 而故障版接受，但未找到把这条边界定为正式要求的依据，记录测试覆盖事实，不另列合同缺陷。
+- 真实 Docker 上门禁自检 `118/118`；八门各一项应失败输入均在目标门禁按目标理由拦下，未把缺沙箱当成功。R15-03 工作区链接、R15-04 依赖只读、R15-05 基线加载失败与缺执行测试，以及 R17-04 跟踪外链，各有正反控制；五个定点故障 `5/5` 被各自夹具发现。另用假 HOME 和 `NEUTRAL_FIXTURE_NO_CREDENTIALS` 独立验证：仓库内普通文件在容器中可读，仓库外链接在复制时被拒，容器中外部中性文件为 `ENOENT`。
+- `--local --base=origin/feat/domain-core` 在被审 HEAD 实跑退出 1：G-TRACE、G-RED、G-STUB、G-TAUTO、G-WORKFLOW、G-LAYER 通过；G-PROVENANCE 因云端没有宿主会话记录失败，G-REVIEW 因旧 reject、旧 hash 与同厂商失败。没有伪造会话记录、改变门禁或豁免。box2 的 Docker 客户端通过本任务目录内包装脚本调用 `sudo -n /usr/bin/docker`，未改 socket、用户组或守护进程；容器用非 root 用户。
+- hy4 中断，仅第一版。H17-01（hy4 发现、Codex 复现）的事实成立：R-03/R-04 指向的仓库内 `r17-local.txt` 为 `314a33e` / `0cf616…`，而非被审 HEAD / `178c91…`；两版之间只变了收据与证明文本，运行源码和测试未变，且本轮已对 `a60746f` 实跑对应六门。现有合同未要求仓库内输出的完整 HEAD/hash 必须与收据提交相同，因此不把旧日志本身认定为 R-07/R-08 违约；仍保留证据版本不一致的追溯提示，不把旧文件冒称当前 HEAD 日志。
+- 撤回内容仅为 U+200B 或 U+0085 时，规范化为空，同字符可出现在 `volatile`；普通中性正文的正反对照分别拦下/放行。现有验收未对规范化为空的原文定义专门规则，此现象不列为合同缺陷。作者提到的 25 个机械存活项未全部独立分类，不冒称全部解决。
+- 原始输出归档：`deliverables/g-group-pr6-r17-codex/evidence-r17-codex.tgz`，SHA-256 `8c608af1ea45c26460e2550487f93f04cfb71c4a10e2f283b7ddf218b63528aa`。归档包含本轮原始测试、变异 TAP、独立探针、容器门禁和退出码；不含克隆、依赖或真实账户文件。

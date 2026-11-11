@@ -70,10 +70,10 @@
   "waiver": null,
   "review": {
     "agent": "codex",
-    "session": "codex:638924e7-9670-4775-9619-788c18d2d5d1",
+    "session": "codex:15a7e32d-94c3-42a5-9919-a9285ed34f6a",
     "model": "shayu/gpt-6.1-terra",
     "verdict": "reject",
-    "reviewed_hash": "9a1608401383b78945bb9782548edf3c21ac415d7c867f811d0f594484dd0a18",
-    "notes": "第十六轮 REJECT：R16-01 hy4 发现并由 Codex 复现同步写入测试缺口；R16-02 有效与无效点名混合的单点故障逃过测试。box1 无 Docker，R15-03～05 容器复核与 3/8 门禁负例未完成，勿视为完整验收；同厂商不构成跨厂商放行。详见审查。"
+    "reviewed_hash": "178c91f257c126ccf252a99136cf1f8d0e2f34625b5200dae20345d508ec6d46",
+    "notes": "第十七轮 REJECT：审查 R17-A1，同 realm 的 JSON 与 Intl 内置对象同步写后恢复可逃过现有测试；是测试缺口，不称当前产品已写入。hy4 中断，仅第一版；H17-01 旧日志版本差异事实复现，但源码未变且当前 HEAD 已独立实跑，合同无相同完整 hash 的要求，不列违约。box2 Docker 经本任务目录包装 sudo -n；同厂商不构成跨厂商放行。其余结果和边界详见审查。"
   }
 }
