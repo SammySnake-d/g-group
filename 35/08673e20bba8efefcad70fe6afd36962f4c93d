@@ -1,0 +1,19 @@
+receipts/feat-cache-observability.json
+  s_78cbadecffd7bf::t_df0b386ea71302 1-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3508673e20bba8efefcad70fe6afd36962f4c93d",
+  "prompts": {},
+  "sessions": {
+    "s_78cbadecffd7bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9caabaa2a69c3a1c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
