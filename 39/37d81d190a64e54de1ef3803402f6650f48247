@@ -1,0 +1,48 @@
+packages/kernel/proof/r18-notes.md
+  s_74b15fb4f695d6::t_9c7749762ab661 44,50,52-59,61-79
+packages/kernel/proof/r18-tests-node24.txt
+  s_74b15fb4f695d6::t_6068d2074a7130 1-1546
+scripts/gates/proof/r18-local.txt
+  s_74b15fb4f695d6::t_6068d2074a7130 1-18
+scripts/gates/proof/r18-lint.txt
+  s_74b15fb4f695d6::t_9c7749762ab661 11,18,20,22,29,34,41,43,45,52
+  s_74b15fb4f695d6::t_6068d2074a7130 1-10,12-17,19,21,23-28,30-33,35-40,42,44,46-51,53-55
+packages/kernel/proof/r18-final-tests-node24.txt
+  s_74b15fb4f695d6::t_6068d2074a7130 1-1547
+packages/kernel/proof/r18-calibration.json
+  s_74b15fb4f695d6::t_6068d2074a7130 1-1253
+packages/kernel/proof/r18-tests-node22.txt
+  s_74b15fb4f695d6::t_6068d2074a7130 1-1547
+receipts/feat-kernel-plugins.json
+  s_74b15fb4f695d6::t_9c7749762ab661 31-32,36-37,41-42,68,79-86
+scripts/gates/proof/r18-selftest.txt
+  s_74b15fb4f695d6::t_6068d2074a7130 1-126
+scripts/gates/proof/r18-container-calibration.txt
+  s_74b15fb4f695d6::t_6068d2074a7130 1-10
+packages/kernel/proof/r18-canary.txt
+  s_74b15fb4f695d6::t_6068d2074a7130 1-2
+packages/kernel/proof/r17-notes.md
+  s_74b15fb4f695d6::t_9c7749762ab661 1-2
+scripts/gates/proof/r18-typecheck.txt
+  s_74b15fb4f695d6::t_6068d2074a7130 1-6
+packages/kernel/proof/r18-mutations.txt
+  s_74b15fb4f695d6::t_98908b582f0a33 1-244
+packages/kernel/proof/r18-classify-audit.json
+  s_74b15fb4f695d6::t_6068d2074a7130 1-1619
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3937d81d190a64e54de1ef3803402f6650f48247",
+  "prompts": {},
+  "sessions": {
+    "s_74b15fb4f695d6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c93a-87c4-7701-a989-58b9b15da855",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
