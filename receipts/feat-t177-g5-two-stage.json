@@ -26,5 +26,5 @@
   "review": null,
   "waiver": null,
   "review_status": "待审",
-  "notes": "由主会话 claude:b36ab234-0cba-4b89-929e-d21a46a35eea 派出的子代理实现,fnqtz 线路(claude-opus-5-5)。叠在 G1(feat/t177-g1-memory@61948a2,PR #58,未合入)上;G1 合入后 rebase 并改 base,届时重写 red.commit。本机 /tmp 工作树曾被外部清理整片删除,按 box3 上的 wip bundle 恢复后重建红/绿提交(红 60c6c7c 只含测试与空壳);v1 云端作业的全量与变异因随后的 d22ba9c 改动中止作废,不计数。阈值(8 标记、24KB、安静期 5 分钟、积压 20、最老 60 分钟、租约 20 分钟)全部是待校准参数。G2/G3 未合入:精筛压缩器取用与邻域在 host.ts 留接缝(fineScreenTurn、anchorNeighbors)。"
+  "notes": "由主会话 claude:b36ab234-0cba-4b89-929e-d21a46a35eea 派出的子代理实现,fnqtz 线路(claude-opus-5-5)。叠在 G1(feat/t177-g1-memory@61948a2,PR #58,未合入)上;G1 合入后 rebase 并改 base,届时重写 red.commit。本机 /tmp 工作树曾被外部清理整片删除,按 box3 上的 wip bundle 恢复后重建红/绿提交(红 60c6c7c 只含测试与空壳);v1 云端作业的全量与变异因随后的 d22ba9c 改动中止作废,不计数。阈值(8 标记、24KB、安静期 5 分钟、积压 20、最老 60 分钟、租约 20 分钟)全部是待校准参数。G2/G3 未合入:精筛压缩器取用与邻域在 host.ts 留接缝(fineScreenTurn、anchorNeighbors)。 证据之后另有一个不改运行逻辑的提交(refactor:写邻域收成 memoryNeighbors 查询接缝,G3 PR #61 合入后改走 searchHistory hybrid);最终 HEAD 由正常 pre-push 钩子(typecheck/lint/全量/门禁自检)与本机 --local 门禁复核。"
 }
