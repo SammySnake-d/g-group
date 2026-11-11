@@ -302,11 +302,8 @@ test("reply 带 mentions:写进消息 mentions(与用户发消息的 @ 同一形
   await host.close();
 });
 
-/** 交付后用户回一句修改:脑子同一轮既 verdict(revise) 又 forward 带 sourceSeq,顺序由 order 定(US7、US10 实测的组合) */
-async function reviseOnce(order: "verdict-first" | "forward-first") {
-  const compute = scriptedCompute({ onResume: () => [{ kind: "completed", result: "改好了:4 条" }] });
-  const a = actors();
-  const host = new Host({ file: file(), mind: a.mind, compute: () => compute.adapter, maxDeferMs: 5 });
+/** 交付后用户回一句修改:脑子同一轮既 verdict(revise) 又 forward 带 sourceSeq,顺序由 order 定(US7、US10 实测的组合);返回改完后的任务视图 */
+async function reviseOnce(host: Host, compute: ReturnType<typeof scriptedCompute>, a: ReturnType<typeof actors>, order: "verdict-first" | "forward-first") {
   const ke = host.createContact({ name: "小克" });
   const dm = host.openDm(ke.id);
   a.plans.set(ke.id, (input) => {
@@ -329,29 +326,34 @@ async function reviseOnce(order: "verdict-first" | "forward-first") {
   assert.deepEqual([t!.state, t!.constraintVersion], ["T5_InReview", 0], "第一次交付后等用户回复");
   host.send({ roomId: dm.id, clientActionId: "u2", text: "改一下:再加第 4 条,讲提交信息首行长度" });
   await settle(host, compute);
-  const v = host.taskViewById(t!.id);
-  return { host, compute, v, rej: rejections(host) };
+  return host.taskViewById(t!.id);
 }
 
 test("一次用户纠错 → constraint_ver 恰好 +1:同一轮 verdict(revise) 在前、forward 带同一条 sourceSeq 在后(复现 US7/US10 的 0→2)", async () => {
-  const { host, compute, v, rej } = await reviseOnce("verdict-first");
+  const compute = scriptedCompute({ onResume: () => [{ kind: "completed", result: "改好了:4 条" }] });
+  const a = actors();
+  const host = new Host({ file: file(), mind: a.mind, compute: () => compute.adapter, maxDeferMs: 5 });
+  const v = await reviseOnce(host, compute, a, "verdict-first");
   assert.equal(v.constraintVersion, 1, "一次纠错只升一版");
   assert.equal(compute.resumed.length, 1, "原 Compute 只续接一次");
   assert.ok(compute.resumed[0]!.text.includes("用户退回:再加第 4 条"), "退回意见送到了");
   assert.ok(compute.resumed[0]!.text.includes("请在 notes.md 末尾加第 4 条,讲首行长度"), "forward 的原文并进同一次续接");
   assert.equal(v.state, "T5_InReview", "按新版本返工后再次交付");
-  assert.deepEqual(rej, []);
+  assert.deepEqual(rejections(host), []);
   compute.close();
   await host.close();
 });
 
 test("一次用户纠错 → constraint_ver 恰好 +1:forward 带 sourceSeq 在前、verdict(revise) 同一条在后,退回意见并进同一次续接、不被拒", async () => {
-  const { host, compute, v, rej } = await reviseOnce("forward-first");
+  const compute = scriptedCompute({ onResume: () => [{ kind: "completed", result: "改好了:4 条" }] });
+  const a = actors();
+  const host = new Host({ file: file(), mind: a.mind, compute: () => compute.adapter, maxDeferMs: 5 });
+  const v = await reviseOnce(host, compute, a, "forward-first");
   assert.equal(v.constraintVersion, 1, "一次纠错只升一版");
   assert.equal(compute.resumed.length, 1, "原 Compute 只续接一次");
   assert.ok(compute.resumed[0]!.text.includes("请在 notes.md 末尾加第 4 条,讲首行长度"));
   assert.ok(compute.resumed[0]!.text.includes("用户退回:再加第 4 条"));
-  assert.deepEqual(rej, []);
+  assert.deepEqual(rejections(host), []);
   compute.close();
   await host.close();
 });

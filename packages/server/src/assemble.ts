@@ -103,7 +103,7 @@ export const CONTACT_SYSTEM = [
 ].join("\n");
 
 export const CONTACT_TOOLS = [
-  "reply(roomId, text, replyToSeq?, mentions?) — 在会话里发言",
+  "reply(roomId, text, replyToSeq?) — 在会话里发言",
   "dispatch(roomId, sourceSeq, title, task) — 开 Compute 执行任务",
   "commit(roomId, sourceSeq, text, taskId?) — 登记承诺",
   "forward(taskId, text) — 转给在途 Compute",
