@@ -1,0 +1,80 @@
+packages/server/proof/g6/manifest.test.ts
+  h_f33e46a035b77c 1-50
+packages/server/proof/g6/fixture.test.ts
+  h_f33e46a035b77c 1-52
+packages/server/proof/g6/types.ts
+  h_f33e46a035b77c 1-236
+packages/server/proof/g6/capture.ts
+  h_f33e46a035b77c 1-13,28,45-53,67-68,70-71
+  s_9e84d571573b49::t_6276c0dd0ea243 14-27,29-44,54-66,69,72
+packages/server/proof/g6/run.test.ts
+  s_9e84d571573b49::t_21dd38797fd6a2 10-12
+  h_f33e46a035b77c 1-9,13-84
+  s_9e84d571573b49::t_91e521e2f297b3 85-114
+packages/server/proof/g6/report.test.ts
+  h_f33e46a035b77c 1-51
+packages/server/proof/g6/run.ts
+  h_f33e46a035b77c 1-31,40-41,60-67
+  s_9e84d571573b49::t_ab1406479aa210 32-39,42-59
+packages/server/proof/g6/report.ts
+  h_f33e46a035b77c 1-27,34
+  s_9e84d571573b49::t_2232daa99e3d71 28-33
+packages/server/proof/g6/fixture.ts
+  s_9e84d571573b49::t_97e370dec9aa79 7-16,18-20
+  h_f33e46a035b77c 1-6,17,21
+packages/server/proof/g6/manifest.ts
+  h_f33e46a035b77c 1-6,14-25
+  s_9e84d571573b49::t_bdf3baeee8f709 7-13,26
+packages/server/proof/g6/driver.test.ts
+  h_f33e46a035b77c 1-55
+packages/server/proof/g6/groups.test.ts
+  h_f33e46a035b77c 1-77
+packages/server/proof/g6/driver.ts
+  s_9e84d571573b49::t_1bfd72d92ebc79 38,44-48,51-58
+  h_f33e46a035b77c 1-37,39-43,49-50,59
+packages/server/proof/g6/score.ts
+  s_9e84d571573b49::t_68bf9c2f16e7e7 10-11,14-19,22-25,28-33,36-40,52-54
+  h_f33e46a035b77c 1-9,12-13,20-21,26-27,34-35,41-51
+packages/server/proof/g6/contracts.test.ts
+  h_f33e46a035b77c 1-105
+packages/server/proof/g6/standin.test.ts
+  h_f33e46a035b77c 1-58
+packages/server/proof/g6/capture.test.ts
+  h_f33e46a035b77c 1-117
+packages/server/proof/g6/fixtures/set-v1.json
+  h_f33e46a035b77c 1-1165
+packages/server/proof/g6/fixtures/build.ts
+  h_f33e46a035b77c 1-93
+packages/server/proof/g6/standin.ts
+  s_9e84d571573b49::t_4b3ddbe4cc047d 10,14-16,19-21
+  h_f33e46a035b77c 1-9,11-13,17-18
+packages/server/proof/g6/score.test.ts
+  h_f33e46a035b77c 1-147
+packages/server/proof/g6/groups.ts
+  s_9e84d571573b49::t_c030ea0c954a7d 35,44,69-75
+  h_f33e46a035b77c 1-34,36-43,45-68
+packages/server/proof/g6/contracts.ts
+  h_f33e46a035b77c 1-6,14-19,28-29
+  s_9e84d571573b49::t_f843a6310dd415 7-13,20-27,30-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "453b90d656b272f4b4addab80ec0d0f087f3e156",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_9e84d571573b49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5c99cdaaa25826c8",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
