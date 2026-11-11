@@ -30,7 +30,7 @@
       "id": "R-02",
       "status": "通过",
       "evidence": "packages/server/proof/contact-actions-red-green.txt",
-      "notes": "红 3d3ec89(测试 + 空壳)上新增与改动的 14 条测试按名失败,绿 97bbd4a 的三处源码上 33 条全过(packages/server/proof/contact-actions-red-green.txt,跑的是当前 HEAD 的测试文件)。之后两个提交:3b81112 只改 host.ts 一处(claim 时状态机冲突按拒绝回告);faca5b3 只改 contact-actions.test.ts 的辅助函数 settle(每次等待与总时长设上限),各条测试体与红提交相同。"
+      "notes": "收据 red.commit 是第二次红 117d4e1(测试 + 空壳):新增与改动的 14 条测试按名失败,第二次绿 a5b967e 上 33 条全过,测试文件两次逐字相同(packages/server/proof/contact-actions-red-green.txt)。为什么有两次红绿:第一次红 3d3ec89 / 绿 97bbd4a 之后,变异校准(见 R-05)与本机 G-TAUTO 先后要求改测试——faca5b3 给辅助函数 settle 设等待上限,117d4e1 让两条「一次纠错只升一版」测试在测试体里建宿主(G-TAUTO 认不出本地辅助函数的返回值是被测源码的结果);实现源码与 3b81112 / 70cec88 逐字相同,117d4e1 只是把它退回空壳、a5b967e 恢复。"
     },
     {
       "id": "R-05",
@@ -48,7 +48,7 @@
     "model": "claude-opus-5-5"
   },
   "red": {
-    "commit": "3d3ec895590bc23e6b17c6c3fb8560dd52aee7c0"
+    "commit": "117d4e1e4c62409b6602559a76540b0fdb780d91"
   },
   "unverifiable": "AC-31:被拒回告只能让联系人之后的轮次知道「那件事没发生」;同一轮里模型先调了会被拒的工具、又在同一轮 reply 里说「已经派出去了」(US1 #4–#7、US9 #4 实测),宿主到 commitRound 才校验,这句话照样会发出去——本片没有在工具调用当场预检(列为需拍板)。「认领成功」只证明任务按版本转到 T2 且起了 Compute;两轮真正并发提交的竞争在单进程 SQLite 事务里是串行的,测试用屏障让两轮都在任一方提交前开始,证明的是「后提交者看到已变状态被拒」,没有跨进程并发。AC-45:去重只按「同一轮、同一任务、同一条来源消息」判;联系人在不同轮次对同一条消息先后 verdict 与 forward 的情形,forward 会因来源不是本轮新消息被原有校验拒绝,没有单测。reply.mentions 只校验成员身份,不判断该不该 @(软提示)。",
   "waiver": null,
