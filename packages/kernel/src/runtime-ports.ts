@@ -91,9 +91,12 @@ export interface RoundInput {
  * stop:请求停止任务的 Compute;
  * rerun:重跑运行台账里失败 / 中断 / 没跑完的单元(progress_rerun,D26 第 5 节)。basisSeq 是本轮里明确要求重跑的那条消息;
  *   不给就是自己决定的自动重跑(只能重跑自己名下的,有次数上限),别人名下的必须给 basisSeq,宿主在群里留记录。
+ * claim:认领会话任务面板上还没人负责的已有任务(U14、§8.4 US1;claim_task)。宿主原子比对 T1_Open 且无负责人后转 T2 并按任务说明起 Compute,
+ *   同一任务先落盘的拿到,后来的被拒并在下一轮第 5 块看到原因。
+ * reply.mentions:结构化 @(联系人或用户 id);宿主校验都是该会话成员后写进消息 mentions,与用户发消息的 @ 同一形状。不给就不 @ 任何人。
  */
 export type MindAction =
-  | { readonly kind: "reply"; readonly roomId: string; readonly text: string; readonly replyToSeq: number | null }
+  | { readonly kind: "reply"; readonly roomId: string; readonly text: string; readonly replyToSeq: number | null; readonly mentions?: readonly string[] }
   | { readonly kind: "dispatch"; readonly roomId: string; readonly sourceSeq: number; readonly title: string; readonly task: string }
   | { readonly kind: "commit"; readonly roomId: string; readonly sourceSeq: number; readonly text: string; readonly taskId: string | null }
   // sourceSeq:这段转交来自任务所在会话里哪条用户消息;给了就是用户中途改条件(E3),宿主据此原位升版并登记关联边(AC-45/AC-16)
@@ -114,9 +117,10 @@ export type MindAction =
       readonly target: string | null;
     }
   | { readonly kind: "memory-use"; readonly id: string; readonly good: boolean; readonly note: string | null }
-  | { readonly kind: "rerun"; readonly runId: string; readonly roomId: string; readonly basisSeq: number | null };
+  | { readonly kind: "rerun"; readonly runId: string; readonly roomId: string; readonly basisSeq: number | null }
+  | { readonly kind: "claim"; readonly taskId: string };
 export type MindActionKind = MindAction["kind"];
-export const MIND_ACTION_KINDS: readonly MindActionKind[] = Object.freeze(["reply", "dispatch", "commit", "forward", "deliver", "stop", "verdict", "remember", "memory-use", "rerun"]);
+export const MIND_ACTION_KINDS: readonly MindActionKind[] = Object.freeze(["reply", "dispatch", "commit", "forward", "deliver", "stop", "verdict", "remember", "memory-use", "rerun", "claim"]);
 
 export interface RoundOutput {
   readonly actions: readonly MindAction[];

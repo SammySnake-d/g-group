@@ -130,6 +130,7 @@ import {
   kernelAssemble,
 } from "./assemble.ts";
 import { type Bus, createBus } from "./bus.ts";
+import { RejectionFeed, ReworkOnce, claimRefusal, claimablePointers, mentionRefusal, mergeIntoRework, rejectionPointers, toMentions } from "./contact-actions.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
@@ -373,6 +374,8 @@ export class Host {
   readonly plugins: PluginStore;
   readonly announcements: AnnouncementStore;
   private readonly exits: MemberExits;
+  /** 被拒动作回告(feat/contact-actions):下一轮第 5 块逐条给该联系人,给过不重复 */
+  private readonly rejections: RejectionFeed;
   /** 共享文档单一提交点(AC-21):所有写入只经它 */
   readonly docs: SharedDocs;
   readonly worktrees: Worktrees | null;
@@ -437,6 +440,7 @@ export class Host {
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
     this.exits = new MemberExits({ db: this.db, now: this.now });
+    this.rejections = new RejectionFeed(this.db);
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
     this.memory = new MemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d));
@@ -2404,6 +2408,12 @@ export class Host {
       if (chain) pointers.push({ ref: `${f.roomId} #${f.seq} 的引用链`, text: renderQuoteChain(chain) });
     }
     const mem = this.memoryForRound(contactId, fresh);
+    // 第 5 块(feat/contact-actions):上一轮被拒的动作与原因(只给事实,给过不重复),本会话还没人负责、可以认领的面板任务
+    const shownRejections = this.rejections.pending(contactId);
+    const claimable = claimablePointers(
+      listDocs<TaskDoc>(this.db, "task:").map((d) => ({ id: d.value.task.id, roomId: d.value.roomId, sourceSeq: d.value.sourceSeq, title: d.value.title, state: d.value.task.state, owner: d.value.task.owner })),
+      new Set(rooms.map((r) => r.id)),
+    );
     let request: ReturnType<RoundAssembler>;
     try {
       request = this.assemble({
@@ -2420,7 +2430,7 @@ export class Host {
       stateNote: note?.value.text ?? null,
       fresh,
       tasks: tasks.map((t) => `${t.id} [${t.state}] ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
-      pointers: [...pointers, ...mem.pointers],
+      pointers: [...rejectionPointers(shownRejections), ...claimable, ...pointers, ...mem.pointers],
       budgetBytes: this.opts.roundBudgetBytes ?? ROUND_BUDGET_BYTES,
       runs: this.runLinesFor(contactId, rooms),
       });
@@ -2488,7 +2498,7 @@ export class Host {
     if (signal.aborted || this.closed) return "done";
     let done: { effects: HostEffect[] };
     try {
-      done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona });
+      done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona, rejectionsShown: shownRejections.map((r) => r.actionId) });
     } catch (e) {
       this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
       throw e;
@@ -2575,7 +2585,7 @@ export class Host {
     fresh: Inbound[],
     inbox: { id: number }[],
     lastSeen: Record<string, number>,
-    out: { actions: readonly MindAction[]; stateNote: string | null; personaSuggestion?: string | null },
+    out: { actions: readonly MindAction[]; stateNote: string | null; personaSuggestion?: string | null; rejectionsShown?: readonly string[] },
   ): { effects: HostEffect[] } {
     const roomIds = new Set(this.roomsOfContact(contactId).map((r) => r.id));
     // 移出中:这个群里的发言、登记承诺与接新活一律拒绝(D05「先禁止新群内接单与发言」)
@@ -2607,6 +2617,8 @@ export class Host {
       const referenced = new Set<string>();
       const ownCommits: { roomId: string; text: string; taskId: string | null; sourceKey: string }[] = [];
       const replies: { roomId: string; seq: number; text: string }[] = [];
+      // 一条用户消息在本轮只给一个任务升一次版(AC-15/AC-45):verdict(revise) 与带 sourceSeq 的 forward 共用
+      const rework = new ReworkOnce();
       let i = 0;
       for (const a of out.actions) {
         const actionId = `${roundId}:a${i++}`;
@@ -2616,7 +2628,10 @@ export class Host {
             if (leavingRooms.has(a.roomId)) { reject(LEAVING_REASON); break; }
             if (!roomIds.has(a.roomId)) { reject("不在这个会话里"); break; }
             if (!a.text.trim()) { reject("空消息"); break; }
-            const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [] });
+            // 结构化 @(缺口 7):对象必须都是这个会话的成员,写进 mentions 与用户发消息同一形状,唤醒照现有规则
+            const atWhy = a.mentions?.length ? mentionRefusal(a.roomId, a.mentions, this.members(a.roomId)) : null;
+            if (atWhy) { reject(atWhy); break; }
+            const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [], ...(a.mentions?.length ? { mentions: toMentions(a.mentions) } : {}) });
             appended.push({ roomId: a.roomId, seq: r.seq });
             replies.push({ roomId: a.roomId, seq: r.seq, text: a.text });
             if (a.replyToSeq !== null) referenced.add(`${a.roomId}#${a.replyToSeq}`);
@@ -2675,6 +2690,15 @@ export class Host {
           case "forward": {
             const t = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
+            if (a.sourceSeq !== undefined && rework.has(a.taskId, t.roomId, a.sourceSeq)) {
+              // 这条用户消息本轮已经给这个任务升过版(verdict revise 在前):不再升版,原文并进同一次续接
+              const over = this.overComputeInput(a.text);
+              if (over) { reject(`转交的补充${over}`); break; }
+              if (!mergeIntoRework(effects, a.taskId, a.text)) { reject(`#${a.sourceSeq} 本轮已给任务 ${a.taskId} 升过版,没有可并入的续接`); break; }
+              referenced.add(`${t.roomId}#${a.sourceSeq}`);
+              touchedTasks.add(a.taskId);
+              break;
+            }
             if (!t.task.computeId || TERMINAL.has(t.task.state) || t.task.state === "T9_StopRequested") { reject("任务没有在途 Compute"); break; }
             const over = this.overComputeInput(a.text);
             if (over) { reject(`转交的补充${over}`); break; }
@@ -2683,6 +2707,7 @@ export class Host {
               const r = this.amendFromFollowUpTx(a.taskId, t, a.sourceSeq, a.text, freshMsgs);
               if (!r.ok) { reject(r.reason); break; }
               effects.push(...r.effects);
+              rework.mark(a.taskId, t.roomId, a.sourceSeq);
               referenced.add(`${t.roomId}#${a.sourceSeq}`);
               touchedTasks.add(a.taskId);
               break;
@@ -2761,6 +2786,14 @@ export class Host {
             // 用户对交付的普通回复由联系人转成结论;宿主只认提出者本人在交付之后、本轮新到的直接消息(AC-28/AC-56,U99 只认本人)
             const d = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             if (!d || d.task.owner !== contactId) { reject(`任务 ${a.taskId} 不存在或不是你的`); break; }
+            if (a.verdict === "revise" && rework.has(a.taskId, d.roomId, a.sourceSeq)) {
+              // 同一条消息本轮已由 forward 升过版:退回意见并进同一次续接,不再升版
+              const src0 = freshMsgs.find((m) => m.roomId === d.roomId && m.seq === a.sourceSeq);
+              if (!mergeIntoRework(effects, a.taskId, `用户退回:${a.feedback?.trim() || src0?.text || ""}`)) { reject(`#${a.sourceSeq} 本轮已给任务 ${a.taskId} 升过版,没有可并入的续接`); break; }
+              referenced.add(`${d.roomId}#${a.sourceSeq}`);
+              touchedTasks.add(a.taskId);
+              break;
+            }
             if (!awaitingUser(d)) { reject(`任务在 ${d.task.state},没有等你确认的交付`); break; }
             const src = freshMsgs.find((m) => m.roomId === d.roomId && m.seq === a.sourceSeq);
             if (!src) { reject(`验收结论的来源 ${d.roomId} #${a.sourceSeq} 不是本轮新消息`); break; }
@@ -2769,6 +2802,7 @@ export class Host {
             const wsv = a.verdict === "accept" ? this.workspace(a.taskId)?.value : undefined;
             if (wsv && (wsv.state === "W5_Conflict" || wsv.state === "W4_Integrating")) { reject(wsv.state === "W5_Conflict" ? "上次合入冲突或重验失败,要先退回修复" : "正在合入"); break; }
             effects.push(...this.decideDeliveryTx(a.taskId, a.verdict === "accept" ? "accept" : "reject", src.sender.id, a.feedback?.trim() || src.text));
+            if (a.verdict === "revise") rework.mark(a.taskId, d.roomId, src.seq);
             referenced.add(`${d.roomId}#${src.seq}`);
             touchedTasks.add(a.taskId);
             break;
@@ -2794,6 +2828,18 @@ export class Host {
             }
             for (const e of eff) if (e.kind === "cancel-spawn") effects.push({ kind: "cancel-spawn", taskId: a.taskId, requestId: e.requestId });
             this.afterCancelTx(a.taskId);
+            touchedTasks.add(a.taskId);
+            break;
+          }
+          case "claim": {
+            // 认领已有任务(U14、§8.4 US1):比对 T1_Open 且无负责人,走与用户指派同一条认领路径(任务文档按版本 CAS 提交)转 T2 并起 Compute
+            const cur = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
+            const why = claimRefusal(a.taskId, cur ? { id: cur.task.id, roomId: cur.roomId, sourceSeq: cur.sourceSeq, title: cur.title, state: cur.task.state, owner: cur.task.owner } : undefined, roomIds, leavingRooms);
+            if (why !== null || !cur) { reject(why ?? `没有任务 ${a.taskId}`); break; }
+            effects.push(...this.claimForTx(a.taskId, contactId));
+            const r = this.appendMessageTx(cur.roomId, { kind: "contact", id: contactId }, { text: `认领了任务:${cur.title}`, actionKey: actionId, replyToSeq: cur.sourceSeq, quotedSeqs: [cur.sourceSeq] });
+            appended.push({ roomId: cur.roomId, seq: r.seq });
+            referenced.add(`${cur.roomId}#${cur.sourceSeq}`);
             touchedTasks.add(a.taskId);
             break;
           }
@@ -2862,6 +2908,9 @@ export class Host {
       for (const r of rejected) {
         run(this.db, "INSERT OR REPLACE INTO gg_effects (action_id, kind, payload, status, error, created_at) VALUES (?, ?, ?, 'rejected', ?, ?)", `${roundId}:rej:${rejected.indexOf(r)}`, r.action.kind, JSON.stringify(r.action), r.reason, this.now());
       }
+      // 被拒动作回告:本轮的拒绝记下等下一轮第 5 块给;本轮第 5 块已给过的记为已给,之后不再重复
+      this.rejections.recordTx(contactId, roundId, rejected, this.now());
+      if (out.rejectionsShown?.length) this.rejections.markShownTx(contactId, out.rejectionsShown, roundId);
     });
     for (const r of rejected) this.report("action-rejected", { contactId, ...r });
     if (hadFailure) this.emitRetry({ scope: "contact", contactId, taskId: null, roomId: null, state: "cleared", attempt: 0, limit: 0, label: "已恢复" });
