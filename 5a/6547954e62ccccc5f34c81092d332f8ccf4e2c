@@ -1,0 +1,29 @@
+packages/adapter-pi-contact/src/mind.test.ts
+  s_98f0ff8415d16e::t_aafce97cd0f4de 88,101
+packages/adapter-pi-contact/src/schedule-tools.test.ts
+  s_98f0ff8415d16e::t_5cf045f8208d90 1-146
+packages/kernel/src/compact.ts
+  s_98f0ff8415d16e::t_17352f1d6de26d 36-44
+packages/kernel/src/runtime-ports.ts
+  s_98f0ff8415d16e::t_33071d63255b5a 117-130,132,146-147
+packages/server/src/standing-commitments.test.ts
+  s_98f0ff8415d16e::t_a246e4dcd712d1 1-410
+packages/server/src/standing-commitments.ts
+  s_98f0ff8415d16e::t_7a6b5d477aa55a 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5a6547954e62ccccc5f34c81092d332f8ccf4e2c",
+  "prompts": {},
+  "sessions": {
+    "s_98f0ff8415d16e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6ed2c2cb3b685ca0",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
