@@ -1,0 +1,23 @@
+packages/server/proof/contact-call-check-mutations.mjs
+  s_9cb5e24d254155::t_ab42fa287f1cd8 1-172
+packages/server/proof/contact-call-check-red-green.sh
+  s_9cb5e24d254155::t_27f1a4739f11f4 1-24
+packages/server/proof/contact-call-check-red-green.txt
+  s_9cb5e24d254155::t_cbc48a26a2fef3 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6983d1d49eff4f73321a9c91570181d1a31e6cdf",
+  "prompts": {},
+  "sessions": {
+    "s_9cb5e24d254155": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a28105ce487aa6efe",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
