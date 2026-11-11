@@ -117,19 +117,21 @@ test("删除只在你这边:列表、搜索、会话预览都不再给;联系人
   assert.equal(r.changed, 1);
   assert.ok(!(await listOf(svc, dm.id)).some((m) => m.seq === m2.seq), "删掉的那条不再列出");
   assert.ok((await listOf(svc, dm.id)).some((m) => m.seq === m1.seq));
-  const hits = await call<{ hits: { seq: number }[] }>(svc, "search.messages", { query: "香蕉" });
-  assert.deepEqual(hits.hits, [], "删掉的搜不到");
+  // 联系人那句「收到:第二句 香蕉」还搜得到(没删它),你删掉的那条搜不到
+  const found = async () => (await call<{ hits: { seq: number }[] }>(svc, "search.messages", { query: "香蕉" })).hits.map((x) => x.seq);
+  assert.ok(!(await found()).includes(m2.seq), "删掉的搜不到");
   assert.ok(host.projected(dm.id).some((m) => m.seq === m2.seq && m.text === "第二句 香蕉"), "日志与联系人那边不动");
   assert.ok(events.some((e) => e.type === "room.updated" && e.room.id === dm.id), "推 room.updated");
 
   const back = await call<{ changed: number }>(svc, "messages.hide", { roomId: dm.id, seqs: [m2.seq], hidden: false });
   assert.equal(back.changed, 1);
   assert.ok((await listOf(svc, dm.id)).some((m) => m.seq === m2.seq), "撤销后放回来");
-  assert.equal((await call<{ hits: unknown[] }>(svc, "search.messages", { query: "香蕉" })).hits.length, 1);
+  assert.ok((await found()).includes(m2.seq), "放回来就又搜得到");
 
   const cleared = await call<{ clearedUpto: number }>(svc, "rooms.clearHistory", { roomId: dm.id });
   assert.equal(cleared.clearedUpto, host.lastSeq(dm.id));
   assert.deepEqual(await listOf(svc, dm.id), [], "清空后这边一条不剩");
+  assert.deepEqual(await found(), [], "清空的都搜不到");
   assert.equal((await call<RoomView>(svc, "rooms.get", { roomId: dm.id })).lastMessagePreview, null);
   host.send({ roomId: dm.id, clientActionId: "c", text: "清空之后的新话" });
   await settle(host);
