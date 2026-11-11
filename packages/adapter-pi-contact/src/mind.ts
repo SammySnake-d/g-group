@@ -198,6 +198,12 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
           if (got === null) return { content: [{ type: "text", text: tools?.readQuoteParent ? `读不到 ${r.value.roomId} #${r.value.seq}` : "本轮没有引用链查询口" }], details: null, isError: true };
           return { content: [{ type: "text", text: got }], details: null };
         }
+        if (r.value.kind === "read-external") {
+          if (!tools?.readExternal) return { content: [{ type: "text", text: "本轮没有外部源查询口" }], details: null, isError: true };
+          const got = await tools.readExternal(r.value.query);
+          if (!got.ok) return { content: [{ type: "text", text: `读不到外部源:${got.why}` }], details: null, isError: true };
+          return { content: [{ type: "text", text: got.text }], details: null };
+        }
         if (r.value.kind === "read") {
           const got = tools ? await tools.readMemory(r.value.id) : null;
           if (got === null) return { content: [{ type: "text", text: tools ? `没有这条记忆:${r.value.id}` : "本轮没有可用的记忆查询口" }], details: null, isError: true };
