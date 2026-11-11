@@ -1,0 +1,25 @@
+packages/kernel/proof/mutations.mjs
+  s_f95254e55a45df::t_3bc806f669036e 1-3,168,240,245-251
+packages/kernel/proof/tests.txt
+  s_f95254e55a45df::t_318aaeea49e744 1-218,220,225
+packages/kernel/src/plain.ts
+  s_f95254e55a45df::t_2a3ab073c7becf 6-8,11-12,21-40,42-43,46-77,80-85,88-164,166-203,206,208-214
+packages/kernel/src/plugins.ts
+  s_f95254e55a45df::t_adcbcb2d3cc57c 1-21,25-311,313-454
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "85bfbcf9e767d9164c4ffb124288120ea241246a",
+  "prompts": {},
+  "sessions": {
+    "s_f95254e55a45df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bfea29f6-6e90-4808-9e7b-cd317a4576de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

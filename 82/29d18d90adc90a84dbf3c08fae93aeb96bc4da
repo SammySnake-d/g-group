@@ -1,0 +1,16 @@
+node_modules
+  h_f33e46a035b77c 1
+packages/domain/src/neg-layer.ts
+  h_f33e46a035b77c 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8229d18d90adc90a84dbf3c08fae93aeb96bc4da",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

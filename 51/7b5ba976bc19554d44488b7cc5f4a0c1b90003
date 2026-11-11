@@ -1,0 +1,22 @@
+packages/kernel/src/retry-policy.ts
+  s_25620647d6f8eb::t_2650a3a700c409 10,18-32,34,38-39,56-58,60-67,70-78,83-92,117-137,168-186,196-215,223-226,247-269,285-298,302,320-333,336-340,344-347,355-364,394,410
+  s_25620647d6f8eb::t_99224322bbb388 395-397,407-409
+  s_25620647d6f8eb::t_9851ef0da0cdb0 411-413
+  s_25620647d6f8eb::t_616e875eb96d8b 398-406,414-417,424-435
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "517b5ba976bc19554d44488b7cc5f4a0c1b90003",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/adapter-pi-contact/src/memory-completion.test.ts
+  s_e21a7b024276d2::t_54092b2933f072 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "78727a34ccc5e1c5b1a5184f10117ec8fd6c09e6",
+  "prompts": {},
+  "sessions": {
+    "s_e21a7b024276d2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c6e6-9a06-7441-b5e9-c070695d078b",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

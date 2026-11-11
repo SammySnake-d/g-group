@@ -1,0 +1,19 @@
+receipts/feat-plugin-exec.json
+  s_ead2b4aeb00e3d::t_3614f54c60f872 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1cf62a8d15af5a65499dc0d73acd43631d50813a",
+  "prompts": {},
+  "sessions": {
+    "s_ead2b4aeb00e3d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "24aee79e-501b-486a-9582-32f776c0e5b1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

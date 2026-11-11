@@ -1,0 +1,56 @@
+packages/server/src/worktree.ts
+  s_25620647d6f8eb::t_6b44b0e4872616 1-10,14-55,81-83,110,112,118,121,139,211,219-220
+  s_40ddef7d1d7537::t_9ebfa9f81d2e0e 11-13,56-80,84-109,111,113-117,119-120,122-138,140-210,212-218,221-249
+packages/server/src/worktree.test.ts
+  s_25620647d6f8eb::t_e0ab3420f3f020 1-474
+packages/api-contract/src/api.ts
+  s_40ddef7d1d7537::t_d665f5b2fac3f6 116-118
+packages/api-contract/src/entities.ts
+  s_40ddef7d1d7537::t_db143565f70c25 150-169,187-188
+packages/server/README.md
+  s_40ddef7d1d7537::t_a81e41a0364cd0 36-37,55,61
+packages/server/proof/worktree-merge.txt
+  s_40ddef7d1d7537::t_d5267e5c166cfd 1-98
+packages/server/src/cli.ts
+  s_40ddef7d1d7537::t_e42e09543e039d 8,32-35,87-88,133-135,166-178
+packages/server/src/host.ts
+  s_40ddef7d1d7537::t_bb5f8d093f1c46 48,60-62,161,219,811,835-906,1209-1217,1368-1369,1394-1399,1454-1465,1529-1530
+packages/server/src/service.ts
+  s_40ddef7d1d7537::t_de43b770f38e1b 73
+packages/server/src/artifacts.test.ts
+  s_ae065512e1088f::t_dad77bb8c6b059 1-327
+packages/server/src/artifacts.ts
+  s_ae065512e1088f::t_675c1f3ec11698 1-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3e22573d83f15ba3347ee8969fff0d94d8ebf224",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_40ddef7d1d7537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_ae065512e1088f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a79b7ed6217c51390",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

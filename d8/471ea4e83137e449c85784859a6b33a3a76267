@@ -1,0 +1,19 @@
+scripts/gates/lib.ts
+  s_28bebc745289eb::t_6603e36a349c38 60-66,99,123-124,127,129,132-142,173-205,209-212
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d8471ea4e83137e449c85784859a6b33a3a76267",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

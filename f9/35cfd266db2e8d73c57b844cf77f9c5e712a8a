@@ -1,0 +1,47 @@
+apps/desktop/e2e/layout.ui.spec.ts
+  s_042e901c6ad028::t_9ece51fa5db6bb 40,46-47
+apps/desktop/e2e/shell.electron.spec.ts
+  s_042e901c6ad028::t_5cf82901c56927 24-37
+apps/desktop/electron/bridge.ts
+  s_042e901c6ad028::t_6fbc19add747df 1-4,6-9,11-34
+apps/desktop/electron/main.ts
+  s_042e901c6ad028::t_3daf9267920421 7-9,78-96
+apps/desktop/electron/preload.ts
+  s_042e901c6ad028::t_3844faec85ae85 1-3,5-16
+apps/desktop/package.json
+  s_042e901c6ad028::t_36021e5fd738f7 11
+apps/desktop/src/App.tsx
+  s_042e901c6ad028::t_29e101244b63d2 6,56-57,846-850
+apps/desktop/src/api/backend.ts
+  s_042e901c6ad028::t_f459f21ec49707 1-23
+apps/desktop/tsconfig.app.json
+  s_042e901c6ad028::t_ae21415dcc2f9d 31-33
+apps/desktop/tsconfig.electron.json
+  s_042e901c6ad028::t_0e207822d39284 9-11,14-21,23-26
+apps/desktop/vite.config.ts
+  s_042e901c6ad028::t_ff11053d8ff91b 13
+apps/desktop/vite.electron.config.ts
+  s_042e901c6ad028::t_40026aa5114200 5-7,11-14,18,23
+package-lock.json
+  s_042e901c6ad028::t_3b7e9eff0afd90 77-80,89-92,151-153,162-165
+packages/ui-core/src/ipc.test.ts
+  s_042e901c6ad028::t_5d2deae9f10239 6-7,36-38,41,43,45,47,49-50
+packages/ui-core/src/ipc.ts
+  s_042e901c6ad028::t_7f59f57412898e 1-3,7-8,57-58,63,66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f935cfd266db2e8d73c57b844cf77f9c5e712a8a",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

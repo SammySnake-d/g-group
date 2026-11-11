@@ -1,0 +1,19 @@
+packages/server/proof/review-actual-mutations.mjs
+  s_40ddef7d1d7537::t_0e93dd087fd2d0 1-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cced923927530da4fc996b70a40cd7ff39656bce",
+  "prompts": {},
+  "sessions": {
+    "s_40ddef7d1d7537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

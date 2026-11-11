@@ -1,0 +1,39 @@
+packages/kernel/src/cron.test.ts
+  s_7f422c52350e16::t_5352a78da4f520 1-58
+packages/kernel/src/cron.ts
+  s_7f422c52350e16::t_3885136eb81a72 1-188
+packages/kernel/src/index.ts
+  s_7f422c52350e16::t_7b946aa77a23b6 7
+packages/server/src/db.ts
+  s_7f422c52350e16::t_65d1807ad544db 34-38
+packages/server/src/fakes.ts
+  s_7f422c52350e16::t_382cfed60e31ce 40
+packages/server/src/host.test.ts
+  s_7f422c52350e16::t_4fb173f117e157 261
+packages/server/src/host.ts
+  s_7f422c52350e16::t_5db95e7ea75baf 43,59-60,145,172-193,1144
+packages/server/src/schedules.test.ts
+  s_7f422c52350e16::t_cf88f5ba7b86fe 1-135
+packages/server/src/schedules.ts
+  s_7f422c52350e16::t_4319f1a863cbd5 1-218
+packages/server/src/service.ts
+  s_7f422c52350e16::t_df112b9401d3b1 17,74-83
+receipts/feat-schedules.json
+  s_7f422c52350e16::t_542478d1f11e90 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b1cb5b9a047de109966d196cab174eb99edb78a3",
+  "prompts": {},
+  "sessions": {
+    "s_7f422c52350e16": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18b4f4b0-3cf6-4d51-be92-ca20094b2ce3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

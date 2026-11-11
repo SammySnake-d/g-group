@@ -1,0 +1,19 @@
+receipts/feat-t177-g4-history-tools.json
+  s_a1c03f790defe9::t_09bc99ad60bd51 1-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e3a6ec7712b25db71d552fe7e9fce66329974d45",
+  "prompts": {},
+  "sessions": {
+    "s_a1c03f790defe9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a486d1455e11315cb",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+receipts/evidence/t177-g6/standin-g1/report.md
+  h_f33e46a035b77c 1-71
+receipts/evidence/t177-g6/standin-g1/summary.json
+  h_f33e46a035b77c 1-1085
+packages/server/proof/g6-mutations.mjs
+  s_1f57ccadf6accc::t_7bb9ff17f85286 1-190
+packages/server/proof/g6-mutations.txt
+  s_1f57ccadf6accc::t_8e696eff4cc0fc 1-70
+receipts/evidence/t177-g6/box3.txt
+  s_1f57ccadf6accc::t_ac2e0208132e03 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dc50479a631a6654d30207f749fb4810638bf025",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_1f57ccadf6accc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b36ab234-0cba-4b89-929e-d21a46a35eea",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+packages/server/src/memory-api.ts
+  s_11402f16ea5415::t_ec074d0b06a40f 1-4,6,10-12,20-21,24-57,60-63,66-68,71-73,76-109
+packages/server/src/memory-hygiene.ts
+  s_11402f16ea5415::t_49c9c6c24e4d81 1-18,20-29,32-34,38-40,42,44-62,64,68-102,105-112,114-132,135-143
+packages/server/src/views.ts
+  s_11402f16ea5415::t_73ea3787010690 2,8,19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5214c3f1b0064f69271f02d61d6e4bc130180b7f",
+  "prompts": {},
+  "sessions": {
+    "s_11402f16ea5415": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a7e51a4d4c085a4d6",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

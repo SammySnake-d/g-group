@@ -1,0 +1,29 @@
+packages/kernel/proof/mutations.mjs
+  s_f95254e55a45df::t_3f335c4459dd17 1-3,168,240,245-251
+packages/kernel/proof/tests.txt
+  s_f95254e55a45df::t_97ce2d004a3d79 1-218,220,225
+packages/kernel/src/assemble.ts
+  s_f95254e55a45df::t_9f419d77bc3dea 14-17,54-56,73-154,156-157,160-296,299-319,321,324,326,329,331-333
+packages/kernel/src/classify.ts
+  s_f95254e55a45df::t_0bdd3a3ae38c92 9,11-12,40-115
+packages/kernel/src/plain.ts
+  s_f95254e55a45df::t_82652b93c0d847 6-8,11-12,21-40,42-43,46-77,80-85,88-164,166-203,206,208-214
+packages/kernel/src/plugins.ts
+  s_f95254e55a45df::t_1d394074f22be8 1-21,25-311,313-454
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0cb90935427b9ce07f2161ce69282c0c6b73a0a2",
+  "prompts": {},
+  "sessions": {
+    "s_f95254e55a45df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bfea29f6-6e90-4808-9e7b-cd317a4576de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

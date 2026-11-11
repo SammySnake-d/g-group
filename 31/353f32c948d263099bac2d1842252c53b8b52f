@@ -1,0 +1,79 @@
+packages/adapter-pi-contact/src/compact.test.ts
+  s_af07fdb734b55e::t_fcc0a88d6769a6 90-117
+packages/server/src/memory.test.ts
+  s_af07fdb734b55e::t_e96397a1628000 305-309
+  s_af07fdb734b55e::t_829cd522d91c2a 311-314
+  s_af07fdb734b55e::t_2a0a5ff13229d1 264
+  s_af07fdb734b55e::t_760b3efebfc416 303
+  s_af07fdb734b55e::t_702aa396856ea9 288
+  s_af07fdb734b55e::t_e104752bbb3ff5 316-317
+  s_af07fdb734b55e::t_0377990c480eba 259-260
+  s_af07fdb734b55e::t_802fddd82f4c03 247-249,251-253
+  s_af07fdb734b55e::t_92ae47179b5d0e 273-275
+  s_af07fdb734b55e::t_3a0a856820b097 290-292,296-298
+  s_af07fdb734b55e::t_039fe27dd5f3f2 255-256
+  s_af07fdb734b55e::t_47e8ae5eb33f33 250,293-295
+  s_af07fdb734b55e::t_5dc7abe10bc6b3 1-246,254,257-258,261,263,265,272,276,282-283,286-287,289,299-300,302,304,310,315,318-319
+  s_af07fdb734b55e::t_6d64c9c0e7582f 301
+  s_af07fdb734b55e::t_683d9195fa96f2 277-281
+  s_af07fdb734b55e::t_4da397cd834769 262
+  s_af07fdb734b55e::t_f05ea446777f2b 284-285
+  s_af07fdb734b55e::t_a64bc7cd3cfad9 266-271
+packages/kernel/src/index.ts
+  s_af07fdb734b55e::t_ef25df4841eaca 13
+packages/adapter-pi-contact/src/mind.test.ts
+  s_28bebc745289eb::t_ab54c1c3577c16 395-443,453
+  s_28bebc745289eb::t_3c09f18cb2aebe 394
+  s_af07fdb734b55e::t_12cf158e29845c 88,101
+  s_28bebc745289eb::t_b5e0c2c18f5399 444-446,450-452
+  s_af07fdb734b55e::t_04238f26ceee57 447-449
+packages/adapter-pi-contact/src/compact.ts
+  s_377be331e17ebd::t_6a6abc53ec27ab 7,96-99
+packages/kernel/src/memory.ts
+  s_af07fdb734b55e::t_4e63f5f8d78d66 1-54
+packages/kernel/src/runtime-ports.ts
+  s_af07fdb734b55e::t_0f407d35bbd45d 100
+  s_af07fdb734b55e::t_170e21fca75831 172-174,178-180
+  s_af07fdb734b55e::t_574bde8c04a659 101-112,114,122-127,129-130,171,181,186
+  s_af07fdb734b55e::t_baf0b00f1cd079 164-167,175-177,189-190
+  s_af07fdb734b55e::t_71d8168fef2ab6 168-170
+  s_af07fdb734b55e::t_d44002516ae435 182-185
+packages/kernel/src/memory.test.ts
+  s_af07fdb734b55e::t_58d1f947177132 1-196
+packages/kernel/src/compact.ts
+  s_28bebc745289eb::t_0bff11ea8aec55 30-33
+packages/server/src/host.ts
+  s_28bebc745289eb::t_94741fa17ada3e 55,128-129,1538-1549
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "31353f32c948d263099bac2d1842252c53b8b52f",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_af07fdb734b55e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3c81b704d9af27a9",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

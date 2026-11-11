@@ -1,0 +1,33 @@
+packages/domain/proof/commitment-ledger-mutations.mjs
+  s_e2bc806021672e::t_3fefe998f5006e 150-156,158-159,161-169
+  s_e2bc806021672e::t_20faecff527ecf 83-91,93-108,110,114-120,122-123,125-137,139,191-197
+  s_e2bc806021672e::t_de8f2baa8b1570 92,141-142,144,146,157,160,245-248
+  s_e2bc806021672e::t_aa5889fa7453d3 183-190,242-244
+  s_e2bc806021672e::t_4df51089568631 175-182,219
+  s_e2bc806021672e::t_1ecfd669cbd562 109,111,121,124,138,140,171-174
+  s_e2bc806021672e::t_4c0de120373986 112-113,143,145,147-149,170
+packages/domain/proof/commitment-ledger-tests.txt
+  s_e2bc806021672e::t_49125be2f80290 53-79
+receipts/feat-commitment-ledger.json
+  s_e2bc806021672e::t_49125be2f80290 14,17,28,35-36
+packages/domain/proof/commitment-ledger-mutations.txt
+  s_e2bc806021672e::t_cec3903069eea1 1-157
+packages/domain/proof/commitment-ledger-round2-red-green.txt
+  s_e2bc806021672e::t_bc15434c207384 1-296
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "babeb29e33f20cfa087e59dee31a017b5e387f0f",
+  "prompts": {},
+  "sessions": {
+    "s_e2bc806021672e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b780-fd11-79d1-a574-02be534fc4f7",
+        "model": "ai-iisbo/[乾坤按量]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

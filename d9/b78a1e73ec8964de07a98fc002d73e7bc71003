@@ -1,0 +1,21 @@
+receipts/feat-kernel-plugins.json
+  s_28bebc745289eb::t_77f415e9826f39 71-78
+reviews/feat-kernel-plugins.md
+  s_28bebc745289eb::t_d93cd93a2e0536 1498-1562
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d9b78a1e73ec8964de07a98fc002d73e7bc71003",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

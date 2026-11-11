@@ -1,0 +1,19 @@
+receipts/feat-t177-c-plugin-outbox.json
+  s_315064bed9dbb1::t_71d04e894389bb 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d497ab3dfe2fccf3fea9582d49fb585ca2ea9134",
+  "prompts": {},
+  "sessions": {
+    "s_315064bed9dbb1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a26e931675986307c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

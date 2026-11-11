@@ -1,0 +1,61 @@
+apps/desktop/e2e/compute.ui.spec.ts
+  s_9356e7c42cd5ff::t_6e010bd323a916 1,4-5,12-33,51-58,70-75,77-90,92-94,96-97,100-103,106-135,137-156,159-161,163-167,171-172,174,177-187,190,192-193
+apps/desktop/src/components/compute/ComputeCard.tsx
+  s_9356e7c42cd5ff::t_6258350cc9123c 37,59,85
+apps/desktop/src/components/compute/HarnessSession.tsx
+  s_9356e7c42cd5ff::t_4542059ac1f031 3,48-51,83
+apps/desktop/src/components/compute/StatusChip.tsx
+  s_9356e7c42cd5ff::t_e733e7e0b28c9c 15
+apps/desktop/src/components/compute/card/AlertStrip.tsx
+  s_9356e7c42cd5ff::t_a81f2849fde9aa 1,4,9-11,13-20,34,43-59,64,70
+apps/desktop/src/components/compute/card/StepList.tsx
+  s_9356e7c42cd5ff::t_ab9fa52b43763e 33-34,40-41,44
+apps/desktop/src/components/compute/constants.ts
+  s_9356e7c42cd5ff::t_e0b7bff722df41 63-67
+apps/desktop/src/components/compute/parts.tsx
+  s_9356e7c42cd5ff::t_a2f603de655dad 12,16
+apps/desktop/src/components/compute/session/AgentGroup.tsx
+  s_9356e7c42cd5ff::t_9919f4642b8f01 44
+apps/desktop/src/components/messages/Body.tsx
+  s_9356e7c42cd5ff::t_bd60373106cf50 6,13-14,18
+apps/desktop/src/components/messages/HoverBar.tsx
+  s_9356e7c42cd5ff::t_e96dc67f5f66fb 8,18,30,64-65
+apps/desktop/src/components/messages/MessageList.tsx
+  s_9356e7c42cd5ff::t_7b4f297263317f 29
+apps/desktop/src/components/messages/MsgMenu.tsx
+  s_9356e7c42cd5ff::t_29b6b2073b46ee 3,8,14,25
+apps/desktop/src/components/messages/compute/ComputeCardFor.tsx
+  s_9356e7c42cd5ff::t_8b18bc53c56b60 1-7,9,11,13,15-18,21-23,25-28,31-46
+apps/desktop/src/components/messages/compute/ComputeLine.tsx
+  s_9356e7c42cd5ff::t_e2e25812a18e78 2-3,13,16-17,29,32,47,60,65,67,71,78
+apps/desktop/src/components/split/ComputeWork.tsx
+  s_9356e7c42cd5ff::t_cc597336f4a6eb 1,16,24-25,40-42,44,48-50,62,83,85-93,100-106,113,119
+apps/desktop/src/components/split/SplitPane.tsx
+  s_9356e7c42cd5ff::t_91d1110132adc7 54
+apps/desktop/src/data.ts
+  s_9356e7c42cd5ff::t_17c21bec85e49d 549
+apps/desktop/src/main.tsx
+  s_9356e7c42cd5ff::t_3a6b5cb86d8550 8,15
+apps/desktop/src/store/types.ts
+  s_9356e7c42cd5ff::t_ac5f06740f5bf2 38-39
+packages/ui-core/src/transcript.test.ts
+  s_9356e7c42cd5ff::t_c24009083dde5a 10,169-183
+packages/ui-core/src/transcript.ts
+  s_9356e7c42cd5ff::t_3d0e813c1cc836 307-316
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e84c6493166b392afce0c44dbf6567321e70da21",
+  "prompts": {},
+  "sessions": {
+    "s_9356e7c42cd5ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2b2d0a85716d2524",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

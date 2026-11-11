@@ -1,0 +1,25 @@
+apps/desktop/src/components/pages/AddContactPage.tsx
+  s_7519818ed5092f::t_72b39cb04c346d 1,10,46
+apps/desktop/src/components/pages/NewGroupPage.tsx
+  s_7519818ed5092f::t_f411e1af8a93c7 1,9,39
+apps/desktop/src/components/pages/SourcesPage.tsx
+  s_7519818ed5092f::t_bdddc992663330 9,56
+apps/desktop/src/components/pages/kit/parts.tsx
+  s_7519818ed5092f::t_16c134be0978e0 31-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "66e84f6859d542c20ddb37d77d370b403f35a990",
+  "prompts": {},
+  "sessions": {
+    "s_7519818ed5092f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4d9331a721ab3d82",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+packages/server/src/fakes.ts
+  h_f33e46a035b77c 47,58-59,89,95-97,131-132
+packages/server/src/intent.test.ts
+  h_f33e46a035b77c 329-330
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "caa3592c98877284f910e39993cc9354727b34cc",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

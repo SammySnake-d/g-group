@@ -1,0 +1,116 @@
+package-lock.json
+  h_f33e46a035b77c 23-421,468-522,527-530,547-550,555-722,732-1213,1234-1263,1285-1292,1311-1324
+packages/adapter-pi-contact/package.json
+  h_f33e46a035b77c 1-16
+packages/adapter-pi-contact/scripts/smoke.ts
+  h_f33e46a035b77c 1-53
+packages/adapter-pi-contact/src/index.ts
+  h_f33e46a035b77c 1-2
+packages/adapter-pi-contact/src/mind.test.ts
+  h_f33e46a035b77c 1-362
+packages/adapter-pi-contact/src/mind.ts
+  h_f33e46a035b77c 1-264
+packages/adapter-pi-contact/src/tools.ts
+  h_f33e46a035b77c 1-165
+packages/adapter-sqlite/src/store.test.ts
+  h_f33e46a035b77c 10,553-585
+packages/adapter-sqlite/src/store.ts
+  h_f33e46a035b77c 67-70,72,84-93
+packages/api-contract/src/api.ts
+  h_f33e46a035b77c 181-182
+packages/kernel/src/attention.test.ts
+  h_f33e46a035b77c 1-241
+packages/kernel/src/attention.ts
+  h_f33e46a035b77c 1-187
+packages/kernel/src/cron.test.ts
+  h_f33e46a035b77c 1-58
+packages/kernel/src/cron.ts
+  h_f33e46a035b77c 1-188
+packages/kernel/src/index.ts
+  h_f33e46a035b77c 5-8
+packages/kernel/src/rounds.test.ts
+  h_f33e46a035b77c 1-260
+packages/kernel/src/rounds.ts
+  h_f33e46a035b77c 1-352
+packages/kernel/src/runtime-ports.ts
+  h_f33e46a035b77c 1-111
+packages/server/README.md
+  h_f33e46a035b77c 1-55
+packages/server/catalog/catalog.json
+  h_f33e46a035b77c 1-6
+packages/server/catalog/rss-reader/plugin.json
+  h_f33e46a035b77c 1-13
+packages/server/catalog/webhook-out/plugin.json
+  h_f33e46a035b77c 1-11
+packages/server/package.json
+  h_f33e46a035b77c 1-16
+packages/server/proof/e2e-claude-compute.txt
+  h_f33e46a035b77c 1-11
+packages/server/proof/e2e-pi-claude.txt
+  h_f33e46a035b77c 1-28
+packages/server/src/assemble.ts
+  h_f33e46a035b77c 1-130
+packages/server/src/bus.ts
+  h_f33e46a035b77c 1-43
+packages/server/src/chat-ops.test.ts
+  h_f33e46a035b77c 1-129
+packages/server/src/cli.ts
+  h_f33e46a035b77c 1-138
+packages/server/src/db.ts
+  h_f33e46a035b77c 1-98
+packages/server/src/fakes.ts
+  h_f33e46a035b77c 1-122
+packages/server/src/host.test.ts
+  h_f33e46a035b77c 1-316
+packages/server/src/host.ts
+  h_f33e46a035b77c 1-1402
+packages/server/src/index.ts
+  h_f33e46a035b77c 1-6
+packages/server/src/plugins.test.ts
+  h_f33e46a035b77c 1-117
+packages/server/src/plugins.ts
+  h_f33e46a035b77c 1-256
+packages/server/src/schedules.test.ts
+  h_f33e46a035b77c 1-135
+packages/server/src/schedules.ts
+  h_f33e46a035b77c 1-218
+packages/server/src/service.ts
+  h_f33e46a035b77c 1-153
+packages/server/src/slash.test.ts
+  h_f33e46a035b77c 1-70
+packages/server/src/start.test.ts
+  h_f33e46a035b77c 1-30
+packages/server/src/start.ts
+  h_f33e46a035b77c 1-90
+receipts/feat-adapter-pi-contact.json
+  h_f33e46a035b77c 1-30
+receipts/feat-chat-ops.json
+  h_f33e46a035b77c 1-14
+receipts/feat-contact-runtime.json
+  h_f33e46a035b77c 1-17
+receipts/feat-host-rounds.json
+  h_f33e46a035b77c 1-13
+receipts/feat-kernel-rounds.json
+  h_f33e46a035b77c 1-14
+receipts/feat-pi-wire.json
+  h_f33e46a035b77c 1-13
+receipts/feat-plugins.json
+  h_f33e46a035b77c 1-12
+receipts/feat-runtime-ports.json
+  h_f33e46a035b77c 1-13
+receipts/feat-schedules.json
+  h_f33e46a035b77c 1-12
+receipts/feat-slash-builtin.json
+  h_f33e46a035b77c 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "285716050236b1ecc611612b67d68807f60d467a",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,61 @@
+apps/desktop/src/components/Plugins.tsx
+  s_7e0c5bbe16b27d::t_f8d875f170c833 1-5
+apps/desktop/src/components/plugins/ActionButton.tsx
+  s_7e0c5bbe16b27d::t_364a7e1c631183 1-32
+apps/desktop/src/components/plugins/AttachDialog.tsx
+  s_7e0c5bbe16b27d::t_8439d077921adb 1-74
+apps/desktop/src/components/plugins/CenterNav.tsx
+  s_7e0c5bbe16b27d::t_9ce52dd67d8cb5 1-58
+apps/desktop/src/components/plugins/ConsentDialog.tsx
+  s_7e0c5bbe16b27d::t_29cc057d9c2c81 1-68
+apps/desktop/src/components/plugins/DetailSections.tsx
+  s_7e0c5bbe16b27d::t_c30a5acb3eada1 1-95
+apps/desktop/src/components/plugins/Discover.tsx
+  s_7e0c5bbe16b27d::t_e0d076fc7c6d01 1-42
+apps/desktop/src/components/plugins/GrantCard.tsx
+  s_7e0c5bbe16b27d::t_50431cce257bbb 1-84
+apps/desktop/src/components/plugins/Installed.tsx
+  s_7e0c5bbe16b27d::t_22fde81f5dee08 1-67
+apps/desktop/src/components/plugins/MarketCard.tsx
+  s_7e0c5bbe16b27d::t_5c32b8eceeb79d 1-35
+apps/desktop/src/components/plugins/PluginCenter.tsx
+  s_7e0c5bbe16b27d::t_0cc21880dea376 1-40
+apps/desktop/src/components/plugins/PluginDetail.tsx
+  s_7e0c5bbe16b27d::t_4ca7f016af0850 1-83
+apps/desktop/src/components/plugins/SideloadDialog.tsx
+  s_7e0c5bbe16b27d::t_4c52fcce312708 1-93
+apps/desktop/src/components/plugins/UninstallDialog.tsx
+  s_7e0c5bbe16b27d::t_86d47c30eab8fb 1-41
+apps/desktop/src/components/plugins/Updates.tsx
+  s_7e0c5bbe16b27d::t_e93101bd61d03a 1-54
+apps/desktop/src/components/plugins/WhereCard.tsx
+  s_7e0c5bbe16b27d::t_80119e4b8af7c7 1-66
+apps/desktop/src/components/plugins/constants.ts
+  s_7e0c5bbe16b27d::t_6a6d7f157881e7 1-57
+apps/desktop/src/components/plugins/flow.tsx
+  s_7e0c5bbe16b27d::t_f0865138332b3f 1-49
+apps/desktop/src/components/plugins/layout.tsx
+  s_7e0c5bbe16b27d::t_91325f363a9c01 1-40
+apps/desktop/src/components/plugins/tags.tsx
+  s_7e0c5bbe16b27d::t_5334aceea178ad 1-41
+apps/desktop/src/components/plugins/util.ts
+  s_7e0c5bbe16b27d::t_79ad26250b4761 1-36
+apps/desktop/src/pluginInfo.ts
+  s_7e0c5bbe16b27d::t_859bc0c67e83de 5-7,13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b32e0d55a809b37c42d0228c855dc82edee6585b",
+  "prompts": {},
+  "sessions": {
+    "s_7e0c5bbe16b27d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac415d54dda55267d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

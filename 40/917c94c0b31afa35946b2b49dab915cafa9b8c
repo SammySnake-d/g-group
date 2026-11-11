@@ -1,0 +1,23 @@
+packages/server/src/db.ts
+  s_cbcca5444aff54::t_df355faa019b1b 6,45-49
+packages/server/src/host.ts
+  s_cbcca5444aff54::t_e04a4834a54e04 27,48,112-126,196-197,246,807,827-834,883-892,929-933,1237-1247,1347-1348,1460,1475,1503-1654,1756,1770
+packages/server/src/review.ts
+  s_cbcca5444aff54::t_f3871a13c6f2e2 3-4,7,17-28,31-40,43-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "40917c94c0b31afa35946b2b49dab915cafa9b8c",
+  "prompts": {},
+  "sessions": {
+    "s_cbcca5444aff54": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9ff7de0f27583eaa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

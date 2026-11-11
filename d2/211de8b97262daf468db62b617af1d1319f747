@@ -1,0 +1,21 @@
+receipts/feat-t177-a-recovery.json
+  s_52d6735a9e0446::t_43cfa7c9343e63 21-28
+reviews/feat-t177-a-recovery.md
+  s_52d6735a9e0446::t_7b388dc14790fe 1-159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d2211de8b97262daf468db62b617af1d1319f747",
+  "prompts": {},
+  "sessions": {
+    "s_52d6735a9e0446": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d0818a09-6c43-480f-9320-7138615ca097",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

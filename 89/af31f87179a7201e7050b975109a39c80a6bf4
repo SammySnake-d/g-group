@@ -1,0 +1,36 @@
+packages/adapter-pi-contact/src/compact.test.ts
+  s_e21a7b024276d2::t_a0f0df0e4ba512 6,37-38
+third_party/openmausbot-memory/NOTICE
+  s_e21a7b024276d2::t_1a05b52313d166 1-102
+packages/kernel/src/memory-capture.ts
+  s_e21a7b024276d2::t_1a05b52313d166 2-4,6,8-39,41-79
+packages/server/src/host.ts
+  s_e21a7b024276d2::t_d2e0e81fd4d994 1-2,395,446,554,2131,2196-2315,2317,2327-2332,2334,3771,3992
+  s_e21a7b024276d2::t_603f0e06025322 2336-2337,2524-2525,2557-2558,2609,3772
+packages/server/src/memory-coverage.ts
+  s_e21a7b024276d2::t_31c3f91a3eb442 2-5,18,20,24-80
+packages/server/src/memory-store.ts
+  s_e21a7b024276d2::t_31c3f91a3eb442 3,41-56
+packages/adapter-pi-contact/src/compact.ts
+  s_e21a7b024276d2::t_a0f0df0e4ba512 7,66,75,79-83,122
+third_party/openmausbot-memory/LICENSE
+  s_e21a7b024276d2::t_1a05b52313d166 1-202
+third_party/openmausbot-memory/UPSTREAM.md
+  s_e21a7b024276d2::t_1a05b52313d166 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "89af31f87179a7201e7050b975109a39c80a6bf4",
+  "prompts": {},
+  "sessions": {
+    "s_e21a7b024276d2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c6e6-9a06-7441-b5e9-c070695d078b",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

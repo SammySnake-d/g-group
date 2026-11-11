@@ -1,0 +1,19 @@
+packages/server/proof/memory-mutations.mjs
+  s_2818dc8c3934e4::t_fba7e6d33773d0 1-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "44c4de9fa40559acbc078f5bb83bc47b5c8bed6c",
+  "prompts": {},
+  "sessions": {
+    "s_2818dc8c3934e4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b8e719a0-2655-4ffe-87d8-d96d424be0a4",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

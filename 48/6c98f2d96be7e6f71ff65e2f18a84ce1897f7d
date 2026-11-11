@@ -1,0 +1,21 @@
+docs/spec/需求文档.md
+  s_52d6735a9e0446::t_8f4ab30f1c2a34 3,10,110,511,557,835,1607,1642,1662,1681,1781,2559-2561,2591,2943-2944,4719-4726
+docs/概念卡.md
+  s_52d6735a9e0446::t_9af62b8dd2e2aa 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "486c98f2d96be7e6f71ff65e2f18a84ce1897f7d",
+  "prompts": {},
+  "sessions": {
+    "s_52d6735a9e0446": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d0818a09-6c43-480f-9320-7138615ca097",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

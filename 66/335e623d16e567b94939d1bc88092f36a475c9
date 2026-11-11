@@ -1,0 +1,29 @@
+receipts/feat-retry-policy.json
+  s_28bebc745289eb::t_41e61989dc2695 1-17
+packages/kernel/proof/retry-policy-mutations.txt
+  s_45f973090a4dd5::t_e3415fdf6bd0cc 1-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "66335e623d16e567b94939d1bc88092f36a475c9",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_45f973090a4dd5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a51cdc3b09003b508",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

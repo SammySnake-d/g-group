@@ -1,0 +1,21 @@
+packages/server/proof/e2e-model-hotswap.txt
+  s_25620647d6f8eb::t_97021f83ad1d98 1-36
+packages/server/scripts/e2e-model-hotswap.ts
+  s_25620647d6f8eb::t_08ee93d098434c 1-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "98ee8b1284e41fe0dc675ebed96ddf2f18cd6f8c",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+packages/server/src/plugin-late-receipt.test.ts
+  s_c5600ddfc2a370::t_564b025fe6cdc7 1-205
+packages/server/src/plugin-outbox.ts
+  s_c5600ddfc2a370::t_9eafa37e16d778 66-83,229-236
+packages/server/src/plugin-runtime.ts
+  s_c5600ddfc2a370::t_95da3c300cf8ac 59-60,333
+packages/server/src/plugins.ts
+  s_c5600ddfc2a370::t_eca6538f0670a4 17,380-383
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ed3e93d8f0a88b9fdddbe9cd9be38d0d72b110f1",
+  "prompts": {},
+  "sessions": {
+    "s_c5600ddfc2a370": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a82d860e88f191a64",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

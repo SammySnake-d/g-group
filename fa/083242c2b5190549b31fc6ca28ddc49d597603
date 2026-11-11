@@ -1,0 +1,43 @@
+apps/desktop/src/components/Workbench.tsx
+  s_3371b1b057a7d1::t_17638014453103 1-5
+apps/desktop/src/components/workbench/ContactPane.tsx
+  s_3371b1b057a7d1::t_402f0360641be2 1-59
+apps/desktop/src/components/workbench/Crons.tsx
+  s_3371b1b057a7d1::t_a4c404bb14ad65 1-58
+apps/desktop/src/components/workbench/DoingRow.tsx
+  s_3371b1b057a7d1::t_4c7a1fc3270c7f 1-33
+apps/desktop/src/components/workbench/Duty.tsx
+  s_3371b1b057a7d1::t_124e54c50b6d11 1-100
+apps/desktop/src/components/workbench/Memory.tsx
+  s_3371b1b057a7d1::t_a6564f91cd1d7b 1-49
+apps/desktop/src/components/workbench/Overview.tsx
+  s_3371b1b057a7d1::t_700aeb83048ad8 1-129
+apps/desktop/src/components/workbench/ProcessView.tsx
+  s_3371b1b057a7d1::t_a2fe20c53e7aac 1-75
+apps/desktop/src/components/workbench/Settings.tsx
+  s_3371b1b057a7d1::t_5760c75f4543c7 1-55
+apps/desktop/src/components/workbench/Workbench.tsx
+  s_3371b1b057a7d1::t_fa587d9ac31237 1-72
+apps/desktop/src/components/workbench/constants.ts
+  s_3371b1b057a7d1::t_2f531d84f11226 1-50
+apps/desktop/src/components/workbench/parts.tsx
+  s_3371b1b057a7d1::t_4a068f2ad759d9 1-88
+apps/desktop/src/components/workbench/status.ts
+  s_3371b1b057a7d1::t_cc9f4ee1167ec1 1-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fa083242c2b5190549b31fc6ca28ddc49d597603",
+  "prompts": {},
+  "sessions": {
+    "s_3371b1b057a7d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-abc11790124c4fe14",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

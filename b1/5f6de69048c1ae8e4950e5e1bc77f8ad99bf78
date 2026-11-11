@@ -1,0 +1,27 @@
+apps/desktop/e2e/concept.ui.spec.ts
+  s_042e901c6ad028::t_bd52394075387a 1-55
+apps/desktop/src/components/Messages.tsx
+  s_042e901c6ad028::t_20c632d6c49537 16,102
+apps/desktop/src/concept/index.ts
+  s_042e901c6ad028::t_3ff562111e0083 1-2
+apps/desktop/src/concept/seal/AcceptSeal.tsx
+  s_042e901c6ad028::t_fda69c6755cdc5 1-42
+apps/desktop/src/concept/seal/motion.ts
+  s_042e901c6ad028::t_cff6ae436325bf 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b15f6de69048c1ae8e4950e5e1bc77f8ad99bf78",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

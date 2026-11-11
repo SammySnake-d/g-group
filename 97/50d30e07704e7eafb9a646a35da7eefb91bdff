@@ -1,0 +1,29 @@
+apps/desktop/e2e/slash.ui.spec.ts
+  s_a43d51091474f6::t_cdadabdeaa428e 1-285
+apps/desktop/src/App.tsx
+  s_a43d51091474f6::t_bba6ec656ce184 6,91,556,667,702-704
+apps/desktop/src/commands.ts
+  s_a43d51091474f6::t_3a47022bc823bb 1-70
+apps/desktop/src/components/Composer.tsx
+  s_a43d51091474f6::t_ff9ba295986938 1-3,7,12,15-16,18-19,22,24,45-137,142,145,151,155,159-171,173-187,191-198,209-307,312-329
+apps/desktop/src/components/Slash.tsx
+  s_a43d51091474f6::t_0e2416e5ef6341 1-139
+apps/desktop/src/ctx.ts
+  s_a43d51091474f6::t_f4043a82b90317 154-157,160-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9750d30e07704e7eafb9a646a35da7eefb91bdff",
+  "prompts": {},
+  "sessions": {
+    "s_a43d51091474f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad50527484f481a61",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

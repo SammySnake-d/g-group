@@ -1,0 +1,21 @@
+packages/domain/proof/tla-red-green.txt
+  s_29fa229c8c70ee::t_ef3dfb1cbf9393 1,4,44
+receipts/feat-tla-cas-models.json
+  s_29fa229c8c70ee::t_ef1d5dfed0887c 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4ca0c4317e45919cdbab04b372bcc3e3e3831a92",
+  "prompts": {},
+  "sessions": {
+    "s_29fa229c8c70ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6f12fa99094fd0fa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

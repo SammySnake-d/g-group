@@ -1,0 +1,74 @@
+packages/adapter-cc-compute/src/attachments.test.ts
+  s_28bebc745289eb::t_c5377a7a6adff6 1-81
+packages/adapter-cc-compute/src/events.ts
+  s_28bebc745289eb::t_dcb22c5efaf809 21
+packages/adapter-cc-compute/src/types.ts
+  s_28bebc745289eb::t_bf79956fd378bc 64
+packages/server/src/fakes.ts
+  s_28bebc745289eb::t_a7c856d8d92c69 38,83-93
+  s_28bebc745289eb::t_4c6471e80919c9 45,68
+packages/server/src/help.test.ts
+  s_28bebc745289eb::t_8af1ce4c313e4c 1-276
+packages/server/src/host.test.ts
+  s_28bebc745289eb::t_456703e46f741e 10,12,42,263,286-287
+packages/adapter-cc-compute/src/adapter.ts
+  s_28bebc745289eb::t_a823fd662cf170 226
+packages/adapter-cc-compute/src/report-schema.ts
+  s_28bebc745289eb::t_beed98c718fe5b 7,18,30,47,65
+packages/server/src/assemble.ts
+  s_28bebc745289eb::t_f97f0ceda109d2 90
+packages/server/src/host.ts
+  s_28bebc745289eb::t_c45a75f4bb2d80 7-8,155-165,187-188,1007,1010-1055,1073,1091-1094,1111,1426-1438,1557-1559,1571-1604,1614-1616,1622-1626,1632-1656,1697,1718-1722,1742,1757-1764
+packages/server/src/service.ts
+  s_28bebc745289eb::t_81e1b2a748c69a 80
+packages/server/proof/compute-help-mutations.mjs
+  s_e7bd71499cd700::t_e8f07a7cc74061 1-103
+receipts/feat-compute-help.json
+  s_4ad1dfe0ee6569::t_40d6c7cd9bf955 1-6,8-15,17-22
+packages/api-contract/src/entities.ts
+  s_28bebc745289eb::t_84b2aa117ec6b8 180-198
+packages/server/src/review.test.ts
+  s_28bebc745289eb::t_e72352a0a23ffa 1-267
+packages/server/src/review.ts
+  s_568736c9a90f61::t_e9eda19c769f24 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c7f4b123937a161a2bf8f0c8c688f262f59c3cd5",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_4ad1dfe0ee6569": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef07eb6a-5c4c-4ab7-bbcc-46df83c37b7d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_568736c9a90f61": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "945466dc-9318-4837-9afe-e1c1b3bb224f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_e7bd71499cd700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8db9faef-fb87-414b-b25d-2aa6747caad3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

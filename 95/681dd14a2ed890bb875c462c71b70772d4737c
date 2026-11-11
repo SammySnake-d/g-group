@@ -1,0 +1,37 @@
+apps/desktop/e2e/layout.ui.spec.ts
+  s_7f422c52350e16::t_065af644f0a0a5 1-78
+apps/desktop/e2e/shell.electron.spec.ts
+  s_7f422c52350e16::t_d4ba8847ae145c 16-17
+apps/desktop/e2e/shots-layout.ui.spec.ts
+  s_7f422c52350e16::t_c03ab863fbfc9e 1-22
+apps/desktop/src/App.tsx
+  s_7f422c52350e16::t_a00080e74c5eca 822-823,831,833-834,840,843,845,950,984-985,1008,1013
+apps/desktop/src/components/Messages.tsx
+  s_7f422c52350e16::t_2fa22dad027c61 1-2,90,92,95,97-102,174,177-194,196-197,515
+apps/desktop/src/index.css
+  s_7f422c52350e16::t_848c577a77083c 12-21,23-36,38-46,68-69,74-97,103-104,106,120,127-128
+apps/desktop/tailwind.config.js
+  s_7f422c52350e16::t_c24ea74936dcdb 11-14
+packages/ui-core/src/anchor.test.ts
+  s_7f422c52350e16::t_c0b558ee3a27e0 1-48
+packages/ui-core/src/anchor.ts
+  s_7f422c52350e16::t_cbfd7d68ee2453 1-50
+packages/ui-core/src/index.ts
+  s_7f422c52350e16::t_8171a2f5900e2b 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "95681dd14a2ed890bb875c462c71b70772d4737c",
+  "prompts": {},
+  "sessions": {
+    "s_7f422c52350e16": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18b4f4b0-3cf6-4d51-be92-ca20094b2ce3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

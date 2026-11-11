@@ -1,0 +1,19 @@
+packages/kernel/proof/run-ledger-mutations.mjs
+  s_568736c9a90f61::t_23c56462d4506b 1-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "685cc89132dd0231d1ff9f4b6fc07da8b2c415bc",
+  "prompts": {},
+  "sessions": {
+    "s_568736c9a90f61": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "945466dc-9318-4837-9afe-e1c1b3bb224f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,56 @@
+package-lock.json
+  h_f33e46a035b77c 77-80,135-140
+packages/kernel/package.json
+  h_f33e46a035b77c 1-8
+packages/kernel/proof/mutations-canary.txt
+  h_f33e46a035b77c 1-4
+packages/kernel/proof/mutations-node25.txt
+  h_f33e46a035b77c 1-207
+packages/kernel/proof/mutations.mjs
+  h_f33e46a035b77c 1-345
+packages/kernel/proof/mutations.txt
+  h_f33e46a035b77c 1-207
+packages/kernel/proof/r10-01-residual.mjs
+  h_f33e46a035b77c 1-96
+packages/kernel/proof/r10-01-residual.txt
+  h_f33e46a035b77c 1-25
+packages/kernel/proof/tests.txt
+  h_f33e46a035b77c 1-225
+packages/kernel/src/assemble.test.ts
+  h_f33e46a035b77c 1-735
+packages/kernel/src/assemble.ts
+  h_f33e46a035b77c 1-334
+packages/kernel/src/classify.test.ts
+  h_f33e46a035b77c 1-268
+packages/kernel/src/classify.ts
+  h_f33e46a035b77c 1-116
+packages/kernel/src/index.ts
+  h_f33e46a035b77c 1-4
+packages/kernel/src/own.ts
+  h_f33e46a035b77c 1-17
+packages/kernel/src/plain.test.ts
+  h_f33e46a035b77c 1-390
+packages/kernel/src/plain.ts
+  h_f33e46a035b77c 1-215
+packages/kernel/src/plugin-contract.ts
+  h_f33e46a035b77c 1-152
+packages/kernel/src/plugins.test.ts
+  h_f33e46a035b77c 1-1971
+packages/kernel/src/plugins.ts
+  h_f33e46a035b77c 1-455
+receipts/feat-kernel-plugins.json
+  h_f33e46a035b77c 1-79
+reviews/feat-kernel-plugins.md
+  h_f33e46a035b77c 1-1562
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7e995032548dff5fc5fc04346f9dfe4a314fd8f5",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

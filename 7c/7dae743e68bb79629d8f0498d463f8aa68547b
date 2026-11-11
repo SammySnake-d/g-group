@@ -1,0 +1,30 @@
+packages/server/src/memory-reliability.test.ts
+  s_e21a7b024276d2::t_d62d1f765769d9 135-143
+  s_e21a7b024276d2::t_d58318c3847578 115-134
+packages/adapter-pi-contact/src/compact.ts
+  s_e21a7b024276d2::t_980deed7a5023c 7,74,77,79-102,141
+packages/kernel/src/memory-capture.ts
+  s_e21a7b024276d2::t_ef97d7bd9c95ee 4-5,7-9
+packages/server/src/host.ts
+  s_e21a7b024276d2::t_caf3294cf83eb0 2191,2200,2202-2217,2487
+packages/server/src/memory-coverage.ts
+  s_e21a7b024276d2::t_05f6d641f8233a 2-3,16,21-33
+packages/server/src/memory-store.ts
+  s_e21a7b024276d2::t_9d5444ecf8193a 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7c7dae743e68bb79629d8f0498d463f8aa68547b",
+  "prompts": {},
+  "sessions": {
+    "s_e21a7b024276d2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c6e6-9a06-7441-b5e9-c070695d078b",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

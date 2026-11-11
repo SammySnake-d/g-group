@@ -1,0 +1,21 @@
+receipts/evidence/t177-g5/SCOPE.md
+  s_9e84d571573b49::t_83c0773cae987e 1-37
+receipts/evidence/t177-g5/summary.json
+  s_9e84d571573b49::t_22a6eecf2bbb98 1-365
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8f15d9df40e3d85164d3246395491c24764b8144",
+  "prompts": {},
+  "sessions": {
+    "s_9e84d571573b49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5c99cdaaa25826c8",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

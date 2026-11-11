@@ -1,0 +1,25 @@
+packages/server/proof/shared-docs-mutations.mjs
+  s_28bebc745289eb::t_9016d4da991239 1-78
+packages/server/proof/shared-docs-mutations.txt
+  s_28bebc745289eb::t_c4e5aa414b4557 1-20
+packages/server/proof/shared-docs-tests.txt
+  s_28bebc745289eb::t_2773294f20ebc9 1-22
+receipts/feat-shared-doc.json
+  s_28bebc745289eb::t_4f1bd973fc889e 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0e3a4893e71b0db719d7f0e12214becd16116e52",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

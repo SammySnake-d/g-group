@@ -1,0 +1,27 @@
+packages/adapter-cc-compute/proof/resident-complete-mutations.mjs
+  s_56d86eb5914775::t_76adf7fe199a58 1-116
+packages/adapter-cc-compute/proof/resident-partial-messages-probe.txt
+  s_56d86eb5914775::t_b9cf10731b7c65 1-15
+packages/server/proof/resident-complete-real.ts
+  s_56d86eb5914775::t_e33dfd5f8e96db 1-124
+packages/server/proof/resident-complete-real.txt
+  s_56d86eb5914775::t_11819928980bb7 1-43
+receipts/feat-resident-complete.json
+  s_56d86eb5914775::t_434d6c6f31260b 1-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7f8502471cf430f3c7779551889d381986fbd327",
+  "prompts": {},
+  "sessions": {
+    "s_56d86eb5914775": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1ead79f6fd1706fc",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+packages/kernel/src/plain.test.ts
+  s_f95254e55a45df::t_36b96c213831da 346-390
+packages/kernel/src/plain.ts
+  s_f95254e55a45df::t_5ce33b5c1e79e5 1,7-8,20,23-24,27-28,32,36
+packages/kernel/src/plugins.test.ts
+  s_f95254e55a45df::t_55af9364ac88bc 1426-1427,1432-1433,1458-1466,1468,1489-1491,1559,1576,1657-1971
+packages/kernel/src/plugins.ts
+  s_f95254e55a45df::t_2aac3cfecc4a48 1-3,8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ab8d4ec742078da6e3d917417a1791743cd28e0c",
+  "prompts": {},
+  "sessions": {
+    "s_f95254e55a45df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bfea29f6-6e90-4808-9e7b-cd317a4576de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

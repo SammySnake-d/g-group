@@ -1,0 +1,30 @@
+packages/kernel/fixtures/rejection-operations.mjs
+  s_74b15fb4f695d6::t_149fb33cd9f4a6 1-154
+  s_74b15fb4f695d6::t_70485ee2d72343 155-173
+packages/kernel/src/plain.ts
+  s_74b15fb4f695d6::t_030994ffa1dbf5 6-8,11-12,21-40,42-43,46-77,80-85,88-164,166-203,206,208-214
+packages/kernel/src/assemble.ts
+  s_74b15fb4f695d6::t_030994ffa1dbf5 14-17,54-56,73-154,156-157,160-296,299-329,331,334,336,339,341-343
+packages/kernel/fixtures/sync-window.mjs
+  s_74b15fb4f695d6::t_030994ffa1dbf5 5,25-37,39-42,44,46-50,52,56-69,82,104-107,117,129-144,152-157,165
+packages/kernel/src/plugins.ts
+  s_74b15fb4f695d6::t_030994ffa1dbf5 1-23,27-196,198-341
+packages/kernel/src/classify.ts
+  s_74b15fb4f695d6::t_030994ffa1dbf5 9,11-12,40-115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4c71508cf3153a760d49af27f0c84a0b9adce01f",
+  "prompts": {},
+  "sessions": {
+    "s_74b15fb4f695d6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c93a-87c4-7701-a989-58b9b15da855",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

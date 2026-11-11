@@ -1,0 +1,19 @@
+scripts/t177/g5-mutations.mjs
+  s_ce8dc7845336c2::t_7b029648ed8110 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "446d43bc1b0b250962154e8d12c691445ae12613",
+  "prompts": {},
+  "sessions": {
+    "s_ce8dc7845336c2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac609c5004756eb3d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

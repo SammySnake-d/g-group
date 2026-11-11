@@ -1,0 +1,32 @@
+receipts/feat-auth-host.json
+  s_25620647d6f8eb::t_50ba435e2b916c 1-63
+packages/server/proof/auth-intent-host-mutations.txt
+  s_25620647d6f8eb::t_692a8f46c532a4 20-22
+  s_25620647d6f8eb::t_646c46a6869959 1-19
+  s_25620647d6f8eb::t_b06b9b0088b909 23
+packages/server/proof/auth-intent-tests.txt
+  s_25620647d6f8eb::t_be5dc666ee3e52 1-40
+packages/server/proof/real-auth-run.txt
+  s_25620647d6f8eb::t_924d5e5e86a1ce 2-3,5,10-11,13-15,17-18,21-24,30,32,35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8c4f158acf5611c8d1fc18b7a5ab395a6bcb79b4",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

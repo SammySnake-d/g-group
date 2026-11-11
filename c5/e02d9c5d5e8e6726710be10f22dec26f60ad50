@@ -1,0 +1,69 @@
+apps/desktop/src/components/Overlays.tsx
+  s_3ea52b607a942c::t_4fe5babec9bb98 1-4
+apps/desktop/src/components/pages/AddContactPage.tsx
+  s_3ea52b607a942c::t_9cf91f5ec47ce4 1-49
+apps/desktop/src/components/pages/CommitsPage.tsx
+  s_3ea52b607a942c::t_24fc7960c51d75 1-36
+apps/desktop/src/components/pages/DetailPage.tsx
+  s_3ea52b607a942c::t_d6827d4aba6a04 1-135
+apps/desktop/src/components/pages/FilesPage.tsx
+  s_3ea52b607a942c::t_1526af0e8ffb26 1-24
+apps/desktop/src/components/pages/FloatPanel.tsx
+  s_3ea52b607a942c::t_ba58407fca6ef4 1-75
+apps/desktop/src/components/pages/ForwardPages.tsx
+  s_3ea52b607a942c::t_399548559742ae 1-32
+apps/desktop/src/components/pages/GroupPage.tsx
+  s_3ea52b607a942c::t_77c03246d951d4 1-66
+apps/desktop/src/components/pages/HelperPage.tsx
+  s_3ea52b607a942c::t_848ecfe88bc3fa 1-74
+apps/desktop/src/components/pages/HuddlePage.tsx
+  s_3ea52b607a942c::t_f92a543b3e6f71 1-28
+apps/desktop/src/components/pages/InnerPage.tsx
+  s_3ea52b607a942c::t_ab05f7d657c761 1-72
+apps/desktop/src/components/pages/LinksPage.tsx
+  s_3ea52b607a942c::t_410b25fa7d29ca 1-44
+apps/desktop/src/components/pages/NewGroupPage.tsx
+  s_3ea52b607a942c::t_73b84746f9fbdb 1-44
+apps/desktop/src/components/pages/PageBody.tsx
+  s_3ea52b607a942c::t_1928f90417a8a5 1-59
+apps/desktop/src/components/pages/PersonPage.tsx
+  s_3ea52b607a942c::t_d51bd440012dc9 1-79
+apps/desktop/src/components/pages/PinsPage.tsx
+  s_3ea52b607a942c::t_4230296869f166 1-29
+apps/desktop/src/components/pages/PlaybookPage.tsx
+  s_3ea52b607a942c::t_66968a52939cd0 1-33
+apps/desktop/src/components/pages/PoolPage.tsx
+  s_3ea52b607a942c::t_10f3469eb176cd 1-64
+apps/desktop/src/components/pages/SearchPage.tsx
+  s_3ea52b607a942c::t_e2caeef86e8b91 1-36
+apps/desktop/src/components/pages/SettingsPage.tsx
+  s_3ea52b607a942c::t_0260e4f2c4645f 1-51
+apps/desktop/src/components/pages/SourcesPage.tsx
+  s_3ea52b607a942c::t_01157f45f6f9e1 1-61
+apps/desktop/src/components/pages/TalkPage.tsx
+  s_3ea52b607a942c::t_f39e4d2be689ba 1-30
+apps/desktop/src/components/pages/WorkspacePage.tsx
+  s_3ea52b607a942c::t_8afbfbc5470131 1-32
+apps/desktop/src/components/pages/constants.ts
+  s_3ea52b607a942c::t_24e7076aa2f4d2 1-63
+apps/desktop/src/components/pages/helperReply.ts
+  s_3ea52b607a942c::t_0b39d7b7021ac2 1-17
+apps/desktop/src/components/pages/titles.ts
+  s_3ea52b607a942c::t_124bddc08e1328 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c5e02d9c5d5e8e6726710be10f22dec26f60ad50",
+  "prompts": {},
+  "sessions": {
+    "s_3ea52b607a942c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ad819446-c7fb-4d42-823b-3d753284f3be",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

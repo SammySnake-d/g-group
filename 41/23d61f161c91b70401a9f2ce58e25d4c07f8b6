@@ -1,0 +1,14 @@
+packages/domain/src/contact.test.ts
+  h_f33e46a035b77c 1765-1798
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4123d61f161c91b70401a9f2ce58e25d4c07f8b6",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

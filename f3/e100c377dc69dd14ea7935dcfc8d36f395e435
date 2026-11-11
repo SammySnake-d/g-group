@@ -1,0 +1,35 @@
+apps/desktop/e2e/astryx.ui.spec.ts
+  s_afda23cfcae587::t_dde05ceb56b3b9 1-62
+apps/desktop/package-lock.json
+  s_afda23cfcae587::t_f6cf46f2fbdb73 12-13,29,120-147,223-243,2125-2135,2587-2592,3194-3212,3285-3290,3604-3615,4547-4552
+apps/desktop/package.json
+  s_afda23cfcae587::t_ab845296e6afa9 24-25,41
+apps/desktop/src/astryx/AstryxRoot.tsx
+  s_afda23cfcae587::t_3a0915710088c0 1-11
+apps/desktop/src/astryx/Probe.tsx
+  s_afda23cfcae587::t_9532b2d76baf98 1-50
+apps/desktop/src/astryx/layers.css
+  s_afda23cfcae587::t_92c772b17f2d44 1-4
+apps/desktop/src/astryx/theme-paper-ink.css
+  s_afda23cfcae587::t_9f2a786b9c9a78 1-47
+apps/desktop/src/index.css
+  s_afda23cfcae587::t_5e269409eb43ba 1-7,9
+apps/desktop/src/main.tsx
+  s_afda23cfcae587::t_e3c189cdb80cee 5-6,17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f3e100c377dc69dd14ea7935dcfc8d36f395e435",
+  "prompts": {},
+  "sessions": {
+    "s_afda23cfcae587": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "92af38cf-dccc-4335-ba90-5e71604991ff",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+receipts/feat-model-hotswap-wire.json
+  s_20b61be4cb682f::t_3258fbee7ce1aa 7-12,15-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4fd5919470725c7fcefafcbd80d08032d0824c3d",
+  "prompts": {},
+  "sessions": {
+    "s_20b61be4cb682f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6cc08ff4-6b3e-4c77-8c0c-740d8ab6b882",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+packages/server/src/db.ts
+  s_28bebc745289eb::t_67c5f1936bde90 6,45-49
+packages/server/src/host.ts
+  s_28bebc745289eb::t_a1746c927f2c04 27,48,112-126,196-197,246,807,827-834,883-892,929-933,1237-1247,1347-1348,1460,1475,1503-1654,1756,1770
+packages/server/src/review.ts
+  s_28bebc745289eb::t_c7ce3a17fc9bd9 3-4,7,17-28,31-40,43-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8965d8c55b754f86c084152b2eed86ff55bf284f",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

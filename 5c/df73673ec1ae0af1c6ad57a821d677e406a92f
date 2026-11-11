@@ -1,0 +1,21 @@
+packages/server/src/artifacts.test.ts
+  s_ae065512e1088f::t_dad77bb8c6b059 1-327
+packages/server/src/artifacts.ts
+  s_ae065512e1088f::t_675c1f3ec11698 1-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5cdf73673ec1ae0af1c6ad57a821d677e406a92f",
+  "prompts": {},
+  "sessions": {
+    "s_ae065512e1088f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a79b7ed6217c51390",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

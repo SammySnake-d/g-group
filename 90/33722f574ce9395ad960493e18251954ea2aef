@@ -1,0 +1,51 @@
+apps/desktop/src/components/ModelSettings.tsx
+  s_042e901c6ad028::t_3df23caedfdddc 1-3
+apps/desktop/src/components/models/BatchColumns.tsx
+  s_042e901c6ad028::t_c9b183a7245df7 1-86
+apps/desktop/src/components/models/BatchReplace.tsx
+  s_042e901c6ad028::t_bc29bb88993746 1-69
+apps/desktop/src/components/models/Chain.tsx
+  s_042e901c6ad028::t_f1a395bfbc9c94 1-24
+apps/desktop/src/components/models/ComputeModeList.tsx
+  s_042e901c6ad028::t_4dddaacdec7291 1-25
+apps/desktop/src/components/models/ContactModelSettings.tsx
+  s_042e901c6ad028::t_34f13ff40a09d6 1-128
+apps/desktop/src/components/models/DefaultsImpact.tsx
+  s_042e901c6ad028::t_5a5c4ac26e83d7 1-85
+apps/desktop/src/components/models/EffectivePanel.tsx
+  s_042e901c6ad028::t_c3823b03bb0bf2 1-67
+apps/desktop/src/components/models/FieldSwitch.tsx
+  s_042e901c6ad028::t_7094db75871eda 1-9
+apps/desktop/src/components/models/GlobalModelDefaults.tsx
+  s_042e901c6ad028::t_5f7fecec12625e 1-107
+apps/desktop/src/components/models/MismatchFix.tsx
+  s_042e901c6ad028::t_84b960d5b6ffe9 1-42
+apps/desktop/src/components/models/ModelOverview.tsx
+  s_042e901c6ad028::t_e7dda15c4e91fc 1-41
+apps/desktop/src/components/models/NextTurnNote.tsx
+  s_042e901c6ad028::t_00e944aa58840f 1-22
+apps/desktop/src/components/models/SaveBar.tsx
+  s_042e901c6ad028::t_623dd449621492 1-38
+apps/desktop/src/components/models/StallSettings.tsx
+  s_042e901c6ad028::t_b43adc6dfe36ed 1-52
+apps/desktop/src/components/models/constants.ts
+  s_042e901c6ad028::t_4ee57ef8f2b2fa 1-73
+apps/desktop/src/components/models/logic.ts
+  s_042e901c6ad028::t_521632b18edfaa 1-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9033722f574ce9395ad960493e18251954ea2aef",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+scripts/gates/lib.ts
+  s_b099f12605dd4d::t_95f01b6ce4bbd2 118-126,128,133,153
+scripts/gates/mutation.ts
+  s_b099f12605dd4d::t_8511682ff88204 121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "95aabd78fa6cf7763c2bcf44fcdd98a0ae872cfa",
+  "prompts": {},
+  "sessions": {
+    "s_b099f12605dd4d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "60a67dd9-ce77-40d1-a314-0fe4d04f4589",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

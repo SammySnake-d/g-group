@@ -1,0 +1,14 @@
+packages/domain/src/recovery.test.ts
+  h_f33e46a035b77c 54-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "80b7b508ce13abfaeebc31f876e6864f79e15fd4",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
