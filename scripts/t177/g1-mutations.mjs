@@ -5,6 +5,7 @@ import path from 'node:path';
 const K='packages/kernel/src/memory-capture.ts',C='packages/server/src/memory-coverage.ts',H='packages/server/src/host.ts',A='packages/adapter-pi-contact/src/compact.ts';
 const kt='packages/kernel/src/memory-capture.test.ts',ct='packages/server/src/memory-coverage.test.ts',ht='packages/server/src/memory-reliability.test.ts',at='packages/adapter-pi-contact/src/memory-completion.test.ts';
 const cases=[
+ ['G1-LOCK','packages/kernel/src/attention.ts','s.running = new Promise<void>(resolve => { release = resolve; });','const ignored = new Promise<void>(resolve => { release = resolve; }); void ignored;','packages/kernel/src/memory-serial.test.ts','G1-LOCK '],
  ['G1-01TIME',H,'Promise.race([Promise.resolve().then(()=>call(ac.signal)),stopped,expired])','Promise.race([Promise.resolve().then(()=>call(ac.signal)),stopped])',ht,'G1-01TIME '],
  ['G1-02PRE',H,'if(!beforeCall.valid){this.disposeCoverage(work,beforeCall.sources);return null;}','if(false){this.disposeCoverage(work,beforeCall.sources);return null;}',ht,'G1-02PRE '],
  ['G1-03a',A,'|| msg.stopReason === "length"','|| (msg.stopReason === "length" && sys !== SYSTEM)',at,'G1-03a '],
@@ -46,7 +47,7 @@ const cases=[
 ];
 const out=process.argv[2]??'receipts/evidence/t177-g1/mutations';mkdirSync(out,{recursive:true});
 function run(files,name,pattern){const args=['--test','--test-concurrency=1','--test-timeout=20000','--test-reporter=tap',...(pattern?[`--test-name-pattern=^${pattern}`]:[]),...files];const r=spawnSync(process.execPath,args,{cwd:process.cwd(),encoding:'utf8',timeout:120000,maxBuffer:32*1024*1024});const log=(r.stdout??'')+(r.stderr??'');writeFileSync(path.join(out,`${name}.tap`),log);return{r,log};}
-const control=run([at,kt,ct,ht],'control');if(control.r.status!==0)throw new Error('原样对照不绿，不允许判变异');
+const control=run([at,kt,ct,ht,'packages/kernel/src/memory-serial.test.ts'],'control');if(control.r.status!==0)throw new Error('原样对照不绿，不允许判变异');
 const results=[];
 for(const[id,file,before,after,testFile,prefix]of cases){const source=readFileSync(file,'utf8');if(source.split(before).length!==2)throw new Error(`${id}: 位置不唯一`);try{writeFileSync(file,source.replace(before,after));const{r,log}=run([testFile],id,prefix);const failed=[...log.matchAll(/^not ok \d+ - (.+)$/gm)].map(m=>m[1]);const killed=r.status!==0&&failed.some(n=>n.startsWith(prefix))&&!/SyntaxError:|ERR_MODULE_NOT_FOUND|ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX/.test(log);results.push({id,file,designated:prefix,status:killed?'killed':'survived',exit:r.status,failed});writeFileSync(path.join(out,'results.json'),JSON.stringify({control:{exit:control.r.status},results},null,2)+'\n');console.log(`${id} ${killed?'killed':'survived'}`);}finally{writeFileSync(file,source);}}
-const final=run([at,kt,ct,ht],'after-control');console.log(JSON.stringify({mutations:results.length,killed:results.filter(r=>r.status==='killed').length,afterControl:final.r.status}));process.exit(results.every(r=>r.status==='killed')&&final.r.status===0?0:1);
+const final=run([at,kt,ct,ht,'packages/kernel/src/memory-serial.test.ts'],'after-control');console.log(JSON.stringify({mutations:results.length,killed:results.filter(r=>r.status==='killed').length,afterControl:final.r.status}));process.exit(results.every(r=>r.status==='killed')&&final.r.status===0?0:1);
