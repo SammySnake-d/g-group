@@ -1,21 +1,30 @@
 packages/adapter-pi-contact/src/mind.test.ts
   s_641f1e26108d65::t_912d6a144f9de3 88,101
+  s_78cbadecffd7bf::t_7171a23b76e766 88,101
 packages/adapter-pi-contact/src/read-external.test.ts
   s_641f1e26108d65::t_c5c4f6c068060b 1-108
+  s_78cbadecffd7bf::t_612884facd79d0 1-54,56-87,89-102,104-108
 packages/api-contract/src/api.ts
   s_641f1e26108d65::t_c2c3096313e98c 23,334,339-340,343-358
+  s_78cbadecffd7bf::t_7ff993a1ece9d2 23,334,339-340,343-358
 packages/api-contract/src/entities.ts
   s_641f1e26108d65::t_842b221953caec 571-592
+  s_78cbadecffd7bf::t_30cf2785d9194c 571-592
 packages/kernel/src/runtime-ports.ts
   s_641f1e26108d65::t_af5a07a43b2b29 127-142,149-150
+  s_78cbadecffd7bf::t_75676cec6e8203 127-142,149-150
 packages/server/src/host.ts
   s_641f1e26108d65::t_97e9b19c934a91 138,375-376,510-522,567-568,2425-2428,2445,2481,4739
+  s_78cbadecffd7bf::t_614a58235ca033 138,375-376,510-522,567-568,2425-2428,2445,2481,4739
 packages/server/src/plugin-sources.test.ts
   s_641f1e26108d65::t_f821716c69e344 1-465
+  s_78cbadecffd7bf::t_41422d93377e94 1-61,63-64,66-465
 packages/server/src/plugin-sources.ts
   s_641f1e26108d65::t_5516a8b24b01bd 1-51
+  s_78cbadecffd7bf::t_06c586da241154 1-51
 packages/server/src/service.ts
   s_641f1e26108d65::t_5d008b3155981b 124-128
+  s_78cbadecffd7bf::t_f34426de175455 124-128
 ---
 {
   "schema_version": "authorship/3.0.0",
@@ -27,6 +36,14 @@ packages/server/src/service.ts
       "agent_id": {
         "tool": "claude",
         "id": "agent-a647ecb1ad4618089",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_78cbadecffd7bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9caabaa2a69c3a1c",
         "model": "unknown"
       },
       "human_author": "Sammy <caxapokrq+sammy@gmail.com>"

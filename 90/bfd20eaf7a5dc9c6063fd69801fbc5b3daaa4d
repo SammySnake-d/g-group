@@ -1,0 +1,19 @@
+receipts/feat-plugin-sources.json
+  s_641f1e26108d65::t_0875a2bff8b52a 1-27,29-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "90bfd20eaf7a5dc9c6063fd69801fbc5b3daaa4d",
+  "prompts": {},
+  "sessions": {
+    "s_641f1e26108d65": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a647ecb1ad4618089",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
