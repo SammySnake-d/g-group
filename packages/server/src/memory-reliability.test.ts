@@ -41,7 +41,8 @@ test("G1-01H 检查超时不吞欠账 下一轮带旧原文并补查",async t=>{
 });
 test("G1-02H 第一条原话产生的记忆不挂到最后一条用户消息",async t=>{
   let room="",seq=0;
-  const s=setup(Host,t,async()=>({...empty(),memories:[{title:"语言",text:"用中文回复",anchors:["global"],relation:null,target:null,kind:"preference",roomId:room,sourceSeq:seq,evidence:"以后都用中文回复"}]}));room=s.dm.id;
+  const s=setup(Host,t,async r=>{assert.equal(r.sources.length,2,"夹具必须同时投递两条消息");return {...empty(),memories:[{title:"语言",text:"用中文回复",anchors:["global"],relation:null,target:null,kind:"preference",roomId:room,sourceSeq:seq,evidence:"以后都用中文回复"}]};});room=s.dm.id;
+  const notify=s.host.loop.notify.bind(s.host.loop);s.host.loop.notify=(id)=>notify(id,"batch");
   seq=s.host.send({roomId:room,clientActionId:"one",text:"以后都用中文回复"}).seq;
   s.host.send({roomId:room,clientActionId:"two",text:"现在看看缓存方案"});await settle(s.host);
   const m=s.host.listMemories(s.c.id)[0]!;assert.equal(m.source?.seq,seq);assert.equal(m.source?.userQuote,true);assert.equal(m.source?.quote,"以后都用中文回复");
