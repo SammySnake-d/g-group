@@ -122,17 +122,25 @@ export function reusable(rec: unknown, want: { readonly commit: string; readonly
 }
 
 /**
- * 网关是不是还在(真实模式每道题之前查一次,不发模型请求):能收到任何 HTTP 回复就算在;连不上就停整个 runner,不记录这一道,
- * 留给续跑——会话断了网关跟着没了,那不是模型或宿主的失败,不能写进分母。
+ * 网关是不是还在(真实模式每道题前后各查一次,不发模型请求):能收到任何 HTTP 回复就算在(连 404/500 都算在,那是网关在回话);
+ * 连试两次都连不上才判不在,停整个 runner 并把那一道的记录丢掉,留给续跑——会话断了网关跟着没了,那不是模型或宿主的失败,不能写进分母。
  */
-export async function gatewayUp(baseUrl: string, fetchFn: typeof globalThis.fetch, timeoutMs = 5000): Promise<boolean> {
-  try {
-    const r = await fetchFn(baseUrl, { method: "GET", signal: AbortSignal.timeout(timeoutMs) });
-    await r.body?.cancel();
-    return true;
-  } catch {
-    return false;
+export async function gatewayUp(baseUrl: string, fetchFn: typeof globalThis.fetch, timeoutMs = 10_000, attempts = 2): Promise<boolean> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const r = await fetchFn(baseUrl, { method: "GET", signal: AbortSignal.timeout(timeoutMs) });
+      // 收到任何回复就算在;读正文失败(取消、超时)不影响这个结论
+      try {
+        await r.arrayBuffer();
+      } catch {
+        /* 忽略 */
+      }
+      return true;
+    } catch {
+      /* 再试一次:一次连接失败不算网关没了 */
+    }
   }
+  return false;
 }
 
 export interface ProbeAttempt {
@@ -326,7 +334,8 @@ async function main() {
   const patchOf = (groupId: string): HostPatch | null => defs.find((d) => d.id === groupId)?.hostPatch ?? null;
   const settleOf = (groupId: string): number => defs.find((d) => d.id === groupId)?.settleMs ?? Number(values.settle);
   // 驱动代码与题集一改,旧记录就不续用
-  const digest = runnerDigest([...["driver.ts", "capture.ts", "standin.ts", "fixture.ts", "types.ts"].map((name) => ({ name, text: readFileSync(path.join(HERE, name), "utf8") })), { name: "fixture", text: readFileSync(values.fixture, "utf8") }]);
+  // 驱动代码 + runner 自己 + 题集:任一处改了,旧的原始记录就不续用(驱动侧文件决定测量,run.ts 决定怎么测)
+  const digest = runnerDigest([...["driver.ts", "capture.ts", "standin.ts", "fixture.ts", "types.ts", "score.ts", "contracts.ts", "groups.ts", "manifest.ts", "run.ts"].map((name) => ({ name, text: readFileSync(path.join(HERE, name), "utf8") })), { name: "fixture", text: readFileSync(values.fixture, "utf8") }]);
   const cfgFor = (groupId: string, model: string) => {
     const patch = patchOf(groupId);
     const settings = patch ? { ...patch, settleMs: settleOf(groupId) } : null;

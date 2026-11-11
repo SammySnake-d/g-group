@@ -162,9 +162,19 @@ test("探测:没准备好(429 或上游错误)就等一段再探,到上限判不
   assert.deepEqual([recovered.ok, recovered.attempts.map((a) => a.status)], [true, [500, 200]]);
 });
 
-test("网关在不在:收到任何 HTTP 回复算在,连不上算不在", async () => {
+test("网关在不在:收到任何 HTTP 回复算在(含 404/500),连试两次都连不上才算不在", async () => {
   assert.equal(await gatewayUp("http://gw.invalid/", (async () => new Response("x", { status: 404 })) as typeof fetch), true);
+  assert.equal(await gatewayUp("http://gw.invalid/", (async () => new Response("boom", { status: 500 })) as typeof fetch), true);
+  let n = 0;
+  const flaky = (async () => {
+    n++;
+    if (n === 1) throw new TypeError("fetch failed");
+    return new Response("ok", { status: 200 });
+  }) as typeof fetch;
+  assert.deepEqual([await gatewayUp("http://gw.invalid/", flaky), n], [true, 2]);
   assert.equal(await gatewayUp("http://gw.invalid/", (async () => { throw new TypeError("fetch failed"); }) as typeof fetch), false);
+  const cancel = (async () => new Response(null, { status: 200 })) as typeof fetch;
+  assert.equal(await gatewayUp("http://gw.invalid/", cancel), true);
 });
 
 test("模型状态:跑过的记已跑(探测记录照留),没跑过但有 429 探测记录记未测,两者都没有记未跑", () => {
