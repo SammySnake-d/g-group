@@ -131,7 +131,10 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
     const controller = new AbortController();
     s.controller = controller;
     s.count++;
-    s.running = (async () => {
+    // 先占同一联系人槽位，再调用可同步回调 notify 的运行端口。
+    let release!: () => void;
+    s.running = new Promise<void>(resolve => { release = resolve; });
+    void (async () => {
       let status: RoundStatus | "error" = "done";
       let failure: unknown;
       try {
@@ -167,7 +170,7 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
         if (s.timer === null) arm(id, s, opts.maxDeferMs, "batch");
       }
       settleWaiters();
-    })();
+    })().then(release, error => { report(id,"error",error);s.running=null;release();settleWaiters(); });
   };
 
   return {
