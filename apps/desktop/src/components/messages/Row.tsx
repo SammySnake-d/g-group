@@ -21,18 +21,18 @@ import * as Concept from '@/concept'
 import { ComputeLine } from './compute/ComputeLine'
 import type { Bodied } from './types'
 
-type RowProps = { m: Bodied; first: boolean; compact: boolean; highlight: boolean; selecting?: boolean; checked?: boolean; onSelect?: (id: string) => void; trail?: string; children: ReactNode }
+type RowProps = { m: Bodied; first: boolean; compact: boolean; highlight: boolean; selecting?: boolean; checked?: boolean; onSelect?: (id: string) => void; trail?: string; /** 这条的引用上面同一个人刚画过,不重复画 */ hideQuotes?: boolean; children: ReactNode }
 
 /** 新到的消息(本地发出 / 刚收到)进场时轻轻浮起,历史消息不动 */
 const isNew = (id: string) => /^(me-|h|c-|s)[a-z0-9]{6}$/.test(id)
 
-export function Row({ m, first, compact, highlight, selecting, checked, onSelect, trail, children }: RowProps) {
+export function Row({ m, first, compact, highlight, selecting, checked, onSelect, trail, hideQuotes, children }: RowProps) {
   const from = m.from
   const mine = from === 'me'
   const av = compact ? 26 : 32
   const { answers } = useApp()
   // 回答消息显示成收起的卡片,卡片本身就写着回答的是哪个问题,不再叠一层引用
-  const quotes = m.k === 'text' && !(m.answerTo && answers[m.answerTo]) ? m.quotes : undefined
+  const quotes = m.k === 'text' && !hideQuotes && !(m.answerTo && answers[m.answerTo]) ? m.quotes : undefined
   return (
     <div
       id={'m-' + m.id}
