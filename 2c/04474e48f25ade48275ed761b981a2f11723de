@@ -1,0 +1,19 @@
+apps/desktop/src/store/boot.ts
+  s_39bc0020a75100::t_3518c9c023dc1d 28-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2c04474e48f25ade48275ed761b981a2f11723de",
+  "prompts": {},
+  "sessions": {
+    "s_39bc0020a75100": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c951-08a4-7b33-bde4-81a528fe5c41",
+        "model": "shayu/gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
