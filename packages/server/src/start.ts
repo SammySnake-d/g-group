@@ -24,6 +24,8 @@ export interface StartOptions {
   readonly onReport?: (what: string, detail: unknown) => void;
   /** 给 Compute 的单次输入字节上限(§8.1 待决 13);不给=不设上限 */
   readonly computeInputMaxBytes?: number | null;
+  /** 状态笔记的 UTF-8 字节上限(D06 第 2 小节第 3 块):超了请同一说话模型缩写。不给用 DEFAULT_STATE_NOTE_MAX_BYTES(候选);null 不设上限 */
+  readonly stateNoteMaxBytes?: number | null;
 }
 export interface Started {
   readonly host: Host;
@@ -33,6 +35,8 @@ export interface Started {
 }
 
 export const SAMPLE_CATALOG = fileURLToPath(new URL("../catalog/catalog.json", import.meta.url));
+/** 生产默认的状态笔记上限(UTF-8 字节),候选值(空壳:还没接到宿主) */
+export const DEFAULT_STATE_NOTE_MAX_BYTES = 8192;
 
 export async function startServer(o: StartOptions): Promise<Started> {
   const env = o.env ?? process.env;

@@ -4,6 +4,7 @@
 //   - ContactMind:联系人「脑子」——吃一轮输入,吐动作。真实实现在 adapter 层(pi-agent-core),测试用确定性假实现;
 //   - MindAction:模型能提出的动作。动作由宿主校验、分配 action_id、落盘后才执行,模型不能直接发消息或起进程。
 // 分工(D06 §2「代码与模型的分工」):代码负责拼装、校验、按 seq 幂等落盘、推进游标;模型只负责判断、提出承诺与写状态笔记。
+import type { UsageSink } from "./model-usage.ts";
 
 export type InboundSenderKind = "user" | "contact" | "helper" | "system";
 export interface InboundSender {
@@ -133,8 +134,11 @@ export interface RoundTools {
 }
 
 export interface ContactMind {
-  /** 跑一轮。signal 触发时应尽快放弃(宿主发现发送前出现更新的用户消息,会中止重跑)。tools 是本轮内的只读查询口,可不给。 */
-  round(input: RoundInput, signal: AbortSignal, tools?: RoundTools): Promise<RoundOutput>;
+  /**
+   * 跑一轮。signal 触发时应尽快放弃(宿主发现发送前出现更新的用户消息,会中止重跑)。tools 是本轮内的只读查询口,可不给。
+   * usage 是宿主给的用量回执口(AC-39 ⑤):每发完一次模型请求回报一次,可不给。
+   */
+  round(input: RoundInput, signal: AbortSignal, tools?: RoundTools, usage?: UsageSink): Promise<RoundOutput>;
 }
 
 /**
@@ -191,8 +195,9 @@ export interface ReflectResult {
   readonly memories: readonly CompactMemory[];
   readonly personaSuggestion: string | null;
 }
+/** usage:宿主给的用量回执口(AC-39 ⑤),每发完一次模型请求回报一次,可不给 */
 export interface ContactCompactor {
-  compact(req: CompactRequest, signal: AbortSignal): Promise<string>;
+  compact(req: CompactRequest, signal: AbortSignal, usage?: UsageSink): Promise<string>;
   /** 有就每轮调用(取代只在缺笔记时调的 compact);没有就退回 compact */
-  reflect?(req: ReflectRequest, signal: AbortSignal): Promise<ReflectResult>;
+  reflect?(req: ReflectRequest, signal: AbortSignal, usage?: UsageSink): Promise<ReflectResult>;
 }

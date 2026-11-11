@@ -9,7 +9,7 @@
 import { Agent, type AgentMessage, type AgentTool, type AgentToolResult, type StreamFn } from "@earendil-works/pi-agent-core";
 import { type AssistantMessage, type Model, type SimpleStreamOptions, type SystemMessage, toToolDeclaration, type UserMessage } from "@earendil-works/pi-ai";
 import { anthropicMessagesApi } from "@earendil-works/pi-ai/api/anthropic-messages.lazy";
-import { BLOCK_LABELS, type BlockNo, type ContactMind, type MindAction, plainData, type RoundBlock, type RoundInput, type RoundOutput, type RoundTools } from "@g-group/kernel";
+import { BLOCK_LABELS, type BlockNo, type ContactMind, type MindAction, plainData, type RoundBlock, type RoundInput, type RoundOutput, type RoundTools, type UsageSink } from "@g-group/kernel";
 import { parseToolCall, TOOL_DECLARATIONS } from "./tools.ts";
 
 export interface PiContactMindOptions {
@@ -171,7 +171,7 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
   const api = anthropicMessagesApi();
   const declarations = TOOL_DECLARATIONS.map((d) => toToolDeclaration({ name: d.name, description: d.description, parameters: d.parameters }));
 
-  async function round(input: RoundInput, signal: AbortSignal, tools?: RoundTools): Promise<RoundOutput> {
+  async function round(input: RoundInput, signal: AbortSignal, tools?: RoundTools, _usage?: UsageSink): Promise<RoundOutput> {
     if (!(signal instanceof AbortSignal)) throw new PiContactMindError("invalid-request", "signal 必须是 AbortSignal");
     if (signal.aborted) throw new RoundAbortedError();
     const { blocks } = readRound(input, cfg.model);

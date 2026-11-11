@@ -4,7 +4,7 @@
 // 端点报错如实抛出(隐去密钥),不换模型或厂商重试。压缩用哪个模型、配置失配怎么拦截归 D 件(AC-32),这里只按联系人的说话模型调用。
 import { type AssistantMessage, type Model, normalizeContext, type SystemMessage, type UserMessage } from "@earendil-works/pi-ai";
 import { anthropicMessagesApi } from "@earendil-works/pi-ai/api/anthropic-messages.lazy";
-import { type CompactRequest, type ContactCompactor, plainData, type ReflectRequest, type ReflectResult, STATE_NOTE_GUIDE } from "@g-group/kernel";
+import { type CompactRequest, type ContactCompactor, plainData, type ReflectRequest, type ReflectResult, STATE_NOTE_GUIDE, type UsageSink } from "@g-group/kernel";
 import { PiContactMindError, type PiContactMindOptions } from "./mind.ts";
 
 export type PiCompactorOptions = Omit<PiContactMindOptions, "maxRequestsPerRound" | "cacheRetention">;
@@ -110,7 +110,7 @@ export function createPiCompactor(opts: PiCompactorOptions): ContactCompactor {
     input: ["text"], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: cfg.contextWindow, maxTokens: cfg.maxTokens,
   };
   const api = anthropicMessagesApi();
-  async function compact(input: CompactRequest, signal: AbortSignal): Promise<string> {
+  async function compact(input: CompactRequest, signal: AbortSignal, _usage?: UsageSink): Promise<string> {
     const p = plainData(input, "压缩请求");
     if (!p.ok) throw new PiContactMindError("invalid-request", `压缩请求不合格:${p.path} ${p.why}`);
     const req = p.value as CompactRequest;
@@ -143,7 +143,7 @@ export function createPiCompactor(opts: PiCompactorOptions): ContactCompactor {
     if (text === "") throw new PiContactMindError("provider-error", "压缩器返回了空笔记");
     return text;
   }
-  async function reflect(input: ReflectRequest, signal: AbortSignal): Promise<ReflectResult> {
+  async function reflect(input: ReflectRequest, signal: AbortSignal, _usage?: UsageSink): Promise<ReflectResult> {
     const p = plainData(input, "检查请求");
     if (!p.ok) throw new PiContactMindError("invalid-request", `检查请求不合格:${p.path} ${p.why}`);
     const req = p.value as ReflectRequest;

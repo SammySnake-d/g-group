@@ -144,6 +144,7 @@ import { Scheduler, checkCron } from "./schedules.ts";
 import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, unindexTx } from "./search.ts";
 import { SharedDocs } from "./shared-docs.ts";
 import { type CodeRepoConfig, type Workspace, Worktrees } from "./worktree.ts";
+import { UsageLedger } from "./usage.ts";
 import { type ArtifactRef, ArtifactStore, MAX_ARTIFACT_BYTES, MAX_ARTIFACTS, MAX_INLINE_TEXT, isReadable, recentReadable } from "./artifacts.ts";
 
 export interface HostOptions {
@@ -412,6 +413,8 @@ export class Host {
   private reviewStops: { taskId: string; computeId: string }[] = [];
   /** 运行台账(AC-43):全景画板、runs.* 接口与联系人第 5 块读同一张 */
   readonly runs: RunStore;
+  /** 模型调用用量表(AC-39 ⑤⑥):联系人每轮、压缩、检查的每次请求一行;usage.cacheStats 读它 */
+  readonly usage: UsageLedger;
   readonly bootId: string;
   /** computeId → 台账里的会话与当前轮次 */
   private readonly computeRuns = new Map<string, { sessionId: string; turnId: string }>();
@@ -440,6 +443,7 @@ export class Host {
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
     this.memory = new MemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d));
+    this.usage = new UsageLedger({ db: this.db, now: this.now, report: (w, d) => this.report(w, d) });
     this.bus = createBus(this.now);
     // 本次启动编号:在途轮次标记(F12)与运行台账存活核对(AC-43)共用
     this.bootId = opts.bootId ?? this.newId("boot");
