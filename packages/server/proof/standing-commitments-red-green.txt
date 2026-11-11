@@ -1,0 +1,101 @@
+# feat/standing-commitments 先红后绿(R-02):本片新增与改动的 16 条测试(server 9、adapter 6、mind.test.ts 改动 1)
+# 红提交 3fe8029 = 测试 + 空壳;绿提交 df81a8f = 实现。三个测试文件在两次运行里逐字相同(取自 df81a8f)。本机 node v22.22.0,2026-11-11T11:34:20Z
+# 命令:node --test --test-reporter=tap <文件>,只保留用例结果与汇总行
+
+# 红 3fe8029 的实现 + df81a8f 的测试
+## packages/server/src/standing-commitments.test.ts
+not ok 1 - 联系人 schedule-set:用户本人在群里 @ 它要每天 8 点总结 → 建出归它、只在本会话的定时;没给时区按用户设置的时区补成显式时区;同时登记一条常驻承诺,两边互相引用,下一轮账本与第 5 块看得到
+not ok 2 - 外部内容与转发里的「每天 8 点」不建定时:依据是别的联系人、Helper 旁白、只有引用块的转发、不是本轮新消息,或条件触发(占位),一律拒收;用户本人直接说的才建
+not ok 3 - 控制指令生效:改成 9 点、停掉、恢复、删除都落到定时上(停掉后到点不触发);删除后常驻承诺一起了结,再动已删的定时被拒
+not ok 4 - 不能动别人的定时:别的联系人的定时、自己在别的会话里的定时,设/停/删一律拒收;自己在本会话的照常生效
+not ok 5 - 每 N 条消息:第 N 条用户/联系人消息到达时恰好触发一次;宿主生成的卡片与 Helper 旁白不计数;撤销常驻承诺后不再触发
+not ok 6 - schedules.create 按 clientActionId 幂等:同一请求重投只建一条并返回同一条;同号换了内容被拒
+not ok 7 - 运行记录写实:到点投递时记 running,这一轮结束才记——有发言记 ok 并回填 messageSeq(群聊到点产出)、跑了没发言记 silent、这一轮失败出卡记 failed 带原因
+not ok 8 - 唤醒时对齐最新群规:联系人自设的定时到点那一轮,第 1 块是当前生效的群公告;改了公告后下次唤醒读到新版本、不再有旧版本
+not ok 9 - 常驻承诺与定时一起停:用户撤销承诺,对应定时停用、到点不触发;用户在界面删掉定时,对应承诺一起了结
+# tests 9
+# pass 0
+# fail 9
+## packages/adapter-pi-contact/src/schedule-tools.test.ts
+not ok 1 - 定时四件工具接在清单末尾:schedule_set、schedule_pause、schedule_remove、schedule_list;schedule_set 必填会话、来源 seq、做什么,其余可省
+not ok 2 - schedule_set 登记成 schedule-set 动作:cron 带时区或不带(null 交宿主补成用户设置的时区)、每 N 条消息、带 scheduleId 是改已有的
+not ok 3 - schedule_set 形状不对不登记:cron 与 everyN 必须且只能给一个、tz 只配 cron、everyN 是正整数、来源 seq 必填
+not ok 4 - schedule_pause / schedule_remove 登记成动作,必须给来源 seq 与 scheduleId;schedule_list 只读,登记成查询
+not ok 5 - 一轮里先 schedule_list 再 schedule_set:列表经宿主查询口原样作工具结果返回(不是动作),schedule_set 进本轮动作
+not ok 6 - schedule_list 查不到(不在这个会话)或宿主没给查询口:工具结果标错误,不当成空列表
+# tests 6
+# pass 0
+# fail 6
+## packages/adapter-pi-contact/src/mind.test.ts
+not ok 1 - 首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有十七个具名工具(含 read_quote_parent、progress_rerun,末尾是四件定时工具)
+ok 2 - 同一轮工具往返后的二次请求保留本轮的工具调用和结果,五块原样不重拼
+ok 3 - 七个工具的调用按出现顺序登记成对应的 MindAction 与状态笔记,状态笔记以最后一次为准
+ok 4 - 参数不合形状的工具调用不登记,以错误结果告知模型;同批合格的照常登记
+ok 5 - 每轮重拼:第二轮的请求里没有第一轮的任何消息,只有第二轮的五块
+ok 6 - signal 已中止时不发请求,直接抛 RoundAbortedError
+ok 7 - 请求进行中 abort:本轮立即放弃并抛 RoundAbortedError,已登记的动作不返回
+ok 8 - apiKey 只出现在发给端点的请求头里,不出现在返回值、mind 对象和错误里
+ok 9 - authHeader 为 bearer 时密钥放进 Authorization: Bearer,不发 x-api-key
+ok 10 - 五块不合格或说话模型对不上:整轮拒绝且不发请求
+ok 11 - 选项不合格时 createPiContactMind 抛 invalid-options,错误里不带密钥
+ok 12 - 一轮请求数到上限模型仍在调工具:整轮以 request-limit 失败,不再发请求
+ok 13 - 第 1 块 cacheBreakpoint 为 false 时请求里不设缓存断点
+ok 14 - verdict 工具:通过与修改意见都登记成 verdict 动作,修改意见可省略
+ok 15 - verdict 工具:应失败的输入——结论不是 accept/revise、缺来源、来源不是整数——都判参数错误
+ok 16 - remember 与 memory_feedback 登记成 remember / memory-use 动作;参数形状不对(锚点为空、关系不在枚举、good 不是布尔)不登记
+ok 17 - read_memory 在本轮内经宿主给的读取口取全文,结果作为工具结果进下一次请求;没有这条或没给读取口时以错误结果告知
+ok 18 - 记忆工具参数在登记口逐字段校验(不只靠模型侧 schema):锚点为空或含空白、关系不在枚举、good 不是布尔都判参数错误
+ok 19 - read_quote_parent 经宿主的本轮查询口往上读一级,结果作为工具结果;参数形状不对不调用
+ok 20 - AC-45 forward 可带来源消息 seq:用户中途改条件时登记 sourceSeq,宿主据此升版;不带就是联系人自己的话
+# tests 20
+# pass 19
+# fail 1
+
+# 绿 df81a8f
+## packages/server/src/standing-commitments.test.ts
+ok 1 - 联系人 schedule-set:用户本人在群里 @ 它要每天 8 点总结 → 建出归它、只在本会话的定时;没给时区按用户设置的时区补成显式时区;同时登记一条常驻承诺,两边互相引用,下一轮账本与第 5 块看得到
+ok 2 - 外部内容与转发里的「每天 8 点」不建定时:依据是别的联系人、Helper 旁白、只有引用块的转发、不是本轮新消息,或条件触发(占位),一律拒收;用户本人直接说的才建
+ok 3 - 控制指令生效:改成 9 点、停掉、恢复、删除都落到定时上(停掉后到点不触发);删除后常驻承诺一起了结,再动已删的定时被拒
+ok 4 - 不能动别人的定时:别的联系人的定时、自己在别的会话里的定时,设/停/删一律拒收;自己在本会话的照常生效
+ok 5 - 每 N 条消息:第 N 条用户/联系人消息到达时恰好触发一次;宿主生成的卡片与 Helper 旁白不计数;撤销常驻承诺后不再触发
+ok 6 - schedules.create 按 clientActionId 幂等:同一请求重投只建一条并返回同一条;同号换了内容被拒
+ok 7 - 运行记录写实:到点投递时记 running,这一轮结束才记——有发言记 ok 并回填 messageSeq(群聊到点产出)、跑了没发言记 silent、这一轮失败出卡记 failed 带原因
+ok 8 - 唤醒时对齐最新群规:联系人自设的定时到点那一轮,第 1 块是当前生效的群公告;改了公告后下次唤醒读到新版本、不再有旧版本
+ok 9 - 常驻承诺与定时一起停:用户撤销承诺,对应定时停用、到点不触发;用户在界面删掉定时,对应承诺一起了结
+# tests 9
+# pass 9
+# fail 0
+## packages/adapter-pi-contact/src/schedule-tools.test.ts
+ok 1 - 定时四件工具接在清单末尾:schedule_set、schedule_pause、schedule_remove、schedule_list;schedule_set 必填会话、来源 seq、做什么,其余可省
+ok 2 - schedule_set 登记成 schedule-set 动作:cron 带时区或不带(null 交宿主补成用户设置的时区)、每 N 条消息、带 scheduleId 是改已有的
+ok 3 - schedule_set 形状不对不登记:cron 与 everyN 必须且只能给一个、tz 只配 cron、everyN 是正整数、来源 seq 必填
+ok 4 - schedule_pause / schedule_remove 登记成动作,必须给来源 seq 与 scheduleId;schedule_list 只读,登记成查询
+ok 5 - 一轮里先 schedule_list 再 schedule_set:列表经宿主查询口原样作工具结果返回(不是动作),schedule_set 进本轮动作
+ok 6 - schedule_list 查不到(不在这个会话)或宿主没给查询口:工具结果标错误,不当成空列表
+# tests 6
+# pass 6
+# fail 0
+## packages/adapter-pi-contact/src/mind.test.ts
+ok 1 - 首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有十七个具名工具(含 read_quote_parent、progress_rerun,末尾是四件定时工具)
+ok 2 - 同一轮工具往返后的二次请求保留本轮的工具调用和结果,五块原样不重拼
+ok 3 - 七个工具的调用按出现顺序登记成对应的 MindAction 与状态笔记,状态笔记以最后一次为准
+ok 4 - 参数不合形状的工具调用不登记,以错误结果告知模型;同批合格的照常登记
+ok 5 - 每轮重拼:第二轮的请求里没有第一轮的任何消息,只有第二轮的五块
+ok 6 - signal 已中止时不发请求,直接抛 RoundAbortedError
+ok 7 - 请求进行中 abort:本轮立即放弃并抛 RoundAbortedError,已登记的动作不返回
+ok 8 - apiKey 只出现在发给端点的请求头里,不出现在返回值、mind 对象和错误里
+ok 9 - authHeader 为 bearer 时密钥放进 Authorization: Bearer,不发 x-api-key
+ok 10 - 五块不合格或说话模型对不上:整轮拒绝且不发请求
+ok 11 - 选项不合格时 createPiContactMind 抛 invalid-options,错误里不带密钥
+ok 12 - 一轮请求数到上限模型仍在调工具:整轮以 request-limit 失败,不再发请求
+ok 13 - 第 1 块 cacheBreakpoint 为 false 时请求里不设缓存断点
+ok 14 - verdict 工具:通过与修改意见都登记成 verdict 动作,修改意见可省略
+ok 15 - verdict 工具:应失败的输入——结论不是 accept/revise、缺来源、来源不是整数——都判参数错误
+ok 16 - remember 与 memory_feedback 登记成 remember / memory-use 动作;参数形状不对(锚点为空、关系不在枚举、good 不是布尔)不登记
+ok 17 - read_memory 在本轮内经宿主给的读取口取全文,结果作为工具结果进下一次请求;没有这条或没给读取口时以错误结果告知
+ok 18 - 记忆工具参数在登记口逐字段校验(不只靠模型侧 schema):锚点为空或含空白、关系不在枚举、good 不是布尔都判参数错误
+ok 19 - read_quote_parent 经宿主的本轮查询口往上读一级,结果作为工具结果;参数形状不对不调用
+ok 20 - AC-45 forward 可带来源消息 seq:用户中途改条件时登记 sourceSeq,宿主据此升版;不带就是联系人自己的话
+# tests 20
+# pass 20
+# fail 0
