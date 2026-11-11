@@ -1,0 +1,23 @@
+apps/desktop/proof/files-provenance/red.txt
+  s_068645421914c7::t_ff787dfb27f2ee 1-13
+apps/desktop/src/components/files/FileReader.tsx
+  s_068645421914c7::t_a29528299f79dd 1,5,9,12-29,32-33,37,40-49
+apps/desktop/src/components/files/Provenance.tsx
+  s_068645421914c7::t_c8f6e88227b4d0 1-2,5,7,10,12-18,21-28,31-36,38-39,41-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5d3f567379c2b2b576dd89d2182e4f4825ba6e9d",
+  "prompts": {},
+  "sessions": {
+    "s_068645421914c7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89c7adaf-00e2-45a9-80be-5840d96475f2",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
