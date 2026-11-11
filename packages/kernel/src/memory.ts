@@ -14,9 +14,11 @@ const INVIS = new RegExp(INVISIBLE_SOURCE, "gu");
 const squash = (t: string) => t.replace(INVIS, "");
 
 export type MemoryStatus = "active" | "superseded" | "revoked" | "degraded";
-export interface MemorySource { readonly roomId: string; readonly seq: number; readonly userQuote: boolean }
+export interface MemorySource { readonly roomId: string; readonly seq: number; readonly userQuote: boolean; readonly revision?: number; readonly quote?: string; readonly senderId?: string }
 export interface MemoryUse { readonly at: string; readonly good: boolean; readonly note?: string }
 export interface MemoryEntry {
+  /** 已落实的自动检查写入身份；随 md 真源保存，重建索引不丢。 */
+  readonly captureIds?: readonly string[];
   readonly id: string;
   readonly version: number;
   readonly status: MemoryStatus;

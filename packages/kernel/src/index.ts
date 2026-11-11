@@ -13,3 +13,5 @@ export * from "./compact.ts";
 export * from "./retry-policy.ts";
 export * from "./memory.ts";
 export * from "./quote-chain.ts";
+
+export * from "./memory-capture.ts";

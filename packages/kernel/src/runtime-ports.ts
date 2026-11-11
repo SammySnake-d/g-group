@@ -169,7 +169,21 @@ export interface CompactRequest {
   readonly maxBytes: number | null;
 }
 /** 压缩时顺手检查出的一条记忆点(按该联系人的职责写它自己的),由宿主按 D25 写入判关系落地 */
+/** 后台检查实际读到的消息快照；revision 来自最后一个编辑/撤回事件 seq。 */
+export interface ReflectSource {
+  readonly roomId: string;
+  readonly seq: number;
+  readonly revision: number;
+  readonly senderKind: InboundSenderKind;
+  readonly senderId: string;
+  readonly text: string;
+  readonly verifiedOutcome: boolean;
+}
 export interface CompactMemory {
+  readonly roomId?: string;
+  readonly sourceSeq?: number;
+  readonly evidence?: string;
+  readonly kind?: "preference" | "fact" | "decision" | "outcome";
   readonly title: string;
   readonly text: string;
   readonly anchors: readonly string[];
@@ -181,6 +195,7 @@ export interface CompactMemory {
  * 检查「有没有值得记的」、最多给一条「建议改人格」(人格本身不改)。用联系人自己的说话模型,独立无状态调用。
  */
 export interface ReflectRequest extends CompactRequest {
+  readonly sources: readonly ReflectSource[];
   /** 邻域记忆(本轮锚点相交的生效条目),供判断复述、改变、细化、冲突 */
   readonly neighbors: readonly { readonly id: string; readonly title: string; readonly body: string }[];
   /** 模型本轮自己写的状态笔记;不为 null 时检查不得覆盖它 */
