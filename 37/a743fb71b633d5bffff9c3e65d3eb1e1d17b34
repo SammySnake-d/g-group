@@ -1,0 +1,45 @@
+packages/server/src/runtime-config.test.ts
+  s_6da187c6e14fd9::t_7df75487397f39 1-489
+packages/server/src/host.ts
+  s_6da187c6e14fd9::t_005f8979aafe09 143-159,172-176,248-249,451-454,472,563-566,614-617,639,641,646,667-686,695,1758-1781,1783-1805,2534-2539,2959,2962-2963,2966,3032-3038,3403-3409,3501-3504,3513,3517,3534-3539
+packages/server/src/progress-get.ts
+  s_6da187c6e14fd9::t_058b044dda8b9c 1-9
+packages/kernel/src/runtime-ports.ts
+  s_6da187c6e14fd9::t_1632ad57a46558 133-134
+packages/server/src/runs.ts
+  s_6da187c6e14fd9::t_432406c23e5131 78-79,350-360,388-399
+packages/server/src/start.ts
+  s_6da187c6e14fd9::t_7d361f0e9f66c1 7,27-28,93
+packages/adapter-pi-contact/src/mind.test.ts
+  s_6da187c6e14fd9::t_f35326ec9aeb89 88,101
+packages/api-contract/src/entities.ts
+  s_6da187c6e14fd9::t_717aa61053057a 64-75,95-98,637-640
+packages/server/src/service.ts
+  s_6da187c6e14fd9::t_61758c545cd28e 141
+packages/adapter-pi-contact/src/progress-tool.test.ts
+  s_6da187c6e14fd9::t_542b49cab50461 1-99
+packages/api-contract/src/api.ts
+  s_6da187c6e14fd9::t_13059825dd05b1 39,42,94-95,403-404
+packages/kernel/src/orphan-pid.test.ts
+  s_6da187c6e14fd9::t_de4d0c684c485d 1-63
+packages/server/src/runtime-config.ts
+  s_6da187c6e14fd9::t_130b7765827f40 1-66
+packages/server/src/cli.ts
+  s_6da187c6e14fd9::t_e6123468d92c4e 9,19,40-41,137,154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "37a743fb71b633d5bffff9c3e65d3eb1e1d17b34",
+  "prompts": {},
+  "sessions": {
+    "s_6da187c6e14fd9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2ee95d347ee6f575",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
