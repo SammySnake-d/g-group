@@ -1,0 +1,6 @@
+✗ ① 逐文件哈希与钉住的上游一致  源码 254 个、dist 93 个文件;树 d5f2368636dd;src 树 e59f57d7c0f0
+    - 源码:src/search/index.ts 内容不同
+    - HEAD:third_party/acp-kernel 去掉本地新增后的树 3e979ecea5e9e9c96f921c2a8d6cad604f1f236e ≠ 上游 541cf260c4e0:kernel 的树 d5f2368636ddc737fbb023fd73417e16369bd2b1
+    - HEAD:third_party/acp-kernel/src 的树 b908ea85e528f58302836d4b069f9b414c8cca9f ≠ 上游 src 树 e59f57d7c0f03d79fcc2b5236e2020fe654572ed
+✓ ④ 全仓只有一处 import acp-kernel  扫描 252 个代码文件;import 方:packages/kernel/src/history-search.ts;依赖声明:packages/kernel/package.json
+上游边界验收:不通过

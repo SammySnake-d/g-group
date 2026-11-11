@@ -1,0 +1,162 @@
+{
+  "summary": {
+    "node": "v24.21.0",
+    "mutations": 11,
+    "killed": 11,
+    "survived": 0,
+    "control": {
+      "passed": 10,
+      "failed": 0
+    },
+    "afterControl": {
+      "passed": 10,
+      "failed": 0,
+      "exit": 0
+    }
+  },
+  "results": [
+    {
+      "id": "G3-01a",
+      "file": "packages/kernel/src/history-search.ts",
+      "why": "改回字面子串检索",
+      "designated": "packages/kernel/src/history-search.test.ts › G3-01a…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G3-01a 改写问法能找回原消息:会议安排、谁来审查、部署到测试服都命中原文(这些问法在原文里没有字面子串)"
+      ]
+    },
+    {
+      "id": "G3-01b",
+      "file": "packages/kernel/src/history-search.ts",
+      "why": "不检索,整个集合当结果(返回全库)",
+      "designated": "packages/kernel/src/history-search.test.ts › G3-01b…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G3-01b 空查询、空集合、不相关的查询都返回空,不回退成整个集合"
+      ]
+    },
+    {
+      "id": "G3-01c",
+      "file": "packages/kernel/src/history-search.ts",
+      "why": "同分倒着排",
+      "designated": "packages/kernel/src/history-search.test.ts › G3-01c…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G3-01c 同分按传入先后排,换个顺序传入结果跟着换;最多返回 limit 条"
+      ]
+    },
+    {
+      "id": "G3-01d",
+      "file": "packages/kernel/src/history-search.ts",
+      "why": "ref 重复不报错",
+      "designated": "packages/kernel/src/history-search.test.ts › G3-01d…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G3-01d 只在传入的文档里排序:结果都来自传入集合;ref 重复直接报错,不让上游按 ref 合并时串文"
+      ]
+    },
+    {
+      "id": "G3-a1",
+      "file": "packages/kernel/src/memory.ts",
+      "why": "全文分量直接用检索的小数分",
+      "designated": "packages/kernel/src/memory-rank.test.ts › G3-a1…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G3-a1 全文分量只用名次:命中按检索分数分档,是 0 起、步长 1 的整数,同分同值,未命中为 0"
+      ]
+    },
+    {
+      "id": "G3-a1b",
+      "file": "packages/kernel/src/memory.ts",
+      "why": "按序号不按分档,同分不同值",
+      "designated": "packages/kernel/src/memory-rank.test.ts › G3-a1…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G3-a1 全文分量只用名次:命中按检索分数分档,是 0 起、步长 1 的整数,同分同值,未命中为 0"
+      ]
+    },
+    {
+      "id": "G3-a2",
+      "file": "packages/kernel/src/memory.ts",
+      "why": "名次不封顶,超出旧整数区间",
+      "designated": "packages/kernel/src/memory-rank.test.ts › G3-a2…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G3-a2 名次封顶在旧字面重合个数的上界内:档数多于本轮文字的字面单位时,最高档也不超过上界"
+      ]
+    },
+    {
+      "id": "G3-a3",
+      "file": "packages/kernel/src/memory.ts",
+      "why": "排序不看全文分量",
+      "designated": "packages/kernel/src/memory-rank.test.ts › G3-a3…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G3-a3 稀有词优先:同锚点下与本轮文字共有稀有词的条目排在只共有常见词的条目前面"
+      ]
+    },
+    {
+      "id": "G3-a4",
+      "file": "packages/kernel/src/memory.ts",
+      "why": "同分按传入顺序,不按 id",
+      "designated": "packages/kernel/src/memory-rank.test.ts › G3-a4…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G3-a4 并列顺序稳定:同分按 id 排,与传入顺序无关;md 序列化再解析(重建索引)前后展开结果相同"
+      ]
+    },
+    {
+      "id": "G3-a5",
+      "file": "packages/kernel/src/memory.ts",
+      "why": "名次倒置(分数低的分量高)",
+      "designated": "packages/kernel/src/memory-rank.test.ts › G3-a5…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G3-a5 AC-42 现有夹具(审查人从 Astra 改为 Codex 等)换分量前后展开与清单相同"
+      ]
+    },
+    {
+      "id": "G3-01e",
+      "file": "packages/kernel/src/memory.ts",
+      "why": "排序用全部条目,越过硬筛",
+      "designated": "packages/kernel/src/memory-rank.test.ts › G3-01e…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G3-01e 全文最相关也越不过硬筛:已替代、已撤销、过期、锚点不相交、全局条目不进读取"
+      ]
+    }
+  ]
+}

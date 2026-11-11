@@ -1,0 +1,65 @@
+// T-177 G3-a / G3-01:记忆读取的全文分量换成检索接缝(上游 acp-kernel hybrid)后的合成规则。
+//   全文分量只取名次,映射到旧「字面重合个数」所在的整数区间;同分按 id;硬筛在检索之前;
+//   AC-42 现有夹具(审查人从 Astra 改为 Codex,g-group#1531)换分量前后展开结果相同。
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { type MemoryEntry, selectMemories } from "./memory.ts";
+
+const T0 = "2026-11-05T10:00:00.000Z";
+const NOW = "2026-11-09T10:00:00.000Z";
+const entry = (over: Partial<MemoryEntry> = {}): MemoryEntry => ({
+  id: "m-astra",
+  version: 1,
+  status: "active",
+  title: "审查交给谁",
+  body: "PR 审查交给 Astra。",
+  anchors: ["room:g-group", "tool:review"],
+  validFrom: null,
+  validTo: null,
+  source: { roomId: "g-group", seq: 1000, userQuote: true },
+  supersedes: [],
+  supersededBy: null,
+  refines: [],
+  conflictsWith: [],
+  derivedFrom: [],
+  evidence: [],
+  uses: [],
+  createdAt: T0,
+  updatedAt: T0,
+  ...over,
+});
+const ids = (xs: readonly { id: string }[]) => xs.map((x) => x.id);
+const pick = (r: { expanded: MemoryEntry[]; listed: { id: string; title: string }[] }) => [ids(r.expanded), r.listed.map((x) => [x.id, x.title])];
+
+// AC-42 读取夹具(packages/kernel/src/memory.test.ts 的「读取排序与断崖截断」),本轮文字「帮我安排审查」
+const REVIEW = [
+  entry({ id: "r1", title: "审查人", anchors: ["room:g-group", "tool:review"], body: "审查交给 Codex" }),
+  entry({ id: "r2", title: "审查格式", anchors: ["room:g-group", "tool:review"], body: "审查报告写进 reviews 目录" }),
+  entry({ id: "r3", title: "审查格式副本", anchors: ["room:g-group", "tool:review"], body: "审查报告写进  reviews 目录" }),
+  entry({ id: "x1", title: "午饭", anchors: ["room:g-group"], body: "周五一起吃饭" }),
+  entry({ id: "x2", title: "天气", anchors: ["room:g-group"], body: "最近下雨" }),
+];
+// 一个稀有词(部署)只出现在一条里,常见词(审查)出现在三条里;旧的二字计数对「部署审查」给四条都记 1 分
+const RARE = [
+  entry({ id: "e1", title: "审查流程", anchors: ["room:g"], body: "审查前先看 PR 描述" }),
+  entry({ id: "e2", title: "部署", anchors: ["room:g"], body: "部署前先跑测试" }),
+  entry({ id: "e3", title: "审查人", anchors: ["room:g"], body: "审查交给 Codex" }),
+  entry({ id: "e4", title: "审查格式", anchors: ["room:g"], body: "审查报告写进 reviews 目录" }),
+];
+
+test("G3-a5 AC-42 现有夹具(审查人从 Astra 改为 Codex 等)换分量前后展开与清单相同", () => {
+  // 期望值是换分量前(4efdee0 的二字计数)跑出来的结果;同一组夹具在换分量后必须一字不差
+  assert.deepEqual(pick(selectMemories(REVIEW, { anchors: ["room:g-group", "tool:review"], text: "帮我安排审查", now: NOW })), [["r1", "r2"], [["r3", "审查格式副本"], ["x1", "午饭"], ["x2", "天气"]]]);
+  const byText = selectMemories([entry({ id: "lunch", title: "午饭", anchors: ["room:g"], body: "周五一起吃饭" }), entry({ id: "rev", title: "审查人", anchors: ["room:g"], body: "审查交给 Codex" })], { anchors: ["room:g"], text: "这次审查谁来做", now: NOW });
+  assert.deepEqual(pick(byText), [["rev"], [["lunch", "午饭"]]]);
+  const astra = entry();
+  const codex = entry({ id: "m-codex", body: "PR 审查交给 Codex,不再交 Astra。", supersedes: ["m-astra"], createdAt: NOW, updatedAt: NOW });
+  const lunch = entry({ id: "m-lunch", title: "午饭", anchors: ["room:g-group"], body: "周五一起吃饭" });
+  const ctx = { anchors: ["room:g-group", "tool:review"], text: "这次审查交给谁", now: NOW };
+  assert.deepEqual(pick(selectMemories([astra, lunch], ctx)), [["m-astra"], [["m-lunch", "午饭"]]], "改交之前读到 Astra");
+  const after = selectMemories([{ ...astra, status: "superseded", supersededBy: "m-codex", version: 2 }, codex, lunch], ctx);
+  assert.deepEqual(pick(after), [["m-codex"], [["m-lunch", "午饭"]]], "改交 Codex 之后只读到 Codex,Astra 不进");
+  const flat = selectMemories([entry({ id: "p", anchors: ["room:g"] }), entry({ id: "q", anchors: ["room:g"], body: "另一条" })], { anchors: ["room:g"], text: "", now: NOW });
+  assert.deepEqual(pick(flat), [["p", "q"], []], "没有断崖就全部展开");
+});
+
