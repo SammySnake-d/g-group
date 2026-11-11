@@ -78,7 +78,7 @@ export interface RunStoreOptions {
 }
 
 /**
- * 校验休眠门参数并对上核对周期,不合格抛 invalid_params。宿主构造时先调一次(在打开别的资源之前拒绝),台账构造时再调一次。
+ * 校验休眠门参数并对上核对周期,不合格抛 invalid_params。宿主构造时在打开数据库之前先调一次(调用方拿不到 Host 就没法 close,不能先占资源),台账构造时再调一次。
  * jumpMs 低于 2 个核对周期时,正常核对的间隔(一个周期加上计时器的延迟)也会被当成休眠唤醒,宽限门会一直开着、卡死永远判不出
  */
 export function checkRunWake(checkMs: number, wake: unknown): WakePolicy {

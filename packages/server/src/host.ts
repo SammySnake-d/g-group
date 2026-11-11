@@ -435,6 +435,11 @@ export class Host {
     this.assemble = opts.assemble ?? kernelAssemble;
     this.userId = opts.userId ?? "me";
     this.userName = opts.userName ?? "我";
+    // 纯参数校验放在打开数据库之前:构造抛错时调用方拿不到 Host、也就没法 close(),不能留下数据库文件和句柄(B-F11 审查 BF11-R1-01)
+    const policy = checkRetryPolicy({ ...DEFAULT_RETRY_POLICY, ...(opts.retry ?? {}) });
+    if (!policy.ok) throw new HostError("invalid_params", `重试参数不合格:${policy.reason}`);
+    this.retryPolicy = policy.policy;
+    const runWake = checkRunWake(opts.runCheckMs ?? DEFAULT_RUN_CHECK_MS, opts.runWakePolicy);
     this.db = openDb(opts.file);
     this.exits = new MemberExits({ db: this.db, now: this.now });
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
@@ -443,11 +448,7 @@ export class Host {
     this.bus = createBus(this.now);
     // 本次启动编号:在途轮次标记(F12)与运行台账存活核对(AC-43)共用
     this.bootId = opts.bootId ?? this.newId("boot");
-    const policy = checkRetryPolicy({ ...DEFAULT_RETRY_POLICY, ...(opts.retry ?? {}) });
-    if (!policy.ok) throw new HostError("invalid_params", `重试参数不合格:${policy.reason}`);
-    this.retryPolicy = policy.policy;
     this.breakerPolicy = { ...DEFAULT_BREAKER_POLICY, ...(opts.breaker ?? {}) };
-    const runWake = checkRunWake(opts.runCheckMs ?? DEFAULT_RUN_CHECK_MS, opts.runWakePolicy);
     this.clock = opts.clockMs ?? Date.now;
     this.random = opts.random ?? Math.random;
     this.loop = createAttentionLoop({

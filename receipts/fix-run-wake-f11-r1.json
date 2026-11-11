@@ -1,0 +1,23 @@
+{
+  "slice": "T-177 B-F11 第 1 轮返修(审查 reviews/feat-run-wake-f11.md,在 feat/run-wake-f11 的审查提交 5ad19c2;Codex 第 1 轮 REJECT,reviewed_hash c99501043f1c62400906db9b074f4148ecc6f4aacf1e3809bb4ac31d89494ce1;原切片 PR #55 已合入 dev/integration 4efdee0,本 PR 从 4efdee0 起):BF11-R1-01 宿主构造的两项纯参数校验(checkRetryPolicy、checkRunWake)移到 openDb 之前,非法参数拒绝时不建库、不改已有库、不留 SQLite 句柄,runs.ts 注释改成与实际顺序一致;BF11-R1-02 补测跳变边界(恰好相隔 jumpMs 不算醒来)与宽限 0(不宽限)两处存活变异;变异校准加 W14–W18,测试文件逐个单独跑并按具名全集核对完整性",
+  "acceptance": [
+    {
+      "id": "AC-36",
+      "status": "未测",
+      "reason": "本 PR 只返修 ⑤ F11 宿主接线的构造失败路径与两处边界,不扩展为整个 AC-36 验收。具名测试 packages/server/src/run-wake-edges.test.ts 2 条与 packages/kernel/src/wake-jump.test.ts 1 条:「宿主参数不合格在打开数据库之前就拒绝」在 4efdee0 的实现上按行为失败(拒绝时已建 g.db / g.db-wal / g.db-shm,与审查复现的句柄 3/5/7 同源),是真红→绿;覆盖休眠门参数、runCheckMs 与 jumpMs 对不上、重试参数三种,新文件不建、已有库逐字节不变、连续三次拒绝句柄始终 0(Linux 读 /proc/self/fd、macOS 用 lsof,并以合法宿主打开时句柄 >0 作对照);重试参数审查未要求,同一构造函数同一处顺序,一并前移。「宽限给 0 就是不宽限」「相邻采样恰好相隔 jumpMs 不算醒来」两条在原实现上本来就成立(回归保护),红提交 ba7b4bf 上失败是因为红提交把被钉住的两处写成审查记录的变异形态(wakeTick 用 >=,即 C01;台账宽限 0 换成默认 3 分钟,即 C03),绿提交 011c3f5 还原。变异 packages/server/proof/run-wake-mutations.txt(box3 Node v24.21.0,在 4c05720 上):18 个单点故障(原 W01–W13 + 新 W14 宿主休眠门校验放回 openDb 之后、W15 重试参数校验放回 openDb 之后、W16 跳变 > 改 >=、W17 宽限 0 换默认、W18 宿主早期校验不按 runCheckMs)全被具名测试杀死,7 个测试文件逐个单独跑、每个副本 94 条具名结果与源码全集逐条对上、不完整 0;同一次运行 tsc 0、lint 0、npm test 1476/1476。红提交实跑 3 条 0 通过 / 3 失败(deliverables/g-group-t177-bf11-r1-claude/red-ba7b4bf.tap)。待审"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:8d1aaaab-7093-4d4a-882c-c12dd400ea71",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "ba7b4bf"
+  },
+  "unverifiable": "AC-36 ⑤ F11 返修:句柄计数只数测试临时目录下的文件(Linux /proc/self/fd、macOS lsof),不覆盖 Windows;只保证这两项纯参数校验在打开任何资源之前,宿主构造在 openDb 之后的其他失败(磁盘、搜索索引重建、插件目录等 I/O 错误)仍不释放已开的数据库,不在本片。Docker 容器沙箱下的门禁本片没测(box 上 docker 权限受限,门禁在本机 macOS 跑)。原切片已声明的未覆盖项不变:真机合盖、短于约 30 秒的休眠、firstByteMs ≤ jumpMs、judgeRunner 与 reconcileOrphans 的重复判定、Compute 适配器内部计时、Electron 唤醒事件",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "作者 Claude Code(fnqtz 线路),本会话即任务会话,按 11-10 分工由 Codex 主验收第 2 轮;本片作者是 anthropic,Codex(openai)可签 review 栏。审查记录逐条终审(采纳/驳回及理由)写在任务线程 dm-ai-matrix+usr_4f6ca5e0d86b4a73b5575724ab172bb0#2589 与 PR 描述里。"
+}
