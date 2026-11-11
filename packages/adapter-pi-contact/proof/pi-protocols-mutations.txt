@@ -1,0 +1,14 @@
+node v24.21.0,变异 10 个,只跑 src/protocols.test.ts
+✓ 原样副本:11 绿 / 0 红
+✓ [1/10] P01 协议判断去掉:一律走 anthropic-messages 的适配器(其它协议发不出请求):6 绿 / 5 红,被「openai-chat:工具声明进 tools[].function、工具结果回填成 role:tool、密钥进 Authorization: Bearer」发现(另 4 条)
+✓ [2/10] P02 工具声明不进请求(转换结果被丢掉,模型看不到任何工具):7 绿 / 4 红,被「anthropic-messages:工具声明进 system.tools、工具结果回填成 tool_result、密钥进 x-api-key,响应里的工具调用登记成动作」发现(另 3 条)
+✓ [3/10] P03 工具结果不回填(同一轮第二次请求里没有 tool_result / role:tool / function_call_output):8 绿 / 3 红,被「openai-chat:工具声明进 tools[].function、工具结果回填成 role:tool、密钥进 Authorization: Bearer」发现(另 2 条)
+✓ [4/10] P04 缓存断点不看协议(非 anthropic 也按 cacheRetention 发缓存字段):10 绿 / 1 红,被「cache_control 只在 anthropic-messages 下加:anthropic 的断点不超过 4 个;其它三种协议不带缓存字段也不报错」发现
+✓ [5/10] P05 上游错误体不隐去密钥(错误信息里带明文密钥):10 绿 / 1 红,被「四种协议下密钥不出现在返回值、mind 对象与错误信息里(含上游 4xx/5xx 的错误体)」发现
+✓ [6/10] P06 密钥的兜底分支用错:不发 apiKey、改发 Authorization(google 拿不到 x-goog-api-key):6 绿 / 5 红,被「anthropic-messages:工具声明进 system.tools、工具结果回填成 tool_result、密钥进 x-api-key,响应里的工具调用登记成动作」发现(另 4 条)
+✓ [7/10] P07 密钥头不按协议收窄(给 google 配 bearer、给 anthropic 配 x-goog-api-key 都放行):10 绿 / 1 红,被「密钥头按协议收窄:给该协议不认的头判选项不合格,给认的头照发;协议默认不给也算对」发现
+✓ [8/10] P08 openai 兼容口的端点根不补 /v1(请求打到 /chat/completions):8 绿 / 3 红,被「openai-chat:工具声明进 tools[].function、工具结果回填成 role:tool、密钥进 Authorization: Bearer」发现(另 2 条)
+✓ [9/10] P09 模型名里的 gemini 前缀认不出(落到 anthropic-messages 默认):10 绿 / 1 红,被「模型名 → 协议:google/gemini、openai/gpt 前缀认得出,认不出的用 anthropic-messages 默认」发现
+✓ [10/10] P10 压缩器不按协议(压缩请求也打到 anthropic-messages 的端点):10 绿 / 1 红,被「压缩器也按协议:openai-chat 下压缩请求打到 /v1/chat/completions、不带工具、密钥进 Bearer、返回新笔记」发现
+合计 10:杀死 10,存活 0
+变异校准通过
