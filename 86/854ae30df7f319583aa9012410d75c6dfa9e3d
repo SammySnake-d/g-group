@@ -1,0 +1,19 @@
+receipts/feat-runtime-config.json
+  s_6da187c6e14fd9::t_5b7445c7ae9bde 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "86854ae30df7f319583aa9012410d75c6dfa9e3d",
+  "prompts": {},
+  "sessions": {
+    "s_6da187c6e14fd9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2ee95d347ee6f575",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
