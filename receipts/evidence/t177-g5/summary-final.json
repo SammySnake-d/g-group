@@ -1,0 +1,357 @@
+{
+  "head": "4158ac3400df30884a8bc3548b345ca9bfd22a6c",
+  "red_commit": "60c6c7c9d45ae9edc099250ad38eba2a363deee4",
+  "green_commit": "3f34cfd7e00d27df1c80cf3a201d030c47c4eb51",
+  "box": "box3",
+  "job": "v3",
+  "red": {
+    "tests": 30,
+    "pass": 0,
+    "fail": 30,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "g5": {
+    "tests": 30,
+    "pass": 30,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "full": {
+    "tests": 1542,
+    "pass": 1542,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "mutation_control": {
+    "tests": 30,
+    "pass": 30,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "mutation_after_control": {
+    "tests": 30,
+    "pass": 30,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "typecheck_exit": 0,
+  "lint_exit": 0,
+  "g5_exit": 0,
+  "full_exit": 0,
+  "mutation_exit": 0,
+  "dirty_after_mut": 0,
+  "mutations": [
+    {
+      "id": "G5-K1",
+      "file": "packages/kernel/src/memory-marks.ts",
+      "designated": "G5-K1 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-K1 标记身份带消息版本与原话 一条消息两件事是两个身份"
+      ]
+    },
+    {
+      "id": "G5-K2",
+      "file": "packages/kernel/src/memory-marks.ts",
+      "designated": "G5-K2 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-K2 粗筛出口三选一 只有本人长期偏好直接写"
+      ]
+    },
+    {
+      "id": "G5-K3",
+      "file": "packages/kernel/src/memory-marks.ts",
+      "designated": "G5-K3 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-K3 精筛一批不超过条数与字节上限 最老的先"
+      ]
+    },
+    {
+      "id": "G5-K4",
+      "file": "packages/kernel/src/memory-marks.ts",
+      "designated": "G5-K4 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-K4 精筛触发 没有欠账不跑 显式与积压与年龄与安静期"
+      ]
+    },
+    {
+      "id": "G5-K5",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G5-K5 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-K5 检查结果带标记 形状不对整份判失败"
+      ]
+    },
+    {
+      "id": "G5-K6",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G5-K6 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-K6 精筛结果每项必须指回来源"
+      ]
+    },
+    {
+      "id": "G5-K7",
+      "file": "packages/kernel/src/run-ledger.ts",
+      "designated": "G5-K7 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-K7 宿主后台单元声明计时后卡死判定与休眠宽限管得到"
+      ]
+    },
+    {
+      "id": "G5-LS4",
+      "file": "packages/server/src/memory-marks.ts",
+      "designated": "G5-LS4 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-LS4 精筛租约同一时刻只一个 过期或旧启动留下的可收回"
+      ]
+    },
+    {
+      "id": "G5-02L",
+      "file": "packages/server/src/memory-marks.ts",
+      "designated": "G5-02L ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-02L 失败到上限只挡自动重试 标记仍是欠账"
+      ]
+    },
+    {
+      "id": "G5-05S",
+      "file": "packages/server/src/memory-marks.ts",
+      "designated": "G5-05S ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-05S 同一消息两项各自留存 同身份幂等 联系人互不覆盖"
+      ]
+    },
+    {
+      "id": "G5-01EX",
+      "file": "packages/server/src/host.ts",
+      "designated": "G5-01EX ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-01EX 直接写与标记互斥 本人长期偏好写下即生效 其余只打标"
+      ]
+    },
+    {
+      "id": "G5-02RM",
+      "file": "packages/server/src/host.ts",
+      "designated": "G5-02RM ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-02RM 联系人主动记住当轮生效 不等待精筛"
+      ]
+    },
+    {
+      "id": "G5-02S4",
+      "file": "packages/server/src/host.ts",
+      "designated": "G5-02S4 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-02S4 精筛遇到本轮已主动记住的内容按复述处理不新增"
+      ]
+    },
+    {
+      "id": "G5-03SW",
+      "file": "packages/server/src/host.ts",
+      "designated": "G5-03SW ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-03SW G1已写md未确认跨切换 不重复写也不再打标"
+      ]
+    },
+    {
+      "id": "G5-04OW",
+      "file": "packages/server/src/host.ts",
+      "designated": "G5-04OW ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-04OW 移交事务前后退出 重启后同一候选只有一个可执行 owner"
+      ]
+    },
+    {
+      "id": "G5-05TW",
+      "file": "packages/kernel/src/memory-marks.ts",
+      "designated": "G5-05TW ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-05TW 一条消息两项候选都保留并各自精筛落地"
+      ]
+    },
+    {
+      "id": "G5-06ED",
+      "file": "packages/server/src/host.ts",
+      "designated": "G5-06ED ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-06ED 编辑后的待办不回灌旧文 新版本另开检查工作项"
+      ]
+    },
+    {
+      "id": "G5-06RT",
+      "file": "packages/server/src/memory-marks.ts",
+      "designated": "G5-06RT ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-06RT 撤回后的待办只留无正文处置"
+      ]
+    },
+    {
+      "id": "G5-07LK",
+      "file": "packages/server/src/host.ts",
+      "designated": "G5-07LK ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-07LK 精筛与对话不并发 都在同一把联系人锁里"
+      ]
+    },
+    {
+      "id": "G5-07PE",
+      "file": "packages/server/src/host.ts",
+      "designated": "G5-07PE ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-07PE 有新消息精筛让出联系人锁 标记保留为欠账"
+      ]
+    },
+    {
+      "id": "G5-07PG",
+      "file": "packages/server/src/host.ts",
+      "designated": "G5-07PG ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-07PG 精筛进行中 progress_get 能查到后台单元"
+      ]
+    },
+    {
+      "id": "G5-07ST",
+      "file": "packages/server/src/host.ts",
+      "designated": "G5-07ST ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-07ST 精筛无进展超过阈值判失败 标记留作欠账"
+      ]
+    },
+    {
+      "id": "G5-08FL",
+      "file": "packages/server/src/memory-marks.ts",
+      "designated": "G5-08FL ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-08FL 精筛一直失败不清债也不退回直接写"
+      ]
+    },
+    {
+      "id": "G5-01IN",
+      "file": "packages/server/src/memory-marks.ts",
+      "designated": "G5-01IN ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-01IN 两个联系人同群各记各的标记与覆盖"
+      ]
+    },
+    {
+      "id": "G5-03RU",
+      "file": "packages/server/src/host.ts",
+      "designated": "G5-03RU ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-03RU 精筛卡住时当轮回复与规矩照常提交"
+      ]
+    },
+    {
+      "id": "G5-04BT",
+      "file": "packages/server/src/host.ts",
+      "designated": "G5-04BT ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-04BT 精筛一批至多 8 个标记 余下的下一批"
+      ]
+    },
+    {
+      "id": "G5-04CL",
+      "file": "packages/server/src/host.ts",
+      "designated": "G5-04CL ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-04CL 关闭后不再发精筛 标记在重启后续做"
+      ]
+    },
+    {
+      "id": "G5-02RS",
+      "file": "packages/server/src/host.ts",
+      "designated": "G5-02RS ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-02RS 重启不清待精筛标记"
+      ]
+    },
+    {
+      "id": "G5-AD1",
+      "file": "packages/adapter-pi-contact/src/compact.ts",
+      "designated": "G5-AD1 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-AD1 精筛只用说话模型 结果必须指回来源 截断不算完成"
+      ]
+    },
+    {
+      "id": "G5-AD2",
+      "file": "packages/adapter-pi-contact/src/compact.ts",
+      "designated": "G5-AD2 ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G5-AD2 粗筛标记并进原来那一次检查 不另增调用"
+      ]
+    }
+  ],
+  "killed": 30,
+  "survived": []
+}
