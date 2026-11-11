@@ -32,3 +32,11 @@ not ok 5 - 按内容上传附件:base64 存一份、同内容同 ref,随消息�
     Expected: visible
     Error: element(s) not found
   3 failed
+
+## 追加:联系人连着几句引用同一条(用例提交 61d97f6,实现在后)——真实后端下同时出现 3 个同样的引用块
+  1) [electron] › e2e/parity-chat.electron.spec.ts:295:1 › 联系人连着几句都回你同一条:引用只在第一句上画一次,后面几句并在同一个头像下 ──
+    Error: expect(locator).toHaveCount(expected) failed
+    Locator:  getByTestId('chat-column').locator('[data-msg][data-from]:not([data-from="me"])').filter({ has: getByTestId('sent-quotes').filter({ hasText: '帮我写 hello.txt' }) })
+    Expected: 1
+    Received: 3
+  1 failed
