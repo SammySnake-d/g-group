@@ -2235,10 +2235,10 @@ test("R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现
   }
 });
 
+// biome-ignore-start lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
 test("R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口", async () => {
   const reg = createRegistry();
   const p = Promise.resolve([]);
-  // biome-ignore lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
   Object.defineProperty(p, "then", { value: () => {}, configurable: true });
   reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => p });
   const result = await reg.pull("p", "g");
@@ -2266,11 +2266,12 @@ test("R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实
     assert.equal(row.restored, true);
   }
 });
+// biome-ignore-end lint/suspicious/noThenProperty: 以上具名夹具有意包含 then。
 
+// biome-ignore-start lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
 test("R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口", async () => {
   const reg = createRegistry();
   const p = Promise.resolve([]);
-  // biome-ignore lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
   Object.defineProperty(p, "then", { value: () => {}, configurable: true });
   reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => p });
   const result = await reg.pull("p", "g");
@@ -2298,11 +2299,12 @@ test("R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定
     assert.equal(row.restored, true);
   }
 });
+// biome-ignore-end lint/suspicious/noThenProperty: 以上具名夹具有意包含 then。
 
+// biome-ignore-start lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
 test("R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口", async () => {
   const reg = createRegistry();
   const p = Promise.resolve([]);
-  // biome-ignore lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
   Object.defineProperty(p, "then", { value: () => {}, configurable: true });
   reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => p });
   const result = await reg.pull("p", "g");
@@ -2330,11 +2332,12 @@ test("R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实
     assert.equal(row.restored, true);
   }
 });
+// biome-ignore-end lint/suspicious/noThenProperty: 以上具名夹具有意包含 then。
 
+// biome-ignore-start lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
 test("R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口", async () => {
   const reg = createRegistry();
   const p = Promise.resolve([]);
-  // biome-ignore lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
   Object.defineProperty(p, "then", { value: () => {}, configurable: true });
   reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => p });
   const result = await reg.pull("p", "g");
@@ -2362,11 +2365,12 @@ test("R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真
     assert.equal(row.restored, true);
   }
 });
+// biome-ignore-end lint/suspicious/noThenProperty: 以上具名夹具有意包含 then。
 
+// biome-ignore-start lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
 test("R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口", async () => {
   const reg = createRegistry();
   const p = Promise.resolve([]);
-  // biome-ignore lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
   Object.defineProperty(p, "then", { value: () => {}, configurable: true });
   reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => p });
   const result = await reg.pull("p", "g");
@@ -2394,6 +2398,7 @@ test("R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定�
     assert.equal(row.restored, true);
   }
 });
+// biome-ignore-end lint/suspicious/noThenProperty: 以上具名夹具有意包含 then。
 
 test("R18-06 描述符旗标、原型、可扩展性三类同步写法都有事件与无事件标定", async () => {
   const reg = createRegistry();
