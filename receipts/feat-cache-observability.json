@@ -1,0 +1,29 @@
+{
+  "slice": "AC-39 缓存命中可观测(CM1):pi 联系人适配器每次模型请求(一轮、压缩、检查)把 input / cache_read / cache_write / output、请求序号、实际请求体的固定前缀哈希与断点个数、线路(服务商|主机名|模型,网关路径里的令牌段不进)经可选回执口交给宿主;宿主只追加落 gg_usage;usage.cacheStats 按「线路 × 联系人 × 群」(可加种类)出命中率 = cache_read/(input+cache_read+cache_write),做拆账口径检查(cache_read/input 恒定比例、或不声明缓存的请求报命中;标出且不计入)、只缓存首段标记、低于阈值标记(阈值只做参数、默认不设)与未命中归因(cold / prefix-changed / expired 超 TTL 不算前缀错误 / uncached);适配器把 cache_control 收拢到工具末尾、第 1 块末尾、最后一条消息末尾(≤4);startServer 加 stateNoteMaxBytes(默认 8192 候选,null 不设)让缩写分支在生产可触发,cli 加 --note-max-bytes",
+  "acceptance": [
+    {
+      "id": "AC-39",
+      "status": "未测",
+      "reason": "本片覆盖 ③⑤⑥:③ 实际请求体 cache_control ≤ 4 且在工具末尾 / 第 1 块末尾 / 最新追加消息末尾、回报的断点数等于请求体实际个数(packages/adapter-pi-contact/src/usage.test.ts);⑤ 每次调用落表、按线路 × 联系人 × 群出命中率、压缩与检查也记、线路不含网关令牌段(packages/server/src/usage.test.ts,startServer(mind=pi) 连假网关);⑥ 坏实现④ kiro 式 4:1 拆账数据标 split-accounting 且不计入、坏实现⑤ 只缓存首段数据在给了阈值时标 low-hit-rate(并标 first-segment-only)、间隔超 TTL 的未命中记过期不算前缀错误,均有具名测试;27 个单点变异全被具名测试杀死(packages/server/proof/cache-observability-mutations.txt);真实网关 5 轮实测见 packages/server/proof/cache-observability-real.txt(fnqtz 线路未判拆账,命中率全部 0.807、联系人轮次 0.915)。候选,非正式门禁:报警阈值待用户按线路定(验收文档 §8.1),只做成参数 alertBelow / alertBelowByLine / minCalls,默认不设、不标、不推送;startServer 状态笔记默认上限 8192 字节是助手按压缩器输出上限推的候选值。与文档措辞的差异:「全新随机前缀首调即报命中」在生产流量里改用「不声明缓存(无 cache_control)的请求报命中」判(生产不发随机前缀探测;第一次实测里「工具声明本库首见即命中」误判,证据见 real.txt)。①②④ 不在本片;Compute(adapter-cc-compute)没有解析 usage,compute 种类未接;待审"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "notes": "27 个单点故障在 box4 串行全部被具名测试按名字杀死,原样副本全绿",
+      "evidence": "packages/server/proof/cache-observability-mutations.txt"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:dd154965-afbd-4134-a1d3-c00f2a859eab",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "138c891c9f774f79284f845a1961821fcecedd8a"
+  },
+  "unverifiable": "AC-39 ⑥:拆账口径是启发式判据,只认两种形态(cache_read/input 恒定比例且 input 有变化;没有 cache_control 的请求也报命中)。会漏判:只在带断点的请求上按非固定比例虚报命中的渠道;会误判:对不带 cache_control 的请求也做隐式缓存的上游(如经中转的 Gemini/OpenAI 自动缓存),这类线路的命中率会被置空并标拆账。只缓存首段只在有轮内工具往返时看得出(五块每轮重拼,轮与轮之间本来只有固定前缀可命中)。AC-39 ⑤ 的房间维度按「本次调用涉及的会话集合」分组(一轮跨两个群时记成 g1,g2),与 D25 第 12 节「按同一联系人在同一群算」不完全一致(装配本身就跨会话,见对照表 B7)。单测里网关是进程内假端点,真实数字只有一次 5 轮实测",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "子代理实现(调度会话 claude:dd154965-afbd-4134-a1d3-c00f2a859eab 派出,切片说明 CM1-cache-observability.md)。设计真源核对:origin/docs/dev-handbook v3.29(6109485)的 D22 与 AC-39 与仓库快照逐字一致。只给 startServer 加选项与传参,没动 mind/compactor 工厂缓存(线程 #2586 的 G2 在改)。内核端口用可选回执口参数(round 第 4 个参数、compact/reflect 第 3 个参数)而不是在 RoundOutput 加 usage[]:不改既有返回值形状(既有测试对返回值做深相等),且失败或被中止的一轮里已发出的请求也能记上。gg_usage 不存 ttlExpired 列,过期按查询时的 ttlMs 现算(TTL 是参数,存死会和参数打架)。"
+}
