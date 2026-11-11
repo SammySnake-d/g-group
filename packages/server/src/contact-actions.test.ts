@@ -18,9 +18,11 @@ after(() => rmSync(dir, { recursive: true, force: true }));
 let fileNo = 0;
 const file = () => path.join(dir, `a${++fileNo}.db`);
 
+/** 等宿主安静下来;每次等待与总时长都有上限,宿主停不下来(例如轮次反复重跑)时按名字失败,而不是挂到测试超时 */
 async function settle(host: Host, compute: { drained(): boolean }) {
-  for (let i = 0; i < 400; i++) {
-    await host.idle();
+  const deadline = Date.now() + 30_000;
+  for (let i = 0; i < 400 && Date.now() < deadline; i++) {
+    await Promise.race([host.idle(), new Promise((r) => setTimeout(r, 250))]);
     await new Promise((r) => setTimeout(r, 5));
     if (compute.drained() && !host.loop.busy()) {
       await new Promise((r) => setTimeout(r, 10));
