@@ -116,6 +116,40 @@ export function checkCompressionCall(contact: ContactModels, requestedModel: str
   return freeze({ ok: false, code: "compression-model-mismatch", reason: `压缩必须用联系人 ${contact.name} 的说话模型 ${want},拒绝改用 ${requestedModel}(失败时保留原文,不换模型)` });
 }
 
+// ------------------------------------------------------------------ 说话侧有效配置快照(T-177 G2 = D;AC-32 ③)— 红提交空壳
+export interface SpeakingEndpoint {
+  readonly provider: string;
+  readonly baseUrl: string;
+  readonly authRef: string;
+  readonly maxOutputTokens: number;
+  readonly contextWindow: number;
+  readonly reasoning?: Readonly<Record<string, unknown>>;
+}
+export type EffectiveSpeakingConfig = Readonly<{
+  model: string;
+  vendor: Vendor;
+  provider: string;
+  baseUrl: string;
+  authRef: string;
+  maxOutputTokens: number;
+  contextWindow: number;
+  reasoning: Readonly<Record<string, unknown>>;
+  fingerprint: string;
+}>;
+export const DEFAULT_SPEAKING_ENDPOINT: SpeakingEndpoint = Object.freeze({ provider: "", baseUrl: "", authRef: "", maxOutputTokens: 0, contextWindow: 0 });
+export class SpeakingConfigError extends Error {
+  readonly code = "invalid-speaking-config";
+}
+export function checkSpeakingEndpoint(e: SpeakingEndpoint): SpeakingEndpoint {
+  return e;
+}
+export function speakingFingerprint(_body: Omit<EffectiveSpeakingConfig, "fingerprint">, _bootId: string): string {
+  return "";
+}
+export function resolveSpeakingConfig(_endpoint: SpeakingEndpoint, _model: string, _bootId: string): EffectiveSpeakingConfig {
+  return { model: "", vendor: "unknown", provider: "", baseUrl: "", authRef: "", maxOutputTokens: 0, contextWindow: 0, reasoning: {}, fingerprint: "" };
+}
+
 export function supportOf(caps: readonly ModelCapability[], harness: string, model: string): Support {
   const decl = caps.find((c) => c.id === model);
   if (!decl) return "undeclared";
