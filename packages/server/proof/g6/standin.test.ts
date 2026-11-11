@@ -56,3 +56,9 @@ test("替身端点只接 messages,其余 404", async () => {
   assert.equal(r.status, 200);
   assert.equal(parseReply(await r.text()).text, "- 今天食堂的番茄炒蛋有点咸");
 });
+
+test("精筛请求替身给合法空结果,不把标记提升为记忆", () => {
+  const req = JSON.stringify({ model: "m", system: '你替一位联系人做记忆精筛:只输出 {"memories": []}', messages: [{ role: "user", content: "[待精筛标记]\n…" }] });
+  const r = parseReply(standinReply(item, req));
+  assert.deepEqual([r.text, r.stopReason], ['{"memories": []}', "end_turn"]);
+});

@@ -5,7 +5,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpat
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
-import { gitEnv, gitQuery, linkNodeModules, MergeConflict, prepareTree } from "./run.ts";
+import { gatewayUp, gitEnv, gitQuery, linkNodeModules, MergeConflict, modelStatesFor, prepareTree, probeModel, reusable } from "./run.ts";
+import { mkRecord } from "./fixtures/build.ts";
 
 // 临时仓库不读本机全局/系统 git 配置(本机全局配置里的 trace2 守护会异步往 .git 里写文件,删目录时撞 ENOTEMPTY);runner 的子进程继承
 process.env.GIT_CONFIG_GLOBAL = "/dev/null";
@@ -46,7 +47,7 @@ function repo(name = "repo") {
   git(r, "checkout", "-q", "main");
   return { r, base, s1, s2, s3 };
 }
-const state = (base: string, inputs: [string, string][]) => ({ id: "gx", label: "x", state: "可跑" as const, reason: null, base, inputs: inputs.map(([slice, sha]) => ({ slice, branch: slice, ref: sha, sha, receipt: true })) });
+const state = (base: string, inputs: [string, string][], groupCommit: string | null = null) => ({ id: "gx", label: "x", state: "可跑" as const, reason: null, base, groupCommit, inputs: inputs.map(([slice, sha]) => ({ slice, branch: slice, ref: sha, sha, receipt: true })) });
 
 test("依赖链接:第三方包链到 runner 的 node_modules,@g-group 链到被测树自己的 packages,file: 依赖链到被测树", () => {
   const runner = path.join(dir, "runner");
@@ -111,4 +112,64 @@ test("调用方环境里带 GIT_DIR / GIT_WORK_TREE(如在 pre-push 钩子里跑
   }
   assert.equal(git(decoy.r, "for-each-ref", "--format=%(refname) %(objectname)"), before);
   assert.equal(git(decoy.r, "worktree", "list", "--porcelain").split("\n").filter((l) => l.startsWith("worktree ")).length, 1);
+});
+
+test("有只供 G6 的组提交就直接 detach 到它,不再按序合入;isAncestor 认祖先关系", () => {
+  const { r, base, s1, s2 } = repo("grp");
+  git(r, "checkout", "-q", "-b", "m12", s1);
+  git(r, "merge", "--no-ff", "--no-edit", "-q", s2);
+  const m12 = git(r, "rev-parse", "HEAD");
+  git(r, "checkout", "-q", "main");
+  const q = gitQuery(r);
+  assert.deepEqual([q.isAncestor(s1, m12), q.isAncestor(s2, m12), q.isAncestor(m12, s1), q.isAncestor(base, base)], [true, true, false, true]);
+  const wt = path.join(dir, "wt-grp");
+  const { head } = prepareTree(r, state(base, [["S3", "不会被合入"]], m12), wt);
+  assert.equal(head, m12);
+  assert.deepEqual([readFileSync(path.join(wt, "a.txt"), "utf8"), readFileSync(path.join(wt, "b.txt"), "utf8")], ["2\n", "S1\n"]);
+});
+
+test("续跑只沿用同一组提交、同一续跑身份、同一题同一次的合法记录;运行出错的重跑,超时与上游失败照常沿用", () => {
+  const want = { commit: "c", reuseKey: "rk", item: "T", rep: 1 };
+  assert.equal(reusable(mkRecord(), want), true);
+  assert.equal(reusable(mkRecord({ status: "timeout" }), want), true);
+  assert.equal(reusable(mkRecord({ status: "config_insufficient" }), want), true);
+  assert.equal(reusable(mkRecord({ status: "error" }), want), false);
+  assert.equal(reusable(mkRecord({ commit: "d" }), want), false);
+  assert.equal(reusable(mkRecord({ reuseKey: "other" }), want), false);
+  assert.equal(reusable(mkRecord({ rep: 2 }), want), false);
+  assert.equal(reusable(null, want), false);
+  assert.equal(reusable({ ...mkRecord(), schema: "x" }, want), false);
+});
+
+test("探测:429 就等一段再探,到上限仍 429 判不跑;非 429 一次就放行;记下每次时刻、状态与 retry-after", async () => {
+  const waits: number[] = [];
+  const seq = (statuses: number[]) => {
+    let i = 0;
+    return (async () => {
+      const st = statuses[Math.min(i++, statuses.length - 1)]!;
+      return new Response(st === 200 ? "{}" : JSON.stringify({ error: { type: "rate_limit_error" } }), { status: st, headers: st === 429 ? { "retry-after": "819" } : {} });
+    }) as typeof fetch;
+  };
+  const env = { ANTHROPIC_BASE_URL: "http://gw.invalid/", ANTHROPIC_AUTH_TOKEN: "NEUTRAL_FIXTURE_NO_CREDENTIALS" };
+  const no = await probeModel({ model: "hy", env, fetch: seq([429]), tries: 3, waitMs: 1500, sleep: async (ms) => void waits.push(ms), now: () => new Date(0) });
+  assert.deepEqual([no.ok, no.attempts.length, no.attempts[0], waits], [false, 3, { at: "1970-01-01T00:00:00.000Z", status: 429, retryAfter: "819", note: "rate_limit_error" }, [1500, 1500]]);
+  const later = await probeModel({ model: "hy", env, fetch: seq([429, 200]), tries: 3, waitMs: 10, sleep: async () => {} });
+  assert.deepEqual([later.ok, later.attempts.map((a) => a.status)], [true, [429, 200]]);
+  const other = await probeModel({ model: "hy", env, fetch: seq([500]), tries: 3, waitMs: 10, sleep: async () => {} });
+  assert.deepEqual([other.ok, other.attempts.length], [true, 1]);
+});
+
+test("网关在不在:收到任何 HTTP 回复算在,连不上算不在", async () => {
+  assert.equal(await gatewayUp("http://gw.invalid/", (async () => new Response("x", { status: 404 })) as typeof fetch), true);
+  assert.equal(await gatewayUp("http://gw.invalid/", (async () => { throw new TypeError("fetch failed"); }) as typeof fetch), false);
+});
+
+test("模型状态:跑过的记已跑(探测记录照留),没跑过但有 429 探测记录记未测,两者都没有记未跑", () => {
+  const rec = mkRecord({ model: "hy" });
+  const probe = { state: "未测(上游 429 限流)", attempts: [{ at: "t", status: 429, retryAfter: "819", note: "rate_limit_error" }] };
+  assert.deepEqual(modelStatesFor("hy", [rec], probe), { state: "已跑", attempts: probe.attempts });
+  assert.deepEqual(modelStatesFor("hy", [], probe), probe);
+  assert.deepEqual(modelStatesFor("hy", [], { state: "可跑", attempts: [] }), { state: "未跑(本次未选或无可跑的组)", attempts: [] });
+  assert.deepEqual(modelStatesFor("hy", [], undefined), { state: "未跑(本次未选或无可跑的组)", attempts: [] });
+  assert.deepEqual(modelStatesFor("other", [rec], undefined), { state: "未跑(本次未选或无可跑的组)", attempts: [] });
 });

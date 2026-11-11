@@ -93,7 +93,8 @@ export interface FixtureSet {
 }
 
 // ---------------------------------------------------------------- 原始记录
-export type CallClass = "round" | "check" | "compact" | "background";
+/** round 联系人一轮;check 每轮记忆检查;compact 补写/缩写笔记;refine G5 精筛;background 其余后台 */
+export type CallClass = "round" | "check" | "compact" | "refine" | "background";
 export type CallOutcome = "ok" | "timeout" | "network_error" | "http_error" | "truncated" | "parse_failure" | "empty";
 export interface Usage {
   readonly input: number;
@@ -104,7 +105,10 @@ export interface Usage {
 /** 一次模型 HTTP 调用(含 SDK 自己的重试,每次都单独记)。请求头不记,密钥不落盘。 */
 export interface CallRecord {
   readonly n: number;
+  /** 真正发出的时刻(一次一个调用时,排队之后) */
   readonly at: number;
+  /** 一次一个调用时在 runner 里排队等了多久 */
+  readonly queuedMs: number;
   readonly ms: number;
   readonly contact: string | null;
   readonly cls: CallClass;
@@ -159,6 +163,13 @@ export interface MemoryRecord {
   readonly body: string;
   readonly anchors: readonly string[];
   readonly source: { readonly roomId: string; readonly seq: number } | null;
+  /** 宿主写下这一条的时刻(毫秒);读不出为 null */
+  readonly createdAt: number | null;
+}
+/** 组级的宿主选项覆盖(start.ts 不暴露、但宿主已有的选项):opts 并进宿主选项,fineScreen 并进 G5 精筛参数 */
+export interface HostPatch {
+  readonly opts?: Readonly<Record<string, unknown>>;
+  readonly fineScreen?: Readonly<Record<string, unknown>>;
 }
 export type RunStatus = "ok" | "error" | "timeout" | "config_insufficient";
 export interface RawRecord {
@@ -171,6 +182,8 @@ export interface RawRecord {
   readonly item: string;
   readonly rep: number;
   readonly fingerprint: string;
+  /** 续跑身份:模型、方式、认证引用、组级选项、一次一个调用、runner 驱动代码摘要;不含每次会话都变的网关端口与路径 */
+  readonly reuseKey: string;
   readonly startedAt: number;
   readonly endedAt: number;
   readonly status: RunStatus;
@@ -185,7 +198,9 @@ export interface RawRecord {
   readonly notes: Readonly<Record<string, string | null>>;
   readonly reports: readonly { readonly what: string; readonly at: number; readonly detail: string }[];
   /** 宿主自报的检查欠账(有接口才有,如 G1 的 memoryCoverage);没有接口为 null */
-  readonly hostDebt: Readonly<Record<string, Readonly<Record<string, number>>>> | null;
+  readonly hostDebt: Readonly<Record<string, { readonly counts: Readonly<Record<string, number>>; readonly refs: readonly { readonly roomId: string; readonly seq: number; readonly state: string }[] }>> | null;
+  /** 组级宿主选项覆盖实际落到了哪些字段、哪些在被测提交里不存在 */
+  readonly hostPatch: { readonly applied: readonly string[]; readonly missing: readonly string[] } | null;
   readonly calls: readonly CallRecord[];
 }
 
@@ -222,6 +237,10 @@ export interface Metrics {
   readonly tokens: Usage & { readonly byClass: Readonly<Record<CallClass, number>> };
   readonly calls: number;
   readonly roundLatencyMs: { readonly p50: number | null; readonly p95: number | null; readonly n: number };
+  /** 期望记忆从来源消息发出到宿主写下的时间(只算写到了的) */
+  readonly writeLatencyMs: { readonly p50: number | null; readonly p95: number | null; readonly n: number };
+  /** 联系人调用历史查询工具 query_history 的次数(G4) */
+  readonly historyToolCalls: number;
   readonly callLatencyMs: { readonly p50: number | null; readonly p95: number | null; readonly n: number };
   readonly backlog: { readonly count: number; readonly maxAgeMs: number | null };
   readonly failures: FailureTally;

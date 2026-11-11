@@ -6,14 +6,14 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 import { accounting, sameModel } from "./contracts.ts";
-import { contactOf, driveItem, gatewayEnv } from "./driver.ts";
+import { applyHostPatch, contactOf, driveItem, gatewayEnv } from "./driver.ts";
 import { A, B, mkItem, mkSet } from "./fixtures/build.ts";
 import { scoreRecords } from "./score.ts";
 
 const dir = mkdtempSync(path.join(tmpdir(), "g6-drive-"));
 after(() => rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
 let no = 0;
-const opts = (item = mkItem()) => ({ set: mkSet([item]), item, group: "g1", commit: "c", rep: 1, mode: "standin" as const, model: "standin/rules-v1", env: {}, dataDir: path.join(dir, `d${++no}`), fingerprint: "fp", stepTimeoutMs: 20_000, callTimeoutMs: 20_000, quietMs: 30, settleMs: 0 });
+const opts = (item = mkItem()) => ({ set: mkSet([item]), item, group: "g1", commit: "c", rep: 1, mode: "standin" as const, model: "standin/rules-v1", env: {}, dataDir: path.join(dir, `d${++no}`), fingerprint: "fp", reuseKey: "rk", stepTimeoutMs: 20_000, callTimeoutMs: 20_000, quietMs: 30, settleMs: 0 });
 
 test("替身跑完一道题:每步都有记录,每次调用都记账并归到联系人,第 1 次检查按题集换成解析失败", async () => {
   const item = mkItem({ faults: [{ contact: "A", cls: "check", nth: 1, fault: "malformed" }] });
@@ -52,4 +52,22 @@ test("调用归属:认人设 marker;不带人设的补写请求只有一位联�
   assert.equal(contactOf(one, "[旧状态笔记] 没有人设"), "A");
   assert.equal(contactOf(two, "[旧状态笔记] 没有人设"), null);
   assert.equal(contactOf(two, `${A.marker} ${B.marker}`), null);
+});
+
+test("组级宿主选项覆盖:并进宿主已有的选项对象与精筛参数,被测提交里没有的字段如实记缺", () => {
+  const host = { opts: { a: 1 }, finePolicy: { quietMs: 300_000, maxMarks: 8 } };
+  const r = applyHostPatch(host, { opts: { historyPrefetch: false }, fineScreen: { quietMs: 20_000 } });
+  assert.deepEqual(r, { applied: ["opts.historyPrefetch", "fineScreen.quietMs"], missing: [] });
+  assert.deepEqual(host, { opts: { a: 1, historyPrefetch: false }, finePolicy: { quietMs: 20_000, maxMarks: 8 } });
+  const old = { opts: { a: 1 } };
+  assert.deepEqual(applyHostPatch(old, { fineScreen: { quietMs: 1 } }), { applied: [], missing: ["fineScreen.quietMs"] });
+  assert.deepEqual(applyHostPatch(old, null), { applied: [], missing: [] });
+});
+
+test("替身跑一道题时 driver 把组级覆盖落到宿主上并记进原始记录;记忆带写下时刻", async () => {
+  const rec = await driveItem({ ...opts(), hostPatch: { opts: { stateNoteMaxBytes: 4000 } }, serial: true });
+  assert.deepEqual([rec.status, rec.hostPatch, rec.reuseKey], ["ok", { applied: ["opts.stateNoteMaxBytes"], missing: [] }, "rk"]);
+  const m = rec.memories.A!.find((x) => x.body.includes("weekly@corp.example"));
+  assert.ok(m && typeof m.createdAt === "number" && m.createdAt >= rec.startedAt && m.createdAt <= rec.endedAt);
+  assert.ok(rec.calls.every((c) => c.queuedMs >= 0));
 });

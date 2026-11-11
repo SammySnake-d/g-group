@@ -5,9 +5,10 @@ import { BASELINE, GROUPS, type GitQuery, receiptPath, resolveGroup, resolveSlic
 import { crashRecord, planRuns } from "./run.ts";
 
 /** 假仓库:refs 里列出的引用能解析,files 里列出的「提交:路径」存在 */
-const fakeGit = (refs: Record<string, string>, files: string[]): GitQuery => ({
+const fakeGit = (refs: Record<string, string>, files: string[], ancestors: string[] = []): GitQuery => ({
   revParse: (ref) => refs[ref] ?? null,
   hasFile: (commit, file) => files.includes(`${commit}:${file}`),
+  isAncestor: (a, b) => a === b || ancestors.includes(`${a}<${b}`),
 });
 const def = (id: string) => GROUPS.find((g) => g.id === id)!;
 
@@ -30,7 +31,7 @@ test("某片分支不存在或还没有收据,该组记未测(分支未就绪)�
   assert.match(g3.reason!, /G3\(feat\/t177-g3-bc-search 不存在\)/);
 });
 
-test("每片都有收据就可跑;预取关这组在 G4 开关名定之前记未测(开关未定)", () => {
+test("每片都有收据就可跑;预取关这组按 G4 的 historyPrefetch=false 跑,含 G5 的组带精筛安静期参数", () => {
   const refs: Record<string, string> = { [BASELINE]: BASELINE };
   const files: string[] = [];
   for (const [s, b] of [["G1", "feat/t177-g1-memory"], ["G2", "feat/t177-g2-config"], ["G3", "feat/t177-g3-bc-search"], ["G4", "feat/t177-g4-history-tools"], ["G5", "feat/t177-g5-two-stage"]] as const) {
@@ -41,8 +42,10 @@ test("每片都有收据就可跑;预取关这组在 G4 开关名定之前记未
   assert.equal(resolveGroup(def("g4on"), git).state, "可跑");
   assert.deepEqual(resolveGroup(def("g4on"), git).inputs.map((i) => i.sha), ["sha-G1", "sha-G2", "sha-G3", "sha-G5", "sha-G4"]);
   const off = resolveGroup(def("g4off"), git);
-  assert.equal(off.state, "未测(开关未定)");
-  assert.match(off.reason!, /^G4 的预取开关接口未定/);
+  assert.equal(off.state, "可跑");
+  assert.deepEqual(def("g4off").hostPatch, { fineScreen: { quietMs: 20_000 }, opts: { historyPrefetch: false } });
+  assert.equal(def("g4on").hostPatch?.opts, undefined);
+  assert.deepEqual([def("g1").hostPatch, def("g2").hostPatch, def("g3").settleMs], [null, null, 35_000]);
 });
 
 test("同一片远端与本地都有时取带收据的那个,显式覆盖优先", () => {
@@ -56,7 +59,8 @@ test("开关表逐组列开关,并注明 G3 是③④的共同底座", () => {
   assert.match(t, /^\| ①当前基线 \| \(无\) \| 关 \| 关 \| 关 \| 关 \| 关 \| 关 \|$/m);
   assert.match(t, /^\| ④消融:预取关 \| G1\+G2\+G3\+G5\+G4 \| 开 \| 开 \| 开 \| 开 \| 开 \| 关 \|$/m);
   assert.match(t, /历史查询工具:检索\+分页回读\(G4,一个内置工具\)/);
-  assert.match(t, /③④都已合入 G3,记忆排序是 BC 检索接缝,不是旧的 overlap 算法;③与④的差只在 G4\(历史查询工具与预取\),④两行的差只在预取开关。$/);
+  assert.match(t, /③④都已合入 G3,记忆排序是 BC 检索接缝,不是旧的 overlap 算法;③与④的差只在 G4\(历史查询工具与预取\),④两行的差只在预取开关。$/m);
+  assert.match(t, /含 G5 的组:精筛安静期调到 20 秒\(产品默认 5 分钟,待校准\),每题末尾留 35 秒给精筛;写入延迟受这个参数支配。$/);
 });
 
 test("只给可跑的组排运行,顺序为组、模型、题、次", () => {
@@ -72,6 +76,20 @@ test("只给可跑的组排运行,顺序为组、模型、题、次", () => {
 });
 
 test("driver 没交回记录时补一份运行出错的记录,留在分母里", () => {
-  const r = crashRecord({ group: "g1", model: "m", item: "U1", rep: 3, commit: "c", mode: "real", fingerprint: "fp" }, "退出码 1", 42);
-  assert.deepEqual([r.runId, r.status, r.error, r.startedAt, r.calls.length], ["g1/m/U1/3", "error", "退出码 1", 42, 0]);
+  const r = crashRecord({ group: "g1", model: "m", item: "U1", rep: 3, commit: "c", mode: "real", fingerprint: "fp", reuseKey: "rk" }, "退出码 1", 42);
+  assert.deepEqual([r.runId, r.status, r.error, r.startedAt, r.calls.length, r.reuseKey], ["g1/m/U1/3", "error", "退出码 1", 42, 0, "rk"]);
+});
+
+test("给了只供 G6 的组提交:必须含基线与每片当前提交、带每片收据才可跑,否则写明缺哪片", () => {
+  const refs: Record<string, string> = { [BASELINE]: BASELINE, "origin/feat/t177-g1-memory": "s1", "origin/feat/t177-g2-config": "s2", m12: "m12" };
+  const ok = fakeGit(refs, ["m12:receipts/feat-t177-g1-memory.json", "m12:receipts/feat-t177-g2-config.json"], [`${BASELINE}<m12`, "s1<m12", "s2<m12"]);
+  const g = resolveGroup(def("g2"), ok, { groupRefs: { g2: "m12" } });
+  assert.deepEqual([g.state, g.groupCommit, g.reason], ["可跑", "m12", null]);
+  const stale = fakeGit(refs, ["m12:receipts/feat-t177-g1-memory.json", "m12:receipts/feat-t177-g2-config.json"], [`${BASELINE}<m12`, "s1<m12"]);
+  const s2 = resolveGroup(def("g2"), stale, { groupRefs: { g2: "m12" } });
+  assert.deepEqual([s2.state, s2.reason], ["未测(分支未就绪)", "G2(组提交不含 feat/t177-g2-config 当前的 s2)"]);
+  const noReceipt = fakeGit(refs, ["m12:receipts/feat-t177-g1-memory.json"], [`${BASELINE}<m12`, "s1<m12", "s2<m12"]);
+  assert.equal(resolveGroup(def("g2"), noReceipt, { groupRefs: { g2: "m12" } }).reason, "G2(组提交里没有收据 receipts/feat-t177-g2-config.json)");
+  assert.equal(resolveGroup(def("g2"), ok, { groupRefs: { g2: "nope" } }).reason, "组提交 nope 解析不到");
+  assert.equal(resolveGroup(def("g2"), ok).groupCommit, null);
 });

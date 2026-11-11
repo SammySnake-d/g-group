@@ -35,7 +35,7 @@ export const checkRequest = (material: string, note = "(没有旧笔记)") => `[
 
 export function mkCall(over: Partial<CallRecord> = {}): CallRecord {
   n++;
-  return { n, at: 1000 + n, ms: 10, contact: "A", cls: "round", model: "m", maxTokens: 4096, status: 200, outcome: "ok", stopReason: "end_turn", usage: { input: 100, output: 10, cacheRead: 0, cacheWrite: 0 }, tools: [], text: "", system: `你叫小甲。${A.marker}`, request: roundRequest({}), fault: null, ...over };
+  return { n, at: 1000 + n, queuedMs: 0, ms: 10, contact: "A", cls: "round", model: "m", maxTokens: 4096, status: 200, outcome: "ok", stopReason: "end_turn", usage: { input: 100, output: 10, cacheRead: 0, cacheWrite: 0 }, tools: [], text: "", system: `你叫小甲。${A.marker}`, request: roundRequest({}), fault: null, ...over };
 }
 
 /** 一份按 mkItem() 跑完的记录:三条消息都发出去了,检查都成功,记忆写对了,追问答对了。 */
@@ -50,6 +50,7 @@ export function mkRecord(over: Partial<RawRecord> = {}): RawRecord {
     item: "T",
     rep: 1,
     fingerprint: "fp",
+    reuseKey: "rk",
     startedAt: 1000,
     endedAt: 5000,
     status: "ok",
@@ -76,10 +77,11 @@ export function mkRecord(over: Partial<RawRecord> = {}): RawRecord {
       { room: "dm", seq: 4, contact: "A", text: "嗯嗯", at: 1250 },
       { room: "dm", seq: 6, contact: "A", text: "发到 weekly@corp.example。", at: 1450 },
     ],
-    memories: { A: [{ id: "m1", status: "active", title: "周报邮箱", body: "以后周报都发到 weekly@corp.example", anchors: ["global"], source: { roomId: "dm-1", seq: 1 } }] },
+    memories: { A: [{ id: "m1", status: "active", title: "周报邮箱", body: "以后周报都发到 weekly@corp.example", anchors: ["global"], source: { roomId: "dm-1", seq: 1 }, createdAt: 1030 }] },
     notes: { A: "- 周报邮箱" },
     reports: [],
     hostDebt: null,
+    hostPatch: null,
     calls: [
       mkCall({ at: 1010, request: roundRequest({ fresh: line(1, "以后周报都发到 weekly@corp.example") }) }),
       mkCall({ at: 1020, cls: "check", request: checkRequest(line(1, "以后周报都发到 weekly@corp.example")), system: '只输出 JSON {"memories": []}' }),

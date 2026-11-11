@@ -24,6 +24,7 @@ test("请求体解析:system 数组、工具结果都进文字,带工具才算�
   assert.equal(classifyCall({ hasTools: false, system: '只输出 {"note", "memories": []}' }), "check");
   assert.equal(classifyCall({ hasTools: false, system: "你替一位联系人整理它的状态笔记" }), "compact");
   assert.equal(classifyCall({ hasTools: false, system: "精筛" }), "background");
+  assert.equal(classifyCall({ hasTools: false, system: '你替一位联系人做记忆精筛:…只输出 {"memories": []}' }), "refine");
 });
 
 test("runner 自己判调用结果:检查要带 memories 的 JSON,截断与空输出都不算成功", () => {
@@ -44,6 +45,11 @@ test("宿主呈现格式的消息逐条读出,多行原文保留,段落标题处
   assert.deepEqual(inboundLines(text), [
     { roomId: "dm-1", seq: 3, kind: "user", text: "第一行\n第二行" },
     { roomId: "g-2", seq: 4, kind: "user", text: "另一条" },
+  ]);
+  const debt = "dm-1 #3 rev=3 (user:me)\n以后周报都发到 weekly@corp.example\n\ng-2 #7 rev=9 (user:me)\n第二条\n两行\n\n收尾的一句不属于任何消息";
+  assert.deepEqual(inboundLines(debt), [
+    { roomId: "dm-1", seq: 3, kind: "user", text: "以后周报都发到 weekly@corp.example" },
+    { roomId: "g-2", seq: 7, kind: "user", text: "第二条\n两行" },
   ]);
 });
 
@@ -114,4 +120,39 @@ test("注入的故障回复:400/529 不让 SDK 重试,截断按类区分文字,n
   assert.notEqual(cutCheck.text, cutNote.text);
   assert.equal(parseReply(await faultResponse("empty", "m", "check").text()).text, "");
   assert.throws(() => faultResponse("network", "m", "round"), /g6 注入的故障 network/);
+});
+
+test("一次一个调用:第二个调用等第一个读完正文才发出,排队时间记下;注入的故障不排队", async () => {
+  const order: string[] = [];
+  let release!: () => void;
+  const gate = new Promise<void>((r) => {
+    release = r;
+  });
+  let n = 0;
+  const rec = recordingFetch({
+    upstream: (async () => {
+      const me = ++n;
+      order.push(`start${me}`);
+      if (me === 1) await gate;
+      order.push(`end${me}`);
+      return ok("好");
+    }) as typeof fetch,
+    contactOf: () => "A",
+    faults: [{ contact: "A", cls: "round", nth: 3, fault: "http-400" }],
+    serial: true,
+  });
+  const b = body({ tools: [{ name: "reply" }] });
+  const p1 = rec.fetch(URL_, { method: "POST", body: b }).then((r) => r.text());
+  const p2 = rec.fetch(URL_, { method: "POST", body: b }).then((r) => r.text());
+  const p3 = rec.fetch(URL_, { method: "POST", body: b }).then((r) => r.status);
+  assert.equal(await p3, 400);
+  await new Promise((r) => setTimeout(r, 30));
+  assert.deepEqual(order, ["start1"]);
+  release();
+  await Promise.all([p1, p2]);
+  await rec.flush();
+  assert.deepEqual(order, ["start1", "end1", "start2", "end2"]);
+  const second = rec.calls.find((c) => c.n === 2)!;
+  assert.ok(second.queuedMs >= 25, `排队 ${second.queuedMs}ms`);
+  assert.equal(rec.calls.find((c) => c.n === 3)!.queuedMs, 0);
 });

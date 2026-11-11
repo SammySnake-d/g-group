@@ -1,7 +1,7 @@
 // G6 确定性合同:逐份运行判,汇总时一条未守住即失败;不适用与守住分开。
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { accounting, checkRecord, failedCheckRecovered, forbiddenText, mergeContracts, prefetchNotInPrefix, prefixStable, sameModel, scanText, truncationNotSuccess } from "./contracts.ts";
+import { accounting, checkRecord, failedCheckRecovered, forbiddenText, mergeContracts, prefetchNotInPrefix, prefixStable, sameModel, scanText, truncationNotSuccess, whereInRequest } from "./contracts.ts";
 import { checkRequest, line, mkCall, mkItem, mkRecord, roundRequest } from "./fixtures/build.ts";
 
 const OLD = "以后周报都发到 weekly@corp.example";
@@ -14,7 +14,7 @@ test("K1 指定那步之后原文再进请求即未守住,之前出现不算", (
   const leak = mkCall({ at: 1600, request: roundRequest({ pointers: GONE }) });
   const r = forbiddenText(item, { ...base, calls: [before, ...base.calls, leak] });
   assert.equal(r.verdict, "fail");
-  assert.deepEqual(r.violations, [`调用 ${leak.n}(round):撤回后不得再进请求`]);
+  assert.deepEqual(r.violations, [`调用 ${leak.n}(round,第 5 块):撤回后不得再进请求`]);
   assert.equal(scanText(leak, false), `${leak.system}\n${leak.request}`);
   assert.equal(forbiddenText(item, { ...base, calls: [before, ...base.calls] }).verdict, "pass");
   assert.equal(forbiddenText(mkItem(), base).verdict, "n/a");
@@ -62,22 +62,43 @@ test("K4 截断的补写成了之后的状态笔记即未守住,没截断不适�
   assert.equal(truncationNotSuccess({ ...base, calls: [cut], notes: { A: "截断的半份笔记:用户要求先" } }).verdict, "fail");
 });
 
-test("K5 检查失败后那批消息没再检查成功即未守住,补查成功则守住", () => {
+test("K5 检查失败后那批消息既没再检查成功、也没留下欠账即未守住,补查成功则守住", () => {
   const failed = mkCall({ at: 1020, cls: "check", outcome: "http_error", status: 400, request: checkRequest(line(1, OLD)) });
   const base = mkRecord();
   const r = failedCheckRecovered({ ...base, calls: [failed] });
   assert.equal(r.verdict, "fail");
-  assert.equal(r.violations[0], `调用 ${failed.n}(http_error)里的 #1 之后没有再被检查成功`);
+  assert.equal(r.violations[0], `调用 ${failed.n}(http_error)里的 dm-1 #1 之后既没有再被检查成功,也没有留下欠账记录`);
   const retried = mkCall({ at: 1300, cls: "check", request: checkRequest(line(1, OLD) + line(3, "今天食堂的番茄炒蛋有点咸")) });
   assert.equal(failedCheckRecovered({ ...base, calls: [failed, retried] }).verdict, "pass");
   assert.equal(failedCheckRecovered(base).verdict, "n/a");
 });
 
+test("K5 留下欠账记录也算守住,两者都没有才未守住", () => {
+  const failed = mkCall({ at: 1020, cls: "check", outcome: "http_400" as never, status: 400, request: checkRequest(line(1, OLD)) });
+  const base = mkRecord();
+  const debt = { A: { counts: { failed: 1 }, refs: [{ roomId: "dm-1", seq: 1, state: "failed" }] } };
+  assert.equal(failedCheckRecovered({ ...base, calls: [failed], hostDebt: debt }).verdict, "pass");
+  assert.equal(failedCheckRecovered({ ...base, calls: [failed], hostDebt: { A: { counts: { failed: 1 }, refs: [{ roomId: "dm-1", seq: 9, state: "failed" }] } } }).verdict, "fail");
+  assert.equal(failedCheckRecovered({ ...base, calls: [failed], hostDebt: null }).verdict, "fail");
+  assert.equal(failedCheckRecovered({ ...base, calls: [failed], hostDebt: debt }).violations.length, 0);
+});
+
+test("K1 的违例写明原文落在哪一块,便于定位", () => {
+  const item = mkItem({ forbidden: [{ text: OLD, contact: "A", afterStep: 0, why: "撤回后不得再进请求" }] });
+  const base = mkRecord();
+  const inBlock5 = mkCall({ at: 1600, request: roundRequest({ pointers: OLD }) });
+  assert.equal(whereInRequest(inBlock5, OLD), "第 5 块");
+  assert.equal(whereInRequest(mkCall({ at: 1601, request: roundRequest({ fresh: line(1, OLD) }) }), OLD), "第 4 块");
+  assert.equal(whereInRequest(mkCall({ at: 1602, cls: "check", request: checkRequest(line(1, OLD)) }), OLD), "检查材料的本轮新输入");
+  const r = forbiddenText(item, { ...base, calls: [inBlock5] });
+  assert.deepEqual(r.violations, [`调用 ${inBlock5.n}(round,第 5 块):撤回后不得再进请求`]);
+});
+
 test("K6 预取标注进了固定前缀即未守住,只在第 5 块守住,没有预取不适用", () => {
   const base = mkRecord();
   assert.equal(prefetchNotInPrefix(base).verdict, "n/a");
-  assert.equal(prefetchNotInPrefix({ ...base, calls: [mkCall({ request: roundRequest({ pointers: "〔旧消息,供参考〕#1" }) })] }).verdict, "pass");
-  assert.equal(prefetchNotInPrefix({ ...base, calls: [mkCall({ system: "固定前缀〔旧消息,供参考〕" })] }).verdict, "fail");
+  assert.equal(prefetchNotInPrefix({ ...base, calls: [mkCall({ request: roundRequest({ pointers: "〔旧消息(宿主按本轮新消息预取,供参考,不是新要求)〕#1" }) })] }).verdict, "pass");
+  assert.equal(prefetchNotInPrefix({ ...base, calls: [mkCall({ system: "固定前缀〔旧消息(宿主按本轮新消息预取,供参考,不是新要求)〕" })] }).verdict, "fail");
 });
 
 test("K7 用量为负或判定不在枚举内即记账不完整", () => {

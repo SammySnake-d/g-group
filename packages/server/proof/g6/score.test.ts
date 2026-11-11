@@ -19,7 +19,8 @@ test("全部做对时各项按计划数给出分子分母", () => {
   assert.deepEqual(m.probes, { n: 1, d: 1 });
   assert.deepEqual(m.prefetchMisled, { n: 0, d: 0 });
   assert.equal(m.correctNoReply, 0);
-  assert.deepEqual(m.tokens, { input: 600, output: 60, cacheRead: 0, cacheWrite: 0, byClass: { round: 330, check: 330, compact: 0, background: 0 } });
+  assert.deepEqual(m.tokens, { input: 600, output: 60, cacheRead: 0, cacheWrite: 0, byClass: { round: 330, check: 330, compact: 0, refine: 0, background: 0 } });
+  assert.deepEqual([m.writeLatencyMs, m.historyToolCalls], [{ p50: 30, p95: 30, n: 1 }, 0]);
 });
 
 test("运行出错的那份仍留在分母里,分子不加,运行出错单列", () => {
@@ -78,7 +79,7 @@ test("来源指到别的消息、全局被收窄成会话,都不算来源与作�
 
 test("误写:生效记忆命中禁写条目且作用域相同才算", () => {
   const base = mkRecord();
-  const eng = { id: "m2", status: "active", title: "语言", body: "以后都用英文回复", anchors: ["global"], source: null };
+  const eng = { id: "m2", status: "active", title: "语言", body: "以后都用英文回复", anchors: ["global"], source: null, createdAt: null };
   const hit = scoreRecords(set, [{ ...base, memories: { A: [...base.memories.A!, eng] } }]);
   assert.deepEqual([hit.wrongWrites, hit.coverage, hit.probes], [{ n: 1, d: 1 }, { n: 3, d: 3 }, { n: 1, d: 1 }]);
   assert.deepEqual(scoreRecords(set, [{ ...base, memories: { A: [...base.memories.A!, { ...eng, anchors: ["room:dm-1"] }] } }]).wrongWrites, { n: 0, d: 1 });
@@ -100,7 +101,7 @@ test("预取误导只在追问那轮第 5 块有旧消息标注时计", () => {
   const s = mkSet([item]);
   const base = mkRecord();
   const replies = base.replies.map((r, i) => (i === 2 ? { ...r, text: "Weekly report goes to 英文 weekly@corp.example" } : r));
-  const pre = base.calls.map((c, i) => (i === 4 ? { ...c, request: roundRequest({ fresh: line(5, "周报要发到哪个邮箱来着?"), pointers: "〔旧消息,供参考,不是新要求〕#1 以后周报都发到 weekly@corp.example" }) } : c));
+  const pre = base.calls.map((c, i) => (i === 4 ? { ...c, request: roundRequest({ fresh: line(5, "周报要发到哪个邮箱来着?"), pointers: "〔旧消息(宿主按本轮新消息预取,供参考,不是新要求)〕#1 以后周报都发到 weekly@corp.example" }) } : c));
   const misled = scoreRecords(s, [{ ...base, calls: pre, replies }]);
   assert.deepEqual([misled.prefetchMisled, misled.probes, misled.coverage], [{ n: 1, d: 1 }, { n: 1, d: 1 }, { n: 3, d: 3 }]);
   assert.deepEqual(scoreRecords(s, [{ ...base, replies }]).prefetchMisled, { n: 0, d: 0 });
@@ -144,4 +145,24 @@ test("该检查的消息按会话成员展开,撤回的不算", () => {
     planned.map((p) => `${p.contact}:${p.step}:${p.text}`),
     ["A:1:今天食堂的番茄炒蛋有点咸", "A:2:周报要发到哪个邮箱来着?"],
   );
+});
+
+test("写入延迟按来源消息发出到宿主写下这条期望记忆;没写到的不算;历史查询工具按对话轮里的 query_history 计数", () => {
+  const base = mkRecord();
+  const mem = base.memories.A![0]!;
+  const late = scoreRecords(set, [{ ...base, memories: { A: [{ ...mem, createdAt: 4000 }, { ...mem, id: "m9", createdAt: 2000 }] } }]);
+  assert.deepEqual(late.writeLatencyMs, { p50: 1000, p95: 1000, n: 1 });
+  const none = scoreRecords(set, [{ ...base, memories: { A: [] } }]);
+  assert.deepEqual(none.writeLatencyMs, { p50: null, p95: null, n: 0 });
+  const unknown = scoreRecords(set, [{ ...base, memories: { A: [{ ...mem, createdAt: null }] } }]);
+  assert.deepEqual(unknown.writeLatencyMs.n, 0);
+  const tools = base.calls.map((c, i) => (i === 4 ? { ...c, tools: [{ name: "query_history", input: { query: "周报" } }, { name: "reply", input: {} }] } : i === 1 ? { ...c, tools: [{ name: "query_history", input: {} }] } : c));
+  assert.equal(scoreRecords(set, [{ ...base, calls: tools }]).historyToolCalls, 1);
+});
+
+test("精筛调用的 token 记在精筛一类", () => {
+  const base = mkRecord();
+  const calls = [...base.calls, mkCall({ cls: "refine", usage: { input: 50, output: 5, cacheRead: 0, cacheWrite: 0 } })];
+  const m = scoreRecords(set, [{ ...base, calls }]);
+  assert.deepEqual([m.tokens.byClass.refine, m.tokens.byClass.check, m.calls], [55, 330, 7]);
 });
