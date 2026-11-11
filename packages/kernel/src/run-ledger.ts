@@ -168,6 +168,7 @@ export function newRun(input: NewRun): RunUnit {
     verdict: null,
     rerunOf: input.rerunOf ?? null,
     attempt: input.attempt ?? 0,
+    ...(input.timed === true ? { timed: true } : {}),
   });
 }
 
@@ -309,7 +310,7 @@ const mins = (ms: number) => Math.round((ms / 60_000) * 10) / 10;
 export function stallCheck(unit: RunUnit, now: number, th: ResolvedThresholds, sleep: { readonly awakeSince: number | null; readonly graceMs?: number } = { awakeSince: null }): StallCheck {
   const none = (waiting: StallCheck["waiting"], idleMs = 0): StallCheck => ({ verdict: null, waiting, idleMs });
   if (unit.status === "waiting_user") return none("waiting_user");
-  if (unit.status !== "running" || !TIMED.has(unit.layer)) return none(null);
+  if (unit.status !== "running" || !(TIMED.has(unit.layer) || unit.timed === true)) return none(null);
   const p = unit.progress;
   if (p.toolsRunning.length) return none("tool_running");
   const awake = sleep.awakeSince;

@@ -16,9 +16,13 @@ export interface CoverageWork {
   state: "pending" | "failed" | "ok"; attempts: number; retryAt: number | null; blocked: boolean; error: string | null;
   writes: readonly CaptureWrite[] | null; writesDone: boolean; unresolved: number;
   disposition: string | null; upstream: string; alerted: boolean; failureHeal?: HealClass;
+  /** G5:本批转成待精筛标记的条数(标记完成不等于记忆已写) */
   marks?: number;
+  /** G5 切换时接管的 G1 待复查项;handedOver 只在新出口(直接写计划与标记)和接管关系同一事务落盘后才置 */
   takeover?: boolean; handedOver?: boolean;
+  /** 接管时 G1 已落地候选的来源键(来源 + 原话或正文),之后不再为它们生成标记 */
   landed?: string[];
+  /** G5 精筛批次借用同一写入计划/恢复协议;不是消息覆盖,不进补查 */
   purpose?: "refine";
 }
 const key = (id: string) => `memory-coverage:${id}`;
@@ -38,6 +42,15 @@ export class MemoryCoverage {
     const work: CoverageWork = { id,contactId,sources:refs,inboxIds:ids,rooms:rs,state:"pending",attempts:0,retryAt:0,blocked:false,error:null,writes:null,writesDone:false,unresolved:0,disposition:null,upstream,alerted:false };
     putDoc(this.db,key(id),0,work);return work;
   }
+  /** G5 精筛一批的写入工作:身份由联系人与批次决定,与消息覆盖分开;写入计划/恢复照 G1 原路径 */
+  beginRefine(contactId: string, batchId: string, sources: readonly CoverageRef[], rooms: readonly string[], upstream: string): CoverageWork {
+    const id = `refine-${createHash("sha256").update(JSON.stringify([contactId,batchId])).digest("hex")}`;
+    const old = getDoc<CoverageWork>(this.db,key(id)); if(old) return old.value;
+    const work: CoverageWork = { id,contactId,sources:[...sources],inboxIds:[],rooms:[...new Set(rooms)].sort(),state:"pending",attempts:0,retryAt:null,blocked:true,error:null,writes:null,writesDone:false,unresolved:0,disposition:null,upstream,alerted:true,purpose:"refine" };
+    putDoc(this.db,key(id),0,work);return work;
+  }
+  /** G5 在调用方事务里补记标记数与接管关系 */
+  annotate(id: string, change: Pick<CoverageWork, "marks" | "takeover" | "handedOver" | "landed">): void { this.set(id, change); }
   get(id: string): CoverageWork { const doc=getDoc<CoverageWork>(this.db,key(id));if(!doc)throw new Error(`没有覆盖工作 ${id}`);return doc.value; }
   list(contactId?: string): CoverageWork[] { return listDocs<CoverageWork>(this.db,"memory-coverage:").map(d=>d.value).filter(w=>contactId===undefined||w.contactId===contactId); }
   start(id: string): void { this.set(id,{state:"pending",error:null,retryAt:0}); }
