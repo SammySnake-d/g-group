@@ -194,13 +194,15 @@ test("群资料·清单与成员:新建任务、交给联系人认领;拍一拍;
       await win.getByTestId("task-assign-menu").getByRole("menuitem", { name: "小林" }).click();
       await expect(item).toHaveAttribute("data-status", /进行中|待验收/, LONG);
       await expect(item).toContainText("小林");
-      await expect(rows(win).filter({ hasText: "把任务「整理发票」交给 小林" })).toHaveCount(1, LONG);
+      await expect(rows(win).filter({ hasText: "把任务「整理发票」交给 小林" }).and(win.locator('[data-from="me"]'))).toHaveCount(1, LONG);
     });
 
     await test.step("新建时直接指定小克:建好就是小克在做", async () => {
       await win.getByTestId("side-task-add").click();
       await win.getByTestId("task-form-title").fill("写周报");
+      await win.getByTestId("task-form-desc").fill("这周做了什么、下周做什么");
       await win.locator('[data-testid^="task-form-who-"]').filter({ hasText: "小克" }).click();
+      await shot(win, "task-new");
       await win.getByTestId("task-form-submit").click();
       const item = win.getByTestId("side-checklist").locator('[data-testid^="task-"][data-status]').filter({ hasText: "写周报" });
       await expect(item).toHaveAttribute("data-status", /进行中|待验收/, LONG);
