@@ -114,9 +114,22 @@ export type MindAction =
       readonly target: string | null;
     }
   | { readonly kind: "memory-use"; readonly id: string; readonly good: boolean; readonly note: string | null }
-  | { readonly kind: "rerun"; readonly runId: string; readonly roomId: string; readonly basisSeq: number | null };
+  | { readonly kind: "rerun"; readonly runId: string; readonly roomId: string; readonly basisSeq: number | null }
+  // 联系人自设定时 / 常驻承诺(U20、U80、D04.2-1;D02 窄接口形态是候选):只能管自己在本会话的;sourceSeq 是本轮里用户本人的直接消息,
+  // 别的联系人、Helper、转发或只有引用块的内容不能让联系人设或改定时(AC-20),宿主核对
+  | { readonly kind: "schedule-set"; readonly roomId: string; readonly sourceSeq: number; readonly text: string; readonly trigger: StandingTrigger; readonly scheduleId: string | null }
+  | { readonly kind: "schedule-pause"; readonly roomId: string; readonly sourceSeq: number; readonly scheduleId: string }
+  | { readonly kind: "schedule-remove"; readonly roomId: string; readonly sourceSeq: number; readonly scheduleId: string };
+/**
+ * 常驻承诺的触发方式(D04.2-1 trigger_spec):cron 定时(tz 为 null 表示联系人没给,宿主按用户设置的时区补成显式时区);
+ * every_n_messages 本会话每到 N 条用户/联系人消息触发一次(U80;宿主生成的卡片与 Helper 旁白不计);condition 只占位,宿主暂不受理。
+ */
+export type StandingTrigger =
+  | { readonly kind: "cron"; readonly cron: string; readonly tz: string | null }
+  | { readonly kind: "every_n_messages"; readonly n: number }
+  | { readonly kind: "condition"; readonly expr: string };
 export type MindActionKind = MindAction["kind"];
-export const MIND_ACTION_KINDS: readonly MindActionKind[] = Object.freeze(["reply", "dispatch", "commit", "forward", "deliver", "stop", "verdict", "remember", "memory-use", "rerun"]);
+export const MIND_ACTION_KINDS: readonly MindActionKind[] = Object.freeze(["reply", "dispatch", "commit", "forward", "deliver", "stop", "verdict", "remember", "memory-use", "rerun", "schedule-set", "schedule-pause", "schedule-remove"]);
 
 export interface RoundOutput {
   readonly actions: readonly MindAction[];
@@ -130,6 +143,8 @@ export interface RoundTools {
   readMemory(id: string): Promise<string | null>;
   /** 引用链往上读一级(D24 read_quote_parent):这条消息直接引用的那几条;会话不可读返回 null */
   readQuoteParent?(roomId: string, seq: number): Promise<string | null>;
+  /** 列出自己在这个会话的定时与常驻承诺触发器(schedule_list,只读);不在这个会话返回 null */
+  listSchedules?(roomId: string): Promise<string | null>;
 }
 
 export interface ContactMind {

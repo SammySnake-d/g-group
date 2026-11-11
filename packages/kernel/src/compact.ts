@@ -33,6 +33,15 @@ function renderAction(a: MindAction): string {
       return `- memory-use ${a.id}:${a.good ? "好" : "不好"}${a.note === null ? "" : `(${a.note})`}\n`;
     case "rerun":
       return `- rerun → ${a.roomId}${a.basisSeq === null ? "" : ` #${a.basisSeq}`}:单元 ${a.runId}\n`;
+    case "schedule-set": {
+      const t = a.trigger;
+      const how = t.kind === "cron" ? `cron ${t.cron}${t.tz === null ? "" : ` ${t.tz}`}` : t.kind === "every_n_messages" ? `每 ${t.n} 条消息` : `条件 ${t.expr}`;
+      return `- schedule-set → ${a.roomId} #${a.sourceSeq}${a.scheduleId === null ? "" : ` 改 ${a.scheduleId}`}(${how}):${a.text}\n`;
+    }
+    case "schedule-pause":
+      return `- schedule-pause → ${a.roomId} #${a.sourceSeq}:${a.scheduleId}\n`;
+    case "schedule-remove":
+      return `- schedule-remove → ${a.roomId} #${a.sourceSeq}:${a.scheduleId}\n`;
   }
 }
 
