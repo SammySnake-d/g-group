@@ -1,0 +1,25 @@
+packages/server/proof/contact-actions-mutations.mjs
+  s_90e47ba4fa2101::t_123f40ae09cf32 1-173
+packages/server/proof/contact-actions-mutations.txt
+  s_90e47ba4fa2101::t_a9ac959ee0fec5 1-32
+packages/server/proof/contact-actions-red-green.sh
+  s_90e47ba4fa2101::t_170efa66a90ea2 3,11-14
+packages/server/proof/contact-actions-red-green.txt
+  s_90e47ba4fa2101::t_c6748bf0c3aa5f 3-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "affb1649e3abf561f5c8a2b55f9a8c1ff4a3faf8",
+  "prompts": {},
+  "sessions": {
+    "s_90e47ba4fa2101": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dd154965-afbd-4134-a1d3-c00f2a859eab",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

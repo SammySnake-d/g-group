@@ -1,0 +1,16 @@
+packages/kernel/src/orphan-pid.test.ts
+  h_f33e46a035b77c 6,48-52
+receipts/feat-runtime-config.json
+  h_f33e46a035b77c 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bdfa453bb3b2ea051f7cf3e953ff5c97c29777c7",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
