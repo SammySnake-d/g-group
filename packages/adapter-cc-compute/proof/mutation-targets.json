@@ -1,0 +1,887 @@
+{
+  "M01": {
+    "name": "brief 带 memory 或 soul 字段被拒绝,不起任何进程(AC-33 ④ 阳性埋雷)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M02": {
+    "name": "同一 brief 只切凭据:明文 token 被拒绝,引用句柄放行(单开关)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M03": {
+    "name": "CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M04": {
+    "name": "F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M05": {
+    "name": "CLI 给出 success 结果但进程非零退出 → failed,不报 completed",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M06": {
+    "name": "F-03:主进程无视 SIGTERM 时 reapForceMs 后对进程组 SIGKILL,同组孙进程一起消失;孙进程从没收到 SIGTERM",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M07": {
+    "name": "没汇报过约束版本的 Compute 拿不到快照;缺 constraintVer 的 handoff 被 spawn 拒绝(AC-07 阳性埋雷)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M08": {
+    "name": "带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M09": {
+    "name": "子进程 env 不继承宿主进程环境里的明文密钥,凭据只以引用句柄出现",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M10": {
+    "name": "CLI 的 --tools 与 --allowedTools 按 brief.tools 收窄,只额外挂 report_progress",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M11": {
+    "name": "RR-05:terminalFor 的优先级:停止 > 违规 > 进程失败 > 完成;违规保留在 violations,stopped.scope=main-then-group",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M12": {
+    "name": "CLI 以权限拒绝回绝的 report_progress(内容合规,tool_result is_error)不产出事件,只记入拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M13": {
+    "name": "F-03:主进程无视 SIGTERM 时 reapForceMs 后对进程组 SIGKILL,同组孙进程一起消失;孙进程从没收到 SIGTERM",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M14": {
+    "name": "带 handoff 的新 spawn:快照写进新会话首个提示,并列在装配清单里",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M15": {
+    "name": "blocked 后 CLI 结束不报 completed;resume 用同一 CLI 会话续接后报 completed",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M16": {
+    "name": "brief 的运行位置不是本机、工具名带逗号拼接时被拒绝",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M17": {
+    "name": "F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M18": {
+    "name": "F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M19": {
+    "name": "F-02:Compute 经 report_progress 明确汇报放弃,CLI 正常结束也报 failed 不报 completed",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M20": {
+    "name": "F-02:result 行 subtype 是 success 但 is_error 为 true → failed",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M21": {
+    "name": "服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M22": {
+    "name": "F-03:主进程无视 SIGTERM 时 reapForceMs 后对进程组 SIGKILL,同组孙进程一起消失;孙进程从没收到 SIGTERM",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M23": {
+    "name": "F-03:stop 立即产出 stopped;初始 SIGTERM 只发主进程,主进程按时退出就取消组 SIGKILL,同组孙进程收不到信号(与 mirasim 一致)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M24": {
+    "name": "F-03:stop 立即产出 stopped;初始 SIGTERM 只发主进程,主进程按时退出就取消组 SIGKILL,同组孙进程收不到信号(与 mirasim 一致)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M25": {
+    "name": "F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M26": {
+    "name": "F-04:服务器校验失效、回执说已记录时,适配器自己的 schema 校验仍拒收不合规的 blocked",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M27": {
+    "name": "F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M28": {
+    "name": "F-04:needs/stage 类型不对的汇报被拒收、不产出事件,按 schema 重报后照常产出 blocked(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M29": {
+    "name": "服务器拒收的 blocked(约束版本非法)不产出 blocked、被记录;没有重报时 CLI 成功也报 failed,非法字段不进快照",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M30": {
+    "name": "F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M31": {
+    "name": "F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M32": {
+    "name": "RR-01:被拒收的 blocked 之后只来一个合规 started,也不算解除(审查存活变异)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M33": {
+    "name": "RR-01:被拒收的 blocked 未合规重报时,另一种合规汇报(completed)不能把它清掉 → failed",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M34": {
+    "name": "RR-01(非 mirasim 对照项):已受理 blocked 后对进程组 SIGSTOP 冻结,之后的 milestone/completed 与同组孙进程副作用都不发生",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M35": {
+    "name": "RR-01:被拒收的 blocked 由宿主显式 resume 解除,续接一轮正常完成(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M36": {
+    "name": "RR-02:report_progress MCP 起不来时 init 里 host 为 failed → 回收进程组并 failed,不报 completed",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M37": {
+    "name": "RR-02:与真实 CLI 同形的 init(host status failed、工具里无 report_progress)判为无法核验;connected 的同形 init 放行",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M38": {
+    "name": "RR-02:与真实 CLI 同形的 init(host status failed、工具里无 report_progress)判为无法核验;connected 的同形 init 放行",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M39": {
+    "name": "F-03:主进程无视 SIGTERM 时 reapForceMs 后对进程组 SIGKILL,同组孙进程一起消失;孙进程从没收到 SIGTERM",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M40": {
+    "name": "F-03:stop 立即产出 stopped;初始 SIGTERM 只发主进程,主进程按时退出就取消组 SIGKILL,同组孙进程收不到信号(与 mirasim 一致)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M41": {
+    "name": "RR-01(非 mirasim 对照项):已受理 blocked 后对进程组 SIGSTOP 冻结,之后的 milestone/completed 与同组孙进程副作用都不发生",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M42": {
+    "name": "RR-04:运行中、stopped 已产出但主进程未退出时快照都是 not-quiescent;主进程退出后才给出快照",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M43": {
+    "name": "RR-05:terminalFor 的优先级:停止 > 违规 > 进程失败 > 完成;违规保留在 violations,stopped.scope=main-then-group",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M44": {
+    "name": "F-03:主进程无视 SIGTERM 时 reapForceMs 后对进程组 SIGKILL,同组孙进程一起消失;孙进程从没收到 SIGTERM",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M45": {
+    "name": "F-01:CLI init 自报挂载了 brief 之外的工具 → 终止整个进程组并报 failed;只挂授权工具时 completed(单开关)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M46": {
+    "name": "F-03:stop 立即产出 stopped;初始 SIGTERM 只发主进程,主进程按时退出就取消组 SIGKILL,同组孙进程收不到信号(与 mirasim 一致)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M47": {
+    "name": "R3-01:stopped 之后迟到的 milestone 不再产出事件,也不改变终态",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M48": {
+    "name": "R3-02:空白续接先校验、返回输入错误,冻结的主进程与同组孙进程保持暂停;合法续接再执行(单开关)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M49": {
+    "name": "R3-03:init 之前的 assistant 文本、非 JSON 行 → 回收并 failed,不报 started/completed",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M50": {
+    "name": "R3-03:init 之前认可的 system 帧(hook_started/hook_response/ui_invalidate)放行,随后合法 init 正常完成(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M51": {
+    "name": "R4-04:多凭据引用:每一个位置放非引用都被拒绝、不起进程;全部合法的多元素放行并原样进清单(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M52": {
+    "name": "F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M53": {
+    "name": "F-04:report_progress 服务器直接 JSON-RPC:类型、枚举、constraintVer、未知字段不合 schema 一律 isError,合规输入接收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M54": {
+    "name": "F-01:brief.tools 为空时 --tools 是空串,CLI 实际挂载的只有 report_progress",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M55": {
+    "name": "R8-02:单个请求处理失败(REPORT_LOG 指向目录写不进)时只回这一条的 -32603、不回已记录,进程不退出、随后的请求照常回复;同一请求不设日志时照常接收(对照);initialize 的 protocolVersion 不是字符串时回本服务器版本,字符串照常回显(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M56": {
+    "name": "R4-02:report MCP 收到合法 JSON null、其他原始值、数组与坏 JSON 时回 JSON-RPC 错误且进程继续可用,随后的合法请求照常处理(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M57": {
+    "name": "R4-01:checkBrief 遇到字段/数组元素 getter、Proxy、撤销 Proxy、自定义原型 getter、不可枚举 setter 时不调用即拒收;纯 JSON brief 放行(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M58": {
+    "name": "R4-01:spawn 的 brief、选项与 handoff(含嵌套数组)带 getter/Proxy/非预期字段时不调用即拒收、不起子进程;纯 JSON 选项与 handoff 正常启动(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M59": {
+    "name": "R4-01:spawn 的 brief、选项与 handoff(含嵌套数组)带 getter/Proxy/非预期字段时不调用即拒收、不起子进程;纯 JSON 选项与 handoff 正常启动(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M60": {
+    "name": "R4-01:checkBrief 遇到字段/数组元素 getter、Proxy、撤销 Proxy、自定义原型 getter、不可枚举 setter 时不调用即拒收;纯 JSON brief 放行(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M61": {
+    "name": "R4-01:checkBrief 遇到字段/数组元素 getter、Proxy、撤销 Proxy、自定义原型 getter、不可枚举 setter 时不调用即拒收;纯 JSON brief 放行(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M62": {
+    "name": "R4-01:checkBrief 遇到字段/数组元素 getter、Proxy、撤销 Proxy、自定义原型 getter、不可枚举 setter 时不调用即拒收;纯 JSON brief 放行(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M63": {
+    "name": "R4-01:reportErrors 遇到 getter、Proxy、撤销 Proxy、嵌套数组访问器、不可枚举字段时返回错误且不调用;纯 JSON 汇报无错(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M64": {
+    "name": "R4-01:spawn 的 brief、选项与 handoff(含嵌套数组)带 getter/Proxy/非预期字段时不调用即拒收、不起子进程;纯 JSON 选项与 handoff 正常启动(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M65": {
+    "name": "R4-01:适配器选项与状态参数(computeId、续接文本)带 getter/Proxy/toPrimitive 时不调用即拒收;纯数据的选项与续接正常(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M66": {
+    "name": "R4-01:适配器选项与状态参数(computeId、续接文本)带 getter/Proxy/toPrimitive 时不调用即拒收;纯数据的选项与续接正常(对照)",
+    "code": "ERR_TEST_FAILURE",
+    "errorName": "TypeError"
+  },
+  "M67": {
+    "name": "R4-01:spawn 的 brief、选项与 handoff(含嵌套数组)带 getter/Proxy/非预期字段时不调用即拒收、不起子进程;纯 JSON 选项与 handoff 正常启动(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M68": {
+    "name": "R4-03:resolveReapForceMs 与 mirasim Ukc 一致:未传显式值时合法正数环境值生效,缺失/无效/非正回落 10000;显式值优先",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M69": {
+    "name": "R4-03:resolveReapForceMs 与 mirasim Ukc 一致:未传显式值时合法正数环境值生效,缺失/无效/非正回落 10000;显式值优先",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M70": {
+    "name": "R4-03:resolveReapForceMs 与 mirasim Ukc 一致:未传显式值时合法正数环境值生效,缺失/无效/非正回落 10000;显式值优先",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M71": {
+    "name": "导出的策略常量不可变:CC_BUILTIN_TOOLS、REPORT_KINDS、PRE_INIT_SYSTEM_SUBTYPES、DEFAULT_RUNNER 冻结,改写抛错且校验行为不变",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M72": {
+    "name": "导出的策略常量不可变:CC_BUILTIN_TOOLS、REPORT_KINDS、PRE_INIT_SYSTEM_SUBTYPES、DEFAULT_RUNNER 冻结,改写抛错且校验行为不变",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M73": {
+    "name": "磁盘清理:每轮的 g-group-cc-* 临时目录运行中存在,CLI 结束、stop 或受阻后续接时删除;续接的新一轮另建目录并在结束后删除",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M74": {
+    "name": "R5-01:checkBrief、checkSnapshot、reportErrors 遇到值为 undefined 的未声明自有字段一律拒收;去掉该字段放行,声明过的可选字段为 undefined 按没给处理、必填字段为 undefined 拒收(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M75": {
+    "name": "R5-01:spawn 的 brief 带 memory/soul:undefined、选项或 handoff 带 outside:undefined 时拒收且不起进程(中性启动标记不出现);去掉该字段的同一输入照常启动,选项 cwd/handoff 为 undefined 按没给处理(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M76": {
+    "name": "R5-01:checkBrief、checkSnapshot、reportErrors 遇到值为 undefined 的未声明自有字段一律拒收;去掉该字段放行,声明过的可选字段为 undefined 按没给处理、必填字段为 undefined 拒收(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M77": {
+    "name": "R5-02:report MCP 的 tools/call 只认 report_progress:未知、缺失或非字符串工具名回 -32602 协议错误,不回已记录、不写 REPORT_LOG;同一参数换成合法名称照常接收并记录(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M78": {
+    "name": "R5-02:report MCP 的 tools/call 只认 report_progress:未知、缺失或非字符串工具名回 -32602 协议错误,不回已记录、不写 REPORT_LOG;同一参数换成合法名称照常接收并记录(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M79": {
+    "name": "R6-01:包根 firstPrompt 对 brief/交接快照的 getter、嵌套与已撤销 Proxy 不调用即抛受控 TypeError(计数 0);合法纯数据照常拼出首个提示,返回值深冻结",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M80": {
+    "name": "R6-01:包根 firstPrompt 对 brief/交接快照的 getter、嵌套与已撤销 Proxy 不调用即抛受控 TypeError(计数 0);合法纯数据照常拼出首个提示,返回值深冻结",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M81": {
+    "name": "R6-01:包根 allowedTools、cliArgs、toolOverreach 对 brief Proxy/getter 与非字符串状态参数不调用即抛受控 TypeError(计数 0);合法输入给出按 brief 收窄的工具清单与参数",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M82": {
+    "name": "R6-01:包根 allowedTools、cliArgs、toolOverreach 对 brief Proxy/getter 与非字符串状态参数不调用即抛受控 TypeError(计数 0);合法输入给出按 brief 收窄的工具清单与参数",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M83": {
+    "name": "R6-01:包根 allowedTools、cliArgs、toolOverreach 对 brief Proxy/getter 与非字符串状态参数不调用即抛受控 TypeError(计数 0);合法输入给出按 brief 收窄的工具清单与参数",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M84": {
+    "name": "R6-01:包根 allowedTools、cliArgs、toolOverreach 对 brief Proxy/getter 与非字符串状态参数不调用即抛受控 TypeError(计数 0);合法输入给出按 brief 收窄的工具清单与参数",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M85": {
+    "name": "R6-01:包根 cliEnv 对 hostEnv 的 getter、Proxy、非字符串或 undefined 值与非字符串 computeId 不调用即抛受控 TypeError(计数 0),与 createComputeAdapter 的 hostEnv 判定一致;合法 hostEnv 原样复制",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M86": {
+    "name": "R6-01:包根 cliEnv 对 hostEnv 的 getter、Proxy、非字符串或 undefined 值与非字符串 computeId 不调用即抛受控 TypeError(计数 0),与 createComputeAdapter 的 hostEnv 判定一致;合法 hostEnv 原样复制",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M87": {
+    "name": "R6-01:包根 cliEnv 对 hostEnv 的 getter、Proxy、非字符串或 undefined 值与非字符串 computeId 不调用即抛受控 TypeError(计数 0),与 createComputeAdapter 的 hostEnv 判定一致;合法 hostEnv 原样复制",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M88": {
+    "name": "R6-01:包根 streamParser 的输入行与 terminalFor 的退出/结果/事实参数遇到 Proxy、getter、嵌套 Proxy 不调用即抛受控 TypeError(计数 0);合法字符串行与纯数据照常解析和裁决",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M89": {
+    "name": "R6-01:包根 streamParser 的输入行与 terminalFor 的退出/结果/事实参数遇到 Proxy、getter、嵌套 Proxy 不调用即抛受控 TypeError(计数 0);合法字符串行与纯数据照常解析和裁决",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M90": {
+    "name": "R6-01:包根 streamParser 的输入行与 terminalFor 的退出/结果/事实参数遇到 Proxy、getter、嵌套 Proxy 不调用即抛受控 TypeError(计数 0);合法字符串行与纯数据照常解析和裁决",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M91": {
+    "name": "R6-01:包根导出的每个函数逐个参数换成已撤销 Proxy、整体 Proxy、getter、嵌套 Proxy/已撤销 Proxy 或可转换对象时都拒收且访问器与陷阱计数为 0;同一组合法参数照常工作;导出函数清单与本表一致",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M92": {
+    "name": "R6-01:包根导出的每个函数逐个参数换成已撤销 Proxy、整体 Proxy、getter、嵌套 Proxy/已撤销 Proxy 或可转换对象时都拒收且访问器与陷阱计数为 0;同一组合法参数照常工作;导出函数清单与本表一致",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M93": {
+    "name": "R6-02:违规后 stop 的 stopped 事件及其 violations 深冻结:首个订阅者改写抛 TypeError,新订阅者与两次 settled() 仍看到原违规;停止优先、违规可审计",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M94": {
+    "name": "R6-02:rejectedReports 记录里来自 JSON 的 kind(数组)深冻结,改写抛 TypeError,再次读取不变",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M95": {
+    "name": "R6-03:report MCP 只认精确的 report_progress:前后空格、制表/换行、大小写不同、连字符等近似名称回 -32602 且不写 REPORT_LOG,同一参数的精确名称照常接收并只记一行(直接 JSON-RPC 正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M96": {
+    "name": "R6-03:report MCP 只认精确的 report_progress:前后空格、制表/换行、大小写不同、连字符等近似名称回 -32602 且不写 REPORT_LOG,同一参数的精确名称照常接收并只记一行(直接 JSON-RPC 正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M97": {
+    "name": "R7-01:受阻后并发两次 resume 只受理一个、另一个立即被明确拒绝,只起一个续接 CLI;stop 后原 CLI 与续接 CLI 全部回收(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M98": {
+    "name": "R7-01:受阻后并发两次 resume 只受理一个、另一个立即被明确拒绝,只起一个续接 CLI;stop 后原 CLI 与续接 CLI 全部回收(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M99": {
+    "name": "R7-01:受阻后并发两次 resume 只受理一个、另一个立即被明确拒绝,只起一个续接 CLI;stop 后原 CLI 与续接 CLI 全部回收(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M100": {
+    "name": "R7-01:resume 在途(正等冻结的上一轮退出)时 stop:stop 受理,在途续接被明确拒绝,stop 确认之后不再起 CLI;原 CLI 回收、进程表里不剩本测试的进程(竞态对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M101": {
+    "name": "R7-02:init 前的帧与 init 里 type/subtype/host 状态是对象、数组、null 的合法 JSON 时 preInitFrame/checkInit 按合同拒收、给固定说明、不抛错;拒收回执的 text 是对象或数组时不拼接、不抛错;坏 JSON 与非对象照常拒收,合法字符串与 connected 的 init 照常(对照)",
+    "code": "ERR_TEST_FAILURE",
+    "errorName": "TypeError"
+  },
+  "M102": {
+    "name": "R7-02:init 前的帧与 init 里 type/subtype/host 状态是对象、数组、null 的合法 JSON 时 preInitFrame/checkInit 按合同拒收、给固定说明、不抛错;拒收回执的 text 是对象或数组时不拼接、不抛错;坏 JSON 与非对象照常拒收,合法字符串与 connected 的 init 照常(对照)",
+    "code": "ERR_TEST_FAILURE",
+    "errorName": "TypeError"
+  },
+  "M103": {
+    "name": "R7-02:适配器宿主子进程里,CLI 输出 type/subtype/host 状态为对象或数组、拒收回执 text 为对象、汇报 kind 嵌套过深的合法 JSON:宿主不退出,对应 Compute 各自 failed(或按合同记拒收)并回收 CLI,同一适配器随后的正常 Compute 照常 completed(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M104": {
+    "name": "R7-02:适配器宿主子进程里,CLI 输出 type/subtype/host 状态为对象或数组、拒收回执 text 为对象、汇报 kind 嵌套过深的合法 JSON:宿主不退出,对应 Compute 各自 failed(或按合同记拒收)并回收 CLI,同一适配器随后的正常 Compute 照常 completed(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M105": {
+    "name": "R7-02:init 前的帧与 init 里 type/subtype/host 状态是对象、数组、null 的合法 JSON 时 preInitFrame/checkInit 按合同拒收、给固定说明、不抛错;拒收回执的 text 是对象或数组时不拼接、不抛错;坏 JSON 与非对象照常拒收,合法字符串与 connected 的 init 照常(对照)",
+    "code": "ERR_TEST_FAILURE",
+    "errorName": "TypeError"
+  },
+  "M106": {
+    "name": "R7-02:适配器宿主子进程里,CLI 输出 type/subtype/host 状态为对象或数组、拒收回执 text 为对象、汇报 kind 嵌套过深的合法 JSON:宿主不退出,对应 Compute 各自 failed(或按合同记拒收)并回收 CLI,同一适配器随后的正常 Compute 照常 completed(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M107": {
+    "name": "R7-02:适配器宿主子进程里,CLI 输出 type/subtype/host 状态为对象或数组、拒收回执 text 为对象、汇报 kind 嵌套过深的合法 JSON:宿主不退出,对应 Compute 各自 failed(或按合同记拒收)并回收 CLI,同一适配器随后的正常 Compute 照常 completed(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M108": {
+    "name": "R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M109": {
+    "name": "R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M110": {
+    "name": "R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M111": {
+    "name": "R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M112": {
+    "name": "R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M113": {
+    "name": "R8-01:有空位或越界数字键的数组(含无下标 0 另带 4294967295 的组合)在 checkBrief、checkSnapshot、reportErrors、firstPrompt 一律拒收;同值的密集数组照常放行并原样复制(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M114": {
+    "name": "R8-01:有空位或越界数字键的数组(含无下标 0 另带 4294967295 的组合)在 checkBrief、checkSnapshot、reportErrors、firstPrompt 一律拒收;同值的密集数组照常放行并原样复制(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M115": {
+    "name": "R8-01:有空位或越界数字键的数组(含无下标 0 另带 4294967295 的组合)在 checkBrief、checkSnapshot、reportErrors、firstPrompt 一律拒收;同值的密集数组照常放行并原样复制(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M116": {
+    "name": "R8-02:report MCP 的 JSON-RPC id 不是字符串或整数(嵌套 12000 层数组、对象、布尔、null、小数)时回 -32600 且 id 为 null、不处理不入日志,进程不退出;随后整数与字符串 id 的合法请求照常回复(设与不设 REPORT_LOG 对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M117": {
+    "name": "R8-02:report MCP 的 JSON-RPC id 不是字符串或整数(嵌套 12000 层数组、对象、布尔、null、小数)时回 -32600 且 id 为 null、不处理不入日志,进程不退出;随后整数与字符串 id 的合法请求照常回复(设与不设 REPORT_LOG 对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M118": {
+    "name": "R8-02:report MCP 的 JSON-RPC id 不是字符串或整数(嵌套 12000 层数组、对象、布尔、null、小数)时回 -32600 且 id 为 null、不处理不入日志,进程不退出;随后整数与字符串 id 的合法请求照常回复(设与不设 REPORT_LOG 对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M119": {
+    "name": "R8-02:report MCP 收到 kind 嵌套 12000 层的汇报:设与不设 REPORT_LOG 回复完全相同(拒收 isError),进程不退出、随后的合法汇报照常接收;日志里拒收那条只记有界说明不记原值,参数里的同名字段改不了判定(只切日志开关的正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M120": {
+    "name": "R8-02:report MCP 收到 kind 嵌套 12000 层的汇报:设与不设 REPORT_LOG 回复完全相同(拒收 isError),进程不退出、随后的合法汇报照常接收;日志里拒收那条只记有界说明不记原值,参数里的同名字段改不了判定(只切日志开关的正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M121": {
+    "name": "R8-02:report MCP 收到 kind 嵌套 12000 层的汇报:设与不设 REPORT_LOG 回复完全相同(拒收 isError),进程不退出、随后的合法汇报照常接收;日志里拒收那条只记有界说明不记原值,参数里的同名字段改不了判定(只切日志开关的正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M122": {
+    "name": "R8-02:单个请求处理失败(REPORT_LOG 指向目录写不进)时只回这一条的 -32603、不回已记录,进程不退出、随后的请求照常回复;同一请求不设日志时照常接收(对照);initialize 的 protocolVersion 不是字符串时回本服务器版本,字符串照常回显(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M123": {
+    "name": "R8-02:单个请求处理失败(REPORT_LOG 指向目录写不进)时只回这一条的 -32603、不回已记录,进程不退出、随后的请求照常回复;同一请求不设日志时照常接收(对照);initialize 的 protocolVersion 不是字符串时回本服务器版本,字符串照常回显(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M124": {
+    "name": "R8-02:单个请求处理失败(REPORT_LOG 指向目录写不进)时只回这一条的 -32603、不回已记录,进程不退出、随后的请求照常回复;同一请求不设日志时照常接收(对照);initialize 的 protocolVersion 不是字符串时回本服务器版本,字符串照常回显(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M125": {
+    "name": "R8-02:单个请求处理失败(REPORT_LOG 指向目录写不进)时只回这一条的 -32603、不回已记录,进程不退出、随后的请求照常回复;同一请求不设日志时照常接收(对照);initialize 的 protocolVersion 不是字符串时回本服务器版本,字符串照常回显(对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M126": {
+    "name": "R8-03:checkInit 只认 host 状态恰为 connected:connecting、pending、needs-auth 等其它状态与大小写/空白/截短变体一律 bad-init;同一 init 只把状态换成 connected 时放行(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M127": {
+    "name": "R8-03:checkInit 只认 host 状态恰为 connected:connecting、pending、needs-auth 等其它状态与大小写/空白/截短变体一律 bad-init;同一 init 只把状态换成 connected 时放行(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M128": {
+    "name": "R8-04:summary 为纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 reportErrors 与 report MCP 都拒收;同一汇报换成非空文本(含首尾空白的非空文本)接收(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M129": {
+    "name": "R8-04:summary 为纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 reportErrors 与 report MCP 都拒收;同一汇报换成非空文本(含首尾空白的非空文本)接收(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M130": {
+    "name": "R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M131": {
+    "name": "R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M132": {
+    "name": "R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M133": {
+    "name": "R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M134": {
+    "name": "R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M135": {
+    "name": "R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M136": {
+    "name": "R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M137": {
+    "name": "R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M138": {
+    "name": "R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M139": {
+    "name": "R9-02:report MCP 先核对 jsonrpc 版本:缺失、\"1.0\"、数字 2、\"2\"、\"2.0 \"、null 的 tools/call、tools/list、initialize 一律回 -32600、id 为 null、不回已记录、不入日志;同一组请求只把版本换成 \"2.0\" 时照常回复并只记合规那一条(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M140": {
+    "name": "R9-02:report MCP 先核对 jsonrpc 版本:缺失、\"1.0\"、数字 2、\"2\"、\"2.0 \"、null 的 tools/call、tools/list、initialize 一律回 -32600、id 为 null、不回已记录、不入日志;同一组请求只把版本换成 \"2.0\" 时照常回复并只记合规那一条(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M141": {
+    "name": "R9-02:report MCP 先核对 jsonrpc 版本:缺失、\"1.0\"、数字 2、\"2\"、\"2.0 \"、null 的 tools/call、tools/list、initialize 一律回 -32600、id 为 null、不回已记录、不入日志;同一组请求只把版本换成 \"2.0\" 时照常回复并只记合规那一条(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M142": {
+    "name": "R9-02:report MCP 先核对 jsonrpc 版本:缺失、\"1.0\"、数字 2、\"2\"、\"2.0 \"、null 的 tools/call、tools/list、initialize 一律回 -32600、id 为 null、不回已记录、不入日志;同一组请求只把版本换成 \"2.0\" 时照常回复并只记合规那一条(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M143": {
+    "name": "R9-02:report MCP 先核对 jsonrpc 版本:缺失、\"1.0\"、数字 2、\"2\"、\"2.0 \"、null 的 tools/call、tools/list、initialize 一律回 -32600、id 为 null、不回已记录、不入日志;同一组请求只把版本换成 \"2.0\" 时照常回复并只记合规那一条(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M144": {
+    "name": "R9-03:无编号消息按通知处理:正常 notifications/initialized、notifications/cancelled、无编号的 tools/list、无编号的合规 tools/call、无编号的未知方法都不回复、不入日志;随后编号 17 的合法请求照常回复并入日志,编号为 null 的请求仍回 -32600(连续对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M145": {
+    "name": "R9-03:无编号消息按通知处理:正常 notifications/initialized、notifications/cancelled、无编号的 tools/list、无编号的合规 tools/call、无编号的未知方法都不回复、不入日志;随后编号 17 的合法请求照常回复并入日志,编号为 null 的请求仍回 -32600(连续对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M146": {
+    "name": "R9-03:无编号消息按通知处理:正常 notifications/initialized、notifications/cancelled、无编号的 tools/list、无编号的合规 tools/call、无编号的未知方法都不回复、不入日志;随后编号 17 的合法请求照常回复并入日志,编号为 null 的请求仍回 -32600(连续对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M147": {
+    "name": "R8-02:report MCP 的 JSON-RPC id 不是字符串或整数(嵌套 12000 层数组、对象、布尔、null、小数)时回 -32600 且 id 为 null、不处理不入日志,进程不退出;随后整数与字符串 id 的合法请求照常回复(设与不设 REPORT_LOG 对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M148": {
+    "name": "R9-04:brief.task 为空串或纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 checkBrief 拒收、spawn 不起 CLI;同一 brief 只把 task 换成非空文本(含首尾空白)时放行,task 原样保留、不去首尾空白(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M149": {
+    "name": "R9-04:brief.task 为空串或纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 checkBrief 拒收、spawn 不起 CLI;同一 brief 只把 task 换成非空文本(含首尾空白)时放行,task 原样保留、不去首尾空白(单开关对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M150": {
+    "name": "R9 补充:凭据引用的方案名可带数字、加号、点、连字符(s3://、git+ssh://、x.y-z://)时放行;方案名以数字开头、带大写或下划线、缺 :// 或路径为空时拒收(正反对照)",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M151": {
+    "name": "R10-01/跳过:真实 TAP 跳过项使原样与故障副本均无效",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M152": {
+    "name": "R10-02:转义的顶层 id 键按解码值识别,重复转义键取最后一个且嵌套同名键不影响",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M153": {
+    "name": "R10-03:版本与通知六格交叉保持先核对版本,无效通知回错误且不登记,有效通知静默且不登记",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M154": {
+    "name": "R10-01/计划汇总:缺失重复或错误的 TAP 计划与汇总都拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M155": {
+    "name": "R10-01/计划汇总:缺失重复或错误的 TAP 计划与汇总都拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M156": {
+    "name": "R10-01/计划汇总:缺失重复或错误的 TAP 计划与汇总都拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M157": {
+    "name": "R10-01/指令:即使汇总声称零跳过,结果行 SKIP 或 TODO 指令仍拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M158": {
+    "name": "R10-01/逐名:条数相同但名字或序号不一致以及重复名字均拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M159": {
+    "name": "R10-01/逐名:条数相同但名字或序号不一致以及重复名字均拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M160": {
+    "name": "R10-01/进程:超时信号异常退出码和截断均不能成为有效判决",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M161": {
+    "name": "R10-01/原因:只有指定名字及指定错误码匹配才算发现,无关失败不能替代",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M162": {
+    "name": "R10-01/原因:只有指定名字及指定错误码匹配才算发现,无关失败不能替代",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M163": {
+    "name": "R10-01/原因:只有指定名字及指定错误码匹配才算发现,无关失败不能替代",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M164": {
+    "name": "R10-01/原因:只有指定名字及指定错误码匹配才算发现,无关失败不能替代",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M165": {
+    "name": "R10-01/文件失败:加载异常或提前退出不算测试代码断言失败",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M166": {
+    "name": "R10-01/全执行:真实 TAP 的完整基线与指定断言失败分别认可,同名全绿不算发现故障",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M167": {
+    "name": "R11-01 快照只在同组后代确已结束后放行",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M168": {
+    "name": "R11-01 快照只在同组后代确已结束后放行",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M169": {
+    "name": "R11-01 续接等待同组停止确认且组回收后仍可新开一轮",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M170": {
+    "name": "R11-01 快照只在同组后代确已结束后放行",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M171": {
+    "name": "R11-01 续接等待同组停止确认且组回收后仍可新开一轮",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M172": {
+    "name": "R11-02 NUL 续接在受阻轮回收及状态变更之前拒绝，普通续接成功",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M173": {
+    "name": "R11-02 CLI 会话号含 NUL 不产出 started 且不能成为续接参数",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M174": {
+    "name": "R11-02 启动失败受控拒绝并保留旧轮及拒收记录，修复目录后可再续接",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M175": {
+    "name": "R11-02 启动失败受控拒绝并保留旧轮及拒收记录，修复目录后可再续接",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M176": {
+    "name": "R11-03 无交接时汇报版本零被保存并进入快照",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  },
+  "M177": {
+    "name": "R11-03 版本零交接接受且原样装配，不改变负版本拒收",
+    "code": "ERR_ASSERTION",
+    "errorName": "AssertionError"
+  }
+}

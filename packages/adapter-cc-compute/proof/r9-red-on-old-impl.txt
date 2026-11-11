@@ -1,0 +1,45 @@
+# 第九轮独立先红:旧实现(434c1d2 的 src/ 与 mcp/)上只换入新测试文件,只跑 R9 新测试(本机 macOS,Node v22.22.0)
+## 结果一:旧实现原样
+not ok 1 - R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)
+not ok 2 - R9-02:report MCP 先核对 jsonrpc 版本:缺失、"1.0"、数字 2、"2"、"2.0 "、null 的 tools/call、tools/list、initialize 一律回 -32600、id 为 null、不回已记录、不入日志;同一组请求只把版本换成 "2.0" 时照常回复并只记合规那一条(单开关对照)
+not ok 3 - R9-03:无编号消息按通知处理:正常 notifications/initialized、notifications/cancelled、无编号的 tools/list、无编号的合规 tools/call、无编号的未知方法都不回复、不入日志;随后编号 17 的合法请求照常回复并入日志,编号为 null 的请求仍回 -32600(连续对照)
+ok 4 - R9-04:brief.task 为空串或纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 checkBrief 拒收、spawn 不起 CLI;同一 brief 只把 task 换成非空文本(含首尾空白)时放行,task 原样保留、不去首尾空白(单开关对照)
+ok 5 - R9 补充:凭据引用的方案名可带数字、加号、点、连字符(s3://、git+ssh://、x.y-z://)时放行;方案名以数字开头、带大写或下划线、缺 :// 或路径为空时拒收(正反对照)
+# tests 5
+# pass 2
+# fail 3
+# skipped 0
+# todo 0
+## 旧实现 + 单点变异 R9-04-A 去掉 task 非空白判断(hy4 H9-01)(src/brief.ts)
+not ok 1 - R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)
+not ok 2 - R9-02:report MCP 先核对 jsonrpc 版本:缺失、"1.0"、数字 2、"2"、"2.0 "、null 的 tools/call、tools/list、initialize 一律回 -32600、id 为 null、不回已记录、不入日志;同一组请求只把版本换成 "2.0" 时照常回复并只记合规那一条(单开关对照)
+not ok 3 - R9-03:无编号消息按通知处理:正常 notifications/initialized、notifications/cancelled、无编号的 tools/list、无编号的合规 tools/call、无编号的未知方法都不回复、不入日志;随后编号 17 的合法请求照常回复并入日志,编号为 null 的请求仍回 -32600(连续对照)
+not ok 4 - R9-04:brief.task 为空串或纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 checkBrief 拒收、spawn 不起 CLI;同一 brief 只把 task 换成非空文本(含首尾空白)时放行,task 原样保留、不去首尾空白(单开关对照)
+ok 5 - R9 补充:凭据引用的方案名可带数字、加号、点、连字符(s3://、git+ssh://、x.y-z://)时放行;方案名以数字开头、带大写或下划线、缺 :// 或路径为空时拒收(正反对照)
+# tests 5
+# pass 1
+# fail 4
+# skipped 0
+# todo 0
+## 旧实现 + 单点变异 R9-04-B 放行的 task 去掉首尾空白(审查 S04)(src/brief.ts)
+not ok 1 - R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)
+not ok 2 - R9-02:report MCP 先核对 jsonrpc 版本:缺失、"1.0"、数字 2、"2"、"2.0 "、null 的 tools/call、tools/list、initialize 一律回 -32600、id 为 null、不回已记录、不入日志;同一组请求只把版本换成 "2.0" 时照常回复并只记合规那一条(单开关对照)
+not ok 3 - R9-03:无编号消息按通知处理:正常 notifications/initialized、notifications/cancelled、无编号的 tools/list、无编号的合规 tools/call、无编号的未知方法都不回复、不入日志;随后编号 17 的合法请求照常回复并入日志,编号为 null 的请求仍回 -32600(连续对照)
+not ok 4 - R9-04:brief.task 为空串或纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 checkBrief 拒收、spawn 不起 CLI;同一 brief 只把 task 换成非空文本(含首尾空白)时放行,task 原样保留、不去首尾空白(单开关对照)
+ok 5 - R9 补充:凭据引用的方案名可带数字、加号、点、连字符(s3://、git+ssh://、x.y-z://)时放行;方案名以数字开头、带大写或下划线、缺 :// 或路径为空时拒收(正反对照)
+# tests 5
+# pass 1
+# fail 4
+# skipped 0
+# todo 0
+## 旧实现 + 单点变异 R9-S03 方案名只收字母(审查 S03)(src/brief.ts)
+not ok 1 - R9-01:report MCP 的整数请求编号按原文回显:相邻大整数 9007199254740992 与 9007199254740993、负大整数、零、空字符串、普通编号与 1E2/10.0 写法各自原样回到对应回复;重复的顶层 id 取最后一个、params 里的同名字段不影响;小数写法(1.5、1e-1、-0.5、9007199254740993.5)回 -32600、id 为 null、不入日志(正反对照)
+not ok 2 - R9-02:report MCP 先核对 jsonrpc 版本:缺失、"1.0"、数字 2、"2"、"2.0 "、null 的 tools/call、tools/list、initialize 一律回 -32600、id 为 null、不回已记录、不入日志;同一组请求只把版本换成 "2.0" 时照常回复并只记合规那一条(单开关对照)
+not ok 3 - R9-03:无编号消息按通知处理:正常 notifications/initialized、notifications/cancelled、无编号的 tools/list、无编号的合规 tools/call、无编号的未知方法都不回复、不入日志;随后编号 17 的合法请求照常回复并入日志,编号为 null 的请求仍回 -32600(连续对照)
+ok 4 - R9-04:brief.task 为空串或纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 checkBrief 拒收、spawn 不起 CLI;同一 brief 只把 task 换成非空文本(含首尾空白)时放行,task 原样保留、不去首尾空白(单开关对照)
+not ok 5 - R9 补充:凭据引用的方案名可带数字、加号、点、连字符(s3://、git+ssh://、x.y-z://)时放行;方案名以数字开头、带大写或下划线、缺 :// 或路径为空时拒收(正反对照)
+# tests 5
+# pass 1
+# fail 4
+# skipped 0
+# todo 0

@@ -1,0 +1,120 @@
+# 第八轮独立先红:旧实现上只换入新测试文件
+# 旧实现 = b0b4a00(第八轮被审 6c52402 之后只加了审查文件)的 packages/adapter-cc-compute/src/ 与 mcp/;
+# 新测试 = 9ed5a73 的 src/adapter.test.ts(假 CLI 本轮未改)。复现:
+#   git archive b0b4a00 | tar -x -C <目录>; git show 9ed5a73:packages/adapter-cc-compute/src/adapter.test.ts 覆盖进去;
+#   HOME=<假 HOME> TMPDIR=<假 TMPDIR> node --test --test-reporter=tap --test-name-pattern='^R8-' packages/adapter-cc-compute/src/adapter.test.ts
+# 结果一:R8-01 两条、R8-02 三条按名失败;R8-03、R8-04 五条在旧实现上通过(实现本来正确,是测试缺口)。
+# 结果二:同一旧实现副本只加审查的单点变异 R8-A(events.ts 放行 connecting)与 R8-C(report-schema.ts 的 x.trim() !== "" 改为 x !== ""),
+#   --test-name-pattern='^R8-0[34]':五条全部按名失败。这是 R8-03/R8-04 的先红证据。
+# Node v22.22.0;只用假 HOME/TMPDIR 与假 CLI,不调用真实 Claude CLI。
+
+## 结果一
+not ok 1 - R8-01:有空位或越界数字键的数组(含无下标 0 另带 4294967295 的组合)在 checkBrief、checkSnapshot、reportErrors、firstPrompt 一律拒收;同值的密集数组照常放行并原样复制(正反对照)
+  error: |-
+    无下标 0、带越界键 4294967295
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+not ok 2 - R8-01:spawn 的 brief.rules 或 handoff.openQuestions 是有空位/越界键的数组时拒收、不启动 CLI(中性启动标记不出现);同值密集数组照常启动(正反对照)
+  error: |-
+    无下标 0、带越界键 4294967295
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+not ok 3 - R8-02:report MCP 收到 kind 嵌套 12000 层的汇报:设与不设 REPORT_LOG 回复完全相同(拒收 isError),进程不退出、随后的合法汇报照常接收;日志里拒收那条只记有界说明不记原值,参数里的同名字段改不了判定(只切日志开关的正反对照)
+  error: |-
+    设日志:file://<旧实现副本>/packages/adapter-cc-compute/mcp/report-mcp.mjs:43
+        if (LOG) fs.appendFileSync(LOG, `${JSON.stringify({ ts: new Date().toISOString(), valid: errs.length === 0, errs, ...a })}\n`);
+                                                ^
+    
+    RangeError: Maximum call stack size exceeded
+        at JSON.stringify (<anonymous>)
+        at Interface.<anonymous> (file://<旧实现副本>/packages/adapter-cc-compute/mcp/report-mcp.mjs:43:45)
+        at Interface.emit (node:events:519:28)
+not ok 4 - R8-02:report MCP 的 JSON-RPC id 不是字符串或整数(嵌套 12000 层数组、对象、布尔、null、小数)时回 -32600 且 id 为 null、不处理不入日志,进程不退出;随后整数与字符串 id 的合法请求照常回复(设与不设 REPORT_LOG 对照)
+  error: |-
+    不设日志:file://<旧实现副本>/packages/adapter-cc-compute/mcp/report-mcp.mjs:14
+    const send = (o) => process.stdout.write(`${JSON.stringify(o)}\n`);
+                                                     ^
+    
+    RangeError: Maximum call stack size exceeded
+        at JSON.stringify (<anonymous>)
+        at send (file://<旧实现副本>/packages/adapter-cc-compute/mcp/report-mcp.mjs:14:50)
+        at Interface.<anonymous> (file://<旧实现副本>/packages/adapter-cc-compute/mcp/report-mcp.mjs:30:5)
+not ok 5 - R8-02:单个请求处理失败(REPORT_LOG 指向目录写不进)时只回这一条的 -32603、不回已记录,进程不退出、随后的请求照常回复;同一请求不设日志时照常接收(对照);initialize 的 protocolVersion 不是字符串时回本服务器版本,字符串照常回显(对照)
+  error: |-
+    node:fs:2437
+        return binding.writeFileUtf8(
+                       ^
+    
+    Error: EISDIR: illegal operation on a directory, open '<假TMPDIR>/fake-cc-3Lf8L4'
+        at Object.writeFileSync (node:fs:2437:20)
+        at Object.appendFileSync (node:fs:2519:6)
+        at Interface.<anonymous> (file://<旧实现副本>/packages/adapter-cc-compute/mcp/report-mcp.mjs:43:17)
+ok 6 - R8-03:checkInit 只认 host 状态恰为 connected:connecting、pending、needs-auth 等其它状态与大小写/空白/截短变体一律 bad-init;同一 init 只把状态换成 connected 时放行(单开关对照)
+ok 7 - R8-03:端到端:CLI 的 init 自报 host 为 connecting 或 pending 时回收并 failed,不报 started/completed;同一剧本只把状态换成 connected 时 started→milestone→completed(单开关对照)
+ok 8 - R8-04:summary 为纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 reportErrors 与 report MCP 都拒收;同一汇报换成非空文本(含首尾空白的非空文本)接收(单开关对照)
+ok 9 - R8-04:blocked 的 needs 为纯空白时 reportErrors 与 report MCP 拒收,端到端不产出 blocked、记一条拒收、CLI 成功结束也 failed;同一剧本 needs 换成非空文本时产出 blocked(单开关对照)
+ok 10 - R8-04:milestone 的 stage 为纯空白时 reportErrors 与 report MCP 拒收;同一汇报 stage 换成非空文本时接收(单开关对照)
+# tests 10
+# pass 5
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+
+## 结果二(旧实现 + R8-A + R8-C)
+not ok 1 - R8-03:checkInit 只认 host 状态恰为 connected:connecting、pending、needs-auth 等其它状态与大小写/空白/截短变体一律 bad-init;同一 init 只把状态换成 connected 时放行(单开关对照)
+  error: |-
+    "connecting"
+    + actual - expected
+    
+      {
+    +   sessionId: 'neutral',
+    +   tools: [
+not ok 2 - R8-03:端到端:CLI 的 init 自报 host 为 connecting 或 pending 时回收并 failed,不报 started/completed;同一剧本只把状态换成 connected 时 started→milestone→completed(单开关对照)
+  error: |-
+    connecting
+    + actual - expected
+    
+      [
+    +   'started',
+    +   'milestone',
+not ok 3 - R8-04:summary 为纯空白(空格、制表、换行、全角空格、不换行空格、BOM)时 reportErrors 与 report MCP 都拒收;同一汇报换成非空文本(含首尾空白的非空文本)接收(单开关对照)
+  error: |-
+    " "
+    + actual - expected
+    
+    + []
+    - [
+    -   'summary 须为非空字符串'
+not ok 4 - R8-04:blocked 的 needs 为纯空白时 reportErrors 与 report MCP 拒收,端到端不产出 blocked、记一条拒收、CLI 成功结束也 failed;同一剧本 needs 换成非空文本时产出 blocked(单开关对照)
+  error: |-
+    " "
+    + actual - expected
+    
+    + []
+    - [
+    -   'needs 须为非空字符串'
+not ok 5 - R8-04:milestone 的 stage 为纯空白时 reportErrors 与 report MCP 拒收;同一汇报 stage 换成非空文本时接收(单开关对照)
+  error: |-
+    " "
+    + actual - expected
+    
+    + []
+    - [
+    -   'stage 须为非空字符串'
+# tests 5
+# pass 0
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
