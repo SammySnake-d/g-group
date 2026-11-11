@@ -83,9 +83,12 @@ test("闭环:只经界面建联系人、私聊派活、建群拉人后群里派�
       await expect(rows(win).filter({ hasText: "接了任务:写 hello.txt" }).and(win.locator('[data-msg]:not([data-from="me"])'))).toHaveCount(1);
       await expect(line).toContainText("做完了");
       await expect(line).not.toContainText("完成:写");
-      // Compute 行不另起一个联系人头像,紧挨着挂在那句下面
-      await expect(win.locator('[data-msg$="~c"]').filter({ has: win.locator('[data-testid^="compute-line-"]'), hasText: "写 hello.txt" })).toHaveAttribute("data-first", "0");
-      await expect(rows(win).filter({ hasText: "进度:已写好 hello.txt" })).toHaveCount(1, LONG);
+      // 做完、交付之后(#1790 消息优先):Compute 那一行挂在联系人的交付消息下面,不再单独占一行
+      // (在跑时挂在「接了任务」那句下面、不另起头像,见 parity-compute 的停止用例)
+      await expect(rows(win).filter({ hasText: "做完了:完成:写 hello.txt" }).locator('[data-testid^="trail-"] [data-testid^="compute-line-"]')).toHaveCount(1, LONG);
+      await expect(win.locator('[data-msg$="~c"]').filter({ hasText: "写 hello.txt" })).toHaveCount(0);
+      // 替身 Compute 按派的活说话:联系人转述的进度是这件事本身
+      await expect(rows(win).filter({ hasText: "进度:正在写 hello.txt" })).toHaveCount(1, LONG);
       await expect(rows(win).filter({ hasText: "做完了:完成:写 hello.txt" })).toHaveCount(1, LONG);
       // 自己发的那条:乐观显示的和事件推来的是同一条,不重复
       const mine = rows(win).filter({ hasText: "帮我写 hello.txt" }).and(win.locator('[data-from="me"]'));
@@ -98,7 +101,7 @@ test("闭环:只经界面建联系人、私聊派活、建群拉人后群里派�
       await win.getByTestId("cview-activity").click();
       const acts = win.getByTestId("activity");
       await expect(acts).toContainText("已开始");
-      await expect(acts).toContainText("写文件 · 已写好 hello.txt");
+      await expect(acts).toContainText("动手 · 正在写 hello.txt");
       await expect(acts).toContainText("完成:写 hello.txt");
       await shot(win, "dm-compute-activity");
       await win.keyboard.press("Escape");
@@ -135,7 +138,7 @@ test("闭环:只经界面建联系人、私聊派活、建群拉人后群里派�
       const line = win.getByTestId("chat-column").locator('[data-testid^="compute-line-"]').filter({ hasText: "写 group.txt" });
       await expect(line).toHaveCount(1, LONG);
       await expect(line).toHaveAttribute("data-state", "done", LONG);
-      await expect(rows(win).filter({ hasText: "进度:已写好 hello.txt" })).toHaveCount(1, LONG);
+      await expect(rows(win).filter({ hasText: "进度:正在写 group.txt" })).toHaveCount(1, LONG);
       await expect(rows(win).filter({ hasText: "做完了:完成:写 group.txt" })).toHaveCount(1, LONG);
       // 没被 @ 的小林、小美不接这件事
       await expect(win.getByTestId("chat-column").locator('[data-testid^="compute-line-"]')).toHaveCount(1);

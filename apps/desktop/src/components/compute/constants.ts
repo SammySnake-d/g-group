@@ -76,8 +76,8 @@ export const COPY = {
   skip: '跳过',
   readonly: (owner: string) => `Compute 只读，要改要求去找 ${owner} 说`,
   talk: (dm: boolean, owner: string) => `回${dm ? '私聊' : '群里'} @${owner}`,
-  noTranscript: '还没拿到这个 Compute 的 harness 记录',
-  noTranscriptHint: '后端接上原始会话后，这里会显示它和 harness 的完整对话。',
+  noTranscript: '它还没开工',
+  noTranscriptHint: '开工以后，这里会显示联系人交给它的话和它每一步的进展。',
   earlier: '更早的记录还没加载',
 } as const
 

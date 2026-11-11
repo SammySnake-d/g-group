@@ -4,6 +4,7 @@ import type { StateCreator, StoreApi } from 'zustand'
 import type { ChatSlice } from './slices/chat'
 import type { ComputeSlice } from './slices/compute'
 import type { ContactsSlice } from './slices/contacts'
+import type { FilesSlice } from './slices/files'
 import type { LayoutSlice } from './slices/layout'
 import type { MembersSlice } from './slices/members'
 import type { MessagesSlice } from './slices/messages'
@@ -13,7 +14,7 @@ import type { ScheduleSlice } from './slices/schedule'
 import type { SendSlice } from './slices/send'
 import type { TasksSlice } from './slices/tasks'
 
-export type AppState = LayoutSlice & ChatSlice & MessagesSlice & MembersSlice & ComputeSlice & TasksSlice & ScheduleSlice & PluginsSlice & ModelsSlice & SendSlice & ContactsSlice
+export type AppState = LayoutSlice & ChatSlice & MessagesSlice & MembersSlice & ComputeSlice & TasksSlice & ScheduleSlice & PluginsSlice & ModelsSlice & SendSlice & ContactsSlice & FilesSlice
 
 export type Slice<T> = StateCreator<AppState, [], [], T>
 type SetState = StoreApi<AppState>['setState']

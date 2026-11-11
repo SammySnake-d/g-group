@@ -126,6 +126,8 @@ export interface Compute {
   short?: string
   /** AC-23：已请求停止、还没确认停下 */
   stopping?: boolean
+  /** 在哪跑(本机 / 自带机器 / 云端);演示数据没有这一项,按本机显示 */
+  placement?: string
   /** C-US15：做到一半卡在只有人能过的一步（验证码），交给你；你接手过了再交还 */
   needsHuman?: { what: string; taken?: boolean; qid?: string }
   /** AC-45：约束版本。你改了派活消息，在途任务原位升版，不另开 */
@@ -301,7 +303,11 @@ export const computes0: Record<string, Compute> = {
 }
 
 /* ---------- 文件与资产 ---------- */
-export interface Artifact { id: string; name: string; kind: 'doc' | 'page' | 'sheet' | 'asset'; meta: string; by: PersonId; conv: string; when: string }
+export interface Artifact {
+  id: string; name: string; kind: 'doc' | 'page' | 'sheet' | 'asset'; meta: string; by: PersonId; conv: string; when: string
+  /** 连上后端时才有:合同里的文件号(files.read / artifacts.get 用)、出现它的那条消息、类型与大小 */
+  live?: { ref: string; src: string; mime: string; bytes: number; via: 'file' | 'artifact' }
+}
 export const artifacts: Artifact[] = [
   { id: 'a1', name: 'IM 竞品交互对照', kind: 'doc', meta: '文档 · 12 KB', by: 'astra', conv: 'g', when: '昨天' },
   { id: 'a2', name: '登录页深色版', kind: 'page', meta: '网页', by: 'claude', conv: 'g', when: '刚刚' },
@@ -359,7 +365,7 @@ export interface QuoteRef { msgId: string; from: PersonId; text: string; reply?:
 export type Msg =
   | { k: 'date'; text: string }
   | { k: 'sys'; id: string; text: string; undo?: string; recalled?: string; rewind?: boolean }
-  | { k: 'text'; id: string; from: PersonId; text: string; answerTo?: string; edited?: boolean; at?: string; cron?: string; cronNew?: boolean; disp?: Disp; quotes?: QuoteRef[]; tag?: { task: string; state: string }; task?: string; helper?: { scope: string; card?: { kind: 'csv' | 'group' | 'send'; lines: string[]; done?: boolean } }; byHelper?: boolean; shot?: { title: string; compute: string } }
+  | { k: 'text'; id: string; from: PersonId; text: string; answerTo?: string; edited?: boolean; at?: string; cron?: string; cronNew?: boolean; disp?: Disp; quotes?: QuoteRef[]; tag?: { task: string; state: string }; task?: string; helper?: { scope: string; card?: { kind: 'csv' | 'group' | 'send'; lines: string[]; done?: boolean } }; byHelper?: boolean; shot?: { title: string; compute: string }; card?: MsgCard; deliverables?: { ref: string; name: string; mime: string; bytes: number }[] }
   | { k: 'compute'; id: string; from: PersonId; computeId: string }
   | { k: 'file'; id: string; from: PersonId; artifactId: string }
   | { k: 'huddle'; id: string; who: PersonId[]; items: { id: string; from: PersonId; text: string }[]; conclusion: string }
@@ -372,6 +378,8 @@ export type Msg =
   | { k: 'summary'; id: string; from: PersonId; title: string; items: { text: string; ref?: string }[]; covers?: string[]; expired?: string }
   | { k: 'replying'; id: string; from: PersonId; quotes: QuoteRef[]; phase: string; mins: number; steps: string[] }
 
+/** 连上后端时消息上挂的卡片(提问、失败、授权…):按钮走 cards.act,点了以你的名义记一条回复。演示数据没有这一项 */
+export interface MsgCard { id: string; seq: number; kind: string; taskId: string | null; state: 'open' | 'claimed' | 'done' | 'expired'; title: string; body: string; actions: { id: string; label: string; style: 'primary' | 'default' | 'danger' }[] }
 /** 一条群公告。ver 每次修改 +1；助手接活前由软件把当前版本装配进它的上下文（不是它自己去读，所以叫「已装配」，不写「已遵守」） */
 /** U87 / D23 / AC-40：每条交给助手的消息都要有交代。谁来交代 = 被 @ 的联系人；ref 指向它落在哪（Compute、定时、消息） */
 export type DispKind = 'doing' | 'done' | 'committed' | 'merged' | 'superseded' | 'noted'
