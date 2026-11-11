@@ -7,24 +7,24 @@
 // 工具只登记动作、不做 I/O(tools.ts);宿主校验、分配 action_id、落盘后才执行。
 // 密钥只由调用方传入,只在发请求时交给 pi-ai;不读环境变量,不进返回值、错误信息和日志。
 import { Agent, type AgentMessage, type AgentTool, type AgentToolResult, type StreamFn } from "@earendil-works/pi-agent-core";
-import { type AssistantMessage, type Model, type SimpleStreamOptions, type SystemMessage, toToolDeclaration, type UserMessage } from "@earendil-works/pi-ai";
-import { anthropicMessagesApi } from "@earendil-works/pi-ai/api/anthropic-messages.lazy";
+import { type Api, type AssistantMessage, type Model, type SystemMessage, toToolDeclaration, type UserMessage } from "@earendil-works/pi-ai";
 import { BLOCK_LABELS, type BlockNo, type ContactMind, type MindAction, plainData, type RoundBlock, type RoundInput, type RoundOutput, type RoundTools } from "@g-group/kernel";
+import { authHeaderFor, baseUrlForApi, keyOptions, PROTOCOLS, type PiAuthHeader, type PiProtocol, protocolFor } from "./protocols.ts";
 import { parseToolCall, TOOL_DECLARATIONS } from "./tools.ts";
 
 export interface PiContactMindOptions {
-  /** 模型协议。本片只接 Anthropic Messages 兼容端点(默认即此)。 */
-  readonly api?: "anthropic-messages";
+  /** 模型协议(四种之一,见 protocols.ts)。默认 anthropic-messages。 */
+  readonly api?: PiProtocol;
   /** 服务商标识(进 pi 的 provider 字段,不含密钥),例如 "anthropic"、"magpie"。 */
   readonly provider: string;
   /** 模型 id,原样发给端点;必须与 RoundInput.contact.speakingModel 一致,不一致整轮拒绝(不静默换模)。 */
   readonly model: string;
-  /** Anthropic 兼容端点根地址(SDK 会接 /v1/messages)。 */
+  /** 端点根地址。openai 兼容口没带路径时会补 /v1(见 protocols.ts 的 baseUrlForApi)。 */
   readonly baseUrl: string;
   /** 密钥,由调用方传入。适配器不读环境变量。 */
   readonly apiKey: string;
-  /** 密钥放哪个请求头:x-api-key(默认,Anthropic API 密钥)或 Authorization: Bearer(网关令牌)。 */
-  readonly authHeader?: "x-api-key" | "bearer";
+  /** 密钥放哪个请求头。只认协议认的那几种,默认按协议(anthropic 用 x-api-key,openai 用 Bearer,google 用 x-goog-api-key)。 */
+  readonly authHeader?: PiAuthHeader;
   /** 单次回复的输出上限,默认 4096。 */
   readonly maxTokens?: number;
   /** 模型上下文窗口,默认 200000(只用于 pi 的模型描述)。 */
@@ -63,11 +63,13 @@ export function renderBlock(b: RoundBlock): string {
 }
 
 interface Resolved {
+  readonly protocol: PiProtocol;
+  readonly api: Api;
   readonly provider: string;
   readonly model: string;
   readonly baseUrl: string;
   readonly apiKey: string;
-  readonly authHeader: "x-api-key" | "bearer";
+  readonly authHeader: PiAuthHeader;
   readonly maxTokens: number;
   readonly contextWindow: number;
   readonly cacheRetention: "short" | "long";
@@ -102,19 +104,23 @@ function resolveOptions(opts: unknown): Resolved {
     if (typeof v !== "string" || !(allowed as readonly string[]).includes(v)) return bad(`${k} 只能是 ${allowed.join(" / ")}`);
     return v as T;
   };
-  oneOf("api", ["anthropic-messages"], "anthropic-messages");
+  oneOf("cacheRetention", ["short", "long"], "short");
   const fetchFn = r.fetch;
   if (fetchFn !== undefined && typeof fetchFn !== "function") bad("fetch 必须是函数");
-  const baseUrl = text("baseUrl");
+  const protocol = protocolFor(r.api, bad);
+  const authHeader = authHeaderFor(protocol, r.authHeader, bad);
+  const baseUrl = baseUrlForApi(protocol, text("baseUrl"));
   let url: URL;
   try { url = new URL(baseUrl); } catch { return bad("baseUrl 不是合法 URL"); }
   if (url.protocol !== "http:" && url.protocol !== "https:") bad("baseUrl 必须是 http(s)");
   return {
+    protocol,
+    api: PROTOCOLS[protocol].api,
     provider: text("provider"),
     model: text("model"),
     baseUrl,
     apiKey: text("apiKey"),
-    authHeader: oneOf("authHeader", ["x-api-key", "bearer"], "x-api-key"),
+    authHeader,
     maxTokens: int("maxTokens", 4096, 1, 1_000_000),
     contextWindow: int("contextWindow", 200_000, 1, 100_000_000),
     cacheRetention: oneOf("cacheRetention", ["short", "long"], "short"),
@@ -156,10 +162,10 @@ const describe = (e: unknown): string => (e instanceof Error ? e.message : Strin
 export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
   const cfg = resolveOptions(opts);
   const redact = (s: string): string => s.split(cfg.apiKey).join("[密钥已隐去]");
-  const model: Model<"anthropic-messages"> = {
+  const model: Model<Api> = {
     id: cfg.model,
     name: cfg.model,
-    api: "anthropic-messages",
+    api: cfg.api,
     provider: cfg.provider,
     baseUrl: cfg.baseUrl,
     reasoning: false,
@@ -168,7 +174,7 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
     contextWindow: cfg.contextWindow,
     maxTokens: cfg.maxTokens,
   };
-  const api = anthropicMessagesApi();
+  const api = PROTOCOLS[cfg.protocol].load();
   const declarations = TOOL_DECLARATIONS.map((d) => toToolDeclaration({ name: d.name, description: d.description, parameters: d.parameters }));
 
   async function round(input: RoundInput, signal: AbortSignal, tools?: RoundTools): Promise<RoundOutput> {
@@ -217,14 +223,15 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
     let requests = 0;
     let limitHit = false;
     let last: AssistantMessage | undefined;
-    const keyOpts: Partial<SimpleStreamOptions> = cfg.authHeader === "bearer" ? {} : { apiKey: cfg.apiKey };
+    const key = keyOptions(cfg.protocol, cfg.authHeader, cfg.apiKey);
     const streamFn: StreamFn = (m, ctx, o) => api.streamSimple(m, ctx, {
       ...o,
-      ...keyOpts,
-      ...(cfg.authHeader === "bearer" ? { headers: { ...o?.headers, authorization: `Bearer ${cfg.apiKey}` } } : {}),
+      ...key,
+      ...(key.headers ? { headers: { ...o?.headers, ...key.headers } } : {}),
       ...(cfg.fetch ? { fetch: cfg.fetch } : {}),
       maxTokens: cfg.maxTokens,
-      cacheRetention: b1.cacheBreakpoint ? cfg.cacheRetention : "none",
+      // 缓存断点(cache_control)是 anthropic-messages 的东西:其它协议不设,也不报错
+      cacheRetention: cfg.protocol === "anthropic-messages" && b1.cacheBreakpoint ? cfg.cacheRetention : "none",
     });
     const agent = new Agent({
       initialState: { model, tools: agentTools, thinkingLevel: "off" },

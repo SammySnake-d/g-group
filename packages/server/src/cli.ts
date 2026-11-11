@@ -4,6 +4,7 @@
 //   node packages/server/src/cli.ts log --db ./gg.db [roomId]
 //   node packages/server/src/cli.ts group --db ./gg.db --members 小克,小研 --to 小克 "@小克 帮我在你的工作目录写 group.txt"
 // 选项:--mind fake|pi(默认 fake 规则脑子;pi 需要 @g-group/adapter-pi-contact 与模型网关环境变量)
+//       --api 协议(anthropic-messages|openai-chat|openai-responses|google-generative-ai;不给按模型名前缀挑)
 //       --compute fake|claude(默认 fake;claude 起真实 Claude Code CLI)  --cwd 目录(Compute 工作目录)  --timeout 秒
 //       --repo 仓库 --target 分支 [--verify "命令 参数…"](AC-22:每个任务一个 worktree 作 Compute 工作目录)  --accept(交付后豁免审查并验收,代码任务随即合入)
 import { mkdirSync } from "node:fs";
@@ -11,6 +12,7 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { claudeCompute } from "./compute.ts";
 import type { ContactView } from "@g-group/api-contract";
+import type { PiProtocol } from "@g-group/adapter-pi-contact";
 import type { ContactCompactor, ContactMind } from "@g-group/kernel";
 import { ensureGroup, sendAndWait, senderAudit } from "./drive.ts";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
@@ -22,6 +24,7 @@ const { values, positionals } = parseArgs({
     db: { type: "string", default: "./gg.db" },
     name: { type: "string", default: "小克" },
     mind: { type: "string", default: "fake" },
+    api: { type: "string" },
     compute: { type: "string", default: "fake" },
     cwd: { type: "string" },
     timeout: { type: "string", default: "600" },
@@ -43,11 +46,20 @@ async function makeMind(kind: string): Promise<{ mind: (c: ContactView) => Conta
   if (kind === "fake") return { mind: () => scriptedMind() };
   if (kind === "pi") {
     // 字面量动态 import:按需加载 pi 依赖,G-LAYER 也能核对依赖方向
-    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as { createPiContactMind(o: Record<string, unknown>): ContactMind; createPiCompactor(o: Record<string, unknown>): ContactCompactor };
+    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as {
+      createPiContactMind(o: Record<string, unknown>): ContactMind;
+      createPiCompactor(o: Record<string, unknown>): ContactCompactor;
+      apiForModel(model: string): PiProtocol;
+    };
     const bearer = process.env.ANTHROPIC_AUTH_TOKEN;
     const apiKey = bearer ?? process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("--mind pi 需要 ANTHROPIC_AUTH_TOKEN 或 ANTHROPIC_API_KEY");
-    const opts = (model: string) => ({ provider: "anthropic", model, baseUrl: process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
+    const baseUrl = process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com";
+    // 协议:--api 优先,否则按说话模型名前缀挑;authHeader 只在 anthropic-messages 下可选
+    const opts = (model: string) => {
+      const api = (values.api as PiProtocol | undefined) ?? mod.apiForModel(model);
+      return { api, provider: "anthropic", model, baseUrl, apiKey, ...(api === "anthropic-messages" ? { authHeader: bearer ? "bearer" : "x-api-key" } : {}) };
+    };
     const cache = new Map<string, ContactMind>();
     const compactors = new Map<string, ContactCompactor>();
     return {
@@ -125,7 +137,7 @@ async function runGroup(host: Host, model: string | undefined) {
 
 async function main() {
   if (cmd !== "dm" && cmd !== "log" && cmd !== "group") {
-    console.log("用法: cli.ts dm|log|group --db 文件 [--name 联系人] [--members 甲,乙 --to 甲] [--mind fake|pi] [--compute fake|claude] [--cwd 目录] \"消息\"");
+    console.log("用法: cli.ts dm|log|group --db 文件 [--name 联系人] [--members 甲,乙 --to 甲] [--mind fake|pi] [--api 协议] [--compute fake|claude] [--cwd 目录] \"消息\"");
     process.exit(2);
   }
   const compute = makeCompute(values.compute);

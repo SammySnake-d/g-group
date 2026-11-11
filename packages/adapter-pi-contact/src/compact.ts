@@ -2,10 +2,10 @@
 // 一次独立、无状态的模型调用:system = 压缩说明(含 STATE_NOTE_GUIDE),user = 旧笔记 + 本轮材料(+ 字节上限);不带工具、
 // 不带联系人五块与人设,所以不进联系人会话、不动第 1 块缓存前缀。模型必须等于请求里联系人的说话模型,不一致一次都不发;
 // 端点报错如实抛出(隐去密钥),不换模型或厂商重试。压缩用哪个模型、配置失配怎么拦截归 D 件(AC-32),这里只按联系人的说话模型调用。
-import { type AssistantMessage, type Model, normalizeContext, type SystemMessage, type UserMessage } from "@earendil-works/pi-ai";
-import { anthropicMessagesApi } from "@earendil-works/pi-ai/api/anthropic-messages.lazy";
+import { type Api, type AssistantMessage, type Model, normalizeContext, type SystemMessage, type UserMessage } from "@earendil-works/pi-ai";
 import { type CompactRequest, type ContactCompactor, plainData, type ReflectRequest, type ReflectResult, STATE_NOTE_GUIDE } from "@g-group/kernel";
 import { PiContactMindError, type PiContactMindOptions } from "./mind.ts";
+import { authHeaderFor, baseUrlForApi, keyOptions, PROTOCOLS, protocolFor } from "./protocols.ts";
 
 export type PiCompactorOptions = Omit<PiContactMindOptions, "maxRequestsPerRound" | "cacheRetention">;
 
@@ -20,22 +20,24 @@ function resolve(opts: unknown) {
   const r = o as Record<string, unknown>;
   for (const k of Object.keys(r)) if (!KEYS.has(k)) bad(`未知字段 ${k}`);
   const text = (k: string): string => (typeof r[k] === "string" && (r[k] as string).trim() !== "" ? (r[k] as string) : bad(`${k} 必须是非空字符串`));
-  if (r.api !== undefined && r.api !== "anthropic-messages") bad("api 只能是 anthropic-messages");
-  if (r.authHeader !== undefined && r.authHeader !== "x-api-key" && r.authHeader !== "bearer") bad("authHeader 只能是 x-api-key / bearer");
   if (r.fetch !== undefined && typeof r.fetch !== "function") bad("fetch 必须是函数");
   const int = (k: string, d: number, max: number): number => {
     const v = r[k];
     if (v === undefined) return d;
     return typeof v === "number" && Number.isSafeInteger(v) && v >= 1 && v <= max ? v : bad(`${k} 必须是 1–${max} 的整数`);
   };
-  const baseUrl = text("baseUrl");
+  const protocol = protocolFor(r.api, bad);
+  const authHeader = authHeaderFor(protocol, r.authHeader, bad);
+  const baseUrl = baseUrlForApi(protocol, text("baseUrl"));
   try { new URL(baseUrl); } catch { bad("baseUrl 不是合法 URL"); }
   return {
+    protocol,
+    api: PROTOCOLS[protocol].api,
     provider: text("provider"),
     model: text("model"),
     baseUrl,
     apiKey: text("apiKey"),
-    bearer: r.authHeader === "bearer",
+    authHeader,
     maxTokens: int("maxTokens", 4096, 1_000_000),
     contextWindow: int("contextWindow", 200_000, 100_000_000),
     fetch: r.fetch as typeof globalThis.fetch | undefined,
@@ -105,11 +107,12 @@ function parseReflect(text: string, noteWritten: boolean): ReflectResult {
 export function createPiCompactor(opts: PiCompactorOptions): ContactCompactor {
   const cfg = resolve(opts);
   const redact = (s: string) => s.split(cfg.apiKey).join("[密钥已隐去]");
-  const model: Model<"anthropic-messages"> = {
-    id: cfg.model, name: cfg.model, api: "anthropic-messages", provider: cfg.provider, baseUrl: cfg.baseUrl, reasoning: false,
+  const model: Model<Api> = {
+    id: cfg.model, name: cfg.model, api: cfg.api, provider: cfg.provider, baseUrl: cfg.baseUrl, reasoning: false,
     input: ["text"], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: cfg.contextWindow, maxTokens: cfg.maxTokens,
   };
-  const api = anthropicMessagesApi();
+  const api = PROTOCOLS[cfg.protocol].load();
+  const key = keyOptions(cfg.protocol, cfg.authHeader, cfg.apiKey);
   async function compact(input: CompactRequest, signal: AbortSignal): Promise<string> {
     const p = plainData(input, "压缩请求");
     if (!p.ok) throw new PiContactMindError("invalid-request", `压缩请求不合格:${p.path} ${p.why}`);
@@ -131,7 +134,8 @@ export function createPiCompactor(opts: PiCompactorOptions): ContactCompactor {
           signal,
           maxTokens: cfg.maxTokens,
           cacheRetention: "none",
-          ...(cfg.bearer ? { headers: { authorization: `Bearer ${cfg.apiKey}` } } : { apiKey: cfg.apiKey }),
+          ...key,
+          ...(key.headers ? { headers: { ...key.headers } } : {}),
           ...(cfg.fetch ? { fetch: cfg.fetch } : {}),
         })
         .result();
