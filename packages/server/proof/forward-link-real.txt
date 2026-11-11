@@ -1,0 +1,19 @@
+# 真实运行(feat/forward-link)的尝试记录:没跑成,原因如实记下(2026-11-12)
+# 命令:node packages/server/proof/forward-link-real.ts /tmp/gg-fwdlink-real(真实联系人脑子 mind=pi、真实 SQLite;网关地址与令牌只经环境变量)
+# 本机模型网关(ANTHROPIC_BASE_URL)从 2026-11-11 23:0x 起持续返回 503,模型请求全部失败,联系人一轮都跑不完;
+# 三次探测(同样的最小请求,与 stories/runner/probe.mjs 同一口径):
+2026-11-11T17:41:29.407Z 探测:HTTP 503 {"error":{"message":"anyrouter: Service Unavailable","type":"error"},"type":"error"}
+2026-11-11T17:41:41.158Z 探测:HTTP 503 {"error":{"message":"anyrouter: Service Unavailable","type":"error"},"type":"error"}
+2026-11-11T17:41:54.982Z 探测:HTTP 503 {"error":{"message":"anyrouter: Service Unavailable","type":"error"},"type":"error"}
+# 同一时间跑脚本时的宿主输出(每一轮都被上游失败重试,没有一轮拿到模型回复):
+# 2026-11-11T15:08:08.906Z 模型 group/opus;真实联系人脑子 mind=pi,真实 SQLite,数据目录 /tmp/gg-fwdlink-real
+[宿主] recall {"contactId":"c-mwc9758r-1","roundId":"c-mwc9758r-1:r1:mwc9758v","items":[]}
+(node:34348) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[宿主] attention:error:c-mwc9758r-1 {"delayMs":906,"name":"RoundRetry"}
+[宿主] recall {"contactId":"c-mwc9758r-1","roundId":"c-mwc9758r-1:r2:mwc9877j","items":[]}
+[宿主] attention:error:c-mwc9758r-1 {"delayMs":1685,"name":"RoundRetry"}
+[宿主] recall {"contactId":"c-mwc9758r-1","roundId":"c-mwc9758r-1:r3:mwc994kt","items":[]}
+[宿主] attention:error:c-mwc9758r-1 {"delayMs":3731,"name":"RoundRetry"}
+[宿主] recall {"contactId":"c-mwc9758r-1","roundId":"c-mwc9758r-1:r4:mwc9a5dk","items":[]}
+# 结论:这一段(真实模型下的转发与关联行为)未跑,收据里记未测;跑过的证据见 proof/forward-link-tests.txt(13 条行为测试)与 proof/forward-link-mutations.txt(box4 上 36 个单点故障全被具名测试杀死)

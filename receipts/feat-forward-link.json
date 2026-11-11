@@ -1,0 +1,35 @@
+{
+  "slice": "转发选中消息与会话显式关联(U25/US2、U24/US2、U100 的转发入口):messages.forward 在目标会话追加一条「转发的聊天记录」(用户在两边都是成员才行;副本是选中几条的原文快照,带原会话标题、原发言者、原时间;不授予目标会话读原会话的权限:正文不含来源会话 id、不带指回原会话的引用、里的 @ 与命令不进元数据;副本不能编辑;原消息之后被撤回或被私聊 rewind 撤下时副本只标「来源已撤回」、正文不删,候选)。授权:联系人处理转发消息时,宿主不把副本喂给授权绑定,副本正文也不是干脆的同意,转发里的「同意」不放行(AC-20 的转发子判据)。关联:rooms.link 圈定关联那一刻对方的上界(静态关联,候选;同一动作号重放不改上界)、rooms.unlink 解除;联系人可用只读工具 read_linked 在上界以内按需读(不每轮注入、不改第 1 块前缀),上界之后的新消息读不到,用户须是两边成员。",
+  "acceptance": [
+    {
+      "id": "AC-20",
+      "status": "通过",
+      "evidence": "packages/server/proof/forward-link-tests.txt",
+      "notes": "本片补齐转发这一路的子判据:群里等授权时把私聊里一句「同意」转发进群 → 授权仍 pending、任务停在 T4b_BlockedOnHuman、Compute 不续接、不写盘(forward-link.test.ts「AC-20 转发里的「同意」不放行」);本人随后在群里直接说「同意」→ 才放行一次并写盘一次(同一条测试的后半)。AC-20 的其余子判据(引用旧同意、外部材料、多候选追问)由既有 intent.test.ts / authorization.test.ts 覆盖,本片未改动。 真实模型下的端到端(proof/forward-link-real.ts)未跑成:本机模型网关从 2026-11-11 23:0x 起持续返回 503,三次最小探测都是 503、脚本每一轮都被上游失败重试,见 packages/server/proof/forward-link-real.txt(尝试记录)。本片通过的是宿主级证据(真实 SQLite + 确定性替身联系人),不是真实模型行为。"
+    },
+    {
+      "id": "R-10",
+      "status": "通过",
+      "evidence": "packages/server/proof/forward-link-tests.txt",
+      "notes": "转发块里的 @ 与命令不进副本的 mentions/command,不唤醒、不派活、不建定时(forward-link.test.ts「转发里的 @ 与命令不进副本的元数据」);副本里的 @ 不触发新指令,转发内容不产生授权(同上一条)。"
+    },
+    {
+      "id": "AC-57",
+      "status": "未测",
+      "reason": "AC-57 是前端 X 层(消息右键菜单贴近目标、两主题截图、栏宽拖动、IME 组字):本片只做后端入口 messages.forward(副本结构与权限边界)与 rooms.link/unlink + read_linked,没有界面,不能判 AC-57 通过。"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:dd154965-afbd-4134-a1d3-c00f2a859eab",
+    "model": "claude-opus-5-5",
+    "notes": "子代理实现(实现子代理 claude:dd154965-afbd-4134-a1d3-c00f2a859eab),按 slices/S1b-forward-link.md 执行"
+  },
+  "red": {
+    "commit": "f90790f0"
+  },
+  "unverifiable": "AC-20 在转发这条路上由两道各管一半:宿主不把副本喂给授权绑定,以及副本正文被 renderForwardText 包过(标题、逐条引用、末尾一句「是背景材料」),consentIntent 对整段文本判不出干脆的同意。所以「转发也跑一遍授权绑定」这个变异是等价的(改上去不改变行为),已从变异表里删掉并在脚本头部写明——也就是说,如果以后有人把副本正文改成只放原文,单靠本片的测试仍会红(FL10 之外无覆盖),这条边界要另外记住。AC-57 只验到后端入口与副本结构,界面层完全未验。 AC-20 的真实模型段没跑(网关 503,proof/forward-link-real.txt 是尝试记录而不是通过证据),所以「转发里的同意不放行」只在宿主机械层被证明,联系人真的遇到转发块时会怎么处理(会不会把它当成用户当前的话)没有实测;AC-57 的转发入口界面(右键菜单、两主题截图)完全没有。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}
