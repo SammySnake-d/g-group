@@ -119,6 +119,8 @@ import {
   runDisplay,
   runFailure,
   scrubRetracted,
+  historyRef,
+  searchHistory,
   visibleRuns,
 } from "@g-group/kernel";
 import { type AnnouncementOrder, AnnouncementStore } from "./announcements.ts";
@@ -136,6 +138,7 @@ import {
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
+import { HistoryAccess, type HistoryPrefetchOptions, type HistorySearchFn } from "./history.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
 import { MemoryStore } from "./memory-store.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
@@ -238,6 +241,10 @@ export interface HostOptions {
   readonly bootId?: string;
   /** 自己名下自动重跑上限,默认 2 次(助手建议,用户未定,#2646) */
   readonly rerunLimit?: number;
+  /** 找旧消息的检索实现(T-177 G4);默认 G3 接缝 searchHistory。宿主只把已过滤的可见语料交给它。 */
+  readonly historySearch?: HistorySearchFn;
+  /** 每轮旧消息预取(G4,需求 D06 §3「粗筛自动」):默认开;false 关(query_history 照常可用)。时限与最小分是待校准占位。 */
+  readonly historyPrefetch?: false | HistoryPrefetchOptions;
 }
 
 /** 记忆锚点:全局(进前缀)与「建议改人格」(只记录,不进任何一块) */
@@ -452,6 +459,8 @@ export class Host {
   private readonly stopBy = new Map<string, string>();
   /** 联系人下一轮是对哪个失败轮次的重跑 */
   private readonly pendingRerun = new Map<string, { rerunOf: string; attempt: number }>();
+  /** 找旧消息(G4):每轮预取与本轮查询口 query_history */
+  private readonly history: HistoryAccess;
 
   constructor(opts: HostOptions) {
     this.opts = opts;
@@ -469,6 +478,17 @@ export class Host {
     this.memoryCoverage = new MemoryCoverage(this.db, this.memory);
     this.memoryMarks = new MemoryMarks(this.db);
     this.finePolicy = { ...DEFAULT_FINE_SCREEN, ...(opts.fineScreen ?? {}) };
+    this.history = new HistoryAccess({
+      db: this.db,
+      readableRooms: (contactId) => {
+        const leaving = this.exits.leavingRoomsOf(contactId);
+        return new Set(this.roomsOfContact(contactId).map((r) => r.id).filter((id) => !leaving.has(id)));
+      },
+      author: (s) => this.nameOf(s),
+      search: opts.historySearch ?? searchHistory,
+      recallBudgetBytes: () => opts.recallBudgetBytes ?? RECALL_BUDGET_BYTES,
+      report: (w, d) => this.report(w, d),
+    });
     this.bus = createBus(this.now);
     // 本次启动编号:在途轮次标记(F12)与运行台账存活核对(AC-43)共用
     this.bootId = opts.bootId ?? this.newId("boot");
@@ -2880,20 +2900,32 @@ export class Host {
     // 引用链(D24/AC-41):带引用的新消息附前 K 级,放在第 5 块(新消息之后,不进前缀);已换入或同在本轮的标 in_context
     const paged = new Set(plan.items.filter((it) => it.state === "Full" || it.state === "TruncatedSlice").map((it) => `${it.roomId}#${it.seq}`));
     const chainMsgs = new Map<string, QuoteMsg[]>();
+    const shown = new Set<string>();
     for (const f of fresh) {
       if (f.kind !== "message" || (f.replyToSeq === null && f.quotedSeqs.length === 0)) continue;
       const qm = chainMsgs.get(f.roomId) ?? this.quoteMsgs(f.roomId);
       chainMsgs.set(f.roomId, qm);
       const inContext = [...qm.filter((m) => paged.has(`${f.roomId}#${m.seq}`)).map((m) => m.seq), ...fresh.flatMap((x) => (x.kind === "message" && x.roomId === f.roomId ? [x.seq] : []))];
       const chain = buildQuoteChain({ fromSeq: f.seq, refs: [...(f.replyToSeq !== null ? [f.replyToSeq] : []), ...f.quotedSeqs], messages: qm, inContext, k: QUOTE_CHAIN_K, scanCap: QUOTE_SCAN_CAP, budgetBytes: this.opts.quoteChainBudgetBytes ?? RECALL_BUDGET_BYTES });
-      if (chain) pointers.push({ ref: `${f.roomId} #${f.seq} 的引用链`, text: renderQuoteChain(chain) });
+      if (chain) {
+        pointers.push({ ref: `${f.roomId} #${f.seq} 的引用链`, text: renderQuoteChain(chain) });
+        for (const l of chain.levels) shown.add(historyRef(f.roomId, l.seq));
+      }
     }
     this.recoverMemoryWrites(contactId);
     pointers.push(...this.memoryDebtPointers(contactId));
     const mem = this.memoryForRound(contactId, fresh);
+    // 旧消息预取(G4,D06 §3「粗筛自动」):本批新消息、引用换入与引用链已在上下文里的不再预取;有时限,超时或出错不挡这一轮
+    for (const f of fresh) if (f.kind === "message") shown.add(historyRef(f.roomId, f.seq));
+    for (const it of plan.items) shown.add(historyRef(it.roomId, it.seq));
+    const pre = this.opts.historyPrefetch === false ? null : await this.history.prefetch(contactId, fresh, shown, this.opts.historyPrefetch ?? {});
+    if (signal.aborted || this.closed) {
+      this.setActivity(contactId, null, "idle");
+      return "done";
+    }
     let request: ReturnType<RoundAssembler>;
-    try {
-      request = this.assemble({
+    const assembleWith = (extra: readonly { ref: string; text: string }[]) =>
+      this.assemble({
         memories: mem.prefix,
       system: CONTACT_SYSTEM,
       tools: CONTACT_TOOLS,
@@ -2907,10 +2939,19 @@ export class Host {
       stateNote: note?.value.text ?? null,
       fresh,
       tasks: tasks.map((t) => `${t.id} [${t.state}] ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
-      pointers: [...pointers, ...mem.pointers],
+      pointers: [...pointers, ...mem.pointers, ...extra],
       budgetBytes: this.opts.roundBudgetBytes ?? ROUND_BUDGET_BYTES,
       runs: this.runLinesFor(contactId, rooms),
       });
+    try {
+      try {
+        request = assembleWith(pre?.pointers ?? []);
+      } catch (e) {
+        // 预取只在显式引用、记忆之后排,超预算先丢预取,不挤掉显式引用、不让这一轮因预取失败
+        if (!(pre?.pointers.length && e instanceof RoundAssembleError && e.reason === "over-budget")) throw e;
+        this.report("history-prefetch", { contactId, status: "dropped", reason: "over-budget", need: e.need, budget: e.budget });
+        request = assembleWith([]);
+      }
     } catch (e) {
       // 整轮超预算(D06 §2):显式失败——不截断、不调模型、游标不推进;出失败卡交用户重试或跳过,不在后台反复重跑
       if (e instanceof RoundAssembleError && e.reason === "over-budget" && e.need !== null && e.budget !== null) {
@@ -2946,8 +2987,9 @@ export class Host {
     try {
       // 每一轮现场定生效模型(原则 70):用户在失败卡上显式选了备用模型才换,只用于重跑这一批;自动重试永远用原模型(严禁静默换模)。
       // 这一轮的配置快照只解析这一次,对话、补写、检查共用同一个对象(T-177 G2)
+      // query_history(G4)只在本轮新输入所在的会话里查(审查条件 G4-a)
       speaking = this.speakingFor(model);
-      const tools: RoundTools = { readMemory: async (id: string) => this.renderMemory(contactId, id), readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq) };
+      const tools: RoundTools = { readMemory: async (id: string) => this.renderMemory(contactId, id), readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq), ...this.history.tools(contactId, new Set(fresh.map((f) => f.roomId))) };
       out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: speaking.model }, speaking).round({ contact: { id: contactId, name: contact.name, speakingModel: speaking.model, persona: contact.persona }, request, fresh }, ac.signal, tools), stalled, closing]);
     } catch (e) {
       this.setActivity(contactId, null, "idle");

@@ -193,6 +193,18 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
       execute: async (_id: string, params: unknown): Promise<AgentToolResult<null>> => {
         const r = parseToolCall(d.name, params);
         if (!r.ok) return { content: [{ type: "text", text: `未登记:参数不合形状(${r.why})。请按工具说明修正后重新调用。` }], details: null, isError: true };
+        if (r.value.kind === "query-history") {
+          const q = r.value.query;
+          if (!tools?.queryHistory) return { content: [{ type: "text", text: "本轮没有找旧消息的查询口" }], details: null, isError: true };
+          let got: string | null;
+          try {
+            got = await tools.queryHistory(q);
+          } catch (e) {
+            return { content: [{ type: "text", text: `找旧消息出错(不代表没说过):${redact(describe(e))}` }], details: null, isError: true };
+          }
+          if (got === null) return { content: [{ type: "text", text: q.kind === "search" ? `${q.roomId ?? "本轮"}不在本轮可查的会话里` : `读不到 ${q.roomId} #${q.seq}(不在本轮会话里或没有这条)` }], details: null, isError: true };
+          return { content: [{ type: "text", text: got }], details: null };
+        }
         if (r.value.kind === "read-quote") {
           const got = tools?.readQuoteParent ? await tools.readQuoteParent(r.value.roomId, r.value.seq) : null;
           if (got === null) return { content: [{ type: "text", text: tools?.readQuoteParent ? `读不到 ${r.value.roomId} #${r.value.seq}` : "本轮没有引用链查询口" }], details: null, isError: true };

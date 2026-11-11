@@ -17,3 +17,4 @@ export * from "./quote-chain.ts";
 
 export * from "./memory-capture.ts";
 export * from "./memory-marks.ts";
+export * from "./history-tools.ts";

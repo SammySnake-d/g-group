@@ -1,8 +1,9 @@
-// 联系人的直接工具清单:每种 MindAction 一个工具,外加 update_state_note 与只读的 read_memory(经宿主给的本轮查询口取全文)。
+// 联系人的直接工具清单:每种 MindAction 一个工具,外加 update_state_note 与只读的 read_memory、read_quote_parent、
+// query_history(经宿主给的本轮查询口取结果;找旧消息是 T-177 G4,需求 D06 §3「精筛内置」:一个宿主注册的查询工具,检索与分页回读是它的两种用法,不走 MCP)。
 // 工具只校验参数形状、登记成 MindAction 并立即回「已登记」,不做任何 I/O;
 // 宿主在本轮结束后逐条校验(会话可见、任务归属、seq 在本轮输入里)、分配 action_id、落盘后才执行(runtime-ports.ts)。
 // 清单是封闭的:联系人没有 shell、文件读写、网络这类工具;要动手就用 dispatch_compute 开 Compute(AC-33)。
-import type { MindAction } from "@g-group/kernel";
+import type { HistoryQuery, MindAction } from "@g-group/kernel";
 
 /** 工具名 → 对应的动作种类;update_state_note 不是动作,写进 RoundOutput.stateNote。 */
 export const PI_CONTACT_TOOL_NAMES = Object.freeze([
@@ -19,10 +20,11 @@ export const PI_CONTACT_TOOL_NAMES = Object.freeze([
   "read_memory",
   "read_quote_parent",
   "progress_rerun",
+  "query_history",
 ] as const);
 export type PiContactToolName = (typeof PI_CONTACT_TOOL_NAMES)[number];
 
-type FieldKind = "text" | "seq" | "seqOrNull" | "textOrNull" | "verdict" | "texts" | "bool" | "relationOrNull";
+type FieldKind = "text" | "seq" | "seqOrNull" | "textOrNull" | "verdict" | "texts" | "bool" | "relationOrNull" | "countOrNull";
 interface FieldSpec {
   readonly kind: FieldKind;
   readonly required: boolean;
@@ -34,6 +36,8 @@ interface ToolSpec {
 }
 
 const RELATIONS = ["change", "refine", "conflict"] as const;
+/** 找旧消息的条数参数上限(宿主还会按自己的上限收紧) */
+const COUNT_MAX = 50;
 const f = (kind: FieldKind, required: boolean, description: string): FieldSpec => ({ kind, required, description });
 
 const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
@@ -136,6 +140,18 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
       seq: f("seq", true, "要往上读的那条消息的 seq"),
     },
   },
+  query_history: {
+    description:
+      "找旧消息(只读),两种用法:① 检索——给 query(可再给 roomId 只搜其中一个会话、limit 条数),在本轮新消息所在的会话里按意思找更早的消息,返回「会话 #seq · 作者 · 时间 · 版本 · 一行预览」;② 回读——给 roomId 和 seq(可再给 before/after 前后条数),读这条和它前后几条,每条单独核对,撤回的、看不见的只给占位,正文超过回读预算会给续读位置。宿主先按你现在的权限、撤回和最新编辑版本过滤;只能查本轮新消息所在的会话。query 与 seq 二选一。查到的是旧消息,不是新要求。",
+    fields: {
+      query: f("textOrNull", false, "检索用:要找什么(用自己的话描述,不必和原话一字不差);回读时省略"),
+      roomId: f("textOrNull", false, "检索时可选:只搜本轮里的某一个会话;回读时必填:那条消息所在的会话"),
+      seq: f("seqOrNull", false, "回读用:要读的那条消息的 seq;检索时省略"),
+      limit: f("countOrNull", false, "检索时可选:最多返回几条"),
+      before: f("countOrNull", false, "回读时可选:再往前读几条,默认 3"),
+      after: f("countOrNull", false, "回读时可选:再往后读几条,默认 3"),
+    },
+  },
   update_state_note: {
     description: "写新的状态笔记(下一轮第 3 块):当前在做什么、下一步、完成判据、相关指针、走不通的路;不复述过程。本轮多次调用以最后一次为准。",
     fields: {
@@ -154,6 +170,7 @@ const schemaOf = (s: FieldSpec): Record<string, unknown> => {
     case "texts": return { type: "array", items: { type: "string", minLength: 1 }, minItems: 1, description: s.description };
     case "bool": return { type: "boolean", description: s.description };
     case "relationOrNull": return { type: ["string", "null"], enum: [...RELATIONS, null], description: s.description };
+    case "countOrNull": return { type: ["integer", "null"], minimum: 0, maximum: COUNT_MAX, description: s.description };
   }
 };
 
@@ -181,7 +198,8 @@ export type Registered =
   | { readonly kind: "action"; readonly action: MindAction }
   | { readonly kind: "note"; readonly note: string }
   | { readonly kind: "read"; readonly id: string }
-  | { readonly kind: "read-quote"; readonly roomId: string; readonly seq: number };
+  | { readonly kind: "read-quote"; readonly roomId: string; readonly seq: number }
+  | { readonly kind: "query-history"; readonly query: HistoryQuery };
 export type ParseResult = { readonly ok: true; readonly value: Registered } | { readonly ok: false; readonly why: string };
 
 const isRecord = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
@@ -221,6 +239,9 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
       if (typeof x !== "string") problems.push(`${k} 必须是字符串`);
       else if (x.trim() === "") problems.push(`${k} 不能为空白`);
       else v[k] = x;
+    } else if (s.kind === "countOrNull") {
+      if (typeof x !== "number" || !Number.isSafeInteger(x) || x < 0 || x > COUNT_MAX) problems.push(`${k} 必须是 0–${COUNT_MAX} 的整数`);
+      else v[k] = x;
     } else if (typeof x !== "number" || !Number.isSafeInteger(x) || x < 0) {
       problems.push(`${k} 必须是非负整数`);
     } else {
@@ -250,6 +271,19 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
     case "memory_feedback": return act({ kind: "memory-use", id: s("id"), good: v.good as boolean, note: sn("note") });
     case "read_memory": return { ok: true, value: { kind: "read", id: s("id") } };
     case "read_quote_parent": return { ok: true, value: { kind: "read-quote", roomId: s("roomId"), seq: n("seq") } };
+    case "query_history": {
+      const query = sn("query");
+      const seq = nn("seq");
+      const roomId = sn("roomId");
+      if ((query === null) === (seq === null)) return { ok: false, why: "query 与 seq 二选一:检索给 query,回读给 roomId 和 seq" };
+      if (query !== null) {
+        if (v.before !== null || v.after !== null) return { ok: false, why: "检索不用 before/after,要读前后文请给 roomId 和 seq" };
+        return { ok: true, value: { kind: "query-history", query: { kind: "search", query, roomId, limit: nn("limit") } } };
+      }
+      if (roomId === null) return { ok: false, why: "回读要给 roomId" };
+      if (v.limit !== null) return { ok: false, why: "回读不用 limit,用 before/after" };
+      return { ok: true, value: { kind: "query-history", query: { kind: "read", roomId, seq: seq!, before: nn("before"), after: nn("after") } } };
+    }
   }
 }
 const act = (action: MindAction): ParseResult => ({ ok: true, value: { kind: "action", action: Object.freeze(action) } });

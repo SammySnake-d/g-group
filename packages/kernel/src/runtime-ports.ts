@@ -124,12 +124,24 @@ export interface RoundOutput {
   readonly stateNote: string | null;
 }
 
+/** query_history 的两种用法:检索(roomId 给了只搜其中一个会话,limit 不给用默认)与分页回读(before/after 不给用默认) */
+export type HistoryQuery =
+  | { readonly kind: "search"; readonly query: string; readonly roomId: string | null; readonly limit: number | null }
+  | { readonly kind: "read"; readonly roomId: string; readonly seq: number; readonly before: number | null; readonly after: number | null };
+
 /** 本轮内可用的只读查询口(宿主提供):联系人在同一轮的工具往返里按 id 取全文,不是动作、不落盘 */
 export interface RoundTools {
   /** 按 id 读一条记忆全文(含状态与关系);没有这条或无权读返回 null */
   readMemory(id: string): Promise<string | null>;
   /** 引用链往上读一级(D24 read_quote_parent):这条消息直接引用的那几条;会话不可读返回 null */
   readQuoteParent?(roomId: string, seq: number): Promise<string | null>;
+  /**
+   * query_history(G4;需求 D06 §3「粗筛自动、精筛内置」:一个宿主注册的查询工具,不是 MCP、不依赖 CLI):两种用法——
+   * 检索(search):在本轮新输入所在的会话里找旧消息,宿主先按当前权限、撤回、回退与最新版本形成可见语料再交检索,返回前再核;
+   * 分页回读(read):读一条消息和它前后几条,每条各自核对可见性,正文受回读预算约束、装不下给续读位置。
+   * 会话不在本轮范围、没有这条或本轮没有可查的会话返回 null;检索出错抛错(不当成「没说过」)。
+   */
+  queryHistory?(q: HistoryQuery): Promise<string | null>;
 }
 
 export interface ContactMind {
