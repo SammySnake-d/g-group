@@ -7,7 +7,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
-import type { MemoryView } from "@g-group/api-contract";
+import type { ContactProfileView, MemoryView } from "@g-group/api-contract";
 import { type MindAction, type RoundInput, type RoundTools, parseMemory, serializeMemory } from "@g-group/kernel";
 import { run } from "./db.ts";
 import { Host } from "./host.ts";
@@ -105,12 +105,56 @@ test("U29 回退:撤下范围的原文在回退事务里就从状态笔记清掉
   await host.close();
 });
 
-test("来源消息撤回:由它写出的记忆不进第 1 块前缀、不进第 5 块,read_memory 读不到正文;无关记忆照常;条目还在并标来源已撤回", async () => {
+test("U29 回退时联系人正在跑一轮:回退事务里就清掉已落盘的笔记,资料页立刻读不到撤下原文", async () => {
+  let note: string | null = null;
+  let hold: Promise<void> | null = null;
+  let release = () => {};
+  let entered = false;
+  const host = new Host({
+    ...fresh(), maxDeferMs: 5,
+    mind: () => ({
+      async round(i: RoundInput) {
+        if (lastMsg(i)?.text === "再查一下返程" && hold) {
+          entered = true;
+          await hold;
+        }
+        return { actions: [], stateNote: note };
+      },
+    }),
+  });
+  const svc = createService(host);
+  const c = host.createContact({ name: "小克" });
+  const dm = host.openDm(c.id);
+  host.send({ roomId: dm.id, clientActionId: "1", text: "第一条:周五开会" });
+  await settle(host);
+  note = "在做:帮我订周六去杭州的高铁票";
+  host.send({ roomId: dm.id, clientActionId: "2", text: "帮我订周六去杭州的高铁票" });
+  await settle(host);
+  note = null;
+  hold = new Promise<void>((r) => {
+    release = r;
+  });
+  host.send({ roomId: dm.id, clientActionId: "3", text: "再查一下返程" });
+  try {
+    for (let k = 0; k < 400 && !entered; k++) await new Promise((r) => setTimeout(r, 5));
+    assert.equal(entered, true, "联系人这一轮还没结束");
+    host.rewind({ roomId: dm.id, toSeq: 1, clientActionId: "rw" });
+    assert.doesNotMatch(host.stateNote(c.id) ?? "", /帮我订周六去杭州的高铁票/, "不等联系人这一轮结束就清掉");
+    const p = await value<ContactProfileView>(svc.handle("contacts.profile", { contactId: c.id }));
+    assert.equal(p.memory.stateNote?.text, "在做:〔已撤回内容已移除〕", "资料页读到的工作记忆也不含撤下原文");
+  } finally {
+    release();
+    await settle(host);
+    await host.close();
+  }
+});
+
+test("来源消息撤回:由它写出的记忆不进第 1 块前缀(已并入的前缀快照也拿掉)、不进第 5 块,read_memory 读不到正文;无关记忆照常;条目还在并标来源已撤回", async () => {
   const reqs: RoundInput["request"][] = [];
   const reads: (string | null)[] = [];
   let readId = "";
   const host = new Host({
-    ...fresh(), maxDeferMs: 5, memoryFoldAfter: 1,
+    ...fresh(), maxDeferMs: 5, memoryFoldAfter: 2,
     mind: scripted(async (i, tools) => {
       if (lastMsg(i)?.text === "读") reads.push(await tools!.readMemory(readId));
       return memoryScript(i, tools);
@@ -126,10 +170,11 @@ test("来源消息撤回:由它写出的记忆不进第 1 块前缀、不进第 
   };
   await say("0", "你好");
   const sGlobal = await say("1", "以后所有回复都先给结论");
+  await say("1b", "以后所有代码都要先写测试");
   const sWeekly = await say("2", "记:周报每周五发给小王");
   await say("3", "记:部署前先跑测试");
   await say("4", "在吗");
-  assert.match(b(reqs.at(-1)!, 1), /以后所有回复都先给结论/, "全局条目已并入前缀");
+  assert.match(b(reqs.at(-1)!, 1), /以后所有回复都先给结论[\s\S]*以后所有代码都要先写测试/, "两条全局条目已并入前缀");
   assert.match(b(reqs.at(-1)!, 5), /周报每周五发给小王/);
   const ids = Object.fromEntries(host.listMemories(c.id).map((e) => [e.body, e.id]));
   readId = ids.周报每周五发给小王!;
@@ -139,18 +184,20 @@ test("来源消息撤回:由它写出的记忆不进第 1 块前缀、不进第 
   await settle(host);
   await say("5", "继续");
   const last = reqs.at(-1)!;
-  assert.doesNotMatch(b(last, 1), /以后所有回复都先给结论/, "来源撤回的全局条目从前缀里拿掉");
+  assert.doesNotMatch(b(last, 1), /以后所有回复都先给结论/, "来源撤回的全局条目从前缀快照里拿掉(只差 1 条、没到折叠阈值也拿掉)");
+  assert.match(b(last, 1), /以后所有代码都要先写测试/, "没撤回的全局条目留在前缀");
   assert.doesNotMatch(all(last), /周报每周五/, "来源撤回的条目正文和标题都不进上下文");
   assert.doesNotMatch(all(last), /以后所有回复都先给结论/);
   assert.match(b(last, 5), /部署前先跑测试/, "与撤回消息无关的记忆照常读回");
   await say("6", "读");
   assert.deepEqual(reads, [null], "read_memory 按 id 也读不到来源撤回的条目");
 
-  assert.equal(host.listMemories(c.id).length, 3, "条目本身保留");
+  assert.equal(host.listMemories(c.id).length, 4, "条目本身保留");
   const list = await value<{ memories: MemoryView[] }>(svc.handle("memory.list", { contactId: c.id }));
   const state = Object.fromEntries(list.memories.map((v) => [v.body, [v.state, v.effective]]));
   assert.deepEqual(state, {
     以后所有回复都先给结论: ["source-retracted", false],
+    以后所有代码都要先写测试: ["active", true],
     周报每周五发给小王: ["source-retracted", false],
     部署前先跑测试: ["active", true],
   });
