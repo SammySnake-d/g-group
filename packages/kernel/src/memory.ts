@@ -8,6 +8,7 @@
 //   前缀:prefixMemories 只收生效的全局条目(每轮都适用的才进前缀,不设 token 上限)。
 //   反馈:recordMemoryUse 记 uses;连续 DEGRADE_AFTER 次结果不好降级(不删除),降级后一次好结果恢复。
 import { INVISIBLE_SOURCE } from "./assemble.ts";
+import { searchHistory } from "./history-search.ts";
 
 // 去掉空白与零宽字符后比对(与 assemble.ts 撤回比对同一套字符)。复述判定、去重都对两边同样处理,
 // 不写返回类型标注:G-STUB 的返回值变异对两边同时生效时改不了行为(等价变异),这里不让它把对称用法误报成「没测计算结果」
@@ -147,9 +148,30 @@ export function planMemoryWrite(entries: readonly MemoryEntry[], w: MemoryWrite,
 
 const inWindow = (e: MemoryEntry, now: string) => (e.validFrom === null || e.validFrom <= now) && (e.validTo === null || e.validTo > now);
 
-/** 全文分量(T-177 G3-a)。红提交空壳:签名在,一律返回 0。 */
-export function memoryTextRanks(entries: readonly MemoryEntry[], _text: string): Map<string, number> {
-  return new Map(entries.map((e) => [e.id, 0]));
+/** 旧全文分量(字面重合个数)所在整数区间的上界:本轮文字里不同的相邻二字与英文词的个数。只用来给名次封顶,不再拿它打分 */
+function literalUnits(text: string) {
+  const grams = new Set<string>();
+  const chars = [...squash(text).toLowerCase()];
+  for (let i = 0; i + 1 < chars.length; i++) grams.add(chars[i]! + chars[i + 1]!);
+  for (const w of text.toLowerCase().match(/[a-z0-9_]{3,}/g) ?? []) grams.add(w);
+  return grams.size;
+}
+
+/**
+ * 全文分量(T-177 G3-a):检索接缝只给名次,不直接用它的小数分。命中的条目按检索分数从高到低分档(同分同档),
+ * 第 k 档(0 起)记 max(1, min(上界, 档数) − k),未命中记 0。上界是旧分量「字面重合个数」能取到的最大值(literalUnits),
+ * 所以新分量仍是 0 起、步长 1、落在旧整数区间里的整数,锚点 ×10、好评/差评 ±1、降级 −5 的相对权重和断崖量纲不变。
+ * 只在传入的条目里检索(调用方先做硬筛),空文字、没有条目时全为 0。
+ */
+export function memoryTextRanks(entries: readonly MemoryEntry[], text: string): Map<string, number> {
+  const out = new Map(entries.map((e) => [e.id, 0]));
+  const cap = literalUnits(text);
+  if (cap === 0 || entries.length === 0) return out;
+  const hits = searchHistory(entries.map((e) => ({ ref: e.id, role: "user" as const, text: `${e.title}\n${e.body}` })), text, entries.length);
+  const levels = [...new Set(hits.map((h) => h.score))];
+  const top = Math.min(cap, levels.length);
+  for (const h of hits) out.set(h.ref, Math.max(1, top - levels.indexOf(h.score)));
+  return out;
 }
 
 function score(e: MemoryEntry, anchors: readonly string[], ranks: ReadonlyMap<string, number>) {
