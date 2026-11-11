@@ -78,6 +78,11 @@ test("闭环:只经界面建联系人、私聊派活、建群拉人后群里派�
       const line = win.getByTestId("chat-column").locator('[data-testid^="compute-line-"]').filter({ hasText: "写 hello.txt" });
       await expect(line).toHaveCount(1, LONG);
       await expect(line).toHaveAttribute("data-state", "done", LONG);
+      // 照设计:Compute 是联系人派出去的执行者——挂在联系人「接了任务」那句下面;这一行只写标题、谁在干(harness)、阶段,
+      // 不搬 Compute 自己的原话(它不在聊天里说话,原话在点开后的过程里)
+      await expect(rows(win).filter({ hasText: "接了任务:写 hello.txt" }).and(win.locator('[data-msg]:not([data-from="me"])'))).toHaveCount(1);
+      await expect(line).toContainText("做完了");
+      await expect(line).not.toContainText("完成:写");
       await expect(rows(win).filter({ hasText: "进度:已写好 hello.txt" })).toHaveCount(1, LONG);
       await expect(rows(win).filter({ hasText: "做完了:完成:写 hello.txt" })).toHaveCount(1, LONG);
       // 自己发的那条:乐观显示的和事件推来的是同一条,不重复
