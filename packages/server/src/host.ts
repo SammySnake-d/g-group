@@ -132,6 +132,7 @@ import {
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
+import { ForwardLinkStore } from "./forward-link.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
 import { MemoryStore } from "./memory-store.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
@@ -373,6 +374,8 @@ export class Host {
   readonly plugins: PluginStore;
   readonly announcements: AnnouncementStore;
   private readonly exits: MemberExits;
+  /** 转发副本与会话关联(U25/U24):副本快照与来源、关联与上界 */
+  private readonly links: ForwardLinkStore;
   /** 共享文档单一提交点(AC-21):所有写入只经它 */
   readonly docs: SharedDocs;
   readonly worktrees: Worktrees | null;
@@ -437,6 +440,7 @@ export class Host {
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
     this.exits = new MemberExits({ db: this.db, now: this.now });
+    this.links = new ForwardLinkStore(this.db);
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
     this.memory = new MemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d));
@@ -4699,6 +4703,20 @@ export class Host {
     this.emitTask(input.toTaskId);
     void this.runEffects(effects);
     return { from: this.taskView(this.taskDoc(input.fromTaskId).value), to: this.taskView(this.taskDoc(input.toTaskId).value) };
+  }
+
+  // ======================= 转发与关联(U25/U24,forward-link.ts) =======================
+  /** 转发选中的消息(空壳) */
+  forwardMessages(input: { fromRoomId: string; seqs: number[]; toRoomId: string; note?: string; clientActionId: string }): MessageView {
+    return { roomId: input.toRoomId, seq: 1, threadRootSeq: null, sender: { kind: "user", id: this.userId }, text: "", mentions: [], replyToSeq: null, quotedSeqs: [], quotes: [], attachments: [], card: null, command: null, reactions: [], edited: false, retracted: false, clientActionId: input.clientActionId, at: this.now() };
+  }
+  /** 关联(空壳) */
+  linkRooms(input: { roomId: string; linkedRoomId: string; clientActionId: string }): RoomView {
+    return this.roomView(input.roomId);
+  }
+  /** 解除关联(空壳) */
+  unlinkRooms(input: { roomId: string; linkedRoomId: string; clientActionId: string }): RoomView {
+    return this.roomView(input.roomId);
   }
 
   // ======================= 生命周期 =======================
