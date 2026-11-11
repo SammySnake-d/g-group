@@ -18,7 +18,7 @@ const cases=[
  ['G1-02V',K,'visible.revision !== src.revision || ','',kt,'G1-02V '],
  ['G1-02S',K,'src.senderKind === "user" && LONG_TERM.test(candidate.evidence)','src.senderKind === "user"',kt,'G1-02S '],
  ['G1-02A',K,'if (candidate.anchors.some(a => a.startsWith("user:") && a !== `user:${src.senderId}`))','if (false)',kt,'G1-02A '],
- ['G1-02C',K,'!directPassage(src.text, candidate.evidence)','false',kt,'G1-02C '],
+ ['G1-02C',K,'!directLines(src.text).some(line => line.includes(candidate.evidence!) && statedIn(line, candidate.evidence!))','false',kt,'G1-02C '],
  ['G1-03D',K,'if (r.note !== null && !str(r.note))','if (false)',kt,'G1-03D '],
  ['G1-01B',C,'const refs = [...sources].sort((a,b) => a.roomId.localeCompare(b.roomId) || a.seq-b.seq || a.revision-b.revision);','const refs = [...sources];',ct,'G1-01B '],
  ['G1-01R',C,'now+decision.delayMs','now',ct,'G1-01R '],
