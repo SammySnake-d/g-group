@@ -52,6 +52,8 @@ async function menu(win: Page, row: ReturnType<typeof rows>, item: string, shotN
   if (shotName) await shot(win, shotName, 250);
   if (item.startsWith("ctx-")) await m.getByTestId(item).click();
   else await m.getByText(item, { exact: true }).click();
+  // 菜单收起的动画走完再往下,下一次右键不会同时有两个菜单
+  await expect(win.getByTestId("ctx-menu")).toHaveCount(0);
 }
 
 test("私聊里就近操作消息:表情、编辑、撤回、删除都由后端落实;重启后回执、草稿、表情、编辑、撤回、删除都还在;正在回复卡只写真实活动", async () => {
@@ -283,6 +285,29 @@ test("私聊回到某条:确认框写明真实要撤下几条;之后的撤下、
     await expect(run.win.getByTestId("chat-column").getByTestId("attachment-需求补充.md")).toBeVisible(LONG);
     await expect(run.win.getByTestId("rewind-line")).toContainText("你把聊天退回到「第一句」");
     await expect(mine(run.win, "第二句")).toHaveCount(0);
+    expect(run.errors, "页面不该抛错").toEqual([]);
+  } finally {
+    await run.app.close();
+    rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test("联系人连着几句都回你同一条:引用只在第一句上画一次,后面几句并在同一个头像下", async () => {
+  test.setTimeout(180_000);
+  const dataDir = mkdtempSync(path.join(tmpdir(), "gg-pchat-"));
+  const run = await launch(dataDir, 0);
+  try {
+    const { win } = run;
+    await addContact(win, "小克");
+    await send(win, "帮我写 hello.txt");
+    await expect(rows(win).filter({ hasText: "做完了:完成:写 hello.txt" })).toHaveCount(1, LONG);
+    await expect(theirs(win, "好的,我安排 Compute 去写 hello.txt")).toHaveCount(1);
+    // 它连着说的几句都是回「帮我写 hello.txt」:引用块只画一次,不一句一遍
+    const quoted = win.getByTestId("chat-column").locator('[data-msg][data-from]:not([data-from="me"])').filter({ has: win.getByTestId("sent-quotes").filter({ hasText: "帮我写 hello.txt" }) });
+    await expect(quoted).toHaveCount(1);
+    // 第二句紧跟在第一句后面,并在同一个头像下(不另起一组)
+    await expect(theirs(win, "好的,我安排 Compute 去写 hello.txt")).toHaveAttribute("data-first", "0");
+    await shot(win, "dm-quote-once");
     expect(run.errors, "页面不该抛错").toEqual([]);
   } finally {
     await run.app.close();
