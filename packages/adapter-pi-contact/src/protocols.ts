@@ -41,14 +41,18 @@ export const PROTOCOLS: Readonly<Record<PiProtocol, ProtocolSpec>> = Object.free
 });
 
 /** 选项里的 api:只认四个值;不给就是 anthropic-messages(模型目录里查不到时的默认)。 */
-export function protocolFor(given: unknown, _bad: (why: string) => never): PiProtocol {
+export function protocolFor(given: unknown, bad: (why: string) => never): PiProtocol {
   if (given === undefined) return "anthropic-messages";
-  return _bad(`api ${String(given)} 还没接`);
+  if (typeof given !== "string" || !(PI_PROTOCOLS as readonly string[]).includes(given)) bad(`api 只能是 ${PI_PROTOCOLS.join(" / ")}`);
+  return given as PiProtocol;
 }
 
 /** 密钥头:按协议收窄到该协议认的那几个;不给就用该协议的默认。 */
-export function authHeaderFor(_protocol: PiProtocol, given: unknown, _bad: (why: string) => never): PiAuthHeader {
-  return given === "bearer" ? "bearer" : "x-api-key";
+export function authHeaderFor(protocol: PiProtocol, given: unknown, bad: (why: string) => never): PiAuthHeader {
+  const spec = PROTOCOLS[protocol];
+  const value = given === undefined ? spec.defaultAuthHeader : given;
+  if (typeof value !== "string" || !(spec.authHeaders as readonly string[]).includes(value)) bad(`authHeader 在 ${protocol} 下只能是 ${spec.authHeaders.join(" / ")}`);
+  return value as PiAuthHeader;
 }
 
 /**
@@ -56,8 +60,8 @@ export function authHeaderFor(_protocol: PiProtocol, given: unknown, _bad: (why:
  * 所以这两种(以及 anthropic 的 x-api-key)只给 apiKey;只有 anthropic 要 Bearer 时才改成显式头
  * (Anthropic 的 SDK 把 apiKey 发成 x-api-key,发不成 Bearer)。
  */
-export function keyOptions(_protocol: PiProtocol, authHeader: PiAuthHeader, apiKey: string): { readonly apiKey?: string; readonly headers?: Record<string, string> } {
-  if (authHeader === "bearer") return { headers: { authorization: `Bearer ${apiKey}` } };
+export function keyOptions(protocol: PiProtocol, authHeader: PiAuthHeader, apiKey: string): { readonly apiKey?: string; readonly headers?: Record<string, string> } {
+  if (authHeader === "bearer" && protocol === "anthropic-messages") return { headers: { authorization: `Bearer ${apiKey}` } };
   return { apiKey };
 }
 
@@ -65,8 +69,16 @@ export function keyOptions(_protocol: PiProtocol, authHeader: PiAuthHeader, apiK
  * 各协议的端点根地址。anthropic 与 google 原样用(适配器自己接 /v1/messages、/models/<id>:streamGenerateContent);
  * openai 兼容口按惯例挂在 /v1 下,没带路径就补上,已带路径(如 .../v1)原样用,不重复加。
  */
-export function baseUrlForApi(_protocol: PiProtocol, baseUrl: string): string {
-  return baseUrl;
+export function baseUrlForApi(protocol: PiProtocol, baseUrl: string): string {
+  if (protocol === "anthropic-messages" || protocol === "google-generative-ai") return baseUrl;
+  let url: URL;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    return baseUrl;
+  }
+  if (url.pathname !== "" && url.pathname !== "/") return baseUrl;
+  return new URL("/v1", url).toString();
 }
 
 /**
@@ -74,6 +86,10 @@ export function baseUrlForApi(_protocol: PiProtocol, baseUrl: string): string {
  * openai/gpt/o1–o4 → openai-chat),认不出的用 anthropic-messages 默认(不静默换模型,只挑协议)。
  * openai-responses 与 openai-chat 同名同厂商,前缀分不出来,只能用显式 api 选。
  */
-export function apiForModel(_model: string): PiProtocol {
+export function apiForModel(model: string): PiProtocol {
+  const id = model.trim().toLowerCase();
+  const head = id.split("/")[0] ?? "";
+  if (head === "google" || head === "gemini" || head.startsWith("gemini-")) return "google-generative-ai";
+  if (head === "openai" || head === "gpt" || head.startsWith("gpt-") || /^o[1-9]($|-)/.test(id)) return "openai-chat";
   return "anthropic-messages";
 }
