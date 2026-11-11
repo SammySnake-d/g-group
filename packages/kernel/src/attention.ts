@@ -207,7 +207,7 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
       for (const s of slots.values()) s.running = null;
       settleWaiters();
     },
-    rounds(contactId) {
+    rounds(contactId): number {
       return slots.get(contactId)?.count ?? 0;
     },
   };
