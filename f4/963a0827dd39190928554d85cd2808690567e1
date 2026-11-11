@@ -1,0 +1,23 @@
+docs/spec/需求文档.md
+  s_07c6c5923e562c::t_1b64ff824ced1a 3,10,85,140-164,889,899,2587-2588,2590,2746,2971-2972,4755-4777
+docs/开发手册.md
+  s_07c6c5923e562c::t_65883529f2275b 12
+docs/概念卡.md
+  s_07c6c5923e562c::t_c01ee6ff660fad 7-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f4963a0827dd39190928554d85cd2808690567e1",
+  "prompts": {},
+  "sessions": {
+    "s_07c6c5923e562c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a568bd5fa5a0b725f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
