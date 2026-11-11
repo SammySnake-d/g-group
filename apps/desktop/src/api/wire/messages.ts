@@ -1,6 +1,8 @@
 // 消息接线:每个会话 messages.list 读最近一页 → 会话的消息;message.appended / message.updated 增量写回。
 // 写:发送(messages.send,带 clientActionId)。先乐观显示一条,回包或事件到了按 clientActionId 换成后端那条,不重复。
-// 消息 id = 会话 id#seq:全局唯一、重读也不变。任务卡(task-status)在聊天里画成 Compute 那一行,其余卡片按正文显示。
+// 消息 id = 会话 id#seq:全局唯一、重读也不变。任务卡(task-status)照设计画成两样:联系人说的那句(派活记录的正文)
+// 和挂在它下面的 Compute 那一行(id 后缀 ~c)——Compute 是联系人派出去的执行者,不在聊天里说话,这一行只写标题、阶段、耗时。
+// 其余卡片按正文显示。
 import type { MessageView } from '@g-group/api-contract'
 import { people, type Msg, type PersonId, type QuoteRef } from '@/data'
 import { actionId, clockOf, defineWiring, read, selfId, type WireCtx } from './types'
@@ -8,7 +10,7 @@ import { actionId, clockOf, defineWiring, read, selfId, type WireCtx } from './t
 export const msgId = (roomId: string, seq: number) => `${roomId}#${seq}`
 /** 后端消息的序号;本地乐观条目、演示消息没有 */
 export const seqOf = (id: string): number | null => {
-  const m = /#(\d+)$/.exec(id)
+  const m = /#(\d+)(?:~c)?$/.exec(id)
   return m ? Number(m[1]) : null
 }
 /** 乐观显示的那条(还没回包)的 id */
@@ -21,14 +23,19 @@ export function senderOf(s: MessageView['sender'], userId: string): PersonId | n
   return s.kind === 'user' && s.id === userId ? 'me' : s.id
 }
 
-/** 合同的消息 → 界面的消息。whoSaid 按序号查被引用那条是谁说的(查不到就不画这条引用,不编作者) */
-export function toMsg(v: MessageView, userId: string, whoSaid: (seq: number) => PersonId | undefined = () => undefined): Msg {
+/** 合同的消息 → 界面的消息(任务卡是两条:联系人那句 + 它派出的 Compute 那一行)。whoSaid 按序号查被引用那条是谁说的(查不到就不画这条引用,不编作者) */
+export function toMsgs(v: MessageView, userId: string, whoSaid: (seq: number) => PersonId | undefined = () => undefined): Msg[] {
+  const m = toMsg(v, userId, whoSaid)
+  if (v.card?.kind !== 'task-status' || !v.card.taskId || m.k !== 'text') return [m]
+  return [m, { k: 'compute', id: `${m.id}~c`, from: m.from, computeId: v.card.taskId }]
+}
+
+function toMsg(v: MessageView, userId: string, whoSaid: (seq: number) => PersonId | undefined): Msg {
   const id = msgId(v.roomId, v.seq)
   const from = senderOf(v.sender, userId)
   const body = v.text || v.card?.title || ''
   if (!from) return { k: 'sys', id, text: body }
   if (v.retracted) return { k: 'sys', id, text: from === 'me' ? '你撤回了一条消息' : `${people[from]?.name ?? ''} 撤回了一条消息` }
-  if (v.card?.kind === 'task-status' && v.card.taskId) return { k: 'compute', id, from, computeId: v.card.taskId }
   const quotes: QuoteRef[] = v.quotes.flatMap((q) => {
     const who = q.state === 'ok' ? whoSaid(q.seq) : undefined
     return who ? [{ msgId: msgId(v.roomId, q.seq), from: who, text: q.excerpt, ...(q.seq === v.replyToSeq ? { reply: true } : {}) }] : []
@@ -49,7 +56,8 @@ export function mergeMsgs(cur: Msg[], incoming: Msg[], settled: readonly string[
     else remote.set(idOf(m), m)
   }
   for (const m of incoming) remote.set(idOf(m), m)
-  const sorted = [...remote.values()].sort((a, b) => (seqOf(idOf(a)) ?? 0) - (seqOf(idOf(b)) ?? 0))
+  /* 同一序号的两条(联系人那句与它下面的 Compute 行):那句在前 */
+  const sorted = [...remote.values()].sort((a, b) => (seqOf(idOf(a)) ?? 0) - (seqOf(idOf(b)) ?? 0) || Number(idOf(a).endsWith('~c')) - Number(idOf(b).endsWith('~c')))
   return [...sorted, ...local]
 }
 
@@ -67,7 +75,7 @@ export function putMessages(w: WireCtx, roomId: string, views: readonly MessageV
     const f = senderOf(v.sender, me)
     if (f) said.set(v.seq, f)
   }
-  const mapped = views.map((v) => toMsg(v, me, (s) => said.get(s)))
+  const mapped = views.flatMap((v) => toMsgs(v, me, (s) => said.get(s)))
   const settled = views.flatMap((v) => (v.clientActionId ? [localId(v.clientActionId)] : []))
   w.get().setConvs((cs) => cs.map((c) => (c.id === roomId ? { ...c, messages: mergeMsgs(c.messages, mapped, settled) } : c)))
 }

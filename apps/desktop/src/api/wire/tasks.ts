@@ -27,18 +27,20 @@ export function mergeActs(cur: readonly Activity[], add: readonly Activity[]): A
   return [...all.values()].sort((a, b) => a.id.localeCompare(b.id))
 }
 
-function phaseOf(t: TaskView, last: ComputeProgress | undefined): string {
+/** Compute 那一行的阶段:宿主的任务状态说了算,不搬 Compute 自己的原话(它不在聊天里说话,原话在点开后的过程里)。
+ *  h = 执行它的 harness(Claude Code / Codex),写在阶段前面,一眼看出活是 Compute 在干 */
+function phaseOf(t: TaskView, last: ComputeProgress | undefined, h: string): string {
   switch (t.state) {
     case 'T1_Open': case 'T2_Claimed': return t.waitingFor ?? '等着开工'
-    case 'T3_Running': return t.waitingFor ?? (last ? lineOf(last) : '在做')
-    case 'T4b_BlockedOnHuman': return t.pendingQuestion?.text ?? '等你回答'
-    case 'T5_InReview': return t.reviews?.some((r) => r.status === 'running') ? '在复核' : '做完了，等你确认'
-    case 'T7_Delivering': return '在交付'
-    case 'T8a_Delivered': return '交付了，等你确认'
-    case 'T8_Accepted': return '你已验收'
+    case 'T3_Running': return t.waitingFor ?? `${h} ${last?.kind === 'milestone' && last.stage ? last.stage : '在做'}`
+    case 'T4b_BlockedOnHuman': return t.pendingQuestion?.text ?? `${h} 卡住了，等你回答`
+    case 'T5_InReview': return t.reviews?.some((r) => r.status === 'running') ? `${h} 做完了，在复核` : `${h} 做完了，等你确认`
+    case 'T7_Delivering': return `${h} 做完了，在交付`
+    case 'T8a_Delivered': return `${h} 做完了，等你确认`
+    case 'T8_Accepted': return `${h} 做完了，你已验收`
     case 'T9_StopRequested': return t.waitingFor ?? '正在停止'
     case 'T10_Cancelled': return '已取消'
-    case 'T11_Failed': return last?.kind === 'failed' ? last.summary : '没做成'
+    case 'T11_Failed': return `${h} 没做成`
   }
 }
 
@@ -54,15 +56,18 @@ export function toCompute(t: TaskView, prev?: Compute): Compute | null {
   const failed = [...progress].reverse().find((p) => p.kind === 'failed')
   const status = STATUS[t.state]
   const ended = first && last?.endedAt ? Date.parse(last.endedAt) - Date.parse(first.startedAt) : NaN
+  const harness = last ? (HARNESS[last.harness] ?? last.harness) : '—'
+  const elapsed = Number.isFinite(ended) && ended >= 0 ? formatDuration(ended) : '—'
+  const phase = phaseOf(t, latest, harness === '—' ? 'Compute' : harness)
   return {
     id: t.id, title: t.title, owner: t.ownerContactId, conv: t.roomId, askMsg: msgId(t.roomId, t.sourceSeq),
-    status, phase: phaseOf(t, latest),
-    elapsed: Number.isFinite(ended) && ended >= 0 ? formatDuration(ended) : '—',
+    status, phase, elapsed,
     cost: '—',
     model: last?.model ?? t.modelSnapshot?.model ?? '—',
-    harness: last ? (HARNESS[last.harness] ?? last.harness) : '—',
+    harness,
     steps: [], activity: mergeActs(prev?.activity ?? [], progress.map(actOf)), files: [], checks: [], checkpoints: [],
-    ...(status === 'done' && done ? { result: done.summary } : {}),
+    /* 做完了:那一行写「Claude Code 做完了，等你确认 · 18 秒」,Compute 的原话(done.summary)只在过程里 */
+    ...(status === 'done' && done ? { result: elapsed === '—' ? phase : `${phase} · ${elapsed}` } : {}),
     ...(status === 'error' && failed ? { error: failed.summary } : {}),
     ...(t.state === 'T9_StopRequested' ? { stopping: true } : {}),
   }
@@ -93,7 +98,7 @@ export const tasksWiring = defineWiring({
     'compute.progress': (ev, w) => {
       const c = w.get().computes[ev.progress.taskId]
       if (!c) return
-      w.get().putCompute({ ...c, activity: mergeActs(c.activity, [actOf(ev.progress)]), ...(c.status === 'running' ? { phase: lineOf(ev.progress) } : {}) })
+      w.get().putCompute({ ...c, activity: mergeActs(c.activity, [actOf(ev.progress)]), ...(c.status === 'running' && ev.progress.kind === 'milestone' && ev.progress.stage ? { phase: `${c.harness === '—' ? 'Compute' : c.harness} ${ev.progress.stage}` } : {}) })
     },
   },
 })
