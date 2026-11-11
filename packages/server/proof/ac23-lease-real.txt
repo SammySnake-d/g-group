@@ -1,0 +1,27 @@
+# AC-23 真实运行:停止确认后才归还槽位,排队的任务在那之后才开工(2026-11-09,本机)
+# 命令:node packages/server/proof/ac23-real-run.ts /tmp/gg-c-real-lease
+# 真实 Claude Code CLI 2.1.319 + 本仓库适配器;联系人脑子是规则替身 scriptedMind;个人 Compute 槽位 1
+# 2026-11-08T20:12:32.636Z 真实 Claude Code Compute(anyrouter/claude-opus-5-5),个人槽位 1;慢进程命令行标记 gg-ac23-slow-20630
++240.5s 超时:慢进程起来
++240.5s 任务一 t-mw89r1q2-1 [T3_Running],慢进程 pid ,租约 "personal:c-mw89r1mh-0"
++241.0s 任务二 t-mw89w77n-5 [T2_Claimed] waitingFor="个人算力正被 dm-c-mw89r1mh-0 里的任务占用;排队等,或转交别人"
++241.1s 取消任务一:状态 T9_StopRequested,租约 stopping=true,任务二 Compute 次数 0
++241.6s 任务一 [T10_Cancelled],慢进程还在的:[],任务一租约 null
++435.2s 任务二 [T5_InReview] 进度=started>milestone>completed hello.txt="hi"
+#1 我: 帮我用 Bash 工具执行这一条命令并等它结束:setsid sh -c 'exec -a gg-ac23-slow-20630 sleep 600' & sleep 600
+#2 小克: 接了任务:用 Bash 工具执行这一条命令并等它结束:setsid sh -c 'exec  [卡片:task-status]
+#3 小克: 好的,我安排 Compute 去用 Bash 工具执行这一条命令并等它结束:setsid sh -c 'exec -a gg-ac23-slow-20630 sleep 600' & sleep 600,有进度告诉你。
+#4 我: 帮我在当前目录写一个 hello.txt,内容是 hi
+#5 小克: 接了任务:在当前目录写一个 hello.txt,内容是 hi  [卡片:task-status]
+#6 小克: 好的,我安排 Compute 去在当前目录写一个 hello.txt,内容是 hi,有进度告诉你。
+#7 我: 取消任务
+#8 小克: 收到:取消任务
+#9 小克: 进度:已创建 hello.txt,经校验内容正好是 2 个字节的 "hi"
+#10 小克: 做完了:I created `hello.txt` in the current directory (`/private/tmp/gg-c-real-lease/work/t-mw89w77n-5`) with the content `hi`, and checked the file afterwards to   [卡片:delivery]
+# 说明(如实):
+# - 这一次网关首个请求就用了约 240 秒,任务一的 Compute 在取消前还没来得及调用 Bash,所以慢进程没起来(「慢进程 pid」为空)。
+#   本次真实运行证明的是:任务二在任务一取消前一直排队(waitingFor 写明原因,Compute 次数 0);取消后任务一先停在 T9、租约标「停止中」,
+#   停止确认(CLI 主进程与它的子进程都退出)之后才落 T10、交出槽位;任务二随后开工并完成交付。
+# - 「脱组且忽略 SIGTERM 的子进程也被找出来关掉」由适配器测试 packages/adapter-cc-compute/src/quiesce.test.ts 用真实子进程验证;
+#   上一次运行(慢进程起来了,但当时脚本按命令行包含匹配,把 CLI 自己也算了进去)里 setsid 慢进程在任务一 T10 时已不在,未作为证据。
+# - 运行结束后 pgrep 查标记进程:无残留。

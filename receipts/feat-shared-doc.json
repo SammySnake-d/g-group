@@ -1,0 +1,22 @@
+{
+  "slice": "共享文档单一提交点:宿主 SharedDocs 是共享文档唯一写入入口,提交带 (docId, baseVersion, content, requestId),SQLite 一个写事务里做版本 CAS + 正文 + 版本链 + 幂等键;版本变了回 conflict(detail.currentVer)不写入,同一 requestId 重试返回当初生效版本,.md 为派生镜像,读取与宿主启动时按权威版本修复;合同新增 docs.list/get/create/commit/history 与 doc.updated 事件",
+  "acceptance": [
+    {
+      "id": "AC-21",
+      "status": "通过",
+      "evidence": "packages/server/proof/shared-docs-tests.txt"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "a9690c8"
+  },
+  "unverifiable": "由 D 组会话(claude:616edc61-14d8-4e9e-9519-ec8c2abc9af7)的子代理编写。AC-21 的绿可能被骗过的地方:① 两个进程真正同时提交时的写锁等待只由 adapter-sqlite 的 store.test.ts「两个独立进程基于同一版本同时提交…」覆盖,本片只测了两个宿主实例按序提交(同文件两个连接);② .md 镜像只在读取和宿主启动时按权威修复,运行中被外部改写不会立即发现,V-04(执行器写盘中途杀进程)未测;③ 变异 17 个全部被 shared-docs.test.ts 具名测试发现(box3 云端在 fe5518d 基线上重跑,见文件头)(packages/server/proof/shared-docs-mutations.txt),但只覆盖本文件,不覆盖 adapter-sqlite 的 CAS 原语本身(那部分见 packages/adapter-sqlite/proof/mutations.txt)。联系人/Compute 侧还没有写共享文档的工具,目前写入方只有用户经 docs.* 与宿主内部调用。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

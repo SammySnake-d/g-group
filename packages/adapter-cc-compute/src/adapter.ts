@@ -12,7 +12,7 @@
 // 落败的 resume 立即被明确拒绝;等冻结的上一轮退出之后重新核对这一轮有没有被 stop,stop 确认之后不再起新的 CLI。
 // CLI 输出(R7-02):stdout 的每一行在受控边界里处理,任何解码/映射异常都只让当前 Compute 记违规、回收并 failed,
 // 不逸出 readline 回调、不终止适配器宿主;错误说明对外部 JSON 的对象/数组字段只给固定说明,不做隐式字符串转换。
-import { type ChildProcess, spawn as spawnChild } from "node:child_process";
+import { type ChildProcess, execFileSync, spawn as spawnChild } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -20,11 +20,11 @@ import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { checkBrief, checkSnapshot } from "./brief.ts";
-import { allowedTools, cliArgs, cliEnv, firstPrompt, toolOverreach } from "./cli.ts";
-import { type AcceptedReport, preInitFrame, streamParser, type Terminal, terminalFor } from "./events.ts";
+import { HOST_MCP, MCP_SERVER_NAME, allowedTools, cliArgs, cliEnv, firstPrompt, skillCatalog, skillsSection, toolOverreach } from "./cli.ts";
+import { type AcceptedReport, activityOf, initLoaded, preInitFrame, streamParser, type Terminal, terminalFor } from "./events.ts";
 import { freezeDeep, isPlainRecord, plainData } from "./plain.ts";
-import { IS_WINDOWS, signalGroup } from "./procgroup.ts";
-import type { AdapterOptions, Brief, ClaudeRunner, ComputeAdapter, ComputeEvent, HandoffSnapshot, Manifest, Refusal, RejectedReport } from "./types.ts";
+import { IS_WINDOWS, type ProcRow, processTable, signalGroup, stillAlive, treeByPgrep, treeOf } from "./procgroup.ts";
+import type { AdapterOptions, Brief, ClaudeRunner, ComputeActivity, ComputeAdapter, ComputeEvent, HandoffSnapshot, Manifest, McpServerSpec, QuiesceResult, Refusal, RejectedReport } from "./types.ts";
 
 export const REPORT_MCP_PATH = fileURLToPath(new URL("../mcp/report-mcp.mjs", import.meta.url));
 export const DEFAULT_RUNNER: ClaudeRunner = Object.freeze({ command: "claude", args: Object.freeze([]) });
@@ -50,7 +50,7 @@ interface Config {
   readonly server: Command;
 }
 const OPTION_KEYS: readonly string[] = Object.freeze(["runner", "hostEnv", "reapForceMs", "reportServer"]);
-const SPAWN_KEYS: readonly string[] = Object.freeze(["handoff", "cwd"]);
+const SPAWN_KEYS: readonly string[] = Object.freeze(["handoff", "cwd", "configDir", "pluginDirs", "mcpServers"]);
 const isStrArr = (x: unknown): x is readonly string[] => Array.isArray(x) && x.every((s) => typeof s === "string");
 
 /** 启动命令 {command, args?}:x 已是纯数据副本 */
@@ -81,10 +81,41 @@ function adapterConfig(options: unknown): Config {
   };
 }
 
-/** spawn 选项与 handoff:同样先判纯数据,只收 handoff/cwd。未声明的字段即使值为 undefined 也拒绝;
- *  声明过的 cwd/handoff 为 undefined 时按没给处理(R5-01) */
-function spawnOptions(opts: unknown): { readonly ok: true; readonly handoff: HandoffSnapshot | undefined; readonly cwd: string | undefined } | Refusal {
-  if (opts === undefined) return { ok: true, handoff: undefined, cwd: undefined };
+/** 勾选能力(AC-29):联系人专属配置目录、勾选 skill 的插件目录、勾选 MCP 服务器。都已是纯数据副本 */
+interface Isolation {
+  readonly configDir: string | undefined;
+  readonly pluginDirs: readonly string[];
+  readonly mcpServers: Readonly<Record<string, McpServerSpec>>;
+}
+type SpawnParsed = { readonly ok: true; readonly handoff: HandoffSnapshot | undefined; readonly cwd: string | undefined; readonly iso: Isolation };
+const NO_ISOLATION: Isolation = Object.freeze({ configDir: undefined, pluginDirs: Object.freeze([]), mcpServers: Object.freeze({}) });
+
+/** 勾选能力字段:o 已是纯数据副本。不合格返回拒收理由 */
+function isolationOf(o: Readonly<Record<string, unknown>>): Isolation | string {
+  const { configDir, pluginDirs, mcpServers } = o;
+  if (configDir !== undefined && (typeof configDir !== "string" || !path.isAbsolute(configDir))) return "spawn 选项 configDir 必须是绝对路径";
+  if (pluginDirs !== undefined && !(isStrArr(pluginDirs) && pluginDirs.every((d) => path.isAbsolute(d)))) return "spawn 选项 pluginDirs 必须是绝对路径数组";
+  const servers: Record<string, McpServerSpec> = {};
+  if (mcpServers !== undefined) {
+    if (!isPlainRecord(mcpServers)) return "spawn 选项 mcpServers 必须是 {名字: {command, args?, env?}}";
+    for (const [name, spec] of Object.entries(mcpServers)) {
+      if (name === HOST_MCP) return `spawn 选项 mcpServers 不能用 ${HOST_MCP}(留给 report_progress)`;
+      if (!MCP_SERVER_NAME.test(name)) return `spawn 选项 mcpServers 的名字 ${name} 不合规`;
+      if (!isPlainRecord(spec) || typeof spec.command !== "string" || !spec.command || Object.keys(spec).some((k) => k !== "command" && k !== "args" && k !== "env")
+        || (spec.args !== undefined && !isStrArr(spec.args))
+        || (spec.env !== undefined && !(isPlainRecord(spec.env) && Object.values(spec.env).every((v) => typeof v === "string")))) {
+        return `spawn 选项 mcpServers.${name} 必须是 {command: 非空字符串, args?: 字符串数组, env?: 字符串到字符串}`;
+      }
+      servers[name] = spec as unknown as McpServerSpec;
+    }
+  }
+  return { configDir: configDir as string | undefined, pluginDirs: (pluginDirs as readonly string[] | undefined) ?? [], mcpServers: servers };
+}
+
+/** spawn 选项与 handoff:同样先判纯数据,只收 SPAWN_KEYS。未声明的字段即使值为 undefined 也拒绝;
+ *  声明过的字段为 undefined 时按没给处理(R5-01) */
+function spawnOptions(opts: unknown): SpawnParsed | Refusal {
+  if (opts === undefined) return { ok: true, handoff: undefined, cwd: undefined, iso: NO_ISOLATION };
   const p = plainData(opts, "spawn 选项");
   if (!p.ok) return refuse(`spawn 选项必须是纯数据:${p.path} ${p.why}`);
   const o = p.value;
@@ -92,10 +123,12 @@ function spawnOptions(opts: unknown): { readonly ok: true; readonly handoff: Han
   const extra = Object.keys(o).filter((k) => !SPAWN_KEYS.includes(k));
   if (extra.length) return refuse(`spawn 选项只收 ${SPAWN_KEYS.join("/")},拒绝 ${extra.join(", ")}`);
   if (o.cwd !== undefined && (typeof o.cwd !== "string" || !o.cwd)) return refuse("spawn 选项 cwd 必须是非空字符串");
-  if (o.handoff === undefined) return { ok: true, handoff: undefined, cwd: o.cwd as string | undefined };
+  const iso = isolationOf(o);
+  if (typeof iso === "string") return refuse(iso);
+  if (o.handoff === undefined) return { ok: true, handoff: undefined, cwd: o.cwd as string | undefined, iso };
   const h = checkSnapshot(o.handoff);
   if (!h.ok) return h;
-  return { ok: true, handoff: h.snapshot, cwd: o.cwd as string | undefined };
+  return { ok: true, handoff: h.snapshot, cwd: o.cwd as string | undefined, iso };
 }
 
 interface Round {
@@ -124,12 +157,17 @@ interface Round {
   pausedBlocked: boolean;
   readonly violations: string[];
   reportedFailure: string | undefined;
+  /** 停止时按进程表记下的后代与同组成员(AC-23 停止确认要逐个确认它们退出);null 表示停止时读不到进程表 */
+  tree: readonly ProcRow[] | null;
 }
 
 interface ComputeState {
   readonly id: string;
-  readonly brief: Brief;
+  /** 续接时宿主可以换工具清单(授权放行或收紧),其余字段不变 */
+  brief: Brief;
   readonly cwd: string;
+  /** 勾选能力(AC-29),每一轮(含续接)都按它起 CLI */
+  readonly iso: Isolation;
   sessionId: string | null;
   round: Round | null;
   constraintVer: unknown;
@@ -143,6 +181,15 @@ interface ComputeState {
 }
 
 const refuse = (reason: string): Refusal => ({ ok: false, reason });
+/** init 那一行的 JSON 对象(已被 checkInit 判合格,这里只为读加载清单);解析不了给空对象 */
+const rawRecord = (line: string): Record<string, unknown> => {
+  try {
+    const v: unknown = JSON.parse(line);
+    return typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+};
 /** 事件的浅层副本,数组字段(violations)另拷一份,不和本轮内部状态共用 */
 const eventCopy = (e: ComputeEvent): ComputeEvent => {
   const out: Record<string, unknown> = { ...e };
@@ -150,6 +197,25 @@ const eventCopy = (e: ComputeEvent): ComputeEvent => {
   return out as ComputeEvent;
 };
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+/** 当前进程表(停止确认用);只读 ps,不发信号 */
+const procs = () => processTable(() => execFileSync("ps", ["-A", "-o", "pid=,ppid=,pgid=,stat="], { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }));
+/** pgrep:有匹配给 pid 列表,没有匹配(退出码 1)给 [],其它失败给 null */
+const pgrep = (args: readonly string[]): readonly number[] | null => {
+  try {
+    return execFileSync("pgrep", [...args], { encoding: "utf8" }).split("\n").filter((l) => /^\d+$/.test(l.trim())).map((l) => Number(l.trim()));
+  } catch (e) {
+    return (e as { status?: unknown }).status === 1 ? [] : null;
+  }
+};
+/** root 的后代与同组成员:先用 ps,读不到退到 pgrep;都读不到返回 null */
+const treeNow = (root: number): readonly ProcRow[] | null => {
+  const t = procs();
+  return t ? treeOf(root, t) : treeByPgrep(root, pgrep);
+};
+/** 进程还在不在(pid 被复用的可能在秒级窗口里忽略;EPERM 也算还在) */
+const pidAlive = (pid: number): boolean => {
+  try { process.kill(pid, 0); return true; } catch (e) { return (e as { code?: unknown }).code === "EPERM"; }
+};
 /** 异常的说明:只读真正 Error 的字符串 message,不对未知值做隐式字符串转换 */
 const errorText = (err: unknown): string => (err instanceof Error && typeof err.message === "string" ? err.message : "非 Error 异常");
 
@@ -174,11 +240,39 @@ function eventHub() {
   };
 }
 
+/** 活动流:只发给正在迭代的订阅者,不留历史(流式增量很多,不像语义事件那样整份保留);每个订阅者最多积压 10000 条 */
+function activityHub() {
+  const subs = new Set<{ queue: ComputeActivity[]; wake: (() => void) | null }>();
+  return {
+    push(a: ComputeActivity) {
+      for (const s of subs) {
+        if (s.queue.length < 10_000) s.queue.push(a);
+        const w = s.wake;
+        s.wake = null;
+        w?.();
+      }
+    },
+    async *iterate(): AsyncGenerator<ComputeActivity> {
+      const s: { queue: ComputeActivity[]; wake: (() => void) | null } = { queue: [], wake: null };
+      subs.add(s);
+      try {
+        for (;;) {
+          while (s.queue.length) yield s.queue.shift()!;
+          await new Promise<void>((r) => { s.wake = r; });
+        }
+      } finally {
+        subs.delete(s);
+      }
+    },
+  };
+}
+
 export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapter {
   const cfg = adapterConfig(options);
   const runner = cfg.runner;
   const server = cfg.server;
   const hub = eventHub();
+  const acts = activityHub();
   const computes = new Map<string, ComputeState>();
 
   /** 对外事件只发一份深冻结的快照(R6-02):violations 等数组是本轮记录的副本并冻结,
@@ -223,7 +317,7 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
     if (r.kind === "milestone" && r.stage !== undefined) emit(round, { computeId: st.id, kind: "milestone", stage: r.stage, summary: r.summary });
     if (r.kind === "failed") round.reportedFailure = r.summary;
     if (r.kind === "blocked" && r.needs !== undefined) {
-      emit(round, { computeId: st.id, kind: "blocked", needs: r.needs, summary: r.summary });
+      emit(round, { computeId: st.id, kind: "blocked", needs: r.needs, summary: r.summary, ...(r.attachments !== undefined ? { attachments: Object.freeze([...r.attachments]) } : {}) });
       // 受理 blocked 后机械地停在受阻:对进程组 SIGSTOP 冻结。这是**非 mirasim 对照项**:mirasim 0.0.774 没有暂停进程的做法
       // (源码里 SIGSTOP 只出现在一处注释,SIGCONT 没有出现)。之后的任何汇报与 result 都不处理,
       // 直到宿主显式 resume(校验通过后 SIGKILL 冻结的进程组,再用同一 CLI 会话号续接)或 stop(对冻结的进程组 SIGKILL)
@@ -251,11 +345,18 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
         if (round.initOk) { violate(round, "CLI 输出了第二个 init"); return; }
         if (s.type === "bad-init") { violate(round, `CLI 的 init 无法核验:${s.reason}`); return; }
         // 以 CLI 自报的实际挂载清单核对授权:超出 brief 的工具一出现就回收(F-01)
-        const over = toolOverreach(st.brief, s.tools);
+        const picked = Object.keys(st.iso.mcpServers);
+        const loaded = initLoaded(rawRecord(line));
+        const over = toolOverreach(st.brief, s.tools, picked);
         if (over.length) { violate(round, `CLI 实际挂载了 brief 未授权的工具 ${over.join(", ")}`); return; }
+        // 勾选能力(AC-29):只许 host 与勾选的 MCP 服务器出现;勾选的必须连上(勾选的项全部可用)
+        const unpicked = loaded.mcpServers.filter((x) => x.name !== HOST_MCP && !picked.includes(x.name)).map((x) => x.name || "(无名)");
+        if (unpicked.length) { violate(round, `CLI 实际挂载了未勾选的 MCP 服务器 ${unpicked.join(", ")}`); return; }
+        const down = picked.filter((n) => loaded.mcpServers.find((x) => x.name === n)?.status !== "connected");
+        if (down.length) { violate(round, `勾选的 MCP 服务器没有连上:${down.join(", ")}`); return; }
         round.initOk = true;
         st.sessionId = s.sessionId;
-        emit(round, { computeId: st.id, kind: "started", sessionId: s.sessionId, resumed });
+        emit(round, { computeId: st.id, kind: "started", sessionId: s.sessionId, resumed, loaded: { skills: [...loaded.skills], mcpServers: loaded.mcpServers.map((x) => x.name) } });
         continue;
       }
       if (s.type === "report") absorb(st, round, s.report);
@@ -276,10 +377,11 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
     const mcpConfig = path.join(dir, "mcp.json");
     let child: ChildProcess;
     try {
-      fs.writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { host: { command: server.command, args: [...(server.args ?? [])], env: {} } } }));
-      const args = [...(runner.args ?? []), ...cliArgs(st.brief, prompt, mcpConfig, resumeSession)];
+      const picked = Object.fromEntries(Object.entries(st.iso.mcpServers).map(([n, x]) => [n, { command: x.command, args: [...(x.args ?? [])], env: { ...(x.env ?? {}) } }]));
+      fs.writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { ...picked, host: { command: server.command, args: [...(server.args ?? [])], env: {} } } }));
+      const args = [...(runner.args ?? []), ...cliArgs(st.brief, prompt, mcpConfig, resumeSession, { pluginDirs: [...st.iso.pluginDirs], mcpServers: Object.keys(st.iso.mcpServers) })];
       // POSIX 上 detached:CLI 自成进程组,stop 与收尾对整组发信号;Windows 不 detached(与 mirasim 一致)
-      child = spawnChild(runner.command, args, { cwd: st.cwd, env: cliEnv(st.brief, st.id, cfg.hostEnv), stdio: ["ignore", "pipe", "pipe"], detached: !IS_WINDOWS });
+      child = spawnChild(runner.command, args, { cwd: st.cwd, env: cliEnv(st.brief, st.id, cfg.hostEnv, st.iso.configDir), stdio: ["ignore", "pipe", "pipe"], detached: !IS_WINDOWS });
     } catch (err) {
       removeDir();
       throw err;
@@ -290,7 +392,7 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
     const round: Round = {
       events: [], done: new Promise((r) => { finish = r; }), paused, markPaused: () => markPaused(),
       pid: child.pid, child, proc: child, exited: false, finished: false, terminal: null,
-      reaping: false, stopRequested: false, initOk: false, halted: false, pausedBlocked: false, violations: [], reportedFailure: undefined,
+      reaping: false, stopRequested: false, initOk: false, halted: false, pausedBlocked: false, violations: [], reportedFailure: undefined, tree: [],
     };
     st.round = round;
     const parse = streamParser();
@@ -305,6 +407,12 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
           onLine(st, round, parse, line, resumeSession !== undefined, (x) => { result = x; });
         } catch (err) {
           violate(round, `处理 CLI 输出时出错:${errorText(err)}`);
+        }
+        // 活动(卡死检测用):只在 init 核验通过、这一轮还没停下时发;解析失败不影响语义事件
+        if (round.initOk && !round.halted) {
+          try {
+            for (const a of activityOf(line)) acts.push(Object.freeze({ computeId: st.id, ...a }) as ComputeActivity);
+          } catch { /* 活动只是计时依据 */ }
         }
       });
       rl.on("close", () => r());
@@ -345,28 +453,47 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       if (!o.ok) return o;
       const handoff = o.handoff;
       const id = `cc-${crypto.randomUUID()}`;
-      const { prompt, sections } = firstPrompt(b.brief, handoff);
+      const fp = firstPrompt(b.brief, handoff);
+      // 勾选 skill(AC-29):--bare 下没有 Skill 工具,在首个提示里列出可用 skill 与 SKILL.md 路径
+      const catalog = skillCatalog(o.iso.pluginDirs);
+      const skillText = skillsSection(catalog);
+      const prompt = skillText ? `${fp.prompt}\n\n${skillText}` : fp.prompt;
+      const sections = skillText ? [...fp.sections, { name: "skills" as const, detail: { items: catalog.map((s) => ({ name: s.name, file: s.file })) } }] : fp.sections;
       const st: ComputeState = {
-        id, brief: b.brief, cwd: o.cwd ?? process.cwd(), sessionId: null, round: null,
+        id, brief: b.brief, cwd: o.cwd ?? process.cwd(), iso: o.iso, sessionId: null, round: null,
         constraintVer: handoff?.constraintVer, openQuestions: handoff?.openQuestions ?? [], doneSideEffects: [...(handoff?.doneSideEffects ?? [])],
         rejected: [], unresolved: [], resuming: false,
       };
       computes.set(id, st);
       const manifest: Manifest = Object.freeze({
-        computeId: id, sections: Object.freeze(sections), allowedTools: Object.freeze([...allowedTools(b.brief)]),
+        computeId: id, sections: Object.freeze(sections), allowedTools: Object.freeze([...allowedTools(b.brief, Object.keys(o.iso.mcpServers))]),
         credentialRefs: b.brief.credentialRefs, placement: b.brief.placement,
+        mcpServers: Object.freeze(Object.keys(o.iso.mcpServers)), pluginDirs: Object.freeze([...o.iso.pluginDirs]), configDir: o.iso.configDir ?? null,
       });
       launch(st, prompt, undefined);
       return { ok: true, computeId: id, manifest };
     },
 
-    async resume(computeId: string, text: string) {
+    async resume(computeId: string, text: string, _turn?: unknown, opts?: unknown) {
       // 状态参数也是外部输入:不是字符串就拒收,不做任何隐式转换(toString/toPrimitive 不调用)
       if (typeof computeId !== "string" || typeof text !== "string") return refuse("computeId 与续接内容必须是字符串");
       const st = computes.get(computeId);
       if (!st) return refuse(`未知的 Compute ${computeId}`);
       // 先校验输入与前置条件,任何信号和状态变更都在校验之后(R3-02)
       if (!text.trim()) return refuse("续接的内容不能为空");
+      // 换工具清单(宿主按授权放行写工具或收回):选项按纯数据合同判定,新 brief 整体过 checkBrief,不合格不起进程
+      let nextBrief: Brief | null = null;
+      if (opts !== undefined) {
+        const o = plainData(opts, "续接选项");
+        if (!o.ok || !isPlainRecord(o.value)) return refuse("续接选项必须是纯数据对象");
+        const extra = Object.keys(o.value).filter((k) => k !== "tools");
+        if (extra.length) return refuse(`续接选项只认 tools,多了 ${extra.join(", ")}`);
+        if (o.value.tools !== undefined) {
+          const b = checkBrief({ ...st.brief, tools: o.value.tools });
+          if (!b.ok) return refuse(`续接的工具清单不合格:${b.reason}`);
+          nextBrief = b.brief;
+        }
+      }
       if (!st.sessionId) return refuse("上一轮没有拿到 CLI 会话号,无法续接");
       // 同一 Compute 同一时刻只受理一个续接(R7-01):已有续接在等上一轮退出时立即拒绝,不排队、不另起 CLI
       if (st.resuming) return refuse("这个 Compute 正在续接,同一时刻只受理一个续接");
@@ -388,6 +515,7 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       }
       // 宿主显式续接即解除上一轮被拒收的受阻/放弃(RR-01)
       st.unresolved = [];
+      if (nextBrief) st.brief = nextBrief;
       launch(st, text, st.sessionId);
       return { ok: true };
     },
@@ -400,6 +528,8 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       if (round.finished && round.terminal !== "paused-blocked") return refuse(`Compute ${computeId} 没有在运行的进程`);
       const frozen = round.terminal === "paused-blocked" && !round.exited;
       round.stopRequested = true;
+      // 停止确认要用(AC-23):发信号之前记下主进程的后代与同组成员,主进程退出后它们会被过继,事后按父子链就找不到了
+      if (!IS_WINDOWS && round.pid !== undefined && !round.exited) round.tree = treeNow(round.pid);
       // 封存这一轮(R3-01):stopped 之后的任何 stdout/tool_result 都不再产事件、改状态或发信号
       round.halted = true;
       // 冻结的进程组收不到 SIGTERM:直接对组 SIGKILL(非 mirasim 对照项);否则走 mirasim 的 z2:SIGTERM 主进程,到期组 SIGKILL
@@ -413,11 +543,47 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
 
     events: () => hub.iterate(),
 
+    activity: () => acts.iterate(),
+
     async settled(computeId: string) {
       if (typeof computeId !== "string") return [];
       const round = computes.get(computeId)?.round;
       // 主进程退出,或停在受阻(进程被冻结、不会退出)时返回;每次给当前的事件列表,停在受阻后被 stop 时 stopped 追加在后面
       return round ? Promise.race([round.done, round.paused]).then(() => Object.freeze([...round.events])) : [];
+    },
+
+    async quiesce(computeId: string, timeoutMs = 5000): Promise<QuiesceResult> {
+      if (typeof computeId !== "string") return { ok: false, reason: "computeId 必须是字符串", remaining: [] };
+      if (typeof timeoutMs !== "number" || !(timeoutMs >= 0)) return { ok: false, reason: "timeoutMs 必须是非负数", remaining: [] };
+      const round = computes.get(computeId)?.round;
+      if (!round) return { ok: false, reason: `未知的 Compute ${computeId}`, remaining: [] };
+      if (!round.finished || (round.terminal === "paused-blocked" && !round.stopRequested)) return { ok: false, reason: "这一轮还没结束(运行中或停在受阻),先停止", remaining: [] };
+      const pid = round.pid;
+      // 主进程退出:stop 之后由 reap 保证(reapForceMs 后组 SIGKILL);这里再给 timeoutMs 的余量
+      const limit = resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS) + timeoutMs;
+      if (!IS_WINDOWS && pid !== undefined && !round.exited && round.tree !== null && round.tree.length === 0) round.tree = treeNow(pid);
+      let timer: NodeJS.Timeout | undefined;
+      const exited = await Promise.race([round.done.then(() => true), new Promise<boolean>((r) => { timer = setTimeout(() => r(false), limit); timer.unref(); })]);
+      clearTimeout(timer);
+      if (!exited) return { ok: false, reason: "CLI 主进程没有退出", remaining: pid === undefined ? [] : [pid] };
+      if (IS_WINDOWS || pid === undefined) return { ok: true, killed: 0 };
+      // 主进程退出后:停止时记下的后代 + 此刻还在同组的成员,还活着的全部 SIGKILL,轮询到都退出。
+      // 停止时和此刻都读不到进程表就不能确认(读不到 ≠ 没有)
+      const now = treeNow(pid);
+      if (round.tree === null && now === null) return { ok: false, reason: "读不到进程表,无法确认它启动的子进程都已退出", remaining: [] };
+      const known = new Map<number, ProcRow>();
+      for (const r of [...(round.tree ?? []), ...(now ?? [])]) known.set(r.pid, r);
+      const killed = new Set<number>();
+      const t0 = Date.now();
+      for (;;) {
+        const table = procs();
+        const alive = [...known.values()].filter((r) => (table && r.pgid !== -1 ? stillAlive(r, table) : pidAlive(r.pid)));
+        if (!alive.length) return { ok: true, killed: killed.size };
+        if (Date.now() - t0 > timeoutMs) return { ok: false, reason: `还有 ${alive.length} 个进程没退出`, remaining: alive.map((r) => r.pid) };
+        signalGroup(pid, "SIGKILL");
+        for (const r of alive) { try { process.kill(r.pid, "SIGKILL"); killed.add(r.pid); } catch { /* 刚退出 */ } }
+        await delay(50);
+      }
     },
 
     rejectedReports(computeId: string) {

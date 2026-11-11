@@ -1,0 +1,31 @@
+# T4b 求助闭环(AC-44 / tasks.answer)变异校准原文
+# 跑在云电脑 box3(Ubuntu 24.04、2 核、Node v24.21.0),克隆 HEAD f99e1d5 所在提交串(feat/compute-help 197ca2a 的同内容,变基前),命令: node packages/server/proof/compute-help-mutations.mjs
+# 同一次运行:npm test → tests 1153 pass 1153 fail 0;typecheck 0;lint 0。变基到 dev/integration 之后的源码与这次运行逐字相同(只差基线),合入后的全量测试由推送钩子在 dev/integration f0eee06 上跑过
+PASS 基线 packages/server/src/help.test.ts: 通过 12 失败 0
+PASS 基线 packages/server/src/host.test.ts: 通过 11 失败 0
+PASS 基线 packages/adapter-cc-compute/src/attachments.test.ts: 通过 2 失败 0
+KILLED M01 受阻后任务停在 T3 空转: 被「AC-44 ① Compute 报受阻 → 任务进 T4b(q_id),宿主不重试、不重派、不自己续接」杀死;同时失败 10 条
+KILLED M02 宿主收到受阻就自己续接(反复提交): 被「AC-44 ① Compute 报受阻 → 任务进 T4b(q_id),宿主不重试、不重派、不自己续接」杀死;同时失败 8 条
+KILLED M03 提问卡不由联系人发(Compute 直接发言): 被「AC-44 ② 联系人在会话里 @提出者并附截图发提问卡;Compute 不直接发言」杀死;同时失败 1 条
+KILLED M04 提问卡没 @提出者: 被「AC-44 ② 联系人在会话里 @提出者并附截图发提问卡;Compute 不直接发言」杀死;同时失败 1 条
+KILLED M05 提问卡不附截图: 被「AC-44 ② 联系人在会话里 @提出者并附截图发提问卡;Compute 不直接发言」杀死;同时失败 2 条
+KILLED M06 工作目录外的文件也收: 被「受阻截图只收工作目录里的图片:目录外路径与非图片被丢弃,提问卡照发」杀死;同时失败 1 条
+KILLED M07 非图片也收: 被「受阻截图只收工作目录里的图片:目录外路径与非图片被丢弃,提问卡照发」杀死;同时失败 1 条
+KILLED M08 过期卡上的点击不幂等返回: 被「AC-44 ⑤ 任务取消后的迟到回答幂等忽略:不送进 Compute,提问卡标「已过期·未执行」」杀死;同时失败 1 条
+KILLED M10 tasks.answer 不认 q_id,总答当前问题: 被「AC-44 ⑤ 换了新问题后,旧问题上的回答幂等忽略,只有当前 q_id 生效」杀死;同时失败 2 条
+KILLED M11 任务离开 T4b 不过期旧卡: 被「AC-44 ⑤ 任务取消后的迟到回答幂等忽略:不送进 Compute,提问卡标「已过期·未执行」」杀死;同时失败 1 条
+KILLED M12 过期卡不标「已过期·未执行」: 被「AC-44 ⑤ 任务取消后的迟到回答幂等忽略:不送进 Compute,提问卡标「已过期·未执行」」杀死;同时失败 1 条
+KILLED M13 「不做了」不停 Compute: 被「AC-44 ④ 用户在提问卡上选「不做了」→ 任务取消,Compute 被停止并释放」杀死;同时失败 1 条
+KILLED M14 「不做了」也当回答: 被「AC-44 ④ 用户在提问卡上选「不做了」→ 任务取消,Compute 被停止并释放」杀死;同时失败 1 条
+KILLED M15 forward 不核对提出者的回答: 被「AC-44 ① 联系人没等用户回答、自己编了答案 forward → 宿主拒收,任务仍停在 T4b,不送进 Compute」杀死;同时失败 1 条
+KILLED M16 forward 在 T4b 不推进状态机: 被「AC-44 ③ 用户在聊天里直接回答,联系人 forward 转达 → 同样回 T3 并续接,提问卡标为已处理」杀死;同时失败 1 条
+KILLED M17 Compute 说明不带人工验证规则: 被「AC-44 ① 派给 Compute 的说明带人工验证规则:不反复尝试、不猜、不用打码服务,截图后报 blocked 停下」杀死;同时失败 1 条
+KILLED M18 规则里允许打码服务: 被「AC-44 ① 派给 Compute 的说明带人工验证规则:不反复尝试、不猜、不用打码服务,截图后报 blocked 停下」杀死;同时失败 1 条
+KILLED M19 未知问题号当成功: 被「tasks.answer:不存在的问题号 not_found;回答为空被合同拒绝」杀死;同时失败 1 条
+KILLED M20 回答不续接给 Compute: 被「AC-44 ③ tasks.answer 校验 (task_id, q_id, constraint_ver) 后回 T3,回答续接给同一个 Compute」杀死;同时失败 3 条
+KILLED M21 服务层 tasks.answer 仍回 conflict: 被「AC-44 ③ tasks.answer 校验 (task_id, q_id, constraint_ver) 后回 T3,回答续接给同一个 Compute」杀死;同时失败 5 条
+KILLED M25 卡片已回答的那条再 forward 照样续接(验证码送两次): 被「AC-44 ③ 用户在提问卡上回答后,联系人又把那条回答 forward → 宿主拒收,回答只送进 Compute 一次」杀死;同时失败 1 条
+KILLED M22 适配器丢掉 attachments: 被「AC-44 ②:blocked 汇报可带 attachments(工作目录内文件的相对路径),原样透传到 blocked 事件」杀死;同时失败 1 条
+KILLED M23 schema 不校验 attachments 类型: 被「AC-44 ②:attachments 不是字符串数组的汇报被拒收;没带 attachments 的 blocked 事件里没有这个字段」杀死;同时失败 1 条
+KILLED M24 schema 不认 attachments 字段: 被「AC-44 ②:blocked 汇报可带 attachments(工作目录内文件的相对路径),原样透传到 blocked 事件」杀死;同时失败 2 条
+PASS 24/24 变异被指定测试杀死

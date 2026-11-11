@@ -1,0 +1,14 @@
+# node --test --test-concurrency=1 packages/server/src/same-entity.test.ts
+# HEAD a36787e(绿提交),基线 feat/shared-doc a3a5318,v22.22.0,2026-11-08T20:43:03Z
+✔ 侧边栏发言就是群里 @ 他:消息进群时间线,任务挂在群上;群入口、侧边栏入口、任务详情读到同一任务、同一 stateVer (33.284833ms)
+✔ 任务每推进一步 stateVer 增大,task.updated 事件带的 stateVer 与随后两个入口读到的一致;用户在群里回复通过后两边同时看到新版本 (39.49825ms)
+✔ 无新事件 → 两边都不刷新:安静下来后反复读两个入口,stateVer 不变,也不产生 task.updated (19.060291ms)
+✔ 侧边栏只列这个联系人在这个群里的任务:别的联系人的任务不出现,但同一任务在两个入口里版本一致 (45.040083ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 246.203334

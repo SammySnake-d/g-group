@@ -12,9 +12,12 @@ import {
   formatIssues,
   isMethodName,
 } from "@g-group/api-contract";
+import type { AnnouncementOrder } from "./announcements.ts";
 import { HostError } from "./db.ts";
+import { type HelperEntryInput, HelperDesk } from "./helper.ts";
 import type { Host } from "./host.ts";
 import { previewCron } from "./schedules.ts";
+import { contactProfile, listFiles, readFile } from "./views.ts";
 
 type Handler = (p: never) => unknown;
 export const BUILTIN_COMMANDS: readonly SlashCommand[] = Object.freeze([
@@ -29,12 +32,15 @@ export interface Service {
 }
 
 export function createService(host: Host): Service {
+  const helper = new HelperDesk(host);
   const H: { [M in MethodName]: Handler } = {
     "session.hello": () => ({ apiVersion: API_VERSION, serverTime: new Date().toISOString(), eventSeq: host.bus.head(), userId: host.userId }),
     "contacts.list": () => ({ contacts: host.listContacts() }),
     "contacts.get": (p: { contactId: string }) => host.contactView(host.contactDoc(p.contactId).value),
     "contacts.create": (p: Parameters<Host["createContact"]>[0]) => host.createContact(p),
     "contacts.update": ({ contactId, ...patch }: { contactId: string } & Parameters<Host["updateContact"]>[1]) => host.updateContact(contactId, patch),
+    "contacts.profile": (p: { contactId: string }) => contactProfile(host, p.contactId),
+    "capabilities.list": () => host.capabilities.list(),
     "contacts.remove": (p: { contactId: string }) => {
       host.removeContact(p.contactId);
       return { ok: true };
@@ -45,34 +51,60 @@ export function createService(host: Host): Service {
     "rooms.createGroup": (p: { title: string; members: { kind: "user" | "contact"; id: string }[] }) => host.createGroup(p.title, p.members),
     "rooms.update": ({ roomId, ...patch }: { roomId: string } & Parameters<Host["updateRoom"]>[1]) => host.updateRoom(roomId, patch),
     "rooms.addMembers": (p: { roomId: string; members: { kind: "user" | "contact"; id: string }[] }) => host.addMembers(p.roomId, p.members),
-    "rooms.removeMember": (p: { roomId: string; member: { kind: "user" | "contact"; id: string } }) => host.removeMember(p.roomId, p.member),
+    "rooms.removeMember": (p: { roomId: string; member: { kind: "user" | "contact"; id: string }; stopTasks?: boolean }) =>
+      host.removeMember(p.roomId, p.member, p.stopTasks === undefined ? {} : { stopTasks: p.stopTasks }),
     "rooms.markRead": (p: { roomId: string; seq: number }) => {
       host.markRead(p.roomId, { kind: "user", id: host.userId }, p.seq);
       return { ok: true };
     },
+    "announcements.list": (p: { roomId: string; order?: AnnouncementOrder }) => ({ announcements: host.announcements.list(p.roomId, p.order) }),
+    "announcements.add": (p: { roomId: string; clientActionId: string; text: string }) => host.announcements.add(p.roomId, p.text, p.clientActionId),
+    "announcements.update": (p: { announcementId: string; text: string; expectedVersion?: number }) => host.announcements.update(p.announcementId, p.text, p.expectedVersion),
+    "announcements.remove": (p: { announcementId: string; expectedVersion?: number }) => {
+      host.announcements.remove(p.announcementId, p.expectedVersion);
+      return { ok: true };
+    },
+    "rooms.rewindPreview": (p: { roomId: string; toSeq: number }) => host.rewindPreview(p.roomId, p.toSeq),
+    "rooms.rewind": (p: { roomId: string; toSeq: number; clientActionId: string }) => host.rewind(p),
     "messages.list": ({ roomId, ...q }: { roomId: string } & Parameters<Host["listMessages"]>[1]) => host.listMessages(roomId, q),
     "messages.send": (p: Parameters<Host["send"]>[0]) => host.send(p),
     "messages.edit": (p: { roomId: string; seq: number; text: string }) => host.editMessage(p.roomId, p.seq, p.text),
     "messages.retract": (p: { roomId: string; seq: number }) => host.retractMessage(p.roomId, p.seq),
     "messages.react": (p: { roomId: string; seq: number; emoji: string; on: boolean }) => host.react(p.roomId, p.seq, p.emoji, p.on),
     "messages.receipts": (p: { roomId: string; seq: number }) => host.receipts(p.roomId, p.seq),
+    "drafts.get": (p: { roomId: string }) => host.draft(p.roomId),
+    "drafts.save": (p: { roomId: string; expectedVer: number; draft: Parameters<Host["saveDraft"]>[2] }) => host.saveDraft(p.roomId, p.expectedVer, p.draft),
+    "search.messages": (p: Parameters<Host["searchMessages"]>[0]) => host.searchMessages(p),
     "attachments.add": (p: { path: string }) => host.addAttachment(p.path),
+    "files.list": (p: { roomId: string }) => ({ files: listFiles(host, p.roomId) }),
+    "files.read": (p: { ref: string; maxBytes?: number }) => readFile(host, p.ref, p.maxBytes),
     "cards.act": (p: Parameters<Host["cardAct"]>[0]) => host.cardAct(p),
     "tasks.list": (p: Parameters<Host["listTasks"]>[0] & { limit?: number }) => ({ tasks: host.listTasks(p).slice(0, p.limit ?? 200) }),
-    "tasks.get": (p: { taskId: string }) => host.taskView(host.taskDoc(p.taskId).value),
+    "tasks.get": (p: { taskId: string }) => host.taskViewById(p.taskId),
     "tasks.progress": (p: { taskId: string; limit?: number }) => {
       host.taskDoc(p.taskId);
       return { progress: host.progress(p.taskId, p.limit ?? 200) };
     },
     "tasks.accept": (p: { taskId: string; clientActionId: string }) => host.taskDecision(p.taskId, "accept", p.clientActionId),
     "tasks.reject": (p: { taskId: string; clientActionId: string; feedback: string }) => host.taskDecision(p.taskId, "reject", p.clientActionId, p.feedback),
-    "tasks.answer": () => {
-      throw new HostError("conflict", "任务没有待回答的问题(Compute 受阻时由联系人在聊天里问你,直接回复即可)");
-    },
+    "tasks.answer": (p: { taskId: string; qId: string; clientActionId: string; answer: string }) => host.answerTask(p.taskId, p.qId, p.clientActionId, p.answer),
     "tasks.cancel": (p: { taskId: string; clientActionId: string }) => host.taskDecision(p.taskId, "cancel", p.clientActionId),
+    "tasks.create": (p: Parameters<Host["createTask"]>[0]) => host.createTask(p),
+    "tasks.assign": (p: Parameters<Host["assignTask"]>[0]) => host.assignTask(p),
+    "tasks.integrate": (p: { taskId: string }) => host.integrateTask(p.taskId),
+    "artifacts.get": (p: { ref: string }) => host.getArtifact(p.ref),
+    "tasks.rebindFollowUp": (p: Parameters<Host["rebindFollowUp"]>[0]) => host.rebindFollowUp(p),
+    "runs.list": (p: Parameters<Host["listRuns"]>[0]) => host.listRuns(p),
+    "runs.get": (p: { runId: string }) => host.getRun(p.runId),
+    "runs.rerun": (p: { runId: string; clientActionId: string }) => host.rerunRun(p.runId, p.clientActionId),
     "commitments.list": (p: Parameters<Host["listCommitments"]>[0]) => ({ commitments: host.listCommitments(p) }),
     "commitments.revoke": (p: { commitmentId: string }) => host.revokeCommitment(p.commitmentId),
-    "schedules.list": (p: { contactId?: string; roomId?: string }) => ({ schedules: host.scheduler.list(p) }),
+    "docs.list": (p: { roomId?: string }) => ({ docs: host.docs.list(p) }),
+    "docs.get": (p: { docId: string; version?: number }) => host.docs.get(p.docId, p.version),
+    "docs.create": (p: { clientActionId: string; title: string; content: string; roomId?: string | null }) => host.docs.create(p, { kind: "user", id: host.userId }),
+    "docs.commit": (p: { docId: string; requestId: string; baseVersion: number; content: string; title?: string }) => host.docs.commit(p, { kind: "user", id: host.userId }),
+    "docs.history": (p: { docId: string; limit?: number }) => ({ versions: host.docs.history(p.docId, p.limit ?? 50) }),
+    "schedules.list": (p: { contactId?: string; roomId?: string; order?: "next-run" | "created" }) => ({ schedules: host.scheduler.list(p) }),
     "schedules.preview": (p: { cron: string; tz: string; count?: number }) => previewCron(p.cron, p.tz, p.count ?? 5, Date.now()),
     "schedules.create": ({ clientActionId: _c, ...p }: { clientActionId: string } & Parameters<Host["scheduler"]["create"]>[0]) => host.scheduler.create(p),
     "schedules.update": ({ scheduleId, ...patch }: { scheduleId: string } & Parameters<Host["scheduler"]["update"]>[1]) => host.scheduler.update(scheduleId, patch),
@@ -89,6 +121,8 @@ export function createService(host: Host): Service {
     "plugins.setEnabled": (p: { pluginId: string; enabled: boolean }) => host.plugins.setEnabled(p.pluginId, p.enabled),
     "plugins.configure": (p: { pluginId: string; config: unknown }) => host.plugins.configure(p.pluginId, p.config),
     "plugins.update": (p: { pluginId: string; version?: string; grantedPermissions?: string[] }) => host.plugins.update(p.pluginId, p.version, p.grantedPermissions),
+    "plugins.pull": (p: { pluginId: string; sourceId?: string }) => host.plugins.pull(p.pluginId, p.sourceId),
+    "plugins.send": (p: { pluginId: string; actionId: string; payload: string }) => host.plugins.send(p.pluginId, p.actionId, p.payload),
     "plugins.uninstall": (p: { pluginId: string }) => {
       host.plugins.uninstall(p.pluginId);
       return { ok: true };
@@ -97,6 +131,13 @@ export function createService(host: Host): Service {
       host.roomView(p.roomId);
       return { commands: [...BUILTIN_COMMANDS, ...host.plugins.commands()].filter((c) => !p.prefix || c.name.startsWith(p.prefix)) };
     },
+    "helper.context": (p: { entry: HelperEntryInput; readRoomIds?: string[]; limit?: number }) => helper.context(p.entry, p.readRoomIds ?? [], p.limit ?? 100),
+    "helper.note": (p: { entry: HelperEntryInput; role: "user" | "helper"; text: string; clientActionId: string }) => helper.note(p.entry, p.role, p.text, p.clientActionId),
+    "helper.history": (p: { entry: HelperEntryInput; limit?: number }) => ({ notes: helper.history(p.entry, p.limit ?? 200) }),
+    "helper.post": (p: { entry: HelperEntryInput; text: string; clientActionId: string }) => helper.post(p.entry, p.text, p.clientActionId),
+    "models.preview": (p: { change: Parameters<Host["previewModelChange"]>[0] }) => host.previewModelChange(p.change),
+    "models.batchReplace": (p: { from: string; to: string; apply?: boolean; confirmAffected?: boolean }) =>
+      host.batchReplaceModels(p.from, p.to, { ...(p.apply !== undefined ? { apply: p.apply } : {}), ...(p.confirmAffected !== undefined ? { confirmAffected: p.confirmAffected } : {}) }),
     "settings.get": () => host.settings(),
     "settings.update": (p: Parameters<Host["updateSettings"]>[0]) => host.updateSettings(p),
   };

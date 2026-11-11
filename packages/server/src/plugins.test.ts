@@ -1,26 +1,15 @@
 // 插件市场与安装(用户 #719:插件要有市场和安装入口;AC-35 ⑤ 阶段 III 首版只验插件版本号显示与更新)。
 // 安装要用户同意清单声明的全部权限;装好的包复制进宿主数据目录;启用插件的命令进 slash 补全;新版本多要权限要重新同意。
 import assert from "node:assert/strict";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { createHash, randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { after, test } from "node:test";
-import { fileURLToPath } from "node:url";
-import { scriptedMind } from "./fakes.ts";
-import { Host } from "./host.ts";
-import { createService } from "./service.ts";
+import { after, afterEach, test } from "node:test";
+import { gzipSync } from "node:zlib";
+import { cleanupKit, closeKitHosts, setup } from "./test-kit.ts";
 
-const CATALOG_SRC = fileURLToPath(new URL("../catalog", import.meta.url));
-const dir = mkdtempSync(path.join(tmpdir(), "gg-plug-"));
-after(() => rmSync(dir, { recursive: true, force: true }));
-let n = 0;
-function setup() {
-  const root = path.join(dir, `p${++n}`);
-  const catalog = path.join(root, "catalog");
-  cpSync(CATALOG_SRC, catalog, { recursive: true });
-  const host = new Host({ file: path.join(root, "gg.db"), dataDir: path.join(root, "data"), catalogFile: path.join(catalog, "catalog.json"), mind: () => scriptedMind(), maxDeferMs: 5 });
-  return { root, catalog, host, svc: createService(host) };
-}
+afterEach(() => closeKitHosts());
+after(() => cleanupKit());
 
 test("市场列出示例插件;按关键词与类型筛选", async () => {
   const { host, svc } = setup();
@@ -92,7 +81,7 @@ test("版本更新:市场出了新版本列表显示可更新;新版本多要权
   await host.close();
 });
 
-test("本地目录安装:清单不合格、entry 越界被拒;URL 安装如实报未接入", async () => {
+test("本地目录安装:清单不合格、entry 越界被拒;URL 下载失败如实报不可用", async () => {
   const { root, host, svc } = setup();
   const bad = path.join(root, "bad");
   mkdirSync(bad);
@@ -112,6 +101,95 @@ test("本地目录安装:清单不合格、entry 越界被拒;URL 安装如实�
   assert.ok(r3.ok);
   assert.equal((r3.value as { source: string }).source, "local-path");
   const r4 = await svc.handle("plugins.install", { clientActionId: "l4", source: { kind: "url", url: "https://example.com/p.tgz" }, grantedPermissions: [] });
-  assert.equal(!r4.ok && r4.error.code, "unavailable");
+  assert.deepEqual(!r4.ok && [r4.error.code, r4.error.message], ["unavailable", "下载插件包失败:HTTP 404"]);
+  await host.close();
+});
+
+/** 手写 ustar 条目,好精确构造应失败的输入(绝对路径、上级目录、链接条目)。type: "0" 文件 / "5" 目录 / "1" 硬链接 / "2" 符号链接 */
+function tarEntry(name: string, body: Buffer | null, type: string, linkname = ""): Buffer {
+  const h = Buffer.alloc(512);
+  h.write(name, 0, 100, "utf8");
+  h.write("0000644\0", 100);
+  h.write("0000000\0", 108);
+  h.write("0000000\0", 116);
+  h.write(`${(body?.length ?? 0).toString(8).padStart(11, "0")}\0`, 124);
+  h.write("00000000000\0", 136);
+  h.write("        ", 148);
+  h.write(type, 156);
+  h.write(linkname, 157, 100, "utf8");
+  h.write("ustar\0", 257);
+  h.write("00", 263);
+  let sum = 0;
+  for (const b of h) sum += b;
+  h.write(`${sum.toString(8).padStart(6, "0")}\0 `, 148);
+  const pad = Buffer.alloc(body ? (512 - (body.length % 512)) % 512 : 0);
+  return Buffer.concat([h, body ?? Buffer.alloc(0), pad]);
+}
+const tgz = (entries: Buffer[]) => gzipSync(Buffer.concat([...entries, Buffer.alloc(1024)]));
+const sha256 = (b: Buffer) => createHash("sha256").update(b).digest("hex");
+const manifestOf = (id: string, permissions: { key: string; description: string }[] = []) =>
+  Buffer.from(JSON.stringify({ id, name: "远程插件", version: "1.2.0", publisher: "far", description: "", kinds: ["data-source"], permissions, entry: "index.mjs" }));
+const servedBy = (files: Record<string, Buffer>, fetched: string[] = []) => async (url: string) => {
+  fetched.push(url);
+  const body = files[url];
+  return body ? new Response(new Uint8Array(body)) : new Response("", { status: 404 });
+};
+const downloadsLeft = (root: string) => {
+  const d = path.join(root, "data", "plugin-downloads");
+  return existsSync(d) ? readdirSync(d) : [];
+};
+
+test("URL 安装:下载 tgz 包、核对 sha256、解包后照常校验清单与权限,来源记为 url", async () => {
+  const a = tgz([tarEntry("package/", null, "5"), tarEntry("package/plugin.json", manifestOf("far-a", [{ key: "net:fetch", description: "联网" }]), "0"), tarEntry("package/index.mjs", Buffer.from("export default {};\n"), "0")]);
+  const b = tgz([tarEntry("plugin.json", manifestOf("far-b"), "0"), tarEntry("index.mjs", Buffer.from("export default {};\n"), "0")]);
+  const fetched: string[] = [];
+  const { root, host, svc } = setup({ pluginFetch: servedBy({ "https://plugins.example/a.tgz": a, "https://plugins.example/b.tgz": b }, fetched) });
+  const install = (url: string, granted: string[], sha?: string) =>
+    svc.handle("plugins.install", { clientActionId: `u-${fetched.length}`, source: sha ? { kind: "url", url, sha256: sha } : { kind: "url", url }, grantedPermissions: granted });
+  const wrong = await install("https://plugins.example/a.tgz", ["net:fetch"], "0".repeat(64));
+  assert.deepEqual(!wrong.ok && [wrong.error.code, wrong.error.message], ["forbidden", `下载内容的 sha256 是 ${sha256(a)},与给定的不符,不安装`]);
+  const noPerm = await install("https://plugins.example/a.tgz", [], sha256(a));
+  assert.deepEqual(!noPerm.ok && [noPerm.error.code, noPerm.error.detail], ["forbidden", { missing: ["net:fetch"] }]);
+  const ok = await install("https://plugins.example/a.tgz", ["net:fetch"], sha256(a));
+  assert.ok(ok.ok, JSON.stringify(ok));
+  const v = ok.value as { id: string; version: string; source: string; integrity?: unknown; executable?: boolean; latestVersion: string | null };
+  assert.deepEqual([v.id, v.version, v.source, v.integrity, v.executable, v.latestVersion], ["far-a", "1.2.0", "url", { sha256: sha256(a), verified: true }, true, null]);
+  assert.equal(readFileSync(path.join(root, "data", "plugins", "far-a", "1.2.0", "index.mjs"), "utf8"), "export default {};\n");
+  const unverified = await install("https://plugins.example/b.tgz", []);
+  assert.ok(unverified.ok, JSON.stringify(unverified));
+  assert.deepEqual((unverified.value as { integrity?: unknown }).integrity, { sha256: sha256(b), verified: false }, "没给 sha256 也记下实际内容 hash,标未核对");
+  const missing = await install("https://plugins.example/c.tgz", []);
+  assert.deepEqual(!missing.ok && [missing.error.code, missing.error.message], ["unavailable", "下载插件包失败:HTTP 404"]);
+  const list = await svc.handle("plugins.list", {});
+  assert.deepEqual(list.ok && (list.value as { plugins: { id: string; source: string }[] }).plugins.map((p) => [p.id, p.source]), [["far-a", "url"], ["far-b", "url"]]);
+  const up = await svc.handle("plugins.update", { pluginId: "far-a" });
+  assert.equal(!up.ok && up.error.code, "invalid_params", "URL 装的插件不在线更新");
+  assert.deepEqual(downloadsLeft(root), [], "下载与解包的临时目录已清掉");
+  await host.close();
+});
+
+test("URL 安装拒绝不安全或不合格的包:绝对路径、上级目录、符号链接、硬链接、超过大小上限、解压炸开、不是 gzip、没有清单", async () => {
+  const manifest = tarEntry("plugin.json", manifestOf("bad"), "0");
+  const cases: [string, Buffer, string, RegExp][] = [
+    ["abs", tgz([manifest, tarEntry("/etc/x", Buffer.from("x"), "0")]), "forbidden", /包里有绝对路径 \/etc\/x/],
+    ["up", tgz([manifest, tarEntry("a/../../x", Buffer.from("x"), "0")]), "forbidden", /包里有指向上级目录的路径 a\/\.\.\/\.\.\/x/],
+    ["sym", tgz([manifest, tarEntry("link", null, "2", "/tmp")]), "forbidden", /包里有链接条目 link/],
+    ["hard", tgz([manifest, tarEntry("hl", null, "1", "plugin.json")]), "forbidden", /包里有链接条目 hl/],
+    ["big", tgz([manifest, tarEntry("blob.bin", randomBytes(16 * 1024), "0")]), "invalid_params", /插件包超过 4096 字节上限/],
+    ["bomb", tgz([manifest, tarEntry("zeros.bin", Buffer.alloc(256 * 1024), "0")]), "invalid_params", /解压后超过 16384 字节上限/],
+    ["plain", Buffer.from("这不是 gzip"), "invalid_params", /只支持 \.tgz/],
+    ["nomanifest", tgz([tarEntry("readme.md", Buffer.from("hi"), "0")]), "invalid_params", /包里没有 plugin\.json/],
+  ];
+  const files = Object.fromEntries(cases.map(([k, body]) => [`https://plugins.example/${k}.tgz`, body]));
+  const { root, host, svc } = setup({ pluginFetch: servedBy(files), pluginDownloadMaxBytes: 4096 });
+  for (const [k, , code, why] of cases) {
+    const r = await svc.handle("plugins.install", { clientActionId: `b-${k}`, source: { kind: "url", url: `https://plugins.example/${k}.tgz` }, grantedPermissions: [] });
+    assert.equal(!r.ok && r.error.code, code, k);
+    assert.match(!r.ok ? r.error.message : "", why, k);
+  }
+  const list = await svc.handle("plugins.list", {});
+  assert.deepEqual(list.ok && (list.value as { plugins: unknown[] }).plugins, []);
+  assert.equal(existsSync(path.join(root, "data", "plugins", "bad")), false);
+  assert.deepEqual(downloadsLeft(root), []);
   await host.close();
 });
