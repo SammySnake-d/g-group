@@ -23,11 +23,11 @@
     "model": "claude-opus-5-5"
   },
   "red": {
-    "commit": "76601036"
+    "commit": "967839bd"
   },
   "unverifiable": "AC-42 ⑤:「来源已撤回」每次按会话日志里的 retract 事件现算,只认条目的 source 与 evidence[] 指向的消息;derived_from 等关系、条目正文里转述的被撤回内容(正文不是原文时)不追。前缀快照被清掉时第 1 块会变(撤回优先于 ⑦ 前缀不变),这一轮前缀缓存失效。AC-42 ⑧ 启动核对只看有 md 目录的联系人:md 目录整个丢了、索引还在时不动索引;md 解析不了的文件按既有 rebuild 跳过并报告。U29(回退清洗,候选):只按原文精确出现清洗,笔记里由撤下消息推导出的结论清不掉,靠回退说明让模型下一轮自己更新;与撤回共用同一占位文案「已撤回内容已移除」。测试里的联系人动作都是脚本给的,没有真模型运行",
   "waiver": null,
   "review": null,
   "review_status": "待审",
-  "notes": "子代理实现(调度会话 claude:dd154965-afbd-4134-a1d3-c00f2a859eab)。U29「工作记忆随回退回滚」已定、「私聊工作记忆存哪」待决(需求文档 §2.0 U29 行):本片按推荐最小做——私聊工作记忆 = 该联系人的状态笔记,复用撤回清洗机制,不新建版本化笔记存储;候选,非正式门禁,待用户拍板。不做 memory.restore(文档没有这项能力,按调度更正)。U29 回退清洗证据:memory-hygiene.test.ts 两条「U29 回退…」、packages/server/proof/memory-hygiene-real.txt(rewind 事务里笔记立即换成占位、下一轮第 3 块不含撤下原文、回退前已有的长期记忆逐条不变)、变异 M01/M02/M03;候选,非正式门禁。pstack 记录:首轮变异(2f463bc)存活 2 个(M02、M05),补强测试后重新做红 76601036、回到绿 954ca3f,第二轮 17 个全杀;最初的红 dedc4e22 与绿 5214c3f 保留在历史里。与在做的片重叠:G1(PR #58)改 host.ts settleNote/rememberTx/构造函数与 memory-store.ts(readDisk/remove),本片在 host.ts 只改 import、memory 字段与构造那一行、listMemories、memoryForRound 首行、scrubNote、rewind 事务 7 处,构造那一行与 G1 新增行相邻;G1 新加的检查邻域与写入判关系也经 this.memory.list(),合并后自动按可见性过滤;G3(PR #61)改 kernel/memory.ts 打分,本片不动 kernel;G4(PR #69)query_history 与本片无共同文件。"
+  "notes": "子代理实现(调度会话 claude:dd154965-afbd-4134-a1d3-c00f2a859eab)。U29「工作记忆随回退回滚」已定、「私聊工作记忆存哪」待决(需求文档 §2.0 U29 行):本片按推荐最小做——私聊工作记忆 = 该联系人的状态笔记,复用撤回清洗机制,不新建版本化笔记存储;候选,非正式门禁,待用户拍板。不做 memory.restore(文档没有这项能力,按调度更正)。U29 回退清洗证据:memory-hygiene.test.ts 两条「U29 回退…」、packages/server/proof/memory-hygiene-real.txt(rewind 事务里笔记立即换成占位、下一轮第 3 块不含撤下原文、回退前已有的长期记忆逐条不变)、变异 M01/M02/M03;候选,非正式门禁。pstack 记录:首轮变异(2f463bc)存活 2 个(M02、M05),补强测试后重新做红 76601036、回到绿 954ca3f,第二轮 17 个全杀;本机 --local 的 G-TAUTO 又指出 memory-api.test.ts 两条测试没有直接断言被测函数结果,补断言后第三次做红 967839bd、回到绿(实现与 5214c3f 逐字相同);最初的红 dedc4e22 与绿 5214c3f 保留在历史里。变异结果文件记的是 954ca3f 上的运行:之后只改了测试(多了断言),实现未变。与在做的片重叠:G1(PR #58)改 host.ts settleNote/rememberTx/构造函数与 memory-store.ts(readDisk/remove),本片在 host.ts 只改 import、memory 字段与构造那一行、listMemories、memoryForRound 首行、scrubNote、rewind 事务 7 处,构造那一行与 G1 新增行相邻;G1 新加的检查邻域与写入判关系也经 this.memory.list(),合并后自动按可见性过滤;G3(PR #61)改 kernel/memory.ts 打分,本片不动 kernel;G4(PR #69)query_history 与本片无共同文件。"
 }
