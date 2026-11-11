@@ -35,7 +35,7 @@
     {
       "id": "R-05",
       "status": "未测",
-      "reason": "阳性埋雷:packages/server/proof/contact-actions-mutations.mjs 22 个单点故障(去掉 CAS 的比较、认领不查会话、认领后不起 Compute、第 5 块不列可认领任务、可认领清单不按会话过滤 / 含已有人负责的、工具层不登记 claim_task、拒绝不回告、回告不进第 5 块、回告不给原因、给过不标记、装配时就算给过、回告写进第 1 块、mentions 不校验成员 / 不写进消息 / 不去重、工具层丢掉 mentions、升版两次(forward、verdict 各一)、升版后不登记、后到的原文不并进续接),结果见 packages/server/proof/contact-actions-mutations.txt(box4 并发 1;单条测试超时 testTimeoutFailure 单列,不计入杀死)。校准过程如实记下:第一次在 97bbd4a 上跑 22/22「杀死」,但 C01、C02 的「杀死」其实是整份文件超时——据此修了 3b81112(C01 改为按名字失败);第二次在 3b81112 上按新口径 C02 存活(只超时)——据此改了 faca5b3 的 settle 上限。阴性对照为同脚本的原样副本。脚本只核对「被具名测试杀死」,没逐个核对红的原因文字,所以不声称 R-05 双侧标定已完成。"
+      "reason": "阳性埋雷:packages/server/proof/contact-actions-mutations.mjs 22 个单点故障(去掉 CAS 的比较、认领不查会话、认领后不起 Compute、第 5 块不列可认领任务、可认领清单不按会话过滤 / 含已有人负责的、工具层不登记 claim_task、拒绝不回告、回告不进第 5 块、回告不给原因、给过不标记、装配时就算给过、回告写进第 1 块、mentions 不校验成员 / 不写进消息 / 不去重、工具层丢掉 mentions、升版两次(forward、verdict 各一)、升版后不登记、后到的原文不并进续接):22 个全被具名测试按名字杀死、0 存活。证据 packages/server/proof/contact-actions-mutations.txt 含两次运行——box4(faca5b3,同一次 tsc/lint 0、npm test 1486 全过)与 HEAD 7e7deaf 重跑(box4 的 heavy 锁被别的会话一个卡住的作业占着,不动别人的进程,改在本机 nice + lockf 并发 1 跑;这次没有超时)。校准过程如实记下:97bbd4a 上第一次跑报 22/22,但 C01、C02 的「杀死」其实是整份文件超时;据此修 3b81112 与 faca5b3,并按新口径(超时单列、不计入杀死)重验。阴性对照为同脚本的原样副本(48 绿 0 红)。脚本只核对「被具名测试杀死」,没逐个核对红的原因文字,所以不声称 R-05 双侧标定已完成。"
     }
   ],
   "candidate": {
