@@ -26,7 +26,13 @@ export interface Wiring {
 export const defineWiring = (w: Wiring): Wiring => w
 
 export class ReadError extends Error {
-  constructor(readonly method: MethodName, readonly error: ApiError) { super(`${method}:${error.message}`) }
+  readonly method: MethodName
+  readonly error: ApiError
+  constructor(method: MethodName, error: ApiError) {
+    super(`${method}:${error.message}`)
+    this.method = method
+    this.error = error
+  }
 }
 
 /** 读后端:成功返回值,失败抛 ReadError */
