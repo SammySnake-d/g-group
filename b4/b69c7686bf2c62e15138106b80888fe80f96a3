@@ -1,0 +1,44 @@
+packages/adapter-cc-compute/src/resident-quiesce.test.ts
+  s_56d86eb5914775::t_234755cf3ebeba 1-143
+packages/server/src/resident-host.test.ts
+  s_56d86eb5914775::t_90437d4ef2a91e 1-189
+packages/adapter-cc-compute/src/resident-isolation.test.ts
+  s_56d86eb5914775::t_5ca930284908d9 1-243
+packages/adapter-cc-compute/src/resident-activity.test.ts
+  s_56d86eb5914775::t_5ea74a633e4680 1-167,170,173-176,182-184,187
+  s_56d86eb5914775::t_bca3e5c6de7b9a 168-169
+  s_56d86eb5914775::t_bad55af2f59e03 171-172
+  s_56d86eb5914775::t_ce8a7553d624c9 177-181
+  s_56d86eb5914775::t_4937a1a5d63312 185-186
+packages/server/src/compute.test.ts
+  s_25620647d6f8eb::t_3e71680eaf0d9f 30-31
+  s_25620647d6f8eb::t_089bcb2c61fa85 29
+packages/adapter-cc-compute/src/resident.ts
+  s_56d86eb5914775::t_749c19d0b0e575 31,127,632-639
+packages/adapter-cc-compute/test-support/fake-claude-resident.mjs
+  s_56d86eb5914775::t_be84dffe602bab 18-28,60-64,92-104,121-130,134-135,137-151,171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b4b69c7686bf2c62e15138106b80888fe80f96a3",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_56d86eb5914775": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1ead79f6fd1706fc",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
