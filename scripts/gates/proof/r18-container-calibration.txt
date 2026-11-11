@@ -1,0 +1,10 @@
+box2 Node 24.21.0 / Docker Node 22.22.0
+RUN_COMMIT=443209008f65d46e11e04a8a67e81ebb9dbbd846
+RUN_CONTENT_HASH=37b1168ecd93b43effbd8f1ea907d35cdaebb0f98440de1f960cb1c85d691c42
+原样 Docker 夹具:通过
+✓ workspace:指定夹具「R15-03」发现故障
+✓ readonly:指定夹具「R15-04」发现故障
+✓ baseline-load:指定夹具「R15-05 一份」发现故障
+✓ baseline-missing:指定夹具「R15-05 运行时」发现故障
+✓ linked-copy:指定夹具「R17-04 跟踪」发现故障
+容器定点变异 5:杀死 5,存活 0

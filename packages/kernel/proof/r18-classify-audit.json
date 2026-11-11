@@ -1,0 +1,1619 @@
+{
+  "baseline": "fc216e6d2ee3d17afc7d9ab48c6f6d98cf8917e9",
+  "box": "box4",
+  "node": "24.21.0",
+  "samples": 119,
+  "historical_records": 25,
+  "sites": 27,
+  "explanation": "历史日志省略 AST 偏移，L74 num+1 的三个 0 共用一个签名；为不漏项，三个位置全部实跑，结果相同归类。按25条历史记录统计。有限输入对照加代码分析，不冒称任意输入的等价证明。",
+  "categories": {
+    "行为型存活，具名回归未补": 15,
+    "等价或剩余判定屏蔽": 4,
+    "现有具名测试已杀": 4,
+    "仅诊断措辞差异，记存活清单": 2
+  },
+  "rows": [
+    {
+      "id": "C01",
+      "line": 48,
+      "operator": "if-false",
+      "from": "typeof m !== \"object\" || m === null",
+      "start": 2177,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 1,
+      "example": [
+        {
+          "input": {
+            "name": "mention-null",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                null
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "mention-null",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "mention-null",
+            "threw": "TypeError: Cannot destructure property 'id' of 'm' as it is null.",
+            "calls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "C02",
+      "line": 48,
+      "operator": "drop-left(false)",
+      "from": "typeof m !== \"object\"",
+      "start": 2177,
+      "category": "等价或剩余判定屏蔽",
+      "reason": "非对象基本值解构后 id/name 不满足剩余字段检查；null 仍被挡，Proxy/类实例先被 plainData 拒绝。",
+      "failed": [],
+      "difference_count": 0,
+      "example": []
+    },
+    {
+      "id": "C03",
+      "line": 48,
+      "operator": "drop-right(false)",
+      "from": "m === null",
+      "start": 2202,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 1,
+      "example": [
+        {
+          "input": {
+            "name": "mention-null",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                null
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "mention-null",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "mention-null",
+            "threw": "TypeError: Cannot destructure property 'id' of 'm' as it is null.",
+            "calls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "C04",
+      "line": 50,
+      "operator": "drop-right(false)",
+      "from": "name === \"\"",
+      "start": 2366,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 2,
+      "example": [
+        {
+          "input": {
+            "name": "mention-{\"id\":\"a\",\"name\":\"\",\"start\":0,\"end\":1}",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": "",
+                  "start": 0,
+                  "end": 1
+                }
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "mention-{\"id\":\"a\",\"name\":\"\",\"start\":0,\"end\":1}",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "mention-{\"id\":\"a\",\"name\":\"\",\"start\":0,\"end\":1}",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "",
+                    "start": 0,
+                    "end": 1
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "C05",
+      "line": 50,
+      "operator": "drop-right(false)",
+      "from": "typeof name !== \"string\"",
+      "start": 2338,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 4,
+      "example": [
+        {
+          "input": {
+            "name": "name-{}",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": {},
+                  "start": 0,
+                  "end": 2
+                }
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "name-{}",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "name-{}",
+            "threw": "TypeError: Cannot convert object to primitive value",
+            "calls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "C06",
+      "line": 50,
+      "operator": "drop-left(false)",
+      "from": "typeof id !== \"string\"",
+      "start": 2299,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 11,
+      "example": [
+        {
+          "input": {
+            "name": "id-null",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": null,
+                  "name": "A",
+                  "start": 0,
+                  "end": 2
+                }
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "id-null",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "id-null",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": null,
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E1",
+              "via": "mechanical"
+            },
+            "calls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "C07",
+      "line": 51,
+      "operator": "drop-right(false)",
+      "from": "(end as number) > text.length",
+      "start": 2507,
+      "category": "现有具名测试已杀",
+      "reason": "当前基线已发现，不再沿用历史“存活”结论。",
+      "failed": [
+        "R17-03 有效点名混入一个无效范围就走语义:保留有效锚点、E2/semantic/调用一次;移除无效项则 E1/mechanical/零调用(R16-02 单开关)"
+      ],
+      "difference_count": 2,
+      "example": [
+        {
+          "input": {
+            "name": "end-3",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": 0,
+                  "end": 3
+                }
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "end-3",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "end-3",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 3
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E1",
+              "via": "mechanical"
+            },
+            "calls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "C08",
+      "line": 51,
+      "operator": "drop-right(false)",
+      "from": "(start as number) < 0",
+      "start": 2482,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 1,
+      "example": [
+        {
+          "input": {
+            "name": "start--2",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": -2,
+                  "end": 2
+                }
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "start--2",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "start--2",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": -2,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "C09",
+      "line": 51,
+      "operator": "flip >→>=",
+      "from": ">",
+      "start": 2523,
+      "category": "现有具名测试已杀",
+      "reason": "当前基线已发现，不再沿用历史“存活”结论。",
+      "failed": [
+        "R17-03 有效点名混入一个无效范围就走语义:保留有效锚点、E2/semantic/调用一次;移除无效项则 E1/mechanical/零调用(R16-02 单开关)"
+      ],
+      "difference_count": 16,
+      "example": [
+        {
+          "input": {
+            "name": "valid",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": 0,
+                  "end": 2
+                }
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "valid",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E1",
+              "via": "mechanical"
+            },
+            "calls": 0
+          },
+          "mutant": {
+            "name": "valid",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "C10",
+      "line": 58,
+      "operator": "drop-left(true)",
+      "from": "Number.isInteger(q)",
+      "start": 3005,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 3,
+      "example": [
+        {
+          "input": {
+            "name": "quote-1.5",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": 0,
+                  "end": 2
+                }
+              ],
+              "quotes": [
+                1.5
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "quote-1.5",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E1",
+              "via": "mechanical"
+            },
+            "calls": 0
+          },
+          "mutant": {
+            "name": "quote-1.5",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": [
+                  1.5
+                ]
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "C11",
+      "line": 58,
+      "operator": "drop-right(true)",
+      "from": "q > 0",
+      "start": 3028,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 2,
+      "example": [
+        {
+          "input": {
+            "name": "quote-0",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": 0,
+                  "end": 2
+                }
+              ],
+              "quotes": [
+                0
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "quote-0",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E1",
+              "via": "mechanical"
+            },
+            "calls": 0
+          },
+          "mutant": {
+            "name": "quote-0",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": [
+                  0
+                ]
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "C12",
+      "line": 58,
+      "operator": "flip >→>=",
+      "from": ">",
+      "start": 3030,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 1,
+      "example": [
+        {
+          "input": {
+            "name": "quote-0",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": 0,
+                  "end": 2
+                }
+              ],
+              "quotes": [
+                0
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "quote-0",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E1",
+              "via": "mechanical"
+            },
+            "calls": 0
+          },
+          "mutant": {
+            "name": "quote-0",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": [
+                  0
+                ]
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "C13",
+      "line": 58,
+      "operator": "num+1",
+      "from": "0",
+      "start": 3032,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 1,
+      "example": [
+        {
+          "input": {
+            "name": "quote-1",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": 0,
+                  "end": 2
+                }
+              ],
+              "quotes": [
+                1
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "quote-1",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": [
+                  1
+                ]
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "quote-1",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E1",
+              "via": "mechanical"
+            },
+            "calls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "C14",
+      "line": 66,
+      "operator": "drop-left(false)",
+      "from": "typeof c.cardId !== \"string\"",
+      "start": 3413,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 5,
+      "example": [
+        {
+          "input": {
+            "name": "card-cardId-null",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "ok",
+              "card": {
+                "cardId": null,
+                "version": 1,
+                "decision": "approve"
+              }
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "card-cardId-null",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": [],
+                "card": {
+                  "cardId": null,
+                  "version": 1,
+                  "decision": "approve"
+                }
+              },
+              "intent": "Uncertain",
+              "via": "mechanical",
+              "violation": "确认卡回复缺卡号"
+            },
+            "calls": 0
+          },
+          "mutant": {
+            "name": "card-cardId-null",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": [],
+                "card": {
+                  "cardId": null,
+                  "version": 1,
+                  "decision": "approve"
+                }
+              },
+              "intent": "E6",
+              "via": "mechanical",
+              "target": {
+                "cardId": null,
+                "version": 1,
+                "decision": "approve"
+              }
+            },
+            "calls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "C15",
+      "line": 68,
+      "operator": "drop-left(false)",
+      "from": "typeof c.decision !== \"string\"",
+      "start": 3592,
+      "category": "等价或剩余判定屏蔽",
+      "reason": "DECISIONS.has 只接纳两个固定字符串，无隐式转换，typeof 子条件冗余。",
+      "failed": [],
+      "difference_count": 0,
+      "example": []
+    },
+    {
+      "id": "C16",
+      "line": 74,
+      "operator": "drop-right(false)",
+      "from": "a.invalidMentions > 0",
+      "start": 3936,
+      "category": "现有具名测试已杀",
+      "reason": "当前基线已发现，不再沿用历史“存活”结论。",
+      "failed": [
+        "R17-03 有效点名混入一个无效范围就走语义:保留有效锚点、E2/semantic/调用一次;移除无效项则 E1/mechanical/零调用(R16-02 单开关)"
+      ],
+      "difference_count": 1,
+      "example": [
+        {
+          "input": {
+            "name": "invalid-mixture",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": 0,
+                  "end": 2
+                },
+                {
+                  "id": "b",
+                  "name": "B",
+                  "start": 99,
+                  "end": 100
+                }
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "invalid-mixture",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "invalid-mixture",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E1",
+              "via": "mechanical"
+            },
+            "calls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "C17",
+      "line": 74,
+      "operator": "drop-left(false)",
+      "from": "a.mentions.length === 0",
+      "start": 3886,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 2,
+      "example": [
+        {
+          "input": {
+            "name": "empty-text",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": ""
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "empty-text",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "empty-text",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "E1",
+              "via": "mechanical"
+            },
+            "calls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "C18",
+      "line": 74,
+      "operator": "num+1",
+      "from": "0",
+      "start": 3908,
+      "category": "现有具名测试已杀",
+      "reason": "当前基线已发现，不再沿用历史“存活”结论。",
+      "failed": [
+        "只有 @ 没有别的文字的点名机械判定为 E1,分类器调用 0 次",
+        "点名范围的 start 或 end 是非整数(0.5、2.5)时不算有效点名:交给分类器(E2,调用 1 次),不机械判 E1;同一消息范围换回整数就是纯点名 E1、分类器 0 次(R12-04 审查 R12-O1 双侧单开关)",
+        "R17-03 有效点名混入一个无效范围就走语义:保留有效锚点、E2/semantic/调用一次;移除无效项则 E1/mechanical/零调用(R16-02 单开关)"
+      ],
+      "difference_count": 13,
+      "example": [
+        {
+          "input": {
+            "name": "valid",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": 0,
+                  "end": 2
+                }
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "valid",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E1",
+              "via": "mechanical"
+            },
+            "calls": 0
+          },
+          "mutant": {
+            "name": "valid",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "C19",
+      "line": 74,
+      "operator": "num+1",
+      "from": "0",
+      "start": 3931,
+      "category": "现有具名测试已杀",
+      "reason": "当前基线已发现，不再沿用历史“存活”结论。",
+      "failed": [
+        "同一句纯点名多一个引用就不再是纯点名,改调分类器(单开关对照)"
+      ],
+      "difference_count": 2,
+      "example": [
+        {
+          "input": {
+            "name": "quote-1",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": 0,
+                  "end": 2
+                }
+              ],
+              "quotes": [
+                1
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "quote-1",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": [
+                  1
+                ]
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "quote-1",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": [
+                  1
+                ]
+              },
+              "intent": "E1",
+              "via": "mechanical"
+            },
+            "calls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "C20",
+      "line": 74,
+      "operator": "num+1",
+      "from": "0",
+      "start": 3956,
+      "category": "现有具名测试已杀",
+      "reason": "当前基线已发现，不再沿用历史“存活”结论。",
+      "failed": [
+        "R17-03 有效点名混入一个无效范围就走语义:保留有效锚点、E2/semantic/调用一次;移除无效项则 E1/mechanical/零调用(R16-02 单开关)"
+      ],
+      "difference_count": 1,
+      "example": [
+        {
+          "input": {
+            "name": "invalid-mixture",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": 0,
+                  "end": 2
+                },
+                {
+                  "id": "b",
+                  "name": "B",
+                  "start": 99,
+                  "end": 100
+                }
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "invalid-mixture",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "invalid-mixture",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E1",
+              "via": "mechanical"
+            },
+            "calls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "C21",
+      "line": 75,
+      "operator": "flip -→+",
+      "from": "-",
+      "start": 4028,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 1,
+      "example": [
+        {
+          "input": {
+            "name": "reverse-spans",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A @B",
+              "mentions": [
+                {
+                  "id": "b",
+                  "name": "B",
+                  "start": 3,
+                  "end": 5
+                },
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": 0,
+                  "end": 2
+                }
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "reverse-spans",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "b",
+                    "name": "B",
+                    "start": 3,
+                    "end": 5
+                  },
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E1",
+              "via": "mechanical"
+            },
+            "calls": 0
+          },
+          "mutant": {
+            "name": "reverse-spans",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "b",
+                    "name": "B",
+                    "start": 3,
+                    "end": 5
+                  },
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "C22",
+      "line": 78,
+      "operator": "if-false",
+      "from": "m.start < cursor",
+      "start": 4104,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 1,
+      "example": [
+        {
+          "input": {
+            "name": "overlap",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "@A",
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": 0,
+                  "end": 2
+                },
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": 0,
+                  "end": 2
+                }
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "overlap",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  },
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E2",
+              "via": "semantic"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "overlap",
+            "result": {
+              "anchors": {
+                "mentions": [
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  },
+                  {
+                    "id": "a",
+                    "name": "A",
+                    "start": 0,
+                    "end": 2
+                  }
+                ],
+                "quotes": []
+              },
+              "intent": "E1",
+              "via": "mechanical"
+            },
+            "calls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "C23",
+      "line": 95,
+      "operator": "if-false",
+      "from": "typeof event.text !== \"string\"",
+      "start": 4892,
+      "category": "行为型存活，具名回归未补",
+      "reason": "独立输入显示删条件会改变锚点/路由或抛错，现有 classify 测试仍绿；这是测试鉴别力线索，不是原产品已经出错。本轮只分类，不擅自扩产品行为或验收合同。",
+      "failed": [],
+      "difference_count": 5,
+      "example": [
+        {
+          "input": {
+            "name": "text-null",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": null,
+              "mentions": [
+                {
+                  "id": "a",
+                  "name": "A",
+                  "start": 0,
+                  "end": 2
+                }
+              ]
+            },
+            "raw": "E2"
+          },
+          "baseline": {
+            "name": "text-null",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "Uncertain",
+              "via": "mechanical",
+              "violation": "入站事件 text 必须是字符串"
+            },
+            "calls": 0
+          },
+          "mutant": {
+            "name": "text-null",
+            "threw": "TypeError: Cannot read properties of null (reading 'length')",
+            "calls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "C24",
+      "line": 109,
+      "operator": "drop-left(true)",
+      "from": "typeof raw === \"string\"",
+      "start": 5929,
+      "category": "等价或剩余判定屏蔽",
+      "reason": "ALLOWED.has 只接纳固定字符串，删除 typeof 不扩大可接受集合。",
+      "failed": [],
+      "difference_count": 0,
+      "example": []
+    },
+    {
+      "id": "C25",
+      "line": 111,
+      "operator": "if-true",
+      "from": "typeof raw === \"object\" && raw !== null",
+      "start": 6116,
+      "category": "仅诊断措辞差异，记存活清单",
+      "reason": "改变非法分类返回值的 violation 文案，意图、路由与锚点不变；规范未约定精确诊断文案，不改产品。",
+      "failed": [],
+      "difference_count": 6,
+      "example": [
+        {
+          "input": {
+            "name": "raw-kind-undefined",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "hello"
+            },
+            "rawKind": "undefined"
+          },
+          "baseline": {
+            "name": "raw-kind-undefined",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "Uncertain",
+              "via": "semantic",
+              "violation": "undefined"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "raw-kind-undefined",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "Uncertain",
+              "via": "semantic",
+              "violation": "分类结果只接受普通数据对象:分类结果 不支持 undefined"
+            },
+            "calls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "C26",
+      "line": 111,
+      "operator": "drop-left(true)",
+      "from": "typeof raw === \"object\"",
+      "start": 6116,
+      "category": "仅诊断措辞差异，记存活清单",
+      "reason": "改变非法分类返回值的 violation 文案，意图、路由与锚点不变；规范未约定精确诊断文案，不改产品。",
+      "failed": [],
+      "difference_count": 6,
+      "example": [
+        {
+          "input": {
+            "name": "raw-kind-undefined",
+            "input": {
+              "sender": {
+                "kind": "user",
+                "id": "u"
+              },
+              "text": "hello"
+            },
+            "rawKind": "undefined"
+          },
+          "baseline": {
+            "name": "raw-kind-undefined",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "Uncertain",
+              "via": "semantic",
+              "violation": "undefined"
+            },
+            "calls": 1
+          },
+          "mutant": {
+            "name": "raw-kind-undefined",
+            "result": {
+              "anchors": {
+                "mentions": [],
+                "quotes": []
+              },
+              "intent": "Uncertain",
+              "via": "semantic",
+              "violation": "分类结果只接受普通数据对象:分类结果 不支持 undefined"
+            },
+            "calls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "C27",
+      "line": 111,
+      "operator": "drop-right(true)",
+      "from": "raw !== null",
+      "start": 6143,
+      "category": "等价或剩余判定屏蔽",
+      "reason": "新增进入该分支的只有 null；plainData(null).value 仍是 null，safeDescribe 相同。",
+      "failed": [],
+      "difference_count": 0,
+      "example": []
+    }
+  ]
+}

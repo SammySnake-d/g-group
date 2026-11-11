@@ -1,0 +1,1253 @@
+{
+  "commit": "fc216e6d2ee3d17afc7d9ab48c6f6d98cf8917e9",
+  "content_hash": "7f03973c45271e535e0312caf999a784b010e1120f700444e3ce8799a77c0d8d",
+  "box": "box4",
+  "node": "24.21.0",
+  "baseline_tests": 233,
+  "mutations": 238,
+  "killed": 238,
+  "survived": 0,
+  "timeouts": 0,
+  "count_mismatches": 0,
+  "new_cases": [
+    {
+      "id": "K258",
+      "name": "K258 JSON 写后恢复 无事件",
+      "designated": "R18-01",
+      "discovered_by": [
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口"
+      ],
+      "all_failures": [
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K259",
+      "name": "K259 JSON 写后恢复 有事件",
+      "designated": "R18-01",
+      "discovered_by": [
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口"
+      ],
+      "all_failures": [
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K260",
+      "name": "K260 Intl.DateTimeFormat.prototype 写后恢复 无事件",
+      "designated": "R18-02",
+      "discovered_by": [
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口"
+      ],
+      "all_failures": [
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K261",
+      "name": "K261 Intl.DateTimeFormat.prototype 写后恢复 有事件",
+      "designated": "R18-02",
+      "discovered_by": [
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口"
+      ],
+      "all_failures": [
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K262",
+      "name": "K262 Math 写后恢复 无事件",
+      "designated": "R18-03",
+      "discovered_by": [
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口"
+      ],
+      "all_failures": [
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K263",
+      "name": "K263 Math 写后恢复 有事件",
+      "designated": "R18-03",
+      "discovered_by": [
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口"
+      ],
+      "all_failures": [
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K264",
+      "name": "K264 Intl.Collator.prototype 写后恢复 无事件",
+      "designated": "R18-04",
+      "discovered_by": [
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口"
+      ],
+      "all_failures": [
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K265",
+      "name": "K265 Intl.Collator.prototype 写后恢复 有事件",
+      "designated": "R18-04",
+      "discovered_by": [
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口"
+      ],
+      "all_failures": [
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K266",
+      "name": "K266 WebAssembly.Table.prototype 写后恢复 无事件",
+      "designated": "R18-05",
+      "discovered_by": [
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口"
+      ],
+      "all_failures": [
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K267",
+      "name": "K267 WebAssembly.Table.prototype 写后恢复 有事件",
+      "designated": "R18-05",
+      "discovered_by": [
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口"
+      ],
+      "all_failures": [
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K268",
+      "name": "K268 旗标改回",
+      "designated": "R17-01",
+      "discovered_by": [
+        "R17-01 拒收不临时改写已有可写数据属性:实际源码同步停点观察 send/pull、自有 then/constructor、开关异步钩子;赋值/defineProperty/Reflect.set 的有事件与无事件双侧控制"
+      ],
+      "all_failures": [
+        "R17-01 拒收不临时改写已有可写数据属性:实际源码同步停点观察 send/pull、自有 then/constructor、开关异步钩子;赋值/defineProperty/Reflect.set 的有事件与无事件双侧控制",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K269",
+      "name": "K269 原型换回",
+      "designated": "R17-01",
+      "discovered_by": [
+        "R17-01 拒收不临时改写已有可写数据属性:实际源码同步停点观察 send/pull、自有 then/constructor、开关异步钩子;赋值/defineProperty/Reflect.set 的有事件与无事件双侧控制"
+      ],
+      "all_failures": [
+        "插件交回的值按「包装 × 原型 × 自有键 × 描述符 × 可扩展性 × 结局」全组合生成 5976 种形态,send / pull 各一遍:只有由维度推出的普通原生 Promise 被 await(150 次);其余一律拒收,内核对它不做任何引擎操作——访问器、陷阱、子类构造、species、valueOf 与插件函数调用 0 次,实例、子类及其 prototype 逐项不变,宿主内置对象不变,也不装全局失败处理器(第十四轮合同)",
+        "拒收期间不临时改写对象:内核 send / pull 调用窗口内,async_hooks 在每次异步资源创建、Promise 兑现、回调前后逐项比对插件交回的对象、Promise 子类及其 prototype、插件定义与插件函数、宿主内置 Promise / Object / Function / Array 原型,拒收形态 send / pull 各一遍都 0 处变化、每次调用至少观察 1 次;观察器自检:窗口内临时加再删一个属性会被看见(第十五轮 R14-02 审查 M1)",
+        "R17-01 拒收不临时改写已有可写数据属性:实际源码同步停点观察 send/pull、自有 then/constructor、开关异步钩子;赋值/defineProperty/Reflect.set 的有事件与无事件双侧控制",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 224,
+        "fail": 9,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K270",
+      "name": "K270 不可扩展性写",
+      "designated": "R17-01",
+      "discovered_by": [
+        "R17-01 拒收不临时改写已有可写数据属性:实际源码同步停点观察 send/pull、自有 then/constructor、开关异步钩子;赋值/defineProperty/Reflect.set 的有事件与无事件双侧控制"
+      ],
+      "all_failures": [
+        "插件交回的值按「包装 × 原型 × 自有键 × 描述符 × 可扩展性 × 结局」全组合生成 5976 种形态,send / pull 各一遍:只有由维度推出的普通原生 Promise 被 await(150 次);其余一律拒收,内核对它不做任何引擎操作——访问器、陷阱、子类构造、species、valueOf 与插件函数调用 0 次,实例、子类及其 prototype 逐项不变,宿主内置对象不变,也不装全局失败处理器(第十四轮合同)",
+        "拒收期间不临时改写对象:内核 send / pull 调用窗口内,async_hooks 在每次异步资源创建、Promise 兑现、回调前后逐项比对插件交回的对象、Promise 子类及其 prototype、插件定义与插件函数、宿主内置 Promise / Object / Function / Array 原型,拒收形态 send / pull 各一遍都 0 处变化、每次调用至少观察 1 次;观察器自检:窗口内临时加再删一个属性会被看见(第十五轮 R14-02 审查 M1)",
+        "拒收期间插件对象不被同步临时改写:同法造孪生形态,内核拒收其中一个后与从没交给内核的孪生对象仍共用同一张 V8 形状表、自有描述符与写入前的独立基线逐项相同(send / pull 各一遍,不依赖异步事件);观察自检正反对照:窗口里同步 defineProperty 加再删、赋值加再 delete,无异步事件与有异步事件两种窗口都被看见,不写的窗口两种都不报(第十五轮 R15-01、R15-02)",
+        "R17-01 拒收不临时改写已有可写数据属性:实际源码同步停点观察 send/pull、自有 then/constructor、开关异步钩子;赋值/defineProperty/Reflect.set 的有事件与无事件双侧控制",
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 222,
+        "fail": 11,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K271",
+      "name": "K271 别名调用",
+      "designated": "R18-07",
+      "discovered_by": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "all_failures": [
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K272",
+      "name": "K272 计算调用",
+      "designated": "R18-07",
+      "discovered_by": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "all_failures": [
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K273",
+      "name": "K273 safeId 内写",
+      "designated": "R18-07",
+      "discovered_by": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "all_failures": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 232,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K274",
+      "name": "K274 eval 内写后恢复",
+      "designated": "R18-07",
+      "discovered_by": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "all_failures": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 232,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K275",
+      "name": "K275 new Function 内写后恢复",
+      "designated": "R18-07",
+      "discovered_by": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "all_failures": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 232,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K276",
+      "name": "K276 遮蔽原生绑定",
+      "designated": "R18-07",
+      "discovered_by": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "all_failures": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 232,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K277",
+      "name": "K277 插件交回与判定之间写",
+      "designated": "R18-07",
+      "discovered_by": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "all_failures": [
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K278",
+      "name": "K278 放行纯空白 id",
+      "designated": "R18-08",
+      "discovered_by": [
+        "R18-08 插件纯空白 id 拒收,非空 id 正常注册(已有行为补测,不新增合同)"
+      ],
+      "all_failures": [
+        "R18-08 插件纯空白 id 拒收,非空 id 正常注册(已有行为补测,不新增合同)"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 232,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K279",
+      "name": "K279 操作检查恒放行",
+      "designated": "R18-07",
+      "discovered_by": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "all_failures": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 232,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K280",
+      "name": "K280 观察器丢全局根",
+      "designated": "R18-01",
+      "discovered_by": [
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口"
+      ],
+      "all_failures": [
+        "R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull",
+        "R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口",
+        "R18-06 描述符旗标、原型、可扩展性三类同步写法都有事件与无事件标定"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 226,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K281",
+      "name": "K281 观察器漏符号边",
+      "designated": "R18-06",
+      "discovered_by": [
+        "R18-06 描述符旗标、原型、可扩展性三类同步写法都有事件与无事件标定"
+      ],
+      "all_failures": [
+        "R18-06 描述符旗标、原型、可扩展性三类同步写法都有事件与无事件标定"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 232,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K282",
+      "name": "K282 观察器漏访问器函数边",
+      "designated": "R18-06",
+      "discovered_by": [
+        "R18-06 描述符旗标、原型、可扩展性三类同步写法都有事件与无事件标定"
+      ],
+      "all_failures": [
+        "R18-06 描述符旗标、原型、可扩展性三类同步写法都有事件与无事件标定"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 232,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K283",
+      "name": "K283 hy4 B3 原形 new Function 改值再恢复",
+      "designated": "R18-07",
+      "discovered_by": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "all_failures": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 232,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K284",
+      "name": "K284 hy4 B4 原形 eval Map 原型写后恢复",
+      "designated": "R18-07",
+      "discovered_by": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "all_failures": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 232,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K285",
+      "name": "K285 isTracking 读属性之前丢类型保护",
+      "designated": "R18-07",
+      "discovered_by": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "all_failures": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 232,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "id": "K286",
+      "name": "K286 isTracking 调用传入未经值域约束的对象",
+      "designated": "R18-07",
+      "discovered_by": [
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "all_failures": [
+        "插件交回的值按「包装 × 原型 × 自有键 × 描述符 × 可扩展性 × 结局」全组合生成 5976 种形态,send / pull 各一遍:只有由维度推出的普通原生 Promise 被 await(150 次);其余一律拒收,内核对它不做任何引擎操作——访问器、陷阱、子类构造、species、valueOf 与插件函数调用 0 次,实例、子类及其 prototype 逐项不变,宿主内置对象不变,也不装全局失败处理器(第十四轮合同)",
+        "send / pull 返回已兑现的原生 Promise,其自有 async_id 或 trigger_async_id 是带 valueOf 的对象或 BigInt 时不 await:send 记 non-promise-send、pull 记 invalid-batch,valueOf 调用 0 次;子进程开着钩子、valueOf 会抛错或值为 BigInt 时进程存活;同一 Promise 的值换回数字照常确认 / 拉取(R12-01 / R12-02 阳性埋雷 / 单开关对照)",
+        "拒收期间不临时改写对象:内核 send / pull 调用窗口内,async_hooks 在每次异步资源创建、Promise 兑现、回调前后逐项比对插件交回的对象、Promise 子类及其 prototype、插件定义与插件函数、宿主内置 Promise / Object / Function / Array 原型,拒收形态 send / pull 各一遍都 0 处变化、每次调用至少观察 1 次;观察器自检:窗口内临时加再删一个属性会被看见(第十五轮 R14-02 审查 M1)",
+        "拒收期间插件对象不被同步临时改写:同法造孪生形态,内核拒收其中一个后与从没交给内核的孪生对象仍共用同一张 V8 形状表、自有描述符与写入前的独立基线逐项相同(send / pull 各一遍,不依赖异步事件);观察自检正反对照:窗口里同步 defineProperty 加再删、赋值加再 delete,无异步事件与有异步事件两种窗口都被看见,不写的窗口两种都不报(第十五轮 R15-01、R15-02)",
+        "追踪符号上是非整数数字(1.5、-0.5、1e-7、NaN、Infinity)时普通原生 Promise 照常确认 / 拉取;同一描述符换成数字字符串、BigInt 或带 valueOf 的对象就拒收、valueOf 0 次(第十五轮 R14-02 审查 M3 双侧单开关,合同是「数字或 undefined」不是整数)",
+        "R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝"
+      ],
+      "summary": {
+        "tests": 233,
+        "pass": 227,
+        "fail": 6,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    }
+  ],
+  "static": {
+    "problems": [],
+    "controls": [
+      {
+        "name": "R14-M1",
+        "problems": [
+          "48: 语句不在白名单: ExpressionStatement",
+          "48: 语句不在白名单: ExpressionStatement",
+          "48: 语句不在白名单: ExpressionStatement"
+        ]
+      },
+      {
+        "name": "R15-1",
+        "problems": [
+          "48: 语句不在白名单: ExpressionStatement",
+          "48: 语句不在白名单: ExpressionStatement"
+        ]
+      },
+      {
+        "name": "R15-2",
+        "problems": [
+          "48: 语句不在白名单: ExpressionStatement",
+          "48: 语句不在白名单: ExpressionStatement"
+        ]
+      },
+      {
+        "name": "R16-1",
+        "problems": [
+          "48: 只允许新的局部描述符 d",
+          "48: 语句不在白名单: ExpressionStatement",
+          "48: 语句不在白名单: ExpressionStatement"
+        ]
+      },
+      {
+        "name": "R16-2",
+        "problems": [
+          "48: 语句不在白名单: ExpressionStatement",
+          "48: 语句不在白名单: ExpressionStatement"
+        ]
+      },
+      {
+        "name": "R17-JSON",
+        "problems": [
+          "48: 语句不在白名单: ExpressionStatement",
+          "48: 语句不在白名单: ExpressionStatement"
+        ]
+      },
+      {
+        "name": "R17-Intl",
+        "problems": [
+          "48: 语句不在白名单: ExpressionStatement",
+          "48: 语句不在白名单: ExpressionStatement"
+        ]
+      },
+      {
+        "name": "alias",
+        "problems": [
+          "48: 只允许新的局部描述符 d",
+          "48: 语句不在白名单: ExpressionStatement",
+          "48: 语句不在白名单: ExpressionStatement"
+        ]
+      },
+      {
+        "name": "computed",
+        "problems": [
+          "48: 语句不在白名单: ExpressionStatement",
+          "48: 语句不在白名单: ExpressionStatement"
+        ]
+      },
+      {
+        "name": "safeId",
+        "problems": [
+          "38: 操作不在白名单: BinaryExpression Reflect.set(JSON, \"__neutral__\", 1), typeof v === \"number\" || v === undefined"
+        ]
+      },
+      {
+        "name": "new-Function",
+        "problems": [
+          "48: 语句不在白名单: ExpressionStatement"
+        ]
+      },
+      {
+        "name": "eval",
+        "problems": [
+          "48: 语句不在白名单: ExpressionStatement"
+        ]
+      },
+      {
+        "name": "shadow-Object",
+        "problems": [
+          "不许遮蔽原生绑定 Object",
+          "对象反射前必须先排除非 Promise 和 Proxy",
+          "45: 只允许新的局部描述符 d"
+        ]
+      },
+      {
+        "name": "after-return",
+        "problems": [
+          "pull 插件交回后必须立即判定并拒收返回"
+        ]
+      }
+    ]
+  },
+  "observer": {
+    "productPoints": 525,
+    "controlPoints": 82,
+    "hostCount": 1722,
+    "includesMap": true,
+    "includesWeakMap": true,
+    "included": {
+      "JSON": true,
+      "Intl.DateTimeFormat.prototype": true,
+      "Math": true,
+      "Intl.Collator.prototype": true,
+      "WebAssembly.Table.prototype": true,
+      "globalThis": true,
+      "symbol-edge": true,
+      "getter-function": true,
+      "getter-value": false,
+      "foreign": false,
+      "proxy": false,
+      "plugin-function": true,
+      "returned-function": true
+    },
+    "namespaceControls": [
+      {
+        "what": "clean",
+        "withEvent": false,
+        "changed": [],
+        "pauses": 12,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "clean",
+        "withEvent": true,
+        "changed": [],
+        "pauses": 14,
+        "events": 1,
+        "restored": true
+      },
+      {
+        "what": "JSON",
+        "withEvent": false,
+        "changed": [
+          "builtin"
+        ],
+        "pauses": 17,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "JSON",
+        "withEvent": true,
+        "changed": [
+          "builtin"
+        ],
+        "pauses": 19,
+        "events": 1,
+        "restored": true
+      },
+      {
+        "what": "Intl.DateTimeFormat.prototype",
+        "withEvent": false,
+        "changed": [
+          "builtin"
+        ],
+        "pauses": 17,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "Intl.DateTimeFormat.prototype",
+        "withEvent": true,
+        "changed": [
+          "builtin"
+        ],
+        "pauses": 19,
+        "events": 1,
+        "restored": true
+      },
+      {
+        "what": "Math",
+        "withEvent": false,
+        "changed": [
+          "builtin"
+        ],
+        "pauses": 17,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "Math",
+        "withEvent": true,
+        "changed": [
+          "builtin"
+        ],
+        "pauses": 19,
+        "events": 1,
+        "restored": true
+      },
+      {
+        "what": "Intl.Collator.prototype",
+        "withEvent": false,
+        "changed": [
+          "builtin"
+        ],
+        "pauses": 17,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "Intl.Collator.prototype",
+        "withEvent": true,
+        "changed": [
+          "builtin"
+        ],
+        "pauses": 19,
+        "events": 1,
+        "restored": true
+      },
+      {
+        "what": "WebAssembly.Table.prototype",
+        "withEvent": false,
+        "changed": [
+          "builtin"
+        ],
+        "pauses": 17,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "WebAssembly.Table.prototype",
+        "withEvent": true,
+        "changed": [
+          "builtin"
+        ],
+        "pauses": 19,
+        "events": 1,
+        "restored": true
+      }
+    ],
+    "shapeControls": [
+      {
+        "what": "clean",
+        "withEvent": false,
+        "changed": [],
+        "pauses": 12,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "clean",
+        "withEvent": true,
+        "changed": [],
+        "pauses": 14,
+        "events": 1,
+        "restored": true
+      },
+      {
+        "what": "flags",
+        "withEvent": false,
+        "changed": [
+          "returned"
+        ],
+        "pauses": 19,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "flags",
+        "withEvent": true,
+        "changed": [
+          "returned"
+        ],
+        "pauses": 21,
+        "events": 1,
+        "restored": true
+      },
+      {
+        "what": "prototype",
+        "withEvent": false,
+        "changed": [
+          "returned"
+        ],
+        "pauses": 19,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "prototype",
+        "withEvent": true,
+        "changed": [
+          "returned"
+        ],
+        "pauses": 21,
+        "events": 1,
+        "restored": true
+      },
+      {
+        "what": "extensible",
+        "withEvent": false,
+        "changed": [
+          "returned"
+        ],
+        "pauses": 15,
+        "events": 0,
+        "restored": false
+      },
+      {
+        "what": "extensible",
+        "withEvent": true,
+        "changed": [
+          "returned"
+        ],
+        "pauses": 17,
+        "events": 1,
+        "restored": false
+      }
+    ],
+    "controls": [
+      {
+        "what": "clean",
+        "withEvent": false,
+        "changed": [],
+        "pauses": 12,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "clean",
+        "withEvent": true,
+        "changed": [],
+        "pauses": 14,
+        "events": 1,
+        "restored": true
+      },
+      {
+        "what": "value-assign",
+        "withEvent": false,
+        "changed": [
+          "returned"
+        ],
+        "pauses": 16,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "value-assign",
+        "withEvent": true,
+        "changed": [
+          "returned"
+        ],
+        "pauses": 18,
+        "events": 1,
+        "restored": true
+      },
+      {
+        "what": "value-define",
+        "withEvent": false,
+        "changed": [
+          "returned"
+        ],
+        "pauses": 19,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "value-define",
+        "withEvent": true,
+        "changed": [
+          "returned"
+        ],
+        "pauses": 21,
+        "events": 1,
+        "restored": true
+      },
+      {
+        "what": "value-reflect",
+        "withEvent": false,
+        "changed": [
+          "returned"
+        ],
+        "pauses": 18,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "value-reflect",
+        "withEvent": true,
+        "changed": [
+          "returned"
+        ],
+        "pauses": 20,
+        "events": 1,
+        "restored": true
+      },
+      {
+        "what": "map-define",
+        "withEvent": false,
+        "changed": [
+          "builtin"
+        ],
+        "pauses": 17,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "map-define",
+        "withEvent": true,
+        "changed": [
+          "builtin"
+        ],
+        "pauses": 19,
+        "events": 1,
+        "restored": true
+      },
+      {
+        "what": "weakmap-reflect",
+        "withEvent": false,
+        "changed": [
+          "builtin"
+        ],
+        "pauses": 17,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "what": "weakmap-reflect",
+        "withEvent": true,
+        "changed": [
+          "builtin"
+        ],
+        "pauses": 19,
+        "events": 1,
+        "restored": true
+      }
+    ],
+    "actual": [
+      {
+        "mode": "send",
+        "key": "then",
+        "withHook": false,
+        "result": {
+          "ok": false,
+          "state": "delivery-unknown",
+          "reason": "non-promise-send",
+          "detail": "这一片只支持返回原生 Promise 的 send;同步返回值、thenable 与改过 then 的 Promise 都不当作回执"
+        },
+        "changed": [],
+        "pauses": 98,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "mode": "pull",
+        "key": "then",
+        "withHook": false,
+        "result": {
+          "ok": false,
+          "reason": "invalid-batch",
+          "detail": "pull 必须给出普通数据数组:pull 结果 不是普通原生 Promise;这一片只接受返回普通原生 Promise 的 pull,同步返回值、thenable 与改过的 Promise 都不读取、不处理"
+        },
+        "changed": [],
+        "pauses": 23,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "mode": "send",
+        "key": "constructor",
+        "withHook": false,
+        "result": {
+          "ok": false,
+          "state": "delivery-unknown",
+          "reason": "non-promise-send",
+          "detail": "这一片只支持返回原生 Promise 的 send;同步返回值、thenable 与改过 then 的 Promise 都不当作回执"
+        },
+        "changed": [],
+        "pauses": 99,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "mode": "pull",
+        "key": "constructor",
+        "withHook": false,
+        "result": {
+          "ok": false,
+          "reason": "invalid-batch",
+          "detail": "pull 必须给出普通数据数组:pull 结果 不是普通原生 Promise;这一片只接受返回普通原生 Promise 的 pull,同步返回值、thenable 与改过的 Promise 都不读取、不处理"
+        },
+        "changed": [],
+        "pauses": 24,
+        "events": 0,
+        "restored": true
+      },
+      {
+        "mode": "send",
+        "key": "then",
+        "withHook": true,
+        "result": {
+          "ok": false,
+          "state": "delivery-unknown",
+          "reason": "non-promise-send",
+          "detail": "这一片只支持返回原生 Promise 的 send;同步返回值、thenable 与改过 then 的 Promise 都不当作回执"
+        },
+        "changed": [],
+        "pauses": 98,
+        "events": 4,
+        "restored": true
+      },
+      {
+        "mode": "pull",
+        "key": "then",
+        "withHook": true,
+        "result": {
+          "ok": false,
+          "reason": "invalid-batch",
+          "detail": "pull 必须给出普通数据数组:pull 结果 不是普通原生 Promise;这一片只接受返回普通原生 Promise 的 pull,同步返回值、thenable 与改过的 Promise 都不读取、不处理"
+        },
+        "changed": [],
+        "pauses": 23,
+        "events": 1,
+        "restored": true
+      },
+      {
+        "mode": "send",
+        "key": "constructor",
+        "withHook": true,
+        "result": {
+          "ok": false,
+          "state": "delivery-unknown",
+          "reason": "non-promise-send",
+          "detail": "这一片只支持返回原生 Promise 的 send;同步返回值、thenable 与改过 then 的 Promise 都不当作回执"
+        },
+        "changed": [],
+        "pauses": 99,
+        "events": 4,
+        "restored": true
+      },
+      {
+        "mode": "pull",
+        "key": "constructor",
+        "withHook": true,
+        "result": {
+          "ok": false,
+          "reason": "invalid-batch",
+          "detail": "pull 必须给出普通数据数组:pull 结果 不是普通原生 Promise;这一片只接受返回普通原生 Promise 的 pull,同步返回值、thenable 与改过的 Promise 都不读取、不处理"
+        },
+        "changed": [],
+        "pauses": 24,
+        "events": 1,
+        "restored": true
+      }
+    ]
+  },
+  "canary": "node v24.21.0,每个变异超时 300.0s\n✓ 金丝雀(必然卡住的变异):超时被杀,用时 5.0s,记 ✗ 超时、不算杀死\n",
+  "l1_reproduction": [
+    {
+      "name": "clean",
+      "baseline": "6f43f254a7be9e2d006d9d987d0072197ec642b8",
+      "exit": 0
+    },
+    {
+      "name": "K283 hy4 B3 原形 new Function 改值再恢复",
+      "baseline": "6f43f254a7be9e2d006d9d987d0072197ec642b8",
+      "exit": 0
+    },
+    {
+      "name": "K284 hy4 B4 原形 eval Map 原型写后恢复",
+      "baseline": "6f43f254a7be9e2d006d9d987d0072197ec642b8",
+      "exit": 0
+    }
+  ]
+}

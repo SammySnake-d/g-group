@@ -1,0 +1,6 @@
+box2 Node 24.21.0 / Docker Node 22.22.0
+RUN_COMMIT=421392f8d6da7f2e1c31585f4882e687b70fc71f
+RUN_CONTENT_HASH=6bea64690f4c96b544dd3e7d68f42813a3789bee1316b212471e02b201daae2d
+
+> typecheck
+> tsc -p tsconfig.json

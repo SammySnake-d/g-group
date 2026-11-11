@@ -1,0 +1,55 @@
+box2 Node 24.21.0 / Docker Node 22.22.0
+RUN_COMMIT=421392f8d6da7f2e1c31585f4882e687b70fc71f
+RUN_CONTENT_HASH=6bea64690f4c96b544dd3e7d68f42813a3789bee1316b212471e02b201daae2d
+
+> lint
+> biome lint --error-on-warnings
+
+packages/kernel/src/plugins.test.ts:2247:29 lint/complexity/useLiteralKeys  FIXABLE  ━━━━━━━━━━━━━━━
+
+  i The computed expression can be simplified without the use of a string literal.
+
+    2245 │   assert.equal(result.ok === false && result.reason, "invalid-batch");
+    2246 │   const out = await syncWindow();
+  > 2247 │   assert.equal(out.included["JSON"], true, "根与边规则必须发现目标,不靠目标名补集合");
+         │                             ^^^^^^
+    2248 │   const controls = out.namespaceControls.filter((r) => r.what === "JSON" || r.what === "clean");
+    2249 │   assert.equal(controls.length, 4);
+
+  i A literal key is easier to read, and tools such as type checkers and minifiers can understand the property name.
+
+  i Unsafe fix: Use a literal key instead.
+
+    2245 2245 │     assert.equal(result.ok === false && result.reason, "invalid-batch");
+    2246 2246 │     const out = await syncWindow();
+    2247      │ - ··assert.equal(out.included["JSON"],·true,·"根与边规则必须发现目标,不靠目标名补集合");
+         2247 │ + ··assert.equal(out.included.JSON,·true,·"根与边规则必须发现目标,不靠目标名补集合");
+    2248 2248 │     const controls = out.namespaceControls.filter((r) => r.what === "JSON" || r.what === "clean");
+    2249 2249 │     assert.equal(controls.length, 4);
+
+
+packages/kernel/src/plugins.test.ts:2313:29 lint/complexity/useLiteralKeys  FIXABLE  ━━━━━━━━━━━━━━━
+
+  i The computed expression can be simplified without the use of a string literal.
+
+    2311 │   assert.equal(result.ok === false && result.reason, "invalid-batch");
+    2312 │   const out = await syncWindow();
+  > 2313 │   assert.equal(out.included["Math"], true, "根与边规则必须发现目标,不靠目标名补集合");
+         │                             ^^^^^^
+    2314 │   const controls = out.namespaceControls.filter((r) => r.what === "Math" || r.what === "clean");
+    2315 │   assert.equal(controls.length, 4);
+
+  i A literal key is easier to read, and tools such as type checkers and minifiers can understand the property name.
+
+  i Unsafe fix: Use a literal key instead.
+
+    2311 2311 │     assert.equal(result.ok === false && result.reason, "invalid-batch");
+    2312 2312 │     const out = await syncWindow();
+    2313      │ - ··assert.equal(out.included["Math"],·true,·"根与边规则必须发现目标,不靠目标名补集合");
+         2313 │ + ··assert.equal(out.included.Math,·true,·"根与边规则必须发现目标,不靠目标名补集合");
+    2314 2314 │     const controls = out.namespaceControls.filter((r) => r.what === "Math" || r.what === "clean");
+    2315 2315 │     assert.equal(controls.length, 4);
+
+
+Checked 25 files in 156ms. No fixes applied.
+Found 2 infos.
