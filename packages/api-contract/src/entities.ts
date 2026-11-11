@@ -2,6 +2,7 @@
 // 任务四台状态机里的任务状态、Compute 进度四类语义事件、承诺账本、插件三类、定时(cron + 时区)与 slash 命令。
 // 这是「视图」不是领域对象:主进程从领域状态投影出来,渲染进程只读;所有修改都走 api.ts 的方法。
 import { arr, bool, id, int, isoTime, json, lit, nullable, obj, oneOf, opt, seq, str, tagged, type Infer } from "./schema.ts";
+import { LongTermMemoryView } from "./memory.ts";
 
 // ---------- 联系人 ----------
 export const HARNESSES = ["claude-code", "codex"] as const;
@@ -465,7 +466,7 @@ export const ScheduleView = obj({
 export type ScheduleView = Infer<typeof ScheduleView>;
 
 // ---------- 联系人资料(AC-54)----------
-/** 联系人主面板:预设与职责分开给(#1370 是否合并待确认);记忆含工作记忆(状态笔记),长期记忆位置留空待 AC-42。 */
+/** 联系人主面板:预设与职责分开给(#1370 是否合并待确认);记忆含工作记忆(状态笔记)与长期记忆概览(AC-42 条目,见 memory.ts)。 */
 export const ContactProfileView = obj({
   contact: ContactView,
   /** 预设(人设原文),每轮第 1 块使用。 */
@@ -473,8 +474,8 @@ export const ContactProfileView = obj({
   memory: obj({
     /** 工作记忆:联系人当前状态笔记与版本;还没写过为 null。 */
     stateNote: nullable(obj({ text: str({ max: 100000 }), version: int({ min: 1 }) })),
-    /** 长期记忆(AC-42)占位:存储未接入前恒为 null。 */
-    longTerm: nullable(json()),
+    /** 长期记忆(AC-42)概览:按准入分前缀/锚点两类的生效条数与前若干条;逐条看用 memory.list。 */
+    longTerm: nullable(LongTermMemoryView),
   }),
   duties: obj({
     /** 进行中的承诺(status=active)。 */

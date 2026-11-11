@@ -16,6 +16,7 @@ import type { AnnouncementOrder } from "./announcements.ts";
 import { HostError } from "./db.ts";
 import { type HelperEntryInput, HelperDesk } from "./helper.ts";
 import type { Host } from "./host.ts";
+import { memoryHandlers } from "./memory-api.ts";
 import { previewCron } from "./schedules.ts";
 import { contactProfile, listFiles, readFile } from "./views.ts";
 
@@ -40,6 +41,7 @@ export function createService(host: Host): Service {
     "contacts.create": (p: Parameters<Host["createContact"]>[0]) => host.createContact(p),
     "contacts.update": ({ contactId, ...patch }: { contactId: string } & Parameters<Host["updateContact"]>[1]) => host.updateContact(contactId, patch),
     "contacts.profile": (p: { contactId: string }) => contactProfile(host, p.contactId),
+    ...memoryHandlers(host),
     "capabilities.list": () => host.capabilities.list(),
     "contacts.remove": (p: { contactId: string }) => {
       host.removeContact(p.contactId);
