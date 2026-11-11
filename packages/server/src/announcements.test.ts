@@ -69,6 +69,8 @@ test("两条公告并存:第二条不覆盖第一条,按创建先后列出,可�
   );
   const desc = okValue<{ announcements: AnnouncementView[] }>(await svc.handle("announcements.list", { roomId: g1.id, order: "created-desc" }));
   assert.deepEqual(desc.announcements.map((x) => x.id), [x2.id, x1.id]);
+  // 公告改动推的 room.updated 数到这里为止:之后联系人跑一轮、装配了这两条公告,宿主会再推一次(已装配版本变了,见 group-admin.test.ts)
+  const announced = events.length;
   // 闲聊群后来有新消息(更新时间更晚),置顶的研发群仍排第一、不消失
   host.send({ roomId: g2.id, clientActionId: "m1", text: "中午吃什么" });
   await settle(host);
@@ -82,7 +84,7 @@ test("两条公告并存:第二条不覆盖第一条,按创建先后列出,可�
   );
   // 每次公告改动都推 room.updated,带当时的条数;重发不推
   assert.deepEqual(
-    events.flatMap((e) => (e.type === "room.updated" && e.room.id === g1.id ? [e.room.announcementCount] : [])),
+    events.slice(0, announced).flatMap((e) => (e.type === "room.updated" && e.room.id === g1.id ? [e.room.announcementCount] : [])),
     [0, 0, 1, 2],
   );
   await host.close();

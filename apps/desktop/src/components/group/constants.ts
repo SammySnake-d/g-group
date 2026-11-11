@@ -51,6 +51,8 @@ export const TOOLS = {
   fromPlugins: '本群插件带来的',
   noPluginCmds: '本群挂的插件没有提供命令。在「插件」页签添加。',
   foot: '在输入框里打 / 也能叫出这些命令。',
+  fromPluginsLive: '插件带来的',
+  noPluginCmdsLive: '这台电脑上装的插件没有提供命令。',
   contacts: '群里联系人的能力',
   noCaps: '没有勾选额外的 skill 或 MCP',
   manage: '去设置',

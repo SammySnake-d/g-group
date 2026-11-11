@@ -59,7 +59,8 @@ export const createTasksSlice: Slice<TasksSlice> = (set, get) => {
       const b = get().boards[bid]
       /* 连上后端:任务板的一行就是清单里同名的待认领任务,交给它 */
       if (live(get())) {
-        const t = get().checklist.find((x) => x.conv === b?.conv && x.text === b.rows[row]?.task && x.status === '待认领')
+        const task = b?.rows[row]?.task
+        const t = task ? get().checklist.find((x) => x.conv === b.conv && x.text === task && x.status === '待认领') : undefined
         if (t) void assignTaskLive(liveCtx(get, set), t.id, who)
         else get().toast('这一行还不在本群清单里，先导入')
         return

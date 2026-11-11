@@ -114,7 +114,7 @@ test("群资料·公告与群设置:发布、改、撤下公告并写明各联�
       const list = win.getByTestId("notice-list");
       await expect(list.locator("li")).toHaveCount(2);
       await expect(list.locator("li").first()).toContainText("周五不发版");
-      await shot(win, "notice-multi");
+      await shot(win, "notice-multi", 4500); // 等「已发布」提示收起再拍
       const item = list.locator("li").filter({ hasText: "周五不发版" });
       await item.getByRole("button", { name: "撤下", exact: true }).click();
       await item.getByRole("button", { name: "撤下这条", exact: true }).click();
@@ -146,7 +146,7 @@ test("群资料·公告与群设置:发布、改、撤下公告并写明各联�
       await win.getByTestId("pool-max-2").click();
       await expect(pool).toHaveAttribute("data-max", "2", LONG);
       await expect(pool).toContainText("借出 0 / 2 格");
-      await shot(win, "pool");
+      await shot(win, "pool", 4500); // 等提示收起再拍
       await win.keyboard.press("Escape");
       await openTab(win, "tools");
       await expect(win.getByTestId("side-tools")).toBeVisible();

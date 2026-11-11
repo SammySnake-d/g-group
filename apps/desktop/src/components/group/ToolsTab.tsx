@@ -93,8 +93,8 @@ export function ToolsTab({ conv }: { conv: Conversation }) {
       <div className="px-2 pb-1 pt-1.5 text-[11.5px] font-medium text-fg-3">{TOOLS.builtin}</div>
       {builtin.map((t) => <Row key={t.key} t={t} />)}
       {live && <ContactCaps conv={conv} />}
-      <div className="px-2 pb-1 pt-4 text-[11.5px] font-medium text-fg-3">{TOOLS.fromPlugins}</div>
-      {fromPlugins.length ? fromPlugins.map((t) => <Row key={t.key} t={t} />) : <div className="px-2 py-1 text-[12px] text-fg-3">{TOOLS.noPluginCmds}</div>}
+      <div className="px-2 pb-1 pt-4 text-[11.5px] font-medium text-fg-3">{live ? TOOLS.fromPluginsLive : TOOLS.fromPlugins}</div>
+      {fromPlugins.length ? fromPlugins.map((t) => <Row key={t.key} t={t} />) : <div className="px-2 py-1 text-[12px] text-fg-3">{live ? TOOLS.noPluginCmdsLive : TOOLS.noPluginCmds}</div>}
       <p className="mx-2 mt-3 flex items-center gap-1 border-t border-line pt-2.5 text-[11.5px] leading-relaxed text-fg-3"><Puzzle className="h-3 w-3" />{TOOLS.foot}</p>
     </section>
   )
