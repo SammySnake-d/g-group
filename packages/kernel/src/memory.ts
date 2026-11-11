@@ -2,13 +2,14 @@
 //   存储:每条记忆一个 md 文件(真源),frontmatter 是 JSON(YAML 的子集,不加依赖),正文是记忆原文。索引由宿主从 md 派生、可重建。
 //   写:planMemoryWrite 只在锚点相交的邻域里判关系——内容相同(去空白)算复述,只挂佐证;模型指明 change 出新版本并把旧条目标已替代;
 //       refine 挂细化关系;conflict 且两边都来自用户原话时不自动替代,交用户拍板;其余新建。写下即生效(#2375),不进候选区。
-//   读:selectMemories 硬筛(生效或降级、在有效期内、锚点相交、非全局),按锚点命中、与本轮文字的字面重合、使用记录排序;
-//       在分数最大落差处截断(不用固定条数或固定阈值,#2391),内容重复的只展开一条,其余给 id 加标题。
+//   读:selectMemories 硬筛(生效或降级、在有效期内、锚点相交、非全局),按锚点命中、与本轮文字的全文相关名次、使用记录排序;
+//       同分按 id;在分数最大落差处截断(不用固定条数或固定阈值,#2391),内容重复的只展开一条,其余给 id 加标题。
+//       全文相关只在硬筛后的候选里经检索接缝 history-search.ts(上游 acp-kernel 的 hybrid 检索)算名次,见 memoryTextRanks(T-177 G3-a)。
 //   前缀:prefixMemories 只收生效的全局条目(每轮都适用的才进前缀,不设 token 上限)。
 //   反馈:recordMemoryUse 记 uses;连续 DEGRADE_AFTER 次结果不好降级(不删除),降级后一次好结果恢复。
 import { INVISIBLE_SOURCE } from "./assemble.ts";
 
-// 去掉空白与零宽字符后比对(与 assemble.ts 撤回比对同一套字符)。复述判定、去重、字面重合都对两边同样处理,
+// 去掉空白与零宽字符后比对(与 assemble.ts 撤回比对同一套字符)。复述判定、去重都对两边同样处理,
 // 不写返回类型标注:G-STUB 的返回值变异对两边同时生效时改不了行为(等价变异),这里不让它把对称用法误报成「没测计算结果」
 const INVIS = new RegExp(INVISIBLE_SOURCE, "gu");
 const squash = (t: string) => t.replace(INVIS, "");
@@ -146,30 +147,23 @@ export function planMemoryWrite(entries: readonly MemoryEntry[], w: MemoryWrite,
 
 const inWindow = (e: MemoryEntry, now: string) => (e.validFrom === null || e.validFrom <= now) && (e.validTo === null || e.validTo > now);
 
-/** 本轮文字与条目的字面重合:本轮文字的相邻二字与英文词,在条目标题+正文里出现的个数 */
-function overlap(text: string, e: MemoryEntry) {
-  const t = squash(text).toLowerCase();
-  if (t === "") return 0;
-  const hay = squash(`${e.title}${e.body}`).toLowerCase();
-  const grams = new Set<string>();
-  const chars = [...t];
-  for (let i = 0; i + 1 < chars.length; i++) grams.add(chars[i]! + chars[i + 1]!);
-  for (const w of text.toLowerCase().match(/[a-z0-9_]{3,}/g) ?? []) grams.add(w);
-  let n = 0;
-  for (const g of grams) if (hay.includes(g)) n++;
-  return n;
+/** 全文分量(T-177 G3-a)。红提交空壳:签名在,一律返回 0。 */
+export function memoryTextRanks(entries: readonly MemoryEntry[], _text: string): Map<string, number> {
+  return new Map(entries.map((e) => [e.id, 0]));
 }
 
-function score(e: MemoryEntry, anchors: readonly string[], text: string) {
+function score(e: MemoryEntry, anchors: readonly string[], ranks: ReadonlyMap<string, number>) {
   const hits = e.anchors.filter((a) => anchors.includes(a)).length;
   const good = e.uses.filter((u) => u.good).length;
   const badN = e.uses.length - good;
-  return hits * 10 + overlap(text, e) + good - badN - (e.status === "degraded" ? 5 : 0);
+  return hits * 10 + (ranks.get(e.id) ?? 0) + good - badN - (e.status === "degraded" ? 5 : 0);
 }
+const byId = (a: MemoryEntry, b: MemoryEntry) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 export function selectMemories(entries: readonly MemoryEntry[], ctx: { anchors: readonly string[]; text: string; now: string }): { expanded: MemoryEntry[]; listed: { id: string; title: string }[] } {
   const cand = entries.filter((e) => live(e) && inWindow(e, ctx.now) && !e.anchors.includes(GLOBAL_ANCHOR) && meets(e.anchors, ctx.anchors));
-  const ranked = cand.map((e, i) => ({ e, s: score(e, ctx.anchors, ctx.text), i })).sort((a, b) => b.s - a.s || a.i - b.i);
+  const ranks = memoryTextRanks(cand, ctx.text);
+  const ranked = cand.map((e) => ({ e, s: score(e, ctx.anchors, ranks) })).sort((a, b) => b.s - a.s || byId(a.e, b.e));
   // 断崖:相邻分数的最大落差处;没有落差就全部展开
   let cut = ranked.length;
   let maxDrop = 0;
