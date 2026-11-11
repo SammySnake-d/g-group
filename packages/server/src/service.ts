@@ -48,16 +48,17 @@ export function createService(host: Host): Service {
     "rooms.list": () => ({ rooms: host.roomsOfUser() }),
     "rooms.get": (p: { roomId: string }) => host.roomView(p.roomId),
     "rooms.openDm": (p: { contactId: string }) => host.openDm(p.contactId),
-    "rooms.createGroup": (p: { title: string; members: { kind: "user" | "contact"; id: string }[] }) => host.createGroup(p.title, p.members),
+    "rooms.createGroup": (p: { clientActionId: string; title: string; members: { kind: "user" | "contact"; id: string }[] }) => host.createGroup(p.title, p.members, p.clientActionId),
     "rooms.update": ({ roomId, ...patch }: { roomId: string } & Parameters<Host["updateRoom"]>[1]) => host.updateRoom(roomId, patch),
     "rooms.addMembers": (p: { roomId: string; members: { kind: "user" | "contact"; id: string }[] }) => host.addMembers(p.roomId, p.members),
     "rooms.removeMember": (p: { roomId: string; member: { kind: "user" | "contact"; id: string }; stopTasks?: boolean }) =>
       host.removeMember(p.roomId, p.member, p.stopTasks === undefined ? {} : { stopTasks: p.stopTasks }),
+    "rooms.dissolve": (p: { roomId: string; stopTasks?: boolean }) => host.dissolveRoom(p.roomId, p.stopTasks === undefined ? {} : { stopTasks: p.stopTasks }),
     "rooms.markRead": (p: { roomId: string; seq: number }) => {
       host.markRead(p.roomId, { kind: "user", id: host.userId }, p.seq);
       return { ok: true };
     },
-    "announcements.list": (p: { roomId: string; order?: AnnouncementOrder }) => ({ announcements: host.announcements.list(p.roomId, p.order) }),
+    "announcements.list": (p: { roomId: string; order?: AnnouncementOrder }) => ({ announcements: host.announcementViews(p.roomId, p.order) }),
     "announcements.add": (p: { roomId: string; clientActionId: string; text: string }) => host.announcements.add(p.roomId, p.text, p.clientActionId),
     "announcements.update": (p: { announcementId: string; text: string; expectedVersion?: number }) => host.announcements.update(p.announcementId, p.text, p.expectedVersion),
     "announcements.remove": (p: { announcementId: string; expectedVersion?: number }) => {

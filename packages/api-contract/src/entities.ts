@@ -125,6 +125,8 @@ export const AnnouncementView = obj({
   version: int({ min: 1 }),
   createdAt: isoTime(),
   updatedAt: isoTime(),
+  /** 各联系人成员最近一轮装配进上下文的是这条的第几版(「已装配 vN」);还没装配过的不列。旧宿主不给。 */
+  assembled: opt(arr(obj({ contactId: id(), version: int({ min: 1 }) }))),
 });
 export type AnnouncementView = Infer<typeof AnnouncementView>;
 
@@ -313,6 +315,11 @@ export const TaskView = obj({
   workspace: opt(WorkspaceView),
   /** 在等什么(AC-23):排队等 Compute 槽位的原因,或「停止未确认」;没有在等为 null。 */
   waitingFor: opt(nullable(str({ max: 500 }))),
+  /**
+   * 正在占的 Compute 槽位(AC-23/U09):personal = 联系人自己的槽位,group = 借的本群临时槽位;stopping = 已请求停止、还没确认停下(仍占着)。
+   * 没占槽位(没开工、排队中、已停下)为 null;旧宿主不给。
+   */
+  slot: opt(nullable(obj({ scope: oneOf(["personal", "group"] as const), stopping: bool() }))),
   createdAt: isoTime(),
   updatedAt: isoTime(),
   /** 用户手动新建任务时填的描述,原样保留(AC-47);联系人派活建的任务没有这一项。 */

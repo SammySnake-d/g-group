@@ -88,6 +88,8 @@ export function toCompute(t: TaskView, prev?: Compute): Compute | null {
     /* 失败了(出了原位失败卡、任务还在等你选,或已经没做成):那一行写失败原因 */
     ...((status === 'error' || latest?.kind === 'failed') && failed ? { error: failed.summary } : {}),
     ...(t.state === 'T9_StopRequested' ? { stopping: true } : {}),
+    /* 借的是本群临时槽位(U09):群资料「临时算力」页按它列借出 */
+    ...(t.slot?.scope === 'group' ? { pool: 'group' as const } : {}),
   }
 }
 

@@ -1,5 +1,7 @@
 // 协作切片:任务板、群清单、记下的承诺、协作手册,以及 Helper 在聊天里的总结与回复。
 import { people, type Board, type Commitment, type ListItem, type PersonId, type PlaybookItem } from '@/data'
+import { assignTaskLive, createTaskLive, createTasksLive, setTaskStatusLive } from '@/api/wire/checklist'
+import { live, liveCtx } from '@/api/wire/live'
 import { broken } from '@/mut'
 import { later, uid } from '../boot'
 import { HELPER_CARDS, IMPORTED_BOARD, SUMMARY_DEMO } from '../demo'
@@ -12,7 +14,8 @@ export interface TasksCtx {
   playbook: PlaybookItem[]
   checklist: ListItem[]
   claim: (boardId: string, row: number, who: PersonId) => void
-  importBoard: (convId: string) => void
+  /** 导入任务板:rows 是要进清单的行(连上后端时逐行建成本群任务,待认领);演示里用示例行 */
+  importBoard: (convId: string, rows?: string[]) => void
   claimTask: (taskId: string, who: PersonId) => void
   setTaskStatus: (taskId: string, st: ListItem['status']) => void
   addTasks: (convId: string, texts: string[]) => void
@@ -24,7 +27,12 @@ export interface TasksCtx {
 }
 export const TASKS_CTX_KEYS = ['boards', 'commits', 'playbook', 'checklist', 'claim', 'importBoard', 'claimTask', 'setTaskStatus', 'addTasks', 'addTask', 'summarize', 'helperReply'] as const satisfies readonly (keyof TasksCtx)[]
 
-export type TasksSlice = TasksCtx
+export type TasksSlice = TasksCtx & {
+  /** 群清单整表换掉 / 换一项 / 删一项(连上后端时由 api/wire/checklist 写) */
+  setChecklist: (list: ListItem[]) => void
+  putListItem: (it: ListItem) => void
+  dropListItem: (id: string) => void
+}
 
 export const createTasksSlice: Slice<TasksSlice> = (set, get) => {
   const L = lens(set)
@@ -43,12 +51,29 @@ export const createTasksSlice: Slice<TasksSlice> = (set, get) => {
     playbook: [],
     checklist: [],
 
+    setChecklist: (checklist) => set({ checklist }),
+    putListItem: (it) => L.checklist((l) => (l.some((x) => x.id === it.id) ? l.map((x) => (x.id === it.id ? it : x)) : [...l, it])),
+    dropListItem: (id) => L.checklist((l) => l.filter((x) => x.id !== id)),
+
     claim: (bid, row, who) => {
       const b = get().boards[bid]
+      /* 连上后端:任务板的一行就是清单里同名的待认领任务,交给它 */
+      if (live(get())) {
+        const task = b?.rows[row]?.task
+        const t = task ? get().checklist.find((x) => x.conv === b.conv && x.text === task && x.status === '待认领') : undefined
+        if (t) void assignTaskLive(liveCtx(get, set), t.id, who)
+        else get().toast('这一行还不在本群清单里，先导入')
+        return
+      }
       L.boards((all) => ({ ...all, [bid]: { ...all[bid], rows: all[bid].rows.map((r, i) => (i === row ? { ...r, who } : r)) } }))
       get().say(b.conv, who, `我领「${b.rows[row].task}」。`, 500)
     },
-    importBoard: (cid) => {
+    importBoard: (cid, rows) => {
+      if (live(get())) {
+        if (rows?.length) void createTasksLive(liveCtx(get, set), cid, rows)
+        else get().toast('没有要导入的行：先把 CSV 交给 Helper 读出来')
+        return
+      }
       const bid = 'b' + uid()
       L.boards((b) => ({ ...b, [bid]: { id: bid, title: IMPORTED_BOARD.title, conv: cid, rows: IMPORTED_BOARD.rows.map((task) => ({ task })) } }))
       get().pushMsg({ k: 'board', id: 'bd' + uid(), from: 'helper', boardId: bid }, cid)
@@ -58,18 +83,25 @@ export const createTasksSlice: Slice<TasksSlice> = (set, get) => {
     },
 
     claimTask: (tid, who) => {
+      if (live(get())) { void assignTaskLive(liveCtx(get, set), tid, who); return }
       const t = get().checklist.find((x) => x.id === tid)!
       L.checklist((l) => l.map((x) => (x.id === tid ? { ...x, who, status: '进行中' } : x)))
       sys(t.conv, `${people[who].name} 认领了清单里的「${t.text}」`)
     },
-    setTaskStatus: (tid, st) => L.checklist((l) => l.map((x) => (x.id === tid ? { ...x, status: st } : x))),
+    setTaskStatus: (tid, st) => {
+      if (live(get())) { void setTaskStatusLive(liveCtx(get, set), tid, st); return }
+      L.checklist((l) => l.map((x) => (x.id === tid ? { ...x, status: st } : x)))
+    },
     addTasks: (cid, texts) => {
+      if (live(get())) { void createTasksLive(liveCtx(get, set), cid, texts); return }
       L.checklist((l) => [...l, ...texts.map((text) => ({ id: 't' + uid(), conv: cid, text, status: '待认领' as const, attempts: [] }))])
       sys(cid, `Helper 按你的确认，往本群清单加了 ${texts.length} 项`)
       helperSays(cid, `@所有人 清单新加了 ${texts.length} 项，按各自在本群的分工认领。`)
       get().say(cid, 'argon', '我领「飞书接入方案」和「设计规范 v1」，这两项在我的分工里。', 1200)
     },
     addTask: (t) => {
+      /* 连上后端:由后端建(以你的一条消息记进群里),清单项等回包;这里先返回空 */
+      if (live(get())) { void createTaskLive(liveCtx(get, set), t); return '' }
       const id = 't' + uid()
       const desc = broken('AC-47-2') ? undefined : t.desc
       const who = broken('AC-47-3') ? undefined : t.who
