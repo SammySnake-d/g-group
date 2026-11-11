@@ -54,6 +54,8 @@ test("报告不写验收结论,以说明结尾", () => {
 test("模型状态单列:429 到上限记未测并带探测记录", () => {
   const md = renderReport(summary());
   assert.match(md, /^\| hy \| 未测\(上游 429 限流\) \| 2026-11-11T14:00:00\.000Z HTTP 429 retry-after 819 rate_limit_error \|$/m);
+  // 整份报告由 renderReport 算出:整串属性也判(返回值被换成错值时会带上后缀,这条会红)
+  assert.ok(md.startsWith("# T-177 G6 同题对照报告\n") && md.endsWith("- 最后一条说明\n"));
 });
 
 test("指定对照:同模型两组都有结果才列,差值按后者减前者", () => {

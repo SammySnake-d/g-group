@@ -152,6 +152,7 @@ test("写入延迟按来源消息发出到宿主写下这条期望记忆;没写�
   const mem = base.memories.A![0]!;
   const late = scoreRecords(set, [{ ...base, memories: { A: [{ ...mem, createdAt: 4000 }, { ...mem, id: "m9", createdAt: 2000 }] } }]);
   assert.deepEqual(late.writeLatencyMs, { p50: 1000, p95: 1000, n: 1 });
+  assert.deepEqual([late.coverage, late.probes], [{ n: 3, d: 3 }, { n: 1, d: 1 }]);
   const none = scoreRecords(set, [{ ...base, memories: { A: [] } }]);
   assert.deepEqual(none.writeLatencyMs, { p50: null, p95: null, n: 0 });
   const unknown = scoreRecords(set, [{ ...base, memories: { A: [{ ...mem, createdAt: null }] } }]);
@@ -165,4 +166,5 @@ test("精筛调用的 token 记在精筛一类", () => {
   const calls = [...base.calls, mkCall({ cls: "refine", usage: { input: 50, output: 5, cacheRead: 0, cacheWrite: 0 } })];
   const m = scoreRecords(set, [{ ...base, calls }]);
   assert.deepEqual([m.tokens.byClass.refine, m.tokens.byClass.check, m.calls], [55, 330, 7]);
+  assert.deepEqual([m.coverage, m.probes, m.roundLatencyMs.n], [{ n: 3, d: 3 }, { n: 1, d: 1 }, 3]);
 });
