@@ -157,7 +157,7 @@ export class Updater {
       if (done) break;
       hash.update(value);
       received += value.byteLength;
-      if (!out.write(value)) await new Promise((res) => out.once("drain", res));
+      if (!out.write(value)) await new Promise<void>((res) => out.once("drain", () => res()));
       if (Date.now() - lastPush > 250) {
         lastPush = Date.now();
         this.set({ phase: "downloading", latest: info.version, received, size: file.size });
