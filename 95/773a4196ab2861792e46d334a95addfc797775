@@ -1,0 +1,19 @@
+apps/desktop/e2e/closed-loop.electron.spec.ts
+  s_fe3d98b92814dc::t_7b95ef1d93402b 1-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "95773a4196ab2861792e46d334a95addfc797775",
+  "prompts": {},
+  "sessions": {
+    "s_fe3d98b92814dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a679f9c7cf330543a",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
