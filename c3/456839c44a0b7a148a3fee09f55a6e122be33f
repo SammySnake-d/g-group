@@ -1,0 +1,25 @@
+receipts/evidence/t177-c/SCOPE.md
+  s_feaa88b367437c::t_5831972a997ebb 1-53
+receipts/evidence/t177-c/mutations.json
+  s_feaa88b367437c::t_953187db9c1fe3 1-237
+receipts/evidence/t177-c/summary.json
+  s_feaa88b367437c::t_7a87e29e77259f 1-68
+scripts/t177/c-mutations.mjs
+  s_feaa88b367437c::t_409b1f14346dfd 1-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c3456839c44a0b7a148a3fee09f55a6e122be33f",
+  "prompts": {},
+  "sessions": {
+    "s_feaa88b367437c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adea0d67d186f4f27",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
