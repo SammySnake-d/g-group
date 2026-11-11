@@ -12,6 +12,7 @@ import path from "node:path";
 import type { MarketplaceEntry, PluginView, SlashCommand } from "@g-group/api-contract";
 import { SlashCommand as SlashCommandSchema, arr, formatIssues, json, obj, oneOf, opt, str } from "@g-group/api-contract";
 import { type Db, HostError, all, one, run } from "./db.ts";
+import { type OutboxView, PluginOutbox } from "./plugin-outbox.ts";
 import type { PluginRuntime, PluginTarget } from "./plugin-runtime.ts";
 import { extractTo, readTgz } from "./untar.ts";
 
@@ -104,8 +105,10 @@ interface UrlOrigin {
 
 export class PluginStore {
   private readonly d: PluginStoreDeps;
+  private readonly outbox: PluginOutbox;
   constructor(deps: PluginStoreDeps) {
     this.d = deps;
+    this.outbox = new PluginOutbox(deps.db, deps.now);
   }
   private catalog(): { id: string; dir: string; manifest: Manifest }[] {
     if (!this.d.catalogFile || !existsSync(this.d.catalogFile)) return [];
@@ -354,6 +357,18 @@ export class PluginStore {
       rejected,
       failures: out.failures,
     };
+  }
+  /** 安装身份(红提交空壳)。 */
+  installId(_id: string): string {
+    return "";
+  }
+  /** 一个外发动作的落盘记录(红提交空壳)。 */
+  delivery(id: string, actionId: string): OutboxView | undefined {
+    return this.outbox.view(id, actionId);
+  }
+  /** 持久化级别读回(红提交空壳)。 */
+  durability() {
+    return this.outbox.durability();
   }
   /** 经输出渠道外发:同一 actionId 由内核按 B1/B2 记账,已确认复用回执,结果未知时 B2 不再发。 */
   async send(id: string, actionId: string, payload: string) {

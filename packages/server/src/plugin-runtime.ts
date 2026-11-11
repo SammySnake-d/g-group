@@ -47,6 +47,14 @@ export interface PluginRuntimeOptions {
    *  测试用它把插件进程里的 fetch 换成替身(门禁沙箱禁网);它也只得到对自己这个文件的读权限。 */
   readonly preload?: string;
 }
+/** 进程就绪后插件自述的渠道(交给 gate 绑定)。 */
+export interface ChannelInfo {
+  readonly endpoint: string;
+  readonly idempotency: "none" | "action-id";
+  readonly windowMs: number | null;
+}
+/** 外发闸门(红提交空壳:还不调用)。 */
+export type SendGate = (ch: ChannelInfo) => SendResult | null;
 type Describe =
   | { readonly kind: "data-source"; readonly sources: readonly string[] }
   | { readonly kind: "outbound-channel"; readonly idempotency: "none" | "action-id"; readonly idempotencyWindowMs: number | null; readonly endpoint: string | null };
@@ -319,7 +327,7 @@ export class PluginRuntime {
     return out;
   }
 
-  async send(t: PluginTarget, actionId: string, payload: string): Promise<SendResult> {
+  async send(t: PluginTarget, actionId: string, payload: string, _gate?: SendGate): Promise<SendResult> {
     const l = await this.ensure(t);
     if (l.desc.kind !== "outbound-channel") throw new HostError("invalid_params", `插件 ${t.id} 不是输出渠道`);
     if (l.desc.endpoint === null) throw new HostError("invalid_params", `插件 ${t.id} 还没有接收端,先在配置里填写`);
