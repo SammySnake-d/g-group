@@ -192,6 +192,8 @@ export interface ReflectResult {
   readonly personaSuggestion: string | null;
 }
 export interface ContactCompactor {
+  /** 这个压缩器绑定的模型(有就报);宿主每次调用前拿它和本轮冻结的说话模型做同模校验,不同就一次都不发。 */
+  readonly model?: string;
   compact(req: CompactRequest, signal: AbortSignal): Promise<string>;
   /** 有就每轮调用(取代只在缺笔记时调的 compact);没有就退回 compact */
   reflect?(req: ReflectRequest, signal: AbortSignal): Promise<ReflectResult>;
