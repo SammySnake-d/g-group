@@ -2,10 +2,12 @@
 // 一次独立、无状态的模型调用:system = 压缩说明(含 STATE_NOTE_GUIDE),user = 旧笔记 + 本轮材料(+ 字节上限);不带工具、
 // 不带联系人五块与人设,所以不进联系人会话、不动第 1 块缓存前缀。模型必须等于请求里联系人的说话模型,不一致一次都不发;
 // 端点报错如实抛出(隐去密钥),不换模型或厂商重试。压缩用哪个模型、配置失配怎么拦截归 D 件(AC-32),这里只按联系人的说话模型调用。
+// 每次请求的用量连同线路、前缀哈希交给宿主的回执口(AC-39 ⑤,usage.ts),压缩与检查都记。
 import { type AssistantMessage, type Model, normalizeContext, type SystemMessage, type UserMessage } from "@earendil-works/pi-ai";
 import { anthropicMessagesApi } from "@earendil-works/pi-ai/api/anthropic-messages.lazy";
-import { type CompactRequest, type ContactCompactor, plainData, type ReflectRequest, type ReflectResult, STATE_NOTE_GUIDE } from "@g-group/kernel";
+import { type CompactRequest, type ContactCompactor, plainData, type ReflectRequest, type ReflectResult, STATE_NOTE_GUIDE, type UsageSink } from "@g-group/kernel";
 import { PiContactMindError, type PiContactMindOptions } from "./mind.ts";
+import { placeBreakpoints, probeRequest, type RequestProbe, report, usageLine, usageOf } from "./usage.ts";
 
 export type PiCompactorOptions = Omit<PiContactMindOptions, "maxRequestsPerRound" | "cacheRetention">;
 
@@ -110,7 +112,8 @@ export function createPiCompactor(opts: PiCompactorOptions): ContactCompactor {
     input: ["text"], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: cfg.contextWindow, maxTokens: cfg.maxTokens,
   };
   const api = anthropicMessagesApi();
-  async function compact(input: CompactRequest, signal: AbortSignal): Promise<string> {
+  const line = usageLine(cfg.provider, cfg.baseUrl, cfg.model, cfg.apiKey);
+  async function compact(input: CompactRequest, signal: AbortSignal, usage?: UsageSink): Promise<string> {
     const p = plainData(input, "压缩请求");
     if (!p.ok) throw new PiContactMindError("invalid-request", `压缩请求不合格:${p.path} ${p.why}`);
     const req = p.value as CompactRequest;
@@ -118,13 +121,14 @@ export function createPiCompactor(opts: PiCompactorOptions): ContactCompactor {
     if (typeof speaking !== "string") throw new PiContactMindError("invalid-request", "contact.speakingModel 必须是字符串");
     if (speaking !== cfg.model) throw new PiContactMindError("model-mismatch", `联系人的说话模型是 ${speaking},这个压缩器绑定的是 ${cfg.model};压缩只用说话模型,不静默换模`);
     if (req.kind !== "round-note" && req.kind !== "shrink") throw new PiContactMindError("invalid-request", "kind 只能是 round-note 或 shrink");
-    return call(SYSTEM, userText(req), signal);
+    return call(SYSTEM, userText(req), signal, usage);
   }
-  async function call(sys: string, userContent: string, signal: AbortSignal): Promise<string> {
+  async function call(sys: string, userContent: string, signal: AbortSignal, usage: UsageSink | undefined): Promise<string> {
     const now = Date.now();
     const system: SystemMessage = { role: "system", content: sys, timestamp: now };
     const user: UserMessage = { role: "user", content: [{ type: "text", text: userContent }], timestamp: now };
     let msg: AssistantMessage;
+    let probe: RequestProbe | null = null;
     try {
       msg = await api
         .streamSimple(model, normalizeContext({ messages: [system, user] }), {
@@ -133,17 +137,23 @@ export function createPiCompactor(opts: PiCompactorOptions): ContactCompactor {
           cacheRetention: "none",
           ...(cfg.bearer ? { headers: { authorization: `Bearer ${cfg.apiKey}` } } : { apiKey: cfg.apiKey }),
           ...(cfg.fetch ? { fetch: cfg.fetch } : {}),
+          onPayload: (payload) => {
+            const placed = placeBreakpoints(payload);
+            probe = probeRequest(placed);
+            return placed;
+          },
         })
         .result();
     } catch (e) {
       throw new PiContactMindError("provider-error", redact(`压缩请求失败:${e instanceof Error ? e.message : String(e)}`));
     }
+    report(usage, usageOf(line, 1, probe, msg.usage));
     if (msg.stopReason === "error" || msg.stopReason === "aborted") throw new PiContactMindError("provider-error", redact(`压缩请求失败(${msg.stopReason}):${msg.errorMessage ?? "无错误信息"}`));
     const text = msg.content.map((c) => (c.type === "text" ? c.text : "")).join("").trim();
     if (text === "") throw new PiContactMindError("provider-error", "压缩器返回了空笔记");
     return text;
   }
-  async function reflect(input: ReflectRequest, signal: AbortSignal): Promise<ReflectResult> {
+  async function reflect(input: ReflectRequest, signal: AbortSignal, usage?: UsageSink): Promise<ReflectResult> {
     const p = plainData(input, "检查请求");
     if (!p.ok) throw new PiContactMindError("invalid-request", `检查请求不合格:${p.path} ${p.why}`);
     const req = p.value as ReflectRequest;
@@ -151,7 +161,7 @@ export function createPiCompactor(opts: PiCompactorOptions): ContactCompactor {
     if (typeof speaking !== "string") throw new PiContactMindError("invalid-request", "contact.speakingModel 必须是字符串");
     if (speaking !== cfg.model) throw new PiContactMindError("model-mismatch", `联系人的说话模型是 ${speaking},这个压缩器绑定的是 ${cfg.model};检查只用说话模型,不静默换模`);
     if (!Array.isArray(req.neighbors)) throw new PiContactMindError("invalid-request", "neighbors 必须是数组");
-    const text = await call(REFLECT_SYSTEM, reflectText(req), signal);
+    const text = await call(REFLECT_SYSTEM, reflectText(req), signal, usage);
     return parseReflect(text, req.noteWritten !== null);
   }
   return Object.freeze({ compact, reflect });

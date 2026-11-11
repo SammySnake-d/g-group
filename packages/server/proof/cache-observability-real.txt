@@ -1,0 +1,194 @@
+# 2026-11-11T11:14:39.877Z startServer(mind=pi,compute=fake)经本机网关;模型 fnqtz/claude-opus-5-5;线路取 服务商|主机名|模型,不含网关路径
+# 命令: node packages/server/proof/cache-observability-real.mjs;同一联系人「小后」在同一群连发 5 轮短消息,轮与轮之间不等待(都在 5 分钟 TTL 内)
+# 第 1 轮 #1 用时 39241 ms;联系人回:收到1
+# 第 2 轮 #3 用时 8327 ms;联系人回:收到2
+# 第 3 轮 #5 用时 9528 ms;联系人回:收到3
+# 第 4 轮 #7 用时 15105 ms;联系人回:收到4
+# 第 5 轮 #9 用时 24474 ms;联系人回:收到5
+
+## gg_usage 原始行(at、种类、轮次、轮次内请求序号、input / cache_read / cache_write / output、断点数、前缀哈希前 12 位、线路、会话)
+2026-11-11T11:14:54.764Z round   r1 req1 in=4 read=4046 write=1777 out=245 bp=3 prefix=884d239ecfb3 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+2026-11-11T11:15:14.019Z round   r1 req2 in=2 read=5823 write=363 out=19 bp=3 prefix=884d239ecfb3 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+2026-11-11T11:15:18.112Z reflect r1 req1 in=1524 read=0 write=0 out=97 bp=0 prefix=76e75b5ac110 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+2026-11-11T11:15:22.102Z round   r2 req1 in=4 read=5586 write=323 out=259 bp=3 prefix=884d239ecfb3 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+2026-11-11T11:15:23.989Z round   r2 req2 in=2 read=5909 write=377 out=16 bp=3 prefix=884d239ecfb3 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+2026-11-11T11:15:26.437Z reflect r2 req1 in=1617 read=0 write=0 out=82 bp=0 prefix=76e75b5ac110 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+2026-11-11T11:15:31.024Z round   r3 req1 in=4 read=5586 write=337 out=273 bp=3 prefix=884d239ecfb3 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+2026-11-11T11:15:32.358Z round   r3 req2 in=2 read=5923 write=391 out=5 bp=3 prefix=884d239ecfb3 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+2026-11-11T11:15:36.421Z reflect r3 req1 in=1645 read=0 write=0 out=138 bp=0 prefix=76e75b5ac110 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+2026-11-11T11:15:40.347Z round   r4 req1 in=4 read=5586 write=351 out=295 bp=3 prefix=884d239ecfb3 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+2026-11-11T11:15:42.737Z round   r4 req2 in=2 read=5937 write=413 out=62 bp=3 prefix=884d239ecfb3 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+2026-11-11T11:15:51.071Z reflect r4 req1 in=1681 read=0 write=0 out=84 bp=0 prefix=76e75b5ac110 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+2026-11-11T11:16:12.505Z round   r5 req1 in=4 read=5586 write=373 out=314 bp=3 prefix=884d239ecfb3 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+2026-11-11T11:16:13.678Z round   r5 req2 in=2 read=5959 write=432 out=5 bp=3 prefix=884d239ecfb3 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+2026-11-11T11:16:15.539Z reflect r5 req1 in=1722 read=0 write=0 out=25 bp=0 prefix=76e75b5ac110 line=anthropic|127.0.0.1|fnqtz/claude-opus-5-5 rooms=g-mwc0uvsz-2
+
+## usage.cacheStats {"by":["line","contact","room"]}
+{
+ "since": null,
+ "until": null,
+ "by": [
+  "line",
+  "contact",
+  "room"
+ ],
+ "ttlMs": 300000,
+ "groups": [
+  {
+   "line": "anthropic|127.0.0.1|fnqtz/claude-opus-5-5",
+   "contactId": "c-mwc0uvsw-1",
+   "room": "g-mwc0uvsz-2",
+   "kind": null,
+   "calls": 15,
+   "input": 8219,
+   "cacheRead": 55941,
+   "cacheWrite": 5137,
+   "output": 1919,
+   "countedCalls": 15,
+   "hitRate": 0.8072643837395558,
+   "alertBelow": null,
+   "flags": [],
+   "misses": {
+    "cold": 0,
+    "prefixChanged": 0,
+    "expired": 0,
+    "uncached": 0
+   }
+  }
+ ],
+ "lines": [
+  {
+   "line": "anthropic|127.0.0.1|fnqtz/claude-opus-5-5",
+   "calls": 15,
+   "splitAccounting": null,
+   "firstSegmentOnly": false
+  }
+ ]
+}
+
+## usage.cacheStats {"by":["line","contact","room","kind"]}
+{
+ "since": null,
+ "until": null,
+ "by": [
+  "line",
+  "contact",
+  "room",
+  "kind"
+ ],
+ "ttlMs": 300000,
+ "groups": [
+  {
+   "line": "anthropic|127.0.0.1|fnqtz/claude-opus-5-5",
+   "contactId": "c-mwc0uvsw-1",
+   "room": "g-mwc0uvsz-2",
+   "kind": "reflect",
+   "calls": 5,
+   "input": 8189,
+   "cacheRead": 0,
+   "cacheWrite": 0,
+   "output": 426,
+   "countedCalls": 5,
+   "hitRate": 0,
+   "alertBelow": null,
+   "flags": [],
+   "misses": {
+    "cold": 0,
+    "prefixChanged": 0,
+    "expired": 0,
+    "uncached": 0
+   }
+  },
+  {
+   "line": "anthropic|127.0.0.1|fnqtz/claude-opus-5-5",
+   "contactId": "c-mwc0uvsw-1",
+   "room": "g-mwc0uvsz-2",
+   "kind": "round",
+   "calls": 10,
+   "input": 30,
+   "cacheRead": 55941,
+   "cacheWrite": 5137,
+   "output": 1493,
+   "countedCalls": 10,
+   "hitRate": 0.9154447862800288,
+   "alertBelow": null,
+   "flags": [],
+   "misses": {
+    "cold": 0,
+    "prefixChanged": 0,
+    "expired": 0,
+    "uncached": 0
+   }
+  }
+ ],
+ "lines": [
+  {
+   "line": "anthropic|127.0.0.1|fnqtz/claude-opus-5-5",
+   "calls": 15,
+   "splitAccounting": null,
+   "firstSegmentOnly": false
+  }
+ ]
+}
+
+## usage.cacheStats {"by":["line","kind"],"kinds":["round"]}
+{
+ "since": null,
+ "until": null,
+ "by": [
+  "line",
+  "kind"
+ ],
+ "ttlMs": 300000,
+ "groups": [
+  {
+   "line": "anthropic|127.0.0.1|fnqtz/claude-opus-5-5",
+   "contactId": null,
+   "room": null,
+   "kind": "round",
+   "calls": 10,
+   "input": 30,
+   "cacheRead": 55941,
+   "cacheWrite": 5137,
+   "output": 1493,
+   "countedCalls": 10,
+   "hitRate": 0.9154447862800288,
+   "alertBelow": null,
+   "flags": [],
+   "misses": {
+    "cold": 0,
+    "prefixChanged": 0,
+    "expired": 0,
+    "uncached": 0
+   }
+  }
+ ],
+ "lines": [
+  {
+   "line": "anthropic|127.0.0.1|fnqtz/claude-opus-5-5",
+   "calls": 15,
+   "splitAccounting": null,
+   "firstSegmentOnly": false
+  }
+ ]
+}
+
+## 宿主报告(去掉 recall)共 0 条
+
+# 总用时 96684 ms
+
+# ---- 汇总(从上面的 cacheStats 原样摘出) ----
+# 线路 anthropic|127.0.0.1|fnqtz/claude-opus-5-5:可信度检查 splitAccounting=null、firstSegmentOnly=false;15 次调用、未命中归因全 0
+# 全部种类:input 8219 / cache_read 55941 / cache_write 5137 → 命中率 0.807;联系人轮次(round,10 次):0.915;每轮检查(reflect,5 次,不设断点):0
+# 断点:联系人每次请求 3 个(工具末尾、第 1 块末尾、最后一条消息末尾);检查 0 个。轮内第 2 次请求 cache_read 比第 1 次多 ≈ 本轮第 2–5 块(网关缓存了第 1 块之后的内容)
+
+# ---- 前一次实测(2026-11-11T10:57:05Z,旧判据,当时的提交 d252d41 已被本分支改写,原样摘录) ----
+# 旧判据「第一个缓存段(工具声明)在本库头一次出现就报 cache_read 判拆账」把这条正常线路标成了拆账(fresh-prefix-hit),命中率被置空。
+# 原始行(前 3 行):
+#   2026-11-11T10:57:10.565Z round   r1 req1 in=4 read=4046 write=1771 out=241 bp=3
+#   2026-11-11T10:57:15.742Z round   r1 req2 in=2 read=5817 write=359 out=44 bp=3
+#   2026-11-11T10:57:21.267Z reflect r1 req1 in=1516 read=0 write=0 out=25 bp=0
+# 原因:首调的 read=4046 来自热缓存——本机网关用量记录显示 18:46–18:57(本地时间)另一个 pi 客户端(别的切片的真实运行)一直在经同一网关、
+# 同一模型发同样的工具声明(其首次请求 cache_read 5568)。同一账号上工具声明这段缓存本来就是热的,「本库头一次出现」不等于「全新前缀」。
+# 所以改用「不声明缓存的请求(没有 cache_control)却报命中」作为验收文档「全新随机前缀首调即报命中」的生产可观测形态(cache-stats.ts 顶部注释)。
+# 那次 5 轮的总数:15 次调用,input 7966 / cache_read 55821 / cache_write 4882;按新判据同样不判拆账,round 命中率 0.919、全部 0.813。

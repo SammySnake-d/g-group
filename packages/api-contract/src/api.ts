@@ -41,6 +41,7 @@ import {
 } from "./entities.ts";
 import { DraftBody, DraftView } from "./draft.ts";
 import { arr, bool, id, int, isoTime, json, lit, nullable, obj, oneOf, opt, type Schema, seq, str, tagged } from "./schema.ts";
+import { USAGE_METHODS } from "./usage.ts";
 
 /** 合同版本:破坏性改动加主版本;渲染进程启动时用 session.hello 核对。 */
 export const API_VERSION = "0.1.0";
@@ -399,6 +400,9 @@ export const METHODS = {
     }),
     SettingsView,
   ),
+
+  // ---- 用量与缓存命中(AC-39 ⑤⑥) ----
+  ...USAGE_METHODS,
 } as const;
 
 export type MethodTable = typeof METHODS;
