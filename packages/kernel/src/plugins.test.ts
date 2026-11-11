@@ -2155,6 +2155,9 @@ test("sendTimeoutMs 取 Node 定时器上限 2147483647 时可建注册表,30ms 
 interface SyncWindowRow { changed: string[]; pauses: number; events: number; restored: boolean; observerError?: string }
 interface SyncWindowResult {
   productPoints: number; controlPoints: number; hostCount: number; includesMap: boolean; includesWeakMap: boolean;
+  namespaceControls: (SyncWindowRow & { what: string; withEvent: boolean; exception?: string })[];
+  shapeControls: (SyncWindowRow & { what: string; withEvent: boolean; exception?: string })[];
+  included: Record<string, boolean>;
   controls: (SyncWindowRow & { what: string; withEvent: boolean; exception?: string })[];
   actual: (SyncWindowRow & { mode: string; key: string; withHook: boolean; result: { ok: boolean; reason: string } })[];
 }
@@ -2205,7 +2208,7 @@ test("R17-01 拒收不临时改写已有可写数据属性:实际源码同步停
 
 // biome-ignore-end lint/suspicious/noThenProperty: 以上夹具专门验证自有 then 的拒收。
 
-test("R17-02 拒收不临时改写内置对象:由原生构造器描述符闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull", async () => {
+test("R17-02 拒收不临时改写内置对象:由全局数据属性闭包发现 Map/WeakMap 原型;同步 defineProperty/Reflect 的有事件与无事件双侧控制及真实 send/pull", async () => {
   const reg = createRegistry();
   reg.register({ kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: () => [] });
   const direct = await reg.send("p", { action_id: "a", payload: "x" });
@@ -2230,4 +2233,199 @@ test("R17-02 拒收不临时改写内置对象:由原生构造器描述符闭包
     assert.equal(row.changed.includes("builtin"), false, JSON.stringify(row));
     assert.equal(row.restored, true);
   }
+});
+
+// biome-ignore lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
+test("R18-01 审查 JSON 命名空间:同步写后恢复的双侧标定和真实拒收窗口", async () => {
+  const reg = createRegistry();
+  const p = Promise.resolve([]);
+  Object.defineProperty(p, "then", { value: () => {}, configurable: true });
+  reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => p });
+  const result = await reg.pull("p", "g");
+  assert.equal(result.ok === false && result.reason, "invalid-batch");
+  const out = await syncWindow();
+  assert.equal(out.included["JSON"], true, "根与边规则必须发现目标,不靠目标名补集合");
+  const controls = out.namespaceControls.filter((r) => r.what === "JSON" || r.what === "clean");
+  assert.equal(controls.length, 4);
+  for (const row of controls) {
+    assert.equal(row.exception, undefined);
+    assert.equal(row.observerError, undefined);
+    assert.equal(row.pauses > 0, true);
+    assert.equal(row.events > 0, row.withEvent);
+    assert.deepEqual(row.changed, row.what === "clean" ? [] : ["builtin"]);
+    assert.equal(row.restored, true, "返回后已恢复不算观察证据");
+  }
+  assert.equal(out.actual.length, 8);
+  for (const row of out.actual) {
+    assert.equal(row.observerError, undefined);
+    assert.equal(row.pauses > 0, true);
+    assert.equal(row.events > 0, row.withHook);
+    assert.equal(row.result.ok, false);
+    assert.equal(row.result.reason, row.mode === "send" ? "non-promise-send" : "invalid-batch");
+    assert.deepEqual(row.changed, [], JSON.stringify(row));
+    assert.equal(row.restored, true);
+  }
+});
+
+// biome-ignore lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
+test("R18-02 审查 Intl.DateTimeFormat 原型:同步写后恢复的双侧标定和真实拒收窗口", async () => {
+  const reg = createRegistry();
+  const p = Promise.resolve([]);
+  Object.defineProperty(p, "then", { value: () => {}, configurable: true });
+  reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => p });
+  const result = await reg.pull("p", "g");
+  assert.equal(result.ok === false && result.reason, "invalid-batch");
+  const out = await syncWindow();
+  assert.equal(out.included["Intl.DateTimeFormat.prototype"], true, "根与边规则必须发现目标,不靠目标名补集合");
+  const controls = out.namespaceControls.filter((r) => r.what === "Intl.DateTimeFormat.prototype" || r.what === "clean");
+  assert.equal(controls.length, 4);
+  for (const row of controls) {
+    assert.equal(row.exception, undefined);
+    assert.equal(row.observerError, undefined);
+    assert.equal(row.pauses > 0, true);
+    assert.equal(row.events > 0, row.withEvent);
+    assert.deepEqual(row.changed, row.what === "clean" ? [] : ["builtin"]);
+    assert.equal(row.restored, true, "返回后已恢复不算观察证据");
+  }
+  assert.equal(out.actual.length, 8);
+  for (const row of out.actual) {
+    assert.equal(row.observerError, undefined);
+    assert.equal(row.pauses > 0, true);
+    assert.equal(row.events > 0, row.withHook);
+    assert.equal(row.result.ok, false);
+    assert.equal(row.result.reason, row.mode === "send" ? "non-promise-send" : "invalid-batch");
+    assert.deepEqual(row.changed, [], JSON.stringify(row));
+    assert.equal(row.restored, true);
+  }
+});
+
+// biome-ignore lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
+test("R18-03 自选 Math 命名空间:同步写后恢复的双侧标定和真实拒收窗口", async () => {
+  const reg = createRegistry();
+  const p = Promise.resolve([]);
+  Object.defineProperty(p, "then", { value: () => {}, configurable: true });
+  reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => p });
+  const result = await reg.pull("p", "g");
+  assert.equal(result.ok === false && result.reason, "invalid-batch");
+  const out = await syncWindow();
+  assert.equal(out.included["Math"], true, "根与边规则必须发现目标,不靠目标名补集合");
+  const controls = out.namespaceControls.filter((r) => r.what === "Math" || r.what === "clean");
+  assert.equal(controls.length, 4);
+  for (const row of controls) {
+    assert.equal(row.exception, undefined);
+    assert.equal(row.observerError, undefined);
+    assert.equal(row.pauses > 0, true);
+    assert.equal(row.events > 0, row.withEvent);
+    assert.deepEqual(row.changed, row.what === "clean" ? [] : ["builtin"]);
+    assert.equal(row.restored, true, "返回后已恢复不算观察证据");
+  }
+  assert.equal(out.actual.length, 8);
+  for (const row of out.actual) {
+    assert.equal(row.observerError, undefined);
+    assert.equal(row.pauses > 0, true);
+    assert.equal(row.events > 0, row.withHook);
+    assert.equal(row.result.ok, false);
+    assert.equal(row.result.reason, row.mode === "send" ? "non-promise-send" : "invalid-batch");
+    assert.deepEqual(row.changed, [], JSON.stringify(row));
+    assert.equal(row.restored, true);
+  }
+});
+
+// biome-ignore lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
+test("R18-04 自选 Intl.Collator 原型:同步写后恢复的双侧标定和真实拒收窗口", async () => {
+  const reg = createRegistry();
+  const p = Promise.resolve([]);
+  Object.defineProperty(p, "then", { value: () => {}, configurable: true });
+  reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => p });
+  const result = await reg.pull("p", "g");
+  assert.equal(result.ok === false && result.reason, "invalid-batch");
+  const out = await syncWindow();
+  assert.equal(out.included["Intl.Collator.prototype"], true, "根与边规则必须发现目标,不靠目标名补集合");
+  const controls = out.namespaceControls.filter((r) => r.what === "Intl.Collator.prototype" || r.what === "clean");
+  assert.equal(controls.length, 4);
+  for (const row of controls) {
+    assert.equal(row.exception, undefined);
+    assert.equal(row.observerError, undefined);
+    assert.equal(row.pauses > 0, true);
+    assert.equal(row.events > 0, row.withEvent);
+    assert.deepEqual(row.changed, row.what === "clean" ? [] : ["builtin"]);
+    assert.equal(row.restored, true, "返回后已恢复不算观察证据");
+  }
+  assert.equal(out.actual.length, 8);
+  for (const row of out.actual) {
+    assert.equal(row.observerError, undefined);
+    assert.equal(row.pauses > 0, true);
+    assert.equal(row.events > 0, row.withHook);
+    assert.equal(row.result.ok, false);
+    assert.equal(row.result.reason, row.mode === "send" ? "non-promise-send" : "invalid-batch");
+    assert.deepEqual(row.changed, [], JSON.stringify(row));
+    assert.equal(row.restored, true);
+  }
+});
+
+// biome-ignore lint/suspicious/noThenProperty: 自有 then 是具名拒收输入。
+test("R18-05 自选 WebAssembly.Table 原型:同步写后恢复的双侧标定和真实拒收窗口", async () => {
+  const reg = createRegistry();
+  const p = Promise.resolve([]);
+  Object.defineProperty(p, "then", { value: () => {}, configurable: true });
+  reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => p });
+  const result = await reg.pull("p", "g");
+  assert.equal(result.ok === false && result.reason, "invalid-batch");
+  const out = await syncWindow();
+  assert.equal(out.included["WebAssembly.Table.prototype"], true, "根与边规则必须发现目标,不靠目标名补集合");
+  const controls = out.namespaceControls.filter((r) => r.what === "WebAssembly.Table.prototype" || r.what === "clean");
+  assert.equal(controls.length, 4);
+  for (const row of controls) {
+    assert.equal(row.exception, undefined);
+    assert.equal(row.observerError, undefined);
+    assert.equal(row.pauses > 0, true);
+    assert.equal(row.events > 0, row.withEvent);
+    assert.deepEqual(row.changed, row.what === "clean" ? [] : ["builtin"]);
+    assert.equal(row.restored, true, "返回后已恢复不算观察证据");
+  }
+  assert.equal(out.actual.length, 8);
+  for (const row of out.actual) {
+    assert.equal(row.observerError, undefined);
+    assert.equal(row.pauses > 0, true);
+    assert.equal(row.events > 0, row.withHook);
+    assert.equal(row.result.ok, false);
+    assert.equal(row.result.reason, row.mode === "send" ? "non-promise-send" : "invalid-batch");
+    assert.deepEqual(row.changed, [], JSON.stringify(row));
+    assert.equal(row.restored, true);
+  }
+});
+
+test("R18-06 描述符旗标、原型、可扩展性三类同步写法都有事件与无事件标定", async () => {
+  const reg = createRegistry();
+  assert.deepEqual(reg.register(panel()), { ok: true });
+  const out = await syncWindow();
+  assert.equal(out.shapeControls.length, 8);
+  for (const row of out.shapeControls) {
+    assert.equal(row.exception, undefined);
+    assert.equal(row.observerError, undefined);
+    assert.equal(row.pauses > 0, true);
+    assert.equal(row.events > 0, row.withEvent);
+    assert.deepEqual(row.changed, row.what === "clean" ? [] : ["returned"]);
+    assert.equal(row.restored, row.what !== "extensible", "不可恢复的可扩展性写入单列,其余返回后均已恢复");
+  }
+  for (const name of ["globalThis", "symbol-edge", "getter-function", "plugin-function", "returned-function"]) assert.equal(out.included[name], true, name);
+  for (const name of ["proxy", "foreign", "getter-value"]) assert.equal(out.included[name], false, name);
+});
+
+test("R18-07 拒收窗口操作封闭:真实源码通过,历史写入和别名、计算调用、safeId 写入均拒绝", async () => {
+  const reg = createRegistry();
+  reg.register({ kind: "data-source", id: "p", sources: ["g"], pull: () => [] });
+  const result = await reg.pull("p", "g");
+  assert.equal(result.ok === false && result.reason, "invalid-batch");
+  const out = JSON.parse(execFileSync(process.execPath, [new URL("../fixtures/rejection-operations.mjs", import.meta.url).pathname], { encoding: "utf8" })) as { problems: string[]; controls: { name: string; problems: string[] }[] };
+  assert.deepEqual(out.problems, [], "真实 plugins.ts 拒收窗口只允许已解释的只读操作");
+  assert.equal(out.controls.length, 14);
+  for (const row of out.controls) assert.equal(row.problems.length > 0, true, row.name);
+});
+
+test("R18-08 插件纯空白 id 拒收,非空 id 正常注册(已有行为补测,不新增合同)", () => {
+  const reg = createRegistry();
+  const invalid = reg.register({ ...panel(), id: " \t\n" });
+  assert.equal(invalid.ok === false && invalid.reason, "invalid-contract");
+  assert.deepEqual(reg.register(panel()), { ok: true });
 });
