@@ -1,0 +1,6 @@
+运行基线 6f43f254a7be9e2d006d9d987d0072197ec642b8 / box4 Node 24.21.0
+clean: # tests 225, # pass 225, # fail 0, # cancelled 0, # skipped 0, # todo 0
+JSON: # tests 225, # pass 225, # fail 0, # cancelled 0, # skipped 0, # todo 0
+Intl: # tests 225, # pass 225, # fail 0, # cancelled 0, # skipped 0, # todo 0
+JSON 与 Intl 独立扩充观察：各 8/8 changed=[builtin]、restored=true；clean 8/8 changed=[]。
+原始输出 box4-stage1.tgz，经 SHA-256 校验后取回。
