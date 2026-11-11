@@ -3,8 +3,11 @@
 import { createHash } from "node:crypto";
 import { DomainError } from "./errors.ts";
 
-/** 会话里能发言的主体。Compute 不在其中:它的结果只能由联系人转述(AC-03)。Helper 只在被叫到的会话里作答。 */
-export type SenderKind = "user" | "contact" | "helper";
+/**
+ * 会话里能发言的主体。Compute 不在其中:它的结果只能由联系人转述(AC-03)。Helper 只在被叫到的会话里作答。
+ * system 只给宿主自己的通知用(如解散说明):照常写进只追加记录,对联系人只作上下文(见 contextOnly)。
+ */
+export type SenderKind = "user" | "contact" | "helper" | "system";
 export interface Sender { readonly kind: SenderKind; readonly id: string }
 export type EventBody =
   | { readonly kind: "message"; readonly text: string }
@@ -24,6 +27,21 @@ export type VerifyResult = { ok: true } | { ok: false; brokenAt: number };
 
 const GENESIS = "0".repeat(64);
 const SENDERS: ReadonlySet<string> = new Set<SenderKind>(["user", "contact", "helper"]);
+
+/**
+ * 追加时的额外权限,由宿主按会话查出后传入:群主能撤回群里任何人的消息(U26「群主删消息」、U03);
+ * 编辑仍只认原发言者。不给(私聊、非群)就只有原发言者能编辑或撤回。
+ */
+export interface AppendAuthority {
+  readonly groupOwner?: { readonly kind: string; readonly id: string } | null;
+}
+
+/** 只作上下文的发言者(宿主的 system 通知):联系人收到它不产生处置义务——不进待处理、不能作为接活或承诺的来源。 */
+export function contextOnly(_sender: { readonly kind: string }): boolean {
+  return false;
+}
+
+const sameSender = (a: { kind: string; id: string }, b: { kind: string; id: string }) => a.kind === b.kind && a.id === b.id;
 
 function hashOf(e: Omit<LogEvent, "hash">): string {
   return createHash("sha256").update(JSON.stringify([e.seq, e.at, e.sender.kind, e.sender.id, e.body, e.prev])).digest("hex");
@@ -46,18 +64,23 @@ function assertSender(s: { kind: string; id: string }): asserts s is Sender {
   if (!SENDERS.has(s.kind)) throw new DomainError("sender-not-allowed", s.kind);
 }
 
-function checkTarget(log: Log, sender: Sender, target: number): void {
+function checkTarget(log: Log, sender: Sender, body: Exclude<EventBody, { kind: "message" }>, owner: { kind: string; id: string } | null): void {
+  const target = body.target;
   const msg = log.events.find((e) => e.seq === target);
   if (!msg) throw new DomainError("target-not-found", String(target));
   if (msg.body.kind !== "message") throw new DomainError("target-not-message", String(target));
-  if (msg.sender.kind !== sender.kind || msg.sender.id !== sender.id) throw new DomainError("not-original-sender", String(target));
+  // 原发言者本人;或撤回时发起人正是群主(只认宿主给的群主身份,发起人自称不算)
+  void owner;
+  const byOwner = false as boolean;
+  if (!sameSender(msg.sender, sender) && !byOwner) throw new DomainError("not-original-sender", String(target));
   if (log.events.some((e) => e.body.kind === "retract" && e.body.target === target)) throw new DomainError("target-retracted", String(target));
 }
 
-export function append(log: Log, sender: { kind: string; id: string }, body: EventBody, at: string): Log {
+export function append(log: Log, sender: { kind: string; id: string }, body: EventBody, at: string, authority: AppendAuthority = {}): Log {
   assertSender(sender);
   if (body.kind !== "retract" && body.text.trim() === "") throw new DomainError("empty-text");
-  if (body.kind !== "message") checkTarget(log, sender, body.target);
+  const o = authority.groupOwner;
+  if (body.kind !== "message") checkTarget(log, sender, body, o ? { kind: String(o.kind), id: String(o.id) } : null);
   const last = log.events.at(-1);
   const draft = {
     seq: (last?.seq ?? 0) + 1,

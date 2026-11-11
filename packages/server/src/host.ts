@@ -1294,6 +1294,22 @@ export class Host {
     tx(this.db, () => this.exits.finishTx(roomId, contactId));
     this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
   }
+  // ======================= 群管理(U03/U23/U26,D05)——空壳 =======================
+  dissolveRoom(input: { roomId: string; clientActionId: string }): RoomView {
+    return this.roomView(input.roomId);
+  }
+  postSystemNotice(roomId: string, _text: string, _actionKey: string): MessageView {
+    return this.messageView(roomId, { seq: 0, sender: { kind: "system", id: "host" }, text: "", edited: false, retracted: false });
+  }
+  muteMember(input: { roomId: string; contactId: string; muted: boolean; clientActionId: string }): RoomView {
+    return this.roomView(input.roomId);
+  }
+  deleteMessages(_input: { roomId: string; seqs: number[]; clientActionId: string }): { results: { seq: number; ok: boolean; error: { code: "not_found"; message: string } | null }[] } {
+    return { results: [] };
+  }
+  clearHistory(input: { roomId: string; clientActionId: string }): { room: RoomView; clearedUptoSeq: number } {
+    return { room: this.roomView(input.roomId), clearedUptoSeq: 0 };
+  }
   /** 删除联系人:有在途任务时拒绝;删除后从所有群移出,私聊记录保留。 */
   removeContact(id: string) {
     const cur = this.contactDoc(id);
