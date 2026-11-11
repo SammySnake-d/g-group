@@ -83,6 +83,8 @@ test("闭环:只经界面建联系人、私聊派活、建群拉人后群里派�
       await expect(rows(win).filter({ hasText: "接了任务:写 hello.txt" }).and(win.locator('[data-msg]:not([data-from="me"])'))).toHaveCount(1);
       await expect(line).toContainText("做完了");
       await expect(line).not.toContainText("完成:写");
+      // Compute 行不另起一个联系人头像,紧挨着挂在那句下面
+      await expect(win.locator('[data-msg$="~c"]').filter({ has: line })).toHaveAttribute("data-first", "0");
       await expect(rows(win).filter({ hasText: "进度:已写好 hello.txt" })).toHaveCount(1, LONG);
       await expect(rows(win).filter({ hasText: "做完了:完成:写 hello.txt" })).toHaveCount(1, LONG);
       // 自己发的那条:乐观显示的和事件推来的是同一条,不重复

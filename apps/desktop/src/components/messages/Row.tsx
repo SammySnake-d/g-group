@@ -38,6 +38,7 @@ export function Row({ m, first, compact, highlight, selecting, checked, onSelect
       id={'m-' + m.id}
       data-hl={highlight ? '1' : undefined}
       data-msg={m.id}
+      data-first={first ? '1' : '0'}
       data-from={'from' in m ? m.from : undefined}
       onClick={selecting ? () => onSelect?.(m.id) : undefined}
       className={cn('group/row relative -mx-2 flex items-start gap-2.5 rounded-xl px-2 py-[1px] transition-colors duration-slow ease-out', first && 'mt-4', isNew(m.id) && 'msg-new', mine && 'flex-row-reverse', highlight && 'bg-warm-soft', selecting && 'cursor-pointer hover:bg-hover/60', checked && 'bg-sel/70')}
