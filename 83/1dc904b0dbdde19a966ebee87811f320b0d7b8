@@ -1,0 +1,14 @@
+apps/desktop/e2e/files-look.ui.spec.ts
+  h_f33e46a035b77c 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "831dc904b0dbdde19a966ebee87811f320b0d7b8",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

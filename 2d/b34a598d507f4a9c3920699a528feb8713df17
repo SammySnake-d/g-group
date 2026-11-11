@@ -1,0 +1,39 @@
+apps/desktop/src/components/files/context.ts
+  s_74b15fb4f695d6::t_646933cb4b212c 59-65
+apps/desktop/src/components/files/fixtures.ts
+  s_74b15fb4f695d6::t_73bf5a4376758a 1,23-35
+apps/desktop/src/store/boot.ts
+  s_74b15fb4f695d6::t_e30f747cdecf09 27-29
+apps/desktop/src/store/slices/chat.ts
+  s_74b15fb4f695d6::t_831ae5b2586d07 6,42
+apps/desktop/e2e/files-prov-directions.ui.spec.ts
+  s_068645421914c7::t_41420dec3165ce 1-49
+apps/desktop/src/components/files/FileReader.tsx
+  s_068645421914c7::t_17497b7a33eef5 1,5,8,10,13-29,32-36,39,42-51
+apps/desktop/src/components/files/Provenance.tsx
+  s_068645421914c7::t_44c8dd84ab5f8c 1-2,4-5,7,10,12-22,24-30,33-59,62-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2db34a598d507f4a9c3920699a528feb8713df17",
+  "prompts": {},
+  "sessions": {
+    "s_068645421914c7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89c7adaf-00e2-45a9-80be-5840d96475f2",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_74b15fb4f695d6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c93a-87c4-7701-a989-58b9b15da855",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

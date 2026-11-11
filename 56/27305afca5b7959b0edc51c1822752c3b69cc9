@@ -1,0 +1,23 @@
+apps/desktop/e2e/files-design.ui.spec.ts
+  s_c20562a127f0af::t_c4c4ed0de159d7 43,59
+apps/desktop/src/components/files/FileReader.tsx
+  s_c20562a127f0af::t_073aa9a4c7965f 3,22
+apps/desktop/src/store/slices/layout.ts
+  s_c20562a127f0af::t_e05767945560b7 35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5627305afca5b7959b0edc51c1822752c3b69cc9",
+  "prompts": {},
+  "sessions": {
+    "s_c20562a127f0af": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c16c-e991-72f1-9871-6d60d8855ee8",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
