@@ -14,6 +14,7 @@ import {
 } from "@g-group/api-contract";
 import type { AnnouncementOrder } from "./announcements.ts";
 import { HostError } from "./db.ts";
+import { HELPER_OPS, helperExclusion } from "@g-group/kernel";
 import { type HelperEntryInput, HelperDesk } from "./helper.ts";
 import { HelperAgent, type ServiceCaller } from "./helper-agent.ts";
 import type { Host } from "./host.ts";
@@ -151,11 +152,30 @@ export function createService(host: Host): Service {
     "settings.update": (p: Parameters<Host["updateSettings"]>[0]) => host.updateSettings(p),
   };
   const err = (code: ErrorCode, message: string, detail?: unknown): ApiResult<MethodName> => ({ ok: false, error: detail === undefined ? { code, message } : { code, message, detail } });
-  const handle = async (method: string, params: unknown, _caller?: ServiceCaller): Promise<ApiResult<MethodName>> => {
+  /**
+   * Helper 身份的门(U04「在权限内」):入口照 routeHelper 只为用户本人服务;方法不在 HELPER_OPS → forbidden(排除清单带理由,
+   * 以用户身份发言、验收与退回、回答授权只来自用户本人,U99/AC-20/AC-28);带 roomId 的要求用户在场;
+   * 读聊天内容的(read_room 读消息、搜索消息、建群带背景)照入口的读取范围:全局点名用户在场的会话,侧栏 / @ 只读当前聊天。
+   * 不可逆操作不在这里拦(软提示写在 skill 与工具说明里,DM#2565)。
+   */
+  const helperGate = (method: MethodName, params: unknown, caller: Extract<ServiceCaller, { kind: "helper" }>) => {
+    helper.route(caller.entry);
+    if (!HELPER_OPS.some((o) => o.method === method)) {
+      const ex = helperExclusion(method);
+      throw new HostError("forbidden", `${method} 按权限不给 Helper${ex ? `:${ex.reason}` : ""}`);
+    }
+    const p = params as { roomId?: unknown; fromRoomId?: unknown };
+    if (typeof p.roomId === "string") helper.mustSee(p.roomId);
+    const reads = method === "messages.list" || method === "search.messages" ? p.roomId : method === "rooms.createGroup" ? p.fromRoomId : undefined;
+    if (typeof reads === "string") helper.context(caller.entry, [reads], 1);
+    else if (method === "search.messages" && caller.entry.kind !== "global") throw new HostError("invalid_params", "侧栏和 @Helper 只搜当前聊天:请带上当前聊天的 roomId");
+  };
+  const handle = async (method: string, params: unknown, caller?: ServiceCaller): Promise<ApiResult<MethodName>> => {
     if (!isMethodName(method)) return err("unknown_method", `没有方法 ${String(method)}`);
     const p = checkParams(method, params);
     if (!p.ok) return err("invalid_params", formatIssues(p.issues), p.issues);
     try {
+      if (caller?.kind === "helper") helperGate(method, p.value, caller);
       const value = await (H[method] as (x: unknown) => unknown)(p.value);
       const r = checkResult(method, value);
       if (!r.ok) return err("internal", `结果不符合合同:${formatIssues(r.issues)}`);

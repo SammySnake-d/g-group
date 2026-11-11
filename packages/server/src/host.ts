@@ -756,18 +756,45 @@ export class Host {
     this.bus.emit({ type: "room.updated", room: view });
     return view;
   }
-  createGroup(title: string, members: Member[], _opts: { clientActionId?: string; fromRoomId?: string; backgroundSeqs?: readonly number[] } = {}): RoomView {
+  /**
+   * 建群。clientActionId 给了就幂等(重发返回同一个群)。fromRoomId + backgroundSeqs:从用户在场的原会话摘录几条作背景,
+   * 以用户的一条「背景」消息带进新群(AC-52 侧栏点名另开群);原会话不多任何消息。
+   */
+  createGroup(title: string, members: Member[], opts: { clientActionId?: string; fromRoomId?: string; backgroundSeqs?: readonly number[] } = {}): RoomView {
+    const key = opts.clientActionId !== undefined ? `group-create:${opts.clientActionId}` : null;
+    const prior = key ? one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key) : undefined;
+    if (prior) return this.roomView((JSON.parse(prior.payload) as { roomId: string }).roomId);
     for (const m of members) if (m.kind === "contact") this.contactDoc(m.id);
+    if (opts.backgroundSeqs?.length && opts.fromRoomId === undefined) throw new HostError("invalid_params", "backgroundSeqs 要和 fromRoomId 一起给");
+    let background: string | null = null;
+    if (opts.fromRoomId !== undefined) {
+      const src = this.userRoom(opts.fromRoomId);
+      const msgs = this.projected(src.id);
+      const picked = [...new Set(opts.backgroundSeqs ?? [])].map((seq) => {
+        const m = msgs.find((x) => x.seq === seq);
+        if (!m) throw new HostError("invalid_params", `#${seq} 不在会话 ${src.id} 里`);
+        if (m.retracted) throw new HostError("invalid_params", `#${seq} 已撤回,不能带作背景`);
+        return m;
+      });
+      if (picked.length) background = [`背景(摘自「${src.title}」):`, ...picked.map((m) => `#${m.seq} ${this.nameOf(m.sender)}:${m.text}`)].join("\n");
+    }
     const id = this.newId("g");
     const at = this.now();
-    const all_: Member[] = [{ kind: "user", id: this.userId }, ...members.filter((m) => !(m.kind === "user" && m.id === this.userId))];
-    tx(this.db, () => {
+    const me: Member = { kind: "user", id: this.userId };
+    const all_: Member[] = [me, ...members.filter((m) => !(m.kind === "user" && m.id === this.userId))];
+    const bg = tx(this.db, () => {
       run(this.db, "INSERT INTO gg_rooms (id, kind, title, created_at, updated_at) VALUES (?, 'group', ?, ?, ?)", id, title, at, at);
       for (const m of all_) run(this.db, "INSERT OR IGNORE INTO gg_members (room_id, kind, member_id) VALUES (?, ?, ?)", id, m.kind, m.id);
+      const s = background !== null ? this.appendMessageTx(id, me, { text: background, actionKey: `group-bg:${id}` }).seq : null;
+      if (key) recordAction(this.db.store, key, { roomId: id });
+      return s;
     });
-    const view = this.roomView(id);
-    this.bus.emit({ type: "room.updated", room: view });
-    return view;
+    this.bus.emit({ type: "room.updated", room: this.roomView(id) });
+    if (bg !== null) {
+      this.markRead(id, me, bg);
+      this.afterAppend(id, bg, me);
+    }
+    return this.roomView(id);
   }
   addMembers(roomId: string, members: Member[]): RoomView {
     const r = this.roomRow(roomId);

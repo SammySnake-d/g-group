@@ -4,9 +4,9 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ContactView } from "@g-group/api-contract";
-import { type ContactCompactor, type ContactMind, DEFAULT_RETRY_POLICY } from "@g-group/kernel";
+import { type ContactCompactor, type ContactMind, DEFAULT_RETRY_POLICY, type HelperMind } from "@g-group/kernel";
 import { claudeCompute } from "./compute.ts";
-import { scriptedCompute, scriptedMind } from "./fakes.ts";
+import { scriptedCompute, scriptedHelperMind, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
 import { type IpcMainLike, type Service, bindIpc, createService } from "./service.ts";
 
@@ -40,9 +40,16 @@ export async function startServer(o: StartOptions): Promise<Started> {
   const model = env.ANTHROPIC_DEFAULT_SONNET_MODEL;
   let mind: (c: ContactView) => ContactMind = () => scriptedMind();
   let compactor: ((c: ContactView) => ContactCompactor) | undefined;
+  // Helper 的脑子(AC-52):fake 用规则替身;pi 用同一套网关参数建 pi HelperMind,模型 = 全局默认说话模型
+  const fakeHelper = scriptedHelperMind();
+  let helperMind: (model: string) => HelperMind = () => fakeHelper;
   if (o.mind === "pi") {
     // 字面量动态 import:按需加载 pi 依赖,G-LAYER 也能核对依赖方向
-    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as { createPiContactMind(opts: Record<string, unknown>): ContactMind; createPiCompactor(opts: Record<string, unknown>): ContactCompactor };
+    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as {
+      createPiContactMind(opts: Record<string, unknown>): ContactMind;
+      createPiCompactor(opts: Record<string, unknown>): ContactCompactor;
+      createPiHelperMind(opts: Record<string, unknown>): HelperMind;
+    };
     const bearer = env.ANTHROPIC_AUTH_TOKEN;
     const apiKey = bearer ?? env.ANTHROPIC_API_KEY;
     if (!apiKey || !model) throw new Error("mind=pi 需要 ANTHROPIC_AUTH_TOKEN(或 ANTHROPIC_API_KEY)与 ANTHROPIC_DEFAULT_SONNET_MODEL");
@@ -66,6 +73,15 @@ export async function startServer(o: StartOptions): Promise<Started> {
       }
       return k;
     };
+    const helpers = new Map<string, HelperMind>();
+    helperMind = (m) => {
+      let h = helpers.get(m);
+      if (!h) {
+        h = mod.createPiHelperMind({ provider: "anthropic", model: m, baseUrl: env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
+        helpers.set(m, h);
+      }
+      return h;
+    };
   }
   const fake = o.compute === "claude" ? null : scriptedCompute({ stepMs: 300 });
   const compute = fake
@@ -78,6 +94,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
     dataDir: o.dataDir,
     catalogFile: o.catalogFile ?? SAMPLE_CATALOG,
     mind,
+    helperMind,
     ...(compactor ? { compactor } : {}),
     compute,
     computeCwd: (taskId) => {
