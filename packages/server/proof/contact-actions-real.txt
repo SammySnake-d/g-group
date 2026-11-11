@@ -1,0 +1,59 @@
+# 本机(macOS,node v22.22.0)在 3b81112 上跑;脚本 sha256 8bfe4ce62eaa226a(本提交里的 contact-actions-real.mjs)。令牌与网关地址只经环境变量,输出已核对不含二者。
+# 本机同一天前两次:13:27Z 那次网关整段返回上游不可用(只出了一张合并失败卡,4 条消息,判定 ①②③ 为 false,不能用来判故事;重跑前探测网关 200 正常);13:44Z 那次在 97bbd4a 上判定全 true,但小研有一轮以 HostError conflict 失败后由注意循环重试恢复——当时脚本只记下 {"code":"conflict"},没记错误原文,原因未查明(3b81112 修的是变异校准里发现的另一处:claim 时状态机冲突会让整轮抛错重跑,不能断定就是这一次)。之后脚本改为记下错误原文;本文件是 3b81112 上的这一次,没有轮次失败。
+# 2026-11-11T13:53:49.768Z 真实 pi 联系人 + Claude Code Compute(模型 group/opus,经网关 Bearer),startServer({ mind: "pi", compute: "claude" })
+# 命令: node packages/server/proof/contact-actions-real.mjs
+
+## 1 用户 tasks.create 建 2 个面板任务(不指定负责人)
+tasks.create → t-mwc6jkju-4「写 alpha.md」T1_Open 负责人=无 来源 #1
+tasks.create → t-mwc6jkjx-6「写 beta.md」T1_Open 负责人=无 来源 #2
+
+## 2 用户不 @ 任何人:面板上有两个任务,你们各自认领一个做掉,做完在群里说一声
+
+## 任务面板(收尾时)
+{"id":"t-mwc6jkjx-6","title":"写 beta.md","state":"T5_InReview","v":0,"owner":"小研","computeRuns":1}
+{"id":"t-mwc6jkju-4","title":"写 alpha.md","state":"T5_InReview","v":0,"owner":"小克","computeRuns":1}
+
+## 任务状态变化
+[0.1s] 任务 t-mwc6jkju-4「写 alpha.md」T1_Open v0 负责人=无
+[0.1s] 任务 t-mwc6jkjx-6「写 beta.md」T1_Open v0 负责人=无
+[14.9s] 任务 t-mwc6jkju-4「写 alpha.md」T2_Claimed v0 负责人=小克
+[14.9s] 任务 t-mwc6jkju-4「写 alpha.md」T3_Running v0 负责人=小克
+[15.4s] 任务 t-mwc6jkju-4「写 alpha.md」T3_Running v0 负责人=小克
+[28.8s] 任务 t-mwc6jkju-4「写 alpha.md」T3_Running v0 负责人=小克
+[28.8s] 任务 t-mwc6jkju-4「写 alpha.md」T3_Running v0 负责人=小克
+[41.3s] 任务 t-mwc6jkjx-6「写 beta.md」T2_Claimed v0 负责人=小研
+[41.3s] 任务 t-mwc6jkjx-6「写 beta.md」T3_Running v0 负责人=小研
+[41.6s] 任务 t-mwc6jkjx-6「写 beta.md」T3_Running v0 负责人=小研
+[52.9s] 任务 t-mwc6jkjx-6「写 beta.md」T3_Running v0 负责人=小研
+[52.9s] 任务 t-mwc6jkjx-6「写 beta.md」T3_Running v0 负责人=小研
+[55.0s] 任务 t-mwc6jkju-4「写 alpha.md」T5_InReview v0 负责人=小克
+[76.1s] 任务 t-mwc6jkjx-6「写 beta.md」T5_InReview v0 负责人=小研
+
+## 群聊全文
+#1 我([卡:task-status]): 新建任务:写 alpha.md
+    在当前工作目录写一个文件 alpha.md,内容只有一行:NEUTRAL_FIXTURE alpha ok。写完就算完成。
+#2 我([卡:task-status]): 新建任务:写 beta.md
+    在当前工作目录写一个文件 beta.md,内容只有一行:NEUTRAL_FIXTURE beta ok。写完就算完成。
+#3 我: 面板上有两个任务,你们各自认领一个做掉,做完在群里说一声
+#4 小克(↩#1): 认领了任务:写 alpha.md
+#5 小研(↩#3): 我认领了 alpha.md(t-mwc6jkju-4),beta 留给其他人。做完说一声。
+#6 小克(↩#5 @小研): 小研,面板上 alpha(t-mwc6jkju-4)记在我名下，已经在跑了。你的认领可能没成功，beta(t-mwc6jkjx-6)还空着，麻烦你接一下 beta。
+#7 小研(↩#2): 认领了任务:写 beta.md
+#8 小研: alpha 小克已接,我改接 beta.md,做完说一声。
+#9 小克(↩#1 @我): alpha.md 写好了，在 Compute 的工作目录里，内容只有一行:NEUTRAL_FIXTURE alpha ok。写完读回来核对过，内容对。麻烦提出者确认一下。
+#10 小研(↩#6 @小克): 好的。#5 说错了，alpha 归你。beta(t-mwc6jkjx-6)已经在我名下，正在跑，写完会在群里说。
+#11 小研(↩#2 @我): beta 做完了:beta.md 在 Compute 工作目录里，内容只有一行 NEUTRAL_FIXTURE beta ok,写完读回核对过。请提出者确认。
+
+## 宿主判下的拒绝(1 条)
+[23.3s] 小研 claim {"kind":"claim","taskId":"t-mwc6jkju-4"} → 任务 t-mwc6jkju-4 已由联系人 c-mwc6jkjt-1 认领(T3_Running)
+
+## 被拒动作回告台账 gg_rejection_notes(1 条;shown_in = 第 5 块给到它的那一轮)
+{"contact":"小研","action":"claim_task(taskId=t-mwc6jkju-4)","reason":"任务 t-mwc6jkju-4 已由联系人 c-mwc6jkjt-1 认领(T3_Running)","shownIn":"c-mwc6jkju-2:r4:mwc6k3mo"}
+
+# 判定:
+#   ① 两个面板任务各有负责人且是不同的两人 = true(小克、小研)
+#   ② 负责人来自联系人 claim_task(群里有「认领了任务」消息,用户没有 tasks.assign) = true
+#   ③ 两个任务都起了 Compute 并交付(T5/T8a/T8) = true
+#   ④ 没有另建重复任务(本群任务数 = 2) = true
+#   ⑤ 被拒动作之后该联系人还有轮次的,都在之后的某一轮第 5 块给过且只记一次(shown_in 是之后的轮次) = true(共 1 条,其中之后还有轮次的 1 条)
+#   用户请求之后 全部交付;耗时 92026 ms;请求 #3

@@ -14,7 +14,7 @@ const PLACEHOLDER = "〔已撤回内容已移除〕";
 function renderAction(a: MindAction): string {
   switch (a.kind) {
     case "reply":
-      return `- reply → ${a.roomId}${a.replyToSeq === null ? "" : ` ↩#${a.replyToSeq}`}:${a.text}\n`;
+      return `- reply → ${a.roomId}${a.replyToSeq === null ? "" : ` ↩#${a.replyToSeq}`}${a.mentions?.length ? ` @${a.mentions.join(",")}` : ""}:${a.text}\n`;
     case "dispatch":
       return `- dispatch → ${a.roomId} #${a.sourceSeq}「${a.title}」:${a.task}\n`;
     case "commit":
@@ -33,6 +33,8 @@ function renderAction(a: MindAction): string {
       return `- memory-use ${a.id}:${a.good ? "好" : "不好"}${a.note === null ? "" : `(${a.note})`}\n`;
     case "rerun":
       return `- rerun → ${a.roomId}${a.basisSeq === null ? "" : ` #${a.basisSeq}`}:单元 ${a.runId}\n`;
+    case "claim":
+      return `- claim → 任务 ${a.taskId}\n`;
   }
 }
 

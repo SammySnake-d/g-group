@@ -1,0 +1,58 @@
+{
+  "slice": "联系人动作补齐(片 CA;真实跑测 stories/REPORT.md 缺口 1、2、7 与 US7/US10「一次纠错版本号 +2」):① 认领已有任务(U14、§8.4 US1)——pi 联系人内置工具 claim_task(taskId)(adapter-pi-contact 清单末尾),宿主在 commitRound 比对任务在联系人所在会话、T1_Open、无负责人后走与 tasks.assign 同一条 claimForTx(任务文档按版本 CAS 提交)转 T2 并按任务说明起 Compute,同一任务后提交的被拒并给出原因;第 5 块列出本会话还没人负责的面板任务;② 被拒动作回告——commitRound 判下的拒绝与 gg_effects 同事务记入 gg_rejection_notes,下一轮第 5 块逐条给该联系人「动作 → 被拒:原因」(只给事实),带着它的那一轮提交成功才记为已给,轮次被放弃或失败就再给,第 1 块不动;③ reply 可带 mentions——每个 id 必须是会话成员,写进消息 mentions(与用户发消息的 @ 同一形状),唤醒照现有规则;④ 一次纠错只升一版——同一轮 verdict(revise) 与带 sourceSeq 的 forward 指向同一任务同一条用户消息时,先到的升版,后到的只把原文并进同一次续接(Compute 也只多跑一轮)",
+  "acceptance": [
+    {
+      "id": "AC-45",
+      "status": "未测",
+      "reason": "只覆盖 ② 的一个子判据:一条用户修改意见只让任务原位升一版、新条件送进同一个 Compute 的同一次续接——复现 US7/US10 真实运行里同一轮 verdict(revise) + forward(同一 sourceSeq) 造成的 v0→v2 与 Compute 跑两轮,修复后两种顺序都恰好 v0→v1、续接 1 次(packages/server/src/contact-actions.test.ts「一次用户纠错 → constraint_ver 恰好 +1」两条);① 草稿阶段作废重拟、③ 结果体现新条件的 Applied 指向不在本片。"
+    },
+    {
+      "id": "AC-15",
+      "status": "未测",
+      "reason": "只覆盖「版本单调恰好 +1(v_new = current_ver + 1)」在一次纠错路径上成立(同上两条测试);AC-15 本身是改挂补充(E5b)的判据,改挂、重放 #n、回滚确认都不在本片。"
+    },
+    {
+      "id": "AC-31",
+      "status": "未测",
+      "reason": "本片补的是联系人看到的状态与宿主真实状态一致的一项:宿主判下的拒绝下一轮第 5 块逐条给出、原因与 gg_effects 一致、给过不重复、带着它的一轮被放弃(发送前来了更新的用户消息)不算给过(contact-actions.test.ts「被拒的动作下一轮在第 5 块出现一次…」「带着回告的那一轮被放弃…」「两位联系人同时认领同一个任务…」「US1 原样…」);AC-31 ①–⑤ 的原文判据(唯一入口四条件、入库后崩溃去重、发送前撤销竞态、终态自动回收)不在本片。"
+    },
+    {
+      "id": "AC-39",
+      "status": "未测",
+      "reason": "只验 ① 前缀纪律在本片新增的第 5 块内容下成立:带回告与不带回告的相邻轮次第 1 块逐字相同,可认领的任务不进第 1 块(contact-actions.test.ts);②–⑥(断点个数、常驻会话、命中率观测、拆账口径)不在本片。"
+    },
+    {
+      "id": "AC-30",
+      "status": "未测",
+      "reason": "真实运行 packages/server/proof/contact-actions-real.txt(startServer mind=pi compute=claude,本机,3b81112)走通 US1 的认领部分:用户 tasks.create 建 2 个面板任务、不 @ 任何人说「各自认领一个做掉」,小克、小研用 claim_task 各认领一个、各起一个 Claude Code Compute 并交付到 T5;小研有一次认领被拒(已由小克认领),之后一轮第 5 块给过一次;本群任务数 2,五项判定全 true。AC-30 在本仓库验收文档(v0.1)里还带「Compute 内部压缩发生后约束仍有效」的条件(v3.29 已按 DM#2792 去掉,本仓库文档未同步),本片没测压缩;Helper 解析 CSV、@everyone 不在本片。"
+    },
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "packages/server/proof/contact-actions-red-green.txt",
+      "notes": "收据 red.commit 是第二次红 117d4e1(测试 + 空壳):新增与改动的 14 条测试按名失败,第二次绿 a5b967e 上 33 条全过,测试文件两次逐字相同(packages/server/proof/contact-actions-red-green.txt)。为什么有两次红绿:第一次红 3d3ec89 / 绿 97bbd4a 之后,变异校准(见 R-05)与本机 G-TAUTO 先后要求改测试——faca5b3 给辅助函数 settle 设等待上限,117d4e1 让两条「一次纠错只升一版」测试在测试体里建宿主(G-TAUTO 认不出本地辅助函数的返回值是被测源码的结果);实现源码与 3b81112 / 70cec88 逐字相同,117d4e1 只是把它退回空壳、a5b967e 恢复。"
+    },
+    {
+      "id": "R-05",
+      "status": "未测",
+      "reason": "阳性埋雷:packages/server/proof/contact-actions-mutations.mjs 22 个单点故障(去掉 CAS 的比较、认领不查会话、认领后不起 Compute、第 5 块不列可认领任务、可认领清单不按会话过滤 / 含已有人负责的、工具层不登记 claim_task、拒绝不回告、回告不进第 5 块、回告不给原因、给过不标记、装配时就算给过、回告写进第 1 块、mentions 不校验成员 / 不写进消息 / 不去重、工具层丢掉 mentions、升版两次(forward、verdict 各一)、升版后不登记、后到的原文不并进续接):22 个全被具名测试按名字杀死、0 存活。证据 packages/server/proof/contact-actions-mutations.txt 含两次运行——box4(faca5b3,同一次 tsc/lint 0、npm test 1486 全过)与 HEAD 7e7deaf 重跑(box4 的 heavy 锁被别的会话一个卡住的作业占着,不动别人的进程,改在本机 nice + lockf 并发 1 跑;这次没有超时)。校准过程如实记下:97bbd4a 上第一次跑报 22/22,但 C01、C02 的「杀死」其实是整份文件超时;据此修 3b81112 与 faca5b3,并按新口径(超时单列、不计入杀死)重验。阴性对照为同脚本的原样副本(48 绿 0 红)。脚本只核对「被具名测试杀死」,没逐个核对红的原因文字,所以不声称 R-05 双侧标定已完成。"
+    }
+  ],
+  "candidate": {
+    "status": "候选",
+    "description": "候选,非正式门禁:U14「共享任务面板是不是最佳展示」待决,本片只做最小形态——第 5 块「可认领的任务」一行一个(id、状态、标题、会话与来源 seq),认领成功时宿主以该联系人名义在会话里发一条「认领了任务:标题」(回复任务来源消息),与 dispatch 接活时的卡片消息对齐;清单没设条数上限。"
+  },
+  "author": {
+    "agent": "claude",
+    "session": "claude:dd154965-afbd-4134-a1d3-c00f2a859eab",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "117d4e1e4c62409b6602559a76540b0fdb780d91"
+  },
+  "unverifiable": "AC-31:被拒回告只能让联系人之后的轮次知道「那件事没发生」;同一轮里模型先调了会被拒的工具、又在同一轮 reply 里说「已经派出去了」(US1 #4–#7、US9 #4 实测),宿主到 commitRound 才校验,这句话照样会发出去——本片没有在工具调用当场预检(列为需拍板)。「认领成功」只证明任务按版本转到 T2 且起了 Compute;两轮真正并发提交的竞争在单进程 SQLite 事务里是串行的,测试用屏障让两轮都在任一方提交前开始,证明的是「后提交者看到已变状态被拒」,没有跨进程并发。AC-45:去重只按「同一轮、同一任务、同一条来源消息」判;联系人在不同轮次对同一条消息先后 verdict 与 forward 的情形,forward 会因来源不是本轮新消息被原有校验拒绝,没有单测。reply.mentions 只校验成员身份,不判断该不该 @(软提示)。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "子代理实现(Claude Code 子代理,调度会话 claude:dd154965-afbd-4134-a1d3-c00f2a859eab)。按 v3.29 §2.0「做 / 不做」:只做代码能核对的事实(任务状态与归属、会话成员、宿主已判的拒绝),说明文字只放在工具声明(claim_task、reply.mentions 的 description)里,不加代码门禁。第 1 块只在工具清单里给 reply 加了「mentions?」一处:recall.test.ts 的 4000 字节预算用例离上限不到 40 字节,任何片往第 1 块加提示词都会把它推过预算。与并行片的已知冲突点:adapter-pi-contact/src/tools.ts 清单末尾与 mind.test.ts 工具清单精确断言(standing-commitments、plugin-sources 也加工具)、kernel/src/runtime-ports.ts 的 MindAction 联合与 MIND_ACTION_KINDS、kernel/src/compact.ts 的 renderAction、host.ts commitRound 的动作分支。 3b81112:claim 分支在宿主比对之后若任务状态机仍拒绝 Claim(conflict),按拒绝回告,不再让整轮事务抛错、注意循环退避重跑同一批。 faca5b3:contact-actions.test.ts 的 settle 改为每次等待 250ms、总时长 30s 上限(宿主停不下来时按名字失败,不挂到测试超时)。"
+}
