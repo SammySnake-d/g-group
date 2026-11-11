@@ -1,0 +1,25 @@
+packages/adapter-cc-compute/src/types.ts
+  s_74dccb3cdfaa51::t_dbe24a5a304f87 96-98
+packages/adapter-cc-compute/src/adapter.test.ts
+  s_74dccb3cdfaa51::t_575d49013fd504 726,734-737
+packages/adapter-cc-compute/src/r11.test.ts
+  s_74dccb3cdfaa51::t_389e0aa79f63cf 84-86
+packages/adapter-cc-compute/test-support/fake-claude.mjs
+  s_74dccb3cdfaa51::t_d1804665079057 71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d33778650a8e37bab0d50da212ac48418856feb4",
+  "prompts": {},
+  "sessions": {
+    "s_74dccb3cdfaa51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c735-dbc6-7260-8f7d-bf40b267e6b8",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
