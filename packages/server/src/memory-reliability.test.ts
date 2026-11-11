@@ -24,7 +24,7 @@ function setup(H: typeof Host, t: TestContext, reflect: (r: ReflectRequest) => P
   return {host,c,dm,dir,requests};
 }
 async function settle(host: Host) {
-  for(let i=0;i<300;i++){await host.idle();await new Promise(r=>setTimeout(r,5));if(!host.loop.busy())return;}
+  for(let i=0;i<300;i++){await new Promise(r=>setTimeout(r,5));if(!host.loop.busy())return;}
   throw new Error("宿主未收敛");
 }
 const works=(h:Host)=>listDocs<CoverageWork>(h.db,"memory-coverage:").map(x=>x.value);
