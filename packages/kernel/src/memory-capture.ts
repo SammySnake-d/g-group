@@ -2,7 +2,7 @@
 // statedIn / foldForMatch 改编自 OpenMausBot server/memory-capture.ts 与 memory-entries.ts
 // @6c7bcb02ea766429091f94b8e1e11b7b3b8675af，Copyright 2026 Milind Soni and contributors，Apache-2.0。
 // 本地增量：中文假设/问句尾、引用来源过滤。许可和归属见 third_party/openmausbot-memory/。
-import type { CompactMemory, ReflectSource, ReflectResult } from "./runtime-ports.ts";
+import type { CaptureMark, CompactMemory, MarkKind, RefineResult, ReflectSource, ReflectResult } from "./runtime-ports.ts";
 import { plainData } from "./plain.ts";
 export type RevisionEvent = { readonly seq: number; readonly body: { readonly kind: string; readonly target?: number } };
 export function messageRevision(events: readonly RevisionEvent[], seq: number): number {
@@ -75,5 +75,37 @@ export function decodeReflect(input: unknown): { ok: true; value: ReflectResult 
     if (m.kind !== undefined && !["preference", "fact", "decision", "outcome"].includes(String(m.kind))) return no("记忆 kind 不合法");
     memories.push({ title: m.title, text: m.text, anchors: [...m.anchors] as string[], relation: (m.relation ?? null) as CompactMemory["relation"], target: (m.target ?? null) as string | null, ...(m.roomId !== undefined ? { roomId: m.roomId as string } : {}), ...(m.sourceSeq !== undefined ? { sourceSeq: m.sourceSeq as number } : {}), ...(m.evidence !== undefined ? { evidence: m.evidence as string } : {}), ...(m.kind !== undefined ? { kind: m.kind as NonNullable<CompactMemory["kind"]> } : {}) });
   }
-  return { ok: true, value: { note: r.note as string | null, memories, personaSuggestion: (r.personaSuggestion ?? null) as string | null } };
+  const marks = decodeMarks(r.marks);
+  if (!marks.ok) return marks;
+  return { ok: true, value: { note: r.note as string | null, memories, personaSuggestion: (r.personaSuggestion ?? null) as string | null, ...(marks.value.length ? { marks: marks.value } : {}) } };
 }
+const MARK_KIND_SET: ReadonlySet<string> = new Set<MarkKind>(["preference", "fact", "decision", "outcome", "correction", "unsure"]);
+/** G5 粗筛标记的结构校验:缺省为空;任何一项形状不对整份检查判失败(不静默丢项) */
+function decodeMarks(input: unknown): { ok: true; value: CaptureMark[] } | { ok: false; reason: string } {
+  if (input === undefined || input === null) return { ok: true, value: [] };
+  if (!Array.isArray(input)) return { ok: false, reason: "marks 必须是数组" };
+  const out: CaptureMark[] = [];
+  for (const item of input) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return { ok: false, reason: "标记项必须是对象" };
+    const m = item as Record<string, unknown>;
+    if (typeof m.roomId !== "string" || m.roomId.trim() === "") return { ok: false, reason: "标记 roomId 不合法" };
+    if (!Number.isSafeInteger(m.seq) || (m.seq as number) < 1) return { ok: false, reason: "标记 seq 不合法" };
+    if (!MARK_KIND_SET.has(String(m.kind))) return { ok: false, reason: "标记 kind 不合法" };
+    if (typeof m.evidence !== "string" || m.evidence.trim() === "") return { ok: false, reason: "标记 evidence 不合法" };
+    out.push({ roomId: m.roomId, seq: m.seq as number, kind: m.kind as MarkKind, evidence: m.evidence });
+  }
+  return { ok: true, value: out };
+}
+/** G5 精筛结果:沿用 reflect 的记忆项校验,且每项必须指回来源(roomId/sourceSeq/evidence),缺出处不猜 */
+export function decodeRefine(input: unknown): { ok: true; value: RefineResult } | { ok: false; reason: string } {
+  const p = plainData(input, "refine");
+  if (!p.ok) return { ok: false, reason: `${p.path}:${p.why}` };
+  if (!p.value || typeof p.value !== "object" || Array.isArray(p.value)) return { ok: false, reason: "精筛结果必须是对象" };
+  const r = p.value as Record<string, unknown>;
+  const d = decodeReflect({ note: null, memories: r.memories, personaSuggestion: null });
+  if (!d.ok) return d;
+  if (d.value.memories.some((m) => m.roomId === undefined || m.sourceSeq === undefined || m.evidence === undefined)) return { ok: false, reason: "精筛记忆必须带 roomId/sourceSeq/evidence" };
+  return { ok: true, value: { memories: d.value.memories } };
+}
+/** 原话里有没有「以后都/所有/一律…」这类长期范围词(与 validateCapture 的全局判定同一张词表) */
+export const isLongTerm = (evidence: string) => LONG_TERM.test(evidence);
