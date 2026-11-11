@@ -1,0 +1,24 @@
+{
+  "slice": "T-177 G6 同题对照的 runner、固定题集、分开报告的指标与确定性合同(方案 t177-g-d-implementation §9、bc 定稿 v0.2 §8;本项目的验证工具,放 packages/server/proof/g6/,不进产品、不给产品加开关或界面,需求文档 §2.0 v3.28):按组(基线 + 按序合入各片,机械就绪条件=分支可解析且带本片收据)建临时工作树、叠上 runner,用被测提交自己的 start.ts 装配逐题跑;录制层包住 fetch 冻结每次模型调用(用量/停止原因/工具/延迟,不记请求头)并按题集注入故障;冻结原始记录、各组提交、配置指纹(渠道只留主机与摘要)、源权限与消息版本;评分按计划数分母(失败运行留在分母,注入故障单列),K1–K7 确定性合同与效果指标分开报告;规则替身(不联网)测透 runner,并跑了组①",
+  "acceptance": [
+    {
+      "id": "AC-42",
+      "status": "未测",
+      "reason": "本片只交付对照实验的工具与组①的规则替身运行,不是 AC-42 的效果验收。runner 自身:63 条新测试在红 453b90d 上全部按名失败、绿 ca26d67 上全过;box3(Node v24.21.0)在 ca26d67 上 63 个一对一变异:杀死 63、存活 0,原样副本前后全绿,同一次 npm test 1536/1536、tsc/lint 退出 0(packages/server/proof/g6-mutations.txt、receipts/evidence/t177-g6/box3.txt)。组①规则替身 17 题×1 次:K4、K5 未守住(基线把截断的补写当成状态笔记、检查失败的那批不再补查),覆盖 81/84、漏写 3/9 等,见报告;替身是理想读者,数字只说明 runner 与宿主装配,不代表任何模型。②G1+G2 合入 host.ts 冲突、③同、④缺 G4 收据,均记未测;真实模型(强模型、HY4)没跑——没有找到明确批准 G6 花费的配置,列为需拍板。不预设阈值,不写验收结论",
+      "evidence": "receipts/evidence/t177-g6/standin-g1/report.md"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:b36ab234-0cba-4b89-929e-d21a46a35eea",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "453b90d656b272f4b4addab80ec0d0f087f3e156"
+  },
+  "unverifiable": "AC-42:确定性合同只看宿主可核对的行为(撤回/编辑前/越权原文是否进请求、前缀是否变、是否同模、截断是否当成功、失败检查是否补查、预取是否进前缀、记账是否完整),判定依赖 runner 对宿主呈现格式(第 4 块消息头、检查材料段落标题)的解析,宿主改呈现格式时要同步;调用归属靠人设 marker,补写笔记的请求不带人设时只在单联系人题里能归属;预取识别靠第 5 块「旧消息」标注。效果指标对真实模型的判定是正则(expect/reject/misled),只判字面、不证明语义;规则替身组的数字只说明 runner 与宿主装配,不是模型效果。真实模型组、②③④组均未跑,没有任何组间对比结论",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "由主会话 claude:b36ab234 派出的子代理实现(fnqtz 线路)。本机工作树 /tmp 中途被另一清理任务整片删除,按派单在新共享克隆上重做;每个里程碑打 bundle 回传 box3 /workspace/t177-g6-claude/。第一次推送时 pre-push 钩子里 run.test.ts 的 git 子进程继承了钩子的 GIT_DIR,改到了本机共享克隆(core.bare、临时分支、g6 分支多一提交),已当场还原并告知主会话;修法是 runner 与测试起 git 子进程时剥掉 GIT_*(只留选配置来源的三个),加了具名回归测试,红绿重排。重活(typecheck/lint/全量/变异)在 box3 持 heavy.lock 跑;G-RED/G-STUB/G-TAUTO/G-PROVENANCE 在本机。"
+}
