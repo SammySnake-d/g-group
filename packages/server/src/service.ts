@@ -106,10 +106,10 @@ export function createService(host: Host): Service {
     "docs.history": (p: { docId: string; limit?: number }) => ({ versions: host.docs.history(p.docId, p.limit ?? 50) }),
     "schedules.list": (p: { contactId?: string; roomId?: string; order?: "next-run" | "created" }) => ({ schedules: host.scheduler.list(p) }),
     "schedules.preview": (p: { cron: string; tz: string; count?: number }) => previewCron(p.cron, p.tz, p.count ?? 5, Date.now()),
-    "schedules.create": ({ clientActionId: _c, ...p }: { clientActionId: string } & Parameters<Host["scheduler"]["create"]>[0]) => host.scheduler.create(p),
+    "schedules.create": ({ clientActionId, ...p }: { clientActionId: string } & Parameters<Host["scheduler"]["create"]>[0]) => host.scheduler.create(p, { clientActionId }),
     "schedules.update": ({ scheduleId, ...patch }: { scheduleId: string } & Parameters<Host["scheduler"]["update"]>[1]) => host.scheduler.update(scheduleId, patch),
     "schedules.remove": (p: { scheduleId: string }) => {
-      host.scheduler.remove(p.scheduleId);
+      host.removeSchedule(p.scheduleId);
       return { ok: true };
     },
     "schedules.runNow": (p: { scheduleId: string }) => host.scheduler.runNow(p.scheduleId),

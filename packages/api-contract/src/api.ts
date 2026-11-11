@@ -301,7 +301,7 @@ export const METHODS = {
   ),
   "schedules.remove": method(obj({ scheduleId: id() }), Ok),
   "schedules.runNow": method(obj({ scheduleId: id(), clientActionId: id() }), ScheduleView),
-  "schedules.history": method(obj({ scheduleId: id(), ...Page }), obj({ runs: arr(obj({ at: isoTime(), status: oneOf(["ok", "failed", "missed", "running"] as const), messageSeq: nullable(seq()), error: nullable(str()) })) })),
+  "schedules.history": method(obj({ scheduleId: id(), ...Page }), obj({ runs: arr(obj({ at: isoTime(), status: oneOf(["ok", "failed", "missed", "running", "silent"] as const), messageSeq: nullable(seq()), error: nullable(str()) })) })),
 
   // ---- 插件 ----
   "plugins.marketplace": method(obj({ query: opt(str({ max: 200 })), kind: opt(oneOf(["data-source", "outbound-channel", "ui-extension"] as const)) }), obj({ entries: arr(MarketplaceEntry) })),

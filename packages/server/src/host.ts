@@ -141,6 +141,7 @@ import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindR
 import { QuotaTable } from "./quota.ts";
 import { DEFAULT_RUN_CHECK_MS, RunStore, checkRunWake } from "./runs.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
+import { StandingCommitments } from "./standing-commitments.ts";
 import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, reindexEditTx, searchMessages, unindexTx } from "./search.ts";
 import { SharedDocs } from "./shared-docs.ts";
 import { type CodeRepoConfig, type Workspace, Worktrees } from "./worktree.ts";
@@ -370,6 +371,8 @@ export class Host {
   readonly userName: string;
   readonly loop: AttentionLoop;
   readonly scheduler: Scheduler;
+  /** 联系人自设定时与常驻承诺(U20、U80、D04.2-1;D02 窄接口形态是候选) */
+  readonly standing: StandingCommitments;
   readonly plugins: PluginStore;
   readonly announcements: AnnouncementStore;
   private readonly exits: MemberExits;
@@ -472,6 +475,7 @@ export class Host {
       },
       deliverTx: (contactId, roomId, inbound) => {
         run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", contactId, roomId, JSON.stringify(inbound), this.now());
+        return one<{ id: number }>(this.db, "SELECT last_insert_rowid() AS id")!.id;
       },
       notify: (contactId) => this.loop.notify(contactId, "now"),
       label: (contactId, roomId) => {
@@ -483,6 +487,19 @@ export class Host {
         if ("removed" in s) this.bus.emit({ type: "schedule.removed", scheduleId: s.removed });
         else this.bus.emit({ type: "schedule.updated", schedule: s });
       },
+    });
+    this.standing = new StandingCommitments({
+      db: this.db,
+      now: this.now,
+      newId: this.newId,
+      userId: this.userId,
+      scheduler: this.scheduler,
+      timezone: () => this.settings().timezone,
+      commitment: (contactId, roomId, id) => {
+        const c = this.ledgerOf(contactId, roomId).value.commitments.find((x) => x.id === id);
+        return c ? { status: c.status, taskId: c.taskId } : null;
+      },
+      member: (contactId, roomId) => this.isMember(roomId, { kind: "contact", id: contactId }) && !this.exits.isLeaving(roomId, contactId),
     });
     this.capabilities = new CapabilityLibrary(opts.dataDir ?? dirname(opts.file));
     this.quota = new QuotaTable({
@@ -973,6 +990,8 @@ export class Host {
       f.card?.card_id ?? null,
       f.clientActionId ?? null,
     );
+    // 每 N 条消息(U80):按会话计数,满 N 条在同一事务里投递触发;宿主生成的卡片不计
+    this.standing.countTx(roomId, e.seq, sender, { card: !!f.card });
     if (f.card) {
       run(
         this.db,
@@ -995,6 +1014,7 @@ export class Host {
 
   /** 发完一条消息之后:推事件、送达成员联系人的注意循环。 */
   private afterAppend(roomId: string, seq: number, from: { kind: Member["kind"] | "helper"; id: string }) {
+    for (const c of this.standing.takeNotify()) this.loop.notify(c, "now");
     const msgs = this.projected(roomId);
     const m = msgs.find((x) => x.seq === seq);
     if (!m) return;
@@ -1306,6 +1326,27 @@ export class Host {
     });
     this.bus.emit({ type: "contact.removed", contactId: id });
   }
+  /** 因常驻承诺了结而停用的定时:提交后推视图、重设计时器 */
+  private flushSchedules() {
+    for (const id of this.standing.takeChanged()) this.scheduler.changed(id);
+  }
+  /** 用户在界面删定时:对应的常驻承诺一起了结(用户撤销)。 */
+  removeSchedule(scheduleId: string) {
+    const s = this.scheduler.get(scheduleId);
+    if (!s) throw new HostError("not_found", `没有定时 ${scheduleId}`);
+    const cid = this.scheduler.commitmentOf(scheduleId);
+    const c = cid ? this.ledgerOf(s.contact_id, s.room_id).value.commitments.find((x) => x.id === cid && x.status === "active") : undefined;
+    tx(this.db, () => {
+      this.scheduler.deleteTx(scheduleId);
+      if (c) this.ledgerTx(s.contact_id, s.room_id, [{ type: "close", actionId: `schedule-remove:${scheduleId}`, commitmentId: c.id, taskId: c.taskId, actor: { kind: "user", id: this.userId }, roundId: `schedule-remove:${scheduleId}`, outcome: "revoked", artifact: null, detail: `用户删掉了定时 ${scheduleId}` }]);
+    });
+    this.scheduler.removed(scheduleId);
+    if (c) {
+      const v = this.listCommitments({ contactId: s.contact_id, roomId: s.room_id }).find((x) => x.id === c.id);
+      if (v) this.bus.emit({ type: "commitment.updated", commitment: v });
+      this.loop.notify(s.contact_id, "batch");
+    }
+  }
   /** 用户撤销联系人的一条承诺(用户只能撤销,不能替联系人标完成)。 */
   revokeCommitment(commitmentId: string): CommitmentView {
     for (const d of listDocs<Ledger>(this.db, "ledger:")) {
@@ -1316,6 +1357,7 @@ export class Host {
       tx(this.db, () =>
         this.ledgerTx(contactId, roomId, [{ type: "close", actionId: `revoke:${commitmentId}`, commitmentId, taskId: c.taskId, actor: { kind: "user", id: this.userId }, roundId: `revoke:${commitmentId}`, outcome: "revoked", artifact: null, detail: "用户撤销" }]),
       );
+      this.flushSchedules();
       const v = this.listCommitments({ contactId, roomId }).find((x) => x.id === commitmentId)!;
       this.bus.emit({ type: "commitment.updated", commitment: v });
       this.loop.notify(contactId, "batch");
@@ -1413,6 +1455,7 @@ export class Host {
       run(this.db, "INSERT INTO gg_rewinds (room_id, client_action_id, to_seq, upto_seq, marker_seq, result, at) VALUES (?, ?, ?, ?, ?, ?, ?)", roomId, input.clientActionId, input.toSeq, upto, markerSeq, JSON.stringify(r), r.at);
       return r;
     });
+    this.flushSchedules();
     this.markRead(roomId, me, result.markerSeq);
     const msgs = this.projected(roomId);
     for (const m of plan.messages) {
@@ -2009,6 +2052,8 @@ export class Host {
       led = r.ledger;
     }
     putDoc(this.db, this.ledgerKey(contactId, roomId), cur.ver, led);
+    // 常驻承诺了结(撤销、回退、完成):对应的定时停用、每 N 条触发器停计数(D04.2-1)
+    for (const c of cmds) if (c.type === "close") this.standing.closedTx(c.commitmentId);
   }
   private artifactExists(ref: string): boolean {
     const m = /^task:(.+)\/result$/.exec(ref);
@@ -2021,7 +2066,7 @@ export class Host {
       if ((q.contactId && q.contactId !== contactId) || (q.roomId && q.roomId !== roomId)) continue;
       for (const c of d.value.commitments) {
         if (q.status && c.status !== q.status) continue;
-        out.push({ id: c.id, contactId, roomId, sourceSeq: c.sourceSeq, taskId: c.taskId.startsWith("standing-") ? null : c.taskId, text: c.text, status: c.status, scheduleId: null, updatedAt: this.now() });
+        out.push({ id: c.id, contactId, roomId, sourceSeq: c.sourceSeq, taskId: c.taskId.startsWith("standing-") ? null : c.taskId, text: c.text, status: c.status, scheduleId: this.scheduler.byCommitment(c.id), updatedAt: this.now() });
       }
     }
     return out;
@@ -2420,7 +2465,7 @@ export class Host {
       stateNote: note?.value.text ?? null,
       fresh,
       tasks: tasks.map((t) => `${t.id} [${t.state}] ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
-      pointers: [...pointers, ...mem.pointers],
+      pointers: [...pointers, ...mem.pointers, ...this.standing.pointers(contactId, rooms.map((r) => r.id))],
       budgetBytes: this.opts.roundBudgetBytes ?? ROUND_BUDGET_BYTES,
       runs: this.runLinesFor(contactId, rooms),
       });
@@ -2455,7 +2500,11 @@ export class Host {
     let out: Awaited<ReturnType<ContactMind["round"]>>;
     try {
       // 每一轮现场定生效模型(原则 70):用户在失败卡上显式选了备用模型才换,只用于重跑这一批;自动重试永远用原模型(严禁静默换模)
-      const tools: RoundTools = { readMemory: async (id: string) => this.renderMemory(contactId, id), readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq) };
+      const tools: RoundTools = {
+        readMemory: async (id: string) => this.renderMemory(contactId, id),
+        readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq),
+        listSchedules: async (roomId: string) => this.standing.listText(contactId, roomId),
+      };
       out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, ac.signal, tools), stalled, closing]);
     } catch (e) {
       this.setActivity(contactId, null, "idle");
@@ -2530,6 +2579,7 @@ export class Host {
       return m.kind === "round-over-budget" && m.contactId === contactId;
     });
     this.report("round-failed", { contactId, roundId, reason: f.reason, need: f.need, budget: f.budget });
+    tx(this.db, () => this.scheduler.failRunsTx(contactId, inbox.at(-1)?.id ?? 0, `${what}超预算`));
     if (open) {
       run(this.db, "UPDATE gg_cards SET body = ?, meta = ? WHERE card_id = ?", body, JSON.stringify(meta), open.card_id);
       const m = this.projected(open.room_id).find((x) => x.seq === open.seq);
@@ -2587,6 +2637,7 @@ export class Host {
     const rejected: { action: MindAction; reason: string }[] = [];
     let hadFailure = false as boolean;
     const notifyAfter: string[] = [];
+    const afterCommit: (() => void)[] = [];
     tx(this.db, () => {
       // 账本:本轮新消息先 receive
       const byRoom = new Map<string, Parameters<typeof applyLedger>[2][]>();
@@ -2797,6 +2848,21 @@ export class Host {
             touchedTasks.add(a.taskId);
             break;
           }
+          case "schedule-set":
+          case "schedule-pause":
+          case "schedule-remove": {
+            // 联系人自设定时(U20、U80;D02 窄接口形态是候选):只能管自己在本会话的,依据只认本轮里用户本人的直接消息(AC-20)
+            if (leavingRooms.has(a.roomId)) { reject(LEAVING_REASON); break; }
+            if (!roomIds.has(a.roomId)) { reject("不在这个会话里"); break; }
+            const r = this.standing.applyTx(contactId, a, freshMsgs);
+            if (!r.ok) { reject(r.reason); break; }
+            const key = `${a.roomId}#${a.sourceSeq}`;
+            if (r.propose) proposals.set(key, [...(proposals.get(key) ?? []), r.propose]);
+            if (r.close) push(a.roomId, { type: "close", actionId: `${actionId}:close`, commitmentId: r.close.commitmentId, taskId: r.close.taskId, actor: { kind: "contact", id: contactId }, roundId, outcome: "revoked", artifact: null, detail: r.close.detail });
+            referenced.add(key);
+            afterCommit.push(r.after);
+            break;
+          }
           case "rerun": {
             // progress_rerun(D26 第 5 节):可见范围由宿主按会话机械判;依据消息只能是本轮新消息
             if (!roomIds.has(a.roomId)) { reject("不在这个会话里"); break; }
@@ -2846,6 +2912,8 @@ export class Host {
       // 游标、待处理输入、状态笔记与本轮动作同一事务(D15.1)
       this.advanceCursorsTx(contactId, lastSeen);
       for (const ib of inbox) run(this.db, "UPDATE gg_inbox SET consumed = 1 WHERE id = ?", ib.id);
+      // 运行记录写实(D02③):这一批里定时触发的,按联系人这一轮在那个会话里有没有发言记 ok(回填第一条)或 silent
+      this.scheduler.settleRunsTx(inbox.map((ib) => ib.id), (roomId) => replies.find((x) => x.roomId === roomId)?.seq ?? null);
       // 这一批提交成功:在途失败(残留瞬态错误、换模覆盖)清掉,在途轮次标记与 crash_recovery_count 清零(F12「新成功轮次重置计数」)
       hadFailure = run(this.db, "DELETE FROM gg_failures WHERE scope = 'contact' AND subject = ?", contactId) > 0;
       run(this.db, "DELETE FROM gg_round_guard WHERE contact_id = ?", contactId);
@@ -2864,6 +2932,8 @@ export class Host {
       }
     });
     for (const r of rejected) this.report("action-rejected", { contactId, ...r });
+    for (const f of afterCommit) f();
+    this.flushSchedules();
     if (hadFailure) this.emitRetry({ scope: "contact", contactId, taskId: null, roomId: null, state: "cleared", attempt: 0, limit: 0, label: "已恢复" });
     for (const a of appended) this.afterAppend(a.roomId, a.seq, { kind: "contact", id: contactId });
     for (const id of touchedTasks) this.emitTask(id);
@@ -4077,6 +4147,8 @@ export class Host {
         });
       }
       this.upsertFailureTx(row("card", { attempt_seq: attemptSeq, card_id: card?.cardId ?? null }));
+      // 不再自动重试:这批里定时触发的运行记 failed,带原因(D02③)
+      this.scheduler.failRunsTx(contactId, inboxEnd, cls.label);
       if (br.ok) this.saveBreaker(ctx.upstream, br.state);
       this.clearRunningTx(contactId);
     });

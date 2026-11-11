@@ -454,7 +454,8 @@ export const ScheduleView = obj({
   toleranceSec: int({ min: 0, max: 86400 }),
   missedPolicy: oneOf(["skip", "run-once"] as const),
   nextRunAt: nullable(isoTime()),
-  lastRun: nullable(obj({ at: isoTime(), status: oneOf(["ok", "failed", "missed", "running"] as const), messageSeq: nullable(seq()) })),
+  /** 最近一次运行:running 已投递、联系人这一轮还没结束;ok 这一轮有发言(messageSeq 是第一条);silent 跑了没发言;failed 这一轮失败出卡;missed 错过 */
+  lastRun: nullable(obj({ at: isoTime(), status: oneOf(["ok", "failed", "missed", "running", "silent"] as const), messageSeq: nullable(seq()) })),
   commitmentId: nullable(id()),
   createdAt: isoTime(),
   /** 所属会话名(AC-53 联系人视角看各条定时属于哪个群);会话已不存在时省略。 */
