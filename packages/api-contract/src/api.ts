@@ -40,6 +40,7 @@ import {
   TaskView,
 } from "./entities.ts";
 import { DraftBody, DraftView } from "./draft.ts";
+import { MEMORY_METHODS } from "./memory.ts";
 import { arr, bool, id, int, isoTime, json, lit, nullable, obj, oneOf, opt, type Schema, seq, str, tagged } from "./schema.ts";
 
 /** 合同版本:破坏性改动加主版本;渲染进程启动时用 session.hello 核对。 */
@@ -95,6 +96,8 @@ export const METHODS = {
   /** 联系人主面板(AC-54):视图 + 预设 + 工作记忆 + 职责(承诺、在途任务、定时、所在会话)。 */
   "contacts.profile": method(obj({ contactId: id() }), ContactProfileView),
   "contacts.remove": method(obj({ contactId: id() }), Ok),
+  /** 联系人长期记忆(AC-42/AC-54):list/get/revoke/rebuild,只给用户本人,见 memory.ts。 */
+  ...MEMORY_METHODS,
   /** 全局能力库里可勾选的 skill 与 MCP(AC-29)。联系人的 Compute 只加载它勾选的那些,本机全局的默认不进入。 */
   "capabilities.list": method(Empty, CapabilityLibraryView),
 

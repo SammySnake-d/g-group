@@ -133,7 +133,7 @@ import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
-import { MemoryStore } from "./memory-store.ts";
+import { HygienicMemoryStore, purgeHiddenPrefix, rescrubNotes, rewoundTexts } from "./memory-hygiene.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
 import { PluginStore } from "./plugins.ts";
 import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief, reviewModelProblem } from "./review.ts";
@@ -389,7 +389,8 @@ export class Host {
   private readonly stopUnconfirmed = new Map<string, string>();
   private readonly opts: HostOptions;
   private readonly now: () => string;
-  private readonly memory: MemoryStore;
+  /** 联系人长期记忆(md 真源 + 索引);list() 只给联系人可见的条目,memory.* 接口经 listAll() 给用户看全部(memory-hygiene.ts) */
+  readonly memory: HygienicMemoryStore;
   private readonly newId: (prefix: string) => string;
   private readonly assemble: RoundAssembler;
   private readonly activity = new Map<string, Activity>();
@@ -439,7 +440,7 @@ export class Host {
     this.exits = new MemberExits({ db: this.db, now: this.now });
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
-    this.memory = new MemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d));
+    this.memory = new HygienicMemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d), this.now);
     this.bus = createBus(this.now);
     // 本次启动编号:在途轮次标记(F12)与运行台账存活核对(AC-43)共用
     this.bootId = opts.bootId ?? this.newId("boot");
@@ -1411,6 +1412,8 @@ export class Host {
       }).seq;
       const r: RewindResult = { ...plan, tasks, markerSeq, at: this.now() };
       run(this.db, "INSERT INTO gg_rewinds (room_id, client_action_id, to_seq, upto_seq, marker_seq, result, at) VALUES (?, ?, ?, ?, ?, ?, ?)", roomId, input.clientActionId, input.toSeq, upto, markerSeq, JSON.stringify(r), r.at);
+      // 工作记忆随回退清掉撤下原文(U29 候选);长期记忆不动
+      rescrubNotes(this.db, this.members(roomId).filter((m) => m.kind === "contact").map((m) => m.id), (id, text) => this.scrubNote(id, text, this.roomsOfContact(id).map((x) => x.id)));
       return r;
     });
     this.markRead(roomId, me, result.markerSeq);
@@ -2036,9 +2039,9 @@ export class Host {
   }
 
   // ======================= 联系人一轮 =======================
-  /** 联系人的全部记忆(含已替代、降级),按创建时间排序。 */
+  /** 联系人的全部记忆(含已替代、降级、来源已撤回),按创建时间排序。 */
   listMemories(contactId: string): MemoryEntry[] {
-    return this.memory.list(contactId);
+    return this.memory.listAll(contactId);
   }
   /** 压缩检查记下的「建议改人格」(不进任何一块,人格本身不改)。 */
   personaSuggestions(contactId: string): string[] {
@@ -2093,6 +2096,7 @@ export class Host {
   }
   /** 本轮记忆装配:第 1 块的全局快照、第 5 块的读取结果与未并入前缀的全局变化(D25 第 6 节「快照加增量」) */
   private memoryForRound(contactId: string, fresh: readonly Inbound[]): { prefix: { id: string; title: string; text: string }[]; pointers: { ref: string; text: string }[] } {
+    purgeHiddenPrefix(this.db, contactId, this.memory);
     const list = this.memory.list(contactId);
     const now = this.now();
     const cur = prefixMemories(list, now).map((e) => ({ id: e.id, title: e.title, text: e.body }));
@@ -2179,7 +2183,8 @@ export class Host {
   }
   /** 笔记落盘或装配前移除撤回原文;精确替换不掉就整份作废并报告 */
   private scrubNote(contactId: string, note: string, roomIds: readonly string[]): string {
-    const r = scrubRetracted(note, this.retractedTexts(roomIds));
+    // rewind 撤下范围的原文与撤回原文同一机制清洗(U29 候选:私聊工作记忆 = 状态笔记,随回退清掉撤下原文)
+    const r = scrubRetracted(note, [...this.retractedTexts(roomIds), ...rewoundTexts(this.db, roomIds)]);
     if (r.leaked) {
       this.report("state-note-voided", { contactId });
       return VOIDED_NOTE;
