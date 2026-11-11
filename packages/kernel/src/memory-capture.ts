@@ -2,7 +2,7 @@
 // statedIn / foldForMatch 改编自 OpenMausBot server/memory-capture.ts 与 memory-entries.ts
 // @6c7bcb02ea766429091f94b8e1e11b7b3b8675af，Copyright 2026 Milind Soni and contributors，Apache-2.0。
 // 本地增量：中文假设/问句尾、引用来源过滤。许可和归属见 third_party/openmausbot-memory/。
-import type { CompactMemory, ReflectSource, ReflectResult } from "./runtime-ports.ts";
+import type { CompactMemory, RefineResult, ReflectSource, ReflectResult } from "./runtime-ports.ts";
 import { plainData } from "./plain.ts";
 export type RevisionEvent = { readonly seq: number; readonly body: { readonly kind: string; readonly target?: number } };
 export function messageRevision(events: readonly RevisionEvent[], seq: number): number {
@@ -77,3 +77,8 @@ export function decodeReflect(input: unknown): { ok: true; value: ReflectResult 
   }
   return { ok: true, value: { note: r.note as string | null, memories, personaSuggestion: (r.personaSuggestion ?? null) as string | null } };
 }
+/** G5 精筛结果解码(红提交:空壳) */
+export function decodeRefine(_input: unknown): { ok: true; value: RefineResult } | { ok: false; reason: string } {
+  return { ok: false, reason: "未实现" };
+}
+export const isLongTerm = (evidence: string) => LONG_TERM.test(evidence);

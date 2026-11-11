@@ -109,6 +109,8 @@ export interface RunUnit {
   readonly verdict: StallVerdict | null;
   readonly rerunOf: string | null;
   readonly attempt: number;
+  /** 宿主自己发起的后台模型调用(G5 精筛,AC-43 background 单元)登记时声明计时:卡死判定与休眠宽限同样管它 */
+  readonly timed?: boolean;
 }
 
 export interface NewRun {
@@ -127,6 +129,7 @@ export interface NewRun {
   readonly status?: "queued" | "running" | "waiting_user";
   readonly rerunOf?: string | null;
   readonly attempt?: number;
+  readonly timed?: boolean;
 }
 
 const nonEmpty = (x: unknown) => typeof x === "string" && x.length > 0;

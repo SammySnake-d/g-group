@@ -4,7 +4,7 @@
 // 端点报错如实抛出(隐去密钥),不换模型或厂商重试。压缩用哪个模型、配置失配怎么拦截归 D 件(AC-32),这里只按联系人的说话模型调用。
 import { type AssistantMessage, type Model, normalizeContext, type SystemMessage, type UserMessage } from "@earendil-works/pi-ai";
 import { anthropicMessagesApi } from "@earendil-works/pi-ai/api/anthropic-messages.lazy";
-import { type CompactRequest, type ContactCompactor, decodeReflect, plainData, type ReflectRequest, type ReflectResult, STATE_NOTE_GUIDE } from "@g-group/kernel";
+import { type CompactRequest, type ContactCompactor, decodeReflect, plainData, type RefineRequest, type RefineResult, type ReflectRequest, type ReflectResult, STATE_NOTE_GUIDE } from "@g-group/kernel";
 import { PiContactMindError, type PiContactMindOptions } from "./mind.ts";
 
 export type PiCompactorOptions = Omit<PiContactMindOptions, "maxRequestsPerRound" | "cacheRetention">;
@@ -135,5 +135,8 @@ export function createPiCompactor(opts: PiCompactorOptions): ContactCompactor {
     const text = await call(REFLECT_SYSTEM, reflectText(req), signal);
     return parseReflect(text, req.noteWritten !== null);
   }
-  return Object.freeze({ compact, reflect });
+  async function refine(_input: RefineRequest, _signal: AbortSignal): Promise<RefineResult> {
+    return { memories: [] };
+  }
+  return Object.freeze({ compact, reflect, refine });
 }

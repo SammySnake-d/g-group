@@ -1,5 +1,7 @@
 import { MemoryCoverage, type CoverageWork, type CaptureWrite, type CoverageRef } from "./memory-coverage.ts";
 import { decodeReflect, messageRevision, validateCapture, resolveThresholds, type ReflectSource, type CompactMemory } from "@g-group/kernel";
+import type { FineScreenPolicy } from "@g-group/kernel";
+import { MemoryMarks } from "./memory-marks.ts";
 // 本地宿主:把领域状态机、SQLite 存储、联系人注意循环、Compute 适配器和承诺账本拼成 P0 最小闭环(AC-30):
 //   用户在私聊/群里发消息 → 机械送达每位成员联系人的注意循环 → 联系人一轮(五块重拼 → ContactMind)提出动作
 //   → 宿主校验、分配 action_id、与游标/账本/任务同一事务落盘 → 起 Compute → Compute 语义事件回到联系人 → 联系人汇报/交付回聊天。
@@ -180,6 +182,8 @@ export interface HostOptions {
   readonly maxDeferMs?: number;
   /** 状态笔记压缩器(D06 第 2 小节第 3 块、D25 第 8 节):按联系人取,必须用它的说话模型做独立调用(AC-32 ③)。不给就不压缩。 */
   readonly compactor?: (contact: ContactView) => ContactCompactor;
+  /** G5 精筛参数(红提交:空壳) */
+  readonly fineScreen?: Partial<FineScreenPolicy>;
   /** 状态笔记的 UTF-8 字节上限;超了请压缩器缩写,仍超就保留并报告,不截断。null / 不给:不设上限。 */
   readonly stateNoteMaxBytes?: number | null;
   /** 会话中途的全局记忆变化在第 5 块累积到几条就并入第 1 块前缀(D25 第 6 节「快照加增量」)。默认 20。 */
@@ -393,6 +397,8 @@ export class Host {
   private readonly now: () => string;
   private readonly memory: MemoryStore;
   readonly memoryCoverage: MemoryCoverage;
+  /** G5 待精筛标记与按联系人的写入器代次(红提交:空壳) */
+  readonly memoryMarks: MemoryMarks;
   private readonly newId: (prefix: string) => string;
   private readonly assemble: RoundAssembler;
   private readonly activity = new Map<string, Activity>();
@@ -444,6 +450,7 @@ export class Host {
     ensureSearchIndex(this.db);
     this.memory = new MemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d));
     this.memoryCoverage = new MemoryCoverage(this.db, this.memory);
+    this.memoryMarks = new MemoryMarks(this.db);
     this.bus = createBus(this.now);
     // 本次启动编号:在途轮次标记(F12)与运行台账存活核对(AC-43)共用
     this.bootId = opts.bootId ?? this.newId("boot");

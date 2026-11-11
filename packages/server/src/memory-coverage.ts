@@ -16,6 +16,10 @@ export interface CoverageWork {
   state: "pending" | "failed" | "ok"; attempts: number; retryAt: number | null; blocked: boolean; error: string | null;
   writes: readonly CaptureWrite[] | null; writesDone: boolean; unresolved: number;
   disposition: string | null; upstream: string; alerted: boolean; failureHeal?: HealClass;
+  marks?: number;
+  takeover?: boolean; handedOver?: boolean;
+  landed?: string[];
+  purpose?: "refine";
 }
 const key = (id: string) => `memory-coverage:${id}`;
 export class MemoryCoverage {
