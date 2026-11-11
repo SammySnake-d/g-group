@@ -4,7 +4,7 @@
     {
       "id": "AC-42",
       "status": "未测",
-      "reason": "本片只交付对照实验的工具与已完成的运行,不是 AC-42 的效果验收。runner 自身:83 条新测试在红 435d9a2e4f5ae5f41ce698ce64514c68b4307ffc 上全部按名失败、绿上全过;box4 全量 1556/1556;一对一变异 86 个:杀死 86、存活 0(packages/server/proof/g6-mutations.txt、receipts/evidence/t177-g6/box4.txt);tsc/lint 退出 0。规则替身 5 组 × 17 题 × 1 次已跑完(standin-all/):组① K4/K5 未守住,组④预取开 K1 未守住(撤回原文经联系人自己未撤回的回话回到第 5 块,判为真实缺口,证据 standin-all/k1-g4on-R1.md),组②③④消融全守住;K5 在②③④的旧判据是 runner 判据问题,已改成认欠账(standin-all/k5-g1-debt.md)。真实模型:强 fnqtz/claude-opus-5-5 上游 503 不可用(记录 incident/),弱 workbuddy-ai/hy4free 正在跑;未跑到的组记未测。不预设阈值,不写验收结论",
+      "reason": "本片只交付对照实验的工具与已完成的运行,不是 AC-42 的效果验收。runner 自身:83 条新测试在红 21faba248ac0c2878453f25b24cf795719d8df5d 上全部按名失败、绿上全过;box4 全量 1556/1556;一对一变异 86 个:杀死 86、存活 0(packages/server/proof/g6-mutations.txt、receipts/evidence/t177-g6/box4.txt);tsc/lint 退出 0。规则替身 5 组 × 17 题 × 1 次已跑完(standin-all/):组① K4/K5 未守住,组④预取开 K1 未守住(撤回原文经联系人自己未撤回的回话回到第 5 块,判为真实缺口,证据 standin-all/k1-g4on-R1.md),组②③④消融全守住;K5 在②③④的旧判据是 runner 判据问题,已改成认欠账(standin-all/k5-g1-debt.md)。真实模型:强 fnqtz/claude-opus-5-5 上游 503 不可用(记录 incident/),弱 workbuddy-ai/hy4free 正在跑;未跑到的组记未测。不预设阈值,不写验收结论",
       "evidence": "receipts/evidence/t177-g6/STATUS.md"
     }
   ],
@@ -14,7 +14,7 @@
     "model": "claude-opus-5-5"
   },
   "red": {
-    "commit": "435d9a2e4f5ae5f41ce698ce64514c68b4307ffc"
+    "commit": "21faba248ac0c2878453f25b24cf795719d8df5d"
   },
   "unverifiable": "AC-42:确定性合同只看宿主可核对的行为,判定依赖 runner 对宿主呈现格式(第 4 块消息头、检查材料与欠账材料的段落标题、G4 预取行的标注)的解析,宿主改呈现格式要同步;调用归属靠人设 marker,补写笔记的请求不带人设时只在单联系人题里能归属。K1 报的「撤回原文回到请求」在组④是经另一条可见消息(联系人自己的回话)带回来的,不表示宿主把撤回的消息本身放进了请求。K5 只要求「欠账在、重试排上」,不要求这次运行内补完(补查时机由宿主重试策略定)。效果指标的正则只判字面,不证明语义;规则替身的数字只说明 runner 与宿主装配,不是模型效果。真实模型只跑了能跑到的部分,没有任何两模型之间的对比结论",
   "waiver": null,
