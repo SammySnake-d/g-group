@@ -9,7 +9,7 @@ import type { ContactProfileView, MemoryView } from "@g-group/api-contract";
 import type { MindAction, RoundInput } from "@g-group/kernel";
 import { all, run } from "./db.ts";
 import { Host } from "./host.ts";
-import { getMemoryView, listMemoryViews, revokeMemory } from "./memory-api.ts";
+import { LONG_TERM_TOP, getMemoryView, listMemoryViews, longTermMemory, rebuildMemories, revokeMemory } from "./memory-api.ts";
 import { createService } from "./service.ts";
 
 const dir = mkdtempSync(path.join(tmpdir(), "gg-memapi-"));
@@ -138,7 +138,7 @@ test("memory.revoke:按状态机改已撤销并升版本,md 文件与索引行�
   await host.close();
 });
 
-test("contacts.profile 的长期记忆接真实条目:按准入分前缀 / 锚点两类给生效条数与条目,来源已撤回与已失效分开计数", async () => {
+test("contacts.profile 的长期记忆接真实条目:按准入分前缀 / 锚点两类给生效条数与最近几条,来源已撤回与已失效分开计数", async () => {
   const { host, svc, add, say } = setup();
   const { c, dm } = add("小克");
   await say(dm.id, "1", "以后所有回复都先给结论");
@@ -150,15 +150,20 @@ test("contacts.profile 的长期记忆接真实条目:按准入分前缀 / 锚�
   await value(svc.handle("memory.revoke", { contactId: c.id, memoryId: astra.id, clientActionId: "rv" }));
   host.retractMessage(dm.id, gone);
   await settle(host);
-  const p = await value<ContactProfileView>(svc.handle("contacts.profile", { contactId: c.id }));
-  const lt = p.memory.longTerm!;
+  const lt = longTermMemory(host, c.id);
   assert.deepEqual([lt.prefix.count, lt.anchored.count, lt.sourceRetracted, lt.inactive], [1, 2, 1, 1]);
   assert.deepEqual(lt.prefix.items.map((v) => v.body), ["以后所有回复都先给结论"]);
   assert.deepEqual(lt.anchored.items.map((v) => v.body).sort(), ["周报发给小王", "部署前先跑测试"].sort());
+  const p = await value<ContactProfileView>(svc.handle("contacts.profile", { contactId: c.id }));
+  assert.deepEqual(p.memory.longTerm, lt, "contacts.profile 经合同返回的就是这份概览");
+  for (let k = 0; k < LONG_TERM_TOP; k++) await say(dm.id, `more${k}`, `记:补充要点${k}号`);
+  const many = longTermMemory(host, c.id);
+  assert.deepEqual([many.anchored.count, many.anchored.items.length], [2 + LONG_TERM_TOP, LONG_TERM_TOP], "计数是全部生效条目,条目只给最近更新的前几条");
+  assert.equal(many.anchored.items[0]!.body, `补充要点${LONG_TERM_TOP - 1}号`, "最近更新的排在前面");
   await host.close();
 });
 
-test("memory.rebuild:用户触发从 md 真源重建,删掉索引后读回的条目与重建前一致;不给 contactId 就重建全部联系人", async () => {
+test("memory.rebuild:用户触发从 md 真源重建,删掉索引后读回的条目与重建前一致;不给 contactId 就重建全部联系人;联系人身份调用 forbidden", async () => {
   const { host, svc, add, say } = setup();
   const a = add("小克");
   await say(a.dm.id, "1", "记:周报发给小王");
@@ -174,7 +179,9 @@ test("memory.rebuild:用户触发从 md 真源重建,删掉索引后读回的条
   assert.deepEqual(one.contacts, [{ contactId: a.c.id, entries: 2 }]);
   assert.deepEqual(await value(svc.handle("memory.list", { contactId: a.c.id })), before, "读回与重建前一致");
   run(host.db, "DELETE FROM gg_memory");
-  const every = await value<{ contacts: { contactId: string; entries: number }[] }>(svc.handle("memory.rebuild", {}));
+  assert.throws(() => rebuildMemories(host, { kind: "contact", id: a.c.id }, {}), { code: "forbidden" });
+  assert.deepEqual(all(host.db, "SELECT id FROM gg_memory"), [], "被拒的重建什么都不做");
+  const every = rebuildMemories(host, { kind: "user", id: host.userId }, {});
   assert.deepEqual(every.contacts.map((x) => [x.contactId, x.entries]).sort(), [[a.c.id, 2], [z.c.id, 1]].sort());
   assert.deepEqual(await value(svc.handle("memory.list", { contactId: z.c.id })), beforeZ);
   assert.equal(await code(svc.handle("memory.rebuild", { contactId: "c-不存在" })), "not_found");

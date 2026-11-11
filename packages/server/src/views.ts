@@ -1,11 +1,10 @@
 // 联系人资料(AC-54)与会话文件(AC-57 文件列表与窗口联动)的读取接口。只读宿主已有状态,不建新存储:
-// 预设 = 联系人文档 persona;工作记忆 = 状态笔记 note:<id>;长期记忆 = memory-store 条目概览(memory-api.ts);职责 = 承诺账本 + 在途任务 + 定时 + 所在会话。
+// 预设 = 联系人文档 persona;工作记忆 = 状态笔记 note:<id>;职责 = 承诺账本 + 在途任务 + 定时 + 所在会话。
 // 文件 = 会话消息里的附件(gg_attachments)+ 本会话任务的结果(task:<id>/result);工件存储方式不在这里改。
 import { readFileSync } from "node:fs";
 import type { ContactProfileView, FileEntry } from "@g-group/api-contract";
 import { HostError, all, getDoc, one } from "./db.ts";
 import type { Host } from "./host.ts";
-import { longTermMemory } from "./memory-api.ts";
 
 const DONE_STATES = new Set(["T8_Accepted", "T10_Cancelled", "T11_Failed"]);
 const DEFAULT_MAX_BYTES = 1024 * 1024;
@@ -16,7 +15,7 @@ export function contactProfile(host: Host, contactId: string): ContactProfileVie
   return {
     contact: host.contactView(doc),
     persona: doc.persona ?? "",
-    memory: { stateNote: note ? { text: note.value.text, version: note.ver } : null, longTerm: longTermMemory(host, contactId) },
+    memory: { stateNote: note ? { text: note.value.text, version: note.ver } : null, longTerm: null },
     duties: {
       commitments: host.listCommitments({ contactId, status: "active" }),
       tasks: host.listTasks({ contactId }).filter((t) => !DONE_STATES.has(t.state)),
