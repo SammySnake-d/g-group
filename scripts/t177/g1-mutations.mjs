@@ -5,6 +5,7 @@ import path from 'node:path';
 const K='packages/kernel/src/memory-capture.ts',C='packages/server/src/memory-coverage.ts',H='packages/server/src/host.ts',A='packages/adapter-pi-contact/src/compact.ts';
 const kt='packages/kernel/src/memory-capture.test.ts',ct='packages/server/src/memory-coverage.test.ts',ht='packages/server/src/memory-reliability.test.ts',at='packages/adapter-pi-contact/src/memory-completion.test.ts';
 const cases=[
+ ['G1-01TIME',H,'Promise.race([Promise.resolve().then(()=>call(ac.signal)),stopped,expired])','Promise.race([Promise.resolve().then(()=>call(ac.signal)),stopped])',ht,'G1-01TIME '],
  ['G1-02PRE',H,'if(!beforeCall.valid){this.disposeCoverage(work,beforeCall.sources);return null;}','if(false){this.disposeCoverage(work,beforeCall.sources);return null;}',ht,'G1-02PRE '],
  ['G1-03a',A,'|| msg.stopReason === "length"','|| (msg.stopReason === "length" && sys !== SYSTEM)',at,'G1-03a '],
  ['G1-03b',A,'|| msg.stopReason === "length"','|| (msg.stopReason === "length" && sys === SYSTEM)',at,'G1-03b '],
