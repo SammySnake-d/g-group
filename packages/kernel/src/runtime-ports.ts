@@ -205,11 +205,43 @@ export interface ReflectResult {
   readonly note: string | null;
   readonly memories: readonly CompactMemory[];
   readonly personaSuggestion: string | null;
+  /** G5 粗筛:同一次检查顺带给出的待精筛标记(不另增调用);旧适配器不给就是空 */
+  readonly marks?: readonly CaptureMark[];
+}
+/** G5 待精筛标记的种类(v0.2 §7):一条消息可以有多项 */
+export type MarkKind = "preference" | "fact" | "decision" | "outcome" | "correction" | "unsure";
+/** G5 粗筛给出的一项标记:只指向宿主冻结的逐条来源和该条原话,不是记忆 */
+export interface CaptureMark {
+  readonly roomId: string;
+  readonly seq: number;
+  readonly kind: MarkKind;
+  readonly evidence: string;
+}
+/** G5 精筛的一项:宿主重读的当前可见原文、前后文与引用;来源已编辑或撤回的标记不会进来 */
+export interface RefineItem {
+  readonly markId: string;
+  readonly kind: MarkKind;
+  readonly evidence: string;
+  readonly source: ReflectSource;
+  readonly context: string;
+}
+/** G5 精筛请求:一批有界标记 + 同锚点邻域记忆;target 不明时宿主回问一次,hint 写明 */
+export interface RefineRequest {
+  readonly contact: ContactProfile;
+  readonly items: readonly RefineItem[];
+  readonly neighbors: readonly { readonly id: string; readonly title: string; readonly body: string }[];
+  readonly hint: string | null;
+}
+/** 精筛结果:按 D25 判关系的记忆(每项必须带 roomId/sourceSeq/evidence 指回某个标记的来源);空数组 = 这批没有值得记的 */
+export interface RefineResult {
+  readonly memories: readonly CompactMemory[];
 }
 export interface ContactCompactor {
   /** 这个压缩器绑定的模型(有就报);宿主每次调用前拿它和本轮冻结的说话模型做同模校验,不同就一次都不发。 */
   readonly model?: string;
   compact(req: CompactRequest, signal: AbortSignal): Promise<string>;
+  /** G5 精筛:有就启用两段式(宿主按联系人切到第 2 代写入器);没有就保持 G1 的直接写 */
+  refine?(req: RefineRequest, signal: AbortSignal): Promise<RefineResult>;
   /** 有就每轮调用(取代只在缺笔记时调的 compact);没有就退回 compact */
   reflect?(req: ReflectRequest, signal: AbortSignal): Promise<ReflectResult>;
 }

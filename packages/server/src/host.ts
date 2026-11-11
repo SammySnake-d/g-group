@@ -1,5 +1,7 @@
 import { MemoryCoverage, type CoverageWork, type CaptureWrite, type CoverageRef } from "./memory-coverage.ts";
 import { decodeReflect, messageRevision, validateCapture, resolveThresholds, type ReflectSource, type CompactMemory } from "@g-group/kernel";
+import { DEFAULT_FINE_SCREEN, type FineScreenPolicy, type MarkKind, type RefineResult, decodeRefine, fineTrigger, markCandidateKey, routeCapture, selectFineBatch, takeoverMarkId } from "@g-group/kernel";
+import { MemoryMarks, type MemoryMark } from "./memory-marks.ts";
 // 本地宿主:把领域状态机、SQLite 存储、联系人注意循环、Compute 适配器和承诺账本拼成 P0 最小闭环(AC-30):
 //   用户在私聊/群里发消息 → 机械送达每位成员联系人的注意循环 → 联系人一轮(五块重拼 → ContactMind)提出动作
 //   → 宿主校验、分配 action_id、与游标/账本/任务同一事务落盘 → 起 Compute → Compute 语义事件回到联系人 → 联系人汇报/交付回聊天。
@@ -185,6 +187,8 @@ export interface HostOptions {
   /** 状态笔记压缩器(D06 第 2 小节第 3 块、D25 第 8 节):按联系人取,必须用它的说话模型做独立调用(AC-32 ③)。不给就不压缩。
    *  第二个参数是同轮对话用的那一份配置快照(同一对象);压缩器报了绑定模型(model)就先做同模校验,不同就一次都不发。 */
   readonly compactor?: (contact: ContactView, speaking: modelConfig.EffectiveSpeakingConfig) => ContactCompactor;
+  /** G5 精筛参数(单批上限、安静期、积压上限、租约等);不给用 kernel DEFAULT_FINE_SCREEN,全部待校准 */
+  readonly fineScreen?: Partial<FineScreenPolicy>;
   /** 状态笔记的 UTF-8 字节上限;超了请压缩器缩写,仍超就保留并报告,不截断。null / 不给:不设上限。 */
   readonly stateNoteMaxBytes?: number | null;
   /** 会话中途的全局记忆变化在第 5 块累积到几条就并入第 1 块前缀(D25 第 6 节「快照加增量」)。默认 20。 */
@@ -398,6 +402,20 @@ export class Host {
   private readonly now: () => string;
   private readonly memory: MemoryStore;
   readonly memoryCoverage: MemoryCoverage;
+  /** G5 待精筛标记与按联系人的写入器代次 */
+  readonly memoryMarks: MemoryMarks;
+  private readonly finePolicy: FineScreenPolicy;
+  /** 正在跑的精筛:有新输入(任何 notify)就让出联系人锁,对话优先 */
+  private readonly fineAborts = new Map<string, () => void>();
+  /** 精筛单元被台账判卡死时的处理(按单元 id) */
+  private readonly fineStalls = new Map<string, (v: StallVerdict) => void>();
+  /** 任务结束、用户纠正/记住:下一次空闲就精筛 */
+  private readonly fineExplicit = new Set<string>();
+  /** 联系人最后一次对话活动(安静期起点) */
+  private readonly fineQuiet = new Map<string, number>();
+  private innerLoop!: AttentionLoop;
+  /** 本次启动的时刻:重启后先等一个安静期再精筛 */
+  private fineBootAt = 0;
   private readonly newId: (prefix: string) => string;
   private readonly assemble: RoundAssembler;
   private readonly activity = new Map<string, Activity>();
@@ -449,6 +467,8 @@ export class Host {
     ensureSearchIndex(this.db);
     this.memory = new MemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d));
     this.memoryCoverage = new MemoryCoverage(this.db, this.memory);
+    this.memoryMarks = new MemoryMarks(this.db);
+    this.finePolicy = { ...DEFAULT_FINE_SCREEN, ...(opts.fineScreen ?? {}) };
     this.bus = createBus(this.now);
     // 本次启动编号:在途轮次标记(F12)与运行台账存活核对(AC-43)共用
     this.bootId = opts.bootId ?? this.newId("boot");
@@ -464,7 +484,8 @@ export class Host {
     const runWake = checkRunWake(opts.runCheckMs ?? DEFAULT_RUN_CHECK_MS, opts.runWakePolicy);
     this.clock = opts.clockMs ?? Date.now;
     this.random = opts.random ?? Math.random;
-    this.loop = createAttentionLoop({
+    this.fineBootAt = this.clock();
+    const loop = createAttentionLoop({
       maxDeferMs: opts.maxDeferMs ?? 1500,
       ...(opts.timers ? { timers: opts.timers } : {}),
       run: (id, signal) => this.runRound(id, signal),
@@ -472,6 +493,9 @@ export class Host {
       retryAfter: (_id, e) => (e instanceof RoundRetry ? e.delayMs : 1000),
       onReport: (id, what, detail) => this.report(`attention:${what}:${id}`, detail),
     });
+    // G5-b:精筛与对话共用这把联系人锁(注意循环的单飞槽位);有新输入送达就先让精筛退出、保存欠账,对话优先
+    this.innerLoop = loop;
+    this.loop = { ...loop, notify: (id, urgency) => { this.fineAborts.get(id)?.(); loop.notify(id, urgency); } };
     const timers: TimerApi = opts.timers ?? { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>) };
     this.timersApi = timers;
     this.scheduler = new Scheduler({
@@ -563,6 +587,8 @@ export class Host {
     // 启动回收(F4/F6/F12):上次留下的未提交轮次按 crash_recovery_count 决定续跑或熔断出卡;磁盘上还没被领走的输入交给联系人
     this.recoverMemoryWrites();
     this.reconcileOnStart();
+    // G5:上次留下的待精筛标记照常是欠账,重启后按触发条件续做(租约属于旧启动的可收回)
+    for (const c of this.listContacts()) if (this.memoryMarks.generation(c.id) === 2) this.armFine(c.id);
   }
 
   private report(what: string, detail: unknown) {
@@ -1701,6 +1727,7 @@ export class Host {
     // 任务每次变化后看负责人是否在这个群移出中:停止确认到了(T10/T11)才真正移出
     if (doc.task.owner) this.settleExit(doc.roomId, doc.task.owner);
     this.syncTaskRuns(id, doc.task.state);
+    if (doc.task.owner && TERMINAL.has(doc.task.state)) this.fineOnTaskEnd(doc.task.owner);
   }
   /** 任务落到终态:台账里它还活着的 Compute 会话跟着收口(验收 → done;取消 → 已停止;失败 → failed) */
   private syncTaskRuns(taskId: string, state: string) {
@@ -2273,15 +2300,15 @@ export class Host {
       });
     }
   }
-  private planCapturedMemories(work: CoverageWork, memories: readonly CompactMemory[], delivered: readonly ReflectSource[], current: readonly ReflectSource[]): { writes: CaptureWrite[]; unresolved: number } {
+  private planCapturedMemories(work: Pick<CoverageWork, "id" | "contactId">, memories: readonly CompactMemory[], delivered: readonly ReflectSource[], current: readonly ReflectSource[], rejected?: (m: CompactMemory) => void): { writes: CaptureWrite[]; unresolved: number } {
     let entries=this.memory.list(work.contactId);const writes:CaptureWrite[]=[];let unresolved=0;
     for(const m of memories){
-      const valid=validateCapture(m,delivered,current);if(!valid.ok){unresolved++;this.report("memory-capture-rejected",{coverageId:work.id,reason:valid.reason});continue;}
+      const valid=validateCapture(m,delivered,current);if(!valid.ok){unresolved++;rejected?.(m);this.report("memory-capture-rejected",{coverageId:work.id,reason:valid.reason});continue;}
       const id=createHash("sha256").update(JSON.stringify([work.id,m.roomId,m.sourceSeq,valid.source.revision,m.title,m.text,[...valid.anchors].sort(),m.relation,m.target,m.evidence])).digest("hex");
       if(entries.some(e=>e.captureIds?.includes(id)))continue;
       const source={roomId:valid.source.roomId,seq:valid.source.seq,userQuote:valid.source.senderKind==="user",revision:valid.source.revision,quote:m.evidence!,senderId:valid.source.senderId};
       const plan=planMemoryWrite(entries,{title:m.title,body:m.text,anchors:valid.anchors,source,relation:m.relation?{kind:m.relation,target:m.target??""}:null},this.now(),()=>`m-${id.slice(0,32)}`);
-      if(plan.kind==="invalid"){unresolved++;continue;}
+      if(plan.kind==="invalid"){unresolved++;rejected?.(m);continue;}
       const after=plan.changed.map(e=>({...e,captureIds:[...new Set([...(e.captureIds??[]),id])]}));
       const question=plan.kind==="ask-user"?{roomId:valid.source.roomId,text:`记忆冲突，请你拍板：「${plan.entry.body}」和之前的「${entries.find(e=>e.id===plan.target)?.body??"?"}」都来自你的原话，以哪条为准？`}:null;
       writes.push({id,before:plan.changed.map(e=>entries.find(x=>x.id===e.id)??null),after,question});
@@ -2318,13 +2345,15 @@ export class Host {
     const beforeCall=this.readCoverageMaterial(work);
     if(!beforeCall.valid){this.disposeCoverage(work,beforeCall.sources);return null;}
     if(!this.admitUpstream(work.upstream,"background")){this.memoryCoverage.fail(work.id,"共享上游熔断，后台检查未发出","A1",this.retryPolicy,this.clock(),this.random);return null;}
-    const neighbors=this.memory.list(contact.id).filter(e=>(e.status==="active"||e.status==="degraded")&&!e.anchors.includes(PERSONA_ANCHOR)&&e.anchors.some(a=>a==="global"||work.rooms.includes(a.slice(5))&&a.startsWith("room:"))).map(e=>({id:e.id,title:e.title,body:e.body}));
+    const neighbors=this.memoryNeighbors(contact.id,{rooms:work.rooms,text:material});
     const request={contact:{id:contact.id,name:contact.name,speakingModel,persona:contact.persona},kind:"round-note" as const,previous:this.stateNote(contact.id),material,maxBytes:this.opts.stateNoteMaxBytes??null,neighbors,noteWritten,sources:delivered};
     this.memoryCoverage.start(work.id);
     try{
       let decoded=decodeReflect(await this.memoryCall(work,signal,s=>compactor.reflect!(request,s)));if(!decoded.ok)throw new Error(decoded.reason);
       if(signal.aborted||this.closed)return null;
       let result=decoded.value;
+      // G5:第 2 代写入器不在粗筛里回问(不新增粗筛调用),同一次结果按切换规则分出口
+      if(this.memoryMarks.generation(contact.id)===2)return this.coarseTwoStage(contact,work,result,delivered,noteWritten,signal);
       if(result.memories.some(m=>m.relation&&m.target===null)){
         decoded=decodeReflect(await this.memoryCall(work,signal,s=>compactor.reflect!({...request,material:`${material}\n\n更正关系缺少 target。只能从已有相关记忆的 id 里明确选择；仍不确定请保留 target=null，不要猜。`},s)));
         if(!decoded.ok)throw new Error(decoded.reason);result=decoded.value;
@@ -2339,6 +2368,299 @@ export class Host {
       else this.upstreamOk(work.upstream);
       return {...result,note:noteWritten===null?result.note:null};
     }catch(error){if(!signal.aborted&&!this.closed)this.failCoverage(work,error);return null;}
+  }
+
+  // ======================= G5 两段式记忆(v0.2 §7;G1→G5 写入切换规则 + 审查条件 S-1～S-4) =======================
+  /**
+   * 记忆「写邻域」查询接缝:粗筛检查(G1 reflect 的 neighbors)与精筛判关系都只从这里取已有相关记忆,查询 = 会话集合 + 本批材料/原话。
+   * 现在的实现是 G1 分支现成的同锚点邻域(生效/降级、非人格、全局或本批会话锚点),q.text 暂不参与排序。
+   * G3(PR #61)合入后这里改走 kernel history-search 的 searchHistory(hybrid)按 q.text 取全文邻域,写邻域与精筛同时生效;锚点/状态硬筛照旧。
+   */
+  private memoryNeighbors(contactId: string, q: { readonly rooms: readonly string[]; readonly text: string }): { id: string; title: string; body: string }[] {
+    return this.memory.list(contactId).filter(e=>(e.status==="active"||e.status==="degraded")&&!e.anchors.includes(PERSONA_ANCHOR)&&e.anchors.some(a=>a==="global"||q.rooms.includes(a.slice(5))&&a.startsWith("room:"))).map(e=>({id:e.id,title:e.title,body:e.body}));
+  }
+  /** G1 已经落地(或已规范化待落地)的候选:按来源 + 原话(新条目)或来源 + 正文(复述)认出来,接管后不再生成标记或第二份写入 */
+  private landedKeys(work: CoverageWork): string[] {
+    const out = new Set<string>(work.landed ?? []);
+    for (const w of work.writes ?? []) for (const [i, e] of w.after.entries()) {
+      const before = w.before[i] ?? null;
+      if (before === null && e.source?.quote !== undefined) out.add(`${e.source.roomId}#${e.source.seq}#${foldText(e.source.quote)}`);
+      const ev = e.evidence.at(-1);
+      if (before !== null && ev && e.evidence.length > before.evidence.length) out.add(`${ev.roomId}#${ev.seq}#~${foldText(e.body)}`);
+    }
+    return [...out];
+  }
+  /** S-1:持有联系人锁、没有未恢复的后台 md 写入、适配器支持精筛时,这位联系人切到第 2 代。G1 已规范化的提交先按原路径完成;
+   *  仍欠着的 G1 待复查项保留原覆盖身份、来源与失败原因,和代次一起在同一事务里记成接管(之后由第 2 代出口处理,不留两个可执行 owner)。 */
+  private switchWriter(contactId: string, compactor: ContactCompactor | undefined) {
+    if (this.memoryMarks.generation(contactId) === 2) return true;
+    if (!compactor?.refine) return false;
+    this.recoverMemoryWrites(contactId);
+    if (this.memoryCoverage.dirty(contactId)) return false;
+    try {
+      tx(this.db, () => {
+        for (const w of this.memoryCoverage.list(contactId)) if (w.state !== "ok" && !w.disposition && w.purpose !== "refine") this.memoryCoverage.annotate(w.id, { takeover: true, landed: this.landedKeys(w) });
+        this.memoryMarks.switchTx(contactId, this.clock());
+      });
+    } catch (e) {
+      // 切换事务没落盘:这一轮仍按第 1 代走,G1 欠账原样保留,下次拿到锁再切
+      this.report("memory-writer-switch-failed", { contactId, error: errorText(e) });
+      return false;
+    }
+    this.report("memory-writer-switched", { contactId, generation: 2 });
+    return true;
+  }
+  /** 一个标记(S-2 身份);接管来的 G1 待复查项用 coverageId + candidateKey + sourceRevision */
+  private newMark(work: CoverageWork, src: ReflectSource, kind: MarkKind, evidence: string): MemoryMark {
+    const candidateKey = markCandidateKey(src.roomId, src.seq, src.revision, kind, evidence);
+    return { id: work.takeover ? takeoverMarkId(work.id, candidateKey, src.revision) : candidateKey, contactId: work.contactId, roomId: src.roomId, seq: src.seq, revision: src.revision, kind, evidence,
+      origin: { coverageId: work.id, candidateKey, takeover: work.takeover === true }, state: "pending", attempts: 0, retryAt: 0, blocked: false, error: null, askedTarget: false, createdAt: this.clock(), disposition: null, next: null, doneBy: null };
+  }
+  /**
+   * G5 粗筛出口(切换规则「唯一写入分流」):同一次检查的结果逐条校验来源后只进一个出口——用户本人明确长期偏好直接写(G1 唯一幂等写入口)、
+   * 其他合法候选转标记、来源不合法只留失败债务。标记、直接写计划与覆盖结果在一个 SQLite 事务里落盘;md 照 G1 的意图/结果核对落地。
+   */
+  private coarseTwoStage(contact: ContactDoc, work: CoverageWork, result: ReflectResult, delivered: readonly ReflectSource[], noteWritten: string | null, signal: AbortSignal): ReflectResult | null {
+    if (signal.aborted || this.closed) return null;
+    const current = this.readCoverageMaterial(work);
+    if (!current.valid) { this.disposeCoverage(work, current.sources); return null; }
+    const landed = new Set(this.landedKeys(work));
+    const isLanded = (roomId: string, seq: number, evidence: string, body: string | null) => landed.has(`${roomId}#${seq}#${foldText(evidence)}`) || (body !== null && landed.has(`${roomId}#${seq}#~${foldText(body)}`));
+    const direct: CompactMemory[] = [];
+    const marks: MemoryMark[] = [];
+    let debt = 0;
+    for (const m of result.memories) {
+      const check = validateCapture(m, delivered, current.sources);
+      const route = routeCapture(m, check);
+      if (!check.ok || route === "debt") { debt++; this.report("memory-capture-rejected", { coverageId: work.id, reason: check.ok ? "debt" : check.reason }); continue; }
+      if (isLanded(check.source.roomId, check.source.seq, m.evidence ?? "", m.text)) continue;
+      if (route === "direct") direct.push(m);
+      else marks.push(this.newMark(work, check.source, m.kind ?? "unsure", m.evidence!));
+    }
+    for (const k of result.marks ?? []) {
+      const src = delivered.find((s) => s.roomId === k.roomId && s.seq === k.seq);
+      const cur = current.sources.find((s) => s.roomId === k.roomId && s.seq === k.seq);
+      if (!src || !cur || cur.revision !== src.revision || cur.text !== src.text || !src.text.includes(k.evidence)) { debt++; this.report("memory-mark-rejected", { coverageId: work.id, roomId: k.roomId, seq: k.seq }); continue; }
+      // ① 直接写下的那一项不再同时生成待精筛标记
+      if (direct.some((d) => d.roomId === k.roomId && d.sourceSeq === k.seq && d.evidence === k.evidence)) continue;
+      if (isLanded(src.roomId, src.seq, k.evidence, null)) continue;
+      marks.push(this.newMark(work, src, k.kind, k.evidence));
+    }
+    const planned = this.planCapturedMemories(work, direct, delivered, current.sources);
+    tx(this.db, () => {
+      this.memoryMarks.addTx(marks);
+      this.memoryCoverage.prepare(work.id, planned.writes, debt + planned.unresolved);
+      this.memoryCoverage.annotate(work.id, { marks: marks.length, ...(work.takeover ? { handedOver: true } : {}) });
+    });
+    this.memoryCoverage.apply(work.id, (q, id) => this.notifyMemoryQuestion(contact.id, q, id));
+    if (marks.some((m) => m.kind === "correction")) this.fineExplicit.add(contact.id);
+    if (debt + planned.unresolved) this.failCoverage(work, new Error("检查候选缺来源或来源已变,仍有待复查项"), "unknown");
+    else this.upstreamOk(work.upstream);
+    return { ...result, note: noteWritten === null ? result.note : null };
+  }
+  /** 一轮对话提交后:记下安静期起点;联系人本轮主动 remember 过(用户要它记)就算显式触发;按触发条件排下一次精筛 */
+  private afterRoundFine(contactId: string, remembered: boolean): void {
+    if (this.memoryMarks.generation(contactId) !== 2) return;
+    this.fineQuiet.set(contactId, this.clock());
+    if (remembered) this.fineExplicit.add(contactId);
+    this.armFine(contactId);
+  }
+  /** 任务结束是精筛触发之一 */
+  private fineOnTaskEnd(contactId: string): void {
+    if (this.closed || this.memoryMarks.generation(contactId) !== 2 || !this.memoryMarks.open(contactId).length) return;
+    this.fineExplicit.add(contactId);
+    this.armFine(contactId);
+  }
+  /** 按触发条件定下一次叫醒联系人的时刻(只叫醒注意循环,真正跑精筛仍在联系人槽位里) */
+  private armFine(contactId: string): void {
+    if (this.closed) return;
+    const now = this.clock();
+    const open = this.memoryMarks.open(contactId).filter((m) => !m.blocked);
+    if (!open.length) { this.clearHostTimer(`fine:${contactId}`); return; }
+    const p = this.finePolicy;
+    const due = open.filter((m) => (m.retryAt ?? 0) <= now);
+    const quietSince = this.fineQuiet.get(contactId) ?? this.fineBootAt;
+    let at: number;
+    if (due.length && fineTrigger({ pending: due.length, oldestAt: Math.min(...due.map((m) => m.createdAt)), quietSince, now, explicit: this.fineExplicit.has(contactId) }, p)) at = now;
+    else {
+      const oldest = due.length ? Math.min(...due.map((m) => m.createdAt)) : Number.POSITIVE_INFINITY;
+      const retry = Math.min(...open.map((m) => (m.retryAt ?? 0) > now ? m.retryAt! : Number.POSITIVE_INFINITY));
+      at = Math.min(due.length ? quietSince + p.quietMs : Number.POSITIVE_INFINITY, oldest + p.maxAgeMs, retry);
+    }
+    if (!Number.isFinite(at)) return;
+    this.setHostTimer(`fine:${contactId}`, at - now, () => this.innerLoop.notify(contactId, "now"));
+  }
+  /** 精筛入口:只在联系人槽位里、这一刻没有新输入时跑(对话优先);条件不满足就只重新排叫醒 */
+  private async fineScreenTurn(contactId: string, contact: ContactDoc, signal: AbortSignal): Promise<void> {
+    if (this.closed || signal.aborted || this.memoryMarks.generation(contactId) !== 2) return;
+    const now = this.clock();
+    const due = this.memoryMarks.due(contactId, now);
+    const trigger = fineTrigger({ pending: due.length, oldestAt: due.length ? Math.min(...due.map((m) => m.createdAt)) : null, quietSince: this.fineQuiet.get(contactId) ?? this.fineBootAt, now, explicit: this.fineExplicit.has(contactId) }, this.finePolicy);
+    if (trigger) {
+      this.fineExplicit.delete(contactId);
+      // S-3 接缝:精筛是轮次之外的新调用,开始时按联系人当下的永久说话模型取一份配置,整批固定;失败卡上选的备用模型只管那一批对话,不带进来。
+      // G6 合并(G2 已在):按联系人当下的永久说话模型取一份新快照,整批固定;压缩器报了绑定模型就先做同模校验,不同就不发。
+      const speaking = this.speakingFor(contact.speakingModel);
+      let compactor = this.opts.compactor?.(this.contactView(contact), speaking);
+      if (compactor?.model !== undefined && !modelConfig.checkCompressionCall(this.contactModels(contact), compactor.model).ok) {
+        this.report("compression-model-mismatch", { contactId, reason: "fine-screen", fingerprint: speaking.fingerprint });
+        compactor = undefined;
+      }
+      await this.fineBatch(contactId, contact, compactor, signal, trigger);
+    }
+    this.armFine(contactId);
+  }
+  /** 标记所指来源的当前可见原文 + 前后各 radius 条 + 一级引用(只读当前投影;撤回、rewind、失权的一律不读) */
+  private fineContext(src: ReflectSource, radius: number) {
+    const msgs = this.projected(src.roomId);
+    const rewound = rewindRanges(this.db, src.roomId);
+    const ok = (m: ProjectedMessage | undefined): m is ProjectedMessage => !!m && !m.retracted && !inRanges(rewound, m.seq);
+    const i = msgs.findIndex((m) => m.seq === src.seq);
+    const near = radius > 0 ? msgs.slice(Math.max(0, i - radius), i + radius + 1).filter((m) => m.seq !== src.seq && ok(m)) : [];
+    const raw = this.rawRefs(src.roomId, src.seq);
+    const quoted = [...(raw.replyTo !== null ? [raw.replyTo] : []), ...raw.quoted].map((q) => msgs.find((m) => m.seq === q)).filter(ok);
+    return [...near.map((m) => `#${m.seq} ${this.nameOf(m.sender)}:${m.text}`), ...quoted.map((m) => `引用 #${m.seq} ${this.nameOf(m.sender)}:${m.text}`)].join("\n");
+  }
+  /** 重读一批标记的当前原文:来源撤回/失权只留无正文处置;编辑过的作废旧原话、为新版本开新的检查工作项(同一事务);其余给出材料与字节数 */
+  private fineMaterial(contactId: string, marks: readonly MemoryMark[], upstream: string): { mark: MemoryMark; source: ReflectSource; context: string; bytes: number }[] {
+    const out: { mark: MemoryMark; source: ReflectSource; context: string; bytes: number }[] = [];
+    const disposals: (() => void)[] = [];
+    const size = (m: MemoryMark, s: ReflectSource, context: string) => Buffer.byteLength(`${m.evidence ?? ""}\n${s.text}\n${context}`, "utf8");
+    for (const m of marks) {
+      if (m.state !== "pending") continue;
+      const cur = this.currentCaptureSource(contactId, { roomId: m.roomId, seq: m.seq, revision: m.revision });
+      if (!cur) { disposals.push(() => this.memoryMarks.dispose(contactId, m.id, "source-retracted-or-inaccessible", null)); continue; }
+      if (cur.revision !== m.revision || m.evidence === null || !cur.text.includes(m.evidence)) {
+        disposals.push(() => {
+          const next = this.memoryCoverage.begin(contactId, [{ roomId: cur.roomId, seq: cur.seq, revision: cur.revision }], [], [cur.roomId], upstream);
+          this.memoryMarks.dispose(contactId, m.id, "source-edited", next.id);
+        });
+        continue;
+      }
+      let context = this.fineContext(cur, this.finePolicy.neighborRadius);
+      // 预算下缩:先去掉前后文,只留原文
+      if (size(m, cur, context) > this.finePolicy.maxBytes) context = "";
+      out.push({ mark: m, source: cur, context, bytes: size(m, cur, context) });
+    }
+    if (disposals.length) tx(this.db, () => { for (const d of disposals) d(); });
+    return out;
+  }
+  /**
+   * 精筛一批(G5-a/G5-b):登记为 AC-43 background 单元(声明计时,卡死判定与休眠宽限管得到),progress_get 可查;持有联系人锁与租约,
+   * 有新输入就让出;明确有效的输出走 G1 唯一幂等写入口;缺 target 回问一次;失败、取消、卡死都保留标记为欠账,不退回直接写。
+   */
+  private async fineBatch(contactId: string, contact: ContactDoc, compactor: ContactCompactor | undefined, signal: AbortSignal, trigger: string): Promise<void> {
+    const now = this.clock();
+    const due = this.memoryMarks.due(contactId, now);
+    if (!due.length) return;
+    if (!compactor?.refine) {
+      for (const m of due) this.memoryMarks.fail(contactId, m.id, "适配器不支持精筛,标记保留为欠账", "A3", this.retryPolicy, now, this.random);
+      this.report("fine-screen-unsupported", { contactId, marks: due.length });
+      return;
+    }
+    const upstream = this.upstreamKey(contact.speakingModel);
+    const batchId = this.newId("fine");
+    const holder = `${this.bootId}:${batchId}`;
+    if (!this.memoryMarks.claimLease(contactId, holder, this.bootId, now, this.finePolicy.leaseMs)) { this.report("fine-screen-lease-held", { contactId }); return; }
+    try {
+      const items = this.fineMaterial(contactId, due, upstream);
+      const pick = selectFineBatch(items.map((i) => ({ id: i.mark.id, bytes: i.bytes, createdAt: i.mark.createdAt })), this.finePolicy);
+      for (const id of pick.oversize) this.memoryMarks.fail(contactId, id, `原文超过精筛单批预算 ${this.finePolicy.maxBytes} 字节,请调大预算后重试`, "A2", this.retryPolicy, now, this.random);
+      const batch = pick.take.map((id) => items.find((i) => i.mark.id === id)!);
+      if (!batch.length) return;
+      const unit = this.runs.start({ layer: "background", parentId: null, roomId: batch[0]!.mark.roomId, sourceSeq: batch[0]!.mark.seq, contactId, upstream: contact.speakingModel, timed: true });
+      this.runs.addEvent(unit.id, "fine-screen", { trigger, marks: batch.map((b) => b.mark.id) });
+      if (!this.admitUpstream(upstream, "background")) {
+        for (const b of batch) this.memoryMarks.fail(contactId, b.mark.id, "共享上游熔断,精筛未发出", "A1", this.retryPolicy, now, this.random);
+        this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: "共享上游熔断,精筛未发出" })) });
+        return;
+      }
+      const ac = new AbortController();
+      let stall: StallVerdict | null = null;
+      let preempted = false;
+      const stopped = new Promise<never>((_, reject) => ac.signal.addEventListener("abort", () => reject(new Error("精筛中止")), { once: true }));
+      stopped.catch(() => {});
+      const relay = () => ac.abort();
+      signal.addEventListener("abort", relay, { once: true });
+      this.fineAborts.set(contactId, () => { preempted = true; ac.abort(); });
+      this.fineStalls.set(unit.id, (v) => { stall = v; ac.abort(); });
+      const rooms = [...new Set(batch.map((b) => b.mark.roomId))];
+      const profile = { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona };
+      const neighbors = this.memoryNeighbors(contactId, { rooms, text: batch.map((b) => b.mark.evidence ?? "").join("\n") });
+      const ask = async (hint: string | null): Promise<RefineResult> => {
+        this.runs.activity(unit.id, { kind: "model_call" });
+        const raw = await Promise.race([Promise.resolve().then(() => compactor.refine!({ contact: profile, items: batch.map((b) => ({ markId: b.mark.id, kind: b.mark.kind, evidence: b.mark.evidence!, source: b.source, context: b.context })), neighbors, hint }, ac.signal)), stopped]);
+        this.runs.activity(unit.id, { kind: "progress", what: "output" });
+        const d = decodeRefine(raw);
+        if (!d.ok) throw new Error(`精筛输出不合格:${d.reason}`);
+        return d.value;
+      };
+      const unclear = (r: RefineResult) => r.memories.filter((m) => m.relation !== null && !m.target);
+      try {
+        let result = await ask(null);
+        const toAsk = batch.filter((b) => !b.mark.askedTarget && unclear(result).some((m) => m.roomId === b.mark.roomId && m.sourceSeq === b.mark.seq));
+        if (toAsk.length) {
+          tx(this.db, () => { for (const b of toAsk) this.memoryMarks.askedTarget(contactId, b.mark.id); });
+          result = await ask("有记忆的关系缺 target:只能从已有相关记忆的 id 里明确选择;仍不确定请保留 target=null,不要猜。");
+        }
+        if (signal.aborted || this.closed) return;
+        // 调用期间来源变了就按处置走,不用旧原文
+        const live = this.fineMaterial(contactId, batch.map((b) => this.memoryMarks.get(contactId, b.mark.id)!), upstream);
+        const sources = live.map((l) => l.source);
+        const owners = (m: CompactMemory) => live.filter((l) => l.source.roomId === m.roomId && l.source.seq === m.sourceSeq);
+        const failed = new Set<string>();
+        const held = new Set<string>();
+        const valid: CompactMemory[] = [];
+        for (const m of result.memories) {
+          const own = owners(m);
+          if (!own.length) continue;
+          if (m.relation !== null && !m.target) { for (const o of own) held.add(o.mark.id); continue; }
+          valid.push(m);
+        }
+        const workId = `refine-${createHash("sha256").update(JSON.stringify([contactId, batchId])).digest("hex")}`;
+        const planned = this.planCapturedMemories({ id: workId, contactId }, valid, sources, sources, (m) => { for (const o of owners(m)) failed.add(o.mark.id); });
+        const at = this.clock();
+        tx(this.db, () => {
+          const work = this.memoryCoverage.beginRefine(contactId, batchId, sources.map(({ roomId, seq, revision }) => ({ roomId, seq, revision })), rooms, upstream);
+          this.memoryCoverage.prepare(work.id, planned.writes, 0);
+          for (const l of live) {
+            if (failed.has(l.mark.id)) this.memoryMarks.fail(contactId, l.mark.id, "精筛输出没通过来源或关系校验", "unknown", this.retryPolicy, at, this.random);
+            else if (held.has(l.mark.id)) this.memoryMarks.fail(contactId, l.mark.id, "关系目标仍不明确,保持待处理", "unknown", this.retryPolicy, at, this.random);
+            else this.memoryMarks.done(contactId, l.mark.id, batchId);
+          }
+        });
+        this.memoryCoverage.apply(workId, (q, id) => this.notifyMemoryQuestion(contactId, q, id));
+        this.runs.end(unit.id, "done", {}, { marks: live.length, writes: planned.writes.length });
+        this.upstreamOk(upstream);
+      } catch (e) {
+        const at = this.clock();
+        const verdict = stall as StallVerdict | null;
+        if (verdict) {
+          for (const b of batch) this.memoryMarks.fail(contactId, b.mark.id, `精筛卡住:${verdict.failure.raw}`, "A1", this.retryPolicy, at, this.random);
+          this.runs.failStalled(unit.id, verdict);
+        } else if (signal.aborted || this.closed) {
+          // 宿主关闭:台账留运行中,下次启动核对成孤儿;标记原样还是欠账
+        } else if (preempted) {
+          this.runs.end(unit.id, "interrupted", { failure: runFailure(classifyFailure({ text: "对话优先:精筛让出联系人锁,标记保留为欠账" })) });
+        } else {
+          const cls = this.classify(e);
+          const mapped = healOf(cls.reasonClass);
+          const heal = mapped === "user_stopped" ? "unknown" : mapped;
+          for (const b of batch) this.memoryMarks.fail(contactId, b.mark.id, errorText(e), heal, this.retryPolicy, at, this.random);
+          this.runs.end(unit.id, "failed", { failure: runFailure(cls) });
+          // 与 G1 覆盖同一个共享熔断:后台失败也计入,打开后对话与后台一起暂停
+          const br = breakerFailure(this.breakerRow(upstream).state, { nowMs: at, heal, member: `contact:${contactId}`, reason: cls.label }, this.breakerPolicy);
+          if (br.ok) this.saveBreaker(upstream, br.state);
+        }
+        this.report("fine-screen-failed", { contactId, error: errorText(e), stalled: verdict !== null, preempted });
+      } finally {
+        this.fineAborts.delete(contactId);
+        this.fineStalls.delete(unit.id);
+        signal.removeEventListener("abort", relay);
+      }
+    } finally {
+      if (!this.closed) this.memoryMarks.releaseLease(contactId, holder);
+    }
   }
 
   /** 这一轮的说话侧配置快照(T-177 G2):model 是这一轮实际生效的模型(含用户在失败卡上选的备用模型),其余取宿主级配置。 */
@@ -2359,6 +2681,8 @@ export class Host {
         compactor = undefined;
       }
     }
+    // S-1(G5):这一轮的自动检查开始前(持有联系人锁、本联系人没有别的后台写入在跑)决定写入器代次;压缩器取自本轮冻结快照(G2)
+    this.switchWriter(contactId, compactor);
     const profile = { id: contactId, name: contact.name, speakingModel: speaking.model, persona: contact.persona };
     const max = this.opts.stateNoteMaxBytes ?? null;
     let note = out.stateNote;
@@ -2493,6 +2817,8 @@ export class Host {
     for (const i of inbox) fresh.push(JSON.parse(i.payload) as Inbound);
     if (fresh.length === 0) {
       if (ownOnly.length) tx(this.db, () => this.advanceCursorsTx(contactId, lastSeen));
+      // G5-b:精筛只在联系人槽位空出来、这一刻没有新输入时跑(与对话同一把联系人锁,对话优先)
+      await this.fineScreenTurn(contactId, contact, signal);
       return "done";
     }
     const focusRoom = fresh.find((f) => f.kind === "message")?.roomId ?? fresh[0]?.roomId ?? null;
@@ -2665,6 +2991,7 @@ export class Host {
     // 这一轮起的 Compute 会话挂在这个轮次下面(父子一致:Compute 还在跑,轮次就等它,不记 done)
     await this.runEffects(done.effects.map((e) => (e.kind === "spawn" && !e.parentRunId ? { ...e, parentRunId: unit.id } : e)));
     this.runs.settle(unit.id);
+    this.afterRoundFine(contactId, out.actions.some((a) => a.kind === "remember"));
     return "done";
   }
 
@@ -3153,6 +3480,11 @@ export class Host {
   }
   /** 判卡死后:先停这一轮(任务按现有状态机走 ExecFailed),再写失败与原因(D26 第 8.3 节「到阈值」) */
   private onRunStall(u: RunUnit, v: StallVerdict) {
+    const fine = this.fineStalls.get(u.id);
+    if (fine) {
+      fine(v);
+      return;
+    }
     if (u.layer === "contact-round") {
       const abort = this.roundStalls.get(u.id);
       if (abort) abort(v);
@@ -4902,6 +5234,8 @@ export class Host {
 
 const LAYER_NAMES: Readonly<Record<RunUnit["layer"], string>> = Object.freeze({ "contact-round": "联系人轮次", "compute-session": "Compute 会话", "compute-turn": "Compute 轮次", background: "后台任务", subagent: "子代理" });
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+/** G5:比对来源原话用的规范化(与 kernel 标记身份同一口径) */
+const foldText = (s: string) => s.normalize("NFKC").replace(/\s+/g, " ").trim();
 /** 联系人轮次被宿主判卡死(D26 第 8.3 节)。注意循环收到它按出错处理 */
 export class RoundStalledError extends Error {
   readonly verdict: StallVerdict;

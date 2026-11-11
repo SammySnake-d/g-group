@@ -1,0 +1,30 @@
+{
+  "slice": "G5:两段式记忆——粗筛并进原来那一次 reflect,按切换规则只分一个出口(本人长期偏好经 G1 唯一幂等写入口直接写/其余合法候选转标记/来源不合法留债);精筛在同一把联系人锁里批处理、登记 AC-43 background 单元(计时、progress_get 可查、卡死判失败),明确输出经 G1 写入口按 D25 落地;写入器代次按联系人切换并在同一事务接管 G1 欠账。",
+  "acceptance": [
+    {
+      "id": "AC-42",
+      "status": "未测",
+      "reason": "G5 确定性子范围已在 box3 实测:30 条新增具名测试在红提交 60c6c7c 上 30/30 按名失败,HEAD d22ba9c 上 30/30 通过,全量 1542/1542,30/30 一对一定点变异被指定测试杀死、前后原样对照 30/30;typecheck/lint 0。两段式会把事实/决定/结果推迟到精筛后才写,与 docs/dev-handbook v3.29 D25 §12.3「检查结果按第 5 节判关系落地」文字有出入(规格补丁 v3.25 候选里的「两段式边界」尚未合入真源,待拍板);真实模型的提炼质量、精筛延迟与成本、生产阈值留 G6,不把 AC-42 整体标通过。",
+      "evidence": "receipts/evidence/t177-g5/summary-final.json"
+    },
+    {
+      "id": "AC-43",
+      "status": "未测",
+      "reason": "只覆盖本片新增的精筛后台单元:登记为 background 并声明计时,progress_get(getRun/listRuns)在途可查,夹具短阈值下无响应判 failed no_response 并留债,对话来了让出记 interrupted(G5-07PG/G5-07ST/G5-07PE、G5-K7);AC-43 其余条目不在本片,整体保留未测。",
+      "evidence": "receipts/evidence/t177-g5/summary-final.json"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:b36ab234-0cba-4b89-929e-d21a46a35eea",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "60c6c7c9d45ae9edc099250ad38eba2a363deee4"
+  },
+  "unverifiable": "AC-42:宿主测试用确定性 reflect/refine 替身,只证明出口分流、标记身份、接管、重启、编辑撤回处置、锁与台账等确定性合同;模型实际会不会把事实放进 marks、精筛判关系对不对、两段式带来的写入延迟是否可接受,这些检查骗不了也证不了,需 G6 同题对照。精筛租约跨进程竞争只在存储层用同一库模拟,没有两个宿主进程并发实测。AC-43:精筛单元的卡死判定只在夹具短阈值(80ms、核对周期 10ms)下实测,默认 15 分钟/120 秒未单独跑。",
+  "review": null,
+  "waiver": null,
+  "review_status": "待审",
+  "notes": "由主会话 claude:b36ab234-0cba-4b89-929e-d21a46a35eea 派出的子代理实现,fnqtz 线路(claude-opus-5-5)。叠在 G1(feat/t177-g1-memory@61948a2,PR #58,未合入)上;G1 合入后 rebase 并改 base,届时重写 red.commit。本机 /tmp 工作树曾被外部清理整片删除,按 box3 上的 wip bundle 恢复后重建红/绿提交(红 60c6c7c 只含测试与空壳);v1 云端作业的全量与变异因随后的 d22ba9c 改动中止作废,不计数。阈值(8 标记、24KB、安静期 5 分钟、积压 20、最老 60 分钟、租约 20 分钟)全部是待校准参数。G2/G3 未合入:精筛压缩器取用与邻域在 host.ts 留接缝(fineScreenTurn、anchorNeighbors)。 证据之后另有一个不改运行逻辑的提交(refactor:写邻域收成 memoryNeighbors 查询接缝,G3 PR #61 合入后改走 searchHistory hybrid);最终 HEAD 由正常 pre-push 钩子(typecheck/lint/全量/门禁自检)与本机 --local 门禁复核。 最终 HEAD 4158ac3 另在 box3 同一把锁里复跑:typecheck/lint 0、G5 30/30、全量 1542/1542、30/30 变异杀死、前后原样对照 30/30(summary-final.json,cloud-evidence-final.tgz sha256 bd0ee588…);本机 --local 除 G-REVIEW 外 7 项通过(local-gates.txt)。"
+}
