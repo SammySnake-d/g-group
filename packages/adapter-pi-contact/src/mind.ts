@@ -198,6 +198,11 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
           if (got === null) return { content: [{ type: "text", text: tools?.readQuoteParent ? `读不到 ${r.value.roomId} #${r.value.seq}` : "本轮没有引用链查询口" }], details: null, isError: true };
           return { content: [{ type: "text", text: got }], details: null };
         }
+        if (r.value.kind === "read-schedules") {
+          const got = tools?.listSchedules ? await tools.listSchedules(r.value.roomId) : null;
+          if (got === null) return { content: [{ type: "text", text: tools?.listSchedules ? `你不在会话 ${r.value.roomId} 里,查不到` : "本轮没有定时查询口" }], details: null, isError: true };
+          return { content: [{ type: "text", text: got }], details: null };
+        }
         if (r.value.kind === "read") {
           const got = tools ? await tools.readMemory(r.value.id) : null;
           if (got === null) return { content: [{ type: "text", text: tools ? `没有这条记忆:${r.value.id}` : "本轮没有可用的记忆查询口" }], details: null, isError: true };
