@@ -1,0 +1,23 @@
+packages/kernel/proof/r17-notes.md
+  s_707da87feee227::t_7801fb2da4ae0f 40-41
+receipts/feat-kernel-plugins.json
+  s_707da87feee227::t_7d2e4e98b13b07 31-32,36-37,69
+scripts/gates/proof/r17-local.txt
+  s_707da87feee227::t_239c3690353ab1 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a60746f4db82f151af9e88cb195da8d98491277c",
+  "prompts": {},
+  "sessions": {
+    "s_707da87feee227": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c65d-2dc4-7f63-a331-e0399ce6a347",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

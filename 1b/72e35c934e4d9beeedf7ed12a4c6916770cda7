@@ -1,0 +1,25 @@
+apps/desktop/e2e/shell-look.ui.spec.ts
+  s_042e901c6ad028::t_f9a6a5d81761d8 52-60
+apps/desktop/src/app/chat/ChatView.tsx
+  s_042e901c6ad028::t_30f2887ba32bc4 6,29-43,45-64,82-83
+apps/desktop/src/store/dom.ts
+  s_042e901c6ad028::t_42ad690117f5c1 8-14
+apps/desktop/verify/mines.json
+  s_042e901c6ad028::t_e168de438b753a 117-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1b72e35c934e4d9beeedf7ed12a4c6916770cda7",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

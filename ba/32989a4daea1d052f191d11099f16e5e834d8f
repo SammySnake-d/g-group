@@ -1,0 +1,31 @@
+packages/adapter-cc-compute/src/activity.test.ts
+  s_00309a6b1778cc::t_8cba388ecebb5e 1-118
+packages/adapter-cc-compute/src/events.ts
+  s_00309a6b1778cc::t_7fe9f86fd7f286 11,121-125
+packages/adapter-cc-compute/src/types.ts
+  s_00309a6b1778cc::t_22ae3783d28f19 177-193,207-208
+packages/adapter-pi-contact/src/mind.test.ts
+  s_00309a6b1778cc::t_b3fa1a8d727387 88,101
+packages/api-contract/src/runs-contract.test.ts
+  s_00309a6b1778cc::t_4258195bba05b9 1-79
+packages/server/src/fakes.ts
+  s_00309a6b1778cc::t_2def2c17b21cef 2,41,76-77,166-179,191-200,204
+packages/server/src/runs.test.ts
+  s_00309a6b1778cc::t_b35a06d0675b13 1-557
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ba32989a4daea1d052f191d11099f16e5e834d8f",
+  "prompts": {},
+  "sessions": {
+    "s_00309a6b1778cc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5b44653a-2923-45fd-97d0-f25479b43797",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

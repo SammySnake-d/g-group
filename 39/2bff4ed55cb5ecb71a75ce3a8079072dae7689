@@ -1,0 +1,19 @@
+packages/adapter-cc-compute/src/r11.test.ts
+  s_74dccb3cdfaa51::t_3438e7b7b10292 34-43,48,59,62,66,72,74,76-77,81-83,88,94-95,97,101,105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "392bff4ed55cb5ecb71a75ce3a8079072dae7689",
+  "prompts": {},
+  "sessions": {
+    "s_74dccb3cdfaa51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c735-dbc6-7260-8f7d-bf40b267e6b8",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

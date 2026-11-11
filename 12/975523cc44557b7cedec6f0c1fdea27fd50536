@@ -1,0 +1,23 @@
+packages/server/proof/compute-input-mutations.mjs
+  s_19afb02e575b26::t_6854bd2af872f2 1-82
+packages/server/src/host.ts
+  s_19afb02e575b26::t_324b9f7b7a4f73 128,1878-1879,2065-2071,2093-2094
+packages/server/src/start.ts
+  s_19afb02e575b26::t_ad221bf46c3853 25-26,92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "12975523cc44557b7cedec6f0c1fdea27fd50536",
+  "prompts": {},
+  "sessions": {
+    "s_19afb02e575b26": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac3c5d6dff8770595",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

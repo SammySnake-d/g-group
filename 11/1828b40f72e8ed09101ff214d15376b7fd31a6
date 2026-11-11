@@ -1,0 +1,23 @@
+packages/server/proof/artifacts-mutations.txt
+  s_138f3ca4816f31::t_c3bedd38582e0f 1-16
+packages/server/proof/worktree-mutations.txt
+  s_138f3ca4816f31::t_a0be77afa35e70 1-21
+receipts/feat-c-proof.json
+  s_138f3ca4816f31::t_edac7a99e4634c 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "111828b40f72e8ed09101ff214d15376b7fd31a6",
+  "prompts": {},
+  "sessions": {
+    "s_138f3ca4816f31": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a300aa9e-eccb-4ec8-b983-75a3ff723e24",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

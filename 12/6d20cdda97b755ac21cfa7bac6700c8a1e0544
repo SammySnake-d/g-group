@@ -1,0 +1,23 @@
+packages/adapter-cc-compute/src/types.ts
+  s_12ccf69de2a7ec::t_af9579f07d24f1 76-77
+packages/server/src/fakes.ts
+  s_12ccf69de2a7ec::t_b4f07e81f36483 81
+packages/server/src/host.ts
+  s_12ccf69de2a7ec::t_f777ad4d79a02f 2236-2240
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "126d20cdda97b755ac21cfa7bac6700c8a1e0544",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

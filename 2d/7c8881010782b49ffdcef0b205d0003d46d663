@@ -1,0 +1,22 @@
+packages/adapter-cc-compute/src/turn-model.ts
+  s_b56805cea91f5b::t_f6975903ea13b6 84
+  s_b56805cea91f5b::t_8c0104072db3a6 1-8,16,18,20,23-24,29-41,43-52,54-83,85-94
+packages/adapter-cc-compute/src/resident.ts
+  s_b56805cea91f5b::t_f7dc9f65a18c28 1-31,34,36,38,40,43,45-202,204-242,244-547,549-654
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2d7c8881010782b49ffdcef0b205d0003d46d663",
+  "prompts": {},
+  "sessions": {
+    "s_b56805cea91f5b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aac562a73e2c57e10",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

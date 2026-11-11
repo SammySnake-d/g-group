@@ -1,0 +1,19 @@
+packages/server/src/host.ts
+  s_03527c71eef786::t_2b8ae823c38fa3 93-94,899-922,924-953,956-978,1028,1315-1316
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "84f1602f285708a55a800261c81f8981f421a183",
+  "prompts": {},
+  "sessions": {
+    "s_03527c71eef786": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0a8f74fffd601798",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

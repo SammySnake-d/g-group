@@ -1,0 +1,38 @@
+packages/domain/src/helper.ts
+  s_28bebc745289eb::t_5c35216f8f6e31 1,38,41
+packages/domain/src/contact.ts
+  s_28bebc745289eb::t_033ec28b0a1001 1,56,221,223,225,227,239,242,245,255,271,274,283
+packages/domain/src/plain.ts
+  s_28bebc745289eb::t_84bb9d58d72f4e 1,38,40-41,48,51,111
+packages/domain/src/contact.test.ts
+  s_a4449a4186dc65::t_d23eeba257eff1 4,2041-2187,2190,2193,2201-2202,2213
+  s_a4449a4186dc65::t_47ab764fcaaa8f 2188-2189
+  s_a4449a4186dc65::t_64deb871716fc6 2191-2192
+  s_a4449a4186dc65::t_ebc32cc579792b 2194-2196,2198-2200
+  s_a4449a4186dc65::t_66621344c76fe3 2203-2205,2210-2212
+  s_a4449a4186dc65::t_8e3fdb3d231fad 2197,2206-2209
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0d1f4fb93856c244fc5d81a6627b51e80363a7d1",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_a4449a4186dc65": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "35085604-c627-4b24-9468-35e58c5689f4",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

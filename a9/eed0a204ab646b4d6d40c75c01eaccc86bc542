@@ -1,0 +1,36 @@
+package-lock.json
+  h_f33e46a035b77c 8-10,24-26,40-49,53-55,70-72,87-89,104-106,121-123,138-140,155-157,172-174,189-191,206-208,222-229,275-283
+package.json
+  h_f33e46a035b77c 5-7
+packages/adapter-sqlite/package.json
+  h_f33e46a035b77c 1-8
+packages/adapter-sqlite/proof/flake-30.txt
+  h_f33e46a035b77c 1-43
+packages/adapter-sqlite/proof/mutations.mjs
+  h_f33e46a035b77c 1-79
+packages/adapter-sqlite/proof/mutations.txt
+  h_f33e46a035b77c 1-29
+packages/adapter-sqlite/proof/tests.txt
+  h_f33e46a035b77c 1-37
+packages/adapter-sqlite/src/index.ts
+  h_f33e46a035b77c 1
+packages/adapter-sqlite/src/store.test.ts
+  h_f33e46a035b77c 1-552
+packages/adapter-sqlite/src/store.ts
+  h_f33e46a035b77c 1-149
+receipts/feat-sqlite-storage.json
+  h_f33e46a035b77c 1-53
+reviews/feat-sqlite-storage.md
+  h_f33e46a035b77c 1-294
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a9eed0a204ab646b4d6d40c75c01eaccc86bc542",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

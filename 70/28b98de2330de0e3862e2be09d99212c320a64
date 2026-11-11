@@ -1,0 +1,19 @@
+apps/desktop/e2e/concept-clips.ui.spec.ts
+  s_81e22ac695f42c::t_4b8183dc150336 14-15,17-18,44,46,50,57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7028b98de2330de0e3862e2be09d99212c320a64",
+  "prompts": {},
+  "sessions": {
+    "s_81e22ac695f42c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c33e53ae-da9e-48e5-91f7-434363726d86",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

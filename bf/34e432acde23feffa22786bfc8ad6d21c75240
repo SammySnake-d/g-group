@@ -1,0 +1,29 @@
+packages/server/proof/auth-intent-tests.txt
+  s_28bebc745289eb::t_a76041d8ee1129 1-39
+receipts/feat-auth-host.json
+  s_9356e7c42cd5ff::t_68e19ca94038fa 1-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bf34e432acde23feffa22786bfc8ad6d21c75240",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_9356e7c42cd5ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2b2d0a85716d2524",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

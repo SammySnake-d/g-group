@@ -1,0 +1,23 @@
+packages/server/proof/memory-mutations.txt
+  s_52f52e9e42417d::t_541327cdd9905e 1-54
+packages/server/proof/pref-before-after.txt
+  s_52f52e9e42417d::t_3e644527fc785a 1-113
+receipts/feat-g-memory.json
+  s_52f52e9e42417d::t_d8ad81efcff92e 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b90bbaaf9a502dbeb73175a681e10a4f50c09072",
+  "prompts": {},
+  "sessions": {
+    "s_52f52e9e42417d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "12711ac0-7451-42f3-9d67-46280fd72d9a",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

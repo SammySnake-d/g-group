@@ -1,0 +1,19 @@
+receipts/feat-delivery-plain.json
+  s_568736c9a90f61::t_2937156004dc71 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1d933bb94ca531413ad1f2f29d7bca77f0991879",
+  "prompts": {},
+  "sessions": {
+    "s_568736c9a90f61": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "945466dc-9318-4837-9afe-e1c1b3bb224f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

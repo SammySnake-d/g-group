@@ -1,0 +1,33 @@
+package-lock.json
+  s_a43d51091474f6::t_edfd50de7c4bb7 23-421,468-522,527-530,535-538,547-714,724-1205,1226-1255,1277-1284,1291-1293
+packages/adapter-pi-contact/package.json
+  s_a43d51091474f6::t_eaacb3796cd2e9 1-16
+packages/adapter-pi-contact/scripts/smoke.ts
+  s_a43d51091474f6::t_87c5cc1cccd05e 1-53
+packages/adapter-pi-contact/src/index.ts
+  s_a43d51091474f6::t_193f8e82323235 1-2
+packages/adapter-pi-contact/src/mind.test.ts
+  s_a43d51091474f6::t_de8124c61fcbb6 1-362
+packages/adapter-pi-contact/src/mind.ts
+  s_a43d51091474f6::t_cee13a4b4a5029 1-257
+packages/adapter-pi-contact/src/tools.ts
+  s_a43d51091474f6::t_28066e0652822f 1-165
+receipts/feat-adapter-pi-contact.json
+  s_a43d51091474f6::t_707b1cf4a74da2 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d5c14c3f0f3edd487d200652e15de170ac8f042f",
+  "prompts": {},
+  "sessions": {
+    "s_a43d51091474f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad50527484f481a61",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

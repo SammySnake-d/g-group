@@ -1,0 +1,24 @@
+packages/adapter-cc-compute/proof/gates.txt
+  s_8e60cdc3d4b8e6::t_cf409b828741f8 1-2,4,8-9,16-18
+packages/adapter-cc-compute/proof/tests.txt
+  s_8e60cdc3d4b8e6::t_ddfb8bbf6efc8c 1-8
+  s_8e60cdc3d4b8e6::t_742295e6528111 9-13
+packages/adapter-cc-compute/proof/mutations.txt
+  s_8e60cdc3d4b8e6::t_ddfb8bbf6efc8c 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4d8479a38ab8d795ca1904856451fecdc3ce5301",
+  "prompts": {},
+  "sessions": {
+    "s_8e60cdc3d4b8e6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c1ba-5e28-7c00-ac7f-398176174884",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

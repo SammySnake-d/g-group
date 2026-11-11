@@ -1,0 +1,25 @@
+packages/server/proof/same-entity-mutations.mjs
+  s_cb1a42da06940f::t_93d6139563f8b5 1-70
+packages/server/proof/same-entity-mutations.txt
+  s_cb1a42da06940f::t_a388cbc66fbec4 1-11
+packages/server/proof/same-entity-tests.txt
+  s_cb1a42da06940f::t_9932600782877f 1-14
+receipts/feat-same-entity.json
+  s_cb1a42da06940f::t_4e0d160e49e7c3 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0cf381dea095a5100caa2499d7e0a31ca0919bcd",
+  "prompts": {},
+  "sessions": {
+    "s_cb1a42da06940f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ade26af15a1458fdd",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
