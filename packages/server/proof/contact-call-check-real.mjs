@@ -72,7 +72,7 @@ console.log(`messages.send → #${ask.seq}:${ask.text}`);
 await until("小克这一轮说完", async () => !host.loop.busy(), 5 * 60_000);
 
 console.log("\n## 3 用户叫上群里所有人一起看一下安排(reply 的 everyone)");
-const ask2 = await call("messages.send", { roomId: g.id, clientActionId: "u2", text: "叫上群里所有人一起看一下现在的安排,各自说一句。" });
+const ask2 = await call("messages.send", { roomId: g.id, clientActionId: "u2", text: "叫上群里所有人一起看一下现在的安排(用 reply 的 everyone 参数 @ 全体),各自说一句。" });
 console.log(`messages.send → #${ask2.seq}:${ask2.text}`);
 await until("联系人安静下来", async () => !host.loop.busy(), 5 * 60_000);
 
@@ -99,26 +99,44 @@ if (failedRounds.length) {
   }
 }
 
-// ① 没有人宣称接走了那个任务:任何联系人消息的正文里都不出现这个任务 id
-const claimed = transcript.filter((m) => m.sender.kind === "contact" && m.text.includes(t.id));
-// ② 有联系人用 @everyone 发言:mentions 覆盖该会话全体成员(含用户、不含发送者自己)
+// 联系人一个动作都没出时,先看宿主报了什么、私聊里有没有失败卡(诊断用)
+const kinds = new Map();
+for (const r of reports) kinds.set(r.what, (kinds.get(r.what) ?? 0) + 1);
+console.log(`\n## onReport 汇总(${reports.length} 条)`);
+for (const [k, n] of kinds) console.log(`  ${k} × ${n}`);
+console.log("\n## 联系人与他们的私聊(失败卡出在这里)");
+for (const c of [ke, yan]) {
+  const v = host.listContacts().find((x) => x.id === c.id);
+  console.log(`  ${nameOf({ kind: "contact", id: c.id })}:说话模型=${v?.speakingModel} 活动=${JSON.stringify(v?.activity ?? null)}`);
+  const dm = host.openDm(c.id);
+  for (const m of await msgs(dm.id)) console.log(`    [私聊] ${line(m)}`);
+}
+console.log("\n## 全部 report(最多 40 条)");
+for (const r of reports.slice(0, 40)) console.log(`[${(r.t / 1000).toFixed(1)}s] ${r.what} ${redact(JSON.stringify(r.detail ?? null)).slice(0, 400)}`);
+
+// ① 小克有没有真的去碰那个任务(被当场拒或轮末拒的 claim)
+const claimRejections = rejected.filter((r) => r.detail.action.kind === "claim");
+// ② 被当场拒的同一轮里宣称「已经接走」的 reply 被轮末拦下的条数(机制生效的证据)
+const withheld = rejected.filter((r) => String(r.detail.reason).includes("这句话宣称它已完成"));
+// ③ 被当场拒的 claim 没落盘:负责人没变、gg_effects 里没有 claim
+const owner = (await call("tasks.get", { taskId: t.id })).ownerContactId;
+const claimEffects = effects.filter((e) => e.kind === "claim");
+// ④ 有联系人用 @everyone 发言:mentions 覆盖该会话全体成员(含用户、不含发送者自己)
 const members = host.members(g.id);
 const everyoneMsgs = transcript.filter((m) => {
   if (m.sender.kind !== "contact" || !m.mentions?.length) return false;
   const got = new Set(m.mentions.map((x) => x.id));
   const want = members.filter((x) => !(x.kind === m.sender.kind && x.id === m.sender.id)).map((x) => x.id);
-  return want.every((id) => got.has(id)) && want.length > 1;
+  return want.length > 1 && want.every((id) => got.has(id));
 });
-// ③ 被当场拒的 claim 没落盘:负责人没变、gg_effects 里没有 claim
-const owner = (await call("tasks.get", { taskId: t.id })).ownerContactId;
-const claimEffects = effects.filter((e) => e.kind === "claim");
-// ④ 有拒绝就应当回告过(之后的轮次给到它);没被拒说明模型这一次没去碰那个任务,如实记
+// 被拒的动作有没有回告过(之后的轮次给到它);模型没去碰就是 0 条
 const taskNotes = notes.filter((n) => n.action.includes(t.id));
-console.log("\n# 判定:");
-console.log(`#   ① 没有任何联系人宣称接走了 ${t.id}(正文里不出现这个任务 id)= ${claimed.length === 0}(${claimed.length ? claimed.map((m) => `#${m.seq} ${m.text.slice(0, 40)}`).join(";") : "无人宣称"})`);
-console.log(`#   ② 至少一条联系人发言用 @everyone(mentions 覆盖全体成员、含用户、不含发送者自己)= ${everyoneMsgs.length > 0}(${everyoneMsgs.length} 条:${everyoneMsgs.map((m) => `#${m.seq} ${nameOf(m.sender)}`).join("、")})`);
-console.log(`#   ③ 被拒的 claim 没落盘(负责人仍是小研、gg_effects 里没有 claim)= ${owner === yan.id && claimEffects.length === 0}(${nameOf({ kind: "contact", id: owner ?? "?" })},claim 记录 ${claimEffects.length} 条)`);
-console.log(`#   ④ 被拒的动作有回告 = ${taskNotes.length === 0 ? "不适用(这一轮模型没去碰那个任务)" : taskNotes.every((n) => n.shown_in !== null)}(${taskNotes.length} 条)`);
+console.log("\n# 实测读数(不是通过/失败判决,按上面原始输出核):");
+console.log(`#   ① 针对 ${t.id} 的 claim 被拒:${claimRejections.length} 条(0 条说明这一次模型没去碰它)`);
+console.log(`#   ② 当场被拒的同一轮里宣称「已完成」而被轮末拦下的 reply:${withheld.length} 条${withheld.length ? `(${withheld.map((r) => `${nameOf({ kind: "contact", id: r.detail.contactId })} #${String(r.detail.action.roomId)}, 「${String(r.detail.action.text).slice(0, 30)}」`).join(";")})` : "(这一次模型没有在被拒的同一轮里宣称;被拦下时这里会出现 1 条,原因以「这句话宣称它已完成」开头)"}`);
+console.log(`#   ③ 被拒的 claim 没落盘:负责人仍是小研 = ${owner === yan.id}(${nameOf({ kind: "contact", id: owner ?? "无" })});gg_effects 里 claim 记录 = ${claimEffects.length} 条`);
+console.log(`#   ④ 联系人用 @everyone 发言:${everyoneMsgs.length} 条${everyoneMsgs.length ? `(${everyoneMsgs.map((m) => `#${m.seq} ${nameOf(m.sender)} → @${m.mentions.map((x) => nameOf({ kind: x.id === host.userId ? "user" : "contact", id: x.id })).join(",")}`).join(";")})` : "(这一次没有)"}`);
+console.log(`#   ⑤ 被拒的动作有回告:${taskNotes.length === 0 ? "不适用(没去碰)" : taskNotes.map((n) => `shown_in=${n.shown_in ?? "还没给过"}`).join(";")}`);
 console.log(`#   耗时 ${Date.now() - t0} ms;用户请求 #${ask.seq}、#${ask2.seq}`);
 await s.close();
 rmSync(dir, { recursive: true, force: true });

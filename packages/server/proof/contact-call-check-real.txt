@@ -1,0 +1,87 @@
+# 片 CA2(feat/contact-call-check)真实运行一次(本机 macOS,node v22.22.0)。代码版本:HEAD 89046a2a,
+# 加上本脚本当时未提交的几行诊断输出(下面「onReport 汇总」「联系人与他们的私聊」「全部 report」三段);这几行随后一并提交。
+# 命令:ANTHROPIC_BASE_URL=http://127.0.0.1:3425 ANTHROPIC_AUTH_TOKEN=magpie ANTHROPIC_DEFAULT_SONNET_MODEL=cursor/auto \
+#        node packages/server/proof/contact-call-check-real.mjs > packages/server/proof/contact-call-check-real.txt
+# 网关:本机 magpie 本地网关(relay 只服务 Claude Code 客户端,pi 用不了;anyrouter/group/opus 当时 503)。令牌只经环境变量,本文件与脚本输出都不含它。
+# 模型选择(实测):fengshao1227/claude-opus-5-5 经 pi 跑出来 5 轮 0 动作(不回工具调用);workbuddy-ai/hy4free 上游一直断流(群里出「上游一直断流」失败卡);cursor/auto 实测工具调用正常(先用 6582 字节的真实工具声明+流式探过一次,回 reply 的 tool_use),本文件用它。
+#
+# 怎么读下面的读数:
+#   ① 0 条 —— 被当场拒的 claim **不会**走到 commitRound,所以不会记成 action-rejected;它当场被拒的证据在 ② 的行里(宿主写下的原因是
+#      「这一轮里对 t-... 的动作被当场拒了(任务 t-... 已由联系人 ... 认领(T3_Running))」)和 ③(负责人没变、没有任何 claim 落盘)。
+#   ② 1 条 —— 小克的 reply 正文里出现了那个任务 id,被判「宣称已完成」,轮末不发出并记进回告(下一轮 shown_in=r4 给它)。
+#      这条也暴露了最小判据的过度拦截:那句话其实是如实说明「claim_task 接不了」,也被拦了(见 PR 与收据的候选/需拍板)。
+#   ③ 负责人仍是小研、gg_effects 里没有任何 claim 记录。
+#   ④ @everyone 展开正确:两条消息的 @ 各自是「另一位联系人 + 用户」,都不含发送者自己、都不含 Helper。
+#   ⑤ 被拒动作的回告在之后的第 4 轮给到小克。
+# 2026-11-11T22:00:21.501Z 真实 pi 联系人 + Claude Code Compute(模型 cursor/auto,经网关 Bearer),startServer({ mind: "pi", compute: "claude" })
+# 命令: node packages/server/proof/contact-call-check-real.mjs
+
+## 1 用户建一个面板任务并指定给小研
+tasks.create → t-mwcnx91c-4「写 alpha.md」T1_Open 负责人=无 来源 #1
+tasks.assign → t-mwcnx91c-4 负责人=小研(T2_Claimed)
+
+## 2 用户点名让小克去接小研名下那个任务(会被当场拒:已有人负责)
+messages.send → #3:小克:小研手头那个任务(t-mwcnx91c-4)你接过去做,用 claim_task 直接认领。接好之后在群里说一声。
+(node:87903) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+## 3 用户叫上群里所有人一起看一下安排(reply 的 everyone)
+messages.send → #6:叫上群里所有人一起看一下现在的安排(用 reply 的 everyone 参数 @ 全体),各自说一句。
+
+## 群聊全文
+#1 我([卡:task-status]): 新建任务:写 alpha.md
+    在当前工作目录写一个文件 alpha.md,内容只有一行:NEUTRAL_FIXTURE alpha ok。写完就算完成。
+#2 我(↩#1 @小研): 把任务「写 alpha.md」交给 小研
+#3 我: 小克:小研手头那个任务(t-mwcnx91c-4)你接过去做,用 claim_task 直接认领。接好之后在群里说一声。
+#4 小研(↩#1 @我): alpha.md 已写好：当前工作目录下一行内容 `NEUTRAL_FIXTURE alpha ok`。
+#5 小克(↩#4): 收到，alpha.md 已由小研写好。等用户确认。
+#6 我: 叫上群里所有人一起看一下现在的安排(用 reply 的 everyone 参数 @ 全体),各自说一句。
+#7 小克(↩#6 @小研,我): 我这边无未了结任务；alpha.md 由小研负责，Compute 还在等回答，我等验收或下一步指示。
+#8 小研(↩#6 @小克,我): 当前：alpha.md 已写好并交付（任务 t-mwcnx91c-4），等你确认通过；各自看一眼安排就行。
+#9 小克(↩#8): 收到。我这边无待办，继续等用户验收 alpha.md。
+#10 小研(↩#7 @小克): 收到。alpha.md 已交付，等提出者验收。Compute 若还在等回答，请提出者答提问卡，我再原样转过去。
+#11 小克(↩#10): 收到，等提出者验收或下一步指示。
+#12 小研(↩#11): 好，继续等提出者验收；有提问卡答复我再原样转给 Compute。
+
+## 宿主判下的拒绝(1 条)
+[54.4s] 小克 reply {"kind":"reply","roomId":"g-mwcnx91b-3","text":"claim_task 接不了：t-mwcnx91c-4 已由小研认领且在跑（run-mwcnx91o-8）。要我另开一份做，还是等小研交？","replyToSeq":3} → 这一轮里对 t-mwcnx91c-4 的动作被当场拒了(任务 t-mwcnx91c-4 已由联系人 c-mwcnx91b-2 认领(T3_Running));这句话宣称它已完成,没有发出
+
+## 被拒动作回告台账 gg_rejection_notes(1 条;shown_in = 第 5 块给到它的那一轮)
+{"contact":"小克","action":"reply(roomId=g-mwcnx91b-3, text=「claim_task 接不了：t-mwcnx91c-4 已由小研认领且在跑（ru…」)","reason":"这一轮里对 t-mwcnx91c-4 的动作被当场拒了(任务 t-mwcnx91c-4 已由联系人 c-mwcnx91b-2 认领(T3_Running));这句话宣称它已完成,没有发出","shownIn":"c-mwcnx91a-1:r4:mwco0jm1"}
+
+## gg_effects(1 条)
+{"kind":"reply","status":"rejected","error":"这一轮里对 t-mwcnx91c-4 的动作被当场拒了(任务 t-mwcnx91c-4 已由联系人 c-mwcnx91b-2 认领(T3_Running));这句话宣称它已完成,没有发出"}
+
+## onReport 汇总(15 条)
+  recall × 13
+  action-rejected × 1
+  stale-round × 1
+
+## 联系人与他们的私聊(失败卡出在这里)
+  小克:说话模型=cursor/auto 活动="idle"
+  小研:说话模型=cursor/auto 活动="idle"
+
+## 全部 report(最多 40 条)
+[0.0s] recall {"contactId":"c-mwcnx91b-2","roundId":"c-mwcnx91b-2:r1:mwcnx91g","items":[]}
+[1.6s] recall {"contactId":"c-mwcnx91a-1","roundId":"c-mwcnx91a-1:r2:mwcnxa75","items":[]}
+[54.4s] action-rejected {"contactId":"c-mwcnx91a-1","action":{"kind":"reply","roomId":"g-mwcnx91b-3","text":"claim_task 接不了：t-mwcnx91c-4 已由小研认领且在跑（run-mwcnx91o-8）。要我另开一份做，还是等小研交？","replyToSeq":3},"reason":"这一轮里对 t-mwcnx91c-4 的动作被当场拒了(任务 t-mwcnx91c-4 已由联系人 c-mwcnx91b-2 认领(T3_Running));这句话宣称它已完成,没有发出"}
+[66.2s] stale-round {"contactId":"c-mwcnx91b-2","roomId":"g-mwcnx91b-3","newer":[3]}
+[66.2s] recall {"contactId":"c-mwcnx91b-2","roundId":"c-mwcnx91b-2:r3:mwcnyo47","items":[]}
+[153.7s] recall {"contactId":"c-mwcnx91a-1","roundId":"c-mwcnx91a-1:r4:mwco0jm1","items":[{"roomId":"g-mwcnx91b-3","seq":1,"primary":true,"state":"Full","bytes":139,"totalBytes":139,"nextCursor":null}]}
+[229.5s] recall {"contactId":"c-mwcnx91b-2","roundId":"c-mwcnx91b-2:r5:mwco2631","items":[{"roomId":"g-mwcnx91b-3","seq":4,"primary":true,"state":"Full","bytes":84,"totalBytes":84,"nextCursor":null}]}
+[260.8s] recall {"contactId":"c-mwcnx91a-1","roundId":"c-mwcnx91a-1:r6:mwco2u84","items":[]}
+[260.8s] recall {"contactId":"c-mwcnx91b-2","roundId":"c-mwcnx91b-2:r7:mwco2u8g","items":[]}
+[308.0s] recall {"contactId":"c-mwcnx91a-1","roundId":"c-mwcnx91a-1:r8:mwco3uo5","items":[{"roomId":"g-mwcnx91b-3","seq":6,"primary":true,"state":"Full","bytes":110,"totalBytes":110,"nextCursor":null}]}
+[308.0s] recall {"contactId":"c-mwcnx91b-2","roundId":"c-mwcnx91b-2:r9:mwco3uof","items":[{"roomId":"g-mwcnx91b-3","seq":6,"primary":true,"state":"Full","bytes":110,"totalBytes":110,"nextCursor":null}]}
+[376.4s] recall {"contactId":"c-mwcnx91a-1","roundId":"c-mwcnx91a-1:r10:mwco5bgb","items":[{"roomId":"g-mwcnx91b-3","seq":7,"primary":true,"state":"Full","bytes":116,"totalBytes":116,"nextCursor":null}]}
+[376.4s] recall {"contactId":"c-mwcnx91b-2","roundId":"c-mwcnx91b-2:r11:mwco5bgm","items":[{"roomId":"g-mwcnx91b-3","seq":8,"primary":true,"state":"Full","bytes":115,"totalBytes":115,"nextCursor":null}]}
+[421.7s] recall {"contactId":"c-mwcnx91b-2","roundId":"c-mwcnx91b-2:r12:mwco6af4","items":[{"roomId":"g-mwcnx91b-3","seq":10,"primary":true,"state":"Full","bytes":131,"totalBytes":131,"nextCursor":null}]}
+[462.8s] recall {"contactId":"c-mwcnx91a-1","roundId":"c-mwcnx91a-1:r13:mwco764k","items":[{"roomId":"g-mwcnx91b-3","seq":11,"primary":true,"state":"Full","bytes":48,"totalBytes":48,"nextCursor":null}]}
+
+# 实测读数(不是通过/失败判决,按上面原始输出核):
+#   ① 针对 t-mwcnx91c-4 的 claim 被拒:0 条(0 条说明这一次模型没去碰它)
+#   ② 当场被拒的同一轮里宣称「已完成」而被轮末拦下的 reply:1 条(小克 #g-mwcnx91b-3, 「claim_task 接不了：t-mwcnx91c-4 已由」)
+#   ③ 被拒的 claim 没落盘:负责人仍是小研 = true(小研);gg_effects 里 claim 记录 = 0 条
+#   ④ 联系人用 @everyone 发言:2 条(#7 小克 → @小研,我;#8 小研 → @小克,我)
+#   ⑤ 被拒的动作有回告:shown_in=c-mwcnx91a-1:r4:mwco0jm1
+#   耗时 508297 ms;用户请求 #3、#6

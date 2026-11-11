@@ -4,17 +4,17 @@
     {
       "id": "AC-31",
       "status": "未测",
-      "reason": "本片补的是「联系人看到的状态与宿主真实状态一致」在当场校验这一项上的缺口:能提前判定的五类不合规在工具执行时就被拒、原因立刻回到模型(contact-call-check.test.ts「当场校验五类各一条…」),被拒的动作不落盘、宣称它已完成的 reply 不发出并进回告(「同一轮里模型先调会被拒的认领…」),轮末兜底仍拒后提交者(「轮末兜底仍生效…」);AC-31 ①–⑤ 的原文判据(唯一入口四条件、单人串行与防无限延期、入库后崩溃去重、发送前撤销竞态、承诺终态自动回收)不在本片。"
+      "reason": "本片补的是「联系人看到的状态与宿主真实状态一致」在当场校验这一项上的缺口:能提前判定的五类不合规在工具执行时就被拒、原因立刻回到模型(contact-call-check.test.ts「当场校验五类各一条…」),被拒的动作不落盘、宣称它已完成的 reply 不发出并进回告(「同一轮里模型先调会被拒的认领…」),轮末兜底仍拒后提交者(「轮末兜底仍生效…」);真实运行也走过一次(packages/server/proof/contact-call-check-real.txt:小克接小研名下任务被当场拒、claim 没落盘、那句带任务 id 的 reply 被拦下并回告)。AC-31 ①–⑤ 的原文判据(唯一入口四条件、单人串行与防无限延期、入库后崩溃去重、发送前撤销竞态、承诺终态自动回收)不在本片。"
     },
     {
       "id": "AC-20",
       "status": "未测",
-      "reason": "只覆盖「@ 的对象必须是该会话成员」这一条边界:@everyone 只在发送者本人是该会话成员时展开,展开出来的也全是该会话成员;发送者不在这个会话里时当场拒、轮末也拒、消息不发(contact-call-check.test.ts 第 3 条与「当场校验五类各一条…」的第 5 条);AC-20 主体是「授权只来自用户本人」,不在本片。"
+      "reason": "只覆盖「@ 的对象必须是该会话成员」这一条边界:@everyone 只在发送者本人是该会话成员时展开,展开出来的也全是该会话成员;发送者不在这个会话里时当场拒、轮末也拒、消息不发(contact-call-check.test.ts 第 3 条与「当场校验五类各一条…」的第 5 条);真实运行里两位联系人各 @ 了一次全体,展开结果都不含自己、都不含 Helper(packages/server/proof/contact-call-check-real.txt #7、#8)。AC-20 主体是「授权只来自用户本人」,不在本片。"
     },
     {
       "id": "AC-30",
       "status": "未测",
-      "reason": "US1 的 @everyone 与当场校验都只有本机单测,没有真实运行:本机模型网关 2026-11-12 探测返回 HTTP 503(anyrouter: Service Unavailable,见 packages/server/proof/contact-call-check-real-probe.txt),startServer({mind:\"pi\"}) 的真实跑测跑不成。脚本已写好、语法检查过但未执行:packages/server/proof/contact-call-check-real.mjs(验①联系人用 reply 的 everyone 时 mentions 是会话全体成员、②被当场拒的认领没人宣称、不落盘、有回告),网关恢复后按文件头一行的命令跑。另 AC-30 在本仓库验收文档里还带「Compute 内部压缩后约束还在」的条件(v3.29 已按 DM#2792 去掉,仓库文档未同步),本片没测压缩。"
+      "reason": "真实运行跑成了(packages/server/proof/contact-call-check-real.txt,本机,startServer({mind:\"pi\",compute:\"claude\"}),网关用本机 magpie、模型 cursor/auto):用户把面板任务指定给小研后,叫小克用 claim_task 去接小研名下那个任务——小克当场被拒(任务已由小研认领 T3_Running)、被拒的 claim 没落盘(负责人仍是小研、gg_effects 里没有任何 claim),它随后那句正文里带任务 id 的 reply 被轮末判为「宣称已完成」、没有发出并记进回告(下一轮第 4 轮给到它);同一场里两位联系人各用 @everyone 发了一条(小克 → @小研+用户、小研 → @小克+用户,都不含自己、都不含 Helper);小研那个任务的 Claude Code Compute 也跑完并交付到群里(#4)。仍未测的部分:AC-30 的完整链「群里派活 → 联系人建任务 → CC 执行 → 工件回群 → 待确认」里的派活建任务一段不在本片(本片场景是用户 tasks.create + tasks.assign);本仓库验收文档的 AC-30 还带「Compute 内部压缩后约束仍有效」的条件(v3.29 已按 DM#2792 去掉、V-03 已撤销,仓库文档未同步),本片没测压缩。"
     },
     {
       "id": "AC-39",
@@ -35,7 +35,7 @@
   ],
   "candidate": {
     "status": "候选",
-    "description": "候选,非正式门禁:①「未落实声明」的判据取最小实现——只看可核对的字符串事实(这条 reply 的正文里出现了本轮当场被拒的动作所指对象的 id:任务 id、运行单元 id、或会话#来源 seq),不看这句话是宣称做了还是说没做到;因此「t-9 我没认领到」这种如实说明也会被拦一次,模型下一轮拿到回告后换个说法即可。② 能被提前校验的六类按需求口径做,其余(「这条消息已经建过任务」、来源已回退、交付版本未落实、提问卡回答重复等)仍只在轮末判。"
+    "description": "候选,非正式门禁:①「未落实声明」的判据取最小实现——只看可核对的字符串事实(这条 reply 的正文里出现了本轮当场被拒的动作所指对象的 id:任务 id、运行单元 id、或会话#来源 seq),不看这句话是宣称做了还是说没做到。真实运行暴露了这一点(需拍板):小克被当场拒后如实回复「claim_task 接不了:t-xxx 已由小研认领且在跑…」,因为正文里有那个任务 id,这句话被拦下没发出,信息靠它下一轮换个说法再讲(packages/server/proof/contact-call-check-real.txt)。更准只能上语义判断(§2.0 不做);可选的折中是只拦「被拒的是写类动作、且 reply 是在该拒绝之后登记的」——那同样拦得住这条如实说明,收益有限。② 能被提前校验的六类按需求口径做,其余(「这条消息已经建过任务」、来源已回退、交付版本未落实、提问卡回答重复等)仍只在轮末判。"
   },
   "author": {
     "agent": "claude",
@@ -45,9 +45,9 @@
   "red": {
     "commit": "a20e292a11d00dd24881652031d64a5b25b02639"
   },
-  "unverifiable": "AC-31:当场校验只在 pi 运行时真的调校验口时才生效(adapter-pi-contact/src/mind.ts),本轮没有真实运行(网关 503),所以「真实模型在被拒之后确实改口」只有进程内假端点(SSE)与剧本脑子的证据,没有真模型证据;轮末的未落实声明判据是字符串事实,证明的是「这句话没发出并记了回告」,不证明模型下一轮一定改口。AC-30:真实运行没跑。R-05:只核对被具名测试杀死,没核对红的原因文字。",
+  "unverifiable": "AC-31:当场校验只在 pi 运行时真的调校验口时才生效(adapter-pi-contact/src/mind.ts);真实运行(packages/server/proof/contact-call-check-real.txt)证明的是「一次真实模型在被当场拒之后没有宣称做成、且它的那句带任务 id 的 reply 被轮末拦下并回告」,不证明模型下一轮一定改口。AC-30:真实运行只覆盖 US1 的 @everyone 与认领被拒一段,完整链与压缩条件不在本片。R-05:只核对被具名测试杀死,没核对红的原因文字。真实运行用的模型是实测能调工具的 cursor/auto(同场实测 fengshao1227/claude-opus-5-5 5 轮 0 工具调用、workbuddy-ai/hy4free 上游一直断流),换模型行为可能不同,这一次的结果不代表所有模型。",
   "waiver": null,
   "review": null,
   "review_status": "待审",
-  "notes": "子代理实现(Claude Code 子代理,调度会话 claude:dd154965-afbd-4134-a1d3-c00f2a859eab)。按 origin/docs/dev-handbook v3.31(ff5bd71)§2.0「做 / 不做的标准」:只做代码能核对的事实(会话成员、任务状态与归属、seq 是否在本轮输入、认领冲突、被拒动作所指的对象 id、宿主已判的拒绝),说明文字只放在工具声明(reply.everyone 的 description)里,不加代码门禁。第 1 块逐字不动(recall.test.ts 的 4000 字节预算用例余量不到 40 字节),everyone 只在 pi 工具声明里。叠加在 feat/contact-actions(PR #76)上:片内用到的 contact-actions.ts / host.ts commitRound / adapter-pi-contact 的 reply mentions 都只在 #76 上。**与 SLICE-RULES 第 16 行的一处偏离,需拍板**:规则写「叠加片 PR base 仍指 dev/integration」,但门禁 G-RED 按 base 比测试体——以 dev/integration 为 base 时 #76 新增的 contact-actions.test.ts / mind.test.ts / claim-tool.test.ts 全都算「本 PR 新增或改动的测试」,而它们在我的红提交上本来就通过,实测 G-RED 直接红(见 run-all --local 的输出);本仓库已有的叠加片(#69 叠 G3、#72 叠 C)PR base 也都指向前一片。因此本 PR base 取 feat/contact-actions,本地门禁与 --hash 也用 --base=origin/feat/contact-actions(内容 hash 与用 dev/integration 当 base 时相同,都是 02be07d4b4927065827ee2811d9682876927a0c80236af6e1890f75de684bde0)。#76 合入后按规则 rebase 到 dev/integration、PR base 改回 dev/integration。改动了 #76 的 packages/adapter-pi-contact/src/claim-tool.test.ts 一行(reply 声明的字段逐个断言加上 everyone),这是本片新增字段的必然结果。与并行片的已知冲突点:adapter-pi-contact/src/tools.ts 的 reply 字段、kernel/src/runtime-ports.ts 的 MindAction 联合与 RoundTools/RoundOutput、host.ts 的 commitRound reply 分支与 round() 里的 RoundTools 装配。"
+  "notes": "子代理实现(Claude Code 子代理,调度会话 claude:dd154965-afbd-4134-a1d3-c00f2a859eab)。按 origin/docs/dev-handbook v3.31(ff5bd71)§2.0「做 / 不做的标准」:只做代码能核对的事实(会话成员、任务状态与归属、seq 是否在本轮输入、认领冲突、被拒动作所指的对象 id、宿主已判的拒绝),说明文字只放在工具声明(reply.everyone 的 description)里,不加代码门禁。第 1 块逐字不动(recall.test.ts 的 4000 字节预算用例余量不到 40 字节),everyone 只在 pi 工具声明里。叠加在 feat/contact-actions(PR #76)上:片内用到的 contact-actions.ts / host.ts commitRound / adapter-pi-contact 的 reply mentions 都只在 #76 上。**与 SLICE-RULES 第 16 行的一处偏离,需拍板**:规则写「叠加片 PR base 仍指 dev/integration」,但门禁 G-RED 按 base 比测试体——以 dev/integration 为 base 时 #76 新增的 contact-actions.test.ts / mind.test.ts / claim-tool.test.ts 全都算「本 PR 新增或改动的测试」,而它们在我的红提交上本来就通过,实测 G-RED 直接红(见 run-all --local 的输出);本仓库已有的叠加片(#69 叠 G3、#72 叠 C)PR base 也都指向前一片。因此本 PR base 取 feat/contact-actions,本地门禁与 --hash 也用 --base=origin/feat/contact-actions(内容 hash 与用 dev/integration 当 base 时相同,都是 02be07d4b4927065827ee2811d9682876927a0c80236af6e1890f75de684bde0)。#76 合入后按规则 rebase 到 dev/integration、PR base 改回 dev/integration。改动了 #76 的 packages/adapter-pi-contact/src/claim-tool.test.ts 一行(reply 声明的字段逐个断言加上 everyone),这是本片新增字段的必然结果。与并行片的已知冲突点:adapter-pi-contact/src/tools.ts 的 reply 字段、kernel/src/runtime-ports.ts 的 MindAction 联合与 RoundTools/RoundOutput、host.ts 的 commitRound reply 分支与 round() 里的 RoundTools 装配。 真实运行:网关用用户给的本机 magpie(relay 只服务 Claude Code 客户端、pi 用不了),模型实测选 cursor/auto(fengshao1227/claude-opus-5-5 不回工具调用、workbuddy-ai/hy4free 上游一直断流),探测记录在 packages/server/proof/contact-call-check-real-probe.txt。"
 }

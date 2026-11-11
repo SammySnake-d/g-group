@@ -1,11 +1,20 @@
-# 片 CA2(feat/contact-call-check)真实运行前的网关探测(2026-11-12,本机 macOS,node v22.22.0)。
+# 片 CA2(feat/contact-call-check)真实运行前的网关探测记录(2026-11-12,本机 macOS,node v22.22.0)。
 # 为什么要探:contact-call-check-real.mjs 走 startServer({mind:"pi"}) 真实调模型,网关不可用时整轮只有失败卡,
 # 那种输出不能用来判故事(PR #76 的 proof 里同一天早些时候踩过一次)。
-# 做法:用环境变量里的网关地址与令牌发一次最小请求(POST <ANTHROPIC_BASE_URL>/v1/messages,max_tokens=16)。
 # 令牌与网关地址不落盘、不打印(下面的输出里没有它们)。
-#
-# 结果:HTTP 503
-#   {"error":{"message":"anyrouter: Service Unavailable","type":"error"},"type":"error"}
-#
-# 结论:上游不可用(503),真实运行跑不成;contact-call-check-real.mjs 未执行,收据里记「未测:上游 503」。
-# 网关恢复后:node packages/server/proof/contact-call-check-real.mjs > packages/server/proof/contact-call-check-real.txt
+
+# 1) 会话自带的环境变量(relay 网关)发一次最小请求(POST <ANTHROPIC_BASE_URL>/v1/messages,max_tokens=16):
+#    结果:HTTP 503
+#      {"error":{"message":"anyrouter: Service Unavailable","type":"error"},"type":"error"}
+#    → 当时真实运行跑不成,先用空壳脚本占位。
+
+# 2) 改成用户给的本机 magpie 网关(ANTHROPIC_BASE_URL=http://127.0.0.1:3425、ANTHROPIC_AUTH_TOKEN=magpie):
+#    GET /v1/models → HTTP 200。
+#    各模型的工具调用能力实测(带本仓库真实的 14 个工具声明 = 6582 字节 + 流式,单次请求):
+#      fengshao1227/claude-opus-5-5 → 非流式 403;经 pi 实跑 5 轮 0 动作(不回工具调用)
+#      workbuddy-ai/hy4free        → 回 tool_use,但经 pi 实跑上游一直断流(群里出「上游一直断流」失败卡)
+#      cursor/auto                 → 回 tool_use;用它跑成(packages/server/proof/contact-call-check-real.txt)
+#      fengshao1227/kimi-k3、gemini-r/gemini-3.8-flash-high → 探针也回 tool_use(未用于本片实跑)
+
+# 3) 结论:本片的真实运行用 magpie + cursor/auto 跑成,结果见 contact-call-check-real.txt;
+#    本文件的第 1 段只记录 relay 网关当时的 503,不再代表最终状态。
