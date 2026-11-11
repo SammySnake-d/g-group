@@ -1,0 +1,27 @@
+packages/server/proof/standing-commitments-mutations.mjs
+  s_98f0ff8415d16e::t_56ba71a075e9c6 1-177
+packages/server/proof/standing-commitments-mutations.txt
+  s_98f0ff8415d16e::t_2feed56fb3d32f 1-41
+packages/server/proof/standing-commitments-real.mjs
+  s_98f0ff8415d16e::t_9f92aa8ccf38dd 1-110
+packages/server/proof/standing-commitments-real.txt
+  s_98f0ff8415d16e::t_24585824f9942c 1-44
+packages/server/proof/standing-commitments-red-green.txt
+  s_98f0ff8415d16e::t_07c4c3333c570f 1-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "370b72a4e4ee6403cb02f4a36744b0fea03ab6c3",
+  "prompts": {},
+  "sessions": {
+    "s_98f0ff8415d16e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6ed2c2cb3b685ca0",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
