@@ -28,6 +28,7 @@ test("G1-01B 覆盖按实际投递版本登记且同批重复幂等", () => {
   const again = s.coverage.begin("c", [{ roomId: "r", seq: 9, revision: 11 }, ref], [], ["r"], "model");
   assert.equal(one.id, again.id); assert.equal(one.state, "pending");
   assert.deepEqual(one.sources.map(x => x.seq), [2, 9]); assert.equal(s.coverage.list("c").length, 1);
+  assert.equal(s.coverage.dirty("c"), false, "检查pending不等于md半写入");
   const other = s.coverage.begin("other", [ref], [], ["r"], "model"); assert.notEqual(one.id, other.id);
 });
 test("G1-01R 失败补查复用重试策略的退避和上限", () => {
@@ -38,11 +39,13 @@ test("G1-01R 失败补查复用重试策略的退避和上限", () => {
   s.coverage.fail(w.id, "503", "A1", policy, 120);
   assert.equal(s.coverage.due("c", 99999).length, 0); assert.equal(s.coverage.get(w.id).blocked, true);
   assert.equal(s.coverage.get(w.id).state, "failed");
+  assert.equal(s.coverage.dirty("c"), false, "重试耗尽仍无未完成md事务");
 });
 test("G1-01A 鉴权额度失败不逐轮重试且不清欠账", () => {
   const s = fixture(MemoryCoverage, MemoryStore); const w = work(s);
   s.coverage.fail(w.id, "401", "A2", DEFAULT_RETRY_POLICY, 0);
   assert.equal(s.coverage.get(w.id).attempts, 0); assert.equal(s.coverage.due("c", 999999).length, 0);
+  assert.equal(s.coverage.dirty("c"), false, "鉴权失败不能制造md写入栅栏");
   assert.equal(s.coverage.list("c").length, 1); s.coverage.retry(w.id); assert.equal(s.coverage.due("c", 999999).length, 1);
 });
 test("G1-03Z 合法零结果完成而无结果 pending 不冒成功", () => {
