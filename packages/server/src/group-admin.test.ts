@@ -169,3 +169,27 @@ test("群临时算力:任务视图写明占的是个人槽位还是借的本群�
   assert.deepEqual(by("跑脚本一")?.slot, { scope: "personal", stopping: false }, "先占个人槽位");
   assert.deepEqual(by("跑脚本二")?.slot, { scope: "group", stopping: false }, "个人满了借本群临时槽位");
   });
+
+test("已经交付、等你确认的任务不算在途:它的 Compute 已做完,移出成员、解散群都不用先停,交付也不被取消", async () => {
+  const compute = holding(scriptedCompute());
+  const host = mk({ file: file(), mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5 });
+  const svc = createService(host);
+  const a = host.createContact({ name: "小前" });
+  const b = host.createContact({ name: "小安" });
+  const g = host.createGroup("研发群", [contact(a.id)]);
+  const g2 = host.createGroup("运营群", [contact(b.id)]);
+  host.send({ roomId: g.id, clientActionId: "m1", text: "帮我写报告", mentions: [{ id: a.id, source: "manual" }] });
+  host.send({ roomId: g2.id, clientActionId: "m2", text: "帮我写周报", mentions: [{ id: b.id, source: "manual" }] });
+  await settle(host, compute);
+  const waiting = ["T5_InReview", "T8a_Delivered"];
+  const t = host.listTasks({ roomId: g.id })[0]!;
+  const t2 = host.listTasks({ roomId: g2.id })[0]!;
+  assert.ok(waiting.includes(t.state) && waiting.includes(t2.state), `交付后应在等你确认,实际 ${t.state} / ${t2.state}`);
+
+  const r = ok<RoomView>(await svc.handle("rooms.removeMember", { roomId: g.id, member: contact(a.id) }));
+  assert.deepEqual(r.members, [{ kind: "user", id: "me" }], "直接移出,不进移出中");
+  assert.equal(host.listTasks({ roomId: g.id })[0]!.state, t.state, "交付没有被取消");
+
+  assert.deepEqual(ok(await svc.handle("rooms.dissolve", { roomId: g2.id })), { roomId: g2.id, dissolved: true }, "解散也不用先停");
+  assert.equal(host.listTasks({ roomId: g2.id })[0]!.state, t2.state, "交付没有被取消");
+});
