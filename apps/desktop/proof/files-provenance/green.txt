@@ -1,0 +1,87 @@
+# 绿:提交 5d3f567 上 box1 跑 apps/desktop 全部 renderer 用例(npx playwright test --project=renderer --workers=1)
+[68/146] [renderer] › e2e/layout.ui.spec.ts:68:1 › 悬浮工具条在窄窗口和超宽窗口下也压在气泡右上角
+[69/146] [renderer] › e2e/layout.ui.spec.ts:78:1 › 别人的消息和自己的消息,工具条都在气泡上方、贴着末端那一角(不再放到自己气泡的左侧)
+[70/146] [renderer] › e2e/layout.ui.spec.ts:94:1 › 悬停链不断:指针从气泡往上移到工具条,途中不消失,按钮点得到(#1032)
+[71/146] [renderer] › e2e/layout.ui.spec.ts:113:1 › 主面板不再横跨整个窗口:超宽窗口下消息栏和输入框收在居中的阅读栏里
+[72/146] [renderer] › e2e/member-stack.ui.spec.ts:6:3 › 成员头像组(light):默认收拢,悬停 / 键盘聚焦展开,悬停头像显示名字,点了打开成员页
+[73/146] [renderer] › e2e/member-stack.ui.spec.ts:6:3 › 成员头像组(dark):默认收拢,悬停 / 键盘聚焦展开,悬停头像显示名字,点了打开成员页
+[74/146] [renderer] › e2e/models.ui.spec.ts:19:1 › 联系人 Compute 槽位切换三态:生效值和继承链跟着变
+[75/146] [renderer] › e2e/models.ui.spec.ts:56:1 › 选了 Harness 跑不了的模型:就地阻断、给两条修复路径、保存不可用;点「单独指定兼容模型」后恢复可保存
+[76/146] [renderer] › e2e/models.ui.spec.ts:92:1 › 改上游的说话模型:跟随它的 Compute 同样拦下;只能用来说话的模型没有可换的 Harness,只给一条路
+[77/146] [renderer] › e2e/models.ui.spec.ts:107:1 › 改模型保存后提示「下一轮生效、正在跑的这一轮不打断」,私聊里留记录;换 Harness 另外说明
+[78/146] [renderer] › e2e/models.ui.spec.ts:132:1 › 卡死阈值放在高级里:默认 15 分钟 / 120 秒,可以按联系人单独设,不合理的数不能保存
+[79/146] [renderer] › e2e/models.ui.spec.ts:149:1 › 全局默认改 Compute 模型:先显示会影响几位联系人和失配,修好才能保存;保存后继承者用新值
+[80/146] [renderer] › e2e/models.ui.spec.ts:176:1 › 默认 Harness 和默认 Compute 模型组合不成立时不能保存;只改默认说话模型说明只影响新建联系人
+[81/146] [renderer] › e2e/models.ui.spec.ts:192:1 › 批量替换:预览三栏条目正确,冲突处理完才能确认;确认后联系人列表更新,在途任务按启动快照跑完
+[82/146] [renderer] › e2e/models.ui.spec.ts:241:1 › 模型只在两处配:资料页只显示、点了去工作台设置;添加联系人不选模型,用全局默认
+[83/146] [renderer] › e2e/plugins.ui.spec.ts:25:1 › 左侧导航进插件中心;市场按名称、简介、命令名搜索,按类别筛选,结果正确
+[84/146] [renderer] › e2e/plugins.ui.spec.ts:55:1 › 安装:要逐条勾选全部权限才能确认,确认后安装中 → 已安装,接着挂到聊天,出现在「已安装」
+[85/146] [renderer] › e2e/plugins.ui.spec.ts:99:1 › 取消权限对话框不会安装
+[86/146] [renderer] › e2e/plugins.ui.spec.ts:110:1 › 停用 / 启用:开关切换状态,停用后标「已停用」
+[87/146] [renderer] › e2e/plugins.ui.spec.ts:133:1 › 卸载要二次确认:取消不动,确认后卸载中 → 从「已安装」消失,市场里重新出现安装按钮
+[88/146] [renderer] › e2e/plugins.ui.spec.ts:156:1 › 更新:新版本多要的权限要重新同意,只列新增的那项;权限没变的直接更新
+[89/146] [renderer] › e2e/plugins.ui.spec.ts:187:1 › 详情页:权限逐条带风险级别(高风险醒目)、提供的命令 / 事件、版本与更新日志、挂在哪些聊天和谁能调用可增删
+[90/146] [renderer] › e2e/plugins.ui.spec.ts:226:1 › 输出渠道的外发预授权:校验六项,撤销后阻断并在群里出修复卡,重新授权恢复
+[91/146] [renderer] › e2e/plugins.ui.spec.ts:257:1 › 群资料·插件页签:列出本群挂的插件,能把已安装的挂到本群再摘下,启停,去市场
+[92/146] [renderer] › e2e/plugins.ui.spec.ts:293:1 › 群资料·工具页签:每项写清做什么、来自哪里、对应的 / 命令;点了直接执行或填进输入框
+[93/146] [renderer] › e2e/plugins.ui.spec.ts:313:1 › 从文件或地址安装:非法清单逐条显示校验错误;合法清单和地址如实说要连接后端,不假装装好
+[94/146] [renderer] › e2e/progress.ui.spec.ts:22:1 › 四级:对话 → 联系人(只有群聊)→ Compute → 子任务;不显示花费;定时和任务时间线不在遮罩里
+[95/146] [renderer] › e2e/progress.ui.spec.ts:41:1 › 悬停整条链亮起,其余变淡;移开恢复
+[96/146] [renderer] › e2e/progress.ui.spec.ts:51:1 › 状态块:点一下只看这一类,再点取消;关掉再开筛选还在
+[97/146] [renderer] › e2e/progress.ui.spec.ts:76:1 › 关闭:Esc、点暗背景、×;搜索框里 Esc 先清搜索
+[98/146] [renderer] › e2e/progress.ui.spec.ts:99:1 › 单击即跳:对话 → 聊天;群里的联系人 → 本群完整过程;群级提示 → 那个群
+[99/146] [renderer] › e2e/progress.ui.spec.ts:117:1 › 单击即跳:Compute → 聊天 + 它的过程;等你处理的同时定位到它问你的那条消息;子任务 → 所属 Compute
+[100/146] [renderer] › e2e/progress.ui.spec.ts:139:1 › 按联系人:每人一个根,卡片标出来自哪个群;点联系人 → 和它的私聊 + 所有群和私聊里的过程
+[101/146] [renderer] › e2e/progress.ui.spec.ts:153:1 › 子任务超过 6 个折叠;展开后「收起」吸在可视区底部,点了收回并把列表顶部滚回视野
+[102/146] [renderer] › e2e/progress.ui.spec.ts:178:1 › 1024 宽:子任务列自动隐藏,不出横向滚动
+[103/146] [renderer] › e2e/progress.ui.spec.ts:189:1 › 键盘:Tab 顺着对话 → 群级提示 → 联系人 → Compute → 子任务走,聚焦也亮整条链,Enter 即跳
+[104/146] [renderer] › e2e/progress.ui.spec.ts:203:1 › 「所有会话的定时」打开的是独立的定时总览,不是看板;再从左栏打开是看板
+[105/146] [renderer] › e2e/shell-flow.ui.spec.ts:9:1 › 提示条:右键置顶会话出现「已置顶」;多选删除后点撤销,消息回到原位置
+[106/146] [renderer] › e2e/shell-flow.ui.spec.ts:32:1 › 私聊回退:确认框写明撤下几条,Esc 只关确认框;确认后撤下,点恢复全部回来
+[107/146] [renderer] › e2e/shell-flow.ui.spec.ts:59:1 › Esc 逐层退:先收右侧浮层,再收分栏
+[108/146] [renderer] › e2e/shell-flow.ui.spec.ts:72:1 › @ 选人:打 @ 弹出,第一项是 Helper;方向键移动、回车填进输入框,焦点一直在输入框
+[109/146] [renderer] › e2e/shell-flow.ui.spec.ts:90:3 › 提示条和 / 命令菜单跟着主题 token(light)
+[110/146] [renderer] › e2e/shell-flow.ui.spec.ts:90:3 › 提示条和 / 命令菜单跟着主题 token(dark)
+[111/146] [renderer] › e2e/shell-flow.ui.spec.ts:108:1 › 键盘走通:分隔条 Tab 聚焦后 ←/→ 调宽并夹在范围里;会话列表 ↑/↓ 在行间移动焦点
+[112/146] [renderer] › e2e/shell-flow.ui.spec.ts:127:1 › 定时、插件、命令经接口合同:没连后端时走演示服务,建定时、删定时、停用插件、打 / 拉命令清单都有调用且都被接受
+[113/146] [renderer] › e2e/shell-look.ui.spec.ts:43:5 › 壳的观感 light › 左侧导航和聊天区是同一张纸,导航图标看得清
+[114/146] [renderer] › e2e/shell-look.ui.spec.ts:52:5 › 壳的观感 light › 进群就停在最底部:提问卡等内容展开变高后仍贴底,不冒出「回到最新」
+[115/146] [renderer] › e2e/shell-look.ui.spec.ts:61:5 › 壳的观感 light › 回到最新:阅读栏居中、紧贴输入框上方,点了回到底部
+[116/146] [renderer] › e2e/shell-look.ui.spec.ts:43:5 › 壳的观感 dark › 左侧导航和聊天区是同一张纸,导航图标看得清
+[117/146] [renderer] › e2e/shell-look.ui.spec.ts:52:5 › 壳的观感 dark › 进群就停在最底部:提问卡等内容展开变高后仍贴底,不冒出「回到最新」
+[118/146] [renderer] › e2e/shell-look.ui.spec.ts:61:5 › 壳的观感 dark › 回到最新:阅读栏居中、紧贴输入框上方,点了回到底部
+[119/146] [renderer] › e2e/shots-layout.ui.spec.ts:6:1 › 截图:主界面与悬浮工具条
+[120/146] [renderer] › e2e/slash.ui.spec.ts:20:1 › 打 / 弹出命令菜单:贴着输入框上沿、左对齐;每行有 /名字、中文名、说明、来源;没挂的插件灰显写原因
+[121/146] [renderer] › e2e/slash.ui.spec.ts:46:1 › 私聊里只出私聊能用的命令:群命令不出现,私聊对象声明的命令出现
+[122/146] [renderer] › e2e/slash.ui.spec.ts:55:1 › 继续打 sch 或 定时 过滤出 schedule;别名 ketchup 找到 summary;没有匹配时说没有这个命令
+[123/146] [renderer] › e2e/slash.ui.spec.ts:74:1 › ↑↓ 和 Enter 选中 schedule 后输入框变成 /schedule ,高亮当前该填的参数,发送旁说明缺什么;填完能执行
+[124/146] [renderer] › e2e/slash.ui.spec.ts:124:1 › Esc 关掉菜单,再打字重新弹出;工具栏 / 按钮也能打开同一个菜单
+[125/146] [renderer] › e2e/slash.ui.spec.ts:144:1 › 网址、路径、分数里的 / 不弹菜单
+[126/146] [renderer] › e2e/slash.ui.spec.ts:156:1 › /todo 某事 回车后群清单里多出这一项
+[127/146] [renderer] › e2e/slash.ui.spec.ts:167:1 › /summary 回车直接触发总结;/ketchup 是同一条命令
+[128/146] [renderer] › e2e/slash.ui.spec.ts:180:1 › 插件命令:飞书打开勾选外部消息页;Gmail 如实说要等后端、草稿留着;没挂的插件手打也执行不了
+[129/146] [renderer] › e2e/slash.ui.spec.ts:206:1 › /handoff @助手 事:发出一条 @ 它的消息;@ 不在群里的人报错不发
+[130/146] [renderer] › e2e/slash.ui.spec.ts:218:1 › 引用条:卡片按内容收缩,× 紧挨引用文字;多条各占一行;空输入框 Backspace / Esc 去掉最后一条;切会话回来还在
+[131/146] [renderer] › e2e/slash.ui.spec.ts:257:1 › 外部来源的引用挂在引用条上,标「不可信·外部」;入口是输入框左下角的 +
+[132/146] [renderer] › e2e/slash.ui.spec.ts:272:1 › 输入框高度自适应:空时一行(< 90px),多行变高,超过 8 行后在框里滚动
+[133/146] [renderer] › e2e/visual.ui.spec.ts:43:5 › F-VISUAL light › 顶部占用不超过 100px,页面没有横向溢出
+[134/146] [renderer] › e2e/visual.ui.spec.ts:50:5 › F-VISUAL light › 正文、会话标题、次要文字的对比度达标
+[135/146] [renderer] › e2e/visual.ui.spec.ts:61:5 › F-VISUAL light › 提问卡片的选项不溢出卡片,工具条不超过 5 个按钮
+[136/146] [renderer] › e2e/visual.ui.spec.ts:82:5 › F-VISUAL light › 开着群资料分栏时聊天区仍有 480px 以上,单页分栏不再套两层页签
+[137/146] [renderer] › e2e/visual.ui.spec.ts:43:5 › F-VISUAL dark › 顶部占用不超过 100px,页面没有横向溢出
+[138/146] [renderer] › e2e/visual.ui.spec.ts:50:5 › F-VISUAL dark › 正文、会话标题、次要文字的对比度达标
+[139/146] [renderer] › e2e/visual.ui.spec.ts:61:5 › F-VISUAL dark › 提问卡片的选项不溢出卡片,工具条不超过 5 个按钮
+[140/146] [renderer] › e2e/visual.ui.spec.ts:82:5 › F-VISUAL dark › 开着群资料分栏时聊天区仍有 480px 以上,单页分栏不再套两层页签
+[141/146] [renderer] › e2e/walk.ui.spec.ts:18:5 › 走查 light › W1 聊天主界面 → 群资料各页签
+[142/146] [renderer] › e2e/walk.ui.spec.ts:32:5 › 走查 light › W2 通讯录 → 联系人工作台各页签
+[143/146] [renderer] › e2e/walk.ui.spec.ts:46:5 › 走查 light › W3 文件 / 进展全景 / 插件 / 设置
+[144/146] [renderer] › e2e/walk.ui.spec.ts:18:5 › 走查 dark › W1 聊天主界面 → 群资料各页签
+[145/146] [renderer] › e2e/walk.ui.spec.ts:32:5 › 走查 dark › W2 通讯录 → 联系人工作台各页签
+[146/146] [renderer] › e2e/walk.ui.spec.ts:46:5 › 走查 dark › W3 文件 / 进展全景 / 插件 / 设置
+  146 passed (8.6m)
+
+# 文件页用例(同一提交树,box1):
+  14 passed (46.1s)
+# 类型检查与结构检查(box1):
+[box] 已排队:npx tsc -p tsconfig.app.json && npm run verify:structure >/dev/null && echo TSC_STRUCT_OK
+TSC_STRUCT_OK
