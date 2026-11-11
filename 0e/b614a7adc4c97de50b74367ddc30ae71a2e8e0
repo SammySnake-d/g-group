@@ -1,0 +1,53 @@
+receipts/evidence/t177-g3/a3-baseline.test.ts.txt
+  s_d731ecf725d7ad::t_5ec260031c3d12 1-55
+receipts/evidence/t177-g3/a5-baseline.test.ts.txt
+  s_d731ecf725d7ad::t_bd7e3b9c020fb2 1-65
+receipts/evidence/t177-g3/baseline-ac42-fixtures.txt
+  s_d731ecf725d7ad::t_1c5e6df7e03a20 1-17
+receipts/evidence/t177-g3/boundary-neg-0-clean.txt
+  s_d731ecf725d7ad::t_873e9bcd0753c2 1-3
+receipts/evidence/t177-g3/boundary-neg-a-src-byte.txt
+  s_d731ecf725d7ad::t_4c1b19633fed31 1-6
+receipts/evidence/t177-g3/boundary-neg-b-second-import.txt
+  s_d731ecf725d7ad::t_ee967d8ddf4e49 1-4
+receipts/evidence/t177-g3/boundary-neg-c-dist-missing.txt
+  s_d731ecf725d7ad::t_58540f279212c1 1-5
+receipts/evidence/t177-g3/boundary-neg-d-second-manifest.txt
+  s_d731ecf725d7ad::t_67db427e888f51 1-4
+receipts/evidence/t177-g3/boundary-neg-e-dist-map.txt
+  s_d731ecf725d7ad::t_fd23fe5a5a5c72 1-5
+receipts/evidence/t177-g3/boundary-neg-f-dist-tampered-manifest-updated.txt
+  s_d731ecf725d7ad::t_34769fdcfc2dc0 1-5
+receipts/evidence/t177-g3/boundary.txt
+  s_d731ecf725d7ad::t_b5a3e3b7395971 1-5
+receipts/evidence/t177-g3/mutations/after-control.tap
+  s_d731ecf725d7ad::t_6248c79d9479d4 1-70
+receipts/evidence/t177-g3/mutations/control.tap
+  s_d731ecf725d7ad::t_2c4c6110dabe8e 1-70
+receipts/evidence/t177-g3/mutations/results.json
+  s_d731ecf725d7ad::t_403bfd67444055 1-162
+receipts/evidence/t177-g3/mutations/run.txt
+  s_d731ecf725d7ad::t_dc3761adc670aa 1-13
+receipts/evidence/t177-g3/spike-rerun-seam.tap
+  s_d731ecf725d7ad::t_44f4709214da84 1-22
+receipts/evidence/t177-g3/summary.json
+  s_d731ecf725d7ad::t_c5c859bf202ace 1-112
+scripts/t177/g3-mutations.mjs
+  s_d731ecf725d7ad::t_a546839994fc16 1-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0eb614a7adc4c97de50b74367ddc30ae71a2e8e0",
+  "prompts": {},
+  "sessions": {
+    "s_d731ecf725d7ad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af01e0fd0102abfd1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
