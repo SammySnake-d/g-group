@@ -1,0 +1,19 @@
+packages/server/src/chat-parity.test.ts
+  s_8545dccd4816b0::t_2dfe21ff77c3aa 120-122,129,134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0539ccf7c71bb3eb58363cf620df75e8b24649cf",
+  "prompts": {},
+  "sessions": {
+    "s_8545dccd4816b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acff44844de2c7322",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
