@@ -10,6 +10,7 @@ import { attachServer, handleInvoke, subscribe } from "./bridge.ts";
 import { AppConfig } from "./app-config.ts";
 import { bindAppIpc, broadcast } from "./app-ipc.ts";
 import { Backend } from "./backend.ts";
+import { initLog, log } from "./log.ts";
 import { fixPath } from "./shell-env.ts";
 import { DEFAULT_FEED, Updater } from "./updater.ts";
 
@@ -115,17 +116,27 @@ const UPDATE_CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 app.whenReady().then(async () => {
   serveRenderer();
   const userData = app.getPath("userData");
+  initLog(userData);
+  log(`启动 g-group ${app.getVersion()}${app.isPackaged ? "" : "(开发模式)"}`);
   const config = new AppConfig(userData);
   // 宿主服务(@g-group/server)在主进程内起;没配模型时先不起,界面请用户「接入模型」(见 backend.ts)
   const backend = new Backend({ packaged: app.isPackaged, userData, config, dir: __dirname, execPath: process.execPath, onServer: (s) => attachServer(s?.service ?? null) });
-  await backend.restart();
+  const run = await backend.restart();
+  log(`后端:${JSON.stringify(run)}`);
+  // 退出:先把窗口收起来(用户立刻看到应用关了),再停宿主(停掉还在跑的 Compute 进程、关数据库);最多等 8 秒
   let quitting = false;
   app.on("before-quit", (e) => {
     if (quitting) return;
     e.preventDefault();
     quitting = true;
-    void backend.close().finally(() => app.quit());
+    const t0 = Date.now();
+    for (const w of BrowserWindow.getAllWindows()) w.hide();
+    void Promise.race([backend.close(), new Promise((r) => setTimeout(r, 8000))]).finally(() => {
+      log(`退出:停宿主用了 ${Date.now() - t0}ms`);
+      app.quit();
+    });
   });
+  app.on("will-quit", () => log("will-quit"));
   const updater = new Updater({
     current: app.getVersion(),
     packaged: app.isPackaged,
@@ -136,7 +147,10 @@ app.whenReady().then(async () => {
     execPath: process.execPath,
     pid: process.pid,
     onChange: (state) => broadcast({ type: "update", state }),
-    quit: () => app.quit(),
+    quit: () => {
+      log("更新:安装脚本已就位,退出应用");
+      app.quit();
+    },
   });
   updater.cleanup();
   bindAppIpc({ config, backend, updater, ...(DEV_ORIGIN ? { devOrigin: DEV_ORIGIN } : {}) });

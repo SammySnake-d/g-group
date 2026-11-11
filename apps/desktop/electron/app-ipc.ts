@@ -4,6 +4,7 @@ import { isTrustedOrigin } from "@g-group/ui-core";
 import { APP_IPC, APP_SHELL_METHODS, type AppShellEvent, type AppShellMethod, type SetupInput, type SetupView } from "../src/api/app-shell-types";
 import type { AppConfig } from "./app-config.ts";
 import type { Backend } from "./backend.ts";
+import { log } from "./log.ts";
 import { fixPath } from "./shell-env.ts";
 import type { Updater } from "./updater.ts";
 
@@ -19,7 +20,8 @@ export function bindAppIpc(o: { config: AppConfig; backend: Backend; updater: Up
     "app.info": () => ({ version: app.getVersion(), packaged: app.isPackaged, platform: process.platform, arch: process.arch }),
     "setup.get": () => view(),
     "setup.save": async (p) => {
-      o.config.saveGateway(p as unknown as SetupInput);
+      const g = o.config.saveGateway(p as unknown as SetupInput);
+      log(`接入模型:网关 ${new URL(g.baseUrl).host},模型 ${g.model}`);
       await o.backend.restart();
       const v = view();
       // 后端换了一个实例:让渲染层重新探测、全量读、订阅(回包先到,再重载)

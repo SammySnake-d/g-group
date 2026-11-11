@@ -12,6 +12,7 @@ import path from "node:path";
 import { type Started, startServer } from "@g-group/server";
 import type { BackendRun } from "../src/api/app-shell-types";
 import type { AppConfig } from "./app-config.ts";
+import { log } from "./log.ts";
 import { which } from "./shell-env.ts";
 
 const pick = <T extends string>(v: string | undefined, allowed: readonly T[]): T | undefined => ((allowed as readonly string[]).includes(v ?? "") ? (v as T) : undefined);
@@ -102,9 +103,11 @@ export class Backend {
       });
       this.o.onServer(this.started);
       this.run = { state: "running", mind, compute };
+      log(`宿主已起:脑子 ${mind},Compute ${compute}${compute === "claude" ? `(${claude ?? "没找到 claude 命令"})` : ""},数据 ${dataDir}`);
     } catch (e) {
       // 起不来就如实回「后端未连接」并带原因,不假装连上
       console.error("[gg-server] 启动失败", e);
+      log(`宿主没起来:${e instanceof Error ? e.message : String(e)}`);
       this.run = { state: "failed", reason: e instanceof Error ? e.message : String(e) };
     }
     return this.run;
