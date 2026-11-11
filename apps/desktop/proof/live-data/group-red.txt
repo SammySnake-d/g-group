@@ -1,0 +1,4 @@
+    Error: expect(locator).toHaveAttribute(expected) failed
+    Expected: "0"
+    > 87 |       await expect(win.locator('[data-msg$="~c"]').filter({ has: line })).toHaveAttribute("data-first", "0");
+  1 failed

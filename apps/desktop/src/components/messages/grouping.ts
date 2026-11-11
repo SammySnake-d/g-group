@@ -17,6 +17,8 @@ const mins = (t?: string) => (t ? +t.slice(0, 2) * 60 + +t.slice(3, 5) : NaN)
 /** #1796 合并还是拆开:同一个人、同一件事、5 分钟内连着说 → 合并在一个头像下(间距 2px)。
  *  以下任一成立就拆开,重新露出名字和时间(间距 16px):带引用;上一条是一个回合的结尾(挂着要你回答的选项或做完的过程);隔了 5 分钟以上 */
 export function continuesPrev(prev: Msg | undefined, m: Bodied, endsTurn: (x: Msg) => boolean) {
+  /* 联系人「接了任务」那句(带着引用)和它派出的 Compute 行是同一条记录拆出来的两样:Compute 行始终挂在那句下面 */
+  if (prev && m.k === 'compute' && 'id' in prev && m.id === `${prev.id}~c`) return true
   return !!prev && 'from' in prev && prev.from === m.from
     && !(prev.k === 'text' && prev.quotes?.length) && !(m.k === 'text' && m.quotes?.length)
     && !endsTurn(prev) && !(prev.k === 'text' && m.k === 'text' && mins(m.at) - mins(prev.at) > 5)
