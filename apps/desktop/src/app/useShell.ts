@@ -1,11 +1,22 @@
 import { useEffect } from 'react'
-import { demoCalls, probeBackend } from '@/api/backend'
+import { bridge, demoCalls, probeBackend } from '@/api/backend'
+import { startWiring } from '@/api/wire'
 import { useAppStore } from '@/store'
 import { startLiveDemo } from '@/store/live'
 
 /** 壳的副作用:探测后端、演示推进、全局快捷键(Esc 逐层退、⌘K 叫 Helper)、走查钩子 */
 export function useShell() {
-  useEffect(() => { void probeBackend().then(useAppStore.getState().setBackend) }, [])
+  /* 探测后端;连上了就启动接线(全量读 + 订阅事件流),卸载时退订 */
+  useEffect(() => {
+    let stop: (() => void) | null = null
+    let gone = false
+    void probeBackend().then((b) => {
+      if (gone) return
+      useAppStore.getState().setBackend(b)
+      if (b.mode === 'connected' && bridge) stop = startWiring(useAppStore, bridge, b.eventSeq)
+    })
+    return () => { gone = true; stop?.() }
+  }, [])
   useEffect(() => startLiveDemo(useAppStore), [])
   useEffect(() => {
     const h = (e: KeyboardEvent) => {

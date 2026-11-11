@@ -4,13 +4,34 @@ import { notify } from '@/hooks/use-toast'
 import { broken } from '@/mut'
 import { uid } from '../boot'
 import { lens, type Slice } from '../state'
-import type { Ctx } from '../types'
 import { activeConv } from '../select'
 
 type TextMsg = Extract<Msg, { k: 'text' }>
 
-export type MessagesSlice = Pick<Ctx, 'recall' | 'editMsg' | 'rewindAsk' | 'setRewindAsk' | 'rewind' | 'unrewind' | 'deleteMsgs' | 'deleteMsg' | 'forward' | 'pinMsg'
-  | 'decideVote' | 'retag' | 'clearHistory' | 'setNotice' | 'editNotice'>
+/** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 MESSAGES_CTX_KEYS */
+export interface MessagesCtx {
+  recall: (msgId: string) => void
+  /** C-US08：编辑自己发过的消息 → 标已编辑；在回它的助手作废旧草稿、按新内容重写 */
+  editMsg: (msgId: string, text: string) => void
+  rewindAsk: string | null
+  setRewindAsk: (msgId: string | null) => void
+  /** AC-48：私聊回到某条消息。之后的消息撤下、由它们派生的待你回答作废；可恢复 */
+  rewind: (convId: string, msgId: string) => void
+  unrewind: (sysId: string) => void
+  deleteMsgs: (ids: string[]) => void
+  deleteMsg: (msgId: string) => void
+  forward: (from: string, msgIds: string[], to: string) => void
+  pinMsg: (convId: string, msgId: string) => void
+  decideVote: (msgId: string, opt: number) => void
+  retag: (msgId: string, task: string | null) => void
+  clearHistory: (convId: string) => void
+  setNotice: (convId: string, text: string) => void
+  /** 改某一条公告：版本号 +1，助手下次接活 / 醒来装配新版本（U86） */
+  editNotice: (convId: string, noticeId: string, text: string) => void
+}
+export const MESSAGES_CTX_KEYS = ['recall', 'editMsg', 'rewindAsk', 'setRewindAsk', 'rewind', 'unrewind', 'deleteMsgs', 'deleteMsg', 'forward', 'pinMsg', 'decideVote', 'retag', 'clearHistory', 'setNotice', 'editNotice'] as const satisfies readonly (keyof MessagesCtx)[]
+
+export type MessagesSlice = MessagesCtx
 
 export const createMessagesSlice: Slice<MessagesSlice> = (set, get) => {
   const L = lens(set)

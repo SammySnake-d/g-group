@@ -41,7 +41,11 @@ const defaultTools = (): Person['tools'] => [
   { name: '发邮件', on: false, kind: 'mcp' },
 ]
 
-export const people: Record<PersonId, Person> = {
+/** 界面各处查联系人用的登记表(store/people.ts):演示模式装下面的演示联系人,连上后端装 contacts.list 的结果 */
+export { people } from './store/people'
+
+/** 演示联系人:只由演示模式(api/demo-state.ts)装进登记表,连上后端时不用 */
+export const demoPeople: Record<PersonId, Person> = {
   me: { id: 'me', name: '39impacts', initials: '39', role: '你', human: true, color: '#52525b' },
   helper: { id: 'helper', name: 'Helper', shape: 'lightbulb', color: '#f8a01c', role: '帮你操作这个软件', model: 'claude-haiku-5-5' },
   claude: { id: 'claude', name: 'Claude Code', shape: 'chat', color: '#ff6a1a', role: '写代码、做审查', model: 'claude-opus-5-5', harness: 'claude-code', computeModel: { mode: 'follow-speaking', effort: 'xhigh' }, computeQuota: 3, today: '¥3.20', month: '¥41.60', tools: defaultTools() },
@@ -68,9 +72,9 @@ const memOf: Record<string, { text: string; src: string }[]> = {
   grok: [{ text: '查天气先确认城市', src: '#y7（被 Astra 纠正后记下）' }],
 }
 for (const id of Object.keys(soulOf)) {
-  people[id].soul = soulOf[id]
-  people[id].memory = memOf[id] ?? []
-  people[id].versions = [{ v: 3, at: '今天 01:40', note: '你改了预设：汇报时先给结论' }, { v: 2, at: '昨天 22:10', note: '你加了「网页搜索」工具' }, { v: 1, at: '周一', note: '创建' }]
+  demoPeople[id].soul = soulOf[id]
+  demoPeople[id].memory = memOf[id] ?? []
+  demoPeople[id].versions = [{ v: 3, at: '今天 01:40', note: '你改了预设：汇报时先给结论' }, { v: 2, at: '昨天 22:10', note: '你加了「网页搜索」工具' }, { v: 1, at: '周一', note: '创建' }]
 }
 
 export const SHAPES = ['chat', 'book', 'shield', 'controller', 'magnifier', 'sprout', 'lightbulb', 'cloud', 'cat', 'bunny', 'star', 'rocket', 'mug', 'brain', 'ghost', 'camera', 'palette', 'paint-brush', 'watering-can', 'barbell', 'bull', 'witch-hat']

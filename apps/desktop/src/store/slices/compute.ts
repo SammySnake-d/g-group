@@ -1,14 +1,33 @@
 // Compute 与等你回答切片:回答提问、验收/退回、失败重试/跳过、写盘授权、停止/继续/补充/回滚、卡在验证码时交给你。
-import { computes0, pending0, type Activity, type Compute } from '@/data'
+import { type Activity, type Compute, type Pending } from '@/data'
 import { broken } from '@/mut'
 import { clock, frozen, later, uid } from '../boot'
 import { lens, type Slice } from '../state'
-import type { Ctx } from '../types'
+import type { Answer } from '../types'
 
 /** 停下后的说明:只保证到它启动的程序(v3.20 已定 16) */
 const STOPPED = '已停止 · 算力已归还（只保证到它启动的程序）'
 
-export type ComputeSlice = Pick<Ctx, 'computes' | 'pending' | 'answers' | 'resolve' | 'stop' | 'resume' | 'tell' | 'rollback' | 'hitCaptcha' | 'declineHuman' | 'takeHuman' | 'returnHuman'> & {
+/** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 COMPUTE_CTX_KEYS */
+export interface ComputeCtx {
+  computes: Record<string, Compute>
+  pending: Pending[]
+  answers: Record<string, Answer>
+  resolve: (pid: string, action: string, value?: string | number) => void
+  stop: (cid: string) => void
+  resume: (cid: string) => void
+  tell: (cid: string, text: string, sideAsk?: boolean) => void
+  rollback: (cid: string, cpId: string) => void
+  /** AC-35⑤：凭据失效（原型里用按钮模拟）/ 重新授权 */
+  /** C-US15：卡在验证码 → 交给你；你接手、过了以后交还，它接着做 */
+  hitCaptcha: (cid: string) => void
+  declineHuman: (cid: string) => void
+  takeHuman: (cid: string) => void
+  returnHuman: (cid: string) => void
+}
+export const COMPUTE_CTX_KEYS = ['computes', 'pending', 'answers', 'resolve', 'stop', 'resume', 'tell', 'rollback', 'hitCaptcha', 'declineHuman', 'takeHuman', 'returnHuman'] as const satisfies readonly (keyof ComputeCtx)[]
+
+export type ComputeSlice = ComputeCtx & {
   /** 给某件 Compute 的过程追加一条(之前的「进行中」都收起) */
   addAct: (cid: string, a: Omit<Activity, 'id' | 'at'>) => void
 }
@@ -20,8 +39,9 @@ export const createComputeSlice: Slice<ComputeSlice> = (set, get) => {
   const me = (text: string, cid: string, extra?: object) => get().pushMsg({ k: 'text', id: 'me-' + uid(), from: 'me', text, ...extra }, cid)
 
   return {
-    computes: computes0,
-    pending: pending0,
+    /* 初值空:演示数据由 api/demo-state.ts 装 */
+    computes: {},
+    pending: [],
     answers: {},
 
     addAct: (cid, a) => L.computes((cs) => ({ ...cs, [cid]: { ...cs[cid], activity: [...cs[cid].activity.map((x) => ({ ...x, live: false })), { ...a, id: 'x' + uid(), at: '刚刚' } as Activity] } })),

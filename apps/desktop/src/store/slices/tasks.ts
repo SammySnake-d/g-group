@@ -1,12 +1,30 @@
 // 协作切片:任务板、群清单、记下的承诺、协作手册,以及 Helper 在聊天里的总结与回复。
-import { boards0, checklist0, commits0, people, playbook0 } from '@/data'
+import { people, type Board, type Commitment, type ListItem, type PersonId, type PlaybookItem } from '@/data'
 import { broken } from '@/mut'
 import { later, uid } from '../boot'
 import { HELPER_CARDS, IMPORTED_BOARD, SUMMARY_DEMO } from '../demo'
 import { lens, type Slice } from '../state'
-import type { Ctx } from '../types'
 
-export type TasksSlice = Pick<Ctx, 'boards' | 'commits' | 'playbook' | 'checklist' | 'claim' | 'importBoard' | 'claimTask' | 'setTaskStatus' | 'addTasks' | 'addTask' | 'summarize' | 'helperReply'>
+/** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 TASKS_CTX_KEYS */
+export interface TasksCtx {
+  boards: Record<string, Board>
+  commits: Commitment[]
+  playbook: PlaybookItem[]
+  checklist: ListItem[]
+  claim: (boardId: string, row: number, who: PersonId) => void
+  importBoard: (convId: string) => void
+  claimTask: (taskId: string, who: PersonId) => void
+  setTaskStatus: (taskId: string, st: ListItem['status']) => void
+  addTasks: (convId: string, texts: string[]) => void
+  /** 手动新建一项（群资料·清单·新建）：标题、描述分开存，指了人就直接进行中 */
+  addTask: (t: { text: string; desc?: string; who?: PersonId; conv: string }) => string
+  summarize: (convId: string) => void
+  /** 在聊天里 @Helper：回复作为这个聊天的一条消息 */
+  helperReply: (convId: string, ask: string) => void
+}
+export const TASKS_CTX_KEYS = ['boards', 'commits', 'playbook', 'checklist', 'claim', 'importBoard', 'claimTask', 'setTaskStatus', 'addTasks', 'addTask', 'summarize', 'helperReply'] as const satisfies readonly (keyof TasksCtx)[]
+
+export type TasksSlice = TasksCtx
 
 export const createTasksSlice: Slice<TasksSlice> = (set, get) => {
   const L = lens(set)
@@ -19,10 +37,11 @@ export const createTasksSlice: Slice<TasksSlice> = (set, get) => {
   }
 
   return {
-    boards: boards0,
-    commits: commits0,
-    playbook: playbook0,
-    checklist: checklist0,
+    /* 初值空:演示数据由 api/demo-state.ts 装 */
+    boards: {},
+    commits: [],
+    playbook: [],
+    checklist: [],
 
     claim: (bid, row, who) => {
       const b = get().boards[bid]

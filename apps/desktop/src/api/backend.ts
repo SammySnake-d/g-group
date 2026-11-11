@@ -4,7 +4,8 @@
 import { API_VERSION, type ApiResult, type GGroupBridge, type MethodName, type ParamsOf } from '@g-group/api-contract'
 import { createDemoServer, type DemoSeed } from './demo-server'
 
-export type BackendState = { mode: 'checking' } | { mode: 'connected'; userId: string } | { mode: 'demo'; reason: string }
+/** connected 时 eventSeq 是握手那一刻的事件游标,接线层从这里订阅事件流 */
+export type BackendState = { mode: 'checking' } | { mode: 'connected'; userId: string; eventSeq: number } | { mode: 'demo'; reason: string }
 
 export const bridge: GGroupBridge | null = typeof window !== 'undefined' && 'gg' in window ? (window as unknown as { gg: GGroupBridge }).gg : null
 
@@ -12,7 +13,7 @@ async function hello(): Promise<BackendState> {
   if (!bridge) return { mode: 'demo', reason: '在浏览器里预览,没有桌面壳' }
   try {
     const r = await bridge.invoke('session.hello', { clientApiVersion: API_VERSION })
-    if (r.ok) return r.value.apiVersion.split('.')[0] === API_VERSION.split('.')[0] ? { mode: 'connected', userId: r.value.userId } : { mode: 'demo', reason: `接口版本不一致:后端 ${r.value.apiVersion},界面 ${API_VERSION}` }
+    if (r.ok) return r.value.apiVersion.split('.')[0] === API_VERSION.split('.')[0] ? { mode: 'connected', userId: r.value.userId, eventSeq: r.value.eventSeq } : { mode: 'demo', reason: `接口版本不一致:后端 ${r.value.apiVersion},界面 ${API_VERSION}` }
     return { mode: 'demo', reason: r.error.message }
   } catch (e) {
     return { mode: 'demo', reason: e instanceof Error ? e.message : String(e) }

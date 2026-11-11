@@ -3,6 +3,7 @@
 import type { StateCreator, StoreApi } from 'zustand'
 import type { ChatSlice } from './slices/chat'
 import type { ComputeSlice } from './slices/compute'
+import type { ContactsSlice } from './slices/contacts'
 import type { LayoutSlice } from './slices/layout'
 import type { MembersSlice } from './slices/members'
 import type { MessagesSlice } from './slices/messages'
@@ -12,17 +13,14 @@ import type { ScheduleSlice } from './slices/schedule'
 import type { SendSlice } from './slices/send'
 import type { TasksSlice } from './slices/tasks'
 
-export type AppState = LayoutSlice & ChatSlice & MessagesSlice & MembersSlice & ComputeSlice & TasksSlice & ScheduleSlice & PluginsSlice & ModelsSlice & SendSlice
+export type AppState = LayoutSlice & ChatSlice & MessagesSlice & MembersSlice & ComputeSlice & TasksSlice & ScheduleSlice & PluginsSlice & ModelsSlice & SendSlice & ContactsSlice
 
 export type Slice<T> = StateCreator<AppState, [], [], T>
 type SetState = StoreApi<AppState>['setState']
 
-/** 对某一个字段做函数式更新:L.convs((cs) => …) 等价于原来的 setConvs((cs) => …) */
-export function lens(set: SetState) {
+/** 对某一个字段做函数式更新:L.convs((cs) => …) 等价于原来的 setConvs((cs) => …)。任何字段都能用,加字段不用改这里 */
+export type Lens = { readonly [K in keyof AppState]: (f: (v: AppState[K]) => AppState[K]) => void }
+export function lens(set: SetState): Lens {
   const on = <K extends keyof AppState>(k: K) => (f: (v: AppState[K]) => AppState[K]) => set((s) => ({ [k]: f(s[k]) }) as Pick<AppState, K>)
-  return {
-    convs: on('convs'), computes: on('computes'), pending: on('pending'), answers: on('answers'), reactions: on('reactions'), typing: on('typing'),
-    drafts: on('drafts'), quotes: on('quotes'), stack: on('stack'), tabs: on('tabs'), crons: on('crons'), pulse: on('pulse'),
-    checklist: on('checklist'), boards: on('boards'), commits: on('commits'), plugins: on('plugins'), modelSettings: on('modelSettings'),
-  }
+  return new Proxy({} as Lens, { get: (_t, k) => on(k as keyof AppState) })
 }

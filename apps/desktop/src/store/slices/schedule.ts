@@ -3,15 +3,31 @@
 // 按 cron 表达式触发的定时同时经合同写到后端(schedules.create / update / remove / runNow);
 // 事件触发、每 N 条消息触发、说话方式、改负责人 / 挪会话是合同缺口,只在本地。
 import { describeTrigger } from '@g-group/ui-core'
-import { crons0, people, pulse0, type Cron, type Msg, type PulseItem } from '@/data'
+import { crons0, people, type Cron, type Msg, type PulseItem } from '@/data'
 import { broken } from '@/mut'
 import { scheduleCreate, scheduleUpdate } from '@/api/adapters'
 import { uid } from '../boot'
 import { sync } from '../remote'
 import { lens, type Slice } from '../state'
-import type { Ctx } from '../types'
+import type { ScheduleDraft } from '../types'
 
-export type ScheduleSlice = Pick<Ctx, 'crons' | 'pulse' | 'scheduleDraft' | 'openSchedule' | 'updateCron' | 'addCron' | 'removeCron' | 'runCronNow'> & {
+/** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 SCHEDULE_CTX_KEYS */
+export interface ScheduleCtx {
+  crons: Cron[]
+  pulse: PulseItem[]
+  /** 定时草稿：/schedule 带过来的「何时 / 做什么」。openSchedule(草稿) 打开定时编辑并预填，null 关掉；
+   *  定时编辑器读 scheduleDraft 预填（现在由输入框里的定时弹窗读，定时模块换新编辑器时接同一份） */
+  scheduleDraft: ScheduleDraft | null
+  openSchedule: (d: ScheduleDraft | null) => void
+  updateCron: (id: string, patch: Partial<Cron>) => void
+  /** 新建定时；下次运行由 trigger 现算，runs 从空开始 */
+  addCron: (c: Omit<Cron, 'id' | 'runs'>, via: 'chat' | 'panel') => string
+  removeCron: (id: string) => void
+  runCronNow: (id: string) => void
+}
+export const SCHEDULE_CTX_KEYS = ['crons', 'pulse', 'scheduleDraft', 'openSchedule', 'updateCron', 'addCron', 'removeCron', 'runCronNow'] as const satisfies readonly (keyof ScheduleCtx)[]
+
+export type ScheduleSlice = ScheduleCtx & {
   /** #2273 U80:「每 N 条消息醒一次」的计数;满 N 条写一段摘要挂到时间线 */
   countMessage: (m: Extract<Msg, { k: 'text' | 'file' }>, cid: string) => void
 }
@@ -27,8 +43,9 @@ export const createScheduleSlice: Slice<ScheduleSlice> = (set, get) => {
   }
 
   return {
-    crons: crons0,
-    pulse: pulse0,
+    /* 初值空:演示数据由 api/demo-state.ts 装 */
+    crons: [],
+    pulse: [],
     scheduleDraft: null,
     openSchedule: (scheduleDraft) => set({ scheduleDraft }),
 

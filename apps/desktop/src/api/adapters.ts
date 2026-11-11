@@ -1,8 +1,8 @@
 // 界面模型 ↔ 接口合同(@g-group/api-contract)的转换。界面里的定时、插件、命令比合同多一些字段
 // (说话方式、事件/按消息数触发、风险级别、中文名、别名…),这些是「合同缺口」,只留在本地演示数据里,不往合同里塞。
-import type { MarketplaceEntry, ParamsOf, PluginView, ScheduleView, SlashCommand as WireCommand } from '@g-group/api-contract'
+import { type ContactView, EFFORTS, HARNESSES, type MarketplaceEntry, type ParamsOf, type PluginView, type ScheduleView, type SlashCommand as WireCommand } from '@g-group/api-contract'
 import { cronError, nextRuns, type PluginCategory, type PluginManifest, type SlashArg, type SlashCommand } from '@g-group/ui-core'
-import type { Cron, PluginState } from '@/data'
+import type { Cron, Person, PluginState } from '@/data'
 
 type PluginKind = PluginView['kinds'][number]
 
@@ -10,6 +10,25 @@ type PluginKind = PluginView['kinds'][number]
 export const localTz = () => Intl.DateTimeFormat().resolvedOptions().timeZone
 const title = (text: string) => text.split('\n')[0]!.trim().slice(0, 200) || '定时'
 const isCron = (c: Pick<Cron, 'trigger'>): c is Pick<Cron, 'trigger'> & { trigger: { kind: 'cron'; expr: string } } => c.trigger.kind === 'cron'
+
+/* ---------------- 联系人 ---------------- */
+
+type Harness = ContactView['harness']
+type Effort = NonNullable<ContactView['computeModel']['effort']>
+const isHarness = (h: string | undefined): h is Harness => (HARNESSES as readonly string[]).includes(h ?? '')
+const isEffort = (e: string | undefined): e is Effort => (EFFORTS as readonly string[]).includes(e ?? '')
+
+/** 演示联系人 → 合同形状(演示服务的 contacts.list 用)。头像形状、颜色、花费、性格、记忆是界面本地的,合同里没有 */
+export function toContactView(p: Person, now = new Date()): ContactView | null {
+  if (p.human || p.id === 'helper') return null
+  const slot = p.computeModel
+  return {
+    id: p.id, name: p.name.slice(0, 80), avatar: null, bio: p.role.slice(0, 2000), speakingModel: p.model ?? '', harness: isHarness(p.harness) ? p.harness : 'claude-code',
+    computeModel: { mode: slot?.mode ?? 'inherit', ...(slot?.model ? { model: slot.model } : {}), ...(isEffort(slot?.effort) ? { effort: slot.effort } : {}) },
+    tools: [], computeAssets: (p.tools ?? []).filter((t) => t.on).map((t) => ({ name: t.name, kind: t.kind })),
+    computeSlots: p.computeQuota ?? null, activity: 'idle', createdAt: now.toISOString(),
+  }
+}
 
 /* ---------------- 定时 ---------------- */
 

@@ -1,19 +1,33 @@
 // 插件切片:本机安装状态(ui-core 的 pluginReducer 推进生命周期)、凭据与外发预授权,以及每个会话后端给的命令清单。
 // 安装 / 卸载 / 启停 / 更新经合同写到后端(plugins.install / uninstall / setEnabled / update),后端不收就撤回本地改动;
 // 挂到聊天、调用者白名单、凭据失效与重新授权、外发预授权是合同缺口,只在本地。
-import { notInstalled, pluginName, pluginReducer, type PluginAction } from '@g-group/ui-core'
+import { notInstalled, pluginName, pluginReducer, type PluginAction, type PluginManifest, type PluginResult } from '@g-group/ui-core'
 import { call } from '@/api/backend'
-import { pluginCatalog0, plugins0, type PersonId, type PluginState } from '@/data'
+import type { PersonId, PluginState } from '@/data'
 import { broken } from '@/mut'
 import { uid } from '../boot'
 import { atLeast, sync } from '../remote'
 import { lens, type Slice } from '../state'
-import type { Ctx } from '../types'
 
 /** 后端给的某个会话可用命令名;连同请求时的插件状态和成员一起记,本地状态变了就先按本地判断,等新清单 */
 export type RoomCommands = { names: string[]; plugins: PluginState[]; members: PersonId[] }
 
-export type PluginsSlice = Pick<Ctx, 'plugins' | 'pluginCatalog' | 'updatePlugin' | 'pluginAct' | 'revokePlugin' | 'reauthPlugin'> & {
+/** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 PLUGINS_CTX_KEYS */
+export interface PluginsCtx {
+  /** 本机插件安装状态（ui-core 的 PluginInstall + 凭据说明 + 外发预授权） */
+  plugins: PluginState[]
+  /** 插件市场目录：各插件最新版本的清单 */
+  pluginCatalog: PluginManifest[]
+  /** 只改凭据说明、预授权这些附加信息；安装状态走 pluginAct */
+  updatePlugin: (id: string, patch: Partial<Pick<PluginState, 'cred' | 'grant'>>) => void
+  /** 推进插件生命周期（ui-core pluginReducer）。非法转移原样返回错误，不改状态；安装 / 卸载会在演示里稍后自动完成 */
+  pluginAct: (id: string, a: PluginAction) => PluginResult<PluginState>
+  revokePlugin: (id: string) => void
+  reauthPlugin: (id: string) => void
+}
+export const PLUGINS_CTX_KEYS = ['plugins', 'pluginCatalog', 'updatePlugin', 'pluginAct', 'revokePlugin', 'reauthPlugin'] as const satisfies readonly (keyof PluginsCtx)[]
+
+export type PluginsSlice = PluginsCtx & {
   roomCommands: Record<string, RoomCommands>
   /** commands.list:拉这个会话后端认的命令(插件启停、挂摘、成员变了都要重拉) */
   loadCommands: (roomId: string) => void
@@ -39,8 +53,9 @@ export const createPluginsSlice: Slice<PluginsSlice> = (set, get) => {
   }
 
   return {
-    plugins: plugins0,
-    pluginCatalog: pluginCatalog0,
+    /* 初值空:演示数据由 api/demo-state.ts 装 */
+    plugins: [],
+    pluginCatalog: [],
     roomCommands: {},
 
     loadCommands: (roomId) => {

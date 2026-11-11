@@ -1,18 +1,41 @@
 // 会话与消息切片:会话列表、当前会话、消息写入、已读、正在输入、草稿与引用、多选。
-import { convs0, people, reactions0, type Msg, type PersonId, type QuoteRef } from '@/data'
+import { people, type Conversation, type Msg, type PersonId, type QuoteRef } from '@/data'
 import { broken } from '@/mut'
 import { boot, clock, later, uid } from '../boot'
-import { DRAFTS0 } from '../demo'
-import { provFixture } from '@/components/files/fixtures'
 import { focusComposer, scrollToMsg } from '../dom'
 import { lens, type Slice } from '../state'
-import type { Ctx } from '../types'
 
 type TextMsg = Extract<Msg, { k: 'text' }>
 type Draft = string | ((d: string) => string)
 
-export type ChatSlice = Pick<Ctx, 'convs' | 'active' | 'reactions' | 'typing' | 'pushMsg' | 'openConv' | 'openDm' | 'mention' | 'addQuote' | 'react' | 'jump' | 'setDisp'
-  | 'sendAs' | 'setSelecting' | 'markRead' | 'renameConv' | 'editing' | 'setEditing' | 'reedit' | 'putCommand' | 'quoteExternal'> & {
+/** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 CHAT_CTX_KEYS */
+export interface ChatCtx {
+  convs: Conversation[]
+  active: string
+  reactions: Record<string, Record<string, PersonId[]>>
+  typing: Record<string, PersonId | null>
+  pushMsg: (m: import('@/data').Msg, convId: string) => void
+  openConv: (id: string) => void
+  openDm: (id: PersonId) => void
+  mention: (id: PersonId) => void
+  addQuote: (q: QuoteRef) => void
+  react: (msgId: string, emoji: string) => void
+  jump: (msgId: string) => void
+  setDisp: (msgId: string, d: import('@/data').Disp | undefined) => void
+  sendAs: (convId: string, text: string) => void
+  setSelecting: (on: boolean) => void
+  markRead: (convId: string) => void
+  renameConv: (convId: string, title: string) => void
+  editing: string | null
+  setEditing: (id: string | null) => void
+  reedit: (text: string) => void
+  /** 把 /命令 填进当前聊天的输入框（工具页签用；补全菜单在输入框那边） */
+  putCommand: (name: string) => void
+  quoteExternal: (lines: { who: string; text: string }[], app: string) => void
+}
+export const CHAT_CTX_KEYS = ['convs', 'active', 'reactions', 'typing', 'pushMsg', 'openConv', 'openDm', 'mention', 'addQuote', 'react', 'jump', 'setDisp', 'sendAs', 'setSelecting', 'markRead', 'renameConv', 'editing', 'setEditing', 'reedit', 'putCommand', 'quoteExternal'] as const satisfies readonly (keyof ChatCtx)[]
+
+export type ChatSlice = ChatCtx & {
   /** 每个会话各自的草稿和待发引用(切走再回来还在) */
   drafts: Record<string, string>
   quotes: Record<string, QuoteRef[]>
@@ -39,17 +62,18 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
   const L = lens(set)
   const setTyping = (cid: string, who: PersonId | null) => L.typing((t) => ({ ...t, [cid]: who }))
   return {
-    convs: provFixture(boot.provFixture, convs0),
+    /* 初值都是空的:演示模式由 api/demo-state.ts 装演示数据,连上后端由 api/wire 读进来 */
+    convs: [],
     active: boot.conv,
-    reactions: reactions0,
+    reactions: {},
     typing: {},
-    drafts: DRAFTS0,
+    drafts: {},
     quotes: {},
     highlight: null,
     selecting: false,
     selected: new Set(),
     editing: null,
-    unreadAt: Object.fromEntries(convs0.map((c) => [c.id, c.unread ?? 0])),
+    unreadAt: {},
 
     pushMsg: (m, cid) => {
       L.convs((cs) => cs.map((c) => (c.id === cid ? { ...c, messages: [...c.messages, m] } : c)))
