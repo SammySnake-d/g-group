@@ -1291,8 +1291,17 @@ export class Host {
     this.bus.emit({ type: "room.updated", room: view });
     return view;
   }
+  /**
+   * 这个群里它还算「在途」的任务(AC-49):没到 T8/T10/T11,也不是「已经交付、在等你回复」的那种——
+   * 普通消息交付(AC-56)停在 T5 等本人回复时 Compute 已经做完,不占资源,不拦移出(还有复核在跑时仍算在途,等复核落定)。
+   */
   private liveTasksIn(roomId: string, contactId: string): TaskView[] {
-    return this.listTasks({ roomId, contactId }).filter((t) => !EXIT_SETTLED.has(t.state));
+    return this.listTasks({ roomId, contactId }).filter((t) => !EXIT_SETTLED.has(t.state) && !this.deliveredAwaitingUser(t));
+  }
+  /** 交付已经落盘、任务在等用户回复(AC-56:普通消息交付),而且没有复核还在跑。 */
+  private deliveredAwaitingUser(t: TaskView): boolean {
+    if (!awaitingUser(this.taskDoc(t.id).value)) return false;
+    return !(t.reviews ?? []).some((r) => r.status === "running");
   }
   /** 移出中的成员:它在这个群的在途任务全部停稳(T8/T10/T11)才真正删成员行并推 room.updated。 */
   private settleExit(roomId: string, contactId: string) {
@@ -1310,7 +1319,7 @@ export class Host {
     const r = this.roomRow(roomId);
     if (r.kind !== "group") throw new HostError("forbidden", "私聊不能解散");
     if (!this.isMember(roomId, { kind: "user", id: this.userId })) return { roomId, dissolved: true };
-    const live = this.listTasks({ roomId }).filter((t) => t.ownerContactId !== null && !EXIT_SETTLED.has(t.state));
+    const live = this.listTasks({ roomId }).filter((t) => t.ownerContactId !== null && !EXIT_SETTLED.has(t.state) && !this.deliveredAwaitingUser(t));
     if (live.length && !opts.stopTasks) {
       throw new HostError("conflict", `群里还有 ${live.length} 个在途任务,先停止或等它们完成;要一并停止请带 stopTasks`, { tasks: live.map((t) => ({ taskId: t.id, title: t.title, state: t.state })) });
     }

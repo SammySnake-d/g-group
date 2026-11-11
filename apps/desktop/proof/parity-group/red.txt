@@ -118,3 +118,36 @@ not ok 5 - 群临时算力:任务视图写明占的是个人槽位还是借的�
     [electron] › e2e/group-side.electron.spec.ts:169:1 › 群资料·清单与成员:新建任务、交给联系人认领;拍一拍;把成员拖出群 ─────────
     [electron] › e2e/group-side.electron.spec.ts:246:1 › 群资料·定时读后端、解散群:定时重启后还在;解散后群消失,重启也不回来 ───────
 [box] 用了 box4;云端残留进程:0
+
+== 追加红(用例提交 8080c552):已交付等你确认的任务被当成在途,拦住移出成员 ==
+后端 group-admin.test.ts:
+ok 1 - 建群带同一个 clientActionId 重发:只建一个群,返回原来那个
+ok 2 - 解散没有在途任务的群:从会话列表消失并推 room.removed,群里的定时一起删掉,私聊不受影响
+ok 3 - 解散有在途任务的群:不带 stopTasks 被拒并列出任务;带上先停任务,Compute 真实停下之后才移除
+ok 4 - 公告装配:列表写明每位联系人装配到第几版;改了以后下一轮之前仍是旧版,下一轮装配后跟上
+ok 5 - 群临时算力:任务视图写明占的是个人槽位还是借的本群临时槽位
+not ok 6 - 已经交付、等你确认的任务不算在途:它的 Compute 已做完,移出成员、解散群都不用先停,交付也不被取消
+  error: '应当成功,实际:{"ok":false,"error":{"code":"conflict","message":"联系人在这个群还有 1 个在途任务,先停止或等它完成;要一并停止请带 stopTasks","detail":{"tasks":[{"taskId":"t-mwcnc7f4-7","title":"写报告","state":"T5_InReview"}]}}}'
+  expected: true
+  actual: false
+# tests 6
+# pass 5
+
+Electron(提交 58dc990d,e2e/group-side.electron.spec.ts「把小林拖到移出群」,小林手上那件已交付、待验收):
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  getByTestId('side-members-drop').locator('[data-testid^="side-member-"]').filter({ hasText: '小林' })
+    Expected: 0
+    Received: 1
+    Timeout:  30000ms
+
+    Call log:
+      - Expect "toHaveCount" getByTestId('side-members-drop').locator('[data-testid^="side-member-"]').filter({ hasText: '小林' }) with timeout 30000ms
+      - waiting for getByTestId('side-members-drop').locator('[data-testid^="side-member-"]').filter({ hasText: '小林' })
+        63 × locator resolved to 1 element
+           - unexpected value "1"
+
+
+      237 |       await shot(win, "member-drag-out");
+      238 |       await out.dispatchEvent("drop", { dataTransfer: dt });
