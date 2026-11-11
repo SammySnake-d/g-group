@@ -57,7 +57,8 @@ export class MemoryMarks {
     let added = 0;
     for (const m of marks) {
       if (getDoc(this.db, markKey(m.contactId, m.id))) continue;
-      putDoc(this.db, markKey(m.contactId, m.id), 0, m);
+      // 新文档落盘后版本必须是 1;不是就说明并发写过,整次事务回滚
+      if (putDoc(this.db, markKey(m.contactId, m.id), 0, m) !== 1) throw new HostError("conflict", `标记 ${m.id} 不是新建`);
       added++;
     }
     return added;
@@ -80,7 +81,7 @@ export class MemoryMarks {
     const d = getDoc<MemoryMark>(this.db, markKey(contactId, id));
     if (!d) throw new HostError("not_found", `没有标记 ${id}`);
     const next = { ...d.value, ...change };
-    putDoc(this.db, markKey(contactId, id), d.ver, next);
+    if (putDoc(this.db, markKey(contactId, id), d.ver, next) !== d.ver + 1) throw new HostError("conflict", `标记 ${id} 版本没有按 CAS 前进`);
     return next;
   }
   /** 精筛给了明确结果(含「没有值得记的」);写入计划已与它在同一事务里落盘 */
@@ -117,8 +118,8 @@ export class MemoryMarks {
     const cur = getDoc<FineLease>(this.db, leaseKey(contactId));
     if (cur && cur.value.until > now && cur.value.boot === boot && cur.value.holder !== holder) return false;
     try {
-      putDoc(this.db, leaseKey(contactId), cur?.ver ?? 0, { holder, boot, until: now + leaseMs } satisfies FineLease);
-      return true;
+      // CAS 领到才算:版本恰好前进一位
+      return putDoc(this.db, leaseKey(contactId), cur?.ver ?? 0, { holder, boot, until: now + leaseMs } satisfies FineLease) === (cur?.ver ?? 0) + 1;
     } catch (e) {
       if (e instanceof HostError && e.code === "conflict") return false;
       throw e;
