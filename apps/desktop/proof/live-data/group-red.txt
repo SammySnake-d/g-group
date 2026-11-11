@@ -1,4 +1,6 @@
+# 红:分支 HEAD 25510a2a 去掉 grouping.ts 的修复(临时副本 3528109),box2 跑 e2e/closed-loop.electron.spec.ts
     Error: expect(locator).toHaveAttribute(expected) failed
     Expected: "0"
-    > 87 |       await expect(win.locator('[data-msg$="~c"]').filter({ has: line })).toHaveAttribute("data-first", "0");
+    Received: "1"
+    > 87 |       await expect(win.locator('[data-msg$="~c"]').filter({ has: win.locator('[data-testid^="compute-line-"]'), hasText: "写 hello.txt" })).toHaveAttribute("data-first", "0");
   1 failed
