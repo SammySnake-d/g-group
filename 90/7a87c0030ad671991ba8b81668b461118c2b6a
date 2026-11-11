@@ -1,0 +1,21 @@
+apps/desktop/proof/files-provenance/green.txt
+  s_068645421914c7::t_aacb9c3a14e22f 1-87
+receipts/feat-desktop-files-provenance.json
+  s_068645421914c7::t_78024e169c6c83 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "907a87c0030ad671991ba8b81668b461118c2b6a",
+  "prompts": {},
+  "sessions": {
+    "s_068645421914c7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89c7adaf-00e2-45a9-80be-5840d96475f2",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
