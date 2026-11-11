@@ -26,7 +26,7 @@ export interface ProjectedMessage { seq: number; sender: Sender; text: string; e
 export type VerifyResult = { ok: true } | { ok: false; brokenAt: number };
 
 const GENESIS = "0".repeat(64);
-const SENDERS: ReadonlySet<string> = new Set<SenderKind>(["user", "contact", "helper"]);
+const SENDERS: ReadonlySet<string> = new Set<SenderKind>(["user", "contact", "helper", "system"]);
 
 /**
  * 追加时的额外权限,由宿主按会话查出后传入:群主能撤回群里任何人的消息(U26「群主删消息」、U03);
@@ -37,8 +37,8 @@ export interface AppendAuthority {
 }
 
 /** 只作上下文的发言者(宿主的 system 通知):联系人收到它不产生处置义务——不进待处理、不能作为接活或承诺的来源。 */
-export function contextOnly(_sender: { readonly kind: string }): boolean {
-  return false;
+export function contextOnly(sender: { readonly kind: string }): boolean {
+  return sender.kind === "system";
 }
 
 const sameSender = (a: { kind: string; id: string }, b: { kind: string; id: string }) => a.kind === b.kind && a.id === b.id;
@@ -70,8 +70,7 @@ function checkTarget(log: Log, sender: Sender, body: Exclude<EventBody, { kind: 
   if (!msg) throw new DomainError("target-not-found", String(target));
   if (msg.body.kind !== "message") throw new DomainError("target-not-message", String(target));
   // 原发言者本人;或撤回时发起人正是群主(只认宿主给的群主身份,发起人自称不算)
-  void owner;
-  const byOwner = false as boolean;
+  const byOwner = body.kind === "retract" && owner !== null && sameSender(owner, sender);
   if (!sameSender(msg.sender, sender) && !byOwner) throw new DomainError("not-original-sender", String(target));
   if (log.events.some((e) => e.body.kind === "retract" && e.body.target === target)) throw new DomainError("target-retracted", String(target));
 }
