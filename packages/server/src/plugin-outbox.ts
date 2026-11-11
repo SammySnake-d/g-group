@@ -7,6 +7,9 @@
 //   - 启动:别的启动留下的 in_flight 一律改成 delivery_unknown(host-restarted);之后结果未知的动作 B2 按合同、B1 因单调时钟不跨进程,都不自动重发;
 //   - 迟到结果:只在行仍是本次认领的 in_flight 时落地,已被改成未知的不改写。
 // 持久化级别:WAL,synchronous 用库默认(durability() 读回),只承诺宿主进程崩溃这一边界,不声称覆盖断电或系统崩溃。
+// 迟到应答(D29 第 5 条,T-177 C2):宿主已不再等(内核记超时,或宿主重启后这一行已记为未知)之后插件才回的应答,
+// 只追加记进 gg_plugin_late_receipts:来源(插件、动作、哪一次认领、当时的安装与外发状态)、时间、内容摘要(回执 id 原样、整条应答的 sha256 与字节数)。
+// 不改外发状态、不触发重发、不改当时已返回的结果;不存应答全文(插件可能把载荷原文回显进来);一直保留,卸载也不删。
 import { createHash, randomUUID } from "node:crypto";
 import type { ChannelIdempotency, SendResult } from "@g-group/kernel";
 import { type Db, one, run } from "./db.ts";
@@ -63,21 +66,28 @@ export interface OutboxClaim {
 }
 /** 宿主层的外发结果:内核的三态之外,多一种「宿主重启后这一行已记为未知,迟到的结果不改写」。 */
 export type OutboxResult = SendResult | { ok: false; state: "delivery-unknown"; reason: "host-restarted"; detail: string };
-/** 一条迟到应答的记录(红提交空壳)。 */
+/** 一条迟到应答的记录。 */
 export interface LateReceiptView {
   readonly pluginId: string;
   readonly actionId: string;
+  /** 这条应答属于哪一次认领 */
   readonly attempt: string;
+  /** 宿主当时为什么不再等:timeout(内核超时)或 host-restarted(这一行已被重启后的宿主记为未知) */
   readonly cause: string;
+  /** 应答到达时外发表里这一行的状态与原因(记录时不改它) */
   readonly stateAtArrival: OutboxState | null;
   readonly reasonAtArrival: string | null;
   readonly installId: string | null;
   readonly version: string | null;
   readonly endpoint: string | null;
+  /** 收到应答的宿主启动编号 */
   readonly boot: string;
   readonly receivedAt: string;
+  /** 应答里的 receiptId(是字符串才记,原样) */
   readonly receiptId: string | null;
+  /** 应答里的 action_id 与这个动作一致 */
   readonly actionMatches: boolean;
+  /** 整条应答(JSON)的 sha256 与字节数 */
   readonly replySha256: string;
   readonly replyBytes: number;
 }
@@ -107,6 +117,29 @@ export function printOf(payload: string): OutboxPrint {
 
 const MANUAL = "需人工对账";
 
+const LATE_SCHEMA = `CREATE TABLE IF NOT EXISTS gg_plugin_late_receipts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT NOT NULL, action_id TEXT NOT NULL, attempt TEXT NOT NULL, cause TEXT NOT NULL,
+  state_at_arrival TEXT, reason_at_arrival TEXT, install_id TEXT, version TEXT, endpoint TEXT, boot TEXT NOT NULL, received_at TEXT NOT NULL,
+  receipt_id TEXT, action_matches INTEGER NOT NULL, reply_sha256 TEXT NOT NULL, reply_bytes INTEGER NOT NULL
+)`;
+interface LateRow {
+  plugin_id: string;
+  action_id: string;
+  attempt: string;
+  cause: string;
+  state_at_arrival: OutboxState | null;
+  reason_at_arrival: string | null;
+  install_id: string | null;
+  version: string | null;
+  endpoint: string | null;
+  boot: string;
+  received_at: string;
+  receipt_id: string | null;
+  action_matches: number;
+  reply_sha256: string;
+  reply_bytes: number;
+}
+
 export class PluginOutbox {
   private readonly db: Db;
   private readonly now: () => string;
@@ -118,6 +151,7 @@ export class PluginOutbox {
     this.now = now;
     this.boot = boot;
     db.store.db.exec(SCHEMA);
+    db.store.db.exec(LATE_SCHEMA);
     // 上一次(或别的)启动交给插件、还没落结果的动作:宿主不知道对方收没收到,一律记结果未知
     run(db, "UPDATE gg_plugin_outbox SET state = 'delivery_unknown', reason = 'host-restarted', updated_at = ? WHERE state = 'in_flight' AND boot <> ?", now(), boot);
   }
@@ -226,12 +260,56 @@ export class PluginOutbox {
       );
   }
 
-  /** 记一条迟到应答(红提交空壳:不记)。 */
-  recordLate(_c: OutboxClaim, _cause: string, _reply: unknown) {}
+  /**
+   * 记一条迟到应答:只追加,不碰外发表。reply 是过了进程边界的 JSON 数据;只记回执 id(字符串才记)和整条应答的指纹,不记全文。
+   */
+  recordLate(c: OutboxClaim, cause: string, reply: unknown) {
+    const cur = this.row(c.pluginId, c.actionId);
+    const r = reply as { action_id?: unknown; receiptId?: unknown } | null;
+    const text = JSON.stringify(reply) ?? "null";
+    const print = printOf(text);
+    run(
+      this.db,
+      `INSERT INTO gg_plugin_late_receipts (plugin_id, action_id, attempt, cause, state_at_arrival, reason_at_arrival, install_id, version, endpoint, boot, received_at, receipt_id, action_matches, reply_sha256, reply_bytes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      c.pluginId,
+      c.actionId,
+      c.token,
+      cause,
+      cur?.state ?? null,
+      cur?.reason ?? null,
+      cur?.install_id ?? null,
+      cur?.version ?? null,
+      cur?.endpoint ?? null,
+      this.boot,
+      this.now(),
+      typeof r?.receiptId === "string" ? r.receiptId : null,
+      r?.action_id === c.actionId ? 1 : 0,
+      print.sha256,
+      print.bytes,
+    );
+  }
 
-  /** 一个动作的全部迟到应答(红提交空壳)。 */
-  lateReceipts(_pluginId: string, _actionId: string): LateReceiptView[] {
-    return [];
+  /** 一个动作的全部迟到应答,按到达先后。 */
+  lateReceipts(pluginId: string, actionId: string): LateReceiptView[] {
+    const rows = this.db.store.db.prepare("SELECT * FROM gg_plugin_late_receipts WHERE plugin_id = ? AND action_id = ? ORDER BY id").all(pluginId, actionId) as unknown as LateRow[];
+    return rows.map((x) => ({
+      pluginId: x.plugin_id,
+      actionId: x.action_id,
+      attempt: x.attempt,
+      cause: x.cause,
+      stateAtArrival: x.state_at_arrival,
+      reasonAtArrival: x.reason_at_arrival,
+      installId: x.install_id,
+      version: x.version,
+      endpoint: x.endpoint,
+      boot: x.boot,
+      receivedAt: x.received_at,
+      receiptId: x.receipt_id,
+      actionMatches: x.action_matches === 1,
+      replySha256: x.reply_sha256,
+      replyBytes: x.reply_bytes,
+    }));
   }
 
   /** 把内核这一次的结果落到认领的行上;行已被别的启动改成结果未知时不改写,按表里的状态返回。 */

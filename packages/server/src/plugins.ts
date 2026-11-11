@@ -377,7 +377,7 @@ export class PluginStore {
   delivery(id: string, actionId: string): OutboxView | undefined {
     return this.outbox.view(id, actionId);
   }
-  /** 一个外发动作的迟到应答记录(红提交空壳)。 */
+  /** 一个外发动作的迟到应答记录(D29 第 5 条);卸载后仍在。没有对账入口,只读。 */
   lateReceipts(id: string, actionId: string): LateReceiptView[] {
     return this.outbox.lateReceipts(id, actionId);
   }
@@ -397,10 +397,14 @@ export class PluginStore {
     const print = printOf(payload);
     const early = this.outbox.decide(id, actionId, print, install, null);
     if (early) return project(early);
-    const held: { claim: OutboxClaim | null } = { claim: null };
+    const held: { claim: OutboxClaim | null; raw: Promise<unknown> | null } = { claim: null, raw: null };
     let r: OutboxResult;
     try {
-      r = await this.d.runtime.send(t, actionId, payload, (ch) => {
+      r = await this.d.runtime.send(
+        t,
+        actionId,
+        payload,
+        (ch) => {
         const d = this.outbox.decide(id, actionId, print, install, ch);
         if (d) return d;
         try {
@@ -409,13 +413,37 @@ export class PluginStore {
           throw new HostError("unavailable", `外发记录写不进数据库,没有外发:${(e as Error).message}`);
         }
         return held.claim ? null : (this.outbox.decide(id, actionId, print, install, ch) ?? { ok: false, state: "rejected", reason: "in-flight", detail: "上一次发送还没有结果" });
-      });
+        },
+        (raw) => {
+          held.raw = raw;
+        },
+      );
     } catch (e) {
       if (held.claim) this.outbox.release(held.claim);
       throw e;
     }
-    if (held.claim) r = this.outbox.settle(held.claim, r);
+    if (held.claim) {
+      const kernel = r;
+      r = this.outbox.settle(held.claim, kernel);
+      // 宿主已不再等:内核记了超时,或这一行已被重启后的宿主记为未知。之后插件才回的应答只记下来,不改外发状态、不重发、不改这次返回
+      const cause = !kernel.ok && kernel.state === "delivery-unknown" && kernel.reason === "timeout" ? "timeout" : !r.ok && r.reason === "host-restarted" ? "host-restarted" : null;
+      if (cause && held.raw) this.watchLate(held.claim, cause, held.raw);
+    }
     return project(r);
+  }
+  private watchLate(c: OutboxClaim, cause: string, raw: Promise<unknown>) {
+    raw.then(
+      (reply) => {
+        try {
+          this.outbox.recordLate(c, cause, reply);
+        } catch {
+          /* 宿主已关闭或库写不进:迟到记录只是备查,丢了不影响外发状态 */
+        }
+      },
+      () => {
+        /* 插件进程结束或报错:没有应答,不记 */
+      },
+    );
   }
   close() {
     this.d.runtime.close();

@@ -56,7 +56,7 @@ export interface ChannelInfo {
 }
 /** 外发闸门:返回结果就不投递、原样返回;返回 null 才交给内核。同步调用,与投递之间没有 await。 */
 export type SendGate = (ch: ChannelInfo) => SendResult | null;
-/** 这一次投递交给插件进程的原始调用(红提交空壳:还不交出)。 */
+/** 这一次投递交给插件进程的原始调用(内核等它、超时就不再等);宿主拿它记内核放弃等待之后才到的应答(D29 第 5 条)。 */
 export type RawSink = (raw: Promise<unknown>) => void;
 type Describe =
   | { readonly kind: "data-source"; readonly sources: readonly string[] }
@@ -221,6 +221,8 @@ export class PluginRuntime {
   private readonly starting = new Map<string, Promise<Live>>();
   /** 每个插件一个内核注册表:外发账本按插件分开,卸载时整份丢掉 */
   private readonly registries = new Map<string, { reg: PluginRegistry; registered: string | null }>();
+  /** 内核同步调用插件 send 委托的那一刻,把原始调用交给当前这次 send 的接收者(只在 reg.send 的同步段里非空) */
+  private capture: RawSink | null = null;
 
   constructor(o: PluginRuntimeOptions = {}) {
     this.o = {
@@ -296,7 +298,11 @@ export class PluginRuntime {
             ...(desc.idempotencyWindowMs !== null ? { idempotencyWindowMs: desc.idempotencyWindowMs } : {}),
             endpoint: desc.endpoint,
             // 比内核的外发超时多留一段宽限:内核先记 timeout(DeliveryUnknown),宽限内到的迟到回执内核不再理会,过了宽限才结束不回应的进程
-            send: (request: unknown) => call("send", { request }, this.o.sendTimeoutMs + this.o.sendGraceMs),
+            send: (request: unknown) => {
+              const raw = call("send", { request }, this.o.sendTimeoutMs + this.o.sendGraceMs);
+              this.capture?.(raw);
+              return raw;
+            },
           };
     const r = slot.registered === null ? slot.reg.register(candidate) : slot.reg.reregister(candidate);
     if (!r.ok) throw new HostError("conflict", `插件 ${id} 注册进内核失败:${r.reason} ${r.detail}`);
@@ -330,13 +336,21 @@ export class PluginRuntime {
     return out;
   }
 
-  async send(t: PluginTarget, actionId: string, payload: string, gate?: SendGate, _onRaw?: RawSink): Promise<SendResult> {
+  async send(t: PluginTarget, actionId: string, payload: string, gate?: SendGate, onRaw?: RawSink): Promise<SendResult> {
     const l = await this.ensure(t);
     if (l.desc.kind !== "outbound-channel") throw new HostError("invalid_params", `插件 ${t.id} 不是输出渠道`);
     if (l.desc.endpoint === null) throw new HostError("invalid_params", `插件 ${t.id} 还没有接收端,先在配置里填写`);
     const stop = gate?.({ endpoint: l.desc.endpoint, idempotency: l.desc.idempotency, windowMs: l.desc.idempotencyWindowMs });
     if (stop) return stop;
-    return this.registries.get(t.id)!.reg.send(t.id, { action_id: actionId, payload });
+    // 内核在 reg.send 的同步段里调用插件委托;同步段一结束就清掉接收者,并发的另一次 send 拿不到这一次的原始调用
+    this.capture = onRaw ?? null;
+    let pending: Promise<SendResult>;
+    try {
+      pending = this.registries.get(t.id)!.reg.send(t.id, { action_id: actionId, payload });
+    } finally {
+      this.capture = null;
+    }
+    return pending;
   }
 
   /** 结束插件进程(停用、改配置、更新时);外发账本保留。 */
