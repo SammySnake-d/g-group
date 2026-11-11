@@ -1,0 +1,19 @@
+packages/adapter-pi-contact/src/protocols.ts
+  s_30afae688b7542::t_88acb7b31a3d6e 44,46-47,51-55,63-64,72-81,89-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c43aad0c2122451f3c604b03656c1d832cd7d292",
+  "prompts": {},
+  "sessions": {
+    "s_30afae688b7542": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1af55cf420d9f162",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
