@@ -1,0 +1,19 @@
+receipts/evidence/t177-g5/local-gates.txt
+  s_ce8dc7845336c2::t_b13eae968eeefe 1,11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+  "prompts": {},
+  "sessions": {
+    "s_ce8dc7845336c2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac609c5004756eb3d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
