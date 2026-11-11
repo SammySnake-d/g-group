@@ -1,0 +1,19 @@
+receipts/feat-t177-g3-bc-search.json
+  s_d731ecf725d7ad::t_10284dd2dd1aa6 1-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1db51cea13f6b650b9c6aa057a274de406fbfec0",
+  "prompts": {},
+  "sessions": {
+    "s_d731ecf725d7ad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af01e0fd0102abfd1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

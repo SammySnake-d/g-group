@@ -1,0 +1,25 @@
+packages/adapter-pi-contact/src/mind.ts
+  s_a1c03f790defe9::t_ad093abb9e058c 196-207
+packages/adapter-pi-contact/src/tools.ts
+  s_a1c03f790defe9::t_82180ab6d624a4 1-2,6,23,27,39-40,143-154,173,201-202,242-244,274-286
+packages/kernel/src/history-tools.ts
+  s_a1c03f790defe9::t_5d18806d649eac 34-60,62-65,67-74,76-79,81-93,95-120,122,124,126,128,130,134-146,148-206,208,210-213,215-221,223-238
+packages/server/src/history.ts
+  s_a1c03f790defe9::t_6c67537f17df36 7-25,27,42-43,62-63,69-119,121-194,197-198
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1665e3dc9c4f176b35524fe2a127d96b76a4c8c2",
+  "prompts": {},
+  "sessions": {
+    "s_a1c03f790defe9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a486d1455e11315cb",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

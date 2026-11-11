@@ -1,0 +1,52 @@
+packages/server/proof/g6/groups.ts
+  h_f33e46a035b77c 76-82,84-93,96-101
+  s_9e84d571573b49::t_c030ea0c954a7d 35,44,69-75
+packages/server/proof/g6/manifest.ts
+  h_f33e46a035b77c 27-28,30-34,37-44
+  s_9e84d571573b49::t_bdf3baeee8f709 7-13,26
+packages/server/proof/g6/fixture.ts
+  h_f33e46a035b77c 23-36,38-46,49-117,119-124
+  s_9e84d571573b49::t_97e370dec9aa79 7-16,18-20
+packages/server/proof/g6/driver.ts
+  h_f33e46a035b77c 60-66,68-173,176-186,189-193
+  s_9e84d571573b49::t_1bfd72d92ebc79 38,44-48,51-58,67
+packages/server/proof/g6/run.ts
+  h_f33e46a035b77c 60-69,71-90,93-125,128-130,142-157,159-267
+  s_9e84d571573b49::t_ab1406479aa210 32-39,42-59
+packages/server/proof/g6/score.ts
+  h_f33e46a035b77c 55-65,68-80,82,85-87,89-91,97-203
+  s_9e84d571573b49::t_68bf9c2f16e7e7 10-11,14-19,22-25,28-33,36-40,52-54
+packages/server/proof/g6/standin.ts
+  h_f33e46a035b77c 22-65,68-75
+  s_9e84d571573b49::t_4b3ddbe4cc047d 10,14-16,19-21
+packages/server/proof/g6/capture.ts
+  h_f33e46a035b77c 73-77,89-162,165-175,178-188,191-211,214-222,235-307
+  s_9e84d571573b49::t_6276c0dd0ea243 14-27,29-44,54-66,69,72
+packages/server/proof/g6/report.ts
+  h_f33e46a035b77c 36-83
+  s_9e84d571573b49::t_2232daa99e3d71 28-33
+packages/server/proof/g6/contracts.ts
+  h_f33e46a035b77c 42,45-57,60-69,72-83,86-97,100-106,109-118,120-122,125-134
+  s_9e84d571573b49::t_f843a6310dd415 7-13,20-27,30-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a4b61a09e32b8fdcf3533a614ffa84af561a142b",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_9e84d571573b49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5c99cdaaa25826c8",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
