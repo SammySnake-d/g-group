@@ -9,6 +9,7 @@ import type { GGroupBridge, ServerEvent } from '@g-group/api-contract'
 import type { StoreApi } from 'zustand'
 import type { AppState } from '@/store/state'
 import { call } from '../backend'
+import { followUpsWiring } from './chat-ops'
 import { contactsWiring } from './contacts'
 import { messagesWiring } from './messages'
 import { roomsWiring } from './rooms'
@@ -16,7 +17,7 @@ import { tasksWiring } from './tasks'
 import type { Wiring, WireCtx } from './types'
 
 /** 已接线的实体,按读取顺序排。新实体:在 api/wire/ 下加一个文件,export 一个 defineWiring({...}),再在这里按依赖插一行 */
-export const WIRINGS: Wiring[] = [contactsWiring, roomsWiring, messagesWiring, tasksWiring]
+export const WIRINGS: Wiring[] = [contactsWiring, roomsWiring, messagesWiring, tasksWiring, followUpsWiring]
 
 export type WireStatus =
   | { phase: 'off' }

@@ -40,7 +40,9 @@ export async function startServer(o: StartOptions): Promise<Started> {
   const env = o.env ?? process.env;
   mkdirSync(o.dataDir, { recursive: true });
   const model = env.ANTHROPIC_DEFAULT_SONNET_MODEL;
-  let mind: (c: ContactView) => ContactMind = () => scriptedMind();
+  // 规则替身每轮先等一会儿(GG_MIND_DELAY_MS,只给 fake):界面用例要看得见「正在回复」这段真实的忙碌
+  const delayMs = Math.min(Math.max(Number(process.env.GG_MIND_DELAY_MS) || 0, 0), 60_000);
+  let mind: (c: ContactView) => ContactMind = () => scriptedMind(delayMs ? { delayMs } : {});
   let compactor: ((c: ContactView) => ContactCompactor) | undefined;
   if (o.mind === "pi") {
     // 字面量动态 import:按需加载 pi 依赖,G-LAYER 也能核对依赖方向

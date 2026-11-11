@@ -1,5 +1,7 @@
 // 消息操作切片:撤回、编辑、私聊回退、删除、转发、置顶、投票、改挂、群公告。
 import { people, type Msg, type Pending, type PersonId } from '@/data'
+import { clearLive, editLive, forwardLive, hideLive, pinLive, recallLive, retagLive, rewindLive } from '@/api/wire/chat-ops'
+import { live, liveCtx } from '@/api/wire/live'
 import { notify } from '@/hooks/use-toast'
 import { broken } from '@/mut'
 import { uid } from '../boot'
@@ -69,6 +71,8 @@ export const createMessagesSlice: Slice<MessagesSlice> = (set, get) => {
     /* AC-08:撤回级联。由这条消息派生的承诺停掉、还没回答的选项作废;已经做了的事撤不回,只在撤回提示里写明。
        撤回后搜索不再返回原文(消息变成系统行,原文只留给你自己「重新编辑」) */
     recall: (mid) => {
+      /* 连上后端:撤回以宿主为准(原文不再进任何联系人的上下文、搜索不到);级联由宿主做 */
+      if (live(get())) { void recallLive(liveCtx(get, set), mid); return }
       const { commits, computes } = get()
       const conv = activeConv(get())
       const derived = broken('AC-08') ? [] : commits.filter((c) => c.srcMsg === mid && c.on)
@@ -87,6 +91,11 @@ export const createMessagesSlice: Slice<MessagesSlice> = (set, get) => {
 
     editMsg: (mid, text) => {
       const t = text.trim(); if (!t) return
+      /* 连上后端:改以回包为准;在途任务原位升版由宿主做,Compute 行跟着事件变。改成了才收起编辑条 */
+      if (live(get())) {
+        void editLive(liveCtx(get, set), mid, t).then((ok) => { if (ok) { set({ editing: null }); get().setDraft('') } })
+        return
+      }
       const { computes } = get()
       mapMsgs((m) => {
         if (m.k === 'text' && m.id === mid) return { ...m, text: t, edited: true }
@@ -116,6 +125,8 @@ export const createMessagesSlice: Slice<MessagesSlice> = (set, get) => {
     /* AC-48:私聊 rewind。回到某条消息:之后的消息撤下(暂存,可恢复),由它们派生的待你回答一起作废,
        承诺停掉;已经做完的事撤不回,写在提示里。和 Compute 的检查点回滚不是一回事:这里退的是聊天 */
     rewind: (cid, mid) => {
+      /* 连上后端:撤下、取消来源任务、作废承诺都由宿主做,回退说明作为你的一条消息记进会话 */
+      if (live(get())) { set({ rewindAsk: null }); void rewindLive(liveCtx(get, set), cid, mid); return }
       const { convs, pending, commits, computes } = get()
       const c = convs.find((x) => x.id === cid); if (!c) return
       const at = c.messages.findIndex((m) => 'id' in m && m.id === mid); if (at < 0) return
@@ -150,14 +161,17 @@ export const createMessagesSlice: Slice<MessagesSlice> = (set, get) => {
       get().toast('已恢复撤下的消息')
     },
 
-    deleteMsgs: (ids) => hide(ids, `已删除 ${ids.length} 条，只在你这边看不到；别人那边还在`),
-    deleteMsg: (mid) => hide([mid], '已删除，只在你这边看不到；别人那边还在'),
+    deleteMsgs: (ids) => (live(get()) ? void hideLive(liveCtx(get, set), ids) : hide(ids, `已删除 ${ids.length} 条，只在你这边看不到；别人那边还在`)),
+    deleteMsg: (mid) => (live(get()) ? void hideLive(liveCtx(get, set), [mid]) : hide([mid], '已删除，只在你这边看不到；别人那边还在')),
     clearHistory: (cid) => {
+      if (live(get())) { void clearLive(liveCtx(get, set), cid).then((ok) => { if (ok) set({ stack: [] }) }); return }
       L.convs((cs) => cs.map((c) => (c.id === cid ? { ...c, messages: [{ k: 'sys', id: 's' + uid(), text: '你清空了这里的聊天记录（只影响你自己看到的；助手的记忆和资产不受影响）' }] } : c)))
       set({ stack: [] })
     },
 
     forward: (from, ids, to) => {
+      /* 连上后端:转发是你的一条消息,带选中几条的快照;里面的「同意」不算授权由宿主保证(AC-20) */
+      if (live(get())) { get().setSelecting(false); void forwardLive(liveCtx(get, set), from, ids, to); return }
       const { convs, pending } = get()
       const src = convs.find((c) => c.id === from)!
       const items = src.messages.filter((m) => 'id' in m && ids.includes(m.id) && m.k === 'text').map((m) => ({ from: (m as TextMsg).from, text: (m as TextMsg).text }))
@@ -173,6 +187,7 @@ export const createMessagesSlice: Slice<MessagesSlice> = (set, get) => {
     },
 
     pinMsg: (cid, mid) => {
+      if (live(get())) { void pinLive(liveCtx(get, set), cid, mid); return }
       const c = get().convs.find((x) => x.id === cid)!
       const on = !(c.pins ?? []).includes(mid)
       L.convs((cs) => cs.map((x) => (x.id === cid ? { ...x, pins: on ? [...(x.pins ?? []), mid] : (x.pins ?? []).filter((p) => p !== mid) } : x)))
@@ -186,6 +201,8 @@ export const createMessagesSlice: Slice<MessagesSlice> = (set, get) => {
       get().say(owner.id, v.from, '好，按这个定。已写进群协作手册。', 700)
     },
     retag: (msgId, task) => {
+      /* 连上后端:改挂只能从一件移到另一件(宿主不收「不归任何事」) */
+      if (live(get())) { if (task) void retagLive(liveCtx(get, set), msgId, task); return }
       mapMsgs((m) => (m.k === 'text' && m.id === msgId ? { ...m, tag: task ? { task, state: '已改挂' } : { task: '', state: '' } } : m))
       if (task) get().addAct(task, { step: nowStep(task), kind: 'user', title: '你把一条补充改挂到这件事上' })
     },

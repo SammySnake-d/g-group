@@ -10,6 +10,7 @@ import { COMPOSER_EMOJI } from '@/config/emoji'
 import { rise } from '@/config/motion'
 import type { Artifact, Conversation } from '@/data'
 import { broken } from '@/mut'
+import { live } from '@/api/wire/live'
 import { useApp } from '@/store'
 import { SourcePicker } from './SourcePicker'
 
@@ -22,18 +23,19 @@ type Props = {
   onInsert: (s: string) => void
   onAt: () => void
   onSlash: () => void
-  onFile: (name: string, kind: Artifact['kind'], meta: string) => void
+  /** file:真的选了文件时带上(连上后端时按内容上传);截图没有文件 */
+  onFile: (name: string, kind: Artifact['kind'], meta: string, file?: File) => void
   onSubmit: () => void
 }
 
 /* 输入框底部工具栏:左边取外部消息、表情、@、/、截图、文件、图片;右边缺什么 + 发送。
    全部 32px 命中区,提示同组里第一个有延迟、后面即时(TooltipProvider 的 skipDelay)。 */
 export function Toolbar({ conv, inv, canSend, nudge, onInsert, onAt, onSlash, onFile, onSubmit }: Props) {
-  const push = useApp((s) => s.push)
+  const { push, isLive } = useApp((s) => ({ push: s.push, isLive: live(s) }))
   const fileRef = useRef<HTMLInputElement>(null)
   const imgRef = useRef<HTMLInputElement>(null)
   const pick = (e: React.ChangeEvent<HTMLInputElement>, kind: Artifact['kind']) => {
-    for (const f of Array.from(e.target.files ?? [])) onFile(f.name, kind, `${(f.size / 1024).toFixed(0)} KB · 你发的`)
+    for (const f of Array.from(e.target.files ?? [])) onFile(f.name, kind, `${(f.size / 1024).toFixed(0)} KB · 你发的`, f)
     e.target.value = ''
   }
   return (
@@ -52,7 +54,8 @@ export function Toolbar({ conv, inv, canSend, nudge, onInsert, onAt, onSlash, on
       </Popover>
       <IconButton data-testid="tool-at" label="@ 某人（第一项是 Helper）" onClick={onAt} icon={<AtSign strokeWidth={1.6} />} />
       <IconButton data-testid="tool-slash" label="命令（也可以直接打 /）" onMouseDown={(e) => e.preventDefault()} onClick={onSlash} icon={<Slash strokeWidth={2} />} />
-      <IconButton data-testid="tool-shot" label="截图（截当前窗口发出去）" onClick={() => onFile(`截图 ${new Date().toTimeString().slice(0, 5)}.png`, 'asset', '1440×900 · 你截的')} icon={<Scissors strokeWidth={1.6} />} />
+      {/* 截图要桌面壳开放截屏的口子(主进程 desktopCapturer),连上后端时还没有:先不放 */}
+      {!isLive && <IconButton data-testid="tool-shot" label="截图（截当前窗口发出去）" onClick={() => onFile(`截图 ${new Date().toTimeString().slice(0, 5)}.png`, 'asset', '1440×900 · 你截的')} icon={<Scissors strokeWidth={1.6} />} />}
       <IconButton data-testid="tool-file" label="文件" onClick={() => fileRef.current?.click()} icon={<FolderClosed strokeWidth={1.6} />} />
       <IconButton data-testid="tool-image" label="图片" onClick={() => imgRef.current?.click()} icon={<ImageIcon strokeWidth={1.6} />} />
       <input ref={fileRef} data-testid="file-input" type="file" multiple hidden onChange={(e) => pick(e, 'doc')} />

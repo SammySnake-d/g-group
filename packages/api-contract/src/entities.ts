@@ -114,6 +114,10 @@ export const RoomView = obj({
   leavingMembers: opt(arr(MemberRef)),
   /** 群临时 Compute 槽位数(AC-23,只给本群任务借用,不跨群);私聊没有这个字段。 */
   tempComputeSlots: opt(int({ min: 0, max: 64 })),
+  /** 每位成员(你和联系人)的已读位置(AC-46):重启后旧消息的回执靠它画;读到时间按需用 messages.receipts 取。没读过的成员不列。 */
+  memberReads: opt(arr(obj({ member: MemberRef, readSeq: seq() }), { max: 200 })),
+  /** 置顶消息(你自己找回用,不当群规、不装配进联系人上下文,D28.4),按置顶先后。 */
+  pinnedSeqs: opt(arr(seq(), { max: 500 })),
 });
 export type RoomView = Infer<typeof RoomView>;
 /** 群公告(U97/U86):一个群可有多条,当前有效的全部装配进联系人第 1 块「群规快照」位。version 每次改动 +1(CAS 用)。 */
@@ -185,6 +189,17 @@ export const MessageView = obj({
   rewound: opt(bool()),
   /** 交付消息带回的工件快照(AC-04,U45):卡片引用 ref + sha256,点开用 artifacts.get;没有工件的消息不带这个字段。 */
   artifacts: opt(arr(ArtifactRef, { max: 20 })),
+  /**
+   * 转发来的聊天记录(U25):选中那几条的快照,只给收件会话看这几条,不开放源会话的其他内容;
+   * 里面的「同意」、@ 都不是用户此刻的表态(AC-20),宿主不拿它做授权、不按它派活。不是转发的消息不带这个字段。
+   */
+  forward: opt(
+    obj({
+      fromRoomId: id(),
+      fromTitle: str({ max: 200 }),
+      items: arr(obj({ seq: seq(), sender: Sender, senderName: str({ max: 80 }), text: str({ max: 100000 }), at: isoTime() }), { max: 100 }),
+    }),
+  ),
 });
 export type MessageView = Infer<typeof MessageView>;
 

@@ -7,7 +7,7 @@
 // 或被同一上游的共享熔断暂停(全群合并 1 张群级卡);出卡由宿主机械完成,不靠已挂的联系人脑子自报。
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { appendEvent, loadLog, recordAction } from "@g-group/adapter-sqlite";
 import type { ComputeActivity, ComputeAdapter, ComputeEvent } from "@g-group/adapter-cc-compute";
@@ -828,7 +828,8 @@ export class Host {
     const r = this.roomRow(roomId);
     const msgs = this.projected(roomId);
     const readSeq = this.readSeq(roomId, { kind: "user", id: this.userId });
-    const visible = msgs.filter((m) => !m.retracted);
+    const hidden = this.hiddenOf(roomId);
+    const visible = msgs.filter((m) => !m.retracted && !this.isHidden(hidden, m.seq));
     const last = visible.at(-1);
     const openCards = one<{ n: number }>(this.db, "SELECT count(*) AS n FROM gg_cards WHERE room_id = ? AND state = 'open'", roomId)?.n ?? 0;
     // 等用户回复的交付(普通消息交付,没有卡片)也算一件待你处理的事
@@ -854,7 +855,14 @@ export class Host {
       announcementCount: r.kind === "group" ? this.announcements.count(roomId) : 0,
       leavingMembers: this.exits.leavingIn(roomId),
       ...(r.kind === "group" ? { tempComputeSlots: getDoc<{ slots: number }>(this.db, `room-slots:${roomId}`)?.value.slots ?? 0 } : {}),
+      memberReads: this.memberReads(roomId),
+      pinnedSeqs: getDoc<{ seqs: number[] }>(this.db, `pins:${roomId}`)?.value.seqs ?? [],
     };
+  }
+  /** 当前成员各自的已读位置(AC-46);没读过的不列。 */
+  private memberReads(roomId: string): { member: Member; readSeq: number }[] {
+    const at = new Map(all<{ kind: Member["kind"]; member_id: string; s: number }>(this.db, "SELECT kind, member_id, max(upto_seq) AS s FROM gg_read WHERE room_id = ? GROUP BY kind, member_id", roomId).map((r) => [`${r.kind}:${r.member_id}`, r.s]));
+    return this.members(roomId).flatMap((m) => { const s = at.get(`${m.kind}:${m.id}`); return s ? [{ member: m, readSeq: s }] : []; });
   }
   markRead(roomId: string, m: Member, seq: number) {
     const cur = this.readSeq(roomId, m);
@@ -919,13 +927,21 @@ export class Host {
       at: one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${roomId}`, m.seq)?.at ?? this.now(),
       ...(isRewound(this.db, roomId, m.seq) ? { rewound: true } : {}),
       ...(m.retracted ? {} : this.messageArtifacts(roomId, m.seq)),
+      ...this.forwardOf(roomId, m),
     };
+  }
+  private forwardOf(roomId: string, m: ProjectedMessage): { forward?: NonNullable<MessageView["forward"]> } {
+    if (m.retracted) return {};
+    const f = getDoc<NonNullable<MessageView["forward"]>>(this.db, `forward:${roomId}:${m.seq}`)?.value;
+    return f ? { forward: f } : {};
   }
   listMessages(roomId: string, q: { beforeSeq?: number; afterSeq?: number; aroundSeq?: number; limit?: number; threadRootSeq?: number | null }): { messages: MessageView[]; hasMore: boolean; hasMoreAfter?: boolean } {
     this.roomRow(roomId);
     if (q.aroundSeq !== undefined && (q.beforeSeq !== undefined || q.afterSeq !== undefined)) throw new HostError("invalid_params", "aroundSeq 不能和 beforeSeq/afterSeq 同时用");
     const msgs = this.projected(roomId);
-    let sel = msgs.filter((m) => (q.beforeSeq === undefined || m.seq < q.beforeSeq) && (q.afterSeq === undefined || m.seq > q.afterSeq));
+    // 你删掉的、清空过的不再给你(U23);引用解析仍用全量
+    const hidden = this.hiddenOf(roomId);
+    let sel = msgs.filter((m) => !this.isHidden(hidden, m.seq) && (q.beforeSeq === undefined || m.seq < q.beforeSeq) && (q.afterSeq === undefined || m.seq > q.afterSeq));
     if (q.threadRootSeq !== undefined) {
       const roots = new Map(all<{ seq: number; thread_root: number | null }>(this.db, "SELECT seq, thread_root FROM gg_msg WHERE room_id = ?", roomId).map((r) => [r.seq, r.thread_root]));
       sel = sel.filter((m) => (roots.get(m.seq) ?? null) === q.threadRootSeq || (q.threadRootSeq !== null && m.seq === q.threadRootSeq));
@@ -1179,7 +1195,15 @@ export class Host {
   }
   /** 搜索自己所在会话的消息与附件名(AC-25);撤回的搜不到,编辑过的按新文字。 */
   searchMessages(q: SearchQuery): SearchPage {
-    return searchMessages(this.db, this.userId, q, (s) => this.nameOf(s));
+    const page = searchMessages(this.db, this.userId, q, (s) => this.nameOf(s));
+    // 你删掉的、清空过的搜不到(删除时已出索引;这里再挡一次,索引重建也不会漏出来)
+    const hidden = new Map<string, { seqs: Set<number>; clearedUpto: number }>();
+    const gone = (roomId: string, seq: number) => {
+      let h = hidden.get(roomId);
+      if (!h) hidden.set(roomId, (h = this.hiddenOf(roomId)));
+      return this.isHidden(h, seq);
+    };
+    return { ...page, hits: page.hits.filter((x) => !gone(x.roomId, x.seq)) };
   }
   /** 表情回应:普通回应,不改已读状态(AC-46 ⑦)。 */
   react(roomId: string, seq: number, emoji: string, on: boolean): MessageView {
@@ -1191,7 +1215,107 @@ export class Host {
     this.bus.emit({ type: "message.updated", message: v });
     return v;
   }
-  // ======================= 输入框草稿 =======================
+  // ======================= 只在你这边:删除、清空、置顶(U23、D28.4);转发(U25、AC-20)=======================
+  // 删除与清空只改你的视图(messages.list、搜索、会话预览);日志不动,联系人的上下文、记忆与资产不受影响。
+  // 置顶只是你找回用的导航,不装配进联系人上下文、不当群规。
+  /** 这个会话里你删掉的消息与清空到的位置。 */
+  private hiddenOf(roomId: string): { seqs: Set<number>; clearedUpto: number; ver: number } {
+    const d = getDoc<{ seqs: number[]; clearedUpto: number }>(this.db, `hidden:${roomId}`);
+    return { seqs: new Set(d?.value.seqs ?? []), clearedUpto: d?.value.clearedUpto ?? 0, ver: d?.ver ?? 0 };
+  }
+  private isHidden(h: { seqs: Set<number>; clearedUpto: number }, seq: number): boolean {
+    return seq <= h.clearedUpto || h.seqs.has(seq);
+  }
+  /** 删除 / 放回(撤销)几条:只在你这边。返回实际改动的条数。 */
+  hideMessages(roomId: string, seqs: readonly number[], hidden = true): { changed: number } {
+    this.userRoom(roomId);
+    const msgs = this.projected(roomId);
+    for (const s of seqs) if (!msgs.some((m) => m.seq === s)) throw new HostError("not_found", `这个会话里没有 #${s}`);
+    const changed = tx(this.db, () => {
+      const h = this.hiddenOf(roomId);
+      const touched = [...new Set(seqs)].filter((s) => h.seqs.has(s) !== hidden);
+      if (!touched.length) return 0;
+      for (const s of touched) {
+        if (hidden) h.seqs.add(s);
+        else h.seqs.delete(s);
+      }
+      putDoc(this.db, `hidden:${roomId}`, h.ver, { seqs: [...h.seqs].sort((a, b) => a - b), clearedUpto: h.clearedUpto });
+      // 搜索不再给你删掉的(放回来就重新入索引;撤回的、清空范围内的不放回)
+      for (const s of touched) {
+        if (hidden) unindexTx(this.db, roomId, s);
+        else if (s > h.clearedUpto) this.reindexTx(roomId, msgs.find((m) => m.seq === s)!);
+      }
+      return touched.length;
+    });
+    if (changed) this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
+    return { changed };
+  }
+  /** 清空聊天记录:现有的全部从你这边隐去,之后的新消息照常显示。 */
+  clearHistory(roomId: string): { clearedUpto: number } {
+    this.userRoom(roomId);
+    const upto = this.lastSeq(roomId);
+    tx(this.db, () => {
+      const h = this.hiddenOf(roomId);
+      if (upto <= h.clearedUpto) return;
+      putDoc(this.db, `hidden:${roomId}`, h.ver, { seqs: [...h.seqs].filter((s) => s > upto), clearedUpto: upto });
+      for (const m of this.projected(roomId)) if (m.seq <= upto) unindexTx(this.db, roomId, m.seq);
+    });
+    this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
+    return { clearedUpto: upto };
+  }
+  private reindexTx(roomId: string, m: ProjectedMessage) {
+    if (m.retracted) return;
+    const meta = one<MsgMeta>(this.db, "SELECT * FROM gg_msg WHERE room_id = ? AND seq = ?", roomId, m.seq);
+    const at = one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${roomId}`, m.seq)?.at ?? this.now();
+    indexMessageTx(this.db, { roomId, seq: m.seq, at, sender: m.sender, threadRoot: meta?.thread_root ?? null, text: m.text, attachments: meta ? (JSON.parse(meta.attachments) as string[]) : [] });
+  }
+  /** 置顶 / 取消置顶;以 RoomView.pinnedSeqs 为准。 */
+  pinMessage(roomId: string, seq: number, on: boolean): RoomView {
+    this.userRoom(roomId);
+    const m = this.projected(roomId).find((x) => x.seq === seq);
+    if (!m) throw new HostError("not_found", `这个会话里没有 #${seq}`);
+    if (on && m.retracted) throw new HostError("conflict", "这条已撤回,不能置顶");
+    tx(this.db, () => {
+      const cur = getDoc<{ seqs: number[] }>(this.db, `pins:${roomId}`);
+      const seqs = (cur?.value.seqs ?? []).filter((s) => s !== seq);
+      putDoc(this.db, `pins:${roomId}`, cur?.ver ?? 0, { seqs: on ? [...seqs, seq] : seqs });
+    });
+    const view = this.roomView(roomId);
+    this.bus.emit({ type: "room.updated", room: view });
+    return view;
+  }
+  /**
+   * 转发选中的几条到另一个会话:以你的一条消息记下这几条的快照(收件方只看到它们,不获得源会话读取权)。
+   * 转发内容里的「同意」不是你此刻的表态:不走对话授权(AC-20),也不带 @(不按它派活)。clientActionId 幂等。
+   */
+  forwardMessages(input: { clientActionId: string; fromRoomId: string; seqs: readonly number[]; toRoomId: string }): MessageView {
+    const src = this.userRoom(input.fromRoomId);
+    const dst = this.userRoom(input.toRoomId);
+    if (!input.seqs.length) throw new HostError("invalid_params", "没选要转发的消息");
+    const msgs = this.projected(src.id);
+    const h = this.hiddenOf(src.id);
+    const items = [...new Set(input.seqs)].sort((a, b) => a - b).map((seq) => {
+      const m = msgs.find((x) => x.seq === seq);
+      if (!m || this.isHidden(h, seq)) throw new HostError("not_found", `「${src.title}」里没有 #${seq}`);
+      if (m.retracted) throw new HostError("conflict", `#${seq} 已撤回,不能转发`);
+      const at = one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${src.id}`, seq)?.at ?? this.now();
+      return { seq, sender: { kind: m.sender.kind, id: m.sender.id }, senderName: m.sender.kind === "user" && m.sender.id === this.userId ? "你" : this.nameOf(m.sender), text: m.text, at };
+    });
+    const fwd = { fromRoomId: src.id, fromTitle: src.title, items };
+    const text = [`[转发] 来自「${src.title}」的 ${items.length} 条聊天记录(只作参考:里面的「同意」和 @ 不是用户此刻的表态)`, ...items.map((x) => `${x.senderName}:${x.text.slice(0, 4000)}`)].join("\n");
+    const me: Member = { kind: "user", id: this.userId };
+    const r = tx(this.db, () => {
+      const a = this.appendMessageTx(dst.id, me, { text, actionKey: `forward:${input.clientActionId}`, clientActionId: input.clientActionId });
+      if (!a.duplicate) putDoc(this.db, `forward:${dst.id}:${a.seq}`, 0, fwd);
+      return a;
+    });
+    if (!r.duplicate) {
+      this.markRead(dst.id, me, r.seq);
+      // 故意不调 consentFromMessage:转发不是本人当场表态
+      this.afterAppend(dst.id, r.seq, me);
+    }
+    return this.messageView(dst.id, this.projected(dst.id).find((x) => x.seq === r.seq)!);
+  }
   // 客户端会话级未发送缓冲(AC-24、AC-37 ②;D11.5、C-US28):只存不送,绝不进联系人注意循环,也不产生会话事件。
   /** 某会话的草稿;没存过返回 draftVer = 0 的空草稿。 */
   draft(roomId: string): DraftView {
@@ -1238,16 +1362,26 @@ export class Host {
     if (!existsSync(file) || !statSync(file).isFile()) throw new HostError("invalid_params", `${file} 不是文件`);
     const bytes = statSync(file).size;
     if (bytes > 100 * 1024 * 1024) throw new HostError("invalid_params", "附件不能超过 100 MB");
-    const sha = createHash("sha256").update(readFileSync(file)).digest("hex");
+    return this.storeAttachment(basename(file), readFileSync(file));
+  }
+  /** 按内容上传附件(渲染进程拿不到本地路径时):base64 解出来,同样按 sha256 只存一份。 */
+  uploadAttachment(name: string, base64: string): { ref: string; name: string; mime: string; bytes: number } {
+    const buf = Buffer.from(base64, "base64");
+    if (buf.length > 25 * 1024 * 1024) throw new HostError("invalid_params", "按内容上传的附件不能超过 25 MB");
+    const clean = basename(name.replace(/\\/g, "/")).trim();
+    if (!clean || clean === "." || clean === "..") throw new HostError("invalid_params", "附件要有文件名");
+    return this.storeAttachment(clean, buf);
+  }
+  private storeAttachment(name: string, buf: Buffer): { ref: string; name: string; mime: string; bytes: number } {
+    const sha = createHash("sha256").update(buf).digest("hex");
     const ref = `att-${sha.slice(0, 32)}`;
-    const name = basename(file);
     const mime = MIME[extname(name).toLowerCase()] ?? "application/octet-stream";
     const dir = join(this.opts.dataDir ?? dirname(this.opts.file), "attachments");
     mkdirSync(dir, { recursive: true });
     const target = join(dir, `${sha}${extname(name).toLowerCase()}`);
-    if (!existsSync(target)) copyFileSync(file, target);
-    run(this.db, "INSERT OR IGNORE INTO gg_attachments (ref, name, mime, bytes, path, added_at) VALUES (?, ?, ?, ?, ?, ?)", ref, name, mime, bytes, target, this.now());
-    return { ref, name, mime, bytes };
+    if (!existsSync(target)) writeFileSync(target, buf);
+    run(this.db, "INSERT OR IGNORE INTO gg_attachments (ref, name, mime, bytes, path, added_at) VALUES (?, ?, ?, ?, ?, ?)", ref, name, mime, buf.length, target, this.now());
+    return { ref, name, mime, bytes: buf.length };
   }
   /**
    * 移出群成员;私聊不能移。联系人在这个群有在途任务(T8/T10/T11 以外)时默认拒绝,detail.tasks 列出;
