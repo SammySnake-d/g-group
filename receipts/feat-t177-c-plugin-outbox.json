@@ -1,0 +1,24 @@
+{
+  "slice": "T-177 C:插件外发的权威状态落宿主 SQLite(gg_plugin_outbox),跨宿主重启、卸载重装、更新都保留。写前日志(在途行落盘才交插件、写不进不发)、启动把别的启动留下的在途改成结果未知、迟到结果不改写、结果未知不自动重发(B2 按合同,B1 跨重启按 clock-untrusted)、安装身份/版本/接收端对不上不发(channel-changed)、同一动作并发只有一个认领、未投递的拒绝不留在途;内核 packages/kernel 与 Promise 判定合同未改。叠在 A(PR #57)上并行开发,与 A 无文件交集。详见 receipts/evidence/t177-c/SCOPE.md",
+  "acceptance": [
+    {
+      "id": "AC-35",
+      "status": "未测",
+      "reason": "本片只补 AC-35 ④「本地 Outbox + 超时 DeliveryUnknown 阻断盲目重发」在宿主重启、卸载重装、更新之后的持久化部分(审查记录 t177-backend-resume-review.md §C 十一条)。13 条具名测试 C01–C13 在 packages/server/src/plugin-outbox.test.ts;box3 Node 24 红 6ace5ae 13/13 按名失败、绿全量 1518/1518、19/19 定点变异杀死(另 1 个等价变异如实登记存活),见 evidence。AC-35 ①②③、④ 的六元组预授权与 OAuth 阻断、⑤ 阶段 II 真实 Telegram/Gmail 都不在本片,整条不标通过。AC-58(插件隔离,U101/D29)不在本分支验收文档副本(v3.19)里,门禁不认,不单列;本片是它「崩溃重启后同一外发不被自动重发」在宿主重启/重装之后的延伸。待审。",
+      "evidence": "receipts/evidence/t177-c/summary.json"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:b36ab234-0cba-4b89-929e-d21a46a35eea",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "6ace5aee90dbda81b94571e508911713d331ca67"
+  },
+  "unverifiable": "AC-35:宕机用「同一数据文件上再开一个宿主」模拟(旧宿主对象仍在,没有 SIGKILL 宿主进程本身);接收端计数是插件进程内的 seen 列表随回执带出,靠「拒发时不起进程 + 新进程回执里没有它」推出总接收次数,不是进程外的独立计数器;并发认领用同一进程里两个 SQLite 连接验证,没有两个宿主进程真并发;持久化只承诺宿主进程崩溃边界,synchronous 取库默认(macOS Node 22 与 Linux Node 24 读回都是 wal/2),断电与系统崩溃未测;同一次启动里接收端变了的宿主判断与内核 channel-changed 等价,变异 EQ-endpoint-same-boot 测不出(如实登记);门禁沙箱禁网,插件不联网,真实渠道未测;D29 第 5 条「迟到应答留记录」本片没有做。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "由主会话 claude:b36ab234-0cba-4b89-929e-d21a46a35eea 派出的子代理实现,fnqtz 线路(claude-opus-5-5);不自审。叠在 feat/t177-a-recovery(PR #57)上,A 合入 dev/integration 后 rebase 并改 base;C 不依赖 A 的代码,也可直接改基到 dev/integration。Codex 主验收与 hy4 辅审另派,Claude Code 读记录终审。设计真源 docs/dev-handbook@f4963a08(v3.28)。"
+}
