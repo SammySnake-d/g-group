@@ -93,3 +93,12 @@ test("给了只供 G6 的组提交:必须含基线与每片当前提交、带每
   assert.equal(resolveGroup(def("g2"), ok, { groupRefs: { g2: "nope" } }).reason, "组提交 nope 解析不到");
   assert.equal(resolveGroup(def("g2"), ok).groupCommit, null);
 });
+
+test("开关未定的组记未测(开关未定)并写明原因;两条路径(按序合入与组提交)都算", () => {
+  const def = { id: "gx", label: "x", slices: [], switches: {}, hostPatch: null, settleMs: null, blocked: "预取开关接口未定" } as unknown as Parameters<typeof resolveGroup>[0];
+  const git = fakeGit({ [BASELINE]: BASELINE }, []);
+  assert.deepEqual(resolveGroup(def, git).state, "未测(开关未定)");
+  assert.equal(resolveGroup(def, git).reason, "预取开关接口未定");
+  const withRef = fakeGit({ [BASELINE]: BASELINE, grp: "grp" }, [], [`${BASELINE}<grp`]);
+  assert.equal(resolveGroup(def, withRef, { groupRefs: { gx: "grp" } }).state, "未测(开关未定)");
+});
