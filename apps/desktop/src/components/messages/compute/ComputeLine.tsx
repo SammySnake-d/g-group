@@ -63,15 +63,16 @@ export function ComputeLine({ id }: { id: string }) {
 
   if (view === 'done') return (
     <div className={WITH_END}><Pressable data-testid={`compute-line-${id}`} data-state="done" onClick={open} className={`${LINE} truncate px-2 py-0.5 text-[12px] text-fg-3 hover:bg-hover`}>
-      <StatusDot c={c} className="h-3 w-3" /><span className="truncate">{c.title}</span><span className="shrink-0">· {c.result ?? '已完成'}</span>
+      {/* 标题(哪件事)优先完整显示,长的是后面的说明 */}
+      <StatusDot c={c} className="h-3 w-3" /><span className="max-w-[60%] shrink-0 truncate">{c.title}</span><span className="min-w-0 truncate">· {c.result ?? '已完成'}</span>
     </Pressable><OpenSessionButton id={id} /></div>
   )
 
   return (
     <div className={WITH_END}><Pressable data-testid={`compute-line-${id}`} data-state={c.status} data-cver={c.cver ?? 1} onClick={open} className={`${LINE} group/c -ml-0.5 gap-2 truncate py-1 pl-2.5 pr-2 text-[13px] text-fg-2 hover:bg-hover`}>
       <StatusDot c={c} />
-      <span className="truncate font-medium text-fg">{c.title}</span>
-      <span className="shrink-0 text-run" data-testid={`compute-phase-${id}`}>{c.status === 'stopped' ? '已停止' : c.phase}</span>
+      <span className="max-w-[60%] shrink-0 truncate font-medium text-fg">{c.title}</span>
+      <span className="min-w-0 truncate text-run" data-testid={`compute-phase-${id}`}>{c.status === 'stopped' ? '已停止' : c.phase}</span>
       {/* 后端的任务没有步骤计划(合同里没有),就不写第几步 */}
       {c.status === 'running' && c.steps.length > 0 && <span className="shrink-0 tabular-nums text-fg-3">第 {Math.min(stepsDone + 1, c.steps.length)}/{c.steps.length} 步 · {c.elapsed}</span>}
       <ChevronRight className="h-3.5 w-3.5 text-fg-3 transition-transform duration-fast ease-out group-hover/c:translate-x-0.5" />
