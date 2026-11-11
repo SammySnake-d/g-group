@@ -111,6 +111,11 @@ export const METHODS = {
    * stopTasks=true 时先进「移出中」(RoomView.leavingMembers),在途任务 Cancel → 停 Compute,真实停止确认后才移除并推 room.updated。
    */
   "rooms.removeMember": method(obj({ roomId: id(), member: MemberRef, stopTasks: opt(bool()) }), RoomView),
+  /**
+   * 解散群(U03,群主能力):群从会话列表移除并推 room.removed,群里的定时一起删除。群里有在途任务时默认 conflict,detail.tasks 列出;
+   * stopTasks=true 时成员先进「移出中」、在途任务 Cancel → 停 Compute,真实停止确认后才移除(dissolved=false 表示还在等停下)。私聊 forbidden。
+   */
+  "rooms.dissolve": method(obj({ roomId: id(), stopTasks: opt(bool()) }), obj({ roomId: id(), dissolved: bool() })),
   /** 用户自己的已读位置,只影响用户视图(AC-46)。 */
   "rooms.markRead": method(obj({ roomId: id(), seq: seq() }), Ok),
   /** 私聊 rewind 预览(AC-48):只读,不改任何状态;用户看完不确认即取消。群聊 forbidden;回退点不是本会话的消息 invalid_params。 */

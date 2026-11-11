@@ -70,6 +70,8 @@ export function toCompute(t: TaskView, prev?: Compute): Compute | null {
     ...(status === 'done' && done ? { result: elapsed === '—' ? phase : `${phase} · ${elapsed}` } : {}),
     ...(status === 'error' && failed ? { error: failed.summary } : {}),
     ...(t.state === 'T9_StopRequested' ? { stopping: true } : {}),
+    /* 借的是本群临时槽位(U09):群资料「临时算力」页按它列借出 */
+    ...(t.slot?.scope === 'group' ? { pool: 'group' as const } : {}),
   }
 }
 

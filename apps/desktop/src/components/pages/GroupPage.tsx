@@ -6,19 +6,24 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { ListGroup, ListRow } from '@/components/ui/list-row'
 import { PageScroll, TextInput } from './kit/parts'
-import { GROUP_CONFIRM, type GroupConfirmKind } from './constants'
+import { DISSOLVE_LIVE, GROUP_CONFIRM, type GroupConfirmKind } from './constants'
 
 /* ---------- 群设置 ----------
    AC-50(#925):成员、公告、关联/记下/手册、复制团队只在右侧群资料(head-side)一处;这里只剩群设置。
    清空 / 解散 / 退出放在最下面一组,和常用开关隔开(危险操作离常用操作远一点);点了先在原地说清后果再确认。 */
 export function GroupPage({ id }: { id: string }) {
-  const { convs, push, setConvFlag, renameConv, leaveConv, clearHistory, closeAll } = useApp()
+  const { convs, push, setConvFlag, renameConv, leaveConv, clearHistory, closeAll, groupAsk, setGroupAsk } = useApp()
+  const live = useApp((s) => s.backend.mode === 'connected')
   const g = convs.find((c) => c.id === id)
   const [confirm, setConfirm] = useState<null | GroupConfirmKind>(null)
   const [editT, setEditT] = useState(false)
   const [tv, setTv] = useState(g?.title ?? '')
   if (!g) return null
   const owner = g.roles?.me === 'owner'
+  /* 连上后端时你就是群主:群主不单独退出,要离开就解散(U03) */
+  const canLeave = !(live && owner)
+  /* 解散时后端说群里还有在做的事:列出来,确认后先停下再解散 */
+  const ask = groupAsk?.kind === 'dissolve' && groupAsk.conv === id ? groupAsk : null
   const rename = () => { if (tv.trim()) renameConv(id, tv.trim()); setEditT(false) }
   const go = () => {
     if (confirm === 'clear') { clearHistory(id); setConfirm(null); closeAll() }
@@ -46,9 +51,17 @@ export function GroupPage({ id }: { id: string }) {
         <ListRow testid="group-clear" label="清空聊天记录" tone="danger" onClick={() => setConfirm('clear')} />
       </ListGroup>
       <ListGroup>
-        {confirm ? (
+        {ask ? (
+          <div className="space-y-2.5 p-3" data-testid="dissolve-ask" role="alertdialog" aria-label="先停下再解散">
+            <p className="text-[13px] leading-relaxed text-fg-2">群里还有 {ask.tasks.length} 件在做：{ask.tasks.map((t) => `「${t}」`).join('')}。{DISSOLVE_LIVE.stop}</p>
+            <div className="flex gap-2">
+              <Button size="md" onClick={() => { setGroupAsk(null); setConfirm(null) }} className="flex-1" autoFocus>先不解散</Button>
+              <Button data-testid="dissolve-ask-go" variant="danger-solid" size="md" onClick={() => leaveConv(id, true, { stopTasks: true })} className="flex-1">停下并解散</Button>
+            </div>
+          </div>
+        ) : confirm ? (
           <div className="space-y-2.5 p-3" data-testid="leave-confirm" role="alertdialog" aria-label={GROUP_CONFIRM[confirm].go}>
-            <p className="text-[13px] leading-relaxed text-fg-2">{GROUP_CONFIRM[confirm].note}</p>
+            <p className="text-[13px] leading-relaxed text-fg-2">{live && confirm === 'dissolve' ? DISSOLVE_LIVE.note : GROUP_CONFIRM[confirm].note}</p>
             <div className="flex gap-2">
               <Button size="md" onClick={() => setConfirm(null)} className="flex-1" autoFocus>取消</Button>
               <Button data-testid="leave-confirm-go" variant="danger-solid" size="md" onClick={go} className="flex-1">{GROUP_CONFIRM[confirm].go}</Button>
@@ -57,7 +70,7 @@ export function GroupPage({ id }: { id: string }) {
         ) : (
           <>
             {owner && <Button data-testid="group-dissolve" variant="danger" onClick={() => setConfirm('dissolve')} className="h-11 w-full rounded-none text-[14px] font-normal">解散群聊</Button>}
-            <Button data-testid="group-leave" variant="danger" onClick={() => setConfirm('leave')} className="h-11 w-full rounded-none text-[14px] font-normal"><LogOut />退出群聊</Button>
+            {canLeave && <Button data-testid="group-leave" variant="danger" onClick={() => setConfirm('leave')} className="h-11 w-full rounded-none text-[14px] font-normal"><LogOut />退出群聊</Button>}
           </>
         )}
       </ListGroup>

@@ -27,6 +27,8 @@ export const NOTICE = {
   max: 600,
   pinned: '置顶',
   empty: '还没有群公告',
+  removeAsk: '撤下后不再显示，助手下一轮也不再装配它',
+  removeGo: '撤下这条',
 } as const
 
 export const PLUGIN_TAB = {
@@ -39,6 +41,9 @@ export const PLUGIN_TAB = {
   emptyHint: '挂上以后，群里的助手才能用它。',
   foot: '启停对所有聊天生效；「×」只从本群摘下。点名字看权限和命令。',
   disabled: '已停用 · 所有聊天都暂时用不了',
+  emptyLive: '这台电脑上还没装插件。',
+  emptyLiveHint: '到插件市场装好后，所有聊天里的助手都能用。',
+  footLive: '装好的插件对所有聊天生效；启停也对所有聊天生效。点名字看权限和命令。',
 } as const
 
 export const TOOLS = {
@@ -46,7 +51,14 @@ export const TOOLS = {
   fromPlugins: '本群插件带来的',
   noPluginCmds: '本群挂的插件没有提供命令。在「插件」页签添加。',
   foot: '在输入框里打 / 也能叫出这些命令。',
+  contacts: '群里联系人的能力',
+  noCaps: '没有勾选额外的 skill 或 MCP',
+  manage: '去设置',
 } as const
+
+/** 连上后端时真能用的内置工具(其余要的数据或能力还没接:协作手册、工作区、关联会话、记下的事、复制团队、总结;
+ *  群文件由文件列表那一块接上 pages/FilesPage 后把它加回来) */
+export const LIVE_TOOLS: readonly string[] = ['compute']
 
 export type ToolHow = '执行' | '打开' | '填入输入框'
 /** 内置工具:每项写清做什么、对应哪条 / 命令、点了是执行还是打开(打开的页面 key 与 push 的 t 一致) */
@@ -64,6 +76,8 @@ export const BUILTIN_TOOLS: { key: string; icon: LucideIcon; title: string; cmd:
 export const MEMBERS = {
   search: '搜成员',
   dropOut: '拖到这里移出群（它借的群算力会先停下归还）',
+  leaving: '移出中',
+  stopFirst: '移出前要先停下这些事，停稳它才离开',
 } as const
 
 /** 标题栏头像叠最多露几个 */

@@ -87,10 +87,10 @@ test("群资料·公告与群设置:发布、改、撤下公告并写明各联�
       await expect(win.getByTestId("strip-loaded")).toHaveText("0/2 已装配 v1");
     });
 
-    await test.step("@小克 之后它这一轮装配了公告:已装配数跟着后端变", async () => {
+    await test.step("群里说一句之后,两位联系人各跑一轮、都装配了公告:已装配数跟着后端变成 2/2", async () => {
       await say(win, "看下公告", "小克");
       await expect(rows(win).filter({ hasText: "收到:看下公告" })).toHaveCount(1, LONG);
-      await expect(win.getByTestId("strip-loaded")).toHaveText(/^[12]\/2 已装配 v1$/, LONG);
+      await expect(win.getByTestId("strip-loaded")).toHaveText("2/2 已装配 v1", LONG);
     });
 
     await test.step("改公告:版本 +1,下一轮之前联系人还是旧版(0/2 已装配 v2),下一轮装配后跟上", async () => {
@@ -101,7 +101,7 @@ test("群资料·公告与群设置:发布、改、撤下公告并写明各联�
       await expect(win.getByTestId("strip-text")).toContainText("做完先复核", LONG);
       await expect(win.getByTestId("strip-loaded")).toHaveText("0/2 已装配 v2");
       await say(win, "再看一眼", "小克");
-      await expect(win.getByTestId("strip-loaded")).toHaveText(/^[12]\/2 已装配 v2$/, LONG);
+      await expect(win.getByTestId("strip-loaded")).toHaveText("2/2 已装配 v2", LONG);
     });
 
     await test.step("再发一条:两条都在(新的在前),顶栏公告条可以切换;撤下一条后只剩一条", async () => {
@@ -219,19 +219,21 @@ test("群资料·清单与成员:新建任务、交给联系人认领;拍一拍;
     });
 
     await test.step("把小林拖到「移出群」:成员里没有它了,群人数变成 2", async () => {
+      // 小林手上那件先做完(交付等你确认不算在途):这样移出不用先停任务
+      await openTab(win, "list");
+      await expect(win.getByTestId("side-checklist").locator('[data-testid^="task-"][data-status]').filter({ hasText: "整理发票" })).toHaveAttribute("data-status", "待验收", LONG);
       await openTab(win, "members");
       await shot(win, "members");
       const who = win.getByTestId("side-members-drop").locator('[data-testid^="side-member-"]').filter({ hasText: "小林" });
-      await who.hover();
-      await win.mouse.down();
-      const box = (await who.boundingBox())!;
-      await win.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 12, { steps: 4 });
+      // 成员行点下去会先弹菜单,这里直接发拖拽事件(和原型走查同一做法):拖起 → 落点出现 → 拖到落点上 → 松手
+      const dt = await win.evaluateHandle(() => new DataTransfer());
+      await who.dispatchEvent("dragstart", { dataTransfer: dt });
       const out = win.getByTestId("side-drop-out");
       await expect(out).toBeVisible();
-      await out.hover();
+      await out.dispatchEvent("dragover", { dataTransfer: dt });
       await expect(out).toHaveAttribute("data-over", "1");
       await shot(win, "member-drag-out");
-      await win.mouse.up();
+      await out.dispatchEvent("drop", { dataTransfer: dt });
       await expect(win.getByTestId("side-members-drop").locator('[data-testid^="side-member-"]').filter({ hasText: "小林" })).toHaveCount(0, LONG);
       await expect(win.getByTestId("chat-title")).toContainText("(2)");
     });

@@ -12,6 +12,7 @@ import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { appendEvent, loadLog, recordAction } from "@g-group/adapter-sqlite";
 import type { ComputeActivity, ComputeAdapter, ComputeEvent } from "@g-group/adapter-cc-compute";
 import {
+  type AnnouncementView,
   type ClientInputDraft,
   type CommitmentView,
   type ComputeProgress,
@@ -751,7 +752,11 @@ export class Host {
     this.bus.emit({ type: "room.updated", room: view });
     return view;
   }
-  createGroup(title: string, members: Member[]): RoomView {
+  /** 建群;带 clientActionId 时同一号重发返回原来那个群,不再多建一个。 */
+  createGroup(title: string, members: Member[], clientActionId?: string): RoomView {
+    const key = clientActionId ? `group-create:${clientActionId}` : null;
+    const prior = key ? one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key) : undefined;
+    if (prior) return this.roomView((JSON.parse(prior.payload) as { roomId: string }).roomId);
     for (const m of members) if (m.kind === "contact") this.contactDoc(m.id);
     const id = this.newId("g");
     const at = this.now();
@@ -759,6 +764,7 @@ export class Host {
     tx(this.db, () => {
       run(this.db, "INSERT INTO gg_rooms (id, kind, title, created_at, updated_at) VALUES (?, 'group', ?, ?, ?)", id, title, at, at);
       for (const m of all_) run(this.db, "INSERT OR IGNORE INTO gg_members (room_id, kind, member_id) VALUES (?, ?, ?)", id, m.kind, m.id);
+      if (key) recordAction(this.db.store, key, { roomId: id });
     });
     const view = this.roomView(id);
     this.bus.emit({ type: "room.updated", room: view });
@@ -1293,6 +1299,39 @@ export class Host {
     if (!this.exits.isLeaving(roomId, contactId) || this.liveTasksIn(roomId, contactId).length) return;
     tx(this.db, () => this.exits.finishTx(roomId, contactId));
     this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
+    this.finishDissolve(roomId);
+  }
+  /**
+   * 解散群(U03):群里的定时删除,联系人成员都走移出(在途任务先停,D05);
+   * 等最后一位联系人真实停下移出后,你也退出、群从会话列表移除并推 room.removed(D16:槽位确认停止才释放,群池随之作废)。
+   * 有在途任务时默认拒绝并列出;没人负责的待认领任务不占 Compute,不拦解散。
+   */
+  dissolveRoom(roomId: string, opts: { stopTasks?: boolean } = {}): { roomId: string; dissolved: boolean } {
+    const r = this.roomRow(roomId);
+    if (r.kind !== "group") throw new HostError("forbidden", "私聊不能解散");
+    if (!this.isMember(roomId, { kind: "user", id: this.userId })) return { roomId, dissolved: true };
+    const live = this.listTasks({ roomId }).filter((t) => t.ownerContactId !== null && !EXIT_SETTLED.has(t.state));
+    if (live.length && !opts.stopTasks) {
+      throw new HostError("conflict", `群里还有 ${live.length} 个在途任务,先停止或等它们完成;要一并停止请带 stopTasks`, { tasks: live.map((t) => ({ taskId: t.id, title: t.title, state: t.state })) });
+    }
+    const mark = getDoc<{ at: string }>(this.db, `room-dissolving:${roomId}`);
+    if (!mark) putDoc(this.db, `room-dissolving:${roomId}`, 0, { at: this.now() });
+    for (const s of this.scheduler.list({ roomId })) this.scheduler.remove(s.id);
+    for (const m of this.members(roomId)) if (m.kind === "contact") this.removeMember(roomId, m, { stopTasks: true });
+    return { roomId, dissolved: this.finishDissolve(roomId) };
+  }
+  /** 解散中的群:联系人成员都已移出就收尾(你退出、群临时槽位作废、推 room.removed)。返回是否已移除。 */
+  private finishDissolve(roomId: string): boolean {
+    if (!getDoc(this.db, `room-dissolving:${roomId}`)) return false;
+    if (!this.isMember(roomId, { kind: "user", id: this.userId })) return true;
+    if (this.members(roomId).some((m) => m.kind === "contact")) return false;
+    tx(this.db, () => {
+      run(this.db, "DELETE FROM gg_members WHERE room_id = ?", roomId);
+      const slots = getDoc<{ slots: number }>(this.db, `room-slots:${roomId}`);
+      if (slots) putDoc(this.db, `room-slots:${roomId}`, slots.ver, { slots: 0 });
+    });
+    this.bus.emit({ type: "room.removed", roomId });
+    return true;
   }
   /** 删除联系人:有在途任务时拒绝;删除后从所有群移出,私聊记录保留。 */
   removeContact(id: string) {
@@ -1649,12 +1688,40 @@ export class Host {
       ],
       ...this.workspaceField(t.id),
       waitingFor: this.quota.waitingReason(t.id) ?? this.stopUnconfirmed.get(t.id) ?? null,
+      slot: this.slotOf(t.id),
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
       ...(doc.description !== undefined ? { description: doc.description } : {}),
       stateVer: ver ?? this.taskDoc(t.id).ver,
       ...this.intentView(t.id),
     };
+  }
+  /** 任务正占着的槽位:个人的还是借的本群临时槽位(AC-23 / U09「看借出」)。 */
+  private slotOf(taskId: string): { scope: "personal" | "group"; stopping: boolean } | null {
+    const l = this.quota.leaseOf(taskId);
+    return l ? { scope: l.scope.startsWith("group:") ? "group" : "personal", stopping: l.stopping } : null;
+  }
+  /** 公告列表带上各联系人成员最近一轮装配到的版本(AC-55「已装配 vN」)。 */
+  announcementViews(roomId: string, order?: AnnouncementOrder): AnnouncementView[] {
+    const list = this.announcements.list(roomId, order);
+    if (!list.length) return list;
+    const seen = this.members(roomId)
+      .filter((m) => m.kind === "contact" && !this.exits.isLeaving(roomId, m.id))
+      .map((m) => ({ id: m.id, v: getDoc<Record<string, number>>(this.db, `ann-assembled:${roomId}:${m.id}`)?.value ?? {} }));
+    return list.map((a) => ({ ...a, assembled: seen.flatMap((s) => (s.v[a.id] ? [{ contactId: s.id, version: s.v[a.id]! }] : [])) }));
+  }
+  /** 记下联系人这一轮装配进上下文的各群公告版本;有变化推 room.updated,界面据此刷新「已装配」。 */
+  private noteAssembled(contactId: string, rooms: readonly RoomRow[]) {
+    for (const r of rooms) {
+      if (r.kind !== "group") continue;
+      const now: Record<string, number> = Object.fromEntries(this.announcements.list(r.id).map((a) => [a.id, a.version]));
+      const key = `ann-assembled:${r.id}:${contactId}`;
+      const cur = getDoc<Record<string, number>>(this.db, key);
+      const same = cur ? Object.keys(cur.value).length === Object.keys(now).length && Object.entries(now).every(([k, v]) => cur.value[k] === v) : Object.keys(now).length === 0;
+      if (same) continue;
+      putDoc(this.db, key, cur?.ver ?? 0, now);
+      this.bus.emit({ type: "room.updated", room: this.roomView(r.id) });
+    }
   }
   private questionText(taskId: string, qId: string): string {
     const c = this.questionCard(taskId, qId);
@@ -2434,6 +2501,8 @@ export class Host {
       this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
       throw e;
     }
+    // 第 1 块已装配好:记下各群公告装配到的版本(AC-55)
+    this.noteAssembled(contactId, rooms);
     // 在途轮次标记(F12):本轮提交时与游标同一事务删掉;宿主中途退出,重启时据此认出未提交轮次并计 crash_recovery_count
     this.markRunning(contactId, JSON.stringify({ processed: processedNow, inbox: inboxEnd }), focusRoom, lastSeen, inboxEnd);
     // 整轮卡死判失败(D26 第 8.3 节):周期核对判出这一轮卡死时中止它,不等脑子自己返回

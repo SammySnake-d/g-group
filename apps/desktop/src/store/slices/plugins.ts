@@ -31,6 +31,9 @@ export type PluginsSlice = PluginsCtx & {
   roomCommands: Record<string, RoomCommands>
   /** commands.list:拉这个会话后端认的命令(插件启停、挂摘、成员变了都要重拉) */
   loadCommands: (roomId: string) => void
+  /** 插件整表换掉 / 换一个(连上后端时由 api/wire/plugins 按 plugins.list 与事件写) */
+  setPlugins: (list: PluginState[]) => void
+  putPlugin: (p: PluginState) => void
 }
 
 export const createPluginsSlice: Slice<PluginsSlice> = (set, get) => {
@@ -67,6 +70,8 @@ export const createPluginsSlice: Slice<PluginsSlice> = (set, get) => {
       void call('commands.list', { roomId }).then((r) => { if (r.ok) set((st) => ({ roomCommands: { ...st.roomCommands, [roomId]: { names: r.value.commands.map((c) => c.name), ...stamp } } })) })
     },
 
+    setPlugins: (plugins) => set({ plugins }),
+    putPlugin: (p) => L.plugins((l) => (l.some((x) => x.id === p.id) ? l.map((x) => (x.id === p.id ? p : x)) : [...l, p])),
     updatePlugin: (id, patch) => mapPlugin(id, (x) => ({ ...x, ...patch })),
     /* 推进生命周期:非法转移原样返回错误,不改状态。store 的 set 是同步的,同一拍里连着推进几次(装好后一次挂到几个聊天)不会互相覆盖 */
     pluginAct: (id, a) => {

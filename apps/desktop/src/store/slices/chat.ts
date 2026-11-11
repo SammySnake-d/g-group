@@ -2,7 +2,7 @@
 import { people, type Conversation, type Msg, type PersonId, type QuoteRef } from '@/data'
 import { live, liveCtx } from '@/api/wire/live'
 import { seqOf } from '@/api/wire/messages'
-import { markReadLive, openDmLive } from '@/api/wire/rooms'
+import { markReadLive, openDmLive, updateRoomLive } from '@/api/wire/rooms'
 import { broken } from '@/mut'
 import { boot, clock, later, uid } from '../boot'
 import { focusComposer, scrollToMsg } from '../dom'
@@ -130,7 +130,10 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
       const last = live(get()) ? get().convs.find((c) => c.id === cid)?.messages.reduce((n, m) => Math.max(n, ('id' in m && seqOf(m.id)) || 0), 0) : 0
       if (last) markReadLive(liveCtx(get, set), cid, last)
     },
-    renameConv: (cid, title) => L.convs((cs) => cs.map((c) => (c.id === cid ? { ...c, title } : c))),
+    renameConv: (cid, title) => {
+      if (live(get())) { void updateRoomLive(liveCtx(get, set), cid, { title }, `群名改成「${title}」`); return }
+      L.convs((cs) => cs.map((c) => (c.id === cid ? { ...c, title } : c)))
+    },
 
     setDraft: (v) => {
       const a = get().active

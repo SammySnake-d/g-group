@@ -1,6 +1,8 @@
 // 消息操作切片:撤回、编辑、私聊回退、删除、转发、置顶、投票、改挂、群公告。
 import { people, type Msg, type Pending, type PersonId } from '@/data'
 import { notify } from '@/hooks/use-toast'
+import { live, liveCtx } from '@/api/wire/live'
+import { addNoticeLive, editNoticeLive } from '@/api/wire/notices'
 import { broken } from '@/mut'
 import { uid } from '../boot'
 import { lens, type Slice } from '../state'
@@ -191,11 +193,13 @@ export const createMessagesSlice: Slice<MessagesSlice> = (set, get) => {
     },
 
     setNotice: (cid, text) => {
+      if (live(get())) { void addNoticeLive(liveCtx(get, set), cid, text); return }
       L.convs((cs) => cs.map((c) => (c.id === cid ? { ...c, notice: text, noticeBy: '你 · 刚刚', notices: [{ id: 'n' + uid(), text, by: '你', at: '刚刚', ver: 1 }, ...(c.notices ?? [])] } : c)))
       sys(cid, text ? `你更新了群公告：${text.split('\n')[0]}` : '你清空了群公告')
     },
     editNotice: (cid, nid, text) => {
       const n = get().convs.find((c) => c.id === cid)?.notices?.find((x) => x.id === nid)
+      if (live(get())) { if (n) void editNoticeLive(liveCtx(get, set), cid, nid, text, n.ver); return }
       L.convs((cs) => cs.map((c) => (c.id === cid ? { ...c, notices: (c.notices ?? []).map((x) => (x.id === nid ? { ...x, text, ver: x.ver + 1, by: '你', at: '刚刚' } : x)) } : c)))
       sys(cid, `你把群公告改到 v${(n?.ver ?? 0) + 1}：${text.split('\n')[0]}`)
     },
