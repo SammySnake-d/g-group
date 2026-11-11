@@ -13,6 +13,8 @@ import { DEFAULT_SHAPE, DEFAULT_SWATCH_INDEX } from './constants'
 /* ---------- 添加联系人:先挑形象和颜色(大头像实时预览),再填名字和擅长什么;模型用全局默认 ---------- */
 export function AddContactPage() {
   const { createContact, modelSettings } = useApp()
+  /* 连上后端时形象和颜色存不下(合同只有头像图片地址),不让选——选了却不生效等于假装成功;形象由软件按联系人自动分配 */
+  const pickLook = useApp((s) => s.backend.mode !== 'connected')
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
   const [shape, setShape] = useState<string>(DEFAULT_SHAPE)
@@ -21,6 +23,7 @@ export function AddContactPage() {
   return (
     <>
       <PageScroll className="px-4">
+        {pickLook && <>
         <div className="flex flex-col items-center py-3"><Bot shape={shape} color={color} size={80} follow /></div>
         <ChoiceGroup label="形象" value={shape} onChange={setShape} className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto px-1 pb-2">
           {SHAPES.map((s) => (
@@ -36,14 +39,15 @@ export function AddContactPage() {
             </Choice>
           ))}
         </ChoiceGroup>
-        <Field label="名字"><TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="比如：设计师" /></Field>
+        </>}
+        <Field label="名字" className={pickLook ? undefined : 'pt-2'}><TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="比如：设计师" /></Field>
         <Field label="擅长什么" className="mt-3"><TextInput value={role} onChange={(e) => setRole(e.target.value)} placeholder="比如：画界面、做配色" /></Field>
         <div className="mt-4 flex items-center justify-between text-[12.5px] font-medium text-fg-2"><span>最多同时分几个 Compute</span><span className="tabular-nums text-fg">{quota} 个</span></div>
         <Slider value={[quota]} min={1} max={5} step={1} onValueChange={(v) => setQuota(v[0])} className="mt-3" aria-label="最多同时分几个 Compute" />
         <Hint testid="add-model-note" className="mt-3 text-[12px]">说话用全局默认的 {modelLabel(modelSettings.defaultSpeakingModel, modelSettings)}，Compute 继承全局（{modelLabel(modelSettings.defaultComputeModel, modelSettings)}）。加好以后在它的工作台「设置」里改。</Hint>
       </PageScroll>
       <PageFooter>
-        <Button variant="primary" size="md" className={cn('w-full', ctaDisabled)} disabled={!name.trim()} onClick={() => createContact({ name: name.trim(), role: role.trim() || '通用助手', shape, color, model: modelSettings.defaultSpeakingModel, quota })}>添加</Button>
+        <Button variant="primary" size="md" className={cn('w-full', ctaDisabled)} disabled={!name.trim()} onClick={() => createContact({ name: name.trim(), role: role.trim() || (pickLook ? '通用助手' : ''), shape, color, model: modelSettings.defaultSpeakingModel, quota })}>添加</Button>
       </PageFooter>
     </>
   )

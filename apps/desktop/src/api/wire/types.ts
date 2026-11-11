@@ -35,6 +35,21 @@ export class ReadError extends Error {
   }
 }
 
+/** 后端给的当前用户 id。界面里你自己固定是 'me',映射时把它换成 'me' */
+export const selfId = (w: WireCtx): string => {
+  const b = w.get().backend
+  return b.mode === 'connected' ? b.userId : ''
+}
+
+/** 写操作的动作号(合同 clientActionId):同一号重发,后端只认一次 */
+export const actionId = () => `ui-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
+/** 合同时间(ISO)→ 界面上的「时:分」;认不出给空串,不编 */
+export const clockOf = (iso: string | null | undefined): string => {
+  const d = iso ? new Date(iso) : null
+  return d && !Number.isNaN(d.getTime()) ? d.toTimeString().slice(0, 5) : ''
+}
+
 /** 读后端:成功返回值,失败抛 ReadError */
 export async function read<M extends MethodName>(w: WireCtx, method: M, params: ParamsOf<M>): Promise<ResultOf<M>> {
   const r = await w.call(method, params)

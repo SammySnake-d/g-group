@@ -1,0 +1,31 @@
+# 红:当前实现(提交 bf3a18cb)上跑新 Electron e2e,box1,2026-11-11 19:04
+# 命令:node box-e2e.mjs --wt /tmp/gg-live --box box1 --name live --port 5261 --project electron -- e2e/closed-loop.electron.spec.ts
+[box] box1 上的 /workspace/728/wt-live 已就绪(bf3a18c)
+[box] 已排队:playwright --project=electron e2e/closed-loop.electron.spec.ts
+Running 1 test using 1 worker
+[1/1] [electron] › e2e/closed-loop.electron.spec.ts:33:1 › 闭环:只经界面建联系人、私聊派活、建群拉人后群里派活,看到回复、Compute 推进与交付
+  1) [electron] › e2e/closed-loop.electron.spec.ts:33:1 › 闭环:只经界面建联系人、私聊派活、建群拉人后群里派活,看到回复、Compute 推进与交付 › 连上后端:左下角标记写明已连接,各类数据都读到了 
+    Error: expect(locator).toHaveAttribute(expected) failed
+    Locator:  getByTestId('backend-demo')
+    Expected: "live"
+    Received: ""
+    Timeout:  30000ms
+    Call log:
+      - Expect "toHaveAttribute" getByTestId('backend-demo') with timeout 30000ms
+      - waiting for getByTestId('backend-demo')
+        63 × locator resolved to <span tabindex="0" data-state="closed" data-mode="connected" data-testid="backend-demo" class="inline-flex max-w-full shrink-0 items-center gap-1 whitespace-nowrap font-medium tabular-nums [&_svg]:size-3 [&_svg]:shrink-0 border h-[18px] rounded-md px-1.5 text-[10.5px] border-line text-fg-2 my-1 cursor-default">演示</span>
+           - unexpected value "null"
+      45 |       const mark = win.getByTestId("backend-demo");
+      46 |       await expect(mark).toHaveAttribute("data-mode", "connected", LONG);
+    > 47 |       await expect(mark).toHaveAttribute("data-wire", "live", LONG);
+         |                          ^
+      48 |       await expect(mark).toHaveAttribute("data-failed", "0");
+      49 |       await expect(mark).toHaveText("已连接");
+      50 |     });
+        at /workspace/728/wt-live/apps/desktop/e2e/closed-loop.electron.spec.ts:47:26
+        at /workspace/728/wt-live/apps/desktop/e2e/closed-loop.electron.spec.ts:44:5
+    Error Context: test-results/closed-loop.electron-闭环-只经-3f4c1-群拉人后群里派活-看到回复、Compute-推进与交付-electron/error-context.md
+  1 failed
+    [electron] › e2e/closed-loop.electron.spec.ts:33:1 › 闭环:只经界面建联系人、私聊派活、建群拉人后群里派活,看到回复、Compute 推进与交付 
+[box] 用了 box1;云端残留进程:0
+exit=1

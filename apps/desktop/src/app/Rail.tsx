@@ -1,7 +1,9 @@
 import { Settings } from 'lucide-react'
 import type { BackendState } from '@/api/backend'
+import type { WireStatus } from '@/api/wire'
 import { Avatar, Bot } from '@/components/Avatar'
-import { Chip } from '@/components/ui/chip'
+import { Button } from '@/components/ui/button'
+import { Chip, chipVariants } from '@/components/ui/chip'
 import { IconButton } from '@/components/ui/icon-button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { HELPER_MARK } from '@/config/brand'
@@ -11,13 +13,15 @@ import { cn } from '@/lib/utils'
 
 /* 左侧导航:和页面同一张纸,只深一层(第二层中性色);当前位置 = 选中底色 + 柿红竖标。
    #929:之前的深墨竖条和浅色页面割裂。 */
-export function Rail({ section, panoOpen, badge, running, helperOpen, backend, onSection, onPano, onHelper, onSettings }: {
+export function Rail({ section, panoOpen, badge, running, helperOpen, backend, wire, onSection, onPano, onHelper, onSettings, onReload }: {
   section: Section
   panoOpen: boolean
   badge: number
   running: boolean
   helperOpen: boolean
   backend: BackendState
+  wire: WireStatus
+  onReload: () => void
   onSection: (s: Section) => void
   onPano: () => void
   onHelper: () => void
@@ -38,15 +42,31 @@ export function Rail({ section, panoOpen, badge, running, helperOpen, backend, o
       ))}
       <div className="flex-1" />
       <IconButton data-testid="nav-helper" label="Helper（全局 · ⌘K）：默认不读任何聊天" side="right" size="icon-lg" active={helperOpen} onClick={onHelper} icon={<Bot shape={HELPER_MARK.shape} color={HELPER_MARK.color} size={26} />} />
-      {/* 界面数据还是演示数据时一直标「演示」;后端连上了也如实说明界面还没接真实数据(真实数据层接好后再去掉) */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Chip data-testid="backend-demo" data-mode={backend.mode} variant="outline" size="xs" tabIndex={0} className="my-1 cursor-default">演示</Chip>
-        </TooltipTrigger>
-        <TooltipContent side="right">{backend.mode === 'checking' ? '正在连接后端…' : backend.mode === 'connected' ? '后端已连接；界面还没接真实数据，这里仍是演示数据' : `后端未连接（${backend.reason}），界面里是演示数据`}</TooltipContent>
-      </Tooltip>
+      <BackendMark backend={backend} wire={wire} onReload={onReload} />
       <IconButton data-testid="nav-settings" label="设置" side="right" size="icon-lg" onClick={onSettings} icon={<Settings strokeWidth={1.75} />} />
       <div className={cn('mt-1 rounded-full ring-2 ring-rail-hover')} style={{ ['--avatar-ring' as string]: 'var(--rail)' }}><Avatar id="me" size={30} /></div>
     </nav>
+  )
+}
+
+/** 数据从哪来、全不全:固定在这一格,不动手一眼看到。没读全时可以点一下重读;其余状态只看不点 */
+function BackendMark({ backend, wire, onReload }: { backend: BackendState; wire: WireStatus; onReload: () => void }) {
+  const failed = wire.phase === 'live' ? wire.failed : []
+  const m = backend.mode === 'checking' ? { text: '连接中', tone: 'neutral' as const, tip: '正在连接后端…' }
+    : backend.mode === 'demo' ? { text: '演示', tone: 'neutral' as const, tip: `后端未连接（${backend.reason}），界面里是演示数据` }
+    : wire.phase !== 'live' ? { text: '读取中', tone: 'neutral' as const, tip: '后端已连接，正在读取联系人、会话、消息和任务' }
+    : failed.length ? { text: '没读全', tone: 'warm' as const, tip: `没读到：${failed.map((f) => `${f.entity}（${f.reason}）`).join('、')}。点一下重新读取` }
+    : { text: '已连接', tone: 'ok' as const, tip: '后端已连接，界面里都是后端的数据' }
+  const phase = backend.mode === 'connected' ? wire.phase : undefined
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        {failed.length
+          ? <Button data-testid="backend-demo" data-mode={backend.mode} data-wire={phase} data-failed={failed.length} variant={null} size={null} onClick={onReload} aria-label={m.tip}
+            className={cn(chipVariants({ tone: m.tone, variant: 'outline', size: 'xs' }), 'my-1')}>{m.text}</Button>
+          : <Chip data-testid="backend-demo" data-mode={backend.mode} data-wire={phase} data-failed={failed.length} tone={m.tone} variant="outline" size="xs" tabIndex={0} className="my-1 cursor-default">{m.text}</Chip>}
+      </TooltipTrigger>
+      <TooltipContent side="right">{m.tip}</TooltipContent>
+    </Tooltip>
   )
 }

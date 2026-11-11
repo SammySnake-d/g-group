@@ -7,8 +7,9 @@ import { matchFile } from '@/components/files/context'
 
 /** 文件区:按类别分组(网页 / 文档 / 清单 / 资产),写明谁在哪个会话里做的 */
 export function FileList({ query }: { query: string }) {
-  const { convs, fileSel, setFileSel } = useApp((s) => ({ convs: s.convs, fileSel: s.fileSel, setFileSel: s.setFileSel }))
-  const hit = artifacts.filter((a) => matchFile(a, query, convs))
+  const { convs, fileSel, setFileSel, live } = useApp((s) => ({ convs: s.convs, fileSel: s.fileSel, setFileSel: s.setFileSel, live: s.backend.mode === 'connected' }))
+  /* 文件还没接后端(files.list):连上后端时不列演示文件 */
+  const hit = (live ? [] : artifacts).filter((a) => matchFile(a, query, convs))
   return (
     <>
       {!hit.length && <div className="px-2 py-6 text-center text-[13px] text-fg-3">没有找到文件</div>}

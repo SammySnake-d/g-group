@@ -1,5 +1,8 @@
 // 会话与消息切片:会话列表、当前会话、消息写入、已读、正在输入、草稿与引用、多选。
 import { people, type Conversation, type Msg, type PersonId, type QuoteRef } from '@/data'
+import { live, liveCtx } from '@/api/wire/live'
+import { seqOf } from '@/api/wire/messages'
+import { markReadLive, openDmLive } from '@/api/wire/rooms'
 import { broken } from '@/mut'
 import { boot, clock, later, uid } from '../boot'
 import { focusComposer, scrollToMsg } from '../dom'
@@ -46,6 +49,8 @@ export type ChatSlice = ChatCtx & {
   /** 打开会话那一刻记住它有几条未读,用来画「以下是新消息」分隔线(#1240) */
   unreadAt: Record<string, number>
   setActive: (id: string) => void
+  /** 整个会话列表换掉或按函数更新(连上后端时由 api/wire 的会话、消息接线写) */
+  setConvs: (v: Conversation[] | ((cs: Conversation[]) => Conversation[])) => void
   /** 从列表点开一个会话:切过去、清未读、退出多选 */
   openFromList: (id: string) => void
   /** 改当前会话的草稿 */
@@ -108,15 +113,23 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
 
     openConv: (id) => set({ panoOpen: false, section: 'chat', active: id, stack: [] }),
     setActive: (active) => set({ active }),
+    setConvs: (v) => L.convs((cs) => (typeof v === 'function' ? v(cs) : v)),
     openFromList: (id) => { set({ active: id }); get().markRead(id); get().setSelecting(false) },
     openDm: (id) => {
       const dm = get().convs.find((c) => c.kind === 'dm' && c.members.includes(id))
       if (dm) { set({ section: 'chat', active: dm.id, stack: [] }); return }
+      /* 连上后端:私聊由后端开(已有就是原来那个),以回包为准 */
+      if (live(get())) { void openDmLive(liveCtx(get, set), id); return }
       const nid = 'dm-' + id
       L.convs((cs) => [...cs, { id: nid, kind: 'dm', title: people[id].name, members: ['me', id], time: '刚刚', messages: [{ k: 'sys', id: 'n' + uid(), text: `你和 ${people[id].name} 的私聊，和群里的记录互不相通` }] }])
       set({ section: 'chat', active: nid, stack: [] })
     },
-    markRead: (cid) => L.convs((cs) => cs.map((c) => (c.id === cid ? { ...c, unread: 0 } : c))),
+    markRead: (cid) => {
+      L.convs((cs) => cs.map((c) => (c.id === cid ? { ...c, unread: 0 } : c)))
+      /* 连上后端:告诉后端你读到了这个会话最后一条 */
+      const last = live(get()) ? get().convs.find((c) => c.id === cid)?.messages.reduce((n, m) => Math.max(n, ('id' in m && seqOf(m.id)) || 0), 0) : 0
+      if (last) markReadLive(liveCtx(get, set), cid, last)
+    },
     renameConv: (cid, title) => L.convs((cs) => cs.map((c) => (c.id === cid ? { ...c, title } : c))),
 
     setDraft: (v) => {

@@ -72,7 +72,8 @@ export function ComputeLine({ id }: { id: string }) {
       <StatusDot c={c} />
       <span className="truncate font-medium text-fg">{c.title}</span>
       <span className="shrink-0 text-run" data-testid={`compute-phase-${id}`}>{c.status === 'stopped' ? '已停止' : c.phase}</span>
-      {c.status === 'running' && <span className="shrink-0 tabular-nums text-fg-3">第 {Math.min(stepsDone + 1, c.steps.length)}/{c.steps.length} 步 · {c.elapsed}</span>}
+      {/* 后端的任务没有步骤计划(合同里没有),就不写第几步 */}
+      {c.status === 'running' && c.steps.length > 0 && <span className="shrink-0 tabular-nums text-fg-3">第 {Math.min(stepsDone + 1, c.steps.length)}/{c.steps.length} 步 · {c.elapsed}</span>}
       <ChevronRight className="h-3.5 w-3.5 text-fg-3 transition-transform duration-fast ease-out group-hover/c:translate-x-0.5" />
       {id === 'logs' && c.status === 'running' && <span data-testid="demo-captcha" role="button" onClick={stop(() => hitCaptcha(id))} className="ml-1 shrink-0 rounded px-1.5 text-[11.5px] text-fg-3 hover:bg-hover hover:text-fg">演示：遇到验证码</span>}
     </Pressable><OpenSessionButton id={id} /></div>

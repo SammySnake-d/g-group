@@ -11,7 +11,9 @@ import { boot } from '@/store/boot'
 export function FilesMain({ id }: { id: string | null }) {
   const setFileSel = useApp((s) => s.setFileSel)
   const [peek, setPeek] = useState<Artifact | null>(null)
-  const collection = fileDataset(boot.fileFixture, artifacts)
+  /* 文件还没接后端(files.list):连上后端时不列演示文件 */
+  const live = useApp((s) => s.backend.mode === 'connected')
+  const collection = fileDataset(boot.fileFixture, live ? [] : artifacts)
   const [keyboardPeek, setKeyboardPeek] = useState(false)
   const a = collection.find((f) => f.id === id)
   return <>

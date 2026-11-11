@@ -12,7 +12,9 @@ import { PLUGINS_CTX_KEYS, createPluginsSlice } from './slices/plugins'
 import { SCHEDULE_CTX_KEYS, createScheduleSlice } from './slices/schedule'
 import { createSendSlice } from './slices/send'
 import { TASKS_CTX_KEYS, createTasksSlice } from './slices/tasks'
+import { bridge } from '@/api/backend'
 import { applyDemo } from '@/api/demo-state'
+import { guardUnwired } from '@/api/wire/unwired'
 import { CONTACTS_CTX_KEYS, createContactsSlice } from './slices/contacts'
 import type { AppState } from './state'
 import type { Ctx } from './types'
@@ -31,9 +33,11 @@ export const useAppStore = create<AppState>()((...a) => ({
   ...createContactsSlice(...a),
 }))
 
-/* 演示数据:B0a 先照旧在启动时就装(行为和拆分前一样);连上后端时由 api/wire 读真实数据。
-   B0b 改成只在没有桌面壳 / 后端没连上时装,连上后端的界面不再出现演示数据 */
-applyDemo(useAppStore)
+/* 演示数据只在没连上后端时装:没有桌面壳(浏览器预览、renderer 用例)就在建 store 时同步装好,首帧就是演示界面;
+   有桌面壳时等 app/useShell 探测——连上了由 api/wire 读真实数据,一条演示数据都不装;没连上才装演示数据 */
+if (!bridge) applyDemo(useAppStore)
+/* 连上后端时还没接线的写动作不在本地假装做成(api/wire/unwired) */
+guardUnwired(useAppStore)
 
 /** Ctx 的全部字段:useApp() 只订阅这些(壳内部的宽度、草稿、浮层栈变了,业务组件不跟着重渲染)。各片的清单在各自切片文件里 */
 const CTX_KEYS = [

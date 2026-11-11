@@ -2,6 +2,8 @@
 // 回复汇报验收/返工、补进某件事、总结外部来源、改前提作废选项、被 @ 的助手接话)。
 import { REACTION_EMOJI } from '@/config/emoji'
 import { people, type Msg, type PersonId } from '@/data'
+import { live, liveCtx } from '@/api/wire/live'
+import { sendLive } from '@/api/wire/messages'
 import { broken, candidate } from '@/mut'
 import { frozen, later, uid } from '../boot'
 import { lens, type Slice } from '../state'
@@ -31,6 +33,13 @@ export const createSendSlice: Slice<SendSlice> = (set, get) => {
       const t = (override ?? draftOf(s, broken('AC-24'))).trim()
       if (editing) { s.editMsg(editing, t); return }
       if (!t && !q.length) return
+      /* 连上后端:发给后端,回复、派活、进展都由后端的事件带回来;下面按正文分流的演示剧本一概不走 */
+      if (live(s)) {
+        s.setDraft('')
+        L.quotes((all) => ({ ...all, [active]: [] }))
+        void sendLive(liveCtx(get, set), conv?.id ?? active, t, q)
+        return
+      }
       const id = 'me-' + uid()
       const running = Object.values(computes).filter((c) => c.conv === active && c.status === 'running')
       const tag = conv.kind === 'dm' && running.length === 1 && !q.length ? { task: running[0].id, state: '已收到' } : undefined
