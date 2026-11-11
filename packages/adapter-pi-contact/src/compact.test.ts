@@ -3,7 +3,7 @@
 // 模型与联系人说话模型一致才发;端点报错如实抛出,不换模型重试。
 import assert from "node:assert/strict";
 import test from "node:test";
-import { type CompactRequest, STATE_NOTE_GUIDE } from "@g-group/kernel";
+import { type CompactRequest, type ReflectSource, STATE_NOTE_GUIDE } from "@g-group/kernel";
 import { createPiCompactor } from "./compact.ts";
 import { PiContactMindError } from "./mind.ts";
 
@@ -34,7 +34,8 @@ function fake(reply: { text: string } | { status: number; error: unknown }) {
   };
   return { fetch: fetchFn, seen };
 }
-const req = (over: Partial<CompactRequest> = {}): CompactRequest => ({
+const req = (over: Partial<CompactRequest> = {}): CompactRequest & { sources: readonly ReflectSource[] } => ({
+  sources: [],
   contact: { id: "c-1", name: "小克", speakingModel: MODEL, persona: "说话简短" },
   kind: "round-note",
   previous: "旧笔记:在做排序",

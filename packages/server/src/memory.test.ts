@@ -258,13 +258,14 @@ test("每轮结束宿主固定发起一次检查(不靠模型自己想起调 rem
   const host = new Host({
     ...fresh(), maxDeferMs: 5,
     mind: scripted(() => [], reqs),
-    compactor: () => ({ async compact() { throw new Error("有 reflect 时不该再调 compact"); }, async reflect(r: ReflectReq) { asks.push(r); return JSON.parse(JSON.stringify(out).replaceAll("ROOM", r.material.match(/· (dm-[^ ]+) ·/)?.[1] ?? "x")); } }),
+    compactor: () => ({ async compact() { throw new Error("有 reflect 时不该再调 compact"); }, async reflect(r: ReflectReq) { asks.push(r); const src = r.sources[0]!; return { ...out, memories: out.memories.map(m => ({ ...m, anchors: m.anchors.map(a => a.replaceAll("ROOM", src.roomId)), roomId: src.roomId, sourceSeq: src.seq, evidence: src.text })) }; } }),
   });
   const c = host.createContact({ name: "小克", speakingModel: "model-k", persona: "负责部署与发布" });
   const dm = host.openDm(c.id);
   host.send({ roomId: dm.id, clientActionId: "1", text: "以后部署前先跑测试" });
   await settle(host);
   assert.equal(asks.length, 1, "联系人没调 remember 也固定检查一次");
+  assert.deepEqual(asks[0]!.sources?.map(x => x.seq), [1], "检查拿到宿主冻结的真实来源");
   assert.equal(asks[0]!.contact.speakingModel, "model-k");
   assert.match(asks[0]!.contact.persona, /负责部署与发布/);
   assert.match(asks[0]!.material, /以后部署前先跑测试/);
@@ -272,8 +273,8 @@ test("每轮结束宿主固定发起一次检查(不靠模型自己想起调 rem
   assert.equal(host.stateNote(c.id), "笔记:用户定了部署规矩", "模型没写笔记时用检查给的笔记");
   const [m] = host.listMemories(c.id);
   assert.equal(m!.body, "部署前先跑测试");
-  assert.deepEqual(m!.source, { roomId: dm.id, seq: 1, userQuote: false });
-  host.send({ roomId: dm.id, clientActionId: "2", text: "发版吧" });
+  assert.deepEqual(m!.source, { roomId: dm.id, seq: 1, userQuote: true, revision: 1, quote: "以后部署前先跑测试", senderId: host.userId });
+  host.send({ roomId: dm.id, clientActionId: "2", text: "以后部署前先跑测试，再发版吧" });
   await settle(host);
   assert.match(b(reqs.at(-1)!, 5), /部署前先跑测试/, "读回到新消息旁边");
   assert.deepEqual(asks[1]!.neighbors.map((x) => x.id), [m!.id], "第二次检查带上邻域记忆,便于判关系");

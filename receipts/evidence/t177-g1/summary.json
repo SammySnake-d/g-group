@@ -1,0 +1,436 @@
+{
+  "candidate": "2edec88bdb7bf271dd0b2831bc6e930425a9d931",
+  "red_commit": "c0bf5681edc98c5d906bc027e4b897a12d9c5a6e",
+  "green_commit": "759e0c90ef752db68fd70920007d8ff242f5c3b8",
+  "box": "box3",
+  "red": {
+    "tests": 39,
+    "pass": 0,
+    "fail": 39,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "full": {
+    "tests": 1512,
+    "pass": 1512,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "mutation_control": {
+    "tests": 39,
+    "pass": 39,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "mutation_after_control": {
+    "tests": 39,
+    "pass": 39,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "mutations": [
+    {
+      "id": "G1-LOCK",
+      "file": "packages/kernel/src/attention.ts",
+      "designated": "G1-LOCK ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-LOCK 同步回调里的通知也保持同联系人单飞"
+      ]
+    },
+    {
+      "id": "G1-01TIME",
+      "file": "packages/server/src/host.ts",
+      "designated": "G1-01TIME ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-01TIME 后台检查无响应按现有超时阈值留债而不无限阻塞对话"
+      ]
+    },
+    {
+      "id": "G1-02PRE",
+      "file": "packages/server/src/host.ts",
+      "designated": "G1-02PRE ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-02PRE 对话在途撤回原文 后台检查发送前先核来源"
+      ]
+    },
+    {
+      "id": "G1-03a",
+      "file": "packages/adapter-pi-contact/src/compact.ts",
+      "designated": "G1-03a ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-03a compact 截断不得返回成功笔记"
+      ]
+    },
+    {
+      "id": "G1-03b",
+      "file": "packages/adapter-pi-contact/src/compact.ts",
+      "designated": "G1-03b ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-03b reflect 截断JSON不得当成功零结果"
+      ]
+    },
+    {
+      "id": "G1-01V",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G1-01V ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-01V 消息版本取最后编辑或撤回事件 seq 不用 edited 布尔"
+      ]
+    },
+    {
+      "id": "G1-02H",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G1-02H ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-02H 中文假设不是已定偏好"
+      ]
+    },
+    {
+      "id": "G1-02Q",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G1-02Q ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-02Q 中文无问号问句尾不是声明"
+      ]
+    },
+    {
+      "id": "G1-02E",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G1-02E ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-02E 保留上游英文问句假设排除和直接声明对照"
+      ]
+    },
+    {
+      "id": "G1-02R",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G1-02R ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-02R 同 seq 不同会话逐条匹配且不能指向批次外来源"
+      ]
+    },
+    {
+      "id": "G1-02M",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G1-02M ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-02M 缺出处旧输出不得猜最后一条用户消息"
+      ]
+    },
+    {
+      "id": "G1-02V",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G1-02V ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-02V 调用中编辑同字文本也失效 撤回不可见不写"
+      ]
+    },
+    {
+      "id": "G1-02S",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G1-02S ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-02S 本次要求不升全局 长期原话才保留 global"
+      ]
+    },
+    {
+      "id": "G1-02A",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G1-02A ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-02A 他人转述不替用户作证 非用户只收已验证结果"
+      ]
+    },
+    {
+      "id": "G1-02C",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G1-02C ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-02C 引用的工具网页与代码块不能冒充用户直接要求"
+      ]
+    },
+    {
+      "id": "G1-03D",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G1-03D ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-03D 合法零结果与缺字段畸形结果分开判定"
+      ]
+    },
+    {
+      "id": "G1-01B",
+      "file": "packages/server/src/memory-coverage.ts",
+      "designated": "G1-01B ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-01B 覆盖按实际投递版本登记且同批重复幂等"
+      ]
+    },
+    {
+      "id": "G1-01R",
+      "file": "packages/server/src/memory-coverage.ts",
+      "designated": "G1-01R ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-01R 失败补查复用重试策略的退避和上限"
+      ]
+    },
+    {
+      "id": "G1-01A",
+      "file": "packages/server/src/memory-coverage.ts",
+      "designated": "G1-01A ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-01A 鉴权额度失败不逐轮重试且不清欠账"
+      ]
+    },
+    {
+      "id": "G1-03Z",
+      "file": "packages/server/src/memory-coverage.ts",
+      "designated": "G1-03Z ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-03Z 合法零结果完成而无结果 pending 不冒成功"
+      ]
+    },
+    {
+      "id": "G1-04N",
+      "file": "packages/server/src/memory-coverage.ts",
+      "designated": "G1-04N ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-04N md 已写而数据库未确认重开后不新建第二条"
+      ]
+    },
+    {
+      "id": "G1-04E",
+      "file": "packages/server/src/memory-coverage.ts",
+      "designated": "G1-04E ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-04E 重复恢复不多挂佐证或多升版本"
+      ]
+    },
+    {
+      "id": "G1-04C",
+      "file": "packages/server/src/memory-coverage.ts",
+      "designated": "G1-04C ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-04C 替代两文件中途失败重启只补未写文件"
+      ]
+    },
+    {
+      "id": "G1-04I",
+      "file": "packages/server/src/memory-coverage.ts",
+      "designated": "G1-04I ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-04I 部分写入后来源失效只撤回自己未完成的写入"
+      ]
+    },
+    {
+      "id": "G1-04T",
+      "file": "packages/server/src/memory-coverage.ts",
+      "designated": "G1-04T ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-04T 一条消息两件事两个稳定写入身份不会互吞"
+      ]
+    },
+    {
+      "id": "G1-03P",
+      "file": "packages/server/src/memory-coverage.ts",
+      "designated": "G1-03P ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-03P 有合法项可落地但部分无效不冒充整批检查完成"
+      ]
+    },
+    {
+      "id": "G1-01H",
+      "file": "packages/server/src/host.ts",
+      "designated": "G1-01H ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-01H 检查超时不吞欠账 下一轮带旧原文并补查"
+      ]
+    },
+    {
+      "id": "G1-02H-host",
+      "file": "packages/server/src/host.ts",
+      "designated": "G1-02H ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-02H 第一条原话产生的记忆不挂到最后一条用户消息"
+      ]
+    },
+    {
+      "id": "G1-02HYP",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G1-02HYP ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-02HYP 宿主不把中文提问的子串写成长期偏好"
+      ]
+    },
+    {
+      "id": "G1-02EDIT",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G1-02EDIT ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-02EDIT 反射在途编辑后改回同字也不接纳旧版本"
+      ]
+    },
+    {
+      "id": "G1-02PROJECT",
+      "file": "packages/server/src/host.ts",
+      "designated": "G1-02PROJECT ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-02PROJECT 编辑通知使用原消息 seq 和新 revision"
+      ]
+    },
+    {
+      "id": "G1-01K",
+      "file": "packages/server/src/host.ts",
+      "designated": "G1-01K ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-01K 共享熔断打开时后台不发检查请求"
+      ]
+    },
+    {
+      "id": "G1-03U",
+      "file": "packages/server/src/host.ts",
+      "designated": "G1-03U ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-03U 不支持 reflect 可补笔记但覆盖不得记成功"
+      ]
+    },
+    {
+      "id": "G1-05T",
+      "file": "packages/server/src/host.ts",
+      "designated": "G1-05T ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-05T 更正缺 target 给邻域回问一次而不是静默丢弃"
+      ]
+    },
+    {
+      "id": "G1-05C",
+      "file": "packages/server/src/host.ts",
+      "designated": "G1-05C ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-05C 自动检查的双方用户原话冲突只问用户不替换"
+      ]
+    },
+    {
+      "id": "G1-03F",
+      "file": "packages/server/src/host.ts",
+      "designated": "G1-03F ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-03F 反射失败 compact 补写成功也保留检查欠账"
+      ]
+    },
+    {
+      "id": "G1-03BAD",
+      "file": "packages/kernel/src/memory-capture.ts",
+      "designated": "G1-03BAD ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-03BAD 畸形检查结果不覆盖旧笔记也不阻塞对话游标"
+      ]
+    },
+    {
+      "id": "G1-01CARD",
+      "file": "packages/server/src/host.ts",
+      "designated": "G1-01CARD ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-01CARD 鉴权修好后点记忆重试同时释放共享熔断探测"
+      ]
+    },
+    {
+      "id": "G1-04HOST",
+      "file": "packages/server/src/host.ts",
+      "designated": "G1-04HOST ",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "G1-04HOST 宿主重启先核对已写md 不重问模型不多写"
+      ]
+    }
+  ],
+  "typecheck_exit": 0,
+  "lint_exit": 0,
+  "source_restored_exit": 0,
+  "archive_sha256": "f219e97a72cfdc62f71167d007dff4f1d94ac4e90dddcda53a764254956ee11f",
+  "archive_bytes": 292632,
+  "current_followup": "f2f6fe0只新增公开rounds返回类型，不改运行逻辑；最终pre-push将验证最终HEAD。"
+}
