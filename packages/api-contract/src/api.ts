@@ -20,6 +20,7 @@ import {
   MessageView,
   ModelChangePreview,
   ModelSlot,
+  PluginAttachmentView,
   PluginView,
   ReceiptView,
   RewindPreview,
@@ -330,13 +331,31 @@ export const METHODS = {
   /** 在隔离进程里运行数据源插件,拉一次外部事件(宿主盖章、标不可信)。不给 sourceId 就拉插件声明的全部来源;
    *  单个来源失败进 failures,不合契约的事件进 rejected,不影响其它来源。插件停用 → conflict;没有 entry → unavailable。 */
   "plugins.pull": method(
-    obj({ pluginId: id(), sourceId: opt(str({ min: 1, max: 4096 })) }),
+    obj({ pluginId: id(), sourceId: opt(str({ min: 1, max: 4096 })), roomId: opt(id()) }),
     obj({
       events: arr(ExternalEventView),
       rejected: arr(obj({ sourceId: str({ max: 4096 }), index: int({ min: 0 }), reason: str({ max: 2000 }) })),
       failures: arr(obj({ sourceId: str({ max: 4096 }), reason: str({ max: 100 }), detail: str({ max: 2000 }) })),
+      /** 给了 roomId 时:按这个会话的挂接拉取并入库(幂等),这里是拉完之后的挂接(位点、最近一次结果) */
+      attachments: opt(arr(PluginAttachmentView)),
     }),
   ),
+  /** 把已启用的数据源插件挂到群或私聊;只有会话里的用户能挂(联系人没有挂源的工具)。同一 (插件, 会话, 来源) 只有一条,重投返回原来那条。
+   *  config.intervalSec:自动拉取间隔(秒),0 或不给只手动。拉到的外部事件只入库,不进会话消息、不唤醒联系人。 */
+  "plugins.attach": method(
+    obj({
+      clientActionId: id(),
+      pluginId: id(),
+      roomId: id(),
+      sourceId: opt(str({ min: 1, max: 4096 })),
+      config: opt(obj({ intervalSec: opt(int({ min: 0, max: 604800 })) })),
+    }),
+    PluginAttachmentView,
+  ),
+  /** 解挂;已经没挂时 removed=false(幂等)。只有会话里的用户能解。 */
+  "plugins.detach": method(obj({ pluginId: id(), roomId: id(), sourceId: opt(str({ min: 1, max: 4096 })) }), obj({ ok: lit(true), removed: bool() })),
+  /** 挂接列表(带同步位点、最近一次拉取结果与错误);给了 roomId 要求用户在这个会话里。 */
+  "plugins.attachments": method(obj({ roomId: opt(id()), pluginId: opt(id()) }), obj({ attachments: arr(PluginAttachmentView) })),
   /** 经输出渠道插件外发一次。actionId 由调用方生成并在重试时复用:已确认的复用回执不再发;结果未知时 B2 渠道拒绝自动重发,
    *  B1 只在服务商幂等保留期内用同一 actionId 重试。state=rejected 是宿主没发(reason 说明,如 payload-mismatch)。 */
   "plugins.send": method(

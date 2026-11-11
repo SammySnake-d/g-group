@@ -121,7 +121,11 @@ export function createService(host: Host): Service {
     "plugins.setEnabled": (p: { pluginId: string; enabled: boolean }) => host.plugins.setEnabled(p.pluginId, p.enabled),
     "plugins.configure": (p: { pluginId: string; config: unknown }) => host.plugins.configure(p.pluginId, p.config),
     "plugins.update": (p: { pluginId: string; version?: string; grantedPermissions?: string[] }) => host.plugins.update(p.pluginId, p.version, p.grantedPermissions),
-    "plugins.pull": (p: { pluginId: string; sourceId?: string }) => host.plugins.pull(p.pluginId, p.sourceId),
+    // 给了 roomId:按这个会话的挂接拉取并入库(外部源进会话,US12①、D04.1);不给:只把拉到的事件回给调用方(原行为)
+    "plugins.pull": (p: { pluginId: string; sourceId?: string; roomId?: string }) => (p.roomId === undefined ? host.plugins.pull(p.pluginId, p.sourceId) : host.sources.pull(p.pluginId, p.roomId, p.sourceId)),
+    "plugins.attach": (p: Parameters<Host["sources"]["attach"]>[0]) => host.sources.attach(p),
+    "plugins.detach": (p: Parameters<Host["sources"]["detach"]>[0]) => ({ ok: true, removed: host.sources.detach(p) }),
+    "plugins.attachments": (p: { roomId?: string; pluginId?: string }) => ({ attachments: host.sources.list(p) }),
     "plugins.send": (p: { pluginId: string; actionId: string; payload: string }) => host.plugins.send(p.pluginId, p.actionId, p.payload),
     "plugins.uninstall": (p: { pluginId: string }) => {
       host.plugins.uninstall(p.pluginId);

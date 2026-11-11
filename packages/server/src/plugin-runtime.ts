@@ -199,6 +199,8 @@ interface Live {
 }
 
 export interface PullOutcome {
+  /** 这次实际拉了哪些来源(成功与失败的都在内) */
+  readonly sources: readonly string[];
   readonly events: Extract<PullResult, { ok: true }>["events"];
   readonly rejected: { sourceId: string; index: number; reason: string }[];
   readonly failures: { sourceId: string; reason: string; detail: string }[];
@@ -303,7 +305,7 @@ export class PluginRuntime {
     if (first.desc.kind !== "data-source") throw new HostError("invalid_params", `插件 ${t.id} 不是数据源`);
     const sources = sourceId === undefined ? first.desc.sources : [sourceId];
     if (sources.length === 0) throw new HostError("invalid_params", `插件 ${t.id} 还没有可拉取的来源,先在配置里填写`);
-    const out: PullOutcome = { events: [], rejected: [], failures: [] };
+    const out: PullOutcome = { sources: [...sources], events: [], rejected: [], failures: [] };
     for (const s of sources) {
       // 上一个来源把进程结束了(超时、崩溃)就先重起,注册不变
       await this.ensure(t);

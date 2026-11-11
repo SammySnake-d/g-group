@@ -350,6 +350,7 @@ export class PluginStore {
       return !tooLong;
     });
     return {
+      sources: out.sources,
       events: events.map((e) => ({ ...e, origin: { ...e.origin }, attachments: e.attachments.map((a) => ({ ...a })) })),
       rejected,
       failures: out.failures,

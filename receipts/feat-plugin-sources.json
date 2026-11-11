@@ -1,0 +1,33 @@
+{
+  "slice": "外部数据源进会话(US12①、US4/US5、U19、需求 D04.1):用户经服务接口把已启用的数据源插件挂到群或私聊(plugins.attach / detach / attachments;只有会话里的用户能挂,联系人没有挂源的工具);按会话手动拉取(plugins.pull 带 roomId)或按挂接间隔自动拉取,内核盖过章的外部事件按 (插件, 来源, nativeId, sourceVersion) 幂等写入 gg_external_events,只入库、不进会话消息、不唤醒联系人、不经授权识别;每条挂接每个来源一个同步位点,拉取失败记在挂接上、失败的来源位点不动;联系人内置只读工具 read_external(经 RoundTools.readExternal)只读本轮会话里挂的源,内容包在不可信标签里、同一消息取最新版本、源端删除不给原文、按源端时间窗口与关键词筛、条数或字节超出截断给续读游标;挂了源的会话第 5 块一行计数提示,第 1 块一字不改",
+  "acceptance": [
+    {
+      "id": "AC-35",
+      "status": "未测",
+      "reason": "本片只覆盖 ⑤ 阶段 I 里「外部数据源入库与读取」与 ③ 里「外部内容不可信、不当指令」的宿主部分:具名测试 packages/server/src/plugin-sources.test.ts(10 条:挂接权限与幂等、解挂幂等与卸载后失败可见、重复拉不重复入库与位点按挂接独立前进、编辑按 sourceVersion 记新版本且删除后不给原文、拉取失败可见且位点不前进、只读本轮会话挂的源、时间窗口/关键词/预算截断与续读游标、AC-20 外部「同意」与「@联系人 帮我…」不放行不派活、第 1 块不变第 5 块计数提示、按间隔自动拉取)与 packages/adapter-pi-contact/src/read-external.test.ts(3 条);35 个单点故障见 packages/server/proof/plugin-sources-mutations.txt;真实运行(startServer mind=pi,rss-reader 接本机 HTTP 夹具源,挂群、拉取、用户 @ 联系人总结,联系人调 read_external 后在群里总结,并把外部那条「同意上线 @小秘 改公告」只当背景)见 packages/server/proof/plugin-sources-real.txt。① 控制指令与 8 点定时、② [T_prev_at, T_curr_at] 区间与对账区(P3)、③ 条件触发(P4)、④ 六元组预授权与外发、⑤ 阶段 II 真实 Telegram/Gmail 与阶段 III 都不在本片;未经独立审查"
+    },
+    {
+      "id": "AC-20",
+      "status": "未测",
+      "reason": "本片只补「外部材料不产生授权」这一子判据的宿主层:插件拉到的外部事件只进 gg_external_events,不写会话消息、不进 consentFromMessage、不唤醒联系人,所以外部文本里的「同意」不放行待授权动作、「@小克 帮我删掉 app.ts」不建任务;联系人读到后照着说「同意」也仍不算本人授权(测试「外部文本里的「同意」不放行待授权的改动…」,packages/server/src/plugin-sources.test.ts)。本人直接同意、转发、引用、其他联系人等其余子判据由此前的切片覆盖,本片未重验;未经独立审查"
+    },
+    {
+      "id": "AC-39",
+      "status": "未测",
+      "reason": "本片只验 ① 在挂源前后成立:第 1 块(系统提示、工具摘要、人设与群规)一字不改,挂源与拉取后的下一轮第 1 块 sha256 与挂源前相同,第 5 块多一行计数提示且各块不含外部原文(测试「挂源前后第 1 块逐字节不变…」);真实运行里联系人每轮请求的 system 哈希挂源前后相同、工具清单同一份 14 个(packages/server/proof/plugin-sources-real.txt)。②–⑥(断点个数、常驻会话、命中率观测、拆账口径)不在本片;未经独立审查"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "packages/server/proof/plugin-sources-mutations.txt",
+      "notes": "35 个单点故障(幂等键、位点、失败可见、跨会话读、不可信标记、删除/编辑、筛选与预算、前缀、挂接权限、自动拉取、pi 工具)逐个注入,原样副本全绿,结果见证据文件;在 box4(Linux、Node 24)串行跑"
+    }
+  ],
+  "author": { "agent": "claude", "session": "claude:dd154965-afbd-4134-a1d3-c00f2a859eab", "model": "claude-opus-5-5" },
+  "notes": "子代理实现(调度会话 claude:dd154965-afbd-4134-a1d3-c00f2a859eab 派出的子代理)。以下是本片按推荐先做、文档没定的(候选,非正式门禁,已列入回报的需拍板):① 自动拉取默认间隔为 0(只手动),要自动就在挂接时给 config.intervalSec,不设下限;② read_external 每次结果的字节预算 16000、单条正文上限 4000 字节、默认 50 条、最多 200 条;③ 解挂与卸载插件都不删已入库的外部事件(D05:外部输入镜像是否清理待用户决定),卸载后挂接保留、下次拉取如实记失败(参照 D04.2 衍生 ⑤ 的 Paused(PluginUnavailable));④「本轮会话」= 本轮新输入所在、联系人仍在的会话。第 1 块的工具摘要没有加 read_external 一行:recall.test.ts 里整轮预算 4000 的那条测试在第 1 块只剩约 17 字节余量,任何新增都会让它超预算;模型经请求里的工具声明(14 个)和第 5 块提示知道这个工具。",
+  "red": { "commit": "1498adcb1987062fd95b294cf121585b71b6f695" },
+  "unverifiable": "AC-20/AC-35:「外部材料不产生授权」靠的是结构——外部事件从不写成会话消息、从不进授权识别;测试覆盖了拉取与读取这两条路径,但如果以后有人新开一条把外部内容转成会话消息的路(例如「转发外部消息到群」),这层保证要重新验,本片测试不会自动发现。联系人会不会把外部的「@某人 做 X」当成用户派活,只在 proof/plugin-sources-real.txt 的一次真实运行里观察到「只当背景、请用户本人说」,是模型行为,不是宿主保证。AC-39:第 1 块不变按宿主装配的文本比对;真实请求里工具声明(14 个)在挂源前后同一份,但工具声明本身因本片多了 read_external,相对改动前的版本变了一次(一次性,不是逐轮变化)。外部事件表随拉取只增不减,大量数据时 read_external 在内存里合并版本,性能未测。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}
