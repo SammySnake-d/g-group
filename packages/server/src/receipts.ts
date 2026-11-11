@@ -17,7 +17,9 @@ export interface ReadMark {
  * 回退、重复推进同一条、越过账本末尾都返回 null,由调用方跳过写库。
  */
 export function nextReadSeq(cur: number, seq: number, lastSeq: number): number | null {
-  return null;
+  // 不越过账本末尾(seq 可能来自还没落盘的乐观位置);只增不减:更早的位置再报一次(重放、乱序回执)什么都不做
+  const upto = Math.min(seq, lastSeq);
+  return upto > cur ? upto : null;
 }
 
 /**
@@ -25,5 +27,10 @@ export function nextReadSeq(cur: number, seq: number, lastSeq: number): number |
  * 传进来的 marks 必须是同一成员的记录;同一位置推进过多次时取最早的时刻。
  */
 export function readTimeOf(marks: readonly ReadMark[], seq: number): string | null {
-  return marks.at(-1)?.at ?? null;
+  let first: string | null = null;
+  for (const m of marks) {
+    if (m.uptoSeq < seq) continue;
+    if (first === null || m.at < first) first = m.at;
+  }
+  return first;
 }

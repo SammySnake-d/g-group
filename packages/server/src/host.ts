@@ -1204,7 +1204,7 @@ export class Host {
    * 真源是转发副本表(gg_forward,按 (room_id, seq) 一行),不在消息正文里认。
    */
   private forwardedCopy(roomId: string, seq: number): boolean {
-    return false;
+    return this.links.has(roomId, seq);
   }
 
   /** 搜索自己所在会话的消息与附件名(AC-25);撤回的搜不到,编辑过的按新文字。 */
@@ -3850,7 +3850,32 @@ export class Host {
    * 返回被回收的承诺 id(调用方在事务提交后推 commitment.updated)。
    */
   private gcTerminalCommitmentsTx(contactId: string, roomId: string, roundId: string): string[] {
-    return [];
+    const led = this.ledgerOf(contactId, roomId).value;
+    const dead: { id: string; taskId: string; detail: string }[] = [];
+    for (const c of led.commitments) {
+      if (c.status !== "active" || c.taskId.startsWith("standing-")) continue;
+      const doc = getDoc<TaskDoc>(this.db, `task:${c.taskId}`)?.value;
+      if (!doc || doc.roomId !== roomId) continue;
+      if (doc.task.state !== "T10_Cancelled" && doc.task.state !== "T11_Failed") continue;
+      dead.push({ id: c.id, taskId: c.taskId, detail: `任务「${doc.title}」已${doc.task.state === "T10_Cancelled" ? "取消" : "失败"},末次汇报已发出,承诺自动失效回收` });
+    }
+    if (!dead.length) return [];
+    this.ledgerTx(
+      contactId,
+      roomId,
+      dead.map((d) => ({
+        type: "close" as const,
+        actionId: `gc:${d.id}`,
+        commitmentId: d.id,
+        taskId: d.taskId,
+        actor: { kind: "contact" as const, id: contactId },
+        roundId,
+        outcome: "revoked" as const,
+        artifact: null,
+        detail: d.detail,
+      })),
+    );
+    return dead.map((d) => d.id);
   }
 
   // ======================= 失败轮次容错(AC-36) ================  // 联系人一轮或任务的 Compute 失败之后怎么办(是否失败、什么原因由 kernel 的失败分类器判):
@@ -4817,7 +4842,14 @@ export class Host {
       if (!a.duplicate) this.links.putTx({ ...rec, seq: a.seq }, input.clientActionId, this.now());
       return a;
     });
-    if (!r.duplicate) this.afterAppend(to.id, r.seq, me);
+    if (!r.duplicate) {
+      this.afterAppend(to.id, r.seq, me);
+      // 转发副本照样过一遍授权判定(AC-20):副本里的「同意」是转发来的旧记录,不放行,宿主如实记下拒收原因
+      const consent = this.consentFromMessage(to.id, r.seq);
+      for (const a of consent.appended) this.afterAppend(a.roomId, a.seq, a.sender);
+      for (const id of consent.tasks) this.emitTask(id);
+      if (consent.effects.length) void this.runEffects(consent.effects);
+    }
     const m = this.projected(to.id).find((x) => x.seq === r.seq)!;
     return this.messageView(to.id, m);
   }

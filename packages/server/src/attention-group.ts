@@ -14,7 +14,8 @@ import type { Urgency } from "@g-group/kernel";
  * fromUser:发送人是用户本人(用户消息立刻跑,联系人消息攒批)。
  */
 export function memberUrgency(o: { readonly direct: boolean; readonly fromUser: boolean }): Urgency | null {
-  return o.direct && o.fromUser ? "now" : null;
+  // 没被 @、群里已有别人主答,一律照送(攒批跑);用户本人直接指向它的立刻跑
+  return o.direct && o.fromUser ? "now" : "batch";
 }
 
 /**
@@ -22,5 +23,5 @@ export function memberUrgency(o: { readonly direct: boolean; readonly fromUser: 
  * 只认用户本人发的事件(含编辑、撤回:那也是用户的新要求),按序号升序。
  */
 export function newerUserSeqs(events: readonly { readonly seq: number; readonly sender: { readonly kind: string } }[], sinceSeq: number): number[] {
-  return [];
+  return events.filter((e) => e.seq > sinceSeq && e.sender.kind === "user").map((e) => e.seq);
 }
