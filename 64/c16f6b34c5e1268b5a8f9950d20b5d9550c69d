@@ -1,0 +1,22 @@
+packages/server/src/host.ts
+  s_e21a7b024276d2::t_00563a2a9f2fa3 1935-1936,1946,2720,2742,3226-3227,3278-3279,3374,3376-3388,3394,3409,3413-3417,3437-3438,3440,3446,3482,3522,4588,4701-4709,4711-4715,4718,4729-4737,4742-4748,4752,4761-4778,4781,4796
+  s_e21a7b024276d2::t_66b328047990ef 4779-4780
+  s_e21a7b024276d2::t_7fd343ca8b6e4e 4782-4784,4793-4795
+  s_e21a7b024276d2::t_32179da18fc751 4797-4799
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "64c16f6b34c5e1268b5a8f9950d20b5d9550c69d",
+  "prompts": {},
+  "sessions": {
+    "s_e21a7b024276d2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c6e6-9a06-7441-b5e9-c070695d078b",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
