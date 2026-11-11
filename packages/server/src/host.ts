@@ -2333,7 +2333,7 @@ export class Host {
     const beforeCall=this.readCoverageMaterial(work);
     if(!beforeCall.valid){this.disposeCoverage(work,beforeCall.sources);return null;}
     if(!this.admitUpstream(work.upstream,"background")){this.memoryCoverage.fail(work.id,"共享上游熔断，后台检查未发出","A1",this.retryPolicy,this.clock(),this.random);return null;}
-    const neighbors=this.anchorNeighbors(contact.id,work.rooms);
+    const neighbors=this.memoryNeighbors(contact.id,{rooms:work.rooms,text:material});
     const request={contact:{id:contact.id,name:contact.name,speakingModel:contact.speakingModel,persona:contact.persona},kind:"round-note" as const,previous:this.stateNote(contact.id),material,maxBytes:this.opts.stateNoteMaxBytes??null,neighbors,noteWritten,sources:delivered};
     this.memoryCoverage.start(work.id);
     try{
@@ -2359,9 +2359,13 @@ export class Host {
   }
 
   // ======================= G5 两段式记忆(v0.2 §7;G1→G5 写入切换规则 + 审查条件 S-1～S-4) =======================
-  /** 同锚点邻域(G1 现成):生效/降级、非人格、全局或本批会话锚点。G3(BC 检索)合入后改接 history-search 接缝,这里是唯一取邻域的地方 */
-  private anchorNeighbors(contactId: string, rooms: readonly string[]): { id: string; title: string; body: string }[] {
-    return this.memory.list(contactId).filter(e=>(e.status==="active"||e.status==="degraded")&&!e.anchors.includes(PERSONA_ANCHOR)&&e.anchors.some(a=>a==="global"||rooms.includes(a.slice(5))&&a.startsWith("room:"))).map(e=>({id:e.id,title:e.title,body:e.body}));
+  /**
+   * 记忆「写邻域」查询接缝:粗筛检查(G1 reflect 的 neighbors)与精筛判关系都只从这里取已有相关记忆,查询 = 会话集合 + 本批材料/原话。
+   * 现在的实现是 G1 分支现成的同锚点邻域(生效/降级、非人格、全局或本批会话锚点),q.text 暂不参与排序。
+   * G3(PR #61)合入后这里改走 kernel history-search 的 searchHistory(hybrid)按 q.text 取全文邻域,写邻域与精筛同时生效;锚点/状态硬筛照旧。
+   */
+  private memoryNeighbors(contactId: string, q: { readonly rooms: readonly string[]; readonly text: string }): { id: string; title: string; body: string }[] {
+    return this.memory.list(contactId).filter(e=>(e.status==="active"||e.status==="degraded")&&!e.anchors.includes(PERSONA_ANCHOR)&&e.anchors.some(a=>a==="global"||q.rooms.includes(a.slice(5))&&a.startsWith("room:"))).map(e=>({id:e.id,title:e.title,body:e.body}));
   }
   /** G1 已经落地(或已规范化待落地)的候选:按来源 + 原话(新条目)或来源 + 正文(复述)认出来,接管后不再生成标记或第二份写入 */
   private landedKeys(work: CoverageWork): string[] {
@@ -2565,7 +2569,7 @@ export class Host {
       this.fineStalls.set(unit.id, (v) => { stall = v; ac.abort(); });
       const rooms = [...new Set(batch.map((b) => b.mark.roomId))];
       const profile = { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona };
-      const neighbors = this.anchorNeighbors(contactId, rooms);
+      const neighbors = this.memoryNeighbors(contactId, { rooms, text: batch.map((b) => b.mark.evidence ?? "").join("\n") });
       const ask = async (hint: string | null): Promise<RefineResult> => {
         this.runs.activity(unit.id, { kind: "model_call" });
         const raw = await Promise.race([Promise.resolve().then(() => compactor.refine!({ contact: profile, items: batch.map((b) => ({ markId: b.mark.id, kind: b.mark.kind, evidence: b.mark.evidence!, source: b.source, context: b.context })), neighbors, hint }, ac.signal)), stopped]);
