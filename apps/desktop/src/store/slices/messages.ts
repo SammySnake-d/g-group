@@ -105,17 +105,17 @@ export const createMessagesSlice: Slice<MessagesSlice> = (set, get) => {
         return m
       })
       /* AC-45②:在途任务原位升版 v1 → v2,新条件送进同一个 Compute,不新开任务 */
-      const live = Object.values(computes).find((c) => c.askMsg === mid && c.status === 'running')
-      if (live) {
+      const running = Object.values(computes).find((c) => c.askMsg === mid && c.status === 'running')
+      if (running) {
         if (broken('AC-45-fork')) {
-          const nid = live.id + '-v2'
-          L.computes((cs) => ({ ...cs, [nid]: { ...live, id: nid, title: live.title + '（新条件）', activity: [], cver: 2, constraint: t } }))
-          get().pushMsg({ k: 'compute', id: 'cm' + uid(), from: live.owner, computeId: nid }, live.conv)
+          const nid = running.id + '-v2'
+          L.computes((cs) => ({ ...cs, [nid]: { ...running, id: nid, title: running.title + '（新条件）', activity: [], cver: 2, constraint: t } }))
+          get().pushMsg({ k: 'compute', id: 'cm' + uid(), from: running.owner, computeId: nid }, running.conv)
         } else {
-          const v = (live.cver ?? 1) + 1
-          L.computes((cs) => ({ ...cs, [live.id]: { ...cs[live.id], cver: v, constraint: t, phase: `按改后的要求继续（v${v}）` } }))
-          get().addAct(live.id, { step: Math.max(0, live.steps.findIndex((x) => x.state === 'now')), kind: 'user', title: `你改了要求（v${v}）：${t}。在这件里接着做，不另开` })
-          get().say(live.conv, live.owner, `收到改后的要求，在「${live.short ?? live.title}」里接着做，不另开一件。`, 500)
+          const v = (running.cver ?? 1) + 1
+          L.computes((cs) => ({ ...cs, [running.id]: { ...cs[running.id], cver: v, constraint: t, phase: `按改后的要求继续（v${v}）` } }))
+          get().addAct(running.id, { step: Math.max(0, running.steps.findIndex((x) => x.state === 'now')), kind: 'user', title: `你改了要求（v${v}）：${t}。在这件里接着做，不另开` })
+          get().say(running.conv, running.owner, `收到改后的要求，在「${running.short ?? running.title}」里接着做，不另开一件。`, 500)
         }
       }
       set({ editing: null })

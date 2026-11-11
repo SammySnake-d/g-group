@@ -1199,8 +1199,8 @@ export class Host {
     // 你删掉的、清空过的搜不到(删除时已出索引;这里再挡一次,索引重建也不会漏出来)
     const hidden = new Map<string, { seqs: Set<number>; clearedUpto: number }>();
     const gone = (roomId: string, seq: number) => {
-      let h = hidden.get(roomId);
-      if (!h) hidden.set(roomId, (h = this.hiddenOf(roomId)));
+      const h = hidden.get(roomId) ?? this.hiddenOf(roomId);
+      hidden.set(roomId, h);
       return this.isHidden(h, seq);
     };
     return { ...page, hits: page.hits.filter((x) => !gone(x.roomId, x.seq)) };
