@@ -61,6 +61,18 @@ export const ModelAttemptView = obj({
   at: isoTime(),
 });
 
+/** 卡死阈值的一层(AC-43 ⑦⑯、U92,#2827):一轮多久没有进展判失败 / 模型调用发出后等首字节多久算没回应(毫秒);不填的用上一层,最底层是 15 分钟 / 120 秒。 */
+export const StallThresholdsView = obj({ noProgressMs: opt(int({ min: 1000, max: 86_400_000 })), firstByteMs: opt(int({ min: 1000, max: 86_400_000 })) });
+/** 按上游(线路 / 模型)单独设的一条阈值 */
+export const UpstreamStallView = obj({ upstream: str({ min: 1, max: 400 }), ...StallThresholdsView.shape });
+/** 选了宿主还没接入适配器的 Harness(AC-51 ⑦、D07.4 规则 2):照常保存,派活时启动前拦下、不改用别的 Harness 代跑;fixes 是两条修复路径。 */
+export const HarnessWarningView = obj({
+  code: lit("harness-not-connected"),
+  harness: oneOf(HARNESSES),
+  message: str({ max: 2000 }),
+  fixes: arr(obj({ kind: oneOf(["use-connected-harness", "wait-for-harness"] as const), harness: oneOf(HARNESSES), label: str({ max: 200 }) }), { max: 4 }),
+});
+
 /** 联系人当前在做什么,驱动头像旁的「正在回复」等状态。 */
 export const CONTACT_ACTIVITY = ["idle", "reading", "thinking", "replying", "running-compute", "blocked", "offline"] as const;
 export const ContactView = obj({
@@ -80,6 +92,10 @@ export const ContactView = obj({
   createdAt: isoTime(),
   /** Compute 的生效值、完整解析链与能力声明里的支持性(可选,旧客户端忽略)。 */
   computeResolved: opt(obj({ resolved: ResolvedModelView, support: oneOf(MODEL_SUPPORT) })),
+  /** 这位联系人自己的卡死阈值覆盖;null / 没有为不覆盖。 */
+  stall: opt(nullable(StallThresholdsView)),
+  /** 选的 Harness 宿主还没接入时出现。 */
+  warning: opt(HarnessWarningView),
 });
 export type ContactView = Infer<typeof ContactView>;
 
@@ -618,6 +634,10 @@ export const SettingsView = obj({
   defaultEffort: oneOf(EFFORTS),
   timezone: str({ min: 1, max: 64 }),
   models: arr(obj({ id: str({ min: 1, max: 200 }), label: str({ max: 200 }), vendor: str({ max: 64 }), harnesses: arr(oneOf(HARNESSES)) })),
+  /** 卡死阈值:defaults 是此刻生效的默认层(没设显示 15 分钟 / 120 秒),byUpstream 是按上游单独设的。 */
+  runThresholds: opt(obj({ defaults: obj({ noProgressMs: int({ min: 1 }), firstByteMs: int({ min: 1 }) }), byUpstream: arr(UpstreamStallView, { max: 200 }) })),
+  /** 全局默认 Harness 宿主还没接入时出现。 */
+  warning: opt(HarnessWarningView),
 });
 export type SettingsView = Infer<typeof SettingsView>;
 
