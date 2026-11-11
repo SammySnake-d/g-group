@@ -104,7 +104,6 @@ function resolveOptions(opts: unknown): Resolved {
     if (typeof v !== "string" || !(allowed as readonly string[]).includes(v)) return bad(`${k} 只能是 ${allowed.join(" / ")}`);
     return v as T;
   };
-  oneOf("cacheRetention", ["short", "long"], "short");
   const fetchFn = r.fetch;
   if (fetchFn !== undefined && typeof fetchFn !== "function") bad("fetch 必须是函数");
   const protocol = protocolFor(r.api, bad);

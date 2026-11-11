@@ -1,0 +1,31 @@
+{
+  "slice": "U33 联系人层自动适配四种模型协议(D07 §2:pi-ai 是四协议统一 LLM 通信层)。adapter-pi-contact 新增 protocols.ts(四种协议各自的 pi-ai 懒加载入口、Model.api 标识、原生密钥头、端点根、模型名前缀映射),createPiContactMind 与 createPiCompactor 的 api 选项从写死的 anthropic-messages 放开到 anthropic-messages | openai-chat | openai-responses | google-generative-ai,start.ts 的 StartOptions.api 与 cli.ts 的 --api 按模型挑协议并把 api 传给 mind/compactor;协议之间的请求体差异(工具声明摆在哪、工具结果怎么回填)由 pi-ai 的对应适配器按 Model.api 自己转,不重写协议、不新加依赖。真实运行在本机 magpie 网关的 OpenAI 兼容口上跑通一次「群里派活 → 联系人回话」(同一批模型在它的 Anthropic 兼容口上会被上游回「Hark 不支持作为其他应用程序背后的模型使用」,所以这一片也是让真实运行跑得起来的路)",
+  "acceptance": [
+    {
+      "id": "AC-32",
+      "status": "未测",
+      "reason": "本片只覆盖 ③ 的适配器侧与「禁止静默换模」在四种协议下都成立:packages/adapter-pi-contact/src/protocols.test.ts 的「四种协议下说话模型对不上都整轮拒绝:错误是 model-mismatch,一次请求都不发」「压缩器也按协议:openai-chat 下压缩请求打到 /v1/chat/completions、不带工具、密钥进 Bearer、返回新笔记」核对实际请求体(说话模型与绑定模型不一致时一次请求都不发;压缩是同一说话模型的独立无状态调用,不带工具、不带联系人五块);② 保存配置/改上游/启动 Compute 前三时机的失配拦截、④ 双层快照与追加尝试账本、批量替换预览都在宿主侧,不在本片。候选，非正式门禁"
+    },
+    {
+      "id": "AC-33",
+      "status": "未测",
+      "reason": "本片只核对 ① 的工具清单在四种协议下都是同样 13 个具名有界工具(没有 shell、文件读写、网络),且落在各自协议的请求体里:protocols.test.ts 四条按协议逐条断言实际请求体(anthropic 的 system.tools、openai-chat 的 tools[].function、openai-responses 的顶层 function、google 的 tools[].functionDeclarations),工具结果回填成 tool_result / role:tool / function_call_output / functionResponse;② 四条开 Compute 判据是否真开、③ 试错升级、④ Compute 侧子集继承与凭据引用不在本片。真实运行里确实经 dispatch_compute 工具开出了 Compute(packages/server/proof/pi-protocols-real.txt:任务 t-…[T3_Running] Compute=cp-1),只证明这一次。候选，非正式门禁"
+    },
+    {
+      "id": "AC-39",
+      "status": "未测",
+      "reason": "本片只保证 cache_control 只在 anthropic-messages 协议下加:protocols.test.ts「cache_control 只在 anthropic-messages 下加:anthropic 的断点不超过 4 个;其它三种协议不带缓存字段也不报错」按实际请求体计数(anthropic 有断点且总数 ≤4;openai-chat / openai-responses / google-generative-ai 三种协议即使把 cacheRetention 设成 long 也不带 cache_control / prompt_cache_key / prompt_cache_retention,且不报错)。相邻两轮前缀逐字节一致、命中率记录与可信度检查依赖五块装配与用量记录,不在本片;也没有真实端点上的缓存命中数据。候选，非正式门禁"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:dd154965-afbd-4134-a1d3-c00f2a859eab",
+    "model": "claude-opus-5-5",
+    "notes": "子代理实现"
+  },
+  "red": { "commit": "d1e89692f399f39317d0a0c6e0017eeb110b697b" },
+  "unverifiable": "本片所有行为断言都跑在进程内的假端点上:请求体与请求头仍由 pi-ai 的对应适配器照常构造,只把网络套接字换成函数(google 那一条是测试期间替换 globalThis.fetch,因为 pi-ai 的 google 适配器明确拒绝自定义 fetch,而门禁沙箱禁网、本地起 HTTP 服务在 seatbelt 下连不上);假端点按我理解的四种协议流式格式回放,真实端点的边角(重试、流中断、thinking 块、上游对工具 schema 的挑剔)没覆盖。真实端点只在本机 magpie 网关上跑过两幕(packages/server/proof/pi-protocols-real.txt),结果随模型输出变化;openai-responses 与 google-generative-ai 两条协议没有可跑的真实端点(magpie 只有 Anthropic 与 OpenAI Chat 两个口),它们的绿完全来自假端点。AC-32 ③ 与 AC-33 ① 的绿只能说明适配器发出的请求体对,不能说明宿主侧的三时机拦截与 Compute 隔离也对。start.ts 的 StartOptions.api 与 cli.ts 的 --api 没有单独的仓库内测试,只由 proof/pi-protocols-real-run.mjs 那一幕覆盖;apiForModel 的模型名前缀映射是启发式(openai-responses 与 openai-chat 前缀分不出来,只能用显式 api 选),认不出的模型一律回 anthropic-messages 默认。协议切换只按联系人说话模型挑,mind 实例按说话模型缓存,同一个说话模型不会同时用两种协议。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}
