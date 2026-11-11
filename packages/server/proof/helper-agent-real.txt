@@ -1,0 +1,914 @@
+# Helper 真实运行 2026-11-11T11:18:58.957Z node v22.22.0 模型 fnqtz/claude-opus-5-5
+
+$ cli.ts call --db <db> contacts.create {"clientActionId":"c1","name":"小克"}   # 准备:建联系人小克(0.3s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "id": "c-mwc10fxx-1",
+    "name": "小克",
+    "avatar": null,
+    "bio": "",
+    "speakingModel": "fnqtz/claude-opus-5-5",
+    "harness": "claude-code",
+    "computeModel": {
+      "mode": "inherit"
+    },
+    "tools": [],
+    "computeAssets": [],
+    "activity": "idle",
+    "createdAt": "2026-11-11T11:18:59.253Z",
+    "computeResolved": {
+      "resolved": {
+        "harness": "claude-code",
+        "model": "fnqtz/claude-opus-5-5",
+        "effort": "medium",
+        "vendor": "anthropic",
+        "modelSource": "global",
+        "effortSource": "global",
+        "chain": [
+          "compute 继承全局",
+          "全局 Compute 默认 fnqtz/claude-opus-5-5"
+        ]
+      },
+      "support": "undeclared"
+    }
+  }
+}
+
+$ cli.ts call --db <db> contacts.create {"clientActionId":"c2","name":"小研"}   # 准备:建联系人小研(0.3s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "id": "c-mwc10g5i-1",
+    "name": "小研",
+    "avatar": null,
+    "bio": "",
+    "speakingModel": "fnqtz/claude-opus-5-5",
+    "harness": "claude-code",
+    "computeModel": {
+      "mode": "inherit"
+    },
+    "tools": [],
+    "computeAssets": [],
+    "activity": "idle",
+    "createdAt": "2026-11-11T11:18:59.526Z",
+    "computeResolved": {
+      "resolved": {
+        "harness": "claude-code",
+        "model": "fnqtz/claude-opus-5-5",
+        "effort": "medium",
+        "vendor": "anthropic",
+        "modelSource": "global",
+        "effortSource": "global",
+        "chain": [
+          "compute 继承全局",
+          "全局 Compute 默认 fnqtz/claude-opus-5-5"
+        ]
+      },
+      "support": "undeclared"
+    }
+  }
+}
+
+## 一、全局入口:帮我建个群叫 发布群,拉小克和小研进来
+
+$ cli.ts helper --db <db> --mind pi "帮我建个群叫 发布群,拉小克和小研进来"   # 全局(7.2s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "reply": "「发布群」建好了，群里有你、小克和小研三个人。",
+    "ops": [
+      {
+        "op": "contacts.list",
+        "ok": true,
+        "summary": "列出联系人:contacts 2 条"
+      },
+      {
+        "op": "rooms.createGroup",
+        "ok": true,
+        "summary": "建群:id=g-mwc10k9p-1 title=发布群 members 3 条 leavingMembers 0 条"
+      }
+    ],
+    "context": []
+  }
+}
+
+$ cli.ts call --db <db> rooms.list {}   # 读库核对:会话列表(0.3s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "rooms": [
+      {
+        "id": "g-mwc10k9p-1",
+        "kind": "group",
+        "title": "发布群",
+        "avatar": null,
+        "members": [
+          {
+            "kind": "contact",
+            "id": "c-mwc10fxx-1"
+          },
+          {
+            "kind": "contact",
+            "id": "c-mwc10g5i-1"
+          },
+          {
+            "kind": "user",
+            "id": "me"
+          }
+        ],
+        "rules": "",
+        "rulesVersion": 0,
+        "pinned": false,
+        "muted": false,
+        "lastSeq": 0,
+        "readSeq": 0,
+        "unread": 0,
+        "pendingForUser": 0,
+        "lastMessagePreview": null,
+        "updatedAt": "2026-11-11T11:19:04.861Z",
+        "announcementCount": 0,
+        "leavingMembers": [],
+        "tempComputeSlots": 0
+      }
+    ]
+  }
+}
+
+$ cli.ts call --db <db> contacts.list {}   # 读库核对:联系人(0.3s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "contacts": [
+      {
+        "id": "c-mwc10fxx-1",
+        "name": "小克",
+        "avatar": null,
+        "bio": "",
+        "speakingModel": "fnqtz/claude-opus-5-5",
+        "harness": "claude-code",
+        "computeModel": {
+          "mode": "inherit"
+        },
+        "tools": [],
+        "computeAssets": [],
+        "activity": "idle",
+        "createdAt": "2026-11-11T11:18:59.253Z",
+        "computeResolved": {
+          "resolved": {
+            "harness": "claude-code",
+            "model": "fnqtz/claude-opus-5-5",
+            "effort": "medium",
+            "vendor": "anthropic",
+            "modelSource": "global",
+            "effortSource": "global",
+            "chain": [
+              "compute 继承全局",
+              "全局 Compute 默认 fnqtz/claude-opus-5-5"
+            ]
+          },
+          "support": "undeclared"
+        }
+      },
+      {
+        "id": "c-mwc10g5i-1",
+        "name": "小研",
+        "avatar": null,
+        "bio": "",
+        "speakingModel": "fnqtz/claude-opus-5-5",
+        "harness": "claude-code",
+        "computeModel": {
+          "mode": "inherit"
+        },
+        "tools": [],
+        "computeAssets": [],
+        "activity": "idle",
+        "createdAt": "2026-11-11T11:18:59.526Z",
+        "computeResolved": {
+          "resolved": {
+            "harness": "claude-code",
+            "model": "fnqtz/claude-opus-5-5",
+            "effort": "medium",
+            "vendor": "anthropic",
+            "modelSource": "global",
+            "effortSource": "global",
+            "chain": [
+              "compute 继承全局",
+              "全局 Compute 默认 fnqtz/claude-opus-5-5"
+            ]
+          },
+          "support": "undeclared"
+        }
+      }
+    ]
+  }
+}
+核对:发布群存在 id=g-mwc10k9p-1,成员 小克、小研、我
+
+## 二、在发布群的侧栏:把这个 CSV 变成任务
+
+$ cli.ts call --db <db> messages.list {"roomId":"g-mwc10k9p-1"}   # 侧栏前的群消息(0.2s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "messages": [],
+    "hasMore": false
+  }
+}
+
+$ cli.ts helper --db <db> --mind pi --entry sidebar --room 发布群 "把这个 CSV 变成任务:\ntitle,备注\n写发布说明,中英两版\n回归测试,\"覆盖登录, 支付\"\n整理发布清单,周五前"   # 侧栏(5.2s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "reply": "「发布群」里建好了 3 个任务,没有出错的行:\n\n1. 写发布说明,备注:中英两版\n2. 回归测试,备注:覆盖登录, 支付\n3. 整理发布清单,备注:周五前\n\nCSV 里没有负责人这一列，所以这三个任务现在都没人负责、等人认领。要指派给小克或小研的话，跟我说就行。",
+    "ops": [
+      {
+        "op": "tasks.importCsv",
+        "ok": true,
+        "summary": "CSV 转任务:tasks 3 条 errors 0 条"
+      }
+    ],
+    "context": [
+      {
+        "roomId": "g-mwc10k9p-1",
+        "via": "entry",
+        "seqs": []
+      }
+    ]
+  }
+}
+[stderr] [宿主] recall {"contactId":"c-mwc10fxx-1","roundId":"c-mwc10fxx-1:r1:mwc10oed","items":[]}
+[stderr] [宿主] recall {"contactId":"c-mwc10g5i-1","roundId":"c-mwc10g5i-1:r2:mwc10oep","items":[]}
+
+$ cli.ts call --db <db> tasks.list {"roomId":"g-mwc10k9p-1"}   # 读库核对:发布群的任务(0.5s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "tasks": [
+      {
+        "id": "t-mwc10o8v-5",
+        "title": "整理发布清单",
+        "roomId": "g-mwc10k9p-1",
+        "sourceSeq": 3,
+        "requesterId": "me",
+        "ownerContactId": null,
+        "state": "T1_Open",
+        "constraintVersion": 0,
+        "pendingQuestion": null,
+        "reviewGate": "none",
+        "reviews": [],
+        "computeRuns": [],
+        "recentProgress": [],
+        "modelSnapshot": null,
+        "modelAttempts": [],
+        "producerVendors": [],
+        "artifacts": [],
+        "waitingFor": null,
+        "createdAt": "2026-11-11T11:19:10.015Z",
+        "updatedAt": "2026-11-11T11:19:10.015Z",
+        "description": "备注:周五前",
+        "stateVer": 1
+      },
+      {
+        "id": "t-mwc10o8r-3",
+        "title": "回归测试",
+        "roomId": "g-mwc10k9p-1",
+        "sourceSeq": 2,
+        "requesterId": "me",
+        "ownerContactId": null,
+        "state": "T1_Open",
+        "constraintVersion": 0,
+        "pendingQuestion": null,
+        "reviewGate": "none",
+        "reviews": [],
+        "computeRuns": [],
+        "recentProgress": [],
+        "modelSnapshot": null,
+        "modelAttempts": [],
+        "producerVendors": [],
+        "artifacts": [],
+        "waitingFor": null,
+        "createdAt": "2026-11-11T11:19:10.012Z",
+        "updatedAt": "2026-11-11T11:19:10.012Z",
+        "description": "备注:覆盖登录, 支付",
+        "stateVer": 1
+      },
+      {
+        "id": "t-mwc10o8k-1",
+        "title": "写发布说明",
+        "roomId": "g-mwc10k9p-1",
+        "sourceSeq": 1,
+        "requesterId": "me",
+        "ownerContactId": null,
+        "state": "T1_Open",
+        "constraintVersion": 0,
+        "pendingQuestion": null,
+        "reviewGate": "none",
+        "reviews": [],
+        "computeRuns": [],
+        "recentProgress": [],
+        "modelSnapshot": null,
+        "modelAttempts": [],
+        "producerVendors": [],
+        "artifacts": [],
+        "waitingFor": null,
+        "createdAt": "2026-11-11T11:19:10.006Z",
+        "updatedAt": "2026-11-11T11:19:10.006Z",
+        "description": "备注:中英两版",
+        "stateVer": 1
+      }
+    ]
+  }
+}
+[stderr] [宿主] recall {"contactId":"c-mwc10fxx-1","roundId":"c-mwc10fxx-1:r1:mwc10qoj","items":[]}
+[stderr] [宿主] recall {"contactId":"c-mwc10g5i-1","roundId":"c-mwc10g5i-1:r2:mwc10qor","items":[]}
+
+$ cli.ts call --db <db> messages.list {"roomId":"g-mwc10k9p-1"}   # 读库核对:发布群消息(0.4s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "messages": [
+      {
+        "roomId": "g-mwc10k9p-1",
+        "seq": 1,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "text": "新建任务:写发布说明\n备注:中英两版",
+        "mentions": [],
+        "replyToSeq": null,
+        "quotedSeqs": [],
+        "quotes": [],
+        "attachments": [],
+        "card": {
+          "kind": "task-status",
+          "cardId": "card-mwc10o8k-2",
+          "taskId": "t-mwc10o8k-1",
+          "title": "写发布说明",
+          "body": "写发布说明\n\n备注:中英两版",
+          "state": "open",
+          "actions": [
+            {
+              "actionId": "cancel",
+              "label": "取消任务",
+              "style": "danger"
+            }
+          ]
+        },
+        "command": null,
+        "reactions": [],
+        "edited": false,
+        "retracted": false,
+        "clientActionId": "helper-cli-mwc10mjb-1:L2",
+        "at": "2026-11-11T11:19:10.005Z"
+      },
+      {
+        "roomId": "g-mwc10k9p-1",
+        "seq": 2,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "text": "新建任务:回归测试\n备注:覆盖登录, 支付",
+        "mentions": [],
+        "replyToSeq": null,
+        "quotedSeqs": [],
+        "quotes": [],
+        "attachments": [],
+        "card": {
+          "kind": "task-status",
+          "cardId": "card-mwc10o8r-4",
+          "taskId": "t-mwc10o8r-3",
+          "title": "回归测试",
+          "body": "回归测试\n\n备注:覆盖登录, 支付",
+          "state": "open",
+          "actions": [
+            {
+              "actionId": "cancel",
+              "label": "取消任务",
+              "style": "danger"
+            }
+          ]
+        },
+        "command": null,
+        "reactions": [],
+        "edited": false,
+        "retracted": false,
+        "clientActionId": "helper-cli-mwc10mjb-1:L3",
+        "at": "2026-11-11T11:19:10.011Z"
+      },
+      {
+        "roomId": "g-mwc10k9p-1",
+        "seq": 3,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "text": "新建任务:整理发布清单\n备注:周五前",
+        "mentions": [],
+        "replyToSeq": null,
+        "quotedSeqs": [],
+        "quotes": [],
+        "attachments": [],
+        "card": {
+          "kind": "task-status",
+          "cardId": "card-mwc10o8v-6",
+          "taskId": "t-mwc10o8v-5",
+          "title": "整理发布清单",
+          "body": "整理发布清单\n\n备注:周五前",
+          "state": "open",
+          "actions": [
+            {
+              "actionId": "cancel",
+              "label": "取消任务",
+              "style": "danger"
+            }
+          ]
+        },
+        "command": null,
+        "reactions": [],
+        "edited": false,
+        "retracted": false,
+        "clientActionId": "helper-cli-mwc10mjb-1:L4",
+        "at": "2026-11-11T11:19:10.015Z"
+      }
+    ],
+    "hasMore": false
+  }
+}
+核对:发布群任务 3 个:「整理发布清单」T1_Open、「回归测试」T1_Open、「写发布说明」T1_Open;群里新增消息 3 条:user[task-status]、user[task-status]、user[task-status]
+
+## 三、全局入口:把小研删掉 → 先问 → 同意
+
+$ cli.ts helper --db <db> --mind pi 把小研删掉   # 全局(11.5s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "reply": "还没动手，先跟你确认一下：\n\n你是要把小研**移出「发布群」**吧？移出后，群里就只剩你和小克。小研在这个群里没有在做的任务，所以不会有任务被打断。小研这个联系人还在，以后可以再拉回来。\n\n确认的话回我一句「同意」，我就移。\n\n如果你是想**把小研这个联系人整个删掉**，也跟我说。不过删了就恢复不了。",
+    "ops": [
+      {
+        "op": "rooms.list",
+        "ok": true,
+        "summary": "列出会话:rooms 1 条"
+      },
+      {
+        "op": "contacts.list",
+        "ok": true,
+        "summary": "列出联系人:contacts 2 条"
+      },
+      {
+        "op": "tasks.list",
+        "ok": true,
+        "summary": "列出任务:tasks 0 条"
+      }
+    ],
+    "context": []
+  }
+}
+
+$ cli.ts call --db <db> contacts.list {}   # 读库核对:问完之后的联系人(0.3s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "contacts": [
+      {
+        "id": "c-mwc10fxx-1",
+        "name": "小克",
+        "avatar": null,
+        "bio": "",
+        "speakingModel": "fnqtz/claude-opus-5-5",
+        "harness": "claude-code",
+        "computeModel": {
+          "mode": "inherit"
+        },
+        "tools": [],
+        "computeAssets": [],
+        "activity": "idle",
+        "createdAt": "2026-11-11T11:18:59.253Z",
+        "computeResolved": {
+          "resolved": {
+            "harness": "claude-code",
+            "model": "fnqtz/claude-opus-5-5",
+            "effort": "medium",
+            "vendor": "anthropic",
+            "modelSource": "global",
+            "effortSource": "global",
+            "chain": [
+              "compute 继承全局",
+              "全局 Compute 默认 fnqtz/claude-opus-5-5"
+            ]
+          },
+          "support": "undeclared"
+        }
+      },
+      {
+        "id": "c-mwc10g5i-1",
+        "name": "小研",
+        "avatar": null,
+        "bio": "",
+        "speakingModel": "fnqtz/claude-opus-5-5",
+        "harness": "claude-code",
+        "computeModel": {
+          "mode": "inherit"
+        },
+        "tools": [],
+        "computeAssets": [],
+        "activity": "idle",
+        "createdAt": "2026-11-11T11:18:59.526Z",
+        "computeResolved": {
+          "resolved": {
+            "harness": "claude-code",
+            "model": "fnqtz/claude-opus-5-5",
+            "effort": "medium",
+            "vendor": "anthropic",
+            "modelSource": "global",
+            "effortSource": "global",
+            "chain": [
+              "compute 继承全局",
+              "全局 Compute 默认 fnqtz/claude-opus-5-5"
+            ]
+          },
+          "support": "undeclared"
+        }
+      }
+    ]
+  }
+}
+核对:Helper 问完、用户还没同意时联系人 = 小克、小研
+
+$ cli.ts helper --db <db> --mind pi 同意   # 全局(12.7s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "reply": "小研已经移出「发布群」，现在群里只剩你和小克。\n\n群里那 3 个任务（写发布说明、回归测试、整理发布清单）还没有人认领，所以都没受影响。小研这个联系人也还在。",
+    "ops": [
+      {
+        "op": "rooms.list",
+        "ok": true,
+        "summary": "列出会话:rooms 1 条"
+      },
+      {
+        "op": "contacts.list",
+        "ok": true,
+        "summary": "列出联系人:contacts 2 条"
+      },
+      {
+        "op": "tasks.list",
+        "ok": true,
+        "summary": "列出任务:tasks 3 条"
+      },
+      {
+        "op": "rooms.removeMember",
+        "ok": true,
+        "summary": "把成员移出群:id=g-mwc10k9p-1 title=发布群 members 2 条 leavingMembers 0 条"
+      }
+    ],
+    "context": []
+  }
+}
+
+$ cli.ts call --db <db> contacts.list {}   # 读库核对:同意之后的联系人(0.4s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "contacts": [
+      {
+        "id": "c-mwc10fxx-1",
+        "name": "小克",
+        "avatar": null,
+        "bio": "",
+        "speakingModel": "fnqtz/claude-opus-5-5",
+        "harness": "claude-code",
+        "computeModel": {
+          "mode": "inherit"
+        },
+        "tools": [],
+        "computeAssets": [],
+        "activity": "idle",
+        "createdAt": "2026-11-11T11:18:59.253Z",
+        "computeResolved": {
+          "resolved": {
+            "harness": "claude-code",
+            "model": "fnqtz/claude-opus-5-5",
+            "effort": "medium",
+            "vendor": "anthropic",
+            "modelSource": "global",
+            "effortSource": "global",
+            "chain": [
+              "compute 继承全局",
+              "全局 Compute 默认 fnqtz/claude-opus-5-5"
+            ]
+          },
+          "support": "undeclared"
+        }
+      },
+      {
+        "id": "c-mwc10g5i-1",
+        "name": "小研",
+        "avatar": null,
+        "bio": "",
+        "speakingModel": "fnqtz/claude-opus-5-5",
+        "harness": "claude-code",
+        "computeModel": {
+          "mode": "inherit"
+        },
+        "tools": [],
+        "computeAssets": [],
+        "activity": "idle",
+        "createdAt": "2026-11-11T11:18:59.526Z",
+        "computeResolved": {
+          "resolved": {
+            "harness": "claude-code",
+            "model": "fnqtz/claude-opus-5-5",
+            "effort": "medium",
+            "vendor": "anthropic",
+            "modelSource": "global",
+            "effortSource": "global",
+            "chain": [
+              "compute 继承全局",
+              "全局 Compute 默认 fnqtz/claude-opus-5-5"
+            ]
+          },
+          "support": "undeclared"
+        }
+      }
+    ]
+  }
+}
+核对:用户回「同意」后联系人 = 小克、小研
+
+$ cli.ts helper --db <db> --mind pi 同意删除联系人   # 全局·用户说清(6.8s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "reply": "小研这个联系人已经删了，删了就恢复不了。现在联系人里只剩小克。",
+    "ops": [
+      {
+        "op": "contacts.list",
+        "ok": true,
+        "summary": "列出联系人:contacts 2 条"
+      },
+      {
+        "op": "contacts.remove",
+        "ok": true,
+        "summary": "删除联系人"
+      }
+    ],
+    "context": []
+  }
+}
+
+$ cli.ts call --db <db> contacts.list {}   # 读库核对:说清之后的联系人(0.6s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "contacts": [
+      {
+        "id": "c-mwc10fxx-1",
+        "name": "小克",
+        "avatar": null,
+        "bio": "",
+        "speakingModel": "fnqtz/claude-opus-5-5",
+        "harness": "claude-code",
+        "computeModel": {
+          "mode": "inherit"
+        },
+        "tools": [],
+        "computeAssets": [],
+        "activity": "idle",
+        "createdAt": "2026-11-11T11:18:59.253Z",
+        "computeResolved": {
+          "resolved": {
+            "harness": "claude-code",
+            "model": "fnqtz/claude-opus-5-5",
+            "effort": "medium",
+            "vendor": "anthropic",
+            "modelSource": "global",
+            "effortSource": "global",
+            "chain": [
+              "compute 继承全局",
+              "全局 Compute 默认 fnqtz/claude-opus-5-5"
+            ]
+          },
+          "support": "undeclared"
+        }
+      }
+    ]
+  }
+}
+核对:用户说清后联系人 = 小克
+
+## 四、在发布群里 @Helper
+
+$ cli.ts helper --db <db> --mind pi --entry mention --room 发布群 这个群现在有哪些任务?   # @Helper(6.8s,退出码 0)
+{
+  "asked": {
+    "roomId": "g-mwc10k9p-1",
+    "seq": 4
+  },
+  "reply": {
+    "seq": 5,
+    "replyToSeq": 4,
+    "text": "这个群现在有 3 个任务，都还没人认领，也都没开工：\n\n1. **写发布说明**：备注：中英两版（来自 #1）\n2. **回归测试**：备注：覆盖登录、支付（来自 #2）\n3. **整理发布清单**：备注：周五前（来自 #3）\n\n要的话，我可以把它们分给小克。"
+  }
+}
+[stderr] [宿主] recall {"contactId":"c-mwc10fxx-1","roundId":"c-mwc10fxx-1:r1:mwc11gp2","items":[]}
+
+$ cli.ts call --db <db> messages.list {"roomId":"g-mwc10k9p-1","limit":5}   # 读库核对:群里最后几条(0.7s,退出码 0)
+{
+  "ok": true,
+  "value": {
+    "messages": [
+      {
+        "roomId": "g-mwc10k9p-1",
+        "seq": 1,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "text": "新建任务:写发布说明\n备注:中英两版",
+        "mentions": [],
+        "replyToSeq": null,
+        "quotedSeqs": [],
+        "quotes": [],
+        "attachments": [],
+        "card": {
+          "kind": "task-status",
+          "cardId": "card-mwc10o8k-2",
+          "taskId": "t-mwc10o8k-1",
+          "title": "写发布说明",
+          "body": "写发布说明\n\n备注:中英两版",
+          "state": "open",
+          "actions": [
+            {
+              "actionId": "cancel",
+              "label": "取消任务",
+              "style": "danger"
+            }
+          ]
+        },
+        "command": null,
+        "reactions": [],
+        "edited": false,
+        "retracted": false,
+        "clientActionId": "helper-cli-mwc10mjb-1:L2",
+        "at": "2026-11-11T11:19:10.005Z"
+      },
+      {
+        "roomId": "g-mwc10k9p-1",
+        "seq": 2,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "text": "新建任务:回归测试\n备注:覆盖登录, 支付",
+        "mentions": [],
+        "replyToSeq": null,
+        "quotedSeqs": [],
+        "quotes": [],
+        "attachments": [],
+        "card": {
+          "kind": "task-status",
+          "cardId": "card-mwc10o8r-4",
+          "taskId": "t-mwc10o8r-3",
+          "title": "回归测试",
+          "body": "回归测试\n\n备注:覆盖登录, 支付",
+          "state": "open",
+          "actions": [
+            {
+              "actionId": "cancel",
+              "label": "取消任务",
+              "style": "danger"
+            }
+          ]
+        },
+        "command": null,
+        "reactions": [],
+        "edited": false,
+        "retracted": false,
+        "clientActionId": "helper-cli-mwc10mjb-1:L3",
+        "at": "2026-11-11T11:19:10.011Z"
+      },
+      {
+        "roomId": "g-mwc10k9p-1",
+        "seq": 3,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "text": "新建任务:整理发布清单\n备注:周五前",
+        "mentions": [],
+        "replyToSeq": null,
+        "quotedSeqs": [],
+        "quotes": [],
+        "attachments": [],
+        "card": {
+          "kind": "task-status",
+          "cardId": "card-mwc10o8v-6",
+          "taskId": "t-mwc10o8v-5",
+          "title": "整理发布清单",
+          "body": "整理发布清单\n\n备注:周五前",
+          "state": "open",
+          "actions": [
+            {
+              "actionId": "cancel",
+              "label": "取消任务",
+              "style": "danger"
+            }
+          ]
+        },
+        "command": null,
+        "reactions": [],
+        "edited": false,
+        "retracted": false,
+        "clientActionId": "helper-cli-mwc10mjb-1:L4",
+        "at": "2026-11-11T11:19:10.015Z"
+      },
+      {
+        "roomId": "g-mwc10k9p-1",
+        "seq": 4,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "text": "@Helper 这个群现在有哪些任务?",
+        "mentions": [
+          {
+            "id": "helper",
+            "source": "manual"
+          }
+        ],
+        "replyToSeq": null,
+        "quotedSeqs": [],
+        "quotes": [],
+        "attachments": [],
+        "card": null,
+        "command": null,
+        "reactions": [],
+        "edited": false,
+        "retracted": false,
+        "clientActionId": "cli-at-mwc11gj4",
+        "at": "2026-11-11T11:19:46.673Z"
+      },
+      {
+        "roomId": "g-mwc10k9p-1",
+        "seq": 5,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "helper",
+          "id": "helper"
+        },
+        "text": "这个群现在有 3 个任务，都还没人认领，也都没开工：\n\n1. **写发布说明**：备注：中英两版（来自 #1）\n2. **回归测试**：备注：覆盖登录、支付（来自 #2）\n3. **整理发布清单**：备注：周五前（来自 #3）\n\n要的话，我可以把它们分给小克。",
+        "mentions": [],
+        "replyToSeq": 4,
+        "quotedSeqs": [
+          4
+        ],
+        "quotes": [
+          {
+            "seq": 4,
+            "senderName": "我",
+            "excerpt": "@Helper 这个群现在有哪些任务?",
+            "state": "ok"
+          }
+        ],
+        "attachments": [],
+        "card": null,
+        "command": null,
+        "reactions": [],
+        "edited": false,
+        "retracted": false,
+        "clientActionId": "helper-mention-g-mwc10k9p-1-4",
+        "at": "2026-11-11T11:19:52.671Z"
+      }
+    ],
+    "hasMore": false
+  }
+}
+[stderr] [宿主] recall {"contactId":"c-mwc10fxx-1","roundId":"c-mwc10fxx-1:r1:mwc11lov","items":[]}
+核对:群里最后两条 = #4 user;#5 helper 回复#4
+
+## 审计表 gg_helper_ops 与上下文清单 gg_helper_context(读库)
+ops  cli-mwc10ggb global contacts.list ok=1 {"contacts":[{"id":"c-mwc10fxx-1","name":"小克","avatar":null,"bio":"","speakingModel":"fnqtz/claude-opus-5-5","harness":"
+ops  cli-mwc10ggb global rooms.createGroup ok=1 {"id":"g-mwc10k9p-1","kind":"group","title":"发布群","avatar":null,"members":[{"kind":"contact","id":"c-mwc10fxx-1"},{"kind
+ops  cli-mwc10mjb sidebar:g-mwc10k9p-1 tasks.importCsv ok=1 {"tasks":[{"id":"t-mwc10o8k-1","title":"写发布说明","roomId":"g-mwc10k9p-1","sourceSeq":1,"requesterId":"me","ownerContactId"
+ops  cli-mwc10res global rooms.list ok=1 {"rooms":[{"id":"g-mwc10k9p-1","kind":"group","title":"发布群","avatar":null,"members":[{"kind":"contact","id":"c-mwc10fxx-
+ops  cli-mwc10res global contacts.list ok=1 {"contacts":[{"id":"c-mwc10fxx-1","name":"小克","avatar":null,"bio":"","speakingModel":"fnqtz/claude-opus-5-5","harness":"
+ops  cli-mwc10res global tasks.list ok=1 {"tasks":[]}
+ops  cli-mwc110b5 global rooms.list ok=1 {"rooms":[{"id":"g-mwc10k9p-1","kind":"group","title":"发布群","avatar":null,"members":[{"kind":"contact","id":"c-mwc10fxx-
+ops  cli-mwc110b5 global contacts.list ok=1 {"contacts":[{"id":"c-mwc10fxx-1","name":"小克","avatar":null,"bio":"","speakingModel":"fnqtz/claude-opus-5-5","harness":"
+ops  cli-mwc110b5 global tasks.list ok=1 {"tasks":[{"id":"t-mwc10o8v-5","title":"整理发布清单","roomId":"g-mwc10k9p-1","sourceSeq":3,"requesterId":"me","ownerContactId
+ops  cli-mwc110b5 global rooms.removeMember ok=1 {"id":"g-mwc10k9p-1","kind":"group","title":"发布群","avatar":null,"members":[{"kind":"contact","id":"c-mwc10fxx-1"},{"kind
+ops  cli-mwc11aqe global contacts.list ok=1 {"contacts":[{"id":"c-mwc10fxx-1","name":"小克","avatar":null,"bio":"","speakingModel":"fnqtz/claude-opus-5-5","harness":"
+ops  cli-mwc11aqe global contacts.remove ok=1 {"ok":true}
+ops  mention-g-mwc10k9p-1-4 mention:g-mwc10k9p-1 tasks.list ok=1 {"tasks":[{"id":"t-mwc10o8v-5","title":"整理发布清单","roomId":"g-mwc10k9p-1","sourceSeq":3,"requesterId":"me","ownerContactId
+ctx  cli-mwc10mjb sidebar:g-mwc10k9p-1 entry g-mwc10k9p-1 []
+ctx  mention-g-mwc10k9p-1-4 mention:g-mwc10k9p-1 entry g-mwc10k9p-1 [1,2,3,4]
