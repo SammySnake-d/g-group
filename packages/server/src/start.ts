@@ -35,7 +35,10 @@ export interface Started {
 }
 
 export const SAMPLE_CATALOG = fileURLToPath(new URL("../catalog/catalog.json", import.meta.url));
-/** 生产默认的状态笔记上限(UTF-8 字节),候选值(空壳:还没接到宿主) */
+/**
+ * 生产默认的状态笔记上限(UTF-8 字节),候选值、待用户定:D06 / D25 没写数值,取适配器现有默认推出——压缩器单次输出上限 maxTokens 4096,
+ * 8 KB 中文约 2700 字、约 2000–2700 token,缩写时一次输出写得下整份新笔记。超过就请同一说话模型缩写,不截断。
+ */
 export const DEFAULT_STATE_NOTE_MAX_BYTES = 8192;
 
 export async function startServer(o: StartOptions): Promise<Started> {
@@ -92,6 +95,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
     ...(o.onReport ? { onReport: o.onReport } : {}),
     computeHarnessRetries: fake ? 0 : DEFAULT_RETRY_POLICY.maxAutoRetries,
     ...(o.computeInputMaxBytes !== undefined ? { computeInputMaxBytes: o.computeInputMaxBytes } : {}),
+    stateNoteMaxBytes: o.stateNoteMaxBytes === undefined ? DEFAULT_STATE_NOTE_MAX_BYTES : o.stateNoteMaxBytes,
   });
   if (model) host.updateSettings({ defaultSpeakingModel: model, defaultComputeModel: model, confirmAffected: true });
   const service = createService(host);

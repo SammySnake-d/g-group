@@ -6,11 +6,13 @@
 //   - pi 自己累积的 agent.state.messages 只当缓冲,不当真源:每轮新建 Agent,用完即弃。
 // 工具只登记动作、不做 I/O(tools.ts);宿主校验、分配 action_id、落盘后才执行。
 // 密钥只由调用方传入,只在发请求时交给 pi-ai;不读环境变量,不进返回值、错误信息和日志。
+// 用量(AC-39 ⑤):每次请求结束把 usage 连同线路(服务商|主机名|模型,不含路径里的令牌)、请求序号、前缀哈希交给宿主的回执口(usage.ts)。
 import { Agent, type AgentMessage, type AgentTool, type AgentToolResult, type StreamFn } from "@earendil-works/pi-agent-core";
 import { type AssistantMessage, type Model, type SimpleStreamOptions, type SystemMessage, toToolDeclaration, type UserMessage } from "@earendil-works/pi-ai";
 import { anthropicMessagesApi } from "@earendil-works/pi-ai/api/anthropic-messages.lazy";
 import { BLOCK_LABELS, type BlockNo, type ContactMind, type MindAction, plainData, type RoundBlock, type RoundInput, type RoundOutput, type RoundTools, type UsageSink } from "@g-group/kernel";
 import { parseToolCall, TOOL_DECLARATIONS } from "./tools.ts";
+import { placeBreakpoints, probeRequest, type RequestProbe, report, usageLine, usageOf } from "./usage.ts";
 
 export interface PiContactMindOptions {
   /** 模型协议。本片只接 Anthropic Messages 兼容端点(默认即此)。 */
@@ -170,8 +172,9 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
   };
   const api = anthropicMessagesApi();
   const declarations = TOOL_DECLARATIONS.map((d) => toToolDeclaration({ name: d.name, description: d.description, parameters: d.parameters }));
+  const line = usageLine(cfg.provider, cfg.baseUrl, cfg.model, cfg.apiKey);
 
-  async function round(input: RoundInput, signal: AbortSignal, tools?: RoundTools, _usage?: UsageSink): Promise<RoundOutput> {
+  async function round(input: RoundInput, signal: AbortSignal, tools?: RoundTools, usage?: UsageSink): Promise<RoundOutput> {
     if (!(signal instanceof AbortSignal)) throw new PiContactMindError("invalid-request", "signal 必须是 AbortSignal");
     if (signal.aborted) throw new RoundAbortedError();
     const { blocks } = readRound(input, cfg.model);
@@ -217,6 +220,8 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
     let requests = 0;
     let limitHit = false;
     let last: AssistantMessage | undefined;
+    // 本次请求的实际请求体探测(前缀哈希、断点个数):onPayload 里算,这次请求的 assistant 消息结束时连同 usage 回报
+    let probe: RequestProbe | null = null;
     const keyOpts: Partial<SimpleStreamOptions> = cfg.authHeader === "bearer" ? {} : { apiKey: cfg.apiKey };
     const streamFn: StreamFn = (m, ctx, o) => api.streamSimple(m, ctx, {
       ...o,
@@ -225,6 +230,12 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
       ...(cfg.fetch ? { fetch: cfg.fetch } : {}),
       maxTokens: cfg.maxTokens,
       cacheRetention: b1.cacheBreakpoint ? cfg.cacheRetention : "none",
+      onPayload: async (payload, m) => {
+        const prior = await o?.onPayload?.(payload, m);
+        const placed = placeBreakpoints(prior === undefined ? payload : prior);
+        probe = probeRequest(placed);
+        return placed;
+      },
     });
     const agent = new Agent({
       initialState: { model, tools: agentTools, thinkingLevel: "off" },
@@ -246,7 +257,12 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
     agent.subscribe((ev) => {
       if (ev.type !== "message_end" || requests === 0) return;
       const m = ev.message;
-      if (m.role === "assistant") { exchange.push(m); last = m; }
+      if (m.role === "assistant") {
+        exchange.push(m);
+        last = m;
+        report(usage, usageOf(line, requests, probe, m.usage));
+        probe = null;
+      }
       else if (m.role === "toolResult") exchange.push(m);
     });
     const onAbort = () => agent.abort();

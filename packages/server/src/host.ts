@@ -2192,8 +2192,10 @@ export class Host {
     return r.text;
   }
   /** 本轮要落盘的状态笔记:模型没写就请压缩器补写(同一说话模型的独立调用),超上限就缩写;最后移除撤回原文 */
-  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], signal: AbortSignal): Promise<{ note: string | null; remember: MindAction[]; persona: string | null }> {
+  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], signal: AbortSignal, roundId: string): Promise<{ note: string | null; remember: MindAction[]; persona: string | null }> {
     const contactId = contact.id;
+    // 压缩与检查的每次请求也记用量(AC-39 ⑤),归到本轮同一联系人、同一批会话
+    const usageRooms = [...new Set(fresh.map((f) => f.roomId))];
     const prev = this.stateNote(contactId);
     const compactor = this.opts.compactor?.(this.contactView(contact));
     const profile = { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona };
@@ -2210,7 +2212,7 @@ export class Host {
         .filter((e) => (e.status === "active" || e.status === "degraded") && !e.anchors.includes(PERSONA_ANCHOR) && e.anchors.some((x) => anchors.includes(x) || x === GLOBAL_ANCHOR))
         .map((e) => ({ id: e.id, title: e.title, body: e.body }));
       try {
-        const r: ReflectResult = await compactor.reflect({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max, neighbors, noteWritten: out.stateNote }, signal);
+        const r: ReflectResult = await compactor.reflect({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max, neighbors, noteWritten: out.stateNote }, signal, this.usage.sink({ kind: "reflect", contactId, roomIds: usageRooms, roundId }));
         reflected = true;
         if (note === null) note = r.note;
         const lastUser = [...fresh].reverse().find((f): f is InboundMessage => f.kind === "message" && f.sender.kind === "user");
@@ -2223,7 +2225,7 @@ export class Host {
     }
     if (note === null && !reflected && compactor && fresh.length > 0) {
       try {
-        note = await compactor.compact({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max }, signal);
+        note = await compactor.compact({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max }, signal, this.usage.sink({ kind: "compact", contactId, roomIds: usageRooms, roundId }));
       } catch (e) {
         this.report("compact-failed", { contactId, kind: "round-note", error: e instanceof Error ? e.message : String(e) });
         note = null;
@@ -2232,7 +2234,7 @@ export class Host {
     if (note !== null && max !== null && Buffer.byteLength(note, "utf8") > max) {
       if (compactor) {
         try {
-          const shorter = await compactor.compact({ contact: profile, kind: "shrink", previous: note, material: "", maxBytes: max }, signal);
+          const shorter = await compactor.compact({ contact: profile, kind: "shrink", previous: note, material: "", maxBytes: max }, signal, this.usage.sink({ kind: "compact", contactId, roomIds: usageRooms, roundId }));
           if (Buffer.byteLength(shorter, "utf8") < Buffer.byteLength(note, "utf8")) note = shorter;
         } catch (e) {
           this.report("compact-failed", { contactId, kind: "shrink", error: e instanceof Error ? e.message : String(e) });
@@ -2460,7 +2462,8 @@ export class Host {
     try {
       // 每一轮现场定生效模型(原则 70):用户在失败卡上显式选了备用模型才换,只用于重跑这一批;自动重试永远用原模型(严禁静默换模)
       const tools: RoundTools = { readMemory: async (id: string) => this.renderMemory(contactId, id), readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq) };
-      out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, ac.signal, tools), stalled, closing]);
+      const usage = this.usage.sink({ kind: "round", contactId, roomIds: [...new Set(fresh.map((f) => f.roomId))], roundId });
+      out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, ac.signal, tools, usage), stalled, closing]);
     } catch (e) {
       this.setActivity(contactId, null, "idle");
       if (stall) this.runs.failStalled(unit.id, stall);
@@ -2488,7 +2491,7 @@ export class Host {
         }
       }
     }
-    const settled = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), signal);
+    const settled = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), signal, roundId);
     if (signal.aborted || this.closed) return "done";
     let done: { effects: HostEffect[] };
     try {

@@ -1,5 +1,4 @@
-// 缓存命中统计(AC-39 ⑤⑥、D22 第 3 节第 7 条)——红提交的空壳:类型与常量在,函数返回假值。以下是要实现的口径:
-//纯函数,不做 I/O:输入 gg_usage 的行,输出按「线路 × 联系人 × 群」(可加种类)分组的命中率。
+// 缓存命中统计(AC-39 ⑤⑥、D22 第 3 节第 7 条)。纯函数,不做 I/O:输入 gg_usage 的行,输出按「线路 × 联系人 × 群」(可加种类)分组的命中率。
 // 口径(D22、evidence/cache-20261105):命中率 = cache_read / (input + cache_read + cache_write)。
 // 可信度检查按线路做(拆账口径不计入命中率,只标出来):
 //   constant-ratio   :cache_read / input 在样本里恒为同一比例(kiro 式 4:1,允许四舍五入的 ±2 token),且 input 本身有变化;
@@ -94,24 +93,150 @@ export interface CacheStatsResult {
   readonly lines: readonly LineVerdict[];
 }
 
-export function hitRateOf(_rows: readonly UsageRow[]): number | null {
-  return null;
+const ms = (iso: string): number => Date.parse(iso);
+/** 先按时间、再按落表顺序 */
+const chrono = (a: UsageRow, b: UsageRow): number => ms(a.at) - ms(b.at) || a.id - b.id;
+const prompt = (r: UsageRow): number => r.input + r.cacheRead + r.cacheWrite;
+
+/** 命中率口径(D22):cache_read / (input + cache_read + cache_write);分母为 0 返回 null */
+export function hitRateOf(rows: readonly UsageRow[]): number | null {
+  const total = rows.reduce((n, r) => n + prompt(r), 0);
+  return total === 0 ? null : rows.reduce((n, r) => n + r.cacheRead, 0) / total;
 }
-export function constantRatio(_rows: readonly UsageRow[]): boolean {
-  return false;
+
+/** kiro 式拆账:cache_read 与 input 恒成同一比例(四舍五入允许 ±2 token),input 本身有变化 */
+export function constantRatio(rows: readonly UsageRow[]): boolean {
+  const xs = rows.filter((r) => r.input > 0 && r.cacheRead > 0);
+  if (xs.length < TRUST_MIN_SAMPLES) return false;
+  const ins = xs.map((r) => r.input);
+  const lo = Math.min(...ins);
+  const hi = Math.max(...ins);
+  if ((hi - lo) / hi < 0.05) return false;
+  const ratios = xs.map((r) => r.cacheRead / r.input).sort((a, b) => a - b);
+  const k = ratios[Math.floor(ratios.length / 2)]!;
+  return xs.every((r) => Math.abs(r.cacheRead - k * r.input) <= Math.max(2, 0.002 * r.cacheRead));
 }
-export function hitWithoutBreakpoint(_rows: readonly UsageRow[]): boolean {
-  return false;
+
+/** 不声明缓存却报命中:请求里没有任何 cache_control,端点还报 cache_read > 0 */
+export function hitWithoutBreakpoint(rows: readonly UsageRow[]): boolean {
+  return rows.some((r) => r.breakpoints === 0 && r.cacheRead > 0);
 }
-export function firstSegmentOnly(_rows: readonly UsageRow[], _ttlMs: number): boolean {
-  return false;
+
+/** 只缓存首段:同一轮的后续请求命中数不比前一次多(至少 TRUST_MIN_SAMPLES 对,八成以上如此) */
+export function firstSegmentOnly(rows: readonly UsageRow[], ttlMs: number): boolean {
+  const byKey = new Map<string, UsageRow>();
+  for (const r of rows) if (r.kind === "round") byKey.set(`${r.roundId}#${r.request}`, r);
+  let pairs = 0;
+  let flat = 0;
+  for (const r of rows) {
+    if (r.kind !== "round" || r.request < 2 || r.breakpoints === 0) continue;
+    const prev = byKey.get(`${r.roundId}#${r.request - 1}`);
+    if (!prev || prev.cacheRead === 0 || ms(r.at) - ms(prev.at) > ttlMs) continue;
+    pairs++;
+    if (r.cacheRead <= prev.cacheRead) flat++;
+  }
+  return pairs >= TRUST_MIN_SAMPLES && flat >= 0.8 * pairs;
 }
-export function classifyMisses(_rows: readonly UsageRow[], _ttlMs: number): Map<number, MissKind> {
-  return new Map();
+
+/** 每次未命中(带断点、cache_read 为 0)的归因;命中或不带断点的请求不在结果里 */
+export function classifyMisses(rows: readonly UsageRow[], ttlMs: number): Map<number, MissKind> {
+  const out = new Map<number, MissKind>();
+  const lastByPrefix = new Map<string, UsageRow>();
+  const seenBySender = new Set<string>();
+  for (const r of [...rows].sort(chrono)) {
+    const pk = `${r.line}\n${r.prefixHash}`;
+    const sk = `${r.line}\n${r.contactId}\n${r.kind}`;
+    if (r.breakpoints > 0 && r.cacheRead === 0) {
+      const prev = lastByPrefix.get(pk);
+      if (prev) out.set(r.id, ms(r.at) - ms(prev.at) > ttlMs ? "expired" : "uncached");
+      else out.set(r.id, seenBySender.has(sk) ? "prefix-changed" : "cold");
+    }
+    lastByPrefix.set(pk, r);
+    seenBySender.add(sk);
+  }
+  return out;
 }
-export function judgeLines(_rows: readonly UsageRow[], _ttlMs: number): LineVerdict[] {
-  return [];
+
+/** 线路可信度(按窗口内的行):拆账口径(两种判据之一)、只缓存首段 */
+export function judgeLines(rows: readonly UsageRow[], ttlMs: number): LineVerdict[] {
+  const byLine = new Map<string, UsageRow[]>();
+  for (const r of rows) byLine.set(r.line, [...(byLine.get(r.line) ?? []), r]);
+  const out: LineVerdict[] = [];
+  for (const [line, win] of [...byLine].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+    const split: SplitReason | null = constantRatio(win) ? "constant-ratio" : hitWithoutBreakpoint(win) ? "hit-without-breakpoint" : null;
+    out.push(Object.freeze({ line, calls: win.length, splitAccounting: split, firstSegmentOnly: split === null && firstSegmentOnly(win, ttlMs) }));
+  }
+  return out;
 }
-export function cacheStats(_history: readonly UsageRow[], q: CacheStatsQuery): CacheStatsResult {
-  return { since: q.since ?? null, until: q.until ?? null, by: [...q.by], ttlMs: q.ttlMs ?? DEFAULT_CACHE_TTL_MS, groups: [], lines: [] };
+
+const roomKey = (r: UsageRow): string => [...r.roomIds].sort().join(",");
+
+/** 按维度分组出命中率、可信度标记、低于阈值标记与未命中归因 */
+export function cacheStats(history: readonly UsageRow[], q: CacheStatsQuery): CacheStatsResult {
+  const ttlMs = q.ttlMs ?? DEFAULT_CACHE_TTL_MS;
+  const since = q.since ?? null;
+  const until = q.until ?? null;
+  const lo = since === null ? Number.NEGATIVE_INFINITY : ms(since);
+  const hi = until === null ? Number.POSITIVE_INFINITY : ms(until);
+  const upto = history.filter((r) => ms(r.at) < hi);
+  const inWindow = (r: UsageRow) => ms(r.at) >= lo && ms(r.at) < hi;
+  const lines = judgeLines(upto.filter(inWindow), ttlMs);
+  const verdict = new Map(lines.map((v) => [v.line, v]));
+  const misses = classifyMisses(upto, ttlMs);
+  const kinds = q.kinds ? new Set(q.kinds) : null;
+  const rows = upto.filter((r) => inWindow(r) && (kinds === null || kinds.has(r.kind)));
+  const dims = new Set(q.by);
+  const keyOf = (r: UsageRow) => ({
+    line: dims.has("line") ? r.line : null,
+    contactId: dims.has("contact") ? r.contactId : null,
+    room: dims.has("room") ? roomKey(r) : null,
+    kind: dims.has("kind") ? r.kind : null,
+  });
+  const groups = new Map<string, { key: ReturnType<typeof keyOf>; rows: UsageRow[] }>();
+  for (const r of rows) {
+    const key = keyOf(r);
+    const k = JSON.stringify(key);
+    const g = groups.get(k) ?? { key, rows: [] };
+    g.rows.push(r);
+    groups.set(k, g);
+  }
+  const byLine = new Map((q.alertBelowByLine ?? []).map((x) => [x.line, x.below]));
+  const minCalls = q.minCalls ?? DEFAULT_CACHE_MIN_CALLS;
+  const sum = (xs: UsageRow[], f: (r: UsageRow) => number) => xs.reduce((n, r) => n + f(r), 0);
+  const out: CacheStatsGroup[] = [];
+  for (const { key, rows: gr } of [...groups.values()].sort((a, b) => (JSON.stringify(a.key) < JSON.stringify(b.key) ? -1 : 1))) {
+    const counted = gr.filter((r) => !verdict.get(r.line)?.splitAccounting);
+    const hitRate = hitRateOf(counted);
+    const lineSet = new Set(gr.map((r) => r.line));
+    const only = lineSet.size === 1 ? [...lineSet][0]! : null;
+    const alertBelow = (only !== null ? byLine.get(only) : undefined) ?? q.alertBelow ?? null;
+    const flags: CacheFlag[] = [];
+    if ([...lineSet].some((l) => verdict.get(l)?.splitAccounting)) flags.push("split-accounting");
+    if ([...lineSet].some((l) => verdict.get(l)?.firstSegmentOnly)) flags.push("first-segment-only");
+    if (alertBelow !== null && hitRate !== null && counted.length >= minCalls && hitRate < alertBelow) flags.push("low-hit-rate");
+    const m: MissCounts = { cold: 0, prefixChanged: 0, expired: 0, uncached: 0 };
+    for (const r of gr) {
+      const why = misses.get(r.id);
+      if (why === "cold") m.cold++;
+      else if (why === "prefix-changed") m.prefixChanged++;
+      else if (why === "expired") m.expired++;
+      else if (why === "uncached") m.uncached++;
+    }
+    out.push(
+      Object.freeze({
+        ...key,
+        calls: gr.length,
+        input: sum(gr, (r) => r.input),
+        cacheRead: sum(gr, (r) => r.cacheRead),
+        cacheWrite: sum(gr, (r) => r.cacheWrite),
+        output: sum(gr, (r) => r.output),
+        countedCalls: counted.length,
+        hitRate,
+        alertBelow,
+        flags: Object.freeze(flags),
+        misses: Object.freeze(m),
+      }),
+    );
+  }
+  return Object.freeze({ since, until, by: Object.freeze([...q.by]), ttlMs, groups: Object.freeze(out), lines: Object.freeze(lines) });
 }

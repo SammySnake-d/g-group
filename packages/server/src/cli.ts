@@ -6,6 +6,7 @@
 // 选项:--mind fake|pi(默认 fake 规则脑子;pi 需要 @g-group/adapter-pi-contact 与模型网关环境变量)
 //       --compute fake|claude(默认 fake;claude 起真实 Claude Code CLI)  --cwd 目录(Compute 工作目录)  --timeout 秒
 //       --repo 仓库 --target 分支 [--verify "命令 参数…"](AC-22:每个任务一个 worktree 作 Compute 工作目录)  --accept(交付后豁免审查并验收,代码任务随即合入)
+//       --note-max-bytes 字节|none(状态笔记上限,默认 DEFAULT_STATE_NOTE_MAX_BYTES;none 不设)
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -15,6 +16,7 @@ import type { ContactCompactor, ContactMind } from "@g-group/kernel";
 import { ensureGroup, sendAndWait, senderAudit } from "./drive.ts";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
+import { DEFAULT_STATE_NOTE_MAX_BYTES } from "./start.ts";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -35,8 +37,17 @@ const { values, positionals } = parseArgs({
     target: { type: "string", default: "main" },
     verify: { type: "string" },
     accept: { type: "boolean", default: false },
+    "note-max-bytes": { type: "string" },
   },
 });
+/** --note-max-bytes:不给用默认上限;none 不设上限;其余必须是正整数 */
+function noteMaxBytes(v: string | undefined): number | null {
+  if (v === undefined) return DEFAULT_STATE_NOTE_MAX_BYTES;
+  if (v === "none") return null;
+  const n = Number(v);
+  if (!Number.isSafeInteger(n) || n < 1) throw new Error(`--note-max-bytes 必须是正整数或 none,收到 ${v}`);
+  return n;
+}
 const [cmd, ...rest] = positionals;
 
 async function makeMind(kind: string): Promise<{ mind: (c: ContactView) => ContactMind; compactor?: (c: ContactView) => ContactCompactor }> {
@@ -146,6 +157,7 @@ async function main() {
       ? { codeRepo: { repo: path.resolve(values.repo), targetBranch: values.target, ...(values.verify ? { verify: { command: values.verify.split(/\s+/)[0]!, args: values.verify.split(/\s+/).slice(1) } } : {}) } }
       : {}),
     maxDeferMs: 200,
+    stateNoteMaxBytes: noteMaxBytes(values["note-max-bytes"]),
     onReport: (what, detail) => console.error(`[宿主] ${what}`, typeof detail === "object" ? JSON.stringify(detail) : detail),
   });
   try {
