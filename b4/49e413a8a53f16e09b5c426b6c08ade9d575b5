@@ -1,0 +1,59 @@
+packages/server/proof/g6/capture.test.ts
+  s_9e84d571573b49::t_7c709bf4b10578 27,49-53,124-158
+packages/server/proof/g6/capture.ts
+  s_9e84d571573b49::t_57b064f234cef0 2,15-16,18,21-22,29-33,36,38-41,53,56,59,62-63,66,79
+packages/server/proof/g6/contracts.test.ts
+  s_9e84d571573b49::t_86c541b41d357d 4,17,65,70,76-96,100-101
+packages/server/proof/g6/contracts.ts
+  s_9e84d571573b49::t_cb9883258ba8a7 2,8,15-18,21,24,27,30,32-37,40,43,45,48
+packages/server/proof/g6/driver.test.ts
+  s_9e84d571573b49::t_52d14e9885397f 9,16,56-73
+packages/server/proof/g6/driver.ts
+  s_9e84d571573b49::t_09eff3100114b0 2,14,28,35-38,42,48,50-54,56-57,59,62,65-66
+packages/server/proof/g6/fixture.ts
+  s_9e84d571573b49::t_81b631fb2dea73 2,8,10,13,15-16,19,21
+packages/server/proof/g6/fixtures/build.ts
+  s_9e84d571573b49::t_c46b8d613d6138 38,53,80,84
+packages/server/proof/g6/groups.test.ts
+  s_9e84d571573b49::t_87f5fd7bd5ffd1 8,11,34,45-48,62-63,79-94
+packages/server/proof/g6/groups.ts
+  s_9e84d571573b49::t_7eeaf6fbd8af8a 2,6-7,33-36,40-46,48-52,55,61-62,79-80,84,86-90,93
+packages/server/proof/g6/manifest.test.ts
+  s_9e84d571573b49::t_d671716ea9f555 5,33-53
+packages/server/proof/g6/manifest.ts
+  s_9e84d571573b49::t_8d6c67f0aae4e1 2,8,17,19-20,22-30,32,35
+packages/server/proof/g6/report.test.ts
+  s_9e84d571573b49::t_d60976ded9b6c5 7,10,20-21,53-70
+packages/server/proof/g6/report.ts
+  s_9e84d571573b49::t_a1492f5b0158cd 2,23-25,31-37,40
+packages/server/proof/g6/run.test.ts
+  s_9e84d571573b49::t_acf498ed51e7a9 8-9,50,116-175
+packages/server/proof/g6/run.ts
+  s_9e84d571573b49::t_9765a36be80782 17,20,32,35,43-57,59-63,65-75,78,81,92-96,98-101,103-104
+packages/server/proof/g6/score.test.ts
+  s_9e84d571573b49::t_96c52d7394b6cc 22-23,82,104,149-168
+packages/server/proof/g6/score.ts
+  s_9e84d571573b49::t_1659dabd32b9c3 2,8-9,11-12,15,18,21,24,36,39,41,44,46-48,51,54
+packages/server/proof/g6/standin.test.ts
+  s_9e84d571573b49::t_a6af870ffe12e6 59-64
+packages/server/proof/g6/standin.ts
+  s_9e84d571573b49::t_f1c6ffb6557b6e 2,5,11,15,18,21
+packages/server/proof/g6/types.ts
+  s_9e84d571573b49::t_81927bc605e4a2 96-97,108,110-111,166-172,185-186,201-203,240-243
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b449e413a8a53f16e09b5c426b6c08ade9d575b5",
+  "prompts": {},
+  "sessions": {
+    "s_9e84d571573b49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5c99cdaaa25826c8",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
