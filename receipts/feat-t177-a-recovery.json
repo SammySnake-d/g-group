@@ -1,0 +1,31 @@
+{
+  "slice": "A / AC-15 按 appliedVer 和已确认交付历史恢复任务工作树；备份 ref、持久恢复意图、停止与合入栅栏、未核验分支。详见 receipts/evidence/t177-a/SCOPE.md",
+  "acceptance": [
+    {
+      "id": "AC-15",
+      "status": "未测",
+      "reason": "本片候选已实测：box3 红32/32按名失败、全量1505/1505、定点变异32/32杀死、前后原样对照各32/32，typecheck/lint/源码还原退出0。整体AC-15仍不把无代码仓或不完整历史的文字路径当文件恢复通过；真实harness的发送结果未知边界显式阻塞，不承诺跨进程恰好一次。",
+      "evidence": "receipts/evidence/t177-a/summary32.json"
+    }
+  ],
+  "author": {
+    "agent": "astra",
+    "session": "codex:63240562-6769-4e58-afdd-835948217589",
+    "model": "unknown-runtime-metadata-pending"
+  },
+  "red": {
+    "commit": "77ba6af3c68905aca30c2bb9669f4bf99cebf140"
+  },
+  "unverifiable": "AC-15：确定性 Compute 替身不能证明真实 harness 的跨进程送达恰好一次；sending 未确认重启明确阻塞，不自动重复发送。系统断电/文件系统损坏和外部非文件副作用未测。R-02：最终红锚点含首次绿之后追加的强化判据，时间顺序见 SCOPE.md，不伪称全部先红。",
+  "waiver": null,
+  "review": {
+    "agent": "claude",
+    "session": "claude:d0818a09-6c43-480f-9320-7138615ca097",
+    "model": "fnqtz/claude-opus-5-5",
+    "verdict": "reject",
+    "reviewed_hash": "34e9434fd116f465e2735ee39e48c4e228f5aa751b94516ca702778af54f8129",
+    "notes": "第 1 轮 REJECT（5503e89）：复现 typecheck/lint 0、全量 1505/1505、作者 32/32 变异杀死、红 77ba6af 32 条按名失败、门禁除 G-REVIEW 外全过、8 个门禁负例全拦。必须返修：R1-01 已合入并验收的任务改挂后退回 T3 无执行器卡死；R1-02 重放被明确拒收也记成送达未知并永久阻塞；R1-03 恢复通知长期占 waitingFor；R1-04 恢复失败停住期间用户新改动在重试时被删且未备份；R1-05 收据 author.model 未填（会话实际 shayu/gpt-6-astra）；R1-06 五个守卫分支（F1–F5）无测试。详见 reviews/feat-t177-a-recovery.md。hy4 本轮缺席（限额 22:19 恢复）。"
+  },
+  "review_status": "待审",
+  "notes": "作者名按当前用户要求写 astra，不冒用通用 brief 的 Claude 身份。运行中会话尚无 turns.jsonl，未取得实际模型元数据，作者 model 暂记 unknown，后续仅按原始运行记录补齐；不自审。Codex 主验收与 hy4 辅审由用户另派；Claude Code 看记录终审。 原始日志压缩归档 cloud-evidence.tgz，SHA-256 见 summary.json；可解包复核，早期无效签名变异存活记录也保留。"
+}
