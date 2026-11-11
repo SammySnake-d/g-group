@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { after, test } from "node:test";
+import { after, afterEach, test } from "node:test";
 import type { ComputeAdapter } from "@g-group/adapter-cc-compute";
 import type { RoomView, ServerEvent } from "@g-group/api-contract";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
@@ -19,6 +19,13 @@ const dir = mkdtempSync(path.join(tmpdir(), "gg-gadmin-"));
 after(() => rmSync(dir, { recursive: true, force: true }));
 let n = 0;
 const file = () => path.join(dir, `g${++n}.db`);
+/* 用例失败时也要把宿主关掉:开着定时和循环的宿主不会自己退出,node --test 会一直挂着 */
+const computes: { close(): void }[] = [];
+const holding = <T extends { close(): void }>(c: T): T => { computes.push(c); return c; };
+afterEach(() => { for (const c of computes.splice(0)) c.close(); });
+const hosts: Host[] = [];
+const mk = (opts: ConstructorParameters<typeof Host>[0]) => { const h = new Host(opts); hosts.push(h); return h; };
+afterEach(async () => { for (const h of hosts.splice(0)) await h.close(); });
 const contact = (id: string) => ({ kind: "contact" as const, id });
 
 async function settle(host: Host, compute?: { drained(): boolean }) {
@@ -43,7 +50,7 @@ function holdingCompute() {
       return { ok: true };
     },
   };
-  return { adapter, stopAsked, drained: () => inner.drained(), confirm: (id: string) => inner.adapter.stop(id) };
+  return { adapter, stopAsked, drained: () => inner.drained(), confirm: (id: string) => inner.adapter.stop(id), close: () => inner.close() };
 }
 const ok = <T>(r: { ok: boolean; value?: unknown; error?: unknown }): T => {
   assert.ok(r.ok, `应当成功,实际:${JSON.stringify(r)}`);
@@ -52,7 +59,7 @@ const ok = <T>(r: { ok: boolean; value?: unknown; error?: unknown }): T => {
 const groupIds = (rooms: readonly RoomView[]) => rooms.filter((r) => r.kind === "group").map((r) => r.id);
 
 test("建群带同一个 clientActionId 重发:只建一个群,返回原来那个", async () => {
-  const host = new Host({ file: file(), mind: () => scriptedMind(), maxDeferMs: 5 });
+  const host = mk({ file: file(), mind: () => scriptedMind(), maxDeferMs: 5 });
   const svc = createService(host);
   const a = host.createContact({ name: "小前" });
   const p = { clientActionId: "ui-create-1", title: "研发群", members: [contact(a.id)] };
@@ -62,11 +69,10 @@ test("建群带同一个 clientActionId 重发:只建一个群,返回原来那�
   assert.deepEqual(groupIds(ok<{ rooms: RoomView[] }>(await svc.handle("rooms.list", {})).rooms), [first.id], "只应有一个群");
   const other = ok<RoomView>(await svc.handle("rooms.createGroup", { ...p, clientActionId: "ui-create-2" }));
   assert.notEqual(other.id, first.id, "换了动作号是另建一个");
-  await host.close();
-});
+  });
 
 test("解散没有在途任务的群:从会话列表消失并推 room.removed,群里的定时一起删掉,私聊不受影响", async () => {
-  const host = new Host({ file: file(), mind: () => scriptedMind(), maxDeferMs: 5 });
+  const host = mk({ file: file(), mind: () => scriptedMind(), maxDeferMs: 5 });
   const svc = createService(host);
   const a = host.createContact({ name: "小前" });
   const dm = host.openDm(a.id);
@@ -86,12 +92,11 @@ test("解散没有在途任务的群:从会话列表消失并推 room.removed,�
   const again = await svc.handle("rooms.dissolve", { roomId: dm.id });
   assert.equal(again.ok ? "ok" : again.error.code, "forbidden", "私聊不能解散");
   off();
-  await host.close();
-});
+  });
 
 test("解散有在途任务的群:不带 stopTasks 被拒并列出任务;带上先停任务,Compute 真实停下之后才移除", async () => {
-  const compute = holdingCompute();
-  const host = new Host({ file: file(), mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5 });
+  const compute = holding(holdingCompute());
+  const host = mk({ file: file(), mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5 });
   const svc = createService(host);
   const a = host.createContact({ name: "小前" });
   const b = host.createContact({ name: "小安" });
@@ -115,11 +120,10 @@ test("解散有在途任务的群:不带 stopTasks 被拒并列出任务;带上�
   await settle(host, compute);
   assert.equal(host.listTasks({ roomId: g.id })[0]!.state, "T10_Cancelled");
   assert.deepEqual(groupIds(host.roomsOfUser()), [], "停下之后群才移除");
-  await host.close();
-});
+  });
 
 test("公告装配:列表写明每位联系人装配到第几版;改了以后下一轮之前仍是旧版,下一轮装配后跟上", async () => {
-  const host = new Host({ file: file(), mind: () => scriptedMind(), maxDeferMs: 5 });
+  const host = mk({ file: file(), mind: () => scriptedMind(), maxDeferMs: 5 });
   const svc = createService(host);
   const a = host.createContact({ name: "小前" });
   const b = host.createContact({ name: "小安" });
@@ -145,12 +149,11 @@ test("公告装配:列表写明每位联系人装配到第几版;改了以后下
   assert.equal(at((await list())[0], a.id), 2, "下一轮装配了 v2");
   assert.ok(events.some((e) => e.type === "room.updated" && e.room.id === g.id), "装配版本变了要推 room.updated,界面据此刷新");
   off();
-  await host.close();
-});
+  });
 
 test("群临时算力:任务视图写明占的是个人槽位还是借的本群临时槽位", async () => {
-  const compute = holdingCompute();
-  const host = new Host({ file: file(), mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5 });
+  const compute = holding(holdingCompute());
+  const host = mk({ file: file(), mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5 });
   const svc = createService(host);
   const a = host.createContact({ name: "小前" });
   host.updateContact(a.id, { computeSlots: 1 });
@@ -165,5 +168,4 @@ test("群临时算力:任务视图写明占的是个人槽位还是借的本群�
   const by = (title: string) => tasks.find((t) => t.title === title);
   assert.deepEqual(by("跑脚本一")?.slot, { scope: "personal", stopping: false }, "先占个人槽位");
   assert.deepEqual(by("跑脚本二")?.slot, { scope: "group", stopping: false }, "个人满了借本群临时槽位");
-  await host.close();
-});
+  });

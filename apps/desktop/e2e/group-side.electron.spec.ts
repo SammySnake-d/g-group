@@ -73,6 +73,7 @@ test("群资料·公告与群设置:发布、改、撤下公告并写明各联�
       await expect(win.getByTestId("side-members-drop").locator('[data-testid^="side-member-"]')).toHaveCount(3);
       await expect(win.getByTestId("side-tab-notice")).toContainText("公告 0");
       await expect(win.getByTestId("strip-empty")).toBeVisible();
+      await shot(win, "side-members");
     });
 
     await test.step("发布公告:写进后端,顶栏公告条显示它,两位联系人都还没装配(0/2 已装配 v1)", async () => {
@@ -147,6 +148,12 @@ test("群资料·公告与群设置:发布、改、撤下公告并写明各联�
       await expect(pool).toContainText("借出 0 / 2 格");
       await shot(win, "pool");
       await win.keyboard.press("Escape");
+      await openTab(win, "tools");
+      await expect(win.getByTestId("side-tools")).toBeVisible();
+      await shot(win, "tools");
+      await openTab(win, "plugin");
+      await expect(win.getByTestId("side-plugins")).toBeVisible();
+      await shot(win, "plugins");
     });
 
     await test.step("没有演示数据、页面不抛错", async () => {
