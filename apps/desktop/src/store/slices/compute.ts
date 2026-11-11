@@ -30,6 +30,9 @@ export const COMPUTE_CTX_KEYS = ['computes', 'pending', 'answers', 'resolve', 's
 export type ComputeSlice = ComputeCtx & {
   /** 给某件 Compute 的过程追加一条(之前的「进行中」都收起) */
   addAct: (cid: string, a: Omit<Activity, 'id' | 'at'>) => void
+  /** 连上后端时由 api/wire 的任务接线写:整表换掉 / 换一件 */
+  setComputes: (list: Compute[]) => void
+  putCompute: (c: Compute) => void
 }
 
 export const createComputeSlice: Slice<ComputeSlice> = (set, get) => {
@@ -43,6 +46,9 @@ export const createComputeSlice: Slice<ComputeSlice> = (set, get) => {
     computes: {},
     pending: [],
     answers: {},
+
+    setComputes: (list) => set({ computes: Object.fromEntries(list.map((c) => [c.id, c])) }),
+    putCompute: (c) => L.computes((cs) => ({ ...cs, [c.id]: c })),
 
     addAct: (cid, a) => L.computes((cs) => ({ ...cs, [cid]: { ...cs[cid], activity: [...cs[cid].activity.map((x) => ({ ...x, live: false })), { ...a, id: 'x' + uid(), at: '刚刚' } as Activity] } })),
 

@@ -1,5 +1,8 @@
 // 群与成员切片:建群、加人、踢人、关联会话、置顶/免打扰、拍一拍、禁言、群算力、退出/解散、新建联系人。
 import { people, poolUsed, type PersonId } from '@/data'
+import { createContactLive } from '@/api/wire/contacts'
+import { live, liveCtx } from '@/api/wire/live'
+import { addMembersLive, createGroupLive } from '@/api/wire/rooms'
 import { broken } from '@/mut'
 import { uid } from '../boot'
 import { lens, type Slice } from '../state'
@@ -31,12 +34,15 @@ export const createMembersSlice: Slice<MembersSlice> = (set, get) => {
 
   return {
     createGroup: (title, ids, note, pool) => {
+      /* 连上后端:由后端建群(会话 id 等回包),建好切过去;这里先返回空 */
+      if (live(get())) { void createGroupLive(liveCtx(get, set), title, ids, pool); return '' }
       const cid = 'g-' + uid()
       L.convs((cs) => [{ id: cid, kind: 'group', title, members: ['me', ...ids], time: '刚刚', links: [], tempCompute: pool ? { max: pool } : undefined, messages: [{ k: 'sys', id: 'n' + uid(), text: note ?? `你创建了群聊，拉进了 ${names(ids)}` }] }, ...cs])
       set({ section: 'chat', active: cid })
       return cid
     },
     createContact: (p) => {
+      if (live(get())) { void createContactLive(liveCtx(get, set), { name: p.name, role: p.role, quota: p.quota }); return }
       const id = 'c-' + uid()
       /* 经联系人切片登记:登记表和通讯录列表一起更新 */
       get().upsertContact({ id, name: p.name, role: p.role, shape: p.shape, color: p.color, model: p.model, harness: get().modelSettings.defaultHarness, computeModel: { mode: 'inherit' }, computeQuota: p.quota, today: '¥0', month: '¥0', tools: people.claude?.tools?.map((t) => ({ ...t, on: false })) })
@@ -45,6 +51,7 @@ export const createMembersSlice: Slice<MembersSlice> = (set, get) => {
       set({ section: 'chat', active: cid, stack: [] })
     },
     addMembers: (cid, ids, by) => {
+      if (live(get())) { void addMembersLive(liveCtx(get, set), cid, ids); return }
       L.convs((cs) => cs.map((c) => (c.id === cid ? { ...c, members: [...c.members, ...ids.filter((i) => !c.members.includes(i))] } : c)))
       sys(cid, `${by === 'helper' ? 'Helper 按你的要求' : '你'}把 ${names(ids)} 拉进了群`)
     },

@@ -81,7 +81,10 @@ test("闭环:只经界面建联系人、私聊派活、建群拉人后群里派�
       await expect(rows(win).filter({ hasText: "进度:已写好 hello.txt" })).toHaveCount(1, LONG);
       await expect(rows(win).filter({ hasText: "做完了:完成:写 hello.txt" })).toHaveCount(1, LONG);
       // 自己发的那条:乐观显示的和事件推来的是同一条,不重复
-      await expect(rows(win).filter({ hasText: "帮我写 hello.txt" }).and(win.locator('[data-from="me"]'))).toHaveCount(1);
+      const mine = rows(win).filter({ hasText: "帮我写 hello.txt" }).and(win.locator('[data-from="me"]'));
+      await expect(mine).toHaveCount(1);
+      // 联系人接走即已读(宿主推的 receipt.updated):回执显示它读了,后面的会话更新不把它冲掉
+      await expect(mine.locator("[data-read]")).toHaveAttribute("data-unread", "0");
       await shot(win, "dm-compute-done");
       // 点开看过程:开始 → 进展 → 完成,都来自后端的进度事件
       await line.click();
