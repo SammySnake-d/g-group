@@ -1,0 +1,23 @@
+receipts/evidence/t177-a/local-gates.txt
+  s_e21a7b024276d2::t_ff118fef50c184 1-11
+receipts/evidence/t177-a/summary.json
+  s_e21a7b024276d2::t_7f43ecae814c6b 1-362
+receipts/feat-t177-a-recovery.json
+  s_e21a7b024276d2::t_a106ae2f934fe0 7-8,23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c3e516fc53d63d112518f7a2206e03655bda3237",
+  "prompts": {},
+  "sessions": {
+    "s_e21a7b024276d2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c6e6-9a06-7441-b5e9-c070695d078b",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

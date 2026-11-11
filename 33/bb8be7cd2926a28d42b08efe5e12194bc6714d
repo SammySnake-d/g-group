@@ -1,0 +1,27 @@
+receipts/evidence/t177-a/SCOPE.md
+  s_e21a7b024276d2::t_7ea11db7f749ad 20-21
+  s_e21a7b024276d2::t_916a74fdf1db64 1-19,22-31
+receipts/feat-t177-a-recovery.json
+  s_e21a7b024276d2::t_7ea11db7f749ad 17
+  s_e21a7b024276d2::t_916a74fdf1db64 1-16,18-24
+scripts/t177/a-mutations.mjs
+  s_e21a7b024276d2::t_00563a2a9f2fa3 11-12
+  s_e21a7b024276d2::t_1ba472965c6beb 1-10,13-37,40-66
+  s_e21a7b024276d2::t_12a0926ce1b3fe 38-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "33bb8be7cd2926a28d42b08efe5e12194bc6714d",
+  "prompts": {},
+  "sessions": {
+    "s_e21a7b024276d2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c6e6-9a06-7441-b5e9-c070695d078b",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
