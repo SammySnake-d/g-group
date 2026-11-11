@@ -1,0 +1,35 @@
+docs/开发手册.md
+  s_39bc0020a75100::t_83eb4be669715e 11,868,871-877
+docs/spec/技术栈与工程规则.md
+  s_b0f0689c56dddc::t_f1bb53f6b038e2 4-5
+docs/spec/需求文档.md
+  s_b0f0689c56dddc::t_b86b92eb2391dc 3,10-11,110,511,557,835-836,1607,1642,1662,1681,1781,2559,2562-2563,2591,2725,2728,2942-2943,4584-4664
+docs/spec/验收文档-v0.1.md
+  s_b0f0689c56dddc::t_9a005d04e5fa5d 1,3,151,179
+docs/概念卡.md
+  s_b0f0689c56dddc::t_04f6d066d7790a 5-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9f7b95c14daf969912d158780baf402d975379c8",
+  "prompts": {},
+  "sessions": {
+    "s_39bc0020a75100": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c951-08a4-7b33-bde4-81a528fe5c41",
+        "model": "shayu/gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_b0f0689c56dddc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dd882b86-74bf-417c-a676-292fee7387c3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
