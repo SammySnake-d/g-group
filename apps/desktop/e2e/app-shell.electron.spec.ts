@@ -12,11 +12,11 @@ import { _electron as electron, expect, test } from "@playwright/test";
 const appDir = path.resolve(import.meta.dirname, "..");
 const baseEnv = Object.fromEntries(Object.entries(process.env).filter((e): e is [string, string] => e[0] !== "ELECTRON_RUN_AS_NODE" && typeof e[1] === "string"));
 
-function feedServer(files: Record<string, { status?: number; body?: Buffer | string }>): Promise<{ url: string; server: Server }> {
+function feedServer(files: Record<string, { status?: number; body?: Buffer | string; delayMs?: number }>): Promise<{ url: string; server: Server }> {
   const server = createServer((req, res) => {
     const f = files[(req.url ?? "/").slice(1)];
     if (!f) { res.writeHead(404).end(); return; }
-    res.writeHead(f.status ?? 200).end(f.body ?? "");
+    setTimeout(() => res.writeHead(f.status ?? 200).end(f.body ?? ""), f.delayMs ?? 0);
   });
   return new Promise((r) => server.listen(0, "127.0.0.1", () => r({ url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, server })));
 }
@@ -57,7 +57,8 @@ test("没接入模型时整窗请用户接入;填好后宿主起来、界面连�
 
 test("自动更新:提示新版本 → 下载并核对 sha512 → 可以重启安装;校验不过的下载被丢掉并说明;没发布过版本时如实说", async () => {
   const zip = Buffer.from("neutral zip payload for update test ".repeat(4096));
-  const good = await feedServer({ "latest-mac.yml": { body: feedFor("9.9.9", zip) }, "g-group-9.9.9-arm64-mac.zip": { body: zip }, "g-group-9.9.9-x64-mac.zip": { body: zip } });
+  // 安装包晚 1.5 秒才开始回:像真实下载一样,点了「下载」之后提示条要撑过这段时间
+  const good = await feedServer({ "latest-mac.yml": { body: feedFor("9.9.9", zip) }, "g-group-9.9.9-arm64-mac.zip": { body: zip, delayMs: 1500 }, "g-group-9.9.9-x64-mac.zip": { body: zip, delayMs: 1500 } });
   const userData = mkdtempSync(path.join(tmpdir(), "gg-shell-up-"));
   const launch = (feed: string) => electron.launch({ args: [appDir], cwd: appDir, env: { ...baseEnv, GG_BACKEND: "server", GG_MIND: "fake", GG_COMPUTE: "fake", GG_USER_DATA_DIR: userData, GG_UPDATE_FEED: feed, GG_UPDATE_AUTO: "off" } });
   let app = await launch(good.url);
