@@ -1,0 +1,11 @@
+# box2(Node 24.21),node --test packages/server/src/compute-commands.test.ts
+## 红:4e7bc90b(只有用例)
+✖ Compute 适配器选项带上启动方给定的 claude 命令与汇报工具命令
+✖ startServer 的 computeCommands:派活时真的用给定的 claude 命令起 Compute,汇报工具按给定命令写进 MCP 配置
+ℹ pass 0 / fail 2
+## 绿:7dd0cf23
+✔ Compute 适配器选项带上启动方给定的 claude 命令与汇报工具命令
+✔ startServer 的 computeCommands:派活时真的用给定的 claude 命令起 Compute,汇报工具按给定命令写进 MCP 配置
+ℹ pass 2 / fail 0
+## 同一提交上原有 compute.test.ts + start.test.ts:pass 4 / fail 0
+## 19d1268d 上根目录 npm test:1611 条全部通过;typecheck、lint 通过
