@@ -1,6 +1,6 @@
 // 联系人记忆的存储(需求文档 D25 第 4 节):每条记忆一个 md 文件,是真源;SQLite 里的 gg_memory 是从 md 派生、可整表重建的索引。
 // 目录:<dataDir>/memory/<联系人 id>/<记忆 id>.md。写入先写 md 再写索引;读取走索引;rebuild 删掉该联系人的索引后从 md 全量重建。
-import { mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync, unlinkSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type MemoryEntry, parseMemory, serializeMemory } from "@g-group/kernel";
 import { type Db, all, run } from "./db.ts";
@@ -37,22 +37,6 @@ export class MemoryStore {
     writeFileSync(`${file}.tmp`, serializeMemory(e));
     renameSync(`${file}.tmp`, file);
     run(this.db, "INSERT INTO gg_memory (contact_id, id, created_at, json) VALUES (?, ?, ?, ?) ON CONFLICT (contact_id, id) DO UPDATE SET json = excluded.json, created_at = excluded.created_at", contactId, e.id, e.createdAt, JSON.stringify(e));
-  }
-  /** 原始 md 是恢复时的权威值；不是只看可能已回滚的 SQLite 索引。 */
-  readDisk(contactId: string, id: string): MemoryEntry | null {
-    if (!SAFE.test(id)) throw new Error("记忆 id 不合法");
-    let text: string;
-    try { text = readFileSync(join(this.dir(contactId), `${id}.md`), "utf8"); }
-    catch (e) { if ((e as NodeJS.ErrnoException).code === "ENOENT") return null; throw e; }
-    const parsed = parseMemory(text);
-    if (!parsed.ok) throw new Error(`记忆 md 损坏:${parsed.why}`);
-    return parsed.entry;
-  }
-  remove(contactId: string, id: string): void {
-    if (!SAFE.test(id)) throw new Error("记忆 id 不合法");
-    try { unlinkSync(join(this.dir(contactId), `${id}.md`)); }
-    catch (e) { if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e; }
-    run(this.db, "DELETE FROM gg_memory WHERE contact_id = ? AND id = ?", contactId, id);
   }
   /** 删掉该联系人的索引,从 md 真源重建;解析不了的文件报告并跳过。返回重建的条数 */
   rebuild(contactId: string): number {

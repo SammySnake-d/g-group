@@ -1,5 +1,3 @@
-import { MemoryCoverage, type CoverageWork, type CaptureWrite, type CoverageRef } from "./memory-coverage.ts";
-import { decodeReflect, messageRevision, validateCapture, type ReflectSource, type CompactMemory } from "@g-group/kernel";
 // 本地宿主:把领域状态机、SQLite 存储、联系人注意循环、Compute 适配器和承诺账本拼成 P0 最小闭环(AC-30):
 //   用户在私聊/群里发消息 → 机械送达每位成员联系人的注意循环 → 联系人一轮(五块重拼 → ContactMind)提出动作
 //   → 宿主校验、分配 action_id、与游标/账本/任务同一事务落盘 → 起 Compute → Compute 语义事件回到联系人 → 联系人汇报/交付回聊天。
@@ -392,7 +390,6 @@ export class Host {
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly memory: MemoryStore;
-  readonly memoryCoverage: MemoryCoverage;
   private readonly newId: (prefix: string) => string;
   private readonly assemble: RoundAssembler;
   private readonly activity = new Map<string, Activity>();
@@ -443,7 +440,6 @@ export class Host {
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
     this.memory = new MemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d));
-    this.memoryCoverage = new MemoryCoverage(this.db, this.memory);
     this.bus = createBus(this.now);
     // 本次启动编号:在途轮次标记(F12)与运行台账存活核对(AC-43)共用
     this.bootId = opts.bootId ?? this.newId("boot");
@@ -551,7 +547,6 @@ export class Host {
     // 启动时先处理宿主关着期间到期的定时(按容差与 missedPolicy),再按最早一次设计时器
     this.scheduler.tick();
     // 启动回收(F4/F6/F12):上次留下的未提交轮次按 crash_recovery_count 决定续跑或熔断出卡;磁盘上还没被领走的输入交给联系人
-    this.recoverMemoryWrites();
     this.reconcileOnStart();
   }
 
@@ -2128,7 +2123,6 @@ export class Host {
   }
   /** 写一条记忆(remember 动作或压缩检查给的记忆点);不合规返回原因 */
   private rememberTx(contactId: string, a: Extract<MindAction, { kind: "remember" }>, roomIds: Set<string>, actionId: string, appended: { roomId: string; seq: number }[]): string | null {
-    if (this.memoryCoverage.dirty(contactId)) return "后台记忆写入待恢复，未接受本次记忆写入";
     if (!roomIds.has(a.roomId)) return "不在这个会话里";
     let userQuote = false;
     if (a.sourceSeq !== null) {
@@ -2193,128 +2187,8 @@ export class Host {
     if (r.hits > 0) this.report("state-note-scrubbed", { contactId, hits: r.hits });
     return r.text;
   }
-  private captureSources(contactId: string, fresh: readonly Inbound[]): ReflectSource[] {
-    const out = new Map<string,ReflectSource>();
-    for (const f of fresh) if (f.kind === "message") {
-      const log=loadLog(this.db.store,`room:${f.roomId}`).log;
-      const event=log.events.find(e=>e.seq===f.seq);
-      const seq=event && event.body.kind!=="message"?event.body.target:f.seq;
-      const source=this.currentCaptureSource(contactId,{roomId:f.roomId,seq,revision:0});
-      if(source)out.set(`${source.roomId}#${source.seq}`,source);
-    }
-    return [...out.values()];
-  }
-  private currentCaptureSource(contactId: string, ref: CoverageRef): ReflectSource | null {
-    if(!this.roomsOfContact(contactId).some(r=>r.id===ref.roomId)||this.exits.leavingRoomsOf(contactId).has(ref.roomId)||isRewound(this.db,ref.roomId,ref.seq))return null;
-    const log=loadLog(this.db.store,`room:${ref.roomId}`).log;const msg=project(log).find(m=>m.seq===ref.seq);
-    if(!msg||msg.retracted)return null;
-    const verifiedOutcome=msg.sender.kind==="contact"&&listDocs<TaskDoc>(this.db,"task:").some(d=>d.value.roomId===ref.roomId&&d.value.deliveredSeq===ref.seq&&d.value.task.state==="T8_Accepted");
-    return {roomId:ref.roomId,seq:ref.seq,revision:messageRevision(log.events,ref.seq),senderKind:msg.sender.kind,senderId:msg.sender.id,text:msg.text,verifiedOutcome};
-  }
-  private readCoverageMaterial(work: CoverageWork): { valid: boolean; sources: ReflectSource[]; text: string } {
-    const sources=work.sources.flatMap(ref=>{const s=this.currentCaptureSource(work.contactId,ref);return s?[s]:[];});
-    const visible=new Set(this.roomsOfContact(work.contactId).filter(r=>!this.exits.leavingRoomsOf(work.contactId).has(r.id)).map(r=>r.id));
-    const inbox=work.inboxIds.flatMap(id=>{const r=one<{payload:string;room_id:string}>(this.db,"SELECT payload,room_id FROM gg_inbox WHERE id=? AND contact_id=?",id,work.contactId);return r&&visible.has(r.room_id)?[JSON.parse(r.payload) as Inbound]:[];});
-    const valid=work.rooms.every(r=>visible.has(r))&&sources.length===work.sources.length&&inbox.length===work.inboxIds.length&&work.sources.every(ref=>sources.some(s=>s.roomId===ref.roomId&&s.seq===ref.seq&&s.revision===ref.revision));
-    const text=[...sources.map(s=>`${s.roomId} #${s.seq} rev=${s.revision} (${s.senderKind}:${s.senderId})\n${s.text}`),...inbox.map(f=>f.kind==="compute"?f.summary:f.kind==="schedule"?f.prompt:f.text)].join("\n\n");
-    return {valid,sources,text};
-  }
-  private disposeCoverage(work: CoverageWork, sources: ReflectSource[]): void {
-    this.memoryCoverage.invalidate(work.id,"source-edited-retracted-or-inaccessible");
-    if(sources.length) this.memoryCoverage.begin(work.contactId,sources.map(({roomId,seq,revision})=>({roomId,seq,revision})),[],[...new Set(sources.map(s=>s.roomId))],work.upstream);
-  }
-  private memoryDebtPointers(contactId: string): {ref:string;text:string}[] {
-    if (!this.opts.compactor) return [];
-    let budget=this.opts.recallBudgetBytes??RECALL_BUDGET_BYTES;
-    const out:{ref:string;text:string}[]=[];
-    for(const work of this.memoryCoverage.list(contactId).filter(w=>w.state!=="ok"&&!w.disposition)) {
-      const material=this.readCoverageMaterial(work);
-      if(!material.valid){this.disposeCoverage(work,material.sources);continue;}
-      const text=`记忆检查尚未完成（不是新要求）：\n${material.text}`;
-      if(Buffer.byteLength(text,"utf8")>budget){this.report("memory-debt-over-budget",{contactId,coverageId:work.id});continue;}
-      budget-=Buffer.byteLength(text,"utf8");out.push({ref:`待补查 ${work.id.slice(0,12)}`,text});
-    }
-    return out;
-  }
-  private notifyMemoryQuestion(contactId: string, q: {roomId:string;text:string}, actionId: string): void {
-    this.appendMessageTx(q.roomId,{kind:"contact",id:contactId},{text:q.text,actionKey:`memory-capture:${actionId}:question`,mentions:[{id:this.userId,source:"auto"}]});
-  }
-  private recoverMemoryWrites(contactId?: string): void {
-    for(const work of this.memoryCoverage.list(contactId).filter(w=>w.writes&&!w.writesDone)) {
-      try {
-        const material=this.readCoverageMaterial(work);
-        if(!material.valid)this.disposeCoverage(work,material.sources);
-        else this.memoryCoverage.apply(work.id,(q,id)=>this.notifyMemoryQuestion(work.contactId,q,id));
-      }catch(error){this.report("memory-write-recovery",{coverageId:work.id,error:errorText(error)});}
-    }
-  }
-  private failCoverage(work: CoverageWork, error: unknown, forcedHeal?: HealClass): void {
-    const cls=this.classify(error);const mapped=healOf(cls.reasonClass);const heal=forcedHeal??(mapped==="user_stopped"?"unknown":mapped);
-    this.memoryCoverage.fail(work.id,errorText(error),heal,this.retryPolicy,this.clock(),this.random);
-    this.report("reflect-failed",{contactId:work.contactId,coverageId:work.id,error:errorText(error)});
-    const b=this.breakerRow(work.upstream);const br=breakerFailure(b.state,{nowMs:this.clock(),heal,member:`contact:${work.contactId}`,reason:cls.label},this.breakerPolicy);
-    if(br.ok)this.saveBreaker(work.upstream,br.state);
-    const failed=this.memoryCoverage.get(work.id);
-    if(failed.blocked&&!failed.alerted&&work.rooms.length){
-      const room=work.rooms.find(r=>this.roomsOfContact(work.contactId).some(x=>x.id===r));
-      if(room)tx(this.db,()=>{
-        this.appendMessageTx(room,{kind:"contact",id:work.contactId},{text:"后台记忆检查未完成，正常对话继续；欠账已保留。",actionKey:`memory-coverage:${work.id}:alert`,card:{card_id:this.newId("card"),kind:"failure",task_id:null,title:"后台记忆待补查",body:`${failed.error}\n修复配置或预算后可重试；不会清掉未完成检查。`,state:"open",actions:JSON.stringify([{actionId:"retry-memory",label:"重试记忆检查"}]),meta:JSON.stringify({kind:"memory-coverage",coverageId:work.id,contactId:work.contactId})}});
-        this.memoryCoverage.markAlerted(work.id);
-      });
-    }
-  }
-  private planCapturedMemories(work: CoverageWork, memories: readonly CompactMemory[], delivered: readonly ReflectSource[], current: readonly ReflectSource[]): { writes: CaptureWrite[]; unresolved: number } {
-    let entries=this.memory.list(work.contactId);const writes:CaptureWrite[]=[];let unresolved=0;
-    for(const m of memories){
-      const valid=validateCapture(m,delivered,current);if(!valid.ok){unresolved++;this.report("memory-capture-rejected",{coverageId:work.id,reason:valid.reason});continue;}
-      const id=createHash("sha256").update(JSON.stringify([work.id,m.roomId,m.sourceSeq,valid.source.revision,m.title,m.text,[...valid.anchors].sort(),m.relation,m.target,m.evidence])).digest("hex");
-      if(entries.some(e=>e.captureIds?.includes(id)))continue;
-      const source={roomId:valid.source.roomId,seq:valid.source.seq,userQuote:valid.source.senderKind==="user",revision:valid.source.revision,quote:m.evidence!,senderId:valid.source.senderId};
-      const plan=planMemoryWrite(entries,{title:m.title,body:m.text,anchors:valid.anchors,source,relation:m.relation?{kind:m.relation,target:m.target??""}:null},this.now(),()=>`m-${id.slice(0,32)}`);
-      if(plan.kind==="invalid"){unresolved++;continue;}
-      const after=plan.changed.map(e=>({...e,captureIds:[...new Set([...(e.captureIds??[]),id])]}));
-      const question=plan.kind==="ask-user"?{roomId:valid.source.roomId,text:`记忆冲突，请你拍板：「${plan.entry.body}」和之前的「${entries.find(e=>e.id===plan.target)?.body??"?"}」都来自你的原话，以哪条为准？`}:null;
-      writes.push({id,before:plan.changed.map(e=>entries.find(x=>x.id===e.id)??null),after,question});
-      entries=[...entries.filter(e=>!after.some(a=>a.id===e.id)),...after];
-    }
-    return {writes,unresolved};
-  }
-  private async checkMemoryCoverage(contact: ContactDoc, compactor: ContactCompactor | undefined, work: CoverageWork, delivered: readonly ReflectSource[], material: string, noteWritten: string | null, signal: AbortSignal): Promise<ReflectResult | null> {
-    if(work.state==="ok"||work.disposition)return null;
-    if(work.blocked||(work.retryAt??0)>this.clock())return null;
-    if(this.memoryCoverage.dirty(contact.id)) {this.recoverMemoryWrites(contact.id);if(this.memoryCoverage.dirty(contact.id))return null;}
-    if(work.writes&&!work.writesDone){return null;}
-    if(!compactor) {
-      this.memoryCoverage.fail(work.id,"宿主未配置压缩器，未执行记忆检查","A3",this.retryPolicy,this.clock(),this.random);
-      this.report("reflect-unsupported",{contactId:contact.id,coverageId:work.id});return null;
-    }
-    if(!compactor.reflect){this.failCoverage(work,new Error("适配器不支持 reflect，未执行记忆检查"),"A3");return null;}
-    if(!this.admitUpstream(work.upstream,"background")){this.memoryCoverage.fail(work.id,"共享上游熔断，后台检查未发出","A1",this.retryPolicy,this.clock(),this.random);return null;}
-    const neighbors=this.memory.list(contact.id).filter(e=>(e.status==="active"||e.status==="degraded")&&!e.anchors.includes(PERSONA_ANCHOR)&&e.anchors.some(a=>a==="global"||work.rooms.includes(a.slice(5))&&a.startsWith("room:"))).map(e=>({id:e.id,title:e.title,body:e.body}));
-    const request={contact:{id:contact.id,name:contact.name,speakingModel:contact.speakingModel,persona:contact.persona},kind:"round-note" as const,previous:this.stateNote(contact.id),material,maxBytes:this.opts.stateNoteMaxBytes??null,neighbors,noteWritten,sources:delivered};
-    this.memoryCoverage.start(work.id);
-    try{
-      let decoded=decodeReflect(await compactor.reflect(request,signal));if(!decoded.ok)throw new Error(decoded.reason);
-      if(signal.aborted||this.closed)return null;
-      let result=decoded.value;
-      if(result.memories.some(m=>m.relation&&m.target===null)){
-        decoded=decodeReflect(await compactor.reflect({...request,material:`${material}\n\n更正关系缺少 target。只能从已有相关记忆的 id 里明确选择；仍不确定请保留 target=null，不要猜。`},signal));
-        if(!decoded.ok)throw new Error(decoded.reason);result=decoded.value;
-      }
-      if(signal.aborted||this.closed)return null;
-      const current=this.readCoverageMaterial(work);
-      if(!current.valid){this.disposeCoverage(work,current.sources);return null;}
-      const planned=this.planCapturedMemories(work,result.memories,delivered,current.sources);
-      this.memoryCoverage.prepare(work.id,planned.writes,planned.unresolved);
-      this.memoryCoverage.apply(work.id,(q,id)=>this.notifyMemoryQuestion(contact.id,q,id));
-      if(planned.unresolved)this.failCoverage(work,new Error("检查候选缺来源或关系目标，仍有待复查项"),"unknown");
-      else this.upstreamOk(work.upstream);
-      return {...result,note:noteWritten===null?result.note:null};
-    }catch(error){if(!signal.aborted&&!this.closed)this.failCoverage(work,error);return null;}
-  }
-
   /** 本轮要落盘的状态笔记:模型没写就请压缩器补写(同一说话模型的独立调用),超上限就缩写;最后移除撤回原文 */
-  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], signal: AbortSignal, coverage: CoverageWork, captureSources: readonly ReflectSource[]): Promise<{ note: string | null; remember: MindAction[]; persona: string | null }> {
+  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], signal: AbortSignal): Promise<{ note: string | null; remember: MindAction[]; persona: string | null }> {
     const contactId = contact.id;
     const prev = this.stateNote(contactId);
     const compactor = this.opts.compactor?.(this.contactView(contact));
@@ -2323,18 +2197,26 @@ export class Host {
     let note = out.stateNote;
     const remember: MindAction[] = [];
     let persona: string | null = null;
+    // 每轮结束、原文移出窗口前由代码固定发起一次检查(用户 #1196、协调 #1250):同一次调用写笔记、检查有没有值得记的、最多一条人格建议
     let reflected = false;
-    // 先补一批到期欠账，不重跑业务对话；只读当前可见原文，预算不足保留债务。
-    for (const debt of this.memoryCoverage.due(contactId, this.clock()).filter(w=>w.id!==coverage.id).slice(0,1)) {
-      const material = this.readCoverageMaterial(debt);
-      if (!material.valid) { this.disposeCoverage(debt, material.sources); continue; }
-      if (Buffer.byteLength(material.text,"utf8") > (this.opts.recallBudgetBytes ?? RECALL_BUDGET_BYTES)) {
-        this.failCoverage(debt, new Error("补查原文超过回读预算，请调大预算后重试"), "A2"); continue;
+    if (compactor?.reflect && fresh.length > 0) {
+      const list = this.memory.list(contactId);
+      const anchors = this.roundAnchors(fresh);
+      const neighbors = list
+        .filter((e) => (e.status === "active" || e.status === "degraded") && !e.anchors.includes(PERSONA_ANCHOR) && e.anchors.some((x) => anchors.includes(x) || x === GLOBAL_ANCHOR))
+        .map((e) => ({ id: e.id, title: e.title, body: e.body }));
+      try {
+        const r: ReflectResult = await compactor.reflect({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max, neighbors, noteWritten: out.stateNote }, signal);
+        reflected = true;
+        if (note === null) note = r.note;
+        const lastUser = [...fresh].reverse().find((f): f is InboundMessage => f.kind === "message" && f.sender.kind === "user");
+        const roomId = lastUser?.roomId ?? fresh[0]!.roomId;
+        for (const m of r.memories) remember.push({ kind: "remember", roomId, sourceSeq: lastUser?.seq ?? null, title: m.title, text: m.text, anchors: m.anchors, quote: null, relation: m.relation, target: m.target });
+        persona = r.personaSuggestion;
+      } catch (e) {
+        this.report("reflect-failed", { contactId, error: e instanceof Error ? e.message : String(e) });
       }
-      await this.checkMemoryCoverage(contact, compactor, debt, material.sources, material.text, out.stateNote, signal);
     }
-    const result = await this.checkMemoryCoverage(contact, compactor, coverage, captureSources, compactMaterial(fresh,out.actions), out.stateNote, signal);
-    if (result) { reflected = true; if(note===null)note=result.note; persona=result.personaSuggestion; }
     if (note === null && !reflected && compactor && fresh.length > 0) {
       try {
         note = await compactor.compact({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max }, signal);
@@ -2521,8 +2403,6 @@ export class Host {
       const chain = buildQuoteChain({ fromSeq: f.seq, refs: [...(f.replyToSeq !== null ? [f.replyToSeq] : []), ...f.quotedSeqs], messages: qm, inContext, k: QUOTE_CHAIN_K, scanCap: QUOTE_SCAN_CAP, budgetBytes: this.opts.quoteChainBudgetBytes ?? RECALL_BUDGET_BYTES });
       if (chain) pointers.push({ ref: `${f.roomId} #${f.seq} 的引用链`, text: renderQuoteChain(chain) });
     }
-    this.recoverMemoryWrites(contactId);
-    pointers.push(...this.memoryDebtPointers(contactId));
     const mem = this.memoryForRound(contactId, fresh);
     let request: ReturnType<RoundAssembler>;
     try {
@@ -2554,8 +2434,6 @@ export class Host {
       this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
       throw e;
     }
-    const captureSources = this.captureSources(contactId, fresh);
-    const coverage = this.memoryCoverage.begin(contactId, captureSources.map(({roomId,seq,revision})=>({roomId,seq,revision})), inbox.map(x=>x.id), [...new Set(fresh.map(f=>f.roomId))], upstream);
     // 在途轮次标记(F12):本轮提交时与游标同一事务删掉;宿主中途退出,重启时据此认出未提交轮次并计 crash_recovery_count
     this.markRunning(contactId, JSON.stringify({ processed: processedNow, inbox: inboxEnd }), focusRoom, lastSeen, inboxEnd);
     // 整轮卡死判失败(D26 第 8.3 节):周期核对判出这一轮卡死时中止它,不等脑子自己返回
@@ -2606,7 +2484,7 @@ export class Host {
         }
       }
     }
-    const settled = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), signal, coverage, captureSources);
+    const settled = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), signal);
     if (signal.aborted || this.closed) return "done";
     let done: { effects: HostEffect[] };
     try {
@@ -3768,8 +3646,6 @@ export class Host {
   /** 整轮超预算失败卡:「跳过本轮」把那一批标为已处理(推进游标、消费收件箱),由用户显式决定;「重试」不改状态,回复消息会叫醒联系人再试。 */
   private applyRoundFailureTx(card: CardRow, actionId: string) {
     const meta = JSON.parse(card.meta) as { kind?: string; contactId?: string; lastSeen?: Record<string, number>; inboxIds?: number[] };
-    const memory = JSON.parse(card.meta) as { kind?: string; coverageId?: string };
-    if(memory.kind === "memory-coverage" && memory.coverageId && actionId === "retry-memory") { this.memoryCoverage.retry(memory.coverageId);return; }
     if (meta.kind !== "round-over-budget" || !meta.contactId || actionId !== "skip") return;
     this.advanceCursorsTx(meta.contactId, meta.lastSeen ?? {});
     for (const id of meta.inboxIds ?? []) run(this.db, "UPDATE gg_inbox SET consumed = 1 WHERE id = ?", id);
@@ -3989,7 +3865,6 @@ export class Host {
     this.clearHostTimer(`breaker:${upstream}`);
     this.manualProbe.delete(upstream);
     if (!r.recovered) return;
-    this.memoryCoverage.unblock(upstream);
     if (b.card_id) this.emitCardUpdated(b.card_id);
     for (const id of contacts) {
       this.emitRetry({ scope: "contact", contactId: id, taskId: null, roomId: null, state: "cleared", attempt: 0, limit: 0, label: "已恢复" });

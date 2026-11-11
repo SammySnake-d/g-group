@@ -112,3 +112,32 @@ test("G1-03BAD 畸形检查结果不覆盖旧笔记也不阻塞对话游标", as
   assert.ok(one<{processed_seq:number}>(s.host.db,"SELECT processed_seq FROM gg_cursor WHERE contact_id=? AND room_id=?",s.c.id,s.dm.id)!.processed_seq>=msg.seq);
   assert.ok(works(s.host).some(w=>w.state==="failed"));
 });
+test("G1-01CARD 鉴权修好后点记忆重试同时释放共享熔断探测", async t => {
+  let failing=true;
+  const s=setup(Host,t,async r=>{if(failing)throw new Error("HTTP 401 unauthorized");const src=r.sources.find(x=>x.text==="以后都用中文回复");return src?{...empty(),memories:[candidate(src)]}:empty();});
+  s.host.send({roomId:s.dm.id,clientActionId:"one",text:"以后都用中文回复"});await settle(s.host);
+  const card=one<{card_id:string;seq:number}>(s.host.db,"SELECT card_id,seq FROM gg_cards WHERE kind='failure' AND json_extract(meta,'$.kind')='memory-coverage'");assert.ok(card);
+  failing=false;s.host.cardAct({roomId:s.dm.id,seq:card.seq,cardId:card.card_id,actionId:"retry-memory",clientActionId:"retry"});await settle(s.host);
+  assert.equal(s.host.listMemories(s.c.id).length,1);
+  assert.ok(works(s.host).filter(w=>w.sources.some(x=>x.seq===1)).every(w=>w.state==="ok"));
+});
+test("G1-04HOST 宿主重启先核对已写md 不重问模型不多写", async t => {
+  const s=setup(Host,t,async r=>({...empty(),memories:r.sources.filter(x=>x.text==="以后都用中文回复").map(x=>candidate(x))}));
+  const memory=Reflect.get(s.host,"memory") as { put:(c:string,e:unknown)=>void };
+  const put=memory.put.bind(memory);memory.put=(c,e)=>{put(c,e);throw new Error("after-md-before-index-commit");};
+  s.host.send({roomId:s.dm.id,clientActionId:"one",text:"以后都用中文回复"});await settle(s.host);
+  assert.ok(works(s.host).some(w=>w.writes!==null&&!w.writesDone));await s.host.close();
+  let calls=0;
+  const restarted=new Host({file:path.join(s.dir,"db.sqlite"),dataDir:s.dir,maxDeferMs:2,mind:()=>({async round(){return{actions:[],stateNote:null};}}),compactor:()=>({async compact(){return"笔记";},async reflect(){calls++;return empty();}})});t.after(()=>restarted.close());
+  assert.equal(restarted.listMemories(s.c.id).length,1);assert.equal(restarted.listMemories(s.c.id)[0]!.version,1);
+  assert.ok(works(restarted).every(w=>w.writesDone));assert.equal(calls,0);
+});
+test("G1-02PRE 对话在途撤回原文 后台检查发送前先核来源", async t => {
+  let enter!:()=>void,release!:()=>void;const started=new Promise<void>(r=>{enter=r;});const wait=new Promise<void>(r=>{release=r;});let rounds=0;
+  const material:string[]=[];
+  const s=setup(Host,t,async r=>{material.push(r.material);return empty();},{mind:()=>({async round(){if(rounds++===0){enter();await wait;}return{actions:[],stateNote:null};}})});
+  const m=s.host.send({roomId:s.dm.id,clientActionId:"one",text:"NEUTRAL_ONLY_THIS_WITHDRAWN_SOURCE"});await started;
+  try{s.host.retractMessage(s.dm.id,m.seq);}finally{release();}await settle(s.host);
+  assert.ok(works(s.host).some(w=>w.disposition!==null));
+  assert.equal(material.some(x=>x.includes("NEUTRAL_ONLY_THIS_WITHDRAWN_SOURCE")),false);
+});
