@@ -42,8 +42,8 @@ async function send(win: Page, text: string) {
   await box.press("Enter");
 }
 
-/** 联系人说的(不是你发的)那几条里含这句的 */
-const said = (win: Page, text: string): Locator => rows(win).filter({ hasText: text }).and(win.locator('[data-msg]:not([data-from="me"])'));
+/** 联系人说的那几条里含这句的(不算你发的,也不算它派出的 Compute 那一行) */
+const said = (win: Page, text: string): Locator => rows(win).filter({ hasText: text }).and(win.locator('[data-msg]:not([data-from="me"]):not([data-msg$="~c"])'));
 
 test("做完的 Compute 挂在联系人的交付消息下面;点开分屏:运行位置与 harness 照原型,会话 / 过程读真实记录,只读、回会话 @联系人", async () => {
   test.setTimeout(150_000);
@@ -134,12 +134,12 @@ test("出错原地变红给出路:不进输入框上方,点重试后续接做完
     // F-ERROR:聊天里那一行原地变红写明原因,重试离指针最近;输入框上方没有错误卡
     await expect(line).toHaveAttribute("data-state", "error", LONG);
     await expect(line).toContainText("平台拒绝");
-    await expect(line.getByRole("button", { name: "重试" })).toBeVisible();
+    await expect(line.getByRole("button", { name: "重试", exact: true })).toBeVisible();
     await expect(win.locator('[data-testid="pending"][data-kind="error"]')).toHaveCount(0);
-    // F-FAIL3:另一条路照失败卡上真有的写(替身没配备用模型,不出「换个模型」)
+    // F-FAIL3:另一条路照失败卡上真有的写(放弃这件写成卡上的原话「不重试了」;备用模型配了才有「换个模型」)
     await expect(line.getByRole("button", { name: "不重试了" })).toBeVisible();
     await shot(win, "F-ERROR-line");
-    await line.getByRole("button", { name: "重试" }).click();
+    await line.getByRole("button", { name: "重试", exact: true }).click();
     await expect(said(win, "做完了:完成:抓取网页(会失败)")).toHaveCount(1, LONG);
     await expect(computeLine(win, "抓取网页")).toHaveAttribute("data-state", "done", LONG);
     // 你点的「重试」以你的名义记进会话(决定是共享上下文)
@@ -160,6 +160,9 @@ test("停止两步:在跑时挂在接活那句下面;按停止先「正在停止
     await expect(line).toHaveAttribute("data-state", "running", LONG);
     // 在跑:Compute 行挂在联系人「接了任务」那句下面,不另起头像
     await expect(win.locator('[data-msg$="~c"]').filter({ has: win.locator('[data-testid^="compute-line-"]'), hasText: "慢慢整理资料" })).toHaveAttribute("data-first", "0");
+    // 这件活慢慢做:过几秒还在跑,来得及按停止
+    await win.waitForTimeout(3000);
+    await expect(line).toHaveAttribute("data-state", "running");
     await line.click();
     await win.getByTestId("compute-stop").click();
     // F-STOP2:确认它启动的程序都退出了才到「已停止」,注明算力已归还;按下去之后不再有停止按钮
@@ -190,13 +193,13 @@ test("文件:连上后端时文件区列出真实的任务产出,打开看正文
     const card = win.getByTestId("file-shelf-grid").locator('[data-testid^="shelf-"]').filter({ hasText: "写周报 · 结果" });
     await expect(card).toHaveCount(1, LONG);
     await shot(win, "F-FILES-shelf");
-    await card.getByText("写周报 · 结果", { exact: true }).click();
+    await card.click();
     // 正文是后端读来的产出原文
     await expect(win.getByTestId("file-preview")).toContainText("做完了:完成:写周报", LONG);
     // 来处在正文右侧:来自和小克的私聊,交付那一站是小克
     const source = win.getByTestId("file-source");
     await expect(source).toContainText("小克");
-    const hop = source.locator('[data-testid^="file-hop-"][data-source="true"]');
+    const hop = source.locator('[data-testid^="file-hop-"][data-source="true"]').filter({ visible: true });
     await expect(hop).toHaveCount(1);
     await expect(hop).toContainText("交付");
     await shot(win, "F-FILES-reader");
