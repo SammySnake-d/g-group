@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { type MouseEvent, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { shellCall, useAppShell } from '@/api/app-shell'
 import type { UpdateState } from '@/api/app-shell-types'
@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 
 const TOAST_ID = 'gg-update'
+/** 提示条上的按钮:sonner 默认点了就把提示关掉;这里要留着它显示下载进度、再给「重启并安装」 */
+const keep = (fn: () => void) => (e: MouseEvent<HTMLButtonElement>) => { e.preventDefault(); fn() }
 export const percent = (s: UpdateState) => (s.size ? Math.min(100, Math.floor(((s.received ?? 0) / s.size) * 100)) : 0)
 export const mb = (n?: number) => (n ? `${(n / 1024 / 1024).toFixed(1)} MB` : '')
 
@@ -24,11 +26,11 @@ export function useUpdateToast() {
     const onDismiss = () => { dismissed.current = v }
     const base = { id: TOAST_ID, duration: Number.POSITIVE_INFINITY, onDismiss, closeButton: true }
     const line = (text: string) => <span data-testid="update-toast" data-phase={update.phase}>{text}</span>
-    if (update.phase === 'available') toast(line(`g-group ${v} 可以更新了${update.size ? `（${mb(update.size)}）` : ''}`), { ...base, action: { label: '下载', onClick: downloadUpdate } })
+    if (update.phase === 'available') toast(line(`g-group ${v} 可以更新了${update.size ? `（${mb(update.size)}）` : ''}`), { ...base, action: { label: '下载', onClick: keep(downloadUpdate) } })
     else if (update.phase === 'downloading') toast(line(`正在下载 ${v} · ${percent(update)}%`), { ...base, action: undefined })
-    else if (update.phase === 'ready') toast(line(`${v} 已下载好，重启就是新版本`), { ...base, action: { label: '重启并安装', onClick: installUpdate } })
+    else if (update.phase === 'ready') toast(line(`${v} 已下载好，重启就是新版本`), { ...base, action: { label: '重启并安装', onClick: keep(installUpdate) } })
     else if (update.phase === 'installing') toast(line(`正在安装 ${v}，马上重开…`), { ...base, action: undefined, closeButton: false })
-    else if (update.phase === 'error') toast(line(update.note ?? '更新没成功'), { ...base, action: { label: '重试', onClick: update.note?.startsWith('下载失败') ? downloadUpdate : checkUpdate } })
+    else if (update.phase === 'error') toast(line(update.note ?? '更新没成功'), { ...base, action: { label: '重试', onClick: keep(update.note?.startsWith('下载失败') ? downloadUpdate : checkUpdate) } })
   }, [update])
 }
 
