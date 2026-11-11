@@ -168,10 +168,27 @@ export interface MentionMember {
  * 展开只是把这些人列进 mentions(与用户发消息的 @ 同一形状),不是「被 @ 才接活」的特权;同一人只列一次由 toMentions 统一做。
  */
 export function replyMentionIds(explicit: readonly string[] | undefined, everyone: boolean, members: readonly MentionMember[], senderId: string): string[] {
-  void everyone;
-  void members;
-  void senderId;
-  return [...(explicit ?? [])];
+  const named = explicit ?? [];
+  if (!everyone) return [...named];
+  return [...named, ...members.filter((m) => m.kind !== "helper" && m.id !== senderId).map((m) => m.id)];
+}
+
+/** 一个动作指的是哪个对象(轮末认出「宣称它已完成的 reply」用):任务、运行单元、或会话里那条来源消息;没有对象的给空数组 */
+function actionTokens(action: MindAction): string[] {
+  switch (action.kind) {
+    case "claim":
+    case "deliver":
+    case "stop":
+    case "forward":
+    case "verdict":
+      return [action.taskId];
+    case "rerun":
+      return [action.runId];
+    case "dispatch":
+      return [`${action.roomId}#${action.sourceSeq}`];
+    default:
+      return [];
+  }
 }
 
 /**
@@ -180,8 +197,10 @@ export function replyMentionIds(explicit: readonly string[] | undefined, everyon
  * 命中就返回那个 id 与拒绝原因,由宿主不发出这条 reply 并记进被拒动作回告。
  */
 export function unfulfilledClaim(action: MindAction, refusals: readonly ActionRefusal[]): { token: string; reason: string } | null {
-  void action;
-  void refusals;
+  if (action.kind !== "reply") return null;
+  for (const r of refusals) {
+    for (const token of actionTokens(r.action)) if (token !== "" && action.text.includes(token)) return { token, reason: r.reason };
+  }
   return null;
 }
 
