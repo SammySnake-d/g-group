@@ -1,0 +1,169 @@
+@import './astryx/layers.css';
+@import '@astryxdesign/core/astryx.css';
+@import '@astryxdesign/theme-neutral/theme.css';
+@import './astryx/theme-paper-ink.css';
+
+/* Tailwind 3 的基础重置进最低层,否则它(不在层里)会静默压过 Astryx 全部主题样式(astryx#3374) */
+@layer tw-preflight {
+@tailwind base;
+}
+@tailwind components;
+@tailwind utilities;
+
+/*
+  语义色：同一组变量，亮/暗各一套取值。所有组件只引用这些变量。
+  bg 主背景 · side 左栏 · bubble 他人气泡 · me 我的气泡 · fg 正文 · fg2 次要 · fg3 弱化
+  line 分隔 · hover 悬停 · sel 选中 · elev 浮起面（卡片/菜单）· warm 唯一状态色（等你处理）
+*/
+@layer base {
+  :root {
+    /* g-group 视觉:「纸 · 墨 · 柿」——暖白纸面做底,墨色做骨架(左侧导航、我的气泡、主按钮),
+       柿红只给品牌信号(当前位置、命令、市场主操作),靛蓝给可点的链接与选中。 */
+    --bg: 40 33% 98.6%;
+    --side: 38 22% 95.6%;
+    --bubble: 36 18% 93.5%;
+    --theirs: 0 0% 100%;
+    --theirs-line: 36 14% 87%;
+    --mine: 230 28% 19%;
+    --mine-fg: 40 40% 97%;
+    --me: 233 62% 52%;
+    --me-fg: 0 0% 100%;
+    --brand: 13 82% 54%;
+    --brand-fg: 0 0% 100%;
+    --brand-soft: 16 90% 95.5%;
+    --rail: 38 20% 93.2%;
+    --rail-fg: 228 8% 42%;
+    --rail-hover: 36 18% 88.5%;
+    --btn: 230 28% 17%;
+    --btn-fg: 40 40% 97%;
+    --fg: 230 22% 13%;
+    --fg2: 228 8% 40%;
+    --fg3: 30 6% 60%;
+    --line: 36 16% 89%;
+    --hover: 36 18% 93%;
+    --sel: 36 20% 90.5%;
+    --elev: 0 0% 100%;
+    --warm: 28 92% 40%;
+    --warm-dot: 32 95% 50%;
+    --warm-soft: 38 100% 95.5%;
+    --ok: 152 45% 34%;
+    --run: 150 58% 36%;
+    --err: 2 72% 50%;
+    --err-soft: 4 90% 96.5%;
+    --run-soft: 145 50% 94.5%;
+    --quote: 40 30% 97%;
+
+    --background: var(--bg);
+    --foreground: var(--fg);
+    --card: var(--elev);
+    --card-foreground: var(--fg);
+    --popover: var(--elev);
+    --popover-foreground: var(--fg);
+    --primary: var(--me);
+    --primary-foreground: var(--me-fg);
+    --secondary: var(--bubble);
+    --secondary-foreground: var(--fg);
+    --muted: var(--bubble);
+    --muted-foreground: var(--fg2);
+    --accent: var(--hover);
+    --accent-foreground: var(--fg);
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: var(--line);
+    --input: var(--line);
+    --ring: var(--fg3);
+    --radius: 0.75rem;
+    --shadow-elev: 0 0 0 1px rgb(40 30 10 / 0.04), 0 2px 4px -1px rgb(40 30 10 / 0.06), 0 12px 28px -8px rgb(40 30 10 / 0.18);
+    /* 动效 token 的兜底值;运行时由 src/config/motion.ts 的 applyMotionCssVars 用 Animate UI 的 token 覆盖 */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --dur-fast: 150ms;
+    --dur-base: 200ms;
+    --dur-slow: 300ms;
+    --shadow-soft: 0 1px 0 rgb(40 30 10 / 0.04), 0 2px 6px -2px rgb(40 30 10 / 0.06);
+    color-scheme: light;
+  }
+
+  .dark {
+    --bg: 230 14% 9.5%;
+    --side: 230 14% 7.5%;
+    --bubble: 230 12% 14%;
+    --theirs: 230 12% 14%;
+    --theirs-line: 230 10% 19%;
+    --mine: 229 30% 30%;
+    --mine-fg: 40 30% 96%;
+    --me: 232 85% 72%;
+    --me-fg: 230 30% 10%;
+    --brand: 14 88% 62%;
+    --brand-fg: 230 20% 8%;
+    --brand-soft: 14 40% 14%;
+    --rail: 230 14% 6.5%;
+    --rail-fg: 228 8% 60%;
+    --rail-hover: 230 10% 14%;
+    --btn: 40 30% 92%;
+    --btn-fg: 230 22% 10%;
+    --fg: 40 20% 92%;
+    --fg2: 228 8% 64%;
+    --fg3: 228 6% 44%;
+    --line: 230 10% 16%;
+    --hover: 230 10% 14.5%;
+    --sel: 230 10% 18%;
+    --elev: 230 12% 12.5%;
+    --warm: 36 95% 60%;
+    --warm-dot: 36 95% 56%;
+    --warm-soft: 36 40% 14%;
+    --ok: 152 40% 55%;
+    --run: 145 55% 50%;
+    --err: 2 78% 64%;
+    --err-soft: 2 35% 15%;
+    --run-soft: 145 30% 13%;
+    --quote: 230 12% 12%;
+    --shadow-elev: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 28px -6px rgb(0 0 0 / 0.55);
+    color-scheme: dark;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  html, body, #root { height: 100%; }
+  body {
+    @apply bg-bg text-fg antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.005em;
+    font-feature-settings: "tnum" 1, "cv11" 1;
+  }
+  ::selection { background: hsl(var(--fg) / 0.15); }
+}
+
+@layer utilities {
+  .shadow-elev { box-shadow: var(--shadow-elev); }
+  .shadow-soft { box-shadow: var(--shadow-soft); }
+  .font-code { font-family: "SF Mono", ui-monospace, Menlo, "JetBrains Mono", monospace; font-feature-settings: "zero" 1; letter-spacing: 0; }
+  .scroll-thin { scrollbar-width: thin; scrollbar-color: hsl(var(--fg3) / 0.35) transparent; }
+  .no-scrollbar { scrollbar-width: none; }
+}
+
+@keyframes pulse-dot { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
+.pulse-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+@keyframes slide-in { from { transform: translateX(16px); opacity: 0 } to { transform: none; opacity: 1 } }
+.slide-in { animation: slide-in .22s cubic-bezier(.2,.8,.2,1); }
+@keyframes fade-up { from { transform: translateY(4px); opacity: 0 } to { transform: none; opacity: 1 } }
+.fade-up { animation: fade-up .2s ease-out; }
+.spin-ring { width: 12px; height: 12px; border-radius: 9999px; border: 2px solid hsl(var(--run) / .25); border-top-color: hsl(var(--run)); animation: spin .9s linear infinite; display: inline-block; flex-shrink: 0; will-change: transform }
+/* 新消息入场：从下方 6px 淡入，160ms，和 QQ / iMessage 的发送反馈同量级；只用 transform + opacity */
+@keyframes msg-in { from { transform: translateY(6px); opacity: 0 } to { transform: none; opacity: 1 } }
+[data-msg].msg-new { animation: msg-in .16s cubic-bezier(.2,.8,.2,1) }
+@keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-2px) } }
+.bob { animation: bob 1.8s ease-in-out infinite; will-change: transform }
+@keyframes spin { to { transform: rotate(360deg) } }
+@keyframes shimmer { 0%,100% { opacity: .45 } 50% { opacity: 1 } }
+.shimmer { background: hsl(var(--sel)); animation: shimmer 1.6s ease-in-out infinite; will-change: opacity }
+@media (prefers-reduced-motion: reduce) { .slide-in, .fade-up, .pulse-dot, .spin-ring, .shimmer, .bob, [data-msg].msg-new { animation: none } }
+
+/* 进展全景遮罩：背景淡入，面板轻微放大浮出（只动 opacity/transform，不触发重排） */
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(.985) } to { opacity: 1; transform: none } }
+.fade-in { animation: fade-in .16s ease-out both }
+.pop-in { animation: pop-in .2s cubic-bezier(.2,.8,.2,1) both }
+@media (prefers-reduced-motion: reduce) { .fade-in, .pop-in { animation: none } }

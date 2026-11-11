@@ -1,0 +1,9 @@
+{
+  "name": "@g-group/ui-core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "桌面端界面逻辑:定时表达式、斜杠命令、插件生命周期、悬浮菜单定位、IPC 校验。零依赖纯函数,渲染层和 Electron 主进程共用。",
+  "exports": { ".": "./src/index.ts" },
+  "gGroup": { "layer": "app" }
+}
