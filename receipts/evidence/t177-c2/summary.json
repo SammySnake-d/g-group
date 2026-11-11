@@ -1,0 +1,65 @@
+{
+  "branch": "feat/t177-c2-late-receipt",
+  "stacked_on": {
+    "branch": "feat/t177-c-plugin-outbox",
+    "pr": 63,
+    "head": "2189fa19c4459f96785e681cb912040e256f7a1a",
+    "file_intersection_with_C": [
+      "packages/server/src/plugin-outbox.ts",
+      "packages/server/src/plugin-runtime.ts",
+      "packages/server/src/plugins.ts"
+    ]
+  },
+  "red": {
+    "commit": "ed3e93d8f0a88b9fdddbe9cd9be38d0d72b110f1",
+    "where": "box4 Linux Node v24.21.0",
+    "file": "packages/server/src/plugin-late-receipt.test.ts",
+    "tests": 5,
+    "failed_by_name": 5,
+    "load_errors": 0,
+    "log": "cloud-evidence.tgz:red.tap"
+  },
+  "green": {
+    "commit": "0ef0269d1782af81c0e444ce50ac7eae3d3a2cd4",
+    "where": "box4 Linux Node v24.21.0",
+    "npm_ci": 0,
+    "typecheck": 0,
+    "lint": 0,
+    "full_tests": {
+      "tests": 1523,
+      "pass": 1523,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "log": "cloud-evidence.tgz:test.log"
+  },
+  "mutations": {
+    "script": "scripts/t177/c2-mutations.mjs",
+    "named": 11,
+    "killed": 11,
+    "survived": [],
+    "equivalent_registered": [],
+    "control_exit": 0,
+    "after_control_exit": 0,
+    "control_ok": "5/5",
+    "after_control_ok": "5/5",
+    "concurrency": 1,
+    "detail": "mutations.json"
+  },
+  "kernel_untouched": "本片未改 packages/kernel;C 亦未改",
+  "cloud_evidence": {
+    "file": "cloud-evidence.tgz",
+    "sha256": "7a3442e4cb37769ed74bdae720d5e99b2852c68b0c5ca469f68e00ec1f7b8659",
+    "bytes": 97553,
+    "contents": "mut-out/*.tap 与 results.json、run.log/npmci.log/typecheck.log/lint.log/test.log/mut.log、red.tap、c2-mutations.mjs"
+  },
+  "not_measured": [
+    "对账入口(按用户决定等 AC-35 阶段 II)",
+    "记录量的上限与清理",
+    "宿主崩溃在应答已到、还没写进库这一刻",
+    "断电与系统崩溃",
+    "两个宿主进程真并发"
+  ]
+}

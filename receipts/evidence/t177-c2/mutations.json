@@ -1,0 +1,126 @@
+{
+  "control": {
+    "exit": 0
+  },
+  "afterControl": {
+    "exit": 0
+  },
+  "summary": {
+    "mutations": 11,
+    "killed": 11,
+    "control": 0,
+    "afterControl": 0
+  },
+  "results": [
+    {
+      "id": "L01-no-raw-handoff",
+      "file": "packages/server/src/plugin-runtime.ts",
+      "designated": "L01",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "L01 内核超时之后插件才回的回执记成迟到:来源、时间、回执 id 原样与整条应答指纹;不存应答全文"
+      ]
+    },
+    {
+      "id": "L01-no-record",
+      "file": "packages/server/src/plugins.ts",
+      "designated": "L01",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "L01 内核超时之后插件才回的回执记成迟到:来源、时间、回执 id 原样与整条应答指纹;不存应答全文"
+      ]
+    },
+    {
+      "id": "L01-receipt-not-verbatim",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "L01",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "L01 内核超时之后插件才回的回执记成迟到:来源、时间、回执 id 原样与整条应答指纹;不存应答全文"
+      ]
+    },
+    {
+      "id": "L01-action-matches",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "L01",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "L01 内核超时之后插件才回的回执记成迟到:来源、时间、回执 id 原样与整条应答指纹;不存应答全文"
+      ]
+    },
+    {
+      "id": "L01-digest-wrong",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "L01",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "L01 内核超时之后插件才回的回执记成迟到:来源、时间、回执 id 原样与整条应答指纹;不存应答全文"
+      ]
+    },
+    {
+      "id": "L01-stores-full-reply",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "L01",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "L01 内核超时之后插件才回的回执记成迟到:来源、时间、回执 id 原样与整条应答指纹;不存应答全文"
+      ]
+    },
+    {
+      "id": "L02-late-confirms-row",
+      "file": "packages/server/src/plugins.ts",
+      "designated": "L02",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "L02 记迟到不改外发状态、不触发重发、不改这次返回;之后同一动作照外发规则拒发"
+      ]
+    },
+    {
+      "id": "L03-restart-not-recorded",
+      "file": "packages/server/src/plugins.ts",
+      "designated": "L03",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "L03 宿主重启后才落地的确认记成迟到:原因 host-restarted,外发表仍是结果未知"
+      ]
+    },
+    {
+      "id": "L04-records-everything",
+      "file": "packages/server/src/plugins.ts",
+      "designated": "L04",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "L04 只记迟到的:按时确认、插件报错、按时回了对不上的应答、超出宽限被结束都不记,同一进程里真迟到的那一条记下"
+      ]
+    },
+    {
+      "id": "L05-uninstall-drops-late",
+      "file": "packages/server/src/plugins.ts",
+      "designated": "L05",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "L05 迟到记录一直保留:卸载插件、重启宿主之后还在;同一动作多次迟到各记一条"
+      ]
+    },
+    {
+      "id": "L05-overwrites-prior",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "L05",
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "L05 迟到记录一直保留:卸载插件、重启宿主之后还在;同一动作多次迟到各记一条"
+      ]
+    }
+  ]
+}
