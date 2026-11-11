@@ -1,0 +1,39 @@
+feat/tests-search 本片 13 条具名测试的原样输出(node scripts/gates/test-runner.ts)
+
+=== packages/server/src/receipts.test.ts ===
+ok 1 - AC-46 ③ 只进队列不算已读:消息已入账本、已送达,联系人还没接走时回执未读;接走之后同一条才变已读
+ok 2 - AC-46 ④ 接走后这一轮失败:read_seq 已推进到这条且不回退,processed_seq 不动,read_seq ≥ processed_seq
+ok 3 - AC-46 ④ 接走即已读、processed_seq 与 read_seq 分开:这一轮还没跑完时 read_seq 已到这条、processed_seq 还没动
+ok 4 - AC-46 ② 读到时间 = 位置第一次越过这条消息的时刻,之后又读到新消息不改早先那条的时间
+ok 5 - AC-46 阴性对照:发送人不在名单里;已读位置只增不减,重复上报更早的位置不改回执
+# tests 5
+# pass 5
+# fail 0
+# duration_ms 327.703667
+
+=== packages/server/src/attention-group.test.ts ===
+ok 1 - AC-31 ① 群里已有他人主答时,在途的其余联系人仍处理无 @ 广播(不前置过滤,各自推进游标)
+ok 2 - AC-31 ④ 旁观者 B 的旧汇报在发送前被用户控制消息拦下:旧草稿不上屏、承诺不登记,重跑时控制消息一起处理
+ok 3 - AC-31 ⑤ 用户取消(T10)后承诺不在取消那一刻消失,等负责人的末次汇报发出才失效回收
+ok 4 - AC-31 ⑤ 任务进终态且末次汇报发出后机器自动失效回收承诺;之后派新任务不被旧承诺污染
+# tests 4
+# pass 4
+# fail 0
+# duration_ms 286.219959
+
+=== packages/server/src/consent-forward.test.ts ===
+ok 1 - AC-20 转发块里的「同意」不放行;阴性对照:本人直接回的「同意」才放行
+# tests 1
+# pass 1
+# fail 0
+# duration_ms 181.658791
+
+=== packages/server/src/search-rooms.test.ts ===
+ok 1 - U32 全局搜联系人和群:命中群标题与联系人名,大小写不敏感、中文子串,带 roomId/类型/标题/命中位置
+ok 2 - U32 阴性对照:搜不到的词不返回;多词要全部命中;limit 生效
+ok 3 - U32 经服务层调用 search.rooms:参数与结果符合合同,空查询按合同拒收
+# tests 3
+# pass 3
+# fail 0
+# duration_ms 156.301708
+

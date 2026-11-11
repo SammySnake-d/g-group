@@ -110,6 +110,11 @@ export const RoomView = obj({
   updatedAt: isoTime(),
   /** 当前有效群公告条数(AC-55);0 = 无公告空态。私聊恒为 0。 */
   announcementCount: opt(int({ min: 0 })),
+  /**
+   * 用户显式关联到本会话的别的会话(U24,静态关联,候选):本会话的联系人可用只读工具 read_linked 在 uptoSeq(关联那一刻对方的最后序号)以内按需读,
+   * 不每轮注入;上界之后的新消息不在关联范围,解除即失效。关联是单向的。没有关联时不出现。
+   */
+  linkedRooms: opt(arr(obj({ roomId: id(), kind: oneOf(ROOM_KINDS), title: str({ max: 200 }), uptoSeq: seq(), linkedAt: isoTime() }))),
   /** 移出中的成员(AC-49/D05):仍在 members 里,但这个群的新消息不再送达、发言与接新活被拒,等在途任务真实停止确认后才移除。 */
   leavingMembers: opt(arr(MemberRef)),
   /** 群临时 Compute 槽位数(AC-23,只给本群任务借用,不跨群);私聊没有这个字段。 */
@@ -157,6 +162,27 @@ export const Card = obj({
 });
 export const Reaction = obj({ emoji: str({ min: 1, max: 32 }), by: arr(MemberRef) });
 export const SlashInvocation = obj({ name: str({ min: 1, max: 64 }), args: json() });
+/**
+ * 转发的聊天记录(U25/US2):转发那一刻的原文快照,存在目标会话里。不授予目标会话读原会话的权限;
+ * 原消息之后被撤回(或被私聊 rewind 撤下)时 sourceRetracted=true,副本正文不删(候选,需拍板 4)。
+ */
+export const ForwardedItem = obj({
+  /** 在原会话里的序号(只给用户自己看来源;联系人看到的副本里不带) */
+  seq: seq(),
+  sender: Sender,
+  senderName: str({ max: 80 }),
+  at: isoTime(),
+  text: str({ max: 100000 }),
+  sourceRetracted: bool(),
+});
+export const ForwardedBlock = obj({
+  fromRoomId: id(),
+  fromTitle: str({ max: 200 }),
+  fromKind: oneOf(ROOM_KINDS),
+  /** 转发时附的一句话;没附为 null。 */
+  note: nullable(str({ max: 2000 })),
+  items: arr(ForwardedItem, { max: 100 }),
+});
 export const MessageView = obj({
   roomId: id(),
   seq: seq(),
@@ -185,6 +211,8 @@ export const MessageView = obj({
   rewound: opt(bool()),
   /** 交付消息带回的工件快照(AC-04,U45):卡片引用 ref + sha256,点开用 artifacts.get;没有工件的消息不带这个字段。 */
   artifacts: opt(arr(ArtifactRef, { max: 20 })),
+  /** 转发的聊天记录(messages.forward 发出的那条):原文快照与来源;不是转发消息不带这个字段。副本里的 @ 与命令不进 mentions/command。 */
+  forwarded: opt(ForwardedBlock),
 });
 export type MessageView = Infer<typeof MessageView>;
 
@@ -609,6 +637,25 @@ export const SearchHit = obj({
   at: isoTime(),
 });
 export type SearchHit = Infer<typeof SearchHit>;
+
+/**
+ * 全局搜联系人和群的一条结果(U32 已定):会话列表的搜索框用。
+ * 私聊的标题就是联系人名,群里按群标题与成员联系人名匹配(大小写不敏感、中文子串)。
+ */
+export const RoomSearchHit = obj({
+  roomId: id(),
+  kind: oneOf(ROOM_KINDS),
+  title: str({ max: 200 }),
+  /** 命中在会话标题上,还是某位联系人名上。 */
+  matchedIn: oneOf(["title", "contact"] as const),
+  /** 命中联系人名时是哪个名字;命中标题时为 null。 */
+  matchedName: nullable(str({ max: 80 })),
+  /** 每个关键词在命中字段里的位置(UTF-16 下标),给界面高亮用。 */
+  highlights: arr(obj({ start: int({ min: 0 }), length: int({ min: 1 }) })),
+  /** 会话最近更新时间(排序依据)。 */
+  at: isoTime(),
+});
+export type RoomSearchHit = Infer<typeof RoomSearchHit>;
 
 // ---------- 设置 ----------
 export const SettingsView = obj({

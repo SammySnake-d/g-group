@@ -1,0 +1,10 @@
+feat/tests-search 上游可用性核对(2026-11-12)
+
+会话自带的 relay(anyrouter):
+HTTP 503
+  正文 HTTP 503
+{"error":{"message":"anyrouter: Service Unavailable","type":"error"},"type":"error"}
+
+本机 magpie 网关(调度者指定,真实运行走这条):
+HTTP 200
+{"id":"msg_fca4cf9b79b940f7852b5724","type":"message","role":"assistant","content":[{"type":"text","text":"Hark can't be

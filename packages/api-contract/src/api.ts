@@ -25,6 +25,7 @@ import {
   RewindPreview,
   RewindResult,
   RoomView,
+  RoomSearchHit,
   RUN_STATUSES,
   RunEventView,
   RunHint,
@@ -113,6 +114,14 @@ export const METHODS = {
   "rooms.removeMember": method(obj({ roomId: id(), member: MemberRef, stopTasks: opt(bool()) }), RoomView),
   /** 用户自己的已读位置,只影响用户视图(AC-46)。 */
   "rooms.markRead": method(obj({ roomId: id(), seq: seq() }), Ok),
+  /**
+   * 显式关联(U24/US2;静态关联,候选:静态还是持续订阅未定,按推荐做静态):把 linkedRoomId 关联到 roomId,圈定此刻 linkedRoomId 的最后序号为上界。
+   * roomId 里的联系人可用只读工具 read_linked 在上界内按需读(不每轮注入、不改第 1 块前缀);之后的新消息读不到。单向:不让 linkedRoomId 读 roomId。
+   * 用户须是两边成员(否则 forbidden);两个是同一会话 invalid_params。已关联时再关联把上界刷新到此刻。clientActionId 幂等。返回 roomId 的视图。
+   */
+  "rooms.link": method(obj({ roomId: id(), linkedRoomId: id(), clientActionId: id() }), RoomView),
+  /** 解除关联:之后 read_linked 读不到。没关联也返回成功(幂等)。不影响已转发的副本。用户须是 roomId 的成员。 */
+  "rooms.unlink": method(obj({ roomId: id(), linkedRoomId: id(), clientActionId: id() }), RoomView),
   /** 私聊 rewind 预览(AC-48):只读,不改任何状态;用户看完不确认即取消。群聊 forbidden;回退点不是本会话的消息 invalid_params。 */
   "rooms.rewindPreview": method(obj({ roomId: id(), toSeq: seq() }), RewindPreview),
   /** 私聊 rewind 执行:回退点之后的消息撤下、来源于它们的在途任务取消、未了结承诺作废;已发生的外部副作用如实列出,不撤销。clientActionId 幂等。 */
@@ -159,6 +168,16 @@ export const METHODS = {
   "messages.retract": method(obj({ roomId: id(), seq: seq() }), MessageView),
   "messages.react": method(obj({ roomId: id(), seq: seq(), emoji: str({ min: 1, max: 32 }), on: bool() }), MessageView),
   "messages.receipts": method(obj({ roomId: id(), seq: seq() }), ReceiptView),
+  /**
+   * 转发选中的消息(U25/U100/US2):在 toRoomId 追加一条「转发的聊天记录」(MessageView.forwarded:原会话标题、原发言者、原时间、原文快照),发送人是你。
+   * 用户须是两边成员(否则 forbidden);seqs 去重后按序号排,必须都是 fromRoomId 里看得见的消息(没有 not_found,已撤回或已回退 conflict)。
+   * 不授予 toRoomId 的联系人读 fromRoomId 的权限:副本只含选中的几条,引用回读只读得到副本。副本里的 @、命令不进 mentions/command(不唤醒、不派活);
+   * 副本里的「同意」不算授权(AC-20)。原消息之后撤回:副本不删,只标 sourceRetracted(候选)。副本不能编辑。clientActionId 幂等。
+   */
+  "messages.forward": method(
+    obj({ fromRoomId: id(), seqs: arr(seq(), { max: 100 }), toRoomId: id(), note: opt(str({ max: 2000 })), clientActionId: id() }),
+    MessageView,
+  ),
   // ---- 输入框草稿(AC-24、AC-37 ②:按会话持久化,切窗口与重启都不丢;不是消息,不送达任何联系人) ----
   /** 取某会话的草稿;没有时返回 draftVer = 0 的空草稿。 */
   "drafts.get": method(obj({ roomId: id() }), DraftView),
@@ -185,6 +204,14 @@ export const METHODS = {
   "search.messages": method(
     obj({ query: str({ min: 1, max: 200 }), roomId: opt(id()), cursor: opt(nullable(str({ max: 1000 }))), limit: opt(int({ min: 1, max: 100 })) }),
     obj({ hits: arr(SearchHit), nextCursor: nullable(str({ max: 1000 })) }),
+  ),
+  /**
+   * 全局搜联系人和群(U32 已定):按会话标题与联系人名匹配(大小写不敏感、中文子串),只列自己所在的会话,
+   * 按会话最近更新倒序。聊天窗口里搜记录用 search.messages(AC-25)。
+   */
+  "search.rooms": method(
+    obj({ query: str({ min: 1, max: 200 }), limit: opt(int({ min: 1, max: 100 })) }),
+    obj({ rooms: arr(RoomSearchHit) }),
   ),
 
   // ---- 卡片按钮(交付确认、提问回答、失败重试…),以对话消息形式记录 ----

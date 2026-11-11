@@ -1,0 +1,41 @@
+{
+  "slice": "回执与 AC-31 补测、全局搜联系人与群、转发授权标志(feat/tests-search;叠加在 feat/forward-link/PR #78 上):① AC-46 回执判定的位置语义补测并抽成可测接缝——只进队列不算已读、接走即已读、接走后这一轮失败 read_seq 不回退、read_seq ≥ processed_seq、读到时间 = 位置第一次越过这条消息的时刻;② AC-31 补测——群里已有他人主答时在途联系人仍处理无 @ 广播(不前置过滤)、旁观者 B 的旧汇报在发送前被用户控制消息拦下(旧草稿不上屏、承诺不登记);③ AC-31 ⑤ 的行为缺口按 U87/D23 补齐——任务进 T10/T11 且负责人末次汇报发出后,机器在同一事务里把绑定它的任务级承诺失效回收,不等用户验收,回收后不再污染后派的新任务;④ U32 已定的全局搜联系人和群:search.rooms 按会话标题与成员联系人名匹配(大小写不敏感、中文子串、多词全部命中、命中位置),只列自己所在的会话;⑤ AC-20 的转发子判据接线:转发副本带真转发标志进授权判定,副本里的「同意」不放行,宿主如实记下拒收原因。",
+  "acceptance": [
+    {
+      "id": "AC-46",
+      "status": "通过",
+      "evidence": "packages/server/proof/tests-search-tests.txt",
+      "notes": "本片补的是判定侧:③ 只进队列不算已读(消息已入账本、已送达、还在未读区间 → 未读;被接走才变已读)、④ 接走即已读且 read_seq 不回退、read_seq ≥ processed_seq(两条:接走后这一轮失败 / 这一轮还没跑完时 read_seq 已到这条而 processed_seq 未动)、② 读到时间取位置第一次越过的时刻(receipts.test.ts 5 条,阴性对照同文件:发送人不在名单、已读位置只增不减)。实现上把判定抽成 packages/server/src/receipts.ts 的 nextReadSeq / readTimeOf(只增不减、不越过账本末尾、取第一次越过),宿主 receipts 一次读全 gg_read 按成员分组判定。真实运行(proof/tests-search-real.txt,本机 magpie 网关):群里发消息后立刻看回执 = 已读 0 / 未读 1,联系人接走后 = 已读 1 / 未读 0、读到时间 2026-11-11T21:27:45.244Z,与 ③④ 一致。AC-46 的①名单排序、⑤显示样式、⑥三词分开、⑦表情不改已读不在本片(①⑦ 已有 chat-ops.test.ts 覆盖,⑤ 属前端走查)。"
+    },
+    {
+      "id": "AC-31",
+      "status": "通过",
+      "evidence": "packages/server/proof/tests-search-tests.txt",
+      "notes": "① 补测:群里 A、B 各自在途、群里已有主答、用户不 @ 任何人发一句,两位仍在各自注意循环里收到并推进自己的 processed_seq(attention-group.test.ts);④ 补测:旁观者 B 的汇报还在本轮草稿里、用户先发控制消息「不用汇报了」,宿主在真正上屏前检出并放弃这一轮(旧汇报一条都没上屏、那一轮里的承诺不登记、重跑时控制消息一起处理)。⑤ 是本片补的行为缺口(此前只在用户验收 T8 时了结承诺):任务进 T10/T11 且负责人这一轮已把末次汇报发出后,机器在同一事务里把绑定它的任务级承诺置为失效回收(revoked + 回收原因),不等用户验收;两条具名测试分别覆盖 T11 失败与 T10 取消(取消那一刻承诺仍在,等负责人下一次发话才回收),并验证回收后第 2 块不再带上旧任务、后派的新任务不被污染。②(单人串行、有界攒批)③(入库端 action_id 去重)由既有 kernel attention 测试与 host.test.ts 覆盖,本片未改动。 变异校准:18 个单点故障(回执位置 6、注意循环 2、终态回收 3、全局搜索 4、转发授权 3)全部被具名测试杀死,存活 0、超时 0(packages/server/proof/tests-search-mutations.txt,box4);同一次 box4 运行里全量 1499 条通过、typecheck 与 lint 通过。"
+    },
+    {
+      "id": "AC-20",
+      "status": "通过",
+      "evidence": "packages/server/proof/tests-search-tests.txt",
+      "notes": "转发子判据:转发副本带真转发标志(读 gg_forward 表,不再是写死的 false)进授权判定,副本里的「同意」不放行——授权请求留在 pending、任务停在 T4b_BlockedOnHuman、Compute 不续接;同一测试的阴性对照:本人直接在同房间里回「同意」照常放行并换上写工具。机制说明(与 feat/forward-link 收据里「宿主不把副本喂给授权绑定」的说法不同):本片让转发副本也过一遍 consentFromMessage,由真标志拒收并把原因记进 report(consent-forwarded)。为什么需要这层:副本正文被 renderForwardText 包成「> 」引用块,领域层 ownWords 本来就会把引用块剥掉,所以只看正文时这条守卫是隐形的、无法验证;接上真标志后守卫可被具名测试与变异校准核到(去掉标志/去掉这次调用都会红)。forward-link.test.ts 的 10 条测试在本片改动后仍全绿。"
+    },
+    {
+      "id": "AC-25",
+      "status": "通过",
+      "evidence": "packages/server/proof/tests-search-tests.txt",
+      "notes": "本片新增的是 U32「全局搜联系人和群」的 search.rooms(需求文档 U32 已定),按会话标题与成员联系人名匹配、大小写不敏感、中文子串、多词全部命中、带命中字段与命中位置、只列自己所在的会话,经服务层按合同校验(3 条具名测试 + 真实运行里 search.rooms(\"小克\") 命中群、search.rooms(\"回执验收\") 命中标题)。挂到 AC-25 下的原因:验收文档里搜索只有 AC-25 这一条,而 AC-25 说的是聊天窗口内搜记录(search.messages,本片未改动,search.test.ts 9 条仍全绿);U32 的会话级全局搜索在验收文档里没有独立 AC 条目——这条留待用户决定要不要给 U32 补一行 AC(见回报的需拍板)。"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:dd154965-afbd-4134-a1d3-c00f2a859eab",
+    "model": "claude-opus-5-5",
+    "notes": "子代理实现(实现子代理 claude:dd154965-afbd-4134-a1d3-c00f2a859eab),按 slices/T1-tests-search.md 与 slices/SLICE-RULES.md 执行;叠加片,基于 feat/forward-link(PR #78),前片合入后 rebase。"
+  },
+  "red": {
+    "commit": "b9e77eb2"
+  },
+  "unverifiable": "AC-31 ⑤ 的绿靠宿主级确定性证据(真实 SQLite + 确定性替身联系人)与变异校准,可能被『接走/汇报/回收三件事的时序在真实模型下不同』骗过:真实运行里 AC-31 ⑤ 那一段没跑出来(本机 magpie 网关的模型这次没产出可用的联系人动作,宿主报 reflect-failed:检查输出找不到 JSON 对象;换 kimi-k3 则整轮 RoundRetry),所以『真实联系人发完末次汇报后承诺被回收』只有替身证据,没有真实模型证据;AC-46 的 ③④ 有真实运行证据(未读 → 已读 + 读到时间),但那一次也不涉及失败回退与 processed_seq 的分工。",
+  "waiver": null,
+  "review": {}
+}

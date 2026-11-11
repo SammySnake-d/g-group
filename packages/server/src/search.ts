@@ -249,3 +249,75 @@ export function searchMessages(db: Db, userId: string, q: SearchQuery, nameOf: (
   const last = page.at(-1);
   return { hits, nextCursor: rows.length > limit && last ? encodeCursor(last) : null };
 }
+
+// ---------------------------------------------------------------- 全局搜联系人和群(U32 已定)
+/** 全局搜联系人与群的入参:一个查询串 + 可选条数上限。 */
+export interface RoomSearchQuery {
+  readonly query: string;
+  readonly limit?: number;
+}
+/**
+ * 全局搜联系人和群的一条结果(U32):会话列表的搜索框用。命中位置给界面高亮;
+ * 私聊的标题就是联系人名,群里按群标题与成员联系人名匹配。
+ */
+export interface RoomSearchHit {
+  readonly roomId: string;
+  readonly kind: "dm" | "group";
+  readonly title: string;
+  /** 命中在会话标题上,还是某位联系人名上。 */
+  readonly matchedIn: "title" | "contact";
+  /** 命中联系人名时是哪个名字;命中标题时为 null。 */
+  readonly matchedName: string | null;
+  /** 每个关键词在命中字段里的位置(UTF-16 下标)。 */
+  readonly highlights: { readonly start: number; readonly length: number }[];
+  readonly at: string;
+}
+
+/** 每个关键词在命中字段里的所有出现位置(UTF-16 下标),按位置排序;界面直接拿去高亮。 */
+export function highlightsIn(text: string, terms: readonly string[]): { start: number; length: number }[] {
+  const low = text.toLowerCase();
+  const out: { start: number; length: number }[] = [];
+  for (const t of terms) {
+    const tl = t.toLowerCase();
+    if (!tl) continue;
+    for (let i = low.indexOf(tl); i >= 0; i = low.indexOf(tl, i + tl.length)) out.push({ start: i, length: t.length });
+  }
+  return out.sort((a, b) => a.start - b.start || a.length - b.length);
+}
+
+/**
+ * 全局搜联系人与群(U32):按会话标题与成员联系人名匹配,大小写不敏感、中文子串也算命中;
+ * 多词按空白切分,全部命中才算(与搜消息同一口径)。只列 userId 所在的会话,按会话最近更新倒序。
+ * 会话标题优先(私聊的标题就是联系人名);标题没命中才看成员里的联系人名,命中哪个名字就报哪个。
+ */
+export function searchRooms(db: Db, userId: string, q: RoomSearchQuery, nameOf: (s: { kind: string; id: string }) => string): RoomSearchHit[] {
+  const terms = splitTerms(q.query);
+  const limit = Math.min(100, Math.max(1, q.limit ?? 20));
+  const rooms = all<{ id: string; kind: string; title: string; updated_at: string }>(
+    db,
+    "SELECT r.id, r.kind, r.title, r.updated_at FROM gg_rooms r JOIN gg_members m ON m.room_id = r.id AND m.kind = 'user' AND m.member_id = ? ORDER BY r.updated_at DESC, r.id DESC",
+    userId,
+  );
+  const out: RoomSearchHit[] = [];
+  for (const r of rooms) {
+    const fields: { field: "title" | "contact"; name: string }[] = [{ field: "title", name: r.title }];
+    for (const m of all<{ member_id: string }>(db, "SELECT member_id FROM gg_members WHERE room_id = ? AND kind = 'contact' ORDER BY member_id", r.id)) {
+      fields.push({ field: "contact", name: nameOf({ kind: "contact", id: m.member_id }) });
+    }
+    // 一个会话就是一条命中对象:标题 + 成员联系人名合起来算它的可搜文本,多个词各自落在哪里都行
+    if (!terms.every((t) => fields.some((f) => f.name.toLowerCase().includes(t.toLowerCase())))) continue;
+    const hit = fields.find((f) => terms.some((t) => f.name.toLowerCase().includes(t.toLowerCase())))!;
+    const mine = terms.filter((t) => hit.name.toLowerCase().includes(t.toLowerCase()));
+    out.push({
+      roomId: r.id,
+      kind: r.kind === "dm" ? "dm" : "group",
+      title: r.title,
+      matchedIn: hit.field,
+      matchedName: hit.field === "contact" ? hit.name : null,
+      highlights: highlightsIn(hit.name, mine),
+      at: r.updated_at,
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
