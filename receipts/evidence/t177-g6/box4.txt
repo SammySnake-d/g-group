@@ -1,0 +1,3 @@
+box4(2 核 3.9G,Ubuntu 24.04,Node v24.21.0)在 7f386fd82208ba7ba206e80af56aa2fee1d63835 上的结果
+从 bundle 取对象后核对 HEAD:tsc 退出 0、biome lint 退出 0、npm test 1556 条全过(fail 0 / cancelled 0 / skipped 0 / todo 0)
+G6 一对一变异 86 个:杀死 86、存活 0、注入或对照异常 0(原始 mut.txt sha256 bd9d8b0c831ce859…,原文在 packages/server/proof/g6-mutations.txt)
