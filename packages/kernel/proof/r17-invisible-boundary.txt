@@ -1,0 +1,6 @@
+{"codePoints":["4e2d","6027","6b63","6587"],"include":true,"ok":false,"reason":"retracted-text-leaked","contains":null}
+{"codePoints":["4e2d","6027","6b63","6587"],"include":false,"ok":true,"reason":null,"contains":false}
+{"codePoints":["200b"],"include":true,"ok":true,"reason":null,"contains":true}
+{"codePoints":["200b"],"include":false,"ok":true,"reason":null,"contains":false}
+{"codePoints":["85"],"include":true,"ok":true,"reason":null,"contains":true}
+{"codePoints":["85"],"include":false,"ok":true,"reason":null,"contains":false}

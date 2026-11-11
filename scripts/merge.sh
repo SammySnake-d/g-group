@@ -7,6 +7,9 @@
 # 用法: scripts/merge.sh <PR号>
 set -euo pipefail
 PR="$1"
+[[ "$PR" =~ ^[1-9][0-9]*$ ]] || { echo "PR 号必须是正整数"; exit 1; }
+# 剥掉 hook 可能注入的 GIT_* 环境,避免写到别的仓库
+for v in $(env | sed -n 's/^\(GIT_[A-Za-z_]*\)=.*/\1/p'); do unset "$v"; done
 REPO_ROOT=$(git rev-parse --show-toplevel)
 read -r BR SHA < <(gh pr view "$PR" --json headRefName,headRefOid -q '.headRefName + " " + .headRefOid')
 git -C "$REPO_ROOT" fetch -q origin "$BR" main
@@ -23,7 +26,7 @@ else
 fi
 (cd "$JUDGE" && npm ci --silent)
 (cd "$TMP/pr" && npm ci --silent --ignore-scripts)
-OUT=$(node "$JUDGE/scripts/gates/run-all.ts" --repo="$TMP/pr" --base=origin/main --branch="$BR" --local | tee /dev/stderr)
+OUT=$(node "$JUDGE/scripts/gates/run-all.ts" --repo="$TMP/pr" --base=origin/main --branch="$BR" --pr="$PR" --local | tee /dev/stderr)
 HASH=$(printf '%s\n' "$OUT" | sed -n 's/^CONTENT_HASH=//p')
 [ -n "$HASH" ] || { echo "门禁没有给出内容 hash"; exit 1; }
 gh api -X POST "repos/{owner}/{repo}/statuses/$SHA" -f state=success -f context=provenance \

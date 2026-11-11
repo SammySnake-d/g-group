@@ -1,0 +1,9 @@
+{"gate":"G-TRACE","expected":"不在验收文档里","detected":true,"problems":["AC-999999 不在验收文档里"]}
+{"gate":"G-REVIEW","expected":"审查人与作者是同一个","detected":true,"problems":["审查人与作者是同一个(codex)","作者与审查同为 openai,且没有用户豁免"]}
+{"gate":"G-PROVENANCE","expected":"作者会话不可信","detected":true,"problems":["作者会话不可信:会话记录不存在:codex:d729112e-0329-4a40-8544-d5ae0b06e104","审查会话不可信:会话记录不存在:codex:638924e7-9670-4775-9619-788c18d2d5d1"]}
+{"gate":"G-RED","expected":"缺 red.commit","detected":true,"problems":["收据缺 red.commit(只含测试和空壳实现、测试会失败的那个提交)"]}
+{"gate":"G-STUB","expected":"空桩后没有按名字失败","detected":true,"problems":["packages/kernel/src/review-negative.test.ts › only checks type 在全部实现换成空桩后没有按名字失败(仍通过、没执行或文件加载失败),没有测到被测代码","packages/kernel/src/review-negative.test.ts 的测试在被测函数返回错误值(不抛错)时全部仍通过,没有检查计算结果"]}
+{"gate":"G-TAUTO","expected":"恒","detected":true,"problems":["packages/kernel/src/review-taut.test.ts \"taut\":没有一条断言判的是被测源码的结果(只测 mock 或复制逻辑)","packages/kernel/src/review-taut.test.ts \"taut\":恒真/恒定断言 assert.equal(11, 11)","packages/kernel/src/review-taut.test.ts \"taut\":自比较或恒真关系的断言 assert.equal(11, 11)"]}
+{"gate":"G-WORKFLOW","expected":"申请了写权限","detected":true,"problems":[".github/workflows/review-negative.yml 申请了写权限 contents: \"write\""]}
+{"gate":"G-LAYER","expected":"在依赖声明里引用了 plugin","detected":true,"problems":["packages/kernel/package.json:kernel 层的 @g-group/kernel 在依赖声明里引用了 plugin 层的 @review/negative"]}
+NEGATIVE_CASES 8/8

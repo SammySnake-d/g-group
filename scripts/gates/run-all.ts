@@ -7,11 +7,11 @@ import { execFileSync } from "node:child_process";
 import process from "node:process";
 import { parseArgs } from "node:util";
 import { ALL_GATES, LOCAL_GATES } from "./gates.ts";
-import { ctxFromGit, runGates } from "./lib.ts";
+import { ctxFromGit, GIT_SAFE_ARGS, gitEnv, runGates } from "./lib.ts";
 
 const { values: a } = parseArgs({
   options: {
-    repo: { type: "string" }, base: { type: "string" }, branch: { type: "string" },
+    repo: { type: "string" }, base: { type: "string" }, branch: { type: "string" }, pr: { type: "string" },
     local: { type: "boolean" }, "self-test": { type: "boolean" }, hash: { type: "boolean" },
   },
   strict: true,
@@ -22,18 +22,21 @@ if (a["self-test"]) {
   process.exit(selfTest() ? 0 : 1);
 }
 
-const root = execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd: a.repo ?? process.cwd(), encoding: "utf8" }).trim();
-const branch = a.branch ?? (process.env.GITHUB_HEAD_REF || execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd: root, encoding: "utf8" }).trim());
+const g = (cwd: string, ...args: string[]) => execFileSync("git", [...GIT_SAFE_ARGS, ...args], { cwd, encoding: "utf8", env: gitEnv() }).trim();
+const root = g(a.repo ?? process.cwd(), "rev-parse", "--show-toplevel");
+const branch = a.branch ?? (process.env.GITHUB_HEAD_REF || g(root, "rev-parse", "--abbrev-ref", "HEAD"));
 const base = a.base ?? "origin/main";
-const ctx = ctxFromGit(root, base, branch);
+if (a.pr !== undefined && !/^[1-9]\d*$/.test(a.pr)) { console.log(`✗ --pr 必须是正整数,实际 "${a.pr}"`); process.exit(1); }
+const ctx = ctxFromGit(root, base, branch, a.pr === undefined ? undefined : Number(a.pr));
 
 if (a.hash) {
   console.log(ctx.contentHash());
   process.exit(0);
 }
 
-const gates = a.local ? [...ALL_GATES, ...LOCAL_GATES] : ALL_GATES;
-const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+// 来源核对排在最前:会话与群聊记录在执行任何 PR 代码之前读完(PR 代码本身也在沙箱里,读写不到这些目录)
+const gates = a.local ? [...LOCAL_GATES, ...ALL_GATES] : ALL_GATES;
+const head = g(root, "rev-parse", "HEAD");
 console.log(`base=${base} branch=${branch} HEAD=${head} 受检文件 ${ctx.changed.length} 个 收据=${ctx.receipt ? ctx.receiptPath : "无"} 门禁 ${gates.length} 个`);
 const results = runGates(ctx, gates);
 for (const r of results) {

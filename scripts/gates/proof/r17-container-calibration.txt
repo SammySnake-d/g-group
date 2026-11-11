@@ -1,0 +1,7 @@
+原样 Docker 夹具:通过
+✓ workspace:指定夹具「R15-03」发现故障
+✓ readonly:指定夹具「R15-04」发现故障
+✓ baseline-load:指定夹具「R15-05 一份」发现故障
+✓ baseline-missing:指定夹具「R15-05 运行时」发现故障
+✓ linked-copy:指定夹具「R17-04 跟踪」发现故障
+容器定点变异 5:杀死 5,存活 0

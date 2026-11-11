@@ -1,0 +1,1480 @@
+TAP version 13
+# Subtest: 基于当前版本提交成功,版本号加一且写入新内容
+ok 1 - 基于当前版本提交成功,版本号加一且写入新内容
+  ---
+  duration_ms: 1.719991
+  type: 'test'
+  ...
+# Subtest: 两人基于同一版本修改,后提交者收到版本冲突(阳性埋雷:去掉版本校验就会静默覆盖)
+ok 2 - 两人基于同一版本修改,后提交者收到版本冲突(阳性埋雷:去掉版本校验就会静默覆盖)
+  ---
+  duration_ms: 0.299407
+  type: 'test'
+  ...
+# Subtest: 提交不改入参单元
+ok 3 - 提交不改入参单元
+  ---
+  duration_ms: 0.156723
+  type: 'test'
+  ...
+# Subtest: 多文档存储:同一版本、同一提案只切文档键,改不同文档互不冲突且内容都写入(阴性对照)
+ok 4 - 多文档存储:同一版本、同一提案只切文档键,改不同文档互不冲突且内容都写入(阴性对照)
+  ---
+  duration_ms: 0.173782
+  type: 'test'
+  ...
+# Subtest: 多文档存储:成功和冲突两条路径都不改输入 Store
+ok 5 - 多文档存储:成功和冲突两条路径都不改输入 Store
+  ---
+  duration_ms: 0.197743
+  type: 'test'
+  ...
+# Subtest: 多文档存储:同一文档基于旧版本提交被拒绝,不存在的文档按版本 0 新建并写入内容
+ok 6 - 多文档存储:同一文档基于旧版本提交被拒绝,不存在的文档按版本 0 新建并写入内容
+  ---
+  duration_ms: 0.147069
+  type: 'test'
+  ...
+# Subtest: 追加的事件序号递增并串成 hash 链
+ok 7 - 追加的事件序号递增并串成 hash 链
+  ---
+  duration_ms: 1.898492
+  type: 'test'
+  ...
+# Subtest: 原地改写旧记录正文会被 hash 链查出(阳性埋雷)
+ok 8 - 原地改写旧记录正文会被 hash 链查出(阳性埋雷)
+  ---
+  duration_ms: 0.310663
+  type: 'test'
+  ...
+# Subtest: 单条 hash 自洽但与前一条脱链会被查出(阳性埋雷)
+ok 9 - 单条 hash 自洽但与前一条脱链会被查出(阳性埋雷)
+  ---
+  duration_ms: 0.406226
+  type: 'test'
+  ...
+# Subtest: 编辑是一条新事件,调用前的整份日志快照逐字节不变,投影显示新文字
+ok 10 - 编辑是一条新事件,调用前的整份日志快照逐字节不变,投影显示新文字
+  ---
+  duration_ms: 0.389815
+  type: 'test'
+  ...
+# Subtest: 撤回只追加撤回事件,投影标记已撤回,调用前快照不变
+ok 11 - 撤回只追加撤回事件,投影标记已撤回,调用前快照不变
+  ---
+  duration_ms: 0.339198
+  type: 'test'
+  ...
+# Subtest: 追加后再改调用方手里的 message body,已提交历史、投影和 hash 都不变
+ok 12 - 追加后再改调用方手里的 message body,已提交历史、投影和 hash 都不变
+  ---
+  duration_ms: 0.265388
+  type: 'test'
+  ...
+# Subtest: 追加后再改调用方手里的 edit body 与 sender,已提交历史不变
+ok 13 - 追加后再改调用方手里的 edit body 与 sender,已提交历史不变
+  ---
+  duration_ms: 1.179205
+  type: 'test'
+  ...
+# Subtest: 已提交事件本身冻结:不能改 seq、hash 等字段
+ok 14 - 已提交事件本身冻结:不能改 seq、hash 等字段
+  ---
+  duration_ms: 0.652008
+  type: 'test'
+  ...
+# Subtest: 已提交事件的 body 冻结
+ok 15 - 已提交事件的 body 冻结
+  ---
+  duration_ms: 0.180619
+  type: 'test'
+  ...
+# Subtest: 已提交事件的 sender 冻结
+ok 16 - 已提交事件的 sender 冻结
+  ---
+  duration_ms: 0.316708
+  type: 'test'
+  ...
+# Subtest: 日志的事件数组冻结:不能追加或替换
+ok 17 - 日志的事件数组冻结:不能追加或替换
+  ---
+  duration_ms: 0.239116
+  type: 'test'
+  ...
+# Subtest: 日志外壳冻结:不能把 events 换成另一份数组
+ok 18 - 日志外壳冻结:不能把 events 换成另一份数组
+  ---
+  duration_ms: 0.182701
+  type: 'test'
+  ...
+# Subtest: 投影只读:多次投影不改记录(阴性对照)
+ok 19 - 投影只读:多次投影不改记录(阴性对照)
+  ---
+  duration_ms: 0.229859
+  type: 'test'
+  ...
+# Subtest: 同一条消息只切发言者种类:compute 被拒绝,contact 可以发出(AC-03 单开关)
+ok 20 - 同一条消息只切发言者种类:compute 被拒绝,contact 可以发出(AC-03 单开关)
+  ---
+  duration_ms: 0.685649
+  type: 'test'
+  ...
+# Subtest: 被 @ 的 Helper 可以在会话里就地作答
+ok 21 - 被 @ 的 Helper 可以在会话里就地作答
+  ---
+  duration_ms: 0.154918
+  type: 'test'
+  ...
+# Subtest: 只有原发言者能编辑或撤回自己的消息
+ok 22 - 只有原发言者能编辑或撤回自己的消息
+  ---
+  duration_ms: 0.384487
+  type: 'test'
+  ...
+# Subtest: 编辑或撤回的目标必须是存在且未撤回的消息
+ok 23 - 编辑或撤回的目标必须是存在且未撤回的消息
+  ---
+  duration_ms: 0.319544
+  type: 'test'
+  ...
+# Subtest: 请求按 stable → history → tail 分段,压缩点之后的可见消息全量进 history
+ok 24 - 请求按 stable → history → tail 分段,压缩点之后的可见消息全量进 history
+  ---
+  duration_ms: 6.864795
+  type: 'test'
+  ...
+# Subtest: 被引用的已压缩旧消息按原文精确页入 tail,清单记 seq 与字节数
+ok 25 - 被引用的已压缩旧消息按原文精确页入 tail,清单记 seq 与字节数
+  ---
+  duration_ms: 1.137275
+  type: 'test'
+  ...
+# Subtest: 同一历史只切引用开关:不引用 1 号旧消息时它不进装配(阴性对照)
+ok 26 - 同一历史只切引用开关:不引用 1 号旧消息时它不进装配(阴性对照)
+  ---
+  duration_ms: 0.988409
+  type: 'test'
+  ...
+# Subtest: 清单字节数与各段字节数之和等于请求体实际 UTF-8 字节数
+ok 27 - 清单字节数与各段字节数之和等于请求体实际 UTF-8 字节数
+  ---
+  duration_ms: 0.976574
+  type: 'test'
+  ...
+# Subtest: 超预算一个字节就显式失败并要求压缩,而不是静默截断(阳性埋雷)
+ok 28 - 超预算一个字节就显式失败并要求压缩,而不是静默截断(阳性埋雷)
+  ---
+  duration_ms: 1.22036
+  type: 'test'
+  ...
+# Subtest: 预算恰好等于所需字节时装配成功(阴性对照)
+ok 29 - 预算恰好等于所需字节时装配成功(阴性对照)
+  ---
+  duration_ms: 1.795421
+  type: 'test'
+  ...
+# Subtest: 引用已在 history 里的消息不触发页入,原文只出现一次
+ok 30 - 引用已在 history 里的消息不触发页入,原文只出现一次
+  ---
+  duration_ms: 0.87575
+  type: 'test'
+  ...
+# Subtest: 撤回的消息既不进 history 也不能被引用页入,清单把它列为跳过
+ok 31 - 撤回的消息既不进 history 也不能被引用页入,清单把它列为跳过
+  ---
+  duration_ms: 1.096838
+  type: 'test'
+  ...
+# Subtest: 编辑过的消息按最新文字装配
+ok 32 - 编辑过的消息按最新文字装配
+  ---
+  duration_ms: 1.553245
+  type: 'test'
+  ...
+# Subtest: 引用不存在的消息序号显式失败
+ok 33 - 引用不存在的消息序号显式失败
+  ---
+  duration_ms: 0.989322
+  type: 'test'
+  ...
+# Subtest: 把最近 25 条、时间、消息序号、任务号注入 stable 段都报错(AC-39 阳性埋雷)
+ok 34 - 把最近 25 条、时间、消息序号、任务号注入 stable 段都报错(AC-39 阳性埋雷)
+  ---
+  duration_ms: 2.754524
+  type: 'test'
+  ...
+# Subtest: 同样的时间与任务表放进 tail 的会变状态里照常装配(单开关对照)
+ok 35 - 同样的时间与任务表放进 tail 的会变状态里照常装配(单开关对照)
+  ---
+  duration_ms: 0.633452
+  type: 'test'
+  ...
+# Subtest: 正常追加一条消息后,新请求从开头到上次 history 末尾逐字节相同(AC-39 阴性对照)
+ok 36 - 正常追加一条消息后,新请求从开头到上次 history 末尾逐字节相同(AC-39 阴性对照)
+  ---
+  duration_ms: 2.840227
+  type: 'test'
+  ...
+# Subtest: 连续多轮追加不滑动窗口:压缩点之后的消息一条不少,旧前缀每轮都保留
+ok 37 - 连续多轮追加不滑动窗口:压缩点之后的消息一条不少,旧前缀每轮都保留
+  ---
+  duration_ms: 47.313371
+  type: 'test'
+  ...
+# Subtest: 旧历史被重截时前缀哈希不一致,宿主据此能发现(AC-39 阳性埋雷)
+ok 38 - 旧历史被重截时前缀哈希不一致,宿主据此能发现(AC-39 阳性埋雷)
+  ---
+  duration_ms: 0.95995
+  type: 'test'
+  ...
+# Subtest: 引用页入与会变状态都不改变缓存前缀
+ok 39 - 引用页入与会变状态都不改变缓存前缀
+  ---
+  duration_ms: 1.794088
+  type: 'test'
+  ...
+# Subtest: 缓存断点不超过 4 个,位于工具定义末尾、stable 末尾、已压缩块末尾与最新追加消息,tail 里没有
+ok 40 - 缓存断点不超过 4 个,位于工具定义末尾、stable 末尾、已压缩块末尾与最新追加消息,tail 里没有
+  ---
+  duration_ms: 1.844342
+  type: 'test'
+  ...
+# Subtest: 撤回的原文在压缩块里:压缩块生成于撤回前即作废,不给 recompress 时显式要求重建(R3-01 阳性埋雷)
+ok 41 - 撤回的原文在压缩块里:压缩块生成于撤回前即作废,不给 recompress 时显式要求重建(R3-01 阳性埋雷)
+  ---
+  duration_ms: 0.334877
+  type: 'test'
+  ...
+# Subtest: 撤回的原文在压缩块里:给 recompress 就只用仍可见的消息重建,请求里不再有原文,并标 prefixBreak
+ok 42 - 撤回的原文在压缩块里:给 recompress 就只用仍可见的消息重建,请求里不再有原文,并标 prefixBreak
+  ---
+  duration_ms: 0.563208
+  type: 'test'
+  ...
+# Subtest: 压缩块生成于撤回之后(已不含原文)照常复用,不报 prefixBreak(单开关对照)
+ok 43 - 压缩块生成于撤回之后(已不含原文)照常复用,不报 prefixBreak(单开关对照)
+  ---
+  duration_ms: 0.367397
+  type: 'test'
+  ...
+# Subtest: 重建后的压缩块或调用方给的块仍含撤回原文,显式失败而不是送进模型
+ok 44 - 重建后的压缩块或调用方给的块仍含撤回原文,显式失败而不是送进模型
+  ---
+  duration_ms: 0.642693
+  type: 'test'
+  ...
+# Subtest: 撤回的原文在 history 里:下一次装配不再含原文,从该位置起标 prefixBreak,宿主不计为前缀错误
+ok 45 - 撤回的原文在 history 里:下一次装配不再含原文,从该位置起标 prefixBreak,宿主不计为前缀错误
+  ---
+  duration_ms: 1.376527
+  type: 'test'
+  ...
+# Subtest: 撤回的原文进 tail:引用页入跳过它,会变状态里带了原文就显式失败
+ok 46 - 撤回的原文进 tail:引用页入跳过它,会变状态里带了原文就显式失败
+  ---
+  duration_ms: 1.087201
+  type: 'test'
+  ...
+# Subtest: 撤回连带它之后的编辑文字也不再出现
+ok 47 - 撤回连带它之后的编辑文字也不再出现
+  ---
+  duration_ms: 0.641884
+  type: 'test'
+  ...
+# Subtest: 未压缩时编辑作为新事件追加在 history 末尾,旧消息原文不改,前缀逐字节不变(R3-02 阳性埋雷)
+ok 48 - 未压缩时编辑作为新事件追加在 history 末尾,旧消息原文不改,前缀逐字节不变(R3-02 阳性埋雷)
+  ---
+  duration_ms: 1.25953
+  type: 'test'
+  ...
+# Subtest: 压缩点之后编辑压缩块里的旧消息:编辑事件照样进 history,不被旧消息 seq 过滤掉(R3-02 阳性埋雷)
+ok 49 - 压缩点之后编辑压缩块里的旧消息:编辑事件照样进 history,不被旧消息 seq 过滤掉(R3-02 阳性埋雷)
+  ---
+  duration_ms: 1.577366
+  type: 'test'
+  ...
+# Subtest: 连续多轮编辑与新消息交替,每轮前缀都保留上一轮,最新编辑在末尾
+ok 50 - 连续多轮编辑与新消息交替,每轮前缀都保留上一轮,最新编辑在末尾
+  ---
+  duration_ms: 4.079126
+  type: 'test'
+  ...
+# Subtest: 用户自然复述固定提示词里的话不再误拦(R3-04 阴性对照)
+ok 51 - 用户自然复述固定提示词里的话不再误拦(R3-04 阴性对照)
+  ---
+  duration_ms: 0.318336
+  type: 'test'
+  ...
+# Subtest: 不含动态值的通用规则不误拦:新消息、刚才、最近、任务这类普通词都放行(R4-06 阴性对照)
+ok 52 - 不含动态值的通用规则不误拦:新消息、刚才、最近、任务这类普通词都放行(R4-06 阴性对照)
+  ---
+  duration_ms: 0.356668
+  type: 'test'
+  ...
+# Subtest: 同一条规则只多一个动态值就拦下:日期、时刻、消息序号、任务号、带数字的最近 N 条(R4-06 单开关对照)
+ok 53 - 同一条规则只多一个动态值就拦下:日期、时刻、消息序号、任务号、带数字的最近 N 条(R4-06 单开关对照)
+  ---
+  duration_ms: 0.431496
+  type: 'test'
+  ...
+# Subtest: 固定段顺序必须是 system → tools → persona,倒序、重复、未知段、缺 system 都拒(R3-05 阳性埋雷)
+ok 54 - 固定段顺序必须是 system → tools → persona,倒序、重复、未知段、缺 system 都拒(R3-05 阳性埋雷)
+  ---
+  duration_ms: 3.693284
+  type: 'test'
+  ...
+# Subtest: 压缩点必须是不超过日志最新 seq 的非负整数,生成点在压缩点与最新之间,否则拒绝(R3-05 阳性埋雷)
+ok 55 - 压缩点必须是不超过日志最新 seq 的非负整数,生成点在压缩点与最新之间,否则拒绝(R3-05 阳性埋雷)
+  ---
+  duration_ms: 2.302823
+  type: 'test'
+  ...
+# Subtest: user、contact、helper 的消息原文逐字进 history,清单逐条对应(R3-06)
+ok 56 - user、contact、helper 的消息原文逐字进 history,清单逐条对应(R3-06)
+  ---
+  duration_ms: 0.506436
+  type: 'test'
+  ...
+# Subtest: 会变状态原文逐字出现在 tail 末段;空字符串不产生段(R3-06)
+ok 57 - 会变状态原文逐字出现在 tail 末段;空字符串不产生段(R3-06)
+  ---
+  duration_ms: 1.047982
+  type: 'test'
+  ...
+# Subtest: 撤回的短原文(1 到 4 字)出现在会变状态里也显式失败,没有长度阈值(R4-01 阳性埋雷)
+ok 58 - 撤回的短原文(1 到 4 字)出现在会变状态里也显式失败,没有长度阈值(R4-01 阳性埋雷)
+  ---
+  duration_ms: 0.754124
+  type: 'test'
+  ...
+# Subtest: 撤回原文中间夹了空白也算命中:空白规范化后比对
+ok 59 - 撤回原文中间夹了空白也算命中:空白规范化后比对
+  ---
+  duration_ms: 0.333135
+  type: 'test'
+  ...
+# Subtest: 会变状态不含撤回原文时照常装配,短原文只是没出现(单开关对照)
+ok 60 - 会变状态不含撤回原文时照常装配,短原文只是没出现(单开关对照)
+  ---
+  duration_ms: 0.289241
+  type: 'test'
+  ...
+# Subtest: 撤回原文出现在 stable、压缩块、其他消息里都在最终请求边界拦下,并指出位置
+ok 61 - 撤回原文出现在 stable、压缩块、其他消息里都在最终请求边界拦下,并指出位置
+  ---
+  duration_ms: 1.312588
+  type: 'test'
+  ...
+# Subtest: 被引用的消息在 tail 里复述了撤回原文也拦下
+ok 62 - 被引用的消息在 tail 里复述了撤回原文也拦下
+  ---
+  duration_ms: 0.451239
+  type: 'test'
+  ...
+# Subtest: 宿主加的序号与发言者标签不参与扫描:撤回原文恰好是标签片段也不误拦
+ok 63 - 宿主加的序号与发言者标签不参与扫描:撤回原文恰好是标签片段也不误拦
+  ---
+  duration_ms: 0.436988
+  type: 'test'
+  ...
+# Subtest: recompress 改不了交给它的消息,引用页入仍是日志里的原文(R4-01 阳性埋雷)
+ok 64 - recompress 改不了交给它的消息,引用页入仍是日志里的原文(R4-01 阳性埋雷)
+  ---
+  duration_ms: 0.640975
+  type: 'test'
+  ...
+# Subtest: recompress 拿到的是冻结深拷贝,内容与可见消息逐字一致
+ok 65 - recompress 拿到的是冻结深拷贝,内容与可见消息逐字一致
+  ---
+  duration_ms: 0.806723
+  type: 'test'
+  ...
+# Subtest: recompress 抛错时显式失败,不把半成品当压缩块
+ok 66 - recompress 抛错时显式失败,不把半成品当压缩块
+  ---
+  duration_ms: 0.545096
+  type: 'test'
+  ...
+# Subtest: 撤回前多次编辑的每个版本出现在会变状态或压缩块里都拦下(R4-07 阳性埋雷)
+ok 67 - 撤回前多次编辑的每个版本出现在会变状态或压缩块里都拦下(R4-07 阳性埋雷)
+  ---
+  duration_ms: 1.0532
+  type: 'test'
+  ...
+# Subtest: 恰好 4 字与 3 字的撤回原文都拦,未撤回的同样文字照常(R4-07 边界对照)
+ok 68 - 恰好 4 字与 3 字的撤回原文都拦,未撤回的同样文字照常(R4-07 边界对照)
+  ---
+  duration_ms: 0.488224
+  type: 'test'
+  ...
+# Subtest: recompress 抛出 message getter 抛错、原型陷阱抛错、非 Error 值时都返回 invalid-compressed,不抛出(R5-03 阳性埋雷)
+ok 69 - recompress 抛出 message getter 抛错、原型陷阱抛错、非 Error 值时都返回 invalid-compressed,不抛出(R5-03 阳性埋雷)
+  ---
+  duration_ms: 1.601987
+  type: 'test'
+  ...
+# Subtest: recompress 抛普通 Error 时失败原因里带它的文字(R5-03 单开关对照)
+ok 70 - recompress 抛普通 Error 时失败原因里带它的文字(R5-03 单开关对照)
+  ---
+  duration_ms: 0.332709
+  type: 'test'
+  ...
+# Subtest: 发言者 id 含冒号加空格、单个冒号或空格时,标签不参与撤回扫描(R5-04 阳性埋雷)
+ok 71 - 发言者 id 含冒号加空格、单个冒号或空格时,标签不参与撤回扫描(R5-04 阳性埋雷)
+  ---
+  duration_ms: 1.045685
+  type: 'test'
+  ...
+# Subtest: 引用页入的发言者 id 含撤回原文时同样不误拦
+ok 72 - 引用页入的发言者 id 含撤回原文时同样不误拦
+  ---
+  duration_ms: 0.471659
+  type: 'test'
+  ...
+# Subtest: 正文里真的含撤回原文时,不管发言者 id 长什么样都拦下(R5-04 单开关对照)
+ok 73 - 正文里真的含撤回原文时,不管发言者 id 长什么样都拦下(R5-04 单开关对照)
+  ---
+  duration_ms: 0.696893
+  type: 'test'
+  ...
+# Subtest: 制表、换行、全角空格、不换行空格与零宽字符夹在撤回原文里都算命中(R5-05 阳性埋雷)
+ok 74 - 制表、换行、全角空格、不换行空格与零宽字符夹在撤回原文里都算命中(R5-05 阳性埋雷)
+  ---
+  duration_ms: 1.332499
+  type: 'test'
+  ...
+# Subtest: 同样夹着各种空白但文字不同时照常装配(R5-05 单开关对照)
+ok 75 - 同样夹着各种空白但文字不同时照常装配(R5-05 单开关对照)
+  ---
+  duration_ms: 0.49141
+  type: 'test'
+  ...
+# Subtest: 多条消息分别撤回时每一条都拦,命中哪条报哪条(R5-05 阳性埋雷)
+ok 76 - 多条消息分别撤回时每一条都拦,命中哪条报哪条(R5-05 阳性埋雷)
+  ---
+  duration_ms: 0.642752
+  type: 'test'
+  ...
+# Subtest: 同一消息撤回后再被引用多次:每次都跳过,原文不出现,也不重复报跳过
+ok 77 - 同一消息撤回后再被引用多次:每次都跳过,原文不出现,也不重复报跳过
+  ---
+  duration_ms: 0.542621
+  type: 'test'
+  ...
+# Subtest: 日志或装配选项带 getter、Proxy 时显式失败,getter 调用 0 次;同内容普通对象照常装配
+ok 78 - 日志或装配选项带 getter、Proxy 时显式失败,getter 调用 0 次;同内容普通对象照常装配
+  ---
+  duration_ms: 1.849069
+  type: 'test'
+  ...
+# Subtest: Object.prototype 上有 get/set/value/writable/enumerable/configurable 的 setter 或只读值时,合法装配照常成功且内容正确(R6-01 阳性埋雷)
+ok 79 - Object.prototype 上有 get/set/value/writable/enumerable/configurable 的 setter 或只读值时,合法装配照常成功且内容正确(R6-01 阳性埋雷)
+  ---
+  duration_ms: 11.024623
+  type: 'test'
+  ...
+# Subtest: Array.prototype[0] 上有 setter 或只读值时,合法装配照常成功,段、清单与跳过都是自有下标且内容正确(R6-02 阳性埋雷)
+ok 80 - Array.prototype[0] 上有 setter 或只读值时,合法装配照常成功,段、清单与跳过都是自有下标且内容正确(R6-02 阳性埋雷)
+  ---
+  duration_ms: 3.018079
+  type: 'test'
+  ...
+# Subtest: serialize、prefixLength、prefixHash 遇到带 getter 的请求抛受控 TypeError,getter 调用 0 次;装配结果照常可用(R6-03 阳性埋雷)
+ok 81 - serialize、prefixLength、prefixHash 遇到带 getter 的请求抛受控 TypeError,getter 调用 0 次;装配结果照常可用(R6-03 阳性埋雷)
+  ---
+  duration_ms: 1.799683
+  type: 'test'
+  ...
+# Subtest: 撤回原文中间夹着 U+000B、U+0085、U+1680、U+2000–U+200A、U+2028/2029、U+202F、U+205F、U+3000、零宽字符或 BOM 都算命中(R6-05 阳性埋雷)
+ok 82 - 撤回原文中间夹着 U+000B、U+0085、U+1680、U+2000–U+200A、U+2028/2029、U+202F、U+205F、U+3000、零宽字符或 BOM 都算命中(R6-05 阳性埋雷)
+  ---
+  duration_ms: 3.043615
+  type: 'test'
+  ...
+# Subtest: 撤回比对用的不可见字符定义与实现同源:每个样例都在 INVISIBLE_SOURCE 里,普通可见字符都不在(R6-05 单开关对照)
+ok 83 - 撤回比对用的不可见字符定义与实现同源:每个样例都在 INVISIBLE_SOURCE 里,普通可见字符都不在(R6-05 单开关对照)
+  ---
+  duration_ms: 0.549932
+  type: 'test'
+  ...
+# Subtest: 导出的固定段顺序是冻结副本、撤回空白正则不导出实例:调用方改它们之后,顺序校验与撤回扫描都不受影响(R7-04 阳性埋雷)
+ok 84 - 导出的固定段顺序是冻结副本、撤回空白正则不导出实例:调用方改它们之后,顺序校验与撤回扫描都不受影响(R7-04 阳性埋雷)
+  ---
+  duration_ms: 1.514826
+  type: 'test'
+  ...
+# Subtest: squash 只收字符串:带 replace getter 的对象、null、数字都抛受控 TypeError,getter 调用 0 次(R7-02 阳性埋雷)
+ok 85 - squash 只收字符串:带 replace getter 的对象、null、数字都抛受控 TypeError,getter 调用 0 次(R7-02 阳性埋雷)
+  ---
+  duration_ms: 0.304663
+  type: 'test'
+  ...
+# Subtest: 日志或装配选项是 null、数字、字符串、数组,或事件是 null 时返回 invalid-input,不抛错;正常输入照常装配(R7-06 阳性埋雷)
+ok 86 - 日志或装配选项是 null、数字、字符串、数组,或事件是 null 时返回 invalid-input,不抛错;正常输入照常装配(R7-06 阳性埋雷)
+  ---
+  duration_ms: 1.87013
+  type: 'test'
+  ...
+# Subtest: serialize、prefixLength、prefixHash 收到 null 或非对象请求时抛受控 TypeError 并说明请求必须是对象(R7-06 阳性埋雷)
+ok 87 - serialize、prefixLength、prefixHash 收到 null 或非对象请求时抛受控 TypeError 并说明请求必须是对象(R7-06 阳性埋雷)
+  ---
+  duration_ms: 1.085548
+  type: 'test'
+  ...
+# Subtest: 同一条仍可见的已压缩旧消息被重复引用时只页入一次,清单一条、字节只算一次(R7-M3 阳性埋雷)
+ok 88 - 同一条仍可见的已压缩旧消息被重复引用时只页入一次,清单一条、字节只算一次(R7-M3 阳性埋雷)
+  ---
+  duration_ms: 1.944892
+  type: 'test'
+  ...
+# Subtest: 外部请求把某段 bytes 改成 0、-1 或与正文 UTF-8 字节数不符时,serialize / prefixLength / prefixHash 都抛受控 TypeError,两份不同内容不会被算成相同前缀哈希;不改 bytes 的同一请求照常(R12-03 阳性埋雷 / 单开关对照)
+ok 89 - 外部请求把某段 bytes 改成 0、-1 或与正文 UTF-8 字节数不符时,serialize / prefixLength / prefixHash 都抛受控 TypeError,两份不同内容不会被算成相同前缀哈希;不改 bytes 的同一请求照常(R12-03 阳性埋雷 / 单开关对照)
+  ---
+  duration_ms: 1.660307
+  type: 'test'
+  ...
+# Subtest: 合法的中文 UTF-8 请求:每段 bytes 等于正文 UTF-8 字节数(不是 UTF-16 长度),经 JSON 往返后 serialize / prefixLength / prefixHash 照常且与原请求一致(R12-03 单开关对照)
+ok 90 - 合法的中文 UTF-8 请求:每段 bytes 等于正文 UTF-8 字节数(不是 UTF-16 长度),经 JSON 往返后 serialize / prefixLength / prefixHash 照常且与原请求一致(R12-03 单开关对照)
+  ---
+  duration_ms: 2.200018
+  type: 'test'
+  ...
+# Subtest: 外部请求的段顺序被调换(tail 放到最前)或 section 不是 stable / history / tail 时抛受控 TypeError,前缀哈希不会盖到 tail 上;原顺序照常(R12-03 阳性埋雷 / 单开关对照)
+ok 91 - 外部请求的段顺序被调换(tail 放到最前)或 section 不是 stable / history / tail 时抛受控 TypeError,前缀哈希不会盖到 tail 上;原顺序照常(R12-03 阳性埋雷 / 单开关对照)
+  ---
+  duration_ms: 4.806364
+  type: 'test'
+  ...
+# Subtest: 确认卡结构化回复(卡号 + 版本 + 决定)机械判定为 E6,带目标,分类器调用 0 次
+ok 92 - 确认卡结构化回复(卡号 + 版本 + 决定)机械判定为 E6,带目标,分类器调用 0 次
+  ---
+  duration_ms: 3.68136
+  type: 'test'
+  ...
+# Subtest: 确认卡回复不是用户本人、缺卡号、版本非正整数、决定越界都封闭为 Uncertain,也不调分类器
+ok 93 - 确认卡回复不是用户本人、缺卡号、版本非正整数、决定越界都封闭为 Uncertain,也不调分类器
+  ---
+  duration_ms: 0.807937
+  type: 'test'
+  ...
+# Subtest: 只有 @ 没有别的文字的点名机械判定为 E1,分类器调用 0 次
+ok 94 - 只有 @ 没有别的文字的点名机械判定为 E1,分类器调用 0 次
+  ---
+  duration_ms: 0.88292
+  type: 'test'
+  ...
+# Subtest: 带 @ 的停止、修改、纠偏文字意图不能机械确定,交给分类器并采用其结果,锚点照样提取
+ok 95 - 带 @ 的停止、修改、纠偏文字意图不能机械确定,交给分类器并采用其结果,锚点照样提取
+  ---
+  duration_ms: 0.776977
+  type: 'test'
+  ...
+# Subtest: 带 ↩ 引用的控制指令交给分类器,引用序号作为锚点保留
+ok 96 - 带 ↩ 引用的控制指令交给分类器,引用序号作为锚点保留
+  ---
+  duration_ms: 1.221671
+  type: 'test'
+  ...
+# Subtest: 同一句纯点名多一个引用就不再是纯点名,改调分类器(单开关对照)
+ok 97 - 同一句纯点名多一个引用就不再是纯点名,改调分类器(单开关对照)
+  ---
+  duration_ms: 0.63056
+  type: 'test'
+  ...
+# Subtest: 没有任何锚点时调分类器恰好 1 次
+ok 98 - 没有任何锚点时调分类器恰好 1 次
+  ---
+  duration_ms: 0.240042
+  type: 'test'
+  ...
+# Subtest: 分类器返回自由文本按 Uncertain 处理并记录违规原值(阳性埋雷)
+ok 99 - 分类器返回自由文本按 Uncertain 处理并记录违规原值(阳性埋雷)
+  ---
+  duration_ms: 0.172747
+  type: 'test'
+  ...
+# Subtest: 分类器返回非字符串或越界编号同样按 Uncertain 处理并记录
+ok 100 - 分类器返回非字符串或越界编号同样按 Uncertain 处理并记录
+  ---
+  duration_ms: 0.53722
+  type: 'test'
+  ...
+# Subtest: 分类器返回循环对象、BigInt、toJSON 抛错的对象都封闭为 Uncertain 并记可读违规,不抛错
+ok 101 - 分类器返回循环对象、BigInt、toJSON 抛错的对象都封闭为 Uncertain 并记可读违规,不抛错
+  ---
+  duration_ms: 1.463644
+  type: 'test'
+  ...
+# Subtest: 分类器给出每个合法枚举都原样采用且不记违规
+ok 102 - 分类器给出每个合法枚举都原样采用且不记违规
+  ---
+  duration_ms: 1.362686
+  type: 'test'
+  ...
+# Subtest: 分类器抛错(含抛出无法转文字的值)时走 Uncertain 保守路径,不卡死
+ok 103 - 分类器抛错(含抛出无法转文字的值)时走 Uncertain 保守路径,不卡死
+  ---
+  duration_ms: 0.313081
+  type: 'test'
+  ...
+# Subtest: @ 和控制文字之间只隔中文逗号、冒号或没有空格时,正文不被当成名字吞掉,交给分类器(RR-03 阳性埋雷)
+ok 104 - @ 和控制文字之间只隔中文逗号、冒号或没有空格时,正文不被当成名字吞掉,交给分类器(RR-03 阳性埋雷)
+  ---
+  duration_ms: 0.585275
+  type: 'test'
+  ...
+# Subtest: 多个 @ 之间只有空白才是纯点名;任一 @ 后面带了正文就交给分类器
+ok 105 - 多个 @ 之间只有空白才是纯点名;任一 @ 后面带了正文就交给分类器
+  ---
+  duration_ms: 1.692191
+  type: 'test'
+  ...
+# Subtest: 点名范围和正文对不上、或名字里含标点空白,都不算锚点也不走纯点名
+ok 106 - 点名范围和正文对不上、或名字里含标点空白,都不算锚点也不走纯点名
+  ---
+  duration_ms: 0.42768
+  type: 'test'
+  ...
+# Subtest: 分类器抛出 message getter 会抛错、instanceof 会抛错的异常,兜底仍返回 Uncertain(RR-04 阳性埋雷)
+ok 107 - 分类器抛出 message getter 会抛错、instanceof 会抛错的异常,兜底仍返回 Uncertain(RR-04 阳性埋雷)
+  ---
+  duration_ms: 0.610989
+  type: 'test'
+  ...
+# Subtest: 入站事件带 getter、Proxy 或类实例时封闭为 Uncertain,getter 与分类器都调用 0 次
+ok 108 - 入站事件带 getter、Proxy 或类实例时封闭为 Uncertain,getter 与分类器都调用 0 次
+  ---
+  duration_ms: 0.299787
+  type: 'test'
+  ...
+# Subtest: 分类器拿到的是冻结副本,改不了调用方的事件;同内容普通对象照常分类(单开关对照)
+ok 109 - 分类器拿到的是冻结副本,改不了调用方的事件;同内容普通对象照常分类(单开关对照)
+  ---
+  duration_ms: 0.148088
+  type: 'test'
+  ...
+# Subtest: 分类器返回带 getter 或 toJSON 的非枚举对象时按 Uncertain 处理,getter 与 toJSON 调用 0 次,违规点名路径(R6-04 阳性埋雷)
+ok 110 - 分类器返回带 getter 或 toJSON 的非枚举对象时按 Uncertain 处理,getter 与 toJSON 调用 0 次,违规点名路径(R6-04 阳性埋雷)
+  ---
+  duration_ms: 0.341041
+  type: 'test'
+  ...
+# Subtest: 入站事件是 null、数字、字符串或数组时封闭为 Uncertain 并说明必须是对象,分类器调用 0 次,不抛错(R7-06 阳性埋雷)
+ok 111 - 入站事件是 null、数字、字符串或数组时封闭为 Uncertain 并说明必须是对象,分类器调用 0 次,不抛错(R7-06 阳性埋雷)
+  ---
+  duration_ms: 0.230235
+  type: 'test'
+  ...
+# Subtest: 确认卡回复是 null 或数组时封闭为 Uncertain 并说明必须是对象,不抛错;合法卡片照常 E6(R7-06 阳性埋雷)
+ok 112 - 确认卡回复是 null 或数组时封闭为 Uncertain 并说明必须是对象,不抛错;合法卡片照常 E6(R7-06 阳性埋雷)
+  ---
+  duration_ms: 0.67653
+  type: 'test'
+  ...
+# Subtest: 导出的事件枚举是冻结的,调用方改不了;改动尝试之后分类照旧只认 E1..E10 与 Uncertain(R7-04 阳性埋雷)
+ok 113 - 导出的事件枚举是冻结的,调用方改不了;改动尝试之后分类照旧只认 E1..E10 与 Uncertain(R7-04 阳性埋雷)
+  ---
+  duration_ms: 0.502114
+  type: 'test'
+  ...
+# Subtest: 点名范围的 start 或 end 是非整数(0.5、2.5)时不算有效点名:交给分类器(E2,调用 1 次),不机械判 E1;同一消息范围换回整数就是纯点名 E1、分类器 0 次(R12-04 审查 R12-O1 双侧单开关)
+ok 114 - 点名范围的 start 或 end 是非整数(0.5、2.5)时不算有效点名:交给分类器(E2,调用 1 次),不机械判 E1;同一消息范围换回整数就是纯点名 E1、分类器 0 次(R12-04 审查 R12-O1 双侧单开关)
+  ---
+  duration_ms: 0.532182
+  type: 'test'
+  ...
+# Subtest: JSON 可产生的形状判定通过,返回冻结副本,对象原型为 null,undefined 属性按 JSON 规则去掉
+ok 115 - JSON 可产生的形状判定通过,返回冻结副本,对象原型为 null,undefined 属性按 JSON 规则去掉
+  ---
+  duration_ms: 3.658788
+  type: 'test'
+  ...
+# Subtest: 判定顺序:Proxy 先于原型检查,原型先于描述符检查,三者都点名原因
+ok 116 - 判定顺序:Proxy 先于原型检查,原型先于描述符检查,三者都点名原因
+  ---
+  duration_ms: 0.430227
+  type: 'test'
+  ...
+# Subtest: 对象与数组元素的 getter、setter 都拒绝并点名路径,getter 调用 0 次
+ok 117 - 对象与数组元素的 getter、setter 都拒绝并点名路径,getter 调用 0 次
+  ---
+  duration_ms: 0.528762
+  type: 'test'
+  ...
+# Subtest: 非 JSON 形状都拒绝:BigInt、Symbol 值与键、NaN、Infinity、非顶层函数、稀疏数组、数组额外属性、不可枚举属性
+ok 118 - 非 JSON 形状都拒绝:BigInt、Symbol 值与键、NaN、Infinity、非顶层函数、稀疏数组、数组额外属性、不可枚举属性
+  ---
+  duration_ms: 0.467815
+  type: 'test'
+  ...
+# Subtest: 顶层函数只在 topFunctions 打开时放行,原样保留引用(单开关对照)
+ok 119 - 顶层函数只在 topFunctions 打开时放行,原样保留引用(单开关对照)
+  ---
+  duration_ms: 0.253731
+  type: 'test'
+  ...
+# Subtest: plainItems 只检查数组容器,元素原样返回不克隆
+ok 120 - plainItems 只检查数组容器,元素原样返回不克隆
+  ---
+  duration_ms: 0.169171
+  type: 'test'
+  ...
+# Subtest: 判定过程中陷阱抛错也返回拒绝,判定函数自身不抛错
+ok 121 - 判定过程中陷阱抛错也返回拒绝,判定函数自身不抛错
+  ---
+  duration_ms: 0.532678
+  type: 'test'
+  ...
+# Subtest: 原型无污染时数组照常克隆(四种原型条件之一:基线)
+ok 122 - 原型无污染时数组照常克隆(四种原型条件之一:基线)
+  ---
+  duration_ms: 0.269524
+  type: 'test'
+  ...
+# Subtest: Array.prototype 上有同名可写下标时,结果是自有元素,不读原型(四种原型条件之二)
+ok 123 - Array.prototype 上有同名可写下标时,结果是自有元素,不读原型(四种原型条件之二)
+  ---
+  duration_ms: 0.403726
+  type: 'test'
+  ...
+# Subtest: Array.prototype 上有同名 setter 时,克隆不调用它,元素照常写入(四种原型条件之三)
+ok 124 - Array.prototype 上有同名 setter 时,克隆不调用它,元素照常写入(四种原型条件之三)
+  ---
+  duration_ms: 0.38988
+  type: 'test'
+  ...
+# Subtest: Array.prototype 上有同名不可写下标时,合法输入不被误拒(四种原型条件之四)
+ok 125 - Array.prototype 上有同名不可写下标时,合法输入不被误拒(四种原型条件之四)
+  ---
+  duration_ms: 0.320957
+  type: 'test'
+  ...
+# Subtest: Object.prototype 上有同名下标描述符形状的值时,稀疏数组仍按稀疏拒绝,不借原型补洞
+ok 126 - Object.prototype 上有同名下标描述符形状的值时,稀疏数组仍按稀疏拒绝,不借原型补洞
+  ---
+  duration_ms: 0.329771
+  type: 'test'
+  ...
+# Subtest: Object.prototype 上有同名 setter 时,对象结果照常写入且不调用它
+ok 127 - Object.prototype 上有同名 setter 时,对象结果照常写入且不调用它
+  ---
+  duration_ms: 0.266823
+  type: 'test'
+  ...
+# Subtest: safeDescribe 与 describeThrown 给出确切的诊断文字
+ok 128 - safeDescribe 与 describeThrown 给出确切的诊断文字
+  ---
+  duration_ms: 0.3376
+  type: 'test'
+  ...
+# Subtest: Object.prototype 上有描述符字段名(get/set/value/writable/enumerable/configurable)的 setter 或只读值时,合法输入照常通过且结果正确(R6-01 阳性埋雷)
+ok 129 - Object.prototype 上有描述符字段名(get/set/value/writable/enumerable/configurable)的 setter 或只读值时,合法输入照常通过且结果正确(R6-01 阳性埋雷)
+  ---
+  duration_ms: 1.532609
+  type: 'test'
+  ...
+# Subtest: 描述符字段名污染下 getter 仍被拒绝并点名路径,getter 调用 0 次(R6-01 单开关对照)
+ok 130 - 描述符字段名污染下 getter 仍被拒绝并点名路径,getter 调用 0 次(R6-01 单开关对照)
+  ---
+  duration_ms: 0.546645
+  type: 'test'
+  ...
+# Subtest: 判定选项 topFunctions 是 getter 时拒绝,getter 调用 0 次;数据属性照常生效(R6-03 阳性埋雷)
+ok 131 - 判定选项 topFunctions 是 getter 时拒绝,getter 调用 0 次;数据属性照常生效(R6-03 阳性埋雷)
+  ---
+  duration_ms: 0.270887
+  type: 'test'
+  ...
+# Subtest: safeDescribe 不执行 getter、toJSON 与 toString,访问器记作占位;describeThrown 不读 message getter(R6-04 阳性埋雷)
+ok 132 - safeDescribe 不执行 getter、toJSON 与 toString,访问器记作占位;describeThrown 不读 message getter(R6-04 阳性埋雷)
+  ---
+  duration_ms: 0.375426
+  type: 'test'
+  ...
+# Subtest: 有限小数照常通过并原样保留(R6-M1 单开关对照:只拒绝 NaN 与无穷)
+ok 133 - 有限小数照常通过并原样保留(R6-M1 单开关对照:只拒绝 NaN 与无穷)
+  ---
+  duration_ms: 0.289396
+  type: 'test'
+  ...
+# Subtest: appendOwn 的目标不是普通数组(带 length getter 的对象、Proxy 数组、null)时抛受控 TypeError,getter 调用 0 次;普通数组照常追加(R7-02 阳性埋雷)
+ok 134 - appendOwn 的目标不是普通数组(带 length getter 的对象、Proxy 数组、null)时抛受控 TypeError,getter 调用 0 次;普通数组照常追加(R7-02 阳性埋雷)
+  ---
+  duration_ms: 0.628107
+  type: 'test'
+  ...
+# Subtest: 判定选项里任何 getter/setter(可枚举或不可枚举)、其它键或非布尔 topFunctions 都拒绝,访问器调用 0 次(R7-02 阳性埋雷)
+ok 135 - 判定选项里任何 getter/setter(可枚举或不可枚举)、其它键或非布尔 topFunctions 都拒绝,访问器调用 0 次(R7-02 阳性埋雷)
+  ---
+  duration_ms: 1.946634
+  type: 'test'
+  ...
+# Subtest: topFunctions:false 与不传一样拒绝顶层函数,只有 true 放行(R7-M1 单开关对照)
+ok 136 - topFunctions:false 与不传一样拒绝顶层函数,只有 true 放行(R7-M1 单开关对照)
+  ---
+  duration_ms: 0.406863
+  type: 'test'
+  ...
+# Subtest: plainData / plainItems 的路径参数不是字符串(toPrimitive getter、Proxy、null、数字)时拒绝,访问器与陷阱调用 0 次(R8-01 阳性埋雷)
+ok 137 - plainData / plainItems 的路径参数不是字符串(toPrimitive getter、Proxy、null、数字)时拒绝,访问器与陷阱调用 0 次(R8-01 阳性埋雷)
+  ---
+  duration_ms: 0.238206
+  type: 'test'
+  ...
+# Subtest: 路径参数是字符串或不传时照常判定并按它点名(R8-01 单开关对照)
+ok 138 - 路径参数是字符串或不传时照常判定并按它点名(R8-01 单开关对照)
+  ---
+  duration_ms: 0.284398
+  type: 'test'
+  ...
+# Subtest: appendOwn 的目标是带访问器下标、不可枚举下标、额外键、稀疏或 Array 子类的真实数组时抛受控 TypeError,访问器调用 0 次且不写入(R8-02 阳性埋雷)
+ok 139 - appendOwn 的目标是带访问器下标、不可枚举下标、额外键、稀疏或 Array 子类的真实数组时抛受控 TypeError,访问器调用 0 次且不写入(R8-02 阳性埋雷)
+  ---
+  duration_ms: 0.607578
+  type: 'test'
+  ...
+# Subtest: appendOwn 对普通数组(空、带元素、元素是对象)照常追加自有元素(R8-02 单开关对照)
+ok 140 - appendOwn 对普通数组(空、带元素、元素是对象)照常追加自有元素(R8-02 单开关对照)
+  ---
+  duration_ms: 0.227867
+  type: 'test'
+  ...
+# Subtest: 数组下标是不可枚举数据属性时 plainItems 与 plainData 拒绝并点名下标(R8-05 阳性埋雷,审查 R8-M2)
+ok 141 - 数组下标是不可枚举数据属性时 plainItems 与 plainData 拒绝并点名下标(R8-05 阳性埋雷,审查 R8-M2)
+  ---
+  duration_ms: 0.164539
+  type: 'test'
+  ...
+# Subtest: 数组下标都是可枚举数据属性时 plainItems 与 plainData 放行(R8-05 单开关对照)
+ok 142 - 数组下标都是可枚举数据属性时 plainItems 与 plainData 放行(R8-05 单开关对照)
+  ---
+  duration_ms: 0.130366
+  type: 'test'
+  ...
+# Subtest: 数组上 2^32-1 与更大的十进制数字键上的访问器一律拒绝并点名路径,getter 调用 0 次(R11-02 阳性埋雷)
+ok 143 - 数组上 2^32-1 与更大的十进制数字键上的访问器一律拒绝并点名路径,getter 调用 0 次(R11-02 阳性埋雷)
+  ---
+  duration_ms: 0.163694
+  type: 'test'
+  ...
+# Subtest: appendOwn 的目标带 2^32-1 / 更大数字键时抛受控 TypeError,不写入、getter 调用 0 次(R11-02 阳性埋雷)
+ok 144 - appendOwn 的目标带 2^32-1 / 更大数字键时抛受控 TypeError,不写入、getter 调用 0 次(R11-02 阳性埋雷)
+  ---
+  duration_ms: 0.170509
+  type: 'test'
+  ...
+# Subtest: 单开关对照:同一位置换成普通额外键、真下标或 length 内的数据属性时,拒绝原因与放行结果各不相同(R11-02 单开关对照)
+ok 145 - 单开关对照:同一位置换成普通额外键、真下标或 length 内的数据属性时,拒绝原因与放行结果各不相同(R11-02 单开关对照)
+  ---
+  duration_ms: 0.138569
+  type: 'test'
+  ...
+# Subtest: 三类合法插件都能注册并按类型列出
+ok 146 - 三类合法插件都能注册并按类型列出
+  ---
+  duration_ms: 7.048996
+  type: 'test'
+  ...
+# Subtest: 同一个 id 第二次注册被拒,哪怕换了类型(阳性埋雷)
+ok 147 - 同一个 id 第二次注册被拒,哪怕换了类型(阳性埋雷)
+  ---
+  duration_ms: 0.520003
+  type: 'test'
+  ...
+# Subtest: 不同 id 的同类插件可以并存(阴性对照)
+ok 148 - 不同 id 的同类插件可以并存(阴性对照)
+  ---
+  duration_ms: 0.527871
+  type: 'test'
+  ...
+# Subtest: 类型不在三类之内、缺 id 或不是对象被拒
+ok 149 - 类型不在三类之内、缺 id 或不是对象被拒
+  ---
+  duration_ms: 0.525198
+  type: 'test'
+  ...
+# Subtest: DataSource 缺 sources、空 sources、sources 非字符串、缺 pull 各自被拒,补齐后放行
+ok 150 - DataSource 缺 sources、空 sources、sources 非字符串、缺 pull 各自被拒,补齐后放行
+  ---
+  duration_ms: 0.85577
+  type: 'test'
+  ...
+# Subtest: OutboundChannel 缺 send、send 非函数、缺或错 idempotency、B1 缺保留期、B2 带保留期、缺 endpoint 各自被拒,补齐后放行
+ok 151 - OutboundChannel 缺 send、send 非函数、缺或错 idempotency、B1 缺保留期、B2 带保留期、缺 endpoint 各自被拒,补齐后放行
+  ---
+  duration_ms: 0.990538
+  type: 'test'
+  ...
+# Subtest: UIExtension 缺 mounts、mounts 不是字符串数组各自被拒,补齐后放行
+ok 152 - UIExtension 缺 mounts、mounts 不是字符串数组各自被拒,补齐后放行
+  ---
+  duration_ms: 0.661993
+  type: 'test'
+  ...
+# Subtest: 插件声明 schedule 或 cron 直接被拒,理由指向定时归联系人
+ok 153 - 插件声明 schedule 或 cron 直接被拒,理由指向定时归联系人
+  ---
+  duration_ms: 0.81909
+  type: 'test'
+  ...
+# Subtest: 插件声明依赖其他插件被拒,空依赖列表放行(阴性对照)
+ok 154 - 插件声明依赖其他插件被拒,空依赖列表放行(阴性对照)
+  ---
+  duration_ms: 0.656738
+  type: 'test'
+  ...
+# Subtest: 注册后调用方改原对象的 id、sources、加 cron 都不影响宿主快照(阳性埋雷)
+ok 155 - 注册后调用方改原对象的 id、sources、加 cron 都不影响宿主快照(阳性埋雷)
+  ---
+  duration_ms: 2.333783
+  type: 'test'
+  ...
+# Subtest: 注册后改 UIExtension 的 mounts 数组不影响挂载点
+ok 156 - 注册后改 UIExtension 的 mounts 数组不影响挂载点
+  ---
+  duration_ms: 0.475496
+  type: 'test'
+  ...
+# Subtest: reregister 重新走校验:合法更新生效,带 cron 或换类型被拒且旧快照不动
+ok 157 - reregister 重新走校验:合法更新生效,带 cron 或换类型被拒且旧快照不动
+  ---
+  duration_ms: 1.49805
+  type: 'test'
+  ...
+# Subtest: 从插件没声明的源拉取被拒,多个不同未声明源都拒、声明的源放行
+ok 158 - 从插件没声明的源拉取被拒,多个不同未声明源都拒、声明的源放行
+  ---
+  duration_ms: 0.50994
+  type: 'test'
+  ...
+# Subtest: 外部事件经宿主盖章后保留来源、版本、事件类型、双时间与附件,插件自报的 trusted 不算
+ok 159 - 外部事件经宿主盖章后保留来源、版本、事件类型、双时间与附件,插件自报的 trusted 不算
+  ---
+  duration_ms: 0.388376
+  type: 'test'
+  ...
+# Subtest: 同一条外部消息的 create、edit、delete 经宿主后按版本和事件类型可区分
+ok 160 - 同一条外部消息的 create、edit、delete 经宿主后按版本和事件类型可区分
+  ---
+  duration_ms: 0.531198
+  type: 'test'
+  ...
+# Subtest: 迟到消息:发生时间早于宿主收到时间,两者分别保存,宿主时间不取插件自报
+ok 161 - 迟到消息:发生时间早于宿主收到时间,两者分别保存,宿主时间不取插件自报
+  ---
+  duration_ms: 0.451877
+  type: 'test'
+  ...
+# Subtest: 不合契约的外部事件逐条拒收并给出原因,合法的照常盖章(单开关对照)
+ok 162 - 不合契约的外部事件逐条拒收并给出原因,合法的照常盖章(单开关对照)
+  ---
+  duration_ms: 0.836554
+  type: 'test'
+  ...
+# Subtest: pull 抛错或不给数组显式失败,不当作空结果
+ok 163 - pull 抛错或不给数组显式失败,不当作空结果
+  ---
+  duration_ms: 0.629853
+  type: 'test'
+  ...
+# Subtest: 发送缺 action_id 被拒且插件不被调用
+ok 164 - 发送缺 action_id 被拒且插件不被调用
+  ---
+  duration_ms: 0.375773
+  type: 'test'
+  ...
+# Subtest: await 异步发送拿到真实回执才算确认;同 action_id 同内容返回同一回执不再真发
+ok 165 - await 异步发送拿到真实回执才算确认;同 action_id 同内容返回同一回执不再真发
+  ---
+  duration_ms: 1.482389
+  type: 'test'
+  ...
+# Subtest: 同 action_id 换内容被拒,不复用旧回执也不真发
+ok 166 - 同 action_id 换内容被拒,不复用旧回执也不真发
+  ---
+  duration_ms: 0.652956
+  type: 'test'
+  ...
+# Subtest: B2 渠道送达后抛错记 DeliveryUnknown,同 action_id 再调被拒,插件只被调 1 次(阳性埋雷)
+ok 167 - B2 渠道送达后抛错记 DeliveryUnknown,同 action_id 再调被拒,插件只被调 1 次(阳性埋雷)
+  ---
+  duration_ms: 0.660768
+  type: 'test'
+  ...
+# Subtest: B1 渠道结果未知后在保留期内同 action_id 重试会交给接收端去重,拿到真实回执后确认(单开关对照)
+ok 168 - B1 渠道结果未知后在保留期内同 action_id 重试会交给接收端去重,拿到真实回执后确认(单开关对照)
+  ---
+  duration_ms: 0.818496
+  type: 'test'
+  ...
+# Subtest: await 超时记 DeliveryUnknown 而不是成功
+ok 169 - await 超时记 DeliveryUnknown 而不是成功
+  ---
+  duration_ms: 20.696613
+  type: 'test'
+  ...
+# Subtest: 回执不合契约或 send 同步返回都记 DeliveryUnknown,不把返回值当回执
+ok 170 - 回执不合契约或 send 同步返回都记 DeliveryUnknown,不把返回值当回执
+  ---
+  duration_ms: 0.60747
+  type: 'test'
+  ...
+# Subtest: 上一次发送还在途时同 action_id 再调被拒,插件只被调 1 次
+ok 171 - 上一次发送还在途时同 action_id 再调被拒,插件只被调 1 次
+  ---
+  duration_ms: 0.514847
+  type: 'test'
+  ...
+# Subtest: 已确认的 B1 动作过了服务商保留期再调,复用已知回执,不重新产生副作用(阳性埋雷)
+ok 172 - 已确认的 B1 动作过了服务商保留期再调,复用已知回执,不重新产生副作用(阳性埋雷)
+  ---
+  duration_ms: 0.553403
+  type: 'test'
+  ...
+# Subtest: 结果未知的 B1 只在首次尝试的保留期内重试:保留期前放行、恰到期与过期都保持 DeliveryUnknown
+ok 173 - 结果未知的 B1 只在首次尝试的保留期内重试:保留期前放行、恰到期与过期都保持 DeliveryUnknown
+  ---
+  duration_ms: 0.688913
+  type: 'test'
+  ...
+# Subtest: B1 多次重试不刷新首次尝试时间:最后一次重试离首次已满保留期就拒绝
+ok 174 - B1 多次重试不刷新首次尝试时间:最后一次重试离首次已满保留期就拒绝
+  ---
+  duration_ms: 0.56623
+  type: 'test'
+  ...
+# Subtest: B2 结果未知后 reregister 成 B1,同 action_id 仍拒绝重发,新接收端调用 0 次(阳性埋雷)
+ok 175 - B2 结果未知后 reregister 成 B1,同 action_id 仍拒绝重发,新接收端调用 0 次(阳性埋雷)
+  ---
+  duration_ms: 0.441357
+  type: 'test'
+  ...
+# Subtest: B1 结果未知后 reregister 换了接收端,保留期内也不重试,标渠道已变
+ok 176 - B1 结果未知后 reregister 换了接收端,保留期内也不重试,标渠道已变
+  ---
+  duration_ms: 0.409822
+  type: 'test'
+  ...
+# Subtest: 同一渠道版本内 B1 未知可在保留期内重试(单开关对照:不 reregister)
+ok 177 - 同一渠道版本内 B1 未知可在保留期内重试(单开关对照:不 reregister)
+  ---
+  duration_ms: 0.350398
+  type: 'test'
+  ...
+# Subtest: 发送在途时 reregister,同 action_id 再调仍被在途拦下,旧投递完成后新渠道调用 0 次
+ok 178 - 发送在途时 reregister,同 action_id 再调仍被在途拦下,旧投递完成后新渠道调用 0 次
+  ---
+  duration_ms: 0.418417
+  type: 'test'
+  ...
+# Subtest: 同 action_id 的载荷按字节比对:多一个空格、换行或全角字符都算不同,不当成同一动作
+ok 179 - 同 action_id 的载荷按字节比对:多一个空格、换行或全角字符都算不同,不当成同一动作
+  ---
+  duration_ms: 0.273388
+  type: 'test'
+  ...
+# Subtest: 载荷不是字符串被拒且插件不被调用
+ok 180 - 载荷不是字符串被拒且插件不被调用
+  ---
+  duration_ms: 0.172576
+  type: 'test'
+  ...
+# Subtest: 外部事件每个必需字段给错类型都单独拒收,同一事件改回正确类型就放行
+ok 181 - 外部事件每个必需字段给错类型都单独拒收,同一事件改回正确类型就放行
+  ---
+  duration_ms: 1.197693
+  type: 'test'
+  ...
+# Subtest: 对未注册的插件拉取或发送显式失败
+ok 182 - 对未注册的插件拉取或发送显式失败
+  ---
+  duration_ms: 0.180846
+  type: 'test'
+  ...
+# Subtest: 注册后改插件实例的 endpoint 但不 reregister,重试仍发往注册时快照的接收端,副作用只有一次(R3-03 阳性埋雷)
+ok 183 - 注册后改插件实例的 endpoint 但不 reregister,重试仍发往注册时快照的接收端,副作用只有一次(R3-03 阳性埋雷)
+  ---
+  duration_ms: 0.457549
+  type: 'test'
+  ...
+# Subtest: 改接收端走 reregister:未知动作标渠道已变不重试,新动作发往新接收端(单开关对照)
+ok 184 - 改接收端走 reregister:未知动作标渠道已变不重试,新动作发往新接收端(单开关对照)
+  ---
+  duration_ms: 0.480764
+  type: 'test'
+  ...
+# Subtest: 发送在途时改插件实例的 endpoint:同 action_id 被在途拦下,完成后的回执来自原接收端,调用计数为 1
+ok 185 - 发送在途时改插件实例的 endpoint:同 action_id 被在途拦下,完成后的回执来自原接收端,调用计数为 1
+  ---
+  duration_ms: 0.350916
+  type: 'test'
+  ...
+# Subtest: 配置里有 Map、Set、Date 或类实例的渠道在注册时拒绝,原因指出字段(R4-02 阳性埋雷)
+ok 186 - 配置里有 Map、Set、Date 或类实例的渠道在注册时拒绝,原因指出字段(R4-02 阳性埋雷)
+  ---
+  duration_ms: 0.461869
+  type: 'test'
+  ...
+# Subtest: 配置字段是 getter 的渠道在注册时拒绝(展开运算会把 getter 求值,这里直接在对象上定义)
+ok 187 - 配置字段是 getter 的渠道在注册时拒绝(展开运算会把 getter 求值,这里直接在对象上定义)
+  ---
+  duration_ms: 0.254141
+  type: 'test'
+  ...
+# Subtest: 配置是普通数组与普通对象时注册成功,send 的 this 是冻结纯数据且原型为 null(R4-02 单开关对照)
+ok 188 - 配置是普通数组与普通对象时注册成功,send 的 this 是冻结纯数据且原型为 null(R4-02 单开关对照)
+  ---
+  duration_ms: 0.452696
+  type: 'test'
+  ...
+# Subtest: send 拿到的请求带绑定的 endpoint,插件按它发;原型上的配置改了不影响同一未知动作(R4-02 阳性埋雷)
+ok 189 - send 拿到的请求带绑定的 endpoint,插件按它发;原型上的配置改了不影响同一未知动作(R4-02 阳性埋雷)
+  ---
+  duration_ms: 0.789661
+  type: 'test'
+  ...
+# Subtest: 继承原型的实例渠道注册时拒绝,原型后改不可能影响已注册版本(R4-02)
+ok 190 - 继承原型的实例渠道注册时拒绝,原型后改不可能影响已注册版本(R4-02)
+  ---
+  duration_ms: 0.181673
+  type: 'test'
+  ...
+# Subtest: 带私有字段的类实例渠道在注册时拒绝并说明理由,不会注册成功后发送必然失败(R4-03)
+ok 191 - 带私有字段的类实例渠道在注册时拒绝并说明理由,不会注册成功后发送必然失败(R4-03)
+  ---
+  duration_ms: 0.303706
+  type: 'test'
+  ...
+# Subtest: B1 窗口按单调时钟算:墙钟回拨不延长窗口,单调时钟到期就拒绝重试(R4-04 阳性埋雷)
+ok 192 - B1 窗口按单调时钟算:墙钟回拨不延长窗口,单调时钟到期就拒绝重试(R4-04 阳性埋雷)
+  ---
+  duration_ms: 0.36828
+  type: 'test'
+  ...
+# Subtest: 墙钟大幅前跳不影响单调窗口:单调时钟未到期仍可重试(R4-04 单开关对照)
+ok 193 - 墙钟大幅前跳不影响单调窗口:单调时钟未到期仍可重试(R4-04 单开关对照)
+  ---
+  duration_ms: 0.260713
+  type: 'test'
+  ...
+# Subtest: 单调时钟读数倒退时按结果未知处理,不重试
+ok 194 - 单调时钟读数倒退时按结果未知处理,不重试
+  ---
+  duration_ms: 0.385175
+  type: 'test'
+  ...
+# Subtest: 渠道 id 与 action_id 含 NUL 等任意字符时账本不碰撞,各渠道各自真发(R4-05 阳性埋雷)
+ok 195 - 渠道 id 与 action_id 含 NUL 等任意字符时账本不碰撞,各渠道各自真发(R4-05 阳性埋雷)
+  ---
+  duration_ms: 0.39985
+  type: 'test'
+  ...
+# Subtest: 同一渠道同一 action_id 仍去重(R4-05 单开关对照)
+ok 196 - 同一渠道同一 action_id 仍去重(R4-05 单开关对照)
+  ---
+  duration_ms: 0.178651
+  type: 'test'
+  ...
+# Subtest: 单调读数先前进再倒退(仍高于首次)时永久停止重试,副作用只有一次(R5-01 阳性埋雷)
+ok 197 - 单调读数先前进再倒退(仍高于首次)时永久停止重试,副作用只有一次(R5-01 阳性埋雷)
+  ---
+  duration_ms: 0.486239
+  type: 'test'
+  ...
+# Subtest: 单调读数倒退后再回升也不恢复重试资格(R5-01 阳性埋雷)
+ok 198 - 单调读数倒退后再回升也不恢复重试资格(R5-01 阳性埋雷)
+  ---
+  duration_ms: 0.456351
+  type: 'test'
+  ...
+# Subtest: 单调读数一直前进时照常在保留期内重试,到期才拒绝(R5-01 单开关对照)
+ok 199 - 单调读数一直前进时照常在保留期内重试,到期才拒绝(R5-01 单开关对照)
+  ---
+  duration_ms: 0.656536
+  type: 'test'
+  ...
+# Subtest: 单调读数不是有限数时同样永久停止重试
+ok 200 - 单调读数不是有限数时同样永久停止重试
+  ---
+  duration_ms: 0.337423
+  type: 'test'
+  ...
+# Subtest: 嵌套数组元素是 getter 时注册拒绝并点名下标,getter 一次都不调用(R5-02 阳性埋雷)
+ok 201 - 嵌套数组元素是 getter 时注册拒绝并点名下标,getter 一次都不调用(R5-02 阳性埋雷)
+  ---
+  duration_ms: 0.396357
+  type: 'test'
+  ...
+# Subtest: 关键字段 endpoint、kind、id、send 是会抛错的 getter 时注册返回拒绝,不抛出也不调用(R5-02 阳性埋雷)
+ok 202 - 关键字段 endpoint、kind、id、send 是会抛错的 getter 时注册返回拒绝,不抛出也不调用(R5-02 阳性埋雷)
+  ---
+  duration_ms: 0.699387
+  type: 'test'
+  ...
+# Subtest: 同样形状的普通数据对象注册成功,数组与嵌套配置原样冻结进 this(R5-02 单开关对照)
+ok 203 - 同样形状的普通数据对象注册成功,数组与嵌套配置原样冻结进 this(R5-02 单开关对照)
+  ---
+  duration_ms: 0.358336
+  type: 'test'
+  ...
+# Subtest: Proxy、Symbol 键、不可枚举属性、稀疏数组、数组上的额外属性、嵌套函数都拒绝并点名路径(R5-02)
+ok 204 - Proxy、Symbol 键、不可枚举属性、稀疏数组、数组上的额外属性、嵌套函数都拒绝并点名路径(R5-02)
+  ---
+  duration_ms: 0.545459
+  type: 'test'
+  ...
+# Subtest: 注册时检查本身抛错(Proxy 陷阱抛错)也返回拒绝,不逃出注册入口
+ok 205 - 注册时检查本身抛错(Proxy 陷阱抛错)也返回拒绝,不逃出注册入口
+  ---
+  duration_ms: 0.137036
+  type: 'test'
+  ...
+# Subtest: DataSource 与 UIExtension 走同一入口:getter 拒绝,普通数据放行
+ok 206 - DataSource 与 UIExtension 走同一入口:getter 拒绝,普通数据放行
+  ---
+  duration_ms: 0.160054
+  type: 'test'
+  ...
+# Subtest: 发送请求是 getter、Proxy 或类实例时拒绝,getter 调用 0 次且插件不被调用
+ok 207 - 发送请求是 getter、Proxy 或类实例时拒绝,getter 调用 0 次且插件不被调用
+  ---
+  duration_ms: 0.32974
+  type: 'test'
+  ...
+# Subtest: 回执带 getter 时记 DeliveryUnknown,getter 调用 0 次;普通回执照常确认
+ok 208 - 回执带 getter 时记 DeliveryUnknown,getter 调用 0 次;普通回执照常确认
+  ---
+  duration_ms: 0.477719
+  type: 'test'
+  ...
+# Subtest: 拉取结果数组元素是 getter 时整批拒绝,事件对象里有 getter 时只拒那一条,getter 调用 0 次
+ok 209 - 拉取结果数组元素是 getter 时整批拒绝,事件对象里有 getter 时只拒那一条,getter 调用 0 次
+  ---
+  duration_ms: 0.367523
+  type: 'test'
+  ...
+# Subtest: Array.prototype[0] 上有 setter 或只读值时,拉取一条、多条、含拒收与空结果都返回自有下标与真实内容(R6-02 阳性埋雷)
+ok 210 - Array.prototype[0] 上有 setter 或只读值时,拉取一条、多条、含拒收与空结果都返回自有下标与真实内容(R6-02 阳性埋雷)
+  ---
+  duration_ms: 1054.874345
+  type: 'test'
+  ...
+# Subtest: Object.prototype 上有 get/set/value/writable/enumerable/configurable 的 setter 或只读值时,注册、拉取、发送照常成功(R6-01 阳性埋雷)
+ok 211 - Object.prototype 上有 get/set/value/writable/enumerable/configurable 的 setter 或只读值时,注册、拉取、发送照常成功(R6-01 阳性埋雷)
+  ---
+  duration_ms: 4.726847
+  type: 'test'
+  ...
+# Subtest: createRegistry 的选项带 getter 时抛受控 TypeError,getter 调用 0 次;字段类型不对也抛;普通选项照常生效(R6-03 阳性埋雷)
+ok 212 - createRegistry 的选项带 getter 时抛受控 TypeError,getter 调用 0 次;字段类型不对也抛;普通选项照常生效(R6-03 阳性埋雷)
+  ---
+  duration_ms: 1.23578
+  type: 'test'
+  ...
+# Subtest: send 返回带 then getter 的对象(抛错或不抛错)时 getter 调用 0 次,账本落到 delivery-unknown,重发按 B2 拒绝(R6-04 阳性埋雷)
+ok 213 - send 返回带 then getter 的对象(抛错或不抛错)时 getter 调用 0 次,账本落到 delivery-unknown,重发按 B2 拒绝(R6-04 阳性埋雷)
+  ---
+  duration_ms: 1.445853
+  type: 'test'
+  ...
+# Subtest: send 返回普通 thenable、带自有 then 的 Promise 或同步值都记 non-promise-send 不调用 then;原生 Promise 照常确认(R6-04 单开关对照)
+ok 214 - send 返回普通 thenable、带自有 then 的 Promise 或同步值都记 non-promise-send 不调用 then;原生 Promise 照常确认(R6-04 单开关对照)
+  ---
+  duration_ms: 0.820499
+  type: 'test'
+  ...
+# Subtest: B1 渠道 then getter 让首次落到 delivery-unknown 后,保留期内重试交给接收端并确认,getter 调用 0 次(R6-04 重试)
+ok 215 - B1 渠道 then getter 让首次落到 delivery-unknown 后,保留期内重试交给接收端并确认,getter 调用 0 次(R6-04 重试)
+  ---
+  duration_ms: 0.59526
+  type: 'test'
+  ...
+# Subtest: pull 同步返回带 then getter 的对象(抛错或不抛错)或带自有 constructor getter 的原生 Promise 时直接 invalid-batch,getter 调用 0 次(R7-01 阳性埋雷)
+ok 216 - pull 同步返回带 then getter 的对象(抛错或不抛错)或带自有 constructor getter 的原生 Promise 时直接 invalid-batch,getter 调用 0 次(R7-01 阳性埋雷)
+  ---
+  duration_ms: 0.644955
+  type: 'test'
+  ...
+# Subtest: pull 返回合法原生 Promise 时照常拉取;同步普通数组按合同只判定不处理,一律 invalid-batch(R7-01 单开关对照;第十五轮按需求 §8.1 已定第 17 条改为拒收,审查 R14-01)
+ok 217 - pull 返回合法原生 Promise 时照常拉取;同步普通数组按合同只判定不处理,一律 invalid-batch(R7-01 单开关对照;第十五轮按需求 §8.1 已定第 17 条改为拒收,审查 R14-01)
+  ---
+  duration_ms: 1.594528
+  type: 'test'
+  ...
+# Subtest: 发送请求是 null、数字、字符串或数组时返回 invalid-payload 拒绝,不抛错,插件调用 0 次,不建账目(R7-06 阳性埋雷)
+ok 218 - 发送请求是 null、数字、字符串或数组时返回 invalid-payload 拒绝,不抛错,插件调用 0 次,不建账目(R7-06 阳性埋雷)
+  ---
+  duration_ms: 4.298208
+  type: 'test'
+  ...
+# Subtest: createRegistry(null) 按没给选项处理,用默认值;注册与拉取照常(R7-06 单开关对照)
+ok 219 - createRegistry(null) 按没给选项处理,用默认值;注册与拉取照常(R7-06 单开关对照)
+  ---
+  duration_ms: 0.20682
+  type: 'test'
+  ...
+# Subtest: pull 结果数组的下标是不可枚举数据属性时整批 invalid-batch 并点名下标;普通数组照常拉取(R8-05 审查 R8-M2)
+ok 220 - pull 结果数组的下标是不可枚举数据属性时整批 invalid-batch 并点名下标;普通数组照常拉取(R8-05 审查 R8-M2)
+  ---
+  duration_ms: 0.432959
+  type: 'test'
+  ...
+# Subtest: now() 返回非有限数字(访问器对象、Proxy、null、字符串、NaN、Infinity、超出范围)或抛错时 pull 返回 clock-invalid,不盖伪造时间,访问器调用 0 次(R8-03 阳性埋雷)
+ok 221 - now() 返回非有限数字(访问器对象、Proxy、null、字符串、NaN、Infinity、超出范围)或抛错时 pull 返回 clock-invalid,不盖伪造时间,访问器调用 0 次(R8-03 阳性埋雷)
+  ---
+  duration_ms: 0.755831
+  type: 'test'
+  ...
+# Subtest: now() 返回有限数字时 pull 照常盖收到时间(R8-03 单开关对照)
+ok 222 - now() 返回有限数字时 pull 照常盖收到时间(R8-03 单开关对照)
+  ---
+  duration_ms: 0.314577
+  type: 'test'
+  ...
+# Subtest: 首次发送时 now() 不是有限数字就拒绝发送(clock-invalid),插件调用 0 次、不建账目,访问器调用 0 次(R8-03 阳性埋雷)
+ok 223 - 首次发送时 now() 不是有限数字就拒绝发送(clock-invalid),插件调用 0 次、不建账目,访问器调用 0 次(R8-03 阳性埋雷)
+  ---
+  duration_ms: 0.487403
+  type: 'test'
+  ...
+# Subtest: B1 首次单调读数是访问器对象等非数字时只投递一次、记 NaN 且永久不重试;之后读数恢复为数字也返回 clock-untrusted 不抛错,访问器调用 0 次(R8-03 阳性埋雷)
+ok 224 - B1 首次单调读数是访问器对象等非数字时只投递一次、记 NaN 且永久不重试;之后读数恢复为数字也返回 clock-untrusted 不抛错,访问器调用 0 次(R8-03 阳性埋雷)
+  ---
+  duration_ms: 1.29337
+  type: 'test'
+  ...
+# Subtest: B1 首次读数正常、之后单调读数变成访问器对象、Proxy 或抛错时返回 clock-untrusted,不再重试,访问器调用 0 次(R8-03 阳性埋雷)
+ok 225 - B1 首次读数正常、之后单调读数变成访问器对象、Proxy 或抛错时返回 clock-untrusted,不再重试,访问器调用 0 次(R8-03 阳性埋雷)
+  ---
+  duration_ms: 1.36251
+  type: 'test'
+  ...
+# Subtest: B1 单调读数一直是有限数字时保留期内照常重试(R8-03 单开关对照)
+ok 226 - B1 单调读数一直是有限数字时保留期内照常重试(R8-03 单开关对照)
+  ---
+  duration_ms: 0.276153
+  type: 'test'
+  ...
+# Subtest: send / pull 收到普通的已拒绝或稍后拒绝原生 Promise 时记 send-threw / pull-failed,宿主进程存活(R8-04 单开关对照)
+ok 227 - send / pull 收到普通的已拒绝或稍后拒绝原生 Promise 时记 send-threw / pull-failed,宿主进程存活(R8-04 单开关对照)
+  ---
+  duration_ms: 815.553152
+  type: 'test'
+  ...
+# Subtest: 墙钟 now() 返回有限小数(0.5、T0+0.25)时 pull 照常盖收到时间、首次发送照常投递一次,不当成 clock-invalid(R9-02 审查 R9-M1)
+ok 228 - 墙钟 now() 返回有限小数(0.5、T0+0.25)时 pull 照常盖收到时间、首次发送照常投递一次,不当成 clock-invalid(R9-02 审查 R9-M1)
+  ---
+  duration_ms: 1.087667
+  type: 'test'
+  ...
+# Subtest: 墙钟 now() 返回负的有限小数(-0.5、-1.5)时按 Date 的取整规则盖收到时间(1970-01-01T00:00:00.000Z、1969-12-31T23:59:59.999Z),不向下取整,首次发送照常投递一次(R10-02 审查 R10-M2)
+ok 229 - 墙钟 now() 返回负的有限小数(-0.5、-1.5)时按 Date 的取整规则盖收到时间(1970-01-01T00:00:00.000Z、1969-12-31T23:59:59.999Z),不向下取整,首次发送照常投递一次(R10-02 审查 R10-M2)
+  ---
+  duration_ms: 0.757397
+  type: 'test'
+  ...
+# Subtest: send / pull 返回带自有静态 Symbol.species getter 的 Promise 子类时直接拒收,不 await、species getter 0 次、子类构造不再执行;普通原生 Promise 照常(R9-02 审查 R9-M3 单开关对照)
+ok 230 - send / pull 返回带自有静态 Symbol.species getter 的 Promise 子类时直接拒收,不 await、species getter 0 次、子类构造不再执行;普通原生 Promise 照常(R9-02 审查 R9-M3 单开关对照)
+  ---
+  duration_ms: 16.746416
+  type: 'test'
+  ...
+# Subtest: pull 返回的数组带 2^32-1 / 更大数字键上的访问器时整批拒绝(invalid-batch),getter 调用 0 次,事件 0 条(R11-02 阳性埋雷)
+ok 231 - pull 返回的数组带 2^32-1 / 更大数字键上的访问器时整批拒绝(invalid-batch),getter 调用 0 次,事件 0 条(R11-02 阳性埋雷)
+  ---
+  duration_ms: 0.57071
+  type: 'test'
+  ...
+# Subtest: 单开关对照:pull 返回同样长度、带正常事件与普通对象额外字段的数组照常盖章,只有额外键换成超界数字名才整批拒收(R11-02 单开关对照)
+ok 232 - 单开关对照:pull 返回同样长度、带正常事件与普通对象额外字段的数组照常盖章,只有额外键换成超界数字名才整批拒收(R11-02 单开关对照)
+  ---
+  duration_ms: 0.644794
+  type: 'test'
+  ...
+# Subtest: 插件交回的值按「包装 × 原型 × 自有键 × 描述符 × 可扩展性 × 结局」全组合生成 5976 种形态,send / pull 各一遍:只有由维度推出的普通原生 Promise 被 await(150 次);其余一律拒收,内核对它不做任何引擎操作——访问器、陷阱、子类构造、species、valueOf 与插件函数调用 0 次,实例、子类及其 prototype 逐项不变,宿主内置对象不变,也不装全局失败处理器(第十四轮合同)
+ok 233 - 插件交回的值按「包装 × 原型 × 自有键 × 描述符 × 可扩展性 × 结局」全组合生成 5976 种形态,send / pull 各一遍:只有由维度推出的普通原生 Promise 被 await(150 次);其余一律拒收,内核对它不做任何引擎操作——访问器、陷阱、子类构造、species、valueOf 与插件函数调用 0 次,实例、子类及其 prototype 逐项不变,宿主内置对象不变,也不装全局失败处理器(第十四轮合同)
+  ---
+  duration_ms: 819.284659
+  type: 'test'
+  ...
+# Subtest: 拒收的已失败 Promise 内核不挂处理(第十四轮合同,记录性 / 单开关对照):没有全局处理器时,自有 then getter、Promise 子类、Proxy 包装、冻结这四种被拒收后各成为 1 个未处理拒绝,与插件自己在 send / pull 里漏接的拒绝后果相同(宿主存活交插件隔离);内核调用期间插件侧代码 0 次;普通原生 Promise 的拒绝照常被 await 接住(未处理 0)
+ok 234 - 拒收的已失败 Promise 内核不挂处理(第十四轮合同,记录性 / 单开关对照):没有全局处理器时,自有 then getter、Promise 子类、Proxy 包装、冻结这四种被拒收后各成为 1 个未处理拒绝,与插件自己在 send / pull 里漏接的拒绝后果相同(宿主存活交插件隔离);内核调用期间插件侧代码 0 次;普通原生 Promise 的拒绝照常被 await 接住(未处理 0)
+  ---
+  duration_ms: 413.56515
+  type: 'test'
+  ...
+# Subtest: send / pull 返回不可扩展(preventExtensions 或冻结)的已兑现原生 Promise 时不 await:send 记 non-promise-send、pull 记 invalid-batch;子进程开着钩子且 Promise 没有自有 async_id 时进程存活;同一 Promise 不改可扩展性就照常确认 / 拉取(R12-01 阳性埋雷 / 单开关对照)
+ok 235 - send / pull 返回不可扩展(preventExtensions 或冻结)的已兑现原生 Promise 时不 await:send 记 non-promise-send、pull 记 invalid-batch;子进程开着钩子且 Promise 没有自有 async_id 时进程存活;同一 Promise 不改可扩展性就照常确认 / 拉取(R12-01 阳性埋雷 / 单开关对照)
+  ---
+  duration_ms: 166.590913
+  type: 'test'
+  ...
+# Subtest: send / pull 返回已兑现的原生 Promise,其自有 async_id 或 trigger_async_id 是带 valueOf 的对象或 BigInt 时不 await:send 记 non-promise-send、pull 记 invalid-batch,valueOf 调用 0 次;子进程开着钩子、valueOf 会抛错或值为 BigInt 时进程存活;同一 Promise 的值换回数字照常确认 / 拉取(R12-01 / R12-02 阳性埋雷 / 单开关对照)
+ok 236 - send / pull 返回已兑现的原生 Promise,其自有 async_id 或 trigger_async_id 是带 valueOf 的对象或 BigInt 时不 await:send 记 non-promise-send、pull 记 invalid-batch,valueOf 调用 0 次;子进程开着钩子、valueOf 会抛错或值为 BigInt 时进程存活;同一 Promise 的值换回数字照常确认 / 拉取(R12-01 / R12-02 阳性埋雷 / 单开关对照)
+  ---
+  duration_ms: 339.178892
+  type: 'test'
+  ...
+# Subtest: send / pull 返回带自有访问器(可枚举 extra getter、不可枚举 getter、只有 setter)的已兑现原生 Promise 时不当回执也不当拉取结果:send 记 non-promise-send、pull 记 invalid-batch,访问器调用 0 次;同一 Promise 的 extra 换成数据属性(运行时自带的两个追踪符号也是数据属性)照常确认 / 拉取(R12-02 阳性埋雷 / 单开关对照)
+ok 237 - send / pull 返回带自有访问器(可枚举 extra getter、不可枚举 getter、只有 setter)的已兑现原生 Promise 时不当回执也不当拉取结果:send 记 non-promise-send、pull 记 invalid-batch,访问器调用 0 次;同一 Promise 的 extra 换成数据属性(运行时自带的两个追踪符号也是数据属性)照常确认 / 拉取(R12-02 阳性埋雷 / 单开关对照)
+  ---
+  duration_ms: 1.836747
+  type: 'test'
+  ...
+# Subtest: 附件的可选 name、mime 是空字符串时照常盖章并原样保留;同一字段换成非字符串就拒收该条(R12-04 审查 R12-O2 单开关对照)
+ok 238 - 附件的可选 name、mime 是空字符串时照常盖章并原样保留;同一字段换成非字符串就拒收该条(R12-04 审查 R12-O2 单开关对照)
+  ---
+  duration_ms: 0.51457
+  type: 'test'
+  ...
+# Subtest: send / pull 同步返回普通数组(空、非空、下标是 getter、Proxy 包装)一律拒收且不读取该值:pull 记 invalid-batch、send 记 non-promise-send,getter 与 Proxy 陷阱 0 次;同样内容包在普通原生 Promise 里照常确认 / 拉取,普通原生 Promise 的拒绝记 send-threw / pull-failed(第十五轮 R14-01 双侧对照)
+ok 239 - send / pull 同步返回普通数组(空、非空、下标是 getter、Proxy 包装)一律拒收且不读取该值:pull 记 invalid-batch、send 记 non-promise-send,getter 与 Proxy 陷阱 0 次;同样内容包在普通原生 Promise 里照常确认 / 拉取,普通原生 Promise 的拒绝记 send-threw / pull-failed(第十五轮 R14-01 双侧对照)
+  ---
+  duration_ms: 2.36446
+  type: 'test'
+  ...
+# Subtest: 拒收期间不临时改写对象:内核 send / pull 调用窗口内,async_hooks 在每次异步资源创建、Promise 兑现、回调前后逐项比对插件交回的对象、Promise 子类及其 prototype、插件定义与插件函数、宿主内置 Promise / Object / Function / Array 原型,拒收形态 send / pull 各一遍都 0 处变化、每次调用至少观察 1 次;观察器自检:窗口内临时加再删一个属性会被看见(第十五轮 R14-02 审查 M1)
+ok 240 - 拒收期间不临时改写对象:内核 send / pull 调用窗口内,async_hooks 在每次异步资源创建、Promise 兑现、回调前后逐项比对插件交回的对象、Promise 子类及其 prototype、插件定义与插件函数、宿主内置 Promise / Object / Function / Array 原型,拒收形态 send / pull 各一遍都 0 处变化、每次调用至少观察 1 次;观察器自检:窗口内临时加再删一个属性会被看见(第十五轮 R14-02 审查 M1)
+  ---
+  duration_ms: 2523.951043
+  type: 'test'
+  ...
+# Subtest: 拒收期间插件对象不被同步临时改写:同法造孪生形态,内核拒收其中一个后与从没交给内核的孪生对象仍共用同一张 V8 形状表、自有描述符与写入前的独立基线逐项相同(send / pull 各一遍,不依赖异步事件);观察自检正反对照:窗口里同步 defineProperty 加再删、赋值加再 delete,无异步事件与有异步事件两种窗口都被看见,不写的窗口两种都不报(第十五轮 R15-01、R15-02)
+ok 241 - 拒收期间插件对象不被同步临时改写:同法造孪生形态,内核拒收其中一个后与从没交给内核的孪生对象仍共用同一张 V8 形状表、自有描述符与写入前的独立基线逐项相同(send / pull 各一遍,不依赖异步事件);观察自检正反对照:窗口里同步 defineProperty 加再删、赋值加再 delete,无异步事件与有异步事件两种窗口都被看见,不写的窗口两种都不报(第十五轮 R15-01、R15-02)
+  ---
+  duration_ms: 17.083035
+  type: 'test'
+  ...
+# Subtest: 拒收期间不同步临时改写宿主内置对象:独立 worker 里冻结 Promise / Promise.prototype / Object / Object.prototype / Function.prototype / Array / Array.prototype / Reflect 后,九种拒收形态 send / pull 各一遍结果仍是 non-promise-send / invalid-batch、不抛错、插件侧代码 0 次,普通原生 Promise 照常确认 / 拉取;埋雷自检:无异步事件与有异步事件两种窗口里同步定义都当场抛错,Reflect 写法不生效(第十五轮 R15-01)
+ok 242 - 拒收期间不同步临时改写宿主内置对象:独立 worker 里冻结 Promise / Promise.prototype / Object / Object.prototype / Function.prototype / Array / Array.prototype / Reflect 后,九种拒收形态 send / pull 各一遍结果仍是 non-promise-send / invalid-batch、不抛错、插件侧代码 0 次,普通原生 Promise 照常确认 / 拉取;埋雷自检:无异步事件与有异步事件两种窗口里同步定义都当场抛错,Reflect 写法不生效(第十五轮 R15-01)
+  ---
+  duration_ms: 156.517711
+  type: 'test'
+  ...
+# Subtest: 普通原生 Promise 带不可枚举的自有数据属性(字符串键、Symbol 键,可写或只读)照常确认 / 拉取;同一属性换成不可枚举的 getter 或 setter 就拒收、访问器 0 次(第十五轮 R14-02 审查 M2 双侧单开关)
+ok 243 - 普通原生 Promise 带不可枚举的自有数据属性(字符串键、Symbol 键,可写或只读)照常确认 / 拉取;同一属性换成不可枚举的 getter 或 setter 就拒收、访问器 0 次(第十五轮 R14-02 审查 M2 双侧单开关)
+  ---
+  duration_ms: 2.053971
+  type: 'test'
+  ...
+# Subtest: 追踪符号上是非整数数字(1.5、-0.5、1e-7、NaN、Infinity)时普通原生 Promise 照常确认 / 拉取;同一描述符换成数字字符串、BigInt 或带 valueOf 的对象就拒收、valueOf 0 次(第十五轮 R14-02 审查 M3 双侧单开关,合同是「数字或 undefined」不是整数)
+ok 244 - 追踪符号上是非整数数字(1.5、-0.5、1e-7、NaN、Infinity)时普通原生 Promise 照常确认 / 拉取;同一描述符换成数字字符串、BigInt 或带 valueOf 的对象就拒收、valueOf 0 次(第十五轮 R14-02 审查 M3 双侧单开关,合同是「数字或 undefined」不是整数)
+  ---
+  duration_ms: 3.411178
+  type: 'test'
+  ...
+# Subtest: sendTimeoutMs 取 Node 定时器上限 2147483647 时可建注册表,30ms 后返回的回执照常确认、不出 TimeoutOverflowWarning;上限加一 2147483648、2147483647.5、0 以及 Infinity、NaN 在建注册表时抛受控 TypeError 并写明上限,不会被 Node 缩成 1 毫秒后立即判超时(第十五轮 R14-03 双侧)
+ok 245 - sendTimeoutMs 取 Node 定时器上限 2147483647 时可建注册表,30ms 后返回的回执照常确认、不出 TimeoutOverflowWarning;上限加一 2147483648、2147483647.5、0 以及 Infinity、NaN 在建注册表时抛受控 TypeError 并写明上限,不会被 Node 缩成 1 毫秒后立即判超时(第十五轮 R14-03 双侧)
+  ---
+  duration_ms: 31.273694
+  type: 'test'
+  ...
+1..245
+# tests 245
+# suites 0
+# pass 245
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7601.334739

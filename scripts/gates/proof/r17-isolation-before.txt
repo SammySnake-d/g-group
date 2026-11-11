@@ -1,0 +1,1 @@
+{"status":0,"stdout":"{\"outside\":\"ENOENT\",\"inside\":\"NEUTRAL_INSIDE\",\"copied\":\"NEUTRAL_FIXTURE_NO_CREDENTIALS\"}\n","stderr":""}
