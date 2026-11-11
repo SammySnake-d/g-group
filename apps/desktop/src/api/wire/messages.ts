@@ -165,6 +165,9 @@ export const messagesWiring = defineWiring({
     const res = await Promise.allSettled(ids.map((id) => loadMessages(w, id)))
     /* 新消息分隔线:每个会话读进来时有几条未读,打开时就从那里画「以下是新消息」 */
     w.get().setUnreadAt(Object.fromEntries(w.get().convs.map((c) => [c.id, c.unread ?? 0])))
+    /* 一启动就开着的那个会话:你已经看到了,记成读到最后一条(分隔线仍按刚才的未读数画) */
+    const open = w.get().active
+    if (w.get().convs.find((c) => c.id === open)?.unread) w.get().markRead(open)
     /* 输入框草稿要在消息之后读:草稿里的引用按消息补出作者与原文 */
     await loadDrafts(w, ids)
     const bad = res.filter((r) => r.status === 'rejected').length

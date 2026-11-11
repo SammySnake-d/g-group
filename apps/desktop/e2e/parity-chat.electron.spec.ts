@@ -45,10 +45,11 @@ const rows = (win: Page) => win.getByTestId("chat-column").locator("[data-msg]")
 const mine = (win: Page, text: string) => rows(win).filter({ hasText: text }).and(win.locator('[data-from="me"]'));
 const theirs = (win: Page, text: string) => rows(win).filter({ hasText: text }).and(win.locator('[data-from]:not([data-from="me"])'));
 /** 右键这条消息,点菜单里的一项 */
-async function menu(win: Page, row: ReturnType<typeof rows>, item: string) {
+async function menu(win: Page, row: ReturnType<typeof rows>, item: string, shotName?: string) {
   await row.locator("[data-anchor]").first().click({ button: "right" });
   const m = win.getByTestId("ctx-menu");
   await expect(m).toBeVisible();
+  if (shotName) await shot(win, shotName, 250);
   if (item.startsWith("ctx-")) await m.getByTestId(item).click();
   else await m.getByText(item, { exact: true }).click();
 }
@@ -76,7 +77,10 @@ test("私聊里就近操作消息:表情、编辑、撤回、删除都由后端�
     });
 
     await test.step("右键联系人那句点 👍:表情挂上,是你点的", async () => {
-      await menu(win, theirs(win, "收到:你好"), "👍");
+      await theirs(win, "收到:你好").locator("[data-anchor]").first().hover();
+      await expect(theirs(win, "收到:你好").locator('[data-testid^="hoverbar-"]')).toBeVisible();
+      await shot(win, "dm-hoverbar", 250);
+      await menu(win, theirs(win, "收到:你好"), "👍", "dm-ctx-menu");
       const chip = theirs(win, "收到:你好").locator('[data-testid^="reaction-"]');
       await expect(chip).toHaveCount(1, LONG);
       await expect(chip).toHaveAttribute("aria-pressed", "true");
@@ -88,6 +92,7 @@ test("私聊里就近操作消息:表情、编辑、撤回、删除都由后端�
       const box = win.getByTestId("composer");
       await expect(box).toHaveValue("你好");
       await box.fill("你好呀");
+      await shot(win, "dm-edit-bar");
       await box.press("Enter");
       await expect(mine(win, "你好呀")).toHaveCount(1, LONG);
       await expect(mine(win, "你好呀").locator('[data-testid^="edited-"]')).toBeVisible();
@@ -101,6 +106,7 @@ test("私聊里就近操作消息:表情、编辑、撤回、删除都由后端�
       await expect(win.getByTestId("recall-line")).toContainText("你撤回了一条消息", LONG);
       await expect(win.getByTestId("recall-line").locator('[data-testid^="reedit-"]')).toBeVisible();
       await expect(mine(win, "第二句")).toHaveCount(0);
+      await shot(win, "dm-recall");
     });
 
     await test.step("删除联系人那句「收到:第二句」:只在你这边看不到", async () => {
@@ -130,6 +136,13 @@ test("私聊里就近操作消息:表情、编辑、撤回、删除都由后端�
       await expect(mine(w2, "第二句")).toHaveCount(0);
       await expect(theirs(w2, "收到:第二句")).toHaveCount(0);
       await shot(w2, "dm-ops-after-restart");
+      // 点开回执:已读名单里有小克,读到时间是宿主记的那一刻(重启前读的也有)
+      await mine(w2, "你好呀").locator("[data-read]").click();
+      const pop = w2.locator('[data-testid^="receipts-"]').first();
+      await expect(pop.getByTestId("receipts-tab-read")).toContainText("已读 1", LONG);
+      await expect(pop.locator('[data-testid^="receipt-person-"]')).toContainText("读到", LONG);
+      await shot(w2, "dm-receipt-after-restart", 250);
+      await w2.keyboard.press("Escape");
     });
     expect(run.errors, "页面不该抛错").toEqual([]);
   } finally {
@@ -179,6 +192,8 @@ test("群里置顶、转发、多选删除、清空:置顶条显示并在重启�
       await menu(win, mine(win, "草稿一"), "ctx-multi");
       await mine(win, "草稿一").click();
       await mine(win, "草稿二").click();
+      await expect(win.getByTestId("select-bar")).toContainText("已选 2 条");
+      await shot(win, "group-multiselect");
       await win.getByTestId("select-delete").click();
       await expect(mine(win, "草稿一")).toHaveCount(0, LONG);
       await expect(mine(win, "草稿二")).toHaveCount(0);
