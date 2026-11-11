@@ -2,6 +2,9 @@
 // 要求的四个变异加上接线上的其余单点故障,逐个注入单一故障,在隔离副本里跑相关测试文件;每个变异都必须让至少一条
 // 原样副本里通过的具名测试失败(文件级加载失败不算),每处注入点必须恰好出现 1 次;原样副本必须全绿(阴性对照)。并发 1。
 // 副本带整份 packages/,node_modules/@g-group/* 链到副本自己的包——跨包注入(内核)测的才是注入后的代码。
+// 第 1 轮返修(审查 reviews/feat-run-wake-f11.md)起:W14–W18 覆盖 BF11-R1-01/02;测试文件逐个单独跑(多文件合跑时 TAP 会嵌套、
+// 编号重置,Codex 复核时少报过结果),每个文件的具名结果必须和源码里的 test("…") 全集逐条对上、cancelled/skipped/todo 为 0,
+// 对不上记「不完整」、不算杀死。逐项结果另写 JSONL(MUT_OUT,默认不写)。
 // 用法: node packages/server/proof/run-wake-mutations.mjs
 import { spawn } from "node:child_process";
 import fs from "node:fs";
@@ -15,6 +18,8 @@ const TESTS = [
   "packages/server/src/runs.test.ts",
   "packages/kernel/src/retry-policy.test.ts",
   "packages/kernel/src/run-ledger.test.ts",
+  "packages/server/src/run-wake-edges.test.ts",
+  "packages/kernel/src/wake-jump.test.ts",
 ];
 const S = "packages/server/src/runs.ts";
 const H = "packages/server/src/host.ts";
@@ -35,12 +40,21 @@ const M = [
   ["W11 内核参数合同不给的字段不取默认值", [[RP, "  const v = { ...DEFAULT_WAKE_POLICY, ...r.v } as Rec;\n  if (!isPosFinite(v.jumpMs) || !isNat(v.graceMs)) return { ok: false, reason: \"jumpMs 必须是正数、graceMs 必须是非负整数\" };\n  return { ok: true, policy: Object.freeze(", "  const v = { ...r.v } as Rec;\n  if (!isPosFinite(v.jumpMs) || !isNat(v.graceMs)) return { ok: false, reason: \"jumpMs 必须是正数、graceMs 必须是非负整数\" };\n  return { ok: true, policy: Object.freeze("]]],
   ["W12 stallCheck 去掉休眠宽限(坏实现 ⑥ 去掉 awakeSince 宽限门)", [[RL, '  if (awake !== null && now < awake + (sleep.graceMs ?? DEFAULT_SLEEP_GRACE_MS)) return none("sleep_grace");\n', ""]]],
   ["W13 宽限期内确定不会自愈的错误也等宽限", [[H, "      if (ff) void this.stopComputeFor(x.computeId, { failure: ff, verdict: null });", '      if (ff && this.runs.liveCheck(turn).waiting !== "sleep_grace") void this.stopComputeFor(x.computeId, { failure: ff, verdict: null });']]],
+  ["W14 宿主休眠门校验放回打开数据库之后(抛对错误,但已建库、留句柄)", [[H, "    const runWake = checkRunWake(opts.runCheckMs ?? DEFAULT_RUN_CHECK_MS, opts.runWakePolicy);\n    this.db = openDb(opts.file);\n", "    this.db = openDb(opts.file);\n    const runWake = checkRunWake(opts.runCheckMs ?? DEFAULT_RUN_CHECK_MS, opts.runWakePolicy);\n"]]],
+  ["W15 宿主重试参数校验放回打开数据库之后", [[H, "    const policy = checkRetryPolicy({ ...DEFAULT_RETRY_POLICY, ...(opts.retry ?? {}) });\n    if (!policy.ok) throw new HostError(\"invalid_params\", `重试参数不合格:${policy.reason}`);\n    this.retryPolicy = policy.policy;\n    const runWake = checkRunWake(opts.runCheckMs ?? DEFAULT_RUN_CHECK_MS, opts.runWakePolicy);\n    this.db = openDb(opts.file);\n", "    const runWake = checkRunWake(opts.runCheckMs ?? DEFAULT_RUN_CHECK_MS, opts.runWakePolicy);\n    this.db = openDb(opts.file);\n    const policy = checkRetryPolicy({ ...DEFAULT_RETRY_POLICY, ...(opts.retry ?? {}) });\n    if (!policy.ok) throw new HostError(\"invalid_params\", `重试参数不合格:${policy.reason}`);\n    this.retryPolicy = policy.policy;\n"]]],
+  ["W16 跳变判定「超过 jumpMs」改成「不少于」,恰好相隔 jumpMs 的正常核对也当醒来(审查 C01 / hy4 H-BF11-01)", [[RP, "nowMs - lastTickMs > c.p.jumpMs", "nowMs - lastTickMs >= c.p.jumpMs"]]],
+  ["W17 台账宽限 0 被当成没给、换成默认 3 分钟(审查 C03)", [[S, "graceMs: this.wakePolicy.graceMs };", "graceMs: this.wakePolicy.graceMs || 180_000 };"]]],
+  ["W18 宿主早期校验不按 runCheckMs、用默认核对周期(审查 C02 / hy4 H-BF11-02)", [[H, "checkRunWake(opts.runCheckMs ?? DEFAULT_RUN_CHECK_MS, opts.runWakePolicy)", "checkRunWake(DEFAULT_RUN_CHECK_MS, opts.runWakePolicy)"]]],
 ];
 
 const TIMEOUT_MS = Number(process.env.MUT_TIMEOUT_MS ?? 300_000);
-function run(dir) {
+const OUT = process.env.MUT_OUT ?? null;
+/** 源码里顶层 test("…") 的具名全集(TAP 会把名字里的 # 转义成 \#,这里同样转义) */
+const declared = (file) => [...fs.readFileSync(path.join(ROOT, file), "utf8").matchAll(/^test\("((?:[^"\\]|\\.)*)"/gm)].map((m) => JSON.parse(`"${m[1]}"`).replaceAll("#", "\\#"));
+/** 单独跑一个测试文件,读顶层具名结果 */
+function runFile(dir, file) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, ["--test", "--test-concurrency=1", "--test-timeout=120000", "--test-force-exit", "--test-reporter=tap", ...TESTS], { cwd: dir, detached: true, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(process.execPath, ["--test", "--test-concurrency=1", "--test-timeout=120000", "--test-reporter=tap", file], { cwd: dir, detached: true, stdio: ["ignore", "pipe", "pipe"] });
     let out = "";
     let timedOut = false;
     child.stdout.on("data", (d) => {
@@ -58,14 +72,29 @@ function run(dir) {
       timedOut = true;
       kill();
     }, TIMEOUT_MS);
-    child.on("close", (code) => {
+    child.on("close", (code, signal) => {
       clearTimeout(timer);
       kill();
       const failed = [...out.matchAll(/^not ok \d+ - (.+)$/gm)].map((m) => m[1]);
       const passed = [...out.matchAll(/^ok \d+ - (.+)$/gm)].map((m) => m[1]);
-      resolve({ code, failed, passed, timedOut });
+      const tally = (k) => Number(out.match(new RegExp(`^# ${k} (\\d+)$`, "m"))?.[1] ?? -1);
+      resolve({ code, signal, timedOut, failed, passed, cancelled: tally("cancelled"), skipped: tally("skipped"), todo: tally("todo") });
     });
   });
+}
+/** 逐个文件跑;每个文件的具名结果要和声明全集逐条对上,否则记不完整 */
+async function runAll(dir) {
+  const files = [];
+  for (const file of TESTS) {
+    const want = declared(file);
+    const r = await runFile(dir, file);
+    const seen = [...r.passed, ...r.failed];
+    const missing = want.filter((n) => seen.filter((x) => x === n).length !== 1);
+    const extra = seen.filter((n) => !want.includes(n));
+    const complete = !r.timedOut && r.signal === null && missing.length === 0 && extra.length === 0 && r.cancelled === 0 && r.skipped === 0 && r.todo === 0;
+    files.push({ file, declared: want.length, ...r, missing, extra, complete });
+  }
+  return files;
 }
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "run-wake-mut-"));
 const pkgs = fs.readdirSync(path.join(ROOT, "packages"));
@@ -83,14 +112,18 @@ const copy = (name) => {
   return d;
 };
 const count = (s, sub) => s.split(sub).length - 1;
+const record = (o) => OUT && fs.appendFileSync(OUT, `${JSON.stringify(o)}\n`);
+const sum = (fs_, k) => fs_.reduce((n, f) => n + f[k].length, 0);
 
 let ok = true;
-console.log(`node ${process.version},变异 ${M.length} 个,测试文件 ${TESTS.length} 个`);
-const clean = await run(copy("clean"));
-const good = !clean.timedOut && clean.code === 0 && clean.failed.length === 0 && clean.passed.length > 0;
-console.log(`${good ? "✓" : "✗"} 原样副本:${clean.passed.length} 绿 / ${clean.failed.length} 红${clean.failed.length ? `(${clean.failed.join(";")})` : ""}`);
+const total = TESTS.reduce((n, f) => n + declared(f).length, 0);
+console.log(`node ${process.version},变异 ${M.length} 个,测试文件 ${TESTS.length} 个(逐个单独跑),具名测试 ${total} 条`);
+const clean = await runAll(copy("clean"));
+record({ id: "clean", files: clean.map(({ file, declared: d, passed, failed, missing, extra, complete, code, signal, timedOut }) => ({ file, declared: d, passed: passed.length, failed, missing, extra, complete, code, signal, timedOut })) });
+const good = clean.every((f) => f.complete && f.code === 0 && f.failed.length === 0);
+console.log(`${good ? "✓" : "✗"} 原样副本:${sum(clean, "passed")} 绿 / ${sum(clean, "failed")} 红${good ? "" : `;${clean.filter((f) => !f.complete || f.failed.length).map((f) => `${f.file} 不完整或有红(缺 ${f.missing.length}、多 ${f.extra.length}、红 ${f.failed.length})`).join(";")}`}`);
 if (!good) ok = false;
-const named = new Set(clean.passed);
+const named = new Set(clean.flatMap((f) => f.passed));
 let killed = 0;
 let survived = 0;
 for (const [i, [name, edits]] of M.entries()) {
@@ -110,24 +143,28 @@ for (const [i, [name, edits]] of M.entries()) {
   if (bad) {
     ok = false;
     survived++;
+    record({ id: name.split(" ")[0], verdict: "bad-injection", bad });
     console.log(`✗ ${tag} ${name}:${bad},必须恰好 1 次`);
     fs.rmSync(d, { recursive: true, force: true });
     continue;
   }
   const t0 = Date.now();
-  const r = await run(d);
+  const r = await runAll(d);
   fs.rmSync(d, { recursive: true, force: true });
-  const kills = r.failed.filter((t) => named.has(t));
-  if (!r.timedOut && kills.length > 0) {
+  const kills = r.flatMap((f) => f.failed).filter((t) => named.has(t));
+  const incomplete = r.filter((f) => !f.complete).map((f) => `${f.file}(缺 ${f.missing.length}、多 ${f.extra.length}${f.timedOut ? "、超时" : ""}${f.signal ? `、${f.signal}` : ""})`);
+  const verdict = kills.length > 0 && incomplete.length === 0 ? "killed" : incomplete.length ? "incomplete" : "survived";
+  record({ id: name.split(" ")[0], name, verdict, kills, incomplete, passed: sum(r, "passed"), failed: sum(r, "failed"), seconds: (Date.now() - t0) / 1000 });
+  if (verdict === "killed") {
     killed++;
-    console.log(`✓ ${tag} ${name}:${r.passed.length} 绿 / ${r.failed.length} 红,用时 ${((Date.now() - t0) / 1000).toFixed(1)}s,被发现:${kills.map((k) => `「${k}」`).join("")}`);
+    console.log(`✓ ${tag} ${name}:${sum(r, "passed")} 绿 / ${sum(r, "failed")} 红(全集 ${total} 条逐条报出),用时 ${((Date.now() - t0) / 1000).toFixed(1)}s,被发现:${kills.map((k) => `「${k}」`).join("")}`);
   } else {
     ok = false;
     survived++;
-    console.log(`✗ ${tag} ${name}:${r.timedOut ? "超时" : `${r.passed.length} 绿 / ${r.failed.length} 红,存活(或只有文件级失败)`}`);
+    console.log(`✗ ${tag} ${name}:${verdict === "incomplete" ? `不完整 ${incomplete.join(";")}` : `${sum(r, "passed")} 绿 / ${sum(r, "failed")} 红,存活`}`);
   }
 }
 fs.rmSync(tmp, { recursive: true, force: true });
-console.log(`合计 ${M.length}:杀死 ${killed},存活 ${survived}`);
+console.log(`合计 ${M.length}:杀死 ${killed},存活或不完整 ${survived}`);
 console.log(ok ? "变异校准通过" : "变异校准失败");
 process.exit(ok ? 0 : 1);
