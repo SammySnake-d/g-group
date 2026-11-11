@@ -68,9 +68,11 @@ test("自动更新:提示新版本 → 下载并核对 sha512 → 可以重启�
     await win.getByTestId("update-check").click();
     await expect(win.getByTestId("update-toast")).toHaveAttribute("data-phase", "available");
     await expect(win.getByTestId("update-toast")).toContainText("9.9.9");
-    await win.getByTestId("update-download").click();
+    // 用提示条上的按钮走:点「下载」后提示条不能消失,下载完同一条提示上出现「重启并安装」
+    await win.locator("[data-sonner-toast]").getByRole("button", { name: "下载", exact: true }).click();
     await expect(win.getByTestId("update-install")).toBeVisible({ timeout: 20_000 });
     await expect(win.getByTestId("update-toast")).toHaveAttribute("data-phase", "ready");
+    await expect(win.locator("[data-sonner-toast]").getByRole("button", { name: "重启并安装", exact: true })).toBeVisible();
     const log = readFileSync(path.join(userData, "logs", "updater.log"), "utf8");
     expect(log).toContain("sha512 一致");
     await app.close();
