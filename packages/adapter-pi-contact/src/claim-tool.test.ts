@@ -73,7 +73,7 @@ test("claim_task 应失败的输入:缺 taskId、空白、多余字段、不是�
 test("reply 可带 mentions:登记成去重后的 id 列表;不带 mentions 时动作里没有这个字段;空数组或空白 id 不登记", () => {
   const decl = TOOL_DECLARATIONS.find((d) => d.name === "reply")!.parameters as { required: string[]; properties: Record<string, unknown> };
   assert.deepEqual(decl.required, ["roomId", "text"], "mentions 可省略");
-  assert.deepEqual(Object.keys(decl.properties), ["roomId", "text", "replyToSeq", "mentions"]);
+  assert.deepEqual(Object.keys(decl.properties), ["roomId", "text", "replyToSeq", "mentions", "everyone"]);
   assert.deepEqual(parseToolCall("reply", { roomId: "g1", text: "小研看一下", mentions: ["c-yan", "me", "c-yan"] }), {
     ok: true,
     value: { kind: "action", action: { kind: "reply", roomId: "g1", text: "小研看一下", replyToSeq: null, mentions: ["c-yan", "me"] } },

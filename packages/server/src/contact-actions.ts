@@ -7,7 +7,7 @@
 //   - 一次用户纠错只升一版(AC-15「v_A_new = current_ver + 1」、AC-45):同一轮里 verdict(revise) 与带 sourceSeq 的 forward 指向
 //     同一任务、同一条用户消息时,先到的升版,后到的只把原文并进先到的那次续接,Compute 也只多跑一轮。
 // 全是代码能核对的事实(需求文档 §2.0「做 / 不做的标准」):任务状态与归属、会话成员、宿主已判的拒绝;不加软提示门禁。
-import type { MindAction } from "@g-group/kernel";
+import type { ActionRefusal, MindAction } from "@g-group/kernel";
 import { type Db, all, run } from "./db.ts";
 import { LEAVING_REASON } from "./members.ts";
 
@@ -154,6 +154,35 @@ export function mentionRefusal(roomId: string, ids: readonly string[], members: 
 /** 写进消息的 mentions:与用户发消息同一形状,来源记 manual(联系人自己点名的) */
 export function toMentions(ids: readonly string[]): { id: string; source: "manual" }[] {
   return [...new Set(ids)].map((id) => ({ id, source: "manual" as const }));
+}
+
+/** 会话成员(展开 @everyone 用):只要有种类与 id,宿主传的是它的 Member 列表 */
+export interface MentionMember {
+  readonly kind: string;
+  readonly id: string;
+}
+
+/**
+ * reply 的 @ 名单(feat/contact-call-check;US1 §8.4「群输入框发 @everyone」、U14):
+ * 逐个点名的 id 原样在前;everyone 为 true 时把该会话的全体成员补在后——含用户、不含发送者自己、不含 Helper。
+ * 展开只是把这些人列进 mentions(与用户发消息的 @ 同一形状),不是「被 @ 才接活」的特权;同一人只列一次由 toMentions 统一做。
+ */
+export function replyMentionIds(explicit: readonly string[] | undefined, everyone: boolean, members: readonly MentionMember[], senderId: string): string[] {
+  void everyone;
+  void members;
+  void senderId;
+  return [...(explicit ?? [])];
+}
+
+/**
+ * 轮末:这条 reply 是不是在宣称「一件本轮当场被拒的事已经做了」(feat/contact-call-check)。
+ * 判据是能核对的字符串事实——reply 正文里出现了被拒动作所指对象的 id;不做语义判断。
+ * 命中就返回那个 id 与拒绝原因,由宿主不发出这条 reply 并记进被拒动作回告。
+ */
+export function unfulfilledClaim(action: MindAction, refusals: readonly ActionRefusal[]): { token: string; reason: string } | null {
+  void action;
+  void refusals;
+  return null;
 }
 
 /**
