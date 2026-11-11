@@ -1,0 +1,28 @@
+{
+  "slice": "T-177 G 组 RT 片 runtime-config(核对表 work/G-运行时模型与进度.md 第 2 节 B4、B6–B9;设计真源 docs/dev-handbook v3.30 6ead85f,推送前核对到 v3.31 ff5bd712,本片相关条目未变):① Compute 工厂按 (Harness, 模型) 取——HostOptions.compute 可给按 Harness 的工厂表(单个函数仍是 Claude Code 的工厂,start.ts / cli.ts 不变),没接入的 Harness(现在是 codex)在启动前拦下:任务失败、台账 compute-session 记 invalid_request,原文带两条修复路径(改用 claude-code / 等 Codex 接入),不起 Claude Code 代跑,改好配置后 runs.rerun / progress_rerun 照常重跑;contacts.* / settings.* 选了它照常保存,ContactView / SettingsView 带 warning(保存前预检沿用 AC-32);② 卡死阈值用户可设——settings.update runThresholds(defaults + byUpstream 数组)、contacts.update stall 覆盖,宿主每次判定现读(构造参数 ← 设置 ← 联系人),StartOptions.runThresholds 与 cli --no-progress-ms / --first-byte-ms 透传基础层,默认 15 分钟 / 120 秒;③ pi 联系人内置只读工具 progress_get({id, roomId})(tools.ts 末尾追加,kernel RoundTools.progressGet 查询口),宿主按 visibleRuns 判可见范围,返回状态、原因类别与原文、用时、子单元(≤20)与最近事件(≤10);④ Compute 轮次记 started 报的 pid,续接沿用还活着的 pid,RunStore 接 alive(按 pid 发 0 号信号)与 orphaned 回调,同一启动里进程消失的轮次一个核对周期内 orphaned,所属会话跟着成孤儿、任务按失败收口、槽位归还、联系人收到停滞事件;内核 reconcileOrphans 的 pid 判定只核对 running(D26 第 3 节),等人回答的不按进程判;⑤ turnRefused(换模型被拒、Harness 改了、不兼容)在台账记一条 failed 的 Compute 轮次,invalid_request + 原文,会话不收口。不改休眠宽限(run-wake / wake-policy)、不改 resident.ts、不动 start.ts / cli.ts 的工厂缓存",
+  "acceptance": [
+    {
+      "id": "AC-43",
+      "status": "未测",
+      "reason": "本片只覆盖 ②④⑧⑯ 的宿主侧与 ① 的 progress_get 查询:② 同一启动里 Compute 执行进程被杀,一个核对周期内轮次与会话 orphaned「执行进程已不在」、任务收口(真实子进程 pid,packages/server/src/runtime-config.test.ts「同一次启动里 Compute 执行进程被杀…」「等用户回答的 Compute 轮次进程已不在不算孤儿…」);④ progress_get 私聊只见自己在这个私聊的、群里见本群成员在本群的、别的群 / 别人私聊 / 不在的会话看不到(「progress_get 可见范围…」,pi 工具侧 packages/adapter-pi-contact/src/progress-tool.test.ts 2 条);⑧ 换模型被拒在台账写 failed + invalid_request + 原文(「换模型被拒…」);⑯ settings.runThresholds / 联系人 stall / 按上游单独设、改了下一次判定就用新值、默认 15 分钟 / 120 秒(「改 settings.runThresholds 后下一次判定就用新值…」「联系人 stall 覆盖与按上游单独设…」「startServer 透传卡死阈值的基础层…」)。变异见 packages/server/proof/runtime-config-mutations.txt:box4 在 b4f822e 上 29 个单点故障全被具名测试杀死、存活 0(原样副本 33 绿 / 0 红),同一次运行 tsc 退出 0、lint 退出 0、npm test 1486 条全过。未覆盖:⑨ 画板与「打开会话」(前端与 B10)、生产常驻适配器的活动流(B1,resident-complete 片)、第 5 块 / progress_list 列子代理与后台任务、真实 Claude Code 常驻进程被杀的实跑;待审"
+    },
+    {
+      "id": "AC-51",
+      "status": "未测",
+      "reason": "本片只做 ⑦ 的拦截部分:选 codex 的联系人派活在启动前被拦、任务失败带两条修复路径、没有起 Claude Code,改回 claude-code 后重跑照常起;两种 Harness 都接入时按 Harness 各走各的适配器;contacts / settings 选没接入的 Harness 照常保存、返回 warning(runtime-config.test.ts 前 3 条,变异 R01–R07)。Codex 适配器本身、换 Harness 在新 Harness 开新会话并由宿主重拼上下文(D27 第 5 节)未做;①–⑥ 不在本片"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:dd154965-afbd-4134-a1d3-c00f2a859eab",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "37a743fb"
+  },
+  "unverifiable": "AC-43 ②:进程存活用 pid 发 0 号信号探测,pid 被系统复用给别的进程时会把已经不在的执行进程当成还在(漏判,不会误判);测试用的是一个真实子进程的 pid 配合剧本 Compute,没在真实 Claude Code 常驻进程上实测「中途被杀」,常驻适配器自己报 failed 与台账核对谁先到都按同一终态收口,但两者并发的时序没有专门测;核对周期仍是 30 秒参数(D26 第 3 节「核对周期和心跳超时待实测」)。AC-51 ⑦:拦截靠宿主工厂表里有没有这个 Harness,start.ts 只接了 Claude Code;Codex 接入后要在工厂表里加上它才会放行。AC-43 ⑯:阈值三层叠加时联系人覆盖与按上游覆盖同时存在取更宽的那个,沿用内核既有规则(核对表 §4.1 列为待审查确认)。本机 G-STUB/G-RED 与变异在 box4 上跑:box4 首轮(232498f)有一次全量失败在 packages/adapter-cc-compute/src/adapter.test.ts「RR-05:init 越界后用户 stop」,本机同一文件同一用例 3 次全过、box4 重跑也过,判为负载相关的偶发,不属本片;本片改动未触及该包",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "子代理实现(调度会话 claude:dd154965-afbd-4134-a1d3-c00f2a859eab 派出的实现子代理,brief:g-group-coverage/slices/RT-runtime-config.md)。与 brief 的出入:progress_get 带 roomId(与 progress_rerun 同一约定,按 D26 第 4 节「私聊里 / 群里」按会话判范围);byUpstream 用数组 [{upstream, noProgressMs?, firstByteMs?}](合同 schema 没有 map 类型);CONTACT_TOOLS 第 1 块文字没加 progress_get(加一行会让 recall.test.ts 里 4000 字节预算的用例超预算,工具声明已随 pi 请求发出)。待审。"
+}

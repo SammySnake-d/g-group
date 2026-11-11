@@ -75,6 +75,8 @@ export interface RunStoreOptions {
   readonly changed?: (units: readonly RunUnit[]) => void;
   /** 判出卡死:宿主先停这一轮,再调 failStalled 写失败 */
   readonly stalled?: (unit: RunUnit, verdict: StallVerdict) => void;
+  /** 同一启动里核对出执行进程已不在、刚改成 orphaned 的单元(含级联的子孙):宿主据此收口所属会话与任务 */
+  readonly orphaned?: (units: readonly RunUnit[]) => void;
 }
 
 /**
@@ -345,7 +347,17 @@ export class RunStore {
   tick(): void {
     const now = this.now();
     this.wake = wakeTick(this.wake, now, this.wakePolicy);
-    if (this.opts.alive) this.persistOrphans(reconcileOrphans([...this.live.values()], { bootId: this.opts.bootId, at: now, alive: this.opts.alive }), "pid");
+    if (this.opts.alive) {
+      const gone = reconcileOrphans([...this.live.values()], { bootId: this.opts.bootId, at: now, alive: this.opts.alive });
+      this.persistOrphans(gone, "pid");
+      if (gone.length) {
+        try {
+          this.opts.orphaned?.(gone);
+        } catch {
+          /* 宿主收口出错不影响别的单元的核对 */
+        }
+      }
+    }
     for (const u of [...this.live.values()]) {
       if (this.judging.has(u.id) || this.settled.has(u.id)) continue;
       const th = resolveThresholds(this.opts.thresholds(), u.contactId, u.upstream);
@@ -372,6 +384,18 @@ export class RunStore {
   /** 交给 stallCheck 的休眠宽限:最近一次检出醒来的时刻与宽限时长 */
   private sleep() {
     return { awakeSince: this.wake.awakeSince, graceMs: this.wakePolicy.graceMs };
+  }
+  /** 记下在跑单元的执行进程 pid(存活核对用,D26 第 3 节);单元不在跑就不改 */
+  setPid(id: string, pid: number | null): RunUnit | null {
+    const u = this.live.get(id);
+    if (!u || u.pid === pid) return u ?? null;
+    const next = Object.freeze({ ...u, pid });
+    this.live.set(id, next);
+    tx(this.db, () => {
+      this.writeTx(next);
+      this.eventTx(id, "pid", { pid });
+    });
+    return next;
   }
   /** 宿主停完这一轮后写失败 */
   failStalled(id: string, verdict: StallVerdict): Transition {

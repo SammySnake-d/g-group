@@ -36,8 +36,10 @@ import {
   SharedDocView,
   SlashCommand,
   SlashInvocation,
+  StallThresholdsView,
   TASK_STATES,
   TaskView,
+  UpstreamStallView,
 } from "./entities.ts";
 import { DraftBody, DraftView } from "./draft.ts";
 import { arr, bool, id, int, isoTime, json, lit, nullable, obj, oneOf, opt, type Schema, seq, str, tagged } from "./schema.ts";
@@ -89,6 +91,8 @@ export const METHODS = {
       confirmAffected: opt(bool()),
       /** 个人 Compute 槽位数(AC-23);null 恢复宿主默认。 */
       computeSlots: opt(nullable(int({ min: 1, max: 64 }))),
+      /** 这位联系人的卡死阈值覆盖(AC-43 ⑯);null 清掉,用设置里的默认与按上游的值。 */
+      stall: opt(nullable(StallThresholdsView)),
     }),
     ContactView,
   ),
@@ -396,6 +400,8 @@ export const METHODS = {
       models: opt(arr(obj({ id: str({ min: 1, max: 200 }), label: str({ max: 200 }), vendor: str({ max: 64 }), harnesses: arr(oneOf(HARNESSES)) }), { max: 500 })),
       /** 同 contacts.create:预检有冲突时不带 true 保存被拒。 */
       confirmAffected: opt(bool()),
+      /** 卡死阈值(AC-43 ⑯):整份替换,不给的子项清空;每个上游至多一条。 */
+      runThresholds: opt(obj({ defaults: opt(StallThresholdsView), byUpstream: opt(arr(UpstreamStallView, { max: 200 })) })),
     }),
     SettingsView,
   ),
