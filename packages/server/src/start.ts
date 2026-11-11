@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ContactView } from "@g-group/api-contract";
 import { type ContactCompactor, type ContactMind, DEFAULT_RETRY_POLICY } from "@g-group/kernel";
-import { claudeCompute } from "./compute.ts";
+import { type ComputeCommands, claudeCompute } from "./compute.ts";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
 import { type IpcMainLike, type Service, bindIpc, createService } from "./service.ts";
@@ -24,6 +24,8 @@ export interface StartOptions {
   readonly onReport?: (what: string, detail: unknown) => void;
   /** 给 Compute 的单次输入字节上限(§8.1 待决 13);不给=不设上限 */
   readonly computeInputMaxBytes?: number | null;
+  /** compute=claude 时起 Compute 的 claude 命令与汇报工具命令(打包后的桌面应用给自带路径);不给用适配器默认值。 */
+  readonly computeCommands?: ComputeCommands;
 }
 export interface Started {
   readonly host: Host;
@@ -71,7 +73,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
   const compute = fake
     ? () => fake.adapter
     : // 统一重试权(AC-36 F3):CLI 自己对上游错误重试的次数就是宿主的自动重试上限,宿主不再叠加(computeHarnessRetries 同值)
-      claudeCompute(env, { CLAUDE_CODE_MAX_RETRIES: String(DEFAULT_RETRY_POLICY.maxAutoRetries) });
+      claudeCompute(env, { CLAUDE_CODE_MAX_RETRIES: String(DEFAULT_RETRY_POLICY.maxAutoRetries) }, o.computeCommands);
   const work = path.join(o.dataDir, "compute");
   const host = new Host({
     file: path.join(o.dataDir, "gg.db"),
