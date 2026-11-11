@@ -1,0 +1,57 @@
+# 本机(macOS,node v22.22.0)运行:sh packages/server/proof/contact-call-check-red-green.sh a20e292a 5a4b6fc2(并发 1)。红=a20e292a(只有测试与空壳),绿=5a4b6fc2。
+# 同一份(当前工作树)测试文件先放到红提交的实现上跑:新增/改动的 10 条按名字失败(3 条老测试照常绿);再放到绿提交的实现上跑:13 条全过。
+# node v22.22.0;红 a20e292a / 绿 5a4b6fc2;两者之间的源码差异:packages/adapter-pi-contact/src/mind.ts packages/adapter-pi-contact/src/tools.ts packages/server/src/contact-actions.ts packages/server/src/host.ts 
+# 跑的是当前工作树(HEAD 5a4b6fc2)的测试文件;与红提交相比:逐字相同
+#   packages/server/src/contact-call-check.test.ts sha256 1b76975daac04466(当前工作树)
+#   packages/adapter-pi-contact/src/check-action.test.ts sha256 185d677481da1d5e(当前工作树)
+#   packages/adapter-pi-contact/src/claim-tool.test.ts sha256 3309aa171dc9c29f(当前工作树)
+# 其余源码(含 host.ts)两次都用当前工作树 HEAD 的版本;只有上面列出的源码差异在红、绿之间切换
+## 红:packages/adapter-pi-contact/src/mind.ts
+packages/adapter-pi-contact/src/tools.ts
+packages/server/src/contact-actions.ts
+packages/server/src/host.ts 取红提交的版本
+not ok 1 - reply 的 everyone:声明里有这个字段,登记成 everyone=true;不给就不带这个字段,给了非布尔值不登记
+not ok 2 - 工具执行时先调当场校验口:说不行的动作不登记、原因立刻回到模型,同轮其余动作照常登记
+ok 3 - claim_task 在工具清单里,声明只有必填的 taskId;登记成 claim 动作
+ok 4 - claim_task 应失败的输入:缺 taskId、空白、多余字段、不是字符串——都不登记
+not ok 5 - reply 可带 mentions:登记成去重后的 id 列表;不带 mentions 时动作里没有这个字段;空数组或空白 id 不登记
+ok 6 - pi 联系人一轮里调 claim_task 与带 mentions 的 reply:两件都进本轮动作,工具结果是「已登记」不是错误
+not ok 7 - reply 的 @ 名单:@everyone 展开含用户与全部联系人、不含发送者自己与 Helper;不开启时只给逐个点名的
+not ok 8 - reply 带 @everyone:消息 mentions 是会话全体成员(含用户、不含发送者与 Helper),与逐个 @ 并用时同一人只列一次
+not ok 9 - @everyone 的发送者不在这个会话里:当场校验就拒,轮末也拒,消息不发(展开只在本人在的会话里生效)
+not ok 10 - 当场校验五类各一条:越权会话、任务不归属、seq 不在本轮、认领冲突、mentions 非成员——逐条当场拒且原因与轮末一致
+not ok 11 - 同一轮里模型先调会被拒的认领、又在 reply 里宣称已认领:认领不落盘,这句 reply 也不发出,并记进回告(下一轮第 5 块)
+not ok 12 - 轮末兜底仍生效:两人的当场校验都说可以(提交时才知道谁先),后提交的照样在轮末被拒并回告
+not ok 13 - 未落实声明的判据:reply 正文里出现被当场拒动作所指对象的 id 才算;不是 reply、或本轮没有被拒动作都不算
+# tests 13
+# pass 3
+# fail 10
+# cancelled 0
+# skipped 0
+# todo 0
+## 绿:packages/adapter-pi-contact/src/mind.ts
+packages/adapter-pi-contact/src/tools.ts
+packages/server/src/contact-actions.ts
+packages/server/src/host.ts 取绿提交的版本
+ok 1 - reply 的 everyone:声明里有这个字段,登记成 everyone=true;不给就不带这个字段,给了非布尔值不登记
+ok 2 - 工具执行时先调当场校验口:说不行的动作不登记、原因立刻回到模型,同轮其余动作照常登记
+ok 3 - claim_task 在工具清单里,声明只有必填的 taskId;登记成 claim 动作
+ok 4 - claim_task 应失败的输入:缺 taskId、空白、多余字段、不是字符串——都不登记
+ok 5 - reply 可带 mentions:登记成去重后的 id 列表;不带 mentions 时动作里没有这个字段;空数组或空白 id 不登记
+ok 6 - pi 联系人一轮里调 claim_task 与带 mentions 的 reply:两件都进本轮动作,工具结果是「已登记」不是错误
+ok 7 - reply 的 @ 名单:@everyone 展开含用户与全部联系人、不含发送者自己与 Helper;不开启时只给逐个点名的
+ok 8 - reply 带 @everyone:消息 mentions 是会话全体成员(含用户、不含发送者与 Helper),与逐个 @ 并用时同一人只列一次
+ok 9 - @everyone 的发送者不在这个会话里:当场校验就拒,轮末也拒,消息不发(展开只在本人在的会话里生效)
+ok 10 - 当场校验五类各一条:越权会话、任务不归属、seq 不在本轮、认领冲突、mentions 非成员——逐条当场拒且原因与轮末一致
+ok 11 - 同一轮里模型先调会被拒的认领、又在 reply 里宣称已认领:认领不落盘,这句 reply 也不发出,并记进回告(下一轮第 5 块)
+ok 12 - 轮末兜底仍生效:两人的当场校验都说可以(提交时才知道谁先),后提交的照样在轮末被拒并回告
+ok 13 - 未落实声明的判据:reply 正文里出现被当场拒动作所指对象的 id 才算;不是 reply、或本轮没有被拒动作都不算
+# tests 13
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+?? packages/server/proof/contact-call-check-mutations.mjs
+?? packages/server/proof/contact-call-check-red-green.sh
+?? packages/server/proof/contact-call-check-red-green.txt
