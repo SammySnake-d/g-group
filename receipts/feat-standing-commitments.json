@@ -1,0 +1,43 @@
+{
+  "slice": "联系人自设定时与常驻承诺(片 P2;U20、U80「每 N 条消息」、D04.2-1;D02 窄接口的工具形态是候选):联系人四件内置工具 schedule_set / schedule_pause / schedule_remove / schedule_list(adapter-pi-contact 清单末尾),宿主在 commitRound 校验后落 Scheduler 或每 N 条触发器——只认本轮里用户本人的直接消息作依据(别的联系人、Helper、只有引用块的转发不能让联系人设或改定时,AC-20),只能管自己在本会话的定时,cron 时区一律显式(没给按用户设置的时区),条件触发只占位不受理;新设的定时/触发器同时在承诺账本登记一条常驻承诺(ScheduleView.commitmentId 与 CommitmentView.scheduleId 互填),承诺撤销/回退时定时停用、触发器停计数,联系人删定时或用户在界面删定时时承诺一起了结;每 N 条消息在消息入库同一事务按会话计数(只算用户与联系人消息,宿主生成的卡片与 Helper 旁白不算),满 N 条投递一次;schedules.create 按 clientActionId 幂等;运行记录投递时记 running,这一轮联系人结束才写 ok(回填第一条发言的 messageSeq)/ silent / failed(出卡,带原因);第 5 块列出联系人自己的定时;合同 run 状态加 silent",
+  "acceptance": [
+    {
+      "id": "AC-35",
+      "status": "未测",
+      "reason": "只覆盖 ① 的宿主部分子判据,其余未测:① 联系人设每天 8:00 显式时区(没给时区补成用户设置的时区)、用户直接 @ 的控制指令改 9 点 / 停掉 / 恢复 / 删除生效、到点按时区触发(packages/server/src/standing-commitments.test.ts「联系人 schedule-set…」「控制指令生效…」「不能动别人的定时…」,真实 pi 运行 packages/server/proof/standing-commitments-real.txt 四项判定为 true);D04.2-1 常驻承诺与定时互相引用、一起停(同文件「常驻承诺与定时一起停…」);U80 每 N 条消息触发(「每 N 条消息…」);D02③ 运行记录写实与群聊到点产出(「运行记录写实…」);D02② 唤醒时第 1 块是当前生效的群公告(「唤醒时对齐最新群规…」)。① 的 DST 切换与 Δcron 误差阈值本片没加新测(沿用 cron.test.ts / schedules.test.ts);②④⑤(两次 @ 区间、条件触发与 CVE 样例、预授权外发、真实 Telegram/Gmail)不在本片。候选,非正式门禁:D02 窄接口的工具形态(四件工具、依据只认本轮新消息、只管本会话)按 brief 推荐方案先做,需求文档 §8.1 待决第 2 条仍待用户定。"
+    },
+    {
+      "id": "AC-20",
+      "status": "未测",
+      "reason": "只覆盖「外部/转发内容不能让联系人改定时」这一子判据:依据是别的联系人的话、Helper 旁白、只有引用块的转发时宿主拒收(standing-commitments.test.ts「外部内容与转发里的「每天 8 点」不建定时…」,对照:用户本人直接说的才建);外部数据源插件的内容在本片不经消息进会话,未测;AC-20 其余(授权同意、多待授权动作追问)不在本片。"
+    },
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "packages/server/proof/standing-commitments-red-green.txt",
+      "notes": "红 3fe8029(测试 + 空壳)上新增与改动的 16 条测试按名失败,绿 df81a8f 上全过;三个测试文件两次逐字相同。"
+    },
+    {
+      "id": "R-05",
+      "status": "未测",
+      "reason": "阳性埋雷:packages/server/proof/standing-commitments-mutations.mjs 32 个单点故障(去掉本会话限制、去掉来源核对、不剥引用块、计数含 Helper / 含卡片、满 N 条差一、幂等键丢失、运行记录到点即 ok、承诺了结不停定时等),box4 在 df81a8f 上并发 1 跑,杀死 32、存活 0(packages/server/proof/standing-commitments-mutations.txt);阴性对照:同脚本原样副本 41 绿 0 红,测试里各判据带对照(用户本人直接说的才建、自己在本会话的照常生效)。脚本只核对「被具名测试杀死」,没逐个核对红的原因文字,所以不声称 R-05 双侧标定已完成。"
+    }
+  ],
+  "candidate": {
+    "status": "候选",
+    "description": "候选,非正式门禁:D02 cron 窄接口的工具形态(需求文档 v3.28 §8.1 待决第 2 条)待用户定;本片按 brief 推荐方案做最小窄工具——联系人只能管自己在本会话的定时、依据必须是本轮里用户本人的直接消息;休眠错过定时点的默认补偿沿用既有 missedPolicy(skip / run-once),本片未改。"
+  },
+  "author": {
+    "agent": "claude",
+    "session": "claude:dd154965-afbd-4134-a1d3-c00f2a859eab",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "3fe80292eacdba9c70ef3e75317492bdc75edf3f"
+  },
+  "unverifiable": "AC-20:宿主只机械核对依据消息是用户本人发的、去掉引用块与代码块后还有他自己的话;不判断他自己的话是不是真在要求定时(例如引用别人的「每天 8 点」再说一句「看看这个」,依据合格,建不建由联系人判断)。AC-35①:每 N 条计数把「宿主生成的卡片、Helper 旁白」当作 system 不计,用户 / 联系人的普通消息都计(含联系人自己被唤醒后的发言、用户确认任务这类由界面代发的用户消息);rewind 回退标记带命令但发言者是用户,也计入,未单测。运行记录 ok 取联系人这一轮在该会话的第一条 reply,同一轮里既有定时又有用户消息时,不区分那条发言回的是哪一个。真实运行里联系人看不到「前一天」的消息原文(联系人只看游标之后的新消息,区间总结是另一片),所以总结内容不完整——本片只证明定时的建、改、停、触发与记录。所有到点触发的测试用注入时钟,没在真机长时间挂到 8 点。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "子代理实现(Claude Code 子代理,调度会话 claude:dd154965-afbd-4134-a1d3-c00f2a859eab)。按 v3.28 §2.0「做 / 不做」:「回复里写明用的时区」写进工具说明(软提示),不做成宿主回执或门禁;宿主只保证存下来的时区一律显式。与并行片的已知冲突点:adapter-pi-contact/src/tools.ts 清单末尾与 mind.test.ts 工具清单断言(plugin-sources 片也会加工具)。"
+}
