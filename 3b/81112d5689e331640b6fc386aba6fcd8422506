@@ -1,0 +1,19 @@
+packages/server/src/host.ts
+  s_c5600ddfc2a370::t_ead85cd0ab45e6 2839-2847
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3b81112d5689e331640b6fc386aba6fcd8422506",
+  "prompts": {},
+  "sessions": {
+    "s_c5600ddfc2a370": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a82d860e88f191a64",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
