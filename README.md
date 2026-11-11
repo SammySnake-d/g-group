@@ -71,3 +71,7 @@ npm ci
 git config core.hooksPath .githooks
 npm run typecheck && npm run lint && npm test && npm run gates:selftest
 ```
+
+## 第三方组件与致谢
+
+- **acp-kernel / billion-context**:记忆排序和旧消息检索用的是 [acp-kernel](https://github.com/ranxianglei/acp-kernel)(Billion Context 内核,[billion-context](https://github.com/ranxianglei/billion-context) 主仓的 `kernel/`)的 hybrid 检索。原样放在 `third_party/acp-kernel/`(上游提交 `541cf26`,版本 0.0.191),只经 `packages/kernel/src/history-search.ts` 一处调用。Copyright (c) 2026 ranxianglei,MIT 许可另加出处标注条款,见 `third_party/acp-kernel/LICENSE`、`NOTICE` 与 `UPSTREAM.md`。

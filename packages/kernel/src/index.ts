@@ -12,6 +12,7 @@ export * from "./run-ledger.ts";
 export * from "./compact.ts";
 export * from "./retry-policy.ts";
 export * from "./memory.ts";
+export * from "./history-search.ts";
 export * from "./quote-chain.ts";
 
 export * from "./memory-capture.ts";

@@ -1,0 +1,5 @@
+✗ ① 逐文件哈希与钉住的上游一致  源码 254 个、dist 92 个文件;树 d5f2368636dd;src 树 e59f57d7c0f0
+    - dist:缺 dist/index.d.ts
+    - third_party/acp-kernel 有未提交改动:D third_party/acp-kernel/dist/index.d.ts
+✓ ④ 全仓只有一处 import acp-kernel  扫描 252 个代码文件;import 方:packages/kernel/src/history-search.ts;依赖声明:packages/kernel/package.json
+上游边界验收:不通过

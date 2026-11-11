@@ -1,0 +1,30 @@
+{
+  "slice": "T-177 G3:引入 BC(billion-context 541cf260c4e0fcda5edb31e4de4485a3185f5589 的 kernel/,acp-kernel 0.0.191)检索——third_party/acp-kernel 原样源码 + 提交 dist(不含 .map)+ UPSTREAM.md/NOTICE;@g-group/kernel 以 file: 依赖接入(.npmrc install-links,锁文件只多一条);唯一接缝 packages/kernel/src/history-search.ts(searchHistory);记忆读取的全文分量从二字计数换成接缝 hybrid 检索的名次(映射到旧整数区间、同分按 id);上游边界验收脚本;README 与 NOTICE 署名,「关于」页记前端欠项",
+  "acceptance": [
+    {
+      "id": "AC-42",
+      "status": "未测",
+      "reason": "本片只换 AC-42 读取排序里的全文分量(⑥ 断崖截断、⑧ 重建一致、⑩ 不另配裁判/重排/嵌入相关),确定性部分已实测:新测试 10 条先红后绿,AC-42 现有夹具(审查人从 Astra 改为 Codex,g-group#1531)在换分量前(4efdee0)与换分量后展开结果相同,box3 全量 1483/1483;11 个定点变异全杀。真实模型在宿主里的读回与照做、阈值与成本等 G6 实测,不把 AC-42 整体标通过;G 规格补丁仍是候选。",
+      "evidence": "receipts/evidence/t177-g3/summary.json"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "receipts/evidence/t177-g3/mutations/results.json",
+      "reason": "每个具名判据(G3-01a–e、G3-a1–a5)至少一个阳性埋雷,共 11 个,全被指定测试按名杀死(加载失败不算);原样对照前后各 10/10。上游边界脚本另有 6 个应失败的输入全被判失败(receipts/evidence/t177-g3/boundary-neg-*.txt)"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:b36ab234-0cba-4b89-929e-d21a46a35eea",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "c729f69aae9e82e0492bce15149b8d5ffdacee7d"
+  },
+  "unverifiable": "AC-42:hybrid 检索只看字面(BM25 + 模糊 + 中文分词),同义不同字的说法召不回(11-10 探针里「登录鉴权方式」对「身份验证用 OAuth」未命中),所以「排序更好」只在稀有词这类字面可判的夹具上证明,真实对话里的读回质量要 G6 实测;名次映射的上界借用旧二字计数的单位数,文字很短时全文分量被压到 1,锚点权重占主导,这是有意保持旧量纲,不是证明新排序在所有输入上更优。R-05 的 11 个埋雷是作者按判据挑的,不是机械算子扫描。G3-02 上游边界在 box3 node 24 上跑通,未在 Windows/macOS 上重建 dist。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "由主会话(claude:b36ab234-0cba-4b89-929e-d21a46a35eea)派出的子代理实现,fnqtz 线路(claude-opus-5-5)。重活在 box3:上游测试 61/61、1633/1633,11-10 试跑重跑(接缝 2/2、tsc/lint/G-LAYER 0),绿提交全量 1483/1483、typecheck/lint 0、上游边界 ①②③④ 与 6 个负例、变异 11/11;本机只做开发、单文件快验与 macOS 门禁。本机 /tmp 中途被另一个清理任务整片删除,分支从 box3 的 bundle 恢复,提交未改写。偏离与候选见 PR 描述。"
+}

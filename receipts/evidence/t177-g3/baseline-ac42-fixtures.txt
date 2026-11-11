@@ -1,0 +1,17 @@
+# G3-a5 / G3-a3 在换分量前(基线 4efdee0 的 packages/kernel/src/memory.ts,二字计数 overlap)上的运行
+# 本机 v22.22.0,2026-11-11T11:15:11Z。测试体与夹具逐字取自 packages/kernel/src/memory-rank.test.ts(红提交 c729f69 与绿提交 2bae702 相同),
+# 只把 import 改成基线有的 selectMemories(基线没有 memoryTextRanks)。worktree HEAD=4efdee0be6d161060099b5ce488e3344c70305ee;两份测试副本另存为同目录 a5-baseline.test.ts.txt、a3-baseline.test.ts.txt
+
+$ node --test --test-reporter=tap packages/kernel/src/a5-baseline.test.ts   (换分量前:应通过)
+ok 1 - G3-a5 AC-42 现有夹具(审查人从 Astra 改为 Codex 等)换分量前后展开与清单相同
+# tests 1
+# pass 1
+# fail 0
+
+$ node --test --test-reporter=tap packages/kernel/src/a3-baseline.test.ts   (换分量前:预期失败——旧计数下四条并列,e1 排第一)
+not ok 1 - G3-a3 稀有词优先:同锚点下与本轮文字共有稀有词的条目排在只共有常见词的条目前面
+  expected: 'e2'
+  actual: 'e1'
+# tests 1
+# pass 0
+# fail 1

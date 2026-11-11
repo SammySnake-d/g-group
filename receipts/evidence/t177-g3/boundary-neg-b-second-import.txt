@@ -1,0 +1,4 @@
+✓ ① 逐文件哈希与钉住的上游一致  源码 254 个、dist 93 个文件;树 d5f2368636dd;src 树 e59f57d7c0f0
+✗ ④ 全仓只有一处 import acp-kernel  扫描 253 个代码文件;import 方:packages/kernel/src/history-search.ts、packages/server/src/neg-second-import.ts;依赖声明:packages/kernel/package.json
+    - import acp-kernel 的文件应只有 packages/kernel/src/history-search.ts,实际 2 个:packages/kernel/src/history-search.ts、packages/server/src/neg-second-import.ts
+上游边界验收:不通过

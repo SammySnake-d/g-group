@@ -1,0 +1,5 @@
+✓ ① 逐文件哈希与钉住的上游一致  源码 254 个、dist 93 个文件;树 d5f2368636dd;src 树 e59f57d7c0f0;已直接对上游仓库逐文件比
+✓ ② 按 UPSTREAM.md 的命令重建出的 dist 与提交的一致  命令:npm ci --no-audit --no-fund && npm run build && find dist -name '*.map' -delete;node v24.21.0
+✓ ③ 全新克隆 npm ci 后运行时能 import acp-kernel  HEAD 2bae702f38cedd900bca3a4fb6dd9c87975ed4bd;接缝测试 pass 10 fail 0
+✓ ④ 全仓只有一处 import acp-kernel  扫描 252 个代码文件;import 方:packages/kernel/src/history-search.ts;依赖声明:packages/kernel/package.json
+上游边界验收:通过
