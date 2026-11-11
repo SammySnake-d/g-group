@@ -2836,7 +2836,15 @@ export class Host {
             const cur = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             const why = claimRefusal(a.taskId, cur ? { id: cur.task.id, roomId: cur.roomId, sourceSeq: cur.sourceSeq, title: cur.title, state: cur.task.state, owner: cur.task.owner } : undefined, roomIds, leavingRooms);
             if (why !== null || !cur) { reject(why ?? `没有任务 ${a.taskId}`); break; }
-            effects.push(...this.claimForTx(a.taskId, contactId));
+            // 任务状态机按版本提交(stepTaskTx 先判后写,判不过时什么都没写):万一比对之后状态已变,按拒绝回告,不让整轮作废重跑
+            let claimed: HostEffect[];
+            try {
+              claimed = this.claimForTx(a.taskId, contactId);
+            } catch (e) {
+              if (e instanceof HostError && e.code === "conflict") { reject(e.message); break; }
+              throw e;
+            }
+            effects.push(...claimed);
             const r = this.appendMessageTx(cur.roomId, { kind: "contact", id: contactId }, { text: `认领了任务:${cur.title}`, actionKey: actionId, replyToSeq: cur.sourceSeq, quotedSeqs: [cur.sourceSeq] });
             appended.push({ roomId: cur.roomId, seq: r.seq });
             referenced.add(`${cur.roomId}#${cur.sourceSeq}`);
