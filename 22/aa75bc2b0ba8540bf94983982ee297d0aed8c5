@@ -1,0 +1,21 @@
+apps/desktop/e2e/group-side.electron.spec.ts
+  s_0c61f3c78b6806::t_1d43907c119644 1-287
+packages/server/src/group-admin.test.ts
+  s_0c61f3c78b6806::t_496de792088b65 1-169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "22aa75bc2b0ba8540bf94983982ee297d0aed8c5",
+  "prompts": {},
+  "sessions": {
+    "s_0c61f3c78b6806": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a15bbcd29a7ee10e3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
