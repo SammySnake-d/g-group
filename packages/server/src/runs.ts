@@ -78,7 +78,7 @@ export interface RunStoreOptions {
 }
 
 /**
- * 校验休眠门参数并对上核对周期,不合格抛 invalid_params。宿主构造时先调一次(在打开别的资源之前拒绝),台账构造时再调一次。
+ * 校验休眠门参数并对上核对周期,不合格抛 invalid_params。宿主构造时在打开数据库之前先调一次(调用方拿不到 Host 就没法 close,不能先占资源),台账构造时再调一次。
  * jumpMs 低于 2 个核对周期时,正常核对的间隔(一个周期加上计时器的延迟)也会被当成休眠唤醒,宽限门会一直开着、卡死永远判不出
  */
 export function checkRunWake(checkMs: number, wake: unknown): WakePolicy {
@@ -371,8 +371,7 @@ export class RunStore {
   }
   /** 交给 stallCheck 的休眠宽限:最近一次检出醒来的时刻与宽限时长 */
   private sleep() {
-    // 红提交空壳(B-F11 第 1 轮审查 C03 形态):宽限 0 被当成没给、换成默认 3 分钟;绿提交还原
-    return { awakeSince: this.wake.awakeSince, graceMs: this.wakePolicy.graceMs || 180_000 };
+    return { awakeSince: this.wake.awakeSince, graceMs: this.wakePolicy.graceMs };
   }
   /** 宿主停完这一轮后写失败 */
   failStalled(id: string, verdict: StallVerdict): Transition {
