@@ -10,11 +10,10 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { claudeCompute } from "./compute.ts";
-import type { ContactView } from "@g-group/api-contract";
-import type { ContactCompactor, ContactMind } from "@g-group/kernel";
 import { ensureGroup, sendAndWait, senderAudit } from "./drive.ts";
-import { scriptedCompute, scriptedMind } from "./fakes.ts";
+import { scriptedCompute } from "./fakes.ts";
 import { Host } from "./host.ts";
+import { assembleSpeaking } from "./speaking.ts";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -39,39 +38,6 @@ const { values, positionals } = parseArgs({
 });
 const [cmd, ...rest] = positionals;
 
-async function makeMind(kind: string): Promise<{ mind: (c: ContactView) => ContactMind; compactor?: (c: ContactView) => ContactCompactor }> {
-  if (kind === "fake") return { mind: () => scriptedMind() };
-  if (kind === "pi") {
-    // 字面量动态 import:按需加载 pi 依赖,G-LAYER 也能核对依赖方向
-    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as { createPiContactMind(o: Record<string, unknown>): ContactMind; createPiCompactor(o: Record<string, unknown>): ContactCompactor };
-    const bearer = process.env.ANTHROPIC_AUTH_TOKEN;
-    const apiKey = bearer ?? process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error("--mind pi 需要 ANTHROPIC_AUTH_TOKEN 或 ANTHROPIC_API_KEY");
-    const opts = (model: string) => ({ provider: "anthropic", model, baseUrl: process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
-    const cache = new Map<string, ContactMind>();
-    const compactors = new Map<string, ContactCompactor>();
-    return {
-      mind: (c) => {
-        let m = cache.get(c.speakingModel);
-        if (!m) {
-          m = mod.createPiContactMind(opts(c.speakingModel));
-          cache.set(c.speakingModel, m);
-        }
-        return m;
-      },
-      // 状态笔记压缩:同一说话模型的独立调用(AC-32 ③)
-      compactor: (c) => {
-        let k = compactors.get(c.speakingModel);
-        if (!k) {
-          k = mod.createPiCompactor(opts(c.speakingModel));
-          compactors.set(c.speakingModel, k);
-        }
-        return k;
-      },
-    };
-  }
-  throw new Error(`未知 --mind ${kind}`);
-}
 function makeCompute(kind: string) {
   if (kind === "fake") {
     const c = scriptedCompute({ stepMs: 50 });
@@ -128,11 +94,15 @@ async function main() {
     console.log("用法: cli.ts dm|log|group --db 文件 [--name 联系人] [--members 甲,乙 --to 甲] [--mind fake|pi] [--compute fake|claude] [--cwd 目录] \"消息\"");
     process.exit(2);
   }
+  // 说话侧与生产入口 start.ts 共用同一个装配函数(T-177 G2)
+  const speaking = await assembleSpeaking({ kind: values.mind, env: process.env });
   const compute = makeCompute(values.compute);
   const cwdRoot = values.cwd ? path.resolve(values.cwd) : undefined;
   const host = new Host({
     file: path.resolve(values.db),
-    ...(await makeMind(values.mind)),
+    mind: speaking.mind,
+    ...(speaking.compactor ? { compactor: speaking.compactor } : {}),
+    speakingEndpoint: () => speaking.endpoint,
     compute: compute.factory,
     ...(cwdRoot
       ? {

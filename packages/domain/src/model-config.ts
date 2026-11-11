@@ -6,6 +6,7 @@
 //   - 支持性判据:以能力声明为准(settings.models 里每个模型声明支持哪些 Harness),不按厂商名字猜;
 //     声明里没有这个模型记为 undeclared:不拦,但原样用这个模型,绝不替换成 Harness 默认模型(禁止静默换模)。
 //   - 不兼容时给两条修复路径:单独指定一个兼容的具体模型 / 更换支持该模型的 Harness。
+import { createHash } from "node:crypto";
 import { type Vendor, vendorOf } from "./vendor.ts";
 
 export type ComputeSlotMode = "inherit" | "follow-speaking" | "explicit";
@@ -114,6 +115,88 @@ export function checkCompressionCall(contact: ContactModels, requestedModel: str
   const want = contact.speakingModel;
   if (requestedModel === want) return { ok: true };
   return freeze({ ok: false, code: "compression-model-mismatch", reason: `压缩必须用联系人 ${contact.name} 的说话模型 ${want},拒绝改用 ${requestedModel}(失败时保留原文,不换模型)` });
+}
+
+// ------------------------------------------------------------------ 说话侧有效配置快照(T-177 G2 = D;AC-32 ③)
+/** 宿主级的说话侧端点配置:联系人只有 speakingModel 一个字段,其余都取这一份(启动参数与环境变量)。 */
+export interface SpeakingEndpoint {
+  readonly provider: string;
+  readonly baseUrl: string;
+  /** 认证引用,不是密钥值:`<请求头>:env:<变量名>`(请求头 bearer / x-api-key),或 none。密钥只在私有调用边界按引用解析。 */
+  readonly authRef: string;
+  /** 单次输出上限,映射到适配器的 maxTokens;与状态笔记字节上限 stateNoteMaxBytes 无关。 */
+  readonly maxOutputTokens: number;
+  readonly contextWindow: number;
+  /** 推理参数,默认空;适配器没声明支持就显式拒绝,不丢弃后假装继承。 */
+  readonly reasoning?: Readonly<Record<string, unknown>>;
+}
+/** 一轮里对话、补写、检查共用的同一份不可变配置;fingerprint 覆盖全部非敏感字段与宿主启动号。 */
+export type EffectiveSpeakingConfig = Readonly<{
+  model: string;
+  vendor: Vendor;
+  provider: string;
+  baseUrl: string;
+  authRef: string;
+  maxOutputTokens: number;
+  contextWindow: number;
+  reasoning: Readonly<Record<string, unknown>>;
+  fingerprint: string;
+}>;
+/** 与两个 pi 适配器原有默认值相同(4096 / 200000),开发入口与生产入口共用这一份,不各写一套。 */
+export const DEFAULT_SPEAKING_ENDPOINT: SpeakingEndpoint = Object.freeze({ provider: "anthropic", baseUrl: "https://api.anthropic.com", authRef: "none", maxOutputTokens: 4096, contextWindow: 200_000, reasoning: Object.freeze({}) });
+const AUTH_REF = /^(?:none|(?:bearer|x-api-key):env:[A-Z_][A-Z0-9_]*)$/;
+export class SpeakingConfigError extends Error {
+  readonly code = "invalid-speaking-config";
+}
+function canonical(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(canonical);
+  if (v && typeof v === "object") return Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonical((v as Record<string, unknown>)[k])]));
+  return v;
+}
+/** 宿主端点配置的合法性:错了直接拒绝(说明里不回显原值,认证引用位置可能被误填成密钥)。 */
+export function checkSpeakingEndpoint(e: SpeakingEndpoint): SpeakingEndpoint {
+  const bad = (why: string): never => {
+    throw new SpeakingConfigError(`说话侧配置不合格:${why}`);
+  };
+  if (typeof e !== "object" || e === null) bad("必须是对象");
+  if (typeof e.provider !== "string" || e.provider.trim() === "") bad("provider 必须是非空字符串");
+  let url: URL | null = null;
+  try {
+    url = new URL(e.baseUrl);
+  } catch {
+    bad("baseUrl 不是合法 URL");
+  }
+  if (url && url.username + url.password !== "") bad("baseUrl 不能带用户名或密码");
+  if (typeof e.authRef !== "string" || !AUTH_REF.test(e.authRef)) bad("authRef 必须是认证引用(bearer:env:变量名 / x-api-key:env:变量名 / none),不能填密钥值");
+  const int = (k: "maxOutputTokens" | "contextWindow", max: number) => {
+    const v = e[k];
+    if (typeof v !== "number" || !Number.isSafeInteger(v) || v < 1 || v > max) bad(`${k} 必须是 1–${max} 的整数`);
+  };
+  int("maxOutputTokens", 1_000_000);
+  int("contextWindow", 100_000_000);
+  if (e.maxOutputTokens > e.contextWindow) bad("maxOutputTokens 不能大于 contextWindow");
+  const r = e.reasoning ?? {};
+  if (typeof r !== "object" || r === null || Array.isArray(r)) bad("reasoning 必须是对象");
+  try {
+    if (JSON.stringify(r) === undefined) bad("reasoning 必须是纯数据");
+  } catch {
+    bad("reasoning 必须是纯数据");
+  }
+  return e;
+}
+/** 每轮开始解析一次:model 是这一轮实际生效的模型(含用户在失败卡上选的备用模型),其余取宿主级配置;bootId 是宿主启动号。
+ *  fingerprint 用 authRef + 启动号代替尚不存在的凭据修订号:进程内换密钥不改指纹,不在覆盖范围。 */
+export function resolveSpeakingConfig(endpoint: SpeakingEndpoint, model: string, bootId: string): EffectiveSpeakingConfig {
+  const e = checkSpeakingEndpoint(endpoint);
+  if (!nonEmpty(model)) throw new SpeakingConfigError("说话侧配置不合格:model 必须是非空字符串");
+  if (!nonEmpty(bootId)) throw new SpeakingConfigError("说话侧配置不合格:宿主启动号必须是非空字符串");
+  const reasoning = structuredClone(canonical(e.reasoning ?? {})) as Record<string, unknown>;
+  const body = { model, vendor: vendorOf(model), provider: e.provider, baseUrl: e.baseUrl, authRef: e.authRef, maxOutputTokens: e.maxOutputTokens, contextWindow: e.contextWindow, reasoning };
+  return freeze({ ...body, fingerprint: speakingFingerprint(body, bootId) });
+}
+/** 快照指纹:规范化后的全部非敏感字段 + 宿主启动号的 sha256。缓存、诊断都按它认同一份配置。 */
+export function speakingFingerprint(body: Omit<EffectiveSpeakingConfig, "fingerprint">, bootId: string): string {
+  return `sha256:${createHash("sha256").update(JSON.stringify(canonical({ ...body, bootId }))).digest("hex")}`;
 }
 
 export function supportOf(caps: readonly ModelCapability[], harness: string, model: string): Support {

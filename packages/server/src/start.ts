@@ -3,12 +3,12 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { ContactView } from "@g-group/api-contract";
-import { type ContactCompactor, type ContactMind, DEFAULT_RETRY_POLICY } from "@g-group/kernel";
+import { DEFAULT_RETRY_POLICY } from "@g-group/kernel";
 import { claudeCompute } from "./compute.ts";
-import { scriptedCompute, scriptedMind } from "./fakes.ts";
+import { scriptedCompute } from "./fakes.ts";
 import { Host } from "./host.ts";
 import { type IpcMainLike, type Service, bindIpc, createService } from "./service.ts";
+import { assembleSpeaking } from "./speaking.ts";
 
 export interface StartOptions {
   /** 数据目录:gg.db、插件包、附件、Compute 工作目录都在这下面。 */
@@ -17,11 +17,14 @@ export interface StartOptions {
   readonly mind?: "fake" | "pi";
   /** fake:剧本 Compute;claude:真实 Claude Code CLI。默认 fake。 */
   readonly compute?: "fake" | "claude";
-  /** 模型网关环境(ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN / ANTHROPIC_DEFAULT_SONNET_MODEL),默认 process.env。 */
+  /** 模型网关环境(ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN / ANTHROPIC_DEFAULT_SONNET_MODEL,
+   *  可选 GG_SPEAKING_MAX_OUTPUT_TOKENS / GG_SPEAKING_CONTEXT_WINDOW),默认 process.env。 */
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** 插件市场目录文件;默认包内示例市场。 */
   readonly catalogFile?: string;
   readonly onReport?: (what: string, detail: unknown) => void;
+  /** 联系人脑子与压缩器的 HTTP 传输,默认 globalThis.fetch;代理、录制与测试用。 */
+  readonly modelFetch?: typeof globalThis.fetch;
   /** 给 Compute 的单次输入字节上限(§8.1 待决 13);不给=不设上限 */
   readonly computeInputMaxBytes?: number | null;
 }
@@ -38,35 +41,9 @@ export async function startServer(o: StartOptions): Promise<Started> {
   const env = o.env ?? process.env;
   mkdirSync(o.dataDir, { recursive: true });
   const model = env.ANTHROPIC_DEFAULT_SONNET_MODEL;
-  let mind: (c: ContactView) => ContactMind = () => scriptedMind();
-  let compactor: ((c: ContactView) => ContactCompactor) | undefined;
-  if (o.mind === "pi") {
-    // 字面量动态 import:按需加载 pi 依赖,G-LAYER 也能核对依赖方向
-    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as { createPiContactMind(opts: Record<string, unknown>): ContactMind; createPiCompactor(opts: Record<string, unknown>): ContactCompactor };
-    const bearer = env.ANTHROPIC_AUTH_TOKEN;
-    const apiKey = bearer ?? env.ANTHROPIC_API_KEY;
-    if (!apiKey || !model) throw new Error("mind=pi 需要 ANTHROPIC_AUTH_TOKEN(或 ANTHROPIC_API_KEY)与 ANTHROPIC_DEFAULT_SONNET_MODEL");
-    // 每位联系人用自己的说话模型(U68);同一模型复用一个实例
-    const cache = new Map<string, ContactMind>();
-    mind = (c) => {
-      let m = cache.get(c.speakingModel);
-      if (!m) {
-        m = mod.createPiContactMind({ provider: "anthropic", model: c.speakingModel, baseUrl: env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
-        cache.set(c.speakingModel, m);
-      }
-      return m;
-    };
-    // 状态笔记压缩:同一说话模型的独立调用(AC-32 ③),同一模型复用一个实例
-    const compactors = new Map<string, ContactCompactor>();
-    compactor = (c) => {
-      let k = compactors.get(c.speakingModel);
-      if (!k) {
-        k = mod.createPiCompactor({ provider: "anthropic", model: c.speakingModel, baseUrl: env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
-        compactors.set(c.speakingModel, k);
-      }
-      return k;
-    };
-  }
+  if (o.mind === "pi" && !model) throw new Error("mind=pi 需要 ANTHROPIC_DEFAULT_SONNET_MODEL(联系人默认说话模型)");
+  // 说话侧与开发入口 cli.ts 共用同一个装配函数(T-177 G2):端点配置一份、快照按 fingerprint 缓存、密钥只在调用边界解析
+  const speaking = await assembleSpeaking({ kind: o.mind ?? "fake", env, ...(o.modelFetch ? { fetch: o.modelFetch } : {}) });
   const fake = o.compute === "claude" ? null : scriptedCompute({ stepMs: 300 });
   const compute = fake
     ? () => fake.adapter
@@ -77,8 +54,9 @@ export async function startServer(o: StartOptions): Promise<Started> {
     file: path.join(o.dataDir, "gg.db"),
     dataDir: o.dataDir,
     catalogFile: o.catalogFile ?? SAMPLE_CATALOG,
-    mind,
-    ...(compactor ? { compactor } : {}),
+    mind: speaking.mind,
+    ...(speaking.compactor ? { compactor: speaking.compactor } : {}),
+    speakingEndpoint: () => speaking.endpoint,
     compute,
     computeCwd: (taskId) => {
       const d = path.join(work, taskId);
