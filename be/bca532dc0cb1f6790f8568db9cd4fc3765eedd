@@ -1,0 +1,55 @@
+packages/adapter-pi-contact/src/helper-mind.test.ts
+  s_78cbadecffd7bf::t_c0081e216f7d30 1-193
+packages/adapter-pi-contact/src/helper-mind.ts
+  s_78cbadecffd7bf::t_32ccc2b612050c 1-9
+packages/adapter-pi-contact/src/index.ts
+  s_78cbadecffd7bf::t_025847829fb874 4
+packages/api-contract/src/api.ts
+  s_78cbadecffd7bf::t_a8526cc2d0cea8 15,18,108-115,223-232,387-393
+packages/api-contract/src/entities.ts
+  s_78cbadecffd7bf::t_a1e39ea9a4d915 649-654
+packages/api-contract/src/events.ts
+  s_78cbadecffd7bf::t_e7d9723a2d2786 3,50-51
+packages/kernel/src/csv.ts
+  s_78cbadecffd7bf::t_9b8b4bf8b0019e 1-24
+packages/kernel/src/helper-mcp.ts
+  s_78cbadecffd7bf::t_60d62dc1801bc1 1-32
+packages/kernel/src/helper-ops.test.ts
+  s_78cbadecffd7bf::t_4fd09e0a07cf0f 1-179
+packages/kernel/src/helper-ops.ts
+  s_78cbadecffd7bf::t_fd58ce3a5c65bf 1-95
+packages/kernel/src/index.ts
+  s_78cbadecffd7bf::t_a3e817524c0f43 16-18
+packages/server/src/fakes.ts
+  s_78cbadecffd7bf::t_aca01c13c3e310 3,208-212
+packages/server/src/helper-agent.test.ts
+  s_78cbadecffd7bf::t_565cfdbbfdbc1f 1-489
+packages/server/src/helper-agent.ts
+  s_78cbadecffd7bf::t_803937bc63b021 1-48
+packages/server/src/helper-mcp-stdio.ts
+  s_78cbadecffd7bf::t_47028d34047bcb 1-5
+packages/server/src/host.ts
+  s_78cbadecffd7bf::t_31e3df1ded5a82 64,156-157,419,436,759
+packages/server/src/service.ts
+  s_78cbadecffd7bf::t_0abadd7b741bb9 18,21,31,33-34,40-41,57-58,100,146,154-168,170
+packages/server/src/task-import.test.ts
+  s_78cbadecffd7bf::t_02f89722898a96 1-118
+packages/server/src/task-import.ts
+  s_78cbadecffd7bf::t_9ea8a4223a83dc 1-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bebca532dc0cb1f6790f8568db9cd4fc3765eedd",
+  "prompts": {},
+  "sessions": {
+    "s_78cbadecffd7bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9caabaa2a69c3a1c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

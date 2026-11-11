@@ -1,0 +1,35 @@
+packages/adapter-pi-contact/src/tools.ts
+  s_641f1e26108d65::t_bb56cb7987fa31 1,5,22,26,38-39,142-154,173,201-202,242-244,274-275
+packages/server/src/plugin-runtime.ts
+  s_641f1e26108d65::t_b3e5ae3d28750c 202-203,308
+packages/server/src/plugin-sources.ts
+  s_641f1e26108d65::t_7739d8e5d61fd9 1-12,15,18-42,49,62-126,128-133,135-224,226-272,274-277,279-460,462-472,474-477,479-481
+packages/adapter-pi-contact/src/mind.ts
+  s_641f1e26108d65::t_dce14bc2a0d423 201-206
+packages/server/src/plugins.ts
+  s_9f5d90b359532e::t_1935c665510438 353
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d0c3ba3a8afaff939b95b74847f8eff85df44e0d",
+  "prompts": {},
+  "sessions": {
+    "s_641f1e26108d65": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a647ecb1ad4618089",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_9f5d90b359532e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a52413cf6794cb84a",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
