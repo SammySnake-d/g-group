@@ -4,17 +4,17 @@
     {
       "id": "AC-08",
       "status": "未测",
-      "reason": "本片只覆盖记忆与状态笔记侧:来源撤回的记忆不再经第 1/5 块、read_memory 回到请求(packages/server/src/memory-hygiene.test.ts「来源消息撤回…」「来源撤回但同一件事被复述过…」),撤回清洗原有测试不变(state-note.test.ts)。派生草稿、R-Rule、检索索引等其余级联不在本片。md 真源里条目正文与 source 字段仍保留(用户经 memory.get 能看到,不回到联系人上下文);G1(PR #58)给 source 加的 quote 原话撤回后也仍在 md 里,本片不清 md。变异见 packages/server/proof/memory-hygiene-mutations.txt;待审"
+      "reason": "本片只覆盖记忆与状态笔记侧,其余级联(派生草稿、R-Rule、检索索引)不在本片,所以整项不标通过。记忆与笔记侧证据:来源撤回的记忆不再经第 1/5 块、read_memory 回到请求(packages/server/src/memory-hygiene.test.ts「来源消息撤回…」「来源撤回但同一件事被复述过…」);两进程真实运行 packages/server/proof/memory-hygiene-real.txt(撤回带 NEUTRAL_FIXTURE 那句后,同进程下一轮与重启后下一轮整轮请求都不含它);变异 packages/server/proof/memory-hygiene-mutations.txt M04/M05/M06/M14 被具名测试杀死。md 真源与 gg_memory 索引里条目正文仍保留(给用户经 memory.get 查看、可撤销,不回到联系人上下文;真实运行里两处都为 true),是否连 md 正文一起清属待拍板;待审"
     },
     {
       "id": "AC-42",
       "status": "未测",
-      "reason": "本片覆盖 ⑤(来源撤回、用户撤销的条目不进上下文:memory-hygiene.test.ts、memory-api.test.ts「memory.revoke…」)、⑧ 生产入口(启动核对与 memory.rebuild:memory-hygiene.test.ts 两条「启动核对…」、memory-api.test.ts「memory.rebuild…」)、⑨ 同理的不物理删除(revoke 后 md 与索引行都在)。①–④⑥⑦⑩ 沿用既有测试,不在本片;变异 packages/server/proof/memory-hygiene-mutations.txt;待审"
+      "reason": "本片覆盖 ⑤(来源撤回、用户撤销的条目不进上下文)、⑧ 生产入口(启动核对与 memory.rebuild)、⑨ 同理的不物理删除(revoke 后 md 与索引行都在):具名测试 packages/server/src/memory-hygiene.test.ts 6 条、memory-api.test.ts 4 条;真实运行 packages/server/proof/memory-hygiene-real.txt(重启后 md 4 个 / 索引 4 行一致,清空索引后 memory.rebuild 读回与重建前一致);变异 packages/server/proof/memory-hygiene-mutations.txt 17 个全杀。①–④⑥⑦⑩ 沿用既有测试,不在本片,所以整项不标通过;待审"
     },
     {
       "id": "AC-54",
       "status": "未测",
-      "reason": "后端资料接口:contacts.profile 的 memory.longTerm 由占位 null 改为真实条目概览(memory-api.test.ts「contacts.profile 的长期记忆接真实条目…」、profile.test.ts 改为 0 条概览)。主面板、右侧分屏是前端,没测"
+      "reason": "后端资料接口:contacts.profile 的 memory.longTerm 由占位 null 改为真实条目概览(memory-api.test.ts「contacts.profile 的长期记忆接真实条目…」、profile.test.ts 改为 0 条概览;packages/server/proof/memory-hygiene-real.txt 前缀 1、锚点 1、来源已撤回 1、已失效 1;变异 M12/M17)。主面板、右侧分屏是前端,没测"
     }
   ],
   "author": {
@@ -23,11 +23,11 @@
     "model": "claude-opus-5-5"
   },
   "red": {
-    "commit": "dedc4e22"
+    "commit": "76601036"
   },
   "unverifiable": "AC-42 ⑤:「来源已撤回」每次按会话日志里的 retract 事件现算,只认条目的 source 与 evidence[] 指向的消息;derived_from 等关系、条目正文里转述的被撤回内容(正文不是原文时)不追。前缀快照被清掉时第 1 块会变(撤回优先于 ⑦ 前缀不变),这一轮前缀缓存失效。AC-42 ⑧ 启动核对只看有 md 目录的联系人:md 目录整个丢了、索引还在时不动索引;md 解析不了的文件按既有 rebuild 跳过并报告。U29(回退清洗,候选):只按原文精确出现清洗,笔记里由撤下消息推导出的结论清不掉,靠回退说明让模型下一轮自己更新;与撤回共用同一占位文案「已撤回内容已移除」。测试里的联系人动作都是脚本给的,没有真模型运行",
   "waiver": null,
   "review": null,
   "review_status": "待审",
-  "notes": "子代理实现(调度会话 claude:dd154965-afbd-4134-a1d3-c00f2a859eab)。U29「工作记忆随回退回滚」已定、「私聊工作记忆存哪」待决(需求文档 §2.0 U29 行):本片按推荐最小做——私聊工作记忆 = 该联系人的状态笔记,复用撤回清洗机制,不新建版本化笔记存储;候选,非正式门禁,待用户拍板。不做 memory.restore(文档没有这项能力,按调度更正)。与在做的片重叠:G1(PR #58)改 host.ts settleNote/rememberTx/构造函数与 memory-store.ts(readDisk/remove),本片在 host.ts 只改 import、memory 字段与构造那一行、listMemories、memoryForRound 首行、scrubNote、rewind 事务 7 处,构造那一行与 G1 新增行相邻;G1 新加的检查邻域与写入判关系也经 this.memory.list(),合并后自动按可见性过滤;G3(PR #61)改 kernel/memory.ts 打分,本片不动 kernel;G4(PR #69)query_history 与本片无共同文件。"
+  "notes": "子代理实现(调度会话 claude:dd154965-afbd-4134-a1d3-c00f2a859eab)。U29「工作记忆随回退回滚」已定、「私聊工作记忆存哪」待决(需求文档 §2.0 U29 行):本片按推荐最小做——私聊工作记忆 = 该联系人的状态笔记,复用撤回清洗机制,不新建版本化笔记存储;候选,非正式门禁,待用户拍板。不做 memory.restore(文档没有这项能力,按调度更正)。U29 回退清洗证据:memory-hygiene.test.ts 两条「U29 回退…」、packages/server/proof/memory-hygiene-real.txt(rewind 事务里笔记立即换成占位、下一轮第 3 块不含撤下原文、回退前已有的长期记忆逐条不变)、变异 M01/M02/M03;候选,非正式门禁。pstack 记录:首轮变异(2f463bc)存活 2 个(M02、M05),补强测试后重新做红 76601036、回到绿 954ca3f,第二轮 17 个全杀;最初的红 dedc4e22 与绿 5214c3f 保留在历史里。与在做的片重叠:G1(PR #58)改 host.ts settleNote/rememberTx/构造函数与 memory-store.ts(readDisk/remove),本片在 host.ts 只改 import、memory 字段与构造那一行、listMemories、memoryForRound 首行、scrubNote、rewind 事务 7 处,构造那一行与 G1 新增行相邻;G1 新加的检查邻域与写入判关系也经 this.memory.list(),合并后自动按可见性过滤;G3(PR #61)改 kernel/memory.ts 打分,本片不动 kernel;G4(PR #69)query_history 与本片无共同文件。"
 }

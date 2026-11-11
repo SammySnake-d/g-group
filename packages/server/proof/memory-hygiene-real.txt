@@ -1,0 +1,43 @@
+=== 真实运行证据:记忆与笔记的撤回/回退清洗 + 记忆对外接口(feat/memory-hygiene)
+=== 两个真实 node 进程:进程 1 经生产组装(Host + createService,真实 SQLite 与 md 目录)写入并撤回/撤销/回退;进程 2 重启后按启动核对重建索引再核对
+=== 命令:
+===   node packages/server/proof/memory-hygiene-real.ts /tmp/gg-mh-real write
+===   node packages/server/proof/memory-hygiene-real.ts /tmp/gg-mh-real verify
+
+进程 1 写:联系人 c-mwc67p9m-1 会话 dm-c-mwc67p9m-1
+  写入后:索引 3 行、md 3 个;memory.list 3 条
+    m-mwc67pa0-3 prefix/active/active effective=true 「以后所有回复都先给结论」
+    m-mwc67pah-5 anchored/active/active effective=true 「VPS 配置里写的是 NEUTRAL_FIXTURE_NO_CREDENTIALS」
+    m-mwc67pb1-7 anchored/active/active effective=true 「周报每周五发给小王」
+  memory.revoke「周报」:revoked v2;md 文件还在:true;索引行还在:true
+  撤回 #2(带凭据那句)之后的落盘状态笔记:在做:(撤回了 #2);下一步:按新消息继续
+  撤回后「m-mwc67pah-5」:state=source-retracted effective=false
+  资料页长期记忆:前缀 1、锚点 0、来源已撤回 1、已失效 1
+  撤回后下一轮请求(5 次)最后一块:
+    1:[系统提示词] 你是用户通讯录里的一位联系人,在私聊或群聊里和用户及其他联系人协作。 你只能通过工具行动:reply 在会话里说话;dispatch 把需要跑命令、改文件、多轮试错的活交给你手下的 Compute(你自己不能跑 shell); commit 登记你答应要做的事(原文必须出自来源消息);forward 把用户的补充要求转给在途 Compute;deliver 在 Compute 完成后交付结果;stop 停止任务。 收到 Compute 的进度时,值得告诉用户的用 reply 简短汇报;Compute
+    2:[承诺账本] (无未了结承诺) 
+    3:[状态笔记 v4] 在做:(撤回了 #2);下一步:按新消息继续 
+    4:[新消息](processed_seq 之后,按到达顺序,原文) #5 · dm-c-mwc67p9m-1 · 我(user:me) · 2026-11-11T13:44:36.100Z 继续 
+    5:[指针与按需换入] 〔记忆变化(全局,尚未并入前缀,以这里为准)〕 + 〔记忆 m-mwc67pa0-3 · 以后所有回复都先〕以后所有回复都先给结论 
+  这一轮里还有那条凭据原文吗:false
+  rewind 到 #5:撤下 [6]
+  回退前状态笔记:在做:记:周六订去杭州的高铁;下一步:按新消息继续
+  回退事务里就清掉后的状态笔记:在做:〔已撤回内容已移除〕;下一步:按新消息继续
+  长期记忆条数 3 → 4;回退前已有的条目逐条不变:true
+  回退不回滚长期记忆(U29):撤下的 #6 写出的那条仍在:true
+  回退后下一轮第 3 块:[状态笔记 v8] 在做:回退到 #5:之后的 1 条消息(#6)作废,不再作为当前上下文,不要再按它们执行。请据此更新状态笔记。;下一步:按新消息继续 
+  第 3 块含撤下原文吗:false
+进程 1 结束,数据留在 /tmp/gg-mh-real
+进程 2 核对:联系人 c-mwc67p9m-1;md 4 个、启动核对后索引 4 行,一致:true
+  memory.list:
+    m-mwc67pa0-3 prefix/active/active effective=true 「以后所有回复都先给结论」
+    m-mwc67pah-5 anchored/active/source-retracted effective=false 「VPS 配置里写的是 NEUTRAL_FIXTURE_NO_CREDENTIALS」
+    m-mwc67pb1-7 anchored/revoked/revoked effective=false 「周报每周五发给小王」
+    m-mwc67pcv-b anchored/active/active effective=true 「周六订去杭州的高铁」
+  contacts.profile:长期记忆 前缀 1、锚点 1、来源已撤回 1、已失效 1
+  contacts.profile 状态笔记:在做:继续;下一步:按新消息继续
+  重启后下一轮第 1 块含那条凭据原文:false;整轮含它:false;含已撤销的「周报每周五发给小王」:false
+  md 真源里还留着那条正文(用户可查、不回到联系人上下文):true
+  gg_memory 索引里还留着那条正文:true
+  手工清空索引后 memory.rebuild:[{"contactId":"c-mwc67p9m-1","entries":4}];重建后条目与重建前一致:true
+进程 2 结束
