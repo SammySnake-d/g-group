@@ -1,0 +1,41 @@
+# macOS 安装包:dmg(手动安装)+ zip(自动更新用)+ latest-mac.yml(更新信息,含 sha512)。
+# 签名:没有开发者证书时用临时签名(identity "-"),本机自己装、自己更新能用;发给别人要开发者证书 + 公证(见 docs/打包与更新.md)。
+appId: com.sammysnake.g-group
+productName: g-group
+copyright: Copyright © 2026 SammySnake-d
+directories:
+  output: release
+  buildResources: build
+# 由 scripts/pack-mac.mjs 在暂存目录里用(那里只有下面这些文件)
+files:
+  - package.json
+  - dist/**/*
+  - dist-electron/**/*
+asar: true
+# Compute 的汇报工具由 claude 命令以子进程拉起,要放在 asar 外面
+asarUnpack:
+  - dist-electron/report-mcp.cjs
+extraResources:
+  - from: ../../packages/server/catalog
+    to: catalog
+# 不装运行时依赖:主进程、宿主与渲染层都已由 vite 打成单文件
+npmRebuild: false
+electronVersion: 39.8.10
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [arm64]
+    - target: zip
+      arch: [arm64]
+  identity: "-"
+  hardenedRuntime: true
+  artifactName: g-group-${version}-${arch}-mac.${ext}
+dmg:
+  artifactName: g-group-${version}-${arch}.${ext}
+  writeUpdateInfo: false
+publish:
+  provider: github
+  owner: SammySnake-d
+  repo: g-group
+  releaseType: release

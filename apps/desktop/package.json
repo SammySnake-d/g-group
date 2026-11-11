@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vite",
     "build:renderer": "vite build",
-    "build:electron": "vite build -c vite.electron.config.ts && GG_ENTRY=preload vite build -c vite.electron.config.ts",
+    "build:electron": "vite build -c vite.electron.config.ts && GG_ENTRY=preload vite build -c vite.electron.config.ts && GG_ENTRY=report-mcp vite build -c vite.electron.config.ts",
     "build": "npm run typecheck && npm run build:renderer && npm run build:electron",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.electron.json --noEmit",
     "test:e2e": "node verify/serial.mjs npx playwright test",
@@ -17,7 +17,8 @@
     "verify:structure": "node verify/structure.mjs",
     "e2e": "node verify/serial.mjs npx playwright test --project=renderer",
     "e2e:electron": "node verify/serial.mjs npx playwright test --project=electron",
-    "verify:mutate": "node verify/serial.mjs node verify/mutate.mjs"
+    "verify:mutate": "node verify/serial.mjs node verify/mutate.mjs",
+    "pack:mac": "node scripts/pack-mac.mjs"
   },
   "dependencies": {
     "@animate-ui/react": "^2.4.2",
@@ -66,5 +67,6 @@
     "typescript": "^6.0.3",
     "vite": "^8.3.5",
     "vite-plugin-singlefile": "2.3.4"
-  }
+  },
+  "productName": "g-group"
 }
