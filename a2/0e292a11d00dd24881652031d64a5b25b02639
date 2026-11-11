@@ -1,0 +1,27 @@
+packages/adapter-pi-contact/src/check-action.test.ts
+  s_9cb5e24d254155::t_8b08ba6c94261a 1-101
+packages/server/src/contact-actions.ts
+  s_9cb5e24d254155::t_abb466372cf88b 10,159-187
+packages/server/src/contact-call-check.test.ts
+  s_9cb5e24d254155::t_ec89307fd329d9 1-286
+packages/kernel/src/runtime-ports.ts
+  s_9cb5e24d254155::t_fd024a1b8b69c3 97-99,102,132-136,139-147,154-159
+packages/adapter-pi-contact/src/claim-tool.test.ts
+  s_9cb5e24d254155::t_c2f0b65bdc09e8 76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a20e292a11d00dd24881652031d64a5b25b02639",
+  "prompts": {},
+  "sessions": {
+    "s_9cb5e24d254155": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a28105ce487aa6efe",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
