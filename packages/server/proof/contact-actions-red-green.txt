@@ -1,9 +1,12 @@
 # 本机(macOS)运行:sh packages/server/proof/contact-actions-red-green.sh 3d3ec895 97bbd4a7(并发 1)
 # node v22.22.0;红 3d3ec895 / 绿 97bbd4a7;两者之间的源码差异:packages/adapter-pi-contact/src/tools.ts packages/server/src/assemble.ts packages/server/src/contact-actions.ts 
-# 测试文件红绿是否逐字相同:相同
-#   packages/server/src/contact-actions.test.ts sha256 5eed6fe2837dbdff
-#   packages/adapter-pi-contact/src/claim-tool.test.ts sha256 d76aa121fb7fdd6f
-#   packages/adapter-pi-contact/src/mind.test.ts sha256 21068774aa6dbbfa
+# 跑的是当前工作树(HEAD faca5b3f)的测试文件;与红提交相比:有差异(下面列出文件;G-RED 按每条测试的测试体比对)
+#    packages/server/src/contact-actions.test.ts | 6 ++++--
+#    1 file changed, 4 insertions(+), 2 deletions(-)
+#   packages/server/src/contact-actions.test.ts sha256 9760f7c3960052a2(当前工作树)
+#   packages/adapter-pi-contact/src/claim-tool.test.ts sha256 d76aa121fb7fdd6f(当前工作树)
+#   packages/adapter-pi-contact/src/mind.test.ts sha256 21068774aa6dbbfa(当前工作树)
+# 其余源码(含 host.ts)两次都用当前工作树 HEAD 的版本;只有上面列出的源码差异在红、绿之间切换
 ## 红:packages/adapter-pi-contact/src/tools.ts
 packages/server/src/assemble.ts
 packages/server/src/contact-actions.ts 取红提交的版本
@@ -88,4 +91,3 @@ ok 33 - 一次用户纠错 → constraint_ver 恰好 +1:forward 带 sourceSeq �
 # cancelled 0
 # skipped 0
 # todo 0
-# 脚本最后的 git status --short -- packages 只列出当时还没提交的 proof 文件,源码已还原到绿提交版本
