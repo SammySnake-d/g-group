@@ -1,0 +1,68 @@
+{
+  "branch": "feat/t177-c-plugin-outbox",
+  "stacked_on": {
+    "branch": "feat/t177-a-recovery",
+    "pr": 57,
+    "head": "6e756bdb258d44b87373df3c9edf696db90294af",
+    "file_intersection_with_A": []
+  },
+  "red": {
+    "commit": "6ace5aee90dbda81b94571e508911713d331ca67",
+    "where": "box3 Linux Node v24.21.0",
+    "file": "packages/server/src/plugin-outbox.test.ts",
+    "tests": 13,
+    "failed_by_name": 13,
+    "load_errors": 0,
+    "log": "cloud-evidence.tgz:red.tap"
+  },
+  "green": {
+    "commit": "f0b191f740dd3cec00384bf55dc80b124c1838a5",
+    "where": "box3 Linux Node v24.21.0",
+    "npm_ci": 0,
+    "typecheck": 0,
+    "lint": 0,
+    "full_tests": {
+      "tests": 1518,
+      "pass": 1518,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "log": "cloud-evidence.tgz:test.log"
+  },
+  "mutations": {
+    "script": "scripts/t177/c-mutations.mjs",
+    "named": 19,
+    "killed": 19,
+    "survived_named": [],
+    "equivalent_registered": [
+      "EQ-endpoint-same-boot:survived"
+    ],
+    "control_exit": 0,
+    "after_control_exit": 0,
+    "control_ok": "13/13",
+    "after_control_ok": "13/13",
+    "concurrency": 1,
+    "detail": "mutations.json"
+  },
+  "durability_readback": {
+    "macOS Node v22.22.0": "journal_mode=wal synchronous=2",
+    "box3 Linux Node v24.21.0": "journal_mode=wal synchronous=2"
+  },
+  "kernel_untouched": "git diff origin/feat/t177-a-recovery..HEAD -- packages/kernel 为空",
+  "cloud_evidence": {
+    "file": "cloud-evidence.tgz",
+    "sha256": "c79cc41f1bad70742bd78dca23f1db3a802a4c2c16d8e07a6b526583ba89bb2d",
+    "bytes": 102212,
+    "contents": "mut-out/*.tap 与 results.json、run.log/npmci.log/typecheck.log/lint.log/test.log/mut.log、red.tap、red-head.txt、c-mutations.mjs"
+  },
+  "not_measured": [
+    "断电与系统崩溃",
+    "两个宿主进程真并发",
+    "SIGKILL 宿主进程本身",
+    "真实渠道 Gmail/Telegram/Resend",
+    "迟到回执 id 另存",
+    "人工对账入口"
+  ]
+}

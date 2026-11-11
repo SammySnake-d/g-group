@@ -1,0 +1,237 @@
+{
+  "control": {
+    "exit": 0
+  },
+  "afterControl": {
+    "exit": 0
+  },
+  "summary": {
+    "mutations": 19,
+    "killed": 19,
+    "equivalent": [
+      "EQ-endpoint-same-boot:survived"
+    ],
+    "control": 0,
+    "afterControl": 0
+  },
+  "results": [
+    {
+      "id": "C01-bytes",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C01",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C01 写前日志:插件收到之前在途行已落盘,带安装身份、版本、接收端与载荷指纹,不存载荷原文"
+      ]
+    },
+    {
+      "id": "C01-receipt",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C01",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C01 写前日志:插件收到之前在途行已落盘,带安装身份、版本、接收端与载荷指纹,不存载荷原文"
+      ]
+    },
+    {
+      "id": "C02-send-before-record",
+      "file": "packages/server/src/plugin-runtime.ts",
+      "designated": "C02",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C02 外发记录写不进数据库就不外发,也不留在途行"
+      ]
+    },
+    {
+      "id": "C02-swallow-write-error",
+      "file": "packages/server/src/plugins.ts",
+      "designated": "C02",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C02 外发记录写不进数据库就不外发,也不留在途行"
+      ]
+    },
+    {
+      "id": "C03-unknown-reason",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C03",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C03 结果落盘:确认存回执 id;超时与插件进程退出存结果未知和原因"
+      ]
+    },
+    {
+      "id": "C04-no-restart-sweep",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C04",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C04 插件收到后、宿主记确认前宕机:重启把在途记为未知,迟到的确认不改写,B2 不重发,接收端只收到一次"
+      ]
+    },
+    {
+      "id": "C04-late-overwrites",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C04",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C04 插件收到后、宿主记确认前宕机:重启把在途记为未知,迟到的确认不改写,B2 不重发,接收端只收到一次"
+      ]
+    },
+    {
+      "id": "C05-b1-across-restart",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C05",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C05 重启后结果未知的 B1 也不自动重发;同一次启动里 B1 仍按内核保留期重试"
+      ]
+    },
+    {
+      "id": "C05-same-boot-reclaim",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C05",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C05 重启后结果未知的 B1 也不自动重发;同一次启动里 B1 仍按内核保留期重试"
+      ]
+    },
+    {
+      "id": "C06-payload-mismatch",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C06",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C06 重启后已确认的动作复用存下的回执、不调插件;同一动作换了内容显式冲突"
+      ]
+    },
+    {
+      "id": "C06-confirmed-reuse",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C06",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C06 重启后已确认的动作复用存下的回执、不调插件;同一动作换了内容显式冲突"
+      ]
+    },
+    {
+      "id": "C07-install-id-reused",
+      "file": "packages/server/src/plugins.ts",
+      "designated": "C07",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C07 安装身份:停用启用、改配置、更新都不变,卸载重装换新"
+      ]
+    },
+    {
+      "id": "C08-uninstall-drops-outbox",
+      "file": "packages/server/src/plugins.ts",
+      "designated": "C08",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C08 卸载不删外发记录;重装后同一动作不发:已确认复用旧回执,结果未知不重发"
+      ]
+    },
+    {
+      "id": "C08-install-binding",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C08",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C08 卸载不删外发记录;重装后同一动作不发:已确认复用旧回执,结果未知不重发"
+      ]
+    },
+    {
+      "id": "C09-version-binding",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C09",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C09 更新到新版本后,旧版本结果未知的 B1 动作不发"
+      ]
+    },
+    {
+      "id": "C10-in-flight",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C10",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C10 同一动作并发两次:只有认领到在途行的那一次外发,另一次按在途拒绝"
+      ]
+    },
+    {
+      "id": "C11-release-fresh",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C11",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C11 没发生投递的拒绝不留在途行,之后同一动作照常首次外发"
+      ]
+    },
+    {
+      "id": "C12-durability",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C12",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C12 外发表的持久化级别读回:WAL,synchronous 不是 OFF"
+      ]
+    },
+    {
+      "id": "C13-claim-conflict",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "C13",
+      "equivalent": false,
+      "status": "killed",
+      "exit": 1,
+      "failed": [
+        "C13 两个连接同时认领同一个新动作:只有插入成功的那个拿到外发权,另一个按在途拒绝"
+      ]
+    },
+    {
+      "id": "EQ-endpoint-same-boot",
+      "file": "packages/server/src/plugin-outbox.ts",
+      "designated": "(等价,全文件)",
+      "equivalent": true,
+      "status": "survived",
+      "exit": 0,
+      "failed": []
+    }
+  ]
+}
