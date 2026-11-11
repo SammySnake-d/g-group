@@ -1,0 +1,14 @@
+apps/desktop/e2e/zz-debug.ui.spec.ts
+  h_f33e46a035b77c 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9e501bd4fdb669f4dd281e69a3c472310851df6f",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

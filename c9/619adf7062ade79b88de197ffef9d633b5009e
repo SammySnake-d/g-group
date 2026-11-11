@@ -1,0 +1,29 @@
+apps/desktop/e2e/files-context.ui.spec.ts
+  s_068645421914c7::t_ae69420e57a330 1,4-6,8-9,11,13-15,17-31,33,47,59-76,78-88,95,97-101
+apps/desktop/src/components/files/FileBody.tsx
+  s_068645421914c7::t_f778bb730daa76 4,20-22
+apps/desktop/src/components/files/context.ts
+  s_068645421914c7::t_40c6950fa7c1e3 59-65
+apps/desktop/src/components/files/fixtures.ts
+  s_068645421914c7::t_d52ea92f8b2a74 1,23-35
+apps/desktop/src/store/boot.ts
+  s_068645421914c7::t_a1d4a5134e0b49 27-28
+apps/desktop/src/store/slices/chat.ts
+  s_068645421914c7::t_9c4cdd5958e6b0 6,42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c9619adf7062ade79b88de197ffef9d633b5009e",
+  "prompts": {},
+  "sessions": {
+    "s_068645421914c7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89c7adaf-00e2-45a9-80be-5840d96475f2",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

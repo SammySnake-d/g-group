@@ -1,0 +1,19 @@
+docs/spec/需求文档.md
+  s_c25d99e19661a8::t_402dd5b7a2364a 3,654-655,2693-2695,2734-2769,2948-2949
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "07e08d090b105f78471be60cdec5f6a15a649548",
+  "prompts": {},
+  "sessions": {
+    "s_c25d99e19661a8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c37f-6fa8-76f2-a2bd-cebbcadb08af",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

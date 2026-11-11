@@ -1,0 +1,20 @@
+apps/desktop/e2e/files-context.ui.spec.ts
+  h_f33e46a035b77c 17,19-22,24,30,44,46,67,69
+apps/desktop/e2e/files-design.ui.spec.ts
+  h_f33e46a035b77c 36,83
+apps/desktop/src/components/files/Provenance.tsx
+  h_f33e46a035b77c 50,60,63
+apps/desktop/verify/design-preview.mjs
+  h_f33e46a035b77c 30-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "debcdf17824b12fddfe4102eadc19b00edcc28e3",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
