@@ -203,6 +203,11 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
           if (got === null) return { content: [{ type: "text", text: tools ? `没有这条记忆:${r.value.id}` : "本轮没有可用的记忆查询口" }], details: null, isError: true };
           return { content: [{ type: "text", text: got }], details: null };
         }
+        if (r.value.kind === "progress-get") {
+          const got = tools?.progressGet ? await tools.progressGet(r.value.id, r.value.roomId) : null;
+          if (got === null) return { content: [{ type: "text", text: tools?.progressGet ? `在 ${r.value.roomId} 看不到单元 ${r.value.id}` : "本轮没有运行台账查询口" }], details: null, isError: true };
+          return { content: [{ type: "text", text: got }], details: null };
+        }
         if (r.value.kind === "note") {
           stateNote = r.value.note;
           return { content: [{ type: "text", text: "状态笔记已登记。" }], details: null };
