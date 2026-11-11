@@ -1,0 +1,49 @@
+packages/adapter-pi-contact/src/compact.ts
+  s_e66fa75bad6135::t_617750363166a7 7,113,146
+packages/adapter-pi-contact/src/mind.ts
+  s_e66fa75bad6135::t_5eaba512374bca 12,174
+packages/adapter-pi-contact/src/usage.test.ts
+  s_e66fa75bad6135::t_33cfc372c0c2dd 1-165
+packages/adapter-pi-contact/src/usage.ts
+  s_e66fa75bad6135::t_54dfa765fe37c7 1-23
+packages/api-contract/src/api.ts
+  s_e66fa75bad6135::t_82ad861601d183 44,403-405
+packages/api-contract/src/index.ts
+  s_e66fa75bad6135::t_a0fbc595f8e522 7
+packages/api-contract/src/usage.ts
+  s_e66fa75bad6135::t_907ba26ead145d 1-59
+packages/kernel/src/index.ts
+  s_e66fa75bad6135::t_0de8a3f0fe1904 15
+packages/kernel/src/model-usage.ts
+  s_e66fa75bad6135::t_9f7ef7189b1033 1-28
+packages/kernel/src/runtime-ports.ts
+  s_e66fa75bad6135::t_232b62000b9b00 7,137-141,198,200,202
+packages/server/src/cache-stats.ts
+  s_e66fa75bad6135::t_c3054d583588bd 1-117
+packages/server/src/host.ts
+  s_e66fa75bad6135::t_df62e17ac42455 147,416-417,446
+packages/server/src/service.ts
+  s_e66fa75bad6135::t_330202494c5333 143
+packages/server/src/start.ts
+  s_e66fa75bad6135::t_c6a2cd5b898e67 27-28,38-39
+packages/server/src/usage.test.ts
+  s_e66fa75bad6135::t_325028973786a6 1-343
+packages/server/src/usage.ts
+  s_e66fa75bad6135::t_0befd2731d176a 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f2559f07b8a905f248796802c39f9e3df1060a78",
+  "prompts": {},
+  "sessions": {
+    "s_e66fa75bad6135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a88580108b882fc97",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
