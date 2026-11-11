@@ -1652,6 +1652,7 @@ export class Host {
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
       ...(doc.description !== undefined ? { description: doc.description } : {}),
+      deliveredSeq: doc.deliveredSeq ?? null,
       stateVer: ver ?? this.taskDoc(t.id).ver,
       ...this.intentView(t.id),
     };

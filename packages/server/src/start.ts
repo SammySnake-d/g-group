@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import type { ContactView } from "@g-group/api-contract";
 import { type ContactCompactor, type ContactMind, DEFAULT_RETRY_POLICY } from "@g-group/kernel";
 import { type ComputeCommands, claudeCompute } from "./compute.ts";
-import { scriptedCompute, scriptedMind } from "./fakes.ts";
+import { deskCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
 import { type IpcMainLike, type Service, bindIpc, createService } from "./service.ts";
 
@@ -15,7 +15,7 @@ export interface StartOptions {
   readonly dataDir: string;
   /** fake:规则替身(不连模型,开发前端用);pi:真实联系人脑子。默认 fake。 */
   readonly mind?: "fake" | "pi";
-  /** fake:剧本 Compute;claude:真实 Claude Code CLI。默认 fake。 */
+  /** fake:剧本 Compute(按派的活说话,见 fakes.ts deskCompute);claude:真实 Claude Code CLI。默认 fake。 */
   readonly compute?: "fake" | "claude";
   /** 模型网关环境(ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN / ANTHROPIC_DEFAULT_SONNET_MODEL),默认 process.env。 */
   readonly env?: Readonly<Record<string, string | undefined>>;
@@ -69,7 +69,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
       return k;
     };
   }
-  const fake = o.compute === "claude" ? null : scriptedCompute({ stepMs: 300 });
+  const fake = o.compute === "claude" ? null : deskCompute({ stepMs: 300 });
   const compute = fake
     ? () => fake.adapter
     : // 统一重试权(AC-36 F3):CLI 自己对上游错误重试的次数就是宿主的自动重试上限,宿主不再叠加(computeHarnessRetries 同值)

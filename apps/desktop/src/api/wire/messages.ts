@@ -5,6 +5,7 @@
 // 其余卡片按正文显示。
 import type { MessageView } from '@g-group/api-contract'
 import { people, type Msg, type PersonId, type QuoteRef } from '@/data'
+import { cardFields, syncCards } from './cards'
 import { actionId, clockOf, defineWiring, read, selfId, type WireCtx } from './types'
 
 export const msgId = (roomId: string, seq: number) => `${roomId}#${seq}`
@@ -40,7 +41,7 @@ function toMsg(v: MessageView, userId: string, whoSaid: (seq: number) => PersonI
     const who = q.state === 'ok' ? whoSaid(q.seq) : undefined
     return who ? [{ msgId: msgId(v.roomId, q.seq), from: who, text: q.excerpt, ...(q.seq === v.replyToSeq ? { reply: true } : {}) }] : []
   })
-  return { k: 'text', id, from, text: body, at: clockOf(v.at), ...(v.edited ? { edited: true } : {}), ...(quotes.length ? { quotes } : {}) }
+  return { k: 'text', id, from, text: body, at: clockOf(v.at), ...(v.edited ? { edited: true } : {}), ...(quotes.length ? { quotes } : {}), ...cardFields(v) }
 }
 
 const idOf = (m: Msg) => ('id' in m ? m.id : '')
@@ -78,6 +79,7 @@ export function putMessages(w: WireCtx, roomId: string, views: readonly MessageV
   const mapped = views.flatMap((v) => toMsgs(v, me, (s) => said.get(s)))
   const settled = views.flatMap((v) => (v.clientActionId ? [localId(v.clientActionId)] : []))
   w.get().setConvs((cs) => cs.map((c) => (c.id === roomId ? { ...c, messages: mergeMsgs(c.messages, mapped, settled) } : c)))
+  syncCards(w, roomId)
 }
 
 /** 读一个会话最近一页消息 */

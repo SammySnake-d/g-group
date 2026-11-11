@@ -8,6 +8,9 @@ import { msgId } from './messages'
 import { clockOf, defineWiring, read } from './types'
 
 const HARNESS: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex' }
+const PLACEMENT: Record<TaskView['computeRuns'][number]['placement'], string> = { local: '本机', byom_daemon: '自带机器', cloud_sandbox: '云端' }
+/** 停下后的说明:宿主确认它启动的程序都退出了才到「已取消」(AC-23),只保证到它启动的程序(v3.20 已定 16) */
+export const STOPPED_PHASE = '已停止 · 算力已归还（只保证到它启动的程序）'
 const ACT_KIND: Record<ComputeProgress['kind'], ActKind> = { started: 'sub', milestone: 'report', blocked: 'ask', completed: 'report', failed: 'error', stopped: 'user' }
 const STATUS: Record<TaskStateName, CStatus> = {
   T1_Open: 'running', T2_Claimed: 'running', T3_Running: 'running', T4b_BlockedOnHuman: 'waiting',
@@ -38,10 +41,18 @@ function phaseOf(t: TaskView, last: ComputeProgress | undefined, h: string): str
     case 'T7_Delivering': return `${h} 做完了，在交付`
     case 'T8a_Delivered': return `${h} 做完了，等你确认`
     case 'T8_Accepted': return `${h} 做完了，你已验收`
-    case 'T9_StopRequested': return t.waitingFor ?? '正在停止'
-    case 'T10_Cancelled': return '已取消'
+    case 'T9_StopRequested': return t.waitingFor ?? '正在停止…等它启动的程序都退出，之前不归还算力'
+    case 'T10_Cancelled': return t.computeRuns.length ? STOPPED_PHASE : '已取消'
     case 'T11_Failed': return `${h} 没做成`
   }
+}
+
+/** 任务卡在只有人能过的一步(Compute 报受阻,宿主让联系人 @你,AC-44):不是联系人转来的授权提问。
+ *  你点过「我来处理」(本地记的 taken)在同一个问题上保留 */
+function humanStep(t: TaskView, prev?: Compute): Compute['needsHuman'] {
+  const q = t.state === 'T4b_BlockedOnHuman' ? t.pendingQuestion : null
+  if (!q || t.authorizations?.some((a) => a.qId === q.qId && a.state === 'pending')) return undefined
+  return { what: q.text || '这一步得你来', qid: q.qId, ...(prev?.needsHuman?.qid === q.qId && prev.needsHuman.taken ? { taken: true } : {}) }
 }
 
 /** 合同的任务 → 界面的 Compute。没派给联系人的任务(清单里待认领的)不是 Compute,返回 null。
@@ -54,13 +65,19 @@ export function toCompute(t: TaskView, prev?: Compute): Compute | null {
   const latest = progress[progress.length - 1]
   const done = [...progress].reverse().find((p) => p.kind === 'completed')
   const failed = [...progress].reverse().find((p) => p.kind === 'failed')
-  const status = STATUS[t.state]
+  const human = humanStep(t, prev)
+  /* 卡在要你来的那一步:Compute 还占着,那一行换成「要你来」(和原型一样仍算在跑) */
+  const status = human ? 'running' : STATUS[t.state]
   const ended = first && last?.endedAt ? Date.parse(last.endedAt) - Date.parse(first.startedAt) : NaN
   const harness = last ? (HARNESS[last.harness] ?? last.harness) : '—'
   const elapsed = Number.isFinite(ended) && ended >= 0 ? formatDuration(ended) : '—'
   const phase = phaseOf(t, latest, harness === '—' ? 'Compute' : harness)
   return {
     id: t.id, title: t.title, owner: t.ownerContactId, conv: t.roomId, askMsg: msgId(t.roomId, t.sourceSeq),
+    /* 交付消息(AC-56 普通消息):做完的 Compute 挂在它下面(#1790 消息优先) */
+    ...(t.deliveredSeq != null ? { reportMsg: msgId(t.roomId, t.deliveredSeq) } : {}),
+    ...(last ? { placement: PLACEMENT[last.placement] } : {}),
+    ...(human ? { needsHuman: human } : {}),
     status, phase, elapsed,
     cost: '—',
     model: last?.model ?? t.modelSnapshot?.model ?? '—',
@@ -68,7 +85,8 @@ export function toCompute(t: TaskView, prev?: Compute): Compute | null {
     steps: [], activity: mergeActs(prev?.activity ?? [], progress.map(actOf)), files: [], checks: [], checkpoints: [],
     /* 做完了:那一行写「Claude Code 做完了，等你确认 · 18 秒」,Compute 的原话(done.summary)只在过程里 */
     ...(status === 'done' && done ? { result: elapsed === '—' ? phase : `${phase} · ${elapsed}` } : {}),
-    ...(status === 'error' && failed ? { error: failed.summary } : {}),
+    /* 失败了(出了原位失败卡、任务还在等你选,或已经没做成):那一行写失败原因 */
+    ...((status === 'error' || latest?.kind === 'failed') && failed ? { error: failed.summary } : {}),
     ...(t.state === 'T9_StopRequested' ? { stopping: true } : {}),
   }
 }

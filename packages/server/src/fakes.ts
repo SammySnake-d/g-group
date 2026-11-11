@@ -69,6 +69,10 @@ export function scriptedCompute(
     settle?: (computeId: string) => Promise<void>;
     /** 和真实一次性适配器一样:这一轮已经以 completed/failed 结束的实例,stop 返回拒绝(没有在运行的进程),不再报 stopped */
     refuseStopAfterExit?: boolean;
+    /** 和真实进程一样:stop 之后这一轮剩下的事件不再吐(默认照旧吐完,老用例依赖) */
+    haltOnStop?: boolean;
+    /** 吐某条事件前多等一会儿(毫秒,叠加在 stepMs 上);桌面替身用它把「慢慢做」拉长,好让人按停止 */
+    pause?: (e: ComputeEvent) => number;
   } = {},
 ) {
   const queue: ComputeEvent[] = [];
@@ -89,6 +93,8 @@ export function scriptedCompute(
   const turns: { computeId: string; turn: TurnModel | undefined }[] = [];
   const stopped: string[] = [];
   const ended = new Set<string>();
+  /** haltOnStop:已被停下、还没续接的实例 */
+  const halted = new Set<string>();
   const push = (e: ComputeEvent) => {
     if (e.kind === "completed" || e.kind === "failed") ended.add(e.computeId);
     if (e.kind === "started") ended.delete(e.computeId);
@@ -101,7 +107,8 @@ export function scriptedCompute(
     busy.set(computeId, (busy.get(computeId) ?? 0) + 1);
     void (async () => {
       for (const e of evs) {
-        await new Promise((r) => setTimeout(r, opts.stepMs ?? 1));
+        await new Promise((r) => setTimeout(r, (opts.stepMs ?? 1) + (opts.pause?.(e) ?? 0)));
+        if (opts.haltOnStop && halted.has(computeId)) break;
         push(e);
       }
       busy.set(computeId, (busy.get(computeId) ?? 1) - 1);
@@ -132,6 +139,7 @@ export function scriptedCompute(
       const changed = o?.tools !== undefined && JSON.stringify(o.tools) !== toolsOf.get(computeId);
       if (o?.tools) toolsOf.set(computeId, JSON.stringify(o.tools));
       resumed.push({ computeId, text, ...(changed && o?.tools ? { tools: [...o.tools] } : {}) });
+      halted.delete(computeId);
       turns.push({ computeId, turn });
       play(computeId, [...(opts.resumeScript?.(computeId, turn, text, o?.tools) ?? []), ...(opts.onResume?.(computeId, text) ?? [])].map((e) => ({ ...e, computeId }) as ComputeEvent));
       return { ok: true };
@@ -139,6 +147,7 @@ export function scriptedCompute(
     async stop(computeId: string) {
       if (opts.refuseStopAfterExit && ended.has(computeId)) return { ok: false as const, reason: `Compute ${computeId} 没有在运行的进程` };
       stopped.push(computeId);
+      halted.add(computeId);
       push({ computeId, kind: "stopped", code: null, signal: null, scope: "main-then-group", violations: [] });
       return { ok: true };
     },
@@ -204,4 +213,49 @@ export function scriptedCompute(
       actWake?.();
     },
   };
+}
+
+/** 派给 Compute 的那件事(宿主的 brief 是 { task, rules, tools… };重跑时后面接着重跑说明,只取第一行) */
+const taskOf = (brief: unknown) => String((brief as { task?: unknown } | null)?.task ?? brief ?? "").split("\n")[0]!.trim() || "这件事";
+
+/**
+ * 桌面开发用的剧本 Compute(GG_COMPUTE=fake,见 start.ts):按派的活说话,不再不管派什么都报同一句。
+ *   一般的活:开始 → 动手「正在<活>」→ 完成「完成:<活>」;
+ *   活里带「验证码」:做到一半停在受阻,等你接手(AC-44);你回答(交还)后接着做完;
+ *   活里带「会失败」:一开始就失败(平台拒绝,宿主出原位失败卡,AC-36);点重试续接后做完;
+ *   活里带「慢慢」:每步之间停很久,好让人按停止(AC-23);停下后不再吐剩下的进度。
+ */
+type Step = ComputeEvent extends infer E ? (E extends ComputeEvent ? Omit<E, "computeId"> : never) : never;
+export function deskCompute(o: { stepMs?: number; slowMs?: number } = {}) {
+  const tasks = new Map<string, string>();
+  const slow = new Set<string>();
+  const done = (task: string): Step => ({ kind: "completed", result: `完成:${task}` });
+  return scriptedCompute({
+    stepMs: o.stepMs ?? 300,
+    haltOnStop: true,
+    pause: (e) => (slow.has(e.computeId) && e.kind !== "started" ? (o.slowMs ?? 20_000) : 0),
+    script: (computeId, brief): Step[] => {
+      const task = taskOf(brief);
+      tasks.set(computeId, task);
+      const start: Step = { kind: "started", sessionId: `desk-${computeId}`, resumed: false };
+      if (task.includes("验证码")) {
+        return [
+          start,
+          { kind: "milestone", stage: "登录", summary: `打开登录页,准备${task}` },
+          { kind: "blocked", needs: "登录要短信验证码,这一步得你来", summary: "停在登录页等你输入验证码,不重试、不绕过" },
+        ];
+      }
+      if (task.includes("会失败")) return [start, { kind: "failed", reason: `打开网页被平台拒绝(${task})`, code: 1, signal: null, violations: [] }];
+      if (task.includes("慢慢")) {
+        slow.add(computeId);
+        return [start, { kind: "milestone", stage: "第 1 步", summary: `开始${task}` }, { kind: "milestone", stage: "第 2 步", summary: `接着${task}` }, done(task)];
+      }
+      return [start, { kind: "milestone", stage: "动手", summary: `正在${task}` }, done(task)];
+    },
+    onResume: (computeId): Step[] => {
+      slow.delete(computeId);
+      const task = tasks.get(computeId) ?? "这件事";
+      return [{ kind: "milestone", stage: "接着做", summary: `接着${task}` }, done(task)];
+    },
+  });
 }

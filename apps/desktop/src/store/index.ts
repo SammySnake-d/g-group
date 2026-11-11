@@ -16,6 +16,7 @@ import { bridge } from '@/api/backend'
 import { applyDemo } from '@/api/demo-state'
 import { guardUnwired } from '@/api/wire/unwired'
 import { CONTACTS_CTX_KEYS, createContactsSlice } from './slices/contacts'
+import { createFilesSlice } from './slices/files'
 import type { AppState } from './state'
 import type { Ctx } from './types'
 
@@ -31,6 +32,7 @@ export const useAppStore = create<AppState>()((...a) => ({
   ...createModelsSlice(...a),
   ...createSendSlice(...a),
   ...createContactsSlice(...a),
+  ...createFilesSlice(...a),
 }))
 
 /* 演示数据只在没连上后端时装:没有桌面壳(浏览器预览、renderer 用例)就在建 store 时同步装好,首帧就是演示界面;

@@ -35,10 +35,12 @@ export interface HarnessSessionProps {
   autoFocus?: boolean
   /** 嵌进已有标题与只读条的容器（分屏里 Compute 视图的「会话」页签）：不画自己的顶栏和只读条，只留对话流和状态行 */
   embedded?: boolean
+  /** 记录还在取(连上后端时点开的那一下):先空着,不说「还没开工」 */
+  loading?: boolean
   className?: string
 }
 
-export function HarnessSession({ compute: c, transcript, sourceTitle, dm = false, now, onBack, onClose, onJumpSource, onTalk, autoFocus = false, embedded = false, className }: HarnessSessionProps) {
+export function HarnessSession({ compute: c, transcript, sourceTitle, dm = false, now, onBack, onClose, onJumpSource, onTalk, autoFocus = false, embedded = false, loading = false, className }: HarnessSessionProps) {
   const ref = useRef<HTMLElement>(null)
   useEffect(() => {
     if (autoFocus) ref.current?.focus({ preventScroll: true })
@@ -70,6 +72,8 @@ export function HarnessSession({ compute: c, transcript, sourceTitle, dm = false
             <Transcript blocks={view.blocks} ownerName={owner} />
             <Deliverables items={view.deliverables} changes={view.changes} />
           </div>
+        ) : loading ? (
+          <div className="py-16" aria-busy="true" data-testid="session-loading" />
         ) : (
           <EmptyState icon={<SquareTerminal />} title={COPY.noTranscript} hint={COPY.noTranscriptHint} className="py-16" />
         )}

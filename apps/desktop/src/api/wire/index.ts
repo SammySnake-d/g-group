@@ -10,13 +10,14 @@ import type { StoreApi } from 'zustand'
 import type { AppState } from '@/store/state'
 import { call } from '../backend'
 import { contactsWiring } from './contacts'
+import { filesWiring } from './files'
 import { messagesWiring } from './messages'
 import { roomsWiring } from './rooms'
 import { tasksWiring } from './tasks'
 import type { Wiring, WireCtx } from './types'
 
 /** 已接线的实体,按读取顺序排。新实体:在 api/wire/ 下加一个文件,export 一个 defineWiring({...}),再在这里按依赖插一行 */
-export const WIRINGS: Wiring[] = [contactsWiring, roomsWiring, messagesWiring, tasksWiring]
+export const WIRINGS: Wiring[] = [contactsWiring, roomsWiring, messagesWiring, tasksWiring, filesWiring]
 
 export type WireStatus =
   | { phase: 'off' }

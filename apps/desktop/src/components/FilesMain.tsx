@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Dialog } from '@astryxdesign/core/Dialog'
-import { artifacts, type Artifact } from '@/data'
+import type { Artifact } from '@/data'
 import { useApp } from '@/store'
+import { fileList } from '@/store/slices/files'
 import { FileShelf } from './files/FileShelf'
 import { FileReader } from './files/FileReader'
 import { fileDataset } from './files/fixtures'
@@ -11,9 +12,9 @@ import { boot } from '@/store/boot'
 export function FilesMain({ id }: { id: string | null }) {
   const setFileSel = useApp((s) => s.setFileSel)
   const [peek, setPeek] = useState<Artifact | null>(null)
-  /* 文件还没接后端(files.list):连上后端时不列演示文件 */
-  const live = useApp((s) => s.backend.mode === 'connected')
-  const collection = fileDataset(boot.fileFixture, live ? [] : artifacts)
+  /* 连上后端列 files.list 读到的(附件、任务产出、交付带回的工件);没连上列演示文件 */
+  const files = useApp(fileList)
+  const collection = fileDataset(boot.fileFixture, files)
   const [keyboardPeek, setKeyboardPeek] = useState(false)
   const a = collection.find((f) => f.id === id)
   return <>
