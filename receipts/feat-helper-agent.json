@@ -1,0 +1,23 @@
+{
+  "slice": "Helper 运行时与软件操作工具(U04/U05、U94/D28.1、D07.0、AC-52 后端):内核 HELPER_OPS 封闭清单(服务接口受控子集 63 项)是唯一业务能力来源,Helper 专属 MCP(进程内内存传输接 pi 运行时、cli.ts mcp 以 stdio 给外部)、CLI(cli.ts helper/tools/tool/call)、skill(packages/server/skills/helper/SKILL.md 进 Helper 系统提示)三者复用它;工具经 service.handle(caller=helper) 真执行,服务层只拒排除清单并照入口限读取范围;不可逆操作不设代码确认门禁,「先问用户」写在 skill 与工具说明;三种入口照 routeHelper(全局不带聊天、read_room 按需读;侧栏回复只进侧栏;@Helper 由宿主触发、以 helper 发言引用那条;联系人 @Helper 只留拒收记录);审计 gg_helper_ops、上下文清单 gg_helper_context;tasks.importCsv(RFC 4180,逐行报错);rooms.createGroup 幂等并可带 fromRoomId+backgroundSeqs;start.ts/cli.ts 接线 pi HelperMind 与规则替身",
+  "acceptance": [
+    {
+      "id": "AC-52",
+      "status": "未测",
+      "reason": "整项含前端交互(⌘K 全局入口、聊天侧栏、拖 CSV 进 Helper 窗口),界面不在本片,按 brief 整项记未测。后端部分的证据:①全局首次不带聊天、按需读有权聊天、读无权被拒 → packages/server/src/helper-agent.test.ts「全局入口:…」;②侧栏读当前聊天、对话不上公屏 →「侧栏:…」;③@Helper 回复出现在当前聊天并引用那条 →「@Helper:…」;④侧栏点名另开群(fromRoomId+backgroundSeqs,原群不多消息)→「侧栏点名另开群:…」;⑤CSV 转本群任务、落错群为红 → packages/server/src/task-import.test.ts 4 条;⑥请求上下文清单(观测点)→ gg_helper_context 与 helper.ask 的 context 字段,上述测试逐条核对;真实模型三条路径 + @Helper → packages/server/proof/helper-agent-real.txt;单点故障校准 → packages/server/proof/helper-agent-mutations.txt"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:dd154965-afbd-4134-a1d3-c00f2a859eab",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "55e9b0b"
+  },
+  "unverifiable": "AC-52:后端测试用剧本替身的 Helper 脑子按剧本调工具,证明的是「工具清单、权限门、入口路由、落点、上下文清单」这些代码事实;真实模型会不会照 skill 先问再删、会不会多调或少调工具,只有 helper-agent-real.txt 那一次实跑为证(软提示不做代码门禁,DM#2565),换模型或改提示词可能表现不同。服务层门只按方法名与 roomId/fromRoomId 判读取范围:files.read、artifacts.get、tasks.list 等不在「读聊天内容」之列,侧栏入口仍能读到别的会话的文件与任务元数据(按 U04 手动能做的都给)。全局入口读别的聊天不另要确认(D28 待确认①未定),每次读取记在上下文清单里。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "子代理实现(调度会话 claude:dd154965-afbd-4134-a1d3-c00f2a859eab 派出);设计真源 docs/dev-handbook f4963a0(v3.28):D07.0 工具形态已定(DM#2669)、§2.0 做/不做标准(软提示不做成功能 DM#2565)。\n与 brief 的出入(按远端真源与调度更正):不做代码层确认门禁(原 brief 的 helper.confirm/cancelConfirm/pending 与待确认登记已去掉,改为 skill 与工具说明写「先问用户」);不加 settings.helperModel(U70 只在联系人与 Compute 两处配模型,v3.28 §2.0 原文「也不设全局杂活模型」),Helper 用 defaultSpeakingModel。\nU04 覆盖(HELPER_OPS 全表 63 项)——读 29:contacts.list、contacts.get、contacts.profile、capabilities.list、rooms.list、rooms.get、rooms.rewindPreview、announcements.list、messages.list、search.messages、messages.receipts、files.list、files.read、artifacts.get、tasks.list、tasks.get、tasks.progress、runs.list、runs.get、commitments.list、schedules.list、schedules.preview、schedules.history、plugins.marketplace、plugins.list、plugins.get、commands.list、models.preview、settings.get(messages.list 的工具名是 read_room);写 22:contacts.create、contacts.update、rooms.openDm、rooms.createGroup、rooms.update、rooms.addMembers、announcements.add、announcements.update、messages.react、tasks.create、tasks.importCsv、tasks.assign、tasks.rebindFollowUp、runs.rerun、schedules.create、schedules.update、schedules.runNow、plugins.setEnabled、plugins.configure、plugins.pull、models.batchReplace、settings.update;不可逆或授权类 12(说明标【先问用户】,代码不拦):contacts.remove、rooms.removeMember、rooms.rewind、announcements.remove、messages.retract、tasks.cancel、tasks.integrate、commitments.revoke、schedules.remove、plugins.install、plugins.update、plugins.uninstall。\n排除清单 22(服务层以 Helper 身份调用一律 forbidden,MCP 不列):session.hello(渲染进程握手,不是用户操作);messages.send(Helper 不以用户身份在聊天里发言;@Helper 的回复以 helper 发言者出现);messages.edit(改写用户本人的发言等同以用户身份发言);rooms.markRead(已读位置代表用户本人看过(AC-46),Helper 不替用户标已读);drafts.get(输入框草稿不需要 Helper 操作);drafts.save(输入框草稿不需要 Helper 操作);attachments.add(从本机任意路径取文件;Helper 只读会话里已有的文件(files.list/files.read));cards.act(卡片按钮含授权、验收与回答,只来自用户本人(U99/AC-20、AC-28);失败重试用 runs.rerun);tasks.accept(验收交付要用户本人回复(AC-28));tasks.reject(退回交付要用户本人回复(AC-28));tasks.answer(回答联系人的提问与授权只来自用户本人(U99/AC-20));plugins.send(经输出渠道以用户身份对外发送,与 messages.send 同理不给 Helper);docs.list(共享文档服务正由 PR #56 撤销);docs.get(共享文档服务正由 PR #56 撤销);docs.create(共享文档服务正由 PR #56 撤销);docs.commit(共享文档服务正由 PR #56 撤销);docs.history(共享文档服务正由 PR #56 撤销);helper.context(Helper 自己的入口,不作为工具);helper.note(Helper 自己的入口,不作为工具);helper.history(Helper 自己的入口,不作为工具);helper.post(Helper 自己的入口,不作为工具);helper.ask(Helper 自己的入口,不作为工具)。\n服务端还没有的操作(解散群、禁言、删消息、消息置顶、转发、资产、群模板)由另一片 S1 补,补完后在清单里叠加;对账测试会在方法表新增方法而清单未登记时变红。\nU05:普通联系人的工具清单与 HELPER_OPS 不相交、联系人请求体里没有 Helper 工具与 skill(adapter-pi-contact/src/helper-mind.test.ts);联系人五块与 Compute 派活说明里没有 skill 与 Helper 工具名(server/src/helper-agent.test.ts「skill 只进 Helper」)。"
+}
