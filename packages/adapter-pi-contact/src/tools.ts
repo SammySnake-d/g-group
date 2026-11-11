@@ -2,6 +2,7 @@
 // 工具只校验参数形状、登记成 MindAction 并立即回「已登记」,不做任何 I/O;
 // 宿主在本轮结束后逐条校验(会话可见、任务归属、seq 在本轮输入里)、分配 action_id、落盘后才执行(runtime-ports.ts)。
 // 清单是封闭的:联系人没有 shell、文件读写、网络这类工具;要动手就用 dispatch_compute 开 Compute(AC-33)。
+// 末尾 claim_task(feat/contact-actions,U14 认领任务):认领会话面板上还没人负责的已有任务;reply 可带 mentions 结构化 @ 人。
 import type { MindAction } from "@g-group/kernel";
 
 /** 工具名 → 对应的动作种类;update_state_note 不是动作,写进 RoundOutput.stateNote。 */
@@ -19,6 +20,7 @@ export const PI_CONTACT_TOOL_NAMES = Object.freeze([
   "read_memory",
   "read_quote_parent",
   "progress_rerun",
+  "claim_task",
 ] as const);
 export type PiContactToolName = (typeof PI_CONTACT_TOOL_NAMES)[number];
 
@@ -43,6 +45,7 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
       roomId: f("text", true, "会话 id(群或私聊),必须是本轮新消息所在的会话"),
       text: f("text", true, "要发出的原文"),
       replyToSeq: f("seqOrNull", false, "回复哪条消息的 seq;不针对某条消息就省略"),
+      mentions: f("texts", false, "要 @ 的人的 id(用户或本会话的联系人);被 @ 的人会收到提醒。正文里写的 @ 不会提醒任何人。不 @ 人就省略"),
     },
   },
   dispatch_compute: {
@@ -142,6 +145,13 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
       note: f("text", true, "完整的新状态笔记"),
     },
   },
+  claim_task: {
+    description:
+      "认领会话任务面板上还没人负责的已有任务(第 5 块「可认领的任务」里列着 id)。宿主原子校验:任务在你所在的会话、还开着、没人负责;先落盘的拿到,认领后按任务说明起 Compute,结果之后以事件回到你这里。别人先认领了会被拒,原因下一轮第 5 块给你。面板上已有的任务用它接,不要再用 dispatch_compute 另建一份。",
+    fields: {
+      taskId: f("text", true, "要认领的任务 id"),
+    },
+  },
 });
 
 const schemaOf = (s: FieldSpec): Record<string, unknown> => {
@@ -233,7 +243,10 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
   const sn = (k: string) => v[k] as string | null;
   const nn = (k: string) => v[k] as number | null;
   switch (tool) {
-    case "reply": return act({ kind: "reply", roomId: s("roomId"), text: s("text"), replyToSeq: nn("replyToSeq") });
+    case "reply": {
+      const at = v.mentions as readonly string[] | null;
+      return act({ kind: "reply", roomId: s("roomId"), text: s("text"), replyToSeq: nn("replyToSeq"), ...(at !== null ? { mentions: Object.freeze([...new Set(at)]) } : {}) });
+    }
     case "dispatch_compute": return act({ kind: "dispatch", roomId: s("roomId"), sourceSeq: n("sourceSeq"), title: s("title"), task: s("task") });
     case "commit": return act({ kind: "commit", roomId: s("roomId"), sourceSeq: n("sourceSeq"), text: s("text"), taskId: sn("taskId") });
     case "forward": {
@@ -250,6 +263,7 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
     case "memory_feedback": return act({ kind: "memory-use", id: s("id"), good: v.good as boolean, note: sn("note") });
     case "read_memory": return { ok: true, value: { kind: "read", id: s("id") } };
     case "read_quote_parent": return { ok: true, value: { kind: "read-quote", roomId: s("roomId"), seq: n("seq") } };
+    case "claim_task": return act({ kind: "claim", taskId: s("taskId") });
   }
 }
 const act = (action: MindAction): ParseResult => ({ ok: true, value: { kind: "action", action: Object.freeze(action) } });
