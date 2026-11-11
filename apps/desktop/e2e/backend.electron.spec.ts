@@ -44,14 +44,14 @@ test("接上宿主服务:私聊派活走完一圈,事件流推到渲染层", asy
     const again = await ok<{ seq: number }>("messages.send", { roomId: room.id, clientActionId: "e2e-m1", text: "帮我写 hello.txt" });
     expect(again.seq).toBe(sent.seq);
 
-    // 联系人回话、派出 Compute、Compute 跑完、联系人发交付卡
+    // 联系人回话、派出 Compute、Compute 跑完、联系人以普通消息交付(AC-56:交付是普通消息,不出专用卡)
     await expect.poll(async () => {
       const list = await ok<{ messages: { sender: { kind: string }; text: string; card: { kind: string } | null }[] }>("messages.list", { roomId: room.id, limit: 100 });
       const tasks = await ok<{ tasks: { recentProgress: { kind: string }[] }[] }>("tasks.list", { roomId: room.id });
       return {
         reply: list.messages.some((m) => m.sender.kind === "contact" && m.text.includes("安排 Compute")),
         completed: tasks.tasks.some((t) => t.recentProgress.some((p) => p.kind === "completed")),
-        delivery: list.messages.some((m) => m.card?.kind === "delivery"),
+        delivery: list.messages.some((m) => m.sender.kind === "contact" && m.text.startsWith("做完了")),
       };
     }, { timeout: 30_000 }).toEqual({ reply: true, completed: true, delivery: true });
     const tasks = await ok<{ tasks: { title: string; state: string; recentProgress: { kind: string }[] }[] }>("tasks.list", { roomId: room.id });
