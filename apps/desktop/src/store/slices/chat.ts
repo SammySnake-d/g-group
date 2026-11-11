@@ -8,6 +8,7 @@ import { markReadLive, openDmLive } from '@/api/wire/rooms'
 import { broken } from '@/mut'
 import { boot, clock, later, uid } from '../boot'
 import { focusComposer, scrollToMsg } from '../dom'
+import { firstUnreadId } from '../select'
 import { rankIn } from '../reads'
 import { lens, type Slice } from '../state'
 
@@ -70,7 +71,8 @@ export type ChatSlice = ChatCtx & {
   setReplying: (who: PersonId, roomId: string | null, activity: string) => void
   /** 连上后端:以后端为准换掉这些消息上的表情回应 */
   putReactions: (m: Record<string, Record<string, PersonId[]>>) => void
-  /** 连上后端:读进来时各会话的未读数(新消息分隔线从这里画) */
+  /** 连上后端:各会话「以下是新消息」锚在哪条上(打开那一刻的第一条未读;演示数据用 unreadAt 的条数) */
+  newFrom: Record<string, string | null>
   setUnreadAt: (m: Record<string, number>) => void
   /** 连上后端:把存着的草稿(文字 + 引用)放回输入框 */
   restoreDraft: (cid: string, text: string, quotes: QuoteRef[]) => void
@@ -94,6 +96,7 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
     selected: new Set(),
     editing: null,
     unreadAt: {},
+    newFrom: {},
     replyingSince: {},
     replyingWhat: {},
 
@@ -134,8 +137,11 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
     setActive: (active) => set({ active }),
     setConvs: (v) => L.convs((cs) => (typeof v === 'function' ? v(cs) : v)),
     openFromList: (id) => {
-      /* 连上后端:记住打开这一刻有几条未读,画「以下是新消息」(#1240) */
-      if (live(get())) set((s) => ({ unreadAt: { ...s.unreadAt, [id]: s.convs.find((c) => c.id === id)?.unread ?? 0 } }))
+      /* 连上后端:锚住打开这一刻的第一条未读,画「以下是新消息」(#1240) */
+      if (live(get())) {
+        const c = get().convs.find((x) => x.id === id)
+        if (c) set((s) => ({ newFrom: { ...s.newFrom, [id]: firstUnreadId(c, c.unread ?? 0) } }))
+      }
       set({ active: id }); get().markRead(id); get().setSelecting(false)
     },
     openDm: (id) => {
@@ -174,7 +180,12 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
       return { typing, replyingSince: same ? s.replyingSince : { ...s.replyingSince, [roomId]: Date.now() }, replyingWhat: { ...s.replyingWhat, [roomId]: activity } }
     }),
     putReactions: (m) => L.reactions((r) => ({ ...r, ...m })),
-    setUnreadAt: (m) => L.unreadAt((u) => ({ ...u, ...m })),
+    setUnreadAt: (m) => {
+      L.unreadAt((u) => ({ ...u, ...m }))
+      /* 读进来的这一刻锚住第一条未读,之后来的新消息不把它往下推 */
+      const convs = get().convs
+      L.newFrom((f) => ({ ...f, ...Object.fromEntries(Object.entries(m).map(([id, n]) => { const c = convs.find((x) => x.id === id); return [id, c ? firstUnreadId(c, n) : null] })) }))
+    },
     mention: (id) => {
       set({ section: 'chat', stack: [] })
       get().setDraft((d) => (d && !d.endsWith(' ') ? d + ' ' : d) + '@' + people[id].name + ' ')

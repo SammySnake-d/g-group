@@ -171,6 +171,7 @@ test("群里置顶、转发、多选删除、清空:置顶条显示并在重启�
       await expect(mine(win, "上线时间定在周五")).toHaveCount(1, LONG);
       await menu(win, mine(win, "上线时间定在周五"), "ctx-pin");
       await expect(win.getByTestId("strip-text")).toContainText("上线时间定在周五", LONG);
+      await expect(win.getByText("已设为置顶消息")).toHaveCount(0, LONG); // 提示条消失后再拍,不挡置顶条
       await shot(win, "group-pinbar");
     });
 
@@ -243,15 +244,19 @@ test("私聊回到某条:确认框写明真实要撤下几条;之后的撤下、
       await expect(win.locator('[data-msg="new-divider"]')).toBeVisible(LONG);
       await expect(theirs(win, "收到:第一句")).toHaveCount(1);
       await shot(win, "dm-new-divider");
+      // 分隔线锚在打开那一刻的第一条未读上:紧跟在它后面的就是那句回复
+      await expect(win.locator('[data-msg="new-divider"] + *')).toContainText("收到:第一句");
     });
 
     await test.step("回到「第一句」:确认框说之后 3 条会撤下;确认后它们不见了,留一行灰字,没有假的「恢复」", async () => {
       await send(win, "第二句");
       await expect(theirs(win, "收到:第二句")).toHaveCount(1, LONG);
+      // 又来了新消息,分隔线没被推着走,还在「收到:第一句」前面
+      await expect(win.locator('[data-msg="new-divider"] + *')).toContainText("收到:第一句");
       await menu(win, mine(win, "第一句"), "ctx-rewind");
       const dlg = win.getByTestId("rewind-dialog");
       await expect(dlg).toContainText("之后的 3 条会撤下", LONG);
-      await shot(win, "dm-rewind-dialog");
+      await shot(win, "dm-rewind-dialog", 500);
       await dlg.getByTestId("rewind-confirm").click();
       await expect(mine(win, "第二句")).toHaveCount(0, LONG);
       await expect(theirs(win, "收到:第二句")).toHaveCount(0);

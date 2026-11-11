@@ -18,14 +18,17 @@ import { rankIn } from '@/store/reads'
 type TextMsg = Extract<Msg, { k: 'text' }>
 /** 宿主推来的联系人活动 → 卡里那几个字 */
 const ACTIVITY: Record<string, string> = { reading: '在看消息', thinking: '在想', replying: '在写回答' }
-/** 联系人这一轮接走的是哪条:它的已读位置(接走即已读)落在的你那条消息;没有就不引用 */
+/** 联系人这一轮接走的是哪条:它的已读位置(接走即已读)之前、你最后发的那一条。只有附件就写文件名;
+ *  最后一条不是你说的话(回退说明、转发)就不引用——不把更早的一句安到它头上 */
 function takenBy(conv: Conversation, who: PersonId): TextMsg | undefined {
   const marks = conv.reads?.[who]
   const upto = marks?.[marks.length - 1]?.upto
   if (!upto) return undefined
   const rank = rankIn(conv.messages.flatMap((m) => ('id' in m ? [m.id] : [])))
   const at = rank(upto)
-  return [...conv.messages].reverse().find((m): m is TextMsg => m.k === 'text' && m.from === 'me' && rank(m.id) <= at && !!m.text)
+  const last = [...conv.messages].reverse().find((m) => 'id' in m && rank(m.id) <= at && ((m.k === 'text' && m.from === 'me') || (m.k === 'sys' && m.rewind) || (m.k === 'forward' && m.from === 'me')))
+  if (last?.k !== 'text') return undefined
+  return last.text ? last : { ...last, text: (last.files ?? []).map((f) => f.name).join('、') }
 }
 /** 离底部不到这么多就算「在最新」 */
 const NEAR_BOTTOM = 80
@@ -33,9 +36,9 @@ const NEAR_BOTTOM = 80
 /* 聊天主区:头部、群公告条、居中阅读栏(消息流 + 输入框,--chat-col 上限 860)、回到最新、有人 @ 你。
    布局几何是之前反馈修出来的(阅读栏居中、回到最新贴输入框上方),e2e/layout、visual、shell-look 会量。 */
 export function ChatView() {
-  const { conv, active, highlight, selecting, selected, toggleSelected, openSplit, typing, unreadAt, isLive, since, what } = useApp((s) => ({
+  const { conv, active, highlight, selecting, selected, toggleSelected, openSplit, typing, unreadAt, newFrom, isLive, since, what } = useApp((s) => ({
     conv: activeConv(s), active: s.active, highlight: s.highlight, selecting: s.selecting, selected: s.selected, toggleSelected: s.toggleSelected,
-    openSplit: s.openSplit, typing: s.typing[s.active], unreadAt: s.unreadAt[activeConv(s).id],
+    openSplit: s.openSplit, typing: s.typing[s.active], unreadAt: s.unreadAt[activeConv(s).id], newFrom: s.newFrom[s.active],
     isLive: live(s), since: s.replyingSince[s.active], what: s.replyingWhat[s.active],
   }))
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -109,7 +112,7 @@ export function ChatView() {
       <div className="relative min-h-0 flex-1">
         <div ref={scrollRef} data-scroll="chat" onScroll={(e) => onScroll(e.currentTarget)} className="scroll-thin h-full overflow-y-auto" style={{ ['--avatar-ring' as string]: 'var(--bg)' }}>
           <div ref={colRef} className="mx-auto w-full max-w-[var(--chat-col)] px-6 pb-3 pt-1" data-testid="chat-column">
-            <MessageList msgs={withUnreadDivider(conv, unreadAt)} highlight={highlight} selecting={selecting} selected={selected} onSelect={toggleSelected} conv={conv.id} />
+            <MessageList msgs={withUnreadDivider(conv, unreadAt, newFrom)} highlight={highlight} selecting={selecting} selected={selected} onSelect={toggleSelected} conv={conv.id} />
             {replying && <div data-testid="typing"><MessageList msgs={[replying]} conv={active} /></div>}
           </div>
         </div>
