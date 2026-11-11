@@ -1,0 +1,21 @@
+packages/kernel/proof/r18-notes.md
+  s_74b15fb4f695d6::t_1e2387f8277aba 38,42,53-54
+receipts/feat-kernel-plugins.json
+  s_74b15fb4f695d6::t_dce4d32584b7b8 81-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f2aa741416c4429f9c477fc69acc8197bcfe1f1b",
+  "prompts": {},
+  "sessions": {
+    "s_74b15fb4f695d6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c93a-87c4-7701-a989-58b9b15da855",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+packages/kernel/proof/r18-notes.md
+  s_74b15fb4f695d6::t_dd01a3a6579dbc 1-52
+packages/kernel/proof/r18-red-green.json
+  s_74b15fb4f695d6::t_2dc911ac0709a4 1-255
+packages/kernel/proof/r18-reproduction.txt
+  s_74b15fb4f695d6::t_79e53945c3fd67 1-6
+receipts/feat-kernel-plugins.json
+  s_74b15fb4f695d6::t_8361a91079a0e3 27,31-32,36-37,41-42,62-63,66,68,77-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "443209008f65d46e11e04a8a67e81ebb9dbbd846",
+  "prompts": {},
+  "sessions": {
+    "s_74b15fb4f695d6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c93a-87c4-7701-a989-58b9b15da855",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
