@@ -135,6 +135,7 @@ import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
 import { MemoryStore } from "./memory-store.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
+import { PluginSources } from "./plugin-sources.ts";
 import { PluginStore } from "./plugins.ts";
 import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief, reviewModelProblem } from "./review.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
@@ -371,6 +372,8 @@ export class Host {
   readonly loop: AttentionLoop;
   readonly scheduler: Scheduler;
   readonly plugins: PluginStore;
+  /** 数据源插件挂到会话:挂接、拉取入库、联系人按会话只读读取(US12①、D04.1;AC-35 阶段 I) */
+  readonly sources: PluginSources;
   readonly announcements: AnnouncementStore;
   private readonly exits: MemberExits;
   /** 共享文档单一提交点(AC-21):所有写入只经它 */
@@ -504,6 +507,19 @@ export class Host {
       ...(opts.pluginFetch ? { fetch: opts.pluginFetch } : {}),
       ...(opts.pluginDownloadMaxBytes !== undefined ? { maxDownloadBytes: opts.pluginDownloadMaxBytes } : {}),
     });
+    // 外部数据源进会话:拉到的外部事件只入库,不进会话消息、不唤醒联系人、不经授权识别(D04.1 外部输入默认是背景;AC-20)
+    this.sources = new PluginSources({
+      db: this.db,
+      plugins: this.plugins,
+      clockMs: this.clock,
+      timers,
+      newId: this.newId,
+      userInRoom: (roomId) => {
+        this.roomRow(roomId);
+        return this.isMember(roomId, { kind: "user", id: this.userId });
+      },
+      report: (what, detail) => this.report(what, detail),
+    });
     this.announcements = new AnnouncementStore({
       db: this.db,
       now: this.now,
@@ -548,6 +564,8 @@ export class Host {
     this.scheduler.tick();
     // 启动回收(F4/F6/F12):上次留下的未提交轮次按 crash_recovery_count 决定续跑或熔断出卡;磁盘上还没被领走的输入交给联系人
     this.reconcileOnStart();
+    // 外部源按间隔自动拉取:宿主关着期间到点的挂接现在拉一次(不按错过次数连拉),再按最早的下一次设计时器
+    this.sources.tick();
   }
 
   private report(what: string, detail: unknown) {
@@ -2404,6 +2422,10 @@ export class Host {
       if (chain) pointers.push({ ref: `${f.roomId} #${f.seq} 的引用链`, text: renderQuoteChain(chain) });
     }
     const mem = this.memoryForRound(contactId, fresh);
+    // 外部源(D04.1):本轮会话 = 本轮新输入所在、联系人仍在的会话;挂了源的给第 5 块一行计数提示(不给原文、不进第 1 块,AC-39),
+    // read_external 也只读这几个会话挂的源
+    const roundRooms = rooms.filter((r) => fresh.some((f) => f.roomId === r.id)).map((r) => r.id);
+    const extHints = this.sources.hints(roundRooms);
     let request: ReturnType<RoundAssembler>;
     try {
       request = this.assemble({
@@ -2420,7 +2442,7 @@ export class Host {
       stateNote: note?.value.text ?? null,
       fresh,
       tasks: tasks.map((t) => `${t.id} [${t.state}] ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
-      pointers: [...pointers, ...mem.pointers],
+      pointers: [...pointers, ...extHints, ...mem.pointers],
       budgetBytes: this.opts.roundBudgetBytes ?? ROUND_BUDGET_BYTES,
       runs: this.runLinesFor(contactId, rooms),
       });
@@ -2456,6 +2478,7 @@ export class Host {
     try {
       // 每一轮现场定生效模型(原则 70):用户在失败卡上显式选了备用模型才换,只用于重跑这一批;自动重试永远用原模型(严禁静默换模)
       const tools: RoundTools = { readMemory: async (id: string) => this.renderMemory(contactId, id), readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq) };
+      tools.readExternal = async (q) => this.sources.read({ contactId, roomIds: roundRooms }, q);
       out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, ac.signal, tools), stalled, closing]);
     } catch (e) {
       this.setActivity(contactId, null, "idle");
@@ -4713,6 +4736,7 @@ export class Host {
     this.hostTimers.clear();
     this.runs.stopTicker();
     this.scheduler.stop();
+    this.sources.stop();
     this.plugins.close();
     await this.loop.stop();
     // 一次性适配器只有在跑的才有进程;常驻适配器一轮做完(completed)、停在受阻(blocked)时进程仍在,关闭时一并停掉,不留后台进程

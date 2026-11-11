@@ -568,6 +568,28 @@ export const ExternalEventView = obj({
 });
 export type ExternalEventView = Infer<typeof ExternalEventView>;
 
+/**
+ * 数据源插件挂到一个会话(群或私聊)的挂接(US12①、D04.1;AC-35 阶段 I)。同一 (插件, 会话, 来源) 只有一条;
+ * 同一插件可挂多个会话,每条挂接各自记同步位点。sourceId 为 null 表示插件声明的全部来源。
+ */
+export const PluginAttachmentView = obj({
+  id: id(),
+  pluginId: id(),
+  roomId: id(),
+  sourceId: nullable(str({ min: 1, max: 4096 })),
+  /** 自动拉取间隔(秒);0 表示只手动拉 */
+  intervalSec: int({ min: 0, max: 604800 }),
+  createdAt: isoTime(),
+  nextPullAt: nullable(isoTime()),
+  /** 各来源的同步位点:最近一次成功同步的时间与当时外部事件表入库到的位置。拉取失败的来源不前进 */
+  cursors: arr(obj({ sourceId: str({ min: 1, max: 4096 }), syncedAt: isoTime(), position: int({ min: 0 }) })),
+  /** 最近一次拉取:失败时 status=failed、error 写原因(不当作「没有新内容」);newEvents 是这次对这条挂接而言新增的条数 */
+  lastPull: nullable(obj({ at: isoTime(), status: oneOf(["ok", "failed"] as const), newEvents: int({ min: 0 }), rejected: int({ min: 0 }), error: nullable(str({ max: 2000 })) })),
+  /** 挂接覆盖的来源里可读的外部条目数(同一条消息的多个版本算一条,源端已删除的不算) */
+  entries: int({ min: 0 }),
+});
+export type PluginAttachmentView = Infer<typeof PluginAttachmentView>;
+
 // ---------- Slash 命令 ----------
 export const SlashArg = obj({
   name: str({ min: 1, max: 40 }),

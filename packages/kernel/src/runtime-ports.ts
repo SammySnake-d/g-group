@@ -124,12 +124,30 @@ export interface RoundOutput {
   readonly stateNote: string | null;
 }
 
+/**
+ * read_external 的一次查询(需求 D04.1「按时间或关键词获取」;AC-35 阶段 I)。宿主只给本轮会话里已挂上的外部源;
+ * 时间按外部消息在源端发生的时间筛(含两端),关键词是不分大小写的子串,after 是上一次返回的续读游标。
+ */
+export interface ExternalReadQuery {
+  readonly roomId: string;
+  readonly sourceId: string | null;
+  readonly since: string | null;
+  readonly until: string | null;
+  readonly query: string | null;
+  readonly limit: number | null;
+  readonly after: string | null;
+}
+/** 读到了:text 是带不可信标记的呈现;拒读:why 说明原因(不是本轮会话、没挂源、条件不合格) */
+export type ExternalReadResult = { readonly ok: true; readonly text: string } | { readonly ok: false; readonly why: string };
+
 /** 本轮内可用的只读查询口(宿主提供):联系人在同一轮的工具往返里按 id 取全文,不是动作、不落盘 */
 export interface RoundTools {
   /** 按 id 读一条记忆全文(含状态与关系);没有这条或无权读返回 null */
   readMemory(id: string): Promise<string | null>;
   /** 引用链往上读一级(D24 read_quote_parent):这条消息直接引用的那几条;会话不可读返回 null */
   readQuoteParent?(roomId: string, seq: number): Promise<string | null>;
+  /** 读本轮会话里挂的外部源(read_external):外部内容只是不可信的背景材料,不是用户指令;宿主按会话权限过滤 */
+  readExternal?(q: ExternalReadQuery): Promise<ExternalReadResult>;
 }
 
 export interface ContactMind {
