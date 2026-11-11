@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils'
 import type { Artifact } from '@/data'
 import { useApp } from '@/store'
+import { boot } from '@/store/boot'
 import { Avatar } from '../Avatar'
 import { Preview } from '../split/Preview'
 import { AssetTable } from '../split/ArtifactView'
@@ -16,7 +17,9 @@ export function FileBody({ artifact: a }: { artifact: Artifact }) {
     {t.who && <Avatar id={t.who} size={24} status={false} mood="idle" />}
     <span className={cn('shrink-0', t.status === '待验收' ? 'text-warm' : 'text-fg-2')}>{t.status}</span>
   </div>)}{!tasks.length && <p className="py-8 text-fg-2">清单为空</p>}</div>
-  const sections = a.id === 'a1' ? articleSections(ARTICLE_SEC4) : PLAYBOOK_SECTIONS
+  const base = a.id === 'a1' ? articleSections(ARTICLE_SEC4) : PLAYBOOK_SECTIONS
+  // 走查用长文档:同样的小节接几遍,验证往下翻时右侧来处还在
+  const sections = boot.provFixture?.includes('long') ? Array.from({ length: 6 }, (_, i) => base.map(([h, b]) => [`${h}${i ? `（${i + 1}）` : ''}`, b] as const)).flat() : base
   return <article className="space-y-7 text-[15px] leading-[1.9]">
     <p className="text-fg-2">{a.id === 'a1' ? ARTICLE_INTRO : PLAYBOOK_INTRO}</p>
     {sections.map(([h, b]) => <section key={h}><h2 className="mb-2 text-[17px] font-semibold">{h}</h2><p>{b}</p></section>)}

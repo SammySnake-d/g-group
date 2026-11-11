@@ -3,6 +3,7 @@ import { convs0, people, reactions0, type Msg, type PersonId, type QuoteRef } fr
 import { broken } from '@/mut'
 import { boot, clock, later, uid } from '../boot'
 import { DRAFTS0 } from '../demo'
+import { provFixture } from '@/components/files/fixtures'
 import { focusComposer, scrollToMsg } from '../dom'
 import { lens, type Slice } from '../state'
 import type { Ctx } from '../types'
@@ -38,7 +39,7 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
   const L = lens(set)
   const setTyping = (cid: string, who: PersonId | null) => L.typing((t) => ({ ...t, [cid]: who }))
   return {
-    convs: convs0,
+    convs: provFixture(boot.provFixture, convs0),
     active: boot.conv,
     reactions: reactions0,
     typing: {},

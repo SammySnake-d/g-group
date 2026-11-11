@@ -56,6 +56,13 @@ export function provenance(a: Artifact, convs: Conversation[]) {
   return { ...ctx, hops }
 }
 
+/** 一站的原话:优先这一站里说的话(交付时的附言常有「重点看第 3 节」这种读法提示),没有话再用消息本身 */
+export const hopQuote = (h: Hop) => {
+  const said = h.msgs.find((m) => m.k === 'text')
+  return (said ? messageText(said) : messageText(h.target)).replace(/\s*\n+\s*/g, ' ')
+}
+export const hopWho = (h: Hop) => (h.from ? people[h.from].name : '系统')
+
 export function messageText(m: IdMsg): string {
   if ('text' in m) return m.text
   if ('title' in m) return m.title

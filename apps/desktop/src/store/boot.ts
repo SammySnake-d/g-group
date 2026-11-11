@@ -24,6 +24,8 @@ function splitFromUrl(): SplitTab[] {
 
 export const boot = {
   fileFixture: (import.meta.env.DEV || import.meta.env.MODE === 'design') ? qs.get('files-fixture') : null,
+  /** 文件页走查数据:busy = 来处站很多、原话很长;long = 正文很长要往下翻。可组合(busy-long) */
+  provFixture: qs.get('prov-fixture'),
   dark: qs.get('theme') === 'dark',
   /** ?section=activity 是旧链接:进展全景已经改成弹出遮罩(#1618),左侧停在聊天 */
   section: ((qs.get('section') === 'activity' ? 'chat' : qs.get('section')) as Section) ?? 'chat',
