@@ -6,7 +6,8 @@
 // DataSource / OutboundChannel 注册进内核注册表,外部事件盖章、B1/B2 外发记账都走内核现成逻辑。
 // 超时、进程退出(含插件里没人接的拒绝、未捕获的异常、process.exit、堆超过上限)、非 JSON 输出、单行超过上限都把进程结束、
 // 在途调用收成受控失败;下次调用重新起进程(AC-58:插件的故障只落在插件自己)。回应只按请求 id 对上,旧 id、未知 id 丢弃。
-// 外发账本在内核注册表里(内存):宿主重启或卸载插件后丢失,见收据第 7 栏。
+// 内核注册表里的外发账本只是进程内执行器(B1 窗口、单调时钟、渠道版本);跨宿主重启、卸载重装的权威状态在宿主表(plugin-outbox.ts),
+// 宿主经 send 的 gate 在进程就绪、渠道自述确定之后、交给内核之前同步认领,认领到才投递。
 import { type ChildProcess, spawn } from "node:child_process";
 import { lstatSync, mkdirSync, readdirSync, realpathSync } from "node:fs";
 import path from "node:path";
@@ -47,6 +48,14 @@ export interface PluginRuntimeOptions {
    *  测试用它把插件进程里的 fetch 换成替身(门禁沙箱禁网);它也只得到对自己这个文件的读权限。 */
   readonly preload?: string;
 }
+/** 进程就绪后插件自述的渠道(交给 gate 绑定)。 */
+export interface ChannelInfo {
+  readonly endpoint: string;
+  readonly idempotency: "none" | "action-id";
+  readonly windowMs: number | null;
+}
+/** 外发闸门:返回结果就不投递、原样返回;返回 null 才交给内核。同步调用,与投递之间没有 await。 */
+export type SendGate = (ch: ChannelInfo) => SendResult | null;
 type Describe =
   | { readonly kind: "data-source"; readonly sources: readonly string[] }
   | { readonly kind: "outbound-channel"; readonly idempotency: "none" | "action-id"; readonly idempotencyWindowMs: number | null; readonly endpoint: string | null };
@@ -319,10 +328,12 @@ export class PluginRuntime {
     return out;
   }
 
-  async send(t: PluginTarget, actionId: string, payload: string): Promise<SendResult> {
+  async send(t: PluginTarget, actionId: string, payload: string, gate?: SendGate): Promise<SendResult> {
     const l = await this.ensure(t);
     if (l.desc.kind !== "outbound-channel") throw new HostError("invalid_params", `插件 ${t.id} 不是输出渠道`);
     if (l.desc.endpoint === null) throw new HostError("invalid_params", `插件 ${t.id} 还没有接收端,先在配置里填写`);
+    const stop = gate?.({ endpoint: l.desc.endpoint, idempotency: l.desc.idempotency, windowMs: l.desc.idempotencyWindowMs });
+    if (stop) return stop;
     return this.registries.get(t.id)!.reg.send(t.id, { action_id: actionId, payload });
   }
 
@@ -332,7 +343,7 @@ export class PluginRuntime {
     this.live.delete(id);
     l?.proc.kill("插件已停止");
   }
-  /** 卸载:结束进程并丢掉这个插件的注册与外发账本。 */
+  /** 卸载:结束进程并丢掉这个插件的注册与进程内账本(宿主表里的外发记录不动)。 */
   forget(id: string) {
     this.stop(id);
     this.registries.delete(id);

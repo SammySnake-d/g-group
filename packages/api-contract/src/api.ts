@@ -338,7 +338,8 @@ export const METHODS = {
     }),
   ),
   /** 经输出渠道插件外发一次。actionId 由调用方生成并在重试时复用:已确认的复用回执不再发;结果未知时 B2 渠道拒绝自动重发,
-   *  B1 只在服务商幂等保留期内用同一 actionId 重试。state=rejected 是宿主没发(reason 说明,如 payload-mismatch)。 */
+   *  B1 只在同一次宿主启动、服务商幂等保留期内用同一 actionId 重试;宿主重启、重装或更新后结果未知的一律不自动重发(需人工对账)。
+   *  外发记录在宿主库里跨重启、卸载保留。state=rejected 是宿主没发(reason 说明,如 payload-mismatch)。 */
   "plugins.send": method(
     obj({ pluginId: id(), actionId: id(), payload: str({ min: 1, max: 100000 }) }),
     obj({

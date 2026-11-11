@@ -6,12 +6,15 @@
 // URL 安装:下载 .tgz(大小上限、可选 sha256 核对),在宿主数据目录 plugin-downloads/ 下解包(拒绝绝对路径、..、链接条目),
 // 之后与本地目录安装同一条路:校验清单、核对权限、复制进 plugins/<id>/<version>/;临时目录用完即删。
 // 签名校验不在首版(§8.1 已定:插件市场首版只做版本号显示与更新,在线提交/签名/分发不在首版),只记内容 sha256。
+// 外发的权威状态在宿主表 gg_plugin_outbox(plugin-outbox.ts,T-177 C):调插件前先落在途行,结果落回同一行;跨宿主重启、卸载重装都保留。
+// 安装身份 install_id 每次安装新生成,更新、启停、改配置都不变;卸载只删安装行和包目录,不删外发记录。
 import { createHash, randomUUID } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 import type { MarketplaceEntry, PluginView, SlashCommand } from "@g-group/api-contract";
 import { SlashCommand as SlashCommandSchema, arr, formatIssues, json, obj, oneOf, opt, str } from "@g-group/api-contract";
 import { type Db, HostError, all, one, run } from "./db.ts";
+import { type OutboxClaim, type OutboxResult, type OutboxView, PluginOutbox, printOf } from "./plugin-outbox.ts";
 import type { PluginRuntime, PluginTarget } from "./plugin-runtime.ts";
 import { extractTo, readTgz } from "./untar.ts";
 
@@ -46,6 +49,7 @@ interface Row {
   config: string | null;
   granted: string;
   installed_at: string;
+  install_id: string | null;
 }
 
 function readManifest(dir: string): Manifest {
@@ -66,6 +70,10 @@ function readManifest(dir: string): Manifest {
   }
   return m.value;
 }
+const project = (r: OutboxResult) =>
+  r.ok
+    ? { state: r.state, receiptId: r.receipt.receiptId, deduplicated: r.deduplicated, reason: null, detail: null }
+    : { state: r.state, receiptId: null, deduplicated: false, reason: r.reason, detail: r.detail.slice(0, 2000) };
 const cmp = (a: string, b: string) => {
   const pa = a.split(/[.-]/).map((x) => (/^\d+$/.test(x) ? Number(x) : x));
   const pb = b.split(/[.-]/).map((x) => (/^\d+$/.test(x) ? Number(x) : x));
@@ -104,8 +112,13 @@ interface UrlOrigin {
 
 export class PluginStore {
   private readonly d: PluginStoreDeps;
+  private readonly outbox: PluginOutbox;
   constructor(deps: PluginStoreDeps) {
     this.d = deps;
+    // 安装身份列:旧库没有就补上;升级前装的插件补一个新身份(那时还没有外发记录,不会错配)
+    if (!all<{ name: string }>(deps.db, "PRAGMA table_info(gg_plugins)").some((c) => c.name === "install_id")) run(deps.db, "ALTER TABLE gg_plugins ADD COLUMN install_id TEXT");
+    for (const r of all<{ id: string }>(deps.db, "SELECT id FROM gg_plugins WHERE install_id IS NULL")) run(deps.db, "UPDATE gg_plugins SET install_id = ? WHERE id = ? AND install_id IS NULL", randomUUID(), r.id);
+    this.outbox = new PluginOutbox(deps.db, deps.now);
   }
   private catalog(): { id: string; dir: string; manifest: Manifest }[] {
     if (!this.d.catalogFile || !existsSync(this.d.catalogFile)) return [];
@@ -256,7 +269,7 @@ export class PluginStore {
     const target = this.copyIn(m, dir);
     run(
       this.d.db,
-      "INSERT INTO gg_plugins (id, version, source, origin, dir, enabled, status, error, manifest, config, granted, installed_at) VALUES (?, ?, ?, ?, ?, 1, 'ready', NULL, ?, NULL, ?, ?)",
+      "INSERT INTO gg_plugins (id, version, source, origin, dir, enabled, status, error, manifest, config, granted, installed_at, install_id) VALUES (?, ?, ?, ?, ?, 1, 'ready', NULL, ?, NULL, ?, ?, ?)",
       m.id,
       m.version,
       source.kind,
@@ -265,6 +278,7 @@ export class PluginStore {
       JSON.stringify(m),
       JSON.stringify(m.permissions.map((p) => p.key)),
       this.d.now(),
+      randomUUID(),
     );
     const v = this.get(m.id);
     this.d.emit(v);
@@ -355,11 +369,49 @@ export class PluginStore {
       failures: out.failures,
     };
   }
-  /** 经输出渠道外发:同一 actionId 由内核按 B1/B2 记账,已确认复用回执,结果未知时 B2 不再发。 */
+  /** 安装身份:每次安装新生成,更新、启停、改配置都不变。 */
+  installId(id: string): string {
+    return this.row(id).install_id ?? "";
+  }
+  /** 一个外发动作的落盘记录;没有就是 undefined。卸载后仍在。 */
+  delivery(id: string, actionId: string): OutboxView | undefined {
+    return this.outbox.view(id, actionId);
+  }
+  /** 外发表所在库的持久化级别(WAL、synchronous)读回。 */
+  durability() {
+    return this.outbox.durability();
+  }
+  /**
+   * 经输出渠道外发。权威状态在宿主表:已确认复用回执、不调插件;在途拒绝;结果未知一律不自动重发(B2 按合同,B1 跨重启因单调时钟不跨进程),
+   * 只有同一次启动里结果未知的 B1 交给内核按保留期判;安装身份、版本或接收端对不上就不发。
+   * 新动作先写在途行(写不进就不发),再交内核执行器投递,结果写回同一行。
+   */
   async send(id: string, actionId: string, payload: string) {
-    const r = await this.d.runtime.send(this.target(id, "outbound-channel"), actionId, payload);
-    if (r.ok) return { state: r.state, receiptId: r.receipt.receiptId, deduplicated: r.deduplicated, reason: null, detail: null };
-    return { state: r.state, receiptId: null, deduplicated: false, reason: r.reason, detail: r.detail.slice(0, 2000) };
+    const t = this.target(id, "outbound-channel");
+    const r0 = this.row(id);
+    const install = { installId: r0.install_id ?? "", version: r0.version };
+    const print = printOf(payload);
+    const early = this.outbox.decide(id, actionId, print, install, null);
+    if (early) return project(early);
+    const held: { claim: OutboxClaim | null } = { claim: null };
+    let r: OutboxResult;
+    try {
+      r = await this.d.runtime.send(t, actionId, payload, (ch) => {
+        const d = this.outbox.decide(id, actionId, print, install, ch);
+        if (d) return d;
+        try {
+          held.claim = this.outbox.claim(id, actionId, print, install, ch);
+        } catch (e) {
+          throw new HostError("unavailable", `外发记录写不进数据库,没有外发:${(e as Error).message}`);
+        }
+        return held.claim ? null : (this.outbox.decide(id, actionId, print, install, ch) ?? { ok: false, state: "rejected", reason: "in-flight", detail: "上一次发送还没有结果" });
+      });
+    } catch (e) {
+      if (held.claim) this.outbox.release(held.claim);
+      throw e;
+    }
+    if (held.claim) r = this.outbox.settle(held.claim, r);
+    return project(r);
   }
   close() {
     this.d.runtime.close();
