@@ -141,3 +141,13 @@ test("G1-02PRE 对话在途撤回原文 后台检查发送前先核来源", asyn
   assert.ok(works(s.host).some(w=>w.disposition!==null));
   assert.equal(material.some(x=>x.includes("NEUTRAL_ONLY_THIS_WITHDRAWN_SOURCE")),false);
 });
+test("G1-01TIME 后台检查无响应按现有超时阈值留债而不无限阻塞对话", async t => {
+  let release!:(r:ReflectResult)=>void;const pending=new Promise<ReflectResult>(r=>{release=r;});
+  const s=setup(Host,t,()=>pending,{runThresholds:{defaults:{stallMs:20,firstByteMs:20}}});
+  const msg=s.host.send({roomId:s.dm.id,clientActionId:"one",text:"以后都用中文回复"});
+  try {
+    await new Promise(r=>setTimeout(r,100));
+    assert.ok((one<{processed_seq:number}>(s.host.db,"SELECT processed_seq FROM gg_cursor WHERE contact_id=? AND room_id=?",s.c.id,s.dm.id)?.processed_seq??0)>=msg.seq);
+    assert.ok(works(s.host).some(w=>w.state==="failed"&&/timeout/.test(w.error??"")));
+  } finally {release(empty());await settle(s.host);}
+});
