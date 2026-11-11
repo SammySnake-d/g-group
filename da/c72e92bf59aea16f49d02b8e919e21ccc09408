@@ -1,0 +1,20 @@
+packages/domain/src/followups.ts
+  h_f33e46a035b77c 32-33,49,99,201,221,225,228-229,240,283-284,288,306,315
+packages/server/src/host.ts
+  h_f33e46a035b77c 1,380,529,553,1655,1935-1936,1946,2720,2742,3226-3227,3278-3279,3374,3376-3388,3394,3409,3413-3417,3437-3438,3440,3446,3482,3522,4588,4701-4709,4711-4715,4718,4729-4737,4742-4748,4752,4761-4840,5034-5035,5037-5038,5040,5066
+packages/server/src/recovery.ts
+  h_f33e46a035b77c 1-2,10-70
+packages/server/src/worktree.ts
+  h_f33e46a035b77c 12,114-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dac72e92bf59aea16f49d02b8e919e21ccc09408",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

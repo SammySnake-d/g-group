@@ -1,0 +1,21 @@
+packages/adapter-cc-compute/proof/gates.txt
+  s_74dccb3cdfaa51::t_f350059e7d9623 1-3,5,10,17-19
+receipts/feat-cc-compute.json
+  s_74dccb3cdfaa51::t_60bc15ff96ff1d 26-27,49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4cacf07eed35177b1a5721be1ae6a8d97132a700",
+  "prompts": {},
+  "sessions": {
+    "s_74dccb3cdfaa51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c735-dbc6-7260-8f7d-bf40b267e6b8",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

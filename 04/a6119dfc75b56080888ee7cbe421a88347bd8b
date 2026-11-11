@@ -1,0 +1,346 @@
+packages/adapter-cc-compute/package.json
+  h_f33e46a035b77c 5
+packages/adapter-cc-compute/proof/ac51-resident-real.txt
+  h_f33e46a035b77c 1-57
+packages/adapter-cc-compute/proof/resident-mutations.mjs
+  h_f33e46a035b77c 1-106
+packages/adapter-cc-compute/proof/resident-mutations.txt
+  h_f33e46a035b77c 1-23
+packages/adapter-cc-compute/smoke/resident-real.mjs
+  h_f33e46a035b77c 1-77
+packages/adapter-cc-compute/src/adapter.ts
+  h_f33e46a035b77c 15,23-24,26-27,53,84-118,126-128,131,160-161,166-167,169-170,184-192,200-218,292,320-322,324-328,331,352-354,356,367,422-427,429,435,437,443,450-462,484,497-498,519-552
+packages/adapter-cc-compute/src/attachments.test.ts
+  h_f33e46a035b77c 1-81
+packages/adapter-cc-compute/src/cli.ts
+  h_f33e46a035b77c 5,7,62-81,84-88,90-117,120-132,137-145,152-153,157,163-165,168-169,179
+packages/adapter-cc-compute/src/events.ts
+  h_f33e46a035b77c 21,63-71
+packages/adapter-cc-compute/src/index.ts
+  h_f33e46a035b77c 3
+packages/adapter-cc-compute/src/isolation.test.ts
+  h_f33e46a035b77c 1-152
+packages/adapter-cc-compute/src/procgroup.ts
+  h_f33e46a035b77c 22-89
+packages/adapter-cc-compute/src/quiesce.test.ts
+  h_f33e46a035b77c 1-106
+packages/adapter-cc-compute/src/report-schema.ts
+  h_f33e46a035b77c 7,18,30,47,65
+packages/adapter-cc-compute/src/resident-entry.ts
+  h_f33e46a035b77c 1-7
+packages/adapter-cc-compute/src/resident.test.ts
+  h_f33e46a035b77c 1-420
+packages/adapter-cc-compute/src/resident.ts
+  h_f33e46a035b77c 1-656
+packages/adapter-cc-compute/src/resume-tools.test.ts
+  h_f33e46a035b77c 1-79
+packages/adapter-cc-compute/src/turn-model.ts
+  h_f33e46a035b77c 1-96
+packages/adapter-cc-compute/src/types.ts
+  h_f33e46a035b77c 38-44,48-83,87,98-103,106-113,118-129,131-150,172-176,179-186,197-202
+packages/adapter-cc-compute/test-support/fake-claude-resident.mjs
+  h_f33e46a035b77c 1-175
+packages/adapter-cc-compute/test-support/fake-claude.mjs
+  h_f33e46a035b77c 127-139,141-142
+packages/adapter-pi-contact/src/compact.test.ts
+  h_f33e46a035b77c 1-117
+packages/adapter-pi-contact/src/compact.ts
+  h_f33e46a035b77c 1-158
+packages/adapter-pi-contact/src/index.ts
+  h_f33e46a035b77c 3
+packages/adapter-pi-contact/src/mind.test.ts
+  h_f33e46a035b77c 88,101,394-478
+packages/adapter-pi-contact/src/mind.ts
+  h_f33e46a035b77c 12,174,187,196-205,230
+packages/adapter-pi-contact/src/tools.ts
+  h_f33e46a035b77c 1,17-20,24,35,70,95-128,144-146,170-174,190,201-209,229-232,237-241
+packages/api-contract/src/api.ts
+  h_f33e46a035b77c 6,20,30-31,57-67,83-86,93-94,102,211-228,234-250,331-347,352-362
+packages/api-contract/src/artifacts.test.ts
+  h_f33e46a035b77c 1-28
+packages/api-contract/src/entities.ts
+  h_f33e46a035b77c 15-63,77-78,81-82,115-116,135-144,186-187,235-236,238-259,273-291,295-315,320-356,413-439,542-549
+packages/api-contract/src/events.ts
+  h_f33e46a035b77c 3,26-27
+packages/api-contract/src/workspace.test.ts
+  h_f33e46a035b77c 1-19
+packages/domain/proof/auth-intent-mutations.mjs
+  h_f33e46a035b77c 1-113
+packages/domain/proof/auth-intent-mutations.txt
+  h_f33e46a035b77c 1-53
+packages/domain/proof/auth-intent-tests.txt
+  h_f33e46a035b77c 1-43
+packages/domain/src/authorization.test.ts
+  h_f33e46a035b77c 1-170
+packages/domain/src/authorization.ts
+  h_f33e46a035b77c 1-246
+packages/domain/src/followups.test.ts
+  h_f33e46a035b77c 1-248
+packages/domain/src/followups.ts
+  h_f33e46a035b77c 1-348
+packages/domain/src/index.ts
+  h_f33e46a035b77c 10-14
+packages/domain/src/model-config.test.ts
+  h_f33e46a035b77c 1-133
+packages/domain/src/model-config.ts
+  h_f33e46a035b77c 1-251
+packages/domain/src/model-ledger.test.ts
+  h_f33e46a035b77c 1-37
+packages/domain/src/model-ledger.ts
+  h_f33e46a035b77c 1-62
+packages/domain/src/routing.test.ts
+  h_f33e46a035b77c 1-67
+packages/domain/src/routing.ts
+  h_f33e46a035b77c 1-92
+packages/kernel/src/compact.test.ts
+  h_f33e46a035b77c 1-59
+packages/kernel/src/compact.ts
+  h_f33e46a035b77c 1-69
+packages/kernel/src/fixtures/quote-chain-2071.json
+  h_f33e46a035b77c 1-111
+packages/kernel/src/index.ts
+  h_f33e46a035b77c 13-15
+packages/kernel/src/memory.test.ts
+  h_f33e46a035b77c 1-196
+packages/kernel/src/memory.ts
+  h_f33e46a035b77c 1-205
+packages/kernel/src/quote-chain.test.ts
+  h_f33e46a035b77c 1-101
+packages/kernel/src/quote-chain.ts
+  h_f33e46a035b77c 1-111
+packages/kernel/src/rounds.ts
+  h_f33e46a035b77c 39-40,134-140,236-240,269-270,287
+packages/kernel/src/runtime-ports.ts
+  h_f33e46a035b77c 96-97,101-113,115,123-130,132-193
+packages/server/README.md
+  h_f33e46a035b77c 36-37,56-57,63-64
+packages/server/proof/ac23-lease-real.txt
+  h_f33e46a035b77c 1-27
+packages/server/proof/ac23-real-run.ts
+  h_f33e46a035b77c 1-58
+packages/server/proof/ac29-capability-isolation.txt
+  h_f33e46a035b77c 1-28
+packages/server/proof/ac29-real-run.ts
+  h_f33e46a035b77c 1-64
+packages/server/proof/artifacts-mutations.mjs
+  h_f33e46a035b77c 1-80
+packages/server/proof/artifacts.txt
+  h_f33e46a035b77c 1-58
+packages/server/proof/auth-intent-host-mutations.mjs
+  h_f33e46a035b77c 1-72
+packages/server/proof/auth-intent-host-mutations.txt
+  h_f33e46a035b77c 1-23
+packages/server/proof/auth-intent-tests.txt
+  h_f33e46a035b77c 1-46
+packages/server/proof/compute-help-mutations.mjs
+  h_f33e46a035b77c 1-105
+packages/server/proof/compute-help-mutations.txt
+  h_f33e46a035b77c 1-31
+packages/server/proof/compute-input-mutations.mjs
+  h_f33e46a035b77c 1-82
+packages/server/proof/compute-input-mutations.txt
+  h_f33e46a035b77c 1-12
+packages/server/proof/cross-vendor-review-mutations.mjs
+  h_f33e46a035b77c 1-87
+packages/server/proof/cross-vendor-review-mutations.txt
+  h_f33e46a035b77c 1-29
+packages/server/proof/e2e-help-review-run1.txt
+  h_f33e46a035b77c 1-77
+packages/server/proof/e2e-help-review-run2.txt
+  h_f33e46a035b77c 1-37
+packages/server/proof/e2e-help-review-run3.txt
+  h_f33e46a035b77c 1-78
+packages/server/proof/e2e-help-review-run4.txt
+  h_f33e46a035b77c 1-118
+packages/server/proof/e2e-help-review-run5.txt
+  h_f33e46a035b77c 1-205
+packages/server/proof/e2e-help-review.ts
+  h_f33e46a035b77c 1-203
+packages/server/proof/e2e-model-hotswap.txt
+  h_f33e46a035b77c 1-36
+packages/server/proof/echo-mcp.mjs
+  h_f33e46a035b77c 1-10
+packages/server/proof/loss-baseline.txt
+  h_f33e46a035b77c 1-40
+packages/server/proof/loss-before-after.txt
+  h_f33e46a035b77c 1-89
+packages/server/proof/loss-eval.mjs
+  h_f33e46a035b77c 1-184
+packages/server/proof/memory-mutations.mjs
+  h_f33e46a035b77c 1-136
+packages/server/proof/memory-mutations.txt
+  h_f33e46a035b77c 1-54
+packages/server/proof/model-config-mutations.mjs
+  h_f33e46a035b77c 1-74
+packages/server/proof/model-config-mutations.txt
+  h_f33e46a035b77c 1-31
+packages/server/proof/model-config-tests.txt
+  h_f33e46a035b77c 1-21
+packages/server/proof/model-hotswap-wire-mutations.mjs
+  h_f33e46a035b77c 1-52
+packages/server/proof/model-hotswap-wire-mutations.txt
+  h_f33e46a035b77c 1-9
+packages/server/proof/model-turns-mutations.mjs
+  h_f33e46a035b77c 1-60
+packages/server/proof/model-turns-mutations.txt
+  h_f33e46a035b77c 1-17
+packages/server/proof/model-turns-tests.txt
+  h_f33e46a035b77c 1-11
+packages/server/proof/pref-before-after.txt
+  h_f33e46a035b77c 1-113
+packages/server/proof/pref-eval.mjs
+  h_f33e46a035b77c 1-99
+packages/server/proof/quote-chain-mutations.mjs
+  h_f33e46a035b77c 1-103
+packages/server/proof/quote-chain-mutations.txt
+  h_f33e46a035b77c 1-30
+packages/server/proof/real-auth-run.ts
+  h_f33e46a035b77c 1-74
+packages/server/proof/real-auth-run.txt
+  h_f33e46a035b77c 1-40
+packages/server/proof/review-actual-mutations.mjs
+  h_f33e46a035b77c 1-61
+packages/server/proof/review-actual-mutations.txt
+  h_f33e46a035b77c 1-11
+packages/server/proof/same-entity-mutations.mjs
+  h_f33e46a035b77c 1-70
+packages/server/proof/same-entity-mutations.txt
+  h_f33e46a035b77c 1-11
+packages/server/proof/same-entity-tests.txt
+  h_f33e46a035b77c 1-14
+packages/server/proof/shared-docs-mutations.mjs
+  h_f33e46a035b77c 1-78
+packages/server/proof/shared-docs-mutations.txt
+  h_f33e46a035b77c 1-22
+packages/server/proof/shared-docs-tests.txt
+  h_f33e46a035b77c 1-22
+packages/server/proof/state-note-mutations.mjs
+  h_f33e46a035b77c 1-105
+packages/server/proof/state-note-mutations.txt
+  h_f33e46a035b77c 1-35
+packages/server/proof/v02-config-dir.txt
+  h_f33e46a035b77c 1-31
+packages/server/proof/worktree-merge.txt
+  h_f33e46a035b77c 1-88
+packages/server/proof/worktree-mutations.mjs
+  h_f33e46a035b77c 1-85
+packages/server/scripts/e2e-model-hotswap.ts
+  h_f33e46a035b77c 1-107
+packages/server/src/artifacts.test.ts
+  h_f33e46a035b77c 1-315
+packages/server/src/artifacts.ts
+  h_f33e46a035b77c 1-106
+packages/server/src/assemble.ts
+  h_f33e46a035b77c 3,33-34,95-97,108-112,150
+packages/server/src/capabilities.test.ts
+  h_f33e46a035b77c 1-173
+packages/server/src/capabilities.ts
+  h_f33e46a035b77c 1-151
+packages/server/src/cli.ts
+  h_f33e46a035b77c 8,12,14,34-37,42-43,46,50,52-70,80,90,94-95,135,145-147,153,172-185
+packages/server/src/compute-input.test.ts
+  h_f33e46a035b77c 1-100
+packages/server/src/compute.test.ts
+  h_f33e46a035b77c 1-46
+packages/server/src/compute.ts
+  h_f33e46a035b77c 1-26
+packages/server/src/db.ts
+  h_f33e46a035b77c 6,43-44,57-61
+packages/server/src/fakes.ts
+  h_f33e46a035b77c 2,38-40,46-70,76-84,90-102,110-112,114-117,120-128,131,150-151,154-155,157-158,163,166-167
+packages/server/src/help.test.ts
+  h_f33e46a035b77c 1-296
+packages/server/src/host.test.ts
+  h_f33e46a035b77c 10,12,42,263,286-287
+packages/server/src/host.ts
+  h_f33e46a035b77c 7-8,19,31,36,38,40,42-45,47-48,50,54,58-69,71,78,81,98-99,101,103,106-108,120-122,140-149,154-155,158-169,186-201,225-239,279-289,302-315,318,326-329,343,376-381,401-414,428,444-445,451-452,455-462,474-480,482,485-488,500-501,504-508,512-586,588,654,656-660,722,787,925-926,928-930,977,1199,1221,1391-1392,1395-1462,1479,1481-1483,1485-1487,1491-1503,1505-1513,1517-1518,1521-1524,1535-1537,1540-1546,1552-1651,1701-1902,2007-2014,2032-2043,2047,2060,2073-2074,2091-2093,2174,2273-2303,2313-2329,2332-2333,2341-2345,2348-2351,2363-2364,2370-2380,2386,2417-2422,2438-2442,2444,2447,2467-2469,2476-2479,2481-2482,2484-2488,2498-2528,2532-2550,2554,2557-2561,2564-2566,2569-2593,2598-2600,2602,2605-2611,2618-2624,2626-2763,2766,2768-2769,2783-2795,2797-2822,2825,2827-2832,2834-2836,2843-2982,3008-3012,3022-3023,3034,3047-3055,3072-3074,3125-3395,3404,3406-3407,3423-3473,3480-3483,3487,3489-3493,3506-3524
+packages/server/src/intent.test.ts
+  h_f33e46a035b77c 1-617
+packages/server/src/lease.test.ts
+  h_f33e46a035b77c 1-155
+packages/server/src/memory-store.ts
+  h_f33e46a035b77c 1-62
+packages/server/src/memory.test.ts
+  h_f33e46a035b77c 1-320
+packages/server/src/model-turns.test.ts
+  h_f33e46a035b77c 1-227
+packages/server/src/models.test.ts
+  h_f33e46a035b77c 1-190
+packages/server/src/quota.test.ts
+  h_f33e46a035b77c 1-81
+packages/server/src/quota.ts
+  h_f33e46a035b77c 1-117
+packages/server/src/quote-chain.test.ts
+  h_f33e46a035b77c 1-123
+packages/server/src/review-actual.test.ts
+  h_f33e46a035b77c 1-85
+packages/server/src/review.test.ts
+  h_f33e46a035b77c 1-277
+packages/server/src/review.ts
+  h_f33e46a035b77c 1-81
+packages/server/src/same-entity.test.ts
+  h_f33e46a035b77c 1-136
+packages/server/src/service.ts
+  h_f33e46a035b77c 43,83,90,94-96,99-103,133-135
+packages/server/src/shared-docs.test.ts
+  h_f33e46a035b77c 1-215
+packages/server/src/shared-docs.ts
+  h_f33e46a035b77c 1-202
+packages/server/src/start.ts
+  h_f33e46a035b77c 7-8,25-26,42,45,59-68,73,80,88,90
+packages/server/src/state-note.test.ts
+  h_f33e46a035b77c 1-191
+packages/server/src/worktree.test.ts
+  h_f33e46a035b77c 1-456
+packages/server/src/worktree.ts
+  h_f33e46a035b77c 1-259
+receipts/feat-artifacts.json
+  h_f33e46a035b77c 1-12
+receipts/feat-auth-domain.json
+  h_f33e46a035b77c 1-19
+receipts/feat-auth-host.json
+  h_f33e46a035b77c 1-63
+receipts/feat-cc-resident.json
+  h_f33e46a035b77c 1-17
+receipts/feat-compute-help.json
+  h_f33e46a035b77c 1-22
+receipts/feat-compute-iso.json
+  h_f33e46a035b77c 1-12
+receipts/feat-compute-lease.json
+  h_f33e46a035b77c 1-12
+receipts/feat-cross-vendor-review.json
+  h_f33e46a035b77c 1-27
+receipts/feat-g-compute-input-cap.json
+  h_f33e46a035b77c 1-12
+receipts/feat-g-memory.json
+  h_f33e46a035b77c 1-15
+receipts/feat-g-quote-chain.json
+  h_f33e46a035b77c 1-13
+receipts/feat-g-state-note.json
+  h_f33e46a035b77c 1-38
+receipts/feat-model-config.json
+  h_f33e46a035b77c 1-16
+receipts/feat-model-hotswap-wire.json
+  h_f33e46a035b77c 1-16
+receipts/feat-model-turns.json
+  h_f33e46a035b77c 1-16
+receipts/feat-review-actual-model.json
+  h_f33e46a035b77c 1-22
+receipts/feat-same-entity.json
+  h_f33e46a035b77c 1-22
+receipts/feat-shared-doc.json
+  h_f33e46a035b77c 1-22
+receipts/feat-worktree-merge.json
+  h_f33e46a035b77c 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "04a6119dfc75b56080888ee7cbe421a88347bd8b",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

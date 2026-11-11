@@ -1,0 +1,39 @@
+packages/server/src/host.ts
+  s_e21a7b024276d2::t_7329b4b57efad2 1940-1943,1949,2723,2745,3229-3230,3235-3237,3387,4707,4712,4735,4750,4825
+  s_e21a7b024276d2::t_a4e69bdae4f37e 3384-3386
+  s_e21a7b024276d2::t_a4f08bbc4b3331 3388-3390
+  s_e21a7b024276d2::t_8ba12f6ebf1d7d 4706
+  s_e21a7b024276d2::t_87f00dc9e2dc8e 4708-4711
+  s_e21a7b024276d2::t_3909bac3b48c64 4713-4714
+  s_e21a7b024276d2::t_5010189ee32330 4734
+  s_e21a7b024276d2::t_7a9ec79838fb4b 4736-4738
+  s_e21a7b024276d2::t_5eb3416a4cbd4e 4747-4749
+  s_e21a7b024276d2::t_a0e7566022f195 4751-4753
+  s_e21a7b024276d2::t_2fbdf2bf085645 4822-4824
+  s_e21a7b024276d2::t_b0a3075c8f1668 4826-4828
+packages/server/src/recovery.ts
+  s_e21a7b024276d2::t_0da4bd0425a0de 37-42,54,86
+  s_e21a7b024276d2::t_7329b4b57efad2 17-36,43,47,60,64,87
+  s_e21a7b024276d2::t_6d70fb86d5dbbd 14-16
+  s_e21a7b024276d2::t_451be6d2397f38 44-46
+  s_e21a7b024276d2::t_e5ea4f11024592 48-53
+  s_e21a7b024276d2::t_880c45c0ee26b7 55-59
+  s_e21a7b024276d2::t_cd1e37d9f983a6 61-63
+  s_e21a7b024276d2::t_ecfa1985289d66 65-67,83-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "33b06722cff36764e38dec5d864463a469886dd1",
+  "prompts": {},
+  "sessions": {
+    "s_e21a7b024276d2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c6e6-9a06-7441-b5e9-c070695d078b",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

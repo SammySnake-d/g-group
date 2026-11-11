@@ -1,0 +1,19 @@
+packages/kernel/src/plugins.test.ts
+  s_b07977d47b253e::t_0c8aa7d4510ca0 2053-2056,2058-2061
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "53aabeb350e9cb9ddfd89d7d10d965c440fb2d97",
+  "prompts": {},
+  "sessions": {
+    "s_b07977d47b253e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c14f-fcec-7dd3-93dc-f113b9f16247",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

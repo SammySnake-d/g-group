@@ -1,0 +1,27 @@
+packages/server/src/recovery.ts
+  s_e21a7b024276d2::t_6383f89b6389d5 1-2,10-70
+packages/server/src/host.ts
+  s_e21a7b024276d2::t_bc93a31663879b 4768
+  s_e21a7b024276d2::t_f9b12769a35469 1,380,529,553,1655,1936,1946,2720,2742,3226-3227,3278-3279,3418,4568-4574,4694-4697,4699-4703,4706,4717-4725,4730-4736,4740,4749-4767,4769-4822,5016-5017,5019-5020,5022,5048
+  s_e21a7b024276d2::t_a8d801cb1a4f92 4689-4693
+packages/server/src/worktree.ts
+  s_e21a7b024276d2::t_6383f89b6389d5 12,114-167
+packages/domain/src/followups.ts
+  s_e21a7b024276d2::t_6383f89b6389d5 32-33,49,99,201,221,225,228-229,240,283-284,288,306,315
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fdd752a42f63391668ca3700fa6f0ed89e209241",
+  "prompts": {},
+  "sessions": {
+    "s_e21a7b024276d2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c6e6-9a06-7441-b5e9-c070695d078b",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

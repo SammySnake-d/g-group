@@ -1,0 +1,21 @@
+packages/adapter-cc-compute/proof/mutations.mjs
+  s_74dccb3cdfaa51::t_324fc7ca872bc0 63-64,123-124,195-205
+packages/adapter-cc-compute/proof/mutation-targets.json
+  s_74dccb3cdfaa51::t_324fc7ca872bc0 831-885
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "953b2980438be12a29e41fc4c663816f9655ccae",
+  "prompts": {},
+  "sessions": {
+    "s_74dccb3cdfaa51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c735-dbc6-7260-8f7d-bf40b267e6b8",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

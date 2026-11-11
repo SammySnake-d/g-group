@@ -1,0 +1,29 @@
+packages/server/src/memory-reliability.test.ts
+  s_e21a7b024276d2::t_9c72497903f949 144-153
+packages/adapter-pi-contact/src/compact.ts
+  s_e21a7b024276d2::t_8e6b89dc00c822 7,74,77,79-102,141
+packages/kernel/src/memory-capture.ts
+  s_e21a7b024276d2::t_601563aa2e40b0 4-5,7-9
+packages/server/src/host.ts
+  s_e21a7b024276d2::t_c323b3699b6418 2191,2200,2202-2217,2220,2487
+packages/server/src/memory-coverage.ts
+  s_e21a7b024276d2::t_6f4cf2098b3f37 2-3,16,21-33
+packages/server/src/memory-store.ts
+  s_e21a7b024276d2::t_1394071aaee374 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f4e788dbc8b86bc34108569102c91a667589ced1",
+  "prompts": {},
+  "sessions": {
+    "s_e21a7b024276d2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c6e6-9a06-7441-b5e9-c070695d078b",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

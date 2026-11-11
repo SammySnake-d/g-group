@@ -1,0 +1,25 @@
+packages/server/src/recovery.test.ts
+  s_e21a7b024276d2::t_7329b4b57efad2 28
+  s_e21a7b024276d2::t_091dd4a47d0788 130-135,142
+  s_e21a7b024276d2::t_0da4bd0425a0de 136-141
+packages/server/src/recovery-host.test.ts
+  s_e21a7b024276d2::t_091dd4a47d0788 181-187
+packages/server/src/recovery.ts
+  s_e21a7b024276d2::t_7329b4b57efad2 10-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "77ba6af3c68905aca30c2bb9669f4bf99cebf140",
+  "prompts": {},
+  "sessions": {
+    "s_e21a7b024276d2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c6e6-9a06-7441-b5e9-c070695d078b",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

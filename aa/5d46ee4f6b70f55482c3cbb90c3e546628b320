@@ -1,0 +1,68 @@
+packages/adapter-cc-compute/src/activity.test.ts
+  h_f33e46a035b77c 1-117
+packages/adapter-cc-compute/src/adapter.test.ts
+  h_f33e46a035b77c 1438
+packages/adapter-cc-compute/src/adapter.ts
+  h_f33e46a035b77c 24,27,242-268,274,410-415,531-532
+packages/adapter-cc-compute/src/cli.ts
+  h_f33e46a035b77c 150-151
+packages/adapter-cc-compute/src/events.ts
+  h_f33e46a035b77c 11,121-165
+packages/adapter-cc-compute/src/index.ts
+  h_f33e46a035b77c 4
+packages/adapter-cc-compute/src/types.ts
+  h_f33e46a035b77c 177-193,204-205
+packages/adapter-pi-contact/src/mind.test.ts
+  h_f33e46a035b77c 88,101
+packages/adapter-pi-contact/src/tools.ts
+  h_f33e46a035b77c 21,95-103,242
+packages/api-contract/src/api.ts
+  h_f33e46a035b77c 27-30,226-234
+packages/api-contract/src/entities.ts
+  h_f33e46a035b77c 594-655
+packages/api-contract/src/events.ts
+  h_f33e46a035b77c 3,25-26
+packages/api-contract/src/runs-contract.test.ts
+  h_f33e46a035b77c 1-79
+packages/kernel/src/compact.ts
+  h_f33e46a035b77c 34-35
+packages/kernel/src/rounds.ts
+  h_f33e46a035b77c 98
+packages/kernel/src/runtime-ports.ts
+  h_f33e46a035b77c 28-29,91-93,115-116,118
+packages/server/proof/run-ledger-host-mutations.mjs
+  h_f33e46a035b77c 1-118
+packages/server/proof/run-ledger-real-frames.txt
+  h_f33e46a035b77c 1-19
+packages/server/proof/run-ledger-real.mjs
+  h_f33e46a035b77c 1-87
+packages/server/proof/run-ledger-real.txt
+  h_f33e46a035b77c 1-80
+packages/server/src/assemble.ts
+  h_f33e46a035b77c 35-36,75,96-97,118,165
+packages/server/src/fakes.ts
+  h_f33e46a035b77c 2,41,74-75,160-173,183-192,196
+packages/server/src/host.ts
+  h_f33e46a035b77c 13,26-27,84-88,101-102,104-105,111-113,115,138,203-210,382-397,413-414,494-510,1069-1072,1639-1838,2306-2318,2376,2381,2385,2390-2405,2410,2413-2415,2418-2420,2422,2433,2440-2446,2449-2451,2540,2720-2723,2729-2750,2799,2815,2819-2971,3076-3079,3081-3085,3090,3105-3110,3219-3220,3309-3324,3327-3330,3334-3335,3398-3400,3616-3619,4354,4372-4386,4537
+packages/server/src/recall.test.ts
+  h_f33e46a035b77c 196-197,201,222
+packages/server/src/runs.test.ts
+  h_f33e46a035b77c 1-557
+packages/server/src/runs.ts
+  h_f33e46a035b77c 1-449
+packages/server/src/service.ts
+  h_f33e46a035b77c 96-98
+receipts/feat-run-ledger-host.json
+  h_f33e46a035b77c 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aa5d46ee4f6b70f55482c3cbb90c3e546628b320",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

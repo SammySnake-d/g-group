@@ -1,0 +1,21 @@
+receipts/fix-lockfile-platforms.json
+  s_20b61be4cb682f::t_6b0eb813cc0374 1-13
+scripts/proof/lockfile-platforms.txt
+  s_20b61be4cb682f::t_c4e852fd06ee4c 1-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "13eb71583cfa5fe68422e90145e4ecb02edc094d",
+  "prompts": {},
+  "sessions": {
+    "s_20b61be4cb682f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6cc08ff4-6b3e-4c77-8c0c-740d8ab6b882",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
