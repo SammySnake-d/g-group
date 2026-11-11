@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpat
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
-import { gatewayUp, gitEnv, gitQuery, linkNodeModules, MergeConflict, modelStatesFor, prepareTree, probeModel, reusable } from "./run.ts";
+import { classifyProbe, gatewayUp, gitEnv, gitQuery, linkNodeModules, MergeConflict, modelStatesFor, prepareTree, probeModel, reusable } from "./run.ts";
 import { mkRecord } from "./fixtures/build.ts";
 
 // 临时仓库不读本机全局/系统 git 配置(本机全局配置里的 trace2 守护会异步往 .git 里写文件,删目录时撞 ENOTEMPTY);runner 的子进程继承
@@ -141,22 +141,25 @@ test("续跑只沿用同一组提交、同一续跑身份、同一题同一次�
   assert.equal(reusable({ ...mkRecord(), schema: "x" }, want), false);
 });
 
-test("探测:429 就等一段再探,到上限仍 429 判不跑;非 429 一次就放行;记下每次时刻、状态与 retry-after", async () => {
+test("探测:没准备好(429 或上游错误)就等一段再探,到上限判不跑;拿到正文就放行;记下每次时刻、状态与 retry-after", async () => {
   const waits: number[] = [];
+  const OK_STREAM = 'event: message_start\ndata: {}\n\nevent: content_block_delta\ndata: {"delta":{"type":"text_delta","text":"好"}}\n\nevent: message_delta\ndata: {"delta":{"stop_reason":"end_turn"}}';
   const seq = (statuses: number[]) => {
     let i = 0;
     return (async () => {
       const st = statuses[Math.min(i++, statuses.length - 1)]!;
-      return new Response(st === 200 ? "{}" : JSON.stringify({ error: { type: "rate_limit_error" } }), { status: st, headers: st === 429 ? { "retry-after": "819" } : {} });
+      return new Response(st === 200 ? OK_STREAM : JSON.stringify({ error: { type: "rate_limit_error" } }), { status: st, headers: st === 429 ? { "retry-after": "819" } : {} });
     }) as typeof fetch;
   };
   const env = { ANTHROPIC_BASE_URL: "http://gw.invalid/", ANTHROPIC_AUTH_TOKEN: "NEUTRAL_FIXTURE_NO_CREDENTIALS" };
   const no = await probeModel({ model: "hy", env, fetch: seq([429]), tries: 3, waitMs: 1500, sleep: async (ms) => void waits.push(ms), now: () => new Date(0) });
-  assert.deepEqual([no.ok, no.attempts.length, no.attempts[0], waits], [false, 3, { at: "1970-01-01T00:00:00.000Z", status: 429, retryAfter: "819", note: "rate_limit_error" }, [1500, 1500]]);
+  assert.deepEqual([no.ok, no.attempts.length, no.attempts[0], waits], [false, 3, { at: "1970-01-01T00:00:00.000Z", status: 429, retryAfter: "819", note: "HTTP 429" }, [1500, 1500]]);
   const later = await probeModel({ model: "hy", env, fetch: seq([429, 200]), tries: 3, waitMs: 10, sleep: async () => {} });
   assert.deepEqual([later.ok, later.attempts.map((a) => a.status)], [true, [429, 200]]);
   const other = await probeModel({ model: "hy", env, fetch: seq([500]), tries: 3, waitMs: 10, sleep: async () => {} });
-  assert.deepEqual([other.ok, other.attempts.length], [true, 1]);
+  assert.deepEqual([other.ok, other.attempts.length], [false, 3]);
+  const recovered = await probeModel({ model: "hy", env, fetch: seq([500, 200]), tries: 3, waitMs: 10, sleep: async () => {} });
+  assert.deepEqual([recovered.ok, recovered.attempts.map((a) => a.status)], [true, [500, 200]]);
 });
 
 test("网关在不在:收到任何 HTTP 回复算在,连不上算不在", async () => {
@@ -172,4 +175,14 @@ test("模型状态:跑过的记已跑(探测记录照留),没跑过但有 429 �
   assert.deepEqual(modelStatesFor("hy", [], { state: "可跑", attempts: [] }), { state: "未跑(本次未选或无可跑的组)", attempts: [] });
   assert.deepEqual(modelStatesFor("hy", [], undefined), { state: "未跑(本次未选或无可跑的组)", attempts: [] });
   assert.deepEqual(modelStatesFor("other", [rec], undefined), { state: "未跑(本次未选或无可跑的组)", attempts: [] });
+});
+
+test("探测结果怎么读:429 与「200 但流里是 error 事件」都算没准备好并带上游原话,拿到正文才算好", () => {
+  assert.deepEqual(classifyProbe(200, 'event: message_start\ndata: {}\n\nevent: content_block_delta\ndata: {"delta":{"type":"text_delta","text":"好"}}\n\nevent: message_delta\ndata: {"delta":{"stop_reason":"end_turn"}}'), { ready: true, note: "ok" });
+  const bad = classifyProbe(200, 'event: message_start\ndata: {}\n\nevent: error\ndata: {"error":{"message":"fnqtz: No available accounts (503: you can retry your request)","type":"api_error"},"type":"error"}\n\n');
+  assert.deepEqual([bad.ready, bad.note], [false, "fnqtz: No available accounts (503: you can retry your request)"]);
+  assert.deepEqual(classifyProbe(429, "{}"), { ready: false, note: "HTTP 429" });
+  const empty = classifyProbe(200, "event: message_start\ndata: {}");
+  assert.deepEqual([empty.ready, empty.note.startsWith("HTTP 200 但没有正文")], [false, true]);
+  assert.deepEqual([classifyProbe(200, 'event: content_block_delta\ndata: {"delta":{"type":"thinking_delta","thinking":"想"}}').ready], [true]);
 });

@@ -284,8 +284,8 @@ export function recordingFetch(o: { upstream: typeof globalThis.fetch; contactOf
     };
     const at = now();
     const base = { n: no, at, queuedMs: at - asked, contact, cls, model: req.model, maxTokens: req.maxTokens, system: req.system, request: req.request, fault };
-    const push = (status: number, r: ParsedReply, outcome: CallOutcome) => {
-      calls.push({ ...base, ms: now() - at, status, outcome, stopReason: r.stopReason, usage: r.usage, tools: r.tools, text: r.text });
+    const push = (status: number, r: ParsedReply, outcome: CallOutcome, raw: string) => {
+      calls.push({ ...base, ms: now() - at, status, outcome, stopReason: r.stopReason, usage: r.usage, tools: r.tools, text: r.text, error: outcome === "ok" ? null : (r.error ?? (raw.replace(/\s+/g, " ").trim().slice(0, 300) || `HTTP ${status} 无正文`)), bodyTail: outcome === "ok" ? null : raw.slice(-600) });
     };
     const empty: ParsedReply = { stopReason: null, usage: ZERO, text: "", tools: [], error: null };
     let res: Response;
@@ -310,7 +310,7 @@ export function recordingFetch(o: { upstream: typeof globalThis.fetch; contactOf
     } catch (e) {
       stop();
       free();
-      push(0, empty, timedOut ? "timeout" : "network_error");
+      push(0, empty, timedOut ? "timeout" : "network_error", e instanceof Error ? e.message : String(e));
       throw e;
     }
     const copy = res.clone();
@@ -319,9 +319,9 @@ export function recordingFetch(o: { upstream: typeof globalThis.fetch; contactOf
       .then(
         (t) => {
           const r = parseReply(t);
-          push(res.status, r, judgeCall(cls, res.status, r));
+          push(res.status, r, judgeCall(cls, res.status, r), t);
         },
-        () => push(res.status, empty, timedOut ? "timeout" : "network_error"),
+        () => push(res.status, empty, timedOut ? "timeout" : "network_error", "读响应正文失败"),
       )
       .finally(() => {
         stop();

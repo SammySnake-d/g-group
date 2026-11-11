@@ -141,6 +141,23 @@ export interface ProbeAttempt {
   readonly retryAfter: string | null;
   readonly note: string;
 }
+/** 探测结果怎么读:HTTP 429 与「HTTP 200 但流里是 error 事件」(上游不可用一类)都算还没准备好,等一段再探;拿到正文就算好。 */
+export function classifyProbe(status: number, body: string): { ready: boolean; note: string } {
+  const err = /event: error\s*\ndata: (\{.*?\})\s*(?:\n|$)/s.exec(body)?.[1] ?? (/event: error/.test(body) ? "{}" : null);
+  if (err !== null) {
+    let msg = "SSE error";
+    try {
+      msg = (JSON.parse(err) as { error?: { message?: string } }).error?.message ?? msg;
+    } catch {
+      /* 正文不是 JSON:留原样 */
+    }
+    return { ready: false, note: msg.slice(0, 200) };
+  }
+  if (status !== 200) return { ready: false, note: `HTTP ${status}` };
+  const text = [...body.matchAll(/"type":"(?:text|thinking)_delta"[^}]*"(?:text|thinking)":"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]).join("");
+  if (text.trim() !== "" || /"stop_reason":"[a-z_]+"/.test(body)) return { ready: true, note: "ok" };
+  return { ready: false, note: `HTTP 200 但没有正文(${body.replace(/\s+/g, " ").slice(0, 120)})` };
+}
 /**
  * 一个模型在报告里的状态:有记录就记「已跑」(探测记录照留);没有记录但有探测结果就照探测结果记(429 到上限 → 未测(上游 429 限流));
  * 两者都没有记「未跑(本次未选或无可跑的组)」。不会把未测盖成一句空话。
@@ -167,17 +184,20 @@ export async function probeModel(o: { model: string; env: Readonly<Record<string
     let status = 0;
     let retryAfter: string | null = null;
     let note = "";
+    let ready = false;
     try {
-      const r = await o.fetch(`${base}/v1/messages`, { method: "POST", headers, body: JSON.stringify({ model: o.model, max_tokens: 8, messages: [{ role: "user", content: "回一个字:好" }] }) });
+      // stream + 64 tokens:有些模型先把预算花在思考块上,给太少会看不到正文
+      const r = await o.fetch(`${base}/v1/messages`, { method: "POST", headers, body: JSON.stringify({ model: o.model, max_tokens: 64, stream: true, messages: [{ role: "user", content: "回一个字:好" }] }) });
       status = r.status;
       retryAfter = r.headers.get("retry-after");
-      const t = await r.text();
-      note = status === 200 ? "ok" : (t.match(/"type"\s*:\s*"([a-z_]+_error)"/)?.[1] ?? `HTTP ${status}`);
+      const c = classifyProbe(status, await r.text());
+      ready = c.ready;
+      note = c.note;
     } catch (e) {
       note = `网络错误:${e instanceof Error ? e.message : String(e)}`;
     }
     attempts.push({ at: now().toISOString(), status, retryAfter, note });
-    if (status !== 429) return { ok: true, attempts };
+    if (ready) return { ok: true, attempts };
   }
   return { ok: false, attempts };
 }

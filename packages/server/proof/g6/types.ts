@@ -120,6 +120,10 @@ export interface CallRecord {
   readonly usage: Usage;
   readonly tools: readonly { readonly name: string; readonly input: unknown }[];
   readonly text: string;
+  /** 判定不是 ok 时的原因(解析器或上游给的原文,截断到 300 字);ok 时为 null */
+  readonly error: string | null;
+  /** 判定不是 ok 时的正文尾部(截断到 600 字),用来分辨网关的 keepalive、错误事件与断流 */
+  readonly bodyTail: string | null;
   readonly system: string;
   readonly request: string;
   readonly fault: FaultKind | null;

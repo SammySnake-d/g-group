@@ -35,7 +35,7 @@ export const checkRequest = (material: string, note = "(没有旧笔记)") => `[
 
 export function mkCall(over: Partial<CallRecord> = {}): CallRecord {
   n++;
-  return { n, at: 1000 + n, queuedMs: 0, ms: 10, contact: "A", cls: "round", model: "m", maxTokens: 4096, status: 200, outcome: "ok", stopReason: "end_turn", usage: { input: 100, output: 10, cacheRead: 0, cacheWrite: 0 }, tools: [], text: "", system: `你叫小甲。${A.marker}`, request: roundRequest({}), fault: null, ...over };
+  return { n, at: 1000 + n, queuedMs: 0, ms: 10, contact: "A", error: null, bodyTail: null, cls: "round", model: "m", maxTokens: 4096, status: 200, outcome: "ok", stopReason: "end_turn", usage: { input: 100, output: 10, cacheRead: 0, cacheWrite: 0 }, tools: [], text: "", system: `你叫小甲。${A.marker}`, request: roundRequest({}), fault: null, ...over };
 }
 
 /** 一份按 mkItem() 跑完的记录:三条消息都发出去了,检查都成功,记忆写对了,追问答对了。 */
