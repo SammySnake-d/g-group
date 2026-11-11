@@ -17,7 +17,14 @@
   },
   "unverifiable": "AC-36 ⑤ F11:测试的时钟与核对计时器全部注入,醒来只靠「相邻两次核对相隔超过 jumpMs(默认 60 秒)」判出,没在真机合盖上实测过 Node 计时器在休眠后的实际补跑时刻;合盖短于约 30 秒(两拍间隔 ≤ 60 秒)检不出,此时若某联系人或上游把 firstByteMs 设到 ≤ jumpMs,短休眠仍可能误判(审查 §B 已列为未覆盖)。时钟回拨按内核 wakeTick 的既有语义也算醒来(原内联阈值不算),会给一次宽限。宽限默认 3 分钟、跳变 60 秒仍是占位值(验收文档第 9 节)。未覆盖:judgeRunner 与 reconcileOrphans 的 PID/启动号判定重复(另记清理项,本片不删内核导出)、Compute 适配器内部计时(常驻进程空闲回收)、Electron 唤醒事件",
   "waiver": null,
-  "review": null,
+  "review": {
+    "agent": "codex",
+    "session": "codex:54e2b511-80ef-4c96-a314-154750c9e30b",
+    "model": "shayu/gpt-6.1-sol",
+    "verdict": "reject",
+    "reviewed_hash": "c99501043f1c62400906db9b074f4148ecc6f4aacf1e3809bb4ac31d89494ce1",
+    "notes": "独立主审 REJECT，见 reviews/feat-run-wake-f11.md：BF11-R1-01 非法休眠参数在 openDb 后才拒绝，重复构造失败后句柄3/5/7（合法构造并close为0），需前置校验或完整释放。box2 Node24.21.0 typecheck/lint/1473条全量通过，无skip/todo/cancel；红8条按名失败、绿8条通过；作者13个变异经逐文件91条完整校准全部杀死；另5个单点故障2杀死3存活（2个建议补测边界、1个冗余校验），hy4两项逐条复现归类。实际切片7门禁通过，仅G-REVIEW因reject拦下；已合并基线零差异的8绿不当验收证据。Docker socket权限拒绝，容器沙箱未测。本轮起始/首次hash为shayu/gpt-6.1-terra，继续完成为shayu/gpt-6.1-sol，均OpenAI。"
+  },
   "review_status": "待审",
   "notes": "作者 Claude Code(fnqtz 线路,用户 dm#1897 定实现交回 Claude Code);方案作者 Astra(docs/plans/t177-backend-resume-20261110.md),方案审查 Claude Code。按 11-10 分工走 Codex 主验收 + hy4 辅审;本片作者是 anthropic,Codex(openai)可作为门禁审查人签 review 栏。"
 }
