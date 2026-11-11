@@ -24,7 +24,7 @@ export function FileList({ query }: { query: string }) {
             {list.map((a) => (
               <ListRow key={a.id} data-testid={`file-${a.id}`} onClick={() => setFileSel(a.id)} selected={fileSel === a.id} className="gap-2.5 rounded-xl px-2 py-1.5">
                 <ArtifactIcon kind={a.kind} className="h-9 w-9" />
-                <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-medium">{a.name}</div><div className="truncate text-[12px] text-fg-2">{people[a.by]?.name} · {convs.find((c) => c.id === a.conv)?.title} · {a.when}</div></div>
+                <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-medium">{a.name}</div><div className="truncate text-[12px] text-fg-2">{[...new Set([people[a.by]?.name, convs.find((c) => c.id === a.conv)?.title])].filter(Boolean).join(' · ')} · {a.when}</div></div>
               </ListRow>
             ))}
           </div>

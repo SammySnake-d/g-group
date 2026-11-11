@@ -65,7 +65,7 @@ export function ComputeWork({ id, view = 'session' }: { id: string; view?: CView
           <div className="text-[16.5px] font-semibold leading-snug tracking-tight [text-wrap:balance]">{c.title}</div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-fg-2">
             {c.status !== 'waiting' && c.status !== 'error' && <span className="flex items-center gap-1.5"><StatusDot c={c} /><span className={cn(c.status === 'running' && 'text-run')} data-testid="compute-status-text">{c.status === 'stopped' && c.phase.startsWith('已停止') ? c.phase : statusText(c)}</span></span>}
-            <Meta icon={<Clock />}>{c.elapsed}</Meta>
+            {!(c.status === 'done' && c.result?.endsWith(c.elapsed)) && <Meta icon={<Clock />}>{c.elapsed}</Meta>}
             {/* harness 就是这个 Compute 本身(#1005);花费按 #877 不放 */}
             <Meta icon={<SquareTerminal />}><span data-testid="compute-harness">{c.harness}</span><span className="text-fg-3/70"> · </span>{c.model}</Meta>
           </div>
@@ -108,7 +108,7 @@ export function ComputeWork({ id, view = 'session' }: { id: string; view?: CView
         {/* 会话页自己滚、自己有状态行,铺满;只读条用下面这条共用的 */}
         {view === 'session' && (
           <TabPanel value="session" className="flex min-h-0 flex-1 flex-col">
-            <HarnessSession embedded className="min-h-0 flex-1" compute={c} transcript={session.live ? session.transcript : demoSession(id)} loading={session.loading} {...(session.live ? {} : { now: DEMO_NOW })} sourceTitle={convTitle} dm={dm} onJumpSource={() => jump(c.askMsg)} />
+            <HarnessSession embedded className="min-h-0 flex-1" compute={c} transcript={session.live ? session.transcript : demoSession(id)} loading={session.loading} noCalls={session.live} {...(session.live ? {} : { now: DEMO_NOW })} sourceTitle={convTitle} dm={dm} onJumpSource={() => jump(c.askMsg)} />
           </TabPanel>
         )}
         {view !== 'session' && <TabPanel value={view} className="scroll-thin min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-3">

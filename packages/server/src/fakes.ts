@@ -34,7 +34,8 @@ function react(me: string, f: Inbound): MindAction[] {
   if (f.kind === "compute") {
     if (f.signal === "milestone") return [{ kind: "reply", roomId: f.roomId, text: `进度:${f.summary}`, replyToSeq: null }];
     if (f.signal === "completed") return [{ kind: "deliver", taskId: f.taskId, text: `做完了:${f.summary}` }];
-    if (f.signal === "failed") return [{ kind: "reply", roomId: f.roomId, text: `任务没做成:${f.summary}`, replyToSeq: null }];
+    // 摘要末尾括号里「宿主已…」是宿主写给联系人的说明,不是给用户看的:替身也不照念
+    if (f.signal === "failed") return [{ kind: "reply", roomId: f.roomId, text: `任务没做成:${f.summary.replace(/\(宿主已[^()]*\)$/, "")}`, replyToSeq: null }];
     // 受阻:宿主已替联系人 @提出者发了提问卡(inbox 摘要里有说明)就不再重复喊,用户回答后由联系人 forward;
     // 其余受阻(如换模型被 harness 拒)照旧如实告诉用户
     if (f.signal === "blocked" && !f.summary.includes("宿主已替你在会话里")) return [{ kind: "reply", roomId: f.roomId, text: `需要你帮忙:${f.summary}`, replyToSeq: null }];

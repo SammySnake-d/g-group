@@ -37,6 +37,12 @@ function fromProgress(p: ComputeProgress): Draft['e'] {
   }
 }
 
+/** 本轮交付的一项:写人看得懂的名字和它在「文件」区里叫什么 / 工作目录里的路径,不露内部编号 */
+function deliverable(title: string, a: TaskView['artifacts'][number]) {
+  if (a.kind === 'text') return { name: '结果', type: a.kind, ref: `文件区：${title} · 结果` }
+  return { name: a.name.split('/').pop() || a.name, type: a.kind, ref: a.name }
+}
+
 /** 台账事件里值得给人看的:卡死判定、重跑 */
 function fromRunEvent(e: RunEventView): Draft['e'] | null {
   if (e.kind === 'stall-judged') return { kind: 'notice', at: e.at, level: 'warn', text: '这一轮卡住没有进展，已判失败' }
@@ -58,7 +64,7 @@ export function liveTranscript(f: SessionFacts): HarnessTranscript | null {
     ...f.progress.map((p) => ({ at: p.at, e: fromProgress(p) })),
     ...kids.filter((r) => r.layer === 'subagent').map((r): Draft => ({ at: r.startedAt, e: { kind: 'agent', id: r.id, at: r.startedAt, label: r.text, brief: '', status: AGENT_STATUS[r.status], calls: 0, durationMs: r.durationMs } })),
     ...(f.session?.events ?? []).flatMap((x) => { const e = fromRunEvent(x); return e ? [{ at: x.at, e }] : [] }),
-    ...f.task.artifacts.map((a): Draft => ({ at: last.endedAt ?? f.task.updatedAt, e: { kind: 'deliverable', id: a.ref, at: last.endedAt ?? f.task.updatedAt, name: a.kind === 'text' ? '结果' : a.name, type: a.kind, ref: a.ref } })),
+    ...f.task.artifacts.map((a): Draft => ({ at: last.endedAt ?? f.task.updatedAt, e: { kind: 'deliverable', id: a.ref, at: last.endedAt ?? f.task.updatedAt, ...deliverable(f.task.title, a) } })),
   ]
   /* 按发生先后排(同一时刻保持拼进来的顺序),再编会话内序号 */
   const events = drafts

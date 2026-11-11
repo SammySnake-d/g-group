@@ -54,7 +54,7 @@ export function ComputeLine({ id }: { id: string }) {
   /* 出错:红字一行;AC-36 失败原地给三条路:重试 / 换个模型 / 跳过这一步(跳过后汇报里写明跳过了什么) */
   if (view === 'error') return (
     <div data-testid={`compute-line-${id}`} data-state="error" onClick={open} className="flex max-w-full cursor-pointer items-center gap-2 rounded-full bg-err/[0.06] py-0.5 pl-2 pr-1 text-[13px]">
-      <StatusDot c={c} />
+      <StatusDot c={c.status === 'error' ? c : { ...c, status: 'error' }} />
       <Pressable onClick={open} className="block min-w-0 shrink truncate font-semibold text-err hover:underline">{c.title}</Pressable>
       <span className="min-w-0 truncate text-err/90" title={c.error}>{c.error ?? '出错了'}</span>
       {err && <Button data-testid={`retry-${id}`} onClick={stop(() => resolve(err.id, 'retry'))} variant="danger" size="xs" shape="pill" className="ml-1 shrink-0 border border-err/40">重试</Button>}

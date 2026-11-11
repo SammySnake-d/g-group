@@ -37,10 +37,12 @@ export interface HarnessSessionProps {
   embedded?: boolean
   /** 记录还在取(连上后端时点开的那一下):先空着,不说「还没开工」 */
   loading?: boolean
+  /** 记录里没有工具调用(连上后端时合同只有语义进度):状态行不写调用数,不拿 0 冒充 */
+  noCalls?: boolean
   className?: string
 }
 
-export function HarnessSession({ compute: c, transcript, sourceTitle, dm = false, now, onBack, onClose, onJumpSource, onTalk, autoFocus = false, embedded = false, loading = false, className }: HarnessSessionProps) {
+export function HarnessSession({ compute: c, transcript, sourceTitle, dm = false, now, onBack, onClose, onJumpSource, onTalk, autoFocus = false, embedded = false, loading = false, noCalls = false, className }: HarnessSessionProps) {
   const ref = useRef<HTMLElement>(null)
   useEffect(() => {
     if (autoFocus) ref.current?.focus({ preventScroll: true })
@@ -82,7 +84,7 @@ export function HarnessSession({ compute: c, transcript, sourceTitle, dm = false
         state={state}
         elapsed={transcript ? formatDuration(sessionElapsedMs(transcript.meta, now ?? Date.now())) : c.elapsed}
         turns={transcript?.meta.turns ?? 1}
-        calls={view?.work.calls ?? 0}
+        {...(noCalls ? {} : { calls: view?.work.calls ?? 0 })}
         agents={view?.work.agents ?? 0}
         background={settled ? 0 : transcript?.meta.background.filter((j) => j.state === 'running').length ?? 0}
         owner={owner}
