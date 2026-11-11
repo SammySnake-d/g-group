@@ -1,0 +1,13 @@
+# box3 在 02cbc9c 上 history-prefetch-bench.ts 1000 10000 跑两遍(bench.log / bench2.log 原样)
+## bench.log
+{"env":{"node":"v24.21.0","cpus":2,"cpu":"INTEL(R) XEON(R) PLATINUM 8581C CPU @ 2.10GHz","mem":"4G","loadavg":["1.64","1.55","1.43"],"platform":"linux 6.8.0-142-generic"}}
+{"visible":1000,"timeoutMs":1500,"prefetch":[{"status":"ok","elapsedMs":70,"docs":1000,"hits":3},{"status":"ok","elapsedMs":24,"docs":1001,"hits":1}],"searchToolMs":[36,25]}
+{"visible":1000,"timeoutMs":60000,"prefetch":[{"status":"ok","elapsedMs":46,"docs":1000,"hits":3},{"status":"ok","elapsedMs":25,"docs":1001,"hits":3}],"searchToolMs":[26,18]}
+{"visible":10000,"timeoutMs":1500,"prefetch":[{"status":"ok","elapsedMs":546,"docs":10000,"hits":3},{"status":"ok","elapsedMs":213,"docs":10001,"hits":3}],"searchToolMs":[226,219]}
+{"visible":10000,"timeoutMs":60000,"prefetch":[{"status":"ok","elapsedMs":516,"docs":10000,"hits":3},{"status":"ok","elapsedMs":242,"docs":10001,"hits":3}],"searchToolMs":[282,194]}
+## bench2.log
+{"env":{"node":"v24.21.0","cpus":2,"cpu":"INTEL(R) XEON(R) PLATINUM 8581C CPU @ 2.10GHz","mem":"4G","loadavg":["1.58","1.54","1.43"],"platform":"linux 6.8.0-142-generic"}}
+{"visible":1000,"timeoutMs":1500,"prefetch":[{"status":"ok","elapsedMs":86,"docs":1000,"hits":3},{"status":"ok","elapsedMs":16,"docs":1001,"hits":1}],"searchToolMs":[34,19]}
+{"visible":1000,"timeoutMs":60000,"prefetch":[{"status":"ok","elapsedMs":45,"docs":1000,"hits":3},{"status":"ok","elapsedMs":24,"docs":1001,"hits":3}],"searchToolMs":[26,17]}
+{"visible":10000,"timeoutMs":1500,"prefetch":[{"status":"ok","elapsedMs":565,"docs":10000,"hits":3},{"status":"ok","elapsedMs":213,"docs":10001,"hits":3}],"searchToolMs":[236,229]}
+{"visible":10000,"timeoutMs":60000,"prefetch":[{"status":"ok","elapsedMs":462,"docs":10000,"hits":3},{"status":"ok","elapsedMs":227,"docs":10001,"hits":3}],"searchToolMs":[230,194]}
