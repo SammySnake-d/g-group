@@ -1,0 +1,26 @@
+{
+  "slice": "T-177 G4 找旧消息:每轮预取(D06 §3 粗筛自动)+ 一个内置查询工具 query_history(精筛:检索 + 分页回读)",
+  "base": { "branch": "feat/t177-g3-bc-search", "commit": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d", "seam": "packages/kernel/src/history-search.ts searchHistory(docs, query, limit)" },
+  "commits": {
+    "red": "a88304988cf4d18525cc42615c4262815d0c9c58",
+    "green": "1665e3dc9c4f176b35524fe2a127d96b76a4c8c2",
+    "proof_scripts": "02cbc9c5bc473f49154b613106dcd56d989e527e"
+  },
+  "box3": {
+    "where": "box3 /workspace/t177-g4-claude/gg,HEAD=02cbc9c5bc473f49154b613106dcd56d989e527e,node v24.21.0,2 核 4G,整段在 /workspace/.heavy.lock 下",
+    "npm_ci": "exit 0",
+    "typecheck": "exit 0",
+    "lint": "exit 0(Checked 209 files)",
+    "full": "1500/1500(G3 的 1483 + 本片新增 17)",
+    "mutations": "33 个定点变异全被指定具名测试按名杀死,存活 0;原样副本 37/37(5 个测试文件)",
+    "git_status_after": "空(跑完树没被改)",
+    "archive": "receipts/evidence/t177-g4/cloud-evidence.tgz(run1/ 原样:status、npmci、typecheck、lint、full、mutations、bench、bench2),sha256 eed51d7fec0d65ba1be86013b66657f4ffed62ebd96796f031b7d516a4cf11bc"
+  },
+  "red_check": "本机 a883049 上 5 个测试文件:新增 17 条 + mind.test.ts 改动 1 条共 18 条按名失败,其余 19 条既有测试通过,无文件级失败",
+  "prefetch_timing_box3_ms": {
+    "note": "宿主自报的 history-prefetch 诊断 elapsedMs(含读日志、投影、建文档、检索、返回前再核);每个规模连发两条新消息,第一条冷、第二条走上游按正文的特征缓存;两遍(bench / bench2)。默认时限 1500 毫秒下全部 status=ok,没有超时。两种时限用的是同一随机生成器的不同段落,语料不同,命中数不可比,只看耗时",
+    "visible_1000": { "cold": [70, 46, 86, 45], "warm": [24, 25, 16, 24], "query_history_search": [36, 25, 26, 18, 34, 19, 26, 17] },
+    "visible_10000": { "cold": [546, 516, 565, 462], "warm": [213, 242, 213, 227], "query_history_search": [226, 219, 282, 194, 236, 229, 230, 194] }
+  },
+  "local_precheck": "本机 macOS(M3)在等价提交上先跑过一遍 33/33 变异与 G-RED/G-STUB/G-TAUTO/G-LAYER(只作预检,不当证据);权威变异结果是 box3 这份"
+}
