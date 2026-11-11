@@ -6,15 +6,26 @@
 // 选项:--mind fake|pi(默认 fake 规则脑子;pi 需要 @g-group/adapter-pi-contact 与模型网关环境变量)
 //       --compute fake|claude(默认 fake;claude 起真实 Claude Code CLI)  --cwd 目录(Compute 工作目录)  --timeout 秒
 //       --repo 仓库 --target 分支 [--verify "命令 参数…"](AC-22:每个任务一个 worktree 作 Compute 工作目录)  --accept(交付后豁免审查并验收,代码任务随即合入)
+// Helper(AC-52;D07.0 Helper 专属 MCP＋CLI＋skill 复用同一业务能力):
+//   node packages/server/src/cli.ts helper --db ./gg.db --mind pi "帮我建个群叫 发布群,拉小克进来"
+//       叫 Helper 做一件事;--entry global|sidebar|mention(默认 global)--room 会话 id 或群名(侧栏 / @ 用);打印回复、操作与上下文清单
+//   node packages/server/src/cli.ts tools                         列出 Helper 的能力清单(HELPER_OPS)
+//   node packages/server/src/cli.ts tool --db ./gg.db <工具名> '<JSON 参数>'   以 Helper 身份执行一个操作(验收、调试、兜底)
+//   node packages/server/src/cli.ts mcp --db ./gg.db               以 stdio 跑 Helper 专属 MCP 服务(一行一个 JSON-RPC)
+//   node packages/server/src/cli.ts call --db ./gg.db <方法> '<JSON 参数>'   以用户本人调任意服务方法
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { claudeCompute } from "./compute.ts";
 import type { ContactView } from "@g-group/api-contract";
-import type { ContactCompactor, ContactMind } from "@g-group/kernel";
+import { type ContactCompactor, type ContactMind, HELPER_OPS, type HelperMind, toolDescription } from "@g-group/kernel";
 import { ensureGroup, sendAndWait, senderAudit } from "./drive.ts";
-import { scriptedCompute, scriptedMind } from "./fakes.ts";
+import { scriptedCompute, scriptedHelperMind, scriptedMind } from "./fakes.ts";
+import { HELPER_ID } from "./helper.ts";
+import { helperAgentOf, whenHelperIdle } from "./helper-agent.ts";
+import { serveMcpStdio } from "./helper-mcp-stdio.ts";
 import { Host } from "./host.ts";
+import { createService } from "./service.ts";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -35,22 +46,41 @@ const { values, positionals } = parseArgs({
     target: { type: "string", default: "main" },
     verify: { type: "string" },
     accept: { type: "boolean", default: false },
+    entry: { type: "string", default: "global" },
+    room: { type: "string" },
   },
 });
 const [cmd, ...rest] = positionals;
 
-async function makeMind(kind: string): Promise<{ mind: (c: ContactView) => ContactMind; compactor?: (c: ContactView) => ContactCompactor }> {
-  if (kind === "fake") return { mind: () => scriptedMind() };
+async function makeMind(kind: string): Promise<{ mind: (c: ContactView) => ContactMind; compactor?: (c: ContactView) => ContactCompactor; helperMind: (model: string) => HelperMind }> {
+  if (kind === "fake") {
+    const h = scriptedHelperMind();
+    return { mind: () => scriptedMind(), helperMind: () => h };
+  }
   if (kind === "pi") {
     // 字面量动态 import:按需加载 pi 依赖,G-LAYER 也能核对依赖方向
-    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as { createPiContactMind(o: Record<string, unknown>): ContactMind; createPiCompactor(o: Record<string, unknown>): ContactCompactor };
+    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as {
+      createPiContactMind(o: Record<string, unknown>): ContactMind;
+      createPiCompactor(o: Record<string, unknown>): ContactCompactor;
+      createPiHelperMind(o: Record<string, unknown>): HelperMind;
+    };
     const bearer = process.env.ANTHROPIC_AUTH_TOKEN;
     const apiKey = bearer ?? process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("--mind pi 需要 ANTHROPIC_AUTH_TOKEN 或 ANTHROPIC_API_KEY");
     const opts = (model: string) => ({ provider: "anthropic", model, baseUrl: process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
     const cache = new Map<string, ContactMind>();
     const compactors = new Map<string, ContactCompactor>();
+    const helpers = new Map<string, HelperMind>();
     return {
+      // Helper 用全局默认说话模型,同一套网关参数(AC-52)
+      helperMind: (model) => {
+        let h = helpers.get(model);
+        if (!h) {
+          h = mod.createPiHelperMind(opts(model));
+          helpers.set(model, h);
+        }
+        return h;
+      },
       mind: (c) => {
         let m = cache.get(c.speakingModel);
         if (!m) {
@@ -123,9 +153,71 @@ async function runGroup(host: Host, model: string | undefined) {
   for (const o of audit.offenders) console.log(`  ✗ #${o.seq} ${o.sender.kind}:${o.sender.id} ${o.reason}`);
 }
 
+type CliEntry = { kind: "global" } | { kind: "sidebar"; roomId: string };
+function cliEntry(host: Host): CliEntry {
+  if (values.entry === "global") return { kind: "global" };
+  if (values.entry !== "sidebar") throw new Error(`--entry 只能是 global、sidebar 或 mention,收到 ${values.entry}`);
+  return { kind: "sidebar", roomId: roomOf(host, values.room) };
+}
+function roomOf(host: Host, ref: string | undefined): string {
+  if (!ref) throw new Error(`--entry ${values.entry} 要 --room 会话 id 或群名`);
+  const r = host.roomsOfUser().find((x) => x.id === ref || x.title === ref);
+  if (!r) throw new Error(`没有会话 ${ref}`);
+  return r.id;
+}
+
+/** 叫 Helper 一次(AC-52):全局 / 侧栏 / @ 三种入口;打印回复、操作与带进模型的上下文清单。 */
+async function runHelper(host: Host) {
+  const service = createService(host);
+  const text = rest.join(" ").trim();
+  if (!text) throw new Error("缺要对 Helper 说的话");
+  const stamp = Date.now().toString(36);
+  if (values.entry === "mention") {
+    // 以用户身份在聊天里 @Helper 发这句话;宿主触发 Helper,回复作为 helper 消息出现在聊天里
+    const roomId = roomOf(host, values.room);
+    const sent = host.send({ roomId, clientActionId: `cli-at-${stamp}`, text: `@Helper ${text}`, mentions: [{ id: HELPER_ID, source: "manual" }] });
+    await whenHelperIdle(host);
+    const reply = host.listMessages(roomId, { afterSeq: sent.seq, limit: 50 }).messages.find((m) => m.sender.kind === "helper" && m.replyToSeq === sent.seq);
+    console.log(JSON.stringify({ asked: { roomId, seq: sent.seq }, reply: reply ? { seq: reply.seq, replyToSeq: reply.replyToSeq, text: reply.text } : null }, null, 2));
+    return;
+  }
+  const r = await service.handle("helper.ask", { entry: cliEntry(host), text, clientActionId: `cli-${stamp}` });
+  console.log(JSON.stringify(r, null, 2));
+  if (!r.ok) process.exitCode = 1;
+}
+
+/** 以 Helper 身份执行一个操作(与 Helper MCP 同一个执行器)。 */
+async function runTool(host: Host) {
+  const [name, json] = rest;
+  if (!name) throw new Error("用法: cli.ts tool --db 文件 <工具名> '<JSON 参数>'(工具名见 cli.ts tools)");
+  createService(host);
+  const r = await helperAgentOf(host)!.runTool(cliEntry(host), name, json ? JSON.parse(json) : {}, `cli-tool-${Date.now().toString(36)}`);
+  console.log(r.text);
+  if (!r.ok) process.exitCode = 1;
+}
+
+/** 以 stdio 跑 Helper 专属 MCP 服务(外部 MCP 客户端用;一行一个 JSON-RPC)。 */
+async function runMcp(host: Host) {
+  createService(host);
+  await serveMcpStdio(helperAgentOf(host)!.mcpServer(cliEntry(host), `mcp-${Date.now().toString(36)}`), process.stdin, process.stdout);
+}
+
+/** 以用户本人调任意服务方法。 */
+async function runCall(host: Host) {
+  const [method, json] = rest;
+  if (!method) throw new Error("用法: cli.ts call --db 文件 <方法> '<JSON 参数>'");
+  const r = await createService(host).handle(method, json ? JSON.parse(json) : {});
+  console.log(JSON.stringify(r, null, 2));
+  if (!r.ok) process.exitCode = 1;
+}
+
 async function main() {
-  if (cmd !== "dm" && cmd !== "log" && cmd !== "group") {
-    console.log("用法: cli.ts dm|log|group --db 文件 [--name 联系人] [--members 甲,乙 --to 甲] [--mind fake|pi] [--compute fake|claude] [--cwd 目录] \"消息\"");
+  if (cmd === "tools") {
+    for (const o of HELPER_OPS) console.log(`${o.name}\t${o.method}\t${o.kind}\t${toolDescription(o)}`);
+    return;
+  }
+  if (cmd !== "dm" && cmd !== "log" && cmd !== "group" && cmd !== "helper" && cmd !== "tool" && cmd !== "mcp" && cmd !== "call") {
+    console.log("用法: cli.ts dm|log|group|helper|tools|tool|mcp|call --db 文件 [--name 联系人] [--members 甲,乙 --to 甲] [--mind fake|pi] [--compute fake|claude] [--cwd 目录] [--entry global|sidebar|mention --room 会话] \"消息\"");
     process.exit(2);
   }
   const compute = makeCompute(values.compute);
@@ -152,6 +244,10 @@ async function main() {
     const model = values.model ?? process.env.ANTHROPIC_DEFAULT_SONNET_MODEL;
     if (model) host.updateSettings({ defaultComputeModel: model, defaultSpeakingModel: model, confirmAffected: true });
     if (cmd === "group") return await runGroup(host, model);
+    if (cmd === "helper") return await runHelper(host);
+    if (cmd === "tool") return await runTool(host);
+    if (cmd === "mcp") return await runMcp(host);
+    if (cmd === "call") return await runCall(host);
     let contact = host.listContacts().find((c) => c.name === values.name);
     contact ??= host.createContact({ name: values.name });
     const room = host.openDm(contact.id);

@@ -61,6 +61,7 @@ import {
   type AttentionLoop,
   type ContactCompactor,
   type ContactMind,
+  type HelperMind,
   DEFAULT_BREAKER_POLICY,
   DEFAULT_RETRY_POLICY,
   type FailureClass,
@@ -152,6 +153,8 @@ export interface HostOptions {
   readonly userName?: string;
   /** 每位联系人的脑子;同一个实现可服务多位联系人(round 输入里带联系人档案)。 */
   readonly mind: (contact: ContactView) => ContactMind;
+  /** Helper 的脑子(AC-52,U04):按模型取(全局默认说话模型,U70 不另设模型槽);不给则 helper.ask 不可用、@Helper 不自动回复。 */
+  readonly helperMind?: (model: string) => HelperMind;
   /** 按模型取 Compute 适配器;不给则派活直接失败(任务进 T11 并告诉联系人)。 */
   readonly compute?: (model: string) => ComputeAdapter;
   /** Compute 工作目录。 */
@@ -413,6 +416,7 @@ export class Host {
   /** 运行台账(AC-43):全景画板、runs.* 接口与联系人第 5 块读同一张 */
   readonly runs: RunStore;
   readonly bootId: string;
+  readonly helperMind: ((model: string) => HelperMind) | null;
   /** computeId → 台账里的会话与当前轮次 */
   private readonly computeRuns = new Map<string, { sessionId: string; turnId: string }>();
   /** computeId:toolId → 后台任务 / 子代理单元 */
@@ -429,6 +433,7 @@ export class Host {
 
   constructor(opts: HostOptions) {
     this.opts = opts;
+    this.helperMind = opts.helperMind ?? null;
     this.now = opts.now ?? (() => new Date().toISOString());
     let n = 0;
     this.newId = opts.newId ?? ((p) => `${p}-${Date.now().toString(36)}-${(n++).toString(36)}`);
@@ -751,18 +756,45 @@ export class Host {
     this.bus.emit({ type: "room.updated", room: view });
     return view;
   }
-  createGroup(title: string, members: Member[]): RoomView {
+  /**
+   * 建群。clientActionId 给了就幂等(重发返回同一个群)。fromRoomId + backgroundSeqs:从用户在场的原会话摘录几条作背景,
+   * 以用户的一条「背景」消息带进新群(AC-52 侧栏点名另开群);原会话不多任何消息。
+   */
+  createGroup(title: string, members: Member[], opts: { clientActionId?: string; fromRoomId?: string; backgroundSeqs?: readonly number[] } = {}): RoomView {
+    const key = opts.clientActionId !== undefined ? `group-create:${opts.clientActionId}` : null;
+    const prior = key ? one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key) : undefined;
+    if (prior) return this.roomView((JSON.parse(prior.payload) as { roomId: string }).roomId);
     for (const m of members) if (m.kind === "contact") this.contactDoc(m.id);
+    if (opts.backgroundSeqs?.length && opts.fromRoomId === undefined) throw new HostError("invalid_params", "backgroundSeqs 要和 fromRoomId 一起给");
+    let background: string | null = null;
+    if (opts.fromRoomId !== undefined) {
+      const src = this.userRoom(opts.fromRoomId);
+      const msgs = this.projected(src.id);
+      const picked = [...new Set(opts.backgroundSeqs ?? [])].map((seq) => {
+        const m = msgs.find((x) => x.seq === seq);
+        if (!m) throw new HostError("invalid_params", `#${seq} 不在会话 ${src.id} 里`);
+        if (m.retracted) throw new HostError("invalid_params", `#${seq} 已撤回,不能带作背景`);
+        return m;
+      });
+      if (picked.length) background = [`背景(摘自「${src.title}」):`, ...picked.map((m) => `#${m.seq} ${this.nameOf(m.sender)}:${m.text}`)].join("\n");
+    }
     const id = this.newId("g");
     const at = this.now();
-    const all_: Member[] = [{ kind: "user", id: this.userId }, ...members.filter((m) => !(m.kind === "user" && m.id === this.userId))];
-    tx(this.db, () => {
+    const me: Member = { kind: "user", id: this.userId };
+    const all_: Member[] = [me, ...members.filter((m) => !(m.kind === "user" && m.id === this.userId))];
+    const bg = tx(this.db, () => {
       run(this.db, "INSERT INTO gg_rooms (id, kind, title, created_at, updated_at) VALUES (?, 'group', ?, ?, ?)", id, title, at, at);
       for (const m of all_) run(this.db, "INSERT OR IGNORE INTO gg_members (room_id, kind, member_id) VALUES (?, ?, ?)", id, m.kind, m.id);
+      const s = background !== null ? this.appendMessageTx(id, me, { text: background, actionKey: `group-bg:${id}` }).seq : null;
+      if (key) recordAction(this.db.store, key, { roomId: id });
+      return s;
     });
-    const view = this.roomView(id);
-    this.bus.emit({ type: "room.updated", room: view });
-    return view;
+    this.bus.emit({ type: "room.updated", room: this.roomView(id) });
+    if (bg !== null) {
+      this.markRead(id, me, bg);
+      this.afterAppend(id, bg, me);
+    }
+    return this.roomView(id);
   }
   addMembers(roomId: string, members: Member[]): RoomView {
     const r = this.roomRow(roomId);

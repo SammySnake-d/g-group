@@ -12,8 +12,10 @@ import {
   ExternalEventView,
   FileEntry,
   HARNESSES,
+  HelperContextItem,
   HelperEntry,
   HelperNote,
+  HelperOpResult,
   HelperRoute,
   MarketplaceEntry,
   MemberRef,
@@ -103,7 +105,14 @@ export const METHODS = {
   "rooms.get": method(obj({ roomId: id() }), RoomView),
   /** 打开与某联系人的私聊;已存在则返回原会话。 */
   "rooms.openDm": method(obj({ contactId: id() }), RoomView),
-  "rooms.createGroup": method(obj({ clientActionId: id(), title: str({ min: 1, max: 200 }), members: arr(MemberRef, { max: 100 }) }), RoomView),
+  /**
+   * 建群;同一 clientActionId 重发返回同一个群。fromRoomId + backgroundSeqs(AC-52 侧栏点名另开群):从用户在场的原会话摘录这几条,
+   * 以用户的一条「背景」消息带进新群;原会话不多任何消息。只给 backgroundSeqs 不给 fromRoomId、seq 不在原会话或已撤回 → invalid_params。
+   */
+  "rooms.createGroup": method(
+    obj({ clientActionId: id(), title: str({ min: 1, max: 200 }), members: arr(MemberRef, { max: 100 }), fromRoomId: opt(id()), backgroundSeqs: opt(arr(seq(), { max: 50 })) }),
+    RoomView,
+  ),
   "rooms.update": method(obj({ roomId: id(), title: opt(str({ min: 1, max: 200 })), pinned: opt(bool()), muted: opt(bool()), rules: opt(str({ max: 20000 })), expectedRulesVersion: opt(int({ min: 0 })), tempComputeSlots: opt(int({ min: 0, max: 64 })) }), RoomView),
   "rooms.addMembers": method(obj({ roomId: id(), members: arr(MemberRef, { max: 100 }) }), RoomView),
   /**
@@ -210,6 +219,16 @@ export const METHODS = {
   "tasks.create": method(
     obj({ clientActionId: id(), roomId: id(), title: str({ min: 1, max: 500 }), description: opt(str({ max: 20000 })), ownerContactId: opt(id()) }),
     TaskView,
+  ),
+  /**
+   * CSV 转本群任务(US1 后端;前端入口是 Helper 侧栏上传 CSV,Helper 的 tasks_importCsv 工具也走这里)。CSV 按 RFC 4180 解析、第一行是表头;
+   * 每个数据行建一个任务(同 tasks.create:以用户的一条消息记进会话);assigneeColumn 那格有值时交给这位联系人(名字或 id,必须是本会话联系人),否则停在 T1_Open 待认领。
+   * 标题列:titleColumn,不给就找 title/标题/任务/名称,都没有用第一列;其余非空列写进描述。空行、缺列、标题为空、负责人不对逐行进 errors,不影响其他行。
+   * 同一 clientActionId 重发不重复建(逐行幂等)。表头缺失、指定的列不存在 → invalid_params。
+   */
+  "tasks.importCsv": method(
+    obj({ clientActionId: id(), roomId: id(), csv: str({ min: 1, max: 1_000_000 }), titleColumn: opt(str({ min: 1, max: 200 })), assigneeColumn: opt(str({ min: 1, max: 200 })) }),
+    obj({ tasks: arr(TaskView), errors: arr(obj({ line: int({ min: 1 }), reason: str({ max: 2000 }) })) }),
   ),
   /** 给还没人负责(T1_Open)的任务指定负责人:以用户一条对话消息记录并 @ 它,由它认领并起 Compute。已有负责人 conflict;不是本会话联系人 invalid_params。clientActionId 幂等。 */
   "tasks.assign": method(obj({ taskId: id(), contactId: id(), clientActionId: id() }), TaskView),
@@ -365,6 +384,13 @@ export const METHODS = {
   "helper.history": method(obj({ entry: HelperEntry, ...Page }), obj({ notes: arr(HelperNote) })),
   /** 聊天里 @Helper 时的公开回复:作为 helper 发言者的一条消息回复那条 @ 它的用户消息。只有 mention 入口能用。 */
   "helper.post": method(obj({ entry: HelperEntry, text: str({ min: 1, max: 100000 }), clientActionId: id() }), MessageView),
+  /**
+   * 叫 Helper 做一件事(U04/AC-52):按入口路由(只为用户本人服务),Helper 经 Helper 专属 MCP 调工具真执行软件操作(D07.0)。
+   * 全局入口的模型请求不带任何聊天;侧栏回复只记在侧栏(helper.history),不上公屏;mention 入口的回复作为 helper 消息回复那条 @ 它的消息。
+   * 不可逆操作先问用户写在 skill 与工具说明里,代码不设确认门禁;按权限不给 Helper 的方法(以用户身份发言、验收、回答授权)服务层拒收。
+   * context 是这次带进模型的会话与消息(AC-52 观测点)。clientActionId 幂等(重发返回同一结果,不重复执行)。没有配置 Helper 模型运行时 → unavailable。
+   */
+  "helper.ask": method(obj({ entry: HelperEntry, text: str({ min: 1, max: 100000 }), clientActionId: id() }), obj({ reply: str({ max: 100000 }), ops: arr(HelperOpResult), context: arr(HelperContextItem) })),
   // ---- 模型配置(AC-32)----
   /** 保存前预检:按提议的改动算出每位联系人的生效值,列出受影响的下游与冲突;不落盘。 */
   "models.preview": method(

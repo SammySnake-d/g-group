@@ -13,3 +13,6 @@ export * from "./compact.ts";
 export * from "./retry-policy.ts";
 export * from "./memory.ts";
 export * from "./quote-chain.ts";
+export * from "./helper-ops.ts";
+export * from "./helper-mcp.ts";
+export * from "./csv.ts";

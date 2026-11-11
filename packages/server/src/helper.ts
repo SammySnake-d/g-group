@@ -46,7 +46,7 @@ export class HelperDesk {
   }
 
   /** 入口 → 路由(routeHelper:只为用户本人服务);带会话的入口要求用户在这个会话里。 */
-  private route(entry: HelperEntryInput): HelperRouteView {
+  route(entry: HelperEntryInput): HelperRouteView {
     const e: HelperEntry =
       entry.kind === "global" ? { kind: "global" } : entry.kind === "sidebar" ? { kind: "sidebar", conversationId: entry.roomId } : { kind: "mention", conversationId: entry.roomId, seq: entry.seq };
     const r = routeHelper(e, { kind: "user", id: this.host.userId }, this.host.userId);
@@ -54,7 +54,8 @@ export class HelperDesk {
     if (entry.kind !== "global") this.mustSee(entry.roomId);
     return { replyIn: r.route.replyIn, becomesMessage: r.route.becomesMessage, contextRoomId: r.route.contextConversation, replyToSeq: r.route.replyToSeq };
   }
-  private mustSee(roomId: string) {
+  /** 用户在这个会话里才让 Helper 读写它;会话不存在 not_found,不在场 forbidden。 */
+  mustSee(roomId: string) {
     this.host.roomView(roomId);
     if (!this.host.members(roomId).some((m) => m.kind === "user" && m.id === this.host.userId)) throw new HostError("forbidden", `你不在会话 ${roomId} 里,Helper 不能读它`);
   }
@@ -94,8 +95,14 @@ export class HelperDesk {
   post(entry: HelperEntryInput, text: string, clientActionId: string): MessageView {
     const route = this.route(entry);
     if (!route.becomesMessage || entry.kind !== "mention") throw new HostError("invalid_params", "只有聊天里 @Helper 的回复会发成会话消息;侧栏和全局面板用 helper.note");
+    this.askedMessage(entry);
+    return this.host.postAsHelper(entry.roomId, HELPER_ID, text, entry.seq, clientActionId);
+  }
+
+  /** mention 入口指向的那条消息:必须是用户本人 @Helper 的消息。 */
+  askedMessage(entry: { roomId: string; seq: number }): MessageView {
     const asked = this.host.listMessages(entry.roomId, { afterSeq: entry.seq - 1, limit: 1 }).messages[0];
     if (!asked || asked.seq !== entry.seq || asked.sender.kind !== "user" || !asked.mentions.some((m) => m.id === HELPER_ID)) throw new HostError("invalid_params", `#${entry.seq} 不是用户 @Helper 的消息`);
-    return this.host.postAsHelper(entry.roomId, HELPER_ID, text, entry.seq, clientActionId);
+    return asked;
   }
 }

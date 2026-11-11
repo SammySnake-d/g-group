@@ -1,6 +1,6 @@
 // 测试与 CLI 演示用的确定性替身:脚本化的联系人脑子、按剧本吐语义事件的 Compute 适配器。不连模型、不起进程。
 import type { ComputeActivity, ComputeAdapter, ComputeEvent, QuiesceResult, Refusal, SpawnOptions, SpawnResult, TurnModel } from "@g-group/adapter-cc-compute";
-import type { ContactMind, Inbound, MindAction, RoundInput, RoundOutput } from "@g-group/kernel";
+import type { ContactMind, HelperMind, HelperMindInput, Inbound, MindAction, RoundInput, RoundOutput } from "@g-group/kernel";
 
 /** 规则脑子:用户在私聊或 @ 它派活 → dispatch + commit + 回复;Compute 里程碑 → 汇报;完成 → 交付;失败 → 如实告知。 */
 export function scriptedMind(opts: { delayMs?: number; onRound?: (input: RoundInput) => void } = {}): ContactMind {
@@ -202,6 +202,58 @@ export function scriptedCompute(
       closed = true;
       wake?.();
       actWake?.();
+    },
+  };
+}
+
+/**
+ * Helper 的规则替身(开发前端与 CLI 演示用,不连模型):只认三种说法,其余如实说听不懂。工具经 Helper MCP(tools/call)照常真执行。
+ *   「建个群叫 X,拉 A 和 B 进来」→ contacts_list 查 id → rooms_createGroup;
+ *   「把 A 删掉」→ 照 skill 先问用户、不调工具;用户下一句说「同意」(此前对话里有这个问题)→ contacts_remove;
+ *   「…CSV…:」后跟 CSV 原文(侧栏 / @ 入口)→ tasks_importCsv 到当前聊天。
+ */
+export function scriptedHelperMind(opts: { onRun?: (input: HelperMindInput) => void } = {}): HelperMind {
+  return {
+    async run(input, _signal, mcp) {
+      opts.onRun?.(input);
+      const calls: { name: string; args: unknown; ok: boolean; text: string }[] = [];
+      const call = async (name: string, args: unknown) => {
+        const r = (await mcp.request("tools/call", { name, arguments: args })) as { content: { text: string }[]; isError: boolean };
+        const out = { ok: !r.isError, text: r.content.map((c) => c.text).join("") };
+        calls.push({ name, args, ...out });
+        return out;
+      };
+      const contactIds = async (names: string[]) => {
+        const r = await call("contacts_list", {});
+        const list = r.ok ? (JSON.parse(r.text) as { contacts: { id: string; name: string }[] }).contacts : [];
+        return names.map((n) => ({ name: n, id: list.find((c) => c.name === n)?.id ?? null }));
+      };
+      const t = input.text.trim();
+      const group = /建(?:个|一个)?群(?:叫|名叫|名字叫)?\s*「?([^,，。」\s]+)」?.*?拉(.+?)进来/.exec(t);
+      if (group) {
+        const found = await contactIds(group[2]!.split(/[和、,，\s]+/).map((x) => x.trim()).filter(Boolean));
+        const missing = found.filter((f) => !f.id).map((f) => f.name);
+        if (missing.length) return { reply: `没找到联系人:${missing.join("、")}`, calls };
+        const r = await call("rooms_createGroup", { title: group[1], members: found.map((f) => ({ kind: "contact", id: f.id })) });
+        return { reply: r.ok ? `建好了群「${group[1]}」,拉了 ${found.map((f) => f.name).join("、")}` : `没建成:${r.text}`, calls };
+      }
+      const remove = /^把(.+?)删掉/.exec(t);
+      if (remove) return { reply: `要删除联系人「${remove[1]!.trim()}」吗?删了不能恢复。回复「同意」我就删。`, calls };
+      const asked = /^(同意|可以|确认)/.test(t) ? [...input.history].reverse().find((h) => h.role === "helper")?.text.match(/要删除联系人「(.+?)」吗/) : null;
+      if (asked) {
+        const [f] = await contactIds([asked[1]!]);
+        if (!f?.id) return { reply: `没找到联系人:${asked[1]}`, calls };
+        const r = await call("contacts_remove", { contactId: f.id });
+        return { reply: r.ok ? `删掉了联系人「${f.name}」` : `没删成:${r.text}`, calls };
+      }
+      const csv = /csv[^:：]*[:：]\s*([\s\S]+)$/i.exec(t);
+      if (csv && input.route.contextRoomId) {
+        const r = await call("tasks_importCsv", { roomId: input.route.contextRoomId, csv: csv[1] });
+        if (!r.ok) return { reply: `没导入:${r.text}`, calls };
+        const v = JSON.parse(r.text) as { tasks: unknown[]; errors: { line: number; reason: string }[] };
+        return { reply: `导入了 ${v.tasks.length} 个任务${v.errors.length ? `,${v.errors.length} 行有问题:${v.errors.map((e) => `第 ${e.line} 行 ${e.reason}`).join(";")}` : ""}`, calls };
+      }
+      return { reply: "我是规则替身,只认:建群拉人、删联系人、CSV 转任务。", calls };
     },
   };
 }

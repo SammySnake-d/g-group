@@ -1,6 +1,6 @@
 // 主进程推给渲染进程的事件流。每条事件带全局递增的 eventSeq:渲染进程断线/刷新后用 sinceEventSeq 续订,
 // 服务端补发缺口;缺口太大(已丢弃)时回 resync=true,渲染进程重新 list。
-import { CommitmentView, ComputeProgress, CONTACT_ACTIVITY, ContactView, MemberRef, MessageView, PluginView, RoomView, RunView, ScheduleView, SharedDocView, SlashCommand, TaskView } from "./entities.ts";
+import { CommitmentView, ComputeProgress, CONTACT_ACTIVITY, ContactView, HelperEntry, HelperOpResult, MemberRef, MessageView, PluginView, RoomView, RunView, ScheduleView, SharedDocView, SlashCommand, TaskView } from "./entities.ts";
 import { DraftView } from "./draft.ts";
 import { arr, id, int, isoTime, nullable, obj, oneOf, seq, str, tagged, type Infer, lit } from "./schema.ts";
 
@@ -47,6 +47,8 @@ export const ServerEvent = tagged("type", {
     limit: int({ min: 0 }),
     label: str({ max: 200 }),
   }),
+  /** Helper 回复了一次(AC-52):全局/侧栏的回复在 noteId 那条记录里,@ 的回复是会话里 messageSeq 那条消息;ops 是这次做过的操作。 */
+  "helper.replied": ev("helper.replied", { entry: HelperEntry, reply: str({ max: 100000 }), ops: arr(HelperOpResult), noteId: nullable(id()), messageSeq: nullable(seq()) }),
   /** 订阅续接失败(缺口已丢弃):渲染进程需全量重拉。 */
   "stream.resync": ev("stream.resync", { reason: str({ max: 500 }) }),
 } as const);
