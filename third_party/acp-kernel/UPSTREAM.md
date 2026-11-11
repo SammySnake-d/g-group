@@ -1,0 +1,416 @@
+# third_party/acp-kernel 的来源、构建与许可(T-177 G3)
+
+这个目录是 Billion Context(billion-context)主仓 `kernel/`(npm 包名 `acp-kernel`)在一个钉住提交上的**原样**拷贝,外加按上游自带命令构建出的 `dist/`。
+g-group 第一版只用它的检索(用户 2026-11-10 dm-ai-matrix#1885 选 A「先接检索」;设计定稿 v0.2 §6、实施方案 §5、审查条件 G3-a/G3-b/G3-c)。
+
+## 钉住的上游(scripts/t177/g3-upstream-check.ts 读取这一段)
+
+- upstream-repo: `https://github.com/ranxianglei/billion-context`
+- upstream-commit: `541cf260c4e0fcda5edb31e4de4485a3185f5589`
+- upstream-path: `kernel`
+- upstream-tree: `d5f2368636ddc737fbb023fd73417e16369bd2b1`
+- upstream-src-tree: `e59f57d7c0f03d79fcc2b5236e2020fe654572ed`
+- split-commit: `e70468868c2fa736b7c1c57321ab0abc9ee911b4`
+- squash-commit: `64ebdaa3233ae7e7427fda34f3f89fd0e96c0efc`
+- import-commit: `87fb4ebfe6136945086485c9b1ad9614209bc5cd`
+- dist-commit: `793aa76bd5be7a15bb2f5972344a8644dc3e7de8`
+- build: `npm ci --no-audit --no-fund && npm run build && find dist -name '*.map' -delete`
+
+说明:
+- 上游提交 `541cf26`:2026-11-10T09:43:07+08:00,`Merge pull request #5997 from ranxianglei/2026-11-09_command-code-byok-doc-row`,在上游 `master` 上(2026-11-11 核对时 `master` 已到 `e3220adc`,不跟进)。缩写 `541cf26` 在上游仓库里唯一。
+- 这个提交里 `kernel/package.json` 的版本是 **0.0.191**。设计定稿 v0.2 和实施方案写的「0.0.190」是 11-10 对照探针用的 `444630170` 上的版本,`541cf26` 上已是 0.0.191,以本行为准。
+- 拆分:`git subtree split --prefix=kernel 541cf26`(git 2.43.0)得到 `e704688`,它的树就是上游 `541cf26:kernel` 的树 `d5f2368`;最后一个改动 `kernel/` 的上游提交是「kernel: version 0.0.191」(Gong Liu,2026-11-10T01:24:25+08:00)。
+- 引入:`git subtree add --squash --prefix=third_party/acp-kernel e704688` 生成 squash 提交 `64ebdaa`(无父提交,树 = `d5f2368`)和合并提交 `87fb4eb`,不带上游 8406 个提交的历史。
+- 独立的 acp-kernel 仓库和 npm 上的 acp-kernel 都停在 0.0.101(2026-10-03),不是真源,不用。
+
+## 构建产物
+
+- `dist/` 由上游自带命令构建(`build` 一行;`npm run build` = `npm run clean && tsup && tsc --emitDeclarationOnly`),上游 `.gitignore` 忽略 `dist/`,这里用 `git add -f` 提交,**不提交 `.map`**(dist 里的 `//# sourceMappingURL` 注释指向不存在的 map,运行时不读)。
+- 提交 `793aa76` 的 dist 构建环境:box3,Linux 6.8 x86_64,node v24.21.0,npm 11.19.0;构建依赖版本由上游 `package-lock.json` 锁定。
+- `@g-group/kernel` 经上游 `package.json` 的 `exports`(`dist/index.js` + `dist/index.d.ts`)原样使用;不改上游 `.js` 后缀的 import,不加运行时解析钩子。
+
+## 本地补丁与本地新增
+
+- 本地补丁:**无**。上游源码逐字不改(下面的源码清单与上游 `541cf26:kernel/` 逐文件相同)。以后确需补丁时单独提交、带回归测试、记上游 issue,并列在这里。
+- 本地新增(不来自上游):`UPSTREAM.md`(本文件)、`NOTICE`、`dist/`(构建产物)。
+
+## 怎么接进 g-group
+
+- `packages/kernel/package.json` 依赖 `"acp-kernel": "file:../../third_party/acp-kernel"`;仓库根 `.npmrc` 设 `install-links=true`,npm 按打包副本安装(只装它 `files` 列出的 `dist/`、说明与许可,不装它的 devDependencies),锁文件只多 `node_modules/acp-kernel` 一条。不设这项时 npm 把链接目标当开发中的包,锁文件要多 128 条构建工具条目,还会在本目录里装一份 typescript 5。
+- 业务代码全仓只有 `packages/kernel/src/history-search.ts` 一处 import `acp-kernel`(G-LAYER:kernel 层只能依赖 domain 层,所以接缝放在 `@g-group/kernel` 里,不另开包)。
+- 只用上游的 `messageDocs` + `searchBlocks`(默认 hybrid:BM25 + 模糊 + 中文分词)。不用旧的子串接口 `CompressionCore.search()`,不用块压缩(compress/decompress/refold/state)、nudge、紧急截断、默认 `processTurn`、`tokenize` 估算。
+
+## 许可与署名
+
+- `LICENSE` 是上游 `kernel/LICENSE` 原文:MIT,另加「产品出处标注」附加条款——终端用户可见的产品须在首页、文档或「关于/致谢」页至少一处写明使用了 acp-kernel(涉及时含 billion-context),并附 https://github.com/ranxianglei/acp-kernel (及 https://github.com/ranxianglei/billion-context)的链接;纯服务端或内嵌、无用户界面的用途,随附文档带上声明即可。
+- g-group 已署名的地方:仓库 `README.md`「第三方组件与致谢」、本目录 `NOTICE`。条款要求至少一处,已满足。
+- **欠项(前端)**:仓库 `packages/` 下只有后端七个包,还没有「关于/致谢」页。桌面前端合入(feat/desktop-ui)时,在「关于/致谢」页补写 acp-kernel 与 billion-context 及两个链接。
+- 残余风险:上游 `PROVENANCE.md` 自述内核与 AGPL-3.0 的 DCP 没有代码继承(逐文件审计),我们无法独立证明;本片只用的检索模块 `src/search/` 不在它列的 DCP 派生清单里(清单里的 `compress/search.ts` 是边界解析,不是这个模块)。对外分发前再核。
+
+## 校验与升级
+
+- 校验(G3-02 上游边界):`node scripts/t177/g3-upstream-check.ts`(离线:逐文件哈希、唯一 import);加 `--upstream <billion-context 克隆>` 直接对上游逐文件比,加 `--rebuild` 按上面的 `build` 重建 dist 逐文件比,加 `--fresh-clone <仓库> --ref <提交>` 做全新克隆 `npm ci` 后的运行时 import 与接缝测试。
+- 升级不跟上游 HEAD,只在需要上游修复时走候选:上游 `git subtree split --prefix=kernel <新提交>` → `git subtree merge --squash --prefix=third_party/acp-kernel <新拆分>` → 按 `build` 重建并提交 `dist/` → 更新本文件的钉住字段与清单 → 跑上游测试、本脚本、接缝回归和真实模型样例。
+
+## 逐文件 sha256
+
+上游源码(除本地新增与 dist/,共 254 个):
+
+<!-- source-sha256:begin -->
+```
+124d523adc9fa248caee3c56c5f0746683813f0c18d34f6cdb588d9ad01911a3  .gitignore
+4481eddde374018cb5b00644b22096ed5ff2e3a6b2cd47a955f728d9a343f503  .prettierignore
+f149f8feca1e3692c10ee6a8f289b29e1fa653bd6b204ec58c94bf616658e46f  .prettierrc
+379da590ba96f29c8dec359ef5b6a99e6695952627fcf3eaee4a567879a97e75  DESIGN-prompts.md
+a0cdc64d259de80539507d17585f3ea0bf04c5b7cfe15d1ef1075e13e8e201d6  DESIGN.md
+5f82d3c8724c30a0ece8819b23babc4587a50eddf350273c6c8f0c936bad2a74  LICENSE
+81564232113198ae865c90de5a5ae8f7f439cac9f5a25ea4e75d1d6bd3a8997e  PROVENANCE.md
+7e81d8d0b6013892e1a75d31cd3214846e9ed146714a2120e1c5c53fce3475bb  README.md
+4722c59966fd71f152e5c3b1c34f7e61a5b1490edc21ce9421d48d5c1cd5a758  SECURITY.md
+b2abc04e6be01f2404f92ca3da6d644a208e9ab8769cb93bb38fbaf2e48ea3f2  bench/search/bench.ts
+db753bb3d163dc9403c20b87e89058b38a665a8e53e81dd90684bb159827b70a  bench/search/corpus.ts
+8e29fd8787db602fba0f1d1478a0d78db198f30e44594e57375e37bec9506ec2  package-lock.json
+3456c9e919caf85bb3c7a43127223fd9b64dd21592aface9a6475f35ab51ebd1  package.json
+af5b887a623045074ffa09966a7913bc5c0dd5a8b6c4da00245e62b2b01fb6aa  scripts/ci/check-pr.sh
+a087e559ee1aacb2ee6877f7e85edfc33d364b996c8cd7ae7eb0cdce630d44ed  scripts/format-until-stable.mjs
+96359dce57640919ddc27173ea9e99ea555e23e5a1e77c22241a45d16b7cfc70  src/absorb.ts
+4f2d2b524498544fd67f5e673389f560d7212db37ea74383f16de33860d45cca  src/block-map.ts
+58912ccafd212b9a3075956d1de40426f9aa6b18a256655cbad51ccb3ba8ec19  src/boundaries.ts
+74f04a77a20a1de00a387c66c71c62dbd0b0b9c87bfac786c0057fb28f7883a5  src/cache-report.ts
+cb4958639aadcbe1849984739a90ae43620e8396e2d08e9e72269b4f9919c5f3  src/ccr.ts
+087cc95f1d40ca3dc898f803d4d795fca830b7d2c709baa5ffc43aff5cd8851f  src/compress-tools.ts
+0bcb51b928fc4646d60a3607069db3161dd1bd23ddeaef84b44fcbc3464b8f65  src/compress.ts
+d88fe089baacc71d735fca6e93db0ae0de44b11dcac6b3518a74f886af737b8f  src/compression-rules.ts
+72957d0a40e85d4b08f168714d8b9535fa18dc734a893e247c083773031ae1bb  src/config.ts
+41ebb082b92206be662e54292a839a494f82747e566acb5af4c6b8ccbd532875  src/content-store.ts
+2b0b06a91b4eba8d281132d0dd5877ab0d1813babbc09a852e07f3a0fa78db38  src/crush.ts
+44fe84d49018d796d8cfa16628abb78690b529dae8cea76dbb8b2963477ba455  src/decompress.ts
+f9b7b179e34f7bd864b9bb626d98bbb1bfecb71c6120dc87d0bcb2f3fa607b23  src/filter/apply.ts
+af4d0983247749eee6dad402bfc494b9e723eed64114afaf6571fdf326877c2d  src/filter/index.ts
+9c86e9a969712dd7ab42cccbbfaf603ef9b7308f61b6e474d5bfd14cd290ab63  src/filter/registry.ts
+947c11d7937e1bcb897b66b7b03c38d0769726f54b73151ed618b56c0273d926  src/filter/types.ts
+4caa7b1e515fa53befe36c0e46c534295cd5220f6b0e99cfa87955f7122a56b5  src/handoff.ts
+35c18e769eb06891fe5336978f069fdd6b513630d9f104d911a9986c52d86985  src/hide-consumed.ts
+12d889e07847fa78717ba7eb81401f4e1ed64eb0ec494dd2a8220b3985d97c15  src/index.ts
+b4121f846cf20da3f46926642d0710b6d26058a9af69f9be961638bd404cb265  src/instance-reid.ts
+912e296bd77cc442679f17bcf6109b74ec01717c120e51b435acf014e925224d  src/media-refs.ts
+cebd0ce7e6dcbe72026d4309f32972fc7d2d129af8ca7b7a60fb85153321be4d  src/message-kind.ts
+9b9a157a9ae04fc51dd21203c10fbcfdbf561f142ef37742b6e4fac52199fc72  src/nudge-text.ts
+c7cc31b52ee0d101defb4ad33982d07f6f64b27c730aea16be41db0ddd264081  src/output-steering.ts
+5199138d6a0980a414bcfc4ea67f255355773feaae3be09ebc77e193a7f97889  src/packs.ts
+bbe678bc3ea1d1be475566b0eebcfe29c51d726ebd260ecca778d2cbac23ee54  src/panel/cache.ts
+9359239d61d396733ba85fa2cab022b81a67e15a80a65b367d7b5bf96614140e  src/panel/format.ts
+9cb51e2d33a0833e0e2a84664c2295306e2d94c936e18d9e5c05f79831d9cab5  src/panel/index.ts
+71ab6e492646930291658a70935244bc34fa5bedde564292c278c30b6f36bff0  src/panel/panel.ts
+dc7ba3c71f33ea48204d0ebeaaf0bafcbfa2fe60cc94ecce34ba8399f07fe676  src/panel/topic.ts
+44f4e593e2e1f7206e0049b965aa3b58cd46cd6fe1f57c3460ff377d69e5c74e  src/parse-compress-input.ts
+f2b084b8816fe3895846aa9750ed0764e70e6aec5ae25109b20e4c67f1bf38b5  src/persist/index.ts
+89fc69bc99dd0352fad939ca6e57c020618cc1bdbc98b84fbdb9ac0bae2596aa  src/persist/state-merge.ts
+1e0ab8b35255b8f80a8cb592766cdc0a354ac876c52959b7c2a1f82d76890e3b  src/persist/store.ts
+b7d263980cbc8db66a3706999ab3479ec2c71a949c44e6a5dfd8be0fee97e51c  src/pipeline.ts
+f9d4819485fc67a16cad8a5ee6b2822fdafde6cc4bf2942f620d8694d14e9b9a  src/prompts.ts
+6d679ac24e5632e1314d35a904036dac205ba31a2443b99926e9b20c799fafd1  src/protected.ts
+396d54fb4ec6656a85414c307f2dda0d6d41d717719c9ec8611ab4bb9affc73d  src/prune.ts
+61da02ab6fc520a5d1deb8e64b5b02becdb49e71ff937d34fab4c17620fe71ad  src/reasoning-pairs.ts
+beafe0b9326aaf6e2c7696337243be2b86c4733ec50b3a5fb73098fd6b01786a  src/rebuild.ts
+e7b735a11a17aa14d5407970abf6eac9985696d33cb2979ba279f67dfa2248f6  src/recommend.ts
+bcc69e6d39a8dae78b3c5ede9e083ac70e9060dbe3b1cb5f3b813e8a840ba497  src/refold.ts
+cd9c2881ad0ab7e588042ec2d0a9689f736b8553a6e8c3b5fc6938d56920e58b  src/refs.ts
+76a2f16ed0898cdf65c4f30d9410ea0ddc1c4f0555e97ff184aee736b8ffdce1  src/relocate-compress.ts
+40eb0cec278eb276974c215f86594c1cbd18ffffaeb07b43272be550ad8e4833  src/render-refs.ts
+6b4096491162fe2a94a1ce00ff7a0a7d829d858bc5b297d6a146b1938b7c398a  src/report.ts
+f4c5f2ac4eaae18fc2ae4cb65d4de225a85698fea23860332c2dcd533a0468a3  src/rules.ts
+69b260a2580f7c84efd1480d62c213577682a6964b1afd870030cbf37514474c  src/search.ts
+7f6081ecc1af583aab9f3dc17702d9d8029b76301e6cc64e0023acc2c4b0a123  src/search/SEARCH.md
+2478a374310c3a55922edd0bc4a075fb8b8e8f7be04f466353840feb6d9e47e5  src/search/algorithms/bm25.ts
+acdfae1a61d4a692351f78e7aa6e5edb981a524cadcee2b8569620555a55acb3  src/search/algorithms/fuzzy.ts
+729bdfcdbd95f9809edeff4eff33d532317a210a73020e884bc3082258176312  src/search/algorithms/hybrid.ts
+952d4b02d52927803c16b89078e0c75717514b24aa311e7d4f8b6bbe83e39892  src/search/algorithms/semantic.ts
+b6d3844ee93cdf4a5c488e7c18f0dc3602f4597b828918db734354072caf3e07  src/search/algorithms/substring.ts
+2bdc0dd72af859ffc903259b463e9d79b5f8cb0f5b9503d5200c07e7b5721231  src/search/doc-cache.ts
+366488d5e395e47483b38dab2f9420ab2776c2b352cfacca4ac15cf7703e6162  src/search/index.ts
+2362efd3c02e3c365040ec159112c9dfbdf17c4ec9d816e4afe9c7a76265ed57  src/search/registry.ts
+7d139a6682dbf8d94611e4bdcc0e668ed9b8f525b7ba49c95192d04f7e4d1f03  src/search/stemmer.ts
+cb08b80298837758281c52dd4d5766f49c9ca05ba866b287f97bab95e129e06a  src/search/tokenizer.ts
+b767eb5f90b6c10d264b3c25fc6b3ef67855eeced10b99a5ff295e28bdfffc35  src/search/types.ts
+426e692d847c91cfc69a4077abc0bd544155b6c219cd5806fbf181bae84f2ad2  src/segment.ts
+bc837f27c630f5aa6cf8e88f9a9c3a78efeeee0aa2c881fc43889cd8baff80a8  src/state.ts
+da9dc66ab426df86c03cb61dc6fb38f3854e485c3ade91e4d852494f114fac1e  src/surface-config.ts
+842482596dd05a002235a9aa0d26148f7beeff7a280fab4e11586123d0b81d77  src/sync.ts
+c86199aa2a4762f95def446cdf2f145217456b8dd699927fd6a943282aa53471  src/tokenize.ts
+6efff223663542b44ba1c69642923a48eaca5112a197c3c16a3f55630f36b5fe  src/tool-pairs.ts
+fdcda9f120b0d86fa0952699b0663e2c244ebb5c77eebdbbf9a6b446dcc1db9f  src/transform-channel.ts
+0d9a631b815a7385934dac0bc4aafe3bb9a2d07598b83d896eb52339ab094e9d  src/truncate-tools.ts
+b7577c6bfdfd71d88139272e4880b430a317088a3a3e68ec0b4f2d5c95e1cbd9  src/truncate.ts
+45917d3a94007f71cf5941c89cb59680953a193633651df711039910e142453b  src/turn-integrity.ts
+99601a864138a4b78580c2c2fea5e6ec3eb5a185042117475fd363d740768d90  src/types.ts
+ec12fa13504933089ca9ffe941d5cfc14bbd34c357e95a3af3aa11513adafdb8  src/unit-projection.ts
+7c64c9e8f6b14c43b36c302e6e221814a7a3268634e84b455294b32d0c722669  src/viable.ts
+63e4fa94de37b48f8028c20862bea8ae7651f854e2d7c6695f7106cf8a852f82  src/view-latch.ts
+832d56be5fc41862f965c8a179894e376dba14305131ba146cc736f701ff50f0  src/wire/anthropic.ts
+5e2ba96999cbd1136604a454ca2ef8f53e6ef9df452cfc59037e9ee0ccc23a94  src/wire/bili-message.ts
+24be7bb82b1580aea2304c3f18f0f2a7594f752d0a67d7963a7dfbd820b63415  src/wire/compress-detect.ts
+c294b179162f6f9ef1036459cdf3f684e7ecae42475a7e79d9e16c329a976108  src/wire/demoted-thinking.ts
+45b581aac786a478d85e36e0d257b2a89cc56089cabb230f3d62c42ebe86c538  src/wire/formats.ts
+2bb77b19731376615b514b8e12fccdf8d8d258ef09aef3e780cbaefdedefd67f  src/wire/google.ts
+6cbd2a0c41b052f60e6efb81e0a569eb751510e170c68d51e2b058a07fcc6a46  src/wire/identity.ts
+4fdbee55396730a3a6cceead2622f3de9a95ba40683468d444aeb6b43328353b  src/wire/index.ts
+3a9b8abaf900a3bbbd1512cf290aacb1e08689991dde3b31a34ab12de9913679  src/wire/message-id.ts
+e427f397404af4ee2e154ec97ef3f5db2c0bfe39165d99a221c9ff23d6659360  src/wire/mirror.ts
+e643503c898ea28965c5b9cd27b3c1ecb8ad5f7321d87646f61761db3e619085  src/wire/openai.ts
+0f0924d1c1606f5781880f437e4e13d814558bf7444d67220dcde3783e0a704c  src/wire/responses.ts
+ef8d918b7445c3b7ba184ceae62841b25672ab05d46852ee1d4b01e47e87f4e6  src/wire/util.ts
+bc6fe611df0330f4c5b162ad7baac73b7a0e405f440365d54240dcc91d591941  tests/absorb.test.ts
+20e1a9b291f8bb5ea0882b090d853240c18347a16e181b97d77100225cb6c3c2  tests/anthropic-system-message-passthrough.test.ts
+9cfa37fe4c02d05c6a310b77a837a95ac33d8ef3cc95959dc2d19163ccd16b79  tests/block-map.test.ts
+1f0ad2e728aa63e3985e0f1a2f2391aae21da16da0379bb34c850d7ee690edcc  tests/cache-report.test.ts
+aba12a70fe1550e42c578422ee432271febfb993c672e615eae72b795a0bbb58  tests/carrier-advertise-validate.test.ts
+afcbccc807070c56f3cfcdc7f412d0ebb747640a702cd347f2eb28b10d15cb23  tests/ccr-restamp.test.ts
+995b56fc28512b68b49001ca61248adab56b708f286ae6c1c1ac5797ee7b1502  tests/ccr.test.ts
+ced36d9e4bd92e203c6c8961b05377b0b8d6efab1ea4b6a59d864c0ce3f97bba  tests/checkpoint-carrier.test.ts
+2e16bc319b56389e93b7b869ec95934b3219896291873cb591db3d0a744c3174  tests/compress-detect.test.ts
+40a62f880fca5d27ceaa9b93ea560c4d64ae59697a40d1bbe02181051480157f  tests/compress-schema-contract.test.ts
+b118047b962968e52a53cca898852cfc4b70f8c1e858579adc31b3dd4b91b273  tests/compress-tools.test.ts
+0014500d524d3e1c3a772c5dcf47d2bc58aee13fb7c1e7216453bfc799da5c1b  tests/compress.test.ts
+81fe3b7a8933a2900fad789ceb6e2b61f81fda618ec3eaf6e62016f2a6d26373  tests/covered-seq-sentinel.test.ts
+93b7a810f5a27b6ed2d906a2b0b380976e72ff0025d82dee124b214603bf456a  tests/cross-protocol-identity.test.ts
+57d16ea1ff29b66ff837d2e1360deb31766d5d5c637be65cbfef2bc37de54622  tests/crush.test.ts
+dd45f13d1ecb5ea10ce75ac01da40975400a4c4b6a322e0ad2dba584eb0280c7  tests/dead-ref-split.test.ts
+29a0431a2ccf864003511916f90560ca4db80ce703e264889e9ccc67d586b059  tests/dead-refs.test.ts
+a3fdce0d5157427a934ebe676477d8be323992e3fa15177db7713bb7d90df9c6  tests/decompress-report.test.ts
+8dc3c12335ecad0c87bb6fabab46f6793b151eb2e9e77fdcf2505a726f3f15d9  tests/doc-cache.test.ts
+6397e827c36aa4abc7b5dd68b638c917f3363f97bea95e20d046cedf01778937  tests/effective-gate-chars.test.ts
+e623429cf8416901e3cc7e5cf67c14c1d60eb425ebfe1d1b7fd49390f52cdbfd  tests/fixtures/prompt-function-default.txt
+2e81cb5f4e3bfa11f756d81590f4cbaf5ed5eb2c7b471e659eeaa7c4f92355d4  tests/fixtures/prompt-hybrid-default.txt
+95d673a0cac68883c8fff423a7f645a8f1e4d501bfc0616a5cf3325ead69e2ea  tests/fixtures/prompt-text-default.txt
+c86dec503d6a69a0549f0294f5d01c73140752b1f4abe0a6e4ed3869201588eb  tests/handoff.test.ts
+4949b6a73a9cb4f694c1cf7d8098b688443c4474cd432aa5c7eed0245e31ba28  tests/hide-consumed-mcp.test.ts
+43b4dbb8f27d3fa72d3c85bd5d5f673061891541f3b837f8ce4ac0aca011d296  tests/hide-consumed-stub.test.ts
+acf72fa37d68f1c3591ca5c286e4b0312c9b5e9fb4a1cd8e3191aabd0dfe2499  tests/hide-merge-rebuild.test.ts
+b9b2a8b4cafb8e0bf956f2347a7e5e21c5edd13314319a24f2ee332c32506a9f  tests/issue1476-reid.test.ts
+075acc826e0d4482d2220d349baf6116dff6aab63200468a574b66c2d92648e2  tests/issue2886-recent-pair-integrity.test.ts
+ff40f440a7b8a64cfc064ea7f6fcab25c8f2b8dd7c06901b8832e0a648e69545  tests/issue3003-all-or-nothing-length.test.ts
+c25aed6e0e466ad667b57ebff2580e811f7cbed2c15dbc97fad0a950f37a06d2  tests/issue3046-duplicate-tool-call-ids.test.ts
+44231dfd46fe11050a96e6e44a89642afe0ac80952860c32bd397b0e70ff25c7  tests/issue3236-recommend-apply-consistency.test.ts
+f10b32297ad0b83392c987d6d5c79aa1db8c27abdddeae121193f81c0cf10af9  tests/issue3302-sparse-ref-unknown.test.ts
+4ab7cadf605e2365b90b7b2c42d0d4ce76cb738ad34264b7a1e4928851e13eea  tests/issue3371-consumed-unit-screen.test.ts
+e1783240288e2f71a13be4ec58531bd8a51fb081f030d3ac5f27b9f9d4d76f59  tests/issue3406-screen-observability.test.ts
+d8e25cd3a6ef9700b0013c18b408e88c7924fca1e2eba9274d226a5673c3f0c1  tests/issue3406-screen-scale.test.ts
+2a9a32899a1e209bec77feb4d76a467575b089a034f4b88d333e8a8b8408d80f  tests/issue3410-wire-passthrough.test.ts
+ec4856e3fcf3625966b4d7329411134cbff5add0bd6d3abf449d67188432b95c  tests/issue3674-nudge-low-water.test.ts
+f2e50c00c774d69adb9ed75681b8d5025e98dc0ee2736fd9172c27b45a8ae2c4  tests/issue3769-orphan-sweep.test.ts
+b18357a9ceb2b6153124f7d050fb849c7ff803f22ea36ec493d6263f7a8d2f91  tests/issue3935-truncation-shrink.test.ts
+0ed847d82192f763843d11005d4f74e6a957e2aec5b0bda8e418b11f349c5b77  tests/issue3939-fold-boundary-pins.test.ts
+5941c443c86c4573974cb994c6a07b2e9f038d9696e227471aeeea9de44bdddb  tests/issue3939-ref-migration-defer.test.ts
+66302f1ab79dc35b5ce49964687710cbf3fa42c3d77f8e10ee0bea24d3e06e1c  tests/issue3939-truncate-latch.test.ts
+c5a28bd8e8bd8dfc02e57973d7efb4cd70900edfa5703ca6d1d2b0ba1047f3da  tests/issue3939-view-latch.test.ts
+24a4355725d2565322136cc17d93d461209a32f8145460b9ead7b31296e59e46  tests/issue3939-wire-byte-stability.test.ts
+106cad763a0a78c7825d8d24b163e7ac9c3d2708f84c945adbf7df59a7105a5e  tests/issue3939-wire-unknown-parts-pins.test.ts
+9d6d58320a049183392cf35b51fe2b80b7bcd1f191d97fa83d59979d41c863bc  tests/issue3945-id-collision.test.ts
+fafee6224a3c6b7426982f9d421f8fa52f88a95822e500d99de96c066c2c263d  tests/issue3953-straddle-truncate.test.ts
+5d84c0b2a3081f34e371d13bd89232b77e16656c01b54b78b6ac0dcca8607dc4  tests/issue4166-openai-midsystem-pins.test.ts
+c9cfe3bb89fadc462ef8f5620bf73c63859446611927a932fc4440909c24ff4b  tests/issue4166-responses-midsystem-pins.test.ts
+794662b0c35508c4f2e46eee1c5e174888ab766d83c35bdc1ba9944edfeff3df  tests/issue4289-failed-compress-fold.test.ts
+f5fe969c85fdac6d33b1f5fc5a2886556ebc2e6eca607b2d327130f7ab04b88a  tests/issue4292-orphan-system-guard.test.ts
+f16ff87fa73dcfb4ff70cd43383e789e71ee12b15884cf403f8eba6e98f1f8f4  tests/issue4311-summary-dedup.test.ts
+ef54a513e0e667103992a5b1ba46e0c1dea2ddc03b6afabf913ecc5f1274f2f1  tests/issue4313-message-timestamps.test.ts
+b35b1761338c163a830507125c54b13bd1648f606a6eb1b93cd41a401e6e0e74  tests/issue4348-receipt-lace.test.ts
+83186d7f4067c67e2142f5a9ea5c8bfbab5d952931a6a044c90d522c23aed2bb  tests/issue4457-sidecar-system-folds.test.ts
+c67b4ac134996d0322d62a9f65d3a8e988d7713a91f08e9cf9054991b42417df  tests/issue4484-merge-coverage.test.ts
+2fe86c30189c5f191261d817ded4970c7fe38576924e1f16ce76ba031319d601  tests/issue4521-retry-livelock.test.ts
+2ffa561cf2bb1c2732eb0a7dda977932e5eccf02c9b11a18b840abec27a1a6e0  tests/issue4570-system-position-final-wire.test.ts
+6ca3416543f2f514e22ed3afe7afda3d334d3e2c250deed239cab907059dc6f0  tests/issue5101-truncate-blocked-latch.test.ts
+543e27cd1764a765abd8d16b67aae259beebe34884005ef82df311c3f67c9a75  tests/issue5109-anchor-skip-injections.test.ts
+f2c40ae393c75adf9c7f70307152ab97d0d66f515c9040edaba3086bd223e835  tests/issue5337-shared-screening.test.ts
+ee71e239b738e6c04692aa88048f0be12e6a3720e407a36d0cdf29756db87e56  tests/issue5415-absorb-debt-nudge.test.ts
+f1aa8e2bd56b49634a1d1644e115d3dd7bb3d5076299d6edeef438e30b206e2d  tests/issue5432-follow-side-heal.test.ts
+8944bb35f99732fa713fef40e830d9cbe33a04ebdba20315a5302700292aef4a  tests/issue5531-stranded-reasoning-residue.test.ts
+a90804599ee82d816f44e7e5af22bbd5b4836fdde28de3878b80b86e3dfff8b5  tests/issue5620-ref-recoverable-media.test.ts
+46de9dcd940e8576051b0b885ce8d493c23d01dda56cbb23aae07d20457e4594  tests/issue5698-t1-harvest-stall.test.ts
+3f689daae913bb880611ab774d92d4302bc66471b5128620aed6da9617028cee  tests/issue5751-tool-pair-widening.test.ts
+d4d005e1985f79152926c2812e76472226ec0a7b3d9593cfeb3ba1e12bbad5f0  tests/issue5789-tier2-merge-ladder.test.ts
+66adb514dc68bffe2658365707a86fb2790dcb04775a34eab0a6c9160c52b401  tests/issue5919-shredded-merge.test.ts
+e107ab33b5a1e593d00b16583e4e3cb488689d632622504caaf58ae3ccedaa41  tests/issue684-turn-integrity.test.ts
+41e88603fd90310aa5775c70fa9ee4c7d73cb7f6abd09e3ce46ec31ddf0634ec  tests/media-payload.test.ts
+0bc0fbb609fe070bc0b0c2ac68726652173cd2dd4c0e493f63aee49cdff11815  tests/message-protection.test.ts
+935c9ee3a7565752f30f85b0a31c0fbd94edbe3ebf10c6cb3886efb49ec7813a  tests/nudge-pressure-benefit.test.ts
+966d6d9f4d4e11ec22d68b0d229a854371be72e81ae8426ec301ac78bc28bcce  tests/nudge-pressure-estimate-hold-backstop.test.ts
+e4462a3a0370951c32d62b621b14cce17ec6df8453a4963d973254e4c892d754  tests/nudge-pressure-no-sample-hold.test.ts
+558354037937227a7b7aec323d919c75cd6a4813ac6229442ffe56f796d2aa9f  tests/nudge-sections.test.ts
+ad2a8b998d1a7331fbde1ed2b92a2d81d637948e2618d48bf35478ff7f1d6d21  tests/nudge-text.test.ts
+f1b71c59a130eb8abd0c51ac224929eb601a83e0cbb80fc3b58766529b3272c6  tests/nudge.test.ts
+387cac624992276c5d75f10c9b5c8f938ba8cf6be5cc9428716465bf0d89eecf  tests/open-objectives.test.ts
+bcbb93e1428157e810f66ef6a535b9649f77a8fa2257800b21558f18a48853fb  tests/openai-system-hoist.test.ts
+ec4f9179de122f05fd4833db4b3d15ecc37818599a80e372c56e7c33a8fd71cc  tests/orphan-endpoint-snap.test.ts
+16fdc84e649c3a6072250303e9e72fc39d70fdb2a0421ccbcd3ecc2fab635191  tests/orphan-fixes.test.ts
+6ef841f0d8fcc57d81048ec93b3ae76035ac3ed1cbcee892bedd5ef6200eb981  tests/output-steering.test.ts
+07e1cb911862026c431d4e73f21979ea7e254ce4473936f5b2896a85c405fe58  tests/packs.test.ts
+a9c6330e967942bf4df34d2f2cc2d650125c5d59c4e77331bbc6ba406d6a7126  tests/panel.test.ts
+52e3e6359d65e16f0962e47682e43ec633a628e2f7e0f28771e6abd6d05c2149  tests/parse-compress-input.test.ts
+a938f16f8326c296797ceb0acdf3cec1672d66fa15de372c2ae1fce153185569  tests/persist.test.ts
+55d771036926ce04588824608f220878c20d890b65f757dc06bc9273288f9410  tests/pipeline.test.ts
+879db0bc82222968a8fa13c466ec06ab41eaff5742acfbaeb4106d95bb4f4c47  tests/prompts.test.ts
+e85c28df88238ff1933a63778431aa6b749fd03fe1e66c5c60e87bd83406ffa9  tests/protect-recent.test.ts
+c43bb74914067026d3f6dfa2baec5c467fb3bc16f10d4671b6f789a9b4ce9665  tests/protected-content.test.ts
+e35470b78dcc19488761189542c8be4eae26c51d1bf478223c6aea39a560d1f2  tests/protected-latest.test.ts
+a76cb94a3467a154015908ae7161f55ac037796eb119b6845d03b451f530925e  tests/protected-paths.test.ts
+12c5422709191abb4b5a04f379a37c0f64c13f000c0126df7f566550084ddd8d  tests/protected-virtual-paths.test.ts
+65d4d5c2001b83782dccc7327a932e5627c05b70a5627854eb52362d76e6b24a  tests/prune-orphan-mcp.test.ts
+4116654454c5432d262f19383cf1959eb6b88796fe0f6d73f6753efbba6e437e  tests/prune-recommend-scale.test.ts
+9c38ddb80e41663d790a740a699f912e3bf73d132ca7bb41861024c0ba75baea  tests/range-coverage.test.ts
+a08dec1bf71ad67450385127de0df5baaccf98e7af99bcf64f0ff4588a4c14f3  tests/ranges-consistency.test.ts
+d3207252157e525e26be4dc70b0fe7214466c6baeaf6a3dde668a078455bf059  tests/reasoning-pairs.test.ts
+ee09f5aa215b0faa4f618209f915e6fbdc6ceaa95cbbf895d2c40e0c0e56b593  tests/recommend-merge.test.ts
+6ff0e44016a83af63a85d71874e5fe3f6226f32bb64b6f1bd14b4c0e0fbcb637  tests/recommend-range-integrity.test.ts
+54e092950abf41dad2493f82f4a238026ac3887e4b54b33cabf58a10f6d4761d  tests/recommend.test.ts
+2b575f9c20c90c6eb646c2feb93ac1866dcf055a7eee092aea7bc81fc52621fa  tests/refold.test.ts
+5d7f9241e2042dcc3a0e649f72268376357c15af551d793eb1f2b84853f2e410  tests/refs.test.ts
+6c83d144456ba67f6ef912d190b724ddb1ae3ade6433c4ad88c7ceacca8abae5  tests/regression-bili-470.test.ts
+dbdc5bf506f8841b9f6a27f31ff5f17c722e207cd81653c128510b3c75848fc4  tests/regression-bugfixes.test.ts
+8d86fe412adcfd57bbd139cd783b6220f37683bb2487e7c6ba5b96bba53ded23  tests/regression-empty-rewrap.test.ts
+9d6fb9d0a441edd0ec0c3c715c779b7dd4eb37f6aecb9c62699bcd5a71b99cae  tests/regression-features.test.ts
+35673a0f54f900908a6d0c00c4fbc8fd3911aa5f154a2867b8b4800a52ab287b  tests/regression-promote-after-prune.test.ts
+ee393275a731e6367f86b7e0f99211146ba3b5aa46bafaee5197d7524db30370  tests/relocate-compress.test.ts
+e347964f5c7378a4c487014758232dbe3ba44b60eae37640fa128ff4b5d08ae9  tests/report-accounting.test.ts
+de6ff6265e598c9f125b7f188e1798fc8a310063048ec5e2465c12041a8ebb48  tests/report-tool-accounting.test.ts
+b8dd6818d60765cc8c73eb4355f6de4c078774f9012d5bb7cee6fa5032112f2e  tests/report-truncation.test.ts
+a97f8d4accbf29f99cc4a5e6cf681bcd4fc22930428a0dba99fb013773f51fa6  tests/responses-head-role.test.ts
+3d489685cb482cd5fbb5c54145493fc0d53a69ca343fce3c9f193560ce1bad9f  tests/reversed-ranges.test.ts
+a810ef069913b5bf5c1d587a0ac3470d634a39613fee1ac05b5bb08d45a53d15  tests/rules.test.ts
+e865aa9739d73c968f3df1899b9dd9226ebcf040175e040d8c229ce6c11f46be  tests/scrub-lone-surrogates.test.ts
+96680b4a30eef3a386d903f6ec819b4423a172473e8733321a71b8d25071ad74  tests/search.test.ts
+ae673413e673526a7740fbfc967f2df1d316720bc3857a375301b20bec67012b  tests/segment.test.ts
+ff51889e09993df751e678ba96417c66f4ee91dceb1168aeca551a22855d027c  tests/seq-interval-coverage.test.ts
+b06fbb7344de2ba01a396a34f936a1ae137e1eadc2a1004ae0b1a2be11e930e9  tests/seq-restamp.test.ts
+7d87a7368f3c78fdec8fa8db75d522b5e9b6b23f187fb291fe40feae57364f1d  tests/state-prune.test.ts
+ffeb8044433ae9e27bbbb603232c39eab20fe5f3e46f4907b235b7db264d381e  tests/status-surface-meta.test.ts
+2a4398ab313602cf846042a611c32de42a4207081482279f49ea5cc39d19b041  tests/surface-config.test.ts
+8d1ae53c3c14b413a283882bd3d65ad3fc86de3e8cfc185fe3cc64be1e61829b  tests/sync-config.test.ts
+f549a2dfeb8e9c2da7cf48973845b4b3c13e3b7e99e3dd08641cf59dfb9ad986  tests/terminal-escape.test.ts
+0c9546cb5b3be203751d667d5911a0155ea76e1e8f4b42714518ac1282af0744  tests/thinking-tokens.test.ts
+f617820ee2d269794d318a9c22b2574b834bfca595c2d338fb5833a5d34c52e0  tests/tier-scale-separation.test.ts
+c95c34128bef298d8344aa69d2229227d2f9435577406cf665436c4c28d7568a  tests/token-snapshot.test.ts
+5e9978dfc6713a97546935a4b6233220993b05c7dc5f6f54c6506678f722ba1b  tests/tokenizer.test.ts
+a07c4b6d06ab26c78d6aaf88af44719dea256f61135ebe2b7f400817dffbb3ad  tests/tool-pair-integrity.test.ts
+d76ea5cbd940919b29086dbb25ac10e0cf07a0194db2adef921574835a1c0646  tests/tool-pairs.test.ts
+bed0c69542c201bef41121037e25e658573a053e4a95844357677064330b9445  tests/transform-channel.test.ts
+6ae7a96954e21db52817856a8cfe81dff27b5a342b6575eca1b24aa90ae82a5b  tests/truncate-keep-filter.test.ts
+59ae0f9a933f99cdf29601d4b7e4837d75851f2191f8361b97aa43aba2d2c62d  tests/truncate-surrogates.test.ts
+6584f8acbb5eaa459ffdfdb349cf63c6f24753c0d1075d80b3d03b1638b9acb6  tests/validation.test.ts
+c14a848e96f516a82590dbb559b276ec0cb0173f39b7452d46d26e4d3dd5ffda  tests/viable.test.ts
+aeae58b7b9b21e28a6bb9f6f4ac7768774953492e0b6879b43953291c7245a91  tests/wire-bili-message-roundtrip.test.ts
+d156178c72125230806605450467c3cf6c5781b19191e88176a1f8e41774df5b  tests/wire-conversation-signal.test.ts
+656043679fafd8b1297c296e15e3fcfae857abb4d8cb131b7c6c5c9ccaf74a70  tests/wire-demoted-thinking.test.ts
+24b7004824112f251266cb9e1ed2e13116e238867fa6fdd40fcdb276bf09509c  tests/wire-formats.test.ts
+85eade5adf6ebee397f9ee2a6a4e1d5bdae5e570c55cb0e2cea631af8eb73614  tests/wire-google.test.ts
+ab7a5ab34b7c3e6f0d46e58628129f3559df5f5ceb632b9935bebaa39864cdef  tests/wire-mirror.test.ts
+7bbcfc3969e33b5ad4bcb7b0016bc2a86c1d4cee49bf1f403424d6a4bea34a6f  tests/wire-proxy-message-id.test.ts
+0d842e7c9b2bc038ace7553421f3ff6bc0f4023b9af2ebb53f60c8e8b0d492ab  tests/wire-reasoning-echo.test.ts
+6b7aa7ec9d7c3b257cfe261394c9dd2ec01c4be3048a0807bb69dcd185189d1a  tests/wire-schema-gemini.test.ts
+b2560c6d24b839c82890173034bbbb1384a4309d111f43c42be13d8c79ed9d4b  tests/wire-schema-top-level.test.ts
+4a4eaf811a363baf660511312fc7df4baf9f48d184b697b35fa6967512b3b2b4  tests/wire-subagent-namespace.test.ts
+98b95434d1a8e8e5d8b27172f55b93086278e46e66bc478fb7927b66a41adf1b  tests/wire-tool-result-toolname.test.ts
+9cbee4b2b0edef105ff71e50a50731049de816ac42781acb84d1a5fdcd12cb94  tsconfig.json
+00dbdbb1cbdf79adb19811b9618c972c7babe2fb8d82ed645aa114bbaf419d41  tsup.config.ts
+```
+<!-- source-sha256:end -->
+
+dist(按 `build` 构建、不含 .map,共 93 个):
+
+<!-- dist-sha256:begin -->
+```
+057edb0fefd366257e250944aeecd04e12a69f9a98254061d4e090237c621c65  dist/absorb.d.ts
+be1c36b8b80465300208fc8997401e5e898dfdaa69caf064ba93e3a9e984152c  dist/block-map.d.ts
+3d705ab04102921204ec6c7237952f5103cc9ab6c477054a92112bf44b1717bc  dist/boundaries.d.ts
+4e4a8d42a946de87df37cc017efec58fce3507ea00d0e643026dd8535cedf6b9  dist/cache-report.d.ts
+5fa888f483ce47f2720fe92d3dd4589ad15dcc7da87eed608206242abd1dffb5  dist/ccr.d.ts
+e9c2e8040010564e27f00c93cced62e0506b00e5fbf92eae33e6fe8f65185999  dist/chunk-5NN4XL6Q.js
+06324c2bdc0bd34417032ef45ee97c1bc4026b80ea21dcc4e446759223dbbcc3  dist/chunk-6ECDTFU5.js
+4f2bdfca40d16c05d44d768043c733b4a1dfd22a3a00399b017a024689c1f995  dist/chunk-M4F7HU2H.js
+6dce7232b29b8dbc9f30b12f3f8a718e29258d4b59ef78cc4fa0ae8298bccdb5  dist/compress-tools.d.ts
+2d1051f28b8b2acf7f78d9240c0292b8d97a7b693a9e68d45e66d62266f44eff  dist/compress.d.ts
+876f587a1e7fb4d50f51777bc3c2a33ffc207f638d0b7837e99c20fd791416bd  dist/compression-rules.d.ts
+70f45830c2c6a4c9fac1a339fc9cdf1ed0b348407e6d16b65475d1f1cb5fbce8  dist/config.d.ts
+4c8b4d43f12c14bc5d7b23ecaecd6fc149d88b37d01f4aa140029fc0cff24411  dist/content-store.d.ts
+228850035b230a26af236942177d80c48902c5b3577c6bd1cc05ed6b4e3f20ad  dist/crush.d.ts
+f9512a192d14aa2a5cf0ef0560b66c79132968bf40680f445753ea670982e2ea  dist/decompress.d.ts
+06438f32a8daeb3c8321fc40180592590b49b860366d40d9efcf2ba382b9b546  dist/filter/apply.d.ts
+0cf9521bf570bf38c3e2cee8ac7b8a58223ca96440cd7fbeceda52c9e78c3a2e  dist/filter/index.d.ts
+5584c67e40b908b7b4cfd9d24199cb9d36f6f5d3349773197dd2522710499c36  dist/filter/registry.d.ts
+2f079d9e08402d634df60dc818593b15d776cb693af7d27644414e79514ddc13  dist/filter/types.d.ts
+a390f67ee8bb05308c998d925296d78c53909a670ee13aaff50dbcf21c3a03e4  dist/handoff.d.ts
+dd5408217d8003eee417363c5a507f8460bb61168a797a02ad405ee5f32996a3  dist/hide-consumed.d.ts
+bf2ab7c2c83d8fc1945d0c5b7405c274b304394f822b2df04891da1713448fb4  dist/index.d.ts
+f22bdd2025d50c9d3bf075326839081d2259ab3789c231dd8ed41f629ff09ee1  dist/index.js
+f1a54de538f662fb98f6ea1b45daeb78f06eb01cf358aea084364761a941c4ac  dist/instance-reid.d.ts
+6491ee14bdece650f57b436b5b993cb2c1e19871b05461ce11146955973fdea4  dist/media-refs.d.ts
+a7b9cac35e6ab37dbe3486403e4c4f712462216471cc5d9f35de0bae4b5f0fe2  dist/message-kind.d.ts
+08465a667805da188a5805d5af3f072aacc28ca36072d9fb04bed70545242171  dist/nudge-text.d.ts
+22cd9dd3aa03f810868473ecb5c30fa3312fdb93daf7bafa2a08b248fe4475b1  dist/output-steering.d.ts
+d523a26b7cac423921c866590170e1cd8e23f92eae488dc7a5d3676b8c300b60  dist/packs.d.ts
+a493a7ac15a9bb6915325aafebe7449c1b6a990bb166a01cdb23411a30bdf497  dist/panel/cache.d.ts
+4681c5a0f5d6674032b992c4fcda25c3db9c9de6e2ceb1fb70ddd9d3d782f54f  dist/panel/format.d.ts
+3598e4d174270157d933a3a70a66d6cd2222dd9094421cd42cf8af380cd2c7eb  dist/panel/index.d.ts
+94c15b9fee580b6fa628eb5314cb3f3d955fef2b82db3dea7771f144126115fd  dist/panel/index.js
+2d03a43cdd882d7d1fb901c70ea2ba27219e591ec46b7816144eff57b0e9a921  dist/panel/panel.d.ts
+b532284d45c8744e7ea8d98a82f4fb46ecd75955ea6d42fc81dc2478633e1521  dist/panel/topic.d.ts
+bf617eca9e0f7eebdc6a8885cfa494bdeccb8ddbe4a64aef57803a6342b0a139  dist/parse-compress-input.d.ts
+4036d47bb83f7459426d3a46f99be8bd52837ce9f8bab68bc98034cc8c2130c3  dist/persist/index.d.ts
+e39a3c089988803bf23e8988df4630fed40182821b494bcc5e6742f77fc08cbd  dist/persist/index.js
+3521917017ddbaa5fe12081ba003f6be13975a43a7b4b53b16dce03f5b87fefd  dist/persist/state-merge.d.ts
+217109253c2410641aca1de9dd1cd130c8c4d6301dc9e19588179e2053a114ae  dist/persist/store.d.ts
+da008d7866a6f3da2abeb0482c5dcb29f6a11f557c81abb25724c39f6d197733  dist/pipeline.d.ts
+d1aaabd0c57276982ebafb9e7f8dcfa71085f6a13aab44cd00171f5a03a8dd04  dist/prompts.d.ts
+2d821667bbc925e888229a9a9ca185bee44fd941947fbd54dadd67878d23bffa  dist/protected.d.ts
+5a34e2fd7941aeb9be2a4524b1054268ebaeafdb83ee9ae4034c41cf4847c824  dist/prune.d.ts
+17cd44bdc02c7043e5087d1de487caaca8b826a61a6e56eb6e8d4e982540e7f7  dist/reasoning-pairs.d.ts
+62cc9e002b1449aaacaa2bd956606c0fc1ab4b2cde7e31faa56fc8e750235cc5  dist/rebuild.d.ts
+aeba3fc1d78e3f15af1a6b6488e874391476fb9c817c8173cf4d99b8af07e9fd  dist/recommend.d.ts
+8535b18d5198468e259fd551eef7c8c2ed3d108938996ff9d15ea1d2984f21dd  dist/refold.d.ts
+fe7e440fd62a730fac557b3ce4f0ec09ac068742fc42646c8f3e4d1621ce1ac3  dist/refs.d.ts
+4b11e1aa02fe92c8eff4c0267924b7fa83868d71ce005d8b4063953e9272f296  dist/relocate-compress.d.ts
+dcd7650eb71a03c3283f792393ef46e0a3e70527a38e67af480176a26c4c460f  dist/render-refs.d.ts
+88a3bb14dce5b57251e59f8dd036eca34952371a6d880d872ed7054e858ab82c  dist/report.d.ts
+02a08d0448642112d345dca561aacd1c5aea78a30153990208a978baed292865  dist/rules.d.ts
+cca6f7995f446a7a1d1beb489be7d39580892029601e4692619efa4d595d0b0e  dist/search.d.ts
+08c997e1e2b922549b3abe9136c4a8ca1a46aa9b47681647adf46a6ef73956db  dist/search/algorithms/bm25.d.ts
+390d3aa34795cb2e772ca4f3d20f32ab207316296c84e02d51b392f7ab680b2a  dist/search/algorithms/fuzzy.d.ts
+a7874f418a77e07367d165681378943d87eb162390120cbb8bdef0be0c50d9ee  dist/search/algorithms/hybrid.d.ts
+1bb8de36c4691c9e7531d2cf4466011070af56a3459d6f4a090f8f3fd6b94745  dist/search/algorithms/semantic.d.ts
+60b89230e341a5f0d0e1c7a64fd5270477797dc10c0b5382167417b27b43db55  dist/search/algorithms/substring.d.ts
+5c9bc71d0650733247ea21f502fcd1ac5e13501217491fe70252a92e3f1d7905  dist/search/doc-cache.d.ts
+929d22a19f67151dd4c749e1221ea607b4ad62e8e3944ca1b7ec1ece300b8d5c  dist/search/index.d.ts
+6b921fe642a903fee8e0b2fbbe40a7d9990f92a1fa1105fa4cd282017dfd52c9  dist/search/registry.d.ts
+659f9aea68860539a5b1d22a5d145f672a2d655be8210fdddeb790411b904639  dist/search/stemmer.d.ts
+8cef3e97ead3213918c03fb4e99a0460a8018e265da28e04333338ae23b4b35f  dist/search/tokenizer.d.ts
+4bcfab8a22e6e3767e8e044b08963f5150abd6e8134419e41a3267a7a784291b  dist/search/types.d.ts
+2230fe4f7701ac5ec38a60b99ecc51e4927465324f613ca918a280342bf467c6  dist/segment.d.ts
+9e2daa87907d2bc80dd05ddf32dc05539e13679dbff050d91acc0176386ccb0c  dist/state.d.ts
+1faa1932732c22e793596faa4dde97499929bf65153ed60f29663e79dbe46053  dist/surface-config.d.ts
+c2478b915156ed9a03636a6da0b1b389d254525234797140039cfd8c527daf65  dist/sync.d.ts
+d527c47a11fc00c50e940259ab547e3253e435a7504a051fecdb4005ff71b72b  dist/tokenize.d.ts
+81758cc94dbba0d46b68b0fff5c69eb01829a8d3a2b15060c98572bacd2b7f48  dist/tool-pairs.d.ts
+e53f8e8de992b3670f759ca71e3776bef72808074bf5d716ea9148a02e896fab  dist/transform-channel.d.ts
+87e4fd349824d0211215dd0cac949191a0550df776ff85d12850d52ecf5fb094  dist/truncate-tools.d.ts
+2285a165d86c32f569115d250403c5fda1d91c87cbe98a10e4a559e585deecb2  dist/truncate.d.ts
+88811a405eb5c122a1ab6f9373c75be9a2e4f8ae30dc2f3976e72120f52046e3  dist/turn-integrity.d.ts
+14b8bcfd52763d6d112fdb2444b05e4d2f8dc3ce359d912b5016d6f1d5fc3008  dist/types.d.ts
+cceff9a0a8c1f2ecc77d241737460896bfbdb0f1722e6d92b057b3c9fa3f2a55  dist/unit-projection.d.ts
+0569868fe5a748abf2e5cf1b2ca82bc93b8c2bb7e6e46a00a5688ca63f06f959  dist/viable.d.ts
+f7fc0d4485d4f8a2d5dc8fd325baec775f9a4a6b56ea9d014148feedd5c13d2f  dist/view-latch.d.ts
+3d99cdd8caac4a7863794741347410035e097f545b45422ab3afd1ebbacb599b  dist/wire/anthropic.d.ts
+b1535320a987ec1875788f3f0977e5b15bc0a3e76ed155a48d6ab2c9b04f99d9  dist/wire/bili-message.d.ts
+4bd7dac6d0a7886d401864a889b00f8d46087119e39b4db240fb28d5e747a12e  dist/wire/compress-detect.d.ts
+e0462e97f526a76f1f36bdcfa22a6682ab2023971d2bd095701983b66dbe0549  dist/wire/demoted-thinking.d.ts
+1ef7141928b17a37e1d3fa9c743a81d4fa2bc7b32041877153b86891cd67e555  dist/wire/formats.d.ts
+04a7fbd167d297b78a6d3704e4410ec0070d89a34d8ac89263a91f8ef41b1ca4  dist/wire/google.d.ts
+f7971f4f8ad21fcea69aa45cff8c949e28d8fa9f3e09f7d68708f076df0a18ba  dist/wire/identity.d.ts
+935a301475bcd15723090879930f2317776389d7917c8df223dcb68f36e7f785  dist/wire/index.d.ts
+cc6120937c1706cf02587944cef8dde54f3d3e8bdfe61696cada794322d8f34d  dist/wire/index.js
+2367ba78d28dee327db5b3acdf49b60835a5f7a1967cc3c51e02e18c5311afe9  dist/wire/message-id.d.ts
+e2ad69ae153a9f730c3bf653b18d6da2a8a8597c381ec37d50d332b8973edf84  dist/wire/mirror.d.ts
+a30457f1b94c33e5d23b80bdbe95170dcde1cd018952f374d085c48e11d24549  dist/wire/openai.d.ts
+5bb59dfdbe740e53499aac81c2324f2d9ba35bb36ecba865968d9c5c38487e43  dist/wire/responses.d.ts
+7613e2ecb940a3bf19551dd3bf3a5357deb04ff450a4fc76386903a8c66f892c  dist/wire/util.d.ts
+```
+<!-- dist-sha256:end -->

@@ -1,0 +1,112 @@
+{
+  "slice": "T-177 G3 引入 BC 检索",
+  "branch": "feat/t177-g3-bc-search",
+  "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+  "commits": {
+    "squash": "64ebdaa3233ae7e7427fda34f3f89fd0e96c0efc",
+    "vendor_import": "87fb4ebfe6136945086485c9b1ad9614209bc5cd",
+    "dist": "793aa76bd5be7a15bb2f5972344a8644dc3e7de8",
+    "deps_provenance": "3789e56f3c9187ebdb6de4326326471b5e0668d9",
+    "red": "c729f69aae9e82e0492bce15149b8d5ffdacee7d",
+    "green": "2bae702f38cedd900bca3a4fb6dd9c87975ed4bd"
+  },
+  "upstream": {
+    "repo": "https://github.com/ranxianglei/billion-context",
+    "commit": "541cf260c4e0fcda5edb31e4de4485a3185f5589",
+    "commit_date": "2026-11-10T09:43:07+08:00",
+    "subject": "Merge pull request #5997 from ranxianglei/2026-11-09_command-code-byok-doc-row",
+    "on_master": true,
+    "short_unique": true,
+    "path": "kernel",
+    "tree": "d5f2368636ddc737fbb023fd73417e16369bd2b1",
+    "src_tree": "e59f57d7c0f03d79fcc2b5236e2020fe654572ed",
+    "package": "acp-kernel@0.0.191（方案写的 0.0.190 是 444630170 上的版本）",
+    "split_commit": "e70468868c2fa736b7c1c57321ab0abc9ee911b4",
+    "license": "MIT + Additional Term — Attribution on Product Surfaces（kernel/LICENSE 原文，未改）"
+  },
+  "upstream_tests_box3": {
+    "node": "v24.21.0",
+    "when": "2026-11-11T07:31:46Z–07:32:41Z",
+    "search_tokenizer": "61/61",
+    "full": "1633/1633",
+    "typecheck_exit": 0,
+    "log": "receipts/evidence/t177-g3/upstream-tests.log",
+    "full_taps": "receipts/evidence/t177-g3/cloud-evidence.tgz (up-search.tap, up-full.tap)"
+  },
+  "spike_rerun_box3": {
+    "on": "4efdee0 + 本片 vendor/dist 793aa76，放回 11-10 试跑的 history-search.ts/test 与 file: 依赖（原样 npm install）",
+    "npm_install_exit": 0,
+    "lock_entries_added": 128,
+    "vendor_node_modules": "typescript（上游 devDependency 被装进 third_party/acp-kernel/node_modules）",
+    "tsc_exit": 0,
+    "lint_exit": 0,
+    "g_layer_problems": 0,
+    "fresh_clone_npm_ci_exit": 0,
+    "runtime_import": "ok",
+    "seam_test": "2/2（全新克隆里跑）",
+    "log": "receipts/evidence/t177-g3/spike-rerun.log",
+    "seam_tap": "receipts/evidence/t177-g3/spike-rerun-seam.tap",
+    "finding": "试跑的 file: 链接方式让锁文件多 128 条上游构建工具条目并在 vendor 目录装 typescript 5；正式实现改用 .npmrc install-links=true，锁文件只多 1 条"
+  },
+  "verify_green_box3": {
+    "head": "2bae702f38cedd900bca3a4fb6dd9c87975ed4bd",
+    "when": "2026-11-11T07:54:53Z–08:00:58Z",
+    "node": "v24.21.0",
+    "npm_ci_exit": 0,
+    "git_status_after_npm_ci": "clean",
+    "vendor_node_modules": "absent",
+    "typecheck_exit": 0,
+    "lint_exit": 0,
+    "lint_files": 202,
+    "full_tests": "1483/1483",
+    "log": "receipts/evidence/t177-g3/verify-box3.log"
+  },
+  "boundary_G3_02": {
+    "result": "①②③④ 全过（--upstream 直接对上游仓库逐文件比、--rebuild 重建 dist 逐文件一致、--fresh-clone 全新克隆 npm ci 后运行时 import 与接缝测试 10/10）",
+    "log": "receipts/evidence/t177-g3/boundary.txt",
+    "negative_controls": {
+      "0-clean": "通过",
+      "a-src-byte": "① 判失败",
+      "b-second-import": "④ 判失败",
+      "c-dist-missing": "① 判失败",
+      "d-second-manifest": "④ 判失败",
+      "e-dist-map": "① 判失败",
+      "f-dist-tampered-manifest-updated": "① 通过、② 判失败（重建比对不是清单的同语反复）"
+    }
+  },
+  "mutations": {
+    "script": "scripts/t177/g3-mutations.mjs",
+    "script_sha256": "3df7969c264deea9e84c1728d4caccec98729e58cde91e57e6a7f056daaf9f2b",
+    "total": 11,
+    "killed": 11,
+    "survived": 0,
+    "control": "10/10",
+    "after_control": "10/10",
+    "node": "v24.21.0",
+    "results": "receipts/evidence/t177-g3/mutations/results.json"
+  },
+  "ac42_fixture_regression": {
+    "file": "receipts/evidence/t177-g3/baseline-ac42-fixtures.txt",
+    "a5_on_baseline": "通过（换分量前后展开相同）",
+    "a3_on_baseline": "失败（旧计数下 e1 排第一，新分量 e2 排第一）"
+  },
+  "files_sha256": {
+    "a3-baseline.test.ts.txt": "60b69c85f155780284a46238c81a7cdb4a3a3f0e9b3366c0b7ceced2785ec53b",
+    "a5-baseline.test.ts.txt": "34fdec079aaf965d751fef70c9f3c9fe9a631a9eba13b77f38f809dccfe57bab",
+    "baseline-ac42-fixtures.txt": "940fcf679fbd0885a7df2e841527bbfaf43811ebb1ee6e8def4d8c3f527620ee",
+    "boundary-neg-0-clean.txt": "07924bb417824ef79736ede6167accf0cdef085d0198ebf1eee80dc566a90e69",
+    "boundary-neg-a-src-byte.txt": "5c2c2dceefc918a7e3512ca7a1bead35724c8231ecfa31726362ee3ee03d4cf0",
+    "boundary-neg-b-second-import.txt": "eb68f2ea3cf7b966c519e4bf3e2163fef8adcd93f9ad4ce8883855d51cf54e93",
+    "boundary-neg-c-dist-missing.txt": "e75802e7afb936d1e657a828b7ba8cb6aaa2cf31d6473d6670052b06dd1b710b",
+    "boundary-neg-d-second-manifest.txt": "f690500669061d8fc569de0cc2c76e5d92e70f828cf56e580dadfff7dda1fc77",
+    "boundary-neg-e-dist-map.txt": "0eabd55154364c4b9388c0113fea78f6d9e540adbffb6473b1f0699f947a8397",
+    "boundary-neg-f-dist-tampered-manifest-updated.txt": "f6b80f9f0ec51998da2d00664cc27cb51c12d86b6bced60a4155951fabc8f1d7",
+    "boundary.txt": "d3da6831ed66f35fe66cb0b0c64d63a116049d920bfeab777e3948331637ec30",
+    "cloud-evidence.tgz": "67593abd1021190d995255ac3eaa38ce4778cd3840a74bb7a392589eb316fa8a",
+    "spike-rerun-seam.tap": "24fedade27b5c310c03822b379da14f877159f59d27ec6428368eeda80c8e08c",
+    "spike-rerun.log": "17c11bc0f51a55a3543812278ff2f8bcc8cef03e7450b136dec8f2fb76a6f088",
+    "upstream-build.log": "8ca0993c9f7f870f95819380641c0d2b0669f2fb88231c4517af3ead6f030ec3",
+    "upstream-tests.log": "9cbd87b74a684ef0d9b445c74b97d79114d03e191cd8ce55e2dce34d5698176e",
+    "verify-box3.log": "3c3b4cd092649a771309e571ccbcf6195c49ff1f8e301638436717af8bc1baeb"
+  }
+}
