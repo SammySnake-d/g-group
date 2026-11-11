@@ -1,0 +1,28 @@
+{
+  "slice": "T-177 G2 = D 说话侧配置快照(审查 docs/plans/t177-a-g-review-20261111.md G2-a/G2-b、方案 t177-g-d-implementation-20261111.md §4,在 docs/t177-backend-resume 分支):domain/model-config 新增宿主级 SpeakingEndpoint 与不可变 EffectiveSpeakingConfig,宿主每轮解析一次(model 取本轮实际生效模型,含失败卡上用户选的备用模型;provider/baseUrl/authRef/maxOutputTokens/contextWindow 取宿主级配置,reasoning 默认空;fingerprint = 全部非敏感字段 + authRef + 宿主启动号),联系人脑子与压缩器工厂收同一个快照对象,settleNote 不再按联系人现值重新解析;压缩器报了绑定模型就先走现成的 checkCompressionCall(按本轮冻结值),不同就一次都不发、保留原文、不换模型;生产入口 start.ts 与开发入口 cli.ts 共用 server/speaking.ts 的唯一装配函数,按 fingerprint 缓存无状态客户端,maxOutputTokens/contextWindow 映射到两路 pi 适配器,推理参数不被支持就显式拒绝,密钥只在调用边界按 authRef 解析",
+  "acceptance": [
+    {
+      "id": "AC-32",
+      "status": "未测",
+      "reason": "本片只覆盖 ③「压缩复用该联系人说话模型发起独立调用、失败保留原文不换模型」在宿主装配层的配置一致性:具名测试 packages/domain/src/speaking-endpoint.test.ts 4 条、packages/server/src/speaking-snapshot.test.ts 5 条、packages/server/src/speaking-assembly.test.ts 6 条与 Astra 的 packages/server/src/speaking-config.test.ts G2-03 1 条。真红:G2-03 在 4efdee0 上按名失败(用户在失败卡选备用模型后对话走备用模型、后台补写检查仍走刚失败的原模型)。其余 15 条是新合同(快照接口、两入口同一装配、按指纹缓存、同模校验接线),在红提交空壳上按名失败。变异 packages/server/proof/g2-speaking-mutations.txt:box3 在绿提交 a82a35c 上 21 个一对一单点故障全被指定的具名测试杀死、原样副本 16 绿;同一次运行全量 1489/1489、typecheck、lint 通过。①②④ 不在本片;本片未改压缩请求内容与主会话五块装配;待审"
+    },
+    {
+      "id": "AC-42",
+      "status": "未测",
+      "reason": "G2 对应规格候选补丁里的 AC-42 ⑱(配置快照与备用模型规则),该补丁尚未合入设计真源(审查 P-5/P-6 待改基);本片实现与测试按审查 G2-a/G2-b 落地,AC-42 其余条目归 G1/G3–G6"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:b36ab234-0cba-4b89-929e-d21a46a35eea",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "7f65350380475cebc2333dae90eaf637918df2dc"
+  },
+  "unverifiable": "AC-32 ③:fingerprint 用 authRef + 宿主启动号代替尚不存在的凭据修订号,进程内换密钥(同一 authRef、同一启动号)指纹不变,已建的客户端会继续用旧密钥,不在覆盖范围;宿主级端点今天只来自环境变量(GG_SPEAKING_MAX_OUTPUT_TOKENS / GG_SPEAKING_CONTEXT_WINDOW 为本片新增,默认 4096 / 200000 与两个 pi 适配器原有默认值相同),没有界面与联系人级设置;同模校验只对报了绑定模型的压缩器生效(pi 压缩器已报,测试替身不报的不校验,pi 适配器自身仍按请求里的说话模型拒绝失配);推理参数 pi 适配器一律不支持、给了就拒绝,其他适配器的支持声明未做;后台精筛(G5)尚未接快照。真实网关上没有跑过同一轮两路请求,生产入口连线用 pi 适配器 + 注入的 HTTP 传输(进程内 SSE 假端点)核对实际发出的请求体",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "作者 Claude Code(fnqtz 线路,用户 dm#2521 定后端实现交回 Claude Code,Mira Bot #2587 派单);G2-03 真红测试与红提交 c2902e5 由 Astra(codex:63240562-6769-4e58-afdd-835948217589)写,保留原作者;本片其余测试、实现、变异由主会话 claude:b36ab234 本人写。审查按派单走 Codex 主审 + hy4 辅审;本片作者是 anthropic,Codex(openai)可作为门禁审查人签 review 栏。 设计真源核对:origin/docs/dev-handbook v3.28(f4963a08)需求文档第 950 行「每次压缩固定当时的配置快照……严禁自动切换其他厂商模型」与本片一致;§2.0 做/不做标准:本片是联系人层的上下文与调用配置(判据 5),不涉及 harness 内部与 Compute 审批。"
+}

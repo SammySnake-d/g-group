@@ -152,8 +152,12 @@ export interface HostOptions {
   readonly file: string;
   readonly userId?: string;
   readonly userName?: string;
-  /** 每位联系人的脑子;同一个实现可服务多位联系人(round 输入里带联系人档案)。 */
-  readonly mind: (contact: ContactView) => ContactMind;
+  /** 每位联系人的脑子;同一个实现可服务多位联系人(round 输入里带联系人档案)。第二个参数是这一轮冻结的说话侧配置快照(T-177 G2),
+   *  与同轮的压缩器拿的是同一个对象;工厂按 fingerprint 缓存,不按模型名缓存。 */
+  readonly mind: (contact: ContactView, speaking: modelConfig.EffectiveSpeakingConfig) => ContactMind;
+  /** 宿主级说话侧端点配置(provider / baseUrl / authRef / 输出上限 / 窗口 / 推理参数);每轮开始读一次并冻结进快照,
+   *  在途调用不受之后的改动影响。不给就是 DEFAULT_SPEAKING_ENDPOINT。 */
+  readonly speakingEndpoint?: () => modelConfig.SpeakingEndpoint;
   /** 按模型取 Compute 适配器;不给则派活直接失败(任务进 T11 并告诉联系人)。 */
   readonly compute?: (model: string) => ComputeAdapter;
   /** Compute 工作目录。 */
@@ -178,8 +182,9 @@ export interface HostOptions {
   readonly clockMs?: () => number;
   readonly newId?: (prefix: string) => string;
   readonly maxDeferMs?: number;
-  /** 状态笔记压缩器(D06 第 2 小节第 3 块、D25 第 8 节):按联系人取,必须用它的说话模型做独立调用(AC-32 ③)。不给就不压缩。 */
-  readonly compactor?: (contact: ContactView) => ContactCompactor;
+  /** 状态笔记压缩器(D06 第 2 小节第 3 块、D25 第 8 节):按联系人取,必须用它的说话模型做独立调用(AC-32 ③)。不给就不压缩。
+   *  第二个参数是同轮对话用的那一份配置快照(同一对象);压缩器报了绑定模型(model)就先做同模校验,不同就一次都不发。 */
+  readonly compactor?: (contact: ContactView, speaking: modelConfig.EffectiveSpeakingConfig) => ContactCompactor;
   /** 状态笔记的 UTF-8 字节上限;超了请压缩器缩写,仍超就保留并报告,不截断。null / 不给:不设上限。 */
   readonly stateNoteMaxBytes?: number | null;
   /** 会话中途的全局记忆变化在第 5 块累积到几条就并入第 1 块前缀(D25 第 6 节「快照加增量」)。默认 20。 */
@@ -447,6 +452,11 @@ export class Host {
     this.bus = createBus(this.now);
     // 本次启动编号:在途轮次标记(F12)与运行台账存活核对(AC-43)共用
     this.bootId = opts.bootId ?? this.newId("boot");
+    try {
+      modelConfig.checkSpeakingEndpoint((opts.speakingEndpoint ?? (() => modelConfig.DEFAULT_SPEAKING_ENDPOINT))());
+    } catch (e) {
+      throw new HostError("invalid_params", e instanceof Error ? e.message : String(e));
+    }
     const policy = checkRetryPolicy({ ...DEFAULT_RETRY_POLICY, ...(opts.retry ?? {}) });
     if (!policy.ok) throw new HostError("invalid_params", `重试参数不合格:${policy.reason}`);
     this.retryPolicy = policy.policy;
@@ -2293,7 +2303,9 @@ export class Host {
     try{return await Promise.race([Promise.resolve().then(()=>call(ac.signal)),stopped,expired]);}
     finally{this.timersApi.clear(handle);signal.removeEventListener("abort",abort);}
   }
-  private async checkMemoryCoverage(contact: ContactDoc, compactor: ContactCompactor | undefined, work: CoverageWork, delivered: readonly ReflectSource[], material: string, noteWritten: string | null, signal: AbortSignal): Promise<ReflectResult | null> {
+  private async checkMemoryCoverage(contact: ContactDoc, speakingModel: string, compactor: ContactCompactor | undefined, stored: CoverageWork, delivered: readonly ReflectSource[], material: string, noteWritten: string | null, signal: AbortSignal): Promise<ReflectResult | null> {
+    // 检查发给哪个上游、熔断记在哪个上游,都按这一轮冻结的说话模型(T-177 G2);台账里存的是首次建账时的上游,用户选了备用模型重跑时会过时
+    const work: CoverageWork = { ...stored, upstream: this.upstreamKey(speakingModel) };
     if(work.state==="ok"||work.disposition)return null;
     if(work.blocked||(work.retryAt??0)>this.clock())return null;
     if(this.memoryCoverage.dirty(contact.id)) {this.recoverMemoryWrites(contact.id);if(this.memoryCoverage.dirty(contact.id))return null;}
@@ -2307,7 +2319,7 @@ export class Host {
     if(!beforeCall.valid){this.disposeCoverage(work,beforeCall.sources);return null;}
     if(!this.admitUpstream(work.upstream,"background")){this.memoryCoverage.fail(work.id,"共享上游熔断，后台检查未发出","A1",this.retryPolicy,this.clock(),this.random);return null;}
     const neighbors=this.memory.list(contact.id).filter(e=>(e.status==="active"||e.status==="degraded")&&!e.anchors.includes(PERSONA_ANCHOR)&&e.anchors.some(a=>a==="global"||work.rooms.includes(a.slice(5))&&a.startsWith("room:"))).map(e=>({id:e.id,title:e.title,body:e.body}));
-    const request={contact:{id:contact.id,name:contact.name,speakingModel:contact.speakingModel,persona:contact.persona},kind:"round-note" as const,previous:this.stateNote(contact.id),material,maxBytes:this.opts.stateNoteMaxBytes??null,neighbors,noteWritten,sources:delivered};
+    const request={contact:{id:contact.id,name:contact.name,speakingModel,persona:contact.persona},kind:"round-note" as const,previous:this.stateNote(contact.id),material,maxBytes:this.opts.stateNoteMaxBytes??null,neighbors,noteWritten,sources:delivered};
     this.memoryCoverage.start(work.id);
     try{
       let decoded=decodeReflect(await this.memoryCall(work,signal,s=>compactor.reflect!(request,s)));if(!decoded.ok)throw new Error(decoded.reason);
@@ -2329,12 +2341,25 @@ export class Host {
     }catch(error){if(!signal.aborted&&!this.closed)this.failCoverage(work,error);return null;}
   }
 
-  /** 本轮要落盘的状态笔记:模型没写就请压缩器补写(同一说话模型的独立调用),超上限就缩写;最后移除撤回原文 */
-  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], signal: AbortSignal, coverage: CoverageWork, captureSources: readonly ReflectSource[]): Promise<{ note: string | null; remember: MindAction[]; persona: string | null }> {
+  /** 这一轮的说话侧配置快照(T-177 G2):model 是这一轮实际生效的模型(含用户在失败卡上选的备用模型),其余取宿主级配置。 */
+  private speakingFor(model: string): modelConfig.EffectiveSpeakingConfig {
+    return modelConfig.resolveSpeakingConfig((this.opts.speakingEndpoint ?? (() => modelConfig.DEFAULT_SPEAKING_ENDPOINT))(), model, this.bootId);
+  }
+  /** 本轮要落盘的状态笔记:模型没写就请压缩器补写(同一说话模型的独立调用),超上限就缩写;最后移除撤回原文。
+   *  补写与检查用这一轮冻结的快照,不再从联系人现值重新解析。 */
+  private async settleNote(contact: ContactDoc, speaking: modelConfig.EffectiveSpeakingConfig, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], signal: AbortSignal, coverage: CoverageWork, captureSources: readonly ReflectSource[]): Promise<{ note: string | null; remember: MindAction[]; persona: string | null }> {
     const contactId = contact.id;
     const prev = this.stateNote(contactId);
-    const compactor = this.opts.compactor?.(this.contactView(contact));
-    const profile = { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona };
+    let compactor = this.opts.compactor?.({ ...this.contactView(contact), speakingModel: speaking.model }, speaking);
+    // 同模校验(AC-32 ③):压缩器报了绑定模型就和本轮冻结的说话模型比;不同就一次都不发,保留原文,不换模型
+    if (compactor?.model !== undefined) {
+      const check = modelConfig.checkCompressionCall({ ...this.contactModels(contact), speakingModel: speaking.model }, compactor.model);
+      if (!check.ok) {
+        this.report("compression-model-mismatch", { contactId, reason: check.reason, fingerprint: speaking.fingerprint });
+        compactor = undefined;
+      }
+    }
+    const profile = { id: contactId, name: contact.name, speakingModel: speaking.model, persona: contact.persona };
     const max = this.opts.stateNoteMaxBytes ?? null;
     let note = out.stateNote;
     const remember: MindAction[] = [];
@@ -2347,9 +2372,9 @@ export class Host {
       if (Buffer.byteLength(material.text,"utf8") > (this.opts.recallBudgetBytes ?? RECALL_BUDGET_BYTES)) {
         this.failCoverage(debt, new Error("补查原文超过回读预算，请调大预算后重试"), "A2"); continue;
       }
-      await this.checkMemoryCoverage(contact, compactor, debt, material.sources, material.text, out.stateNote, signal);
+      await this.checkMemoryCoverage(contact, speaking.model, compactor, debt, material.sources, material.text, out.stateNote, signal);
     }
-    const result = await this.checkMemoryCoverage(contact, compactor, coverage, captureSources, compactMaterial(fresh,out.actions), out.stateNote, signal);
+    const result = await this.checkMemoryCoverage(contact, speaking.model, compactor, coverage, captureSources, compactMaterial(fresh,out.actions), out.stateNote, signal);
     if (result) { reflected = true; if(note===null)note=result.note; persona=result.personaSuggestion; }
     if (note === null && !reflected && compactor && fresh.length > 0 && !this.memoryCoverage.get(coverage.id).disposition) {
       try {
@@ -2591,10 +2616,13 @@ export class Host {
     const closing = new Promise<never>((_, reject) => signal.addEventListener("abort", () => reject(new Error("宿主中止本轮")), { once: true }));
     closing.catch(() => {});
     let out: Awaited<ReturnType<ContactMind["round"]>>;
+    let speaking: modelConfig.EffectiveSpeakingConfig | null = null;
     try {
-      // 每一轮现场定生效模型(原则 70):用户在失败卡上显式选了备用模型才换,只用于重跑这一批;自动重试永远用原模型(严禁静默换模)
+      // 每一轮现场定生效模型(原则 70):用户在失败卡上显式选了备用模型才换,只用于重跑这一批;自动重试永远用原模型(严禁静默换模)。
+      // 这一轮的配置快照只解析这一次,对话、补写、检查共用同一个对象(T-177 G2)
+      speaking = this.speakingFor(model);
       const tools: RoundTools = { readMemory: async (id: string) => this.renderMemory(contactId, id), readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq) };
-      out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, ac.signal, tools), stalled, closing]);
+      out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: speaking.model }, speaking).round({ contact: { id: contactId, name: contact.name, speakingModel: speaking.model, persona: contact.persona }, request, fresh }, ac.signal, tools), stalled, closing]);
     } catch (e) {
       this.setActivity(contactId, null, "idle");
       if (stall) this.runs.failStalled(unit.id, stall);
@@ -2622,7 +2650,8 @@ export class Host {
         }
       }
     }
-    const settled = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), signal, coverage, captureSources);
+    if (speaking === null) throw new HostError("internal", "本轮没有说话侧配置快照");
+    const settled = await this.settleNote(contact, speaking, fresh, out, rooms.map((r) => r.id), signal, coverage, captureSources);
     if (signal.aborted || this.closed) return "done";
     let done: { effects: HostEffect[] };
     try {

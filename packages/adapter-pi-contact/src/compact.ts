@@ -135,5 +135,5 @@ export function createPiCompactor(opts: PiCompactorOptions): ContactCompactor {
     const text = await call(REFLECT_SYSTEM, reflectText(req), signal);
     return parseReflect(text, req.noteWritten !== null);
   }
-  return Object.freeze({ compact, reflect });
+  return Object.freeze({ model: cfg.model, compact, reflect });
 }
