@@ -1,0 +1,24 @@
+{
+  "slice": "T-177 C2:迟到应答只留记录(需求 D29 第 5 条)。宿主已不再等之后插件才回的应答,只追加记进 gg_plugin_late_receipts:来源(插件、动作、哪一次认领、宿主为什么不再等)、时间、当时外发行的状态与绑定、回执 id 原样、整条应答的 sha256 与字节数;不存应答全文(插件可能回显载荷)。不改外发状态、不触发重发、不改当时返回;卸载与重启后保留,不加清理;不做对账入口(用户 dm-ai-matrix#2822 只选了这一条,另两条按推荐留待 AC-35 阶段 II)。叠在 C(PR #63)上,与 C 在三个源码文件上有交集,必须先等 C 合入。详见 receipts/evidence/t177-c2/SCOPE.md",
+  "acceptance": [
+    {
+      "id": "AC-35",
+      "status": "未测",
+      "reason": "本片只补 D29 第 5 条「迟到的应答按请求 id 丢弃并留记录,不改已经落地的账本状态」里属于宿主外发账本的那一半(内核不再等之后才到的应答)。5 条具名测试 L01–L05 在 packages/server/src/plugin-late-receipt.test.ts;box4 Node 24 红 ed3e93d8 5/5 按名失败、绿全量 1523/1523、11/11 定点变异杀死(没有等价变异),见 evidence。AC-35 ①②③、④ 的六元组预授权与 OAuth 阻断、⑤ 阶段 II 真实 Telegram/Gmail 都不在本片,整条不标通过。AC-58 不在本分支验收文档副本里,门禁不认,不单列。待审。",
+      "evidence": "receipts/evidence/t177-c2/summary.json"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:b36ab234-0cba-4b89-929e-d21a46a35eea",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "ed3e93d8f0a88b9fdddbe9cd9be38d0d72b110f1"
+  },
+  "unverifiable": "AC-35:记录只是备查,没有任何调用方真的对过账,没有对账入口(用户决定等 AC-35 阶段 II),所以「留记录」对人工对账是否够用未验;宿主在「应答已到、还没写进库」这一刻崩溃,这条记录会丢(没有为它加事务或重放,因为不改外发状态是硬要求);插件协议层按请求 id 丢弃的那些迟到应答到不了宿主,不在本片;记录会一直增长,没有上限与清理;宕机仍用「同一数据文件上再开一个宿主」模拟,没有 SIGKILL 宿主进程;断电与系统崩溃、两个宿主进程真并发都未测。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "由主会话 claude:b36ab234-0cba-4b89-929e-d21a46a35eea 派出的子代理实现,fnqtz 线路(claude-opus-5-5);不自审。叠在 feat/t177-c-plugin-outbox(PR #63)上,C 合入 dev/integration 后 rebase 并改 base、重排 red.commit。设计真源 docs/dev-handbook@6109485e(v3.29)与用户 dm-ai-matrix#2822。Codex 主验收与 hy4 辅审另派,Claude Code 读记录终审。"
+}
