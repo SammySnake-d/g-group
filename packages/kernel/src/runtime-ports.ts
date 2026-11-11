@@ -94,9 +94,12 @@ export interface RoundInput {
  * claim:认领会话任务面板上还没人负责的已有任务(U14、§8.4 US1;claim_task)。宿主原子比对 T1_Open 且无负责人后转 T2 并按任务说明起 Compute,
  *   同一任务先落盘的拿到,后来的被拒并在下一轮第 5 块看到原因。
  * reply.mentions:结构化 @(联系人或用户 id);宿主校验都是该会话成员后写进消息 mentions,与用户发消息的 @ 同一形状。不给就不 @ 任何人。
+ * reply.everyone(feat/contact-call-check;US1 §8.4「群输入框发 @everyone」):@ 该会话全体成员。宿主核对发送者是该会话成员后展开成
+ *   全体成员(含用户、不含发送者自己、不含 Helper),与逐个 mentions 取并集写进消息 mentions(同一形状)。它只是把所有人列进 mentions,
+ *   不构成「被 @ 才接活」的特权。不给就是 false。
  */
 export type MindAction =
-  | { readonly kind: "reply"; readonly roomId: string; readonly text: string; readonly replyToSeq: number | null; readonly mentions?: readonly string[] }
+  | { readonly kind: "reply"; readonly roomId: string; readonly text: string; readonly replyToSeq: number | null; readonly mentions?: readonly string[]; readonly everyone?: boolean }
   | { readonly kind: "dispatch"; readonly roomId: string; readonly sourceSeq: number; readonly title: string; readonly task: string }
   | { readonly kind: "commit"; readonly roomId: string; readonly sourceSeq: number; readonly text: string; readonly taskId: string | null }
   // sourceSeq:这段转交来自任务所在会话里哪条用户消息;给了就是用户中途改条件(E3),宿主据此原位升版并登记关联边(AC-45/AC-16)
@@ -126,7 +129,21 @@ export interface RoundOutput {
   readonly actions: readonly MindAction[];
   /** 新状态笔记(第 3 块);null 表示不变。 */
   readonly stateNote: string | null;
+  /**
+   * 本轮里被当场校验口拒下、因此没有登记的动作(feat/contact-call-check)。宿主轮末据此认出「宣称一件当场被拒的事已经做了」的
+   * reply:不发出它,并把这件事记进被拒动作回告。没有当场被拒的动作就不给这个字段。
+   */
+  readonly inRoundRefusals?: readonly ActionRefusal[];
 }
+
+/** 一个动作 + 它被当场拒下的原因(轮末回告与「未落实声明」判据用) */
+export interface ActionRefusal {
+  readonly action: MindAction;
+  readonly reason: string;
+}
+
+/** 当场校验口的结论:能判定就说不行并给原因;要落盘后才知道的给不出结论,返回 ok,交轮末校验兜底 */
+export type ActionCheck = { readonly ok: true } | { readonly ok: false; readonly reason: string };
 
 /** 本轮内可用的只读查询口(宿主提供):联系人在同一轮的工具往返里按 id 取全文,不是动作、不落盘 */
 export interface RoundTools {
@@ -134,6 +151,12 @@ export interface RoundTools {
   readMemory(id: string): Promise<string | null>;
   /** 引用链往上读一级(D24 read_quote_parent):这条消息直接引用的那几条;会话不可读返回 null */
   readQuoteParent?(roomId: string, seq: number): Promise<string | null>;
+  /**
+   * 当场校验口(feat/contact-call-check):只读,不改任何状态。判的是能提前判定的事实——会话可见性与成员、任务归属与状态、
+   * seq 是不是本轮输入、认领冲突(T1 且无人负责)、mentions 是不是会话成员、forward 的目标还在不在途。
+   * 要落盘后才知道的(提交时的 CAS 冲突、写失败)在这里给不出结论,返回 ok,由轮末校验兜底。
+   */
+  checkAction?(action: MindAction): ActionCheck | Promise<ActionCheck>;
 }
 
 export interface ContactMind {

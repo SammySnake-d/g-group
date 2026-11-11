@@ -46,6 +46,11 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
       text: f("text", true, "要发出的原文"),
       replyToSeq: f("seqOrNull", false, "回复哪条消息的 seq;不针对某条消息就省略"),
       mentions: f("texts", false, "要 @ 的人的 id(用户或本会话的联系人);被 @ 的人会收到提醒。正文里写的 @ 不会提醒任何人。不 @ 人就省略"),
+      everyone: f(
+        "bool",
+        false,
+        "@ 这个会话里的所有人(US1 的「群输入框发 @everyone」):展开成该会话全体成员——含用户,不含你自己,也不含 Helper;与逐个 mentions 取并集,同一人只列一次。它不是「被 @ 才接活」的特权,只是把所有人列进 mentions。不 @ 全体就省略",
+      ),
     },
   },
   dispatch_compute: {
@@ -245,7 +250,15 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
   switch (tool) {
     case "reply": {
       const at = v.mentions as readonly string[] | null;
-      return act({ kind: "reply", roomId: s("roomId"), text: s("text"), replyToSeq: nn("replyToSeq"), ...(at !== null ? { mentions: Object.freeze([...new Set(at)]) } : {}) });
+      const all = v.everyone === true;
+      return act({
+        kind: "reply",
+        roomId: s("roomId"),
+        text: s("text"),
+        replyToSeq: nn("replyToSeq"),
+        ...(at !== null ? { mentions: Object.freeze([...new Set(at)]) } : {}),
+        ...(all ? { everyone: true } : {}),
+      });
     }
     case "dispatch_compute": return act({ kind: "dispatch", roomId: s("roomId"), sourceSeq: n("sourceSeq"), title: s("title"), task: s("task") });
     case "commit": return act({ kind: "commit", roomId: s("roomId"), sourceSeq: n("sourceSeq"), text: s("text"), taskId: sn("taskId") });

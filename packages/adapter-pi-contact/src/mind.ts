@@ -9,7 +9,7 @@
 import { Agent, type AgentMessage, type AgentTool, type AgentToolResult, type StreamFn } from "@earendil-works/pi-agent-core";
 import { type AssistantMessage, type Model, type SimpleStreamOptions, type SystemMessage, toToolDeclaration, type UserMessage } from "@earendil-works/pi-ai";
 import { anthropicMessagesApi } from "@earendil-works/pi-ai/api/anthropic-messages.lazy";
-import { BLOCK_LABELS, type BlockNo, type ContactMind, type MindAction, plainData, type RoundBlock, type RoundInput, type RoundOutput, type RoundTools } from "@g-group/kernel";
+import { BLOCK_LABELS, type ActionRefusal, type BlockNo, type ContactMind, type MindAction, plainData, type RoundBlock, type RoundInput, type RoundOutput, type RoundTools } from "@g-group/kernel";
 import { parseToolCall, TOOL_DECLARATIONS } from "./tools.ts";
 
 export interface PiContactMindOptions {
@@ -183,6 +183,7 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
     const base: readonly AgentMessage[] = [system, fresh];
 
     const actions: MindAction[] = [];
+    const refusals: ActionRefusal[] = [];
     let stateNote: string | null = null;
     const agentTools: AgentTool[] = TOOL_DECLARATIONS.map((d) => ({
       name: d.name,
@@ -206,6 +207,13 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
         if (r.value.kind === "note") {
           stateNote = r.value.note;
           return { content: [{ type: "text", text: "状态笔记已登记。" }], details: null };
+        }
+        // 当场校验(片 CA2):宿主给的只读校验口说不行就不登记这个动作,原因立刻作为工具结果回到模型,
+        // 模型同一轮就能改口或改动作(不必等下一轮第 5 块的回告);轮末的校验照旧兜底。
+        const verdict = tools?.checkAction ? await tools.checkAction(r.value.action) : null;
+        if (verdict && !verdict.ok) {
+          refusals.push({ action: r.value.action, reason: verdict.reason });
+          return { content: [{ type: "text", text: `未登记:${verdict.reason}。这件事没有发生,不要对外说它已经做了;按原因改动作或改说法后重新调用。` }], details: null, isError: true };
         }
         actions.push(r.value.action);
         return { content: [{ type: "text", text: `已登记(本轮第 ${actions.length} 个动作:${r.value.action.kind})。宿主会在本轮结束后校验并执行,这里不会有执行结果。` }], details: null };
@@ -267,7 +275,7 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
     if (end.stopReason === "error" || end.stopReason === "aborted") {
       throw new PiContactMindError("provider-error", redact(`模型请求失败(${end.stopReason}):${end.errorMessage ?? "无错误信息"}`));
     }
-    return Object.freeze({ actions: Object.freeze([...actions]), stateNote });
+    return Object.freeze({ actions: Object.freeze([...actions]), stateNote, ...(refusals.length > 0 ? { inRoundRefusals: Object.freeze([...refusals]) } : {}) });
   }
 
   return Object.freeze({ round });

@@ -69,6 +69,8 @@ import {
   type InboundMessage,
   type MemoryEntry,
   type QuoteMsg,
+  type ActionCheck,
+  type ActionRefusal,
   buildQuoteChain,
   quoteParent,
   renderLevels,
@@ -130,7 +132,7 @@ import {
   kernelAssemble,
 } from "./assemble.ts";
 import { type Bus, createBus } from "./bus.ts";
-import { RejectionFeed, ReworkOnce, claimRefusal, claimablePointers, mentionRefusal, mergeIntoRework, rejectionPointers, toMentions } from "./contact-actions.ts";
+import { RejectionFeed, ReworkOnce, claimRefusal, claimablePointers, mentionRefusal, mergeIntoRework, rejectionPointers, replyMentionIds, toMentions, unfulfilledClaim } from "./contact-actions.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
@@ -2465,7 +2467,13 @@ export class Host {
     let out: Awaited<ReturnType<ContactMind["round"]>>;
     try {
       // 每一轮现场定生效模型(原则 70):用户在失败卡上显式选了备用模型才换,只用于重跑这一批;自动重试永远用原模型(严禁静默换模)
-      const tools: RoundTools = { readMemory: async (id: string) => this.renderMemory(contactId, id), readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq) };
+      const freshMsgs = fresh.filter((f): f is InboundMessage => f.kind === "message");
+      const tools: RoundTools = {
+        readMemory: async (id: string) => this.renderMemory(contactId, id),
+        readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq),
+        // 当场校验口(片 CA2):pi 运行时在工具执行时先调它,能提前判定的不合规当场拒,轮末 commitRound 照旧兜底
+        checkAction: (a: MindAction) => this.precheck(contactId, a, freshMsgs),
+      };
       out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, ac.signal, tools), stalled, closing]);
     } catch (e) {
       this.setActivity(contactId, null, "idle");
@@ -2498,7 +2506,7 @@ export class Host {
     if (signal.aborted || this.closed) return "done";
     let done: { effects: HostEffect[] };
     try {
-      done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona, rejectionsShown: shownRejections.map((r) => r.actionId) });
+      done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona, rejectionsShown: shownRejections.map((r) => r.actionId), inRoundRefusals: out.inRoundRefusals ?? [] });
     } catch (e) {
       this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
       throw e;
@@ -2577,6 +2585,73 @@ export class Host {
     }
   }
 
+  /**
+   * 当场校验口(片 CA2):只读,不改任何状态。pi 运行时在工具执行时先调它,能提前判定的不合规当场拒
+   * (不登记该动作、原因立刻回到模型),轮末 commitRound 的同名判据保留为兜底。
+   * 只判能提前判定的事实:会话可见性与成员、任务归属与状态、seq 是不是本轮输入、认领冲突(T1 且无人负责)、
+   * mentions 是不是会话成员、forward 的目标还在不在途;要落盘后才知道的(提交时的 CAS 冲突、写失败)
+   * 在这里给不出结论,返回 ok。判据与原因文字与 commitRound 逐条对齐,不另立一套。
+   */
+  private precheck(contactId: string, a: MindAction, freshMsgs: readonly InboundMessage[]): ActionCheck {
+    const roomIds = new Set(this.roomsOfContact(contactId).map((r) => r.id));
+    const leaving = this.exits.leavingRoomsOf(contactId);
+    const no = (reason: string): ActionCheck => ({ ok: false, reason });
+    const inFresh = (roomId: string, seq: number) => freshMsgs.some((m) => m.roomId === roomId && m.seq === seq);
+    const mine = (taskId: string): { readonly doc: TaskDoc } | { readonly why: string } => {
+      const doc = getDoc<TaskDoc>(this.db, `task:${taskId}`)?.value;
+      return !doc || doc.task.owner !== contactId ? { why: "不是你的任务" } : { doc };
+    };
+    switch (a.kind) {
+      case "reply": {
+        if (leaving.has(a.roomId)) return no(LEAVING_REASON);
+        if (!roomIds.has(a.roomId)) return no("不在这个会话里");
+        const atWhy = a.mentions?.length ? mentionRefusal(a.roomId, a.mentions, this.members(a.roomId)) : null;
+        return atWhy ? no(atWhy) : { ok: true };
+      }
+      case "dispatch":
+      case "commit": {
+        if (leaving.has(a.roomId)) return no(LEAVING_REASON);
+        return inFresh(a.roomId, a.sourceSeq) ? { ok: true } : no(`来源 ${a.roomId} #${a.sourceSeq} 不是本轮新消息`);
+      }
+      case "forward": {
+        const t = mine(a.taskId);
+        if ("why" in t) return no(t.why);
+        if (a.sourceSeq !== undefined && !inFresh(t.doc.roomId, a.sourceSeq)) return no(`来源 ${t.doc.roomId} #${a.sourceSeq} 不是本轮新消息`);
+        return !t.doc.task.computeId || TERMINAL.has(t.doc.task.state) || t.doc.task.state === "T9_StopRequested" ? no("任务没有在途 Compute") : { ok: true };
+      }
+      case "deliver": {
+        const t = mine(a.taskId);
+        if ("why" in t) return no(t.why);
+        return t.doc.task.state !== "T3_Running" || !t.doc.task.computeId ? no(`任务在 ${t.doc.task.state},不能交付`) : { ok: true };
+      }
+      case "stop": {
+        const t = mine(a.taskId);
+        return "why" in t ? no(t.why) : { ok: true };
+      }
+      case "verdict": {
+        const t = mine(a.taskId);
+        if ("why" in t) return no(t.why);
+        const d = t.doc;
+        if (!awaitingUser(d)) return no(`任务在 ${d.task.state},没有等你确认的交付`);
+        const src = freshMsgs.find((m) => m.roomId === d.roomId && m.seq === a.sourceSeq);
+        if (!src) return no(`验收结论的来源 ${d.roomId} #${a.sourceSeq} 不是本轮新消息`);
+        if (src.sender.kind !== "user" || src.sender.id !== d.task.requester) return no(`验收结论的来源 ${d.roomId} #${a.sourceSeq} 不是提出者本人的消息`);
+        return src.seq <= (d.deliveredSeq ?? Number.POSITIVE_INFINITY) ? no(`验收结论的来源 ${d.roomId} #${a.sourceSeq} 早于这次交付`) : { ok: true };
+      }
+      case "claim": {
+        const cur = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
+        const why = claimRefusal(a.taskId, cur ? { id: cur.task.id, roomId: cur.roomId, sourceSeq: cur.sourceSeq, title: cur.title, state: cur.task.state, owner: cur.task.owner } : undefined, roomIds, leaving);
+        return why !== null ? no(why) : { ok: true };
+      }
+      // remember 与 rerun 在轮末只看「这个会话在不在你的会话里」,不额外看移出中(与 commitRound 对齐,不另立更严的判据)
+      case "remember":
+      case "rerun":
+        return roomIds.has(a.roomId) ? { ok: true } : no("不在这个会话里");
+      default:
+        return { ok: true };
+    }
+  }
+
   /** 校验动作,把本轮全部状态变化放进一个事务;返回事务提交后要执行的副作用。 */
   private commitRound(
     contactId: string,
@@ -2585,7 +2660,7 @@ export class Host {
     fresh: Inbound[],
     inbox: { id: number }[],
     lastSeen: Record<string, number>,
-    out: { actions: readonly MindAction[]; stateNote: string | null; personaSuggestion?: string | null; rejectionsShown?: readonly string[] },
+    out: { actions: readonly MindAction[]; stateNote: string | null; personaSuggestion?: string | null; rejectionsShown?: readonly string[]; inRoundRefusals?: readonly ActionRefusal[] },
   ): { effects: HostEffect[] } {
     const roomIds = new Set(this.roomsOfContact(contactId).map((r) => r.id));
     // 移出中:这个群里的发言、登记承诺与接新活一律拒绝(D05「先禁止新群内接单与发言」)
@@ -2628,10 +2703,15 @@ export class Host {
             if (leavingRooms.has(a.roomId)) { reject(LEAVING_REASON); break; }
             if (!roomIds.has(a.roomId)) { reject("不在这个会话里"); break; }
             if (!a.text.trim()) { reject("空消息"); break; }
+            // 未落实声明(片 CA2):这一轮里被当场拒的动作所指的对象出现在正文里,就是宣称它已经做了——不发出这句话,只记回告
+            const over = unfulfilledClaim(a, out.inRoundRefusals ?? []);
+            if (over) { reject(`这一轮里对 ${over.token} 的动作被当场拒了(${over.reason});这句话宣称它已完成,没有发出`); break; }
             // 结构化 @(缺口 7):对象必须都是这个会话的成员,写进 mentions 与用户发消息同一形状,唤醒照现有规则
             const atWhy = a.mentions?.length ? mentionRefusal(a.roomId, a.mentions, this.members(a.roomId)) : null;
             if (atWhy) { reject(atWhy); break; }
-            const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [], ...(a.mentions?.length ? { mentions: toMentions(a.mentions) } : {}) });
+            // @everyone(片 CA2,US1 §8.4):展开成该会话全体成员(含用户、不含发送者自己、不含 Helper),与逐个 @ 取并集、同一人只列一次
+            const atIds = replyMentionIds(a.mentions, a.everyone === true, this.members(a.roomId), contactId);
+            const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [], ...(atIds.length ? { mentions: toMentions(atIds) } : {}) });
             appended.push({ roomId: a.roomId, seq: r.seq });
             replies.push({ roomId: a.roomId, seq: r.seq, text: a.text });
             if (a.replyToSeq !== null) referenced.add(`${a.roomId}#${a.replyToSeq}`);
