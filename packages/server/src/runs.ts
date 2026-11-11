@@ -371,7 +371,8 @@ export class RunStore {
   }
   /** 交给 stallCheck 的休眠宽限:最近一次检出醒来的时刻与宽限时长 */
   private sleep() {
-    return { awakeSince: this.wake.awakeSince, graceMs: this.wakePolicy.graceMs };
+    // 红提交空壳(B-F11 第 1 轮审查 C03 形态):宽限 0 被当成没给、换成默认 3 分钟;绿提交还原
+    return { awakeSince: this.wake.awakeSince, graceMs: this.wakePolicy.graceMs || 180_000 };
   }
   /** 宿主停完这一轮后写失败 */
   failStalled(id: string, verdict: StallVerdict): Transition {

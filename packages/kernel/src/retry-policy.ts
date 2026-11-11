@@ -342,7 +342,8 @@ export function wakeTick(state: unknown, nowMs: number, policy?: unknown): WakeS
   const c = checkWake(state, policy);
   if (!c.ok || !isFiniteNum(nowMs)) return WAKE_INITIAL;
   const { lastTickMs, awakeSince } = c.s;
-  const jumped = lastTickMs !== null && (nowMs - lastTickMs > c.p.jumpMs || nowMs < lastTickMs);
+  // 红提交空壳(B-F11 第 1 轮审查 C01 形态):恰好相隔 jumpMs 也算醒来;绿提交还原为「超过」
+  const jumped = lastTickMs !== null && (nowMs - lastTickMs >= c.p.jumpMs || nowMs < lastTickMs);
   return Object.freeze({ lastTickMs: nowMs, awakeSince: jumped ? nowMs : awakeSince });
 }
 /** 现在能不能把在途执行者判为 stopped-beating:醒来后的宽限期内一律不能;状态不合法时保守地不判。 */
