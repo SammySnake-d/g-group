@@ -1,0 +1,13 @@
+head=ca26d67222a9401ba5f38b2835f224ed30be50c2 node=v24.21.0 started=2026-11-11T11:53:57Z finished=2026-11-11T12:02:54Z
+npmci=0
+tsc_exit=0
+lint_exit=0
+# tests 1536
+# pass 1536
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+test-runner:实际执行并通过 1536 条用例
+test_exit=0
+status-after:
