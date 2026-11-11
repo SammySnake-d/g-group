@@ -1,0 +1,25 @@
+apps/desktop/electron/app-ipc.ts
+  s_54fdb48636ffee::t_a2cd19eaed54fa 7,23-24
+apps/desktop/electron/backend.ts
+  s_54fdb48636ffee::t_9f10152aa7a806 15,106,110
+apps/desktop/electron/log.ts
+  s_54fdb48636ffee::t_83d9dd86dd0589 1-20
+apps/desktop/electron/main.ts
+  s_54fdb48636ffee::t_6c91fe55911999 13,119-120,124-126,132-137,139,150-153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "19d1268db0d3616358813995334977400f77a502",
+  "prompts": {},
+  "sessions": {
+    "s_54fdb48636ffee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "16b87c7b-b9f6-4a8a-92d0-b64d3392ff32",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

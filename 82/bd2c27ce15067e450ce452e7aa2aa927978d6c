@@ -1,0 +1,19 @@
+apps/desktop/e2e/app-shell.electron.spec.ts
+  s_54fdb48636ffee::t_11ef52ddf68ca4 15,19,60-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "82bd2c27ce15067e450ce452e7aa2aa927978d6c",
+  "prompts": {},
+  "sessions": {
+    "s_54fdb48636ffee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "16b87c7b-b9f6-4a8a-92d0-b64d3392ff32",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

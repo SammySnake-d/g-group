@@ -1,0 +1,55 @@
+apps/desktop/.gitignore
+  s_54fdb48636ffee::t_2761f67247284e 7-8
+apps/desktop/electron-builder.yml
+  s_54fdb48636ffee::t_3ebe44fa0cfe15 1-41
+apps/desktop/electron/app-config.ts
+  s_54fdb48636ffee::t_1831858ef264d0 1-71
+apps/desktop/electron/app-ipc.ts
+  s_54fdb48636ffee::t_97ce2c29fc53e0 1-49
+apps/desktop/electron/backend.ts
+  s_54fdb48636ffee::t_4daef2049891e7 1-10,13-15,17-110
+apps/desktop/electron/main.ts
+  s_54fdb48636ffee::t_3f0d30c1b36d67 6,10-19,113-114,117-146
+apps/desktop/electron/preload.ts
+  s_54fdb48636ffee::t_9270c9bb7892fd 1-2,5,20-28
+apps/desktop/electron/shell-env.ts
+  s_54fdb48636ffee::t_90da822410f815 1-47
+apps/desktop/electron/updater.ts
+  s_54fdb48636ffee::t_611c53d0260311 1-257
+apps/desktop/package.json
+  s_54fdb48636ffee::t_6af766022f8ed5 11,20-21,70-71
+apps/desktop/scripts/pack-mac.mjs
+  s_54fdb48636ffee::t_9543a4b8d1656b 1-41
+apps/desktop/src/App.tsx
+  s_54fdb48636ffee::t_0148968382c790 11-14,20-28,30
+apps/desktop/src/api/app-shell-types.ts
+  s_54fdb48636ffee::t_55d4ced643b1ae 1-74
+apps/desktop/src/api/app-shell.ts
+  s_54fdb48636ffee::t_fe7c455d384552 1-29
+apps/desktop/src/components/pages/SettingsPage.tsx
+  s_54fdb48636ffee::t_e262e4c2167269 13-15,24-25,30,32-43,67
+apps/desktop/src/components/shell/SetupForm.tsx
+  s_54fdb48636ffee::t_ab453ecec5bc41 1-73
+apps/desktop/src/components/shell/SetupScreen.tsx
+  s_54fdb48636ffee::t_6b746ce6a5a540 1-18
+apps/desktop/src/components/shell/updates.tsx
+  s_54fdb48636ffee::t_2d69e33fd50e47 1-48
+apps/desktop/vite.electron.config.ts
+  s_54fdb48636ffee::t_39f85bb8ce935b 5-12,21-22,30-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "210b287a35c70c032a1d034a1496ff7e3290e8dc",
+  "prompts": {},
+  "sessions": {
+    "s_54fdb48636ffee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "16b87c7b-b9f6-4a8a-92d0-b64d3392ff32",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+apps/desktop/proof/live-data/attach-red.txt
+  s_54fdb48636ffee::t_9492c9352612de 1-5
+apps/desktop/src/api/wire/messages.ts
+  s_54fdb48636ffee::t_d45774b118924b 3-5,13,26-33,59-60,78
+apps/desktop/src/api/wire/tasks.ts
+  s_54fdb48636ffee::t_bb161194cab441 30-32,35-40,43,59-61,64,67,69-70,101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff88f9d52d7f16931638d050a23d75263a4ae75d",
+  "prompts": {},
+  "sessions": {
+    "s_54fdb48636ffee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "16b87c7b-b9f6-4a8a-92d0-b64d3392ff32",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
