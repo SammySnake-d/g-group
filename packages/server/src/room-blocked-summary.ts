@@ -11,6 +11,10 @@ export function roomBlockedSummary(items: readonly RoomBlocker[]): string | null
   if (!first) return null;
   const text = first.text.replace(/\s+/g, " ").trim();
   const suffix = ordered.length > 1 ? `（另有 ${ordered.length - 1} 项）` : "";
-  const line = `等待你：${text}${suffix}`;
-  return line.length <= 500 ? line : `${line.slice(0, 499)}…`;
+  const prefix = "等待你：";
+  const line = `${prefix}${text}${suffix}`;
+  if (line.length <= 500) return line;
+  // 给完整尾注与省略号预留空间；合同按 UTF-16 长度计数，不截开代理对。
+  const clipped = text.slice(0, 499 - prefix.length - suffix.length).replace(/[\uD800-\uDBFF]$/u, "");
+  return `${prefix}${clipped}…${suffix}`;
 }
