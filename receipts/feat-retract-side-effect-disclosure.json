@@ -1,0 +1,27 @@
+{
+  "slice": "AC-08撤回已完成任务来源时的宿主事实披露;叠#73 c56dae7e,整支并入#71 c7d1a2dd;仅新增appendUserEvent内的持久披露,不改runRound/清洗实现/任务T5状态",
+  "acceptance": [
+    {
+      "id": "AC-08",
+      "status": "未测",
+      "reason": "完整AC-08尚未验收;本片子判据原4项同体保留,RC03从真实工件保留但无披露红,到宿主按来源room+seq与gg_progress完成台账在同事务追加system通知绿;RD01命名任务/Compute/完成结果+订阅+重启/重复撤回,RD02无副作用闲聊阴性,RD03跨会话同序号隔离及不带回撤回原文,RD04写通知失败回滚整个撤回。候选本机8/8,云与全量/变异/独立审尚未完成"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "model": "gpt-6.1-sol"
+  },
+  "red": {
+    "commit": "98da21c02560c23ef14fc5c7667b464bbe4adf46"
+  },
+  "review": null,
+  "waiver": null,
+  "review_status": "待Mira Bot安排Claude独立跨厂商审查;作者不自签",
+  "unverifiable": "Compute为确定性适配器夹具,外部文件写入是真实持久事实,不是真模型/CLI证明。通知只报告宿主已持久化的completed事实,无法推断未上报的外部副作用。任务补充/续接来源关联、R-Rule失效与整套前端未在本片证明。通知落聊天system消息与措辞是候选;任务停T5如实保持。",
+  "notes": {
+    "coordination": "Mira Bot #3038/#3040;box4同heavy.lock,防回环→额度→本片→Q05→Q08;不动#71/#73原分支",
+    "original_witness": "ceaa35359bc33ea68ead1da37c8cc33634a3917e原proof副本未改;原四项测试sha fa59007613a6db02dc87d03674ded9783bb198666e6411e24994d82b1c49dd3d",
+    "provenance": "本机原生session01a1cfc8-db89-7400-b3de-876bd8478982 turn_context.model实际读取gpt-6.1-sol;G-PROVENANCE在review=null时未实核"
+  }
+}
