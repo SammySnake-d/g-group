@@ -1,0 +1,20 @@
+{
+  "at": "2026-11-13T01:28:16.331242+08:00",
+  "target": "/private/tmp/gg-req-task-timeline-resume-20261113",
+  "red_copy": "/private/tmp/gg-task-timeline-final-red-1w0fd06t",
+  "red_commit": "63c8c4e5d18f1dc76f76d63e3a8fb273e631cf21",
+  "initial_red": "b8b31c88e666cd19003a5db8470cb96f04617521",
+  "test_sha256": "505693df33a22b3825aba37a0de6f27d1c4683e626e1e52986ea10141c493a78",
+  "counts": {
+    "tests": 11,
+    "pass": 0,
+    "fail": 11,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "named_err_assertion": 11,
+  "exit": 1,
+  "timing": "Final bodies are retrospective: initial nine were red before implementation; fixture corrections and TT10/TT11 added after implementation. No claim that all final tests predated product code. Canonical-encoding and zero-write controls also added retrospectively. Final 11 identical bodies rerun on stub and green.",
+  "previous_red_commit": "2d2c57ea0bc20ad2f37c16befaef81e825cef6bb"
+}

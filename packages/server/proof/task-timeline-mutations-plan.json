@@ -1,0 +1,294 @@
+{
+  "registered_at": "2026-11-13T01:32:33.875529+08:00",
+  "timing": "Retrospective criterion-scoped mutation plan after implementation; do not call this pre-product registration.",
+  "expected_total_tests": 11,
+  "test_file": "packages/server/src/task-timeline.test.ts",
+  "mutants": [
+    {
+      "id": "M01",
+      "criterion": "TT01",
+      "expected_test": "TT01 manual creation, user assignment and real model-attempt facts are append-only and action-idempotent",
+      "reason": "omit actual manual creation fact",
+      "edits": [
+        {
+          "file": "packages/server/src/host.ts",
+          "from": "      recordTaskFacts(this.db, null, doc, \"ManualCreate\", me, { requester: doc.task.requester });",
+          "to": ""
+        }
+      ]
+    },
+    {
+      "id": "M02",
+      "criterion": "TT01",
+      "expected_test": "TT01 manual creation, user assignment and real model-attempt facts are append-only and action-idempotent",
+      "reason": "misattribute explicit user assignment to the assigned contact",
+      "edits": [
+        {
+          "file": "packages/server/src/host.ts",
+          "from": "{}, { cause, actor: { kind: \"user\", id: this.userId } }",
+          "to": "{}, { cause, actor: { kind: \"contact\", id: contactId } }"
+        }
+      ]
+    },
+    {
+      "id": "M03",
+      "criterion": "TT01",
+      "expected_test": "TT01 manual creation, user assignment and real model-attempt facts are append-only and action-idempotent",
+      "reason": "omit actually appended model attempts",
+      "edits": [
+        {
+          "file": "packages/server/src/task-timeline.ts",
+          "from": ".slice(before?.models?.attempts.length ?? 0)",
+          "to": ".slice(0, 0)"
+        }
+      ]
+    },
+    {
+      "id": "M04",
+      "criterion": "TT02",
+      "expected_test": "TT02 contact dispatch and explicit rerun both record their actual creator and original source",
+      "reason": "lose rerun source task identity",
+      "edits": [
+        {
+          "file": "packages/server/src/host.ts",
+          "from": "rerunOfTask: src.task.id",
+          "to": "rerunOfTask: \"wrong-task\""
+        }
+      ]
+    },
+    {
+      "id": "M05",
+      "criterion": "TT02",
+      "expected_test": "TT02 contact dispatch and explicit rerun both record their actual creator and original source",
+      "reason": "misattribute contact dispatch to user",
+      "edits": [
+        {
+          "file": "packages/server/src/host.ts",
+          "from": "            recordTaskFacts(this.db, null, doc0, \"ContactDispatch\", { kind: \"contact\", id: contactId }, { requester });",
+          "to": "            recordTaskFacts(this.db, null, doc0, \"ContactDispatch\", { kind: \"user\", id: requester }, { requester });"
+        }
+      ]
+    },
+    {
+      "id": "M06",
+      "criterion": "TT03",
+      "expected_test": "TT03 task transitions preserve pre/post state and do not turn duplicate or rejected actions into history",
+      "reason": "replace before-state with after-state",
+      "edits": [
+        {
+          "file": "packages/server/src/task-timeline.ts",
+          "from": "before: before ? snapshot(before) : null",
+          "to": "before: before ? snapshot(doc.task) : null"
+        }
+      ]
+    },
+    {
+      "id": "M07",
+      "criterion": "TT03",
+      "expected_test": "TT03 task transitions preserve pre/post state and do not turn duplicate or rejected actions into history",
+      "reason": "report stop requested even when stopped was confirmed",
+      "edits": [
+        {
+          "file": "packages/server/src/task-timeline.ts",
+          "from": "after: snapshot(doc.task), data",
+          "to": "after: { ...snapshot(doc.task), ...(cause === \"StoppedConfirmed\" ? { state: \"T9_StopRequested\" } : {}) }, data"
+        }
+      ]
+    },
+    {
+      "id": "M08",
+      "criterion": "TT04",
+      "expected_test": "TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text",
+      "reason": "omit actual receipt of follow-up",
+      "edits": [
+        {
+          "file": "packages/server/src/task-timeline.ts",
+          "from": "  const prev = followSnapshot(before); const data = followSnapshot(next);",
+          "to": "  if (cause === \"FollowUpReceived\") return;\n  const prev = followSnapshot(before); const data = followSnapshot(next);"
+        }
+      ]
+    },
+    {
+      "id": "M09",
+      "criterion": "TT04",
+      "expected_test": "TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text",
+      "reason": "omit artifact application fact",
+      "edits": [
+        {
+          "file": "packages/server/src/task-timeline.ts",
+          "from": "  const prev = followSnapshot(before); const data = followSnapshot(next);",
+          "to": "  if (cause === \"FollowUpApplied\") return;\n  const prev = followSnapshot(before); const data = followSnapshot(next);"
+        }
+      ]
+    },
+    {
+      "id": "M10",
+      "criterion": "TT04",
+      "expected_test": "TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text",
+      "reason": "duplicate retractable source plaintext into timeline",
+      "edits": [
+        {
+          "file": "packages/server/src/task-timeline.ts",
+          "from": "seq: l.seq, state: l.state",
+          "to": "seq: l.seq, text: l.text, state: l.state"
+        }
+      ]
+    },
+    {
+      "id": "M11",
+      "criterion": "TT05",
+      "expected_test": "TT05 rebind appends both sides' real linkage versions atomically and replay does not duplicate them",
+      "reason": "drop target-side rebind history",
+      "edits": [
+        {
+          "file": "packages/server/src/task-timeline.ts",
+          "from": "  const prev = followSnapshot(before); const data = followSnapshot(next);",
+          "to": "  if (cause === \"FollowUpReboundIn\") return;\n  const prev = followSnapshot(before); const data = followSnapshot(next);"
+        }
+      ]
+    },
+    {
+      "id": "M12",
+      "criterion": "TT06",
+      "expected_test": "TT06 same-timestamp keyset pages are task-bound, stable under append and strictly validate cursors and limits",
+      "reason": "reverse id-keyset order",
+      "edits": [
+        {
+          "file": "packages/server/src/task-timeline.ts",
+          "from": "ORDER BY id ASC LIMIT ?",
+          "to": "ORDER BY id DESC LIMIT ?"
+        }
+      ]
+    },
+    {
+      "id": "M13",
+      "criterion": "TT06",
+      "expected_test": "TT06 same-timestamp keyset pages are task-bound, stable under append and strictly validate cursors and limits",
+      "reason": "accept another task cursor",
+      "edits": [
+        {
+          "file": "packages/server/src/task-timeline.ts",
+          "from": "v[0] !== q.taskId || ",
+          "to": ""
+        }
+      ]
+    },
+    {
+      "id": "M14",
+      "criterion": "TT06",
+      "expected_test": "TT06 same-timestamp keyset pages are task-bound, stable under append and strictly validate cursors and limits",
+      "reason": "accept decode-equivalent noncanonical base64url bits",
+      "edits": [
+        {
+          "file": "packages/server/src/task-timeline.ts",
+          "from": "      if (bytes.toString(\"base64url\") !== q.cursor) throw new Error(\"canonical encoding\");",
+          "to": ""
+        }
+      ]
+    },
+    {
+      "id": "M15",
+      "criterion": "TT06",
+      "expected_test": "TT06 same-timestamp keyset pages are task-bound, stable under append and strictly validate cursors and limits",
+      "reason": "perform idempotent SQL write while reading",
+      "edits": [
+        {
+          "file": "packages/server/src/host.ts",
+          "from": "    return readTaskTimeline(this.db, q);",
+          "to": "    run(this.db, \"UPDATE gg_task_events SET payload = payload WHERE task_id = ?\", q.taskId);\n    return readTaskTimeline(this.db, q);"
+        }
+      ]
+    },
+    {
+      "id": "M16",
+      "criterion": "TT07",
+      "expected_test": "TT07 task timeline enforces current room membership before returning any events or cursor",
+      "reason": "bypass current room membership",
+      "edits": [
+        {
+          "file": "packages/server/src/host.ts",
+          "from": "    if (!this.isMember(doc.roomId, { kind: \"user\", id: this.userId })) throw new HostError(\"forbidden\", \"你不在这个会话里\");",
+          "to": ""
+        }
+      ]
+    },
+    {
+      "id": "M17",
+      "criterion": "TT08",
+      "expected_test": "TT08 timeline insert failure rolls back creation and task transition with no durable or live ghost",
+      "reason": "swallow timeline INSERT fault so TaskDoc can commit without its fact",
+      "edits": [
+        {
+          "file": "packages/server/src/task-timeline.ts",
+          "from": "  run(db, \"INSERT INTO gg_task_events (task_id, room_id, at, payload) VALUES (?, ?, ?, ?)\", doc.task.id, doc.roomId, at, JSON.stringify(payload));",
+          "to": "  try { run(db, \"INSERT INTO gg_task_events (task_id, room_id, at, payload) VALUES (?, ?, ?, ?)\", doc.task.id, doc.roomId, at, JSON.stringify(payload)); } catch {}"
+        }
+      ]
+    },
+    {
+      "id": "M18",
+      "criterion": "TT09",
+      "expected_test": "TT09 real SQLite reopen preserves event bytes and continuation cursor but does not invent legacy task history",
+      "reason": "erase durable timeline when reopening SQLite",
+      "edits": [
+        {
+          "file": "packages/server/src/db.ts",
+          "from": "CREATE TABLE IF NOT EXISTS gg_task_events",
+          "to": "DROP TABLE IF EXISTS gg_task_events;\nCREATE TABLE IF NOT EXISTS gg_task_events"
+        }
+      ]
+    },
+    {
+      "id": "M19",
+      "criterion": "TT10",
+      "expected_test": "TT10 queued continuation is not labeled accepted until the old round ends and the native resume succeeds",
+      "reason": "falsely append accepted resume while it is only queued",
+      "edits": [
+        {
+          "file": "packages/server/src/task-timeline.ts",
+          "from": "  const prev = followSnapshot(before); const data = followSnapshot(next);",
+          "to": "  const prev = followSnapshot(before); const data = followSnapshot(next);\n  if (cause === \"ResumeQueued\") append(db, doc, doc.task, \"follow-up\", \"ResumeAccepted\", data, actor, at);"
+        }
+      ]
+    },
+    {
+      "id": "M20",
+      "criterion": "TT11",
+      "expected_test": "TT11 a failed target-side rebind fact rolls back both tasks, both links and the action receipt before a clean retry",
+      "reason": "swallow only target rebind INSERT failure and lose cross-task atomicity",
+      "edits": [
+        {
+          "file": "packages/server/src/task-timeline.ts",
+          "from": "  run(db, \"INSERT INTO gg_task_events (task_id, room_id, at, payload) VALUES (?, ?, ?, ?)\", doc.task.id, doc.roomId, at, JSON.stringify(payload));",
+          "to": "  try { run(db, \"INSERT INTO gg_task_events (task_id, room_id, at, payload) VALUES (?, ?, ?, ?)\", doc.task.id, doc.roomId, at, JSON.stringify(payload)); } catch (e) { if (cause !== \"FollowUpReboundIn\") throw e; }"
+        }
+      ]
+    },
+    {
+      "id": "M21",
+      "criterion": "TT04",
+      "expected_test": "TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text",
+      "reason": "omit actual accepted follow-up model turn attempt",
+      "edits": [
+        {
+          "file": "packages/server/src/task-timeline.ts",
+          "from": ".slice(before?.models?.attempts.length ?? 0)",
+          "to": ".slice(before?.models?.attempts.length ?? 0).filter((a) => a.reason !== \"turn\")"
+        }
+      ]
+    },
+    {
+      "id": "M22",
+      "criterion": "TT09",
+      "expected_test": "TT09 real SQLite reopen preserves event bytes and continuation cursor but does not invent legacy task history",
+      "reason": "invent creation history on first legacy-task read",
+      "edits": [
+        {
+          "file": "packages/server/src/host.ts",
+          "from": "    return readTaskTimeline(this.db, q);",
+          "to": "    if (!all(this.db, \"SELECT id FROM gg_task_events WHERE task_id = ?\", q.taskId).length) recordTaskFacts(this.db, null, doc, \"InventedLegacyCreate\");\n    return readTaskTimeline(this.db, q);"
+        }
+      ]
+    }
+  ]
+}

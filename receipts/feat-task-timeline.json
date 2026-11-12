@@ -1,0 +1,27 @@
+{
+  "slice": "Q05/U80/D21 内置P0只追加任务时间线；现有持久事务薄接缝、成员只读API、keyset分页与SQLite重启；无UI/旧历史倒推",
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "未测",
+      "reason": "最终同体11红/11绿、目标lint/typecheck已实跑；22变异/依赖/云全量/正式沙箱门禁待box4按共享锁执行，局部证明不提升完整R-02。"
+    },
+    {
+      "id": "AC-02",
+      "status": "未测",
+      "reason": "本片仅任务只追加事实流；真实模型/CLI、完整任务链、前端、摘要插件未验收。"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "model": "gpt-6.1-sol"
+  },
+  "red": {
+    "commit": "63c8c4e5d18f1dc76f76d63e3a8fb273e631cf21"
+  },
+  "unverifiable": "R-02云全量与正式门禁尚未跑；AC-02完整产品链、真实模型/CLI/前端不在本片证明内；未核provenance，review=null不得视作来源实核。",
+  "waiver": null,
+  "review": null,
+  "notes": "Initial 9 tests genuinely red before implementation. Final 11 bodies include retrospective fixture corrections and added TT10/TT11/canonical/zero-write controls; final same bodies replayed on independent empty-stream red and green, 11 named ERR_ASSERTION failures then 11 passes. Mutation definitions also retrospective. No assertion weakening, skipped test, self-review, merge/deploy or forged provenance."
+}
