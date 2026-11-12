@@ -227,3 +227,21 @@ test("CXP-14 concurrent native turn starts cannot create a second active turn be
     assert.equal((await client.interrupt("native-thread-1", "native-turn-1")).ok, true);
   } finally { await client.quiesce(1000); }
 });
+
+test("CXP-15 explicit next-turn model and effort are sent unchanged and unsupported capabilities never enter native input", async () => {
+  const cfg = options(); const client = createCodexComputeProtocol(cfg);
+  try {
+    assert.equal((await client.initialize()).ok, true);
+    assert.equal((await client.startThread({ model: "probe-A", effort: "low" })).ok, true);
+    assert.equal((await client.startTurn("native-thread-1", "one", { model: "probe-A", effort: "low" })).ok, true);
+    assert.equal((await client.settled("native-thread-1", "native-turn-1")).ok, true);
+    const denied = await client.startTurn("native-thread-1", "DENIED_INPUT", { model: "probe-A", effort: "high" });
+    assert.equal(denied.ok, false);
+    assert.equal((await client.startTurn("native-thread-1", "two", { model: "probe-B", effort: "high" })).ok, true);
+    assert.equal((await client.settled("native-thread-1", "native-turn-2")).ok, true);
+    const wire = readFileSync(path.join(cfg.configDir, "wire-requests.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    const sent = wire.filter((m) => m.method === "turn/start");
+    assert.deepEqual(sent.map((m) => [m.params.model, m.params.effort]), [["probe-A", "low"], ["probe-B", "high"]]);
+    assert.equal(JSON.stringify(wire).includes("DENIED_INPUT"), false);
+  } finally { await client.quiesce(1000); }
+});
