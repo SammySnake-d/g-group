@@ -18,10 +18,11 @@
   "review": null,
   "waiver": null,
   "review_status": "待Mira Bot安排Claude独立跨厂商审查;作者不自签",
-  "unverifiable": "Compute为确定性适配器夹具,外部文件写入是真实持久事实,不是真模型/CLI证明。通知只报告宿主已持久化的completed事实,无法推断未上报的外部副作用。任务补充/续接来源关联、R-Rule失效与整套前端未在本片证明。通知落聊天system消息与措辞是候选;任务停T5如实保持。",
+  "unverifiable": "AC-08: Compute为确定性适配器夹具,外部文件写入是真实持久事实,不是真模型/CLI证明。通知只报告宿主已持久化的completed事实,无法推断未上报的外部副作用。任务补充/续接来源关联、R-Rule失效与整套前端未在本片证明。通知落聊天system消息与措辞是候选;任务停T5如实保持。",
   "notes": {
     "coordination": "Mira Bot #3038/#3040;box4同heavy.lock,防回环→额度→本片→Q05→Q08;不动#71/#73原分支",
     "original_witness": "ceaa35359bc33ea68ead1da37c8cc33634a3917e原proof副本未改;原四项测试sha fa59007613a6db02dc87d03674ded9783bb198666e6411e24994d82b1c49dd3d",
-    "provenance": "本机原生session01a1cfc8-db89-7400-b3de-876bd8478982 turn_context.model实际读取gpt-6.1-sol;G-PROVENANCE在review=null时未实核"
+    "provenance": "本机原生session01a1cfc8-db89-7400-b3de-876bd8478982 turn_context.model实际读取gpt-6.1-sol;G-PROVENANCE在review=null时未实核",
+    "red_snapshot_chronology": "初始6项的真实4绿/2红记录在dbb9744f之前;另外两条隐私/原子控制在产品补丁后扩展,再把最终同体8项放回依赖-only实现98da21c0实跑4绿/4红;不伪称8项全是补丁之前写的。"
   }
 }
