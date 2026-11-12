@@ -1,0 +1,31 @@
+docs/proof/coverage-invariants/README.md
+  s_9d7fa6e9d65b83::t_33c5e44e12f542 48-67
+docs/proof/coverage-invariants/mutations.json
+  s_9d7fa6e9d65b83::t_82e9788e7ca7af 1-214
+docs/proof/coverage-invariants/red-green.json
+  s_9d7fa6e9d65b83::t_679be89653b92d 1-15
+docs/proof/coverage-invariants/result.json
+  s_9d7fa6e9d65b83::t_a83f2c860061da 1-96
+docs/proof/coverage-invariants/source-freeze.json
+  s_9d7fa6e9d65b83::t_e948ad39e03293 1-504
+docs/proof/coverage-invariants/source-identity.json
+  s_9d7fa6e9d65b83::t_668345b4e58f6d 1-15
+receipts/feat-coverage-invariants.json
+  s_9d7fa6e9d65b83::t_e653f3134a7331 58-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "943302320f3b49fe429fba79f3c3e7d0e2a24197",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
