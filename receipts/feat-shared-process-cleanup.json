@@ -18,7 +18,7 @@
     "codex:01a1d043-1042-7e61-9981-968868c25de1"
   ],
   "red": {
-    "commit": "3091ca6d29cdfdb36150cf7dea3c2e3b44a95fd9"
+    "commit": "9cae32b6d535d85433d08b8736a7d9b802386abd"
   },
   "unverifiable": "AC-23 not accepted by thin proof. Full original CC baseline/candidate and cloud full/type/lint, independent review, provenance and product integration remain pending. Escaped system-managed/double-fork processes remain outside discoverable scope. Windows full-tree confirmation fails closed.",
   "waiver": null,
@@ -42,7 +42,8 @@
     "retainedExecutorFailures": [
       "lockf acquisition exit 75 twice",
       "initial typecheck exit 2: incomplete external dependency symlinks; corrected exit 0"
-    ]
+    ],
+    "sameBodyNamedRed": 12
   },
   "authorIdentitySource": "CODEX_THREAD_ID and CODEX_SESSION_ID observed in this worker environment; model label inherited from the frozen first-slice receipt, no new provenance approval claimed."
 }

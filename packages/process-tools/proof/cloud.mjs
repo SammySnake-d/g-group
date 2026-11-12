@@ -74,7 +74,7 @@ const nodeTests = [process.execPath, "--test", "--test-concurrency=1", "--test-t
 try {
   run("baseline-cc-original", baseline, [...nodeTests, ...tests], true);
   run("candidate-cc-original", root, [...nodeTests, ...tests], true);
-  run("candidate-shared-cleanup", root, [...nodeTests, "packages/process-tools/src/cleanup.test.ts", "packages/process-tools/src/procgroup.test.ts", "scripts/gates/process-layer.test.ts"], true);
+  run("candidate-shared-cleanup", root, [...nodeTests, "packages/process-tools/src/cleanup.test.ts", "packages/process-tools/src/procgroup.test.ts", "scripts/gates/process-layer.test.ts", "packages/adapter-cc-compute/src/shared-process.test.ts"], true);
   run("legacy-resident-bridge", root, [...nodeTests, "packages/adapter-cc-compute/proof/shared-process-bridge.test.mjs"], true);
   run("cleanup-layer-mutants", root, [process.execPath, "packages/process-tools/proof/mutations.mjs", path.join(out, "mutations")], false);
   run("layer-cli-selftest", root, ["env", "GATE_SELFTEST_ONLY=Q08", "GATE_SELFTEST_JOBS=1", process.execPath, "scripts/gates/run-all.ts", "--self-test"], false);

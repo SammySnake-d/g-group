@@ -91,3 +91,28 @@ test("S-PROC-05 AC-23: actual unavailable ps and pgrep fail closed instead of re
   assert.equal(result.ok, false);
   assert.match(result.reason, /读不到进程表/);
 });
+
+test("S-PROC-06 AC-23: 主进程先 exit 0 而 3 个子程序仍活时不得报已停止", async () => {
+  const script = fileURLToPath(new URL("../test-support/three-children.mjs", import.meta.url));
+  const child = spawn(process.execPath, [script], { detached: true, stdio: ["ignore", "pipe", "ignore"] });
+  let pids: number[] = [];
+  try {
+    const ready = await once(child.stdout!, "data", { signal: AbortSignal.timeout(5000) });
+    pids = (JSON.parse(String(ready[0])) as { pids: number[] }).pids;
+    const cleanup = createProcessCleanup(child);
+    cleanup.capture();
+    const exit = once(child, "exit");
+    child.kill("SIGTERM");
+    await exit;
+    assert.equal(child.exitCode, 0);
+    assert.deepEqual(pids.map(live), [true, true, true], "exit 0 did not stop any of the three children");
+    const receipt = await cleanup.quiesce(2000, 100);
+    assert.equal(receipt.ok, true);
+    assert.deepEqual(pids.map(live), [false, false, false], "all three real exits are required before the stopped receipt");
+  } finally {
+    for (const pid of pids) { try { process.kill(pid, "SIGKILL"); } catch { /* exited */ } }
+    if (child.pid !== undefined) { try { process.kill(-child.pid, "SIGKILL"); } catch { /* exited */ }
+    }
+    if (child.exitCode === null && child.signalCode === null) await once(child, "exit");
+  }
+});

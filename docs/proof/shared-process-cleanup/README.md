@@ -1,6 +1,6 @@
 # Q08 middle slice: one shared OS process cleanup implementation
 
-Base: `3216bb1eeff5d1f0229b610cd37cb90e92db48c5` (the frozen pure Compute port slice). Primary semantic red: `3091ca6d29cdfdb36150cf7dea3c2e3b44a95fd9`.
+Base: `3216bb1eeff5d1f0229b610cd37cb90e92db48c5` (the frozen pure Compute port slice). Initial primary semantic red: `3091ca6d29cdfdb36150cf7dea3c2e3b44a95fd9`. Complete same-body 12-name red: `9cae32b6d535d85433d08b8736a7d9b802386abd`.
 
 ## Scope and ownership
 
