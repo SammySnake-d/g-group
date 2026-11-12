@@ -1,0 +1,19 @@
+receipts/feat-pi-protocols.json
+  s_30afae688b7542::t_bd360083662008 1-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "de5d36ef80c9799500bec6c334f2799bddcc42a3",
+  "prompts": {},
+  "sessions": {
+    "s_30afae688b7542": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1af55cf420d9f162",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
