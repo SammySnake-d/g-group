@@ -22,7 +22,14 @@
   },
   "unverifiable": "AC-35：scriptedMind的无模型proof只证明实际插件安装/隔离RPC/service/SQLite，不能代替真实模型、UI或完整US12。M12/M18旧测试曾漏来源与重复RPC，当前已加强并重跑18/18；所有旧失败保留。G-PROVENANCE在review=null时短路不是实核通过；宿主没有兼容turns.jsonl，不伪造。",
   "waiver": null,
-  "review": null,
+  "review": {
+    "agent": "claude",
+    "session": "claude:c5c887e6-a469-431e-8341-37f7016797dc",
+    "model": "group/opus",
+    "verdict": "reject",
+    "reviewed_hash": "63fc6591d1d8fc05d497fd34924eaa1d8b2361e02622a72d04eeb82cb6bad69a",
+    "notes": "第 1 轮 REJECT。hy4 辅审因线路 403 未产出，本轮无辅审。作者数字全部复现（红16/绿16、18/18 具名 ERR_ASSERTION、全量 1501/1501、typecheck/lint=0，hash 一致）；驳回因产品行为：R1-01 已有插件声明的 /rss、/push 被打断；R1-02 插件命令绕过成员与解散只读校验；R1-03 插件输出以宿主身份进入联系人上下文；R1-04 /ketchup 反复把旧失败任务报成变更；R1-05 自构 14 个单点故障存活 10 个；R1-06 收据未写明 185/192 行产品代码出自 codex:534f3614 子会话（chatflows/gpt-6-astra）且红提交为事后换回直通桩。来源以 Codex 原生记录核对；G-PROVENANCE 读不了原生记录，填 review 后实判「审查会话记录不存在」（本轮未结束），不宣称已认证。详见 reviews/feat-slash-plugins-complete.md。"
+  },
   "review_status": "待Mira Bot安排独立审查",
   "notes": "原候选11aa677c树未动；当前副本修unknown参数真实对象校验并强化证明。测试绿/变异不等于独立review。附v3冻结506文件SHA与原始完整日志；后续正常pre-push输出另存接手包，不绕钩子。公平/阈值/跳数等候选不在本片定案。"
 }
