@@ -23,7 +23,7 @@
       "id": "R-05",
       "status": "通过",
       "reason": "仅本片15具名判据作者对照：原15+7严格指定ERR_ASSERTION完整杀死，另补事务判据阳性9绿1红/同代码单开关阴性10绿；完整#71、全需求与独立审查不在这项通过范围。",
-      "evidence": "docs/proof/mention-loop-ca2/r05-coverage.json; docs/proof/mention-loop-ca2/cloud-summary.json; docs/proof/mention-loop-ca2/transaction-supplement.json"
+      "evidence": "docs/proof/mention-loop-ca2/r05-coverage.json"
     },
     {
       "id": "AC-30",
