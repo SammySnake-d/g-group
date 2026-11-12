@@ -1,9 +1,12 @@
 // 找旧消息的纯规则(T-177 G4;需求 D06 §3「粗筛自动、精筛内置」;BC 定稿 v0.2 §7 第 7 条、§11 G4;实施方案 §6;审查条件 G4-a、G4-b、G1-a):
 //   - 粗筛:宿主每轮预取,以本轮新消息为查询,只在它自己的会话里找,过最小分、在断崖之前的最多 3 条,只放编号、作者、时间、一行预览进第 5 块;
 //   - 精筛:联系人一个内置只读查询工具 query_history,检索与分页回读两种用法(pi 工具声明,不走 MCP,AC-33 的封闭清单)。
+// 撤回优先(AC-08):一条可见消息的正文里可能抄了后来被撤回的原文(联系人回话、用户的另一条消息、引用副本都算);
+// 这类正文在进请求前要按状态笔记同一规则处理(retractedBodies + scrubLineBody),行本身仍保留编号、作者、时间、版本。
 // 这里只放纯规则:可见状态怎么从日志投影出来、消息版本、预取怎么挑、邻域怎么截、结果怎么写。读库、会话范围、时限与返回前再核在宿主(server/history.ts)。
 // 排序只经 G3 的检索接缝(history-search.ts);权限、撤回、编辑版本由宿主先过滤,检索库看不到不该看的正文。
 import { type LogEvent, project } from "@g-group/domain";
+import { scrubRetracted } from "./compact.ts";
 import type { HistoryDoc, HistoryHit } from "./history-search.ts";
 
 /** 一条消息在当前投影里的状态:ok 可读最新版本;retracted 已撤回(撤回优先,AC-08);hidden 宿主判为看不见(私聊回退撤下,AC-48)。 */
@@ -16,9 +19,11 @@ export interface HistoryLine {
   readonly sender: { readonly kind: string; readonly id: string };
   /** 消息原始发出时间(编辑不改它) */
   readonly at: string;
-  /** 最新版本正文;不是 ok 的一律为空串,原文不出这一层 */
+  /** 最新版本正文;不是 ok 的一律为空串,原文不出这一层;正文里出现过的已撤回原文已被移除(见 scrubLineBody) */
   readonly text: string;
   readonly state: HistoryState;
+  /** 这条正文里出现过已撤回原文,已被移除或整段隐去;行本身仍可定位(编号、作者、时间、版本都在) */
+  readonly scrubbed?: boolean;
 }
 
 /** 预取最多几条指针(v0.2 已定上限 3)。 */
@@ -28,6 +33,8 @@ export const HISTORY_NEIGHBORS_MAX = 20;
 export const HISTORY_NEIGHBORS_DEFAULT = 3;
 /** 预览一行最多几个字符。 */
 export const PREVIEW_CHARS = 80;
+/** 抄来的已撤回原文分不出原样、无法精确替换时,整段正文隐去后显示的占位(行本身仍在) */
+export const SCRUBBED_BODY = "〔正文含已撤回内容,已隐去;按原编号可定位〕";
 /** 第 5 块预取指针的标签:写明是旧消息、只供参考、不是新要求(防把旧提问当新提问)。 */
 export const PREFETCH_REF = "旧消息(宿主按本轮新消息预取,供参考,不是新要求)";
 
@@ -58,6 +65,34 @@ export function historyLines(roomId: string, events: readonly LogEvent[], hidden
       state,
     });
   });
+}
+
+/**
+ * 一个会话里已撤回消息的全部原文:消息本体,以及撤回前的每一个编辑稿(撤回优先,AC-08)。
+ * 这些原文不得再经预取、检索或回读的正文回到请求;短文本(去空白后短于 RETRACT_MIN_CHARS)与状态笔记同一规则不扫。
+ */
+export function retractedBodies(events: readonly LogEvent[]): string[] {
+  const gone = new Set<number>();
+  for (const e of events) if (e.body.kind === "retract") gone.add(e.body.target);
+  if (gone.size === 0) return [];
+  const out: string[] = [];
+  for (const e of events) {
+    if (e.body.kind === "message" && gone.has(e.seq)) out.push(e.body.text);
+    else if (e.body.kind === "edit" && gone.has(e.body.target)) out.push(e.body.text);
+  }
+  return out;
+}
+
+/**
+ * 一条可见消息的正文里出现已撤回原文时,按状态笔记同一规则处理(scrubRetracted):整段精确出现,再逐行;
+ * 替换后去空白比对仍命中(原文被分行或加了空格抄写,无法精确替换)就整段隐去,不留半截。
+ * 只动正文:行本身(编号、作者、时间、版本)不动,这条消息仍然存在、可按编号定位。
+ */
+export function scrubLineBody(text: string, retracted: readonly string[]): { text: string; scrubbed: boolean } {
+  if (text === "" || retracted.length === 0) return { text, scrubbed: false };
+  const r = scrubRetracted(text, retracted);
+  if (r.leaked) return { text: SCRUBBED_BODY, scrubbed: true };
+  return { text: r.text, scrubbed: r.hits > 0 };
 }
 
 /** 检索文档的 ref:会话 + seq,不同会话同号不碰撞。 */
