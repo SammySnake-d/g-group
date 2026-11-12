@@ -117,3 +117,21 @@ test("CXP-08 native exit zero without matching completion is a failed turn not s
     assert.deepEqual(done, { ok: true, value: { computeId: "native-thread-1", kind: "failed", reason: "native process exited before matching turn/completed", code: 0, signal: null, violations: [] } });
   } finally { await client.quiesce(1000); }
 });
+
+test("CXP-09 native started and terminal events are observable in kernel order exactly once", async () => {
+  const client = createCodexComputeProtocol(options());
+  try {
+    assert.equal((await client.initialize()).ok, true);
+    assert.equal((await client.startThread({ model: "probe-A", effort: "low" })).ok, true);
+    assert.equal((await client.startTurn("native-thread-1", "events", { model: "probe-A", effort: "low" })).ok, true);
+    assert.equal((await client.settled("native-thread-1", "native-turn-1")).ok, true);
+    const events = client.events()[Symbol.asyncIterator]();
+    const started = await events.next();
+    assert.equal(started.done, false);
+    assert.equal(started.value?.kind, "started");
+    const completed = await events.next();
+    assert.equal(completed.value?.kind, "completed");
+    assert.equal((await client.quiesce(1000)).ok, true);
+    assert.equal((await events.next()).done, true);
+  } finally { await client.quiesce(1000); }
+});
