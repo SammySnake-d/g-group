@@ -1,0 +1,31 @@
+docs/proof/task-timeline-v2/README.md
+  s_9d7fa6e9d65b83::t_2c137c03747a91 34-35
+docs/proof/task-timeline-v2/final-lint.log
+  s_9d7fa6e9d65b83::t_7592a120a08c70 1-5
+docs/proof/task-timeline-v2/final-narrow-verification.json
+  s_9d7fa6e9d65b83::t_b02bb379bb7dab 1-61
+docs/proof/task-timeline-v2/final-thirteen-green.tap
+  s_9d7fa6e9d65b83::t_a2bdac531a2c3f 1-88
+docs/proof/task-timeline-v2/final-typecheck.log
+  s_9d7fa6e9d65b83::t_75faf318b99234 1-4
+docs/proof/task-timeline-v2/lint-v2.log
+  s_9d7fa6e9d65b83::t_66adf0a585a521 1-5
+docs/proof/task-timeline-v2/typecheck-v2.log
+  s_9d7fa6e9d65b83::t_57fbb487c3b0eb 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "55dcef23196da88ad4e0dabc18b7686db2e044ea",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
