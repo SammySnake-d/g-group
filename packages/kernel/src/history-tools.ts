@@ -6,6 +6,7 @@
 // 这里只放纯规则:可见状态怎么从日志投影出来、消息版本、预取怎么挑、邻域怎么截、结果怎么写。读库、会话范围、时限与返回前再核在宿主(server/history.ts)。
 // 排序只经 G3 的检索接缝(history-search.ts);权限、撤回、编辑版本由宿主先过滤,检索库看不到不该看的正文。
 import { type LogEvent, project } from "@g-group/domain";
+import { scrubRetracted } from "./compact.ts";
 import type { HistoryDoc, HistoryHit } from "./history-search.ts";
 
 /** 一条消息在当前投影里的状态:ok 可读最新版本;retracted 已撤回(撤回优先,AC-08);hidden 宿主判为看不见(私聊回退撤下,AC-48)。 */
@@ -71,8 +72,15 @@ export function historyLines(roomId: string, events: readonly LogEvent[], hidden
  * 这些原文不得再经预取、检索或回读的正文回到请求;短文本(去空白后短于 RETRACT_MIN_CHARS)与状态笔记同一规则不扫。
  */
 export function retractedBodies(events: readonly LogEvent[]): string[] {
-  void events;
-  return [];
+  const gone = new Set<number>();
+  for (const e of events) if (e.body.kind === "retract") gone.add(e.body.target);
+  if (gone.size === 0) return [];
+  const out: string[] = [];
+  for (const e of events) {
+    if (e.body.kind === "message" && gone.has(e.seq)) out.push(e.body.text);
+    else if (e.body.kind === "edit" && gone.has(e.body.target)) out.push(e.body.text);
+  }
+  return out;
 }
 
 /**
@@ -81,8 +89,10 @@ export function retractedBodies(events: readonly LogEvent[]): string[] {
  * 只动正文:行本身(编号、作者、时间、版本)不动,这条消息仍然存在、可按编号定位。
  */
 export function scrubLineBody(text: string, retracted: readonly string[]): { text: string; scrubbed: boolean } {
-  void retracted;
-  return { text, scrubbed: false };
+  if (text === "" || retracted.length === 0) return { text, scrubbed: false };
+  const r = scrubRetracted(text, retracted);
+  if (r.leaked) return { text: SCRUBBED_BODY, scrubbed: true };
+  return { text: r.text, scrubbed: r.hits > 0 };
 }
 
 /** 检索文档的 ref:会话 + seq,不同会话同号不碰撞。 */

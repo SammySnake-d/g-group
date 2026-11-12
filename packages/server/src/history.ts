@@ -89,8 +89,17 @@ export class HistoryAccess {
    * retracted 为空时原样返回(不扫)。换掉的条数进诊断。
    */
   private scrub(lines: readonly HistoryLine[], retracted: readonly string[]): HistoryLine[] {
-    void retracted;
-    return [...lines];
+    if (retracted.length === 0) return [...lines];
+    let hits = 0;
+    const out = lines.map((l) => {
+      if (l.state !== "ok") return l;
+      const r = scrubLineBody(l.text, retracted);
+      if (!r.scrubbed) return l;
+      hits++;
+      return { ...l, text: r.text, scrubbed: true };
+    });
+    if (hits > 0) this.d.report("history-scrubbed", { lines: hits });
+    return out;
   }
 
   /** 本轮会话范围里,联系人此刻仍能读的那些(按 id 排序)。 */
