@@ -1,0 +1,75 @@
+packages/server/proof/slash-plugins-v3/README.md
+  s_9d7fa6e9d65b83::t_960e59de778aa7 1-32
+packages/server/proof/slash-plugins-v3/out/mutations/M01.tap
+  s_9d7fa6e9d65b83::t_dc51235b58603f 1-385
+packages/server/proof/slash-plugins-v3/out/mutations/M02.tap
+  s_9d7fa6e9d65b83::t_cf6cfb5640d657 1-129
+packages/server/proof/slash-plugins-v3/out/mutations/M03.tap
+  s_9d7fa6e9d65b83::t_b019b6f5f2bdec 1-135
+packages/server/proof/slash-plugins-v3/out/mutations/M04.tap
+  s_9d7fa6e9d65b83::t_4d025530ab6714 1-358
+packages/server/proof/slash-plugins-v3/out/mutations/M05.tap
+  s_9d7fa6e9d65b83::t_333b2d7420105a 1-125
+packages/server/proof/slash-plugins-v3/out/mutations/M06.tap
+  s_9d7fa6e9d65b83::t_ea91f2a035a76c 1-125
+packages/server/proof/slash-plugins-v3/out/mutations/M07.tap
+  s_9d7fa6e9d65b83::t_9ac9b2bd3e6b72 1-125
+packages/server/proof/slash-plugins-v3/out/mutations/M08.tap
+  s_9d7fa6e9d65b83::t_a1e3c0f30bbf8f 1-144
+packages/server/proof/slash-plugins-v3/out/mutations/M09.tap
+  s_9d7fa6e9d65b83::t_43f16b04fdc110 1-144
+packages/server/proof/slash-plugins-v3/out/mutations/M10.tap
+  s_9d7fa6e9d65b83::t_4a07022325a712 1-125
+packages/server/proof/slash-plugins-v3/out/mutations/M11.tap
+  s_9d7fa6e9d65b83::t_8b986ab6655a15 1-125
+packages/server/proof/slash-plugins-v3/out/mutations/M12.tap
+  s_9d7fa6e9d65b83::t_52d0627f164d4b 1-339
+packages/server/proof/slash-plugins-v3/out/mutations/M13.tap
+  s_9d7fa6e9d65b83::t_db447b7cb6489c 1-130
+packages/server/proof/slash-plugins-v3/out/mutations/M14.tap
+  s_9d7fa6e9d65b83::t_b0f4bd68c62095 1-123
+packages/server/proof/slash-plugins-v3/out/mutations/M15.tap
+  s_9d7fa6e9d65b83::t_90e3d64004180b 1-125
+packages/server/proof/slash-plugins-v3/out/mutations/M16.tap
+  s_9d7fa6e9d65b83::t_df35985a20019f 1-322
+packages/server/proof/slash-plugins-v3/out/mutations/M17.tap
+  s_9d7fa6e9d65b83::t_a361ec8b6d7c16 1-125
+packages/server/proof/slash-plugins-v3/out/mutations/M18.tap
+  s_9d7fa6e9d65b83::t_73fdde9c073218 1-135
+packages/server/proof/slash-plugins-v3/out/mutations/baseline.tap
+  s_9d7fa6e9d65b83::t_5d75e664efe6d8 1-106
+packages/server/proof/slash-plugins-v3/out/mutations/mutations.json
+  s_9d7fa6e9d65b83::t_762390e4552d89 1-618
+packages/server/proof/slash-plugins-v3/out/mutations/parser-calibration.tap
+  s_9d7fa6e9d65b83::t_b69c8b6fadda45 1-63
+packages/server/proof/slash-plugins-v3/out/mutations/parser-load-error.tap
+  s_9d7fa6e9d65b83::t_2294d434c4093d 1-40
+packages/server/proof/slash-plugins-v3/out/red-green.json
+  s_9d7fa6e9d65b83::t_d5ada04387b82f 1-40
+packages/server/proof/slash-plugins-v3/out/result.json
+  s_9d7fa6e9d65b83::t_b6e9d68bb11e98 1-94
+packages/server/proof/slash-plugins-v3/out/source-freeze.json
+  s_9d7fa6e9d65b83::t_7bf39b25003d6b 1-513
+packages/server/proof/slash-plugins-v3/out/status.json
+  s_9d7fa6e9d65b83::t_11496126cebb8f 1-90
+packages/server/proof/slash-plugins-v3/run.py
+  s_9d7fa6e9d65b83::t_972a59faa87f41 1-58
+receipts/feat-slash-plugins-complete.json
+  s_9d7fa6e9d65b83::t_0575346529e702 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5cc1616ba447a7bbafd90af6bd28873d967f8f4b",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
