@@ -1,0 +1,28 @@
+{
+  "slice": "T-177 G3/G5 integration: both coarse and fine memory-write neighborhoods use the existing BC hybrid search after contact/status/persona/room filters; deterministic ties and empty no-hit results. No G4 dependency.",
+  "acceptance": [
+    {
+      "id": "AC-42",
+      "status": "未测",
+      "reason": "本片确定性接线范围已通过：3 条具名红绿测试、云端全量 1730/1730、12 个定点变异全杀、隔离 G3+G5 无 G4 组合 31/31。真实模型 153 份弱模型矩阵、原强模型 fnqtz 路由与质量/延迟/成本判定未完成，不能将 AC-42 整体标通过；未改生产阈值。",
+      "evidence": "receipts/evidence/t177-g35/verification.json"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "receipts/evidence/t177-g35/mutations.json",
+      "reason": "12 个定点变异分别由具名 G35 测试按名杀死；编译/导入失败 0；前后原样对照各 3/3。"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:3e47edad-c6be-45fd-be1e-5d2f90a51145",
+    "model": "gpt-6.1-sol"
+  },
+  "red": {
+    "commit": "62d6abff25da95b69b0c1ca2146a94bb22af88fe"
+  },
+  "unverifiable": "AC-42：G35-01/02 证明字面 hybrid 检索的相关性接线、G35-03 证明前置权限边界；不证明模型会正确提炼、写入更快或总成本更低。首次 ASCII 非相关夹具被现有 fuzzy 检索合法命中，已保留失败日志并改用经真实 seam 表征的不命中文字；没有改算法或弱化断言。12 个变异为作者手工选择，不是独立审查。原始组合和旧 g3/G4 观测不覆盖本次新组提交。",
+  "waiver": null,
+  "review": null
+}

@@ -1,0 +1,175 @@
+{
+  "summary": {
+    "node": "v24.21.0",
+    "mutations": 12,
+    "killed": 12,
+    "survived": 0,
+    "control": {
+      "passed": 3,
+      "failed": 0
+    },
+    "afterControl": {
+      "passed": 3,
+      "failed": 0,
+      "exit": 0
+    }
+  },
+  "results": [
+    {
+      "id": "G35-M01",
+      "file": "packages/server/src/host.ts",
+      "why": "return every eligible memory instead of retrieval",
+      "designated": "packages/server/src/memory-write-neighbors.test.ts › G35-02…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G35-02 a query with no matching memory gives both write paths an empty neighborhood"
+      ]
+    },
+    {
+      "id": "G35-M02",
+      "file": "packages/server/src/host.ts",
+      "why": "ignore the write-neighborhood query",
+      "designated": "packages/server/src/memory-write-neighbors.test.ts › G35-01…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order"
+      ]
+    },
+    {
+      "id": "G35-M03",
+      "file": "packages/server/src/host.ts",
+      "why": "reverse stable tied order",
+      "designated": "packages/server/src/memory-write-neighbors.test.ts › G35-01…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order"
+      ]
+    },
+    {
+      "id": "G35-M04",
+      "file": "packages/server/src/host.ts",
+      "why": "include revoked and superseded entries",
+      "designated": "packages/server/src/memory-write-neighbors.test.ts › G35-03…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G35-03 both write paths keep contact, room, status and persona boundaries before retrieval"
+      ]
+    },
+    {
+      "id": "G35-M05",
+      "file": "packages/server/src/host.ts",
+      "why": "include persona suggestions",
+      "designated": "packages/server/src/memory-write-neighbors.test.ts › G35-03…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G35-03 both write paths keep contact, room, status and persona boundaries before retrieval"
+      ]
+    },
+    {
+      "id": "G35-M06",
+      "file": "packages/server/src/host.ts",
+      "why": "include memories from unrelated rooms",
+      "designated": "packages/server/src/memory-write-neighbors.test.ts › G35-03…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G35-03 both write paths keep contact, room, status and persona boundaries before retrieval"
+      ]
+    },
+    {
+      "id": "G35-M07",
+      "file": "packages/server/src/host.ts",
+      "why": "drop global matching entries",
+      "designated": "packages/server/src/memory-write-neighbors.test.ts › G35-01…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order"
+      ]
+    },
+    {
+      "id": "G35-M08",
+      "file": "packages/server/src/host.ts",
+      "why": "drop degraded matching entries",
+      "designated": "packages/server/src/memory-write-neighbors.test.ts › G35-01…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order"
+      ]
+    },
+    {
+      "id": "G35-M09",
+      "file": "packages/server/src/host.ts",
+      "why": "mix another contact memory into this neighborhood",
+      "designated": "packages/server/src/memory-write-neighbors.test.ts › G35-03…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G35-03 both write paths keep contact, room, status and persona boundaries before retrieval"
+      ]
+    },
+    {
+      "id": "G35-M10",
+      "file": "packages/server/src/host.ts",
+      "why": "coarse path passes an empty query",
+      "designated": "packages/server/src/memory-write-neighbors.test.ts › G35-01…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order"
+      ]
+    },
+    {
+      "id": "G35-M11",
+      "file": "packages/server/src/host.ts",
+      "why": "fine path passes an empty query",
+      "designated": "packages/server/src/memory-write-neighbors.test.ts › G35-01…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order"
+      ]
+    },
+    {
+      "id": "G35-M12",
+      "file": "packages/server/src/host.ts",
+      "why": "lose matched memory bodies",
+      "designated": "packages/server/src/memory-write-neighbors.test.ts › G35-01…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order"
+      ]
+    }
+  ]
+}
