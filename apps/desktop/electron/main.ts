@@ -4,7 +4,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { app, BrowserWindow, ipcMain, net, protocol, session, shell } from "electron";
-import { IPC, isMethodName } from "@g-group/api-contract";
+import { ATTACHMENT_UPLOAD_IPC_BYTES, IPC, isMethodName } from "@g-group/api-contract";
 import { checkIpcRequest, isTrustedOrigin } from "@g-group/ui-core";
 import { attachServer, handleInvoke, subscribe } from "./bridge.ts";
 import { AppConfig } from "./app-config.ts";
@@ -87,7 +87,7 @@ function createWindow() {
 }
 
 ipcMain.handle(IPC.invoke, async (event, req: unknown) => {
-  const checked = checkIpcRequest(req, event.senderFrame?.url ?? "", { isMethod: isMethodName, ...(DEV_ORIGIN ? { devOrigin: DEV_ORIGIN } : {}) });
+  const checked = checkIpcRequest(req, event.senderFrame?.url ?? "", { isMethod: isMethodName, methodByteLimits: { "attachments.upload": ATTACHMENT_UPLOAD_IPC_BYTES }, ...(DEV_ORIGIN ? { devOrigin: DEV_ORIGIN } : {}) });
   if (!checked.ok) return { ok: false, error: { code: checked.error.startsWith("不认识的方法") ? "unknown_method" : "forbidden", message: checked.error } };
   return handleInvoke(checked.method, checked.params);
 });

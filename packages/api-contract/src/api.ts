@@ -45,6 +45,10 @@ import { arr, bool, id, int, isoTime, json, lit, nullable, obj, oneOf, opt, type
 /** 合同版本:破坏性改动加主版本;渲染进程启动时用 session.hello 核对。 */
 export const API_VERSION = "0.1.0";
 
+/** 附件 schema 与桌面 IPC 使用同一组上传边界;文件名在 JSON 中每字符最多转义为 6 字节。 */
+export const ATTACHMENT_UPLOAD_LIMITS = Object.freeze({ name: 500, base64: 35_000_000 });
+export const ATTACHMENT_UPLOAD_IPC_BYTES = ATTACHMENT_UPLOAD_LIMITS.base64 + ATTACHMENT_UPLOAD_LIMITS.name * 6 + 64;
+
 const Empty = obj({});
 const Ok = obj({ ok: lit(true) });
 const Page = { limit: opt(int({ min: 1, max: 500 })) };
@@ -188,7 +192,7 @@ export const METHODS = {
   "attachments.add": method(obj({ path: str({ min: 1, max: 4096 }) }), obj({ ref: id(), name: str(), mime: str(), bytes: int({ min: 0 }) })),
   /** 按内容上传附件(拖进来 / 选文件时渲染进程拿不到本地路径就用它):base64 正文,单个不超过 25 MB;同一内容只存一份。 */
   "attachments.upload": method(
-    obj({ name: str({ min: 1, max: 500 }), base64: str({ min: 0, max: 35_000_000, pattern: /^[A-Za-z0-9+/]*={0,2}$/ }) }),
+    obj({ name: str({ min: 1, max: ATTACHMENT_UPLOAD_LIMITS.name }), base64: str({ min: 0, max: ATTACHMENT_UPLOAD_LIMITS.base64, pattern: /^[A-Za-z0-9+/]*={0,2}$/ }) }),
     obj({ ref: id(), name: str(), mime: str(), bytes: int({ min: 0 }) }),
   ),
 
