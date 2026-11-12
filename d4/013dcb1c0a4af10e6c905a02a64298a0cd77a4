@@ -1,0 +1,33 @@
+docs/proof/room-pending-summary/README.md
+  s_9d7fa6e9d65b83::t_2ec6d723f50b47 1-37
+docs/proof/room-pending-summary/archive-manifest.json
+  s_9d7fa6e9d65b83::t_0edab39e92b6cc 1-35
+docs/proof/room-pending-summary/full-summary.json
+  s_9d7fa6e9d65b83::t_8c2cc0d6ad5b1e 1-8
+docs/proof/room-pending-summary/mutations.json
+  s_9d7fa6e9d65b83::t_d426e86509088a 1-110
+docs/proof/room-pending-summary/result.json
+  s_9d7fa6e9d65b83::t_4607c9303c8b9e 1-108
+docs/proof/room-pending-summary/source-freeze.json
+  s_9d7fa6e9d65b83::t_dcf0c8702774cc 1-13
+receipts/feat-room-pending-summary.json
+  s_9d7fa6e9d65b83::t_b337b4ce5af7f9 1-34
+reviews/room-pending-summary-mechanical-before-evidence-fix.txt
+  s_9d7fa6e9d65b83::t_cce7b50ac766a1 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d4013dcb1c0a4af10e6c905a02a64298a0cd77a4",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
