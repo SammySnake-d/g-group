@@ -94,7 +94,7 @@ test("Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/�
   const off = s.svc.subscribe(e => { if (e.type === "compute.progress") events.push(e.progress); });
   try {
     const task = await start(s); const computeId = s.compute.spawned[0]!.computeId;
-    for (const [stage, summary] of [["scan", "唯一进度-扫描"], ["verify", "唯一进度-校验"]]) { s.compute.emit({ computeId, kind: "milestone", stage, summary }); await settle(s.host, s.compute); }
+    for (const [stage, summary] of ([["scan", "唯一进度-扫描"], ["verify", "唯一进度-校验"]] as const)) { s.compute.emit({ computeId, kind: "milestone", stage, summary }); await settle(s.host, s.compute); }
     const all = value<{ progress: ComputeProgress[] }>(await svc.handle("tasks.progress", { taskId: task.id, limit: 100 })).progress;
     assert.deepEqual(all, events); assert.equal(all.length, 3);
     assert.deepEqual(all.map(p => [p.taskId, p.computeId, p.kind, p.stage ?? null, p.summary]), [[task.id, computeId, "started", null, "已开始"], [task.id, computeId, "milestone", "scan", "唯一进度-扫描"], [task.id, computeId, "milestone", "verify", "唯一进度-校验"]]);
@@ -102,7 +102,7 @@ test("Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/�
     assert.deepEqual(value<{ progress: ComputeProgress[] }>(await svc.handle("tasks.progress", { taskId: task.id, limit: 1 })).progress, [all[2]]);
     const unknown = await svc.handle("tasks.progress", { taskId: "not-a-task" }); assert.equal(!unknown.ok && unknown.error.code, "not_found");
     off(); s.compute.close(); await s.host.close();
-    const h = new Host({ file: path.join(s.root, "gg.db"), dataDir: path.join(s.root, "data") });
+    const h = new Host({ file: path.join(s.root, "gg.db"), dataDir: path.join(s.root, "data"), mind: mind(() => []) });
     try { assert.deepEqual(value<{ progress: ComputeProgress[] }>(await createService(h).handle("tasks.progress", { taskId: task.id, limit: 100 })).progress, all); } finally { await h.close(); }
   } finally { off(); s.compute.close(); }
 });
