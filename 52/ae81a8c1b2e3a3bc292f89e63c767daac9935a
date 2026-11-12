@@ -1,0 +1,19 @@
+packages/server/src/create-quota.test.ts
+  s_9d7fa6e9d65b83::t_c3534ee6c5ff90 7-9,16,24,36-281
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "52ae81a8c1b2e3a3bc292f89e63c767daac9935a",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
