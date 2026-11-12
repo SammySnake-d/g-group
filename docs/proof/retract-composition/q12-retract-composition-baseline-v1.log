@@ -1,0 +1,30 @@
+✔ RC01 messages.retract: an in-flight draft derived from the retracted source must not reach chat (34.936416ms)
+ℹ {"sourceSeq":1,"retracted":true,"obsoleteReplySeqs":[],"messageCount":1}
+✔ RC02 positive control: the same live source really publishes its derived reply without a retract (15.859333ms)
+✖ RC03 messages.retract: an already-written external artifact stays real and the user gets an explicit cannot-retract hint (35.671ms)
+ℹ {"sourceSeq":1,"artifactStillPresent":true,"writes":1,"taskStates":["T5_InReview"],"visibleText":["","接了任务:写入一个工件","好的,我安排 Compute 去写入一个工件,有进度告诉你。","做完了:已写入工件","收到:(撤回了 #1)"]}
+✔ RC04 deleting K retains an independent later requirement N in state-note context across restart (45.739208ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 384.077375
+
+✖ failing tests:
+
+test at packages/server/src/retract-composition.test.ts:90:1
+✖ RC03 messages.retract: an already-written external artifact stays real and the user gets an explicit cannot-retract hint (35.671ms)
+  AssertionError [ERR_ASSERTION]: AC-08: the real retract response/chat must explicitly disclose already-happened, cannot-retract effects
+      at TestContext.<anonymous> (file:///private/tmp/gg-req-retract-proof-resume-20261112/packages/server/src/retract-composition.test.ts:120:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: '{"result":{"ok":true,"value":{"roomId":"dm-c-mwdqnyit-1","seq":1,"threadRootSeq":null,"sender":{"kind":"user","id":"me"},"text":"","mentions":[],"replyToSeq":null,"quotedSeqs":[],"quotes":[],"attachments":[],"card":null,"command":null,"reactions":[],"edited":false,"retracted":true,"clientActionId":"rc-effects","at":"2026-11-12T16:04:52.997Z"}},"messages":[{"roomId":"dm-c-mwdqnyit-1","seq":1,"threadRootSeq":null,"sender":{"kind":"user","id":"me"},"text":"","mentions":[],"replyToSeq":null,"quotedSeqs":[],"quotes":[],"attachments":[],"card":null,"command":null,"reactions":[],"edited":false,"retracted":true,"clientActionId":"rc-effects","at":"2026-11-12T16:04:52.997Z"},{"roomId":"dm-c-mwdqnyit-1","seq":2,"threadRootSeq":null,"sender":{"kind":"contact","id":"c-mwdqnyit-1"},"text":"接了任务:写入一个工件","mentions":[],"replyToSeq":1,"quotedSeqs":[1],"quotes":[{"seq":1,"senderName":"我","excerpt":"","state":"retracted"}],"attachments":[],"card":{"kind":"task-status","cardId":"card-mwdqnyiw-4","taskId":"t-mwdqnyiw-3","title":"写入一个工件","body":"写入一个工件","state":"open","actions":[{"actionId":"cancel","label":"取消任务","style":"danger"}]},"command":null,"reactions":[],"edited":false,"retracted":false,"clientActionId":null,"at":"2026-11-12T16:04:53.000Z"},{"roomId":"dm-c-mwdqnyit-1","seq":3,"threadRootSeq":null,"sender":{"kind":"contact","id":"c-mwdqnyit-1"},"text":"好的,我安排 Compute 去写入一个工件,有进度告诉你。","mentions":[],"replyToSeq":1,"quotedSeqs":[1],"quotes":[{"seq":1,"senderName":"我","excerpt":"","state":"retracted"}],"attachments":[],"card":null,"command":null,"reactions":[],"edited":false,"retracted":false,"clientActionId":null,"at":"2026-11-12T16:04:53.000Z"},{"roomId":"dm-c-mwdqnyit-1","seq":4,"threadRootSeq":null,"sender":{"kind":"contact","id":"c-mwdqnyit-1"},"text":"做完了:已写入工件","mentions":[{"id":"me","source":"auto"}],"replyToSeq":1,"quotedSeqs":[1],"quotes":[{"seq":1,"senderName":"我","excerpt":"","state":"retracted"}],"attachments":[],"card":null,"command":null,"reactions":[],"edited":false,"retracted":false,"clientActionId":null,"at":"2026-11-12T16:04:53.008Z"},{"roomId":"dm-c-mwdqnyit-1","seq":6,"threadRootSeq":null,"sender":{"kind":"contact","id":"c-mwdqnyit-1"},"text":"收到:(撤回了 #1)","mentions":[],"replyToSeq":5,"quotedSeqs":[5],"quotes":[{"seq":5,"senderName":"?","excerpt":"","state":"denied"}],"attachments":[],"card":null,"command":null,"reactions":[],"edited":false,"retracted":false,"clientActionId":null,"at":"2026-11-12T16:04:53.017Z"}]}',
+    expected: /已发生[^。\n]{0,80}(无法撤回|不会被撤销|不能撤回|未撤销)/,
+    operator: 'match',
+    diff: 'simple'
+  }

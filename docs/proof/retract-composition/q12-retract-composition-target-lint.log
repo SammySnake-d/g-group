@@ -1,0 +1,30 @@
+packages/server/src/retract-composition.test.ts:39:13 lint/complexity/useOptionalChain  FIXABLE  ━━━━━━━━━━
+
+  ! Change to an optional chain.
+  
+    37 │       async round(input: RoundInput) {
+    38 │         const source = input.fresh.find((f) => f.kind === "message" && f.text === "NEUTRAL_SOURCE_FOR_WITHDRAWAL");
+  > 39 │         if (!source || source.kind !== "message") return { actions: [], stateNote: null };
+       │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    40 │         entered = true;
+    41 │         await held;
+  
+  i An optional chain is shorter, and it avoids repeating the same expression in each check.
+  
+  i Unsafe fix: Change to an optional chain.
+  
+     37  37 │         async round(input: RoundInput) {
+     38  38 │           const source = input.fresh.find((f) => f.kind === "message" && f.text === "NEUTRAL_SOURCE_FOR_WITHDRAWAL");
+     39     │ - ········if·(!source·||·source.kind·!==·"message")·return·{·actions:·[],·stateNote:·null·};
+         39 │ + ········if·(source?.kind·!==·"message")·return·{·actions:·[],·stateNote:·null·};
+     40  40 │           entered = true;
+     41  41 │           await held;
+  
+
+Checked 1 file in 8ms. No fixes applied.
+Found 1 warning.
+lint ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some warnings were emitted while running checks.
+  
+

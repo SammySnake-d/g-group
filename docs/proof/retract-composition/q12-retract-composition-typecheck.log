@@ -1,0 +1,5 @@
+
+> typecheck
+> tsc -p tsconfig.json
+
+packages/server/src/retract-composition.test.ts(110,69): error TS2339: Property 'result' does not exist on type '{ id: string; state: "T1_Open" | "T2_Claimed" | "T3_Running" | "T4b_BlockedOnHuman" | "T5_InReview" | "T7_Delivering" | "T8a_Delivered" | "T8_Accepted" | "T9_StopRequested" | "T10_Cancelled" | "T11_Failed"; ... 23 more ...; authorizations?: { ...; }[]; }'.
