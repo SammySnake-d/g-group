@@ -115,6 +115,15 @@ export const RoomView = obj({
   leavingMembers: opt(arr(MemberRef)),
   /** 群临时 Compute 槽位数(AC-23,只给本群任务借用,不跨群);私聊没有这个字段。 */
   tempComputeSlots: opt(int({ min: 0, max: 64 })),
+  /** 群主(建群的用户;U03 群主能力:解散、禁言、撤回别人的消息)。私聊没有这个字段。 */
+  ownerId: opt(id()),
+  /**
+   * 解散(U03/D05):dissolving = 本群在途任务正在停、等真实停止确认;dissolved = 已解散。两种都只读——不能再发言、
+   * 新消息不送达联系人;记录保留可查,列表照常列出。没解散不出现。
+   */
+  dissolution: opt(oneOf(["dissolving", "dissolved"] as const)),
+  /** 本群被禁言的联系人(U03 禁言,候选):它在这个群发的消息被拒收,别的不变。没有时不出现。 */
+  mutedMembers: opt(arr(MemberRef)),
 });
 export type RoomView = Infer<typeof RoomView>;
 /** 群公告(U97/U86):一个群可有多条,当前有效的全部装配进联系人第 1 块「群规快照」位。version 每次改动 +1(CAS 用)。 */

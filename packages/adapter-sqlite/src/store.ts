@@ -1,7 +1,7 @@
 // SQLite 存储适配器:会话事件只追加(AC-05)、文档单一提交点 CAS(AC-21)、外发动作入库端 action_id 去重(AC-31③)。
 // 用 Node 内置 node:sqlite,一个数据库文件就是宿主的权威落盘;关闭再打开同一文件,状态都在。
 import { DatabaseSync } from "node:sqlite";
-import { append, type EventBody, type Log, type LogEvent, type Sender, type VerifyResult, type Versioned, verify } from "@g-group/domain";
+import { type AppendAuthority, append, type EventBody, type Log, type LogEvent, type Sender, type VerifyResult, type Versioned, verify } from "@g-group/domain";
 
 export interface OpenOptions {
   /** 拿不到写锁时最多等多久(毫秒),默认 5000 */
@@ -101,10 +101,10 @@ function readEvents(db: DatabaseSync, sessionId: string): LogEvent[] {
   }));
 }
 
-/** 用领域的 append 算 seq/prev/hash(并执行发言者等领域约束),再在同一事务里落盘。 */
-export function appendEvent(s: SqliteStore, sessionId: string, sender: { kind: string; id: string }, body: EventBody, at: string): LogEvent {
+/** 用领域的 append 算 seq/prev/hash(并执行发言者等领域约束),再在同一事务里落盘。authority 原样交给领域(群主撤回别人的消息)。 */
+export function appendEvent(s: SqliteStore, sessionId: string, sender: { kind: string; id: string }, body: EventBody, at: string, authority?: AppendAuthority): LogEvent {
   return tx(s.db, () => {
-    const next = append({ events: readEvents(s.db, sessionId) }, sender, body, at);
+    const next = append({ events: readEvents(s.db, sessionId) }, sender, body, at, authority);
     const e = next.events.at(-1)!;
     s.db.prepare("INSERT INTO events (session, seq, at, sender_kind, sender_id, body, prev, hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
       .run(sessionId, e.seq, e.at, e.sender.kind, e.sender.id, JSON.stringify(e.body), e.prev, e.hash);

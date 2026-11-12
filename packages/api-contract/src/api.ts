@@ -120,6 +120,23 @@ export const METHODS = {
   "rooms.rewindPreview": method(obj({ roomId: id(), toSeq: seq() }), RewindPreview),
   /** 私聊 rewind 执行:回退点之后的消息撤下、来源于它们的在途任务取消、未了结承诺作废;已发生的外部副作用如实列出,不撤销。clientActionId 幂等。 */
   "rooms.rewind": method(obj({ roomId: id(), toSeq: seq(), clientActionId: id() }), RewindResult),
+  /**
+   * 解散群(U03/D05):只有群主能解散,私聊 forbidden。先停本群全部在途任务(Cancel → 停 Compute)并进 dissolution=dissolving,
+   * 从这一刻起只读:用户与联系人都不能再在这里发言、新消息不送达联系人、本群定时停用;每个任务都收到真实停止确认后才
+   * dissolved,本群临时 Compute 槽位清零(AC-23/U09:确认前不归还)。记录保留可查。重复调用不重复停止,返回当前状态。
+   */
+  "rooms.dissolve": method(obj({ roomId: id(), clientActionId: id() }), RoomView),
+  /**
+   * 群内禁言(U03;候选,语义待用户定,只做最小一项):禁言期间这个联系人在这个群发的消息(回复、接活卡片、交付)被宿主拒收并记违规,
+   * 它下一轮输入里写明自己在这个群被禁言;别的都不变——在途任务照跑、交付不改投、私聊不受影响、不另发通知。
+   * 只有群主能做,私聊 forbidden。muted=false 解除;状态没变什么都不改。
+   */
+  "rooms.muteMember": method(obj({ roomId: id(), contactId: id(), muted: bool(), clientActionId: id() }), RoomView),
+  /**
+   * 清空聊天记录(U23):只在你这一端隐藏这个会话此刻为止的全部消息,之后的新消息照常显示;联系人上下文与其他成员不受影响(与撤回不同)。
+   * 只追加一条隐藏记录,原消息不改。clientActionId 幂等。
+   */
+  "rooms.clearHistory": method(obj({ roomId: id(), clientActionId: id() }), obj({ room: RoomView, clearedUptoSeq: seq() })),
 
   // ---- 群公告(AC-55,U97/U86):一个群可有多条;改动推 room.updated;联系人下一轮装配读当前全部有效公告 ----
   /** 当前有效公告;order 缺省按创建先后(created-asc)。私聊返回空数组。 */
@@ -159,7 +176,16 @@ export const METHODS = {
     MessageView,
   ),
   "messages.edit": method(obj({ roomId: id(), seq: seq(), text: str({ max: 100000 }) }), MessageView),
+  /** 撤回:对所有人生效,原文不再进任何联系人的上下文、搜索不再返回(AC-08)。群里群主能撤回任何人的消息(U26),其余只能撤回自己的。 */
   "messages.retract": method(obj({ roomId: id(), seq: seq() }), MessageView),
+  /**
+   * 删除 / 多选删除(U23/U100):只在你这一端隐藏所选消息——messages.list、搜索、会话预览不再返回;联系人上下文与其他成员不受影响(与撤回不同)。
+   * 逐条给结果:不在这个会话里的 seq 记 not_found,不影响其他条。只追加隐藏记录,原消息不改(AC-05)。clientActionId 幂等(重放返回原结果)。
+   */
+  "messages.delete": method(
+    obj({ roomId: id(), seqs: arr(seq(), { max: 500 }), clientActionId: id() }),
+    obj({ results: arr(obj({ seq: seq(), ok: bool(), error: nullable(obj({ code: oneOf(["not_found"] as const), message: str({ max: 500 }) })) })) }),
+  ),
   "messages.react": method(obj({ roomId: id(), seq: seq(), emoji: str({ min: 1, max: 32 }), on: bool() }), MessageView),
   "messages.receipts": method(obj({ roomId: id(), seq: seq() }), ReceiptView),
   // ---- 输入框草稿(AC-24、AC-37 ②:按会话持久化,切窗口与重启都不丢;不是消息,不送达任何联系人) ----
