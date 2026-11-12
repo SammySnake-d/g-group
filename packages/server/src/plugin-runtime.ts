@@ -48,6 +48,7 @@ export interface PluginRuntimeOptions {
   readonly preload?: string;
 }
 type Describe =
+  | { readonly kind: "ui-extension" }
   | { readonly kind: "data-source"; readonly sources: readonly string[] }
   | { readonly kind: "outbound-channel"; readonly idempotency: "none" | "action-id"; readonly idempotencyWindowMs: number | null; readonly endpoint: string | null };
 
@@ -179,6 +180,7 @@ function parseDescribe(raw: unknown, t: PluginTarget): Describe {
   const bad = (why: string) => new HostError("unavailable", `插件 ${t.id} 的自述不合格:${why}`);
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) throw bad("不是对象");
   const d = raw as Record<string, unknown>;
+  if (d.kind === "ui-extension" && t.kinds.includes("ui-extension")) return { kind: "ui-extension" };
   if (d.kind !== "data-source" && d.kind !== "outbound-channel") throw bad("kind 必须是 data-source 或 outbound-channel(界面扩展不需要运行)");
   if (!t.kinds.includes(d.kind)) throw bad(`运行时自报 ${d.kind},清单没有声明`);
   if (d.kind === "data-source") {
@@ -265,6 +267,7 @@ export class PluginRuntime {
 
   /** 把进程包成内核契约对象注册;函数委托给「当前活着的进程」,进程重启不换注册,只有自述变了才 reregister。 */
   private register(id: string, desc: Describe) {
+    if (desc.kind === "ui-extension") return;
     if (desc.kind === "data-source" ? desc.sources.length === 0 : desc.endpoint === null) return;
     let slot = this.registries.get(id);
     if (!slot) {
@@ -317,6 +320,16 @@ export class PluginRuntime {
       for (const x of r.rejected) out.rejected.push({ sourceId: s, index: x.index, reason: x.reason });
     }
     return out;
+  }
+
+  /** 插件斜杠命令复用隔离进程与限时 JSON RPC,不进入外发注册表。 */
+  async command(t: PluginTarget, request: unknown): Promise<{ text: string }> {
+    const l = await this.ensure(t);
+    const result = await l.proc.call("command", { request }, this.o.callTimeoutMs);
+    if (typeof result !== "object" || result === null || Array.isArray(result) || typeof (result as { text?: unknown }).text !== "string") throw new HostError("unavailable", "插件命令必须返回 {text: string}");
+    const text = (result as { text: string }).text;
+    if (text.length === 0 || text.length > 100_000) throw new HostError("unavailable", "插件命令结果必须为 1 到 100000 字符");
+    return { text };
   }
 
   async send(t: PluginTarget, actionId: string, payload: string): Promise<SendResult> {
