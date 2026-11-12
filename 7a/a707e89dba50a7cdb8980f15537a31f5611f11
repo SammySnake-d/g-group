@@ -1,0 +1,115 @@
+receipts/evidence/t177-g6/takeover-20261112/README.md
+  s_ecdaeafb3c4b76::t_d62fa9a5af6230 1-68
+receipts/evidence/t177-g6/takeover-20261112/FILES.sha256
+  s_ecdaeafb3c4b76::t_22982ec05526d2 1-52
+receipts/evidence/t177-g6/takeover-20261112/STATE.json
+  s_ecdaeafb3c4b76::t_9ce4be3b6bd72b 1-49
+receipts/evidence/t177-g6/takeover-20261112/analysis/k5/execution.json
+  s_ecdaeafb3c4b76::t_c56366a85a9723 1-19
+receipts/evidence/t177-g6/takeover-20261112/analysis/k5/exit-code.txt
+  s_ecdaeafb3c4b76::t_9ca487d9ce7613 1
+receipts/evidence/t177-g6/takeover-20261112/analysis/k5/g4off-addendum.json
+  s_ecdaeafb3c4b76::t_bc9aacf41e8f17 1-248
+receipts/evidence/t177-g6/takeover-20261112/analysis/k5/g4off-addendum.md
+  s_ecdaeafb3c4b76::t_7fb4b099034331 1-46
+receipts/evidence/t177-g6/takeover-20261112/analysis/k5/portable-exit.txt
+  s_ecdaeafb3c4b76::t_20cc64151f3bb2 1
+receipts/evidence/t177-g6/takeover-20261112/analysis/k5/portable-stdout.json
+  s_ecdaeafb3c4b76::t_6a87bcc73c9e7c 1-382
+receipts/evidence/t177-g6/takeover-20261112/analysis/k5/stdout.json
+  s_ecdaeafb3c4b76::t_a0d57730a807d4 1-382
+receipts/evidence/t177-g6/takeover-20261112/analysis/k5/verify_k5_records.py
+  s_ecdaeafb3c4b76::t_f6eb7b8694ea7a 1-162
+receipts/evidence/t177-g6/takeover-20261112/analysis/k5/结论.md
+  s_ecdaeafb3c4b76::t_89756bf593b2a8 1-77
+receipts/evidence/t177-g6/takeover-20261112/analysis/refine/counts.json
+  s_ecdaeafb3c4b76::t_dc906ddf936c27 1-2377
+receipts/evidence/t177-g6/takeover-20261112/analysis/refine/frozen-counts.json
+  s_ecdaeafb3c4b76::t_a93100c759abba 1-2389
+receipts/evidence/t177-g6/takeover-20261112/analysis/refine/portable-exit.txt
+  s_ecdaeafb3c4b76::t_04553b004f2d70 1
+receipts/evidence/t177-g6/takeover-20261112/analysis/refine/portable-stdout.json
+  s_ecdaeafb3c4b76::t_ae00d6080a0cd0 1-54
+receipts/evidence/t177-g6/takeover-20261112/analysis/refine/recount.py
+  s_ecdaeafb3c4b76::t_52b4b4f4d59455 1-212
+receipts/evidence/t177-g6/takeover-20261112/analysis/refine/结论.md
+  s_ecdaeafb3c4b76::t_fd76c31fd6d2d1 1-87
+receipts/evidence/t177-g6/takeover-20261112/cloud/RESULT.md
+  s_ecdaeafb3c4b76::t_3b59b6ec8bcf01 1-36
+receipts/evidence/t177-g6/takeover-20261112/cloud/SHA256SUMS
+  s_ecdaeafb3c4b76::t_6c4e7f323bd73d 1-4
+receipts/evidence/t177-g6/takeover-20261112/cloud/baseline-before.exit
+  s_ecdaeafb3c4b76::t_d561a043f538a6 1
+receipts/evidence/t177-g6/takeover-20261112/cloud/baseline-before.log
+  s_ecdaeafb3c4b76::t_874d17efd2d57d 1-4
+receipts/evidence/t177-g6/takeover-20261112/cloud/baseline-finished.txt
+  s_ecdaeafb3c4b76::t_4175778779b9be 1
+receipts/evidence/t177-g6/takeover-20261112/cloud/comparison.json
+  s_ecdaeafb3c4b76::t_9df8cfe7eadc91 1-483
+receipts/evidence/t177-g6/takeover-20261112/cloud/finished.txt
+  s_ecdaeafb3c4b76::t_6f1ae12b86f545 1
+receipts/evidence/t177-g6/takeover-20261112/cloud/prepare-failure.txt
+  s_ecdaeafb3c4b76::t_59cf3552448509 1
+receipts/evidence/t177-g6/takeover-20261112/cloud/run.log
+  s_ecdaeafb3c4b76::t_c5e82a41865293 1-37
+receipts/evidence/t177-g6/takeover-20261112/cloud/runner-files-before.sha256
+  s_ecdaeafb3c4b76::t_f6f089e3601696 1-23
+receipts/evidence/t177-g6/takeover-20261112/cloud/runner.exit
+  s_ecdaeafb3c4b76::t_0d915060d0b60e 1
+receipts/evidence/t177-g6/takeover-20261112/cloud/source-integrity.exit
+  s_ecdaeafb3c4b76::t_ddcae62ccd81cf 1
+receipts/evidence/t177-g6/takeover-20261112/cloud/source-integrity.txt
+  s_ecdaeafb3c4b76::t_9acb29b7794086 1-23
+receipts/evidence/t177-g6/takeover-20261112/cloud/source-status-after.txt
+  s_ecdaeafb3c4b76::t_d51283160a4377 1
+receipts/evidence/t177-g6/takeover-20261112/cloud/source-status-before.txt
+  s_ecdaeafb3c4b76::t_79d2d2fee3d985 1
+receipts/evidence/t177-g6/takeover-20261112/cloud/standin-before-R1/report.md
+  s_ecdaeafb3c4b76::t_ce9c15a9659dfe 1-96
+receipts/evidence/t177-g6/takeover-20261112/cloud/standin-before-R1/summary.json
+  s_ecdaeafb3c4b76::t_0c9a46cb6b2a49 1-533
+receipts/evidence/t177-g6/takeover-20261112/cloud/standin-post-g4b/report.md
+  s_ecdaeafb3c4b76::t_16ceec62ca3f1f 1-96
+receipts/evidence/t177-g6/takeover-20261112/cloud/standin-post-g4b/summary.json
+  s_ecdaeafb3c4b76::t_049dfbe3032694 1-1932
+receipts/evidence/t177-g6/takeover-20261112/cloud/started.txt
+  s_ecdaeafb3c4b76::t_0dec5c9649d35d 1
+receipts/evidence/t177-g6/takeover-20261112/commands.json
+  s_ecdaeafb3c4b76::t_1f8e5905b9ad20 1-124
+receipts/evidence/t177-g6/takeover-20261112/manifest.json
+  s_ecdaeafb3c4b76::t_962c82ce48c4ce 1-29
+receipts/evidence/t177-g6/takeover-20261112/probe-alternatives.json
+  s_ecdaeafb3c4b76::t_a6cb8c24a72171 1-26
+receipts/evidence/t177-g6/takeover-20261112/real-snapshot/raw-manifest.json
+  s_ecdaeafb3c4b76::t_1a5710c5647ce9 1-497
+receipts/evidence/t177-g6/takeover-20261112/real-snapshot/report.md
+  s_ecdaeafb3c4b76::t_d83a3fd06e6200 1-162
+receipts/evidence/t177-g6/takeover-20261112/real-snapshot/summary.json
+  s_ecdaeafb3c4b76::t_90739f1db5f407 1-4594
+receipts/evidence/t177-g6/takeover-20261112/runner-files.json
+  s_ecdaeafb3c4b76::t_2925c575a55fc6 1-25
+receipts/evidence/t177-g6/takeover-20261112/strong-probes/probe-strong-takeover-20261112.json
+  s_ecdaeafb3c4b76::t_9781b8f6ad06b5 1-14
+receipts/evidence/t177-g6/takeover-20261112/strong-probes/probe-strong.log
+  s_ecdaeafb3c4b76::t_76b6fd603a8e3b 1-81
+receipts/evidence/t177-g6/takeover-20261112/strong-probes/probes-strong.json
+  s_ecdaeafb3c4b76::t_e406e60df0ff6c 1-14
+receipts/feat-t177-g6-proof.json
+  s_ecdaeafb3c4b76::t_54d783668ab611 7,23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7aa707e89dba50a7cdb8980f15537a31f5611f11",
+  "prompts": {},
+  "sessions": {
+    "s_ecdaeafb3c4b76": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cf01-1d3d-7193-99b4-dcee5ae892a1",
+        "model": "chatflows/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
