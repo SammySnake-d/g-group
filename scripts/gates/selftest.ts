@@ -884,7 +884,7 @@ export const CASES: Case[] = [
     if (o.allowed.join(",") !== "codex,astra,claude,argon") bad.push(`allowedReviewers 变成 ${o.allowed}`);
     if (o.harness !== "codex" || o.codex !== "codex") bad.push(`harnessOf 变成 ${o.harness}/${o.codex}`);
     if (o.ctx.join(",") !== "trusted-gates,provenance,self-check") bad.push(`PROTECTED_CONTEXTS 变成 ${o.ctx}`);
-    if (o.layers.join(",") !== "domain,kernel,adapter,plugin,app") bad.push(`LAYERS 变成 ${o.layers}`);
+    if (o.layers.join(",") !== "domain,kernel,process,adapter,plugin,app") bad.push(`LAYERS 变成 ${o.layers}`);
     if (Object.keys(o.scripts).length !== 3 || o.scripts.test === "true") bad.push(`REQUIRED_GATE_SCRIPTS 变成 ${JSON.stringify(o.scripts)}`);
     if (o.harnesses.join(",") !== "claude,codex,pi") bad.push(`HARNESSES 变成 ${o.harnesses}`);
     if (!o.review.some((m) => m.includes("审查人必须是"))) bad.push(`改了导出名单后 unlisted 审查人被放行:${JSON.stringify(o.review)}`);
