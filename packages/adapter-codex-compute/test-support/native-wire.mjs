@@ -23,7 +23,7 @@ createInterface({ input: process.stdin }).on("line", async (line) => {
       helper.stdout.destroy(); helper.unref();
     }
     if (mode === "foreign-rpc") send({ id: "unrelated-rpc-id", result: { codexHome: "/definitely-not-owner" } });
-    send({ id: m.id, result: { codexHome: process.env.CODEX_HOME } });
+    send({ id: m.id, result: { codexHome: mode === "wrong-owner" ? "/nonexistent-native-owner-cxp17" : process.env.CODEX_HOME } });
   }
   else if (m.method === "initialized") initialized = true;
   else if (m.method === "thread/start") {
@@ -44,6 +44,7 @@ createInterface({ input: process.stdin }).on("line", async (line) => {
     send({ id: m.id, result: { turn: { id, status: "inProgress", items: [] } } });
     send({ method: "turn/started", params: { threadId: thread, turn: { id, status: "inProgress" } } });
     if (mode === "exit0") process.exit(0);
+    if (mode === "malformed") { process.stdout.write("not-json\n"); return; }
     if (mode === "approval") send({ id: "native-approval-1", method: "item/commandExecution/requestApproval", params: { threadId: thread, turnId: id, command: "fixture-not-executed" } });
     else if (!["hold", "ack-only"].includes(mode)) send(terminal(id));
   } else if (m.method === "turn/steer") send(m.params.expectedTurnId === `native-turn-${n}` ? { id: m.id, result: { turnId: `native-turn-${n}` } } : { id: m.id, error: { code: -32600, message: "expected active turn id mismatch" } });

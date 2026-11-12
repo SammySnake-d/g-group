@@ -245,3 +245,26 @@ test("CXP-15 explicit next-turn model and effort are sent unchanged and unsuppor
     assert.equal(JSON.stringify(wire).includes("DENIED_INPUT"), false);
   } finally { await client.quiesce(1000); }
 });
+
+
+test("CXP-16 malformed native wire fails the active turn instead of leaving settled pending forever", async () => {
+  const client = createCodexComputeProtocol(options("malformed"));
+  try {
+    assert.equal((await client.initialize()).ok, true);
+    assert.equal((await client.startThread({ model: "probe-A", effort: "low" })).ok, true);
+    assert.equal((await client.startTurn("native-thread-1", "invalid-wire", { model: "probe-A", effort: "low" })).ok, true);
+    let timer: NodeJS.Timeout | undefined;
+    const done = await Promise.race([client.settled("native-thread-1", "native-turn-1"), new Promise<unknown>((r) => { timer = setTimeout(() => r({ deadline: true }), 700); })]);
+    clearTimeout(timer);
+    assert.deepEqual(done, { ok: true, value: { computeId: "native-thread-1", kind: "failed", reason: "invalid native JSON", code: null, signal: null, violations: [] } });
+  } finally { await client.quiesce(1000); }
+});
+
+test("CXP-17 missing native config owner is an explicit refusal rather than an uncaught realpath failure", async () => {
+  const client = createCodexComputeProtocol(options("wrong-owner"));
+  try {
+    let result: unknown;
+    await assert.doesNotReject(async () => { result = await client.initialize(); });
+    assert.deepEqual(result, { ok: false, reason: "native config owner mismatch" });
+  } finally { await client.quiesce(1000); }
+});
