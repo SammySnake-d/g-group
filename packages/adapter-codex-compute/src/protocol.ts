@@ -32,7 +32,9 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
   if (!snapshot.ok) throw new TypeError("protocol options must be plain data");
   options = snapshot.value as unknown as CodexProtocolOptions;
   const timeout = options.timeoutMs ?? 10000;
-  function capability(turn: TurnModel) {
+  function capability(turn: TurnModel, tools: readonly string[] | undefined) {
+    const t = plainData(tools ?? [], "requested tools");
+    if (!t.ok || !Array.isArray(t.value) || t.value.length !== 0) return no("native per-tool authorization is not mapped; Host/G2 policy must not be guessed");
     const p = plainData(turn, "turn model");
     if (!p.ok || !record(p.value) || typeof p.value.model !== "string" || !Object.hasOwn(options.models, p.value.model)) return no("requested model is not in the explicit owner catalog");
     return null;
@@ -113,8 +115,8 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       initialized = true;
       return { ok: true, value: { codexHome: r.value.codexHome } };
     },
-    async startThread(turn) {
-      const refused = capability(turn); if (refused) return refused;
+    async startThread(turn, tools) {
+      const refused = capability(turn, tools); if (refused) return refused;
       if (!initialized) return no("initialize first");
       const r = await request("thread/start", { model: turn.model, cwd: options.cwd, ephemeral: false, approvalPolicy: "never", sandbox: "read-only" });
       if (!r.ok) return r;
@@ -122,8 +124,8 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       threadId = r.value.thread.id;
       return { ok: true, value: { threadId } };
     },
-    async resumeThread(wantedThread, turn) {
-      const refused = capability(turn); if (refused) return refused;
+    async resumeThread(wantedThread, turn, tools) {
+      const refused = capability(turn, tools); if (refused) return refused;
       if (!initialized || typeof wantedThread !== "string" || !wantedThread) return no("native thread id required");
       const r = await request("thread/resume", { threadId: wantedThread, model: turn.model, cwd: options.cwd, approvalPolicy: "never", sandbox: "read-only" });
       if (!r.ok) return r;
@@ -131,8 +133,8 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       threadId = wantedThread;
       return { ok: true, value: { threadId } };
     },
-    async startTurn(wantedThread, text, turn) {
-      const refused = capability(turn); if (refused) return refused;
+    async startTurn(wantedThread, text, turn, tools) {
+      const refused = capability(turn, tools); if (refused) return refused;
       if (wantedThread !== threadId) return no("native thread mismatch");
       const r = await request("turn/start", { threadId: wantedThread, input: [{ type: "text", text, text_elements: [] }], model: turn.model, effort: turn.effort });
       if (!r.ok) return r;
