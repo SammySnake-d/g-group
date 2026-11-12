@@ -9,7 +9,7 @@
 - R1-03无产品改动：`CFG15`通过真实service修改全部十字段，之后回滚逐字段核name/avatar/bio/speakingModel/harness/computeModel/tools/computeAssets/computeSlots/persona；同时核身份与createdAt不变和新历史kind/restoredFrom。工具、能力、槽位、简介、头像和两种模型/harness均为不同的真实前后值。
 - R1-04无产品改动：`CFG16`直接查询SQLite原始`config`，逐行核精确十键白名单、嵌套Compute资产/模型键和两种中性秘密/记忆标记不落盘；create/update/batch/rollback/baseline五种真实路径均实际经过，6行。不是只核读API再次投影后的结果。
 - 最终16同体回溯红`b92c857bc90f681cf8cdc2dff7ae6c39c99fe081`是将快照append设为空观察，16项全为具名ERR_ASSERTION；恢复绿`f73a2d278dfc8ce1ef112cc0664a304319601cb0`为16/16。这是实现后的校准，**不冒充16项历史TDD**；唯一新真bug先红再修是上面的CFG13。
-- 本机局部16/16，typecheck/lint exit0。旧作者/审查的1485/15变异只属于旧R1，**不用于签本R2**。本R2新19变异/full/生产proof与正式seatbelt/正常push尚待执行，当前无完成结论。
+- 本机局部16/16，typecheck/lint exit0。旧作者/审查的1485/15变异只属于旧R1，**不用于签本R2**。原R1三存活故障F2/F6/F8在审查祖先原12测重放均仍12/12；新16测分别CFG16/CFG14/CFG15具名ERR_ASSERTION杀死，F8附带CFG13失败保留。追加M16–M19各完整16测4/4严格kill；纯parser21阳阴性控制通过，旧15定义逐字节不变。首次新runner在baseline前因macOS /var→/private/var路径别名误拒而exit1，现仅realpath规范化新建owned tmp后重跑，未放宽依赖内界。完整原文见local-preflight-original-logs.tar.gz与其逐成员manifest。本R2新19变异/full/生产proof与正式seatbelt/正常push尚待执行，当前无完成结论。
 
 ## R1-05 来源与收据选择
 
