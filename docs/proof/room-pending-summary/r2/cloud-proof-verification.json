@@ -1,0 +1,215 @@
+{
+  "head": "6da91f5afc437a347bff0990db8af59bd189edd2",
+  "content_hash": "beae27a2b3f2404376efe2c7f976acfd644ff1ae776d864b4749a31366258512",
+  "cloud_node": "v24.21.0",
+  "archive_sha256": "3dacf91d1a8a0bf311f339e819dbca1dd1a788a818b57bd338a2f4f990f912fe",
+  "archive_bytes": 134399,
+  "member_count": 32,
+  "all_member_and_log_sha256_verified": true,
+  "all_536_source_sha256_unchanged": true,
+  "narrow": {
+    "tests": 17,
+    "pass": 17,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "dependency": {
+    "tests": 30,
+    "pass": 30,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "full": {
+    "tests": 1490,
+    "pass": 1490,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "mutations_total": 18,
+  "mutations_killed": 18,
+  "mutations": [
+    {
+      "name": "排序反向",
+      "target": "阻塞摘要按最早消息顺序选择并给出其余项数量",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": [
+        "R2-05 长问题截断保留另有 N 项尾注且整行不超过500",
+        "R2-01 宿主最早问题与另有一项在回答后切换为剩余问题"
+      ]
+    },
+    {
+      "name": "漏其余项计数",
+      "target": "阻塞摘要按最早消息顺序选择并给出其余项数量",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": [
+        "R2-05 长问题截断保留另有 N 项尾注且整行不超过500",
+        "R2-01 宿主最早问题与另有一项在回答后切换为剩余问题"
+      ]
+    },
+    {
+      "name": "空态造摘要",
+      "target": "没有阻塞时不给出虚构摘要",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": [
+        "回答生效后阻塞摘要消失并经 room.updated 推送",
+        "其他会话没有本会话的阻塞摘要",
+        "重启回收后的失败任务不再显示已过期的待答摘要",
+        "R2-04b 取消后旧问题仍可见且保留pendingQ但过期卡不能生成摘要"
+      ]
+    },
+    {
+      "name": "保留换行",
+      "target": "阻塞摘要折为一行并限制为合同允许的长度",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": []
+    },
+    {
+      "name": "不截长文",
+      "target": "阻塞摘要折为一行并限制为合同允许的长度",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": [
+        "R2-05 长问题截断保留另有 N 项尾注且整行不超过500",
+        "R2-02c 整行501字符截为499加省略号",
+        "R2-07 Unicode截断不留下孤立高代理码元"
+      ]
+    },
+    {
+      "name": "未接实际原因",
+      "target": "rooms.get 返回真实阻塞原因且读取不改变任务与已读游标",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": [
+        "R2-01 宿主最早问题与另有一项在回答后切换为剩余问题",
+        "R2-03 授权提问摘要取真实授权请求action而不是不存在的needs",
+        "R2-04b 取消后旧问题仍可见且保留pendingQ但过期卡不能生成摘要",
+        "R2-04c 当前宿主拒绝用户撤回联系人提问且当前open卡仍可见",
+        "R2-06 rooms.get不产生幂等数据库写入也不发送事件"
+      ]
+    },
+    {
+      "name": "删除会话范围",
+      "target": "其他会话没有本会话的阻塞摘要",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": []
+    },
+    {
+      "name": "未接房间输出",
+      "target": "rooms.get 返回真实阻塞原因且读取不改变任务与已读游标",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": [
+        "R2-01 宿主最早问题与另有一项在回答后切换为剩余问题",
+        "R2-03 授权提问摘要取真实授权请求action而不是不存在的needs",
+        "R2-04b 取消后旧问题仍可见且保留pendingQ但过期卡不能生成摘要",
+        "R2-04c 当前宿主拒绝用户撤回联系人提问且当前open卡仍可见",
+        "R2-06 rooms.get不产生幂等数据库写入也不发送事件"
+      ]
+    },
+    {
+      "name": "R1宿主改取最新",
+      "target": "R2-01 宿主最早问题与另有一项在回答后切换为剩余问题",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": []
+    },
+    {
+      "name": "R5边界499",
+      "target": "R2-02b 整行恰500字符不截断",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": []
+    },
+    {
+      "name": "R6边界501",
+      "target": "R2-02c 整行501字符截为499加省略号",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": []
+    },
+    {
+      "name": "R7丢授权action",
+      "target": "R2-03 授权提问摘要取真实授权请求action而不是不存在的needs",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": []
+    },
+    {
+      "name": "R3丢open过滤",
+      "target": "R2-04b 取消后旧问题仍可见且保留pendingQ但过期卡不能生成摘要",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": [
+        "重启回收后的失败任务不再显示已过期的待答摘要"
+      ]
+    },
+    {
+      "name": "R9单项也计其余",
+      "target": "R2-01 宿主最早问题与另有一项在回答后切换为剩余问题",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": [
+        "阻塞摘要折为一行并限制为合同允许的长度",
+        "rooms.get 返回真实阻塞原因且读取不改变任务与已读游标",
+        "R2-02a 整行499字符不截断",
+        "R2-02b 整行恰500字符不截断",
+        "R2-02c 整行501字符截为499加省略号",
+        "R2-03 授权提问摘要取真实授权请求action而不是不存在的needs",
+        "R2-04b 取消后旧问题仍可见且保留pendingQ但过期卡不能生成摘要",
+        "R2-04c 当前宿主拒绝用户撤回联系人提问且当前open卡仍可见",
+        "R2-06 rooms.get不产生幂等数据库写入也不发送事件",
+        "R2-07 Unicode截断不留下孤立高代理码元"
+      ]
+    },
+    {
+      "name": "R10读取幂等写入",
+      "target": "R2-06 rooms.get不产生幂等数据库写入也不发送事件",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": []
+    },
+    {
+      "name": "R11不trim",
+      "target": "阻塞摘要折为一行并限制为合同允许的长度",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": []
+    },
+    {
+      "name": "R1-05先拼后截吃尾注",
+      "target": "R2-05 长问题截断保留另有 N 项尾注且整行不超过500",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": [
+        "R2-07 Unicode截断不留下孤立高代理码元"
+      ]
+    },
+    {
+      "name": "R1-07切开代理对",
+      "target": "R2-07 Unicode截断不留下孤立高代理码元",
+      "assertion_kill": true,
+      "tests": 17,
+      "collateral": []
+    }
+  ],
+  "excluded_review_faults": {
+    "R2_state": "redundant predicate removed with reachability proof",
+    "R4_visibility": "redundant predicate removed with reachability proof",
+    "R12_open_and_visibility": "visibility predicate no longer exists; remaining open guard independently calibrated",
+    "R8_same_seq_tie": "equivalent under room-local unique sequence, not claimed killed"
+  },
+  "typecheck_exit": 0,
+  "lint_exit": 0,
+  "at": "2026-11-13T02:40:42.291083+08:00"
+}

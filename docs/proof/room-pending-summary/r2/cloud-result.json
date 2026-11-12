@@ -1,0 +1,138 @@
+{
+  "head": "6da91f5afc437a347bff0990db8af59bd189edd2",
+  "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+  "results": [
+    {
+      "name": "clone",
+      "command": [
+        "git",
+        "clone",
+        "--no-checkout",
+        "--no-hardlinks",
+        "/workspace/req-room-summary-r2-20261113-6da91f5a/candidate.bundle",
+        "/workspace/req-room-summary-r2-20261113-6da91f5a/repo"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 0.317,
+      "log_sha256": "bb6f79280781b1593f29f98a91069178cee7b26a6ef3931d599def04748108be"
+    },
+    {
+      "name": "checkout",
+      "command": [
+        "git",
+        "checkout",
+        "-B",
+        "feat/room-pending-summary",
+        "6da91f5afc437a347bff0990db8af59bd189edd2"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 0.115,
+      "log_sha256": "7234a45f4720eec80c3ad78f81e92792dfac9daef7421d44f0c74eff7352bc92"
+    },
+    {
+      "name": "npm-ci",
+      "command": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 5.912,
+      "log_sha256": "c57a2fe32ed3d11f9389ae68ccd1ea2ea3437edc660036ae26c033f5c9d04404"
+    },
+    {
+      "name": "narrow-17",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-reporter=tap",
+        "packages/server/src/room-blocked-summary.test.ts"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 1.78,
+      "log_sha256": "b9b288c4be82461f4fadf5e0824bf065f4a06db3cba1872743ca677754bc407d"
+    },
+    {
+      "name": "dependency-regression",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-reporter=tap",
+        "packages/server/src/intent.test.ts",
+        "packages/server/src/rewind.test.ts"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 5.19,
+      "log_sha256": "ba26a33a0ac8639f8c7f6369b0f202d68d762609115c224eb3a71c74a1b7c052"
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 8.965,
+      "log_sha256": "396901319daac4a4413b23478852db3c572014f86c71d148273565f0f3332696"
+    },
+    {
+      "name": "lint",
+      "command": [
+        "npm",
+        "run",
+        "lint"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 1.072,
+      "log_sha256": "b8c39468330b89e15e28af4c74620dcd541af10e88b4d7131247fff75bcfa983"
+    },
+    {
+      "name": "full",
+      "command": [
+        "npm",
+        "test"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 187.493,
+      "log_sha256": "d9dc01546f3424091d65a7a2160fc35a88f73e8239855e7f816df57fa566e6c9"
+    },
+    {
+      "name": "mutations",
+      "command": [
+        "node",
+        "packages/server/proof/room-pending-summary-mutations.mjs",
+        "/workspace/req-room-summary-r2-20261113-6da91f5a/out/mutations.json"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 35.015,
+      "log_sha256": "4133fde3b15b265e975991c06a6935f3c43583d3548b3fcfa7dce37622fd3102"
+    }
+  ],
+  "errors": [],
+  "source_unchanged": true,
+  "cloud_behavior_complete": true,
+  "formal_gates_pending": true,
+  "review_pending": true
+}

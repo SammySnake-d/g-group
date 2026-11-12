@@ -31,7 +31,7 @@
   },
   "unverifiable": "AC-50：确定性 scriptedMind/scriptedCompute 驱动真实 Host、SQLite、service API 和事件；没有连接真实模型，不包含浏览器/桌面 UI 验收。重启沿用现宿主回收失联 Compute 为 T11_Failed 的语义，旧待答摘要清空。仅当前有效 T4b，不把所有待确认状态都称为已覆盖。",
   "waiver": null,
-  "review_status": "R1 REJECT及旧reviewed_hash保留；R2本地窄测17/17、生命周期30/30、type/lint已实测；新full/18变异待根排云，正式门禁看外置最终回执，作者不自签不豁免",
+  "review_status": "R1 REJECT及旧reviewed_hash保留；R2新box4窄测17/17、生命周期30/30、full1490/1490、18/18严格具名变异、type/lint exit0，536源SHA未变；本机正式门禁与正常推送看外置实际回执，R2待独立审查，作者不自签不豁免",
   "provenance": {
     "inherited_mirasim_session": "codex:534f3614-21cd-43eb-9db6-3cd1673d2b62",
     "inherited_native_session": "01a1cf01-3b82-7211-b7b9-c7147d5e45e7",
@@ -44,6 +44,9 @@
     "r2_true_first_red": "b93f2e385edd4bc35e56c32ead5fcdb82106390f",
     "r2_first_green": "4f15f21da646f515841507556abcba0c3097d856",
     "r2_same_body_calibration_red": "21f0931ec75da6b59b91cd11255d560989fd6895",
-    "r2_same_body_calibration_green": "6ff182815e65b210d6e155feeb5485ce1241cf4d"
+    "r2_same_body_calibration_green": "6ff182815e65b210d6e155feeb5485ce1241cf4d",
+    "r2_cloud_tested_source_head": "6da91f5afc437a347bff0990db8af59bd189edd2",
+    "r2_cloud_proof": "docs/proof/room-pending-summary/r2/cloud-proof-verification.json",
+    "r2_cloud_archive_sha256": "3dacf91d1a8a0bf311f339e819dbca1dd1a788a818b57bd338a2f4f990f912fe"
   }
 }

@@ -34,7 +34,7 @@ RoomView 新增可选 nullable 的 `blockedSummary`，Host.roomView 从当前房
 
 ## 独立审查与来源现状
 
-R1 的真实 REJECT 和审查提交 515db145 保留，review 对象不清空、不改成 approve；原 reviewed_hash 仍对应 R1。R2 是后续普通叠加的作者候选，尚未推送、未交独审，不合并、不发布，waiver=null。
+R1 的真实 REJECT 和审查提交 515db145 保留，review 对象不清空、不改成 approve；原 reviewed_hash 仍对应 R1。R2 是后续普通叠加的作者候选；推送与本机正式门禁状态以最终外置运行回执及 PR 远端 HEAD 为准，仍待 R2 独立审查，不合并、不发布，waiver=null。
 
 作者宿主 codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7 的 turns.jsonl 现在存在；本轮实读 record.json 指向原生 01a1cfc8-db89-7400-b3de-876bd8478982。R2 在真实原生子线程 01a1d03a-add3-7a02-92d2-92e9791196ee（gpt-6.1-sol）完成，宿主身份未伪造。更早最初10个提交来自 codex:534f3614-21cd-43eb-9db6-3cd1673d2b62 / 原生01a1cf01-3b82-7211-b7b9-c7147d5e45e7，模型chatflows/gpt-6-astra；此链是R1审查人工核验结论，本轮不将它冒充门禁自动覆盖。没有补写宿主记录或改门禁。
 
@@ -44,6 +44,16 @@ R1 的真实 REJECT 和审查提交 515db145 保留，review 对象不清空、�
 - 截断先给完整「另有 N 项」及省略号预留空间，总长<=500个UTF-16码元；正文结尾不留下孤立高代理。纯ASCII/中文499/500/501边界分别钉住。
 - 宿主双联系人同群两个实际问题，取最早并计数，回答后换下一条；授权问题取真实授权请求action；读取用total_changes()和事件订阅防止幂等写入漏测。
 - R1-04 三过滤逐项见 r2/guard-reachability.md：剩余open卡条件有独立实际反例；state与visible在当前稳定Host边界不可独立触发，按审查允许的另一条路线删去，不制造非法数据库快照来计kill。
-- 新窄测17/17、拥有边界的intent/rewind生命周期回归30/30、typecheck/lint exit0；无skip/todo/cancel；18项完整单文件变异runner已准备并静态确认注入点唯一，**本机未执行变异大扫，也未重跑full**。旧1480/8数字不签新版本。新full与18项变异交根排box4共享heavy锁后实测。
+- 新 box4 独占共享 heavy 锁实测：窄测17/17、拥有边界的intent/rewind生命周期回归30/30、typecheck/lint exit0、**full 1490/1490、18/18严格具名变异**；每个变异完整执行17测，指定测试块有ERR_ASSERTION，加载错误/超时/信号不算kill，附带失败如实保留。所有执行均无skip/todo/cancel。旧1480/8数字不签新版本；原样冻结源536个文件运行前后逐SHA一致。
 - 最终17项同体红校准 `21f0931ec75da6b59b91cd11255d560989fd6895` 实跑0 pass/17具名ERR_ASSERTION fail，恢复绿 `6ff182815e65b210d6e155feeb5485ce1241cf4d` 为17/17；测试SHA256两端同为`aaf04904d8f1d86beb7c9008caee1fab77cac70705b0aa8af81e75ed8a49a11f`。明确这是**补丁后校准，不是历史TDD**；真实首个R1-05红b93f2e38始终单列。
 - AC-50及UI/实模验收保持未测。本片不新增前端、G4、C/C2、runRound或生命周期实现改动。
+
+## R2 新云证明与重放边界
+
+- 受测冻结 HEAD：`6da91f5afc437a347bff0990db8af59bd189edd2`；该次受测输入 content hash：`beae27a2b3f2404376efe2c7f976acfd644ff1ae776d864b4749a31366258512`。本次提交只补 proof/README/receipt，因此作者最终 content hash 必须在最终提交后重算，不能沿用这里的旧值。
+- box4 Node `v24.21.0`，持久目录 `/workspace/req-room-summary-r2-20261113-6da91f5a`，共享 `/workspace/.heavy.lock` 正常排队（queue PID `690000`），没有干预其他队列。依赖经该候选独立 npm ci，所有 @g-group 链接解析到该副本自身 packages。
+- `r2/cloud-proof.tar.gz`：134399 bytes；SHA256 `3dacf91d1a8a0bf311f339e819dbca1dd1a788a818b57bd338a2f4f990f912fe`。包内含新 full/17窄测/30回归全部TAP、18项变异及原样对照TAP、真实命令/退出码/时长/源码清单；`out/members-sha256.json`逐成员校验。下载总SHA、32个受校验成员、每条命令日志SHA及完整TAP均由独立下载校验脚本重核，见`r2/cloud-proof-verification.json`。
+- `r2/cloud-config.json`、`r2/cloud-run.py`与上传/排队收据保留当次冻结输入；变异canonical runner SHA仍为`e42f85ada54e3e57702f63b5fc8b9d537479ec6bda078903bfa8eb1eb4503602`，17测SHA仍为`aaf04904d8f1d86beb7c9008caee1fab77cac70705b0aa8af81e75ed8a49a11f`。
+- **18项不是原审查所有故障全kill。** state/visible冗余条件已删除并有当前稳定Host API/事务边界的不变量论证；原组合注入点已不存在，房间内同seq故障为等价项。完整排除表见变异JSON，附带失败未隐藏。
+- R1-04论证**不是任意数据库快照、未来 #71 群主撤回或新增MindAction入口的证明**，也不是穷举模型检查。未来新增这些组合时必须重建不变量并补独立反例；本轮未制造非法DB状态、未修改生命周期来迎合摘要测试。
+- AC-50/UI/实模验收及R2跨厂商独审仍未完成。R1 REJECT原对象、旧reviewed_hash与旧证明原字节保留；作者不自签、不派审、不合并、不发布。
