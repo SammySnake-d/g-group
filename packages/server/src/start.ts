@@ -4,6 +4,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ContactView } from "@g-group/api-contract";
+import type { PiProtocol } from "@g-group/adapter-pi-contact";
 import { type ContactCompactor, type ContactMind, DEFAULT_RETRY_POLICY } from "@g-group/kernel";
 import { claudeCompute } from "./compute.ts";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
@@ -17,6 +18,8 @@ export interface StartOptions {
   readonly mind?: "fake" | "pi";
   /** fake:剧本 Compute;claude:真实 Claude Code CLI。默认 fake。 */
   readonly compute?: "fake" | "claude";
+  /** 联系人模型协议(U33 的四种之一);不给时按联系人的说话模型名前缀挑,认不出用 anthropic-messages 默认。 */
+  readonly api?: PiProtocol;
   /** 模型网关环境(ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN / ANTHROPIC_DEFAULT_SONNET_MODEL),默认 process.env。 */
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** 插件市场目录文件;默认包内示例市场。 */
@@ -42,16 +45,27 @@ export async function startServer(o: StartOptions): Promise<Started> {
   let compactor: ((c: ContactView) => ContactCompactor) | undefined;
   if (o.mind === "pi") {
     // 字面量动态 import:按需加载 pi 依赖,G-LAYER 也能核对依赖方向
-    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as { createPiContactMind(opts: Record<string, unknown>): ContactMind; createPiCompactor(opts: Record<string, unknown>): ContactCompactor };
+    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as {
+      createPiContactMind(opts: Record<string, unknown>): ContactMind;
+      createPiCompactor(opts: Record<string, unknown>): ContactCompactor;
+      apiForModel(model: string): PiProtocol;
+    };
     const bearer = env.ANTHROPIC_AUTH_TOKEN;
     const apiKey = bearer ?? env.ANTHROPIC_API_KEY;
     if (!apiKey || !model) throw new Error("mind=pi 需要 ANTHROPIC_AUTH_TOKEN(或 ANTHROPIC_API_KEY)与 ANTHROPIC_DEFAULT_SONNET_MODEL");
+    const baseUrl = env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com";
+    // 协议:显式 o.api 优先,否则按这个联系人的说话模型名前缀挑(模型目录缺项时保持 anthropic-messages 默认)。
+    // authHeader 只在 anthropic-messages 下可选;其它协议用各自的头(x-goog-api-key / Authorization: Bearer),由适配器定。
+    const optsFor = (speakingModel: string): Record<string, unknown> => {
+      const api = o.api ?? mod.apiForModel(speakingModel);
+      return { api, provider: "anthropic", model: speakingModel, baseUrl, apiKey, ...(api === "anthropic-messages" ? { authHeader: bearer ? "bearer" : "x-api-key" } : {}) };
+    };
     // 每位联系人用自己的说话模型(U68);同一模型复用一个实例
     const cache = new Map<string, ContactMind>();
     mind = (c) => {
       let m = cache.get(c.speakingModel);
       if (!m) {
-        m = mod.createPiContactMind({ provider: "anthropic", model: c.speakingModel, baseUrl: env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
+        m = mod.createPiContactMind(optsFor(c.speakingModel));
         cache.set(c.speakingModel, m);
       }
       return m;
@@ -61,7 +75,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
     compactor = (c) => {
       let k = compactors.get(c.speakingModel);
       if (!k) {
-        k = mod.createPiCompactor({ provider: "anthropic", model: c.speakingModel, baseUrl: env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
+        k = mod.createPiCompactor(optsFor(c.speakingModel));
         compactors.set(c.speakingModel, k);
       }
       return k;

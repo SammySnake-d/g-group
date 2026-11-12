@@ -1,0 +1,39 @@
+U33 真实运行证据:联系人接 openai-chat 协议,在本机 magpie 网关上跑通「群里派活 → 联系人回话」。
+本机(macOS arm64)2026-11-12 实跑;端点与密钥只从环境变量读,不落盘、不打印令牌,脚本见同目录 pi-protocols-real-run.mjs。
+
+跑法与配置(产品路径,不是绕开宿主直连):
+  ANTHROPIC_BASE_URL=http://127.0.0.1:3425 ANTHROPIC_AUTH_TOKEN=<本机 magpie 网关令牌> \
+  ANTHROPIC_DEFAULT_SONNET_MODEL=workbuddy-ai/hy4free \
+  node packages/server/proof/pi-protocols-real-run.mjs
+  startServer({ mind: "pi", api: "openai-chat", compute: "fake" }):baseUrl 不带路径,适配器按协议补成 /v1
+  (即 http://127.0.0.1:3425/v1,请求走 /v1/chat/completions,密钥走 Authorization: Bearer)。
+  为什么用 openai-chat 而不是 anthropic:同一批模型在 magpie 的 Anthropic 兼容口上会被上游回
+  「Hark 不支持作为其他应用程序背后的模型使用」,OpenAI 兼容口正常返回并会构造工具调用(见片说明)。
+  Compute 用剧本替身:本片验的是模型协议,不是 Compute;替身不会真的收尾,所以第二幕的「收尾超时」是预期的,
+  判据只看有没有经 dispatch_compute 开出任务。
+
+两幕与判定:
+  第一幕:用户 @ 联系人,要求用 reply 工具回话 → 群里出现联系人说的话(纯文本输出不会入群,能入群就说明
+  协议侧真的解析出了工具调用并登记成动作)。
+  第二幕:用户派一件要动手的活 → 模型调 dispatch_compute,宿主开出任务 t-…[T3_Running] Compute=cp-1。
+  「收尾超时」两行是等任务收尾的等待结果,不是失败。
+
+—— 脚本实际输出 ——
+协议 openai-chat · 模型 workbuddy-ai/hy4free · startServer({ mind: "pi", api: "openai-chat" })
+群 g-mwcr2lah-2「协议冒烟群」成员:2 人
+(node:99387) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+  → [contact] 收到,我先看一下
+收尾超时:false
+  → [contact] 接了任务:在工作目录写 hello.txt,内容为 hi
+  → [contact] 收到,已开 Compute 去写 hello.txt(内容 hi),完成后我把文件路径发给你。
+第二幕收尾超时:true
+—— 群记录 ——
+#1 user:me 小克,用 reply 工具在群里回一句「收到,我先看一下」;你只能通过工具发言。
+#2 contact:c-mwcr2laf-1 收到,我先看一下
+#3 user:me 小克,帮我在你的工作目录写一个 hello.txt,内容 hi;你没有 shell 和文件工具,用 dispatch_compute 开 Compute 去做。
+#4 contact:c-mwcr2laf-1 接了任务:在工作目录写 hello.txt,内容为 hi
+#5 contact:c-mwcr2laf-1 收到,已开 Compute 去写 hello.txt(内容 hi),完成后我把文件路径发给你。
+任务 t-mwcr6uk6-5 [T3_Running] 在工作目录写 hello.txt,内容为 hi Compute=cp-1
+判定:联系人回话 3 条 → 通过;派活开出任务 1 个 → 通过
+exit: 0
