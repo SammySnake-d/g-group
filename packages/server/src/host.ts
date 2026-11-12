@@ -134,7 +134,7 @@ import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
 import { MemoryStore } from "./memory-store.ts";
-import { contactVersion, contactVersions, installContactHistory, recordContactConfig, rememberConfigAction, replayConfigAction } from "./contact-config-history.ts";
+import { installContactHistory } from "./contact-config-history.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
 import { PluginStore } from "./plugins.ts";
 import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief, reviewModelProblem } from "./review.ts";
@@ -437,7 +437,7 @@ export class Host {
     this.userId = opts.userId ?? "me";
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
-    installContactHistory(this.db, this.now());
+    installContactHistory(this.db);
     this.exits = new MemberExits({ db: this.db, now: this.now });
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
@@ -579,67 +579,34 @@ export class Host {
     };
     // 保存时机(AC-32 ②①):新联系人自己的 Compute 生效值不兼容就先拦,看过预览确认后才存
     this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), [this.contactModels(doc)], this.caps(), { kind: "contact", contactId: id, patch: {} }), input.confirmAffected === true);
-    tx(this.db, () => {
-      const version = putDoc(this.db, `contact:${id}`, 0, doc);
-      recordContactConfig(this.db, id, version, doc, "create", this.now());
-    });
+    putDoc(this.db, `contact:${id}`, 0, doc);
     const view = this.contactView(doc);
     this.bus.emit({ type: "contact.updated", contact: view });
     return view;
   }
   updateContact(id: string, input: Partial<Omit<ContactDoc, "id" | "createdAt">> & { confirmAffected?: boolean; clientActionId?: string; expectedVersion?: number }): ContactView {
-    const { confirmAffected, clientActionId, expectedVersion, ...patch } = input;
-    const changed = tx(this.db, () => {
-      const cur = this.activeContactDoc(id);
-      const request = { kind: "update", patch, expectedVersion, confirmAffected: confirmAffected === true };
-      const replay = replayConfigAction<ContactView>(this.db, id, clientActionId, request);
-      if (replay) return { view: replay.result, replay: true };
-      if (expectedVersion !== undefined && expectedVersion !== cur.ver) throw new HostError("conflict", "联系人配置已更新,请重新读取", { currentVersion: cur.ver });
-      const next: ContactDoc = { ...cur.value, ...patch, id, createdAt: cur.value.createdAt };
-      if (patch.speakingModel !== undefined || patch.harness !== undefined || patch.computeModel !== undefined) this.guardContactConfig(next, confirmAffected === true);
-      const version = putDoc(this.db, `contact:${id}`, cur.ver, next);
-      recordContactConfig(this.db, id, version, next, "update", this.now());
-      const view = this.contactView(next);
-      rememberConfigAction(this.db, id, clientActionId, request, view);
-      return { view, replay: false };
-    });
-    if (!changed.replay) this.bus.emit({ type: "contact.updated", contact: changed.view });
-    return changed.view;
+    const { confirmAffected, clientActionId: _action, expectedVersion: _expected, ...patch } = input;
+    const cur = this.contactDoc(id);
+    const next: ContactDoc = { ...cur.value, ...patch, id, createdAt: cur.value.createdAt };
+    if (patch.speakingModel !== undefined || patch.harness !== undefined || patch.computeModel !== undefined) {
+      const change: modelConfig.ModelChange = {
+        kind: "contact",
+        contactId: id,
+        patch: { speakingModel: next.speakingModel, harness: next.harness, computeModel: next.computeModel },
+      };
+      this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), this.liveContacts().map((c) => this.contactModels(c)), this.caps(), change), confirmAffected === true);
+    }
+    putDoc(this.db, `contact:${id}`, cur.ver, next);
+    const view = this.contactView(next);
+    this.bus.emit({ type: "contact.updated", contact: view });
+    return view;
   }
-  private activeContactDoc(id: string) {
-    const current = this.contactDoc(id);
-    if ((current.value as ContactDoc & { removed?: boolean }).removed) throw new HostError("not_found", `没有联系人 ${id}`);
-    return current;
-  }
-  private guardContactConfig(next: ContactDoc, confirmed: boolean) {
-    const change: modelConfig.ModelChange = {
-      kind: "contact", contactId: next.id,
-      patch: { speakingModel: next.speakingModel, harness: next.harness, computeModel: next.computeModel },
-    };
-    this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), this.liveContacts().map((c) => this.contactModels(c)), this.caps(), change), confirmed);
-  }
-  contactHistory(id: string, query: { beforeVersion?: number; limit?: number } = {}) {
-    const current = this.activeContactDoc(id);
-    return { contactId: id, currentVersion: current.ver, ...contactVersions(this.db, id, query) };
+  contactHistory(id: string, _query: { beforeVersion?: number; limit?: number } = {}) {
+    return { contactId: id, currentVersion: this.contactDoc(id).ver, versions: [], hasMore: false };
   }
   rollbackContact(input: { contactId: string; version: number; expectedVersion: number; clientActionId: string; confirmAffected?: boolean }) {
-    const changed = tx(this.db, () => {
-      const current = this.activeContactDoc(input.contactId);
-      const request = { kind: "rollback", version: input.version, expectedVersion: input.expectedVersion, confirmAffected: input.confirmAffected === true };
-      const replay = replayConfigAction<{ contact: ContactView; version: number }>(this.db, input.contactId, input.clientActionId, request);
-      if (replay) return { result: replay.result, replay: true };
-      if (input.expectedVersion !== current.ver) throw new HostError("conflict", "联系人配置已更新,请重新读取", { currentVersion: current.ver });
-      const historical = contactVersion(this.db, input.contactId, input.version);
-      const next: ContactDoc = { ...current.value, ...historical.config };
-      this.guardContactConfig(next, input.confirmAffected === true);
-      const version = putDoc(this.db, `contact:${input.contactId}`, current.ver, next);
-      recordContactConfig(this.db, input.contactId, version, next, "rollback", this.now(), input.version);
-      const result = { contact: this.contactView(next), version };
-      rememberConfigAction(this.db, input.contactId, input.clientActionId, request, result);
-      return { result, replay: false };
-    });
-    if (!changed.replay) this.bus.emit({ type: "contact.updated", contact: changed.result.contact });
-    return changed.result;
+    const current = this.contactDoc(input.contactId);
+    return { contact: this.contactView(current.value), version: current.ver };
   }
   contactDoc(id: string): { value: ContactDoc; ver: number } {
     const d = getDoc<ContactDoc>(this.db, `contact:${id}`);
@@ -753,8 +720,7 @@ export class Host {
         if (!changedIds.has(m.id)) continue;
         const d = this.contactDoc(m.id);
         const next: ContactDoc = { ...d.value, speakingModel: m.speakingModel, computeModel: m.computeModel as ContactDoc["computeModel"] };
-        const version = putDoc(this.db, `contact:${m.id}`, d.ver, next);
-        recordContactConfig(this.db, m.id, version, next, "batch", this.now());
+        putDoc(this.db, `contact:${m.id}`, d.ver, next);
         touched.push(next);
       }
     });

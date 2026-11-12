@@ -26,7 +26,8 @@ const catalog = [
 ];
 
 test("CFG01 创建与修改保留完整配置快照，旧版本不随当前修改变化", async () => {
-  const { host, svc } = make();
+  const { host } = make();
+  const svc = createService(host);
   const c = host.createContact({ name: "原名字", persona: "原人设" });
   await svc.handle("contacts.update", { contactId: c.id, name: "新名字", avatar: "fixture-avatar", bio: "简介", persona: "新人设", computeSlots: 3, tools: ["read"], computeAssets: [{ name: "fixture-skill", kind: "skill" }] });
   const result = await svc.handle("contacts.history", { contactId: c.id });
@@ -39,7 +40,8 @@ test("CFG01 创建与修改保留完整配置快照，旧版本不随当前修�
 });
 
 test("CFG02 回滚生成递增版本且保留身份、消息、记忆、任务与游标", async () => {
-  const { host, svc } = make();
+  const { host } = make();
+  const svc = createService(host);
   const c = host.createContact({ name: "原名字", persona: "原人设" });
   const dm = host.openDm(c.id);
   putDoc(host.db, `note:${c.id}`, 0, { text: "NEUTRAL_MEMORY", marker: "keep" });
@@ -58,7 +60,8 @@ test("CFG02 回滚生成递增版本且保留身份、消息、记忆、任务�
 });
 
 test("CFG03 回滚按当前版本拒绝过期请求，不覆盖较新的配置", async () => {
-  const { host, svc } = make();
+  const { host } = make();
+  const svc = createService(host);
   const c = host.createContact({ name: "原" });
   host.updateContact(c.id, { name: "新" });
   const result = await svc.handle("contacts.rollback", { contactId: c.id, version: 1, expectedVersion: 1, clientActionId: "stale" });
@@ -68,7 +71,8 @@ test("CFG03 回滚按当前版本拒绝过期请求，不覆盖较新的配置",
 });
 
 test("CFG04 修改可带 CAS 和幂等号，重复请求不追加快照或通知", async () => {
-  const { host, svc } = make();
+  const { host } = make();
+  const svc = createService(host);
   const c = host.createContact({ name: "原" });
   const events: unknown[] = [];
   const off = host.bus.subscribe((e) => { if (e.type === "contact.updated") events.push(e); });
@@ -84,23 +88,25 @@ test("CFG04 修改可带 CAS 和幂等号，重复请求不追加快照或通知
 });
 
 test("CFG05 回滚幂等持久化；同一动作号换目标版本拒绝", async () => {
-  const { host, svc, file } = make();
+  const { host, file } = make();
+  const svc = createService(host);
   const c = host.createContact({ name: "原" });
   host.updateContact(c.id, { name: "新" });
   const input = { contactId: c.id, version: 1, expectedVersion: 2, clientActionId: "rollback-once" };
   const first = await svc.handle("contacts.rollback", input);
   await host.close();
   const restarted = make(file);
-  const again = await restarted.svc.handle("contacts.rollback", input);
+  const again = await createService(restarted.host).handle("contacts.rollback", input);
   assert.deepEqual(again, first);
   assert.equal(restarted.host.contactDoc(c.id).ver, 3);
-  const conflict = await restarted.svc.handle("contacts.rollback", { ...input, version: 2 });
+  const conflict = await createService(restarted.host).handle("contacts.rollback", { ...input, version: 2 });
   assert.equal(!conflict.ok && conflict.error.code, "conflict");
   assert.equal(all(restarted.host.db, "SELECT * FROM gg_contact_config_versions").length, 3);
 });
 
 test("CFG06 回滚重新执行当前模型兼容预检，失败原子不写；明确确认后保留原选择", async () => {
-  const { host, svc } = make();
+  const { host } = make();
+  const svc = createService(host);
   host.updateSettings({ defaultHarness: "claude-code", defaultSpeakingModel: "fixture-a", defaultComputeModel: "fixture-a", models: catalog });
   const c = host.createContact({ name: "原", computeModel: { mode: "explicit", model: "fixture-a" } });
   host.updateContact(c.id, { computeModel: { mode: "explicit", model: "fixture-b" } });
@@ -116,7 +122,8 @@ test("CFG06 回滚重新执行当前模型兼容预检，失败原子不写；�
 });
 
 test("CFG07 历史写入失败时配置更新与通知一起放弃", async () => {
-  const { host, svc } = make();
+  const { host } = make();
+  const svc = createService(host);
   const c = host.createContact({ name: "原" });
   const events: unknown[] = [];
   const off = host.bus.subscribe((e) => { if (e.type === "contact.updated") events.push(e); });
@@ -132,7 +139,8 @@ test("CFG07 历史写入失败时配置更新与通知一起放弃", async () =>
 });
 
 test("CFG08 批量模型替换也追加快照，快照失败同时回滚全局与所有联系人", async () => {
-  const { host, svc } = make();
+  const { host } = make();
+  const svc = createService(host);
   host.updateSettings({ defaultHarness: "claude-code", defaultSpeakingModel: "fixture-a", defaultComputeModel: "fixture-a", models: catalog });
   const c = host.createContact({ name: "甲" });
   const d = host.createContact({ name: "乙" });
@@ -149,7 +157,8 @@ test("CFG08 批量模型替换也追加快照，快照失败同时回滚全局�
 });
 
 test("CFG09 重启后历史按联系人分页且不会复制已有版本", async () => {
-  const { host, svc, file } = make();
+  const { host, file } = make();
+  const svc = createService(host);
   const c = host.createContact({ name: "甲" });
   host.createContact({ name: "不能串进来" });
   host.updateContact(c.id, { name: "甲二" });
@@ -159,7 +168,7 @@ test("CFG09 重启后历史按联系人分页且不会复制已有版本", async
   assert.deepEqual([(first.value as History).versions.map((v) => v.version), (first.value as History).hasMore], [[3, 2], true]);
   await host.close();
   const restarted = make(file);
-  const second = await restarted.svc.handle("contacts.history", { contactId: c.id, beforeVersion: 2, limit: 2 });
+  const second = await createService(restarted.host).handle("contacts.history", { contactId: c.id, beforeVersion: 2, limit: 2 });
   assert.ok(second.ok);
   assert.deepEqual([(second.value as History).versions.map((v) => [v.version, v.config.name]), (second.value as History).hasMore, (second.value as History).currentVersion], [[[1, "甲"]], false, 3]);
   assert.equal(all(restarted.host.db, "SELECT * FROM gg_contact_config_versions WHERE contact_id = ?", c.id).length, 3);
@@ -172,7 +181,7 @@ test("CFG10 升级既有联系人只登记当前配置基线，不伪造早期�
   putDoc(host.db, "contact:legacy-contact", 1, { ...existing, name: "旧联系人第二版" });
   await host.close();
   const restarted = make(file);
-  const result = await restarted.svc.handle("contacts.history", { contactId: "legacy-contact" });
+  const result = await createService(restarted.host).handle("contacts.history", { contactId: "legacy-contact" });
   assert.ok(result.ok);
   const h = result.value as History;
   assert.deepEqual(h.versions.map((v) => [v.version, v.kind, v.config.name]), [[2, "baseline", "旧联系人第二版"]]);
@@ -189,7 +198,8 @@ test("CFG11 历史只追加，数据库 UPDATE 或 DELETE 被拒且原值保留"
 });
 
 test("CFG12 删除联系人不允许通过配置回滚复活；不存在的版本不写任何东西", async () => {
-  const { host, svc } = make();
+  const { host } = make();
+  const svc = createService(host);
   const c = host.createContact({ name: "原" });
   const missing = await svc.handle("contacts.rollback", { contactId: c.id, version: 999, expectedVersion: 1, clientActionId: "missing" });
   assert.equal(!missing.ok && missing.error.code, "not_found");
