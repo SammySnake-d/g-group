@@ -1171,12 +1171,28 @@ export class Host {
     if (body.kind === "edit" && this.chatAdmin.isClosed(roomId)) throw new HostError("conflict", DISSOLVED_REASON);
     // 群里群主能撤回任何人的消息(U26);群主身份由宿主查出交给领域判定
     const owner = room.kind === "group" && body.kind === "retract" ? this.chatAdmin.ownerOf(roomId) : null;
+    const notices: number[] = [];
     try {
       tx(this.db, () => {
         appendEvent(this.db.store, `room:${roomId}`, { kind: "user", id: this.userId }, body, this.now(), { groupOwner: owner === null ? null : { kind: "user", id: owner } });
         // 搜索索引同一事务更新:编辑只留新文字,撤回删行(AC-08 索引不再返回原文)
         if (body.kind === "edit") reindexEditTx(this.db, roomId, body.target, body.text);
-        else unindexTx(this.db, roomId, body.target);
+        else {
+          unindexTx(this.db, roomId, body.target);
+          // AC-08:撤回和宿主披露同一事务。只引用来源匹配的真实完成台账,不把同屋别的任务算到这条消息上。
+          const hidden = this.retractedTexts([roomId]);
+          for (const { value: doc } of listDocs<TaskDoc>(this.db, "task:")) {
+            if (doc.roomId !== roomId || doc.sourceSeq !== body.target) continue;
+            const completed = all<{ id: number; compute_id: string; summary: string; at: string }>(this.db, "SELECT id, compute_id, summary, at FROM gg_progress WHERE task_id = ? AND kind = 'completed' ORDER BY id", doc.task.id);
+            for (const record of completed) {
+              const clean = scrubRetracted(record.summary, hidden);
+              const outcome = clean.leaked ? "(完成摘要含已撤回内容,已省略)" : clean.text.slice(0, 2000);
+              const text = `撤回 #${body.target}。任务 ${doc.task.id} / Compute ${record.compute_id} 于 ${record.at} 已报告完成:${outcome}。该记录中已发生的副作用无法撤回;撤回消息不等于撤销外部操作。`;
+              const notice = this.appendMessageTx(roomId, SYSTEM_SENDER, { text, actionKey: `system:retract-effects:${body.target}:${record.id}` });
+              if (!notice.duplicate) notices.push(notice.seq);
+            }
+          }
+        }
         run(this.db, "UPDATE gg_rooms SET updated_at = ? WHERE id = ?", this.now(), roomId);
       });
     } catch (e) {
@@ -1186,6 +1202,7 @@ export class Host {
       if (code === "target-retracted") throw new HostError("conflict", "这条已撤回");
       throw e;
     }
+    for (const seq of notices) this.afterAppend(roomId, seq, SYSTEM_SENDER);
     for (const mem of this.members(roomId)) if (mem.kind === "contact") this.loop.notify(mem.id, "batch");
   }
   private updatedView(roomId: string, seq: number): MessageView {
