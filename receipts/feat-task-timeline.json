@@ -4,7 +4,7 @@
     {
       "id": "R-02",
       "status": "未测",
-      "reason": "v2仅修两项真实actor问题：新2在v1具名ERR_ASSERTION红后最小补丁2绿；原11字节不变且合计13绿；回溯最终13空桩同体断言红；type/lint0。24变异、依赖、云全量及正式沙箱门禁待根另排v2云run，不复用v1旧full作验收。"
+      "reason": "v3保持v2三行actor修复及24原变异不变；针对支持seatbelt中G-TAUTO六项真实失败，把真实createService在该六测试显式构造并用同一实例观察原行为，不删改断言。最终13同体回溯空流具名ERR_ASSERTION红→13绿、type/lint0。新组合云24变异/依赖/full和最终seatbelt仍待实际执行；不复用v1/v2旧full当v3验收。"
     },
     {
       "id": "AC-02",
@@ -18,10 +18,10 @@
     "model": "gpt-6.1-sol"
   },
   "red": {
-    "commit": "3709debf59585bc2926754b3a2335da73f26ec20"
+    "commit": "49cd32c9896d72dd7156d0b9c1126630d9c6ac89"
   },
-  "unverifiable": "v2云24变异/依赖/全量及正式门禁尚未运行；AC-02完整产品链、真实模型/CLI/前端不在本片证明内；未核provenance，review=null不得视作来源实核。",
+  "unverifiable": "v3云24变异/依赖/full与最终seatbelt尚待执行；独审/真实宿主provenance未核，review=null不是来源实核；完整AC-02、真实模型/CLI/前端/摘要插件未验。",
   "waiver": null,
   "review": null,
-  "notes": "Initial 9 tests genuinely red before implementation. Final 11 bodies include retrospective fixture corrections and added TT10/TT11/canonical/zero-write controls; final same bodies replayed on independent empty-stream red and green, 11 named ERR_ASSERTION failures then 11 passes. Mutation definitions also retrospective. No assertion weakening, skipped test, self-review, merge/deploy or forged provenance. V2 follow-up by /root/contact_history_finish: two public regressions reproduced the actual v1 actor bugs before the three-line host fix; original eleven-file bytes unchanged, two green and combined thirteen green, type/lint exit0. Final thirteen empty-stream red at 3709debf is retrospective after the fix and retained as an ancestor by a content-neutral ordinary merge. M23/M24 registered after the fix; all 24 execution is pending cloud. Existing author provenance record retained as historical metadata, not newly validated or a review signature."
+  "notes": "Initial 9 tests genuinely red before implementation. Final 11 bodies include retrospective fixture corrections and added TT10/TT11/canonical/zero-write controls; final same bodies replayed on independent empty-stream red and green, 11 named ERR_ASSERTION failures then 11 passes. Mutation definitions also retrospective. No assertion weakening, skipped test, self-review, merge/deploy or forged provenance. V2 follow-up by /root/contact_history_finish: two public regressions reproduced the actual v1 actor bugs before the three-line host fix; original eleven-file bytes unchanged, two green and combined thirteen green, type/lint exit0. Final thirteen empty-stream red at 3709debf is retrospective after the fix and retained as an ancestor by a content-neutral ordinary merge. M23/M24 registered after the fix; all 24 execution is pending cloud. Existing author provenance record retained as historical metadata, not newly validated or a review signature. V3 root continuation: supported seatbelt on v2 truly rejected six old tests in G-TAUTO; final six bodies now explicitly construct the same real public createService and keep all existing assertions/expected values. This intentionally changes only the final test file while preserving historical v1/v2 bytes. Final same-thirteen retrospective empty-stream calibration at 49cd32c9: 13 named ERR_ASSERTION failures; 13 final green, type/lint0. Production actor fix and all24 mutation definitions/runner are identical to v2; new final v3 cloud proof pending. No gate modifications or dummy assertions."
 }

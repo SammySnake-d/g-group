@@ -1,0 +1,55 @@
+[
+  {
+    "name": "thirteen-green",
+    "command": [
+      "nice",
+      "-n",
+      "10",
+      "lockf",
+      "/tmp/gg-cov-local.lock",
+      "node",
+      "--test",
+      "--test-concurrency=1",
+      "--test-reporter=tap",
+      "packages/server/src/task-timeline.test.ts",
+      "packages/server/src/task-timeline-origin.test.ts"
+    ],
+    "exit": 0,
+    "seconds": 0.962,
+    "log_sha256": "8e2a3b242ed7eb2d2f8a3dd441563921ee70a28b127517352e75a7ccb20b84f0"
+  },
+  {
+    "name": "typecheck",
+    "command": [
+      "nice",
+      "-n",
+      "10",
+      "lockf",
+      "/tmp/gg-cov-local.lock",
+      "npm",
+      "run",
+      "-s",
+      "typecheck"
+    ],
+    "exit": 0,
+    "seconds": 4.481,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "name": "lint",
+    "command": [
+      "nice",
+      "-n",
+      "10",
+      "lockf",
+      "/tmp/gg-cov-local.lock",
+      "npm",
+      "run",
+      "-s",
+      "lint"
+    ],
+    "exit": 0,
+    "seconds": 1.25,
+    "log_sha256": "e482bcd5bd93fcbf01a2441eb5f54c9d5cf943a8ed5dd0abfbcb1eb418ca3372"
+  }
+]

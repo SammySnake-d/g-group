@@ -1,0 +1,30 @@
+{
+  "red": "49cd32c9896d72dd7156d0b9c1126630d9c6ac89",
+  "command": [
+    "nice",
+    "-n",
+    "10",
+    "lockf",
+    "/tmp/gg-cov-local.lock",
+    "node",
+    "--test",
+    "--test-concurrency=1",
+    "--test-reporter=tap",
+    "packages/server/src/task-timeline.test.ts",
+    "packages/server/src/task-timeline-origin.test.ts"
+  ],
+  "exit": 1,
+  "counts": {
+    "tests": 13,
+    "pass": 0,
+    "fail": 13,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "named_ERR_ASSERTION": 13,
+  "tap_sha256": "69f8887ad663d66119ceb7d87057d2e8280de2c4c080a791a6f3e3b70bd46d69",
+  "test_sha256": "15318477a2b4dd4b1b8e65f9d6b1d70ece4b2e48bca3a96eddf5a935ebf8728b",
+  "calibration_is_after_implementation": true,
+  "production_unchanged_from_v2": true
+}

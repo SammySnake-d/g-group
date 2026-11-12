@@ -1,0 +1,9 @@
+# Q05 v3: explicit real-source public-service observations
+
+The actor fix is still exactly the v2 three-line host change. No production file, gate, fake, assertion, expected value or named test is changed relative to v2. V1/v2 source snapshots and their original eleven-test bytes remain preserved.
+
+The supported macOS seatbelt gate actually passed G-RED/G-STUB on v2, but G-TAUTO rejected TT01/TT03/TT04/TT05/TT07/TT08: their source instance and responses were hidden from its local-variable data flow by the scene helper. This is a real gate failure, not explained away as Docker. In those six final tests, instantiate the real imported createService(host) explicitly and use that same actual service for the existing queries/actions. Every original behavioral assertion remains, with only the equivalent service reference substituted; no new dummy/import-only assertion or copied implementation is introduced.
+
+Actual local results on the final test body: 13/13 green; typecheck/lint exit0. Same final thirteen bodies against the independent empty-stream red commit 49cd32c9896d72dd7156d0b9c1126630d9c6ac89 fail all thirteen by named ERR_ASSERTION, with zero skip/cancel/todo. This calibration is retrospective after implementation and after the actual v2 actor fix; it is not historical test-first work. The two new actor regressions were genuinely red on v1 before the three-line fix, as preserved in task-timeline-v2. The new calibration is retained by an ordinary content-neutral merge; the old witnesses are not overwritten.
+
+The current original 24 mutation definitions/runner are unchanged. A v2 cloud run remains frozen and is not modified. A final v3 cloud run is still pending: do not promote v1/v2 full or mutations into a tested v3 result. Supported native seatbelt gate-only is next; independent cross-vendor review, host provenance, complete AC-02/CLI/real-model/frontend acceptance remain incomplete. No self-sign, waiver, merge or deploy.
