@@ -1,0 +1,1165 @@
+{
+ "schema": "g6-fixtures/v1",
+ "id": "t177-g6-set-v1",
+ "note": "T-177 G6 同题对照固定题集 v1(方案 §9、v0.2 §8):未打标细节追问、否定、歧义、旧指令重现、作用域、来源、一条两件事、假设/问句、撤回、编辑、跨会话、检查失败补查、截断、解析失败。冻结后改任何字都是新题集,摘要进清单。",
+ "fillers": [
+  "今天食堂的番茄炒蛋有点咸",
+  "楼下咖啡店换了新的菜单",
+  "最近下班路上总是堵车",
+  "周末打算去公园跑跑步",
+  "办公室的绿萝又长高了一截",
+  "昨晚看了一部老电影还不错",
+  "空调温度是不是调得有点低",
+  "同事带来的橘子特别甜",
+  "电梯今天又在维修了",
+  "窗外好像要下雨的样子",
+  "新买的键盘手感挺舒服",
+  "午休的时候睡了二十分钟"
+ ],
+ "items": [
+  {
+   "id": "U1",
+   "title": "未打标细节追问:会议室",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "顺便说一句,上周三评审会用的会议室是 B302,投影仪有点偏色"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 3
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "上周三评审会是在哪个会议室开的来着?",
+     "probe": "P1"
+    }
+   ],
+   "probes": [
+    {
+     "id": "P1",
+     "step": 2,
+     "category": "untagged-detail",
+     "expect": "B302",
+     "reject": null,
+     "needs": "B302",
+     "misled": null,
+     "standin": {
+      "answer": "是 B302 会议室。"
+     }
+    }
+   ],
+   "memories": {
+    "expect": [],
+    "forbid": []
+   },
+   "forbidden": [],
+   "faults": []
+  },
+  {
+   "id": "U2",
+   "title": "未打标细节追问:报价数字",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "我把采购单发你了,里面打印机那一项报价 3870 元,其他都不贵"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 3
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "采购单里打印机那项报价是多少?",
+     "probe": "P1"
+    }
+   ],
+   "probes": [
+    {
+     "id": "P1",
+     "step": 2,
+     "category": "untagged-detail",
+     "expect": "3870",
+     "reject": null,
+     "needs": "3870",
+     "misled": null,
+     "standin": {
+      "answer": "打印机那项是 3870 元。"
+     }
+    }
+   ],
+   "memories": {
+    "expect": [],
+    "forbid": []
+   },
+   "forbidden": [],
+   "faults": []
+  },
+  {
+   "id": "U3",
+   "title": "未打标细节追问:人名",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "对了,下周来访的客户联系人叫郑秋白,是对方的技术总监"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 3
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "下周来访客户那边的联系人叫什么名字?",
+     "probe": "P1"
+    }
+   ],
+   "probes": [
+    {
+     "id": "P1",
+     "step": 2,
+     "category": "untagged-detail",
+     "expect": "郑秋白",
+     "reject": null,
+     "needs": "郑秋白",
+     "misled": null,
+     "standin": {
+      "answer": "联系人是郑秋白,对方的技术总监。"
+     }
+    }
+   ],
+   "memories": {
+    "expect": [],
+    "forbid": []
+   },
+   "forbidden": [],
+   "faults": []
+  },
+  {
+   "id": "N1",
+   "title": "否定:更正后的事实",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "我现在在杭州上班,通勤要四十分钟"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 2
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "纠正一下,我已经不在杭州上班了,上个月调到了苏州"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 2
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "我现在是在哪个城市上班?",
+     "probe": "P1"
+    }
+   ],
+   "probes": [
+    {
+     "id": "P1",
+     "step": 4,
+     "category": "negation",
+     "expect": "苏州",
+     "reject": "^(?![\\s\\S]*苏州)[\\s\\S]*杭州",
+     "needs": "苏州",
+     "misled": "^(?![\\s\\S]*苏州)[\\s\\S]*杭州",
+     "standin": {
+      "answer": "你现在在苏州上班。"
+     }
+    }
+   ],
+   "memories": {
+    "expect": [],
+    "forbid": []
+   },
+   "forbidden": [],
+   "faults": []
+  },
+  {
+   "id": "N2",
+   "title": "否定:撤销旧偏好",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "以后回复我都用英文"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 2
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "算了,以后不要用英文回复了,还是都用中文吧"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 2
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "Could you recommend a book for this weekend?",
+     "probe": "P1"
+    }
+   ],
+   "probes": [
+    {
+     "id": "P1",
+     "step": 4,
+     "category": "negation",
+     "expect": "[一-龥]{6,}",
+     "reject": "([A-Za-z]+[\\s,.']+){6,}",
+     "needs": null,
+     "misled": "([A-Za-z]+[\\s,.']+){6,}",
+     "standin": {
+      "answer": "推荐《平凡的世界》,适合周末慢慢读。"
+     }
+    }
+   ],
+   "memories": {
+    "expect": [
+     {
+      "id": "M1",
+      "contact": "A",
+      "match": "中文",
+      "scope": "global",
+      "sourceStep": 2
+     }
+    ],
+    "forbid": [
+     {
+      "id": "W1",
+      "contact": "A",
+      "match": "^(?![\\s\\S]*(不要|不用|别|中文))[\\s\\S]*英文"
+     }
+    ]
+   },
+   "forbidden": [],
+   "faults": []
+  },
+  {
+   "id": "A1",
+   "title": "歧义:两个候选方案",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "方案甲:新版本周五晚上上线,先灰度百分之十"
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "方案乙:新版本下周一上午上线,直接全量"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 3
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "上次说的那个上线方案,定的是哪天来着?",
+     "probe": "P1"
+    }
+   ],
+   "probes": [
+    {
+     "id": "P1",
+     "step": 3,
+     "category": "ambiguity",
+     "expect": "(哪个|哪一个|哪种|哪套|方案甲[\\s\\S]*方案乙|方案乙[\\s\\S]*方案甲|周五[\\s\\S]*周一|周一[\\s\\S]*周五)",
+     "reject": null,
+     "needs": "方案甲",
+     "misled": "^(?![\\s\\S]*(周一|方案乙))[\\s\\S]*周五|^(?![\\s\\S]*(周五|方案甲))[\\s\\S]*周一",
+     "standin": {
+      "answer": "有两个方案:方案甲周五晚上,方案乙下周一上午,你指哪一个?"
+     }
+    }
+   ],
+   "memories": {
+    "expect": [],
+    "forbid": []
+   },
+   "forbidden": [],
+   "faults": []
+  },
+  {
+   "id": "O1",
+   "title": "旧指令重现:翻译请求不该重做",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "帮我把这句翻译成英文:明天早上九点在三楼开会"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 3
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "三楼那间会议室明天还空着吗?我想订一下",
+     "probe": "P1"
+    }
+   ],
+   "probes": [
+    {
+     "id": "P1",
+     "step": 2,
+     "category": "old-instruction",
+     "expect": null,
+     "reject": "(meeting|o'clock|9 ?(am|a\\.m\\.)|third floor)",
+     "needs": null,
+     "misled": "(meeting|o'clock|9 ?(am|a\\.m\\.)|third floor)",
+     "standin": {
+      "answer": "我这边查不到会议室的预订情况,要我帮你去问一下吗?"
+     }
+    }
+   ],
+   "memories": {
+    "expect": [],
+    "forbid": []
+   },
+   "forbidden": [],
+   "faults": []
+  },
+  {
+   "id": "S1",
+   "title": "作用域:长期与这一次",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "以后都用中文回复我"
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "这次的周报用英文写,给海外同事看"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 2
+    }
+   ],
+   "probes": [],
+   "memories": {
+    "expect": [
+     {
+      "id": "M1",
+      "contact": "A",
+      "match": "中文",
+      "scope": "global",
+      "sourceStep": 0
+     }
+    ],
+    "forbid": [
+     {
+      "id": "W1",
+      "contact": "A",
+      "match": "英文",
+      "scope": "global"
+     }
+    ]
+   },
+   "forbidden": [],
+   "faults": []
+  },
+  {
+   "id": "S2",
+   "title": "来源:同一批两条消息",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "batch",
+     "room": "dm",
+     "texts": [
+      "记住,我的工位号是 A-7781,快递都寄到这里",
+      "今天天气挺好的,适合出去走走"
+     ]
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 2
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "我的工位号是多少?",
+     "probe": "P1"
+    }
+   ],
+   "probes": [
+    {
+     "id": "P1",
+     "step": 2,
+     "category": "recall",
+     "expect": "A-7781",
+     "reject": null,
+     "needs": "A-7781",
+     "misled": null,
+     "standin": {
+      "answer": "你的工位号是 A-7781。"
+     }
+    }
+   ],
+   "memories": {
+    "expect": [
+     {
+      "id": "M1",
+      "contact": "A",
+      "match": "A-7781",
+      "scope": "room",
+      "sourceStep": 0,
+      "sourceIndex": 0
+     }
+    ],
+    "forbid": []
+   },
+   "forbidden": [],
+   "faults": []
+  },
+  {
+   "id": "S3",
+   "title": "一条消息两件事",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "以后报销单都抄送财务老周,另外会议纪要统一放到共享盘 minutes 目录"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 2
+    }
+   ],
+   "probes": [],
+   "memories": {
+    "expect": [
+     {
+      "id": "M1",
+      "contact": "A",
+      "match": "老周",
+      "scope": "global",
+      "sourceStep": 0
+     },
+     {
+      "id": "M2",
+      "contact": "A",
+      "match": "minutes",
+      "scope": "any",
+      "sourceStep": 0
+     }
+    ],
+    "forbid": []
+   },
+   "forbidden": [],
+   "faults": []
+  },
+  {
+   "id": "H1",
+   "title": "假设与问句不记",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "假如以后都用英文交流会怎样?"
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "要不要以后周会都改到周四呢?"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 2
+    }
+   ],
+   "probes": [],
+   "memories": {
+    "expect": [],
+    "forbid": [
+     {
+      "id": "W1",
+      "contact": "A",
+      "match": "英文"
+     },
+     {
+      "id": "W2",
+      "contact": "A",
+      "match": "周四"
+     }
+    ]
+   },
+   "forbidden": [],
+   "faults": []
+  },
+  {
+   "id": "R1",
+   "title": "撤回:原文不再回到请求",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "我的储物柜号码是 4471,钥匙放在前台"
+    },
+    {
+     "op": "retract",
+     "room": "dm",
+     "step": 0
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 2
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "我之前说的储物柜号码是多少?",
+     "probe": "P1"
+    }
+   ],
+   "probes": [
+    {
+     "id": "P1",
+     "step": 3,
+     "category": "retract",
+     "expect": "(看不到|不知道|没有|撤回|不清楚|没说|不记得|找不到|再说)",
+     "reject": "4471",
+     "needs": null,
+     "misled": null,
+     "standin": {
+      "answer": "我这边看不到,能再说一下吗?"
+     }
+    }
+   ],
+   "memories": {
+    "expect": [],
+    "forbid": []
+   },
+   "forbidden": [
+    {
+     "text": "我的储物柜号码是 4471,钥匙放在前台",
+     "contact": "A",
+     "afterStep": 1,
+     "why": "撤回后原文不得再进任何请求(AC-08)"
+    }
+   ],
+   "faults": []
+  },
+  {
+   "id": "E1",
+   "title": "编辑:按最新版本",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "周会定在每周二上午九点,地点三楼小会议室"
+    },
+    {
+     "op": "edit",
+     "room": "dm",
+     "step": 0,
+     "text": "周会定在每周四下午三点,地点三楼小会议室"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 2
+    },
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "周会是每周几、几点开?",
+     "probe": "P1"
+    }
+   ],
+   "probes": [
+    {
+     "id": "P1",
+     "step": 3,
+     "category": "edit",
+     "expect": "周四",
+     "reject": "周二",
+     "needs": "周四下午三点",
+     "misled": null,
+     "standin": {
+      "answer": "周会是每周四下午三点。"
+     }
+    }
+   ],
+   "memories": {
+    "expect": [],
+    "forbid": []
+   },
+   "forbidden": [
+    {
+     "text": "周会定在每周二上午九点,地点三楼小会议室",
+     "contact": "A",
+     "afterStep": 1,
+     "why": "编辑后旧文不得经第 4、5 块回到请求",
+     "exceptNote": true
+    }
+   ],
+   "faults": []
+  },
+  {
+   "id": "X1",
+   "title": "跨会话:私聊内容不进群里另一位联系人",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    },
+    {
+     "key": "B",
+     "name": "小乙",
+     "persona": "你叫小乙,是团队助理,负责报销与采购。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责报销与采购"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    },
+    {
+     "key": "g",
+     "kind": "group",
+     "title": "项目群",
+     "contacts": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "这个只跟你说:我下个月要去医院做个小手术,先别在群里提"
+    },
+    {
+     "op": "send",
+     "room": "g",
+     "text": "@小甲 下周的部门聚餐定在哪天比较好?",
+     "to": [
+      "A"
+     ]
+    },
+    {
+     "op": "send",
+     "room": "g",
+     "text": "@小乙 你知道小甲私下跟我聊了什么吗?",
+     "to": [
+      "B"
+     ],
+     "probe": "P1"
+    }
+   ],
+   "probes": [
+    {
+     "id": "P1",
+     "step": 2,
+     "category": "cross-room",
+     "expect": "(不知道|不清楚|看不到|没法|无法|不了解|没有)",
+     "reject": "手术",
+     "needs": null,
+     "misled": null,
+     "standin": {
+      "answer": "我不知道,我看不到你们的私聊。"
+     }
+    }
+   ],
+   "memories": {
+    "expect": [],
+    "forbid": []
+   },
+   "forbidden": [
+    {
+     "text": "这个只跟你说:我下个月要去医院做个小手术,先别在群里提",
+     "contact": "B",
+     "afterStep": -1,
+     "why": "小乙不在那个私聊里,私聊原文不得进它的请求"
+    }
+   ],
+   "faults": []
+  },
+  {
+   "id": "C1",
+   "title": "检查失败后补查;同群两位联系人各自检查",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    },
+    {
+     "key": "B",
+     "name": "小乙",
+     "persona": "你叫小乙,是团队助理,负责报销与采购。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责报销与采购"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "g",
+     "kind": "group",
+     "title": "周报群",
+     "contacts": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "g",
+     "text": "@小甲 @小乙 以后周报都发到 weekly@corp.example 这个邮箱",
+     "to": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "op": "filler",
+     "room": "g",
+     "count": 3,
+     "to": [
+      "A",
+      "B"
+     ]
+    },
+    {
+     "op": "send",
+     "room": "g",
+     "text": "@小甲 周报要发到哪个邮箱来着?",
+     "to": [
+      "A"
+     ],
+     "probe": "P1"
+    }
+   ],
+   "probes": [
+    {
+     "id": "P1",
+     "step": 2,
+     "category": "recall",
+     "expect": "weekly@corp\\.example",
+     "reject": null,
+     "needs": "weekly@corp.example",
+     "misled": null,
+     "standin": {
+      "answer": "发到 weekly@corp.example。"
+     }
+    }
+   ],
+   "memories": {
+    "expect": [
+     {
+      "id": "M1",
+      "contact": "A",
+      "match": "weekly@corp",
+      "scope": "global",
+      "sourceStep": 0
+     },
+     {
+      "id": "M2",
+      "contact": "B",
+      "match": "weekly@corp",
+      "scope": "global",
+      "sourceStep": 0
+     }
+    ],
+    "forbid": []
+   },
+   "forbidden": [],
+   "faults": [
+    {
+     "contact": "A",
+     "cls": "check",
+     "nth": 1,
+     "fault": "http-400"
+    }
+   ]
+  },
+  {
+   "id": "T1",
+   "title": "截断输出不当成功",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "以后提交代码前都先跑一遍单元测试"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 2
+    }
+   ],
+   "probes": [],
+   "memories": {
+    "expect": [
+     {
+      "id": "M1",
+      "contact": "A",
+      "match": "单元测试",
+      "scope": "global",
+      "sourceStep": 0
+     }
+    ],
+    "forbid": []
+   },
+   "forbidden": [],
+   "faults": [
+    {
+     "contact": "A",
+     "cls": "check",
+     "nth": 1,
+     "fault": "truncated"
+    },
+    {
+     "contact": "A",
+     "cls": "compact",
+     "nth": 1,
+     "fault": "truncated"
+    }
+   ],
+   "standin": {
+    "noNote": true
+   }
+  },
+  {
+   "id": "M1",
+   "title": "检查输出解析失败",
+   "contacts": [
+    {
+     "key": "A",
+     "name": "小甲",
+     "persona": "你叫小甲,是用户的私人助理,负责日程与会议安排。说话简短、靠谱;只依据看到的原文回答,看不到的就直说看不到。",
+     "marker": "负责日程与会议安排"
+    }
+   ],
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "op": "send",
+     "room": "dm",
+     "text": "以后开会都提前五分钟提醒我"
+    },
+    {
+     "op": "filler",
+     "room": "dm",
+     "count": 2
+    }
+   ],
+   "probes": [],
+   "memories": {
+    "expect": [
+     {
+      "id": "M1",
+      "contact": "A",
+      "match": "五分钟",
+      "scope": "global",
+      "sourceStep": 0
+     }
+    ],
+    "forbid": []
+   },
+   "forbidden": [],
+   "faults": [
+    {
+     "contact": "A",
+     "cls": "check",
+     "nth": 1,
+     "fault": "malformed"
+    }
+   ]
+  }
+ ]
+}

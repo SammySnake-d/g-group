@@ -1,0 +1,533 @@
+{
+ "generatedAt": "2026-11-12T10:01:39.368Z",
+ "runner": {
+  "commit": "f5f3af097109025295249a6c391fcd78f7cff025",
+  "node": "v24.21.0",
+  "platform": "linux-x64"
+ },
+ "fixture": {
+  "id": "t177-g6-set-v1",
+  "digest": "9f5df979ea7a2a3be7ae4e25fca10b69f5a4abd9da6a7baca3d4c3b7d38cfc1d",
+  "items": [
+   "R1"
+  ]
+ },
+ "reps": 1,
+ "groups": [
+  {
+   "id": "g4on",
+   "label": "④③+G4 历史查询,预取开",
+   "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "inputs": [
+    {
+     "slice": "G1",
+     "branch": "feat/t177-g1-memory",
+     "ref": "61948a23809d03a0d9087ba1e0253235b2fda955",
+     "sha": "61948a23809d03a0d9087ba1e0253235b2fda955",
+     "receipt": true
+    },
+    {
+     "slice": "G2",
+     "branch": "feat/t177-g2-config",
+     "ref": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+     "sha": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+     "receipt": true
+    },
+    {
+     "slice": "G3",
+     "branch": "feat/t177-g3-bc-search",
+     "ref": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+     "sha": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+     "receipt": true
+    },
+    {
+     "slice": "G5",
+     "branch": "feat/t177-g5-two-stage",
+     "ref": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+     "sha": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+     "receipt": true
+    },
+    {
+     "slice": "G4",
+     "branch": "feat/t177-g4-history-tools",
+     "ref": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+     "sha": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+     "receipt": true
+    }
+   ],
+   "groupCommit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "state": "可跑",
+   "reason": null
+  },
+  {
+   "id": "g4off",
+   "label": "④消融:预取关",
+   "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "inputs": [
+    {
+     "slice": "G1",
+     "branch": "feat/t177-g1-memory",
+     "ref": "61948a23809d03a0d9087ba1e0253235b2fda955",
+     "sha": "61948a23809d03a0d9087ba1e0253235b2fda955",
+     "receipt": true
+    },
+    {
+     "slice": "G2",
+     "branch": "feat/t177-g2-config",
+     "ref": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+     "sha": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+     "receipt": true
+    },
+    {
+     "slice": "G3",
+     "branch": "feat/t177-g3-bc-search",
+     "ref": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+     "sha": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+     "receipt": true
+    },
+    {
+     "slice": "G5",
+     "branch": "feat/t177-g5-two-stage",
+     "ref": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+     "sha": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+     "receipt": true
+    },
+    {
+     "slice": "G4",
+     "branch": "feat/t177-g4-history-tools",
+     "ref": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+     "sha": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+     "receipt": true
+    }
+   ],
+   "groupCommit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "state": "可跑",
+   "reason": null
+  }
+ ],
+ "models": [
+  {
+   "mode": "standin",
+   "model": "standin/rules-v1",
+   "endpoint": "进程内规则替身",
+   "endpointHash": "-",
+   "authRef": "(无)",
+   "settings": {
+    "fineScreen": {
+     "quietMs": 20000
+    },
+    "settleMs": 35000
+   },
+   "serial": false,
+   "fingerprint": "d974302cc2424c89964aea8bdf22a7a3",
+   "reuseKey": "3f3d586e2ec4102edf46f77953e28ae8",
+   "group": "g4on"
+  },
+  {
+   "mode": "standin",
+   "model": "standin/rules-v1",
+   "endpoint": "进程内规则替身",
+   "endpointHash": "-",
+   "authRef": "(无)",
+   "settings": {
+    "fineScreen": {
+     "quietMs": 20000
+    },
+    "opts": {
+     "historyPrefetch": false
+    },
+    "settleMs": 35000
+   },
+   "serial": false,
+   "fingerprint": "370810dc5560ae7a15d16e8e943160b8",
+   "reuseKey": "611be3be192043563304d517b78df096",
+   "group": "g4off"
+  }
+ ],
+ "modelStates": {
+  "standin/rules-v1": {
+   "state": "已跑",
+   "attempts": []
+  }
+ },
+ "results": [
+  {
+   "group": "g4on",
+   "label": "④③+G4 历史查询,预取开",
+   "model": "standin/rules-v1",
+   "mode": "standin",
+   "fingerprint": "d974302cc2424c89964aea8bdf22a7a3",
+   "metrics": {
+    "runs": 1,
+    "coverage": {
+     "n": 3,
+     "d": 3
+    },
+    "missedWrites": {
+     "n": 0,
+     "d": 0
+    },
+    "wrongWrites": {
+     "n": 0,
+     "d": 0
+    },
+    "sourceScope": {
+     "n": 0,
+     "d": 0
+    },
+    "readBack": {
+     "n": 0,
+     "d": 0
+    },
+    "followAfterRead": {
+     "n": 0,
+     "d": 0
+    },
+    "untagged": {
+     "n": 0,
+     "d": 0
+    },
+    "prefetchMisled": {
+     "n": 0,
+     "d": 0
+    },
+    "probes": {
+     "n": 1,
+     "d": 1
+    },
+    "correctNoReply": 0,
+    "tokens": {
+     "input": 19670,
+     "output": 565,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "byClass": {
+      "round": 14965,
+      "check": 5270,
+      "compact": 0,
+      "refine": 0,
+      "background": 0
+     }
+    },
+    "calls": 15,
+    "roundLatencyMs": {
+     "p50": 53,
+     "p95": 128,
+     "n": 4
+    },
+    "writeLatencyMs": {
+     "p50": null,
+     "p95": null,
+     "n": 0
+    },
+    "historyToolCalls": 0,
+    "callLatencyMs": {
+     "p50": 1,
+     "p95": 5,
+     "n": 15
+    },
+    "backlog": {
+     "count": 0,
+     "maxAgeMs": null
+    },
+    "failures": {
+     "timeout": 0,
+     "parseFailure": 0,
+     "configInsufficient": 0,
+     "httpError": 0,
+     "networkError": 0,
+     "empty": 0,
+     "injected": 0,
+     "runErrors": 0,
+     "stepTimeouts": 0
+    }
+   },
+   "contracts": [
+    {
+     "id": "K1",
+     "title": "撤回/编辑前/越权原文不进请求",
+     "verdict": "fail",
+     "checked": 12,
+     "violations": [
+      "g4on/standin/rules-v1/R1/1:调用 13(round,第 5 块):撤回后原文不得再进任何请求(AC-08)",
+      "g4on/standin/rules-v1/R1/1:调用 14(round,第 5 块):撤回后原文不得再进任何请求(AC-08)"
+     ]
+    },
+    {
+     "id": "K2",
+     "title": "固定前缀各轮不变",
+     "verdict": "pass",
+     "checked": 10,
+     "violations": []
+    },
+    {
+     "id": "K3",
+     "title": "对话与后台同模",
+     "verdict": "pass",
+     "checked": 15,
+     "violations": []
+    },
+    {
+     "id": "K4",
+     "title": "截断输出不当成功",
+     "verdict": "n/a",
+     "checked": 0,
+     "violations": []
+    },
+    {
+     "id": "K5",
+     "title": "失败的检查之后补查成功或留下欠账",
+     "verdict": "n/a",
+     "checked": 0,
+     "violations": []
+    },
+    {
+     "id": "K6",
+     "title": "预取旧消息不进固定前缀",
+     "verdict": "pass",
+     "checked": 10,
+     "violations": []
+    },
+    {
+     "id": "K7",
+     "title": "调用与运行记账完整",
+     "verdict": "pass",
+     "checked": 16,
+     "violations": []
+    }
+   ]
+  },
+  {
+   "group": "g4off",
+   "label": "④消融:预取关",
+   "model": "standin/rules-v1",
+   "mode": "standin",
+   "fingerprint": "370810dc5560ae7a15d16e8e943160b8",
+   "metrics": {
+    "runs": 1,
+    "coverage": {
+     "n": 3,
+     "d": 3
+    },
+    "missedWrites": {
+     "n": 0,
+     "d": 0
+    },
+    "wrongWrites": {
+     "n": 0,
+     "d": 0
+    },
+    "sourceScope": {
+     "n": 0,
+     "d": 0
+    },
+    "readBack": {
+     "n": 0,
+     "d": 0
+    },
+    "followAfterRead": {
+     "n": 0,
+     "d": 0
+    },
+    "untagged": {
+     "n": 0,
+     "d": 0
+    },
+    "prefetchMisled": {
+     "n": 0,
+     "d": 0
+    },
+    "probes": {
+     "n": 1,
+     "d": 1
+    },
+    "correctNoReply": 0,
+    "tokens": {
+     "input": 19548,
+     "output": 565,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "byClass": {
+      "round": 14843,
+      "check": 5270,
+      "compact": 0,
+      "refine": 0,
+      "background": 0
+     }
+    },
+    "calls": 15,
+    "roundLatencyMs": {
+     "p50": 40,
+     "p95": 195,
+     "n": 4
+    },
+    "writeLatencyMs": {
+     "p50": null,
+     "p95": null,
+     "n": 0
+    },
+    "historyToolCalls": 0,
+    "callLatencyMs": {
+     "p50": 2,
+     "p95": 13,
+     "n": 15
+    },
+    "backlog": {
+     "count": 0,
+     "maxAgeMs": null
+    },
+    "failures": {
+     "timeout": 0,
+     "parseFailure": 0,
+     "configInsufficient": 0,
+     "httpError": 0,
+     "networkError": 0,
+     "empty": 0,
+     "injected": 0,
+     "runErrors": 0,
+     "stepTimeouts": 0
+    }
+   },
+   "contracts": [
+    {
+     "id": "K1",
+     "title": "撤回/编辑前/越权原文不进请求",
+     "verdict": "pass",
+     "checked": 12,
+     "violations": []
+    },
+    {
+     "id": "K2",
+     "title": "固定前缀各轮不变",
+     "verdict": "pass",
+     "checked": 10,
+     "violations": []
+    },
+    {
+     "id": "K3",
+     "title": "对话与后台同模",
+     "verdict": "pass",
+     "checked": 15,
+     "violations": []
+    },
+    {
+     "id": "K4",
+     "title": "截断输出不当成功",
+     "verdict": "n/a",
+     "checked": 0,
+     "violations": []
+    },
+    {
+     "id": "K5",
+     "title": "失败的检查之后补查成功或留下欠账",
+     "verdict": "n/a",
+     "checked": 0,
+     "violations": []
+    },
+    {
+     "id": "K6",
+     "title": "预取旧消息不进固定前缀",
+     "verdict": "n/a",
+     "checked": 10,
+     "violations": []
+    },
+    {
+     "id": "K7",
+     "title": "调用与运行记账完整",
+     "verdict": "pass",
+     "checked": 16,
+     "violations": []
+    }
+   ]
+  }
+ ],
+ "notes": [
+  "④③+G4 历史查询,预取开 工作树 HEAD `3218bc7dcc59465146cc9455595d81a470a618ff`(只供 G6 的合并提交;未推送到任何 PR 分支);依赖链接:@g-group/adapter-cc-compute、@g-group/adapter-pi-contact、@g-group/adapter-sqlite、@g-group/api-contract、@g-group/domain、@g-group/kernel、acp-kernel→third_party/acp-kernel、@g-group/server",
+  "④消融:预取关 工作树 HEAD `3218bc7dcc59465146cc9455595d81a470a618ff`(只供 G6 的合并提交;未推送到任何 PR 分支);依赖链接:@g-group/adapter-cc-compute、@g-group/adapter-pi-contact、@g-group/adapter-sqlite、@g-group/api-contract、@g-group/domain、@g-group/kernel、acp-kernel→third_party/acp-kernel、@g-group/server",
+  "runner 驱动代码与题集摘要 28b08dfe7b1a0d3b;续跑只沿用同一组提交、同一续跑身份(模型/方式/认证引用/组级选项/一次一个调用/驱动摘要)、同一次序的记录;运行出错的记录不沿用"
+ ],
+ "heads": {
+  "g4on": "3218bc7dcc59465146cc9455595d81a470a618ff",
+  "g4off": "3218bc7dcc59465146cc9455595d81a470a618ff"
+ },
+ "freeze": [
+  {
+   "runId": "g4on/standin/rules-v1/R1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 2,
+     "retracted": true
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/R1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 2,
+     "retracted": true
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  }
+ ]
+}

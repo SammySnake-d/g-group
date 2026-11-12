@@ -1,0 +1,24 @@
+{
+  "slice": "T-177 G6 同题对照(runner + 固定题集 + 报告;本项目的验证工具,放 packages/server/proof/g6/,不进产品、不给产品加开关或界面,需求文档 §2.0 v3.28):按组(基线 + 按序合入各片,或只供 G6 的合并提交)建临时工作树、叠上 runner,用被测提交自己的 start.ts 装配逐题跑;录制层包住 fetch 冻结每次模型调用(用量/停止原因/工具/排队/延迟/失败原文,不记请求头)并按题集注入故障;一次一个模型调用;原始记录带续跑身份可续跑;冻结各组提交、配置指纹(渠道只留主机与摘要)、源权限与消息版本;评分按计划数分母(失败运行留在分母,注入故障与 429 单列),K1–K7 确定性合同与效果指标分开报告;报告含模型状态、写入延迟、精筛 token、历史查询工具调用与指定对照表",
+  "acceptance": [
+    {
+      "id": "AC-42",
+      "status": "未测",
+      "reason": "本片只交付对照实验的工具与已完成的运行,不是 AC-42 的效果验收。runner 自身:83 条新测试在红 21faba24 上全部按名失败、绿 4ddce295 上全过;box4(Node v24.21.0)在 7f386fd8 上 tsc/lint 退出 0、npm test 1556/1556;一对一变异 86 个:杀死 86、存活 0(packages/server/proof/g6-mutations.txt、receipts/evidence/t177-g6/box4.txt);本机 --local 除 G-REVIEW 外全过(receipts/evidence/t177-g6/local-gates.txt,--hash 42666b3d…)。规则替身 5 组 × 17 题 × 1 次已跑完(receipts/evidence/t177-g6/standin-all/):组① K4、K5 未守住;组④预取开 K1 未守住(撤回原文经联系人自己未撤回的回话回到第 5 块,判为真实缺口,证据 standin-all/k1-g4on-R1.md);组②③与预取消融全守住;K5 在②③④的旧判据是 runner 判据问题,已改成认欠账(standin-all/k5-g1-debt.md)。真实模型:强 fnqtz/claude-opus-5-5 上游 503 不可用(探测记录 incident/),弱 workbuddy-ai/hy4free 正在跑(逐题落盘、可续);未跑到的组与重复次数记未测。不预设阈值,不写验收结论 2026-11-12接管检查点：G4b已为PR82/b2cda6ea；box4同runner修复后34/34规则替身完成，两组K1各33检查0违例，同平台旧R1仍复现g4on第13/14调用泄漏。真实弱模型冻结82份rep1记录，组①②③④开各17题、旧④关14题；②③三遍与修复后④真实实验未完成。K5六条（含④关补充两条）已用固定raw确认是事件seq与来源seq错配造成误报，自动报告原样保留；真实精筛调用0，不能评价精筛质量/成本。强fnqtz再次503，两条备选仅小请求探测成功，正式替换需拍板。详见 receipts/evidence/t177-g6/takeover-20261112/README.md。",
+      "evidence": "receipts/evidence/t177-g6/box4.txt"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:b36ab234-0cba-4b89-929e-d21a46a35eea",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "21faba248ac0c2878453f25b24cf795719d8df5d"
+  },
+  "unverifiable": "AC-42:确定性合同只看宿主可核对的行为,判定依赖 runner 对宿主呈现格式(第 4 块消息头、检查材料与欠账材料的段落标题、G4 预取行的标注)的解析,宿主改呈现格式要同步;调用归属靠人设 marker,补写笔记的请求不带人设时只在单联系人题里能归属。K1 报的「撤回原文回到请求」在组④是经另一条可见消息(联系人自己的回话)带回来的,不表示宿主把撤回的消息本身放进了请求。K5 只要求「欠账在、重试排上」,不要求这次运行内补完(补查时机由宿主重试策略定)。效果指标的正则只判字面,不证明语义;规则替身的数字只说明 runner 与宿主装配,不是模型效果。真实模型只跑了能跑到的部分,没有任何两模型之间的对比结论",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "由主会话 claude:b36ab234 派出的子代理实现(fnqtz 线路)。本机 /tmp 工作树中途被另一清理任务整片删除、会话两次中断,按派单在持久目录重做,每个里程碑打 bundle 回传 box3/box4。第一次推送时 pre-push 钩子里 run.test.ts 的 git 子进程继承了钩子的 GIT_DIR,改到了共享克隆(已当场还原并告知主会话);修法是剥掉 GIT_*(只留选配置来源的三个)。真实模型跑批:强模型上游 503 不可用,按 15 分钟探测等待恢复;弱模型一次一个调用在跑,逐题落盘可续(tools/continue.sh)。重活在 box4 持 heavy.lock;G-RED/G-STUB/G-TAUTO/G-PROVENANCE 在本机。 接管者 codex:01a1cf01-1d3d-7193-99b4-dcee5ae892a1 仅补证据与运行控制；原产品、runner、题集、红绿链及作者身份未改。原f5f3af09未推证据提交已保留。2026-11-12云端新回归未重复原全量/变异。"
+}

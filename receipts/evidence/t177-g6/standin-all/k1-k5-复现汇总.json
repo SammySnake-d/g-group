@@ -1,0 +1,284 @@
+{
+ "generatedAt": "2026-11-11T15:06:27.578Z",
+ "runner": {
+  "commit": "1a3dcdad80e92176305640f8beca7b680e04adb0",
+  "node": "v22.22.0",
+  "platform": "darwin-arm64"
+ },
+ "fixture": {
+  "id": "t177-g6-set-v1",
+  "digest": "9f5df979ea7a2a3be7ae4e25fca10b69f5a4abd9da6a7baca3d4c3b7d38cfc1d",
+  "items": [
+   "R1"
+  ]
+ },
+ "reps": 1,
+ "groups": [
+  {
+   "id": "g4on",
+   "label": "④③+G4 历史查询,预取开",
+   "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "inputs": [
+    {
+     "slice": "G1",
+     "branch": "feat/t177-g1-memory",
+     "ref": "origin/feat/t177-g1-memory",
+     "sha": "61948a23809d03a0d9087ba1e0253235b2fda955",
+     "receipt": true
+    },
+    {
+     "slice": "G2",
+     "branch": "feat/t177-g2-config",
+     "ref": "origin/feat/t177-g2-config",
+     "sha": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+     "receipt": true
+    },
+    {
+     "slice": "G3",
+     "branch": "feat/t177-g3-bc-search",
+     "ref": "origin/feat/t177-g3-bc-search",
+     "sha": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+     "receipt": true
+    },
+    {
+     "slice": "G5",
+     "branch": "feat/t177-g5-two-stage",
+     "ref": "origin/feat/t177-g5-two-stage",
+     "sha": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+     "receipt": true
+    },
+    {
+     "slice": "G4",
+     "branch": "feat/t177-g4-history-tools",
+     "ref": "origin/feat/t177-g4-history-tools",
+     "sha": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+     "receipt": true
+    }
+   ],
+   "groupCommit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "state": "可跑",
+   "reason": null
+  }
+ ],
+ "models": [
+  {
+   "mode": "standin",
+   "model": "standin/rules-v1",
+   "endpoint": "进程内规则替身",
+   "endpointHash": "-",
+   "authRef": "(无)",
+   "settings": {
+    "fineScreen": {
+     "quietMs": 20000
+    },
+    "settleMs": 35000
+   },
+   "serial": false,
+   "fingerprint": "1896cc57b76ccd0877783c17db0ba149",
+   "reuseKey": "369f5d3318bab063be8b0b11b10d0871",
+   "group": "g4on"
+  }
+ ],
+ "modelStates": {
+  "standin/rules-v1": {
+   "state": "已跑",
+   "attempts": []
+  }
+ },
+ "results": [
+  {
+   "group": "g4on",
+   "label": "④③+G4 历史查询,预取开",
+   "model": "standin/rules-v1",
+   "mode": "standin",
+   "fingerprint": "1896cc57b76ccd0877783c17db0ba149",
+   "metrics": {
+    "runs": 1,
+    "coverage": {
+     "n": 3,
+     "d": 3
+    },
+    "missedWrites": {
+     "n": 0,
+     "d": 0
+    },
+    "wrongWrites": {
+     "n": 0,
+     "d": 0
+    },
+    "sourceScope": {
+     "n": 0,
+     "d": 0
+    },
+    "readBack": {
+     "n": 0,
+     "d": 0
+    },
+    "followAfterRead": {
+     "n": 0,
+     "d": 0
+    },
+    "untagged": {
+     "n": 0,
+     "d": 0
+    },
+    "prefetchMisled": {
+     "n": 0,
+     "d": 0
+    },
+    "probes": {
+     "n": 1,
+     "d": 1
+    },
+    "correctNoReply": 0,
+    "tokens": {
+     "input": 19670,
+     "output": 565,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "byClass": {
+      "round": 14965,
+      "check": 5270,
+      "compact": 0,
+      "refine": 0,
+      "background": 0
+     }
+    },
+    "calls": 15,
+    "roundLatencyMs": {
+     "p50": 12,
+     "p95": 47,
+     "n": 4
+    },
+    "writeLatencyMs": {
+     "p50": null,
+     "p95": null,
+     "n": 0
+    },
+    "historyToolCalls": 0,
+    "callLatencyMs": {
+     "p50": 1,
+     "p95": 2,
+     "n": 15
+    },
+    "backlog": {
+     "count": 0,
+     "maxAgeMs": null
+    },
+    "failures": {
+     "timeout": 0,
+     "parseFailure": 0,
+     "configInsufficient": 0,
+     "httpError": 0,
+     "networkError": 0,
+     "empty": 0,
+     "injected": 0,
+     "runErrors": 0,
+     "stepTimeouts": 0
+    }
+   },
+   "contracts": [
+    {
+     "id": "K1",
+     "title": "撤回/编辑前/越权原文不进请求",
+     "verdict": "fail",
+     "checked": 12,
+     "violations": [
+      "g4on/standin/rules-v1/R1/1:调用 13(round,第 5 块):撤回后原文不得再进任何请求(AC-08)",
+      "g4on/standin/rules-v1/R1/1:调用 14(round,第 5 块):撤回后原文不得再进任何请求(AC-08)"
+     ]
+    },
+    {
+     "id": "K2",
+     "title": "固定前缀各轮不变",
+     "verdict": "pass",
+     "checked": 10,
+     "violations": []
+    },
+    {
+     "id": "K3",
+     "title": "对话与后台同模",
+     "verdict": "pass",
+     "checked": 15,
+     "violations": []
+    },
+    {
+     "id": "K4",
+     "title": "截断输出不当成功",
+     "verdict": "n/a",
+     "checked": 0,
+     "violations": []
+    },
+    {
+     "id": "K5",
+     "title": "失败的检查之后补查成功或留下欠账",
+     "verdict": "n/a",
+     "checked": 0,
+     "violations": []
+    },
+    {
+     "id": "K6",
+     "title": "预取旧消息不进固定前缀",
+     "verdict": "pass",
+     "checked": 10,
+     "violations": []
+    },
+    {
+     "id": "K7",
+     "title": "调用与运行记账完整",
+     "verdict": "pass",
+     "checked": 16,
+     "violations": []
+    }
+   ]
+  }
+ ],
+ "notes": [
+  "④③+G4 历史查询,预取开 工作树 HEAD `3218bc7dcc59465146cc9455595d81a470a618ff`(只供 G6 的合并提交;未推送到任何 PR 分支);依赖链接:@g-group/adapter-cc-compute、@g-group/adapter-pi-contact、@g-group/adapter-sqlite、@g-group/api-contract、@g-group/domain、@g-group/kernel、acp-kernel→third_party/acp-kernel、@g-group/server",
+  "runner 驱动代码与题集摘要 9f6a0c30627e8664;续跑只沿用同一组提交、同一续跑身份(模型/方式/认证引用/组级选项/一次一个调用/驱动摘要)、同一次序的记录;运行出错的记录不沿用"
+ ],
+ "heads": {
+  "g4on": "3218bc7dcc59465146cc9455595d81a470a618ff"
+ },
+ "freeze": [
+  {
+   "runId": "g4on/standin/rules-v1/R1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 2,
+     "retracted": true
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  }
+ ]
+}

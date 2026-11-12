@@ -1,0 +1,483 @@
+{
+  "runner_head": "f5f3af097109025295249a6c391fcd78f7cff025",
+  "before_head": "3218bc7dcc59465146cc9455595d81a470a618ff",
+  "after_head": "da066f5fee37d070785ec0ef9b2e7babebf13972",
+  "proof_kind": "standin deterministic contract regression, not real model effectiveness",
+  "runs": {
+    "after": {
+      "count": 34,
+      "statuses": {
+        "ok": 34
+      },
+      "runner": {
+        "commit": "f5f3af097109025295249a6c391fcd78f7cff025",
+        "node": "v24.21.0",
+        "platform": "linux-x64"
+      },
+      "fixture": {
+        "id": "t177-g6-set-v1",
+        "digest": "9f5df979ea7a2a3be7ae4e25fca10b69f5a4abd9da6a7baca3d4c3b7d38cfc1d",
+        "items": [
+          "U1",
+          "U2",
+          "U3",
+          "N1",
+          "N2",
+          "A1",
+          "O1",
+          "S1",
+          "S2",
+          "S3",
+          "H1",
+          "R1",
+          "E1",
+          "X1",
+          "C1",
+          "T1",
+          "M1"
+        ]
+      },
+      "groups": [
+        {
+          "id": "g4on",
+          "label": "④③+G4 历史查询,预取开",
+          "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+          "inputs": [
+            {
+              "slice": "G1",
+              "branch": "feat/t177-g1-memory",
+              "ref": "61948a23809d03a0d9087ba1e0253235b2fda955",
+              "sha": "61948a23809d03a0d9087ba1e0253235b2fda955",
+              "receipt": true
+            },
+            {
+              "slice": "G2",
+              "branch": "feat/t177-g2-config",
+              "ref": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+              "sha": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+              "receipt": true
+            },
+            {
+              "slice": "G3",
+              "branch": "feat/t177-g3-bc-search",
+              "ref": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+              "sha": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+              "receipt": true
+            },
+            {
+              "slice": "G5",
+              "branch": "feat/t177-g5-two-stage",
+              "ref": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+              "sha": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+              "receipt": true
+            },
+            {
+              "slice": "G4",
+              "branch": "feat/t177-g4-history-tools",
+              "ref": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+              "sha": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+              "receipt": true
+            }
+          ],
+          "groupCommit": "da066f5fee37d070785ec0ef9b2e7babebf13972",
+          "state": "可跑",
+          "reason": null
+        },
+        {
+          "id": "g4off",
+          "label": "④消融:预取关",
+          "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+          "inputs": [
+            {
+              "slice": "G1",
+              "branch": "feat/t177-g1-memory",
+              "ref": "61948a23809d03a0d9087ba1e0253235b2fda955",
+              "sha": "61948a23809d03a0d9087ba1e0253235b2fda955",
+              "receipt": true
+            },
+            {
+              "slice": "G2",
+              "branch": "feat/t177-g2-config",
+              "ref": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+              "sha": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+              "receipt": true
+            },
+            {
+              "slice": "G3",
+              "branch": "feat/t177-g3-bc-search",
+              "ref": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+              "sha": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+              "receipt": true
+            },
+            {
+              "slice": "G5",
+              "branch": "feat/t177-g5-two-stage",
+              "ref": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+              "sha": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+              "receipt": true
+            },
+            {
+              "slice": "G4",
+              "branch": "feat/t177-g4-history-tools",
+              "ref": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+              "sha": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+              "receipt": true
+            }
+          ],
+          "groupCommit": "da066f5fee37d070785ec0ef9b2e7babebf13972",
+          "state": "可跑",
+          "reason": null
+        }
+      ],
+      "contracts": {
+        "g4on": [
+          {
+            "id": "K1",
+            "title": "撤回/编辑前/越权原文不进请求",
+            "verdict": "pass",
+            "checked": 33,
+            "violations": []
+          },
+          {
+            "id": "K2",
+            "title": "固定前缀各轮不变",
+            "verdict": "pass",
+            "checked": 196,
+            "violations": []
+          },
+          {
+            "id": "K3",
+            "title": "对话与后台同模",
+            "verdict": "pass",
+            "checked": 297,
+            "violations": []
+          },
+          {
+            "id": "K4",
+            "title": "截断输出不当成功",
+            "verdict": "pass",
+            "checked": 2,
+            "violations": []
+          },
+          {
+            "id": "K5",
+            "title": "失败的检查之后补查成功或留下欠账",
+            "verdict": "pass",
+            "checked": 3,
+            "violations": []
+          },
+          {
+            "id": "K6",
+            "title": "预取旧消息不进固定前缀",
+            "verdict": "pass",
+            "checked": 196,
+            "violations": []
+          },
+          {
+            "id": "K7",
+            "title": "调用与运行记账完整",
+            "verdict": "pass",
+            "checked": 314,
+            "violations": []
+          }
+        ],
+        "g4off": [
+          {
+            "id": "K1",
+            "title": "撤回/编辑前/越权原文不进请求",
+            "verdict": "pass",
+            "checked": 33,
+            "violations": []
+          },
+          {
+            "id": "K2",
+            "title": "固定前缀各轮不变",
+            "verdict": "pass",
+            "checked": 196,
+            "violations": []
+          },
+          {
+            "id": "K3",
+            "title": "对话与后台同模",
+            "verdict": "pass",
+            "checked": 297,
+            "violations": []
+          },
+          {
+            "id": "K4",
+            "title": "截断输出不当成功",
+            "verdict": "pass",
+            "checked": 2,
+            "violations": []
+          },
+          {
+            "id": "K5",
+            "title": "失败的检查之后补查成功或留下欠账",
+            "verdict": "pass",
+            "checked": 3,
+            "violations": []
+          },
+          {
+            "id": "K6",
+            "title": "预取旧消息不进固定前缀",
+            "verdict": "n/a",
+            "checked": 196,
+            "violations": []
+          },
+          {
+            "id": "K7",
+            "title": "调用与运行记账完整",
+            "verdict": "pass",
+            "checked": 314,
+            "violations": []
+          }
+        ]
+      },
+      "r1": {
+        "g4off": {
+          "status": "ok",
+          "calls": 15,
+          "commit": "da066f5fee37d070785ec0ef9b2e7babebf13972",
+          "sha256": "3e0ab4b660495c92e02f30ba082871e9accb525ad26c3cccfb557ae9a7b46ff0"
+        },
+        "g4on": {
+          "status": "ok",
+          "calls": 15,
+          "commit": "da066f5fee37d070785ec0ef9b2e7babebf13972",
+          "sha256": "8c25861900185a365b98f0cac457e34955475ef89e5bfc4823fcaee0f6dff530"
+        }
+      }
+    },
+    "before_R1": {
+      "count": 2,
+      "statuses": {
+        "ok": 2
+      },
+      "runner": {
+        "commit": "f5f3af097109025295249a6c391fcd78f7cff025",
+        "node": "v24.21.0",
+        "platform": "linux-x64"
+      },
+      "fixture": {
+        "id": "t177-g6-set-v1",
+        "digest": "9f5df979ea7a2a3be7ae4e25fca10b69f5a4abd9da6a7baca3d4c3b7d38cfc1d",
+        "items": [
+          "R1"
+        ]
+      },
+      "groups": [
+        {
+          "id": "g4on",
+          "label": "④③+G4 历史查询,预取开",
+          "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+          "inputs": [
+            {
+              "slice": "G1",
+              "branch": "feat/t177-g1-memory",
+              "ref": "61948a23809d03a0d9087ba1e0253235b2fda955",
+              "sha": "61948a23809d03a0d9087ba1e0253235b2fda955",
+              "receipt": true
+            },
+            {
+              "slice": "G2",
+              "branch": "feat/t177-g2-config",
+              "ref": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+              "sha": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+              "receipt": true
+            },
+            {
+              "slice": "G3",
+              "branch": "feat/t177-g3-bc-search",
+              "ref": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+              "sha": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+              "receipt": true
+            },
+            {
+              "slice": "G5",
+              "branch": "feat/t177-g5-two-stage",
+              "ref": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+              "sha": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+              "receipt": true
+            },
+            {
+              "slice": "G4",
+              "branch": "feat/t177-g4-history-tools",
+              "ref": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+              "sha": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+              "receipt": true
+            }
+          ],
+          "groupCommit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+          "state": "可跑",
+          "reason": null
+        },
+        {
+          "id": "g4off",
+          "label": "④消融:预取关",
+          "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+          "inputs": [
+            {
+              "slice": "G1",
+              "branch": "feat/t177-g1-memory",
+              "ref": "61948a23809d03a0d9087ba1e0253235b2fda955",
+              "sha": "61948a23809d03a0d9087ba1e0253235b2fda955",
+              "receipt": true
+            },
+            {
+              "slice": "G2",
+              "branch": "feat/t177-g2-config",
+              "ref": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+              "sha": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+              "receipt": true
+            },
+            {
+              "slice": "G3",
+              "branch": "feat/t177-g3-bc-search",
+              "ref": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+              "sha": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+              "receipt": true
+            },
+            {
+              "slice": "G5",
+              "branch": "feat/t177-g5-two-stage",
+              "ref": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+              "sha": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+              "receipt": true
+            },
+            {
+              "slice": "G4",
+              "branch": "feat/t177-g4-history-tools",
+              "ref": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+              "sha": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+              "receipt": true
+            }
+          ],
+          "groupCommit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+          "state": "可跑",
+          "reason": null
+        }
+      ],
+      "contracts": {
+        "g4on": [
+          {
+            "id": "K1",
+            "title": "撤回/编辑前/越权原文不进请求",
+            "verdict": "fail",
+            "checked": 12,
+            "violations": [
+              "g4on/standin/rules-v1/R1/1:调用 13(round,第 5 块):撤回后原文不得再进任何请求(AC-08)",
+              "g4on/standin/rules-v1/R1/1:调用 14(round,第 5 块):撤回后原文不得再进任何请求(AC-08)"
+            ]
+          },
+          {
+            "id": "K2",
+            "title": "固定前缀各轮不变",
+            "verdict": "pass",
+            "checked": 10,
+            "violations": []
+          },
+          {
+            "id": "K3",
+            "title": "对话与后台同模",
+            "verdict": "pass",
+            "checked": 15,
+            "violations": []
+          },
+          {
+            "id": "K4",
+            "title": "截断输出不当成功",
+            "verdict": "n/a",
+            "checked": 0,
+            "violations": []
+          },
+          {
+            "id": "K5",
+            "title": "失败的检查之后补查成功或留下欠账",
+            "verdict": "n/a",
+            "checked": 0,
+            "violations": []
+          },
+          {
+            "id": "K6",
+            "title": "预取旧消息不进固定前缀",
+            "verdict": "pass",
+            "checked": 10,
+            "violations": []
+          },
+          {
+            "id": "K7",
+            "title": "调用与运行记账完整",
+            "verdict": "pass",
+            "checked": 16,
+            "violations": []
+          }
+        ],
+        "g4off": [
+          {
+            "id": "K1",
+            "title": "撤回/编辑前/越权原文不进请求",
+            "verdict": "pass",
+            "checked": 12,
+            "violations": []
+          },
+          {
+            "id": "K2",
+            "title": "固定前缀各轮不变",
+            "verdict": "pass",
+            "checked": 10,
+            "violations": []
+          },
+          {
+            "id": "K3",
+            "title": "对话与后台同模",
+            "verdict": "pass",
+            "checked": 15,
+            "violations": []
+          },
+          {
+            "id": "K4",
+            "title": "截断输出不当成功",
+            "verdict": "n/a",
+            "checked": 0,
+            "violations": []
+          },
+          {
+            "id": "K5",
+            "title": "失败的检查之后补查成功或留下欠账",
+            "verdict": "n/a",
+            "checked": 0,
+            "violations": []
+          },
+          {
+            "id": "K6",
+            "title": "预取旧消息不进固定前缀",
+            "verdict": "n/a",
+            "checked": 10,
+            "violations": []
+          },
+          {
+            "id": "K7",
+            "title": "调用与运行记账完整",
+            "verdict": "pass",
+            "checked": 16,
+            "violations": []
+          }
+        ]
+      },
+      "r1": {
+        "g4off": {
+          "status": "ok",
+          "calls": 15,
+          "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+          "sha256": "a7d997f778538a1559a2e22a955019c89d034fe3cd5dfe46f6f42a338667f84a"
+        },
+        "g4on": {
+          "status": "ok",
+          "calls": 15,
+          "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+          "sha256": "c31dfcc8229b06f79f9af67dd133f0fbb184864736feb2cb620d0ef8414e1bdf"
+        }
+      }
+    }
+  }
+}

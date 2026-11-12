@@ -1,0 +1,37 @@
+RUNNER_HEAD=f5f3af097109025295249a6c391fcd78f7cff025
+v24.21.0
+g4on standin/rules-v1 U1#1: ok 调用 15 次 37.0s
+g4on standin/rules-v1 U2#1: ok 调用 15 次 36.7s
+g4on standin/rules-v1 U3#1: ok 调用 15 次 36.7s
+g4on standin/rules-v1 N1#1: ok 调用 21 次 36.8s
+g4on standin/rules-v1 N2#1: ok 调用 21 次 37.0s
+g4on standin/rules-v1 A1#1: ok 调用 18 次 37.0s
+g4on standin/rules-v1 O1#1: ok 调用 15 次 36.8s
+g4on standin/rules-v1 S1#1: ok 调用 12 次 36.7s
+g4on standin/rules-v1 S2#1: ok 调用 16 次 36.5s
+g4on standin/rules-v1 S3#1: ok 调用 9 次 36.5s
+g4on standin/rules-v1 H1#1: ok 调用 12 次 36.3s
+g4on standin/rules-v1 R1#1: ok 调用 15 次 37.9s
+g4on standin/rules-v1 E1#1: ok 调用 15 次 38.6s
+g4on standin/rules-v1 X1#1: ok 调用 21 次 42.7s
+g4on standin/rules-v1 C1#1: ok 调用 58 次 46.7s
+g4on standin/rules-v1 T1#1: ok 调用 10 次 36.5s
+g4on standin/rules-v1 M1#1: ok 调用 9 次 36.3s
+g4off standin/rules-v1 U1#1: ok 调用 15 次 36.7s
+g4off standin/rules-v1 U2#1: ok 调用 15 次 36.7s
+g4off standin/rules-v1 U3#1: ok 调用 15 次 36.8s
+g4off standin/rules-v1 N1#1: ok 调用 21 次 36.7s
+g4off standin/rules-v1 N2#1: ok 调用 21 次 36.6s
+g4off standin/rules-v1 A1#1: ok 调用 18 次 36.8s
+g4off standin/rules-v1 O1#1: ok 调用 15 次 36.4s
+g4off standin/rules-v1 S1#1: ok 调用 12 次 36.1s
+g4off standin/rules-v1 S2#1: ok 调用 16 次 36.3s
+g4off standin/rules-v1 S3#1: ok 调用 9 次 36.4s
+g4off standin/rules-v1 H1#1: ok 调用 12 次 36.5s
+g4off standin/rules-v1 R1#1: ok 调用 15 次 38.4s
+g4off standin/rules-v1 E1#1: ok 调用 15 次 38.5s
+g4off standin/rules-v1 X1#1: ok 调用 21 次 42.4s
+g4off standin/rules-v1 C1#1: ok 调用 58 次 46.0s
+g4off standin/rules-v1 T1#1: ok 调用 10 次 36.5s
+g4off standin/rules-v1 M1#1: ok 调用 9 次 36.9s
+报告:/workspace/t177-g6-codex-20261112/standin-post-g4b/report.md

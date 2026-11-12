@@ -1,0 +1,4684 @@
+{
+ "generatedAt": "2026-11-11T15:59:54.706Z",
+ "runner": {
+  "commit": "1a3dcdad80e92176305640f8beca7b680e04adb0",
+  "node": "v22.22.0",
+  "platform": "darwin-arm64"
+ },
+ "fixture": {
+  "id": "t177-g6-set-v1",
+  "digest": "9f5df979ea7a2a3be7ae4e25fca10b69f5a4abd9da6a7baca3d4c3b7d38cfc1d",
+  "items": [
+   "U1",
+   "U2",
+   "U3",
+   "N1",
+   "N2",
+   "A1",
+   "O1",
+   "S1",
+   "S2",
+   "S3",
+   "H1",
+   "R1",
+   "E1",
+   "X1",
+   "C1",
+   "T1",
+   "M1"
+  ]
+ },
+ "reps": 1,
+ "groups": [
+  {
+   "id": "g1",
+   "label": "①当前基线",
+   "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "inputs": [],
+   "groupCommit": null,
+   "state": "可跑",
+   "reason": null
+  },
+  {
+   "id": "g2",
+   "label": "②G1+G2",
+   "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "inputs": [
+    {
+     "slice": "G1",
+     "branch": "feat/t177-g1-memory",
+     "ref": "origin/feat/t177-g1-memory",
+     "sha": "61948a23809d03a0d9087ba1e0253235b2fda955",
+     "receipt": true
+    },
+    {
+     "slice": "G2",
+     "branch": "feat/t177-g2-config",
+     "ref": "origin/feat/t177-g2-config",
+     "sha": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+     "receipt": true
+    }
+   ],
+   "groupCommit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "state": "可跑",
+   "reason": null
+  },
+  {
+   "id": "g3",
+   "label": "③②+G5 两段式(含 G3 检索底座)",
+   "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "inputs": [
+    {
+     "slice": "G1",
+     "branch": "feat/t177-g1-memory",
+     "ref": "origin/feat/t177-g1-memory",
+     "sha": "61948a23809d03a0d9087ba1e0253235b2fda955",
+     "receipt": true
+    },
+    {
+     "slice": "G2",
+     "branch": "feat/t177-g2-config",
+     "ref": "origin/feat/t177-g2-config",
+     "sha": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+     "receipt": true
+    },
+    {
+     "slice": "G3",
+     "branch": "feat/t177-g3-bc-search",
+     "ref": "origin/feat/t177-g3-bc-search",
+     "sha": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+     "receipt": true
+    },
+    {
+     "slice": "G5",
+     "branch": "feat/t177-g5-two-stage",
+     "ref": "origin/feat/t177-g5-two-stage",
+     "sha": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+     "receipt": true
+    }
+   ],
+   "groupCommit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "state": "可跑",
+   "reason": null
+  },
+  {
+   "id": "g4on",
+   "label": "④③+G4 历史查询,预取开",
+   "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "inputs": [
+    {
+     "slice": "G1",
+     "branch": "feat/t177-g1-memory",
+     "ref": "origin/feat/t177-g1-memory",
+     "sha": "61948a23809d03a0d9087ba1e0253235b2fda955",
+     "receipt": true
+    },
+    {
+     "slice": "G2",
+     "branch": "feat/t177-g2-config",
+     "ref": "origin/feat/t177-g2-config",
+     "sha": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+     "receipt": true
+    },
+    {
+     "slice": "G3",
+     "branch": "feat/t177-g3-bc-search",
+     "ref": "origin/feat/t177-g3-bc-search",
+     "sha": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+     "receipt": true
+    },
+    {
+     "slice": "G5",
+     "branch": "feat/t177-g5-two-stage",
+     "ref": "origin/feat/t177-g5-two-stage",
+     "sha": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+     "receipt": true
+    },
+    {
+     "slice": "G4",
+     "branch": "feat/t177-g4-history-tools",
+     "ref": "origin/feat/t177-g4-history-tools",
+     "sha": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+     "receipt": true
+    }
+   ],
+   "groupCommit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "state": "可跑",
+   "reason": null
+  },
+  {
+   "id": "g4off",
+   "label": "④消融:预取关",
+   "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "inputs": [
+    {
+     "slice": "G1",
+     "branch": "feat/t177-g1-memory",
+     "ref": "origin/feat/t177-g1-memory",
+     "sha": "61948a23809d03a0d9087ba1e0253235b2fda955",
+     "receipt": true
+    },
+    {
+     "slice": "G2",
+     "branch": "feat/t177-g2-config",
+     "ref": "origin/feat/t177-g2-config",
+     "sha": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+     "receipt": true
+    },
+    {
+     "slice": "G3",
+     "branch": "feat/t177-g3-bc-search",
+     "ref": "origin/feat/t177-g3-bc-search",
+     "sha": "f6b25f8c042f20c7697f2fc204e39a9fe33f027d",
+     "receipt": true
+    },
+    {
+     "slice": "G5",
+     "branch": "feat/t177-g5-two-stage",
+     "ref": "origin/feat/t177-g5-two-stage",
+     "sha": "f881619a82f269a275d5a6cb5e823c2971c6fcb3",
+     "receipt": true
+    },
+    {
+     "slice": "G4",
+     "branch": "feat/t177-g4-history-tools",
+     "ref": "origin/feat/t177-g4-history-tools",
+     "sha": "7a918e6e6ea7367063292b8e0f437ac64d14468a",
+     "receipt": true
+    }
+   ],
+   "groupCommit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "state": "可跑",
+   "reason": null
+  }
+ ],
+ "models": [
+  {
+   "mode": "standin",
+   "model": "standin/rules-v1",
+   "endpoint": "进程内规则替身",
+   "endpointHash": "-",
+   "authRef": "(无)",
+   "settings": null,
+   "serial": false,
+   "fingerprint": "87e29cefa75d8e93e9fe1018c33c915a",
+   "reuseKey": "b48ca4c49c2650578a8761ce039db8a2",
+   "group": "g1"
+  },
+  {
+   "mode": "standin",
+   "model": "standin/rules-v1",
+   "endpoint": "进程内规则替身",
+   "endpointHash": "-",
+   "authRef": "(无)",
+   "settings": null,
+   "serial": false,
+   "fingerprint": "87e29cefa75d8e93e9fe1018c33c915a",
+   "reuseKey": "b48ca4c49c2650578a8761ce039db8a2",
+   "group": "g2"
+  },
+  {
+   "mode": "standin",
+   "model": "standin/rules-v1",
+   "endpoint": "进程内规则替身",
+   "endpointHash": "-",
+   "authRef": "(无)",
+   "settings": {
+    "fineScreen": {
+     "quietMs": 20000
+    },
+    "settleMs": 35000
+   },
+   "serial": false,
+   "fingerprint": "1896cc57b76ccd0877783c17db0ba149",
+   "reuseKey": "369f5d3318bab063be8b0b11b10d0871",
+   "group": "g3"
+  },
+  {
+   "mode": "standin",
+   "model": "standin/rules-v1",
+   "endpoint": "进程内规则替身",
+   "endpointHash": "-",
+   "authRef": "(无)",
+   "settings": {
+    "fineScreen": {
+     "quietMs": 20000
+    },
+    "settleMs": 35000
+   },
+   "serial": false,
+   "fingerprint": "1896cc57b76ccd0877783c17db0ba149",
+   "reuseKey": "369f5d3318bab063be8b0b11b10d0871",
+   "group": "g4on"
+  },
+  {
+   "mode": "standin",
+   "model": "standin/rules-v1",
+   "endpoint": "进程内规则替身",
+   "endpointHash": "-",
+   "authRef": "(无)",
+   "settings": {
+    "fineScreen": {
+     "quietMs": 20000
+    },
+    "opts": {
+     "historyPrefetch": false
+    },
+    "settleMs": 35000
+   },
+   "serial": false,
+   "fingerprint": "a7331d509f901f626a69809b932797aa",
+   "reuseKey": "426c2500446c2b883c5f509e1e46c39e",
+   "group": "g4off"
+  }
+ ],
+ "modelStates": {
+  "standin/rules-v1": {
+   "state": "已跑",
+   "attempts": []
+  }
+ },
+ "results": [
+  {
+   "group": "g1",
+   "label": "①当前基线",
+   "model": "standin/rules-v1",
+   "mode": "standin",
+   "fingerprint": "87e29cefa75d8e93e9fe1018c33c915a",
+   "metrics": {
+    "runs": 17,
+    "coverage": {
+     "n": 81,
+     "d": 84
+    },
+    "missedWrites": {
+     "n": 3,
+     "d": 9
+    },
+    "wrongWrites": {
+     "n": 1,
+     "d": 4
+    },
+    "sourceScope": {
+     "n": 1,
+     "d": 9
+    },
+    "readBack": {
+     "n": 2,
+     "d": 8
+    },
+    "followAfterRead": {
+     "n": 1,
+     "d": 2
+    },
+    "untagged": {
+     "n": 0,
+     "d": 3
+    },
+    "prefetchMisled": {
+     "n": 0,
+     "d": 0
+    },
+    "probes": {
+     "n": 5,
+     "d": 12
+    },
+    "correctNoReply": 0,
+    "tokens": {
+     "input": 357650,
+     "output": 11787,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "byClass": {
+      "round": 294468,
+      "check": 74969,
+      "compact": 0,
+      "refine": 0,
+      "background": 0
+     }
+    },
+    "calls": 294,
+    "roundLatencyMs": {
+     "p50": 7,
+     "p95": 37,
+     "n": 78
+    },
+    "writeLatencyMs": {
+     "p50": 35,
+     "p95": 44,
+     "n": 6
+    },
+    "historyToolCalls": 0,
+    "callLatencyMs": {
+     "p50": 1,
+     "p95": 2,
+     "n": 293
+    },
+    "backlog": {
+     "count": 3,
+     "maxAgeMs": 9577
+    },
+    "failures": {
+     "timeout": 0,
+     "parseFailure": 0,
+     "configInsufficient": 0,
+     "httpError": 0,
+     "networkError": 0,
+     "empty": 0,
+     "injected": 4,
+     "runErrors": 0,
+     "stepTimeouts": 0
+    }
+   },
+   "contracts": [
+    {
+     "id": "K1",
+     "title": "撤回/编辑前/越权原文不进请求",
+     "verdict": "pass",
+     "checked": 33,
+     "violations": []
+    },
+    {
+     "id": "K2",
+     "title": "固定前缀各轮不变",
+     "verdict": "pass",
+     "checked": 196,
+     "violations": []
+    },
+    {
+     "id": "K3",
+     "title": "对话与后台同模",
+     "verdict": "pass",
+     "checked": 294,
+     "violations": []
+    },
+    {
+     "id": "K4",
+     "title": "截断输出不当成功",
+     "verdict": "fail",
+     "checked": 2,
+     "violations": [
+      "g1/standin/rules-v1/T1/1:调用 4 截断的输出成了调用 5 的状态笔记"
+     ]
+    },
+    {
+     "id": "K5",
+     "title": "失败的检查之后补查成功或留下欠账",
+     "verdict": "fail",
+     "checked": 3,
+     "violations": [
+      "g1/standin/rules-v1/C1/1:调用 5(http_error)里的 g-mwc9wpkn-3 #1 之后既没有再被检查成功,也没有留下欠账记录",
+      "g1/standin/rules-v1/T1/1:调用 3(truncated)里的 dm-c-mwc9wx3u-1 #1 之后既没有再被检查成功,也没有留下欠账记录",
+      "g1/standin/rules-v1/M1/1:调用 3(parse_failure)里的 dm-c-mwc9wxff-1 #1 之后既没有再被检查成功,也没有留下欠账记录"
+     ]
+    },
+    {
+     "id": "K6",
+     "title": "预取旧消息不进固定前缀",
+     "verdict": "n/a",
+     "checked": 196,
+     "violations": []
+    },
+    {
+     "id": "K7",
+     "title": "调用与运行记账完整",
+     "verdict": "pass",
+     "checked": 311,
+     "violations": []
+    }
+   ]
+  },
+  {
+   "group": "g2",
+   "label": "②G1+G2",
+   "model": "standin/rules-v1",
+   "mode": "standin",
+   "fingerprint": "87e29cefa75d8e93e9fe1018c33c915a",
+   "metrics": {
+    "runs": 17,
+    "coverage": {
+     "n": 82,
+     "d": 84
+    },
+    "missedWrites": {
+     "n": 2,
+     "d": 9
+    },
+    "wrongWrites": {
+     "n": 1,
+     "d": 4
+    },
+    "sourceScope": {
+     "n": 7,
+     "d": 9
+    },
+    "readBack": {
+     "n": 2,
+     "d": 8
+    },
+    "followAfterRead": {
+     "n": 2,
+     "d": 2
+    },
+    "untagged": {
+     "n": 0,
+     "d": 3
+    },
+    "prefetchMisled": {
+     "n": 0,
+     "d": 0
+    },
+    "probes": {
+     "n": 6,
+     "d": 12
+    },
+    "correctNoReply": 0,
+    "tokens": {
+     "input": 380405,
+     "output": 12030,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "byClass": {
+      "round": 297494,
+      "check": 94941,
+      "compact": 0,
+      "refine": 0,
+      "background": 0
+     }
+    },
+    "calls": 296,
+    "roundLatencyMs": {
+     "p50": 8,
+     "p95": 43,
+     "n": 78
+    },
+    "writeLatencyMs": {
+     "p50": 40,
+     "p95": 1565,
+     "n": 7
+    },
+    "historyToolCalls": 0,
+    "callLatencyMs": {
+     "p50": 0,
+     "p95": 2,
+     "n": 295
+    },
+    "backlog": {
+     "count": 2,
+     "maxAgeMs": 248
+    },
+    "failures": {
+     "timeout": 0,
+     "parseFailure": 0,
+     "configInsufficient": 0,
+     "httpError": 0,
+     "networkError": 0,
+     "empty": 0,
+     "injected": 4,
+     "runErrors": 0,
+     "stepTimeouts": 0
+    }
+   },
+   "contracts": [
+    {
+     "id": "K1",
+     "title": "撤回/编辑前/越权原文不进请求",
+     "verdict": "pass",
+     "checked": 33,
+     "violations": []
+    },
+    {
+     "id": "K2",
+     "title": "固定前缀各轮不变",
+     "verdict": "pass",
+     "checked": 196,
+     "violations": []
+    },
+    {
+     "id": "K3",
+     "title": "对话与后台同模",
+     "verdict": "pass",
+     "checked": 296,
+     "violations": []
+    },
+    {
+     "id": "K4",
+     "title": "截断输出不当成功",
+     "verdict": "pass",
+     "checked": 2,
+     "violations": []
+    },
+    {
+     "id": "K5",
+     "title": "失败的检查之后补查成功或留下欠账",
+     "verdict": "pass",
+     "checked": 3,
+     "violations": []
+    },
+    {
+     "id": "K6",
+     "title": "预取旧消息不进固定前缀",
+     "verdict": "n/a",
+     "checked": 196,
+     "violations": []
+    },
+    {
+     "id": "K7",
+     "title": "调用与运行记账完整",
+     "verdict": "pass",
+     "checked": 313,
+     "violations": []
+    }
+   ]
+  },
+  {
+   "group": "g3",
+   "label": "③②+G5 两段式(含 G3 检索底座)",
+   "model": "standin/rules-v1",
+   "mode": "standin",
+   "fingerprint": "1896cc57b76ccd0877783c17db0ba149",
+   "metrics": {
+    "runs": 17,
+    "coverage": {
+     "n": 82,
+     "d": 84
+    },
+    "missedWrites": {
+     "n": 3,
+     "d": 9
+    },
+    "wrongWrites": {
+     "n": 1,
+     "d": 4
+    },
+    "sourceScope": {
+     "n": 6,
+     "d": 9
+    },
+    "readBack": {
+     "n": 1,
+     "d": 8
+    },
+    "followAfterRead": {
+     "n": 1,
+     "d": 1
+    },
+    "untagged": {
+     "n": 0,
+     "d": 3
+    },
+    "prefetchMisled": {
+     "n": 0,
+     "d": 0
+    },
+    "probes": {
+     "n": 5,
+     "d": 12
+    },
+    "correctNoReply": 0,
+    "tokens": {
+     "input": 392391,
+     "output": 12044,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "byClass": {
+      "round": 297245,
+      "check": 106441,
+      "compact": 0,
+      "refine": 749,
+      "background": 0
+     }
+    },
+    "calls": 297,
+    "roundLatencyMs": {
+     "p50": 8,
+     "p95": 59,
+     "n": 78
+    },
+    "writeLatencyMs": {
+     "p50": 52,
+     "p95": 1590,
+     "n": 6
+    },
+    "historyToolCalls": 0,
+    "callLatencyMs": {
+     "p50": 0,
+     "p95": 2,
+     "n": 296
+    },
+    "backlog": {
+     "count": 2,
+     "maxAgeMs": 35334
+    },
+    "failures": {
+     "timeout": 0,
+     "parseFailure": 0,
+     "configInsufficient": 0,
+     "httpError": 0,
+     "networkError": 0,
+     "empty": 0,
+     "injected": 4,
+     "runErrors": 0,
+     "stepTimeouts": 0
+    }
+   },
+   "contracts": [
+    {
+     "id": "K1",
+     "title": "撤回/编辑前/越权原文不进请求",
+     "verdict": "pass",
+     "checked": 33,
+     "violations": []
+    },
+    {
+     "id": "K2",
+     "title": "固定前缀各轮不变",
+     "verdict": "pass",
+     "checked": 196,
+     "violations": []
+    },
+    {
+     "id": "K3",
+     "title": "对话与后台同模",
+     "verdict": "pass",
+     "checked": 297,
+     "violations": []
+    },
+    {
+     "id": "K4",
+     "title": "截断输出不当成功",
+     "verdict": "pass",
+     "checked": 2,
+     "violations": []
+    },
+    {
+     "id": "K5",
+     "title": "失败的检查之后补查成功或留下欠账",
+     "verdict": "pass",
+     "checked": 3,
+     "violations": []
+    },
+    {
+     "id": "K6",
+     "title": "预取旧消息不进固定前缀",
+     "verdict": "n/a",
+     "checked": 196,
+     "violations": []
+    },
+    {
+     "id": "K7",
+     "title": "调用与运行记账完整",
+     "verdict": "pass",
+     "checked": 314,
+     "violations": []
+    }
+   ]
+  },
+  {
+   "group": "g4on",
+   "label": "④③+G4 历史查询,预取开",
+   "model": "standin/rules-v1",
+   "mode": "standin",
+   "fingerprint": "1896cc57b76ccd0877783c17db0ba149",
+   "metrics": {
+    "runs": 17,
+    "coverage": {
+     "n": 82,
+     "d": 84
+    },
+    "missedWrites": {
+     "n": 3,
+     "d": 9
+    },
+    "wrongWrites": {
+     "n": 1,
+     "d": 4
+    },
+    "sourceScope": {
+     "n": 6,
+     "d": 9
+    },
+    "readBack": {
+     "n": 7,
+     "d": 8
+    },
+    "followAfterRead": {
+     "n": 7,
+     "d": 7
+    },
+    "untagged": {
+     "n": 3,
+     "d": 3
+    },
+    "prefetchMisled": {
+     "n": 0,
+     "d": 3
+    },
+    "probes": {
+     "n": 11,
+     "d": 12
+    },
+    "correctNoReply": 0,
+    "tokens": {
+     "input": 396136,
+     "output": 12020,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "byClass": {
+      "round": 300995,
+      "check": 106412,
+      "compact": 0,
+      "refine": 749,
+      "background": 0
+     }
+    },
+    "calls": 297,
+    "roundLatencyMs": {
+     "p50": 9,
+     "p95": 57,
+     "n": 78
+    },
+    "writeLatencyMs": {
+     "p50": 38,
+     "p95": 1598,
+     "n": 6
+    },
+    "historyToolCalls": 0,
+    "callLatencyMs": {
+     "p50": 0,
+     "p95": 2,
+     "n": 296
+    },
+    "backlog": {
+     "count": 2,
+     "maxAgeMs": 35341
+    },
+    "failures": {
+     "timeout": 0,
+     "parseFailure": 0,
+     "configInsufficient": 0,
+     "httpError": 0,
+     "networkError": 0,
+     "empty": 0,
+     "injected": 4,
+     "runErrors": 0,
+     "stepTimeouts": 0
+    }
+   },
+   "contracts": [
+    {
+     "id": "K1",
+     "title": "撤回/编辑前/越权原文不进请求",
+     "verdict": "fail",
+     "checked": 33,
+     "violations": [
+      "g4on/standin/rules-v1/R1/1:调用 13(round,第 5 块):撤回后原文不得再进任何请求(AC-08)",
+      "g4on/standin/rules-v1/R1/1:调用 14(round,第 5 块):撤回后原文不得再进任何请求(AC-08)"
+     ]
+    },
+    {
+     "id": "K2",
+     "title": "固定前缀各轮不变",
+     "verdict": "pass",
+     "checked": 196,
+     "violations": []
+    },
+    {
+     "id": "K3",
+     "title": "对话与后台同模",
+     "verdict": "pass",
+     "checked": 297,
+     "violations": []
+    },
+    {
+     "id": "K4",
+     "title": "截断输出不当成功",
+     "verdict": "pass",
+     "checked": 2,
+     "violations": []
+    },
+    {
+     "id": "K5",
+     "title": "失败的检查之后补查成功或留下欠账",
+     "verdict": "pass",
+     "checked": 3,
+     "violations": []
+    },
+    {
+     "id": "K6",
+     "title": "预取旧消息不进固定前缀",
+     "verdict": "pass",
+     "checked": 196,
+     "violations": []
+    },
+    {
+     "id": "K7",
+     "title": "调用与运行记账完整",
+     "verdict": "pass",
+     "checked": 314,
+     "violations": []
+    }
+   ]
+  },
+  {
+   "group": "g4off",
+   "label": "④消融:预取关",
+   "model": "standin/rules-v1",
+   "mode": "standin",
+   "fingerprint": "a7331d509f901f626a69809b932797aa",
+   "metrics": {
+    "runs": 17,
+    "coverage": {
+     "n": 82,
+     "d": 84
+    },
+    "missedWrites": {
+     "n": 3,
+     "d": 9
+    },
+    "wrongWrites": {
+     "n": 1,
+     "d": 4
+    },
+    "sourceScope": {
+     "n": 6,
+     "d": 9
+    },
+    "readBack": {
+     "n": 1,
+     "d": 8
+    },
+    "followAfterRead": {
+     "n": 1,
+     "d": 1
+    },
+    "untagged": {
+     "n": 0,
+     "d": 3
+    },
+    "prefetchMisled": {
+     "n": 0,
+     "d": 0
+    },
+    "probes": {
+     "n": 5,
+     "d": 12
+    },
+    "correctNoReply": 0,
+    "tokens": {
+     "input": 392391,
+     "output": 12044,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "byClass": {
+      "round": 297245,
+      "check": 106441,
+      "compact": 0,
+      "refine": 749,
+      "background": 0
+     }
+    },
+    "calls": 297,
+    "roundLatencyMs": {
+     "p50": 8,
+     "p95": 59,
+     "n": 78
+    },
+    "writeLatencyMs": {
+     "p50": 35,
+     "p95": 1591,
+     "n": 6
+    },
+    "historyToolCalls": 0,
+    "callLatencyMs": {
+     "p50": 0,
+     "p95": 2,
+     "n": 296
+    },
+    "backlog": {
+     "count": 2,
+     "maxAgeMs": 35337
+    },
+    "failures": {
+     "timeout": 0,
+     "parseFailure": 0,
+     "configInsufficient": 0,
+     "httpError": 0,
+     "networkError": 0,
+     "empty": 0,
+     "injected": 4,
+     "runErrors": 0,
+     "stepTimeouts": 0
+    }
+   },
+   "contracts": [
+    {
+     "id": "K1",
+     "title": "撤回/编辑前/越权原文不进请求",
+     "verdict": "pass",
+     "checked": 33,
+     "violations": []
+    },
+    {
+     "id": "K2",
+     "title": "固定前缀各轮不变",
+     "verdict": "pass",
+     "checked": 196,
+     "violations": []
+    },
+    {
+     "id": "K3",
+     "title": "对话与后台同模",
+     "verdict": "pass",
+     "checked": 297,
+     "violations": []
+    },
+    {
+     "id": "K4",
+     "title": "截断输出不当成功",
+     "verdict": "pass",
+     "checked": 2,
+     "violations": []
+    },
+    {
+     "id": "K5",
+     "title": "失败的检查之后补查成功或留下欠账",
+     "verdict": "pass",
+     "checked": 3,
+     "violations": []
+    },
+    {
+     "id": "K6",
+     "title": "预取旧消息不进固定前缀",
+     "verdict": "n/a",
+     "checked": 196,
+     "violations": []
+    },
+    {
+     "id": "K7",
+     "title": "调用与运行记账完整",
+     "verdict": "pass",
+     "checked": 314,
+     "violations": []
+    }
+   ]
+  }
+ ],
+ "notes": [
+  "①当前基线 工作树 HEAD `4efdee0be6d161060099b5ce488e3344c70305ee`(基线 4efdee0be6d1 按序合入 无;未推送到任何 PR 分支);依赖链接:@g-group/adapter-cc-compute、@g-group/adapter-pi-contact、@g-group/adapter-sqlite、@g-group/api-contract、@g-group/domain、@g-group/kernel、@g-group/server",
+  "②G1+G2 工作树 HEAD `4c9a37201c42dc2587380769fb072c3f10b2c1ad`(只供 G6 的合并提交;未推送到任何 PR 分支);依赖链接:@g-group/adapter-cc-compute、@g-group/adapter-pi-contact、@g-group/adapter-sqlite、@g-group/api-contract、@g-group/domain、@g-group/kernel、@g-group/server",
+  "③②+G5 两段式(含 G3 检索底座) 工作树 HEAD `122e0d4f1f8b0415cf0c413db28fa827f1d4067b`(只供 G6 的合并提交;未推送到任何 PR 分支);依赖链接:@g-group/adapter-cc-compute、@g-group/adapter-pi-contact、@g-group/adapter-sqlite、@g-group/api-contract、@g-group/domain、@g-group/kernel、acp-kernel→third_party/acp-kernel、@g-group/server",
+  "④③+G4 历史查询,预取开 工作树 HEAD `3218bc7dcc59465146cc9455595d81a470a618ff`(只供 G6 的合并提交;未推送到任何 PR 分支);依赖链接:@g-group/adapter-cc-compute、@g-group/adapter-pi-contact、@g-group/adapter-sqlite、@g-group/api-contract、@g-group/domain、@g-group/kernel、acp-kernel→third_party/acp-kernel、@g-group/server",
+  "④消融:预取关 工作树 HEAD `3218bc7dcc59465146cc9455595d81a470a618ff`(只供 G6 的合并提交;未推送到任何 PR 分支);依赖链接:@g-group/adapter-cc-compute、@g-group/adapter-pi-contact、@g-group/adapter-sqlite、@g-group/api-contract、@g-group/domain、@g-group/kernel、acp-kernel→third_party/acp-kernel、@g-group/server",
+  "runner 驱动代码与题集摘要 9f6a0c30627e8664;续跑只沿用同一组提交、同一续跑身份(模型/方式/认证引用/组级选项/一次一个调用/驱动摘要)、同一次序的记录;运行出错的记录不沿用"
+ ],
+ "heads": {
+  "g1": "4efdee0be6d161060099b5ce488e3344c70305ee",
+  "g2": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+  "g3": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+  "g4on": "3218bc7dcc59465146cc9455595d81a470a618ff",
+  "g4off": "3218bc7dcc59465146cc9455595d81a470a618ff"
+ },
+ "freeze": [
+  {
+   "runId": "g1/standin/rules-v1/U1/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/U2/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/U3/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/N1/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 13,
+     "version": 7,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/N2/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 13,
+     "version": 7,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/A1/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/O1/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/S1/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/S2/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 2,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 4,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 6,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 8,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/S3/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/H1/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/R1/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 2,
+     "retracted": true
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/E1/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/X1/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    },
+    {
+     "key": "g",
+     "kind": "group",
+     "contacts": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 1,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 4,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/C1/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "g",
+     "kind": "group",
+     "contacts": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "g",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 4,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 7,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 10,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 13,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/T1/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g1/standin/rules-v1/M1/1",
+   "commit": "4efdee0be6d161060099b5ce488e3344c70305ee",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/U1/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/U2/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/U3/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/N1/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 13,
+     "version": 7,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/N2/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 13,
+     "version": 7,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/A1/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/O1/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/S1/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/S2/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 2,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 4,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 6,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 8,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/S3/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/H1/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/R1/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 2,
+     "retracted": true
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/E1/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/X1/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    },
+    {
+     "key": "g",
+     "kind": "group",
+     "contacts": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 1,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 4,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/C1/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "g",
+     "kind": "group",
+     "contacts": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "g",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 5,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 8,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 11,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 14,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/T1/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g2/standin/rules-v1/M1/1",
+   "commit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/U1/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/U2/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/U3/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/N1/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 13,
+     "version": 7,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/N2/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 13,
+     "version": 7,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/A1/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/O1/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/S1/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/S2/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 2,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 4,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 6,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 8,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/S3/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/H1/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/R1/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 2,
+     "retracted": true
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/E1/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/X1/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    },
+    {
+     "key": "g",
+     "kind": "group",
+     "contacts": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 1,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 4,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/C1/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "g",
+     "kind": "group",
+     "contacts": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "g",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 5,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 8,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 11,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 14,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/T1/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g3/standin/rules-v1/M1/1",
+   "commit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/U1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/U2/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/U3/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/N1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 13,
+     "version": 7,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/N2/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 13,
+     "version": 7,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/A1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/O1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/S1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/S2/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 2,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 4,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 6,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 8,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/S3/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/H1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/R1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 2,
+     "retracted": true
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/E1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/X1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    },
+    {
+     "key": "g",
+     "kind": "group",
+     "contacts": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 1,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 4,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/C1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "g",
+     "kind": "group",
+     "contacts": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "g",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 5,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 8,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 11,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 14,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/T1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4on/standin/rules-v1/M1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/U1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/U2/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/U3/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/N1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 13,
+     "version": 7,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/N2/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 13,
+     "version": 7,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/A1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 11,
+     "version": 6,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/O1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/S1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/S2/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 2,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 4,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 6,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 8,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/S3/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/H1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/R1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 2,
+     "retracted": true
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/E1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 7,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 9,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/X1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    },
+    {
+     "key": "g",
+     "kind": "group",
+     "contacts": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 1,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 4,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/C1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "g",
+     "kind": "group",
+     "contacts": [
+      "A",
+      "B"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "g",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 5,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 8,
+     "version": 3,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 11,
+     "version": 4,
+     "retracted": false
+    },
+    {
+     "room": "g",
+     "seq": 14,
+     "version": 5,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/T1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  },
+  {
+   "runId": "g4off/standin/rules-v1/M1/1",
+   "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+   "rooms": [
+    {
+     "key": "dm",
+     "kind": "dm",
+     "contacts": [
+      "A"
+     ]
+    }
+   ],
+   "versions": [
+    {
+     "room": "dm",
+     "seq": 1,
+     "version": 1,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 3,
+     "version": 2,
+     "retracted": false
+    },
+    {
+     "room": "dm",
+     "seq": 5,
+     "version": 3,
+     "retracted": false
+    }
+   ]
+  }
+ ]
+}

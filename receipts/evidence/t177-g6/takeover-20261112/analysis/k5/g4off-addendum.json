@@ -1,0 +1,248 @@
+{
+  "schema": "g6-k5-g4off-addendum/v1",
+  "checkedAtUtc": "2026-11-12T11:11:35.223649+00:00",
+  "verdict": "TWO_FROZEN_K5_FALSE_POSITIVES",
+  "verifiedRecords": 2,
+  "method": "Read original raw; validate fixed SHA256/commit; reuse unchanged local read-only helpers for frozen K5 parse/comparison; reconstruct MemoryCoverage.begin identity; compare original reflect-failed IDs and subsequent calls. No network or product/runner execution.",
+  "helperSha256": "cbc1906956724d4156e51d148fa54a1b0a123dd198820e45b9775d1a92b2dd76",
+  "fixedSourceSha256": {
+    "3218bc7:packages/server/src/host.ts": "00be6139e13ecf378391b84f97ec5679fc06b90343b5362ac69f184d276a0eca",
+    "3218bc7:packages/server/src/memory-coverage.ts": "b1bff8ba921bd946504f8498bd2066383505290891fe312b0d30fe87aaef538a"
+  },
+  "results": [
+    {
+      "path": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-t177-execution/G6/runs/real/raw/g4off__workbuddy-ai_hy4free/R1-r1.json",
+      "sha256": "85c9dad5e127c06a744887bd8e0424b4fa99d216e6865b4815abd36e80f8e549",
+      "bytes": 326318,
+      "runId": "g4off/workbuddy-ai/hy4free/R1/1",
+      "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+      "originalStatus": "timeout",
+      "operation": {
+        "order": 2,
+        "op": "retract",
+        "room": "dm",
+        "seq": 1,
+        "step": 1,
+        "at": 1794475378902,
+        "utc": "2026-11-12T09:22:58.902+00:00"
+      },
+      "focusedCalls": [
+        {
+          "n": 6,
+          "at": 1794475437042,
+          "startUtc": "2026-11-12T09:23:57.042+00:00",
+          "endUtc": "2026-11-12T09:25:54.158+00:00",
+          "outcome": "empty",
+          "sources": [],
+          "derivedCoverageId": "3786ff8e25b20bc13ef878fd36f1aa9f00134f2e4f3e16edf9dc56e4422e7f95",
+          "inboundLines": [
+            {
+              "roomId": "dm-c-mwdc7yoe-1",
+              "seq": 3,
+              "kind": "user",
+              "text": "(撤回了 #1)"
+            }
+          ],
+          "text": null
+        },
+        {
+          "n": 11,
+          "at": 1794475784908,
+          "startUtc": "2026-11-12T09:29:44.908+00:00",
+          "endUtc": "2026-11-12T09:30:36.545+00:00",
+          "outcome": "ok",
+          "sources": [],
+          "derivedCoverageId": "3786ff8e25b20bc13ef878fd36f1aa9f00134f2e4f3e16edf9dc56e4422e7f95",
+          "inboundLines": [],
+          "text": "{\"note\":null,\"memories\":[],\"personaSuggestion\":null}"
+        }
+      ],
+      "matchingFailedReports": [
+        {
+          "at": 1794475554166,
+          "utc": "2026-11-12T09:25:54.166+00:00",
+          "contactId": "c-mwdc7yoe-1",
+          "coverageId": "3786ff8e25b20bc13ef878fd36f1aa9f00134f2e4f3e16edf9dc56e4422e7f95",
+          "error": "压缩请求失败(error):Anthropic stream ended before message_stop"
+        }
+      ],
+      "historicalK5Violations": [
+        {
+          "call": 6,
+          "roomId": "dm-c-mwdc7yoe-1",
+          "seq": 3,
+          "text": "(撤回了 #1)"
+        }
+      ],
+      "finalHostDebt": {
+        "counts": {
+          "ok": 4,
+          "failed": 1
+        },
+        "refs": [
+          {
+            "roomId": "dm-c-mwdc7yoe-1",
+            "seq": 1,
+            "state": "failed"
+          }
+        ]
+      },
+      "rejectedRememberSourceSeq3": [
+        {
+          "at": 1794475554169,
+          "utc": "2026-11-12T09:25:54.169+00:00",
+          "detail": "{\"contactId\":\"c-mwdc7yoe-1\",\"action\":{\"kind\":\"remember\",\"roomId\":\"dm-c-mwdc7yoe-1\",\"sourceSeq\":3,\"title\":\"储物柜信息已被撤回，不再作为依据\",\"text\":\"用户已于 #3 撤回 #1（那条告知储物柜与钥匙位置的消息），原文不可见。原记忆 m-mwdcb3ne-3 的内容不再作为回答依据：以后被问到柜号或钥匙位置时，直说看不到原文、不要凭该记忆作答。用户重新提供时再另记。\",\"anchors\":[\"user:me\",\"room:dm-c-mwdc7yoe-1\"],\"quote\":null,\"relation\":\"change\",\"target\":\"m-mwdcb3ne-3\"},\"reason\":\"来源 dm-c-mwdc7yoe-1 #3 不存在或已撤回\"}"
+        }
+      ],
+      "finding": "判据误报：call 6 的撤回事件 #3 形成空 sources coverage，call 11 对同一重建覆盖身份检查成功；原 K5 文本比较漏认。",
+      "rawHashUnchanged": true
+    },
+    {
+      "path": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-t177-execution/G6/runs/real/raw/g4off__workbuddy-ai_hy4free/E1-r1.json",
+      "sha256": "db7e4df368a72f9fda2fd21648652c4769d173604801cf5fd964982e9abeb429",
+      "bytes": 418904,
+      "runId": "g4off/workbuddy-ai/hy4free/E1/1",
+      "commit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+      "originalStatus": "timeout",
+      "operation": {
+        "order": 2,
+        "op": "edit",
+        "room": "dm",
+        "seq": 1,
+        "step": 1,
+        "at": 1794476541472,
+        "utc": "2026-11-12T09:42:21.472+00:00"
+      },
+      "focusedCalls": [
+        {
+          "n": 6,
+          "at": 1794476567323,
+          "startUtc": "2026-11-12T09:42:47.323+00:00",
+          "endUtc": "2026-11-12T09:44:47.625+00:00",
+          "outcome": "empty",
+          "sources": [
+            {
+              "roomId": "dm-c-mwdcwi5l-1",
+              "seq": 1,
+              "revision": 3,
+              "senderKind": "user",
+              "senderId": "me",
+              "text": "周会定在每周四下午三点,地点三楼小会议室",
+              "verifiedOutcome": false
+            }
+          ],
+          "derivedCoverageId": "666cdd10ff6bc00b345199fd841c1b8f6fce88e4ed2fe8fdf1828c96035c865d",
+          "inboundLines": [
+            {
+              "roomId": "dm-c-mwdcwi5l-1",
+              "seq": 3,
+              "kind": "user",
+              "text": "(编辑了 #1)周会定在每周四下午三点,地点三楼小会议室"
+            }
+          ],
+          "text": null
+        },
+        {
+          "n": 14,
+          "at": 1794476916099,
+          "startUtc": "2026-11-12T09:48:36.099+00:00",
+          "endUtc": "2026-11-12T09:50:38.413+00:00",
+          "outcome": "empty",
+          "sources": [
+            {
+              "roomId": "dm-c-mwdcwi5l-1",
+              "seq": 1,
+              "revision": 3,
+              "senderKind": "user",
+              "senderId": "me",
+              "text": "周会定在每周四下午三点,地点三楼小会议室",
+              "verifiedOutcome": false
+            }
+          ],
+          "derivedCoverageId": "666cdd10ff6bc00b345199fd841c1b8f6fce88e4ed2fe8fdf1828c96035c865d",
+          "inboundLines": [
+            {
+              "roomId": "dm-c-mwdcwi5l-1",
+              "seq": 1,
+              "kind": "user",
+              "text": "周会定在每周四下午三点,地点三楼小会议室"
+            }
+          ],
+          "text": null
+        }
+      ],
+      "matchingFailedReports": [
+        {
+          "at": 1794476687634,
+          "utc": "2026-11-12T09:44:47.634+00:00",
+          "contactId": "c-mwdcwi5l-1",
+          "coverageId": "666cdd10ff6bc00b345199fd841c1b8f6fce88e4ed2fe8fdf1828c96035c865d",
+          "error": "压缩请求失败(error):Anthropic stream ended before message_stop"
+        },
+        {
+          "at": 1794477038420,
+          "utc": "2026-11-12T09:50:38.420+00:00",
+          "contactId": "c-mwdcwi5l-1",
+          "coverageId": "666cdd10ff6bc00b345199fd841c1b8f6fce88e4ed2fe8fdf1828c96035c865d",
+          "error": "压缩请求失败(error):Anthropic stream ended before message_stop"
+        }
+      ],
+      "historicalK5Violations": [
+        {
+          "call": 6,
+          "roomId": "dm-c-mwdcwi5l-1",
+          "seq": 3,
+          "text": "(编辑了 #1)周会定在每周四下午三点,地点三楼小会议室"
+        }
+      ],
+      "finalHostDebt": {
+        "counts": {
+          "ok": 2,
+          "failed": 2,
+          "pending": 1
+        },
+        "refs": [
+          {
+            "roomId": "dm-c-mwdcwi5l-1",
+            "seq": 1,
+            "state": "failed"
+          },
+          {
+            "roomId": "dm-c-mwdcwi5l-1",
+            "seq": 6,
+            "state": "pending"
+          },
+          {
+            "roomId": "dm-c-mwdcwi5l-1",
+            "seq": 1,
+            "state": "failed"
+          }
+        ]
+      },
+      "rejectedRememberSourceSeq3": [
+        {
+          "at": 1794476687636,
+          "utc": "2026-11-12T09:44:47.636+00:00",
+          "detail": "{\"contactId\":\"c-mwdcwi5l-1\",\"action\":{\"kind\":\"remember\",\"roomId\":\"dm-c-mwdcwi5l-1\",\"sourceSeq\":3,\"title\":\"周会固定安排\",\"text\":\"用户定下的固定周会:每周四下午三点(15:00),地点三楼小会议室。以后安排日程时该时段默认被周会占用。(原记录为每周二上午九点,用户于 #3 编辑 #1 改为周四下午三点,地点不变。)\",\"anchors\":[\"room:dm-c-mwdcwi5l-1\",\"user:me\"],\"quote\":\"周会定在每周四下午三点,地点三楼小会议室\",\"relation\":\"change\",\"target\":\"m-mwdd00zt-3\"},\"reason\":\"来源 dm-c-mwdcwi5l-1 #3 不存在或已撤回\"}"
+        }
+      ],
+      "finding": "判据误报：call 6 呈现事件 #3，实际来源 #1/rev3；同一 coverage 在 call 14 确实补查但仍失败，最终有 #1 failed 欠账。不能写成补查成功。",
+      "rawHashUnchanged": true
+    }
+  ],
+  "originalAttachmentHashesPreserved": {
+    "stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "结论.md": "2851ecfb5fb6a8bd1ea1ef9436300cc7d683f69cd564cda3e99363f19fd1e89a",
+    "verify_k5_records.py": "cbc1906956724d4156e51d148fa54a1b0a123dd198820e45b9775d1a92b2dd76",
+    "stdout.json": "f84c935d14b07d6aed282841b9536e03632159463ae641b1a3154d60753b8a0a",
+    "exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "execution.json": "9923d88a5dbe15532117eb8ee42121123e6578b255d4d5abdabd9ff3889438c9"
+  },
+  "limitations": [
+    "Only these two g4off failures are classified; no declaration that all K5, AC-42, or G6 passed.",
+    "Original hostDebt drops coverage ID, revision and disposition. Derived IDs are reconstruction, not directly recorded call metadata.",
+    "remember sourceSeq=3 rejection remains a separate behavior; not declared normal or repaired.",
+    "E1 retry call 14 failed: debt persistence, not successful recovery."
+  ],
+  "verificationAssertionsCompleted": true
+}

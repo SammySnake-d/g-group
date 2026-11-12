@@ -1,0 +1,54 @@
+{
+  "output": "/private/tmp/gg-t177g6-delivery-20261112/receipts/evidence/t177-g6/takeover-20261112/analysis/refine/frozen-counts.json",
+  "sha256": "82f12c77c7f30e325045cfd54b81432397121d390ab4cf7281a505ea1736082e",
+  "rawFiles": 82,
+  "selectedRecords": 82,
+  "rawManifestSha256": "357db3a807a32c3cbbc27ff027d86a7dd10702f5394c6c8e8b3a5537d0d0ea9d",
+  "groups": [
+    {
+      "group": "g1",
+      "records": 17,
+      "checkEmptyCandidates": 65,
+      "checkExactEmptyResult": 65,
+      "checkFailed": 19,
+      "generation2": 0,
+      "refineCalls": 0
+    },
+    {
+      "group": "g2",
+      "records": 17,
+      "checkEmptyCandidates": 77,
+      "checkExactEmptyResult": 77,
+      "checkFailed": 26,
+      "generation2": 0,
+      "refineCalls": 0
+    },
+    {
+      "group": "g3",
+      "records": 17,
+      "checkEmptyCandidates": 56,
+      "checkExactEmptyResult": 56,
+      "checkFailed": 28,
+      "generation2": 19,
+      "refineCalls": 0
+    },
+    {
+      "group": "g4on",
+      "records": 17,
+      "checkEmptyCandidates": 56,
+      "checkExactEmptyResult": 56,
+      "checkFailed": 26,
+      "generation2": 19,
+      "refineCalls": 0
+    },
+    {
+      "group": "g4off",
+      "records": 14,
+      "checkEmptyCandidates": 61,
+      "checkExactEmptyResult": 61,
+      "checkFailed": 24,
+      "generation2": 15,
+      "refineCalls": 0
+    }
+  ]
+}
