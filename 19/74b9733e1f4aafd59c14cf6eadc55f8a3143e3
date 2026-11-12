@@ -1,0 +1,37 @@
+docs/proof/mention-loop-ca2/README.md
+  s_9d7fa6e9d65b83::t_55222590ce6c5a 1-52
+docs/proof/mention-loop-ca2/cloud-summary.json
+  s_9d7fa6e9d65b83::t_c5a106cb830f7a 1-276
+docs/proof/mention-loop-ca2/dependency-and-authorization.md
+  s_9d7fa6e9d65b83::t_edb56facca38cd 1-8
+docs/proof/mention-loop-ca2/mechanical-gates-v4.json
+  s_9d7fa6e9d65b83::t_6e18aa31aa706b 1-160
+docs/proof/mention-loop-ca2/r05-coverage.json
+  s_9d7fa6e9d65b83::t_afb9dab95cc66c 1-221
+docs/proof/mention-loop-ca2/runner-count-calibration.json
+  s_9d7fa6e9d65b83::t_44fe18b15ffc10 1-28
+docs/proof/mention-loop-ca2/source-freeze.json
+  s_9d7fa6e9d65b83::t_cb24fab4d0792b 1-534
+docs/proof/mention-loop-ca2/transaction-supplement.json
+  s_9d7fa6e9d65b83::t_001ed08ab42a06 1-35
+docs/proof/mention-loop-ca2/transaction-supplement.mjs
+  s_9d7fa6e9d65b83::t_5c14c1349f092a 1-100
+receipts/feat-mention-loop-guard-ca2.json
+  s_9d7fa6e9d65b83::t_6cecc065b8745e 1-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1974b9733e1f4aafd59c14cf6eadc55f8a3143e3",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

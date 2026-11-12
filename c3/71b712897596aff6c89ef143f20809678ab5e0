@@ -1,0 +1,21 @@
+packages/server/proof/create-quota-mutations.mjs
+  s_9d7fa6e9d65b83::t_e3e6664b13c65d 1-86
+packages/server/proof/create-quota-real.ts
+  s_9d7fa6e9d65b83::t_e3e6664b13c65d 1-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c371b712897596aff6c89ef143f20809678ab5e0",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

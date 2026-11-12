@@ -1,0 +1,54 @@
+docs/proof/create-quota/gate-inherited-api-identity.json
+  s_9d7fa6e9d65b83::t_ab94092a320876 1-63
+docs/proof/create-quota/gate-inherited-api-red.tap
+  s_9d7fa6e9d65b83::t_ab94092a320876 1-549
+docs/proof/create-quota/range-calibrated-red-result.json
+  s_9d7fa6e9d65b83::t_ab94092a320876 1-9
+docs/proof/create-quota/range-calibrated-red.tap
+  s_9d7fa6e9d65b83::t_ab94092a320876 1-584
+docs/proof/create-quota/gate-preliminary-failure.txt
+  s_9d7fa6e9d65b83::t_ab94092a320876 1-14
+docs/proof/create-quota/README.md
+  s_9d7fa6e9d65b83::t_ab94092a320876 1-28
+  s_9d7fa6e9d65b83::t_0f998ca8f6ea54 29-30
+docs/proof/create-quota/range-calibrated-green.tap
+  s_9d7fa6e9d65b83::t_ab94092a320876 1-88
+receipts/feat-create-quota.json
+  s_9d7fa6e9d65b83::t_ab94092a320876 1-27
+docs/proof/create-quota/create-quota-baseline-before.json
+  s_9d7fa6e9d65b83::t_b9f50b10f09fe2 1-74
+docs/proof/create-quota/create-quota-calibrated-red.tap
+  s_9d7fa6e9d65b83::t_498464d1bc1b70 1-587
+docs/proof/create-quota/create-quota-full-red.tap
+  s_9d7fa6e9d65b83::t_caa489c6aca903 1-587
+docs/proof/create-quota/create-quota-green.tap
+  s_9d7fa6e9d65b83::t_925479506d67ce 1-88
+docs/proof/create-quota/create-quota-initial-green.tap
+  s_9d7fa6e9d65b83::t_a055ca27c81c58 1-130
+docs/proof/create-quota/create-quota-initial-red.tap
+  s_9d7fa6e9d65b83::t_69b690a6c2d284 1-31
+docs/proof/create-quota/create-quota-lint-initial.txt
+  s_9d7fa6e9d65b83::t_d9b9fb5ff21f3f 1
+docs/proof/create-quota/create-quota-real-local.txt
+  s_9d7fa6e9d65b83::t_1db741e6eed8fa 1-17
+docs/proof/create-quota/create-quota-typecheck-initial.txt
+  s_9d7fa6e9d65b83::t_5b59396b3dc37a 1
+docs/proof/create-quota/log-byte-provenance.json
+  s_9d7fa6e9d65b83::t_affe27ea520ba1 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e1b91fc123148d637ddfd5db0db64ba6efdba4bf",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

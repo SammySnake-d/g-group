@@ -1,0 +1,24 @@
+packages/server/src/host.ts
+  s_bc500ef58bf3aa::t_a4e1ec839a32d1 1,153,436-437,447
+packages/server/src/loop-guard.ts
+  s_bc500ef58bf3aa::t_a4e1ec839a32d1 1-29
+packages/server/src/loop-guard.test.ts
+  s_bc500ef58bf3aa::t_73079e46674028 171
+  s_bc500ef58bf3aa::t_a4e1ec839a32d1 1-170,172-186
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "23f23ef3eb19c688a479441289ddb26245a43e92",
+  "prompts": {},
+  "sessions": {
+    "s_bc500ef58bf3aa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cf01-3b82-7211-b7b9-c7147d5e45e7",
+        "model": "chatflows/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
