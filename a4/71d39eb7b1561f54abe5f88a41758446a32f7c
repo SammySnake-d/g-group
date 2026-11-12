@@ -1,0 +1,29 @@
+docs/proof/codex-compute-protocol/README.md
+  s_9d7fa6e9d65b83::t_f076789a1be69f 1-25
+docs/proof/codex-compute-protocol/calibration.json
+  s_9d7fa6e9d65b83::t_d0b8d68f6d180a 1-33
+docs/proof/codex-compute-protocol/mutation-check.py
+  s_9d7fa6e9d65b83::t_8c0920abde0bb2 1-41
+docs/proof/codex-compute-protocol/native-component-result.json
+  s_9d7fa6e9d65b83::t_57015024d97d1c 1-196
+docs/proof/codex-compute-protocol/native-component-run.mjs
+  s_9d7fa6e9d65b83::t_e47d9e762a3164 1-51
+receipts/feat-codex-compute-protocol.json
+  s_9d7fa6e9d65b83::t_47055351ddd70e 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a471d39eb7b1561f54abe5f88a41758446a32f7c",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
