@@ -1,0 +1,75 @@
+docs/proof/room-pending-summary/README.md
+  s_9d7fa6e9d65b83::t_7ff8b2109ed2fc 47-48
+docs/proof/room-pending-summary/r2/baseline-seven-corrected.tap
+  s_9d7fa6e9d65b83::t_da0e63e204fc24 1-52
+docs/proof/room-pending-summary/r2/coverage-index.json
+  s_9d7fa6e9d65b83::t_e0545bee6975a2 1-73
+docs/proof/room-pending-summary/r2/executor-errors/baseline-seven-execution.json
+  s_9d7fa6e9d65b83::t_18e9e9f80c2a62 1-19
+docs/proof/room-pending-summary/r2/executor-errors/baseline-seven.tap
+  s_9d7fa6e9d65b83::t_7e4f7d2395e80c 1-93
+docs/proof/room-pending-summary/r2/executor-errors/dependency-binding-executor-error.json
+  s_9d7fa6e9d65b83::t_934f0254443941 1-27
+docs/proof/room-pending-summary/r2/executor-errors/r2-counterexample-execution.json
+  s_9d7fa6e9d65b83::t_88351ab830d380 1-12
+docs/proof/room-pending-summary/r2/executor-errors/r2-executor-notes.json
+  s_9d7fa6e9d65b83::t_b7921d11c934c2 1-63
+docs/proof/room-pending-summary/r2/executor-errors/r2-expanded-corrected.tap
+  s_9d7fa6e9d65b83::t_eb657c12c7b4f9 1-128
+docs/proof/room-pending-summary/r2/executor-errors/r2-expanded-first-execution.json
+  s_9d7fa6e9d65b83::t_74309fe336131f 1-11
+docs/proof/room-pending-summary/r2/executor-errors/r2-expanded-first.tap
+  s_9d7fa6e9d65b83::t_e8eadee0b0b57e 1-132
+docs/proof/room-pending-summary/r2/executor-errors/r2-expanded-fixture-correction.json
+  s_9d7fa6e9d65b83::t_edfcee69ca5217 1-14
+docs/proof/room-pending-summary/r2/executor-errors/r2-typecheck-first.log
+  s_9d7fa6e9d65b83::t_cb3d1b2dea50d6 1-5
+docs/proof/room-pending-summary/r2/r1-05-true-green-execution.json
+  s_9d7fa6e9d65b83::t_b74215692e42b4 1-17
+docs/proof/room-pending-summary/r2/r1-05-true-green.tap
+  s_9d7fa6e9d65b83::t_11c30a8ddca464 1-58
+docs/proof/room-pending-summary/r2/r1-05-true-red-execution.json
+  s_9d7fa6e9d65b83::t_598cee78853d53 1-18
+docs/proof/room-pending-summary/r2/r1-05-true-red.tap
+  s_9d7fa6e9d65b83::t_1d77865717f34a 1-80
+docs/proof/room-pending-summary/r2/r2-final-narrow.tap
+  s_9d7fa6e9d65b83::t_17663879b3ee86 1-112
+docs/proof/room-pending-summary/r2/r2-final-same-body-green.tap
+  s_9d7fa6e9d65b83::t_53877d02ae493b 1-112
+docs/proof/room-pending-summary/r2/r2-final-same-body-red-execution.json
+  s_9d7fa6e9d65b83::t_5ca82fc485721f 1-36
+docs/proof/room-pending-summary/r2/r2-final-same-body-red.tap
+  s_9d7fa6e9d65b83::t_ce2a16e34b191d 1-440
+docs/proof/room-pending-summary/r2/r2-final-same-body-verification.json
+  s_9d7fa6e9d65b83::t_f71e922c537f8c 1-13
+docs/proof/room-pending-summary/r2/r2-lint.log
+  s_9d7fa6e9d65b83::t_530408855d4dc4 1-5
+docs/proof/room-pending-summary/r2/r2-local-verification.json
+  s_9d7fa6e9d65b83::t_211d891ded7d27 1-12
+docs/proof/room-pending-summary/r2/r2-owning-lifecycle-regression.json
+  s_9d7fa6e9d65b83::t_ef48dce00b84cd 1-22
+docs/proof/room-pending-summary/r2/r2-owning-lifecycle-regression.tap
+  s_9d7fa6e9d65b83::t_2c449497024ba2 1-190
+docs/proof/room-pending-summary/r2/r2-typecheck.log
+  s_9d7fa6e9d65b83::t_8a8e973490ad8f 1-4
+docs/proof/room-pending-summary/r2/runner-input-validation.json
+  s_9d7fa6e9d65b83::t_198efdffba7e88 1-117
+receipts/feat-room-pending-summary.json
+  s_9d7fa6e9d65b83::t_b58d0e72b39242 29-30,34,45-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6da91f5afc437a347bff0990db8af59bd189edd2",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,79 @@
+docs/proof/coverage-invariants-r2/samebody-red.tap
+  s_9d7fa6e9d65b83::t_01713b74237e02 1-175
+docs/proof/coverage-invariants-r2/check-runner-parser.mjs
+  s_9d7fa6e9d65b83::t_01713b74237e02 1-27
+docs/proof/coverage-invariants-r2/receipt-before-r2.json
+  s_9d7fa6e9d65b83::t_01713b74237e02 1-86
+docs/proof/coverage-invariants-r2/runner-delta.json
+  s_9d7fa6e9d65b83::t_01713b74237e02 1-26
+docs/proof/coverage-invariants-r2/runner-parser-check.json
+  s_9d7fa6e9d65b83::t_01713b74237e02 1-61
+docs/proof/coverage-invariants-r2/r2-executor-errors.json
+  s_9d7fa6e9d65b83::t_01713b74237e02 1-27
+packages/server/src/coverage-invariants.test.ts
+  s_9d7fa6e9d65b83::t_9815297eed35d6 34-35,38,43-46,59,62-74
+  s_9d7fa6e9d65b83::t_95ca7b3c193b17 119-128,131-135,149-153
+  s_9d7fa6e9d65b83::t_2a58ff216e8f0e 154
+docs/proof/coverage-invariants-r2/production-byte-comparison.json
+  s_9d7fa6e9d65b83::t_01713b74237e02 1-17
+docs/proof/coverage-invariants-r2/local-static-checks.json
+  s_9d7fa6e9d65b83::t_01713b74237e02 1-40
+docs/proof/coverage-invariants-r2/README.md
+  s_9d7fa6e9d65b83::t_01713b74237e02 1-44
+docs/proof/coverage-invariants-r2/samebody-red-commands.json
+  s_9d7fa6e9d65b83::t_01713b74237e02 1-85
+docs/proof/coverage-invariants-r2/samebody-red-result.json
+  s_9d7fa6e9d65b83::t_01713b74237e02 1-40
+receipts/feat-coverage-invariants.json
+  s_9d7fa6e9d65b83::t_01713b74237e02 8,14,20,25-27,30,33,67-72,75-80,83-136
+docs/proof/coverage-invariants-r2/candidate-baseline.json
+  s_9d7fa6e9d65b83::t_661cd6159c88b9 1-21
+docs/proof/coverage-invariants-r2/enhanced-r101-M09.json
+  s_9d7fa6e9d65b83::t_dd121ee5c0a8f8 1-27
+docs/proof/coverage-invariants-r2/enhanced-r101-M09.tap
+  s_9d7fa6e9d65b83::t_f15d50be7600ff 1-99
+docs/proof/coverage-invariants-r2/final-M09.tap
+  s_9d7fa6e9d65b83::t_5bf0d7886d9526 1-97
+docs/proof/coverage-invariants-r2/final-M10.tap
+  s_9d7fa6e9d65b83::t_96fc9c2d1e3085 1-127
+docs/proof/coverage-invariants-r2/final-M11.tap
+  s_9d7fa6e9d65b83::t_04d7c76cbac23d 1-52
+docs/proof/coverage-invariants-r2/final-baseline.tap
+  s_9d7fa6e9d65b83::t_b0e93fc1ce84d6 1-34
+docs/proof/coverage-invariants-r2/final-narrow-calibration.json
+  s_9d7fa6e9d65b83::t_0ab404075ab677 1-141
+docs/proof/coverage-invariants-r2/mutation-anchor-executor-error-v1.json
+  s_9d7fa6e9d65b83::t_9e4ad20c07f771 1-8
+docs/proof/coverage-invariants-r2/original-M09.tap
+  s_9d7fa6e9d65b83::t_8cea0f846c0901 1-34
+docs/proof/coverage-invariants-r2/original-M10.tap
+  s_9d7fa6e9d65b83::t_5948cd1158c413 1-34
+docs/proof/coverage-invariants-r2/original-M11.tap
+  s_9d7fa6e9d65b83::t_6b56d42c93a583 1-34
+docs/proof/coverage-invariants-r2/original-baseline.tap
+  s_9d7fa6e9d65b83::t_6ae6baa679f997 1-34
+docs/proof/coverage-invariants-r2/original-counterexample-survival.json
+  s_9d7fa6e9d65b83::t_711171759872e9 1-103
+docs/proof/coverage-invariants-r2/r1-counterexamples-plan.json
+  s_9d7fa6e9d65b83::t_058a9cc8eb7e2d 1-35
+docs/proof/coverage-invariants-r2/run-narrow-calibration.py
+  s_9d7fa6e9d65b83::t_6aa90759bd5bc0 1-46
+packages/server/proof/coverage-invariants-mutations.mjs
+  s_9d7fa6e9d65b83::t_42a5baff58f000 30-37,43-44,54-55,57,93-94,99,107-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e20b04ad04d4a2faebfd9de20789638e310d853e",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
