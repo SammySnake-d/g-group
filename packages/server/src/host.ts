@@ -838,7 +838,7 @@ export class Host {
     const blockers = roomTasks.flatMap(({ value: d }) => {
       if (d.task.state !== "T4b_BlockedOnHuman" || !d.task.pendingQ) return [];
       const card = this.questionCard(d.task.id, d.task.pendingQ.qId);
-      if (!card || card.state !== "open" || !visible.some((m) => m.seq === card.seq)) return [];
+      if (card?.state !== "open" || !visible.some((m) => m.seq === card.seq)) return [];
       const text = this.authzOf(d.task.id).value.requests.find((q) => q.qId === d.task.pendingQ!.qId)?.action ?? this.questionText(d.task.id, d.task.pendingQ.qId);
       return [{ taskId: d.task.id, seq: card.seq, text }];
     });
