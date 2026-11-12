@@ -1,0 +1,21 @@
+receipts/evidence/t177-g6/takeover-20261112/FILES.sha256
+  s_ecdaeafb3c4b76::t_8d09c8b9763ea5 42
+receipts/evidence/t177-g6/takeover-20261112/delivery-local-gates.txt
+  s_ecdaeafb3c4b76::t_24bbd759c7ff21 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "71f61a31a1b265f75943bf05babe318534bdd99f",
+  "prompts": {},
+  "sessions": {
+    "s_ecdaeafb3c4b76": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cf01-1d3d-7193-99b4-dcee5ae892a1",
+        "model": "chatflows/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

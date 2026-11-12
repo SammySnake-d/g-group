@@ -1,0 +1,19 @@
+apps/desktop/proof/parity-compute/green.txt
+  s_b3368d8f94ae5a::t_ef33f5658798ed 1-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "845fc067256ed230c0123095c8508880917e4e86",
+  "prompts": {},
+  "sessions": {
+    "s_b3368d8f94ae5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aff9ebe3f7dda50e6",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

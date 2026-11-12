@@ -1,0 +1,31 @@
+apps/desktop/src/api/wire/session.ts
+  s_b3368d8f94ae5a::t_2baff85d240182 40-45,67
+apps/desktop/src/app/list/FileList.tsx
+  s_b3368d8f94ae5a::t_80896cd7cebe56 27
+apps/desktop/src/components/compute/HarnessSession.tsx
+  s_b3368d8f94ae5a::t_0de3ddce5eca21 40-41,45,87
+apps/desktop/src/components/compute/session/SessionFooter.tsx
+  s_b3368d8f94ae5a::t_6bef8c957d2489 21,26
+apps/desktop/src/components/messages/compute/ComputeLine.tsx
+  s_b3368d8f94ae5a::t_906d00bfe11eec 57
+apps/desktop/src/components/split/ComputeWork.tsx
+  s_b3368d8f94ae5a::t_533553880e47ec 68,111
+packages/server/src/fakes.ts
+  s_b3368d8f94ae5a::t_7b1683cb3c0b86 37-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "08ebe5bb7a8e12a92f3c4023f88522ffe983fe4b",
+  "prompts": {},
+  "sessions": {
+    "s_b3368d8f94ae5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aff9ebe3f7dda50e6",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

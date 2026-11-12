@@ -1,0 +1,27 @@
+apps/desktop/e2e/group-side.electron.spec.ts
+  s_f0dfa712c20d46::t_fbfe3ca00d2f63 117,149
+apps/desktop/src/components/group/ToolsTab.tsx
+  s_f0dfa712c20d46::t_f2dfb1b7c87a52 96-97
+apps/desktop/src/components/group/constants.ts
+  s_f0dfa712c20d46::t_c6e27b404d139d 54-55
+apps/desktop/src/store/slices/tasks.ts
+  s_f0dfa712c20d46::t_986b5377e07230 62-63
+packages/server/src/announcements.test.ts
+  s_f0dfa712c20d46::t_5bd87b0aecf99e 72-73,87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "445e0345f5a7f0f1c601aaf4baee586b5d9b96e3",
+  "prompts": {},
+  "sessions": {
+    "s_f0dfa712c20d46": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac5e2e0613e55bd0a",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

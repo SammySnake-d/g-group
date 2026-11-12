@@ -1,0 +1,23 @@
+apps/desktop/electron/main.ts
+  s_d81660d2bcfe5d::t_7d436d102f3f31 7,90
+packages/ui-core/src/ipc.ts
+  s_d81660d2bcfe5d::t_7d436d102f3f31 8,65-67
+packages/api-contract/src/api.ts
+  s_d81660d2bcfe5d::t_7d436d102f3f31 48-51,195
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "52412af151804e9a70110f0e2b388e55ab1cdaac",
+  "prompts": {},
+  "sessions": {
+    "s_d81660d2bcfe5d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cec9-738b-7a32-9fdf-78b37f5178c9",
+        "model": "chatflows/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
