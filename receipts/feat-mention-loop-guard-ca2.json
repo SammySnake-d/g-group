@@ -1,0 +1,56 @@
+{
+  "slice": "U15 / D07.0 防联系人无限互唤，叠CA2并合入完整chat-admin依赖；不以本片代替全量需求验收",
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "失败",
+      "reason": "官方G-RED实际红：Docker overlayfs导致具名运行0；本片15条另有同体回溯红/绿，但不是历史先写规格证明，也不覆盖完整#71继承测试。非产品失败定性。",
+      "evidence": "docs/proof/mention-loop-ca2/mechanical-gates-v4.json; docs/proof/mention-loop-ca2/cloud-summary.json"
+    },
+    {
+      "id": "R-03",
+      "status": "失败",
+      "reason": "官方G-STUB实际红：官方沙箱未启动真实实现，无任何具名通过，未完成官方空实现/返回值变异门禁。",
+      "evidence": "docs/proof/mention-loop-ca2/mechanical-gates-v4.json"
+    },
+    {
+      "id": "R-04",
+      "status": "失败",
+      "reason": "官方G-TAUTO实际红：静态27条、沙箱运行0；不据此定性测试同语反复，环境恢复后须跑真实门禁。",
+      "evidence": "docs/proof/mention-loop-ca2/mechanical-gates-v4.json"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "reason": "仅本片15具名判据作者对照：原15+7严格指定ERR_ASSERTION完整杀死，另补事务判据阳性9绿1红/同代码单开关阴性10绿；完整#71、全需求与独立审查不在这项通过范围。",
+      "evidence": "docs/proof/mention-loop-ca2/r05-coverage.json; docs/proof/mention-loop-ca2/cloud-summary.json; docs/proof/mention-loop-ca2/transaction-supplement.json"
+    },
+    {
+      "id": "AC-30",
+      "status": "未测",
+      "reason": "scripted真实service配置2跳的停止/续话/重启对照通过，不是实模、UI或完整Compute产品链验收。"
+    },
+    {
+      "id": "AC-31",
+      "status": "未测",
+      "reason": "仅机械因果限次/滚动频率及CA2保留；完整条目、默认跳数4批准、G4后续接缝未验。"
+    }
+  ],
+  "candidate": {
+    "status": "候选",
+    "description": "maxHops默认4仍待用户拍板；仅Host构造选项可配置，未声称UI或持久产品设置已实现。自动往返是机械因果，不推断话题语义。"
+  },
+  "author": {
+    "agent": "codex",
+    "session": "codex:01a1d03a-add3-7a02-92d2-92e9791196ee",
+    "model": "gpt-6.1-sol"
+  },
+  "red": {
+    "commit": "e520a78acff82db54407cf0231081450ee27aa20"
+  },
+  "unverifiable": "R-02历史TDD顺序未证；R-02/R-03/R-04官方Docker沙箱overlayfs在Node前失败，实际门禁红，须环境恢复后真实重跑。G-PROVENANCE在review=null下短路不代表来源实核。AC-30/31完整产品链、真实模型/CLI E2E与UI未验。maxHops4未批，G4 #69/#82接缝待重对。R-05通过只限本片15具名判据的作者对照。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待Mira Bot安排独立跨厂商审查与真实来源核验",
+  "notes": "CA2固定base3968d497；完整#71 c7d1a2dd由合并提交37118a3d引入，原#71/#79分支未写。Mira Bot DM #3000/#3011授权并集：rejections/chatAdmin字段与初始化均保留；pointers精确保持rejectionPointers,claimable,pointers,mem.pointers,muteNotes顺序。新增CA2接缝05真实执行验证三样同轮装配。claim卡与reply/dispatch/deliver一同继承causeRoots。红提交是回溯可加载空壳与针对新接缝故障对照，旧10体与新5体在红/绿保持不变。作者为真实子会话，native full-history fork含父session_meta但不据其伪造turns，不自签审查。当前冻结受测源码e1e8ab02912a90335496c2172577ff72da57d46c；最终仅增加证明与收据，526份受测源文件保持原字节。 新box4全量1522/1522；原22变异完整指定断言红；补1事务阳性/单开关阴性；非1495旧组合借用。外层门禁runner0不冒充官方命令1通过。"
+}
