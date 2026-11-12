@@ -22,6 +22,9 @@ export function installContactHistory(db: Db, now: string) {
     kind TEXT NOT NULL, restored_from INTEGER, at TEXT NOT NULL,
     PRIMARY KEY (contact_id, version)
   );
+  CREATE TRIGGER IF NOT EXISTS gg_contact_config_no_overwrite BEFORE INSERT ON gg_contact_config_versions
+    WHEN EXISTS (SELECT 1 FROM gg_contact_config_versions WHERE contact_id = NEW.contact_id AND version = NEW.version)
+    BEGIN SELECT RAISE(ABORT, 'contact config history immutable'); END;
   CREATE TRIGGER IF NOT EXISTS gg_contact_config_no_update BEFORE UPDATE ON gg_contact_config_versions BEGIN SELECT RAISE(ABORT, 'contact config history immutable'); END;
   CREATE TRIGGER IF NOT EXISTS gg_contact_config_no_delete BEFORE DELETE ON gg_contact_config_versions BEGIN SELECT RAISE(ABORT, 'contact config history immutable'); END;
   CREATE TABLE IF NOT EXISTS gg_contact_config_actions (
