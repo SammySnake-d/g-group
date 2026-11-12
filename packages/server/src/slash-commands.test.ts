@@ -92,9 +92,10 @@ test("P7 待确认:生产任务交付列入摘要,仍保持待确认状态", asy
 });
 
 test("P7 待回答:授权和提问照实列出,摘要不能代答", async () => {
-  const compute = scriptedCompute(); const s = setup({compute:()=>compute.adapter}); await install(s,ketchupPath); const c=s.host.createContact({name:"小克"}); const g=s.host.createGroup("群",[{kind:"contact",id:c.id}]);
+  const compute = scriptedCompute({script:()=>[{kind:"started",sessionId:"s",resumed:false},{kind:"blocked",needs:"要改 app.ts",summary:"准备改"}]}); const s = setup({compute:()=>compute.adapter}); await install(s,ketchupPath); const c=s.host.createContact({name:"小克"}); const g=s.host.createGroup("群",[{kind:"contact",id:c.id}]);
   s.host.updateRoom(g.id,{rules:"改代码前先问我"});
-  s.host.send({roomId:g.id,clientActionId:"ask",text:"帮我改 app.ts",mentions:[{id:c.id,source:"manual"}]});await settle(s.host);
+  s.host.send({roomId:g.id,clientActionId:"ask",text:"帮我改 app.ts",mentions:[{id:c.id,source:"manual"}]});
+  for(let i=0;i<100;i++){await settle(s.host);if(s.host.listMessages(g.id,{}).messages.some(m=>m.card?.kind==="question"))break;}
   const cards=s.host.listMessages(g.id,{}).messages.filter(m=>m.card?.kind==="question" && m.card.state==="open"); assert.equal(cards.length,1);
   const before=state(s.host); const r=await s.svc.handle("messages.send",send(g.id,"question","ketchup"));
   assert.ok(view(r).text.includes(`等你授权:「${cards[0]!.card!.title}」(${cards[0]!.card!.taskId})#${cards[0]!.seq}`));
