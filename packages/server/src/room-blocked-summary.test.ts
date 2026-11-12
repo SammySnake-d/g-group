@@ -10,11 +10,14 @@ import { cleanupKit, closeKitHosts, setup } from "./test-kit.ts";
 afterEach(() => closeKitHosts());
 after(() => cleanupKit());
 
-async function settle(host: Host) {
+async function settle(host: Host, compute: { drained(): boolean }) {
   for (let n = 0; n < 100; n++) {
     await Promise.race([host.idle(), new Promise((resolve) => setTimeout(resolve, 50))]);
     await new Promise((resolve) => setTimeout(resolve, 5));
-    if (!host.loop.busy()) return;
+    if (compute.drained() && !host.loop.busy()) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      if (compute.drained() && !host.loop.busy()) return;
+    }
   }
   throw new Error("阻塞夹具未在有界等待内结束");
 }
@@ -25,7 +28,7 @@ async function blocked() {
   const c = s.host.createContact({ name: "测试联系人" });
   const dm = s.host.openDm(c.id);
   s.host.send({ roomId: dm.id, clientActionId: "create-blocked", text: "帮我登录测试页面" });
-  await settle(s.host);
+  await settle(s.host, compute);
   const task = s.host.listTasks({ roomId: dm.id })[0]!;
   assert.equal(task.state, "T4b_BlockedOnHuman", "夹具必须真正走到等待用户");
   return { ...s, compute, dm, task };
@@ -63,7 +66,7 @@ test("回答生效后阻塞摘要消失并经 room.updated 推送", async () => 
     const unsubscribe = s.svc.subscribe((event) => { if (event.type === "room.updated" && event.room.id === s.dm.id) updates.push(event.room); });
     const answered = await s.svc.handle("tasks.answer", { taskId: s.task.id, qId: s.task.pendingQuestion!.qId, clientActionId: "answer-once", answer: "NEUTRAL_FIXTURE" });
     assert.ok(answered.ok);
-    await settle(s.host);
+    await settle(s.host, s.compute);
     const got = await s.svc.handle("rooms.get", { roomId: s.dm.id });
     assert.equal(got.ok && (got.value as RoomView).blockedSummary, null);
     assert.equal(updates.at(-1)?.blockedSummary, null);
