@@ -41,7 +41,7 @@ export function installContactHistory(db: Db, now: string) {
 }
 
 export function recordContactConfig(db: Db, id: string, version: number, value: ConfigSource, kind: ContactConfigVersion["kind"], at: string, restoredFrom: number | null = null) {
-  void [db, id, version, value, kind, at, restoredFrom];
+  run(db, "INSERT INTO gg_contact_config_versions (contact_id, version, config, kind, restored_from, at) VALUES (?, ?, ?, ?, ?, ?)", id, version, JSON.stringify(contactConfigOf(value)), kind, restoredFrom, at);
 }
 
 type VersionRow = { version: number; config: string; kind: ContactConfigVersion["kind"]; restored_from: number | null; at: string };
