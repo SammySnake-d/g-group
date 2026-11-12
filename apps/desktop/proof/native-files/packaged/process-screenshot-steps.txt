@@ -1,0 +1,3 @@
+2026-11-12T09:36:03.215Z 最终安装包启动:/private/tmp/gg-t186-final-installed/Applications/g-group.app/Contents/MacOS/g-group;版本=0.1.0
+2026-11-12T09:36:04.301Z 真实模型后端已连接;沿用已完成任务,不重复派活
+2026-11-12T09:36:06.428Z 最终包过程页稳定截图已取回

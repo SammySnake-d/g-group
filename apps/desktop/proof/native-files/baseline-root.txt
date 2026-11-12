@@ -1,0 +1,7 @@
+[box] box4 上的 /workspace/728/wt-loop4 已就绪(22472dc)
+[box] 已排队:cd ../.. && (unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY; npm test --silent > /tmp/loop4-test.log 2>&1; echo ROOT_TEST=$?); grep -E '^# (pass|fail|tests)' /tmp/loop4-test.log | tail -3; grep -E '^not ok' /tmp/loop4-test.log | head -10
+ROOT_TEST=0
+# tests 1628
+# pass 1628
+# fail 0
+[box] 用了 box4;云端残留进程:0
