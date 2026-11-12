@@ -13,7 +13,7 @@ mutations=[
  ('M07-effort-fallback','CXP-07','return no("requested effort is not supported by the explicit owner catalog");','return null;'),
  ('M08-foreign-rpc-id-consumed','CXP-12','const p = pending.get(msg.id);','const p = pending.values().next().value;'),
  ('M09-foreign-thread-consumed','CXP-12',' || msg.params.threadId !== threadId',''),
- ('M10-foreign-turn-consumed','CXP-12','const turn = turns.get(native.id);','const turn = turns.values().next().value;'),
+ ('M10-foreign-turn-consumed','CXP-12','const turn = turns.get(native.id);','const turn = turns.get(native.id) ?? turns.values().next().value;'),
  ('M11-main-exit-zero-is-success','CXP-08','turn.result = { ok: true, value: { computeId: threadId!, kind: "failed", reason: wireFailure ?? "native process exited before matching turn/completed", code: wireFailure ? null : code, signal: wireFailure ? null : signal, violations: [] } };','turn.result = { ok: true, value: { computeId: threadId!, kind: "completed", result: "" } };'),
  ('M12-main-only-quiescence','CXP-11','const r = await cleanup.quiesce(timeoutMs, timeoutMs + 500);','await new Promise<void>((resolve) => { if (child!.exitCode !== null || child!.signalCode !== null) resolve(); else child!.once("close", () => resolve()); }); const r = { ok: true as const, killed: 0 };'),
  ('M13-concurrent-native-turns','CXP-14','if (starting || [...turns.values()].some((t) => t.result === null)) return no("native turn already active");',''),
