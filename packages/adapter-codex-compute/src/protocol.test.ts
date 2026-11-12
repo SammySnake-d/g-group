@@ -93,3 +93,13 @@ test("CXP-06 nonempty tool capability cannot silently become unrestricted native
     assert.equal(readFileSync(path.join(cfg.configDir, "wire-requests.jsonl"), "utf8").includes('"thread/start"'), false);
   } finally { await client.quiesce(1000); }
 });
+
+test("CXP-07 incompatible effort is refused without falling back to harness defaults", async () => {
+  const cfg = options(); const client = createCodexComputeProtocol(cfg);
+  try {
+    assert.equal((await client.initialize()).ok, true);
+    const refused = await client.startThread({ model: "probe-A", effort: "high" });
+    assert.equal(refused.ok, false);
+    assert.equal(readFileSync(path.join(cfg.configDir, "wire-requests.jsonl"), "utf8").includes('"thread/start"'), false);
+  } finally { await client.quiesce(1000); }
+});
