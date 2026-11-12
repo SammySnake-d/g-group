@@ -1,0 +1,27 @@
+packages/server/src/service.ts
+  s_9d7fa6e9d65b83::t_af25d91bfe9399 54
+packages/server/src/create-quota.test.ts
+  s_9d7fa6e9d65b83::t_af25d91bfe9399 59-63,76-82
+packages/server/proof/create-quota-mutations-plan.json
+  s_9d7fa6e9d65b83::t_af25d91bfe9399 4,94-96
+packages/server/src/host.ts
+  s_9d7fa6e9d65b83::t_af25d91bfe9399 564-582,586-588,797-802,806-808
+packages/api-contract/src/api.ts
+  s_9d7fa6e9d65b83::t_af25d91bfe9399 94,114-115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "069bbd20b7ef925e9043a54b94b4276760e09a59",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

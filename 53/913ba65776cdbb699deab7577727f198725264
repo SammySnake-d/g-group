@@ -1,0 +1,21 @@
+packages/server/src/host.ts
+  s_9d7fa6e9d65b83::t_81c5da98c826f7 156,974,984,1038-1046,2478-2483,2486,2582,2816-2817,2861,2864,2867,2895,3007,3090
+packages/server/src/loop-guard.ts
+  s_9d7fa6e9d65b83::t_cab2f5dce648a6 1-2,4,6-12,14,16,32-37,39-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "53913ba65776cdbb699deab7577727f198725264",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+docs/proof/coverage-invariants-r2/lint.log
+  s_9d7fa6e9d65b83::t_c5799f0b5f2275 1
+docs/proof/coverage-invariants-r2/samebody-green-final-result.json
+  s_9d7fa6e9d65b83::t_eb17d5407ef66c 1-26
+docs/proof/coverage-invariants-r2/samebody-green-final.tap
+  s_9d7fa6e9d65b83::t_840d80c68b3b58 1-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2fccaabdc1fda18ff4f79d10c6dfa45b39089489",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
