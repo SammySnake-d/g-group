@@ -1,0 +1,67 @@
+{
+  "slice": "Q08 stack 1/2: behavior-preserving shared Compute port and pure validator extraction; original CC entry paths retained",
+  "acceptance": [
+    {
+      "id": "AC-07",
+      "status": "未测",
+      "reason": "Snapshot validator is extracted unchanged and narrow fixtures pass; complete handoff/product acceptance and original CC cloud suite are pending.",
+      "evidence": "docs/proof/compute-port-extract/README.md"
+    },
+    {
+      "id": "AC-29",
+      "status": "未测",
+      "reason": "This PR only preserves types/config field paths; real harness capability isolation is not implemented or accepted by extraction.",
+      "evidence": "docs/proof/compute-port-extract/README.md"
+    },
+    {
+      "id": "AC-33",
+      "status": "未测",
+      "reason": "Pure brief/ref validators are preserved with a harness-owned tool policy; whole runtime credential/identity isolation and full regression remain pending.",
+      "evidence": "docs/proof/compute-port-extract/README.md"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:01a1d043-1042-7e61-9981-968868c25de1",
+    "model": "gpt-6.1-sol"
+  },
+  "contributingSessions": [
+    "codex:01a1cfc8-db89-7400-b3de-876bd8478982",
+    "codex:01a1d043-1042-7e61-9981-968868c25de1"
+  ],
+  "red": {
+    "commit": "37c697d52aabf3882e6797154c09fb09a1aff025"
+  },
+  "unverifiable": "AC-07/AC-29/AC-33 are not accepted by structural extraction or a narrow green witness. All seven original CC tests must run unchanged on baseline/candidate and the full cloud suite must pass; real Codex isolation/model/lifecycle proof belongs to stack 2. OS process effects are deliberately not moved into kernel.",
+  "waiver": null,
+  "review": null,
+  "verification": {
+    "originalCCTestFilesByteUnchanged": 7,
+    "portTypeDeclarationsIdentical": true,
+    "pureDataImplementationByteIdentical": true,
+    "beforeAfterBehaviorByteIdentical": true,
+    "namedRed": 1,
+    "namedGreen": 1,
+    "mutationKilled": 8,
+    "mutationSurvived": 0,
+    "parserControls": true,
+    "initialTypecheckExit": 0,
+    "initialLintExit": 0,
+    "cloud": "not started; parent owns box4 admission",
+    "normalPush": "not started",
+    "overallAcceptance": "pending original CC/full cloud regression and independent review"
+  },
+  "processEffects": {
+    "path": "packages/adapter-cc-compute/src/procgroup.ts",
+    "status": "unchanged in adapter",
+    "reason": "Kernel runtime ports explicitly forbid I/O; signalGroup has OS side effects."
+  },
+  "pr74": {
+    "head": "21ac0887b271779a012054f50e61586f59e2e3be",
+    "movedFileOverlap": false,
+    "changedLifecycleSitesUntouched": [
+      "packages/adapter-cc-compute/src/adapter.ts",
+      "packages/adapter-cc-compute/src/resident.ts"
+    ]
+  }
+}
