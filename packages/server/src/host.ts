@@ -836,9 +836,10 @@ export class Host {
     const roomTasks = listDocs<TaskDoc>(this.db, "task:").filter((d) => d.value.roomId === roomId);
     const pending = openCards + roomTasks.filter((d) => awaitingUser(d.value)).length;
     const blockers = roomTasks.flatMap(({ value: d }) => {
-      if (d.task.state !== "T4b_BlockedOnHuman" || !d.task.pendingQ) return [];
+      // 当前 pendingQ + open 卡已钉住阻塞；生命周期与同房间可见性证明见本片 R2 证据。
+      if (!d.task.pendingQ) return [];
       const card = this.questionCard(d.task.id, d.task.pendingQ.qId);
-      if (card?.state !== "open" || !visible.some((m) => m.seq === card.seq)) return [];
+      if (card?.state !== "open") return [];
       const text = this.authzOf(d.task.id).value.requests.find((q) => q.qId === d.task.pendingQ!.qId)?.action ?? this.questionText(d.task.id, d.task.pendingQ.qId);
       return [{ taskId: d.task.id, seq: card.seq, text }];
     });

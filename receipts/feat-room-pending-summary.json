@@ -30,12 +30,17 @@
   },
   "unverifiable": "AC-50：确定性 scriptedMind/scriptedCompute 驱动真实 Host、SQLite、service API 和事件；没有连接真实模型，不包含浏览器/桌面 UI 验收。重启沿用现宿主回收失联 Compute 为 T11_Failed 的语义，旧待答摘要清空。仅当前有效 T4b，不把所有待确认状态都称为已覆盖。",
   "waiver": null,
-  "review_status": "待 Mira Bot 安排 hy4 + Claude；作者不自审不豁免",
+  "review_status": "R1 REJECT保留；R2作者候选本地返修，尚未推送/独审；新full与大变异待根排云执行，作者不自签不豁免",
   "provenance": {
     "inherited_mirasim_session": "codex:534f3614-21cd-43eb-9db6-3cd1673d2b62",
     "inherited_native_session": "01a1cf01-3b82-7211-b7b9-c7147d5e45e7",
     "current_native_session": "01a1cfc8-db89-7400-b3de-876bd8478982",
     "cloud_tested_source_head": "1fc0e9197d7f4e4c98b89457a752176180d17613",
-    "note": "宿主尚未生成当前会话 turns.jsonl；不得伪造以满足旧 G-PROVENANCE。真实原生记录保留于 ~/.codex/sessions/2026/11/12。"
+    "note": "宿主turns.jsonl现已存在，本轮实读record.json/nativeSessionId与R2子线程turn_context。最早10个提交来自继承的codex:534f3614（chatflows/gpt-6-astra）；R1人工核过全链OpenAI，不冒称门禁自动核过接手链。未补写宿主记录，未改门禁。",
+    "r2_native_subthread": "01a1d03a-add3-7a02-92d2-92e9791196ee",
+    "r2_native_subthread_model": "gpt-6.1-sol",
+    "r2_role": "loop_proof_finish; real host codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "r2_true_first_red": "b93f2e385edd4bc35e56c32ead5fcdb82106390f",
+    "r2_first_green": "4f15f21da646f515841507556abcba0c3097d856"
   }
 }

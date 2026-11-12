@@ -6,7 +6,7 @@ RoomView 新增可选 nullable 的 `blockedSummary`，Host.roomView 从当前房
 
 本片不覆盖 UI 橙点/列表展示，不覆盖全部 T8a/R0 待确认摘要，不新增收件箱或授权动作。重启沿用现有失联 Compute -> T11_Failed 语义，不承诺失联执行器继续在线。G4 runRound/pointers、C/C2 发送 gate、前端均未修改。
 
-## 冻结、红绿与正式云验收
+## R1 历史冻结、红绿与云证明（以下数字不适用于 R2）
 
 - base：4efdee0be6d161060099b5ce488e3344c70305ee（dev/integration）。
 - 同一份测试的有效红：274e3be11e6b9d3c92c7ffc7898f601aca1e0c42。
@@ -32,6 +32,18 @@ RoomView 新增可选 nullable 的 `blockedSummary`，Host.roomView 从当前房
 - 收据 evidence 曾误填“路径加说明”，被 G-TRACE 按不存在路径拒绝；已改成仓库内 README.md 的单一路径，说明保留在该文档。失败日志保留在 reviews/room-pending-summary-mechanical-before-evidence-fix.txt，未放宽门禁。
 - 仅清理本次创建、且 Git bundle 已保全的旧云端副本；共享镜像与其他任务未清理。
 
-## 独立审查与来源限制
+## 独立审查与来源现状
 
-review=null；由 Mira Bot 安排独立审查，作者不派审、不自审、不申请豁免、不合并。--local 的 G-PROVENANCE 在 review=null 时短路，因此显示 ✓ 不等于作者/审查来源已经核验。真实原生会话记录存在，当前宿主尚无兼容 turns.jsonl；没有伪造、补写会话记录或放宽门禁。后续审查须对完整内容 hash 与来源分别核验。
+R1 的真实 REJECT 和审查提交 515db145 保留，review 对象不清空、不改成 approve；原 reviewed_hash 仍对应 R1。R2 是后续普通叠加的作者候选，尚未推送、未交独审，不合并、不发布，waiver=null。
+
+作者宿主 codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7 的 turns.jsonl 现在存在；本轮实读 record.json 指向原生 01a1cfc8-db89-7400-b3de-876bd8478982。R2 在真实原生子线程 01a1d03a-add3-7a02-92d2-92e9791196ee（gpt-6.1-sol）完成，宿主身份未伪造。更早最初10个提交来自 codex:534f3614-21cd-43eb-9db6-3cd1673d2b62 / 原生01a1cf01-3b82-7211-b7b9-c7147d5e45e7，模型chatflows/gpt-6-astra；此链是R1审查人工核验结论，本轮不将它冒充门禁自动覆盖。没有补写宿主记录或改门禁。
+
+## R2 作者返修（只报新实测）
+
+- R1-05 首先在 515db145 后加具名失败并提交 b93f2e385edd4bc35e56c32ead5fcdb82106390f：原7项pass、新1项 ERR_ASSERTION；再只改截断，4f15f21da646f515841507556abcba0c3097d856 上同文件8/8通过，未后补冒充此顺序。
+- 截断先给完整「另有 N 项」及省略号预留空间，总长<=500个UTF-16码元；正文结尾不留下孤立高代理。纯ASCII/中文499/500/501边界分别钉住。
+- 宿主双联系人同群两个实际问题，取最早并计数，回答后换下一条；授权问题取真实授权请求action；读取用total_changes()和事件订阅防止幂等写入漏测。
+- R1-04 三过滤逐项见 r2/guard-reachability.md：剩余open卡条件有独立实际反例；state与visible在当前稳定Host边界不可独立触发，按审查允许的另一条路线删去，不制造非法数据库快照来计kill。
+- 新窄测17/17通过，无skip/todo/cancel；18项完整单文件变异runner已准备并静态确认注入点唯一，**本机未执行变异大扫，也未重跑full**。旧1480/8数字不签新版本。新full与18项变异交根排box4共享heavy锁后实测。
+- 最终同体红校准若在扩展测试后补做，会另列为「补丁后校准」而不是历史TDD；真实首个R1-05红始终单列。
+- AC-50及UI/实模验收保持未测。本片不新增前端、G4、C/C2、runRound或生命周期实现改动。

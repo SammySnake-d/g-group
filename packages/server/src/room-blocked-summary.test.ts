@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, afterEach, test } from "node:test";
 import type { RoomView } from "@g-group/api-contract";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
+import { one } from "./db.ts";
 import { Host } from "./host.ts";
 import { roomBlockedSummary } from "./room-blocked-summary.ts";
 import { createService } from "./service.ts";
@@ -105,4 +106,123 @@ test("R2-05 长问题截断保留另有 N 项尾注且整行不超过500", () =>
   const result = roomBlockedSummary([{ taskId: "first", seq: 1, text: "中".repeat(600) }, { taskId: "later", seq: 2, text: "下一项" }]);
   assert.equal(result, `等待你：${"中".repeat(487)}…（另有 1 项）`);
   assert.equal(result.length, 500);
+});
+
+test("R2-01 宿主最早问题与另有一项在回答后切换为剩余问题", async () => {
+  let n = 0;
+  const compute = scriptedCompute({ script: () => [{ kind: "started", sessionId: `two-${++n}`, resumed: false }, { kind: "blocked", needs: `问题${n}`, summary: "等待测试输入" }] });
+  const s = setup({ compute: () => compute.adapter });
+  const svc = createService(s.host);
+  try {
+    const a = s.host.createContact({ name: "甲" });
+    const b = s.host.createContact({ name: "乙" });
+    const room = s.host.createGroup("两个独立问题", [{ kind: "contact", id: a.id }, { kind: "contact", id: b.id }]);
+    s.host.send({ roomId: room.id, clientActionId: "first", text: "帮我登录页面甲", mentions: [{ id: a.id, source: "manual" }] });
+    await settle(s.host, compute);
+    s.host.send({ roomId: room.id, clientActionId: "later", text: "帮我登录页面乙", mentions: [{ id: b.id, source: "manual" }] });
+    await settle(s.host, compute);
+    const tasks = s.host.listTasks({ roomId: room.id });
+    assert.equal(tasks.filter((t) => t.state === "T4b_BlockedOnHuman").length, 2);
+    const got = await svc.handle("rooms.get", { roomId: room.id });
+    assert.equal(got.ok && (got.value as RoomView).blockedSummary, "等待你：问题1（另有 1 项）");
+    const first = tasks.find((t) => t.pendingQuestion?.text === "问题1")!;
+    const answered = await svc.handle("tasks.answer", { taskId: first.id, qId: first.pendingQuestion!.qId, clientActionId: "answer-first", answer: "中性输入" });
+    assert.ok(answered.ok);
+    await settle(s.host, compute);
+    const next = await svc.handle("rooms.get", { roomId: room.id });
+    assert.equal(next.ok && (next.value as RoomView).blockedSummary, "等待你：问题2");
+  } finally { compute.close(); }
+});
+
+test("R2-02a 整行499字符不截断", () => {
+  const result = roomBlockedSummary([{ taskId: "a", seq: 1, text: "中".repeat(495) }]);
+  assert.equal(result, `等待你：${"中".repeat(495)}`);
+  assert.equal(result.length, 499);
+});
+
+test("R2-02b 整行恰500字符不截断", () => {
+  const result = roomBlockedSummary([{ taskId: "a", seq: 1, text: "中".repeat(496) }]);
+  assert.equal(result, `等待你：${"中".repeat(496)}`);
+  assert.equal(result.length, 500);
+});
+
+test("R2-02c 整行501字符截为499加省略号", () => {
+  const result = roomBlockedSummary([{ taskId: "a", seq: 1, text: "中".repeat(497) }]);
+  assert.equal(result, `等待你：${"中".repeat(495)}…`);
+  assert.equal(result.length, 500);
+});
+
+test("R2-03 授权提问摘要取真实授权请求action而不是不存在的needs", async () => {
+  const compute = scriptedCompute({ script: () => [{ kind: "started", sessionId: "authorization", resumed: false }, { kind: "blocked", needs: "要改 app.ts 加导出函数", summary: "读完准备修改" }] });
+  const s = setup({ compute: () => compute.adapter });
+  const svc = createService(s.host);
+  try {
+    const c = s.host.createContact({ name: "受群规约束的联系人" });
+    const room = s.host.createGroup("授权问题", [{ kind: "contact", id: c.id }]);
+    s.host.updateRoom(room.id, { rules: "改代码前先问我" });
+    s.host.send({ roomId: room.id, clientActionId: "needs-consent", text: "帮我给 app.ts 加个导出", mentions: [{ id: c.id, source: "manual" }] });
+    await settle(s.host, compute);
+    const task = s.host.listTasks({ roomId: room.id })[0]!;
+    assert.equal(task.state, "T4b_BlockedOnHuman");
+    assert.equal(task.authorizations?.[0]?.action, "要改 app.ts 加导出函数");
+    const card = one<{ meta: string }>(s.host.db, "SELECT meta FROM gg_cards WHERE task_id = ? AND kind = 'question'", task.id)!;
+    assert.equal(JSON.parse(card.meta).authz, true);
+    assert.equal(JSON.parse(card.meta).needs, undefined);
+    const got = await svc.handle("rooms.get", { roomId: room.id });
+    assert.equal(got.ok && (got.value as RoomView).blockedSummary, "等待你：要改 app.ts 加导出函数");
+  } finally { compute.close(); }
+});
+
+test("R2-04b 取消后旧问题仍可见且保留pendingQ但过期卡不能生成摘要", async () => {
+  const s = await blocked();
+  try {
+    assert.equal(s.host.roomView(s.dm.id).blockedSummary, "等待你：请给中性验证码");
+    s.host.stopTask(s.task.id, s.host.userId);
+    const doc = s.host.taskDoc(s.task.id).value;
+    assert.equal(doc.task.state, "T9_StopRequested");
+    assert.ok(doc.task.pendingQ);
+    const card = one<{ seq: number; state: string }>(s.host.db, "SELECT seq, state FROM gg_cards WHERE task_id = ? AND kind = 'question'", s.task.id)!;
+    assert.equal(card.state, "expired");
+    assert.ok(s.host.listMessages(s.dm.id, {}).messages.some((m) => m.seq === card.seq && !m.retracted));
+    assert.equal(s.host.roomView(s.dm.id).blockedSummary, null);
+  } finally { s.compute.close(); }
+});
+
+test("R2-04c 当前宿主拒绝用户撤回联系人提问且当前open卡仍可见", async () => {
+  const s = await blocked();
+  const svc = createService(s.host);
+  try {
+    assert.equal(s.host.roomView(s.dm.id).blockedSummary, "等待你：请给中性验证码");
+    const card = one<{ seq: number; state: string }>(s.host.db, "SELECT seq, state FROM gg_cards WHERE task_id = ? AND kind = 'question'", s.task.id)!;
+    const retracted = await svc.handle("messages.retract", { roomId: s.dm.id, seq: card.seq });
+    assert.ok(!retracted.ok);
+    assert.equal(retracted.error.code, "forbidden");
+    assert.equal(s.host.taskDoc(s.task.id).value.task.state, "T4b_BlockedOnHuman");
+    assert.equal(one<{ state: string }>(s.host.db, "SELECT state FROM gg_cards WHERE task_id = ? AND kind = 'question'", s.task.id)!.state, "open");
+    assert.ok(s.host.listMessages(s.dm.id, {}).messages.some((m) => m.seq === card.seq && !m.retracted));
+    assert.equal(s.host.roomView(s.dm.id).blockedSummary, "等待你：请给中性验证码");
+  } finally { s.compute.close(); }
+});
+
+test("R2-06 rooms.get不产生幂等数据库写入也不发送事件", async () => {
+  const s = await blocked();
+  const svc = createService(s.host);
+  try {
+    const events: unknown[] = [];
+    const unsubscribe = svc.subscribe((event) => events.push(event));
+    const before = one<{ n: number }>(s.host.db, "SELECT total_changes() AS n")!.n;
+    const got = await svc.handle("rooms.get", { roomId: s.dm.id });
+    const afterRead = one<{ n: number }>(s.host.db, "SELECT total_changes() AS n")!.n;
+    unsubscribe();
+    assert.equal(got.ok && (got.value as RoomView).blockedSummary, "等待你：请给中性验证码");
+    assert.equal(afterRead, before);
+    assert.deepEqual(events, []);
+  } finally { s.compute.close(); }
+});
+
+test("R2-07 Unicode截断不留下孤立高代理码元", () => {
+  const result = roomBlockedSummary([{ taskId: "a", seq: 1, text: `${"中".repeat(494)}😀😀😀` }]);
+  assert.equal(result, `等待你：${"中".repeat(494)}…`);
+  assert.equal(result.length, 499);
+  assert.doesNotMatch(result, /[\uD800-\uDFFF]/u);
 });
