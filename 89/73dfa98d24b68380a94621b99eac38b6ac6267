@@ -1,0 +1,21 @@
+receipts/feat-shared-process-cleanup.json
+  s_1080d22beb5dd5::t_c35fc28c309d75 25-32
+reviews/feat-shared-process-cleanup.md
+  s_1080d22beb5dd5::t_95884c61be5f46 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8973dfa98d24b68380a94621b99eac38b6ac6267",
+  "prompts": {},
+  "sessions": {
+    "s_1080d22beb5dd5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "16a18628-e644-4da6-9ce7-ca3a8ad65181",
+        "model": "unknown"
+      },
+      "human_author": "Claude (review) <claude-review@g-group.local>"
+    }
+  }
+}
