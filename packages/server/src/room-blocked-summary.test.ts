@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, afterEach, test } from "node:test";
 import type { RoomView } from "@g-group/api-contract";
-import { scriptedCompute } from "./fakes.ts";
+import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
 import { roomBlockedSummary } from "./room-blocked-summary.ts";
 import { createService } from "./service.ts";
@@ -90,7 +90,7 @@ test("重启回收后的失败任务不再显示已过期的待答摘要", async
   const s = await blocked();
   s.compute.close();
   await s.host.close();
-  const reopened = new Host({ file: `${s.root}/gg.db`, dataDir: `${s.root}/data`, catalogFile: `${s.catalog}/catalog.json` });
+  const reopened = new Host({ mind: () => scriptedMind(), file: `${s.root}/gg.db`, dataDir: `${s.root}/data`, catalogFile: `${s.catalog}/catalog.json` });
   try {
     assert.equal(reopened.taskViewById(s.task.id).state, "T11_Failed", "现有宿主会把失联 Compute 回收为失败，不能显示旧的待答缓存");
     const got = await createService(reopened).handle("rooms.get", { roomId: s.dm.id });
