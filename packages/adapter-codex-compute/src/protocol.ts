@@ -68,6 +68,11 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       turn.result = { ok: true, value: { computeId: threadId!, kind: "stopped", code: null, signal: null, scope: "main-then-group", violations: [] } };
       publish(turn.result.value); turn.finish(turn.result); return;
     }
+    if (native.status === "failed") {
+      const reason = record(native.error) && typeof native.error.message === "string" ? native.error.message : "native turn failed";
+      turn.result = { ok: true, value: { computeId: threadId!, kind: "failed", reason, code: null, signal: null, violations: [] } };
+      publish(turn.result.value); turn.finish(turn.result); return;
+    }
     if (native.status !== "completed") return;
     const items = Array.isArray(native.items) ? native.items : [];
     const text = items.filter((i): i is Record<string, unknown> => record(i) && i.type === "agentMessage" && typeof i.text === "string").map((i) => i.text).join("\n");
@@ -103,6 +108,9 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       try {
         const msg: unknown = JSON.parse(line);
         if (!record(msg)) return;
+        if (typeof msg.method === "string" && Object.hasOwn(msg, "id")) {
+          send({ id: msg.id, error: { code: -32601, message: "g-group protocol slice has no Host approval authority" } }); return;
+        }
         if (typeof msg.method === "string") { notes.push(msg); consume(msg); return; }
         if (typeof msg.id !== "string") return;
         const p = pending.get(msg.id);
