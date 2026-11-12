@@ -1,11 +1,11 @@
 // AC-33/AC-07: new neutral port, unchanged legacy import surface.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CC_BUILTIN_TOOLS, checkBrief, checkSnapshot, isCredentialRef } from "./brief.ts";
-import { freezeDeep, isPlainRecord, plainData } from "./plain.ts";
+import { CC_BUILTIN_TOOLS, checkBrief, checkSnapshot, isCredentialRef } from "../src/brief.ts";
+import { freezeDeep, isPlainRecord, plainData } from "../src/plain.ts";
 
 test("S-PORT-01: kernel Compute port preserves CC aliases and keeps tool policies distinct", async () => {
-  let shared: typeof import("@g-group/kernel/compute") | undefined;
+  let shared;
   let importFailure = "";
   try { shared = await import("@g-group/kernel/compute"); }
   catch (error) { importFailure = error instanceof Error ? error.message : String(error); }
@@ -47,5 +47,5 @@ test("S-PORT-01: kernel Compute port preserves CC aliases and keeps tool policie
   assert.equal(calls, 0, "extraction must preserve descriptor-only validation");
   const undefinedField = plainData({ extra: undefined }, "fixture");
   assert.ok(undefinedField.ok);
-  assert.ok(Object.hasOwn(undefinedField.value as object, "extra"), "do not substitute kernel root plainData, which drops undefined properties");
+  assert.ok(Object.hasOwn(undefinedField.value, "extra"), "do not substitute kernel root plainData, which drops undefined properties");
 });

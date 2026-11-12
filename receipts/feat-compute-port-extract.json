@@ -30,7 +30,7 @@
     "codex:01a1d043-1042-7e61-9981-968868c25de1"
   ],
   "red": {
-    "commit": "37c697d52aabf3882e6797154c09fb09a1aff025"
+    "commit": "f62f661887222487cc3205d072a5adbb13bba0ac"
   },
   "unverifiable": "AC-07/AC-29/AC-33 are not accepted by structural extraction or a narrow green witness. All seven original CC tests must run unchanged on baseline/candidate and the full cloud suite must pass; real Codex isolation/model/lifecycle proof belongs to stack 2. OS process effects are deliberately not moved into kernel.",
   "waiver": null,
@@ -49,7 +49,14 @@
     "initialLintExit": 0,
     "cloud": "not started; parent owns box4 admission",
     "normalPush": "not started",
-    "overallAcceptance": "pending original CC/full cloud regression and independent review"
+    "overallAcceptance": "pending original CC/full cloud regression and independent review",
+    "legacyAliasProof": "complete S-PORT-01 assertions retained in separately executed process proof; owning-kernel S-PORT-02 is the mechanical red/green witness",
+    "initialMechanicalFailure": "G-STUB failed because shared node_modules workspace links resolve to original, unmutated kernel source; retained raw failure, rebound new tests to their owning kernel implementation without changing gates or production semantics",
+    "localTypecheckExit": 0,
+    "localLintExit": 0,
+    "owningKernelNamedRed": 1,
+    "owningKernelNamedGreen": 1,
+    "legacyAliasProcessProofGreen": 1
   },
   "processEffects": {
     "path": "packages/adapter-cc-compute/src/procgroup.ts",

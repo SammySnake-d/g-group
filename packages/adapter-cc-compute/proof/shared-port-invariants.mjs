@@ -14,7 +14,7 @@ fs.mkdirSync(out, { recursive: true });
 const base = "272b1b5d77bd95f34467a5aa04d0bf5891355887";
 const cc = "packages/adapter-cc-compute";
 const kernel = "packages/kernel";
-const testFile = `${cc}/src/compute-port-compat.test.ts`;
+const testFile = `${cc}/proof/shared-port-legacy.test.mjs`;
 const expectedTest = "S-PORT-01: kernel Compute port preserves CC aliases and keeps tool policies distinct";
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
@@ -98,6 +98,6 @@ for (const m of mutations) {
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 for (const [file, hash] of Object.entries(seal)) assert.equal(sha(fs.readFileSync(path.join(root, file))), hash, `source unchanged: ${file}`);
-const result = { base, node: process.version, complete: true, originalCCTestFilesUnchanged: originalTests.length, portTypeDeclarationsIdentical: true, pureDataByteIdentical: true, cliAndLifecycleFilesUnchanged: true, processEffectsUnmoved: true, sameTestRedCommit: "37c697d52aabf3882e6797154c09fb09a1aff025", positiveTests: 1, killed: results.length, survived: 0, parserPositiveAndNegative: true, sourceBeforeAndAfter: seal, mutations: results };
+const result = { base, node: process.version, complete: true, originalCCTestFilesUnchanged: originalTests.length, portTypeDeclarationsIdentical: true, pureDataByteIdentical: true, cliAndLifecycleFilesUnchanged: true, processEffectsUnmoved: true, owningKernelRedCommit: "f62f661887222487cc3205d072a5adbb13bba0ac", legacyAliasRedHistory: "37c697d52aabf3882e6797154c09fb09a1aff025", legacyProofAssertionsPreserved: true, positiveTests: 1, killed: results.length, survived: 0, parserPositiveAndNegative: true, sourceBeforeAndAfter: seal, mutations: results };
 fs.writeFileSync(path.join(out, "result.json"), JSON.stringify(result, null, 2) + "\n");
 console.log(JSON.stringify(result, null, 2));

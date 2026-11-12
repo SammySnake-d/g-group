@@ -73,7 +73,7 @@ const nodeTests = [process.execPath, "--test", "--test-concurrency=1", "--test-t
 try {
   run("baseline-cc-original", baseline, [...nodeTests, ...tests], true);
   run("candidate-cc-original", root, [...nodeTests, ...tests], true);
-  run("candidate-neutral-port", root, [...nodeTests, "packages/adapter-cc-compute/src/compute-port-compat.test.ts"], true);
+  run("candidate-neutral-port", root, [...nodeTests, "packages/kernel/src/compute/port-compat.test.ts"], true);
   run("invariants-mutations", root, [process.execPath, "packages/adapter-cc-compute/proof/shared-port-invariants.mjs", path.join(out, "thin-proof")], false);
   run("typecheck", root, ["npm", "run", "typecheck"], false);
   run("lint", root, ["npm", "run", "lint"], false);
