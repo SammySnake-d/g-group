@@ -1,0 +1,51 @@
+{
+  "slice": "T-177 G4b:撤回原文不得经找旧消息的三条入口回到请求(AC-08;G6 实测缺口 k1-g4on-R1)",
+  "base": { "branch": "feat/t177-g4-history-tools", "commit": "7a918e6e6ea7367063292b8e0f437ac64d14468a", "note": "叠在 G4(#69)上,G4 合入后 rebase 并把 base 改过去" },
+  "commits": {
+    "red": "75bae8fabee39406402e19396e3728b07bd76ea9",
+    "green": "db6ff02a3c46e13bd308f3762e2184e85ea0e5e6",
+    "proof": "66cac85bfa52352d9acaac3e629d9a0326a9eb05"
+  },
+  "changed_files": [
+    "packages/kernel/src/history-tools.ts(retractedBodies + scrubLineBody + SCRUBBED_BODY 常量)",
+    "packages/kernel/src/compact.ts(占位串导出成 RETRACT_PLACEHOLDER)",
+    "packages/server/src/history.ts(verify 与 read 返回前各过一遍 scrub;facts 一次读日志同时取投影与撤回原文;history-scrubbed 诊断)",
+    "packages/kernel/src/history-scrub.test.ts(新,4 条)",
+    "packages/server/src/history-scrub.test.ts(新,5 条)",
+    "packages/server/proof/history-scrub-mutations.mjs(新,9 个定点变异)"
+  ],
+  "box4": {
+    "where": "box4 /workspace/t177-g4b-claude/gg,HEAD=66cac85bfa52352d9acaac3e629d9a0326a9eb05,node v24.21.0,整段在 /workspace/.heavy.lock 下",
+    "npm_ci": "exit 0",
+    "typecheck": "exit 0(无输出)",
+    "lint": "exit 0(Checked 211 files,无警告)",
+    "full": "1509/1509(G4 的 1500 + 本片新增 9)",
+    "mutations": "9 个定点变异全被指定具名测试按名杀死,存活 0;原样副本 24/24(5 个测试文件)",
+    "git_status_after": "空(跑完树没被改)",
+    "archive": "receipts/evidence/t177-g4b/cloud-evidence.tgz(run2/ 原样:status、npmci、typecheck、lint、full、mutations),sha256 12211e8150a8b4c7052b70591d1b20c4ffd22802c38894a6f54b474ef63f885d"
+  },
+  "red_check": "本机 75bae8fa 上两个新测试文件:9 条全部按名失败,无文件级失败;同批既有测试(history-tools / history-prefetch / state-note / memory)在绿树全绿",
+  "new_tests": [
+    "kernel/history-scrub.test.ts:已撤回原文的集合(本体与撤回前的每个编辑稿;没撤回就是空)",
+    "kernel/history-scrub.test.ts:正文里出现已撤回原文时只换掉那一段,别的字留着(联系人回话与用户自己的消息都算)",
+    "kernel/history-scrub.test.ts:抄写时分了行或加了空格、精确替换不掉时整段隐去,不留半截",
+    "kernel/history-scrub.test.ts:短文本不扫(与状态笔记同一规则)",
+    "server/history-scrub.test.ts:预取行不带已撤回原文(G6 缺口的最小复现:第 5 块只留编号、作者、时间,原文换成占位)",
+    "server/history-scrub.test.ts:回读窗口不带已撤回原文(抄了原文的邻居只换那一段,撤回的那条仍给占位,别的字留着)",
+    "server/history-scrub.test.ts:检索结果不带已撤回原文(命中仍给编号、作者、时间与版本)",
+    "server/history-scrub.test.ts:分不出原样(加了空格)时整段正文隐去,行还在",
+    "server/history-scrub.test.ts:只换抄到撤回原文的那条(没抄到的消息一字不动)"
+  ],
+  "mutation_pairs": {
+    "X1": "verify 不 scrub(预取与检索这条出口漏掉) → 预取行 / 检索结果两条按名失败",
+    "X2": "只在预取路径 scrub、漏掉回读路径(协调方点名) → 回读窗口 / 整段隐去两条按名失败",
+    "X3": "整条丢掉而不是只换掉撤回原文(协调方点名) → 只换那一段 / 只换抄到的那条两条按名失败",
+    "X4": "分不出原样时不隐去(只留替换结果) → 整段隐去(内核与宿主各一条)按名失败",
+    "X5": "已撤回原文漏掉撤回前的编辑稿 → 已撤回原文的集合按名失败",
+    "X6": "短文本也照扫(去掉下限) → 短文本不扫按名失败",
+    "X7": "拿当前投影当撤回原文(撤回后正文已空,等于不扫) → 预取行按名失败",
+    "X8": "scrub 后不标 scrubbed(诊断报不出来) → 预取诊断那条断言按名失败",
+    "X9": "只认整条替换(去掉逐行/精确替换) → 只换抄到的那条按名失败"
+  },
+  "local_precheck": "本机 macOS(M3)在等价提交上先跑过 G-STUB/G-TAUTO 仿真与 9/9 变异(只作预检);权威结果是 box4 这份"
+}
