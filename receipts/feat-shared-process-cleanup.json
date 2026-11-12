@@ -22,7 +22,14 @@
   },
   "unverifiable": "AC-23 not accepted by local proof. Full original CC baseline/candidate and cloud full/type/lint, independent review, provenance and product integration remain pending. Escaped system-managed/double-fork processes remain outside discoverable scope. Windows full-tree confirmation fails closed.",
   "waiver": null,
-  "review": null,
+  "review": {
+    "agent": "claude",
+    "session": "claude:16a18628-e644-4da6-9ce7-ca3a8ad65181",
+    "model": "group/opus",
+    "verdict": "reject",
+    "reviewed_hash": "2a0d5ec2de53bbf912f2a1d399e0459199f98ba9251cbe97f8d7c0673d46542c",
+    "notes": "第 1 轮 REJECT,详见 reviews/feat-shared-process-cleanup.md。作者数字全部复现(CC 七文件 base/HEAD 各 139/139、新包 15/15、桥接 2/2、全量 1502/1502、typecheck/lint 0、9 变异全杀、自检 223/223 真实 exit 0、本机 seatbelt 六项机械门禁绿),搬迁文件逐字节相同、原 7 个 CC 测试未改。拒绝原因:R1-01 常驻适配器一轮 failed 后宿主被判「停止未确认」且不归还槽位(base 无此行为);R1-02 常驻保留的旧清理句柄在主进程退出后仍按 pid 重新枚举并对该 pid 的进程组 SIGKILL,pid 被复用时会杀掉无关进程;R1-03 自构 18 个单点故障存活 8 个(含「常驻保留旧句柄」这一作者自列重点无测试);R1-04 收据 author.session 写的是 Codex 原生子线程号,G-PROVENANCE 判「会话记录不存在」。hy4 辅审因线路 403 未产出,本轮无辅审。"
+  },
   "gateChangeReviewFocus": "Proposed process layer; add only adapter->process. Five direct controls and four real CLI selftests preserve adapter->adapter and pure-layer prohibitions; trusted-main activation requires independent review.",
   "verification": {
     "originalCCTestFilesByteUnchanged": 7,
