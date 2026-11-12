@@ -32,6 +32,22 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
   let child: ChildProcessWithoutNullStreams | null = null;
   let cleanup: ProcessCleanup | null = null;
   let initialized = false;
+  let threadId: string | null = null;
+  type Turn = { id: string; done: Promise<ProtocolResult<ComputeEvent>>; finish: (r: ProtocolResult<ComputeEvent>) => void; result: ProtocolResult<ComputeEvent> | null };
+  const turns = new Map<string, Turn>();
+  const notes: Record<string, unknown>[] = [];
+  function consume(msg: Record<string, unknown>) {
+    if (msg.method !== "turn/completed" || !record(msg.params) || msg.params.threadId !== threadId || !record(msg.params.turn)) return;
+    const native = msg.params.turn;
+    if (typeof native.id !== "string") return;
+    const turn = turns.get(native.id);
+    if (!turn || turn.result) return;
+    if (native.status !== "completed") return;
+    const items = Array.isArray(native.items) ? native.items : [];
+    const text = items.filter((i): i is Record<string, unknown> => record(i) && i.type === "agentMessage" && typeof i.text === "string").map((i) => i.text).join("\n");
+    turn.result = { ok: true, value: { computeId: threadId!, kind: "completed", result: text } };
+    turn.finish(turn.result);
+  }
   let sequence = 0;
   const pending = new Map<string, { finish: (r: ProtocolResult<Record<string, unknown>>) => void; timer: NodeJS.Timeout }>();
   const failPending = (reason: string) => {
@@ -60,7 +76,9 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       cleanup?.capture();
       try {
         const msg: unknown = JSON.parse(line);
-        if (!record(msg) || typeof msg.id !== "string") return;
+        if (!record(msg)) return;
+        if (typeof msg.method === "string") { notes.push(msg); consume(msg); return; }
+        if (typeof msg.id !== "string") return;
         const p = pending.get(msg.id);
         if (!p) return;
         pending.delete(msg.id); clearTimeout(p.timer);
@@ -88,13 +106,28 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       const r = await request("thread/start", { model: turn.model, cwd: options.cwd, ephemeral: false, approvalPolicy: "never", sandbox: "read-only" });
       if (!r.ok) return r;
       if (!record(r.value.thread) || typeof r.value.thread.id !== "string") return no("invalid native thread id");
-      return { ok: true, value: { threadId: r.value.thread.id } };
+      threadId = r.value.thread.id;
+      return { ok: true, value: { threadId } };
     },
     resumeThread: async () => no("not implemented"),
-    startTurn: async () => no("not implemented"),
+    async startTurn(wantedThread, text, turn) {
+      if (wantedThread !== threadId) return no("native thread mismatch");
+      const r = await request("turn/start", { threadId: wantedThread, input: [{ type: "text", text, text_elements: [] }], model: turn.model, effort: turn.effort });
+      if (!r.ok) return r;
+      if (!record(r.value.turn) || typeof r.value.turn.id !== "string") return no("invalid native turn id");
+      const id = r.value.turn.id;
+      let finish: Turn["finish"] = () => {};
+      const done = new Promise<ProtocolResult<ComputeEvent>>((r) => { finish = r; });
+      turns.set(id, { id, done, finish, result: null });
+      for (const note of notes) consume(note);
+      return { ok: true, value: { turnId: id } };
+    },
     steer: async () => no("not implemented"),
     interrupt: async () => no("not implemented"),
-    settled: async () => no("not implemented"),
+    async settled(wantedThread, turnId) {
+      if (wantedThread !== threadId || !turns.has(turnId)) return no("native turn mismatch");
+      return turns.get(turnId)!.done;
+    },
     events: async function* () {},
     async quiesce(timeoutMs = 5000) {
       if (!cleanup || !child) return { ok: true, killed: 0 };
