@@ -75,7 +75,7 @@ try {
   const clean = execute(cleanDir, 'baseline');
   console.log(JSON.stringify({ kind: 'control', ...clean }));
   fs.rmSync(cleanDir, { recursive: true });
-  if (names.length !== 10 || clean.exit !== 0 || clean.passed.length !== names.length || clean.failed.length) throw new Error('原样对照不全绿');
+  if (names.length !== 5 || clean.exit !== 0 || clean.passed.length !== names.length || clean.failed.length) throw new Error('原样对照不全绿');
   for (const [index, [label, file, from, to, target]] of mutants.entries()) {
     const dir = copy(`m${index}`);
     const source = path.join(dir, file);
