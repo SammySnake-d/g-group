@@ -7,6 +7,7 @@ import {
   CommitmentView,
   ComputeProgress,
   ContactProfileView,
+  ContactConfigVersion,
   ContactView,
   EFFORTS,
   ExternalEventView,
@@ -75,6 +76,8 @@ export const METHODS = {
   "contacts.update": method(
     obj({
       contactId: id(),
+      clientActionId: opt(id()),
+      expectedVersion: opt(int({ min: 1 })),
       name: opt(str({ min: 1, max: 80 })),
       bio: opt(str({ max: 2000 })),
       avatar: opt(nullable(str({ max: 2048 }))),
@@ -95,6 +98,11 @@ export const METHODS = {
   /** 联系人主面板(AC-54):视图 + 预设 + 工作记忆 + 职责(承诺、在途任务、定时、所在会话)。 */
   "contacts.profile": method(obj({ contactId: id() }), ContactProfileView),
   "contacts.remove": method(obj({ contactId: id() }), Ok),
+  /** U07:历史按配置版本倒序,当前版本用于 CAS;不导出身份/记忆或任何凭据。 */
+  "contacts.history": method(obj({ contactId: id(), beforeVersion: opt(int({ min: 1 })), ...Page }), obj({ contactId: id(), currentVersion: int({ min: 1 }), versions: arr(ContactConfigVersion), hasMore: bool() })),
+  /** 回滚只恢复配置,生成新版本。重复 clientActionId 返回原结果,改参数复用同一号报 conflict。 */
+  "contacts.rollback": method(obj({ contactId: id(), version: int({ min: 1 }), expectedVersion: int({ min: 1 }), clientActionId: id(), confirmAffected: opt(bool()) }), obj({ contact: ContactView, version: int({ min: 1 }) })),
+
   /** 全局能力库里可勾选的 skill 与 MCP(AC-29)。联系人的 Compute 只加载它勾选的那些,本机全局的默认不进入。 */
   "capabilities.list": method(Empty, CapabilityLibraryView),
 

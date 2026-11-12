@@ -134,6 +134,7 @@ import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
 import { MemoryStore } from "./memory-store.ts";
+import { installContactHistory } from "./contact-config-history.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
 import { PluginStore } from "./plugins.ts";
 import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief, reviewModelProblem } from "./review.ts";
@@ -436,6 +437,7 @@ export class Host {
     this.userId = opts.userId ?? "me";
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
+    installContactHistory(this.db);
     this.exits = new MemberExits({ db: this.db, now: this.now });
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
@@ -582,8 +584,8 @@ export class Host {
     this.bus.emit({ type: "contact.updated", contact: view });
     return view;
   }
-  updateContact(id: string, input: Partial<Omit<ContactDoc, "id" | "createdAt">> & { confirmAffected?: boolean }): ContactView {
-    const { confirmAffected, ...patch } = input;
+  updateContact(id: string, input: Partial<Omit<ContactDoc, "id" | "createdAt">> & { confirmAffected?: boolean; clientActionId?: string; expectedVersion?: number }): ContactView {
+    const { confirmAffected, clientActionId: _action, expectedVersion: _expected, ...patch } = input;
     const cur = this.contactDoc(id);
     const next: ContactDoc = { ...cur.value, ...patch, id, createdAt: cur.value.createdAt };
     if (patch.speakingModel !== undefined || patch.harness !== undefined || patch.computeModel !== undefined) {
@@ -598,6 +600,13 @@ export class Host {
     const view = this.contactView(next);
     this.bus.emit({ type: "contact.updated", contact: view });
     return view;
+  }
+  contactHistory(id: string, _query: { beforeVersion?: number; limit?: number } = {}) {
+    return { contactId: id, currentVersion: this.contactDoc(id).ver, versions: [], hasMore: false };
+  }
+  rollbackContact(input: { contactId: string; version: number; expectedVersion: number; clientActionId: string; confirmAffected?: boolean }) {
+    const current = this.contactDoc(input.contactId);
+    return { contact: this.contactView(current.value), version: current.ver };
   }
   contactDoc(id: string): { value: ContactDoc; ver: number } {
     const d = getDoc<ContactDoc>(this.db, `contact:${id}`);

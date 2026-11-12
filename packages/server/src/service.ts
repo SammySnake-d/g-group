@@ -40,6 +40,9 @@ export function createService(host: Host): Service {
     "contacts.create": (p: Parameters<Host["createContact"]>[0]) => host.createContact(p),
     "contacts.update": ({ contactId, ...patch }: { contactId: string } & Parameters<Host["updateContact"]>[1]) => host.updateContact(contactId, patch),
     "contacts.profile": (p: { contactId: string }) => contactProfile(host, p.contactId),
+    "contacts.history": ({ contactId, ...query }: { contactId: string; beforeVersion?: number; limit?: number }) => host.contactHistory(contactId, query),
+    "contacts.rollback": (p: Parameters<Host["rollbackContact"]>[0]) => host.rollbackContact(p),
+
     "capabilities.list": () => host.capabilities.list(),
     "contacts.remove": (p: { contactId: string }) => {
       host.removeContact(p.contactId);
