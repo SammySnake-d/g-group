@@ -83,3 +83,13 @@ test("CXP-05 unknown requested model is refused before native thread input", asy
     assert.equal(readFileSync(path.join(cfg.configDir, "wire-requests.jsonl"), "utf8").includes('"thread/start"'), false);
   } finally { await client.quiesce(1000); }
 });
+
+test("CXP-06 nonempty tool capability cannot silently become unrestricted native tools", async () => {
+  const cfg = options(); const client = createCodexComputeProtocol(cfg);
+  try {
+    assert.equal((await client.initialize()).ok, true);
+    const refused = await client.startThread({ model: "probe-A", effort: "low" }, ["Bash"]);
+    assert.equal(refused.ok, false);
+    assert.equal(readFileSync(path.join(cfg.configDir, "wire-requests.jsonl"), "utf8").includes('"thread/start"'), false);
+  } finally { await client.quiesce(1000); }
+});
