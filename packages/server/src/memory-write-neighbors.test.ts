@@ -23,7 +23,7 @@ function setup(t: TestContext) {
   const fine: RefineRequest[] = [];
   const host = new Host({
     file: path.join(dir, "db.sqlite"), dataDir: dir, maxDeferMs: 2,
-    fineScreen: { quietMs: 5 }, historyPrefetch: false,
+    fineScreen: { quietMs: 5 },
     mind: () => ({ async round() { return { actions: [], stateNote: "MAIN" }; } }),
     compactor: () => ({
       async compact() { return "MAIN"; },
