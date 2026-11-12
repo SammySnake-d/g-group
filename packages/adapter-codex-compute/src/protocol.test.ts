@@ -22,3 +22,15 @@ test("CXP-01 native initialize is acknowledged before initialized and first thre
     assert.deepEqual(thread, { ok: true, value: { threadId: "native-thread-1" } });
   } finally { await client.quiesce(1000); }
 });
+
+test("CXP-02 native turn IDs and completed payload map to kernel ComputeEvent without a replacement loop", async () => {
+  const client = createCodexComputeProtocol(options());
+  try {
+    assert.equal((await client.initialize()).ok, true);
+    assert.equal((await client.startThread({ model: "probe-A", effort: "low" })).ok, true);
+    const turn = await client.startTurn("native-thread-1", "literal task", { model: "probe-A", effort: "low" });
+    assert.deepEqual(turn, { ok: true, value: { turnId: "native-turn-1" } });
+    const done = await client.settled("native-thread-1", "native-turn-1");
+    assert.deepEqual(done, { ok: true, value: { computeId: "native-thread-1", kind: "completed", result: "reply-native-turn-1" } });
+  } finally { await client.quiesce(1000); }
+});
