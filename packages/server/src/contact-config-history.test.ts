@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, afterEach, test } from "node:test";
-import type { ContactConfigVersion } from "@g-group/api-contract";
+import type { ContactConfig, ContactConfigVersion } from "@g-group/api-contract";
 import { all, getDoc, putDoc, run } from "./db.ts";
 import { Host } from "./host.ts";
 import { createService } from "./service.ts";
@@ -228,4 +228,86 @@ test("CFG13 R1-01 覆盖插入不能原位改写历史且回滚仍使用原配�
   const rolled = await svc.handle("contacts.rollback", { contactId: c.id, version: 2, expectedVersion: 3, clientActionId: "after-rejected-replace" });
   assert.ok(rolled.ok);
   assert.deepEqual([host.contactDoc(c.id).value.name, host.contactDoc(c.id).value.persona, host.contactDoc(c.id).value.tools], ["原配置", "原人设", ["read"]]);
+});
+
+
+test("CFG14 R1-02 回滚历史写入失败原子放弃且同一动作号可重试一次", async () => {
+  const { host } = make();
+  const svc = createService(host);
+  const c = host.createContact({ name: "原", persona: "原人设" });
+  host.updateContact(c.id, { name: "新", persona: "新人设" });
+  const before = host.contactDoc(c.id);
+  const historyBefore = all(host.db, "SELECT * FROM gg_contact_config_versions WHERE contact_id = ? ORDER BY version", c.id);
+  const actionsBefore = all(host.db, "SELECT * FROM gg_contact_config_actions WHERE contact_id = ?", c.id);
+  const events: unknown[] = [];
+  const off = host.bus.subscribe((e) => { if (e.type === "contact.updated") events.push(e); });
+  host.db.store.db.exec("CREATE TRIGGER fixture_rollback_failure BEFORE INSERT ON gg_contact_config_versions WHEN NEW.kind = 'rollback' BEGIN SELECT RAISE(ABORT, 'FIXTURE_ROLLBACK_FAILURE'); END");
+  const input = { contactId: c.id, version: 1, expectedVersion: 2, clientActionId: "rollback-atomic-retry" };
+  const rejected = await svc.handle("contacts.rollback", input);
+  assert.equal(!rejected.ok && rejected.error.code, "internal");
+  assert.deepEqual(host.contactDoc(c.id), before);
+  assert.deepEqual(all(host.db, "SELECT * FROM gg_contact_config_versions WHERE contact_id = ? ORDER BY version", c.id), historyBefore);
+  assert.deepEqual(all(host.db, "SELECT * FROM gg_contact_config_actions WHERE contact_id = ?", c.id), actionsBefore);
+  assert.equal(events.length, 0);
+  host.db.store.db.exec("DROP TRIGGER fixture_rollback_failure");
+  const retried = await svc.handle("contacts.rollback", input);
+  assert.ok(retried.ok);
+  assert.deepEqual([host.contactDoc(c.id).ver, host.contactDoc(c.id).value.name, host.contactDoc(c.id).value.persona, events.length], [3, "原", "原人设", 1]);
+  assert.equal(all(host.db, "SELECT * FROM gg_contact_config_versions WHERE contact_id = ?", c.id).length, 3);
+  assert.equal(all(host.db, "SELECT * FROM gg_contact_config_actions WHERE contact_id = ?", c.id).length, 1);
+  const replayed = await svc.handle("contacts.rollback", input);
+  assert.deepEqual(replayed, retried);
+  assert.deepEqual([host.contactDoc(c.id).ver, events.length, all(host.db, "SELECT * FROM gg_contact_config_versions WHERE contact_id = ?", c.id).length], [3, 1, 3]);
+  off();
+});
+
+test("CFG15 R1-03 回滚恢复每个白名单字段含工具能力槽位和模型harness", async () => {
+  const { host } = make();
+  const svc = createService(host);
+  host.updateSettings({ defaultHarness: "claude-code", defaultSpeakingModel: "fixture-a", defaultComputeModel: "fixture-a", models: catalog.map((m) => ({ ...m, harnesses: ["claude-code", "codex"] })) });
+  const c = host.createContact({ name: "初始" });
+  const expected: ContactConfig = { name: "原名", avatar: "old-avatar", bio: "原简介", speakingModel: "fixture-a", harness: "claude-code", computeModel: { mode: "explicit", model: "fixture-a" }, tools: ["read"], computeAssets: [{ name: "old-skill", kind: "skill" }], computeSlots: 2, persona: "原人设" };
+  const saved = await svc.handle("contacts.update", { contactId: c.id, ...expected });
+  assert.ok(saved.ok);
+  const changed = await svc.handle("contacts.update", { contactId: c.id, name: "新名", avatar: "new-avatar", bio: "改坏", speakingModel: "fixture-b", harness: "codex", computeModel: { mode: "explicit", model: "fixture-b" }, tools: ["write", "NEUTRAL_EXTRA_TOOL"], computeAssets: [{ name: "new-skill", kind: "skill" }], computeSlots: 9, persona: "新人设" });
+  assert.ok(changed.ok);
+  const result = await svc.handle("contacts.rollback", { contactId: c.id, version: 2, expectedVersion: 3, clientActionId: "restore-all-fields" });
+  assert.ok(result.ok);
+  const actual = host.contactDoc(c.id);
+  for (const key of Object.keys(expected) as (keyof ContactConfig)[]) assert.deepEqual(actual.value[key], expected[key], key);
+  assert.deepEqual([actual.ver, actual.value.id, actual.value.createdAt], [4, c.id, c.createdAt]);
+  const history = await svc.handle("contacts.history", { contactId: c.id });
+  assert.ok(history.ok);
+  assert.deepEqual((history.value as History).versions[0]!.config, expected);
+  assert.deepEqual([(history.value as History).versions[0]!.kind, (history.value as History).versions[0]!.restoredFrom], ["rollback", 2]);
+});
+
+test("CFG16 R1-04 五种快照的SQLite原始内容严格只落盘配置白名单", async () => {
+  const { host, file } = make();
+  host.updateSettings({ defaultHarness: "claude-code", defaultSpeakingModel: "fixture-a", defaultComputeModel: "fixture-a", models: catalog });
+  const legacy = { id: "legacy-whitelist", name: "旧", avatar: null, bio: "", speakingModel: "fixture-a", harness: "claude-code", computeModel: { mode: "inherit", authToken: "NEUTRAL_FIXTURE_NO_CREDENTIALS" }, tools: ["read"], computeAssets: [{ name: "fixture-skill", kind: "skill", memory: "NEUTRAL_PRIVATE_MEMORY" }], persona: "原", createdAt: "2026-11-01T00:00:00.000Z", memory: "NEUTRAL_PRIVATE_MEMORY", authToken: "NEUTRAL_FIXTURE_NO_CREDENTIALS" };
+  putDoc(host.db, "contact:legacy-whitelist", 0, legacy);
+  await host.close();
+  const restarted = make(file);
+  const svc = createService(restarted.host);
+  restarted.host.createContact({ name: "新建" });
+  const update = await svc.handle("contacts.update", { contactId: legacy.id, name: "修改后" });
+  assert.ok(update.ok);
+  const batch = await svc.handle("models.batchReplace", { clientActionId: "whitelist-batch", from: "fixture-a", to: "fixture-b", apply: true });
+  assert.ok(batch.ok);
+  const rollback = await svc.handle("contacts.rollback", { contactId: legacy.id, version: 1, expectedVersion: 3, clientActionId: "whitelist-rollback" });
+  assert.ok(rollback.ok);
+  const rows = all<{ kind: string; config: string }>(restarted.host.db, "SELECT kind, config FROM gg_contact_config_versions ORDER BY contact_id, version");
+  assert.deepEqual([...new Set(rows.map((row) => row.kind))].sort(), ["baseline", "batch", "create", "rollback", "update"]);
+  assert.equal(rows.length, 6);
+  for (const row of rows) {
+    const config = JSON.parse(row.config);
+    assert.deepEqual(Object.keys(config).sort(), ["avatar", "bio", "computeAssets", "computeModel", "computeSlots", "harness", "name", "persona", "speakingModel", "tools"], row.kind);
+    assert.ok(!row.config.includes("NEUTRAL_PRIVATE_MEMORY") && !row.config.includes("NEUTRAL_FIXTURE_NO_CREDENTIALS"), row.kind);
+    for (const asset of config.computeAssets) assert.deepEqual(Object.keys(asset).sort(), ["kind", "name"], row.kind);
+    assert.ok(Object.keys(config.computeModel).every((key) => ["mode", "model", "effort"].includes(key)), row.kind);
+  }
+  const result = await svc.handle("contacts.history", { contactId: legacy.id });
+  assert.ok(result.ok);
+  assert.deepEqual((result.value as History).versions.map((v) => v.kind), ["rollback", "batch", "update", "baseline"]);
 });
