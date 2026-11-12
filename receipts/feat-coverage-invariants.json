@@ -1,0 +1,57 @@
+{
+  "slice": "Q02 测试专片：四组既有Host/SQLite/service行为的独立断言与错误行为校准；生产代码最终不变，replying生命周期缺口仍未验收",
+  "acceptance": [
+    {
+      "id": "AC-01",
+      "status": "未测",
+      "reason": "已独立证明Host层头像/合法换harness/重启身份记忆与同名隔离；真实CLI及完整INVARIANTS协议不在此测试专片，不能将子项绿升格为整条通过",
+      "evidence": "docs/proof/coverage-invariants/README.md"
+    },
+    {
+      "id": "AC-43",
+      "status": "未测",
+      "reason": "tasks.progress实际事件/字段/顺序/limit/重启/未知任务已覆盖；完整台账、卡住重跑、afterAt与真实harness未验收",
+      "evidence": "docs/proof/coverage-invariants/README.md"
+    },
+    {
+      "id": "AC-44",
+      "status": "未测",
+      "reason": "T4b无关插话及原qId/原Compute恢复子项已覆盖；真实验证码截图与模型路径未测",
+      "evidence": "docs/proof/coverage-invariants/README.md"
+    },
+    {
+      "id": "AC-P1-02",
+      "status": "未测",
+      "reason": "无关插话不会冲掉原问题/卡/版本且可原路回答已覆盖；依赖前提实际被推翻的完整选项卡族不在此专片",
+      "evidence": "docs/proof/coverage-invariants/README.md"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:01a1d043-1042-7e61-9981-968868c25de1",
+    "model": "gpt-6.1-sol"
+  },
+  "contributingSessions": [
+    "codex:01a1cfc8-db89-7400-b3de-876bd8478982",
+    "codex:01a1d043-1042-7e61-9981-968868c25de1"
+  ],
+  "red": {
+    "commit": "a9c0ffef997b5f364fb6b725031357b4dcf93d74"
+  },
+  "unverifiable": "AC-01 使用确定性Mind/Compute替身而非真实harness；AC-43只覆盖摘要进度且afterAt未测。U83单独真实探针仍失败：实际回复只有thinking到idle，没有replying；因此Q02整体验收未完成。四组断言的绿不能代替这些未测或失败项。",
+  "waiver": null,
+  "review": null,
+  "knownGaps": [
+    {
+      "id": "U83",
+      "status": "失败",
+      "evidence": "packages/server/proof/coverage-invariants-replying-gap.ts",
+      "reason": "真实回复后没有实际replying活动事件；本切片不修生产公共写点"
+    },
+    {
+      "id": "tasks.progress.afterAt",
+      "status": "未测",
+      "reason": "基线service忽略该参数；本专片不改该另一个缺口"
+    }
+  ]
+}
