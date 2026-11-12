@@ -1,0 +1,10 @@
+{
+  "frozen_head": "e1b91fc123148d637ddfd5db0db64ba6efdba4bf",
+  "archive": "cloud-behavior-raw.tar.gz",
+  "bytes": 133130,
+  "sha256": "76303e174c05ddb49fa25ef8b46d78f7ac978d198109406acba02dfedb297930",
+  "verified_archive_members": 45,
+  "manifest_member": "SHA256-MANIFEST.json",
+  "analysis": "cloud-behavior-analysis.json",
+  "all_archive_member_sizes_and_sha256_verified": true
+}
