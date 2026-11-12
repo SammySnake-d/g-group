@@ -92,7 +92,7 @@ test("TT01 manual creation, user assignment and real model-attempt facts are app
 test("TT02 contact dispatch and explicit rerun both record their actual creator and original source", async () => {
   let attempt = 0;
   const compute = scriptedCompute({ script: () => ++attempt === 1 ? [{ kind: "started", sessionId: "s", resumed: false }, { kind: "failed", reason: "process failed", code: 1, signal: null, violations: [] }] : [{ kind: "started", sessionId: "s2", resumed: false }] });
-  const s = scene({ compute });
+  const s = scene({ compute, userId: "timeline-requester" });
   try {
     const source = s.host.send({ roomId: s.room.id, clientActionId: "source", text: "帮我核对文档" });
     await settle(s.host, compute);
@@ -101,12 +101,13 @@ test("TT02 contact dispatch and explicit rerun both record their actual creator 
     assert.equal(first[0]?.cause, "ContactDispatch");
     assert.deepEqual(first[0]!.actor, { kind: "contact", id: s.c.id });
     assert.equal(first[0]!.sourceSeq, source.seq);
+    assert.equal(detail(first[0]!).requester, "timeline-requester");
     const unit = s.host.listRuns({}).runs.find((r) => r.layer === "compute-session" && r.status === "failed")!;
     assert.ok(unit);
     const rerun = await call<{ taskId: string }>(s.svc, "runs.rerun", { runId: unit.id, clientActionId: "retry" });
     await settle(s.host, compute);
     const second = (await page(s.svc, rerun.taskId)).events;
-    assert.deepEqual([second[0]!.cause, second[0]!.actor, second[0]!.sourceSeq, detail(second[0]!).rerunOfTask], ["RerunCreate", { kind: "user", id: "me" }, source.seq, t.id]);
+    assert.deepEqual([second[0]!.cause, second[0]!.actor, second[0]!.sourceSeq, detail(second[0]!).rerunOfTask], ["RerunCreate", { kind: "user", id: "timeline-requester" }, source.seq, t.id]);
     assert.ok(second.some((e) => e.cause === "RerunClaim" && e.after.owner === s.c.id));
     const oldAfterRerun = (await page(s.svc, t.id)).events;
     assert.deepEqual(oldAfterRerun.slice(0, first.length), first, "a rerun cannot rewrite old rows; real late stop/failure facts may append");
@@ -148,7 +149,7 @@ test("TT04 follow-up receipt, accepted resume and artifact application are disti
     const received = events.find((e) => e.cause === "FollowUpReceived")!;
     const resumed = events.find((e) => e.cause === "ResumeAccepted")!;
     assert.ok(received && resumed && received.id < resumed.id);
-    assert.ok(JSON.stringify(detail(received)).includes(`\"seq\":${msg.seq}`));
+    assert.ok(JSON.stringify(detail(received)).includes(`"seq":${msg.seq}`));
     assert.equal(received.after.constraintVer, 1);
     assert.equal(s.compute.resumed.length, 1);
     assert.ok(events.some((e) => e.kind === "model-attempt" && detail(e).reason === "turn"), "recordTurnTx bypass also appends the real accepted model attempt");
@@ -176,7 +177,7 @@ test("TT05 rebind appends both sides' real linkage versions atomically and repla
     await settle(s.host, s.compute);
     const ea = (await page(s.svc, a.id)).events; const eb = (await page(s.svc, b.id)).events;
     assert.ok(ea.some((e) => e.cause === "FollowUpReboundOut" && JSON.stringify(detail(e)).includes(b.id)));
-    assert.ok(eb.some((e) => e.cause === "FollowUpReboundIn" && JSON.stringify(detail(e)).includes(`\"seq\":${m.seq}`)));
+    assert.ok(eb.some((e) => e.cause === "FollowUpReboundIn" && JSON.stringify(detail(e)).includes(`"seq":${m.seq}`)));
     const before = [rows(s.host, a.id), rows(s.host, b.id)];
     await call(s.svc, "tasks.rebindFollowUp", params);
     await settle(s.host, s.compute);
@@ -198,12 +199,22 @@ test("TT06 same-timestamp keyset pages are task-bound, stable under append and s
     assert.equal(new Set(combined.map((e) => e.id)).size, combined.length);
     assert.ok(combined.every((e) => e.at === NOW));
     const other = await create(s, "other", "B");
-    for (const q of [{ cursor: first.nextCursor, taskId: other.id }, { cursor: "%%%" }, { cursor: Buffer.from(JSON.stringify([t.id, -1])).toString("base64url") }, { limit: 0 }, { limit: 201 }]) {
+    const canonical = [1, 10, 100].map((id) => Buffer.from(JSON.stringify([t.id, id])).toString("base64url")).find((c) => c.length % 4 !== 0)!;
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    const noncanonical = canonical.slice(0, -1) + alphabet[alphabet.indexOf(canonical.at(-1)!) + 1];
+    assert.deepEqual(Buffer.from(noncanonical, "base64url"), Buffer.from(canonical, "base64url"), "negative control changes only unused encoding bits, not decoded JSON");
+    assert.equal((await s.svc.handle("tasks.timeline", { taskId: t.id, cursor: canonical })).ok, true);
+    for (const q of [{ cursor: first.nextCursor, taskId: other.id }, { cursor: "%%%" }, { cursor: noncanonical }, { cursor: Buffer.from(JSON.stringify([t.id, -1])).toString("base64url") }, { limit: 0 }, { limit: 201 }, { limit: 1.5 }]) {
       const r = await s.svc.handle("tasks.timeline", { taskId: t.id, ...q });
       assert.ok(!r.ok && r.error.code === "invalid_params");
     }
-    const frozen = rows(s.host, t.id); await page(s.svc, t.id);
+    const frozen = rows(s.host, t.id);
+    const changes = () => all<{ n: number }>(s.host.db, "SELECT total_changes() AS n")[0]!.n;
+    const beforeRead = changes(); const live: unknown[] = []; const unsubscribe = s.host.bus.subscribe((e) => live.push(e));
+    await page(s.svc, t.id); unsubscribe();
     assert.deepEqual(rows(s.host, t.id), frozen, "timeline API is read-only");
+    assert.equal(changes(), beforeRead, "even idempotent SQL writes are forbidden during timeline reads");
+    assert.equal(live.length, 0, "reading timeline never emits a live mutation event");
   } finally { await s.host.close(); }
 });
 
