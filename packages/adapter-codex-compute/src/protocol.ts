@@ -47,6 +47,7 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
   let starting = false;
   let resumed = false;
   let closed = false;
+  let wireFailure: string | null = null;
   const emitted: ComputeEvent[] = [];
   const listeners = new Set<() => void>();
   function wake() { for (const w of listeners) w(); listeners.clear(); }
@@ -125,14 +126,14 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
         if (!p) return;
         pending.delete(msg.id); clearTimeout(p.timer);
         p.finish(record(msg.result) ? { ok: true, value: msg.result } : no("native RPC rejected"));
-      } catch { failPending("invalid native JSON"); }
+      } catch { wireFailure = "invalid native JSON"; failPending(wireFailure); cleanup?.requestStop(50); }
     });
     child.stderr.resume();
     child.once("close", (code, signal) => {
       failPending("native process exited");
       for (const turn of turns.values()) {
         if (turn.result) continue;
-        turn.result = { ok: true, value: { computeId: threadId!, kind: "failed", reason: "native process exited before matching turn/completed", code, signal, violations: [] } };
+        turn.result = { ok: true, value: { computeId: threadId!, kind: "failed", reason: wireFailure ?? "native process exited before matching turn/completed", code: wireFailure ? null : code, signal: wireFailure ? null : signal, violations: [] } };
         publish(turn.result.value); turn.finish(turn.result);
       }
       closed = true; wake();
@@ -146,7 +147,9 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       launch();
       const r = await request("initialize", { clientInfo: { name: "g-group-codex-protocol", version: "0.0.1" }, capabilities: { experimentalApi: true, requestAttestation: false } });
       if (!r.ok) return r;
-      if (typeof r.value.codexHome !== "string" || realpathSync(r.value.codexHome) !== realpathSync(options.configDir)) return no("native config owner mismatch");
+      try {
+        if (typeof r.value.codexHome !== "string" || realpathSync(r.value.codexHome) !== realpathSync(options.configDir)) return no("native config owner mismatch");
+      } catch { return no("native config owner mismatch"); }
       if (!send({ method: "initialized", params: {} })) return no("initialized write failed");
       initialized = true;
       return { ok: true, value: { codexHome: r.value.codexHome } };
