@@ -210,3 +210,20 @@ test("CXP-13 interrupt acknowledgement alone never becomes an interrupted comple
     assert.equal(terminal.ok && terminal.value.kind, "failed");
   } finally { await client.quiesce(1000); }
 });
+
+test("CXP-14 concurrent native turn starts cannot create a second active turn behind the caller", async () => {
+  const cfg = options("hold"); const client = createCodexComputeProtocol(cfg);
+  try {
+    assert.equal((await client.initialize()).ok, true);
+    assert.equal((await client.startThread({ model: "probe-A", effort: "low" })).ok, true);
+    const [first, second] = await Promise.all([
+      client.startTurn("native-thread-1", "first", { model: "probe-A", effort: "low" }),
+      client.startTurn("native-thread-1", "second", { model: "probe-A", effort: "low" }),
+    ]);
+    assert.equal(first.ok, true);
+    assert.equal(second.ok, false);
+    const wire = readFileSync(path.join(cfg.configDir, "wire-requests.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    assert.equal(wire.filter((m) => m.method === "turn/start").length, 1);
+    assert.equal((await client.interrupt("native-thread-1", "native-turn-1")).ok, true);
+  } finally { await client.quiesce(1000); }
+});
