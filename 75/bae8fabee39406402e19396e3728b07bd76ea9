@@ -1,0 +1,27 @@
+packages/kernel/src/compact.ts
+  s_a1c03f790defe9::t_2c3c95f0ee3d38 12-14
+packages/kernel/src/history-scrub.test.ts
+  s_a1c03f790defe9::t_68fc243c0fb38b 1-66
+packages/kernel/src/history-tools.ts
+  s_a1c03f790defe9::t_bfe1fd9918b151 4-5,21,24-25,35-36,69-87
+packages/server/src/history-scrub.test.ts
+  s_a1c03f790defe9::t_f1428f03f9b76f 1-163
+packages/server/src/history.ts
+  s_a1c03f790defe9::t_21d05f0364430a 7-9,28-29,75-76,79-93,102-105,108,111-127,129,132,148,151-154,175,179-181,205-206,228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "75bae8fabee39406402e19396e3728b07bd76ea9",
+  "prompts": {},
+  "sessions": {
+    "s_a1c03f790defe9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a486d1455e11315cb",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/server/proof/history-scrub-mutations.mjs
+  s_a1c03f790defe9::t_4c1eabe3daff5b 1-168
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "66cac85bfa52352d9acaac3e629d9a0326a9eb05",
+  "prompts": {},
+  "sessions": {
+    "s_a1c03f790defe9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a486d1455e11315cb",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

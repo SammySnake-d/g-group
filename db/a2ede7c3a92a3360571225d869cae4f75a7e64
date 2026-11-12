@@ -1,0 +1,21 @@
+packages/kernel/src/history-tools.ts
+  s_30afae688b7542::t_3a01f65ce9debb 9,75-83,92-95
+packages/server/src/history.ts
+  s_30afae688b7542::t_c20d882cdb602c 92-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dba2ede7c3a92a3360571225d869cae4f75a7e64",
+  "prompts": {},
+  "sessions": {
+    "s_30afae688b7542": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1af55cf420d9f162",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

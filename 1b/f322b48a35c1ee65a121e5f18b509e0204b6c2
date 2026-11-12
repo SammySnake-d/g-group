@@ -1,0 +1,23 @@
+receipts/evidence/t177-g4b/mutations.txt
+  s_a1c03f790defe9::t_c46dbd74406f5b 1-13
+receipts/evidence/t177-g4b/summary.json
+  s_a1c03f790defe9::t_2ae32362d59777 1-51
+receipts/feat-t177-g4b-scrub-retracted.json
+  s_a1c03f790defe9::t_7f41f666270c77 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1bf322b48a35c1ee65a121e5f18b509e0204b6c2",
+  "prompts": {},
+  "sessions": {
+    "s_a1c03f790defe9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a486d1455e11315cb",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
