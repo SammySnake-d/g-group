@@ -1,0 +1,584 @@
+TAP version 13
+# Subtest: CQ01 contacts.create 在创建事务持久化指定个人额度与首版历史
+not ok 1 - CQ01 contacts.create 在创建事务持久化指定个人额度与首版历史
+  ---
+  duration_ms: 14.020209
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:27:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    undefined !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:33:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: CQ02 rooms.createGroup 原子保存群成员与指定临时额度并对外返回
+not ok 2 - CQ02 rooms.createGroup 原子保存群成员与指定临时额度并对外返回
+  ---
+  duration_ms: 8.5225
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:37:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 3
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 3
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:44:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: CQ03 contacts.create 与更新共用 null 或 1..64 整数范围，坏额度不残留实体
+not ok 3 - CQ03 contacts.create 与更新共用 null 或 1..64 整数范围，坏额度不残留实体
+  ---
+  duration_ms: 8.787708
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:49:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + false
+    - 'invalid_params'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'invalid_params'
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:54:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: CQ04 rooms.createGroup 与更新共用 0..64 整数范围，坏额度不残留群成员
+not ok 4 - CQ04 rooms.createGroup 与更新共用 0..64 整数范围，坏额度不残留群成员
+  ---
+  duration_ms: 8.261666
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:66:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + false
+    - 'invalid_params'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'invalid_params'
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:71:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: CQ05 个人创建缺省和 null 保留宿主默认，1 与 64 边界保存且动作可重放
+not ok 5 - CQ05 个人创建缺省和 null 保留宿主默认，1 与 64 边界保存且动作可重放
+  ---
+  duration_ms: 7.72625
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:85:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - null
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:93:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: CQ06 群创建缺省零与显式 0 和 64 都持久化同一额度文档
+not ok 6 - CQ06 群创建缺省零与显式 0 和 64 都持久化同一额度文档
+  ---
+  duration_ms: 8.897708
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:101:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + undefined
+    - {
+    -   slots: 0
+    - }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    slots: 0
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:109:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: CQ07 联系人创建动作跨重启返回原响应，修改参数冲突且不覆当前配置历史
+not ok 7 - CQ07 联系人创建动作跨重启返回原响应，修改参数冲突且不覆当前配置历史
+  ---
+  duration_ms: 9.868375
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:113:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+
+      {
+        ok: true,
+        value: {
+          activity: 'idle',
+          avatar: null,
+    ...
+          },
+    +     createdAt: '2026-11-12T15:48:25.932Z',
+    -     createdAt: '2026-11-12T15:48:25.929Z',
+          harness: 'claude-code',
+    +     id: 'c-mwdq2swc-1',
+    -     id: 'c-mwdq2sw9-1',
+          name: '创建时名字',
+          speakingModel: 'claude-sonnet-4-6',
+          tools: []
+        }
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    ok: true
+    value:
+      id: 'c-mwdq2sw9-1'
+      name: '创建时名字'
+      avatar: ~
+      bio: ''
+      speakingModel: 'claude-sonnet-4-6'
+      harness: 'claude-code'
+      computeModel:
+        mode: 'inherit'
+      tools:
+      computeAssets:
+      activity: 'idle'
+      createdAt: '2026-11-12T15:48:25.929Z'
+      computeResolved:
+        resolved:
+          harness: 'claude-code'
+          model: 'claude-sonnet-4-6'
+          effort: 'medium'
+          vendor: 'anthropic'
+          modelSource: 'global'
+          effortSource: 'global'
+          chain:
+            0: 'compute 继承全局'
+            1: '全局 Compute 默认 claude-sonnet-4-6'
+        support: 'undeclared'
+  actual:
+    ok: true
+    value:
+      id: 'c-mwdq2swc-1'
+      name: '创建时名字'
+      avatar: ~
+      bio: ''
+      speakingModel: 'claude-sonnet-4-6'
+      harness: 'claude-code'
+      computeModel:
+        mode: 'inherit'
+      tools:
+      computeAssets:
+      activity: 'idle'
+      createdAt: '2026-11-12T15:48:25.932Z'
+      computeResolved:
+        resolved:
+          harness: 'claude-code'
+          model: 'claude-sonnet-4-6'
+          effort: 'medium'
+          vendor: 'anthropic'
+          modelSource: 'global'
+          effortSource: 'global'
+          chain:
+            0: 'compute 继承全局'
+            1: '全局 Compute 默认 claude-sonnet-4-6'
+        support: 'undeclared'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:127:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: CQ08 建群动作跨重启返回原响应，额度或成员变更冲突且不覆当前群
+not ok 8 - CQ08 建群动作跨重启返回原响应，额度或成员变更冲突且不覆当前群
+  ---
+  duration_ms: 9.8095
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:138:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+
+      {
+        ok: true,
+        value: {
+          announcementCount: 0,
+          avatar: null,
+    +     id: 'g-mwdq2swm-1',
+    -     id: 'g-mwdq2swj-1',
+          kind: 'group',
+          lastMessagePreview: null,
+          lastSeq: 0,
+          leavingMembers: [],
+          members: [
+    ...
+          unread: 0,
+    +     updatedAt: '2026-11-12T15:48:25.942Z'
+    -     updatedAt: '2026-11-12T15:48:25.939Z'
+        }
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    ok: true
+    value:
+      id: 'g-mwdq2swj-1'
+      kind: 'group'
+      title: '创建时群名'
+      avatar: ~
+      members:
+        0:
+          kind: 'user'
+          id: 'me'
+      rules: ''
+      rulesVersion: 0
+      pinned: false
+      muted: false
+      lastSeq: 0
+      readSeq: 0
+      unread: 0
+      pendingForUser: 0
+      lastMessagePreview: ~
+      updatedAt: '2026-11-12T15:48:25.939Z'
+      announcementCount: 0
+      leavingMembers:
+      tempComputeSlots: 0
+  actual:
+    ok: true
+    value:
+      id: 'g-mwdq2swm-1'
+      kind: 'group'
+      title: '创建时群名'
+      avatar: ~
+      members:
+        0:
+          kind: 'user'
+          id: 'me'
+      rules: ''
+      rulesVersion: 0
+      pinned: false
+      muted: false
+      lastSeq: 0
+      readSeq: 0
+      unread: 0
+      pendingForUser: 0
+      lastMessagePreview: ~
+      updatedAt: '2026-11-12T15:48:25.942Z'
+      announcementCount: 0
+      leavingMembers:
+      tempComputeSlots: 0
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:152:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: CQ09 动作号按创建种类隔离，JSON字段顺序不产生伪冲突或重复实体
+not ok 9 - CQ09 动作号按创建种类隔离，JSON字段顺序不产生伪冲突或重复实体
+  ---
+  duration_ms: 9.202167
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:163:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+
+      [
+        {
+          ok: true,
+          value: {
+            activity: 'idle',
+    ...
+            harness: 'claude-code',
+    +       id: 'c-mwdq2swt-3',
+    -       id: 'c-mwdq2swt-1',
+            name: '独立联系人',
+            speakingModel: 'claude-sonnet-4-6',
+            tools: []
+          }
+        },
+    ...
+            avatar: null,
+    +       id: 'g-mwdq2swu-4',
+    -       id: 'g-mwdq2swt-2',
+            kind: 'group',
+            lastMessagePreview: null,
+            lastSeq: 0,
+            leavingMembers: [],
+            members: [
+    ...
+            unread: 0,
+    +       updatedAt: '2026-11-12T15:48:25.950Z'
+    -       updatedAt: '2026-11-12T15:48:25.949Z'
+          }
+        }
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      ok: true
+      value:
+        id: 'c-mwdq2swt-1'
+        name: '独立联系人'
+        avatar: ~
+        bio: ''
+        speakingModel: 'claude-sonnet-4-6'
+        harness: 'claude-code'
+        computeModel:
+          mode: 'inherit'
+        tools:
+        computeAssets:
+        activity: 'idle'
+        createdAt: '2026-11-12T15:48:25.949Z'
+        computeResolved:
+          resolved:
+            harness: 'claude-code'
+            model: 'claude-sonnet-4-6'
+            effort: 'medium'
+            vendor: 'anthropic'
+            modelSource: 'global'
+            effortSource: 'global'
+            chain:
+              0: 'compute 继承全局'
+              1: '全局 Compute 默认 claude-sonnet-4-6'
+          support: 'undeclared'
+    1:
+      ok: true
+      value:
+        id: 'g-mwdq2swt-2'
+        kind: 'group'
+        title: '独立群'
+        avatar: ~
+        members:
+          0:
+            kind: 'user'
+            id: 'me'
+        rules: ''
+        rulesVersion: 0
+        pinned: false
+        muted: false
+        lastSeq: 0
+        readSeq: 0
+        unread: 0
+        pendingForUser: 0
+        lastMessagePreview: ~
+        updatedAt: '2026-11-12T15:48:25.949Z'
+        announcementCount: 0
+        leavingMembers:
+        tempComputeSlots: 0
+  actual:
+    0:
+      ok: true
+      value:
+        id: 'c-mwdq2swt-3'
+        name: '独立联系人'
+        avatar: ~
+        bio: ''
+        speakingModel: 'claude-sonnet-4-6'
+        harness: 'claude-code'
+        computeModel:
+          mode: 'inherit'
+        tools:
+        computeAssets:
+        activity: 'idle'
+        createdAt: '2026-11-12T15:48:25.949Z'
+        computeResolved:
+          resolved:
+            harness: 'claude-code'
+            model: 'claude-sonnet-4-6'
+            effort: 'medium'
+            vendor: 'anthropic'
+            modelSource: 'global'
+            effortSource: 'global'
+            chain:
+              0: 'compute 继承全局'
+              1: '全局 Compute 默认 claude-sonnet-4-6'
+          support: 'undeclared'
+    1:
+      ok: true
+      value:
+        id: 'g-mwdq2swu-4'
+        kind: 'group'
+        title: '独立群'
+        avatar: ~
+        members:
+          0:
+            kind: 'user'
+            id: 'me'
+        rules: ''
+        rulesVersion: 0
+        pinned: false
+        muted: false
+        lastSeq: 0
+        readSeq: 0
+        unread: 0
+        pendingForUser: 0
+        lastMessagePreview: ~
+        updatedAt: '2026-11-12T15:48:25.950Z'
+        announcementCount: 0
+        leavingMembers:
+        tempComputeSlots: 0
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:171:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: CQ10 创建动作记账失败回滚联系人、额度与历史，修复后同号可重试
+not ok 10 - CQ10 创建动作记账失败回滚联系人、额度与历史，修复后同号可重试
+  ---
+  duration_ms: 7.523584
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:175:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + false
+    - 'internal'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'internal'
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:181:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: CQ11 群额度落盘失败回滚群、成员与动作，修复后同号可重试
+not ok 11 - CQ11 群额度落盘失败回滚群、成员与动作，修复后同号可重试
+  ---
+  duration_ms: 7.505042
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:191:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + false
+    - 'internal'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'internal'
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:197:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: CQ12 创建额度进入既有租约原语，群不串借，下调不抢在途且停止确认才归还
+not ok 12 - CQ12 创建额度进入既有租约原语，群不串借，下调不抢在途且停止确认才归还
+  ---
+  duration_ms: 37.287083
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:219:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+    -   'group:g-mwdq2sxi-2',
+        'personal:c-mwdq2sxh-1',
+    +   'personal:c-mwdq2sxh-1'
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'group:g-mwdq2sxi-2'
+    1: 'personal:c-mwdq2sxh-1'
+  actual:
+    0: 'personal:c-mwdq2sxh-1'
+    1: 'personal:c-mwdq2sxh-1'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:235:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: CQ13 个人额度下调保留旧租约，未停止不抢占，低于新上限后才让排队起跑
+not ok 13 - CQ13 个人额度下调保留旧租约，未停止不抢占，低于新上限后才让排队起跑
+  ---
+  duration_ms: 7.244458
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:257:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    undefined !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:264:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 0
+# fail 13
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 365.082

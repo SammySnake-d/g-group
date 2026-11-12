@@ -1,0 +1,17 @@
+{
+  "proof": "service/Host/SQLite no-model",
+  "contactCreatedSlots": 2,
+  "groupCreatedSlots": 3,
+  "replayAcrossRestart": true,
+  "mutatedRequest": "conflict",
+  "badQuota": "invalid_params",
+  "failedActionNoDefaultEntity": true,
+  "historyVersions": [
+    3,
+    2,
+    1
+  ],
+  "taskMessageCursorPreserved": true,
+  "currentGroupSlotsAfterReplay": 0,
+  "helperCreate": "not in base; #64/Q13 prerequisite"
+}

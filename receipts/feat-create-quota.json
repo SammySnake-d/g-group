@@ -1,0 +1,27 @@
+{
+  "slice": "U08/U09 contacts.create.computeSlots 与 rooms.createGroup.tempComputeSlots：创建额度同事务持久化及动作幂等；Q03历史事务保留；不改公平或生命周期算法",
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "docs/proof/create-quota/README.md"
+    },
+    {
+      "id": "AC-23",
+      "status": "未测",
+      "reason": "本机13项和真service/SQLite无模型proof仅证明创建额度与既有租约/停止确认的限定路径；云17项变异、全量及真实CLI/子进程停止仍未完成，不能提升AC-23整项验收。"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "model": "gpt-6.1-sol"
+  },
+  "red": {
+    "commit": "069bbd20b7ef925e9043a54b94b4276760e09a59"
+  },
+  "unverifiable": "AC-23 当前只证创建额度与受控适配器下真实Host租约路径；云启动前ENOSPC，本片未启动云runner，17项变异/全量待恢复；真实模型与CLI子进程未测；Helper创建缺#64/Q13前置。G-PROVENANCE在review=null短路不算来源实核，未伪造turns。",
+  "waiver": null,
+  "review": null,
+  "notes": "Original first reds and 17 pre-product mutant registrations retained. CQ03/CQ04 strengthened with actual valid-boundary persistence after preserving all old rejection/no-residue assertions. Strengthening red 069bbd20 is explicitly retrospective; inherited gate API symlink mismatch reproduced and retained. Product 3 files identical to c371b712; 17 mutant definitions unchanged; cloud still not started."
+}
