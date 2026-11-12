@@ -42,6 +42,10 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
     if (typeof native.id !== "string") return;
     const turn = turns.get(native.id);
     if (!turn || turn.result) return;
+    if (native.status === "interrupted") {
+      turn.result = { ok: true, value: { computeId: threadId!, kind: "stopped", code: null, signal: null, scope: "main-then-group", violations: [] } };
+      turn.finish(turn.result); return;
+    }
     if (native.status !== "completed") return;
     const items = Array.isArray(native.items) ? native.items : [];
     const text = items.filter((i): i is Record<string, unknown> => record(i) && i.type === "agentMessage" && typeof i.text === "string").map((i) => i.text).join("\n");
@@ -129,8 +133,24 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       for (const note of notes) consume(note);
       return { ok: true, value: { turnId: id } };
     },
-    steer: async () => no("not implemented"),
-    interrupt: async () => no("not implemented"),
+    async steer(wantedThread, expectedTurnId, text) {
+      const active = turns.get(expectedTurnId);
+      if (wantedThread !== threadId || !active || active.result || typeof text !== "string" || !text.trim()) return no("no matching active native turn");
+      const r = await request("turn/steer", { threadId: wantedThread, expectedTurnId, input: [{ type: "text", text, text_elements: [] }] });
+      if (!r.ok) return r;
+      if (r.value.turnId !== expectedTurnId) return no("native steer acknowledged a different turn");
+      return { ok: true, value: { turnId: expectedTurnId } };
+    },
+    async interrupt(wantedThread, turnId) {
+      const turn = turns.get(turnId);
+      if (wantedThread !== threadId || !turn || turn.result) return no("no matching active native turn");
+      const r = await request("turn/interrupt", { threadId: wantedThread, turnId });
+      if (!r.ok) return r;
+      let timer: NodeJS.Timeout | undefined;
+      const terminal = await Promise.race([turn.done, new Promise<ProtocolResult<ComputeEvent>>((r) => { timer = setTimeout(() => r(no("native interrupt not confirmed")), timeout); })]);
+      clearTimeout(timer);
+      return terminal.ok && terminal.value.kind === "stopped" ? { ok: true, value: { status: "interrupted" } } : no("native interrupt not confirmed");
+    },
     async settled(wantedThread, turnId) {
       if (wantedThread !== threadId || !turns.has(turnId)) return no("native turn mismatch");
       return turns.get(turnId)!.done;
