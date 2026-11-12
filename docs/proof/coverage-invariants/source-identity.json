@@ -1,0 +1,15 @@
+{
+  "candidate": "/private/tmp/gg-req-invariants-resume-20261112",
+  "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+  "changedPaths": [
+    "docs/proof/coverage-invariants/README.md",
+    "packages/server/proof/coverage-invariants-mutations.mjs",
+    "packages/server/proof/coverage-invariants-replying-gap.ts",
+    "packages/server/src/coverage-invariants.test.ts",
+    "receipts/feat-coverage-invariants.json"
+  ],
+  "productionSourceDelta": [],
+  "hostSha256": "744317ce7e5e805dbcb2875c9d42ee32dcbd79e43110fc2199cf7285d674a9d1",
+  "testSha256": "ac7f6d8537a1abe6dc30fa1cb1023bf17d245cebb48fe2e776f2d54ea9bd1e46",
+  "sourceHead": "5cf70481c19c3d052e1da6822ac33919c3a2e1a0"
+}

@@ -45,3 +45,23 @@ box3，Node v24.21.0；独占 RAM 根与 `flock -w 3600 /workspace/.heavy.lock` 
 首轮已经取得四红四绿与 8/8 变异，但类型检查暴露测试 fixture 类型问题（元组推断为可能 undefined，重开 Host 缺少必需 mind）。不把该轮报作全部通过：仅显式 fixture 类型与重启替身，断言没有弱化，再做新红提交和完整云验证。旧轮完整结果另行保留。
 
 收据追踪说明：固定基线门禁的 spec ID 提取器不识别主文档现有 `AC-P1-02`，首次 G-TRACE 如实失败。未修改门禁/需求或添加豁免；该子项保留在 `additionalCoverageNotes`，其 T4b 原题/原 Compute 路径同时映射到可识别的 AC-44，复合验收仍未测。
+
+
+## 冻结 v2 的实际结果
+
+| 观察边界 | 实际结果 |
+|---|---|
+| cloud source HEAD | `5cf70481c19c3d052e1da6822ac33919c3a2e1a0` |
+| red / green | 同一四个测试：4 个具名 `ERR_ASSERTION` 红 → 4/4 绿 |
+| 预定单点变异 | 8/8 被各自预绑定具名断言杀死；存活 0；原样副本 4/4 |
+| parser controls | assertion 能识别；TypeError/timeout/module-load 不计为 kills |
+| typecheck / lint | 均 exit 0 |
+| full | **1477/1477**，fail/cancelled/skipped/todo 全 0，168.588 秒，Node v24.21.0 |
+| 实际回复生命周期 | **仍失败**，exit 1 `ERR_ASSERTION`；真实 reply 已提交，只有 thinking→idle |
+| 源码冻结 | 云端全部受测 tracked 文件运行后 SHA 不变；最终三份测试/证明源码与受测版本相同 |
+| 独立审查 / 真实来源核验 | pending；review=null 的 G-PROVENANCE 短路不等于实核通过 |
+
+- `cloud-proof.tar.gz`：125145 字节，SHA256 `74f11a35f6ab09cf627de125cedfaadaf00e185c5834a91131155eca4f5b702a`；包含所有原始 TAP/full/typecheck/lint/gap/变异日志、source freeze 与实际 runner。
+- `initial-typecheck-failure.tar.gz`：34929 字节，SHA256 `8accdb6497b3ea65f929c360a9c16dcf35a8d3406ae1085ce87881b08a7b9e96`；保留首轮 typecheck exit 2，不用后续绿抹掉 executor/fixture 失败。
+- `result.json` 中 complete 表示七个预定执行步骤各达到其预定退出码，**不表示 Q02 整体验收完成**；其中 replying-gap 的预定退出码正是 1，产品缺口仍在。
+- 云端一度 overlay 满导致 shell wrapper 无法创建、一次整段 base64 返回被截断。未清共享文件，改用自有 RAM 传输根、120 行分页，最终双 archive 字节数与 SHA 全部核对后才采用；没有重跑已完成 evaluator 来代替取证。
