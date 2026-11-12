@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const repo = fileURLToPath(new URL("../../../..", import.meta.url));
+const repo = fileURLToPath(new URL("../../..", import.meta.url));
 const output = process.argv[2] ?? path.join(repo, "room-pending-summary-mutations-result.json");
 const source = "packages/server/src/room-blocked-summary.ts";
 const host = "packages/server/src/host.ts";
