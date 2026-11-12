@@ -1,0 +1,30 @@
+packages/server/plugins/ketchup/index.mjs
+  s_bc500ef58bf3aa::t_df4e990a7de695 1-2,5-28
+packages/server/src/plugin-runtime.ts
+  s_bc500ef58bf3aa::t_df4e990a7de695 51,183,270,325-332
+  s_bc500ef58bf3aa::t_da0fac217a9f91 333-334
+packages/server/src/plugins.ts
+  s_bc500ef58bf3aa::t_df4e990a7de695 361-382
+  s_bc500ef58bf3aa::t_efeb3e2ab3d807 255,311,393,395
+packages/server/runtime/plugin-runner.mjs
+  s_bc500ef58bf3aa::t_df4e990a7de695 59-63
+packages/server/src/slash-commands.ts
+  s_bc500ef58bf3aa::t_fbf2d783a2aba0 5,11,13,61,66-67,74-79,85-86
+  s_bc500ef58bf3aa::t_df4e990a7de695 1-4,8-10,12,14-46,49-60,62-65,68-73,80-84,87-92,95-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "11aa677cab053e60b1a0a7368e50e0711e6e5b1e",
+  "prompts": {},
+  "sessions": {
+    "s_bc500ef58bf3aa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cf01-3b82-7211-b7b9-c7147d5e45e7",
+        "model": "chatflows/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
