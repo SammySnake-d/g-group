@@ -67,6 +67,7 @@ import {
   type HealClass,
   type Inbound,
   type InboundMessage,
+  type LinkedQuery,
   type MemoryEntry,
   type QuoteMsg,
   buildQuoteChain,
@@ -132,6 +133,7 @@ import {
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
+import { type ForwardRecord, ForwardLinkStore, renderForwardText, renderLinked } from "./forward-link.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
 import { MemoryStore } from "./memory-store.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
@@ -373,6 +375,8 @@ export class Host {
   readonly plugins: PluginStore;
   readonly announcements: AnnouncementStore;
   private readonly exits: MemberExits;
+  /** 转发副本与会话关联(U25/U24):副本快照与来源、关联与上界 */
+  private readonly links: ForwardLinkStore;
   /** 共享文档单一提交点(AC-21):所有写入只经它 */
   readonly docs: SharedDocs;
   readonly worktrees: Worktrees | null;
@@ -437,6 +441,7 @@ export class Host {
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
     this.exits = new MemberExits({ db: this.db, now: this.now });
+    this.links = new ForwardLinkStore(this.db);
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
     this.memory = new MemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d));
@@ -854,6 +859,8 @@ export class Host {
       announcementCount: r.kind === "group" ? this.announcements.count(roomId) : 0,
       leavingMembers: this.exits.leavingIn(roomId),
       ...(r.kind === "group" ? { tempComputeSlots: getDoc<{ slots: number }>(this.db, `room-slots:${roomId}`)?.value.slots ?? 0 } : {}),
+      // 显式关联(U24,静态,候选):只列用户两边都在的关联,解除后不再出现
+      ...(this.linksOfUser(roomId).length ? { linkedRooms: this.linksOfUser(roomId).map((l) => ({ roomId: l.linkedRoomId, kind: l.kind, title: l.title, uptoSeq: l.uptoSeq, linkedAt: l.linkedAt })) } : {}),
     };
   }
   markRead(roomId: string, m: Member, seq: number) {
@@ -884,12 +891,14 @@ export class Host {
     for (const r of all<{ emoji: string; kind: Member["kind"]; member_id: string }>(this.db, "SELECT emoji, kind, member_id FROM gg_reactions WHERE room_id = ? AND seq = ? ORDER BY rowid", roomId, m.seq)) {
       reactions.set(r.emoji, [...(reactions.get(r.emoji) ?? []), { kind: r.kind, id: r.member_id }]);
     }
+    const fwd = this.links.get(roomId, m.seq);
     return {
       roomId,
       seq: m.seq,
       threadRootSeq: meta?.thread_root ?? null,
       sender: { kind: m.sender.kind, id: m.sender.id },
-      text: m.retracted ? "" : m.text,
+      // 转发副本的正文按副本当前状态渲染(来源撤回后标出来源已撤回;原文仍在)
+      text: m.retracted ? "" : fwd ? renderForwardText(fwd) : m.text,
       mentions: meta ? (JSON.parse(meta.mentions) as MessageView["mentions"]) : [],
       replyToSeq: meta?.reply_to ?? null,
       quotedSeqs: quoted,
@@ -919,6 +928,7 @@ export class Host {
       at: one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${roomId}`, m.seq)?.at ?? this.now(),
       ...(isRewound(this.db, roomId, m.seq) ? { rewound: true } : {}),
       ...(m.retracted ? {} : this.messageArtifacts(roomId, m.seq)),
+      ...(fwd ? { forwarded: this.links.view(fwd) } : {}),
     };
   }
   listMessages(roomId: string, q: { beforeSeq?: number; afterSeq?: number; aroundSeq?: number; limit?: number; threadRootSeq?: number | null }): { messages: MessageView[]; hasMore: boolean; hasMoreAfter?: boolean } {
@@ -1141,6 +1151,8 @@ export class Host {
   /** 编辑自己的消息:追加编辑事件,不改旧事件;联系人下一轮收到「编辑了 #x」。 */
   editMessage(roomId: string, seq: number, text: string): MessageView {
     if (!text.trim()) throw new HostError("invalid_params", "消息不能为空");
+    // 转发副本是「转发那一刻的快照」,不是可改的正文(要改就撤回它再转一次)
+    if (this.links.has(roomId, seq)) throw new HostError("conflict", "转发来的记录不能编辑,要改就撤回它再转一次");
     if (isRewound(this.db, roomId, seq)) throw new HostError("conflict", `#${seq} 已回退,不能再编辑`);
     this.appendUserEvent(roomId, { kind: "edit", target: seq, text });
     return this.updatedView(roomId, seq);
@@ -1167,6 +1179,8 @@ export class Host {
       if (code === "target-retracted") throw new HostError("conflict", "这条已撤回");
       throw e;
     }
+    // 撤回的原文从副本里标出来源已撤回(副本正文不删,候选);副本所在会话照常送达联系人
+    if (body.kind === "retract") this.markForwardSources(roomId, [body.target]);
     for (const mem of this.members(roomId)) if (mem.kind === "contact") this.loop.notify(mem.id, "batch");
   }
   private updatedView(roomId: string, seq: number): MessageView {
@@ -1419,6 +1433,8 @@ export class Host {
       const pm = msgs.find((x) => x.seq === m.seq);
       if (pm) this.bus.emit({ type: "message.updated", message: this.messageView(roomId, pm, msgs) });
     }
+    // 撤下的消息若被转发过,副本标来源已撤回(与撤回同一条规则;副本正文不删)
+    this.markForwardSources(roomId, plan.messages.map((m) => m.seq));
     this.afterAppend(roomId, result.markerSeq, me);
     for (const t of plan.tasks) this.emitTask(t.taskId);
     const changed = new Set(plan.commitments.map((k) => k.commitmentId));
@@ -2057,7 +2073,8 @@ export class Host {
       const meta = one<MsgMeta>(this.db, "SELECT * FROM gg_msg WHERE room_id = ? AND seq = ?", roomId, m.seq);
       const quoted = [...(meta?.reply_to != null ? [meta.reply_to] : []), ...(meta ? (JSON.parse(meta.quoted) as number[]) : [])];
       const at = one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${roomId}`, m.seq)?.at ?? "";
-      out.push({ seq: m.seq, author: this.nameOf(m.sender), at, text: m.text, quoted, retracted: m.retracted });
+      const copy = this.links.get(roomId, m.seq);
+      out.push({ seq: m.seq, author: this.nameOf(m.sender), at, text: copy ? renderForwardText(copy) : m.text, quoted, retracted: m.retracted });
     }
     return out;
   }
@@ -2254,12 +2271,14 @@ export class Host {
     // 第 4 块只标指向更早消息的引用(五块装配的输入合同);指向本条之后的引用不可能是真引用,交召回规划判 AccessDenied
     const earlier = (q: number) => Number.isSafeInteger(q) && q >= 1 && q < m.seq;
     const replyTo = meta?.reply_to ?? null;
+    // 转发副本:正文按副本当前状态渲染(来源撤回后标出来源已撤回);副本里没有指回原会话的引用,读不到邻居
+    const fwd = this.links.get(roomId, m.seq);
     return {
       kind: "message",
       roomId,
       seq: m.seq,
       sender: { kind: m.sender.kind, id: m.sender.id, name: this.nameOf(m.sender) },
-      text: m.text,
+      text: fwd ? renderForwardText(fwd) : m.text,
       replyToSeq: replyTo !== null && earlier(replyTo) ? replyTo : null,
       quotedSeqs: meta ? (JSON.parse(meta.quoted) as number[]).filter(earlier) : [],
       mentions: meta ? (JSON.parse(meta.mentions) as { id: string }[]).map((x) => x.id) : [],
@@ -2326,7 +2345,9 @@ export class Host {
           refs.push({ fromRoomId: r.id, roomId: r.id, seq: q, primary: q === raw.replyTo });
           // 私聊 rewind 撤下的消息(AC-48)不换入原文:按撤回处理,只给占位,原文不进召回规划
           const gone = !!src && inRanges(rewound, src.seq);
-          if (src && !sources.has(`${r.id}#${q}`)) sources.set(`${r.id}#${q}`, { roomId: r.id, seq: q, text: gone ? "" : src.text, retracted: src.retracted || gone, sender: this.nameOf(src.sender) });
+          // 换入的若是转发副本,正文按副本当前状态渲染(来源撤回后标出来源已撤回;仍然读不到原会话)
+          const copy = src && !gone ? this.links.get(r.id, q) : null;
+          if (src && !sources.has(`${r.id}#${q}`)) sources.set(`${r.id}#${q}`, { roomId: r.id, seq: q, text: gone ? "" : copy ? renderForwardText(copy) : src.text, retracted: src.retracted || gone, sender: this.nameOf(src.sender) });
         }
       }
     }
@@ -2455,7 +2476,12 @@ export class Host {
     let out: Awaited<ReturnType<ContactMind["round"]>>;
     try {
       // 每一轮现场定生效模型(原则 70):用户在失败卡上显式选了备用模型才换,只用于重跑这一批;自动重试永远用原模型(严禁静默换模)
-      const tools: RoundTools = { readMemory: async (id: string) => this.renderMemory(contactId, id), readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq) };
+      const freshRooms = new Set(fresh.flatMap((f) => (f.kind === "message" ? [f.roomId] : [])));
+      const tools: RoundTools = {
+        readMemory: async (id: string) => this.renderMemory(contactId, id),
+        readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq),
+        readLinked: async (q) => this.readLinked(contactId, freshRooms, q),
+      };
       out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, ac.signal, tools), stalled, closing]);
     } catch (e) {
       this.setActivity(contactId, null, "idle");
@@ -4701,7 +4727,118 @@ export class Host {
     return { from: this.taskView(this.taskDoc(input.fromTaskId).value), to: this.taskView(this.taskDoc(input.toTaskId).value) };
   }
 
-  // ======================= 生命周期 =======================
+  // ======================= 转发与关联(U25/U24,forward-link.ts) =======================
+  /** 本会话关联到的、用户两边都在的会话(被关联会话被删或用户已退出就不算)。 */
+  private linksOfUser(roomId: string): ReturnType<ForwardLinkStore["linksOf"]> {
+    return this.links.linksOf(roomId).filter(
+      (l) => !!one(this.db, "SELECT 1 FROM gg_rooms WHERE id = ?", l.linkedRoomId) && this.isMember(l.linkedRoomId, { kind: "user", id: this.userId }),
+    );
+  }
+  /**
+   * 转发选中的消息(U25/US2):在目标会话追加一条「转发的聊天记录」,发送人是用户;用户须是两边成员。
+   * 副本只含选中的几条(去重后按原序号排),不授予目标会话读原会话的权限:正文里没有来源会话 id、不带指回原会话的引用,
+   * 副本里的 @ 与命令不进 mentions/command(不唤醒、不派活,R-10);副本不能编辑。同一 clientActionId 重发返回原消息。
+   */
+  forwardMessages(input: { fromRoomId: string; seqs: number[]; toRoomId: string; note?: string; clientActionId: string }): MessageView {
+    const from = this.userRoom(input.fromRoomId);
+    const to = this.userRoom(input.toRoomId);
+    const actionKey = `fwd:${input.clientActionId}`;
+    const prior = one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", `msg:${to.id}:${actionKey}`);
+    if (prior) {
+      const seq = (JSON.parse(prior.payload) as { seq: number }).seq;
+      const dup = this.projected(to.id).find((x) => x.seq === seq);
+      if (dup) return this.messageView(to.id, dup);
+    }
+    const seqs = [...new Set(input.seqs)].sort((a, b) => a - b);
+    if (seqs.length === 0) throw new HostError("invalid_params", "至少选一条消息再转发");
+    const msgs = this.projected(from.id);
+    const rewound = rewindRanges(this.db, from.id);
+    const items = seqs.map((s) => {
+      const m = msgs.find((x) => x.seq === s);
+      if (!m) throw new HostError("not_found", `${from.id} 里没有 #${s}`);
+      if (m.retracted || inRanges(rewound, s)) throw new HostError("conflict", `#${s} 已撤回或已回退,不能转发`);
+      return {
+        seq: s,
+        sender: { kind: m.sender.kind, id: m.sender.id },
+        senderName: this.nameOf(m.sender),
+        at: one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${from.id}`, s)?.at ?? this.now(),
+        text: m.text,
+        sourceRetracted: false,
+      };
+    });
+    const rec: ForwardRecord = { roomId: to.id, seq: 0, fromRoomId: from.id, fromTitle: from.title, fromKind: from.kind, note: input.note?.trim() ? input.note : null, items };
+    const me: Member = { kind: "user", id: this.userId };
+    const r = tx(this.db, () => {
+      // 正文由副本渲染(不含来源会话 id);@ 与命令不进元数据
+      const a = this.appendMessageTx(to.id, me, { text: renderForwardText(rec), actionKey, clientActionId: input.clientActionId });
+      if (!a.duplicate) this.links.putTx({ ...rec, seq: a.seq }, input.clientActionId, this.now());
+      return a;
+    });
+    if (!r.duplicate) this.afterAppend(to.id, r.seq, me);
+    const m = this.projected(to.id).find((x) => x.seq === r.seq)!;
+    return this.messageView(to.id, m);
+  }
+  /**
+   * 显式关联(U24/US2;静态关联,候选):圈定此刻被关联会话的最后序号为上界,联系人可用 read_linked 在上界内按需读。
+   * 用户须是两边成员;关联到自己 invalid_params;同一动作号重放不改上界,换动作号再关联刷新上界。
+   */
+  linkRooms(input: { roomId: string; linkedRoomId: string; clientActionId: string }): RoomView {
+    const room = this.userRoom(input.roomId);
+    const other = this.userRoom(input.linkedRoomId);
+    if (room.id === other.id) throw new HostError("invalid_params", "不能把会话关联到自己");
+    tx(this.db, () => void this.links.linkTx(room.id, other.id, this.lastSeq(other.id), input.clientActionId, this.now()));
+    const view = this.roomView(room.id);
+    this.bus.emit({ type: "room.updated", room: view });
+    return view;
+  }
+  /** 解除关联(U24):之后 read_linked 读不到;没关联也成功(幂等)。已转发的副本不受影响。 */
+  unlinkRooms(input: { roomId: string; linkedRoomId: string; clientActionId: string }): RoomView {
+    const room = this.userRoom(input.roomId);
+    this.userRoom(input.linkedRoomId);
+    tx(this.db, () => void this.links.unlinkTx(room.id, input.linkedRoomId));
+    const view = this.roomView(room.id);
+    this.bus.emit({ type: "room.updated", room: view });
+    return view;
+  }
+  /** 来源会话里这些消息被撤回或被 rewind 撤下:引用它们的副本标来源已撤回,读回受影响副本推 message.updated。 */
+  private markForwardSources(fromRoomId: string, seqs: readonly number[]) {
+    const touched = this.links.markSourceRetracted(fromRoomId, seqs);
+    for (const t of touched) {
+      const m = this.projected(t.roomId).find((x) => x.seq === t.seq);
+      if (m) this.bus.emit({ type: "message.updated", message: this.messageView(t.roomId, m) });
+    }
+  }
+  /**
+   * read_linked(U24 静态关联,候选):读用户关联到本会话的别的会话,只在上界以内;只读、按需,不每轮注入。
+   * 会话必须本轮有新输入、联系人在这两个会话里、用户两边都在;不给 linkedRoomId 就列出本会话的关联。
+   */
+  private readLinked(contactId: string, freshRooms: ReadonlySet<string>, q: LinkedQuery): string | null {
+    if (!freshRooms.has(q.roomId)) return null;
+    if (!this.roomsOfContact(contactId).some((r) => r.id === q.roomId)) return null;
+    const links = this.linksOfUser(q.roomId);
+    if (q.linkedRoomId === null) {
+      if (!links.length) return "本会话没有关联别的聊天记录";
+      return ["本会话关联的聊天记录(只读、只到关联那一刻的上界以内;读某一条用 read_linked 带 linkedRoomId):", ...links.map((l) => `- ${l.linkedRoomId} · ${l.kind === "dm" ? "私聊" : "群聊"}「${l.title}」· 上界 #${l.uptoSeq}(关联于 ${l.linkedAt})`)].join("\n");
+    }
+    const link = links.find((l) => l.linkedRoomId === q.linkedRoomId);
+    if (!link) return null;
+    const rows = this.projected(link.linkedRoomId)
+      .filter((m) => m.seq <= link.uptoSeq && (q.beforeSeq === null || m.seq < q.beforeSeq))
+      .map((m) => ({
+        seq: m.seq,
+        senderName: this.nameOf(m.sender),
+        at: one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${link.linkedRoomId}`, m.seq)?.at ?? "",
+        text: m.text,
+        gone: m.retracted || isRewound(this.db, link.linkedRoomId, m.seq),
+      }))
+      .filter((r) => matchTerms(r.text, q.query))
+      .sort((a, b) => a.seq - b.seq);
+    const limit = Math.min(Math.max(q.limit ?? LINKED_LIMIT, 1), LINKED_LIMIT_MAX);
+    const page = rows.slice(-limit);
+    return renderLinked(link, page, rows.length - page.length);
+  }
+
+  // ======================= 生命周期 =======================  // ======================= 生命周期 =======================
   async idle(): Promise<void> {
     await this.loop.idle();
   }
@@ -4728,6 +4865,16 @@ export class Host {
     }
     this.db.close();
   }
+}
+
+/** read_linked 的条数默认与上限(宿主收紧;单次回读是有界的,不把整个关联会话塞进窗口)。 */
+const LINKED_LIMIT = 20;
+const LINKED_LIMIT_MAX = 50;
+/** 按词过滤:query 按空白切词,每个词都要在正文里(与搜索同一口径:全命中才算)。 */
+function matchTerms(text: string, query: string | null): boolean {
+  if (query === null || query.trim() === "") return true;
+  const hay = text.toLowerCase();
+  return query.split(/\s+/).filter(Boolean).every((t) => hay.includes(t.toLowerCase()));
 }
 
 const LAYER_NAMES: Readonly<Record<RunUnit["layer"], string>> = Object.freeze({ "contact-round": "联系人轮次", "compute-session": "Compute 会话", "compute-turn": "Compute 轮次", background: "后台任务", subagent: "子代理" });

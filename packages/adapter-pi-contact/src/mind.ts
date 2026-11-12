@@ -193,6 +193,12 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
       execute: async (_id: string, params: unknown): Promise<AgentToolResult<null>> => {
         const r = parseToolCall(d.name, params);
         if (!r.ok) return { content: [{ type: "text", text: `未登记:参数不合形状(${r.why})。请按工具说明修正后重新调用。` }], details: null, isError: true };
+        if (r.value.kind === "read-linked") {
+          if (!tools?.readLinked) return { content: [{ type: "text", text: "本轮没有关联查询口" }], details: null, isError: true };
+          const got = await tools.readLinked(r.value.query);
+          if (got === null) return { content: [{ type: "text", text: `读不到关联记录(${r.value.query.linkedRoomId ?? r.value.query.roomId} 不在本轮可查的范围里,或没有这个关联)` }], details: null, isError: true };
+          return { content: [{ type: "text", text: got }], details: null };
+        }
         if (r.value.kind === "read-quote") {
           const got = tools?.readQuoteParent ? await tools.readQuoteParent(r.value.roomId, r.value.seq) : null;
           if (got === null) return { content: [{ type: "text", text: tools?.readQuoteParent ? `读不到 ${r.value.roomId} #${r.value.seq}` : "本轮没有引用链查询口" }], details: null, isError: true };

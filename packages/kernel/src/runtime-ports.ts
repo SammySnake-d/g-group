@@ -128,6 +128,11 @@ export interface RoundOutput {
 export interface RoundTools {
   /** 按 id 读一条记忆全文(含状态与关系);没有这条或无权读返回 null */
   readMemory(id: string): Promise<string | null>;
+  /**
+   * read_linked(U24 显式关联,静态,候选):读用户关联到 roomId 的会话 linkedRoomId,只在关联那一刻的上界以内(不每轮注入)。
+   * linkedRoomId 为 null 时列出 roomId 的关联;roomId 不是本轮新输入所在的会话、没有这个关联或已解除返回 null。
+   */
+  readLinked?(q: LinkedQuery): Promise<string | null>;
   /** 引用链往上读一级(D24 read_quote_parent):这条消息直接引用的那几条;会话不可读返回 null */
   readQuoteParent?(roomId: string, seq: number): Promise<string | null>;
 }
@@ -135,6 +140,15 @@ export interface RoundTools {
 export interface ContactMind {
   /** 跑一轮。signal 触发时应尽快放弃(宿主发现发送前出现更新的用户消息,会中止重跑)。tools 是本轮内的只读查询口,可不给。 */
   round(input: RoundInput, signal: AbortSignal, tools?: RoundTools): Promise<RoundOutput>;
+}
+
+/** read_linked 的参数:query 按词过滤(全部命中才算),beforeSeq 往前翻页,limit 条数(宿主收紧到 1–50,不给用默认)。 */
+export interface LinkedQuery {
+  readonly roomId: string;
+  readonly linkedRoomId: string | null;
+  readonly query: string | null;
+  readonly beforeSeq: number | null;
+  readonly limit: number | null;
 }
 
 /**

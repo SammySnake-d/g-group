@@ -64,6 +64,8 @@ export function createService(host: Host): Service {
       host.announcements.remove(p.announcementId, p.expectedVersion);
       return { ok: true };
     },
+    "rooms.link": (p: Parameters<Host["linkRooms"]>[0]) => host.linkRooms(p),
+    "rooms.unlink": (p: Parameters<Host["unlinkRooms"]>[0]) => host.unlinkRooms(p),
     "rooms.rewindPreview": (p: { roomId: string; toSeq: number }) => host.rewindPreview(p.roomId, p.toSeq),
     "rooms.rewind": (p: { roomId: string; toSeq: number; clientActionId: string }) => host.rewind(p),
     "messages.list": ({ roomId, ...q }: { roomId: string } & Parameters<Host["listMessages"]>[1]) => host.listMessages(roomId, q),
@@ -72,6 +74,7 @@ export function createService(host: Host): Service {
     "messages.retract": (p: { roomId: string; seq: number }) => host.retractMessage(p.roomId, p.seq),
     "messages.react": (p: { roomId: string; seq: number; emoji: string; on: boolean }) => host.react(p.roomId, p.seq, p.emoji, p.on),
     "messages.receipts": (p: { roomId: string; seq: number }) => host.receipts(p.roomId, p.seq),
+    "messages.forward": (p: Parameters<Host["forwardMessages"]>[0]) => host.forwardMessages(p),
     "drafts.get": (p: { roomId: string }) => host.draft(p.roomId),
     "drafts.save": (p: { roomId: string; expectedVer: number; draft: Parameters<Host["saveDraft"]>[2] }) => host.saveDraft(p.roomId, p.expectedVer, p.draft),
     "search.messages": (p: Parameters<Host["searchMessages"]>[0]) => host.searchMessages(p),
