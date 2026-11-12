@@ -1,0 +1,28 @@
+{
+  "slice": "T-177 G6: preserve explicit speaking output/context settings through runner subprocess and driver into the tested host; include them in configuration fingerprints and reuse identity; no hardcoded new production cap.",
+  "acceptance": [
+    {
+      "id": "AC-42",
+      "status": "未测",
+      "reason": "配置链确定性部分已实测：4/4 具名真红转绿，真实模式 driver+宿主+适配器在中性传输替身下对话/后台实际请求均带继承值；云端 typecheck/lint 0，全量 1734/1734，G6CFG 8/8 变异和 G35 12/12 回归变异全杀。原生 HY4 65536 配置批次尚无记录；历史 4096 批次 3 份（2 ok、1 timeout）完整保留、单独分母，不能因预算变化或 status=ok 宣布效果验收。",
+      "evidence": "receipts/evidence/t177-g6-config/verification.json"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "receipts/evidence/t177-g6-config/mutations.json",
+      "reason": "8 个定点变异全部由指定具名 G6CFG 测试按名杀死；前后原样对照各 4/4；编译或导入失败 0。"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:3e47edad-c6be-45fd-be1e-5d2f90a51145",
+    "model": "gpt-6.1-sol"
+  },
+  "red": {
+    "commit": "b3988855b0c9ae4e92e58c8b6853bccc520808c3"
+  },
+  "unverifiable": "AC-42：G6CFG-04 用中性传输替身验证真实 driver/宿主/适配器生成的请求参数，不证明原生 HY4 65536 的实际提炼质量、延迟、成本或上游是否采纳全部参数；仍须同题实测。G6CFG-03 防预算变化后复用旧记录，但旧记录不能删除或洗掉。新增 ModelConfig speaking 字段后第一次全量运行时 1734/1734 和变异全过但 typecheck 失败（report.test.ts 旧夹具缺字段），已只补夹具形状并重跑全部验证，不改断言。G1 旧基线可能不识别 GG_*，报告必须列实际请求上限，不假装同配置生效。",
+  "waiver": null,
+  "review": null
+}

@@ -1,0 +1,102 @@
+TAP version 13
+# Subtest: G6CFG-01 driver keeps explicit output and context settings, including invalid values for host rejection
+not ok 1 - G6CFG-01 driver keeps explicit output and context settings, including invalid values for host rejection
+  ---
+  duration_ms: 0.745834
+  type: 'test'
+  location: '/private/tmp/gg-t177-backend-closeout-20261112/packages/server/proof/g6/runtime-config.test.ts:15:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - '9216'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '9216'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-t177-backend-closeout-20261112/packages/server/proof/g6/runtime-config.test.ts:17:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: G6CFG-02 runner child environment carries speaking settings without copying unrelated host state
+not ok 2 - G6CFG-02 runner child environment carries speaking settings without copying unrelated host state
+  ---
+  duration_ms: 0.160625
+  type: 'test'
+  location: '/private/tmp/gg-t177-backend-closeout-20261112/packages/server/proof/g6/runtime-config.test.ts:22:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - '9216'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '9216'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-t177-backend-closeout-20261112/packages/server/proof/g6/runtime-config.test.ts:24:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: G6CFG-03 both budgets enter fingerprints and resume identity, but credentials do not
+not ok 3 - G6CFG-03 both budgets enter fingerprints and resume identity, but credentials do not
+  ---
+  duration_ms: 0.368375
+  type: 'test'
+  location: '/private/tmp/gg-t177-backend-closeout-20261112/packages/server/proof/g6/runtime-config.test.ts:30:1'
+  failureType: 'testCodeFailure'
+  error: 'GG_SPEAKING_MAX_OUTPUT_TOKENS'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'c02d037096a2723a8597f889e6dbf3b9'
+  actual: 'c02d037096a2723a8597f889e6dbf3b9'
+  operator: 'notStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-t177-backend-closeout-20261112/packages/server/proof/g6/runtime-config.test.ts:34:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: G6CFG-04 real-mode driver host sends the inherited cap to both dialogue and memory checks
+not ok 4 - G6CFG-04 real-mode driver host sends the inherited cap to both dialogue and memory checks
+  ---
+  duration_ms: 284.860541
+  type: 'test'
+  location: '/private/tmp/gg-t177-backend-closeout-20261112/packages/server/proof/g6/runtime-config.test.ts:41:1'
+  failureType: 'testCodeFailure'
+  error: 'dialogue cap'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-t177-backend-closeout-20261112/packages/server/proof/g6/runtime-config.test.ts:52:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 518.202834
