@@ -32,5 +32,5 @@
   "waiver": null,
   "review": null,
   "review_status": "待审",
-  "notes": "真实运行补跑记录：2026-11-12 00:51Z，本机 magpie 网关（Anthropic 兼容口），模型 douclor/workbuddy-deepseek-v4.1-flash，证据 packages/server/proof/forward-link-real.txt。此前 2026-11-11 23:0x–23:5x 的三次尝试都因上游不可用失败（503 / 0 工具调用 / 断流），一并写在证据文件头。脚本的阴性对照修过一处：原来拿被转发过的私聊日期去问，答案本来就在群里；改成问未被转发的私聊事实。"
+  "notes": "真实运行补跑记录：2026-11-12 00:51Z，本机 magpie 网关（Anthropic 兼容口），模型 douclor/workbuddy-deepseek-v4.1-flash，证据 packages/server/proof/forward-link-real.txt。此前 2026-11-11 23:0x–23:5x 的三次尝试都因上游不可用失败（503 / 0 工具调用 / 断流），一并写在证据文件头。脚本的阴性对照修过一处：原来拿被转发过的私聊日期去问，答案本来就在群里；改成问未被转发的私聊事实。 真实运行补跑后的内容 hash（--base=origin/dev/integration）：55bfff9094b03c92986a8f61b65f49af0162e8f2e8f497d9ba3f14a53fd29754（receipts/ 不进内容 hash，改收据不改变它）。"
 }
