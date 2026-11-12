@@ -73,3 +73,13 @@ test("CXP-04 steer binds expectedTurnId and interrupt waits for matching native 
     assert.equal(requests.includes('"expectedTurnId":"native-turn-1"'), true);
   } finally { await client.quiesce(1000); }
 });
+
+test("CXP-05 unknown requested model is refused before native thread input", async () => {
+  const cfg = options(); const client = createCodexComputeProtocol(cfg);
+  try {
+    assert.equal((await client.initialize()).ok, true);
+    const refused = await client.startThread({ model: "not-in-owner-catalog", effort: "low" });
+    assert.equal(refused.ok, false);
+    assert.equal(readFileSync(path.join(cfg.configDir, "wire-requests.jsonl"), "utf8").includes('"thread/start"'), false);
+  } finally { await client.quiesce(1000); }
+});
