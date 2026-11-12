@@ -135,3 +135,19 @@ test("CXP-09 native started and terminal events are observable in kernel order e
     assert.equal((await events.next()).done, true);
   } finally { await client.quiesce(1000); }
 });
+
+
+test("CXP-10 native server approval is refused instead of implicitly authorized and failed status is preserved", async () => {
+  const cfg = options("approval"); const client = createCodexComputeProtocol(cfg);
+  try {
+    assert.equal((await client.initialize()).ok, true);
+    assert.equal((await client.startThread({ model: "probe-A", effort: "low" })).ok, true);
+    assert.equal((await client.startTurn("native-thread-1", "approval", { model: "probe-A", effort: "low" })).ok, true);
+    let timer: NodeJS.Timeout | undefined;
+    const done = await Promise.race([client.settled("native-thread-1", "native-turn-1"), new Promise<unknown>((r) => { timer = setTimeout(() => r({ deadline: true }), 700); })]);
+    clearTimeout(timer);
+    assert.deepEqual(done, { ok: true, value: { computeId: "native-thread-1", kind: "failed", reason: "unsupported native approval refused", code: null, signal: null, violations: [] } });
+    const wire = readFileSync(path.join(cfg.configDir, "wire-requests.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    assert.equal(wire.some((m) => m.id === "native-approval-1" && m.error?.code === -32601), true);
+  } finally { await client.quiesce(1000); }
+});
