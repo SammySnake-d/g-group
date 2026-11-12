@@ -2,7 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createInterface } from "node:readline";
 import path from "node:path";
 import { realpathSync } from "node:fs";
-import { plainData, type ComputeEvent, type QuiesceResult, type TurnModel } from "@g-group/kernel/compute";
+import { freezeDeep, plainData, type ComputeEvent, type QuiesceResult, type TurnModel } from "@g-group/kernel/compute";
 import { createProcessCleanup, type ProcessCleanup } from "@g-group/process-tools";
 export type ProtocolResult<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly reason: string };
 export interface CodexProtocolOptions {
@@ -44,24 +44,35 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
   let cleanup: ProcessCleanup | null = null;
   let initialized = false;
   let threadId: string | null = null;
-  type Turn = { id: string; done: Promise<ProtocolResult<ComputeEvent>>; finish: (r: ProtocolResult<ComputeEvent>) => void; result: ProtocolResult<ComputeEvent> | null };
+  let resumed = false;
+  let closed = false;
+  const emitted: ComputeEvent[] = [];
+  const listeners = new Set<() => void>();
+  function wake() { for (const w of listeners) w(); listeners.clear(); }
+  function publish(event: ComputeEvent) { emitted.push(freezeDeep(event)); wake(); }
+  type Turn = { started: boolean; id: string; done: Promise<ProtocolResult<ComputeEvent>>; finish: (r: ProtocolResult<ComputeEvent>) => void; result: ProtocolResult<ComputeEvent> | null };
   const turns = new Map<string, Turn>();
   const notes: Record<string, unknown>[] = [];
   function consume(msg: Record<string, unknown>) {
-    if (msg.method !== "turn/completed" || !record(msg.params) || msg.params.threadId !== threadId || !record(msg.params.turn)) return;
+    if (!["turn/completed", "turn/started"].includes(String(msg.method)) || !record(msg.params) || msg.params.threadId !== threadId || !record(msg.params.turn)) return;
     const native = msg.params.turn;
     if (typeof native.id !== "string") return;
     const turn = turns.get(native.id);
     if (!turn || turn.result) return;
+    if (!turn.started) {
+      turn.started = true;
+      publish({ computeId: threadId!, kind: "started", sessionId: threadId!, resumed, ...(child?.pid ? { pid: child.pid } : {}) });
+    }
+    if (msg.method === "turn/started") return;
     if (native.status === "interrupted") {
       turn.result = { ok: true, value: { computeId: threadId!, kind: "stopped", code: null, signal: null, scope: "main-then-group", violations: [] } };
-      turn.finish(turn.result); return;
+      publish(turn.result.value); turn.finish(turn.result); return;
     }
     if (native.status !== "completed") return;
     const items = Array.isArray(native.items) ? native.items : [];
     const text = items.filter((i): i is Record<string, unknown> => record(i) && i.type === "agentMessage" && typeof i.text === "string").map((i) => i.text).join("\n");
     turn.result = { ok: true, value: { computeId: threadId!, kind: "completed", result: text } };
-    turn.finish(turn.result);
+    publish(turn.result.value); turn.finish(turn.result);
   }
   let sequence = 0;
   const pending = new Map<string, { finish: (r: ProtocolResult<Record<string, unknown>>) => void; timer: NodeJS.Timeout }>();
@@ -106,8 +117,9 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       for (const turn of turns.values()) {
         if (turn.result) continue;
         turn.result = { ok: true, value: { computeId: threadId!, kind: "failed", reason: "native process exited before matching turn/completed", code, signal, violations: [] } };
-        turn.finish(turn.result);
+        publish(turn.result.value); turn.finish(turn.result);
       }
+      closed = true; wake();
     });
     child.once("error", () => failPending("native process failed to start"));
     child.stdin.on("error", () => failPending("native stdin closed"));
@@ -138,7 +150,7 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       const r = await request("thread/resume", { threadId: wantedThread, model: turn.model, cwd: options.cwd, approvalPolicy: "never", sandbox: "read-only" });
       if (!r.ok) return r;
       if (!record(r.value.thread) || r.value.thread.id !== wantedThread) return no("native resumed a different thread");
-      threadId = wantedThread;
+      threadId = wantedThread; resumed = true;
       return { ok: true, value: { threadId } };
     },
     async startTurn(wantedThread, text, turn, tools) {
@@ -150,7 +162,7 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       const id = r.value.turn.id;
       let finish: Turn["finish"] = () => {};
       const done = new Promise<ProtocolResult<ComputeEvent>>((r) => { finish = r; });
-      turns.set(id, { id, done, finish, result: null });
+      turns.set(id, { started: false, id, done, finish, result: null });
       for (const note of notes) consume(note);
       return { ok: true, value: { turnId: id } };
     },
@@ -176,7 +188,14 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       if (wantedThread !== threadId || !turns.has(turnId)) return no("native turn mismatch");
       return turns.get(turnId)!.done;
     },
-    events: async function* () {},
+    events: async function* () {
+      let index = 0;
+      for (;;) {
+        while (index < emitted.length) yield emitted[index++]!;
+        if (closed) return;
+        await new Promise<void>((r) => listeners.add(r));
+      }
+    },
     async quiesce(timeoutMs = 5000) {
       if (!cleanup || !child) return { ok: true, killed: 0 };
       cleanup.capture(); child.stdin.end();
