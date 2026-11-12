@@ -37,11 +37,17 @@ Retained executor events: two local shared-lock acquisition exits 75; initial ty
 
 ## Final same-body calibration and preserved correction
 
-Final red commit `bccc9b9bc4c8684679e6648fc24e9845e0b29b9c` has 15 named ERR_ASSERTION failures, zero passes, no skip/cancel. The final green executes the exact same four test files (SHA sealed) and passes 15/15. This is retrospective red calibration of an already-observed green implementation, not a claim that every witness was written before implementation. Earlier 1-name, 12-name and 15-name intermediate reds remain history, not final acceptance evidence.
+Final red commit `19139462faa651a5f35b39251c8ba8d1da2eb2dd` has 15 named ERR_ASSERTION failures, zero passes, no skip/cancel. The final green executes the exact same four test files (SHA sealed) and passes 15/15. This is retrospective red calibration of an already-observed green implementation, not a claim that every witness was written before implementation. Earlier 1-name, 12-name and 15-name intermediate reds remain history, not final acceptance evidence.
 
 The added CC tests initially caused TypeScript exit 2 (TS2339): `assert.equal(result.ok, true)` had already narrowed a later failure guard to never. Only its fallback error text was corrected; no assertion was weakened, no compiler option changed. Final red was rerun after that change; final typecheck and lint exit 0. Nine exact named mutation failures were independently checked to contain ERR_ASSERTION, not just nonzero exits.
 
-Self-contained local logs: `thin-proof-v3.tar.gz`, SHA256 `08a988645f8d26e1b14c713ed1922fd14771a31d44ef31f8b1d1e8a6a2d738f0`. The parser selftest passed its positive and negative controls only; it did not launch cloud work.
+Self-contained local logs: `thin-proof-v4.tar.gz`, SHA256 `1751a3db0f92a3b42e861acd1628876bea341b1fb0265d30b47e813b0c964171`. The parser selftest passed its positive and negative controls only; it did not launch cloud work.
+
+## Actual mechanical failure and corrected owning fixtures
+
+The first full native mechanical command exited 1; its original output is retained. Seven green witnesses failed because their test-only OS liveness helper invoked setuid `ps`, denied by macOS seatbelt (EPERM). Production already had a pgrep fallback. The two new test files now perform an independent OS pid listing with pgrep only when ps is unavailable; unavailable pgrep throws, never means empty. Original seven CC files are unchanged.
+
+S-PROC-05 originally ran a subprocess-only oracle, not visible to in-process G-STUB arming/static G-TAUTO. It now directly invokes the real shared cleanup API on an exited owned child while PATH makes both enumeration tools unavailable, restores PATH in finally, and asserts refusal/reason/remaining. No assertion deletion, skip, gate suppression or sandbox weakening. The real gate-owned `runNodeTests` seatbelt path now runs all 15 names green. Final RED also stubs both owning CC factories, so a snapshot cannot accidentally get the current green shared package through workspace aliases. Final formal gate output is kept outside the frozen source; the command result, not this paragraph, is authoritative.
 
 ## Pending, not accepted
 

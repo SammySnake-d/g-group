@@ -18,7 +18,7 @@
     "codex:01a1d043-1042-7e61-9981-968868c25de1"
   ],
   "red": {
-    "commit": "bccc9b9bc4c8684679e6648fc24e9845e0b29b9c"
+    "commit": "19139462faa651a5f35b39251c8ba8d1da2eb2dd"
   },
   "unverifiable": "AC-23 not accepted by local proof. Full original CC baseline/candidate and cloud full/type/lint, independent review, provenance and product integration remain pending. Escaped system-managed/double-fork processes remain outside discoverable scope. Windows full-tree confirmation fails closed.",
   "waiver": null,
@@ -42,14 +42,16 @@
     "retainedExecutorFailures": [
       "lockf acquisition exit 75 twice",
       "initial typecheck exit 2: incomplete external dependency symlinks; corrected exit 0",
-      "new CC test typecheck exit 2 TS2339 after successful assertion narrowing; type-safe guard text corrected, final 15-name red rerun, corrected typecheck exit 0"
+      "new CC test typecheck exit 2 TS2339 after successful assertion narrowing; type-safe guard text corrected, final 15-name red rerun, corrected typecheck exit 0",
+      "First native mechanical run exit 1 retained: seven test-only ps EPERM failures and subprocess-only S-PROC-05 G-STUB/G-TAUTO blind spot; owning tests corrected without relaxing gates; actual seatbelt rerun 15/15 green. Formal recheck recorded externally on frozen final head."
     ],
     "sameBodyNamedRed": 15,
     "owningCCIntegrationGreen": 2,
-    "finalThinProofArchive": "docs/proof/shared-process-cleanup/thin-proof-v3.tar.gz",
-    "finalThinProofArchiveSha256": "08a988645f8d26e1b14c713ed1922fd14771a31d44ef31f8b1d1e8a6a2d738f0",
+    "finalThinProofArchive": "docs/proof/shared-process-cleanup/thin-proof-v4.tar.gz",
+    "finalThinProofArchiveSha256": "1751a3db0f92a3b42e861acd1628876bea341b1fb0265d30b47e813b0c964171",
     "testBodiesByteEqualRedToGreen": true,
-    "redIsRetrospectiveCalibration": true
+    "redIsRetrospectiveCalibration": true,
+    "actualSeatbeltOwningGreen": 15
   },
   "authorIdentitySource": "CODEX_THREAD_ID and CODEX_SESSION_ID observed in this worker environment; model label inherited from the frozen first-slice receipt, no new provenance approval claimed."
 }
