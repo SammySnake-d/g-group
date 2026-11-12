@@ -1,0 +1,20 @@
+packages/server/proof/room-pending-summary-mutations.mjs
+  s_bc500ef58bf3aa::t_d718d6d072e5b3 21
+  s_bc500ef58bf3aa::t_8d3ebdfa2b841d 1-20,22-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "808fd833f445366d3424d03b60898eccbd374f69",
+  "prompts": {},
+  "sessions": {
+    "s_bc500ef58bf3aa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cf01-3b82-7211-b7b9-c7147d5e45e7",
+        "model": "chatflows/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

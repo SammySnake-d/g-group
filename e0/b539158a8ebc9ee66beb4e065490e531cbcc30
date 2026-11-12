@@ -1,0 +1,25 @@
+packages/server/proof/slash-plugins-mutations.mjs
+  s_9d7fa6e9d65b83::t_98e4cb764c2855 18
+packages/server/proof/slash-plugins-real.ts
+  s_9d7fa6e9d65b83::t_9e6c7dad5c7d06 12,15,27
+packages/server/src/slash-commands.test.ts
+  s_9d7fa6e9d65b83::t_5e0f510837943e 145-150
+packages/server/src/slash-commands.ts
+  s_9d7fa6e9d65b83::t_ed4bf91d61e51c 1,6-7,10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e0b539158a8ebc9ee66beb4e065490e531cbcc30",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

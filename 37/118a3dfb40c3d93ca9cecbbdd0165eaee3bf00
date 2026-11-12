@@ -1,0 +1,47 @@
+packages/adapter-sqlite/src/store.ts
+  s_9d7fa6e9d65b83::t_9e9a233d15e213 4,104-105,107
+packages/api-contract/src/api.ts
+  s_9d7fa6e9d65b83::t_ae6c5a831f1fb0 120-136,176,178-185
+packages/api-contract/src/entities.ts
+  s_9d7fa6e9d65b83::t_787f2d814de165 117-125
+packages/api-contract/src/events.ts
+  s_9d7fa6e9d65b83::t_fbc6b50a2478f0 15-16
+packages/domain/src/chat-admin.test.ts
+  s_9d7fa6e9d65b83::t_4bbb8535d1e1ef 1-64
+packages/domain/src/log.ts
+  s_9d7fa6e9d65b83::t_58dfba7e9195ad 6-10,29-44,67-68,72-74,78,81-82
+packages/server/proof/chat-admin-mutations.mjs
+  s_9d7fa6e9d65b83::t_2ccb4d82929489 1-162
+packages/server/proof/chat-admin-mutations.txt
+  s_9d7fa6e9d65b83::t_c42566b036bd97 1-39
+packages/server/proof/chat-admin-tests.txt
+  s_9d7fa6e9d65b83::t_01eed72e141c07 1-19
+packages/server/src/chat-admin.test.ts
+  s_9d7fa6e9d65b83::t_49cb0615cea845 1-489
+packages/server/src/chat-admin.ts
+  s_9d7fa6e9d65b83::t_f85b8b86159d1a 1-139
+packages/server/src/host.ts
+  s_9d7fa6e9d65b83::t_eae2e6f88e0876 46,140,383-384,450,773,782,844-845,871,942-944,967,973-974,1016,1025-1026,1175-1178,1181,1190,1321-1422,1814-1815,2404-2405,2558-2559,2805-2806,2830-2831,2850-2852,2855,2885,2888,2955-2957,3097
+packages/server/src/search.ts
+  s_9d7fa6e9d65b83::t_0164144ef4b03a 8,204-206
+packages/server/src/service.ts
+  s_9d7fa6e9d65b83::t_fb44eb71d2a67b 69-71,76
+receipts/feat-chat-admin.json
+  s_9d7fa6e9d65b83::t_33d77056abd592 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "37118a3dfb40c3d93ca9cecbbdd0165eaee3bf00",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

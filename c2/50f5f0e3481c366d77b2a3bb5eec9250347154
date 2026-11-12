@@ -1,0 +1,24 @@
+packages/server/src/coverage-invariants.test.ts
+  s_9d7fa6e9d65b83::t_14040aa50f0947 80,82,86,93,98,102-103,111,115-116,120
+  s_9d7fa6e9d65b83::t_da55444bbebd30 1-79,81,83-85,87-92,94-97,99-101,104-110,112-114,117-119,121-125
+packages/server/proof/coverage-invariants-replying-gap.ts
+  s_9d7fa6e9d65b83::t_cc62a8ec92426a 1-19
+packages/server/src/host.ts
+  s_9d7fa6e9d65b83::t_d3201844060fe0 1011,1573,1663,4750
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c250f5f0e3481c366d77b2a3bb5eec9250347154",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
