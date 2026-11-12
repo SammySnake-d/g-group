@@ -1,0 +1,26 @@
+{
+  "head_before_final_evidence_commit": "97b15dddac44a114199a1d6fa78ac81d56d7adab",
+  "red": "121a145f55bc966df7df438a16621af2a397fd60",
+  "test_sha256": "4b77f98c5c682b515dcef9f7cb9c6fb4613f4644be61f03eb189936a2ed47bdf",
+  "red_green_test_bytes_identical": true,
+  "red_is_ancestor": true,
+  "command": [
+    "node",
+    "--test",
+    "--test-concurrency=1",
+    "--test-timeout=120000",
+    "--test-force-exit",
+    "--test-reporter=tap",
+    "packages/server/src/coverage-invariants.test.ts"
+  ],
+  "exit": 0,
+  "counts": {
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "seconds": 0.614
+}
