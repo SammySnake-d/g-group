@@ -1,0 +1,13 @@
+{
+  "green_commit": "6ff182815e65b210d6e155feeb5485ce1241cf4d",
+  "red_commit": "21f0931ec75da6b59b91cd11255d560989fd6895",
+  "test_sha256": "aaf04904d8f1d86beb7c9008caee1fab77cac70705b0aa8af81e75ed8a49a11f",
+  "red_test_sha256": "aaf04904d8f1d86beb7c9008caee1fab77cac70705b0aa8af81e75ed8a49a11f",
+  "green_tests": 17,
+  "green_pass": 17,
+  "green_fail": 0,
+  "test_file_byte_identical": true,
+  "green_production_bytes_restored": true,
+  "red_is_post_patch_calibration": true,
+  "observed_at": "2026-11-12T18:21:35.947097+00:00"
+}

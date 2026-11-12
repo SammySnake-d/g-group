@@ -1,0 +1,36 @@
+{
+  "command": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "packages/server/src/room-blocked-summary.test.ts"
+  ],
+  "exit_code": 1,
+  "red_commit": "21f0931ec75da6b59b91cd11255d560989fd6895",
+  "test_sha256": "aaf04904d8f1d86beb7c9008caee1fab77cac70705b0aa8af81e75ed8a49a11f",
+  "tests": 17,
+  "pass": 0,
+  "fail": 17,
+  "named_err_assertion": 17,
+  "failed_names": [
+    "阻塞摘要按最早消息顺序选择并给出其余项数量",
+    "没有阻塞时不给出虚构摘要",
+    "阻塞摘要折为一行并限制为合同允许的长度",
+    "rooms.get 返回真实阻塞原因且读取不改变任务与已读游标",
+    "回答生效后阻塞摘要消失并经 room.updated 推送",
+    "其他会话没有本会话的阻塞摘要",
+    "重启回收后的失败任务不再显示已过期的待答摘要",
+    "R2-05 长问题截断保留另有 N 项尾注且整行不超过500",
+    "R2-01 宿主最早问题与另有一项在回答后切换为剩余问题",
+    "R2-02a 整行499字符不截断",
+    "R2-02b 整行恰500字符不截断",
+    "R2-02c 整行501字符截为499加省略号",
+    "R2-03 授权提问摘要取真实授权请求action而不是不存在的needs",
+    "R2-04b 取消后旧问题仍可见且保留pendingQ但过期卡不能生成摘要",
+    "R2-04c 当前宿主拒绝用户撤回联系人提问且当前open卡仍可见",
+    "R2-06 rooms.get不产生幂等数据库写入也不发送事件",
+    "R2-07 Unicode截断不留下孤立高代理码元"
+  ],
+  "classification": "post-patch full-suite same-body calibration; not historical TDD",
+  "historical_first_bug_red": "b93f2e385edd4bc35e56c32ead5fcdb82106390f"
+}

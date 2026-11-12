@@ -1,0 +1,128 @@
+TAP version 13
+# Subtest: 阻塞摘要按最早消息顺序选择并给出其余项数量
+ok 1 - 阻塞摘要按最早消息顺序选择并给出其余项数量
+  ---
+  duration_ms: 1.193875
+  type: 'test'
+  ...
+# Subtest: 没有阻塞时不给出虚构摘要
+ok 2 - 没有阻塞时不给出虚构摘要
+  ---
+  duration_ms: 0.119
+  type: 'test'
+  ...
+# Subtest: 阻塞摘要折为一行并限制为合同允许的长度
+ok 3 - 阻塞摘要折为一行并限制为合同允许的长度
+  ---
+  duration_ms: 0.713542
+  type: 'test'
+  ...
+# Subtest: rooms.get 返回真实阻塞原因且读取不改变任务与已读游标
+ok 4 - rooms.get 返回真实阻塞原因且读取不改变任务与已读游标
+  ---
+  duration_ms: 38.240625
+  type: 'test'
+  ...
+# Subtest: 回答生效后阻塞摘要消失并经 room.updated 推送
+ok 5 - 回答生效后阻塞摘要消失并经 room.updated 推送
+  ---
+  duration_ms: 45.575417
+  type: 'test'
+  ...
+# Subtest: 其他会话没有本会话的阻塞摘要
+ok 6 - 其他会话没有本会话的阻塞摘要
+  ---
+  duration_ms: 28.054542
+  type: 'test'
+  ...
+# Subtest: 重启回收后的失败任务不再显示已过期的待答摘要
+ok 7 - 重启回收后的失败任务不再显示已过期的待答摘要
+  ---
+  duration_ms: 28.74375
+  type: 'test'
+  ...
+# Subtest: R2-05 长问题截断保留另有 N 项尾注且整行不超过500
+ok 8 - R2-05 长问题截断保留另有 N 项尾注且整行不超过500
+  ---
+  duration_ms: 0.143833
+  type: 'test'
+  ...
+# Subtest: R2-01 宿主最早问题与另有一项在回答后切换为剩余问题
+ok 9 - R2-01 宿主最早问题与另有一项在回答后切换为剩余问题
+  ---
+  duration_ms: 88.197042
+  type: 'test'
+  ...
+# Subtest: R2-02a 整行499字符不截断
+ok 10 - R2-02a 整行499字符不截断
+  ---
+  duration_ms: 0.142792
+  type: 'test'
+  ...
+# Subtest: R2-02b 整行恰500字符不截断
+ok 11 - R2-02b 整行恰500字符不截断
+  ---
+  duration_ms: 0.055917
+  type: 'test'
+  ...
+# Subtest: R2-02c 整行501字符截为499加省略号
+ok 12 - R2-02c 整行501字符截为499加省略号
+  ---
+  duration_ms: 0.044583
+  type: 'test'
+  ...
+# Subtest: R2-03 授权提问摘要取真实授权请求action而不是不存在的needs
+ok 13 - R2-03 授权提问摘要取真实授权请求action而不是不存在的needs
+  ---
+  duration_ms: 25.459209
+  type: 'test'
+  ...
+# Subtest: R2-04b 取消后旧问题仍可见且保留pendingQ但过期卡不能生成摘要
+ok 14 - R2-04b 取消后旧问题仍可见且保留pendingQ但过期卡不能生成摘要
+  ---
+  duration_ms: 28.374625
+  type: 'test'
+  ...
+# Subtest: R2-04c 回退只隐藏提问时T4b与open卡仍在但摘要必须消失
+not ok 15 - R2-04c 回退只隐藏提问时T4b与open卡仍在但摘要必须消失
+  ---
+  duration_ms: 34.351917
+  type: 'test'
+  location: '/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/server/src/room-blocked-summary.test.ts:191:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(!s.host.listMessages(s.dm.id, {}).messages.some((m) => m.seq === card.seq && !m.retracted))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-room-summary-r2-resume-20261113/packages/server/src/room-blocked-summary.test.ts:201:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: R2-06 rooms.get不产生幂等数据库写入也不发送事件
+ok 16 - R2-06 rooms.get不产生幂等数据库写入也不发送事件
+  ---
+  duration_ms: 26.01375
+  type: 'test'
+  ...
+# Subtest: R2-07 Unicode截断不留下孤立高代理码元
+ok 17 - R2-07 Unicode截断不留下孤立高代理码元
+  ---
+  duration_ms: 0.109291
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 16
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 577.666

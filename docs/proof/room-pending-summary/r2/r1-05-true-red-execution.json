@@ -1,0 +1,18 @@
+{
+  "command": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "packages/server/src/room-blocked-summary.test.ts"
+  ],
+  "exit_code": 1,
+  "red_commit": "b93f2e385edd4bc35e56c32ead5fcdb82106390f",
+  "parent_commit": "515db145086f524ff232a98bb8e9dcc16a4b6815",
+  "test": "R2-05 长问题截断保留另有 N 项尾注且整行不超过500",
+  "pass": 7,
+  "fail": 1,
+  "failure_code": "ERR_ASSERTION",
+  "production_source_unchanged": true,
+  "test_sha256": "12e5a7432d906830237b3e60dc0250a6ecf86a76e842f739bea5dcff011ed886",
+  "is_historical_pre_patch_witness": true
+}

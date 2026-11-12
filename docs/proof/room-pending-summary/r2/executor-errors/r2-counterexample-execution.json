@@ -1,0 +1,12 @@
+{
+  "command": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "packages/server/src/room-blocked-summary.test.ts"
+  ],
+  "exit_code": 0,
+  "invalid_witness_replaced": "The newly authored rewind fixture incorrectly assumed rewound messages were retracted; actual projected/listMessages keeps them with a rewound flag. Not a product failure, not a mutation kill. Raw first/corrected logs retained.",
+  "replacement": "public service rejects user retraction of contact question, source audit covers same-room atomic creation and immutable task room; redundant visibility predicate removed per R1-04 alternative.",
+  "production_delta": "summary truncation plus only two redundant predicates removed from roomView; no other host methods changed"
+}

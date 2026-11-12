@@ -26,11 +26,12 @@
     "notes": "第 1 轮 REJECT（d4013dcb）。作者数字全部复现：box2 Node24 typecheck/lint 0、npm test 1480/1480 无 skip/todo/cancel、作者 8 变异 8/8 被具名测试杀死、红 274e3be1 上 7 条按名 ERR_ASSERTION 失败且测试与 HEAD 逐字相同、末提交只补证据、5 个源文件 SHA 与云端一致、reviewed_hash 与作者 CONTENT_HASH 相同；8 个门禁负例各自判败。范围未越界；AC-27 通过与 AC-50 未测标注如实。驳回理由：审查方 12 个单点故障存活 10 个（宿主层取最新、截断边界 499/501、授权提问原因来源、三道过滤单点、读路径幂等写入），以及第一条问题过长时「另有 N 项」被截掉（R1-05，需改产品代码）；问题 R1-01..R1-08 见 reviews/feat-room-pending-summary.md。来源：作者会话 turns.jsonl 已存在（收据 provenance.note 过时），门禁对作者一侧无报错；另按 Codex 原生记录 01a1cfc8 核到红/绿提交、box3 v5 运行（1480/1480、包哈希、落盘时间）、推送未绕过钩子、PR 创建；接手链最早 10 个提交出自 codex:534f3614（gpt-6-astra），全链 OpenAI，门禁不查接手链，为人工核对。box3 进程级记录未核。hy4 辅审因线路 403 未产出，本轮无辅审。"
   },
   "red": {
-    "commit": "274e3be11e6b9d3c92c7ffc7898f601aca1e0c42"
+    "commit": "21f0931ec75da6b59b91cd11255d560989fd6895",
+    "note": "R2扩展17项的补丁后同体空实现校准，不冒称历史TDD；真实R1-05先红b93f2e38再绿4f15f21d另列"
   },
   "unverifiable": "AC-50：确定性 scriptedMind/scriptedCompute 驱动真实 Host、SQLite、service API 和事件；没有连接真实模型，不包含浏览器/桌面 UI 验收。重启沿用现宿主回收失联 Compute 为 T11_Failed 的语义，旧待答摘要清空。仅当前有效 T4b，不把所有待确认状态都称为已覆盖。",
   "waiver": null,
-  "review_status": "R1 REJECT保留；R2作者候选本地返修，尚未推送/独审；新full与大变异待根排云执行，作者不自签不豁免",
+  "review_status": "R1 REJECT及旧reviewed_hash保留；R2本地窄测17/17、生命周期30/30、type/lint已实测；新full/18变异待根排云，正式门禁看外置最终回执，作者不自签不豁免",
   "provenance": {
     "inherited_mirasim_session": "codex:534f3614-21cd-43eb-9db6-3cd1673d2b62",
     "inherited_native_session": "01a1cf01-3b82-7211-b7b9-c7147d5e45e7",
@@ -41,6 +42,8 @@
     "r2_native_subthread_model": "gpt-6.1-sol",
     "r2_role": "loop_proof_finish; real host codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
     "r2_true_first_red": "b93f2e385edd4bc35e56c32ead5fcdb82106390f",
-    "r2_first_green": "4f15f21da646f515841507556abcba0c3097d856"
+    "r2_first_green": "4f15f21da646f515841507556abcba0c3097d856",
+    "r2_same_body_calibration_red": "21f0931ec75da6b59b91cd11255d560989fd6895",
+    "r2_same_body_calibration_green": "6ff182815e65b210d6e155feeb5485ce1241cf4d"
   }
 }

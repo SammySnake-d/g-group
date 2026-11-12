@@ -1,0 +1,11 @@
+{
+  "command": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "packages/server/src/room-blocked-summary.test.ts"
+  ],
+  "exit_code": 1,
+  "all_log_bytes": 3569,
+  "phase": "new R1 counterexamples, no full or mutation sweep"
+}

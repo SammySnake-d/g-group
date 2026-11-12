@@ -1,0 +1,14 @@
+{
+  "previous_test_exit": 1,
+  "previous_pass": 15,
+  "previous_fail": 2,
+  "error": "Host.listMessages called without mandatory query object; TypeError aroundSeq, not a product failure or mutation kill",
+  "correction": "supply {} query to both fixture visibility checks",
+  "command": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "packages/server/src/room-blocked-summary.test.ts"
+  ],
+  "corrected_test_exit": 1
+}

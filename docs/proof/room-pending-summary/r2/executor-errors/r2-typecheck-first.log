@@ -1,0 +1,5 @@
+
+> typecheck
+> tsc -p tsconfig.json
+
+packages/server/src/room-blocked-summary.test.ts(227,23): error TS2550: Property 'isWellFormed' does not exist on type 'string'. Do you need to change your target library? Try changing the 'lib' compiler option to 'es2024' or later.

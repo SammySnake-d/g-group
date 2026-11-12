@@ -1,0 +1,117 @@
+{
+  "cases": 18,
+  "unique_anchors": [
+    {
+      "name": "排序反向",
+      "source": "packages/server/src/room-blocked-summary.ts",
+      "unique_anchor_count": 1,
+      "target_test": "阻塞摘要按最早消息顺序选择并给出其余项数量"
+    },
+    {
+      "name": "漏其余项计数",
+      "source": "packages/server/src/room-blocked-summary.ts",
+      "unique_anchor_count": 1,
+      "target_test": "阻塞摘要按最早消息顺序选择并给出其余项数量"
+    },
+    {
+      "name": "空态造摘要",
+      "source": "packages/server/src/room-blocked-summary.ts",
+      "unique_anchor_count": 1,
+      "target_test": "没有阻塞时不给出虚构摘要"
+    },
+    {
+      "name": "保留换行",
+      "source": "packages/server/src/room-blocked-summary.ts",
+      "unique_anchor_count": 1,
+      "target_test": "阻塞摘要折为一行并限制为合同允许的长度"
+    },
+    {
+      "name": "不截长文",
+      "source": "packages/server/src/room-blocked-summary.ts",
+      "unique_anchor_count": 1,
+      "target_test": "阻塞摘要折为一行并限制为合同允许的长度"
+    },
+    {
+      "name": "未接实际原因",
+      "source": "packages/server/src/host.ts",
+      "unique_anchor_count": 1,
+      "target_test": "rooms.get 返回真实阻塞原因且读取不改变任务与已读游标"
+    },
+    {
+      "name": "删除会话范围",
+      "source": "packages/server/src/host.ts",
+      "unique_anchor_count": 1,
+      "target_test": "其他会话没有本会话的阻塞摘要"
+    },
+    {
+      "name": "未接房间输出",
+      "source": "packages/server/src/host.ts",
+      "unique_anchor_count": 1,
+      "target_test": "rooms.get 返回真实阻塞原因且读取不改变任务与已读游标"
+    },
+    {
+      "name": "R1宿主改取最新",
+      "source": "packages/server/src/host.ts",
+      "unique_anchor_count": 1,
+      "target_test": "R2-01 宿主最早问题与另有一项在回答后切换为剩余问题"
+    },
+    {
+      "name": "R5边界499",
+      "source": "packages/server/src/room-blocked-summary.ts",
+      "unique_anchor_count": 1,
+      "target_test": "R2-02b 整行恰500字符不截断"
+    },
+    {
+      "name": "R6边界501",
+      "source": "packages/server/src/room-blocked-summary.ts",
+      "unique_anchor_count": 1,
+      "target_test": "R2-02c 整行501字符截为499加省略号"
+    },
+    {
+      "name": "R7丢授权action",
+      "source": "packages/server/src/host.ts",
+      "unique_anchor_count": 1,
+      "target_test": "R2-03 授权提问摘要取真实授权请求action而不是不存在的needs"
+    },
+    {
+      "name": "R3丢open过滤",
+      "source": "packages/server/src/host.ts",
+      "unique_anchor_count": 1,
+      "target_test": "R2-04b 取消后旧问题仍可见且保留pendingQ但过期卡不能生成摘要"
+    },
+    {
+      "name": "R9单项也计其余",
+      "source": "packages/server/src/room-blocked-summary.ts",
+      "unique_anchor_count": 1,
+      "target_test": "R2-01 宿主最早问题与另有一项在回答后切换为剩余问题"
+    },
+    {
+      "name": "R10读取幂等写入",
+      "source": "packages/server/src/host.ts",
+      "unique_anchor_count": 1,
+      "target_test": "R2-06 rooms.get不产生幂等数据库写入也不发送事件"
+    },
+    {
+      "name": "R11不trim",
+      "source": "packages/server/src/room-blocked-summary.ts",
+      "unique_anchor_count": 1,
+      "target_test": "阻塞摘要折为一行并限制为合同允许的长度"
+    },
+    {
+      "name": "R1-05先拼后截吃尾注",
+      "source": "packages/server/src/room-blocked-summary.ts",
+      "unique_anchor_count": 1,
+      "target_test": "R2-05 长问题截断保留另有 N 项尾注且整行不超过500"
+    },
+    {
+      "name": "R1-07切开代理对",
+      "source": "packages/server/src/room-blocked-summary.ts",
+      "unique_anchor_count": 1,
+      "target_test": "R2-07 Unicode截断不留下孤立高代理码元"
+    }
+  ],
+  "runner_sha256": "e42f85ada54e3e57702f63b5fc8b9d537479ec6bda078903bfa8eb1eb4503602",
+  "suite_tests": 17,
+  "mutant_sweep_executed": false,
+  "differences": "retained 8 old fault meanings, adapted truncation anchor; added 10 review-specific faults; dynamic complete inventory and per-target ERR_ASSERTION; no signal/load/timeout kill; own disposable copy and source freeze"
+}

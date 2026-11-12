@@ -1,0 +1,22 @@
+{
+  "command": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "--test-concurrency=1",
+    "packages/server/src/intent.test.ts",
+    "packages/server/src/rewind.test.ts"
+  ],
+  "exit_code": 0,
+  "counts": {
+    "tests": 30,
+    "pass": 30,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "original_seven_test_bodies_preserved": true,
+  "review_report_sha_unchanged": true,
+  "full_or_mutant_sweep": false
+}

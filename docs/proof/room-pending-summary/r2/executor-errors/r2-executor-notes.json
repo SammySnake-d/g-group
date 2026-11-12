@@ -1,0 +1,63 @@
+{
+  "dependency_binding": {
+    "previous_execution_exit": 1,
+    "original_test_exit": 1,
+    "failure": "whole node_modules reuse linked @g-group workspace packages to Q12 instead of TARGET; service schema from wrong branch removed blockedSummary",
+    "correction": "external dependencies reused but every @g-group symlink rebound to TARGET own packages",
+    "workspace_packages": {
+      "@g-group/adapter-sqlite": "/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/adapter-sqlite",
+      "@g-group/adapter-pi-contact": "/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/adapter-pi-contact",
+      "@g-group/server": "/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/server",
+      "@g-group/adapter-cc-compute": "/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/adapter-cc-compute",
+      "@g-group/domain": "/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/domain",
+      "@g-group/api-contract": "/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/api-contract",
+      "@g-group/kernel": "/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/kernel"
+    },
+    "corrected_command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "packages/server/src/room-blocked-summary.test.ts"
+    ],
+    "corrected_test_exit": 0,
+    "product_source_changed": false,
+    "subthread_context": {
+      "CODEX_THREAD_ID": "01a1d03a-add3-7a02-92d2-92e9791196ee",
+      "MIRASIM_SESSION_KEY": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7"
+    }
+  },
+  "fixture_query": {
+    "previous_test_exit": 1,
+    "previous_pass": 15,
+    "previous_fail": 2,
+    "error": "Host.listMessages called without mandatory query object; TypeError aroundSeq, not a product failure or mutation kill",
+    "correction": "supply {} query to both fixture visibility checks",
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "packages/server/src/room-blocked-summary.test.ts"
+    ],
+    "corrected_test_exit": 1
+  },
+  "invalid_rewind_witness": {
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "packages/server/src/room-blocked-summary.test.ts"
+    ],
+    "exit_code": 0,
+    "invalid_witness_replaced": "The newly authored rewind fixture incorrectly assumed rewound messages were retracted; actual projected/listMessages keeps them with a rewound flag. Not a product failure, not a mutation kill. Raw first/corrected logs retained.",
+    "replacement": "public service rejects user retraction of contact question, source audit covers same-room atomic creation and immutable task room; redundant visibility predicate removed per R1-04 alternative.",
+    "production_delta": "summary truncation plus only two redundant predicates removed from roomView; no other host methods changed"
+  },
+  "typecheck_first_exit": 2,
+  "typecheck_error": "TS2550 String.isWellFormed absent from current lib target",
+  "typecheck_correction": "equivalent Unicode regex rejects unpaired surrogate code points; no tsconfig/global lib changes",
+  "missing_inspection_paths": [
+    "scripts/room-blocked-summary-mutations.ts -> packages/server/proof/room-pending-summary-mutations.mjs",
+    "packages/store/src/index.ts -> packages/server/src/db.ts"
+  ],
+  "inspection_failures_not_product_results": true
+}

@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: 阻塞摘要按最早消息顺序选择并给出其余项数量
+ok 1 - 阻塞摘要按最早消息顺序选择并给出其余项数量
+  ---
+  duration_ms: 1.521959
+  type: 'test'
+  ...
+# Subtest: 没有阻塞时不给出虚构摘要
+ok 2 - 没有阻塞时不给出虚构摘要
+  ---
+  duration_ms: 0.135792
+  type: 'test'
+  ...
+# Subtest: 阻塞摘要折为一行并限制为合同允许的长度
+ok 3 - 阻塞摘要折为一行并限制为合同允许的长度
+  ---
+  duration_ms: 0.239792
+  type: 'test'
+  ...
+# Subtest: rooms.get 返回真实阻塞原因且读取不改变任务与已读游标
+ok 4 - rooms.get 返回真实阻塞原因且读取不改变任务与已读游标
+  ---
+  duration_ms: 61.601958
+  type: 'test'
+  ...
+# Subtest: 回答生效后阻塞摘要消失并经 room.updated 推送
+ok 5 - 回答生效后阻塞摘要消失并经 room.updated 推送
+  ---
+  duration_ms: 44.238916
+  type: 'test'
+  ...
+# Subtest: 其他会话没有本会话的阻塞摘要
+ok 6 - 其他会话没有本会话的阻塞摘要
+  ---
+  duration_ms: 29.644584
+  type: 'test'
+  ...
+# Subtest: 重启回收后的失败任务不再显示已过期的待答摘要
+ok 7 - 重启回收后的失败任务不再显示已过期的待答摘要
+  ---
+  duration_ms: 27.345625
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 463.569125
