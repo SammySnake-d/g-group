@@ -27,5 +27,12 @@
   },
   "unverifiable": "R-02 按当前12项测试体的红提交重放及具名AssertionError校准；AC-01/AC-32这里只证明U07配置历史和回滚子集，scripted脑子不证明模型质量；旧全量源码相同但测试写法曾校准，分开记录；review=null时G-PROVENANCE短路不算来源实核，未伪造兼容turns，交Mira Bot安排独立审查。",
   "waiver": null,
-  "review": null
+  "review": {
+    "agent": "claude",
+    "session": "claude:a32c9f77-01be-405f-b2a8-1097160e10aa",
+    "model": "group/opus",
+    "verdict": "reject",
+    "reviewed_hash": "123bb4c606a44b02b98637b48c3a7e0b949ad76bca6b814dda16ddd4e6b077ca",
+    "notes": "第 1 轮独立审查，结论 reject，问题 R1-01～R1-05 必须返修，见 reviews/feat-contact-config-history.md。hy4 辅审因线路 403 未产出，本轮无辅审。复现：typecheck/lint=0、全量 1485/1485、红提交 12/12 业务断言失败、作者 15 项变异 15/15；审查人自构 8 个单点故障存活 3 个（落盘白名单、回滚事务、回滚恢复全部字段），另复现 INSERT OR REPLACE 可原位改写历史。来源：按 Codex 原生记录核到提交、云端运行与推送逐条对应；实现与红提交实际由 codex:534f3614 的子代理用 chatflows/gpt-6-astra 写出，收据 author 未写明。model 填的是宿主记录的线路组名 group/opus（Anthropic Claude）。本审查不是 AC-01/AC-32 验收。"
+  }
 }
