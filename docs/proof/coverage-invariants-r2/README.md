@@ -26,10 +26,10 @@ baseline 与每次 mutant 必须都运行 4 个完整测试，pass+fail=4、零 
 
 - `author.session` 与 `contributingSessions` 统一为真实宿主 `codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7`；旧 native 主/子线程仅保在 notes 和 `receipt-before-r2.json`，不伪造新来源。改正标识不等于 G-PROVENANCE 已通过；宿主在跑的 turn 与子线程工具来源仍须独立审查实核。
 - 原 `review` 的 Claude R1 REJECT、原审查文件和旧证据完整保留；它评的是旧 hash，不把它清空或自签新候选。
-- 原云四红四绿、8/8、full1477/1477 是 **R1 历史结果**，留在旧 docs 和 receipt.historicalVerification；不能继承给当前 R2。当前 R2 的完整 11 变异、full、正式门禁还待根冻结后排共享云锁执行。
+- 原云四红四绿、8/8、full1477/1477 是 **R1 历史结果**，留在旧 docs 和 receipt.historicalVerification；不能继承给当前 R2。当前 R2 的新云结果已取回并核证，详见下节；不能把相同的 1477 数量误解为复用旧结果。正式门禁的预 proof 和最终 proof-only HEAD 分开标识。
 - replying 真实生命周期仍缺；afterAt 未修/未测；真实模型/CLI、UI、完整 INVARIANTS/AC-43/AC-44 复合闭环均没有在本片验收。所有复合 AC 仍未测，waiver=null，独立 R2 审查与来源判定尚未通过。
 
-## 冻结后复现命令（由根排云，不在本机追加 full/大变异）
+## 冻结后复现命令（重活走共享云锁，不在本机追加大变异）
 
 ```sh
 node --test --test-concurrency=1 --test-timeout=120000 --test-force-exit --test-reporter=tap packages/server/src/coverage-invariants.test.ts
@@ -41,4 +41,15 @@ npm test --silent
 node scripts/gates/run-all.ts --hash --branch=feat/coverage-invariants --base=origin/dev/integration
 ```
 
-本片不 push、不派审、不自签；根接收冻结 bundle 后才继续云证明/正式 gate/正常推送与 Bot 协调。候选交付不代表 PR86 或全量需求完成。
+本轮根已授权同一冻结候选排云验证、收纳 proof、正式 seatbelt 与正常快进推送；推送也必须排同一共享本机锁、不绕钩子。最终 HEAD、重新计算的内容 hash、最终 gate、推送和 CI 一次性快照以外置交付回执为准。本作者不向 Bot 派审、不自签、不合并；由根实际发送新包给 Mira Bot 派 R2。候选交付不代表 PR86 或全量需求完成。
+
+
+## 新 R2 云档与官方预 proof 门禁（2026-11-13）
+
+- 真实执行输入为冻结 HEAD `2fccaabdc1fda18ff4f79d10c6dfa45b39089489` / base `4efdee0be6d161060099b5ce488e3344c70305ee` / 同体 red `121a145f55bc966df7df438a16621af2a397fd60`。box4 共享 `/workspace/.heavy.lock` 正常排队，queue PID 686285、runner PID 686287，真实 exit.code=0，13 阶段均为预期退出、无超时。云 Node **v24.21.0**。
+- `cloud-results-2fccaabd.tar.gz` 是新取回原档，**134755 bytes**，SHA-256 **776693b4dfae3a1418eea5b01bb7f61fd78a5802725046485ef90195189ad0fd**。`cloud-download-receipt.json` 保留逐块 SHA；`cloud-proof-verification.json` 在本地重新解析原始 TAP、核每阶段日志 SHA、完整名字和计数，不只相信 runner 总结。原档的 `out/freeze.json` 含 538 个 tracked 文件 SHA，运行前后与冻结候选匹配。
+- 同体 red 为 **0 pass / 4 具名 ERR_ASSERTION fail**，green **4/4**，两者最终测试 SHA 相同。新完整 **11/11** 故障具名断言杀死；每个故障完整运行原四测试、pass+fail=4、零 skip/cancel/todo、无超时。M03/M04 各另有一项 collateral fail，原 TAP 完整保留，不隐藏为仅指定一项失败；M09/M10/M11 各为 3 pass / 1 指定断言 fail。
+- 新依赖 **37/37**、full **1477/1477**，零 fail/skip/cancel/todo；typecheck/lint exit0。full 原始执行耗时 178.270 秒。原始 `known-replying-gap.log` 仍是真实 `ERR_ASSERTION` exit1（不是加载错误），**replying 产品缺口仍失败**，afterAt 仍未测。
+- 在收纳新 proof 之前，同一冻结 HEAD 的官方 macOS **seatbelt** `--local --pr=86` 真实 exit1：G-TRACE / G-RED / G-STUB / G-TAUTO / G-WORKFLOW / G-LAYER 六项通过；**G-PROVENANCE 与 G-REVIEW 均失败**。具体原因保留在 `seatbelt-preproof-gates.log`：旧审查会话缺少匹配 reviewed_hash 的 hash 输出、该轮厂商认不出；旧 R1 仍 reject 且 reviewed_hash 不等于当前 hash。没有豁免、清空旧 review 或自签。
+- 预 proof 的独立原始 `gates:selftest` **exit0，219/219**，Node v22.22.0，并发2；不是从 pre-push 的 grep 管道退出码推断。源码在本机共享锁持有期间未变。`seatbelt-preproof-result.json` 与原日志保留其明确 HEAD/hash。
+- **官方 contentHash 包含 docs 与去 review 后的 receipt**。因此收纳以上 proof 会改变最终内容 hash；`2c8f958e...` 只属于预 proof 冻结候选，不沿用给新提交。最终新 hash 与对应正式 gate 由同一官方入口重新实核并随外置交付包提供，不通过把自身 hash 写回收据制造自指循环。

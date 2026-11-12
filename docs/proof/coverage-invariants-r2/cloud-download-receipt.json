@@ -1,0 +1,85 @@
+{
+  "source": "/workspace/req-q02-invariants-r2-20261113/results.tar.gz",
+  "bytes": 134755,
+  "sha256": "776693b4dfae3a1418eea5b01bb7f61fd78a5802725046485ef90195189ad0fd",
+  "parts": [
+    {
+      "offset": 0,
+      "bytes": 9000,
+      "sha256": "ec1d289600f651af48e787f449fae77441d242e0c4357d955a817677799cc2a0"
+    },
+    {
+      "offset": 9000,
+      "bytes": 9000,
+      "sha256": "c0d3b9bf2f5cdc6bf44a15f410cbe03ab92bde3b481009220fd04cd82bd0a3d0"
+    },
+    {
+      "offset": 18000,
+      "bytes": 9000,
+      "sha256": "b279296b366c4ed0eba77f24958c2be27c8d9b7ac346144afecd10ac0b461a69"
+    },
+    {
+      "offset": 27000,
+      "bytes": 9000,
+      "sha256": "e78f287d8da0e4b81bb563a24b29e47786d887d4666e9597204ca16fcabf97c4"
+    },
+    {
+      "offset": 36000,
+      "bytes": 9000,
+      "sha256": "abff2be8cd2c235d8ecc539e525dca5f9a7be55dcee3c6706ba0744e04bf5bf6"
+    },
+    {
+      "offset": 45000,
+      "bytes": 9000,
+      "sha256": "9efb3a019f3e5ef2a7867a6ac1b4afc2da1777e2e34e0607217bac631900923c"
+    },
+    {
+      "offset": 54000,
+      "bytes": 9000,
+      "sha256": "b29a473fb36492a78a09c43a5b9eb6b1a03d652d6e7938689236d688256d6a91"
+    },
+    {
+      "offset": 63000,
+      "bytes": 9000,
+      "sha256": "35e84f40ea53236df6df75b0d5d86b872676cf94c0131f45a0f15e2209c0d475"
+    },
+    {
+      "offset": 72000,
+      "bytes": 9000,
+      "sha256": "1361e83f76ba0b59aa1fbf91974135a89968f8e3619430501b92145348519a5c"
+    },
+    {
+      "offset": 81000,
+      "bytes": 9000,
+      "sha256": "085fecb663d652da2d170a15d4a84bb8841a055437fb2b7e7a4c8da00cbe6108"
+    },
+    {
+      "offset": 90000,
+      "bytes": 9000,
+      "sha256": "f95518708cd5029d3e3af07e19daa82f77df3e31325a71d0aa779cb606ab72b3"
+    },
+    {
+      "offset": 99000,
+      "bytes": 9000,
+      "sha256": "9eba422e0d4c9fc7d5ba0b2acb7396d81beee2d4488e6033af2ac103a64b1bf9"
+    },
+    {
+      "offset": 108000,
+      "bytes": 9000,
+      "sha256": "92667e5d283a24d945ae50b256e4e5f6848e56e86fba9d93779b3d16d0ebfbab"
+    },
+    {
+      "offset": 117000,
+      "bytes": 9000,
+      "sha256": "9b3859a33821edd0b5fa356d71ec0b5823462a3ede22815e6b383142acfa4981"
+    },
+    {
+      "offset": 126000,
+      "bytes": 8755,
+      "sha256": "c8fb980fb50a4b91d6d4cfe716843cc2a99f0519b95029ef98e7f1e45e7e1c82"
+    }
+  ],
+  "local": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/q02-invariants-r2/cloud-execution/cloud-results-2fccaabd.tar.gz",
+  "observed_command_exit": "0",
+  "extracted": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/q02-invariants-r2/cloud-execution/cloud-results"
+}
