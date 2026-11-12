@@ -1,0 +1,70 @@
+{
+  "head": "3d92212ef4d698742c2daf221bd3f23effb75fae",
+  "base": "272b1b5d77bd95f34467a5aa04d0bf5891355887",
+  "branch": "feat/task-timeline",
+  "content_hash": "e54e243e4d79ed78ce546745c7b3a1c82e03c5d54f2f9ab05cc7f1d7aa77a723",
+  "sandbox": "seatbelt",
+  "supported_route_decision_bot_seq": 3085,
+  "records": [
+    {
+      "mode": "--hash",
+      "command": [
+        "nice",
+        "-n",
+        "10",
+        "lockf",
+        "/tmp/gg-cov-local.lock",
+        "node",
+        "scripts/gates/run-all.ts",
+        "--hash",
+        "--branch",
+        "feat/task-timeline",
+        "--base",
+        "272b1b5d77bd95f34467a5aa04d0bf5891355887"
+      ],
+      "exit": 0,
+      "seconds": 0.308,
+      "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/task-timeline-resume/v3/seatbelt-q05v3-hash.log",
+      "log_sha256": "8bcce42a9ffe1b9297c10b6d6f4031bf8910255f66e19c5858e14461de1ef16c"
+    },
+    {
+      "mode": "--local",
+      "command": [
+        "nice",
+        "-n",
+        "10",
+        "lockf",
+        "/tmp/gg-cov-local.lock",
+        "node",
+        "scripts/gates/run-all.ts",
+        "--local",
+        "--branch",
+        "feat/task-timeline",
+        "--base",
+        "272b1b5d77bd95f34467a5aa04d0bf5891355887"
+      ],
+      "exit": 1,
+      "seconds": 4.8,
+      "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/task-timeline-resume/v3/seatbelt-q05v3-gates.log",
+      "log_sha256": "784d6a1b4767a1ef238a23e8f4b60c9ec7c0775ff12397805839dd48ff455bed"
+    }
+  ],
+  "passed": [
+    "✓ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是仓库所有者对这个 PR 这一版的结构化批准",
+    "✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据",
+    "✓ G-RED  R-02:先红后绿,红提交上的测试与现在相同,现在的测试放到红提交实现上按名字失败、现在按名字通过",
+    "✓ G-STUB  R-03 R-04:空实现红基线 + 返回值变异校准,桩下或错值下仍通过、没执行、加载失败的测试都判无效",
+    "✓ G-TAUTO  R-04:拒绝同语反复测试(按 node:test 真实导入识别;无断言、自比较、恒真、不可达、不判源码结果、skip/only;运行时与静态逐条计数一致)",
+    "✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限、不得写提交状态、不得用 pull_request_target",
+    "✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)"
+  ],
+  "failures": [
+    "✗ G-REVIEW  R-01:审查人限 Codex/Astra/Claude/Argon(g-group#1531、g-group#2943、g-group#3199 原则 68,默认 Codex;Claude 审 Codex 写的 PR,Argon 备用),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)"
+  ],
+  "source_unchanged": true,
+  "review_and_provenance_not_complete": true,
+  "prior_docker_failures_preserved": true,
+  "no_full_or_mutations_rerun": true,
+  "not_pushed": true,
+  "at": "2026-11-13T02:12:22.533940+08:00"
+}

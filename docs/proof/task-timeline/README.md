@@ -2,7 +2,7 @@
 
 ## 范围与真实入口
 
-固定 base 为 #77 / feat/manual-task `272b1b5d77bd95f34467a5aa04d0bf5891355887`，本片新增内置 P0 的任务事实流 `tasks.timeline`。原副本和待审分支不改。不做前端、摘要插件或旧历史重建。
+固定 base 为 #77 / feat/runtime-config `272b1b5d77bd95f34467a5aa04d0bf5891355887`，本片新增内置 P0 的任务事实流 `tasks.timeline`。原副本和待审分支不改。不做前端、摘要插件或旧历史重建。
 
 真实基线 service 请求为 `unknown_method`，见 `baseline-runtime.log`。空桩红基线随后只提供可加载 API/schema/table，返回空事件。
 

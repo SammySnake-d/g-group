@@ -1,0 +1,88 @@
+{
+  "source": "/workspace/req-task-timeline-v3-20261113/results.tar.gz",
+  "bytes": 138446,
+  "sha256": "08a73907a6e2e1769006f4be9885a78664f4c5ddbedd638944cfc0dfd636d3f4",
+  "parts": [
+    {
+      "offset": 0,
+      "bytes": 9000,
+      "sha256": "5e2d299780ff2509a7950feb3a5f51e35f70b6307cd3be1772f0c1b3c7be2f18"
+    },
+    {
+      "offset": 9000,
+      "bytes": 9000,
+      "sha256": "21e0a229ba0ba3be96c15ef4c0ae478f9ea9db10ba56af52fee1f8b11f1cd1f9"
+    },
+    {
+      "offset": 18000,
+      "bytes": 9000,
+      "sha256": "ff77e1742c167cf7d5db9bf61e6202e29079d70b94b1363fc32c0eba9092f360"
+    },
+    {
+      "offset": 27000,
+      "bytes": 9000,
+      "sha256": "f0638fc24e759ee36eb50e37569af29203d85b3bc51066156f4ece6b4ecddfee"
+    },
+    {
+      "offset": 36000,
+      "bytes": 9000,
+      "sha256": "9071dbc53bca97c8616bb549d42d10079c38cf1fd7789d0f2e3a385c3d55023c"
+    },
+    {
+      "offset": 45000,
+      "bytes": 9000,
+      "sha256": "58e3f9f4a019ef9d220b1f8cd072de41d64356458b6cc41aca76ae9422511bfc"
+    },
+    {
+      "offset": 54000,
+      "bytes": 9000,
+      "sha256": "3968383082c327aa11578aec9598a29707d88d70af1326d9a081d31ebfe2af35"
+    },
+    {
+      "offset": 63000,
+      "bytes": 9000,
+      "sha256": "3245e93f5dc74aba8d10c77dd0076d1786499b02988543026b48c671a2a91f22"
+    },
+    {
+      "offset": 72000,
+      "bytes": 9000,
+      "sha256": "4512d0f274afa8a306830a40cd4d1829a07b9a8a9d32c1b3c1618d4e2caa6b16"
+    },
+    {
+      "offset": 81000,
+      "bytes": 9000,
+      "sha256": "16baa6a61473d02206a9eb5fae6e9dfa062dde9ade5558cd133460ac3e50a404"
+    },
+    {
+      "offset": 90000,
+      "bytes": 9000,
+      "sha256": "2a889f0f15b4bef0861235085f9437420d3ab94504a7904e08883bd2d54a1acf"
+    },
+    {
+      "offset": 99000,
+      "bytes": 9000,
+      "sha256": "23f86985dd6a616667d3d2582fea44432ff5f09869301ac4b0366d562995c464"
+    },
+    {
+      "offset": 108000,
+      "bytes": 9000,
+      "sha256": "4ddfb2ef3d51bcf2e358142da02ab1ddddd0df145d4d6a2fbdb0bbb9d68d3211"
+    },
+    {
+      "offset": 117000,
+      "bytes": 9000,
+      "sha256": "234086b802ebc1964a1098196d10bad4089d5d83b40181cc83e8e90028a3c922"
+    },
+    {
+      "offset": 126000,
+      "bytes": 9000,
+      "sha256": "2870ca1810b1cf9a3461aa38a370ae9421889dfa07480765257ae2515a9186fc"
+    },
+    {
+      "offset": 135000,
+      "bytes": 3446,
+      "sha256": "5caaddeab7c448950bc7cd5a41f5cdf072b21b968a010e3ea6ade17264fd0831"
+    }
+  ],
+  "local": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/task-timeline-resume/v3/cloud-execution/cloud-results-3d92212e.tar.gz"
+}

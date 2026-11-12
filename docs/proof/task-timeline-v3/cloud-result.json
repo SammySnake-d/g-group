@@ -1,0 +1,235 @@
+{
+  "head": "3d92212ef4d698742c2daf221bd3f23effb75fae",
+  "red": "49cd32c9896d72dd7156d0b9c1126630d9c6ac89",
+  "base": "272b1b5d77bd95f34467a5aa04d0bf5891355887",
+  "results": [
+    {
+      "name": "clone",
+      "command": [
+        "git",
+        "clone",
+        "--no-checkout",
+        "--no-hardlinks",
+        "/workspace/req-task-timeline-v3-20261113/candidate.bundle",
+        "/workspace/req-task-timeline-v3-20261113/repo"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 0.417,
+      "log_sha256": "a30a397a90bdd85009ad2baf7a63ec1bcad0c6769ee644da8e848111c189a6c1"
+    },
+    {
+      "name": "checkout",
+      "command": [
+        "git",
+        "checkout",
+        "-B",
+        "feat/task-timeline",
+        "3d92212ef4d698742c2daf221bd3f23effb75fae"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 0.115,
+      "log_sha256": "ed4304b9ccaa55002a97ae47d1e2ac73b948a0d6c84a71c28cb5fdb5ecd6f70c"
+    },
+    {
+      "name": "red-worktree",
+      "command": [
+        "git",
+        "worktree",
+        "add",
+        "--detach",
+        "/workspace/req-task-timeline-v3-20261113/red",
+        "49cd32c9896d72dd7156d0b9c1126630d9c6ac89"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 0.115,
+      "log_sha256": "28e160c9a294e5c0d7690f643e3805760c0c642cef6796d2d8cdf35aa1c9eff1"
+    },
+    {
+      "name": "real-bug-red-worktree",
+      "command": [
+        "git",
+        "worktree",
+        "add",
+        "--detach",
+        "/workspace/req-task-timeline-v3-20261113/bug-red",
+        "f8fac8dd3712d8340a166ce0dcbf3603e1bf6090"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 0.115,
+      "log_sha256": "10190920c254be7fb979e19c6717461e9439dc8754cf4ac45c1a13c500f3d592"
+    },
+    {
+      "name": "npm-green",
+      "command": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 6.004,
+      "log_sha256": "c57a2fe32ed3d11f9389ae68ccd1ea2ea3437edc660036ae26c033f5c9d04404"
+    },
+    {
+      "name": "npm-red",
+      "command": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 4.795,
+      "log_sha256": "cb67821c7afde7f7bcabb8cb974a3e4a9e80ed5a033b3f455920fe0d0473a1d9"
+    },
+    {
+      "name": "npm-real-bug-red",
+      "command": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 4.659,
+      "log_sha256": "bd47b70ebfb5fce8beadbbe8fb61f308ebea9a4fd7b8da5e64580032b945526d"
+    },
+    {
+      "name": "two-real-bug-red",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-reporter=tap",
+        "packages/server/src/task-timeline-origin.test.ts"
+      ],
+      "exit": 1,
+      "expected_exit": 1,
+      "timed_out": false,
+      "seconds": 0.721,
+      "log_sha256": "6ec625a0d4956baa7beaf06a2a204c6e54b61cf3e812649bd8ecc8b0a0cb6bd0"
+    },
+    {
+      "name": "same-thirteen-red",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-reporter=tap",
+        "packages/server/src/task-timeline.test.ts",
+        "packages/server/src/task-timeline-origin.test.ts"
+      ],
+      "exit": 1,
+      "expected_exit": 1,
+      "timed_out": false,
+      "seconds": 1.826,
+      "log_sha256": "2cf7e834e9056f9343d1e2d8d297e9e7c37b5617ef48375726c10e0c38ee8506"
+    },
+    {
+      "name": "same-thirteen-green",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-reporter=tap",
+        "packages/server/src/task-timeline.test.ts",
+        "packages/server/src/task-timeline-origin.test.ts"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 2.427,
+      "log_sha256": "4dd7cd89e7bd9d07233373e02eabd5bd83642902a1caa32c18a52d757417f325"
+    },
+    {
+      "name": "mutations",
+      "command": [
+        "python3",
+        "packages/server/proof/task-timeline-mutations.py"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 64.734,
+      "log_sha256": "63571fe84415eb875ae7f7bbc51fd3449d03e03493a9b4504b9b1c84480f3462"
+    },
+    {
+      "name": "dependency-regression",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-reporter=tap",
+        "packages/server/src/manual-task.test.ts",
+        "packages/server/src/intent.test.ts",
+        "packages/server/src/model-turns.test.ts"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 6.039,
+      "log_sha256": "bc07653229e62fd4680619f0f4c28b5a2316e32a95b2a6b999d183c1030b0c8e"
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "-s",
+        "typecheck"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 8.822,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "command": [
+        "npm",
+        "run",
+        "-s",
+        "lint"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 0.97,
+      "log_sha256": "4c44ac540a4cb5523658b93d49d54f0055498300ebb0152bd756395f663bea2a"
+    },
+    {
+      "name": "full",
+      "command": [
+        "npm",
+        "test",
+        "--silent"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 183.596,
+      "log_sha256": "447d647c6d9fb48dd228b450dccc91af198933f802e7ae7ed92d2630b49e2506"
+    }
+  ],
+  "errors": [],
+  "source_unchanged": true,
+  "cloud_behavior_complete": true,
+  "complete": false,
+  "formal_gates_pending": true,
+  "review_pending": true
+}
