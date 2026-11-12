@@ -56,6 +56,11 @@ test("CQ03 contacts.create 与更新共用 null 或 1..64 整数范围，坏额�
   assert.equal(host.listContacts().length, 0);
   assert.equal(all(host.db, "SELECT * FROM gg_contact_config_versions").length, 0);
   assert.equal(all(host.db, "SELECT * FROM actions WHERE action_id LIKE 'create:%'").length, 0);
+  for (const [i, slots] of [null, 1, 64].entries()) {
+    const valid = await svc.handle("contacts.create", { clientActionId: `valid-contact-range-${i}`, name: "合法边界", computeSlots: slots });
+    assert.ok(valid.ok);
+    assert.equal(host.contactDoc((valid.value as ContactView).id).value.computeSlots, slots);
+  }
 });
 
 test("CQ04 rooms.createGroup 与更新共用 0..64 整数范围，坏额度不残留群成员", async () => {
@@ -68,6 +73,13 @@ test("CQ04 rooms.createGroup 与更新共用 0..64 整数范围，坏额度不�
   assert.equal(all(host.db, "SELECT * FROM gg_rooms").length, 0);
   assert.equal(all(host.db, "SELECT * FROM gg_members").length, 0);
   assert.equal(all(host.db, "SELECT * FROM docs WHERE key LIKE 'room-slots:%'").length, 0);
+  for (const [i, slots] of [0, 64].entries()) {
+    const valid = await svc.handle("rooms.createGroup", { clientActionId: `valid-group-range-${i}`, title: "合法边界", members: [], tempComputeSlots: slots });
+    assert.ok(valid.ok);
+    const room = valid.value as RoomView;
+    assert.equal(room.tempComputeSlots, slots);
+    assert.deepEqual(getDoc(host.db, `room-slots:${room.id}`)?.value, { slots });
+  }
 });
 
 test("CQ05 个人创建缺省和 null 保留宿主默认，1 与 64 边界保存且动作可重放", async () => {

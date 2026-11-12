@@ -9,7 +9,6 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, resolve, sep } from "node:path";
-import { isDeepStrictEqual } from "node:util";
 import { appendEvent, loadLog, recordAction } from "@g-group/adapter-sqlite";
 import type { ComputeActivity, ComputeAdapter, ComputeEvent } from "@g-group/adapter-cc-compute";
 import {
@@ -562,49 +561,31 @@ export class Host {
   }
 
   // ======================= 联系人 =======================
-  /** 创建实体与动作结果在同一个既有 SQLite 事务提交;重放不重发通知。 */
-  private createOnce<T>(kind: "contact" | "group", clientActionId: string | undefined, request: unknown, create: () => T): { view: T; replay: boolean } {
-    const normalized = JSON.parse(JSON.stringify(request)) as unknown;
-    return tx(this.db, () => {
-      const key = clientActionId === undefined ? undefined : `create:${kind}:${clientActionId}`;
-      const prior = key === undefined ? undefined : one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key);
-      if (prior) {
-        const saved = JSON.parse(prior.payload) as { request: unknown; result: T };
-        if (!isDeepStrictEqual(saved.request, normalized)) throw new HostError("conflict", "同一创建动作号已用于不同请求");
-        return { view: saved.result, replay: true };
-      }
-      const view = create();
-      if (key !== undefined) recordAction(this.db.store, key, { request: normalized, result: view });
-      return { view, replay: false };
-    });
-  }
-  createContact(input: { clientActionId?: string; name: string; bio?: string; speakingModel?: string; harness?: ContactView["harness"]; computeModel?: ContactView["computeModel"]; persona?: string; computeSlots?: number | null; confirmAffected?: boolean }): ContactView {
-    const { clientActionId, ...request } = input;
-    const changed = this.createOnce("contact", clientActionId, request, () => {
-      const id = this.newId("c");
-      const settings = this.settings();
-      const doc: ContactDoc = {
-        id,
-        name: input.name,
-        avatar: null,
-        bio: input.bio ?? "",
-        speakingModel: input.speakingModel ?? settings.defaultSpeakingModel,
-        harness: input.harness ?? settings.defaultHarness,
-        computeModel: input.computeModel ?? { mode: "inherit" },
-        tools: [],
-        computeAssets: [],
-        createdAt: this.now(),
-        persona: input.persona ?? "",
-        computeSlots: input.computeSlots ?? null,
-      };
-      // 保存时机(AC-32 ②①):新联系人自己的 Compute 生效值不兼容就先拦,看过预览确认后才存
-      this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), [this.contactModels(doc)], this.caps(), { kind: "contact", contactId: id, patch: {} }), input.confirmAffected === true);
+  createContact(input: { clientActionId?: string; name: string; bio?: string; speakingModel?: string; harness?: ContactView["harness"]; computeModel?: ContactView["computeModel"]; persona?: string; confirmAffected?: boolean }): ContactView {
+    const id = this.newId("c");
+    const settings = this.settings();
+    const doc: ContactDoc = {
+      id,
+      name: input.name,
+      avatar: null,
+      bio: input.bio ?? "",
+      speakingModel: input.speakingModel ?? settings.defaultSpeakingModel,
+      harness: input.harness ?? settings.defaultHarness,
+      computeModel: input.computeModel ?? { mode: "inherit" },
+      tools: [],
+      computeAssets: [],
+      createdAt: this.now(),
+      persona: input.persona ?? "",
+    };
+    // 保存时机(AC-32 ②①):新联系人自己的 Compute 生效值不兼容就先拦,看过预览确认后才存
+    this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), [this.contactModels(doc)], this.caps(), { kind: "contact", contactId: id, patch: {} }), input.confirmAffected === true);
+    tx(this.db, () => {
       const version = putDoc(this.db, `contact:${id}`, 0, doc);
       recordContactConfig(this.db, id, version, doc, "create", this.now());
-      return this.contactView(doc);
     });
-    if (!changed.replay) this.bus.emit({ type: "contact.updated", contact: changed.view });
-    return changed.view;
+    const view = this.contactView(doc);
+    this.bus.emit({ type: "contact.updated", contact: view });
+    return view;
   }
   updateContact(id: string, input: Partial<Omit<ContactDoc, "id" | "createdAt">> & { confirmAffected?: boolean; clientActionId?: string; expectedVersion?: number }): ContactView {
     const { confirmAffected, clientActionId, expectedVersion, ...patch } = input;
@@ -813,19 +794,18 @@ export class Host {
     this.bus.emit({ type: "room.updated", room: view });
     return view;
   }
-  createGroup(title: string, members: Member[], options: { clientActionId?: string; tempComputeSlots?: number } = {}): RoomView {
-    const changed = this.createOnce("group", options.clientActionId, { title, members, tempComputeSlots: options.tempComputeSlots }, () => {
-      for (const m of members) if (m.kind === "contact") this.contactDoc(m.id);
-      const id = this.newId("g");
-      const at = this.now();
-      const all_: Member[] = [{ kind: "user", id: this.userId }, ...members.filter((m) => !(m.kind === "user" && m.id === this.userId))];
+  createGroup(title: string, members: Member[]): RoomView {
+    for (const m of members) if (m.kind === "contact") this.contactDoc(m.id);
+    const id = this.newId("g");
+    const at = this.now();
+    const all_: Member[] = [{ kind: "user", id: this.userId }, ...members.filter((m) => !(m.kind === "user" && m.id === this.userId))];
+    tx(this.db, () => {
       run(this.db, "INSERT INTO gg_rooms (id, kind, title, created_at, updated_at) VALUES (?, 'group', ?, ?, ?)", id, title, at, at);
       for (const m of all_) run(this.db, "INSERT OR IGNORE INTO gg_members (room_id, kind, member_id) VALUES (?, ?, ?)", id, m.kind, m.id);
-      putDoc(this.db, `room-slots:${id}`, 0, { slots: options.tempComputeSlots ?? 0 });
-      return this.roomView(id);
     });
-    if (!changed.replay) this.bus.emit({ type: "room.updated", room: changed.view });
-    return changed.view;
+    const view = this.roomView(id);
+    this.bus.emit({ type: "room.updated", room: view });
+    return view;
   }
   addMembers(roomId: string, members: Member[]): RoomView {
     const r = this.roomRow(roomId);

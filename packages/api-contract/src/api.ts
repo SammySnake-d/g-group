@@ -52,9 +52,6 @@ const Page = { limit: opt(int({ min: 1, max: 500 })) };
 
 const method = <P, R>(params: Schema<P>, result: Schema<R>) => ({ params, result });
 
-const PersonalComputeSlots = nullable(int({ min: 1, max: 64 }));
-const GroupComputeSlots = int({ min: 0, max: 64 });
-
 export const METHODS = {
   // 会话握手:核对合同版本,拿当前事件游标(订阅从这里接)。
   "session.hello": method(obj({ clientApiVersion: str({ max: 20 }) }), obj({ apiVersion: str(), serverTime: isoTime(), eventSeq: seq(), userId: id() })),
@@ -71,7 +68,6 @@ export const METHODS = {
       harness: opt(oneOf(HARNESSES)),
       computeModel: opt(ModelSlot),
       persona: opt(str({ max: 20000 })),
-      computeSlots: opt(PersonalComputeSlots),
       /** 预检发现会让 Compute 不兼容时,不带它保存被拒(conflict,detail.reason="model-incompatible",detail.preview);用户看过预览确认后带 true 再存。 */
       confirmAffected: opt(bool()),
     }),
@@ -95,7 +91,7 @@ export const METHODS = {
       /** 同 contacts.create。 */
       confirmAffected: opt(bool()),
       /** 个人 Compute 槽位数(AC-23);null 恢复宿主默认。 */
-      computeSlots: opt(PersonalComputeSlots),
+      computeSlots: opt(nullable(int({ min: 1, max: 64 }))),
     }),
     ContactView,
   ),
@@ -115,8 +111,8 @@ export const METHODS = {
   "rooms.get": method(obj({ roomId: id() }), RoomView),
   /** 打开与某联系人的私聊;已存在则返回原会话。 */
   "rooms.openDm": method(obj({ contactId: id() }), RoomView),
-  "rooms.createGroup": method(obj({ clientActionId: id(), title: str({ min: 1, max: 200 }), members: arr(MemberRef, { max: 100 }), tempComputeSlots: opt(GroupComputeSlots) }), RoomView),
-  "rooms.update": method(obj({ roomId: id(), title: opt(str({ min: 1, max: 200 })), pinned: opt(bool()), muted: opt(bool()), rules: opt(str({ max: 20000 })), expectedRulesVersion: opt(int({ min: 0 })), tempComputeSlots: opt(GroupComputeSlots) }), RoomView),
+  "rooms.createGroup": method(obj({ clientActionId: id(), title: str({ min: 1, max: 200 }), members: arr(MemberRef, { max: 100 }) }), RoomView),
+  "rooms.update": method(obj({ roomId: id(), title: opt(str({ min: 1, max: 200 })), pinned: opt(bool()), muted: opt(bool()), rules: opt(str({ max: 20000 })), expectedRulesVersion: opt(int({ min: 0 })), tempComputeSlots: opt(int({ min: 0, max: 64 })) }), RoomView),
   "rooms.addMembers": method(obj({ roomId: id(), members: arr(MemberRef, { max: 100 }) }), RoomView),
   /**
    * 移出成员。联系人在这个群有在途任务(T8/T10/T11 以外)时默认 conflict,detail.tasks 列出 {taskId,title,state};

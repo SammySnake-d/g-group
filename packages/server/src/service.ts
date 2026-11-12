@@ -51,7 +51,7 @@ export function createService(host: Host): Service {
     "rooms.list": () => ({ rooms: host.roomsOfUser() }),
     "rooms.get": (p: { roomId: string }) => host.roomView(p.roomId),
     "rooms.openDm": (p: { contactId: string }) => host.openDm(p.contactId),
-    "rooms.createGroup": (p: { clientActionId: string; title: string; members: { kind: "user" | "contact"; id: string }[]; tempComputeSlots?: number }) => host.createGroup(p.title, p.members, p),
+    "rooms.createGroup": (p: { title: string; members: { kind: "user" | "contact"; id: string }[] }) => host.createGroup(p.title, p.members),
     "rooms.update": ({ roomId, ...patch }: { roomId: string } & Parameters<Host["updateRoom"]>[1]) => host.updateRoom(roomId, patch),
     "rooms.addMembers": (p: { roomId: string; members: { kind: "user" | "contact"; id: string }[] }) => host.addMembers(p.roomId, p.members),
     "rooms.removeMember": (p: { roomId: string; member: { kind: "user" | "contact"; id: string }; stopTasks?: boolean }) =>
