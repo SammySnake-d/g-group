@@ -75,6 +75,9 @@ test("其他会话没有本会话的阻塞摘要", async () => {
   const s = await blocked();
   try {
     const other = s.host.createGroup("另一个群", []);
+    // 两个会话可以有同号消息；不能靠 seq 碰巧不重合代替会话作用域校验。
+    const last = s.host.lastSeq(s.dm.id);
+    for (let i = 0; i < last; i++) s.host.send({ roomId: other.id, clientActionId: `other-${i}`, text: "另一个会话的中性消息" });
     const got = await s.svc.handle("rooms.get", { roomId: other.id });
     assert.equal(got.ok && (got.value as RoomView).blockedSummary, null);
   } finally { s.compute.close(); }
