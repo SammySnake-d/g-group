@@ -55,7 +55,7 @@ test("G35-01 coarse and fine use the query, preserve global/degraded hits and st
   const s = setup(t);
   s.seed("m-0", "BANANA_UNRELATED", [`room:${s.room.id}`]);
   s.seed("m-a", NEEDLE, ["global"]);
-  s.seed("m-z", NEEDLE, [`room:${s.room.id}`], { status: "degraded" });
+  s.seed("m-z", NEEDLE, [`room:${s.room.id}`], { status: "degraded", createdAt: "2025-01-01T00:00:00.000Z" });
   const requests = await s.request();
   for (const [stage, neighbors] of Object.entries(requests)) {
     assert.deepEqual(neighbors.map((n) => n.id), ["m-a", "m-z"], `${stage}: only hybrid matches, in stable tie order`);
