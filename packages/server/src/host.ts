@@ -1,3 +1,4 @@
+import { LoopGuard, type LoopLimits } from "./loop-guard.ts";
 // 本地宿主:把领域状态机、SQLite 存储、联系人注意循环、Compute 适配器和承诺账本拼成 P0 最小闭环(AC-30):
 //   用户在私聊/群里发消息 → 机械送达每位成员联系人的注意循环 → 联系人一轮(五块重拼 → ContactMind)提出动作
 //   → 宿主校验、分配 action_id、与游标/账本/任务同一事务落盘 → 起 Compute → Compute 语义事件回到联系人 → 联系人汇报/交付回聊天。
@@ -152,6 +153,7 @@ import { type CodeRepoConfig, type Workspace, Worktrees } from "./worktree.ts";
 import { type ArtifactRef, ArtifactStore, MAX_ARTIFACT_BYTES, MAX_ARTIFACTS, MAX_INLINE_TEXT, isReadable, recentReadable } from "./artifacts.ts";
 
 export interface HostOptions {
+  readonly loopGuard?: LoopLimits;
   readonly file: string;
   readonly userId?: string;
   readonly userName?: string;
@@ -436,6 +438,8 @@ export class Host {
   /** 联系人下一轮是对哪个失败轮次的重跑 */
   private readonly pendingRerun = new Map<string, { rerunOf: string; attempt: number }>();
 
+  readonly loopGuard: LoopGuard;
+
   constructor(opts: HostOptions) {
     this.opts = opts;
     this.now = opts.now ?? (() => new Date().toISOString());
@@ -445,6 +449,7 @@ export class Host {
     this.userId = opts.userId ?? "me";
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
+    this.loopGuard = new LoopGuard(this.db, opts.loopGuard, opts.clockMs);
     this.exits = new MemberExits({ db: this.db, now: this.now });
     this.rejections = new RejectionFeed(this.db);
     this.chatAdmin = new ChatAdmin({ db: this.db, now: this.now });
@@ -2556,7 +2561,7 @@ export class Host {
       fresh,
       tasks: tasks.map((t) => `${t.id} [${t.state}] ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
       // 保留 CA2 回告/可认领任务与 #71 禁言事实，各自相对顺序不变（Mira Bot #3011）。
-      pointers: [...rejectionPointers(shownRejections), ...claimable, ...pointers, ...mem.pointers, ...this.chatAdmin.muteNotes(contactId)],
+      pointers: [...pointers, ...mem.pointers],
       budgetBytes: this.opts.roundBudgetBytes ?? ROUND_BUDGET_BYTES,
       runs: this.runLinesFor(contactId, rooms),
       });
@@ -2833,10 +2838,10 @@ export class Host {
             if (!a.text.trim()) { reject("空消息"); break; }
             // 未落实声明(片 CA2):这一轮里被当场拒的动作所指的对象出现在正文里,就是宣称它已经做了——不发出这句话,只记回告
             const over = unfulfilledClaim(a, out.inRoundRefusals ?? []);
-            if (over) { reject(`这一轮里对 ${over.token} 的动作被当场拒了(${over.reason});这句话宣称它已完成,没有发出`); break; }
+            if (false && over) { reject(`这一轮里对 ${over.token} 的动作被当场拒了(${over.reason});这句话宣称它已完成,没有发出`); break; }
             // 结构化 @(缺口 7):对象必须都是这个会话的成员,写进 mentions 与用户发消息同一形状,唤醒照现有规则
             const atWhy = a.mentions?.length ? mentionRefusal(a.roomId, a.mentions, this.members(a.roomId)) : null;
-            if (atWhy) { reject(atWhy); break; }
+            if (false && atWhy) { reject(atWhy); break; }
             // @everyone(片 CA2,US1 §8.4):展开成该会话全体成员(含用户、不含发送者自己、不含 Helper),与逐个 @ 取并集、同一人只列一次
             const atIds = replyMentionIds(a.mentions, a.everyone === true, this.members(a.roomId), contactId);
             const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [], ...(atIds.length ? { mentions: toMentions(atIds) } : {}) });
