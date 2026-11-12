@@ -62,7 +62,12 @@ function run(dir) {
       kill();
       const failed = [...out.matchAll(/^not ok \d+ - (.+)$/gm)].map((m) => m[1]);
       const passed = [...out.matchAll(/^ok \d+ - (.+)$/gm)].map((m) => m[1]);
-      resolve({ code, failed, passed, timedOut, output: out });
+      const assertionFailed = [...out.matchAll(/^not ok \d+ - (.+)$/gm)].filter(m => {
+        const start=m.index; const next=out.indexOf("\n# Subtest:",start); const plan=out.indexOf("\n1..",start);
+        const end=Math.min(...[next,plan,out.length].filter(n=>n>=start));
+        return /\bERR_ASSERTION\b/.test(out.slice(start,end));
+      }).map(m=>m[1]);
+      resolve({ code, failed, passed, assertionFailed, timedOut, output: out });
     });
   });
 }
@@ -122,7 +127,7 @@ for (const [i, [name, edits]] of M.entries()) {
   fs.rmSync(d, { recursive: true, force: true });
   const expected = titles[expectedIndex[i]];
   const kills = r.failed.filter((t) => named.has(t));
-  const detected = !r.timedOut && r.code === 1 && kills.includes(expected);
+  const detected = !r.timedOut && r.code === 1 && kills.includes(expected) && r.assertionFailed.includes(expected);
   evidence.mutations.push({ name, expected, detected, ...r, output: undefined });
   if (outDir) fs.writeFileSync(path.join(outDir, `M${String(i + 1).padStart(2, "0")}.tap`), r.output);
   save();

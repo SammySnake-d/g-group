@@ -63,7 +63,7 @@ test("P7 未读范围:摘要只含已读之后消息,按发言人分组并附来
   const b = s.host.send({ roomId: g.id, clientActionId: "b", text: "新消息第一行\n长文第二行" });
   const r = await s.svc.handle("messages.send", send(g.id, "k1", "ketchup", { from: a.seq }));
   const text = view(r).text;
-  assert.ok(text.includes(`新消息 1 条`) && text.includes(`#${b.seq}`) && text.includes("新消息第一行"), text);
+  assert.ok(text.includes(`新消息 1 条`) && text.split("\n").includes(`#${b.seq} 新消息第一行`) && text.split("\n").includes("我:"), text);
   assert.ok(!text.includes("旧消息") && !text.includes("长文第二行"), text);
   const again = await s.svc.handle("messages.send", send(g.id, "k2", "ketchup", { from: a.seq }));
   assert.equal(view(again).text, text);
@@ -104,11 +104,17 @@ test("P7 待回答:授权和提问照实列出,摘要不能代答", async () => 
 
 test("P7 重放:同一 action 并发只执行一次,改参数拒绝,宿主重启仍返回原消息",async()=>{
   const s=setup();const g=s.host.createGroup("群",[]);await install(s,fixture(s,"once","once",'await new Promise(r=>setTimeout(r,20)); return {text:String(calls)};'));
+  // 观测器只计数并委托真实隔离RPC，不提供替身结果。
+  let commandCalls=0;const realCommand=s.host.plugins.command.bind(s.host.plugins);
+  s.host.plugins.command=(...args)=>{commandCalls++;return realCommand(...args);};
   const p=send(g.id,"same","once");const rs=await Promise.all([s.svc.handle("messages.send",p),s.svc.handle("messages.send",p)]);
   assert.deepEqual(rs.map(r=>[view(r).seq,view(r).text]),[[1,"1"],[1,"1"]]);
+  const replay=await s.svc.handle("messages.send",p);assert.deepEqual([view(replay).seq,view(replay).text,commandCalls],[1,"1",1]);
   const bad=await s.svc.handle("messages.send",send(g.id,"same","once",{different:true}));assert.equal(!bad.ok && bad.error.code,"conflict");
   await s.host.close();const h=new Host({file:path.join(s.root,"gg.db"),dataDir:path.join(s.root,"data"),mind:()=>scriptedMind()});
-  try {const r=await createService(h).handle("messages.send",p);assert.deepEqual([view(r).seq,view(r).text],[1,"1"]);}finally{await h.close();}
+  let restartCalls=0;const restartCommand=h.plugins.command.bind(h.plugins);
+  h.plugins.command=(...args)=>{restartCalls++;return restartCommand(...args);};
+  try {const r=await createService(h).handle("messages.send",p);assert.deepEqual([view(r).seq,view(r).text,restartCalls],[1,"1",0]);}finally{await h.close();}
 });
 
 test("P7 冲突:内置名称与已安装命令名称不得被第二插件占用",async()=>{
