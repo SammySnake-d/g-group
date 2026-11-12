@@ -66,16 +66,18 @@ const rows = (h: Host, taskId: string) => all<{ id: number; payload: string }>(h
 
 test("TT01 manual creation, user assignment and real model-attempt facts are append-only and action-idempotent", async () => {
   const s = scene();
+  // Construct the real service here so each asserted response is explicitly tied to the imported source.
+  const svc = createService(s.host);
   try {
     const t = await create(s, "create");
-    let history = (await page(s.svc, t.id)).events;
+    let history = (await page(svc, t.id)).events;
     assert.equal(history.length, 1, "manual creation has exactly one actual creation fact");
     assert.deepEqual([history[0]!.kind, history[0]!.cause, history[0]!.actor, history[0]!.before, history[0]!.after.state], ["created", "ManualCreate", { kind: "user", id: "me" }, null, "T1_Open"]);
     assert.equal(detail(history[0]!).requester, "me");
     const original = rows(s.host, t.id);
-    await call(s.svc, "tasks.assign", { taskId: t.id, contactId: s.c.id, clientActionId: "assign" });
+    await call(svc, "tasks.assign", { taskId: t.id, contactId: s.c.id, clientActionId: "assign" });
     await settle(s.host, s.compute);
-    history = (await page(s.svc, t.id)).events;
+    history = (await page(svc, t.id)).events;
     const claim = history.find((e) => e.cause === "ManualAssign")!;
     assert.deepEqual([claim.actor, claim.before!.owner, claim.after.owner, claim.after.state], [{ kind: "user", id: "me" }, null, s.c.id, "T2_Claimed"]);
     assert.ok(history.some((e) => e.cause === "Dispatch" && e.after.state === "T3_Running" && e.after.computeId === "cp-1"));
@@ -83,7 +85,7 @@ test("TT01 manual creation, user assignment and real model-attempt facts are app
     const frozen = rows(s.host, t.id);
     assert.deepEqual(frozen.slice(0, original.length), original, "old rows keep their original bytes");
     await create(s, "create");
-    await call(s.svc, "tasks.assign", { taskId: t.id, contactId: s.c.id, clientActionId: "assign" });
+    await call(svc, "tasks.assign", { taskId: t.id, contactId: s.c.id, clientActionId: "assign" });
     await settle(s.host, s.compute);
     assert.deepEqual(rows(s.host, t.id), frozen, "replayed actions do not fabricate new facts");
   } finally { await s.host.close(); }
@@ -117,21 +119,23 @@ test("TT02 contact dispatch and explicit rerun both record their actual creator 
 
 test("TT03 task transitions preserve pre/post state and do not turn duplicate or rejected actions into history", async () => {
   const s = scene();
+  // Construct the real service here so each asserted response is explicitly tied to the imported source.
+  const svc = createService(s.host);
   try {
     const t = await create(s, "start", "A", true);
     await settle(s.host, s.compute);
-    assert.ok((await page(s.svc, t.id)).events.some((e) => e.cause === "Dispatch"));
-    await call(s.svc, "tasks.cancel", { taskId: t.id, clientActionId: "cancel" });
+    assert.ok((await page(svc, t.id)).events.some((e) => e.cause === "Dispatch"));
+    await call(svc, "tasks.cancel", { taskId: t.id, clientActionId: "cancel" });
     await settle(s.host, s.compute);
-    const events = (await page(s.svc, t.id)).events;
+    const events = (await page(svc, t.id)).events;
     const stop = events.find((e) => e.cause === "Cancel")!;
     const confirmed = events.find((e) => e.cause === "StoppedConfirmed")!;
     assert.deepEqual([stop.before!.state, stop.after.state, confirmed.before!.state, confirmed.after.state], ["T3_Running", "T9_StopRequested", "T9_StopRequested", "T10_Cancelled"]);
     assert.ok(stop.id < confirmed.id, "stop request is not stop confirmation");
     const old = rows(s.host, t.id);
-    const replay = await s.svc.handle("tasks.cancel", { taskId: t.id, clientActionId: "cancel" });
+    const replay = await svc.handle("tasks.cancel", { taskId: t.id, clientActionId: "cancel" });
     assert.ok(!replay.ok && replay.error.code === "conflict", "existing cancel checks terminal state before its action key");
-    const invalid = await s.svc.handle("tasks.assign", { taskId: t.id, contactId: s.c.id, clientActionId: "bad" });
+    const invalid = await svc.handle("tasks.assign", { taskId: t.id, contactId: s.c.id, clientActionId: "bad" });
     assert.equal(invalid.ok, false);
     assert.deepEqual(rows(s.host, t.id), old);
   } finally { await s.host.close(); }
@@ -139,13 +143,15 @@ test("TT03 task transitions preserve pre/post state and do not turn duplicate or
 
 test("TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text", async () => {
   const s = scene({ mind: forwarding });
+  // Construct the real service here so each asserted response is explicitly tied to the imported source.
+  const svc = createService(s.host);
   try {
     const t = await create(s, "A", "A", true);
     await settle(s.host, s.compute);
-    assert.ok((await page(s.svc, t.id)).events.length > 0);
+    assert.ok((await page(svc, t.id)).events.length > 0);
     const msg = s.host.send({ roomId: s.room.id, clientActionId: "new-constraint", text: "给A:PRIVATE-FOLLOW-UP-PLAINTEXT" });
     await settle(s.host, s.compute);
-    let events = (await page(s.svc, t.id)).events;
+    let events = (await page(svc, t.id)).events;
     const received = events.find((e) => e.cause === "FollowUpReceived")!;
     const resumed = events.find((e) => e.cause === "ResumeAccepted")!;
     assert.ok(received && resumed && received.id < resumed.id);
@@ -157,7 +163,7 @@ test("TT04 follow-up receipt, accepted resume and artifact application are disti
     await settle(s.host, s.compute);
     s.compute.emit({ computeId: "cp-1", kind: "completed", result: "v1-result" });
     await settle(s.host, s.compute);
-    events = (await page(s.svc, t.id)).events;
+    events = (await page(svc, t.id)).events;
     assert.ok(events.some((e) => e.cause === "RoundCompleted" && detail(e).resultVer === 1));
     assert.ok(events.some((e) => e.cause === "FollowUpApplied" && JSON.stringify(detail(e)).includes('"state":"Applied"')));
     assert.ok(!JSON.stringify(events).includes("PRIVATE-FOLLOW-UP-PLAINTEXT"), "timeline does not duplicate retractable message bodies");
@@ -166,20 +172,22 @@ test("TT04 follow-up receipt, accepted resume and artifact application are disti
 
 test("TT05 rebind appends both sides' real linkage versions atomically and replay does not duplicate them", async () => {
   const s = scene({ mind: forwarding });
+  // Construct the real service here so each asserted response is explicitly tied to the imported source.
+  const svc = createService(s.host);
   try {
     const a = await create(s, "A", "A", true); const b = await create(s, "B", "B", true);
     await settle(s.host, s.compute);
-    assert.ok((await page(s.svc, a.id)).events.length > 0);
+    assert.ok((await page(svc, a.id)).events.length > 0);
     const m = s.host.send({ roomId: s.room.id, clientActionId: "follow", text: "给A:改挂要求" });
     await settle(s.host, s.compute);
     const params = { roomId: s.room.id, seq: m.seq, fromTaskId: a.id, toTaskId: b.id, expectedBindingVersion: 0, clientActionId: "rebind" };
-    await call(s.svc, "tasks.rebindFollowUp", params);
+    await call(svc, "tasks.rebindFollowUp", params);
     await settle(s.host, s.compute);
-    const ea = (await page(s.svc, a.id)).events; const eb = (await page(s.svc, b.id)).events;
+    const ea = (await page(svc, a.id)).events; const eb = (await page(svc, b.id)).events;
     assert.ok(ea.some((e) => e.cause === "FollowUpReboundOut" && JSON.stringify(detail(e)).includes(b.id)));
     assert.ok(eb.some((e) => e.cause === "FollowUpReboundIn" && JSON.stringify(detail(e)).includes(`"seq":${m.seq}`)));
     const before = [rows(s.host, a.id), rows(s.host, b.id)];
-    await call(s.svc, "tasks.rebindFollowUp", params);
+    await call(svc, "tasks.rebindFollowUp", params);
     await settle(s.host, s.compute);
     assert.deepEqual([rows(s.host, a.id), rows(s.host, b.id)], before);
   } finally { await s.host.close(); }
@@ -220,38 +228,42 @@ test("TT06 same-timestamp keyset pages are task-bound, stable under append and s
 
 test("TT07 task timeline enforces current room membership before returning any events or cursor", async () => {
   const s = scene();
+  // Construct the real service here so each asserted response is explicitly tied to the imported source.
+  const svc = createService(s.host);
   try {
     const t = await create(s, "A");
-    assert.equal((await page(s.svc, t.id)).events.length, 1);
+    assert.equal((await page(svc, t.id)).events.length, 1);
     s.host.db.store.db.prepare("DELETE FROM gg_members WHERE room_id = ? AND kind = 'user'").run(s.room.id);
     for (const q of [{}, { cursor: "invalid" }]) {
-      const r = await s.svc.handle("tasks.timeline", { taskId: t.id, ...q });
+      const r = await svc.handle("tasks.timeline", { taskId: t.id, ...q });
       assert.ok(!r.ok && r.error.code === "forbidden");
     }
-    const missing = await s.svc.handle("tasks.timeline", { taskId: "absent" });
+    const missing = await svc.handle("tasks.timeline", { taskId: "absent" });
     assert.ok(!missing.ok && missing.error.code === "not_found");
   } finally { await s.host.close(); }
 });
 
 test("TT08 timeline insert failure rolls back creation and task transition with no durable or live ghost", async () => {
   const s = scene();
+  // Construct the real service here so each asserted response is explicitly tied to the imported source.
+  const svc = createService(s.host);
   try {
     const control = await create(s, "control");
-    assert.equal((await page(s.svc, control.id)).events.length, 1);
+    assert.equal((await page(svc, control.id)).events.length, 1);
     const before = [s.host.listMessages(s.room.id, {}).messages, s.host.listTasks({}), rows(s.host, control.id)];
     const seen: unknown[] = []; const unsubscribe = s.host.bus.subscribe((e) => seen.push(e));
     // Fault injection only: no production triggers are used to record timeline facts.
     s.host.db.store.db.exec("CREATE TEMP TRIGGER fail_timeline BEFORE INSERT ON gg_task_events BEGIN SELECT RAISE(ABORT, 'timeline fault'); END");
-    const badCreate = await s.svc.handle("tasks.create", { roomId: s.room.id, clientActionId: "retryable-create", title: "new" });
-    const badCancel = await s.svc.handle("tasks.cancel", { taskId: control.id, clientActionId: "retryable-cancel" });
+    const badCreate = await svc.handle("tasks.create", { roomId: s.room.id, clientActionId: "retryable-create", title: "new" });
+    const badCancel = await svc.handle("tasks.cancel", { taskId: control.id, clientActionId: "retryable-cancel" });
     assert.ok(!badCreate.ok && !badCancel.ok);
     assert.deepEqual([s.host.listMessages(s.room.id, {}).messages, s.host.listTasks({}), rows(s.host, control.id)], before);
     assert.equal(seen.length, 0); unsubscribe();
     s.host.db.store.db.exec("DROP TRIGGER fail_timeline");
     const retried = await create(s, "retryable-create", "new");
-    assert.equal((await page(s.svc, retried.id)).events.length, 1);
-    await call(s.svc, "tasks.cancel", { taskId: control.id, clientActionId: "retryable-cancel" });
-    assert.equal((await page(s.svc, control.id)).events.at(-1)!.after.state, "T10_Cancelled");
+    assert.equal((await page(svc, retried.id)).events.length, 1);
+    await call(svc, "tasks.cancel", { taskId: control.id, clientActionId: "retryable-cancel" });
+    assert.equal((await page(svc, control.id)).events.at(-1)!.after.state, "T10_Cancelled");
   } finally { await s.host.close(); }
 });
 
