@@ -1008,7 +1008,7 @@ export class Host {
       // 调度只看元数据(@、私聊、回复对象),不读正文(D15.1)
       const direct = room.kind === "dm" || view.mentions.some((x) => x.id === mem.id) || (repliedTo?.sender.kind === "contact" && repliedTo.sender.id === mem.id);
       const urgency: Urgency = direct && from.kind === "user" ? "now" : "batch";
-      if (direct) this.loop.notify(mem.id, urgency);
+      this.loop.notify(mem.id, urgency);
     }
   }
 
@@ -1570,7 +1570,7 @@ export class Host {
    * tasks.answer(AC-44 ③⑤):回答当前待回答的问题,等同于在提问卡上点「回答」。
    * 问题号不存在 → not_found;问题已回答、已过期,或任务已离开 T4b → 幂等忽略,返回任务当前视图,不送进 Compute。
    */
-  answerTask(taskId: string, qId: string, clientActionId: string, answer: string): TaskView { return this.taskView(this.taskDoc(taskId).value);
+  answerTask(taskId: string, qId: string, clientActionId: string, answer: string): TaskView {
     this.taskDoc(taskId);
     const card = this.questionCard(taskId, qId);
     if (!card) throw new HostError("not_found", `任务 ${taskId} 没有问题 ${qId}`);
@@ -1660,7 +1660,7 @@ export class Host {
     const c = this.questionCard(taskId, qId);
     return c ? String((JSON.parse(c.meta) as { needs?: string }).needs ?? "").slice(0, 5000) : "";
   }
-  progress(taskId: string, limit = 200): ComputeProgress[] { return [];
+  progress(taskId: string, limit = 200): ComputeProgress[] {
     return all<{ compute_id: string; kind: ComputeProgress["kind"]; stage: string | null; summary: string; at: string }>(
       this.db,
       "SELECT * FROM (SELECT * FROM gg_progress WHERE task_id = ? ORDER BY id DESC LIMIT ?) ORDER BY id",
@@ -4747,7 +4747,7 @@ export class RoundStalledError extends Error {
 
 /** 第 1 块人设:先写明这位联系人是谁(群里据此分清 @ 的是不是自己),再接用户设的人设原文。只随改名/改人设变,前缀缓存不受每轮影响。 */
 function identityOf(contactId: string, c: { name: string; persona: string }): string {
-  return "错误身份红对照";
+  return [`你是「${c.name}」(联系人 id ${contactId})。消息里的 @ 列的是联系人 id。`, c.persona].filter((x) => x.trim()).join("\n");
 }
 /** 保存被拒时给人看的说明:列出每位会冲突的联系人和原因。 */
 function incompatibleMessage(conflicts: readonly modelConfig.AffectedContact[]): string {
