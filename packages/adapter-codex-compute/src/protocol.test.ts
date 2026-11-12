@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -149,5 +150,63 @@ test("CXP-10 native server approval is refused instead of implicitly authorized 
     assert.deepEqual(done, { ok: true, value: { computeId: "native-thread-1", kind: "failed", reason: "unsupported native approval refused", code: null, signal: null, violations: [] } });
     const wire = readFileSync(path.join(cfg.configDir, "wire-requests.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
     assert.equal(wire.some((m) => m.id === "native-approval-1" && m.error?.code === -32601), true);
+  } finally { await client.quiesce(1000); }
+});
+
+
+test("CXP-11 main exit zero with three detached descendants is not quiescence until shared cleanup proves all exited", async () => {
+  const cfg = options("children"); const client = createCodexComputeProtocol(cfg);
+  let pids: number[] = [];
+  try {
+    assert.equal((await client.initialize()).ok, true);
+    const tree = JSON.parse(readFileSync(path.join(cfg.configDir, "fixture-children.json"), "utf8")) as { helper: number; pids: number[] };
+    pids = [tree.helper, ...tree.pids];
+    assert.equal(tree.pids.length, 3);
+    for (const pid of tree.pids) assert.equal(process.kill(pid, 0), true);
+    const quiet = await client.quiesce(1500);
+    assert.equal(quiet.ok, true);
+    assert.equal(quiet.ok && quiet.killed >= 3, true);
+    for (const pid of tree.pids) {
+      let stat = "";
+      try { stat = execFileSync("ps", ["-p", String(pid), "-o", "stat="], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim(); }
+      catch (e) { if ((e as { status?: unknown }).status !== 1) throw e; }
+      assert.equal(stat === "" || stat.startsWith("Z"), true);
+    }
+  } finally {
+    await client.quiesce(1000);
+    for (const pid of pids) { try { process.kill(pid, "SIGKILL"); } catch { /* owned fixture already exited */ } }
+  }
+});
+
+test("CXP-12 foreign response IDs and early or duplicate foreign turn notifications cannot forge completion", async () => {
+  const client = createCodexComputeProtocol(options("early"));
+  const foreign = createCodexComputeProtocol(options("foreign-rpc"));
+  try {
+    assert.equal((await foreign.initialize()).ok, true);
+    assert.equal((await client.initialize()).ok, true);
+    assert.equal((await client.startThread({ model: "probe-A", effort: "low" })).ok, true);
+    assert.equal((await client.startTurn("native-thread-1", "early", { model: "probe-A", effort: "low" })).ok, true);
+    const done = await client.settled("native-thread-1", "native-turn-1");
+    assert.deepEqual(done, { ok: true, value: { computeId: "native-thread-1", kind: "completed", result: "reply-native-turn-1" } });
+    const wrong = await client.settled("native-thread-1", "foreign-turn");
+    assert.equal(wrong.ok, false);
+    assert.equal((await client.quiesce(1000)).ok, true);
+    const observed = [];
+    for await (const event of client.events()) observed.push(event.kind);
+    assert.deepEqual(observed, ["started", "completed"]);
+  } finally { await client.quiesce(1000); await foreign.quiesce(1000); }
+});
+
+test("CXP-13 interrupt acknowledgement alone never becomes an interrupted completion or quiescence claim", async () => {
+  const client = createCodexComputeProtocol(options("ack-only"));
+  try {
+    assert.equal((await client.initialize()).ok, true);
+    assert.equal((await client.startThread({ model: "probe-A", effort: "low" })).ok, true);
+    assert.equal((await client.startTurn("native-thread-1", "hold", { model: "probe-A", effort: "low" })).ok, true);
+    const reply = await client.interrupt("native-thread-1", "native-turn-1");
+    assert.deepEqual(reply, { ok: false, reason: "native interrupt not confirmed" });
+    assert.equal((await client.quiesce(1000)).ok, true);
+    const terminal = await client.settled("native-thread-1", "native-turn-1");
+    assert.equal(terminal.ok && terminal.value.kind, "failed");
   } finally { await client.quiesce(1000); }
 });
