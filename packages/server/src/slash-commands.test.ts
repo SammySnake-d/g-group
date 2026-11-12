@@ -92,13 +92,13 @@ test("P7 待确认:生产任务交付列入摘要,仍保持待确认状态", asy
 });
 
 test("P7 待回答:授权和提问照实列出,摘要不能代答", async () => {
-  const s = setup(); await install(s,ketchupPath); const c=s.host.createContact({name:"小克"}); const g=s.host.createGroup("群",[{kind:"contact",id:c.id}]);
+  const compute = scriptedCompute(); const s = setup({compute:()=>compute.adapter}); await install(s,ketchupPath); const c=s.host.createContact({name:"小克"}); const g=s.host.createGroup("群",[{kind:"contact",id:c.id}]);
   s.host.updateRoom(g.id,{rules:"改代码前先问我"});
   s.host.send({roomId:g.id,clientActionId:"ask",text:"帮我改 app.ts",mentions:[{id:c.id,source:"manual"}]});await settle(s.host);
   const cards=s.host.listMessages(g.id,{}).messages.filter(m=>m.card?.kind==="question" && m.card.state==="open"); assert.equal(cards.length,1);
   const before=state(s.host); const r=await s.svc.handle("messages.send",send(g.id,"question","ketchup"));
   assert.ok(view(r).text.includes(`等你授权:「${cards[0]!.card!.title}」(${cards[0]!.card!.taskId})#${cards[0]!.seq}`));
-  assert.deepEqual(state(s.host),before);
+  assert.deepEqual(state(s.host),before); compute.close();
 });
 
 test("P7 重放:同一 action 并发只执行一次,改参数拒绝,宿主重启仍返回原消息",async()=>{
