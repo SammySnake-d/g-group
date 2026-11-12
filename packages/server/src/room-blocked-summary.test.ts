@@ -51,9 +51,10 @@ test("阻塞摘要折为一行并限制为合同允许的长度", () => {
 
 test("rooms.get 返回真实阻塞原因且读取不改变任务与已读游标", async () => {
   const s = await blocked();
+  const svc = createService(s.host);
   try {
     const before = [s.host.taskViewById(s.task.id).stateVer, s.host.readSeq(s.dm.id, { kind: "user", id: s.host.userId })];
-    const got = await s.svc.handle("rooms.get", { roomId: s.dm.id });
+    const got = await svc.handle("rooms.get", { roomId: s.dm.id });
     assert.equal(got.ok && (got.value as RoomView).blockedSummary, "等待你：请给中性验证码");
     assert.deepEqual([s.host.taskViewById(s.task.id).stateVer, s.host.readSeq(s.dm.id, { kind: "user", id: s.host.userId })], before);
   } finally { s.compute.close(); }
@@ -61,13 +62,14 @@ test("rooms.get 返回真实阻塞原因且读取不改变任务与已读游标"
 
 test("回答生效后阻塞摘要消失并经 room.updated 推送", async () => {
   const s = await blocked();
+  const svc = createService(s.host);
   try {
     const updates: RoomView[] = [];
-    const unsubscribe = s.svc.subscribe((event) => { if (event.type === "room.updated" && event.room.id === s.dm.id) updates.push(event.room); });
-    const answered = await s.svc.handle("tasks.answer", { taskId: s.task.id, qId: s.task.pendingQuestion!.qId, clientActionId: "answer-once", answer: "NEUTRAL_FIXTURE" });
+    const unsubscribe = svc.subscribe((event) => { if (event.type === "room.updated" && event.room.id === s.dm.id) updates.push(event.room); });
+    const answered = await svc.handle("tasks.answer", { taskId: s.task.id, qId: s.task.pendingQuestion!.qId, clientActionId: "answer-once", answer: "NEUTRAL_FIXTURE" });
     assert.ok(answered.ok);
     await settle(s.host, s.compute);
-    const got = await s.svc.handle("rooms.get", { roomId: s.dm.id });
+    const got = await svc.handle("rooms.get", { roomId: s.dm.id });
     assert.equal(got.ok && (got.value as RoomView).blockedSummary, null);
     assert.equal(updates.at(-1)?.blockedSummary, null);
     unsubscribe();
@@ -76,12 +78,13 @@ test("回答生效后阻塞摘要消失并经 room.updated 推送", async () => 
 
 test("其他会话没有本会话的阻塞摘要", async () => {
   const s = await blocked();
+  const svc = createService(s.host);
   try {
     const other = s.host.createGroup("另一个群", []);
     // 两个会话可以有同号消息；不能靠 seq 碰巧不重合代替会话作用域校验。
     const last = s.host.lastSeq(s.dm.id);
     for (let i = 0; i < last; i++) s.host.send({ roomId: other.id, clientActionId: `other-${i}`, text: "另一个会话的中性消息" });
-    const got = await s.svc.handle("rooms.get", { roomId: other.id });
+    const got = await svc.handle("rooms.get", { roomId: other.id });
     assert.equal(got.ok && (got.value as RoomView).blockedSummary, null);
   } finally { s.compute.close(); }
 });
