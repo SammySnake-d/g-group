@@ -1,0 +1,21 @@
+packages/server/proof/tests-search-gateway.txt
+  s_18ecd6dafbe9bc::t_dea23fdd213c84 1-10
+packages/server/proof/tests-search-real.txt
+  s_18ecd6dafbe9bc::t_7035cc9aba8d29 1-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e9d9d7923f4493f39de5a42357f076629170d7d9",
+  "prompts": {},
+  "sessions": {
+    "s_18ecd6dafbe9bc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad0317667723754dc",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
