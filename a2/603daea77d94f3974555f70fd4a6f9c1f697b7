@@ -1,0 +1,53 @@
+packages/server/proof/task-timeline-mutations-plan.json
+  s_9d7fa6e9d65b83::t_65813a09330d97 4,291-321,323-329
+packages/server/proof/task-timeline-mutations.py
+  s_9d7fa6e9d65b83::t_65813a09330d97 14
+docs/proof/task-timeline-v2/README.md
+  s_9d7fa6e9d65b83::t_6fcbf63b71d0f2 1-33
+docs/proof/task-timeline-v2/candidate-creation-executor-error-v1.json
+  s_9d7fa6e9d65b83::t_8d20e8e0bb8941 1-18
+docs/proof/task-timeline-v2/lint-v2-result.json
+  s_9d7fa6e9d65b83::t_8fec4b2a357f3d 1-11
+docs/proof/task-timeline-v2/mutation-plan-anchor-verification.json
+  s_9d7fa6e9d65b83::t_1e7dc510d60aca 1-14
+docs/proof/task-timeline-v2/product-only.patch
+  s_9d7fa6e9d65b83::t_2eea3d0f735557 1-24
+docs/proof/task-timeline-v2/readonly-boundary-review.json
+  s_9d7fa6e9d65b83::t_1a87955610886c 1-285
+docs/proof/task-timeline-v2/test-baseline.json
+  s_9d7fa6e9d65b83::t_0cbcbe46d9ba4b 1-7
+docs/proof/task-timeline-v2/thirteen-empty-stream-red-result.json
+  s_9d7fa6e9d65b83::t_8ba34e2cf6eae1 1-81
+docs/proof/task-timeline-v2/thirteen-empty-stream-red.tap
+  s_9d7fa6e9d65b83::t_4b7119090739b3 1-313
+docs/proof/task-timeline-v2/thirteen-v2-green-result.json
+  s_9d7fa6e9d65b83::t_b856d1502d179c 1-13
+docs/proof/task-timeline-v2/thirteen-v2-green.tap
+  s_9d7fa6e9d65b83::t_1a5d05d664e116 1-88
+docs/proof/task-timeline-v2/two-regressions-v1-red.tap
+  s_9d7fa6e9d65b83::t_6e19e451fef188 1-73
+docs/proof/task-timeline-v2/two-regressions-v2-green-result.json
+  s_9d7fa6e9d65b83::t_649d76f3999cb7 1-12
+docs/proof/task-timeline-v2/two-regressions-v2-green.tap
+  s_9d7fa6e9d65b83::t_f612674614cf63 1-22
+docs/proof/task-timeline-v2/typecheck-v2-result.json
+  s_9d7fa6e9d65b83::t_221332dcd05c59 1-11
+receipts/feat-task-timeline.json
+  s_9d7fa6e9d65b83::t_1621775faa03b5 7,21,23,26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a2603daea77d94f3974555f70fd4a6f9c1f697b7",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
