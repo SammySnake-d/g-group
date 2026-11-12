@@ -5,6 +5,7 @@
 // 匹配用 LIKE(两字中文词也能搜到),% _ \ 按字面转义;多个词按空白切分,全部命中才算(正文或附件名)。
 import { loadLog } from "@g-group/adapter-sqlite";
 import { project } from "@g-group/domain";
+import { notHiddenSql } from "./chat-admin.ts";
 import { type Db, HostError, all, one, run, tx } from "./db.ts";
 
 /** 索引格式版本:改了行结构或填法就加一,启动时发现不符会全量重建。 */
@@ -200,8 +201,9 @@ export function searchMessages(db: Db, userId: string, q: SearchQuery, nameOf: (
     if (!one(db, "SELECT 1 FROM gg_rooms WHERE id = ?", q.roomId)) throw new HostError("not_found", `没有会话 ${q.roomId}`);
     if (!one(db, "SELECT 1 FROM gg_members WHERE room_id = ? AND kind = 'user' AND member_id = ?", q.roomId, userId)) throw new HostError("forbidden", "你不在这个会话里");
   }
-  const where: string[] = [];
-  const params: (string | number | null)[] = [userId];
+  // 用户自己这一端删除/清空的消息不再搜到(U23);只在查询时按隐藏记录排除,联系人与索引真源不受影响
+  const where: string[] = [notHiddenSql("s")];
+  const params: (string | number | null)[] = [userId, userId];
   if (q.roomId !== undefined) {
     where.push("s.room_id = ?");
     params.push(q.roomId);
