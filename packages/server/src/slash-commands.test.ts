@@ -142,6 +142,12 @@ test("P7 参数和权限:非法范围不落消息,未声明读权限的插件拿
   await install(s,fixture(s,"no-read","no-read",'return {text:JSON.stringify(req.snapshot)};',false),[]);
   const r=await s.svc.handle("messages.send",send(g.id,"noread","no-read"));assert.equal(view(r).text,"null");
   assert.equal(s.host.listMessages(g.id,{}).messages.length,1);
+  for(const [i,args] of [null, [], "not-an-object", 42].entries()) {
+    const bad=await s.svc.handle("messages.send",{...send(g.id,`bad-args-${i}`,"ketchup"),command:{name:"ketchup",args}});
+    assert.equal(!bad.ok && bad.error.code,"invalid_params");
+  }
+  assert.equal(s.host.listMessages(g.id,{}).messages.length,1);
+  assert.equal(all(s.host.db,"SELECT * FROM gg_plugin_commands").length,1);
 });
 
 test("P7 失败:插件报错不落假成功消息,同 action 不盲目重跑,新 action 可再试",async()=>{

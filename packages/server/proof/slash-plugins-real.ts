@@ -9,9 +9,10 @@ import type { MessageView } from "@g-group/api-contract";
 import { Host } from "../src/host.ts";
 import { createService } from "../src/service.ts";
 import { all } from "../src/db.ts";
+import { scriptedMind } from "../src/fakes.ts";
 const root = mkdtempSync(path.join(os.tmpdir(), "gg-p7-live-"));
 const file = path.join(root,"gg.db");
-let host = new Host({file,dataDir:path.join(root,"data")});
+let host = new Host({file,dataDir:path.join(root,"data"),mind:()=>scriptedMind()});
 try {
   let svc=createService(host); const room=host.createGroup("插件摘要实跑",[]);
   const installed=await svc.handle("plugins.install",{clientActionId:"install",source:{kind:"local-path",path:fileURLToPath(new URL("../plugins/ketchup",import.meta.url))},grantedPermissions:["chat:read"]});assert.ok(installed.ok);
@@ -23,7 +24,7 @@ try {
   assert.equal(m.sender.kind,"system");assert.ok(m.text.includes("#2 后端命令插件现在可以执行"));assert.ok(!m.text.includes("前端闭环另线跟进"));
   assert.equal(JSON.stringify({read:all(host.db,"SELECT * FROM gg_read"),effects:all(host.db,"SELECT * FROM gg_effects"),cursor:all(host.db,"SELECT * FROM gg_cursor")}),before);
   console.log(m.text);console.log("只读状态比较: unchanged");console.log("命令输出数:",host.listMessages(room.id,{}).messages.filter(x=>x.sender.kind==="system").length);
-  await host.close();host=new Host({file,dataDir:path.join(root,"data")});svc=createService(host);
+  await host.close();host=new Host({file,dataDir:path.join(root,"data"),mind:()=>scriptedMind()});svc=createService(host);
   const replay=await svc.handle("messages.send",params);assert.ok(replay.ok);assert.equal((replay.value as MessageView).seq,m.seq);console.log("重启重放: same seq",m.seq);
 } finally {await host.close();rmSync(root,{recursive:true,force:true});}
 console.log("PASS:真实插件安装、隔离RPC、生产服务、SQLite持久重放；无需模型调用。");

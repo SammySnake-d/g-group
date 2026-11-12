@@ -15,7 +15,7 @@ const M = [
  ["M04 隐藏原文进入快照", [[S, 'messages: unread.slice(-200).map(m =>', 'messages: host.projected(roomId).map(m =>']]],
  ["M05 同action不比参数", [[S, 'if (prior.fingerprint !== fingerprint)', 'if (false && prior.fingerprint !== fingerprint)']]],
  ["M06 停用命令当用户消息", [[S, 'if (!known.enabled) throw new HostError("conflict", `插件 ${known.pluginId} 已停用`);', 'if (!known.enabled) return this.host.send(input);']]],
- ["M07 无权限也给快照", [[S, 'known.canRead ? commandSnapshot(this.host, input.roomId, command.args.from) : null', 'commandSnapshot(this.host, input.roomId, command.args.from)']]],
+ ["M07 无权限也给快照", [[S, 'known.canRead ? commandSnapshot(this.host, input.roomId, args.from) : null', 'commandSnapshot(this.host, input.roomId, args.from)']]],
  ["M08 内置冲突不校验", [[S, 'BUILTIN.has(c.name) || seen.has(c.name)', 'seen.has(c.name)']]],
  ["M09 插件之间命令可重名", [[S, 'existing.some(e => e.name === c.name && e.pluginId !== pluginId)', 'false']]],
  ["M10 不保留停用名称", [[P, 'commands(includeDisabled = false): SlashCommand[] {', 'commands(includeDisabled = false): SlashCommand[] { includeDisabled = false;']]],
