@@ -1,0 +1,34 @@
+{
+  "slice": "D09.2④ 会话列表当前人工阻塞的一行摘要：RoomView.blockedSummary，真实 Host/SQLite/service 投影；不包含前端或全部待确认对象",
+  "acceptance": [
+    {
+      "id": "AC-27",
+      "status": "通过",
+      "evidence": "docs/proof/room-pending-summary/README.md"
+    },
+    {
+      "id": "AC-50",
+      "status": "未测",
+      "reason": "本片仅补后端 RoomView 当前有效 T4b 人工问题的一行摘要；前端橙点/渲染、完整观察入口走查，以及 T8a/R0 待确认摘要不在本片，不能据此宣称 D09.2 或 AC-50 产品全量通过"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "model": "gpt-6.1-sol"
+  },
+  "review": null,
+  "red": {
+    "commit": "274e3be11e6b9d3c92c7ffc7898f601aca1e0c42"
+  },
+  "unverifiable": "AC-50：确定性 scriptedMind/scriptedCompute 驱动真实 Host、SQLite、service API 和事件；没有连接真实模型，不包含浏览器/桌面 UI 验收。重启沿用现宿主回收失联 Compute 为 T11_Failed 的语义，旧待答摘要清空。仅当前有效 T4b，不把所有待确认状态都称为已覆盖。",
+  "waiver": null,
+  "review_status": "待 Mira Bot 安排 hy4 + Claude；作者不自审不豁免",
+  "provenance": {
+    "inherited_mirasim_session": "codex:534f3614-21cd-43eb-9db6-3cd1673d2b62",
+    "inherited_native_session": "01a1cf01-3b82-7211-b7b9-c7147d5e45e7",
+    "current_native_session": "01a1cfc8-db89-7400-b3de-876bd8478982",
+    "cloud_tested_source_head": "1fc0e9197d7f4e4c98b89457a752176180d17613",
+    "note": "宿主尚未生成当前会话 turns.jsonl；不得伪造以满足旧 G-PROVENANCE。真实原生记录保留于 ~/.codex/sessions/2026/11/12。"
+  }
+}

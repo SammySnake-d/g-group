@@ -1,0 +1,110 @@
+{
+  "head": "1fc0e9197d7f4e4c98b89457a752176180d17613",
+  "control": {
+    "tests": 7,
+    "pass": 7
+  },
+  "total": 8,
+  "killed": 8,
+  "results": [
+    {
+      "name": "排序反向",
+      "target_test": "阻塞摘要按最早消息顺序选择并给出其余项数量",
+      "killed": true,
+      "exit": 1,
+      "error": null,
+      "failed": [
+        "阻塞摘要按最早消息顺序选择并给出其余项数量"
+      ],
+      "assertion": true,
+      "complete": true
+    },
+    {
+      "name": "漏其余项计数",
+      "target_test": "阻塞摘要按最早消息顺序选择并给出其余项数量",
+      "killed": true,
+      "exit": 1,
+      "error": null,
+      "failed": [
+        "阻塞摘要按最早消息顺序选择并给出其余项数量"
+      ],
+      "assertion": true,
+      "complete": true
+    },
+    {
+      "name": "空态造摘要",
+      "target_test": "没有阻塞时不给出虚构摘要",
+      "killed": true,
+      "exit": 1,
+      "error": null,
+      "failed": [
+        "没有阻塞时不给出虚构摘要",
+        "回答生效后阻塞摘要消失并经 room.updated 推送",
+        "其他会话没有本会话的阻塞摘要",
+        "重启回收后的失败任务不再显示已过期的待答摘要"
+      ],
+      "assertion": true,
+      "complete": true
+    },
+    {
+      "name": "保留换行",
+      "target_test": "阻塞摘要折为一行并限制为合同允许的长度",
+      "killed": true,
+      "exit": 1,
+      "error": null,
+      "failed": [
+        "阻塞摘要折为一行并限制为合同允许的长度"
+      ],
+      "assertion": true,
+      "complete": true
+    },
+    {
+      "name": "不截长文",
+      "target_test": "阻塞摘要折为一行并限制为合同允许的长度",
+      "killed": true,
+      "exit": 1,
+      "error": null,
+      "failed": [
+        "阻塞摘要折为一行并限制为合同允许的长度"
+      ],
+      "assertion": true,
+      "complete": true
+    },
+    {
+      "name": "未接实际原因",
+      "target_test": "rooms.get 返回真实阻塞原因且读取不改变任务与已读游标",
+      "killed": true,
+      "exit": 1,
+      "error": null,
+      "failed": [
+        "rooms.get 返回真实阻塞原因且读取不改变任务与已读游标"
+      ],
+      "assertion": true,
+      "complete": true
+    },
+    {
+      "name": "删除会话范围",
+      "target_test": "其他会话没有本会话的阻塞摘要",
+      "killed": true,
+      "exit": 1,
+      "error": null,
+      "failed": [
+        "其他会话没有本会话的阻塞摘要"
+      ],
+      "assertion": true,
+      "complete": true
+    },
+    {
+      "name": "未接房间输出",
+      "target_test": "rooms.get 返回真实阻塞原因且读取不改变任务与已读游标",
+      "killed": true,
+      "exit": 1,
+      "error": null,
+      "failed": [
+        "rooms.get 返回真实阻塞原因且读取不改变任务与已读游标"
+      ],
+      "assertion": true,
+      "complete": true
+    }
+  ]
+}

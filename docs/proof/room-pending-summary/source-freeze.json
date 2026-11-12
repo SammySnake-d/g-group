@@ -1,0 +1,13 @@
+{
+  "head": "1fc0e9197d7f4e4c98b89457a752176180d17613",
+  "red": "274e3be11e6b9d3c92c7ffc7898f601aca1e0c42",
+  "candidate": "/private/tmp/gg-req-room-summary-resume-20261112",
+  "change": "G-TAUTO: instantiate actual createService(s.host) explicitly in API tests; same production entry, assertions unchanged",
+  "source_sha256": {
+    "packages/api-contract/src/entities.ts": "311f35deed3d6446b514ec6830cf24416b388325124ec87d9166e9d579033350",
+    "packages/server/src/host.ts": "165cfb569b0d07431998abd11087bc6f5b18f795c2ddef6c7e5065042d102bb2",
+    "packages/server/src/room-blocked-summary.ts": "28d95f7f1d93fbb033945b91a60eac495b56b9c3d057339e4ff1f2328c6d7166",
+    "packages/server/src/room-blocked-summary.test.ts": "991ca30798aa36c73af559faddcf202f87a5883c07c2851c79c9e251203475a7",
+    "packages/server/proof/room-pending-summary-mutations.mjs": "3d748cb597136892780f783d781b15d8779d7e90ef495b57138e2074455d58dd"
+  }
+}
