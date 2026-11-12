@@ -7,19 +7,8 @@ import type { AppState } from '@/store/state'
 import { live } from './live'
 
 export const UNWIRED = {
-  recall: '撤回消息',
-  editMsg: '编辑消息',
-  react: '表情回应',
-  rewind: '回退私聊',
   unrewind: '恢复回退',
-  deleteMsgs: '删除消息',
-  deleteMsg: '删除消息',
-  forward: '转发',
-  pinMsg: '置顶消息',
   decideVote: '拍板',
-  retag: '改挂消息',
-  clearHistory: '清空聊天记录',
-  sendAs: '代发消息',
   linkConv: '关联会话',
   unlinkConv: '取消关联',
   silence: '禁言',

@@ -164,6 +164,20 @@ export const METHODS = {
   "messages.retract": method(obj({ roomId: id(), seq: seq() }), MessageView),
   "messages.react": method(obj({ roomId: id(), seq: seq(), emoji: str({ min: 1, max: 32 }), on: bool() }), MessageView),
   "messages.receipts": method(obj({ roomId: id(), seq: seq() }), ReceiptView),
+  /**
+   * 转发(U25):把 fromRoomId 里选中的几条以你的一条消息发到 toRoomId,带这几条的快照(MessageView.forward)。
+   * 收件会话只看到这几条,不获得源会话的读取权;里面的「同意」不算你此刻的授权(AC-20),也不按它派活。clientActionId 幂等。
+   */
+  "messages.forward": method(obj({ clientActionId: id(), fromRoomId: id(), seqs: arr(seq(), { max: 100 }), toRoomId: id() }), MessageView),
+  /** 置顶 / 取消置顶一条消息(只是你找回用的导航,不当群规,D28.4);改动推 room.updated,RoomView.pinnedSeqs 为准。 */
+  "messages.pin": method(obj({ roomId: id(), seq: seq(), on: bool() }), RoomView),
+  /**
+   * 删除(U23):只在你这边看不到——messages.list、搜索、会话预览都不再给你这几条;联系人的上下文不变。
+   * hidden=false 把删掉的放回来(提示条上的「撤销」)。返回这次实际改动的条数。
+   */
+  "messages.hide": method(obj({ roomId: id(), seqs: arr(seq(), { max: 500 }), hidden: opt(bool()) }), obj({ changed: int({ min: 0 }) })),
+  /** 清空聊天记录(U23):把这个会话现有的消息全部从你这边隐去(之后的新消息照常显示);联系人的记忆、资产与上下文不受影响。 */
+  "rooms.clearHistory": method(obj({ roomId: id() }), obj({ clearedUpto: seq() })),
   // ---- 输入框草稿(AC-24、AC-37 ②:按会话持久化,切窗口与重启都不丢;不是消息,不送达任何联系人) ----
   /** 取某会话的草稿;没有时返回 draftVer = 0 的空草稿。 */
   "drafts.get": method(obj({ roomId: id() }), DraftView),
@@ -172,6 +186,11 @@ export const METHODS = {
 
   /** 上传附件(渲染进程先把文件交给 preload 拿到本地路径)。 */
   "attachments.add": method(obj({ path: str({ min: 1, max: 4096 }) }), obj({ ref: id(), name: str(), mime: str(), bytes: int({ min: 0 }) })),
+  /** 按内容上传附件(拖进来 / 选文件时渲染进程拿不到本地路径就用它):base64 正文,单个不超过 25 MB;同一内容只存一份。 */
+  "attachments.upload": method(
+    obj({ name: str({ min: 1, max: 500 }), base64: str({ min: 0, max: 35_000_000, pattern: /^[A-Za-z0-9+/]*={0,2}$/ }) }),
+    obj({ ref: id(), name: str(), mime: str(), bytes: int({ min: 0 }) }),
+  ),
 
   /** 会话里出现过的文件(附件 + 任务产出),按出现顺序;文件列表选中后用 files.read 取内容(AC-57)。 */
   "files.list": method(obj({ roomId: id() }), obj({ files: arr(FileEntry) })),

@@ -362,10 +362,12 @@ export const sources: Source[] = [
 
 /* ---------- 消息：聊天里只放“说的话”，事件只占一行 ---------- */
 export interface QuoteRef { msgId: string; from: PersonId; text: string; reply?: boolean; ext?: string }
+/** 随消息发出的附件(连上后端时来自 MessageView.attachments) */
+export interface MsgFile { ref: string; name: string; mime: string; bytes: number }
 export type Msg =
   | { k: 'date'; text: string }
   | { k: 'sys'; id: string; text: string; undo?: string; recalled?: string; rewind?: boolean }
-  | { k: 'text'; id: string; from: PersonId; text: string; answerTo?: string; edited?: boolean; at?: string; cron?: string; cronNew?: boolean; disp?: Disp; quotes?: QuoteRef[]; tag?: { task: string; state: string }; task?: string; helper?: { scope: string; card?: { kind: 'csv' | 'group' | 'send'; lines: string[]; done?: boolean } }; byHelper?: boolean; shot?: { title: string; compute: string }; card?: MsgCard; deliverables?: { ref: string; name: string; mime: string; bytes: number }[] }
+  | { k: 'text'; id: string; from: PersonId; text: string; answerTo?: string; edited?: boolean; at?: string; cron?: string; cronNew?: boolean; disp?: Disp; quotes?: QuoteRef[]; tag?: { task: string; state: string }; task?: string; helper?: { scope: string; card?: { kind: 'csv' | 'group' | 'send'; lines: string[]; done?: boolean } }; byHelper?: boolean; shot?: { title: string; compute: string }; card?: MsgCard; deliverables?: { ref: string; name: string; mime: string; bytes: number }[]; files?: MsgFile[] }
   | { k: 'compute'; id: string; from: PersonId; computeId: string }
   | { k: 'file'; id: string; from: PersonId; artifactId: string }
   | { k: 'huddle'; id: string; who: PersonId[]; items: { id: string; from: PersonId; text: string }[]; conclusion: string }
@@ -376,7 +378,7 @@ export type Msg =
   | { k: 'vote'; id: string; from: PersonId; title: string; options: string[]; votes: Record<PersonId, { opt: number; why: string }>; decided?: number }
   | { k: 'authfix'; id: string; from: PersonId; plugin: string; text: string; fixed?: boolean }
   | { k: 'summary'; id: string; from: PersonId; title: string; items: { text: string; ref?: string }[]; covers?: string[]; expired?: string }
-  | { k: 'replying'; id: string; from: PersonId; quotes: QuoteRef[]; phase: string; mins: number; steps: string[] }
+  | { k: 'replying'; id: string; from: PersonId; quotes: QuoteRef[]; phase: string; mins: number; steps: string[]; since?: number }
 
 /** 连上后端时消息上挂的卡片(提问、失败、授权…):按钮走 cards.act,点了以你的名义记一条回复。演示数据没有这一项 */
 export interface MsgCard { id: string; seq: number; kind: string; taskId: string | null; state: 'open' | 'claimed' | 'done' | 'expired'; title: string; body: string; actions: { id: string; label: string; style: 'primary' | 'default' | 'danger' }[] }

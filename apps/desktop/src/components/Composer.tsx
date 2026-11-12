@@ -10,7 +10,9 @@ import { useMention } from '@/app/composer/useMention'
 import { useSlash } from '@/app/composer/useSlash'
 import { Button } from '@/components/ui/button'
 import { artifacts, type Artifact, type Conversation, type QuoteRef } from '@/data'
-import { useApp } from '@/store'
+import { attachLive } from '@/api/wire/chat-ops'
+import { live, liveCtx } from '@/api/wire/live'
+import { useApp, useAppStore } from '@/store'
 
 /* 输入区:一个圆角输入框,里面从上到下是 引用条 → 命令提示 → 自适应高度的输入 → 工具栏(左下角「+」取外部消息,右下角发送)。
    打 / 弹出命令菜单(Telegram 式),选中后在输入框里提示该填的参数;打 @ 弹出选人。两个菜单都贴着输入框上沿,焦点一直在输入框里。 */
@@ -18,7 +20,7 @@ export function Composer({ conv, draft, setDraft, quotes, onRemoveQuote, onSend,
   conv: Conversation; draft: string; setDraft: (v: string | ((d: string) => string)) => void; quotes: QuoteRef[]
   onRemoveQuote: (q: QuoteRef) => void; onSend: (text?: string) => void; inputRef: RefObject<HTMLTextAreaElement | null>
 }) {
-  const { pushMsg, toast, editing, setEditing } = useApp((s) => ({ pushMsg: s.pushMsg, toast: s.toast, editing: s.editing, setEditing: s.setEditing }))
+  const { pushMsg, toast, editing, setEditing, isLive } = useApp((s) => ({ pushMsg: s.pushMsg, toast: s.toast, editing: s.editing, setEditing: s.setEditing, isLive: live(s) }))
   const [caret, setCaret] = useState(draft.length)
   const [focused, setFocused] = useState(false)
   const boxRef = useRef<HTMLDivElement>(null)
@@ -33,7 +35,9 @@ export function Composer({ conv, draft, setDraft, quotes, onRemoveQuote, onSend,
   useEffect(() => { setCaret(inputRef.current?.selectionStart ?? draft.length) }, [conv.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* C-US19:截图、文件、图片都真的发出去,变成一条文件消息,同时进「文件」里,写明来自这个会话 */
-  const sendFile = (name: string, kind: Artifact['kind'], meta: string) => {
+  const sendFile = (name: string, kind: Artifact['kind'], meta: string, file?: File) => {
+    /* 连上后端:按内容上传,再作为一条只有附件的消息发出;以后端回包为准 */
+    if (isLive) { if (file) void attachLive(liveCtx(useAppStore.getState, useAppStore.setState), conv.id, [file]); return }
     const id = 'up' + Math.random().toString(36).slice(2, 7)
     artifacts.push({ id, name, kind, meta, by: 'me', conv: conv.id, when: '刚刚' })
     pushMsg({ k: 'file', id: 'f' + id, from: 'me', artifactId: id }, conv.id)

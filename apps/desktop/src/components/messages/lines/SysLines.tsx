@@ -3,6 +3,8 @@ import { ChevronRight, KeyRound, Pin } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { people } from '@/data'
 import { useApp } from '@/ctx'
+import { live } from '@/api/wire/live'
+import { useAppStore } from '@/store'
 import { AvatarStack } from '@/components/Avatar'
 import { Pressable, TextLink } from '../Pressable'
 import type { MsgOf } from '../types'
@@ -16,10 +18,12 @@ export function DateLine({ text }: { text: string }) {
 
 export function SysLine({ m }: { m: MsgOf<'sys'> }) {
   const { reedit, unrewind } = useApp()
+  /* 连上后端时宿主没有「恢复回退」(恢复范围待拍板,AC-48):不放一个点了也做不成的链接 */
+  const canRestore = !useAppStore((s) => live(s))
   return (
-    <div data-msg={m.id} data-testid={m.rewind ? 'rewind-line' : undefined} className="py-1.5 text-center text-xs text-fg-3">
+    <div data-msg={m.id} data-testid={m.rewind ? 'rewind-line' : m.recalled !== undefined || /撤回了一条消息/.test(m.text) ? 'recall-line' : undefined} className="py-1.5 text-center text-xs text-fg-3">
       {m.text}
-      {m.rewind && <TextLink data-testid={`rewind-undo-${m.id}`} onClick={() => unrewind(m.id)} className="ml-1.5">恢复</TextLink>}
+      {m.rewind && canRestore && <TextLink data-testid={`rewind-undo-${m.id}`} onClick={() => unrewind(m.id)} className="ml-1.5">恢复</TextLink>}
       {m.recalled && <TextLink data-testid={`reedit-${m.id}`} onClick={() => reedit(m.recalled!)} className="ml-1.5">重新编辑</TextLink>}
     </div>
   )

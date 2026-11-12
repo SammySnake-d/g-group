@@ -4,7 +4,7 @@
 // 你是每个群的群主(U03:用户就是超级管理员);合同里没有的(管理员、关联会话、工作区、禁言)不填,界面按「没有」显示。
 import type { RoomView } from '@g-group/api-contract'
 import { people, type Conversation, type PersonId } from '@/data'
-import { loadMessages } from './messages'
+import { loadMessages, mergeReads, msgId } from './messages'
 import { actionId, clockOf, defineWiring, read, selfId, type WireCtx } from './types'
 
 /** 会话最后活动时间(合同 updatedAt),会话列表按它从新到旧排 */
@@ -24,7 +24,9 @@ export function toConversation(r: RoomView, userId: string, prev?: Conversation)
     ...(r.tempComputeSlots ? { tempCompute: { max: r.tempComputeSlots } } : {}),
     ...(leaving.length ? { leaving } : {}),
     messages: prev?.messages ?? [],
-    ...(prev?.reads ? { reads: prev.reads } : {}),
+    /* 已读位置:重启前的由 memberReads 补上,之后的由 receipt.updated 推进(只进不退);置顶消息以后端为准 */
+    ...((r.memberReads ?? prev?.reads) ? { reads: mergeReads(prev?.reads, r.memberReads, r.id, userId) } : {}),
+    ...(r.pinnedSeqs?.length ? { pins: r.pinnedSeqs.map((s) => msgId(r.id, s)) } : {}),
     /* 公告由公告接线(api/wire/notices)写,换会话元信息时原样保留 */
     ...(prev?.notices ? { notices: prev.notices, loaded: prev.loaded } : {}),
   }

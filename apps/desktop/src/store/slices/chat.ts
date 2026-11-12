@@ -1,11 +1,15 @@
 // 会话与消息切片:会话列表、当前会话、消息写入、已读、正在输入、草稿与引用、多选。
 import { people, type Conversation, type Msg, type PersonId, type QuoteRef } from '@/data'
+import { reactLive, sendAsLive } from '@/api/wire/chat-ops'
+import { scheduleDraftSave } from '@/api/wire/drafts'
 import { live, liveCtx } from '@/api/wire/live'
 import { seqOf } from '@/api/wire/messages'
 import { markReadLive, openDmLive, updateRoomLive } from '@/api/wire/rooms'
 import { broken } from '@/mut'
 import { boot, clock, later, uid } from '../boot'
 import { focusComposer, scrollToMsg } from '../dom'
+import { firstUnreadId } from '../select'
+import { rankIn } from '../reads'
 import { lens, type Slice } from '../state'
 
 type TextMsg = Extract<Msg, { k: 'text' }>
@@ -61,6 +65,19 @@ export type ChatSlice = ChatCtx & {
   say: (cid: string, from: PersonId, text: string, delay?: number, extra?: Partial<TextMsg>) => void
   /** AC-46 已读位置:只由宿主推进、只进不退 */
   advanceRead: (cid: string, who: PersonId, upto?: string) => void
+  /** 联系人「正在回复」从什么时候开始(按会话;连上后端时由 contact.activity 推进,卡里显示真实时长) */
+  replyingSince: Record<string, number>
+  /** 连上后端:某位联系人在某个会话里正在回复(roomId=null 表示不在任何会话里忙了) */
+  setReplying: (who: PersonId, roomId: string | null, activity: string) => void
+  /** 连上后端:以后端为准换掉这些消息上的表情回应 */
+  putReactions: (m: Record<string, Record<string, PersonId[]>>) => void
+  /** 连上后端:各会话「以下是新消息」锚在哪条上(打开那一刻的第一条未读;演示数据用 unreadAt 的条数) */
+  newFrom: Record<string, string | null>
+  setUnreadAt: (m: Record<string, number>) => void
+  /** 连上后端:把存着的草稿(文字 + 引用)放回输入框 */
+  restoreDraft: (cid: string, text: string, quotes: QuoteRef[]) => void
+  /** 正在回复的是哪种忙(在看 / 在想 / 在写) */
+  replyingWhat: Record<string, string>
 }
 
 export const createChatSlice: Slice<ChatSlice> = (set, get) => {
@@ -79,6 +96,9 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
     selected: new Set(),
     editing: null,
     unreadAt: {},
+    newFrom: {},
+    replyingSince: {},
+    replyingWhat: {},
 
     pushMsg: (m, cid) => {
       L.convs((cs) => cs.map((c) => (c.id === cid ? { ...c, messages: [...c.messages, m] } : c)))
@@ -94,7 +114,9 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
         const to = upto ?? ids[ids.length - 1]
         const cur = c.reads?.[who] ?? []
         const last = cur[cur.length - 1]
-        if (!to || (last && ids.indexOf(last.upto) >= ids.indexOf(to))) return c
+        /* 连上后端时按序号比:推到的位置可能是不在列表里的那条 */
+        const rank = rankIn(ids)
+        if (!to || (last && rank(last.upto) >= rank(to))) return c
         return { ...c, reads: { ...c.reads, [who]: [...cur, { upto: to, at }] } }
       }))
     },
@@ -114,7 +136,14 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
     openConv: (id) => set({ panoOpen: false, section: 'chat', active: id, stack: [] }),
     setActive: (active) => set({ active }),
     setConvs: (v) => L.convs((cs) => (typeof v === 'function' ? v(cs) : v)),
-    openFromList: (id) => { set({ active: id }); get().markRead(id); get().setSelecting(false) },
+    openFromList: (id) => {
+      /* 连上后端:锚住打开这一刻的第一条未读,画「以下是新消息」(#1240) */
+      if (live(get())) {
+        const c = get().convs.find((x) => x.id === id)
+        if (c) set((s) => ({ newFrom: { ...s.newFrom, [id]: firstUnreadId(c, c.unread ?? 0) } }))
+      }
+      set({ active: id }); get().markRead(id); get().setSelecting(false)
+    },
     openDm: (id) => {
       const dm = get().convs.find((c) => c.kind === 'dm' && c.members.includes(id))
       if (dm) { set({ section: 'chat', active: dm.id, stack: [] }); return }
@@ -138,6 +167,27 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
     setDraft: (v) => {
       const a = get().active
       L.drafts((d) => ({ ...d, [a]: typeof v === 'function' ? v(d[a] ?? '') : v }))
+      /* 连上后端:草稿按会话存到后端,重启也还在(AC-24) */
+      if (live(get())) scheduleDraftSave(liveCtx(get, set), a)
+    },
+    restoreDraft: (cid, text, quotes) => {
+      L.drafts((d) => ({ ...d, [cid]: text }))
+      L.quotes((all) => ({ ...all, [cid]: quotes }))
+    },
+    setReplying: (who, roomId, activity) => set((s) => {
+      const typing = { ...s.typing }
+      for (const [cid, p] of Object.entries(typing)) if (p === who && cid !== roomId) typing[cid] = null
+      if (!roomId) return { typing }
+      const same = s.typing[roomId] === who
+      typing[roomId] = who
+      return { typing, replyingSince: same ? s.replyingSince : { ...s.replyingSince, [roomId]: Date.now() }, replyingWhat: { ...s.replyingWhat, [roomId]: activity } }
+    }),
+    putReactions: (m) => L.reactions((r) => ({ ...r, ...m })),
+    setUnreadAt: (m) => {
+      L.unreadAt((u) => ({ ...u, ...m }))
+      /* 读进来的这一刻锚住第一条未读,之后来的新消息不把它往下推 */
+      const convs = get().convs
+      L.newFrom((f) => ({ ...f, ...Object.fromEntries(Object.entries(m).map(([id, n]) => { const c = convs.find((x) => x.id === id); return [id, c ? firstUnreadId(c, n) : null] })) }))
     },
     mention: (id) => {
       set({ section: 'chat', stack: [] })
@@ -156,6 +206,7 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
       if (cur.some((x) => x.msgId === qq.msgId && !!x.reply === !!qq.reply)) return
       const rest = cur.filter((x) => x.msgId !== qq.msgId).map((x) => (qq.reply ? { ...x, reply: false } : x))
       L.quotes((all) => ({ ...all, [active]: qq.reply ? [qq, ...rest] : [...rest, qq] }))
+      if (live(get()) && !qq.reply) scheduleDraftSave(liveCtx(get, set), active)
       if (qq.reply) {
         get().setDraft((d) => {
           let s = d
@@ -170,6 +221,7 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
       const a = get().active
       L.quotes((all) => ({ ...all, [a]: (all[a] ?? []).filter((y) => y.msgId !== x.msgId) }))
       if (x.reply && x.from !== 'me') get().setDraft((d) => d.replace('@' + people[x.from].name + ' ', ''))
+      else if (live(get())) scheduleDraftSave(liveCtx(get, set), a)
     },
     quoteExternal: (lines, app) => {
       const a = get().active
@@ -177,7 +229,7 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
       focusComposer()
     },
 
-    react: (msgId, e) => L.reactions((r) => {
+    react: (msgId, e) => live(get()) ? void reactLive(liveCtx(get, set), msgId, e) : L.reactions((r) => {
       const cur = { ...(r[msgId] ?? {}) }
       const who = cur[e] ?? []
       cur[e] = who.includes('me') ? who.filter((w) => w !== 'me') : [...who, 'me']
@@ -195,6 +247,7 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
     },
     setDisp: (msgId, d) => L.convs((cs) => cs.map((c) => ({ ...c, messages: c.messages.map((m) => (m.k === 'text' && m.id === msgId ? { ...m, disp: d } : m)) }))),
     sendAs: (cid, text) => {
+      if (live(get())) { void sendAsLive(liveCtx(get, set), cid, text); return }
       get().pushMsg({ k: 'text', id: 'me-' + uid(), from: 'me', text }, cid)
       const target = Object.values(people).find((p) => text.includes('@' + p.name))
       if (target && !target.human) get().say(cid, target.id, '收到，我看一下。', 1000)
