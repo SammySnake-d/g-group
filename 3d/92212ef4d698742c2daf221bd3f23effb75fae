@@ -1,0 +1,31 @@
+docs/proof/task-timeline-v3/README.md
+  s_9d7fa6e9d65b83::t_307cc02315c137 1-9
+docs/proof/task-timeline-v3/baseline-formal-gate-failure.json
+  s_9d7fa6e9d65b83::t_5656e19469d15f 1-15
+docs/proof/task-timeline-v3/local-narrow-results.json
+  s_9d7fa6e9d65b83::t_7bcd0573dfe4c4 1-55
+docs/proof/task-timeline-v3/same-thirteen-final-red-result.json
+  s_9d7fa6e9d65b83::t_963ce2fe469acf 1-30
+docs/proof/task-timeline-v3/same-thirteen-final-red.tap
+  s_9d7fa6e9d65b83::t_fcb9966db632f3 1-313
+docs/proof/task-timeline-v3/test-source-visibility.patch
+  s_9d7fa6e9d65b83::t_7b4e741dc93bd4 1-170
+receipts/feat-task-timeline.json
+  s_9d7fa6e9d65b83::t_badb9a4d56db1a 7,21,23,26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3d92212ef4d698742c2daf221bd3f23effb75fae",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
