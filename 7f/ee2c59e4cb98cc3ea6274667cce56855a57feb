@@ -1,0 +1,23 @@
+packages/api-contract/src/api.ts
+  s_9d7fa6e9d65b83::t_953d282aeb69cd 55-57,74,98,118-119
+packages/server/src/service.ts
+  s_9d7fa6e9d65b83::t_953d282aeb69cd 54
+packages/server/src/host.ts
+  s_9d7fa6e9d65b83::t_953d282aeb69cd 12,565-601,604,606-607,816-821,824-825,827-828
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7fee2c59e4cb98cc3ea6274667cce56855a57feb",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

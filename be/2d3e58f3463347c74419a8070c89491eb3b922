@@ -1,0 +1,23 @@
+packages/server/proof/retract-disclosure-mutations.mjs
+  s_9d7fa6e9d65b83::t_d763b3e53d32b5 1-180
+packages/server/src/retract-disclosure.test.ts
+  s_9d7fa6e9d65b83::t_c7ab59e291e7e5 7,94-151
+receipts/feat-retract-side-effect-disclosure.json
+  s_9d7fa6e9d65b83::t_39d5b51ebd6210 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "be2d3e58f3463347c74419a8070c89491eb3b922",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
