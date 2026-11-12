@@ -26,7 +26,8 @@ import { checkBrief, checkSnapshot } from "./brief.ts";
 import { SYSTEM_PROMPT, allowedTools, cliEnv, firstPrompt, toolOverreach } from "./cli.ts";
 import { type AcceptedReport, preInitFrame, streamParser } from "./events.ts";
 import { freezeDeep, isPlainRecord, plainData } from "./plain.ts";
-import { IS_WINDOWS, signalGroup } from "./procgroup.ts";
+import { createProcessCleanup, type ProcessCleanup } from "@g-group/process-tools";
+import { IS_WINDOWS } from "./procgroup.ts";
 import { checkTurnModel, planTurn, type SessionModel, switchRefusalKind } from "./turn-model.ts";
 import type { AdapterOptions, Brief, ComputeAdapter, ComputeEvent, HandoffSnapshot, Manifest, Refusal, RejectedReport, TurnModel } from "./types.ts";
 
@@ -160,6 +161,7 @@ interface Proc {
   /** 这个进程收到过第一个 init */
   sawInit: boolean;
   reaping: boolean;
+  readonly cleanup: ProcessCleanup;
   /** 宿主要它退出(换模型兜底重启、空闲回收、停止):退出不算这一轮失败 */
   expectedExit: boolean;
   stderr: string;
@@ -186,6 +188,7 @@ interface State {
   readonly cwd: string;
   readonly sessionId: string;
   proc: Proc | null;
+  readonly cleanups: ProcessCleanup[];
   /** harness 回报的会话当前实际模型;null 表示不明 */
   model: string | null;
   effort: string | undefined;
@@ -265,13 +268,7 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
   function reap(proc: Proc) {
     if (proc.reaping) return;
     proc.reaping = true;
-    const p = proc.child;
-    if (p.exitCode !== null || p.signalCode !== null) return;
-    try { p.kill("SIGTERM"); } catch { /* 已退出 */ }
-    const ms = resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS);
-    const timer = setTimeout(() => signalGroup(proc.pid, "SIGKILL"), ms);
-    timer.unref();
-    p.once("exit", () => clearTimeout(timer));
+    proc.cleanup.requestStop(resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS));
   }
 
   /** 宿主要求进程退出(兜底重启、空闲回收):先关 stdin 让 CLI 自己收尾,3 秒没退再按停止语义回收;等主进程退出 */
@@ -279,6 +276,7 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
     const proc = st.proc;
     if (!proc) return;
     proc.expectedExit = true;
+    proc.cleanup.capture();
     try { proc.child.stdin?.end(); } catch { /* 已关 */ }
     const t = setTimeout(() => reap(proc), 3000);
     await proc.exited;
@@ -428,8 +426,9 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
     let markExited: () => void = () => {};
     const exited = new Promise<void>((r) => { markExited = r; });
     const parse = streamParser();
-    const proc: Proc = { child, pid: child.pid, exited, isExited: false, resumed: resume, started: false, sawInit: false, reaping: false, expectedExit: false, stderr: "", parse };
+    const proc: Proc = { child, pid: child.pid, exited, isExited: false, resumed: resume, started: false, sawInit: false, reaping: false, cleanup: createProcessCleanup(child), expectedExit: false, stderr: "", parse };
     st.proc = proc;
+    st.cleanups.push(proc.cleanup);
     // 启动参数里的模型就是会话当前模型,直到 init 或 set_model 回包更正
     if (model) st.model = model;
     if (effort) st.effort = effort;
@@ -557,7 +556,7 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
       const id = `ccr-${crypto.randomUUID()}`;
       const { prompt, sections } = firstPrompt(b.brief, o.handoff);
       const st: State = {
-        id, brief: b.brief, cwd: o.cwd ?? process.cwd(), sessionId: crypto.randomUUID(), proc: null, model: null, effort: undefined, turn: null,
+        id, brief: b.brief, cwd: o.cwd ?? process.cwd(), sessionId: crypto.randomUUID(), proc: null, cleanups: [], model: null, effort: undefined, turn: null,
         stopped: false, resuming: false, controls: new Map(), idleTimer: null,
         constraintVer: o.handoff?.constraintVer, openQuestions: o.handoff?.openQuestions ?? [], doneSideEffects: [...(o.handoff?.doneSideEffects ?? [])], rejected: [], unresolved: [],
       };
@@ -640,6 +639,20 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
     rejectedReports(computeId: string) {
       if (typeof computeId !== "string") return Object.freeze([]);
       return Object.freeze([...(computes.get(computeId)?.rejected ?? [])]);
+    },
+
+    async quiesce(computeId: string, timeoutMs = 5000) {
+      if (!Number.isFinite(timeoutMs) || timeoutMs < 0) return { ok: false as const, reason: "timeoutMs 必须是非负有限数", remaining: [] };
+      const st = typeof computeId === "string" ? computes.get(computeId) : undefined;
+      if (!st) return { ok: false as const, reason: "未知的 Compute", remaining: [] };
+      if (!st.turn?.finished || st.turn.blocked && !st.stopped) return { ok: false as const, reason: "这一轮还没结束(运行中或停在受阻),先停止", remaining: [] };
+      let killed = 0;
+      for (const cleanup of st.cleanups) {
+        const result = await cleanup.quiesce(timeoutMs, resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS) + timeoutMs);
+        if (!result.ok) return result;
+        killed += result.killed;
+      }
+      return { ok: true as const, killed };
     },
 
     snapshot(computeId: string) {

@@ -1,0 +1,48 @@
+{
+  "slice": "Q08 middle slice: shared I/O process stop and actual all-exit confirmation; no Codex/Host/session rewrite",
+  "acceptance": [
+    {
+      "id": "AC-23",
+      "status": "未测",
+      "reason": "Real thin process and negative controls pass, but whole-product/cloud and complete unchanged CC baseline/candidate suites are pending.",
+      "evidence": "docs/proof/shared-process-cleanup/README.md"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:01a1d043-1042-7e61-9981-968868c25de1",
+    "model": "gpt-6.1-sol"
+  },
+  "contributingSessions": [
+    "codex:01a1cfc8-db89-7400-b3de-876bd8478982",
+    "codex:01a1d043-1042-7e61-9981-968868c25de1"
+  ],
+  "red": {
+    "commit": "3091ca6d29cdfdb36150cf7dea3c2e3b44a95fd9"
+  },
+  "unverifiable": "AC-23 not accepted by thin proof. Full original CC baseline/candidate and cloud full/type/lint, independent review, provenance and product integration remain pending. Escaped system-managed/double-fork processes remain outside discoverable scope. Windows full-tree confirmation fails closed.",
+  "waiver": null,
+  "review": null,
+  "gateChangeReviewFocus": "Proposed process layer; add only adapter->process. Five direct controls and four real CLI selftests preserve adapter->adapter and pure-layer prohibitions; trusted-main activation requires independent review.",
+  "verification": {
+    "originalCCTestFilesByteUnchanged": 7,
+    "movedProcgroupByteIdentical": true,
+    "primaryNamedRed": 1,
+    "sharedCleanupGreen": 5,
+    "helperControlsGreen": 2,
+    "directLayerControlsGreen": 5,
+    "realCliLayerSelftestsGreen": 4,
+    "legacyAndResidentBridgeGreen": 2,
+    "selectedOriginalResidentTestsGreen": 4,
+    "namedMutantsKilled": 8,
+    "namedMutantsSurvived": 0,
+    "localTypecheckExit": 0,
+    "localLintExit": 0,
+    "cloud": "not started; root owns queue",
+    "retainedExecutorFailures": [
+      "lockf acquisition exit 75 twice",
+      "initial typecheck exit 2: incomplete external dependency symlinks; corrected exit 0"
+    ]
+  },
+  "authorIdentitySource": "CODEX_THREAD_ID and CODEX_SESSION_ID observed in this worker environment; model label inherited from the frozen first-slice receipt, no new provenance approval claimed."
+}
