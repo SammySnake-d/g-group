@@ -98,6 +98,6 @@ for (const m of mutations) {
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 for (const [file, hash] of Object.entries(seal)) assert.equal(sha(fs.readFileSync(path.join(root, file))), hash, `source unchanged: ${file}`);
-const result = { base, node: process.version, complete: true, originalCCTestFilesUnchanged: originalTests.length, portTypeDeclarationsIdentical: true, pureDataByteIdentical: true, cliAndLifecycleFilesUnchanged: true, processEffectsUnmoved: true, owningKernelRedCommit: "f62f661887222487cc3205d072a5adbb13bba0ac", legacyAliasRedHistory: "37c697d52aabf3882e6797154c09fb09a1aff025", legacyProofAssertionsPreserved: true, positiveTests: 1, killed: results.length, survived: 0, parserPositiveAndNegative: true, sourceBeforeAndAfter: seal, mutations: results };
+const result = { base, node: process.version, complete: true, originalCCTestFilesUnchanged: originalTests.length, portTypeDeclarationsIdentical: true, pureDataByteIdentical: true, cliAndLifecycleFilesUnchanged: true, processEffectsUnmoved: true, owningKernelRedCommit: "ec4610e1ea58fe785148775f1b46cd5cfe87e15a", legacyAliasRedHistory: "37c697d52aabf3882e6797154c09fb09a1aff025", legacyProofAssertionsPreserved: true, positiveTests: 1, killed: results.length, survived: 0, parserPositiveAndNegative: true, sourceBeforeAndAfter: seal, mutations: results };
 fs.writeFileSync(path.join(out, "result.json"), JSON.stringify(result, null, 2) + "\n");
 console.log(JSON.stringify(result, null, 2));

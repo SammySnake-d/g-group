@@ -30,7 +30,7 @@
     "codex:01a1d043-1042-7e61-9981-968868c25de1"
   ],
   "red": {
-    "commit": "f62f661887222487cc3205d072a5adbb13bba0ac"
+    "commit": "ec4610e1ea58fe785148775f1b46cd5cfe87e15a"
   },
   "unverifiable": "AC-07/AC-29/AC-33 are not accepted by structural extraction or a narrow green witness. All seven original CC tests must run unchanged on baseline/candidate and the full cloud suite must pass; real Codex isolation/model/lifecycle proof belongs to stack 2. OS process effects are deliberately not moved into kernel.",
   "waiver": null,
@@ -56,7 +56,11 @@
     "localLintExit": 0,
     "owningKernelNamedRed": 1,
     "owningKernelNamedGreen": 1,
-    "legacyAliasProcessProofGreen": 1
+    "legacyAliasProcessProofGreen": 1,
+    "retainedMechanicalFailures": [
+      "cf6cb4a: G-STUB workspace links resolved to unmutated original source; owning relative imports fix execution identity without gate changes",
+      "87bb063: G-TAUTO did not recognize dynamic-import result lineage; retained all owning validator assertions and added direct real kernel-root negative control, proving its different undefined-field behavior"
+    ]
   },
   "processEffects": {
     "path": "packages/adapter-cc-compute/src/procgroup.ts",
