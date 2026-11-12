@@ -43,3 +43,5 @@ node packages/server/proof/coverage-invariants-replying-gap.ts # 当前预期 ex
 box3，Node v24.21.0；独占 RAM 根与 `flock -w 3600 /workspace/.heavy.lock` 串行执行。源码、runner、配置冻结；不清理共享文件。仓库内 `cloud-proof.tar.gz`、`result.json`、`mutations.json` 与 `source-freeze.json` 在实际运行完成后保留原始结果。
 
 首轮已经取得四红四绿与 8/8 变异，但类型检查暴露测试 fixture 类型问题（元组推断为可能 undefined，重开 Host 缺少必需 mind）。不把该轮报作全部通过：仅显式 fixture 类型与重启替身，断言没有弱化，再做新红提交和完整云验证。旧轮完整结果另行保留。
+
+收据追踪说明：固定基线门禁的 spec ID 提取器不识别主文档现有 `AC-P1-02`，首次 G-TRACE 如实失败。未修改门禁/需求或添加豁免；该子项保留在 `additionalCoverageNotes`，其 T4b 原题/原 Compute 路径同时映射到可识别的 AC-44，复合验收仍未测。

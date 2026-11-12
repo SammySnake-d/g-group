@@ -18,12 +18,6 @@
       "status": "未测",
       "reason": "T4b无关插话及原qId/原Compute恢复子项已覆盖；真实验证码截图与模型路径未测",
       "evidence": "docs/proof/coverage-invariants/README.md"
-    },
-    {
-      "id": "AC-P1-02",
-      "status": "未测",
-      "reason": "无关插话不会冲掉原问题/卡/版本且可原路回答已覆盖；依赖前提实际被推翻的完整选项卡族不在此专片",
-      "evidence": "docs/proof/coverage-invariants/README.md"
     }
   ],
   "author": {
@@ -52,6 +46,14 @@
       "id": "tasks.progress.afterAt",
       "status": "未测",
       "reason": "基线service忽略该参数；本专片不改该另一个缺口"
+    }
+  ],
+  "additionalCoverageNotes": [
+    {
+      "id": "AC-P1-02",
+      "status": "未测",
+      "reason": "无关插话不会冲掉原问题/卡/版本且可原路回答已覆盖；依赖前提实际被推翻的完整选项卡族不在此专片",
+      "evidence": "docs/proof/coverage-invariants/README.md"
     }
   ]
 }
