@@ -1,17 +1,29 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import test from "node:test";
+import test, { after } from "node:test";
 import { createCodexComputeProtocol } from "./protocol.ts";
+// Independent OS observation: macOS seatbelt may deny setuid ps; pgrep is still a real pid listing.
+function live(pid: number): boolean {
+  try {
+    const rows = execFileSync("ps", ["-A", "-o", "pid=,stat="], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    return rows.split("\n").some((line) => { const p = line.trim().split(/\s+/); return Number(p[0]) === pid && !p[1]?.startsWith("Z"); });
+  } catch {
+    const listed = spawnSync("pgrep", ["-fl", "."], { encoding: "utf8" });
+    if (listed.status === 1) return false;
+    if (listed.error || listed.status !== 0) throw new Error(`pid enumeration unavailable: ${listed.error?.message ?? listed.stderr}`);
+    return listed.stdout.split("\n").some((line) => Number(line.trim().split(/\s+/)[0]) === pid);
+  }
+}
 const fixture = path.resolve(import.meta.dirname, "../test-support/native-wire.mjs");
 const homes: string[] = [];
 function options(mode = "normal") {
   const home = mkdtempSync(path.join(os.tmpdir(), "codex-wire-test-")); homes.push(home);
   return { runner: { command: process.execPath, args: [fixture], env: { FIXTURE_MODE: mode } }, cwd: home, configDir: home, models: { "probe-A": ["low"], "probe-B": ["high"] }, timeoutMs: 500 };
 }
-test.after(() => { for (const home of homes) rmSync(home, { recursive: true, force: true }); });
+after(() => { for (const home of homes) rmSync(home, { recursive: true, force: true }); });
 
 test("CXP-01 native initialize is acknowledged before initialized and first thread", async () => {
   const client = createCodexComputeProtocol(options());
@@ -166,12 +178,7 @@ test("CXP-11 main exit zero with three detached descendants is not quiescence un
     const quiet = await client.quiesce(1500);
     assert.equal(quiet.ok, true);
     assert.equal(quiet.ok && quiet.killed >= 3, true);
-    for (const pid of tree.pids) {
-      let stat = "";
-      try { stat = execFileSync("ps", ["-p", String(pid), "-o", "stat="], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim(); }
-      catch (e) { if ((e as { status?: unknown }).status !== 1) throw e; }
-      assert.equal(stat === "" || stat.startsWith("Z"), true);
-    }
+    for (const pid of tree.pids) assert.equal(live(pid), false);
   } finally {
     await client.quiesce(1000);
     for (const pid of pids) { try { process.kill(pid, "SIGKILL"); } catch { /* owned fixture already exited */ } }

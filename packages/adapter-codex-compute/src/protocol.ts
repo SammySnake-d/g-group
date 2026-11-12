@@ -87,7 +87,7 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
     for (const p of pending.values()) { clearTimeout(p.timer); p.finish(no(reason)); }
     pending.clear();
   };
-  function send(message: Record<string, unknown>) {
+  function send(message: Record<string, unknown>): boolean {
     if (!child || child.exitCode !== null || child.signalCode !== null) return false;
     try { child.stdin.write(JSON.stringify(message) + "\n"); return true; } catch { return false; }
   }
