@@ -137,11 +137,11 @@ test("CFG08 批量模型替换也追加快照，快照失败同时回滚全局�
   const c = host.createContact({ name: "甲" });
   const d = host.createContact({ name: "乙" });
   host.db.store.db.exec(`CREATE TRIGGER fixture_batch_failure BEFORE INSERT ON gg_contact_config_versions WHEN NEW.contact_id = '${d.id}' AND NEW.version = 2 BEGIN SELECT RAISE(ABORT, 'FIXTURE_BATCH_FAILURE'); END`);
-  const failed = await svc.handle("models.batchReplace", { from: "fixture-a", to: "fixture-b", apply: true });
+  const failed = await svc.handle("models.batchReplace", { clientActionId: "batch", from: "fixture-a", to: "fixture-b", apply: true });
   assert.equal(!failed.ok && failed.error.code, "internal");
   assert.deepEqual([host.settings().defaultSpeakingModel, host.contactDoc(c.id).value.speakingModel, host.contactDoc(d.id).value.speakingModel], ["fixture-a", "fixture-a", "fixture-a"]);
   host.db.store.db.exec("DROP TRIGGER fixture_batch_failure");
-  const applied = await svc.handle("models.batchReplace", { from: "fixture-a", to: "fixture-b", apply: true });
+  const applied = await svc.handle("models.batchReplace", { clientActionId: "batch", from: "fixture-a", to: "fixture-b", apply: true });
   assert.ok(applied.ok);
   const h = await svc.handle("contacts.history", { contactId: c.id });
   assert.ok(h.ok);
