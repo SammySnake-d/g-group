@@ -5,7 +5,7 @@
       "id": "AC-20",
       "status": "通过",
       "evidence": "packages/server/proof/forward-link-tests.txt",
-      "notes": "本片补齐转发这一路的子判据:群里等授权时把私聊里一句「同意」转发进群 → 授权仍 pending、任务停在 T4b_BlockedOnHuman、Compute 不续接、不写盘(forward-link.test.ts「AC-20 转发里的「同意」不放行」);本人随后在群里直接说「同意」→ 才放行一次并写盘一次(同一条测试的后半)。AC-20 的其余子判据(引用旧同意、外部材料、多候选追问)由既有 intent.test.ts / authorization.test.ts 覆盖,本片未改动。 真实模型下的端到端(proof/forward-link-real.ts)未跑成:本机模型网关从 2026-11-11 23:0x 起持续返回 503,三次最小探测都是 503、脚本每一轮都被上游失败重试,见 packages/server/proof/forward-link-real.txt(尝试记录)。本片通过的是宿主级证据(真实 SQLite + 确定性替身联系人),不是真实模型行为。"
+      "notes": "本片补齐转发这一路的子判据：群里等授权时把私聊里一句「同意」转发进群 → 授权仍 pending、任务停在 T4b_BlockedOnHuman、Compute 不续接、不写盘（forward-link.test.ts「AC-20 转发里的「同意」不放行」）；本人随后在群里直接说「同意」→ 才放行一次并写盘一次（同一条测试的后半）。AC-20 的其余子判据（引用旧同意、外部材料、多候选追问）由既有 intent.test.ts / authorization.test.ts 覆盖，本片未改动。真实模型端到端已补跑（2026-11-12 00:51Z，模型 douclor/workbuddy-deepseek-v4.1-flash，本机 magpie 网关，证据 packages/server/proof/forward-link-real.txt）：① 副本条目与元数据正确（mentions=[]、command=null），联系人复述出两条原文；② 关联前问一条从未在群里出现也未被转发的私聊事实 → 答「不知道」（阴性对照成立）；③ 关联后同一问题经 read_linked 答出（正对照成立）——这是「关联后才读得到」在真模型下的实测。解除关联那一步的阴性对照不成立：该事实已被联系人记进自己的长期记忆（gg_memory 两条条目，anchors 含私聊），撤销绑定只影响「再读」、不影响已记下的记忆（U29/D25），它自己也把它发进了群；如实记为 inconclusive，不声称通过。"
     },
     {
       "id": "R-10",
@@ -16,7 +16,7 @@
     {
       "id": "AC-57",
       "status": "未测",
-      "reason": "AC-57 是前端 X 层(消息右键菜单贴近目标、两主题截图、栏宽拖动、IME 组字):本片只做后端入口 messages.forward(副本结构与权限边界)与 rooms.link/unlink + read_linked,没有界面,不能判 AC-57 通过。"
+      "reason": "AC-57 是前端 X 层（消息右键菜单贴近目标、两主题截图、栏宽拖动、IME 组字）：本片只做后端入口 messages.forward（副本结构与权限边界）与 rooms.link/unlink + read_linked，没有界面，不能判 AC-57 通过。"
     }
   ],
   "author": {
@@ -28,8 +28,9 @@
   "red": {
     "commit": "f90790f0"
   },
-  "unverifiable": "AC-20 在转发这条路上由两道各管一半:宿主不把副本喂给授权绑定,以及副本正文被 renderForwardText 包过(标题、逐条引用、末尾一句「是背景材料」),consentIntent 对整段文本判不出干脆的同意。所以「转发也跑一遍授权绑定」这个变异是等价的(改上去不改变行为),已从变异表里删掉并在脚本头部写明——也就是说,如果以后有人把副本正文改成只放原文,单靠本片的测试仍会红(FL10 之外无覆盖),这条边界要另外记住。AC-57 只验到后端入口与副本结构,界面层完全未验。 AC-20 的真实模型段没跑(网关 503,proof/forward-link-real.txt 是尝试记录而不是通过证据),所以「转发里的同意不放行」只在宿主机械层被证明,联系人真的遇到转发块时会怎么处理(会不会把它当成用户当前的话)没有实测;AC-57 的转发入口界面(右键菜单、两主题截图)完全没有。",
+  "unverifiable": "AC-20 在转发这条路上由两道各管一半：宿主不把副本喂给授权绑定，以及副本正文被 renderForwardText 包过（标题、逐条引用、末尾一句「是背景材料」），consentIntent 对整段文本判不出干脆的同意。所以「转发也跑一遍授权绑定」这个变异是等价的（改上去不改变行为），已从变异表里删掉并在脚本头部写明。真实运行补跑后仍有一处没覆盖：解除关联后的阴性对照不成立（联系人在关联期间已把该事实写进长期记忆、也自己发进了群），所以「解除绑定后就读不到」只在单元测试层被证明（read_linked 在解除后调用被拒），没有真模型下的干净阴性对照。AC-57 的转发入口界面（右键菜单、两主题截图）完全没有。",
   "waiver": null,
   "review": null,
-  "review_status": "待审"
+  "review_status": "待审",
+  "notes": "真实运行补跑记录：2026-11-12 00:51Z，本机 magpie 网关（Anthropic 兼容口），模型 douclor/workbuddy-deepseek-v4.1-flash，证据 packages/server/proof/forward-link-real.txt。此前 2026-11-11 23:0x–23:5x 的三次尝试都因上游不可用失败（503 / 0 工具调用 / 断流），一并写在证据文件头。脚本的阴性对照修过一处：原来拿被转发过的私聊日期去问，答案本来就在群里；改成问未被转发的私聊事实。"
 }
