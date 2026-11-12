@@ -12,7 +12,7 @@ Native generated ThreadStart/TurnStart schemas do not expose a verified arbitrar
 
 ## Observed at this source snapshot
 
-17 owning tests pass, local typecheck/lint exit0. Sequential true red/green logs for CXP01-10/14/16/17 are retained externally; CXP11-13 were existing-code green controls, CXP15 was a green control. The final 17-body empty-protocol red calibration is RETROSPECTIVE, not a claim all tests preceded implementation. Red `de8e9b6f6bfbb5d5ebbea88c20dff65beadfccba`, identical test file SHA is in calibration.json.
+17 owning tests pass, local typecheck/lint exit0. Sequential true red/green logs for CXP01-10/14/16/17 are retained externally; CXP11-13 were existing-code green controls, CXP15 was a green control. The final 17-body empty-protocol red calibration is RETROSPECTIVE, not a claim all tests preceded implementation. Red `0bbacb050b423a7efe0e53f987a3d1b9e89629f7`, identical test file SHA is in calibration.json.
 
 Real Codex 0.167.2 was driven through this exported component (not only the previous raw probe): two exact marker completions, process restart/resume of the same thread, wrong-turn refusal, native matching steer acknowledgement and interrupted terminal. Both native clients quiesced, production config bytes stayed unchanged, credentials were not logged/written, isolated temporary config was removed, and no recorded native PID remained. Requested owner model/effort are recorded; no actual-model gateway attribution is claimed.
 
@@ -23,3 +23,5 @@ Six original mechanical gates, ordinary pre-push, draft PR, independent review/p
 ## Exact sources
 
 Codex CLI 0.167.2 generated TypeScript schema observed locally, ThreadStartParams/ThreadResumeParams/TurnStartParams/TurnSteerParams/TurnInterruptParams/UserInput; official app-server documentation at `https://learn.chatgpt.com/docs/app-server`. This component's same-body tests are the executable contract for this bounded slice.
+
+The first original seatbelt gate run failed (CXP11 ps EPERM; return-value calibration typing; `test.after` mistaken as test registration). Originals are retained. The test now independently enumerates with ps/pgrep, never treats enumeration errors as absence, imports the after hook explicitly, and production send has an explicit boolean return type. No gate or sandbox/assertion was weakened. Final full-body red calibration was repeated after those body changes.

@@ -24,7 +24,7 @@
     "codex:01a1d043-1042-7e61-9981-968868c25de1"
   ],
   "red": {
-    "commit": "de8e9b6f6bfbb5d5ebbea88c20dff65beadfccba"
+    "commit": "0bbacb050b423a7efe0e53f987a3d1b9e89629f7"
   },
   "unverifiable": "NOT a full ComputeAdapter. No verified arbitrary native tool allowlist; reject nonempty tools, do not claim empty disables native builtins. Host/G2, actual model attribution/ledger, cross-harness contexts, Windows full process-tree proof, independent review/provenance and product AC-23/AC-51 remain pending.",
   "waiver": null,
@@ -45,6 +45,7 @@
     "productionConfigBytesUnchanged": true,
     "cloud": "pending",
     "namedMutants": "pending",
-    "independentReview": false
+    "independentReview": false,
+    "retainedFormalFailure": "v1 G-RED actual ps EPERM in CXP11, G-STUB missing explicit primitive-return calibration and G-TAUTO test.after hook parsed as a dynamic test name. Product assertions and original gate code retained; independent pid enumeration falls back to pgrep with errors never treated absent; send return type explicit; imported after hook. Formal recheck pending."
   }
 }
