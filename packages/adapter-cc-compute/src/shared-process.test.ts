@@ -35,7 +35,7 @@ test("S-PROC-CC-01 AC-23: one-shot CC delegates captured setsid cleanup and refu
   try {
     const result = await adapter.spawn(brief);
     assert.equal(result.ok, true);
-    if (!result.ok) throw new Error(result.reason);
+    if (!result.ok) throw new Error("spawn failed");
     id = result.computeId;
     await started(adapter, id);
     descendant = Number(fs.readFileSync(`${record}.grandchild.pid`, "utf8"));
@@ -64,7 +64,7 @@ test("S-PROC-CC-02 AC-23: resident CC distinguishes a finished turn from shared 
   try {
     const result = await adapter.spawn(brief);
     assert.equal(result.ok, true);
-    if (!result.ok) throw new Error(result.reason);
+    if (!result.ok) throw new Error("spawn failed");
     id = result.computeId;
     await adapter.settled(id);
     pids = JSON.parse(fs.readFileSync(pidFile, "utf8")) as { main: number; descendant: number };
