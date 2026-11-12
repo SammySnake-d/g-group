@@ -100,3 +100,9 @@ test("重启回收后的失败任务不再显示已过期的待答摘要", async
     assert.equal(got.ok && (got.value as RoomView).blockedSummary, null);
   } finally { await reopened.close(); }
 });
+
+test("R2-05 长问题截断保留另有 N 项尾注且整行不超过500", () => {
+  const result = roomBlockedSummary([{ taskId: "first", seq: 1, text: "中".repeat(600) }, { taskId: "later", seq: 2, text: "下一项" }]);
+  assert.equal(result, `等待你：${"中".repeat(487)}…（另有 1 项）`);
+  assert.equal(result.length, 500);
+});
