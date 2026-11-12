@@ -101,7 +101,14 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       } catch { failPending("invalid native JSON"); }
     });
     child.stderr.resume();
-    child.once("exit", () => failPending("native process exited"));
+    child.once("close", (code, signal) => {
+      failPending("native process exited");
+      for (const turn of turns.values()) {
+        if (turn.result) continue;
+        turn.result = { ok: true, value: { computeId: threadId!, kind: "failed", reason: "native process exited before matching turn/completed", code, signal, violations: [] } };
+        turn.finish(turn.result);
+      }
+    });
     child.once("error", () => failPending("native process failed to start"));
     child.stdin.on("error", () => failPending("native stdin closed"));
   }
