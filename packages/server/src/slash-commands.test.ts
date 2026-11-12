@@ -1,11 +1,11 @@
 // P7: 真实隔离插件与生产 service 入口；每条测试都按实际状态判，不把假注册表当插件执行。
 import assert from "node:assert/strict";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { after, afterEach, test } from "node:test";
 import type { MessageView, SlashCommand } from "@g-group/api-contract";
-import { all, one } from "./db.ts";
+import { all } from "./db.ts";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
 import { createService } from "./service.ts";
@@ -153,4 +153,43 @@ test("P7 快照可见性:只含本会话可见消息,隐藏和撤回原文以及
   const r=await s.svc.handle("messages.send",send(g.id,"snapshot","snapshot",{from:0}));const text=view(r).text; assert.equal(view(r).sender.kind,"system");
   assert.ok(!text.includes("HIDDEN_NEUTRAL") && !text.includes("RETRACT_NEUTRAL") && !text.includes("OTHER_ROOM_NEUTRAL"),text);
   assert.equal(JSON.parse(text).roomId,g.id);
+});
+
+
+test("P7 内置与未知命令保持原行为,安装插件只接管自己声明的命令",async()=>{
+  const s=setup();const c=s.host.createContact({name:"小克"});const g=s.host.createGroup("群",[{kind:"contact",id:c.id}]);await install(s,ketchupPath);
+  const task=await s.svc.handle("messages.send",send(g.id,"builtin","task",{contact:c.id,what:"跑测试"}));
+  assert.deepEqual(view(task).mentions,[{id:c.id,source:"auto"}]);
+  const unknown=await s.svc.handle("messages.send",send(g.id,"unknown","notice"));assert.equal(view(unknown).sender.kind,"user");
+  const result=await s.svc.handle("messages.send",send(g.id,"plugin","ketchup"));assert.equal(view(result).sender.kind,"system");
+});
+
+test("P7 更新冲突被拒而旧版本可用,停用插件的名称仍保留",async()=>{
+  const s=setup();const g=s.host.createGroup("群",[]);
+  const first=fixture(s,"owner","owned",'return {text:"owner"};');await install(s,first);await s.svc.handle("plugins.setEnabled",{pluginId:"owner",enabled:false});
+  const collision=fixture(s,"collision","owned",'return {text:"collision"};');
+  const bad=await s.svc.handle("plugins.install",{clientActionId:"collision",source:{kind:"local-path",path:collision},grantedPermissions:["chat:read"]});assert.equal(!bad.ok&&bad.error.code,"conflict");
+  const market=path.join(s.catalog,"rss-reader","plugin.json");
+  const old=JSON.parse(readFileSync(market,"utf8"));
+  await s.svc.handle("plugins.install",{clientActionId:"rss",source:{kind:"marketplace",id:"rss-reader"},grantedPermissions:["net:fetch"]});
+  writeFileSync(market,JSON.stringify({...old,version:"0.2.0",commands:[{name:"stop",description:"bad",args:[]}]}));
+  const update=await s.svc.handle("plugins.update",{pluginId:"rss-reader"});assert.equal(!update.ok&&update.error.code,"conflict");
+  assert.equal(s.host.plugins.get("rss-reader").version,"0.1.0");
+  await s.svc.handle("plugins.setEnabled",{pluginId:"owner",enabled:true});
+  const result=await s.svc.handle("messages.send",send(g.id,"reenabled","owned"));assert.equal(view(result).text,"owner");
+});
+
+test("P7 非法结果与缺失执行入口显式失败,不能变成用户消息或空成功",async()=>{
+  const s=setup();const g=s.host.createGroup("群",[]);await install(s,fixture(s,"invalid-output","invalid-output",'return {text:42};'));
+  const invalid=await s.svc.handle("messages.send",send(g.id,"invalid-output","invalid-output"));assert.equal(!invalid.ok&&invalid.error.code,"unavailable");
+  const dir=fixture(s,"missing-command","missing-command",'return {text:"x"};');writeFileSync(path.join(dir,"index.mjs"),'export default {kind:"ui-extension"};');await install(s,dir);
+  const missing=await s.svc.handle("messages.send",send(g.id,"missing-command","missing-command"));assert.equal(!missing.ok&&missing.error.code,"unavailable");
+  assert.equal(s.host.listMessages(g.id,{}).messages.length,0);
+});
+
+test("P7 有界展示:超过二百条明确标截断,任务与待办不因消息裁剪丢失",async()=>{
+  const s=setup();const g=s.host.createGroup("群",[]);await install(s,ketchupPath);
+  for(let i=0;i<205;i++)s.host.send({roomId:g.id,clientActionId:`m${i}`,text:`消息 ${i}`});
+  const result=await s.svc.handle("messages.send",send(g.id,"bounded","ketchup",{from:0}));const text=view(result).text;
+  assert.ok(text.includes("新消息 205 条（只列最近 200 条）")&&text.includes("#205 消息 204")&&!text.includes("#1 消息 0"),text);
 });
