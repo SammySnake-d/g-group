@@ -109,7 +109,14 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
       threadId = r.value.thread.id;
       return { ok: true, value: { threadId } };
     },
-    resumeThread: async () => no("not implemented"),
+    async resumeThread(wantedThread, turn) {
+      if (!initialized || typeof wantedThread !== "string" || !wantedThread) return no("native thread id required");
+      const r = await request("thread/resume", { threadId: wantedThread, model: turn.model, cwd: options.cwd, approvalPolicy: "never", sandbox: "read-only" });
+      if (!r.ok) return r;
+      if (!record(r.value.thread) || r.value.thread.id !== wantedThread) return no("native resumed a different thread");
+      threadId = wantedThread;
+      return { ok: true, value: { threadId } };
+    },
     async startTurn(wantedThread, text, turn) {
       if (wantedThread !== threadId) return no("native thread mismatch");
       const r = await request("turn/start", { threadId: wantedThread, input: [{ type: "text", text, text_elements: [] }], model: turn.model, effort: turn.effort });
