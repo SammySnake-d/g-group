@@ -1,0 +1,20 @@
+packages/adapter-cc-compute/src/compute-port-compat.test.ts
+  s_9d7fa6e9d65b83::t_15a07a4ace28bc 1-48
+  s_9d7fa6e9d65b83::t_d92af892eaccb4 49-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "37c697d52aabf3882e6797154c09fb09a1aff025",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

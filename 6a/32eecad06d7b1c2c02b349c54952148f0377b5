@@ -1,0 +1,41 @@
+packages/server/proof/task-timeline-mutations.py
+  s_9d7fa6e9d65b83::t_b291c5d3fc0048 1-51
+packages/server/src/host.ts
+  s_9d7fa6e9d65b83::t_f4d12df66847d9 1492,1494,1537-1538,1563,1577,1583,1650,1652-1655,1906-1907,2733,2845,3366-3368,3605,4558,4560,4566,4568-4570,4639-4640,4659-4660,4669,4680,4689,4804-4807
+  s_9d7fa6e9d65b83::t_ce5e562d0a4332 121
+packages/server/src/task-timeline.ts
+  s_9d7fa6e9d65b83::t_3c7b1772022ca7 1-72
+packages/server/src/task-timeline.test.ts
+  s_9d7fa6e9d65b83::t_04bf93640a1bc8 95,104,110,202-207,211-214,216-217
+  s_9d7fa6e9d65b83::t_9e5fcacd14fe6a 267-268,278-279,281-283
+  s_9d7fa6e9d65b83::t_7dd7bd86435fd2 112-114,132-133,155,271-274,276,287-332
+  s_9d7fa6e9d65b83::t_ce5e562d0a4332 152,180
+packages/server/proof/task-timeline-mutations-plan.json
+  s_9d7fa6e9d65b83::t_b291c5d3fc0048 1-294
+docs/proof/task-timeline/README.md
+  s_9d7fa6e9d65b83::t_55b44225986038 1-29
+docs/proof/task-timeline/same-eleven-final-red-receipt.json
+  s_9d7fa6e9d65b83::t_a2f5ee1e49b8c6 1-20
+docs/proof/task-timeline/same-eleven-final-red.tap
+  s_9d7fa6e9d65b83::t_6b51c73399d3e6 1-253
+docs/proof/task-timeline/same-eleven-green-final.tap
+  s_9d7fa6e9d65b83::t_d7d583ea041563 1-76
+receipts/feat-task-timeline.json
+  s_9d7fa6e9d65b83::t_5065bda6a9bce0 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6a32eecad06d7b1c2c02b349c54952148f0377b5",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
