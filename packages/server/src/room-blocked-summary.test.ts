@@ -80,13 +80,14 @@ test("其他会话没有本会话的阻塞摘要", async () => {
   } finally { s.compute.close(); }
 });
 
-test("真实数据库关闭再打开后阻塞摘要仍来自持久待答状态", async () => {
+test("重启回收后的失败任务不再显示已过期的待答摘要", async () => {
   const s = await blocked();
   s.compute.close();
   await s.host.close();
   const reopened = new Host({ file: `${s.root}/gg.db`, dataDir: `${s.root}/data`, catalogFile: `${s.catalog}/catalog.json` });
   try {
+    assert.equal(reopened.taskViewById(s.task.id).state, "T11_Failed", "现有宿主会把失联 Compute 回收为失败，不能显示旧的待答缓存");
     const got = await createService(reopened).handle("rooms.get", { roomId: s.dm.id });
-    assert.equal(got.ok && (got.value as RoomView).blockedSummary, "等待你：请给中性验证码");
+    assert.equal(got.ok && (got.value as RoomView).blockedSummary, null);
   } finally { await reopened.close(); }
 });
