@@ -2371,13 +2371,15 @@ export class Host {
   }
 
   // ======================= G5 两段式记忆(v0.2 §7;G1→G5 写入切换规则 + 审查条件 S-1～S-4) =======================
-  /**
-   * 记忆「写邻域」查询接缝:粗筛检查(G1 reflect 的 neighbors)与精筛判关系都只从这里取已有相关记忆,查询 = 会话集合 + 本批材料/原话。
-   * 现在的实现是 G1 分支现成的同锚点邻域(生效/降级、非人格、全局或本批会话锚点),q.text 暂不参与排序。
-   * G3(PR #61)合入后这里改走 kernel history-search 的 searchHistory(hybrid)按 q.text 取全文邻域,写邻域与精筛同时生效;锚点/状态硬筛照旧。
-   */
+  /** 粗筛与精筛共用 G3 写邻域:先按联系人、状态、人格与会话锚点硬筛,再用本批原文做 hybrid 检索。
+   * 同分按 id 稳定排序;没有命中就返回空,不把整个锚点集合送给模型。 */
   private memoryNeighbors(contactId: string, q: { readonly rooms: readonly string[]; readonly text: string }): { id: string; title: string; body: string }[] {
-    return this.memory.list(contactId).filter(e=>(e.status==="active"||e.status==="degraded")&&!e.anchors.includes(PERSONA_ANCHOR)&&e.anchors.some(a=>a==="global"||q.rooms.includes(a.slice(5))&&a.startsWith("room:"))).map(e=>({id:e.id,title:e.title,body:e.body}));
+    const visible = this.memory.list(contactId)
+      .filter((e) => (e.status === "active" || e.status === "degraded") && !e.anchors.includes(PERSONA_ANCHOR) && e.anchors.some((a) => a === "global" || a.startsWith("room:") && q.rooms.includes(a.slice(5))))
+      .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+    const byId = new Map(visible.map((e) => [e.id, e]));
+    return searchHistory(visible.map((e) => ({ ref: e.id, role: "user" as const, text: `${e.title}\n${e.body}` })), q.text, visible.length)
+      .map((hit) => { const e = byId.get(hit.ref)!; return { id: e.id, title: e.title, body: e.body }; });
   }
   /** G1 已经落地(或已规范化待落地)的候选:按来源 + 原话(新条目)或来源 + 正文(复述)认出来,接管后不再生成标记或第二份写入 */
   private landedKeys(work: CoverageWork): string[] {
