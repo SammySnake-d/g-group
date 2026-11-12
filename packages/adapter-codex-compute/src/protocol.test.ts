@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -33,4 +33,22 @@ test("CXP-02 native turn IDs and completed payload map to kernel ComputeEvent wi
     const done = await client.settled("native-thread-1", "native-turn-1");
     assert.deepEqual(done, { ok: true, value: { computeId: "native-thread-1", kind: "completed", result: "reply-native-turn-1" } });
   } finally { await client.quiesce(1000); }
+});
+
+
+test("CXP-03 process restart uses native thread resume and never silently creates a replacement thread", async () => {
+  const cfg = options();
+  const first = createCodexComputeProtocol(cfg);
+  const second = createCodexComputeProtocol(cfg);
+  try {
+    assert.equal((await first.initialize()).ok, true);
+    assert.equal((await first.startThread({ model: "probe-A", effort: "low" })).ok, true);
+    assert.equal((await first.quiesce(1000)).ok, true);
+    assert.equal((await second.initialize()).ok, true);
+    const resumed = await second.resumeThread("native-thread-1", { model: "probe-B", effort: "high" });
+    assert.deepEqual(resumed, { ok: true, value: { threadId: "native-thread-1" } });
+    const wire = readFileSync(path.join(cfg.configDir, "wire-requests.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    assert.equal(wire.filter((m) => m.method === "thread/start").length, 1);
+    assert.equal(wire.filter((m) => m.method === "thread/resume" && m.params.threadId === "native-thread-1").length, 1);
+  } finally { await first.quiesce(1000); await second.quiesce(1000); }
 });
