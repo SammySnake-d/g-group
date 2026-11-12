@@ -1,3 +1,5 @@
+> 当前状态：R1独审已REJECT，审查提交6d812334保留；下文为R1作者历史快照，不代表当前review=null或R2成绩。R2变更和限制见[本轮说明](r2/README.md)。
+
 # U07 联系人配置历史与回滚：作者候选证据
 
 - 范围：`contacts.history` / `contacts.rollback`；每次 create/update/batch/rollback 追加配置版本；回滚生成新版本，不覆盖旧版本；版本CAS与幂等动作持久化；沿用当前模型预检和下一轮配置生效。

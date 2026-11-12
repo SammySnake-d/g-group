@@ -1,0 +1,22 @@
+{
+  "red": "af3bf6f13756604e7ad8edd094f842658241b6f9",
+  "green": "b2e8070daba2e207667641d83420e9e6eb772d07",
+  "red_counts": {
+    "tests": 13,
+    "pass": 12,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "green_counts": {
+    "tests": 13,
+    "pass": 13,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "same_test_body": true,
+  "only_three_trigger_product_lines": true
+}
