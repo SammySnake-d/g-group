@@ -52,3 +52,24 @@ test("CXP-03 process restart uses native thread resume and never silently create
     assert.equal(wire.filter((m) => m.method === "thread/resume" && m.params.threadId === "native-thread-1").length, 1);
   } finally { await first.quiesce(1000); await second.quiesce(1000); }
 });
+
+test("CXP-04 steer binds expectedTurnId and interrupt waits for matching native interrupted terminal", async () => {
+  const cfg = options("hold");
+  const client = createCodexComputeProtocol(cfg);
+  try {
+    assert.equal((await client.initialize()).ok, true);
+    assert.equal((await client.startThread({ model: "probe-A", effort: "low" })).ok, true);
+    assert.equal((await client.startTurn("native-thread-1", "hold", { model: "probe-A", effort: "low" })).ok, true);
+    const wrong = await client.steer("native-thread-1", "foreign-turn", "do not deliver");
+    assert.equal(wrong.ok, false);
+    const right = await client.steer("native-thread-1", "native-turn-1", "current input");
+    assert.deepEqual(right, { ok: true, value: { turnId: "native-turn-1" } });
+    const interrupted = await client.interrupt("native-thread-1", "native-turn-1");
+    assert.deepEqual(interrupted, { ok: true, value: { status: "interrupted" } });
+    const terminal = await client.settled("native-thread-1", "native-turn-1");
+    assert.equal(terminal.ok && terminal.value.kind, "stopped");
+    const requests = readFileSync(path.join(cfg.configDir, "wire-requests.jsonl"), "utf8");
+    assert.equal(requests.includes("foreign-turn"), false);
+    assert.equal(requests.includes('"expectedTurnId":"native-turn-1"'), true);
+  } finally { await client.quiesce(1000); }
+});
