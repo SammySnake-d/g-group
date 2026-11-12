@@ -17,9 +17,8 @@ export function MessageList({ msgs: all, compact = false, highlight, selecting, 
   const { list: msgs, trailOf } = foldComputeTrails(all, computes)
   /** 一个回合的结尾:挂着要你回答的选项,或者下面挂着做完的过程 */
   const endsTurn = (x: Msg) => 'id' in x && (pending.some((p) => 'ask' in p && p.ask === x.id) || !!trailOf[x.id])
-  /* 同一个人连着说、引用的是同一条:后面几句不重复画引用,并在同一个头像下(分组时当它没带引用) */
+  /* 同一个人连着说、引用的是同一条:后面几句不重复画引用,相同引用不再拆开头像组。 */
   const sameQuote = msgs.map((m, i) => 'from' in m && m.k !== 'replying' && repeatsPrevQuote(msgs, i, m as Bodied))
-  const shown = (i: number): Msg | undefined => { const x = msgs[i]; return x && sameQuote[i] && x.k === 'text' ? { ...x, quotes: undefined } : x }
   return (
     <div className="flex flex-col">
       {msgs.map((m, i) => {
@@ -30,7 +29,7 @@ export function MessageList({ msgs: all, compact = false, highlight, selecting, 
         if (m.k === 'asset') return <AssetLine key={m.id} m={m} />
         if (m.k === 'replying') return <ReplyingCard key={m.id} m={m} />
         const row = (
-          <Row key={m.id} m={m} first={!continuesPrev(shown(i - 1), shown(i) as Bodied, endsTurn)} hideQuotes={sameQuote[i]} compact={compact} highlight={highlight === m.id} selecting={selecting} checked={selected?.has(m.id)} onSelect={onSelect} trail={trailOf[m.id]}>
+          <Row key={m.id} m={m} first={!continuesPrev(msgs[i - 1], m, endsTurn, sameQuote[i])} hideQuotes={sameQuote[i]} compact={compact} highlight={highlight === m.id} selecting={selecting} checked={selected?.has(m.id)} onSelect={onSelect} trail={trailOf[m.id]}>
             <Body m={m} compact={compact} />
           </Row>
         )

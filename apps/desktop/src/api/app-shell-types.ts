@@ -52,6 +52,7 @@ export interface AppInfo {
 /** 方法表:方法名 → [参数, 结果] */
 export interface AppShellMethods {
   'app.info': [Record<string, never>, AppInfo]
+  'window.capture': [Record<string, never>, { base64: string; width: number; height: number }]
   'setup.get': [Record<string, never>, SetupView]
   'setup.save': [SetupInput, SetupView]
   'setup.detectClaude': [Record<string, never>, SetupView]
@@ -61,12 +62,14 @@ export interface AppShellMethods {
   'update.install': [Record<string, never>, UpdateState]
 }
 export type AppShellMethod = keyof AppShellMethods
-export const APP_SHELL_METHODS: readonly AppShellMethod[] = ['app.info', 'setup.get', 'setup.save', 'setup.detectClaude', 'update.get', 'update.check', 'update.download', 'update.install']
+export const APP_SHELL_METHODS: readonly AppShellMethod[] = ['app.info', 'window.capture', 'setup.get', 'setup.save', 'setup.detectClaude', 'update.get', 'update.check', 'update.download', 'update.install']
 
 export type AppShellResult<M extends AppShellMethod> = { ok: true; value: AppShellMethods[M][1] } | { ok: false; error: string }
 export type AppShellEvent = { type: 'update'; state: UpdateState }
 
 export interface AppShellBridge {
+  /** 只接受用户选中的 File;内存生成的 File 返回空串,不开放任意路径读取。 */
+  getPathForFile(file: File): string
   invoke<M extends AppShellMethod>(method: M, params: AppShellMethods[M][0]): Promise<AppShellResult<M>>
   subscribe(listener: (e: AppShellEvent) => void): () => void
 }

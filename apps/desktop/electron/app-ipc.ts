@@ -1,5 +1,5 @@
 // 应用壳的 IPC(gg-app:invoke / gg-app:event):接入模型、版本与更新。和宿主合同(gg:invoke)分开,方法白名单 + 来源校验。
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from "electron";
 import { isTrustedOrigin } from "@g-group/ui-core";
 import { APP_IPC, APP_SHELL_METHODS, type AppShellEvent, type AppShellMethod, type SetupInput, type SetupView } from "../src/api/app-shell-types";
 import type { AppConfig } from "./app-config.ts";
@@ -16,8 +16,17 @@ export function broadcast(ev: AppShellEvent) {
 
 export function bindAppIpc(o: { config: AppConfig; backend: Backend; updater: Updater; devOrigin?: string }) {
   const view = (): SetupView => ({ gateway: o.config.gatewayView(), claudePath: o.backend.claudePath(), backend: o.backend.status() });
-  const H: Record<AppShellMethod, (p: Record<string, unknown>) => unknown> = {
+  const H: Record<AppShellMethod, (p: Record<string, unknown>, event: IpcMainInvokeEvent) => unknown> = {
     "app.info": () => ({ version: app.getVersion(), packaged: app.isPackaged, platform: process.platform, arch: process.arch }),
+    "window.capture": async (_p, event) => {
+      // 只截发起调用的应用主窗口,不枚举桌面/其他窗口,也不需要屏幕录制权限。
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (!win || event.senderFrame !== event.sender.mainFrame) throw new Error("只能截取当前应用窗口");
+      const image = await event.sender.capturePage();
+      if (image.isEmpty()) throw new Error("没有截到画面，请回到聊天后再试");
+      const { width, height } = image.getSize();
+      return { base64: image.toPNG().toString("base64"), width, height };
+    },
     "setup.get": () => view(),
     "setup.save": async (p) => {
       const g = o.config.saveGateway(p as unknown as SetupInput);
@@ -43,7 +52,7 @@ export function bindAppIpc(o: { config: AppConfig; backend: Backend; updater: Up
     if (!r || typeof r !== "object" || !isMethod(r.method)) return { ok: false, error: `不认识的方法 ${String(r?.method)}` };
     const params = r.params && typeof r.params === "object" && !Array.isArray(r.params) ? (r.params as Record<string, unknown>) : {};
     try {
-      return { ok: true, value: await H[r.method](params) };
+      return { ok: true, value: await H[r.method](params, event) };
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }

@@ -3,6 +3,7 @@
 import type { RewindPreview, TaskView } from '@g-group/api-contract'
 import type { MsgFile } from '@/data'
 import { notify } from '@/hooks/use-toast'
+import { appShell } from '../app-shell'
 import { loadMessages, msgId, putMessages, recalledText, sendLive, seqOf } from './messages'
 import { upsertRoom } from './rooms'
 import { actionId, defineWiring, read, type WireCtx } from './types'
@@ -131,14 +132,20 @@ export async function retagLive(w: WireCtx, id: string, toTaskId: string) {
   noteTasks(w, [r.value.from, r.value.to])
 }
 
-/** 发附件:逐个按内容上传,再作为一条消息发出(拿不到本地路径也能发) */
+/** 发附件:磁盘文件交给宿主读取;截图/内存文件按内容上传,再作为一条消息发出。 */
 export async function attachLive(w: WireCtx, roomId: string, files: readonly File[]) {
   const done: MsgFile[] = []
   for (const f of files) {
-    const base64 = await toBase64(f)
-    const r = await w.call('attachments.upload', { name: f.name, base64 })
-    if (!r.ok) return fail(w, `「${f.name}」没发出去`, r.error)
-    done.push(r.value)
+    try {
+      const localPath = appShell?.getPathForFile(f)
+      const r = localPath
+        ? await w.call('attachments.add', { path: localPath })
+        : await w.call('attachments.upload', { name: f.name, base64: await toBase64(f) })
+      if (!r.ok) return fail(w, `「${f.name}」没发出去`, r.error)
+      done.push(r.value)
+    } catch (e) {
+      return w.get().toast(`「${f.name}」没发出去：${e instanceof Error ? e.message : String(e)}`)
+    }
   }
   if (done.length) await sendLive(w, roomId, '', [], done)
 }

@@ -37,7 +37,7 @@ export function Composer({ conv, draft, setDraft, quotes, onRemoveQuote, onSend,
   /* C-US19:截图、文件、图片都真的发出去,变成一条文件消息,同时进「文件」里,写明来自这个会话 */
   const sendFile = (name: string, kind: Artifact['kind'], meta: string, file?: File) => {
     /* 连上后端:按内容上传,再作为一条只有附件的消息发出;以后端回包为准 */
-    if (isLive) { if (file) void attachLive(liveCtx(useAppStore.getState, useAppStore.setState), conv.id, [file]); return }
+    if (isLive) { if (file) return attachLive(liveCtx(useAppStore.getState, useAppStore.setState), conv.id, [file]); return }
     const id = 'up' + Math.random().toString(36).slice(2, 7)
     artifacts.push({ id, name, kind, meta, by: 'me', conv: conv.id, when: '刚刚' })
     pushMsg({ k: 'file', id: 'f' + id, from: 'me', artifactId: id }, conv.id)
