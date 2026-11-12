@@ -289,6 +289,13 @@ const readJson = (f: string): unknown => {
   }
 };
 
+/** Driver 子进程的受限环境;提取原有白名单,不让任意宿主环境进入被测进程。 */
+export function driverProcessEnv(mode: "standin" | "real", source: Readonly<Record<string, string | undefined>>): Record<string, string> {
+  const env: Record<string, string> = { PATH: source.PATH ?? "/usr/bin:/bin", HOME: source.HOME ?? tmpdir() };
+  if (mode === "real") for (const k of ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"]) if (source[k]) env[k] = source[k]!;
+  return env;
+}
+
 async function main() {
   const { values } = parseArgs({
     options: {
@@ -392,8 +399,7 @@ async function main() {
         const job = { fixtureFile: path.join(dir, "packages/server/proof/g6/fixtures", path.basename(values.fixture)), itemId: run.item, group: run.group, commit: prepared.head, rep: run.rep, mode, model: run.model, dataDir: path.join(work, "data", tag, `${run.item}-${run.rep}`), fingerprint: cfg.fingerprint, reuseKey: cfg.reuseKey, stepTimeoutMs: Number(values["step-timeout"] ?? (mode === "real" ? 300_000 : 30_000)), callTimeoutMs: Number(values["call-timeout"]), quietMs: Number(values.quiet ?? (mode === "real" ? 400 : 60)), settleMs: settleOf(g.id), hostPatch: patchOf(g.id), serial };
         if (!existsSync(job.fixtureFile)) cpSync(values.fixture, job.fixtureFile);
         writeFileSync(jobFile, JSON.stringify(job));
-        const env: Record<string, string> = { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: process.env.HOME ?? tmpdir() };
-        if (mode === "real") for (const k of ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"]) if (process.env[k]) env[k] = process.env[k]!;
+        const env = driverProcessEnv(mode, process.env);
         const t0 = Date.now();
         const r = spawnSync(process.execPath, ["--disable-warning=ExperimentalWarning", path.join(dir, "packages/server/proof/g6/driver.ts"), jobFile, outFile], { env, encoding: "utf8", timeout: job.stepTimeoutMs * 40, cwd: dir });
         // 这一道跑的时候网关没了(会话断了):这份记录不算测量结果,删掉,停下留给续跑
