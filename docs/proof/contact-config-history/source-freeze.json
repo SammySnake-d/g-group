@@ -1,0 +1,14 @@
+{
+  "head": "126c42aed03612883810f6379326b4620a8278b5",
+  "bundle_sha256": "364875d6171b0a1ea08a14b43b1b9196b8054bbd773ce853d5ca33087dc2f9f1",
+  "node": "v24.21.0",
+  "files": {
+    "packages/server/src/service.ts": "2fd021d901c6554a0baf9104f6663b0043061c16af0340f41ee3744c65a5b2eb",
+    "packages/server/src/host.ts": "c74c4e7cdc9285e5786e327e3bfc32b0db3d7407bc7a47ad0271384a11b587f6",
+    "packages/server/src/contact-config-history.ts": "883a3c9bcc4ea1964f0ba021ac07ac16791d391d6ecb2cb63c93ff32f41f11c1",
+    "packages/server/src/contact-config-history.test.ts": "009a86da21959732dd46777a33cd815283cfeb0d64f54a6879f8073e0de0aea8",
+    "packages/server/proof/contact-config-history-mutations.mjs": "e3b01d4a9e69bf223153abad2a29f01d4a4e04f1574cc0fd1c98c30ebfb0c957",
+    "packages/api-contract/src/entities.ts": "9c655708ea80723a9f332be2db1ef5dbd336fbca8249346a2f85680fde9ac1c1",
+    "packages/api-contract/src/api.ts": "0f16a954f60fef36640ed6a205dea99c1c5d5b25a83b81daf4bf33d40a765554"
+  }
+}

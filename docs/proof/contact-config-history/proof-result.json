@@ -1,0 +1,37 @@
+{
+  "head": "13774dd4c0e521d4102fe9f28821ce8cb00408f7",
+  "results": [
+    {
+      "name": "typecheck-resume",
+      "command": [
+        "npm",
+        "run",
+        "-s",
+        "typecheck"
+      ],
+      "exit": 0,
+      "seconds": 29.677
+    },
+    {
+      "name": "lint-resume",
+      "command": [
+        "npm",
+        "run",
+        "-s",
+        "lint"
+      ],
+      "exit": 0,
+      "seconds": 2.551
+    },
+    {
+      "name": "production",
+      "command": [
+        "node",
+        "packages/server/proof/contact-config-history-real.ts"
+      ],
+      "exit": 0,
+      "seconds": 1.339
+    }
+  ],
+  "source_unchanged": true
+}

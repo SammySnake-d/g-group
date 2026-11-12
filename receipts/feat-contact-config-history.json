@@ -1,0 +1,31 @@
+{
+  "slice": "U07 联系人配置历史列表与CAS/幂等回滚；配置白名单快照只追加，复用模型兼容预检，不回滚身份/消息/任务/记忆，下一轮生效（后端候选，前端不改）",
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "docs/proof/contact-config-history/README.md"
+    },
+    {
+      "id": "AC-01",
+      "status": "未测",
+      "reason": "本片已证明配置回滚不改ID/真实md记忆与索引/任务/消息/游标及跨重启幂等，但不替代AC-01全部持久身份/换harness验收；待独立审查"
+    },
+    {
+      "id": "AC-32",
+      "status": "未测",
+      "reason": "回滚重新执行当前模型预检、失败原子不落盘和确认分支有具名测试/变异；在途轮次配置冻结、下一轮生效有生产proof；未覆盖AC-32其余子项和真实模型运行"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "model": "gpt-6.1-sol"
+  },
+  "red": {
+    "commit": "93e8cf922e4b4c7997691ed8ddc7262bd357b13e"
+  },
+  "unverifiable": "R-02 按当前12项测试体的红提交重放及具名AssertionError校准；AC-01/AC-32这里只证明U07配置历史和回滚子集，scripted脑子不证明模型质量；旧全量源码相同但测试写法曾校准，分开记录；review=null时G-PROVENANCE短路不算来源实核，未伪造兼容turns，交Mira Bot安排独立审查。",
+  "waiver": null,
+  "review": null
+}
