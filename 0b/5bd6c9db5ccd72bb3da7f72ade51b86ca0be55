@@ -1,0 +1,21 @@
+packages/server/proof/create-quota-mutations-plan.json
+  s_9d7fa6e9d65b83::t_3bde496024bd6c 4,92-94
+packages/server/src/create-quota.test.ts
+  s_9d7fa6e9d65b83::t_5b1593d0439cdf 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0b5bd6c9db5ccd72bb3da7f72ade51b86ca0be55",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
