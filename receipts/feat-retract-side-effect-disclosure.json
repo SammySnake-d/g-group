@@ -4,7 +4,8 @@
     {
       "id": "AC-08",
       "status": "未测",
-      "reason": "完整AC-08尚未验收;本片子判据原4项同体保留,RC03从真实工件保留但无披露红,到宿主按来源room+seq与gg_progress完成台账在同事务追加system通知绿;RD01命名任务/Compute/完成结果+订阅+重启/重复撤回,RD02无副作用闲聊阴性,RD03跨会话同序号隔离及不带回撤回原文,RD04写通知失败回滚整个撤回。候选本机8/8,云与全量/变异/独立审尚未完成"
+      "reason": "完整AC-08尚未验收；本片box4同run636890复核：同体8项4绿/4具名断言红→8绿，12变异各完整4项且目标具名断言kill；依赖14/14、typecheck/lint exit0、full1503/1503。官方门禁exit1，runtime计数0及独审未签。未上报副作用、follow-up来源/R-Rule与实模/CLI/UI仍缺证；不以本片代全量验收。",
+      "evidence": "docs/proof/retract-disclosure/coverage-index.json"
     }
   ],
   "author": {
@@ -23,6 +24,8 @@
     "coordination": "Mira Bot #3038/#3040;box4同heavy.lock,防回环→额度→本片→Q05→Q08;不动#71/#73原分支",
     "original_witness": "ceaa35359bc33ea68ead1da37c8cc33634a3917e原proof副本未改;原四项测试sha fa59007613a6db02dc87d03674ded9783bb198666e6411e24994d82b1c49dd3d",
     "provenance": "本机原生session01a1cfc8-db89-7400-b3de-876bd8478982 turn_context.model实际读取gpt-6.1-sol;G-PROVENANCE在review=null时未实核",
-    "red_snapshot_chronology": "初始6项的真实4绿/2红记录在dbb9744f之前;另外两条隐私/原子控制在产品补丁后扩展,再把最终同体8项放回依赖-only实现98da21c0实跑4绿/4红;不伪称8项全是补丁之前写的。"
+    "red_snapshot_chronology": "初始6项的真实4绿/2红记录在dbb9744f之前;另外两条隐私/原子控制在产品补丁后扩展,再把最终同体8项放回依赖-only实现98da21c0实跑4绿/4红;不伪称8项全是补丁之前写的。",
+    "cloud_proof": "docs/proof/retract-disclosure/coverage-index.json",
+    "author_closeout": "仅补原80aa646b的证明与本分支收据；生产/测试/变异冻结。最终证据提交HEAD与hash存包外置manifest，不自引用。原run整体exit1；正式门禁失败不豁免，G-PROVENANCE未实核。"
   }
 }

@@ -1,0 +1,26 @@
+TAP version 13
+# Subtest: calibration nonassertion
+not ok 1 - calibration nonassertion
+  ---
+  duration_ms: 0.67763
+  type: 'test'
+  location: '/workspace/req-retract-disclosure-20261113/tmp/gg-retract-tap-cal-jgy6zB/runtime-error.test.mjs:1:32'
+  failureType: 'testCodeFailure'
+  error: 'ERR_ASSERTION marker alone is not an assertion'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/req-retract-disclosure-20261113/tmp/gg-retract-tap-cal-jgy6zB/runtime-error.test.mjs:1:75)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.start (node:internal/test_runner/test:1262:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 109.21206

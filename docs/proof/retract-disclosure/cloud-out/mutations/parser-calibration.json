@@ -1,0 +1,88 @@
+[
+  {
+    "tag": "assertion",
+    "expectedAssertion": true,
+    "detected": true,
+    "exit": 1,
+    "timedOut": false,
+    "executionError": null,
+    "passed": [],
+    "failed": [
+      {
+        "name": "calibration assertion",
+        "assertion": true,
+        "detail": "  ---\n  duration_ms: 1.25788\n  type: 'test'\n  location: '/workspace/req-retract-disclosure-20261113/tmp/gg-retract-tap-cal-jgy6zB/assertion.test.mjs:1:72'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    1 !== 2\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 2\n  actual: 1\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///workspace/req-retract-disclosure-20261113/tmp/gg-retract-tap-cal-jgy6zB/assertion.test.mjs:1:112)\n    Test.runInAsyncScope (node:async_hooks:227:14)\n    Test.run (node:internal/test_runner/test:1402:25)\n    Test.start (node:internal/test_runner/test:1262:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)\n  ...\n"
+      }
+    ],
+    "totals": {
+      "tests": 1,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "stderr": ""
+  },
+  {
+    "tag": "load-error",
+    "expectedAssertion": false,
+    "detected": false,
+    "exit": 1,
+    "timedOut": false,
+    "executionError": null,
+    "passed": [],
+    "failed": [
+      {
+        "name": "/workspace/req-retract-disclosure-20261113/tmp/gg-retract-tap-cal-jgy6zB/load-error.test.mjs",
+        "assertion": false,
+        "detail": "  ---\n  duration_ms: 77.84568\n  type: 'test'\n  location: '/workspace/req-retract-disclosure-20261113/tmp/gg-retract-tap-cal-jgy6zB/load-error.test.mjs:1:1'\n  failureType: 'testCodeFailure'\n  exitCode: 1\n  signal: ~\n  error: 'test failed'\n  code: 'ERR_TEST_FAILURE'\n  ...\n"
+      }
+    ],
+    "totals": {
+      "tests": 1,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "stderr": ""
+  },
+  {
+    "tag": "runtime-error",
+    "expectedAssertion": false,
+    "detected": false,
+    "exit": 1,
+    "timedOut": false,
+    "executionError": null,
+    "passed": [],
+    "failed": [
+      {
+        "name": "calibration nonassertion",
+        "assertion": false,
+        "detail": "  ---\n  duration_ms: 0.67763\n  type: 'test'\n  location: '/workspace/req-retract-disclosure-20261113/tmp/gg-retract-tap-cal-jgy6zB/runtime-error.test.mjs:1:32'\n  failureType: 'testCodeFailure'\n  error: 'ERR_ASSERTION marker alone is not an assertion'\n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    TestContext.<anonymous> (file:///workspace/req-retract-disclosure-20261113/tmp/gg-retract-tap-cal-jgy6zB/runtime-error.test.mjs:1:75)\n    Test.runInAsyncScope (node:async_hooks:227:14)\n    Test.run (node:internal/test_runner/test:1402:25)\n    Test.start (node:internal/test_runner/test:1262:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)\n  ...\n"
+      }
+    ],
+    "totals": {
+      "tests": 1,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "stderr": ""
+  },
+  {
+    "tag": "timeout",
+    "expectedAssertion": false,
+    "detected": false,
+    "exit": null,
+    "timedOut": true,
+    "executionError": "ETIMEDOUT",
+    "passed": [],
+    "failed": [],
+    "totals": {
+      "tests": -1,
+      "cancelled": -1,
+      "skipped": -1,
+      "todo": -1
+    },
+    "stderr": ""
+  }
+]

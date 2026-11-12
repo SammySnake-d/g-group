@@ -1,0 +1,13 @@
+{
+  "decisions": {
+    "G-PROVENANCE": true,
+    "G-TRACE": true,
+    "G-REVIEW": false,
+    "G-RED": false,
+    "G-STUB": false,
+    "G-TAUTO": false,
+    "G-WORKFLOW": true,
+    "G-LAYER": true
+  },
+  "review_null_provenance_not_substantive": true
+}

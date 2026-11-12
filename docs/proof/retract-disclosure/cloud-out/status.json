@@ -1,0 +1,197 @@
+{
+  "head": "80aa646bea7a9ae7b403af16e604192dca3a67f8",
+  "results": [
+    {
+      "name": "clone",
+      "command": [
+        "git",
+        "clone",
+        "--no-checkout",
+        "--no-hardlinks",
+        "/workspace/req-retract-disclosure-20261113/candidate.bundle",
+        "/workspace/req-retract-disclosure-20261113/repo"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 0.428,
+      "log_sha256": "a4733199b99c94e88e32b25a2ae93378ae564a43d6fe18424319232fb1a3366d"
+    },
+    {
+      "name": "checkout",
+      "command": [
+        "git",
+        "checkout",
+        "-B",
+        "feat/retract-side-effect-disclosure",
+        "80aa646bea7a9ae7b403af16e604192dca3a67f8"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 0.114,
+      "log_sha256": "c10aebd92376e66103089a2eacdf60a74f9a5bb9d87f82638a67d08dc9fa090a"
+    },
+    {
+      "name": "red-worktree",
+      "command": [
+        "git",
+        "worktree",
+        "add",
+        "--detach",
+        "/workspace/req-retract-disclosure-20261113/red",
+        "98da21c02560c23ef14fc5c7667b464bbe4adf46"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 0.116,
+      "log_sha256": "42e2b88b83288479e2af557481208fdf658f32d2bb0653c55512c1ed77f3ee69"
+    },
+    {
+      "name": "npm-green",
+      "command": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 6.265,
+      "log_sha256": "c57a2fe32ed3d11f9389ae68ccd1ea2ea3437edc660036ae26c033f5c9d04404"
+    },
+    {
+      "name": "npm-red",
+      "command": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 6.111,
+      "log_sha256": "e0016a54c10b7166801e47f06ef1413ea9dd3cae6c577563efdd2847691d7ebe"
+    },
+    {
+      "name": "same-eight-red",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-reporter=tap",
+        "packages/server/src/retract-composition.test.ts",
+        "packages/server/src/retract-disclosure.test.ts"
+      ],
+      "exit": 1,
+      "expected_exit": 1,
+      "timed_out": false,
+      "seconds": 1.928,
+      "log_sha256": "28bd1b487d52dee1b9b47cdddd680c4f09126e06e5f8db8f955178315f505db3"
+    },
+    {
+      "name": "same-eight-green",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-reporter=tap",
+        "packages/server/src/retract-composition.test.ts",
+        "packages/server/src/retract-disclosure.test.ts"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 2.083,
+      "log_sha256": "d1c0bf72a2c5d493a30c41e1a354c0246eb28e75bd2078915176ce8257fd3a95"
+    },
+    {
+      "name": "mutations",
+      "command": [
+        "node",
+        "packages/server/proof/retract-disclosure-mutations.mjs"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 15.219,
+      "log_sha256": "031740c8c28dd8be97ed76f6f78d8abe1787b0c859eb6eab940401ccb90e4eff"
+    },
+    {
+      "name": "dependency-regression",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-reporter=tap",
+        "packages/server/src/memory-hygiene.test.ts",
+        "packages/server/src/chat-admin.test.ts"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 3.228,
+      "log_sha256": "509934f1c3ca99856234a44a90cba4e917c53cbb61e633bbf619fdef76dfc96e"
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "-s",
+        "typecheck"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 9.188,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "command": [
+        "npm",
+        "run",
+        "-s",
+        "lint"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 0.922,
+      "log_sha256": "62e6d5f0f58ffd216623c3ad29527a3503e746bfb94428aa83fae38ac7c6e72f"
+    },
+    {
+      "name": "full",
+      "command": [
+        "npm",
+        "test",
+        "--silent"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "timed_out": false,
+      "seconds": 192.957,
+      "log_sha256": "ba33c4335e546fc2caf3a7f15494da95ede75d5e354d604f1232b00239cdb5c8"
+    },
+    {
+      "name": "mechanical-gates",
+      "command": [
+        "node",
+        "scripts/gates/run-all.ts",
+        "--local",
+        "--branch=feat/retract-side-effect-disclosure",
+        "--base=c56dae7e3e3f564a4f5080712bfdde92081789d2"
+      ],
+      "exit": 1,
+      "expected_exit": 1,
+      "timed_out": false,
+      "seconds": 3.753,
+      "log_sha256": "3b5a24b45cb34e1853271fdb3952af11410620c1461c7c48ada2503e25688b27"
+    }
+  ],
+  "errors": []
+}

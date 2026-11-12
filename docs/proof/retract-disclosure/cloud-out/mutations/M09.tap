@@ -1,0 +1,71 @@
+TAP version 13
+# Subtest: RD01 retract disclosure is a durable host fact naming the affected task and completed ledger outcome
+not ok 1 - RD01 retract disclosure is a durable host fact naming the affected task and completed ledger outcome
+  ---
+  duration_ms: 187.1577
+  type: 'test'
+  location: '/workspace/req-retract-disclosure-20261113/tmp/gg-retract-disclosure-mut-vGaSrS/m8/packages/server/src/retract-disclosure.test.ts:21:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the same persisted notice is delivered to live subscribers
+    + actual - expected
+    
+    + []
+    - [
+    -   '撤回 #1。任务 t-mwds4ssj-3 / Compute cp-1 于 2026-11-12T16:45:58.434Z 已报告完成:已写入文件 written.txt。该记录中已发生的副作用无法撤回;撤回消息不等于撤销外部操作。'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '撤回 #1。任务 t-mwds4ssj-3 / Compute cp-1 于 2026-11-12T16:45:58.434Z 已报告完成:已写入文件 written.txt。该记录中已发生的副作用无法撤回;撤回消息不等于撤销外部操作。'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/req-retract-disclosure-20261113/tmp/gg-retract-disclosure-mut-vGaSrS/m8/packages/server/src/retract-disclosure.test.ts:56:12)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: RD02 retracting effect-free chat emits no irreversible-effect warning even when another task in the room completed
+ok 2 - RD02 retracting effect-free chat emits no irreversible-effect warning even when another task in the room completed
+  ---
+  duration_ms: 202.05458
+  type: 'test'
+  ...
+# Subtest: RD03 equal sequence in another room is not provenance, and disclosure never copies withdrawn source text
+ok 3 - RD03 equal sequence in another room is not provenance, and disclosure never copies withdrawn source text
+  ---
+  duration_ms: 104.94778
+  type: 'test'
+  ...
+# Subtest: RD04 failed durable notice append rolls back the retract itself and emits no phantom live notice
+not ok 4 - RD04 failed durable notice append rolls back the retract itself and emits no phantom live notice
+  ---
+  duration_ms: 75.85251
+  type: 'test'
+  location: '/workspace/req-retract-disclosure-20261113/tmp/gg-retract-disclosure-mut-vGaSrS/m8/packages/server/src/retract-disclosure.test.ts:123:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/req-retract-disclosure-20261113/tmp/gg-retract-disclosure-mut-vGaSrS/m8/packages/server/src/retract-disclosure.test.ts:148:12)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 2
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 919.04391

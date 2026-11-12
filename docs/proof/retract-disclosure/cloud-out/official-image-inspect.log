@@ -1,0 +1,52 @@
+[
+    {
+        "Id": "sha256:d5ade540c67a471009a07648f75cbfff854ac590158936a0c1b04bb2c2cd63d9",
+        "RepoTags": [
+            "node:22.22.0-slim",
+            "node:i-was-a-digest"
+        ],
+        "RepoDigests": [
+            "node@sha256:d5ade540c67a471009a07648f75cbfff854ac590158936a0c1b04bb2c2cd63d9"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-02-24T19:27:48.023904195Z",
+        "Config": {
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "NODE_VERSION=22.22.0",
+                "YARN_VERSION=1.22.22"
+            ],
+            "Entrypoint": [
+                "docker-entrypoint.sh"
+            ],
+            "Cmd": [
+                "node"
+            ]
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 79433318,
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:9eb9a78eeb101ab215acf43ffb2a709d5fca9ca2a22178564c7ee5cc30774c60",
+                "sha256:f6e71f9d22ec0d0bae2efa77e58e546696fdefb29ea86e480ff1692f30965d5b",
+                "sha256:4353f08b878699ccb1ddad75458dd7d17f97911b46d91a07779baca3b4755991",
+                "sha256:cc5e91a4e413ffbc14fc7624806852156d32444569b5d0ef61cb60ebce7e9b1a",
+                "sha256:a2a4e69ea5e16fe3f4301bf9e1e8e32e90918c26a72e59246a0220d8bb0b04ac"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-11-12T16:45:25.850372471Z"
+        },
+        "Descriptor": {
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+            "digest": "sha256:d5ade540c67a471009a07648f75cbfff854ac590158936a0c1b04bb2c2cd63d9",
+            "size": 1079,
+            "annotations": {
+                "io.containerd.image.name": "docker.io/library/node:22.22.0-slim",
+                "org.opencontainers.image.ref.name": "22.22.0-slim"
+            }
+        }
+    }
+]

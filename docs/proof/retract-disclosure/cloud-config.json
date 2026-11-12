@@ -1,0 +1,11 @@
+{
+  "head": "80aa646bea7a9ae7b403af16e604192dca3a67f8",
+  "red": "98da21c02560c23ef14fc5c7667b464bbe4adf46",
+  "base": "c56dae7e3e3f564a4f5080712bfdde92081789d2",
+  "content_hash": "ae7af5bd8e0dda2cd389eae18d50c452f1bdd5f46bd25a3df46e75ec9105ed73",
+  "bundle_sha256": "427ad1f7a146effaee92954938434b931fc7139d03d2b0b5f6295acdb449f624",
+  "test_files": [
+    "packages/server/src/retract-composition.test.ts",
+    "packages/server/src/retract-disclosure.test.ts"
+  ]
+}
