@@ -44,6 +44,7 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
   let cleanup: ProcessCleanup | null = null;
   let initialized = false;
   let threadId: string | null = null;
+  let starting = false;
   let resumed = false;
   let closed = false;
   const emitted: ComputeEvent[] = [];
@@ -111,7 +112,14 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
         if (typeof msg.method === "string" && Object.hasOwn(msg, "id")) {
           send({ id: msg.id, error: { code: -32601, message: "g-group protocol slice has no Host approval authority" } }); return;
         }
-        if (typeof msg.method === "string") { notes.push(msg); consume(msg); return; }
+        if (typeof msg.method === "string") {
+          if (!["turn/started", "turn/completed"].includes(msg.method)) return;
+          if (starting) {
+            if (notes.length >= 64) { failPending("too many early lifecycle events"); cleanup?.requestStop(50); }
+            else notes.push(msg);
+          } else consume(msg);
+          return;
+        }
         if (typeof msg.id !== "string") return;
         const p = pending.get(msg.id);
         if (!p) return;
@@ -164,14 +172,18 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
     async startTurn(wantedThread, text, turn, tools) {
       const refused = capability(turn, tools); if (refused) return refused;
       if (wantedThread !== threadId) return no("native thread mismatch");
+      if (starting || [...turns.values()].some((t) => t.result === null)) return no("native turn already active");
+      if (typeof text !== "string" || !text.trim()) return no("native turn input must be nonempty text");
+      starting = true;
       const r = await request("turn/start", { threadId: wantedThread, input: [{ type: "text", text, text_elements: [] }], model: turn.model, effort: turn.effort });
-      if (!r.ok) return r;
-      if (!record(r.value.turn) || typeof r.value.turn.id !== "string") return no("invalid native turn id");
+      if (!r.ok) { starting = false; notes.length = 0; return r; }
+      if (!record(r.value.turn) || typeof r.value.turn.id !== "string") { starting = false; notes.length = 0; return no("invalid native turn id"); }
       const id = r.value.turn.id;
       let finish: Turn["finish"] = () => {};
       const done = new Promise<ProtocolResult<ComputeEvent>>((r) => { finish = r; });
       turns.set(id, { started: false, id, done, finish, result: null });
-      for (const note of notes) consume(note);
+      for (const note of notes.splice(0)) consume(note);
+      starting = false;
       return { ok: true, value: { turnId: id } };
     },
     async steer(wantedThread, expectedTurnId, text) {
