@@ -1,0 +1,155 @@
+{
+  "source": "/workspace/req-contact-history-r2-20261113-3dca25e9-v2-node22/results.tar.gz",
+  "bytes": 254924,
+  "sha256": "de9a7a86e6709eb895f58f3689969ca47ba6d2ce4781315414e4d337a1ef999e",
+  "parts": [
+    {
+      "offset": 0,
+      "bytes": 9000,
+      "sha256": "238b65eeeebfb6922d653212413e6e5c2b346cfe000588a0e1ee435ee81f7df9"
+    },
+    {
+      "offset": 9000,
+      "bytes": 9000,
+      "sha256": "7e7397a7cda9db193fc1b341966bfd03a8aad2ba584ef3bd093e46ac7b75835c"
+    },
+    {
+      "offset": 18000,
+      "bytes": 9000,
+      "sha256": "efa0334199a705742e3941a172691e77635f6861d26cca267e399c4d10d84f8f"
+    },
+    {
+      "offset": 27000,
+      "bytes": 9000,
+      "sha256": "1f3ad305acf37f5bc7dc57e7cbfb56dde9c177a4dffd5b3cbde96da9edea5d1f"
+    },
+    {
+      "offset": 36000,
+      "bytes": 9000,
+      "sha256": "fd771bf8a625e688547e8f9bf1f7fa7fd61543c8db3e16a51c7cc23531df7900"
+    },
+    {
+      "offset": 45000,
+      "bytes": 9000,
+      "sha256": "8bf093979968874fe13977f8952495c9ec3ce4573ba42bc39f3dbcd9a15c8021"
+    },
+    {
+      "offset": 54000,
+      "bytes": 9000,
+      "sha256": "09a24379e7796948fb0aac7d56443100720e29d8cbd3258b9fe40ad540c7ac29"
+    },
+    {
+      "offset": 63000,
+      "bytes": 9000,
+      "sha256": "f6a2c7b9fb9e491361382802cada9127ba1875a1e79629f90955a70b13a14724"
+    },
+    {
+      "offset": 72000,
+      "bytes": 9000,
+      "sha256": "ea3e4f1c0f9dc333f17d8d77893f263e3659e8625ae049e24642a6a0460b7b08"
+    },
+    {
+      "offset": 81000,
+      "bytes": 9000,
+      "sha256": "c907bb7424ea0361782843de83d5f70f6cac8a0111853355b11fe23e1c8ea43e"
+    },
+    {
+      "offset": 90000,
+      "bytes": 9000,
+      "sha256": "71de6a1c0eeccb09cea67170e1f09428b72c2ec67092cfc33c42cca7f8c7edd4"
+    },
+    {
+      "offset": 99000,
+      "bytes": 9000,
+      "sha256": "894bdaba5033202c65a1e07eda8795f4c9199b0669366a1b8254e7686cc4b0d8"
+    },
+    {
+      "offset": 108000,
+      "bytes": 9000,
+      "sha256": "656647f589fda500f335a512c4e2f7f332bf9c6c124da6ed5dfc53b6dd30d3ae"
+    },
+    {
+      "offset": 117000,
+      "bytes": 9000,
+      "sha256": "5b08eccd39c9f4ae437d76912d9654923c29db6ab370a74ace4c316b584b102e"
+    },
+    {
+      "offset": 126000,
+      "bytes": 9000,
+      "sha256": "10a4d5b3fc64590ae35773f2d7f25656316232d4cf9cdbf19e3626246bd92a03"
+    },
+    {
+      "offset": 135000,
+      "bytes": 9000,
+      "sha256": "c87cdc1881aa72e76950aa8a3482884cb76a3bac9ad9e34d18e3dd56adaf88d5"
+    },
+    {
+      "offset": 144000,
+      "bytes": 9000,
+      "sha256": "3692b419136f2f3475611c33a7b69c33b2fa0db0ceab7886b68dceb714c32d57"
+    },
+    {
+      "offset": 153000,
+      "bytes": 9000,
+      "sha256": "2fb49a6ff7cd0b76ee812d0fedc313b072da77f8744636aabe5535104268e23c"
+    },
+    {
+      "offset": 162000,
+      "bytes": 9000,
+      "sha256": "662c92f277142cc281744abeac52877c83341861b2f971f595c04dfa97df7948"
+    },
+    {
+      "offset": 171000,
+      "bytes": 9000,
+      "sha256": "4f786cb77588ff449735588ff7488c1d6e29a071940caea2b7ba23be7d8f0745"
+    },
+    {
+      "offset": 180000,
+      "bytes": 9000,
+      "sha256": "cb4251a80ac22a400390e82436b6e50680aa70c605ded7715708c8130409a94a"
+    },
+    {
+      "offset": 189000,
+      "bytes": 9000,
+      "sha256": "9bdc84eff15897bc60a60c2e905762dbbfb8e47971ab5261c565b4aeee69cee4"
+    },
+    {
+      "offset": 198000,
+      "bytes": 9000,
+      "sha256": "be2420fd384a42b24614f88e36c6d7911663f0e2c55fae42b5c8e4aded90306c"
+    },
+    {
+      "offset": 207000,
+      "bytes": 9000,
+      "sha256": "12f2a6850cdca72d0ed85025f9dd69e083ae5af992947e1b69b09bb7acc15f1c"
+    },
+    {
+      "offset": 216000,
+      "bytes": 9000,
+      "sha256": "3bf16a52b7600aa956c05b369aea74ec9541712aa4d8f6e0318df6d0fed96ad8"
+    },
+    {
+      "offset": 225000,
+      "bytes": 9000,
+      "sha256": "7ffaab790251941ee9386f1d255a507f2dd4c808a6581a77311a8fc3c1091ef9"
+    },
+    {
+      "offset": 234000,
+      "bytes": 9000,
+      "sha256": "df605f6db92a17a8bc6cecc04afffad3459a9f20bd5aca7fb7f1ace913d2fe84"
+    },
+    {
+      "offset": 243000,
+      "bytes": 9000,
+      "sha256": "ffbc89fea741493e733aa7bdb707c69faa850c3d541211c6f29f1b480ca957b6"
+    },
+    {
+      "offset": 252000,
+      "bytes": 2924,
+      "sha256": "8e600c9004e4fe6047d852e777bbd1f4dbcbc14ab975fff3760d98f602d73d2f"
+    }
+  ],
+  "local": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/contact-history-r2-resume/pr84-r2-cloud-3dca25e9-node22/cloud-results-3dca25e9.tar.gz",
+  "observed_command_exit": "0",
+  "extracted": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/contact-history-r2-resume/pr84-r2-cloud-3dca25e9-node22/cloud-results"
+}

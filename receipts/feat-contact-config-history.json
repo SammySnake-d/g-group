@@ -25,7 +25,7 @@
   "red": {
     "commit": "b92c857bc90f681cf8cdc2dff7ae6c39c99fe081"
   },
-  "unverifiable": "R-02 R2最终16项同体回溯校准红b92c857b→绿f73a2d27不是历史TDD；CFG13真缺陷先红af3bf6f1后绿b2e8070d。R1-05 原产品/测试/红由codex:534f3614-21cd-43eb-9db6-3cd1673d2b62的原生子代理01a1cf62-d34d-7050-b7b6-c9d738b02b9a、模型chatflows/gpt-6-astra写出；本宿主76d2c467的旧finisher原生01a1d035-2076-7443-bb9f-062b74f98187、gpt-6.1-sol仅从126c42ae起写runner/proof/证据与推送，本轮根gpt-6.1-sol直接写三行触发器及CFG13-16，当前author选本轮直接修改者，未将继承产品改记其名；详见r2来源说明，4原生前缀/13提交call_id已实核但不是上游模型/防篡改证明，host当前turns缺本轮，未伪造。R-02 原三故障在原12测真实存活、新16测指定杀死；追加4变异各16测4/4具名kill、parser21控制通过，runner初次路径别名误拒留证。本轮新云19变异/full/生产proof、正式seatbelt及正常push待执行，旧1485/15不签R2。AC-01/AC-32其他子项、真实模型/CLI/UI仍未验收；回滚始终重做当前模型预检为保守策略，旧R1 review/reject/hash完整保留，交Bot派独立R2。",
+  "unverifiable": "R-02 R2最终16项同体回溯校准红b92c857b→绿f73a2d27不是历史TDD；CFG13真缺陷先红af3bf6f1后绿b2e8070d。R1-05 原产品/测试/红由codex:534f3614-21cd-43eb-9db6-3cd1673d2b62的原生子代理01a1cf62-d34d-7050-b7b6-c9d738b02b9a、模型chatflows/gpt-6-astra写出；本宿主76d2c467的旧finisher原生01a1d035-2076-7443-bb9f-062b74f98187、gpt-6.1-sol仅从126c42ae起写runner/proof/证据与推送，本轮根gpt-6.1-sol直接写三行触发器及CFG13-16，当前author选本轮直接修改者，未将继承产品改记其名；详见r2来源说明，4原生前缀/13提交call_id已实核但不是上游模型/防篡改证明，host当前turns缺本轮，未伪造。R-02 原三故障在原12测真实存活、新16测指定杀死；追加4变异各16测4/4具名kill、parser21控制通过，runner初次路径别名误拒留证。本轮新box4固定Node22云：19/19完整16测指定具名变异kill、16同体红绿、full1489/1489、依赖46/46、type/lint与真实Host/SQLite/service proof均实际通过，535源SHA前后不变；Node24前置失败原包保留且不算产品失败。最终官方hash/seatbelt双锁、正常pre-push full/219自检及CI一次另随交付原档核证；旧1485/15只为R1历史，不签R2。AC-01/AC-32其他子项、真实模型/CLI/UI仍未验收；回滚始终重做当前模型预检为保守策略，旧R1 review/reject/hash完整保留，交Bot派独立R2。",
   "waiver": null,
   "review": {
     "agent": "claude",

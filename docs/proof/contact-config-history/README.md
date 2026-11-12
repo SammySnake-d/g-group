@@ -36,3 +36,7 @@ production proof 使用真Host/SQLite/service/真实MemoryStore的md与索引，
 `cloud-proof.tar.gz` 125974 bytes，SHA256 `1949fdcbef83513761a210659f7c44380f80f68149c78f95440dbaa30953ccba`；37个普通成员，36项文件SHA全部核对。原全量、失败runner与当前15项变异逐个TAP均保留；旧baseline实际是Node的checkmark/spec输出，不是TAP，见 `runner-before-baseline.txt`。
 
 本机 `run-all.ts --local --base 4efdee0... --branch feat/contact-config-history`：G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER通过；G-REVIEW失败：还没有独立审查。G-PROVENANCE因review=null短路，不是来源已实核。这次首次门禁在源码/测试/runner/proof冻结后、完整证据提交前运行，见 `mechanical-gates-before-evidence.txt`。最终hash也覆盖docs证据，不能在本文内嵌自引用；完整证据提交后重新跑出的门禁与hash写在 `reviews/contact-config-history-final-gates.txt`（不参与hash）。
+
+## R2 新冻结云证明
+
+本轮新19变异、最终16同体红绿、full/type/lint、生产Host/SQLite/service与相关依赖回归见`r2/README.md`和`r2/new-cloud-proof-verification.json`；旧1485/15仅为历史。原审查REJECT不改，最终hash/原生门禁/正常推送及CI一次原档随R2自包含交付包提供，不是独立审查或AC-01/AC-32全部验收。
