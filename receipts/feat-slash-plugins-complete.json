@@ -1,0 +1,28 @@
+{
+  "slice": "U58/D11 P7：声明插件斜杠命令隔离执行与 /ketchup 本会话只读未读摘要后端子路径；叠PR#71，不含前端/完整R0/时间线",
+  "acceptance": [
+    {
+      "id": "AC-35",
+      "status": "未测",
+      "reason": "本片后端子范围红16绿16、18/18具名变异、生产插件service路径、全量1501与类型/lint通过；证据packages/server/proof/slash-plugins-v3/README.md。AC-35完整三类插件/常驻承诺/真实渠道故事及前端不在本片，不能据此标全条通过。"
+    },
+    {
+      "id": "AC-05",
+      "status": "未测",
+      "reason": "本片命令的幂等/失败/持久重放已经真实测试（见P7证明），未单独重验AC-05其他普通消息/物理append-only全范围。"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "model": "gpt-6.1-sol"
+  },
+  "red": {
+    "commit": "e0b539158a8ebc9ee66beb4e065490e531cbcc30"
+  },
+  "unverifiable": "AC-35：scriptedMind的无模型proof只证明实际插件安装/隔离RPC/service/SQLite，不能代替真实模型、UI或完整US12。M12/M18旧测试曾漏来源与重复RPC，当前已加强并重跑18/18；所有旧失败保留。G-PROVENANCE在review=null时短路不是实核通过；宿主没有兼容turns.jsonl，不伪造。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待Mira Bot安排独立审查",
+  "notes": "原候选11aa677c树未动；当前副本修unknown参数真实对象校验并强化证明。测试绿/变异不等于独立review。附v3冻结506文件SHA与原始完整日志；后续正常pre-push输出另存接手包，不绕钩子。公平/阈值/跳数等候选不在本片定案。"
+}

@@ -1,0 +1,94 @@
+{
+  "head": "29f1fd3c6bc592881b6f39d6cc2a493d50c77080",
+  "base": "c7d1a2dd3671c2a2289a5cd4b3b673a9f1bb9f29",
+  "results": [
+    {
+      "name": "green",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-timeout=120000",
+        "--test-force-exit",
+        "--test-reporter=tap",
+        "packages/server/src/slash-commands.test.ts"
+      ],
+      "exit_code": 0,
+      "seconds": 2.532,
+      "log_sha256": "5e3d3080707f12f94b47279347f733c2322aefcb2c38e0e6cc6528fa1f81f6ab"
+    },
+    {
+      "name": "red",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-timeout=120000",
+        "--test-force-exit",
+        "--test-reporter=tap",
+        "packages/server/src/slash-commands.test.ts"
+      ],
+      "exit_code": 1,
+      "seconds": 1.733,
+      "log_sha256": "26e0b2a287b4cbc2d921af5da88cdc8ab5f37720f89067d1646cab1c0a4cbbe4"
+    },
+    {
+      "name": "mutations",
+      "command": [
+        "node",
+        "packages/server/proof/slash-plugins-mutations.mjs"
+      ],
+      "exit_code": 0,
+      "seconds": 49.402,
+      "log_sha256": "7c17d5cc953b808a35528c994c51d7978941346dae0a72990401f45702cba394"
+    },
+    {
+      "name": "production",
+      "command": [
+        "node",
+        "packages/server/proof/slash-plugins-real.ts"
+      ],
+      "exit_code": 0,
+      "seconds": 0.471,
+      "log_sha256": "312c15a2a6150d1c8015ba423e3643a665bb2bc8bba3ef4cf620a1b8b43a2df5"
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "-s",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "seconds": 11.485,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "command": [
+        "npm",
+        "run",
+        "-s",
+        "lint"
+      ],
+      "exit_code": 0,
+      "seconds": 0.924,
+      "log_sha256": "633faf46df39b47bae242f60a3e1bbd9604585d4535bea83c15456c53a62f768"
+    },
+    {
+      "name": "full",
+      "command": [
+        "npm",
+        "test",
+        "--silent"
+      ],
+      "exit_code": 0,
+      "seconds": 171.623,
+      "log_sha256": "897dc0918a0292583ac1374ebb1dbf9cfcfdb3be19d20ea1e7be324b71ad1390"
+    }
+  ],
+  "error": null,
+  "source_unchanged": true,
+  "complete": true
+}
