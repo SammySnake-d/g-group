@@ -34,7 +34,14 @@
   },
   "unverifiable": "AC-01 使用确定性Mind/Compute替身而非真实harness；AC-43只覆盖摘要进度且afterAt未测。U83单独真实探针仍失败：实际回复只有thinking到idle，没有replying；因此Q02整体验收未完成。四组断言的绿不能代替这些未测或失败项。",
   "waiver": null,
-  "review": null,
+  "review": {
+    "agent": "claude",
+    "session": "claude:89762718-8de0-48ba-8531-1f6f3ee30739",
+    "model": "group/opus",
+    "verdict": "reject",
+    "reviewed_hash": "2efdba77c1e8120c4f32506e130d0a4cb1837e477d433d733cc2c759705947c6",
+    "notes": "第 1 轮 REJECT（9433023）。hy4 辅审因线路 403 未产出，本轮无辅审。复现一致：生产代码与基线逐字节相同；红 a9c0ffef 4/4 ERR_ASSERTION、绿 4/4；typecheck/lint 0；npm test 1477/1477 无 skip/todo（基线 1473+4）；作者 8/8 变异具名杀死；replying 探针 exit 1 且不在套件内；--local 除 G-REVIEW 外全过；8 个门禁应失败输入各自判败。红是红提交里把 host.ts 改坏 4 处造出来的（等同变异校准，作者已写明）。拒绝原因：审查方 9 个单点故障存活 3——R1-01 同名联系人记忆串读（全仓库无测试发现）、R1-02 tasks.progress 不按任务过滤（全仓库无测试发现）、R1-03 回答不核对 qId（本片未守）；R1-04 author.session 是 Codex 原生子线程号，G-PROVENANCE 报作者会话记录不存在，宿主会话应为 codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7。来源已用 Codex 原生记录逐项对到提交、红绿、变异、1477、推送钩子与开 PR。见 reviews/feat-coverage-invariants.md 第 1 轮。"
+  },
   "knownGaps": [
     {
       "id": "U83",
