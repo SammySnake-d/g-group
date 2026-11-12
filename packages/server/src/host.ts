@@ -153,6 +153,7 @@ import { type CodeRepoConfig, type Workspace, Worktrees } from "./worktree.ts";
 import { type ArtifactRef, ArtifactStore, MAX_ARTIFACT_BYTES, MAX_ARTIFACTS, MAX_INLINE_TEXT, isReadable, recentReadable } from "./artifacts.ts";
 
 export interface HostOptions {
+  /** 联系人派生互唤的持久因果限额；默认总次数 4 为候选，可配置。 */
   readonly loopGuard?: LoopLimits;
   readonly file: string;
   readonly userId?: string;
@@ -970,7 +971,7 @@ export class Host {
   private appendMessageTx(
     roomId: string,
     sender: { kind: "user" | "contact" | "helper" | "system"; id: string },
-    f: { text: string; actionKey: string; clientActionId?: string | null; attachments?: string[]; threadRootSeq?: number | null; replyToSeq?: number | null; quotedSeqs?: number[]; mentions?: MessageView["mentions"]; command?: { name: string; args: unknown } | null; card?: Omit<CardRow, "room_id" | "seq"> | null },
+    f: { text: string; actionKey: string; clientActionId?: string | null; attachments?: string[]; threadRootSeq?: number | null; replyToSeq?: number | null; quotedSeqs?: number[]; mentions?: MessageView["mentions"]; command?: { name: string; args: unknown } | null; causeRoots?: readonly string[]; card?: Omit<CardRow, "room_id" | "seq"> | null },
   ): { seq: number; duplicate: boolean } {
     const key = `msg:${roomId}:${f.actionKey}`;
     const prior = one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key);
@@ -980,6 +981,7 @@ export class Host {
     const at = this.now();
     const e = appendEvent(this.db.store, `room:${roomId}`, sender, { kind: "message", text: f.text }, at);
     recordAction(this.db.store, key, { seq: e.seq });
+    this.loopGuard.recordMessage(roomId, e.seq, f.causeRoots ?? []);
     indexMessageTx(this.db, { roomId, seq: e.seq, at, sender, threadRoot: f.threadRootSeq ?? null, text: f.text, attachments: f.attachments ?? [] });
     // 回复 = @原作者 + 引用(AC-37 ①):主回复对象一定在引用里;引用保序去重
     const quoted = [...new Set([...(f.quotedSeqs ?? []), ...(f.replyToSeq != null ? [f.replyToSeq] : [])])];
@@ -1033,6 +1035,15 @@ export class Host {
       if (mem.kind !== "contact" || (from.kind === "contact" && from.id === mem.id) || this.exits.isLeaving(roomId, mem.id)) continue;
       // 调度只看元数据(@、私聊、回复对象),不读正文(D15.1)
       const direct = room.kind === "dm" || view.mentions.some((x) => x.id === mem.id) || (repliedTo?.sender.kind === "contact" && repliedTo.sender.id === mem.id);
+      if (from.kind === "contact") {
+        const wake = this.loopGuard.admit(roomId, seq, mem.id);
+        if (!wake.allowed) {
+          // 一根一条可见说明；被拦目标与消息另存待处理，不把等待误报为已经执行。
+          this.postSystemNotice(roomId, `自动往返已到上限(${wake.reason === "rate" ? "频率" : "总次数"})。待处理:消息 #${seq} 的后续自动讨论；等用户发言继续。`, `loop-limit:${wake.roots.join("|")}`);
+          continue;
+        }
+        if (wake.duplicate) continue;
+      }
       const urgency: Urgency = direct && from.kind === "user" ? "now" : "batch";
       this.loop.notify(mem.id, urgency);
     }
@@ -2464,8 +2475,15 @@ export class Host {
         }
       }
     }
+    // 达到限额的派生消息保留在日志；只由新用户输入续话，不因重启/旁路通知重新开轮。
+    const userRooms = new Set(fresh.filter((f) => f.kind === "message" && f.sender.kind === "user").map((f) => f.roomId));
+    for (let i = fresh.length - 1; i >= 0; i--) {
+      const f = fresh[i]!;
+      if (f.kind === "message" && !userRooms.has(f.roomId) && (f.sender.kind === "contact" && this.loopGuard.isStopped(f.roomId, f.seq))) fresh.splice(i, 1);
+    }
     const inbox = this.inbox(contactId);
     for (const i of inbox) fresh.push(JSON.parse(i.payload) as Inbound);
+    if (fresh.length > 0 && fresh.every((f) => f.kind === "message" && f.sender.kind === "system")) return "done";
     if (fresh.length === 0) {
       if (ownOnly.length) tx(this.db, () => this.advanceCursorsTx(contactId, lastSeen));
       return "done";
@@ -2561,7 +2579,7 @@ export class Host {
       fresh,
       tasks: tasks.map((t) => `${t.id} [${t.state}] ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
       // 保留 CA2 回告/可认领任务与 #71 禁言事实，各自相对顺序不变（Mira Bot #3011）。
-      pointers: [...pointers, ...mem.pointers],
+      pointers: [...rejectionPointers(shownRejections), ...claimable, ...pointers, ...mem.pointers, ...this.chatAdmin.muteNotes(contactId)],
       budgetBytes: this.opts.roundBudgetBytes ?? ROUND_BUDGET_BYTES,
       runs: this.runLinesFor(contactId, rooms),
       });
@@ -2795,6 +2813,8 @@ export class Host {
     // 移出中:这个群里的发言、登记承诺与接新活一律拒绝(D05「先禁止新群内接单与发言」)
     const leavingRooms = this.exits.leavingRoomsOf(contactId);
     const freshMsgs = fresh.filter((f): f is InboundMessage => f.kind === "message");
+    const appendMessage = (roomId: string, sender: Parameters<Host["appendMessageTx"]>[1], fields: Parameters<Host["appendMessageTx"]>[2]) =>
+      this.appendMessageTx(roomId, sender, { ...fields, causeRoots: this.loopGuard.rootsFor(fresh, roomId) });
     const effects: HostEffect[] = [];
     const appended: { roomId: string; seq: number }[] = [];
     const touchedTasks = new Set<string>();
@@ -2838,13 +2858,13 @@ export class Host {
             if (!a.text.trim()) { reject("空消息"); break; }
             // 未落实声明(片 CA2):这一轮里被当场拒的动作所指的对象出现在正文里,就是宣称它已经做了——不发出这句话,只记回告
             const over = unfulfilledClaim(a, out.inRoundRefusals ?? []);
-            if (false && over) { reject(`这一轮里对 ${over.token} 的动作被当场拒了(${over.reason});这句话宣称它已完成,没有发出`); break; }
+            if (over) { reject(`这一轮里对 ${over.token} 的动作被当场拒了(${over.reason});这句话宣称它已完成,没有发出`); break; }
             // 结构化 @(缺口 7):对象必须都是这个会话的成员,写进 mentions 与用户发消息同一形状,唤醒照现有规则
             const atWhy = a.mentions?.length ? mentionRefusal(a.roomId, a.mentions, this.members(a.roomId)) : null;
-            if (false && atWhy) { reject(atWhy); break; }
+            if (atWhy) { reject(atWhy); break; }
             // @everyone(片 CA2,US1 §8.4):展开成该会话全体成员(含用户、不含发送者自己、不含 Helper),与逐个 @ 取并集、同一人只列一次
             const atIds = replyMentionIds(a.mentions, a.everyone === true, this.members(a.roomId), contactId);
-            const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [], ...(atIds.length ? { mentions: toMentions(atIds) } : {}) });
+            const r = appendMessage(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [], ...(atIds.length ? { mentions: toMentions(atIds) } : {}) });
             appended.push({ roomId: a.roomId, seq: r.seq });
             replies.push({ roomId: a.roomId, seq: r.seq, text: a.text });
             if (a.replyToSeq !== null) referenced.add(`${a.roomId}#${a.replyToSeq}`);
@@ -2872,7 +2892,7 @@ export class Host {
             const { effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: contactId });
             for (const e of eff) if (e.kind === "spawn-compute") effects.push({ kind: "spawn", taskId, requestId: e.requestId, contactId, model: this.computeModelOf(contact), brief: a.task, roomId: a.roomId });
             const cardId = this.newId("card");
-            const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, {
+            const r = appendMessage(a.roomId, { kind: "contact", id: contactId }, {
               text: `接了任务:${a.title}`,
               actionKey: `${actionId}:card`,
               replyToSeq: a.sourceSeq,
@@ -2984,7 +3004,7 @@ export class Host {
             // 审查门(AC-26):还没有跨厂商审查联系人时任务停在 T5,提出者本人回复通过即豁免审查并验收,记为 waived-by-user
             // 可读工件按内容快照进库,交付消息钉住 ref + sha256(AC-04)
             const arts = this.collectArtifacts(a.taskId);
-            const r = this.appendMessageTx(t.roomId, { kind: "contact", id: contactId }, {
+            const r = appendMessage(t.roomId, { kind: "contact", id: contactId }, {
               text: a.text,
               actionKey: actionId,
               replyToSeq: t.sourceSeq,
@@ -3067,7 +3087,7 @@ export class Host {
               throw e;
             }
             effects.push(...claimed);
-            const r = this.appendMessageTx(cur.roomId, { kind: "contact", id: contactId }, { text: `认领了任务:${cur.title}`, actionKey: actionId, replyToSeq: cur.sourceSeq, quotedSeqs: [cur.sourceSeq] });
+            const r = appendMessage(cur.roomId, { kind: "contact", id: contactId }, { text: `认领了任务:${cur.title}`, actionKey: actionId, replyToSeq: cur.sourceSeq, quotedSeqs: [cur.sourceSeq] });
             appended.push({ roomId: cur.roomId, seq: r.seq });
             referenced.add(`${cur.roomId}#${cur.sourceSeq}`);
             touchedTasks.add(a.taskId);
