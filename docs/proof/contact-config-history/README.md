@@ -33,4 +33,4 @@ production proof 使用真Host/SQLite/service/真实MemoryStore的md与索引，
 
 `cloud-proof.tar.gz` 125974 bytes，SHA256 `1949fdcbef83513761a210659f7c44380f80f68149c78f95440dbaa30953ccba`；37个普通成员，36项文件SHA全部核对。原全量、失败runner与当前15项变异逐个TAP均保留；旧baseline实际是Node的checkmark/spec输出，不是TAP，见 `runner-before-baseline.txt`。
 
-本机 `run-all.ts --local --base 4efdee0... --branch feat/contact-config-history`：G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER通过；G-REVIEW失败：还没有独立审查。G-PROVENANCE因review=null短路，不是来源已实核。内容hash `2b6c37e04e43323b684dfce97c1178907d2a7e2f448db856034de84a1f71e0dd`。
+本机 `run-all.ts --local --base 4efdee0... --branch feat/contact-config-history`：G-TRACE/G-RED/G-STUB/G-TAUTO/G-WORKFLOW/G-LAYER通过；G-REVIEW失败：还没有独立审查。G-PROVENANCE因review=null短路，不是来源已实核。这次首次门禁在源码/测试/runner/proof冻结后、完整证据提交前运行，见 `mechanical-gates-before-evidence.txt`。最终hash也覆盖docs证据，不能在本文内嵌自引用；完整证据提交后重新跑出的门禁与hash写在 `reviews/contact-config-history-final-gates.txt`（不参与hash）。
