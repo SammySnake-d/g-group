@@ -37,6 +37,7 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
     if (!t.ok || !Array.isArray(t.value) || t.value.length !== 0) return no("native per-tool authorization is not mapped; Host/G2 policy must not be guessed");
     const p = plainData(turn, "turn model");
     if (!p.ok || !record(p.value) || typeof p.value.model !== "string" || !Object.hasOwn(options.models, p.value.model)) return no("requested model is not in the explicit owner catalog");
+    if (typeof p.value.effort !== "string" || !options.models[p.value.model]?.includes(p.value.effort)) return no("requested effort is not supported by the explicit owner catalog");
     return null;
   }
   let child: ChildProcessWithoutNullStreams | null = null;
