@@ -1,0 +1,27 @@
+{
+  "stage": "R1-01 test enhancement before other findings",
+  "candidate": "/private/tmp/gg-req-invariants-r2-resume-20261113",
+  "scratch": "/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gg-q02-r2-r101-melhuz42",
+  "command": [
+    "node",
+    "--test",
+    "--test-concurrency=1",
+    "--test-timeout=120000",
+    "--test-force-exit",
+    "--test-reporter=tap",
+    "packages/server/src/coverage-invariants.test.ts"
+  ],
+  "exit": 1,
+  "counts": {
+    "tests": 4,
+    "pass": 3,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "designated_test": "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+  "designated_ERR_ASSERTION_kill": true,
+  "seconds": 0.428,
+  "test_sha256": "bd1518759bce90cf2012c97baebc60d91056f8e7b87014d015ae119ea7f59ced"
+}

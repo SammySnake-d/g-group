@@ -31,17 +31,19 @@ const CATALOG = [
 ];
 
 test("Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离", async () => {
-  const seen: RoundInput[] = [];
-  const factory = mind(i => i.fresh.flatMap(f => f.kind === "message" && f.text === "记住核对暗号" ? [{ kind: "remember" as const, roomId: f.roomId, sourceSeq: f.seq, title: "核对暗号", text: "记忆暗号-identity-proof", anchors: [`room:${f.roomId}`], quote: null, relation: null, target: null }] : []), seen);
+  const seen: RoundInput[] = []; let owner = "";
+  const factory = mind(i => i.contact.id === owner ? i.fresh.flatMap(f => f.kind === "message" && f.text === "记住核对暗号" ? [{ kind: "remember" as const, roomId: f.roomId, sourceSeq: f.seq, title: "核对暗号", text: "记忆暗号-identity-proof", anchors: [`room:${f.roomId}`], quote: null, relation: null, target: null }] : []) : [], seen);
   const s = setup({ mind: factory }); let h = s.host; let svc = s.svc;
   h.updateSettings({ defaultHarness: "claude-code", defaultSpeakingModel: "claude-sonnet-5-5", defaultComputeModel: "claude-opus-5-5", models: CATALOG });
-  const c = value<ContactView>(await svc.handle("contacts.create", { clientActionId: "create", name: "同名联系人", persona: "身份原文-identity-proof" }));
+  const c = value<ContactView>(await svc.handle("contacts.create", { clientActionId: "create", name: "同名联系人", persona: "身份原文-identity-proof" })); owner = c.id;
   const dm = value<RoomView>(await svc.handle("rooms.openDm", { contactId: c.id }));
   const send = async (action: string, text: string) => { value<MessageView>(await svc.handle("messages.send", { roomId: dm.id, clientActionId: action, text })); await settle(h); };
   const check = () => {
     const req = seen.filter(i => i.contact.id === c.id).at(-1)!.request;
-    assert.ok(req.blocks[0]!.text.includes(`联系人 id ${c.id}`) && req.blocks[0]!.text.includes("身份原文-identity-proof"), req.blocks[0]!.text);
-    assert.ok(req.blocks[4]!.text.includes("记忆暗号-identity-proof"), req.blocks[4]!.text);
+    const identity = req.blocks.find(b => b.block === 1); const memoryBlock = req.blocks.find(b => b.block === 5);
+    assert.ok(identity && memoryBlock, "身份块和记忆块必须存在");
+    assert.ok(identity.text.includes(`联系人 id ${c.id}`) && identity.text.includes("身份原文-identity-proof"), identity.text);
+    assert.ok(memoryBlock.text.includes("记忆暗号-identity-proof"), memoryBlock.text);
   };
   await send("remember", "记住核对暗号"); const memory = stableMemory(h, c.id); assert.equal(memory.length, 1);
   await send("recall", "核对暗号是什么"); check();
@@ -54,9 +56,22 @@ test("Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆
     const reopened = value<ContactView>(await svc.handle("contacts.get", { contactId: c.id }));
     assert.deepEqual([reopened.id, reopened.createdAt, reopened.harness, reopened.avatar], [c.id, c.createdAt, "codex", avatar.avatar]);
     await send("restart", "核对暗号重启后"); check(); assert.deepEqual(stableMemory(h, c.id), memory);
-    const other = value<ContactView>(await svc.handle("contacts.create", { clientActionId: "same-name", name: c.name }));
+    const other = value<ContactView>(await svc.handle("contacts.create", { clientActionId: "same-name", name: c.name, persona: "第二位身份-identity-proof" }));
     assert.notEqual(other.id, c.id); assert.deepEqual(h.listMemories(other.id), []); assert.deepEqual(stableMemory(h, c.id), memory);
     assert.equal(h.contactDoc(c.id).value.persona, "身份原文-identity-proof");
+    // 共享room anchor，避免不同私聊恰好把串读的记忆筛掉；只有owner会记忆。
+    const shared = value<RoomView>(await svc.handle("rooms.createGroup", { clientActionId: "same-name-room", title: "同名身份核对", members: [{ kind: "contact", id: c.id }, { kind: "contact", id: other.id }] }));
+    value<MessageView>(await svc.handle("messages.send", { roomId: shared.id, clientActionId: "shared-remember", text: "记住核对暗号", mentions: [{ id: c.id, source: "manual" }] })); await settle(h);
+    assert.equal(h.listMemories(c.id).length, 2); assert.deepEqual(h.listMemories(other.id), []);
+    const recall = value<MessageView>(await svc.handle("messages.send", { roomId: shared.id, clientActionId: "shared-recall", text: "大家核对自己的记忆" })); await settle(h);
+    for (const contact of [c, other]) assert.ok(seen.some(i => i.contact.id === contact.id && i.fresh.some(f => f.kind === "message" && f.seq === recall.seq && f.roomId === shared.id)), `实际跑过本轮: ${contact.id}`);
+    check();
+    const otherInput = seen.filter(i => i.contact.id === other.id).at(-1)!;
+    const otherIdentity = otherInput.request.blocks.find(b => b.block === 1); assert.ok(otherIdentity);
+    assert.ok(otherIdentity.text.includes(`联系人 id ${other.id}`) && otherIdentity.text.includes("第二位身份-identity-proof"), otherIdentity.text);
+    const otherContent = otherInput.request.blocks.map(b => b.text).join("\n");
+    assert.ok(!otherContent.includes("记忆暗号-identity-proof") && !otherContent.includes("身份原文-identity-proof"), otherContent);
+    assert.deepEqual(h.listMemories(other.id), []);
   } finally { await h.close(); }
 });
 
@@ -101,9 +116,23 @@ test("Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/�
     assert.ok(all.every(p => Number.isFinite(Date.parse(p.at))));
     assert.deepEqual(value<{ progress: ComputeProgress[] }>(await svc.handle("tasks.progress", { taskId: task.id, limit: 1 })).progress, [all[2]]);
     const unknown = await svc.handle("tasks.progress", { taskId: "not-a-task" }); assert.equal(!unknown.ok && unknown.error.code, "not_found");
+    value<MessageView>(await svc.handle("messages.send", { roomId: s.room.id, clientActionId: "second-task", text: "唯一派活请求", mentions: [{ id: s.c.id, source: "manual" }] })); await settle(s.host, s.compute);
+    const tasks = value<{ tasks: TaskView[] }>(await svc.handle("tasks.list", { roomId: s.room.id })).tasks; assert.equal(tasks.length, 2);
+    const second = tasks.find(t => t.id !== task.id)!; assert.ok(second); assert.equal(s.compute.spawned.length, 2);
+    const secondComputeId = s.compute.spawned[1]!.computeId; assert.notEqual(secondComputeId, computeId);
+    s.compute.emit({ computeId: secondComputeId, kind: "milestone", stage: "second", summary: "第二任务独有进度" }); await settle(s.host, s.compute);
+    assert.deepEqual(value<{ progress: ComputeProgress[] }>(await svc.handle("tasks.progress", { taskId: task.id, limit: 100 })).progress, all);
+    const secondAll = value<{ progress: ComputeProgress[] }>(await svc.handle("tasks.progress", { taskId: second.id, limit: 100 })).progress;
+    // taskId由查询参数回填，必须连computeId和独有内容一起核对。
+    assert.deepEqual(secondAll.map(p => [p.taskId, p.computeId, p.kind, p.stage ?? null, p.summary]), [[second.id, secondComputeId, "started", null, "已开始"], [second.id, secondComputeId, "milestone", "second", "第二任务独有进度"]]);
+    assert.ok(secondAll.every(p => Number.isFinite(Date.parse(p.at))));
     off(); s.compute.close(); await s.host.close();
     const h = new Host({ file: path.join(s.root, "gg.db"), dataDir: path.join(s.root, "data"), mind: mind(() => []) });
-    try { assert.deepEqual(value<{ progress: ComputeProgress[] }>(await createService(h).handle("tasks.progress", { taskId: task.id, limit: 100 })).progress, all); } finally { await h.close(); }
+    try {
+      const restarted = createService(h);
+      assert.deepEqual(value<{ progress: ComputeProgress[] }>(await restarted.handle("tasks.progress", { taskId: task.id, limit: 100 })).progress, all);
+      assert.deepEqual(value<{ progress: ComputeProgress[] }>(await restarted.handle("tasks.progress", { taskId: second.id, limit: 100 })).progress, secondAll);
+    } finally { await h.close(); }
   } finally { off(); s.compute.close(); }
 });
 
@@ -116,6 +145,12 @@ test("Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍
     const after = value<TaskView>(await svc.handle("tasks.get", { taskId: task.id }));
     assert.deepEqual([after.state, after.pendingQuestion, after.constraintVersion, after.computeRuns], [task.state, task.pendingQuestion, task.constraintVersion, task.computeRuns]);
     const same = messages(s.host, s.room.id).find(m => m.seq === card.seq)!; assert.deepEqual([same.card!.cardId, same.card!.state], [card.card!.cardId, "open"]);
+    assert.deepEqual([s.compute.spawned.length, s.compute.resumed.length], [1, 0]);
+    const wrong = await svc.handle("tasks.answer", { taskId: task.id, qId: `${task.pendingQuestion!.qId}-wrong`, clientActionId: "answer-wrong-question", answer: "错误问题的答案" });
+    assert.equal(!wrong.ok && wrong.error.code, "not_found"); await settle(s.host, s.compute);
+    assert.deepEqual(value<TaskView>(await svc.handle("tasks.get", { taskId: task.id })), after);
+    const afterWrong = messages(s.host, s.room.id).find(m => m.seq === card.seq)!;
+    assert.deepEqual([afterWrong.card!.cardId, afterWrong.card!.state], [card.card!.cardId, "open"]);
     assert.deepEqual([s.compute.spawned.length, s.compute.resumed.length], [1, 0]);
     const answered = value<TaskView>(await svc.handle("tasks.answer", { taskId: task.id, qId: task.pendingQuestion!.qId, clientActionId: "answer-original", answer: "7Q2K" }));
     assert.equal(answered.state, "T3_Running"); await settle(s.host, s.compute);

@@ -5,32 +5,32 @@
       "id": "AC-01",
       "status": "未测",
       "reason": "已独立证明Host层头像/合法换harness/重启身份记忆与同名隔离；真实CLI及完整INVARIANTS协议不在此测试专片，不能将子项绿升格为整条通过",
-      "evidence": "docs/proof/coverage-invariants/README.md"
+      "evidence": "docs/proof/coverage-invariants-r2/README.md"
     },
     {
       "id": "AC-43",
       "status": "未测",
       "reason": "tasks.progress实际事件/字段/顺序/limit/重启/未知任务已覆盖；完整台账、卡住重跑、afterAt与真实harness未验收",
-      "evidence": "docs/proof/coverage-invariants/README.md"
+      "evidence": "docs/proof/coverage-invariants-r2/README.md"
     },
     {
       "id": "AC-44",
       "status": "未测",
       "reason": "T4b无关插话及原qId/原Compute恢复子项已覆盖；真实验证码截图与模型路径未测",
-      "evidence": "docs/proof/coverage-invariants/README.md"
+      "evidence": "docs/proof/coverage-invariants-r2/README.md"
     }
   ],
   "author": {
     "agent": "codex",
-    "session": "codex:01a1d043-1042-7e61-9981-968868c25de1",
-    "model": "gpt-6.1-sol"
+    "session": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "model": "gpt-6.1-sol",
+    "notes": "R1-04 corrected to actual Mirasim host. Historical native parent codex:01a1cfc8-db89-7400-b3de-876bd8478982 and child codex:01a1d043-1042-7e61-9981-968868c25de1 are transcript locators only, not host session identities. No provenance approval is asserted."
   },
   "contributingSessions": [
-    "codex:01a1cfc8-db89-7400-b3de-876bd8478982",
-    "codex:01a1d043-1042-7e61-9981-968868c25de1"
+    "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7"
   ],
   "red": {
-    "commit": "a9c0ffef997b5f364fb6b725031357b4dcf93d74"
+    "commit": "121a145f55bc966df7df438a16621af2a397fd60"
   },
   "unverifiable": "AC-01 使用确定性Mind/Compute替身而非真实harness；AC-43只覆盖摘要进度且afterAt未测。U83单独真实探针仍失败：实际回复只有thinking到idle，没有replying；因此Q02整体验收未完成。四组断言的绿不能代替这些未测或失败项。",
   "waiver": null,
@@ -64,23 +64,74 @@
     }
   ],
   "verification": {
-    "sourceHead": "5cf70481c19c3d052e1da6822ac33919c3a2e1a0",
-    "cloud": "box3",
-    "node": "v24.21.0",
+    "scope": "R2 local author rework only; final frozen cloud full/11-mutant/gates not yet run",
+    "basedOn": "c908939d3d66c0e5018951b6381f9e2b3892a55d",
+    "node": "v25.8.1",
+    "testSha256": "4b77f98c5c682b515dcef9f7cb9c6fb4613f4644be61f03eb189936a2ed47bdf",
+    "red": "121a145f55bc966df7df438a16621af2a397fd60",
+    "redNature": "Retrospective four-fault mutation calibration after existing product implementation; not historical test-first evidence.",
     "redNamedAssertions": 4,
     "green": 4,
-    "mutationKilled": 8,
-    "mutationSurvived": 0,
-    "full": 1477,
-    "fullFail": 0,
-    "fullSkipped": 0,
-    "fullCancelled": 0,
-    "fullTodo": 0,
+    "reviewerCounterexamplesKilled": 3,
+    "reviewerCounterexamplesSurvived": 0,
+    "eachCounterexampleSuiteTests": 4,
+    "full": null,
+    "fullStatus": "pending on cloud for R2; old 1477 result applies to R1 only",
+    "originalEightMutationStatus": "definitions byte-identical; current R2 full eleven-mutant execution pending on cloud",
     "typecheckExit": 0,
     "lintExit": 0,
-    "knownReplyingGapExit": 1,
-    "sourceFrozen": true,
-    "evidence": "docs/proof/coverage-invariants/cloud-proof.tar.gz",
-    "overallAcceptance": "incomplete: known replying gap and documented untested composite criteria"
-  }
+    "runnerParserChecks": 11,
+    "productionPathsByteIdentical": 154,
+    "evidence": "docs/proof/coverage-invariants-r2/README.md",
+    "overallAcceptance": "incomplete: independent R2 review/provenance and cloud gates pending; replying/afterAt/real-harness composite gaps remain"
+  },
+  "historicalVerification": {
+    "R1AuthorCloud": {
+      "sourceHead": "5cf70481c19c3d052e1da6822ac33919c3a2e1a0",
+      "cloud": "box3",
+      "node": "v24.21.0",
+      "redNamedAssertions": 4,
+      "green": 4,
+      "mutationKilled": 8,
+      "mutationSurvived": 0,
+      "full": 1477,
+      "fullFail": 0,
+      "fullSkipped": 0,
+      "fullCancelled": 0,
+      "fullTodo": 0,
+      "typecheckExit": 0,
+      "lintExit": 0,
+      "knownReplyingGapExit": 1,
+      "sourceFrozen": true,
+      "evidence": "docs/proof/coverage-invariants/cloud-proof.tar.gz",
+      "overallAcceptance": "incomplete: known replying gap and documented untested composite criteria"
+    },
+    "R1Receipt": "docs/proof/coverage-invariants-r2/receipt-before-r2.json",
+    "R1Review": "reviews/feat-coverage-invariants.md"
+  },
+  "reworkNotes": [
+    {
+      "id": "R1-01",
+      "change": "实际同名联系人在同一room anchor下运行；仅owner记忆；核对第二位本轮完整request无第一位persona/记忆。原存储隔离、头像/harness/重启断言全部保留。",
+      "evidence": "docs/proof/coverage-invariants-r2/final-M09.tap"
+    },
+    {
+      "id": "R1-02",
+      "change": "创建真实第二任务及不同computeId/独有进度，双向查询与重启逐项比对，不以参数回填taskId自证。",
+      "evidence": "docs/proof/coverage-invariants-r2/final-M10.tap"
+    },
+    {
+      "id": "R1-03",
+      "change": "先答不存在qId，断not_found、任务视图/原卡不变且不恢复Compute；随后原正确qId仍可恢复原Compute。",
+      "evidence": "docs/proof/coverage-invariants-r2/final-M11.tap"
+    },
+    {
+      "id": "R1-04",
+      "change": "author/contributingSessions使用真实host；原native线程保在author.notes及历史receipt。来源门禁尚未实核，不自签。"
+    },
+    {
+      "id": "R1-05",
+      "change": "身份与记忆块按RoundBlock.block=1/5定位，不再依赖blocks数组下标。"
+    }
+  ]
 }

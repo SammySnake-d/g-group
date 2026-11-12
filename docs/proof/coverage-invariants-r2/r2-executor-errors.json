@@ -1,0 +1,27 @@
+[
+  {
+    "stage": "continuation host CLI discovery",
+    "command": [
+      "mirasim",
+      "ui-cli",
+      "atoms",
+      "call",
+      "sessions.send"
+    ],
+    "error": "FileNotFoundError(2, No such file or directory)",
+    "process_started": false,
+    "correction": "Used declared absolute /Users/snakesammy/.mirasim/bin/mirasim CLI and actual chat post schema; not used as test/gate evidence."
+  },
+  {
+    "stage": "gate hash source locator",
+    "command": [
+      "sed",
+      "-n",
+      "1,60p",
+      "scripts/gates/hash.ts"
+    ],
+    "observed_command_exit": 1,
+    "error": "sed: scripts/gates/hash.ts: No such file or directory",
+    "correction": "Read actual scripts/gates/lib.ts hashFiles/contentHash; official hash command not yet executed."
+  }
+]

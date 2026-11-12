@@ -1,0 +1,34 @@
+TAP version 13
+# Subtest: Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离
+ok 1 - Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离
+  ---
+  duration_ms: 103.09275
+  type: 'test'
+  ...
+# Subtest: Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute
+ok 2 - Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute
+  ---
+  duration_ms: 56.534333
+  type: 'test'
+  ...
+# Subtest: Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务
+ok 3 - Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务
+  ---
+  duration_ms: 71.405292
+  type: 'test'
+  ...
+# Subtest: Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答
+ok 4 - Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答
+  ---
+  duration_ms: 76.083125
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 508.020292

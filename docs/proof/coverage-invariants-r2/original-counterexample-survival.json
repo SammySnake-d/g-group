@@ -1,0 +1,103 @@
+{
+  "source_head": "c908939d3d66c0e5018951b6381f9e2b3892a55d",
+  "test_sha256": "ac7f6d8537a1abe6dc30fa1cb1023bf17d245cebb48fe2e776f2d54ea9bd1e46",
+  "production_sha256": "744317ce7e5e805dbcb2875c9d42ee32dcbd79e43110fc2199cf7285d674a9d1",
+  "rows": [
+    {
+      "label": "baseline",
+      "exit": 0,
+      "counts": {
+        "tests": 4,
+        "pass": 4,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/q02-invariants-r2/original-baseline.tap",
+      "reused_already_observed_result": true
+    },
+    {
+      "event": "command_execution",
+      "label": "M09",
+      "candidate_snapshot": "c908939d3d66c0e5018951b6381f9e2b3892a55d",
+      "cwd": "/private/tmp/gg-q02-r2-original-survivors-d4k4vfgo/M09",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-reporter=tap",
+        "packages/server/src/coverage-invariants.test.ts"
+      ],
+      "exit": 0,
+      "counts": {
+        "tests": 4,
+        "pass": 4,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "seconds": 0.52,
+      "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/q02-invariants-r2/original-M09.tap",
+      "log_sha256": "2cc8598a014341a08b8f19fb645bbfd998c77b4a499c30c5a730d19856b7e5a6",
+      "expected_test": "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+      "reviewer_counterexample_survives_original_suite": true
+    },
+    {
+      "event": "command_execution",
+      "label": "M10",
+      "candidate_snapshot": "c908939d3d66c0e5018951b6381f9e2b3892a55d",
+      "cwd": "/private/tmp/gg-q02-r2-original-survivors-d4k4vfgo/M10",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-reporter=tap",
+        "packages/server/src/coverage-invariants.test.ts"
+      ],
+      "exit": 0,
+      "counts": {
+        "tests": 4,
+        "pass": 4,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "seconds": 0.477,
+      "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/q02-invariants-r2/original-M10.tap",
+      "log_sha256": "b6e37c2fa713ce1225cce2707b091a577f5c4fbe95515d44d9a0c989fb64cc8a",
+      "expected_test": "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务",
+      "reviewer_counterexample_survives_original_suite": true
+    },
+    {
+      "event": "command_execution",
+      "label": "M11",
+      "candidate_snapshot": "c908939d3d66c0e5018951b6381f9e2b3892a55d",
+      "cwd": "/private/tmp/gg-q02-r2-original-survivors-d4k4vfgo/M11",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-reporter=tap",
+        "packages/server/src/coverage-invariants.test.ts"
+      ],
+      "exit": 0,
+      "counts": {
+        "tests": 4,
+        "pass": 4,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "seconds": 0.501,
+      "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/q02-invariants-r2/original-M11.tap",
+      "log_sha256": "091d05448acbbebf4b52b04d31028a9300bb8af2fcdcf84f5dc3d9e45da89e1b",
+      "expected_test": "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答",
+      "reviewer_counterexample_survives_original_suite": true
+    }
+  ],
+  "new_assertions_not_written_yet": true
+}

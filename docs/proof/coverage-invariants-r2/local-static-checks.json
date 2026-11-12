@@ -1,0 +1,40 @@
+[
+  {
+    "name": "runner-syntax",
+    "command": [
+      "node",
+      "--check",
+      "packages/server/proof/coverage-invariants-mutations.mjs"
+    ],
+    "exit": 0,
+    "seconds": 0.061,
+    "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/q02-invariants-r2/runner-syntax.log",
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "name": "typecheck",
+    "command": [
+      "npm",
+      "run",
+      "-s",
+      "typecheck"
+    ],
+    "exit": 0,
+    "seconds": 3.084,
+    "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/q02-invariants-r2/typecheck.log",
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "name": "lint",
+    "command": [
+      "npm",
+      "run",
+      "-s",
+      "lint"
+    ],
+    "exit": 0,
+    "seconds": 0.513,
+    "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/q02-invariants-r2/lint.log",
+    "log_sha256": "48a10674f733e0aba893b5af133984b37f2d0d807140f736e28d597f0cdb7c6a"
+  }
+]

@@ -1,0 +1,61 @@
+{
+  "scope": "Pure parse/completeness functions extracted from actual new runner; real narrow TAP plus explicit malformed/incomplete controls. Does not execute original 8 or the whole 11-mutant sweep.",
+  "checks": [
+    {
+      "name": "real complete baseline",
+      "expected": true,
+      "actual": true
+    },
+    {
+      "name": "real designated assertion mutant",
+      "expected": true,
+      "actual": true
+    },
+    {
+      "name": "summary count missing",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "name": "summary wrong test total",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "name": "pass/fail incomplete",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "name": "pass names incomplete",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "name": "skip rejected",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "name": "cancel rejected",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "name": "todo rejected",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "name": "timeout rejected",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "name": "ERR_TEST_FAILURE is not designated assertion",
+      "expected": 0,
+      "actual": 0
+    }
+  ],
+  "passed": 11
+}
