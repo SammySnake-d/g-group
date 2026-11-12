@@ -1,7 +1,7 @@
 {
   "registered_before_product_patch": true,
   "red_head": "52ae81a8c1b2e3a3bc292f89e63c767daac9935a",
-  "fixed_test_sha256": "fbbe7cb2511557b88b84d17ae005854b8e348cae8252f8187a419c61d78f8053",
+  "fixed_test_sha256": "616a40212df20d79b23dbd2de8e411e1b30bb4147595e579faa86f50dec811a2",
   "mutants": [
     {
       "id": "M01",
@@ -89,5 +89,7 @@
       "fault": "personal downscale releases in-flight leases early"
     }
   ],
-  "kill_rule": "Original control 13/13 no skipped/cancelled/todo; each mutant must produce its designated named CQxx ERR_ASSERTION; timeout/load/parser error is not a kill. Record all collateral named failures."
+  "kill_rule": "Original control 13/13 no skipped/cancelled/todo; each mutant must produce its designated named CQxx ERR_ASSERTION; timeout/load/parser error is not a kill. Record all collateral named failures.",
+  "initial_registered_test_sha256": "fbbe7cb2511557b88b84d17ae005854b8e348cae8252f8187a419c61d78f8053",
+  "calibration_reason": "CQ02 expected member order corrected to the observed existing contact-before-user ordering; quota and exact membership assertions retained. All mutant definitions unchanged. Replayed full current test body on original implementation before final green."
 }

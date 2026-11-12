@@ -43,7 +43,7 @@ test("CQ02 rooms.createGroup 原子保存群成员与指定临时额度并对外
   const room = result.value as RoomView;
   assert.equal(room.tempComputeSlots, 3);
   assert.deepEqual(getDoc(host.db, `room-slots:${room.id}`)?.value, { slots: 3 });
-  assert.deepEqual(room.members, [{ kind: "user", id: host.userId }, { kind: "contact", id: c.id }]);
+  assert.deepEqual(room.members, [{ kind: "contact", id: c.id }, { kind: "user", id: host.userId }]);
 });
 
 test("CQ03 contacts.create 与更新共用 null 或 1..64 整数范围，坏额度不残留实体", async () => {
