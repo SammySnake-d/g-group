@@ -14,6 +14,7 @@ import { SlashCommand as SlashCommandSchema, arr, formatIssues, json, obj, oneOf
 import { type Db, HostError, all, one, run } from "./db.ts";
 import type { PluginRuntime, PluginTarget } from "./plugin-runtime.ts";
 import { extractTo, readTgz } from "./untar.ts";
+import { assertCommandNames } from "./slash-commands.ts";
 
 const KIND = oneOf(["data-source", "outbound-channel", "ui-extension"] as const);
 /** plugin.json 的形状。命令沿用合同里的 SlashCommand,但 source/pluginId/targetContactId 由宿主填。 */
@@ -251,6 +252,7 @@ export class PluginStore {
     }
     const m = readManifest(dir);
     if (one(this.d.db, "SELECT 1 FROM gg_plugins WHERE id = ?", m.id)) throw new HostError("conflict", `插件 ${m.id} 已安装,要换版本请用更新`);
+    assertCommandNames(m.commands ?? [], this.commands(), m.id);
     const missing = m.permissions.map((p) => p.key).filter((k) => !granted.includes(k));
     if (missing.length) throw new HostError("forbidden", `安装需要你同意这些权限:${missing.join("、")}`, { missing });
     const target = this.copyIn(m, dir);
@@ -306,6 +308,7 @@ export class PluginStore {
     if (!e) throw new HostError("not_found", `市场里已没有 ${id}`);
     if (version && version !== e.manifest.version) throw new HostError("not_found", `市场里 ${id} 只有 ${e.manifest.version}`);
     if (cmp(e.manifest.version, r.version) <= 0) throw new HostError("conflict", `已是最新版本 ${r.version}`);
+    assertCommandNames(e.manifest.commands ?? [], this.commands(), id);
     const had = JSON.parse(r.granted) as string[];
     const all_ = [...had, ...(granted ?? [])];
     const missing = e.manifest.permissions.map((p) => p.key).filter((k) => !all_.includes(k));

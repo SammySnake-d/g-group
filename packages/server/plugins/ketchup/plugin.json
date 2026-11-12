@@ -1,0 +1,7 @@
+{
+  "id": "ketchup", "name": "离开后的进展摘要", "version": "0.1.0", "publisher": "g-group",
+  "description": "按会话已读位置汇总新消息、任务进展和待你处理的事；只读，不替你批准。",
+  "kinds": ["ui-extension"], "entry": "index.mjs",
+  "permissions": [{"key":"chat:read","description":"读取用户本次选择会话的消息与任务快照"}],
+  "commands": [{"name":"ketchup","description":"汇总未读进展与待处理项","args":[{"name":"from","description":"从哪条消息之后开始；默认已读位置","kind":"number","required":false}]}]
+}
