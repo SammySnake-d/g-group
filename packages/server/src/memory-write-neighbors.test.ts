@@ -53,7 +53,7 @@ function setup(t: TestContext) {
 
 test("G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order", async (t) => {
   const s = setup(t);
-  s.seed("m-0", "BANANA_UNRELATED", [`room:${s.room.id}`]);
+  s.seed("m-0", "紫罗兰花期", [`room:${s.room.id}`]);
   s.seed("m-a", NEEDLE, ["global"]);
   s.seed("m-z", NEEDLE, [`room:${s.room.id}`], { status: "degraded", createdAt: "2025-01-01T00:00:00.000Z" });
   const requests = await s.request();
@@ -65,7 +65,7 @@ test("G35-01 coarse and fine use the query, preserve global/degraded hits and st
 
 test("G35-02 a query with no matching memory gives both write paths an empty neighborhood", async (t) => {
   const s = setup(t);
-  s.seed("m-unrelated", "BANANA_UNRELATED", ["global"]);
+  s.seed("m-unrelated", "紫罗兰花期", ["global"]);
   const requests = await s.request();
   assert.deepEqual(requests.coarse, [], "coarse: no full-library fallback");
   assert.deepEqual(requests.fine, [], "fine: no full-library fallback");
@@ -74,7 +74,7 @@ test("G35-02 a query with no matching memory gives both write paths an empty nei
 test("G35-03 both write paths keep contact, room, status and persona boundaries before retrieval", async (t) => {
   const s = setup(t);
   const other = s.host.createContact({ name: "other", speakingModel: "fixture-model" });
-  s.seed("m-unrelated", "BANANA_UNRELATED", [`room:${s.room.id}`]);
+  s.seed("m-unrelated", "紫罗兰花期", [`room:${s.room.id}`]);
   s.seed("m-visible", NEEDLE, [`room:${s.room.id}`]);
   s.seed("m-room", NEEDLE, ["room:unrelated-room"]);
   s.seed("m-revoked", NEEDLE, ["global"], { status: "revoked" });
