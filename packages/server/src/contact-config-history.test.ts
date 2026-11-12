@@ -209,3 +209,22 @@ test("CFG12 删除联系人不允许通过配置回滚复活；不存在的版�
   assert.equal(host.listContacts().length, 0);
   assert.equal(all(host.db, "SELECT * FROM gg_contact_config_versions").length, 1);
 });
+
+
+test("CFG13 R1-01 覆盖插入不能原位改写历史且回滚仍使用原配置", async () => {
+  const { host } = make();
+  const svc = createService(host);
+  const c = host.createContact({ name: "原配置", persona: "原人设", tools: ["read"] });
+  host.updateContact(c.id, { name: "当前配置", tools: ["read", "write"] });
+  run(host.db, "PRAGMA recursive_triggers = OFF");
+  const before = all(host.db, "SELECT * FROM gg_contact_config_versions WHERE contact_id = ? ORDER BY version", c.id);
+  const injected = { ...host.contactDoc(c.id).value, name: "不得进入历史", tools: ["NEUTRAL_INJECTED_TOOL"] };
+  assert.throws(() => run(host.db, "INSERT OR REPLACE INTO gg_contact_config_versions (contact_id, version, config, kind, restored_from, at) VALUES (?, 1, ?, 'create', NULL, '2026-01-01T00:00:00.000Z')", c.id, JSON.stringify(injected)), /immutable/);
+  assert.deepEqual(all(host.db, "SELECT * FROM gg_contact_config_versions WHERE contact_id = ? ORDER BY version", c.id), before);
+  const history = await svc.handle("contacts.history", { contactId: c.id });
+  assert.ok(history.ok);
+  assert.deepEqual((history.value as History).versions.at(-1)?.config.tools, ["read"]);
+  const rolled = await svc.handle("contacts.rollback", { contactId: c.id, version: 1, expectedVersion: 2, clientActionId: "after-rejected-replace" });
+  assert.ok(rolled.ok);
+  assert.deepEqual([host.contactDoc(c.id).value.name, host.contactDoc(c.id).value.persona, host.contactDoc(c.id).value.tools], ["原配置", "原人设", ["read"]]);
+});
