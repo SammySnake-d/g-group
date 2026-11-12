@@ -108,7 +108,9 @@ test("TT02 contact dispatch and explicit rerun both record their actual creator 
     const second = (await page(s.svc, rerun.taskId)).events;
     assert.deepEqual([second[0]!.cause, second[0]!.actor, second[0]!.sourceSeq, detail(second[0]!).rerunOfTask], ["RerunCreate", { kind: "user", id: "me" }, source.seq, t.id]);
     assert.ok(second.some((e) => e.cause === "RerunClaim" && e.after.owner === s.c.id));
-    assert.deepEqual((await page(s.svc, t.id)).events, first, "new task history does not rewrite original history");
+    const oldAfterRerun = (await page(s.svc, t.id)).events;
+    assert.deepEqual(oldAfterRerun.slice(0, first.length), first, "a rerun cannot rewrite old rows; real late stop/failure facts may append");
+    assert.ok(oldAfterRerun.slice(first.length).every((e) => e.taskId === t.id && ["ExecFailed", "StoppedConfirmed"].includes(e.cause)));
   } finally { await s.host.close(); }
 });
 
@@ -126,7 +128,8 @@ test("TT03 task transitions preserve pre/post state and do not turn duplicate or
     assert.deepEqual([stop.before!.state, stop.after.state, confirmed.before!.state, confirmed.after.state], ["T3_Running", "T9_StopRequested", "T9_StopRequested", "T10_Cancelled"]);
     assert.ok(stop.id < confirmed.id, "stop request is not stop confirmation");
     const old = rows(s.host, t.id);
-    await call(s.svc, "tasks.cancel", { taskId: t.id, clientActionId: "cancel" });
+    const replay = await s.svc.handle("tasks.cancel", { taskId: t.id, clientActionId: "cancel" });
+    assert.ok(!replay.ok && replay.error.code === "conflict", "existing cancel checks terminal state before its action key");
     const invalid = await s.svc.handle("tasks.assign", { taskId: t.id, contactId: s.c.id, clientActionId: "bad" });
     assert.equal(invalid.ok, false);
     assert.deepEqual(rows(s.host, t.id), old);
@@ -148,6 +151,7 @@ test("TT04 follow-up receipt, accepted resume and artifact application are disti
     assert.ok(JSON.stringify(detail(received)).includes(`\"seq\":${msg.seq}`));
     assert.equal(received.after.constraintVer, 1);
     assert.equal(s.compute.resumed.length, 1);
+    assert.ok(events.some((e) => e.kind === "model-attempt" && detail(e).reason === "turn"), "recordTurnTx bypass also appends the real accepted model attempt");
     s.compute.emit({ computeId: "cp-1", kind: "completed", result: "v0-result" });
     await settle(s.host, s.compute);
     s.compute.emit({ computeId: "cp-1", kind: "completed", result: "v1-result" });
@@ -249,16 +253,69 @@ test("TT09 real SQLite reopen preserves event bytes and continuation cursor but 
     const original = rows(s.host, t.id);
     tx(s.host.db, () => putDoc(s.host.db, "task:legacy", 0, { task: newTask("legacy", "me"), title: "pre-timeline task", roomId: s.room.id, sourceSeq: 1, brief: "old", createdAt: NOW, updatedAt: NOW, result: null }));
     await s.host.close(); closed = true;
-    const h = new Host({ file: s.file, now: () => NOW, mind: () => scriptedMind() });
+    const restart = scriptedCompute({ idPrefix: "restart", script: () => [{ kind: "started", sessionId: "restart-session", resumed: false }] });
+    const h = new Host({ file: s.file, now: () => NOW, mind: () => scriptedMind(), compute: () => restart.adapter });
     try {
       const svc = createService(h);
-      assert.deepEqual(rows(h, t.id), original);
+      const reopened = rows(h, t.id);
+      assert.deepEqual(reopened.slice(0, original.length), original, "startup recovery may append actual failure/stop facts, never rewrite old bytes");
+      const recoveryEvents = (await page(svc, t.id)).events.slice(original.length);
+      assert.ok(recoveryEvents.every((e) => ["ExecFailed", "StoppedConfirmed"].includes(e.cause)));
       const rest = await page(svc, t.id, { cursor: first.nextCursor });
-      assert.deepEqual([...first.events, ...rest.events].map((e) => e.id), original.map((e) => e.id));
+      assert.deepEqual([...first.events, ...rest.events].map((e) => e.id), reopened.map((e) => e.id));
       assert.deepEqual(await page(svc, "legacy"), { events: [], nextCursor: null });
-      await call(svc, "tasks.cancel", { taskId: "legacy", clientActionId: "legacy-change" });
+      await call(svc, "tasks.assign", { taskId: "legacy", contactId: s.c.id, clientActionId: "legacy-change" });
+      await settle(h, restart);
       const history = (await page(svc, "legacy")).events;
-      assert.deepEqual(history.map((e) => e.cause), ["Cancel"], "only a new real event, no invented Created record");
+      assert.deepEqual(history[0]!.cause, "ManualAssign", "the first fact is the new actual assignment, not invented creation");
+      assert.ok(history.every((e) => e.kind !== "created"), "never reconstruct pre-timeline task history");
+      assert.ok(history.some((e) => e.cause === "Dispatch" && e.after.computeId === "restart-1"));
     } finally { await h.close(); }
   } finally { if (!closed) await s.host.close(); }
+});
+
+test("TT10 queued continuation is not labeled accepted until the old round ends and the native resume succeeds", async () => {
+  let resumes = 0;
+  const compute = scriptedCompute({ script: () => [{ kind: "started", sessionId: "s", resumed: false }], resumeResult: () => ++resumes === 1 ? { ok: false, reason: "这个 Compute 还在运行,等它结束这一轮再续" } : null });
+  const s = scene({ compute, mind: forwarding });
+  try {
+    const t = await create(s, "A", "A", true); await settle(s.host, compute);
+    assert.ok((await page(s.svc, t.id)).events.length > 0);
+    s.host.send({ roomId: s.room.id, clientActionId: "queued", text: "给A:QUEUE-PRIVATE-TEXT" });
+    await settle(s.host, compute);
+    const before = (await page(s.svc, t.id)).events;
+    const queued = before.find((e) => e.cause === "ResumeQueued")!;
+    assert.equal(detail(queued).queuedCount, 1);
+    assert.equal(before.filter((e) => e.cause === "ResumeAccepted").length, 0);
+    assert.equal(compute.resumed.length, 0);
+    compute.emit({ computeId: "cp-1", kind: "completed", result: "old round" }); await settle(s.host, compute);
+    const after = (await page(s.svc, t.id)).events;
+    const dequeued = after.find((e) => e.cause === "ResumeDequeued")!;
+    const accepted = after.find((e) => e.cause === "ResumeAccepted")!;
+    assert.ok(queued.id < dequeued.id && dequeued.id < accepted.id);
+    assert.equal(detail(dequeued).queuedCount, 0);
+    assert.equal(accepted.after.constraintVer, 1);
+    assert.equal(compute.resumed.length, 1);
+    assert.ok(!JSON.stringify(after).includes("QUEUE-PRIVATE-TEXT"));
+  } finally { await s.host.close(); }
+});
+
+test("TT11 a failed target-side rebind fact rolls back both tasks, both links and the action receipt before a clean retry", async () => {
+  const s = scene({ mind: forwarding });
+  try {
+    const a = await create(s, "A", "A", true); const b = await create(s, "B", "B", true); await settle(s.host, s.compute);
+    assert.ok((await page(s.svc, a.id)).events.length > 0);
+    const m = s.host.send({ roomId: s.room.id, clientActionId: "follow", text: "给A:原子改挂" }); await settle(s.host, s.compute);
+    const params = { roomId: s.room.id, seq: m.seq, fromTaskId: a.id, toTaskId: b.id, expectedBindingVersion: 0, clientActionId: "atomic-rebind" };
+    const docs = () => all(s.host.db, "SELECT key, ver, value FROM docs WHERE key IN (?, ?, ?, ?) ORDER BY key", `task:${a.id}`, `task:${b.id}`, `follow:${a.id}`, `follow:${b.id}`);
+    const before = { docs: docs(), rows: [rows(s.host, a.id), rows(s.host, b.id)] };
+    s.host.db.store.db.exec("CREATE TEMP TRIGGER fail_rebind_fact BEFORE INSERT ON gg_task_events WHEN json_extract(NEW.payload, '$.cause') = 'FollowUpReboundIn' BEGIN SELECT RAISE(ABORT, 'target timeline fault'); END");
+    const result = await s.svc.handle("tasks.rebindFollowUp", params);
+    assert.ok(!result.ok && result.error.code === "internal");
+    assert.deepEqual({ docs: docs(), rows: [rows(s.host, a.id), rows(s.host, b.id)] }, before);
+    assert.equal(all(s.host.db, "SELECT 1 FROM actions WHERE action_id = ?", "rebind:atomic-rebind").length, 0);
+    s.host.db.store.db.exec("DROP TRIGGER fail_rebind_fact");
+    await call(s.svc, "tasks.rebindFollowUp", params); await settle(s.host, s.compute);
+    assert.ok((await page(s.svc, b.id)).events.some((e) => e.cause === "FollowUpReboundIn"));
+  } finally { await s.host.close(); }
 });
