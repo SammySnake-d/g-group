@@ -25,14 +25,23 @@ Candidate G-LAYER has five direct direction controls and four real CLI selftest 
 ## Observed thin proof
 
 - Existing CC quiesce baseline: 5/5; candidate unchanged file: 5/5.
-- Shared real cleanup: 5/5, including captured detached child, unexited-main refusal, SIGTERM refusal/escalation, invalid inputs, real unavailable ps/pgrep.
+- Shared real cleanup: 6/6, including captured detached child, unexited-main refusal, SIGTERM refusal/escalation, invalid inputs, real unavailable ps/pgrep.
+- New owning CC one-shot/resident integration: 2/2; total owning tests 15/15. The named three-child witness first proves all three children remain live after main exit 0, then requires all three actual exits before success.
 - Moved pure helper controls: 2/2. Direct G-LAYER controls: 5/5.
 - Original resident file: four selected named tests pass (same PID/session, fallback restart, stop, pending resume invalidated by stop). This is not the full original CC suite.
 - Legacy export identity and resident detached-child bridge: 2/2.
-- Eight pre-bound mutants killed by their exact named witnesses; zero survived, candidate unchanged during proof.
+- Nine pre-bound mutants killed by their exact named witnesses; zero survived, candidate unchanged during proof.
 - Real CLI G-LAYER selftest: 4/4. Local typecheck/lint passed.
 
 Retained executor events: two local shared-lock acquisition exits 75; initial typecheck exit 2 due incomplete local external dependency links. Rebinding missing external dependencies (workspace aliases remained candidate-local) fixed it, corrected typecheck exit 0. These failures are not erased or called product successes.
+
+## Final same-body calibration and preserved correction
+
+Final red commit `bccc9b9bc4c8684679e6648fc24e9845e0b29b9c` has 15 named ERR_ASSERTION failures, zero passes, no skip/cancel. The final green executes the exact same four test files (SHA sealed) and passes 15/15. This is retrospective red calibration of an already-observed green implementation, not a claim that every witness was written before implementation. Earlier 1-name, 12-name and 15-name intermediate reds remain history, not final acceptance evidence.
+
+The added CC tests initially caused TypeScript exit 2 (TS2339): `assert.equal(result.ok, true)` had already narrowed a later failure guard to never. Only its fallback error text was corrected; no assertion was weakened, no compiler option changed. Final red was rerun after that change; final typecheck and lint exit 0. Nine exact named mutation failures were independently checked to contain ERR_ASSERTION, not just nonzero exits.
+
+Self-contained local logs: `thin-proof-v3.tar.gz`, SHA256 `08a988645f8d26e1b14c713ed1922fd14771a31d44ef31f8b1d1e8a6a2d738f0`. The parser selftest passed its positive and negative controls only; it did not launch cloud work.
 
 ## Pending, not accepted
 

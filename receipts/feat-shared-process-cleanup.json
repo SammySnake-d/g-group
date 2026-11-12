@@ -4,7 +4,7 @@
     {
       "id": "AC-23",
       "status": "未测",
-      "reason": "Real thin process and negative controls pass, but whole-product/cloud and complete unchanged CC baseline/candidate suites are pending.",
+      "reason": "Final 15-name same-body calibration and 9 named mutants pass locally; complete original CC baseline/candidate suites, cloud full, independent review and whole-product acceptance remain pending.",
       "evidence": "docs/proof/shared-process-cleanup/README.md"
     }
   ],
@@ -18,9 +18,9 @@
     "codex:01a1d043-1042-7e61-9981-968868c25de1"
   ],
   "red": {
-    "commit": "9cae32b6d535d85433d08b8736a7d9b802386abd"
+    "commit": "bccc9b9bc4c8684679e6648fc24e9845e0b29b9c"
   },
-  "unverifiable": "AC-23 not accepted by thin proof. Full original CC baseline/candidate and cloud full/type/lint, independent review, provenance and product integration remain pending. Escaped system-managed/double-fork processes remain outside discoverable scope. Windows full-tree confirmation fails closed.",
+  "unverifiable": "AC-23 not accepted by local proof. Full original CC baseline/candidate and cloud full/type/lint, independent review, provenance and product integration remain pending. Escaped system-managed/double-fork processes remain outside discoverable scope. Windows full-tree confirmation fails closed.",
   "waiver": null,
   "review": null,
   "gateChangeReviewFocus": "Proposed process layer; add only adapter->process. Five direct controls and four real CLI selftests preserve adapter->adapter and pure-layer prohibitions; trusted-main activation requires independent review.",
@@ -28,22 +28,28 @@
     "originalCCTestFilesByteUnchanged": 7,
     "movedProcgroupByteIdentical": true,
     "primaryNamedRed": 1,
-    "sharedCleanupGreen": 5,
+    "sharedCleanupGreen": 6,
     "helperControlsGreen": 2,
     "directLayerControlsGreen": 5,
     "realCliLayerSelftestsGreen": 4,
     "legacyAndResidentBridgeGreen": 2,
     "selectedOriginalResidentTestsGreen": 4,
-    "namedMutantsKilled": 8,
+    "namedMutantsKilled": 9,
     "namedMutantsSurvived": 0,
     "localTypecheckExit": 0,
     "localLintExit": 0,
     "cloud": "not started; root owns queue",
     "retainedExecutorFailures": [
       "lockf acquisition exit 75 twice",
-      "initial typecheck exit 2: incomplete external dependency symlinks; corrected exit 0"
+      "initial typecheck exit 2: incomplete external dependency symlinks; corrected exit 0",
+      "new CC test typecheck exit 2 TS2339 after successful assertion narrowing; type-safe guard text corrected, final 15-name red rerun, corrected typecheck exit 0"
     ],
-    "sameBodyNamedRed": 12
+    "sameBodyNamedRed": 15,
+    "owningCCIntegrationGreen": 2,
+    "finalThinProofArchive": "docs/proof/shared-process-cleanup/thin-proof-v3.tar.gz",
+    "finalThinProofArchiveSha256": "08a988645f8d26e1b14c713ed1922fd14771a31d44ef31f8b1d1e8a6a2d738f0",
+    "testBodiesByteEqualRedToGreen": true,
+    "redIsRetrospectiveCalibration": true
   },
   "authorIdentitySource": "CODEX_THREAD_ID and CODEX_SESSION_ID observed in this worker environment; model label inherited from the frozen first-slice receipt, no new provenance approval claimed."
 }
