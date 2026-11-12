@@ -1,0 +1,50 @@
+{
+  "slice": "Q08 thin native Codex protocol component; not full ComputeAdapter or Host/G2 integration",
+  "acceptance": [
+    {
+      "id": "AC-23",
+      "status": "未测",
+      "reason": "Component17 and real native marker/resume/interrupt are observed. Whole-product resource ownership, gateway-attributed model switching, tool isolation and Host/G2 remain untested.",
+      "evidence": "docs/proof/codex-compute-protocol/README.md"
+    },
+    {
+      "id": "AC-51",
+      "status": "未测",
+      "reason": "Component17 and real native marker/resume/interrupt are observed. Whole-product resource ownership, gateway-attributed model switching, tool isolation and Host/G2 remain untested.",
+      "evidence": "docs/proof/codex-compute-protocol/README.md"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:01a1d043-1042-7e61-9981-968868c25de1",
+    "model": "gpt-6.1-sol"
+  },
+  "contributingSessions": [
+    "codex:01a1cfc8-db89-7400-b3de-876bd8478982",
+    "codex:01a1d043-1042-7e61-9981-968868c25de1"
+  ],
+  "red": {
+    "commit": "de8e9b6f6bfbb5d5ebbea88c20dff65beadfccba"
+  },
+  "unverifiable": "NOT a full ComputeAdapter. No verified arbitrary native tool allowlist; reject nonempty tools, do not claim empty disables native builtins. Host/G2, actual model attribution/ledger, cross-harness contexts, Windows full process-tree proof, independent review/provenance and product AC-23/AC-51 remain pending.",
+  "waiver": null,
+  "review": null,
+  "authorIdentitySource": "Observed worker environment CODEX_THREAD_ID/CODEX_SESSION_ID; model inherited from active owner configuration. No independent provenance claim.",
+  "verification": {
+    "componentTests": 17,
+    "localTypecheckExit": 0,
+    "localLintExit": 0,
+    "sameBodyNamedRed": 17,
+    "redIsRetrospectiveCalibration": true,
+    "sameTestBytes": true,
+    "nativeComponentSmoke": "docs/proof/codex-compute-protocol/native-component-result.json",
+    "nativeMarkersExact": 2,
+    "nativeRestartResumeSameThread": true,
+    "nativeSteerAckOnly": true,
+    "nativeInterruptedTerminal": true,
+    "productionConfigBytesUnchanged": true,
+    "cloud": "pending",
+    "namedMutants": "pending",
+    "independentReview": false
+  }
+}

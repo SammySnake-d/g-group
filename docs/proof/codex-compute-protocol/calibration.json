@@ -1,0 +1,33 @@
+{
+  "red": "de8e9b6f6bfbb5d5ebbea88c20dff65beadfccba",
+  "green": "f5587177a25b878ada4fa121fcc9f86fa09c1af7",
+  "retrospectiveCalibration": true,
+  "notClaimedAsOriginalTdd": true,
+  "originalSequentialRedGreenLogsRetained": true,
+  "testFile": "packages/adapter-codex-compute/src/protocol.test.ts",
+  "testSha256": "8056308242437696477f00e237ff1ae70d27d43c4dc18fc0805fad54158f1ba8",
+  "sameTestBytes": true,
+  "redExit": 1,
+  "greenExit": 0,
+  "namedAssertionFailures": [
+    "CXP-01 native initialize is acknowledged before initialized and first thread",
+    "CXP-02 native turn IDs and completed payload map to kernel ComputeEvent without a replacement loop",
+    "CXP-03 process restart uses native thread resume and never silently creates a replacement thread",
+    "CXP-04 steer binds expectedTurnId and interrupt waits for matching native interrupted terminal",
+    "CXP-05 unknown requested model is refused before native thread input",
+    "CXP-06 nonempty tool capability cannot silently become unrestricted native tools",
+    "CXP-07 incompatible effort is refused without falling back to harness defaults",
+    "CXP-08 native exit zero without matching completion is a failed turn not successful work",
+    "CXP-09 native started and terminal events are observable in kernel order exactly once",
+    "CXP-10 native server approval is refused instead of implicitly authorized and failed status is preserved",
+    "CXP-11 main exit zero with three detached descendants is not quiescence until shared cleanup proves all exited",
+    "CXP-12 foreign response IDs and early or duplicate foreign turn notifications cannot forge completion",
+    "CXP-13 interrupt acknowledgement alone never becomes an interrupted completion or quiescence claim",
+    "CXP-14 concurrent native turn starts cannot create a second active turn behind the caller",
+    "CXP-15 explicit next-turn model and effort are sent unchanged and unsupported capabilities never enter native input",
+    "CXP-16 malformed native wire fails the active turn instead of leaving settled pending forever",
+    "CXP-17 missing native config owner is an explicit refusal rather than an uncaught realpath failure"
+  ],
+  "namedGreen": 17,
+  "sourceRestoredByteIdentical": true
+}
