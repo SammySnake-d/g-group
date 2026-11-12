@@ -37,9 +37,9 @@ if (outDir) fs.mkdirSync(outDir, { recursive: true });
 const evidence = { node: process.version, tests: TESTS, baseline: null, mutations: [] };
 const save = () => { if (outDir) fs.writeFileSync(path.join(outDir, "mutations.json"), JSON.stringify(evidence, null, 2) + "\n"); };
 const TIMEOUT_MS = Number(process.env.MUT_TIMEOUT_MS ?? 300_000);
-function run(dir) {
+function run(dir, tests = TESTS) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, ["--test", "--test-concurrency=1", "--test-timeout=120000", "--test-force-exit", "--test-reporter=tap", ...TESTS], { cwd: dir, detached: true, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(process.execPath, ["--test", "--test-concurrency=1", "--test-timeout=120000", "--test-force-exit", "--test-reporter=tap", ...tests], { cwd: dir, detached: true, stdio: ["ignore", "pipe", "pipe"] });
     let out = "";
     let timedOut = false;
     child.stdout.on("data", (d) => {
@@ -90,6 +90,16 @@ const count = (s, sub) => s.split(sub).length - 1;
 
 let ok = true;
 console.log(`node ${process.version},变异 ${M.length} 个,测试文件 ${TESTS.length} 个`);
+const cal = path.join(tmp, "parser-calibration"); fs.mkdirSync(cal);
+fs.writeFileSync(path.join(cal, "calibration.test.mjs"), `import assert from "node:assert/strict";import {test} from "node:test";test("parser-assertion",()=>assert.equal(1,2));test("parser-runtime",()=>{throw new TypeError("not an assertion")});test("parser-timeout",{timeout:20},async()=>await new Promise(r=>setTimeout(r,1000)));`);
+fs.writeFileSync(path.join(cal, "load-error.test.mjs"), 'import "./intentionally-missing.mjs";');
+const calibration = await run(cal, ["calibration.test.mjs"]);
+const loadError = await run(cal, ["load-error.test.mjs"]);
+const parserGood = calibration.code === 1 && JSON.stringify(calibration.assertionFailed) === JSON.stringify(["parser-assertion"]) && calibration.failed.length === 3 && loadError.code === 1 && loadError.assertionFailed.length === 0;
+evidence.parserCalibration = { passed: parserGood, mixed: { ...calibration, output: undefined }, loadError: { ...loadError, output: undefined } };
+if (outDir) { fs.writeFileSync(path.join(outDir, "parser-calibration.tap"), calibration.output); fs.writeFileSync(path.join(outDir, "parser-load-error.tap"), loadError.output); } save();
+if (!parserGood) { fs.rmSync(tmp, { recursive: true, force: true }); throw new Error("TAP解析器未区分真实断言/运行异常/超时/加载失败"); }
+console.log("✓ TAP解析器阳阴性:真实ERR_ASSERTION识别，TypeError/超时/加载错误均不算杀死");
 const clean = await run(copy("clean"));
 const good = !clean.timedOut && clean.code === 0 && clean.failed.length === 0 && clean.passed.length === 16;
 console.log(`${good ? "✓" : "✗"} 原样副本:${clean.passed.length} 绿 / ${clean.failed.length} 红${clean.failed.length ? `(${clean.failed.join(";")})` : ""}`);
