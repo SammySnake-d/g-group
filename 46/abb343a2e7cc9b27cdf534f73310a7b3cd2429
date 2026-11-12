@@ -1,0 +1,37 @@
+apps/desktop/src/components/messages/MessageList.tsx
+  s_d81660d2bcfe5d::t_75b391fa3465c4 20,32
+apps/desktop/electron/preload.ts
+  s_d81660d2bcfe5d::t_75b391fa3465c4 3,22
+apps/desktop/src/api/wire/chat-ops.ts
+  s_d81660d2bcfe5d::t_75b391fa3465c4 6,135,139-148
+apps/desktop/electron/app-ipc.ts
+  s_d81660d2bcfe5d::t_75b391fa3465c4 2,19,21-29,55
+apps/desktop/src/api/app-shell-types.ts
+  s_d81660d2bcfe5d::t_75b391fa3465c4 55,65,71-72
+apps/desktop/src/components/messages/grouping.ts
+  s_d81660d2bcfe5d::t_75b391fa3465c4 19,23
+apps/desktop/src/components/Composer.tsx
+  s_d81660d2bcfe5d::t_75b391fa3465c4 40
+apps/desktop/src/app/composer/Toolbar.tsx
+  s_d81660d2bcfe5d::t_75b391fa3465c4 4,14,27-28,35,38-52,73
+apps/desktop/proof/native-files/grouping-red.txt
+  s_d81660d2bcfe5d::t_3a13831fb51a21 1-81
+apps/desktop/proof/native-files/red.txt
+  s_d81660d2bcfe5d::t_42123811f8f435 1-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "46abb343a2e7cc9b27cdf534f73310a7b3cd2429",
+  "prompts": {},
+  "sessions": {
+    "s_d81660d2bcfe5d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cec9-738b-7a32-9fdf-78b37f5178c9",
+        "model": "chatflows/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
