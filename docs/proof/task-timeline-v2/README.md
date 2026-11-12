@@ -31,3 +31,5 @@ v1 冻结候选为 `fbf62dedf42c2718095b77e67b3f0309907694c0`，PR base #77 为 
 首次 clone 已带同名本地分支，`git checkout -b` 真实exit128，随后核对现有ref后改为 `git checkout` 成功。见 executor-error receipt，不计产品红。受控 Mind/Compute 仅控制动作方和信号，底层为真实 Host/service/SQLite；不是真模型、真CLI或前端验收。未自行push、发Bot、派审、签字、合并产品或部署。
 
 v2 尚需云24变异/依赖回归/全量、正式沙箱门禁与跨厂商独审；既有 Docker overlay 运行层失败不得绕过。本片仍不代表完整 AC-02/R-02 验收，provenance未实核，review=null不能当通过。若后续出现第三项产品BUG，仅报告并另行授权，不在此补丁扩张。
+
+最终源码/测试/变异输入提交 `a2603daea77d94f3974555f70fd4a6f9c1f697b7` 上再次实际运行13绿、项目typecheck/lint均exit0，见 [final-narrow-verification.json](final-narrow-verification.json)、[final-thirteen-green.tap](final-thirteen-green.tap)、[final-typecheck.log](final-typecheck.log)、[final-lint.log](final-lint.log)。随后只收进这些原始证明文件，不再改行为、测试或变异输入。

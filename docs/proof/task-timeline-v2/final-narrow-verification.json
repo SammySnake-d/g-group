@@ -1,0 +1,61 @@
+{
+  "source_head": "a2603daea77d94f3974555f70fd4a6f9c1f697b7",
+  "source_unchanged": true,
+  "commands": [
+    {
+      "event": "command_execution",
+      "label": "final-thirteen-green",
+      "command": [
+        "node",
+        "--test",
+        "--test-reporter=tap",
+        "packages/server/src/task-timeline.test.ts",
+        "packages/server/src/task-timeline-origin.test.ts"
+      ],
+      "source_head": "a2603daea77d94f3974555f70fd4a6f9c1f697b7",
+      "exit": 0,
+      "seconds": 0.709,
+      "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/task-timeline-resume/v2/final-thirteen-green.tap",
+      "counts": {
+        "tests": 13,
+        "pass": 13,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "event": "command_execution",
+      "label": "final-typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "source_head": "a2603daea77d94f3974555f70fd4a6f9c1f697b7",
+      "exit": 0,
+      "seconds": 3.111,
+      "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/task-timeline-resume/v2/final-typecheck.log"
+    },
+    {
+      "event": "command_execution",
+      "label": "final-lint",
+      "command": [
+        "npm",
+        "run",
+        "lint"
+      ],
+      "source_head": "a2603daea77d94f3974555f70fd4a6f9c1f697b7",
+      "exit": 0,
+      "seconds": 0.439,
+      "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/task-timeline-resume/v2/final-lint.log"
+    }
+  ],
+  "not_run": [
+    "full suite",
+    "24 mutants",
+    "official sandbox gates",
+    "model/CLI"
+  ]
+}
