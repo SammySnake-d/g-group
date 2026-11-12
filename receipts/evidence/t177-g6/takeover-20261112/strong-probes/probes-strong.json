@@ -1,0 +1,14 @@
+{
+ "fnqtz/claude-opus-5-5": {
+  "at": "2026-11-12T05:07:55.026Z",
+  "ok": false,
+  "attempts": [
+   {
+    "at": "2026-11-12T05:07:55.022Z",
+    "status": 200,
+    "retryAfter": null,
+    "note": "fnqtz: No available accounts: no available accounts (503: you can retry your request)"
+   }
+  ]
+ }
+}

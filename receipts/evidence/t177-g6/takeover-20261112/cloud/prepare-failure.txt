@@ -1,0 +1,1 @@
+Initial delta preparation: remote git fetch failed exit 128; Could not resolve host: github.com. Clone created successfully. Frozen bundle fallback selected.

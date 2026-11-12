@@ -1,0 +1,26 @@
+{
+ "fengshao1227/claude-opus-5-5": {
+  "at": "2026-11-12T09:43:00.908Z",
+  "ok": true,
+  "attempts": [
+   {
+    "at": "2026-11-12T09:43:00.907Z",
+    "status": 200,
+    "retryAfter": null,
+    "note": "ok"
+   }
+  ]
+ },
+ "gemini-r/gemini-3.8-flash-high": {
+  "at": "2026-11-12T09:43:21.164Z",
+  "ok": true,
+  "attempts": [
+   {
+    "at": "2026-11-12T09:43:21.163Z",
+    "status": 200,
+    "retryAfter": null,
+    "note": "ok"
+   }
+  ]
+ }
+}

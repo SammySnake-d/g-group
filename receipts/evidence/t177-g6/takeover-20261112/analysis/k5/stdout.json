@@ -1,0 +1,382 @@
+{
+  "schema": "g6-k5-four-record-readonly-audit/v1",
+  "checkedAtUtc": "2026-11-12T10:07:18.911491+00:00",
+  "verdict": "PASS_FOUR_FROZEN_FALSE_POSITIVES_ONLY",
+  "verifiedRecords": 4,
+  "expectedRecords": 4,
+  "results": [
+    {
+      "file": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-t177-execution/G6/runs/real/raw/g2__workbuddy-ai_hy4free/E1-r1.json",
+      "sha256": "a548d98df4fd9719feb5058e9bcadd4b215bec9d305d6a7619aeb1755c3836c3",
+      "bytes": 141009,
+      "runId": "g2/workbuddy-ai/hy4free/E1/1",
+      "testedCommit": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+      "originalRunStatus": "timeout",
+      "operation": {
+        "order": 2,
+        "op": "edit",
+        "room": "dm",
+        "seq": 1,
+        "step": 1,
+        "at": 1794439890106,
+        "utc": "2026-11-11T23:31:30.106+00:00"
+      },
+      "focusedCall": {
+        "n": 6,
+        "startUtc": "2026-11-11T23:31:53.195+00:00",
+        "endUtc": "2026-11-11T23:33:43.901+00:00",
+        "outcome": "empty"
+      },
+      "sourceMetadata": [
+        {
+          "roomId": "dm-c-mwcr3qsg-1",
+          "seq": 1,
+          "revision": 3,
+          "senderKind": "user",
+          "senderId": "me",
+          "text": "周会定在每周四下午三点,地点三楼小会议室",
+          "verifiedOutcome": false
+        }
+      ],
+      "derivedCoverageId": "bc78fbed5eadac267cc1800f5ddd45297797d57bbe2fe182a61f7e9efe4b7c30",
+      "matchingFailureReports": [
+        {
+          "at": 1794440023908,
+          "utc": "2026-11-11T23:33:43.908+00:00",
+          "contactId": "c-mwcr3qsg-1",
+          "coverageId": "bc78fbed5eadac267cc1800f5ddd45297797d57bbe2fe182a61f7e9efe4b7c30",
+          "error": "压缩请求失败(error):Anthropic stream ended before message_stop"
+        }
+      ],
+      "historicalK5Violations": [
+        {
+          "call": 6,
+          "roomId": "dm-c-mwcr3qsg-1",
+          "seq": 3,
+          "text": "(编辑了 #1)周会定在每周四下午三点,地点三楼小会议室"
+        }
+      ],
+      "finalHostDebt": {
+        "counts": {
+          "pending": 2,
+          "failed": 2
+        },
+        "refs": [
+          {
+            "roomId": "dm-c-mwcr3qsg-1",
+            "seq": 5,
+            "state": "pending"
+          },
+          {
+            "roomId": "dm-c-mwcr3qsg-1",
+            "seq": 6,
+            "state": "pending"
+          },
+          {
+            "roomId": "dm-c-mwcr3qsg-1",
+            "seq": 1,
+            "state": "failed"
+          },
+          {
+            "roomId": "dm-c-mwcr3qsg-1",
+            "seq": 5,
+            "state": "pending"
+          },
+          {
+            "roomId": "dm-c-mwcr3qsg-1",
+            "seq": 1,
+            "state": "failed"
+          }
+        ]
+      },
+      "rememberSourceSeq3RejectedAt": [
+        "2026-11-11T23:33:43.909+00:00"
+      ],
+      "finding": "呈现事件 #3 与 canonical source #1/rev3 混用；新版本检查失败已落账，最终存在 #1 failed 引用。",
+      "rawUnchangedAfterRead": true
+    },
+    {
+      "file": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-t177-execution/G6/runs/real/raw/g3__workbuddy-ai_hy4free/R1-r1.json",
+      "sha256": "74bfe556e4da762446ba5e8f950031b038f991e1d8761132c228e5291533be61",
+      "bytes": 266253,
+      "runId": "g3/workbuddy-ai/hy4free/R1/1",
+      "testedCommit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+      "originalRunStatus": "timeout",
+      "operation": {
+        "order": 2,
+        "op": "retract",
+        "room": "dm",
+        "seq": 1,
+        "step": 1,
+        "at": 1794450785822,
+        "utc": "2026-11-12T02:33:05.822+00:00"
+      },
+      "focusedCall": {
+        "n": 7,
+        "startUtc": "2026-11-12T02:34:23.106+00:00",
+        "endUtc": "2026-11-12T02:36:38.647+00:00",
+        "outcome": "empty"
+      },
+      "sourceMetadata": [],
+      "derivedCoverageId": "75b25011b646da79b7f551cf8da4a2cb9a78631bd4c0e2d6031783088e3d9e33",
+      "matchingFailureReports": [
+        {
+          "at": 1794450998653,
+          "utc": "2026-11-12T02:36:38.653+00:00",
+          "contactId": "c-mwcxkp4z-1",
+          "coverageId": "75b25011b646da79b7f551cf8da4a2cb9a78631bd4c0e2d6031783088e3d9e33",
+          "error": "压缩请求失败(error):Anthropic stream ended before message_stop"
+        }
+      ],
+      "historicalK5Violations": [
+        {
+          "call": 7,
+          "roomId": "dm-c-mwcxkp4z-1",
+          "seq": 3,
+          "text": "(撤回了 #1)"
+        }
+      ],
+      "finalHostDebt": {
+        "counts": {
+          "pending": 2,
+          "failed": 2,
+          "ok": 1
+        },
+        "refs": [
+          {
+            "roomId": "dm-c-mwcxkp4z-1",
+            "seq": 6,
+            "state": "pending"
+          },
+          {
+            "roomId": "dm-c-mwcxkp4z-1",
+            "seq": 8,
+            "state": "pending"
+          },
+          {
+            "roomId": "dm-c-mwcxkp4z-1",
+            "seq": 5,
+            "state": "failed"
+          },
+          {
+            "roomId": "dm-c-mwcxkp4z-1",
+            "seq": 1,
+            "state": "failed"
+          },
+          {
+            "roomId": "dm-c-mwcxkp4z-1",
+            "seq": 6,
+            "state": "pending"
+          }
+        ]
+      },
+      "rememberSourceSeq3RejectedAt": [
+        "2026-11-12T02:36:38.656+00:00",
+        "2026-11-12T02:41:58.237+00:00"
+      ],
+      "recovery": {
+        "call": 12,
+        "startUtc": "2026-11-12T02:39:32.586+00:00",
+        "endUtc": "2026-11-12T02:40:02.996+00:00",
+        "outcome": "ok",
+        "sourceMetadata": [],
+        "derivedCoverageId": "75b25011b646da79b7f551cf8da4a2cb9a78631bd4c0e2d6031783088e3d9e33",
+        "result": {
+          "note": null,
+          "memories": [],
+          "personaSuggestion": null
+        }
+      },
+      "finding": "撤回事件 #3 的空来源 coverage 在 call 12 补查成功；原判据要求撤回通知文本再次出现，漏认补查。",
+      "rawUnchangedAfterRead": true
+    },
+    {
+      "file": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-t177-execution/G6/runs/real/raw/g3__workbuddy-ai_hy4free/E1-r1.json",
+      "sha256": "465a7525b3191a3205e021ba8633281663ba7d6d34352d7179ec98a7140e90a7",
+      "bytes": 198427,
+      "runId": "g3/workbuddy-ai/hy4free/E1/1",
+      "testedCommit": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+      "originalRunStatus": "timeout",
+      "operation": {
+        "order": 2,
+        "op": "edit",
+        "room": "dm",
+        "seq": 1,
+        "step": 1,
+        "at": 1794451956176,
+        "utc": "2026-11-12T02:52:36.176+00:00"
+      },
+      "focusedCall": {
+        "n": 6,
+        "startUtc": "2026-11-12T02:52:58.650+00:00",
+        "endUtc": "2026-11-12T02:55:05.641+00:00",
+        "outcome": "empty"
+      },
+      "sourceMetadata": [
+        {
+          "roomId": "dm-c-mwcy9tu7-1",
+          "seq": 1,
+          "revision": 3,
+          "senderKind": "user",
+          "senderId": "me",
+          "text": "周会定在每周四下午三点,地点三楼小会议室",
+          "verifiedOutcome": false
+        }
+      ],
+      "derivedCoverageId": "8bbda7bbd858c2fb7bfc04ef374c90e41ae964657342520974cddee968d3d129",
+      "matchingFailureReports": [
+        {
+          "at": 1794452105647,
+          "utc": "2026-11-12T02:55:05.647+00:00",
+          "contactId": "c-mwcy9tu7-1",
+          "coverageId": "8bbda7bbd858c2fb7bfc04ef374c90e41ae964657342520974cddee968d3d129",
+          "error": "压缩请求失败(error):Anthropic stream ended before message_stop"
+        }
+      ],
+      "historicalK5Violations": [
+        {
+          "call": 6,
+          "roomId": "dm-c-mwcy9tu7-1",
+          "seq": 3,
+          "text": "(编辑了 #1)周会定在每周四下午三点,地点三楼小会议室"
+        }
+      ],
+      "finalHostDebt": {
+        "counts": {
+          "failed": 2,
+          "pending": 2
+        },
+        "refs": [
+          {
+            "roomId": "dm-c-mwcy9tu7-1",
+            "seq": 1,
+            "state": "failed"
+          },
+          {
+            "roomId": "dm-c-mwcy9tu7-1",
+            "seq": 5,
+            "state": "pending"
+          },
+          {
+            "roomId": "dm-c-mwcy9tu7-1",
+            "seq": 6,
+            "state": "pending"
+          },
+          {
+            "roomId": "dm-c-mwcy9tu7-1",
+            "seq": 5,
+            "state": "pending"
+          },
+          {
+            "roomId": "dm-c-mwcy9tu7-1",
+            "seq": 1,
+            "state": "failed"
+          }
+        ]
+      },
+      "rememberSourceSeq3RejectedAt": [
+        "2026-11-12T02:55:05.649+00:00"
+      ],
+      "finding": "呈现事件 #3 与 canonical source #1/rev3 混用；新版本检查失败已落账，最终存在 #1 failed 引用。",
+      "rawUnchangedAfterRead": true
+    },
+    {
+      "file": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-t177-execution/G6/runs/real/raw/g4on__workbuddy-ai_hy4free/E1-r1.json",
+      "sha256": "74bbacf1a6a4aad8806bd122438e89fca9763f4d403edc47ff790af52aab3a3f",
+      "bytes": 106915,
+      "runId": "g4on/workbuddy-ai/hy4free/E1/1",
+      "testedCommit": "3218bc7dcc59465146cc9455595d81a470a618ff",
+      "originalRunStatus": "timeout",
+      "operation": {
+        "order": 2,
+        "op": "edit",
+        "room": "dm",
+        "seq": 1,
+        "step": 1,
+        "at": 1794463600901,
+        "utc": "2026-11-12T06:06:40.901+00:00"
+      },
+      "focusedCall": {
+        "n": 6,
+        "startUtc": "2026-11-12T06:06:59.313+00:00",
+        "endUtc": "2026-11-12T06:09:06.785+00:00",
+        "outcome": "empty"
+      },
+      "sourceMetadata": [
+        {
+          "roomId": "dm-c-mwd57klo-1",
+          "seq": 1,
+          "revision": 3,
+          "senderKind": "user",
+          "senderId": "me",
+          "text": "周会定在每周四下午三点,地点三楼小会议室",
+          "verifiedOutcome": false
+        }
+      ],
+      "derivedCoverageId": "14867d6636ab4d7610324765a70e90189333c20836f2434013dab04f0dfbafe1",
+      "matchingFailureReports": [
+        {
+          "at": 1794463746794,
+          "utc": "2026-11-12T06:09:06.794+00:00",
+          "contactId": "c-mwd57klo-1",
+          "coverageId": "14867d6636ab4d7610324765a70e90189333c20836f2434013dab04f0dfbafe1",
+          "error": "压缩请求失败(error):Anthropic stream ended before message_stop"
+        }
+      ],
+      "historicalK5Violations": [
+        {
+          "call": 6,
+          "roomId": "dm-c-mwd57klo-1",
+          "seq": 3,
+          "text": "(编辑了 #1)周会定在每周四下午三点,地点三楼小会议室"
+        }
+      ],
+      "finalHostDebt": {
+        "counts": {
+          "pending": 2,
+          "failed": 2
+        },
+        "refs": [
+          {
+            "roomId": "dm-c-mwd57klo-1",
+            "seq": 5,
+            "state": "pending"
+          },
+          {
+            "roomId": "dm-c-mwd57klo-1",
+            "seq": 1,
+            "state": "failed"
+          },
+          {
+            "roomId": "dm-c-mwd57klo-1",
+            "seq": 1,
+            "state": "failed"
+          },
+          {
+            "roomId": "dm-c-mwd57klo-1",
+            "seq": 5,
+            "state": "pending"
+          },
+          {
+            "roomId": "dm-c-mwd57klo-1",
+            "seq": 6,
+            "state": "pending"
+          }
+        ]
+      },
+      "rememberSourceSeq3RejectedAt": [
+        "2026-11-12T06:09:06.800+00:00"
+      ],
+      "finding": "呈现事件 #3 与 canonical source #1/rev3 混用；新版本检查失败已落账，最终存在 #1 failed 引用。",
+      "rawUnchangedAfterRead": true
+    }
+  ],
+  "errors": [],
+  "limits": [
+    "仅核对四份固定 raw 中的四条 K5 误报，不证明全部 K5 或 AC-42 通过。",
+    "未执行模型、宿主、测试套件或修改 runner；Python 仅重放冻结判据的读取/比较逻辑。",
+    "hostDebt 原采集丢失 coverage ID、revision、disposition；新旧 #1 引用不能仅靠该投影区分。",
+    "call 12 的 coverage 关联按固定宿主 identity 公式重建；原 call 记录不直接携带 coverage ID。",
+    "保留 remember sourceSeq=3 被拒绝以及旧记忆仍 active 的独立行为边界；本附件不判其正常或已修复。"
+  ]
+}

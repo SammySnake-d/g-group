@@ -1,0 +1,29 @@
+{
+  "created_at": "2026-11-12T17:22:45.992468+08:00",
+  "source_repo": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-t177-execution/G6/repo",
+  "working_copy": "/private/tmp/gg-t177g6-codex-20261112",
+  "runner_head": "f5f3af097109025295249a6c391fcd78f7cff025",
+  "pr": 70,
+  "pr_head_at_takeover": "3935efa0e45d68eaa71ea6957c5fefcf9119328a",
+  "groups": {
+    "g1": "4efdee0be6d161060099b5ce488e3344c70305ee",
+    "g2": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+    "g3": "122e0d4f1f8b0415cf0c413db28fa827f1d4067b",
+    "g4_before": "3218bc7dcc59465146cc9455595d81a470a618ff",
+    "g4_after": "da066f5fee37d070785ec0ef9b2e7babebf13972"
+  },
+  "g4b_head": "b2cda6eaf1e76c1873a3c7a3bf35152b27f04e49",
+  "original_runner_pid": 91639,
+  "stopped_queue_pid": 87078,
+  "strong_model": "fnqtz/claude-opus-5-5",
+  "weak_model": "workbuddy-ai/hy4free",
+  "required_reps": {
+    "g1": 1,
+    "g2": 3,
+    "g3": 3,
+    "g4on_after": 1,
+    "g4off_after": 1
+  },
+  "strong_status": "probe failed again; upstream No available accounts (503); replacement requires user decision",
+  "credentials": "process-local inherited from original runner; not persisted"
+}

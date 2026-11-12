@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/opt/homebrew/opt/python@3.14/bin/python3.14",
+    "-B",
+    "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-t177-execution/G6/takeover-20261112/analysis/k5/verify_k5_records.py"
+  ],
+  "cwd": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-t177-execution/G6/takeover-20261112/analysis/k5",
+  "startedAtUtc": "2026-11-12T10:07:18.876214+00:00",
+  "endedAtUtc": "2026-11-12T10:07:18.914809+00:00",
+  "exitCode": 0,
+  "scriptSha256": "cbc1906956724d4156e51d148fa54a1b0a123dd198820e45b9775d1a92b2dd76",
+  "stdoutSha256": "f84c935d14b07d6aed282841b9536e03632159463ae641b1a3154d60753b8a0a",
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "outputs": [
+    "stdout.json",
+    "stderr.log",
+    "exit-code.txt"
+  ]
+}
