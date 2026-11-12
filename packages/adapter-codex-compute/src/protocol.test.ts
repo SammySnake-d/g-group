@@ -17,7 +17,7 @@ test("CXP-01 native initialize is acknowledged before initialized and first thre
   try {
     const initialized = await client.initialize();
     assert.equal(initialized.ok, true);
-    if (!initialized.ok) throw new Error(initialized.reason);
+    if (!initialized.ok) throw new Error("native initialize refused");
     const thread = await client.startThread({ model: "probe-A", effort: "low" });
     assert.deepEqual(thread, { ok: true, value: { threadId: "native-thread-1" } });
   } finally { await client.quiesce(1000); }
@@ -101,5 +101,19 @@ test("CXP-07 incompatible effort is refused without falling back to harness defa
     const refused = await client.startThread({ model: "probe-A", effort: "high" });
     assert.equal(refused.ok, false);
     assert.equal(readFileSync(path.join(cfg.configDir, "wire-requests.jsonl"), "utf8").includes('"thread/start"'), false);
+  } finally { await client.quiesce(1000); }
+});
+
+
+test("CXP-08 native exit zero without matching completion is a failed turn not successful work", async () => {
+  const client = createCodexComputeProtocol(options("exit0"));
+  try {
+    assert.equal((await client.initialize()).ok, true);
+    assert.equal((await client.startThread({ model: "probe-A", effort: "low" })).ok, true);
+    assert.equal((await client.startTurn("native-thread-1", "exit", { model: "probe-A", effort: "low" })).ok, true);
+    let timer: NodeJS.Timeout | undefined;
+    const done = await Promise.race([client.settled("native-thread-1", "native-turn-1"), new Promise<unknown>((r) => { timer = setTimeout(() => r({ deadline: true }), 700); })]);
+    clearTimeout(timer);
+    assert.deepEqual(done, { ok: true, value: { computeId: "native-thread-1", kind: "failed", reason: "native process exited before matching turn/completed", code: 0, signal: null, violations: [] } });
   } finally { await client.quiesce(1000); }
 });

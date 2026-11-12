@@ -24,6 +24,7 @@ createInterface({ input: process.stdin }).on("line", (line) => {
     const state = JSON.parse(readFileSync(stored, "utf8")); state.turns.push({ id }); writeFileSync(stored, JSON.stringify(state));
     send({ id: m.id, result: { turn: { id, status: "inProgress", items: [] } } });
     send({ method: "turn/started", params: { threadId: thread, turn: { id, status: "inProgress" } } });
+    if (mode === "exit0") process.exit(0);
     if (mode !== "hold") send(terminal(id));
   } else if (m.method === "turn/steer") send(m.params.expectedTurnId === `native-turn-${n}` ? { id: m.id, result: { turnId: `native-turn-${n}` } } : { id: m.id, error: { code: -32600, message: "expected active turn id mismatch" } });
   else if (m.method === "turn/interrupt") { send({ id: m.id, result: {} }); send(terminal(m.params.turnId, "interrupted")); }
