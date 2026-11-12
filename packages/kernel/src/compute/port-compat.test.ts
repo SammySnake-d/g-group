@@ -1,6 +1,7 @@
 // AC-33/AC-07: use owning-package imports so gate mutations execute the observed implementation.
 import assert from "node:assert/strict";
 import test from "node:test";
+import { plainData as kernelPlainData } from "../plain.ts";
 
 test("S-PORT-02: neutral Compute validators retain baseline input and freeze semantics", async () => {
   let shared: typeof import("./index.ts") | undefined;
@@ -31,6 +32,11 @@ test("S-PORT-02: neutral Compute validators retain baseline input and freeze sem
   const undefinedField = shared.plainData({ extra: undefined }, "fixture");
   assert.ok(undefinedField.ok);
   assert.ok(Object.hasOwn(undefinedField.value as object, "extra"));
+  // Negative control: the pre-existing kernel root contract really does drop it.
+  // The extracted Compute contract must remain observably different, not an alias to that validator.
+  const rootContract = kernelPlainData({ extra: undefined }, "fixture");
+  assert.ok(rootContract.ok);
+  assert.equal(Object.hasOwn(rootContract.value as object, "extra"), false);
   const owned = { nested: { count: 1 } };
   assert.equal(shared.freezeDeep(owned), owned);
   assert.ok(Object.isFrozen(owned.nested));
