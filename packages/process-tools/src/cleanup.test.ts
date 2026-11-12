@@ -1,6 +1,6 @@
 // AC-23: owned real process tree only; never touch a user's existing harness.
 import assert from "node:assert/strict";
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -8,8 +8,16 @@ import { createProcessCleanup } from "./cleanup.ts";
 
 const fixture = fileURLToPath(new URL("../test-support/tree.mjs", import.meta.url));
 function live(pid: number): boolean {
-  const rows = execFileSync("ps", ["-A", "-o", "pid=,stat="], { encoding: "utf8" });
-  return rows.split("\n").some((line) => { const p = line.trim().split(/\s+/); return Number(p[0]) === pid && !p[1]?.startsWith("Z"); });
+  try {
+    const rows = execFileSync("ps", ["-A", "-o", "pid=,stat="], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    return rows.split("\n").some((line) => { const p = line.trim().split(/\s+/); return Number(p[0]) === pid && !p[1]?.startsWith("Z"); });
+  } catch {
+    // macOS seatbelt denies setuid ps; use an independent OS pid listing, never assume absent on error.
+    const listed = spawnSync("pgrep", ["-fl", "."], { encoding: "utf8" });
+    if (listed.status === 1) return false;
+    if (listed.error || listed.status !== 0) throw new Error(`pid enumeration unavailable: ${listed.error?.message ?? listed.stderr}`);
+    return listed.stdout.split("\n").some((line) => Number(line.trim().split(/\s+/)[0]) === pid);
+  }
 }
 
 test("S-PROC-01 AC-23: shared cleanup confirms real main exit and kills a captured setsid child before success", async () => {
@@ -85,11 +93,23 @@ test("S-PROC-04 AC-23: invalid timeouts do not claim cleanup or signal a live pr
   }
 });
 
-test("S-PROC-05 AC-23: actual unavailable ps and pgrep fail closed instead of reporting an empty tree", () => {
-  const probe = fileURLToPath(new URL("../test-support/unobservable.mjs", import.meta.url));
-  const result = JSON.parse(execFileSync(process.execPath, [probe], { encoding: "utf8", timeout: 5000, env: { ...process.env, PATH: "/g-group-no-command-fixture" } })) as { ok: boolean; reason: string };
-  assert.equal(result.ok, false);
-  assert.match(result.reason, /读不到进程表/);
+test("S-PROC-05 AC-23: actual unavailable ps and pgrep fail closed instead of reporting an empty tree", async () => {
+  const child = spawn(process.execPath, ["-e", "process.exit(0)"], { detached: true, stdio: "ignore" });
+  const originalPath = process.env.PATH;
+  try {
+    const cleanup = createProcessCleanup(child);
+    await once(child, "exit");
+    process.env.PATH = "/g-group-no-command-fixture";
+    const result = await cleanup.quiesce(50, 50);
+    assert.equal(result.ok, false);
+    if (result.ok) throw new Error("unreadable tree was accepted");
+    assert.match(result.reason, /读不到进程表/);
+    assert.deepEqual(result.remaining, []);
+  } finally {
+    if (originalPath === undefined) delete process.env.PATH;
+    else process.env.PATH = originalPath;
+    if (child.pid !== undefined) { try { process.kill(-child.pid, "SIGKILL"); } catch {} }
+  }
 });
 
 test("S-PROC-06 AC-23: 主进程先 exit 0 而 3 个子程序仍活时不得报已停止", async () => {

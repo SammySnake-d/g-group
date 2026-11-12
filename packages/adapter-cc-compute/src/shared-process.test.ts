@@ -1,6 +1,6 @@
 // New owning-boundary witnesses; none of the seven original CC tests is modified.
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -10,7 +10,16 @@ import { createComputeAdapter } from "./adapter.ts";
 import { createResidentComputeAdapter } from "./resident.ts";
 import type { ComputeAdapter } from "./types.ts";
 const brief = { task: "neutral cleanup fixture", rules: [], tools: ["Read"], credentialRefs: [], placement: "local" };
-const live = (pid: number) => execFileSync("ps", ["-A", "-o", "pid=,stat="], { encoding: "utf8" }).split("\n").some((l) => { const p = l.trim().split(/\s+/); return Number(p[0]) === pid && !p[1]?.startsWith("Z"); });
+const live = (pid: number) => {
+  try {
+    return execFileSync("ps", ["-A", "-o", "pid=,stat="], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).split("\n").some((l) => { const p = l.trim().split(/\s+/); return Number(p[0]) === pid && !p[1]?.startsWith("Z"); });
+  } catch {
+    const listed = spawnSync("pgrep", ["-fl", "."], { encoding: "utf8" });
+    if (listed.status === 1) return false;
+    if (listed.error || listed.status !== 0) throw new Error(`pid enumeration unavailable: ${listed.error?.message ?? listed.stderr}`);
+    return listed.stdout.split("\n").some((line) => Number(line.trim().split(/\s+/)[0]) === pid);
+  }
+};
 async function started(adapter: ComputeAdapter, id: string) {
   let timer: NodeJS.Timeout | undefined;
   try {
