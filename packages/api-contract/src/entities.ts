@@ -231,6 +231,14 @@ export const TASK_STATES = [
 export type TaskStateName = (typeof TASK_STATES)[number];
 /** Compute 四类语义事件 + 起止(与 @g-group/adapter-cc-compute ComputeEvent.kind 一致)。 */
 export const COMPUTE_EVENT_KINDS = ["started", "milestone", "blocked", "completed", "failed", "stopped"] as const;
+/** 任务事实流只记录写入时实际发生的事实,不从当前任务倒推历史;data 不存用户补充正文。 */
+export const TaskTimelineState = obj({ state: oneOf(TASK_STATES), owner: nullable(id()), constraintVer: int({ min: 0 }), computeId: nullable(id()) });
+export const TaskTimelineEvent = obj({
+  id: int({ min: 1 }), taskId: id(), roomId: id(), sourceSeq: seq(), at: isoTime(),
+  kind: oneOf(["created", "task", "model-attempt", "follow-up"] as const), cause: str({ min: 1, max: 100 }),
+  actor: nullable(MemberRef), before: nullable(TaskTimelineState), after: TaskTimelineState, data: json(),
+});
+export type TaskTimelineEvent = Infer<typeof TaskTimelineEvent>;
 export const ComputeProgress = obj({
   computeId: id(),
   taskId: id(),

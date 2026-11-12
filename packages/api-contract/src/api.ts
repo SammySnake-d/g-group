@@ -39,6 +39,7 @@ import {
   StallThresholdsView,
   TASK_STATES,
   TaskView,
+  TaskTimelineEvent,
   UpstreamStallView,
 } from "./entities.ts";
 import { DraftBody, DraftView } from "./draft.ts";
@@ -200,6 +201,8 @@ export const METHODS = {
     obj({ tasks: arr(TaskView) }),
   ),
   "tasks.get": method(obj({ taskId: id() }), TaskView),
+  /** U80/D21 内置 P0 只读事实流,按只追加 id 正序 keyset 分页;游标绑定任务。旧任务可以没有历史。 */
+  "tasks.timeline": method(obj({ taskId: id(), cursor: opt(str({ min: 1, max: 2000 })), limit: opt(int({ min: 1, max: 200 })) }), obj({ events: arr(TaskTimelineEvent), nextCursor: nullable(str({ max: 2000 })) })),
   "tasks.progress": method(obj({ taskId: id(), afterAt: opt(isoTime()), ...Page }), obj({ progress: arr(ComputeProgress) })),
   /** 普通回复也能确认/退回(AC-28);这两个是同一语义的显式入口。 */
   "tasks.accept": method(obj({ taskId: id(), clientActionId: id() }), TaskView),

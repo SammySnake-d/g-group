@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS gg_compute (
   compute_id TEXT PRIMARY KEY, task_id TEXT NOT NULL, contact_id TEXT NOT NULL, room_id TEXT NOT NULL, harness TEXT NOT NULL, model TEXT NOT NULL,
   status TEXT NOT NULL, started_at TEXT NOT NULL, ended_at TEXT, result TEXT
 );
+CREATE TABLE IF NOT EXISTS gg_task_events (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, room_id TEXT NOT NULL, at TEXT NOT NULL, payload TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS gg_task_events_task ON gg_task_events (task_id, id);
 CREATE TABLE IF NOT EXISTS gg_progress (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, compute_id TEXT NOT NULL, kind TEXT NOT NULL, stage TEXT, summary TEXT NOT NULL, at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS gg_schedules (
   id TEXT PRIMARY KEY, contact_id TEXT NOT NULL, room_id TEXT NOT NULL, title TEXT NOT NULL, cron TEXT NOT NULL, tz TEXT NOT NULL, prompt TEXT NOT NULL,

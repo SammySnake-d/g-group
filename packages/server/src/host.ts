@@ -27,6 +27,7 @@ import {
   type RunView,
   type SettingsView,
   type TaskView,
+  type TaskTimelineEvent,
   draftIssues,
   draftPreview,
   emptyDraft,
@@ -1643,6 +1644,11 @@ export class Host {
     return this.taskView(this.taskDoc(taskId).value);
   }
   /** 按 id 读权威任务文档(正文与版本同一次读出)投影成视图;群入口、侧边栏、事件都走这里或 listTasks,不读缓存副本(AC-02) */
+  /** U80/D21: 红基线仅提供可加载的空事实流;实现由同体行为测试约束。 */
+  taskTimeline(q: { taskId: string; cursor?: string; limit?: number }): { events: TaskTimelineEvent[]; nextCursor: string | null } {
+    this.taskDoc(q.taskId);
+    return { events: [], nextCursor: null };
+  }
   taskViewById(id: string): TaskView {
     const d = this.taskDoc(id);
     return this.taskView(d.value, d.ver);
