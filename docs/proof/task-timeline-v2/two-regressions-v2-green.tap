@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: TT12 contact-owned stop records the actual contact actor while user cancellation stays user
+ok 1 - TT12 contact-owned stop records the actual contact actor while user cancellation stays user
+  ---
+  duration_ms: 100.59575
+  type: 'test'
+  ...
+# Subtest: TT13 autonomous rerun reuses the real contact initiator and manual rerun remains user
+ok 2 - TT13 autonomous rerun reuses the real contact initiator and manual rerun remains user
+  ---
+  duration_ms: 80.224542
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 392.677042

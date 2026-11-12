@@ -1,0 +1,7 @@
+{
+  "source_head": "fbf62dedf42c2718095b77e67b3f0309907694c0",
+  "old_eleven_sha256": "505693df33a22b3825aba37a0de6f27d1c4683e626e1e52986ea10141c493a78",
+  "new_test_path": "packages/server/src/task-timeline-origin.test.ts",
+  "new_test_sha256": "6038004818a068c69c0b1c9bcc044be17105d08a651d078a742d5795d9680bde",
+  "method": "two new public Host/service/SQLite regressions before either product fix; old eleven untouched"
+}

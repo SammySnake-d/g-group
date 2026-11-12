@@ -1,0 +1,18 @@
+{
+  "command": [
+    "git",
+    "checkout",
+    "-b",
+    "feat/task-timeline",
+    "fbf62dedf42c2718095b77e67b3f0309907694c0"
+  ],
+  "exit": 128,
+  "stderr": "fatal: a branch named 'feat/task-timeline' already exists",
+  "classification": "executor clone/check-out error; not test red",
+  "correction": [
+    "git",
+    "checkout",
+    "feat/task-timeline"
+  ],
+  "correction_exit": 0
+}

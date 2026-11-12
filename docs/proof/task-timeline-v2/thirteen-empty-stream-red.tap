@@ -1,0 +1,313 @@
+TAP version 13
+# (node:8315) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: TT12 contact-owned stop records the actual contact actor while user cancellation stays user
+not ok 1 - TT12 contact-owned stop records the actual contact actor while user cancellation stays user
+  ---
+  duration_ms: 61.283417
+  type: 'test'
+  location: '/private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline-origin.test.ts:45:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    contact stop must not invent a user with the contact ID
+    + actual - expected
+    
+    + undefined
+    - {
+    -   id: 'c-mwduaxsy-1',
+    -   kind: 'contact'
+    - }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    kind: 'contact'
+    id: 'c-mwduaxsy-1'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline-origin.test.ts:67:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: TT13 autonomous rerun reuses the real contact initiator and manual rerun remains user
+not ok 2 - TT13 autonomous rerun reuses the real contact initiator and manual rerun remains user
+  ---
+  duration_ms: 38.248709
+  type: 'test'
+  location: '/private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline-origin.test.ts:78:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    rerun creation must match the actual already-recorded initiator, not the ambient user
+    + actual - expected
+    
+    + undefined
+    - {
+    -   id: 'c-mwduaxuk-1',
+    -   kind: 'contact'
+    - }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    kind: 'contact'
+    id: 'c-mwduaxuk-1'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline-origin.test.ts:119:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# (node:8316) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: TT01 manual creation, user assignment and real model-attempt facts are append-only and action-idempotent
+not ok 3 - TT01 manual creation, user assignment and real model-attempt facts are append-only and action-idempotent
+  ---
+  duration_ms: 22.953125
+  type: 'test'
+  location: '/private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:67:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    manual creation has exactly one actual creation fact
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:72:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: TT02 contact dispatch and explicit rerun both record their actual creator and original source
+not ok 4 - TT02 contact dispatch and explicit rerun both record their actual creator and original source
+  ---
+  duration_ms: 27.679209
+  type: 'test'
+  location: '/private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:92:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - 'ContactDispatch'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'ContactDispatch'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:101:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: TT03 task transitions preserve pre/post state and do not turn duplicate or rejected actions into history
+not ok 5 - TT03 task transitions preserve pre/post state and do not turn duplicate or rejected actions into history
+  ---
+  duration_ms: 24.324292
+  type: 'test'
+  location: '/private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:118:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok((await page(s.svc, t.id)).events.some((e) => e.cause === "Dispatch"))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:123:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text
+not ok 6 - TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text
+  ---
+  duration_ms: 18.948125
+  type: 'test'
+  location: '/private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:140:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok((await page(s.svc, t.id)).events.length > 0)
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:145:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: TT05 rebind appends both sides' real linkage versions atomically and replay does not duplicate them
+not ok 7 - TT05 rebind appends both sides' real linkage versions atomically and replay does not duplicate them
+  ---
+  duration_ms: 22.155542
+  type: 'test'
+  location: '/private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:167:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok((await page(s.svc, a.id)).events.length > 0)
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:172:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: TT06 same-timestamp keyset pages are task-bound, stable under append and strictly validate cursors and limits
+not ok 8 - TT06 same-timestamp keyset pages are task-bound, stable under append and strictly validate cursors and limits
+  ---
+  duration_ms: 19.567958
+  type: 'test'
+  location: '/private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:188:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:193:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: TT07 task timeline enforces current room membership before returning any events or cursor
+not ok 9 - TT07 task timeline enforces current room membership before returning any events or cursor
+  ---
+  duration_ms: 10.191416
+  type: 'test'
+  location: '/private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:221:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:225:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: TT08 timeline insert failure rolls back creation and task transition with no durable or live ghost
+not ok 10 - TT08 timeline insert failure rolls back creation and task transition with no durable or live ghost
+  ---
+  duration_ms: 9.348
+  type: 'test'
+  location: '/private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:236:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:240:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: TT09 real SQLite reopen preserves event bytes and continuation cursor but does not invent legacy task history
+not ok 11 - TT09 real SQLite reopen preserves event bytes and continuation cursor but does not invent legacy task history
+  ---
+  duration_ms: 18.579417
+  type: 'test'
+  location: '/private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:258:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:263:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: TT10 queued continuation is not labeled accepted until the old round ends and the native resume succeeds
+not ok 12 - TT10 queued continuation is not labeled accepted until the old round ends and the native resume succeeds
+  ---
+  duration_ms: 17.679041
+  type: 'test'
+  location: '/private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:288:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok((await page(s.svc, t.id)).events.length > 0)
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:294:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: TT11 a failed target-side rebind fact rolls back both tasks, both links and the action receipt before a clean retry
+not ok 13 - TT11 a failed target-side rebind fact rolls back both tasks, both links and the action receipt before a clean retry
+  ---
+  duration_ms: 19.849917
+  type: 'test'
+  location: '/private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:314:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok((await page(s.svc, a.id)).events.length > 0)
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-task-timeline-v2-final-red-20261113/packages/server/src/task-timeline.test.ts:318:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 0
+# fail 13
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 378.654167

@@ -11,7 +11,7 @@ rows=[]
 def execute(label):
  start=time.monotonic();timed=False
  with (out/(label+'.tap')).open('w') as log:
-  p=subprocess.Popen(['node','--test','--test-concurrency=1','--test-reporter=tap',plan['test_file']],cwd=tmp,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+  p=subprocess.Popen(['node','--test','--test-concurrency=1','--test-reporter=tap',*plan['test_files']],cwd=tmp,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
   try: code=p.wait(timeout=90)
   except subprocess.TimeoutExpired: timed=True;os.killpg(p.pid,signal.SIGKILL);code=p.wait()
  raw=(out/(label+'.tap')).read_text()

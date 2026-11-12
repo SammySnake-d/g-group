@@ -1,0 +1,285 @@
+{
+  "schema": "task-timeline-readonly-boundary-review/v1",
+  "created_at": "2026-11-12T17:40:23.798409+00:00",
+  "reviewer": "/root/contact_history_finish",
+  "role": "same-vendor bounded read-only boundary check; not cross-vendor independent acceptance",
+  "target": "/private/tmp/gg-req-task-timeline-resume-20261113",
+  "head": "fbf62dedf42c2718095b77e67b3f0309907694c0",
+  "base": "272b1b5d77bd95f34467a5aa04d0bf5891355887",
+  "parent_bound_content_hash": "e2b6dcc9877c42b8d226a3237b0d2f228c11bf56c2319aaf2530c2885334126c",
+  "content_hash_recomputed": false,
+  "verdict": "issues_found",
+  "findings": [
+    {
+      "id": "TT-RO-01",
+      "severity": "P2",
+      "introduced_by_this_slice": true,
+      "title": "联系人 stop 被记成用户取消，actor.kind 与实际动作方不符",
+      "location": {
+        "path": "packages/server/src/task-timeline.ts",
+        "start_line": 37,
+        "end_line": 37
+      },
+      "call_chain": [
+        "Host.commitRound action stop at host.ts:2881-2889 checks owner contact",
+        "stepTaskTx(taskId,{kind:Cancel,by:contactId}) at host.ts:2884",
+        "recordTaskTransition at task-timeline.ts:42-43",
+        "eventActor treats every Cancel as user at task-timeline.ts:37"
+      ],
+      "trigger": "Owner contact emits existing MindAction {kind:stop, taskId} for its running task. This is an ordinary authorized product route, not a private method call.",
+      "observed": "Real Host/service/SQLite probe completed T3_Running -> T9_StopRequested -> T10_Cancelled; tasks.timeline returned cause=Cancel actor={kind:user,id:<contactId>} although issued action came from that contact.",
+      "expected": "The actual contact actor must remain kind=contact (or explicit origin carrying that real actor); never invent a user with a contact ID.",
+      "impact": "The new append-only authoritative task fact stream misattributes an actual actor, so clients cannot truthfully distinguish contact termination from user cancellation.",
+      "existing_vs_new": "Existing stop behavior succeeds and was not changed; wrong persisted timeline actor is newly introduced by this slice.",
+      "proof_result": "contact_stop_actor",
+      "suggested_minimal_boundary": "Supply contact origin at the existing contact stop call or otherwise preserve typed actor context; do not infer user solely from TaskEvent.kind."
+    },
+    {
+      "id": "TT-RO-02",
+      "severity": "P2",
+      "introduced_by_this_slice": true,
+      "title": "联系人自主自动重跑被归给从未发起重跑的本机用户",
+      "location": {
+        "path": "packages/server/src/host.ts",
+        "start_line": 1906,
+        "end_line": 1907
+      },
+      "call_chain": [
+        "MindAction rerun basisSeq=null leaves req.initiator=contact and trigger=auto at host.ts:2894-2908",
+        "rerunTx receives both typed initiator and actor at host.ts:1853-1855",
+        "new RerunCreate and RerunClaim hardcode {kind:user,id:this.userId} at host.ts:1906-1907"
+      ],
+      "trigger": "Owner contact reacts to a failed Compute session with {kind:rerun,runId,roomId,basisSeq:null}; rerun policy permits its one automatic attempt.",
+      "observed": "Real public task creation -> controlled Compute failure -> ordinary contact rerun action created a new task. Existing gg_run_events rerun detail correctly recorded initiator=contact, actor=contact, trigger=auto, basisSeq=null; the new task timeline RerunCreate and RerunClaim instead both recorded actor={kind:user,id:actual-user}.",
+      "expected": "Automatic contact rerun must not synthesize a user initiator/actor. Reuse the already available typed req.initiator/req.actor according to the chosen timeline actor semantics.",
+      "impact": "The new task history falsely asserts a user-triggered creation/claim and contradicts the existing durable run ledger, changing product truth for autonomous retries.",
+      "existing_vs_new": "Existing run ledger and automatic rerun route retain correct contact provenance; the new history rows introduce the contradiction.",
+      "proof_result": "contact_auto_rerun_actor",
+      "suggested_minimal_boundary": "Derive the two origin actors from rerunTx req rather than this.userId; retain explicit/manual rerun behavior and do not rewrite rerun policy."
+    }
+  ],
+  "verification": {
+    "command": [
+      "node",
+      "/private/tmp/gg-timeline-readonly-probe-uahya703/readonly-boundary-probe.mts"
+    ],
+    "cwd": "/private/tmp/gg-timeline-readonly-probe-uahya703",
+    "exit_code": 0,
+    "elapsed_process_seconds": 0.43,
+    "scope": "Two minimal single-behavior scenarios in one local Node process, real Host/service/SQLite, controlled Mind/Compute; no heavy suite, cloud job, model or CLI.",
+    "inputs": "/private/tmp/gg-timeline-readonly-probe-uahya703/probe-inputs.json",
+    "probe_script": "/private/tmp/gg-timeline-readonly-probe-uahya703/readonly-boundary-probe.mts",
+    "probe_sha256": "ea2ca8504bf0e8ac7ce93c4c03b9484d44045e655b4ed0c4452ecded79a3a369",
+    "stdout": "/private/tmp/gg-timeline-readonly-probe-uahya703/probe.stdout.json",
+    "stdout_sha256": "e0b5e1771aacd09fe4bd950b5009dafdb367975beba1f83326335b89cf29f35f",
+    "stderr": "/private/tmp/gg-timeline-readonly-probe-uahya703/probe.stderr.log",
+    "stderr_only": "Node experimental SQLite warning",
+    "runtime_results": [
+      {
+        "name": "contact_stop_actor",
+        "actualPerformer": {
+          "kind": "contact",
+          "id": "c-mwdu16xy-1"
+        },
+        "recordedActor": {
+          "kind": "user",
+          "id": "c-mwdu16xy-1"
+        },
+        "taskState": "T10_Cancelled",
+        "issuedActions": [
+          {
+            "contactId": "c-mwdu16xy-1",
+            "actions": [
+              {
+                "kind": "stop",
+                "taskId": "t-mwdu16y1-2"
+              }
+            ]
+          }
+        ],
+        "event": {
+          "id": 6,
+          "taskId": "t-mwdu16y1-2",
+          "roomId": "dm-c-mwdu16xy-1",
+          "sourceSeq": 1,
+          "at": "2026-11-12T17:39:09.328Z",
+          "kind": "task",
+          "cause": "Cancel",
+          "actor": {
+            "kind": "user",
+            "id": "c-mwdu16xy-1"
+          },
+          "before": {
+            "state": "T3_Running",
+            "owner": "c-mwdu16xy-1",
+            "constraintVer": 0,
+            "computeId": "cp-1"
+          },
+          "after": {
+            "state": "T9_StopRequested",
+            "owner": "c-mwdu16xy-1",
+            "constraintVer": 0,
+            "computeId": "cp-1"
+          },
+          "data": {
+            "event": {
+              "kind": "Cancel",
+              "by": "c-mwdu16xy-1"
+            }
+          }
+        }
+      },
+      {
+        "name": "contact_auto_rerun_actor",
+        "actualPerformer": {
+          "kind": "contact",
+          "id": "c-mwdu16zy-1"
+        },
+        "recordedActor": {
+          "kind": "user",
+          "id": "actual-user"
+        },
+        "issuedActions": [
+          {
+            "contactId": "c-mwdu16zy-1",
+            "actions": [
+              {
+                "kind": "rerun",
+                "roomId": "dm-c-mwdu16zy-1",
+                "runId": "run-mwdu1703-6",
+                "basisSeq": null
+              }
+            ]
+          }
+        ],
+        "originalTask": "t-mwdu16zz-2",
+        "newTask": "t-mwdu170c-a",
+        "create": {
+          "id": 9,
+          "taskId": "t-mwdu170c-a",
+          "roomId": "dm-c-mwdu16zy-1",
+          "sourceSeq": 1,
+          "at": "2026-11-12T17:39:09.372Z",
+          "kind": "created",
+          "cause": "RerunCreate",
+          "actor": {
+            "kind": "user",
+            "id": "actual-user"
+          },
+          "before": null,
+          "after": {
+            "state": "T1_Open",
+            "owner": null,
+            "constraintVer": 0,
+            "computeId": null
+          },
+          "data": {
+            "requester": "actual-user",
+            "rerunOfTask": "t-mwdu16zz-2",
+            "runId": "run-mwdu1703-6"
+          }
+        },
+        "claim": {
+          "id": 10,
+          "taskId": "t-mwdu170c-a",
+          "roomId": "dm-c-mwdu16zy-1",
+          "sourceSeq": 1,
+          "at": "2026-11-12T17:39:09.373Z",
+          "kind": "task",
+          "cause": "RerunClaim",
+          "actor": {
+            "kind": "user",
+            "id": "actual-user"
+          },
+          "before": {
+            "state": "T1_Open",
+            "owner": null,
+            "constraintVer": 0,
+            "computeId": null
+          },
+          "after": {
+            "state": "T2_Claimed",
+            "owner": "c-mwdu16zy-1",
+            "constraintVer": 0,
+            "computeId": null
+          },
+          "data": {
+            "event": {
+              "kind": "Claim",
+              "by": "c-mwdu16zy-1"
+            },
+            "origin": {
+              "runId": "run-mwdu1703-6"
+            }
+          }
+        },
+        "ledger": [
+          {
+            "id": 8,
+            "run_id": "run-mwdu1703-6",
+            "kind": "rerun",
+            "detail": "{\"kind\":\"rerun\",\"unitId\":\"run-mwdu1703-6\",\"initiator\":{\"kind\":\"contact\",\"id\":\"c-mwdu16zy-1\"},\"owner\":\"c-mwdu16zy-1\",\"trigger\":\"auto\",\"basis\":{\"unitId\":\"run-mwdu1703-6\",\"taskId\":\"t-mwdu16zz-2\",\"status\":\"failed\",\"reasonClass\":\"unknown\",\"raw\":\"process failed\",\"note\":null},\"mode\":\"same_session\",\"attempt\":1,\"at\":1794505149372,\"actor\":{\"kind\":\"contact\",\"id\":\"c-mwdu16zy-1\"},\"basisSeq\":null,\"countsTowardLimit\":true,\"announce\":false,\"newTaskId\":\"t-mwdu170c-a\",\"lease\":{\"holder\":\"c-mwdu16zy-1\",\"until\":1794505749372}}",
+            "at": "2026-11-12T17:39:09.373Z"
+          }
+        ]
+      }
+    ],
+    "frozen_source_verification": [
+      {
+        "path": "packages/server/src/host.ts",
+        "sha256": "fbeaf4cece7a5b82c47b65c4665b98446b0a9163e7fb74469af52a01925f4a1d",
+        "source_and_probe_match_frozen_blob": true
+      },
+      {
+        "path": "packages/server/src/task-timeline.ts",
+        "sha256": "418a223eaff6307592c703e5a9e6daea156db4e62f33544319bb44f445c10e8a",
+        "source_and_probe_match_frozen_blob": true
+      },
+      {
+        "path": "packages/server/src/db.ts",
+        "sha256": "6e2bbbcc62d4759dbd427fdc045cac52f36a103a270f1cd66e73f486425a9268",
+        "source_and_probe_match_frozen_blob": true
+      },
+      {
+        "path": "packages/api-contract/src/entities.ts",
+        "sha256": "cbf9f0e36d2c16fc719498ecd1b3775d35d76c3d75e32618724e39a18bcac984",
+        "source_and_probe_match_frozen_blob": true
+      },
+      {
+        "path": "packages/domain/src/task.ts",
+        "sha256": "2925762a5c2ec9610c7d3d88ff397e84acef368c058c44fa8dd0587e3d84de46",
+        "source_and_probe_match_frozen_blob": true
+      },
+      {
+        "path": "packages/domain/src/followups.ts",
+        "sha256": "da9e47feb533cc857517aee691c81741c429f788df5e8a3fe52bcb360ab4b68e",
+        "source_and_probe_match_frozen_blob": true
+      }
+    ],
+    "original_head_unchanged": true,
+    "original_worktree": "clean",
+    "writes_to_candidate_or_root_state": false,
+    "only_public_write": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/task-timeline-resume/readonly-boundary-review.json"
+  },
+  "bounded_static_notes": [
+    {
+      "topic": "write seams",
+      "observation": "Inspected initial manual/contact/rerun inserts plus stepTaskTx, recordTurnTx, saveTaskTx and putFollowTx integration. Added fact inserts sit immediately after successful CAS/inserts in those existing transaction seams; no additional raw TaskDoc/follow write outside host was found by focused search. No claim that every caller transaction has been exhaustively fault-injected."
+    },
+    {
+      "topic": "message bodies",
+      "observation": "TaskEvent values currently contain discriminators/IDs/version/approval enums, not note text; recordTaskTransition persists that event rather than TaskDoc brief/result. followSnapshot explicitly projects link IDs/status/version/refs and queuedCount, omits Link.text and queued text; Rollback fields are refs/version/computeId. No source-body duplication identified in the inspected data projection."
+    },
+    {
+      "topic": "read path",
+      "observation": "taskTimeline loads actual current TaskDoc room then checks user membership before query; readTaskTimeline filters task_id and id>cursor, orders by globally monotonic id, validates canonical task-bound base64url and limit. No newly identified read-path issue in this bounded inspection."
+    }
+  ],
+  "not_retested_or_not_proven": [
+    "Did not rerun author 11 red/green tests or 22 mutants or full/type/lint; root owns queued box4 shared-lock proof.",
+    "Did not independently fault-inject SQLite reopen/pagination/membership/rebind dual-side rollback in this task; existing candidate tests are not promoted to independent live proof.",
+    "No official Docker gate or independent cross-vendor review performed; no push, Bot post, test edit, product fix or architecture change.",
+    "Stopped at two newly introduced, independently triggered product-truth findings as requested; remaining unexercised callers are not cleared."
+  ],
+  "stop_condition": "Two evidenced new actor-attribution defects submitted; do not extend review or patch this snapshot without a new bounded assignment."
+}

@@ -1,8 +1,7 @@
 {
   "registered_at": "2026-11-13T01:32:33.875529+08:00",
   "timing": "Retrospective criterion-scoped mutation plan after implementation; do not call this pre-product registration.",
-  "expected_total_tests": 11,
-  "test_file": "packages/server/src/task-timeline.test.ts",
+  "expected_total_tests": 13,
   "mutants": [
     {
       "id": "M01",
@@ -289,6 +288,43 @@
           "to": "    if (!all(this.db, \"SELECT id FROM gg_task_events WHERE task_id = ?\", q.taskId).length) recordTaskFacts(this.db, null, doc, \"InventedLegacyCreate\");\n    return readTaskTimeline(this.db, q);"
         }
       ]
+    },
+    {
+      "id": "M23",
+      "criterion": "TT12",
+      "expected_test": "TT12 contact-owned stop records the actual contact actor while user cancellation stays user",
+      "reason": "drop the explicit typed contact origin from the existing contact stop route",
+      "edits": [
+        {
+          "file": "packages/server/src/host.ts",
+          "from": "            const { effects: eff } = this.stepTaskTx(a.taskId, { kind: \"Cancel\", by: contactId }, {}, { actor: { kind: \"contact\", id: contactId } });",
+          "to": "            const { effects: eff } = this.stepTaskTx(a.taskId, { kind: \"Cancel\", by: contactId });"
+        }
+      ]
+    },
+    {
+      "id": "M24",
+      "criterion": "TT13",
+      "expected_test": "TT13 autonomous rerun reuses the real contact initiator and manual rerun remains user",
+      "reason": "restore ambient-user attribution for both automatic rerun creation and claim instead of the already-decided real initiator",
+      "edits": [
+        {
+          "file": "packages/server/src/host.ts",
+          "from": "      recordTaskFacts(this.db, null, doc0, \"RerunCreate\", plan.event.initiator, { requester: doc0.task.requester, rerunOfTask: src.task.id, runId: unit.id });",
+          "to": "      recordTaskFacts(this.db, null, doc0, \"RerunCreate\", { kind: \"user\", id: this.userId }, { requester: doc0.task.requester, rerunOfTask: src.task.id, runId: unit.id });"
+        },
+        {
+          "file": "packages/server/src/host.ts",
+          "from": "      const { effects: eff } = this.stepTaskTx(taskId, { kind: \"Claim\", by: owner }, {}, { cause: \"RerunClaim\", actor: plan.event.initiator, data: { runId: unit.id } });",
+          "to": "      const { effects: eff } = this.stepTaskTx(taskId, { kind: \"Claim\", by: owner }, {}, { cause: \"RerunClaim\", actor: { kind: \"user\", id: this.userId }, data: { runId: unit.id } });"
+        }
+      ]
     }
-  ]
+  ],
+  "test_files": [
+    "packages/server/src/task-timeline.test.ts",
+    "packages/server/src/task-timeline-origin.test.ts"
+  ],
+  "followup_registered_at": "2026-11-12T17:47:25.890474+00:00",
+  "followup_timing": "M23/M24 registered after the v2 attribution fixes and before their cloud mutant execution; retrospective, not pre-product registration."
 }
