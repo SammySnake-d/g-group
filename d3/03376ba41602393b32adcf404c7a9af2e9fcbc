@@ -1,0 +1,19 @@
+receipts/feat-t177-g6-proof.json
+  s_9e84d571573b49::t_25621d5cbeb91b 2,7-8,17,19,23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d303376ba41602393b32adcf404c7a9af2e9fcbc",
+  "prompts": {},
+  "sessions": {
+    "s_9e84d571573b49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5c99cdaaa25826c8",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

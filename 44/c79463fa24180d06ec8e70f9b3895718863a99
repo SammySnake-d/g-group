@@ -1,0 +1,37 @@
+receipts/feat-forward-link.json
+  s_a19c652d723a1d::t_fd900e5c5f2c7e 1-35
+packages/server/src/host.ts
+  s_a19c652d723a1d::t_d313b3deb55bac 70,136,862-863,894,900-901,931,1154-1155,1182-1183,1436-1437,2076-2077,2274-2275,2281,2348-2350,2479-2484,4731-4741,4743-4779,4781-4784,4786-4792,4794,4796-4838,4841,4870-4879
+packages/server/proof/forward-link-tests.txt
+  s_a19c652d723a1d::t_9bf38a9c273a9d 1-23
+packages/server/proof/forward-link-real.txt
+  s_a19c652d723a1d::t_bf3a7d45594365 1-19
+packages/server/proof/forward-link-real.ts
+  s_a19c652d723a1d::t_cf05b4bf5a698c 1-97
+packages/adapter-pi-contact/src/tools.ts
+  s_a19c652d723a1d::t_ad76da8cabfb9d 1,5,22,133-142,195-196,265
+packages/server/proof/forward-link-mutations.mjs
+  s_a19c652d723a1d::t_51d3441e30c9bb 1-118
+packages/server/proof/forward-link-mutations.txt
+  s_a19c652d723a1d::t_8466762de5545d 1-44
+packages/server/src/forward-link.ts
+  s_a19c652d723a1d::t_ef3985007cd398 1-9,13,17,31,35-71,74-102,104-113,115-174
+packages/adapter-pi-contact/src/mind.ts
+  s_a19c652d723a1d::t_325477afec99c3 196-201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "44c79463fa24180d06ec8e70f9b3895718863a99",
+  "prompts": {},
+  "sessions": {
+    "s_a19c652d723a1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adc8f784a18a4a1b1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+packages/server/proof/contact-actions-mutations.txt
+  s_c5600ddfc2a370::t_d925629ec2de89 5-6,35-67
+receipts/feat-contact-actions.json
+  s_c5600ddfc2a370::t_982ee656aae61f 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "eeb42e0bba517efeabad5451dd1f8d7cd51f6a67",
+  "prompts": {},
+  "sessions": {
+    "s_c5600ddfc2a370": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a82d860e88f191a64",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

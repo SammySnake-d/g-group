@@ -1,0 +1,25 @@
+packages/server/proof/forward-link-mutations.txt
+  s_a19c652d723a1d::t_b6dc7f8dec5199 1-44
+packages/server/proof/forward-link-mutations.mjs
+  s_a19c652d723a1d::t_4a0d2947397e00 1-118
+packages/server/proof/forward-link-real.ts
+  s_a19c652d723a1d::t_a859bcb33d24f4 1-98
+packages/server/proof/forward-link-tests.txt
+  s_a19c652d723a1d::t_f3cb02ff4fbd8b 1-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4214203f1a46246047416f0d76ca25fcb0c015e8",
+  "prompts": {},
+  "sessions": {
+    "s_a19c652d723a1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adc8f784a18a4a1b1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+packages/kernel/src/index.ts
+  s_585171b20c27f9::t_6f17fe7c70507f 8
+packages/kernel/src/window.test.ts
+  s_585171b20c27f9::t_d1e224ac81f277 1-100
+packages/kernel/src/window.ts
+  s_585171b20c27f9::t_dd657fabf2d5b5 1-66
+packages/server/src/host.ts
+  s_585171b20c27f9::t_3e0587e9d23016 113,141,379-380,527-534,1095-1102,2309-2318,2388-2391,2441-2445,2467-2468,2485,2493-2495,2531-2533,2564-2566
+packages/server/src/plugin-sources.ts
+  s_585171b20c27f9::t_4250c4d355a4d0 14,333-342
+packages/server/src/window-summary.test.ts
+  s_585171b20c27f9::t_8f2e8ab8466e91 1-295
+packages/server/src/window-summary.ts
+  s_585171b20c27f9::t_e6ca5c0d67eb4f 1-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f5aa4a8728a15fdcad912ab12c0bf5bb1ebe9ce4",
+  "prompts": {},
+  "sessions": {
+    "s_585171b20c27f9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aadfe4b2819083829",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
