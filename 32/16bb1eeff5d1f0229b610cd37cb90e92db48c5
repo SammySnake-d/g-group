@@ -1,0 +1,24 @@
+packages/adapter-cc-compute/proof/shared-port-invariants.mjs
+  s_9d7fa6e9d65b83::t_14603b67f967c4 101
+docs/proof/compute-port-extract/README.md
+  s_9d7fa6e9d65b83::t_14603b67f967c4 4
+  s_9d7fa6e9d65b83::t_1e83a8a3d8ce97 23,29-30
+receipts/feat-compute-port-extract.json
+  s_9d7fa6e9d65b83::t_14603b67f967c4 33,59-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3216bb1eeff5d1f0229b610cd37cb90e92db48c5",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
