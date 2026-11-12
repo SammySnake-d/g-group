@@ -1,3 +1,4 @@
+import { speakingEnv } from "./manifest.ts";
 // G6 driver:在被测提交的工作树里跑一道题,产出一份原始记录(RawRecord)。G6 是本项目的验证工具(开发纪律),不进产品功能,
 // 不给产品加开关或界面(需求文档 §2.0 v3.28)。runner 把整个 proof/g6/ 目录叠到被测工作树的同一位置再执行它,
 // 所以下面的 ../../src/start.ts 解析到的是被测提交自己的装配入口——
@@ -80,7 +81,7 @@ export function gatewayEnv(o: Pick<DriveOptions, "mode" | "model" | "env">): Rec
   const token = o.env.ANTHROPIC_AUTH_TOKEN;
   const key = o.env.ANTHROPIC_API_KEY;
   if (!base || (!token && !key) || !o.model) return null;
-  return { ANTHROPIC_BASE_URL: base, ...(token ? { ANTHROPIC_AUTH_TOKEN: token } : {}), ...(key ? { ANTHROPIC_API_KEY: key } : {}), ANTHROPIC_DEFAULT_SONNET_MODEL: o.model };
+  return { ...speakingEnv(o.env), ANTHROPIC_BASE_URL: base, ...(token ? { ANTHROPIC_AUTH_TOKEN: token } : {}), ...(key ? { ANTHROPIC_API_KEY: key } : {}), ANTHROPIC_DEFAULT_SONNET_MODEL: o.model };
 }
 
 export async function driveItem(o: DriveOptions): Promise<RawRecord> {
