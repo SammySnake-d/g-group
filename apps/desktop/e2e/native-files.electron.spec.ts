@@ -73,3 +73,18 @@ test("截图:当前窗口返回有效 PNG,点击输入栏截图发送真实附�
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("内存附件超过通用 IPC 上限仍按上传合同发送,普通请求不放宽", async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "gg-native-large-"));
+  const { app, win } = await launch(dir);
+  try {
+    await win.getByTestId("file-input").setInputFiles({ name: "大附件.txt", mimeType: "text/plain", buffer: Buffer.alloc(300_000, "x") });
+    await expect(win.getByTestId("attachment-大附件.txt")).toBeVisible(LONG);
+    const denied = await win.evaluate(() => (window as unknown as { gg: { invoke: (m: string, p: object) => Promise<{ ok: boolean; error?: { message: string } }> } }).gg.invoke("messages.send", { text: "x".repeat(300_000) }));
+    expect(denied.ok).toBe(false);
+    expect(denied.error?.message).toContain("超过上限");
+  } finally {
+    await app.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
