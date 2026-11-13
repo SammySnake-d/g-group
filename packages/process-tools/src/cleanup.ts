@@ -70,30 +70,32 @@ export function createProcessCleanup(child: ChildProcess, options: CleanupOption
   let requested = false;
   let known: Map<number, Known> | null = null;
   let confirmed: CleanupResult | null = null;
-  /** The members left in the main's group were recorded (or the pid was seen to belong to someone else already) */
-  let exitSeen = false;
+  /** null: this handle has not seen its main exit. Otherwise: whether the members left in the main's group could be read at that moment */
+  let exitRecord: "read" | "unreadable" | null = null;
   const mainExited = () => child.exitCode !== null || child.signalCode !== null;
   const remember = (rows: readonly Known[]) => { known ??= new Map(); for (const row of rows) known.set(row.pid, row); };
   // The main's group id stays reserved while any member is alive (POSIX never reuses a pid that is still a process-group id),
   // so a group still holding a member recorded as ours is ours, and every member of it is something the main left behind.
   const groupHeldByKnown = (snap: Snapshot, main: number) => [...(known?.values() ?? [])].some((r) => r.pgid === main && ours(r, snap));
   const exited = mainExited() ? Promise.resolve() : new Promise<void>((resolve) => {
-    child.once("exit", () => { exitSnapshot(); resolve(); });
+    child.once("exit", () => { exitRecord = recordGroupAtExit() ? "read" : "unreadable"; resolve(); });
     // A failed spawn has no OS process to wait for and may not emit exit.
     child.once("error", () => { if (child.pid === undefined) resolve(); });
   });
   /**
-   * Record the members still in the main's group once it has exited. Taken in the exit event itself, right after the main was
-   * reaped (pids are handed out in sequence, so it is not reused yet); if nothing was readable then, or the handle was created
-   * after the exit, the same rule is applied at the first confirmation. Children are never looked up by the old pid again.
+   * Record the members still in the main's group, in the exit event itself: right after the main was reaped its pid has not been
+   * handed out again (pids are given out in sequence). This is the only moment the group is looked up by the main's pid after its
+   * exit; later that pid may be anyone's. False when neither ps nor pgrep could be read.
    */
-  function exitSnapshot() {
-    if (exitSeen || pid === undefined || pid <= 1 || windows) return;
+  function recordGroupAtExit() {
+    if (pid === undefined || pid <= 1 || windows) return true;
     const snap = procs();
     // The same pid listed again already belongs to another program; then the old group must have emptied first.
-    if (snap) { exitSeen = true; remember(snap.table.some((r) => r.pid === pid) ? [] : stamp(treeOf(pid, snap.table), snap)); return; }
+    if (snap) { remember(snap.table.some((r) => r.pid === pid) ? [] : stamp(treeOf(pid, snap.table), snap)); return true; }
     const group = pgrep(["-g", String(pid)]);
-    if (group !== null) { exitSeen = true; remember(group.includes(pid) ? [] : groupRows(group, pid)); }
+    if (group === null) return false;
+    remember(group.includes(pid) ? [] : groupRows(group, pid));
+    return true;
   }
   function capture() {
     // Only while the main is unreaped: the enumeration runs synchronously, so the event loop cannot reap it and free its pid meanwhile.
@@ -136,7 +138,8 @@ export function createProcessCleanup(child: ChildProcess, options: CleanupOption
       if (!done) return { ok: false, reason: "CLI 主进程没有退出", remaining: pid === undefined ? [] : [pid] };
       if (pid === undefined) return { ok: true, killed: 0 };
       if (windows) return { ok: false, reason: "当前平台无法确认完整进程树已退出", remaining: [] };
-      exitSnapshot();
+      // What the main left in its group can only be read when it exits; a later look at that group id cannot stand in for it.
+      if (exitRecord === "unreadable") return { ok: false, reason: "读不到进程表,无法确认它启动的子进程都已退出", remaining: [] };
       // A current observation after main exit is required: unreadable is never empty.
       const after = treeNow(pid);
       if (after !== null) { known ??= new Map(); for (const row of after) known.set(row.pid, row); }

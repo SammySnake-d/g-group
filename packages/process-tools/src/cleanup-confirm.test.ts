@@ -67,12 +67,18 @@ async function endOwned(child: ChildProcess, extra: readonly number[] = []) {
   if (child.pid !== undefined) { try { realKill.call(process, -child.pid, "SIGKILL"); } catch { /* exited */ } }
   if (child.exitCode === null && child.signalCode === null) await once(child, "exit");
 }
-/** pgrep available, ps not: the restricted-sandbox enumeration path, on any platform */
-function pgrepOnlyPath() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "q08-pgrep-only-"));
-  const real = (process.env.PATH ?? "").split(path.delimiter).map((d) => path.join(d, "pgrep")).find((f) => fs.existsSync(f)) ?? "/usr/bin/pgrep";
-  fs.symlinkSync(real, path.join(dir, "pgrep"));
+/** A PATH directory holding exactly one of the two enumeration tools */
+function onlyToolPath(tool: "ps" | "pgrep") {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `q08-${tool}-only-`));
+  const real = (process.env.PATH ?? "").split(path.delimiter).map((d) => path.join(d, tool)).find((f) => fs.existsSync(f)) ?? `/usr/bin/${tool}`;
+  fs.symlinkSync(real, path.join(dir, tool));
   return dir;
+}
+/** pgrep available, ps not: the restricted-sandbox enumeration path, on any platform */
+const pgrepOnlyPath = () => onlyToolPath("pgrep");
+/** ps can run here (macOS seatbelt denies the setuid ps; there the "ps" and "ps only" cases reduce to pgrep and are not repeated) */
+function psRuns(): boolean {
+  try { execFileSync("ps", ["-o", "pid=", "-p", String(process.pid)], { stdio: ["ignore", "pipe", "ignore"] }); return true; } catch { return false; }
 }
 /** ps replaced by a script that prints the table the test wrote (pid ppid pgid stat start-time); pgrep is not on this PATH */
 function scriptedPs() {
@@ -187,9 +193,12 @@ test("S-PROC-09 AC-23: the group recorded at main exit excludes a group that alr
 
 test("S-PROC-10 AC-23: a descendant started by a known process after capture is found and closed, with ps and with pgrep only", async () => {
   const pgrepDir = pgrepOnlyPath();
+  const psDir = onlyToolPath("ps");
   const originalPath = process.env.PATH;
+  // "ps only": the refresh must work through ps alone, not be carried by the pgrep fallback
+  const modes: readonly ("both" | "pgrep only" | "ps only")[] = psRuns() ? ["both", "pgrep only", "ps only"] : ["both", "pgrep only"];
   try {
-    for (const onlyPgrep of [false, true]) {
+    for (const mode of modes) {
       const child = spawn(process.execPath, [refreshTree], { detached: true, stdio: ["ignore", "pipe", "ignore"] });
       const next = jsonLines(child);
       const owned: number[] = [];
@@ -203,10 +212,10 @@ test("S-PROC-10 AC-23: a descendant started by a known process after capture is 
         owned.push(g);
         child.kill("SIGTERM");
         await exitOf(child);
-        if (onlyPgrep) process.env.PATH = pgrepDir;
+        if (mode !== "both") process.env.PATH = mode === "ps only" ? psDir : pgrepDir;
         const result = await cleanup.quiesce(3000, 500);
         process.env.PATH = originalPath;
-        assert.deepEqual(result, { ok: true, killed: 2 }, onlyPgrep ? "pgrep-only enumeration" : "ps enumeration");
+        assert.deepEqual(result, { ok: true, killed: 2 }, `enumeration: ${mode}`);
         assert.deepEqual([live(d), live(g)], [false, false], "the late descendant G was not captured but must be closed too");
       } finally {
         process.env.PATH = originalPath;
@@ -217,6 +226,7 @@ test("S-PROC-10 AC-23: a descendant started by a known process after capture is 
     if (originalPath === undefined) delete process.env.PATH;
     else process.env.PATH = originalPath;
     fs.rmSync(pgrepDir, { recursive: true, force: true });
+    fs.rmSync(psDir, { recursive: true, force: true });
   }
 });
 
@@ -278,21 +288,34 @@ test("S-PROC-13 AC-23: on an injected Windows platform cleanup refuses to claim 
 });
 
 test("S-PROC-14 AC-23: same-group members alive when the main exits are still closed without any earlier capture", async () => {
-  const child = spawn(process.execPath, ["-e", 'const c = require("node:child_process").spawn(process.execPath, ["-e", "process.on(\\"SIGTERM\\", () => {}); setInterval(() => {}, 1000)"], { stdio: "ignore" }); console.log(JSON.stringify({ c: c.pid })); process.on("SIGTERM", () => process.exit(0)); setInterval(() => {}, 1000);'], { detached: true, stdio: ["ignore", "pipe", "ignore"] });
-  const owned: number[] = [];
+  const pgrepDir = pgrepOnlyPath();
+  const originalPath = process.env.PATH;
   try {
-    const cleanup = createProcessCleanup(child);
-    const c = (await jsonLines(child)()).c!;
-    owned.push(c);
-    child.kill("SIGTERM");
-    await exitOf(child);
-    assert.equal(live(c), true, "only the main got SIGTERM; its same-group child is left");
-    const result = await cleanup.quiesce(2000, 500);
-    // the group SIGKILL may reap it before the per-pid kill is counted, so the count is not pinned here
-    assert.equal(result.ok, true);
-    assert.equal(live(c), false, "the member recorded at main exit was closed before the receipt");
+    for (const onlyPgrep of [false, true]) {
+      const child = spawn(process.execPath, ["-e", 'const c = require("node:child_process").spawn(process.execPath, ["-e", "process.on(\\"SIGTERM\\", () => {}); setInterval(() => {}, 1000)"], { stdio: "ignore" }); console.log(JSON.stringify({ c: c.pid })); process.on("SIGTERM", () => process.exit(0)); setInterval(() => {}, 1000);'], { detached: true, stdio: ["ignore", "pipe", "ignore"] });
+      const owned: number[] = [];
+      try {
+        const cleanup = createProcessCleanup(child);
+        const c = (await jsonLines(child)()).c!;
+        owned.push(c);
+        // the record of who is left in the group is taken when the exit is seen, through whichever tool is available then
+        if (onlyPgrep) process.env.PATH = pgrepDir;
+        child.kill("SIGTERM");
+        await exitOf(child);
+        const result = await cleanup.quiesce(2000, 500);
+        process.env.PATH = originalPath;
+        // the group SIGKILL may reap it before the per-pid kill is counted, so the count is not pinned here
+        assert.equal(result.ok, true, onlyPgrep ? "pgrep-only enumeration" : "ps enumeration");
+        assert.equal(live(c), false, `the member left in the group at main exit was closed before the receipt (${onlyPgrep ? "pgrep only" : "ps"})`);
+      } finally {
+        process.env.PATH = originalPath;
+        await endOwned(child, owned);
+      }
+    }
   } finally {
-    await endOwned(child, owned);
+    if (originalPath === undefined) delete process.env.PATH;
+    else process.env.PATH = originalPath;
+    fs.rmSync(pgrepDir, { recursive: true, force: true });
   }
 });
 
@@ -367,5 +390,40 @@ test("S-PROC-16 AC-23: only the group members seen when the main exited are its 
     else process.env.PATH = originalPath;
     fs.rmSync(ps.dir, { recursive: true, force: true });
     await endOwned(by, [kid]);
+  }
+});
+
+test("S-PROC-17 AC-23: a spawn that never produced a process has nothing to wait for or close", async () => {
+  const child = spawn(path.join(os.tmpdir(), "g-group-no-such-command-fixture"), [], { detached: true, stdio: "ignore" });
+  const cleanup = createProcessCleanup(child);
+  const failed = await once(child, "error", { signal: AbortSignal.timeout(5000) });
+  assert.equal((failed[0] as NodeJS.ErrnoException).code, "ENOENT");
+  cleanup.requestStop(20);
+  const result = await cleanup.quiesce(200, 200);
+  assert.deepEqual(result, { ok: true, killed: 0 }, "no process was started: confirmed at once, not reported as a main that will not exit");
+});
+
+test("S-PROC-18 AC-23: when the group left at the main's exit could not be read at that moment, a later readable table does not confirm", async () => {
+  const blind = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { detached: true, stdio: "ignore" });
+  const seen = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { detached: true, stdio: "ignore" });
+  const originalPath = process.env.PATH;
+  try {
+    const unread = createProcessCleanup(blind);
+    const read = createProcessCleanup(seen);
+    // neither ps nor pgrep can run while this main exits
+    process.env.PATH = "/g-group-no-command-fixture";
+    blind.kill("SIGKILL");
+    await exitOf(blind);
+    process.env.PATH = originalPath;
+    seen.kill("SIGKILL");
+    await exitOf(seen);
+    const result = await unread.quiesce(200, 200);
+    assert.deepEqual(result, { ok: false, reason: "读不到进程表,无法确认它启动的子进程都已退出", remaining: [] });
+    assert.deepEqual(await read.quiesce(200, 200), { ok: true, killed: 0 }, "control: the same exit, readable when it happened, is confirmed");
+  } finally {
+    if (originalPath === undefined) delete process.env.PATH;
+    else process.env.PATH = originalPath;
+    await endOwned(blind);
+    await endOwned(seen);
   }
 });
