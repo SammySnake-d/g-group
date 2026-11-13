@@ -34,7 +34,14 @@
   },
   "unverifiable": "AC-07/AC-29/AC-33 are not accepted by structural extraction or a narrow green witness. All seven original CC tests must run unchanged on baseline/candidate and the full cloud suite must pass; real Codex isolation/model/lifecycle proof belongs to stack 2. OS process effects are deliberately not moved into kernel.",
   "waiver": null,
-  "review": null,
+  "review": {
+    "agent": "claude",
+    "session": "claude:bed00d70-50b3-46c7-9227-da8304ad22f4",
+    "model": "group/opus",
+    "verdict": "reject",
+    "reviewed_hash": "27c57735286835da9c4fad2802b0aceb780ca3cf089d901765b85cf0319b91b2",
+    "notes": "第 1 轮 reject,详见 reviews/feat-compute-port-extract.md。复现:CC 七文件基线/候选各 139/139 且用例名逐条相同、测试文件字节未改;全量 1487/1487,skip/cancel/todo 0;typecheck/lint 0;导出面 86 条类型严格相等、转出口与 kernel/compute 同一对象;作者 8 变异在 proof 里全杀。退回 6 项:R1-01 中性合同带 CC 的 CLI 参数/工具名/进程语义;R1-02 同一性与 CC 工具表只在 proof 里守,默认检查下 A1、A8 存活(另 F1/F4/F4b 存活);R1-03 共享校验器 rules/placement/负 constraintVer 三个拒收分支无测试;R1-04 未核与 #7 的撞车(合到 HEAD 多冲突 plain.ts、types.ts);R1-05 author.session 是原生子线程号,G-PROVENANCE 实判会话记录不存在,换宿主会话 codex:76d2c467 后探针通过;R1-06 红提交为实现之后从 base 侧分支补的,未写明。G-LAYER 不拦内核引 node:child_process/fs,列需拍板。hy4 辅审因线路 403 未产出,本轮无辅审。"
+  },
   "verification": {
     "originalCCTestFilesByteUnchanged": 7,
     "portTypeDeclarationsIdentical": true,
