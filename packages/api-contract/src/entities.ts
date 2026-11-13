@@ -406,6 +406,23 @@ export const RewindResult = obj({
 export type RewindResult = Infer<typeof RewindResult>;
 
 // ---------- 承诺账本 ----------
+/**
+ * 承诺的触发方式是「每 N 条消息」(U80,D21.3 第 14 项)时带这一段:宿主从登记那一刻起数这个会话的群聊发言
+ * (system 通知、任务事实卡、已撤回的不算),每攒够 everyN 条冻结一段 (coveredSeq 旧值, 第 N 条的 seq] 并把 coveredSeq 推到那里。
+ */
+export const CommitmentTrigger = obj({
+  kind: lit("message-count"),
+  everyN: int({ min: 1, max: 10000 }),
+  /** 上次覆盖到的 seq;下一段从它之后开始数 */
+  coveredSeq: seq(),
+  /** coveredSeq 之后已经攒了几条;不再触发时为 0 */
+  count: int({ min: 0 }),
+  /** 还在数:承诺是 active、联系人还在这个会话、会话没解散 */
+  active: bool(),
+  /** 已经冻结过几段 */
+  windows: int({ min: 0 }),
+});
+export type CommitmentTrigger = Infer<typeof CommitmentTrigger>;
 export const CommitmentView = obj({
   id: id(),
   contactId: id(),
@@ -416,6 +433,8 @@ export const CommitmentView = obj({
   status: oneOf(["active", "done", "revoked", "superseded", "blocked"] as const),
   scheduleId: nullable(id()),
   updatedAt: isoTime(),
+  /** 按消息数触发的承诺才有 */
+  trigger: opt(CommitmentTrigger),
 });
 export type CommitmentView = Infer<typeof CommitmentView>;
 

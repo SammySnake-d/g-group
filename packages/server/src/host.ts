@@ -135,6 +135,8 @@ import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
 import { CONTEXT_ONLY_REASON, ChatAdmin, DISSOLVED_REASON, SYSTEM_SENDER } from "./chat-admin.ts";
+import { lastEventSeq } from "./chat-range.ts";
+import { CountTriggers, everyNProblem } from "./count-triggers.ts";
 import { MemoryStore } from "./memory-store.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
 import { PluginStore } from "./plugins.ts";
@@ -391,6 +393,8 @@ export class Host {
   private readonly launchEpoch = new Map<string, number>();
   /** 停止没确认下来的原因(进程没退干净),任务视图里显示 */
   private readonly stopUnconfirmed = new Map<string, string>();
+  /** 按消息数触发的承诺与冻结的窗口(U80) */
+  readonly countTriggers: CountTriggers;
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly memory: MemoryStore;
@@ -442,6 +446,16 @@ export class Host {
     this.db = openDb(opts.file);
     this.exits = new MemberExits({ db: this.db, now: this.now });
     this.chatAdmin = new ChatAdmin({ db: this.db, now: this.now });
+    // 按消息数触发的承诺(U80):计数、冻结窗口都在 count-triggers.ts,宿主只在写消息、登记/撤销承诺、启动这几处各调一行
+    this.countTriggers = new CountTriggers({
+      db: this.db,
+      now: this.now,
+      newId: this.newId,
+      closedWhy: (t) => this.countTriggerClosedWhy(t.commitmentId, t.contactId, t.roomId),
+      hidden: (roomId, viewerId) => this.chatAdmin.hidden(roomId, viewerId),
+      changed: (commitmentId) => this.emitCommitment(commitmentId),
+      fired: (w) => this.report("count-window", w),
+    });
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
     this.memory = new MemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d));
@@ -553,6 +567,9 @@ export class Host {
     this.scheduler.tick();
     // 启动回收(F4/F6/F12):上次留下的未提交轮次按 crash_recovery_count 决定续跑或熔断出卡;磁盘上还没被领走的输入交给联系人
     this.reconcileOnStart();
+    // 按消息数触发:补上「消息已落盘、还没计数」的那一拍,还没处理完的窗口重新交给消费方
+    tx(this.db, () => this.countTriggers.reconcileTx());
+    this.countTriggers.announce();
   }
 
   private report(what: string, detail: unknown) {
@@ -1003,11 +1020,13 @@ export class Host {
       );
     }
     run(this.db, "UPDATE gg_rooms SET updated_at = ? WHERE id = ?", this.now(), roomId);
+    this.countTriggers.onAppendTx(roomId);
     return { seq: e.seq, duplicate: false };
   }
 
   /** 发完一条消息之后:推事件、送达成员联系人的注意循环。 */
   private afterAppend(roomId: string, seq: number, from: { kind: Member["kind"] | "helper" | "system"; id: string }) {
+    this.countTriggers.announce();
     const msgs = this.projected(roomId);
     const m = msgs.find((x) => x.seq === seq);
     if (!m) return;
@@ -1433,9 +1452,10 @@ export class Host {
       if (!c) continue;
       const [, contactId, roomId] = d.key.split(":") as [string, string, string];
       if (c.status !== "active") throw new HostError("conflict", `承诺已是 ${c.status}`);
-      tx(this.db, () =>
-        this.ledgerTx(contactId, roomId, [{ type: "close", actionId: `revoke:${commitmentId}`, commitmentId, taskId: c.taskId, actor: { kind: "user", id: this.userId }, roundId: `revoke:${commitmentId}`, outcome: "revoked", artifact: null, detail: "用户撤销" }]),
-      );
+      tx(this.db, () => {
+        this.ledgerTx(contactId, roomId, [{ type: "close", actionId: `revoke:${commitmentId}`, commitmentId, taskId: c.taskId, actor: { kind: "user", id: this.userId }, roundId: `revoke:${commitmentId}`, outcome: "revoked", artifact: null, detail: "用户撤销" }]);
+        this.countTriggers.closeTx(commitmentId, "承诺已撤销");
+      });
       const v = this.listCommitments({ contactId, roomId }).find((x) => x.id === commitmentId)!;
       this.bus.emit({ type: "commitment.updated", commitment: v });
       this.loop.notify(contactId, "batch");
@@ -2143,10 +2163,25 @@ export class Host {
       if ((q.contactId && q.contactId !== contactId) || (q.roomId && q.roomId !== roomId)) continue;
       for (const c of d.value.commitments) {
         if (q.status && c.status !== q.status) continue;
-        out.push({ id: c.id, contactId, roomId, sourceSeq: c.sourceSeq, taskId: c.taskId.startsWith("standing-") ? null : c.taskId, text: c.text, status: c.status, scheduleId: null, updatedAt: this.now() });
+        const trigger = this.countTriggers.viewOf(c.id);
+        out.push({ id: c.id, contactId, roomId, sourceSeq: c.sourceSeq, taskId: c.taskId.startsWith("standing-") ? null : c.taskId, text: c.text, status: c.status, scheduleId: null, updatedAt: this.now(), ...(trigger ? { trigger } : {}) });
       }
     }
     return out;
+  }
+  /** 按消息数触发的承诺现在还该不该数(U80);不该就给出原因:承诺已不是 active、联系人不在这个会话或正在移出、会话已解散。 */
+  private countTriggerClosedWhy(commitmentId: string, contactId: string, roomId: string): string | null {
+    const c = getDoc<Ledger>(this.db, this.ledgerKey(contactId, roomId))?.value.commitments.find((x) => x.id === commitmentId);
+    if (c?.status !== "active") return "承诺已了结或撤销";
+    if (!this.isMember(roomId, { kind: "contact", id: contactId }) || this.exits.isLeaving(roomId, contactId)) return "联系人已不在这个会话";
+    if (this.chatAdmin.isClosed(roomId)) return "会话已解散";
+    return null;
+  }
+  /** 推一条承诺的当前视图(触发状态变了)。 */
+  private emitCommitment(commitmentId: string) {
+    const t = this.countTriggers.byCommitment(commitmentId);
+    const v = t ? this.listCommitments({ contactId: t.contactId, roomId: t.roomId }).find((x) => x.id === commitmentId) : undefined;
+    if (v) this.bus.emit({ type: "commitment.updated", commitment: v });
   }
   private activeLedgerLines(contactId: string): LedgerLine[] {
     const out: LedgerLine[] = [];
@@ -2731,7 +2766,8 @@ export class Host {
       const dispatchedBySource = new Map<string, string>();
       const proposals = new Map<string, { id: string; taskId: string; text: string }[]>();
       const referenced = new Set<string>();
-      const ownCommits: { roomId: string; text: string; taskId: string | null; sourceKey: string }[] = [];
+      const ownCommits: { roomId: string; text: string; taskId: string | null; sourceKey: string; trigger?: { everyN: number; requesterId: string; sourceSeq: number } }[] = [];
+      const countPlans: { commitmentId: string; roomId: string; everyN: number; requesterId: string; sourceSeq: number }[] = [];
       const replies: { roomId: string; seq: number; text: string }[] = [];
       let i = 0;
       for (const a of out.actions) {
@@ -2792,17 +2828,25 @@ export class Host {
             if (!src) { reject(`来源 ${a.roomId} #${a.sourceSeq} 不是本轮新消息`); break; }
             if (contextOnly(src.sender)) { reject(CONTEXT_ONLY_REASON); break; }
             if (isRewound(this.db, a.roomId, a.sourceSeq)) { reject("来源消息已回退"); break; }
+            // 按消息数触发(U80):N 不合格、不是用户提出的,整条拒收,不悄悄记成普通承诺
+            const everyN = a.everyNMessages;
+            if (everyN !== undefined) {
+              const badN = everyNProblem(everyN) ?? (src.sender.kind === "user" ? null : "按消息数触发的承诺要由用户提出");
+              if (badN) { reject(badN); break; }
+            }
             const key = `${a.roomId}#${a.sourceSeq}`;
             if (!src.text.includes(a.text)) {
               // 联系人自己回复里说的「我会做 X」也要进账本(AC-40 ②):原文出自本轮同会话的 reply,就挂到那条回复上
               const own = out.actions.some((x) => x.kind === "reply" && x.roomId === a.roomId && x.text.includes(a.text));
               if (!own) { reject("承诺原文必须出自来源消息或本轮自己的回复"); break; }
-              ownCommits.push({ roomId: a.roomId, text: a.text, taskId: a.taskId ?? null, sourceKey: key });
+              ownCommits.push({ roomId: a.roomId, text: a.text, taskId: a.taskId ?? null, sourceKey: key, ...(everyN !== undefined ? { trigger: { everyN, requesterId: src.sender.id, sourceSeq: a.sourceSeq } } : {}) });
               referenced.add(key);
               break;
             }
             const taskId = a.taskId ?? dispatchedBySource.get(key) ?? `standing-${this.newId("k")}`;
-            proposals.set(key, [...(proposals.get(key) ?? []), { id: this.newId("k"), taskId, text: a.text }]);
+            const commitmentId = this.newId("k");
+            proposals.set(key, [...(proposals.get(key) ?? []), { id: commitmentId, taskId, text: a.text }]);
+            if (everyN !== undefined) countPlans.push({ commitmentId, roomId: a.roomId, everyN, requesterId: src.sender.id, sourceSeq: a.sourceSeq });
             referenced.add(key);
             break;
           }
@@ -2973,7 +3017,9 @@ export class Host {
         if (!rep) continue;
         const k = `${rep.roomId}#${rep.seq}`;
         const entry = byReply.get(k) ?? { ...rep, items: [] };
-        entry.items.push({ id: this.newId("k"), taskId: oc.taskId ?? dispatchedBySource.get(oc.sourceKey) ?? `standing-${this.newId("k")}`, text: oc.text });
+        const ownId = this.newId("k");
+        entry.items.push({ id: ownId, taskId: oc.taskId ?? dispatchedBySource.get(oc.sourceKey) ?? `standing-${this.newId("k")}`, text: oc.text });
+        if (oc.trigger) countPlans.push({ commitmentId: ownId, roomId: oc.roomId, ...oc.trigger });
         byReply.set(k, entry);
       }
       for (const [k, e] of byReply) {
@@ -2981,6 +3027,8 @@ export class Host {
         push(e.roomId, { type: "process", actionId: `${roundId}:proc-own:${k}`, seq: e.seq, accepted: true, commitments: e.items });
       }
       for (const [roomId, cmds] of byRoom) this.ledgerTx(contactId, roomId, cmds);
+      // 按消息数触发:承诺进了账本才登记触发,同一事务;从此刻会话末尾之后开始数
+      for (const p of countPlans) this.countTriggers.createTx({ ...p, contactId, coveredSeq: lastEventSeq(this.db, p.roomId) });
       // 游标、待处理输入、状态笔记与本轮动作同一事务(D15.1)
       this.advanceCursorsTx(contactId, lastSeen);
       for (const ib of inbox) run(this.db, "UPDATE gg_inbox SET consumed = 1 WHERE id = ?", ib.id);
