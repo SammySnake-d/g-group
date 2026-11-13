@@ -129,6 +129,7 @@ if (process.env.MUT_DRY) {
     }
   }
   console.log(ok ? `注入点核对通过(${M.length} 个变异)` : "注入点核对失败");
+  fs.rmSync(tmp, { recursive: true, force: true });
   process.exit(ok ? 0 : 1);
 }
 const clean = await run(copy("clean"));
