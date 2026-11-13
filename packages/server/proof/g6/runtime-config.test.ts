@@ -29,6 +29,8 @@ test("G6CFG-02 runner child environment carries speaking settings without copyin
 
 test("G6CFG-03 both budgets enter fingerprints and resume identity, but credentials do not", () => {
   const base = modelConfig("real", "fixture-model", env);
+  assert.match(configFingerprint(base, "same-driver"), /^[0-9a-f]{32}$/);
+  assert.match(reuseKey(base, "same-driver"), /^[0-9a-f]{32}$/);
   for (const field of ["GG_SPEAKING_MAX_OUTPUT_TOKENS", "GG_SPEAKING_CONTEXT_WINDOW"] as const) {
     const changed = modelConfig("real", "fixture-model", { ...env, [field]: String(Number(env[field]) + 1) });
     assert.notEqual(configFingerprint(changed, "same-driver"), configFingerprint(base, "same-driver"), field);
