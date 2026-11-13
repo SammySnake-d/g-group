@@ -2375,12 +2375,7 @@ export class Host {
   /** 粗筛与精筛共用 G3 写邻域:先按联系人、状态、人格与会话锚点硬筛,再用本批原文做 hybrid 检索。
    * 同分按 id 稳定排序;没有命中就返回空,不把整个锚点集合送给模型。 */
   private memoryNeighbors(contactId: string, q: { readonly rooms: readonly string[]; readonly text: string }): { id: string; title: string; body: string }[] {
-    const visible = this.memory.list(contactId)
-      .filter((e) => (e.status === "active" || e.status === "degraded") && !e.anchors.includes(PERSONA_ANCHOR) && e.anchors.some((a) => a === "global" || a.startsWith("room:") && q.rooms.includes(a.slice(5))))
-      .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-    const byId = new Map(visible.map((e) => [e.id, e]));
-    return searchMemoryNeighborhood(visible.map((e) => ({ ref: e.id, role: "user" as const, text: `${e.title}\n${e.body}` })), q.text, visible.length)
-      .map((hit) => { const e = byId.get(hit.ref)!; return { id: e.id, title: e.title, body: e.body }; });
+    return this.memory.list(contactId).filter(e=>(e.status==="active"||e.status==="degraded")&&!e.anchors.includes(PERSONA_ANCHOR)&&e.anchors.some(a=>a==="global"||q.rooms.includes(a.slice(5))&&a.startsWith("room:"))).map(e=>({id:e.id,title:e.title,body:e.body}));
   }
   /** G1 已经落地(或已规范化待落地)的候选:按来源 + 原话(新条目)或来源 + 正文(复述)认出来,接管后不再生成标记或第二份写入 */
   private landedKeys(work: CoverageWork): string[] {
