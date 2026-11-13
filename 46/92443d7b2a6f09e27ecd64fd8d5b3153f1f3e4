@@ -1,0 +1,21 @@
+receipts/feat-task-timeline.json
+  s_acb73d5a44618d::t_427e2a07fe5ef1 25-32
+reviews/feat-task-timeline.md
+  s_acb73d5a44618d::t_8215450fd59e7f 1-159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4692443d7b2a6f09e27ecd64fd8d5b3153f1f3e4",
+  "prompts": {},
+  "sessions": {
+    "s_acb73d5a44618d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fd6da05b-4f12-4778-9e76-fc2d1b792365",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

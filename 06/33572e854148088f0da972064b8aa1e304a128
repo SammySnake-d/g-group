@@ -1,0 +1,33 @@
+docs/proof/coverage-invariants-r2/README.md
+  s_9d7fa6e9d65b83::t_b4873ff8d769be 29,32,44-55
+docs/proof/coverage-invariants-r2/cloud-download-receipt.json
+  s_9d7fa6e9d65b83::t_4dc858eaa20d04 1-85
+docs/proof/coverage-invariants-r2/cloud-proof-verification.json
+  s_9d7fa6e9d65b83::t_3626f7c3c93c77 1-266
+docs/proof/coverage-invariants-r2/seatbelt-preproof-gates.log
+  s_9d7fa6e9d65b83::t_4419e14ef68f66 1-14
+docs/proof/coverage-invariants-r2/seatbelt-preproof-hash.log
+  s_9d7fa6e9d65b83::t_87afa3a5c558ba 1
+docs/proof/coverage-invariants-r2/seatbelt-preproof-result.json
+  s_9d7fa6e9d65b83::t_993b45f4a66451 1-99
+docs/proof/coverage-invariants-r2/seatbelt-preproof-selftest.log
+  s_9d7fa6e9d65b83::t_ccb80e0b9b4791 1-448
+receipts/feat-coverage-invariants.json
+  s_9d7fa6e9d65b83::t_1e25fdd321cfcd 67,78-80,86-372
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0633572e854148088f0da972064b8aa1e304a128",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

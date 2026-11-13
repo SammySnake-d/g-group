@@ -1,0 +1,19 @@
+packages/server/src/task-timeline.test.ts
+  s_9d7fa6e9d65b83::t_bfb8a164f0b908 69-70,73,78,80,88,122-123,127-128,130,136,138,146-147,151,154,166,175-176,180,184,186,190,231-232,235,238,241,248-249,252,257-258,264-266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "49cd32c9896d72dd7156d0b9c1126630d9c6ac89",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
