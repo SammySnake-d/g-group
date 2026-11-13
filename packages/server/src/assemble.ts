@@ -9,6 +9,8 @@ export interface LedgerLine {
   readonly taskId: string;
   readonly text: string;
   readonly status: string;
+  /** 跟在承诺 id 后面的一句短说明(单行);一行索引里也看得到 */
+  readonly shortName?: string;
 }
 export interface AssembleContext {
   /** 各会话 processed_seq;内核装配用它拒绝旧消息混进第 4 块(AC-40 ⑪)。 */
