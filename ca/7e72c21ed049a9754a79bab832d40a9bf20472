@@ -1,0 +1,21 @@
+receipts/feat-mention-loop-guard-ca2.json
+  s_3410df211081b0::t_8dd61040c5484c 53-60
+reviews/feat-mention-loop-guard-ca2.md
+  s_3410df211081b0::t_0c0ba80a6aca84 1-236
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ca7e72c21ed049a9754a79bab832d40a9bf20472",
+  "prompts": {},
+  "sessions": {
+    "s_3410df211081b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6024214ba242fcf3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
