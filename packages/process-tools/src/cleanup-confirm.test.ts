@@ -99,42 +99,67 @@ test("S-PROC-07 AC-23: a confirmed handle remembers its receipt and never enumer
   }
 });
 
-test("S-PROC-08 AC-23: a stale handle whose pid now leads an unrelated group signals nothing in that group", async () => {
-  const { by, leader, kid } = await bystander();
+test("S-PROC-08 AC-23: a stale handle whose pid now leads an unrelated group signals nothing in that group, with ps and with pgrep only", async () => {
+  const pgrepDir = pgrepOnlyPath();
+  const originalPath = process.env.PATH;
   try {
-    // the old main exited long ago (exit already observed before this handle looked); its pid now belongs to the bystander group
-    const stale = Object.assign(new EventEmitter(), { pid: leader, exitCode: 0, signalCode: null, kill: () => { throw new Error("stub: never signals"); } }) as unknown as ChildProcess;
-    const cleanup = createProcessCleanup(stale);
-    const sent = recordKills(() => false);
-    const result = await cleanup.quiesce(300, 0);
-    process.kill = realKill;
-    assert.deepEqual(result, { ok: true, killed: 0 });
-    assert.deepEqual(sent.filter(([t]) => t === leader || t === -leader || t === kid), [], "the bystander leader, its group and its child are not this handle's");
-    assert.equal(live(leader), true);
-    assert.equal(live(kid), true);
+    for (const onlyPgrep of [false, true]) {
+      const { by, leader, kid } = await bystander();
+      try {
+        // the old main exited long ago (exit already observed before this handle looked); its pid now belongs to the bystander group
+        const stale = Object.assign(new EventEmitter(), { pid: leader, exitCode: 0, signalCode: null, kill: () => { throw new Error("stub: never signals"); } }) as unknown as ChildProcess;
+        const cleanup = createProcessCleanup(stale);
+        const sent = recordKills(() => false);
+        if (onlyPgrep) process.env.PATH = pgrepDir;
+        const result = await cleanup.quiesce(300, 0);
+        process.env.PATH = originalPath;
+        process.kill = realKill;
+        assert.deepEqual(result, { ok: true, killed: 0 }, onlyPgrep ? "pgrep-only enumeration" : "ps enumeration");
+        assert.deepEqual(sent.filter(([t]) => t === leader || t === -leader || t === kid), [], "the bystander leader, its group and its child are not this handle's");
+        assert.deepEqual([live(leader), live(kid)], [true, true]);
+      } finally {
+        process.env.PATH = originalPath;
+        process.kill = realKill;
+        await endOwned(by, [kid]);
+      }
+    }
   } finally {
-    process.kill = realKill;
-    await endOwned(by, [kid]);
+    if (originalPath === undefined) delete process.env.PATH;
+    else process.env.PATH = originalPath;
+    fs.rmSync(pgrepDir, { recursive: true, force: true });
   }
 });
 
-test("S-PROC-09 AC-23: the group recorded at main exit excludes a group that already belongs to whoever holds that pid", async () => {
-  const { by, leader, kid } = await bystander();
+test("S-PROC-09 AC-23: the group recorded at main exit excludes a group that already belongs to whoever holds that pid, with ps and with pgrep only", async () => {
+  const pgrepDir = pgrepOnlyPath();
+  const originalPath = process.env.PATH;
   try {
-    const stub = Object.assign(new EventEmitter(), { pid: leader, exitCode: null as number | null, signalCode: null, kill: () => { throw new Error("stub: never signals"); } });
-    const cleanup = createProcessCleanup(stub as unknown as ChildProcess);
-    // exit observed while the pid is (in this simulation) already held by the bystander leader
-    stub.exitCode = 0;
-    stub.emit("exit", 0, null);
-    const sent = recordKills(() => false);
-    const result = await cleanup.quiesce(300, 0);
-    process.kill = realKill;
-    assert.deepEqual(result, { ok: true, killed: 0 });
-    assert.deepEqual(sent.filter(([t]) => t === leader || t === -leader || t === kid), []);
-    assert.equal(live(kid), true);
+    for (const onlyPgrep of [false, true]) {
+      const { by, leader, kid } = await bystander();
+      try {
+        const stub = Object.assign(new EventEmitter(), { pid: leader, exitCode: null as number | null, signalCode: null, kill: () => { throw new Error("stub: never signals"); } });
+        const cleanup = createProcessCleanup(stub as unknown as ChildProcess);
+        // exit observed while the pid is (in this simulation) already held by the bystander leader
+        if (onlyPgrep) process.env.PATH = pgrepDir;
+        stub.exitCode = 0;
+        stub.emit("exit", 0, null);
+        const sent = recordKills(() => false);
+        const result = await cleanup.quiesce(300, 0);
+        process.env.PATH = originalPath;
+        process.kill = realKill;
+        assert.deepEqual(result, { ok: true, killed: 0 }, onlyPgrep ? "pgrep-only enumeration" : "ps enumeration");
+        assert.deepEqual(sent.filter(([t]) => t === leader || t === -leader || t === kid), []);
+        assert.equal(live(kid), true);
+      } finally {
+        process.env.PATH = originalPath;
+        process.kill = realKill;
+        await endOwned(by, [kid]);
+      }
+    }
   } finally {
-    process.kill = realKill;
-    await endOwned(by, [kid]);
+    if (originalPath === undefined) delete process.env.PATH;
+    else process.env.PATH = originalPath;
+    fs.rmSync(pgrepDir, { recursive: true, force: true });
   }
 });
 

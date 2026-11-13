@@ -646,11 +646,16 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
       const st = typeof computeId === "string" ? computes.get(computeId) : undefined;
       if (!st) return { ok: false as const, reason: "未知的 Compute", remaining: [] };
       if (!st.turn?.finished || st.turn.blocked && !st.stopped) return { ok: false as const, reason: "这一轮还没结束(运行中或停在受阻),先停止", remaining: [] };
+      // R1-01:没有停止时常驻进程按设计驻留(一轮 completed/failed 后照常等下一条输入),没有要确认退出的进程;
+      // 与没有 quiesce 时宿主退回 settled、归还槽位的原行为一致。只有停止之后才要求确认它启动过的全部进程都已退出。
+      if (!st.stopped) return { ok: true as const, killed: 0 };
       let killed = 0;
-      for (const cleanup of st.cleanups) {
+      for (const cleanup of [...st.cleanups]) {
         const result = await cleanup.quiesce(timeoutMs, resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS) + timeoutMs);
         if (!result.ok) return result;
         killed += result.killed;
+        // R1-02:确认过的句柄移出列表,之后不再按它的旧 pid 枚举或发信号
+        st.cleanups.splice(st.cleanups.indexOf(cleanup), 1);
       }
       return { ok: true as const, killed };
     },
