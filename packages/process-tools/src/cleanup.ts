@@ -157,7 +157,10 @@ export function createProcessCleanup(child: ChildProcess, options: CleanupOption
           }
         }
         const alive = [...known.values()].filter((r) => snap && r.pgid !== -1 ? ours(r, snap) : pidAlive(r.pid));
-        if (!alive.length) return (confirmed = { ok: true, killed: killed.size });
+        if (!alive.length) {
+          confirmed = { ok: true, killed: killed.size };
+          return confirmed;
+        }
         if (Date.now() - start > timeoutMs) return { ok: false, reason: `还有 ${alive.length} 个进程没退出`, remaining: alive.map((r) => r.pid) };
         // Group SIGKILL only while that group id is still held by a member recorded as ours.
         if (snap && groupHeldByKnown(snap, pid)) signalGroup(pid, "SIGKILL");
