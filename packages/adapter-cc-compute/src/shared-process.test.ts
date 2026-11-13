@@ -78,8 +78,10 @@ test("S-PROC-CC-02 AC-23: resident CC distinguishes a finished turn from shared 
     await adapter.settled(id);
     pids = JSON.parse(fs.readFileSync(pidFile, "utf8")) as { main: number; descendant: number };
     assert.equal((await adapter.quiesce!(id, Number.NaN)).ok, false);
-    assert.equal((await adapter.quiesce!(id, 0)).ok, false);
+    // R1-01: an ended turn that was not stopped leaves the resident process in place (as before quiesce existed); nothing to confirm, nothing killed
+    assert.deepEqual(await adapter.quiesce!(id, 0), { ok: true, killed: 0 });
     assert.equal(live(pids.main), true);
+    assert.equal(live(pids.descendant), true);
     assert.equal((await adapter.stop(id)).ok, true);
     assert.equal((await adapter.quiesce!(id, 2000)).ok, true);
     assert.equal(live(pids.main), false);

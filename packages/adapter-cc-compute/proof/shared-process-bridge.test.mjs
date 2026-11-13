@@ -29,7 +29,8 @@ test("S-PROC-CC-RESIDENT-01 AC-23: CC resident uses shared all-exit confirmation
     pids = JSON.parse(fs.readFileSync(pidFile, "utf8"));
     assert.equal(alive(pids.main), true);
     assert.equal((await adapter.quiesce(id, Number.NaN)).ok, false);
-    assert.equal((await adapter.quiesce(id, 0)).ok, false, "turn completion is not process cleanup");
+    assert.deepEqual(await adapter.quiesce(id, 0), { ok: true, killed: 0 }, "turn completion without stop keeps the resident process; nothing is killed");
+    assert.equal(alive(pids.main), true);
     assert.equal((await adapter.stop(id)).ok, true);
     assert.equal((await adapter.quiesce(id, 2000)).ok, true);
     assert.equal(alive(pids.main), false);
