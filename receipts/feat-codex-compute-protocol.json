@@ -1,0 +1,58 @@
+{
+  "slice": "Q08 thin native Codex protocol component; not full ComputeAdapter or Host/G2 integration",
+  "acceptance": [
+    {
+      "id": "AC-23",
+      "status": "未测",
+      "reason": "Component17 and real native marker/resume/interrupt are observed. Whole-product resource ownership, gateway-attributed model switching, tool isolation and Host/G2 remain untested.",
+      "evidence": "docs/proof/codex-compute-protocol/README.md"
+    },
+    {
+      "id": "AC-51",
+      "status": "未测",
+      "reason": "Component17 and real native marker/resume/interrupt are observed. Whole-product resource ownership, gateway-attributed model switching, tool isolation and Host/G2 remain untested.",
+      "evidence": "docs/proof/codex-compute-protocol/README.md"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:01a1d043-1042-7e61-9981-968868c25de1",
+    "model": "gpt-6.1-sol"
+  },
+  "contributingSessions": [
+    "codex:01a1cfc8-db89-7400-b3de-876bd8478982",
+    "codex:01a1d043-1042-7e61-9981-968868c25de1"
+  ],
+  "red": {
+    "commit": "0bbacb050b423a7efe0e53f987a3d1b9e89629f7"
+  },
+  "unverifiable": "NOT a full ComputeAdapter. No verified arbitrary native tool allowlist; reject nonempty tools, do not claim empty disables native builtins. Host/G2, actual model attribution/ledger, cross-harness contexts, Windows full process-tree proof, independent review/provenance and product AC-23/AC-51 remain pending.",
+  "waiver": null,
+  "review": {
+    "agent": "claude",
+    "session": "claude:fd6da05b-4f12-4778-9e76-fc2d1b792365",
+    "model": "group/opus",
+    "verdict": "reject",
+    "reviewed_hash": "2c949f116e17b72ce1da0ee091b1b44305b15464aaaade1db7fc1ef7eab74fd9",
+    "notes": "第 1 轮 REJECT,详见 reviews/feat-codex-compute-protocol.md。作者数字全部复现(原 CC 七文件 base/HEAD 各 139/139、本片 17/17、全量 1519/1519、typecheck/lint 0、作者 17 变异全杀、红提交 17 条按名失败、自检 223/223 真实 exit 0、本机 seatbelt 六项机械门禁绿),范围未越界,真实 Codex 0.167.2 上 resume 同线程、错 turn 拒收、steer 回执、interrupted 终态与进程表确认的 quiesce 由审查人独立复现。拒绝原因:R1-01 简报点名的判定(interrupt 终态种类、steer 回执 turn、resume 线程号、thread 核对)与写死的 sandbox/approvalPolicy/HOME 无测试,自构 15 个单点故障全部存活;R1-02 HOME 改写、强制只读、never 审批三项启动决定未完整写进合同;R1-03 逐行同步 ps 捕获阻塞事件循环,且只增不减的已知进程表把 #91 R1-02 的 pid 复用误杀窗口放大到 app-server 整个生命周期(Codex 命令自成进程组,探针 quiesce 杀掉无关进程组 killed:2);R1-04 收据 author.session 是原生子线程号(原则 71 要宿主会话 codex:76d2c467-…),收据/README 云端与变异仍写 pending。hy4 辅审因线路 403 未产出,本轮无辅审。"
+  },
+  "authorIdentitySource": "Observed worker environment CODEX_THREAD_ID/CODEX_SESSION_ID; model inherited from active owner configuration. No independent provenance claim.",
+  "verification": {
+    "componentTests": 17,
+    "localTypecheckExit": 0,
+    "localLintExit": 0,
+    "sameBodyNamedRed": 17,
+    "redIsRetrospectiveCalibration": true,
+    "sameTestBytes": true,
+    "nativeComponentSmoke": "docs/proof/codex-compute-protocol/native-component-result.json",
+    "nativeMarkersExact": 2,
+    "nativeRestartResumeSameThread": true,
+    "nativeSteerAckOnly": true,
+    "nativeInterruptedTerminal": true,
+    "productionConfigBytesUnchanged": true,
+    "cloud": "pending",
+    "namedMutants": "pending",
+    "independentReview": false,
+    "retainedFormalFailure": "v1 G-RED actual ps EPERM in CXP11, G-STUB missing explicit primitive-return calibration and G-TAUTO test.after hook parsed as a dynamic test name. Product assertions and original gate code retained; independent pid enumeration falls back to pgrep with errors never treated absent; send return type explicit; imported after hook. Formal recheck pending."
+  }
+}

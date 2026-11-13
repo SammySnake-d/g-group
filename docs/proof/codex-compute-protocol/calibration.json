@@ -1,0 +1,31 @@
+{
+  "red": "0bbacb050b423a7efe0e53f987a3d1b9e89629f7",
+  "retrospectiveCalibration": true,
+  "sameTestBytes": true,
+  "testFile": "packages/adapter-codex-compute/src/protocol.test.ts",
+  "testSha256": "f1d42f581f7e403e609a6b84c6ce93bfe4a8e2539f0fe9485eb4a474584e1ce2",
+  "redExit": 1,
+  "greenExit": "pending command below",
+  "namedAssertionFailures": [
+    "CXP-01 native initialize is acknowledged before initialized and first thread",
+    "CXP-02 native turn IDs and completed payload map to kernel ComputeEvent without a replacement loop",
+    "CXP-03 process restart uses native thread resume and never silently creates a replacement thread",
+    "CXP-04 steer binds expectedTurnId and interrupt waits for matching native interrupted terminal",
+    "CXP-05 unknown requested model is refused before native thread input",
+    "CXP-06 nonempty tool capability cannot silently become unrestricted native tools",
+    "CXP-07 incompatible effort is refused without falling back to harness defaults",
+    "CXP-08 native exit zero without matching completion is a failed turn not successful work",
+    "CXP-09 native started and terminal events are observable in kernel order exactly once",
+    "CXP-10 native server approval is refused instead of implicitly authorized and failed status is preserved",
+    "CXP-11 main exit zero with three detached descendants is not quiescence until shared cleanup proves all exited",
+    "CXP-12 foreign response IDs and early or duplicate foreign turn notifications cannot forge completion",
+    "CXP-13 interrupt acknowledgement alone never becomes an interrupted completion or quiescence claim",
+    "CXP-14 concurrent native turn starts cannot create a second active turn behind the caller",
+    "CXP-15 explicit next-turn model and effort are sent unchanged and unsupported capabilities never enter native input",
+    "CXP-16 malformed native wire fails the active turn instead of leaving settled pending forever",
+    "CXP-17 missing native config owner is an explicit refusal rather than an uncaught realpath failure"
+  ],
+  "namedGreen": 17,
+  "sourceRestoredByteIdentical": true,
+  "supersedes": "de8e9b6; old17 body calibration and original logs retained, real ps EPERM/return calibration/hook analyzer failures retained"
+}
