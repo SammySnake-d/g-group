@@ -1,0 +1,23 @@
+docs/proof/task-timeline/baseline-runtime.log
+  s_9d7fa6e9d65b83::t_6c8c0bb9f797ad 1
+docs/proof/task-timeline/red-v2.log
+  s_9d7fa6e9d65b83::t_ae60d5c0150223 1-209
+docs/proof/task-timeline/target-lint-final.log
+  s_9d7fa6e9d65b83::t_01cf33b0b308bb 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fbf62dedf42c2718095b77e67b3f0309907694c0",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

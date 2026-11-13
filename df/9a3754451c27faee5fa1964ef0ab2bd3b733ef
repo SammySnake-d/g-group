@@ -1,0 +1,21 @@
+receipts/feat-contact-config-history.json
+  s_209dc3fd714a96::t_f4854b07c39e04 32,35-48
+reviews/feat-contact-config-history.md
+  s_209dc3fd714a96::t_07ba6d449d8278 178-350
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "df9a3754451c27faee5fa1964ef0ab2bd3b733ef",
+  "prompts": {},
+  "sessions": {
+    "s_209dc3fd714a96": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf4ef95e-9b68-4262-a62d-ca75f35d1208",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
