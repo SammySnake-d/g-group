@@ -1,0 +1,219 @@
+# 2026-11-13T22:42:46.630Z 真实 pi 联系人(模型 group/opus,经网关 Bearer)做群聊动向摘要,全程 231189 ms
+# 命令: node packages/server/proof/q06-summary-real.mjs;每 4 条消息一次;用户那句请求是 #1
+
+## 承诺与触发(listCommitments)
+{"id":"k-mwfk88b1-5","status":"active","sourceSeq":1,"text":"以后这个群每 4 条消息帮我总结一次大家聊了什么、方向往哪走","trigger":{"kind":"message-count","everyN":4,"coveredSeq":6,"count":0,"active":true,"windows":1}}
+
+## 模型各轮(按先后;动作是模型原样给的)
+--- 第 1 轮 · 平常轮 · 新消息 #1 · 78381 ms
+动作 {"kind":"commit","roomId":"g-mwfk6jtd-2","sourceSeq":1,"text":"以后这个群每 4 条消息帮我总结一次大家聊了什么、方向往哪走","taskId":null,"everyNMessages":4}
+动作 {"kind":"reply","roomId":"g-mwfk6jtd-2","text":"好的,记下了:这个群每 4 条消息我总结一次——大家聊了什么、方向往哪走。","replyToSeq":1}
+(这一轮还写了状态笔记)
+--- 第 2 轮 · 摘要轮 · 新消息 #3 #4 #5 #6 · 71723 ms
+[第 5 块]
+会话:研发群(g-mwfk6jtd-2)
+区间:#2 之后到 #6(含),当前可见的群聊发言 4 条。
+4 条全部在第 4 块里。
+[第 4 块]
+[待总结的消息](会话 g-mwfk6jtd-2,原文,按先后)
+#3 · 我(user:me) · 2026-11-13T22:40:13.849Z
+登录接口的限流阈值我们定 100,周三前改完。
+#4 · 我(user:me) · 2026-11-13T22:40:13.851Z
+周五发版,发版前要跑一遍回归。
+#5 · 我(user:me) · 2026-11-13T22:40:13.853Z
+回归由小安负责,我来盯线上监控。
+#6 · 我(user:me) · 2026-11-13T22:40:13.855Z
+另外测试服端口换成 8081 了,文档记得同步。
+
+动作 {"kind":"reply","roomId":"g-mwfk6jtd-2","text":"- 登录接口限流阈值定为 100,要求周三前改完 [#3]\n- 周五发版,发版前要跑一遍回归 [#4]\n- 分工:回归由小安负责,发言人自己盯线上监控 [#5]\n- 测试服端口已换成 8081,提醒文档要同步(待办,尚未见有人认领) [#6]\n- 整体方向:围绕周五发版收口——周三前改限流、发版前回归、同步文档 [#3 #4 #6]","replyToSeq":null}
+--- 第 3 轮 · 平常轮 · 新消息 #3 #4 #5 #6 · 79794 ms
+(这一轮还写了状态笔记)
+--- 第 4 轮 · 摘要轮 · 新消息 #4 #5 #6 · 67106 ms
+[第 5 块]
+会话:研发群(g-mwfk6jtd-2)
+区间:#2 之后到 #6(含),当前可见的群聊发言 3 条。
+3 条全部在第 4 块里。
+[第 4 块]
+[待总结的消息](会话 g-mwfk6jtd-2,原文,按先后)
+#4 · 我(user:me) · 2026-11-13T22:40:13.851Z
+周五发版,发版前要跑一遍回归。
+#5 · 我(user:me) · 2026-11-13T22:40:13.853Z
+回归由小安负责,我来盯线上监控。
+#6 · 我(user:me) · 2026-11-13T22:40:13.855Z
+另外测试服端口换成 8081 了,文档记得同步。
+
+动作 {"kind":"reply","roomId":"g-mwfk6jtd-2","text":"- 周五发版,发版前要跑一遍回归 [#4]\n- 分工:回归由小安负责,发言人自己盯线上监控 [#5]\n- 测试服端口已换成 8081,提醒文档要同步(待办,未见谁认领) [#6]\n- 整体方向:围绕周五发版做准备,回归、监控、文档同步三件事并行 [#4 #5 #6]","replyToSeq":null}
+--- 第 5 轮 · 平常轮 · 新消息 #7 · 72945 ms
+(这一轮还写了状态笔记)
+
+## 第一份摘要(生成后、撤回前)
+{
+  "summaryId": "sum-mwfk88bm-7",
+  "roomId": "g-mwfk6jtd-2",
+  "contactId": "c-mwfk6jtb-1",
+  "commitmentId": "k-mwfk88b1-5",
+  "nature": "llm-interpretation",
+  "fromSeqExclusive": 2,
+  "toSeqInclusive": 6,
+  "messageCount": 4,
+  "coveredCount": 4,
+  "coveredToSeq": 6,
+  "truncated": false,
+  "status": "ok",
+  "items": [
+    {
+      "text": "登录接口限流阈值定为 100,要求周三前改完",
+      "sourceSeqs": [
+        3
+      ],
+      "hiddenSourceSeqs": []
+    },
+    {
+      "text": "周五发版,发版前要跑一遍回归",
+      "sourceSeqs": [
+        4
+      ],
+      "hiddenSourceSeqs": []
+    },
+    {
+      "text": "分工:回归由小安负责,发言人自己盯线上监控",
+      "sourceSeqs": [
+        5
+      ],
+      "hiddenSourceSeqs": []
+    },
+    {
+      "text": "测试服端口已换成 8081,提醒文档要同步(待办,尚未见有人认领)",
+      "sourceSeqs": [
+        6
+      ],
+      "hiddenSourceSeqs": []
+    },
+    {
+      "text": "整体方向:围绕周五发版收口——周三前改限流、发版前回归、同步文档",
+      "sourceSeqs": [
+        3,
+        4,
+        6
+      ],
+      "hiddenSourceSeqs": []
+    }
+  ],
+  "hiddenItems": 0,
+  "model": {
+    "speakingModel": "group/opus"
+  },
+  "generatedAt": "2026-11-13T22:41:25.583Z",
+  "staleReason": null,
+  "staleBySeq": null,
+  "staleAt": null,
+  "error": null,
+  "version": 1,
+  "supersedes": null,
+  "supersededBy": null,
+  "createdAt": "2026-11-13T22:40:13.858Z"
+}
+
+## 撤回 #3 之后这份摘要
+{
+  "summaryId": "sum-mwfk88bm-7",
+  "roomId": "g-mwfk6jtd-2",
+  "contactId": "c-mwfk6jtb-1",
+  "commitmentId": "k-mwfk88b1-5",
+  "nature": "llm-interpretation",
+  "fromSeqExclusive": 2,
+  "toSeqInclusive": 6,
+  "messageCount": 4,
+  "coveredCount": 4,
+  "coveredToSeq": 6,
+  "truncated": false,
+  "status": "stale",
+  "items": [],
+  "hiddenItems": 0,
+  "model": {
+    "speakingModel": "group/opus"
+  },
+  "generatedAt": "2026-11-13T22:41:25.583Z",
+  "staleReason": "source-retracted",
+  "staleBySeq": 3,
+  "staleAt": "2026-11-13T22:41:26.198Z",
+  "error": null,
+  "version": 1,
+  "supersedes": null,
+  "supersededBy": "sum-mwfk9s53-9",
+  "createdAt": "2026-11-13T22:40:13.858Z"
+}
+
+## 重做出来的新版本
+{
+  "summaryId": "sum-mwfk9s53-9",
+  "roomId": "g-mwfk6jtd-2",
+  "contactId": "c-mwfk6jtb-1",
+  "commitmentId": "k-mwfk88b1-5",
+  "nature": "llm-interpretation",
+  "fromSeqExclusive": 2,
+  "toSeqInclusive": 6,
+  "messageCount": 3,
+  "coveredCount": 3,
+  "coveredToSeq": 6,
+  "truncated": false,
+  "status": "ok",
+  "items": [
+    {
+      "text": "周五发版,发版前要跑一遍回归",
+      "sourceSeqs": [
+        4
+      ],
+      "hiddenSourceSeqs": []
+    },
+    {
+      "text": "分工:回归由小安负责,发言人自己盯线上监控",
+      "sourceSeqs": [
+        5
+      ],
+      "hiddenSourceSeqs": []
+    },
+    {
+      "text": "测试服端口已换成 8081,提醒文档要同步(待办,未见谁认领)",
+      "sourceSeqs": [
+        6
+      ],
+      "hiddenSourceSeqs": []
+    },
+    {
+      "text": "整体方向:围绕周五发版做准备,回归、监控、文档同步三件事并行",
+      "sourceSeqs": [
+        4,
+        5,
+        6
+      ],
+      "hiddenSourceSeqs": []
+    }
+  ],
+  "hiddenItems": 0,
+  "model": {
+    "speakingModel": "group/opus"
+  },
+  "generatedAt": "2026-11-13T22:42:33.306Z",
+  "staleReason": null,
+  "staleBySeq": null,
+  "staleAt": null,
+  "error": null,
+  "version": 2,
+  "supersedes": "sum-mwfk88bm-7",
+  "supersededBy": null,
+  "createdAt": "2026-11-13T22:41:26.199Z"
+}
+
+## 宿主报告(摘要与拒收相关)
+count-window {"triggerId":"ct-mwfk88b4-6","commitmentId":"k-mwfk88b1-5","contactId":"c-mwfk6jtb-1","roomId":"g-mwfk6jtd-2","requesterId":"me","fromSeqExclusive":2,"toSeqInclusive":6,"status":"pending"}
+
+## 会话(摘要不是消息,不在这里)
+#1 user:me: 小记,以后这个群每 4 条消息帮我总结一次大家聊了什么、方向往哪走。
+#2 contact:小记: 好的,记下了:这个群每 4 条消息我总结一次——大家聊了什么、方向往哪走。
+#3 user:me: (已撤回)
+#4 user:me: 周五发版,发版前要跑一遍回归。
+#5 user:me: 回归由小安负责,我来盯线上监控。
+#6 user:me: 另外测试服端口换成 8081 了,文档记得同步。
+
+# 判定: 真实模型登记了带 everyNMessages 的承诺=true;到点生成了摘要=true(状态 ok);要点都带来源且都在区间内=true;撤回后当场过期且正文清空=true;重做出新版本且不再引用被撤回的那条=true;摘要轮次数=2
