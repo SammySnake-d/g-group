@@ -471,6 +471,7 @@ async function a3(): Promise<boolean> {
   const { call } = caller(s, sc);
   const tracked: number[] = [];
   const timeline: { at: number; content: string }[] = [];
+  const taskTimeline: Record<string, unknown>[] = [];
   let watching = true;
   let watcher: Promise<void> = Promise.resolve();
   try {
@@ -492,10 +493,16 @@ async function a3(): Promise<boolean> {
     const file = path.join(sc.data, "compute", taskId, "color.txt");
     watcher = (async () => {
       let last = "<无文件>";
+      let lastTask = "";
       timeline.push({ at: Date.now(), content: last });
       while (watching) {
         const c = fs.existsSync(file) ? fs.readFileSync(file, "utf8").trim() : "<无文件>";
         if (c !== last) { timeline.push({ at: Date.now(), content: c }); sc.step("color.txt 变化", JSON.stringify(c)); last = c; }
+        // 观察(不作断言):任务状态、条件版本、槽位、Compute 个数的变化,写进 task-timeline.csv
+        const t = await call("tasks.get", { taskId }, true);
+        const row = { state: t.state, constraintVersion: t.constraintVersion, slot: t.slot ? `${t.slot.scope}${t.slot.stopping ? "/stopping" : ""}` : "", computes: t.computeRuns.length, deliveredSeq: t.deliveredSeq ?? "" };
+        const key = JSON.stringify(row);
+        if (key !== lastTask) { taskTimeline.push({ at: Date.now(), ...row }); lastTask = key; }
         await sleep(200);
       }
     })();
@@ -558,6 +565,7 @@ async function a3(): Promise<boolean> {
   } finally {
     watching = false;
     await watcher;
+    sc.writeCsv("task-timeline.csv", taskTimeline.map((r) => ({ ...r, at: new Date(r.at as number).toISOString() })));
     off();
     const rows = await psTable();
     for (const c of myClis(rows)) tracked.push(...descendants(c.pid, rows).map((r) => r.pid));
