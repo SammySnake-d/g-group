@@ -12,6 +12,12 @@ export function endpointOf(baseUrl: string): { endpoint: string; endpointHash: s
   return { endpoint: origin, endpointHash: createHash("sha256").update(baseUrl).digest("hex").slice(0, 16) };
 }
 
+/** 与 start.ts/speaking.ts 的显式配置键相同;不另设 G6 输出上限,无值就交给被测宿主自己的默认值。 */
+export const SPEAKING_ENV_KEYS = Object.freeze(["GG_SPEAKING_MAX_OUTPUT_TOKENS", "GG_SPEAKING_CONTEXT_WINDOW"] as const);
+export function speakingEnv(env: Readonly<Record<string, string | undefined>>): Record<string, string> {
+  return Object.fromEntries(SPEAKING_ENV_KEYS.flatMap((k) => env[k] === undefined ? [] : [[k, env[k]!]]));
+}
+
 export interface ModelConfig {
   readonly mode: "standin" | "real";
   readonly model: string;
@@ -23,6 +29,8 @@ export interface ModelConfig {
   readonly settings: Readonly<Record<string, unknown>> | null;
   /** 一次只放一个模型调用 */
   readonly serial: boolean;
+  /** 显式传入宿主的说话预算;进入指纹和续跑身份,不含凭据。 */
+  readonly speaking: Readonly<Record<string, string>>;
 }
 /** 配置指纹:非敏感配置的规范化摘要(含 runner 驱动代码摘要)。同模型换渠道、换认证引用或换设置都会变。 */
 export function configFingerprint(c: ModelConfig, runnerDigest = ""): string {
@@ -44,9 +52,9 @@ export function runnerDigest(files: readonly { readonly name: string; readonly t
 }
 
 export function modelConfig(mode: "standin" | "real", model: string, env: Readonly<Record<string, string | undefined>>, settings: ModelConfig["settings"] = null, serial = false): ModelConfig {
-  if (mode === "standin") return { mode, model, endpoint: "进程内规则替身", endpointHash: "-", authRef: "(无)", settings, serial };
+  if (mode === "standin") return { mode, model, endpoint: "进程内规则替身", endpointHash: "-", authRef: "(无)", settings, serial, speaking: {} };
   const { endpoint, endpointHash } = endpointOf(env.ANTHROPIC_BASE_URL ?? "");
-  return { mode, model, endpoint, endpointHash, authRef: env.ANTHROPIC_AUTH_TOKEN ? "env:ANTHROPIC_AUTH_TOKEN" : env.ANTHROPIC_API_KEY ? "env:ANTHROPIC_API_KEY" : "(缺)", settings, serial };
+  return { mode, model, endpoint, endpointHash, authRef: env.ANTHROPIC_AUTH_TOKEN ? "env:ANTHROPIC_AUTH_TOKEN" : env.ANTHROPIC_API_KEY ? "env:ANTHROPIC_API_KEY" : "(缺)", settings, serial, speaking: speakingEnv(env) };
 }
 
 /** 一道题的源权限(谁在哪个会话)与这次运行的消息版本(发、改、撤回的先后)。 */
