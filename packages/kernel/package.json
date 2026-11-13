@@ -2,7 +2,7 @@
   "name": "@g-group/kernel",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": { ".": "./src/index.ts", "./compute": "./src/compute/index.ts" },
   "dependencies": { "@g-group/domain": "*" },
   "gGroup": { "layer": "kernel" }
 }
