@@ -29,5 +29,5 @@
   "waiver": null,
   "review": null,
   "review_status": "待审",
-  "notes": "作者:Claude Code 宿主会话 claude:484c2330-2f15-49ae-9f7a-145e467cedb1(group/opus)主会话直接编写,未用子代理。来源:Mira Bot 私聊 #3138 后的指派(用户已授权堵漏洞,不放松门禁)。改前钩子在 set -e 下只看 grep 的退出码,自检失败照样放行(端到端反例 1:旧钩子 + 注入一条自检失败 → push 退出 0)。"
+  "notes": "作者:Claude Code 宿主会话 claude:484c2330-2f15-49ae-9f7a-145e467cedb1(group/opus)主会话直接编写,未用子代理。来源:Mira Bot 私聊 #3138 后的指派(用户已授权堵漏洞,不放松门禁)。改前钩子在 set -e 下只看 grep 的退出码,自检失败照样放行(端到端反例 1:旧钩子 + 注入一条自检失败 → push 退出 0)。 云端 box2(Ubuntu 24.04,/bin/sh=/usr/bin/dash,Node v24.21.0,HEAD 14fe40d9 起跑,与本提交只差收据和证明文档):npm ci 0、typecheck 0、lint 0(199 文件)、pre-push-hook.test.ts 4/4、npm test 全量 1477/1477(fail/cancelled/skipped/todo 均 0);云端目录已删、残留进程 0。本机 macOS seatbelt 下 run-all.ts --local:7 项 ✓,G-REVIEW「还没有独立审查」。"
 }
