@@ -1,0 +1,35 @@
+{
+  "tested_source": "e1e8ab02912a90335496c2172577ff72da57d46c",
+  "box": "box4",
+  "node": "v24.21.0",
+  "source_files_original_bytes_verified": 526,
+  "positive": {
+    "label": "事务内提前提交使失败消息泄漏额度",
+    "target": "因果元数据与消息事务同生共死；失败事务不留下额度占用",
+    "injection": "earlyCommit=true commits active outer message transaction before its caller aborts",
+    "exit": 1,
+    "tests": 10,
+    "pass": 9,
+    "fail": 1,
+    "target_assertion_line": 126,
+    "expected": true,
+    "actual": false,
+    "code": "ERR_ASSERTION"
+  },
+  "negative": {
+    "switch": "earlyCommit=false, otherwise same injected source",
+    "exit": 0,
+    "tests": 10,
+    "pass": 10,
+    "fail": 0
+  },
+  "baseline": {
+    "exit": 0,
+    "tests": 10,
+    "pass": 10,
+    "fail": 0
+  },
+  "parser_calibration_cases": 4,
+  "archive_sha256": "98ca7d0a2d880384e2921e89e956f4f2f160d58a8bb1b7459c6f5eefefe1c931",
+  "purpose": "separate supplemental proof closes the previously unassigned transaction criterion; original 15+7 run remains unchanged"
+}

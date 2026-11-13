@@ -1,0 +1,221 @@
+{
+  "scope": "15 explicitly named loop+CA2 seam criteria, not complete requirements or inherited full chat-admin acceptance",
+  "named_criteria": 15,
+  "original_mutants": 22,
+  "supplemental_mutants": 1,
+  "criteria": [
+    {
+      "name": "因果根继承：派生消息连续传递同一根，不能每条消息重新获额度",
+      "positive_controls": [
+        {
+          "group": "mutations",
+          "label": "因果元数据未落盘",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        },
+        {
+          "group": "mutations",
+          "label": "派生消息另起新根",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        }
+      ]
+    },
+    {
+      "name": "同根并发分支共用总额度，不同根互不占用，多根派生取每根约束",
+      "positive_controls": [
+        {
+          "group": "mutations",
+          "label": "移除总次数上限",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        }
+      ]
+    },
+    {
+      "name": "消息重投使用会话、消息与目标联系人的稳定键，不二次扣额度",
+      "positive_controls": [
+        {
+          "group": "mutations",
+          "label": "重投不查稳定键",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        }
+      ]
+    },
+    {
+      "name": "频率额度使用滚动一分钟；频率停止持久保留，等新用户输入开新根",
+      "positive_controls": [
+        {
+          "group": "mutations",
+          "label": "频率窗口含一分钟边界",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        },
+        {
+          "group": "mutations",
+          "label": "移除频率上限",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        },
+        {
+          "group": "mutations",
+          "label": "停止原因不持久",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        }
+      ]
+    },
+    {
+      "name": "重启后保留次数、停止原因和待处理；新用户输入才建立新的因果根",
+      "positive_controls": [
+        {
+          "group": "mutations",
+          "label": "新用户输入仍沿旧根",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        },
+        {
+          "group": "mutations",
+          "label": "重启重置次数",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        }
+      ]
+    },
+    {
+      "name": "因果元数据与消息事务同生共死；失败事务不留下额度占用",
+      "positive_controls": [
+        {
+          "group": "supplemental-transaction",
+          "label": "事务内提前提交使失败消息泄漏额度",
+          "designated_assertion": true,
+          "negative": "same injected source earlyCommit=false full10 green"
+        }
+      ]
+    },
+    {
+      "name": "跨会话派生保持原因果根，不借输出到另一群重新获额度",
+      "positive_controls": [
+        {
+          "group": "mutations",
+          "label": "跨会话丢弃输入根",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        }
+      ]
+    },
+    {
+      "name": "配置拒绝无穷、零和非整数；省略次数时采用明确标候选的有限默认值",
+      "positive_controls": [
+        {
+          "group": "mutations",
+          "label": "允许零次数参数",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        }
+      ]
+    },
+    {
+      "name": "生产调度保留旁观者参与但同根自动往返到上限停止，只留一次停止说明；新用户消息可继续",
+      "positive_controls": [
+        {
+          "group": "mutations",
+          "label": "消息生产未继承根",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        },
+        {
+          "group": "mutations",
+          "label": "生产调度不拦限额",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        },
+        {
+          "group": "mutations",
+          "label": "停止说明缺失",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        }
+      ]
+    },
+    {
+      "name": "生产重启不自动重开已停止的派生链；未读原文仍可查看，用户续话后再参与",
+      "positive_controls": [
+        {
+          "group": "mutations",
+          "label": "重启仍自动处理停止根",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        }
+      ]
+    },
+    {
+      "name": "CA2接缝01：@everyone与逐个@去重保留，同根派生仍有限停止",
+      "positive_controls": [
+        {
+          "group": "seam-mutations",
+          "label": "CA2全员展开丢失",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        }
+      ]
+    },
+    {
+      "name": "CA2接缝02：同轮被拒动作的完成声明仍不发送，也不产生自动唤醒额度",
+      "positive_controls": [
+        {
+          "group": "seam-mutations",
+          "label": "CA2被拒完成声明放行",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        }
+      ]
+    },
+    {
+      "name": "CA2接缝03：@everyone不掩盖非法逐个@，拒绝仍在消息与因果提交之前",
+      "positive_controls": [
+        {
+          "group": "seam-mutations",
+          "label": "CA2非法逐个点名放行",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        }
+      ]
+    },
+    {
+      "name": "CA2接缝04：新增claim卡继承触发本轮的用户根，而不是另起卡片根",
+      "positive_controls": [
+        {
+          "group": "seam-mutations",
+          "label": "CA2认领卡未继承根",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        }
+      ]
+    },
+    {
+      "name": "CA2接缝05：同一轮真实装配同时保留被拒回告、可认领任务和禁言事实",
+      "positive_controls": [
+        {
+          "group": "seam-mutations",
+          "label": "并集丢失回告",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        },
+        {
+          "group": "seam-mutations",
+          "label": "并集丢失可认领任务",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        },
+        {
+          "group": "seam-mutations",
+          "label": "并集丢失禁言事实",
+          "designated_assertion": true,
+          "baseline": "original same-code clean group full green"
+        }
+      ]
+    }
+  ]
+}
