@@ -50,7 +50,14 @@
   },
   "unverifiable": "R-02历史TDD顺序未证；R-02/R-03/R-04官方Docker沙箱overlayfs在Node前失败，实际门禁红，须环境恢复后真实重跑。G-PROVENANCE在review=null下短路不代表来源实核。AC-30/31完整产品链、真实模型/CLI E2E与UI未验。maxHops4未批，G4 #69/#82接缝待重对。R-05通过只限本片15具名判据的作者对照。",
   "waiver": null,
-  "review": null,
+  "review": {
+    "agent": "claude",
+    "session": "claude:f91c9497-b43d-4978-a35a-717a7d863cc2",
+    "model": "group/opus",
+    "verdict": "reject",
+    "reviewed_hash": "867b328a03ee14635802f52cf90de9313dc54edb78fa3330f07592faf5bacf5e",
+    "notes": "第 1 轮 REJECT。hy4 辅审因线路 403 未产出，本轮无辅审。复现一致（box2，Node v24.21.0）：typecheck/lint 0；npm test 1522/1522 无 fail/skip/todo；回溯红 10+5 ERR_ASSERTION、同体绿 15/15；22 变异全部具名杀死；事务补充 9 绿 1 红、阴性 10/10；回归 24/24；526 份受测源 SHA 0 不符。合并 #71 c7d1a2dd 的 14 个文件逐字节未改，host.ts 3 处冲突为两边都留、pointers 次序与交接一致；接缝05 少任一项都按名失败。本机 seatbelt --local（审前）：RED 11 项全是并入的 #71 测试（需拍板），STUB 8 项是本片 loop-guard 单元测试。拒绝原因：R1-01 因果链在 Compute 边界重置（loop-guard.ts:67 及宿主代发 6 处），探针里一边发「已到上限」一边继续派活；R1-02 记忆冲突提问与重跑说明不继承根，两联系人互唤到探针封顶不停；R1-03 审查方 14 个非对照单点故障存活 12（含 dispatch/deliver 不继承根、不同根合计数）；R1-04 一轮跨会话合并根，不相干群互相叫停；R1-05 待处理在别的轮后丢失；R1-06 已放行的唤醒被作废；R1-07 G-STUB 判红 8 项需补原始类型返回值断言；R1-08 author.session 是 Codex 原生子线程号，G-PROVENANCE 读不到，宿主会话为 codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7。来源已用 Codex 原生记录核到各提交、红绿同次调用与推送；box4 未登录。maxHops=4 为候选，不作拒绝依据。见 reviews/feat-mention-loop-guard-ca2.md 第 1 轮。"
+  },
   "review_status": "待Mira Bot安排独立跨厂商审查与真实来源核验",
   "notes": "CA2固定base3968d497；完整#71 c7d1a2dd由合并提交37118a3d引入，原#71/#79分支未写。Mira Bot DM #3000/#3011授权并集：rejections/chatAdmin字段与初始化均保留；pointers精确保持rejectionPointers,claimable,pointers,mem.pointers,muteNotes顺序。新增CA2接缝05真实执行验证三样同轮装配。claim卡与reply/dispatch/deliver一同继承causeRoots。红提交是回溯可加载空壳与针对新接缝故障对照，旧10体与新5体在红/绿保持不变。作者为真实子会话，native full-history fork含父session_meta但不据其伪造turns，不自签审查。当前冻结受测源码e1e8ab02912a90335496c2172577ff72da57d46c；最终仅增加证明与收据，526份受测源文件保持原字节。 新box4全量1522/1522；原22变异完整指定断言红；补1事务阳性/单开关阴性；非1495旧组合借用。外层门禁runner0不冒充官方命令1通过。"
 }
