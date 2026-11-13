@@ -1,0 +1,21 @@
+packages/adapter-codex-compute/src/protocol.test.ts
+  s_9d7fa6e9d65b83::t_a9a0c945b3ca84 138-153
+packages/adapter-codex-compute/test-support/native-wire.mjs
+  s_9d7fa6e9d65b83::t_76e46649df2e59 14-15,29-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4bb5334957f4a197a3791a2699e487edb7a63e15",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

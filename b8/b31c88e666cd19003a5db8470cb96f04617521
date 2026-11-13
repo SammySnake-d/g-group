@@ -1,0 +1,31 @@
+packages/api-contract/src/api.ts
+  s_9d7fa6e9d65b83::t_eefc9a31a5e431 42,204-205
+packages/server/src/db.ts
+  s_9d7fa6e9d65b83::t_eefc9a31a5e431 35-36
+packages/server/src/host.ts
+  s_9d7fa6e9d65b83::t_eefc9a31a5e431 30,1647-1651
+packages/server/src/service.ts
+  s_9d7fa6e9d65b83::t_eefc9a31a5e431 84
+packages/server/src/task-timeline.test.ts
+  s_9d7fa6e9d65b83::t_eefc9a31a5e431 8,250
+  s_9d7fa6e9d65b83::t_0b3dbf971bc441 1-7,9-43,45-103,105-189,191-249,251-264
+  s_9d7fa6e9d65b83::t_0ce813eab2b9e3 44,104,190
+packages/api-contract/src/entities.ts
+  s_9d7fa6e9d65b83::t_0b3dbf971bc441 234-241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b8b31c88e666cd19003a5db8470cb96f04617521",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+docs/proof/room-pending-summary/README.md
+  s_9d7fa6e9d65b83::t_e0bb751bb09086 37,47,50-59
+docs/proof/room-pending-summary/r2/cloud-config.json
+  s_9d7fa6e9d65b83::t_6a5876d8d82034 1-609
+docs/proof/room-pending-summary/r2/cloud-proof-verification.json
+  s_9d7fa6e9d65b83::t_e9ba4a301126b7 1-215
+docs/proof/room-pending-summary/r2/cloud-queue-receipt.json
+  s_9d7fa6e9d65b83::t_b0f40da9a93990 1-14
+docs/proof/room-pending-summary/r2/cloud-result.json
+  s_9d7fa6e9d65b83::t_87ddada62bab1b 1-138
+docs/proof/room-pending-summary/r2/cloud-run.py
+  s_9d7fa6e9d65b83::t_875927b7fa207f 1-45
+docs/proof/room-pending-summary/r2/cloud-upload-receipt.json
+  s_9d7fa6e9d65b83::t_bdbdaa1e0c38a7 1-10
+receipts/feat-room-pending-summary.json
+  s_9d7fa6e9d65b83::t_0c964abe2989a3 34,47-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "702c87194e886b40272ff21c831788f4450d5d27",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

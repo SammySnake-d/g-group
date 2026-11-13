@@ -1,0 +1,21 @@
+receipts/feat-slash-plugins-complete.json
+  s_12fa257cb93700::t_9778f282aa6a21 25-32
+reviews/feat-slash-plugins-complete.md
+  s_12fa257cb93700::t_35a67beb2a8789 1-249
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "230ed1c98fe13d5a532c3d94fd725f36b2216ddc",
+  "prompts": {},
+  "sessions": {
+    "s_12fa257cb93700": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d0a5-52ef-79e3-8cfb-106f121a15a6",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
