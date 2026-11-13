@@ -1,0 +1,14 @@
+receipts/feat-slash-plugins-complete.json
+  h_f33e46a035b77c 25-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8b75e26e74d137f6ff83dce1cebe65cf714c7e0c",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
