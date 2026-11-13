@@ -20,7 +20,7 @@
   "red": {
     "commit": "5579bc7e5c6cfba11fcfa689e4ea137c1357c398"
   },
-  "unverifiable": "AC-35、AC-31:① 计数口径是我按需求文字定的(联系人自己的发言也算、提出人本端删除的不算、任务事实卡按 gg_cards.kind 四种排除);测试只证明代码照这个口径数,不证明口径本身是用户要的——见 PR.md「待确认」1、2。② 「联系人会不会在该用的时候带 everyNMessages」是模型行为:本片的适配器测试用进程内假端点驱动真实的 createPiContactMind,只证明工具声明发出去了、填了 N 能登记;真实模型的一次样本在 Q06-2(packages/server/proof/q06-summary-real.txt),只有一次。③ 「正在移出」「解散」用测试替身的 Compute 停止确认构造,没有用真实 Compute 进程。④ 触发的关闭是在这个会话下一次写消息或宿主启动时才落库的(撤销除外,撤销当场关):联系人被移出后到下一条消息之间,库里的触发行仍是 active,而 CommitmentView.trigger.active 是现判的、已是 false(测试断言了视图)。⑤ 本片单独合入时窗口没有消费方,pending 窗口会一直留着,直到 Q06-2 接上或承诺关闭。⑥ 全量测试、变异在 box1 的 c9105e7 上跑,之后只加了证据文件与本收据,没有再跑全量",
+  "unverifiable": "AC-35、AC-31:① 计数口径是我按需求文字定的(联系人自己的发言也算、提出人本端删除的不算、任务事实卡按 gg_cards.kind 四种排除);测试只证明代码照这个口径数,不证明口径本身是用户要的——见 PR.md「待确认」1、2。② 「联系人会不会在该用的时候带 everyNMessages」是模型行为:本片的适配器测试用进程内假端点驱动真实的 createPiContactMind,只证明工具声明发出去了、填了 N 能登记;真实模型的一次样本在 Q06-2(packages/server/proof/q06-summary-real.txt),只有一次。③ 「正在移出」「解散」用测试替身的 Compute 停止确认构造,没有用真实 Compute 进程。④ 触发的关闭是在这个会话下一次写消息或宿主启动时才落库的(撤销除外,撤销当场关):联系人被移出后到下一条消息之间,库里的触发行仍是 active,而 CommitmentView.trigger.active 是现判的、已是 false(测试断言了视图)。⑤ 本片单独合入时窗口没有消费方,pending 窗口会一直留着,直到 Q06-2 接上或承诺关闭。⑥ 全量测试、变异在 box1 的 c9105e7 上跑,之后只加了证据文件、本收据,以及给变异脚本的「只核对注入点」模式补了一行清理临时目录(不影响真正跑变异的那条路),没有再跑全量和变异",
   "waiver": null,
   "review": null,
   "review_status": "待审",
