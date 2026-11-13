@@ -1,5 +1,8 @@
 // P7 命令路由。宿主只提供本次选中会话的只读快照；插件正文经独立进程生成。
 // 命令执行账本与外发 outbox 无关：断电留下 running 时拒绝盲重跑，用户可用新 action 明确再试。
+// 只接管明确提供命令执行入口的插件（PluginStore.commandOwner，R1-01）；别的插件声明的命令照原路由作为带 command 的用户消息发给联系人。
+// 插件命令先过与 Host.send 同一道成员与解散只读校验，被拒时不执行插件、不落账本、不写消息（R1-02）；
+// 结果以 system:plugin:<插件 id> 写入并带可机读来源，留在发起的话题里，带 draftVer 时结算那一版草稿（Host.postPluginResult，R1-02/R1-03）。
 import { createHash } from "node:crypto";
 import type { MessageView } from "@g-group/api-contract";
 import { HostError, all, one, run } from "./db.ts";
@@ -7,10 +10,10 @@ import type { Host } from "./host.ts";
 
 const BUILTIN = new Set(["task", "remind", "stop"]);
 const SCHEMA = `CREATE TABLE IF NOT EXISTS gg_plugin_commands (
- room_id TEXT NOT NULL, action_id TEXT NOT NULL, fingerprint TEXT NOT NULL,
+ room_id TEXT NOT NULL, action_id TEXT NOT NULL, fingerprint TEXT NOT NULL, plugin_id TEXT NOT NULL,
  status TEXT NOT NULL, result_seq INTEGER, result_text TEXT, error TEXT, PRIMARY KEY(room_id,action_id)
 )`;
-interface CommandRow { fingerprint: string; status: string; result_seq: number | null; result_text: string | null; error: string | null }
+interface CommandRow { fingerprint: string; plugin_id: string; status: string; result_seq: number | null; result_text: string | null; error: string | null }
 
 /** JSON 参数对象的属性顺序不改变同一逻辑命令的身份。 */
 function canonical(v: unknown): unknown {
@@ -45,7 +48,8 @@ export function commandSnapshot(host: Host, roomId: string, from?: unknown) {
   const tasks = host.listTasks({ roomId }).map(t => ({ id: t.id, title: t.title, state: t.state, sourceSeq: t.sourceSeq, deliveredSeq: host.taskDoc(t.id).value.deliveredSeq ?? null, updatedAt: t.updatedAt }));
   const pending = visible.filter(m => m.card?.kind === "question" && m.card.state === "open").map(m => ({ kind: m.card!.actions.some(a => a.actionId === "approve") ? "authorization" : "question", taskId: m.card!.taskId, title: m.card!.title, seq: m.seq }));
   for (const t of tasks) if (t.deliveredSeq !== null && (t.state === "T8a_Delivered" || t.state === "T5_InReview")) pending.push({ kind: "delivery", taskId: t.id, title: t.title, seq: t.deliveredSeq });
-  const boundaryAt = visible.find(m => m.seq === fromSeq)?.at ?? null;
+  // 边界时刻取自已读序号这一条本身（R1-04）：已读停在摘要、撤回或本端删掉的消息上也一样；从头（0）没有边界。
+  const boundaryAt = fromSeq === 0 ? null : one<{ at: string }>(host.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${roomId}`, fromSeq)?.at ?? null;
   return { roomId, fromSeq, toSeq: Math.max(fromSeq, toSeq), truncated: unread.length > 200, messageCount: unread.length,
     messages: unread.slice(-200).map(m => ({ seq: m.seq, sender: m.sender, name: m.sender.kind === "user" ? (m.sender.id === host.userId ? "我" : m.sender.id) : contacts.get(m.sender.id) ?? "宿主", text: m.text })), tasks, pending, boundaryAt };
 }
@@ -71,17 +75,23 @@ export class SlashCommands {
     }
     const known = this.host.plugins.commandOwner(command.name);
     if (!known) return this.host.send(input);
+    this.host.assertCanPost(input.roomId);
     if (!known.enabled) throw new HostError("conflict", `插件 ${known.pluginId} 已停用`);
     const args = commandArgs(command.args);
     const snapshot = known.canRead ? commandSnapshot(this.host, input.roomId, args.from) : null;
-    run(this.host.db, "INSERT INTO gg_plugin_commands (room_id,action_id,fingerprint,status) VALUES (?,?,?,'running')", input.roomId, input.clientActionId, fingerprint);
+    run(this.host.db, "INSERT INTO gg_plugin_commands (room_id,action_id,fingerprint,plugin_id,status) VALUES (?,?,?,?,'running')", input.roomId, input.clientActionId, fingerprint, known.pluginId);
     const work = this.execute(known.pluginId, input, snapshot);
     this.active.set(key, work);
     try { return await work; } finally { this.active.delete(key); }
   }
 
   private publish(input: Parameters<Host["send"]>[0], text: string): MessageView {
-    const message = this.host.postSystemNotice(input.roomId, text, `plugin-command:${input.clientActionId}`);
+    const row = one<{ plugin_id: string }>(this.host.db, "SELECT plugin_id FROM gg_plugin_commands WHERE room_id = ? AND action_id = ?", input.roomId, input.clientActionId)!;
+    const message = this.host.postPluginResult({
+      roomId: input.roomId, pluginId: row.plugin_id, command: input.command!.name, clientActionId: input.clientActionId, text,
+      threadRootSeq: input.threadRootSeq ?? null, ...(input.draftVer === undefined ? {} : { draftVer: input.draftVer }),
+      submitted: { text: input.text, replyToSeq: input.replyToSeq ?? null, quotedSeqs: input.quotedSeqs ?? [], mentions: input.mentions ?? [] },
+    });
     run(this.host.db, "UPDATE gg_plugin_commands SET status='done',result_seq=? WHERE room_id=? AND action_id=?", message.seq, input.roomId, input.clientActionId);
     return message;
   }

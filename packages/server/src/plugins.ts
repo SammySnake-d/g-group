@@ -358,11 +358,17 @@ export class PluginStore {
       failures: out.failures,
     };
   }
-  /** 命令归属包含停用插件,避免停用的命令误变成联系人消息。 */
+  /**
+   * 命令归属包含停用插件,避免停用的命令误变成联系人消息。
+   * 只接管明确提供命令执行入口的插件(清单声明界面扩展 ui-extension 且有 entry,P7 R1-01);数据源、输出渠道等别的插件
+   * 声明的命令返回 null,照 #71 原路由作为带 command 的用户消息发给联系人,也不为它拉起插件进程。
+   */
   commandOwner(name: string): { pluginId: string; enabled: boolean; canRead: boolean } | null {
     for (const r of all<Row>(this.d.db, "SELECT * FROM gg_plugins ORDER BY id")) {
       const m = JSON.parse(r.manifest) as Manifest;
-      if (m.commands?.some(c => c.name === name)) return { pluginId: r.id, enabled: !!r.enabled, canRead: (JSON.parse(r.granted) as string[]).includes("chat:read") };
+      if (!m.commands?.some(c => c.name === name)) continue;
+      if (!m.kinds.includes("ui-extension") || !m.entry) return null;
+      return { pluginId: r.id, enabled: !!r.enabled, canRead: (JSON.parse(r.granted) as string[]).includes("chat:read") };
     }
     return null;
   }

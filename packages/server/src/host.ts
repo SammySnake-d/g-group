@@ -364,6 +364,8 @@ const QUESTION_IMAGE_EXT: ReadonlySet<string> = new Set([".png", ".jpg", ".jpeg"
 const QUESTION_ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024;
 const EXPIRED_NOTE = "\n(已过期·未执行)";
 const TERMINAL: ReadonlySet<string> = new Set(["T8_Accepted", "T10_Cancelled", "T11_Failed"]);
+/** 插件斜杠命令结果的发言者 id 前缀(P7 R1-03):system:plugin:<插件 id>,与宿主自己的 system:host 分开。 */
+const PLUGIN_SENDER_PREFIX = "plugin:";
 
 export class Host {
   readonly db: Db;
@@ -882,6 +884,7 @@ export class Host {
   private nameOf(s: { kind: string; id: string }): string {
     if (s.kind === "user") return s.id === this.userId ? this.userName : s.id;
     if (s.kind === "contact") return getDoc<ContactDoc>(this.db, `contact:${s.id}`)?.value.name ?? s.id;
+    if (s.kind === "system" && s.id.startsWith(PLUGIN_SENDER_PREFIX)) return `插件 ${s.id.slice(PLUGIN_SENDER_PREFIX.length)}`;
     return "宿主";
   }
   messageView(roomId: string, m: ProjectedMessage, all_?: ProjectedMessage[]): MessageView {
@@ -928,6 +931,7 @@ export class Host {
       at: one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${roomId}`, m.seq)?.at ?? this.now(),
       ...(isRewound(this.db, roomId, m.seq) ? { rewound: true } : {}),
       ...(m.retracted ? {} : this.messageArtifacts(roomId, m.seq)),
+      ...(m.sender.kind === "system" ? this.messagePluginCommand(roomId, m.seq) : {}),
     };
   }
   listMessages(roomId: string, q: { beforeSeq?: number; afterSeq?: number; aroundSeq?: number; limit?: number; threadRootSeq?: number | null }): { messages: MessageView[]; hasMore: boolean; hasMoreAfter?: boolean } {
@@ -959,13 +963,14 @@ export class Host {
   private appendMessageTx(
     roomId: string,
     sender: { kind: "user" | "contact" | "helper" | "system"; id: string },
-    f: { text: string; actionKey: string; clientActionId?: string | null; attachments?: string[]; threadRootSeq?: number | null; replyToSeq?: number | null; quotedSeqs?: number[]; mentions?: MessageView["mentions"]; command?: { name: string; args: unknown } | null; card?: Omit<CardRow, "room_id" | "seq"> | null },
+    f: { text: string; actionKey: string; clientActionId?: string | null; attachments?: string[]; threadRootSeq?: number | null; replyToSeq?: number | null; quotedSeqs?: number[]; mentions?: MessageView["mentions"]; command?: { name: string; args: unknown } | null; card?: Omit<CardRow, "room_id" | "seq"> | null; userAction?: boolean },
   ): { seq: number; duplicate: boolean } {
     const key = `msg:${roomId}:${f.actionKey}`;
     const prior = one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key);
     if (prior) return { seq: (JSON.parse(prior.payload) as { seq: number }).seq, duplicate: true };
-    // 解散中/已解散的群只读:用户与 Helper 不能再写(联系人在 commitRound 里逐条拒收,宿主的 system 通知照写)
-    if ((sender.kind === "user" || sender.kind === "helper") && this.chatAdmin.isClosed(roomId)) throw new HostError("conflict", DISSOLVED_REASON);
+    // 解散中/已解散的群只读:用户与 Helper 不能再写,用户发起的插件命令结果同样(userAction);
+    // 联系人在 commitRound 里逐条拒收,宿主的 system 通知照写
+    if ((sender.kind === "user" || sender.kind === "helper" || f.userAction === true) && this.chatAdmin.isClosed(roomId)) throw new HostError("conflict", DISSOLVED_REASON);
     const at = this.now();
     const e = appendEvent(this.db.store, `room:${roomId}`, sender, { kind: "message", text: f.text }, at);
     recordAction(this.db.store, key, { seq: e.seq });
@@ -1364,6 +1369,39 @@ export class Host {
     const r = tx(this.db, () => this.appendMessageTx(roomId, SYSTEM_SENDER, { text, actionKey: `system:${actionKey}` }));
     if (!r.duplicate) this.afterAppend(roomId, r.seq, SYSTEM_SENDER);
     return this.messageView(roomId, this.projected(roomId).find((x) => x.seq === r.seq)!);
+  }
+  /** 用户在会话里发一条之前的校验,与 send 同口径(P7 R1-02,插件命令执行前走这一道):不是成员 forbidden;群解散中/已解散只读 conflict。 */
+  assertCanPost(roomId: string): void {
+    if (this.chatAdmin.isClosed(this.userRoom(roomId).id)) throw new HostError("conflict", DISSOLVED_REASON);
+  }
+  /**
+   * 插件斜杠命令的结果(P7 R1-02/R1-03):发言者是 system:plugin:<插件 id>,不是宿主;消息带可机读来源(插件、命令、触发的 clientActionId)。
+   * 与 send 同口径:不是成员 forbidden;群解散中/已解散只读 conflict(同一结果的重放照 send 返回原消息)。
+   * 结果留在发起命令的话题里;带 draftVer 时与写入同一事务只结算那一版草稿(AC-24)。只作上下文,不唤醒联系人。
+   */
+  postPluginResult(input: {
+    roomId: string;
+    pluginId: string;
+    command: string;
+    clientActionId: string;
+    text: string;
+    threadRootSeq: number | null;
+    draftVer?: number;
+    submitted: { text: string; replyToSeq: number | null; quotedSeqs: number[]; mentions: MessageView["mentions"] };
+  }): MessageView {
+    const room = this.userRoom(input.roomId);
+    const sender = { kind: "system" as const, id: `${PLUGIN_SENDER_PREFIX}${input.pluginId}` };
+    let settled: DraftView | null = null;
+    const r = tx(this.db, () => {
+      const appended = this.appendMessageTx(room.id, sender, { text: input.text, actionKey: `plugin-command:${input.clientActionId}`, threadRootSeq: input.threadRootSeq, userAction: true });
+      if (appended.duplicate) return appended;
+      run(this.db, "INSERT INTO gg_msg_plugin (room_id, seq, plugin_id, command, client_action_id) VALUES (?, ?, ?, ?, ?)", room.id, appended.seq, input.pluginId, input.command, input.clientActionId);
+      if (input.draftVer !== undefined) settled = this.settleDraftTx(room.id, { roomId: room.id, submittedVer: input.draftVer, submitted: input.submitted });
+      return appended;
+    });
+    if (settled) this.bus.emit({ type: "draft.updated", draft: settled });
+    if (!r.duplicate) this.afterAppend(room.id, r.seq, sender);
+    return this.messageView(room.id, this.projected(room.id).find((x) => x.seq === r.seq)!);
   }
   /** 群内禁言(U03,候选,只做最小一项):只记状态,拒收在 commitRound,告知在 runRound 第 5 块;不停任务、不发通知。 */
   muteMember(input: { roomId: string; contactId: string; muted: boolean; clientActionId: string }): RoomView {
@@ -2023,6 +2061,11 @@ export class Host {
   private messageArtifacts(roomId: string, seq: number): { artifacts?: ArtifactRef[] } {
     const row = one<{ artifacts: string }>(this.db, "SELECT artifacts FROM gg_msg_artifacts WHERE room_id = ? AND seq = ?", roomId, seq);
     return row ? { artifacts: JSON.parse(row.artifacts) as ArtifactRef[] } : {};
+  }
+  /** 插件命令结果的来源(P7 R1-03):哪个插件、哪条命令、由哪次发送触发;别的消息不带。 */
+  private messagePluginCommand(roomId: string, seq: number): { pluginCommand?: { pluginId: string; command: string; clientActionId: string } } {
+    const row = one<{ plugin_id: string; command: string; client_action_id: string }>(this.db, "SELECT plugin_id, command, client_action_id FROM gg_msg_plugin WHERE room_id = ? AND seq = ?", roomId, seq);
+    return row ? { pluginCommand: { pluginId: row.plugin_id, command: row.command, clientActionId: row.client_action_id } } : {};
   }
   /** 收集本次交付的可读工件:代码任务读钉住的候选提交里改过的文件(不读工作区);
    *  否则在 Compute 工作目录里找本任务 Compute 启动后改过的文件(按修改时间,局限见 recentReadable)。 */

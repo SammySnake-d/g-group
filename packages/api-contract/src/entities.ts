@@ -194,6 +194,8 @@ export const MessageView = obj({
   rewound: opt(bool()),
   /** 交付消息带回的工件快照(AC-04,U45):卡片引用 ref + sha256,点开用 artifacts.get;没有工件的消息不带这个字段。 */
   artifacts: opt(arr(ArtifactRef, { max: 20 })),
+  /** 插件斜杠命令的结果(P7):哪个插件、哪条命令、由哪次发送(clientActionId)触发;发言者是 system:plugin:<插件 id>,不是宿主。别的消息不带这个字段。 */
+  pluginCommand: opt(obj({ pluginId: id(), command: str({ min: 1, max: 64 }), clientActionId: id() })),
 });
 export type MessageView = Infer<typeof MessageView>;
 

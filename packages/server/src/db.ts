@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS gg_plugins (
   status TEXT NOT NULL, error TEXT, manifest TEXT NOT NULL, config TEXT, granted TEXT NOT NULL, installed_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS gg_msg_artifacts (room_id TEXT NOT NULL, seq INTEGER NOT NULL, artifacts TEXT NOT NULL, PRIMARY KEY (room_id, seq));
+-- 插件斜杠命令结果的来源(P7):哪个插件、哪条命令、由哪次发送(client_action_id)触发;与消息同事务写入
+CREATE TABLE IF NOT EXISTS gg_msg_plugin (room_id TEXT NOT NULL, seq INTEGER NOT NULL, plugin_id TEXT NOT NULL, command TEXT NOT NULL, client_action_id TEXT NOT NULL, PRIMARY KEY (room_id, seq));
 CREATE TABLE IF NOT EXISTS gg_artifacts (ref TEXT PRIMARY KEY, sha256 TEXT NOT NULL, name TEXT NOT NULL, mime TEXT NOT NULL, bytes INTEGER NOT NULL, path TEXT NOT NULL, added_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS gg_attachments (ref TEXT PRIMARY KEY, name TEXT NOT NULL, mime TEXT NOT NULL, bytes INTEGER NOT NULL, path TEXT NOT NULL, added_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS gg_effects (action_id TEXT PRIMARY KEY, kind TEXT NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL, error TEXT, created_at TEXT NOT NULL);
