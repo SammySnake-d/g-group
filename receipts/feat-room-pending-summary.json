@@ -19,11 +19,11 @@
   },
   "review": {
     "agent": "claude",
-    "session": "claude:8cbac2cc-c5f7-45af-a8db-c74a3419331f",
+    "session": "claude:c2ba2550-7fa0-4c1e-a8a1-c4266c213d65",
     "model": "group/opus",
     "verdict": "reject",
-    "reviewed_hash": "91a926b0f55a6a4ca211a5ef41a4e81774fc0f04e5a2709b2b19fe44c9db328c",
-    "notes": "第 1 轮 REJECT（d4013dcb）。作者数字全部复现：box2 Node24 typecheck/lint 0、npm test 1480/1480 无 skip/todo/cancel、作者 8 变异 8/8 被具名测试杀死、红 274e3be1 上 7 条按名 ERR_ASSERTION 失败且测试与 HEAD 逐字相同、末提交只补证据、5 个源文件 SHA 与云端一致、reviewed_hash 与作者 CONTENT_HASH 相同；8 个门禁负例各自判败。范围未越界；AC-27 通过与 AC-50 未测标注如实。驳回理由：审查方 12 个单点故障存活 10 个（宿主层取最新、截断边界 499/501、授权提问原因来源、三道过滤单点、读路径幂等写入），以及第一条问题过长时「另有 N 项」被截掉（R1-05，需改产品代码）；问题 R1-01..R1-08 见 reviews/feat-room-pending-summary.md。来源：作者会话 turns.jsonl 已存在（收据 provenance.note 过时），门禁对作者一侧无报错；另按 Codex 原生记录 01a1cfc8 核到红/绿提交、box3 v5 运行（1480/1480、包哈希、落盘时间）、推送未绕过钩子、PR 创建；接手链最早 10 个提交出自 codex:534f3614（gpt-6-astra），全链 OpenAI，门禁不查接手链，为人工核对。box3 进程级记录未核。hy4 辅审因线路 403 未产出，本轮无辅审。"
+    "reviewed_hash": "9b0b4e8675379c0ac0e6c00bec1a3f96cf4583c01146c911486eb94bf0639feb",
+    "notes": "第 2 轮 REJECT（702c8719）；第 1 轮 REJECT（d4013dcb，审查提交 515db145，reviewed_hash 91a926b0…）原文保留在 reviews/feat-room-pending-summary.md「第 1 轮」。作者数字全部复现：box1 Node24 typecheck/lint 0、npm test 1490/1490 无 skip/todo/cancel、窄测 17/17、intent/rewind 30/30、作者 18 变异 18/18 被指定具名测试以 ERR_ASSERTION 杀死；真实首红 b93f2e38（7 过 1 败）→ 首绿 4f15f21d（8/8），校准红 21f0931e 上 17 条全部按名 ERR_ASSERTION 失败 → 6ff18281 17/17；6da91f5a→HEAD 无源码改动；本机不经管道门禁自检 exit 0、219/219；8 个门禁负例各自判败；GitHub self-check run 43283757225 SUCCESS。R1-01/02/03/05/06/07/08 已解决，R1-04 部分解决；第 1 轮 12 个故障中可注入的全部被具名测试杀死。驳回理由（只需补测试）：R2-01 删掉可见性过滤后，#83 与 #71（c7d1a2dd）无冲突合并，群主撤回联系人提问后摘要仍透出被撤回原文，17 条测试全绿，没有会在那时变红的测试；R2-02 新构造故障 N4（按任务号定序）、N5（按任务来源消息定序）17 条全过，「最早 #seq 的提问」未被钉住。来源：原生子线程 01a1d03a（gpt-6.1-sol，父 01a1cfc8）里核到红/绿/校准/冻结/box4 运行/提交 702c8719/正常推送 515db145..702c8719；作者会话号为宿主号；接手链人工核，全链 OpenAI。作者门禁的两项 G-PROVENANCE 原始失败源于第 1 轮审查的 --hash 调用写成 cd … &&，本轮改为单条命令。hy4 辅审因线路 403 未产出，本轮无辅审。"
   },
   "red": {
     "commit": "21f0931ec75da6b59b91cd11255d560989fd6895",
