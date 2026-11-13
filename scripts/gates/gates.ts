@@ -723,58 +723,7 @@ const ALLOWED: Record<Layer, Layer[]> = {
 };
 type Manifest = { name?: string; gGroup?: { layer?: string } } & Partial<Record<"dependencies" | "devDependencies" | "peerDependencies" | "optionalDependencies", Record<string, string>>>;
 
-export const layers: Gate = {
-  id: "G-LAYER", rule: "插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)",
-  run(ctx) {
-    const g = this.id, out: Problem[] = [];
-    const pkgs = new Map<string, { dir: string; layer: Layer }>();
-    const manifests: [string, Manifest][] = [];
-    for (const f of ctx.files.filter((f) => /^packages\/[^/]+\/package\.json$/.test(f))) {
-      const j = JSON.parse(ctx.read(f)!) as Manifest;
-      manifests.push([f, j]);
-      const layer = j.gGroup?.layer as Layer | undefined;
-      if (!j.name || !layer || !LAYERS.includes(layer)) { out.push(p(g, `${f} 缺 name 或合法的 gGroup.layer(${LAYERS.join("/")})`)); continue; }
-      pkgs.set(j.name, { dir: path.posix.dirname(f), layer });
-    }
-    for (const [f, j] of manifests) {
-      const own = j.name ? pkgs.get(j.name) : undefined;
-      if (!own) continue;
-      for (const dep of Object.keys({ ...j.dependencies, ...j.devDependencies, ...j.peerDependencies, ...j.optionalDependencies })) {
-        const d = pkgs.get(dep);
-        if (d && dep !== j.name && !ALLOWED[own.layer].includes(d.layer)) out.push(p(g, `${f}:${own.layer} 层的 ${j.name} 在依赖声明里引用了 ${d.layer} 层的 ${dep}`));
-      }
-    }
-    const ownerOf = (f: string) => [...pkgs.entries()].find(([, v]) => f.startsWith(`${v.dir}/`));
-    for (const f of ctx.files.filter((f) => f.startsWith("packages/") && f.endsWith(".ts"))) {
-      const own = ownerOf(f);
-      if (!own) { out.push(p(g, `${f} 不属于任何声明了层级的包`)); continue; }
-      const [ownName, ownInfo] = own;
-      const sf = ts.createSourceFile(f, ctx.read(f) ?? "", ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-      const specs: string[] = [];
-      const walk = (n: ts.Node) => {
-        if ((ts.isImportDeclaration(n) || ts.isExportDeclaration(n)) && n.moduleSpecifier && ts.isStringLiteral(n.moduleSpecifier)) specs.push(n.moduleSpecifier.text);
-        if (ts.isCallExpression(n) && (n.expression.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(n.expression) && n.expression.text === "require"))) {
-          const a = n.arguments[0];
-          if (a && ts.isStringLiteralLike(a)) specs.push(a.text);
-          else if (a) out.push(p(g, `${f} 有非字面量的动态 import/require,无法核对依赖方向`));
-        }
-        ts.forEachChild(n, walk);
-      };
-      walk(sf);
-      for (const s of specs) {
-        if (s.startsWith(".")) {
-          const target = path.posix.normalize(path.posix.join(path.posix.dirname(f), s));
-          if (!target.startsWith(`${ownInfo.dir}/`)) out.push(p(g, `${f} 用相对路径 "${s}" 跨出了包 ${ownName}`));
-          continue;
-        }
-        const dep = [...pkgs.entries()].find(([name]) => s === name || s.startsWith(`${name}/`));
-        if (!dep || dep[0] === ownName) continue;
-        if (!ALLOWED[ownInfo.layer].includes(dep[1].layer)) out.push(p(g, `${f}:${ownInfo.layer} 层的 ${ownName} 不能依赖 ${dep[1].layer} 层的 ${dep[0]}`));
-      }
-    }
-    return out;
-  },
-};
+export const layers: Gate = { id: "G-LAYER", rule: "pending shared I/O layer", run(_ctx) { return [{ gate: "G-LAYER", msg: "layer validation not implemented" }]; } };
 
 // R6-03:数组与其中每个门禁对象(及嵌套)都深冻结;单独导出的 trace/review/... 是同一批对象,也一并不可改
 export const ALL_GATES: readonly Gate[] = deepFreeze([trace, review, red, stub, tautology, workflow, layers]);
