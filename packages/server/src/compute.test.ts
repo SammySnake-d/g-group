@@ -26,8 +26,9 @@ test("真实 Compute 用常驻适配器:声明会话内换模型能力、能插�
   const make = claudeCompute(NEUTRAL);
   const a = make("model-a");
   const b = make("model-b");
-  assert.deepEqual(a.capabilities, { inSessionModelSwitch: true });
-  assert.deepEqual(b.capabilities, { inSessionModelSwitch: true });
+  // 常驻适配器收专属配置目录与勾选的 skill/MCP(AC-29):宿主据此才把勾选能力交给它
+  assert.deepEqual(a.capabilities, { inSessionModelSwitch: true, isolation: true });
+  assert.deepEqual(b.capabilities, { inSessionModelSwitch: true, isolation: true });
   assert.equal(typeof a.steer, "function", "常驻会话支持往当前这一轮插话");
 });
 

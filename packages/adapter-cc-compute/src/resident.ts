@@ -28,7 +28,7 @@ import { type AcceptedReport, preInitFrame, streamParser } from "./events.ts";
 import { freezeDeep, isPlainRecord, plainData } from "./plain.ts";
 import { IS_WINDOWS, signalGroup } from "./procgroup.ts";
 import { checkTurnModel, planTurn, type SessionModel, switchRefusalKind } from "./turn-model.ts";
-import type { AdapterOptions, Brief, ComputeAdapter, ComputeEvent, HandoffSnapshot, Manifest, Refusal, RejectedReport, TurnModel } from "./types.ts";
+import type { AdapterOptions, Brief, ComputeActivity, ComputeAdapter, ComputeEvent, HandoffSnapshot, Manifest, QuiesceResult, Refusal, RejectedReport, TurnModel } from "./types.ts";
 
 export interface ResidentAdapterOptions extends AdapterOptions {
   /** harness 支持会话内换模型 id;false 时换模型走兜底重启(同一会话 id)。默认 true(Claude Code 2.1.319 实测 set_model 可用) */
@@ -124,7 +124,7 @@ function spawnOptions(opts: unknown): ({ readonly ok: true } & SpawnOpts) | Refu
 }
 
 /** 常驻 CLI 的启动参数:与一次性适配器相同的隔离做法,换成从 stdin 收 stream-json;resume=true 时接回同一会话 */
-export function residentArgs(input: Brief, mcpConfigPath: string, launch: { readonly sessionId: string; readonly resume: boolean; readonly model?: string; readonly effort?: string }): readonly string[] {
+export function residentArgs(input: Brief, mcpConfigPath: string, launch: { readonly sessionId: string; readonly resume: boolean; readonly model?: string; readonly effort?: string; readonly pluginDirs?: readonly string[]; readonly mcpServers?: readonly string[] }): readonly string[] {
   const b = checkBrief(input);
   if (!b.ok) throw new TypeError(`residentArgs 的 brief 不合格:${b.reason}`);
   if (typeof mcpConfigPath !== "string" || !mcpConfigPath) throw new TypeError("residentArgs 的 mcpConfigPath 必须是非空字符串");
@@ -628,6 +628,14 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
     },
 
     events: () => hub.iterate(),
+
+    // 空壳(红):活动流什么都不推
+    activity: () => (async function* (): AsyncGenerator<ComputeActivity> {})(),
+
+    // 空壳(红):不等进程退出,直接回报确认
+    async quiesce(_computeId: string, _timeoutMs?: number): Promise<QuiesceResult> {
+      return { ok: true, killed: 0 };
+    },
 
     async settled(computeId: string) {
       if (typeof computeId !== "string") return [];
