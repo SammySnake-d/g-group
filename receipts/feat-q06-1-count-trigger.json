@@ -1,0 +1,28 @@
+{
+  "slice": "联系人承诺按消息数触发(U80,D21.3 第 14 项、D21.4 第 1 步;设计真源 docs/dev-handbook 的需求文档 v3.29):用户在会话里对联系人说「每 N 条消息做一次」→ 联系人 commit 带 everyNMessages → 承诺进账本的同一事务里登记触发(gg_count_triggers:承诺、联系人、会话、提出人、N、coveredSeq)→ 宿主每写一条消息在同一事务里按唯一口径(chat-range.ts:不算 system 通知、任务事实卡、已撤回、rewind 撤下的与回退说明、提出人本端删除的)现数,攒够 N 条冻结窗口 (from, to] 并把 coveredSeq 推到第 N 条(gg_count_windows,主键 trigger+to、唯一 trigger+from)→ 提交后推 commitment.updated、把窗口交给消费方(本片没有消费方,Q06-2 接动向摘要)→ commitments.list 的 CommitmentView.trigger 给出 everyN、coveredSeq、已攒条数、是否还在数、已冻结段数。承诺撤销/了结、联系人移出或正在移出、群解散 → 触发关闭并写明原因,没处理的窗口取消;N 取 1–10000 且必须出自用户消息,不合格整条拒收;宿主启动时补上「消息已落盘、还没计数」的那一拍",
+  "acceptance": [
+    {
+      "id": "AC-35",
+      "status": "未测",
+      "reason": "本片只做常驻承诺的一种新触发方式(按消息数),不是 AC-35 的定时/两次 @ 区间/CVE/邮件那几条。本片子判据都有具名测试(packages/server/proof/q06-1-tests.txt)和点名的变异(packages/server/proof/q06-1-count-trigger-mutations.txt,46 杀死 / 0 存活):没人开就没有触发;第 99 条不冻结、第 100 条冻结一段、第 101 条不再冻结;一段正好 N 条且首尾相接;通知、任务事实卡、撤回、提出人本端删除、rewind 撤下的不计数;撤销/移出/正在移出/解散/rewind 撤下承诺后关闭;N 不合格或不是用户提出的整条拒收。AC-35 其余各条(8 点定时与时区、两次 @ 区间摘要、条件告警、预授权投递、三类插件契约)不在本片"
+    },
+    {
+      "id": "AC-31",
+      "status": "未测",
+      "reason": "本片只覆盖和 AC-31 ③ 同类的一个子判据——落盘后崩溃不重复:同一 clientActionId 重发不计数;关宿主重开接着数、已冻结的不重冻;消息已落盘但没来得及计数时重启补冻结,攒了两个 N 就冻结两段、每段正好 N 条(count-triggers.test.ts「重放与重启不多数」「消息已落盘但没来得及计数」,变异 T03/T20/H15/H16 被杀)。AC-31 的唯一入口四条件、单人串行、发送前撤销竞态、承诺终态自动回收不在本片"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:484c2330-2f15-49ae-9f7a-145e467cedb1",
+    "model": "group/opus"
+  },
+  "red": {
+    "commit": "5579bc7e5c6cfba11fcfa689e4ea137c1357c398"
+  },
+  "unverifiable": "AC-35、AC-31:① 计数口径是我按需求文字定的(联系人自己的发言也算、提出人本端删除的不算、任务事实卡按 gg_cards.kind 四种排除);测试只证明代码照这个口径数,不证明口径本身是用户要的——见 PR.md「待确认」1、2。② 「联系人会不会在该用的时候带 everyNMessages」是模型行为:本片的适配器测试用进程内假端点驱动真实的 createPiContactMind,只证明工具声明发出去了、填了 N 能登记;真实模型的一次样本在 Q06-2(packages/server/proof/q06-summary-real.txt),只有一次。③ 「正在移出」「解散」用测试替身的 Compute 停止确认构造,没有用真实 Compute 进程。④ 触发的关闭是在这个会话下一次写消息或宿主启动时才落库的(撤销除外,撤销当场关):联系人被移出后到下一条消息之间,库里的触发行仍是 active,而 CommitmentView.trigger.active 是现判的、已是 false(测试断言了视图)。⑤ 本片单独合入时窗口没有消费方,pending 窗口会一直留着,直到 Q06-2 接上或承诺关闭。⑥ 全量测试、变异在 box1 的 c9105e7 上跑,之后只加了证据文件与本收据,没有再跑全量",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "由该会话的子代理编写(主会话 claude:484c2330-2f15-49ae-9f7a-145e467cedb1 派出的 Q06 后端作者子代理)。本轮不推送、不开 PR:提交在 bundle 里(deliverables/g-group-backend-claude-20261113/bundles/q06-1.bundle),PR 说明在 deliverables/g-group-backend-claude-20261113/q06/q06-1/PR.md。base 是 feat/chat-admin(PR #71,c7d1a2d),不是 dev/integration:计数口径要用 #71 的本端删除(gg_view_hides)与 system 发言者;不依赖 PR #85。真实红 = 5579bc7(17 条新测试 + 空壳:count-triggers.ts 与 chat-range.ts 的方法体不做事、adapter-pi-contact 的 tools.ts 未改),绿 = 9555662(把空壳换成实现);没有另做变异校准红。验证:box1(x86_64,node v24.21.0)在 c9105e7 上 typecheck、lint 退出码 0,全量 npm test 实际执行并通过 1502 条,具名 17 绿,变异 46 杀死 / 0 存活;本机(arm64,node v22.22.0)只跑了单个测试文件、红提交上的 17 条(全部按名字失败)和门禁 --local。定位包 7 条具名验收里本片对应第 3 条的计数部分(99/100/101、重放、重启、不开零触发);「一次有效模型调用」「输出不自触发」在 Q06-2。未做:是否把承诺所属联系人自己的发言排除在计数之外(待确认);别的消费方"
+}
