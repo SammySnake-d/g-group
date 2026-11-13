@@ -1,0 +1,33 @@
+{
+  "slice": "推送钩子成败跟门禁自检的真实退出码走:自检失败一条→钩子拦下推送,全过→放行,输出照旧滤掉对勾行(只改 .githooks/pre-push 第 7 行,另加反例测试与证明)",
+  "acceptance": [
+    {
+      "id": "R-18",
+      "status": "通过",
+      "evidence": "scripts/proof/pre-push-selftest-exit.md"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "scripts/gates/pre-push-hook.test.ts"
+    },
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "scripts/proof/pre-push-selftest-exit.md"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:484c2330-2f15-49ae-9f7a-145e467cedb1",
+    "model": "group/opus"
+  },
+  "red": {
+    "commit": "72fa0f3a459c6cb8cdb7c37417b8a51fb89c8b6d"
+  },
+  "unverifiable": "R-18:端到端反例里 typecheck/lint/test 三行由 PATH 包装跳过(这三行本片未改),只有 gates:selftest 走真实 npm;故障注入只验证了「第 7 栏」一条自检用例失败时钩子拦下,其余失败形态由单元测试(假 npm 给定退出码)覆盖。R-02:新测试在 scripts/gates/ 下,G-RED 只统计 packages/**/*.test.ts,所以红提交 72fa0f3a 上的 3/4 失败是作者自己的运行记录(证明文件与作者证据目录 hook-red.tap),门禁不会替你核。真实 git push 到 GitHub 时钩子的行为本轮未测:本轮无用户 Git 登录,没有推送。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "作者:Claude Code 宿主会话 claude:484c2330-2f15-49ae-9f7a-145e467cedb1(group/opus)主会话直接编写,未用子代理。来源:Mira Bot 私聊 #3138 后的指派(用户已授权堵漏洞,不放松门禁)。改前钩子在 set -e 下只看 grep 的退出码,自检失败照样放行(端到端反例 1:旧钩子 + 注入一条自检失败 → push 退出 0)。"
+}
