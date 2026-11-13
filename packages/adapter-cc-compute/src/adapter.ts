@@ -532,7 +532,6 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       if (!round) return { ok: false, reason: `未知的 Compute ${computeId}`, remaining: [] };
       if (!round.finished || (round.terminal === "paused-blocked" && !round.stopRequested)) return { ok: false, reason: "这一轮还没结束(运行中或停在受阻),先停止", remaining: [] };
       const limit = resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS) + timeoutMs;
-      if (limit >= 0) return { ok: false as const, reason: "red scaffold", remaining: [] }; // red scaffold (round-2 G-RED calibration); restored by the next commit
       return round.cleanup.quiesce(timeoutMs, limit);
     },
 
