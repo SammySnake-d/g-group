@@ -14,7 +14,7 @@ import { parseArgs } from "node:util";
 import { checkRecord, mergeContracts } from "./contracts.ts";
 import { fixtureDigest, loadFixtureSet } from "./fixture.ts";
 import { GROUPS, type GitQuery, type GroupState, resolveGroup } from "./groups.ts";
-import { configFingerprint, modelConfig, reuseKey, runnerDigest, sourceFreeze, speakingEnv } from "./manifest.ts";
+import { configFingerprint, modelConfig, reuseKey, runnerDigest, sourceFreeze } from "./manifest.ts";
 import { renderReport, type ResultRow, type Summary } from "./report.ts";
 import { scoreRecords } from "./score.ts";
 import type { FixtureSet, HostPatch, RawRecord } from "./types.ts";
@@ -292,10 +292,7 @@ const readJson = (f: string): unknown => {
 /** Driver 子进程的受限环境;提取原有白名单,不让任意宿主环境进入被测进程。 */
 export function driverProcessEnv(mode: "standin" | "real", source: Readonly<Record<string, string | undefined>>): Record<string, string> {
   const env: Record<string, string> = { PATH: source.PATH ?? "/usr/bin:/bin", HOME: source.HOME ?? tmpdir() };
-  if (mode === "real") {
-    for (const k of ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"]) if (source[k]) env[k] = source[k]!;
-    Object.assign(env, speakingEnv(source));
-  }
+  if (mode === "real") for (const k of ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"]) if (source[k]) env[k] = source[k]!;
   return env;
 }
 
