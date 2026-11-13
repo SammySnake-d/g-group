@@ -13,6 +13,12 @@
 //   - 账本(第 6 条):completed/failed 事件带这一轮开始时会话模型 model 与 harness 回报这一轮实际用过的模型 models(model_usage_since_last_result 的键)。
 //   - 受阻:report_progress blocked 受理后这一轮以 blocked 结束(不再产出 completed),进程照常等 stdin,不需要 SIGSTOP 冻结。
 //   - 停止:照 mirasim 0.0.774 z2 的 POSIX 路径(g-group#2309):SIGTERM 只发主进程,reapForceMs 后仍未退出才对进程组 SIGKILL;stopped 立即产出。
+//   - 停止确认(AC-23,§8.1 已定第 16 条):停止时先记下主进程的后代与同组成员;quiesce 等主进程退出,再把它们还活着的 SIGKILL、轮询到都退出才回报
+//     (与一次性适配器同一套,stop-confirm.ts)。这一轮已失败或完成、常驻进程还活着时,quiesce 先结束它,下一轮用同一会话 id 恢复。
+//   - 勾选能力(AC-29,D07 §3):spawn 收 configDir / pluginDirs / mcpServers,设 CLAUDE_CONFIG_DIR、逐个 --plugin-dir,勾选 MCP 与 host 合并进
+//     --mcp-config;每个进程(含恢复、兜底重启)都按它起;每轮 init 按 harness 自报核对配置生效(isolation.ts,与一次性适配器同一套)。
+//   - 活动(AC-43,D26 第 8.3 节):--include-partial-messages,stdout 每一行经 activityOf 认出活动推给 activity() 的订阅者;
+//     只在这个进程的 init 核验通过、这一轮在跑且没被判违规时推。只观察 harness 的输出,不拦截 Compute 的任何调用。
 // 外部输入(选项、brief、spawn 选项、computeId、续接文本、生效模型)读取前按纯数据合同判定(plain.ts),合同限定内置原型未被改的环境(g-group#2662)。
 // CLI 输出每行在受控边界里处理:任何解码/映射异常只让当前 Compute 记违规并回收,不逸出 readline 回调。
 import { type ChildProcess, spawn as spawnChild } from "node:child_process";
@@ -21,12 +27,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
-import { DEFAULT_RUNNER, REPORT_MCP_PATH, resolveReapForceMs } from "./adapter.ts";
+import { DEFAULT_RUNNER, REPORT_MCP_PATH, activityHub, resolveReapForceMs } from "./adapter.ts";
 import { checkBrief, checkSnapshot } from "./brief.ts";
-import { SYSTEM_PROMPT, allowedTools, cliEnv, firstPrompt, toolOverreach } from "./cli.ts";
-import { type AcceptedReport, preInitFrame, streamParser } from "./events.ts";
+import { SYSTEM_PROMPT, allowedTools, cliEnv } from "./cli.ts";
+import { type AcceptedReport, activityOf, preInitFrame, streamParser } from "./events.ts";
+import { type Isolation, NO_ISOLATION, checkInitIsolation, isolationOf, mcpConfigFor, promptWithSkills } from "./isolation.ts";
 import { freezeDeep, isPlainRecord, plainData } from "./plain.ts";
-import { IS_WINDOWS, signalGroup } from "./procgroup.ts";
+import { IS_WINDOWS, type ProcRow, signalGroup } from "./procgroup.ts";
+import { confirmStopped, treeNow } from "./stop-confirm.ts";
 import { checkTurnModel, planTurn, type SessionModel, switchRefusalKind } from "./turn-model.ts";
 import type { AdapterOptions, Brief, ComputeActivity, ComputeAdapter, ComputeEvent, HandoffSnapshot, Manifest, QuiesceResult, Refusal, RejectedReport, TurnModel } from "./types.ts";
 
@@ -43,7 +51,7 @@ export interface ResidentAdapterOptions extends AdapterOptions {
 
 export const DEFAULT_SWITCH_TIMEOUT_MS = 60_000;
 const OPTION_KEYS: readonly string[] = Object.freeze(["runner", "hostEnv", "reapForceMs", "reportServer", "inSessionModelSwitch", "inSessionEffort", "switchTimeoutMs", "idleReclaimMs"]);
-const SPAWN_KEYS: readonly string[] = Object.freeze(["handoff", "cwd", "model", "effort"]);
+const SPAWN_KEYS: readonly string[] = Object.freeze(["handoff", "cwd", "model", "effort", "configDir", "pluginDirs", "mcpServers"]);
 const FIXES = Object.freeze(["explicit-compatible-model", "change-harness"] as const);
 
 type Command = { readonly command: string; readonly args?: readonly string[] };
@@ -104,9 +112,11 @@ interface SpawnOpts {
   readonly cwd: string | undefined;
   readonly model: string | undefined;
   readonly effort: string | undefined;
+  /** 勾选能力(AC-29) */
+  readonly iso: Isolation;
 }
 function spawnOptions(opts: unknown): ({ readonly ok: true } & SpawnOpts) | Refusal {
-  if (opts === undefined) return { ok: true, handoff: undefined, cwd: undefined, model: undefined, effort: undefined };
+  if (opts === undefined) return { ok: true, handoff: undefined, cwd: undefined, model: undefined, effort: undefined, iso: NO_ISOLATION };
   const p = plainData(opts, "spawn 选项");
   if (!p.ok) return refuse(`spawn 选项必须是纯数据:${p.path} ${p.why}`);
   const o = p.value;
@@ -114,16 +124,19 @@ function spawnOptions(opts: unknown): ({ readonly ok: true } & SpawnOpts) | Refu
   const extra = Object.keys(o).filter((k) => !SPAWN_KEYS.includes(k));
   if (extra.length) return refuse(`spawn 选项只收 ${SPAWN_KEYS.join("/")},拒绝 ${extra.join(", ")}`);
   for (const k of ["cwd", "model", "effort"] as const) if (o[k] !== undefined && (typeof o[k] !== "string" || !o[k])) return refuse(`spawn 选项 ${k} 必须是非空字符串`);
+  const iso = isolationOf(o);
+  if (typeof iso === "string") return refuse(iso);
   let handoff: HandoffSnapshot | undefined;
   if (o.handoff !== undefined) {
     const h = checkSnapshot(o.handoff);
     if (!h.ok) return h;
     handoff = h.snapshot;
   }
-  return { ok: true, handoff, cwd: o.cwd as string | undefined, model: o.model as string | undefined, effort: o.effort as string | undefined };
+  return { ok: true, handoff, cwd: o.cwd as string | undefined, model: o.model as string | undefined, effort: o.effort as string | undefined, iso };
 }
 
-/** 常驻 CLI 的启动参数:与一次性适配器相同的隔离做法,换成从 stdin 收 stream-json;resume=true 时接回同一会话 */
+/** 常驻 CLI 的启动参数:与一次性适配器相同的隔离做法,换成从 stdin 收 stream-json;resume=true 时接回同一会话。
+ *  pluginDirs(绝对路径)逐个 --plugin-dir,mcpServers(勾选的 MCP 服务器名)整组进 --allowedTools(AC-29) */
 export function residentArgs(input: Brief, mcpConfigPath: string, launch: { readonly sessionId: string; readonly resume: boolean; readonly model?: string; readonly effort?: string; readonly pluginDirs?: readonly string[]; readonly mcpServers?: readonly string[] }): readonly string[] {
   const b = checkBrief(input);
   if (!b.ok) throw new TypeError(`residentArgs 的 brief 不合格:${b.reason}`);
@@ -133,16 +146,23 @@ export function residentArgs(input: Brief, mcpConfigPath: string, launch: { read
   const l = p.value;
   if (typeof l.sessionId !== "string" || !l.sessionId || typeof l.resume !== "boolean") throw new TypeError("residentArgs 的 launch 需要 sessionId 与 resume");
   if ((l.model !== undefined && (typeof l.model !== "string" || !l.model)) || (l.effort !== undefined && (typeof l.effort !== "string" || !l.effort))) throw new TypeError("residentArgs 的 model/effort 必须是非空字符串");
+  if (l.pluginDirs !== undefined && !(isStrArr(l.pluginDirs) && l.pluginDirs.every((d) => path.isAbsolute(d)))) throw new TypeError("residentArgs 的 pluginDirs 必须是绝对路径数组");
+  if (l.mcpServers !== undefined && !isStrArr(l.mcpServers)) throw new TypeError("residentArgs 的 mcpServers 必须是字符串数组");
+  const pluginDirs = (l.pluginDirs as readonly string[] | undefined) ?? [];
   const brief = b.brief;
   return Object.freeze([
     "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
+    // 流式增量(D26 第 8.3 节):首字节与长输出进行中都有行可看;真实 CLI 2.1.319 在 stdin 收 stream-json 时同样支持(proof/resident-partial-messages-probe.txt)
+    "--include-partial-messages",
     ...(l.resume ? ["--resume", l.sessionId] : ["--session-id", l.sessionId]),
     ...(l.model ? ["--model", l.model as string] : []),
     ...(l.effort ? ["--effort", l.effort as string] : []),
     "--bare",
+    // --bare 下 skill 只从 --plugin-dir 加载:只给联系人勾选的那些(AC-29,V-02 实测)
+    ...pluginDirs.flatMap((d) => ["--plugin-dir", d]),
     "--mcp-config", mcpConfigPath, "--strict-mcp-config",
     "--tools", brief.tools.join(","),
-    "--allowedTools", allowedTools(brief).join(","),
+    "--allowedTools", allowedTools(brief, l.mcpServers as readonly string[] | undefined).join(","),
     "--permission-mode", "dontAsk",
     "--append-system-prompt", SYSTEM_PROMPT,
   ]);
@@ -164,6 +184,8 @@ interface Proc {
   expectedExit: boolean;
   stderr: string;
   readonly parse: (line: string) => ReturnType<ReturnType<typeof streamParser>>;
+  /** 停止(或停止确认结束它)时按进程表记下的后代与同组成员(AC-23);[] 是还没记,null 是记的时候读不到进程表 */
+  tree: readonly ProcRow[] | null;
 }
 
 interface Turn {
@@ -185,7 +207,11 @@ interface State {
   readonly brief: Brief;
   readonly cwd: string;
   readonly sessionId: string;
+  /** 勾选能力(AC-29):每个进程(含恢复、兜底重启)都按它起 */
+  readonly iso: Isolation;
   proc: Proc | null;
+  /** 最近一次起的进程(退出后仍留着,停止确认要它的 pid 与停止时记下的后代) */
+  lastProc: Proc | null;
   /** harness 回报的会话当前实际模型;null 表示不明 */
   model: string | null;
   effort: string | undefined;
@@ -253,8 +279,10 @@ const turnModelsOf = (m: Record<string, unknown>): readonly string[] => {
 export function createResidentComputeAdapter(options: ResidentAdapterOptions = {}): ComputeAdapter {
   const cfg = residentConfig(options);
   const hub = eventHub();
+  const acts = activityHub();
   const computes = new Map<string, State>();
-  const caps = Object.freeze({ inSessionModelSwitch: cfg.inSessionModelSwitch });
+  // isolation:收专属配置目录与勾选的 skill/MCP(宿主据此才把勾选能力交给常驻适配器,AC-29)
+  const caps = Object.freeze({ inSessionModelSwitch: cfg.inSessionModelSwitch, isolation: true });
 
   function emit(st: State, e: ComputeEvent) {
     const snap = freezeDeep(eventCopy(e));
@@ -383,15 +411,16 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
       if (s.type === "init") {
         // 常驻模式下每轮都有一个 init:会话 id 必须一直是这个 Compute 的,工具清单不能越出 brief
         if (s.sessionId !== st.sessionId) { violate(st, `CLI 的会话 id 变成了 ${s.sessionId},应为 ${st.sessionId}`); return; }
-        const over = toolOverreach(st.brief, s.tools);
-        if (over.length) { violate(st, `CLI 实际挂载了 brief 未授权的工具 ${over.join(", ")}`); return; }
+        // 勾选能力(AC-29,isolation.ts):工具不越出 brief 与勾选的 MCP、只许 host 与勾选的 MCP、勾选的都连上
+        const iso = checkInitIsolation(st.brief, st.iso, s.tools, line);
+        if (!iso.ok) { violate(st, iso.reason); return; }
         proc.sawInit = true;
         const model = typeof m?.model === "string" && m.model ? m.model : null;
         if (model !== null) st.model = model;
         if (turn && !turn.finished) turn.model = st.model;
         if (!proc.started) {
           proc.started = true;
-          emit(st, { computeId: st.id, kind: "started", sessionId: st.sessionId, resumed: proc.resumed, ...(st.model !== null ? { model: st.model } : {}), ...(proc.pid !== undefined ? { pid: proc.pid } : {}) });
+          emit(st, { computeId: st.id, kind: "started", sessionId: st.sessionId, resumed: proc.resumed, ...(st.model !== null ? { model: st.model } : {}), ...(proc.pid !== undefined ? { pid: proc.pid } : {}), loaded: iso.loaded });
         }
         continue;
       }
@@ -418,9 +447,10 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
     const mcpConfig = path.join(dir, "mcp.json");
     let child: ChildProcess;
     try {
-      fs.writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { host: { command: cfg.server.command, args: [...(cfg.server.args ?? [])], env: {} } } }));
-      const args = [...(cfg.runner.args ?? []), ...residentArgs(st.brief, mcpConfig, { sessionId: st.sessionId, resume, ...(model ? { model } : {}), ...(effort ? { effort } : {}) })];
-      child = spawnChild(cfg.runner.command, args, { cwd: st.cwd, env: cliEnv(st.brief, st.id, cfg.hostEnv), stdio: ["pipe", "pipe", "pipe"], detached: !IS_WINDOWS });
+      fs.writeFileSync(mcpConfig, JSON.stringify(mcpConfigFor(st.iso, cfg.server)));
+      const launchArgs = { sessionId: st.sessionId, resume, ...(model ? { model } : {}), ...(effort ? { effort } : {}), pluginDirs: [...st.iso.pluginDirs], mcpServers: Object.keys(st.iso.mcpServers) };
+      const args = [...(cfg.runner.args ?? []), ...residentArgs(st.brief, mcpConfig, launchArgs)];
+      child = spawnChild(cfg.runner.command, args, { cwd: st.cwd, env: cliEnv(st.brief, st.id, cfg.hostEnv, st.iso.configDir), stdio: ["pipe", "pipe", "pipe"], detached: !IS_WINDOWS });
     } catch (err) {
       removeDir();
       throw err;
@@ -428,8 +458,9 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
     let markExited: () => void = () => {};
     const exited = new Promise<void>((r) => { markExited = r; });
     const parse = streamParser();
-    const proc: Proc = { child, pid: child.pid, exited, isExited: false, resumed: resume, started: false, sawInit: false, reaping: false, expectedExit: false, stderr: "", parse };
+    const proc: Proc = { child, pid: child.pid, exited, isExited: false, resumed: resume, started: false, sawInit: false, reaping: false, expectedExit: false, stderr: "", parse, tree: [] };
     st.proc = proc;
+    st.lastProc = proc;
     // 启动参数里的模型就是会话当前模型,直到 init 或 set_model 回包更正
     if (model) st.model = model;
     if (effort) st.effort = effort;
@@ -441,6 +472,13 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
         onLine(st, proc, line);
       } catch (err) {
         violate(st, `处理 CLI 输出时出错:${errorText(err)}`);
+      }
+      // 活动(卡死检测用,D26 第 8.3 节):这个进程的 init 核验通过、这一轮在跑且没被判违规时才推;解析失败不影响语义事件
+      const turn = st.turn;
+      if (proc.sawInit && st.proc === proc && turn && !turn.finished && !turn.halted) {
+        try {
+          for (const a of activityOf(line)) acts.push(Object.freeze({ computeId: st.id, ...a }) as ComputeActivity);
+        } catch { /* 活动只是计时依据 */ }
       }
     });
     const closed = new Promise<void>((r) => rl.on("close", () => r()));
@@ -494,15 +532,18 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
     }
   }
 
-  /** 确保有活着的进程:空闲回收或崩溃后,用同一会话 id、带这一轮的生效模型恢复 */
-  function ensureProc(st: State, want: TurnModel | undefined) {
+  /** 确保有活着的进程:空闲回收、停止确认结束或崩溃后,用同一会话 id、带这一轮的生效模型恢复。
+   *  正在被结束的进程(停止确认、空闲回收)不再往里写输入:等它退出再恢复 */
+  async function ensureProc(st: State, want: TurnModel | undefined) {
+    if (st.proc && !st.proc.isExited && st.proc.expectedExit) await st.proc.exited;
     if (st.proc && !st.proc.isExited) return;
     launch(st, true, want?.model ?? st.model ?? undefined, want?.effort ?? st.effort);
   }
 
   /** 按计划在轮边界切换,成功后写入这一轮输入 */
   async function runTurn(st: State, text: string, want: TurnModel | undefined): Promise<{ readonly ok: true } | Refusal> {
-    ensureProc(st, want);
+    await ensureProc(st, want);
+    if (st.stopped) return refuse("这个 Compute 已被停止");
     const current: SessionModel = { model: st.model, ...(st.effort !== undefined ? { effort: st.effort } : {}) };
     const steps = want === undefined && current.model === null ? [{ kind: "send" as const, model: "" }] : planTurn(current, want, { inSessionModelSwitch: cfg.inSessionModelSwitch, inSessionEffort: cfg.inSessionEffort });
     for (const step of steps) {
@@ -555,15 +596,17 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
       const o = spawnOptions(opts);
       if (!o.ok) return o;
       const id = `ccr-${crypto.randomUUID()}`;
-      const { prompt, sections } = firstPrompt(b.brief, o.handoff);
+      // 勾选 skill(AC-29):--bare 下没有 Skill 工具,在首个提示里列出可用 skill 与 SKILL.md 路径
+      const { prompt, sections } = promptWithSkills(b.brief, o.handoff, o.iso.pluginDirs);
       const st: State = {
-        id, brief: b.brief, cwd: o.cwd ?? process.cwd(), sessionId: crypto.randomUUID(), proc: null, model: null, effort: undefined, turn: null,
+        id, brief: b.brief, cwd: o.cwd ?? process.cwd(), sessionId: crypto.randomUUID(), iso: o.iso, proc: null, lastProc: null, model: null, effort: undefined, turn: null,
         stopped: false, resuming: false, controls: new Map(), idleTimer: null,
         constraintVer: o.handoff?.constraintVer, openQuestions: o.handoff?.openQuestions ?? [], doneSideEffects: [...(o.handoff?.doneSideEffects ?? [])], rejected: [], unresolved: [],
       };
       computes.set(id, st);
       const manifest: Manifest = Object.freeze({
-        computeId: id, sections: Object.freeze(sections), allowedTools: Object.freeze([...allowedTools(b.brief)]), credentialRefs: b.brief.credentialRefs, placement: b.brief.placement,
+        computeId: id, sections: Object.freeze(sections), allowedTools: Object.freeze([...allowedTools(b.brief, Object.keys(o.iso.mcpServers))]), credentialRefs: b.brief.credentialRefs, placement: b.brief.placement,
+        mcpServers: Object.freeze(Object.keys(o.iso.mcpServers)), pluginDirs: Object.freeze([...o.iso.pluginDirs]), configDir: o.iso.configDir ?? null,
       });
       launch(st, false, o.model, o.effort);
       startTurn(st, prompt);
@@ -613,7 +656,13 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
       const turn = st.turn;
       const violations = turn ? [...turn.violations] : [];
       if (turn && !turn.finished) turn.halted = true;
-      if (st.proc) { st.proc.expectedExit = true; reap(st.proc); }
+      if (st.proc) {
+        const p = st.proc;
+        // 停止确认要用(AC-23):发信号之前记下主进程的后代与同组成员,主进程退出后它们会被过继,事后按父子链就找不到了
+        if (!IS_WINDOWS && p.pid !== undefined && !p.isExited) p.tree = treeNow(p.pid);
+        p.expectedExit = true;
+        reap(p);
+      }
       if (!turn || turn.finished) {
         // 空闲时停止:给这次停止单独记一轮,stopped 落在它下面
         let finish: () => void = () => {};
@@ -629,12 +678,36 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
 
     events: () => hub.iterate(),
 
-    // 空壳(红):活动流什么都不推
-    activity: () => (async function* (): AsyncGenerator<ComputeActivity> {})(),
+    activity: () => acts.iterate(),
 
-    // 空壳(红):不等进程退出,直接回报确认
-    async quiesce(_computeId: string, _timeoutMs?: number): Promise<QuiesceResult> {
-      return { ok: true, killed: 0 };
+    async quiesce(computeId: string, timeoutMs = 5000): Promise<QuiesceResult> {
+      if (typeof computeId !== "string") return { ok: false, reason: "computeId 必须是字符串", remaining: [] };
+      if (typeof timeoutMs !== "number" || !(timeoutMs >= 0)) return { ok: false, reason: "timeoutMs 必须是非负数", remaining: [] };
+      const st = computes.get(computeId);
+      if (!st) return { ok: false, reason: `未知的 Compute ${computeId}`, remaining: [] };
+      const t = st.turn;
+      // 这一轮在跑,或停在受阻(常驻进程照常等回答)且没被停止:不做,先停止
+      if (!t?.finished || (t.kind === "blocked" && !st.stopped)) return { ok: false, reason: "这一轮还没结束(运行中或停在受阻),先停止", remaining: [] };
+      const proc = st.lastProc;
+      if (!proc) return { ok: true, killed: 0 };
+      const pid = proc.pid;
+      if (!proc.isExited) {
+        // 这一轮已失败或完成、常驻进程还活着:确认静止就要先结束它(下一轮用同一会话 id 恢复);停止时已记下后代的不再重记
+        if (!IS_WINDOWS && pid !== undefined && proc.tree !== null && proc.tree.length === 0) proc.tree = treeNow(pid);
+        if (!proc.expectedExit) {
+          proc.expectedExit = true;
+          reap(proc);
+        }
+      }
+      // 主进程退出:reap 保证(reapForceMs 后组 SIGKILL);这里再给 timeoutMs 的余量
+      const limit = resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS) + timeoutMs;
+      let timer: NodeJS.Timeout | undefined;
+      const exited = proc.isExited || (await Promise.race([proc.exited.then(() => true), new Promise<boolean>((r) => { timer = setTimeout(() => r(false), limit); timer.unref(); })]));
+      clearTimeout(timer);
+      if (!exited) return { ok: false, reason: "CLI 主进程没有退出", remaining: pid === undefined ? [] : [pid] };
+      if (IS_WINDOWS || pid === undefined) return { ok: true, killed: 0 };
+      // 主进程退出后:停止时记下的后代 + 此刻还在同组的成员,还活着的全部 SIGKILL,轮询到都退出(与一次性适配器同一套)
+      return confirmStopped(pid, proc.tree, timeoutMs);
     },
 
     async settled(computeId: string) {

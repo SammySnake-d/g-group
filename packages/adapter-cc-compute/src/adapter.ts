@@ -12,7 +12,7 @@
 // 落败的 resume 立即被明确拒绝;等冻结的上一轮退出之后重新核对这一轮有没有被 stop,stop 确认之后不再起新的 CLI。
 // CLI 输出(R7-02):stdout 的每一行在受控边界里处理,任何解码/映射异常都只让当前 Compute 记违规、回收并 failed,
 // 不逸出 readline 回调、不终止适配器宿主;错误说明对外部 JSON 的对象/数组字段只给固定说明,不做隐式字符串转换。
-import { type ChildProcess, execFileSync, spawn as spawnChild } from "node:child_process";
+import { type ChildProcess, spawn as spawnChild } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -20,11 +20,13 @@ import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { checkBrief, checkSnapshot } from "./brief.ts";
-import { HOST_MCP, MCP_SERVER_NAME, allowedTools, cliArgs, cliEnv, firstPrompt, skillCatalog, skillsSection, toolOverreach } from "./cli.ts";
-import { type AcceptedReport, activityOf, initLoaded, preInitFrame, streamParser, type Terminal, terminalFor } from "./events.ts";
+import { allowedTools, cliArgs, cliEnv } from "./cli.ts";
+import { type AcceptedReport, activityOf, preInitFrame, streamParser, type Terminal, terminalFor } from "./events.ts";
+import { type Isolation, NO_ISOLATION, checkInitIsolation, isolationOf, mcpConfigFor, promptWithSkills } from "./isolation.ts";
 import { freezeDeep, isPlainRecord, plainData } from "./plain.ts";
-import { IS_WINDOWS, type ProcRow, processTable, signalGroup, stillAlive, treeByPgrep, treeOf } from "./procgroup.ts";
-import type { AdapterOptions, Brief, ClaudeRunner, ComputeActivity, ComputeAdapter, ComputeEvent, HandoffSnapshot, Manifest, McpServerSpec, QuiesceResult, Refusal, RejectedReport } from "./types.ts";
+import { IS_WINDOWS, type ProcRow, signalGroup } from "./procgroup.ts";
+import { confirmStopped, treeNow } from "./stop-confirm.ts";
+import type { AdapterOptions, Brief, ClaudeRunner, ComputeActivity, ComputeAdapter, ComputeEvent, HandoffSnapshot, Manifest, QuiesceResult, Refusal, RejectedReport } from "./types.ts";
 
 export const REPORT_MCP_PATH = fileURLToPath(new URL("../mcp/report-mcp.mjs", import.meta.url));
 export const DEFAULT_RUNNER: ClaudeRunner = Object.freeze({ command: "claude", args: Object.freeze([]) });
@@ -81,36 +83,7 @@ function adapterConfig(options: unknown): Config {
   };
 }
 
-/** 勾选能力(AC-29):联系人专属配置目录、勾选 skill 的插件目录、勾选 MCP 服务器。都已是纯数据副本 */
-interface Isolation {
-  readonly configDir: string | undefined;
-  readonly pluginDirs: readonly string[];
-  readonly mcpServers: Readonly<Record<string, McpServerSpec>>;
-}
 type SpawnParsed = { readonly ok: true; readonly handoff: HandoffSnapshot | undefined; readonly cwd: string | undefined; readonly iso: Isolation };
-const NO_ISOLATION: Isolation = Object.freeze({ configDir: undefined, pluginDirs: Object.freeze([]), mcpServers: Object.freeze({}) });
-
-/** 勾选能力字段:o 已是纯数据副本。不合格返回拒收理由 */
-function isolationOf(o: Readonly<Record<string, unknown>>): Isolation | string {
-  const { configDir, pluginDirs, mcpServers } = o;
-  if (configDir !== undefined && (typeof configDir !== "string" || !path.isAbsolute(configDir))) return "spawn 选项 configDir 必须是绝对路径";
-  if (pluginDirs !== undefined && !(isStrArr(pluginDirs) && pluginDirs.every((d) => path.isAbsolute(d)))) return "spawn 选项 pluginDirs 必须是绝对路径数组";
-  const servers: Record<string, McpServerSpec> = {};
-  if (mcpServers !== undefined) {
-    if (!isPlainRecord(mcpServers)) return "spawn 选项 mcpServers 必须是 {名字: {command, args?, env?}}";
-    for (const [name, spec] of Object.entries(mcpServers)) {
-      if (name === HOST_MCP) return `spawn 选项 mcpServers 不能用 ${HOST_MCP}(留给 report_progress)`;
-      if (!MCP_SERVER_NAME.test(name)) return `spawn 选项 mcpServers 的名字 ${name} 不合规`;
-      if (!isPlainRecord(spec) || typeof spec.command !== "string" || !spec.command || Object.keys(spec).some((k) => k !== "command" && k !== "args" && k !== "env")
-        || (spec.args !== undefined && !isStrArr(spec.args))
-        || (spec.env !== undefined && !(isPlainRecord(spec.env) && Object.values(spec.env).every((v) => typeof v === "string")))) {
-        return `spawn 选项 mcpServers.${name} 必须是 {command: 非空字符串, args?: 字符串数组, env?: 字符串到字符串}`;
-      }
-      servers[name] = spec as unknown as McpServerSpec;
-    }
-  }
-  return { configDir: configDir as string | undefined, pluginDirs: (pluginDirs as readonly string[] | undefined) ?? [], mcpServers: servers };
-}
 
 /** spawn 选项与 handoff:同样先判纯数据,只收 SPAWN_KEYS。未声明的字段即使值为 undefined 也拒绝;
  *  声明过的字段为 undefined 时按没给处理(R5-01) */
@@ -181,15 +154,6 @@ interface ComputeState {
 }
 
 const refuse = (reason: string): Refusal => ({ ok: false, reason });
-/** init 那一行的 JSON 对象(已被 checkInit 判合格,这里只为读加载清单);解析不了给空对象 */
-const rawRecord = (line: string): Record<string, unknown> => {
-  try {
-    const v: unknown = JSON.parse(line);
-    return typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
-  } catch {
-    return {};
-  }
-};
 /** 事件的浅层副本,数组字段(violations)另拷一份,不和本轮内部状态共用 */
 const eventCopy = (e: ComputeEvent): ComputeEvent => {
   const out: Record<string, unknown> = { ...e };
@@ -197,25 +161,6 @@ const eventCopy = (e: ComputeEvent): ComputeEvent => {
   return out as ComputeEvent;
 };
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-/** 当前进程表(停止确认用);只读 ps,不发信号 */
-const procs = () => processTable(() => execFileSync("ps", ["-A", "-o", "pid=,ppid=,pgid=,stat="], { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }));
-/** pgrep:有匹配给 pid 列表,没有匹配(退出码 1)给 [],其它失败给 null */
-const pgrep = (args: readonly string[]): readonly number[] | null => {
-  try {
-    return execFileSync("pgrep", [...args], { encoding: "utf8" }).split("\n").filter((l) => /^\d+$/.test(l.trim())).map((l) => Number(l.trim()));
-  } catch (e) {
-    return (e as { status?: unknown }).status === 1 ? [] : null;
-  }
-};
-/** root 的后代与同组成员:先用 ps,读不到退到 pgrep;都读不到返回 null */
-const treeNow = (root: number): readonly ProcRow[] | null => {
-  const t = procs();
-  return t ? treeOf(root, t) : treeByPgrep(root, pgrep);
-};
-/** 进程还在不在(pid 被复用的可能在秒级窗口里忽略;EPERM 也算还在) */
-const pidAlive = (pid: number): boolean => {
-  try { process.kill(pid, 0); return true; } catch (e) { return (e as { code?: unknown }).code === "EPERM"; }
-};
 /** 异常的说明:只读真正 Error 的字符串 message,不对未知值做隐式字符串转换 */
 const errorText = (err: unknown): string => (err instanceof Error && typeof err.message === "string" ? err.message : "非 Error 异常");
 
@@ -240,8 +185,8 @@ function eventHub() {
   };
 }
 
-/** 活动流:只发给正在迭代的订阅者,不留历史(流式增量很多,不像语义事件那样整份保留);每个订阅者最多积压 10000 条 */
-function activityHub() {
+/** 活动流:只发给正在迭代的订阅者,不留历史(流式增量很多,不像语义事件那样整份保留);每个订阅者最多积压 10000 条。常驻适配器共用 */
+export function activityHub() {
   const subs = new Set<{ queue: ComputeActivity[]; wake: (() => void) | null }>();
   return {
     push(a: ComputeActivity) {
@@ -344,19 +289,12 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       if (s.type === "init" || s.type === "bad-init") {
         if (round.initOk) { violate(round, "CLI 输出了第二个 init"); return; }
         if (s.type === "bad-init") { violate(round, `CLI 的 init 无法核验:${s.reason}`); return; }
-        // 以 CLI 自报的实际挂载清单核对授权:超出 brief 的工具一出现就回收(F-01)
-        const picked = Object.keys(st.iso.mcpServers);
-        const loaded = initLoaded(rawRecord(line));
-        const over = toolOverreach(st.brief, s.tools, picked);
-        if (over.length) { violate(round, `CLI 实际挂载了 brief 未授权的工具 ${over.join(", ")}`); return; }
-        // 勾选能力(AC-29):只许 host 与勾选的 MCP 服务器出现;勾选的必须连上(勾选的项全部可用)
-        const unpicked = loaded.mcpServers.filter((x) => x.name !== HOST_MCP && !picked.includes(x.name)).map((x) => x.name || "(无名)");
-        if (unpicked.length) { violate(round, `CLI 实际挂载了未勾选的 MCP 服务器 ${unpicked.join(", ")}`); return; }
-        const down = picked.filter((n) => loaded.mcpServers.find((x) => x.name === n)?.status !== "connected");
-        if (down.length) { violate(round, `勾选的 MCP 服务器没有连上:${down.join(", ")}`); return; }
+        // 以 CLI 自报的实际挂载清单核对授权与勾选能力(F-01、AC-29,isolation.ts):越出 brief 的工具、未勾选的 MCP、勾选的没连上,一出现就回收
+        const iso = checkInitIsolation(st.brief, st.iso, s.tools, line);
+        if (!iso.ok) { violate(round, iso.reason); return; }
         round.initOk = true;
         st.sessionId = s.sessionId;
-        emit(round, { computeId: st.id, kind: "started", sessionId: s.sessionId, resumed, loaded: { skills: [...loaded.skills], mcpServers: loaded.mcpServers.map((x) => x.name) } });
+        emit(round, { computeId: st.id, kind: "started", sessionId: s.sessionId, resumed, loaded: iso.loaded });
         continue;
       }
       if (s.type === "report") absorb(st, round, s.report);
@@ -377,8 +315,7 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
     const mcpConfig = path.join(dir, "mcp.json");
     let child: ChildProcess;
     try {
-      const picked = Object.fromEntries(Object.entries(st.iso.mcpServers).map(([n, x]) => [n, { command: x.command, args: [...(x.args ?? [])], env: { ...(x.env ?? {}) } }]));
-      fs.writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { ...picked, host: { command: server.command, args: [...(server.args ?? [])], env: {} } } }));
+      fs.writeFileSync(mcpConfig, JSON.stringify(mcpConfigFor(st.iso, server)));
       const args = [...(runner.args ?? []), ...cliArgs(st.brief, prompt, mcpConfig, resumeSession, { pluginDirs: [...st.iso.pluginDirs], mcpServers: Object.keys(st.iso.mcpServers) })];
       // POSIX 上 detached:CLI 自成进程组,stop 与收尾对整组发信号;Windows 不 detached(与 mirasim 一致)
       child = spawnChild(runner.command, args, { cwd: st.cwd, env: cliEnv(st.brief, st.id, cfg.hostEnv, st.iso.configDir), stdio: ["ignore", "pipe", "pipe"], detached: !IS_WINDOWS });
@@ -453,12 +390,8 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       if (!o.ok) return o;
       const handoff = o.handoff;
       const id = `cc-${crypto.randomUUID()}`;
-      const fp = firstPrompt(b.brief, handoff);
       // 勾选 skill(AC-29):--bare 下没有 Skill 工具,在首个提示里列出可用 skill 与 SKILL.md 路径
-      const catalog = skillCatalog(o.iso.pluginDirs);
-      const skillText = skillsSection(catalog);
-      const prompt = skillText ? `${fp.prompt}\n\n${skillText}` : fp.prompt;
-      const sections = skillText ? [...fp.sections, { name: "skills" as const, detail: { items: catalog.map((s) => ({ name: s.name, file: s.file })) } }] : fp.sections;
+      const { prompt, sections } = promptWithSkills(b.brief, handoff, o.iso.pluginDirs);
       const st: ComputeState = {
         id, brief: b.brief, cwd: o.cwd ?? process.cwd(), iso: o.iso, sessionId: null, round: null,
         constraintVer: handoff?.constraintVer, openQuestions: handoff?.openQuestions ?? [], doneSideEffects: [...(handoff?.doneSideEffects ?? [])],
@@ -567,23 +500,8 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       clearTimeout(timer);
       if (!exited) return { ok: false, reason: "CLI 主进程没有退出", remaining: pid === undefined ? [] : [pid] };
       if (IS_WINDOWS || pid === undefined) return { ok: true, killed: 0 };
-      // 主进程退出后:停止时记下的后代 + 此刻还在同组的成员,还活着的全部 SIGKILL,轮询到都退出。
-      // 停止时和此刻都读不到进程表就不能确认(读不到 ≠ 没有)
-      const now = treeNow(pid);
-      if (round.tree === null && now === null) return { ok: false, reason: "读不到进程表,无法确认它启动的子进程都已退出", remaining: [] };
-      const known = new Map<number, ProcRow>();
-      for (const r of [...(round.tree ?? []), ...(now ?? [])]) known.set(r.pid, r);
-      const killed = new Set<number>();
-      const t0 = Date.now();
-      for (;;) {
-        const table = procs();
-        const alive = [...known.values()].filter((r) => (table && r.pgid !== -1 ? stillAlive(r, table) : pidAlive(r.pid)));
-        if (!alive.length) return { ok: true, killed: killed.size };
-        if (Date.now() - t0 > timeoutMs) return { ok: false, reason: `还有 ${alive.length} 个进程没退出`, remaining: alive.map((r) => r.pid) };
-        signalGroup(pid, "SIGKILL");
-        for (const r of alive) { try { process.kill(r.pid, "SIGKILL"); killed.add(r.pid); } catch { /* 刚退出 */ } }
-        await delay(50);
-      }
+      // 主进程退出后:停止时记下的后代 + 此刻还在同组的成员,还活着的全部 SIGKILL,轮询到都退出(stop-confirm.ts)
+      return confirmStopped(pid, round.tree, timeoutMs);
     },
 
     rejectedReports(computeId: string) {
