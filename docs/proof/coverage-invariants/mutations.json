@@ -1,0 +1,214 @@
+{
+  "node": "v24.21.0",
+  "test": "packages/server/src/coverage-invariants.test.ts",
+  "testSha256": "ac7f6d8537a1abe6dc30fa1cb1023bf17d245cebb48fe2e776f2d54ea9bd1e46",
+  "hostSha256": "744317ce7e5e805dbcb2875c9d42ee32dcbd79e43110fc2199cf7285d674a9d1",
+  "total": 8,
+  "mutations": [
+    {
+      "name": "M01 身份前缀丢失",
+      "expected": "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+      "injectionCount": 1,
+      "detected": true,
+      "code": 1,
+      "timedOut": false,
+      "failed": [
+        "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离"
+      ],
+      "passed": [
+        "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+        "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务",
+        "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+      ],
+      "assertionFailed": [
+        "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离"
+      ],
+      "logSha256": "ac51b95f80cacb58a7e53f1a05491bd52fe099da2e78bcd2b277906f603c4dc5"
+    },
+    {
+      "name": "M02 公开记忆查询丢失",
+      "expected": "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+      "injectionCount": 1,
+      "detected": true,
+      "code": 1,
+      "timedOut": false,
+      "failed": [
+        "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离"
+      ],
+      "passed": [
+        "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+        "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务",
+        "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+      ],
+      "assertionFailed": [
+        "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离"
+      ],
+      "logSha256": "4d1f01bbc9692b3962a505b5339f1153615f216072d5698748cd93c05120aaac"
+    },
+    {
+      "name": "M03 普通群消息不送联系人",
+      "expected": "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+      "injectionCount": 1,
+      "detected": true,
+      "code": 1,
+      "timedOut": false,
+      "failed": [
+        "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute"
+      ],
+      "passed": [
+        "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+        "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务",
+        "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+      ],
+      "assertionFailed": [
+        "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute"
+      ],
+      "logSha256": "1b61dbff6c1a1795501efa0fb6eba5543bfb63302559dd2b4d910d04542c0d74"
+    },
+    {
+      "name": "M04 普通群消息错误直送在途Compute",
+      "expected": "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+      "injectionCount": 1,
+      "detected": true,
+      "code": 1,
+      "timedOut": false,
+      "failed": [
+        "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+        "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+      ],
+      "passed": [
+        "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+        "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务"
+      ],
+      "assertionFailed": [
+        "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+        "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+      ],
+      "logSha256": "cce84d3acb0ff48bcc6ce3b429b9ecb5b646cdd5ae79e1cb77185c35a2bca840"
+    },
+    {
+      "name": "M05 进度查询忽略limit",
+      "expected": "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务",
+      "injectionCount": 1,
+      "detected": true,
+      "code": 1,
+      "timedOut": false,
+      "failed": [
+        "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务"
+      ],
+      "passed": [
+        "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+        "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+        "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+      ],
+      "assertionFailed": [
+        "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务"
+      ],
+      "logSha256": "03e88a80154f295e36914e5214ee3d125b132ba4d46989f1297eabb334dfbc52"
+    },
+    {
+      "name": "M06 进度输出逆序",
+      "expected": "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务",
+      "injectionCount": 1,
+      "detected": true,
+      "code": 1,
+      "timedOut": false,
+      "failed": [
+        "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务"
+      ],
+      "passed": [
+        "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+        "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+        "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+      ],
+      "assertionFailed": [
+        "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务"
+      ],
+      "logSha256": "5e6b48fb5217d28f17428045b82782bf3cc8a8787bb8fb54deb4afd8cd969e18"
+    },
+    {
+      "name": "M07 原问题回答被静默忽略",
+      "expected": "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答",
+      "injectionCount": 1,
+      "detected": true,
+      "code": 1,
+      "timedOut": false,
+      "failed": [
+        "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+      ],
+      "passed": [
+        "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+        "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+        "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务"
+      ],
+      "assertionFailed": [
+        "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+      ],
+      "logSha256": "dc0e4f5e98789ed21d9fe2decf04b3d4d5c5d9511c0841bbbc788a4358fdb22c"
+    },
+    {
+      "name": "M08 普通插话使当前卡过期",
+      "expected": "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答",
+      "injectionCount": 1,
+      "detected": true,
+      "code": 1,
+      "timedOut": false,
+      "failed": [
+        "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+      ],
+      "passed": [
+        "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+        "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+        "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务"
+      ],
+      "assertionFailed": [
+        "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+      ],
+      "logSha256": "006e4e9b371c75384c915c6cef63d2372b620bd022f38375c4d72739ad6e053a"
+    }
+  ],
+  "killed": 8,
+  "survived": 0,
+  "parserCalibration": {
+    "mixed": {
+      "code": 1,
+      "timedOut": false,
+      "failed": [
+        "parser-assertion",
+        "parser-runtime",
+        "parser-timeout"
+      ],
+      "passed": [],
+      "assertionFailed": [
+        "parser-assertion"
+      ],
+      "logSha256": "79e0bc5364398d6f0272c26ef3795f67074fe86468f9acaf8063ac84895909e6"
+    },
+    "load": {
+      "code": 1,
+      "timedOut": false,
+      "failed": [
+        "load.test.mjs"
+      ],
+      "passed": [],
+      "assertionFailed": [],
+      "logSha256": "0313323441187bff1f06a9dedfe9c5670abb25085824cf0b89aaec5d5ec0fef7"
+    },
+    "passed": true
+  },
+  "baseline": {
+    "code": 0,
+    "timedOut": false,
+    "failed": [],
+    "passed": [
+      "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+      "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+      "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务",
+      "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+    ],
+    "assertionFailed": [],
+    "logSha256": "b00e9ded384361fb28a43a00f3a1d68e9088226eb1ba0b16c5e57b1f6ba904d1"
+  },
+  "sourceUnchanged": true,
+  "complete": true
+}

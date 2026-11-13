@@ -1,0 +1,85 @@
+[
+  {
+    "command": [
+      "git",
+      "clone",
+      "--no-hardlinks",
+      "--no-checkout",
+      "/private/tmp/gg-req-invariants-r2-resume-20261113",
+      "/private/tmp/gg-q02-r2-samebody-red-8o35sxkl"
+    ],
+    "cwd": "/private/tmp/gg-req-invariants-r2-resume-20261113",
+    "exit": 0,
+    "output": "Cloning into '/private/tmp/gg-q02-r2-samebody-red-8o35sxkl'...\ndone.\n"
+  },
+  {
+    "command": [
+      "git",
+      "checkout",
+      "-b",
+      "calibration/q02-r2-samebody-red",
+      "a9c0ffef997b5f364fb6b725031357b4dcf93d74"
+    ],
+    "cwd": "/private/tmp/gg-q02-r2-samebody-red-8o35sxkl",
+    "exit": 0,
+    "output": "Switched to a new branch 'calibration/q02-r2-samebody-red'\n"
+  },
+  {
+    "command": [
+      "git",
+      "config",
+      "--local",
+      "core.hooksPath",
+      ".githooks"
+    ],
+    "cwd": "/private/tmp/gg-q02-r2-samebody-red-8o35sxkl",
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "command": [
+      "git",
+      "add",
+      "--",
+      "packages/server/src/coverage-invariants.test.ts"
+    ],
+    "cwd": "/private/tmp/gg-q02-r2-samebody-red-8o35sxkl",
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "command": [
+      "git",
+      "commit",
+      "-m",
+      "test(coverage-invariants): R1增强同体四项回溯红校准，保留原错误实现"
+    ],
+    "cwd": "/private/tmp/gg-q02-r2-samebody-red-8o35sxkl",
+    "exit": 0,
+    "output": "[calibration/q02-r2-samebody-red 121a145f] test(coverage-invariants): R1增强同体四项回溯红校准，保留原错误实现\n 1 file changed, 42 insertions(+), 7 deletions(-)\n"
+  },
+  {
+    "command": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "cwd": "/private/tmp/gg-q02-r2-samebody-red-8o35sxkl",
+    "exit": 0,
+    "output": "121a145f55bc966df7df438a16621af2a397fd60\n"
+  },
+  {
+    "command": [
+      "node",
+      "--test",
+      "--test-concurrency=1",
+      "--test-timeout=120000",
+      "--test-force-exit",
+      "--test-reporter=tap",
+      "packages/server/src/coverage-invariants.test.ts"
+    ],
+    "cwd": "/private/tmp/gg-q02-r2-samebody-red-8o35sxkl",
+    "exit": 1,
+    "output": "TAP version 13\n# Subtest: Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离\nnot ok 1 - Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离\n  ---\n  duration_ms: 40.776167\n  type: 'test'\n  location: '/private/tmp/gg-q02-r2-samebody-red-8o35sxkl/packages/server/src/coverage-invariants.test.ts:33:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    [系统提示词]\n    你是用户通讯录里的一位联系人,在私聊或群聊里和用户及其他联系人协作。\n    你只能通过工具行动:reply 在会话里说话;dispatch 把需要跑命令、改文件、多轮试错的活交给你手下的 Compute(你自己不能跑 shell);\n    commit 登记你答应要做的事(原文必须出自来源消息);forward 把用户的补充要求转给在途 Compute;deliver 在 Compute 完成后交付结果;stop 停止任务。\n    收到 Compute 的进度时,值得告诉用户的用 reply 简短汇报;Compute 完成后用 deliver 交付,说清结果在哪。不要编造没有发生的进展。\n    deliver 的 text 会原样作为交付消息发到会话里;交付时不要再用 reply 重复同样的内容。\n    第 5 块「运行台账」是宿主核对的真实状态;Compute 报 stalled 即被判卡住或没跑完,在会话里说清卡在哪。\n    rerun 只重跑失败/中断/没跑完的单元:自己名下的可自行重跑(有上限),别人名下的须本轮有人明确要求(basisSeq 写那条),人停的不重跑。\n    群里一条消息 @ 了别的联系人、没 @ 你时,那件事归被 @ 的人:你不要接活、不要说「我来做」,宿主也会拒绝你为它开 Compute;同一条消息已有别人接手时同样不要再接。\n    交付后等提出者本人回复:他明确说通过,用 verdict(accept) 记下;他说要改什么,用 verdict(revise) 并带上原话。sourceSeq 必须是他本人在交付之后发的那条;别人说的、转述的或交付之前的话都不算。没回复就一直等,不要自己当作通过。\n    每轮结束前用 update_state_note 写状态笔记:下一轮你看不到这一轮的消息原文,只看得到状态笔记、承诺账本和新消息。\n    状态笔记是下一轮你唯一能看到的工作记忆(另有承诺账本原文与新消息);按下面五项写,只写之后还要用的事实,不复述过程:\n    1 在做什么:对方还没了结的每条要求,连同它依赖的对象、数值、条件原文要点(如要排序的词、改过的时间),标来源 #seq;\n    2 下一步;\n    3 完成判据;\n    4 相关指针:#seq、任务号、文件路径;\n    5 走不通的路。\n    被后来的消息改掉的条件只留新的,写明「#x 改了 #y」。\n    Compute 受阻需要用户(如验证码)时,宿主已替你在会话里 @提出者 发了提问卡并附截图;用户在聊天里回答后,用 forward 把回答原样转给 Compute,不要自己猜答案或替用户回答。\n    [工具声明]\n    reply(roomId, text, replyToSeq?) — 在会话里发言\n    dispatch(roomId, sourceSeq, title, task) — 开 Compute 执行任务\n    commit(roomId, sourceSeq, text, taskId?) — 登记承诺\n    forward(taskId, text) — 转给在途 Compute\n    deliver(taskId, text) — 交付任务结果\n    stop(taskId) — 停止任务\n    verdict(taskId, sourceSeq, accept|revise, feedback?) — 记下提出者对交付的回复:通过或要改\n    update_state_note(note) — 写状态笔记(下一轮第 3 块)\n    remember(roomId, title, text, anchors, sourceSeq?, quote?, relation?, target?) — 记下以后用得上的记忆(写下即生效)\n    memory_feedback(id, good, note?) — 记一笔某条记忆这次用得好不好\n    read_memory(id) — 按 id 读一条记忆全文\n    read_quote_parent(roomId, seq) — 引用链往上读一级\n    rerun(runId, roomId, basisSeq?) — 重跑运行台账里失败 / 中断 / 没跑完的单元\n    [人设]\n    错误身份红对照\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: true\n  actual: false\n  operator: '=='\n  stack: |-\n    check (file:///private/tmp/gg-q02-r2-samebody-red-8o35sxkl/packages/server/src/coverage-invariants.test.ts:45:12)\n    TestContext.<anonymous> (file:///private/tmp/gg-q02-r2-samebody-red-8o35sxkl/packages/server/src/coverage-invariants.test.ts:49:36)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)\n  ...\n# Subtest: Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute\nnot ok 2 - Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute\n  ---\n  duration_ms: 17.995958\n  type: 'test'\n  location: '/private/tmp/gg-q02-r2-samebody-red-8o35sxkl/packages/server/src/coverage-invariants.test.ts:94:1'\n  failureType: 'testCodeFailure'\n  error: 'c-mwdv4fey-1'\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: true\n  actual: false\n  operator: '=='\n  stack: |-\n    TestContext.<anonymous> (file:///private/tmp/gg-q02-r2-samebody-red-8o35sxkl/packages/server/src/coverage-invariants.test.ts:98:41)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n# Subtest: Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务\nnot ok 3 - Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务\n  ---\n  duration_ms: 41.266\n  type: 'test'\n  location: '/private/tmp/gg-q02-r2-samebody-red-8o35sxkl/packages/server/src/coverage-invariants.test.ts:107:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    \n    + []\n    - [\n    -   {\n    -     at: '2026-11-12T18:09:39.876Z',\n    -     computeId: 'cp-1',\n    -     kind: 'started',\n    -     summary: '已开始',\n    -     taskId: 't-mwdv4ffj-5'\n    -   },\n    -   {\n    -     at: '2026-11-12T18:09:39.882Z',\n    -     computeId: 'cp-1',\n    -     kind: 'milestone',\n    -     stage: 'scan',\n    -     summary: '唯一进度-扫描',\n    -     taskId: 't-mwdv4ffj-5'\n    -   },\n    -   {\n    -     at: '2026-11-12T18:09:39.890Z',\n    -     computeId: 'cp-1',\n    -     kind: 'milestone',\n    -     stage: 'verify',\n    -     summary: '唯一进度-校验',\n    -     taskId: 't-mwdv4ffj-5'\n    -   }\n    - ]\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected:\n    0:\n      computeId: 'cp-1'\n      taskId: 't-mwdv4ffj-5'\n      kind: 'started'\n      summary: '已开始'\n      at: '2026-11-12T18:09:39.876Z'\n    1:\n      computeId: 'cp-1'\n      taskId: 't-mwdv4ffj-5'\n      kind: 'milestone'\n      stage: 'scan'\n      summary: '唯一进度-扫描'\n      at: '2026-11-12T18:09:39.882Z'\n    2:\n      computeId: 'cp-1'\n      taskId: 't-mwdv4ffj-5'\n      kind: 'milestone'\n      stage: 'verify'\n      summary: '唯一进度-校验'\n      at: '2026-11-12T18:09:39.890Z'\n  actual:\n  operator: 'deepStrictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///private/tmp/gg-q02-r2-samebody-red-8o35sxkl/packages/server/src/coverage-invariants.test.ts:114:12)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n# Subtest: Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答\nnot ok 4 - Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答\n  ---\n  duration_ms: 28.990042\n  type: 'test'\n  location: '/private/tmp/gg-q02-r2-samebody-red-8o35sxkl/packages/server/src/coverage-invariants.test.ts:139:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    + actual - expected\n    \n    + false\n    - 'not_found'\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 'not_found'\n  actual: false\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///private/tmp/gg-q02-r2-samebody-red-8o35sxkl/packages/server/src/coverage-invariants.test.ts:150:12)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n1..4\n# tests 4\n# suites 0\n# pass 0\n# fail 4\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 349.013833\n"
+  }
+]

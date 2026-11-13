@@ -1,0 +1,141 @@
+{
+  "candidate": "/private/tmp/gg-req-invariants-r2-resume-20261113",
+  "head": "c908939d3d66c0e5018951b6381f9e2b3892a55d",
+  "scratch": "/private/tmp/gg-q02-r2-final-calibration-ojigvo2f",
+  "node": "v25.8.1",
+  "test_sha256": "4b77f98c5c682b515dcef9f7cb9c6fb4613f4644be61f03eb189936a2ed47bdf",
+  "host_sha256": "744317ce7e5e805dbcb2875c9d42ee32dcbd79e43110fc2199cf7285d674a9d1",
+  "scope": "Only the four Q02 tests, clean plus exact three reviewer counterexamples; not full regression or original eight mutants.",
+  "results": [
+    {
+      "id": "baseline",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-timeout=120000",
+        "--test-force-exit",
+        "--test-reporter=tap",
+        "packages/server/src/coverage-invariants.test.ts"
+      ],
+      "exit": 0,
+      "seconds": 0.573,
+      "counts": {
+        "tests": 4,
+        "pass": 4,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "complete_suite": true,
+      "failed_tests": [],
+      "ERR_ASSERTION_tests": [],
+      "expected_test": null,
+      "accepted": true,
+      "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/q02-invariants-r2/final-baseline.tap",
+      "log_sha256": "93e48b895e7959866749387e42bb69be31bc56b9e4be39cd0311500f1bba3647"
+    },
+    {
+      "id": "M09",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-timeout=120000",
+        "--test-force-exit",
+        "--test-reporter=tap",
+        "packages/server/src/coverage-invariants.test.ts"
+      ],
+      "exit": 1,
+      "seconds": 0.573,
+      "counts": {
+        "tests": 4,
+        "pass": 3,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "complete_suite": true,
+      "failed_tests": [
+        "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离"
+      ],
+      "ERR_ASSERTION_tests": [
+        "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离"
+      ],
+      "expected_test": "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+      "accepted": true,
+      "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/q02-invariants-r2/final-M09.tap",
+      "log_sha256": "5b319075d4ee90909d3bd0a466c8a4b8f623c6dcb93061ffbb10ce99b54aa6ec"
+    },
+    {
+      "id": "M10",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-timeout=120000",
+        "--test-force-exit",
+        "--test-reporter=tap",
+        "packages/server/src/coverage-invariants.test.ts"
+      ],
+      "exit": 1,
+      "seconds": 0.564,
+      "counts": {
+        "tests": 4,
+        "pass": 3,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "complete_suite": true,
+      "failed_tests": [
+        "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务"
+      ],
+      "ERR_ASSERTION_tests": [
+        "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务"
+      ],
+      "expected_test": "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务",
+      "accepted": true,
+      "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/q02-invariants-r2/final-M10.tap",
+      "log_sha256": "8e2b7a94c1d1fe11295770523383d50a47d420472f3c2276a2836d3c0b56df25"
+    },
+    {
+      "id": "M11",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-timeout=120000",
+        "--test-force-exit",
+        "--test-reporter=tap",
+        "packages/server/src/coverage-invariants.test.ts"
+      ],
+      "exit": 1,
+      "seconds": 0.556,
+      "counts": {
+        "tests": 4,
+        "pass": 3,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "complete_suite": true,
+      "failed_tests": [
+        "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+      ],
+      "ERR_ASSERTION_tests": [
+        "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+      ],
+      "expected_test": "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答",
+      "accepted": true,
+      "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/q02-invariants-r2/final-M11.tap",
+      "log_sha256": "62323899a4d449c3ee209c54534568a952e9933d873f14533137db7504d3ad56"
+    }
+  ],
+  "source_unchanged": true,
+  "complete": true
+}

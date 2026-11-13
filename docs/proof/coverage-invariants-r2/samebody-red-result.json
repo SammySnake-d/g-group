@@ -1,0 +1,40 @@
+{
+  "path": "/private/tmp/gg-q02-r2-samebody-red-8o35sxkl",
+  "parent": "a9c0ffef997b5f364fb6b725031357b4dcf93d74",
+  "commit": "121a145f55bc966df7df438a16621af2a397fd60",
+  "test_sha256": "4b77f98c5c682b515dcef9f7cb9c6fb4613f4644be61f03eb189936a2ed47bdf",
+  "green_test_sha256": "4b77f98c5c682b515dcef9f7cb9c6fb4613f4644be61f03eb189936a2ed47bdf",
+  "test_bytes_identical": true,
+  "command": [
+    "node",
+    "--test",
+    "--test-concurrency=1",
+    "--test-timeout=120000",
+    "--test-force-exit",
+    "--test-reporter=tap",
+    "packages/server/src/coverage-invariants.test.ts"
+  ],
+  "exit": 1,
+  "counts": {
+    "tests": 4,
+    "pass": 0,
+    "fail": 4,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "failed_tests": [
+    "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+    "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+    "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务",
+    "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+  ],
+  "ERR_ASSERTION_tests": [
+    "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+    "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+    "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务",
+    "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+  ],
+  "seconds": 0.422,
+  "nature": "Retrospective four-fault mutation calibration after existing product implementation; not historical test-first evidence."
+}

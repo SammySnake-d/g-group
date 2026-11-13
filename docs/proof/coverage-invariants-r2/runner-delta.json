@@ -1,0 +1,26 @@
+{
+  "original_runner_sha256": "5c01276dda39bd8da26bdbb257e3cd77bf5bfab5a649901b4462e1bdcbb61118",
+  "new_runner_sha256": "743c18beb3d89eb8647190a749fcfd6350333f19d2abbdad596e558f4db5774c",
+  "original_eight_definition_bytes_unchanged": true,
+  "original_eight_definition_sha256": "e404b3e6cdf54494a45797838785b2abc7b55cf1f6badea5d098ceb10b6823ba",
+  "added_exact_mutants": [
+    "M09",
+    "M10",
+    "M11"
+  ],
+  "total": 11,
+  "designated_test_indices": [
+    0,
+    2,
+    3
+  ],
+  "requires_complete_suite_tests": 4,
+  "requires_zero": [
+    "skipped",
+    "cancelled",
+    "todo"
+  ],
+  "requires": "exit 1 and pre-bound named ERR_ASSERTION, no timeout; raw TAP and all collateral retained",
+  "completion": "all 11 records, all 11 kills, no survivor/error, source/test unchanged",
+  "local_scope": "narrow three counterexamples only; full 11 and full regression pending on cloud"
+}

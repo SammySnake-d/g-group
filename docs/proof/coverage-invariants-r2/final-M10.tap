@@ -1,0 +1,127 @@
+TAP version 13
+# Subtest: Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离
+ok 1 - Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离
+  ---
+  duration_ms: 99.71125
+  type: 'test'
+  ...
+# Subtest: Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute
+ok 2 - Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute
+  ---
+  duration_ms: 58.725875
+  type: 'test'
+  ...
+# Subtest: Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务
+not ok 3 - Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务
+  ---
+  duration_ms: 67.4225
+  type: 'test'
+  location: '/private/tmp/gg-q02-r2-final-calibration-ojigvo2f/M10/packages/server/src/coverage-invariants.test.ts:107:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      [
+        {
+          at: '2026-11-12T18:07:25.816Z',
+          computeId: 'cp-1',
+          kind: 'started',
+    ...
+        },
+    +   {
+    +     at: '2026-11-12T18:07:25.845Z',
+    +     computeId: 'cp-2',
+    +     kind: 'started',
+    +     summary: '已开始',
+    +     taskId: 't-mwdv1jzo-5'
+    +   },
+    +   {
+    +     at: '2026-11-12T18:07:25.857Z',
+    +     computeId: 'cp-2',
+    +     kind: 'milestone',
+    +     stage: 'second',
+    +     summary: '第二任务独有进度',
+    +     taskId: 't-mwdv1jzo-5'
+    +   }
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      computeId: 'cp-1'
+      taskId: 't-mwdv1jzo-5'
+      kind: 'started'
+      summary: '已开始'
+      at: '2026-11-12T18:07:25.816Z'
+    1:
+      computeId: 'cp-1'
+      taskId: 't-mwdv1jzo-5'
+      kind: 'milestone'
+      stage: 'scan'
+      summary: '唯一进度-扫描'
+      at: '2026-11-12T18:07:25.825Z'
+    2:
+      computeId: 'cp-1'
+      taskId: 't-mwdv1jzo-5'
+      kind: 'milestone'
+      stage: 'verify'
+      summary: '唯一进度-校验'
+      at: '2026-11-12T18:07:25.833Z'
+  actual:
+    0:
+      computeId: 'cp-1'
+      taskId: 't-mwdv1jzo-5'
+      kind: 'started'
+      summary: '已开始'
+      at: '2026-11-12T18:07:25.816Z'
+    1:
+      computeId: 'cp-1'
+      taskId: 't-mwdv1jzo-5'
+      kind: 'milestone'
+      stage: 'scan'
+      summary: '唯一进度-扫描'
+      at: '2026-11-12T18:07:25.825Z'
+    2:
+      computeId: 'cp-1'
+      taskId: 't-mwdv1jzo-5'
+      kind: 'milestone'
+      stage: 'verify'
+      summary: '唯一进度-校验'
+      at: '2026-11-12T18:07:25.833Z'
+    3:
+      computeId: 'cp-2'
+      taskId: 't-mwdv1jzo-5'
+      kind: 'started'
+      summary: '已开始'
+      at: '2026-11-12T18:07:25.845Z'
+    4:
+      computeId: 'cp-2'
+      taskId: 't-mwdv1jzo-5'
+      kind: 'milestone'
+      stage: 'second'
+      summary: '第二任务独有进度'
+      at: '2026-11-12T18:07:25.857Z'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-q02-r2-final-calibration-ojigvo2f/M10/packages/server/src/coverage-invariants.test.ts:124:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答
+ok 4 - Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答
+  ---
+  duration_ms: 70.149917
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 497.825958

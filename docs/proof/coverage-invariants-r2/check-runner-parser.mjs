@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+const root='/private/tmp/gg-req-invariants-r2-resume-20261113';
+const out=import.meta.dirname;
+const src=fs.readFileSync(path.join(root,'packages/server/proof/coverage-invariants-mutations.mjs'),'utf8');
+const section=src.slice(src.indexOf('const parse ='),src.indexOf('const run ='));
+const {parse,completeSuite}=new Function('EXPECTED_TESTS',section+'\nreturn {parse,completeSuite};')(4);
+const clean=fs.readFileSync(path.join(out,'final-baseline.tap'),'utf8');
+const mutant=fs.readFileSync(path.join(out,'final-M09.tap'),'utf8');
+const rows=[];
+function check(name,input,expected,extra={}){const got=completeSuite({...parse(input),...extra});assert.equal(got,expected,name);rows.push({name,expected,actual:got});}
+check('real complete baseline',clean,true);
+check('real designated assertion mutant',mutant,true);
+check('summary count missing',clean.replace(/^# tests .+\n/m,''),false);
+check('summary wrong test total',clean.replace('# tests 4','# tests 3'),false);
+check('pass/fail incomplete',clean.replace('# pass 4','# pass 3'),false);
+check('pass names incomplete',clean.replace(/^ok 4 - .+\n/m,''),false);
+check('skip rejected',clean.replace('# skipped 0','# skipped 1'),false);
+check('cancel rejected',clean.replace('# cancelled 0','# cancelled 1'),false);
+check('todo rejected',clean.replace('# todo 0','# todo 1'),false);
+check('timeout rejected',clean,false,{timedOut:true});
+const p=parse(mutant);assert.equal(p.assertionFailed.length,1);
+const runtime=parse(mutant.replaceAll('ERR_ASSERTION','ERR_TEST_FAILURE'));assert.deepEqual(runtime.assertionFailed,[]);
+rows.push({name:'ERR_TEST_FAILURE is not designated assertion',expected:0,actual:runtime.assertionFailed.length});
+fs.writeFileSync(path.join(out,'runner-parser-check.json'),JSON.stringify({scope:'Pure parse/completeness functions extracted from actual new runner; real narrow TAP plus explicit malformed/incomplete controls. Does not execute original 8 or the whole 11-mutant sweep.',checks:rows,passed:rows.length},null,2)+'\n');
+console.log(JSON.stringify({passed:rows.length,complete:true}));

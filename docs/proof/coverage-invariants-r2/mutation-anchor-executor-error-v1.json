@@ -1,0 +1,8 @@
+{
+  "first_dispatch_exit": 1,
+  "error": "AssertionError before M09 process launch: anchor was not unique",
+  "old_anchor": "    const list = this.memory.list(contactId);",
+  "observed_occurrences": 2,
+  "correction": "Scope memory list anchor with the adjacent const now line, unique at actual memoryForRound seam",
+  "not_counted_as_red_or_mutant_result": true
+}

@@ -1,0 +1,17 @@
+{
+  "scope": "All tracked packages/scripts/.githooks files except *.test.ts and /proof/; direct original bytes compared against local candidate.",
+  "results": [
+    {
+      "baseline": "4efdee0be6d161060099b5ce488e3344c70305ee",
+      "compared_non_test_non_proof_paths": 154,
+      "changed": [],
+      "byte_identical": true
+    },
+    {
+      "baseline": "c908939d3d66c0e5018951b6381f9e2b3892a55d",
+      "compared_non_test_non_proof_paths": 154,
+      "changed": [],
+      "byte_identical": true
+    }
+  ]
+}

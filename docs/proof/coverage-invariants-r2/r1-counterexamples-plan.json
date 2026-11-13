@@ -1,0 +1,35 @@
+{
+  "registered_against": "c908939d3d66c0e5018951b6381f9e2b3892a55d",
+  "timing": "Reviewer-defined existing-implementation mutation calibration; registered before these author assertion enhancements, not before product implementation.",
+  "expected_suite_tests": 4,
+  "test_file": "packages/server/src/coverage-invariants.test.ts",
+  "mutants": [
+    {
+      "id": "M09",
+      "finding": "R1-01",
+      "expected_test": "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+      "reason": "memoryForRound merges memories belonging to other same-name contacts",
+      "file": "packages/server/src/host.ts",
+      "from": "    const list = this.memory.list(contactId);\n    const now = this.now();",
+      "to": "    const list = this.liveContacts().filter(c => c.name === this.contactDoc(contactId).value.name).flatMap(c => this.memory.list(c.id));\n    const now = this.now();"
+    },
+    {
+      "id": "M10",
+      "finding": "R1-02",
+      "expected_test": "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务",
+      "reason": "progress query ignores task binding while preserving SQL parameter count",
+      "file": "packages/server/src/host.ts",
+      "from": "SELECT * FROM gg_progress WHERE task_id = ? ORDER BY id DESC LIMIT ?",
+      "to": "SELECT * FROM gg_progress WHERE (task_id = ? OR 1) ORDER BY id DESC LIMIT ?"
+    },
+    {
+      "id": "M11",
+      "finding": "R1-03",
+      "expected_test": "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答",
+      "reason": "questionCard ignores qId while retaining task binding and SQL parameter count",
+      "file": "packages/server/src/host.ts",
+      "from": "SELECT * FROM gg_cards WHERE task_id = ? AND kind = 'question' AND json_extract(meta, '$.qId') = ?",
+      "to": "SELECT * FROM gg_cards WHERE task_id = ? AND kind = 'question' AND (json_extract(meta, '$.qId') = ? OR 1)"
+    }
+  ]
+}

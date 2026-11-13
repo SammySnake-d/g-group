@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离
+ok 1 - Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离
+  ---
+  duration_ms: 99.57825
+  type: 'test'
+  ...
+# Subtest: Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute
+ok 2 - Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute
+  ---
+  duration_ms: 59.351125
+  type: 'test'
+  ...
+# Subtest: Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务
+ok 3 - Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务
+  ---
+  duration_ms: 74.737792
+  type: 'test'
+  ...
+# Subtest: Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答
+not ok 4 - Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答
+  ---
+  duration_ms: 52.100584
+  type: 'test'
+  location: '/private/tmp/gg-q02-r2-final-calibration-ojigvo2f/M11/packages/server/src/coverage-invariants.test.ts:139:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + false
+    - 'not_found'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'not_found'
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-q02-r2-final-calibration-ojigvo2f/M11/packages/server/src/coverage-invariants.test.ts:150:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 488.981458

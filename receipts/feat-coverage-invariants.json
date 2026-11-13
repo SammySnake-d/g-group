@@ -1,0 +1,433 @@
+{
+  "slice": "Q02 测试专片：四组既有Host/SQLite/service行为的独立断言与错误行为校准；生产代码最终不变，replying生命周期缺口仍未验收",
+  "acceptance": [
+    {
+      "id": "AC-01",
+      "status": "未测",
+      "reason": "已独立证明Host层头像/合法换harness/重启身份记忆与同名隔离；真实CLI及完整INVARIANTS协议不在此测试专片，不能将子项绿升格为整条通过",
+      "evidence": "docs/proof/coverage-invariants-r2/README.md"
+    },
+    {
+      "id": "AC-43",
+      "status": "未测",
+      "reason": "tasks.progress实际事件/字段/顺序/limit/重启/未知任务已覆盖；完整台账、卡住重跑、afterAt与真实harness未验收",
+      "evidence": "docs/proof/coverage-invariants-r2/README.md"
+    },
+    {
+      "id": "AC-44",
+      "status": "未测",
+      "reason": "T4b无关插话及原qId/原Compute恢复子项已覆盖；真实验证码截图与模型路径未测",
+      "evidence": "docs/proof/coverage-invariants-r2/README.md"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "model": "gpt-6.1-sol",
+    "notes": "R1-04 corrected to actual Mirasim host. Historical native parent codex:01a1cfc8-db89-7400-b3de-876bd8478982 and child codex:01a1d043-1042-7e61-9981-968868c25de1 are transcript locators only, not host session identities. No provenance approval is asserted."
+  },
+  "contributingSessions": [
+    "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7"
+  ],
+  "red": {
+    "commit": "121a145f55bc966df7df438a16621af2a397fd60"
+  },
+  "unverifiable": "AC-01 使用确定性Mind/Compute替身而非真实harness；AC-43只覆盖摘要进度且afterAt未测。U83单独真实探针仍失败：实际回复只有thinking到idle，没有replying；因此Q02整体验收未完成。四组断言的绿不能代替这些未测或失败项。",
+  "waiver": null,
+  "review": {
+    "agent": "claude",
+    "session": "claude:4e0a71e2-55f2-4eb1-ab93-ce65d14aa6d9",
+    "model": "group/opus",
+    "verdict": "approve",
+    "reviewed_hash": "8d04a717a7ce677a47ac87d70c27acd53a5abb61dfe67abc9305a9bd98dcb55c",
+    "notes": "第 2 轮 APPROVE（0633572e）。hy4 辅审因线路 403 未产出，本轮无辅审。R1-01…R1-04 必修全部解决、R1-05 已采纳：第 1 轮存活的 3 个故障（同名记忆串读、进度不按任务过滤、不核对 qId）现被作者自己的具名测试按名杀死（:73、:124、:150）。复现（box2 独立重跑）：生产代码与 base 逐字节相同；红 121a145f 0/4 全 ERR_ASSERTION、绿 4/4（重跑 15 次稳定）；typecheck/lint 0；依赖 37/37；npm test 1477/1477 无 skip/todo；作者 11/11 变异具名杀死；replying 探针仍 exit 1 且不在套件内；自检不经管道 219/219 exit 0；CI self-check SUCCESS。审查方 16 个单点故障 15 个具名杀死，N7（只让全局前缀记忆串到同名联系人）存活，记建议 R2-01；另有建议 R2-02（测试过长、标题未点名新性质）、R2-03（notes 未写返修子线程 01a1d035）。来源：作者侧 G-PROVENANCE 已能按宿主会话 codex:76d2c467 的 turns.jsonl 核过（R1-04 实测通过）；另用 Codex 原生记录（父 01a1cfc8 → 子 01a1d035，gpt-6.1-sol）逐项对到红、四个提交、合并、云端运行与正常快进推送（钩子 1477 + 219/219，c908939d..0633572e）。8 个门禁应失败输入各自判败。红仍是把 host.ts 改坏造出来的回溯校准，按第 1 轮口径不以此拒绝，见需拍板。见 reviews/feat-coverage-invariants.md 第 2 轮。",
+    "history": [
+      {
+        "agent": "claude",
+        "session": "claude:89762718-8de0-48ba-8531-1f6f3ee30739",
+        "model": "group/opus",
+        "verdict": "reject",
+        "reviewed_hash": "2efdba77c1e8120c4f32506e130d0a4cb1837e477d433d733cc2c759705947c6",
+        "notes": "第 1 轮 REJECT（9433023）。hy4 辅审因线路 403 未产出，本轮无辅审。复现一致：生产代码与基线逐字节相同；红 a9c0ffef 4/4 ERR_ASSERTION、绿 4/4；typecheck/lint 0；npm test 1477/1477 无 skip/todo（基线 1473+4）；作者 8/8 变异具名杀死；replying 探针 exit 1 且不在套件内；--local 除 G-REVIEW 外全过；8 个门禁应失败输入各自判败。红是红提交里把 host.ts 改坏 4 处造出来的（等同变异校准，作者已写明）。拒绝原因：审查方 9 个单点故障存活 3——R1-01 同名联系人记忆串读（全仓库无测试发现）、R1-02 tasks.progress 不按任务过滤（全仓库无测试发现）、R1-03 回答不核对 qId（本片未守）；R1-04 author.session 是 Codex 原生子线程号，G-PROVENANCE 报作者会话记录不存在，宿主会话应为 codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7。来源已用 Codex 原生记录逐项对到提交、红绿、变异、1477、推送钩子与开 PR。见 reviews/feat-coverage-invariants.md 第 1 轮。"
+      }
+    ]
+  },
+  "knownGaps": [
+    {
+      "id": "U83",
+      "status": "失败",
+      "evidence": "packages/server/proof/coverage-invariants-replying-gap.ts",
+      "reason": "真实回复后没有实际replying活动事件；本切片不修生产公共写点"
+    },
+    {
+      "id": "tasks.progress.afterAt",
+      "status": "未测",
+      "reason": "基线service忽略该参数；本专片不改该另一个缺口"
+    }
+  ],
+  "additionalCoverageNotes": [
+    {
+      "id": "AC-P1-02",
+      "status": "未测",
+      "reason": "无关插话不会冲掉原问题/卡/版本且可原路回答已覆盖；依赖前提实际被推翻的完整选项卡族不在此专片",
+      "evidence": "docs/proof/coverage-invariants/README.md"
+    }
+  ],
+  "verification": {
+    "scope": "Current R2 frozen cloud behavior and pre-proof official macOS seatbelt gates/selftest; old R1 results not borrowed. Final proof-only HEAD/hash are independently recomputed in external delivery receipt.",
+    "basedOn": "c908939d3d66c0e5018951b6381f9e2b3892a55d",
+    "node": "v25.8.1",
+    "testSha256": "4b77f98c5c682b515dcef9f7cb9c6fb4613f4644be61f03eb189936a2ed47bdf",
+    "red": "121a145f55bc966df7df438a16621af2a397fd60",
+    "redNature": "Retrospective four-fault mutation calibration after existing product implementation; not historical test-first evidence.",
+    "redNamedAssertions": 4,
+    "green": 4,
+    "reviewerCounterexamplesKilled": 3,
+    "reviewerCounterexamplesSurvived": 0,
+    "eachCounterexampleSuiteTests": 4,
+    "full": 1477,
+    "fullStatus": "new R2 cloud run completed exit 0 at 2fccaabd; raw phase log SHA independently checked",
+    "originalEightMutationStatus": "original eight definitions unchanged; current full eleven-mutant run observed and verified, all eleven designated ERR_ASSERTION kills",
+    "typecheckExit": 0,
+    "lintExit": 0,
+    "runnerParserChecks": 11,
+    "productionPathsByteIdentical": 154,
+    "evidence": "docs/proof/coverage-invariants-r2/README.md",
+    "overallAcceptance": "incomplete: independent R2 review and reviewer provenance not passed; U83.replying still failed; afterAt/real-harness/CLI/UI/composite AC still untested. Final content hash must be recomputed after proof-only commit.",
+    "localRework": {
+      "scope": "R2 local author rework only; final frozen cloud full/11-mutant/gates not yet run",
+      "basedOn": "c908939d3d66c0e5018951b6381f9e2b3892a55d",
+      "node": "v25.8.1",
+      "testSha256": "4b77f98c5c682b515dcef9f7cb9c6fb4613f4644be61f03eb189936a2ed47bdf",
+      "red": "121a145f55bc966df7df438a16621af2a397fd60",
+      "redNature": "Retrospective four-fault mutation calibration after existing product implementation; not historical test-first evidence.",
+      "redNamedAssertions": 4,
+      "green": 4,
+      "reviewerCounterexamplesKilled": 3,
+      "reviewerCounterexamplesSurvived": 0,
+      "eachCounterexampleSuiteTests": 4,
+      "full": null,
+      "fullStatus": "pending on cloud for R2; old 1477 result applies to R1 only",
+      "originalEightMutationStatus": "definitions byte-identical; current R2 full eleven-mutant execution pending on cloud",
+      "typecheckExit": 0,
+      "lintExit": 0,
+      "runnerParserChecks": 11,
+      "productionPathsByteIdentical": 154,
+      "evidence": "docs/proof/coverage-invariants-r2/README.md",
+      "overallAcceptance": "incomplete: independent R2 review/provenance and cloud gates pending; replying/afterAt/real-harness composite gaps remain"
+    },
+    "testedHead": "2fccaabdc1fda18ff4f79d10c6dfa45b39089489",
+    "cloudNode": "v24.21.0",
+    "cloudArchiveSha256": "776693b4dfae3a1418eea5b01bb7f61fd78a5802725046485ef90195189ad0fd",
+    "cloudArchiveBytes": 134755,
+    "cloudSourceFilesFrozen": 538,
+    "fullPass": 1477,
+    "fullFail": 0,
+    "fullSkipped": 0,
+    "fullCancelled": 0,
+    "fullTodo": 0,
+    "mutations": {
+      "total": 11,
+      "killed": 11,
+      "survived": 0,
+      "eachSuiteTests": 4,
+      "skipCancelTodo": 0,
+      "records": [
+        {
+          "id": "M01",
+          "expected": "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+          "counts": {
+            "tests": 4,
+            "pass": 3,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "named_assertion_kill": true,
+          "assertion_failed": [
+            "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离"
+          ],
+          "collateral_failed": [],
+          "log_sha256": "14de5e28bb88785ade2bbbba86989046d6b73461e5342c8f3150334cbf5e97db"
+        },
+        {
+          "id": "M02",
+          "expected": "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+          "counts": {
+            "tests": 4,
+            "pass": 3,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "named_assertion_kill": true,
+          "assertion_failed": [
+            "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离"
+          ],
+          "collateral_failed": [],
+          "log_sha256": "2665385cd80ad9b0d5af97b03b7d70ad2d5e36a78406b0031156639cf9fe6a5d"
+        },
+        {
+          "id": "M03",
+          "expected": "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+          "counts": {
+            "tests": 4,
+            "pass": 2,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "named_assertion_kill": true,
+          "assertion_failed": [
+            "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+            "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute"
+          ],
+          "collateral_failed": [
+            "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离"
+          ],
+          "log_sha256": "1dde163e4aecc3952e21392f5f32f98543c552b387ff0063f5e2a40e2d56acff"
+        },
+        {
+          "id": "M04",
+          "expected": "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+          "counts": {
+            "tests": 4,
+            "pass": 2,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "named_assertion_kill": true,
+          "assertion_failed": [
+            "Q02 群普通消息:每位联系人收到，但无任务及在途阶段均不直达Compute",
+            "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+          ],
+          "collateral_failed": [
+            "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+          ],
+          "log_sha256": "fcaaaef8b27f3b712bc6bc03be73bba77a98317613cbd52b961018779390e069"
+        },
+        {
+          "id": "M05",
+          "expected": "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务",
+          "counts": {
+            "tests": 4,
+            "pass": 3,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "named_assertion_kill": true,
+          "assertion_failed": [
+            "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务"
+          ],
+          "collateral_failed": [],
+          "log_sha256": "56a0412f4209fe957741a82c77d2d2aeeb2c7bd0092b7c20d17521e3b22d8e0c"
+        },
+        {
+          "id": "M06",
+          "expected": "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务",
+          "counts": {
+            "tests": 4,
+            "pass": 3,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "named_assertion_kill": true,
+          "assertion_failed": [
+            "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务"
+          ],
+          "collateral_failed": [],
+          "log_sha256": "2d0d1666089d83aee53e4ae0dd85fd174ded70c1ab729c95534ddcf454edd897"
+        },
+        {
+          "id": "M07",
+          "expected": "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答",
+          "counts": {
+            "tests": 4,
+            "pass": 3,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "named_assertion_kill": true,
+          "assertion_failed": [
+            "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+          ],
+          "collateral_failed": [],
+          "log_sha256": "5b98d81a493f66f97ec1931a68e98d38cc0bbea909c66d91c33fa469cbf926c6"
+        },
+        {
+          "id": "M08",
+          "expected": "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答",
+          "counts": {
+            "tests": 4,
+            "pass": 3,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "named_assertion_kill": true,
+          "assertion_failed": [
+            "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+          ],
+          "collateral_failed": [],
+          "log_sha256": "5ffa54c78fea4062279771e35b5a0c5c6e3d75edb19b992bf9e4370ed3632f69"
+        },
+        {
+          "id": "M09",
+          "expected": "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离",
+          "counts": {
+            "tests": 4,
+            "pass": 3,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "named_assertion_kill": true,
+          "assertion_failed": [
+            "Q02 身份记忆:头像/换harness/重启不换身份，同名新建记忆隔离"
+          ],
+          "collateral_failed": [],
+          "log_sha256": "53a97a55d53f2d771f5e39da8a586c29afb4000a61bb8ae01229d9ffdcf3dcf2"
+        },
+        {
+          "id": "M10",
+          "expected": "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务",
+          "counts": {
+            "tests": 4,
+            "pass": 3,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "named_assertion_kill": true,
+          "assertion_failed": [
+            "Q02 tasks.progress:真实事件同形查询，准确字段/限量顺序/重启与未知任务"
+          ],
+          "collateral_failed": [],
+          "log_sha256": "b9590c4174c36235d2256b79bdc0eed3eb7c35fb10a38335a945337010156b13"
+        },
+        {
+          "id": "M11",
+          "expected": "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答",
+          "counts": {
+            "tests": 4,
+            "pass": 3,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "named_assertion_kill": true,
+          "assertion_failed": [
+            "Q02 无关插话:保留原T4b问题/版本/卡片与Compute，原问题仍可回答"
+          ],
+          "collateral_failed": [],
+          "log_sha256": "eb0f1f257a553f497685e0d2db382d945e50fc05b5674c493e85efa9b4c3c4bb"
+        }
+      ],
+      "evidence": "docs/proof/coverage-invariants-r2/cloud-results-2fccaabd.tar.gz:out/mutations/"
+    },
+    "dependency": {
+      "tests": 37,
+      "pass": 37,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "cloudTypecheckExit": 0,
+    "cloudLintExit": 0,
+    "officialSeatbeltPreProof": {
+      "testedHead": "2fccaabdc1fda18ff4f79d10c6dfa45b39089489",
+      "contentHash": "2c8f958e22b23bc6a0207e609534620d8decd7108b21fbee257020cec1746742",
+      "node": "v22.22.0",
+      "exit": 1,
+      "passed": [
+        "✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据",
+        "✓ G-RED  R-02:先红后绿,红提交上的测试与现在相同,现在的测试放到红提交实现上按名字失败、现在按名字通过",
+        "✓ G-STUB  R-03 R-04:空实现红基线 + 返回值变异校准,桩下或错值下仍通过、没执行、加载失败的测试都判无效",
+        "✓ G-TAUTO  R-04:拒绝同语反复测试(按 node:test 真实导入识别;无断言、自比较、恒真、不可达、不判源码结果、skip/only;运行时与静态逐条计数一致)",
+        "✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限、不得写提交状态、不得用 pull_request_target",
+        "✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)"
+      ],
+      "failures": [
+        "✗ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是仓库所有者对这个 PR 这一版的结构化批准",
+        "✗ G-REVIEW  R-01:审查人限 Codex/Astra/Claude/Argon(g-group#1531、g-group#2943、g-group#3199 原则 68,默认 Codex;Claude 审 Codex 写的 PR,Argon 备用),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)"
+      ],
+      "evidence": "docs/proof/coverage-invariants-r2/seatbelt-preproof-result.json"
+    },
+    "realSelftest": {
+      "exit": 0,
+      "timed_out": false,
+      "cases": 219,
+      "passed": 219,
+      "failures": [],
+      "summary": [
+        "自检通过",
+        "自检耗时 134s:用例 219/219,并发 2(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0"
+      ]
+    }
+  },
+  "historicalVerification": {
+    "R1AuthorCloud": {
+      "sourceHead": "5cf70481c19c3d052e1da6822ac33919c3a2e1a0",
+      "cloud": "box3",
+      "node": "v24.21.0",
+      "redNamedAssertions": 4,
+      "green": 4,
+      "mutationKilled": 8,
+      "mutationSurvived": 0,
+      "full": 1477,
+      "fullFail": 0,
+      "fullSkipped": 0,
+      "fullCancelled": 0,
+      "fullTodo": 0,
+      "typecheckExit": 0,
+      "lintExit": 0,
+      "knownReplyingGapExit": 1,
+      "sourceFrozen": true,
+      "evidence": "docs/proof/coverage-invariants/cloud-proof.tar.gz",
+      "overallAcceptance": "incomplete: known replying gap and documented untested composite criteria"
+    },
+    "R1Receipt": "docs/proof/coverage-invariants-r2/receipt-before-r2.json",
+    "R1Review": "reviews/feat-coverage-invariants.md"
+  },
+  "reworkNotes": [
+    {
+      "id": "R1-01",
+      "change": "实际同名联系人在同一room anchor下运行；仅owner记忆；核对第二位本轮完整request无第一位persona/记忆。原存储隔离、头像/harness/重启断言全部保留。",
+      "evidence": "docs/proof/coverage-invariants-r2/final-M09.tap"
+    },
+    {
+      "id": "R1-02",
+      "change": "创建真实第二任务及不同computeId/独有进度，双向查询与重启逐项比对，不以参数回填taskId自证。",
+      "evidence": "docs/proof/coverage-invariants-r2/final-M10.tap"
+    },
+    {
+      "id": "R1-03",
+      "change": "先答不存在qId，断not_found、任务视图/原卡不变且不恢复Compute；随后原正确qId仍可恢复原Compute。",
+      "evidence": "docs/proof/coverage-invariants-r2/final-M11.tap"
+    },
+    {
+      "id": "R1-04",
+      "change": "author/contributingSessions使用真实host；原native线程保在author.notes及历史receipt。来源门禁尚未实核，不自签。"
+    },
+    {
+      "id": "R1-05",
+      "change": "身份与记忆块按RoundBlock.block=1/5定位，不再依赖blocks数组下标。"
+    }
+  ]
+}

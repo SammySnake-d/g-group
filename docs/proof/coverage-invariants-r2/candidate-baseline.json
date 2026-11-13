@@ -1,0 +1,21 @@
+{
+  "at": "2026-11-12T17:54:45.229693+00:00",
+  "source": "/private/tmp/gg-req-invariants-resume-20261112",
+  "source_git_root": "/private/tmp/gg-req-invariants-resume-20261112",
+  "source_head": "943302320f3b49fe429fba79f3c3e7d0e2a24197",
+  "source_status": "",
+  "remote": "https://github.com/SammySnake-d/g-group.git",
+  "remote_review_head": "c908939d3d66c0e5018951b6381f9e2b3892a55d",
+  "new_candidate": "/private/tmp/gg-req-invariants-r2-resume-20261113",
+  "candidate_head": "c908939d3d66c0e5018951b6381f9e2b3892a55d",
+  "branch": "feat/coverage-invariants",
+  "workspace_modules": {
+    "adapter-sqlite": "/private/tmp/gg-req-invariants-r2-resume-20261113/packages/adapter-sqlite",
+    "adapter-pi-contact": "/private/tmp/gg-req-invariants-r2-resume-20261113/packages/adapter-pi-contact",
+    "server": "/private/tmp/gg-req-invariants-r2-resume-20261113/packages/server",
+    "adapter-cc-compute": "/private/tmp/gg-req-invariants-r2-resume-20261113/packages/adapter-cc-compute",
+    "domain": "/private/tmp/gg-req-invariants-r2-resume-20261113/packages/domain",
+    "api-contract": "/private/tmp/gg-req-invariants-r2-resume-20261113/packages/api-contract",
+    "kernel": "/private/tmp/gg-req-invariants-r2-resume-20261113/packages/kernel"
+  }
+}
