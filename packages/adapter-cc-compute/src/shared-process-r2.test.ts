@@ -51,6 +51,10 @@ test("S-PROC-CC-03 AC-23: resident stop confirms the leftovers of an idle-reclai
     const [retired] = readPids(log);
     if (!retired) throw new Error("first launch not recorded");
     await until(() => !live(retired.main), "idle reclaim ends the first process");
+    // resume only once the adapter itself has seen that exit (its snapshot stops refusing with not-quiescent): a resume that
+    // arrives while the adapter is still handling the exit is not relaunched, in base as well; that window is not this slice's
+    const handled = () => { const snap = adapter.snapshot(id!); return snap.ok || snap.reason !== "not-quiescent"; };
+    await until(handled, "the adapter has handled the reclaimed process's exit");
     assert.equal(live(retired.descendant), true, "reclaiming the idle process leaves its setsid child; confirmation is owed at stop");
     assert.deepEqual(await adapter.resume(id, "第二轮"), { ok: true });
     await until(() => readPids(log).length === 2, "the session resumes in a new process");
