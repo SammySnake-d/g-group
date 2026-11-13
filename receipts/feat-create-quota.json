@@ -22,6 +22,13 @@
   },
   "unverifiable": "AC-23本片只证创建额度与受控适配器下真实Host租约路径；云行为七阶段已完成，官方Docker overlay挂载invalid argument导致RED/STUB/TAUTO失败，保留原始诊断；真实模型与CLI子进程、Helper创建#64/Q13前置及前端用户操作未测。G-PROVENANCE在review=null短路不算来源实核；未伪造turns。",
   "waiver": null,
-  "review": null,
+  "review": {
+    "agent": "claude",
+    "session": "claude:225d4b4a-0b47-4cfa-bbeb-3460d6f8db1c",
+    "model": "group/opus",
+    "verdict": "reject",
+    "reviewed_hash": "43b9409e768583b0094a9da19c14e6d4a4f96313bced53392ef82194cf19faeb",
+    "notes": "第 1 轮 REJECT（852e0f89）。hy4 辅审因线路 403 未产出，本轮无辅审。复现一致：typecheck/lint 0；CQ01–13 13/13；npm test 1498/1498 无 skip/todo（基线 1485+13）；红 069bbd2 13/13 ERR_ASSERTION；作者 17/17 变异具名杀死；本机 seatbelt --local 除 G-REVIEW 外七项通过（G-RED/STUB/TAUTO 实际执行），自检 219/219；8 个门禁应失败输入各自判败。产品行为实测正确，拒绝原因是测试守不住标题与 README 声称的行为：审查方 15 个单点故障 8 个在全量下存活——R1-01 首版历史同事务、R1-02 群额度跨重启不被重置、R1-03 同号改参冲突只覆盖部分字段、R1-04 通知只在提交后发出；R1-05 回滚带回额度只有 proof 脚本断言（合入 #84 R2 cd5c3f4d 后由 CFG15 守住）；R1-06 建群成员存在性无测试（建议）；R1-07 README 称 ContactView 不含 computeSlots 与实测不符。来源：G-PROVENANCE 填 review 后判通过，但只读宿主 turns.jsonl；已用 Codex 原生子线程 01a1d035（父 01a1cfc8 = codex:76d2c467）逐项对到 10 个提交、红绿、box4 冻结 e1b91fc 与归档 sha、17/17、1498、正常推送与 pre-push 钩子、hash。#84 R2 试合并无冲突。见 reviews/feat-create-quota.md 第 1 轮。"
+  },
   "notes": "Three product files remain byte-identical to c371b712; current test, 17 mutant definitions and real proof remain frozen. Exact same strengthened test bodies red069bbd20 and green8c3d078e retained. Strengthening red is explicitly retrospective, original reds and 17 pre-product registrations preserved. Box4 actual 13/13, 17/17 designated named ERR_ASSERTION kills (collateral retained), production, Q03 regression, typecheck/lint0 and full1498/1498. Original daemon image-pull failure and v2 wrong image Id/config executor assertion retained; exact official image exported config/rootfs verified. Official gates actually fail G-RED/G-STUB/G-TAUTO because Docker overlay container start invalid argument; not waived or replaced by direct Node proof. review=null; no self-sign, merge or deployment."
 }
