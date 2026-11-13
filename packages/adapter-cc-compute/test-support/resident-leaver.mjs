@@ -1,6 +1,7 @@
 // Owned neutral resident fixture: every launch (including a resume after idle reclaim) leaves one setsid child that ignores
 // SIGTERM and appends {main, descendant} to Q08_PIDS_LOG; with Q08_FAIL_RESULTS=1 every turn's result is reported as an
-// execution error while the process stays resident. Then it behaves exactly as the repository's resident fake CLI.
+// execution error while the process stays resident; with Q08_IGNORE_TERM=1 the CLI itself ignores SIGTERM (only the forced
+// group kill ends it). Otherwise it behaves exactly as the repository's resident fake CLI.
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 const child = spawn(process.execPath, ["-e", 'process.on("SIGTERM", () => {}); setInterval(() => {}, 1000);'], { detached: true, stdio: "ignore" });
@@ -13,3 +14,7 @@ if (process.env.Q08_FAIL_RESULTS === "1") {
   };
 }
 await import("./fake-claude-resident.mjs");
+if (process.env.Q08_IGNORE_TERM === "1") {
+  process.removeAllListeners("SIGTERM");
+  process.on("SIGTERM", () => {});
+}

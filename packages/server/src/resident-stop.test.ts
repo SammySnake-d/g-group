@@ -54,7 +54,7 @@ test("S-PROC-HOST-01 AC-23: 常驻 Compute 一轮 failed 后进程照常驻留�
     assert.deepEqual(reports.filter((w) => w === "stop-unconfirmed"), []);
   } finally {
     await host.close();
-    for (const p of readPids(log)) for (const pid of [p.descendant, p.main]) { try { process.kill(pid, "SIGKILL"); } catch { /* exited */ } }
+    for (const p of readPids(log)) for (const target of [p.descendant, -p.main, p.main]) { try { process.kill(target, "SIGKILL"); } catch { /* exited */ } }
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
@@ -83,7 +83,7 @@ test("S-PROC-HOST-02 AC-23: 取消正在跑的常驻 Compute,要等它和它留�
     assert.deepEqual(reports.filter((w) => w === "stop-unconfirmed"), []);
   } finally {
     await host.close();
-    for (const p of readPids(log)) for (const pid of [p.descendant, p.main]) { try { process.kill(pid, "SIGKILL"); } catch { /* exited */ } }
+    for (const p of readPids(log)) for (const target of [p.descendant, -p.main, p.main]) { try { process.kill(target, "SIGKILL"); } catch { /* exited */ } }
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });

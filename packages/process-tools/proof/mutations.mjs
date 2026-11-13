@@ -22,6 +22,8 @@ const cc2 = "packages/adapter-cc-compute/src/shared-process-r2.test.ts";
 const host = "packages/server/src/resident-stop.test.ts";
 // Round-2 cases that cross packages copy every package and link node_modules/@g-group/* to the copy, so the mutant is what runs.
 const whole = { dirs: ["packages", "scripts/gates"], links: true, timeout: 120000 };
+// Round-2 process-tools cases keep the default copy; their witnesses use bounded waits of up to 15s, so they get a longer limit.
+const own = { timeout: 60000 };
 const cases = [
   { id: "M-PROC-01-main-not-exited", file: cleanup, from: 'if (!done) return { ok: false, reason: "CLI 主进程没有退出", remaining: pid === undefined ? [] : [pid] };', to: 'if (!done) return { ok: true, killed: 0 };', test: "packages/process-tools/src/cleanup.test.ts", name: "S-PROC-02" },
   { id: "M-PROC-02-forget-captured-setsid", file: cleanup, from: 'const after = treeNow(pid);', to: 'known = null; const after = treeNow(pid);', test: "packages/process-tools/src/cleanup.test.ts", name: "S-PROC-01" },
@@ -33,23 +35,27 @@ const cases = [
   { id: "M-LAYER-03-new-location-denied", file: gate, from: 'adapter: ["domain", "kernel", "process"]', to: 'adapter: ["domain", "kernel"]', test: "scripts/gates/process-layer.test.ts", name: "S-PROC-LAYER-01" },
   { id: "M-LAYER-04-relative-bypass", file: gate, from: 'if (!target.startsWith(`${ownInfo.dir}/`))', to: 'if (false && !target.startsWith(`${ownInfo.dir}/`))', test: "scripts/gates/process-layer.test.ts", name: "S-PROC-LAYER-05" },
   // ---- review round 1 (R1-01..R1-03), appended; the nine cases above are unchanged
-  { id: "M-PROC-06-forget-confirmation", file: cleanup, from: "if (confirmed) return confirmed;", to: "/* confirmation forgotten */", test: r2, name: "S-PROC-07" },
-  { id: "M-PROC-07-group-kill-without-anchor", file: cleanup, from: 'if (table && groupHeldByKnown(table, pid)) signalGroup(pid, "SIGKILL");', to: 'signalGroup(pid, "SIGKILL");', test: r2, name: "S-PROC-07" },
-  { id: "M-PROC-08-adopt-reused-group-ps", file: cleanup, from: "if (table) return groupHeldByKnown(table, main) ? treeOf(main, table) : [];", to: "if (table) return treeOf(main, table);", test: r2, name: "S-PROC-08" },
-  { id: "M-PROC-09-adopt-reused-group-pgrep", file: cleanup, from: "return group.some((k) => known?.get(k)?.pgid === main) ? groupRows(group, main) : [];", to: "return groupRows(group, main);", test: r2, name: "S-PROC-08" },
-  { id: "M-PROC-10-capture-after-exit", file: cleanup, from: "if (pid === undefined || pid <= 1 || windows || confirmed || mainExited()) return;", to: "if (pid === undefined || pid <= 1 || windows || confirmed) return;", test: r2, name: "S-PROC-08" },
-  { id: "M-PROC-11-exit-snapshot-reused-ps", file: cleanup, from: "if (table) { remember(table.some((r) => r.pid === pid) ? [] : treeOf(pid, table)); return; }", to: "if (table) { remember(treeOf(pid, table)); return; }", test: r2, name: "S-PROC-09" },
-  { id: "M-PROC-12-exit-snapshot-reused-pgrep", file: cleanup, from: "if (group !== null) remember(group.includes(pid) ? [] : groupRows(group, pid));", to: "if (group !== null) remember(groupRows(group, pid));", test: r2, name: "S-PROC-09" },
-  { id: "M-PROC-13-A1-no-refresh-ps", file: cleanup, from: "for (const row of treeOf(root.pid, table)) known.set(row.pid, row);", to: "void root;", test: r2, name: "S-PROC-10" },
-  { id: "M-PROC-14-A1-no-refresh-pgrep", file: cleanup, from: "for (const row of treeByPgrep(root.pid, pgrep) ?? []) if (!known.has(row.pid)) known.set(row.pid, row);", to: "void root;", test: r2, name: "S-PROC-10" },
-  { id: "M-PROC-15-A12-captured-unreadable-continues", file: cleanup, from: 'if (after === null || known === null) return { ok: false, reason: "读不到进程表,无法确认它启动的子进程都已退出", remaining: [] };', to: 'if (after === null && known === null) return { ok: false, reason: "读不到进程表,无法确认它启动的子进程都已退出", remaining: [] };', test: r2, name: "S-PROC-11" },
-  { id: "M-PROC-16-A13-requeststop-not-idempotent", file: cleanup, from: "if (requested) return;", to: "/* not idempotent */", test: r2, name: "S-PROC-12" },
-  { id: "M-PROC-17-A11-windows-claims-success", file: cleanup, from: 'if (windows) return { ok: false, reason: "当前平台无法确认完整进程树已退出", remaining: [] };', to: "if (windows) return { ok: true, killed: 0 };", test: r2, name: "S-PROC-13" },
-  { id: "M-PROC-18-no-exit-snapshot", file: cleanup, from: 'child.once("exit", () => { atExit(); resolve(); });', to: 'child.once("exit", () => { resolve(); });', test: r2, name: "S-PROC-14" },
+  { id: "M-PROC-06-forget-confirmation", file: cleanup, from: "if (confirmed) return confirmed;", to: "/* confirmation forgotten */", test: r2, name: "S-PROC-07", ...own },
+  { id: "M-PROC-07-group-kill-without-anchor", file: cleanup, from: 'if (snap && groupHeldByKnown(snap, pid)) signalGroup(pid, "SIGKILL");', to: 'signalGroup(pid, "SIGKILL");', test: r2, name: "S-PROC-07", ...own },
+  { id: "M-PROC-08-adopt-reused-group-ps", file: cleanup, from: "if (snap) return groupHeldByKnown(snap, main) ? stamp(treeOf(main, snap.table), snap) : [];", to: "if (snap) return stamp(treeOf(main, snap.table), snap);", test: r2, name: "S-PROC-08", ...own },
+  { id: "M-PROC-09-adopt-reused-group-pgrep", file: cleanup, from: "return group.some((k) => known?.get(k)?.pgid === main) ? groupRows(group, main) : [];", to: "return groupRows(group, main);", test: r2, name: "S-PROC-08", ...own },
+  { id: "M-PROC-10-capture-after-exit", file: cleanup, from: "if (pid === undefined || pid <= 1 || windows || confirmed || mainExited()) return;", to: "if (pid === undefined || pid <= 1 || windows || confirmed) return;", test: r2, name: "S-PROC-08", ...own },
+  { id: "M-PROC-11-exit-snapshot-reused-ps", file: cleanup, from: "if (snap) { exitSeen = true; remember(snap.table.some((r) => r.pid === pid) ? [] : stamp(treeOf(pid, snap.table), snap)); return; }", to: "if (snap) { exitSeen = true; remember(stamp(treeOf(pid, snap.table), snap)); return; }", test: r2, name: "S-PROC-09", ...own },
+  { id: "M-PROC-12-exit-snapshot-reused-pgrep", file: cleanup, from: "if (group !== null) { exitSeen = true; remember(group.includes(pid) ? [] : groupRows(group, pid)); }", to: "if (group !== null) { exitSeen = true; remember(groupRows(group, pid)); }", test: r2, name: "S-PROC-09", ...own },
+  { id: "M-PROC-13-A1-no-refresh-ps", file: cleanup, from: "for (const row of stamp(treeOf(root.pid, snap.table), snap)) known.set(row.pid, row);", to: "void root;", test: r2, name: "S-PROC-10", ...own },
+  { id: "M-PROC-14-A1-no-refresh-pgrep", file: cleanup, from: "for (const row of treeByPgrep(root.pid, pgrep) ?? []) if (!known.has(row.pid)) known.set(row.pid, row);", to: "void root;", test: r2, name: "S-PROC-10", ...own },
+  { id: "M-PROC-15-A12-captured-unreadable-continues", file: cleanup, from: 'if (after === null || known === null) return { ok: false, reason: "读不到进程表,无法确认它启动的子进程都已退出", remaining: [] };', to: 'if (after === null && known === null) return { ok: false, reason: "读不到进程表,无法确认它启动的子进程都已退出", remaining: [] };', test: r2, name: "S-PROC-11", ...own },
+  { id: "M-PROC-16-A13-requeststop-not-idempotent", file: cleanup, from: "if (requested) return;", to: "/* not idempotent */", test: r2, name: "S-PROC-12", ...own },
+  { id: "M-PROC-17-A11-windows-claims-success", file: cleanup, from: 'if (windows) return { ok: false, reason: "当前平台无法确认完整进程树已退出", remaining: [] };', to: "if (windows) return { ok: true, killed: 0 };", test: r2, name: "S-PROC-13", ...own },
+  { id: "M-PROC-18-no-exit-snapshot", file: cleanup, from: "if (exitSeen || pid === undefined || pid <= 1 || windows) return;", to: "return;", test: r2, name: "S-PROC-14", ...own },
+  { id: "M-PROC-19-identity-ignores-start-time", file: cleanup, from: "return r.born === undefined || now === undefined || Math.abs(now - r.born) <= BORN_SLACK_MS;", to: "return true;", test: r2, name: "S-PROC-15", ...own },
+  { id: "M-PROC-20-no-start-time-slack", file: cleanup, from: "const BORN_SLACK_MS = 2000;", to: "const BORN_SLACK_MS = 0;", test: r2, name: "S-PROC-15", ...own },
+  { id: "M-PROC-21-group-recorded-late-not-at-exit", file: cleanup, from: 'child.once("exit", () => { exitSnapshot(); resolve(); });', to: 'child.once("exit", () => { resolve(); });', test: r2, name: "S-PROC-16", ...own },
   { id: "M-CC-01-R1-01-failed-turn-requires-exit", file: resident, from: "if (!st.stopped) return { ok: true as const, killed: 0 };", to: "/* unstopped resident must exit */", test: host, name: "S-PROC-HOST-01", ...whole },
   { id: "M-CC-02-A6-confirm-only-last-handle", file: resident, from: "for (const cleanup of [...st.cleanups]) {", to: "for (const cleanup of st.cleanups.slice(-1)) {", test: cc2, name: "S-PROC-CC-03", ...whole },
   { id: "M-CC-03-A7-retire-without-capture", file: resident, from: "    proc.cleanup.capture();", to: "    void proc;", test: cc2, name: "S-PROC-CC-03", ...whole },
   { id: "M-CC-04-keep-confirmed-handles", file: resident, from: "st.cleanups.splice(st.cleanups.indexOf(cleanup), 1);", to: "void cleanup;", test: cc2, name: "S-PROC-CC-03", ...whole },
+  { id: "M-CC-06-A16-resident-does-not-wait-for-main-exit", file: resident, from: "const result = await cleanup.quiesce(timeoutMs, resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS) + timeoutMs);", to: "const result = await cleanup.quiesce(timeoutMs, 0);", test: cc2, name: "S-PROC-CC-05", ...whole },
   { id: "M-CC-05-A10-frozen-stop-without-capture", file: oneShot, from: "if (!IS_WINDOWS && round.pid !== undefined && !round.exited) round.cleanup.capture();", to: "/* no capture before the frozen group SIGKILL */", test: cc2, name: "S-PROC-CC-04", ...whole },
 ];
 const seal = Object.fromEntries([...new Set(cases.map((c) => c.file))].map((f) => [f, hash(path.join(root, f))]));

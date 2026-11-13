@@ -29,8 +29,9 @@ async function until(cond: () => boolean, what: string, ms = 10000) {
   }
 }
 const readPids = (log: string): { main: number; descendant: number }[] => (fs.existsSync(log) ? fs.readFileSync(log, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l) as { main: number; descendant: number }) : []);
+/** Last-resort cleanup of what this test started: each pid, and the group it leads (the fake CLI and its helper share one) */
 function killOwn(pids: readonly number[]) {
-  for (const pid of pids) if (pid > 1) { try { process.kill(pid, "SIGKILL"); } catch { /* exited */ } }
+  for (const pid of pids) if (pid > 1) for (const target of [-pid, pid]) { try { process.kill(target, "SIGKILL"); } catch { /* exited */ } }
 }
 
 test("S-PROC-CC-03 AC-23: resident stop confirms the leftovers of an idle-reclaimed process too, and a confirmed handle is dropped", async () => {
@@ -66,6 +67,37 @@ test("S-PROC-CC-03 AC-23: resident stop confirms the leftovers of an idle-reclai
   } finally {
     if (originalPath === undefined) delete process.env.PATH;
     else process.env.PATH = originalPath;
+    try { if (id) { await adapter.stop(id); await adapter.quiesce!(id, 2000); } } finally {
+      killOwn(readPids(log).flatMap((p) => [p.descendant, p.main]));
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+});
+
+test("S-PROC-CC-05 AC-23: resident stop confirmation waits for a CLI that ignores SIGTERM until the forced group kill ends it", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "q08-ccr-stubborn-"));
+  const log = path.join(dir, "pids.jsonl");
+  const adapter = createResidentComputeAdapter({
+    runner: { command: process.execPath, args: [fileURLToPath(new URL("../test-support/resident-leaver.mjs", import.meta.url)), `--fake-dir=${dir}${path.sep}`] },
+    hostEnv: { FAKE_SCRIPT: "{}", FAKE_RECORD: path.join(dir, "record.jsonl"), Q08_PIDS_LOG: log, Q08_IGNORE_TERM: "1" }, reapForceMs: 400 });
+  let id: string | undefined;
+  try {
+    const result = await adapter.spawn(brief);
+    assert.equal(result.ok, true);
+    if (!result.ok) throw new Error("spawn failed");
+    id = result.computeId;
+    await adapter.settled(id);
+    const [resident] = readPids(log);
+    if (!resident) throw new Error("launch not recorded");
+    // give the fixture time to replace the fake CLI's SIGTERM handler (it does so right after the fake finished loading)
+    await new Promise((r) => setTimeout(r, 300));
+    assert.deepEqual(await adapter.stop(id), { ok: true });
+    await new Promise((r) => setTimeout(r, 100));
+    assert.equal(live(resident.main), true, "SIGTERM alone does not end this CLI; the stop is only a request so far");
+    const stopped = await adapter.quiesce!(id, 3000);
+    assert.equal(stopped.ok, true);
+    assert.deepEqual([live(resident.main), live(resident.descendant)], [false, false], "confirmed only after the forced kill ended the main and its leftover was closed");
+  } finally {
     try { if (id) { await adapter.stop(id); await adapter.quiesce!(id, 2000); } } finally {
       killOwn(readPids(log).flatMap((p) => [p.descendant, p.main]));
       fs.rmSync(dir, { recursive: true, force: true });

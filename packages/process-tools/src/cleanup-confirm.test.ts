@@ -1,6 +1,7 @@
 // AC-23 R1-02/R1-03 (review round 1): a confirmed handle never re-enumerates or signals by pid; after the main exits only processes
 // it provably left behind are touched. Owned processes only: every "unrelated" process here is a group this test started itself,
-// and every check that a signal was NOT sent uses a replaced process.kill that records instead of signalling.
+// and every check that a signal was NOT sent uses a replaced process.kill that records instead of signalling. Where a scenario
+// needs a pid to change hands (which a test cannot arrange for real), ps is replaced by a script printing a table the test wrote.
 import assert from "node:assert/strict";
 import { type ChildProcess, execFileSync, spawn, spawnSync } from "node:child_process";
 import { EventEmitter, once } from "node:events";
@@ -32,7 +33,7 @@ function jsonLines(child: ChildProcess) {
   const queue: Record<string, number>[] = [];
   let wake: (() => void) | undefined;
   readline.createInterface({ input: child.stdout! }).on("line", (l) => { queue.push(JSON.parse(l) as Record<string, number>); wake?.(); });
-  return async (ms = 5000): Promise<Record<string, number>> => {
+  return async (ms = 15000): Promise<Record<string, number>> => {
     const t0 = Date.now();
     while (!queue.length) {
       if (Date.now() - t0 > ms) throw new Error("fixture line timed out");
@@ -57,6 +58,10 @@ async function bystander() {
   const { kid } = await jsonLines(by)();
   return { by, leader: by.pid!, kid: kid! };
 }
+/** Wait for an owned child's exit, bounded: an implementation that never stops it must fail the test by name, not hang the file */
+async function exitOf(child: ChildProcess, ms = 10000) {
+  if (child.exitCode === null && child.signalCode === null) await once(child, "exit", { signal: AbortSignal.timeout(ms) });
+}
 async function endOwned(child: ChildProcess, extra: readonly number[] = []) {
   for (const pid of extra) { try { realKill.call(process, pid, "SIGKILL"); } catch { /* exited */ } }
   if (child.pid !== undefined) { try { realKill.call(process, -child.pid, "SIGKILL"); } catch { /* exited */ } }
@@ -65,8 +70,25 @@ async function endOwned(child: ChildProcess, extra: readonly number[] = []) {
 /** pgrep available, ps not: the restricted-sandbox enumeration path, on any platform */
 function pgrepOnlyPath() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "q08-pgrep-only-"));
-  fs.symlinkSync("/usr/bin/pgrep", path.join(dir, "pgrep"));
+  const real = (process.env.PATH ?? "").split(path.delimiter).map((d) => path.join(d, "pgrep")).find((f) => fs.existsSync(f)) ?? "/usr/bin/pgrep";
+  fs.symlinkSync(real, path.join(dir, "pgrep"));
   return dir;
+}
+/** ps replaced by a script that prints the table the test wrote (pid ppid pgid stat start-time); pgrep is not on this PATH */
+function scriptedPs() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "q08-scripted-ps-"));
+  const table = path.join(dir, "table");
+  fs.writeFileSync(table, "");
+  fs.writeFileSync(path.join(dir, "ps"), `#!/bin/sh\nexec /bin/cat "${table}"\n`, { mode: 0o755 });
+  // the form ps prints with LC_ALL=C, e.g. "Sun Nov  1 16:00:00 2026"
+  const at = (ms: number) => { const [wd, mon, day, year, time] = new Date(ms).toString().split(" "); return `${wd} ${mon} ${String(Number(day)).padStart(2)} ${time} ${year}`; };
+  return { dir, show: (rows: readonly (readonly [pid: number, ppid: number, pgid: number, stat: string, bornMs: number])[]) => fs.writeFileSync(table, rows.map(([pid, ppid, pgid, stat, born]) => `${pid} ${ppid} ${pgid} ${stat} ${at(born)}\n`).join("")) };
+}
+/** The pid of an owned child that has already exited: a number nobody holds, to stand for a main that is gone */
+async function spentPid() {
+  const gone = spawn(process.execPath, ["-e", ""], { stdio: "ignore" });
+  await exitOf(gone);
+  return gone.pid!;
 }
 
 test("S-PROC-07 AC-23: a confirmed handle remembers its receipt and never enumerates or signals by the old pid again", async () => {
@@ -78,7 +100,7 @@ test("S-PROC-07 AC-23: a confirmed handle remembers its receipt and never enumer
     descendant = (await jsonLines(child)()).pid;
     const cleanup = createProcessCleanup(child);
     cleanup.requestStop(50);
-    if (child.exitCode === null && child.signalCode === null) await once(child, "exit");
+    await exitOf(child);
     // the main is gone and reaped: from here on its pid may belong to anyone, so nothing may be sent to it or its group id
     const sent = recordKills((target) => target !== main && target !== -main);
     const first = await cleanup.quiesce(2000, 2000);
@@ -179,9 +201,8 @@ test("S-PROC-10 AC-23: a descendant started by a known process after capture is 
         realKill.call(process, d, "SIGUSR2");
         const g = (await next()).g!;
         owned.push(g);
-        const exit = once(child, "exit");
         child.kill("SIGTERM");
-        await exit;
+        await exitOf(child);
         if (onlyPgrep) process.env.PATH = pgrepDir;
         const result = await cleanup.quiesce(3000, 500);
         process.env.PATH = originalPath;
@@ -205,9 +226,8 @@ test("S-PROC-11 AC-23: an earlier capture does not replace a current observation
   try {
     const cleanup = createProcessCleanup(child);
     cleanup.capture();
-    const exit = once(child, "exit");
     child.kill("SIGKILL");
-    await exit;
+    await exitOf(child);
     process.env.PATH = "/g-group-no-command-fixture";
     const result = await cleanup.quiesce(50, 50);
     assert.equal(result.ok, false);
@@ -264,9 +284,8 @@ test("S-PROC-14 AC-23: same-group members alive when the main exits are still cl
     const cleanup = createProcessCleanup(child);
     const c = (await jsonLines(child)()).c!;
     owned.push(c);
-    const exit = once(child, "exit");
     child.kill("SIGTERM");
-    await exit;
+    await exitOf(child);
     assert.equal(live(c), true, "only the main got SIGTERM; its same-group child is left");
     const result = await cleanup.quiesce(2000, 500);
     // the group SIGKILL may reap it before the per-pid kill is counted, so the count is not pinned here
@@ -274,5 +293,79 @@ test("S-PROC-14 AC-23: same-group members alive when the main exits are still cl
     assert.equal(live(c), false, "the member recorded at main exit was closed before the receipt");
   } finally {
     await endOwned(child, owned);
+  }
+});
+
+test("S-PROC-15 AC-23: a recorded leftover is that process only while its start time matches; a later holder of the pid is not signalled", async () => {
+  const { by, leader, kid } = await bystander();
+  const ps = scriptedPs();
+  const originalPath = process.env.PATH;
+  try {
+    const main = await spentPid();
+    const t0 = Date.UTC(2026, 10, 1, 8, 0, 0);
+    const stub = Object.assign(new EventEmitter(), { pid: main, exitCode: null as number | null, signalCode: null, kill: () => { throw new Error("stub: never signals"); } });
+    const sent = recordKills(() => false);
+    process.env.PATH = ps.dir;
+    // while the main lives it has one setsid child X (the table uses the bystander leader's pid for it); captured with its start time
+    ps.show([[main, 1, main, "S", t0], [leader, main, leader, "Ss", t0 + 5000]]);
+    const cleanup = createProcessCleanup(stub as unknown as ChildProcess);
+    cleanup.capture();
+    ps.show([[leader, 1, leader, "Ss", t0 + 5000]]);
+    stub.exitCode = 0;
+    stub.emit("exit", 0, null);
+    // the same process printed a second later (ps start times can differ by a second between runs): still ours, so it is signalled
+    ps.show([[leader, 1, leader, "Ss", t0 + 6000]]);
+    const same = await cleanup.quiesce(150, 0);
+    assert.deepEqual(same, { ok: false, reason: "还有 1 个进程没退出", remaining: [leader] });
+    const before = sent.filter(([t]) => t === leader).length;
+    assert.equal(before > 0, true, "control: with a matching start time the recorded leftover is signalled");
+    // hours later the pid is held by a process started at another time: not what this main left behind
+    ps.show([[leader, 1, leader, "Ss", t0 + 3 * 3600_000]]);
+    const later = await cleanup.quiesce(150, 0);
+    process.env.PATH = originalPath;
+    process.kill = realKill;
+    assert.deepEqual(later, { ok: true, killed: 0 });
+    assert.equal(sent.filter(([t]) => t === leader).length, before, "no further signal to a pid whose holder started at another time");
+    assert.deepEqual(sent.filter(([t]) => t === main || t === -main), [], "never the exited main's pid or group id");
+    assert.deepEqual([live(leader), live(kid)], [true, true]);
+  } finally {
+    process.kill = realKill;
+    if (originalPath === undefined) delete process.env.PATH;
+    else process.env.PATH = originalPath;
+    fs.rmSync(ps.dir, { recursive: true, force: true });
+    await endOwned(by, [kid]);
+  }
+});
+
+test("S-PROC-16 AC-23: only the group members seen when the main exited are its leftovers; a later group under the same id is not adopted", async () => {
+  const { by, leader, kid } = await bystander();
+  const ps = scriptedPs();
+  const originalPath = process.env.PATH;
+  try {
+    const main = await spentPid();
+    const t0 = Date.UTC(2026, 10, 1, 8, 0, 0);
+    const stub = Object.assign(new EventEmitter(), { pid: main, exitCode: null as number | null, signalCode: null, kill: () => { throw new Error("stub: never signals"); } });
+    const sent = recordKills(() => false);
+    process.env.PATH = ps.dir;
+    ps.show([[main, 1, main, "S", t0]]);
+    const cleanup = createProcessCleanup(stub as unknown as ChildProcess);
+    // at the exit event one member X (table: the bystander leader's pid) is left in the main's group
+    ps.show([[leader, 1, main, "S", t0 + 5000]]);
+    stub.exitCode = 0;
+    stub.emit("exit", 0, null);
+    // later X is gone and a group with the same id holds another process Y (table: the bystander child's pid), its leader gone too
+    ps.show([[kid, 1, main, "S", t0 + 3 * 3600_000]]);
+    const result = await cleanup.quiesce(150, 0);
+    process.env.PATH = originalPath;
+    process.kill = realKill;
+    assert.deepEqual(result, { ok: true, killed: 0 });
+    assert.deepEqual(sent, [], "nothing recorded at the exit is alive, so nothing is signalled: not Y, not the group id");
+    assert.deepEqual([live(leader), live(kid)], [true, true]);
+  } finally {
+    process.kill = realKill;
+    if (originalPath === undefined) delete process.env.PATH;
+    else process.env.PATH = originalPath;
+    fs.rmSync(ps.dir, { recursive: true, force: true });
+    await endOwned(by, [kid]);
   }
 });
