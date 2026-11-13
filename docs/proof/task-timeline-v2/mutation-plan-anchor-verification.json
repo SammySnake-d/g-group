@@ -1,0 +1,14 @@
+{
+  "event": "mutation_definition_anchors_verified",
+  "total": 24,
+  "old_22_semantically_unchanged": true,
+  "test_files": [
+    "packages/server/src/task-timeline.test.ts",
+    "packages/server/src/task-timeline-origin.test.ts"
+  ],
+  "expected_tests_each_run": 13,
+  "unique_anchors": true,
+  "mutants_executed_here": false,
+  "normalized_mutant_sha256": "5b258320755552fca80eda1126e43c642ec6414056537792afb374fd69fdb12e",
+  "runner_delta": "one argv site: plan['test_file'] -> *plan['test_files']; no kill/completeness predicate changes"
+}

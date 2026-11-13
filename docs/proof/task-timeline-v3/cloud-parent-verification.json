@@ -1,0 +1,468 @@
+{
+  "at": "2026-11-13T02:32:22.921781+08:00",
+  "head": "3d92212ef4d698742c2daf221bd3f23effb75fae",
+  "base": "272b1b5d77bd95f34467a5aa04d0bf5891355887",
+  "red_commit": "49cd32c9896d72dd7156d0b9c1126630d9c6ac89",
+  "archive_sha256": "08a73907a6e2e1769006f4be9885a78664f4c5ddbedd638944cfc0dfd636d3f4",
+  "archive_bytes": 138446,
+  "safe_members_verified": 47,
+  "recorded_phase_log_hashes_verified": 15,
+  "source_frozen_files_verified": 542,
+  "source_unchanged": true,
+  "real_actor_bug_red": {
+    "tests": 2,
+    "pass": 0,
+    "fail": 2,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "same_thirteen_red": {
+    "tests": 13,
+    "pass": 0,
+    "fail": 13,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "same_thirteen_green": {
+    "tests": 13,
+    "pass": 13,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "dependency_regression": {
+    "tests": 33,
+    "pass": 33,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "full": {
+    "tests": 1499,
+    "pass": 1499,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "mutations": {
+    "strict_named_kills": 24,
+    "rows": [
+      {
+        "id": "M01",
+        "expected_test": "TT01 manual creation, user assignment and real model-attempt facts are append-only and action-idempotent",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 10,
+          "fail": 3,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [
+          {
+            "name": "TT07 task timeline enforces current room membership before returning any events or cursor",
+            "assertion": true
+          },
+          {
+            "name": "TT08 timeline insert failure rolls back creation and task transition with no durable or live ghost",
+            "assertion": true
+          }
+        ],
+        "tap_sha256": "84305d4417137064c55b125e1ebf9ac698953a8a7ac970e042ab6cfe84a8c8b2"
+      },
+      {
+        "id": "M02",
+        "expected_test": "TT01 manual creation, user assignment and real model-attempt facts are append-only and action-idempotent",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "ba443ec4291b38b3295d78b34f1597886694330949401bd5d9a03bbedeaa7e0b"
+      },
+      {
+        "id": "M03",
+        "expected_test": "TT01 manual creation, user assignment and real model-attempt facts are append-only and action-idempotent",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 11,
+          "fail": 2,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [
+          {
+            "name": "TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text",
+            "assertion": true
+          }
+        ],
+        "tap_sha256": "fec88ae967a084a35215c62d3f419884232128f98a8319ab1b793c8f1a5c4156"
+      },
+      {
+        "id": "M04",
+        "expected_test": "TT02 contact dispatch and explicit rerun both record their actual creator and original source",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "a1d64ab9731705d6829a231bf1989423c01ce18eeee41126fb47559979c1b8e2"
+      },
+      {
+        "id": "M05",
+        "expected_test": "TT02 contact dispatch and explicit rerun both record their actual creator and original source",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "0ad0f3776a705df40cb27fefb2e56c27506c891373f13d33eea0dbd98c4e5b80"
+      },
+      {
+        "id": "M06",
+        "expected_test": "TT03 task transitions preserve pre/post state and do not turn duplicate or rejected actions into history",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 11,
+          "fail": 2,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [
+          {
+            "name": "TT01 manual creation, user assignment and real model-attempt facts are append-only and action-idempotent",
+            "assertion": true
+          }
+        ],
+        "tap_sha256": "d18d8e1e194946ce722f4160f56c24dcd132b60383b949cd74b33bcf28c54f86"
+      },
+      {
+        "id": "M07",
+        "expected_test": "TT03 task transitions preserve pre/post state and do not turn duplicate or rejected actions into history",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "c0b7ef04cc5cb8610ba6b22fae384f75525c543ccfbe14d31847a7e17cd06cfd"
+      },
+      {
+        "id": "M08",
+        "expected_test": "TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "83c8a518caef0cb013765ace0ee89bf84821a287096a593d891140c298c362f7"
+      },
+      {
+        "id": "M09",
+        "expected_test": "TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "1f266dfed1039829eed574ea776813e1c3ce2de94d12ef47e4d0ca13492be6c2"
+      },
+      {
+        "id": "M10",
+        "expected_test": "TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 11,
+          "fail": 2,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [
+          {
+            "name": "TT10 queued continuation is not labeled accepted until the old round ends and the native resume succeeds",
+            "assertion": true
+          }
+        ],
+        "tap_sha256": "92b4fec1df1ff16ca530186ed2a0a401d71e6153447bdacd428e37750e403677"
+      },
+      {
+        "id": "M11",
+        "expected_test": "TT05 rebind appends both sides' real linkage versions atomically and replay does not duplicate them",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 11,
+          "fail": 2,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [
+          {
+            "name": "TT11 a failed target-side rebind fact rolls back both tasks, both links and the action receipt before a clean retry",
+            "assertion": true
+          }
+        ],
+        "tap_sha256": "c2b1b986d7cc03f762c7d53c0a076a35b40a12d5fca515d83cd9e0ab9571224e"
+      },
+      {
+        "id": "M12",
+        "expected_test": "TT06 same-timestamp keyset pages are task-bound, stable under append and strictly validate cursors and limits",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 9,
+          "fail": 4,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [
+          {
+            "name": "TT02 contact dispatch and explicit rerun both record their actual creator and original source",
+            "assertion": true
+          },
+          {
+            "name": "TT08 timeline insert failure rolls back creation and task transition with no durable or live ghost",
+            "assertion": true
+          },
+          {
+            "name": "TT09 real SQLite reopen preserves event bytes and continuation cursor but does not invent legacy task history",
+            "assertion": true
+          }
+        ],
+        "tap_sha256": "733adc2a5abb40bc7b6f4c060fa1c7f5b19fed4eedc0c456c43e281b05beb32c"
+      },
+      {
+        "id": "M13",
+        "expected_test": "TT06 same-timestamp keyset pages are task-bound, stable under append and strictly validate cursors and limits",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "432857c6eae58f3e113e1703d78221ccf582f3e68e81d996aeff491425e7b5a3"
+      },
+      {
+        "id": "M14",
+        "expected_test": "TT06 same-timestamp keyset pages are task-bound, stable under append and strictly validate cursors and limits",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "3e4e5fa9af2630c55d7fd2b96edbc8afd77c332e45946663644fe878ccd00443"
+      },
+      {
+        "id": "M15",
+        "expected_test": "TT06 same-timestamp keyset pages are task-bound, stable under append and strictly validate cursors and limits",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "580a2e97361ff39f1deb08675ea1e227c36e2a6b2b2828c43f0d22723a7ed153"
+      },
+      {
+        "id": "M16",
+        "expected_test": "TT07 task timeline enforces current room membership before returning any events or cursor",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "d6bcf8dc095a0bec9ee7768fde57bbae6f3ecee0de18611ab5ab56b960f1e667"
+      },
+      {
+        "id": "M17",
+        "expected_test": "TT08 timeline insert failure rolls back creation and task transition with no durable or live ghost",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 11,
+          "fail": 2,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [
+          {
+            "name": "TT11 a failed target-side rebind fact rolls back both tasks, both links and the action receipt before a clean retry",
+            "assertion": true
+          }
+        ],
+        "tap_sha256": "02861402e70f3280d6e78855ee37362917b5f7cfa2fd97da6e98c70a3dbcb2f4"
+      },
+      {
+        "id": "M18",
+        "expected_test": "TT09 real SQLite reopen preserves event bytes and continuation cursor but does not invent legacy task history",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "c79f4aa6d3da23d2f3401e7cb5abc795032dd361d8b50d7b568913eac627d0e8"
+      },
+      {
+        "id": "M19",
+        "expected_test": "TT10 queued continuation is not labeled accepted until the old round ends and the native resume succeeds",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "9e11e535e9b1af068e6ad3b2ade8d3363a6cd1ce7e0345804835904ed3d88b83"
+      },
+      {
+        "id": "M20",
+        "expected_test": "TT11 a failed target-side rebind fact rolls back both tasks, both links and the action receipt before a clean retry",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "b342510a7df99ed9d4fce8064e72b3b5e26c2f56545386a93bba2d04e7baa3d9"
+      },
+      {
+        "id": "M21",
+        "expected_test": "TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "715bc1ff071af2d31077beeb226c566ae740791404484e4f25a6e06e61b83c44"
+      },
+      {
+        "id": "M22",
+        "expected_test": "TT09 real SQLite reopen preserves event bytes and continuation cursor but does not invent legacy task history",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "7e3c8493dd12f8095f5542dc5dca49cae2cc62eb6bcd2af13e5eeb17e6fc6c71"
+      },
+      {
+        "id": "M23",
+        "expected_test": "TT12 contact-owned stop records the actual contact actor while user cancellation stays user",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "aaf677942aedda98d20856d5fe84530b7b7df0db4b2d843b7d44493b450f3528"
+      },
+      {
+        "id": "M24",
+        "expected_test": "TT13 autonomous rerun reuses the real contact initiator and manual rerun remains user",
+        "designated_ERR_ASSERTION": true,
+        "counts": {
+          "tests": 13,
+          "pass": 12,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "collateral_failures": [],
+        "tap_sha256": "70dd44cb4e8298d47b5ccfefd42ceb44e3b8680ce4370fd2a98765b23ac519a9"
+      }
+    ]
+  },
+  "cloud_behavior_complete": true,
+  "formal_gates_not_inferred_from_cloud": true,
+  "review_and_provenance_incomplete": true,
+  "complete": false
+}

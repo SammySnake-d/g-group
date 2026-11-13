@@ -1,0 +1,81 @@
+{
+  "event": "command_execution",
+  "command": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "packages/server/src/task-timeline.test.ts",
+    "packages/server/src/task-timeline-origin.test.ts"
+  ],
+  "cwd": "/private/tmp/gg-req-task-timeline-v2-final-red-20261113",
+  "red_commit": "3709debf59585bc2926754b3a2335da73f26ec20",
+  "base_empty_stream_commit": "63c8c4e5d18f1dc76f76d63e3a8fb273e631cf21",
+  "exit": 1,
+  "counts": {
+    "tests": 13,
+    "pass": 0,
+    "fail": 13,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "failures": [
+    {
+      "name": "TT12 contact-owned stop records the actual contact actor while user cancellation stays user",
+      "assertion": true
+    },
+    {
+      "name": "TT13 autonomous rerun reuses the real contact initiator and manual rerun remains user",
+      "assertion": true
+    },
+    {
+      "name": "TT01 manual creation, user assignment and real model-attempt facts are append-only and action-idempotent",
+      "assertion": true
+    },
+    {
+      "name": "TT02 contact dispatch and explicit rerun both record their actual creator and original source",
+      "assertion": true
+    },
+    {
+      "name": "TT03 task transitions preserve pre/post state and do not turn duplicate or rejected actions into history",
+      "assertion": true
+    },
+    {
+      "name": "TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text",
+      "assertion": true
+    },
+    {
+      "name": "TT05 rebind appends both sides' real linkage versions atomically and replay does not duplicate them",
+      "assertion": true
+    },
+    {
+      "name": "TT06 same-timestamp keyset pages are task-bound, stable under append and strictly validate cursors and limits",
+      "assertion": true
+    },
+    {
+      "name": "TT07 task timeline enforces current room membership before returning any events or cursor",
+      "assertion": true
+    },
+    {
+      "name": "TT08 timeline insert failure rolls back creation and task transition with no durable or live ghost",
+      "assertion": true
+    },
+    {
+      "name": "TT09 real SQLite reopen preserves event bytes and continuation cursor but does not invent legacy task history",
+      "assertion": true
+    },
+    {
+      "name": "TT10 queued continuation is not labeled accepted until the old round ends and the native resume succeeds",
+      "assertion": true
+    },
+    {
+      "name": "TT11 a failed target-side rebind fact rolls back both tasks, both links and the action receipt before a clean retry",
+      "assertion": true
+    }
+  ],
+  "same_test_files": {
+    "packages/server/src/task-timeline.test.ts": "505693df33a22b3825aba37a0de6f27d1c4683e626e1e52986ea10141c493a78",
+    "packages/server/src/task-timeline-origin.test.ts": "6038004818a068c69c0b1c9bcc044be17105d08a651d078a742d5795d9680bde"
+  },
+  "timing": "Retrospective final-13 empty-stream calibration after the v2 product fixes; distinct from the earlier two real bug regressions on the v1 implementation."
+}

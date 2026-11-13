@@ -1,0 +1,11 @@
+{
+  "event": "command_execution",
+  "label": "lint-v2",
+  "command": [
+    "npm",
+    "run",
+    "lint"
+  ],
+  "cwd": "/private/tmp/gg-req-task-timeline-v2-resume-20261113",
+  "exit": 0
+}

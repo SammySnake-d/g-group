@@ -1,0 +1,24 @@
+diff --git a/packages/server/src/host.ts b/packages/server/src/host.ts
+index 3e4d484..7bbd3fc 100644
+--- a/packages/server/src/host.ts
++++ b/packages/server/src/host.ts
+@@ -1903,8 +1903,8 @@ export class Host {
+ [重跑说明] 这是任务 ${src.task.id} 的第 ${plan.event.attempt} 次重跑${plan.mode === "new_session" ? "(开新会话,不接着原会话)" : ""};上次结果:${why}。已经做过的副作用先核对再继续。`;
+       const doc0: TaskDoc = { task: newTask(taskId, src.task.requester), title: src.title, roomId: src.roomId, sourceSeq: src.sourceSeq, brief, createdAt: this.now(), updatedAt: this.now(), result: null };
+       putDoc(this.db, `task:${taskId}`, 0, doc0);
+-      recordTaskFacts(this.db, null, doc0, "RerunCreate", { kind: "user", id: this.userId }, { requester: doc0.task.requester, rerunOfTask: src.task.id, runId: unit.id });
+-      const { effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: owner }, {}, { cause: "RerunClaim", actor: { kind: "user", id: this.userId }, data: { runId: unit.id } });
++      recordTaskFacts(this.db, null, doc0, "RerunCreate", plan.event.initiator, { requester: doc0.task.requester, rerunOfTask: src.task.id, runId: unit.id });
++      const { effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: owner }, {}, { cause: "RerunClaim", actor: plan.event.initiator, data: { runId: unit.id } });
+       for (const e of eff) if (e.kind === "spawn-compute") effects.push({ kind: "spawn", taskId, requestId: e.requestId, contactId: owner, model: this.computeModelOf(this.contactDoc(owner).value), brief, roomId: src.roomId, rerunOf: unit.id, attempt: plan.event.attempt });
+       const r = this.appendMessageTx(src.roomId, { kind: "contact", id: owner }, {
+         text: `重跑任务:${src.title}(第 ${plan.event.attempt} 次,依据台账 ${unit.id})`,
+@@ -2881,7 +2881,7 @@ export class Host {
+           case "stop": {
+             const t = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
+             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
+-            const { effects: eff } = this.stepTaskTx(a.taskId, { kind: "Cancel", by: contactId });
++            const { effects: eff } = this.stepTaskTx(a.taskId, { kind: "Cancel", by: contactId }, {}, { actor: { kind: "contact", id: contactId } });
+             for (const e of eff) if (e.kind === "stop-compute") {
+               this.stopBy.set(e.computeId, contactId);
+               effects.push({ kind: "stop", taskId: a.taskId, computeId: e.computeId });

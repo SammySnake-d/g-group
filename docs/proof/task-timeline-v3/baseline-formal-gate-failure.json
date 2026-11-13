@@ -1,0 +1,15 @@
+{
+  "baseline_head": "55dcef23196da88ad4e0dabc18b7686db2e044ea",
+  "baseline_gate_log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/task-timeline-resume/v2/seatbelt-q05v2-gates.log",
+  "gate": "G-TAUTO",
+  "flagged_original_tests": [
+    "TT01",
+    "TT03",
+    "TT04",
+    "TT05",
+    "TT07",
+    "TT08"
+  ],
+  "delta": "only explicit construction of real imported createService plus same scoped response references; no assertion removed/weakened, no product/gate change",
+  "original_v2_preserved": true
+}

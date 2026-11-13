@@ -1,0 +1,13 @@
+{
+  "event": "command_execution",
+  "label": "thirteen-v2-green",
+  "command": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "packages/server/src/task-timeline.test.ts",
+    "packages/server/src/task-timeline-origin.test.ts"
+  ],
+  "cwd": "/private/tmp/gg-req-task-timeline-v2-resume-20261113",
+  "exit": 0
+}

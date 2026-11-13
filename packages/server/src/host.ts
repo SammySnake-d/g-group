@@ -27,6 +27,7 @@ import {
   type RunView,
   type SettingsView,
   type TaskView,
+  type TaskTimelineEvent,
   draftIssues,
   draftPreview,
   emptyDraft,
@@ -117,6 +118,7 @@ import {
   scrubRetracted,
   visibleRuns,
 } from "@g-group/kernel";
+import { type TaskFactOrigin, readTaskTimeline, recordFollowFacts, recordTaskFacts, recordTaskTransition } from "./task-timeline.ts";
 import { type AnnouncementOrder, AnnouncementStore } from "./announcements.ts";
 import {
   CONTACT_SYSTEM,
@@ -1487,9 +1489,9 @@ export class Host {
     if (!this.isMember(roomId, { kind: "contact", id: contactId })) throw new HostError("invalid_params", "这位联系人不在这个会话里");
   }
   /** 事务内:负责人认领任务,返回起 Compute 的副作用(与联系人 dispatch 同一条派发路径)。 */
-  private claimForTx(taskId: string, contactId: string): HostEffect[] {
+  private claimForTx(taskId: string, contactId: string, cause: string): HostEffect[] {
     const contact = this.contactDoc(contactId).value;
-    const { doc, effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: contactId });
+    const { doc, effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: contactId }, {}, { cause, actor: { kind: "user", id: this.userId } });
     return eff.flatMap((e): HostEffect[] => (e.kind === "spawn-compute" ? [{ kind: "spawn", taskId, requestId: e.requestId, contactId, model: this.computeModelOf(contact), brief: doc.brief, roomId: doc.roomId }] : []));
   }
   private actionTaskId(key: string): string | null {
@@ -1532,7 +1534,8 @@ export class Host {
       }).seq;
       const doc: TaskDoc = { task: newTask(taskId, this.userId), title: title.slice(0, 500), roomId: room.id, sourceSeq: s, brief, createdAt: this.now(), updatedAt: this.now(), result: null, ...(description ? { description } : {}) };
       putDoc(this.db, `task:${taskId}`, 0, doc);
-      if (owner !== undefined) effects.push(...this.claimForTx(taskId, owner));
+      recordTaskFacts(this.db, null, doc, "ManualCreate", me, { requester: doc.task.requester });
+      if (owner !== undefined) effects.push(...this.claimForTx(taskId, owner, "ManualCreateClaim"));
       recordAction(this.db.store, key, { taskId });
       return s;
     });
@@ -1557,7 +1560,7 @@ export class Host {
         quotedSeqs: [doc.sourceSeq],
         mentions: [{ id: input.contactId, source: "auto" }],
       }).seq;
-      effects.push(...this.claimForTx(input.taskId, input.contactId));
+      effects.push(...this.claimForTx(input.taskId, input.contactId, "ManualAssign"));
       recordAction(this.db.store, key, { taskId: input.taskId });
       return s;
     });
@@ -1571,12 +1574,13 @@ export class Host {
     return d;
   }
   /** 在事务里推进任务状态机;被状态机拒绝抛 conflict。 */
-  private stepTaskTx(id: string, ev: TaskEvent, extra: Partial<TaskDoc> = {}): { doc: TaskDoc; effects: ReturnType<typeof applyTask> extends infer O ? (O extends { ok: true; effects: infer E } ? E : never) : never } {
+  private stepTaskTx(id: string, ev: TaskEvent, extra: Partial<TaskDoc> = {}, origin: TaskFactOrigin = {}): { doc: TaskDoc; effects: ReturnType<typeof applyTask> extends infer O ? (O extends { ok: true; effects: infer E } ? E : never) : never } {
     const cur = this.taskDoc(id);
     const out = applyTask(cur.value.task, ev);
     if (!out.ok) throw new HostError("conflict", `任务 ${id} 拒绝 ${ev.kind}:${out.reason}`);
     const doc: TaskDoc = { ...cur.value, ...extra, task: out.task, updatedAt: this.now() };
     putDoc(this.db, `task:${id}`, cur.ver, doc);
+    recordTaskTransition(this.db, cur.value, doc, ev, origin);
     this.expireQuestionsTx(id, out.task);
     this.retireReviewsTx(id, out.task);
     return { doc, effects: out.effects };
@@ -1643,6 +1647,13 @@ export class Host {
     return this.taskView(this.taskDoc(taskId).value);
   }
   /** 按 id 读权威任务文档(正文与版本同一次读出)投影成视图;群入口、侧边栏、事件都走这里或 listTasks,不读缓存副本(AC-02) */
+  /** U80/D21: 当前成员才可读;不借用未带成员过滤的 tasks.list/progress。 */
+  taskTimeline(q: { taskId: string; cursor?: string; limit?: number }): { events: TaskTimelineEvent[]; nextCursor: string | null } {
+    const doc = this.taskDoc(q.taskId).value;
+    this.roomRow(doc.roomId);
+    if (!this.isMember(doc.roomId, { kind: "user", id: this.userId })) throw new HostError("forbidden", "你不在这个会话里");
+    return readTaskTimeline(this.db, q);
+  }
   taskViewById(id: string): TaskView {
     const d = this.taskDoc(id);
     return this.taskView(d.value, d.ver);
@@ -1892,7 +1903,8 @@ export class Host {
 [重跑说明] 这是任务 ${src.task.id} 的第 ${plan.event.attempt} 次重跑${plan.mode === "new_session" ? "(开新会话,不接着原会话)" : ""};上次结果:${why}。已经做过的副作用先核对再继续。`;
       const doc0: TaskDoc = { task: newTask(taskId, src.task.requester), title: src.title, roomId: src.roomId, sourceSeq: src.sourceSeq, brief, createdAt: this.now(), updatedAt: this.now(), result: null };
       putDoc(this.db, `task:${taskId}`, 0, doc0);
-      const { effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: owner });
+      recordTaskFacts(this.db, null, doc0, "RerunCreate", plan.event.initiator, { requester: doc0.task.requester, rerunOfTask: src.task.id, runId: unit.id });
+      const { effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: owner }, {}, { cause: "RerunClaim", actor: plan.event.initiator, data: { runId: unit.id } });
       for (const e of eff) if (e.kind === "spawn-compute") effects.push({ kind: "spawn", taskId, requestId: e.requestId, contactId: owner, model: this.computeModelOf(this.contactDoc(owner).value), brief, roomId: src.roomId, rerunOf: unit.id, attempt: plan.event.attempt });
       const r = this.appendMessageTx(src.roomId, { kind: "contact", id: owner }, {
         text: `重跑任务:${src.title}(第 ${plan.event.attempt} 次,依据台账 ${unit.id})`,
@@ -2718,6 +2730,7 @@ export class Host {
             const t0 = newTask(taskId, requester);
             const doc0: TaskDoc = { task: t0, title: a.title.slice(0, 500), roomId: a.roomId, sourceSeq: a.sourceSeq, brief: a.task, createdAt: this.now(), updatedAt: this.now(), result: null };
             putDoc(this.db, `task:${taskId}`, 0, doc0);
+            recordTaskFacts(this.db, null, doc0, "ContactDispatch", { kind: "contact", id: contactId }, { requester });
             const { effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: contactId });
             for (const e of eff) if (e.kind === "spawn-compute") effects.push({ kind: "spawn", taskId, requestId: e.requestId, contactId, model: this.computeModelOf(contact), brief: a.task, roomId: a.roomId });
             const cardId = this.newId("card");
@@ -2829,7 +2842,7 @@ export class Host {
             const { effects: sub } = this.stepTaskTx(a.taskId, { kind: "SubmitForReview", commit, computeId: t.task.computeId, constraintVer: t.task.constraintVer }, { result: a.text, deliveredSeq: r.seq, artifacts: arts });
             // 落实:这一版产物覆盖到的补充标 Applied,指向产物与版本
             const applied = fu.applyArtifact(follow.value.state, { artifact: `${commit}@v${resultVer}`, artifactVer: resultVer });
-            if (applied.ok) this.putFollowTx(a.taskId, follow, { ...follow.value, state: applied.value });
+            if (applied.ok) this.putFollowTx(a.taskId, follow, { ...follow.value, state: applied.value }, "FollowUpApplied");
             appended.push({ roomId: t.roomId, seq: r.seq });
             touchedTasks.add(a.taskId);
             // 审查门(AC-26):有跨厂商审查联系人就交给它审,审过才进 T8a 待确认;没有合格审查人,任务停在 T5 等提出者本人回复(豁免,记 waived-by-user)
@@ -2868,7 +2881,7 @@ export class Host {
           case "stop": {
             const t = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
-            const { effects: eff } = this.stepTaskTx(a.taskId, { kind: "Cancel", by: contactId });
+            const { effects: eff } = this.stepTaskTx(a.taskId, { kind: "Cancel", by: contactId }, {}, { actor: { kind: "contact", id: contactId } });
             for (const e of eff) if (e.kind === "stop-compute") {
               this.stopBy.set(e.computeId, contactId);
               effects.push({ kind: "stop", taskId: a.taskId, computeId: e.computeId });
@@ -3350,7 +3363,9 @@ export class Host {
       if (o.ok) task = o.task;
       else this.report("producer-model-rejected", { taskId, model, reason: o.reason });
     }
-    putDoc(this.db, `task:${taskId}`, cur.ver, { ...cur.value, task, models, updatedAt: this.now() });
+    const doc = { ...cur.value, task, models, updatedAt: this.now() };
+    putDoc(this.db, `task:${taskId}`, cur.ver, doc);
+    recordTaskFacts(this.db, cur.value, doc, "ProducerModelAdded", null, { computeId, model });
   }
   /**
    * 送进 Compute 的每一次后续输入(联系人转达、用户退回重试……)都走这里(AC-51 ①⑤):
@@ -3587,7 +3602,7 @@ export class Host {
       for (const x of eff) if (x.kind === "stop-compute") late.push(x.computeId);
       // 新实例的第一轮依据启动时的约束版本
       const f = this.followOf(e.taskId);
-      this.putFollowTx(e.taskId, f, { ...f.value, rounds: [launchVer], resultVer: null });
+      this.putFollowTx(e.taskId, f, { ...f.value, rounds: [launchVer], resultVer: null }, "RoundStarted");
     });
     const session = ledger(r.computeId, model);
     const turn = this.runs.start({ layer: "compute-turn", parentId: session.id, roomId: e.roomId, sourceSeq: session.sourceSeq, contactId: e.contactId, taskId: e.taskId, computeId: r.computeId, upstream: model });
@@ -4540,16 +4555,19 @@ export class Host {
   private followOf(taskId: string): { value: FollowDoc; ver: number } {
     return getDoc<FollowDoc>(this.db, `follow:${taskId}`) ?? { value: { state: fu.emptyFollowUps(taskId), rounds: [], resultVer: null, queued: [] }, ver: 0 };
   }
-  private putFollowTx(taskId: string, cur: { ver: number }, next: FollowDoc) {
+  private putFollowTx(taskId: string, cur: { value: FollowDoc; ver: number }, next: FollowDoc, cause: string, actor: Member | null = null) {
     putDoc(this.db, `follow:${taskId}`, cur.ver, next);
+    recordFollowFacts(this.db, this.taskDoc(taskId).value, cur.value, next, cause, this.now(), actor);
   }
   private authzOf(taskId: string): { value: AuthzDoc; ver: number } {
     return getDoc<AuthzDoc>(this.db, `authz:${taskId}`) ?? { value: { requests: [] }, ver: 0 };
   }
   /** 写任务文档(CAS):用于领域层合成函数已经算好的新任务(改条件、改挂)。 */
-  private saveTaskTx(id: string, cur: { value: TaskDoc; ver: number }, task: Task) {
+  private saveTaskTx(id: string, cur: { value: TaskDoc; ver: number }, task: Task, cause: string) {
     if (task === cur.value.task) return;
-    putDoc(this.db, `task:${id}`, cur.ver, { ...cur.value, task, updatedAt: this.now() });
+    const doc = { ...cur.value, task, updatedAt: this.now() };
+    putDoc(this.db, `task:${id}`, cur.ver, doc);
+    recordTaskFacts(this.db, cur.value, doc, cause, { kind: "user", id: this.userId });
   }
   private roomRuleLines(roomId: string): string[] {
     return this.roomRow(roomId).rules.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -4618,8 +4636,8 @@ export class Host {
     const r = fu.amendWithFollowUp({ task: cur.value.task, followUps: f.value.state }, { roomId: t.roomId, seq: sourceSeq, text: src.text, by: src.sender.id, computeResumable: true });
     if (!r.ok) return r;
     if (r.task === cur.value.task) return { ok: true, effects: [] };
-    this.saveTaskTx(taskId, cur, r.task);
-    this.putFollowTx(taskId, f, { ...f.value, state: r.followUps });
+    this.saveTaskTx(taskId, cur, r.task, "FollowUpAmend");
+    this.putFollowTx(taskId, f, { ...f.value, state: r.followUps }, "FollowUpReceived", { kind: "user", id: src.sender.id });
     this.expireAuthzTx(taskId);
     return { ok: true, effects: this.taskEffectsToHost(taskId, r.taskEffects, `${text}\n(用户补充 #${sourceSeq},任务条件已更新到 v${r.task.constraintVer},之后的产出必须体现它)`) };
   }
@@ -4638,8 +4656,8 @@ export class Host {
     try {
       tx(this.db, () => {
         const f = this.followOf(e.taskId);
-        if (r.ok) this.putFollowTx(e.taskId, f, { ...f.value, rounds: [...f.value.rounds, this.taskDoc(e.taskId).value.task.constraintVer] });
-        else if (/还在运行/.test(r.reason)) this.putFollowTx(e.taskId, f, { ...f.value, queued: [...f.value.queued, e.text] });
+        if (r.ok) this.putFollowTx(e.taskId, f, { ...f.value, rounds: [...f.value.rounds, this.taskDoc(e.taskId).value.task.constraintVer] }, "ResumeAccepted");
+        else if (/还在运行/.test(r.reason)) this.putFollowTx(e.taskId, f, { ...f.value, queued: [...f.value.queued, e.text] }, "ResumeQueued");
       });
     } catch (err) {
       this.report("follow-round", err);
@@ -4648,7 +4666,7 @@ export class Host {
   private flushQueuedTx(taskId: string, computeId: string): HostEffect[] {
     const f = this.followOf(taskId);
     if (!f.value.queued.length) return [];
-    this.putFollowTx(taskId, f, { ...f.value, queued: [] });
+    this.putFollowTx(taskId, f, { ...f.value, queued: [] }, "ResumeDequeued");
     return [{ kind: "resume", taskId, computeId, text: f.value.queued.join("\n\n") }];
   }
   /** Compute 事件里与意图相关的部分:轮次结束记版本、排队补充续上、改前先问时把受阻变成授权提问、改挂回滚等停止确认。 */
@@ -4659,7 +4677,7 @@ export class Host {
     if (ev.kind === "stopped" && f.value.state.pendingRollback?.computeId === ev.computeId) {
       const r = fu.confirmRollbackStopped(f.value.state, ev.computeId);
       if (r.ok) {
-        this.putFollowTx(taskId, f, { ...f.value, state: r.value, rounds: [] });
+        this.putFollowTx(taskId, f, { ...f.value, state: r.value, rounds: [] }, "RollbackStopped");
         for (const e of r.effects) if (e.kind === "restore-workspace") out.effects.push({ kind: "resume", taskId, computeId: ev.computeId, text: restoreText(e) });
         out.quiet = true;
       }
@@ -4668,7 +4686,7 @@ export class Host {
     if (ev.kind !== "completed" && ev.kind !== "blocked" && ev.kind !== "failed") return;
     const [ver, ...rest] = f.value.rounds;
     const next: FollowDoc = { ...f.value, rounds: rest, resultVer: ev.kind === "completed" && ver !== undefined ? ver : f.value.resultVer };
-    this.putFollowTx(taskId, f, next);
+    this.putFollowTx(taskId, f, next, ev.kind === "completed" ? "RoundCompleted" : ev.kind === "blocked" ? "RoundBlocked" : "RoundFailed");
     if (ev.kind === "completed" && next.queued.length && t.task.computeId === ev.computeId) out.effects.push(...this.flushQueuedTx(taskId, ev.computeId));
     if (ev.kind === "blocked") this.raiseAuthorizationTx(t, ev, out);
   }
@@ -4783,10 +4801,10 @@ export class Host {
       if (!r.ok) throw new HostError(/关联版本已变/.test(r.reason) ? "conflict" : "invalid_params", r.reason, /关联版本已变/.test(r.reason) ? { currentVer: fa.value.state.bindingVer } : undefined);
       recordAction(this.db.store, `rebind:${input.clientActionId}`, { from: input.fromTaskId, to: input.toTaskId });
       if (r.idempotent) return;
-      this.saveTaskTx(input.fromTaskId, a, r.from.task);
-      this.saveTaskTx(input.toTaskId, b, r.to.task);
-      this.putFollowTx(input.fromTaskId, fa, { ...fa.value, state: r.from.followUps });
-      this.putFollowTx(input.toTaskId, fb, { ...fb.value, state: r.to.followUps });
+      this.saveTaskTx(input.fromTaskId, a, r.from.task, "RebindTaskOut");
+      this.saveTaskTx(input.toTaskId, b, r.to.task, "RebindTaskIn");
+      this.putFollowTx(input.fromTaskId, fa, { ...fa.value, state: r.from.followUps }, "FollowUpReboundOut", { kind: "user", id: this.userId });
+      this.putFollowTx(input.toTaskId, fb, { ...fb.value, state: r.to.followUps }, "FollowUpReboundIn", { kind: "user", id: this.userId });
       this.expireAuthzTx(input.fromTaskId);
       this.expireAuthzTx(input.toTaskId);
       const halting = r.from.effects.some((e) => e.kind === "stop-for-rollback");

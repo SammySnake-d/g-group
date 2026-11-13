@@ -1,0 +1,76 @@
+TAP version 13
+# Subtest: TT01 manual creation, user assignment and real model-attempt facts are append-only and action-idempotent
+ok 1 - TT01 manual creation, user assignment and real model-attempt facts are append-only and action-idempotent
+  ---
+  duration_ms: 44.788625
+  type: 'test'
+  ...
+# Subtest: TT02 contact dispatch and explicit rerun both record their actual creator and original source
+ok 2 - TT02 contact dispatch and explicit rerun both record their actual creator and original source
+  ---
+  duration_ms: 38.73175
+  type: 'test'
+  ...
+# Subtest: TT03 task transitions preserve pre/post state and do not turn duplicate or rejected actions into history
+ok 3 - TT03 task transitions preserve pre/post state and do not turn duplicate or rejected actions into history
+  ---
+  duration_ms: 33.110084
+  type: 'test'
+  ...
+# Subtest: TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text
+ok 4 - TT04 follow-up receipt, accepted resume and artifact application are distinct persisted facts without source text
+  ---
+  duration_ms: 45.080583
+  type: 'test'
+  ...
+# Subtest: TT05 rebind appends both sides' real linkage versions atomically and replay does not duplicate them
+ok 5 - TT05 rebind appends both sides' real linkage versions atomically and replay does not duplicate them
+  ---
+  duration_ms: 50.360833
+  type: 'test'
+  ...
+# Subtest: TT06 same-timestamp keyset pages are task-bound, stable under append and strictly validate cursors and limits
+ok 6 - TT06 same-timestamp keyset pages are task-bound, stable under append and strictly validate cursors and limits
+  ---
+  duration_ms: 34.047875
+  type: 'test'
+  ...
+# Subtest: TT07 task timeline enforces current room membership before returning any events or cursor
+ok 7 - TT07 task timeline enforces current room membership before returning any events or cursor
+  ---
+  duration_ms: 9.11025
+  type: 'test'
+  ...
+# Subtest: TT08 timeline insert failure rolls back creation and task transition with no durable or live ghost
+ok 8 - TT08 timeline insert failure rolls back creation and task transition with no durable or live ghost
+  ---
+  duration_ms: 16.497083
+  type: 'test'
+  ...
+# Subtest: TT09 real SQLite reopen preserves event bytes and continuation cursor but does not invent legacy task history
+ok 9 - TT09 real SQLite reopen preserves event bytes and continuation cursor but does not invent legacy task history
+  ---
+  duration_ms: 34.281167
+  type: 'test'
+  ...
+# Subtest: TT10 queued continuation is not labeled accepted until the old round ends and the native resume succeeds
+ok 10 - TT10 queued continuation is not labeled accepted until the old round ends and the native resume succeeds
+  ---
+  duration_ms: 35.092208
+  type: 'test'
+  ...
+# Subtest: TT11 a failed target-side rebind fact rolls back both tasks, both links and the action receipt before a clean retry
+ok 11 - TT11 a failed target-side rebind fact rolls back both tasks, both links and the action receipt before a clean retry
+  ---
+  duration_ms: 41.285791
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 605.854542
