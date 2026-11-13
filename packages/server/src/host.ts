@@ -3447,7 +3447,7 @@ export class Host {
     if (a) {
       if (kind !== "completed" && a.quiesce) {
         const q = await a.quiesce(computeId);
-        if (q.ok || !q.ok) { ok = false; why = "red scaffold"; } // red scaffold (round-2 G-RED calibration); restored by the next commit
+        if (!q.ok) { ok = false; why = `${q.reason}${q.remaining.length ? `(pid ${q.remaining.join(",")})` : ""}`; }
       } else await a.settled(computeId);
     }
     if (this.closed) return;
