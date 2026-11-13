@@ -4,32 +4,25 @@
     {
       "id": "AC-35",
       "status": "未测",
-      "reason": "本片后端子范围红16绿16、18/18具名变异、生产插件service路径、全量1501与类型/lint通过；证据packages/server/proof/slash-plugins-v3/README.md。AC-35完整三类插件/常驻承诺/真实渠道故事及前端不在本片，不能据此标全条通过。"
+      "reason": "本片只是 U58/D11 的后端子路径:两份测试文件 31 条(第 1 轮 16 + 第 2 轮返修 15)、38 个具名变异(原 18 + 追加 20)全杀、生产插件 service 路径、全量 1516 与 typecheck/lint 通过;证据 packages/server/proof/slash-plugins-r2/README.md 与 packages/server/proof/slash-plugins-v3/README.md。AC-35 完整的三类插件、常驻承诺、真实渠道故事及前端不在本片,不能据此标全条通过。"
     },
     {
       "id": "AC-05",
       "status": "未测",
-      "reason": "本片命令的幂等/失败/持久重放已经真实测试（见P7证明），未单独重验AC-05其他普通消息/物理append-only全范围。"
+      "reason": "本片命令的幂等、失败、持久重放有真实测试(见 P7 证明),没有单独重验 AC-05 其他普通消息与物理只追加的全范围。"
     }
   ],
   "author": {
-    "agent": "codex",
-    "session": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
-    "model": "gpt-6.1-sol"
+    "agent": "claude",
+    "session": "claude:484c2330-2f15-49ae-9f7a-145e467cedb1",
+    "model": "group/opus"
   },
   "red": {
-    "commit": "e0b539158a8ebc9ee66beb4e065490e531cbcc30"
+    "commit": "472eaed1413a1f7f603511b34775a4b36b1f2c05"
   },
-  "unverifiable": "AC-35：scriptedMind的无模型proof只证明实际插件安装/隔离RPC/service/SQLite，不能代替真实模型、UI或完整US12。M12/M18旧测试曾漏来源与重复RPC，当前已加强并重跑18/18；所有旧失败保留。G-PROVENANCE在review=null时短路不是实核通过；宿主没有兼容turns.jsonl，不伪造。",
+  "unverifiable": "AC-35:scriptedMind 的无模型 proof 只证明实际插件安装、隔离 RPC、service 与 SQLite,不能代替真实模型、界面或完整 US12。/ketchup 不在 packages/server/catalog/catalog.json,宿主启动也不会装它,入口没有接通——只能按本地路径手动安装,市场安装与界面入口未测。插件输出是否进入联系人上下文等审查记录「需拍板」第 1 条,本轮没有定:现在仍作为只读上下文进入同群联系人的下一轮输入(发言者 system:plugin:<插件 id>,不再是 system:host),不主动唤醒;宿主重启后仍会把同群联系人叫起一轮(审查记录另记 N-1,根因在基线 hasPendingInput,不归本片,未修、未加测试)。撤回消息的原文仍会经任务标题进入快照。命令带的 attachments/mentions/quotedSeqs 被丢弃且不进幂等指纹、gg_plugin_commands 不清理、未读为 0 仍整群翻页(R1-07)未改。gg_plugin_commands 新增 plugin_id 列没有迁移(本分支从未合入)。重放时不重复结算草稿这一处与 Host.send 不同,没有测试。AC-05 其余范围未重验。G-PROVENANCE 在 review=null 时短路,不是实核通过;本会话的 turns.jsonl 要到本轮结束才写出。云端 box2 没有 docker/seatbelt,G-RED/G-STUB/G-TAUTO 只在本机 seatbelt 跑。",
   "waiver": null,
-  "review": {
-    "agent": "claude",
-    "session": "claude:c5c887e6-a469-431e-8341-37f7016797dc",
-    "model": "group/opus",
-    "verdict": "reject",
-    "reviewed_hash": "63fc6591d1d8fc05d497fd34924eaa1d8b2361e02622a72d04eeb82cb6bad69a",
-    "notes": "第 1 轮 REJECT。hy4 辅审因线路 403 未产出，本轮无辅审。作者数字全部复现（红16/绿16、18/18 具名 ERR_ASSERTION、全量 1501/1501、typecheck/lint=0，hash 一致）；驳回因产品行为：R1-01 已有插件声明的 /rss、/push 被打断；R1-02 插件命令绕过成员与解散只读校验；R1-03 插件输出以宿主身份进入联系人上下文；R1-04 /ketchup 反复把旧失败任务报成变更；R1-05 自构 14 个单点故障存活 10 个；R1-06 收据未写明 185/192 行产品代码出自 codex:534f3614 子会话（chatflows/gpt-6-astra）且红提交为事后换回直通桩。来源以 Codex 原生记录核对；G-PROVENANCE 读不了原生记录，填 review 后实判「审查会话记录不存在」（本轮未结束），不宣称已认证。详见 reviews/feat-slash-plugins-complete.md。"
-  },
-  "review_status": "待Mira Bot安排独立审查",
-  "notes": "原候选11aa677c树未动；当前副本修unknown参数真实对象校验并强化证明。测试绿/变异不等于独立review。附v3冻结506文件SHA与原始完整日志；后续正常pre-push输出另存接手包，不绕钩子。公平/阈值/跳数等候选不在本片定案。"
+  "review": null,
+  "review_status": "待审",
+  "notes": "作者来源(三段,厂商并列):① 前 5 个提交 d8e4c308、3eb96bab、c40c7991、6012ce3e、11aa677c(本片第 1 轮产品代码 +192/−3 中的 +185/−3)出自宿主会话 codex:534f3614 派出的子会话(Codex 原生 01a1cf2d-de5e-7ef3-b41a-081912768e53,/root/implement_slash),模型 chatflows/gpt-6-astra(OpenAI);② 其后 9 个提交 62f4be84、5569e91b、ff0c1edf、ea5ee46e、e0b53915、29f1fd3c、5cc1616b、64bc1fba、2aeb408c(args 校验 +9/−2、测试加强、证明与收据)出自 codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7,模型 gpt-6.1-sol(OpenAI);③ 第 2 轮返修(230ed1c9 之后的全部提交:15fa0b78、5ada028e、472eaed1、917d2183、156d4840 及其后的证据与收据提交)出自本收据 author 栏的会话 claude:484c2330-2f15-49ae-9f7a-145e467cedb1,模型 group/opus(Anthropic),由该会话的子代理编写。这一版产物的累积产出厂商是 {openai, anthropic},独立审查方须两者都不是,或由用户豁免。①② 两段的归属取自第 1 轮审查记录对 Codex 原生记录的核对,本会话没有重核。 红提交:red.commit=472eaed1 是变异校准红(开发手册原则 71)——两份测试文件与现在逐字相同,只把 packages/server/src/slash-commands.ts 换成直通桩(send 一律 host.send、assertCommandNames 空函数、不建执行账本,与第 1 轮 e0b53915 同一形态),917d2183 逐字节还原为 5ada028e 的版本,最终生产代码与修复版相同;31 条在其上全部按名失败(29 条 ERR_ASSERTION,2 条是直通桩不建表导致的 no such table: gg_plugin_commands)。真实红是 15fa0b78:只加新测试文件、实现仍是审查提交 230ed1c9,7 条按名以 ERR_ASSERTION 失败(R1-01 一条、R1-02 三条、R1-03 一条、R1-04 两条);新文件其余 8 条(S03、S05、S06、S07/S14、S09、S10、S11、S12)钉的是原本就对的行为,在真实实现上从来是绿的,红只对直通桩与对应单点变异成立。第 1 轮写的「红16」同理并在此更正:e0b53915 是实现写完后换回直通桩得到的,16 条里只有「P7 参数和权限…」1 条对修复前的真实实现(ff0c1edf、11aa677c)是红的,其余 15 条的红只对空桩成立,不是 16 条都先于实现而红。 返修范围:R1-01 只接管清单声明 ui-extension 且有 entry 的插件,rss-reader、webhook-out 的 /rss、/push 保持 #71 原路由(保持 base 行为,不替用户定「需拍板」第 4 条);R1-02 执行前与发布时都过与 Host.send 同口径的成员与解散只读校验,结果留在发起的话题、成功时结算提交的那一版草稿;R1-03 发言者改为 system:plugin:<插件 id> 并带 pluginCommand 来源字段(进不进联系人上下文卡在「需拍板」第 1 条,未改现有行为);R1-04 边界时刻取自已读序号那条事件本身;R1-05 为 S03、S05–S12、S14 各补一条业务断言并进变异清单(只增不改)。「需拍板」四条都没有在返修里自行决定。测试绿与变异全杀不等于独立审查。"
 }
