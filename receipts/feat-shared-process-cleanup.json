@@ -4,61 +4,83 @@
     {
       "id": "AC-23",
       "status": "未测",
-      "reason": "Final 15-name same-body calibration and 9 named mutants pass locally; complete original CC baseline/candidate suites, cloud full, independent review and whole-product acceptance remain pending.",
+      "reason": "本片只做共享的「停止并清理进程」与 CC 两条路径的接入,不是 AC-23 整项验收:Codex 接入、真实 CLI、Windows 整树确认、双 fork/系统托管进程都不在本片。第 2 轮云端(box2)结果见 verification.cloud。",
       "evidence": "docs/proof/shared-process-cleanup/README.md"
     }
   ],
   "author": {
-    "agent": "codex",
-    "session": "codex:01a1d043-1042-7e61-9981-968868c25de1",
-    "model": "gpt-6.1-sol"
+    "agent": "claude",
+    "session": "claude:484c2330-2f15-49ae-9f7a-145e467cedb1",
+    "model": "group/opus"
   },
   "contributingSessions": [
-    "codex:01a1cfc8-db89-7400-b3de-876bd8478982",
-    "codex:01a1d043-1042-7e61-9981-968868c25de1"
+    "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "claude:484c2330-2f15-49ae-9f7a-145e467cedb1"
   ],
+  "notes": "作者来源(R1-04):base..229fb95a 的 9 个提交(3091ca6、9cae32b、baa0f75、bccc9b9、7279aab、1913946、0f88b6e、1cb9279、229fb95)出自宿主会话 codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7 下的原生子线程 01a1d043-1042-7e61-9981-968868c25de1(模型 gpt-6.1-sol;原生父线程 01a1cfc8-db89-7400-b3de-876bd8478982);原生线程号只是 Codex 记录的定位符,不是宿主会话号。第 1 轮审查提交 2ec80a5d(REJECT,审查会话 claude:16a18628-e644-4da6-9ce7-ca3a8ad65181,reviewed_hash 2a0d5ec2de53bbf912f2a1d399e0459199f98ba9251cbe97f8d7c0673d46542c)之后的第 2 轮返修提交出自宿主会话 claude:484c2330-2f15-49ae-9f7a-145e467cedb1(group/opus),由该会话的子代理编写。本 PR 的产出因此跨两个厂商(OpenAI、Anthropic);G-PROVENANCE 只按 author.session 一个会话算产出厂商,看不到前 9 个提交的厂商。未声称任何来源核验已通过。",
   "red": {
-    "commit": "19139462faa651a5f35b39251c8ba8d1da2eb2dd"
+    "commit": "0b2440eaa05c14a627f75a7b1ae548be5d0eaa77"
   },
-  "unverifiable": "AC-23 not accepted by local proof. Full original CC baseline/candidate and cloud full/type/lint, independent review, provenance and product integration remain pending. Escaped system-managed/double-fork processes remain outside discoverable scope. Windows full-tree confirmation fails closed.",
+  "redNotes": "red.commit 0b2440eaa05c14a627f75a7b1ae548be5d0eaa77 是变异校准红(开发手册原则 71),不是产品状态:测试、夹具与变异清单与 715a2bda84d3a6a48313050c6f607ac60fbe1d8b 相同,只把 6 个生产文件换成红形态——packages/process-tools/src/cleanup.ts(空壳:capture/requestStop 不做事,quiesce 恒返回 ok:false「red scaffold」)、packages/process-tools/src/procgroup.ts 与 scripts/gates/gates.ts(取 19139462 的形态:辅助函数返回空/null/false,G-LAYER 恒报未实现)、packages/adapter-cc-compute/src/resident.ts 与 adapter.ts(quiesce 恒返回 ok:false)、packages/server/src/host.ts(afterRound 把任何确认结果当未确认);下一个提交把这 6 个文件从 715a2bda84d3a6a48313050c6f607ac60fbe1d8b 逐字节还原,最终生产代码与 715a2bda84d3a6a48313050c6f607ac60fbe1d8b 的树相同。真实红是 1199e03(新测试跑在未改动的 2ec80a5d 实现上):S-PROC-HOST-01、S-PROC-CC-02、S-PROC-CC-03、S-PROC-07、-08、-09、-10、-13 按名失败;当时通过的 S-PROC-11、-12、-14、S-PROC-CC-04 是回归保护,靠变异清单校准。之后新增的 S-PROC-15、-16、S-PROC-CC-05、S-PROC-HOST-02 没有单独的真实红提交(S-PROC-15/16 钉的是本轮自己加的启动时间判别;S-PROC-CC-05、S-PROC-HOST-02 是回归保护),同样靠变异或校准红判别。19139462、2366dc2 是历史上的校准红,不再是 red.commit。",
+  "unverifiable": "AC-23 整项未验收。本片的绿可能被这些骗过:① pid 复用无法在测试里真实制造,S-PROC-08/09 用测试自起的进程组充当「后来占用该 pid 的程序」,S-PROC-15/16 用脚本替换的 ps 表,发信号一律走替换掉的 process.kill——真实内核下的复用时序没有测;② 进程启动时间取自 ps 的 lstart(秒级),同一秒内 pid 被复用且落在同一进程组号的情形判别不了;读不到 ps(受限沙箱只有 pgrep)时没有启动时间,只按 pid 判活;③ A11 只测了注入平台后的拒绝确认,没有在真实 Windows 上跑;④ 双 fork/交给系统托管的进程在捕获前就脱离父子链,找不到也关不掉(原有边界);⑤ 常驻进程空闲回收与续接之间的既有竞态(续接落在适配器处理退出事件的窗口内不会重启进程,这一轮以 failed 结束)在 base 上同样存在,本片没有改,见 docs/proof 说明。",
   "waiver": null,
-  "review": {
-    "agent": "claude",
-    "session": "claude:16a18628-e644-4da6-9ce7-ca3a8ad65181",
-    "model": "group/opus",
-    "verdict": "reject",
-    "reviewed_hash": "2a0d5ec2de53bbf912f2a1d399e0459199f98ba9251cbe97f8d7c0673d46542c",
-    "notes": "第 1 轮 REJECT,详见 reviews/feat-shared-process-cleanup.md。作者数字全部复现(CC 七文件 base/HEAD 各 139/139、新包 15/15、桥接 2/2、全量 1502/1502、typecheck/lint 0、9 变异全杀、自检 223/223 真实 exit 0、本机 seatbelt 六项机械门禁绿),搬迁文件逐字节相同、原 7 个 CC 测试未改。拒绝原因:R1-01 常驻适配器一轮 failed 后宿主被判「停止未确认」且不归还槽位(base 无此行为);R1-02 常驻保留的旧清理句柄在主进程退出后仍按 pid 重新枚举并对该 pid 的进程组 SIGKILL,pid 被复用时会杀掉无关进程;R1-03 自构 18 个单点故障存活 8 个(含「常驻保留旧句柄」这一作者自列重点无测试);R1-04 收据 author.session 写的是 Codex 原生子线程号,G-PROVENANCE 判「会话记录不存在」。hy4 辅审因线路 403 未产出,本轮无辅审。"
-  },
+  "review": null,
+  "review_status": "待审",
   "gateChangeReviewFocus": "Proposed process layer; add only adapter->process. Five direct controls and four real CLI selftests preserve adapter->adapter and pure-layer prohibitions; trusted-main activation requires independent review.",
   "verification": {
+    "round": 2,
+    "cloud": {
+      "machine": "box2 (4 cores, Node v24.21.0)",
+      "head": "de400ae3b39bd370f1ad552b3015dbe31c9fb2ab",
+      "base": "3216bb1eeff5d1f0229b610cd37cb90e92db48c5",
+      "typecheckExit": 0,
+      "lintExit": 0,
+      "originalCCSevenFilesBase": "139/139",
+      "originalCCSevenFilesHead": "139/139",
+      "ownSevenFiles": "32/32",
+      "legacyAndResidentBridge": "2/2",
+      "full": "1519/1519",
+      "fullFailSkipCancelTodo": 0,
+      "mutationsKilled": "35/35(9 个第 1 轮变异原样 + 26 个第 2 轮新增)",
+      "mutationsSurvived": 0,
+      "mutationPositiveControl": "35/35(--control:同样的副本不注入,具名测试全部通过)",
+      "round2FilesRepeated": "30/30(第 2 轮的 4 个测试文件连跑 30 遍)",
+      "earlierRuns": "8d347d1:连跑 10 遍 9/10(S-PROC-CC-03 在适配器处理退出事件的窗口内续接,3845cec 修测试);983a3da:own 30/30、全量 1517/1517、变异 31/31、连跑 30/30。",
+      "sweeps": "作者自扫(983a3da):审查人第 1 轮 18 个故障按第 2 轮代码重新定位共 19 种形态,18 杀、A1 字面形态存活;cleanup.ts 23 个 if 取反,21 杀 2 存活;三个存活在 715a2bd 补测试关掉(M-PROC-22..24)。在最终代码上的复扫结果见 PR 说明。"
+    },
     "originalCCTestFilesByteUnchanged": 7,
     "movedProcgroupByteIdentical": true,
-    "primaryNamedRed": 1,
-    "sharedCleanupGreen": 6,
-    "helperControlsGreen": 2,
-    "directLayerControlsGreen": 5,
-    "realCliLayerSelftestsGreen": 4,
-    "legacyAndResidentBridgeGreen": 2,
-    "selectedOriginalResidentTestsGreen": 4,
-    "namedMutantsKilled": 9,
-    "namedMutantsSurvived": 0,
-    "localTypecheckExit": 0,
-    "localLintExit": 0,
-    "cloud": "not started; root owns queue",
-    "retainedExecutorFailures": [
-      "lockf acquisition exit 75 twice",
-      "initial typecheck exit 2: incomplete external dependency symlinks; corrected exit 0",
-      "new CC test typecheck exit 2 TS2339 after successful assertion narrowing; type-safe guard text corrected, final 15-name red rerun, corrected typecheck exit 0",
-      "First native mechanical run exit 1 retained: seven test-only ps EPERM failures and subprocess-only S-PROC-05 G-STUB/G-TAUTO blind spot; owning tests corrected without relaxing gates; actual seatbelt rerun 15/15 green. Formal recheck recorded externally on frozen final head."
-    ],
-    "sameBodyNamedRed": 15,
-    "owningCCIntegrationGreen": 2,
-    "finalThinProofArchive": "docs/proof/shared-process-cleanup/thin-proof-v4.tar.gz",
-    "finalThinProofArchiveSha256": "1751a3db0f92a3b42e861acd1628876bea341b1fb0265d30b47e813b0c964171",
-    "testBodiesByteEqualRedToGreen": true,
-    "redIsRetrospectiveCalibration": true,
-    "actualSeatbeltOwningGreen": 15
+    "hostTsByteIdenticalToBase": true,
+    "notes": "云端数字是第 2 轮作者自己在 box2 跑的,对应提交见 cloud.head(最后一个改代码或测试的提交;其后的提交只改 docs/ 与 receipts/)。本机 seatbelt 的 run-all.ts --local 与 --hash 在写这份收据之后跑,结果见 PR 说明。本轮提交尚未推送,pre-push 钩子与 GitHub self-check 没有在这些提交上跑过。",
+    "round1": {
+      "source": "第 1 轮作者(codex 子线程)本机数字,原样保留自 229fb95a 的收据;当时写的 cloud 字段是「not started; root owns queue」,后来的云端运行只写进了 PR 说明。第 1 轮审查人在 box2 对 229fb95a 独立复跑的数字见 reviews/feat-shared-process-cleanup.md 第二节(CC 七文件 base/HEAD 各 139/139、新包 15/15、桥接 2/2、全量 1502/1502、9 变异全杀)。",
+      "originalCCTestFilesByteUnchanged": 7,
+      "movedProcgroupByteIdentical": true,
+      "primaryNamedRed": 1,
+      "sharedCleanupGreen": 6,
+      "helperControlsGreen": 2,
+      "directLayerControlsGreen": 5,
+      "realCliLayerSelftestsGreen": 4,
+      "legacyAndResidentBridgeGreen": 2,
+      "selectedOriginalResidentTestsGreen": 4,
+      "namedMutantsKilled": 9,
+      "namedMutantsSurvived": 0,
+      "localTypecheckExit": 0,
+      "localLintExit": 0,
+      "retainedExecutorFailures": [
+        "lockf acquisition exit 75 twice",
+        "initial typecheck exit 2: incomplete external dependency symlinks; corrected exit 0",
+        "new CC test typecheck exit 2 TS2339 after successful assertion narrowing; type-safe guard text corrected, final 15-name red rerun, corrected typecheck exit 0",
+        "First native mechanical run exit 1 retained: seven test-only ps EPERM failures and subprocess-only S-PROC-05 G-STUB/G-TAUTO blind spot; owning tests corrected without relaxing gates; actual seatbelt rerun 15/15 green. Formal recheck recorded externally on frozen final head."
+      ],
+      "sameBodyNamedRed": 15,
+      "owningCCIntegrationGreen": 2,
+      "finalThinProofArchive": "docs/proof/shared-process-cleanup/thin-proof-v4.tar.gz",
+      "finalThinProofArchiveSha256": "1751a3db0f92a3b42e861acd1628876bea341b1fb0265d30b47e813b0c964171",
+      "testBodiesByteEqualRedToGreen": true,
+      "redIsRetrospectiveCalibration": true,
+      "actualSeatbeltOwningGreen": 15
+    }
   },
-  "authorIdentitySource": "CODEX_THREAD_ID and CODEX_SESSION_ID observed in this worker environment; model label inherited from the frozen first-slice receipt, no new provenance approval claimed."
+  "authorIdentitySource": "收据作者栏按 2026-11-13 后端作者线共同约定写宿主会话号;模型标识是宿主报的 group/opus。第 1 轮收据写的是 Codex 原生子线程号(codex:01a1d043-…),G-PROVENANCE 判「会话记录不存在」(R1-04)。"
 }
