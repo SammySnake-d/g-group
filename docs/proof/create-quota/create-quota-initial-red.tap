@@ -1,0 +1,31 @@
+TAP version 13
+# Subtest: CQ01 contacts.create 在创建事务持久化指定个人额度与首版历史
+not ok 1 - CQ01 contacts.create 在创建事务持久化指定个人额度与首版历史
+  ---
+  duration_ms: 12.474125
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:23:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    undefined !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:29:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 228.107

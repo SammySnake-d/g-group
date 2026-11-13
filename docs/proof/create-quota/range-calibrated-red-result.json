@@ -1,0 +1,9 @@
+{
+  "exit": 1,
+  "named_failures": 13,
+  "ERR_ASSERTION": 13,
+  "test_sha256": "92173f61eb60c74c411711068828a9b67176e09569c44fdafb56c9275670283c",
+  "mutant_definitions_sha256": "90aaaa7ae173faa1effd082af01c2b6d92d2ede39d2e0adf565f199f80b6f5f2",
+  "product_baseline": "3cfabba2978e3b617a07c86b962eba5fd8e4d411",
+  "captured_at": "2026-11-12T23:48:26.023355+08:00"
+}

@@ -1,0 +1,130 @@
+TAP version 13
+# Subtest: CQ01 contacts.create 在创建事务持久化指定个人额度与首版历史
+ok 1 - CQ01 contacts.create 在创建事务持久化指定个人额度与首版历史
+  ---
+  duration_ms: 14.669541
+  type: 'test'
+  ...
+# Subtest: CQ02 rooms.createGroup 原子保存群成员与指定临时额度并对外返回
+not ok 2 - CQ02 rooms.createGroup 原子保存群成员与指定临时额度并对外返回
+  ---
+  duration_ms: 9.6925
+  type: 'test'
+  location: '/private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:37:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+        {
+    +     id: 'c-mwdpc377-1',
+    +     kind: 'contact'
+    +   },
+    +   {
+          id: 'me',
+          kind: 'user'
+        },
+    -   {
+    -     id: 'c-mwdpc377-1',
+    -     kind: 'contact'
+    -   }
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      kind: 'user'
+      id: 'me'
+    1:
+      kind: 'contact'
+      id: 'c-mwdpc377-1'
+  actual:
+    0:
+      kind: 'contact'
+      id: 'c-mwdpc377-1'
+    1:
+      kind: 'user'
+      id: 'me'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-create-quota-resume-20261112/packages/server/src/create-quota.test.ts:46:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: CQ03 contacts.create 与更新共用 null 或 1..64 整数范围，坏额度不残留实体
+ok 3 - CQ03 contacts.create 与更新共用 null 或 1..64 整数范围，坏额度不残留实体
+  ---
+  duration_ms: 7.115625
+  type: 'test'
+  ...
+# Subtest: CQ04 rooms.createGroup 与更新共用 0..64 整数范围，坏额度不残留群成员
+ok 4 - CQ04 rooms.createGroup 与更新共用 0..64 整数范围，坏额度不残留群成员
+  ---
+  duration_ms: 8.607958
+  type: 'test'
+  ...
+# Subtest: CQ05 个人创建缺省和 null 保留宿主默认，1 与 64 边界保存且动作可重放
+ok 5 - CQ05 个人创建缺省和 null 保留宿主默认，1 与 64 边界保存且动作可重放
+  ---
+  duration_ms: 8.675917
+  type: 'test'
+  ...
+# Subtest: CQ06 群创建缺省零与显式 0 和 64 都持久化同一额度文档
+ok 6 - CQ06 群创建缺省零与显式 0 和 64 都持久化同一额度文档
+  ---
+  duration_ms: 8.395459
+  type: 'test'
+  ...
+# Subtest: CQ07 联系人创建动作跨重启返回原响应，修改参数冲突且不覆当前配置历史
+ok 7 - CQ07 联系人创建动作跨重启返回原响应，修改参数冲突且不覆当前配置历史
+  ---
+  duration_ms: 8.99325
+  type: 'test'
+  ...
+# Subtest: CQ08 建群动作跨重启返回原响应，额度或成员变更冲突且不覆当前群
+ok 8 - CQ08 建群动作跨重启返回原响应，额度或成员变更冲突且不覆当前群
+  ---
+  duration_ms: 9.677708
+  type: 'test'
+  ...
+# Subtest: CQ09 动作号按创建种类隔离，JSON字段顺序不产生伪冲突或重复实体
+ok 9 - CQ09 动作号按创建种类隔离，JSON字段顺序不产生伪冲突或重复实体
+  ---
+  duration_ms: 7.421459
+  type: 'test'
+  ...
+# Subtest: CQ10 创建动作记账失败回滚联系人、额度与历史，修复后同号可重试
+ok 10 - CQ10 创建动作记账失败回滚联系人、额度与历史，修复后同号可重试
+  ---
+  duration_ms: 8.886375
+  type: 'test'
+  ...
+# Subtest: CQ11 群额度落盘失败回滚群、成员与动作，修复后同号可重试
+ok 11 - CQ11 群额度落盘失败回滚群、成员与动作，修复后同号可重试
+  ---
+  duration_ms: 8.938334
+  type: 'test'
+  ...
+# Subtest: CQ12 创建额度进入既有租约原语，群不串借，下调不抢在途且停止确认才归还
+ok 12 - CQ12 创建额度进入既有租约原语，群不串借，下调不抢在途且停止确认才归还
+  ---
+  duration_ms: 135.07375
+  type: 'test'
+  ...
+# Subtest: CQ13 个人额度下调保留旧租约，未停止不抢占，低于新上限后才让排队起跑
+ok 13 - CQ13 个人额度下调保留旧租约，未停止不抢占，低于新上限后才让排队起跑
+  ---
+  duration_ms: 97.540042
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 12
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 552.205708

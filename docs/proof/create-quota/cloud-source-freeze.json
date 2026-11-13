@@ -1,0 +1,17 @@
+{
+  "head": "e1b91fc123148d637ddfd5db0db64ba6efdba4bf",
+  "red": "069bbd20b7ef925e9043a54b94b4276760e09a59",
+  "node": "v24.21.0",
+  "input_sha256": {
+    "packages/api-contract/src/api.ts": "6b9f33cf7cdc2b242a34d99e0f021024715e870e2077991392309b022411091b",
+    "packages/server/src/host.ts": "4abd64af5e301bb1e38224d2cd93da6c18672bda1a4f96b7a367441df44bb099",
+    "packages/server/src/service.ts": "1d86dd580615bdd04b792a11d1271e934a5ba2b632dbd42d09fe3399f5bfd61b",
+    "packages/server/src/create-quota.test.ts": "92173f61eb60c74c411711068828a9b67176e09569c44fdafb56c9275670283c",
+    "packages/server/proof/create-quota-mutations.mjs": "0d8f89e14c610f3c4dbd2de3301f32800e85ec68419bbb0283106ae71646ae70",
+    "packages/server/proof/create-quota-real.ts": "323c8fd858774973a787a1dcdf3cda9a7169b219caea26e39232ec23cea305f3",
+    "packages/server/proof/create-quota-mutations-plan.json": "e30d1709300303be9342ded2c3310925113a01594b7fd7601e707b812067ae2c",
+    "package-lock.json": "859b9037999c928e7358b113d1971ff067f651d28815347348688e754f948e68"
+  },
+  "runner_sha256": "87b10838a7067f5004240e07589ae4e3c3b6f6176a830f21d224c7311912be13",
+  "bundle_sha256": "508d2a39fb3fac90b83ffe3639755f4c0bab656cb49fd40d8dadd59bab23cbae"
+}

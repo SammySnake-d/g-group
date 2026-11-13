@@ -1,0 +1,63 @@
+{
+  "target": "/private/tmp/gg-req-create-quota-resume-20261112",
+  "red": "/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-snap-2RxVaA",
+  "apiPackageRealpath": "/private/tmp/gg-req-create-quota-resume-20261112/packages/api-contract",
+  "expectedRedApiPackage": "/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-snap-2RxVaA/packages/api-contract",
+  "testDependencies": [],
+  "passed": [
+    {
+      "file": "packages/server/src/create-quota.test.ts",
+      "name": "CQ03 contacts.create 与更新共用 null 或 1..64 整数范围，坏额度不残留实体"
+    },
+    {
+      "file": "packages/server/src/create-quota.test.ts",
+      "name": "CQ04 rooms.createGroup 与更新共用 0..64 整数范围，坏额度不残留群成员"
+    }
+  ],
+  "failed": [
+    {
+      "file": "packages/server/src/create-quota.test.ts",
+      "name": "CQ01 contacts.create 在创建事务持久化指定个人额度与首版历史"
+    },
+    {
+      "file": "packages/server/src/create-quota.test.ts",
+      "name": "CQ02 rooms.createGroup 原子保存群成员与指定临时额度并对外返回"
+    },
+    {
+      "file": "packages/server/src/create-quota.test.ts",
+      "name": "CQ05 个人创建缺省和 null 保留宿主默认，1 与 64 边界保存且动作可重放"
+    },
+    {
+      "file": "packages/server/src/create-quota.test.ts",
+      "name": "CQ06 群创建缺省零与显式 0 和 64 都持久化同一额度文档"
+    },
+    {
+      "file": "packages/server/src/create-quota.test.ts",
+      "name": "CQ07 联系人创建动作跨重启返回原响应，修改参数冲突且不覆当前配置历史"
+    },
+    {
+      "file": "packages/server/src/create-quota.test.ts",
+      "name": "CQ08 建群动作跨重启返回原响应，额度或成员变更冲突且不覆当前群"
+    },
+    {
+      "file": "packages/server/src/create-quota.test.ts",
+      "name": "CQ09 动作号按创建种类隔离，JSON字段顺序不产生伪冲突或重复实体"
+    },
+    {
+      "file": "packages/server/src/create-quota.test.ts",
+      "name": "CQ10 创建动作记账失败回滚联系人、额度与历史，修复后同号可重试"
+    },
+    {
+      "file": "packages/server/src/create-quota.test.ts",
+      "name": "CQ11 群额度落盘失败回滚群、成员与动作，修复后同号可重试"
+    },
+    {
+      "file": "packages/server/src/create-quota.test.ts",
+      "name": "CQ12 创建额度进入既有租约原语，群不串借，下调不抢在途且停止确认才归还"
+    },
+    {
+      "file": "packages/server/src/create-quota.test.ts",
+      "name": "CQ13 个人额度下调保留旧租约，未停止不抢占，低于新上限后才让排队起跑"
+    }
+  ]
+}
