@@ -158,7 +158,7 @@ export const kernelAssemble: RoundAssembler = (ctx) => {
       ...(ctx.memories && ctx.memories.length > 0 ? { memories: [...ctx.memories] } : {}),
     },
     ledger: {
-      open: ctx.ledger.map((l) => ({ id: l.id, sourceSeq: l.sourceSeq, taskId: l.taskId.startsWith("standing-") ? null : l.taskId, text: l.text, status: l.status })),
+      open: ctx.ledger.map((l) => ({ id: l.id, sourceSeq: l.sourceSeq, taskId: l.taskId.startsWith("standing-") ? null : l.taskId, text: l.text, status: l.status, ...(l.shortName !== undefined ? { shortName: l.shortName } : {}) })),
       boundIds: [...(ctx.boundIds ?? [])],
     },
     stateNote: ctx.stateNote === null ? null : { version: ctx.stateNoteVersion ?? 1, text: ctx.stateNote },
