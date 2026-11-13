@@ -1,0 +1,19 @@
+packages/server/src/contact-config-history.test.ts
+  s_9d7fa6e9d65b83::t_2288f1b3e7d5e8 7,232-313
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d387bef18be073ad5ccb69e3f81f60652825e962",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
