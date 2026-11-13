@@ -36,11 +36,21 @@
   "waiver": null,
   "review": {
     "agent": "claude",
-    "session": "claude:89762718-8de0-48ba-8531-1f6f3ee30739",
+    "session": "claude:4e0a71e2-55f2-4eb1-ab93-ce65d14aa6d9",
     "model": "group/opus",
-    "verdict": "reject",
-    "reviewed_hash": "2efdba77c1e8120c4f32506e130d0a4cb1837e477d433d733cc2c759705947c6",
-    "notes": "第 1 轮 REJECT（9433023）。hy4 辅审因线路 403 未产出，本轮无辅审。复现一致：生产代码与基线逐字节相同；红 a9c0ffef 4/4 ERR_ASSERTION、绿 4/4；typecheck/lint 0；npm test 1477/1477 无 skip/todo（基线 1473+4）；作者 8/8 变异具名杀死；replying 探针 exit 1 且不在套件内；--local 除 G-REVIEW 外全过；8 个门禁应失败输入各自判败。红是红提交里把 host.ts 改坏 4 处造出来的（等同变异校准，作者已写明）。拒绝原因：审查方 9 个单点故障存活 3——R1-01 同名联系人记忆串读（全仓库无测试发现）、R1-02 tasks.progress 不按任务过滤（全仓库无测试发现）、R1-03 回答不核对 qId（本片未守）；R1-04 author.session 是 Codex 原生子线程号，G-PROVENANCE 报作者会话记录不存在，宿主会话应为 codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7。来源已用 Codex 原生记录逐项对到提交、红绿、变异、1477、推送钩子与开 PR。见 reviews/feat-coverage-invariants.md 第 1 轮。"
+    "verdict": "approve",
+    "reviewed_hash": "8d04a717a7ce677a47ac87d70c27acd53a5abb61dfe67abc9305a9bd98dcb55c",
+    "notes": "第 2 轮 APPROVE（0633572e）。hy4 辅审因线路 403 未产出，本轮无辅审。R1-01…R1-04 必修全部解决、R1-05 已采纳：第 1 轮存活的 3 个故障（同名记忆串读、进度不按任务过滤、不核对 qId）现被作者自己的具名测试按名杀死（:73、:124、:150）。复现（box2 独立重跑）：生产代码与 base 逐字节相同；红 121a145f 0/4 全 ERR_ASSERTION、绿 4/4（重跑 15 次稳定）；typecheck/lint 0；依赖 37/37；npm test 1477/1477 无 skip/todo；作者 11/11 变异具名杀死；replying 探针仍 exit 1 且不在套件内；自检不经管道 219/219 exit 0；CI self-check SUCCESS。审查方 16 个单点故障 15 个具名杀死，N7（只让全局前缀记忆串到同名联系人）存活，记建议 R2-01；另有建议 R2-02（测试过长、标题未点名新性质）、R2-03（notes 未写返修子线程 01a1d035）。来源：作者侧 G-PROVENANCE 已能按宿主会话 codex:76d2c467 的 turns.jsonl 核过（R1-04 实测通过）；另用 Codex 原生记录（父 01a1cfc8 → 子 01a1d035，gpt-6.1-sol）逐项对到红、四个提交、合并、云端运行与正常快进推送（钩子 1477 + 219/219，c908939d..0633572e）。8 个门禁应失败输入各自判败。红仍是把 host.ts 改坏造出来的回溯校准，按第 1 轮口径不以此拒绝，见需拍板。见 reviews/feat-coverage-invariants.md 第 2 轮。",
+    "history": [
+      {
+        "agent": "claude",
+        "session": "claude:89762718-8de0-48ba-8531-1f6f3ee30739",
+        "model": "group/opus",
+        "verdict": "reject",
+        "reviewed_hash": "2efdba77c1e8120c4f32506e130d0a4cb1837e477d433d733cc2c759705947c6",
+        "notes": "第 1 轮 REJECT（9433023）。hy4 辅审因线路 403 未产出，本轮无辅审。复现一致：生产代码与基线逐字节相同；红 a9c0ffef 4/4 ERR_ASSERTION、绿 4/4；typecheck/lint 0；npm test 1477/1477 无 skip/todo（基线 1473+4）；作者 8/8 变异具名杀死；replying 探针 exit 1 且不在套件内；--local 除 G-REVIEW 外全过；8 个门禁应失败输入各自判败。红是红提交里把 host.ts 改坏 4 处造出来的（等同变异校准，作者已写明）。拒绝原因：审查方 9 个单点故障存活 3——R1-01 同名联系人记忆串读（全仓库无测试发现）、R1-02 tasks.progress 不按任务过滤（全仓库无测试发现）、R1-03 回答不核对 qId（本片未守）；R1-04 author.session 是 Codex 原生子线程号，G-PROVENANCE 报作者会话记录不存在，宿主会话应为 codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7。来源已用 Codex 原生记录逐项对到提交、红绿、变异、1477、推送钩子与开 PR。见 reviews/feat-coverage-invariants.md 第 1 轮。"
+      }
+    ]
   },
   "knownGaps": [
     {
