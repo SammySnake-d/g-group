@@ -1,0 +1,50 @@
+{
+  "slice": "U07 联系人配置历史列表与CAS/幂等回滚；配置白名单快照只追加，复用模型兼容预检，不回滚身份/消息/任务/记忆，下一轮生效（后端候选，前端不改）",
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "docs/proof/contact-config-history/r2/README.md"
+    },
+    {
+      "id": "AC-01",
+      "status": "未测",
+      "reason": "本片已证明配置回滚不改ID/真实md记忆与索引/任务/消息/游标及跨重启幂等，但不替代AC-01全部持久身份/换harness验收；待独立审查"
+    },
+    {
+      "id": "AC-32",
+      "status": "未测",
+      "reason": "回滚重新执行当前模型预检、失败原子不落盘和确认分支有具名测试/变异；在途轮次配置冻结、下一轮生效有生产proof；未覆盖AC-32其余子项和真实模型运行"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "model": "gpt-6.1-sol"
+  },
+  "red": {
+    "commit": "b92c857bc90f681cf8cdc2dff7ae6c39c99fe081"
+  },
+  "unverifiable": "R-02 R2最终16项同体回溯校准红b92c857b→绿f73a2d27不是历史TDD；CFG13真缺陷先红af3bf6f1后绿b2e8070d。R1-05 原产品/测试/红由codex:534f3614-21cd-43eb-9db6-3cd1673d2b62的原生子代理01a1cf62-d34d-7050-b7b6-c9d738b02b9a、模型chatflows/gpt-6-astra写出；本宿主76d2c467的旧finisher原生01a1d035-2076-7443-bb9f-062b74f98187、gpt-6.1-sol仅从126c42ae起写runner/proof/证据与推送，本轮根gpt-6.1-sol直接写三行触发器及CFG13-16，当前author选本轮直接修改者，未将继承产品改记其名；详见r2来源说明，4原生前缀/13提交call_id已实核但不是上游模型/防篡改证明，host当前turns缺本轮，未伪造。R-02 原三故障在原12测真实存活、新16测指定杀死；追加4变异各16测4/4具名kill、parser21控制通过，runner初次路径别名误拒留证。本轮新box4固定Node22云：19/19完整16测指定具名变异kill、16同体红绿、full1489/1489、依赖46/46、type/lint与真实Host/SQLite/service proof均实际通过，535源SHA前后不变；Node24前置失败原包保留且不算产品失败。最终官方hash/seatbelt双锁、正常pre-push full/219自检及CI一次另随交付原档核证；旧1485/15只为R1历史，不签R2。AC-01/AC-32其他子项、真实模型/CLI/UI仍未验收；回滚始终重做当前模型预检为保守策略，旧R1 review/reject/hash完整保留，交Bot派独立R2。",
+  "waiver": null,
+  "review": {
+    "agent": "claude",
+    "session": "claude:e4f44e54-3c17-49b2-9cb8-cace64ed0b43",
+    "model": "group/opus",
+    "verdict": "reject",
+    "reviewed_hash": "e7c1566c4b56c0841f70ffb5188161f8573b80c98c75225f02486d018c13115e",
+    "notes": "第 2 轮独立审查（HEAD cd5c3f4d），结论 reject，只剩 R2-01 一项必修：新加的 BEFORE INSERT 触发器挡住了同主键 INSERT OR REPLACE，但带已有行 rowid 的 INSERT OR REPLACE 仍能删掉旧版本、再用普通 INSERT 写入伪造版本，history 与 rollback 都用了伪造配置（R1-01 部分解决；R1-01 要求「做法同 events 表」本身不完整，events 表基线同样有此缺口，范围外另报）。R1-02～R1-05 已解决。hy4 辅审因线路 403 未产出，本轮无辅审。复现：typecheck/lint=0、全量 1489/1489 无 skip/todo、红 b92c857b 16/16 ERR_ASSERTION、CFG13 真红 fcde7046/af3bf6f1→绿 b2e8070d、作者 19/19 变异具名杀死、本机门禁自检 219/219、--local 六项机械门禁通过；第 1 轮存活的 F2/F6/F8 与 R1-01 原缺陷均被新测试具名杀死，审查人新构 7 个故障存活 2 个（effort 投影、回滚跳过 null，作为建议不阻塞）。来源：按 Codex 原生记录核到本轮各提交、云端运行与推送（根会话与子代理均 gpt-6.1-sol）。model 填宿主记录的线路组名 group/opus（Anthropic Claude）。本审查不是 AC-01/AC-32 验收。见 reviews/feat-contact-config-history.md 第 2 轮。",
+    "history": [
+      {
+        "round": 1,
+        "commit": "6d8123341002f0e9f397c77633c3f30a6d01a54b",
+        "agent": "claude",
+        "session": "claude:a32c9f77-01be-405f-b2a8-1097160e10aa",
+        "model": "group/opus",
+        "verdict": "reject",
+        "reviewed_hash": "123bb4c606a44b02b98637b48c3a7e0b949ad76bca6b814dda16ddd4e6b077ca",
+        "notes": "第 1 轮独立审查，结论 reject，问题 R1-01～R1-05 必须返修，见 reviews/feat-contact-config-history.md。hy4 辅审因线路 403 未产出，本轮无辅审。复现：typecheck/lint=0、全量 1485/1485、红提交 12/12 业务断言失败、作者 15 项变异 15/15；审查人自构 8 个单点故障存活 3 个（落盘白名单、回滚事务、回滚恢复全部字段），另复现 INSERT OR REPLACE 可原位改写历史。来源：按 Codex 原生记录核到提交、云端运行与推送逐条对应；实现与红提交实际由 codex:534f3614 的子代理用 chatflows/gpt-6-astra 写出，收据 author 未写明。model 填的是宿主记录的线路组名 group/opus（Anthropic Claude）。本审查不是 AC-01/AC-32 验收。"
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+Cloning into '/dev/shm/gg-contact-history-resume-20261112/repo'...
+done.
+Note: switching to '4efdee0be6d161060099b5ce488e3344c70305ee'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+fatal: couldn't find remote ref feat/contact-config-history
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "<string>", line 11, in <module>
+  File "/usr/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'fetch', '/dev/shm/gg-contact-history-resume-20261112/candidate.bundle', 'feat/contact-config-history']' returned non-zero exit status 128.
+[exit status 1]

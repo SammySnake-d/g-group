@@ -1,0 +1,48 @@
+{
+  "head": "c8449f699ccb4dc72cc44e6dd652c9cc63b7162d",
+  "results": [
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "-s",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "seconds": 35.415
+    },
+    {
+      "name": "lint",
+      "command": [
+        "npm",
+        "run",
+        "-s",
+        "lint"
+      ],
+      "exit_code": 0,
+      "seconds": 1.608
+    },
+    {
+      "name": "full",
+      "command": [
+        "npm",
+        "test",
+        "--silent"
+      ],
+      "exit_code": 0,
+      "seconds": 316.497
+    },
+    {
+      "name": "mutations",
+      "command": [
+        "node",
+        "packages/server/proof/contact-config-history-mutations.mjs"
+      ],
+      "exit_code": 1,
+      "seconds": 5.66
+    }
+  ],
+  "complete": true,
+  "source_sha256": "883a3c9bcc4ea1964f0ba021ac07ac16791d391d6ecb2cb63c93ff32f41f11c1"
+}

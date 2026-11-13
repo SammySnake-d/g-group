@@ -1,0 +1,342 @@
+{
+  "head": "3dca25e9ac72700ec3642817572d6300ce71e2e0",
+  "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+  "red_commit": "b92c857bc90f681cf8cdc2dff7ae6c39c99fe081",
+  "archive_sha256": "de9a7a86e6709eb895f58f3689969ca47ba6d2ce4781315414e4d337a1ef999e",
+  "archive_bytes": 254924,
+  "safe_extraction_and_archive_sha_verified": true,
+  "manifest_members_verified": 68,
+  "phase_log_hashes_verified": 16,
+  "tracked_source_files_frozen": 535,
+  "cloud_node": "v22.22.0",
+  "samebody_red": {
+    "tests": 16,
+    "pass": 0,
+    "fail": 16,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "samebody_green": {
+    "tests": 16,
+    "pass": 16,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "samebody_retrospective_not_historical_TDD": true,
+  "all16_red_named_ERR_ASSERTION": [
+    "CFG01 创建与修改保留完整配置快照，旧版本不随当前修改变化",
+    "CFG02 回滚生成递增版本且保留身份、消息、记忆、任务与游标",
+    "CFG03 回滚按当前版本拒绝过期请求，不覆盖较新的配置",
+    "CFG04 修改可带 CAS 和幂等号，重复请求不追加快照或通知",
+    "CFG05 回滚幂等持久化；同一动作号换目标版本拒绝",
+    "CFG06 回滚重新执行当前模型兼容预检，失败原子不写；明确确认后保留原选择",
+    "CFG07 历史写入失败时配置更新与通知一起放弃",
+    "CFG08 批量模型替换也追加快照，快照失败同时回滚全局与所有联系人",
+    "CFG09 重启后历史按联系人分页且不会复制已有版本",
+    "CFG10 升级既有联系人只登记当前配置基线，不伪造早期历史或纳入秘密记忆字段",
+    "CFG11 历史只追加，数据库 UPDATE 或 DELETE 被拒且原值保留",
+    "CFG12 删除联系人不允许通过配置回滚复活；不存在的版本不写任何东西",
+    "CFG13 R1-01 覆盖插入不能原位改写历史且回滚仍使用原配置",
+    "CFG14 R1-02 回滚历史写入失败原子放弃且同一动作号可重试一次",
+    "CFG15 R1-03 回滚恢复每个白名单字段含工具能力槽位和模型harness",
+    "CFG16 R1-04 五种快照的SQLite原始内容严格只落盘配置白名单"
+  ],
+  "strict_mutants": [
+    {
+      "id": "M01",
+      "criterion": "CFG01",
+      "expectedName": "CFG01 创建与修改保留完整配置快照，旧版本不随当前修改变化",
+      "tests": 16,
+      "pass": 3,
+      "fail": 13,
+      "namedAssertionKill": true,
+      "collateral": [
+        "CFG02 回滚生成递增版本且保留身份、消息、记忆、任务与游标",
+        "CFG03 回滚按当前版本拒绝过期请求，不覆盖较新的配置",
+        "CFG04 修改可带 CAS 和幂等号，重复请求不追加快照或通知",
+        "CFG05 回滚幂等持久化；同一动作号换目标版本拒绝",
+        "CFG06 回滚重新执行当前模型兼容预检，失败原子不写；明确确认后保留原选择",
+        "CFG07 历史写入失败时配置更新与通知一起放弃",
+        "CFG08 批量模型替换也追加快照，快照失败同时回滚全局与所有联系人",
+        "CFG09 重启后历史按联系人分页且不会复制已有版本",
+        "CFG11 历史只追加，数据库 UPDATE 或 DELETE 被拒且原值保留",
+        "CFG12 删除联系人不允许通过配置回滚复活；不存在的版本不写任何东西",
+        "CFG14 R1-02 回滚历史写入失败原子放弃且同一动作号可重试一次",
+        "CFG16 R1-04 五种快照的SQLite原始内容严格只落盘配置白名单"
+      ],
+      "tap": "M01.tap",
+      "rawResult": "M01.raw-result.json"
+    },
+    {
+      "id": "M02",
+      "criterion": "CFG02",
+      "expectedName": "CFG02 回滚生成递增版本且保留身份、消息、记忆、任务与游标",
+      "tests": 16,
+      "pass": 11,
+      "fail": 5,
+      "namedAssertionKill": true,
+      "collateral": [
+        "CFG06 回滚重新执行当前模型兼容预检，失败原子不写；明确确认后保留原选择",
+        "CFG13 R1-01 覆盖插入不能原位改写历史且回滚仍使用原配置",
+        "CFG14 R1-02 回滚历史写入失败原子放弃且同一动作号可重试一次",
+        "CFG15 R1-03 回滚恢复每个白名单字段含工具能力槽位和模型harness"
+      ],
+      "tap": "M02.tap",
+      "rawResult": "M02.raw-result.json"
+    },
+    {
+      "id": "M03",
+      "criterion": "CFG03",
+      "expectedName": "CFG03 回滚按当前版本拒绝过期请求，不覆盖较新的配置",
+      "tests": 16,
+      "pass": 15,
+      "fail": 1,
+      "namedAssertionKill": true,
+      "collateral": [],
+      "tap": "M03.tap",
+      "rawResult": "M03.raw-result.json"
+    },
+    {
+      "id": "M04",
+      "criterion": "CFG04",
+      "expectedName": "CFG04 修改可带 CAS 和幂等号，重复请求不追加快照或通知",
+      "tests": 16,
+      "pass": 15,
+      "fail": 1,
+      "namedAssertionKill": true,
+      "collateral": [],
+      "tap": "M04.tap",
+      "rawResult": "M04.raw-result.json"
+    },
+    {
+      "id": "M05",
+      "criterion": "CFG05",
+      "expectedName": "CFG05 回滚幂等持久化；同一动作号换目标版本拒绝",
+      "tests": 16,
+      "pass": 14,
+      "fail": 2,
+      "namedAssertionKill": true,
+      "collateral": [
+        "CFG14 R1-02 回滚历史写入失败原子放弃且同一动作号可重试一次"
+      ],
+      "tap": "M05.tap",
+      "rawResult": "M05.raw-result.json"
+    },
+    {
+      "id": "M06",
+      "criterion": "CFG06",
+      "expectedName": "CFG06 回滚重新执行当前模型兼容预检，失败原子不写；明确确认后保留原选择",
+      "tests": 16,
+      "pass": 15,
+      "fail": 1,
+      "namedAssertionKill": true,
+      "collateral": [],
+      "tap": "M06.tap",
+      "rawResult": "M06.raw-result.json"
+    },
+    {
+      "id": "M07",
+      "criterion": "CFG07",
+      "expectedName": "CFG07 历史写入失败时配置更新与通知一起放弃",
+      "tests": 16,
+      "pass": 15,
+      "fail": 1,
+      "namedAssertionKill": true,
+      "collateral": [],
+      "tap": "M07.tap",
+      "rawResult": "M07.raw-result.json"
+    },
+    {
+      "id": "M08",
+      "criterion": "CFG08",
+      "expectedName": "CFG08 批量模型替换也追加快照，快照失败同时回滚全局与所有联系人",
+      "tests": 16,
+      "pass": 14,
+      "fail": 2,
+      "namedAssertionKill": true,
+      "collateral": [
+        "CFG16 R1-04 五种快照的SQLite原始内容严格只落盘配置白名单"
+      ],
+      "tap": "M08.tap",
+      "rawResult": "M08.raw-result.json"
+    },
+    {
+      "id": "M09",
+      "criterion": "CFG09",
+      "expectedName": "CFG09 重启后历史按联系人分页且不会复制已有版本",
+      "tests": 16,
+      "pass": 15,
+      "fail": 1,
+      "namedAssertionKill": true,
+      "collateral": [],
+      "tap": "M09.tap",
+      "rawResult": "M09.raw-result.json"
+    },
+    {
+      "id": "M10",
+      "criterion": "CFG10",
+      "expectedName": "CFG10 升级既有联系人只登记当前配置基线，不伪造早期历史或纳入秘密记忆字段",
+      "tests": 16,
+      "pass": 14,
+      "fail": 2,
+      "namedAssertionKill": true,
+      "collateral": [
+        "CFG16 R1-04 五种快照的SQLite原始内容严格只落盘配置白名单"
+      ],
+      "tap": "M10.tap",
+      "rawResult": "M10.raw-result.json"
+    },
+    {
+      "id": "M11",
+      "criterion": "CFG11",
+      "expectedName": "CFG11 历史只追加，数据库 UPDATE 或 DELETE 被拒且原值保留",
+      "tests": 16,
+      "pass": 15,
+      "fail": 1,
+      "namedAssertionKill": true,
+      "collateral": [],
+      "tap": "M11.tap",
+      "rawResult": "M11.raw-result.json"
+    },
+    {
+      "id": "M12",
+      "criterion": "CFG12",
+      "expectedName": "CFG12 删除联系人不允许通过配置回滚复活；不存在的版本不写任何东西",
+      "tests": 16,
+      "pass": 15,
+      "fail": 1,
+      "namedAssertionKill": true,
+      "collateral": [],
+      "tap": "M12.tap",
+      "rawResult": "M12.raw-result.json"
+    },
+    {
+      "id": "M13",
+      "criterion": "CFG11",
+      "expectedName": "CFG11 历史只追加，数据库 UPDATE 或 DELETE 被拒且原值保留",
+      "tests": 16,
+      "pass": 15,
+      "fail": 1,
+      "namedAssertionKill": true,
+      "collateral": [],
+      "tap": "M13.tap",
+      "rawResult": "M13.raw-result.json"
+    },
+    {
+      "id": "M14",
+      "criterion": "CFG05",
+      "expectedName": "CFG05 回滚幂等持久化；同一动作号换目标版本拒绝",
+      "tests": 16,
+      "pass": 15,
+      "fail": 1,
+      "namedAssertionKill": true,
+      "collateral": [],
+      "tap": "M14.tap",
+      "rawResult": "M14.raw-result.json"
+    },
+    {
+      "id": "M15",
+      "criterion": "CFG01",
+      "expectedName": "CFG01 创建与修改保留完整配置快照，旧版本不随当前修改变化",
+      "tests": 16,
+      "pass": 5,
+      "fail": 11,
+      "namedAssertionKill": true,
+      "collateral": [
+        "CFG02 回滚生成递增版本且保留身份、消息、记忆、任务与游标",
+        "CFG03 回滚按当前版本拒绝过期请求，不覆盖较新的配置",
+        "CFG04 修改可带 CAS 和幂等号，重复请求不追加快照或通知",
+        "CFG05 回滚幂等持久化；同一动作号换目标版本拒绝",
+        "CFG07 历史写入失败时配置更新与通知一起放弃",
+        "CFG09 重启后历史按联系人分页且不会复制已有版本",
+        "CFG13 R1-01 覆盖插入不能原位改写历史且回滚仍使用原配置",
+        "CFG14 R1-02 回滚历史写入失败原子放弃且同一动作号可重试一次",
+        "CFG15 R1-03 回滚恢复每个白名单字段含工具能力槽位和模型harness",
+        "CFG16 R1-04 五种快照的SQLite原始内容严格只落盘配置白名单"
+      ],
+      "tap": "M15.tap",
+      "rawResult": "M15.raw-result.json"
+    },
+    {
+      "id": "M16",
+      "criterion": "CFG13",
+      "expectedName": "CFG13 R1-01 覆盖插入不能原位改写历史且回滚仍使用原配置",
+      "tests": 16,
+      "pass": 15,
+      "fail": 1,
+      "namedAssertionKill": true,
+      "collateral": [],
+      "tap": "M16.tap",
+      "rawResult": "M16.raw-result.json"
+    },
+    {
+      "id": "M17",
+      "criterion": "CFG14",
+      "expectedName": "CFG14 R1-02 回滚历史写入失败原子放弃且同一动作号可重试一次",
+      "tests": 16,
+      "pass": 15,
+      "fail": 1,
+      "namedAssertionKill": true,
+      "collateral": [],
+      "tap": "M17.tap",
+      "rawResult": "M17.raw-result.json"
+    },
+    {
+      "id": "M18",
+      "criterion": "CFG15",
+      "expectedName": "CFG15 R1-03 回滚恢复每个白名单字段含工具能力槽位和模型harness",
+      "tests": 16,
+      "pass": 14,
+      "fail": 2,
+      "namedAssertionKill": true,
+      "collateral": [
+        "CFG13 R1-01 覆盖插入不能原位改写历史且回滚仍使用原配置"
+      ],
+      "tap": "M18.tap",
+      "rawResult": "M18.raw-result.json"
+    },
+    {
+      "id": "M19",
+      "criterion": "CFG16",
+      "expectedName": "CFG16 R1-04 五种快照的SQLite原始内容严格只落盘配置白名单",
+      "tests": 16,
+      "pass": 15,
+      "fail": 1,
+      "namedAssertionKill": true,
+      "collateral": [],
+      "tap": "M19.tap",
+      "rawResult": "M19.raw-result.json"
+    }
+  ],
+  "mutants_killed": 19,
+  "mutants_survived": 0,
+  "mutants_invalid": 0,
+  "dependency": {
+    "tests": 46,
+    "pass": 46,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "full": {
+    "tests": 1489,
+    "pass": 1489,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "source_unchanged": true,
+  "production_real_host_sqlite_service": true,
+  "acceptance_limits": [
+    "No real model calls",
+    "No desktop-user-operation acceptance",
+    "Independent review remains pending; original R1 reject preserved"
+  ],
+  "original_review_reject_preserved": true,
+  "official_native_gates_not_substituted_by_cloud": true
+}

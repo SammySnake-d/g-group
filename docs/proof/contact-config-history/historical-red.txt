@@ -1,0 +1,364 @@
+TAP version 13
+# (node:28992) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: CFG01 创建与修改保留完整配置快照，旧版本不随当前修改变化
+not ok 1 - CFG01 创建与修改保留完整配置快照，旧版本不随当前修改变化
+  ---
+  duration_ms: 13.210875
+  type: 'test'
+  location: '/private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:28:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   [
+    -     2,
+    -     'update',
+    -     '新名字'
+    -   ],
+    -   [
+    -     1,
+    -     'create',
+    -     '原名字'
+    -   ]
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      0: 2
+      1: 'update'
+      2: '新名字'
+    1:
+      0: 1
+      1: 'create'
+      2: '原名字'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:36:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: CFG02 回滚生成递增版本且保留身份、消息、记忆、任务与游标
+not ok 2 - CFG02 回滚生成递增版本且保留身份、消息、记忆、任务与游标
+  ---
+  duration_ms: 7.612125
+  type: 'test'
+  location: '/private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:42:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   2,
+    +   '改坏的名字',
+    +   '改坏的人设'
+    -   3,
+    -   '原名字',
+    -   '原人设'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 3
+    1: '原名字'
+    2: '原人设'
+  actual:
+    0: 2
+    1: '改坏的名字'
+    2: '改坏的人设'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:54:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CFG03 回滚按当前版本拒绝过期请求，不覆盖较新的配置
+not ok 3 - CFG03 回滚按当前版本拒绝过期请求，不覆盖较新的配置
+  ---
+  duration_ms: 7.215291
+  type: 'test'
+  location: '/private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:62:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + false
+    - [
+    -   'conflict',
+    -   {
+    -     currentVersion: 2
+    -   }
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'conflict'
+    1:
+      currentVersion: 2
+  actual: false
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:68:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CFG04 修改可带 CAS 和幂等号，重复请求不追加快照或通知
+not ok 4 - CFG04 修改可带 CAS 和幂等号，重复请求不追加快照或通知
+  ---
+  duration_ms: 6.581542
+  type: 'test'
+  location: '/private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:73:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   3,
+        2,
+    -   1
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 2
+    1: 1
+  actual:
+    0: 3
+    1: 2
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:83:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CFG05 回滚幂等持久化；同一动作号换目标版本拒绝
+not ok 5 - CFG05 回滚幂等持久化；同一动作号换目标版本拒绝
+  ---
+  duration_ms: 7.66025
+  type: 'test'
+  location: '/private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:90:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    2 !== 3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 3
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:101:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CFG06 回滚重新执行当前模型兼容预检，失败原子不写；明确确认后保留原选择
+not ok 6 - CFG06 回滚重新执行当前模型兼容预检，失败原子不写；明确确认后保留原选择
+  ---
+  duration_ms: 6.419459
+  type: 'test'
+  location: '/private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:107:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + false
+    - 'conflict'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'conflict'
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:116:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CFG07 历史写入失败时配置更新与通知一起放弃
+not ok 7 - CFG07 历史写入失败时配置更新与通知一起放弃
+  ---
+  duration_ms: 5.935584
+  type: 'test'
+  location: '/private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:124:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + false
+    - 'internal'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'internal'
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:132:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CFG08 批量模型替换也追加快照，快照失败同时回滚全局与所有联系人
+not ok 8 - CFG08 批量模型替换也追加快照，快照失败同时回滚全局与所有联系人
+  ---
+  duration_ms: 7.727583
+  type: 'test'
+  location: '/private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:141:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + false
+    - 'internal'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'internal'
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:149:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CFG09 重启后历史按联系人分页且不会复制已有版本
+not ok 9 - CFG09 重启后历史按联系人分页且不会复制已有版本
+  ---
+  duration_ms: 6.871541
+  type: 'test'
+  location: '/private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:159:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   [],
+    +   false
+    -   [
+    -     3,
+    -     2
+    -   ],
+    -   true
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      0: 3
+      1: 2
+    1: true
+  actual:
+    0:
+    1: false
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:168:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CFG10 升级既有联系人只登记当前配置基线，不伪造早期历史或纳入秘密记忆字段
+not ok 10 - CFG10 升级既有联系人只登记当前配置基线，不伪造早期历史或纳入秘密记忆字段
+  ---
+  duration_ms: 7.15275
+  type: 'test'
+  location: '/private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:177:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   [
+    -     2,
+    -     'baseline',
+    -     '旧联系人第二版'
+    -   ]
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      0: 2
+      1: 'baseline'
+      2: '旧联系人第二版'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:187:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CFG11 历史只追加，数据库 UPDATE 或 DELETE 被拒且原值保留
+not ok 11 - CFG11 历史只追加，数据库 UPDATE 或 DELETE 被拒且原值保留
+  ---
+  duration_ms: 6.612125
+  type: 'test'
+  location: '/private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:192:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected exception.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'throws'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:195:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CFG12 删除联系人不允许通过配置回滚复活；不存在的版本不写任何东西
+not ok 12 - CFG12 删除联系人不允许通过配置回滚复活；不存在的版本不写任何东西
+  ---
+  duration_ms: 6.433542
+  type: 'test'
+  location: '/private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:200:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + false
+    - 'not_found'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'not_found'
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-req-contact-history-20261112/packages/server/src/contact-config-history.test.ts:205:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 0
+# fail 12
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 233.649083

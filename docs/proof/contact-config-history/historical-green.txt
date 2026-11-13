@@ -1,0 +1,84 @@
+TAP version 13
+# (node:29006) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: CFG01 创建与修改保留完整配置快照，旧版本不随当前修改变化
+ok 1 - CFG01 创建与修改保留完整配置快照，旧版本不随当前修改变化
+  ---
+  duration_ms: 14.378209
+  type: 'test'
+  ...
+# Subtest: CFG02 回滚生成递增版本且保留身份、消息、记忆、任务与游标
+ok 2 - CFG02 回滚生成递增版本且保留身份、消息、记忆、任务与游标
+  ---
+  duration_ms: 15.086166
+  type: 'test'
+  ...
+# Subtest: CFG03 回滚按当前版本拒绝过期请求，不覆盖较新的配置
+ok 3 - CFG03 回滚按当前版本拒绝过期请求，不覆盖较新的配置
+  ---
+  duration_ms: 7.934791
+  type: 'test'
+  ...
+# Subtest: CFG04 修改可带 CAS 和幂等号，重复请求不追加快照或通知
+ok 4 - CFG04 修改可带 CAS 和幂等号，重复请求不追加快照或通知
+  ---
+  duration_ms: 8.877084
+  type: 'test'
+  ...
+# Subtest: CFG05 回滚幂等持久化；同一动作号换目标版本拒绝
+ok 5 - CFG05 回滚幂等持久化；同一动作号换目标版本拒绝
+  ---
+  duration_ms: 9.647458
+  type: 'test'
+  ...
+# Subtest: CFG06 回滚重新执行当前模型兼容预检，失败原子不写；明确确认后保留原选择
+ok 6 - CFG06 回滚重新执行当前模型兼容预检，失败原子不写；明确确认后保留原选择
+  ---
+  duration_ms: 9.409375
+  type: 'test'
+  ...
+# Subtest: CFG07 历史写入失败时配置更新与通知一起放弃
+ok 7 - CFG07 历史写入失败时配置更新与通知一起放弃
+  ---
+  duration_ms: 8.419
+  type: 'test'
+  ...
+# Subtest: CFG08 批量模型替换也追加快照，快照失败同时回滚全局与所有联系人
+ok 8 - CFG08 批量模型替换也追加快照，快照失败同时回滚全局与所有联系人
+  ---
+  duration_ms: 9.635583
+  type: 'test'
+  ...
+# Subtest: CFG09 重启后历史按联系人分页且不会复制已有版本
+ok 9 - CFG09 重启后历史按联系人分页且不会复制已有版本
+  ---
+  duration_ms: 10.453667
+  type: 'test'
+  ...
+# Subtest: CFG10 升级既有联系人只登记当前配置基线，不伪造早期历史或纳入秘密记忆字段
+ok 10 - CFG10 升级既有联系人只登记当前配置基线，不伪造早期历史或纳入秘密记忆字段
+  ---
+  duration_ms: 9.414
+  type: 'test'
+  ...
+# Subtest: CFG11 历史只追加，数据库 UPDATE 或 DELETE 被拒且原值保留
+ok 11 - CFG11 历史只追加，数据库 UPDATE 或 DELETE 被拒且原值保留
+  ---
+  duration_ms: 7.995125
+  type: 'test'
+  ...
+# Subtest: CFG12 删除联系人不允许通过配置回滚复活；不存在的版本不写任何东西
+ok 12 - CFG12 删除联系人不允许通过配置回滚复活；不存在的版本不写任何东西
+  ---
+  duration_ms: 7.7045
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 258.599167

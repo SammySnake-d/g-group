@@ -1,0 +1,21 @@
+{
+  "native_prefixes_sha_verified": 4,
+  "native_matching_call_outputs_verified": 13,
+  "commit_paths_verified": 13,
+  "commits": [
+    "0eb6ad3b4596dbe838c302ba54f563b184f13baf",
+    "03d5e9543ee23f48c968136d33e6702d07cbd17d",
+    "c8449f699ccb4dc72cc44e6dd652c9cc63b7162d",
+    "93e8cf922e4b4c7997691ed8ddc7262bd357b13e",
+    "badd24e5a6b4d4ae5a7601fb933d7c393ec54e12",
+    "126c42aed03612883810f6379326b4620a8278b5",
+    "13774dd4c0e521d4102fe9f28821ce8cb00408f7",
+    "80ba41865ec2e52007070e6ff56322c8da64c30e",
+    "773dafd89bed46cd9f10ea4cb0d9dbe1c7b699ae",
+    "3cfabba2978e3b617a07c86b962eba5fd8e4d411",
+    "fcde704683680728b5d840b77f3c21c47d36af38",
+    "af3bf6f13756604e7ad8edd094f842658241b6f9",
+    "b2e8070daba2e207667641d83420e9e6eb772d07"
+  ],
+  "not_upstream_model_or_record_tamper_attestation": true
+}

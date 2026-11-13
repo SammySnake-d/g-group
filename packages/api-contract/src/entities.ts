@@ -83,6 +83,21 @@ export const ContactView = obj({
 });
 export type ContactView = Infer<typeof ContactView>;
 
+/** U07:配置快照只包含联系人定义,不含身份、记忆、任务、游标、凭据值或运行状态。 */
+export const ContactConfig = obj({
+  name: str({ min: 1, max: 80 }), avatar: nullable(str({ max: 2048 })), bio: str({ max: 2000 }),
+  speakingModel: str({ max: 200 }), harness: oneOf(HARNESSES), computeModel: ModelSlot,
+  tools: arr(str({ max: 200 })), computeAssets: arr(obj({ name: str({ max: 200 }), kind: oneOf(["mcp", "skill", "script"] as const) })),
+  computeSlots: nullable(int({ min: 1, max: 64 })), persona: str({ max: 20000 }),
+});
+export type ContactConfig = Infer<typeof ContactConfig>;
+export const ContactConfigVersion = obj({
+  version: int({ min: 1 }), at: isoTime(),
+  kind: oneOf(["baseline", "create", "update", "batch", "rollback"] as const),
+  restoredFrom: nullable(int({ min: 1 })), config: ContactConfig,
+});
+export type ContactConfigVersion = Infer<typeof ContactConfigVersion>;
+
 // ---------- 会话(私聊 / 群聊)----------
 export const ROOM_KINDS = ["dm", "group"] as const;
 export const MemberRef = obj({ kind: oneOf(["user", "contact"] as const), id: id() });

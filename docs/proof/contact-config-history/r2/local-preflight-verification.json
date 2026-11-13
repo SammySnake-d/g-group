@@ -1,0 +1,13 @@
+{
+  "archive": "local-preflight-original-logs.tar.gz",
+  "bytes": 38278,
+  "sha256": "8cd60b2007969cfc92c95114b20311cf9af91b8e5ad5c3111b359403285f800d",
+  "declared_original_members_verified": 36,
+  "legacy_F2_F6_F8_original12_survived": 3,
+  "new16_designated_kill": 3,
+  "targeted_new_mutants_killed": 4,
+  "parser_controls_passed": 21,
+  "new19_cloud_not_run": true,
+  "runner_final_sha256": "15de2ad705bd89f781e78b5aec44b902d62e87bdcb516fe8a1623a896b55d8a0",
+  "old15_definitions_byte_identical": true
+}

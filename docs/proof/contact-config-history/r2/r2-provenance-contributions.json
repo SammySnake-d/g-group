@@ -1,0 +1,727 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-11-13T03:01:22.907610+08:00",
+  "status": "read_only_contribution_locator_not_review_or_gate_approval",
+  "target": "/private/tmp/gg-req-contact-history-r2-resume-20261113",
+  "frozen_review_ancestor": "6d8123341002f0e9f397c77633c3f30a6d01a54b",
+  "R1_05_contract_locator": {
+    "git_object": "6d8123341002f0e9f397c77633c3f30a6d01a54b:reviews/feat-contact-config-history.md",
+    "lines": [
+      88,
+      93
+    ],
+    "use": "只定位需核查的角色/提交；不把旧审查或receipt当来源证据"
+  },
+  "scope": "仅PR84来源定位；原生/宿主记录与Git树只读；未改TARGET、门禁或其他PR；仅写本JSON及同名MD",
+  "evidence_policy": {
+    "native_call_and_matching_output_required": true,
+    "git_commit_objects_and_paths_independently_resolved": true,
+    "old_receipt_not_used_as_attribution_source": true,
+    "model_values_are_exact_recorded_strings_not_independent_upstream_vendor_attestation": true,
+    "no_synthesized_turns_or_records": true
+  },
+  "source_snapshots": [
+    {
+      "id": "original_parent",
+      "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T17-05-26-01a1cf01-3b82-7211-b7b9-c7147d5e45e7.jsonl",
+      "snapshot_line_count": 758,
+      "snapshot_bytes": 2420850,
+      "snapshot_prefix_sha256": "40877d0a1c270b63953110b76fb7e5aeff4fb7374a1f9c2714075891b7eb6868",
+      "append_only_snapshot_not_future_full_file_hash": true
+    },
+    {
+      "id": "original_child",
+      "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T18-52-02-01a1cf62-d34d-7050-b7b6-c9d738b02b9a.jsonl",
+      "snapshot_line_count": 465,
+      "snapshot_bytes": 1823163,
+      "snapshot_prefix_sha256": "9428a5fbd49c39eb27e3ae4178329a790a5e2ee8f3973bdc43fd3375e167ffcd",
+      "append_only_snapshot_not_future_full_file_hash": true
+    },
+    {
+      "id": "current_parent",
+      "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+      "snapshot_line_count": 5646,
+      "snapshot_bytes": 21177434,
+      "snapshot_prefix_sha256": "f0ed4c21d2a12bb30277107352a0782de12938d4ea26c2fd1d5156ed0bd5d62f",
+      "append_only_snapshot_not_future_full_file_hash": true
+    },
+    {
+      "id": "finisher_child",
+      "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+      "snapshot_line_count": 3350,
+      "snapshot_bytes": 13973847,
+      "snapshot_prefix_sha256": "fb9181a6f4dd993a68bd633dc37b2b872aa1fdb926149ba9f1497da23dd6957e",
+      "append_only_snapshot_not_future_full_file_hash": true
+    }
+  ],
+  "actors": [
+    {
+      "actor": "original_parent",
+      "role": "原宿主父会话：调度，不把子代理产品提交归成父会话亲自编写",
+      "host_session": "codex:534f3614-21cd-43eb-9db6-3cd1673d2b62",
+      "native_session": "01a1cf01-3b82-7211-b7b9-c7147d5e45e7",
+      "model_exact": "chatflows/gpt-6-astra",
+      "evidence": [
+        {
+          "path": "/Users/snakesammy/.mirasim/sessions/codex/534f3614-21cd-43eb-9db6-3cd1673d2b62/turns.jsonl",
+          "line_start": 1,
+          "line_end": 2,
+          "note": "历史轮次绑定原生sessionId与model"
+        },
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T17-05-26-01a1cf01-3b82-7211-b7b9-c7147d5e45e7.jsonl",
+          "line_start": 1,
+          "line_end": 1,
+          "note": "原生session_meta.id"
+        },
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T17-05-26-01a1cf01-3b82-7211-b7b9-c7147d5e45e7.jsonl",
+          "line_start": 8,
+          "line_end": 8,
+          "note": "turn_context.model精确字符串"
+        },
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T17-05-26-01a1cf01-3b82-7211-b7b9-c7147d5e45e7.jsonl",
+          "line_start": 474,
+          "line_end": 477,
+          "note": "真实spawn_agent调用/返回task_name"
+        }
+      ]
+    },
+    {
+      "actor": "original_child",
+      "role": "原实际产品、测试、原始红及同体校准红/恢复绿作者",
+      "host_session_inherited_from": "codex:534f3614-21cd-43eb-9db6-3cd1673d2b62",
+      "native_session": "01a1cf62-d34d-7050-b7b6-c9d738b02b9a",
+      "agent_path": "/root/implement_contact_history",
+      "model_exact": "chatflows/gpt-6-astra",
+      "evidence": [
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T18-52-02-01a1cf62-d34d-7050-b7b6-c9d738b02b9a.jsonl",
+          "line_start": 1,
+          "line_end": 1,
+          "note": "session_meta.id/parent_thread_id/agent_path"
+        },
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T18-52-02-01a1cf62-d34d-7050-b7b6-c9d738b02b9a.jsonl",
+          "line_start": 9,
+          "line_end": 9,
+          "note": "turn_context.model"
+        }
+      ]
+    },
+    {
+      "actor": "current_parent",
+      "role": "当前宿主父会话；原阶段调度finisher，当前R2根实际写红测试及产品补丁",
+      "host_session": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+      "native_session": "01a1cfc8-db89-7400-b3de-876bd8478982",
+      "model_exact": "gpt-6.1-sol",
+      "evidence": [
+        {
+          "path": "/Users/snakesammy/.mirasim/sessions/codex/76d2c467-4626-4ff1-a5d3-54c5be6b3de7/record.json",
+          "line_start": 15,
+          "line_end": 15,
+          "note": "当前宿主nativeSessionId绑定"
+        },
+        {
+          "path": "/Users/snakesammy/.mirasim/sessions/codex/76d2c467-4626-4ff1-a5d3-54c5be6b3de7/turns.jsonl",
+          "line_start": 1,
+          "line_end": 1,
+          "note": "仅已结束历史轮次，不冒称覆盖本轮R2"
+        },
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+          "line_start": 1,
+          "line_end": 1,
+          "note": "session_meta.id/thread_source=user"
+        },
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+          "line_start": 8,
+          "line_end": 8,
+          "note": "原阶段turn_context.model"
+        },
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+          "line_start": 5406,
+          "line_end": 5406,
+          "note": "本轮R2命令之前最近turn_context.model"
+        },
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+          "line_start": 1189,
+          "line_end": 1192,
+          "note": "原阶段真实spawn_agent调用/返回task_name"
+        }
+      ]
+    },
+    {
+      "actor": "finisher_child",
+      "role": "原完成阶段runner/proof/收据证据/正常push；不归属原产品实现",
+      "host_session_inherited_from": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+      "native_session": "01a1d035-2076-7443-bb9f-062b74f98187",
+      "agent_path": "/root/contact_history_finish",
+      "model_exact": "gpt-6.1-sol",
+      "evidence": [
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+          "line_start": 1,
+          "line_end": 1,
+          "note": "session_meta.id/parent_thread_id/agent_path"
+        },
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+          "line_start": 5,
+          "line_end": 5,
+          "note": "turn_context.model"
+        },
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+          "line_start": 409,
+          "line_end": 411,
+          "note": "正常push命令实际启动及其HEAD/hash；此处工具仍为running，不伪称该行是最终退出码"
+        }
+      ]
+    }
+  ],
+  "commit_contributions": [
+    {
+      "commit": "0eb6ad3b4596dbe838c302ba54f563b184f13baf",
+      "actor": "original_child",
+      "model_exact": "chatflows/gpt-6-astra",
+      "contribution": "原始红：API/实体与服务入口、空实现和12项测试",
+      "git_parent": "4efdee0be6d161060099b5ce488e3344c70305ee",
+      "git_authored_at": "2026-11-12T19:21:34+08:00",
+      "subject": "test(contact-config-history): U07 配置快照与回滚先红，12 条按名失败",
+      "changed_paths": [
+        "packages/api-contract/src/api.ts",
+        "packages/api-contract/src/entities.ts",
+        "packages/server/src/contact-config-history.test.ts",
+        "packages/server/src/contact-config-history.ts",
+        "packages/server/src/host.ts",
+        "packages/server/src/service.ts"
+      ],
+      "native_call_id": "call_7139921a4dc0408d85f24aa2fc7d06c4",
+      "native_command_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T18-52-02-01a1cf62-d34d-7050-b7b6-c9d738b02b9a.jsonl",
+        "line_start": 300,
+        "line_end": 300,
+        "note": "实际提交命令，非读取旧receipt"
+      },
+      "native_result_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T18-52-02-01a1cf62-d34d-7050-b7b6-c9d738b02b9a.jsonl",
+        "line_start": 303,
+        "line_end": 303,
+        "note": "同call_id工具输出中实际提交短SHA/HEAD"
+      },
+      "command_sha256": "14084347539455cd199aa2a7c2ae953e5b28abf884ddcd8abf7925a81588fc19"
+    },
+    {
+      "commit": "03d5e9543ee23f48c968136d33e6702d07cbd17d",
+      "actor": "original_child",
+      "model_exact": "chatflows/gpt-6-astra",
+      "contribution": "原始红夹具纠正：完整批量参数，12项按行为断言失败",
+      "git_parent": "0eb6ad3b4596dbe838c302ba54f563b184f13baf",
+      "git_authored_at": "2026-11-12T19:28:43+08:00",
+      "subject": "test(contact-config-history): 红用例带完整批量参数，12 项均在实际行为断言失败",
+      "changed_paths": [
+        "packages/server/src/contact-config-history.test.ts"
+      ],
+      "native_call_id": "call_1fae17debc244bb3877769bc49c212e8",
+      "native_command_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T18-52-02-01a1cf62-d34d-7050-b7b6-c9d738b02b9a.jsonl",
+        "line_start": 328,
+        "line_end": 328,
+        "note": "实际提交命令，非读取旧receipt"
+      },
+      "native_result_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T18-52-02-01a1cf62-d34d-7050-b7b6-c9d738b02b9a.jsonl",
+        "line_start": 331,
+        "line_end": 331,
+        "note": "同call_id工具输出中实际提交短SHA/HEAD"
+      },
+      "command_sha256": "a5820089693218f32aa3dc1b1adb33878018c7f3002f25a0a1171a56653fa4d8"
+    },
+    {
+      "commit": "c8449f699ccb4dc72cc44e6dd652c9cc63b7162d",
+      "actor": "original_child",
+      "model_exact": "chatflows/gpt-6-astra",
+      "contribution": "实际产品实现：配置历史、版本校验和事务回滚",
+      "git_parent": "03d5e9543ee23f48c968136d33e6702d07cbd17d",
+      "git_authored_at": "2026-11-12T19:34:46+08:00",
+      "subject": "feat(contact-config-history): 追加配置历史与版本校验回滚，复用模型预检且状态原子落盘",
+      "changed_paths": [
+        "packages/server/src/contact-config-history.ts",
+        "packages/server/src/host.ts"
+      ],
+      "native_call_id": "call_6e996fd4e04140748ecd12b3e1799970",
+      "native_command_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T18-52-02-01a1cf62-d34d-7050-b7b6-c9d738b02b9a.jsonl",
+        "line_start": 347,
+        "line_end": 347,
+        "note": "实际提交命令，非读取旧receipt"
+      },
+      "native_result_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T18-52-02-01a1cf62-d34d-7050-b7b6-c9d738b02b9a.jsonl",
+        "line_start": 350,
+        "line_end": 350,
+        "note": "同call_id工具输出中实际提交短SHA/HEAD"
+      },
+      "command_sha256": "411aefce278898905f3b27a3d46101378e233dda1ea45784b43885705dc17a4a"
+    },
+    {
+      "commit": "93e8cf922e4b4c7997691ed8ddc7262bd357b13e",
+      "actor": "original_child",
+      "model_exact": "chatflows/gpt-6-astra",
+      "contribution": "实现后G-TAUTO同体红校准，不是历史首红",
+      "git_parent": "c8449f699ccb4dc72cc44e6dd652c9cc63b7162d",
+      "git_authored_at": "2026-11-12T20:05:24+08:00",
+      "subject": "test(contact-config-history): 直接调用服务入口校准 G-TAUTO，保留12项真实红对照",
+      "changed_paths": [
+        "packages/server/src/contact-config-history.test.ts",
+        "packages/server/src/contact-config-history.ts",
+        "packages/server/src/host.ts"
+      ],
+      "native_call_id": "call_e6b95bd5ccde461ea72344aed04b1e1c",
+      "native_command_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T18-52-02-01a1cf62-d34d-7050-b7b6-c9d738b02b9a.jsonl",
+        "line_start": 422,
+        "line_end": 422,
+        "note": "实际提交命令，非读取旧receipt"
+      },
+      "native_result_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T18-52-02-01a1cf62-d34d-7050-b7b6-c9d738b02b9a.jsonl",
+        "line_start": 425,
+        "line_end": 425,
+        "note": "同call_id工具输出中实际提交短SHA/HEAD"
+      },
+      "command_sha256": "a95c3e00137473bcbc7e1c0ffa04bd5c70428c7b408c527dfdb21b234a8e8b0e"
+    },
+    {
+      "commit": "badd24e5a6b4d4ae5a7601fb933d7c393ec54e12",
+      "actor": "original_child",
+      "model_exact": "chatflows/gpt-6-astra",
+      "contribution": "同体红之后恢复产品绿",
+      "git_parent": "93e8cf922e4b4c7997691ed8ddc7262bd357b13e",
+      "git_authored_at": "2026-11-12T20:05:25+08:00",
+      "subject": "feat(contact-config-history): 恢复已校准实现，12条通过",
+      "changed_paths": [
+        "packages/server/src/contact-config-history.ts",
+        "packages/server/src/host.ts"
+      ],
+      "native_call_id": "call_e6b95bd5ccde461ea72344aed04b1e1c",
+      "native_command_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T18-52-02-01a1cf62-d34d-7050-b7b6-c9d738b02b9a.jsonl",
+        "line_start": 422,
+        "line_end": 422,
+        "note": "实际提交命令，非读取旧receipt"
+      },
+      "native_result_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T18-52-02-01a1cf62-d34d-7050-b7b6-c9d738b02b9a.jsonl",
+        "line_start": 425,
+        "line_end": 425,
+        "note": "同call_id工具输出中实际提交短SHA/HEAD"
+      },
+      "command_sha256": "a95c3e00137473bcbc7e1c0ffa04bd5c70428c7b408c527dfdb21b234a8e8b0e"
+    },
+    {
+      "commit": "126c42aed03612883810f6379326b4620a8278b5",
+      "actor": "finisher_child",
+      "model_exact": "gpt-6.1-sol",
+      "contribution": "仅变异runner：显式TAP及副本自身workspace依赖",
+      "git_parent": "badd24e5a6b4d4ae5a7601fb933d7c393ec54e12",
+      "git_authored_at": "2026-11-12T22:43:40+08:00",
+      "subject": "test(contact-config-history): 固定TAP并让变异依赖指向自身副本",
+      "changed_paths": [
+        "packages/server/proof/contact-config-history-mutations.mjs"
+      ],
+      "native_call_id": "call_PWncDpe9IEU6cKti5EstABxD",
+      "native_command_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+        "line_start": 102,
+        "line_end": 102,
+        "note": "实际提交命令，非读取旧receipt"
+      },
+      "native_result_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+        "line_start": 105,
+        "line_end": 105,
+        "note": "同call_id工具输出中实际提交短SHA/HEAD"
+      },
+      "command_sha256": "ff25e2819c726052a55d79f16f12e344e4ecec26811a17233e752485641604aa"
+    },
+    {
+      "commit": "13774dd4c0e521d4102fe9f28821ce8cb00408f7",
+      "actor": "finisher_child",
+      "model_exact": "gpt-6.1-sol",
+      "contribution": "仅真实服务proof脚本",
+      "git_parent": "126c42aed03612883810f6379326b4620a8278b5",
+      "git_authored_at": "2026-11-12T22:50:46+08:00",
+      "subject": "proof(contact-config-history): 真实服务验证下一轮生效与跨重启幂等",
+      "changed_paths": [
+        "packages/server/proof/contact-config-history-real.ts"
+      ],
+      "native_call_id": "call_i4DS2s2rVdNldBOiHLCWADF4",
+      "native_command_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+        "line_start": 240,
+        "line_end": 240,
+        "note": "实际提交命令，非读取旧receipt"
+      },
+      "native_result_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+        "line_start": 243,
+        "line_end": 243,
+        "note": "同call_id工具输出中实际提交短SHA/HEAD"
+      },
+      "command_sha256": "0526f217ab2f10dc9ef8969029d3fb964b89bb872f56b45ede03989cf63a0311"
+    },
+    {
+      "commit": "80ba41865ec2e52007070e6ff56322c8da64c30e",
+      "actor": "finisher_child",
+      "model_exact": "gpt-6.1-sol",
+      "contribution": "证据/README/收据归档",
+      "git_parent": "13774dd4c0e521d4102fe9f28821ce8cb00408f7",
+      "git_authored_at": "2026-11-12T22:58:29+08:00",
+      "subject": "proof(contact-config-history): 封存红绿变异与生产回滚收据，独立审查待办",
+      "changed_paths": [
+        "docs/proof/contact-config-history/README.md",
+        "docs/proof/contact-config-history/bundle-setup-failure.txt",
+        "docs/proof/contact-config-history/cloud-proof.tar.gz",
+        "docs/proof/contact-config-history/contact-config-history-mutations.json",
+        "docs/proof/contact-config-history/historical-green.txt",
+        "docs/proof/contact-config-history/historical-red.txt",
+        "docs/proof/contact-config-history/historical-runner-before.mjs",
+        "docs/proof/contact-config-history/inherited-full-summary.txt",
+        "docs/proof/contact-config-history/inherited-result.json",
+        "docs/proof/contact-config-history/manifest.json",
+        "docs/proof/contact-config-history/mechanical-gates.txt",
+        "docs/proof/contact-config-history/production-incomplete-input-failure.txt",
+        "docs/proof/contact-config-history/proof-result.json",
+        "docs/proof/contact-config-history/proof-source-freeze.json",
+        "docs/proof/contact-config-history/result.json",
+        "docs/proof/contact-config-history/runner-before-baseline.txt",
+        "docs/proof/contact-config-history/source-freeze.json",
+        "docs/proof/contact-config-history/source-identity.json",
+        "receipts/feat-contact-config-history.json"
+      ],
+      "native_call_id": "call_FVFLiOcE4i969E6xemXXxxkl",
+      "native_command_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+        "line_start": 366,
+        "line_end": 366,
+        "note": "实际提交命令，非读取旧receipt"
+      },
+      "native_result_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+        "line_start": 369,
+        "line_end": 369,
+        "note": "同call_id工具输出中实际提交短SHA/HEAD"
+      },
+      "command_sha256": "3b0353c38bdd0ff938c82931d39e9b166db3d36d2cc5cad1120f17f5fc8cbee1"
+    },
+    {
+      "commit": "773dafd89bed46cd9f10ea4cb0d9dbe1c7b699ae",
+      "actor": "finisher_child",
+      "model_exact": "gpt-6.1-sol",
+      "contribution": "证据说明/hash纠错",
+      "git_parent": "80ba41865ec2e52007070e6ff56322c8da64c30e",
+      "git_authored_at": "2026-11-12T22:59:34+08:00",
+      "subject": "docs(contact-config-history): 最终hash覆盖证据，不嵌入自引用",
+      "changed_paths": [
+        "docs/proof/contact-config-history/README.md",
+        "docs/proof/contact-config-history/mechanical-gates-before-evidence.txt",
+        "docs/proof/contact-config-history/mechanical-gates.txt"
+      ],
+      "native_call_id": "call_ay19L4YWHK8wglRw0UpZstl3",
+      "native_command_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+        "line_start": 389,
+        "line_end": 389,
+        "note": "实际提交命令，非读取旧receipt"
+      },
+      "native_result_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+        "line_start": 391,
+        "line_end": 391,
+        "note": "同call_id工具输出中实际提交短SHA/HEAD"
+      },
+      "command_sha256": "19be9c6d291cd42ee646ded7d2f955fa31946f88656ea4a2d9e7f6a914c56a73"
+    },
+    {
+      "commit": "3cfabba2978e3b617a07c86b962eba5fd8e4d411",
+      "actor": "finisher_child",
+      "model_exact": "gpt-6.1-sol",
+      "contribution": "机械门禁输出封存与正常push启动",
+      "git_parent": "773dafd89bed46cd9f10ea4cb0d9dbe1c7b699ae",
+      "git_authored_at": "2026-11-12T23:00:36+08:00",
+      "subject": "review-evidence(contact-config-history): 封存最终机械门禁，未自签",
+      "changed_paths": [
+        "reviews/contact-config-history-final-gates.txt"
+      ],
+      "native_call_id": "call_fXspELKxX0zHHdNvcOluuzDR",
+      "native_command_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+        "line_start": 409,
+        "line_end": 409,
+        "note": "实际提交命令，非读取旧receipt"
+      },
+      "native_result_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+        "line_start": 411,
+        "line_end": 411,
+        "note": "同call_id工具输出中实际提交短SHA/HEAD"
+      },
+      "command_sha256": "a758665fa0d8dfdeae2f2eb2d0eb3b3cc74f62e876ec8bf81f544656e87e8367"
+    },
+    {
+      "commit": "fcde704683680728b5d840b77f3c21c47d36af38",
+      "actor": "current_parent",
+      "model_exact": "gpt-6.1-sol",
+      "contribution": "当前根R2：实际替换缺陷红测试",
+      "git_parent": "6d8123341002f0e9f397c77633c3f30a6d01a54b",
+      "git_authored_at": "2026-11-13T02:54:50+08:00",
+      "subject": "test(contact-history): reproduce replacement of immutable snapshot",
+      "changed_paths": [
+        "packages/server/src/contact-config-history.test.ts"
+      ],
+      "native_call_id": "call_9Se8DXqwEGglQT9hzZMmEWYX",
+      "native_command_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+        "line_start": 5596,
+        "line_end": 5596,
+        "note": "实际提交命令，非读取旧receipt"
+      },
+      "native_result_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+        "line_start": 5599,
+        "line_end": 5599,
+        "note": "同call_id工具输出中实际提交短SHA/HEAD"
+      },
+      "command_sha256": "365e10e180ba4e454e7406dfb41d1073288aafd0a9db0efb861eaddc8d7c3d78"
+    },
+    {
+      "commit": "af3bf6f13756604e7ad8edd094f842658241b6f9",
+      "actor": "current_parent",
+      "model_exact": "gpt-6.1-sol",
+      "contribution": "当前根R2：通过受支持update API修正测试夹具/红",
+      "git_parent": "fcde704683680728b5d840b77f3c21c47d36af38",
+      "git_authored_at": "2026-11-13T02:55:38+08:00",
+      "subject": "test(contact-history): seed tool snapshot through supported update API",
+      "changed_paths": [
+        "packages/server/src/contact-config-history.test.ts"
+      ],
+      "native_call_id": "call_EYVt8GW5kg5F1AC634kP8XoA",
+      "native_command_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+        "line_start": 5611,
+        "line_end": 5611,
+        "note": "实际提交命令，非读取旧receipt"
+      },
+      "native_result_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+        "line_start": 5614,
+        "line_end": 5614,
+        "note": "同call_id工具输出中实际提交短SHA/HEAD"
+      },
+      "command_sha256": "15af050fdba04a475eb949df2727a0a6775a8b5b389f0c6fca3e5bd6a107c4b1"
+    },
+    {
+      "commit": "b2e8070daba2e207667641d83420e9e6eb772d07",
+      "actor": "current_parent",
+      "model_exact": "gpt-6.1-sol",
+      "contribution": "当前根R2：拒绝覆盖已有版本的SQLite触发器产品修复",
+      "git_parent": "af3bf6f13756604e7ad8edd094f842658241b6f9",
+      "git_authored_at": "2026-11-13T02:55:38+08:00",
+      "subject": "fix(contact-history): reject SQLite replacement of existing versions",
+      "changed_paths": [
+        "packages/server/src/contact-config-history.ts"
+      ],
+      "native_call_id": "call_EYVt8GW5kg5F1AC634kP8XoA",
+      "native_command_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+        "line_start": 5611,
+        "line_end": 5611,
+        "note": "实际提交命令，非读取旧receipt"
+      },
+      "native_result_evidence": {
+        "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+        "line_start": 5614,
+        "line_end": 5614,
+        "note": "同call_id工具输出中实际提交短SHA/HEAD"
+      },
+      "command_sha256": "15af050fdba04a475eb949df2727a0a6775a8b5b389f0c6fca3e5bd6a107c4b1"
+    }
+  ],
+  "original_product_ownership_proof": {
+    "method": "git show c8449f69:path 与冻结R1审查祖先:path逐字节比对；检查badd24e5..3cfabba2全部变更路径",
+    "five_product_files": [
+      {
+        "path": "packages/api-contract/src/api.ts",
+        "c8449f69_sha256": "0f16a954f60fef36640ed6a205dea99c1c5d5b25a83b81daf4bf33d40a765554",
+        "R1_review_head_sha256": "0f16a954f60fef36640ed6a205dea99c1c5d5b25a83b81daf4bf33d40a765554",
+        "byte_identical": true
+      },
+      {
+        "path": "packages/api-contract/src/entities.ts",
+        "c8449f69_sha256": "9c655708ea80723a9f332be2db1ef5dbd336fbca8249346a2f85680fde9ac1c1",
+        "R1_review_head_sha256": "9c655708ea80723a9f332be2db1ef5dbd336fbca8249346a2f85680fde9ac1c1",
+        "byte_identical": true
+      },
+      {
+        "path": "packages/server/src/contact-config-history.ts",
+        "c8449f69_sha256": "883a3c9bcc4ea1964f0ba021ac07ac16791d391d6ecb2cb63c93ff32f41f11c1",
+        "R1_review_head_sha256": "883a3c9bcc4ea1964f0ba021ac07ac16791d391d6ecb2cb63c93ff32f41f11c1",
+        "byte_identical": true
+      },
+      {
+        "path": "packages/server/src/host.ts",
+        "c8449f69_sha256": "c74c4e7cdc9285e5786e327e3bfc32b0db3d7407bc7a47ad0271384a11b587f6",
+        "R1_review_head_sha256": "c74c4e7cdc9285e5786e327e3bfc32b0db3d7407bc7a47ad0271384a11b587f6",
+        "byte_identical": true
+      },
+      {
+        "path": "packages/server/src/service.ts",
+        "c8449f69_sha256": "2fd021d901c6554a0baf9104f6663b0043061c16af0340f41ee3744c65a5b2eb",
+        "R1_review_head_sha256": "2fd021d901c6554a0baf9104f6663b0043061c16af0340f41ee3744c65a5b2eb",
+        "byte_identical": true
+      }
+    ],
+    "all_finisher_delta_paths_in_proof_docs_receipts_reviews": true,
+    "finisher_changed_paths": [
+      "docs/proof/contact-config-history/README.md",
+      "docs/proof/contact-config-history/bundle-setup-failure.txt",
+      "docs/proof/contact-config-history/cloud-proof.tar.gz",
+      "docs/proof/contact-config-history/contact-config-history-mutations.json",
+      "docs/proof/contact-config-history/historical-green.txt",
+      "docs/proof/contact-config-history/historical-red.txt",
+      "docs/proof/contact-config-history/historical-runner-before.mjs",
+      "docs/proof/contact-config-history/inherited-full-summary.txt",
+      "docs/proof/contact-config-history/inherited-result.json",
+      "docs/proof/contact-config-history/manifest.json",
+      "docs/proof/contact-config-history/mechanical-gates-before-evidence.txt",
+      "docs/proof/contact-config-history/production-incomplete-input-failure.txt",
+      "docs/proof/contact-config-history/proof-result.json",
+      "docs/proof/contact-config-history/proof-source-freeze.json",
+      "docs/proof/contact-config-history/result.json",
+      "docs/proof/contact-config-history/runner-before-baseline.txt",
+      "docs/proof/contact-config-history/source-freeze.json",
+      "docs/proof/contact-config-history/source-identity.json",
+      "packages/server/proof/contact-config-history-mutations.mjs",
+      "packages/server/proof/contact-config-history-real.ts",
+      "receipts/feat-contact-config-history.json",
+      "reviews/contact-config-history-final-gates.txt"
+    ],
+    "conclusion": "R1冻结版五个产品文件均来自原implement_contact_history链；contact_history_finish没有更改这些产品文件"
+  },
+  "push_evidence": {
+    "native_command": {
+      "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+      "line_start": 409,
+      "line_end": 409,
+      "note": "nice/lockf/env GATE_SELFTEST_JOBS=2 git push -u origin feat/contact-config-history；含hook配置校验"
+    },
+    "native_start_event": {
+      "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T22-41-45-01a1d035-2076-7443-bb9f-062b74f98187.jsonl",
+      "line_start": 411,
+      "line_end": 411,
+      "note": "HEAD=3cfabba2与正常push启动，session29560当时running"
+    },
+    "actual_log": {
+      "path": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/contact-history-push-hook.txt",
+      "sha256": "1b73209f39b51ad3f74c5c4b27898cb48c8698001d74ca6b5e754411336da9b0",
+      "tap_summary_lines": [
+        8914,
+        8920
+      ],
+      "selftest_lines": [
+        9142,
+        9143
+      ],
+      "remote_new_branch_lines": [
+        9148,
+        9149
+      ]
+    },
+    "observed": "真实push日志显示1485/1485、自检219/219及new branch创建；不从旧push-result/receipt推断来源"
+  },
+  "current_R2_snapshot": {
+    "actor": "current_parent",
+    "native_session": "01a1cfc8-db89-7400-b3de-876bd8478982",
+    "host_session": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "model_exact": "gpt-6.1-sol",
+    "model_evidence": {
+      "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+      "line_start": 5406,
+      "line_end": 5406,
+      "note": null
+    },
+    "observed_commit_prefixes": [
+      "fcde7046",
+      "af3bf6f1",
+      "b2e8070d"
+    ],
+    "not_final_R2_census": true,
+    "bound_through_native_line": 5646,
+    "note": "根R2仍在写后续测试/证明，本表只归属已观察到的三个真实提交；没有替根补造后续产出"
+  },
+  "unverifiable_or_limits": [
+    {
+      "id": "R1-05-host-current-pointer",
+      "detail": "原host534f3614的record.json当前nativeSessionId为01a1cfc5-28e0-7712-889b-e20765fe9baa，不能用这个当前指针否认/替代历史cf01贡献；历史绑定来自turns.jsonl第1-2行。第3行已为gpt-6.1-sol另一个原生轮次，不归到原astra产品提交。",
+      "evidence": [
+        {
+          "path": "/Users/snakesammy/.mirasim/sessions/codex/534f3614-21cd-43eb-9db6-3cd1673d2b62/record.json",
+          "line_start": 15,
+          "line_end": 15,
+          "note": null
+        },
+        {
+          "path": "/Users/snakesammy/.mirasim/sessions/codex/534f3614-21cd-43eb-9db6-3cd1673d2b62/turns.jsonl",
+          "line_start": 1,
+          "line_end": 3,
+          "note": null
+        }
+      ]
+    },
+    {
+      "id": "R1-05-current-host-turns-gap",
+      "detail": "host76d2c467的turns.jsonl本次读取只有1行，是已结束旧轮次；没有本轮PR84 R2已完成宿主轮次。R2身份与实际命令可以从原生DB89记录核到，但不冒称宿主门禁已证明这些R2产出。",
+      "evidence": [
+        {
+          "path": "/Users/snakesammy/.mirasim/sessions/codex/76d2c467-4626-4ff1-a5d3-54c5be6b3de7/turns.jsonl",
+          "line_start": 1,
+          "line_end": 1,
+          "note": null
+        },
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+          "line_start": 5406,
+          "line_end": 5406,
+          "note": null
+        },
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+          "line_start": 5596,
+          "line_end": 5599,
+          "note": null
+        },
+        {
+          "path": "/Users/snakesammy/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-29-01a1cfc8-db89-7400-b3de-876bd8478982.jsonl",
+          "line_start": 5611,
+          "line_end": 5614,
+          "note": null
+        }
+      ]
+    },
+    {
+      "id": "R1-05-model-record-trust",
+      "detail": "仅核本机现有原生记录内部一致性及Git对象/命令回执对应；未独立证明原生记录防篡改、实际远端模型厂商或云进程级来源。不能把模型字符串、该说明或六项机械门禁提升为跨厂商独审签名。"
+    },
+    {
+      "id": "R1-05-final-R2-pending",
+      "detail": "本说明不覆盖原生第5646行后的R2新提交/最终推送，也不决定author填谁；根据实际R2产出选择author并在unverifiable/README保留两段继承贡献及本轮身份。author.session不得拼接子代理后缀。"
+    }
+  ],
+  "merge_rule": "根核实可验证内容后仅把来源说明加入unverifiable/README，保留原R1 review对象；缺口原样保留，不改门禁，不签审查，不发送Bot"
+}

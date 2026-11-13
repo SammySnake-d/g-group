@@ -1,0 +1,26 @@
+{
+  "head": "126c42aed03612883810f6379326b4620a8278b5",
+  "results": [
+    {
+      "name": "green",
+      "command": [
+        "node",
+        "--test",
+        "--test-reporter=tap",
+        "packages/server/src/contact-config-history.test.ts"
+      ],
+      "exit": 0,
+      "seconds": 1.456
+    },
+    {
+      "name": "mutations",
+      "command": [
+        "node",
+        "packages/server/proof/contact-config-history-mutations.mjs"
+      ],
+      "exit": 0,
+      "seconds": 12.377
+    }
+  ],
+  "source_unchanged": true
+}

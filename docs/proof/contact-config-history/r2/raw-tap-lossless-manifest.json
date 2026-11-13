@@ -1,0 +1,58 @@
+{
+  "final16-same-body-restored-green.tap.gz": {
+    "raw_name": "final16-same-body-restored-green.tap",
+    "raw_bytes": 3989,
+    "raw_sha256": "1af82268babdc399019a3cef47c920b476be79986807c737476651eb15a4a356",
+    "gzip_bytes": 1356,
+    "gzip_sha256": "f0694c79f157ebb45fdc2a61f808b72ee1ed6f56b0d408e78ef0a2963ecbe7e7",
+    "raw_external_original_preserved": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/contact-history-r2-resume/final16-same-body-restored-green.tap"
+  },
+  "final16-same-body-retrospective-red.tap.gz": {
+    "raw_name": "final16-same-body-retrospective-red.tap",
+    "raw_bytes": 15521,
+    "raw_sha256": "6400a024cee81324d272b2cfe6f62008367ed7b6baa2c634ce3eae3ee6ad4a06",
+    "gzip_bytes": 2405,
+    "gzip_sha256": "f4121fee7cd15a55b4b9993c43e17d3a993a7ecf921068f22d4b46c591ed8fba",
+    "raw_external_original_preserved": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/contact-history-r2-resume/final16-same-body-retrospective-red.tap"
+  },
+  "r1-01-corrected-true-green.tap.gz": {
+    "raw_name": "r1-01-corrected-true-green.tap",
+    "raw_bytes": 3294,
+    "raw_sha256": "069217c48b3ae14e12e73da168c6aa795d45e6392733c4d82c631cbbd27834a8",
+    "gzip_bytes": 1194,
+    "gzip_sha256": "98c29c65e074a81e9418fe5cf47dd7be5c6dc9f9cc786187265c876249bd6442",
+    "raw_external_original_preserved": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/contact-history-r2-resume/r1-01-corrected-true-green.tap"
+  },
+  "r1-01-corrected-true-red.tap.gz": {
+    "raw_name": "r1-01-corrected-true-red.tap",
+    "raw_bytes": 4106,
+    "raw_sha256": "51c276b47e1afa98013f79d9dae420d14d93637169799db7d749ed9a781750d1",
+    "gzip_bytes": 1540,
+    "gzip_sha256": "f3fc7ec7457dc54d7048acc2e35aaab9b959397cf7a7282d935c420c338fe390",
+    "raw_external_original_preserved": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/contact-history-r2-resume/r1-01-corrected-true-red.tap"
+  },
+  "r1-01-real-first-green.tap.gz": {
+    "raw_name": "r1-01-real-first-green.tap",
+    "raw_bytes": 4004,
+    "raw_sha256": "2220c0f5af6912542d52f4987f8e280cd2436e325cac0410fd643dedecb7d99d",
+    "gzip_bytes": 1556,
+    "gzip_sha256": "c1973d29cec6ea8eb8cdde750a7dcb3769931ac5e494093095dff27cdf414423",
+    "raw_external_original_preserved": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/contact-history-r2-resume/r1-01-real-first-green.tap"
+  },
+  "r1-01-real-first-red.tap.gz": {
+    "raw_name": "r1-01-real-first-red.tap",
+    "raw_bytes": 4111,
+    "raw_sha256": "60c022e16cb01ee6fc6ece0b4e921c651d93bf771fb58b17468945a9c18aa15e",
+    "gzip_bytes": 1540,
+    "gzip_sha256": "4edd6472334713323046862c11221ced7c82ffacd94e33882d5df56a2f23fd9d",
+    "raw_external_original_preserved": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/contact-history-r2-resume/r1-01-real-first-red.tap"
+  },
+  "r1-02-04-green-first.tap.gz": {
+    "raw_name": "r1-02-04-green-first.tap",
+    "raw_bytes": 3819,
+    "raw_sha256": "a44aded4996595a4a895779c482002234213a452ca1c7ebb0e44c2dd3d729c49",
+    "gzip_bytes": 1237,
+    "gzip_sha256": "bdd9821899c13a745c336898ac46b350c38703e6230ad22bfe7d596495be519e",
+    "raw_external_original_preserved": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/contact-history-r2-resume/r1-02-04-green-first.tap"
+  }
+}

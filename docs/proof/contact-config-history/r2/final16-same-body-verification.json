@@ -1,0 +1,25 @@
+{
+  "retrospective_final_same_body_red": "b92c857bc90f681cf8cdc2dff7ae6c39c99fe081",
+  "restored_green": "f73a2d278dfc8ce1ef112cc0664a304319601cb0",
+  "red_counts": {
+    "tests": 16,
+    "pass": 0,
+    "fail": 16,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "green_counts": {
+    "tests": 16,
+    "pass": 16,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "all16_named_ERR_ASSERTION": true,
+  "same_test_body": true,
+  "not_historical_TDD": true,
+  "actual_bug_first_red": "af3bf6f13756604e7ad8edd094f842658241b6f9",
+  "actual_bug_first_green": "b2e8070daba2e207667641d83420e9e6eb772d07"
+}

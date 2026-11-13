@@ -1,0 +1,12 @@
+{
+  "controller": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/contact-history-r2-resume/pr84-r2-cloud-3dca25e9-prepare/controller.json",
+  "queue_pid": 705443,
+  "runner_pid": 712659,
+  "exit": 1,
+  "error": "AssertionError('v24.21.0')",
+  "product_commands_started": 0,
+  "source_files": 0,
+  "not_a_product_failure_or_mutant_kill": true,
+  "archive_sha256": "831f4d0d417e75ad484b2a734c6e7f016de48e38d75edb43e23347176cea6941",
+  "correction": "new owned persistent run downloads fixed official Node22, verifies SHASUMS256 and process-local actual version; shared runtime untouched"
+}
