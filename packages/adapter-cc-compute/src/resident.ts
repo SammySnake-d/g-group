@@ -648,7 +648,7 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
       if (!st.turn?.finished || st.turn.blocked && !st.stopped) return { ok: false as const, reason: "这一轮还没结束(运行中或停在受阻),先停止", remaining: [] };
       // R1-01:没有停止时常驻进程按设计驻留(一轮 completed/failed 后照常等下一条输入),没有要确认退出的进程;
       // 与没有 quiesce 时宿主退回 settled、归还槽位的原行为一致。只有停止之后才要求确认它启动过的全部进程都已退出。
-      if (st) return { ok: false as const, reason: "red scaffold", remaining: [] }; // red scaffold (round-2 G-RED calibration); restored by the next commit
+      if (!st.stopped) return { ok: true as const, killed: 0 };
       let killed = 0;
       for (const cleanup of [...st.cleanups]) {
         const result = await cleanup.quiesce(timeoutMs, resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS) + timeoutMs);
