@@ -29,10 +29,22 @@
   "waiver": null,
   "review": {
     "agent": "claude",
-    "session": "claude:a32c9f77-01be-405f-b2a8-1097160e10aa",
+    "session": "claude:e4f44e54-3c17-49b2-9cb8-cace64ed0b43",
     "model": "group/opus",
     "verdict": "reject",
-    "reviewed_hash": "123bb4c606a44b02b98637b48c3a7e0b949ad76bca6b814dda16ddd4e6b077ca",
-    "notes": "第 1 轮独立审查，结论 reject，问题 R1-01～R1-05 必须返修，见 reviews/feat-contact-config-history.md。hy4 辅审因线路 403 未产出，本轮无辅审。复现：typecheck/lint=0、全量 1485/1485、红提交 12/12 业务断言失败、作者 15 项变异 15/15；审查人自构 8 个单点故障存活 3 个（落盘白名单、回滚事务、回滚恢复全部字段），另复现 INSERT OR REPLACE 可原位改写历史。来源：按 Codex 原生记录核到提交、云端运行与推送逐条对应；实现与红提交实际由 codex:534f3614 的子代理用 chatflows/gpt-6-astra 写出，收据 author 未写明。model 填的是宿主记录的线路组名 group/opus（Anthropic Claude）。本审查不是 AC-01/AC-32 验收。"
+    "reviewed_hash": "e7c1566c4b56c0841f70ffb5188161f8573b80c98c75225f02486d018c13115e",
+    "notes": "第 2 轮独立审查（HEAD cd5c3f4d），结论 reject，只剩 R2-01 一项必修：新加的 BEFORE INSERT 触发器挡住了同主键 INSERT OR REPLACE，但带已有行 rowid 的 INSERT OR REPLACE 仍能删掉旧版本、再用普通 INSERT 写入伪造版本，history 与 rollback 都用了伪造配置（R1-01 部分解决；R1-01 要求「做法同 events 表」本身不完整，events 表基线同样有此缺口，范围外另报）。R1-02～R1-05 已解决。hy4 辅审因线路 403 未产出，本轮无辅审。复现：typecheck/lint=0、全量 1489/1489 无 skip/todo、红 b92c857b 16/16 ERR_ASSERTION、CFG13 真红 fcde7046/af3bf6f1→绿 b2e8070d、作者 19/19 变异具名杀死、本机门禁自检 219/219、--local 六项机械门禁通过；第 1 轮存活的 F2/F6/F8 与 R1-01 原缺陷均被新测试具名杀死，审查人新构 7 个故障存活 2 个（effort 投影、回滚跳过 null，作为建议不阻塞）。来源：按 Codex 原生记录核到本轮各提交、云端运行与推送（根会话与子代理均 gpt-6.1-sol）。model 填宿主记录的线路组名 group/opus（Anthropic Claude）。本审查不是 AC-01/AC-32 验收。见 reviews/feat-contact-config-history.md 第 2 轮。",
+    "history": [
+      {
+        "round": 1,
+        "commit": "6d8123341002f0e9f397c77633c3f30a6d01a54b",
+        "agent": "claude",
+        "session": "claude:a32c9f77-01be-405f-b2a8-1097160e10aa",
+        "model": "group/opus",
+        "verdict": "reject",
+        "reviewed_hash": "123bb4c606a44b02b98637b48c3a7e0b949ad76bca6b814dda16ddd4e6b077ca",
+        "notes": "第 1 轮独立审查，结论 reject，问题 R1-01～R1-05 必须返修，见 reviews/feat-contact-config-history.md。hy4 辅审因线路 403 未产出，本轮无辅审。复现：typecheck/lint=0、全量 1485/1485、红提交 12/12 业务断言失败、作者 15 项变异 15/15；审查人自构 8 个单点故障存活 3 个（落盘白名单、回滚事务、回滚恢复全部字段），另复现 INSERT OR REPLACE 可原位改写历史。来源：按 Codex 原生记录核到提交、云端运行与推送逐条对应；实现与红提交实际由 codex:534f3614 的子代理用 chatflows/gpt-6-astra 写出，收据 author 未写明。model 填的是宿主记录的线路组名 group/opus（Anthropic Claude）。本审查不是 AC-01/AC-32 验收。"
+      }
+    ]
   }
 }

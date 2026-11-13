@@ -175,3 +175,176 @@ node /tmp/pr84-r1-claude/repo/scripts/gates/run-all.ts --hash --repo=/tmp/pr84-r
 ### 证据
 
 本机：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr84-r1-claude/`（box2 日志包、自构故障脚本与逐项结果、产品探针与输出、门禁负例输出、审查前后两次 `--local` 输出、原生记录调用索引）。
+
+## 第 2 轮
+
+### 结论：reject
+
+只剩 1 项必须返修（R2-01）：返修加的 BEFORE INSERT 触发器挡住了同主键的 `INSERT OR REPLACE`，但带上已有行 `rowid` 的 `INSERT OR REPLACE` 仍能把历史原位改掉，回滚会把伪造的配置写回联系人。R1-02 ～ R1-05 已解决；返修新加的 4 条测试没有发现新的必修问题。本轮不是 U07 验收，也不是 AC-01 / AC-32 验收。审查人没有改产品代码、测试或门禁。
+
+需要说明：R2-01 的根子在我第 1 轮的返修要求。R1-01 要求「做法同 `events` 表」，作者照做了；但 `events` 表在基线上有同样的缺口（见第五节），我第 1 轮没有查到。作者这一轮的实现完全符合 R1-01 的字面要求，问题出在要求本身不完整。
+
+- 对象：`feat/contact-config-history`，HEAD `cd5c3f4d5e91a1eedce5780d86d3567d8acfbcd3`；开工前与提交前两次回读远端，未变。
+- 基线：`origin/dev/integration` `4efdee0be6d161060099b5ce488e3344c70305ee`，未变。
+- 返修叠加方式：在第 1 轮审查提交 `6d812334` 之上快进 9 个提交（`fcde7046` → `cd5c3f4d`），没有合并提交。第 1 轮审查记录在 `6d812334` 与 HEAD 上逐字相同（SHA256 `20a4edf3…`，与审查人留底副本一致）。
+- 改动范围（相对 `6d812334`）：产品代码只有 `contact-config-history.ts` 加了 3 行触发器；测试文件只追加 CFG13–CFG16，旧 12 条一字未改（只把 import 多引一个类型）；变异脚本的旧 M01–M15 定义逐字未变，新增 M16–M19；其余是 `docs/proof` 和收据。`scripts/`、`.githooks/`、`.github/` 未改。
+- 审查人：Claude；会话 `claude:e4f44e54-3c17-49b2-9cb8-cace64ed0b43`；宿主模型名 `group/opus`。
+- 辅审：hy4 辅审因线路 403 未产出，本轮无辅审。
+- 环境：本机 macOS、Node v22.22.0，独立克隆 `/tmp/pr84-r2-claude/repo`；重活在云电脑 box1（Ubuntu、Node v24.21.0）`/workspace/pr84-r2/`，走 `.heavy.lock` 排队。
+
+在本会话里运行：
+
+```sh
+node /tmp/pr84-r2-claude/repo/scripts/gates/run-all.ts --hash --repo=/tmp/pr84-r2-claude/repo --branch=feat/contact-config-history --base=origin/dev/integration
+```
+
+原样输出（= reviewed_hash，与作者报的 CONTENT_HASH 相同）：
+
+```text
+e7c1566c4b56c0841f70ffb5188161f8573b80c98c75225f02486d018c13115e
+```
+
+### R1 核销
+
+| R1 | 核销 | 依据 |
+|---|---|---|
+| R1-01 历史可被原位改写 | **部分解决** | 同主键 `INSERT OR REPLACE`、文本或实数版本号的 REPLACE、`ON CONFLICT DO UPDATE`、`UPDATE OR REPLACE`、单行与整表 `DELETE` 都被拒、表内容不变（本机 Node 22 与 box1 Node 24 结果相同）。CFG13 真红 `fcde7046`、`af3bf6f1`（13 条里只有 CFG13 以 `ERR_ASSERTION` 失败）→ 绿 `b2e8070d`（13/13）复现；删掉新触发器（F9 = M16）被 CFG13 杀死。**未解决的部分**：带 `rowid` 的 `INSERT OR REPLACE` 照样改写历史，见 R2-01 |
+| R1-02 回滚原子性无测试 | 已解决 | CFG14 用真 SQLite 触发器让回滚的历史写入失败，断言联系人整份文档、历史行、动作表、通知数都不变，去掉故障后同一动作号重试只追加一版，再重放不写。F6（= M17）、N2（吞掉历史写入错误照样提交）、N6（重放也发通知）都被 CFG14 杀死 |
+| R1-03 回滚只验了部分字段 | 已解决 | CFG15 改全 10 个白名单字段（前后值都不同），回滚后逐字段断言。F8、M18 被 CFG15 杀死（F8 同时让 CFG13 失败）。另有两处更细的空当（N1、N5）作为建议，见第四节 |
+| R1-04 落盘白名单无测试 | 已解决 | CFG16 直接读 `gg_contact_config_versions.config`，create / update / batch / rollback / baseline 五种写入都实际经过（6 行），逐行断言键集合恰为 10 个、两个中性标记不落盘、`computeAssets` 与 `computeModel` 的子键也受限。F2（= M19）、N3（只让升级基线一条路径落盘整份文档）、N7（`computeAssets` 保留全部键）都被 CFG16 杀死 |
+| R1-05 收据作者来源不完整 | 已解决 | 收据 `unverifiable` 写明两段历史产出各自的会话、原生子代理与模型，以及本轮由谁改了什么；`author.session` 为宿主号、无后缀；作者选本轮直接修改者并写了理由。审查人按原生记录逐项核对一致（第六节） |
+
+第 1 轮的观察项：O-1（回滚总做模型预检）、O-2（空修改也追加版本）、O-3（缺 `tools` 的旧文档）、O-4（下一轮生效只在 proof 里）作者已在 `docs/proof/contact-config-history/r2/README.md` 写明保留现状、不在本轮改；O-5 未动。都不阻塞。
+
+### 一、亲自运行的结果
+
+| 操作 | 在哪 | 实测结果 |
+|---|---|---|
+| `npm ci` | 本机、box1 | exit 0 |
+| `npm run -s typecheck` | box1 | exit 0 |
+| `npm run -s lint` | box1 | exit 0，`Checked 201 files` |
+| `npm test` | box1 | exit 0，1489 条，pass 1489，fail / cancelled / skipped / todo 均为 0（第 1 轮 1485 + 新增 4） |
+| 新测试文件单跑（TAP） | box1 | 16/16 |
+| 收据红提交 `b92c857b` 上跑同一文件 | box1 | exit 1，0 通过、16 失败，16 条全是 `ERR_ASSERTION`。该提交只把 `recordContactConfig` 换成空操作；这是实现之后的同体回溯校准，作者已写明不是历史 TDD |
+| CFG13 的真红 `fcde7046`、`af3bf6f1` | box1 | 各 13 条里 12 过、CFG13 以 `ERR_ASSERTION` 失败（`fcde7046` 为 `Missing expected exception`） |
+| `b2e8070d`（触发器修复）、`f73a2d27`（恢复绿） | box1 | 13/13、16/16 |
+| 作者变异脚本（M01–M19，完整 16 条判定） | box1 | 原样 16/16；19/19 被各自指定的 CFG 用例以 `ERR_ASSERTION` + `testCodeFailure` 杀死，存活 / 无效 0；源文件变异前后哈希不变 |
+| 作者 proof `contact-config-history-real.ts` | box1 | exit 0，`PASS:真实Host/SQLite/service…` |
+| 绕过探针 `bypass.ts` | 本机、box1 | 两地结果相同，见 R2-01 |
+| `run-all.ts --local --base=origin/dev/integration`（审查前） | 本机 seatbelt | G-PROVENANCE ✓、G-TRACE ✓、G-REVIEW ✗（「审查结论是 reject」「审查对应的内容 123bb4c606a4 ≠ 当前 e7c1566c4b56」）、G-RED ✓、G-STUB ✓、G-TAUTO ✓、G-WORKFLOW ✓、G-LAYER ✓；`CONTENT_HASH=e7c1566c…`；exit 1 |
+| 同一命令（填了本轮 review 之后） | 本机 seatbelt | 见第六节 |
+| `GATE_SELFTEST_JOBS=2 npm run -s gates:selftest`（不经管道，直接取退出码） | 本机 | exit 0，`自检通过`，用例 219/219 |
+| GitHub `self-check` | — | `cd5c3f4d` 上 COMPLETED / SUCCESS |
+
+作者报的数字逐条对上：16 同体红 → 16 绿、19/19 变异、typecheck / lint = 0、全量 1489/1489 且 skip / cancel / todo = 0、六项机械门禁通过、G-REVIEW 待审。作者的「依赖 46/46」没有单独复跑，全量已包含这些文件。作者在 box4 用 Node 22，审查人在 box1 用 Node 24，结果相同。
+
+### 二、必须返修
+
+#### R2-01 · 高：带 rowid 的 INSERT OR REPLACE 仍能原位改写历史（R1-01 未解决的部分）
+
+- 位置：`packages/server/src/contact-config-history.ts:20-27`。表的主键是 `(contact_id, version)`，但它是普通 rowid 表，另有一个隐藏的 `rowid`，也是唯一约束。新触发器只查 `(contact_id, version)` 是否已存在。
+- 复现（HEAD 原样，真 Host / SQLite，`recursive_triggers` 默认 0）：
+
+  ```sql
+  -- 第 1 步：主键 ('__trash__', 1) 不存在，触发器放行；rowid 与版本 1 冲突，REPLACE 删掉版本 1，删除触发器不触发
+  INSERT OR REPLACE INTO gg_contact_config_versions (rowid, contact_id, version, config, kind, restored_from, at)
+  VALUES (<版本 1 的 rowid>, '__trash__', 1, '{}', 'create', NULL, '2026-01-01T00:00:00.000Z');
+  -- 第 2 步：版本 1 已不存在，普通 INSERT 写入伪造的版本 1
+  INSERT INTO gg_contact_config_versions (contact_id, version, config, kind, restored_from, at)
+  VALUES (<联系人>, 1, <伪造配置>, 'create', NULL, '2026-01-01T00:00:00.000Z');
+  ```
+
+  两步都不报错。随后 `contacts.history` 返回的版本 1 是「伪造的版本1」、工具 `NEUTRAL_INJECTED_TOOL`；`contacts.rollback` 到版本 1 返回成功，联系人被写成伪造的名字和工具。该联系人的历史上看不出痕迹，表里只多出一行别的联系人号 `__trash__`。另开一个不经宿主的连接做第 1 步，结果相同（版本 2 被替换成版本 2000）。
+- 只在 `recursive_triggers` 打开时会被删除触发器挡住（探针 G）；它默认关闭，所以和 R1-01 一样不能依赖。
+- 现有测试：CFG13 只试了不带 rowid 的同主键 REPLACE，发现不了。
+- 返修要求：让带 rowid 的覆盖写也被拒。两种做法审查人都实测过：（a）表改成 `WITHOUT ROWID`，此时带 rowid 的语句直接报「没有 rowid 列」，正常写入不受影响；（b）触发器条件加上 `OR rowid = NEW.rowid`，rowid 冲突时报 immutable，不带 rowid 的正常插入不受影响。用（b）时请换一个新的触发器名，或先删旧的再建：`CREATE TRIGGER IF NOT EXISTS` 不会更新已经用旧定义建好的库。在 CFG13 或新用例里断言：带 rowid 的 REPLACE 被拒；版本 1 的原行字节不变；`history` 和 `rollback` 仍用原配置。配一个对应的单点变异（换回现在的触发器），确认由具名断言杀死。先红后绿。
+
+### 三、审查人自构的单点故障
+
+在 box1 的独立工作树里一次改一处，跑 16 条新测试文件和作者 proof；16 条没有抓到的再跑全量 `npm test`。原样对照 16/16、proof exit 0。
+
+| 编号 | 故障 | 16 条 | proof | 全量 | 结论 |
+|---|---|---|---|---|---|
+| F1 | 回滚不追加新版本（R1 原样） | CFG02、05、14、15、16 失败 | 失败 | — | 被发现 |
+| F2 | 快照落盘整份联系人文档（R1 存活） | CFG16 失败 | 通过 | — | **被发现**（R1-04） |
+| F3 | 回滚连带清掉游标（R1 原样） | CFG02 失败 | 失败 | — | 被发现 |
+| F4 | 修改跳过版本校验（R1 原样） | CFG04 失败 | 通过 | — | 被发现 |
+| F5 | 动作幂等表不持久（R1 原样） | CFG05 失败 | 失败 | — | 被发现 |
+| F6 | 回滚不在同一事务（R1 存活） | CFG14 失败 | 通过 | — | **被发现**（R1-02） |
+| F7 | 批量替换不在同一事务（R1 原样） | CFG08 失败 | 通过 | — | 被发现 |
+| F8 | 回滚不恢复工具 / 能力 / 槽位 / 简介 / 头像（R1 存活） | CFG13、CFG15 失败 | 通过 | — | **被发现**（R1-03） |
+| F9 | 删掉新加的覆盖插入触发器（R1-01 原缺陷） | CFG13 失败 | 通过 | — | **被发现**（R1-01） |
+| N1 | 快照投影丢掉 `computeModel.effort` | 16/16 | 通过 | 1489/1489 | **存活** → 建议 S-1 |
+| N2 | 回滚吞掉历史写入错误照样提交 | CFG14 失败 | 通过 | — | 被发现 |
+| N3 | 只让升级基线一条路径落盘整份文档 | CFG16 失败 | 通过 | — | 被发现 |
+| N4 | 删掉触发器、改为连接级 `PRAGMA recursive_triggers = ON` | CFG13 失败 | 通过 | — | 被发现（CFG13 显式关掉了递归触发器，所以不依赖默认值） |
+| N5 | 回滚时跳过值为 `null` 的字段 | 16/16 | 通过 | 1489/1489 | **存活** → 建议 S-2 |
+| N6 | 重放同一回滚也再发通知 | CFG14 失败 | 通过 | — | 被发现 |
+| N7 | 快照保留 `computeAssets` 的全部键 | CFG16 失败 | 通过 | — | 被发现 |
+
+所有「失败」都是 `ERR_ASSERTION`。第 1 轮存活的 3 个（F2、F6、F8）和 R1-01 原缺陷（F9）都被新测试具名杀死。专打新断言的 7 个里 5 个被发现、2 个存活；存活的两个 HEAD 行为都是对的，只是没有测试守住，不阻塞。
+
+### 四、建议（不阻塞，可随 R2-01 一起补）
+
+- S-1：没有任何测试在历史或回滚里用到 `computeModel.effort`。投影丢掉它（N1）时全量照过，后果是回滚到带 effort 的版本会丢掉 effort。建议 CFG15 的期望配置带上 `effort`。
+- S-2：CFG15 回滚到的版本里 `avatar`、`computeSlots` 都是非空值，没有覆盖「回滚到一个字段为 `null` 的旧版本，要把当前值清空」。实现若跳过 `null`（N5），回滚后头像和槽位留着改坏后的值，全量照过。建议加一个回滚到 `avatar: null` / `computeSlots: null` 版本的断言。
+- S-3：`reviews/contact-config-history-final-gates.txt` 是作者侧门禁输出，仍在 `reviews/` 下；第 1 轮建议挪到 `docs/proof/`，本轮未处理。
+
+### 五、范围外的发现
+
+`packages/adapter-sqlite/src/store.ts:28-37` 的 `events` 表（基线代码，本 PR 未改）有同样的缺口：主键 `(session, seq)`、普通 rowid 表、只有同主键的 BEFORE INSERT。审查人用同一份建表语句实测：同主键 REPLACE 被拒，但带 rowid 的 REPLACE 删掉第 1 条后，普通 INSERT 能写入伪造的第 1 条（探针 `events-rowid.ts`）。`events` 有 `prev` / `hash` 链，改写后读出时校验能发现，但写入本身不被拦。不在本 PR 范围，不作为本 PR 的返修条件，见「需拍板」。
+
+### 六、来源核验
+
+**填了本轮 review 之后 G-PROVENANCE 的实际输出**：`✗ 审查会话不可信:会话记录不存在:claude:e4f44e54-3c17-49b2-9cb8-cace64ed0b43`（完整输出见本节末）。原因是宿主的 `turns.jsonl` 只在一轮结束时写入，本审查会话这一轮还没结束；本轮结束后同一命令的结果会变。门禁在审查一侧先报错，作者一侧这次没有单独的输出行。
+
+作者一侧：宿主 `codex:76d2c467` 的 `turns.jsonl` 现在有 2 轮，第 2 轮开始于 11-12 14:31 UTC，模型 `gpt-6.1-sol`；`record.json` 的 `nativeSessionId` 是 `01a1cfc8-db89-…`。门禁不读子代理的原生记录，所以另用 `~/.codex/sessions/2026/11/12/` 下的原生 rollout 逐条核（返修全部发生在这个日期的文件里，`2026/11/13/` 下与本 PR 有关的只有今晚别的审查会话读到这些提交号，不是作者）：
+
+| 作者自述 | 原生记录里对应的调用与输出 | 结果 |
+|---|---|---|
+| CFG13 首红 `fcde7046` | 根会话 `01a1cfc8-db89`（`gpt-6.1-sol`），第 5596 行，18:54:50 UTC：12 条基线 12/12、13 条 exit 1（12 过 1 败），提交 `fcde7046` | 一致 |
+| 夹具纠正红 `af3bf6f1`、触发器修复 `b2e8070d` | 同上，第 5611 行，18:55:37 UTC：红 13/12/1、绿 13/13，`only_three_trigger_product_lines: true` | 一致 |
+| CFG14–16 `d387bef1`、校准红 `b92c857b`、恢复绿 `f73a2d27` | 同上，第 5692 行，19:00:18 UTC：红 0/16、绿 16/16、`all16_named_ERR_ASSERTION: true` | 一致 |
+| 来源说明 `0131d50c` | 同上，第 5754 行，19:03:57 UTC | 一致 |
+| 变异 runner `3dca25e9`，本机 M16–M19 4/4 | 同上，第 5889 行（runner 首次因 macOS `/var` 路径别名 exit 1，原样留着）、第 5937 行提交 | 一致（失败如实保留） |
+| 冻结前本机门禁 | 同上，第 5971 行：六项 ✓、G-REVIEW ✗、`CONTENT_HASH=ea4eab3d…`（`3dca25e9`） | 一致 |
+| box4 云端 19/19、1489/1489 | 子代理 `01a1d035-2076`（`/root/contact_history_finish`，`gpt-6.1-sol`），第 3785–3795 行下载与核验；本 PR `cloud-r2-proof.tar.gz` 归档。审查人没有登 box4（作者队列），以 box1 独立复跑为准 | 数字与复跑一致 |
+| proof 提交 `cd5c3f4d` | 子代理 `01a1d035`，第 3804 行，19:35:33 UTC | 一致 |
+| 最终 hash、门禁、正常推送 | 子代理 `01a1d035`，第 3811–3823 行：hash `e7c1566c…`；门禁 exit 1（只有 G-REVIEW ✗）；推送日志 `final-normal-push.log`（SHA256 `69c52f05…`）含 tests 1489 / pass 1489、`自检耗时 123s:用例 219/219`、`6d812334..cd5c3f4d  HEAD -> feat/contact-config-history`（快进），未见 `--no-verify` | 一致 |
+| 交接包 | ZIP SHA256 `602189fa…`，33 个文件，`MANIFEST.json` 登记的 32 个逐一核对一致；其中 `candidate.bundle` 校验通过，两个引用为 `cd5c3f4d` / `4efdee0b`；包内 R1 审查副本与审查人留底逐字相同 | 一致 |
+
+模型：根会话与两个子代理（`01a1d035` 收尾、`01a1d03a` `/root/loop_proof_finish` 只读定位）的 `turn_context.model` 全程都是 `gpt-6.1-sol`；父子关系按 `session_meta.source.subagent.thread_spawn.parent_thread_id` 核对。作者厂商 openai，审查厂商 anthropic。
+
+**没有核到的：** box4 上的原始运行（作者队列，按分工不登，只核了归档与作者核验文件，并在 box1 独立复跑）；Codex 原生记录本身的真伪只能按文件内部一致性判断。
+
+填了本轮 review（提交前）后在本机 seatbelt 跑 `node scripts/gates/run-all.ts --local --base=origin/dev/integration` 的原样输出：
+
+```text
+base=origin/dev/integration branch=feat/contact-config-history HEAD=cd5c3f4d5e91a1eedce5780d86d3567d8acfbcd3 受检文件 52 个 收据=receipts/feat-contact-config-history.json 门禁 8 个
+✗ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是仓库所有者对这个 PR 这一版的结构化批准
+    - 审查会话不可信:会话记录不存在:claude:e4f44e54-3c17-49b2-9cb8-cace64ed0b43
+✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据
+✗ G-REVIEW  R-01:审查人限 Codex/Astra/Claude/Argon(g-group#1531、g-group#2943、g-group#3199 原则 68,默认 Codex;Claude 审 Codex 写的 PR,Argon 备用),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)
+    - 审查结论是 reject
+✓ G-RED  R-02:先红后绿,红提交上的测试与现在相同,现在的测试放到红提交实现上按名字失败、现在按名字通过
+✓ G-STUB  R-03 R-04:空实现红基线 + 返回值变异校准,桩下或错值下仍通过、没执行、加载失败的测试都判无效
+✓ G-TAUTO  R-04:拒绝同语反复测试(按 node:test 真实导入识别;无断言、自比较、恒真、不可达、不判源码结果、skip/only;运行时与静态逐条计数一致)
+✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限、不得写提交状态、不得用 pull_request_target
+✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)
+CONTENT_HASH=e7c1566c4b56c0841f70ffb5188161f8573b80c98c75225f02486d018c13115e
+exit=1
+```
+
+除 G-PROVENANCE（本轮会话记录尚未写出）与 G-REVIEW（结论 reject）外，其余 6 项通过；`CONTENT_HASH` 与审查前相同。收据里第 1 轮的 review 原样保留在 `review.history`（门禁只把 `review` 整个排除在内容 hash 外，放在顶层会改变 hash）。
+
+### 七、需拍板
+
+- `events` 表的同类缺口（第五节）是否另开一个小片修。建议另开：改法与 R2-01 相同、改动很小，但它动的是基线的存储适配层，不该混进 U07 这一片。不修的话，「事件只追加」在有库写权限的代码面前同样不成立（读出时哈希链能发现，写入不拦）。
+
+### 八、返修与重新送审
+
+只需修 R2-01（S-1、S-2 可顺手补）。改了受管文件后内容 hash 会变，本轮结论作废，需要第 3 轮审查。第 3 轮只核 R2-01 和随之改动的测试，R1 已解决的各项不再重开，除非返修改动波及。
+
+### 证据
+
+本机：`/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr84-r2-claude/`（box1 日志包、自构故障脚本与逐项结果、绕过探针与两地输出、两种修法的验证、`events` 表探针、审查前后两次 `--local` 输出、本机自检日志、原生记录调用索引）。
