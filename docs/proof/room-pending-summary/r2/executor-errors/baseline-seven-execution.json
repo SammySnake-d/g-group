@@ -1,0 +1,19 @@
+{
+  "command": [
+    "node",
+    "--test",
+    "packages/server/src/room-blocked-summary.test.ts"
+  ],
+  "cwd": "/private/tmp/gg-req-room-summary-r2-resume-20261113",
+  "exit_code": 1,
+  "baseline_head": "515db145086f524ff232a98bb8e9dcc16a4b6815",
+  "base": "4efdee0be6d161060099b5ce488e3344c70305ee",
+  "node": "v25.8.1",
+  "dependency_reuse": "/private/tmp/gg-req-retract-disclosure-resume-20261113/node_modules",
+  "source_files": 507,
+  "subthread_context": {
+    "CODEX_THREAD_ID": "01a1d03a-add3-7a02-92d2-92e9791196ee",
+    "MIRASIM_SESSION_KEY": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7"
+  },
+  "new_tests_added": false
+}

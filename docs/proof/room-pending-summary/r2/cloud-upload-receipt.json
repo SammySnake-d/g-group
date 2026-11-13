@@ -1,0 +1,10 @@
+{
+  "box": "box4",
+  "remote_root": "/workspace/req-room-summary-r2-20261113-6da91f5a",
+  "head": "6da91f5afc437a347bff0990db8af59bd189edd2",
+  "chunks": 10,
+  "bundle_sha256": "fa470f34aeab854af18f58677629368993591219b7442434e0d7adc024236245",
+  "runner_sha256": "58987063932f1881655a9ba0dafab795155bd64c06983b70f07f91d0dbe209db",
+  "uploaded_and_sha_verified": true,
+  "enqueued": false
+}

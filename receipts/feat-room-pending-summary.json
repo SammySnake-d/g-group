@@ -1,0 +1,52 @@
+{
+  "slice": "D09.2④ 会话列表当前人工阻塞的一行摘要：RoomView.blockedSummary，真实 Host/SQLite/service 投影；不包含前端或全部待确认对象",
+  "acceptance": [
+    {
+      "id": "AC-27",
+      "status": "通过",
+      "evidence": "docs/proof/room-pending-summary/README.md"
+    },
+    {
+      "id": "AC-50",
+      "status": "未测",
+      "reason": "本片仅补后端 RoomView 当前有效 T4b 人工问题的一行摘要；前端橙点/渲染、完整观察入口走查，以及 T8a/R0 待确认摘要不在本片，不能据此宣称 D09.2 或 AC-50 产品全量通过"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "model": "gpt-6.1-sol"
+  },
+  "review": {
+    "agent": "claude",
+    "session": "claude:c2ba2550-7fa0-4c1e-a8a1-c4266c213d65",
+    "model": "group/opus",
+    "verdict": "reject",
+    "reviewed_hash": "9b0b4e8675379c0ac0e6c00bec1a3f96cf4583c01146c911486eb94bf0639feb",
+    "notes": "第 2 轮 REJECT（702c8719）；第 1 轮 REJECT（d4013dcb，审查提交 515db145，reviewed_hash 91a926b0…）原文保留在 reviews/feat-room-pending-summary.md「第 1 轮」。作者数字全部复现：box1 Node24 typecheck/lint 0、npm test 1490/1490 无 skip/todo/cancel、窄测 17/17、intent/rewind 30/30、作者 18 变异 18/18 被指定具名测试以 ERR_ASSERTION 杀死；真实首红 b93f2e38（7 过 1 败）→ 首绿 4f15f21d（8/8），校准红 21f0931e 上 17 条全部按名 ERR_ASSERTION 失败 → 6ff18281 17/17；6da91f5a→HEAD 无源码改动；本机不经管道门禁自检 exit 0、219/219；8 个门禁负例各自判败；GitHub self-check run 43283757225 SUCCESS。R1-01/02/03/05/06/07/08 已解决，R1-04 部分解决；第 1 轮 12 个故障中可注入的全部被具名测试杀死。驳回理由（只需补测试）：R2-01 删掉可见性过滤后，#83 与 #71（c7d1a2dd）无冲突合并，群主撤回联系人提问后摘要仍透出被撤回原文，17 条测试全绿，没有会在那时变红的测试；R2-02 新构造故障 N4（按任务号定序）、N5（按任务来源消息定序）17 条全过，「最早 #seq 的提问」未被钉住。来源：原生子线程 01a1d03a（gpt-6.1-sol，父 01a1cfc8）里核到红/绿/校准/冻结/box4 运行/提交 702c8719/正常推送 515db145..702c8719；作者会话号为宿主号；接手链人工核，全链 OpenAI。作者门禁的两项 G-PROVENANCE 原始失败源于第 1 轮审查的 --hash 调用写成 cd … &&，本轮改为单条命令。hy4 辅审因线路 403 未产出，本轮无辅审。"
+  },
+  "red": {
+    "commit": "21f0931ec75da6b59b91cd11255d560989fd6895",
+    "note": "R2扩展17项的补丁后同体空实现校准，不冒称历史TDD；真实R1-05先红b93f2e38再绿4f15f21d另列"
+  },
+  "unverifiable": "AC-50：确定性 scriptedMind/scriptedCompute 驱动真实 Host、SQLite、service API 和事件；没有连接真实模型，不包含浏览器/桌面 UI 验收。重启沿用现宿主回收失联 Compute 为 T11_Failed 的语义，旧待答摘要清空。仅当前有效 T4b，不把所有待确认状态都称为已覆盖。",
+  "waiver": null,
+  "review_status": "R1 REJECT及旧reviewed_hash保留；R2新box4窄测17/17、生命周期30/30、full1490/1490、18/18严格具名变异、type/lint exit0，536源SHA未变；本机正式门禁与正常推送看外置实际回执，R2待独立审查，作者不自签不豁免",
+  "provenance": {
+    "inherited_mirasim_session": "codex:534f3614-21cd-43eb-9db6-3cd1673d2b62",
+    "inherited_native_session": "01a1cf01-3b82-7211-b7b9-c7147d5e45e7",
+    "current_native_session": "01a1cfc8-db89-7400-b3de-876bd8478982",
+    "cloud_tested_source_head": "1fc0e9197d7f4e4c98b89457a752176180d17613",
+    "note": "宿主turns.jsonl现已存在，本轮实读record.json/nativeSessionId与R2子线程turn_context。最早10个提交来自继承的codex:534f3614（chatflows/gpt-6-astra）；R1人工核过全链OpenAI，不冒称门禁自动核过接手链。未补写宿主记录，未改门禁。",
+    "r2_native_subthread": "01a1d03a-add3-7a02-92d2-92e9791196ee",
+    "r2_native_subthread_model": "gpt-6.1-sol",
+    "r2_role": "loop_proof_finish; real host codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "r2_true_first_red": "b93f2e385edd4bc35e56c32ead5fcdb82106390f",
+    "r2_first_green": "4f15f21da646f515841507556abcba0c3097d856",
+    "r2_same_body_calibration_red": "21f0931ec75da6b59b91cd11255d560989fd6895",
+    "r2_same_body_calibration_green": "6ff182815e65b210d6e155feeb5485ce1241cf4d",
+    "r2_cloud_tested_source_head": "6da91f5afc437a347bff0990db8af59bd189edd2",
+    "r2_cloud_proof": "docs/proof/room-pending-summary/r2/cloud-proof-verification.json",
+    "r2_cloud_archive_sha256": "3dacf91d1a8a0bf311f339e819dbca1dd1a788a818b57bd338a2f4f990f912fe"
+  }
+}

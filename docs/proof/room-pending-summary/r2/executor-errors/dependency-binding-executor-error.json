@@ -1,0 +1,27 @@
+{
+  "previous_execution_exit": 1,
+  "original_test_exit": 1,
+  "failure": "whole node_modules reuse linked @g-group workspace packages to Q12 instead of TARGET; service schema from wrong branch removed blockedSummary",
+  "correction": "external dependencies reused but every @g-group symlink rebound to TARGET own packages",
+  "workspace_packages": {
+    "@g-group/adapter-sqlite": "/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/adapter-sqlite",
+    "@g-group/adapter-pi-contact": "/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/adapter-pi-contact",
+    "@g-group/server": "/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/server",
+    "@g-group/adapter-cc-compute": "/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/adapter-cc-compute",
+    "@g-group/domain": "/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/domain",
+    "@g-group/api-contract": "/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/api-contract",
+    "@g-group/kernel": "/private/tmp/gg-req-room-summary-r2-resume-20261113/packages/kernel"
+  },
+  "corrected_command": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "packages/server/src/room-blocked-summary.test.ts"
+  ],
+  "corrected_test_exit": 0,
+  "product_source_changed": false,
+  "subthread_context": {
+    "CODEX_THREAD_ID": "01a1d03a-add3-7a02-92d2-92e9791196ee",
+    "MIRASIM_SESSION_KEY": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7"
+  }
+}

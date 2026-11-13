@@ -1,0 +1,190 @@
+TAP version 13
+# Subtest: AC-17 群规「改代码前先问我」生效:Compute 首轮拿不到任何写工具,群规写进 brief
+ok 1 - AC-17 群规「改代码前先问我」生效:Compute 首轮拿不到任何写工具,群规写进 brief
+  ---
+  duration_ms: 44.856666
+  type: 'test'
+  ...
+# Subtest: AC-17 归入任务 ≠ 获授权:受阻后任务停在 T4b,负责人在会话里 @ 用户提问;没有本人同意不续接写
+ok 2 - AC-17 归入任务 ≠ 获授权:受阻后任务停在 T4b,负责人在会话里 @ 用户提问;没有本人同意不续接写
+  ---
+  duration_ms: 31.590917
+  type: 'test'
+  ...
+# Subtest: AC-17 本人直接回复「同意」(不点卡):绑定当前版本放行,续接换上写工具,实际只写一次
+ok 3 - AC-17 本人直接回复「同意」(不点卡):绑定当前版本放行,续接换上写工具,实际只写一次
+  ---
+  duration_ms: 74.732042
+  type: 'test'
+  ...
+# Subtest: AC-17 按钮只是可选交互:点提问卡「同意」走同一条绑定路径,同样放行一次
+ok 4 - AC-17 按钮只是可选交互:点提问卡「同意」走同一条绑定路径,同样放行一次
+  ---
+  duration_ms: 53.830167
+  type: 'test'
+  ...
+# Subtest: AC-17 本人回复「不行」:不写盘,任务取消
+ok 5 - AC-17 本人回复「不行」:不写盘,任务取消
+  ---
+  duration_ms: 54.772625
+  type: 'test'
+  ...
+# Subtest: AC-17 没有「改前先问」群规:照常给全部工具,不插授权提问(可逆改动由群规决定,不是默认都问)
+ok 6 - AC-17 没有「改前先问」群规:照常给全部工具,不插授权提问(可逆改动由群规决定,不是默认都问)
+  ---
+  duration_ms: 32.474334
+  type: 'test'
+  ...
+# Subtest: AC-17 显式入口 tasks.answer 回答授权提问:「同意」绑定放行一次;含义不清的回答被拒,不放行
+ok 7 - AC-17 显式入口 tasks.answer 回答授权提问:「同意」绑定放行一次;含义不清的回答被拒,不放行
+  ---
+  duration_ms: 52.91575
+  type: 'test'
+  ...
+# Subtest: AC-20 授权提问时联系人把用户的话 forward 过去不算授权:被拒,任务仍等本人,写工具仍收着
+ok 8 - AC-20 授权提问时联系人把用户的话 forward 过去不算授权:被拒,任务仍等本人,写工具仍收着
+  ---
+  duration_ms: 60.585875
+  type: 'test'
+  ...
+# Subtest: AC-20 授权只来自用户本人:引用旧的「同意」、正文说别的,不放行
+ok 9 - AC-20 授权只来自用户本人:引用旧的「同意」、正文说别的,不放行
+  ---
+  duration_ms: 54.869625
+  type: 'test'
+  ...
+# Subtest: AC-20 联系人在群里说「同意」不产生授权:旁边的联系人看到提问就回「同意」,任务仍停在等本人
+ok 10 - AC-20 联系人在群里说「同意」不产生授权:旁边的联系人看到提问就回「同意」,任务仍停在等本人
+  ---
+  duration_ms: 44.526583
+  type: 'test'
+  ...
+# Subtest: AC-20 多个待授权动作又没指明:不擅自选,联系人追问;回复其中一条提问才放行那一件
+ok 11 - AC-20 多个待授权动作又没指明:不擅自选,联系人追问;回复其中一条提问才放行那一件
+  ---
+  duration_ms: 96.631959
+  type: 'test'
+  ...
+# Subtest: AC-19 改条件之后的迟到「同意」不放行:提问卡标过期,授权记 expired,任务按新版本回到执行
+ok 12 - AC-19 改条件之后的迟到「同意」不放行:提问卡标过期,授权记 expired,任务按新版本回到执行
+  ---
+  duration_ms: 80.888917
+  type: 'test'
+  ...
+# Subtest: AC-19 授权只对那一版有效:同意后用户又改条件,之后的续接收回写工具
+ok 13 - AC-19 授权只对那一版有效:同意后用户又改条件,之后的续接收回写工具
+  ---
+  duration_ms: 92.601916
+  type: 'test'
+  ...
+# Subtest: AC-45 Compute 运行中送不进去的新条件:这一轮结束时自动续上,不靠联系人交付触发
+ok 14 - AC-45 Compute 运行中送不进去的新条件:这一轮结束时自动续上,不靠联系人交付触发
+  ---
+  duration_ms: 44.190542
+  type: 'test'
+  ...
+# Subtest: AC-45 中途改条件:同一任务原位升版 v0→v1,新约束送进同一个 Compute;Compute 在跑就排队,旧版本结果不能交付
+ok 15 - AC-45 中途改条件:同一任务原位升版 v0→v1,新约束送进同一个 Compute;Compute 在跑就排队,旧版本结果不能交付
+  ---
+  duration_ms: 48.810292
+  type: 'test'
+  ...
+# Subtest: AC-16 收到 ≠ 落实:补充送达、Compute 也做完了,没交付前只是 Received;交付后才标 Applied 并指向产物版本
+ok 16 - AC-16 收到 ≠ 落实:补充送达、Compute 也做完了,没交付前只是 Received;交付后才标 Applied 并指向产物版本
+  ---
+  duration_ms: 77.307166
+  type: 'test'
+  ...
+# Subtest: AC-15 改挂补充:消息 m 从 A 移到 B,A 不取消、版本 +1 并重放 消息 n,B 收下 消息 m;重复改挂幂等
+ok 17 - AC-15 改挂补充:消息 m 从 A 移到 B,A 不取消、版本 +1 并重放 消息 n,B 收下 消息 m;重复改挂幂等
+  ---
+  duration_ms: 109.277875
+  type: 'test'
+  ...
+# Subtest: AC-15 关联版本对不上返回 conflict 并带当前值;改挂之后联系人再把 消息 m 转给 A 被拒(定向作废依赖 消息 m 的动作)
+ok 18 - AC-15 关联版本对不上返回 conflict 并带当前值;改挂之后联系人再把 消息 m 转给 A 被拒(定向作废依赖 消息 m 的动作)
+  ---
+  duration_ms: 114.787584
+  type: 'test'
+  ...
+# Subtest: AC-15 消息 m 已落实进工作区:先停旧执行器(任务不取消),停止确认后才让它回到 消息 m 之前并重做 消息 n
+ok 19 - AC-15 消息 m 已落实进工作区:先停旧执行器(任务不取消),停止确认后才让它回到 消息 m 之前并重做 消息 n
+  ---
+  duration_ms: 102.587666
+  type: 'test'
+  ...
+# Subtest: AC-15 改挂到别的会话的任务、改挂到自己都被拒
+ok 20 - AC-15 改挂到别的会话的任务、改挂到自己都被拒
+  ---
+  duration_ms: 84.441209
+  type: 'test'
+  ...
+# Subtest: rewind 预览只读:列出将撤下的消息、将取消的在途任务、将作废的承诺与已发生的 Compute;消息、任务、承诺、游标、待处理输入、卡片前后逐项不变,不发事件
+ok 21 - rewind 预览只读:列出将撤下的消息、将取消的在途任务、将作废的承诺与已发生的 Compute;消息、任务、承诺、游标、待处理输入、卡片前后逐项不变,不发事件
+  ---
+  duration_ms: 67.319458
+  type: 'test'
+  ...
+# Subtest: rewind 执行:之后的消息标 rewound 照常列出;来源于它们的在途任务 Cancel → T9、Compute 收到 stop,停止确认前不算停下,确认后 T10;承诺作废;回退说明如实写明已发生的不撤销
+ok 22 - rewind 执行:之后的消息标 rewound 照常列出;来源于它们的在途任务 Cancel → T9、Compute 收到 stop,停止确认前不算停下,确认后 T10;承诺作废;回退说明如实写明已发生的不撤销
+  ---
+  duration_ms: 73.466708
+  type: 'test'
+  ...
+# Subtest: rewind 后联系人第 4 块不再有撤下的消息;新消息引用它,第 5 块也换不进它的原文(没撤下的照常换入);附件资产不删
+ok 23 - rewind 后联系人第 4 块不再有撤下的消息;新消息引用它,第 5 块也换不进它的原文(没撤下的照常换入);附件资产不删
+  ---
+  duration_ms: 44.575042
+  type: 'test'
+  ...
+# Subtest: rewind:已完成的 Compute 结果列在「已发生、未撤销」里;任务照样取消并等停止确认,任务卡收口,文案不声称结果被撤回
+ok 24 - rewind:已完成的 Compute 结果列在「已发生、未撤销」里;任务照样取消并等停止确认,任务卡收口,文案不声称结果被撤回
+  ---
+  duration_ms: 71.603667
+  type: 'test'
+  ...
+# Subtest: rewind:同一 clientActionId 重放返回同一结果,不重复撤下、不重复记回退说明、不重复停 Compute;回退点是已撤下的消息 → invalid_params
+ok 25 - rewind:同一 clientActionId 重放返回同一结果,不重复撤下、不重复记回退说明、不重复停 Compute;回退点是已撤下的消息 → invalid_params
+  ---
+  duration_ms: 72.686542
+  type: 'test'
+  ...
+# Subtest: rewind 只在私聊:群聊 forbidden;会话不存在 not_found;回退点不是本会话的消息或之后没有消息 invalid_params;被拒时什么都不变
+ok 26 - rewind 只在私聊:群聊 forbidden;会话不存在 not_found;回退点不是本会话的消息或之后没有消息 invalid_params;被拒时什么都不变
+  ---
+  duration_ms: 39.168875
+  type: 'test'
+  ...
+# Subtest: rewind 时 Compute 还在启动途中:任务进 T9 等撤销确认;实例一上线就被停,停止确认后 T10,不会带着作废的请求跑下去
+ok 27 - rewind 时 Compute 还在启动途中:任务进 T9 等撤销确认;实例一上线就被停,停止确认后 T10,不会带着作废的请求跑下去
+  ---
+  duration_ms: 51.107583
+  type: 'test'
+  ...
+# Subtest: rewind 时 Compute 还在启动途中、随后启动失败:撤销即确认,任务落到 T10,不卡在 T9
+ok 28 - rewind 时 Compute 还在启动途中、随后启动失败:撤销即确认,任务落到 T10,不卡在 T9
+  ---
+  duration_ms: 51.510625
+  type: 'test'
+  ...
+# Subtest: rewind 后联系人想把补充转给已取消任务的 Compute:被拒,停止中的 Compute 不会被恢复
+ok 29 - rewind 后联系人想把补充转给已取消任务的 Compute:被拒,停止中的 Compute 不会被恢复
+  ---
+  duration_ms: 55.82925
+  type: 'test'
+  ...
+# Subtest: rewind 发生在联系人这一轮途中:基于撤下消息的派活被放弃重跑,只登记承诺的也被拒,不会按撤下的请求执行
+ok 30 - rewind 发生在联系人这一轮途中:基于撤下消息的派活被放弃重跑,只登记承诺的也被拒,不会按撤下的请求执行
+  ---
+  duration_ms: 49.530833
+  type: 'test'
+  ...
+1..30
+# tests 30
+# suites 0
+# pass 30
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2343.093792

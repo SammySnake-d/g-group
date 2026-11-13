@@ -1,0 +1,17 @@
+{
+  "command": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "packages/server/src/room-blocked-summary.test.ts"
+  ],
+  "exit_code": 0,
+  "green_commit": "4f15f21da646f515841507556abcba0c3097d856",
+  "red_commit": "b93f2e385edd4bc35e56c32ead5fcdb82106390f",
+  "tests": 8,
+  "pass": 8,
+  "fail": 0,
+  "test_file_identical_to_real_red": true,
+  "production_delta": "room-blocked-summary.ts truncation reserves full count suffix and never ends the retained body with a high surrogate",
+  "new_product_files": 0
+}

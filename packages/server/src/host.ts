@@ -138,6 +138,7 @@ import { PluginRuntime } from "./plugin-runtime.ts";
 import { PluginStore } from "./plugins.ts";
 import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief, reviewModelProblem } from "./review.ts";
 import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
+import { roomBlockedSummary } from "./room-blocked-summary.ts";
 import { QuotaTable } from "./quota.ts";
 import { DEFAULT_RUN_CHECK_MS, RunStore, checkRunWake } from "./runs.ts";
 import { Scheduler, checkCron } from "./schedules.ts";
@@ -832,7 +833,16 @@ export class Host {
     const last = visible.at(-1);
     const openCards = one<{ n: number }>(this.db, "SELECT count(*) AS n FROM gg_cards WHERE room_id = ? AND state = 'open'", roomId)?.n ?? 0;
     // 等用户回复的交付(普通消息交付,没有卡片)也算一件待你处理的事
-    const pending = openCards + listDocs<TaskDoc>(this.db, "task:").filter((d) => d.value.roomId === roomId && awaitingUser(d.value)).length;
+    const roomTasks = listDocs<TaskDoc>(this.db, "task:").filter((d) => d.value.roomId === roomId);
+    const pending = openCards + roomTasks.filter((d) => awaitingUser(d.value)).length;
+    const blockers = roomTasks.flatMap(({ value: d }) => {
+      // 当前 pendingQ + open 卡已钉住阻塞；生命周期与同房间可见性证明见本片 R2 证据。
+      if (!d.task.pendingQ) return [];
+      const card = this.questionCard(d.task.id, d.task.pendingQ.qId);
+      if (card?.state !== "open") return [];
+      const text = this.authzOf(d.task.id).value.requests.find((q) => q.qId === d.task.pendingQ!.qId)?.action ?? this.questionText(d.task.id, d.task.pendingQ.qId);
+      return [{ taskId: d.task.id, seq: card.seq, text }];
+    });
     const draft = getDoc<DraftView>(this.db, `draft:${roomId}`)?.value;
     return {
       id: r.id,
@@ -848,6 +858,7 @@ export class Host {
       readSeq,
       unread: visible.filter((m) => m.seq > readSeq && !(m.sender.kind === "user" && m.sender.id === this.userId)).length,
       pendingForUser: pending,
+      blockedSummary: roomBlockedSummary(blockers),
       lastMessagePreview: last ? last.text.slice(0, 200) : null,
       ...(draft ? { draftPreview: draftPreview(draft) } : {}),
       updatedAt: r.updated_at,

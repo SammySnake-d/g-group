@@ -104,6 +104,8 @@ export const RoomView = obj({
   unread: int({ min: 0 }),
   /** 有需要用户处理的事(交付待确认、提问、失败卡)时 > 0,会话列表显示红点。 */
   pendingForUser: int({ min: 0 }),
+  /** D09.2④：实际等待用户回答的最早阻塞摘要；没有阻塞时为 null。 */
+  blockedSummary: opt(nullable(str({ max: 500 }))),
   lastMessagePreview: nullable(str({ max: 500 })),
   /** 输入框里有未发送草稿时的「[草稿] …」提示(AC-24);存过草稿后清空为 null,从没存过时不出现。 */
   draftPreview: opt(nullable(str({ max: 500 }))),

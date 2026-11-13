@@ -1,0 +1,73 @@
+{
+  "scope": "R2 author local evidence only; full/18 mutants/cloud acceptance pending; R1 rejection unchanged",
+  "baseline_review_commit": "515db145086f524ff232a98bb8e9dcc16a4b6815",
+  "true_first_bug_red": "b93f2e385edd4bc35e56c32ead5fcdb82106390f",
+  "true_first_green": "4f15f21da646f515841507556abcba0c3097d856",
+  "post_patch_same_body_red": "21f0931ec75da6b59b91cd11255d560989fd6895",
+  "post_patch_same_body_green": "6ff182815e65b210d6e155feeb5485ce1241cf4d",
+  "test_file_sha256": "aaf04904d8f1d86beb7c9008caee1fab77cac70705b0aa8af81e75ed8a49a11f",
+  "cases": [
+    {
+      "finding": "R1-01",
+      "evidence": "R2-01 real Host/service two contacts, earliest+count, answer switches to next",
+      "mutant": "R1宿主改取最新",
+      "local": "17-suite pass; mutant sweep not run"
+    },
+    {
+      "finding": "R1-02",
+      "evidence": "R2-02a/b/c complete lengths 499/500/501",
+      "mutants": [
+        "R5边界499",
+        "R6边界501"
+      ],
+      "local": "17-suite pass; mutant sweep not run"
+    },
+    {
+      "finding": "R1-03",
+      "evidence": "R2-03 actual authorization request action and no needs in question card metadata",
+      "mutant": "R7丢授权action",
+      "local": "17-suite pass; mutant sweep not run"
+    },
+    {
+      "finding": "R1-04",
+      "evidence": "guard-reachability.md plus R2-04b real cancelled/expired card and R2-04c forbidden contact-question retraction",
+      "decision": "remove state and visible predicates proven redundant at current stable Host boundary; retain open predicate with isolated normal-API counterexample",
+      "mutant": "R3丢open过滤",
+      "local": "source proof and 17-suite pass; no invented kill"
+    },
+    {
+      "finding": "R1-05",
+      "evidence": "r1-05-true-red-execution.json; r1-05-true-green-execution.json; exact full suffix at length500",
+      "mutant": "R1-05先拼后截吃尾注",
+      "local": "true first red 7pass/1named assertion fail then same8 green"
+    },
+    {
+      "finding": "R1-06",
+      "evidence": "R2-06 SQLite total_changes and no subscription event",
+      "mutant": "R10读取幂等写入",
+      "local": "17-suite pass; mutant sweep not run"
+    },
+    {
+      "finding": "R1-07",
+      "evidence": "R2-07 exact Unicode truncation and no unpaired surrogate code points",
+      "mutant": "R1-07切开代理对",
+      "local": "17-suite pass; mutant sweep not run"
+    },
+    {
+      "finding": "R1-08",
+      "evidence": "README source section and receipt provenance; host turns exists; actual native subthread 01a1d03a-add3-7a02-92d2-92e9791196ee",
+      "local": "source metadata refreshed without forging records"
+    }
+  ],
+  "old_r1_proof_numbers_not_applied": true,
+  "review": {
+    "agent": "claude",
+    "session": "claude:8cbac2cc-c5f7-45af-a8db-c74a3419331f",
+    "model": "group/opus",
+    "verdict": "reject",
+    "reviewed_hash": "91a926b0f55a6a4ca211a5ef41a4e81774fc0f04e5a2709b2b19fe44c9db328c",
+    "notes": "第 1 轮 REJECT（d4013dcb）。作者数字全部复现：box2 Node24 typecheck/lint 0、npm test 1480/1480 无 skip/todo/cancel、作者 8 变异 8/8 被具名测试杀死、红 274e3be1 上 7 条按名 ERR_ASSERTION 失败且测试与 HEAD 逐字相同、末提交只补证据、5 个源文件 SHA 与云端一致、reviewed_hash 与作者 CONTENT_HASH 相同；8 个门禁负例各自判败。范围未越界；AC-27 通过与 AC-50 未测标注如实。驳回理由：审查方 12 个单点故障存活 10 个（宿主层取最新、截断边界 499/501、授权提问原因来源、三道过滤单点、读路径幂等写入），以及第一条问题过长时「另有 N 项」被截掉（R1-05，需改产品代码）；问题 R1-01..R1-08 见 reviews/feat-room-pending-summary.md。来源：作者会话 turns.jsonl 已存在（收据 provenance.note 过时），门禁对作者一侧无报错；另按 Codex 原生记录 01a1cfc8 核到红/绿提交、box3 v5 运行（1480/1480、包哈希、落盘时间）、推送未绕过钩子、PR 创建；接手链最早 10 个提交出自 codex:534f3614（gpt-6-astra），全链 OpenAI，门禁不查接手链，为人工核对。box3 进程级记录未核。hy4 辅审因线路 403 未产出，本轮无辅审。"
+  },
+  "waiver": null,
+  "full_q12_unrelated_untouched": true
+}

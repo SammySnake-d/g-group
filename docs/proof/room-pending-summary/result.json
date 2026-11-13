@@ -1,0 +1,108 @@
+{
+  "head": "1fc0e9197d7f4e4c98b89457a752176180d17613",
+  "red_commit": "274e3be11e6b9d3c92c7ffc7898f601aca1e0c42",
+  "results": [
+    {
+      "name": "red",
+      "command": [
+        "node",
+        "--test",
+        "--test-reporter=tap",
+        "packages/server/src/room-blocked-summary.test.ts"
+      ],
+      "cwd": "/dev/shm/gg-room-summary-20261112-resume/red",
+      "expected_exit": 1,
+      "exit_code": 1,
+      "valid": true,
+      "seconds": 0.781,
+      "log_sha256": "8e893621124242d558676cbea17f5483c36cfa80ec61943a53f2439dd4d26d99"
+    },
+    {
+      "name": "green",
+      "command": [
+        "node",
+        "--test",
+        "--test-reporter=tap",
+        "packages/server/src/room-blocked-summary.test.ts"
+      ],
+      "cwd": "/dev/shm/gg-room-summary-20261112-resume/repo",
+      "expected_exit": 0,
+      "exit_code": 0,
+      "valid": true,
+      "seconds": 0.659,
+      "log_sha256": "df11b7e31b97e450b57f0a48f4d8e66e6f210dd4e654b19a0927b8f5892ecdc4"
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "-s",
+        "typecheck"
+      ],
+      "cwd": "/dev/shm/gg-room-summary-20261112-resume/repo",
+      "expected_exit": 0,
+      "exit_code": 0,
+      "valid": true,
+      "seconds": 12.491,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "command": [
+        "npm",
+        "run",
+        "-s",
+        "lint"
+      ],
+      "cwd": "/dev/shm/gg-room-summary-20261112-resume/repo",
+      "expected_exit": 0,
+      "exit_code": 0,
+      "valid": true,
+      "seconds": 1.08,
+      "log_sha256": "3d8b5634c92689f921e8cd5a9289b05cdccbe25a80eba587f0ab3d7bcdd1ab0a"
+    },
+    {
+      "name": "full",
+      "command": [
+        "npm",
+        "test",
+        "--silent"
+      ],
+      "cwd": "/dev/shm/gg-room-summary-20261112-resume/repo",
+      "expected_exit": 0,
+      "exit_code": 0,
+      "valid": true,
+      "seconds": 166.617,
+      "log_sha256": "5c3228af62da28ff2310ed896896a387db62d2ffd97ad20a89aa09504460da26"
+    },
+    {
+      "name": "mutations",
+      "command": [
+        "node",
+        "packages/server/proof/room-pending-summary-mutations.mjs",
+        "/workspace/req-room-summary-20261112-v5/mutations.json"
+      ],
+      "cwd": "/dev/shm/gg-room-summary-20261112-resume/repo",
+      "expected_exit": 0,
+      "exit_code": 0,
+      "valid": true,
+      "seconds": 6.599,
+      "log_sha256": "144a85647d459bb8072e463f02212fe777efb319a1d52a71b46dfe8af0bffab6"
+    }
+  ],
+  "complete": true,
+  "node": "v24.21.0",
+  "source_sha256": {
+    "packages/api-contract/src/entities.ts": "311f35deed3d6446b514ec6830cf24416b388325124ec87d9166e9d579033350",
+    "packages/server/src/host.ts": "165cfb569b0d07431998abd11087bc6f5b18f795c2ddef6c7e5065042d102bb2",
+    "packages/server/src/room-blocked-summary.ts": "28d95f7f1d93fbb033945b91a60eac495b56b9c3d057339e4ff1f2328c6d7166",
+    "packages/server/src/room-blocked-summary.test.ts": "991ca30798aa36c73af559faddcf202f87a5883c07c2851c79c9e251203475a7",
+    "packages/server/proof/room-pending-summary-mutations.mjs": "3d748cb597136892780f783d781b15d8779d7e90ef495b57138e2074455d58dd"
+  },
+  "runner_sha256": "2c7d952b54af09c4f78d758d91a7fcfa3b26f66a64b1ce13008bbf1a0205368b",
+  "environment": {
+    "TMPDIR": "/dev/shm/gg-room-summary-20261112-resume/tmp",
+    "reason": "individually owned executable tmpfs, avoid exhausted shared cloud disk; persistent receipts stay in /workspace"
+  }
+}

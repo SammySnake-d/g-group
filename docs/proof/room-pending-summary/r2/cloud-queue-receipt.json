@@ -1,0 +1,14 @@
+{
+  "command": [
+    "node",
+    "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/room-summary-r2-resume/cloud-execution/box-call-file.mjs",
+    "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-coverage/takeover-20261112/room-summary-r2-resume/cloud-execution/cloud-launch-guarded.json"
+  ],
+  "box": "box4",
+  "client_exit": 0,
+  "remote_exit": 0,
+  "at": "2026-11-13T02:34:46.164916+08:00",
+  "dispatch_pid": "690000",
+  "run_frozen": true,
+  "heavy_lock": "/workspace/.heavy.lock"
+}

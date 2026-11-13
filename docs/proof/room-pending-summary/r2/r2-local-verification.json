@@ -1,0 +1,12 @@
+{
+  "source_head_before_test_commit": "4f15f21da646f515841507556abcba0c3097d856",
+  "typecheck_exit": 0,
+  "lint_exit": 0,
+  "narrow_tests": 17,
+  "narrow_pass": 17,
+  "narrow_fail": 0,
+  "narrow_skip": 0,
+  "mutants_run": false,
+  "full_run": false,
+  "recorded_at": "2026-11-12T18:19:15.728369+00:00"
+}

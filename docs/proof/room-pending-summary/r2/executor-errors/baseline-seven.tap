@@ -1,0 +1,93 @@
+✔ 阻塞摘要按最早消息顺序选择并给出其余项数量 (0.829708ms)
+✔ 没有阻塞时不给出虚构摘要 (0.07475ms)
+✔ 阻塞摘要折为一行并限制为合同允许的长度 (0.080834ms)
+✖ rooms.get 返回真实阻塞原因且读取不改变任务与已读游标 (40.079833ms)
+✖ 回答生效后阻塞摘要消失并经 room.updated 推送 (43.321875ms)
+✖ 其他会话没有本会话的阻塞摘要 (27.231459ms)
+✖ 重启回收后的失败任务不再显示已过期的待答摘要 (28.3575ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 3
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 378.053417
+
+✖ failing tests:
+
+test at packages/server/src/room-blocked-summary.test.ts:52:1
+✖ rooms.get 返回真实阻塞原因且读取不改变任务与已读游标 (40.079833ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - '等待你：请给中性验证码'
+  
+      at TestContext.<anonymous> (file:///private/tmp/gg-req-room-summary-r2-resume-20261113/packages/server/src/room-blocked-summary.test.ts:58:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: '等待你：请给中性验证码',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/server/src/room-blocked-summary.test.ts:63:1
+✖ 回答生效后阻塞摘要消失并经 room.updated 推送 (43.321875ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - null
+  
+      at TestContext.<anonymous> (file:///private/tmp/gg-req-room-summary-r2-resume-20261113/packages/server/src/room-blocked-summary.test.ts:73:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/server/src/room-blocked-summary.test.ts:79:1
+✖ 其他会话没有本会话的阻塞摘要 (27.231459ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - null
+  
+      at TestContext.<anonymous> (file:///private/tmp/gg-req-room-summary-r2-resume-20261113/packages/server/src/room-blocked-summary.test.ts:88:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/server/src/room-blocked-summary.test.ts:92:1
+✖ 重启回收后的失败任务不再显示已过期的待答摘要 (28.3575ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - null
+  
+      at TestContext.<anonymous> (file:///private/tmp/gg-req-room-summary-r2-resume-20261113/packages/server/src/room-blocked-summary.test.ts:100:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
