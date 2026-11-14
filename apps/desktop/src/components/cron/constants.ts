@@ -20,6 +20,14 @@ export const SPEAK_HINT: Record<Cron['speak'], string> = {
   'only-if': '看过没情况就不说话，只记进运行历史',
 }
 
+/** 连上后端时关着的几项:合同的 schedules.create / update 只表达按 cron 触发、每次都发结果,也不收负责人和会话的改动。
+ *  原因直接写在编辑器里那一项下面,不用点就能看到 */
+export const CRON_LIVE = {
+  kinds: '后端的定时只按时间重复：「只跑一次」「每 N 条消息」「某件事发生」还不支持',
+  speak: '后端的定时每次醒来都发结果：「有情况才说」还不支持',
+  fixed: '由谁做、在哪个会话，建好后改不了：后端的定时不收这两项的改动。要换就删掉这条再新建',
+} as const
+
 /** 运行历史结果条:最多画几格、每种结果的颜色 */
 export const HEALTH_TICKS = 12
 export const TICK_CLS: Record<CronRun['result'], string> = { said: 'bg-ok/50', silent: 'bg-fg-3/30', error: 'bg-err' }
