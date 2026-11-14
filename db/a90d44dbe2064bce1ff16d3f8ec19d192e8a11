@@ -1,0 +1,41 @@
+package-lock.json
+  s_2950c8e8f91d67::t_61c15344d21bed 8-10,219-226,257-265
+package.json
+  s_2950c8e8f91d67::t_e388a73c3009e2 5-7
+packages/adapter-cc-compute/mcp/report-mcp.mjs
+  s_2950c8e8f91d67::t_12fb02913d710a 1-58
+packages/adapter-cc-compute/package.json
+  s_2950c8e8f91d67::t_2220903ccc54d2 1-8
+packages/adapter-cc-compute/src/adapter.test.ts
+  s_2950c8e8f91d67::t_fc68d3a0094cee 1-301
+packages/adapter-cc-compute/src/adapter.ts
+  s_2950c8e8f91d67::t_0f3b513de73c75 1-11
+packages/adapter-cc-compute/src/brief.ts
+  s_2950c8e8f91d67::t_e88dd614634eba 1-13
+packages/adapter-cc-compute/src/cli.ts
+  s_2950c8e8f91d67::t_5e5280ab171526 1-22
+packages/adapter-cc-compute/src/events.ts
+  s_2950c8e8f91d67::t_4a8748e790b4fe 1-30
+packages/adapter-cc-compute/src/index.ts
+  s_2950c8e8f91d67::t_1fa29e75e14c3d 1-5
+packages/adapter-cc-compute/src/types.ts
+  s_2950c8e8f91d67::t_7c022b4d5f9bf2 1-78
+packages/adapter-cc-compute/test-support/fake-claude.mjs
+  s_2950c8e8f91d67::t_eedf78db293e15 1-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dba90d44dbe2064bce1ff16d3f8ec19d192e8a11",
+  "prompts": {},
+  "sessions": {
+    "s_2950c8e8f91d67": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a224e5bbe1fb8b394",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

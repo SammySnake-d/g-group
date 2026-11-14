@@ -1,0 +1,33 @@
+docs/开发手册.md
+  s_233b6d928b260b::t_e3ff30c245902e 1-787
+docs/概念卡.md
+  s_233b6d928b260b::t_ef59548b145fa5 1-369
+docs/spec/需求文档.md
+  s_060cb60f4a56ed::t_4ad8d6df22d8cc 3,88-89,117,120-121,129-236,301,320,329,334-346,421,428,433,442,446,539,606,624,627,647,653,880-881,914,1613,1649,1660,1733-2141,2191,2197,2206,2213-2218,2220-2221,2227,2232-2233,2244-2245,2285,2290,2307,2313,2315,2319-2320,2322,2326-2367,2371,2373-2374,2378,2380,2521-2534,2539,2721-2728,4118-4175,4181,4186-4187
+docs/spec/验收文档-v0.1.md
+  s_060cb60f4a56ed::t_3e9ab4ee263ff4 1,3-5,43,90,148,152-165,247-249,251-252,256-257
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "504aa47034064f9708e6bc40e1b5f80aa0a51f67",
+  "prompts": {},
+  "sessions": {
+    "s_060cb60f4a56ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae8c5e6a9c179f748",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_233b6d928b260b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1afe1-6e07-78f2-8a32-e312349378e7",
+        "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

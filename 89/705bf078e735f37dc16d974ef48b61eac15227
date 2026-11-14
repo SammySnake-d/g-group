@@ -1,0 +1,19 @@
+packages/adapter-cc-compute/src/tap-result.test.ts
+  s_8e60cdc3d4b8e6::t_0f2109ab892920 57,77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "89705bf078e735f37dc16d974ef48b61eac15227",
+  "prompts": {},
+  "sessions": {
+    "s_8e60cdc3d4b8e6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c1ba-5e28-7c00-ac7f-398176174884",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

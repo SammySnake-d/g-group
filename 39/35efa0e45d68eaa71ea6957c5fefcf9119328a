@@ -1,0 +1,23 @@
+receipts/evidence/t177-g6/real-partial/README.md
+  s_30afae688b7542::t_152039f0f0f19e 1-7
+receipts/evidence/t177-g6/real-partial/report.md
+  s_30afae688b7542::t_cf0634f9a5e707 1-87
+receipts/evidence/t177-g6/real-partial/summary.json
+  s_30afae688b7542::t_3236bc5a4867c4 1-1277
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3935efa0e45d68eaa71ea6957c5fefcf9119328a",
+  "prompts": {},
+  "sessions": {
+    "s_30afae688b7542": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1af55cf420d9f162",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

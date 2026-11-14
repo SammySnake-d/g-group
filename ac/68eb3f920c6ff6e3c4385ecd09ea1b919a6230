@@ -1,0 +1,25 @@
+packages/domain/proof/red-against-8e57583.tap
+  s_b517c605a7c83f::t_6d313fc866c241 1-1581
+packages/domain/src/task.test.ts
+  s_b517c605a7c83f::t_fe06f85b2629ba 7-10,12,1800-1947
+packages/domain/src/task.ts
+  s_b517c605a7c83f::t_78503f89983e05 1,100-105
+packages/domain/src/vendor.ts
+  s_b517c605a7c83f::t_be7a4479e0a41a 1,4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ac68eb3f920c6ff6e3c4385ecd09ea1b919a6230",
+  "prompts": {},
+  "sessions": {
+    "s_b517c605a7c83f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adbd1c9c28bef0051",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

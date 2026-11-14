@@ -1,0 +1,19 @@
+receipts/feat-t177-g5-two-stage.json
+  s_ce8dc7845336c2::t_f5bb61ab2e59b2 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4158ac3400df30884a8bc3548b345ca9bfd22a6c",
+  "prompts": {},
+  "sessions": {
+    "s_ce8dc7845336c2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac609c5004756eb3d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

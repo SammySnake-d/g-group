@@ -1,0 +1,19 @@
+receipts/feat-chat-admin.json
+  s_1f57ccadf6accc::t_9d5262779246ec 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a11b9746e32e4e0ef8949114eb0434e61d0cb60b",
+  "prompts": {},
+  "sessions": {
+    "s_1f57ccadf6accc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b36ab234-0cba-4b89-929e-d21a46a35eea",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

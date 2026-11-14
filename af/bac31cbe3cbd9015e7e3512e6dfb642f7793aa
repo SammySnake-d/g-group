@@ -1,0 +1,23 @@
+packages/server/proof/plugin-exec-mut.mjs
+  s_19afb02e575b26::t_5b8c116eda476b 1-63
+packages/server/proof/plugin-exec.txt
+  s_19afb02e575b26::t_aabe1a4a7a1481 1-38
+receipts/feat-plugin-exec.json
+  s_19afb02e575b26::t_593d80fa1d7be3 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "afbac31cbe3cbd9015e7e3512e6dfb642f7793aa",
+  "prompts": {},
+  "sessions": {
+    "s_19afb02e575b26": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac3c5d6dff8770595",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

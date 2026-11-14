@@ -1,0 +1,37 @@
+apps/desktop/e2e/a2ui.ui.spec.ts
+  s_042e901c6ad028::t_f29e2cc81a4a38 2,30,66
+apps/desktop/e2e/models.ui.spec.ts
+  s_042e901c6ad028::t_0257beafbb400e 2
+apps/desktop/e2e/plugins.ui.spec.ts
+  s_042e901c6ad028::t_9f0e3a9cf70c16 2,5-7,30,72,121,199,263,304
+apps/desktop/e2e/shell-look.ui.spec.ts
+  s_042e901c6ad028::t_c514c81edcf83a 2,66
+apps/desktop/e2e/shots-layout.ui.spec.ts
+  s_042e901c6ad028::t_a5a7c41e810d8d 2,9,14,18,21
+apps/desktop/e2e/shots.ts
+  s_042e901c6ad028::t_ed55bd444ba9a5 1-16
+apps/desktop/e2e/slash.ui.spec.ts
+  s_042e901c6ad028::t_6bdfe0a7f9a0ab 2,5
+apps/desktop/e2e/walk.ui.spec.ts
+  s_042e901c6ad028::t_dd04667fb17510 2,7
+apps/desktop/package.json
+  s_042e901c6ad028::t_75471c97582a31 15
+apps/desktop/verify/mutate.mjs
+  s_042e901c6ad028::t_a8e58d6a8f6919 34-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "174537ef7e65fa97e256d1aa6ca75fe1d4cad1dc",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

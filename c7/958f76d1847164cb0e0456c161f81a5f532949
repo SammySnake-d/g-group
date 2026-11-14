@@ -1,0 +1,19 @@
+packages/server/proof/g6-mutations.txt
+  s_9e84d571573b49::t_519eb8a33fd77a 1-2,4-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c7958f76d1847164cb0e0456c161f81a5f532949",
+  "prompts": {},
+  "sessions": {
+    "s_9e84d571573b49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5c99cdaaa25826c8",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

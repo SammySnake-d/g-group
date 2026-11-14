@@ -1,0 +1,27 @@
+.github/workflows/self-check.yml
+  s_22ba9b1b818602::t_6c9cad3ae034c3 10-12,16,33-40,42,45-46
+.github/workflows/trusted-gates.yml
+  s_22ba9b1b818602::t_034f63c5d52da1 12
+receipts/chore-gates.json
+  s_22ba9b1b818602::t_2a067664389bb8 66
+scripts/gates/mutation.ts
+  s_22ba9b1b818602::t_62e68e8b86abff 60-62,64,66-67,70,97,99-100,110,112
+scripts/gates/proof/mutation.txt
+  s_22ba9b1b818602::t_d1cec5424277c9 2-40,80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "78657627b5116033ed002141e9593e9cecf06c5d",
+  "prompts": {},
+  "sessions": {
+    "s_22ba9b1b818602": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91b17b26-1e2d-4bc5-904f-9d3aab1e0f38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

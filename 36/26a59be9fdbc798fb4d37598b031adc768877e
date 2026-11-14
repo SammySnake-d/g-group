@@ -1,0 +1,25 @@
+packages/server/proof/cross-vendor-review-mutations.mjs
+  s_00309a6b1778cc::t_467693e893c549 35
+packages/server/proof/retry-host-mutations.mjs
+  s_00309a6b1778cc::t_666d5380ca0479 36-40,61
+packages/server/proof/run-ledger-host-mutations.mjs
+  s_00309a6b1778cc::t_3d44ec5b55db2e 19-23
+packages/server/src/retry.test.ts
+  s_00309a6b1778cc::t_4b5440e9450af6 566-585
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3626a59be9fdbc798fb4d37598b031adc768877e",
+  "prompts": {},
+  "sessions": {
+    "s_00309a6b1778cc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5b44653a-2923-45fd-97d0-f25479b43797",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

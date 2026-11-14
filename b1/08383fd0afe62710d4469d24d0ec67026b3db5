@@ -1,0 +1,18 @@
+docs/spec/需求文档.md
+  h_f33e46a035b77c 3,236,2232,2234,2236-2241,2650-2651
+docs/spec/验收文档-v0.1.md
+  h_f33e46a035b77c 1,163,251
+docs/开发手册.md
+  h_f33e46a035b77c 803-805
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b108383fd0afe62710d4469d24d0ec67026b3db5",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+packages/adapter-cc-compute/proof/resident-complete-mutations.txt
+  s_56d86eb5914775::t_2d9940b71c3ddd 1-27
+packages/server/proof/resident-complete-cross-red.txt
+  s_56d86eb5914775::t_ed990cad79cfcb 1-14
+receipts/feat-resident-complete.json
+  s_56d86eb5914775::t_f40b8cdb7b670a 7,12,26,28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "05c4ae782a77283a40778208a1454086f3bf3587",
+  "prompts": {},
+  "sessions": {
+    "s_56d86eb5914775": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1ead79f6fd1706fc",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

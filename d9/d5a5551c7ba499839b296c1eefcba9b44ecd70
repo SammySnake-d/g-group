@@ -1,0 +1,21 @@
+packages/server/src/fakes.ts
+  s_25620647d6f8eb::t_599fc86d137649 102-112
+packages/server/src/host.ts
+  s_25620647d6f8eb::t_fe4ff0a70afc41 23,36,1303-1304,1306,1309,1329,1355-1367,1384-1385,1395-1455,1479-1481,1485-1488,1491,1494,1496,1600-1613
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d9d5a5551c7ba499839b296c1eefcba9b44ecd70",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

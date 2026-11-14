@@ -1,0 +1,14 @@
+packages/server/proof/auth-intent-host-mutations.mjs
+  h_f33e46a035b77c 28-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9157a3039aa49d2a9920c3e674b7db1c10a9b30d",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

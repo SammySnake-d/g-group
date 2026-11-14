@@ -1,0 +1,23 @@
+packages/domain/src/task.test.ts
+  s_60e9c5a2ac18df::t_75e156603bb6ae 8,1531-1665
+packages/domain/src/task.ts
+  s_60e9c5a2ac18df::t_425a586da19d6a 1,100-105
+packages/domain/src/vendor.ts
+  s_60e9c5a2ac18df::t_73144ae1794622 1,4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1f62d32b0451f153d1fd9a931053ebf4499f79f4",
+  "prompts": {},
+  "sessions": {
+    "s_60e9c5a2ac18df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac25756ecc32db3a1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

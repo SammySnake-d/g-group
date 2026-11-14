@@ -1,0 +1,35 @@
+apps/desktop/src/config/layout.ts
+  s_c20562a127f0af::t_fe478e27ca19a3 7-8
+apps/desktop/src/components/files/FileReader.tsx
+  s_c20562a127f0af::t_fe478e27ca19a3 6-7,16-18,37-39
+apps/desktop/e2e/files-context.ui.spec.ts
+  s_c20562a127f0af::t_fe478e27ca19a3 1-49
+apps/desktop/docs/astra-files-design.md
+  s_c20562a127f0af::t_fe478e27ca19a3 12,32,43-48
+apps/desktop/src/components/files/useFileContextPanel.ts
+  s_c20562a127f0af::t_fe478e27ca19a3 1-17
+apps/desktop/e2e/files-design.ui.spec.ts
+  s_c20562a127f0af::t_fe478e27ca19a3 38
+apps/desktop/src/components/FilesMain.tsx
+  s_c20562a127f0af::t_fe478e27ca19a3 10
+apps/desktop/src/store/slices/layout.ts
+  s_c20562a127f0af::t_fe478e27ca19a3 28-30,59,92
+apps/desktop/verify/design-preview.mjs
+  s_c20562a127f0af::t_2fe876167f5689 20,30-32,37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a9a5110af49b90ddb8cb3735d923cbf7c89a6215",
+  "prompts": {},
+  "sessions": {
+    "s_c20562a127f0af": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c16c-e991-72f1-9871-6d60d8855ee8",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

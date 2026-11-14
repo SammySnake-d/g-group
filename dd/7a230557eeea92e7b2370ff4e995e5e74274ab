@@ -1,0 +1,21 @@
+apps/desktop/e2e/walk.ui.spec.ts
+  s_042e901c6ad028::t_19514070db949f 1-63
+apps/desktop/verify/report.mjs
+  s_042e901c6ad028::t_be6ff23dc4b893 1-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dd7a230557eeea92e7b2370ff4e995e5e74274ab",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

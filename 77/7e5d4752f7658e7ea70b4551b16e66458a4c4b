@@ -1,0 +1,19 @@
+packages/adapter-sqlite/src/store.ts
+  s_e22e670ac40a01::t_0b2dfcbe7d0c29 3-4,23-88,91-94,97-99,102-109,112-119,122-125,128-131,134-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "777e5d4752f7658e7ea70b4551b16e66458a4c4b",
+  "prompts": {},
+  "sessions": {
+    "s_e22e670ac40a01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1b743a657e0be6fc",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

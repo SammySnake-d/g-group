@@ -1,0 +1,23 @@
+scripts/gates/selftest.ts
+  s_a1d351a2cfe605::t_0f39f21312d416 43,94,158-170,279-284
+scripts/gates/test-runner.test.ts
+  s_a1d351a2cfe605::t_e7718e2c83b233 1-45
+scripts/gates/test-runner.ts
+  s_a1d351a2cfe605::t_235d82d58e1d8f 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e508fc6498ea0e10d64380613074701e283f19f2",
+  "prompts": {},
+  "sessions": {
+    "s_a1d351a2cfe605": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a77e6bd4f86950c8d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,58 @@
+packages/server/proof/g6/capture.test.ts
+  h_f33e46a035b77c 1-117
+packages/server/proof/g6/capture.ts
+  h_f33e46a035b77c 1-307
+packages/server/proof/g6/contracts.test.ts
+  h_f33e46a035b77c 1-105
+packages/server/proof/g6/contracts.ts
+  h_f33e46a035b77c 1-134
+packages/server/proof/g6/driver.test.ts
+  h_f33e46a035b77c 1-55
+packages/server/proof/g6/driver.ts
+  h_f33e46a035b77c 1-195
+packages/server/proof/g6/fixture.test.ts
+  h_f33e46a035b77c 1-52
+packages/server/proof/g6/fixture.ts
+  h_f33e46a035b77c 1-124
+packages/server/proof/g6/fixtures/build.ts
+  h_f33e46a035b77c 1-93
+packages/server/proof/g6/fixtures/set-v1.json
+  h_f33e46a035b77c 1-1165
+packages/server/proof/g6/groups.test.ts
+  h_f33e46a035b77c 1-77
+packages/server/proof/g6/groups.ts
+  h_f33e46a035b77c 1-101
+packages/server/proof/g6/manifest.test.ts
+  h_f33e46a035b77c 1-50
+packages/server/proof/g6/manifest.ts
+  h_f33e46a035b77c 1-44
+packages/server/proof/g6/report.test.ts
+  h_f33e46a035b77c 1-51
+packages/server/proof/g6/report.ts
+  h_f33e46a035b77c 1-83
+packages/server/proof/g6/run.test.ts
+  h_f33e46a035b77c 1-81
+packages/server/proof/g6/run.ts
+  h_f33e46a035b77c 1-269
+packages/server/proof/g6/score.test.ts
+  h_f33e46a035b77c 1-147
+packages/server/proof/g6/score.ts
+  h_f33e46a035b77c 1-203
+packages/server/proof/g6/standin.test.ts
+  h_f33e46a035b77c 1-58
+packages/server/proof/g6/standin.ts
+  h_f33e46a035b77c 1-75
+packages/server/proof/g6/types.ts
+  h_f33e46a035b77c 1-236
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ef6bdbe2e2e11be67db864adc5d092b77a6cdc94",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

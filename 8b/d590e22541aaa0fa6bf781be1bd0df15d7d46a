@@ -1,0 +1,19 @@
+receipts/feat-kernel-plugins.json
+  s_707da87feee227::t_6c33818f8c75d1 2,12,22,27,32,37,42,57,62-64,67,69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8bd590e22541aaa0fa6bf781be1bd0df15d7d46a",
+  "prompts": {},
+  "sessions": {
+    "s_707da87feee227": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c65d-2dc4-7f63-a331-e0399ce6a347",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

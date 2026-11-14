@@ -1,0 +1,21 @@
+receipts/feat-kernel-plugins.json
+  s_5933e6a1dff8f8::t_9f964cc3ba614e 77-78,80-81
+reviews/feat-kernel-plugins.md
+  s_5933e6a1dff8f8::t_9f964cc3ba614e 1686-1718
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ee1b1f4b3b30792a161bb46c0719d4d558882559",
+  "prompts": {},
+  "sessions": {
+    "s_5933e6a1dff8f8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c3b5-7e45-77d0-853e-689ca93df034",
+        "model": "shayu/gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

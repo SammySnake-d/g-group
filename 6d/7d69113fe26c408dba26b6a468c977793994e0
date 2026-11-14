@@ -1,0 +1,19 @@
+apps/desktop/e2e/parity-compute.electron.spec.ts
+  s_6da187c6e14fd9::t_79aa6a31550768 45-46,137,139,142,163-165,196,202
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6d7d69113fe26c408dba26b6a468c977793994e0",
+  "prompts": {},
+  "sessions": {
+    "s_6da187c6e14fd9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2ee95d347ee6f575",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

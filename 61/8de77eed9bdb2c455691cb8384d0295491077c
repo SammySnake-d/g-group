@@ -1,0 +1,39 @@
+apps/desktop/e2e/shell-flow.ui.spec.ts
+  s_ead2b4aeb00e3d::t_576cb6f6f65cb5 126-158
+apps/desktop/src/api/adapters.ts
+  s_ead2b4aeb00e3d::t_8e0d264df048f3 1-79
+apps/desktop/src/api/backend.ts
+  s_ead2b4aeb00e3d::t_a44db7dad2c7db 3,5,11,22-31,33-36
+apps/desktop/src/api/demo-seed.ts
+  s_ead2b4aeb00e3d::t_38d092cbc17b01 1-16
+apps/desktop/src/app/composer/useSlash.ts
+  s_ead2b4aeb00e3d::t_6922bfd0c14d77 1,3,7-10,27-29,34-42
+apps/desktop/src/app/useShell.ts
+  s_ead2b4aeb00e3d::t_d8647213b2a807 2,20-21
+apps/desktop/src/store/index.ts
+  s_ead2b4aeb00e3d::t_14d79c5a06cb5f 15-18,35-44
+apps/desktop/src/store/remote.ts
+  s_ead2b4aeb00e3d::t_c860c8a7048330 1-16
+apps/desktop/src/store/select.ts
+  s_ead2b4aeb00e3d::t_b07313a51d4967 2-3,55-60
+apps/desktop/src/store/slices/plugins.ts
+  s_ead2b4aeb00e3d::t_d7c9cad0b88981 1-3,5-6,8-9,13-20,26-39,44-53,65-66
+apps/desktop/src/store/slices/schedule.ts
+  s_ead2b4aeb00e3d::t_51fc486d895ec1 3-4,6,8,10,22-27,67-72,77,85-87,101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "618de77eed9bdb2c455691cb8384d0295491077c",
+  "prompts": {},
+  "sessions": {
+    "s_ead2b4aeb00e3d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "24aee79e-501b-486a-9582-32f776c0e5b1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

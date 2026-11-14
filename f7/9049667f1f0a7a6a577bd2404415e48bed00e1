@@ -1,0 +1,19 @@
+apps/desktop/src/components/messages/Row.tsx
+  s_afda23cfcae587::t_f8514fdb1b3d4d 70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f79049667f1f0a7a6a577bd2404415e48bed00e1",
+  "prompts": {},
+  "sessions": {
+    "s_afda23cfcae587": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "92af38cf-dccc-4335-ba90-5e71604991ff",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

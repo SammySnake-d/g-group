@@ -1,0 +1,81 @@
+packages/domain/src/lease.test.ts
+  s_19afb02e575b26::t_05d8d75317d55c 1-86
+packages/domain/src/lease.ts
+  s_19afb02e575b26::t_84bb88a3ab606f 1-59
+packages/domain/src/trace-replay.test.ts
+  s_19afb02e575b26::t_41ef6048a1022b 1-145
+packages/domain/src/trace-replay.ts
+  s_19afb02e575b26::t_cd43347d089701 1-67
+packages/domain/tla/Claim-nocas.cfg
+  s_19afb02e575b26::t_5b084acd7c542b 1-9
+packages/domain/tla/Claim-single.cfg
+  s_19afb02e575b26::t_80cbd0fec5497d 1-9
+packages/domain/tla/Claim-witness.cfg
+  s_19afb02e575b26::t_27cb55e12dc0d8 1-8
+packages/domain/tla/Claim.cfg
+  s_19afb02e575b26::t_4da2fc16e65aa5 1-9
+packages/domain/tla/Claim.tla
+  s_19afb02e575b26::t_89114e26616b30 1-82
+packages/domain/tla/Lease-nocas.cfg
+  s_19afb02e575b26::t_4f715ec046e992 1-10
+packages/domain/tla/Lease-noorder-reverse.cfg
+  s_19afb02e575b26::t_63c73307b19f65 1-9
+packages/domain/tla/Lease-noorder.cfg
+  s_19afb02e575b26::t_dd8bb24b13c001 1-10
+packages/domain/tla/Lease-single.cfg
+  s_19afb02e575b26::t_d802236bdef0e0 1-10
+packages/domain/tla/Lease-witness.cfg
+  s_19afb02e575b26::t_5243d986694580 1-9
+packages/domain/tla/Lease.cfg
+  s_19afb02e575b26::t_e3077e26464971 1-10
+packages/domain/tla/Lease.tla
+  s_19afb02e575b26::t_72297794ba9ff3 1-102
+packages/domain/tla/Publish-nocas-double.cfg
+  s_19afb02e575b26::t_a2882d76cb8782 1-9
+packages/domain/tla/Publish-nocas.cfg
+  s_19afb02e575b26::t_aa1ed244263eda 1-10
+packages/domain/tla/Publish-single.cfg
+  s_19afb02e575b26::t_f0b871d8f2eeef 1-10
+packages/domain/tla/Publish-witness.cfg
+  s_19afb02e575b26::t_26d2cb47f704fc 1-9
+packages/domain/tla/Publish.cfg
+  s_19afb02e575b26::t_85ea449e6dd11f 1-10
+packages/domain/tla/Publish.tla
+  s_19afb02e575b26::t_8dfaf1de6d6c45 1-82
+packages/domain/tla/run-tlc.sh
+  s_19afb02e575b26::t_d5b60295d5f5f6 1-25
+packages/domain/tla/traces/Claim-nocas.json
+  s_19afb02e575b26::t_cd6511b4cde3fe 1
+packages/domain/tla/traces/Claim-witness.json
+  s_19afb02e575b26::t_3285de46927a06 1
+packages/domain/tla/traces/Lease-nocas.json
+  s_19afb02e575b26::t_30b2d19d3133fd 1
+packages/domain/tla/traces/Lease-noorder-reverse.json
+  s_19afb02e575b26::t_1182153a661c61 1
+packages/domain/tla/traces/Lease-noorder.json
+  s_19afb02e575b26::t_9e0683187a57ce 1
+packages/domain/tla/traces/Lease-witness.json
+  s_19afb02e575b26::t_0c8dc565c46aef 1
+packages/domain/tla/traces/Publish-nocas-double.json
+  s_19afb02e575b26::t_d8b26b80139327 1
+packages/domain/tla/traces/Publish-nocas.json
+  s_19afb02e575b26::t_154ea933b3edcf 1
+packages/domain/tla/traces/Publish-witness.json
+  s_19afb02e575b26::t_76fdaa43da201d 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9966e9937dded4d2f8a1d4fef31bdea6700495d8",
+  "prompts": {},
+  "sessions": {
+    "s_19afb02e575b26": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac3c5d6dff8770595",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

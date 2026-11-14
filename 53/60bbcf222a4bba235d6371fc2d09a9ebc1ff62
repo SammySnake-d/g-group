@@ -1,0 +1,28 @@
+packages/server/proof/artifacts.txt
+  s_ae065512e1088f::t_91da7dca4ba4fb 1-2,4,8,11,13-15,18-25,28,30,33,35,37-43,54
+receipts/feat-artifacts.json
+  h_f33e46a035b77c 4,7
+packages/api-contract/src/artifacts.test.ts
+  h_f33e46a035b77c 4,9-10,14-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5360bbcf222a4bba235d6371fc2d09a9ebc1ff62",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_ae065512e1088f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a79b7ed6217c51390",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

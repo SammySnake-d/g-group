@@ -1,0 +1,31 @@
+packages/kernel/src/plain.ts
+  s_d25047fbd77bcf::t_1794d2bfbac4a3 139-146,149
+packages/kernel/src/plugins.test.ts
+  s_d25047fbd77bcf::t_da9f96cc845fcb 1744-1752,1756-1757,1761-1762,1771-1777,1802-1803,1879-1881,1898,1914,1917-1919,1921
+packages/kernel/src/plugins.ts
+  s_7a21443c2ee2b8::t_90ed3d7ac01724 72-73,92-93,95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f4ebe901dbe62005108e48643542c8d01242a81f",
+  "prompts": {},
+  "sessions": {
+    "s_7a21443c2ee2b8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b780-4bdd-7eb1-a370-253334ff593e",
+        "model": "ai-iisbo/[乾坤按量]gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_d25047fbd77bcf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b75e-31aa-71b0-bce6-1c7c30aa772b",
+        "model": "ai-iisbo/deepseek-v4.1-flash"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

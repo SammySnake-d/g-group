@@ -1,0 +1,22 @@
+receipts/fix-pre-push-selftest-exit.json
+  s_fef3bb312667df::t_4c8595b6dfe1ee 30-37
+reviews/fix-pre-push-selftest-exit.md
+  s_fef3bb312667df::t_4c8595b6dfe1ee 1-43
+  s_fef3bb312667df::t_637f102e30f0f5 44-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dc15977bd5b6bfbd3ff195d022229049e2fe640d",
+  "prompts": {},
+  "sessions": {
+    "s_fef3bb312667df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d98a-7796-74b0-ac57-7910d994edd6",
+        "model": "chatflows/gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

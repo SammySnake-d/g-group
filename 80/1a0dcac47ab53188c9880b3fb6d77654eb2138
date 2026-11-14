@@ -1,0 +1,39 @@
+packages/server/src/host.ts
+  s_12ccf69de2a7ec::t_11392b27d8fb78 223
+  s_ead2b4aeb00e3d::t_b4a7cd77782a5f 48,158-159,217-222,224-227
+packages/server/src/shared-docs.test.ts
+  s_ead2b4aeb00e3d::t_5a7eb455d7bfb4 1-191
+packages/api-contract/src/contract.test.ts
+  s_ead2b4aeb00e3d::t_25aae6b44a205d 130-147
+packages/server/src/shared-docs.ts
+  s_ead2b4aeb00e3d::t_d844e0d4f58c3a 10,13-34,36-45
+  s_12ccf69de2a7ec::t_9a9c63c30c4598 1-9,11-12,35
+  s_ead2b4aeb00e3d::t_9c13a25ab2753c 46-48
+  s_ead2b4aeb00e3d::t_d32115c5625cdc 49-52
+packages/api-contract/src/entities.ts
+  s_ead2b4aeb00e3d::t_0cc42a1fcf2861 186-212
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "801a0dcac47ab53188c9880b3fb6d77654eb2138",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_ead2b4aeb00e3d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "24aee79e-501b-486a-9582-32f776c0e5b1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

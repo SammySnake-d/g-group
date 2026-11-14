@@ -1,0 +1,60 @@
+apps/desktop/src/App.tsx
+  h_f33e46a035b77c 10,18,20,26
+apps/desktop/src/api/wire/contacts.ts
+  h_f33e46a035b77c 1-2,6-7,28-29,36-47
+apps/desktop/src/api/wire/index.ts
+  h_f33e46a035b77c 3-4,13-15,18-19,24-28,53-58,74,76
+apps/desktop/src/api/wire/live.ts
+  h_f33e46a035b77c 1-10
+apps/desktop/src/api/wire/messages.ts
+  h_f33e46a035b77c 1-126
+apps/desktop/src/api/wire/rooms.ts
+  h_f33e46a035b77c 1-96
+apps/desktop/src/api/wire/tasks.ts
+  h_f33e46a035b77c 1-99
+apps/desktop/src/api/wire/types.ts
+  h_f33e46a035b77c 38-52
+apps/desktop/src/api/wire/unwired.ts
+  h_f33e46a035b77c 1-28
+apps/desktop/src/app/MainPane.tsx
+  h_f33e46a035b77c 8,14,18,24-25
+apps/desktop/src/app/Rail.tsx
+  h_f33e46a035b77c 3,5-6,16,23-24,45,51-72
+apps/desktop/src/app/chat/ChatEmpty.tsx
+  h_f33e46a035b77c 1-24
+apps/desktop/src/app/list/FileList.tsx
+  h_f33e46a035b77c 10-12
+apps/desktop/src/app/useShell.ts
+  h_f33e46a035b77c 3,10,17-19
+apps/desktop/src/components/FilesMain.tsx
+  h_f33e46a035b77c 14-16
+apps/desktop/src/components/messages/compute/ComputeLine.tsx
+  h_f33e46a035b77c 75-76
+apps/desktop/src/components/pages/AddContactPage.tsx
+  h_f33e46a035b77c 16-17,26,42-43,50
+apps/desktop/src/components/split/ActivityView.tsx
+  h_f33e46a035b77c 57
+apps/desktop/src/components/split/StepBar.tsx
+  h_f33e46a035b77c 15-16
+apps/desktop/src/store/index.ts
+  h_f33e46a035b77c 15,17,36-40
+apps/desktop/src/store/slices/chat.ts
+  h_f33e46a035b77c 3-5,52-53,116,121-122,127-132
+apps/desktop/src/store/slices/compute.ts
+  h_f33e46a035b77c 33-35,50-52
+apps/desktop/src/store/slices/members.ts
+  h_f33e46a035b77c 3-5,37-38,45,54
+apps/desktop/src/store/slices/send.ts
+  h_f33e46a035b77c 5-6,36-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9bab47d4bdadb5108ab7f53f1a77ffa2c9059e77",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

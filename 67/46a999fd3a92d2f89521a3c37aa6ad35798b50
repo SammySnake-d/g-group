@@ -1,0 +1,21 @@
+reviews/feat-compute-port-extract.md
+  s_442066304c9eec::t_dc0db65cbe1a88 1-191
+receipts/feat-compute-port-extract.json
+  s_442066304c9eec::t_1d0de1a524b838 37-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6746a999fd3a92d2f89521a3c37aa6ad35798b50",
+  "prompts": {},
+  "sessions": {
+    "s_442066304c9eec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9c4611deeadb1aa8",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+packages/ui-core/src/slash.test.ts
+  s_3b5d10b45e836f::t_eea6a702d72647 15,19-20,26,44,53-55,82-87,110-121,124-137,173-176,179-186,188,190,192-202,231-232,303-313,344-346
+packages/ui-core/src/slash.ts
+  s_3b5d10b45e836f::t_74e62a8862fe5f 35-38,41-52,55,59-64,81-82,130-135,151-163,165-168,170-178,180-182,217-220,226-231,233-234,317-319,325-328,396,400,403-406
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "23032448cf7e74bc48c2c61452401bc67b99a6ba",
+  "prompts": {},
+  "sessions": {
+    "s_3b5d10b45e836f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a30b7025d5a25b157",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

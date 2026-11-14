@@ -1,0 +1,21 @@
+apps/desktop/proof/parity-group/red.txt
+  s_f0dfa712c20d46::t_ab8c4464cb283c 121-153
+packages/server/src/host.ts
+  s_f0dfa712c20d46::t_092c669b5782f9 1294-1297,1299-1304,1322
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c6f7592c2655b74a92076410217251324f4293a2",
+  "prompts": {},
+  "sessions": {
+    "s_f0dfa712c20d46": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac5e2e0613e55bd0a",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

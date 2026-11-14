@@ -1,0 +1,14 @@
+receipts/feat-coverage-invariants.json
+  h_f33e46a035b77c 25,37-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7be78d9516ca807ec4ed2e6dc5ec00df9481907d",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

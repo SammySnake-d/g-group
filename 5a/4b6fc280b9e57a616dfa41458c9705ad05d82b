@@ -1,0 +1,25 @@
+packages/server/src/host.ts
+  s_55f14ed2baa035::t_755ce1eaf859c1 72-73,135,2470-2476,2509,2588-2654,2663,2706-2708,2712-2714
+packages/server/src/contact-actions.ts
+  s_55f14ed2baa035::t_ddedcd93fda20f 171-191,200-203
+packages/adapter-pi-contact/src/tools.ts
+  s_55f14ed2baa035::t_457fc6d7f9fa26 49-53,253-261
+packages/adapter-pi-contact/src/mind.ts
+  s_55f14ed2baa035::t_4cd665e99ba45a 12,186,211-217,278
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5a4b6fc280b9e57a616dfa41458c9705ad05d82b",
+  "prompts": {},
+  "sessions": {
+    "s_55f14ed2baa035": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a598f0de3461d2f9d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

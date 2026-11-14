@@ -1,0 +1,21 @@
+packages/kernel/proof/failure-class-mutations.mjs
+  s_f14c4f5d7f8b94::t_8177d10dc40b92 1-103
+receipts/feat-failure-class.json
+  s_f14c4f5d7f8b94::t_e48ca5d3bc7fd8 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "29174a6b5826365a23036cc0fb133dadbbeaaa11",
+  "prompts": {},
+  "sessions": {
+    "s_f14c4f5d7f8b94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a09f3a3f2092d0f50",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

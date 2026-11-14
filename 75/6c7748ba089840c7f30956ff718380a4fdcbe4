@@ -1,0 +1,23 @@
+receipts/feat-model-turns.json
+  s_25620647d6f8eb::t_4f256541d919f1 1-16
+packages/server/proof/model-turns-mutations.txt
+  s_25620647d6f8eb::t_cc71208614c49d 1-17
+packages/server/proof/model-turns-tests.txt
+  s_25620647d6f8eb::t_316acad735575e 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "756c7748ba089840c7f30956ff718380a4fdcbe4",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

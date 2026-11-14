@@ -1,0 +1,35 @@
+packages/adapter-pi-contact/src/compact.test.ts
+  s_12ccf69de2a7ec::t_fbb34d4e5d48d4 1-89
+packages/adapter-pi-contact/src/compact.ts
+  s_12ccf69de2a7ec::t_81abf600452315 1-8
+packages/adapter-pi-contact/src/index.ts
+  s_12ccf69de2a7ec::t_262f9ec07d0257 3
+packages/kernel/src/compact.test.ts
+  s_12ccf69de2a7ec::t_db6348997804ae 1-58
+packages/kernel/src/compact.ts
+  s_12ccf69de2a7ec::t_2e5b85172972fe 1-10
+packages/kernel/src/index.ts
+  s_12ccf69de2a7ec::t_a7b3afec4ae7bd 9
+packages/kernel/src/runtime-ports.ts
+  s_12ccf69de2a7ec::t_7c8a04bf3c19a3 112-146
+packages/server/src/host.test.ts
+  s_12ccf69de2a7ec::t_e6e2c7330f5d07 9,317-451
+packages/server/src/host.ts
+  s_12ccf69de2a7ec::t_1ba2dc466eaa99 34,72-75,882-885
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3ba6db15596c6b2dbe8c2671fce54ce49dc4ba36",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+packages/domain/src/model-ledger.ts
+  s_042e901c6ad028::t_1c4d7a5336d10c 1-49
+packages/domain/src/model-ledger.test.ts
+  s_042e901c6ad028::t_44e974b20c9329 1-37
+packages/domain/src/model-config.test.ts
+  s_042e901c6ad028::t_abbe4c3c40213a 1-133
+packages/server/src/host.ts
+  s_042e901c6ad028::t_653aba56fb6341 16,228,249-250,282-283,289-297,1432-1436
+packages/domain/src/model-config.ts
+  s_042e901c6ad028::t_d8c1d0315ccdbe 1-116
+packages/api-contract/src/entities.ts
+  s_042e901c6ad028::t_4c3d853e0c259f 15-63,79-80,217-222
+packages/domain/src/index.ts
+  s_042e901c6ad028::t_bb858998bba723 9-10
+packages/server/src/service.ts
+  s_042e901c6ad028::t_375f8b887a568e 100-102
+packages/api-contract/src/api.ts
+  s_042e901c6ad028::t_0b1a494725ccb0 12,43-52,66-67,201-218,222-232
+packages/server/src/models.test.ts
+  s_042e901c6ad028::t_5bfc4d6ae24154 1-190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ce6d467b7452da996ca34d61fd40e8b651de86e8",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

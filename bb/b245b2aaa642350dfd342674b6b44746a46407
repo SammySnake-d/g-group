@@ -1,0 +1,56 @@
+apps/desktop/proof/native-files/RESULT.md
+  s_d81660d2bcfe5d::t_7c6af85afde977 12-19
+  s_d81660d2bcfe5d::t_40cf3e4cff68e7 1-11
+  s_d81660d2bcfe5d::t_21b2858c3efaf4 20-23
+apps/desktop/proof/native-files/packaged-upload-red.txt
+  s_d81660d2bcfe5d::t_7c6af85afde977 1-19
+apps/desktop/proof/native-files/budget-red.txt
+  s_d81660d2bcfe5d::t_7c6af85afde977 1-44
+apps/desktop/proof/native-files/packaged/final-resume-steps.txt
+  s_d81660d2bcfe5d::t_21b2858c3efaf4 1-7
+apps/desktop/proof/native-files/packaged/accept-packaged-resume.mjs
+  s_d81660d2bcfe5d::t_21b2858c3efaf4 1-72
+apps/desktop/proof/native-files/packaged/README.md
+  s_d81660d2bcfe5d::t_21b2858c3efaf4 1-12
+receipts/feat-desktop-closed-loop.json
+  s_d81660d2bcfe5d::t_21b2858c3efaf4 33,51-62
+  s_d81660d2bcfe5d::t_40cf3e4cff68e7 2,12,36-50,63
+apps/desktop/proof/native-files/budget-green.txt
+  s_d81660d2bcfe5d::t_82d234b22eb846 1-83
+apps/desktop/proof/native-files/remaining-green.txt
+  s_d81660d2bcfe5d::t_40cf3e4cff68e7 1-67
+apps/desktop/proof/native-files/packaged/manifest.json
+  s_d81660d2bcfe5d::t_21b2858c3efaf4 1-23
+apps/desktop/proof/native-files/REVIEW.md
+  s_d81660d2bcfe5d::t_3e8d4fdd83e057 1-28
+apps/desktop/proof/native-files/baseline-renderer.txt
+  s_d81660d2bcfe5d::t_50559d99f6790d 1-83
+apps/desktop/proof/native-files/baseline-root.txt
+  s_d81660d2bcfe5d::t_878b70d7f29467 1-7
+apps/desktop/proof/native-files/baseline-types.txt
+  s_d81660d2bcfe5d::t_3f867486ecb19a 1-6
+apps/desktop/proof/native-files/green.txt
+  s_d81660d2bcfe5d::t_c769343bbd57aa 1-84
+apps/desktop/proof/native-files/packaged/accept-loop-final.mjs
+  s_d81660d2bcfe5d::t_705c778e18af7d 1-198
+apps/desktop/proof/native-files/packaged/first-model-loop-steps.txt
+  s_d81660d2bcfe5d::t_f74545dd0a0e3a 1-61
+apps/desktop/proof/native-files/packaged/process-screenshot-steps.txt
+  s_d81660d2bcfe5d::t_53d3678403af4c 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bbb245b2aaa642350dfd342674b6b44746a46407",
+  "prompts": {},
+  "sessions": {
+    "s_d81660d2bcfe5d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cec9-738b-7a32-9fdf-78b37f5178c9",
+        "model": "chatflows/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

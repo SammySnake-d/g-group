@@ -1,0 +1,21 @@
+receipts/feat-retract-side-effect-disclosure.json
+  s_5c697da75bc518::t_259804f49f39e7 19-26
+reviews/feat-retract-side-effect-disclosure.md
+  s_5c697da75bc518::t_f3dc84446705df 1-147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "153ed67ed15b8d01d31d9cac3288769a904c2ae5",
+  "prompts": {},
+  "sessions": {
+    "s_5c697da75bc518": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "618640cf-092c-44c3-8b19-306bb572d0d0",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

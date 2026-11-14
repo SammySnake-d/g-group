@@ -1,0 +1,25 @@
+packages/server/src/host.ts
+  s_7f422c52350e16::t_0518207de33e50 47,559-561,579,586-631
+packages/server/src/service.ts
+  s_7f422c52350e16::t_ee527ffc4aac15 21-23
+packages/server/src/slash.test.ts
+  s_7f422c52350e16::t_07b34cf8c506ab 1-70
+receipts/feat-slash-builtin.json
+  s_7f422c52350e16::t_2b991a3efd2767 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f035d6c3195fb6e1f34446a51d307eaa3aa3174f",
+  "prompts": {},
+  "sessions": {
+    "s_7f422c52350e16": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18b4f4b0-3cf6-4d51-be92-ca20094b2ce3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

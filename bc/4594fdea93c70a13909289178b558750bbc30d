@@ -1,0 +1,19 @@
+apps/desktop/src/store/index.ts
+  s_f61b680c67b1d6::t_afe4ddd4ac3d91 69,71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bc4594fdea93c70a13909289178b558750bbc30d",
+  "prompts": {},
+  "sessions": {
+    "s_f61b680c67b1d6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3906c70af06d9f1a",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/adapter-codex-compute/src/protocol.test.ts
+  s_9d7fa6e9d65b83::t_6e0fa15c26ad91 120-137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "674092a6cf82d74500d7e2810af4756fee50d3e1",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

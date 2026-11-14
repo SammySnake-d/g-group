@@ -1,0 +1,37 @@
+.githooks/pre-push
+  s_22ba9b1b818602::t_73d33c694add9c 2,5-7
+.github/workflows/gates.yml
+  s_22ba9b1b818602::t_f8578fd010db59 23-26
+receipts/chore-gates.json
+  s_22ba9b1b818602::t_4e9a0de7aba447 4-53,55-59,61,64
+scripts/gates/gates.ts
+  s_22ba9b1b818602::t_84588261236740 6,51,79-87,98,100,149,186,214,238,240-241,247-254,256
+scripts/gates/lib.ts
+  s_22ba9b1b818602::t_05cf3cb6670d92 52,98,161-169
+scripts/gates/proof/selftest.txt
+  s_22ba9b1b818602::t_7d47e192050f5e 9,32-41,43-49
+scripts/gates/run-all.ts
+  s_22ba9b1b818602::t_b7ff75988047f6 7,9,12-18,21,23-24,27,29-34,36-37
+scripts/gates/selftest.ts
+  s_22ba9b1b818602::t_33be8fabd9949e 6-8,96-106,110-124,127-128,132-142,147-158,160,164-168
+scripts/gates/vendor.ts
+  s_22ba9b1b818602::t_b5ff5513414ea2 6
+scripts/merge.sh
+  s_22ba9b1b818602::t_f9e5e28df4ee11 2-3,7-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2f3dbd35f833a02f94ce12a99c4e1ef247deee3d",
+  "prompts": {},
+  "sessions": {
+    "s_22ba9b1b818602": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91b17b26-1e2d-4bc5-904f-9d3aab1e0f38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

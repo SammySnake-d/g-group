@@ -1,0 +1,47 @@
+packages/adapter-pi-contact/src/tools.ts
+  s_a19c652d723a1d::t_edf54f68bfecd3 1,5,22,133-142,195-196,265
+packages/server/proof/forward-link-tests.txt
+  s_a19c652d723a1d::t_f3cb02ff4fbd8b 1-23
+packages/server/src/forward-link.ts
+  s_a19c652d723a1d::t_7aebcdc4d49800 1-9,13,17,31,35-71,74-102,104-113,115-174
+packages/server/src/forward-link.test.ts
+  s_6da187c6e14fd9::t_1036a69cff5aef 139,310,312-313,322,327-330,334,416-417
+packages/server/src/assemble.ts
+  s_a19c652d723a1d::t_3bdf80d563934a 118
+packages/adapter-pi-contact/src/read-linked.test.ts
+  s_a19c652d723a1d::t_f13c619d1fb958 95-96,103
+packages/server/proof/forward-link-mutations.mjs
+  s_a19c652d723a1d::t_4a0d2947397e00 1-118
+packages/server/src/host.ts
+  s_a19c652d723a1d::t_82871954b88437 70,136,862-863,894,900-901,931,1154-1155,1182-1183,1436-1437,2076-2077,2274-2275,2281,2348-2350,2479-2484,4731-4741,4743-4779,4781-4784,4786-4792,4794,4796-4838,4841,4870-4879
+packages/adapter-pi-contact/src/mind.ts
+  s_a19c652d723a1d::t_27830cc1f2f3e8 196-201
+packages/server/proof/forward-link-real.ts
+  s_a19c652d723a1d::t_a859bcb33d24f4 1-98
+packages/server/proof/forward-link-mutations.txt
+  s_a19c652d723a1d::t_b6dc7f8dec5199 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ce350d641bdf1780ccceb8c5435bf4d2f9dd6c64",
+  "prompts": {},
+  "sessions": {
+    "s_6da187c6e14fd9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2ee95d347ee6f575",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_a19c652d723a1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adc8f784a18a4a1b1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

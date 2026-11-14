@@ -1,0 +1,19 @@
+receipts/feat-c-proof.json
+  s_138f3ca4816f31::t_470c10327fce3b 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "50884fd86bab4a4ebd8ee5bb04cf1a81cde021e4",
+  "prompts": {},
+  "sessions": {
+    "s_138f3ca4816f31": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a300aa9e-eccb-4ec8-b983-75a3ff723e24",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

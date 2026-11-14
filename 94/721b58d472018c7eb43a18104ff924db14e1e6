@@ -1,0 +1,81 @@
+apps/desktop/proof/parity-compute/red-backend.txt
+  s_b3368d8f94ae5a::t_db46c3bbaa4122 1-90
+apps/desktop/proof/parity-compute/red.txt
+  s_b3368d8f94ae5a::t_a904d4c353de51 1-52
+apps/desktop/src/api/wire/cards.ts
+  s_b3368d8f94ae5a::t_46fa255321d610 1-62
+apps/desktop/src/api/wire/compute-actions.ts
+  s_b3368d8f94ae5a::t_7dd28dbab9ea34 1-96
+apps/desktop/src/api/wire/files.ts
+  s_b3368d8f94ae5a::t_f7bea13e9e6001 1-64
+apps/desktop/src/api/wire/index.ts
+  s_b3368d8f94ae5a::t_902bf8179c1a50 13,20
+apps/desktop/src/api/wire/messages.ts
+  s_b3368d8f94ae5a::t_df6b3dedc43dad 8,44,82
+apps/desktop/src/api/wire/session.ts
+  s_b3368d8f94ae5a::t_93d865ac9bb3eb 1-85
+apps/desktop/src/api/wire/tasks.ts
+  s_b3368d8f94ae5a::t_d515df5e830439 11-13,44-45,50-57,68-70,77-80,88-89
+apps/desktop/src/app/list/FileList.tsx
+  s_b3368d8f94ae5a::t_dc454674398837 2,4,11-14,27
+apps/desktop/src/components/FilesMain.tsx
+  s_b3368d8f94ae5a::t_88d962397a23e3 3,5,15-17
+apps/desktop/src/components/compute/HarnessSession.tsx
+  s_b3368d8f94ae5a::t_b6be963234850a 38-39,43,75-76
+apps/desktop/src/components/compute/constants.ts
+  s_b3368d8f94ae5a::t_c2f5e80e9c56df 79-80
+apps/desktop/src/components/compute/useLiveSession.ts
+  s_b3368d8f94ae5a::t_fa135615b9fc6c 1-51
+apps/desktop/src/components/files/FileBody.tsx
+  s_b3368d8f94ae5a::t_d805048eed9d52 6,14
+apps/desktop/src/components/files/FileCover.tsx
+  s_b3368d8f94ae5a::t_3a4780d9ed5e1e 6,14
+apps/desktop/src/components/files/FileReturn.tsx
+  s_b3368d8f94ae5a::t_3f901b68de707d 7,14-15
+apps/desktop/src/components/files/LiveFile.tsx
+  s_b3368d8f94ae5a::t_2286ec0d39b630 1-64
+apps/desktop/src/components/files/context.ts
+  s_b3368d8f94ae5a::t_f6e6e84189ef59 6,10,12-13,62-63
+apps/desktop/src/components/messages/compute/ComputeLine.tsx
+  s_b3368d8f94ae5a::t_1319cb7046f73c 13,23,25,43,45,47-48,56,59-62,82
+apps/desktop/src/components/messages/compute/useComputeView.ts
+  s_b3368d8f94ae5a::t_12431b42e39b75 18-21,24,31
+apps/desktop/src/components/messages/compute/useFailChoices.ts
+  s_b3368d8f94ae5a::t_f9f59191a68fe0 1-14
+apps/desktop/src/components/split/ComputeWork.tsx
+  s_b3368d8f94ae5a::t_c2e19b8eee60e4 17-18,48-49,51,55-59,67,74,76,95-96,99-100,111
+apps/desktop/src/data.ts
+  s_b3368d8f94ae5a::t_50bf743af6ef55 129-130,306-310,368,381-382
+apps/desktop/src/store/index.ts
+  s_b3368d8f94ae5a::t_d56280f268c0f3 19,35
+apps/desktop/src/store/slices/compute.ts
+  s_b3368d8f94ae5a::t_8f980bb07884f5 3-4,38-39,56,61,119,130,136,149-150,160-161,167,176
+apps/desktop/src/store/slices/files.ts
+  s_b3368d8f94ae5a::t_3f7d043ba05677 1-18
+apps/desktop/src/store/state.ts
+  s_b3368d8f94ae5a::t_9eaa646da78fbb 7,17
+packages/api-contract/src/entities.ts
+  s_b3368d8f94ae5a::t_c28c8598ed8c1c 320-324
+packages/server/src/fakes.ts
+  s_b3368d8f94ae5a::t_d41ada73e4d1f9 72-75,96-97,110-111,142,150,217-261
+packages/server/src/host.ts
+  s_b3368d8f94ae5a::t_23cc7b61274742 1655
+packages/server/src/start.ts
+  s_b3368d8f94ae5a::t_db129cd49f5d2f 9,18,72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "94721b58d472018c7eb43a18104ff924db14e1e6",
+  "prompts": {},
+  "sessions": {
+    "s_b3368d8f94ae5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aff9ebe3f7dda50e6",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

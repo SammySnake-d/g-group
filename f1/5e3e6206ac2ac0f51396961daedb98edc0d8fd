@@ -1,0 +1,25 @@
+apps/desktop/e2e/concept.ui.spec.ts
+  s_d2325b58e7599b::t_e610ef0a98df60 54-95
+apps/desktop/src/App.tsx
+  s_d2325b58e7599b::t_d1e6525cdad0ea 9,1047
+apps/desktop/src/concept/dblreply/DoubleClickReply.tsx
+  s_d2325b58e7599b::t_aa1ec6e32b3177 1-59
+apps/desktop/src/concept/index.ts
+  s_d2325b58e7599b::t_207cd348d83ad3 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f15e3e6206ac2ac0f51396961daedb98edc0d8fd",
+  "prompts": {},
+  "sessions": {
+    "s_d2325b58e7599b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab4bd987aebe6bf5e",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

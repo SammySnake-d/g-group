@@ -1,0 +1,25 @@
+packages/server/proof/plugin-sources-mutations.mjs
+  s_641f1e26108d65::t_46b8c21c03b460 1-128
+packages/server/proof/plugin-sources-mutations.txt
+  s_641f1e26108d65::t_e86de8dbb178d1 1-43
+packages/server/proof/plugin-sources-real.mjs
+  s_641f1e26108d65::t_14f5760c32fc92 1-156
+packages/server/proof/plugin-sources-real.txt
+  s_641f1e26108d65::t_1e42bc17a81d74 1-120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a8afc91cf6b54ac49f40295df00f704aada64739",
+  "prompts": {},
+  "sessions": {
+    "s_641f1e26108d65": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a647ecb1ad4618089",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

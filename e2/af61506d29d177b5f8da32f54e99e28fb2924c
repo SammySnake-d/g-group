@@ -1,0 +1,19 @@
+receipts/feat-t177-g2-config.json
+  s_1f57ccadf6accc::t_28142d54ee4723 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e2af61506d29d177b5f8da32f54e99e28fb2924c",
+  "prompts": {},
+  "sessions": {
+    "s_1f57ccadf6accc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b36ab234-0cba-4b89-929e-d21a46a35eea",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

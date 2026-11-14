@@ -1,0 +1,65 @@
+apps/desktop/e2e/slash.ui.spec.ts
+  s_042e901c6ad028::t_0f4c07d6ac144c 235-236
+apps/desktop/package-lock.json
+  s_042e901c6ad028::t_ba0de8cb6cfe27 20,23,27,29,33-35,856-885,945-973,1861-1876,2237-2263,2946-2986,3693-3708,4181-4209
+apps/desktop/package.json
+  s_042e901c6ad028::t_0e2978c64d302d 16-17,29,32,36,38,42-44
+apps/desktop/src/App.tsx
+  s_042e901c6ad028::t_c0d77d02933144 3,7-8,887,890-901,1045
+apps/desktop/src/app/JumpToLatest.tsx
+  s_042e901c6ad028::t_b8ac45dde97d61 1-21
+apps/desktop/src/app/Rail.tsx
+  s_042e901c6ad028::t_181343ac6d6f95 1-54
+apps/desktop/src/components/Composer.tsx
+  s_042e901c6ad028::t_31f1f240605445 1,16
+apps/desktop/src/components/Messages.tsx
+  s_042e901c6ad028::t_6d3fd50016c5bb 1,176
+apps/desktop/src/components/ui/button.tsx
+  s_042e901c6ad028::t_7f94468d27474e 7-9,11,15-24,27-37,40-41,52,54
+apps/desktop/src/components/ui/chip.tsx
+  s_042e901c6ad028::t_95e9c6f5f7fc80 1-54
+apps/desktop/src/components/ui/icon-button.tsx
+  s_042e901c6ad028::t_4ebf0ef0232119 1-40
+apps/desktop/src/components/ui/section.tsx
+  s_042e901c6ad028::t_6d130ab6964663 1-28
+apps/desktop/src/components/ui/segmented.tsx
+  s_042e901c6ad028::t_4e9e178679b4d0 1-29
+apps/desktop/src/components/ui/surface.tsx
+  s_042e901c6ad028::t_4b5d1c7c2d6e0a 1-28
+apps/desktop/src/components/ui/toast.tsx
+  s_042e901c6ad028::t_394414c7e3fad6 28
+apps/desktop/src/config/brand.ts
+  s_042e901c6ad028::t_93db9f1dabfbf8 1-2
+apps/desktop/src/config/emoji.ts
+  s_042e901c6ad028::t_d0c0a6f27030a7 1-3
+apps/desktop/src/config/layout.ts
+  s_042e901c6ad028::t_35dd605408a705 1-13
+apps/desktop/src/config/motion.ts
+  s_042e901c6ad028::t_c3ce07acea500c 1-16
+apps/desktop/src/config/nav.ts
+  s_042e901c6ad028::t_7ad9f3fcbe9d35 1-13
+apps/desktop/src/index.css
+  s_042e901c6ad028::t_a34fcc72c118ea 26-28,68-73,91-93
+apps/desktop/tailwind.config.js
+  s_042e901c6ad028::t_4341679bd96151 56-57
+apps/desktop/verify/structure-baseline.json
+  s_042e901c6ad028::t_6d1a5c31eb5e15 1-43
+apps/desktop/verify/structure.mjs
+  s_042e901c6ad028::t_7bb10d7dc27020 1-73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ab13b4775f8c517490e9d21076128199f71028c9",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

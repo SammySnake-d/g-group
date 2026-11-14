@@ -1,0 +1,35 @@
+packages/ui-core/src/index.ts
+  s_042e901c6ad028::t_fcb2598f709d60 2
+packages/ui-core/src/cron.test.ts
+  s_042e901c6ad028::t_e973f9ca9b9498 261-282
+  s_042e901c6ad028::t_4370e9ff4a74c9 258-260
+  s_042e901c6ad028::t_943de26a99bae5 1-257
+packages/ui-core/src/cron.ts
+  s_58a77bc541c265::t_06da9116b8bb21 21-23
+  s_58a77bc541c265::t_4d986fe03b26a6 48-131
+  s_042e901c6ad028::t_e29e9aa5488ab2 1-20,24-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d1edfcf76944f986618953e1401c664bdf96e9be",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_58a77bc541c265": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a84c00f5de6dce335",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

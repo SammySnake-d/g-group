@@ -1,0 +1,38 @@
+packages/adapter-cc-compute/src/adapter.ts
+  h_f33e46a035b77c 226
+packages/adapter-cc-compute/src/attachments.test.ts
+  h_f33e46a035b77c 1-81
+packages/adapter-cc-compute/src/events.ts
+  h_f33e46a035b77c 21
+packages/adapter-cc-compute/src/report-schema.ts
+  h_f33e46a035b77c 7,18,30,47,65
+packages/adapter-cc-compute/src/types.ts
+  h_f33e46a035b77c 95
+packages/server/proof/compute-help-mutations.mjs
+  h_f33e46a035b77c 1-105
+packages/server/src/assemble.ts
+  h_f33e46a035b77c 95
+packages/server/src/fakes.ts
+  h_f33e46a035b77c 38,45,83-93
+packages/server/src/help.test.ts
+  h_f33e46a035b77c 1-296
+packages/server/src/host.test.ts
+  h_f33e46a035b77c 10,12,42,263,286-287
+packages/server/src/host.ts
+  h_f33e46a035b77c 7-8,198-208,232-233,1175,1178-1223,1247,1266-1269,1285,1755-1772,1893-1895,1907-1940,1950-1952,1958-1962,1968-1992,2033,2071-2075,2096,2111-2118
+packages/server/src/service.ts
+  h_f33e46a035b77c 89
+receipts/feat-compute-help.json
+  h_f33e46a035b77c 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "50743f9cd5c6333b06867dd3ce96b9d79150dae8",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

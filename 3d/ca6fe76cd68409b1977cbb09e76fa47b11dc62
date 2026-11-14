@@ -1,0 +1,19 @@
+apps/desktop/src/store/slices/compute.ts
+  s_25620647d6f8eb::t_d2238f3562c720 1,8-10,84-85,88-90,92-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3dca6fe76cd68409b1977cbb09e76fa47b11dc62",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

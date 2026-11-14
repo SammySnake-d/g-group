@@ -1,0 +1,23 @@
+packages/kernel/src/failure-class.test.ts
+  s_25b02f2fb0d35b::t_35c4e8dd86f43f 1-161
+packages/kernel/src/failure-class.ts
+  s_25b02f2fb0d35b::t_04dd2e67c318e7 1-64
+packages/kernel/src/index.ts
+  s_25b02f2fb0d35b::t_88bfbf07b73d69 10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c4924aefcda831ef8de60800e0a1348c335cc603",
+  "prompts": {},
+  "sessions": {
+    "s_25b02f2fb0d35b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d0bff13-9adf-40ba-a795-53ae48143f57",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

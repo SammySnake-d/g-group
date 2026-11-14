@@ -1,0 +1,19 @@
+packages/server/src/room-blocked-summary.test.ts
+  s_bc500ef58bf3aa::t_1dc7a9f310b467 83,89,91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a1c28e641b0ad0ef54b15d7d8e2e6d5838ad2e51",
+  "prompts": {},
+  "sessions": {
+    "s_bc500ef58bf3aa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cf01-3b82-7211-b7b9-c7147d5e45e7",
+        "model": "chatflows/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

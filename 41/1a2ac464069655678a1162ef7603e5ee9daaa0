@@ -1,0 +1,14 @@
+packages/server/proof/worktree-mutations.mjs
+  h_f33e46a035b77c 26-27,29-30,71-73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "411a2ac464069655678a1162ef7603e5ee9daaa0",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

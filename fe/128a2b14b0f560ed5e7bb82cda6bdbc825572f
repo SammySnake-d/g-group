@@ -1,0 +1,21 @@
+apps/desktop/e2e/closed-loop.electron.spec.ts
+  s_54fdb48636ffee::t_ee6ba80fba648b 86-87
+apps/desktop/src/components/messages/Row.tsx
+  s_54fdb48636ffee::t_7da9165cd0abad 41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fe128a2b14b0f560ed5e7bb82cda6bdbc825572f",
+  "prompts": {},
+  "sessions": {
+    "s_54fdb48636ffee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "16b87c7b-b9f6-4a8a-92d0-b64d3392ff32",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

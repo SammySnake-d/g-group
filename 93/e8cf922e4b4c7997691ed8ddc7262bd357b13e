@@ -1,0 +1,23 @@
+packages/server/src/contact-config-history.test.ts
+  s_bc500ef58bf3aa::t_e6742417f8ac45 29-30,43-44,63-64,74-75,91-92,99,102,108-109,125-126,142-143,160-161,171,184,201-202
+packages/server/src/contact-config-history.ts
+  s_bc500ef58bf3aa::t_62d1b9e3adb86a 2,4
+packages/server/src/host.ts
+  s_bc500ef58bf3aa::t_f2097ed87e1ba3 137,440,582,588-602,604-605,608-609,723
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "93e8cf922e4b4c7997691ed8ddc7262bd357b13e",
+  "prompts": {},
+  "sessions": {
+    "s_bc500ef58bf3aa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cf01-3b82-7211-b7b9-c7147d5e45e7",
+        "model": "chatflows/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

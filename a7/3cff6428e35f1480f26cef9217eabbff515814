@@ -1,0 +1,21 @@
+receipts/feat-codex-compute-protocol.json
+  s_acb73d5a44618d::t_5406ca1c67690c 31-38
+reviews/feat-codex-compute-protocol.md
+  s_acb73d5a44618d::t_d52571497b4c4d 1-172
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a73cff6428e35f1480f26cef9217eabbff515814",
+  "prompts": {},
+  "sessions": {
+    "s_acb73d5a44618d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fd6da05b-4f12-4778-9e76-fc2d1b792365",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

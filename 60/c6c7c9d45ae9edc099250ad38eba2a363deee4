@@ -1,0 +1,43 @@
+packages/adapter-pi-contact/src/compact.ts
+  s_ce8dc7845336c2::t_8546c528b1d761 7,138-141
+packages/adapter-pi-contact/src/memory-refine.test.ts
+  s_ce8dc7845336c2::t_2874060e7affaa 1-54
+packages/kernel/src/index.ts
+  s_ce8dc7845336c2::t_e14175feda3767 18
+packages/kernel/src/memory-capture.ts
+  s_ce8dc7845336c2::t_0ba0d2d6437cd1 5,80-84
+packages/kernel/src/memory-marks.test.ts
+  s_ce8dc7845336c2::t_ad0d1fa8aebf65 1-109
+packages/kernel/src/memory-marks.ts
+  s_ce8dc7845336c2::t_b79602c06a8fc5 1-38
+packages/kernel/src/run-ledger.ts
+  s_ce8dc7845336c2::t_673b6d5b2eb41e 112-113,132
+packages/kernel/src/runtime-ports.ts
+  s_ce8dc7845336c2::t_5511168f59ca9f 208-237,241-242
+packages/server/src/host.ts
+  s_ce8dc7845336c2::t_a6b805c325d6ce 3-4,185-186,400-401,453
+packages/server/src/memory-coverage.ts
+  s_ce8dc7845336c2::t_3b5925305866c5 19-22
+packages/server/src/memory-marks.test.ts
+  s_ce8dc7845336c2::t_be1e869ee7a419 1-65
+packages/server/src/memory-marks.ts
+  s_ce8dc7845336c2::t_e2758a18236dae 1-76
+packages/server/src/memory-two-stage.test.ts
+  s_ce8dc7845336c2::t_d367079c1f3a4c 1-421
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "60c6c7c9d45ae9edc099250ad38eba2a363deee4",
+  "prompts": {},
+  "sessions": {
+    "s_ce8dc7845336c2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac609c5004756eb3d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+packages/server/src/announcements.ts
+  s_ead2b4aeb00e3d::t_10e02782ec73bf 7,21-34,36-39,43,47-61,63-64,66-68,70-80,82-93,95-104,106-109
+packages/server/src/host.ts
+  s_ead2b4aeb00e3d::t_d0245c306a3036 418,981-982
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "60bae502f40da805a3faabb867e6c25d362e2999",
+  "prompts": {},
+  "sessions": {
+    "s_ead2b4aeb00e3d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "24aee79e-501b-486a-9582-32f776c0e5b1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

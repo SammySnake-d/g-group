@@ -1,0 +1,61 @@
+apps/desktop/src/api/wire/clone.ts
+  s_c2e268409ae4a0::t_619ae828e651e9 1-35
+apps/desktop/src/api/wire/plugins.ts
+  s_c2e268409ae4a0::t_fe2b4e61fb5c47 4-6,8,67-80
+apps/desktop/src/api/wire/rooms.ts
+  s_c2e268409ae4a0::t_dac755a4d0d04a 101-102,104,107,111
+apps/desktop/src/components/group/ToolsTab.tsx
+  s_c2e268409ae4a0::t_14f022d0f43c80 3,84
+apps/desktop/src/components/group/constants.ts
+  s_c2e268409ae4a0::t_df22983d27c723 61-63,67,75
+apps/desktop/src/components/pages/clone/CloneFlow.tsx
+  s_c2e268409ae4a0::t_0d3542dfb954fd 1,6-8,11-12,16-33,37,43-45,62-68,75,79-80,89,97,100,107
+apps/desktop/src/components/pages/clone/CloneSteps.tsx
+  s_c2e268409ae4a0::t_14c60d0c26d0fa 10,13-14,50,53-56,61,70,75-83,111,114,118,125
+apps/desktop/src/components/pages/clone/constants.ts
+  s_c2e268409ae4a0::t_cba2a01155a5e2 6-7,21-41
+apps/desktop/src/components/pages/clone/items.ts
+  s_c2e268409ae4a0::t_b0c068690b26e3 2-3,20-36
+apps/desktop/src/components/plugins/CenterNav.tsx
+  s_c2e268409ae4a0::t_40046d59a3031c 4,7,17,22,57
+apps/desktop/src/components/plugins/DetailSections.tsx
+  s_c2e268409ae4a0::t_4b1d748573a16e 6,9,18-19,24
+apps/desktop/src/components/plugins/Discover.tsx
+  s_c2e268409ae4a0::t_04861c5aaabacb 9,18-19,32
+apps/desktop/src/components/plugins/GrantCard.tsx
+  s_c2e268409ae4a0::t_68886d41e82075 1-4,12,19-33
+apps/desktop/src/components/plugins/Installed.tsx
+  s_c2e268409ae4a0::t_91f771e6cdec4d 1-2,13,21,25,27-28,47,52
+apps/desktop/src/components/plugins/PluginDetail.tsx
+  s_c2e268409ae4a0::t_fe64ee157a245f 10,20,68
+apps/desktop/src/components/plugins/SideloadDialog.tsx
+  s_c2e268409ae4a0::t_b867335bd79b5d 1-2,11,18,20,29,49,56,61,78,95
+apps/desktop/src/components/plugins/UninstallDialog.tsx
+  s_c2e268409ae4a0::t_a60ede157a13e8 1-2,8,18,29-31
+apps/desktop/src/components/plugins/Updates.tsx
+  s_c2e268409ae4a0::t_6d0fdcb93a86c9 7,14,18
+apps/desktop/src/components/plugins/WhereCard.tsx
+  s_c2e268409ae4a0::t_ed134f76b3be48 1-2,11,44-45,70-79
+apps/desktop/src/components/plugins/constants.ts
+  s_c2e268409ae4a0::t_dd54bfd31c5730 56-76
+apps/desktop/src/components/plugins/flow.tsx
+  s_c2e268409ae4a0::t_0ccdbb73357e86 12,17,19-20
+apps/desktop/src/store/slices/plugins.ts
+  s_c2e268409ae4a0::t_cdffc2c19d0226 5,8-9,54-55,62-63,96-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ae877759e6ff96154963834c28c04f9184db1472",
+  "prompts": {},
+  "sessions": {
+    "s_c2e268409ae4a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad1acc7dc8d973000",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

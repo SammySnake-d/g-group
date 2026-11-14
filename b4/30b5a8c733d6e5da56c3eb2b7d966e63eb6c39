@@ -1,0 +1,30 @@
+scripts/gates/lib.ts
+  s_b099f12605dd4d::t_95f01b6ce4bbd2 118-126,128,133,153
+scripts/gates/mutation.ts
+  s_ae51a77ac1f48f::t_1b8656cdbdd804 120
+  s_b099f12605dd4d::t_8511682ff88204 121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b430b5a8c733d6e5da56c3eb2b7d966e63eb6c39",
+  "prompts": {},
+  "sessions": {
+    "s_ae51a77ac1f48f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b5ef-a44e-7b73-9609-382f8d76b296",
+        "model": "ai-iisbo/[乾坤按量]gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_b099f12605dd4d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "60a67dd9-ce77-40d1-a314-0fe4d04f4589",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

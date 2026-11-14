@@ -1,0 +1,41 @@
+packages/api-contract/src/api.ts
+  s_19afb02e575b26::t_620c7061c2c5f8 11,249-250,262-283
+packages/api-contract/src/entities.ts
+  s_19afb02e575b26::t_37c506f69ebf2c 345-348,352-368
+packages/server/catalog/rss-reader/index.mjs
+  s_19afb02e575b26::t_fb251b88ef2fee 1-118
+packages/server/catalog/rss-reader/plugin.json
+  s_19afb02e575b26::t_994c919010d974 6-15,17-28,30-42
+packages/server/catalog/webhook-out/index.mjs
+  s_19afb02e575b26::t_642b5f81446ac2 1-27
+packages/server/catalog/webhook-out/plugin.json
+  s_19afb02e575b26::t_405396115e7ff5 6-35
+packages/server/runtime/plugin-runner.mjs
+  s_19afb02e575b26::t_ee04b5f6433ad6 1-87
+packages/server/src/host.ts
+  s_19afb02e575b26::t_3ce895841dba75 70,107-108,269-271,1933,1935,1938
+packages/server/src/plugin-runtime.ts
+  s_19afb02e575b26::t_16dbf147a08823 1-336
+packages/server/src/plugins.ts
+  s_19afb02e575b26::t_1f05892bdc4d1a 4-10,15-16,90-102,154,170-171,180-235,249-250,284,295-296,313,322-323,326,330-356,358-362,364-365
+packages/server/src/service.ts
+  s_19afb02e575b26::t_c2c6691a91d444 114-115
+packages/server/src/untar.ts
+  s_19afb02e575b26::t_b06990797a06fd 1-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1ffeb2f1c1f8f44f96c299fc1439e35668b27c67",
+  "prompts": {},
+  "sessions": {
+    "s_19afb02e575b26": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac3c5d6dff8770595",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

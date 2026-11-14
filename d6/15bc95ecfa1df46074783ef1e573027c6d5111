@@ -1,0 +1,31 @@
+packages/server/src/capabilities.ts
+  s_12ccf69de2a7ec::t_65c9ce92ccedd2 19-20,29,34,39-65,70-77,79,81-92,94-139,141-149
+  s_12ccf69de2a7ec::t_647ec3d994f4e5 1-15
+packages/adapter-cc-compute/src/events.ts
+  s_12ccf69de2a7ec::t_9c274a27ed86c5 25-33,67-71
+packages/adapter-cc-compute/src/cli.ts
+  s_12ccf69de2a7ec::t_f6c18140e386f4 7,62-81,84-88,90-117,120-132,137-145,152-153,157,163-165,168-169,179
+  s_12ccf69de2a7ec::t_8043610b422af6 5
+packages/adapter-cc-compute/src/index.ts
+  s_12ccf69de2a7ec::t_a830ba8cdcc3aa 3
+packages/adapter-cc-compute/src/adapter.ts
+  s_12ccf69de2a7ec::t_24904574cc19ce 23,27,53,84-118,126-128,131,166-167,289-290,292-296,299,320-322,324,390-395,397,403,405
+packages/server/src/host.ts
+  s_12ccf69de2a7ec::t_c045db62c640f5 798-810,1233-1237,1304-1309
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d615bc95ecfa1df46074783ef1e573027c6d5111",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+packages/server/src/plugin-outbox.ts
+  s_13de409162fac1::t_439bcfb9404e7e 10-12,69,73,75,77,83,86,88,90,120-142,154,263-291,293-312
+packages/server/src/plugin-runtime.ts
+  s_13de409162fac1::t_bf56c94eb24daf 59,224-225,301-305,339,345-353
+packages/server/src/plugins.ts
+  s_13de409162fac1::t_196e0d0f4f037a 380,400,403-407,416-420,425-431,434-447
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0ef0269d1782af81c0e444ce50ac7eae3d3a2cd4",
+  "prompts": {},
+  "sessions": {
+    "s_13de409162fac1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0d17afa56210101a",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

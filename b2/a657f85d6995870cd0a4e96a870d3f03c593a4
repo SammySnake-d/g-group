@@ -1,0 +1,18 @@
+receipts/evidence/t177-g6/standin-g1/report.md
+  h_f33e46a035b77c 1-71
+receipts/evidence/t177-g6/standin-g1/summary.json
+  h_f33e46a035b77c 1-1085
+receipts/feat-t177-g6-proof.json
+  h_f33e46a035b77c 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b2a657f85d6995870cd0a4e96a870d3f03c593a4",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

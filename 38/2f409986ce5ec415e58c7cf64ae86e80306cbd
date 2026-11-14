@@ -1,0 +1,16 @@
+apps/desktop/e2e/files-context.ui.spec.ts
+  h_f33e46a035b77c 77
+apps/desktop/src/components/files/Provenance.tsx
+  h_f33e46a035b77c 6,18-20,29,62,64-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "382f409986ce5ec415e58c7cf64ae86e80306cbd",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

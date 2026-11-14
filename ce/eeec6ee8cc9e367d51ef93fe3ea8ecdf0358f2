@@ -1,0 +1,19 @@
+packages/adapter-cc-compute/test-support/fake-claude-resident.mjs
+  s_0c61f3c78b6806::t_f3f4d8d13fc238 121-123,126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ceeeec6ee8cc9e367d51ef93fe3ea8ecdf0358f2",
+  "prompts": {},
+  "sessions": {
+    "s_0c61f3c78b6806": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a15bbcd29a7ee10e3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

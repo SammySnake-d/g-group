@@ -1,0 +1,33 @@
+apps/desktop/e2e/models.ui.spec.ts
+  s_714fa08b922bb0::t_a4e8f2a64161d3 1-256
+apps/desktop/src/App.tsx
+  s_714fa08b922bb0::t_480eb41d942e2c 7,96-97,347,563-573,684
+apps/desktop/src/components/ModelSettings.tsx
+  s_714fa08b922bb0::t_268ece87c6426b 1-637
+apps/desktop/src/components/Overlays.tsx
+  s_714fa08b922bb0::t_835b7fe9d34042 4-6,145,173-175,550,570,590,593,685,697
+apps/desktop/src/components/Workbench.tsx
+  s_714fa08b922bb0::t_4bedc9ebbfab3f 4-5,452
+apps/desktop/src/ctx.ts
+  s_714fa08b922bb0::t_aca4c9daee45ce 157-162
+apps/desktop/src/data.ts
+  s_714fa08b922bb0::t_ed578a68a70ca7 3,14,16-21,44-50
+apps/desktop/src/modelConfig.ts
+  s_714fa08b922bb0::t_07c3241525631d 1-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a70bc718462266a966bb0fc497b954bed6b3f9df",
+  "prompts": {},
+  "sessions": {
+    "s_714fa08b922bb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a7ed5acffda8b70b2",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

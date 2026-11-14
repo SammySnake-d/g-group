@@ -1,0 +1,23 @@
+packages/server/proof/g6-mutations.mjs
+  s_9e84d571573b49::t_265f03899de85d 84-85
+packages/server/proof/g6/run.test.ts
+  s_9e84d571573b49::t_e0d7c00f8ee6aa 165,167-174,176-177
+packages/server/proof/g6/run.ts
+  s_9e84d571573b49::t_bcef72537aef80 125-126,128-141,143,337-338
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6c65a268240b4092bb0f61e0d3fe23b16dfe9874",
+  "prompts": {},
+  "sessions": {
+    "s_9e84d571573b49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5c99cdaaa25826c8",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

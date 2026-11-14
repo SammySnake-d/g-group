@@ -1,0 +1,27 @@
+packages/adapter-cc-compute/src/adapter.ts
+  s_28bebc745289eb::t_a823fd662cf170 226
+packages/adapter-cc-compute/src/report-schema.ts
+  s_28bebc745289eb::t_beed98c718fe5b 7,18,30,47,65
+packages/server/src/assemble.ts
+  s_28bebc745289eb::t_f97f0ceda109d2 88
+packages/server/src/host.ts
+  s_28bebc745289eb::t_c45a75f4bb2d80 7-8,147-157,177-178,786,789-834,852,869-872,889,1170-1182,1301-1303,1315-1348,1358-1360,1366-1370,1376-1400,1438,1455-1459,1479,1494-1501
+packages/server/src/service.ts
+  s_28bebc745289eb::t_81e1b2a748c69a 69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "121b72ceff44600c7bb02b485897f7ec75920eff",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
