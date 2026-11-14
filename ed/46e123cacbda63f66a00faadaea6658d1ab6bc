@@ -1,0 +1,23 @@
+packages/adapter-cc-compute/src/quiesce.test.ts
+  s_69f96fa873b14b::t_c8013176ceb39f 110-111
+  s_69f96fa873b14b::t_4452e3c9e16115 108-109,112,179
+  s_69f96fa873b14b::t_76319f96ab4f85 119-127,130-134,169,171-175
+  s_69f96fa873b14b::t_3eef94b2409407 157,159-160,166
+  s_69f96fa873b14b::t_548ded375f6307 5,12,113-118,128-129,135-156,158,161-165,167-168,170,176-178
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ed46e123cacbda63f66a00faadaea6658d1ab6bc",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
