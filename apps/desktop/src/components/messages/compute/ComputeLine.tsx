@@ -27,12 +27,13 @@ export function ComputeLine({ id }: { id: string }) {
   if (!v) return null
   const { c, view, stepsDone, err } = v
   const open = stop(() => openSplit({ t: 'compute', id }))
+  const stuck = stuckAt(c)
 
   /* AC-14 停滞:换成黄色一行写明多久没动、卡在哪一步;联系人会自己出来 @你 */
   if (view === 'stalled') return (
     <div className={WITH_END}><Pressable data-testid={`compute-line-${id}`} data-state="stalled" onClick={open} className={`${LINE} bg-warm-soft py-0.5 pl-2 pr-2.5`}>
       <PauseCircle className="h-3.5 w-3.5 text-warm" /><span className="truncate font-medium">{c.title}</span>
-      <span className="shrink-0 text-warm">· <span className="tabular-nums">{c.idleMin}</span> 分钟没动静{stuckAt(c) ? <> · 卡在「{stuckAt(c)}」</> : null}</span>
+      <span className="shrink-0 text-warm">· <span className="tabular-nums">{c.idleMin}</span> 分钟没动静{stuck ? <> · {stuck.label}「{stuck.text}」</> : null}</span>
     </Pressable><OpenSessionButton id={id} /></div>
   )
 

@@ -90,6 +90,8 @@ export function toCompute(t: TaskView, prev?: Compute): Compute | null {
     ...(t.state === 'T9_StopRequested' ? { stopping: true } : {}),
     /* 借的是本群临时槽位(U09):群资料「临时算力」页按它列借出 */
     ...(t.slot?.scope === 'group' ? { pool: 'group' as const } : {}),
+    /* 还没有 Compute 开工:在排队(进展全景写「排队中」和在等什么) */
+    ...((t.state === 'T1_Open' || t.state === 'T2_Claimed') && !runs.length ? { queued: true } : {}),
     /* 进展全景按真实时刻算「已跑多久」「多久没进展」(不按「时:分」字符串猜日期) */
     ...times(first?.startedAt ?? progress[0]?.at, latest?.at, status === 'running' || status === 'waiting' ? null : (last?.endedAt ?? latest?.at)),
   }

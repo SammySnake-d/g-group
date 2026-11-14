@@ -14,8 +14,13 @@ export function idleMinOf(c: Compute, now: number): number | undefined {
   return last === undefined ? undefined : Math.max(0, Math.floor((now - last) / 60_000))
 }
 
-/** 卡在哪一步:有步骤计划就用正在做的那步,没有(连后端时合同不给步骤)就用最近一条进度 */
-export const stuckAt = (c: Compute): string | undefined => c.steps.find((x) => x.state === 'now')?.text ?? c.activity[c.activity.length - 1]?.title
+/** 停在哪:有步骤计划写「卡在」正在做的那步;没有(连后端时合同不给步骤计划)如实写「最后进展」是哪一条,不替它猜卡在哪 */
+export function stuckAt(c: Compute): { label: '卡在' | '最后进展'; text: string } | null {
+  const step = c.steps.find((x) => x.state === 'now')?.text
+  if (step) return { label: '卡在', text: step }
+  const last = c.activity[c.activity.length - 1]?.title
+  return last ? { label: '最后进展', text: last } : null
+}
 
 /** 「现在」(毫秒):只在 on 时每 ms 走一格,省得没有在跑的 Compute 也一直重渲染 */
 export function useTick(on: boolean, ms = 30_000): number {

@@ -23,7 +23,7 @@ export function Panorama() {
 const TICK_MS = 30_000
 
 function ProgressBoard() {
-  const { computes, convs, pending, real } = useApp((s) => ({ computes: s.computes, convs: s.convs, pending: s.pending, real: live(s) }))
+  const { computes, convs, pending, ledger, real } = useApp((s) => ({ computes: s.computes, convs: s.convs, pending: s.pending, ledger: s.ledger, real: live(s) }))
   const onJump = useJump()
   const [now, setNow] = useState(() => (real ? Date.now() : demoNow()))
   useEffect(() => {
@@ -33,6 +33,9 @@ function ProgressBoard() {
     return () => clearInterval(t)
   }, [real])
   /* 后端推来新进度时也按当下时刻算,不等下一格 */
-  const world = useMemo(() => toWorld({ computes, convs, pending, people }, real ? Math.max(now, Date.now()) : now, real), [computes, convs, pending, now, real])
+  const world = useMemo(
+    () => (real ? toWorld({ computes, convs, pending, people }, Math.max(now, Date.now()), ledger) : toWorld({ computes, convs, pending, people }, now)),
+    [computes, convs, pending, ledger, now, real],
+  )
   return <Board world={world} onJump={onJump} />
 }

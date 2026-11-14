@@ -137,6 +137,8 @@ export interface Compute {
   startedAt?: number
   lastAt?: number
   endedAt?: number
+  /** 连上后端:任务已派出但 Compute 还没开工(等槽位、等上游恢复);phase 写的是在等什么 */
+  queued?: boolean
 }
 
 const loginDiff: DiffLine[] = [
