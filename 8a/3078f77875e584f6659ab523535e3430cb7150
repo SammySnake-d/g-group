@@ -1,0 +1,19 @@
+apps/desktop/e2e/parity-r2-pano.electron.spec.ts
+  s_fb0de607dadbd8::t_3dbfd9877a8f7e 1-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8a3078f77875e584f6659ab523535e3430cb7150",
+  "prompts": {},
+  "sessions": {
+    "s_fb0de607dadbd8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1a4dc882-b84a-4a01-936c-126151dd9dc1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
