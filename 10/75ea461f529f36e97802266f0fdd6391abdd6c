@@ -1,0 +1,22 @@
+receipts/feat-q06-1-count-trigger.json
+  s_fef3bb312667df::t_440ed801a935d8 25-32
+reviews/feat-q06-1-count-trigger.md
+  s_fef3bb312667df::t_9c7ef3b1ce7042 1-77,79
+  s_fef3bb312667df::t_f53312c2f69ffe 78,80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1075ea461f529f36e97802266f0fdd6391abdd6c",
+  "prompts": {},
+  "sessions": {
+    "s_fef3bb312667df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d98a-7796-74b0-ac57-7910d994edd6",
+        "model": "chatflows/gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

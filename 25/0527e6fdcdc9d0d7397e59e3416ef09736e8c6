@@ -1,0 +1,22 @@
+receipts/feat-q06-2-trend-summary.json
+  s_fef3bb312667df::t_4b197281e79c06 35-42
+reviews/feat-q06-2-trend-summary.md
+  s_fef3bb312667df::t_4b197281e79c06 1-101
+  s_fef3bb312667df::t_76d6110e7dda84 102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "250527e6fdcdc9d0d7397e59e3416ef09736e8c6",
+  "prompts": {},
+  "sessions": {
+    "s_fef3bb312667df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d98a-7796-74b0-ac57-7910d994edd6",
+        "model": "chatflows/gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
