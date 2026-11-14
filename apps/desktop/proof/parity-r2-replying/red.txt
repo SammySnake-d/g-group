@@ -1,65 +1,31 @@
-[box] 连接断了,5 秒后重试(ECONNRESET)
-[box] 连接断了,10 秒后重试(ECONNRESET)
-[box] 连接断了,5 秒后重试(UND_ERR_SOCKET)
-[box] 连接断了,5 秒后重试(UND_ERR_SOCKET)
-[box] box2 上的 /workspace/728/wt-dbp-pano 已就绪(27f377f)
-[box] 已排队:playwright --project=electron e2e/parity-r2-replying.electron.spec.ts
-[plugin builtin:vite-reporter] 
-(!) Some chunks are larger than 500 kB after minification. Consider:
-- Using dynamic import() to code-split the application
-- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
-- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
-
- WARN  inlineDynamicImports option is deprecated, please use codeSplitting: false instead.
-
-
- WARN  inlineDynamicImports option is deprecated, please use codeSplitting: false instead.
-
-
- WARN  inlineDynamicImports option is deprecated, please use codeSplitting: false instead.
-
-[WebServer] (node:1701165) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+红:提交 6f09cd9b(只有用例),box1,2026-11-14 21:23
 [WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
-
-[WebServer] (node:1701178) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
-[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
-
-
 Running 1 test using 1 worker
-
-(node:1701201) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:1209989) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-
 [1/1] [electron] › e2e/parity-r2-replying.electron.spec.ts:65:1 › 群里两位联系人同时在回:各有一张正在回复卡;一位回完,另一位的卡和已有消息原样留着,列表不重刷不跳
   1) [electron] › e2e/parity-r2-replying.electron.spec.ts:65:1 › 群里两位联系人同时在回:各有一张正在回复卡;一位回完,另一位的卡和已有消息原样留着,列表不重刷不跳 
-
-    Error: expect(locator).toHaveCount(expected) failed
-
-    Locator:  getByTestId('typing').locator('[data-testid^="replying-"]:not([data-testid^="replying-phase-"])')
-    Expected: 2
-    Received: 1
+    Error: 小林开始想时,小克那张卡不该被挤掉
+    expect(locator).toHaveCount(expected) failed
+    Locator:  getByTestId('typing').locator('[data-testid^="replying-"]:not([data-testid^="replying-phase-"])').filter({ has: getByText('小克', { exact: true }) })
+    Expected: 1
+    Received: 0
     Timeout:  5000ms
-
     Call log:
-      - Expect "toHaveCount" getByTestId('typing').locator('[data-testid^="replying-"]:not([data-testid^="replying-phase-"])') with timeout 5000ms
-      - waiting for getByTestId('typing').locator('[data-testid^="replying-"]:not([data-testid^="replying-phase-"])')
-        14 × locator resolved to 1 element
-           - unexpected value "1"
-
-
-      102 |     await expect(ke, "小林开始想时,小克那张卡不该被挤掉").toHaveCount(1);
-      103 |     await expect(ke).toHaveAttribute("data-mark", "ke");
-    > 104 |     await expect(allReplying(win)).toHaveCount(2);
-          |                                    ^
-      105 |     await expect(allReplying(win).first()).toContainText("小克");
-      106 |     await expect(ke).toContainText("在想");
-      107 |     await expect(lin).toContainText("在想");
-        at /workspace/728/wt-dbp-pano/apps/desktop/e2e/parity-r2-replying.electron.spec.ts:104:36
-
+      - 小林开始想时,小克那张卡不该被挤掉 getByTestId('typing').locator('[data-testid^="replying-"]:not([data-testid^="replying-phase-"])').filter({ has: getByText('小克', { exact: true }) }) with timeout 5000ms
+      - waiting for getByTestId('typing').locator('[data-testid^="replying-"]:not([data-testid^="replying-phase-"])').filter({ has: getByText('小克', { exact: true }) })
+        14 × locator resolved to 0 elements
+           - unexpected value "0"
+       99 |     await say(win, "你好", "小林");
+      100 |     await expect(lin).toHaveCount(1, LONG);
+    > 101 |     await expect(ke, "小林开始想时,小克那张卡不该被挤掉").toHaveCount(1);
+          |                                           ^
+      102 |     await expect(ke).toHaveAttribute("data-mark", "ke");
+      103 |     await expect(allReplying(win)).toHaveCount(2);
+      104 |     await expect(allReplying(win).first()).toHaveAttribute("data-mark", "ke");
+        at /workspace/728/wt-dbp-red/apps/desktop/e2e/parity-r2-replying.electron.spec.ts:101:43
     Error Context: test-results/parity-r2-replying.electro-c46cd-一位回完-另一位的卡和已有消息原样留着-列表不重刷不跳-electron/error-context.md
-
-
   1 failed
     [electron] › e2e/parity-r2-replying.electron.spec.ts:65:1 › 群里两位联系人同时在回:各有一张正在回复卡;一位回完,另一位的卡和已有消息原样留着,列表不重刷不跳 
-[box] 用了 box2;云端残留进程:0
+[box] 用了 box1;云端残留进程:0
 exit=1
