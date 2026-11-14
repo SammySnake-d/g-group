@@ -1,0 +1,28 @@
+apps/desktop/e2e/parity-r2-honest.electron.spec.ts
+  s_c2e268409ae4a0::t_7829f089b2d4b0 68-80,151,161,182,202,208,245-246,248,257,267,271
+  s_acb73d5a44618d::t_d6e90b3b06cf90 1-67,81-150,152-160,162-181,183-201,203-207,209-244,247,249-256,258-266,268-270,272-274
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a038f46033aee76e3752f2a9b5190a0c4b162e8e",
+  "prompts": {},
+  "sessions": {
+    "s_acb73d5a44618d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fd6da05b-4f12-4778-9e76-fc2d1b792365",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_c2e268409ae4a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad1acc7dc8d973000",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
