@@ -1,0 +1,24 @@
+packages/adapter-cc-compute/src/procgroup.ts
+  s_69f96fa873b14b::t_0a3da1cad6e65b 34-35,44-50,82,88,92-101,104
+  s_69f96fa873b14b::t_611c3dca3d04e7 72
+packages/adapter-cc-compute/src/stop-confirm.ts
+  s_69f96fa873b14b::t_0a3da1cad6e65b 6,11,31-32,37-45
+packages/adapter-cc-compute/src/quiesce.test.ts
+  s_69f96fa873b14b::t_4512ab75d800b9 13,86,93,97,111-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "45976fca3c1311451acf17c915509d724bf719f1",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
