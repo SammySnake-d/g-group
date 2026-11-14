@@ -90,7 +90,18 @@ export function toCompute(t: TaskView, prev?: Compute): Compute | null {
     ...(t.state === 'T9_StopRequested' ? { stopping: true } : {}),
     /* 借的是本群临时槽位(U09):群资料「临时算力」页按它列借出 */
     ...(t.slot?.scope === 'group' ? { pool: 'group' as const } : {}),
+    /* 还没有 Compute 开工:在排队(进展全景写「排队中」和在等什么) */
+    ...((t.state === 'T1_Open' || t.state === 'T2_Claimed') && !runs.length ? { queued: true } : {}),
+    /* 进展全景按真实时刻算「已跑多久」「多久没进展」(不按「时:分」字符串猜日期) */
+    ...times(first?.startedAt ?? progress[0]?.at, latest?.at, status === 'running' || status === 'waiting' ? null : (last?.endedAt ?? latest?.at)),
   }
+}
+
+const ms = (iso: string | null | undefined) => { const t = iso ? Date.parse(iso) : NaN; return Number.isFinite(t) ? t : undefined }
+/** 开始 / 最近进度 / 结束的真实时刻;认不出的不给 */
+function times(start: string | undefined, lastAt: string | undefined, end: string | null | undefined): Pick<Compute, 'startedAt' | 'lastAt' | 'endedAt'> {
+  const a = ms(start), b = ms(lastAt), c = ms(end)
+  return { ...(a !== undefined ? { startedAt: a } : {}), ...(b !== undefined ? { lastAt: b } : {}), ...(c !== undefined ? { endedAt: c } : {}) }
 }
 
 /** 每件任务见过的最新文档版本(合同 stateVer):旧版本晚到也不覆盖新的 */
@@ -118,7 +129,8 @@ export const tasksWiring = defineWiring({
     'compute.progress': (ev, w) => {
       const c = w.get().computes[ev.progress.taskId]
       if (!c) return
-      w.get().putCompute({ ...c, activity: mergeActs(c.activity, [actOf(ev.progress)]), ...(c.status === 'running' && ev.progress.kind === 'milestone' && ev.progress.stage ? { phase: `${c.harness === '—' ? 'Compute' : c.harness} ${ev.progress.stage}` } : {}) })
+      const at = ms(ev.progress.at)
+      w.get().putCompute({ ...c, activity: mergeActs(c.activity, [actOf(ev.progress)]), ...(at !== undefined && at > (c.lastAt ?? 0) ? { lastAt: at } : {}), ...(c.status === 'running' && ev.progress.kind === 'milestone' && ev.progress.stage ? { phase: `${c.harness === '—' ? 'Compute' : c.harness} ${ev.progress.stage}` } : {}) })
     },
   },
 })

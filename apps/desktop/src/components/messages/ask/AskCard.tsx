@@ -24,7 +24,7 @@ export function AskCard({ msgId }: { msgId: string }) {
   const Option = short ? AskChipOption : AskRowOption
   return (
     <div data-testid={`ask-${msgId}`} data-state={state} data-expanded={expanded ? '1' : '0'} onClick={(e) => e.stopPropagation()}
-      className={cn('fade-up mb-1 mt-1.5 w-[min(560px,100%)] overflow-hidden rounded-[14px] border bg-elev shadow-soft transition-colors duration-base ease-out', live ? 'border-warm/40' : 'border-line')}>
+      className={cn('mb-1 mt-1.5 w-[min(560px,100%)] overflow-hidden rounded-[14px] border bg-elev shadow-soft transition-colors duration-base ease-out', live ? 'border-warm/40' : 'border-line')}>
       <Collapsible.Root open={expanded} onOpenChange={setOpen}>
         <Collapsible.Trigger asChild>
           <Pressable data-testid={`ask-${msgId}-head`} className="flex w-full gap-2.5 rounded-none bg-side/60 px-3.5 py-2.5 hover:bg-hover/70 active:scale-100">

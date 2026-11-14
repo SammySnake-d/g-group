@@ -39,7 +39,7 @@ export function Bot({ shape, color, size, mood = 'idle', follow = false, still }
   useEffect(() => {
     inst.current?.update({ color, mood: isStill ? 'idle' : mood, followPointer: follow && !isStill, still: isStill })
   }, [color, mood, follow, isStill])
-  return <span ref={host} onPointerEnter={() => size >= 22 && setHover(true)} onPointerLeave={() => setHover(false)} className={cn('block', mood === 'thinking' && isStill && 'bob')} style={{ width: size, height: size }} />
+  return <span ref={host} onPointerEnter={() => size >= 22 && setHover(true)} onPointerLeave={() => setHover(false)} className="block" style={{ width: size, height: size }} />
 }
 
 export type Live = 'idle' | 'running' | 'waiting' | 'error'

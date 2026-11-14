@@ -4,17 +4,18 @@ import { changesSince, marketList, permissionsToConsent } from '@g-group/ui-core
 import type { PluginState } from '@/data'
 import { useApp } from '@/ctx'
 import { Button } from '@/components/ui/button'
-import { COPY } from './constants'
+import { COPY, COPY_LIVE } from './constants'
 import type { PluginFlow } from './flow'
 import { EmptyBox, PageHead } from './layout'
 import { PluginIcon, RiskBadge } from './tags'
 
 export function Updates({ flow, open }: { flow: PluginFlow; open: (id: string) => void }) {
   const { plugins, pluginCatalog } = useApp()
+  const live = useApp((s) => s.backend.mode === 'connected')
   const items = marketList(pluginCatalog, plugins, { text: '', category: 'all', filter: 'updates', sort: 'name' })
   return (
     <div className="mx-auto max-w-[920px] px-8 pb-14 pt-7" data-testid="plg-updates">
-      <PageHead title={COPY.updatesTitle} desc={COPY.updatesDesc} />
+      <PageHead title={COPY.updatesTitle} desc={live ? COPY_LIVE.updatesDesc : COPY.updatesDesc} />
       {items.length === 0 && <EmptyBox testid="plg-updates-empty">{COPY.updatesEmpty}</EmptyBox>}
       <div className="mt-6 space-y-3">
         {items.map((it) => {

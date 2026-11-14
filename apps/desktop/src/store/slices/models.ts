@@ -3,6 +3,8 @@ import { people, type PersonId } from '@/data'
 import { INITIAL_MODEL_SETTINGS } from '@/modelConfig'
 import { uid } from '../boot'
 import { lens, type Slice } from '../state'
+import { live, liveCtx } from '@/api/wire/live'
+import { saveModelsLive } from '@/api/wire/settings'
 
 /** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 MODELS_CTX_KEYS */
 export interface ModelsCtx {
@@ -10,11 +12,12 @@ export interface ModelsCtx {
   modelSettings: import('@/modelConfig').ModelSettings
   /** 每保存一次模型配置 +1：别处打开着的配置页据此刷新 */
   modelsRev: number
+  setModelSettings: (s: import('@/modelConfig').ModelSettings) => void
   /** 一次写入：全局默认 + 若干联系人的模型字段（每位联系人在私聊里留一条记录） */
   saveModels: (s: { settings?: Partial<import('@/modelConfig').ModelSettings>; contacts?: { id: PersonId; patch: Partial<import('@/data').Person>; note: string }[]; toast?: string }) => void
   updatePerson: (id: PersonId, patch: Partial<import('@/data').Person>, note: string) => void
 }
-export const MODELS_CTX_KEYS = ['modelSettings', 'modelsRev', 'saveModels', 'updatePerson'] as const satisfies readonly (keyof ModelsCtx)[]
+export const MODELS_CTX_KEYS = ['modelSettings', 'modelsRev', 'setModelSettings', 'saveModels', 'updatePerson'] as const satisfies readonly (keyof ModelsCtx)[]
 
 export type ModelsSlice = ModelsCtx
 
@@ -26,6 +29,7 @@ export const createModelsSlice: Slice<ModelsSlice> = (set, get) => {
   return {
     modelSettings: INITIAL_MODEL_SETTINGS,
     modelsRev: 0,
+    setModelSettings: (modelSettings) => set((s) => ({ modelSettings, modelsRev: s.modelsRev + 1 })),
 
     updatePerson: (pid, patch, note) => {
       Object.assign(people[pid], patch)
@@ -37,6 +41,7 @@ export const createModelsSlice: Slice<ModelsSlice> = (set, get) => {
       get().toast('已保存')
     },
     saveModels: ({ settings, contacts, toast }) => {
+      if (live(get())) { void saveModelsLive(liveCtx(get as never, set as never), { settings, contacts }).then((ok) => { if (ok) get().toast(toast ?? '已保存') }); return }
       if (settings) L.modelSettings((m) => ({ ...m, ...settings }))
       for (const c of contacts ?? []) {
         Object.assign(people[c.id], c.patch)

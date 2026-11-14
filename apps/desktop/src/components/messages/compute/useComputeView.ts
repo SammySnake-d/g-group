@@ -2,13 +2,18 @@
 import { useApp } from '@/ctx'
 import { broken } from '@/mut'
 import { receiptOf } from '@/components/Receipt'
+import { idleMinOf, useTick } from '@/components/compute/idle'
 
 export type ComputeView = 'stalled' | 'human' | 'error' | 'done' | 'plain'
 
 export function useComputeView(id: string) {
   const { computes, pending, convs } = useApp()
   let c = computes[id]
+  /* 连上后端:按最近一条进度的真实时刻走钟,多久没动静跟着变 */
+  const now = useTick(!!c && c.idleMin === undefined && c.lastAt !== undefined && c.status === 'running')
   if (!c) return null
+  const idle = idleMinOf(c, now)
+  if (idle !== c.idleMin) c = { ...c, idleMin: idle }
   /* 坏实现(埋雷 AC-46-4):派活那条消息全读了,就把任务当成做完。AC-46⑥:已读不等于已落实,做完没有只看任务本身 */
   if (broken('AC-46-4') && c.askMsg && c.status === 'running') {
     const cv = convs.find((x) => x.id === c.conv); const am = cv?.messages.find((x) => 'id' in x && x.id === c.askMsg) as { text?: string } | undefined

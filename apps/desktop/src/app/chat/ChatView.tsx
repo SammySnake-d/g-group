@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { TopStrip } from '@/components/GroupSide'
 import { MessageList } from '@/components/Messages'
-import type { Conversation, Msg, PersonId } from '@/data'
+import { people, type Conversation, type Msg, type PersonId, type QuoteRef } from '@/data'
 import { useApp } from '@/store'
 import { chatFollow } from '@/store/dom'
 import { activeConv, withUnreadDivider } from '@/store/select'
@@ -28,6 +28,8 @@ function takenBy(conv: Conversation, who: PersonId): TextMsg | undefined {
   const at = rank(upto)
   const last = [...conv.messages].reverse().find((m) => 'id' in m && rank(m.id) <= at && ((m.k === 'text' && m.from === 'me') || (m.k === 'sys' && m.rewind) || (m.k === 'forward' && m.from === 'me')))
   if (last?.k !== 'text') return undefined
+  /* 群里:这句没 @ 它(它是被别的事叫醒的,比如 Compute 报进度),就不引用——不把你对别人说的话安到它头上 */
+  if (conv.kind === 'group' && !last.text.includes(`@${people[who]?.name ?? ''}`)) return undefined
   return last.text ? last : { ...last, text: (last.files ?? []).map((f) => f.name).join('、') }
 }
 /** 离底部不到这么多就算「在最新」 */
@@ -36,10 +38,10 @@ const NEAR_BOTTOM = 80
 /* 聊天主区:头部、群公告条、居中阅读栏(消息流 + 输入框,--chat-col 上限 860)、回到最新、有人 @ 你。
    布局几何是之前反馈修出来的(阅读栏居中、回到最新贴输入框上方),e2e/layout、visual、shell-look 会量。 */
 export function ChatView() {
-  const { conv, active, highlight, selecting, selected, toggleSelected, openSplit, typing, unreadAt, newFrom, isLive, since, what } = useApp((s) => ({
+  const { conv, active, highlight, selecting, selected, toggleSelected, openSplit, typing, unreadAt, newFrom, isLive, replyingNow } = useApp((s) => ({
     conv: activeConv(s), active: s.active, highlight: s.highlight, selecting: s.selecting, selected: s.selected, toggleSelected: s.toggleSelected,
     openSplit: s.openSplit, typing: s.typing[s.active], unreadAt: s.unreadAt[activeConv(s).id], newFrom: s.newFrom[s.active],
-    isLive: live(s), since: s.replyingSince[s.active], what: s.replyingWhat[s.active],
+    isLive: live(s), replyingNow: s.replying[s.active],
   }))
   const scrollRef = useRef<HTMLDivElement>(null)
   const [atBottom, setAtBottom] = useState(true)
@@ -93,18 +95,19 @@ export function ChatView() {
   useEffect(() => {
     const grew = conv.messages.length - lastLen.current
     const lastMine = (conv.messages[conv.messages.length - 1] as { from?: string })?.from === 'me'
-    if (grew > 0 && lastLen.current) { if (atBottom || lastMine) toBottom(true); else setNewCount((n) => n + grew) }
+    if (grew > 0 && lastLen.current) { if (atBottom || lastMine) toBottom(); else setNewCount((n) => n + grew) }
     lastLen.current = conv.messages.length
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conv.messages.length])
   useEffect(() => { if (atBottom) setNewCount(0) }, [atBottom])
   useEffect(() => { lastLen.current = 0; setNewCount(0) }, [active])
 
-  const lastMineMsg = typing ? (isLive ? takenBy(conv, typing) : [...conv.messages].reverse().find((m) => m.k === 'text' && m.from === 'me') as TextMsg | undefined) : undefined
-  /* 连上后端:卡里只写宿主推来的真实活动(在看 / 在想 / 在写)和已经多久,不编步骤;演示数据照旧 */
-  const replying: Msg | null = !typing ? null : isLive
-    ? { k: 'replying', id: 'typing', from: typing, quotes: lastMineMsg ? [{ msgId: lastMineMsg.id, from: 'me', text: lastMineMsg.text }] : [], phase: ACTIVITY[what ?? ''] ?? '在想', mins: 0, steps: [], since: since ?? Date.now() }
-    : { k: 'replying', id: 'typing', from: typing, quotes: lastMineMsg ? [{ msgId: lastMineMsg.id, from: 'me', text: lastMineMsg.text }] : [], phase: '在想', mins: 0, steps: ['读了最新几条消息', '判断要不要接这件事'] }
+  const quoteOf = (m: TextMsg | undefined): QuoteRef[] => (m ? [{ msgId: m.id, from: 'me', text: m.text }] : [])
+  /* 连上后端:正在回复的每位联系人各一张卡(先开始的在上),卡的 id 跟着联系人走——谁回完只收掉谁那张,别人的卡还是原来那个节点。
+     卡里只写宿主推来的真实活动(在看 / 在想 / 在写)和已经多久,不编步骤;演示数据照旧一张 */
+  const replying: Msg[] = isLive
+    ? (replyingNow ?? []).map((r) => ({ k: 'replying' as const, id: `typing-${r.who}`, from: r.who, quotes: quoteOf(takenBy(conv, r.who)), phase: ACTIVITY[r.what] ?? '在想', mins: 0, steps: [], since: r.since }))
+    : typing ? [{ k: 'replying', id: 'typing', from: typing, quotes: quoteOf([...conv.messages].reverse().find((m) => m.k === 'text' && m.from === 'me') as TextMsg | undefined), phase: '在想', mins: 0, steps: ['读了最新几条消息', '判断要不要接这件事'] }] : []
   return (
     <main className="flex min-w-[520px] flex-1 flex-col bg-bg [--chat-col:860px]" data-testid="chat">
       <ChatHeader conv={conv} />
@@ -113,7 +116,7 @@ export function ChatView() {
         <div ref={scrollRef} data-scroll="chat" onScroll={(e) => onScroll(e.currentTarget)} className="scroll-thin h-full overflow-y-auto" style={{ ['--avatar-ring' as string]: 'var(--bg)' }}>
           <div ref={colRef} className="mx-auto w-full max-w-[var(--chat-col)] px-6 pb-3 pt-1" data-testid="chat-column">
             <MessageList msgs={withUnreadDivider(conv, unreadAt, newFrom)} highlight={highlight} selecting={selecting} selected={selected} onSelect={toggleSelected} conv={conv.id} />
-            {replying && <div data-testid="typing"><MessageList msgs={[replying]} conv={active} /></div>}
+            {replying.length > 0 && <div data-testid="typing"><MessageList msgs={replying} conv={active} /></div>}
           </div>
         </div>
         <JumpToLatest show={!atBottom} count={newCount} onJump={() => toBottom(true)} />

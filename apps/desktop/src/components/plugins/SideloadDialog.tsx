@@ -1,4 +1,5 @@
-/* 从文件或地址安装:清单先在本机逐条校验;下载安装包、核对签名要连接后端,如实说明,不假装装好。 */
+/* 从文件或地址安装:清单先在本机逐条校验;下载安装包、核对签名要连接后端,如实说明,不假装装好。
+   连着后端时这一步也还没接(合同的安装要安装包地址或本机目录,这里校验的是清单),原因照实写,不再说「没连上」。 */
 import { useRef, useState } from 'react'
 import { Check, FileUp } from 'lucide-react'
 import { readInstallSource, type InstallSource, type PluginManifest } from '@g-group/ui-core'
@@ -7,15 +8,16 @@ import { useApp } from '@/ctx'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/field'
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/modal'
-import { COPY } from './constants'
+import { COPY, COPY_LIVE } from './constants'
 import { CategoryTag, CommandTag, PluginIcon, RiskBadge } from './tags'
 
 export function SideloadDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   /* 草稿留在外层:关掉再打开,粘贴过的清单还在 */
   const [text, setText] = useState('')
   const [res, setRes] = useState<InstallSource | null>(null)
+  const live = useApp((s) => s.backend.mode === 'connected')
   return (
-    <Modal open={open} onClose={onClose} testid="plg-sideload" width={620} title={COPY.sideloadTitle} description={COPY.sideloadDesc}
+    <Modal open={open} onClose={onClose} testid="plg-sideload" width={620} title={COPY.sideloadTitle} description={live ? COPY_LIVE.sideloadDesc : COPY.sideloadDesc}
       icon={<span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-hover text-fg-2"><FileUp className="h-5 w-5" /></span>}>
       <SideloadBody text={text} setText={setText} res={res} setRes={setRes} onClose={onClose} />
     </Modal>
@@ -24,6 +26,7 @@ export function SideloadDialog({ open, onClose }: { open: boolean; onClose: () =
 
 function SideloadBody({ text, setText, res, setRes, onClose }: { text: string; setText: (t: string) => void; res: InstallSource | null; setRes: (r: InstallSource | null) => void; onClose: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const live = useApp((s) => s.backend.mode === 'connected')
   const check = (t = text) => setRes(readInstallSource(t))
   return (
     <>
@@ -43,18 +46,19 @@ function SideloadBody({ text, setText, res, setRes, onClose }: { text: string; s
       <ModalFooter>
         <span className="flex-1" />
         <Button variant="ghost" onClick={onClose}>关闭</Button>
-        <Button data-testid="plg-sideload-install" variant="primary" disabled title="需要连接后端">安装（需要连接后端）</Button>
+        <Button data-testid="plg-sideload-install" variant="primary" disabled title={live ? COPY_LIVE.sideloadOff : '需要连接后端'}>{live ? COPY_LIVE.sideloadInstall : '安装（需要连接后端）'}</Button>
       </ModalFooter>
     </>
   )
 }
 
 function Result({ res }: { res: Exclude<InstallSource, { kind: 'empty' }> }) {
+  const live = useApp((s) => s.backend.mode === 'connected')
   if (res.kind === 'invalid') return <p data-testid="plg-sideload-errors" className="rounded-xl border border-err/30 bg-err-soft px-3.5 py-2.5 text-[13px] text-err">{res.error}</p>
   if (res.kind === 'url') {
     return (
       <p data-testid="plg-sideload-backend" className="rounded-xl bg-hover px-3.5 py-2.5 text-[13px] leading-relaxed text-fg-2">
-        地址格式没问题：<span className="break-all font-code text-[12px] text-fg">{res.url}</span><br />{COPY.sideloadUrlBackend}
+        地址格式没问题：<span className="break-all font-code text-[12px] text-fg">{res.url}</span><br />{live ? COPY_LIVE.sideloadOff : COPY.sideloadUrlBackend}
       </p>
     )
   }
@@ -71,6 +75,7 @@ function Result({ res }: { res: Exclude<InstallSource, { kind: 'empty' }> }) {
 
 function ManifestOk({ m }: { m: PluginManifest }) {
   const { plugins, pluginCatalog } = useApp()
+  const live = useApp((s) => s.backend.mode === 'connected')
   const same = pluginCatalog.find((x) => x.id === m.id) ?? plugins.find((p) => p.id === m.id)?.manifest
   return (
     <div data-testid="plg-sideload-ok" className="rounded-xl border border-line px-3.5 py-3">
@@ -87,7 +92,7 @@ function ManifestOk({ m }: { m: PluginManifest }) {
         {m.permissions.map((p) => <span key={p.scope} className="inline-flex items-center gap-1.5 rounded-lg border border-line py-0.5 pl-2 pr-1 text-[12px] text-fg-2">{p.detail}<RiskBadge r={p.risk} /></span>)}
         {m.contributes.commands.map((c) => <CommandTag key={c.name}>/{c.name}</CommandTag>)}
       </div>
-      <p data-testid="plg-sideload-backend" className="mt-3 rounded-lg bg-hover px-3 py-2 text-[12.5px] leading-relaxed text-fg-2">{COPY.sideloadNeedBackend}</p>
+      <p data-testid="plg-sideload-backend" className="mt-3 rounded-lg bg-hover px-3 py-2 text-[12.5px] leading-relaxed text-fg-2">{live ? COPY_LIVE.sideloadOff : COPY.sideloadNeedBackend}</p>
     </div>
   )
 }

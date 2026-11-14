@@ -55,12 +55,11 @@
 .bd-links { pointer-events: none; position: absolute; inset: 0; overflow: visible }
 .bd-link { fill: none; stroke: hsl(var(--g) / .55); stroke-width: 1.5px; stroke-linecap: round; stroke-linejoin: round; transition: opacity .16s var(--mx-ease), stroke .16s var(--mx-ease) }
 .bd-link[data-group=done], .bd-link[data-group=stopped] { stroke: hsl(var(--g) / .32) }
-.bd-link[data-group=run] { stroke: hsl(var(--g) / .75); stroke-dasharray: 7 5; animation: 1.1s linear infinite bd-flow }
+.bd-link[data-group=run] { stroke: hsl(var(--g) / .75); stroke-dasharray: 7 5 }
 .bd-link[data-group=wait] { stroke: hsl(var(--g) / .8) }
 .bd-link[data-more] { stroke: hsl(var(--bd-done) / .35); stroke-dasharray: 2 4; animation: none }
 .bd-link[data-lit] { stroke: hsl(var(--g) / 1) }
 .bd-link[data-dim] { opacity: .12 }
-@keyframes bd-flow { to { stroke-dashoffset: -24px } }
 
 /* 节点:绝对定位在画布上;过渡只列 mirasim 的三项,外加原语按下缩放的 transform(时长取库 token) */
 .bd-board .bd-press { position: absolute; font-weight: 400; white-space: nowrap; text-align: left; transition: opacity .16s var(--mx-ease), box-shadow .16s var(--mx-ease), background-color .12s var(--mx-ease), transform var(--dur-fast) var(--ease-out) }
@@ -86,8 +85,6 @@
 .bd-fact[data-group] { color: hsl(var(--g)) }
 .bd-dot { background: hsl(var(--g, var(--bd-done))); border-radius: 999px; flex-shrink: 0; width: 8px; height: 8px; display: inline-block }
 .bd-dot[data-group=done], .bd-dot[data-group=stopped] { background: hsl(var(--g) / .55) }
-.bd-dot[data-live] { animation: bd-breathe 1.6s ease-in-out infinite }
-@keyframes bd-breathe { 0%, 100% { box-shadow: 0 0 0 0 hsl(var(--g) / .45) } 50% { box-shadow: 0 0 0 3px hsl(var(--g) / 0) } }
 .bd-board .bd-inside { background: var(--mx-seg-track); border-radius: 7px; display: flex; justify-content: flex-start; align-items: center; gap: 6px; padding: 0 9px 0 8px; font-size: 12px }
 .bd-board .bd-inside:hover { background: var(--mx-row-hover) }
 .bd-board .bd-inside[data-kind=subchat] { background: var(--bd-card); box-shadow: 0 0 0 1px var(--mx-hairline) }
@@ -112,4 +109,3 @@
 .bd-board [data-dim]:not(path) { opacity: .38 }
 .bd-board .bd-press[data-lit] { box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand-cta) 55%, transparent), 0 4px 14px -8px hsl(var(--bd-new) / .3) }
 .bd-board .bd-press:focus-visible { box-shadow: 0 0 0 3px var(--focus-ring); outline: none }
-@media (prefers-reduced-motion: reduce) { .bd-link[data-group=run], .bd-dot[data-live] { animation: none } }

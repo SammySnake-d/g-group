@@ -1,4 +1,7 @@
-/* 输出渠道的六项预授权（需求 US12 第 5 条）。收件人对助手只读：只能在这里由你改。 */
+/* 输出渠道的六项预授权（需求 US12 第 5 条）。收件人对助手只读：只能在这里由你改。
+   连着后端时如实关着：合同里 plugins.configure 只存插件自己的配置（PluginView.config / configSchema），外发（plugins.send）之前
+   后端不核对承诺、收件人、内容、频率，PluginView.error 也只是插件自己的报错，表达不了「授权失效」。所以不放设置授权、
+   模拟授权失效、重新授权，把原因写在卡上。 */
 import { useState } from 'react'
 import { CONTENT_POLICIES, CONTENT_POLICY_LABEL, isInstalled, splitList, validateGrant, type OutboundGrant } from '@g-group/ui-core'
 import type { PluginState } from '@/data'
@@ -6,13 +9,28 @@ import { useApp } from '@/ctx'
 import { Button } from '@/components/ui/button'
 import { Field, Input, SelectMenu, Textarea } from '@/components/ui/field'
 import { cn } from '@/lib/utils'
-import { GRANT_DEFAULT_SOURCE } from './constants'
+import { COPY_LIVE, GRANT_DEFAULT_SOURCE } from './constants'
 import { SideCard } from './layout'
 
 type Status = { t: string; tone: 'warm' | 'err' | 'ok' }
 const TONE: Record<Status['tone'], string> = { warm: 'text-warm', err: 'text-err', ok: 'text-ok' }
 
 export function GrantCard({ s }: { s: PluginState }) {
+  const live = useApp((st) => st.backend.mode === 'connected')
+  return live ? <GrantLive /> : <GrantDemo s={s} />
+}
+
+/** 连着后端:后端没有外发预授权这一项 */
+function GrantLive() {
+  return (
+    <SideCard title="外发预授权" testid="plg-grant">
+      <div data-testid="plg-grant-status" className="mb-1.5 text-[12.5px] font-medium text-warm">{COPY_LIVE.grantOff}</div>
+      <p className="text-[12px] leading-relaxed text-fg-3">{COPY_LIVE.grantWhy}</p>
+    </SideCard>
+  )
+}
+
+function GrantDemo({ s }: { s: PluginState }) {
   const { plugins, updatePlugin, revokePlugin, reauthPlugin, toast } = useApp()
   const m = s.manifest!
   const kind = m.id === 'g-group.webhook' ? 'url' : 'email'

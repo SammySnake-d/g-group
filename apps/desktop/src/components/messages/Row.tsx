@@ -23,9 +23,6 @@ import type { Bodied } from './types'
 
 type RowProps = { m: Bodied; first: boolean; compact: boolean; highlight: boolean; selecting?: boolean; checked?: boolean; onSelect?: (id: string) => void; trail?: string; /** 这条的引用上面同一个人刚画过,不重复画 */ hideQuotes?: boolean; children: ReactNode }
 
-/** 新到的消息(本地发出 / 刚收到)进场时轻轻浮起,历史消息不动 */
-const isNew = (id: string) => /^(me-|h|c-|s)[a-z0-9]{6}$/.test(id)
-
 export function Row({ m, first, compact, highlight, selecting, checked, onSelect, trail, hideQuotes, children }: RowProps) {
   const from = m.from
   const mine = from === 'me'
@@ -41,7 +38,7 @@ export function Row({ m, first, compact, highlight, selecting, checked, onSelect
       data-first={first ? '1' : '0'}
       data-from={'from' in m ? m.from : undefined}
       onClick={selecting ? () => onSelect?.(m.id) : undefined}
-      className={cn('group/row relative -mx-2 flex items-start gap-2.5 rounded-xl px-2 py-[1px] transition-colors duration-slow ease-out', first && 'mt-4', isNew(m.id) && 'msg-new', mine && 'flex-row-reverse', highlight && 'bg-warm-soft', selecting && 'cursor-pointer hover:bg-hover/60', checked && 'bg-sel/70')}
+      className={cn('group/row relative -mx-2 flex items-start gap-2.5 rounded-xl px-2 py-[1px] transition-colors duration-slow ease-out', first && 'mt-4', mine && 'flex-row-reverse', highlight && 'bg-warm-soft', selecting && 'cursor-pointer hover:bg-hover/60', checked && 'bg-sel/70')}
     >
       {selecting && (
         <span aria-hidden className={cn('mb-2 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border transition-colors duration-fast ease-out', checked ? 'border-me bg-me text-me-fg' : 'border-fg-3')}>{checked && <Check className="h-3 w-3" strokeWidth={3} />}</span>
