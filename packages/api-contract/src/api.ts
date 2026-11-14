@@ -38,6 +38,7 @@ import {
   SlashInvocation,
   TASK_STATES,
   TaskView,
+  TrendSummaryView,
 } from "./entities.ts";
 import { DraftBody, DraftView } from "./draft.ts";
 import { arr, bool, id, int, isoTime, json, lit, nullable, obj, oneOf, opt, type Schema, seq, str, tagged } from "./schema.ts";
@@ -270,6 +271,19 @@ export const METHODS = {
   // ---- 承诺账本 ----
   "commitments.list": method(obj({ contactId: opt(id()), roomId: opt(id()), status: opt(oneOf(["active", "done", "revoked", "superseded", "blocked"] as const)) }), obj({ commitments: arr(CommitmentView) })),
   "commitments.revoke": method(obj({ commitmentId: id(), clientActionId: id() }), CommitmentView),
+
+  // ---- 群聊动向摘要(U80,D21.2–D21.4):只读;由联系人「每 N 条消息」的承诺触发生成,见 CommitmentView.trigger ----
+  /** 一个会话的摘要,按区间从新到旧(时间轴用);默认每段只给最新版本,includeSuperseded 连旧版本一起给。beforeToSeq 翻页。不在这个会话 forbidden。 */
+  "summaries.list": method(
+    obj({ roomId: id(), beforeToSeq: opt(seq()), includeSuperseded: opt(bool()), limit: opt(int({ min: 1, max: 200 })) }),
+    obj({ summaries: arr(TrendSummaryView), hasMore: bool() }),
+  ),
+  "summaries.get": method(obj({ summaryId: id() }), TrendSummaryView),
+  /**
+   * 重做一份已过期(stale)或没生成成(failed)的摘要:同一区间出新版本(generating,结果走 summary.updated),重新读这段现在可见的消息。
+   * 其它状态、已有更新版本、联系人已不在这个会话 → conflict;同一 clientActionId 重放返回同一份。
+   */
+  "summaries.regenerate": method(obj({ summaryId: id(), clientActionId: id() }), TrendSummaryView),
 
   // ---- 共享文档(AC-21:单一提交点,带基线版本提交,版本冲突不静默覆盖) ----
   "docs.list": method(obj({ roomId: opt(id()) }), obj({ docs: arr(SharedDocView) })),

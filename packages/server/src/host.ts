@@ -137,6 +137,7 @@ import { CapabilityLibrary } from "./capabilities.ts";
 import { CONTEXT_ONLY_REASON, ChatAdmin, DISSOLVED_REASON, SYSTEM_SENDER } from "./chat-admin.ts";
 import { lastEventSeq } from "./chat-range.ts";
 import { CountTriggers, everyNProblem } from "./count-triggers.ts";
+import { type TrendSummary, TrendSummaries, summaryLedgerNote } from "./trend-summaries.ts";
 import { MemoryStore } from "./memory-store.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
 import { PluginStore } from "./plugins.ts";
@@ -231,6 +232,10 @@ export interface HostOptions {
   readonly bootId?: string;
   /** 自己名下自动重跑上限,默认 2 次(助手建议,用户未定,#2646) */
   readonly rerunLimit?: number;
+  /** 动向摘要交给模型的消息原文字节上限(默认 SUMMARY_INPUT_MAX_BYTES);超了只读前一部分并如实标 truncated */
+  readonly summaryInputMaxBytes?: number;
+  /** 一次动向摘要等模型多久(毫秒,默认 SUMMARY_TIMEOUT_MS);到时中止,记 failed */
+  readonly summaryTimeoutMs?: number;
 }
 
 /** 记忆锚点:全局(进前缀)与「建议改人格」(只记录,不进任何一块) */
@@ -395,6 +400,8 @@ export class Host {
   private readonly stopUnconfirmed = new Map<string, string>();
   /** 按消息数触发的承诺与冻结的窗口(U80) */
   readonly countTriggers: CountTriggers;
+  /** 群聊动向摘要(U80):只读桥、存储与失效 */
+  readonly summaries: TrendSummaries;
   private readonly opts: HostOptions;
   private readonly now: () => string;
   private readonly memory: MemoryStore;
@@ -454,7 +461,31 @@ export class Host {
       closedWhy: (t) => this.countTriggerClosedWhy(t.commitmentId, t.contactId, t.roomId),
       hidden: (roomId, viewerId) => this.chatAdmin.hidden(roomId, viewerId),
       changed: (commitmentId) => this.emitCommitment(commitmentId),
-      fired: (w) => this.report("count-window", w),
+      fired: (w) => {
+        this.report("count-window", w);
+        this.summaries.enqueue(w);
+      },
+    });
+    // 动向摘要(U80):逻辑都在 trend-summaries.ts;宿主只在撤回事务、空闲/关闭、启动这几处各调一行
+    this.summaries = new TrendSummaries({
+      db: this.db,
+      now: this.now,
+      newId: this.newId,
+      contact: (contactId) => {
+        const c = getDoc<ContactDoc & { removed?: boolean }>(this.db, `contact:${contactId}`)?.value;
+        return c && !c.removed ? { profile: { id: c.id, name: c.name, speakingModel: c.speakingModel, persona: c.persona }, mind: this.opts.mind(this.contactView(c)) } : null;
+      },
+      blockedWhy: (contactId, roomId) => (!this.isMember(roomId, { kind: "contact", id: contactId }) || this.exits.isLeaving(roomId, contactId) ? "联系人已不在这个会话" : this.chatAdmin.isClosed(roomId) ? "会话已解散" : null),
+      roomTitle: (roomId) => this.roomRow(roomId).title,
+      nameOf: (s) => this.nameOf(s),
+      hidden: (roomId, viewerId) => this.chatAdmin.hidden(roomId, viewerId),
+      commitmentText: (commitmentId, contactId, roomId) => getDoc<Ledger>(this.db, this.ledgerKey(contactId, roomId))?.value.commitments.find((x) => x.id === commitmentId)?.text ?? null,
+      windowPending: (triggerId, to) => this.countTriggers.window(triggerId, to)?.status === "pending",
+      settleWindowTx: (triggerId, to, status) => void this.countTriggers.settleWindowTx(triggerId, to, status),
+      changed: (summaryId) => this.bus.emit({ type: "summary.updated", summary: this.summaries.view(summaryId, this.userId) }),
+      report: (what, detail) => this.report(what, detail),
+      ...(opts.summaryInputMaxBytes !== undefined ? { inputMaxBytes: opts.summaryInputMaxBytes } : {}),
+      ...(opts.summaryTimeoutMs !== undefined ? { timeoutMs: opts.summaryTimeoutMs } : {}),
     });
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
@@ -567,7 +598,8 @@ export class Host {
     this.scheduler.tick();
     // 启动回收(F4/F6/F12):上次留下的未提交轮次按 crash_recovery_count 决定续跑或熔断出卡;磁盘上还没被领走的输入交给联系人
     this.reconcileOnStart();
-    // 按消息数触发:补上「消息已落盘、还没计数」的那一拍,还没处理完的窗口重新交给消费方
+    // 按消息数触发:补上「消息已落盘、还没计数」的那一拍,还没处理完的窗口重新交给消费方;上次被打断的摘要先记成失败
+    tx(this.db, () => this.summaries.recoverTx());
     tx(this.db, () => this.countTriggers.reconcileTx());
     this.countTriggers.announce();
   }
@@ -1195,8 +1227,11 @@ export class Host {
         // 搜索索引同一事务更新:编辑只留新文字,撤回删行(AC-08 索引不再返回原文)
         if (body.kind === "edit") reindexEditTx(this.db, roomId, body.target, body.text);
         else unindexTx(this.db, roomId, body.target);
+        // 撤回与摘要失效同一事务(AC-08):区间含这条的动向摘要标过期、清正文
+        if (body.kind === "retract") this.summaries.invalidateTx(roomId, body.target);
         run(this.db, "UPDATE gg_rooms SET updated_at = ? WHERE id = ?", this.now(), roomId);
       });
+      this.summaries.announce();
     } catch (e) {
       const code = (e as { code?: string }).code;
       if (code === "target-not-found" || code === "target-not-message") throw new HostError("not_found", `没有消息 #${body.target}`);
@@ -2169,6 +2204,22 @@ export class Host {
     }
     return out;
   }
+  // ======================= 群聊动向摘要(U80)=======================
+  /** 一个会话的动向摘要(时间轴用);只给在这个会话里的用户,按他自己这一端的隐藏过滤要点。 */
+  listSummaries(q: { roomId: string; beforeToSeq?: number; includeSuperseded?: boolean; limit?: number }): { summaries: TrendSummary[]; hasMore: boolean } {
+    this.userRoom(q.roomId);
+    return this.summaries.list({ ...q, viewerId: this.userId });
+  }
+  getSummary(summaryId: string): TrendSummary {
+    const v = this.summaries.view(summaryId, this.userId);
+    this.userRoom(v.roomId);
+    return v;
+  }
+  /** 重做一份过期或失败的摘要(用户本人发起):同一区间出新版本。 */
+  regenerateSummary(input: { summaryId: string; clientActionId: string }): TrendSummary {
+    this.getSummary(input.summaryId);
+    return this.summaries.regenerate({ ...input, viewerId: this.userId });
+  }
   /** 按消息数触发的承诺现在还该不该数(U80);不该就给出原因:承诺已不是 active、联系人不在这个会话或正在移出、会话已解散。 */
   private countTriggerClosedWhy(commitmentId: string, contactId: string, roomId: string): string | null {
     const c = getDoc<Ledger>(this.db, this.ledgerKey(contactId, roomId))?.value.commitments.find((x) => x.id === commitmentId);
@@ -2187,7 +2238,12 @@ export class Host {
     const out: LedgerLine[] = [];
     for (const d of listDocs<Ledger>(this.db, `ledger:${contactId}:`)) {
       const roomId = d.key.slice(`ledger:${contactId}:`.length);
-      for (const c of d.value.commitments) if (c.status === "active") out.push({ id: c.id, roomId, sourceSeq: c.sourceSeq, taskId: c.taskId, text: c.text, status: c.status });
+      for (const c of d.value.commitments) {
+        if (c.status !== "active") continue;
+        // 按消息数触发的承诺(U80):账本里写明到点由宿主另起一轮交给它,平常轮不用自己总结
+        const every = this.countTriggers.byCommitment(c.id)?.everyN;
+        out.push({ id: c.id, roomId, sourceSeq: c.sourceSeq, taskId: c.taskId, text: c.text, status: c.status, ...(every !== undefined ? { shortName: summaryLedgerNote(every) } : {}) });
+      }
     }
     return out;
   }
@@ -4890,6 +4946,7 @@ export class Host {
   // ======================= 生命周期 =======================
   async idle(): Promise<void> {
     await this.loop.idle();
+    await this.summaries.idle();
   }
   /** 关闭宿主;重复调用直接返回。 */
   async close(): Promise<void> {
@@ -4901,6 +4958,7 @@ export class Host {
     this.scheduler.stop();
     this.plugins.close();
     await this.loop.stop();
+    await this.summaries.stop();
     // 一次性适配器只有在跑的才有进程;常驻适配器一轮做完(completed)、停在受阻(blocked)时进程仍在,关闭时一并停掉,不留后台进程
     for (const a of this.adapters.values()) {
       const statuses = isModelAware(a) ? "('starting','running','blocked','completed')" : "('starting','running')";
