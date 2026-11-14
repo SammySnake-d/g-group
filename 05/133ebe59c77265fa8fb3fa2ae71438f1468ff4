@@ -1,0 +1,25 @@
+apps/desktop/proof/parity-r2-replying/red.txt
+  s_fb0de607dadbd8::t_b38ce87983a318 1-65
+apps/desktop/src/api/wire/messages.ts
+  s_fb0de607dadbd8::t_00e19bae3e65bb 6
+apps/desktop/src/app/chat/ChatView.tsx
+  s_fb0de607dadbd8::t_590ab670c87693 4,39,42,103-108,117
+apps/desktop/src/store/slices/chat.ts
+  s_fb0de607dadbd8::t_1431f04dcc339a 17-18,70-73,101,178,180-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "05133ebe59c77265fa8fb3fa2ae71438f1468ff4",
+  "prompts": {},
+  "sessions": {
+    "s_fb0de607dadbd8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1a4dc882-b84a-4a01-936c-126151dd9dc1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
