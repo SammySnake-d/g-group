@@ -91,9 +91,9 @@ test("常驻适配器 + 联系人勾选 skill/MCP:宿主不再拒绝,带专属�
   r.host.updateContact(c.id, { computeAssets: [{ name: "a-style", kind: "skill" }, { name: "notes", kind: "mcp" }] });
   const dm = r.host.openDm(c.id);
   r.host.send({ roomId: dm.id, clientActionId: "u1", text: "帮我整理笔记" });
-  await r.until(() => r.host.listTasks({ roomId: dm.id })[0]?.state === "T5_InReview" || r.host.listTasks({ roomId: dm.id })[0]?.state === "T11_Failed", "任务跑完");
+  await r.until(() => r.host.listTasks({ roomId: dm.id })[0]?.state === "T8a_Delivered" || r.host.listTasks({ roomId: dm.id })[0]?.state === "T11_Failed", "任务跑完");
   const [task] = r.host.listTasks({ roomId: dm.id });
-  assert.equal(task!.state, "T5_InReview", "勾选了能力也照常跑完,不落 T11");
+  assert.equal(task!.state, "T8a_Delivered", "勾选了能力也照常跑完,不落 T11");
   const [l] = r.launches() as unknown as { configDir: string; pluginDirs: string[]; mcpConfig: { mcpServers: Record<string, unknown> }; argv: string[] }[];
   assert.equal(l!.configDir, path.join(r.dir, "run_homes", c.id, "claude-code", "config"));
   assert.equal(l!.pluginDirs.length, 1);
@@ -153,7 +153,7 @@ test("常驻进程里的长工具在跑:超过整轮阈值也不判卡死;子代
   const bg = runsOf(r.host, "background");
   assert.deepEqual([sub.length, bg.length], [1, 1]);
   assert.deepEqual([sub[0]!.parentId, bg[0]!.parentId, sub[0]!.status], [turn.id, turn.id, "done"]);
-  assert.equal(r.host.listTasks({ roomId: dm.id })[0]!.state, "T5_InReview");
+  assert.equal(r.host.listTasks({ roomId: dm.id })[0]!.state, "T8a_Delivered");
 });
 
 test("停止确认后才归还槽位:取消在跑的任务,CLI 主进程与脱组后代都退出之前槽位不归还、排队的不开工;都退出后才落 T10、排队的开工", async () => {
