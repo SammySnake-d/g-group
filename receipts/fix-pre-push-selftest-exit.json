@@ -1,0 +1,40 @@
+{
+  "slice": "推送钩子成败跟门禁自检的真实退出码走:自检失败一条→钩子拦下推送,全过→放行,输出照旧滤掉对勾行(只改 .githooks/pre-push 第 7 行,另加反例测试与证明)",
+  "acceptance": [
+    {
+      "id": "R-18",
+      "status": "通过",
+      "evidence": "scripts/proof/pre-push-selftest-exit.md"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "scripts/gates/pre-push-hook.test.ts"
+    },
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "scripts/proof/pre-push-selftest-exit.md"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:484c2330-2f15-49ae-9f7a-145e467cedb1",
+    "model": "group/opus"
+  },
+  "red": {
+    "commit": "72fa0f3a459c6cb8cdb7c37417b8a51fb89c8b6d"
+  },
+  "unverifiable": "R-18:端到端反例里 typecheck/lint/test 三行由 PATH 包装跳过(这三行本片未改),只有 gates:selftest 走真实 npm;故障注入只验证了「第 7 栏」一条自检用例失败时钩子拦下,其余失败形态由单元测试(假 npm 给定退出码)覆盖。R-02:新测试在 scripts/gates/ 下,G-RED 只统计 packages/**/*.test.ts,所以红提交 72fa0f3a 上的 3/4 失败是作者自己的运行记录(证明文件与作者证据目录 hook-red.tap),门禁不会替你核。真实 git push 到 GitHub 时钩子的行为本轮未测:本轮无用户 Git 登录,没有推送。",
+  "waiver": null,
+  "review": {
+    "agent": "codex",
+    "session": "codex:60035fe9-26d8-47e0-a381-566b28322cce",
+    "model": "chatflows/gpt-6.1-sol",
+    "verdict": "approve",
+    "reviewed_hash": "5a5d5ed3fc4108609ef97a6bfade463ee41dcecc29b842521018f618bca26983",
+    "notes": "PR94 R1 APPROVE；冻结868b2a30，父宿主亲自单独hash与作者一致；box4全量1477/1477、typecheck/lint0；红1绿3红、绿4/4，独立输入111通过，独立3故障具名杀死，fd生命周期故障存活是非阻塞补测建议、当前实现正确。真实裸远端push旧钩子+故障0/新钩子+同故障1，完整seatbelt自检219/219。Linux无沙箱自检失败保留，不当成功。通用gates:mutation未跑。来源原生线程01a1d98a-7796-74b0-ac57-7910d994edd6，实际模型chatflows/gpt-6.1-sol；会话落盘前G-PROVENANCE需按实测报告，不伪造。详情reviews/fix-pre-push-selftest-exit.md与本机deliverables/g-group-backend-review-codex-20261114/pr94。"
+  },
+  "review_status": "待审",
+  "notes": "作者:Claude Code 宿主会话 claude:484c2330-2f15-49ae-9f7a-145e467cedb1(group/opus)主会话直接编写,未用子代理。来源:Mira Bot 私聊 #3138 后的指派(用户已授权堵漏洞,不放松门禁)。改前钩子在 set -e 下只看 grep 的退出码,自检失败照样放行(端到端反例 1:旧钩子 + 注入一条自检失败 → push 退出 0)。 云端 box2(Ubuntu 24.04,/bin/sh=/usr/bin/dash,Node v24.21.0,HEAD 14fe40d9 起跑,与本提交只差收据和证明文档):npm ci 0、typecheck 0、lint 0(199 文件)、pre-push-hook.test.ts 4/4、npm test 全量 1477/1477(fail/cancelled/skipped/todo 均 0);云端目录已删、残留进程 0。本机 macOS seatbelt 下 run-all.ts --local:7 项 ✓,G-REVIEW「还没有独立审查」。"
+}
