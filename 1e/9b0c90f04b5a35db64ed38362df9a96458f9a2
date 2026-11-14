@@ -1,0 +1,47 @@
+apps/desktop/src/app/chat/ChatView.tsx
+  s_38f0853d3666ca::t_36c6094bf0573c 96
+apps/desktop/src/components/Avatar.tsx
+  s_38f0853d3666ca::t_237b2b44c49c35 42
+apps/desktop/src/components/compute/card/AlertStrip.tsx
+  s_38f0853d3666ca::t_ba607fc7a830a5 65
+apps/desktop/src/components/compute/session/SessionFooter.tsx
+  s_38f0853d3666ca::t_c0dca0a833815e 13
+apps/desktop/src/components/messages/ask/AskCard.tsx
+  s_38f0853d3666ca::t_7e8fbf7e7f5e85 27
+apps/desktop/src/components/progress/board.css
+  s_38f0853d3666ca::t_7888b72709172a 58
+apps/desktop/src/config/motion.ts
+  s_38f0853d3666ca::t_cebf2ae431788e 1,6-9
+apps/desktop/src/index.css
+  s_38f0853d3666ca::t_13f351f3a555f8 80-82,147-148,151-152
+apps/desktop/src/main.tsx
+  s_38f0853d3666ca::t_15c73ff5de2b0f 7-8,18
+apps/desktop/src/components/compute/StatusChip.tsx
+  s_fb0de607dadbd8::t_e7d880cc0bf18d 7,25
+apps/desktop/src/components/messages/Row.tsx
+  s_fb0de607dadbd8::t_9b41962f57b7b5 41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1e9b0c90f04b5a35db64ed38362df9a96458f9a2",
+  "prompts": {},
+  "sessions": {
+    "s_38f0853d3666ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1da65-51d1-79a0-987e-5fb6857999b0",
+        "model": "chatflows/gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_fb0de607dadbd8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1a4dc882-b84a-4a01-936c-126151dd9dc1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
