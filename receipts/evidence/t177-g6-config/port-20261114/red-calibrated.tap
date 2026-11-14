@@ -1,0 +1,140 @@
+TAP version 13
+# Subtest: 比率写成分子/分母(百分比),分母为 0 写不适用
+ok 1 - 比率写成分子/分母(百分比),分母为 0 写不适用
+  ---
+  duration_ms: 0.382666
+  type: 'test'
+  ...
+# Subtest: 报告列出每组状态,未测的写明原因,已跑的写已跑
+ok 2 - 报告列出每组状态,未测的写明原因,已跑的写已跑
+  ---
+  duration_ms: 2.365667
+  type: 'test'
+  ...
+# Subtest: 合同有一条未守住就在组标题上标出,效果指标照常列但不抵消
+ok 3 - 合同有一条未守住就在组标题上标出,效果指标照常列但不抵消
+  ---
+  duration_ms: 0.794042
+  type: 'test'
+  ...
+# Subtest: 报告不写验收结论,以说明结尾
+ok 4 - 报告不写验收结论,以说明结尾
+  ---
+  duration_ms: 3.184417
+  type: 'test'
+  ...
+# Subtest: 模型状态单列:429 到上限记未测并带探测记录
+ok 5 - 模型状态单列:429 到上限记未测并带探测记录
+  ---
+  duration_ms: 1.398917
+  type: 'test'
+  ...
+# Subtest: 指定对照:同模型两组都有结果才列,差值按后者减前者
+ok 6 - 指定对照:同模型两组都有结果才列,差值按后者减前者
+  ---
+  duration_ms: 2.027584
+  type: 'test'
+  ...
+# (node:16105) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: G6CFG-01 driver keeps explicit output and context settings, including invalid values for host rejection
+not ok 7 - G6CFG-01 driver keeps explicit output and context settings, including invalid values for host rejection
+  ---
+  duration_ms: 0.655625
+  type: 'test'
+  location: '/private/tmp/gg-claude-author-20261113/t177-closeout/g6cfg/packages/server/proof/g6/runtime-config.test.ts:15:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - '9216'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '9216'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-claude-author-20261113/t177-closeout/g6cfg/packages/server/proof/g6/runtime-config.test.ts:17:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: G6CFG-02 runner child environment carries speaking settings without copying unrelated host state
+not ok 8 - G6CFG-02 runner child environment carries speaking settings without copying unrelated host state
+  ---
+  duration_ms: 0.126917
+  type: 'test'
+  location: '/private/tmp/gg-claude-author-20261113/t177-closeout/g6cfg/packages/server/proof/g6/runtime-config.test.ts:22:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - '9216'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '9216'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-claude-author-20261113/t177-closeout/g6cfg/packages/server/proof/g6/runtime-config.test.ts:24:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: G6CFG-03 both budgets enter fingerprints and resume identity, but credentials do not
+not ok 9 - G6CFG-03 both budgets enter fingerprints and resume identity, but credentials do not
+  ---
+  duration_ms: 0.489959
+  type: 'test'
+  location: '/private/tmp/gg-claude-author-20261113/t177-closeout/g6cfg/packages/server/proof/g6/runtime-config.test.ts:30:1'
+  failureType: 'testCodeFailure'
+  error: 'GG_SPEAKING_MAX_OUTPUT_TOKENS'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'c02d037096a2723a8597f889e6dbf3b9'
+  actual: 'c02d037096a2723a8597f889e6dbf3b9'
+  operator: 'notStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-claude-author-20261113/t177-closeout/g6cfg/packages/server/proof/g6/runtime-config.test.ts:36:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: G6CFG-04 real-mode driver host sends the inherited cap to both dialogue and memory checks
+not ok 10 - G6CFG-04 real-mode driver host sends the inherited cap to both dialogue and memory checks
+  ---
+  duration_ms: 193.652708
+  type: 'test'
+  location: '/private/tmp/gg-claude-author-20261113/t177-closeout/g6cfg/packages/server/proof/g6/runtime-config.test.ts:43:1'
+  failureType: 'testCodeFailure'
+  error: 'dialogue cap'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-claude-author-20261113/t177-closeout/g6cfg/packages/server/proof/g6/runtime-config.test.ts:54:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 6
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 369.643625

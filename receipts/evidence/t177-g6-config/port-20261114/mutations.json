@@ -1,0 +1,123 @@
+{
+  "summary": {
+    "node": "v24.21.0",
+    "mutations": 8,
+    "killed": 8,
+    "survived": 0,
+    "control": {
+      "passed": 4,
+      "failed": 0
+    },
+    "afterControl": {
+      "passed": 4,
+      "failed": 0,
+      "exit": 0
+    }
+  },
+  "results": [
+    {
+      "id": "G6CFG-M01",
+      "file": "packages/server/proof/g6/driver.ts",
+      "why": "driver drops GG_SPEAKING_MAX_OUTPUT_TOKENS",
+      "designated": "packages/server/proof/g6/runtime-config.test.ts › G6CFG-01…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G6CFG-01 driver keeps explicit output and context settings, including invalid values for host rejection"
+      ]
+    },
+    {
+      "id": "G6CFG-M02",
+      "file": "packages/server/proof/g6/driver.ts",
+      "why": "driver drops GG_SPEAKING_CONTEXT_WINDOW",
+      "designated": "packages/server/proof/g6/runtime-config.test.ts › G6CFG-01…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G6CFG-01 driver keeps explicit output and context settings, including invalid values for host rejection"
+      ]
+    },
+    {
+      "id": "G6CFG-M03",
+      "file": "packages/server/proof/g6/run.ts",
+      "why": "runner child drops GG_SPEAKING_MAX_OUTPUT_TOKENS",
+      "designated": "packages/server/proof/g6/runtime-config.test.ts › G6CFG-02…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G6CFG-02 runner child environment carries speaking settings without copying unrelated host state"
+      ]
+    },
+    {
+      "id": "G6CFG-M04",
+      "file": "packages/server/proof/g6/run.ts",
+      "why": "runner child drops GG_SPEAKING_CONTEXT_WINDOW",
+      "designated": "packages/server/proof/g6/runtime-config.test.ts › G6CFG-02…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G6CFG-02 runner child environment carries speaking settings without copying unrelated host state"
+      ]
+    },
+    {
+      "id": "G6CFG-M05",
+      "file": "packages/server/proof/g6/manifest.ts",
+      "why": "resume identity ignores GG_SPEAKING_MAX_OUTPUT_TOKENS",
+      "designated": "packages/server/proof/g6/runtime-config.test.ts › G6CFG-03…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G6CFG-03 both budgets enter fingerprints and resume identity, but credentials do not"
+      ]
+    },
+    {
+      "id": "G6CFG-M06",
+      "file": "packages/server/proof/g6/manifest.ts",
+      "why": "resume identity ignores GG_SPEAKING_CONTEXT_WINDOW",
+      "designated": "packages/server/proof/g6/runtime-config.test.ts › G6CFG-03…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G6CFG-03 both budgets enter fingerprints and resume identity, but credentials do not"
+      ]
+    },
+    {
+      "id": "G6CFG-M07",
+      "file": "packages/server/proof/g6/run.ts",
+      "why": "copy unrelated host state into driver environment",
+      "designated": "packages/server/proof/g6/runtime-config.test.ts › G6CFG-02…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G6CFG-02 runner child environment carries speaking settings without copying unrelated host state"
+      ]
+    },
+    {
+      "id": "G6CFG-M08",
+      "file": "packages/server/proof/g6/manifest.ts",
+      "why": "credential value enters manifest and resume identity",
+      "designated": "packages/server/proof/g6/runtime-config.test.ts › G6CFG-03…",
+      "status": "killed",
+      "exit": 1,
+      "signal": null,
+      "loadFail": false,
+      "failed": [
+        "G6CFG-03 both budgets enter fingerprints and resume identity, but credentials do not"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+本机 seatbelt 门禁回执(macOS,lockf 串行;由 claude:484c2330-2f15-49ae-9f7a-145e467cedb1 的子代理执行),收据提交 bf2a86a01c239cb4b9b414c525714b688f194f81 上:
+命令:node <克隆>/scripts/gates/run-all.ts --local --repo <克隆> --branch=fix/t177-g6-config-propagation --base=proof/t177-g6-g2-merge  退出码 1(仅 G-REVIEW 未过)
+单独一条命令 --hash 的输出:900fb4aeca20a9eb47ea490a212b54d8683db0e5ae33cf1a2811ba2238ff77c7
+注:G-PROVENANCE 显示 ✓ 是因为收据 review 为空时该门禁直接返回,不代表已核对作者会话来源;G-REVIEW 如实为 ✗(还没有独立审查)。
+----
+base=proof/t177-g6-g2-merge branch=fix/t177-g6-config-propagation HEAD=bf2a86a01c239cb4b9b414c525714b688f194f81 受检文件 15 个 收据=receipts/fix-t177-g6-config-propagation.json 门禁 8 个
+✓ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是仓库所有者对这个 PR 这一版的结构化批准
+✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据
+✗ G-REVIEW  R-01:审查人限 Codex/Astra/Claude/Argon(g-group#1531、g-group#2943、g-group#3199 原则 68,默认 Codex;Claude 审 Codex 写的 PR,Argon 备用),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)
+    - 还没有独立审查
+✓ G-RED  R-02:先红后绿,红提交上的测试与现在相同,现在的测试放到红提交实现上按名字失败、现在按名字通过
+✓ G-STUB  R-03 R-04:空实现红基线 + 返回值变异校准,桩下或错值下仍通过、没执行、加载失败的测试都判无效
+✓ G-TAUTO  R-04:拒绝同语反复测试(按 node:test 真实导入识别;无断言、自比较、恒真、不可达、不判源码结果、skip/only;运行时与静态逐条计数一致)
+✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限、不得写提交状态、不得用 pull_request_target
+✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)
+CONTENT_HASH=900fb4aeca20a9eb47ea490a212b54d8683db0e5ae33cf1a2811ba2238ff77c7
+----
+同一收据提交上的云端复跑(box1,Node v24.21.0,2026-11-13T16:55:19Z → 2026-11-13T16:58:20Z):
+typecheck 退出 0;lint 退出 0(Checked 226 files in 513ms. No fixes applied.);全量退出 0:tests 1576 pass 1576 fail 0 cancelled 0 skipped 0 todo 0 
+具名变异退出 0:{"node":"v24.21.0","mutations":8,"killed":8,"survived":0,"control":{"passed":4,"failed":0},"afterControl":{"passed":4,"failed":0,"exit":0}}
+变异后源码还原检查退出 0;云端证据包 sha256 9144f73a8dca0e88a2aec07f34d77c84f1718179fcee1ee548ae0fb9159f309b

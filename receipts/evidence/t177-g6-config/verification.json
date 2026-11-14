@@ -1,0 +1,91 @@
+{
+  "at": "2026-11-12T16:25:51.593222+00:00",
+  "head": "9c05e56fdbef6811c7f1d299ba291235e60683d5",
+  "baseline": "0cbdd2d5f96813d845debd4540241a7e07e00e6b",
+  "red": "b3988855b0c9ae4e92e58c8b6853bccc520808c3",
+  "first_green": "faee7492d4cb44b244eebf83e0e2ef676a0643bc",
+  "accepted": true,
+  "scope": "G6 explicit-profile configuration propagation and G35 regression: deterministic code verification only, not overall backend/G6 release acceptance",
+  "box": "box4",
+  "execution_session": 64589,
+  "exits": {
+    "typecheck": 0,
+    "lint": 0,
+    "full": 0,
+    "mutations": 0,
+    "g35-mutations": 0,
+    "source-integrity": 0
+  },
+  "full": {
+    "tests": 1734,
+    "pass": 1734,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "G6CFG_mutations": {
+    "node": "v24.21.0",
+    "mutations": 8,
+    "killed": 8,
+    "survived": 0,
+    "control": {
+      "passed": 4,
+      "failed": 0
+    },
+    "afterControl": {
+      "passed": 4,
+      "failed": 0,
+      "exit": 0
+    }
+  },
+  "G35_mutations": {
+    "node": "v24.21.0",
+    "mutations": 12,
+    "killed": 12,
+    "survived": 0,
+    "control": {
+      "passed": 3,
+      "failed": 0
+    },
+    "afterControl": {
+      "passed": 3,
+      "failed": 0,
+      "exit": 0
+    }
+  },
+  "load_failures": 0,
+  "source_integrity_restored": true,
+  "started": "2026-11-12T16:12:33Z",
+  "finished": "2026-11-12T16:17:30Z",
+  "archive": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-t177-execution/backend-closeout-20261112/config-final-cloud-evidence.tar.gz",
+  "archive_sha256": "2110e56e37b71020303aee2d02fe59cd6bb3e376efb0e213a0a6c208df461848",
+  "previous_typecheck_failure": {
+    "session": 71167,
+    "head": "e3bd03454361015c41c7c035ddcac0b536ac5a31",
+    "typecheck_exit": 2,
+    "runtime_full_passed": 1734,
+    "G6CFG_mutants_killed": 8,
+    "G35_mutants_killed": 12,
+    "reason": "report.test.ts constructed the old ModelConfig fixture without the new speaking field; corrected its fixture shape only, no assertions changed"
+  },
+  "configured_native_records": 0,
+  "legacy_records": {
+    "total": 3,
+    "statuses": {
+      "ok": 2,
+      "timeout": 1
+    },
+    "budget": 4096,
+    "all_retained": true,
+    "pooled_with_configured_cohort": false
+  },
+  "configured_runtime": {
+    "GG_SPEAKING_MAX_OUTPUT_TOKENS": "65536",
+    "GG_SPEAKING_CONTEXT_WINDOW": "983010",
+    "source": "Selected Hy4 profile in /Users/snakesammy/.mirasim/setting.json; not a changed production default"
+  },
+  "overall_backend_complete": false,
+  "overall_G6_complete": false,
+  "independent_review": null
+}
