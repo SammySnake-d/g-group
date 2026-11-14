@@ -1,0 +1,21 @@
+receipts/fix-t177-g6-config-propagation.json
+  s_38f0853d3666ca::t_62d740635f95c6 27-34
+reviews/fix-t177-g6-config-propagation.md
+  s_38f0853d3666ca::t_aa8e78c2bb0b0e 1-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "693c32f621b8b81bcd44e51b8f857301ed6537f7",
+  "prompts": {},
+  "sessions": {
+    "s_38f0853d3666ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1da65-51d1-79a0-987e-5fb6857999b0",
+        "model": "chatflows/gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
