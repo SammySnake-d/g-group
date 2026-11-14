@@ -1,0 +1,44 @@
+reviews/feat-desktop-closed-loop-r1.md
+  s_aa7ace926fa1e4::t_5e65a2c8d907bf 1-98
+reviews/pr75-r1-evidence/old-db-independent-red.json
+  s_aa7ace926fa1e4::t_5e65a2c8d907bf 1-187
+reviews/pr75-r1-evidence/MANIFEST.json
+  s_aa7ace926fa1e4::t_5e65a2c8d907bf 1-68,73-74
+  s_aa7ace926fa1e4::t_867734d7e24c2a 69-72
+reviews/pr75-r1-evidence/cloud-cleanup.json
+  s_aa7ace926fa1e4::t_5e65a2c8d907bf 1-77
+reviews/pr75-r1-evidence/selftest-summary.json
+  s_aa7ace926fa1e4::t_5e65a2c8d907bf 1-19
+receipts/feat-desktop-closed-loop.json
+  s_aa7ace926fa1e4::t_5e65a2c8d907bf 35-42
+reviews/pr75-r1-evidence/local-gate-summary.json
+  s_aa7ace926fa1e4::t_5e65a2c8d907bf 1-51
+reviews/pr75-r1-evidence/bound-state.json
+  s_aa7ace926fa1e4::t_d2d27195d7de2a 1-13
+reviews/pr75-r1-evidence/pgid-transition-event.json
+  s_aa7ace926fa1e4::t_bd5f7519d14dc4 1
+reviews/pr75-r1-evidence/pgid-transition-probe.mjs
+  s_aa7ace926fa1e4::t_cdeb445506b8db 1-72
+reviews/pr75-r1-evidence/snapshot-checker.json
+  s_aa7ace926fa1e4::t_dd9a168539694a 1-252
+reviews/pr75-r1-evidence/snapshot-independent.json
+  s_aa7ace926fa1e4::t_4854ddd7d9d366 1-83
+reviews/pr75-r1-evidence/snapshot-requester-messages.json
+  s_aa7ace926fa1e4::t_e003d234cce9c4 1-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2539ad7f7e6232a76228303d7910eaa4e2551ee4",
+  "prompts": {},
+  "sessions": {
+    "s_aa7ace926fa1e4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d98a-5952-7302-8957-6a95ce505d1e",
+        "model": "chatflows/gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
