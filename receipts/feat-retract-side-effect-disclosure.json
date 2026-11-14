@@ -16,7 +16,14 @@
   "red": {
     "commit": "98da21c02560c23ef14fc5c7667b464bbe4adf46"
   },
-  "review": null,
+  "review": {
+    "agent": "claude",
+    "session": "claude:618640cf-092c-44c3-8b19-306bb572d0d0",
+    "model": "group/opus",
+    "verdict": "reject",
+    "reviewed_hash": "2e914a990a3944c56975e9811296dc720df8dbbe3bf359cf39bac9e7b05e6d99",
+    "notes": "第 1 轮 REJECT,详见 reviews/feat-retract-side-effect-disclosure.md。作者数字全部复现(box2:typecheck/lint 0、同体 8 项 HEAD 8/8、红提交 98da21c0 上 4 过 4 具名断言红、依赖 14/14、全量 1503/1503 无 skip/todo、12 变异全杀;本机门禁自检 219/219 真实 exit 0;本机 seatbelt --local exit 1,G-RED 16 项与作者日志逐字相同)。生产改动只有 appendUserEvent 撤回分支 +18/−1,事实来源正确(探针证实只取宿主任务出处与完成台账,不读联系人自述)。拒绝原因:R1-01 审查人自构 8 个单点故障(披露读联系人自述、失败也报完成、跨任务串源、披露后删台账等)在本片 8 项和全部产品包测试 1495 条下全部存活;R1-02 本片 RC01/RC02/RC04/RD02 在红提交上本来就通过,G-RED 红,按原则 71 做变异校准红或拆出。另:R1-04(返修必修,非本轮拒绝理由)已发生只认完成记录,比 rewind 的「运行过的 Compute」口径窄,Compute 失败或还在跑时撤回不披露;R1-03 收据与 coverage-index 仍写容器那轮的 STUB/TAUTO 红。G-RED 另 12 项来自整支并入的未审 #71,不改门禁、不出豁免,#71 先独立审(作者 Claude,须 Codex/Astra 审),本轮不替 #71 背书。原「需拍板」三项按用户 DM#3361 由审查人对照文档定了,无留给用户的项。hy4 辅审因线路 403 未产出,本轮无辅审。"
+  },
   "waiver": null,
   "review_status": "待Mira Bot安排Claude独立跨厂商审查;作者不自签",
   "unverifiable": "AC-08: Compute为确定性适配器夹具,外部文件写入是真实持久事实,不是真模型/CLI证明。通知只报告宿主已持久化的completed事实,无法推断未上报的外部副作用。任务补充/续接来源关联、R-Rule失效与整套前端未在本片证明。通知落聊天system消息与措辞是候选;任务停T5如实保持。",
