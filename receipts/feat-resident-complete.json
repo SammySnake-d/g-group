@@ -1,0 +1,33 @@
+{
+  "slice": "R1 常驻 Compute 适配器补齐(生产入口 start.ts / cli.ts 用的 adapter-cc-compute/resident.ts):只做宿主侧三件(需求 §2.0「做 / 不做」:Compute 的启动 / 停止 / 观察与隔离;不在运行中拦截 Compute 的任何调用,不加审批通道或 hooks)。① 隔离(AC-29、D07 §3):spawn 收 configDir / pluginDirs / mcpServers,每个常驻进程(含空闲回收恢复、兜底重启)设 CLAUDE_CONFIG_DIR、逐个 --plugin-dir,勾选 MCP 与 host 合并进 --mcp-config 并整组放行,首个提示列勾选 skill,能力声明 isolation:true,每轮 init 按 harness 自报核对配置生效、started 带实际加载清单;宿主「常驻适配器 + 勾选能力」不再被拒。② 活动流(AC-43、D26 §8.3):residentArgs 加 --include-partial-messages(真实 CLI 2.1.319 在 stdin 收 stream-json 时支持,proof/resident-partial-messages-probe.txt),stdout 每行经 activityOf 推给 activity(),只在 init 核验通过、这一轮在跑且没判违规时推。③ 停止确认(AC-23、§8.1 已定第 16 条):stop 发信号前记下后代与同组成员,quiesce 等主进程退出再把还活着的 SIGKILL、轮询到都退出才回报;失败 / 完成后常驻进程还活着时先结束它,下一轮同一会话 id 恢复。复用一次性适配器的实现(搬到 isolation.ts、stop-confirm.ts,activityHub 导出),adapter.ts 改为调用,行为不变。host.ts、runs.ts、休眠宽限逻辑都不改",
+  "acceptance": [
+    {
+      "id": "AC-29",
+      "status": "未测",
+      "reason": "常驻生产路径部分有具名测试、变异与真实运行:packages/adapter-cc-compute/src/resident-isolation.test.ts 7 条(配置目录 / 插件目录 / 合并 MCP / 未勾选全局 skill 不进入 / 两个联系人互不可见 / 恢复后照带 / init 核对 / 应失败的选项)、packages/server/src/resident-host.test.ts 第 1 条(宿主 + 真实常驻适配器,勾选 skill 与 MCP 照常启动,原来被拒);变异 packages/adapter-cc-compute/proof/resident-complete-mutations.txt C01–C08(17 个变异全部被具名测试杀死,原样副本 21/21);真实运行 packages/server/proof/resident-complete-real.txt 第 1 段(startServer pi + claude,勾选的 skill 在实际加载清单里,没勾的与本机全局 skill 不在)。未覆盖:真实运行只勾了 skill、没勾 MCP(MCP 的真实加载见既有 packages/server/proof/ac29-capability-isolation.txt,那次走一次性适配器);两个联系人互不可见只用假 CLI 验;V-02 的 Codex 侧不在本片;正式验收待审"
+    },
+    {
+      "id": "AC-43",
+      "status": "未测",
+      "reason": "本片只补常驻适配器的活动流(①⑦⑩⑪⑫ 的生产路径接线):packages/adapter-cc-compute/src/resident-activity.test.ts 6 条(--include-partial-messages、按行推请求 / 子代理 / 后台命令 / 工具 / 增量、首字节前只有 model_call、长工具 tool_end 不提前、首个 init 违规与合规一轮之后再违规的这一轮都不推);packages/server/src/resident-host.test.ts 第 2、3 条(宿主 + 真实常驻适配器:首字节窗口判 no_response 并先停后写失败;长工具在跑超阈值不判卡死,子代理与后台命令成台账单元);变异 A01–A03;真实运行 resident-complete-real.txt 第 2 段台账显示 waiting=tool_running。阈值、原因分类、孤儿、可见范围、重跑等其余各条不在本片(见 feat-run-ledger-host 收据);⑪ 重试公告不刷新计时由既有 runs.test.ts 验,本片只保证常驻适配器把 api_retry 行原样经 activityOf 推出(与一次性适配器同一函数),没有单独的常驻重试测试;正式验收待审"
+    },
+    {
+      "id": "AC-23",
+      "status": "未测",
+      "reason": "常驻生产路径的停止确认有具名测试、变异与真实运行:packages/adapter-cc-compute/src/resident-quiesce.test.ts 4 条(脱组且忽略 SIGTERM 的后代没退出前不回报、主进程忽略 SIGTERM 时等组 SIGKILL、失败一轮后结束常驻进程与后代再回报并能同会话恢复、运行中 / 受阻 / 未知不做);packages/server/src/resident-host.test.ts 第 4 条(取消在跑任务:主进程与脱组后代都退出前槽位不归还、排队的不开工,退出后才 T10 并开工);变异 Q01–Q06;真实运行 resident-complete-real.txt 第 2 段(真实 CLI 前台 sleep 30,进程组与 CLI 不同;取消后 sleep 与 CLI 都退出才归还槽位,采样中槽位已还而进程还在 0 次)。不覆盖(§8.1 第 16 条已定的边界):停止前父子链就断了的双 fork 守护进程、交给系统托管的进程;跨群隔离由既有 lease.test.ts 验;正式验收待审"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:dd154965-afbd-4134-a1d3-c00f2a859eab",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "b2091dc5"
+  },
+  "unverifiable": "AC-23:停止确认靠「停止时按 ppid 链与进程组记下的后代」,真实运行里 sleep 30 是 CLI 收到 SIGTERM 后自己结束的(停止请求后约 116 毫秒退出,早于主进程),所以真实运行证明的是「确认前不归还」,没有证明「CLI 不清理时由停止确认 SIGKILL 关掉」——后者只有假 CLI 的孙进程测试(resident-quiesce.test.ts 第 1 条、resident-host.test.ts 第 4 条)。停止前父子链已断的守护进程找不到(已定边界)。AC-29 的「实际加载清单」取自 CLI init 自报,如果 harness 自报与实际不一致这里检不出(真实运行用 note.md 的格式被照做作旁证)。AC-43 首字节窗口靠 CLI 的 system/status requesting 帧,真实帧序只核对过一次(resident-partial-messages-probe.txt)。门禁 G-RED 的红快照把整个 node_modules 软链回 HEAD 工作树,@g-group/* 相对链接因此解析到 HEAD 的绿实现:server 包里依赖适配器行为的 5 条测试(resident-host.test.ts 4 条、compute.test.ts 1 条)在门禁红快照里通过、被 G-RED 判「没有按名字失败」;把 @g-group/* 指向红快照自己的 packages 重放时这 5 条都按名字失败(packages/server/proof/resident-complete-cross-red.txt),本片不改门禁(门禁取自 main,属冻结面),G-RED 这一项待仓库所有者定:修门禁的红快照链接,或对这 5 条给豁免",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "子代理实现(调度会话 claude:dd154965-afbd-4134-a1d3-c00f2a859eab 派出,作者 Claude Code)。设计真源 origin/docs/dev-handbook v3.29(6109485);与 brief 无冲突。每轮 init 按 harness 自报核对勾选(未勾选的 MCP 出现、勾选的没连上即判违规回收)沿用一次性适配器既有做法,属于启动配置是否生效的核对,不是运行中拦截;若审查认为越出 §2.0 判据 7,可只保留观测不判违规。既有测试 packages/server/src/compute.test.ts 一条的期望随能力声明更新(多了 isolation:true),改动放在红提交里。。红提交改写过三次(补 A03 的具名测试、补跨包 compute.test 期望、把夹具孙进程「测试目录删掉就自己退出」并进红提交),最终红 b2091dc5、绿 6a6a1722;变异与跨包红重放是在改夹具之前的提交上跑的,与现在只差这一处夹具(测试进行中目录一直在,不影响判定),没有重跑"
+}

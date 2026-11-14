@@ -1,0 +1,14 @@
+# 跨包红重放(补充证据,feat/resident-complete):把现在的 server 测试放到红提交 b4b69c76 上(之后红提交只多了夹具孙进程自退一处,现为 b2091dc5,未重跑),node_modules/@g-group/* 指向红快照自己的 packages(适配器是红提交的空壳)
+# 对照:门禁 G-RED 的红快照把整个 node_modules 软链回 HEAD 工作树,@g-group/* 是相对链接,解析到 HEAD 的绿实现,所以这几条 server 测试在门禁的红快照里通过(本机复现过一次,7/7 通过)
+# 命令: node --test --test-concurrency=1 --test-reporter=tap packages/server/src/compute.test.ts packages/server/src/resident-host.test.ts(本机)
+# @g-group/adapter-cc-compute/resident 解析到: file://<红快照>/packages/adapter-cc-compute/src/resident-entry.ts
+ok 1 - 真实 Compute 的进程环境只带网关地址与令牌,不把模型写进环境;空闲会话按时回收
+not ok 2 - 真实 Compute 用常驻适配器:声明会话内换模型能力、能插话;工厂收到的模型不固定进实例
+ok 3 - 宿主关闭时停掉还活着的常驻会话:一轮做完(completed)进程仍在,也要停,不留后台进程
+not ok 4 - 常驻适配器 + 联系人勾选 skill/MCP:宿主不再拒绝,带专属配置目录、勾选 skill 插件目录与勾选 MCP 启动,实际加载清单记进任务视图
+not ok 5 - 常驻进程发出请求后上游不回应:活动流进台账,过了首字节窗口在一个核对周期内判 no_response,先停这一轮再写失败,停止确认后进程已退出
+not ok 6 - 常驻进程里的长工具在跑:超过整轮阈值也不判卡死;子代理与后台命令各成台账单元,挂在这一轮下面
+not ok 7 - 停止确认后才归还槽位:取消在跑的任务,CLI 主进程与脱组后代都退出之前槽位不归还、排队的不开工;都退出后才落 T10、排队的开工
+# tests 7
+# pass 2
+# fail 5

@@ -1,0 +1,43 @@
+# Q09 剩余具名验收的真实运行摘要(startServer pi + claude,全部走 service 入口;模型 workbuddy-ai/deepseek-v4.1-flash-sg)
+# runner: packages/server/proof/q09-real/run.ts;证据目录(不入库):/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/
+
+## A4 停止(代码 da7fe313,合入 PR #74 之后、合入 T8a 修复之前;T8a 修复不改停止路径)  q09-real-20261114-0004/run-a4
+A4-01 长工具确实已起:sleep 120 是这个任务 CLI 的后代,任务在跑、占着个人槽位 → 通过:任务 t-mwf63h7l-3 T3_Running slot={"scope":"personal","stopping":false};sleep pid=19413 ppid=19410 pgid=19410 sleep 120(进程组与 CLI 不同);CLI 后代 3 个
+A4-02 停止请求经 service 受理后任务进 T9(停止请求 ≠ 已停止) → 通过:首次看到 T9 在停止请求后 38 毫秒
+A4-03 CLI 主进程或任一后代还活着时,任务没有落 T10、槽位没有归还 → 通过:归还/T10 之后的 15 次采样里进程全部已退出
+A4-04 停稳窗口被采到:T9、槽位停止中(仍占着)、进程还在 → 通过:28 次采样
+A4-05 全部退出后才 T10 并归还,60 秒内完成(超时即失败) → 通过:停止请求后 673 毫秒落 T10;此刻 state=T10_Cancelled slot=null 记下的进程还活着 无;超时=false
+A4-06 约 20 毫秒采样 → 通过:采样 48 次,间隔中位 21 毫秒、最大 68 毫秒
+A4-CLEAN 收尾清干净:宿主关闭后本次起的 CLI 与记下的后代全部退出 → 通过:记下的 4 个进程与本进程起的 CLI 都已退出
+a4 结束 → 全部断言通过
+
+## A5 成员移出(代码 da7fe313)  q09-real-20261114-0004/run-a5
+A5-01 两件长任务都确实已起:二群 sleep 300、一群 sleep 200 各是自己 CLI 的后代,两件都在跑 → 通过:一群 t-mwf64m1f-c T3_Running sleep pid=28692 ppid=28691 pgid=28691 sleep 200;二群 t-mwf648hf-5 T3_Running sleep pid=27277 ppid=27276 pgid=27276 sleep 300
+A5-02 群临时槽位实际被借用:一群那件占一群的临时槽位,二群那件占个人槽位 → 通过:一群 slot={"scope":"group","stopping":false};二群 slot={"scope":"personal","stopping":false}
+A5-03 移出进入「移出中」:leavingMembers 有 X,X 仍是成员 → 通过:members=[{"kind":"contact","id":"c-mwf63vwp-1"},{"kind":"user","id":"me"}] leaving=[{"kind":"contact","id":"c-mwf63vwp-1"}]
+A5-05 移出中接新活被拒:一群里 /task 交给 X 返回 conflict → 通过:conflict 这位联系人正在移出这个群,不能再交活;发送时仍在移出中=true
+A5-04 重复移出不重复发停止:第二次 removeMember 原样返回移出中,一群那件只进一次 T9、只有一次 stopped → 通过:第二次返回 leaving=[{"kind":"contact","id":"c-mwf63vwp-1"}];一群任务状态序列 T3_Running>T9_StopRequested>T10_Cancelled;stopped 进度 1 条
+A5-07 一群进程没停稳之前:任务不落 T10、临时槽位不归还、X 不被删出 → 通过:归还/删成员之后的 15 次采样里一群进程全部已退出
+A5-08 停稳窗口被采到:T9、一群临时槽位停止中、X 仍在并标移出中、进程还在 → 通过:26 次采样
+A5-09 停稳后才删成员、归还临时槽位,60 秒内完成(超时即失败) → 通过:state=T10_Cancelled slot=null members=[{"kind":"user","id":"me"}] leaving=[] 一群进程还活着 无;超时=false
+A5-06 移出中一群的新消息不再派给 X:@X 之后 X 在一群没有发言、没有新任务 → 通过:那条消息 #4 发送时仍在移出中=true;之后 X 在一群的发言 0 条;一群任务 1 个
+A5-10 别群不误伤:一群移出全过程中二群那件一直在跑、个人槽位不变、CLI 与 sleep 300 都在、二群成员不变 → 通过:46 次采样全部正常
+A5-06b 采样密度约 20 毫秒 → 通过:采样 46 次(每次 4 个 service 读),间隔中位 21 毫秒、最大 57 毫秒
+A5-11 最后取消二群那件:停稳后 T10、个人槽位归还 → 通过:639 毫秒;state=T10_Cancelled slot=null 二群进程还活着 无
+A5-CLEAN 收尾清干净:宿主关闭后本次起的 CLI 与记下的后代全部退出 → 通过:记下的 8 个进程与本进程起的 CLI 都已退出
+a5 结束 → 全部断言通过
+
+## A3 在途纠正(代码 d8fe480f,已含 T8a 修复)  q09-real-20261114-1505-a3-r2
+A3-01 联系人 forward 带 sourceSeq:用户改条件那条消息挂到任务上,任务 constraintVersion 升版 → 通过:改条件 #4 后 14508 毫秒升版 v0→v1;followUps 里 #4={"roomId":"g-mwg2g3t1-2","seq":4,"state":"Received","version":1,"appliedIn":null,"appliedVersion":null,"reboundTo":null}
+A3-02 改条件时 Compute 第一轮还在跑(在途纠正) → 通过:升版时 sleep 90 还活着=true,CLI 还活着=true
+A3-03 补充排队到这一轮结束后再续接:升版发生在第一轮结束前,第二轮在第一轮结束之后才开始 → 通过:compute-turn 2 轮;升版 2026-11-14T07:10:57.372Z;第一轮结束 2026-11-14T07:12:30.817Z;第二轮开始 2026-11-14T07:12:30.819Z
+A3-04 续接的是同一个 computeId,没有新开 Compute → 通过:任务的 Compute:ccr-577baa7d-1747-4fff-ab3d-0dd91bdec5cb;派活时 ccr-577baa7d-1747-4fff-ab3d-0dd91bdec5cb
+A3-05 产物按新条件变化:color.txt 先按旧条件是 RED,续接后变成 BLUE → 通过:文件内容序列 ["<无文件>","RED","BLUE"]
+A3-06 交付依据新版本:补充 Applied 且 appliedVersion == constraintVersion;交付工件 color.txt 经 artifacts.get 读回是 BLUE、hash 与磁盘一致 → 通过:state=T8a_Delivered constraintVersion=1 补充={"roomId":"g-mwg2g3t1-2","seq":4,"state":"Applied","version":1,"appliedIn":"result:ccr-577baa7d-1747-4fff-ab3d-0dd91bdec5cb@v1","appliedVersion":1,"reboundTo":null};工件 art-e66bd0ec9b4a23441f85f9cf3a104e7a.txt e66bd0ec9b4a23441f85f9cf3a104e7a81173829d3a0eec4e8639ca08f559fba;artifacts.get 5B e66bd0ec9b4a23441f85f9cf3a104e7a81173829d3a0eec4e8639ca08f559fba "BLUE\n";磁盘 e66bd0ec9b4a23441f85f9cf3a104e7a81173829d3a0eec4e8639ca08f559fba
+A3-07 本人普通回复「通过」经联系人 verdict 验到 T8 → 通过:「通过」#8 回复交付 #7;最终 T8_Accepted reviewGate=waived-by-user
+A3-08 交付时 resultVer == constraintVersion(宿主 follow 文档) → 通过:follow:t-mwg2gjpl-4 resultVer=1 rounds=[];constraintVersion=1
+A3-CLEAN 收尾清干净:宿主关闭后本次起的 CLI 与记下的后代全部退出 → 通过:记下的 5 个进程与本进程起的 CLI 都已退出
+a3 结束 → 全部断言通过
+
+## 未算通过的一次:q09-real-20261114-1500-a3 —— Compute 起的第一次请求被上游拒绝
+(403 WorkBuddy restricted this account),宿主出了鉴权/额度失败卡,场景没走到纠正;同一模型 20 分钟后重跑通过。保留现场。

@@ -1,0 +1,15 @@
+# 真实 Claude Code 2.1.319 常驻形态(stdin 收 stream-json)是否支持 --include-partial-messages(feat/resident-complete,2026-11-11 20:36:58 +0800,本机)
+# 命令形状:echo '<一条 user stream-json>' | CLAUDE_CONFIG_DIR=<临时目录> claude -p --input-format stream-json --output-format stream-json --verbose --include-partial-messages --session-id <新 uuid> --model $ANTHROPIC_DEFAULT_SONNET_MODEL --bare --mcp-config <空 mcp.json> --strict-mcp-config --tools Read --allowedTools Read --permission-mode dontAsk
+# 网关地址与令牌只经环境变量,未打印;stdin 保持打开 20 秒后关闭,CLI 以 0 退出,stderr 0 字节。下面每行是 stdout 一帧的摘要(只留 type/subtype/status/event 类型,不留正文)
+{"type":"system","subtype":"init","claude_code_version":"2.1.319","tools":["Read"]}
+{"type":"system","subtype":"status","status":"requesting"}
+{"type":"stream_event","event":"message_start"}
+{"type":"stream_event","event":"content_block_start"}
+{"type":"stream_event","event":"content_block_delta"}
+{"type":"assistant"}
+{"type":"stream_event","event":"content_block_stop"}
+{"type":"stream_event","event":"message_delta"}
+{"type":"stream_event","event":"message_stop"}
+{"type":"result","subtype":"success","is_error":false}
+# 结论:支持。帧序为 init → system/status requesting(model_call,首字节窗口起点)→ stream_event 增量(progress output)→ assistant → result;
+#   与一次性适配器(-p <提示>)下的帧序相同,所以 residentArgs 加 --include-partial-messages,activityOf 原样复用。
