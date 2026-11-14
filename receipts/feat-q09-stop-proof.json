@@ -1,0 +1,16 @@
+{
+  "slice": "最小闭环剩余具名验收:合入 PR #74(常驻 Compute 适配器的停止确认 quiesce)后,生产入口 startServer(pi + claude)经 service 真实跑通——停止时全部子进程确认退出才归还槽位(A4)、成员移出先停稳再删成员并归还群临时槽位且别群不受影响(A5)、进行中的原 Compute 被纠正并按新条件交付到 T8a→本人通过→T8(A3)",
+  "acceptance": [
+    { "id": "AC-23", "status": "未测", "reason": "真实运行 packages/server/proof/q09-real/result.txt A4 七条全过(sleep 120 是 CLI 后代;T9 期间槽位不归还,全部退出后 673 毫秒落 T10);确定性层 packages/server/src/resident-exit.test.ts 与 PR #74 的 resident-quiesce/resident-host 测试;独立审查待做,PR #74 本身也待审" },
+    { "id": "AC-49", "status": "未测", "reason": "真实运行 A5 全过(借用群临时槽位;移出中拒新活;停稳后才删成员归还;二群那件 46 次采样不受影响;重复移出只一次停止);待审" },
+    { "id": "AC-45", "status": "未测", "reason": "真实运行 A3 八条全过(同一 computeId 续接,color.txt RED→BLUE,resultVer == constraintVersion);只验了在途改条件这一条路径;待审" },
+    { "id": "AC-30", "status": "未测", "reason": "群里派活→真实 CC→工件回群→T8a→本人通过→T8 见 A3 与打包版验收(叠加片 feat/q09-packaged-accept);待审" }
+  ],
+  "author": { "agent": "claude", "session": "claude:bf4ef95e-9b68-4262-a62d-ca75f35d1208", "model": "group/opus" },
+  "red": { "commit": "efb363e1" },
+  "unverifiable": "AC-23:A4/A5 的真实运行在 da7fe313 上做(合入 T8a 修复之前),之后只合入了交付写点的修复和一处测试期望,停止/移出路径没再改,但没有在最终头上重跑(避免重复付费)。真实 CLI 收到 SIGTERM 后自己清掉了 sleep,所以真实运行证明的是「确认前不归还」,「CLI 不清理时由 quiesce 强杀」只有假 CLI 测试覆盖(同 PR #74 收据)。停止前父子链已断的守护进程找不到(§8.1 第 16 条已定边界)。G-RED 对跨包红快照的已知问题见 PR #74 收据。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "子代理实现,调度会话同号;合入 PR #74(21ac0887)而不另造 quiesce。一次 A3 运行被上游 403 拒绝(账号受限),保留现场未算通过,重跑一次通过。证据目录 deliverables/g-group-closed-loop/q09-real-20261114-0004、q09-real-20261114-1505-a3-r2。"
+}
