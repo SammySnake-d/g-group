@@ -1,0 +1,31 @@
+apps/desktop/src/api/wire/search.ts
+  s_28c505a2982d47::t_357d292fb0ae87 1-55
+apps/desktop/src/components/pages/SearchLive.tsx
+  s_e61d0c5e1d0561::t_cf230ad5f06770 1-139
+apps/desktop/src/components/pages/SearchPage.tsx
+  s_e61d0c5e1d0561::t_e4358310884223 3,11,14-15,17-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "244a97f9515702f8a116faf3ce680fed00858e18",
+  "prompts": {},
+  "sessions": {
+    "s_28c505a2982d47": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d045-d57a-7671-a1cd-caacf15f97d8",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_e61d0c5e1d0561": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a37c5ea263bdb5c7f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
