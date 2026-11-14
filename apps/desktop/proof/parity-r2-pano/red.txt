@@ -1,0 +1,51 @@
+# 红:3e78c686(只有用例),box2,playwright --project=electron e2e/parity-r2-pano.electron.spec.ts,2026-11-14 00:19
+[box] box2 上的 /workspace/728/wt-dbp-pano 已就绪(3e78c68)
+[box] 已排队:playwright --project=electron e2e/parity-r2-pano.electron.spec.ts
+[box] 连接断了,5 秒后重试(ECONNRESET)
+Running 2 tests using 1 worker
+[1/2] [electron] › e2e/parity-r2-pano.electron.spec.ts:42:1 › 进展全景按真实时钟算:连后端时在跑的 Compute 写的是现在的开始时刻、已跑几秒,不是演示时钟 02:16
+  1) [electron] › e2e/parity-r2-pano.electron.spec.ts:42:1 › 进展全景按真实时钟算:连后端时在跑的 Compute 写的是现在的开始时刻、已跑几秒,不是演示时钟 02:16 
+    Error: expect(locator).toContainText(expected) failed
+    Locator: getByTestId('pano-board').locator('[data-testid^="pano-compute-"]').filter({ hasText: '慢慢整理资料' })
+    Expected pattern: /16:18 开始/
+    Received string:  "Star慢慢整理资料运行中 · 已跑 不到 1 分#1已 598 分钟无进展claude-sonnet-4-61 轮02:16 开始 · 最近 昨天 16:18"
+    Timeout: 5000ms
+    Call log:
+      - Expect "toContainText" getByTestId('pano-board').locator('[data-testid^="pano-compute-"]').filter({ hasText: '慢慢整理资料' }) with timeout 5000ms
+      - waiting for getByTestId('pano-board').locator('[data-testid^="pano-compute-"]').filter({ hasText: '慢慢整理资料' })
+        14 × locator resolved to <button type="button" data-group="run" data-testid="pano-compute-t-mwf6lipj-3" class="inline-flex shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-fast ease-out active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rin
+           - unexpected value "Star慢慢整理资料运行中 · 已跑 不到 1 分#1已 598 分钟无进展claude-sonnet-4-61 轮02:16 开始 · 最近 昨天 16:18"
+      55 |     // 开始时刻是刚才派活的那一分钟(派活前后各取一次,跨分钟也认),不是演示时钟
+      56 |     const starts = [...new Set([hhmm(before), hhmm(after)])].map((t) => `${t} 开始`);
+    > 57 |     await expect(card).toContainText(new RegExp(starts.join("|")));
+         |                        ^
+      58 |     await expect(card).not.toContainText("02:16 开始");
+      59 |     // 已跑:秒或一两分钟,不会是几小时;也不会因为「最近进展」被算到十几个小时前而判成卡住
+      60 |     await expect(card).toContainText(/运行中 · 已跑 (不到 1 分|\d+ 分)/);
+        at /workspace/728/wt-dbp-pano/apps/desktop/e2e/parity-r2-pano.electron.spec.ts:57:24
+    Error Context: test-results/parity-r2-pano.electron-进展-8bb3d-的是现在的开始时刻、已跑几秒-不是演示时钟-02-16-electron/error-context.md
+[2/2] [electron] › e2e/parity-r2-pano.electron.spec.ts:70:1 › 停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、卡在哪,全景卡也写无进展
+  2) [electron] › e2e/parity-r2-pano.electron.spec.ts:70:1 › 停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、卡在哪,全景卡也写无进展 
+    Error: expect(locator).toHaveAttribute(expected) failed
+    Locator:  getByTestId('chat-column').locator('[data-testid^="compute-line-"]').filter({ hasText: '慢慢整理资料' })
+    Expected: "stalled"
+    Received: "running"
+    Timeout:  45000ms
+    Call log:
+      - Expect "toHaveAttribute" getByTestId('chat-column').locator('[data-testid^="compute-line-"]').filter({ hasText: '慢慢整理资料' }) with timeout 45000ms
+      - waiting for getByTestId('chat-column').locator('[data-testid^="compute-line-"]').filter({ hasText: '慢慢整理资料' })
+        93 × locator resolved to <button type="button" data-cver="1" data-state="running" data-testid="compute-line-t-mwf6lppg-3" class="select-none items-center whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform] duration-fast ease-out active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-1 focus
+           - unexpected value "running"
+      80 |     // 让界面的钟往后拨 11 分钟(只拨 Date.now,不动后端):最近一条进度还是刚才那条,于是算出 11 分钟没动静
+      81 |     await win.evaluate(() => { const real = Date.now.bind(Date); Date.now = () => real() + 11 * 60_000; });
+    > 82 |     await expect(line).toHaveAttribute("data-state", "stalled", { timeout: 45_000 });
+         |                        ^
+      83 |     await expect(line).toContainText(/1[12] 分钟没动静 · 卡在「第 [12] 步 · /);
+      84 |     await shot(win, "stall-line");
+      85 |     await win.getByTestId("nav-activity").click();
+        at /workspace/728/wt-dbp-pano/apps/desktop/e2e/parity-r2-pano.electron.spec.ts:82:24
+    Error Context: test-results/parity-r2-pano.electron-停滞-69861-那一行原地变黄写明多久没动静、卡在哪-全景卡也写无进展-electron/error-context.md
+  2 failed
+    [electron] › e2e/parity-r2-pano.electron.spec.ts:42:1 › 进展全景按真实时钟算:连后端时在跑的 Compute 写的是现在的开始时刻、已跑几秒,不是演示时钟 02:16 
+    [electron] › e2e/parity-r2-pano.electron.spec.ts:70:1 › 停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、卡在哪,全景卡也写无进展 
+[box] 用了 box2;云端残留进程:0

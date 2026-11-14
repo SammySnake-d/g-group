@@ -4,7 +4,8 @@ import { DEMO_CLOCK, DEMO_COMPUTES, DEMO_SUBS, LEDGER, type DemoCompute } from '
 
 /*
   把 app 现有的会话、联系人、Compute、待你处理映射成看板的台账(@g-group/ui-core 的 BoardWorld)。
-  data.ts 的时间是「HH:MM」和「4 分钟」这样的字符串,这里按演示时钟换成时刻;缺的台账字段从 demo.ts 按 compute id 取。
+  演示模式:data.ts 的时间是「HH:MM」和「4 分钟」这样的字符串,这里按演示时钟换成时刻;缺的台账字段从 demo.ts 按 compute id 取。
+  连着后端:时刻用任务带来的真实时刻(Compute.startedAt / lastAt / endedAt),「现在」是真实时钟,不混演示数据。
 */
 
 const MIN = 60_000
@@ -53,13 +54,14 @@ function askOf(c: Pick<Compute, 'id' | 'status' | 'reportMsg' | 'needsHuman' | '
 
 const STATE: Record<Compute['status'], UnitState> = { running: 'running', waiting: 'waiting_user', error: 'failed', done: 'done', stopped: 'interrupted' }
 
-function fromApp(c: Compute, convs: Conversation[], pending: Pending[], now: number): ComputeUnit {
-  const led = LEDGER[c.id]
+function fromApp(c: Compute, convs: Conversation[], pending: Pending[], now: number, real: boolean): ComputeUnit {
+  /* 连上后端:台账补充字段是演示数据,不拿来补;时刻用任务带来的真实时刻,不按「时:分」和演示时钟猜 */
+  const led = real ? undefined : LEDGER[c.id]
   const ask = askOf(c, pending, led?.askPending)
-  const lastAct = clockAt(c.activity[c.activity.length - 1]?.at, now)
+  const lastAct = real ? (c.lastAt ?? c.startedAt ?? null) : clockAt(c.activity[c.activity.length - 1]?.at, now)
   const live = c.status === 'running' || c.status === 'waiting'
-  const endedAt = live ? undefined : (lastAct ?? now)
-  const startedAt = (endedAt ?? now) - elapsedMs(c.elapsed)
+  const endedAt = live ? undefined : real ? (c.endedAt ?? lastAct ?? now) : (lastAct ?? now)
+  const startedAt = real ? (c.startedAt ?? lastAct ?? now) : (endedAt ?? now) - elapsedMs(c.elapsed)
   const state = ask && c.status === 'running' ? 'waiting_user' : STATE[c.status]
   return {
     id: c.id, conv: c.conv, owner: c.owner, title: c.title, model: c.model, upstream: led?.upstream ?? c.harness,
@@ -95,15 +97,16 @@ function toConv(c: Conversation): BoardConv {
 
 export interface AppSlice { computes: Record<string, Compute>; convs: Conversation[]; pending: Pending[]; people: Record<PersonId, Person> }
 
-/** app 状态 → 看板台账。只收所属对话还在、联系人还在的 Compute;子任务跟着父 Compute 走 */
-export function toWorld({ computes, convs, pending, people }: AppSlice, now: number): BoardWorld {
+/** app 状态 → 看板台账。只收所属对话还在、联系人还在的 Compute;子任务跟着父 Compute 走。
+ *  real:连着后端——只收后端的任务,不混演示的补充 Compute 和子任务,时刻按真实时钟(now 由调用方给 Date.now()) */
+export function toWorld({ computes, convs, pending, people }: AppSlice, now: number, real = false): BoardWorld {
   const known = new Set(convs.map((c) => c.id))
   const units = [
-    ...Object.values(computes).map((c) => fromApp(c, convs, pending, now)),
-    ...DEMO_COMPUTES.map((d) => fromDemo(d, pending, now)),
+    ...Object.values(computes).map((c) => fromApp(c, convs, pending, now, real)),
+    ...(real ? [] : DEMO_COMPUTES.map((d) => fromDemo(d, pending, now))),
   ].filter((u) => known.has(u.conv) && people[u.owner])
   const parents = new Set(units.map((u) => u.id))
-  const subs: SubUnit[] = DEMO_SUBS.filter((s) => parents.has(s.parent)).map((s) => ({
+  const subs: SubUnit[] = (real ? [] : DEMO_SUBS).filter((s) => parents.has(s.parent)).map((s) => ({
     id: s.id, parent: s.parent, kind: s.kind, title: s.title, state: s.state,
     startedAt: now - s.started * MIN, lastProgressAt: now - (s.last ?? s.ended ?? s.started) * MIN,
     ...(s.ended !== undefined ? { endedAt: now - s.ended * MIN } : {}),

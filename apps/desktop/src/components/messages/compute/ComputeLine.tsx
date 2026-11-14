@@ -9,6 +9,7 @@ import { broken } from '@/mut'
 import { Button } from '@/components/ui/button'
 import { Pressable } from '../Pressable'
 import { StatusDot } from './StatusDot'
+import { stuckAt } from '@/components/compute/idle'
 import { useComputeView } from './useComputeView'
 import { useFailChoices } from './useFailChoices'
 import { OpenSessionButton } from './ComputeCardFor'
@@ -31,7 +32,7 @@ export function ComputeLine({ id }: { id: string }) {
   if (view === 'stalled') return (
     <div className={WITH_END}><Pressable data-testid={`compute-line-${id}`} data-state="stalled" onClick={open} className={`${LINE} bg-warm-soft py-0.5 pl-2 pr-2.5`}>
       <PauseCircle className="h-3.5 w-3.5 text-warm" /><span className="truncate font-medium">{c.title}</span>
-      <span className="shrink-0 text-warm">· <span className="tabular-nums">{c.idleMin}</span> 分钟没动静 · 卡在「{c.steps.find((x) => x.state === 'now')?.text}」</span>
+      <span className="shrink-0 text-warm">· <span className="tabular-nums">{c.idleMin}</span> 分钟没动静{stuckAt(c) ? <> · 卡在「{stuckAt(c)}」</> : null}</span>
     </Pressable><OpenSessionButton id={id} /></div>
   )
 
