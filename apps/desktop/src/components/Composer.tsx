@@ -58,6 +58,13 @@ export function Composer({ conv, draft, setDraft, quotes, onRemoveQuote, onSend,
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); slash.submit() }
   }
 
+  const onPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const images = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith('image/'))
+    if (!images.length) return
+    e.preventDefault()
+    for (const file of images) void sendFile(file.name || `粘贴图片-${Date.now()}.png`, 'asset', `${(file.size / 1024).toFixed(0)} KB · 你粘贴的`, file)
+  }
+
   const { inv, menuOpen, token } = slash
   const canSend = inv ? inv.ok : !!draft.trim() || quotes.length > 0
   const ghost = inv && !menuOpen && !tall && caret >= draft.length && !inv.extra && inv.args.some((a) => a.value === undefined)
@@ -85,6 +92,7 @@ export function Composer({ conv, draft, setDraft, quotes, onRemoveQuote, onSend,
             onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
             onFocus={(e) => { setFocused(true); setCaret(e.currentTarget.selectionStart) }}
             onKeyDown={onKeyDown}
+            onPaste={onPaste}
             onBlur={() => { setFocused(false); setTimeout(at.close, 120) }}
             placeholder={peer ? `给 ${conv.title} 发消息，/ 用命令` : '发消息，@ 交给助手，/ 用命令'}
             className="relative block w-full resize-none overflow-hidden bg-transparent py-2 text-[14.5px] leading-[1.6] outline-none placeholder:text-fg-3"
