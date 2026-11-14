@@ -884,7 +884,7 @@ export const CASES: Case[] = [
     if (o.allowed.join(",") !== "codex,astra,claude,argon") bad.push(`allowedReviewers 变成 ${o.allowed}`);
     if (o.harness !== "codex" || o.codex !== "codex") bad.push(`harnessOf 变成 ${o.harness}/${o.codex}`);
     if (o.ctx.join(",") !== "trusted-gates,provenance,self-check") bad.push(`PROTECTED_CONTEXTS 变成 ${o.ctx}`);
-    if (o.layers.join(",") !== "domain,kernel,adapter,plugin,app") bad.push(`LAYERS 变成 ${o.layers}`);
+    if (o.layers.join(",") !== "domain,kernel,process,adapter,plugin,app") bad.push(`LAYERS 变成 ${o.layers}`);
     if (Object.keys(o.scripts).length !== 3 || o.scripts.test === "true") bad.push(`REQUIRED_GATE_SCRIPTS 变成 ${JSON.stringify(o.scripts)}`);
     if (o.harnesses.join(",") !== "claude,codex,pi") bad.push(`HARNESSES 变成 ${o.harnesses}`);
     if (!o.review.some((m) => m.includes("审查人必须是"))) bad.push(`改了导出名单后 unlisted 审查人被放行:${JSON.stringify(o.review)}`);
@@ -1104,6 +1104,22 @@ export const CASES: Case[] = [
   { name: "PR 的 workflow 用 pull_request_target", head: { ...HEAD_OK, ".github/workflows/x.yml": "on: pull_request_target\njobs: {}\n" }, expect: "用了 pull_request_target" },
   { name: "删掉 trusted-gates.yml", head: { ...HEAD_OK, ".github/workflows/trusted-gates.yml": null }, expect: "缺 .github/workflows/trusted-gates.yml" },
 
+  { name: "Q08 合规:adapter 只新增依赖 process 工具层", head: { ...HEAD_OK,
+    "packages/proc/package.json": PKG("@g-group/proc", "process"),
+    "packages/proc/src/index.ts": "export const cleanup = 1;\n",
+    "packages/ad/package.json": PKG("@g-group/ad", "adapter", { dependencies: { "@g-group/proc": "*" } }),
+    "packages/ad/src/index.ts": 'export { cleanup } from "@g-group/proc";\n' }, expect: null },
+  { name: "Q08 adapter 仍不能依赖另一个 adapter", head: { ...HEAD_OK,
+    "packages/a/package.json": PKG("@g-group/a", "adapter"),
+    "packages/b/package.json": PKG("@g-group/b", "adapter"),
+    "packages/a/src/index.ts": 'import "@g-group/b";\n' }, expect: "不能依赖 adapter" },
+  { name: "Q08 kernel 不能取得 process 工具", head: { ...HEAD_OK,
+    "packages/proc/package.json": PKG("@g-group/proc", "process"),
+    "packages/k/package.json": PKG("@g-group/k", "kernel"),
+    "packages/k/src/index.ts": 'import "@g-group/proc";\n' }, expect: "不能依赖 process" },
+  { name: "Q08 domain 不能取得 process 工具", head: { ...HEAD_OK,
+    "packages/proc/package.json": PKG("@g-group/proc", "process"),
+    "packages/core/src/bad.ts": 'import "@g-group/proc";\n' }, expect: "不能依赖 process" },
   { name: "领域层反向依赖内核", head: { ...HEAD_OK, "packages/kern/package.json": PKG("@g-group/kern", "kernel"), "packages/kern/src/k.ts": "export const k = 1;\n", "packages/core/src/bad.ts": `import { k } from "@g-group/kern";\nexport const b = k;\n` }, expect: "不能依赖 kernel" },
   { name: "插件依赖另一个插件", head: { ...HEAD_OK, "packages/p1/package.json": PKG("@g-group/plugin-a", "plugin"), "packages/p2/package.json": PKG("@g-group/plugin-b", "plugin"), "packages/p2/src/x.ts": "export const x = 1;\n", "packages/p1/src/y.ts": `import { x } from "@g-group/plugin-b";\nexport const y = x;\n` }, expect: "不能依赖 plugin" },
   { name: "相对路径跨包", head: { ...HEAD_OK, "packages/kern/package.json": PKG("@g-group/kern", "kernel"), "packages/kern/src/k.ts": `import { add } from "../../core/src/add.ts";\nexport const k = add;\n` }, expect: "跨出了包" },

@@ -716,10 +716,10 @@ export const workflow: Gate = {
 };
 
 // ---------------------------------------------------------------- 插件化分层
-export const LAYERS = deepFreeze(["domain", "kernel", "adapter", "plugin", "app"] as const);
+export const LAYERS = deepFreeze(["domain", "kernel", "process", "adapter", "plugin", "app"] as const);
 type Layer = (typeof LAYERS)[number];
 const ALLOWED: Record<Layer, Layer[]> = {
-  domain: [], kernel: ["domain"], adapter: ["domain", "kernel"], plugin: ["domain", "kernel"], app: ["domain", "kernel", "adapter", "plugin"],
+  domain: [], kernel: ["domain"], process: [], adapter: ["domain", "kernel", "process"], plugin: ["domain", "kernel"], app: ["domain", "kernel", "adapter", "plugin"],
 };
 type Manifest = { name?: string; gGroup?: { layer?: string } } & Partial<Record<"dependencies" | "devDependencies" | "peerDependencies" | "optionalDependencies", Record<string, string>>>;
 

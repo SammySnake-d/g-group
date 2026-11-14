@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "exports": { ".": "./src/index.ts", "./resident": "./src/resident-entry.ts" },
-  "dependencies": { "@g-group/domain": "*", "@g-group/kernel": "*" },
+  "dependencies": { "@g-group/domain": "*", "@g-group/kernel": "*", "@g-group/process-tools": "*" },
   "gGroup": { "layer": "adapter" }
 }
