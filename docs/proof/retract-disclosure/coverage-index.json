@@ -1,0 +1,76 @@
+{
+  "scope": "AC-08 / Q12 retract disclosure candidate only; author proof, not acceptance",
+  "tested_source": "80aa646bea7a9ae7b403af16e604192dca3a67f8",
+  "tested_content_hash": "ae7af5bd8e0dda2cd389eae18d50c452f1bdd5f46bd25a3df46e75ec9105ed73",
+  "base": "c56dae7e3e3f564a4f5080712bfdde92081789d2",
+  "red": "98da21c02560c23ef14fc5c7667b464bbe4adf46",
+  "merged_dependency_71": "c7d1a2dd3671c2a2289a5cd4b3b673a9f1bb9f29",
+  "original_four_tests_preserved": true,
+  "original_four_test_sha256": "fa59007613a6db02dc87d03674ded9783bb198666e6411e24994d82b1c49dd3d",
+  "cloud_run": {
+    "host": "box4",
+    "queue_pid": 636890,
+    "state": "finished",
+    "runner_exit": 1
+  },
+  "same8": {
+    "red": {
+      "pass": 4,
+      "fail": 4,
+      "error": "4 named ERR_ASSERTION failures"
+    },
+    "green": {
+      "pass": 8,
+      "fail": 0
+    }
+  },
+  "mutations": {
+    "total": 12,
+    "killed": 12,
+    "tests_per_mutant": 4,
+    "all_targets_raw_ERR_ASSERTION_verified": true,
+    "collateral_failures": "preserved verbatim in cloud-out/mutations/mutations.json"
+  },
+  "dependency_regression": {
+    "pass": 14,
+    "fail": 0
+  },
+  "full": {
+    "pass": 1503,
+    "fail": 0
+  },
+  "typecheck_exit": 0,
+  "lint_exit": 0,
+  "frozen_tracked_files": 523,
+  "frozen_files_unchanged_before_proof_commit": true,
+  "official_gates": {
+    "exit": 1,
+    "green": [
+      "G-TRACE",
+      "G-WORKFLOW",
+      "G-LAYER"
+    ],
+    "red": [
+      "G-REVIEW",
+      "G-RED",
+      "G-STUB",
+      "G-TAUTO"
+    ],
+    "G-PROVENANCE": "review=null short circuit; not substantive provenance verification",
+    "runtime_named_test_counts": 0
+  },
+  "chronology": "Last two tests are post-patch expanded red replay, not historical test-first proof. See receipt red_snapshot_chronology.",
+  "remaining": [
+    "Docker runtime gates not proved runnable; keep all actual errors",
+    "Full Q12: unreported external effects, follow-up source association and R-Rule",
+    "Independent cross-vendor review and substantive provenance verification",
+    "Real-model / CLI / UI acceptance; Compute here is deterministic fixture"
+  ],
+  "evidence": {
+    "raw_result": "docs/proof/retract-disclosure/cloud-out/result.json",
+    "raw_gate_log": "docs/proof/retract-disclosure/cloud-out/mechanical-gates.log",
+    "mutation_detail": "docs/proof/retract-disclosure/cloud-out/mutations/mutations.json",
+    "freeze": "docs/proof/retract-disclosure/cloud-out/freeze.json",
+    "baseline_verification": "docs/proof/retract-disclosure/author-baseline-verification.json"
+  }
+}

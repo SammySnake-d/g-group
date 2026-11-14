@@ -1,0 +1,62 @@
+TAP version 13
+# Subtest: RD01 retract disclosure is a durable host fact naming the affected task and completed ledger outcome
+not ok 1 - RD01 retract disclosure is a durable host fact naming the affected task and completed ledger outcome
+  ---
+  duration_ms: 182.09298
+  type: 'test'
+  location: '/workspace/req-retract-disclosure-20261113/tmp/gg-retract-disclosure-mut-vGaSrS/m6/packages/server/src/retract-disclosure.test.ts:21:1'
+  failureType: 'testCodeFailure'
+  error: 'the outcome comes from the persisted ledger'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/req-retract-disclosure-20261113/tmp/gg-retract-disclosure-mut-vGaSrS/m6/packages/server/src/retract-disclosure.test.ts:54:12)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: RD02 retracting effect-free chat emits no irreversible-effect warning even when another task in the room completed
+ok 2 - RD02 retracting effect-free chat emits no irreversible-effect warning even when another task in the room completed
+  ---
+  duration_ms: 147.85126
+  type: 'test'
+  ...
+# Subtest: RD03 equal sequence in another room is not provenance, and disclosure never copies withdrawn source text
+not ok 3 - RD03 equal sequence in another room is not provenance, and disclosure never copies withdrawn source text
+  ---
+  duration_ms: 140.09954
+  type: 'test'
+  location: '/workspace/req-retract-disclosure-20261113/tmp/gg-retract-disclosure-mut-vGaSrS/m6/packages/server/src/retract-disclosure.test.ts:95:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(notices[0] .text.includes("ready.txt"))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/req-retract-disclosure-20261113/tmp/gg-retract-disclosure-mut-vGaSrS/m6/packages/server/src/retract-disclosure.test.ts:118:12)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: RD04 failed durable notice append rolls back the retract itself and emits no phantom live notice
+ok 4 - RD04 failed durable notice append rolls back the retract itself and emits no phantom live notice
+  ---
+  duration_ms: 133.00869
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 2
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 961.6232

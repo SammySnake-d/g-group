@@ -1,0 +1,38 @@
+{
+  "slice": "AC-08撤回已完成任务来源时的宿主事实披露;叠#73 c56dae7e,整支并入#71 c7d1a2dd;仅新增appendUserEvent内的持久披露,不改runRound/清洗实现/任务T5状态",
+  "acceptance": [
+    {
+      "id": "AC-08",
+      "status": "未测",
+      "reason": "完整AC-08尚未验收；本片box4同run636890复核：同体8项4绿/4具名断言红→8绿，12变异各完整4项且目标具名断言kill；依赖14/14、typecheck/lint exit0、full1503/1503。官方门禁exit1，runtime计数0及独审未签。未上报副作用、follow-up来源/R-Rule与实模/CLI/UI仍缺证；不以本片代全量验收。",
+      "evidence": "docs/proof/retract-disclosure/coverage-index.json"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:76d2c467-4626-4ff1-a5d3-54c5be6b3de7",
+    "model": "gpt-6.1-sol"
+  },
+  "red": {
+    "commit": "98da21c02560c23ef14fc5c7667b464bbe4adf46"
+  },
+  "review": {
+    "agent": "claude",
+    "session": "claude:618640cf-092c-44c3-8b19-306bb572d0d0",
+    "model": "group/opus",
+    "verdict": "reject",
+    "reviewed_hash": "2e914a990a3944c56975e9811296dc720df8dbbe3bf359cf39bac9e7b05e6d99",
+    "notes": "第 1 轮 REJECT,详见 reviews/feat-retract-side-effect-disclosure.md。作者数字全部复现(box2:typecheck/lint 0、同体 8 项 HEAD 8/8、红提交 98da21c0 上 4 过 4 具名断言红、依赖 14/14、全量 1503/1503 无 skip/todo、12 变异全杀;本机门禁自检 219/219 真实 exit 0;本机 seatbelt --local exit 1,G-RED 16 项与作者日志逐字相同)。生产改动只有 appendUserEvent 撤回分支 +18/−1,事实来源正确(探针证实只取宿主任务出处与完成台账,不读联系人自述)。拒绝原因:R1-01 审查人自构 8 个单点故障(披露读联系人自述、失败也报完成、跨任务串源、披露后删台账等)在本片 8 项和全部产品包测试 1495 条下全部存活;R1-02 本片 RC01/RC02/RC04/RD02 在红提交上本来就通过,G-RED 红,按原则 71 做变异校准红或拆出。另:R1-04(返修必修,非本轮拒绝理由)已发生只认完成记录,比 rewind 的「运行过的 Compute」口径窄,Compute 失败或还在跑时撤回不披露;R1-03 收据与 coverage-index 仍写容器那轮的 STUB/TAUTO 红。G-RED 另 12 项来自整支并入的未审 #71,不改门禁、不出豁免,#71 先独立审(作者 Claude,须 Codex/Astra 审),本轮不替 #71 背书。原「需拍板」三项按用户 DM#3361 由审查人对照文档定了,无留给用户的项。hy4 辅审因线路 403 未产出,本轮无辅审。"
+  },
+  "waiver": null,
+  "review_status": "待Mira Bot安排Claude独立跨厂商审查;作者不自签",
+  "unverifiable": "AC-08: Compute为确定性适配器夹具,外部文件写入是真实持久事实,不是真模型/CLI证明。通知只报告宿主已持久化的completed事实,无法推断未上报的外部副作用。任务补充/续接来源关联、R-Rule失效与整套前端未在本片证明。通知落聊天system消息与措辞是候选;任务停T5如实保持。",
+  "notes": {
+    "coordination": "Mira Bot #3038/#3040;box4同heavy.lock,防回环→额度→本片→Q05→Q08;不动#71/#73原分支",
+    "original_witness": "ceaa35359bc33ea68ead1da37c8cc33634a3917e原proof副本未改;原四项测试sha fa59007613a6db02dc87d03674ded9783bb198666e6411e24994d82b1c49dd3d",
+    "provenance": "本机原生session01a1cfc8-db89-7400-b3de-876bd8478982 turn_context.model实际读取gpt-6.1-sol;G-PROVENANCE在review=null时未实核",
+    "red_snapshot_chronology": "初始6项的真实4绿/2红记录在dbb9744f之前;另外两条隐私/原子控制在产品补丁后扩展,再把最终同体8项放回依赖-only实现98da21c0实跑4绿/4红;不伪称8项全是补丁之前写的。",
+    "cloud_proof": "docs/proof/retract-disclosure/coverage-index.json",
+    "author_closeout": "仅补原80aa646b的证明与本分支收据；生产/测试/变异冻结。最终证据提交HEAD与hash存包外置manifest，不自引用。原run整体exit1；正式门禁失败不豁免，G-PROVENANCE未实核。"
+  }
+}

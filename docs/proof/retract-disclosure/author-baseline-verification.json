@@ -1,0 +1,101 @@
+{
+  "head": "80aa646bea7a9ae7b403af16e604192dca3a67f8",
+  "raw_log_checks": [
+    {
+      "step": "clone",
+      "sha256": "a4733199b99c94e88e32b25a2ae93378ae564a43d6fe18424319232fb1a3366d",
+      "matches": true,
+      "exit": 0,
+      "timed_out": false
+    },
+    {
+      "step": "checkout",
+      "sha256": "c10aebd92376e66103089a2eacdf60a74f9a5bb9d87f82638a67d08dc9fa090a",
+      "matches": true,
+      "exit": 0,
+      "timed_out": false
+    },
+    {
+      "step": "red-worktree",
+      "sha256": "42e2b88b83288479e2af557481208fdf658f32d2bb0653c55512c1ed77f3ee69",
+      "matches": true,
+      "exit": 0,
+      "timed_out": false
+    },
+    {
+      "step": "npm-green",
+      "sha256": "c57a2fe32ed3d11f9389ae68ccd1ea2ea3437edc660036ae26c033f5c9d04404",
+      "matches": true,
+      "exit": 0,
+      "timed_out": false
+    },
+    {
+      "step": "npm-red",
+      "sha256": "e0016a54c10b7166801e47f06ef1413ea9dd3cae6c577563efdd2847691d7ebe",
+      "matches": true,
+      "exit": 0,
+      "timed_out": false
+    },
+    {
+      "step": "same-eight-red",
+      "sha256": "28bd1b487d52dee1b9b47cdddd680c4f09126e06e5f8db8f955178315f505db3",
+      "matches": true,
+      "exit": 1,
+      "timed_out": false
+    },
+    {
+      "step": "same-eight-green",
+      "sha256": "d1c0bf72a2c5d493a30c41e1a354c0246eb28e75bd2078915176ce8257fd3a95",
+      "matches": true,
+      "exit": 0,
+      "timed_out": false
+    },
+    {
+      "step": "mutations",
+      "sha256": "031740c8c28dd8be97ed76f6f78d8abe1787b0c859eb6eab940401ccb90e4eff",
+      "matches": true,
+      "exit": 0,
+      "timed_out": false
+    },
+    {
+      "step": "dependency-regression",
+      "sha256": "509934f1c3ca99856234a44a90cba4e917c53cbb61e633bbf619fdef76dfc96e",
+      "matches": true,
+      "exit": 0,
+      "timed_out": false
+    },
+    {
+      "step": "typecheck",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matches": true,
+      "exit": 0,
+      "timed_out": false
+    },
+    {
+      "step": "lint",
+      "sha256": "62e6d5f0f58ffd216623c3ad29527a3503e746bfb94428aa83fae38ac7c6e72f",
+      "matches": true,
+      "exit": 0,
+      "timed_out": false
+    },
+    {
+      "step": "full",
+      "sha256": "ba33c4335e546fc2caf3a7f15494da95ede75d5e354d604f1232b00239cdb5c8",
+      "matches": true,
+      "exit": 0,
+      "timed_out": false
+    },
+    {
+      "step": "mechanical-gates",
+      "sha256": "3b5a24b45cb34e1853271fdb3952af11410620c1461c7c48ada2503e25688b27",
+      "matches": true,
+      "exit": 1,
+      "timed_out": false
+    }
+  ],
+  "source_freeze_entries": 523,
+  "freeze_mismatches": [],
+  "original_four_test_sha256": "fa59007613a6db02dc87d03674ded9783bb198666e6411e24994d82b1c49dd3d",
+  "original_four_byte_identical": true,
+  "original_witness": "ceaa35359bc33ea68ead1da37c8cc33634a3917e"
+}

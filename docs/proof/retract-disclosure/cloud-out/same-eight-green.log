@@ -1,0 +1,60 @@
+TAP version 13
+# Subtest: RC01 messages.retract: an in-flight draft derived from the retracted source must not reach chat
+ok 1 - RC01 messages.retract: an in-flight draft derived from the retracted source must not reach chat
+  ---
+  duration_ms: 124.45039
+  type: 'test'
+  ...
+# {"sourceSeq":1,"retracted":true,"obsoleteReplySeqs":[],"messageCount":1}
+# Subtest: RC02 positive control: the same live source really publishes its derived reply without a retract
+ok 2 - RC02 positive control: the same live source really publishes its derived reply without a retract
+  ---
+  duration_ms: 67.91972
+  type: 'test'
+  ...
+# Subtest: RC03 messages.retract: an already-written external artifact stays real and the user gets an explicit cannot-retract hint
+ok 3 - RC03 messages.retract: an already-written external artifact stays real and the user gets an explicit cannot-retract hint
+  ---
+  duration_ms: 169.54931
+  type: 'test'
+  ...
+# {"sourceSeq":1,"artifactStillPresent":true,"writes":1,"taskStates":["T5_InReview"],"visibleText":["","接了任务:写入一个工件","好的,我安排 Compute 去写入一个工件,有进度告诉你。","做完了:已写入工件","撤回 \#1。任务 t-mwds4iw8-3 / Compute cp-1 于 2026-11-12T16:45:45.534Z 已报告完成:已写入工件。该记录中已发生的副作用无法撤回;撤回消息不等于撤销外部操作。","收到:(撤回了 \#1)"]}
+# Subtest: RC04 deleting K retains an independent later requirement N in state-note context across restart
+ok 4 - RC04 deleting K retains an independent later requirement N in state-note context across restart
+  ---
+  duration_ms: 144.05846
+  type: 'test'
+  ...
+# Subtest: RD01 retract disclosure is a durable host fact naming the affected task and completed ledger outcome
+ok 5 - RD01 retract disclosure is a durable host fact naming the affected task and completed ledger outcome
+  ---
+  duration_ms: 226.12511
+  type: 'test'
+  ...
+# Subtest: RD02 retracting effect-free chat emits no irreversible-effect warning even when another task in the room completed
+ok 6 - RD02 retracting effect-free chat emits no irreversible-effect warning even when another task in the room completed
+  ---
+  duration_ms: 243.049
+  type: 'test'
+  ...
+# Subtest: RD03 equal sequence in another room is not provenance, and disclosure never copies withdrawn source text
+ok 7 - RD03 equal sequence in another room is not provenance, and disclosure never copies withdrawn source text
+  ---
+  duration_ms: 108.66402
+  type: 'test'
+  ...
+# Subtest: RD04 failed durable notice append rolls back the retract itself and emits no phantom live notice
+ok 8 - RD04 failed durable notice append rolls back the retract itself and emits no phantom live notice
+  ---
+  duration_ms: 147.4054
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1970.03055

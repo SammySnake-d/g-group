@@ -1,0 +1,95 @@
+TAP version 13
+# Subtest: RD01 retract disclosure is a durable host fact naming the affected task and completed ledger outcome
+ok 1 - RD01 retract disclosure is a durable host fact naming the affected task and completed ledger outcome
+  ---
+  duration_ms: 184.06333
+  type: 'test'
+  ...
+# Subtest: RD02 retracting effect-free chat emits no irreversible-effect warning even when another task in the room completed
+ok 2 - RD02 retracting effect-free chat emits no irreversible-effect warning even when another task in the room completed
+  ---
+  duration_ms: 184.58976
+  type: 'test'
+  ...
+# Subtest: RD03 equal sequence in another room is not provenance, and disclosure never copies withdrawn source text
+not ok 3 - RD03 equal sequence in another room is not provenance, and disclosure never copies withdrawn source text
+  ---
+  duration_ms: 160.49034
+  type: 'test'
+  location: '/workspace/req-retract-disclosure-20261113/tmp/gg-retract-disclosure-mut-vGaSrS/m2/packages/server/src/retract-disclosure.test.ts:95:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   {
+    +     at: '2026-11-12T16:45:52.240Z',
+    +     attachments: [],
+    +     card: null,
+    +     clientActionId: null,
+    +     command: null,
+    +     edited: false,
+    +     mentions: [],
+    +     quotedSeqs: [],
+    +     quotes: [],
+    +     reactions: [],
+    +     replyToSeq: null,
+    +     retracted: false,
+    +     roomId: 'dm-c-mwds4o1k-2',
+    +     sender: {
+    +       id: 'host',
+    +       kind: 'system'
+    +     },
+    +     seq: 4,
+    +     text: '撤回 #1。任务 t-mwds4o1z-4 / Compute cp-1 于 2026-11-12T16:45:52.213Z 已报告完成:输出 ready.txt; 原要求:帮我完成NEUTRAL_WITHDRAWN_SOURCE_WITH_PRIVATE_DETAIL。该记录中已发生的副作用无法撤回;撤回消息不等于撤销外部操作。',
+    +     threadRootSeq: null
+    +   }
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      roomId: 'dm-c-mwds4o1k-2'
+      seq: 4
+      threadRootSeq: ~
+      sender:
+        kind: 'system'
+        id: 'host'
+      text: '撤回 #1。任务 t-mwds4o1z-4 / Compute cp-1 于 2026-11-12T16:45:52.213Z 已报告完成:输出 ready.txt; 原要求:帮我完成NEUTRAL_WITHDRAWN_SOURCE_WITH_PRIVATE_DETAIL。该记录中已发生的副作用无法撤回;撤回消息不等于撤销外部操作。'
+      mentions:
+      replyToSeq: ~
+      quotedSeqs:
+      quotes:
+      attachments:
+      card: ~
+      command: ~
+      reactions:
+      edited: false
+      retracted: false
+      clientActionId: ~
+      at: '2026-11-12T16:45:52.240Z'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/req-retract-disclosure-20261113/tmp/gg-retract-disclosure-mut-vGaSrS/m2/packages/server/src/retract-disclosure.test.ts:113:12)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: RD04 failed durable notice append rolls back the retract itself and emits no phantom live notice
+ok 4 - RD04 failed durable notice append rolls back the retract itself and emits no phantom live notice
+  ---
+  duration_ms: 211.96517
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1128.54489

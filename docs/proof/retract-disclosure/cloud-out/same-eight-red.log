@@ -1,0 +1,120 @@
+TAP version 13
+# Subtest: RC01 messages.retract: an in-flight draft derived from the retracted source must not reach chat
+ok 1 - RC01 messages.retract: an in-flight draft derived from the retracted source must not reach chat
+  ---
+  duration_ms: 208.37292
+  type: 'test'
+  ...
+# {"sourceSeq":1,"retracted":true,"obsoleteReplySeqs":[],"messageCount":1}
+# Subtest: RC02 positive control: the same live source really publishes its derived reply without a retract
+ok 2 - RC02 positive control: the same live source really publishes its derived reply without a retract
+  ---
+  duration_ms: 48.324829
+  type: 'test'
+  ...
+# Subtest: RC03 messages.retract: an already-written external artifact stays real and the user gets an explicit cannot-retract hint
+not ok 3 - RC03 messages.retract: an already-written external artifact stays real and the user gets an explicit cannot-retract hint
+  ---
+  duration_ms: 96.35182
+  type: 'test'
+  location: '/workspace/req-retract-disclosure-20261113/red/packages/server/src/retract-composition.test.ts:90:1'
+  failureType: 'testCodeFailure'
+  error: 'AC-08: the real retract response/chat must explicitly disclose already-happened, cannot-retract effects'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: '{"result":{"ok":true,"value":{"roomId":"dm-c-mwds4hem-1","seq":1,"threadRootSeq":null,"sender":{"kind":"user","id":"me"},"text":"","mentions":[],"replyToSeq":null,"quotedSeqs":[],"quotes":[],"attachments":[],"card":null,"command":null,"reactions":[],"edited":false,"retracted":true,"clientActionId":"rc-effects","at":"2026-11-12T16:45:43.584Z"}},"messages":[{"roomId":"dm-c-mwds4hem-1","seq":1,"threadRootSeq":null,"sender":{"kind":"user","id":"me"},"text":"","mentions":[],"replyToSeq":null,"quotedSeqs":[],"quotes":[],"attachments":[],"card":null,"command":null,"reactions":[],"edited":false,"retracted":true,"clientActionId":"rc-effects","at":"2026-11-12T16:45:43.584Z"},{"roomId":"dm-c-mwds4hem-1","seq":2,"threadRootSeq":null,"sender":{"kind":"contact","id":"c-mwds4hem-1"},"text":"接了任务:写入一个工件","mentions":[],"replyToSeq":1,"quotedSeqs":[1],"quotes":[{"seq":1,"senderName":"我","excerpt":"","state":"retracted"}],"attachments":[],"card":{"kind":"task-status","cardId":"card-mwds4hev-4","taskId":"t-mwds4heu-3","title":"写入一个工件","body":"写入一个工件","state":"open","actions":[{"actionId":"cancel","label":"取消任务","style":"danger"}]},"command":null,"reactions":[],"edited":false,"retracted":false,"clientActionId":null,"at":"2026-11-12T16:45:43.591Z"},{"roomId":"dm-c-mwds4hem-1","seq":3,"threadRootSeq":null,"sender":{"kind":"contact","id":"c-mwds4hem-1"},"text":"好的,我安排 Compute 去写入一个工件,有进度告诉你。","mentions":[],"replyToSeq":1,"quotedSeqs":[1],"quotes":[{"seq":1,"senderName":"我","excerpt":"","state":"retracted"}],"attachments":[],"card":null,"command":null,"reactions":[],"edited":false,"retracted":false,"clientActionId":null,"at":"2026-11-12T16:45:43.591Z"},{"roomId":"dm-c-mwds4hem-1","seq":4,"threadRootSeq":null,"sender":{"kind":"contact","id":"c-mwds4hem-1"},"text":"做完了:已写入工件","mentions":[{"id":"me","source":"auto"}],"replyToSeq":1,"quotedSeqs":[1],"quotes":[{"seq":1,"senderName":"我","excerpt":"","state":"retracted"}],"attachments":[],"card":null,"command":null,"reactions":[],"edited":false,"retracted":false,"clientActionId":null,"at":"2026-11-12T16:45:43.612Z"},{"roomId":"dm-c-mwds4hem-1","seq":6,"threadRootSeq":null,"sender":{"kind":"contact","id":"c-mwds4hem-1"},"text":"收到:(撤回了 #1)","mentions":[],"replyToSeq":5,"quotedSeqs":[5],"quotes":[{"seq":5,"senderName":"?","excerpt":"","state":"denied"}],"attachments":[],"card":null,"command":null,"reactions":[],"edited":false,"retracted":false,"clientActionId":null,"at":"2026-11-12T16:45:43.628Z"}]}'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/req-retract-disclosure-20261113/red/packages/server/src/retract-composition.test.ts:120:12)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# {"sourceSeq":1,"artifactStillPresent":true,"writes":1,"taskStates":["T5_InReview"],"visibleText":["","接了任务:写入一个工件","好的,我安排 Compute 去写入一个工件,有进度告诉你。","做完了:已写入工件","收到:(撤回了 \#1)"]}
+# Subtest: RC04 deleting K retains an independent later requirement N in state-note context across restart
+ok 4 - RC04 deleting K retains an independent later requirement N in state-note context across restart
+  ---
+  duration_ms: 106.681
+  type: 'test'
+  ...
+# Subtest: RD01 retract disclosure is a durable host fact naming the affected task and completed ledger outcome
+not ok 5 - RD01 retract disclosure is a durable host fact naming the affected task and completed ledger outcome
+  ---
+  duration_ms: 146.535409
+  type: 'test'
+  location: '/workspace/req-retract-disclosure-20261113/red/packages/server/src/retract-disclosure.test.ts:21:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the host, not a lucky contact reply, owns the disclosure
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/req-retract-disclosure-20261113/red/packages/server/src/retract-disclosure.test.ts:50:12)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: RD02 retracting effect-free chat emits no irreversible-effect warning even when another task in the room completed
+ok 6 - RD02 retracting effect-free chat emits no irreversible-effect warning even when another task in the room completed
+  ---
+  duration_ms: 281.67588
+  type: 'test'
+  ...
+# Subtest: RD03 equal sequence in another room is not provenance, and disclosure never copies withdrawn source text
+not ok 7 - RD03 equal sequence in another room is not provenance, and disclosure never copies withdrawn source text
+  ---
+  duration_ms: 148.731271
+  type: 'test'
+  location: '/workspace/req-retract-disclosure-20261113/red/packages/server/src/retract-disclosure.test.ts:95:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/req-retract-disclosure-20261113/red/packages/server/src/retract-disclosure.test.ts:116:12)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: RD04 failed durable notice append rolls back the retract itself and emits no phantom live notice
+not ok 8 - RD04 failed durable notice append rolls back the retract itself and emits no phantom live notice
+  ---
+  duration_ms: 89.923491
+  type: 'test'
+  location: '/workspace/req-retract-disclosure-20261113/red/packages/server/src/retract-disclosure.test.ts:123:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    do not return success after a failed disclosure append
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/req-retract-disclosure-20261113/red/packages/server/src/retract-disclosure.test.ts:141:12)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 4
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1807.510171

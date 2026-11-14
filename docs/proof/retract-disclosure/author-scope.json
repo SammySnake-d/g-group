@@ -1,0 +1,9 @@
+{
+  "state": "started",
+  "tested_source": "80aa646bea7a9ae7b403af16e604192dca3a67f8",
+  "base": "c56dae7e3e3f564a4f5080712bfdde92081789d2",
+  "scope": "proof and receipt only",
+  "production_tests_mutants": "frozen, never modify",
+  "author_acceptance": "pending, not signed",
+  "reuse_completed_cloud_run": true
+}

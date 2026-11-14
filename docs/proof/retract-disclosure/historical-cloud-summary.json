@@ -1,0 +1,67 @@
+{
+  "head": "80aa646bea7a9ae7b403af16e604192dca3a67f8",
+  "base": "c56dae7e3e3f564a4f5080712bfdde92081789d2",
+  "red": "98da21c02560c23ef14fc5c7667b464bbe4adf46",
+  "content_hash": "ae7af5bd8e0dda2cd389eae18d50c452f1bdd5f46bd25a3df46e75ec9105ed73",
+  "source_unchanged": true,
+  "counts": {
+    "same-eight-red": {
+      "tests": 8,
+      "pass": 4,
+      "fail": 4,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "same-eight-green": {
+      "tests": 8,
+      "pass": 8,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "dependency-regression": {
+      "tests": 14,
+      "pass": 14,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "full": {
+      "tests": 1503,
+      "pass": 1503,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  },
+  "mutation_summary": {
+    "total": 12,
+    "killed": 12,
+    "survived": 0
+  },
+  "mechanical_gates": {
+    "decisions": {
+      "G-PROVENANCE": true,
+      "G-TRACE": true,
+      "G-REVIEW": false,
+      "G-RED": false,
+      "G-STUB": false,
+      "G-TAUTO": false,
+      "G-WORKFLOW": true,
+      "G-LAYER": true
+    },
+    "review_null_provenance_not_substantive": true
+  },
+  "gate_run_exit": 1,
+  "complete": false,
+  "remaining": [
+    "official sandbox runtime gate tests reported zero; raw Docker execution diagnosis pending",
+    "possible true G-RED preserved-controls/whole-#71 dependency requirements remain after executor repair",
+    "independent cross-vendor review",
+    "unreported external effects, follow-up source chain and R-Rule proofs outside this slice"
+  ]
+}

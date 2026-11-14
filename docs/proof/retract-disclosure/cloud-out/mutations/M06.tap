@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: RD01 retract disclosure is a durable host fact naming the affected task and completed ledger outcome
+not ok 1 - RD01 retract disclosure is a durable host fact naming the affected task and completed ledger outcome
+  ---
+  duration_ms: 101.4146
+  type: 'test'
+  location: '/workspace/req-retract-disclosure-20261113/tmp/gg-retract-disclosure-mut-vGaSrS/m5/packages/server/src/retract-disclosure.test.ts:21:1'
+  failureType: 'testCodeFailure'
+  error: 'the notice names the real completed Compute'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/req-retract-disclosure-20261113/tmp/gg-retract-disclosure-mut-vGaSrS/m5/packages/server/src/retract-disclosure.test.ts:53:12)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: RD02 retracting effect-free chat emits no irreversible-effect warning even when another task in the room completed
+ok 2 - RD02 retracting effect-free chat emits no irreversible-effect warning even when another task in the room completed
+  ---
+  duration_ms: 243.26344
+  type: 'test'
+  ...
+# Subtest: RD03 equal sequence in another room is not provenance, and disclosure never copies withdrawn source text
+ok 3 - RD03 equal sequence in another room is not provenance, and disclosure never copies withdrawn source text
+  ---
+  duration_ms: 142.57395
+  type: 'test'
+  ...
+# Subtest: RD04 failed durable notice append rolls back the retract itself and emits no phantom live notice
+ok 4 - RD04 failed durable notice append rolls back the retract itself and emits no phantom live notice
+  ---
+  duration_ms: 95.47235
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 945.90706
