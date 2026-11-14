@@ -2,13 +2,14 @@
 // 「助手启动的程序及其子程序全部找出来关掉、确认都退出才显示已停止;交给系统后台托管的程序找不到也关不掉」)。
 // 起真实子进程:假 CLI(test-support/fake-claude.mjs)按剧本起孙进程,孙进程的副作用只写本测试目录里的中性标记文件。
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { createComputeAdapter } from "./adapter.ts";
+import { confirmStopped, treeNow } from "./stop-confirm.ts";
 import { processTable, stillAlive, treeByPgrep, treeOf } from "./procgroup.ts";
 
 const FAKE = fileURLToPath(new URL("../test-support/fake-claude.mjs", import.meta.url));
@@ -103,4 +104,76 @@ test("纯函数:ps 读不到时按 pgrep 逐层找后代与同组成员;pgrep �
   assert.deepEqual(asked, ["-P 100", "-P 101", "-P 104", "-P 102", "-g 100"]);
   assert.equal(treeByPgrep(100, (args) => (args[0] === "-g" ? null : [])), null);
   assert.equal(treeByPgrep(100, () => null), null);
+});
+
+test("CORR-001:停止前快照到的子进程随后换进程组但仍存活,不能按 pgid 变化确认退出", () => {
+  const before = { pid: 103, ppid: 100, pgid: 100, stat: "S", identity: "Sat Nov 15 04:00:00 2026" } as unknown as Parameters<typeof stillAlive>[0];
+  const after = { pid: 103, ppid: 1, pgid: 103, stat: "Ss", identity: "Sat Nov 15 04:00:00 2026" } as unknown as Parameters<typeof stillAlive>[1][number];
+  assert.equal(stillAlive(before, [after]), true, "同一启动身份换组后仍是存活的原进程");
+});
+
+test("CORR-001:真实时序中父进程退出、子进程 setsid 仍活着时停止确认不能返回 ok", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "corr-001-neutral-"));
+  const childCode = [
+    "import pathlib,sys,time,os",
+    "d=pathlib.Path(sys.argv[1])",
+    "(d/'child.pid').write_text(str(os.getpid()))",
+    "while not (d/'release').exists():",
+    "    time.sleep(.01)",
+    "os.setsid()",
+    "(d/'detached').write_text('NEUTRAL_FIXTURE_NO_CREDENTIALS')",
+    "while not (d/'finish').exists():",
+    "    time.sleep(.01)",
+  ].join("\n");
+  const parentCode = [
+    "import pathlib,sys,time,subprocess",
+    "d=pathlib.Path(sys.argv[1])",
+    "subprocess.Popen([sys.executable,'-c',sys.argv[2],str(d)],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)",
+    "while not (d/'release').exists():",
+    "    time.sleep(.01)",
+  ].join("\n");
+  const parent = spawn("python3", ["-c", parentCode, dir, childCode], { detached: true, stdio: "ignore" });
+  const childReady = async () => {
+    const end = Date.now() + 8000;
+    while (!fs.existsSync(path.join(dir, "child.pid"))) {
+      if (Date.now() > end) throw new Error("中性子进程未就绪");
+      await new Promise((r) => setTimeout(r, 10));
+    }
+  };
+  const child = async () => Number(fs.readFileSync(path.join(dir, "child.pid"), "utf8"));
+  const attempts: { pid: number; signal: NodeJS.Signals | number }[] = [];
+  const originalKill = process.kill;
+  try {
+    await childReady();
+    const before = treeNow(parent.pid!);
+    assert.ok(before?.some((r) => r.pgid === parent.pid), "停止前快照应记录同组子进程");
+    fs.writeFileSync(path.join(dir, "release"), "NEUTRAL_FIXTURE_NO_CREDENTIALS");
+    await new Promise<void>((resolve) => parent.once("exit", () => resolve()));
+    const end = Date.now() + 8000;
+    while (!fs.existsSync(path.join(dir, "detached"))) {
+      if (Date.now() > end) throw new Error("子进程未完成脱组");
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    const childPid = await child();
+    process.kill = ((pid: number, signal?: NodeJS.Signals | number) => {
+      if (signal === 0) return originalKill(pid, 0);
+      if (signal === undefined) return originalKill(pid);
+      attempts.push({ pid, signal });
+      return true;
+    }) as typeof process.kill;
+    const result = await confirmStopped(parent.pid!, before, 120);
+    assert.equal(result.ok, false, "原进程仍可核对且存活时不能确认已停止");
+    assert.ok(attempts.some((a) => a.pid === childPid), "应尝试只杀掉核对过身份的子进程");
+  } finally {
+    process.kill = originalKill;
+    fs.writeFileSync(path.join(dir, "release"), "NEUTRAL_FIXTURE_NO_CREDENTIALS");
+    fs.writeFileSync(path.join(dir, "finish"), "NEUTRAL_FIXTURE_NO_CREDENTIALS");
+    if (fs.existsSync(path.join(dir, "child.pid"))) {
+      const end = Date.now() + 8000;
+      while (Date.now() < end) {
+        try { process.kill(await child(), 0); await new Promise((r) => setTimeout(r, 10)); } catch { break; }
+      }
+    }
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
