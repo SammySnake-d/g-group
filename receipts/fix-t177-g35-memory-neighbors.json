@@ -1,0 +1,37 @@
+{
+  "slice": "T-177 G3/G5 接线修复(移植片):Host.memoryNeighbors 在联系人/状态/人格/会话锚点硬筛之后,用本批原文经现有 searchHistory(hybrid)检索,只返回命中项,同分按 id 稳定排序,未命中返回空;粗筛(reflect)与精筛(refine)共用这一处。不依赖 G4。底座 proof/t177-g6-g3-merge(122e0d4f,G1+G2+G3+G5 的实跑合并)。生产代码出自候选 0cbdd2d5,本片只做 cherry-pick 与列出的测试适配,不改生产代码。",
+  "acceptance": [
+    {
+      "id": "AC-42",
+      "status": "未测",
+      "reason": "本片只覆盖「写邻域按原文检索」的确定性接线:G35-01/02/03 三条具名测试在新底座上红转绿;box1(Node v24.21.0)在代码 HEAD 90dbe131 上 typecheck、lint 退出 0,全量 1571/1571(失败、取消、跳过均 0),12 个具名变异全部被指定测试按名杀死、前后原样对照各 3/3。候选包的 1730/1730、1734/1734 是在本地合并底座 930acf10 上跑的,不继承。真实模型下的提炼质量、写入延迟、总成本、强弱模型对照与 G6 整体验收都没做,不能把 AC-42 标通过;未改任何生产阈值。",
+      "evidence": "receipts/evidence/t177-g35/port-20261114/cloud.txt"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "receipts/evidence/t177-g35/port-20261114/mutations.json",
+      "reason": "新底座上 12 个定点变异各由指定的具名 G35 测试按名杀死(退出码非 0、无加载失败、无信号终止);变异前后原样对照各 3/3 通过;变异后工作树与 HEAD 无差异。变异清单是原作者手工选的,原样沿用未增删,不等于独立审查。"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:3e47edad-c6be-45fd-be1e-5d2f90a51145",
+    "model": "gpt-6.1-sol"
+  },
+  "red": {
+    "commit": "dc973b367c001fa4de1f5b5b09be4967761eede6"
+  },
+  "unverifiable": "AC-42:G35-01/02 只证明字面 hybrid 检索接到了粗筛与精筛两条写入路径,G35-03 只证明检索前的联系人/会话/状态/人格边界;不证明模型提炼得对、写入更快或成本更低。R-02:收据 red.commit dc973b36 是变异校准红——只把 packages/server/src/host.ts 的 Host.memoryNeighbors 方法体换回底座 122e0d4f 的原样一行(硬筛后整组返回,不检索、不排序),下一提交 90dbe131 逐字节还原,最终 host.ts 与适配提交 05710342 相同、memoryNeighbors 方法体与候选 0cbdd2d5 逐字节相同;真实红是 051b655f(候选 62d6abff 的 cherry-pick,同三条测试在修复前实现上按名失败,当时测试体只差 setup(t) 与遍历写法)。之所以另做校准红:适配提交 05710342 为过 G-TAUTO 改了三条测试的取值路径,测试体与真实红上不再逐字相同。中间提交 7d17f54b(候选 9fc32711)在本底座上引用了未导入的 searchHistory(候选底座含 G4 才有该导入),单独检出不能通过类型检查,由下一提交 9997503d 补上导入;只有分支 HEAD 被验证过。receipts/proof-t177-backend-closeout-20261112.json 与 receipts/evidence/t177-g35/ 下四个旧文件是候选原提交带来的,数字属于 930acf10 底座,保留作来源,不作本片结论。",
+  "waiver": null,
+  "review": {
+    "agent": "codex",
+    "session": "codex:1571dbff-578e-42af-b33c-ebaa0328f3e0",
+    "model": "chatflows/gpt-6.1-sol",
+    "verdict": "reject",
+    "reviewed_hash": "c8f6fae9e9c6eb31b0923a31b6d19cf5e08db6082a2f27fba7a676ba80a04410",
+    "notes": "REVIEW 1 REJECT：冻结 HEAD 3250bc0c4cdf、底座及 hash 一致。box1 独立复现 typecheck/lint 0、全量 1571/1571、作者具名变异 12/12、真实红和校准红；自构 5 个故障全部绕过本片新增测试，其中 5/5 绕过全量，独立探针全部打红。必修项为回归保护缺口，未确认当前实现缺陷。当前实际模型 chatflows/gpt-6.1-sol 与原核心实现作者 gpt-6.1-sol 同为 OpenAI，真实 G-PROVENANCE/G-REVIEW 均失败，不构成跨厂商放行；无豁免。完整门禁其余六项通过，219/219 共同门禁自检通过。详见 reviews/fix-t177-g35-memory-neighbors.md；证据 /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr95-96-r1-codex/pr95/。"
+  },
+  "review_status": "待审",
+  "notes": "生产代码与原测试、变异清单的作者是 codex:3e47edad-c6be-45fd-be1e-5d2f90a51145(gpt-6.1-sol);原提交 b2678a04、b48cc753、62d6abff、9fc32711、80dbab5b、47f2fd73、0cbdd2d5 均出现在该会话原生记录 ~/.codex/sessions/2026/11/12/rollout-2026-11-12T20-43-08-01a1cfc8-8ac3-78b0-b74a-9d0711d6502f.jsonl 的 git commit 输出里,所在轮次模型全为 gpt-6.1-sol。由 claude:484c2330-2f15-49ae-9f7a-145e467cedb1(group/opus)的子代理移植到新底座:7 个提交原样 cherry-pick(作者、时间、说明不变;80dbab5b 有一处仅上下文行的冲突——候选底座第 1 行是 A 片的 recovery 导入,本底座没有——增删行与原提交逐行相同),另加 3 个提交由该子代理编写:05710342 测试适配(setup 显式传入 Host、G35-01 遍历改按键取值,断言与期望值不变)、dc973b36 变异校准红、90dbe131 还原。该子代理没有改生产代码的最终内容。跨厂商审查提示:生产代码是 OpenAI 模型写的,不能派 Codex/Astra;适配的 6 行测试改动是 Claude 写的。"
+}
