@@ -22,7 +22,14 @@
   },
   "unverifiable": "AC-35、AC-31:① 计数口径是我按需求文字定的(联系人自己的发言也算、提出人本端删除的不算、任务事实卡按 gg_cards.kind 四种排除);测试只证明代码照这个口径数,不证明口径本身是用户要的——见 PR.md「待确认」1、2。② 「联系人会不会在该用的时候带 everyNMessages」是模型行为:本片的适配器测试用进程内假端点驱动真实的 createPiContactMind,只证明工具声明发出去了、填了 N 能登记;真实模型的一次样本在 Q06-2(packages/server/proof/q06-summary-real.txt),只有一次。③ 「正在移出」「解散」用测试替身的 Compute 停止确认构造,没有用真实 Compute 进程。④ 触发的关闭是在这个会话下一次写消息或宿主启动时才落库的(撤销除外,撤销当场关):联系人被移出后到下一条消息之间,库里的触发行仍是 active,而 CommitmentView.trigger.active 是现判的、已是 false(测试断言了视图)。⑤ 本片单独合入时窗口没有消费方,pending 窗口会一直留着,直到 Q06-2 接上或承诺关闭。⑥ 全量测试、变异在 box1 的 c9105e7 上跑,之后只加了证据文件、本收据,以及给变异脚本的「只核对注入点」模式补了一行清理临时目录(不影响真正跑变异的那条路),没有再跑全量和变异",
   "waiver": null,
-  "review": null,
+  "review": {
+    "agent": "codex",
+    "session": "codex:60035fe9-26d8-47e0-a381-566b28322cce",
+    "model": "chatflows/gpt-6.1-sol",
+    "verdict": "reject",
+    "reviewed_hash": "a62d6ada558d685f499b1c9d4083c93d61006fa7f641353df859e427909edc09",
+    "notes": "第1轮独立审查，冻结8d0b644052813ed089fb5ba662ee56aea2994238，base c7d1a2dd3671c2a2289a5cd4b3b673a9f1bb9f29。宿主Codex与同模型子代理/root/review_pr98共同执行，未编写产品代码；实际模型chatflows/gpt-6.1-sol(OpenAI)，作者Claude(group/opus，Anthropic)。box1复跑typecheck/lint成功，全量1502/1502，具名17/17，红5579bc7全部17按名失败且测试体diff为空，作者变异46/46杀死。原树复现：移出联系人后触发行仍active且pending窗口未取消，未写新消息便拉回会恢复旧触发并再冻结。自构故障3个：Helper漏计、windows视图跨trigger串计2个存活；windows列表丢隔离被现有具名测试杀死。前两项是缺测试，非当前产品缺陷。门禁与来源边界、完整复现见reviews/feat-q06-1-count-trigger.md；证据deliverables/g-group-backend-review-codex-20261114/pr98。未合并，未改产品源码。；同模型子代理原生线程01a1d990-32e2-7381-bd6a-a65322be8e33，宿主单独hash与远端交付。"
+  },
   "review_status": "待审",
   "notes": "由该会话的子代理编写(主会话 claude:484c2330-2f15-49ae-9f7a-145e467cedb1 派出的 Q06 后端作者子代理)。本轮不推送、不开 PR:提交在 bundle 里(deliverables/g-group-backend-claude-20261113/bundles/q06-1.bundle),PR 说明在 deliverables/g-group-backend-claude-20261113/q06/q06-1/PR.md。base 是 feat/chat-admin(PR #71,c7d1a2d),不是 dev/integration:计数口径要用 #71 的本端删除(gg_view_hides)与 system 发言者;不依赖 PR #85。真实红 = 5579bc7(17 条新测试 + 空壳:count-triggers.ts 与 chat-range.ts 的方法体不做事、adapter-pi-contact 的 tools.ts 未改),绿 = 9555662(把空壳换成实现);没有另做变异校准红。验证:box1(x86_64,node v24.21.0)在 c9105e7 上 typecheck、lint 退出码 0,全量 npm test 实际执行并通过 1502 条,具名 17 绿,变异 46 杀死 / 0 存活;本机(arm64,node v22.22.0)只跑了单个测试文件、红提交上的 17 条(全部按名字失败)和门禁 --local。定位包 7 条具名验收里本片对应第 3 条的计数部分(99/100/101、重放、重启、不开零触发);「一次有效模型调用」「输出不自触发」在 Q06-2。未做:是否把承诺所属联系人自己的发言排除在计数之外(待确认);别的消费方"
 }
