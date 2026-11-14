@@ -1,0 +1,14 @@
+apps/desktop/e2e/parity-r2-replying.electron.spec.ts
+  h_f33e46a035b77c 10,62-63,73,75-79,104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b665b5b8d2d79644985521c58508bbabf97cf022",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
