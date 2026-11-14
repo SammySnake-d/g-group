@@ -93,7 +93,7 @@ export function ChatView() {
   useEffect(() => {
     const grew = conv.messages.length - lastLen.current
     const lastMine = (conv.messages[conv.messages.length - 1] as { from?: string })?.from === 'me'
-    if (grew > 0 && lastLen.current) { if (atBottom || lastMine) toBottom(true); else setNewCount((n) => n + grew) }
+    if (grew > 0 && lastLen.current) { if (atBottom || lastMine) toBottom(); else setNewCount((n) => n + grew) }
     lastLen.current = conv.messages.length
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conv.messages.length])

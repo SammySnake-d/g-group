@@ -1,9 +1,12 @@
-import { ease, scale, shift, spring, toCssTiming, transition } from '@animate-ui/react/utils/motion'
+import { createMotionTokens, toCssTiming } from '@animate-ui/react/utils/motion'
 
 // 动效参数一律取自 Animate UI 的 motion tokens,不由我们自己拍数值。
 // 用户 #976:「移动多少、速度多少，渐变、延迟时间等等这种需要资深设计师和动画师去考虑的，而llm很难把握这个度。我们直接用动画库的话就很方便」
 // 弹层、菜单、提示、对话框、开关等交给 src/components/ui 里的 Animate UI 原语;这里只给少数自己组装的进出场用。
-export { ease, scale, shift, spring, transition }
+/** 整体节奏:库默认时长的 0.5 倍(用户 DM 3401:动画太多太慢,整个产品显得慢)。弹层、菜单、对话框、折叠由 main.tsx 的 AnimateUIProvider 按同一个数收短 */
+export const TEMPO = 0.5
+const tokens = createMotionTokens(TEMPO)
+export const { ease, scale, shift, spring, transition } = tokens
 
 /** 浮起的小控件(回到最新、有人 @ 你):库里 popover 的出现方式——从 0.8 缩放淡入,弹簧 pop;退场用 popOut,比进场快 */
 export const rise = {

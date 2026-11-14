@@ -77,9 +77,9 @@
     /* 动效 token 的兜底值;运行时由 src/config/motion.ts 的 applyMotionCssVars 用 Animate UI 的 token 覆盖 */
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-    --dur-fast: 150ms;
-    --dur-base: 200ms;
-    --dur-slow: 300ms;
+    --dur-fast: 75ms;
+    --dur-base: 100ms;
+    --dur-slow: 150ms;
     --shadow-soft: 0 1px 0 rgb(40 30 10 / 0.04), 0 2px 6px -2px rgb(40 30 10 / 0.06);
     color-scheme: light;
   }
@@ -144,26 +144,9 @@
   .no-scrollbar { scrollbar-width: none; }
 }
 
-@keyframes pulse-dot { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
-.pulse-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
-@keyframes slide-in { from { transform: translateX(16px); opacity: 0 } to { transform: none; opacity: 1 } }
-.slide-in { animation: slide-in .22s cubic-bezier(.2,.8,.2,1); }
-@keyframes fade-up { from { transform: translateY(4px); opacity: 0 } to { transform: none; opacity: 1 } }
-.fade-up { animation: fade-up .2s ease-out; }
+/* 动效收过一遍(DM 3401):新消息入场、提问卡上浮、头像上下晃、状态点闪、占位条闪都删了——天天看几百次的东西不该动。
+   只留转圈:它表示真的在等。减少动态时也停 */
 .spin-ring { width: 12px; height: 12px; border-radius: 9999px; border: 2px solid hsl(var(--run) / .25); border-top-color: hsl(var(--run)); animation: spin .9s linear infinite; display: inline-block; flex-shrink: 0; will-change: transform }
-/* 新消息入场：从下方 6px 淡入，160ms，和 QQ / iMessage 的发送反馈同量级；只用 transform + opacity */
-@keyframes msg-in { from { transform: translateY(6px); opacity: 0 } to { transform: none; opacity: 1 } }
-[data-msg].msg-new { animation: msg-in .16s cubic-bezier(.2,.8,.2,1) }
-@keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-2px) } }
-.bob { animation: bob 1.8s ease-in-out infinite; will-change: transform }
 @keyframes spin { to { transform: rotate(360deg) } }
-@keyframes shimmer { 0%,100% { opacity: .45 } 50% { opacity: 1 } }
-.shimmer { background: hsl(var(--sel)); animation: shimmer 1.6s ease-in-out infinite; will-change: opacity }
-@media (prefers-reduced-motion: reduce) { .slide-in, .fade-up, .pulse-dot, .spin-ring, .shimmer, .bob, [data-msg].msg-new { animation: none } }
-
-/* 进展全景遮罩：背景淡入，面板轻微放大浮出（只动 opacity/transform，不触发重排） */
-@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
-@keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(.985) } to { opacity: 1; transform: none } }
-.fade-in { animation: fade-in .16s ease-out both }
-.pop-in { animation: pop-in .2s cubic-bezier(.2,.8,.2,1) both }
-@media (prefers-reduced-motion: reduce) { .fade-in, .pop-in { animation: none } }
+.shimmer { background: hsl(var(--sel)); }
+@media (prefers-reduced-motion: reduce) { .spin-ring { animation: none } }

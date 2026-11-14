@@ -4,7 +4,7 @@ import type { Compute } from '@/data'
 import { idleMinOf } from './idle'
 import { COPY, STATUS, type Tone } from './constants'
 
-/* 状态 = Chip 小标签 + 状态点。颜色不单独表达含义，永远带文字；在跑的点用全局的 pulse-dot（减弱动效时不闪）。 */
+/* 状态 = Chip 小标签 + 状态点。颜色不单独表达含义，永远带文字；状态点不闪（DM 3401 收动画）。 */
 
 export interface ComputeState { key: string; label: string; tone: Tone }
 
@@ -22,7 +22,7 @@ export function computeState(c: Compute, now = Date.now()): ComputeState {
 const DOT: Record<Tone, string> = { neutral: 'bg-fg-3', run: 'bg-run', warm: 'bg-warm-dot', err: 'bg-err', ok: 'bg-ok' }
 
 export function StatusDot({ tone, live, className }: { tone: Tone; live?: boolean; className?: string }) {
-  return <span aria-hidden className={cn('inline-block size-1.5 shrink-0 rounded-full', DOT[tone], live && 'pulse-dot', className)} />
+  return <span aria-hidden data-live={live ? '1' : undefined} className={cn('inline-block size-1.5 shrink-0 rounded-full', DOT[tone], className)} />
 }
 
 export function StatusChip({ state, className, testId = 'compute-status' }: { state: ComputeState; className?: string; testId?: string }) {
