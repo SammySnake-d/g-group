@@ -6,6 +6,7 @@ import { HELPER_MARK } from '@/config/brand'
 import { IconButton } from '@/components/ui/icon-button'
 import { appear } from '@/components/pages/kit/motion'
 import { Bot } from '../Avatar'
+import { HELPER_OFF } from './constants'
 
 /* Helper 面板与全局 Helper 共用的零件:标识、气泡、输入框、确认卡外壳 */
 
@@ -39,6 +40,19 @@ export function AskBox({ value, onChange, onSend, placeholder, testid, sendTesti
         className="max-h-32 min-h-[22px] flex-1 resize-none bg-transparent text-[14px] leading-[22px] outline-none placeholder:text-fg-3"
       />
       <IconButton data-testid={sendTestid} label="发送" tooltip={false} onClick={onSend} disabled={!can} size="icon-sm" variant={can ? 'primary' : 'secondary'} icon={<ArrowUp />} />
+    </div>
+  )
+}
+
+/** 连着后端时 Helper 关着:不用提问就看得到为什么不能用(合同里没有让它生成回答的方法) */
+export function HelperOff({ testid, detail, className }: { testid: string; detail: ReactNode; className?: string }) {
+  return (
+    <div data-testid={testid} role="note" className={cn('flex gap-2 rounded-xl border border-line bg-hover/60 px-3 py-2.5', className)}>
+      <div className="mt-0.5 shrink-0"><Bulb size={22} /></div>
+      <div className="min-w-0 flex-1 text-[13px] leading-relaxed">
+        <div className="font-medium text-fg">{HELPER_OFF}</div>
+        <div className="mt-0.5 text-[12.5px] text-fg-2">{detail}</div>
+      </div>
     </div>
   )
 }
