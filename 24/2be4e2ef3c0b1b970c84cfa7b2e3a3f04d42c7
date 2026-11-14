@@ -1,0 +1,19 @@
+apps/desktop/e2e/zz-probe.electron.spec.ts
+  s_e61d0c5e1d0561::t_174407cd5e3839 1-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "242be4e2ef3c0b1b970c84cfa7b2e3a3f04d42c7",
+  "prompts": {},
+  "sessions": {
+    "s_e61d0c5e1d0561": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a37c5ea263bdb5c7f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
