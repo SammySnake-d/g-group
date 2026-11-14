@@ -31,6 +31,8 @@ export interface ProcRow {
   readonly pgid: number;
   /** ps 的 stat;Z 开头是已退出待回收 */
   readonly stat: string;
+  /** ps 的 lstart 进程启动身份;读不到时为 null,不能用来确认同一 PID */
+  readonly identity: string | null;
 }
 
 /** 当前进程表(POSIX ps);命令执行失败返回 null(读不到 ≠ 没有进程,调用方不能当成「都退出了」) */
@@ -39,8 +41,13 @@ export function processTable(run: () => string): readonly ProcRow[] | null {
   try { out = run(); } catch { return null; }
   const rows: ProcRow[] = [];
   for (const line of out.split("\n")) {
-    const m = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S+)/.exec(line);
-    if (m) rows.push({ pid: Number(m[1]), ppid: Number(m[2]), pgid: Number(m[3]), stat: m[4]! });
+    const fields = line.trim().split(/\s+/);
+    if (fields.length < 4) continue;
+    const pid = Number(fields[0]);
+    const ppid = Number(fields[1]);
+    const pgid = Number(fields[2]);
+    if (![pid, ppid, pgid].every(Number.isInteger) || !fields[3]) continue;
+    rows.push({ pid, ppid, pgid, stat: fields[3], identity: fields.length > 4 ? fields.slice(4).join(" ") : null });
   }
   return rows;
 }
@@ -62,7 +69,7 @@ export function treeOf(root: number, table: readonly ProcRow[]): readonly ProcRo
 /**
  * 读不到 ps 时的退路(macOS 的 /bin/ps 是 setuid 程序,受限沙箱里不让执行;pgrep 不是):
  * 按 `pgrep -P <父>` 逐层找后代、`pgrep -g <组>` 找同组成员。pgrep(pattern) 返回 pid 列表,没有匹配返回 [],执行失败返回 null。
- * 找到的行进程组未知记 -1,之后只能按 pid 判断是否还活着。
+ * 找到的行进程组与启动身份未知记 -1/null;身份无法核对时停止确认不能宣称已退出。
  */
 export function treeByPgrep(root: number, pgrep: (args: readonly string[]) => readonly number[] | null): readonly ProcRow[] | null {
   const found = new Map<number, ProcRow>();
@@ -72,18 +79,27 @@ export function treeByPgrep(root: number, pgrep: (args: readonly string[]) => re
     for (const parent of frontier) {
       const kids = pgrep(["-P", String(parent)]);
       if (kids === null) return null;
-      for (const k of kids) if (k > 1 && k !== root && !found.has(k)) { found.set(k, { pid: k, ppid: parent, pgid: -1, stat: "?" }); next.push(k); }
+      for (const k of kids) if (k > 1 && k !== root && !found.has(k)) { found.set(k, { pid: k, ppid: parent, pgid: -1, stat: "?", identity: null }); next.push(k); }
     }
     frontier = next;
   }
   const group = pgrep(["-g", String(root)]);
   if (group === null) return null;
-  for (const k of group) if (k > 1 && k !== root && !found.has(k)) found.set(k, { pid: k, ppid: -1, pgid: root, stat: "?" });
+  for (const k of group) if (k > 1 && k !== root && !found.has(k)) found.set(k, { pid: k, ppid: -1, pgid: root, stat: "?", identity: null });
   return [...found.values()];
 }
 
-/** 记下的进程现在还是不是同一个、还活着:pid 与进程组都对得上且不是僵尸(防 pid 被复用误杀) */
+export type ProcessMatch = "alive" | "gone" | "unknown";
+
+/** 按 PID + 启动身份核对是否仍是快照中的同一个进程;进程组变化不改变身份。 */
+export function processMatch(known: ProcRow, now: ProcRow | undefined): ProcessMatch {
+  if (!now || now.stat.startsWith("Z")) return "gone";
+  if (known.identity === null || now.identity === null) return "unknown";
+  return known.identity === now.identity ? "alive" : "gone";
+}
+
+/** 记下的进程现在还是不是同一个活进程;身份缺失时按不活返回,确认调用方必须另行处理 unknown。 */
 export function stillAlive(known: ProcRow, table: readonly ProcRow[]): boolean {
   const now = table.find((r) => r.pid === known.pid);
-  return now !== undefined && now.pgid === known.pgid && !now.stat.startsWith("Z");
+  return processMatch(known, now) === "alive";
 }

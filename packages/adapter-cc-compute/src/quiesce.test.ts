@@ -10,7 +10,7 @@ import { afterEach, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { createComputeAdapter } from "./adapter.ts";
 import { confirmStopped, treeNow } from "./stop-confirm.ts";
-import { processTable, stillAlive, treeByPgrep, treeOf } from "./procgroup.ts";
+import { processTable, stillAlive, treeByPgrep, treeOf, type ProcRow } from "./procgroup.ts";
 
 const FAKE = fileURLToPath(new URL("../test-support/fake-claude.mjs", import.meta.url));
 const brief = { task: "跑一个很慢的脚本", rules: [], tools: ["Read"], credentialRefs: [], placement: "local" };
@@ -83,17 +83,18 @@ test("还在运行或未知的 Compute 不做停止确认", async () => {
 });
 
 test("纯函数:后代按父子链找(含脱组的),同组成员也算,僵尸不算;pid 复用到别的进程组不算还活着;读不到进程表给 null 不给空表", () => {
-  const table = processTable(() => ["  100     1   100 S", "  101   100   100 S", "  102   101   102 Ss", "  103   102   102 S", "  104     1   100 S", "  105   100   100 Z", "  200     1   200 S", "garbage"].join("\n"));
+  const table = processTable(() => ["  100     1   100 S start-root", "  101   100   100 S start-a", "  102   101   102 Ss start-b", "  103   102   102 S start-c", "  104     1   100 S start-d", "  105   100   100 Z start-z", "  200     1   200 S start-other", "garbage"].join("\n"));
   assert.equal(table?.length, 7);
   assert.deepEqual(treeOf(100, table!).map((r) => r.pid).sort(), [101, 102, 103, 104]);
   assert.deepEqual(treeOf(200, table!), []);
   const known = table!.find((r) => r.pid === 103)!;
   assert.equal(stillAlive(known, table!), true);
   assert.equal(stillAlive(known, processTable(() => "  103     1   999 S")!), false);
+  assert.equal(stillAlive(known, processTable(() => "  103     1   999 S reused-start")!), false, "PID 复用为另一启动身份不能误杀");
   assert.equal(stillAlive(known, processTable(() => "  103   102   102 Z")!), false);
   assert.equal(stillAlive(known, []), false);
   assert.equal(processTable(() => { throw new Error("ps 不可用"); }), null);
-  assert.deepEqual(table![0], { pid: 100, ppid: 1, pgid: 100, stat: "S" });
+  assert.deepEqual(table![0], { pid: 100, ppid: 1, pgid: 100, stat: "S", identity: "start-root" });
 });
 
 test("纯函数:ps 读不到时按 pgrep 逐层找后代与同组成员;pgrep 本身失败给 null(不能当成没有子进程)", () => {
@@ -107,8 +108,8 @@ test("纯函数:ps 读不到时按 pgrep 逐层找后代与同组成员;pgrep �
 });
 
 test("CORR-001:停止前快照到的子进程随后换进程组但仍存活,不能按 pgid 变化确认退出", () => {
-  const before = { pid: 103, ppid: 100, pgid: 100, stat: "S", identity: "Sat Nov 15 04:00:00 2026" } as unknown as Parameters<typeof stillAlive>[0];
-  const after = { pid: 103, ppid: 1, pgid: 103, stat: "Ss", identity: "Sat Nov 15 04:00:00 2026" } as unknown as Parameters<typeof stillAlive>[1][number];
+  const before: ProcRow = { pid: 103, ppid: 100, pgid: 100, stat: "S", identity: "Sat Nov 15 04:00:00 2026" };
+  const after: ProcRow = { pid: 103, ppid: 1, pgid: 103, stat: "Ss", identity: "Sat Nov 15 04:00:00 2026" };
   assert.equal(stillAlive(before, [after]), true, "同一启动身份换组后仍是存活的原进程");
 });
 
