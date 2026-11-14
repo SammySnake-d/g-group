@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { TopStrip } from '@/components/GroupSide'
 import { MessageList } from '@/components/Messages'
-import type { Conversation, Msg, PersonId, QuoteRef } from '@/data'
+import { people, type Conversation, type Msg, type PersonId, type QuoteRef } from '@/data'
 import { useApp } from '@/store'
 import { chatFollow } from '@/store/dom'
 import { activeConv, withUnreadDivider } from '@/store/select'
@@ -28,6 +28,8 @@ function takenBy(conv: Conversation, who: PersonId): TextMsg | undefined {
   const at = rank(upto)
   const last = [...conv.messages].reverse().find((m) => 'id' in m && rank(m.id) <= at && ((m.k === 'text' && m.from === 'me') || (m.k === 'sys' && m.rewind) || (m.k === 'forward' && m.from === 'me')))
   if (last?.k !== 'text') return undefined
+  /* 群里:这句没 @ 它(它是被别的事叫醒的,比如 Compute 报进度),就不引用——不把你对别人说的话安到它头上 */
+  if (conv.kind === 'group' && !last.text.includes(`@${people[who]?.name ?? ''}`)) return undefined
   return last.text ? last : { ...last, text: (last.files ?? []).map((f) => f.name).join('、') }
 }
 /** 离底部不到这么多就算「在最新」 */
