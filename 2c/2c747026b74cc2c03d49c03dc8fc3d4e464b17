@@ -1,0 +1,19 @@
+apps/desktop/e2e/parity-r2-wb.electron.spec.ts
+  s_abd83cb9d09616::t_829631daeeab7b 1-430
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2c2c747026b74cc2c03d49c03dc8fc3d4e464b17",
+  "prompts": {},
+  "sessions": {
+    "s_abd83cb9d09616": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9a6c103fa52cad5c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
