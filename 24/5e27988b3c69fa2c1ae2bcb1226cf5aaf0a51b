@@ -1,0 +1,27 @@
+apps/desktop/proof/app-shell/accept-loop-steps.txt
+  s_54fdb48636ffee::t_78f3c0ddb3fe85 1-44
+apps/desktop/proof/app-shell/accept-update-steps.txt
+  s_54fdb48636ffee::t_12b6c74f1c1f0e 1-25
+apps/desktop/proof/app-shell/app-shell-red.txt
+  s_54fdb48636ffee::t_78a218bca4043a 1-12
+apps/desktop/proof/app-shell/merged-green.txt
+  s_54fdb48636ffee::t_f05525fe40d886 1-11
+packages/server/proof/compute-commands-redgreen.txt
+  s_54fdb48636ffee::t_580fa856967803 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "245e27988b3c69fa2c1ae2bcb1226cf5aaf0a51b",
+  "prompts": {},
+  "sessions": {
+    "s_54fdb48636ffee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "16b87c7b-b9f6-4a8a-92d0-b64d3392ff32",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

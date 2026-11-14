@@ -1,0 +1,21 @@
+packages/server/proof/artifacts-mutations.mjs
+  s_138f3ca4816f31::t_e95ccc87322ad2 29,66-68
+packages/server/proof/worktree-mutations.mjs
+  s_138f3ca4816f31::t_088148898d0cbc 34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "40dc8d769e55058fbe4d5783e45e1984510f3126",
+  "prompts": {},
+  "sessions": {
+    "s_138f3ca4816f31": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a300aa9e-eccb-4ec8-b983-75a3ff723e24",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

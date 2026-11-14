@@ -1,0 +1,23 @@
+scripts/t177/a-mutations.mjs
+  s_e21a7b024276d2::t_9cfcda364c8260 25
+receipts/evidence/t177-a/SCOPE.md
+  s_e21a7b024276d2::t_c5ca10111a61ca 20,32-33
+receipts/feat-t177-a-recovery.json
+  s_e21a7b024276d2::t_4fb9aba4065ffe 17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fbd8ef8f6ed3d97ca6a736c3c6e429aa432f7e35",
+  "prompts": {},
+  "sessions": {
+    "s_e21a7b024276d2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c6e6-9a06-7441-b5e9-c070695d078b",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

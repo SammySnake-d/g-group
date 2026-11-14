@@ -1,0 +1,21 @@
+packages/server/proof/cache-observability-real.mjs
+  s_78cbadecffd7bf::t_a46c182190beb5 1-57
+packages/server/proof/cache-observability-real.txt
+  s_78cbadecffd7bf::t_9676d34d64dc76 1-194
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a5827786399eaef945443695ee733fd501167a47",
+  "prompts": {},
+  "sessions": {
+    "s_78cbadecffd7bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9caabaa2a69c3a1c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

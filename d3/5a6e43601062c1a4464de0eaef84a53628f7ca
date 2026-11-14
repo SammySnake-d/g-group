@@ -1,0 +1,25 @@
+apps/desktop/e2e/closed-loop.electron.spec.ts
+  s_a19c652d723a1d::t_c4b38840a6148a 86-91,104,141
+apps/desktop/e2e/parity-compute.electron.spec.ts
+  s_a19c652d723a1d::t_412bc9851d86fa 1-212
+packages/server/src/delivered-seq.test.ts
+  s_a19c652d723a1d::t_e51e141f02afdf 1-66
+packages/server/src/desk-fake.test.ts
+  s_a19c652d723a1d::t_6ec4ba4efd3050 1-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d35a6e43601062c1a4464de0eaef84a53628f7ca",
+  "prompts": {},
+  "sessions": {
+    "s_a19c652d723a1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adc8f784a18a4a1b1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

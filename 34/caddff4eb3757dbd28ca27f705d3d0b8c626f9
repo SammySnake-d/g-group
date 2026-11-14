@@ -1,0 +1,19 @@
+receipts/feat-mention-loop-guard-ca2.json
+  s_9d7fa6e9d65b83::t_4436bb18177a42 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "34caddff4eb3757dbd28ca27f705d3d0b8c626f9",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

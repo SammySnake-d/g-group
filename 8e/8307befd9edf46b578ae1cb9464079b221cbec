@@ -1,0 +1,16 @@
+packages/api-contract/src/contract.test.ts
+  h_f33e46a035b77c 145-146,161-162,164-165
+packages/server/src/artifacts.test.ts
+  h_f33e46a035b77c 125-126,171-174,208,213,217-219,222,244,250-251,287-290,305
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8e8307befd9edf46b578ae1cb9464079b221cbec",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/adapter-cc-compute/proof/gates.txt
+  s_2950c8e8f91d67::t_e0b31b4773eb0e 2-3,7,14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "388bce01fc254018283a94fd7067a11d31824f11",
+  "prompts": {},
+  "sessions": {
+    "s_2950c8e8f91d67": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a224e5bbe1fb8b394",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,34 @@
+apps/desktop/e2e/models.ui.spec.ts
+  h_f33e46a035b77c 1-256
+apps/desktop/src/App.tsx
+  h_f33e46a035b77c 7,103-104,363,579-589,729
+apps/desktop/src/components/ModelSettings.tsx
+  h_f33e46a035b77c 1-637
+apps/desktop/src/components/Overlays.tsx
+  h_f33e46a035b77c 4-6,145,173-175,550,570,590,593,685,697
+apps/desktop/src/components/Workbench.tsx
+  h_f33e46a035b77c 4-5,437
+apps/desktop/src/ctx.ts
+  h_f33e46a035b77c 171-176
+apps/desktop/src/data.ts
+  h_f33e46a035b77c 3,16,18-23,46-52
+apps/desktop/src/modelConfig.ts
+  h_f33e46a035b77c 1-79
+packages/ui-core/src/index.ts
+  h_f33e46a035b77c 6
+packages/ui-core/src/models.test.ts
+  h_f33e46a035b77c 1-390
+packages/ui-core/src/models.ts
+  h_f33e46a035b77c 1-404
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "203fcee4b2214089db9bf5d32a9352012c2f73bc",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

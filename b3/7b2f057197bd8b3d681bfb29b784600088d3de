@@ -1,0 +1,21 @@
+receipts/feat-commitment-ledger.json
+  s_efd4c7b74faf49::t_eae8b8a51f0a35 38
+reviews/feat-commitment-ledger.md
+  s_efd4c7b74faf49::t_14568316c3936f 137-246
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b37b2f057197bd8b3d681bfb29b784600088d3de",
+  "prompts": {},
+  "sessions": {
+    "s_efd4c7b74faf49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "09e354da-62f7-4de4-a128-94ea312a7318",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

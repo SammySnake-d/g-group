@@ -1,0 +1,19 @@
+receipts/feat-contact-helper.json
+  s_e35be614b37bea::t_4c350bb3b6597e 45-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f01a84cb154163122778fdfa13e69354beb53776",
+  "prompts": {},
+  "sessions": {
+    "s_e35be614b37bea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ab1f-7839-72e2-afb1-d71409a8ddd2",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

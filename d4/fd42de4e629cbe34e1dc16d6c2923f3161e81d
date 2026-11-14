@@ -1,0 +1,23 @@
+packages/server/proof/auth-intent-host-mutations.mjs
+  s_7e0c5bbe16b27d::t_00ce515406c198 1-69
+packages/server/proof/real-auth-run.ts
+  s_7e0c5bbe16b27d::t_449390d86e4fc2 1-74
+packages/server/proof/real-auth-run.txt
+  s_7e0c5bbe16b27d::t_c988f99dd4e88f 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d4fd42de4e629cbe34e1dc16d6c2923f3161e81d",
+  "prompts": {},
+  "sessions": {
+    "s_7e0c5bbe16b27d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac415d54dda55267d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

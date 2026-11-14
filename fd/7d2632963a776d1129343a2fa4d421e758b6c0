@@ -1,0 +1,33 @@
+packages/adapter-cc-compute/proof/mutations.mjs
+  s_28bebc745289eb::t_e4ca662a9616eb 5,114-130,186-187
+packages/adapter-cc-compute/proof/mutations.txt
+  s_28bebc745289eb::t_91ba53f9d45623 1-115
+packages/adapter-cc-compute/proof/r7-red-on-old-impl.txt
+  s_28bebc745289eb::t_9eea49361b32d3 1-59
+packages/adapter-cc-compute/proof/tests.txt
+  s_d27ae1e424516c::t_0c5819353d032b 5,11,17,23,29,35,41,47,53,59,65,71,77,83,89,95,101,107,113,119,125,131,137,143,149,155,161,167,173,179,185,191,197,203,209,215,221,227,233,239,245,251,257,263,269,275,281,287,293,299,305,311,317,323,329,335,341,347,353,359,365,371,377,383,389,395,401,407,413,419,425,431,437,443,449,455,461,467,473,479,485,491,497,503,506-537,539,544
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fd7d2632963a776d1129343a2fa4d421e758b6c0",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_d27ae1e424516c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f2f8a61b-4780-42b2-a124-d732bb709709",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

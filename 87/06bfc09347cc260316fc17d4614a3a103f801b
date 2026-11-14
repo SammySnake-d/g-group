@@ -1,0 +1,14 @@
+apps/desktop/src/app/chat/ChatView.tsx
+  h_f33e46a035b77c 49-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8706bfc09347cc260316fc17d4614a3a103f801b",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/server/src/group-admin.test.ts
+  s_f0dfa712c20d46::t_457f44367f53e1 172-195
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8080c55239d36808d31a02e6c0445a1d25665198",
+  "prompts": {},
+  "sessions": {
+    "s_f0dfa712c20d46": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac5e2e0613e55bd0a",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

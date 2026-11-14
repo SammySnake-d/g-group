@@ -1,0 +1,25 @@
+apps/desktop/docs/astryx-trial.md
+  s_c20562a127f0af::t_44da24e5e8eab9 14-17
+apps/desktop/e2e/astryx-comparison.ui.spec.ts
+  s_c20562a127f0af::t_6a69f20e8fa945 1-28
+apps/desktop/e2e/astryx.ui.spec.ts
+  s_c20562a127f0af::t_493b703054754e 3,5,30,92,99
+apps/desktop/e2e/console-baseline.ts
+  s_c20562a127f0af::t_2bd0a65e20b4de 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "99d0e71217a4ad7f50a28ac59d5f8bd84426dd7d",
+  "prompts": {},
+  "sessions": {
+    "s_c20562a127f0af": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c16c-e991-72f1-9871-6d60d8855ee8",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

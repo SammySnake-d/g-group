@@ -1,0 +1,18 @@
+packages/kernel/src/orphan-pid.test.ts
+  h_f33e46a035b77c 1-58
+packages/server/proof/runtime-config-mutations.mjs
+  h_f33e46a035b77c 17
+packages/server/src/runtime-config.test.ts
+  h_f33e46a035b77c 416,419,421,423-428,433,438-439,441-443,445-446,448-451
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fc3b6be3c7f03d148e87df22e4624bd8b6f86cbb",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

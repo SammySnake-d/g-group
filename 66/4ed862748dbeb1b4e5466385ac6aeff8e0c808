@@ -1,0 +1,21 @@
+apps/desktop/e2e/parity-chat.electron.spec.ts
+  s_b3368d8f94ae5a::t_ad2a0c76032db5 1-271
+packages/server/src/chat-parity.test.ts
+  s_b3368d8f94ae5a::t_d6a65b24eaee20 1-203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "664ed862748dbeb1b4e5466385ac6aeff8e0c808",
+  "prompts": {},
+  "sessions": {
+    "s_b3368d8f94ae5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aff9ebe3f7dda50e6",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

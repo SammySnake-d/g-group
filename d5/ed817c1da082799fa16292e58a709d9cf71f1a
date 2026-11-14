@@ -1,0 +1,25 @@
+apps/desktop/e2e/concept.ui.spec.ts
+  s_12ccf69de2a7ec::t_83154f9072d868 167-193
+apps/desktop/src/components/Composer.tsx
+  s_12ccf69de2a7ec::t_8036655b783f79 15,201,207
+apps/desktop/src/concept/index.ts
+  s_12ccf69de2a7ec::t_cab6114ed39fd1 6
+apps/desktop/src/concept/load/DispatchLoad.tsx
+  s_12ccf69de2a7ec::t_3a2f231fde7591 1-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d5ed817c1da082799fa16292e58a709d9cf71f1a",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

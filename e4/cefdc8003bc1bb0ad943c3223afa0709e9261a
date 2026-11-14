@@ -1,0 +1,19 @@
+packages/adapter-cc-compute/proof/mutation-targets.json
+  s_8e60cdc3d4b8e6::t_55f8ecacddb61d 168,493
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e4cefdc8003bc1bb0ad943c3223afa0709e9261a",
+  "prompts": {},
+  "sessions": {
+    "s_8e60cdc3d4b8e6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c1ba-5e28-7c00-ac7f-398176174884",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

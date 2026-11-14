@@ -1,0 +1,29 @@
+apps/desktop/e2e/files-context.ui.spec.ts
+  s_7aad9111476a62::t_b21af04e90d440 1,4-6,8-9,11,13-15,17-31,33,47,59-76,78-88,95,97-101
+apps/desktop/src/components/files/FileBody.tsx
+  s_7aad9111476a62::t_4f441edd16b5ad 4,20-22
+apps/desktop/src/components/files/FileReader.tsx
+  s_7aad9111476a62::t_4b05353641af2b 9,12-14,16,18,22-23,27,32-34,40-42,46-48
+apps/desktop/src/components/files/Provenance.tsx
+  s_7aad9111476a62::t_8f2c8471227dce 2,4,12-13,22,24-28,31-33,35-47,55-64
+apps/desktop/src/components/files/fixtures.ts
+  s_7aad9111476a62::t_69a419fedafcc0 33
+apps/desktop/src/store/boot.ts
+  s_7aad9111476a62::t_8e4df9e38d0f70 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dc54b5940538769d65e602ce0cd8ea495d3c5740",
+  "prompts": {},
+  "sessions": {
+    "s_7aad9111476a62": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad285c37d11622b6d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+apps/desktop/src/App.tsx
+  s_042e901c6ad028::t_108d27fc5dc50d 1020
+apps/desktop/src/components/Composer.tsx
+  s_042e901c6ad028::t_0eafaebf7a4d6c 191,193
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "92b5dbacf466873d3586f4fc4a18fd4ba9c7ed7f",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

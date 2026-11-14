@@ -1,0 +1,14 @@
+packages/api-contract/src/contract.test.ts
+  h_f33e46a035b77c 130-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ca0f66549cf051683f954bfc273340f8f444b118",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

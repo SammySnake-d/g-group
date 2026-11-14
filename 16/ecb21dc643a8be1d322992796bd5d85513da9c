@@ -1,0 +1,25 @@
+packages/adapter-cc-compute/proof/mutations.txt
+  s_74dccb3cdfaa51::t_1c227eb1cfa8e3 1-192
+packages/adapter-cc-compute/proof/r11-boundary.md
+  s_74dccb3cdfaa51::t_d6a3c2cff55088 1-21
+packages/adapter-cc-compute/proof/tests.txt
+  s_74dccb3cdfaa51::t_3aa35f87d75a67 1-888
+receipts/feat-cc-compute.json
+  s_74dccb3cdfaa51::t_197d8f6ed89a3a 2,4-38,41-44,47,49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "16ecb21dc643a8be1d322992796bd5d85513da9c",
+  "prompts": {},
+  "sessions": {
+    "s_74dccb3cdfaa51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c735-dbc6-7260-8f7d-bf40b267e6b8",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

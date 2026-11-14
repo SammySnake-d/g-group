@@ -1,0 +1,19 @@
+packages/server/src/slash-commands.test.ts
+  s_bc500ef58bf3aa::t_fbf2d783a2aba0 95,101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3eb96bab02b91b797cbdec6c58485fe36e1adb63",
+  "prompts": {},
+  "sessions": {
+    "s_bc500ef58bf3aa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cf01-3b82-7211-b7b9-c7147d5e45e7",
+        "model": "chatflows/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

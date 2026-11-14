@@ -1,0 +1,29 @@
+packages/adapter-cc-compute/proof/shared-port-legacy.test.mjs
+  s_9d7fa6e9d65b83::t_15ced52556b22c 1-51
+receipts/feat-compute-port-extract.json
+  s_9d7fa6e9d65b83::t_15ced52556b22c 33,52-54
+  s_9d7fa6e9d65b83::t_352dd90cdd121e 55-59
+packages/adapter-cc-compute/proof/shared-port-invariants.mjs
+  s_9d7fa6e9d65b83::t_15ced52556b22c 17
+  s_9d7fa6e9d65b83::t_fd1e0862836606 101
+packages/adapter-cc-compute/proof/shared-port-cloud.mjs
+  s_9d7fa6e9d65b83::t_15ced52556b22c 76
+docs/proof/compute-port-extract/README.md
+  s_9d7fa6e9d65b83::t_af4cdeb8eb9064 4,19,21,23-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87bb063675cbadd92a7c058bb2fed99c3d052b4f",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

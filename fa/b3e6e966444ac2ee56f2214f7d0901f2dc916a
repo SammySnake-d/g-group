@@ -1,0 +1,29 @@
+package-lock.json
+  s_7f422c52350e16::t_fc71fb0fa8a86a 1311
+packages/server/package.json
+  s_7f422c52350e16::t_184772a82c1653 9
+packages/server/proof/e2e-pi-claude.txt
+  s_7f422c52350e16::t_bea13d436a9623 1-28
+packages/server/src/host.test.ts
+  s_7f422c52350e16::t_7bf5b10c08dd9a 170,287-316
+packages/server/src/host.ts
+  s_7f422c52350e16::t_1c49e40afed96b 1043-1044,1055,1088-1095,1158-1171
+receipts/feat-pi-wire.json
+  s_7f422c52350e16::t_278874937f1084 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fab3e6e966444ac2ee56f2214f7d0901f2dc916a",
+  "prompts": {},
+  "sessions": {
+    "s_7f422c52350e16": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18b4f4b0-3cf6-4d51-be92-ca20094b2ce3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

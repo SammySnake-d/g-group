@@ -1,0 +1,43 @@
+apps/desktop/e2e/cron.ui.spec.ts
+  s_042e901c6ad028::t_4978812f34bdb8 1-256
+apps/desktop/src/App.tsx
+  s_042e901c6ad028::t_317753d0b33dc0 5,7-8,118-119,121-123,125,589-590,593,596-606,610-611,625-628,730-731,922
+apps/desktop/src/components/CronDetail.tsx
+  s_042e901c6ad028::t_910469b6573703 1-3,5-7,10-11,13-14,18,21-22,25,28-31,35,37-38,40-50,52-68,71-72,79,92-110,116-131
+apps/desktop/src/components/CronEditor.tsx
+  s_042e901c6ad028::t_8954eb6f62676b 1-267
+apps/desktop/src/components/CronList.tsx
+  s_042e901c6ad028::t_25bcc410a60531 1-90
+apps/desktop/src/components/GroupSide.tsx
+  s_042e901c6ad028::t_7e6627696f9256 6-8,24,26,31-33,35,52,80,93,97,286
+apps/desktop/src/components/Helper.tsx
+  s_042e901c6ad028::t_cc33a6b605340d 7,342
+apps/desktop/src/components/Messages.tsx
+  s_042e901c6ad028::t_8dab36a4562ebc 699
+apps/desktop/src/components/Panorama.tsx
+  s_042e901c6ad028::t_7d2f38cffeaaa2 4,6-8,51-52,68-71,75-76,103,238-241,243,248,252-253,255,261-262,264-267,269-285,287-289,291,293-296,299,311,315,317-318,321,332-333
+apps/desktop/src/components/Workbench.tsx
+  s_042e901c6ad028::t_198cf95f191f9f 6-9,379,381-382,384,388-393,396,398,401,405-406,408-409,412
+apps/desktop/src/cronView.ts
+  s_042e901c6ad028::t_33ffd94fbbffac 1-78
+apps/desktop/src/ctx.ts
+  s_042e901c6ad028::t_1849b1e5bed243 141-142
+apps/desktop/src/data.ts
+  s_042e901c6ad028::t_d0faf75e7e1018 4-5,612-616,618-646,648-658
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d24b67222afb53a1e3bf372cf00788b397133d8d",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

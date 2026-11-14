@@ -1,0 +1,37 @@
+docs/proof/contact-config-history/README.md
+  s_9d7fa6e9d65b83::t_9862c50fcbb85b 1-2
+docs/proof/contact-config-history/r2/README.md
+  s_9d7fa6e9d65b83::t_d6da6a32e911a5 1-29
+docs/proof/contact-config-history/r2/executor-errors.jsonl
+  s_9d7fa6e9d65b83::t_cbbba4828189c3 1-2
+docs/proof/contact-config-history/r2/final16-same-body-verification.json
+  s_9d7fa6e9d65b83::t_9b11be55a7b942 1-25
+docs/proof/contact-config-history/r2/parent-provenance-verification.json
+  s_9d7fa6e9d65b83::t_6a8f31f053c5cb 1-21
+docs/proof/contact-config-history/r2/r1-01-corrected-true-red-green.json
+  s_9d7fa6e9d65b83::t_f0b084f5e1c87b 1-22
+docs/proof/contact-config-history/r2/r2-provenance-contributions.json
+  s_9d7fa6e9d65b83::t_24529e9aa229e2 1-727
+docs/proof/contact-config-history/r2/r2-provenance-contributions.md
+  s_9d7fa6e9d65b83::t_0a376877319332 1-94
+docs/proof/contact-config-history/r2/raw-tap-lossless-manifest.json
+  s_9d7fa6e9d65b83::t_5ef56512e516ee 1-58
+receipts/feat-contact-config-history.json
+  s_9d7fa6e9d65b83::t_f2fb175930fdea 7,26,28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0131d50cc507684f24af524669eea6132035e520",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

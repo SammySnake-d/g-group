@@ -1,0 +1,39 @@
+packages/api-contract/src/api.ts
+  s_11402f16ea5415::t_4a1fec2e68070a 43,99-100
+packages/api-contract/src/entities.ts
+  s_11402f16ea5415::t_07acc2131461b1 5,469,477-478
+packages/api-contract/src/index.ts
+  s_11402f16ea5415::t_9cc7b205826a6c 6
+packages/api-contract/src/memory.ts
+  s_11402f16ea5415::t_9fdd6d4c609d5b 1-61
+packages/server/src/host.ts
+  s_11402f16ea5415::t_eefa0ebe49a20b 136,392-393,443,1415-1416,2042,2044,2099,2186-2187
+packages/server/src/memory-api.test.ts
+  s_11402f16ea5415::t_15d2af6cb810e6 1-182
+packages/server/src/memory-api.ts
+  s_11402f16ea5415::t_a122854070f89b 1-41
+packages/server/src/memory-hygiene.test.ts
+  s_11402f16ea5415::t_50d7daeb13db56 1-242
+packages/server/src/memory-hygiene.ts
+  s_11402f16ea5415::t_0dba7c03361463 1-27
+packages/server/src/profile.test.ts
+  s_11402f16ea5415::t_c75032133ea230 55-57
+packages/server/src/service.ts
+  s_11402f16ea5415::t_6ef588751d4b47 19,44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dedc4e22e34c697ec2defe132044a8e591323ad9",
+  "prompts": {},
+  "sessions": {
+    "s_11402f16ea5415": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a7e51a4d4c085a4d6",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

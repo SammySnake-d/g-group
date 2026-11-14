@@ -1,0 +1,22 @@
+receipts/chore-gates.json
+  s_511198f8b433de::t_07f23e6609e585 68-75
+reviews/chore-gates.md
+  s_511198f8b433de::t_07f23e6609e585 769-801,803-806
+  s_511198f8b433de::t_4e9dfa35987662 802
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "763d6f061b7dee516991218a7c39fd9e526fd1fa",
+  "prompts": {},
+  "sessions": {
+    "s_511198f8b433de": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b236-10e7-7ae2-8925-0174afe5bf78",
+        "model": "ai-iisbo-2/[gptpro]gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+receipts/feat-contact-config-history.json
+  s_9d7fa6e9d65b83::t_c9359b2d24965b 30-37
+reviews/feat-contact-config-history.md
+  s_9d7fa6e9d65b83::t_16f277321bcb36 1-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6d8123341002f0e9f397c77633c3f30a6d01a54b",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

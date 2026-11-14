@@ -1,0 +1,19 @@
+docs/spec/需求文档.md
+  s_aa27e3e641bf01::t_641af60632a5ac 3,178,186,2304,2323,2529-2530
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3cebfdec1607918d578b984903ef1c7116444e5c",
+  "prompts": {},
+  "sessions": {
+    "s_aa27e3e641bf01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5734b8e-3d55-4848-8e7c-d6dc70ac35b8",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

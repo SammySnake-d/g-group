@@ -1,0 +1,43 @@
+packages/adapter-cc-compute/src/types.ts
+  s_f14c4f5d7f8b94::t_ed761ea1558a13 127-131,145-150
+packages/server/src/quota.ts
+  s_f14c4f5d7f8b94::t_28eacd5d8d5142 1-62
+packages/server/src/fakes.ts
+  s_f14c4f5d7f8b94::t_b8b7bc88fd04dc 2,45-55,114-115,118
+packages/api-contract/src/api.ts
+  s_f14c4f5d7f8b94::t_366d0f0a72d4f3 57-58,72
+packages/adapter-cc-compute/src/procgroup.ts
+  s_f14c4f5d7f8b94::t_6c2df745925d4c 22-38
+packages/server/src/lease.test.ts
+  s_28bebc745289eb::t_8d86327693b229 1-155
+packages/server/src/quota.test.ts
+  s_f14c4f5d7f8b94::t_167928dcfbf15f 1-81
+packages/api-contract/src/entities.ts
+  s_f14c4f5d7f8b94::t_6ce1cb4b74ea4e 28-29,58-59,173-174
+packages/adapter-cc-compute/src/quiesce.test.ts
+  s_28bebc745289eb::t_0a8354b41f4be5 1-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "468754ff05e16dda16cc2b7eb3fce32d985665b5",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_f14c4f5d7f8b94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a09f3a3f2092d0f50",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+apps/desktop/src/api/wire/unwired.ts
+  s_54fdb48636ffee::t_f5582356383af7 4,10-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "52321c35ea54d9eb96b9897cf1e358d49b3b692b",
+  "prompts": {},
+  "sessions": {
+    "s_54fdb48636ffee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "16b87c7b-b9f6-4a8a-92d0-b64d3392ff32",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

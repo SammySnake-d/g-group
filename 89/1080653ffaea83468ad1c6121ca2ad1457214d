@@ -1,0 +1,129 @@
+packages/adapter-pi-contact/src/compact.test.ts
+  s_af07fdb734b55e::t_fcc0a88d6769a6 90-117
+packages/server/src/memory.test.ts
+  s_af07fdb734b55e::t_e96397a1628000 306-310
+  s_af07fdb734b55e::t_829cd522d91c2a 312-315
+  s_af07fdb734b55e::t_2a0a5ff13229d1 265
+  s_af07fdb734b55e::t_760b3efebfc416 304
+  s_af07fdb734b55e::t_702aa396856ea9 289
+  s_af07fdb734b55e::t_e104752bbb3ff5 317-318
+  s_af07fdb734b55e::t_0377990c480eba 260-261
+  s_af07fdb734b55e::t_802fddd82f4c03 248-250,252-254
+  s_af07fdb734b55e::t_92ae47179b5d0e 274-276
+  s_af07fdb734b55e::t_3a0a856820b097 291-293,297-299
+  s_af07fdb734b55e::t_039fe27dd5f3f2 256-257
+  s_af07fdb734b55e::t_47e8ae5eb33f33 251,294-296
+  s_af07fdb734b55e::t_5dc7abe10bc6b3 1-161,163-247,255,258-259,262,264,266,273,277,283-284,287-288,290,300-301,303,305,311,316,319-320
+  s_af07fdb734b55e::t_6d64c9c0e7582f 302
+  s_af07fdb734b55e::t_683d9195fa96f2 278-282
+  s_af07fdb734b55e::t_4da397cd834769 263
+  s_af07fdb734b55e::t_f05ea446777f2b 285-286
+  s_af07fdb734b55e::t_a64bc7cd3cfad9 267-272
+packages/kernel/src/index.ts
+  s_af07fdb734b55e::t_ef25df4841eaca 13
+  s_042e901c6ad028::t_0c19287f5b7a32 14
+packages/adapter-pi-contact/src/mind.test.ts
+  s_28bebc745289eb::t_ab54c1c3577c16 395-443,453
+  s_28bebc745289eb::t_3c09f18cb2aebe 394
+  s_28bebc745289eb::t_b5e0c2c18f5399 444-446,450-452
+  s_af07fdb734b55e::t_04238f26ceee57 447-449
+  s_042e901c6ad028::t_2d4416ef13d33f 88,101,454-470
+packages/adapter-pi-contact/src/compact.ts
+  s_377be331e17ebd::t_6a6abc53ec27ab 7,156-157
+  s_377be331e17ebd::t_2fe00607347de7 58-104,121-123,125-126,146-155
+packages/kernel/src/memory.ts
+  s_af07fdb734b55e::t_4e63f5f8d78d66 16-24,26-51,62,99,111,143,161,205
+  s_377be331e17ebd::t_1bde7191d4a185 1-8,15,25,52-61,63-98,100-110,112-142,144-149,151-160,162,164-204
+packages/kernel/src/runtime-ports.ts
+  s_af07fdb734b55e::t_0f407d35bbd45d 100
+  s_af07fdb734b55e::t_170e21fca75831 174-176,180-182
+  s_af07fdb734b55e::t_574bde8c04a659 101-112,114,122-125,128-129,131-132,173,183,188
+  s_af07fdb734b55e::t_baf0b00f1cd079 166-169,177-179,191-192
+  s_af07fdb734b55e::t_71d8168fef2ab6 170-172
+  s_af07fdb734b55e::t_d44002516ae435 184-187
+  s_042e901c6ad028::t_03131ac29dc9f7 126-127
+packages/kernel/src/memory.test.ts
+  s_af07fdb734b55e::t_58d1f947177132 1-196
+packages/kernel/src/compact.ts
+  s_28bebc745289eb::t_0bff11ea8aec55 30-33
+packages/server/src/host.ts
+  s_28bebc745289eb::t_94741fa17ada3e 55,135-136,1653
+  s_377be331e17ebd::t_60bd25f88185bd 56-61,91,145-150,264,285,1553-1652,1684,1691-1713,1732,1863,1880,1893-1894,1911,1913,1994,2144-2154,2191-2196
+packages/adapter-pi-contact/src/mind.ts
+  s_377be331e17ebd::t_81702a69f42a64 12,174,187,196-200,225
+packages/adapter-pi-contact/src/tools.ts
+  s_377be331e17ebd::t_d48d034b5f581c 1,17-19,23,34,93-119,135-137,161-164,180,191-199,224-227
+packages/kernel/src/rounds.ts
+  s_377be331e17ebd::t_2e651849246317 39-40,134-140,236-240
+packages/server/src/assemble.ts
+  s_377be331e17ebd::t_87722182f13d15 33-34,108-110,148
+packages/server/src/memory-store.ts
+  s_377be331e17ebd::t_a2eb80212d8437 1-62
+packages/server/proof/memory-mutations.mjs
+  s_2818dc8c3934e4::t_fba7e6d33773d0 1-51,53-95,97-99,104-114,116,118-136
+  s_377be331e17ebd::t_8f1d28cdb24d85 96,100-103,115,117
+packages/server/proof/pref-eval.mjs
+  s_377be331e17ebd::t_1df76c865f05f1 1-99
+packages/server/src/quote-chain.test.ts
+  s_042e901c6ad028::t_ae8fdcb333afaf 1-102,105-108,110,112,114,116-118,121-122
+  s_042e901c6ad028::t_7f35e612de0b7f 103-104
+  s_042e901c6ad028::t_cbcd5603b09189 109
+  s_042e901c6ad028::t_74d0d8e3b5d207 111
+  s_042e901c6ad028::t_b92ede404db614 113
+  s_042e901c6ad028::t_28bd3429482f46 115
+  s_042e901c6ad028::t_6fc8a5d707e18d 119-120
+packages/kernel/src/fixtures/quote-chain-2071.json
+  s_042e901c6ad028::t_2aab3252ddca3b 1-111
+packages/kernel/src/quote-chain.test.ts
+  s_042e901c6ad028::t_f062cb67e35ad2 1-99
+packages/kernel/src/quote-chain.ts
+  s_042e901c6ad028::t_0f12ce1883245b 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "891080653ffaea83468ad1c6121ca2ad1457214d",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_2818dc8c3934e4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b8e719a0-2655-4ffe-87d8-d96d424be0a4",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_af07fdb734b55e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3c81b704d9af27a9",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

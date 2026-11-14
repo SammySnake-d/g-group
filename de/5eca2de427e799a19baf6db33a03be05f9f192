@@ -1,0 +1,22 @@
+packages/domain/src/commitment-ledger.ts
+  s_e2bc806021672e::t_20167ad6e7d425 148,154,228
+packages/domain/src/commitment-ledger.test.ts
+  s_e2bc806021672e::t_84fd9b6ebae00a 736
+  s_e2bc806021672e::t_3d232d3166abc8 874-949
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "de5eca2de427e799a19baf6db33a03be05f9f192",
+  "prompts": {},
+  "sessions": {
+    "s_e2bc806021672e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b780-fd11-79d1-a574-02be534fc4f7",
+        "model": "ai-iisbo/[乾坤按量]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

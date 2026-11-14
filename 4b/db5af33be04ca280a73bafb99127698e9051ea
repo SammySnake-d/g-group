@@ -1,0 +1,14 @@
+receipts/feat-t177-g6-proof.json
+  h_f33e46a035b77c 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4bdb5af33be04ca280a73bafb99127698e9051ea",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+packages/adapter-cc-compute/proof/flake-20.txt
+  s_0969768406a9fa::t_f59b7d1d4d1b61 1-24
+packages/adapter-cc-compute/proof/tests.txt
+  s_0969768406a9fa::t_492ba5e6a1dfeb 5,11,17,23,29,35,41,44-45,47,50-51,53-59,63,65,69,71,75,77,81,83,87,89,93,95,99,101,105,107,111,113,117,119,123,125,129,131,135,137,141,143,147-153,155,158-159,161,164-165,167,171,173,177,179,183,185,189,191,195,197,201,203,207,209,213,215,219,221,224-225,227,231,233,237,239,243,245,249,251,254-255,257,260-261,263,266-267,269,272-273,275,279,281,284-285,287,290-291,293,296-297,299,304
+receipts/feat-cc-compute.json
+  s_0969768406a9fa::t_c7adc67f4773b7 2,12,17,41,43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a63f5716aca9e5852b1bf4604c4554b2e048fb04",
+  "prompts": {},
+  "sessions": {
+    "s_0969768406a9fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a291220c25ca93a51",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

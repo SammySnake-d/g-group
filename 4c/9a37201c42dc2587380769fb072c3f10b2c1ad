@@ -1,0 +1,47 @@
+packages/adapter-pi-contact/src/compact.ts
+  s_c2951e0144c55f::t_de5ace9b7f0c6c 138
+packages/domain/src/model-config.ts
+  s_c2951e0144c55f::t_b76a81358b0848 9,120-201
+packages/domain/src/speaking-endpoint.test.ts
+  s_c2951e0144c55f::t_41c0702d11a985 1-83
+packages/kernel/src/runtime-ports.ts
+  s_c2951e0144c55f::t_3107b509235612 210-211
+packages/server/proof/g2-speaking-mutations.mjs
+  s_c2951e0144c55f::t_db1f7daa83bbd8 1-163
+packages/server/proof/g2-speaking-mutations.txt
+  s_c2951e0144c55f::t_5b5a3bb7ae1402 1-29
+packages/server/src/cli.ts
+  s_c2951e0144c55f::t_62d5c61f8b81db 14,16,97-98,103-105
+packages/server/src/host.ts
+  s_c2951e0144c55f::t_6107b4dfe4499d 155-160,185-187,455-459,2306-2308,2322,2344-2350,2353-2362,2375,2377,2619,2621-2623,2625,2653-2654
+packages/server/src/index.ts
+  s_c2951e0144c55f::t_559025b383c6ee 6
+packages/server/src/speaking-assembly.test.ts
+  s_c2951e0144c55f::t_1306c1949dd054 1-162
+packages/server/src/speaking-config.test.ts
+  s_c2951e0144c55f::t_88fe68a589d5c1 1-29
+packages/server/src/speaking-snapshot.test.ts
+  s_c2951e0144c55f::t_fac9c6a1e8d7da 1-226
+packages/server/src/speaking.ts
+  s_c2951e0144c55f::t_a445c4d8e15586 1-102
+packages/server/src/start.ts
+  s_c2951e0144c55f::t_267dd191d45be7 6,8,11,20-21,26-27,44-46,57-59
+receipts/feat-t177-g2-config.json
+  s_c2951e0144c55f::t_b87ecbd5713fee 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4c9a37201c42dc2587380769fb072c3f10b2c1ad",
+  "prompts": {},
+  "sessions": {
+    "s_c2951e0144c55f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9ddaf5ef55b639ed",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

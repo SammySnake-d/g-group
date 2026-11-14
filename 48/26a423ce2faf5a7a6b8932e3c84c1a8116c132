@@ -1,0 +1,19 @@
+apps/desktop/proof/live-data/green.txt
+  s_78cbadecffd7bf::t_f98458ec329e16 1-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4826a423ce2faf5a7a6b8932e3c84c1a8116c132",
+  "prompts": {},
+  "sessions": {
+    "s_78cbadecffd7bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9caabaa2a69c3a1c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

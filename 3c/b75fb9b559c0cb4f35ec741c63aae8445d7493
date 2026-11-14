@@ -1,0 +1,14 @@
+.github/workflows/neg-fixture.yml
+  h_f33e46a035b77c 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3cb75fb9b559c0cb4f35ec741c63aae8445d7493",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

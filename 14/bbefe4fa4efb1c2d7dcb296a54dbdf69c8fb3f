@@ -1,0 +1,141 @@
+apps/desktop/e2e/shell-flow.ui.spec.ts
+  s_cb1a42da06940f::t_5ad3238920d0e9 1-158
+apps/desktop/src/App.tsx
+  s_cb1a42da06940f::t_3feb6feb9f41cc 2-11,13-14,16-21,23-35
+apps/desktop/src/api/adapters.ts
+  s_cb1a42da06940f::t_6aeea6db3034d1 1-79
+apps/desktop/src/api/backend.ts
+  s_cb1a42da06940f::t_ba9a88bec935b3 3,5,11,22-31,33-36
+apps/desktop/src/api/demo-seed.ts
+  s_cb1a42da06940f::t_774e4c968366c1 1-16
+apps/desktop/src/app/Divider.tsx
+  s_cb1a42da06940f::t_ce99184ac2ebfd 1-29
+apps/desktop/src/app/ListRow.tsx
+  s_cb1a42da06940f::t_ed4fa2a651cc2f 1-24
+apps/desktop/src/app/MainPane.tsx
+  s_cb1a42da06940f::t_da971a58c0b761 1-30
+apps/desktop/src/app/SplitArea.tsx
+  s_cb1a42da06940f::t_035ef2b0902b6e 1-16
+apps/desktop/src/app/chat/ChatHeader.tsx
+  s_cb1a42da06940f::t_d52af69f55ece5 1-55
+apps/desktop/src/app/chat/ChatView.tsx
+  s_cb1a42da06940f::t_a25f7706f7fd8c 1-65
+apps/desktop/src/app/chat/ComposerSlot.tsx
+  s_cb1a42da06940f::t_4db5c3be3b0696 1-18
+apps/desktop/src/app/chat/MentionMe.tsx
+  s_cb1a42da06940f::t_0b0d6ecb54e640 1-26
+apps/desktop/src/app/chat/SelectBar.tsx
+  s_cb1a42da06940f::t_43eee01b6fc873 1-27
+apps/desktop/src/app/composer/MentionMenu.tsx
+  s_cb1a42da06940f::t_f91cbcfbca9053 1-23
+apps/desktop/src/app/composer/QuoteBar.tsx
+  s_cb1a42da06940f::t_0f9729001768ec 1-33
+apps/desktop/src/app/composer/ScheduleDialog.tsx
+  s_cb1a42da06940f::t_26f5641e8290b7 1-16
+apps/desktop/src/app/composer/SlashHint.tsx
+  s_cb1a42da06940f::t_8aee1b93f78e0e 1-42
+apps/desktop/src/app/composer/SlashMenu.tsx
+  s_cb1a42da06940f::t_7872ee0c6d1346 1-47
+apps/desktop/src/app/composer/SourceBadge.tsx
+  s_cb1a42da06940f::t_4f2b86a0847735 1-29
+apps/desktop/src/app/composer/SourcePicker.tsx
+  s_cb1a42da06940f::t_5e464b5247f988 1-55
+apps/desktop/src/app/composer/Toolbar.tsx
+  s_cb1a42da06940f::t_6850c6af178d3b 1-68
+apps/desktop/src/app/composer/useAutoHeight.ts
+  s_cb1a42da06940f::t_a5c0efbce85a0b 1-30
+apps/desktop/src/app/composer/useMention.ts
+  s_cb1a42da06940f::t_8818333a824928 1-36
+apps/desktop/src/app/composer/useSlash.ts
+  s_cb1a42da06940f::t_a7ca2d78a2851e 1-133
+apps/desktop/src/app/list/ContactList.tsx
+  s_cb1a42da06940f::t_3cb0cc5e2df813 1-57
+apps/desktop/src/app/list/ConvList.tsx
+  s_cb1a42da06940f::t_a37fd9696d793c 1-59
+apps/desktop/src/app/list/FileList.tsx
+  s_cb1a42da06940f::t_3158e7095aa855 1-29
+apps/desktop/src/app/list/ListPane.tsx
+  s_cb1a42da06940f::t_38d341391eb57d 1-46
+apps/desktop/src/app/list/labels.ts
+  s_cb1a42da06940f::t_ede78c8e102cfb 1-9
+apps/desktop/src/app/overlays/Overlays.tsx
+  s_cb1a42da06940f::t_4a74491ddcee04 1-27
+apps/desktop/src/app/overlays/PanoOverlay.tsx
+  s_cb1a42da06940f::t_9dae523df50043 1-28
+apps/desktop/src/app/overlays/RewindDialog.tsx
+  s_cb1a42da06940f::t_669c012e9f2d28 1-26
+apps/desktop/src/app/useShell.ts
+  s_cb1a42da06940f::t_415279b6bae271 1-22
+apps/desktop/src/components/Composer.tsx
+  s_cb1a42da06940f::t_70642814d71f15 1-16,21,24,30-33,35-40,43,47-54,57-58,60,64-66,70,73-75,77,80,83-84,89
+apps/desktop/src/components/Slash.tsx
+  s_cb1a42da06940f::t_cac941a3c17a9e 1-5
+apps/desktop/src/components/ui/command.tsx
+  s_cb1a42da06940f::t_cf24859c196d3e 2-3,7-11,13-23,25-28,30-33,35-40,42-45,47-53,55
+apps/desktop/src/components/ui/sonner.tsx
+  s_cb1a42da06940f::t_44e206ad36da87 1-32
+apps/desktop/src/components/ui/toaster.tsx
+  s_cb1a42da06940f::t_3174d709059d25 1-2
+apps/desktop/src/ctx.ts
+  s_cb1a42da06940f::t_0724ee0a45059d 1-4
+apps/desktop/src/hooks/use-toast.ts
+  s_cb1a42da06940f::t_fc88c4b04a64f9 1-4,6,8-10,12-14,17-20,23-25,27
+apps/desktop/src/store/boot.ts
+  s_cb1a42da06940f::t_b1d6db4848d874 1-36
+apps/desktop/src/store/demo.ts
+  s_cb1a42da06940f::t_f3e85f3ca04004 1-45
+apps/desktop/src/store/dom.ts
+  s_cb1a42da06940f::t_67d1eec6e0b6f2 1-8
+apps/desktop/src/store/index.ts
+  s_cb1a42da06940f::t_c3cc9387f1cb4c 1-76
+apps/desktop/src/store/live.ts
+  s_cb1a42da06940f::t_dcd097464bed1c 1-45
+apps/desktop/src/store/remote.ts
+  s_cb1a42da06940f::t_6b9cfba927b7fe 1-16
+apps/desktop/src/store/select.ts
+  s_cb1a42da06940f::t_c664c65d518c1b 1-60
+apps/desktop/src/store/slices/chat.ts
+  s_cb1a42da06940f::t_2e3dfb556ca8a2 1-169
+apps/desktop/src/store/slices/compute.ts
+  s_cb1a42da06940f::t_20c0036e42c2bb 1-143
+apps/desktop/src/store/slices/layout.ts
+  s_cb1a42da06940f::t_8207b788675b9c 1-105
+apps/desktop/src/store/slices/members.ts
+  s_cb1a42da06940f::t_27aa7cca666175 1-88
+apps/desktop/src/store/slices/messages.ts
+  s_cb1a42da06940f::t_56a81b4234349e 1-182
+apps/desktop/src/store/slices/models.ts
+  s_cb1a42da06940f::t_33196232129268 1-39
+apps/desktop/src/store/slices/plugins.ts
+  s_cb1a42da06940f::t_f15377f6213d13 1-89
+apps/desktop/src/store/slices/schedule.ts
+  s_cb1a42da06940f::t_10ebcab706f6db 1-104
+apps/desktop/src/store/slices/send.ts
+  s_cb1a42da06940f::t_4295ff1c88e6e3 1-120
+apps/desktop/src/store/slices/tasks.ts
+  s_cb1a42da06940f::t_c88029f380e71b 1-80
+apps/desktop/src/store/state.ts
+  s_cb1a42da06940f::t_c9c4834a39845b 1-28
+apps/desktop/src/store/types.ts
+  s_cb1a42da06940f::t_2dd9321f069fa0 1-183
+apps/desktop/verify/mines.json
+  s_cb1a42da06940f::t_0b95295c3c612d 29,64
+apps/desktop/verify/structure-baseline.json
+  s_cb1a42da06940f::t_c457fa4010dfd1 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "14bbefe4fa4efb1c2d7dcb296a54dbdf69c8fb3f",
+  "prompts": {},
+  "sessions": {
+    "s_cb1a42da06940f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ade26af15a1458fdd",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

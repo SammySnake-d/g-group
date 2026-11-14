@@ -1,0 +1,29 @@
+packages/api-contract/src/plugin-contract.test.ts
+  s_29fa229c8c70ee::t_ce093f1954da53 1-39
+packages/server/src/host.ts
+  s_29fa229c8c70ee::t_d48dc2e0780a60 77-82
+packages/server/src/plugin-runtime.test.ts
+  s_29fa229c8c70ee::t_1e3a189d9ad4cd 1-329
+packages/server/src/plugins.test.ts
+  s_29fa229c8c70ee::t_cb158468002a51 4-5,7-9,11-12,84,104-193
+packages/server/src/plugins.ts
+  s_29fa229c8c70ee::t_bdfc70466a6f9d 247-256
+packages/server/src/test-kit.ts
+  s_29fa229c8c70ee::t_508e0e564e36fb 1-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a980cf2c9404025ccbd66ecff4aee4e2d0456f33",
+  "prompts": {},
+  "sessions": {
+    "s_29fa229c8c70ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6f12fa99094fd0fa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

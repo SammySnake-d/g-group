@@ -1,0 +1,14 @@
+packages/domain/src/commitment-ledger.test.ts
+  h_f33e46a035b77c 1142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d231afb2b263ab4de4b4686ae7c7ae29111b153c",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

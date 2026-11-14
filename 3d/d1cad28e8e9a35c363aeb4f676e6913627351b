@@ -1,0 +1,21 @@
+packages/server/proof/cross-vendor-review-mutations.txt
+  s_e7bd71499cd700::t_5c79edf745e107 1-29
+receipts/feat-cross-vendor-review.json
+  s_e7bd71499cd700::t_6f11f22f0e6747 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3dd1cad28e8e9a35c363aeb4f676e6913627351b",
+  "prompts": {},
+  "sessions": {
+    "s_e7bd71499cd700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8db9faef-fb87-414b-b25d-2aa6747caad3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

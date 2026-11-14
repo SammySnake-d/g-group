@@ -1,0 +1,29 @@
+packages/server/proof/slash-plugins-v3/out/full.log
+  s_9d7fa6e9d65b83::t_047c7b029136cf 1-9017
+packages/server/proof/slash-plugins-v3/out/green.log
+  s_9d7fa6e9d65b83::t_79ca262f31e00b 1-106
+packages/server/proof/slash-plugins-v3/out/lint.log
+  s_9d7fa6e9d65b83::t_489f425794b86d 1
+packages/server/proof/slash-plugins-v3/out/mutations.log
+  s_9d7fa6e9d65b83::t_9268966d0c5c03 1-23
+packages/server/proof/slash-plugins-v3/out/production.log
+  s_9d7fa6e9d65b83::t_8b5d579f7a5f8b 1-8
+packages/server/proof/slash-plugins-v3/out/red.log
+  s_9d7fa6e9d65b83::t_1b92040c548bf0 1-389
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "64bc1fba9e273711b511fd657835e9de1e997119",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

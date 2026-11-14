@@ -1,0 +1,45 @@
+scripts/gates/selftest.ts
+  s_06e46686a6de66::t_385bc84b1913f2 1-116
+.githooks/pre-push
+  s_22ba9b1b818602::t_110956e6ac4dec 1-6
+.github/workflows/gates.yml
+  s_22ba9b1b818602::t_848e8746d397f4 1-23
+receipts/chore-gates.json
+  s_22ba9b1b818602::t_475b9610902f19 1-20
+scripts/gates/gates.ts
+  s_22ba9b1b818602::t_3e04d92008af05 1-267
+scripts/gates/lib.ts
+  s_22ba9b1b818602::t_e54e9f15f73abf 1-159
+scripts/gates/proof/selftest.txt
+  s_22ba9b1b818602::t_57a4bfa9e4bec5 1-33
+scripts/gates/run-all.ts
+  s_22ba9b1b818602::t_bec0a3d1d30837 1-36
+scripts/gates/vendor.ts
+  s_22ba9b1b818602::t_123f8b8016b76f 1-18
+scripts/merge.sh
+  s_22ba9b1b818602::t_6df07814d380d1 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db248d1e5acf1d5c75fa9b023ebc8cf786b9a4ff",
+  "prompts": {},
+  "sessions": {
+    "s_06e46686a6de66": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a7c0-7ade-75c0-b4b7-f9b44b509b17",
+        "model": "ai-iisbo/[乾坤按量pro]gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_22ba9b1b818602": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91b17b26-1e2d-4bc5-904f-9d3aab1e0f38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

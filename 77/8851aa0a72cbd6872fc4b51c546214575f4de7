@@ -1,0 +1,19 @@
+packages/kernel/src/plugins.test.ts
+  s_233b6d928b260b::t_21bcd97f6f9afa 1369-1407
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "778851aa0a72cbd6872fc4b51c546214575f4de7",
+  "prompts": {},
+  "sessions": {
+    "s_233b6d928b260b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1afe1-6e07-78f2-8a32-e312349378e7",
+        "model": "ai-iisbo/[乾坤按量]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

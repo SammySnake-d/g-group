@@ -1,0 +1,14 @@
+.github/workflows/gf.yml
+  h_f33e46a035b77c 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9d5aaf05f6e007d13612f2122e7fe2bc08712d28",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+receipts/feat-cc-compute.json
+  h_f33e46a035b77c 45-52
+reviews/feat-cc-compute.md
+  h_f33e46a035b77c 1-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1f52ad300b6db72409f92d6123bbc8e779693716",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

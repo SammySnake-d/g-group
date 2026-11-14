@@ -1,0 +1,27 @@
+packages/adapter-pi-contact/src/mind.ts
+  s_a4449a4186dc65::t_10cd479e8ee62e 196-200
+packages/adapter-pi-contact/src/tools.ts
+  s_a4449a4186dc65::t_1005c8bc395d7b 20,121-127,172-173,237
+packages/kernel/src/quote-chain.ts
+  s_a4449a4186dc65::t_93383dbde15841 1-9,15-37,39-49,51-110
+packages/server/src/assemble.ts
+  s_a4449a4186dc65::t_7778b4263a651c 111
+packages/server/src/host.ts
+  s_a4449a4186dc65::t_a8db35c1ede735 56-60,142-143,154-156,1575-1595,1894-1904,1935
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "09fca9dc9a85c6c005a1e9d63e77de8a4520ff6b",
+  "prompts": {},
+  "sessions": {
+    "s_a4449a4186dc65": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "35085604-c627-4b24-9468-35e58c5689f4",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

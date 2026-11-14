@@ -1,0 +1,19 @@
+packages/server/proof/q09-real/run.ts
+  s_3410df211081b0::t_06c0718d884ec7 474,496,501-505,568
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "75d6fbb314085fd616a5498d6d6464f6fb838be3",
+  "prompts": {},
+  "sessions": {
+    "s_3410df211081b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6024214ba242fcf3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

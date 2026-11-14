@@ -1,0 +1,20 @@
+packages/kernel/proof/mutations.mjs
+  s_74b15fb4f695d6::t_6663038023f2f3 272-297
+  s_74b15fb4f695d6::t_ae635ad89ca666 298-301
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fc216e6d2ee3d17afc7d9ab48c6f6d98cf8917e9",
+  "prompts": {},
+  "sessions": {
+    "s_74b15fb4f695d6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c93a-87c4-7701-a989-58b9b15da855",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

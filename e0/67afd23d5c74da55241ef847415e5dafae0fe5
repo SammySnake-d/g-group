@@ -1,0 +1,19 @@
+packages/server/proof/compute-input-mutations.mjs
+  s_19afb02e575b26::t_c44ea53e8e0fd4 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e067afd23d5c74da55241ef847415e5dafae0fe5",
+  "prompts": {},
+  "sessions": {
+    "s_19afb02e575b26": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac3c5d6dff8770595",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+reviews/feat-cc-compute.md
+  s_7476757b054d83::t_f081a371bb1c50 823-895
+receipts/feat-cc-compute.json
+  s_7476757b054d83::t_3ec2f96261805c 47-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f3a74ec7fc8ca24c5c6a18d8dbd343cf9fe98eb3",
+  "prompts": {},
+  "sessions": {
+    "s_7476757b054d83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c682-7cb7-78f2-87cf-37dd800f7e15",
+        "model": "shayu/gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/kernel/src/failure-class.ts
+  s_568736c9a90f61::t_d438063dd7ef89 1-10,12,29,33,35,39,41,43,51-204,207,210,212,214,221,223,230,232,236-282
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "70321ab560c99297830bb7d821f407c8c321a37a",
+  "prompts": {},
+  "sessions": {
+    "s_568736c9a90f61": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "945466dc-9318-4837-9afe-e1c1b3bb224f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

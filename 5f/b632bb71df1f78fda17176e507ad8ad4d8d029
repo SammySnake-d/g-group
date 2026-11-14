@@ -1,0 +1,70 @@
+packages/adapter-cc-compute/src/adapter.ts
+  h_f33e46a035b77c 166-167,443,450-462,484
+packages/adapter-cc-compute/src/resume-tools.test.ts
+  h_f33e46a035b77c 1-79
+packages/adapter-cc-compute/src/types.ts
+  h_f33e46a035b77c 179-183
+packages/adapter-pi-contact/src/mind.test.ts
+  h_f33e46a035b77c 471-478
+packages/adapter-pi-contact/src/tools.ts
+  h_f33e46a035b77c 70,229-232
+packages/api-contract/src/api.ts
+  h_f33e46a035b77c 214-221
+packages/api-contract/src/entities.ts
+  h_f33e46a035b77c 258-259,325-356
+packages/domain/proof/auth-intent-mutations.mjs
+  h_f33e46a035b77c 1-113
+packages/domain/proof/auth-intent-mutations.txt
+  h_f33e46a035b77c 1-53
+packages/domain/proof/auth-intent-tests.txt
+  h_f33e46a035b77c 1-43
+packages/domain/src/authorization.test.ts
+  h_f33e46a035b77c 1-170
+packages/domain/src/authorization.ts
+  h_f33e46a035b77c 1-246
+packages/domain/src/followups.test.ts
+  h_f33e46a035b77c 1-248
+packages/domain/src/followups.ts
+  h_f33e46a035b77c 1-348
+packages/domain/src/index.ts
+  h_f33e46a035b77c 12-14
+packages/domain/src/routing.test.ts
+  h_f33e46a035b77c 1-67
+packages/domain/src/routing.ts
+  h_f33e46a035b77c 1-92
+packages/kernel/src/runtime-ports.ts
+  h_f33e46a035b77c 96-97
+packages/server/proof/auth-intent-host-mutations.mjs
+  h_f33e46a035b77c 1-72
+packages/server/proof/auth-intent-host-mutations.txt
+  h_f33e46a035b77c 1-23
+packages/server/proof/auth-intent-tests.txt
+  h_f33e46a035b77c 1-46
+packages/server/proof/real-auth-run.ts
+  h_f33e46a035b77c 1-74
+packages/server/proof/real-auth-run.txt
+  h_f33e46a035b77c 1-40
+packages/server/src/fakes.ts
+  h_f33e46a035b77c 55-58,79-84,95-107,121-122,125-126,129-131,133,172-173
+packages/server/src/host.ts
+  h_f33e46a035b77c 43,48,225-236,982-983,985-987,1497-1503,1506,1537,1576,2353-2361,2365-2366,2391-2398,2421-2423,2564,2566-2567,2643,2646,2660-2661,2667,2701-2704,2772-2775,2909-2912,2926,2938-2940,3132-3133,3238,3883-4152,4334-4336,4349-4367
+packages/server/src/intent.test.ts
+  h_f33e46a035b77c 1-617
+packages/server/src/service.ts
+  h_f33e46a035b77c 96
+receipts/feat-auth-domain.json
+  h_f33e46a035b77c 1-19
+receipts/feat-auth-host.json
+  h_f33e46a035b77c 1-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5fb632bb71df1f78fda17176e507ad8ad4d8d029",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

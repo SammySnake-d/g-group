@@ -1,0 +1,16 @@
+packages/server/src/files.test.ts
+  h_f33e46a035b77c 25-26,34,38-40,75-77,98-100
+packages/server/src/schedule-views.test.ts
+  h_f33e46a035b77c 17,19,24,26-28,46,50-51,73-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9d2799c3a39f9cf35ec13316697ae169c525c811",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

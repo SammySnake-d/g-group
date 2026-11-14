@@ -1,0 +1,64 @@
+package-lock.json
+  h_f33e46a035b77c 69-72,131-136
+packages/adapter-cc-compute/mcp/report-mcp.mjs
+  h_f33e46a035b77c 1-49
+packages/adapter-cc-compute/package.json
+  h_f33e46a035b77c 1-8
+packages/adapter-cc-compute/proof/flake-20.sh
+  h_f33e46a035b77c 1-31
+packages/adapter-cc-compute/proof/flake-20.txt
+  h_f33e46a035b77c 1-24
+packages/adapter-cc-compute/proof/gates.txt
+  h_f33e46a035b77c 1-11
+packages/adapter-cc-compute/proof/mutations.mjs
+  h_f33e46a035b77c 1-217
+packages/adapter-cc-compute/proof/mutations.txt
+  h_f33e46a035b77c 1-116
+packages/adapter-cc-compute/proof/r5-red-on-old-impl.txt
+  h_f33e46a035b77c 1-152
+packages/adapter-cc-compute/proof/r7-red-on-old-impl.txt
+  h_f33e46a035b77c 1-59
+packages/adapter-cc-compute/proof/smoke-real.txt
+  h_f33e46a035b77c 1-63
+packages/adapter-cc-compute/proof/tests.txt
+  h_f33e46a035b77c 1-544
+packages/adapter-cc-compute/smoke/real-claude.mjs
+  h_f33e46a035b77c 1-41
+packages/adapter-cc-compute/src/adapter.test.ts
+  h_f33e46a035b77c 1-1847
+packages/adapter-cc-compute/src/adapter.ts
+  h_f33e46a035b77c 1-439
+packages/adapter-cc-compute/src/brief.ts
+  h_f33e46a035b77c 1-69
+packages/adapter-cc-compute/src/cli.ts
+  h_f33e46a035b77c 1-107
+packages/adapter-cc-compute/src/events.ts
+  h_f33e46a035b77c 1-163
+packages/adapter-cc-compute/src/index.ts
+  h_f33e46a035b77c 1-6
+packages/adapter-cc-compute/src/plain.ts
+  h_f33e46a035b77c 1-76
+packages/adapter-cc-compute/src/procgroup.ts
+  h_f33e46a035b77c 1-21
+packages/adapter-cc-compute/src/report-schema.ts
+  h_f33e46a035b77c 1-65
+packages/adapter-cc-compute/src/types.ts
+  h_f33e46a035b77c 1-106
+packages/adapter-cc-compute/test-support/fake-claude.mjs
+  h_f33e46a035b77c 1-171
+receipts/feat-cc-compute.json
+  h_f33e46a035b77c 1-46
+reviews/feat-cc-compute.md
+  h_f33e46a035b77c 1-605
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6b298be45cd8ff39a8b7383726c43c3338272fde",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

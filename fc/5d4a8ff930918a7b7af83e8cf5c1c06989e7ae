@@ -1,0 +1,29 @@
+apps/desktop/docs/astryx-trial.md
+  s_c20562a127f0af::t_32b51a2f42d939 1-13
+apps/desktop/e2e/astryx.ui.spec.ts
+  s_c20562a127f0af::t_c1bbd3e4c1d408 63-99
+apps/desktop/src/astryx/Probe.tsx
+  s_c20562a127f0af::t_ab95565a400689 26
+apps/desktop/src/astryx/layers.css
+  s_c20562a127f0af::t_98c604604a4cbc 4
+apps/desktop/src/astryx/theme-paper-ink.css
+  s_c20562a127f0af::t_6d342cd2d1e1d8 4-6
+apps/desktop/src/components/pages/SettingsPage.tsx
+  s_c20562a127f0af::t_45851153e847ca 1,8,17-20,42-43,52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fc5d4a8ff930918a7b7af83e8cf5c1c06989e7ae",
+  "prompts": {},
+  "sessions": {
+    "s_c20562a127f0af": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c16c-e991-72f1-9871-6d60d8855ee8",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

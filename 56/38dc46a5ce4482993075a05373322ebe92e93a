@@ -1,0 +1,19 @@
+receipts/feat-forward-link.json
+  s_90e47ba4fa2101::t_54bb386bab4f16 35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5638dc46a5ce4482993075a05373322ebe92e93a",
+  "prompts": {},
+  "sessions": {
+    "s_90e47ba4fa2101": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dd154965-afbd-4134-a1d3-c00f2a859eab",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+packages/server/src/slash-commands.test.ts
+  s_bc500ef58bf3aa::t_cd066a13d0e062 1-40,42-115,117-119,121-151,153-155
+  s_bc500ef58bf3aa::t_18921148321bb7 41,116,120,152
+packages/server/plugins/ketchup/plugin.json
+  s_bc500ef58bf3aa::t_6f9d78a2fc6aa4 1-7
+packages/server/src/service.ts
+  s_bc500ef58bf3aa::t_6f9d78a2fc6aa4 19,37,75
+packages/server/src/slash-commands.ts
+  s_bc500ef58bf3aa::t_6f9d78a2fc6aa4 1-10
+packages/server/src/plugins.ts
+  s_bc500ef58bf3aa::t_6f9d78a2fc6aa4 17,255
+  s_bc500ef58bf3aa::t_18921148321bb7 311
+packages/server/plugins/ketchup/index.mjs
+  s_bc500ef58bf3aa::t_6f9d78a2fc6aa4 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d8e4c308c033cbb67d4ddd29b8322b8857727c07",
+  "prompts": {},
+  "sessions": {
+    "s_bc500ef58bf3aa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cf01-3b82-7211-b7b9-c7147d5e45e7",
+        "model": "chatflows/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

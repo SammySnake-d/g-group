@@ -1,0 +1,23 @@
+receipts/evidence/t177-g5/local-gates.txt
+  s_78cbadecffd7bf::t_99dee491a36ae8 1-11
+receipts/evidence/t177-g5/summary-final.json
+  s_78cbadecffd7bf::t_72c9920082867f 1-357
+receipts/feat-t177-g5-two-stage.json
+  s_78cbadecffd7bf::t_56e16286829fa5 8,14,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e241899f4d92287e8d158cdbc7aa7d1d25789941",
+  "prompts": {},
+  "sessions": {
+    "s_78cbadecffd7bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9caabaa2a69c3a1c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

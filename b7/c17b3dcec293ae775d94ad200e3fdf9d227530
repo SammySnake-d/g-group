@@ -1,0 +1,23 @@
+packages/server/proof/forward-link-real.ts
+  s_90e47ba4fa2101::t_73479718a04dc5 3,60-61,77-80,82-83,88,90-91,94-95,97,99-103
+packages/server/proof/forward-link-real.txt
+  s_90e47ba4fa2101::t_92ff1e7d1ca2a6 1-30,32-81
+receipts/feat-forward-link.json
+  s_90e47ba4fa2101::t_59a4cf2493a4c4 8,19,31,34-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b7c17b3dcec293ae775d94ad200e3fdf9d227530",
+  "prompts": {},
+  "sessions": {
+    "s_90e47ba4fa2101": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dd154965-afbd-4134-a1d3-c00f2a859eab",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

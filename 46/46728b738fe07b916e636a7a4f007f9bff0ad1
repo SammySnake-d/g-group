@@ -1,0 +1,35 @@
+apps/desktop/e2e/a2ui.ui.spec.ts
+  s_042e901c6ad028::t_a29d42297c44b5 1-86
+apps/desktop/e2e/visual.ui.spec.ts
+  s_042e901c6ad028::t_87094cb5be2106 61-63,66-72
+apps/desktop/src/App.tsx
+  s_042e901c6ad028::t_dc6231297b48a6 60,267-270,300-304,310-312,574,884-885
+apps/desktop/src/api/demo-server.ts
+  s_042e901c6ad028::t_805ffa67f859f4 1-142
+apps/desktop/src/components/Messages.tsx
+  s_042e901c6ad028::t_f802fe5c7c8ceb 3,58-60,342-343,475-479,481,484-491,495-497,499-510,512-569
+apps/desktop/src/ctx.ts
+  s_042e901c6ad028::t_51d43ba6262231 41-43,45
+apps/desktop/src/data.ts
+  s_042e901c6ad028::t_67322c9cbc46c1 354
+apps/desktop/verify/mines.json
+  s_042e901c6ad028::t_1c8f1176988092 2-93
+apps/desktop/verify/mutation-report.json
+  s_042e901c6ad028::t_d348295654d283 2,5-7,12-14,19-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4646728b738fe07b916e636a7a4f007f9bff0ad1",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

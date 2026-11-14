@@ -1,0 +1,16 @@
+packages/core/proof/adds.txt
+  h_f33e46a035b77c 1
+packages/core/src/add.ts
+  h_f33e46a035b77c 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e750dbec79949f6c1c05429a6d34302f620b2875",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

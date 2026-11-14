@@ -1,0 +1,19 @@
+scripts/gates/selftest.ts
+  s_6b0720ccb9aaa5::t_6d47338d0b02bc 209-234
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1ec064e596f2d58924b9c8e274c3c214f2288ac9",
+  "prompts": {},
+  "sessions": {
+    "s_6b0720ccb9aaa5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8d1af83f4b42b537",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

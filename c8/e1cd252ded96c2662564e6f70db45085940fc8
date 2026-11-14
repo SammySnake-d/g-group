@@ -1,0 +1,14 @@
+packages/api-contract/src/artifacts.test.ts
+  h_f33e46a035b77c 4,9-10,14-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c8e1cd252ded96c2662564e6f70db45085940fc8",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+packages/adapter-pi-contact/src/history-tools.test.ts
+  s_98f0ff8415d16e::t_a31cc99dec1d4d 1-127
+packages/adapter-pi-contact/src/mind.test.ts
+  s_98f0ff8415d16e::t_2d746a7cb0790d 88,101
+packages/kernel/src/history-tools.test.ts
+  s_98f0ff8415d16e::t_8c2b78346ffecc 1-74
+packages/kernel/src/history-tools.ts
+  s_98f0ff8415d16e::t_8d7d8c83ecf095 1-76
+packages/kernel/src/index.ts
+  s_98f0ff8415d16e::t_1780fb9fdcd22a 17
+packages/kernel/src/runtime-ports.ts
+  s_98f0ff8415d16e::t_9d9cf627342fd0 127-131,138-144
+packages/server/src/history-prefetch.test.ts
+  s_98f0ff8415d16e::t_add02873c92df4 1-205
+packages/server/src/history-tools.test.ts
+  s_98f0ff8415d16e::t_349737ad362910 1-370
+packages/server/src/history.ts
+  s_98f0ff8415d16e::t_b083057c2d968f 1-54
+packages/server/src/host.ts
+  s_98f0ff8415d16e::t_bde7c3371d68f5 118-119,137,233-236,436-437,452-462,2418,2425-2428,2431-2438,2440-2441,2455,2459-2467,2499-2500
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "52ce0179a157a34e1a82de6dc9bb9afea9adf25a",
+  "prompts": {},
+  "sessions": {
+    "s_98f0ff8415d16e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6ed2c2cb3b685ca0",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

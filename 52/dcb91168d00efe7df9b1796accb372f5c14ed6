@@ -1,0 +1,19 @@
+apps/desktop/e2e/native-files.electron.spec.ts
+  s_d81660d2bcfe5d::t_8eb9aedb4ad0a8 1-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "52dcb91168d00efe7df9b1796accb372f5c14ed6",
+  "prompts": {},
+  "sessions": {
+    "s_d81660d2bcfe5d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cec9-738b-7a32-9fdf-78b37f5178c9",
+        "model": "chatflows/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

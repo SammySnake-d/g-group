@@ -1,0 +1,37 @@
+.gitignore
+  s_22ba9b1b818602::t_39c9c71443dcc8 1-4
+README.md
+  s_22ba9b1b818602::t_a29ced4e0ea565 1-62
+docs/RECEIPT.md
+  s_22ba9b1b818602::t_c9bb880f1a4d56 1-28
+docs/spec/PROTOTYPE-REPORT.md
+  s_22ba9b1b818602::t_ae26810b50b706 1-32
+docs/spec/技术栈与工程规则.md
+  s_22ba9b1b818602::t_a98d8c4b8dcb01 1-84
+docs/spec/需求文档.md
+  s_22ba9b1b818602::t_0cf4433f17966c 1-3028
+docs/spec/验收文档-v0.1.md
+  s_22ba9b1b818602::t_356a07d61d28c1 1-244
+package-lock.json
+  s_22ba9b1b818602::t_c41317468cefa8 1-48
+package.json
+  s_22ba9b1b818602::t_025905f4f9f5d3 1-18
+tsconfig.json
+  s_22ba9b1b818602::t_6cbfbb22e01092 1-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "412ce25278e3b0057e02d792a8394f98aaf21424",
+  "prompts": {},
+  "sessions": {
+    "s_22ba9b1b818602": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91b17b26-1e2d-4bc5-904f-9d3aab1e0f38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
