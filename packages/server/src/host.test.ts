@@ -43,7 +43,7 @@ test("私聊派活闭环:接任务 → Compute 进度回聊天 → 普通消息�
   assert.match(compute.spawned[0]!.cwd ?? "", /^\/tmp\/gg\/t-/);
   const [task] = host.listTasks({ roomId: dm.id });
   assert.ok(task);
-  assert.equal(task.state, "T5_InReview", "交付后等审查(没有跨厂商审查人,交给用户豁免)");
+  assert.equal(task.state, "T8a_Delivered", "交付后待确认(没有跨厂商审查人,不审,等用户回复)");
   assert.equal(task.ownerContactId, c.id);
   assert.equal(task.requesterId, "me");
   assert.deepEqual(task.recentProgress.map((p) => p.kind), ["started", "milestone", "completed"]);

@@ -212,7 +212,7 @@ test("rewind 后联系人第 4 块不再有撤下的消息;新消息引用它,�
   await host.close();
 });
 
-test("rewind:已完成的 Compute 结果列在「已发生、未撤销」里;任务照样取消并等停止确认,任务卡收口,文案不声称结果被撤回", async () => {
+test("rewind:回退到交付之前,已交付、等你确认的任务不取消(T8a 的取消是空操作),它的 Compute 结果列在「已发生、未撤销」里,说明既不声称取消也不声称撤回", async () => {
   const compute = scriptedCompute();
   const host = new Host({ file: file(), now: () => NOW, mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5 });
   const c = host.createContact({ name: "小克" });
@@ -222,23 +222,23 @@ test("rewind:已完成的 Compute 结果列在「已发生、未撤销」里;任
   host.send({ roomId: dm.id, clientActionId: "u2", text: "帮我写一个 hello.txt" });
   await settle(host, compute);
   const task = host.listTasks({ roomId: dm.id })[0]!;
-  assert.equal(task.state, "T5_InReview");
+  assert.equal(task.state, "T8a_Delivered");
   const expected = [{ kind: "compute", taskId: task.id, taskTitle: "写一个 hello.txt", computeId: "cp-1", status: "completed" as const, result: "完成:写一个 hello.txt", startedAt: NOW, endedAt: NOW }];
   const p = host.rewindPreview(dm.id, 2);
   assert.deepEqual(p.sideEffects, expected);
+  assert.deepEqual(p.tasks, [], "已交付待确认的任务不列为要取消");
   const res: RewindResult = host.rewind({ roomId: dm.id, toSeq: 2, clientActionId: "rw" });
   assert.deepEqual(res.sideEffects, expected);
-  assert.deepEqual(res.tasks.map((t) => [t.taskId, t.state]), [[task.id, "T9_StopRequested"]]);
+  assert.deepEqual(res.tasks, []);
   assert.deepEqual(res.messages.map((m) => m.seq), [3, 4, 5, 6, 7]);
   const marker = host.listMessages(dm.id, {}).messages.find((m) => m.seq === res.markerSeq)!;
   assert.match(marker.text, /1 项已经发生的外部操作.*不会被撤销/);
+  assert.doesNotMatch(marker.text, /取消来源于/, "没取消的任务不说取消了");
   assert.doesNotMatch(marker.text, BAD_CLAIM);
   assert.doesNotMatch(JSON.stringify(res), BAD_CLAIM);
   await settle(host, compute);
-  assert.equal(stateOf(host, task.id), "T10_Cancelled");
-  assert.deepEqual(compute.stopped, ["cp-1"]);
-  const cards = host.listMessages(dm.id, {}).messages.filter((m) => m.card).map((m) => [m.seq, m.card!.kind, m.card!.state]);
-  assert.deepEqual(cards, [[4, "task-status", "expired"]], "交付是普通消息(AC-56),没有交付卡;任务卡收口");
+  assert.equal(stateOf(host, task.id), "T8a_Delivered");
+  assert.deepEqual(compute.stopped, [], "做完的 Compute 不再发停止");
   compute.close();
   await host.close();
 });
