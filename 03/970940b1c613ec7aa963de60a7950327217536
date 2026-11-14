@@ -1,0 +1,21 @@
+apps/desktop/proof/parity-r2-replying/green.txt
+  s_fb0de607dadbd8::t_69a4e50c73bedf 1-9
+apps/desktop/proof/parity-r2-replying/red.txt
+  s_fb0de607dadbd8::t_c7c504469802b1 1,4,8-12,15-26,30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "03970940b1c613ec7aa963de60a7950327217536",
+  "prompts": {},
+  "sessions": {
+    "s_fb0de607dadbd8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1a4dc882-b84a-4a01-936c-126151dd9dc1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
