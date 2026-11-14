@@ -220,7 +220,11 @@ const userRejectRun = (t: Task, e: TaskEvent): Outcome => {
   const ev = as(e, "UserReject");
   return ev.by === t.requester ? rework(t, ev.computeResumable) : no(`只有提出者 ${t.requester} 能退回验收`);
 };
-const accept = (t: Task, e: TaskEvent): Outcome => as(e, "UserAccept").by === t.requester ? ok(set(t, { state: "T8_Accepted", badge: "accepted" })) : no(`只有提出者 ${t.requester} 能确认验收`);
+/** 验收:提出者本人才行。这次交付没经过审查(门禁 none)时,本人验收即本人豁免审查,如实记 waived-by-user,不算合规(AC-26 ⑤)。 */
+const accept = (t: Task, e: TaskEvent): Outcome => {
+  if (as(e, "UserAccept").by !== t.requester) return no(`只有提出者 ${t.requester} 能确认验收`);
+  return ok(set(t, { state: "T8_Accepted", badge: "accepted", reviewGate: t.reviewGate === "none" ? "waived-by-user" : t.reviewGate }));
+};
 
 /** T5 守卫(AC-26 / R-01):审查人≠作者;审查厂商不在累积生产厂商集合里;任何一方 unknown 都拒;提出者本人可豁免同厂商,记为 Waived。 */
 /** 跨厂商判定:返回门禁结论,或不通过的原因(以 Error 包装区分)。 */
@@ -246,6 +250,18 @@ const review = go((t, e) => {
   const round = t.deliverySeq + 1;
   const delivery: Delivery = { round, commit: t.reviewedCommit! };
   return ok(set(t, { state: "T7_Delivering", reviewGate: gate, approval: { reviewerModel: ev.reviewerModel, waiverBy: ev.waiverBy ?? null }, delivery, deliverySeq: round }),
+    [{ kind: "send-card", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);
+});
+/**
+ * 这一轮没有审查(找不到合格审查人,或审查没做成):交付照常发出,分配新的交付代次,门禁如实留 none、不记审查结论;
+ * 之后发卡确认即进 T8a 待确认(需求 §8.1 已定 1:交活后进 T8a,不说话不算通过)。过期回包幂等忽略(同 Review 的绑定)。
+ */
+const unreviewed = go((t, e) => {
+  const ev = as(e, "ReviewUnavailable");
+  if (ev.round !== t.reviewRound || ev.commit !== t.reviewedCommit || ev.constraintVer !== t.constraintVer) return ok(t);
+  const round = t.deliverySeq + 1;
+  const delivery: Delivery = { round, commit: t.reviewedCommit! };
+  return ok(set(t, { state: "T7_Delivering", reviewGate: "none", approval: null, delivery, deliverySeq: round }),
     [{ kind: "send-card", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);
 });
 /** 同一产物重新送审:新轮次、清掉结论与验收标记(R4-CORR-01)。 */
@@ -379,7 +395,7 @@ export const TABLE: TransitionTable = freezeTable({
   T5_InReview: {
     Claim: rej("审查中,拒绝重复认领"), Dispatch: dispatchElse("已有 Compute"), ProducerModelAdded: addModel, NeedHuman: staleOr("审查中不再向人提问"),
     HumanReply: ign(NO_CARD), Amend: amendRework, SubmitForReview: go(submit),
-    Review: review, ReviewUnavailable: rej("空壳:无审查交付还没实现"), DeliveredCard: rej("还没审过,不能交付"),
+    Review: review, ReviewUnavailable: unreviewed, DeliveredCard: rej("还没审过,不能交付"),
     UserAccept: rej(NOT_DELIVERED), UserReject: rej(NOT_DELIVERED), AcceptTimeout: ign(NOT_DELIVERED),
     Cancel: cancel, StoppedConfirmed: ack, ExecFailed: execFailed,
   },

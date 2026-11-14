@@ -12,8 +12,11 @@ export type RewindPlan = RewindPreview;
 export type RewindRange = readonly [toSeq: number, uptoSeq: number];
 
 const TERMINAL: ReadonlySet<string> = new Set(["T8_Accepted", "T10_Cancelled", "T11_Failed"]);
-/** 已在停止中的任务不再重复取消。 */
-const NOT_CANCELLABLE: ReadonlySet<string> = new Set([...TERMINAL, "T9_StopRequested"]);
+/**
+ * 不在回退里取消的任务:已在停止中的不再重复取消;已交付、在等你确认的(T8a)也不取消——交付已经发生,
+ * 状态机对 T8a 的取消是空操作(需求 D20.3 第三台 T8 行),回退说明不能声称取消了它;它的 Compute 列在「已发生、未撤销」里。
+ */
+const NOT_CANCELLABLE: ReadonlySet<string> = new Set([...TERMINAL, "T9_StopRequested", "T8a_Delivered"]);
 type ComputeStatus = RewindPlan["sideEffects"][number]["status"];
 
 /** 这个会话已执行过的全部回退范围。 */
