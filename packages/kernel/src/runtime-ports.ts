@@ -85,7 +85,8 @@ export interface RoundInput {
  * 模型提出的动作。宿主逐条校验(会话是否可见、任务是否属于该联系人、seq 是否在本轮输入里),不合规的整条拒收并记录原因。
  * reply:在会话里发言(只有联系人能对外说话,Compute 不直接发言,AC-03);
  * dispatch:按四判据开 Compute 干活(AC-33),宿主建任务(T1→T2→T3)并起 Compute;
- * commit:登记承诺(AC-40②),text 必须是来源消息或本轮 reply 的原文子串;
+ * commit:登记承诺(AC-40②),text 必须是来源消息或本轮 reply 的原文子串;带 everyNMessages 就是「每 N 条消息做一次」的承诺(U80,
+ *   触发方式是消息数,和定时同一条线):宿主从登记那一刻起数这个会话的群聊发言,每攒够 N 条冻结一段 (from, to] 交给它;
  * forward:把用户追加的要求/回答转给在途 Compute(resume);
  * deliver:交付任务结果(T7→T8a 待确认,AC-28);
  * stop:请求停止任务的 Compute;
@@ -95,7 +96,7 @@ export interface RoundInput {
 export type MindAction =
   | { readonly kind: "reply"; readonly roomId: string; readonly text: string; readonly replyToSeq: number | null }
   | { readonly kind: "dispatch"; readonly roomId: string; readonly sourceSeq: number; readonly title: string; readonly task: string }
-  | { readonly kind: "commit"; readonly roomId: string; readonly sourceSeq: number; readonly text: string; readonly taskId: string | null }
+  | { readonly kind: "commit"; readonly roomId: string; readonly sourceSeq: number; readonly text: string; readonly taskId: string | null; readonly everyNMessages?: number }
   // sourceSeq:这段转交来自任务所在会话里哪条用户消息;给了就是用户中途改条件(E3),宿主据此原位升版并登记关联边(AC-45/AC-16)
   | { readonly kind: "forward"; readonly taskId: string; readonly text: string; readonly sourceSeq?: number }
   | { readonly kind: "deliver"; readonly taskId: string; readonly text: string }
