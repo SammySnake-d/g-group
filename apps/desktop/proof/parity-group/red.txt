@@ -1,0 +1,153 @@
+红记录:用例提交 12b9c3d3(基线 52321c35),在 box4 上跑,失败都是功能没有,不是用例写错或定位写错。
+
+== 后端(packages/server/src/group-admin.test.ts,node --test)==  
+[box] 已排队:cd ../.. && node --test --test-reporter=tap packages/server/src/group-admin.test.ts 2>&1 | grep -E '^not ok|^# (tests|pass|fail)|error:|code:|expected:|actual:|应当成功|AssertionError' | head -45
+not ok 1 - 建群带同一个 clientActionId 重发:只建一个群,返回原来那个
+  error: |-
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'g-mwcjsyyx-2'
+  actual: 'g-mwcjsyz2-3'
+not ok 2 - 解散没有在途任务的群:从会话列表消失并推 room.removed,群里的定时一起删掉,私聊不受影响
+  error: '应当成功,实际:{"ok":false,"error":{"code":"unknown_method","message":"没有方法 rooms.dissolve"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+not ok 3 - 解散有在途任务的群:不带 stopTasks 被拒并列出任务;带上先停任务,Compute 真实停下之后才移除
+  error: |-
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+not ok 4 - 公告装配:列表写明每位联系人装配到第几版;改了以后下一轮之前仍是旧版,下一轮装配后跟上
+  error: |-
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: ~
+not ok 5 - 群临时算力:任务视图写明占的是个人槽位还是借的本群临时槽位
+  error: |-
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+# tests 5
+# pass 0
+# fail 5
+[box] 用了 box4;云端残留进程:0
+
+== Electron e2e(e2e/group-side.electron.spec.ts,playwright --project=electron)==  
+           - unexpected value "0"
+
+
+      82 |       await win.getByTestId("notice-input").fill("派活先 @ 对应的人");
+      83 |       await win.getByTestId("notice-save").click();
+    > 84 |       await expect(win.getByTestId("notice-block")).toHaveAttribute("data-count", "1", LONG);
+         |                                                     ^
+      85 |       await expect(win.getByTestId("side-tab-notice")).toContainText("公告 1");
+      86 |       await expect(win.getByTestId("strip-text")).toContainText("群公告：派活先 @ 对应的人");
+      87 |       await expect(win.getByTestId("strip-loaded")).toHaveText("0/2 已装配 v1");
+
+    Error Context: test-results/group-side.electron-群资料·公告-44c52-系人装配到第几版-改群名、置顶、免打扰、群临时算力上限-electron/error-context.md
+
+
+(node:454619) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[2/3] [electron] › e2e/group-side.electron.spec.ts:169:1 › 群资料·清单与成员:新建任务、交给联系人认领;拍一拍;把成员拖出群
+  2) [electron] › e2e/group-side.electron.spec.ts:169:1 › 群资料·清单与成员:新建任务、交给联系人认领;拍一拍;把成员拖出群 › 没有清单时顶栏不放清单胶囊;新建一项(不指定人)进清单、待认领 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  getByTestId('side-checklist').locator('[data-testid^="task-"][data-status]').filter({ hasText: '整理发票' })
+    Expected: 1
+    Received: 0
+    Timeout:  30000ms
+
+    Call log:
+      - Expect "toHaveCount" getByTestId('side-checklist').locator('[data-testid^="task-"][data-status]').filter({ hasText: '整理发票' }) with timeout 30000ms
+      - waiting for getByTestId('side-checklist').locator('[data-testid^="task-"][data-status]').filter({ hasText: '整理发票' })
+        63 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      182 |       await win.getByTestId("task-form-submit").click();
+      183 |       const item = win.getByTestId("side-checklist").locator('[data-testid^="task-"][data-status]').filter({ hasText: "整理发票" });
+    > 184 |       await expect(item).toHaveCount(1, LONG);
+          |                          ^
+      185 |       await expect(item).toHaveAttribute("data-status", "待认领");
+      186 |       await expect(item).toContainText("按部门分表");
+      187 |       await expect(win.getByTestId("strip-list")).toContainText("清单 0/1");
+
+    Error Context: test-results/group-side.electron-群资料·清单与成员-新建任务、交给联系人认领-拍一拍-把成员拖出群-electron/error-context.md
+
+
+(node:454750) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[3/3] [electron] › e2e/group-side.electron.spec.ts:246:1 › 群资料·定时读后端、解散群:定时重启后还在;解散后群消失,重启也不回来
+  3) [electron] › e2e/group-side.electron.spec.ts:246:1 › 群资料·定时读后端、解散群:定时重启后还在;解散后群消失,重启也不回来 › 重启应用:定时页从后端读回这一条 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByTestId('side-crons')
+    Expected substring: "每天写日报"
+    Received string:    "本群定时 0/0 开着只看本群 · 按本地时间（UTC · UTC）新建定时还没有定时点「新建定时」，或者在群里跟某个助手说「每天 8 点…」所有会话的定时在「进展」里看"
+    Timeout: 30000ms
+
+    Call log:
+      - Expect "toContainText" getByTestId('side-crons') with timeout 30000ms
+      - waiting for getByTestId('side-crons')
+        62 × locator resolved to <section class="px-2 pb-4 pt-2" data-testid="side-crons">…</section>
+           - unexpected value "本群定时 0/0 开着只看本群 · 按本地时间（UTC · UTC）新建定时还没有定时点「新建定时」，或者在群里跟某个助手说「每天 8 点…」所有会话的定时在「进展」里看"
+
+
+      268 |       await convItem(win, "定时群").click();
+      269 |       await openTab(win, "cron");
+    > 270 |       await expect(win.getByTestId("side-crons")).toContainText("每天写日报", LONG);
+          |                                                   ^
+      271 |       await expect(win.getByTestId("side-tab-cron")).toContainText("定时 1");
+      272 |       await expect(win.getByTestId("strip-cron")).toContainText("定时 1");
+      273 |       await shot(run.win, "crons");
+
+    Error Context: test-results/group-side.electron-群资料·定时读后端、解散群-定时重启后还在-解散后群消失-重启也不回来-electron/error-context.md
+
+
+  3 failed
+    [electron] › e2e/group-side.electron.spec.ts:63:1 › 群资料·公告与群设置:发布、改、撤下公告并写明各联系人装配到第几版;改群名、置顶、免打扰、群临时算力上限 
+    [electron] › e2e/group-side.electron.spec.ts:169:1 › 群资料·清单与成员:新建任务、交给联系人认领;拍一拍;把成员拖出群 ─────────
+    [electron] › e2e/group-side.electron.spec.ts:246:1 › 群资料·定时读后端、解散群:定时重启后还在;解散后群消失,重启也不回来 ───────
+[box] 用了 box4;云端残留进程:0
+
+== 追加红(用例提交 8080c552):已交付等你确认的任务被当成在途,拦住移出成员 ==
+后端 group-admin.test.ts:
+ok 1 - 建群带同一个 clientActionId 重发:只建一个群,返回原来那个
+ok 2 - 解散没有在途任务的群:从会话列表消失并推 room.removed,群里的定时一起删掉,私聊不受影响
+ok 3 - 解散有在途任务的群:不带 stopTasks 被拒并列出任务;带上先停任务,Compute 真实停下之后才移除
+ok 4 - 公告装配:列表写明每位联系人装配到第几版;改了以后下一轮之前仍是旧版,下一轮装配后跟上
+ok 5 - 群临时算力:任务视图写明占的是个人槽位还是借的本群临时槽位
+not ok 6 - 已经交付、等你确认的任务不算在途:它的 Compute 已做完,移出成员、解散群都不用先停,交付也不被取消
+  error: '应当成功,实际:{"ok":false,"error":{"code":"conflict","message":"联系人在这个群还有 1 个在途任务,先停止或等它完成;要一并停止请带 stopTasks","detail":{"tasks":[{"taskId":"t-mwcnc7f4-7","title":"写报告","state":"T5_InReview"}]}}}'
+  expected: true
+  actual: false
+# tests 6
+# pass 5
+
+Electron(提交 58dc990d,e2e/group-side.electron.spec.ts「把小林拖到移出群」,小林手上那件已交付、待验收):
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  getByTestId('side-members-drop').locator('[data-testid^="side-member-"]').filter({ hasText: '小林' })
+    Expected: 0
+    Received: 1
+    Timeout:  30000ms
+
+    Call log:
+      - Expect "toHaveCount" getByTestId('side-members-drop').locator('[data-testid^="side-member-"]').filter({ hasText: '小林' }) with timeout 30000ms
+      - waiting for getByTestId('side-members-drop').locator('[data-testid^="side-member-"]').filter({ hasText: '小林' })
+        63 × locator resolved to 1 element
+           - unexpected value "1"
+
+
+      237 |       await shot(win, "member-drag-out");
+      238 |       await out.dispatchEvent("drop", { dataTransfer: dt });

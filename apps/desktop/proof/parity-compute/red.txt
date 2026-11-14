@@ -1,0 +1,52 @@
+# 红:前端(Electron,连真实后端;云电脑 box1,p-compute;提交 6d7d6911,只有用例)
+
+注:末尾的 rc=0 是取日志那条管道(grep)的返回码,不是 playwright 的;判红看「6 failed」和每条的 Expected / Received。
+
+[box] box1 上的 /workspace/728/wt-p-compute 已就绪(6d7d691)
+[box] 已排队:git log --oneline -1; npx vite build >/dev/null 2>&1 && npm run build:electron >/dev/null 2>&1 && DISPLAY=${DISPLAY:-:0} npx playwright test --project=electron --workers=1 --reporter=line e2e/parity-compute.electron.spec.ts e2e/closed-loop.electron.spec.ts 2>&1 | grep -E "^ +[0-9]+\) |Error:|Expected|Received|Locator:|Timeout:|failed|passed|^ +> [0-9]+ \|" | head -150
+6d7d6911 test(compute): 红用例收紧:联系人说的话不算 Compute 行、重试按钮按全名找、停止前先核对慢活还在跑(红里能看出是功能没有)
+  1) [electron] › e2e/closed-loop.electron.spec.ts:33:1 › 闭环:只经界面建联系人、私聊派活、建群拉人后群里派活,看到回复、Compute 推进与交付 › 私聊里 Compute 从开始到完成,随后联系人交付 
+    Error: expect(locator).toHaveCount(expected) failed
+    Locator:  getByTestId('chat-column').locator('[data-msg]').filter({ hasText: '做完了:完成:写 hello.txt' }).locator('[data-testid^="trail-"] [data-testid^="compute-line-"]')
+    Expected: 1
+    Received: 0
+    Timeout:  30000ms
+    > 88 |       await expect(rows(win).filter({ hasText: "做完了:完成:写 hello.txt" }).locator('[data-testid^="trail-"] [data-testid^="compute-line-"]')).toHaveCount(1, LONG);
+  2) [electron] › e2e/parity-compute.electron.spec.ts:48:1 › 做完的 Compute 挂在联系人的交付消息下面;点开分屏:运行位置与 harness 照原型,会话 / 过程读真实记录,只读、回会话 @联系人 
+    Error: expect(locator).toHaveCount(expected) failed
+    Locator:  getByTestId('chat-column').locator('[data-msg]').filter({ hasText: '做完了:完成:整理周报' }).and(locator('[data-msg]:not([data-from="me"]):not([data-msg$="~c"])')).locator('[data-testid^="trail-"] [data-testid^="compute-line-"]')
+    Expected: 1
+    Received: 0
+    Timeout:  30000ms
+    > 57 |     await expect(trail).toHaveCount(1, LONG);
+  3) [electron] › e2e/parity-compute.electron.spec.ts:95:1 › 卡在验证码:那一行原地交给你,你接手、交还后它接着做完;另一件你点不做了就取消 
+    Error: expect(locator).toHaveAttribute(expected) failed
+    Locator:  getByTestId('chat-column').locator('[data-testid^="compute-line-"]').filter({ hasText: '登录后台查日志' })
+    Expected: "human"
+    Received: "done"
+    Timeout:  30000ms
+    > 102 |     await expect(line).toHaveAttribute("data-state", "human", LONG);
+  4) [electron] › e2e/parity-compute.electron.spec.ts:128:1 › 出错原地变红给出路:不进输入框上方,点重试后续接做完 ───────────
+    Error: expect(locator).toHaveAttribute(expected) failed
+    Locator:  getByTestId('chat-column').locator('[data-testid^="compute-line-"]').filter({ hasText: '抓取网页' })
+    Expected: "error"
+    Received: "done"
+    Timeout:  30000ms
+    > 135 |     await expect(line).toHaveAttribute("data-state", "error", LONG);
+  5) [electron] › e2e/parity-compute.electron.spec.ts:154:1 › 停止两步:在跑时挂在接活那句下面;按停止先「正在停止」,确认停下才写已停止、算力归还;点继续按台账重跑 
+    Error: expect(locator).toHaveAttribute(expected) failed
+    Locator:  getByTestId('chat-column').locator('[data-testid^="compute-line-"]').filter({ hasText: '慢慢整理资料' })
+    Expected: "running"
+    Received: "done"
+    Timeout:  5000ms
+    > 165 |     await expect(line).toHaveAttribute("data-state", "running");
+  6) [electron] › e2e/parity-compute.electron.spec.ts:186:1 › 文件:连上后端时文件区列出真实的任务产出,打开看正文,来处在正文右侧,点了回到原消息 
+    Error: expect(locator).toHaveCount(expected) failed
+    Locator:  getByTestId('file-shelf-grid').locator('[data-testid^="shelf-"]').filter({ hasText: '写周报 · 结果' })
+    Expected: 1
+    Received: 0
+    Timeout:  30000ms
+    > 194 |     await expect(card).toHaveCount(1, LONG);
+  6 failed
+[box] 用了 box1;云端残留进程:0
+rc=0

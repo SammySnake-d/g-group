@@ -14,6 +14,8 @@ import { Preview } from './Preview'
 import { ChecksView } from './ChecksView'
 import { CheckpointView } from './CheckpointView'
 import { DEMO_NOW, demoSession, HarnessSession } from '@/components/compute'
+import { useLiveSession } from '@/components/compute/useLiveSession'
+import { useFailChoices } from '@/components/messages/compute/useFailChoices'
 
 /* ---------- Compute 详情:参照 Devin Activity、Copilot session log、Linear agent session、Replit checkpoint ----------
    从上到下:头部(状态 / 耗时 / 花费 / 模型 / 停止)→ 步骤条 → 卡住的那一步(有才出现)→ 视图页签
@@ -43,12 +45,18 @@ export function ComputeWork({ id, view = 'session' }: { id: string; view?: CView
   const c = computes[id]
   const setView = (v: CView) => openSplit({ t: 'compute', id, view: v })
   const err = pending.find((p) => p.kind === 'error' && p.computeId === id)
+  const choices = useFailChoices(err?.id)
+  const session = useLiveSession(c)
   const done = c.steps.filter((s) => s.state === 'done').length
-  const owner = people[c.owner].name
+  const owner = people[c.owner]?.name ?? ''
   const conv = convs.find((x) => x.id === c.conv)
   const dm = conv?.kind === 'dm'
   const convTitle = conv ? (dm ? `与 ${conv.title} 私聊` : conv.title) : c.conv
-  const talk = (text: string) => { openConv(c.conv); setTimeout(() => addQuote({ msgId: c.reportMsg ?? c.askMsg, from: c.owner, text, reply: true }), 50) }
+  /* 回复要对着联系人说的那句:有汇报回汇报,否则回它接活那句(连上后端时派活那条是你自己发的) */
+  const lead = conv?.messages.find((m) => m.k === 'compute' && m.computeId === id)
+  const replyTo = c.reportMsg ?? (lead && 'id' in lead ? lead.id.replace(/~c$/, '') : c.askMsg)
+  const talk = (text: string) => { openConv(c.conv); setTimeout(() => addQuote({ msgId: replyTo, from: c.owner, text, reply: true }), 50) }
+  const failedStep = c.steps.find((s) => s.state === 'fail')?.text
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid={`compute-${id}`}>
       <div className="flex items-start gap-3 px-5 pb-3 pt-4">
@@ -56,16 +64,16 @@ export function ComputeWork({ id, view = 'session' }: { id: string; view?: CView
         <div className="min-w-0 flex-1">
           <div className="text-[16.5px] font-semibold leading-snug tracking-tight [text-wrap:balance]">{c.title}</div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-fg-2">
-            {c.status !== 'waiting' && c.status !== 'error' && <span className="flex items-center gap-1.5"><StatusDot c={c} /><span className={cn(c.status === 'running' && 'text-run')}>{statusText(c)}</span></span>}
-            <Meta icon={<Clock />}>{c.elapsed}</Meta>
+            {c.status !== 'waiting' && c.status !== 'error' && <span className="flex items-center gap-1.5"><StatusDot c={c} /><span className={cn(c.status === 'running' && 'text-run')} data-testid="compute-status-text">{c.status === 'stopped' && c.phase.startsWith('已停止') ? c.phase : statusText(c)}</span></span>}
+            {!(c.status === 'done' && c.result?.endsWith(c.elapsed)) && <Meta icon={<Clock />}>{c.elapsed}</Meta>}
             {/* harness 就是这个 Compute 本身(#1005);花费按 #877 不放 */}
             <Meta icon={<SquareTerminal />}><span data-testid="compute-harness">{c.harness}</span><span className="text-fg-3/70"> · </span>{c.model}</Meta>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[12px] text-fg-3" data-testid="compute-source">
             <span className="max-w-full truncate rounded bg-hover px-1.5 py-px text-fg-2" title={`${owner} 分出的 Compute`}>来自「{conv?.title}」</span>
-            <span data-testid="compute-placement" title="以后可以切到云端托管或自带机器" className="rounded border border-line px-1 text-fg-2">运行在：本机</span>
+            <span data-testid="compute-placement" title="以后可以切到云端托管或自带机器" className="rounded border border-line px-1 text-fg-2">运行在：{c.placement ?? '本机'}</span>
             <Button variant="link" onClick={() => jump(c.askMsg)} className="h-auto gap-0.5 px-0 text-[12px] font-normal text-fg-3 hover:text-fg [&_svg]:size-3">看派活的原消息<ArrowUpRight /></Button>
-            {c.reportMsg && <> · <Button variant="link" onClick={() => jump(c.reportMsg!)} className="h-auto gap-0.5 px-0 text-[12px] font-normal text-fg-3 hover:text-fg [&_svg]:size-3">看群里的汇报<ArrowUpRight /></Button></>}
+            {c.reportMsg && <> · <Button variant="link" onClick={() => jump(c.reportMsg!)} className="h-auto gap-0.5 px-0 text-[12px] font-normal text-fg-3 hover:text-fg [&_svg]:size-3">{dm ? '看它的交付消息' : '看群里的汇报'}<ArrowUpRight /></Button></>}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -84,11 +92,12 @@ export function ComputeWork({ id, view = 'session' }: { id: string; view?: CView
         <div className="mx-5 mt-3 flex items-start gap-2 border-y border-err/30 py-2.5" data-testid="compute-fail-step" role="alert">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-err" />
           <div className="min-w-0 flex-1">
-            <div className="text-[13px] font-semibold text-err">卡在「{c.steps.find((s) => s.state === 'fail')?.text ?? '这一步'}」</div>
-            <div className="mt-0.5 text-[12.5px] text-fg-2">{c.error} · 自动试了 <span className="tabular-nums">{c.attempts}</span> 次</div>
+            <div className="text-[13px] font-semibold text-err">{failedStep ? `卡在「${failedStep}」` : '没做下去'}</div>
+            <div className="mt-0.5 text-[12.5px] text-fg-2">{c.error ?? '出错了'}{c.attempts != null && <> · 自动试了 <span className="tabular-nums">{c.attempts}</span> 次</>}</div>
           </div>
           <div className="flex shrink-0 gap-1">
-            <Button variant="ghost" size="xs" onClick={() => resolve(err.id, 'switch')}>换个模型再试</Button>
+            {choices.switchable && <Button variant="ghost" size="xs" onClick={() => resolve(err.id, 'switch')} title={choices.switchLabel}>换个模型再试</Button>}
+            {!err.id.startsWith('card:') ? null : <Button data-testid="compute-skip" variant="ghost" size="xs" onClick={() => resolve(err.id, 'skip')}>{choices.skipLabel}</Button>}
             <Button data-testid="compute-retry" variant="outline" size="xs" onClick={() => resolve(err.id, 'retry')} className="text-err"><RotateCw />重试</Button>
           </div>
         </div>
@@ -99,7 +108,7 @@ export function ComputeWork({ id, view = 'session' }: { id: string; view?: CView
         {/* 会话页自己滚、自己有状态行,铺满;只读条用下面这条共用的 */}
         {view === 'session' && (
           <TabPanel value="session" className="flex min-h-0 flex-1 flex-col">
-            <HarnessSession embedded className="min-h-0 flex-1" compute={c} transcript={demoSession(id)} now={DEMO_NOW} sourceTitle={convTitle} dm={dm} onJumpSource={() => jump(c.askMsg)} />
+            <HarnessSession embedded className="min-h-0 flex-1" compute={c} transcript={session.live ? session.transcript : demoSession(id)} loading={session.loading} noCalls={session.live} {...(session.live ? {} : { now: DEMO_NOW })} sourceTitle={convTitle} dm={dm} onJumpSource={() => jump(c.askMsg)} />
           </TabPanel>
         )}
         {view !== 'session' && <TabPanel value={view} className="scroll-thin min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-3">

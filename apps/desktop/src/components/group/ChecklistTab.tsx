@@ -1,12 +1,36 @@
-/* 群清单：属于群（#1246）。业务状态，不照搬 Compute（Astra）。待验收的醒目，进行中的转圈，已完成的收成一行。 */
+/* 群清单：属于群（#1246）。业务状态，不照搬 Compute（Astra）。待验收的醒目，进行中的转圈，已完成的收成一行。
+   待认领的：有推荐人就「让它领」；没有就「交给…」挑本群一位联系人——都是以你的一条消息 @ 它，由它认领并起 Compute。 */
 import { useState } from 'react'
 import { Check, ChevronRight, Plus } from 'lucide-react'
 import * as Collapsible from '@animate-ui/react/primitives/radix-ui/collapsible'
 import { useApp } from '@/ctx'
-import { people, type Conversation } from '@/data'
+import { people, type Conversation, type ListItem } from '@/data'
+import { Avatar } from '@/components/Avatar'
 import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { TaskForm } from './TaskForm'
+
+/** 交给本群哪位联系人(移出中的不算) */
+function AssignMenu({ conv, t }: { conv: Conversation; t: ListItem }) {
+  const { claimTask } = useApp()
+  const who = conv.members.filter((m) => m !== 'me' && m !== 'helper' && !people[m]?.human && !conv.leaving?.includes(m))
+  if (!who.length) return null
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button data-testid={`task-assign-${t.id}`} variant="ghost" size="xs" className="h-6 px-1.5 text-[11.5px]">交给…</Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" data-testid="task-assign-menu" className="w-44 rounded-xl border-line bg-elev p-1 shadow-elev">
+        {who.map((p) => (
+          <DropdownMenuItem key={p} data-testid={`task-assign-pick-${p}`} onSelect={() => claimTask(t.id, p)} className="gap-2 rounded-lg text-[13px]">
+            <Avatar id={p} size={18} status={false} mood="idle" />{people[p].name}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
 
 export function ChecklistTab({ conv }: { conv: Conversation }) {
   const { checklist, computes, claimTask, addTask, openSplit } = useApp()
@@ -44,7 +68,7 @@ export function ChecklistTab({ conv }: { conv: Conversation }) {
                     {t.attempts.length > 0 && t.status === '进行中' && ` · ${computes[t.attempts[0]]?.phase ?? ''}`}
                   </div>
                 </div>
-                {t.status === '待认领' && t.suggest && <Button data-testid={`task-claim-${t.id}`} variant="ghost" size="xs" className="h-6 px-1.5 text-[11.5px]" onClick={() => claimTask(t.id, t.suggest!)}>让它领</Button>}
+                {t.status === '待认领' && (t.suggest ? <Button data-testid={`task-claim-${t.id}`} variant="ghost" size="xs" className="h-6 px-1.5 text-[11.5px]" onClick={() => claimTask(t.id, t.suggest!)}>让它领</Button> : <AssignMenu conv={conv} t={t} />)}
                 {wait && t.attempts[0] && <Button variant="ghost" size="xs" className="h-6 px-1.5 text-[11.5px]" onClick={() => openSplit({ t: 'compute', id: t.attempts[0] })}>看过程</Button>}
               </div>
             )

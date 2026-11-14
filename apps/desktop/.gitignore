@@ -4,3 +4,5 @@ dist-electron/
 test-results/
 playwright-report/
 e2e/__shots__/
+release/
+release-stage/

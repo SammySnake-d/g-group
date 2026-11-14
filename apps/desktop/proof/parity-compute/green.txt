@@ -1,0 +1,53 @@
+# 绿:Compute / 提问失败卡 / 文件列表块(云电脑 box1)
+
+实现提交 94721b58 与走查后小修 08ebe5bb 各跑了一遍全套,下面是最终提交 08ebe5bb 的输出。
+(94721b58 上:本块 Electron 5 条 + closed-loop 6 passed;renderer 146 passed;Electron 全量 10 passed;npm test 1617 pass / 0 fail)
+
+## 两份 tsc + verify:structure
+[box] 已排队:git log --oneline -1; npx tsc -p tsconfig.app.json; echo "tsc-app=$?"; npx tsc -p tsconfig.electron.json --noEmit; echo "tsc-electron=$?"; npm run -s verify:structure; echo "structure=$?"
+08ebe5bb fix(desktop): 截图走查后一批修:出错那一行画出错标记、头部不重复用时、状态行不拿 0 冒充调用数、本轮交付不露内部编号、私聊文件不重复写名字;替身脑子不照念宿主写给联系人的说明
+tsc-app=0
+tsc-electron=0
+文件 326 个;超过 400 行的 0 个;原生 <button> 共 0 个
+结构检查通过
+structure=0
+
+## renderer 全量
+  146 passed (7.9m)
+
+## Electron 全量(含本块 parity-compute 5 条、closed-loop)
+[1/10] [electron] › e2e/app-shell.electron.spec.ts:29:1 › 没接入模型时整窗请用户接入;填好后宿主起来、界面连上,令牌不回传给界面
+[2/10] [electron] › e2e/app-shell.electron.spec.ts:58:1 › 自动更新:提示新版本 → 下载并核对 sha512 → 可以重启安装;校验不过的下载被丢掉并说明;没发布过版本时如实说
+[3/10] [electron] › e2e/backend.electron.spec.ts:11:1 › 接上宿主服务:私聊派活走完一圈,事件流推到渲染层
+[4/10] [electron] › e2e/closed-loop.electron.spec.ts:33:1 › 闭环:只经界面建联系人、私聊派活、建群拉人后群里派活,看到回复、Compute 推进与交付
+[5/10] [electron] › e2e/parity-compute.electron.spec.ts:48:1 › 做完的 Compute 挂在联系人的交付消息下面;点开分屏:运行位置与 harness 照原型,会话 / 过程读真实记录,只读、回会话 @联系人
+[6/10] [electron] › e2e/parity-compute.electron.spec.ts:95:1 › 卡在验证码:那一行原地交给你,你接手、交还后它接着做完;另一件你点不做了就取消
+[7/10] [electron] › e2e/parity-compute.electron.spec.ts:128:1 › 出错原地变红给出路:不进输入框上方,点重试后续接做完
+[8/10] [electron] › e2e/parity-compute.electron.spec.ts:154:1 › 停止两步:在跑时挂在接活那句下面;按停止先「正在停止」,确认停下才写已停止、算力归还;点继续按台账重跑
+[9/10] [electron] › e2e/parity-compute.electron.spec.ts:186:1 › 文件:连上后端时文件区列出真实的任务产出,打开看正文,来处在正文右侧,点了回到原消息
+[10/10] [electron] › e2e/shell.electron.spec.ts:8:1 › Electron 壳:安全基线开着,渲染层拿不到 Node,IPC 只认白名单方法
+  10 passed (1.1m)
+
+## 根目录 typecheck / lint / npm test
+[box] 已排队:cd ../.. && git log --oneline -1; npm run -s typecheck; echo "typecheck=$?"; npm run -s lint; echo "lint=$?"; npm test --silent 2>&1 | grep -E "^# (tests|pass|fail|cancelled|skipped|todo)|^not ok"; echo "npmtest=done"
+08ebe5bb fix(desktop): 截图走查后一批修:出错那一行画出错标记、头部不重复用时、状态行不拿 0 冒充调用数、本轮交付不露内部编号、私聊文件不重复写名字;替身脑子不照念宿主写给联系人的说明
+typecheck=0
+Checked 218 files in 606ms. No fixes applied.
+lint=0
+# tests 1617
+# pass 1617
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+
+## 本块后端新用例(94721b58 上单跑)
+ok 1 - 联系人交付后,任务视图的 deliveredSeq 是那条交付消息的序号(列表、单查、推来的事件一致)
+ok 2 - 还没交付(Compute 还在做)时 deliveredSeq 为 null
+ok 3 - 派什么活,替身 Compute 的进度就写什么:不再一律报 hello.txt
+ok 4 - 活里要验证码:替身 Compute 停在受阻,任务等你回答;你交还后它接着做完
+ok 5 - 活里写了会失败:出一张挂在这件事上的原位失败卡,点重试后续接做完
+ok 6 - 活里写了慢慢:停止后不再吐剩下的进度,任务落到已取消;可以按台账重跑
+# tests 6
+# pass 6
+# fail 0

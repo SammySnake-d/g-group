@@ -1,0 +1,42 @@
+# 红:聊天主界面补全(用例先提交,实现在后)——云电脑 box2,HEAD 只有用例(464880d)
+
+## 后端(经服务层调用,失败信息看得出是「没有这个方法」)
+not ok 1 - 转发:收件会话只看到选中几条的快照,看不到源会话其他消息;转发里的「同意」不算本人授权,任务仍停在等本人
+  error: 'messages.forward 应当成功,实际:unknown_method 没有方法 messages.forward'
+not ok 2 - 删除只在你这边:列表、搜索、会话预览都不再给;联系人上下文不动;可以放回;清空后只显示之后的新消息
+  error: 'messages.hide 应当成功,实际:unknown_method 没有方法 messages.hide'
+not ok 3 - 置顶:只是你的导航,RoomView.pinnedSeqs 为准;取消置顶移出;重开宿主还在
+  error: 'messages.pin 应当成功,实际:unknown_method 没有方法 messages.pin'
+not ok 4 - 已读位置:联系人接走即已读,RoomView.memberReads 列出每位成员读到哪;重开宿主照样读得到
+not ok 5 - 按内容上传附件:base64 存一份、同内容同 ref,随消息发出;空文件名被拒
+  error: 'attachments.upload 应当成功,实际:unknown_method 没有方法 attachments.upload'
+# tests 5
+# pass 0
+# fail 5
+
+## Electron 界面(真实后端下按名失败)
+[box] 已排队:npx vite build >/dev/null && npm run build:electron >/dev/null && DISPLAY=${DISPLAY:-:0} npx playwright test --project=electron --workers=1 --reporter=line e2e/parity-chat.electron.spec.ts 2>&1 | grep -E "^  [0-9]\) |Error:|Expected|Received|Locator:|[0-9]+ (failed|passed)" | head -40; cd ../.. && node scripts/gates/test-runner.ts packages/server/src/chat-parity.test.ts 2>&1 | grep -E "^not ok|^ok|^# (tests|pass|fail)|应当成功" | head -30
+  1) [electron] › e2e/parity-chat.electron.spec.ts:56:1 › 私聊里就近操作消息:表情、编辑、撤回、删除都由后端落实;重启后回执、草稿、表情、编辑、撤回、删除都还在;正在回复卡只写真实活动 › 发一句,联系人接走时出「正在回复」卡:只写在想和时长,不编步骤;随后真实回复 
+    Error: expect(locator).toBeVisible() failed
+    Locator: getByTestId('typing')
+    Expected: visible
+    Error: element(s) not found
+  2) [electron] › e2e/parity-chat.electron.spec.ts:141:1 › 群里置顶、转发、多选删除、清空:置顶条显示并在重启后还在;转发到私聊是一张转发卡;删的只在你这边 › 置顶一条:群顶部的置顶条显示它 
+    Error: expect(locator).toContainText(expected) failed
+    Locator: getByTestId('strip-text')
+    Expected substring: "上线时间定在周五"
+    Error: element(s) not found
+  3) [electron] › e2e/parity-chat.electron.spec.ts:214:1 › 私聊回到某条:确认框写明真实要撤下几条;之后的撤下、留一行灰字;发文件是附件卡;切走时来的回复回来时有新消息分隔线 › 切走时小克回了话:回到小克的私聊,未读那里有「以下是新消息」 
+    Error: expect(locator).toBeVisible() failed
+    Locator: locator('[data-msg="new-divider"]')
+    Expected: visible
+    Error: element(s) not found
+  3 failed
+
+## 追加:联系人连着几句引用同一条(用例提交 61d97f6,实现在后)——真实后端下同时出现 3 个同样的引用块
+  1) [electron] › e2e/parity-chat.electron.spec.ts:295:1 › 联系人连着几句都回你同一条:引用只在第一句上画一次,后面几句并在同一个头像下 ──
+    Error: expect(locator).toHaveCount(expected) failed
+    Locator:  getByTestId('chat-column').locator('[data-msg][data-from]:not([data-from="me"])').filter({ has: getByTestId('sent-quotes').filter({ hasText: '帮我写 hello.txt' }) })
+    Expected: 1
+    Received: 3
+  1 failed

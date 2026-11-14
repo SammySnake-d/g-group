@@ -43,13 +43,24 @@ export function convState(c: Conversation, s: Pick<AppState, 'pending' | 'comput
   return { tone: 'none', text: who + last.text, count: 0 }
 }
 
-/** 在「打开时的未读数」那条别人的消息前插一条「以下是新消息」分隔线(#1240) */
-export function withUnreadDivider(c: Conversation, n?: number): Msg[] {
-  if (!n) return c.messages
+/** 打开这个会话那一刻的第一条未读消息(连上后端时按 id 锚住,后来的新消息不把它往下推) */
+export function firstUnreadId(c: Conversation, n: number): string | null {
+  if (!n) return null
   const idx: number[] = []
   c.messages.forEach((m, i) => { if (m.k === 'text' && m.from !== 'me') idx.push(i) })
-  const at = idx[Math.max(0, idx.length - n)]
-  if (at === undefined) return c.messages
+  const i = idx[Math.max(0, idx.length - n)]
+  const m = i === undefined ? undefined : c.messages[i]
+  return m && 'id' in m ? m.id : null
+}
+
+/** 在「打开时的未读」那条别人的消息前插一条「以下是新消息」分隔线(#1240);给了 anchorId 就锚在那条上 */
+export function withUnreadDivider(c: Conversation, n?: number, anchorId?: string | null): Msg[] {
+  /* anchorId:undefined = 没锚过(演示数据,按条数算);null = 打开时没有未读;字符串 = 锚在这条上 */
+  if (anchorId === null || (anchorId === undefined && !n)) return c.messages
+  const idx: number[] = []
+  c.messages.forEach((m, i) => { if (m.k === 'text' && m.from !== 'me') idx.push(i) })
+  const at = anchorId ? c.messages.findIndex((m) => 'id' in m && m.id === anchorId) : idx[Math.max(0, idx.length - (n ?? 0))]
+  if (at === undefined || at < 0) return c.messages
   return [...c.messages.slice(0, at), { k: 'sys', id: 'new-divider', text: '—— 以下是新消息 ——' } as Msg, ...c.messages.slice(at)]
 }
 

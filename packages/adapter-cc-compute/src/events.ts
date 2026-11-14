@@ -8,6 +8,7 @@
 import { REPORT_TOOL } from "./cli.ts";
 import { isPlainRecord, plainData } from "./plain.ts";
 import { reportErrors } from "./report-schema.ts";
+import type { ActivitySignal } from "./types.ts";
 
 /** 通过 report_progress schema 校验的一次汇报 */
 export interface AcceptedReport {
@@ -18,6 +19,7 @@ export interface AcceptedReport {
   readonly constraintVer?: number;
   readonly openQuestions?: readonly string[];
   readonly doneSideEffects?: readonly string[];
+  readonly attachments?: readonly string[];
 }
 
 export type StreamSignal =
@@ -57,6 +59,15 @@ export function checkInit(m: Record<string, unknown>): StreamSignal {
   if (host?.status !== "connected") return { type: "bad-init", reason: `report_progress MCP 未连接(host 状态 ${describe(host?.status ?? "缺失")})` };
   if (!m.tools.includes(REPORT_TOOL)) return { type: "bad-init", reason: `init 的工具清单里没有 ${REPORT_TOOL}` };
   return { type: "init", sessionId: m.session_id, tools: [...m.tools] };
+}
+
+/** init 自报的实际加载清单(AC-29 观测点),只在 checkInit 判定合格之后读:MCP 服务器名与状态(没有名字记空名、
+ *  状态不是字符串记 "unknown"),skills(真实 CLI 2.1.319 带这个字段;缺失或不是字符串数组记为空) */
+export function initLoaded(m: Record<string, unknown>): { readonly mcpServers: readonly { readonly name: string; readonly status: string }[]; readonly skills: readonly string[] } {
+  const list = Array.isArray(m.mcp_servers) ? m.mcp_servers : [];
+  const mcpServers = list.map(asRecord).map((x) => ({ name: typeof x?.name === "string" ? x.name : "", status: typeof x?.status === "string" ? x.status : "unknown" }));
+  const skills = Array.isArray(m.skills) && m.skills.every((t) => typeof t === "string") ? [...(m.skills as string[])] : [];
+  return { mcpServers, skills };
 }
 
 /** init 之前真实 CLI 会输出的 system 帧(原型与 smoke 的 stream-json 里见过);其它一律不认可(R3-03)。冻结数组,导出后不可改 */
@@ -105,6 +116,51 @@ export function streamParser(): (line: string) => StreamSignal[] {
     if (m.type === "result") out.push({ type: "result", success: m.subtype === "success" && m.is_error !== true, text: typeof m.result === "string" ? m.result : "" });
     return out;
   };
+}
+
+/**
+ * 一行 CLI 输出里的「活动」(整轮卡死检测用,见 types.ts ComputeActivity;D26 第 8.3 节)。纯函数,每行独立判,不记状态:
+ *   - system/status requesting(真实 CLI 2.1.319 每次发请求前输出)→ model_call;
+ *   - system/api_retry → retry,带 HTTP 状态与原文(重试公告不算进展);
+ *   - stream_event(--include-partial-messages 的流式增量)→ progress output;
+ *   - assistant 的文本 / 思考块 → progress;tool_use → tool_start(Bash 带 run_in_background 是后台任务,Task/Agent 是子代理);
+ *   - user 的 tool_result → tool_end;带 parent_tool_use_id 的 assistant/user 是子代理里的消息 → progress subagent。
+ * 输入行先判 typeof;JSON 字段一律先判类型,不做隐式字符串转换;认不出的行返回空。
+ */
+export function activityOf(line: string): readonly ActivitySignal[] {
+  if (typeof line !== "string") throw new TypeError("activityOf 的输入行必须是字符串");
+  let m: Json | undefined;
+  try { m = asRecord(JSON.parse(line)); } catch { return []; }
+  if (!m) return [];
+  if (m.type === "system" && m.subtype === "status" && m.status === "requesting") return [{ kind: "model_call" }];
+  if (m.type === "system" && m.subtype === "api_retry") {
+    const status = typeof m.error_status === "number" && Number.isInteger(m.error_status) ? m.error_status : null;
+    const err = typeof m.error === "string" ? m.error : "";
+    const nth = typeof m.attempt === "number" && typeof m.max_retries === "number" ? ` 第 ${m.attempt}/${m.max_retries} 次` : "";
+    return [{ kind: "retry", error: `API 重试${nth}:${status !== null ? `API Error: ${status} ` : ""}${err}`, httpStatus: status }];
+  }
+  if (m.type === "stream_event") return [{ kind: "progress", what: "output" }];
+  const inSubagent = typeof m.parent_tool_use_id === "string" && m.parent_tool_use_id !== "";
+  if (m.type === "assistant") {
+    if (inSubagent) return [{ kind: "progress", what: "subagent" }];
+    const out: ActivitySignal[] = [];
+    for (const b of blocks(m)) {
+      if (b.type === "text") out.push({ kind: "progress", what: "text" });
+      else if (b.type === "thinking" || b.type === "redacted_thinking") out.push({ kind: "progress", what: "thinking" });
+      else if (b.type === "tool_use" && typeof b.id === "string" && typeof b.name === "string") {
+        const input = asRecord(b.input);
+        out.push({ kind: "tool_start", toolId: b.id, name: b.name, background: b.name === "Bash" && input?.run_in_background === true, subagent: b.name === "Task" || b.name === "Agent" });
+      }
+    }
+    return out;
+  }
+  if (m.type === "user") {
+    if (inSubagent) return [{ kind: "progress", what: "subagent" }];
+    const out: ActivitySignal[] = [];
+    for (const b of blocks(m)) if (b.type === "tool_result" && typeof b.tool_use_id === "string") out.push({ kind: "tool_end", toolId: b.tool_use_id, isError: b.is_error === true });
+    return out;
+  }
+  return [];
 }
 
 export type Terminal =

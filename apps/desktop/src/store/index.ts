@@ -2,20 +2,21 @@
 // 只关心一两个字段的组件传选择器 useApp((s) => s.xxx),别的字段变了它不重渲染。
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
-import { createChatSlice } from './slices/chat'
-import { createComputeSlice } from './slices/compute'
-import { createLayoutSlice } from './slices/layout'
-import { createMembersSlice } from './slices/members'
-import { createMessagesSlice } from './slices/messages'
-import { createModelsSlice } from './slices/models'
-import { createPluginsSlice } from './slices/plugins'
-import { createScheduleSlice } from './slices/schedule'
+import { CHAT_CTX_KEYS, createChatSlice } from './slices/chat'
+import { COMPUTE_CTX_KEYS, createComputeSlice } from './slices/compute'
+import { LAYOUT_CTX_KEYS, createLayoutSlice } from './slices/layout'
+import { MEMBERS_CTX_KEYS, createMembersSlice } from './slices/members'
+import { MESSAGES_CTX_KEYS, createMessagesSlice } from './slices/messages'
+import { MODELS_CTX_KEYS, createModelsSlice } from './slices/models'
+import { PLUGINS_CTX_KEYS, createPluginsSlice } from './slices/plugins'
+import { SCHEDULE_CTX_KEYS, createScheduleSlice } from './slices/schedule'
 import { createSendSlice } from './slices/send'
-import { createTasksSlice } from './slices/tasks'
-import { installDemo } from '@/api/backend'
-import { demoSeed } from '@/api/demo-seed'
-import { crons0, pluginCatalog0, plugins0 } from '@/data'
-import { slashEntries } from './select'
+import { TASKS_CTX_KEYS, createTasksSlice } from './slices/tasks'
+import { bridge } from '@/api/backend'
+import { applyDemo } from '@/api/demo-state'
+import { guardUnwired } from '@/api/wire/unwired'
+import { CONTACTS_CTX_KEYS, createContactsSlice } from './slices/contacts'
+import { createFilesSlice } from './slices/files'
 import type { AppState } from './state'
 import type { Ctx } from './types'
 
@@ -30,30 +31,20 @@ export const useAppStore = create<AppState>()((...a) => ({
   ...createPluginsSlice(...a),
   ...createModelsSlice(...a),
   ...createSendSlice(...a),
+  ...createContactsSlice(...a),
+  ...createFilesSlice(...a),
 }))
 
-/* 没连上后端时,call() 交给演示服务;种子是初始演示数据(和 store 的初值同一份),命令清单按会话现算 */
-installDemo(demoSeed({
-  crons: crons0, plugins: plugins0, catalog: pluginCatalog0,
-  commands: (roomId) => {
-    const s = useAppStore.getState()
-    const conv = s.convs.find((c) => c.id === roomId)
-    return conv ? slashEntries(s, conv).filter((e) => !e.disabled).map((e) => e.command) : []
-  },
-}))
+/* 演示数据只在没连上后端时装:没有桌面壳(浏览器预览、renderer 用例)就在建 store 时同步装好,首帧就是演示界面;
+   有桌面壳时等 app/useShell 探测——连上了由 api/wire 读真实数据,一条演示数据都不装;没连上才装演示数据 */
+if (!bridge) applyDemo(useAppStore)
+/* 连上后端时还没接线的写动作不在本地假装做成(api/wire/unwired) */
+guardUnwired(useAppStore)
 
-/** Ctx 的全部字段:useApp() 只订阅这些(壳内部的宽度、草稿、浮层栈变了,业务组件不跟着重渲染) */
+/** Ctx 的全部字段:useApp() 只订阅这些(壳内部的宽度、草稿、浮层栈变了,业务组件不跟着重渲染)。各片的清单在各自切片文件里 */
 const CTX_KEYS = [
-  'answers', 'computes', 'pending', 'convs', 'boards', 'commits', 'playbook', 'reactions', 'active', 'dark', 'debug', 'typing', 'setDark', 'setDebug',
-  'push', 'back', 'closeAll', 'openSplit', 'setPanoOpen', 'openConv', 'openDm', 'mention', 'addQuote', 'react', 'jump', 'resolve', 'stop', 'resume',
-  'tell', 'rollback', 'retag', 'setDisp', 'claim', 'addMembers', 'removeMember', 'createContact', 'createGroup', 'quoteExternal', 'linkConv', 'unlinkConv',
-  'forward', 'sendAs', 'importBoard', 'setSelecting', 'showPip', 'setNotice', 'editNotice', 'setConvFlag', 'markRead', 'recall', 'reedit', 'rewind',
-  'unrewind', 'rewindAsk', 'setRewindAsk', 'renameConv', 'toast', 'decideVote', 'poke', 'silence', 'pinMsg', 'deleteMsgs', 'leaveConv', 'setPool',
-  'deleteMsg', 'openContact', 'summarize', 'editMsg', 'editing', 'setEditing', 'clearHistory', 'updatePerson', 'crons', 'pulse', 'checklist', 'plugins',
-  'pluginCatalog', 'section', 'setSection', 'openWorkbench', 'helperPanel', 'setHelperPanel', 'helperGlobal', 'setHelperGlobal', 'helperReply',
-  'claimTask', 'setTaskStatus', 'addTasks', 'addTask', 'updateCron', 'addCron', 'removeCron', 'runCronNow', 'updatePlugin', 'pluginAct', 'putCommand',
-  'hitCaptcha', 'declineHuman', 'takeHuman', 'returnHuman', 'revokePlugin', 'reauthPlugin', 'pushMsg', 'scheduleDraft', 'openSchedule',
-  'modelSettings', 'modelsRev', 'saveModels',
+  ...LAYOUT_CTX_KEYS, ...CHAT_CTX_KEYS, ...MESSAGES_CTX_KEYS, ...MEMBERS_CTX_KEYS, ...COMPUTE_CTX_KEYS,
+  ...TASKS_CTX_KEYS, ...SCHEDULE_CTX_KEYS, ...PLUGINS_CTX_KEYS, ...MODELS_CTX_KEYS, ...CONTACTS_CTX_KEYS,
 ] as const satisfies readonly (keyof Ctx)[]
 /* 编译期保证上面列全了:Ctx 加了字段而这里漏掉,这一行报错 */
 const covered: [Exclude<keyof Ctx, (typeof CTX_KEYS)[number]>] extends [never] ? true : never = true

@@ -1,0 +1,51 @@
+{
+  "G-PROVENANCE": {
+    "problems": 0,
+    "sample": []
+  },
+  "G-TRACE": {
+    "problems": 0,
+    "sample": []
+  },
+  "G-REVIEW": {
+    "problems": 1,
+    "sample": [
+      "还没有独立审查"
+    ]
+  },
+  "G-RED": {
+    "problems": 958,
+    "sample": [
+      "packages/adapter-cc-compute/src/quiesce.test.ts › 停止确认:脱离进程组(setsid)且忽略 SIGTERM 的子进程也被找出来关掉,都退出后才返回 ok 现在没有恰好通过一次(通过 0 次)",
+      "packages/adapter-cc-compute/src/quiesce.test.ts › 停止确认的已知边界:停止前父子链就断了的守护进程(双 fork)找不到,quiesce 照样 ok,守护进程仍在 现在没有恰好通过一次(通过 0 次)",
+      "packages/adapter-cc-compute/src/quiesce.test.ts › 还在运行或未知的 Compute 不做停止确认 现在没有恰好通过一次(通过 0 次)",
+      "packages/adapter-cc-compute/src/resident-quiesce.test.ts › 停止确认:停止前起的后代另建进程组且忽略 SIGTERM,没退出前不回报;找出来关掉、都退出后才回报 ok 与关掉的数量 现在没有恰好通过一次(通过 0 次)",
+      "packages/adapter-cc-compute/src/resident-quiesce.test.ts › 主进程忽略 SIGTERM:到期对进程组 SIGKILL 之后才确认;同组后代一并关掉,回报前全部退出 现在没有恰好通过一次(通过 0 次)"
+    ]
+  },
+  "G-STUB": {
+    "problems": 2,
+    "sample": [
+      "packages/domain/src/task.test.ts › AC-28① 交付待确认没有归档出口:状态集合里没有归档状态,T8a 只有用户确认能到 T8_Accepted,任何事件都不把它带进终态(用户定案 2273) 在被测函数返回错误值(不抛错)时仍通过,没有检查计算结果",
+      "packages/domain/src/task.test.ts › R13 进程内改写 TABLE/行/格/STATES/EVENT_KINDS 都抛 TypeError,未认领任务的 Dispatch 仍被拒 在被测函数返回错误值(不抛错)时仍通过,没有检查计算结果"
+    ]
+  },
+  "G-TAUTO": {
+    "problems": 344,
+    "sample": [
+      "packages/server/src/delivery-t8a.test.ts \"Q09 A0 私聊没有审查人:交付后经 service 读到 T8a 待确认、门禁 none、交付消息已钉住;沉默不通过\":没有一条断言判的是被测源码的结果(只测 mock 或复制逻辑)",
+      "packages/server/src/delivery-t8a.test.ts \"Q09 A2 本人普通回复「通过」:联系人提交结论,service 读到 T8_Accepted,如实记本人豁免;任务卡收口\":没有一条断言判的是被测源码的结果(只测 mock 或复制逻辑)",
+      "packages/server/src/delivery-t8a.test.ts \"Q09 A2 显式入口 tasks.accept:T8a 直接验到 T8;已验收后再点被拒\":没有一条断言判的是被测源码的结果(只测 mock 或复制逻辑)",
+      "packages/server/src/desk-fake.test.ts \"派什么活,替身 Compute 的进度就写什么:不再一律报 hello.txt\":没有一条断言判的是被测源码的结果(只测 mock 或复制逻辑)",
+      "packages/server/src/desk-fake.test.ts \"活里要验证码:替身 Compute 停在受阻,任务等你回答;你交还后它接着做完\":没有一条断言判的是被测源码的结果(只测 mock 或复制逻辑)"
+    ]
+  },
+  "G-WORKFLOW": {
+    "problems": 0,
+    "sample": []
+  },
+  "G-LAYER": {
+    "problems": 0,
+    "sample": []
+  }
+}

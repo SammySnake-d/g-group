@@ -1,19 +1,51 @@
 // 界面布局切片:一级区域、右侧浮层栈、分栏页签、画中画、Helper 面板、各栏宽度、主题、提示条。
 import type { BackendState } from '@/api/backend'
+import type { WireStatus } from '@/api/wire'
 import { LAYOUT } from '@/config/layout'
 import { notify } from '@/hooks/use-toast'
 import type { PersonId } from '@/data'
 import { boot } from '../boot'
 import type { Slice } from '../state'
-import type { Ctx, Page, Section, SplitTab, WbTab } from '../types'
+import type { Page, Section, SplitTab, WbTab } from '../types'
 
 /** 分栏默认宽度沿用拆分前的 400(config/layout 的 split.initial 是 440,改不改由底座决定,见回报) */
 const SPLIT_INITIAL = 400
 export type Pane = 'list' | 'split' | 'helper'
 
-export type LayoutSlice = Pick<Ctx, 'dark' | 'debug' | 'setDark' | 'setDebug' | 'push' | 'back' | 'closeAll' | 'openSplit' | 'setPanoOpen' | 'section' | 'setSection'
-  | 'helperPanel' | 'setHelperPanel' | 'helperGlobal' | 'setHelperGlobal' | 'showPip' | 'openContact' | 'openWorkbench' | 'toast'> & {
+/** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 LAYOUT_CTX_KEYS */
+export interface LayoutCtx {
+  dark: boolean
+  debug: boolean
+  setDark: (v: boolean) => void
+  setDebug: (v: boolean) => void
+  /** 压栈打开；root=true 时先清空再打开（从别处直接进来） */
+  push: (p: Page, root?: boolean) => void
+  back: () => void
+  closeAll: () => void
+  openSplit: (t: SplitTab) => void
+  setPanoOpen: (v: boolean) => void
+  /** 左侧当前所在的一级区域；从“进展”“联系人”打开东西时不切走它（#1387） */
+  section: Section
+  setSection: (s: Section) => void
+  /** Helper 局部面板（聊天窗口里并排，只读当前聊天） */
+  helperPanel: boolean
+  setHelperPanel: (v: boolean) => void
+  /** Helper 全局（⌘K，默认什么都不读） */
+  helperGlobal: boolean
+  setHelperGlobal: (v: boolean) => void
+  showPip: (cid: string | null) => void
+  openContact: (id: PersonId, conv?: string, tab?: 'here' | 'talks' | 'process' | 'duty' | 'memory') => void
+  /** 联系人工作台：主面板展开（#1334） */
+  openWorkbench: (id: PersonId, tab?: WbTab) => void
+  toast: (text: string) => void
+}
+export const LAYOUT_CTX_KEYS = ['dark', 'debug', 'setDark', 'setDebug', 'push', 'back', 'closeAll', 'openSplit', 'setPanoOpen', 'section', 'setSection', 'helperPanel', 'setHelperPanel', 'helperGlobal', 'setHelperGlobal', 'showPip', 'openContact', 'openWorkbench', 'toast'] as const satisfies readonly (keyof LayoutCtx)[]
+
+export type LayoutSlice = LayoutCtx & {
   backend: BackendState
+  /** 接线层的读取状态(api/wire):正在读 / 读完了、哪几类没读到 */
+  wire: WireStatus
+  setWire: (w: WireStatus) => void
   panoOpen: boolean
   /** 右侧浮层:一摞页面 */
   stack: Page[]
@@ -48,6 +80,7 @@ export type LayoutSlice = Pick<Ctx, 'dark' | 'debug' | 'setDark' | 'setDebug' | 
 
 export const createLayoutSlice: Slice<LayoutSlice> = (set, get) => ({
   backend: { mode: 'checking' },
+  wire: { phase: 'off' },
   dark: boot.dark,
   debug: false,
   section: boot.section,
@@ -66,6 +99,7 @@ export const createLayoutSlice: Slice<LayoutSlice> = (set, get) => ({
   widths: { list: LAYOUT.list.initial, split: SPLIT_INITIAL, float: LAYOUT.float.initial, helper: LAYOUT.helper.initial },
 
   setBackend: (backend) => set({ backend }),
+  setWire: (wire) => set({ wire }),
   setDark: (dark) => { set({ dark }); document.documentElement.classList.toggle('dark', dark) },
   setDebug: (debug) => set({ debug }),
   setSection: (section) => set({ section, fileReturn: null }),

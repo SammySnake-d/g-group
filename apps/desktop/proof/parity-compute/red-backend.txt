@@ -1,0 +1,90 @@
+# 红:Compute / 提问失败卡 / 文件列表块(提交 d35a6e43,只有用例)
+
+## 后端(云电脑 box1,p-compute-be)
+
+命令: node scripts/gates/test-runner.ts packages/server/src/delivered-seq.test.ts packages/server/src/desk-fake.test.ts
+
+[box] box1 上的 /workspace/728/wt-pcb 已就绪(d35a6e4)
+[box] 已排队:cd ../.. && git log --oneline -1 && node scripts/gates/test-runner.ts packages/server/src/delivered-seq.test.ts packages/server/src/desk-fake.test.ts 2>&1 | grep -v '^ *\(duration_ms\|type:\|\.\.\.\|---\)' | tail -80
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+# Subtest: 还没交付(Compute 还在做)时 deliveredSeq 为 null
+not ok 2 - 还没交付(Compute 还在做)时 deliveredSeq 为 null
+  location: '/workspace/728/wt-pcb/packages/server/src/delivered-seq.test.ts:52:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - null
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/728/wt-pcb/packages/server/src/delivered-seq.test.ts:60:10)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+# Subtest: 派什么活,替身 Compute 的进度就写什么:不再一律报 hello.txt
+not ok 3 - 派什么活,替身 Compute 的进度就写什么:不再一律报 hello.txt
+  location: '/workspace/728/wt-pcb/packages/server/src/desk-fake.test.ts:37:1'
+  failureType: 'testCodeFailure'
+  error: '进度不报和这件事无关的文件'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: '已写好 hello.txt'
+  operator: 'doesNotMatch'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/728/wt-pcb/packages/server/src/desk-fake.test.ts:44:38)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+# Subtest: 活里要验证码:替身 Compute 停在受阻,任务等你回答;你交还后它接着做完
+not ok 4 - 活里要验证码:替身 Compute 停在受阻,任务等你回答;你交还后它接着做完
+  location: '/workspace/728/wt-pcb/packages/server/src/desk-fake.test.ts:50:1'
+  failureType: 'testCodeFailure'
+  error: '等不到:停在等你'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    until (file:///workspace/728/wt-pcb/packages/server/src/desk-fake.test.ts:28:9)
+    async TestContext.<anonymous> (file:///workspace/728/wt-pcb/packages/server/src/desk-fake.test.ts:53:19)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+# Subtest: 活里写了会失败:出一张挂在这件事上的原位失败卡,点重试后续接做完
+not ok 5 - 活里写了会失败:出一张挂在这件事上的原位失败卡,点重试后续接做完
+  location: '/workspace/728/wt-pcb/packages/server/src/desk-fake.test.ts:65:1'
+  failureType: 'testCodeFailure'
+  error: '等不到:失败卡'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    until (file:///workspace/728/wt-pcb/packages/server/src/desk-fake.test.ts:28:9)
+    async TestContext.<anonymous> (file:///workspace/728/wt-pcb/packages/server/src/desk-fake.test.ts:68:16)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+# Subtest: 活里写了慢慢:停止后不再吐剩下的进度,任务落到已取消;可以按台账重跑
+not ok 6 - 活里写了慢慢:停止后不再吐剩下的进度,任务落到已取消;可以按台账重跑
+  location: '/workspace/728/wt-pcb/packages/server/src/desk-fake.test.ts:78:1'
+  failureType: 'testCodeFailure'
+  error: '停下后没有再做完:started,stopped,milestone,completed'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/728/wt-pcb/packages/server/src/desk-fake.test.ts:86:10)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+1..6
+# tests 6
+# suites 0
+# pass 0
+# fail 6
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 43845.367346
+[box] 用了 box1;云端残留进程:0
+rc=0

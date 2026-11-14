@@ -1,0 +1,13 @@
+{
+  "slice": "交付是普通消息:联系人回复来源并 @ 提出者汇报结果,不挂验收卡;用户用普通回复表达通过或修改,联系人以 verdict 动作转交,宿主只认提出者本人在交付之后的直接消息;沉默不通过;退回时原 Compute 可恢复就恢复原实例,否则携交接新开;tasks.accept/reject 不依赖卡片",
+  "acceptance": [
+    { "id": "AC-56", "status": "未测", "reason": "后端底座:交付无卡、@ 提出者、普通回复验收、沉默不通过由 delivery-plain.test.ts 覆盖,并真实跑通一次(proof/e2e-delivery-plain-pi-claude.txt);AC-56 要求的窗口截图(页面无专用验收卡)属桌面前端,未测;待审查" },
+    { "id": "AC-28", "status": "未测", "reason": "状态底座:T5/T8a 等用户、明确通过 → T8、沉默一直待确认、修改意见按 A(恢复原实例)/B(携交接新开)续改均有测试;用户在页面上的普通回复路径依赖前端;待审查" }
+  ],
+  "author": { "agent": "claude", "session": "claude:ef07eb6a-5c4c-4ab7-bbcc-46df83c37b7d", "model": "claude-opus-5-5" },
+  "red": { "commit": "449226725b1ac68b649be22639654749623c6415" },
+  "unverifiable": "AC-56 判定「是不是用户本人明确通过」靠联系人模型把普通回复转成 verdict:宿主只能核对来源是提出者本人在交付之后的直接消息,核对不了语义(如「先这样吧」被当成通过);真实运行只证明这一次「通过,谢谢」被正确转交。AC-28 的 A/B 判定以 gg_compute.status 是否 stopped/failed 为准,Compute 进程意外消失但没发出 stopped 事件时会误判为可恢复,resume 失败只记报告。另:host.test.ts 里原有的「宿主每轮用内核五块重拼」测试(本片未改,来自 feat/host-rounds,当时 red 为 null)断言只读 mind 回调收集的请求,G-TAUTO 判它没有判源码结果;本片因改了同文件的私聊闭环测试而把它带进受检范围。修它要改测试体,改了就成为本片新改测试、G-RED 要求它在红提交上失败,而它测的行为本片没改、不会失败,两道门禁对存量测试互相矛盾,留给审查/门禁维护者决定",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

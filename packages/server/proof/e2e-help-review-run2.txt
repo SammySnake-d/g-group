@@ -1,0 +1,37 @@
+# 第 2 次真实运行(2026-11-09,修结论判读之后):真实 pi 联系人(anyrouter/claude-opus-5-5)+ 真实 Claude Code Compute;审查人 Compute 模型 glm/glm-5.3-flash
+# 命令: node packages/server/proof/e2e-help-review.ts /tmp/gg-e2e-help2;下面是原文(本次没跑完:Compute 完成后联系人脑子的上游 anyrouter 一直 provider-error,旧注意循环每 20–70 秒无限重试,没有交付也没有出卡;会话随宿主进程结束而停。这正是 AC-36 要补的缺口,由子代理 β 在做)
+(node:76402) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[   0.0s] 夹具订单后台 http://127.0.0.1:52336(短信验证码只在夹具里,驱动脚本扮演用户读出)
+[   0.1s] 联系人 小克:说话/Compute 模型 anyrouter/claude-opus-5-5;小审:Compute 模型 glm/glm-5.3-flash(审查人)
+[   0.1s] #1 我: 帮我登录 http://127.0.0.1:52336 的订单后台(账号 demo-user,密码 demo-pass),把订单导出成你工作目录里的 orders.csv,做完告诉我
+[ 105.3s] #2 小克: 接了任务:导出订单为 orders.csv  [卡片 task-status/open:取消任务]
+[ 105.3s] #3 小克: 收到，已经开始导出订单，弄好了告诉你。
+[ 105.9s]   · Compute cc-e03d4941- started: 已开始
+[ 211.3s]   · Compute cc-e03d4941- blocked: 受阻:请提供发送到管理员手机的短信验证码(sms_code),我将用它重新登录并导出订单。。登录需要短信验证码,已停下等待用户提供
+[ 211.3s] #4 小克: @我 请提供发送到管理员手机的短信验证码(sms_code),我将用它重新登录并导出订单。  [卡片 question/open:回答|不做了]  [附件 challenge.png image/png 299B]
+[ 211.5s] 任务 t-mw8b8t20-2 状态 T4b_BlockedOnHuman;待回答问题 {"qId":"q-mw8bb2tg-5","text":"请提供发送到管理员手机的短信验证码(sms_code),我将用它重新登录并导出订单。"}
+[ 211.5s] 回答前夹具收到的请求:回答前 GET / / 回答前 POST /login / 回答前 GET /challenge.png
+[ 211.5s] #5 我: 回答:短信验证码是 690741
+[ 211.5s] tasks.answer → ok,任务 T3_Running
+[ 212.0s]   · Compute cc-e03d4941- started: 已开始
+[ 385.3s]   · Compute cc-e03d4941- completed: 我已把全部订单导出到 `/private/tmp/gg-e2e-help2/work/t-mw8b8t20-2/orders.csv`。
+
+- **行数**:共 4 行,1 行表头加 3 条订单(A-1001 键盘 ×2、A-1002 显示器 ×1、A-1003 鼠标 ×3)。
+- **列名**:`order_id,item,qty`
+- **是否全部**:订单接口一次返回了完整的 CSV,里面没有分页的迹象,所以这 3 条应该就是后台的全部订单。
+
+**流程上的问题**:第一次登录时后台要求短信验证码。我把验证画面截图存到了工作目录下的 `challenge.png`,但没有按群规调用 `r
+[ 623.7s] [宿主报告] attention:error:c-mw8b6jtg-0 {"code":"provider-error","name":"PiContactMindError"}
+[ 666.8s] [宿主报告] attention:error:c-mw8b6jtg-0 {"code":"provider-error","name":"PiContactMindError"}
+[ 694.9s] [宿主报告] attention:error:c-mw8b6jtg-0 {"code":"provider-error","name":"PiContactMindError"}
+[ 752.0s] [宿主报告] attention:error:c-mw8b6jtg-0 {"code":"provider-error","name":"PiContactMindError"}
+[ 794.1s] [宿主报告] attention:error:c-mw8b6jtg-0 {"code":"provider-error","name":"PiContactMindError"}
+[ 815.2s] [宿主报告] attention:error:c-mw8b6jtg-0 {"code":"provider-error","name":"PiContactMindError"}
+[ 836.3s] [宿主报告] attention:error:c-mw8b6jtg-0 {"code":"provider-error","name":"PiContactMindError"}
+[ 864.4s] [宿主报告] attention:error:c-mw8b6jtg-0 {"code":"provider-error","name":"PiContactMindError"}
+[ 892.5s] [宿主报告] attention:error:c-mw8b6jtg-0 {"code":"provider-error","name":"PiContactMindError"}
+[ 967.8s] [宿主报告] attention:error:c-mw8b6jtg-0 {"code":"provider-error","name":"PiContactMindError"}
+[1037.0s] [宿主报告] attention:error:c-mw8b6jtg-0 {"code":"provider-error","name":"PiContactMindError"}
+[1112.1s] [宿主报告] attention:error:c-mw8b6jtg-0 {"code":"provider-error","name":"PiContactMindError"}
+[1181.3s] [宿主报告] attention:error:c-mw8b6jtg-0 {"code":"provider-error","name":"PiContactMindError"}

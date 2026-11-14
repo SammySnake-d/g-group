@@ -1,16 +1,18 @@
-// 演示模式下的进程内「宿主」:实现接口合同里定时、插件、命令这几组方法,
+// 演示模式下的进程内「宿主」:实现接口合同里联系人(读)、定时、插件、命令这几组方法,
 // 每次调用都先用合同 checkParams 校验参数、回包前用 checkResult 校验结果——
 // 界面走的调用路径和接上真后端时完全一样,演示数据只是换了一个服务端。
-import { type ApiResult, checkParams, checkResult, formatIssues, isMethodName, type MarketplaceEntry, type MethodName, type PluginView, type ScheduleView, type ServerEvent, type SlashCommand } from '@g-group/api-contract'
+// 没实现的方法一律回 unavailable(「演示模式没有实现 …,要连接后端」),不伪造成功。
+import { type ApiResult, checkParams, checkResult, type ContactView, formatIssues, isMethodName, type MarketplaceEntry, type MethodName, type PluginView, type ScheduleView, type ServerEvent, type SlashCommand } from '@g-group/api-contract'
 import { cronError, describeCron, nextRuns } from '@g-group/ui-core'
 
 type Fail = { ok: false; error: { code: 'invalid_params' | 'not_found' | 'unavailable' | 'unknown_method' | 'internal' | 'conflict' | 'forbidden'; message: string; detail?: unknown } }
 const fail = (code: Fail['error']['code'], message: string, detail?: unknown): Fail => ({ ok: false, error: detail === undefined ? { code, message } : { code, message, detail } })
 
-export type DemoSeed = { schedules: ScheduleView[]; plugins: PluginView[]; market: MarketplaceEntry[]; commands: (roomId: string) => SlashCommand[] }
+export type DemoSeed = { contacts: ContactView[]; schedules: ScheduleView[]; plugins: PluginView[]; market: MarketplaceEntry[]; commands: (roomId: string) => SlashCommand[] }
 export type DemoCall = { method: string; params: unknown; ok: boolean }
 
 export function createDemoServer(seed: DemoSeed, now: () => Date = () => new Date()) {
+  const contacts = new Map(seed.contacts.map((c) => [c.id, c]))
   const schedules = new Map(seed.schedules.map((s) => [s.id, s]))
   const plugins = new Map(seed.plugins.map((p) => [p.id, p]))
   const history = new Map<string, { at: string; status: 'ok' | 'failed' | 'missed' | 'running'; messageSeq: number | null; error: string | null }[]>()
@@ -23,6 +25,13 @@ export function createDemoServer(seed: DemoSeed, now: () => Date = () => new Dat
 
   async function run(method: MethodName, p: Record<string, unknown>): Promise<unknown> {
     switch (method) {
+      case 'contacts.list':
+        return { contacts: [...contacts.values()] }
+      case 'contacts.get': {
+        const c = contacts.get(p.contactId as string)
+        if (!c) throw fail('not_found', '没有这个联系人')
+        return c
+      }
       case 'schedules.list':
         return { schedules: [...schedules.values()].filter((s) => (!p.roomId || s.roomId === p.roomId) && (!p.contactId || s.contactId === p.contactId)) }
       case 'schedules.preview': {

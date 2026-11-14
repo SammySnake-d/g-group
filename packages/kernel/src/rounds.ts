@@ -36,6 +36,8 @@ export interface RoundPrefix {
   /** 群公告原文;私聊或没有公告给 "" */
   readonly roomNotice: string;
   readonly rules: readonly PrefixRule[];
+  /** 联系人的全局记忆(D25 第 6 节:每轮都适用的才进前缀,按会话快照放入,中途变化走第 5 块);不给即没有 */
+  readonly memories?: readonly { readonly id: string; readonly title: string; readonly text: string }[];
 }
 /** 一条未了结承诺。text 是账本里的原文,代码原样复制 */
 export interface LedgerEntry {
@@ -93,7 +95,7 @@ const VOLATILE_PATTERNS: readonly [string, RegExp][] = [
 ];
 const PREFIX_TEXT_PARTS: readonly PrefixTextPart[] = ["system", "tools", "persona", "roomNotice"];
 const SENDER_KINDS: readonly InboundSenderKind[] = ["user", "contact", "helper", "system"];
-const SIGNALS: readonly ComputeSignal[] = ["started", "milestone", "blocked", "completed", "failed", "stopped"];
+const SIGNALS: readonly ComputeSignal[] = ["started", "milestone", "blocked", "completed", "failed", "stopped", "stalled"];
 
 const bytesOf = (s: string) => Buffer.byteLength(s, "utf8");
 const isRec = (x: unknown): x is Readonly<Record<string, unknown>> => typeof x === "object" && x !== null && !Array.isArray(x);
@@ -128,6 +130,13 @@ function checkPrefix(p: unknown): string | undefined {
     if (!isStr(r.text) || r.text === "") return `${at}.text 必须是非空字符串(来源消息原文)`;
     if (ids.has(r.id)) return `规矩 id ${r.id} 重复`;
     ids.add(r.id);
+  }
+  if (p.memories !== undefined) {
+    if (!Array.isArray(p.memories)) return "prefix.memories 必须是数组";
+    for (let i = 0; i < p.memories.length; i++) {
+      const m: unknown = p.memories[i];
+      if (!isRec(m) || !isLine(m.id) || !isLine(m.title) || !isStr(m.text) || m.text === "") return `prefix.memories[${i}] 必须是 {id, title: 单行非空, text: 非空}`;
+    }
   }
   return undefined;
 }
@@ -224,6 +233,11 @@ function renderPrefix(p: RoundPrefix) {
     t += "[已确认规矩与用户纠正(原文)]\n";
     for (const r of rules) t += `〔${r.kind === "rule" ? "规矩" : "纠正"} ${r.id} · 来源 #${r.sourceSeq}〕\n${r.text}\n`;
   }
+  const mems = p.memories ?? [];
+  if (mems.length > 0) {
+    t += "[联系人记忆(全局,每轮适用)]\n";
+    for (const m of mems) t += `〔记忆 ${m.id} · ${m.title}〕\n${m.text}\n`;
+  }
   return t;
 }
 
@@ -252,7 +266,8 @@ function renderStateNote(n: RoundStateNote | null) {
   return n === null ? "[状态笔记]\n(尚无)\n" : `[状态笔记 v${n.version}]\n${n.text}\n`;
 }
 
-function renderInbound(x: Inbound) {
+/** 一条输入在第 4 块里的呈现(消息带 #seq、会话、发送人、时刻与引用;Compute 事件与定时触发各有标签),压缩材料也用它 */
+export function renderInboundText(x: Inbound): string {
   if (x.kind === "message") {
     const s = x.sender;
     let head = `#${x.seq} · ${x.roomId} · ${s.name}(${s.kind}:${s.id}) · ${x.at}`;
@@ -269,7 +284,7 @@ function renderInbound(x: Inbound) {
 function renderFresh(fresh: readonly Inbound[]) {
   if (fresh.length === 0) return "[新消息]\n(无)\n";
   let t = "[新消息](processed_seq 之后,按到达顺序,原文)\n";
-  for (const x of fresh) t += renderInbound(x);
+  for (const x of fresh) t += renderInboundText(x);
   return t;
 }
 

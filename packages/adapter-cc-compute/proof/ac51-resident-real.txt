@@ -1,0 +1,57 @@
+# AC-51 适配器侧实跑:createResidentComputeAdapter + 真实 Claude Code 2.1.319 常驻会话(2026-11-09 02:16 +08:00,本机)
+# 命令: node packages/adapter-cc-compute/smoke/resident-real.mjs "ai-iisbo/deepseek-v4.1-flash" "ai-iisbo/[乾坤按量]gpt-6.1-terra" "zz-none/no-such-model"
+# 网关地址与令牌只经 hostEnv 交给 CLI,未打印;网关核对只摘 ~/.config/magpie/usage.jsonl 里 native_session = 本次会话 id 的行的
+# t/req(CLI 请求的模型)/model/served(网关实际路由)/effort/status/stop 字段。下面是运行输出原文(milestone 事件本次没有)。
+[0.2s] claude 版本: 2.1.319 (Claude Code);hostEnv 键: ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN, ANTHROPIC_API_KEY(值不打印);cwd /var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/ccr-real-Wxl9oz
+[0.2s] 模型 A=ai-iisbo/deepseek-v4.1-flash B=ai-iisbo/[乾坤按量]gpt-6.1-terra 不存在的模型=zz-none/no-such-model
+[1.8s] event {"computeId":"ccr-512e7487-9dc3-4dd0-b09f-91c251ba2b33","kind":"started","sessionId":"8fbc50a9-5f1d-4118-b31e-10c6a40a93aa","resumed":false,"model":"ai-iisbo/deepseek-v4.1-flash","pid":11008}
+[5.3s] event {"computeId":"ccr-512e7487-9dc3-4dd0-b09f-91c251ba2b33","model":"ai-iisbo/deepseek-v4.1-flash","models":["ai-iisbo/deepseek-v4.1-flash"],"kind":"completed","result":"已记住。"}
+[5.3s] 第 1 轮结束;pid=11008 会话=8fbc50a9-5f1d-4118-b31e-10c6a40a93aa 进程活着=true
+[13.5s] 第 2 轮 resume({"model":"ai-iisbo/[乾坤按量]gpt-6.1-terra"}) → {"ok":true}(8.2s)
+[18.4s] event {"computeId":"ccr-512e7487-9dc3-4dd0-b09f-91c251ba2b33","model":"ai-iisbo/[乾坤按量]gpt-6.1-terra","models":["ai-iisbo/[乾坤按量]gpt-6.1-terra"],"kind":"completed","result":"PLUM-7731"}
+[18.6s] 第 2 轮 结束;已结束轮数 2;同一 pid 活着=true
+[19.9s] 第 3 轮(换到不存在的模型) resume({"model":"zz-none/no-such-model"}) → {"ok":true}(1.3s)
+[21.8s] event {"computeId":"ccr-512e7487-9dc3-4dd0-b09f-91c251ba2b33","model":"zz-none/no-such-model","models":["zz-none/no-such-model"],"kind":"completed","result":"这一轮发出了。"}
+[21.9s] 第 3 轮(换到不存在的模型) 结束;已结束轮数 3;同一 pid 活着=true
+[24.0s] 第 4 轮 resume({"model":"ai-iisbo/deepseek-v4.1-flash"}) → {"ok":true}(2.1s)
+[26.5s] event {"computeId":"ccr-512e7487-9dc3-4dd0-b09f-91c251ba2b33","model":"ai-iisbo/deepseek-v4.1-flash","models":["ai-iisbo/deepseek-v4.1-flash"],"kind":"completed","result":"PLUM-7731"}
+[26.6s] 第 4 轮 结束;已结束轮数 4;同一 pid 活着=true
+[26.6s] 第 5 轮(只改 effort) resume({"model":"ai-iisbo/deepseek-v4.1-flash","effort":"low"}) → {"ok":true}(0.0s)
+[28.9s] event {"computeId":"ccr-512e7487-9dc3-4dd0-b09f-91c251ba2b33","model":"ai-iisbo/deepseek-v4.1-flash","models":["ai-iisbo/deepseek-v4.1-flash"],"kind":"completed","result":"PLUM-7731"}
+[29.1s] 第 5 轮(只改 effort) 结束;已结束轮数 5;同一 pid 活着=true
+[29.1s] started 事件数=1
+[29.1s] event {"computeId":"ccr-512e7487-9dc3-4dd0-b09f-91c251ba2b33","kind":"stopped","code":null,"signal":null,"scope":"main-then-group","violations":[]}
+[29.3s] stop 后进程退出=true
+
+== 网关用量日志中本次会话(8fbc50a9-5f1d-4118-b31e-10c6a40a93aa)的请求,共 8 条 ==
+{"t":"2026-11-09T02:16:26.080068+08:00","req":"ai-iisbo/deepseek-v4.1-flash","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"high","status":200,"stop":"end_turn"}
+{"t":"2026-11-09T02:16:29.476367+08:00","req":"ai-iisbo/[乾坤按量]gpt-6.1-terra","model":"claude-opus-5-5","served":"claude-opus-5-5","status":200,"stop":"max_tokens"}
+{"t":"2026-11-09T02:16:37.704693+08:00","req":"ai-iisbo/[乾坤按量]gpt-6.1-terra","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"high","status":200,"stop":"end_turn"}
+{"t":"2026-11-09T02:16:42.740038+08:00","req":"zz-none/no-such-model","model":"claude-opus-5-5","served":"claude-opus-5-5","status":200,"stop":"max_tokens"}
+{"t":"2026-11-09T02:16:44.03514+08:00","req":"zz-none/no-such-model","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"high","status":200,"stop":"end_turn"}
+{"t":"2026-11-09T02:16:46.051571+08:00","req":"ai-iisbo/deepseek-v4.1-flash","model":"claude-opus-5-5","served":"claude-opus-5-5","status":200,"stop":"max_tokens"}
+{"t":"2026-11-09T02:16:48.156759+08:00","req":"ai-iisbo/deepseek-v4.1-flash","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"high","status":200,"stop":"end_turn"}
+{"t":"2026-11-09T02:16:50.84099+08:00","req":"ai-iisbo/deepseek-v4.1-flash","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"low","status":200,"stop":"end_turn"}
+
+== 每轮结果 ==
+{"kind":"completed","model":"ai-iisbo/deepseek-v4.1-flash","models":["ai-iisbo/deepseek-v4.1-flash"],"result":"已记住。"}
+{"kind":"completed","model":"ai-iisbo/[乾坤按量]gpt-6.1-terra","models":["ai-iisbo/[乾坤按量]gpt-6.1-terra"],"result":"PLUM-7731"}
+{"kind":"completed","model":"zz-none/no-such-model","models":["zz-none/no-such-model"],"result":"这一轮发出了。"}
+{"kind":"completed","model":"ai-iisbo/deepseek-v4.1-flash","models":["ai-iisbo/deepseek-v4.1-flash"],"result":"PLUM-7731"}
+{"kind":"completed","model":"ai-iisbo/deepseek-v4.1-flash","models":["ai-iisbo/deepseek-v4.1-flash"],"result":"PLUM-7731"}
+
+# 核对结论(逐条对 AC-51)
+# ① 下一轮就用新模型:网关 req 列逐轮为 deepseek → gpt-6.1-terra → zz-none(第 3 轮)→ deepseek → deepseek,与每轮 resume 带的生效模型一致;
+#    每轮 completed 事件的 model/models 与之相同。注意:本会话所用网关端点把所有请求都路由到 claude-opus-5-5(served 列),
+#    所以这里只证明 CLI 发出的请求模型跟上了,不证明上游按该模型服务——那是网关路由配置,不在适配器范围。
+# ② 同一会话、同一进程:5 轮同一 pid 11008、同一会话 8fbc50a9-…,started 只 1 次;换到 B 之后答出第 1 轮记的 PLUM-7731,换回 A 后仍答出。
+# ③ 在途不打断:本次每轮只有一次主请求,没有在轮中改模型;由单测「在途这一轮不打断」覆盖(假 CLI 按真实 CLI 中途 set_model 立即生效的行为)。
+# ④ 切换失败不静默:本网关端点接受任何模型 id(zz-none/no-such-model 也 200,set_model 1.3s 回 success),真实拒绝路径在这台机器上复现不出;
+#    11-07 实测(g-group-requirements/evidence/model-hotswap-20261107,另一网关路由)Claude Code 对不可用模型回 subtype:error/error_code:check_failed,
+#    适配器按这个形状处理,由单测「切换被拒不静默」「切换超时同样不发出」覆盖。真实拒绝未实测,如实记为未测。
+# ⑤ 兜底重启:本次真实 CLI 的 set_model 全部可用,没有走兜底;由单测「兜底重启」「切换请求本身不可用」覆盖。
+# ⑥ 每轮实际模型:completed 事件带 model(这一轮开始时 init 报的会话模型)与 models(result.model_usage_since_last_result 的键),逐轮见「每轮结果」。
+# effort 会话内改:第 5 轮只改 effort=low,适配器发 apply_flag_settings {effortLevel:"low"}(0.0s 回 success),没有 set_model、没有重启(started 仍 1 次),
+#    网关该轮请求 effort 列由前几轮的 high 变成 low。
+# stop:stopped 立即产出,0.2s 内主进程退出。
+# 第一次试跑(02:15)脚本把第 3 轮当成必被拒、少等了一轮,第 5 轮在发出前就被 stop,结论不采用;本文件是修正脚本后的第二次。

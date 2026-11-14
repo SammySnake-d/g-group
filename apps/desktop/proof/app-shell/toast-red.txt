@@ -1,0 +1,9 @@
+# 红:a55d941 构建的 0.1.0,本机装进 /Applications 后(mac arm64),更新地址放 0.1.1(本机 http 服务)
+# 复现脚本:/tmp/gg-accept/dbg-toast.mjs——等自动提示 → 点提示条上的「下载」→ 每 100ms 读一次提示条
+toast: g-group 0.1.1 可以更新了（103.1 MB）
+0 toasts 1 {"text":"正在下载 0.1.1 · 0%","removed":"true","visible":"true","mounted":"true"}
+100 toasts 1 {"text":"0.1.1 已下载好，重启就是新版本重启并安装","removed":"true","visible":"true","mounted":"true"}
+200 toasts 0 null
+…(到 2900ms 一直 0 条)
+# 结论:点了「下载」sonner 就把提示标成 removed,200ms 后删掉;「重启并安装」随之消失,用户找不到安装入口。
+# 云电脑 Linux 上的 Electron 用例(app-shell.electron.spec.ts 加了提示条按钮断言、安装包晚 1.5 秒回)没能复现,两次都通过;以本机真实安装的复现为准。

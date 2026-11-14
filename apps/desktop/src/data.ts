@@ -41,7 +41,11 @@ const defaultTools = (): Person['tools'] => [
   { name: '发邮件', on: false, kind: 'mcp' },
 ]
 
-export const people: Record<PersonId, Person> = {
+/** 界面各处查联系人用的登记表(store/people.ts):演示模式装下面的演示联系人,连上后端装 contacts.list 的结果 */
+export { people } from './store/people'
+
+/** 演示联系人:只由演示模式(api/demo-state.ts)装进登记表,连上后端时不用 */
+export const demoPeople: Record<PersonId, Person> = {
   me: { id: 'me', name: '39impacts', initials: '39', role: '你', human: true, color: '#52525b' },
   helper: { id: 'helper', name: 'Helper', shape: 'lightbulb', color: '#f8a01c', role: '帮你操作这个软件', model: 'claude-haiku-5-5' },
   claude: { id: 'claude', name: 'Claude Code', shape: 'chat', color: '#ff6a1a', role: '写代码、做审查', model: 'claude-opus-5-5', harness: 'claude-code', computeModel: { mode: 'follow-speaking', effort: 'xhigh' }, computeQuota: 3, today: '¥3.20', month: '¥41.60', tools: defaultTools() },
@@ -68,9 +72,9 @@ const memOf: Record<string, { text: string; src: string }[]> = {
   grok: [{ text: '查天气先确认城市', src: '#y7（被 Astra 纠正后记下）' }],
 }
 for (const id of Object.keys(soulOf)) {
-  people[id].soul = soulOf[id]
-  people[id].memory = memOf[id] ?? []
-  people[id].versions = [{ v: 3, at: '今天 01:40', note: '你改了预设：汇报时先给结论' }, { v: 2, at: '昨天 22:10', note: '你加了「网页搜索」工具' }, { v: 1, at: '周一', note: '创建' }]
+  demoPeople[id].soul = soulOf[id]
+  demoPeople[id].memory = memOf[id] ?? []
+  demoPeople[id].versions = [{ v: 3, at: '今天 01:40', note: '你改了预设：汇报时先给结论' }, { v: 2, at: '昨天 22:10', note: '你加了「网页搜索」工具' }, { v: 1, at: '周一', note: '创建' }]
 }
 
 export const SHAPES = ['chat', 'book', 'shield', 'controller', 'magnifier', 'sprout', 'lightbulb', 'cloud', 'cat', 'bunny', 'star', 'rocket', 'mug', 'brain', 'ghost', 'camera', 'palette', 'paint-brush', 'watering-can', 'barbell', 'bull', 'witch-hat']
@@ -122,6 +126,8 @@ export interface Compute {
   short?: string
   /** AC-23：已请求停止、还没确认停下 */
   stopping?: boolean
+  /** 在哪跑(本机 / 自带机器 / 云端);演示数据没有这一项,按本机显示 */
+  placement?: string
   /** C-US15：做到一半卡在只有人能过的一步（验证码），交给你；你接手过了再交还 */
   needsHuman?: { what: string; taken?: boolean; qid?: string }
   /** AC-45：约束版本。你改了派活消息，在途任务原位升版，不另开 */
@@ -297,7 +303,11 @@ export const computes0: Record<string, Compute> = {
 }
 
 /* ---------- 文件与资产 ---------- */
-export interface Artifact { id: string; name: string; kind: 'doc' | 'page' | 'sheet' | 'asset'; meta: string; by: PersonId; conv: string; when: string }
+export interface Artifact {
+  id: string; name: string; kind: 'doc' | 'page' | 'sheet' | 'asset'; meta: string; by: PersonId; conv: string; when: string
+  /** 连上后端时才有:合同里的文件号(files.read / artifacts.get 用)、出现它的那条消息、类型与大小 */
+  live?: { ref: string; src: string; mime: string; bytes: number; via: 'file' | 'artifact' }
+}
 export const artifacts: Artifact[] = [
   { id: 'a1', name: 'IM 竞品交互对照', kind: 'doc', meta: '文档 · 12 KB', by: 'astra', conv: 'g', when: '昨天' },
   { id: 'a2', name: '登录页深色版', kind: 'page', meta: '网页', by: 'claude', conv: 'g', when: '刚刚' },
@@ -352,10 +362,12 @@ export const sources: Source[] = [
 
 /* ---------- 消息：聊天里只放“说的话”，事件只占一行 ---------- */
 export interface QuoteRef { msgId: string; from: PersonId; text: string; reply?: boolean; ext?: string }
+/** 随消息发出的附件(连上后端时来自 MessageView.attachments) */
+export interface MsgFile { ref: string; name: string; mime: string; bytes: number }
 export type Msg =
   | { k: 'date'; text: string }
   | { k: 'sys'; id: string; text: string; undo?: string; recalled?: string; rewind?: boolean }
-  | { k: 'text'; id: string; from: PersonId; text: string; answerTo?: string; edited?: boolean; at?: string; cron?: string; cronNew?: boolean; disp?: Disp; quotes?: QuoteRef[]; tag?: { task: string; state: string }; task?: string; helper?: { scope: string; card?: { kind: 'csv' | 'group' | 'send'; lines: string[]; done?: boolean } }; byHelper?: boolean; shot?: { title: string; compute: string } }
+  | { k: 'text'; id: string; from: PersonId; text: string; answerTo?: string; edited?: boolean; at?: string; cron?: string; cronNew?: boolean; disp?: Disp; quotes?: QuoteRef[]; tag?: { task: string; state: string }; task?: string; helper?: { scope: string; card?: { kind: 'csv' | 'group' | 'send'; lines: string[]; done?: boolean } }; byHelper?: boolean; shot?: { title: string; compute: string }; card?: MsgCard; deliverables?: { ref: string; name: string; mime: string; bytes: number }[]; files?: MsgFile[] }
   | { k: 'compute'; id: string; from: PersonId; computeId: string }
   | { k: 'file'; id: string; from: PersonId; artifactId: string }
   | { k: 'huddle'; id: string; who: PersonId[]; items: { id: string; from: PersonId; text: string }[]; conclusion: string }
@@ -366,15 +378,17 @@ export type Msg =
   | { k: 'vote'; id: string; from: PersonId; title: string; options: string[]; votes: Record<PersonId, { opt: number; why: string }>; decided?: number }
   | { k: 'authfix'; id: string; from: PersonId; plugin: string; text: string; fixed?: boolean }
   | { k: 'summary'; id: string; from: PersonId; title: string; items: { text: string; ref?: string }[]; covers?: string[]; expired?: string }
-  | { k: 'replying'; id: string; from: PersonId; quotes: QuoteRef[]; phase: string; mins: number; steps: string[] }
+  | { k: 'replying'; id: string; from: PersonId; quotes: QuoteRef[]; phase: string; mins: number; steps: string[]; since?: number }
 
+/** 连上后端时消息上挂的卡片(提问、失败、授权…):按钮走 cards.act,点了以你的名义记一条回复。演示数据没有这一项 */
+export interface MsgCard { id: string; seq: number; kind: string; taskId: string | null; state: 'open' | 'claimed' | 'done' | 'expired'; title: string; body: string; actions: { id: string; label: string; style: 'primary' | 'default' | 'danger' }[] }
 /** 一条群公告。ver 每次修改 +1；助手接活前由软件把当前版本装配进它的上下文（不是它自己去读，所以叫「已装配」，不写「已遵守」） */
 /** U87 / D23 / AC-40：每条交给助手的消息都要有交代。谁来交代 = 被 @ 的联系人；ref 指向它落在哪（Compute、定时、消息） */
 export type DispKind = 'doing' | 'done' | 'committed' | 'merged' | 'superseded' | 'noted'
 export interface Disp { by: PersonId; kind: DispKind; ref?: string; refKind?: 'compute' | 'cron' | 'msg'; note?: string }
 export const dispText: Record<DispKind, string> = { doing: '在做', done: '已做', committed: '记下了', merged: '合并到', superseded: '被替代', noted: '知道了' }
 export interface Notice { id: string; text: string; by: string; at: string; ver: number; top?: boolean }
-export interface Conversation { id: string; kind: 'group' | 'dm'; title: string; members: PersonId[]; time: string; notice?: string; noticeBy?: string; notices?: Notice[]; loaded?: Partial<Record<PersonId, Record<string, number>>>; links?: string[]; pinned?: boolean; muted?: boolean; unread?: number; roles?: Record<PersonId, 'owner' | 'admin'>; nick?: string; pins?: string[]; noticeRead?: PersonId[]; workspace?: { path: string; branch: string; commits: { who: PersonId; msg: string; at: string; add: number; del: number }[] }; tempCompute?: { max: number }; silenced?: Record<PersonId, string>; hiddenAfter?: string; reads?: ReadMarks; messages: Msg[] }
+export interface Conversation { id: string; kind: 'group' | 'dm'; title: string; members: PersonId[]; time: string; notice?: string; noticeBy?: string; notices?: Notice[]; loaded?: Partial<Record<PersonId, Record<string, number>>>; links?: string[]; pinned?: boolean; muted?: boolean; unread?: number; roles?: Record<PersonId, 'owner' | 'admin'>; nick?: string; pins?: string[]; noticeRead?: PersonId[]; workspace?: { path: string; branch: string; commits: { who: PersonId; msg: string; at: string; add: number; del: number }[] }; tempCompute?: { max: number }; silenced?: Record<PersonId, string>; /** 移出中的成员(AC-49):在途任务停下前还在成员里 */ leaving?: PersonId[]; hiddenAfter?: string; reads?: ReadMarks; messages: Msg[] }
 
 /** AC-46 / D09.3：已读位置。每个成员一串推进记录 { 读到哪条消息, 第一次越过的时刻 }。位置只由宿主推进（联系人这一轮回复落盘时），只进不退；
  *  模型的文字、表情、工具调用都改不了它。一条消息的读到时间 = 第一次 ≥ 它的那条记录的时刻 */

@@ -1,0 +1,39 @@
+绿记录:实现提交 445e0345(box4 上跑;基线 52321c35)。
+
+[box] 已排队:cd ../.. && npm run -s typecheck > /tmp/pg-rt.txt 2>&1; echo "ROOT_TSC rc=$? lines=$(wc -l < /tmp/pg-rt.txt)"; npm run -s lint > /tmp/pg-lint.txt 2>&1; echo "LINT rc=$? $(tail -1 /tmp/pg-lint.txt)"; npm test --silent > /tmp/pg-test.txt 2>&1; echo "ROOT_TEST rc=$?"; grep -E "^# (tests|pass|fail|skipped|cancelled)" /tmp/pg-test.txt | tr "\n" " "; echo; grep -E "^not ok" /tmp/pg-test.txt | head -8; node --test --test-reporter=tap packages/server/src/group-admin.test.ts 2>&1 | grep -E "^(not ok|ok)|^# (tests|pass|fail)"; cd apps/desktop && npx tsc -p tsconfig.app.json > /tmp/pg-at.txt 2>&1; echo "APP_TSC rc=$? lines=$(wc -l < /tmp/pg-at.txt)"; npx tsc -p tsconfig.electron.json --noEmit > /tmp/pg-et.txt 2>&1; echo "EL_TSC rc=$? lines=$(wc -l < /tmp/pg-et.txt)"; npm run -s verify:structure 2>&1 | tail -2; npx vite build >/dev/null 2>&1; npm run build:electron >/dev/null 2>&1; GG_PW_PORT=5311 npx playwright test --project=renderer --workers=1 --reporter=line > /tmp/pg-r.txt 2>&1; echo "RENDERER rc=$?"; grep -vE "^\s+at |NO_COLOR|trace-warnings" /tmp/pg-r.txt | tail -3; GG_PW_PORT=5311 GG_SHOTS=/workspace/728/shots-p-group DISPLAY=${DISPLAY:-:0} npx playwright test --project=electron --workers=1 --reporter=line > /tmp/pg-e.txt 2>&1; echo "ELECTRON rc=$?"; grep -vE "^\s+at |NO_COLOR|trace-warnings|^$" /tmp/pg-e.txt | tail -14
+ROOT_TSC rc=0 lines=0
+LINT rc=0 Checked 217 files in 601ms. No fixes applied.
+ROOT_TEST rc=0
+# tests 1617 # pass 1617 # fail 0 # cancelled 0 # skipped 0 
+ok 1 - 建群带同一个 clientActionId 重发:只建一个群,返回原来那个
+ok 2 - 解散没有在途任务的群:从会话列表消失并推 room.removed,群里的定时一起删掉,私聊不受影响
+ok 3 - 解散有在途任务的群:不带 stopTasks 被拒并列出任务;带上先停任务,Compute 真实停下之后才移除
+ok 4 - 公告装配:列表写明每位联系人装配到第几版;改了以后下一轮之前仍是旧版,下一轮装配后跟上
+ok 5 - 群临时算力:任务视图写明占的是个人槽位还是借的本群临时槽位
+ok 6 - 已经交付、等你确认的任务不算在途:它的 Compute 已做完,移出成员、解散群都不用先停,交付也不被取消
+# tests 6
+# pass 6
+# fail 0
+APP_TSC rc=0 lines=0
+EL_TSC rc=0 lines=0
+文件 322 个;超过 400 行的 0 个;原生 <button> 共 0 个
+结构检查通过
+RENDERER rc=0
+[145/146] [renderer] › e2e/walk.ui.spec.ts:32:5 › 走查 dark › W2 通讯录 → 联系人工作台各页签
+[146/146] [renderer] › e2e/walk.ui.spec.ts:46:5 › 走查 dark › W3 文件 / 进展全景 / 插件 / 设置
+  146 passed (8.1m)
+ELECTRON rc=0
+Running 8 tests using 1 worker
+[1/8] [electron] › e2e/app-shell.electron.spec.ts:29:1 › 没接入模型时整窗请用户接入;填好后宿主起来、界面连上,令牌不回传给界面
+[2/8] [electron] › e2e/app-shell.electron.spec.ts:58:1 › 自动更新:提示新版本 → 下载并核对 sha512 → 可以重启安装;校验不过的下载被丢掉并说明;没发布过版本时如实说
+[3/8] [electron] › e2e/backend.electron.spec.ts:11:1 › 接上宿主服务:私聊派活走完一圈,事件流推到渲染层
+[4/8] [electron] › e2e/closed-loop.electron.spec.ts:33:1 › 闭环:只经界面建联系人、私聊派活、建群拉人后群里派活,看到回复、Compute 推进与交付
+[5/8] [electron] › e2e/group-side.electron.spec.ts:63:1 › 群资料·公告与群设置:发布、改、撤下公告并写明各联系人装配到第几版;改群名、置顶、免打扰、群临时算力上限
+[6/8] [electron] › e2e/group-side.electron.spec.ts:169:1 › 群资料·清单与成员:新建任务、交给联系人认领;拍一拍;把成员拖出群
+[7/8] [electron] › e2e/group-side.electron.spec.ts:250:1 › 群资料·定时读后端、解散群:定时重启后还在;解散后群消失,重启也不回来
+[8/8] [electron] › e2e/shell.electron.spec.ts:8:1 › Electron 壳:安全基线开着,渲染层拿不到 Node,IPC 只认白名单方法
+  8 passed (1.4m)
+[box] 截图已取回到 /tmp/gg-pg-shots/live
+[box] 用了 box4;云端残留进程:0
+
+对照截图:pair-*.png 左 = 原型(g-group-ui-v4/verify/shots/light),右 = 连真实后端(server + 规则替身脑子 + 剧本 Compute)的 Electron 实测。

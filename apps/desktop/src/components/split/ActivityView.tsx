@@ -54,7 +54,7 @@ export function ActivityView({ c }: { c: Compute }) {
           const prev = list[i - 1]
           return (
             <div key={a.id}>
-              {(!prev || prev.step !== a.step) && step === null && <div className="mb-1 mt-3 truncate text-[11.5px] font-medium text-fg-3 first:mt-0">{c.steps[a.step]?.text}</div>}
+              {(!prev || prev.step !== a.step) && step === null && c.steps[a.step] && <div className="mb-1 mt-3 truncate text-[11.5px] font-medium text-fg-3 first:mt-0">{c.steps[a.step]?.text}</div>}
               <ActRow a={a} open={open.has(a.id)} onToggle={() => toggle(a.id)} onLink={jump} />
             </div>
           )

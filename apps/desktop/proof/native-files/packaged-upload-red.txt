@@ -1,0 +1,19 @@
+{"capture":{"ok":true,"bytes":81996,"width":2640,"height":1690}}
+已连接
+我
+截图定位
+16:56
+收到:[附件 1 个]
+截图定位
+截图 16-56-42.png
+125 KB · 你发的
+截图定位
+助手
+16:56
+我
+我
+[附件 1 个]
+收到:[附件 1 个]
+发送
+上传 300 KB 附件: {"ok":false,"error":{"code":"forbidden","message":"参数 400042 字节,超过上限 262144"}}
+userdata /private/tmp/gg-capture-diagnosis-rpwEfN

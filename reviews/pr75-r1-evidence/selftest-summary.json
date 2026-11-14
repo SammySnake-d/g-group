@@ -1,0 +1,19 @@
+{
+  "total": 219,
+  "passed": 218,
+  "failed": [
+    {
+      "name": "R7-01 沙箱按实际 HOME 拒读 .git-credentials/.netrc 与未列出的点文件,.ssh/会话/gh 拒读不回退;工作副本与 HOME 点目录里的 node 和依赖可读(符号链接 HOME、/private/var 规范化路径、宽挂载与整个 HOME 挂载)",
+      "direct": true,
+      "expect": null,
+      "exit": null,
+      "gates": {},
+      "expectHit": [],
+      "gateErrors": [],
+      "complete": false,
+      "pass": false,
+      "kind": "verdict",
+      "why": "窄挂载:沙箱进程退出 1:permission denied while trying to connect to the docker API at unix:///var/run/docker.sock"
+    }
+  ]
+}

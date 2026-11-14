@@ -1,0 +1,23 @@
+{
+  "slice": "插件代码真正执行:带 entry 的插件在宿主起的 node --permission 子进程里运行(只读本包目录、不能写文件或起子进程、环境变量只给插件 id、JS 堆有上限、只有 JSON 过进程边界、回应按请求 id 对上),插件里没人接的拒绝、未捕获的异常、process.exit、死循环、堆超限都只结束插件进程(AC-58 的进程隔离部分),包成内核契约对象注册进内核注册表;合同新增 plugins.pull / plugins.send 给前端调用;rss-reader 与 webhook-out 示例插件给出可运行代码;plugins.install 支持从 https URL 下载 .tgz 安装(大小上限、可选 sha256 核对、只放行普通文件和目录)",
+  "acceptance": [
+    {
+      "id": "AC-35",
+      "status": "未测",
+      "reason": "本片补的是阶段 I 宿主契约里「插件代码在隔离进程执行、外部事件经内核盖章为不可信、外发按 action_id 走内核 B1/B2 记账」这一段,测试在 packages/server/src/plugin-runtime.test.ts 与 plugins.test.ts(URL 安装),门禁沙箱禁网,示例插件测试用宿主预加载替换插件进程里的 fetch,真实网络下的运行见 packages/server/proof/plugin-exec.txt;手工变异 26 个见 proof/plugin-exec-mut.txt。另:docs/dev-handbook v3.21 新增的 AC-58(插件隔离,U101/D29)本分支的验收文档(v3.19)里还没有这一条,门禁不认,所以不单列;它的进程隔离部分在本片实现并有具名测试——外发里没人接的拒绝/未捕获的异常/process.exit 只结束插件进程且这次记 DeliveryUnknown、重起后同一动作不自动重发,死循环超时结束,堆超过上限只结束插件进程,getter/Proxy 过边界只剩 JSON,回应按请求 id 对上、旧 id 与未知 id 丢弃,外发超时后才到的回执不改已落地的结果未知;没做的:网络未隔离、ArrayBuffer/Buffer 等堆外内存不在 --max-old-space-size 之内、外发账本在内存(宿主重启丢失)。外部事件还没有送进联系人上下文(只经 plugins.pull 返回给调用方);① 控制指令、② 区间对账、③ 条件触发、④ 六元组预授权、阶段 II 真实 Telegram/Gmail 都不在本片;待审"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:a300aa9e-eccb-4ec8-b983-75a3ff723e24",
+    "model": "claude-opus-5-5"
+  },
+  "author_notes": "作者会话:插件执行与 URL 安装主体由 claude:d8a7aa23-47af-454b-95e5-c7f8adf89c7c 的子代理写成,该会话 11:32 因网关 503 中断,本会话接手补 AC-58 部分、重排红绿并完成门禁与合入。",
+  "red": {
+    "commit": "3594949"
+  },
+  "unverifiable": "AC-35:隔离只靠 Node 22 权限模型与 V8 堆上限——权限模型不管网络(插件能联网,只按清单 net:fetch/net:post 声明告知),--max-old-space-size 只管 JS 堆,插件用 ArrayBuffer/Buffer 分配的堆外内存不受限(没有 OS 级内存限制);也不防同进程里插件伪造协议回应(宿主照内核契约逐字段校验,并只认在途请求 id);权限模型会跟随符号链接,所以靠启动前扫描包目录拒绝符号链接,扫描与启动之间包目录被改换不在防护内。示例插件与 runner 的 .mjs 在子进程里跑,门禁的空桩与返回值变异只作用于宿主侧 TS,runner 的行为(不吞没人接的拒绝)只有手工变异「插件进程吞掉没人接的拒绝与未捕获的异常」校准;门禁沙箱禁网,测试里示例插件的 fetch 是宿主预加载(pluginRuntime.preload)给的替身,插件解析与请求拼装是真代码、网络不是——真实网络只有 proof/plugin-exec.txt 那一次本机实跑。本机 macOS + Node 22 与云端 Linux + Node 24 的权限模型与 OOM 行为以两边实跑结果为准。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

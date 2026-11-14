@@ -1,0 +1,13 @@
+{
+  "slice": "Helper 三种意图的后端接口:helper.context(全局入口首次不读聊天、按需点名用户在场的聊天;侧栏与 @ 只读当前聊天)、helper.note/history(侧栏与全局问答不上公屏、不送联系人)、helper.post(用户 @Helper 时作为 helper 消息在当前聊天公开回复);AC-03 发言者核对放行回复 @Helper 的 helper 消息",
+  "acceptance": [
+    { "id": "AC-52", "status": "未测", "reason": "只做后端需要的接口(brief 定:PR #4 的 routeHelper 是权限底座,复用不重做):三种意图的读取范围与回复落点由 helper-intents.test.ts 覆盖;Helper 自己的模型运行时、⌘K/侧栏界面、侧栏点名建群(已有 rooms.createGroup)、CSV 转本群任务(需 AC-47 的 tasks.create,另一切片)都不在本片;待审查" },
+    { "id": "AC-03", "status": "未测", "reason": "发言者核对细化:用户 @Helper 后 Helper 回复那条消息不算越界,其余 helper 消息与 Compute 实例发言仍判失败(drive.test.ts、helper-intents.test.ts);Compute 不上群公屏的真实运行证据在 feat/group-dispatch" }
+  ],
+  "author": { "agent": "claude", "session": "claude:ef07eb6a-5c4c-4ab7-bbcc-46df83c37b7d", "model": "claude-opus-5-5" },
+  "red": { "commit": "3a43ed8dab138c6d200f6b257c55c95dd30b202f" },
+  "unverifiable": "AC-52 的「首次不带聊天」只约束 helper.context 这一个读取入口;Helper 的模型运行时将来若另走宿主内部 API(listMessages)读聊天,这里的范围检查拦不住,要在接 Helper 运行时时把它的工具限定为 helper.* 方法。AC-03 放行规则只看 replyToSeq 指向的用户消息是否 @ 了 helper,宿主写 helper 消息的入口只有 helper.post(它先核对那条消息),若以后加了别的写入口需重新核对",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

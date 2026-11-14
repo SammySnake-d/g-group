@@ -7,22 +7,37 @@ import { Overlays } from '@/app/overlays/Overlays'
 import { Rail } from '@/app/Rail'
 import { SplitArea } from '@/app/SplitArea'
 import { useShell } from '@/app/useShell'
+import { rewire } from '@/api/wire'
 import { useApp } from '@/store'
+import { appShell, needsSetup, startAppShell, useAppShell } from '@/api/app-shell'
+import { SetupScreen } from '@/components/shell/SetupScreen'
+import { useUpdateToast } from '@/components/shell/updates'
+import { useEffect } from 'react'
 import { totals } from '@/store/select'
 
 /* 应用骨架:左侧导航 | 列表栏(可调宽)| 主区(聊天 / 工作台 / 插件 / 文件)| 右侧分栏,浮层盖在上面。
    状态在 src/store(zustand 按领域切片),各区域自己订阅;这里只做组装。 */
 export default function App() {
+  useEffect(() => startAppShell(), [])
+  const setup = useAppShell((s) => s.setup)
+  /* 桌面应用:先等主进程说清后端状态(几十毫秒),免得先闪一下演示界面;还没接入模型(或上次没连上)时整个窗口先是「接入模型」 */
+  if (appShell && !setup) return <div className="h-full bg-bg" />
+  if (needsSetup(setup)) return <SetupScreen />
+  return <Shell />
+}
+
+function Shell() {
   useShell()
-  const { section, panoOpen, helperGlobal, backend, badge, running, listW, setSection, setPanoOpen, setHelperGlobal, push, resize } = useApp((s) => {
+  useUpdateToast()
+  const { section, panoOpen, helperGlobal, backend, wire, badge, running, listW, setSection, setPanoOpen, setHelperGlobal, push, resize } = useApp((s) => {
     const t = totals(s)
-    return { section: s.section, panoOpen: s.panoOpen, helperGlobal: s.helperGlobal, backend: s.backend, badge: t.wait + t.err, running: t.run > 0, listW: s.widths.list,
+    return { section: s.section, panoOpen: s.panoOpen, helperGlobal: s.helperGlobal, backend: s.backend, wire: s.wire, badge: t.wait + t.err, running: t.run > 0, listW: s.widths.list,
       setSection: s.setSection, setPanoOpen: s.setPanoOpen, setHelperGlobal: s.setHelperGlobal, push: s.push, resize: s.resize }
   })
   return (
     <TooltipProvider delayDuration={500} skipDelayDuration={300}>
       <div className="relative flex h-full min-h-[640px] overflow-hidden bg-bg text-fg">
-        <Rail section={section} panoOpen={panoOpen} badge={badge} running={running} helperOpen={helperGlobal} backend={backend}
+        <Rail section={section} panoOpen={panoOpen} badge={badge} running={running} helperOpen={helperGlobal} backend={backend} wire={wire} onReload={rewire}
           onSection={setSection} onPano={() => setPanoOpen(true)} onHelper={() => setHelperGlobal(!helperGlobal)} onSettings={() => push({ t: 'settings' }, true)} />
         {section !== 'plugins' && <>
           <ListPane />

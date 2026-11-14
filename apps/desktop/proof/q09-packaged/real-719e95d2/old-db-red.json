@@ -1,0 +1,187 @@
+{
+  "pass": false,
+  "failed": [
+    "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/accept-packaged-46abb343/userdata/gg-data/gg.db::t-mwdb3u8w-3::snapshot.state_T8a_Delivered: state=T5_InReview reviewGate=none badge=none deliveredSeq=4;交付后停在 T5_InReview,不是 T8a 待确认",
+    "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/accept-packaged-46abb343/userdata/gg-data/gg.db::t-mwdb4y6i-h::snapshot.state_T8a_Delivered: state=T5_InReview reviewGate=none badge=none deliveredSeq=4;交付后停在 T5_InReview,不是 T8a 待确认",
+    "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/accept-packaged-52412af1-r2/userdata/gg-data/gg.db::t-mwdb3u8w-3::snapshot.state_T8a_Delivered: state=T5_InReview reviewGate=none badge=none deliveredSeq=4;交付后停在 T5_InReview,不是 T8a 待确认",
+    "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/accept-packaged-52412af1-r2/userdata/gg-data/gg.db::t-mwdb4y6i-h::snapshot.state_T8a_Delivered: state=T5_InReview reviewGate=none badge=none deliveredSeq=4;交付后停在 T5_InReview,不是 T8a 待确认"
+  ],
+  "dbs": [
+    {
+      "kind": "snapshot",
+      "db": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/accept-packaged-46abb343/userdata/gg-data/gg.db",
+      "pinned_task": null,
+      "sha256": "acd72b6642a6322db5a4ef154ea897201dd598d666c6d6dd2b7f3adb5c11e724",
+      "unchanged_after_read": true,
+      "tasks": [
+        {
+          "task_id": "t-mwdb3u8w-3",
+          "doc_version": 4,
+          "room_id": "dm-c-mwdb3ep3-1",
+          "title": "新建 hello.txt（内容：你好，g-group）",
+          "requester": "me",
+          "owner": "c-mwdb3ep3-1",
+          "state": "T5_InReview",
+          "reviewGate": "none",
+          "badge": "none",
+          "deliveredSeq": 4,
+          "sourceSeq": 1,
+          "reviews": 0,
+          "approval": null,
+          "delivery": null,
+          "checks": [
+            {
+              "name": "snapshot.state_T8a_Delivered",
+              "pass": false,
+              "detail": "state=T5_InReview reviewGate=none badge=none deliveredSeq=4;交付后停在 T5_InReview,不是 T8a 待确认"
+            },
+            {
+              "name": "snapshot.reviewGate_none",
+              "pass": true,
+              "detail": "state=T5_InReview reviewGate=none badge=none deliveredSeq=4"
+            },
+            {
+              "name": "snapshot.badge_none",
+              "pass": true,
+              "detail": "state=T5_InReview reviewGate=none badge=none deliveredSeq=4"
+            }
+          ]
+        },
+        {
+          "task_id": "t-mwdb4y6i-h",
+          "doc_version": 4,
+          "room_id": "g-mwdb4lk9-d",
+          "title": "新建 group.txt（内容：群聊闭环通过）",
+          "requester": "me",
+          "owner": "c-mwdb3ep3-1",
+          "state": "T5_InReview",
+          "reviewGate": "none",
+          "badge": "none",
+          "deliveredSeq": 4,
+          "sourceSeq": 1,
+          "reviews": 0,
+          "approval": null,
+          "delivery": null,
+          "checks": [
+            {
+              "name": "snapshot.state_T8a_Delivered",
+              "pass": false,
+              "detail": "state=T5_InReview reviewGate=none badge=none deliveredSeq=4;交付后停在 T5_InReview,不是 T8a 待确认"
+            },
+            {
+              "name": "snapshot.reviewGate_none",
+              "pass": true,
+              "detail": "state=T5_InReview reviewGate=none badge=none deliveredSeq=4"
+            },
+            {
+              "name": "snapshot.badge_none",
+              "pass": true,
+              "detail": "state=T5_InReview reviewGate=none badge=none deliveredSeq=4"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "name": "db.read_only_unchanged",
+          "pass": true,
+          "detail": "sha256 前 acd72b6642a6322db5a4ef154ea897201dd598d666c6d6dd2b7f3adb5c11e724 后 acd72b6642a6322db5a4ef154ea897201dd598d666c6d6dd2b7f3adb5c11e724"
+        },
+        {
+          "name": "db.has_delivered_no_review_task",
+          "pass": true,
+          "detail": "已交付且无审查人的任务 2 件 / 全部 2 件"
+        }
+      ],
+      "pass": false
+    },
+    {
+      "kind": "snapshot",
+      "db": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/accept-packaged-52412af1-r2/userdata/gg-data/gg.db",
+      "pinned_task": null,
+      "sha256": "f4f0f934e94d3fab73c92871c9c59ed3d33abf30989a3352c4a6b1d06f7ce781",
+      "unchanged_after_read": true,
+      "tasks": [
+        {
+          "task_id": "t-mwdb3u8w-3",
+          "doc_version": 4,
+          "room_id": "dm-c-mwdb3ep3-1",
+          "title": "新建 hello.txt（内容：你好，g-group）",
+          "requester": "me",
+          "owner": "c-mwdb3ep3-1",
+          "state": "T5_InReview",
+          "reviewGate": "none",
+          "badge": "none",
+          "deliveredSeq": 4,
+          "sourceSeq": 1,
+          "reviews": 0,
+          "approval": null,
+          "delivery": null,
+          "checks": [
+            {
+              "name": "snapshot.state_T8a_Delivered",
+              "pass": false,
+              "detail": "state=T5_InReview reviewGate=none badge=none deliveredSeq=4;交付后停在 T5_InReview,不是 T8a 待确认"
+            },
+            {
+              "name": "snapshot.reviewGate_none",
+              "pass": true,
+              "detail": "state=T5_InReview reviewGate=none badge=none deliveredSeq=4"
+            },
+            {
+              "name": "snapshot.badge_none",
+              "pass": true,
+              "detail": "state=T5_InReview reviewGate=none badge=none deliveredSeq=4"
+            }
+          ]
+        },
+        {
+          "task_id": "t-mwdb4y6i-h",
+          "doc_version": 4,
+          "room_id": "g-mwdb4lk9-d",
+          "title": "新建 group.txt（内容：群聊闭环通过）",
+          "requester": "me",
+          "owner": "c-mwdb3ep3-1",
+          "state": "T5_InReview",
+          "reviewGate": "none",
+          "badge": "none",
+          "deliveredSeq": 4,
+          "sourceSeq": 1,
+          "reviews": 0,
+          "approval": null,
+          "delivery": null,
+          "checks": [
+            {
+              "name": "snapshot.state_T8a_Delivered",
+              "pass": false,
+              "detail": "state=T5_InReview reviewGate=none badge=none deliveredSeq=4;交付后停在 T5_InReview,不是 T8a 待确认"
+            },
+            {
+              "name": "snapshot.reviewGate_none",
+              "pass": true,
+              "detail": "state=T5_InReview reviewGate=none badge=none deliveredSeq=4"
+            },
+            {
+              "name": "snapshot.badge_none",
+              "pass": true,
+              "detail": "state=T5_InReview reviewGate=none badge=none deliveredSeq=4"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "name": "db.read_only_unchanged",
+          "pass": true,
+          "detail": "sha256 前 f4f0f934e94d3fab73c92871c9c59ed3d33abf30989a3352c4a6b1d06f7ce781 后 f4f0f934e94d3fab73c92871c9c59ed3d33abf30989a3352c4a6b1d06f7ce781"
+        },
+        {
+          "name": "db.has_delivered_no_review_task",
+          "pass": true,
+          "detail": "已交付且无审查人的任务 2 件 / 全部 2 件"
+        }
+      ],
+      "pass": false
+    }
+  ]
+}

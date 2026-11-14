@@ -1,0 +1,83 @@
+[box] box3 上的 /workspace/728/wt-loop-budget-green 已就绪(52412af)
+[box] 已排队:npx tsc -p tsconfig.app.json && npx tsc -p tsconfig.electron.json --noEmit && npm run verify:structure && npx vite build && npm run build:electron && GG_PW_PORT=5285 DISPLAY=${DISPLAY:-:0} npx playwright test --project=electron --workers=1 --reporter=line e2e/native-files.electron.spec.ts e2e/shell.electron.spec.ts && cd ../.. && npm run -s typecheck && npm run -s lint && npm test --silent && cd apps/desktop && tar czf /tmp/loop-final-budget.tgz dist dist-electron && sha256sum /tmp/loop-final-budget.tgz && git rev-parse HEAD
+  type: 'test'
+  ...
+# Subtest: sessionElapsedMs:结束了取起止差,在跑取到 now;时间坏了按 0
+ok 1620 - sessionElapsedMs:结束了取起止差,在跑取到 now;时间坏了按 0
+  ---
+  duration_ms: 0.293711
+  type: 'test'
+  ...
+# Subtest: digest:取输出第一行非空内容,超长截断加省略号,按字符不按字节
+ok 1621 - digest:取输出第一行非空内容,超长截断加省略号,按字符不按字节
+  ---
+  duration_ms: 0.968471
+  type: 'test'
+  ...
+# Subtest: interruptRunning:停下后在跑的调用改成失败并附原因,子代理与它的调用一起处理;做完的不动,原数组不变
+ok 1622 - interruptRunning:停下后在跑的调用改成失败并附原因,子代理与它的调用一起处理;做完的不动,原数组不变
+  ---
+  duration_ms: 0.319624
+  type: 'test'
+  ...
+# Subtest: countTests 读顶层汇总行,忽略缩进的子测试汇总
+ok 1623 - countTests 读顶层汇总行,忽略缩进的子测试汇总
+  ---
+  duration_ms: 1.565209
+  type: 'test'
+  ...
+# Subtest: countTests 没有汇总行时给 undefined
+ok 1624 - countTests 没有汇总行时给 undefined
+  ---
+  duration_ms: 0.299844
+  type: 'test'
+  ...
+# Subtest: 0 条用例判失败
+ok 1625 - 0 条用例判失败
+  ---
+  duration_ms: 222.379482
+  type: 'test'
+  ...
+# Subtest: 1 条通过的用例判通过
+ok 1626 - 1 条通过的用例判通过
+  ---
+  duration_ms: 364.083165
+  type: 'test'
+  ...
+# Subtest: 全部 skip 判失败
+ok 1627 - 全部 skip 判失败
+  ---
+  duration_ms: 391.78275
+  type: 'test'
+  ...
+# Subtest: 全部 todo 判失败
+ok 1628 - 全部 todo 判失败
+  ---
+  duration_ms: 386.805878
+  type: 'test'
+  ...
+# Subtest: 通过与 skip 混合判失败
+ok 1629 - 通过与 skip 混合判失败
+  ---
+  duration_ms: 402.753464
+  type: 'test'
+  ...
+# Subtest: 有失败用例判失败
+ok 1630 - 有失败用例判失败
+  ---
+  duration_ms: 355.505515
+  type: 'test'
+  ...
+1..1630
+# tests 1630
+# suites 0
+# pass 1630
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 335862.231239
+test-runner:实际执行并通过 1630 条用例
+03b38c8985cf1a01bba586b8f60530f08f5daeaad745df9bc4f27b0ac220cebf  /tmp/loop-final-budget.tgz
+52412af151804e9a70110f0e2b388e55ab1cdaac
+[box] 用了 box3;云端残留进程:0

@@ -7,8 +7,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 import type { RoundInput } from "@g-group/kernel";
+import { CONTACT_SYSTEM } from "./assemble.ts";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
-import { Host } from "./host.ts";
+import { HUMAN_VERIFICATION_RULE, Host } from "./host.ts";
 import { createService } from "./service.ts";
 
 const dir = mkdtempSync(path.join(tmpdir(), "gg-host-"));
@@ -29,7 +30,7 @@ async function settle(host: Host, compute?: { drained(): boolean }) {
 }
 const texts = (host: Host, roomId: string) => host.listMessages(roomId, {}).messages.map((m) => `${m.sender.kind}:${m.text}`);
 
-test("私聊派活闭环:接任务 → Compute 进度回聊天 → 交付卡 → 用户豁免审查并通过 → T8 已验收,承诺了结", async () => {
+test("私聊派活闭环:接任务 → Compute 进度回聊天 → 普通消息交付并 @ 提出者 → 用户通过 → T8 已验收(用户豁免),承诺了结", async () => {
   const compute = scriptedCompute();
   const host = new Host({ file: file(), mind: () => scriptedMind(), compute: () => compute.adapter, computeCwd: (t) => `/tmp/gg/${t}`, maxDeferMs: 5 });
   const c = host.createContact({ name: "小克" });
@@ -38,11 +39,11 @@ test("私聊派活闭环:接任务 → Compute 进度回聊天 → 交付卡 →
   await settle(host, compute);
 
   assert.equal(compute.spawned.length, 1);
-  assert.deepEqual(compute.spawned[0]!.brief, { task: "写一个 hello.txt", rules: [], tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash"], credentialRefs: [], placement: "local" });
+  assert.deepEqual(compute.spawned[0]!.brief, { task: "写一个 hello.txt", rules: [HUMAN_VERIFICATION_RULE], tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash"], credentialRefs: [], placement: "local" });
   assert.match(compute.spawned[0]!.cwd ?? "", /^\/tmp\/gg\/t-/);
   const [task] = host.listTasks({ roomId: dm.id });
   assert.ok(task);
-  assert.equal(task.state, "T5_InReview", "交付后等审查(没有跨厂商审查人,交给用户豁免)");
+  assert.equal(task.state, "T8a_Delivered", "交付后待确认(没有跨厂商审查人,不审,等用户回复)");
   assert.equal(task.ownerContactId, c.id);
   assert.equal(task.requesterId, "me");
   assert.deepEqual(task.recentProgress.map((p) => p.kind), ["started", "milestone", "completed"]);
@@ -54,24 +55,24 @@ test("私聊派活闭环:接任务 → Compute 进度回聊天 → 交付卡 →
     "contact:做完了:完成:写一个 hello.txt",
   ]);
   const msgs = host.listMessages(dm.id, {}).messages;
-  const card = msgs.at(-1)!.card!;
-  assert.equal(card.kind, "delivery");
-  assert.equal(card.state, "open");
+  const delivered = msgs.at(-1)!;
+  assert.equal(delivered.card, null, "交付是普通消息,不挂验收卡(AC-56)");
+  assert.deepEqual(delivered.mentions, [{ id: "me", source: "auto" }]);
   assert.equal(msgs[1]!.card?.kind, "task-status");
   assert.equal(msgs[1]!.replyToSeq, sent.seq);
-  assert.equal(host.roomView(dm.id).pendingForUser, 2, "任务卡与交付卡都待用户处理");
+  assert.equal(host.roomView(dm.id).pendingForUser, 2, "任务卡与一件等你回复的交付");
 
   const commitments = host.listCommitments({ contactId: c.id });
   assert.deepEqual(commitments.map((k) => [k.text, k.status, k.taskId]), [["写一个 hello.txt", "active", task.id]]);
 
-  const reply = host.cardAct({ roomId: dm.id, seq: msgs.at(-1)!.seq, cardId: card.cardId, actionId: "accept", clientActionId: "u2" });
-  assert.equal(reply.text, "豁免审查并通过");
-  assert.equal(reply.replyToSeq, msgs.at(-1)!.seq);
-  const done = host.taskView(host.taskDoc(task.id).value);
+  const done = host.taskDecision(task.id, "accept", "u2");
   assert.equal(done.state, "T8_Accepted");
   assert.equal(done.reviewGate, "waived-by-user", "用户豁免如实记录,不记合规通过");
+  const reply = host.listMessages(dm.id, {}).messages.find((m) => m.clientActionId === "u2")!;
+  assert.equal(reply.text, "通过");
+  assert.equal(reply.replyToSeq, delivered.seq);
   assert.deepEqual(host.listCommitments({ contactId: c.id }).map((k) => k.status), ["done"]);
-  assert.throws(() => host.cardAct({ roomId: dm.id, seq: msgs.at(-1)!.seq, cardId: card.cardId, actionId: "accept", clientActionId: "u3" }), /已经处理过/);
+  assert.throws(() => host.taskDecision(task.id, "accept", "u3"), /没有待确认的交付/);
   await settle(host, compute);
   compute.close();
   await host.close();
@@ -259,7 +260,7 @@ test("服务层:按合同校验参数与结果;未知方法、非法参数、未
   const nf = await svc.handle("rooms.get", { roomId: "nope" });
   assert.equal(!nf.ok && nf.error.code, "not_found");
   const un = await svc.handle("tasks.answer", { taskId: "t-x", qId: "q", clientActionId: "a", answer: "好" });
-  assert.equal(!un.ok && un.error.code, "conflict");
+  assert.equal(!un.ok && un.error.code, "not_found", "没有这个任务");
   const cmds = await svc.handle("commands.list", { roomId, prefix: "re" });
   assert.ok(cmds.ok);
   assert.deepEqual((cmds.value as { commands: { name: string }[] }).commands.map((c) => c.name), ["remind"]);
@@ -282,6 +283,8 @@ test("宿主每轮用内核五块重拼:块号 1–5,两轮之间第 1 块逐字
   assert.match(reqs[1]!.blocks[3]!.text, /第二句/);
   assert.doesNotMatch(reqs[1]!.blocks[3]!.text, /第一句/);
   assert.deepEqual(reqs.map((r) => r.blocks.filter((b) => b.cacheBreakpoint).map((b) => b.block)), [[1], [1]]);
+  assert.ok(reqs[0]!.blocks[0]!.text.includes(CONTACT_SYSTEM), "第 1 块带联系人系统提示原文");
+  assert.match(CONTACT_SYSTEM, /提问卡/, "系统提示说明了 Compute 受阻时宿主已发提问卡、用户回答由联系人 forward 转达(AC-44 ③)");
   await host.close();
 });
 

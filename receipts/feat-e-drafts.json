@@ -1,0 +1,13 @@
+{
+  "slice": "输入框草稿按会话持久化与回复/多条引用:@g-group/api-contract 的草稿 reducer(回复=@原作者+引用、主回复切换/删除只动 auto @、引用保序去重、逐条 [×]、迟到回执只清已发部分)+ 服务端 drafts.get/drafts.save(draftVer CAS,重启还在,不进联系人注意循环)+ messages.send 带 draftVer 同事务清理 + 发送落盘主回复必在引用里",
+  "acceptance": [
+    { "id": "AC-24", "status": "未测", "reason": "后端底座有测试与真实服务调用:草稿按会话独立、切会话不串、重启后原样还在(drafts.test.ts「AC-24 / AC-37 ② 草稿按会话独立保存…」,proof e-drafts-service.txt 第 1–6 步);回执只清对应 draftVer、等回执期间新打的字保留(draft.test.ts「AC-24 迟到回执(S24-B)…」、drafts.test.ts「AC-24 发送带 draftVer…」,proof 第 7–9 步;S24-B 是候选细化,按验收文档只做底座与接口)。验收观测点是真实窗口 aria 快照,桌面前端不在本仓库;输入法组字时 Enter 不提交是纯前端(X 层),本切片未做" },
+    { "id": "AC-37", "status": "未测", "reason": "①② 的草稿状态机按验收夹具逐步有测试(draft.test.ts 的 AC-37 ① a/b/c 与 ② 各条;合同增量见 draft-contract.test.ts),发送落盘 reply_to_seq 与 quoted_seqs 正交、保序去重、auto/manual @ 原样保存(drafts.test.ts「AC-37 ① 发送落盘…」),切窗口/重启草稿保持(drafts.test.ts、proof e-drafts-service.txt);手工变异 9 个全部被杀死(proof e-drafts-mutations.txt,在云电脑 box4 跑)。③ 多引用公平预算 Page-in、撤回占位与越权拒绝由兄弟切片 feat/e-recall 做;气泡对比、点击跳转高亮与输入框 UI 需前端走查" }
+  ],
+  "author": { "agent": "claude", "session": "claude:f5d9723d-a248-4483-95eb-5ba31b3fda33", "model": "fnqtz/claude-opus-5-5", "notes": "由该会话派出的子代理执行" },
+  "red": { "commit": "7c9627f84174cea4bd7f0c2d2e17bf7a7ecdd8a4" },
+  "unverifiable": "AC-24 的迟到回执清理按「草稿版本 ≤ 发送版本就整份清空,更新就只去掉以已发正文开头的前缀和已发的引用/@」判,这是 S24-B 候选细化的一种实现:若用户在等回执期间删了已发正文再重打同样开头,前缀规则会把它当已发部分去掉;@ 按 id+source 去掉已发的,回执期间新手打的同一个人的 @ 会一并去掉(正文不受影响)。AC-37 的 auto/manual 区分靠渲染进程如实标 source,服务端不核对正文里是否真有手打的 @",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

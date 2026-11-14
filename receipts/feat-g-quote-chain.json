@@ -1,0 +1,13 @@
+{
+  "slice": "引用链投递(D24):带引用的新消息在第 5 块(新消息之后,不进前缀)附引用链——从 reply_to 与 quoted_seqs 出发按层广度优先走引用 DAG,默认前 3 级,每级标状态(inline/in_context/deleted_or_withdrawn/not_visible/id_only)与 has_more_above,整条给 depth_total(扫描上限 32)、truncated、next_seqs;已由引用召回换入或同在本轮的标 in_context 不重复贴;撤回、看不见、rewind 撤下的都不给原文也不越过;超预算从最远一级降成只给编号与作者;read_quote_parent 在本轮内往上读一级",
+  "acceptance": [
+    { "id": "AC-41", "status": "未测", "reason": "①–⑨ 坏实现都有具名测试(packages/kernel/src/quote-chain.test.ts 用 #2071 真实 14 级引用链夹具;packages/server/src/quote-chain.test.ts 接到联系人一轮),23 个变异全杀;未经独立审查。⑩ 行为重放(真实模型新会话里能否指出 #2071 回应的是 #2063)未跑;预算与 depth_scan_cap 数值待实测" },
+    { "id": "R-05", "status": "通过", "notes": "23 个单点故障全部被具名测试杀死,原样副本全绿;删掉 1 个等价变异(看不见的节点没有上一级可走)并在脚本里写明", "evidence": "packages/server/proof/quote-chain-mutations.txt" }
+  ],
+  "author": { "agent": "claude", "session": "claude:366a4421-c4e1-455e-85a2-0721597033e5", "model": "claude-opus-5-5" },
+  "red": { "commit": "595ec9c36d7768cbd283d3e0e93a98f30376085f" },
+  "unverifiable": "AC-41 ⑩ 只能靠真实模型重放判断「有了引用链是否少误读」,单测证明的是链的结构与字段,不证明联系人会用;状态里多出的 id_only(只给编号与作者)是 D24 第 3 节「改成只给编号和作者」的落地写法,文档的状态表里没有这个值,已在结论里列为文档补齐项",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}
