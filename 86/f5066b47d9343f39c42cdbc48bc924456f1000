@@ -1,0 +1,25 @@
+apps/desktop/e2e/parity-r2-honest.electron.spec.ts
+  s_c2e268409ae4a0::t_7829f089b2d4b0 68-80,151,161,182,202,208,245-246,248,257,267,271
+apps/desktop/src/components/helper/HelperGlobal.tsx
+  s_c2e268409ae4a0::t_00a33faea6db68 178
+apps/desktop/src/components/helper/HelperPanel.tsx
+  s_c2e268409ae4a0::t_6eb8af15e78fb8 60
+apps/desktop/src/components/pages/clone/CloneFlow.tsx
+  s_c2e268409ae4a0::t_7a70866e18fca0 18,66-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "86f5066b47d9343f39c42cdbc48bc924456f1000",
+  "prompts": {},
+  "sessions": {
+    "s_c2e268409ae4a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad1acc7dc8d973000",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
