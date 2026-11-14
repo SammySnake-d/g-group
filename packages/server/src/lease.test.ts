@@ -145,7 +145,7 @@ test("正常完成:CLI 主进程退出(settled)后才归还槽位", async () => 
   const c = host.createContact({ name: "小克" });
   const dm = host.openDm(c.id);
   host.send({ roomId: dm.id, clientActionId: "u1", text: "帮我写一个 hello.txt" });
-  await until(() => taskOf(host, dm.id)?.state === "T5_InReview", "交付");
+  await until(() => taskOf(host, dm.id)?.state === "T8a_Delivered", "交付");
   const t1 = taskOf(host, dm.id);
   assert.ok(host.quota.leaseOf(t1.id), "主进程还没退出,槽位还占着");
   exit();

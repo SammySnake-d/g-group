@@ -50,7 +50,7 @@ async function reviewWith(H: typeof Host, actual: string[]) {
 
 test("AC-26 审查 Compute 回报的实际模型与生产厂商同源 → 不算合规通过,记没做成并交给提出者豁免", async () => {
   const w = await reviewWith(Host, ["claude-haiku-4-5"]);
-  assert.equal(w.task.state, "T5_InReview", "没有按下发的 GPT 放行");
+  assert.equal(w.task.state, "T8a_Delivered", "审查不算数:交付待确认,门禁不记合规");
   assert.equal(w.task.reviewGate, "none");
   assert.equal(w.task.reviews?.[0]?.status, "failed");
   assert.match(w.task.reviews?.[0]?.notes ?? "", /实际审查模型/);
@@ -61,7 +61,8 @@ test("AC-26 审查 Compute 回报的实际模型与生产厂商同源 → 不算
 
 test("AC-26 实际审查模型里有一个认不出厂商(unknown)→ 同样不放行", async () => {
   const w = await reviewWith(Host, [GPT, "stealth/crouton-alpha"]);
-  assert.equal(w.task.state, "T5_InReview");
+  assert.equal(w.task.state, "T8a_Delivered");
+  assert.equal(w.task.reviewGate, "none");
   assert.equal(w.task.reviews?.[0]?.status, "failed");
   assert.match(w.task.reviews?.[0]?.notes ?? "", /stealth\/crouton-alpha/);
   await w.done();

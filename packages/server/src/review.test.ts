@@ -133,7 +133,8 @@ test("AC-26 ② 只有同厂商的联系人 → 不起审查 Compute,交给提�
   const task = await deliver(w);
   assert.equal(w.review.spawned.length, 0, "同厂商不能当独立审查人");
   const t = w.host.taskView(w.host.taskDoc(task.id).value);
-  assert.equal(t.state, "T5_InReview");
+  assert.equal(t.state, "T8a_Delivered", "没有合格审查人:不审,交付直接待确认");
+  assert.equal(t.reviewGate, "none");
   assert.deepEqual(t.reviews, [], "没有起任何审查");
   const r = await w.svc.handle("tasks.accept", { taskId: task.id, clientActionId: "a1" });
   assert.ok(r.ok, r.ok ? "" : r.error.message);
@@ -149,7 +150,7 @@ test("AC-26 ③ 审查联系人的模型认不出厂商(unknown)→ 不当审查
   assert.equal(w.review.spawned.length, 0);
   const t = w.host.taskView(w.host.taskDoc(task.id).value);
   assert.deepEqual(t.reviews, [], "没有起任何审查");
-  assert.equal(t.state, "T5_InReview", "停在 T5 等提出者本人决定");
+  assert.equal(t.state, "T8a_Delivered", "不审,交付待确认,等提出者本人决定");
   await close(w);
 });
 
@@ -206,7 +207,7 @@ test("审查 Compute 失败 → 不当通过,交给提出者本人豁免或退�
   const w = world(Host, { reviewFails: true });
   const task = await deliver(w);
   const t = w.host.taskView(w.host.taskDoc(task.id).value);
-  assert.equal(t.state, "T5_InReview");
+  assert.equal(t.state, "T8a_Delivered", "审查没做成:交付进待确认,不留在 T5");
   assert.equal(t.reviewGate, "none");
   assert.equal(t.reviews?.[0]?.status, "failed");
   const last = w.host.listMessages(w.dm.id, {}).messages.at(-1)!;
@@ -222,7 +223,8 @@ test("审查结论既不是 APPROVE 也不是 REJECT → 当审查没做成,不�
   const w = world(Host, { verdicts: ["看起来还行吧"] });
   const task = await deliver(w);
   const t = w.host.taskView(w.host.taskDoc(task.id).value);
-  assert.equal(t.state, "T5_InReview");
+  assert.equal(t.state, "T8a_Delivered");
+  assert.equal(t.reviewGate, "none", "认不出的结论不算通过");
   assert.equal(t.reviews?.[0]?.status, "failed");
   assert.match(w.host.listMessages(w.dm.id, {}).messages.at(-1)!.text, /审查没做成/);
   await close(w);
@@ -267,7 +269,8 @@ test("重启时审查 Compute 已不在 → 这次审查记中断,交给提出�
   const exec2 = scriptedCompute({ modelAware: false });
   const host2 = new Host({ file: f, mind: () => scriptedMind(), compute: () => exec2.adapter, maxDeferMs: 5 });
   const [task] = host2.listTasks({ roomId: dm.id });
-  assert.equal(task!.state, "T5_InReview");
+  assert.equal(task!.state, "T8a_Delivered");
+  assert.equal(task!.reviewGate, "none");
   assert.equal(task!.reviews?.[0]?.status, "interrupted");
   const last = host2.listMessages(dm.id, {}).messages.at(-1)!;
   assert.match(last.text, /审查没做成/);

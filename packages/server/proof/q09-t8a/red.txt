@@ -1,0 +1,44 @@
+# Q09 T8a 红:改动/新增测试在红提交(测试 + 领域空壳,宿主未改)上的运行结果
+# 命令:node --test --test-concurrency=3 packages/domain/src/task-unreviewed.test.ts packages/domain/src/task.test.ts packages/server/src/delivery-t8a.test.ts packages/server/src/delivery-plain.test.ts packages/server/src/artifacts.test.ts packages/server/src/retry.test.ts packages/server/src/worktree.test.ts packages/server/src/review.test.ts packages/server/src/review-actual.test.ts packages/server/src/start.test.ts packages/server/src/rewind.test.ts packages/server/src/lease.test.ts packages/server/src/host.test.ts
+# 基线 bbb245b2;运行于 2026-11-14 00:20 +0800
+# tests 264
+# pass 226
+# fail 38
+not ok 1 - Q09 A0 没有审查:提审这一轮无审查 → 分配交付代次并发卡,发出后进 T8a 待确认,门禁如实留 none
+not ok 2 - Q09 A0 沉默:T8a 待确认的超时事件被拒,任何时长后都不自动通过
+not ok 3 - Q09 A2 提出者本人验收没经审查的交付 → T8_Accepted,记 waived-by-user(本人豁免,不算合规)
+not ok 4 - Q09 A2 阴性 他人验收被拒:不是提出者的确认不推进,任务留在 T8a、门禁仍 none
+not ok 5 - Q09 A2 阴性 旧版本:退回返工后再交付,上一代次的验收回包被忽略,只认当前代次
+not ok 6 - Q09 A0 过期的无审查结论被忽略:轮次、commit 或条件版本对不上都不推进,当前提审继续等
+not ok 7 - Q09 A0 不在审查中时无审查结论不生效:执行中被拒;已交付后迟到的忽略,不改状态
+not ok 9 - AC-09 每格的实际处理符合独立需求期望(目标状态、副作用、版本、负责人、累积生产模型),不以生产表为判据
+not ok 171 - 代码任务交付:候选提交里改过的 .md 快照进内容寻址库,卡片引用的 sha256 与快照文件、提交里的文件一致,artifacts.get 读出同一份;代码文件不进卡片
+not ok 172 - 交付后工作区文件再改:旧卡片仍指向交付时的快照;退回重做后新卡片指向新内容,两张卡各自的 hash 与各自内容一致
+not ok 173 - 同一工件重发不生成第二个文件:退回后 Compute 写出相同内容,再交付的卡片引用同一 ref,库里只有一个文件、一条登记
+not ok 174 - 没有代码仓时按 Compute 启动后改过的可读文件收集:启动前就有的旧文件、隐藏目录、代码文件都不收
+not ok 175 - 快照被改过就拒绝读出:不把别的版本当成这张卡片的内容
+not ok 176 - 交付是普通消息:联系人 @ 提出者汇报结果,不挂交付卡;沉默不算通过,一直待确认
+not ok 180 - 验收结论只认提出者本人的直接消息:别的联系人说「通过」、替不是自己的任务下结论、任务还没交付,都被拒且状态不变
+not ok 182 - Q09 A0 私聊没有审查人:交付后经 service 读到 T8a 待确认、门禁 none、交付消息已钉住;沉默不通过
+not ok 183 - Q09 A0 群里只有同厂商联系人:不起审查,交付同样直接进 T8a
+not ok 184 - Q09 A2 本人普通回复「通过」:联系人提交结论,service 读到 T8_Accepted,如实记本人豁免;任务卡收口
+not ok 185 - Q09 A2 显式入口 tasks.accept:T8a 直接验到 T8;已验收后再点被拒
+not ok 186 - Q09 A2 阴性 他人:群里别的联系人说「通过」,负责联系人据此提交的结论被拒,任务仍在 T8a
+not ok 187 - Q09 A2 阴性 旧版本:第一版交付后要求修改,修改期间说的「通过」被拒;第二版交付后仍待确认,之后本人回复才验到 T8
+not ok 188 - 私聊派活闭环:接任务 → Compute 进度回聊天 → 普通消息交付并 @ 提出者 → 用户通过 → T8 已验收(用户豁免),承诺了结
+not ok 203 - 正常完成:CLI 主进程退出(settled)后才归还槽位
+not ok 216 - Compute 执行器中途崩溃(可自愈):对同一实例 resume 续跑(同一 CLI 会话),不从头 spawn,任务不进 T11,不打断联系人
+not ok 217 - 窗口 ② 对账(A27-03 底座):续跑提示带上工作区 git status,已写入的文件不让模型再追加一遍
+not ok 219 - F3 被信号结束的执行器崩溃(不是 CLI 里的上游错误)不算 CLI 重试过:宿主照常在同一会话续跑
+not ok 221 - F13 半途换模:[换模型重试]选了厂商 B 才换,累积生产集合变成 {A, B},T5 审查同时拒绝 A、B 与 unknown,只放第三家
+not ok 224 - F6 Compute 终态通知丢失(ack 前宿主退出):重启后从磁盘待领取表补领结果交给联系人,不重跑 Compute,不需要人类再发言
+not ok 226 - AC-26 审查 Compute 回报的实际模型与生产厂商同源 → 不算合规通过,记没做成并交给提出者豁免
+not ok 227 - AC-26 实际审查模型里有一个认不出厂商(unknown)→ 同样不放行
+not ok 233 - AC-26 ② 只有同厂商的联系人 → 不起审查 Compute,交给提出者本人豁免,记 waived-by-user
+not ok 234 - AC-26 ③ 审查联系人的模型认不出厂商(unknown)→ 不当审查人
+not ok 238 - 审查 Compute 失败 → 不当通过,交给提出者本人豁免或退回,说明审查没做成
+not ok 239 - 审查结论既不是 APPROVE 也不是 REJECT → 当审查没做成,不猜成通过
+not ok 241 - 重启时审查 Compute 已不在 → 这次审查记中断,交给提出者本人豁免或退回,任务不卡在 T5
+not ok 247 - rewind:回退到交付之前,已交付、等你确认的任务不取消(T8a 的取消是空操作),它的 Compute 结果列在「已发生、未撤销」里,说明既不声称取消也不声称撤回
+not ok 263 - 配了代码仓:两个任务的 Compute 各在自己的 worktree 里改、互不可见;交付钉住候选提交,验收后合入目标分支,合入成功才记验收
+not ok 264 - 合入冲突:任务停在 T8a 不算验收,冲突没修之前再说通过也被拒;退回后 Compute 在同一 worktree 基于新主线修复,再交付验收后合入

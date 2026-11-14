@@ -21,7 +21,7 @@ test("startServer(fake) + bindIpc:渲染进程经 gg:invoke 建联系人、私�
   const dm = await invoke("rooms.openDm", { contactId: c.value!.id });
   const sent = await invoke("messages.send", { roomId: dm.value!.id, clientActionId: "m", text: "帮我整理周报" });
   assert.ok(sent.ok);
-  for (let i = 0; i < 100 && !events.some((e) => e.type === "task.updated" && (e as unknown as { task: { state: string } }).task.state === "T5_InReview"); i++) await new Promise((r) => setTimeout(r, 50));
+  for (let i = 0; i < 100 && !events.some((e) => e.type === "task.updated" && (e as unknown as { task: { state: string } }).task.state === "T8a_Delivered"); i++) await new Promise((r) => setTimeout(r, 50));
   const types = new Set(events.map((e) => e.type));
   for (const t of ["contact.updated", "room.updated", "message.appended", "receipt.updated", "contact.activity", "task.updated", "compute.progress"]) assert.ok(types.has(t), `缺 ${t}`);
   const mk = await invoke("plugins.marketplace", {});

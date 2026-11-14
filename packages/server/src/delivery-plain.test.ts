@@ -80,12 +80,12 @@ test("交付是普通消息:联系人 @ 提出者汇报结果,不挂交付卡;�
   assert.equal(last.replyToSeq, ask.seq);
   assert.deepEqual(msgs.filter((m) => m.card?.kind === "delivery"), [], "整段对话里没有交付卡");
   const [t] = host.listTasks({ roomId: dm.id });
-  assert.equal(t!.state, "T5_InReview", "已交付、等用户回复(没有跨厂商审查人时由提出者决定)");
+  assert.equal(t!.state, "T8a_Delivered", "已交付、待确认(没有跨厂商审查人,不审,由提出者决定)");
   assert.equal(host.roomView(dm.id).pendingForUser, 2, "任务卡 + 一件等你回复的交付");
   // 沉默:再等几轮也不自动通过、不归档
   await new Promise((r) => setTimeout(r, 60));
   await settle(host, compute);
-  assert.equal(host.taskView(host.taskDoc(t!.id).value).state, "T5_InReview");
+  assert.equal(host.taskView(host.taskDoc(t!.id).value).state, "T8a_Delivered");
   assert.equal(host.listMessages(dm.id, {}).messages.length, msgs.length, "沉默期间没有新消息");
   compute.close();
   await host.close();
@@ -174,21 +174,21 @@ test("验收结论只认提出者本人的直接消息:别的联系人说「通�
   host.send({ roomId: g.id, clientActionId: "g1", text: "帮我写报告", mentions: [{ id: a.id, source: "manual" }] });
   await settle(host, compute);
   const [t] = host.listTasks({ roomId: g.id });
-  assert.equal(t!.state, "T5_InReview");
+  assert.equal(t!.state, "T8a_Delivered");
   // 用户说「大家看看」,小研回「通过」;小克若据此提交结论,宿主拒绝(不是提出者本人的消息)
   judge.taskId = t!.id;
   host.send({ roomId: g.id, clientActionId: "g2", text: "大家看看" });
   await settle(host, compute);
   const passMsg = host.listMessages(g.id, {}).messages.find((m) => m.sender.id === b.id && m.text === "通过");
   assert.ok(passMsg, "小研确实在群里说了通过");
-  assert.equal(host.taskView(host.taskDoc(t!.id).value).state, "T5_InReview", "别的联系人说通过不算");
+  assert.equal(host.taskView(host.taskDoc(t!.id).value).state, "T8a_Delivered", "别的联系人说通过不算");
   assert.deepEqual(rejected(host), [{ kind: "verdict", error: `验收结论的来源 ${g.id} #${passMsg.seq} 不是提出者本人的消息` }]);
   // 替不存在/不是自己的任务下结论
   judge.taskId = "t-none";
   host.send({ roomId: g.id, clientActionId: "g3", text: "再看看" });
   await settle(host, compute);
   assert.deepEqual(rejected(host).at(-1), { kind: "verdict", error: "任务 t-none 不存在或不是你的" });
-  assert.equal(host.taskView(host.taskDoc(t!.id).value).state, "T5_InReview");
+  assert.equal(host.taskView(host.taskDoc(t!.id).value).state, "T8a_Delivered");
   // 还没交付(在跑)时用户说「通过」:结论被拒;交付之后这条旧「通过」也不会自动生效
   judge.taskId = null;
   const slow = scriptedCompute({ stepMs: 300 });
@@ -204,7 +204,7 @@ test("验收结论只认提出者本人的直接消息:别的联系人说「通�
   assert.deepEqual(rejected(host2), [{ kind: "verdict", error: "任务在 T3_Running,没有等你确认的交付" }]);
   judge.taskId = null;
   await settle(host2, slow);
-  assert.equal(host2.taskView(host2.taskDoc(t2!.id).value).state, "T5_InReview");
+  assert.equal(host2.taskView(host2.taskDoc(t2!.id).value).state, "T8a_Delivered");
   compute.close();
   slow.close();
   await host.close();
