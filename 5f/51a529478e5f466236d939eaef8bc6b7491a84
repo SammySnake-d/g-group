@@ -1,0 +1,19 @@
+apps/desktop/e2e/parity-r2-cron.electron.spec.ts
+  s_e61d0c5e1d0561::t_d7b5f02ad49114 1-333
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5f51a529478e5f466236d939eaef8bc6b7491a84",
+  "prompts": {},
+  "sessions": {
+    "s_e61d0c5e1d0561": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a37c5ea263bdb5c7f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

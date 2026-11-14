@@ -1,0 +1,35 @@
+apps/desktop/proof/parity-r2-pano/red.txt
+  s_fb0de607dadbd8::t_2bd51d54469755 1-51
+apps/desktop/src/api/wire/tasks.ts
+  s_fb0de607dadbd8::t_7ca2ab5caa46ee 93-94,98-104,130-131
+apps/desktop/src/components/Panorama.tsx
+  s_fb0de607dadbd8::t_2e37edfa969ae0 3,22-24,26,28-36
+apps/desktop/src/components/compute/StatusChip.tsx
+  s_fb0de607dadbd8::t_783eb1baa111c4 4,14,17-18
+apps/desktop/src/components/compute/idle.ts
+  s_fb0de607dadbd8::t_b727a2487bb66a 1-30
+apps/desktop/src/components/messages/compute/ComputeLine.tsx
+  s_fb0de607dadbd8::t_8060c27e35e35d 12,35
+apps/desktop/src/components/messages/compute/useComputeView.ts
+  s_fb0de607dadbd8::t_b132fa32d9ddd4 5,12-13,15-16
+apps/desktop/src/components/progress/adapter.ts
+  s_fb0de607dadbd8::t_d4963ad91796ca 7-8,57-59,61,63-64,100-102,105-106,109
+apps/desktop/src/data.ts
+  s_fb0de607dadbd8::t_69eb5193834cf2 136-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "499b05b8bfac6b9717127405c048edb2ba68256c",
+  "prompts": {},
+  "sessions": {
+    "s_fb0de607dadbd8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1a4dc882-b84a-4a01-936c-126151dd9dc1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

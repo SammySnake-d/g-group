@@ -1,0 +1,21 @@
+receipts/feat-room-pending-summary.json
+  s_550783c6569767::t_e718893d323a9a 22,25-26
+reviews/feat-room-pending-summary.md
+  s_550783c6569767::t_d3150c6f1829c0 163-302
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4d9de029a629a2efd19d07f5cc9eccbca020e69a",
+  "prompts": {},
+  "sessions": {
+    "s_550783c6569767": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaad21c7ff06ce574",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

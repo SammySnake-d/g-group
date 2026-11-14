@@ -1,0 +1,27 @@
+packages/domain/src/task.ts
+  s_209dc3fd714a96::t_66ac37e98775c6 223-227,255-266,398
+packages/server/proof/q09-t8a/green.txt
+  s_209dc3fd714a96::t_56ad7ef6d4a701 1-5
+packages/server/src/host.ts
+  s_209dc3fd714a96::t_c218c875ce57a9 1430,2950,2967-2968,2972,3817-3826,3835-3837,3842-3846,3853,3954,5031
+packages/server/src/rewind.ts
+  s_209dc3fd714a96::t_c00f88b0aa0c3b 15-19
+receipts/fix-desktop-no-review-t8a.json
+  s_209dc3fd714a96::t_2feed26398b9e3 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "71420c9db6ce76c1fbaee60e880c9d445f679b8a",
+  "prompts": {},
+  "sessions": {
+    "s_209dc3fd714a96": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf4ef95e-9b68-4262-a62d-ca75f35d1208",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

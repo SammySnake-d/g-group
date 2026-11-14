@@ -1,0 +1,21 @@
+packages/server/proof/q09-real/result.txt
+  s_209dc3fd714a96::t_5899ac91227952 1-43
+receipts/feat-q09-stop-proof.json
+  s_209dc3fd714a96::t_226263a3bf96a0 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3bf028f3ec7e4e2a78d80c0b515147f6eb280de8",
+  "prompts": {},
+  "sessions": {
+    "s_209dc3fd714a96": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf4ef95e-9b68-4262-a62d-ca75f35d1208",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
