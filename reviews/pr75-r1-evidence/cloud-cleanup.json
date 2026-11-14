@@ -1,0 +1,77 @@
+{
+  "box1": {
+    "cleanup": [
+      {
+        "path": "/workspace/pr75-r1-ui-codex-5c7730f7",
+        "reclaimed_KiB": 1040448,
+        "files": 29246,
+        "head": "cb9f13e00f5ac36f6bfea47d9f4c37d0ce9398ed",
+        "archive_sha256": "4cfafe1465e7be2fbf3e0fb27ae7ff14723312ddcad455b92c385deb1c947949",
+        "absent_after": true
+      },
+      {
+        "path": "/workspace/pr75-r1-t8a-mut-ui-codex-5c7730f7",
+        "reclaimed_KiB": 30688,
+        "files": 2253,
+        "head": null,
+        "archive_sha256": "e1147ccda0c86753ca9f552134ecb341cdaf91a4d574a1c0b33b3fc1f9e88233",
+        "absent_after": true
+      }
+    ],
+    "remaining_own_processes": [],
+    "at": 1794656034.8780537
+  },
+  "box2": {
+    "cleanup": [
+      {
+        "path": "/workspace/pr75-r1-behavior-codex-5c7730f7",
+        "reclaimed_KiB": 64080,
+        "files": 2333,
+        "head": null,
+        "archive_sha256": "f4e43af1e04e319c4aea9c515724335b73b8fb418fa1a220be0844b4655c02f0",
+        "absent_after": true
+      },
+      {
+        "path": "/workspace/pr75-r1-r7-codex-5c7730f7",
+        "reclaimed_KiB": 24,
+        "files": 5,
+        "head": null,
+        "archive_sha256": "31bd54bfeea226f5ac60421765a81fb26cd2df7bec129cfe075e209759cd78f0",
+        "absent_after": true
+      },
+      {
+        "path": "/workspace/pr75-r1-t8a-mut-codex-5c7730f7",
+        "reclaimed_KiB": 12,
+        "files": 2,
+        "head": null,
+        "archive_sha256": null,
+        "absent_after": true
+      },
+      {
+        "path": "/workspace/pr75-r1-codex-5c7730f7",
+        "reclaimed_KiB": 397584,
+        "files": 12417,
+        "head": "cb9f13e00f5ac36f6bfea47d9f4c37d0ce9398ed",
+        "archive_sha256": "0e3e817650b558282f964b1a8a6cd9b372556018abb1ea220335ca8eb37b3b5a",
+        "absent_after": true
+      }
+    ],
+    "remaining_own_processes": [],
+    "at": 1794656034.6597385
+  },
+  "box4": {
+    "cleanup": [
+      {
+        "path": "/workspace/pr75-r1-gates-codex-5c7730f7",
+        "reclaimed_KiB": 396948,
+        "files": 12421,
+        "head": "cb9f13e00f5ac36f6bfea47d9f4c37d0ce9398ed",
+        "archive_sha256": "889a8e414e0f8e2d447ff5f2f795c7439c738912d96551cd5889b61d87482dd5",
+        "absent_after": true
+      }
+    ],
+    "remaining_own_processes": [],
+    "at": 1794656036.3568707
+  },
+  "total_reclaimed_KiB": 1929784
+}

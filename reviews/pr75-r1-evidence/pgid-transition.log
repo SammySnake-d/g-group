@@ -1,0 +1,26 @@
+{
+  "name": "PR75-STOP-PGID：停止前可见的子进程随后 setsid，仍活着时不得确认已停止",
+  "root": 33826,
+  "child": 33831,
+  "before": [
+    {
+      "pid": 33831,
+      "ppid": 33826,
+      "pgid": 33826,
+      "stat": "S"
+    }
+  ],
+  "after": "33831     1 33831 Ss",
+  "parentResult": {
+    "code": 0,
+    "signal": null
+  },
+  "result": {
+    "ok": true,
+    "killed": 0
+  },
+  "aliveWhenConfirmed": true,
+  "neutralSignalAttempts": [],
+  "realStopSignalsSent": 0,
+  "defect": true
+}

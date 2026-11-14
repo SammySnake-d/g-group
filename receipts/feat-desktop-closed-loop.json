@@ -32,7 +32,14 @@
   },
   "unverifiable": "AC-59 的「重启安装」只在本机(macOS arm64、临时签名、更新地址为本机 http 服务)走通,GitHub Releases 真实发布未做,从安装盘直接打开时不替换的分支只有代码没有实测;Electron 用例在云电脑 Linux 上跑,更新提示条被点掉的问题云端没复现、本机真实安装才复现(apps/desktop/proof/app-shell/toast-red.txt),说明 Linux Electron 用例可能骗过 AC-59 的界面部分;G-RED/G-STUB 只认 packages/**/*.test.ts,apps/desktop 的 Playwright 红绿是手工在云电脑跑的;界面接线一部分由同会话派出的子代理写(feat/desktop-live-data,7f5e7a05);本轮新增 packages/ui-core/src/ipc-budgets.test.ts 的红提交为 a79d212a,不同于原切片 red.commit;负向边界对照在红基线已通过,不声称每条新增测试均先红。PR 的 G-RED 全分支统一红提交与独立来源门禁待审,未宣称全部门禁通过。",
   "waiver": null,
-  "review": null,
+  "review": {
+    "agent": "codex",
+    "session": "codex:5c7730f7-9b5e-436b-bf34-f54611e16e15",
+    "model": "chatflows/gpt-6.1-sol",
+    "verdict": "reject",
+    "reviewed_hash": "2a8d88358c0c4cc2eb0c309995e66fb5918a36ca672cda9dac8b1e5fbf69a83b",
+    "notes": "reviews/feat-desktop-closed-loop-r1.md：REJECT。真实缺陷 CORR-001：已记录子进程在快照后 setsid 时仍存活却返回停止确认成功；缺该时序回归。1665/1665、renderer146/146、Electron20/20；红38/264、绿264/264按名复现；独立6/6及原有17/17、24/24变异；8门禁反例均拒绝。正式 G-RED/G-STUB/G-TAUTO 未过，来源与混合作者资格未闭合；只审不改实现、不合并。"
+  },
   "review_status": "待审",
   "contributors": [
     {

@@ -1,0 +1,74 @@
+{
+  "bound-state.json": {
+    "bytes": 587,
+    "sha256": "ef30830074ef10833ee27e94c61ab04f62c2a8de828ac5763d5a2dbc32857f89"
+  },
+  "core-evidence.tar.gz": {
+    "bytes": 191440,
+    "sha256": "0e3e817650b558282f964b1a8a6cd9b372556018abb1ea220335ca8eb37b3b5a"
+  },
+  "ui-evidence.tar.gz": {
+    "bytes": 14634,
+    "sha256": "4cfafe1465e7be2fbf3e0fb27ae7ff14723312ddcad455b92c385deb1c947949"
+  },
+  "gates-environment-evidence.tar.gz": {
+    "bytes": 33192,
+    "sha256": "889a8e414e0f8e2d447ff5f2f795c7439c738912d96551cd5889b61d87482dd5"
+  },
+  "behavior-evidence.tar.gz": {
+    "bytes": 46670,
+    "sha256": "f4e43af1e04e319c4aea9c515724335b73b8fb418fa1a220be0844b4655c02f0"
+  },
+  "r7-evidence.tar.gz": {
+    "bytes": 1790,
+    "sha256": "31bd54bfeea226f5ac60421765a81fb26cd2df7bec129cfe075e209759cd78f0"
+  },
+  "t8a-mutation-evidence.tar.gz": {
+    "bytes": 10825,
+    "sha256": "e1147ccda0c86753ca9f552134ecb341cdaf91a4d574a1c0b33b3fc1f9e88233"
+  },
+  "pgid-transition-probe.mjs": {
+    "bytes": 3601,
+    "sha256": "56e177137edf2e4eb199355b107f067200cbce466b5b1292ddaf11566785ba44"
+  },
+  "pgid-transition.log": {
+    "bytes": 508,
+    "sha256": "e8cc2fd5a781369ccd84fde1256bb7842b021c15ea69c526efd4c096e5f634fa"
+  },
+  "pgid-transition-event.json": {
+    "bytes": 243,
+    "sha256": "73126b19c6a9a6b65be29a819455292c35f161c3bbe426dd59d75f7e1758c1f2"
+  },
+  "snapshot-checker.json": {
+    "bytes": 8506,
+    "sha256": "fe0447d1949d3becc69cde1cb594700a45eeb18b30d5e0da91731842e20c603c"
+  },
+  "snapshot-independent.json": {
+    "bytes": 2106,
+    "sha256": "291c971bcb4750b37153cf413042ab88af68de6218e2b009bd74fc2ece5c10cf"
+  },
+  "snapshot-requester-messages.json": {
+    "bytes": 529,
+    "sha256": "5314df8e1b67245439e090c8e8f6abd5ae2c09e17badaf182c64803a81f1a624"
+  },
+  "old-db-independent-red.json": {
+    "bytes": 7420,
+    "sha256": "03ac4e47d89bd39fdd61ab17c736f0d4d79407cfb54320e732d104f84a9ccb0a"
+  },
+  "local-gate-summary.json": {
+    "bytes": 3297,
+    "sha256": "ec8f8e20e3eae7086f37b342558862c86ced3244426ee2ed23e038996b6c4c6f"
+  },
+  "selftest-summary.json": {
+    "bytes": 677,
+    "sha256": "e789f4359f92cf8325c36dc7cea0531aabc8e961e313a84cba62d7a3a16a6d31"
+  },
+  "cloud-cleanup.json": {
+    "bytes": 2326,
+    "sha256": "2f5240eabe15fb4fc02987393591be8f63dad3b2acc0accebb73d63469acee68"
+  },
+  "local-provenance-after-review.log": {
+    "bytes": 194,
+    "sha256": "05f1cb60d211eb20ad332ddaf2fa384ae8da58dd86634c90ba230fc7355a4a82"
+  }
+}

@@ -1,0 +1,83 @@
+[
+  {
+    "file": "t8a-snapshot-dm.db",
+    "sha256": "1856ff667876298db9c770d0a4faa6c6b27c825880de9818b8704c0cac39d4be",
+    "unchanged": true,
+    "tasks": [
+      {
+        "id": "t-mwg1y2m2-3",
+        "state": "T8a_Delivered",
+        "reviewGate": "none",
+        "badge": "none",
+        "requester": "me",
+        "delivery": {
+          "round": 1,
+          "commit": "result:ccr-bd4a3993-2907-432e-b1e9-eb2b1d1d1d1e"
+        },
+        "deliveredSeq": 4
+      }
+    ]
+  },
+  {
+    "file": "t8a-snapshot-group.db",
+    "sha256": "bbc4cee60b510c24ba25ea8f186b96efb4e6af8ccb95a19018aaa342584bfb41",
+    "unchanged": true,
+    "tasks": [
+      {
+        "id": "t-mwg1y2m2-3",
+        "state": "T8_Accepted",
+        "reviewGate": "waived-by-user",
+        "badge": "accepted",
+        "requester": "me",
+        "delivery": {
+          "round": 1,
+          "commit": "result:ccr-bd4a3993-2907-432e-b1e9-eb2b1d1d1d1e"
+        },
+        "deliveredSeq": 4
+      },
+      {
+        "id": "t-mwg209h4-j",
+        "state": "T8a_Delivered",
+        "reviewGate": "none",
+        "badge": "none",
+        "requester": "me",
+        "delivery": {
+          "round": 1,
+          "commit": "result:ccr-9b5490fd-4177-471a-92bd-d4a6eb1b1e73"
+        },
+        "deliveredSeq": 4
+      }
+    ]
+  },
+  {
+    "file": "final.db",
+    "sha256": "1f2b3ee8887445f9d50d91e92b91e4564c3b1a7384b673410a13d66f30e2c266",
+    "unchanged": true,
+    "tasks": [
+      {
+        "id": "t-mwg1y2m2-3",
+        "state": "T8_Accepted",
+        "reviewGate": "waived-by-user",
+        "badge": "accepted",
+        "requester": "me",
+        "delivery": {
+          "round": 1,
+          "commit": "result:ccr-bd4a3993-2907-432e-b1e9-eb2b1d1d1d1e"
+        },
+        "deliveredSeq": 4
+      },
+      {
+        "id": "t-mwg209h4-j",
+        "state": "T8_Accepted",
+        "reviewGate": "waived-by-user",
+        "badge": "accepted",
+        "requester": "me",
+        "delivery": {
+          "round": 1,
+          "commit": "result:ccr-9b5490fd-4177-471a-92bd-d4a6eb1b1e73"
+        },
+        "deliveredSeq": 4
+      }
+    ]
+  }
+]
