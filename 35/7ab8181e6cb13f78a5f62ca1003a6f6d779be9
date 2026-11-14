@@ -1,0 +1,21 @@
+receipts/fix-t177-g35-memory-neighbors.json
+  s_38f0853d3666ca::t_b8a50b863389f0 27-34
+reviews/fix-t177-g35-memory-neighbors.md
+  s_38f0853d3666ca::t_979d4e687e206d 1-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "357ab8181e6cb13f78a5f62ca1003a6f6d779be9",
+  "prompts": {},
+  "sessions": {
+    "s_38f0853d3666ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1da65-51d1-79a0-987e-5fb6857999b0",
+        "model": "chatflows/gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
