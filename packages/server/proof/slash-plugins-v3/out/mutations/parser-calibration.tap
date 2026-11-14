@@ -1,0 +1,63 @@
+TAP version 13
+# Subtest: parser-assertion
+not ok 1 - parser-assertion
+  ---
+  duration_ms: 1.900237
+  type: 'test'
+  location: '/dev/shm/gg-slash-resume-v3-20261112/tmp/chat-admin-mut-jeZtEy/parser-calibration/calibration.test.mjs:1:72'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///dev/shm/gg-slash-resume-v3-20261112/tmp/chat-admin-mut-jeZtEy/parser-calibration/calibration.test.mjs:1:107)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.start (node:internal/test_runner/test:1262:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+  ...
+# Subtest: parser-runtime
+not ok 2 - parser-runtime
+  ---
+  duration_ms: 0.198607
+  type: 'test'
+  location: '/dev/shm/gg-slash-resume-v3-20261112/tmp/chat-admin-mut-jeZtEy/parser-calibration/calibration.test.mjs:1:119'
+  failureType: 'testCodeFailure'
+  error: 'not an assertion'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (file:///dev/shm/gg-slash-resume-v3-20261112/tmp/chat-admin-mut-jeZtEy/parser-calibration/calibration.test.mjs:1:152)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+    Test.run (node:internal/test_runner/test:1467:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: parser-timeout
+not ok 3 - parser-timeout
+  ---
+  duration_ms: 20.196488
+  type: 'test'
+  location: '/dev/shm/gg-slash-resume-v3-20261112/tmp/chat-admin-mut-jeZtEy/parser-calibration/calibration.test.mjs:1:188'
+  failureType: 'testTimeoutFailure'
+  error: 'test timed out after 20ms'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 0
+# fail 2
+# cancelled 1
+# skipped 0
+# todo 0
+# duration_ms 133.12287

@@ -1,0 +1,133 @@
+{
+  "head": "156d4840ef1a00bbda62c9892174c2450ada62fc",
+  "base": "c7d1a2dd3671c2a2289a5cd4b3b673a9f1bb9f29",
+  "reviewed": "230ed1c98fe13d5a532c3d94fd725f36b2216ddc",
+  "calibration_red": "472eaed1413a1f7f603511b34775a4b36b1f2c05",
+  "real_red": "15fa0b78cf4c102d5f941a9e40db2723f2411eb6",
+  "last_fix_of_slash_commands": "917d2183c8ab073f856d6d883eca1a46700564dd",
+  "node": "v24.21.0",
+  "host": "box2",
+  "results": [
+    {
+      "name": "green",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-timeout=120000",
+        "--test-force-exit",
+        "--test-reporter=tap",
+        "packages/server/src/slash-commands.test.ts",
+        "packages/server/src/slash-commands-boundaries.test.ts"
+      ],
+      "cwd": "/workspace/claude-author-pr85-r2/repo",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "seconds": 17.247,
+      "log_sha256": "7765fde0962447bf154d962e49a581ef51273b6f9b518ac7dc4f51f70211e415"
+    },
+    {
+      "name": "calibration-red",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-timeout=120000",
+        "--test-force-exit",
+        "--test-reporter=tap",
+        "packages/server/src/slash-commands.test.ts",
+        "packages/server/src/slash-commands-boundaries.test.ts"
+      ],
+      "cwd": "/workspace/claude-author-pr85-r2/cal-red",
+      "exit_code": 1,
+      "expected_exit": 1,
+      "seconds": 15.64,
+      "log_sha256": "bff9cab11d1c1cd3f854eaed6b1413394801f67099724432d997dc6ecd932682"
+    },
+    {
+      "name": "real-red",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-timeout=120000",
+        "--test-force-exit",
+        "--test-reporter=tap",
+        "packages/server/src/slash-commands-boundaries.test.ts"
+      ],
+      "cwd": "/workspace/claude-author-pr85-r2/real-red",
+      "exit_code": 1,
+      "expected_exit": 1,
+      "seconds": 7.298,
+      "log_sha256": "0ef1da51d6e25dc4ff1a84daa1b773e1644dcf95ceac3ae93c5165f80c18d88a"
+    },
+    {
+      "name": "mutations",
+      "command": [
+        "node",
+        "packages/server/proof/slash-plugins-mutations.mjs"
+      ],
+      "cwd": "/workspace/claude-author-pr85-r2/repo",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "seconds": 702.748,
+      "log_sha256": "bddb41dbcfbadb516edcb9d80c9a4845bc316dd3a5dc98967c1c3d889a744508"
+    },
+    {
+      "name": "production",
+      "command": [
+        "node",
+        "packages/server/proof/slash-plugins-real.ts"
+      ],
+      "cwd": "/workspace/claude-author-pr85-r2/repo",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "seconds": 0.769,
+      "log_sha256": "312c15a2a6150d1c8015ba423e3643a665bb2bc8bba3ef4cf620a1b8b43a2df5"
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "-s",
+        "typecheck"
+      ],
+      "cwd": "/workspace/claude-author-pr85-r2/repo",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "seconds": 8.327,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "command": [
+        "npm",
+        "run",
+        "-s",
+        "lint"
+      ],
+      "cwd": "/workspace/claude-author-pr85-r2/repo",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "seconds": 0.569,
+      "log_sha256": "afae76f4620dee4be616f2276ffd17b79ac0773e7381df841a5573e860ffc2ab"
+    },
+    {
+      "name": "full",
+      "command": [
+        "npm",
+        "test",
+        "--silent"
+      ],
+      "cwd": "/workspace/claude-author-pr85-r2/repo",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "seconds": 132.225,
+      "log_sha256": "5eaadc604175865f9ae8071dec6e0399e59562806ed852090768288c5453e68a"
+    }
+  ],
+  "error": null,
+  "source_unchanged": true,
+  "complete": true
+}

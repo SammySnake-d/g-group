@@ -1,0 +1,130 @@
+TAP version 13
+# Subtest: P7 隔离执行:声明的插件命令经过真实子进程并返回系统消息,不投递用户命令
+ok 1 - P7 隔离执行:声明的插件命令经过真实子进程并返回系统消息,不投递用户命令
+  ---
+  duration_ms: 106.980677
+  type: 'test'
+  ...
+# Subtest: P7 只读快照:命令不修改任务卡片草稿和游标,不唤醒联系人
+ok 2 - P7 只读快照:命令不修改任务卡片草稿和游标,不唤醒联系人
+  ---
+  duration_ms: 162.207999
+  type: 'test'
+  ...
+# Subtest: P7 未读范围:摘要只含已读之后消息,按发言人分组并附来源,重复摘要不汇总自己
+ok 3 - P7 未读范围:摘要只含已读之后消息,按发言人分组并附来源,重复摘要不汇总自己
+  ---
+  duration_ms: 80.456896
+  type: 'test'
+  ...
+# Subtest: P7 空态:默认从真实已读位置起算,没有未读时明确说明
+ok 4 - P7 空态:默认从真实已读位置起算,没有未读时明确说明
+  ---
+  duration_ms: 74.414185
+  type: 'test'
+  ...
+# Subtest: P7 待确认:生产任务交付列入摘要,仍保持待确认状态
+not ok 5 - P7 待确认:生产任务交付列入摘要,仍保持待确认状态
+  ---
+  duration_ms: 122.697165
+  type: 'test'
+  location: '/dev/shm/gg-slash-resume-v3-20261112/tmp/chat-admin-mut-jeZtEy/m12/packages/server/src/slash-commands.test.ts:79:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    /ketchup · 自 #0 之后到 #4:
+    新消息 4 条
+    我:
+    #1 帮我跑测试
+    小克:
+    #2 接了任务:跑测试
+    #3 好的,我安排 Compute 去跑测试,有进度告诉你。
+    #4 做完了:运行已完成
+    任务变更:
+    新建:「跑测试」(t-mwdogxal-4)#1
+    交付:「跑测试」(t-mwdogxal-4)#4
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///dev/shm/gg-slash-resume-v3-20261112/tmp/chat-admin-mut-jeZtEy/m12/packages/server/src/slash-commands.test.ts:90:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: P7 待回答:授权和提问照实列出,摘要不能代答
+ok 6 - P7 待回答:授权和提问照实列出,摘要不能代答
+  ---
+  duration_ms: 106.475068
+  type: 'test'
+  ...
+# Subtest: P7 重放:同一 action 并发只执行一次,改参数拒绝,宿主重启仍返回原消息
+ok 7 - P7 重放:同一 action 并发只执行一次,改参数拒绝,宿主重启仍返回原消息
+  ---
+  duration_ms: 104.846756
+  type: 'test'
+  ...
+# Subtest: P7 冲突:内置名称与已安装命令名称不得被第二插件占用
+ok 8 - P7 冲突:内置名称与已安装命令名称不得被第二插件占用
+  ---
+  duration_ms: 56.187978
+  type: 'test'
+  ...
+# Subtest: P7 停用:命令从列表移除,旧命令调用明确拒绝且不发送给联系人
+ok 9 - P7 停用:命令从列表移除,旧命令调用明确拒绝且不发送给联系人
+  ---
+  duration_ms: 12.117947
+  type: 'test'
+  ...
+# Subtest: P7 参数和权限:非法范围不落消息,未声明读权限的插件拿不到会话快照
+ok 10 - P7 参数和权限:非法范围不落消息,未声明读权限的插件拿不到会话快照
+  ---
+  duration_ms: 57.311312
+  type: 'test'
+  ...
+# Subtest: P7 失败:插件报错不落假成功消息,同 action 不盲目重跑,新 action 可再试
+ok 11 - P7 失败:插件报错不落假成功消息,同 action 不盲目重跑,新 action 可再试
+  ---
+  duration_ms: 61.087869
+  type: 'test'
+  ...
+# Subtest: P7 快照可见性:只含本会话可见消息,隐藏和撤回原文以及别群内容不进入插件
+ok 12 - P7 快照可见性:只含本会话可见消息,隐藏和撤回原文以及别群内容不进入插件
+  ---
+  duration_ms: 60.737352
+  type: 'test'
+  ...
+# Subtest: P7 内置与未知命令保持原行为,安装插件只接管自己声明的命令
+ok 13 - P7 内置与未知命令保持原行为,安装插件只接管自己声明的命令
+  ---
+  duration_ms: 66.866524
+  type: 'test'
+  ...
+# Subtest: P7 更新冲突被拒而旧版本可用,停用插件的名称仍保留
+ok 14 - P7 更新冲突被拒而旧版本可用,停用插件的名称仍保留
+  ---
+  duration_ms: 75.48238
+  type: 'test'
+  ...
+# Subtest: P7 非法结果与缺失执行入口显式失败,不能变成用户消息或空成功
+ok 15 - P7 非法结果与缺失执行入口显式失败,不能变成用户消息或空成功
+  ---
+  duration_ms: 137.56136
+  type: 'test'
+  ...
+# Subtest: P7 有界展示:超过二百条明确标截断,任务与待办不因消息裁剪丢失
+ok 16 - P7 有界展示:超过二百条明确标截断,任务与待办不因消息裁剪丢失
+  ---
+  duration_ms: 940.340323
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 15
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2766.539085

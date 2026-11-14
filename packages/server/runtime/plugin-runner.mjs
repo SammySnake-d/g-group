@@ -56,6 +56,11 @@ const handlers = {
     if (typeof p.pull !== "function") throw new Error("插件没有 pull");
     return await p.pull(params?.sourceId);
   },
+  async command(params) {
+    const p = await load();
+    if (typeof p.command !== "function") throw new Error("插件没有 command");
+    return await p.command(params?.request);
+  },
   async send(params) {
     const p = await load();
     if (typeof p.send !== "function") throw new Error("插件没有 send");

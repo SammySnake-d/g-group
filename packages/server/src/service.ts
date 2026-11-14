@@ -16,6 +16,7 @@ import type { AnnouncementOrder } from "./announcements.ts";
 import { HostError } from "./db.ts";
 import { type HelperEntryInput, HelperDesk } from "./helper.ts";
 import type { Host } from "./host.ts";
+import { SlashCommands } from "./slash-commands.ts";
 import { previewCron } from "./schedules.ts";
 import { contactProfile, listFiles, readFile } from "./views.ts";
 
@@ -33,6 +34,7 @@ export interface Service {
 
 export function createService(host: Host): Service {
   const helper = new HelperDesk(host);
+  const commands = new SlashCommands(host);
   const H: { [M in MethodName]: Handler } = {
     "session.hello": () => ({ apiVersion: API_VERSION, serverTime: new Date().toISOString(), eventSeq: host.bus.head(), userId: host.userId }),
     "contacts.list": () => ({ contacts: host.listContacts() }),
@@ -70,7 +72,7 @@ export function createService(host: Host): Service {
     "rooms.muteMember": (p: { roomId: string; contactId: string; muted: boolean; clientActionId: string }) => host.muteMember(p),
     "rooms.clearHistory": (p: { roomId: string; clientActionId: string }) => host.clearHistory(p),
     "messages.list": ({ roomId, ...q }: { roomId: string } & Parameters<Host["listMessages"]>[1]) => host.listMessages(roomId, q),
-    "messages.send": (p: Parameters<Host["send"]>[0]) => host.send(p),
+    "messages.send": (p: Parameters<Host["send"]>[0]) => commands.send(p),
     "messages.edit": (p: { roomId: string; seq: number; text: string }) => host.editMessage(p.roomId, p.seq, p.text),
     "messages.retract": (p: { roomId: string; seq: number }) => host.retractMessage(p.roomId, p.seq),
     "messages.delete": (p: { roomId: string; seqs: number[]; clientActionId: string }) => host.deleteMessages(p),

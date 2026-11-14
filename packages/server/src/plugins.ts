@@ -14,6 +14,7 @@ import { SlashCommand as SlashCommandSchema, arr, formatIssues, json, obj, oneOf
 import { type Db, HostError, all, one, run } from "./db.ts";
 import type { PluginRuntime, PluginTarget } from "./plugin-runtime.ts";
 import { extractTo, readTgz } from "./untar.ts";
+import { assertCommandNames } from "./slash-commands.ts";
 
 const KIND = oneOf(["data-source", "outbound-channel", "ui-extension"] as const);
 /** plugin.json 的形状。命令沿用合同里的 SlashCommand,但 source/pluginId/targetContactId 由宿主填。 */
@@ -251,6 +252,7 @@ export class PluginStore {
     }
     const m = readManifest(dir);
     if (one(this.d.db, "SELECT 1 FROM gg_plugins WHERE id = ?", m.id)) throw new HostError("conflict", `插件 ${m.id} 已安装,要换版本请用更新`);
+    assertCommandNames(m.commands ?? [], this.commands(true), m.id);
     const missing = m.permissions.map((p) => p.key).filter((k) => !granted.includes(k));
     if (missing.length) throw new HostError("forbidden", `安装需要你同意这些权限:${missing.join("、")}`, { missing });
     const target = this.copyIn(m, dir);
@@ -306,6 +308,7 @@ export class PluginStore {
     if (!e) throw new HostError("not_found", `市场里已没有 ${id}`);
     if (version && version !== e.manifest.version) throw new HostError("not_found", `市场里 ${id} 只有 ${e.manifest.version}`);
     if (cmp(e.manifest.version, r.version) <= 0) throw new HostError("conflict", `已是最新版本 ${r.version}`);
+    assertCommandNames(e.manifest.commands ?? [], this.commands(true), id);
     const had = JSON.parse(r.granted) as string[];
     const all_ = [...had, ...(granted ?? [])];
     const missing = e.manifest.permissions.map((p) => p.key).filter((k) => !all_.includes(k));
@@ -355,6 +358,34 @@ export class PluginStore {
       failures: out.failures,
     };
   }
+  /**
+   * 命令归属包含停用插件,避免停用的命令误变成联系人消息。
+   * 只接管明确提供命令执行入口的插件(清单声明界面扩展 ui-extension 且有 entry,P7 R1-01);数据源、输出渠道等别的插件
+   * 声明的命令返回 null,照 #71 原路由作为带 command 的用户消息发给联系人,也不为它拉起插件进程。
+   */
+  commandOwner(name: string): { pluginId: string; enabled: boolean; canRead: boolean } | null {
+    for (const r of all<Row>(this.d.db, "SELECT * FROM gg_plugins ORDER BY id")) {
+      const m = JSON.parse(r.manifest) as Manifest;
+      if (!m.commands?.some(c => c.name === name)) continue;
+      if (!m.kinds.includes("ui-extension") || !m.entry) return null;
+      return { pluginId: r.id, enabled: !!r.enabled, canRead: (JSON.parse(r.granted) as string[]).includes("chat:read") };
+    }
+    return null;
+  }
+  /** 独立命令 RPC,不经外发 send/outbox。 */
+  async command(id: string, request: { name: string; args: Record<string, unknown>; roomId: string; userId: string; text: string; snapshot: unknown }) {
+    const r = this.row(id);
+    const m = JSON.parse(r.manifest) as Manifest;
+    if (!r.enabled) throw new HostError("conflict", `插件 ${id} 已停用`);
+    if (!m.commands?.some(c => c.name === request.name)) throw new HostError("not_found", `插件 ${id} 没有命令 /${request.name}`);
+    if (!m.entry) throw new HostError("unavailable", `插件 ${id} 没有可执行代码(清单没有 entry)`);
+    const target = { id, dir: r.dir, entry: m.entry, dataDir: path.join(this.d.dataDir, "plugin-data", id), config: r.config ? JSON.parse(r.config) as unknown : null, kinds: m.kinds };
+    const result = await this.d.runtime.command(target, request);
+    // 调用期间停用/更新/卸载不得再把旧结果发布进会话。
+    const current = this.row(id);
+    if (!current.enabled || current.version !== r.version || current.dir !== r.dir) throw new HostError("conflict", "插件在执行期间已停用或变更,不发布旧结果");
+    return result;
+  }
   /** 经输出渠道外发:同一 actionId 由内核按 B1/B2 记账,已确认复用回执,结果未知时 B2 不再发。 */
   async send(id: string, actionId: string, payload: string) {
     const r = await this.d.runtime.send(this.target(id, "outbound-channel"), actionId, payload);
@@ -365,9 +396,9 @@ export class PluginStore {
     this.d.runtime.close();
   }
   /** 已启用插件声明的 slash 命令。 */
-  commands(): SlashCommand[] {
+  commands(includeDisabled = false): SlashCommand[] {
     const out: SlashCommand[] = [];
-    for (const r of all<Row>(this.d.db, "SELECT * FROM gg_plugins WHERE enabled = 1 ORDER BY id")) {
+    for (const r of all<Row>(this.d.db, includeDisabled ? "SELECT * FROM gg_plugins ORDER BY id" : "SELECT * FROM gg_plugins WHERE enabled = 1 ORDER BY id")) {
       const m = JSON.parse(r.manifest) as Manifest;
       for (const c of m.commands ?? []) out.push({ name: c.name, description: c.description, args: c.args, source: "plugin", pluginId: r.id, targetContactId: null });
     }
