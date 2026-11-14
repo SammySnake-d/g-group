@@ -1,0 +1,19 @@
+packages/kernel/proof/mutations.txt
+  s_d25047fbd77bcf::t_503cd8d581e3de 2-206
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5b2c8f052fe10af05c6b0c0034467d99606490da",
+  "prompts": {},
+  "sessions": {
+    "s_d25047fbd77bcf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b75e-31aa-71b0-bce6-1c7c30aa772b",
+        "model": "ai-iisbo/deepseek-v4.1-flash"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

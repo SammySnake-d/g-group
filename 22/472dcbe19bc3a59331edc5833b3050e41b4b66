@@ -1,0 +1,19 @@
+apps/desktop/src/api/wire/index.ts
+  s_54fdb48636ffee::t_4794e79ffd5d15 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "22472dcbe19bc3a59331edc5833b3050e41b4b66",
+  "prompts": {},
+  "sessions": {
+    "s_54fdb48636ffee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "16b87c7b-b9f6-4a8a-92d0-b64d3392ff32",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

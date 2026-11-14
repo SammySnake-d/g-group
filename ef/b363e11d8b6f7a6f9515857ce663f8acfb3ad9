@@ -1,0 +1,19 @@
+packages/server/src/resident-exit.test.ts
+  s_3410df211081b0::t_cf7348b0157b45 1-157
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "efb363e11d8b6f7a6f9515857ce663f8acfb3ad9",
+  "prompts": {},
+  "sessions": {
+    "s_3410df211081b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6024214ba242fcf3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

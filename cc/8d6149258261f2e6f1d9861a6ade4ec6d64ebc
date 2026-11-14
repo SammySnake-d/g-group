@@ -1,0 +1,72 @@
+apps/desktop/src/api/wire/index.ts
+  s_8545dccd4816b0::t_94295170dc273c 12,20
+packages/api-contract/src/entities.ts
+  s_8545dccd4816b0::t_1c157d9464ab46 117-120,192-202
+apps/desktop/src/app/chat/ChatView.tsx
+  s_8545dccd4816b0::t_6009746ee4ca42 4,15-16,19-29,36,39,100-104,113
+apps/desktop/src/components/messages/cards/ReplyingCard.tsx
+  s_8545dccd4816b0::t_e25a9971929d08 2,13-25,29,31-44
+apps/desktop/src/components/Receipt.tsx
+  s_8545dccd4816b0::t_554e7700ae886c 7,9-11,14-15,34-37,44-46,48-49,75,77,109-126
+  s_8545dccd4816b0::t_bbc9d1a7d31f09 127-128
+apps/desktop/src/components/messages/TaskTag.tsx
+  s_8545dccd4816b0::t_a9319aea3adfe6 4-6,13,15-18,26-29
+apps/desktop/src/app/overlays/RewindDialog.tsx
+  s_8545dccd4816b0::t_df3827dc53aae7 1,3-5,7,9-32,34,38-40,47-53,56
+apps/desktop/src/store/reads.ts
+  s_8545dccd4816b0::t_e24ee1f768c2df 1-9
+apps/desktop/src/app/composer/Toolbar.tsx
+  s_8545dccd4816b0::t_d37572b067a2d8 13,26-27,34,38,57-58
+apps/desktop/src/api/wire/drafts.ts
+  s_8545dccd4816b0::t_e384c58e5acfe3 1-86
+apps/desktop/src/components/messages/cards/MsgFiles.tsx
+  s_8545dccd4816b0::t_54f3579ad7bde4 1-33
+packages/server/src/start.ts
+  s_8545dccd4816b0::t_6dd0d2b583578b 43-45
+apps/desktop/src/api/wire/messages.ts
+  s_8545dccd4816b0::t_db652e93168599 5-9,20-26,34,38-39,50-57,62-73,78,88-92,98-102,116-120,123-127,129,138-151,158-160,166-169,176,178-182,186,188,198,204,208
+apps/desktop/src/api/wire/rooms.ts
+  s_8545dccd4816b0::t_a1c82da552597a 6,23-25
+apps/desktop/src/components/messages/Body.tsx
+  s_8545dccd4816b0::t_1805087b7f1969 3-4,19-29
+apps/desktop/src/components/Composer.tsx
+  s_8545dccd4816b0::t_8673cbc641484f 13-15,23,38-40
+apps/desktop/src/components/messages/lines/SysLines.tsx
+  s_8545dccd4816b0::t_c319a001e3665e 6-7,21-22,24,26
+apps/desktop/src/api/wire/chat-ops.ts
+  s_8545dccd4816b0::t_e41529ade1c7bc 1-205
+packages/api-contract/src/api.ts
+  s_8545dccd4816b0::t_495d261657e3c6 162-175,184-188
+apps/desktop/src/store/slices/chat.ts
+  s_8545dccd4816b0::t_e7433f74bed085 3-4,11,67-78,97-98,114-116,136-140,161-166,168-177,195,210,218,236
+packages/server/src/service.ts
+  s_8545dccd4816b0::t_c05793cae5275f 75-78,83
+apps/desktop/src/store/slices/messages.ts
+  s_8545dccd4816b0::t_efe43bf7ecf324 3-4,74-75,94-98,128-129,164-165,167,173-174,190,204-205
+apps/desktop/src/components/messages/cards/Attachments.tsx
+  s_8545dccd4816b0::t_0a690496e36e6f 52,55
+apps/desktop/src/components/messages/MsgMenu.tsx
+  s_8545dccd4816b0::t_7a9dc8ce53242f 5-6,16-19,33-34,37-38
+packages/server/src/host.ts
+  s_8545dccd4816b0::t_9b6c1a30cdead3 10,831-832,858-859,862-866,930,933-937,942-944,1198-1206,1218-1318,1365-1376,1382-1384
+apps/desktop/src/data.ts
+  s_8545dccd4816b0::t_39500ed9b3fed5 359-360,364,375
+apps/desktop/proof/parity-chat/red.txt
+  s_8545dccd4816b0::t_262f275ffb5ad1 1-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cc8d6149258261f2e6f1d9861a6ade4ec6d64ebc",
+  "prompts": {},
+  "sessions": {
+    "s_8545dccd4816b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acff44844de2c7322",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

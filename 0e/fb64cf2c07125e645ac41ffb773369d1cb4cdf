@@ -1,0 +1,33 @@
+receipts/evidence/t177-g6/STATUS.md
+  s_9e84d571573b49::t_b09d83c18eea82 1-12
+receipts/evidence/t177-g6/standin-all/k1-g4on-R1.md
+  s_9e84d571573b49::t_502cc900e5af3a 1-80
+receipts/evidence/t177-g6/standin-all/k1-k5-复现报告.md
+  s_9e84d571573b49::t_5ef6f5281c4945 7-9,11-17,23,32,36,40-46,52,58,62-64,68-69
+receipts/evidence/t177-g6/standin-all/k1-k5-复现汇总.json
+  s_9e84d571573b49::t_40e067122377bf 1-284
+receipts/evidence/t177-g6/standin-all/k4-基线对照.md
+  s_9e84d571573b49::t_bd7234f9e2085c 1-7
+receipts/evidence/t177-g6/standin-all/k5-g1-debt.md
+  s_9e84d571573b49::t_6249011e3810a3 1-29
+receipts/evidence/t177-g6/standin-all/report.md
+  s_9e84d571573b49::t_b83360cc68eb21 1-162
+receipts/evidence/t177-g6/standin-all/summary.json
+  s_9e84d571573b49::t_fc523ca03f85f9 2,4,38,62-64,95-96,100-102,133-134,140-142,145-147,162-3863,3866-3869,3872-3875,3878-3881,3883-3884,3886-3894,3896-3897,3899-3902,3905-3908,3911-3921,3923-3926,3928-3930,3932-3935,3938-3941,3944-3947,3950,3952-3953,3997-3998,4042-4043,4087-4088,4144-4145,4201-4202,4252-4253,4297-4298,4336-4337,4381-4382,4414-4415,4453-4454,4492-4493,4531-4532,4572-4573,4593,4599,4605,4611,4618-4619,4651-4652
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0efb64cf2c07125e645ac41ffb773369d1cb4cdf",
+  "prompts": {},
+  "sessions": {
+    "s_9e84d571573b49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5c99cdaaa25826c8",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

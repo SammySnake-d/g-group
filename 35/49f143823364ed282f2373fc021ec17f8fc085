@@ -1,0 +1,23 @@
+packages/server/src/cli.ts
+  s_25620647d6f8eb::t_2b89f2db1ecfa4 11,75
+packages/server/src/compute.ts
+  s_25620647d6f8eb::t_d28b1f531df664 2-3,5,7-16,18-22
+packages/server/src/start.ts
+  s_25620647d6f8eb::t_bce12337c2d439 8,71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3549f143823364ed282f2373fc021ec17f8fc085",
+  "prompts": {},
+  "sessions": {
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

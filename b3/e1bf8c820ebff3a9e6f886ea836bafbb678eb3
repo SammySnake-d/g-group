@@ -1,0 +1,23 @@
+reviews/feat-cc-compute.md
+  s_7a21443c2ee2b8::t_7f189872efd8ec 518-593,595-596,598-605
+  s_7a21443c2ee2b8::t_bf95a770fa6d6c 594,597
+receipts/feat-cc-compute.json
+  s_7a21443c2ee2b8::t_bf95a770fa6d6c 51
+  s_7a21443c2ee2b8::t_7f189872efd8ec 45-50,52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b3e1bf8c820ebff3a9e6f886ea836bafbb678eb3",
+  "prompts": {},
+  "sessions": {
+    "s_7a21443c2ee2b8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b780-4bdd-7eb1-a370-253334ff593e",
+        "model": "ai-iisbo/[乾坤按量]gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+packages/server/proof/real-auth-run.ts
+  h_f33e46a035b77c 30,32
+packages/server/proof/real-auth-run.txt
+  h_f33e46a035b77c 2-3,5,10-11,13-15,17-18,21-28,34,36,39-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9f2b791e1db974c03cade41a72b02ecff7fe8634",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

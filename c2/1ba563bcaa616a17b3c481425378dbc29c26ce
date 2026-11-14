@@ -1,0 +1,19 @@
+apps/desktop/e2e/parity-r2-honest.electron.spec.ts
+  s_acb73d5a44618d::t_d6e90b3b06cf90 1-266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c21ba563bcaa616a17b3c481425378dbc29c26ce",
+  "prompts": {},
+  "sessions": {
+    "s_acb73d5a44618d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fd6da05b-4f12-4778-9e76-fc2d1b792365",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+packages/kernel/proof/mutations.mjs
+  h_f33e46a035b77c 1,206,217-219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "818dac52267be6c6ec1ef4ae852ffcc49ceda29d",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

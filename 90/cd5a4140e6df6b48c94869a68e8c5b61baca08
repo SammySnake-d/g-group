@@ -1,0 +1,31 @@
+packages/server/README.md
+  s_45f973090a4dd5::t_be61de08fc5f64 34-35,43
+packages/server/proof/e2e-group-pi-claude-run1.txt
+  s_45f973090a4dd5::t_10560a85796f8b 1-43
+packages/server/proof/e2e-group-pi-claude.txt
+  s_45f973090a4dd5::t_8f4e58111f3486 1-30
+packages/server/src/assemble.ts
+  s_45f973090a4dd5::t_6eed8abd73c4e3 88-89
+packages/server/src/cli.ts
+  s_45f973090a4dd5::t_978475bd77bdc1 5,14,28-30,85-106,108-109,132
+packages/server/src/drive.ts
+  s_45f973090a4dd5::t_1e7258c4425512 4,18-19,21-27,31-57,61-69
+packages/server/src/host.ts
+  s_45f973090a4dd5::t_1b59c3a6c0f530 967,1003-1016,1077-1078,1415-1419
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "90cd5a4140e6df6b48c94869a68e8c5b61baca08",
+  "prompts": {},
+  "sessions": {
+    "s_45f973090a4dd5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a51cdc3b09003b508",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

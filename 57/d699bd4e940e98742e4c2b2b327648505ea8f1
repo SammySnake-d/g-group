@@ -1,0 +1,21 @@
+receipts/feat-coverage-invariants.json
+  s_209dc3fd714a96::t_fcd32223f0c439 39,41-53
+reviews/feat-coverage-invariants.md
+  s_209dc3fd714a96::t_3be447324c75a7 181-331
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "57d699bd4e940e98742e4c2b2b327648505ea8f1",
+  "prompts": {},
+  "sessions": {
+    "s_209dc3fd714a96": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf4ef95e-9b68-4262-a62d-ca75f35d1208",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

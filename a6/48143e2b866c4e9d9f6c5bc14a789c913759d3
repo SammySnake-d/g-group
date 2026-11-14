@@ -1,0 +1,21 @@
+packages/server/src/host.ts
+  s_bc500ef58bf3aa::t_dd15c6432482f2 153,968,978,1032-1040,2472-2478,2481,2732-2733,2773,2801,2903
+packages/server/src/loop-guard.ts
+  s_bc500ef58bf3aa::t_dd15c6432482f2 1-2,4,6-12,14,16,32-37,39-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a648143e2b866c4e9d9f6c5bc14a789c913759d3",
+  "prompts": {},
+  "sessions": {
+    "s_bc500ef58bf3aa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cf01-3b82-7211-b7b9-c7147d5e45e7",
+        "model": "chatflows/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

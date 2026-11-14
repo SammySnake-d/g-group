@@ -1,0 +1,14 @@
+receipts/feat-contact-config-history.json
+  h_f33e46a035b77c 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8a0d088be7026e2e3d3fb751eeb5d56943bcfa2c",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

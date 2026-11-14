@@ -1,0 +1,20 @@
+packages/domain/src/contact.test.ts
+  h_f33e46a035b77c 1402-1583
+packages/domain/src/contact.ts
+  h_f33e46a035b77c 1,206,210,214,218,232,237,242,254,271,276,287
+packages/domain/src/helper.ts
+  h_f33e46a035b77c 1,39,44
+packages/domain/src/plain.ts
+  h_f33e46a035b77c 1,37,92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2a27cf3923fe5bd8369ab3c38775681ac2c6eb0b",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

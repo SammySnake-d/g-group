@@ -1,0 +1,19 @@
+receipts/feat-standing-commitments.json
+  s_98f0ff8415d16e::t_b307dae054aa5d 1-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "12ab93c9583254294662b0b27b205fcf8b4e0dc8",
+  "prompts": {},
+  "sessions": {
+    "s_98f0ff8415d16e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6ed2c2cb3b685ca0",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

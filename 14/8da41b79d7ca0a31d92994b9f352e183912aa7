@@ -1,0 +1,19 @@
+apps/desktop/src/components/shell/updates.tsx
+  s_54fdb48636ffee::t_d41156c5e4f3e6 1,9-10,29,31,33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "148da41b79d7ca0a31d92994b9f352e183912aa7",
+  "prompts": {},
+  "sessions": {
+    "s_54fdb48636ffee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "16b87c7b-b9f6-4a8a-92d0-b64d3392ff32",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

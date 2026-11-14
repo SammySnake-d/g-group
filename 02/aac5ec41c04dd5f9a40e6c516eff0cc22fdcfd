@@ -1,0 +1,37 @@
+packages/server/proof/g6/capture.ts
+  s_9e84d571573b49::t_4e849db7f9499d 14-27,29-44,59-76,79,84-90,102-175,178-188,191-201,204-224,227-235,248-341
+packages/server/proof/g6/contracts.ts
+  s_9e84d571573b49::t_589f45f98b1166 7-13,20-27,30-37,40-53,56-68,71-80,83-94,101-113,116-122,125-134,136-138,141-150
+packages/server/proof/g6/driver.ts
+  s_9e84d571573b49::t_c3808191fb4298 41,47-51,57-74,77-84,86-205,208-218,221-225
+packages/server/proof/g6/fixture.ts
+  s_9e84d571573b49::t_f683ab8aab9d69 7-16,18-20,23-36,38-46,49-117,119-124
+packages/server/proof/g6/groups.ts
+  s_9e84d571573b49::t_f1f01dad573b93 39,54,83-96,102-123,126-131
+packages/server/proof/g6/manifest.ts
+  s_9e84d571573b49::t_cc9c6af6858533 7-13,28-30,35-38,40-44,46-50,53-60
+packages/server/proof/g6/report.ts
+  s_9e84d571573b49::t_631b2b86cae4a7 32-39,41-46,49-118
+packages/server/proof/g6/run.ts
+  s_9e84d571573b49::t_1ebec693bdbe0b 32-39,42-71,79-83,85-112,118-122,128-136,148-153,159-183,186-218,221-223,238-253,255-262,264-421,424-427
+packages/server/proof/g6/score.ts
+  s_9e84d571573b49::t_af46332be94a4c 10-11,14-19,22-25,28-33,36-40,52-65,68-80,82,85-87,89-91,97-210
+packages/server/proof/g6/standin.ts
+  s_9e84d571573b49::t_1a7a78cc090728 10,14-16,19-67,70-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "02aac5ec41c04dd5f9a40e6c516eff0cc22fdcfd",
+  "prompts": {},
+  "sessions": {
+    "s_9e84d571573b49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5c99cdaaa25826c8",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

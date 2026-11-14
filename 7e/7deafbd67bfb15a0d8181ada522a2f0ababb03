@@ -1,0 +1,21 @@
+packages/server/proof/contact-actions-red-green.txt
+  s_6da187c6e14fd9::t_4d054fe1934ad7 1-4
+receipts/feat-contact-actions.json
+  s_6da187c6e14fd9::t_16b39fbb04f3ed 33,51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7e7deafbd67bfb15a0d8181ada522a2f0ababb03",
+  "prompts": {},
+  "sessions": {
+    "s_6da187c6e14fd9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2ee95d347ee6f575",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

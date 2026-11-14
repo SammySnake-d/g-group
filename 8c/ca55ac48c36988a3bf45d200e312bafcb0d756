@@ -1,0 +1,19 @@
+receipts/feat-e-search.json
+  s_65b7b49770f8fb::t_7fd6b190e5483a 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8cca55ac48c36988a3bf45d200e312bafcb0d756",
+  "prompts": {},
+  "sessions": {
+    "s_65b7b49770f8fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f5d9723d-a248-4483-95eb-5ba31b3fda33",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

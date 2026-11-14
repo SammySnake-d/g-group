@@ -1,0 +1,21 @@
+packages/server/proof/g2-speaking-mutations.mjs
+  s_a1c03f790defe9::t_7a244fc521b34f 1-163
+packages/server/proof/g2-speaking-mutations.txt
+  s_a1c03f790defe9::t_10d941c84e3b85 1-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e3279745e508568224d1e4f6fd667fab3ef7a1fc",
+  "prompts": {},
+  "sessions": {
+    "s_a1c03f790defe9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a486d1455e11315cb",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

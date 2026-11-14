@@ -1,0 +1,27 @@
+apps/desktop/src/concept/dblreply/DoubleClickReply.tsx
+  s_a3e46876f3c339::t_bde0c25ee4528a 3,23
+apps/desktop/src/concept/gaze/GazeAvatar.tsx
+  s_a3e46876f3c339::t_86b27da62ac899 6,47-51
+apps/desktop/src/concept/load/DispatchLoad.tsx
+  s_a3e46876f3c339::t_b2ee3c5fe44565 1,12
+apps/desktop/src/concept/ruler/WaitingRuler.tsx
+  s_a3e46876f3c339::t_98d2b8c517139f 3,21
+apps/desktop/src/concept/seal/AcceptSeal.tsx
+  s_a3e46876f3c339::t_e0813ce29ca192 3,12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "237ef614a984ce0df9ca02e281387b0599c6d71f",
+  "prompts": {},
+  "sessions": {
+    "s_a3e46876f3c339": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afab83f69c52efc38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

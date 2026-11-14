@@ -1,0 +1,139 @@
+apps/desktop/.gitignore
+  s_042e901c6ad028::t_03392edb53f386 1-6
+apps/desktop/components.json
+  s_042e901c6ad028::t_e3254d7232253d 1-20
+apps/desktop/e2e/shell.electron.spec.ts
+  s_042e901c6ad028::t_f8de40bc5e76d4 1-38
+apps/desktop/electron/bridge.ts
+  s_042e901c6ad028::t_28a84715b57196 1-11
+apps/desktop/electron/main.ts
+  s_042e901c6ad028::t_f7d6d1aeb0f29c 1-101
+apps/desktop/electron/preload.ts
+  s_042e901c6ad028::t_e7649944289189 1-7
+apps/desktop/index.html
+  s_042e901c6ad028::t_f4e8d3e6dcab7b 1-14
+apps/desktop/package-lock.json
+  s_042e901c6ad028::t_7f6d9db0954603 1-4018
+apps/desktop/package.json
+  s_042e901c6ad028::t_0c15973db37658 1-53
+apps/desktop/playwright.config.ts
+  s_042e901c6ad028::t_7aa2a782423e8f 1-30
+apps/desktop/postcss.config.js
+  s_042e901c6ad028::t_63c017b1ce18bb 1-6
+apps/desktop/public/favicon.svg
+  s_042e901c6ad028::t_45eab70bc79472 1
+apps/desktop/public/icons.svg
+  s_042e901c6ad028::t_826de52d4187ac 1-24
+apps/desktop/src/App.tsx
+  s_042e901c6ad028::t_11f1c339e9e38b 1-1078
+apps/desktop/src/avatars/LICENSE-open-bot-avatar
+  s_042e901c6ad028::t_c4bc2069e5227e 1-21
+apps/desktop/src/avatars/gallery.ts
+  s_042e901c6ad028::t_0dd2a53f2c1cc1 1-3
+apps/desktop/src/components/Avatar.tsx
+  s_042e901c6ad028::t_2af6a2119c34e5 1-108
+apps/desktop/src/components/CloneFlow.tsx
+  s_042e901c6ad028::t_ed3f1a8e754662 1-199
+apps/desktop/src/components/Composer.tsx
+  s_042e901c6ad028::t_2684b8a9306b03 1-157
+apps/desktop/src/components/CronDetail.tsx
+  s_042e901c6ad028::t_945c4388a35ee1 1-172
+apps/desktop/src/components/FilesMain.tsx
+  s_042e901c6ad028::t_ae3b38feac2ed4 1-133
+apps/desktop/src/components/GroupSide.tsx
+  s_042e901c6ad028::t_24fcce16a280bb 1-341
+apps/desktop/src/components/Helper.tsx
+  s_042e901c6ad028::t_18859b77067a5f 1-472
+apps/desktop/src/components/Messages.tsx
+  s_042e901c6ad028::t_0df0f22fdcd49d 1-718
+apps/desktop/src/components/Overlays.tsx
+  s_042e901c6ad028::t_79630524abac81 1-927
+apps/desktop/src/components/Panorama.tsx
+  s_042e901c6ad028::t_1c3a2732759878 1-455
+apps/desktop/src/components/Plugins.tsx
+  s_042e901c6ad028::t_56691f6577ce89 1-170
+apps/desktop/src/components/Receipt.tsx
+  s_042e901c6ad028::t_3d3607af1982b5 1-153
+apps/desktop/src/components/Split.tsx
+  s_042e901c6ad028::t_eb814afe6d2eaf 1-473
+apps/desktop/src/components/Workbench.tsx
+  s_042e901c6ad028::t_e75149b7592861 1-624
+apps/desktop/src/components/ui/button.tsx
+  s_042e901c6ad028::t_d3e64e1ea61ab0 1-57
+apps/desktop/src/components/ui/checkbox.tsx
+  s_042e901c6ad028::t_a0e17e42889161 1-30
+apps/desktop/src/components/ui/context-menu.tsx
+  s_042e901c6ad028::t_ace136d68265f1 1-200
+apps/desktop/src/components/ui/dialog.tsx
+  s_042e901c6ad028::t_4f6a06cda35c2e 1-120
+apps/desktop/src/components/ui/dropdown-menu.tsx
+  s_042e901c6ad028::t_12832b303202d7 1-201
+apps/desktop/src/components/ui/label.tsx
+  s_042e901c6ad028::t_b403a4d3c4c492 1-26
+apps/desktop/src/components/ui/popover.tsx
+  s_042e901c6ad028::t_5334613a493fb4 1-33
+apps/desktop/src/components/ui/slider.tsx
+  s_042e901c6ad028::t_be52f39c07e511 1-26
+apps/desktop/src/components/ui/switch.tsx
+  s_042e901c6ad028::t_72033658774b86 1-29
+apps/desktop/src/components/ui/toast.tsx
+  s_042e901c6ad028::t_f3186034018ed6 1-129
+apps/desktop/src/components/ui/toaster.tsx
+  s_042e901c6ad028::t_d8569bce08252f 1-35
+apps/desktop/src/components/ui/toggle.tsx
+  s_042e901c6ad028::t_d0a4441f384ad5 1-43
+apps/desktop/src/components/ui/tooltip.tsx
+  s_042e901c6ad028::t_e83886c5705c70 1-30
+apps/desktop/src/ctx.ts
+  s_042e901c6ad028::t_90d09a7a566bdb 1-160
+apps/desktop/src/data.ts
+  s_042e901c6ad028::t_18b0a30b921383 1-671
+apps/desktop/src/drag.ts
+  s_042e901c6ad028::t_90712f4b546dc5 1-8
+apps/desktop/src/hooks/use-toast.ts
+  s_042e901c6ad028::t_f26537858e8eea 1-191
+apps/desktop/src/index.css
+  s_042e901c6ad028::t_085d7d2c7e68a9 1-129
+apps/desktop/src/lib/utils.ts
+  s_042e901c6ad028::t_35f7900cd9722d 1-6
+apps/desktop/src/main.tsx
+  s_042e901c6ad028::t_e3a296002a0402 1-10
+apps/desktop/src/mut.ts
+  s_042e901c6ad028::t_5947d34b545eb6 1-9
+apps/desktop/tailwind.config.js
+  s_042e901c6ad028::t_b23c40bd1b0c33 1-75
+apps/desktop/tsconfig.app.json
+  s_042e901c6ad028::t_65cedbcf110a7c 1-41
+apps/desktop/tsconfig.electron.json
+  s_042e901c6ad028::t_141feffa7fa34c 1-15
+apps/desktop/tsconfig.json
+  s_042e901c6ad028::t_6515a146d0045d 1-4
+apps/desktop/vite.config.ts
+  s_042e901c6ad028::t_bebf1d05982b14 1-17
+apps/desktop/vite.electron.config.ts
+  s_042e901c6ad028::t_6937064982eb68 1-23
+packages/ui-core/package.json
+  s_042e901c6ad028::t_a7384d3be47143 1-9
+packages/ui-core/src/index.ts
+  s_042e901c6ad028::t_f8b195e60e3183 1
+packages/ui-core/src/ipc.test.ts
+  s_042e901c6ad028::t_a98fb6374d7aab 1-47
+packages/ui-core/src/ipc.ts
+  s_042e901c6ad028::t_f88e679855734f 1-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "93eba0ac13f578895e98fcb6cc9c0c0a8b8ed06d",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

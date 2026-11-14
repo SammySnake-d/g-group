@@ -1,0 +1,21 @@
+apps/desktop/docs/astryx-trial.md
+  s_c20562a127f0af::t_44d6fcec10a2e9 18-21
+apps/desktop/src/astryx/theme-paper-ink.css
+  s_c20562a127f0af::t_d347fde93d10e1 12-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d265cb2761969c58406ed927222a97637aed0b69",
+  "prompts": {},
+  "sessions": {
+    "s_c20562a127f0af": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c16c-e991-72f1-9871-6d60d8855ee8",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

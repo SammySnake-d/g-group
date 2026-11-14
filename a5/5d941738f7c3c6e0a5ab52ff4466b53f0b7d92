@@ -1,0 +1,71 @@
+apps/desktop/e2e/closed-loop.electron.spec.ts
+  s_9e84d571573b49::t_2d48a003c16694 1-150
+apps/desktop/proof/live-data/green.txt
+  s_9e84d571573b49::t_438a170a023c6b 1-68
+apps/desktop/proof/live-data/red.txt
+  s_9e84d571573b49::t_697396a4cdc384 1-31
+apps/desktop/src/App.tsx
+  s_9e84d571573b49::t_2044dad70173f2 10,32,34,40
+apps/desktop/src/api/wire/contacts.ts
+  s_9e84d571573b49::t_5f37b88a30d1a6 1-2,6-7,28-29,36-47
+apps/desktop/src/api/wire/index.ts
+  s_9e84d571573b49::t_e18916bcd1359b 3-4,13-15,18-19,24-28,53-58,74,76
+apps/desktop/src/api/wire/live.ts
+  s_9e84d571573b49::t_1e9708d7aed8ff 1-10
+apps/desktop/src/api/wire/messages.ts
+  s_9e84d571573b49::t_114d2e2f927a29 1-126
+apps/desktop/src/api/wire/rooms.ts
+  s_9e84d571573b49::t_bfe9b93497038b 1-97
+apps/desktop/src/api/wire/tasks.ts
+  s_9e84d571573b49::t_e64ff176725518 1-99
+apps/desktop/src/api/wire/types.ts
+  s_9e84d571573b49::t_80ff71f12b5a93 38-52
+apps/desktop/src/api/wire/unwired.ts
+  s_9e84d571573b49::t_ae070327158c1a 1-28
+apps/desktop/src/app/MainPane.tsx
+  s_9e84d571573b49::t_79211bea3c8933 8,14,18,24-25
+apps/desktop/src/app/Rail.tsx
+  s_9e84d571573b49::t_290f118d4b28cb 3,5-6,16,23-24,45,51-72
+apps/desktop/src/app/chat/ChatEmpty.tsx
+  s_9e84d571573b49::t_5ebf35ef1e9a8e 1-24
+apps/desktop/src/app/list/FileList.tsx
+  s_9e84d571573b49::t_a47c2c2524412f 10-12
+apps/desktop/src/app/useShell.ts
+  s_9e84d571573b49::t_c3e1f4b4343ebf 3,10,17-19
+apps/desktop/src/components/FilesMain.tsx
+  s_9e84d571573b49::t_94b56b59c5a8ba 14-16
+apps/desktop/src/components/messages/compute/ComputeLine.tsx
+  s_9e84d571573b49::t_101660136078e7 75-76
+apps/desktop/src/components/pages/AddContactPage.tsx
+  s_9e84d571573b49::t_327b0eb4a18f1f 16-17,26,42-43,50
+apps/desktop/src/components/split/ActivityView.tsx
+  s_9e84d571573b49::t_9b24650f4dde51 57
+apps/desktop/src/components/split/StepBar.tsx
+  s_9e84d571573b49::t_a4e03c43501136 15-16
+apps/desktop/src/store/index.ts
+  s_9e84d571573b49::t_5d0dad7d07138e 15,17,36-40
+apps/desktop/src/store/slices/chat.ts
+  s_9e84d571573b49::t_349c320c366e77 3-5,52-53,116,121-122,127-132
+apps/desktop/src/store/slices/compute.ts
+  s_9e84d571573b49::t_879d6ef54327ae 33-35,50-52
+apps/desktop/src/store/slices/members.ts
+  s_9e84d571573b49::t_5141566a6cf552 3-5,37-38,45,54
+apps/desktop/src/store/slices/send.ts
+  s_9e84d571573b49::t_8da736ca47ce00 5-6,36-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a55d941738f7c3c6e0a5ab52ff4466b53f0b7d92",
+  "prompts": {},
+  "sessions": {
+    "s_9e84d571573b49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5c99cdaaa25826c8",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

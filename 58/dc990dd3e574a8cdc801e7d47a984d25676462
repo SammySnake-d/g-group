@@ -1,0 +1,19 @@
+apps/desktop/e2e/group-side.electron.spec.ts
+  s_f0dfa712c20d46::t_17c2ec316893bf 197,203,205
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "58dc990dd3e574a8cdc801e7d47a984d25676462",
+  "prompts": {},
+  "sessions": {
+    "s_f0dfa712c20d46": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac5e2e0613e55bd0a",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+packages/server/src/room-blocked-summary.test.ts
+  s_9d7fa6e9d65b83::t_95248e2ed56a04 13,17-20,31,69
+packages/server/src/room-blocked-summary.ts
+  s_9d7fa6e9d65b83::t_0cf565baf14d4c 8-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2bb14ba5ab888e10dc0f022a6f845e6b9c18d198",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

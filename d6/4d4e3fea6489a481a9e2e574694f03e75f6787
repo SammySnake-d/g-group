@@ -1,0 +1,19 @@
+receipts/feat-compute-help.json
+  s_4ad1dfe0ee6569::t_40d6c7cd9bf955 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d64d4e3fea6489a481a9e2e574694f03e75f6787",
+  "prompts": {},
+  "sessions": {
+    "s_4ad1dfe0ee6569": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef07eb6a-5c4c-4ab7-bbcc-46df83c37b7d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

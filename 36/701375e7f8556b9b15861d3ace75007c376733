@@ -1,0 +1,39 @@
+apps/desktop/docs/astra-files-design.md
+  s_c20562a127f0af::t_fe2be824100b0d 1-25
+apps/desktop/e2e/files-comparison.ui.spec.ts
+  s_c20562a127f0af::t_c4a9efcab87bd1 1-13
+apps/desktop/e2e/files-design.ui.spec.ts
+  s_c20562a127f0af::t_a409c62433844e 1-78
+apps/desktop/index.html
+  s_c20562a127f0af::t_1316fcde888d68 11
+apps/desktop/src/components/FilesMain.tsx
+  s_c20562a127f0af::t_3675284c8abb2e 1-9,11-21
+apps/desktop/src/components/files/FileBody.tsx
+  s_c20562a127f0af::t_f21e56177e7f07 1-24
+apps/desktop/src/components/files/FileCover.tsx
+  s_c20562a127f0af::t_e78d37f11a5b73 1-15
+apps/desktop/src/components/files/FileReader.tsx
+  s_c20562a127f0af::t_4916f88444fb19 1-44
+apps/desktop/src/components/files/FileShelf.tsx
+  s_c20562a127f0af::t_defc6b41cd6f8e 1-43
+apps/desktop/src/components/files/context.ts
+  s_c20562a127f0af::t_1f692db0192524 1-39
+apps/desktop/src/components/files/files.css
+  s_c20562a127f0af::t_0657da620204ce 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "36701375e7f8556b9b15861d3ace75007c376733",
+  "prompts": {},
+  "sessions": {
+    "s_c20562a127f0af": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c16c-e991-72f1-9871-6d60d8855ee8",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

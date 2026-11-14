@@ -1,0 +1,19 @@
+receipts/feat-run-wake-f11.json
+  s_b868c547610ebf::t_b7c0e08eb51271 1-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fc7d8d98a5fc7d2de9278c53804754e06478fc41",
+  "prompts": {},
+  "sessions": {
+    "s_b868c547610ebf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a2a925fa-da86-4354-83c7-0c217a13e607",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

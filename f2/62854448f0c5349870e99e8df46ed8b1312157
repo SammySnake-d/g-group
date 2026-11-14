@@ -1,0 +1,33 @@
+packages/adapter-cc-compute/mcp/report-mcp.mjs
+  s_5e6dee5b83c808::t_e0648f1843fad8 7-11,14,20,22-30,32-33,36,42,49-50,53-81
+packages/adapter-cc-compute/src/adapter.ts
+  s_5e6dee5b83c808::t_db26c7a64505d8 1-20,22-27,31,34-36,38-174,178-438
+packages/adapter-cc-compute/src/brief.ts
+  s_5e6dee5b83c808::t_bf60f384613edd 1-4,6-15,17-18,20-47,50-68
+packages/adapter-cc-compute/src/cli.ts
+  s_5e6dee5b83c808::t_9776d210e081ed 1-7,12-57,60-61,64-68,71-88,91-106
+packages/adapter-cc-compute/src/events.ts
+  s_5e6dee5b83c808::t_b0765ab2d3ef67 4-10,35-46,52-59,62-63,68-74,78-107,132-162
+packages/adapter-cc-compute/src/plain.ts
+  s_5e6dee5b83c808::t_3642493d88b59e 1-11,15-21,23-50,53-96
+packages/adapter-cc-compute/src/procgroup.ts
+  s_5e6dee5b83c808::t_80e2a168a4a22e 1-6,9,11-20
+packages/adapter-cc-compute/src/report-schema.ts
+  s_5e6dee5b83c808::t_050bb86288c1ea 1-3,5-7,9-38,41-46,48-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f262854448f0c5349870e99e8df46ed8b1312157",
+  "prompts": {},
+  "sessions": {
+    "s_5e6dee5b83c808": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28d82518-be0a-4c7b-be7e-4a0f89835986",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

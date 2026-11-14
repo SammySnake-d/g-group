@@ -1,0 +1,27 @@
+packages/kernel/src/assemble.ts
+  s_b07977d47b253e::t_37a924262d3267 1,15,52,69,71,74-75,79,83,87
+packages/kernel/src/classify.ts
+  s_b07977d47b253e::t_867a567e736bb1 1,11,39-40
+packages/kernel/src/plain.ts
+  s_b07977d47b253e::t_842c217378938c 1,7-8,20,23-24,27-28,32,36
+packages/kernel/src/plugins.test.ts
+  s_b07977d47b253e::t_e6f0193e2357ed 2073-2079,2081
+packages/kernel/src/plugins.ts
+  s_b07977d47b253e::t_275e5a3bfcdef1 1-3,8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "00cddfe5df0f7d8e0076572a674b7ec04bdbc893",
+  "prompts": {},
+  "sessions": {
+    "s_b07977d47b253e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c14f-fcec-7dd3-93dc-f113b9f16247",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

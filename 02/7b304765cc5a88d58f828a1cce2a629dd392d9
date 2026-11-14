@@ -1,0 +1,43 @@
+scripts/gates/gates.ts
+  s_233b6d928b260b::t_c7b17dbaf89f2c 582-588
+scripts/gates/proof/mutation.txt
+  s_233b6d928b260b::t_be0cf9b8f223cd 1,3-136
+receipts/chore-gates.json
+  s_a1d351a2cfe605::t_6cd56dd8236976 66,68
+scripts/gates/judge.ts
+  s_a1d351a2cfe605::t_4c919bee3e2013 30,32,37-39,41,55-74
+scripts/gates/mutation.ts
+  s_a1d351a2cfe605::t_b3d2894a930e49 8,19-20,22-23,26-29,31-40,42-88,103,105,118,126-130,132,148-155,168,171-177
+scripts/gates/proof/lint.txt
+  s_a1d351a2cfe605::t_d26e9f354bffb8 1
+scripts/gates/proof/selftest.txt
+  s_a1d351a2cfe605::t_de3f4131153039 1-4,6-12,14,16,18-26,28,30,32-34,36,38,40-50,52,54-56,58,60,62,64,66-68,70,72,74-80,82,84,86,88-96,98,100,102,104-152,154-186,188,190,192,194,196-232,234,236-254,256-278,280-300,302-304,306-332,342
+scripts/gates/proof/test.txt
+  s_a1d351a2cfe605::t_621afa9276bb16 9,15,21,27-45,49,51,54-55,57,62-63
+scripts/gates/selftest.ts
+  s_a1d351a2cfe605::t_26eff20ed99cb6 10-11,73-77,89,95,99-100,146-149,151-155,312-313,325,328,332-334,344,415-416,428-430,434,441-443,453-458,461-470,472,474,479,484,503-504
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "027b304765cc5a88d58f828a1cce2a629dd392d9",
+  "prompts": {},
+  "sessions": {
+    "s_233b6d928b260b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1afe1-6e07-78f2-8a32-e312349378e7",
+        "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_a1d351a2cfe605": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a77e6bd4f86950c8d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

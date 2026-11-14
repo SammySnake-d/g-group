@@ -1,0 +1,70 @@
+packages/server/proof/tests-search-real.txt
+  s_18ecd6dafbe9bc::t_7035cc9aba8d29 1-18
+packages/server/src/service.ts
+  s_18ecd6dafbe9bc::t_15e39d3ba4b035 81
+packages/server/src/consent-forward.test.ts
+  s_18ecd6dafbe9bc::t_ba86f28ee24458 1-66
+packages/server/src/search-rooms.test.ts
+  s_18ecd6dafbe9bc::t_33f4d8e2ff1bbd 1-88
+packages/server/src/receipts.test.ts
+  s_18ecd6dafbe9bc::t_560e788cd1dc75 1-163
+  s_18ecd6dafbe9bc::t_e1c8875c968e2d 164-166
+  s_18ecd6dafbe9bc::t_3dba2b6bfb424c 167-169
+packages/server/src/receipts.ts
+  s_cf00b28e8f691b::t_0da1c766067f04 20-22
+  s_cf00b28e8f691b::t_a9e62af78b685c 23-24
+  s_18ecd6dafbe9bc::t_0c9d6646cf4927 1-19,25-29
+packages/server/src/attention-group.ts
+  s_18ecd6dafbe9bc::t_0a5a7dbf66f902 1-16,20-25
+  s_cf00b28e8f691b::t_9f8bde58683780 19
+  s_cf00b28e8f691b::t_0bab2d012ed125 17-18,26
+packages/api-contract/src/entities.ts
+  s_18ecd6dafbe9bc::t_15d6edc10e3e35 641-659
+packages/server/src/attention-group.test.ts
+  s_18ecd6dafbe9bc::t_6308139974c7b0 1-167
+packages/server/src/host.ts
+  s_18ecd6dafbe9bc::t_22ba02dfc17fe5 145-147,868-870,1021-1023,1143-1148,1151-1152,1202-1206,1208-1209,1214-1217,2525-2526,2528,2637-2638,2895-2898,2922-2925,3845-3852
+  s_cf00b28e8f691b::t_2dd8c8848b86b0 3853-3855
+  s_cf00b28e8f691b::t_ca496c066b35fa 1207
+  s_18ecd6dafbe9bc::t_9445af374d578f 4678-4679,4683
+packages/server/proof/tests-search-tests.txt
+  s_18ecd6dafbe9bc::t_bd31598799a96a 1-39
+packages/server/proof/tests-search-real.ts
+  s_18ecd6dafbe9bc::t_84d0a4eee88491 1-74
+packages/server/proof/tests-search-mutations.mjs
+  s_18ecd6dafbe9bc::t_731e28d346f474 1-114
+packages/server/proof/tests-search-gateway.txt
+  s_18ecd6dafbe9bc::t_dea23fdd213c84 1-10
+packages/server/src/search.ts
+  s_18ecd6dafbe9bc::t_71790755e9740b 252-279
+  s_18ecd6dafbe9bc::t_f458c2ef8bdcf5 280
+  s_18ecd6dafbe9bc::t_bc666c889ae620 281-282
+packages/api-contract/src/api.ts
+  s_18ecd6dafbe9bc::t_b3a29b47027957 28,208-215
+receipts/feat-tests-search.json
+  s_18ecd6dafbe9bc::t_d1ca200b81dc65 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7e2816b23ea08634517d0678260c17c5d724d31d",
+  "prompts": {},
+  "sessions": {
+    "s_18ecd6dafbe9bc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad0317667723754dc",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_cf00b28e8f691b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c80b08df-c5fc-4fa3-a01c-97705d9e4783",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+packages/kernel/src/plain.test.ts
+  s_233b6d928b260b::t_4401f2e07d1759 326
+packages/kernel/src/plugins.test.ts
+  s_233b6d928b260b::t_c8b80847a6031a 1334-1352,1359-1363
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0dd6dade772f70a3a2fb25a9be73cc273264adcd",
+  "prompts": {},
+  "sessions": {
+    "s_233b6d928b260b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1afe1-6e07-78f2-8a32-e312349378e7",
+        "model": "ai-iisbo-2/[gptpro+plus]gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

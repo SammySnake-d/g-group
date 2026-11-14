@@ -1,0 +1,37 @@
+packages/server/proof/forward-link-real.ts
+  s_a19c652d723a1d::t_a859bcb33d24f4 1-98
+packages/server/proof/forward-link-mutations.txt
+  s_a19c652d723a1d::t_b6dc7f8dec5199 1-44
+packages/server/proof/forward-link-mutations.mjs
+  s_a19c652d723a1d::t_4a0d2947397e00 1-118
+packages/server/src/forward-link.test.ts
+  s_6da187c6e14fd9::t_1036a69cff5aef 139,312-313,416-417
+packages/server/proof/forward-link-tests.txt
+  s_a19c652d723a1d::t_f3cb02ff4fbd8b 1-23
+packages/adapter-pi-contact/src/read-linked.test.ts
+  s_a19c652d723a1d::t_f13c619d1fb958 95-96,103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5defff00b4b31a488b23657316bc5c4b6d3ab8da",
+  "prompts": {},
+  "sessions": {
+    "s_6da187c6e14fd9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2ee95d347ee6f575",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_a19c652d723a1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adc8f784a18a4a1b1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

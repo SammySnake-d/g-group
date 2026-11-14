@@ -1,0 +1,29 @@
+apps/desktop/src/app/overlays/Overlays.tsx
+  s_042e901c6ad028::t_0edbc1b1854d52 4,9,11,13,23-24
+apps/desktop/src/components/ui/sonner.tsx
+  s_042e901c6ad028::t_8a958b88249e2b 1-32
+apps/desktop/src/components/ui/toaster.tsx
+  s_042e901c6ad028::t_e4c58115acb68e 1-2
+apps/desktop/src/hooks/use-toast.ts
+  s_042e901c6ad028::t_58843ba6d0ae40 1-4,6,8-10,12-14,17-20,23-25,27
+apps/desktop/src/store/slices/layout.ts
+  s_042e901c6ad028::t_83d111d07fabd0 4,68
+apps/desktop/src/store/slices/messages.ts
+  s_042e901c6ad028::t_0ff95cfe8eb33a 3,22-42,132-133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b44f029b2316f754413a15629d1145b3f3b11cc2",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

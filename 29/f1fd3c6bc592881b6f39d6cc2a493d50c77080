@@ -1,0 +1,19 @@
+packages/server/src/slash-commands.ts
+  s_9d7fa6e9d65b83::t_8815f47ee9061b 1-5,8-52,55-99,102-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "29f1fd3c6bc592881b6f39d6cc2a493d50c77080",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

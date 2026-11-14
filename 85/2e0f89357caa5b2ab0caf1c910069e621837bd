@@ -1,0 +1,29 @@
+docs/proof/create-quota/README.md
+  s_9d7fa6e9d65b83::t_dbb80996626f67 1,14,16-58,62
+docs/proof/create-quota/cloud-behavior-analysis.json
+  s_9d7fa6e9d65b83::t_acddcc0bf5b6bd 1-484
+docs/proof/create-quota/cloud-behavior-verification.json
+  s_9d7fa6e9d65b83::t_dabe16f6cee4da 1-10
+docs/proof/create-quota/cloud-official-gates-verification.json
+  s_9d7fa6e9d65b83::t_4d9237fd989b7b 1-66
+docs/proof/create-quota/cloud-source-freeze.json
+  s_9d7fa6e9d65b83::t_3105cf74929e63 1-17
+receipts/feat-create-quota.json
+  s_9d7fa6e9d65b83::t_5ffd3e7dc6e9ca 12,23,26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "852e0f89357caa5b2ab0caf1c910069e621837bd",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

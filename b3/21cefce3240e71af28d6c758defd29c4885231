@@ -1,0 +1,77 @@
+packages/domain/src/model-ledger.ts
+  s_042e901c6ad028::t_1c4d7a5336d10c 1-5,7-36,46,51,55,62
+  s_377be331e17ebd::t_b2408bdf93adac 6,37-45,47-50,52-54,56-61
+packages/domain/src/model-ledger.test.ts
+  s_042e901c6ad028::t_44e974b20c9329 1-37
+packages/domain/src/model-config.test.ts
+  s_042e901c6ad028::t_abbe4c3c40213a 1-133
+packages/server/src/host.ts
+  s_042e901c6ad028::t_653aba56fb6341 16,257,280,329,341,363,415,1896-1900
+  s_377be331e17ebd::t_99c43d9967f883 28,32-34,36,38,104-105,273-274,281,284-291,303-309,311,314-317,330,333-337,342-362,364-414,417,1169-1171,1696-1705,1711,1714-1718,1857-1889
+packages/domain/src/model-config.ts
+  s_042e901c6ad028::t_d8c1d0315ccdbe 1-59,105,110,117,123,137,146-183,251
+  s_377be331e17ebd::t_f0c5638f2c8786 60-104,106-109,111-116,118-122,124-136,138-145,184-250
+packages/api-contract/src/entities.ts
+  s_042e901c6ad028::t_4c3d853e0c259f 15-63,79-80,234-239
+packages/domain/src/index.ts
+  s_042e901c6ad028::t_bb858998bba723 9-10
+packages/server/src/service.ts
+  s_042e901c6ad028::t_375f8b887a568e 119-121
+packages/api-contract/src/api.ts
+  s_042e901c6ad028::t_0b1a494725ccb0 17,50-59,73-74,248-265,269-279
+packages/server/src/models.test.ts
+  s_042e901c6ad028::t_5bfc4d6ae24154 1-190
+packages/server/src/cli.ts
+  s_377be331e17ebd::t_5ece0f364e5388 139
+packages/server/src/start.ts
+  s_377be331e17ebd::t_9e129057500517 79
+packages/server/proof/model-config-mutations.mjs
+  s_25620647d6f8eb::t_8af798f60a47c0 1-74
+receipts/feat-model-config.json
+  s_5e6dee5b83c808::t_4847b4a2a55da3 1-10,12-16
+packages/server/src/fakes.ts
+  s_377be331e17ebd::t_4676de6b210f36 142
+  s_377be331e17ebd::t_8f8d160d00f15e 44-63,69-70,83-85,88,100-114,117,139,141
+packages/server/src/model-turns.test.ts
+  s_377be331e17ebd::t_b15c7952df17c9 1-228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b321cefce3240e71af28d6c758defd29c4885231",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_5e6dee5b83c808": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28d82518-be0a-4c7b-be7e-4a0f89835986",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

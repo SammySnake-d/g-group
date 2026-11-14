@@ -1,0 +1,25 @@
+packages/adapter-pi-contact/proof/pi-protocols-mutations.mjs
+  s_a1c03f790defe9::t_4ebd5f945e83b0 1-88
+packages/adapter-pi-contact/proof/pi-protocols-mutations.txt
+  s_a1c03f790defe9::t_fca96a19d74874 1-14
+packages/server/proof/pi-protocols-real-run.mjs
+  s_a1c03f790defe9::t_8715ca8025f7b2 1-48
+packages/server/proof/pi-protocols-real.txt
+  s_a1c03f790defe9::t_4a935b2b234521 1-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "612d5735c9fc6fd0e4e2812a47f6bf9a64dbdd50",
+  "prompts": {},
+  "sessions": {
+    "s_a1c03f790defe9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a486d1455e11315cb",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

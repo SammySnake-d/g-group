@@ -1,0 +1,44 @@
+packages/domain/src/followups.test.ts
+  s_40ddef7d1d7537::t_4c150020e6c81d 1-248
+packages/domain/src/index.ts
+  s_40ddef7d1d7537::t_12bd2beb03c821 9-11
+packages/domain/src/routing.test.ts
+  s_40ddef7d1d7537::t_898568cec15964 1-57
+packages/domain/src/routing.ts
+  s_40ddef7d1d7537::t_c1e892d880938f 1-23,33-54
+  s_29fa229c8c70ee::t_ea723e566b5ad0 24-32,55-60
+packages/domain/src/authorization.test.ts
+  s_40ddef7d1d7537::t_94829ce8a37756 1-158
+  s_40ddef7d1d7537::t_96c08a81cf1901 159-161
+  s_40ddef7d1d7537::t_dbd3d58efcce90 162
+packages/domain/src/authorization.ts
+  s_29fa229c8c70ee::t_fa6c0651dcabb8 23-28,33-35,71-80,137-141,173-185
+  s_40ddef7d1d7537::t_ac9cb1e520afa5 1-22,29-32,36-70,81-136,142-172
+packages/domain/src/followups.ts
+  s_40ddef7d1d7537::t_e26b380d01d6ff 1-65,68-135,151-157,171-174,178-199,228-230
+  s_29fa229c8c70ee::t_dd15389df04b2f 66-67,136-150,158-170,175-177,200-227
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7bdec7569b88448a5bb47fc4632d0b3d9a59d5b0",
+  "prompts": {},
+  "sessions": {
+    "s_29fa229c8c70ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6f12fa99094fd0fa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_40ddef7d1d7537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

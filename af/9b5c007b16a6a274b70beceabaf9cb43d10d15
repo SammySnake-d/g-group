@@ -1,0 +1,23 @@
+packages/server/proof/chat-admin-mutations.mjs
+  s_c2951e0144c55f::t_8b9c0da3e8ecee 1-162
+packages/server/proof/chat-admin-mutations.txt
+  s_c2951e0144c55f::t_60c5be2a9b0fa9 1-39
+packages/server/proof/chat-admin-tests.txt
+  s_c2951e0144c55f::t_4cab5ad3b8843e 1-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "af9b5c007b16a6a274b70beceabaf9cb43d10d15",
+  "prompts": {},
+  "sessions": {
+    "s_c2951e0144c55f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9ddaf5ef55b639ed",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

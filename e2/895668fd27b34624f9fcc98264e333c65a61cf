@@ -1,0 +1,53 @@
+apps/desktop/e2e/cron.ui.spec.ts
+  s_960e513757cc2f::t_c049eb7b2b0485 1-256
+apps/desktop/e2e/slash.ui.spec.ts
+  s_960e513757cc2f::t_3aa7f6a620e618 108,114-115,117-119,121-122
+apps/desktop/src/App.tsx
+  s_960e513757cc2f::t_483778837f338f 5,8-9,122-123,125-127,129,594-595,598,601-611,615-616,630-633,736-737,935
+apps/desktop/src/components/CronDetail.tsx
+  s_960e513757cc2f::t_bda4dd61fc7801 1-3,5-7,10-11,13-14,18,21-22,25,28-31,35,37-38,40-50,52-68,71-72,79,92-110,116-131
+apps/desktop/src/components/CronEditor.tsx
+  s_960e513757cc2f::t_150c7a9d911379 1-269
+apps/desktop/src/components/CronList.tsx
+  s_960e513757cc2f::t_8f5f40c277f40b 1-90
+apps/desktop/src/components/GroupSide.tsx
+  s_960e513757cc2f::t_c9819becd7ac86 6-8,24,26,31-33,35,52,80,93,97,286
+apps/desktop/src/components/Helper.tsx
+  s_960e513757cc2f::t_7d8c852f0f0109 7,342
+apps/desktop/src/components/Messages.tsx
+  s_960e513757cc2f::t_2691497f5abaf9 725
+apps/desktop/src/components/Panorama.tsx
+  s_960e513757cc2f::t_636f7241ce5d9f 4,6-8,51-52,68-71,75-76,103,238-241,243,248,252-253,255,261-262,264-267,269-285,287-289,291,293-296,299,311,315,317-318,321,332-333
+apps/desktop/src/components/Slash.tsx
+  s_960e513757cc2f::t_57dcab86de41c2 10,118,123-125,127
+apps/desktop/src/components/Workbench.tsx
+  s_960e513757cc2f::t_68ad67bc2a6060 6-9,379,381-382,384,388-393,396,398,401,405-406,408-409,412
+apps/desktop/src/cronView.ts
+  s_960e513757cc2f::t_896773a9b76b16 1-78
+apps/desktop/src/ctx.ts
+  s_960e513757cc2f::t_d08ad6212af977 141-142
+apps/desktop/src/data.ts
+  s_960e513757cc2f::t_4bbbc73a7a1932 4-5,612-616,618-646,648-658
+packages/ui-core/src/cron.test.ts
+  s_960e513757cc2f::t_b451c537411505 1-282
+packages/ui-core/src/cron.ts
+  s_960e513757cc2f::t_93778b3fb1184e 1-425
+packages/ui-core/src/index.ts
+  s_960e513757cc2f::t_dabe05ae3c21c8 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e2895668fd27b34624f9fcc98264e333c65a61cf",
+  "prompts": {},
+  "sessions": {
+    "s_960e513757cc2f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8ee8c131c7dae80f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+packages/adapter-cc-compute/proof/flake-20.txt
+  s_2950c8e8f91d67::t_03ed36745b7a48 1-22
+packages/adapter-cc-compute/proof/tests.txt
+  s_2950c8e8f91d67::t_ac54375ed67f67 5,11,17,23,29,35,41,44-45,47,50-51,53,56-57,59,65,71,77,83,89,95,101,107,113,119,125,131,137,143,149,152-153,155,158-159,161,167,173,179,185,191,197,203,209,215,221,224-225,227,233,239,245,251,254-255,257,260-261,263,269,272-273,275,281,284-285,287,290-291,293,296-345,347,352
+receipts/feat-cc-compute.json
+  s_2950c8e8f91d67::t_07c4075b0b2760 2,12,17,41,43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7af5bca3f4db8eaddeb0ecfe1eb8285593d706d4",
+  "prompts": {},
+  "sessions": {
+    "s_2950c8e8f91d67": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a224e5bbe1fb8b394",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

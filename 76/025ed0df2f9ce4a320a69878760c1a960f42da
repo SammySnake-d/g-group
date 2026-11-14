@@ -1,0 +1,21 @@
+packages/server/proof/quote-chain-mutations.txt
+  s_377be331e17ebd::t_f8c5f45ed33930 1-30
+receipts/feat-g-quote-chain.json
+  s_377be331e17ebd::t_d7518960ce260d 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "76025ed0df2f9ce4a320a69878760c1a960f42da",
+  "prompts": {},
+  "sessions": {
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

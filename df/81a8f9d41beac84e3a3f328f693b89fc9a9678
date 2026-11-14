@@ -1,0 +1,33 @@
+packages/adapter-pi-contact/src/mind.ts
+  s_98f0ff8415d16e::t_96a79bb76aece2 201-205
+packages/adapter-pi-contact/src/tools.ts
+  s_98f0ff8415d16e::t_5523627545416d 5,23-26,30,150-184,197,225-226,262-264,275-278,302-309
+packages/api-contract/src/api.ts
+  s_98f0ff8415d16e::t_2beae3547b3b8c 304
+packages/api-contract/src/entities.ts
+  s_98f0ff8415d16e::t_7c9ee3e5d20be7 457-458
+packages/server/src/host.ts
+  s_98f0ff8415d16e::t_e29e0dbdeac703 144,374-375,478,491-503,993-994,1017,1329-1349,1360,1458,2055-2056,2069,2468,2503-2507,2582,2640,2851-2865,2915-2916,2935-2936,4150-4151
+packages/server/src/schedules.ts
+  s_98f0ff8415d16e::t_9fcf0753da8965 4-5,10-16,31-32,51-52,76-80,88,92,96-106,108-112,125-126,146-147,168-185,188-210,231-237,240-242,246-255,258-263,272-309,313
+packages/server/src/service.ts
+  s_98f0ff8415d16e::t_0bc579b82e750a 109,112
+packages/server/src/standing-commitments.ts
+  s_98f0ff8415d16e::t_360e846d2fd057 1-12,14-36,43-44,46-49,55,57,59,63,65-69,72-73,75-209,211,213-215,217-222,224-241,243-246,248-252
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "df81a8f9d41beac84e3a3f328f693b89fc9a9678",
+  "prompts": {},
+  "sessions": {
+    "s_98f0ff8415d16e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6ed2c2cb3b685ca0",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

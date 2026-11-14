@@ -1,0 +1,23 @@
+packages/server/proof/ac23-lease-real.txt
+  s_12ccf69de2a7ec::t_f9217c94ba60c1 1-27
+packages/server/proof/ac23-real-run.ts
+  s_12ccf69de2a7ec::t_f135e6b2dca632 1-58
+receipts/feat-compute-lease.json
+  s_12ccf69de2a7ec::t_9032df96035401 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "44d58c04e49b26807b99c050bcd8765db319b36b",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

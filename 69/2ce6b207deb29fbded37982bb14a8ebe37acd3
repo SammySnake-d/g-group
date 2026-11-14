@@ -1,0 +1,105 @@
+docs/proof/retract-disclosure/author-baseline-verification.json
+  s_9d7fa6e9d65b83::t_e204a315d40b71 1-101
+docs/proof/retract-disclosure/README.md
+  s_9d7fa6e9d65b83::t_e204a315d40b71 1-19
+docs/proof/retract-disclosure/coverage-index.json
+  s_9d7fa6e9d65b83::t_e204a315d40b71 1-76
+receipts/feat-retract-side-effect-disclosure.json
+  s_9d7fa6e9d65b83::t_e204a315d40b71 7-8,27-29
+docs/proof/retract-disclosure/author-scope.json
+  s_9d7fa6e9d65b83::t_ba971c198bde57 1-9
+docs/proof/retract-disclosure/cloud-config.json
+  s_9d7fa6e9d65b83::t_9376cd612e1586 1-11
+docs/proof/retract-disclosure/cloud-out/checkout.log
+  s_9d7fa6e9d65b83::t_a8f754c0c36c2d 1
+docs/proof/retract-disclosure/cloud-out/clone.log
+  s_9d7fa6e9d65b83::t_e79e1437843373 1
+docs/proof/retract-disclosure/cloud-out/dependency-regression.log
+  s_9d7fa6e9d65b83::t_a641ff5b970378 1-94
+docs/proof/retract-disclosure/cloud-out/freeze.json
+  s_9d7fa6e9d65b83::t_d77c5cc055d552 1-532
+docs/proof/retract-disclosure/cloud-out/full.log
+  s_9d7fa6e9d65b83::t_c2106d7a8d444c 1-9031
+docs/proof/retract-disclosure/cloud-out/gate-decisions.json
+  s_9d7fa6e9d65b83::t_6de4dd091305d2 1-13
+docs/proof/retract-disclosure/cloud-out/lint.log
+  s_9d7fa6e9d65b83::t_afface5a96f65c 1
+docs/proof/retract-disclosure/cloud-out/mechanical-gates.log
+  s_9d7fa6e9d65b83::t_b7b275ec3fb18b 1-72
+docs/proof/retract-disclosure/cloud-out/mutations.log
+  s_9d7fa6e9d65b83::t_1c02992004ceb8 1-15
+docs/proof/retract-disclosure/cloud-out/mutations/M01.tap
+  s_9d7fa6e9d65b83::t_a9bbbe370e5fc0 1-82
+docs/proof/retract-disclosure/cloud-out/mutations/M02.tap
+  s_9d7fa6e9d65b83::t_815ad1f97a5724 1-95
+docs/proof/retract-disclosure/cloud-out/mutations/M03.tap
+  s_9d7fa6e9d65b83::t_1d963eaabe9cf5 1-95
+docs/proof/retract-disclosure/cloud-out/mutations/M04.tap
+  s_9d7fa6e9d65b83::t_ca31192bd0c5e5 1-82
+docs/proof/retract-disclosure/cloud-out/mutations/M05.tap
+  s_9d7fa6e9d65b83::t_f52238ee0d8167 1-62
+docs/proof/retract-disclosure/cloud-out/mutations/M06.tap
+  s_9d7fa6e9d65b83::t_5b54f3745b38ef 1-46
+docs/proof/retract-disclosure/cloud-out/mutations/M07.tap
+  s_9d7fa6e9d65b83::t_7a5f67fcd08aa5 1-62
+docs/proof/retract-disclosure/cloud-out/mutations/M08.tap
+  s_9d7fa6e9d65b83::t_da9f8ae2cf7d53 1-50
+docs/proof/retract-disclosure/cloud-out/mutations/M09.tap
+  s_9d7fa6e9d65b83::t_e6fb475e752e17 1-71
+docs/proof/retract-disclosure/cloud-out/mutations/M10.tap
+  s_9d7fa6e9d65b83::t_60b30ca5156b2e 1-46
+docs/proof/retract-disclosure/cloud-out/mutations/M11.tap
+  s_9d7fa6e9d65b83::t_4ae33a0be019e2 1-50
+docs/proof/retract-disclosure/cloud-out/mutations/M12.tap
+  s_9d7fa6e9d65b83::t_7f6a7cd6aa44df 1-336
+docs/proof/retract-disclosure/cloud-out/mutations/baseline.tap
+  s_9d7fa6e9d65b83::t_e63c32004b2bbc 1-34
+docs/proof/retract-disclosure/cloud-out/mutations/calibration-assertion.tap
+  s_9d7fa6e9d65b83::t_5d992e0740b58b 1-34
+docs/proof/retract-disclosure/cloud-out/mutations/calibration-load-error.tap
+  s_9d7fa6e9d65b83::t_73657df1913210 1-40
+docs/proof/retract-disclosure/cloud-out/mutations/calibration-runtime-error.tap
+  s_9d7fa6e9d65b83::t_3c8845ffd00fb0 1-26
+docs/proof/retract-disclosure/cloud-out/mutations/calibration-timeout.tap
+  s_9d7fa6e9d65b83::t_6039d2665bc068 1
+docs/proof/retract-disclosure/cloud-out/mutations/mutations.json
+  s_9d7fa6e9d65b83::t_29b3874a996987 1-393
+docs/proof/retract-disclosure/cloud-out/mutations/parser-calibration.json
+  s_9d7fa6e9d65b83::t_ae9295f7a4b2c0 1-88
+docs/proof/retract-disclosure/cloud-out/npm-green.log
+  s_9d7fa6e9d65b83::t_cc595661fb4a98 1-13
+docs/proof/retract-disclosure/cloud-out/npm-red.log
+  s_9d7fa6e9d65b83::t_0828c13d474555 1-8
+docs/proof/retract-disclosure/cloud-out/official-image-inspect.log
+  s_9d7fa6e9d65b83::t_7bb07d1a66af6c 1-52
+docs/proof/retract-disclosure/cloud-out/red-worktree.log
+  s_9d7fa6e9d65b83::t_4a02fbbeca51e0 1-2
+docs/proof/retract-disclosure/cloud-out/result.json
+  s_9d7fa6e9d65b83::t_ac0a0b6948ae33 1-206
+docs/proof/retract-disclosure/cloud-out/same-eight-green.log
+  s_9d7fa6e9d65b83::t_0f7669d22c2687 1-60
+docs/proof/retract-disclosure/cloud-out/same-eight-red.log
+  s_9d7fa6e9d65b83::t_dfe43f755198ae 1-120
+docs/proof/retract-disclosure/cloud-out/status.json
+  s_9d7fa6e9d65b83::t_54e10de787f1c7 1-197
+docs/proof/retract-disclosure/cloud-run.py
+  s_9d7fa6e9d65b83::t_c90c9aacdaf459 1-56
+docs/proof/retract-disclosure/historical-cloud-summary.json
+  s_9d7fa6e9d65b83::t_772bc5fb7e0dc2 1-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "692ce6b207deb29fbded37982bb14a8ebe37acd3",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+packages/adapter-cc-compute/proof/mutations.mjs
+  h_f33e46a035b77c 90-94
+packages/adapter-cc-compute/proof/mutations.txt
+  h_f33e46a035b77c 1-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "46c5dbf5ef4d3a5b0aad6d91987922532b7cc9cd",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

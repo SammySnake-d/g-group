@@ -1,0 +1,25 @@
+packages/domain/src/cas.test.ts
+  s_22ba9b1b818602::t_3826c59c6583fa 49-51,53-54
+packages/domain/src/cas.ts
+  s_22ba9b1b818602::t_382cdd8df13a6f 1,7-9
+packages/domain/src/log.test.ts
+  s_22ba9b1b818602::t_dc1b55ffff574a 88-104,108-114
+packages/domain/src/log.ts
+  s_22ba9b1b818602::t_40f6d9a5552859 1-2,5,7-10,14,16-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "845f26687146c75020d6217ca425757ebdf0883d",
+  "prompts": {},
+  "sessions": {
+    "s_22ba9b1b818602": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91b17b26-1e2d-4bc5-904f-9d3aab1e0f38",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

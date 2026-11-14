@@ -1,0 +1,56 @@
+.github/workflows/self-check.yml
+  h_f33e46a035b77c 13-14,21-22
+.github/workflows/trusted-gates.yml
+  h_f33e46a035b77c 36-37
+README.md
+  h_f33e46a035b77c 19,34,36,47-52
+docs/RECEIPT.md
+  h_f33e46a035b77c 26,28
+docs/spec/技术栈与工程规则.md
+  h_f33e46a035b77c 3,5-6,9,11-12,59,61,64,66,69-70,75,78,87,90-104
+docs/spec/需求文档.md
+  h_f33e46a035b77c 3,226-235,1621-1835,1907-1909,1924,2019-2059,2062,2064-2065,2069,2071,2212-2217,2222,2404-2411,3801-3858,3864,3869-3870
+docs/spec/验收文档-v0.1.md
+  h_f33e46a035b77c 3-5,43,90,152-160,243-244,248-249
+package-lock.json
+  h_f33e46a035b77c 11-13,261-275
+package.json
+  h_f33e46a035b77c 23-25
+receipts/chore-gates.json
+  h_f33e46a035b77c 66,68
+scripts/gates/gates.ts
+  h_f33e46a035b77c 7,12-15,47,55,68-96,99-143,145,152-180,183,188-189,191-194,196,198,205,207-209,211-221,229,235-237,244-251,254,259-260,266,275-276,283-298,308-309,315,318,329-383,385,392-403,405,412,417,420-427,435-456,458,463-491
+scripts/gates/lib.ts
+  h_f33e46a035b77c 46-47,70-138,147-150,190-191,197,203-204,206,210,212,215,218,221
+scripts/gates/mutation.ts
+  h_f33e46a035b77c 8,17,25-27,30-48,55,62,71
+scripts/gates/policy.json
+  h_f33e46a035b77c 1
+scripts/gates/proof/lint.txt
+  h_f33e46a035b77c 1-2
+scripts/gates/proof/mutation.txt
+  h_f33e46a035b77c 6,11-12,15-32
+scripts/gates/proof/selftest.txt
+  h_f33e46a035b77c 27,31,33-77,86
+scripts/gates/proof/typecheck.txt
+  h_f33e46a035b77c 1
+scripts/gates/run-all.ts
+  h_f33e46a035b77c 10,14,25-27,29-30,37-39
+scripts/gates/selftest.ts
+  h_f33e46a035b77c 9,36-41,50,65,70-91,102,104-105,130-131,137-138,147-151,184-238,246-249
+scripts/gates/testlint.ts
+  h_f33e46a035b77c 11-12,102-103,114-143,147-189,191-192,194-195,234-235
+scripts/merge.sh
+  h_f33e46a035b77c 10-12,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "582796fa56c4ea4d79de7cf223d811be9026b016",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

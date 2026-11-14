@@ -1,0 +1,19 @@
+receipts/feat-task-lifecycle.json
+  s_e35be614b37bea::t_dd6547a29f98da 60-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "44c5ab6f67c9528ac47132f6384d1152f64d05ac",
+  "prompts": {},
+  "sessions": {
+    "s_e35be614b37bea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ab1f-7839-72e2-afb1-d71409a8ddd2",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+packages/kernel/src/retry-policy.ts
+  s_b868c547610ebf::t_d9774a5b0f72e3 320-323,325-330,336-338
+packages/kernel/src/run-ledger.ts
+  s_b868c547610ebf::t_26aa2c2db0a781 15,38-39
+packages/server/src/host.ts
+  s_b868c547610ebf::t_01f48b66f2211d 142,224,450,539
+packages/server/src/runs.ts
+  s_b868c547610ebf::t_2ae4c03d9fa72a 21-23,34,36,65-68,80-90,109-111,119,125-126,347,352,372-375,389
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "886f99c79ddbce311383eb6604e9b9afeab16033",
+  "prompts": {},
+  "sessions": {
+    "s_b868c547610ebf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a2a925fa-da86-4354-83c7-0c217a13e607",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

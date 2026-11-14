@@ -1,0 +1,35 @@
+packages/server/src/chat-admin.test.ts
+  s_7b693530575e27::t_ea2a619dfc34fd 1-489
+packages/server/src/service.ts
+  s_7b693530575e27::t_a829261973608a 69-71,76
+packages/domain/src/chat-admin.test.ts
+  s_7b693530575e27::t_8ba94d5be3ed6f 1-57
+packages/api-contract/src/entities.ts
+  s_7b693530575e27::t_2f976847bfe2d7 117-125
+packages/adapter-sqlite/src/store.ts
+  s_7b693530575e27::t_f12686cfd59c0c 4,104-105,107
+packages/api-contract/src/api.ts
+  s_7b693530575e27::t_8cdd18d8351864 120-136,176,178-185
+packages/api-contract/src/events.ts
+  s_7b693530575e27::t_fa8f88b9debc5f 15-16
+packages/domain/src/log.ts
+  s_7b693530575e27::t_5fc27148c15555 6-10,31-45,67-68,72-75,79,82-83
+packages/server/src/host.ts
+  s_7b693530575e27::t_5bff66b97d3a83 1297-1312
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ed7f054ddb1924122fe9e7bef321a12c48386152",
+  "prompts": {},
+  "sessions": {
+    "s_7b693530575e27": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a79ed97788f1d1b4b",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

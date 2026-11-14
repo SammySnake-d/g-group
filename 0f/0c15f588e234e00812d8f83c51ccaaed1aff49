@@ -1,0 +1,25 @@
+packages/adapter-cc-compute/src/adapter.ts
+  s_56d86eb5914775::t_e1728df2cc6ce1 15,23-25,27-29,188-189,292-294,297,318,394,503-504
+packages/adapter-cc-compute/src/isolation.ts
+  s_56d86eb5914775::t_eb54f8c0aa756b 1-78
+packages/adapter-cc-compute/src/resident.ts
+  s_56d86eb5914775::t_2c39fbc9050dbb 16-21,30,32-34,36-37,54,115-116,119,127-128,135,138-139,149-151,155-156,161-162,165,187-188,210-211,213-214,282,284-285,414-416,423,450-453,461,463,476-482,535-538,545-546,599-600,602,608-609,659-665,681,683-710
+packages/adapter-cc-compute/src/stop-confirm.ts
+  s_56d86eb5914775::t_24b65b945e5b1b 1-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0f0c15f588e234e00812d8f83c51ccaaed1aff49",
+  "prompts": {},
+  "sessions": {
+    "s_56d86eb5914775": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1ead79f6fd1706fc",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

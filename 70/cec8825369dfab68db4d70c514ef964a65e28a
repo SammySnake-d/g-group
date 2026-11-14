@@ -1,0 +1,19 @@
+receipts/feat-contact-actions.json
+  s_c5600ddfc2a370::t_0c1cc3966733f3 1-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "70cec8825369dfab68db4d70c514ef964a65e28a",
+  "prompts": {},
+  "sessions": {
+    "s_c5600ddfc2a370": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a82d860e88f191a64",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

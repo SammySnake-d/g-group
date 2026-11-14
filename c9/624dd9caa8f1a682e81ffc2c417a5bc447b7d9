@@ -1,0 +1,29 @@
+packages/server/src/chat-ops.test.ts
+  s_960e513757cc2f::t_1aeb28560bf033 1-129
+packages/server/src/db.ts
+  s_960e513757cc2f::t_16c7b370488ec7 43
+packages/server/src/host.test.ts
+  s_960e513757cc2f::t_2570f0fa6b88c4 261-262
+packages/server/src/host.ts
+  s_960e513757cc2f::t_89095a031cc613 6-8,134,145,262,266-268,449-451,489,499,506,558-559,562-563,601-709,859-866,869-890,934
+packages/server/src/service.ts
+  s_960e513757cc2f::t_bb017696cee192 38-41,48,55-57,59,67-72,74
+receipts/feat-chat-ops.json
+  s_960e513757cc2f::t_6f918cd18fc694 1-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c9624dd9caa8f1a682e81ffc2c417a5bc447b7d9",
+  "prompts": {},
+  "sessions": {
+    "s_960e513757cc2f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8ee8c131c7dae80f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

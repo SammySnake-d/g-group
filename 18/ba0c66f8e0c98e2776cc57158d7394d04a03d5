@@ -1,0 +1,83 @@
+packages/domain/src/model-ledger.ts
+  s_042e901c6ad028::t_1c4d7a5336d10c 1-5,7-36,46,51,55,62
+  s_377be331e17ebd::t_b2408bdf93adac 6,37-45,47-50,52-54,56-61
+packages/domain/src/model-ledger.test.ts
+  s_042e901c6ad028::t_44e974b20c9329 1-37
+packages/domain/src/model-config.test.ts
+  s_042e901c6ad028::t_abbe4c3c40213a 1-133
+packages/server/src/host.ts
+  s_042e901c6ad028::t_653aba56fb6341 293,316,365,377,399,424,451,2107-2111
+  s_377be331e17ebd::t_99c43d9967f883 35,39-41,43,45,131-132,309-310,317,320-327,339-345,347,350-353,366,369-373,378-398,400-450,453,1274-1276,1889-1898,1904,1907-1911,2068-2100
+packages/domain/src/model-config.ts
+  s_042e901c6ad028::t_d8c1d0315ccdbe 1-59,105,110,117,123,137,146-183,251
+  s_377be331e17ebd::t_f0c5638f2c8786 60-104,106-109,111-116,118-122,124-136,138-145,184-250
+packages/api-contract/src/entities.ts
+  s_042e901c6ad028::t_4c3d853e0c259f 15-63,79-80,236-241
+packages/domain/src/index.ts
+  s_042e901c6ad028::t_bb858998bba723 10-11
+packages/server/src/service.ts
+  s_042e901c6ad028::t_375f8b887a568e 126-128
+packages/api-contract/src/api.ts
+  s_042e901c6ad028::t_0b1a494725ccb0 19,54-60,62-64,80-81,289-306,310-320
+packages/server/src/models.test.ts
+  s_042e901c6ad028::t_5bfc4d6ae24154 1-190
+packages/server/src/cli.ts
+  s_377be331e17ebd::t_5ece0f364e5388 139
+packages/server/src/start.ts
+  s_377be331e17ebd::t_9e129057500517 79
+packages/server/proof/model-config-mutations.mjs
+  s_25620647d6f8eb::t_8af798f60a47c0 1-74
+receipts/feat-model-config.json
+  s_5e6dee5b83c808::t_4847b4a2a55da3 1-10,12-16
+  s_25620647d6f8eb::t_b2805802a9fe7d 11
+packages/server/proof/model-config-tests.txt
+  s_25620647d6f8eb::t_e581755f527540 1-21,2-21
+packages/server/proof/model-config-mutations.txt
+  s_25620647d6f8eb::t_2aa5fb2e61be7b 1-31
+packages/server/src/fakes.ts
+  s_377be331e17ebd::t_8f8d160d00f15e 44-63,69,71-72,85-87,90,102-104,106-117,120,142,144
+  s_377be331e17ebd::t_4676de6b210f36 145
+  s_377be331e17ebd::t_bd18f0955c212f 150
+packages/server/src/model-turns.test.ts
+  s_377be331e17ebd::t_b15c7952df17c9 1-227
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "18ba0c66f8e0c98e2776cc57158d7394d04a03d5",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_25620647d6f8eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "616edc61-14d8-4e9e-9519-ec8c2abc9af7",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_5e6dee5b83c808": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28d82518-be0a-4c7b-be7e-4a0f89835986",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

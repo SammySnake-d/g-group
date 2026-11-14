@@ -1,0 +1,16 @@
+receipts/feat-sqlite-storage.json
+  h_f33e46a035b77c 45-52
+reviews/feat-sqlite-storage.md
+  h_f33e46a035b77c 144-197
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a2bc846b0ce36e4574f4cf50e8101a4cf40bf299",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

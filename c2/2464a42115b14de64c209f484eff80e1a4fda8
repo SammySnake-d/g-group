@@ -1,0 +1,47 @@
+apps/desktop/package-lock.json
+  s_042e901c6ad028::t_8b6cb02280b732 11-12,33,68-116,158-172,307-387,411-461,491-520,753-812,854-1000,1008-1010,1167-1221,1255-1352,1549-1577,1670-1687,1718-1732,4049-4125,4490-4495
+apps/desktop/package.json
+  s_042e901c6ad028::t_4f775f2a456055 20-21,42
+apps/desktop/src/components/ui/checkbox.tsx
+  s_042e901c6ad028::t_4f0ed32231d88d 4
+apps/desktop/src/components/ui/context-menu.tsx
+  s_042e901c6ad028::t_afbe8e469235ac 4,49,65
+apps/desktop/src/components/ui/dialog.tsx
+  s_042e901c6ad028::t_2fa7a01e9292c6 2,22,39
+apps/desktop/src/components/ui/dropdown-menu.tsx
+  s_042e901c6ad028::t_be81f8dc1928c0 4,50,69
+apps/desktop/src/components/ui/popover.tsx
+  s_042e901c6ad028::t_4a379d5e2f9bf5 4,24
+apps/desktop/src/components/ui/segmented.tsx
+  s_042e901c6ad028::t_acc459d1f5e14b 2
+apps/desktop/src/components/ui/slider.tsx
+  s_042e901c6ad028::t_96fccaaae65a53 2
+apps/desktop/src/components/ui/switch.tsx
+  s_042e901c6ad028::t_be6fc65070f03a 4,22
+apps/desktop/src/components/ui/toggle.tsx
+  s_042e901c6ad028::t_db0f5974461149 2
+apps/desktop/src/components/ui/tooltip.tsx
+  s_042e901c6ad028::t_82b854959df356 2,21
+apps/desktop/src/config/motion.ts
+  s_042e901c6ad028::t_c3bd357f0942aa 1-15,18-19,21-31
+apps/desktop/src/index.css
+  s_042e901c6ad028::t_26259669540c09 69,72-74
+apps/desktop/src/main.tsx
+  s_042e901c6ad028::t_085ce004beae57 5,10-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c22464a42115b14de64c209f484eff80e1a4fda8",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

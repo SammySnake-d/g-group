@@ -1,0 +1,25 @@
+apps/desktop/proof/q09-packaged/README.md
+  s_550783c6569767::t_2a5646ddff5bc1 1-59
+apps/desktop/proof/q09-packaged/accept-t8.mjs
+  s_550783c6569767::t_47ab292f0d8230 1-434
+apps/desktop/proof/q09-packaged/check-t8a.py
+  s_550783c6569767::t_b52cb127ed3f84 1-144
+apps/desktop/proof/q09-packaged/install-copy.sh
+  s_550783c6569767::t_df0b934f5dd19f 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a82a8c60829340fa978985efcc35aa7a4bbc29d3",
+  "prompts": {},
+  "sessions": {
+    "s_550783c6569767": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaad21c7ff06ce574",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

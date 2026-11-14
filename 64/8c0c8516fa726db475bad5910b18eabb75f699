@@ -1,0 +1,21 @@
+receipts/feat-cc-resident.json
+  s_12ccf69de2a7ec::t_6a39ae7238e51d 1-17
+packages/adapter-cc-compute/proof/resident-mutations.txt
+  s_12ccf69de2a7ec::t_1f997b73e79bf5 1-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "648c0c8516fa726db475bad5910b18eabb75f699",
+  "prompts": {},
+  "sessions": {
+    "s_12ccf69de2a7ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8a7aa23-47af-454b-95e5-c7f8adf89c7c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

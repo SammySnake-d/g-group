@@ -1,0 +1,37 @@
+packages/server/src/quote-chain.test.ts
+  s_042e901c6ad028::t_ae8fdcb333afaf 1-102,105-108,110,112,114,116-118,121-122
+  s_042e901c6ad028::t_7f35e612de0b7f 103-104
+  s_042e901c6ad028::t_cbcd5603b09189 109
+  s_042e901c6ad028::t_74d0d8e3b5d207 111
+  s_042e901c6ad028::t_b92ede404db614 113
+  s_042e901c6ad028::t_28bd3429482f46 115
+  s_042e901c6ad028::t_6fc8a5d707e18d 119-120
+packages/adapter-pi-contact/src/mind.test.ts
+  s_042e901c6ad028::t_2d4416ef13d33f 88,101,454-470
+packages/kernel/src/runtime-ports.ts
+  s_042e901c6ad028::t_03131ac29dc9f7 126-127
+packages/kernel/src/fixtures/quote-chain-2071.json
+  s_042e901c6ad028::t_2aab3252ddca3b 1-111
+packages/kernel/src/quote-chain.test.ts
+  s_042e901c6ad028::t_f062cb67e35ad2 1-99
+packages/kernel/src/quote-chain.ts
+  s_042e901c6ad028::t_0f12ce1883245b 1-15
+packages/kernel/src/index.ts
+  s_042e901c6ad028::t_0c19287f5b7a32 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bd56509a8cac657443906c5c8b9b25d2bf339707",
+  "prompts": {},
+  "sessions": {
+    "s_042e901c6ad028": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2bb962-50a0-4fe9-8da9-dc6f154634de",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+packages/server/src/recovery.ts
+  s_e21a7b024276d2::t_f6663ecff21e71 1-2,10-15
+packages/domain/src/followups.ts
+  s_e21a7b024276d2::t_f6663ecff21e71 47,97,199,219,223,226-227,238,281-282,303,312
+packages/server/src/host.ts
+  s_e21a7b024276d2::t_f6663ecff21e71 1651,3218,3269,4557,4675,4690-4691,4695,4898,4900,4926
+packages/server/src/worktree.ts
+  s_e21a7b024276d2::t_f6663ecff21e71 12,114-116
+packages/server/src/recovery-host.test.ts
+  s_e21a7b024276d2::t_12a0926ce1b3fe 28,49,140,144,148,152,156
+packages/server/src/recovery.test.ts
+  s_e21a7b024276d2::t_12a0926ce1b3fe 21,34,58-61,73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8819f7cbef6ae909cec5ddb1f1f52c25332b7495",
+  "prompts": {},
+  "sessions": {
+    "s_e21a7b024276d2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c6e6-9a06-7441-b5e9-c070695d078b",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

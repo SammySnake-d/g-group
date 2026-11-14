@@ -1,0 +1,45 @@
+packages/adapter-pi-contact/src/helper-mind.ts
+  s_78cbadecffd7bf::t_bf2176479226d7 1-10,14-223
+packages/kernel/src/csv.ts
+  s_78cbadecffd7bf::t_e4e9f77805fdb2 21-131
+packages/kernel/src/helper-mcp.ts
+  s_78cbadecffd7bf::t_d88dc0572c83ae 5,25-62,64-75
+packages/kernel/src/helper-ops.ts
+  s_78cbadecffd7bf::t_2b0a5069936816 31-298,300-304,306-308,355-368
+packages/server/skills/helper/SKILL.md
+  s_78cbadecffd7bf::t_8f031d1ccf7e35 1-43
+packages/server/src/cli.ts
+  s_78cbadecffd7bf::t_68c13e3beb9c8e 9-15,21,23-26,28,49-50,55-59,62-66,73,75-83,156-213,215-220,247-250
+packages/server/src/fakes.ts
+  s_78cbadecffd7bf::t_ff43ff5adf8fe1 209-258
+packages/server/src/helper-agent.ts
+  s_78cbadecffd7bf::t_b613be32f40e5d 1-10,12-16,19,23-31,37-46,48-49,51-52,54-77,81,85-88,91-101,103-111,113-116,118-137,139-275,279-285
+packages/server/src/helper-mcp-stdio.ts
+  s_78cbadecffd7bf::t_5e7f30a90837b4 1-4,8-30
+packages/server/src/helper.ts
+  s_78cbadecffd7bf::t_2ea298648b860d 49,57-58,98-103,106
+packages/server/src/host.ts
+  s_78cbadecffd7bf::t_380014b1613d54 759-766,768-780,783-785,788-790,792-797
+packages/server/src/service.ts
+  s_78cbadecffd7bf::t_daf5c77048d98f 17,155-173,178
+packages/server/src/start.ts
+  s_78cbadecffd7bf::t_7ea490ea233bea 7,9,43-45,48-52,76-84,97
+packages/server/src/task-import.ts
+  s_78cbadecffd7bf::t_0e6a0abba8bea9 5-6,21,23,25-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a9d4478f56a78965f3dc25f1cf41fe69a86ebfdc",
+  "prompts": {},
+  "sessions": {
+    "s_78cbadecffd7bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9caabaa2a69c3a1c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

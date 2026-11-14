@@ -1,0 +1,35 @@
+packages/kernel/proof/lint-r16.txt
+  s_b07977d47b253e::t_406def351c3671 1
+packages/kernel/proof/mutations-canary.txt
+  s_b07977d47b253e::t_765c5778a2da68 1
+packages/kernel/proof/mutations.txt
+  s_b07977d47b253e::t_55d9db3ff2433d 1-204
+packages/kernel/proof/red-r16.txt
+  s_b07977d47b253e::t_f297921b246917 1-4375
+packages/kernel/proof/tests-node24.txt
+  s_b07977d47b253e::t_74209b68d48022 1-1480
+packages/kernel/proof/tests.txt
+  s_b07977d47b253e::t_8e48b47740fe40 1-1480
+scripts/gates/proof/mutation-r15.txt
+  s_b07977d47b253e::t_ca26a5e673140b 1-5
+scripts/gates/proof/r16-local.txt
+  s_b07977d47b253e::t_a9f07e60e65604 1-15
+scripts/gates/proof/selftest.txt
+  s_b07977d47b253e::t_d18bf8f2b1e7f7 104-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "acbc192330faad1c10369f8412ae18b56324ae45",
+  "prompts": {},
+  "sessions": {
+    "s_b07977d47b253e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c14f-fcec-7dd3-93dc-f113b9f16247",
+        "model": "shayu/gpt-6-astra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

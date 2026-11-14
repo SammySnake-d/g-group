@@ -1,0 +1,9 @@
+receipts/feat-e-drafts.json
+  253de69c0489f84a 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "44221d9a1f6e7914f373895042fd622fa310a4c2",
+  "prompts": {}
+}

@@ -1,0 +1,14 @@
+packages/server/proof/artifacts-mutations.mjs
+  h_f33e46a035b77c 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7777ae3feb60919a98bfa7063f77a02b61419524",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

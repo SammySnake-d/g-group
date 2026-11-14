@@ -1,0 +1,27 @@
+packages/server/proof/ac29-capability-isolation.txt
+  s_28bebc745289eb::t_eee95ffe5881df 1-28
+packages/server/proof/ac29-real-run.ts
+  s_28bebc745289eb::t_535ed681f5f8fa 1-64
+packages/server/proof/echo-mcp.mjs
+  s_28bebc745289eb::t_779b534f1ea865 1-10
+packages/server/proof/v02-config-dir.txt
+  s_28bebc745289eb::t_5cac488cb9ef27 1-31
+receipts/feat-compute-iso.json
+  s_28bebc745289eb::t_fae04729557108 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f7a3e1bf1b36a28bc77a243d44cf5cc21d456cfe",
+  "prompts": {},
+  "sessions": {
+    "s_28bebc745289eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b99b-633e-7c21-9aa1-6f2e095428f2",
+        "model": "workbuddy-ai/deepseek-v4.1-flash-sg"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

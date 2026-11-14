@@ -1,0 +1,14 @@
+receipts/feat-t177-a-recovery.json
+  h_f33e46a035b77c 13-14,21-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f3f58c3349da4c2a4f7dc38a31a28af5a0835e64",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

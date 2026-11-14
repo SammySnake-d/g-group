@@ -1,0 +1,21 @@
+scripts/gates/mutation.ts
+  s_2da8da5ee5c3e1::t_c418dceede8533 118-124
+scripts/gates/selftest.ts
+  s_2da8da5ee5c3e1::t_4c2c12b962b8fa 704-712
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d81d3ec7c73c3ff6e070996a91211f34268d4a18",
+  "prompts": {},
+  "sessions": {
+    "s_2da8da5ee5c3e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a84829319f2a5c027",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+apps/desktop/proof/live-data/group-red.txt
+  s_54fdb48636ffee::t_f023744e2d0b34 1-4
+apps/desktop/src/components/messages/grouping.ts
+  s_54fdb48636ffee::t_53402094a55104 20-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7b9cf18c7160f1d760bf6f2c20c2f75a9d84630f",
+  "prompts": {},
+  "sessions": {
+    "s_54fdb48636ffee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "16b87c7b-b9f6-4a8a-92d0-b64d3392ff32",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

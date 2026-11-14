@@ -1,0 +1,31 @@
+packages/adapter-cc-compute/src/attachments.test.ts
+  s_40ddef7d1d7537::t_a06ce09a04f20d 1-81
+packages/adapter-cc-compute/src/events.ts
+  s_40ddef7d1d7537::t_77a429aeba341a 21
+packages/adapter-cc-compute/src/types.ts
+  s_40ddef7d1d7537::t_e74f27fe793934 95
+packages/server/src/fakes.ts
+  s_40ddef7d1d7537::t_064742e41fca6b 38,45,83-93
+packages/server/src/help.test.ts
+  s_40ddef7d1d7537::t_a9dc229c408757 1-296
+packages/server/src/host.test.ts
+  s_40ddef7d1d7537::t_e19182e702de23 10,12,42,263,286-287
+packages/server/src/host.ts
+  s_40ddef7d1d7537::t_88b3d2d99d1f89 186-187
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "568f94c7bd68b4af78cc48e72e60bb08b342afea",
+  "prompts": {},
+  "sessions": {
+    "s_40ddef7d1d7537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

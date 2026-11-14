@@ -1,0 +1,35 @@
+package.json
+  s_a1d351a2cfe605::t_e082e9be97ba61 11
+receipts/chore-gates.json
+  s_a1d351a2cfe605::t_9e9ed5d7324e10 66
+scripts/gates/gates.ts
+  s_a1d351a2cfe605::t_da10660fc3651e 561,566-567
+scripts/gates/mutation.ts
+  s_a1d351a2cfe605::t_77a496711f71b2 72-75
+scripts/gates/proof/lint.txt
+  s_a1d351a2cfe605::t_b9352c07b98e43 1
+scripts/gates/proof/mutation.txt
+  s_a1d351a2cfe605::t_9df1ff6ba9a3a5 1,3-69,71-80,82-83,85-88,90-94,98-100,102-104,106-110,112-115,117-122
+scripts/gates/proof/selftest.txt
+  s_a1d351a2cfe605::t_8cdd3b3d553f40 14-25,27,30-70,77-83,88-95,97-104,108,110,113-118,120,127-133,135-137,145,156
+scripts/gates/proof/test.txt
+  s_a1d351a2cfe605::t_66cce2ce8baf3a 1-46
+scripts/gates/test-runner.ts
+  s_a1d351a2cfe605::t_3d8cbf07e14ddd 1-4,6-16,18-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d95eb70da95d8f517a3712db1f9a3d30b429c185",
+  "prompts": {},
+  "sessions": {
+    "s_a1d351a2cfe605": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a77e6bd4f86950c8d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/server/proof/memory-hygiene-mutations.mjs
+  s_11402f16ea5415::t_6b53c9b18cd14b 1-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2f463bcfa00febaff3428b7c7a65f1567ae51218",
+  "prompts": {},
+  "sessions": {
+    "s_11402f16ea5415": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a7e51a4d4c085a4d6",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

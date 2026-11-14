@@ -1,0 +1,23 @@
+packages/domain/proof/contact-helper-tests.txt
+  s_36f8aff8cdaf05::t_0550f381b3bec1 1-276
+packages/domain/src/contact.test.ts
+  s_36f8aff8cdaf05::t_97098418c92fc4 963-966,978-980,983,985-986,1026,1029,1031
+packages/domain/src/helper.test.ts
+  s_36f8aff8cdaf05::t_a4d32be7a714c1 164,175,177,215,217,236
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2e318548713099f32d1e8389faa1e4f1b09fa037",
+  "prompts": {},
+  "sessions": {
+    "s_36f8aff8cdaf05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a528004857a3a0bf5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

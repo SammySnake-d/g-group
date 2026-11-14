@@ -1,0 +1,27 @@
+packages/server/src/host.ts
+  s_b868c547610ebf::t_978f158e078951 92,224-225
+packages/kernel/src/retry-policy.ts
+  s_b868c547610ebf::t_d41bc9dcd92894 320-324
+packages/kernel/src/wake-policy.test.ts
+  s_b868c547610ebf::t_f1f7389468b149 1-47
+packages/server/src/runs.ts
+  s_b868c547610ebf::t_225644330fb60f 20,63-64
+packages/server/src/run-wake.test.ts
+  s_b868c547610ebf::t_a413a5e676cb10 1-288
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2f82a486b5f98f68d54ba25cc0beb1b835b8ee2c",
+  "prompts": {},
+  "sessions": {
+    "s_b868c547610ebf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a2a925fa-da86-4354-83c7-0c217a13e607",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
