@@ -3,7 +3,7 @@
 // 消息 id = 会话 id#seq:全局唯一、重读也不变。任务卡(task-status)照设计画成两样:联系人说的那句(派活记录的正文)
 // 和挂在它下面的 Compute 那一行(id 后缀 ~c)——Compute 是联系人派出去的执行者,不在聊天里说话,这一行只写标题、阶段、耗时。
 // 其余卡片按正文显示。转发来的画成转发卡,附件画在气泡下;私聊回退撤下的消息不再显示,回退那条记成一行灰字。
-// 表情回应以后端为准写进 reactions;联系人「正在回复」(contact.activity)写进 typing,卡里只写真实的活动和时长,不编步骤。
+// 表情回应以后端为准写进 reactions;联系人「正在回复」(contact.activity)写进 replying(每个会话里一人一条),卡里只写真实的活动和时长,不编步骤。
 import type { MessageView, MemberRef } from '@g-group/api-contract'
 import { people, type Msg, type PersonId, type QuoteRef, type ReadMarks } from '@/data'
 import { loadDrafts, onDraftUpdated } from './drafts'
