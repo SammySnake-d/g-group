@@ -1,0 +1,21 @@
+packages/server/src/coverage-invariants.test.ts
+  s_9d7fa6e9d65b83::t_71a6bfd858f9fe 97,105
+packages/server/src/host.ts
+  s_9d7fa6e9d65b83::t_44de0afc210876 1011,1573,1663,4750
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a9c0ffef997b5f364fb6b725031357b4dcf93d74",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

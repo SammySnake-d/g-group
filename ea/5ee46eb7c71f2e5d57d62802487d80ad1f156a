@@ -1,0 +1,19 @@
+packages/server/proof/slash-plugins-mutations.mjs
+  s_9d7fa6e9d65b83::t_11e3fc63c2e98e 40,42,93-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ea5ee46eb7c71f2e5d57d62802487d80ad1f156a",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

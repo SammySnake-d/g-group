@@ -1,0 +1,33 @@
+docs/proof/task-timeline-v3/README.md
+  s_9d7fa6e9d65b83::t_842b6b8c209c58 10-20
+docs/proof/task-timeline-v3/cloud-download-receipt.json
+  s_9d7fa6e9d65b83::t_dfc3d1fc1e3501 1-88
+docs/proof/task-timeline-v3/cloud-freeze.json
+  s_9d7fa6e9d65b83::t_a636b5697dd5bf 1-551
+docs/proof/task-timeline-v3/cloud-parent-verification.json
+  s_9d7fa6e9d65b83::t_8e848c7a226df5 1-468
+docs/proof/task-timeline-v3/cloud-result.json
+  s_9d7fa6e9d65b83::t_f19b4901ba1053 1-235
+docs/proof/task-timeline-v3/supported-seatbelt-result.json
+  s_9d7fa6e9d65b83::t_8d59e5c93b06d9 1-70
+docs/proof/task-timeline/README.md
+  s_9d7fa6e9d65b83::t_6ef5a86a703238 5
+receipts/feat-task-timeline.json
+  s_9d7fa6e9d65b83::t_e34898353efea2 6-7,23,26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e85396d6130cffb5c03d42c15cbb48e27aad6879",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

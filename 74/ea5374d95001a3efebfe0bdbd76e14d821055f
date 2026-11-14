@@ -1,0 +1,14 @@
+.github/workflows/probe.yml
+  h_f33e46a035b77c 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "74ea5374d95001a3efebfe0bdbd76e14d821055f",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

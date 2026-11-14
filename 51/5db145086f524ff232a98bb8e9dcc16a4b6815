@@ -1,0 +1,29 @@
+receipts/feat-room-pending-summary.json
+  s_9d7fa6e9d65b83::t_beaaaf3fd3025b 20-27
+reviews/feat-room-pending-summary.md
+  s_fa6515557fea6f::t_55d4a49c177910 1-162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "515db145086f524ff232a98bb8e9dcc16a4b6815",
+  "prompts": {},
+  "sessions": {
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_fa6515557fea6f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8cbac2cc-c5f7-45af-a8db-c74a3419331f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
