@@ -1,0 +1,19 @@
+apps/desktop/e2e/parity-r2-replying.electron.spec.ts
+  s_209dc3fd714a96::t_03e84d76238f43 1-134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "27f377f1a784fa97a8df3151550c84bf36a69490",
+  "prompts": {},
+  "sessions": {
+    "s_209dc3fd714a96": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf4ef95e-9b68-4262-a62d-ca75f35d1208",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
