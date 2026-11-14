@@ -1,0 +1,21 @@
+apps/desktop/proof/preview-1/selftest-replying.mjs
+  s_fb0de607dadbd8::t_ac83f588473761 1-111
+apps/desktop/src/app/chat/ChatView.tsx
+  s_fb0de607dadbd8::t_4fe77d7eb539ff 4,31-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1c4c856395a8a7179b42d3f131b59d727628e02b",
+  "prompts": {},
+  "sessions": {
+    "s_fb0de607dadbd8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1a4dc882-b84a-4a01-936c-126151dd9dc1",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
