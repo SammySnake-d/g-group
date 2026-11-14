@@ -9,21 +9,26 @@ import { ListItem } from '@/components/ui/list-row'
 import { openCronOverview } from '@/cronView'
 import { globalAnswer, summaryOf } from './answers'
 import { globalCommands } from './commands'
-import { GLOBAL_DENIED } from './constants'
+import { GLOBAL_DENIED, HELPER_OFF_GLOBAL, HELPER_OFF_NO_CMD, HELPER_OFF_PLACEHOLDER } from './constants'
 import { DraftCard, GrantCard } from './GlobalCards'
-import { Bubble, Bulb } from './parts'
+import { Bubble, Bulb, HelperOff } from './parts'
 import { nid } from './store'
 import type { DraftItem, GItem, GrantItem } from './types'
 
 /* 全局 ⌘K:默认什么都不读;读要授权,发要草稿。Esc 关闭由 App 统一处理(先关这一层)。
    命令列表是 combobox + listbox:焦点留在输入框,↑↓ 移动选中(有输入时 ↑ 能退到「不选命令」),
-   Enter 执行选中的命令 / 文字正好等于命令名就执行 / 否则把文字当问题发出。 */
+   Enter 执行选中的命令 / 文字正好等于命令名就执行 / 否则把文字当问题发出。
+   连着后端时:合同里没有让 Helper 生成回答的方法——一打开就写明还不会回答;问 Helper 的两条「试试」和「代我发」不列,
+   打的字只用来找命令、不当问题发出(所以授权卡、代发草稿都不会出现,代发走不到);新建联系人、发起群聊这些跳转照常。 */
+/** 要 Helper 回答的命令:连着后端时不列 */
+const ASKS_HELPER = ['read', 'send', 'say']
 
 /* ⌘K 呼出很频繁,只给库里最快的淡入(Emil:键盘高频操作不加位移动画);数值来自库 token */
 const pop = { initial: { opacity: 0 }, animate: { opacity: 1, transition: transition.popOut } }
 
 export function HelperGlobal() {
   const { convs, active, setHelperGlobal, setSection, push, pushMsg, toast, setPanoOpen } = useApp()
+  const live = useApp((s) => s.backend.mode === 'connected')
   const uid = useId()
   const [input, setInput] = useState('')
   const [items, setItems] = useState<GItem[]>([])
@@ -38,11 +43,11 @@ export function HelperGlobal() {
 
   const ask = (raw: string) => {
     const text = raw.trim()
-    if (!text) return
+    if (!text || live) return
     setItems((l) => [...l, { id: nid(), from: 'me', text }, globalAnswer(text, convs, granted, nid)])
   }
 
-  const cmds = globalCommands({
+  const all = globalCommands({
     activeTitle: titleOf(active),
     ask: (t) => { ask(t); setInput('') },
     fill: (t) => { setInput(t); setSel(-1) },
@@ -53,6 +58,7 @@ export function HelperGlobal() {
     crons: () => { openCronOverview(setPanoOpen); close() },
     find: () => { close(); setSection('chat'); push({ t: 'search', id: active }, true) },
   })
+  const cmds = live ? all.filter((c) => !ASKS_HELPER.includes(c.id)) : all
   const q = input.trim()
   const shown = q ? cmds.filter((c) => c.label.includes(q) || q.includes(c.label)) : cmds
   const showList = (items.length === 0 || !q || shown.length > 0) && shown.length > 0
@@ -69,13 +75,14 @@ export function HelperGlobal() {
       const exact = cmds.find((c) => c.label === q)
       if (sel >= 0 && shown[sel]) shown[sel].run()
       else if (exact) exact.run()
-      else if (q) { ask(q); setInput('') }
+      else if (q && !live) { ask(q); setInput('') }
     }
   }
 
+  /* 演示里的代发:只往本地插一条。连着后端时走不到(ask 不出草稿),这里再挡一道,不在本地假装发出 */
   const sendDraft = (it: DraftItem) => {
     const body = it.draft.body.trim()
-    if (!body) return
+    if (!body || live) return
     pushMsg({ k: 'text', id: 'hg-' + nid(), from: 'me', text: body, byHelper: true }, it.draft.conv)
     patch(it.id, (x) => ({ ...x, draft: { ...it.draft, body, state: 'sent' } }) as GItem)
     toast(`已代你发到「${it.draft.title}」`)
@@ -108,7 +115,7 @@ export function HelperGlobal() {
               value={input}
               onChange={(e) => { setInput(e.target.value); setSel(e.target.value.trim() ? -1 : 0) }}
               onKeyDown={onKey}
-              placeholder="让 Helper 帮你做点什么…"
+              placeholder={live ? HELPER_OFF_PLACEHOLDER : '让 Helper 帮你做点什么…'}
               className="h-8 min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-fg-3"
             />
             <kbd className="rounded border border-line px-1.5 py-0.5 text-[11px] text-fg-3">Esc</kbd>
@@ -125,6 +132,8 @@ export function HelperGlobal() {
           </div>
 
           <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">
+            {live && <HelperOff testid="hg-off" detail={HELPER_OFF_GLOBAL} className="mx-4 mt-3" />}
+            {live && q && !shown.length && <div data-testid="hg-no-cmd" className="px-4 pt-3 text-[12.5px] text-fg-3">{HELPER_OFF_NO_CMD}</div>}
             {items.length > 0 && (
               <div className="space-y-3 px-4 py-3">
                 {items.map((it) => (
@@ -166,7 +175,7 @@ export function HelperGlobal() {
             )}
           </div>
           <div className="flex items-center gap-3 border-t border-line px-4 py-1.5 text-[11.5px] text-fg-3">
-            <span>↑↓ 选择</span><span>Enter 执行或发送</span><span className="ml-auto">这里的对话不会出现在任何聊天里</span>
+            <span>↑↓ 选择</span><span>{live ? 'Enter 执行' : 'Enter 执行或发送'}</span>{!live && <span className="ml-auto">这里的对话不会出现在任何聊天里</span>}
           </div>
         </motion.div>
       </div>

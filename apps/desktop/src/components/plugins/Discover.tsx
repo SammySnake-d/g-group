@@ -6,7 +6,7 @@ import { useApp } from '@/ctx'
 import { Button } from '@/components/ui/button'
 import { SelectMenu } from '@/components/ui/field'
 import { IconButton } from '@/components/ui/icon-button'
-import { COPY, SORT_OPTIONS } from './constants'
+import { COPY, COPY_LIVE, SORT_OPTIONS } from './constants'
 import type { PluginFlow } from './flow'
 import { EmptyBox, PageHead } from './layout'
 import { MarketCard } from './MarketCard'
@@ -15,6 +15,8 @@ export function Discover({ text, setText, cat, sort, setSort, flow, open, onSide
   text: string; setText: (v: string) => void; cat: PluginCategory | 'all'; sort: MarketSort; setSort: (s: MarketSort) => void; flow: PluginFlow; open: (id: string) => void; onSideload: () => void
 }) {
   const { plugins, pluginCatalog } = useApp()
+  /* 连着后端:插件市场目录按用户决定暂不接(plugins.marketplace),这里只列得出已装的;把这句写在页上 */
+  const live = useApp((s) => s.backend.mode === 'connected')
   const items = marketList(pluginCatalog, plugins, { text, category: cat, filter: 'all', sort })
   return (
     <div className="mx-auto max-w-[1120px] px-8 pb-14 pt-7" data-testid="plg-discover">
@@ -27,6 +29,7 @@ export function Discover({ text, setText, cat, sort, setSort, flow, open, onSide
         </label>
         <SelectMenu testid="plg-sort" label="排序" value={sort} onChange={setSort} options={SORT_OPTIONS} size="lg" align="end" className="w-[136px] rounded-xl text-[13px] text-fg-2" />
       </PageHead>
+      {live && <p data-testid="plg-market-off" role="note" className="mt-4 rounded-xl bg-hover px-3.5 py-2.5 text-[12.5px] leading-relaxed text-fg-2">{COPY_LIVE.marketOff}</p>}
       {items.length === 0 ? (
         <EmptyBox testid="plg-empty" className="mt-10">
           <div className="text-[14px] font-medium text-fg">{text ? `没找到和「${text}」有关的插件` : '这一类还没有插件'}</div>

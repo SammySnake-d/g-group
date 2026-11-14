@@ -3,9 +3,10 @@ import type { ReactNode } from 'react'
 import { Check, ShieldAlert } from 'lucide-react'
 import { commandUsage, type PluginManifest, type PluginPermission } from '@g-group/ui-core'
 import type { PluginState } from '@/data'
+import { useApp } from '@/ctx'
 import { Chip } from '@/components/ui/chip'
 import { cn } from '@/lib/utils'
-import { COPY } from './constants'
+import { COPY, COPY_LIVE } from './constants'
 import { DetailSection } from './layout'
 import { RiskBadge } from './tags'
 
@@ -14,11 +15,13 @@ const Note = ({ testid, children }: { testid?: string; children: ReactNode }) =>
 )
 
 export function About({ m }: { m: PluginManifest }) {
+  /* 连着后端:外发前后端不核对预授权,不照演示的说法写「只能在说好的范围里发」 */
+  const live = useApp((s) => s.backend.mode === 'connected')
   return (
     <DetailSection title="说明">
       <div className="max-w-[68ch] space-y-2 text-pretty text-[14px] leading-[1.7] text-fg">{m.description.split('\n').map((t) => <p key={t}>{t}</p>)}</div>
       {m.category === 'source' && <Note testid="plg-untrusted">{COPY.untrusted}{COPY.untrustedHow}</Note>}
-      {m.category === 'outbound' && <Note>{COPY.outbound}</Note>}
+      {m.category === 'outbound' && <Note testid="plg-outbound-note">{live ? COPY_LIVE.outbound : COPY.outbound}</Note>}
     </DetailSection>
   )
 }
