@@ -168,7 +168,7 @@ test("代码任务交付:候选提交里改过的 .md 快照进内容寻址库,�
   const dm = host.openDm(host.createContact({ name: "小文" }).id);
   try {
     host.send({ roomId: dm.id, clientActionId: "u1", text: "帮我写报告" });
-    await settle(host, e.compute, () => host.listTasks({}).some((t) => t.state === "T5_InReview"));
+    await settle(host, e.compute, () => host.listTasks({}).some((t) => t.state === "T8a_Delivered"));
     const [task] = host.listTasks({});
     const card = deliveries(host, dm.id).at(-1)!;
     assert.equal(card.seq, host.taskDoc(task!.id).value.deliveredSeq, "工件挂在这次交付的那条消息上");
@@ -205,7 +205,7 @@ test("交付后工作区文件再改:旧卡片仍指向交付时的快照;退回
   const dm = host.openDm(host.createContact({ name: "小文" }).id);
   try {
     host.send({ roomId: dm.id, clientActionId: "u1", text: "帮我写计划" });
-    await settle(host, e.compute, () => host.listTasks({}).some((t) => t.state === "T5_InReview"));
+    await settle(host, e.compute, () => host.listTasks({}).some((t) => t.state === "T8a_Delivered"));
     const [task] = host.listTasks({});
     const first = deliveries(host, dm.id).at(-1)!.artifacts[0]!;
     assert.equal(first.sha256, sha(`${NEUTRAL} v1\n`));
@@ -216,7 +216,7 @@ test("交付后工作区文件再改:旧卡片仍指向交付时的快照;退回
 
     const rej = await svc.handle("tasks.reject", { taskId: task!.id, clientActionId: "r1", feedback: "再改一版" });
     assert.ok(rej.ok, rej.ok ? "" : rej.error.message);
-    await settle(host, e.compute, () => deliveries(host, dm.id).length === 2 && host.listTasks({})[0]!.state === "T5_InReview");
+    await settle(host, e.compute, () => deliveries(host, dm.id).length === 2 && host.listTasks({})[0]!.state === "T8a_Delivered");
     const cards = deliveries(host, dm.id);
     const second = cards[1]!.artifacts[0]!;
     assert.equal(second.sha256, sha(`${NEUTRAL} v2\n`));
@@ -241,7 +241,7 @@ test("同一工件重发不生成第二个文件:退回后 Compute 写出相同�
   const dm = host.openDm(host.createContact({ name: "小文" }).id);
   try {
     host.send({ roomId: dm.id, clientActionId: "u1", text: "帮我写总结" });
-    await settle(host, e.compute, () => host.listTasks({}).some((t) => t.state === "T5_InReview"));
+    await settle(host, e.compute, () => host.listTasks({}).some((t) => t.state === "T8a_Delivered"));
     const [task] = host.listTasks({});
     const first = deliveries(host, dm.id).at(-1)!.artifacts[0]!;
     const row = () => host.db.store.db.prepare("SELECT ref, name, added_at, path FROM gg_artifacts").all();
@@ -249,7 +249,7 @@ test("同一工件重发不生成第二个文件:退回后 Compute 写出相同�
     await new Promise((r) => setTimeout(r, 5));
     const rej = await svc.handle("tasks.reject", { taskId: task!.id, clientActionId: "r1", feedback: "重发一次" });
     assert.ok(rej.ok);
-    await settle(host, e.compute, () => deliveries(host, dm.id).length === 2 && host.listTasks({})[0]!.state === "T5_InReview");
+    await settle(host, e.compute, () => deliveries(host, dm.id).length === 2 && host.listTasks({})[0]!.state === "T8a_Delivered");
     const second = deliveries(host, dm.id)[1]!.artifacts[0]!;
     assert.deepEqual(second, first);
     assert.deepEqual(storeFiles(e.data), [`${first.sha256}.md`]);
@@ -282,7 +282,7 @@ test("没有代码仓时按 Compute 启动后改过的可读文件收集:启动�
   const dm = host.openDm(host.createContact({ name: "小文" }).id);
   try {
     host.send({ roomId: dm.id, clientActionId: "u1", text: "帮我整理笔记" });
-    await settle(host, e.compute, () => host.listTasks({}).some((t) => t.state === "T5_InReview"));
+    await settle(host, e.compute, () => host.listTasks({}).some((t) => t.state === "T8a_Delivered"));
     const tid = host.listTasks({})[0]!.id;
     assert.equal(readFileSync(path.join(e.work, tid, "old.md"), "utf8"), `${NEUTRAL} old\n`, "旧文件在交付时就在工作目录里");
     const card = deliveries(host, dm.id).at(-1)!;
@@ -302,7 +302,7 @@ test("快照被改过就拒绝读出:不把别的版本当成这张卡片的内�
   const dm = host.openDm(host.createContact({ name: "小文" }).id);
   try {
     host.send({ roomId: dm.id, clientActionId: "u1", text: "帮我写 r" });
-    await settle(host, e.compute, () => host.listTasks({}).some((t) => t.state === "T5_InReview"));
+    await settle(host, e.compute, () => host.listTasks({}).some((t) => t.state === "T8a_Delivered"));
     const art = deliveries(host, dm.id).at(-1)!.artifacts[0]!;
     writeFileSync(path.join(e.data, "artifacts", `${art.sha256}.md`), `${NEUTRAL} tampered\n`);
     const r = await svc.handle("artifacts.get", { ref: art.ref });

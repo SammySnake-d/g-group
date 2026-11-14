@@ -408,7 +408,7 @@ test("Compute 执行器中途崩溃(可自愈):对同一实例 resume 续跑(同
   const c = host.createContact({ name: "小克" });
   const dm = host.openDm(c.id).id;
   host.send({ roomId: dm, clientActionId: "u1", text: "帮我写一个 hello.txt" });
-  await until(() => host.listTasks({})[0]?.state === "T5_InReview", "续跑后交付");
+  await until(() => host.listTasks({})[0]?.state === "T8a_Delivered", "续跑后交付");
   await host.idle();
   assert.equal(compute.spawned.length, 1, "没有从头 spawn");
   assert.equal(compute.resumed.length, 1);
@@ -437,7 +437,7 @@ test("窗口 ② 对账(A27-03 底座):续跑提示带上工作区 git status,�
   await until(() => compute.resumed.length === 1, "续跑");
   assert.match(compute.resumed[0]!.text, /工作区现状\(git status,共 1 项\):\n\?\? hello\.txt/);
   assert.match(compute.resumed[0]!.text, /已经写进去的改动不要再追加一遍/);
-  await until(() => host.listTasks({})[0]?.state === "T5_InReview", "交付");
+  await until(() => host.listTasks({})[0]?.state === "T8a_Delivered", "交付");
   assert.equal(failureCards(host, dm).length, 0, "续跑成功,没有出卡");
   compute.close();
   await host.close();
@@ -476,7 +476,7 @@ test("F3 被信号结束的执行器崩溃(不是 CLI 里的上游错误)不算 
   const c = host.createContact({ name: "小克" });
   const dm = host.openDm(c.id).id;
   host.send({ roomId: dm, clientActionId: "u1", text: "帮我写一个 hello.txt" });
-  await until(() => host.listTasks({})[0]?.state === "T5_InReview", "续跑后交付");
+  await until(() => host.listTasks({})[0]?.state === "T8a_Delivered", "续跑后交付");
   assert.equal(compute.resumed.length, 1);
   assert.equal(failureCards(host, dm).length, 0);
   compute.close();
@@ -528,10 +528,11 @@ test("F13 半途换模:[换模型重试]选了厂商 B 才换,累积生产集合
   const card = failureCards(host, dm)[0]!;
   assert.deepEqual(card.card!.actions.map((a) => a.actionId), ["retry", "give-up", "switch-model:gpt-5"]);
   host.cardAct({ roomId: dm, seq: card.seq, cardId: card.card!.cardId, actionId: "switch-model:gpt-5", clientActionId: "s1" });
-  await until(() => host.listTasks({})[0]?.state === "T5_InReview", "换模后交付");
+  await until(() => host.listTasks({})[0]?.state === "T8a_Delivered", "换模后交付");
   assert.match(compute.resumed[0]!.text, /^用户选了换成 gpt-5 重试这一轮/);
   assert.equal(compute.turns[0]!.turn?.model, "gpt-5", "这一轮把用户选的模型交给适配器,在同一会话里换");
-  const task = host.taskDoc(host.listTasks({})[0]!.id).value.task;
+  // 没有审查人时交付直接进 T8a(§8.1 已定 1);取这份任务的累积生产集合放回同一轮提审态,核对 T5 守卫
+  const task = { ...host.taskDoc(host.listTasks({})[0]!.id).value.task, state: "T5_InReview" as const };
   assert.deepEqual([...task.producerModels], ["claude-sonnet-4-6", "gpt-5"]);
   const review = (reviewerModel: string): TaskEvent => ({ kind: "Review", reviewerId: "审查人", reviewerModel, round: task.reviewRound, commit: task.reviewedCommit!, constraintVer: task.constraintVer, verdict: "approve" });
   assert.equal(applyTask(task, review("claude-opus-4-1")).ok, false, "A(anthropic)被拒");
@@ -606,7 +607,7 @@ test("F6 Compute 终态通知丢失(ack 前宿主退出):重启后从磁盘待�
   await until(() => hung === 1, "终态到了,宿主 1 还没领走就退出");
   const compute2 = fake();
   const h2 = mk(Host, { mind: () => scriptedMind(), compute: () => compute2.adapter }, f);
-  await until(() => h2.listTasks({})[0]?.state === "T5_InReview", "重启后补领并交付");
+  await until(() => h2.listTasks({})[0]?.state === "T8a_Delivered", "重启后补领并交付");
   await h2.idle();
   assert.equal(compute1.spawned.length, 1);
   assert.equal(compute2.spawned.length, 0, "没有重跑 Compute");

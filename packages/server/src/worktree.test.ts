@@ -352,7 +352,7 @@ test("配了代码仓:两个任务的 Compute 各在自己的 worktree 里改、
     const dm = host.openDm(c.id);
     host.send({ roomId: dm.id, clientActionId: "u1", text: "帮我写 alpha" });
     host.send({ roomId: dm.id, clientActionId: "u2", text: "帮我写 beta" });
-    await settle(host, compute, () => host.listTasks({ roomId: dm.id }).filter((t) => t.state === "T5_InReview").length === 2);
+    await settle(host, compute, () => host.listTasks({ roomId: dm.id }).filter((t) => t.state === "T8a_Delivered").length === 2);
     const tasks = host.listTasks({ roomId: dm.id });
     const alpha = tasks.find((t) => t.title.endsWith("alpha"))!;
     const beta = tasks.find((t) => t.title.endsWith("beta"))!;
@@ -412,7 +412,7 @@ test("合入冲突:任务停在 T8a 不算验收,冲突没修之前再说通过�
     const dm = host.openDm(c.id);
     host.send({ roomId: dm.id, clientActionId: "u1", text: "帮我改 alpha" });
     host.send({ roomId: dm.id, clientActionId: "u2", text: "帮我改 beta" });
-    await settle(host, compute, () => host.listTasks({ roomId: dm.id }).filter((t) => t.state === "T5_InReview").length === 2);
+    await settle(host, compute, () => host.listTasks({ roomId: dm.id }).filter((t) => t.state === "T8a_Delivered").length === 2);
     const tasks = host.listTasks({ roomId: dm.id });
     const alpha = tasks.find((t) => t.title.endsWith("alpha"))!;
     const beta = tasks.find((t) => t.title.endsWith("beta"))!;
@@ -438,7 +438,7 @@ test("合入冲突:任务停在 T8a 不算验收,冲突没修之前再说通过�
 
     const rej = await svc.handle("tasks.reject", { taskId: beta.id, clientActionId: "rej-b", feedback: "基于最新主线修复冲突" });
     assert.ok(rej.ok, rej.ok ? "" : rej.error.message);
-    await settle(host, compute, () => host.taskView(host.taskDoc(beta.id).value).state === "T5_InReview");
+    await settle(host, compute, () => host.taskView(host.taskDoc(beta.id).value).state === "T8a_Delivered");
     const b2 = host.taskView(host.taskDoc(beta.id).value);
     assert.equal(compute.spawned.length, 2, "退回是续改,不新开 Compute");
     assert.equal(b2.workspace?.dir, betaDir, "还在同一个 worktree");

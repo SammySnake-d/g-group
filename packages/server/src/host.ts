@@ -1427,7 +1427,7 @@ export class Host {
   }
   /**
    * 这个群里它还算「在途」的任务(AC-49):没到 T8/T10/T11,也不是「已经交付、在等你回复」的那种——
-   * 普通消息交付(AC-56)停在 T5 等本人回复时 Compute 已经做完,不占资源,不拦移出(还有复核在跑时仍算在途,等复核落定)。
+   * 普通消息交付(AC-56)后在 T8a(或复核中的 T5)等本人回复时 Compute 已经做完,不占资源,不拦移出(还有复核在跑时仍算在途,等复核落定)。
    */
   private liveTasksIn(roomId: string, contactId: string): TaskView[] {
     return this.listTasks({ roomId, contactId }).filter((t) => !EXIT_SETTLED.has(t.state) && !this.deliveredAwaitingUser(t));
@@ -2947,7 +2947,7 @@ export class Host {
               commit = `git:${pinned.candidateSha}`;
             }
             // 交付是普通消息(AC-56/U98):回复来源消息、@ 提出者,不挂验收卡;用户用普通回复表达通过或修改,由联系人提交 verdict。
-            // 审查门(AC-26):还没有跨厂商审查联系人时任务停在 T5,提出者本人回复通过即豁免审查并验收,记为 waived-by-user
+            // 交活后进 T8a 待确认(§8.1 已定 1):有跨厂商审查人时先审(审的过程中停在 T5),没有就直接进 T8a,门禁如实留 none
             // 可读工件按内容快照进库,交付消息钉住 ref + sha256(AC-04)
             const arts = this.collectArtifacts(a.taskId);
             const r = this.appendMessageTx(t.roomId, { kind: "contact", id: contactId }, {
@@ -2964,10 +2964,12 @@ export class Host {
             if (applied.ok) this.putFollowTx(a.taskId, follow, { ...follow.value, state: applied.value });
             appended.push({ roomId: t.roomId, seq: r.seq });
             touchedTasks.add(a.taskId);
-            // 审查门(AC-26):有跨厂商审查联系人就交给它审,审过才进 T8a 待确认;没有合格审查人,任务停在 T5 等提出者本人回复(豁免,记 waived-by-user)
+            // 审查门(AC-26):有跨厂商审查联系人就交给它审,审过才进 T8a 待确认;没有合格审查人,这一轮不审,交付直接进 T8a 待确认
+            // (§8.1 已定 1:交活后进 T8a,不说话不算通过),门禁留 none;提出者本人回复通过时记 waived-by-user(本人豁免,不算合规)
             const req = sub.find((x): x is Extract<typeof x, { kind: "request-review" }> => x.kind === "request-review");
             const reviewer = req ? this.reviewerFor(this.taskDoc(a.taskId).value.task, t.roomId) : null;
             if (req && reviewer) effects.push({ kind: "review", taskId: a.taskId, roomId: t.roomId, ownerId: contactId, reviewerId: reviewer.contactId, model: reviewer.model, round: req.round, commit: req.commit, constraintVer: req.constraintVer, brief: reviewBrief({ title: t.title, requirement: t.brief, delivery: a.text }) });
+            else if (req) this.deliverUnreviewedTx(a.taskId, req);
             break;
           }
           case "verdict": {
@@ -3812,7 +3814,16 @@ export class Host {
     this.emitTask(rv.task_id);
     void this.runEffects(effects);
   }
-  /** 审查没做成:任务还停在这一轮审查上,就由负责联系人发一条普通消息 @提出者说明;提出者回复通过即本人豁免(waived-by-user,不当合规),也可以说要改的地方。 */
+  /**
+   * 这一轮不审(没有合格审查人,或审查没做成):交付已经以普通消息发出,任务直接进 T8a 待确认(§8.1 已定 1),门禁留 none。必须在事务里调用。
+   * 提出者本人回复通过时由状态机记 waived-by-user(本人豁免,不算合规);沉默一直待确认。
+   */
+  private deliverUnreviewedTx(taskId: string, req: { round: number; commit: string; constraintVer: number }) {
+    const { effects } = this.stepTaskTx(taskId, { kind: "ReviewUnavailable", round: req.round, commit: req.commit, constraintVer: req.constraintVer });
+    const send = effects.find((x): x is Extract<typeof x, { kind: "send-card" }> => x.kind === "send-card");
+    if (send) this.stepTaskTx(taskId, { kind: "DeliveredCard", taskId, deliveryRound: send.deliveryRound, commit: send.commit });
+  }
+  /** 审查没做成:任务还停在这一轮审查上,就由负责联系人发一条普通消息 @提出者说明,交付进 T8a 待确认;提出者回复通过即本人豁免(waived-by-user,不当合规),也可以说要改的地方。 */
   private reviewFallback(taskId: string, round: number, reason: string) {
     const doc = this.taskDoc(taskId).value;
     const t = doc.task;
@@ -3821,22 +3832,25 @@ export class Host {
       return;
     }
     const owner = t.owner;
-    const r = tx(this.db, () =>
-      this.appendMessageTx(doc.roomId, { kind: "contact", id: owner }, {
-        text: `@${this.nameOf({ kind: "user", id: t.requester })} 「${doc.title}」的跨厂商审查没做成:${reason.slice(0, 2000)}。你可以直接回复通过(记为你本人豁免审查,不算合规审查),或说要改的地方。`,
+    const r = tx(this.db, () => {
+      const m = this.appendMessageTx(doc.roomId, { kind: "contact", id: owner }, {
+        text: `@${this.nameOf({ kind: "user", id: t.requester })} 「${doc.title}」的跨厂商审查没做成:${reason.slice(0, 2000)}。交付在等你确认:可以直接回复通过(记为你本人豁免审查,不算合规审查),或说要改的地方。`,
         actionKey: `review-fallback:${taskId}:${round}`,
         replyToSeq: doc.deliveredSeq ?? doc.sourceSeq,
         quotedSeqs: [doc.deliveredSeq ?? doc.sourceSeq],
         mentions: [{ id: t.requester, source: "auto" }],
-      }),
-    );
+      });
+      // 审查不会再做了:已经发出的交付进 T8a 待确认(§8.1 已定 1),不留在 T5
+      if (doc.deliveredSeq != null && t.reviewedCommit) this.deliverUnreviewedTx(taskId, { round, commit: t.reviewedCommit, constraintVer: t.constraintVer });
+      return m;
+    });
     if (!r.duplicate) {
       this.markRead(doc.roomId, { kind: "contact", id: owner }, r.seq);
       this.afterAppend(doc.roomId, r.seq, { kind: "contact", id: owner });
     }
     this.emitTask(taskId);
   }
-  /** 宿主重启:上次还在跑的审查 Compute 已经不在了,记 interrupted,任务还停在那一轮审查上就交给提出者豁免,不让它卡在 T5。 */
+  /** 宿主重启:上次还在跑的审查 Compute 已经不在了,记 interrupted,任务还停在那一轮审查上就转 T8a 待确认、交给提出者本人决定,不让它卡在 T5。 */
   private recoverReviews() {
     for (const r of all<ReviewRow>(this.db, "SELECT * FROM gg_reviews WHERE status = 'running'")) {
       run(this.db, "UPDATE gg_reviews SET status = 'interrupted', notes = ?, ended_at = ? WHERE compute_id = ?", "宿主重启时审查 Compute 已不在", this.now(), r.compute_id);
@@ -3937,7 +3951,7 @@ export class Host {
   }
   /**
    * 对一件等用户确认的交付下结论(交付卡、显式入口、联系人转来的普通回复都走这里)。必须在事务里调用。
-   * 通过:T5(还没有审查人)= 提出者本人豁免审查并验收,记 waived-by-user;T8a 直接验收;了结承诺、任务卡收口。
+   * 通过:T5(复核还在跑)= 提出者本人豁免审查并验收,记 waived-by-user;T8a 直接验收(没经审查的交付由状态机记 waived-by-user);了结承诺、任务卡收口。
    * 退回:原 Compute 实例还在(没停、没失败)就恢复原实例并带上意见;不可恢复才携交接新开(AC-28 A/B)。
    */
   private decideDeliveryTx(taskId: string, decision: "accept" | "reject", by: string, note: string): HostEffect[] {
@@ -5014,7 +5028,7 @@ function previewView(p: modelConfig.ChangePreview): ModelChangePreview {
   };
 }
 
-/** 已交付、等提出者回复的任务(AC-56 普通消息交付):T8a,或还没有审查人、停在 T5 等本人豁免。旧数据(交付卡)不算,走卡片。 */
+/** 已交付、等提出者回复的任务(AC-56 普通消息交付):T8a,或复核还在跑、停在 T5(本人可豁免)。旧数据(交付卡)不算,走卡片。 */
 function awaitingUser(d: TaskDoc): boolean {
   if (d.deliveredSeq == null) return false;
   return d.task.state === "T8a_Delivered" || d.task.state === "T5_InReview";
