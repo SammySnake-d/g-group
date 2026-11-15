@@ -1,0 +1,21 @@
+packages/server/src/loop-guard-r1-calibration.test.ts
+  s_69f96fa873b14b::t_863ded413a59b6 188-201
+  s_69f96fa873b14b::t_3091504f976572 127-187
+  s_69f96fa873b14b::t_55e0e42b58b91f 1-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e99dc87ddbfc400c93c1d1cae8aabdce4409a2ab",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
