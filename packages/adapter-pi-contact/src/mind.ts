@@ -216,6 +216,7 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
     const exchange: AgentMessage[] = [];
     let requests = 0;
     let limitHit = false;
+    let truncated = false;
     let last: AssistantMessage | undefined;
     const keyOpts: Partial<SimpleStreamOptions> = cfg.authHeader === "bearer" ? {} : { apiKey: cfg.apiKey };
     const streamFn: StreamFn = (m, ctx, o) => api.streamSimple(m, ctx, {
@@ -236,6 +237,10 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
       },
       finishTurn: (turn) => {
         if (turn.message.stopReason === "error" || turn.message.stopReason === "aborted") return undefined;
+        if (turn.message.stopReason === "length") {
+          truncated = true;
+          return { action: "end" };
+        }
         if (turn.toolResults.length > 0 && requests >= cfg.maxRequestsPerRound) {
           limitHit = true;
           return { action: "end" };
@@ -261,6 +266,7 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
       signal.removeEventListener("abort", onAbort);
     }
     if (signal.aborted) throw new RoundAbortedError();
+    if (truncated) throw new PiContactMindError("provider-error", "模型回复达到输出上限而被截断,整轮未提交");
     if (limitHit) throw new PiContactMindError("request-limit", `本轮已发 ${requests} 次请求,模型仍在调工具;上限 ${cfg.maxRequestsPerRound}`);
     const end = last as AssistantMessage | undefined;
     if (!end) throw new PiContactMindError("internal", "本轮没有收到模型回复");
