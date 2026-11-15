@@ -11,13 +11,14 @@ import { Host } from "./host.ts";
 const MODEL = "fixture-fengshao-model";
 const KEY = "fixture-key";
 type Seen = { model: string; system?: { type: string; text: string }[]; messages: { role: string; content: string | { type: string; text?: string }[] }[] };
-function provider(responses: string[]) {
+function provider(responses: string[], gate?: (index: number) => Promise<void>) {
   const seen: Seen[] = [];
   const enc = new TextEncoder();
   const sse = (type: string, data: object) => enc.encode(`event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`);
   const fetch: typeof globalThis.fetch = async (input, init) => {
     const req = new Request(input, init);
     seen.push(JSON.parse(await req.text()) as Seen);
+    await gate?.(seen.length);
     const text = responses[seen.length - 1];
     if (text === undefined) throw new Error(`意外的额外模型调用 ${seen.length}`);
     return new Response(new ReadableStream<Uint8Array>({
@@ -44,9 +45,9 @@ async function settle(host: Host) {
   }
   throw new Error("宿主没有安静下来");
 }
-function setup(responses: string[], reply = false, gate?: (i: RoundInput) => Promise<void>) {
+function setup(responses: string[], reply = false, gate?: (i: RoundInput) => Promise<void>, providerGate?: (index: number) => Promise<void>) {
   const dir = mkdtempSync(path.join(tmpdir(), "gg-reflect-json-"));
-  const fake = provider(responses);
+  const fake = provider(responses, providerGate);
   const reports: [string, unknown][] = [];
   const requests: RoundInput["request"][] = [];
   const compactor = createPiCompactor({ provider: "fixture", model: MODEL, baseUrl: "http://fake.invalid", apiKey: KEY, fetch: fake.fetch });
@@ -127,6 +128,26 @@ test("下一轮模型运行中撤回待压缩消息,反思与落盘不得再使�
     assert.doesNotMatch(text(x.fake.seen[2]!), /运行中撤回原文标记/);
     assert.doesNotMatch(x.host.stateNote(x.c.id) ?? "", /运行中撤回原文标记/);
   } finally { hold.release(); await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
+});
+
+test("反思调用进行中原文被撤回,丢弃旧反思结果且旧动作不重复提交", async () => {
+  let entered!: () => void, release!: () => void;
+  const started = new Promise<void>((r) => { entered = r; });
+  const finish = new Promise<void>((r) => { release = r; });
+  const poisoned = JSON.stringify({ note: "撤回中旧反思结果标记", memories: [], personaSuggestion: null });
+  const x = setup(["不是 JSON 对象", " ", poisoned, valid, valid], true, undefined, async (index) => { if (index === 3) { entered(); await finish; } });
+  try {
+    const first = x.host.send({ roomId: x.dm.id, clientActionId: "1", text: "反思期间撤回原文" });
+    await settle(x.host);
+    x.host.send({ roomId: x.dm.id, clientActionId: "2", text: "第二轮" });
+    await started;
+    x.host.retractMessage(x.dm.id, first.seq);
+    release();
+    await settle(x.host);
+    assert.doesNotMatch(x.host.stateNote(x.c.id) ?? "", /撤回中旧反思结果标记/);
+    assert.equal(x.host.listMessages(x.dm.id, {}).messages.filter((m) => m.sender.kind === "contact" && m.text === "回应:第二轮").length, 1);
+    assert.ok(x.reports.some(([w, d]) => w === "stale-round" && /检查期间/.test(JSON.stringify(d))));
+  } finally { release(); await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
 });
 
 test("下一轮模型运行中移出群,反思不得使用失权群的待压缩原文", async () => {

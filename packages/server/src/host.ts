@@ -783,6 +783,8 @@ export class Host {
       for (const m of members) {
         const added = run(this.db, "INSERT OR IGNORE INTO gg_members (room_id, kind, member_id) VALUES (?, ?, ?)", roomId, m.kind, m.id) === 1;
         if (added && m.kind === "contact") {
+          // 移出到重新加入之间可能没有轮次清理待压缩队列;以前成员身份取得的输入不能在重入后复活。
+          this.dropPendingRoom(m.id, roomId);
           run(this.db, "INSERT INTO gg_cursor (contact_id, room_id, processed_seq) VALUES (?, ?, ?) ON CONFLICT (contact_id, room_id) DO UPDATE SET processed_seq = excluded.processed_seq", m.id, roomId, last);
         }
       }
@@ -2429,6 +2431,13 @@ export class Host {
     }
     return result;
   }
+  private dropPendingRoom(contactId: string, roomId: string) {
+    const saved = getDoc<{ inputs: Inbound[] }>(this.db, `note-pending:${contactId}`);
+    if (saved?.value.inputs.some((f) => f.roomId === roomId)) putDoc(this.db, `note-pending:${contactId}`, saved.ver, { inputs: saved.value.inputs.filter((f) => f.roomId !== roomId) });
+  }
+  private noteWithPending(note: string | null, pending: readonly Inbound[]): string | null {
+    return pending.length === 0 ? note : [note ?? "(没有旧状态笔记)", "[之前压缩失败,保留的未压缩原文]", compactMaterial(pending, [])].join("\n");
+  }
   /** 本轮要落盘的状态笔记:模型没写就请压缩器补写(同一说话模型的独立调用),超上限就缩写;最后移除撤回原文 */
   private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], previous: string | null, pending: readonly Inbound[], signal: AbortSignal): Promise<{ note: string | null; remember: MindAction[]; persona: string | null; pending: Inbound[] }> {
     const contactId = contact.id;
@@ -2620,11 +2629,7 @@ export class Host {
       }
     }
     const pendingNote = this.pendingNoteInputs(contactId, rooms.map((r) => r.id));
-    const effectiveNote = pendingNote.length === 0 ? (note?.value.text ?? null) : [
-      note?.value.text ?? "(没有旧状态笔记)",
-      "[之前压缩失败,保留的未压缩原文]",
-      compactMaterial(pendingNote, []),
-    ].join("\n");
+    const effectiveNote = this.noteWithPending(note?.value.text ?? null, pendingNote);
     const ledgerLines = this.activeLedgerLines(contactId);
     const freshKeys = new Set(fresh.flatMap((f) => (f.kind === "message" ? [`${f.roomId}#${f.seq}`, ...(f.replyToSeq !== null ? [`${f.roomId}#${f.replyToSeq}`] : [])] : [])));
     const freshTasks = new Set(fresh.flatMap((f) => (f.kind === "compute" ? [f.taskId] : [])));
@@ -2736,8 +2741,22 @@ export class Host {
         }
       }
     }
-    const settled = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), effectiveNote, pendingNote, signal);
+    // 模型执行期间可能发生撤回或移出:再次核对权限与原文,不得把旧快照继续发给 reflect 或提交。
+    const noteRooms = this.roomsOfContact(contactId).filter((r) => !this.exits.isLeaving(r.id, contactId)).map((r) => r.id);
+    const latestPending = this.pendingNoteInputs(contactId, noteRooms);
+    if (JSON.stringify(pendingNote) !== JSON.stringify(latestPending)) {
+      this.report("stale-round", { contactId, reason: "待压缩上下文被撤回、修改或失去权限" });
+      this.runs.settle(unit.id, { stale: true, note: "待压缩上下文变化,放弃旧结果并重跑" });
+      return "stale";
+    }
+    const settled = await this.settleNote(contact, fresh, out, noteRooms, this.noteWithPending(note?.value.text ?? null, latestPending), latestPending, signal);
     if (signal.aborted || this.closed) return "done";
+    const commitRooms = this.roomsOfContact(contactId).filter((r) => !this.exits.isLeaving(r.id, contactId)).map((r) => r.id);
+    if (JSON.stringify(latestPending) !== JSON.stringify(this.pendingNoteInputs(contactId, commitRooms))) {
+      this.report("stale-round", { contactId, reason: "检查期间待压缩上下文发生变化" });
+      this.runs.settle(unit.id, { stale: true, note: "检查期间上下文变化,放弃旧结果并重跑" });
+      return "stale";
+    }
     let done: { effects: HostEffect[] };
     try {
       done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona, pendingNote: settled.pending });
