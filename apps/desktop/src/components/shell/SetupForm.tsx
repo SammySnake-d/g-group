@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CircleAlert, CircleCheck, RotateCw } from 'lucide-react'
 import { shellCall, useAppShell } from '@/api/app-shell'
+import type { GatewayModel } from '@/api/app-shell-types'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Field, TextInput, ctaDisabled } from '@/components/pages/kit/parts'
@@ -8,16 +9,29 @@ import { cn } from '@/lib/utils'
 
 /* 接入模型的表单:首次打开的整窗页和设置页共用。
    主动作只有一个「保存并连接」;claude 命令检测只在会影响下一步时出声(没找到 → 派活会失败 → 重新检测)。 */
-export function SetupForm({ submitLabel = '保存并连接', onSaved }: { submitLabel?: string; onSaved?: () => void }) {
+export function SetupForm({ submitLabel = '保存并连接', onSaved, requireModelChoice = false }: { submitLabel?: string; onSaved?: () => void; requireModelChoice?: boolean }) {
   const setup = useAppShell((s) => s.setup)
   const [baseUrl, setBaseUrl] = useState(setup?.gateway?.baseUrl ?? '')
-  const [model, setModel] = useState(setup?.gateway?.model ?? '')
+  const [model, setModel] = useState(requireModelChoice ? '' : setup?.gateway?.model ?? '')
   const [token, setToken] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(setup?.backend.state === 'failed' ? `上次没连上：${setup.backend.reason}` : null)
   const [detecting, setDetecting] = useState(false)
+  const [models, setModels] = useState<GatewayModel[] | null>(null)
+  const [modelsBusy, setModelsBusy] = useState(false)
+  const [modelsError, setModelsError] = useState<string | null>(null)
   const hasToken = !!setup?.gateway?.hasToken
   const ready = baseUrl.trim() && model.trim() && (token.trim() || hasToken)
+
+  const discoverModels = async () => {
+    setModelsBusy(true)
+    setModelsError(null)
+    const r = await shellCall('setup.models', { baseUrl, ...(token.trim() ? { token } : {}) })
+    setModelsBusy(false)
+    if (!r.ok) { setModels([]); setModelsError(r.error); return }
+    setModels(r.value.models)
+    if (requireModelChoice && !r.value.models.some((m) => m.id === model)) setModel('')
+  }
 
   const save = async () => {
     setBusy(true)
@@ -42,7 +56,17 @@ export function SetupForm({ submitLabel = '保存并连接', onSaved }: { submit
       <Field label="令牌" aside={hasToken ? <span className="text-[11.5px] font-normal text-fg-3">已保存，不改就留空</span> : undefined}>
         <TextInput data-testid="setup-token" type="password" value={token} onChange={(e) => setToken(e.target.value)} placeholder={hasToken ? '••••••••' : 'sk-…'} autoComplete="off" />
       </Field>
-      <Field label="模型"><TextInput data-testid="setup-model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="claude-sonnet-4-6" autoComplete="off" spellCheck={false} /></Field>
+      <Field label="模型" aside={requireModelChoice ? <span className="text-[11.5px] font-normal text-fg-3">不会自动替换；从当前网关目录选</span> : undefined}>
+        <TextInput data-testid="setup-model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="先读取模型目录，或手动填模型 ID" autoComplete="off" spellCheck={false} />
+      </Field>
+      <div className="-mt-2 flex items-center gap-2">
+        <Button type="button" data-testid="setup-models-load" variant="secondary" size="xs" onClick={() => void discoverModels()} disabled={!baseUrl.trim() || (!token.trim() && !hasToken) || modelsBusy}>
+          {modelsBusy ? <><Spinner size="sm" tone="current" />读取中…</> : '读取可用模型'}
+        </Button>
+        {models && <span data-testid="setup-models-count" className="text-[12px] text-fg-3">已读到 {models.length} 个</span>}
+      </div>
+      {models && models.length > 0 && <label className="block"><span className="sr-only">从模型目录选择</span><select data-testid="setup-model-options" value={model} onChange={(e) => setModel(e.target.value)} className="h-9 w-full rounded-lg border border-line bg-bg px-3 text-[13px] text-fg outline-none focus-visible:ring-2 focus-visible:ring-ring/25"><option value="">从目录选择一个模型</option>{models.map((m) => <option key={m.id} value={m.id}>{m.label} · {m.id}</option>)}</select></label>}
+      {modelsError && <p data-testid="setup-models-error" role="alert" className="-mt-2 text-[12px] text-err">{modelsError}。请确认 API 地址和令牌，再读取一次。</p>}
       {error && <p role="alert" data-testid="setup-error" className="flex items-start gap-1.5 text-[12.5px] leading-snug text-err"><CircleAlert className="mt-px h-3.5 w-3.5 shrink-0" />{error}</p>}
       <Button data-testid="setup-save" type="submit" variant="primary" size="md" className={cn('w-full', ctaDisabled)} disabled={!ready || busy}>
         {busy ? <><Spinner size="sm" tone="current" />正在连接…</> : submitLabel}

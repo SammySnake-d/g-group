@@ -1,5 +1,5 @@
 // 应用壳的 IPC(gg-app:invoke / gg-app:event):接入模型、版本与更新。和宿主合同(gg:invoke)分开,方法白名单 + 来源校验。
-import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from "electron";
+import { app, BrowserWindow, ipcMain, net, type IpcMainInvokeEvent } from "electron";
 import { isTrustedOrigin } from "@g-group/ui-core";
 import { APP_IPC, APP_SHELL_METHODS, type AppShellEvent, type AppShellMethod, type SetupInput, type SetupView } from "../src/api/app-shell-types";
 import type { AppConfig } from "./app-config.ts";
@@ -36,6 +36,31 @@ export function bindAppIpc(o: { config: AppConfig; backend: Backend; updater: Up
       // 后端换了一个实例:让渲染层重新探测、全量读、订阅(回包先到,再重载)
       if (v.backend.state === "running") setTimeout(() => { for (const w of BrowserWindow.getAllWindows()) w.webContents.reload(); }, 150);
       return v;
+    },
+    "setup.models": async (p) => {
+      const baseUrl = String(p.baseUrl ?? "").trim().replace(/\/+$/, "");
+      if (!baseUrl) throw new Error("先填网关地址");
+      let url: URL;
+      try { url = new URL(baseUrl); } catch { throw new Error("网关地址不是有效的网址"); }
+      if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("网关地址应以 http:// 或 https:// 开头");
+      const saved = o.config.gateway();
+      const token = typeof p.token === "string" && p.token.trim() ? p.token.trim() : saved?.token ?? "";
+      if (!token) throw new Error("先填令牌");
+      const modelsUrl = new URL(url.toString());
+      modelsUrl.pathname = `${modelsUrl.pathname.replace(/\/+$/, "").replace(/\/v1$/, "")}/v1/models`;
+      modelsUrl.search = "";
+      const res = await net.fetch(modelsUrl.toString(), { headers: { authorization: `Bearer ${token}`, accept: "application/json" }, signal: AbortSignal.timeout(15_000), cache: "no-store" });
+      if (!res.ok) throw new Error(`模型目录读取失败（HTTP ${res.status}）`);
+      const body = await res.json() as { data?: unknown };
+      const rows = Array.isArray(body.data) ? body.data : [];
+      const models = rows.flatMap((x) => {
+        if (!x || typeof x !== "object") return [];
+        const id = typeof (x as { id?: unknown }).id === "string" ? (x as { id: string }).id.trim() : "";
+        if (!id || id.length > 200) return [];
+        const label = typeof (x as { name?: unknown }).name === "string" && (x as { name: string }).name.trim() ? (x as { name: string }).name.trim() : id;
+        return [{ id, label }];
+      });
+      return { models };
     },
     "setup.detectClaude": () => {
       fixPath();

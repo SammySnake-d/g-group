@@ -211,5 +211,7 @@ export async function sendLive(w: WireCtx, roomId: string, text: string, quotes:
   if (r.ok) { putMessages(w, roomId, [r.value]); return }
   w.get().setConvs((cs) => cs.map((c) => (c.id === roomId ? { ...c, messages: c.messages.filter((m) => idOf(m) !== localId(cid)) } : c)))
   if (text && w.get().active === roomId && !w.get().drafts[roomId]) w.get().setDraft(text)
+  const recipient = conv.members.find((id) => id !== 'me' && !!people[id])
+  w.get().pushMsg({ k: 'sys', id: `send-failed-${cid}`, text: `发送失败：${r.error.message}`, ...(recipient ? { modelAction: recipient } : {}) }, roomId)
   w.get().toast(`没发出去：${r.error.message}`)
 }

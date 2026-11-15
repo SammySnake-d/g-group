@@ -372,7 +372,7 @@ export interface QuoteRef { msgId: string; from: PersonId; text: string; reply?:
 export interface MsgFile { ref: string; name: string; mime: string; bytes: number }
 export type Msg =
   | { k: 'date'; text: string }
-  | { k: 'sys'; id: string; text: string; undo?: string; recalled?: string; rewind?: boolean }
+  | { k: 'sys'; id: string; text: string; undo?: string; recalled?: string; rewind?: boolean; modelAction?: PersonId }
   | { k: 'text'; id: string; from: PersonId; text: string; answerTo?: string; edited?: boolean; at?: string; cron?: string; cronNew?: boolean; disp?: Disp; quotes?: QuoteRef[]; tag?: { task: string; state: string }; task?: string; helper?: { scope: string; card?: { kind: 'csv' | 'group' | 'send'; lines: string[]; done?: boolean } }; byHelper?: boolean; shot?: { title: string; compute: string }; card?: MsgCard; deliverables?: { ref: string; name: string; mime: string; bytes: number }[]; files?: MsgFile[] }
   | { k: 'compute'; id: string; from: PersonId; computeId: string }
   | { k: 'file'; id: string; from: PersonId; artifactId: string }
