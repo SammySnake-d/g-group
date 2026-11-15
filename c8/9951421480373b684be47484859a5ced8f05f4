@@ -1,0 +1,20 @@
+scripts/gates/workspace-isolation.test.ts
+  s_69f96fa873b14b::t_bff9564fafa71d 264,274-290
+  s_69f96fa873b14b::t_89989066140ee2 291-292
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c89951421480373b684be47484859a5ced8f05f4",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

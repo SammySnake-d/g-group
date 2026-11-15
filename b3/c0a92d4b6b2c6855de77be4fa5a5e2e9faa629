@@ -1,0 +1,22 @@
+scripts/gates/lib.ts
+  s_69f96fa873b14b::t_cd32cda5a74857 252,270-272,280-281,286,456
+  s_69f96fa873b14b::t_414742df98a616 217-232,237-238,243-244,253-269,282-285,289-290,340-341,351,438,441,452-455
+  s_69f96fa873b14b::t_cdb88d8fb1c08a 277
+  s_69f96fa873b14b::t_237b141132ceca 245-251,273-276,278-279,287-288
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b3c0a92d4b6b2c6855de77be4fa5a5e2e9faa629",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
