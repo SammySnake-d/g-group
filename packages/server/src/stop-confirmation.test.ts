@@ -97,6 +97,7 @@ test("AC-23 执行器未提供停止核验:轮次 settled 不得确认停止或�
   let settledObserved = false;
   const compute = scriptedCompute({
     script: () => [{ kind: "started", sessionId: "s", resumed: false }],
+    quiesce: false,
     settle: async () => { settledObserved = true; },
   });
   const host = new Host({ file: file(), mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5, personalComputeSlots: 1 });
