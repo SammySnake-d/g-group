@@ -64,7 +64,7 @@ test("探针P1：记忆冲突提问(联系人发言)应继承因果根；两位�
 });
 
 test("探针P1b：重跑到上限后的「未做」说明(联系人发言)应继承因果根；两位联系人借它互唤应在上限内停止", async () => {
-  let t0 = Date.parse("2026-11-09T02:00:00.000Z");
+  const t0 = Date.parse("2026-11-09T02:00:00.000Z");
   const clock = { ms: () => t0, iso: () => new Date(t0).toISOString() };
   const started = { kind: "started" as const, sessionId: "s", resumed: false };
   const compute = scriptedCompute({ script: () => [started, { kind: "failed", reason: "进程以 1 退出:boom", code: 1, signal: null, violations: [] }] });
@@ -122,7 +122,7 @@ test("探针P2：经 Compute 往返的联系人互唤(派活→完成→回话�
 });
 
 test("探针P3：两个不相干会话的因果链不应互相计数、互相叫停", async () => {
-  let aId = "", bId = "", cId = ""; let aRound = 0;
+  let aId = "", bId = ""; let aRound = 0;
   let release!: () => void; const gate = new Promise<void>((r) => { release = r; });
   const saw: { b: string[]; c: string[] } = { b: [], c: [] };
   const mind = (): ContactMind => ({ async round(i) {
@@ -137,7 +137,7 @@ test("探针P3：两个不相干会话的因果链不应互相计数、互相叫
     return { actions, stateNote: null };
   } });
   const host = new Host({ ...fresh(), mind, maxDeferMs: 2, loopGuard: { maxHops: 2 } }); hosts.push(host);
-  const a = host.createContact({ name: "甲" }); aId = a.id; const b = host.createContact({ name: "乙" }); bId = b.id; const c = host.createContact({ name: "丙" }); cId = c.id;
+  const a = host.createContact({ name: "甲" }); aId = a.id; const b = host.createContact({ name: "乙" }); bId = b.id; const c = host.createContact({ name: "丙" });
   const g1 = host.createGroup("一群", [{ kind: "contact", id: a.id }, { kind: "contact", id: b.id }]);
   const g2 = host.createGroup("二群", [{ kind: "contact", id: a.id }, { kind: "contact", id: c.id }]);
   host.send({ roomId: g1.id, clientActionId: "p3-1", text: "一群的问题" });
