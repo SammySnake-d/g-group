@@ -1,0 +1,34 @@
+TAP version 13
+# Subtest: C96-R1-01 API_KEY-only 与 AUTH_TOKEN 都经 runner 和 driver 传给宿主,无关环境不透传
+not ok 1 - C96-R1-01 API_KEY-only 与 AUTH_TOKEN 都经 runner 和 driver 传给宿主,无关环境不透传
+  ---
+  duration_ms: 3.539584
+  type: 'test'
+  location: '/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gg96-mutations-bA5ev4/tree/packages/server/proof/g6/runtime-config-r1.test.ts:22:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(gateway)
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: ~
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gg96-mutations-bA5ev4/tree/packages/server/proof/g6/runtime-config-r1.test.ts:27:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 178.51225

@@ -1,0 +1,33 @@
+TAP version 13
+# Subtest: C96-R1-05 禁网下真实 runner CLI 经子进程和宿主传递 65536 及 manifest
+not ok 1 - C96-R1-05 禁网下真实 runner CLI 经子进程和宿主传递 65536 及 manifest
+  ---
+  duration_ms: 1272.743625
+  type: 'test'
+  location: '/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gg96-mutations-bA5ev4/tree/packages/server/proof/g6/runtime-config-r1.test.ts:99:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok([...dialogue, ...checks].every((call) => call.maxTokens === 65536))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gg96-mutations-bA5ev4/tree/packages/server/proof/g6/runtime-config-r1.test.ts:161:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1436.839083

@@ -17,7 +17,7 @@ function summary(): Summary {
     fixture: { id: "test-set", digest: "d".repeat(64), items: ["T"] },
     reps: 2,
     groups: GROUPS.map((g) => resolveGroup(g, git)),
-    models: [{ mode: "standin", model: "m", endpoint: "进程内规则替身", endpointHash: "-", authRef: "(无)", settings: null, serial: false, fingerprint: "fp", group: "g1" }],
+    models: [{ mode: "standin", model: "m", endpoint: "进程内规则替身", endpointHash: "-", authRef: "(无)", settings: null, serial: false, speaking: {}, fingerprint: "fp", group: "g1" }],
     modelStates: { m: { state: "已跑", attempts: [] }, hy: { state: "未测(上游 429 限流)", attempts: [{ at: "2026-11-11T14:00:00.000Z", status: 429, retryAfter: "819", note: "rate_limit_error" }] } },
     results: [{ group: "g1", label: "①当前基线", model: "m", mode: "standin", fingerprint: "fp", metrics: scoreRecords(mkSet(), [rec, bad]), contracts: mergeContracts([rec, bad].map((r) => ({ runId: r.runId, results: checkRecord(mkItem(), r) }))) }],
     notes: ["最后一条说明"],

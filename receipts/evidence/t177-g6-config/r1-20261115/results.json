@@ -1,0 +1,81 @@
+{
+  "head": "0f71e48cda9af49f005285851b49c0b8c172f1bf",
+  "node": "v22.22.0",
+  "before": {
+    "exit": 0,
+    "tests": 9,
+    "pass": 9,
+    "fail": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "id": "C96-01",
+      "why": "API_KEY-only 配置不传入",
+      "file": "packages/server/proof/g6/run.ts",
+      "witness": "C96-R1-01",
+      "exit": 1,
+      "signal": null,
+      "killed": true,
+      "restored": true,
+      "sourceSha256": "4e0b5d6afabbfa846a1a6615117e040637e3c19dd4836619621437f45ea0e627",
+      "tap": "C96-01.tap"
+    },
+    {
+      "id": "C96-02",
+      "why": "只有 context 时丢失",
+      "file": "packages/server/proof/g6/driver.ts",
+      "witness": "C96-R1-02",
+      "exit": 1,
+      "signal": null,
+      "killed": true,
+      "restored": true,
+      "sourceSha256": "8be82a80dfa26e3a67daf3c90a734ef4e1ee9cd4e89ab1728bc09ae7dd5f0994",
+      "tap": "C96-02.tap"
+    },
+    {
+      "id": "C96-03",
+      "why": "大预算被截断",
+      "file": "packages/server/proof/g6/manifest.ts",
+      "witness": "C96-R1-03",
+      "exit": 1,
+      "signal": null,
+      "killed": true,
+      "restored": true,
+      "sourceSha256": "95b6900e5899e8768d08a93a26f5d53d3d99c43f34787e114ac0639df3ac9fbf",
+      "tap": "C96-03.tap"
+    },
+    {
+      "id": "C96-04",
+      "why": "替身身份受无效真实预算影响",
+      "file": "packages/server/proof/g6/manifest.ts",
+      "witness": "C96-R1-04",
+      "exit": 1,
+      "signal": null,
+      "killed": true,
+      "restored": true,
+      "sourceSha256": "95b6900e5899e8768d08a93a26f5d53d3d99c43f34787e114ac0639df3ac9fbf",
+      "tap": "C96-04.tap"
+    },
+    {
+      "id": "C96-05",
+      "why": "CLI 实际调用点剥去预算",
+      "file": "packages/server/proof/g6/run.ts",
+      "witness": "C96-R1-05",
+      "exit": 1,
+      "signal": null,
+      "killed": true,
+      "restored": true,
+      "sourceSha256": "4e0b5d6afabbfa846a1a6615117e040637e3c19dd4836619621437f45ea0e627",
+      "tap": "C96-05.tap"
+    }
+  ],
+  "after": {
+    "exit": 0,
+    "tests": 9,
+    "pass": 9,
+    "fail": 0,
+    "skipped": 0
+  },
+  "sourceRestored": true
+}
