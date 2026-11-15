@@ -9,8 +9,8 @@ export function SetupScreen() {
       <main className="flex min-h-0 flex-1 items-start justify-center overflow-y-auto px-6 pb-12 pt-[12vh]">
         <div className="w-full max-w-[400px]">
           <h1 className="text-[22px] font-semibold tracking-[-0.01em] [text-wrap:balance]">接入模型，开始用 g-group</h1>
-          <p className="mb-7 mt-2 text-[13.5px] leading-relaxed text-fg-2 [text-wrap:pretty]">联系人说话、Compute 干活都经这个网关连模型。填一次就行，以后在设置里改。</p>
-          <SetupForm />
+          <p className="mb-7 mt-2 text-[13.5px] leading-relaxed text-fg-2 [text-wrap:pretty]">联系人说话、Compute 干活都经这个网关连模型。先读取可用模型并选一个，再保存连接；以后在设置里改。</p>
+          <SetupForm requireModelChoice />
         </div>
       </main>
     </div>

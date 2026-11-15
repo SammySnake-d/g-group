@@ -33,6 +33,7 @@ test("没接入模型时整窗请用户接入;填好后宿主起来、界面连�
     const win = await app.firstWindow();
     await expect(win.getByTestId("setup-screen")).toBeVisible();
     await expect(win.getByTestId("rail")).toHaveCount(0);
+    await expect(win.getByTestId("setup-model")).toHaveValue("");
     await expect(win.getByTestId("setup-save")).toBeDisabled();
     await win.getByTestId("setup-base-url").fill("not a url");
     await win.getByTestId("setup-token").fill("NEUTRAL_FIXTURE_NO_CREDENTIALS");
@@ -51,6 +52,30 @@ test("没接入模型时整窗请用户接入;填好后宿主起来、界面连�
     expect(JSON.parse(readFileSync(cfg, "utf8")).gateway.model).toBe("neutral-model");
   } finally {
     await app.close();
+    rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+test("首次接入不预选旧模型:读取网关模型目录后必须明确选一个才连接", async () => {
+  const models = await feedServer({ "v1/models": { body: JSON.stringify({ data: [{ id: "fengshao1227/deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash · feishao" }, { id: "safe-model", name: "Safe Model" }] }) } });
+  const userData = mkdtempSync(path.join(tmpdir(), "gg-shell-models-"));
+  const app = await electron.launch({ args: [appDir], cwd: appDir, env: { ...baseEnv, GG_BACKEND: "server", GG_COMPUTE: "fake", GG_USER_DATA_DIR: userData, GG_UPDATE_AUTO: "off" } });
+  try {
+    const win = await app.firstWindow();
+    await expect(win.getByTestId("setup-screen")).toBeVisible();
+    await expect(win.getByTestId("setup-model")).toHaveValue("");
+    await win.getByTestId("setup-base-url").fill(models.url);
+    await win.getByTestId("setup-token").fill("NEUTRAL_FIXTURE_NO_CREDENTIALS");
+    await win.getByTestId("setup-models-load").click();
+    await expect(win.getByTestId("setup-models-count")).toHaveText("已读到 2 个");
+    await expect(win.getByTestId("setup-model-options")).toContainText("DeepSeek V4.1 Flash · feishao");
+    await win.getByTestId("setup-model-options").selectOption("fengshao1227/deepseek-v4.1-flash");
+    await expect(win.getByTestId("setup-model")).toHaveValue("fengshao1227/deepseek-v4.1-flash");
+    await win.getByTestId("setup-save").click();
+    await expect(win.getByTestId("backend-demo")).toHaveAttribute("data-mode", "connected", { timeout: 20_000 });
+  } finally {
+    await app.close();
+    models.server.close();
     rmSync(userData, { recursive: true, force: true });
   }
 });
