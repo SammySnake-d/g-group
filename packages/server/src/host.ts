@@ -1359,7 +1359,6 @@ export class Host {
       }
       tx(this.db, () => {
         this.exits.finishTx(roomId, m.id);
-        this.countTriggers.closeContactTx(m.id, roomId, "联系人已不在这个会话");
       });
       this.countTriggers.announce();
     } else run(this.db, "DELETE FROM gg_members WHERE room_id = ? AND kind = ? AND member_id = ?", roomId, m.kind, m.id);
