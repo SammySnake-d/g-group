@@ -1,0 +1,19 @@
+apps/desktop/docs/p1-notice-pin-packaged-20261115.md
+  s_132ae2173e1d4c::t_6a3c0f00ead879 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "626e2962b81dd93978139b5a899f2060d3b11b6e",
+  "prompts": {},
+  "sessions": {
+    "s_132ae2173e1d4c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-9c33-7e33-a920-de86304f9413",
+        "model": "group/gpt-routings"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
