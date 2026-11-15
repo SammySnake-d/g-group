@@ -89,3 +89,27 @@ test("AC-23 重启无原执行器后放弃失败任务:不得虚构停止确认"
     if (afterRestart) await afterRestart.close();
   }
 });
+
+test("AC-23 执行器未提供停止核验:轮次 settled 不得确认停止或归还槽位", async () => {
+  let settledObserved = false;
+  const compute = scriptedCompute({
+    script: () => [{ kind: "started", sessionId: "s", resumed: false }],
+    settle: async () => { settledObserved = true; },
+  });
+  const host = new Host({ file: file(), mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5, personalComputeSlots: 1 });
+  try {
+    const contact = host.createContact({ name: "没有停止核验" });
+    const dm = host.openDm(contact.id).id;
+    host.send({ roomId: dm, clientActionId: "start", text: "帮我写一份报告" });
+    await until(() => host.listTasks({ roomId: dm })[0]?.state === "T3_Running", "执行器开跑");
+    const task = host.listTasks({ roomId: dm })[0]!;
+    const lease = host.quota.leaseOf(task.id)!;
+    host.stopTask(task.id, "me");
+    await until(() => settledObserved || host.taskView(host.taskDoc(task.id).value).waitingFor?.includes("执行器未提供") === true, "旧轮次已 settled 或宿主拒绝空核验");
+    assert.equal(host.taskDoc(task.id).value.task.state, "T9_StopRequested", "轮次 settled 不证明主进程及全部后代已经停止");
+    assert.equal(host.quota.leaseOf(task.id)?.leaseId, lease.leaseId, "没有完整停止核验,不能归还物理槽位");
+  } finally {
+    compute.close();
+    await host.close();
+  }
+});
