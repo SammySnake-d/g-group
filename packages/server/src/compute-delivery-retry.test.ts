@@ -130,3 +130,49 @@ test("未交付失败卡出现后,同会话新的用户指令仍能处理并交�
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("交付期间来了取消指令:慢反思结束后旧交付不能越过新消息", { timeout: 4000 }, async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "gg-delivery-stale-"));
+  const compute = scriptedCompute({ script: () => [{ kind: "started", sessionId: "s", resumed: false }, { kind: "completed", result: "结果文件已写好" }] });
+  let inReflection!: () => void;
+  let finishReflection!: () => void;
+  const reflectionStarted = new Promise<void>((resolve) => { inReflection = resolve; });
+  const reflectionRelease = new Promise<void>((resolve) => { finishReflection = resolve; });
+  const mind: ContactMind = {
+    async round(input) {
+      const actions: MindAction[] = [];
+      const cancelled = input.fresh.some((f) => f.kind === "message" && f.sender.kind === "user" && f.text === "不要交付，停下");
+      for (const f of input.fresh) {
+        if (f.kind === "message" && f.sender.kind === "user" && f.text === "请写结果") actions.push({ kind: "dispatch", roomId: f.roomId, sourceSeq: f.seq, title: "写结果", task: "写结果" });
+        if (f.kind === "compute" && f.signal === "completed") actions.push(cancelled ? { kind: "stop", taskId: f.taskId } : { kind: "deliver", taskId: f.taskId, text: `已完成:${f.summary}` });
+      }
+      return { actions, stateNote: null };
+    },
+  };
+  const host = new Host({
+    file: path.join(dir, "host.db"), mind: () => mind, compute: () => compute.adapter, maxDeferMs: 5,
+    compactor: () => ({
+      async compact() { return "笔记"; },
+      async reflect(req) {
+        if (req.material.includes("结果文件已写好")) { inReflection(); await reflectionRelease; }
+        return { note: "笔记", memories: [], personaSuggestion: null };
+      },
+    }),
+  });
+  try {
+    const contact = host.createContact({ name: "联系人" });
+    const room = host.openDm(contact.id);
+    host.send({ roomId: room.id, clientActionId: "stale-1", text: "请写结果" });
+    await reflectionStarted;
+    host.send({ roomId: room.id, clientActionId: "stale-2", text: "不要交付，停下" });
+    finishReflection();
+    await host.idle();
+    assert.equal(host.listMessages(room.id, {}).messages.filter((m) => m.text === "已完成:结果文件已写好").length, 0, "旧轮次不能在新指令后交付");
+    assert.notEqual(host.listTasks({ roomId: room.id })[0]?.state, "T8a_Delivered");
+  } finally {
+    finishReflection();
+    compute.close();
+    await host.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
