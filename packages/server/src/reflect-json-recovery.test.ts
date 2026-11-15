@@ -11,7 +11,8 @@ import { Host } from "./host.ts";
 const MODEL = "fixture-fengshao-model";
 const KEY = "fixture-key";
 type Seen = { model: string; system?: { type: string; text: string }[]; messages: { role: string; content: string | { type: string; text?: string }[] }[] };
-function provider(responses: string[], gate?: (index: number) => Promise<void>) {
+type FakeResponse = string | { text: string; stopReason: "end_turn" | "max_tokens" };
+function provider(responses: FakeResponse[], gate?: (index: number) => Promise<void>) {
   const seen: Seen[] = [];
   const enc = new TextEncoder();
   const sse = (type: string, data: object) => enc.encode(`event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`);
@@ -19,15 +20,17 @@ function provider(responses: string[], gate?: (index: number) => Promise<void>) 
     const req = new Request(input, init);
     seen.push(JSON.parse(await req.text()) as Seen);
     await gate?.(seen.length);
-    const text = responses[seen.length - 1];
-    if (text === undefined) throw new Error(`意外的额外模型调用 ${seen.length}`);
+    const response = responses[seen.length - 1];
+    if (response === undefined) throw new Error(`意外的额外模型调用 ${seen.length}`);
+    const text = typeof response === "string" ? response : response.text;
+    const stopReason = typeof response === "string" ? "end_turn" : response.stopReason;
     return new Response(new ReadableStream<Uint8Array>({
       start(c) {
         c.enqueue(sse("message_start", { message: { id: `msg-${seen.length}`, type: "message", role: "assistant", model: MODEL, content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 10, output_tokens: 1 } } }));
         c.enqueue(sse("content_block_start", { index: 0, content_block: { type: "text", text: "" } }));
         c.enqueue(sse("content_block_delta", { index: 0, delta: { type: "text_delta", text } }));
         c.enqueue(sse("content_block_stop", { index: 0 }));
-        c.enqueue(sse("message_delta", { delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 5 } }));
+        c.enqueue(sse("message_delta", { delta: { stop_reason: stopReason, stop_sequence: null }, usage: { output_tokens: 5 } }));
         c.enqueue(sse("message_stop", {}));
         c.close();
       },
@@ -45,7 +48,7 @@ async function settle(host: Host) {
   }
   throw new Error("宿主没有安静下来");
 }
-function setup(responses: string[], reply = false, gate?: (i: RoundInput) => Promise<void>, providerGate?: (index: number) => Promise<void>) {
+function setup(responses: FakeResponse[], reply = false, gate?: (i: RoundInput) => Promise<void>, providerGate?: (index: number) => Promise<void>) {
   const dir = mkdtempSync(path.join(tmpdir(), "gg-reflect-json-"));
   const fake = provider(responses, providerGate);
   const reports: [string, unknown][] = [];
@@ -287,6 +290,26 @@ test("反思 JSON 持续无效且补压缩也失败时下一轮保留上轮未�
     x.host.send({ roomId: x.dm.id, clientActionId: "4", text: "第四轮" });
     await settle(x.host);
     assert.doesNotMatch(x.requests[3]!.blocks.map((b) => b.text).join("\n"), /持久原文标记:安全发布之前必须先做审查/, "成功替换后不反复回送原文");
+  } finally { await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
+});
+
+test("反思无效且补压缩被截断时,宿主不覆盖旧笔记并保留本轮原文给下一轮", async () => {
+  const firstNote = JSON.stringify({ note: "已有完整旧笔记", memories: [], personaSuggestion: null });
+  const x = setup([firstNote, "不是 JSON", { text: "误当完整的半份新笔记", stopReason: "max_tokens" }, valid]);
+  try {
+    x.host.send({ roomId: x.dm.id, clientActionId: "1", text: "第一轮建立笔记" });
+    await settle(x.host);
+    assert.equal(x.host.stateNote(x.c.id), "已有完整旧笔记");
+    x.host.send({ roomId: x.dm.id, clientActionId: "2", text: "截断压缩必须保留的原文" });
+    await settle(x.host);
+    assert.equal(x.host.stateNote(x.c.id), "已有完整旧笔记", "不能以不完整结果覆盖旧笔记");
+    assert.ok(x.reports.some(([w, d]) => w === "compact-failed" && /截断|length|max_tokens/.test(JSON.stringify(d))));
+    x.host.send({ roomId: x.dm.id, clientActionId: "3", text: "第三轮" });
+    await settle(x.host);
+    const next = x.requests[2]!.blocks.map((b) => b.text).join("\n");
+    assert.match(next, /已有完整旧笔记/);
+    assert.match(next, /截断压缩必须保留的原文/);
+    assert.ok(x.fake.seen.every((r) => r.model === MODEL));
   } finally { await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
 });
 
