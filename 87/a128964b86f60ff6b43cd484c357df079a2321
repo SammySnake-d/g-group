@@ -1,0 +1,26 @@
+packages/domain/src/task.test.ts
+  s_69f96fa873b14b::t_2346e65d95c5f0 646,1992
+packages/server/src/start.test.ts
+  s_69f96fa873b14b::t_0a04543d2592a0 24,28
+packages/server/src/delivery-t8a.test.ts
+  s_69f96fa873b14b::t_0a04543d2592a0 75,88-90,102,127-129,137,145-147,154
+packages/server/src/desk-fake.test.ts
+  s_69f96fa873b14b::t_78784e37de2dc8 46
+  s_69f96fa873b14b::t_0a04543d2592a0 16,37,51,56,67,75,81,89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87a128964b86f60ff6b43cd484c357df079a2321",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
