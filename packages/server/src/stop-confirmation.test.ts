@@ -190,3 +190,19 @@ test("AC-23 没有宿主停止状态表时:配额仍拒绝同任务复用 stoppi
   assert.equal(quota.view().leases.length, 1);
   assert.equal(quota.leaseOf(request.taskId)?.leaseId, acquired.granted.leaseId);
 });
+
+test("AC-15 停止确认前的同任务续接须真排队:确认释放后授予新租约且不丢续接", () => {
+  let id = 0;
+  const quota = new QuotaTable({ personal: () => 1, group: () => 0, newId: () => String(++id) });
+  const request = { taskId: "task", contactId: "contact", roomId: "dm-contact", isGroup: false };
+  const original = quota.acquire(request);
+  assert.ok("granted" in original);
+  quota.markStopping(request.taskId);
+  assert.ok("queued" in quota.acquire(request), "确认前不能复用原租约");
+  assert.ok("queued" in quota.acquire(request), "重复续接仍只排一次");
+  const confirmed = quota.release(original.granted.leaseId);
+  assert.deepEqual(confirmed.granted.map((lease) => lease.taskId), [request.taskId], "实际确认释放后应唤醒先前被拦截的续接");
+  assert.ok(confirmed.granted[0]!.leaseId !== original.granted.leaseId && !confirmed.granted[0]!.stopping);
+  assert.equal(quota.view().waiting.length, 0);
+  assert.equal(quota.view().leases.length, 1);
+});
