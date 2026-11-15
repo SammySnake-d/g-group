@@ -2736,7 +2736,9 @@ export class Host {
   private replyScopeRefusal(contactId: string, action: Extract<MindAction, { kind: "reply" }>, fresh: readonly InboundMessage[]): string | null {
     const room = this.roomRow(action.roomId);
     if (room.kind !== "group") return null;
-    const latestUser = [...fresh].reverse().find((m) => m.roomId === action.roomId && m.sender.kind === "user");
+    // 带明确引用时先看被回复的用户消息,不能把同批另一条较新的点名套到它身上。
+    const quotedUser = action.replyToSeq === null ? undefined : fresh.find((m) => m.roomId === action.roomId && m.seq === action.replyToSeq && m.sender.kind === "user");
+    const latestUser = quotedUser ?? [...fresh].reverse().find((m) => m.roomId === action.roomId && m.sender.kind === "user");
     if (!latestUser || latestUser.mentions.length === 0 || latestUser.mentions.includes(contactId)) return null;
     if (action.replyToSeq !== null) {
       const target = this.projected(action.roomId).find((m) => m.seq === action.replyToSeq);
