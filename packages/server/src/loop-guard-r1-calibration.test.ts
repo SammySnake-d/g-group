@@ -199,3 +199,31 @@ test("失败联系人代发的群级卡继承触发输入的因果根", async ()
   assert.ok(source && card, "来源和失败卡必须实际落盘");
   assert.deepEqual(host.loopGuard.rootsOf(group.id, card.seq), host.loopGuard.rootsOf(group.id, source.seq));
 });
+
+test("宿主连续退出后的恢复失败卡沿用原始批次因果根", async () => {
+  let first = 0; let second = 0;
+  const hang = (which: "first" | "second"): ContactMind => ({ async round(_input, signal) {
+    if (which === "first") first++; else second++;
+    return await new Promise<never>((_resolve, reject) => {
+      if (signal.aborted) reject(new Error("关闭"));
+      else signal.addEventListener("abort", () => reject(new Error("关闭")), { once: true });
+    });
+  } });
+  const wait = async (predicate: () => boolean, what: string) => {
+    for (let i = 0; i < 300; i++) { if (predicate()) return; await new Promise((resolve) => setTimeout(resolve, 5)); }
+    assert.fail(`没有等到 ${what}`);
+  };
+  const file = nextFile();
+  const h1 = new Host({ file, mind: () => hang("first"), maxDeferMs: 2 }); hosts.push(h1);
+  const a = h1.createContact({ name: "甲" }); const dm = h1.openDm(a.id);
+  h1.send({ roomId: dm.id, clientActionId: "start", text: "故障前输入" });
+  await wait(() => first === 1, "首次轮次");
+  const h2 = new Host({ file, mind: () => hang("second"), maxDeferMs: 2 }); hosts.push(h2);
+  await wait(() => second === 1, "恢复轮次");
+  const h3 = new Host({ file, mind: () => hang("second"), maxDeferMs: 2 }); hosts.push(h3);
+  await wait(() => h3.listMessages(dm.id, {}).messages.some((m) => m.card?.kind === "failure"), "恢复失败卡");
+  const messages = h3.listMessages(dm.id, {}).messages;
+  const source = messages.find((m) => m.text === "故障前输入"); const card = messages.find((m) => m.card?.kind === "failure");
+  assert.ok(source && card);
+  assert.deepEqual(h3.loopGuard.rootsOf(dm.id, card.seq), h3.loopGuard.rootsOf(dm.id, source.seq));
+});
