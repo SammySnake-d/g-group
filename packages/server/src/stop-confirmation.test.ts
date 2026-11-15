@@ -54,3 +54,38 @@ test("AC-23 停止未确认后重试被拒:原租约不能复用或释放给后�
     await host.close();
   }
 });
+
+test("AC-23 重启无原执行器后放弃失败任务:不得虚构停止确认", async () => {
+  const compute = scriptedCompute({
+    script: failureScript,
+    quiesce: async () => ({ ok: false, reason: "原执行器停止未确认", remaining: [] }),
+  });
+  const database = file();
+  let before: Host | undefined;
+  let afterRestart: Host | undefined;
+  try {
+    before = new Host({ file: database, mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5, personalComputeSlots: 1 });
+    const contact = before.createContact({ name: "重启无执行器" });
+    const dm = before.openDm(contact.id).id;
+    before.send({ roomId: dm, clientActionId: "start", text: "帮我写一份报告" });
+    await until(() => before!.listTasks({ roomId: dm })[0]?.waitingFor?.includes("停止未确认") === true, "旧执行器停止未确认");
+    const task = before.listTasks({ roomId: dm })[0]!;
+    const saved = before.quota.leaseOf(task.id);
+    assert.ok(saved);
+    await before.close();
+    before = undefined;
+    compute.close();
+    // 重启只有持久账本,没有接回原执行器;旧失败卡仍是正常产品入口。
+    afterRestart = new Host({ file: database, mind: () => scriptedMind(), maxDeferMs: 5, personalComputeSlots: 1 });
+    const failure = afterRestart.listMessages(dm, {}).messages.find((message) => message.card?.kind === "failure")!;
+    afterRestart.cardAct({ roomId: dm, seq: failure.seq, cardId: failure.card!.cardId, actionId: "give-up", clientActionId: "give-up" });
+    await tick();
+    assert.equal(afterRestart.taskDoc(task.id).value.task.state, "T9_StopRequested", "没有原执行器,不能以空观察确认停止并转 T11");
+    assert.deepEqual(afterRestart.quota.leaseOf(task.id), saved, "原物理租约必须原样保留");
+    assert.ok(afterRestart.taskView(afterRestart.taskDoc(task.id).value).waitingFor?.includes("停止未确认"));
+  } finally {
+    compute.close();
+    if (before) await before.close();
+    if (afterRestart) await afterRestart.close();
+  }
+});
