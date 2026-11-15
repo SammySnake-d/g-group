@@ -1,0 +1,4 @@
+{"at":"2026-11-15T22:20:42.474Z","worker":88570,"event":"boot","pid":88570,"ppid":88564,"identity":"1794781242:402838"}
+{"at":"2026-11-15T22:20:42.607Z","worker":88570,"event":"fixture-dir","dir":"/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/baseline-safe/private-test-tmp-79q3d866/gg-q09-Jq5Hnk"}
+{"at":"2026-11-15T22:20:42.619Z","worker":88570,"event":"fixture-dir","dir":"/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/baseline-safe/private-test-tmp-79q3d866/gg-desk-fake-t1jm2J"}
+{"at":"2026-11-15T22:20:42.620Z","worker":88570,"event":"fixture-dir","dir":"/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/baseline-safe/private-test-tmp-79q3d866/gg-start-rTIz5h"}

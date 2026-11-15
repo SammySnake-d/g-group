@@ -1,0 +1,12 @@
+{"at":"2026-11-15T22:22:04.317Z","worker":89358,"event":"boot","pid":89358,"ppid":89352,"identity":"1794781324:254863"}
+{"at":"2026-11-15T22:22:04.700Z","worker":89383,"event":"boot","pid":89383,"ppid":89352,"identity":"1794781324:631439"}
+{"at":"2026-11-15T22:22:04.863Z","worker":89388,"event":"boot","pid":89388,"ppid":89352,"identity":"1794781324:793325"}
+{"at":"2026-11-15T22:22:05.051Z","worker":89393,"event":"boot","pid":89393,"ppid":89352,"identity":"1794781324:979349"}
+{"at":"2026-11-15T22:22:05.181Z","worker":89393,"event":"fixture-dir","dir":"/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/strengthened-safe/private-test-tmp-994tae0b/gg-q09-PqiFXC"}
+{"at":"2026-11-15T22:22:05.192Z","worker":89393,"event":"fixture-dir","dir":"/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/strengthened-safe/private-test-tmp-994tae0b/gg-desk-fake-BGh7o6"}
+{"at":"2026-11-15T22:22:05.193Z","worker":89393,"event":"fixture-dir","dir":"/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/strengthened-safe/private-test-tmp-994tae0b/gg-start-MrmX3u"}
+{"at":"2026-11-15T22:22:12.375Z","worker":89482,"event":"boot","pid":89482,"ppid":89352,"identity":"1794781332:313725"}
+{"at":"2026-11-15T22:22:12.745Z","worker":89507,"event":"boot","pid":89507,"ppid":89352,"identity":"1794781332:676112"}
+{"at":"2026-11-15T22:22:12.908Z","worker":89512,"event":"boot","pid":89512,"ppid":89352,"identity":"1794781332:838629"}
+{"at":"2026-11-15T22:22:13.081Z","worker":89517,"event":"boot","pid":89517,"ppid":89352,"identity":"1794781333:21137"}
+{"at":"2026-11-15T22:22:16.808Z","worker":89543,"event":"boot","pid":89543,"ppid":89352,"identity":"1794781336:272885"}

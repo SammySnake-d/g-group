@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/opt/homebrew/bin/node",
+    "--experimental-test-isolation=none",
+    "--import",
+    "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/forbid-os-signals.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "--test-concurrency=1",
+    "--test-timeout=30000",
+    "packages/server/src/delivery-t8a.test.ts",
+    "packages/server/src/desk-fake.test.ts",
+    "packages/server/src/start.test.ts"
+  ],
+  "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+  "pid": 85836,
+  "exit": 1,
+  "duration_s": 24.553340196609497
+}

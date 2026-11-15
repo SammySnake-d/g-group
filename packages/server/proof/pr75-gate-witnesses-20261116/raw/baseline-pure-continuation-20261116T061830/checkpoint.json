@@ -1,0 +1,63 @@
+{
+  "ACTIVE_OBJECT": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+  "source_head": "3efafc167a80f944a5cd7b839a3c7a9fc6ae3e53",
+  "source_freeze": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/baseline-commands.json",
+  "NEXT_EXECUTABLE_ACTION": [
+    {
+      "name": "static",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/witness-tools.mjs",
+        "static",
+        "baseline"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+      "expected_exits": [
+        1
+      ]
+    },
+    {
+      "name": "attention-mutation",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--experimental-test-isolation=none",
+        "--import",
+        "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/forbid-os-signals.mjs",
+        "--import",
+        "./__gate_arm.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "--test-timeout=2000",
+        "packages/kernel/src/attention-retry.test.ts"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/baseline-mutation",
+      "expected_exits": [
+        1
+      ]
+    },
+    {
+      "name": "task-mutation",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--experimental-test-isolation=none",
+        "--import",
+        "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/forbid-os-signals.mjs",
+        "--import",
+        "./__gate_arm.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "--test-timeout=2000",
+        "--test-name-pattern=^(AC-28① 交付待确认没有归档出口|R13 进程内改写 TABLE/行/格/STATES/EVENT_KINDS)",
+        "packages/domain/src/task.test.ts"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/baseline-mutation",
+      "expected_exits": [
+        0
+      ]
+    }
+  ],
+  "ACCEPTANCE_EVENT": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/baseline-pure-continuation-20261116T061830/command_executions.json",
+  "supervisor_pid": 87313
+}

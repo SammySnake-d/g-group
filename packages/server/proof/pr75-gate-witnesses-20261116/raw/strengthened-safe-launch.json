@@ -1,0 +1,16 @@
+{
+  "event": "command_execution",
+  "command": [
+    "/opt/homebrew/opt/python@3.14/bin/python3.14",
+    "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/run-witnesses-safe.py",
+    "strengthened"
+  ],
+  "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+  "pid": 89352,
+  "started_at": "2026-11-15T22:22:04.166427+00:00",
+  "source_head": "c8456dced7814434105bafb5599b17f3757a9c17",
+  "runner_sha256": "419107050bc448c5073f967b892b69417ac22093e10ed48c668bcdfa474fae4d",
+  "log": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/strengthened-safe-supervisor.log",
+  "exit_path": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/strengthened-safe/supervisor.exit",
+  "frozen_source": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/strengthened-safe/commands.json"
+}

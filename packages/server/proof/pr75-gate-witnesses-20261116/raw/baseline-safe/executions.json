@@ -1,0 +1,23 @@
+[
+  {
+    "event": "command_execution",
+    "name": "server-real",
+    "command": [
+      "/opt/homebrew/bin/node",
+      "--experimental-test-isolation=none",
+      "--test",
+      "--test-reporter=tap",
+      "--test-concurrency=1",
+      "--test-timeout=30000",
+      "packages/server/src/delivery-t8a.test.ts",
+      "packages/server/src/desk-fake.test.ts",
+      "packages/server/src/start.test.ts"
+    ],
+    "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+    "started_at": "2026-11-15T22:20:42.402452+00:00",
+    "pid": 88570,
+    "exit": 0,
+    "elapsed_s": 7.308,
+    "finished_at": "2026-11-15T22:20:49.710814+00:00"
+  }
+]

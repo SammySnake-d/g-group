@@ -1,0 +1,11 @@
+{
+  "event": "command_execution",
+  "pid": 83937,
+  "command": [
+    "python3",
+    "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/run-witnesses.py",
+    "baseline"
+  ],
+  "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+  "started_at": "2026-11-15T22:12:34.388683+00:00"
+}

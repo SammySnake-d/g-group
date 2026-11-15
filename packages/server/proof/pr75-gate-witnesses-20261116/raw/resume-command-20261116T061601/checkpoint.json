@@ -1,0 +1,27 @@
+{
+  "ACTIVE_OBJECT": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+  "branch": "fix/pr75-gate-witnesses-20261116",
+  "source_base_HEAD": "3efafc167a80f944a5cd7b839a3c7a9fc6ae3e53",
+  "NEXT_EXECUTABLE_ACTION": [
+    "/opt/homebrew/bin/node",
+    "--experimental-test-isolation=none",
+    "--import",
+    "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/forbid-os-signals.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "--test-concurrency=1",
+    "--test-timeout=30000",
+    "packages/server/src/delivery-t8a.test.ts",
+    "packages/server/src/desk-fake.test.ts",
+    "packages/server/src/start.test.ts"
+  ],
+  "INPUT_PATHS": [
+    "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/baseline-executions.json",
+    "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/run-witnesses.py",
+    "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/forbid-os-signals.mjs"
+  ],
+  "ACCEPTANCE_EVENT": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/resume-command-20261116T061601/command_execution.json",
+  "log": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/resume-command-20261116T061601/command.log",
+  "exit_path": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/resume-command-20261116T061601/command.exit",
+  "supervisor_pid": 85812
+}
