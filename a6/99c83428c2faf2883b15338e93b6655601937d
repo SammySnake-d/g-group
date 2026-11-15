@@ -1,0 +1,123 @@
+apps/desktop/proof/pr101-r2/cleanup.json
+  s_be862bfe4ebd7a::t_c2bd6e9c7367e7 1-16
+receipts/feat-desktop-backend-parity-20261113.json
+  s_be862bfe4ebd7a::t_54fe5e2c029c4f 1-97
+apps/desktop/scripts/pr101-mutants.mjs
+  s_be862bfe4ebd7a::t_1778326db177eb 1-41
+apps/desktop/scripts/pr101-p0-walk.mjs
+  s_be862bfe4ebd7a::t_a6bc649f393948 13,20-21,25-29,33,66-68,74,145,151-166,168,175-181,183-184,186-188
+apps/desktop/proof/pr101-r2/package-manifest.json
+  s_be862bfe4ebd7a::t_c2bd6e9c7367e7 1-414
+apps/desktop/proof/pr101-r2/RESULT.md
+  s_be862bfe4ebd7a::t_54fe5e2c029c4f 1-59
+apps/desktop/docs/前端开发优先级-20261115.md
+  s_be862bfe4ebd7a::t_c2bd6e9c7367e7 43
+  s_be862bfe4ebd7a::t_4df5446c3c8a57 1,3,5,7-9,12-41,44
+  s_be862bfe4ebd7a::t_e5a217c02f2044 11,42,45-46
+apps/desktop/proof/pr101-r2/packaged-target/database-summary.json
+  s_be862bfe4ebd7a::t_e5a217c02f2044 1-217
+apps/desktop/proof/pr101-r2/mutants-build.txt
+  s_125fc13e4dc62e::t_4215852513f97f 1-76
+apps/desktop/proof/pr101-r2/p0-green.exit
+  s_125fc13e4dc62e::t_2d69db75c63a35 1
+apps/desktop/proof/pr101-r2/p0-green.txt
+  s_125fc13e4dc62e::t_b45b9ea616b526 1-27
+apps/desktop/proof/pr101-r2/packaged-command.json
+  s_be862bfe4ebd7a::t_2215434bded452 1-14
+apps/desktop/proof/pr101-r2/packaged-target-command.json
+  s_be862bfe4ebd7a::t_cc69cf79051227 1-13
+apps/desktop/proof/pr101-r2/structure-final.exit
+  s_be862bfe4ebd7a::t_823eee0b4038bd 1
+apps/desktop/proof/pr101-r2/structure-final.txt
+  s_be862bfe4ebd7a::t_e16f549728db66 1-6
+apps/desktop/proof/pr101-r2/structure.exit
+  s_be862bfe4ebd7a::t_271819dff6b8d7 1
+apps/desktop/proof/pr101-r2/structure.txt
+  s_be862bfe4ebd7a::t_8355d22c66cfd4 1-8
+apps/desktop/proof/pr101-r2/build-package.exit
+  s_b93b4373bbd684::t_260c6e5749d27c 1
+apps/desktop/proof/pr101-r2/build-package.txt
+  s_b93b4373bbd684::t_f799efe11ff412 1-76
+apps/desktop/proof/pr101-r2/mutants.exit
+  s_be862bfe4ebd7a::t_98ce3387909f58 1
+apps/desktop/proof/pr101-r2/mutants.txt
+  s_be862bfe4ebd7a::t_42e51a55393858 1-6
+apps/desktop/proof/pr101-r2/mutants/M-DRAFT.txt
+  s_125fc13e4dc62e::t_a94a92cde5cfb1 1-66
+apps/desktop/proof/pr101-r2/mutants/M-PASTE.txt
+  s_69f96fa873b14b::t_8bc00a4cca1ac5 1-68
+apps/desktop/proof/pr101-r2/mutants/M-PREVIEW.txt
+  s_be862bfe4ebd7a::t_70f3aab12fa2df 1-66
+apps/desktop/proof/pr101-r2/mutants/result.json
+  s_be862bfe4ebd7a::t_d702ac88717597 1-37
+apps/desktop/proof/pr101-r2/p0-first.exit
+  s_be862bfe4ebd7a::t_1d440653774b06 1
+apps/desktop/proof/pr101-r2/p0-first.txt
+  s_be862bfe4ebd7a::t_42371da0bcad88 1-123
+apps/desktop/proof/pr101-r2/p0-second.exit
+  s_be862bfe4ebd7a::t_f68a4053796983 1
+apps/desktop/proof/pr101-r2/p0-second.txt
+  s_be862bfe4ebd7a::t_a34924c21da13d 1-94
+apps/desktop/proof/pr101-r2/p0-third.exit
+  s_be862bfe4ebd7a::t_2a520c51a67be6 1
+apps/desktop/proof/pr101-r2/p0-third.txt
+  s_be862bfe4ebd7a::t_aa5f9989c26098 1-21
+apps/desktop/proof/pr101-r2/pack-local.exit
+  s_be862bfe4ebd7a::t_935950513dc749 1
+apps/desktop/proof/pr101-r2/pack-local.txt
+  s_be862bfe4ebd7a::t_c6509da727054f 1-22
+apps/desktop/proof/pr101-r2/packaged.exit
+  s_125fc13e4dc62e::t_28160109277175 1
+apps/desktop/proof/pr101-r2/packaged.txt
+  s_125fc13e4dc62e::t_ba06990d78ee96 1-10
+apps/desktop/proof/pr101-r2/packaged/result.json
+  s_125fc13e4dc62e::t_4ea0fdfa3dcd46 1-90
+apps/desktop/proof/pr101-r2/renderer-last-recheck.exit
+  s_be862bfe4ebd7a::t_ef2ce22a96a074 1
+apps/desktop/proof/pr101-r2/renderer-last-recheck.txt
+  s_be862bfe4ebd7a::t_0f99e3ec9d3eb0 1-13
+apps/desktop/proof/pr101-r2/renderer-models.exit
+  s_be862bfe4ebd7a::t_864b1365f68188 1
+apps/desktop/proof/pr101-r2/renderer-models.txt
+  s_be862bfe4ebd7a::t_9143d05922f386 1-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a699c83428c2faf2883b15338e93b6655601937d",
+  "prompts": {},
+  "sessions": {
+    "s_125fc13e4dc62e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1defd-bfb5-74f3-8210-1927be85b8df",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_b93b4373bbd684": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1defe-5fc0-7860-ac40-8ae048dd2a50",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_be862bfe4ebd7a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1de94-42ad-7200-a40f-a6f126eca979",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
