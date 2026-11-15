@@ -1,6 +1,6 @@
 import { AlertTriangle, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { people, dutyDefault, type PersonId } from '@/data'
+import { people, type PersonId } from '@/data'
 import { useApp, type WbTab } from '@/ctx'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -43,7 +43,7 @@ export function Workbench({ id, tab, onTab }: { id: PersonId; tab: WbTab; onTab:
               <Avatar id={id} size={64} follow status={false} />
               <div className="min-w-0 flex-1">
                 <h1 className="truncate text-[20px] font-semibold tracking-tight">{p.name}</h1>
-                <div className="mt-0.5 truncate text-[13px] text-fg-2">{dutyDefault[id] ?? p.role}</div>
+                <div className="mt-0.5 truncate text-[13px] text-fg-2">{p.role}</div>
                 {!p.human && (
                   <div data-testid="wb-status" className={cn('mt-1 flex items-center gap-1.5 text-[12.5px]', toneCls[status.tone])}>
                     <StatusIcon tone={status.tone} /><span className="truncate">{status.text}</span>

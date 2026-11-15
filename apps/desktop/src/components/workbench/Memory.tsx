@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { people, type PersonId } from '@/data'
 import { useApp } from '@/ctx'
+import { live } from '@/api/wire/live'
 import { Button } from '@/components/ui/button'
 import { SectionHeader } from '@/components/ui/section'
 import { Hint, TextInput } from '@/components/pages/kit/parts'
@@ -8,11 +9,12 @@ import { TextLink, WbCard } from './parts'
 
 /* 记忆(MEMORY.md):它自己写,你可以纠正或删除;每条带出处,出处是消息就能点回去 */
 export function Memory({ id }: { id: PersonId }) {
-  const { jump, updatePerson } = useApp()
+  const { jump, updatePerson, isLive } = useApp((s) => ({ jump: s.jump, updatePerson: s.updatePerson, isLive: live(s) }))
   const p = people[id]
   const [list, setList] = useState(p.memory ?? [])
   const [fixing, setFixing] = useState<number | null>(null)
   const [draft, setDraft] = useState('')
+  if (isLive) return <WbCard testid="wb-memory"><SectionHeader title="记忆（MEMORY.md）" /><Hint>记忆先关着：后端长期记忆接口还没有接入，当前页面不显示演示内容。</Hint><div data-testid="wb-memory-off" className="mt-2 rounded-lg bg-hover/60 px-3 py-2 text-[12.5px] text-fg-3">记忆功能暂不可用</div></WbCard>
   const save = (next: typeof list, note: string) => { setList(next); updatePerson(id, { memory: next }, note) }
   return (
     <WbCard testid="wb-memory">

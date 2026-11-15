@@ -6,8 +6,10 @@ import { AnimatePresence, motion } from 'motion/react'
 import { applyFix, checkStall, gateCompute, nextTurn, resolveCompute, resolveSpeaking, type Fix, type ModelSlot, type NextTurn } from '@g-group/ui-core'
 import { people, type PersonId } from '@/data'
 import { useApp } from '@/ctx'
+import { live } from '@/api/wire/live'
 import { collapse } from '@/config/motion'
 import { Slider } from '@/components/ui/slider'
+import { Button } from '@/components/ui/button'
 import { Field, NativeSelect } from '@/components/ui/field'
 import { EFFORT_LIST, HARNESS_LIST, VENDOR_LABEL, harnessLabel, liveComputes, modelLabel, modelOption } from '@/modelConfig'
 import { CM } from './constants'
@@ -19,14 +21,17 @@ import { StallSettings } from './StallSettings'
 import { SaveBar } from './SaveBar'
 
 const W = 'w-[230px]'
+const OTHER = '__other__'
 
 export function ContactModelSettings({ id }: { id: PersonId }) {
-  const { modelSettings: s, modelsRev, saveModels, computes } = useApp()
+  const { modelSettings: s, modelsRev, saveModels, computes, isLive } = useApp((st) => ({ modelSettings: st.modelSettings, modelsRev: st.modelsRev, saveModels: st.saveModels, computes: st.computes, isLive: live(st) }))
   const p = people[id]
   const [base, setBase] = useState<Draft>(() => fromPerson(p))
   const [draft, setDraft] = useState<Draft>(base)
   const [notice, setNotice] = useState<NextTurn | null>(null)
   const [adv, setAdv] = useState(!!p.stall)
+  const [talkOther, setTalkOther] = useState(false)
+  const [computeOther, setComputeOther] = useState(false)
   /* 别处（全局默认、批量替换）保存过：没改动就跟上新值 */
   useEffect(() => {
     const cur = fromPerson(people[id])
@@ -68,10 +73,13 @@ export function ContactModelSettings({ id }: { id: PersonId }) {
         {/* ---- 左：配置 ---- */}
         <div className="min-w-0 space-y-3">
           <Field layout="inline" label={CM.talk} hint={CM.talkHint}>
-            <NativeSelect aria-label={CM.talk} data-testid="cm-talk" value={draft.speakingModel} onChange={(e) => set({ speakingModel: e.target.value })} className={W}>
+            <NativeSelect aria-label={CM.talk} data-testid="cm-talk" value={talkOther ? OTHER : draft.speakingModel} onChange={(e) => e.target.value === OTHER ? (setTalkOther(true), set({ speakingModel: '' })) : (setTalkOther(false), set({ speakingModel: e.target.value }))} className={W}>
               {s.models.map((m) => <option key={m.id} value={m.id}>{m.label} · {VENDOR_LABEL[m.vendor] ?? m.vendor}</option>)}
+              {draft.speakingModel && !s.models.some((m) => m.id === draft.speakingModel) && <option value={draft.speakingModel}>{draft.speakingModel} · 目录里没声明</option>}
+              <option value={OTHER}>填别的模型 id…</option>
             </NativeSelect>
           </Field>
+          {talkOther && <div className="mt-2 flex gap-1.5"><input data-testid="cm-talk-other" className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-bg px-2 text-[13px]" placeholder="模型 ID" onChange={(e) => set({ speakingModel: e.target.value })} /><Button data-testid="cm-talk-other-ok" size="xs" variant="secondary" onClick={() => setTalkOther(false)}>确定</Button></div>}
           <div className="border-t border-line pt-3">
             <div className="mb-2 text-[12px] font-medium text-fg-3">{CM.compute}</div>
             <div className="space-y-2.5">
@@ -86,11 +94,14 @@ export function ContactModelSettings({ id }: { id: PersonId }) {
                   onPick={(m) => setSlot(m, m === 'explicit' ? compute.model.value || s.defaultComputeModel : undefined)} />
                 {draft.computeModel.mode === 'explicit' && (
                   <Field layout="inline" label={CM.explicitModel} hint={CM.explicitHint} className="mt-2">
-                    <NativeSelect aria-label="单独指定的 Compute 模型" data-testid="cm-model" value={draft.computeModel.model ?? ''} onChange={(e) => setSlot('explicit', e.target.value)} invalid={!gate.allowed} className={W}>
+                    <NativeSelect aria-label="单独指定的 Compute 模型" data-testid="cm-model" value={computeOther ? OTHER : draft.computeModel.model ?? ''} onChange={(e) => e.target.value === OTHER ? (setComputeOther(true), setSlot('explicit', '')) : (setComputeOther(false), setSlot('explicit', e.target.value))} invalid={!gate.allowed} className={W}>
                       {s.models.map((m) => <option key={m.id} value={m.id}>{modelOption(m.id, s)}</option>)}
+                      {draft.computeModel.model && !s.models.some((m) => m.id === draft.computeModel.model) && <option value={draft.computeModel.model}>{draft.computeModel.model} · 目录里没声明</option>}
+                      <option value={OTHER}>填别的模型 id…</option>
                     </NativeSelect>
                   </Field>
                 )}
+                {computeOther && <div className="mt-2 flex gap-1.5"><input data-testid="cm-model-other" className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-bg px-2 text-[13px]" placeholder="模型 ID" onChange={(e) => setSlot('explicit', e.target.value)} /><Button data-testid="cm-model-other-ok" size="xs" variant="secondary" onClick={() => setComputeOther(false)}>确定</Button></div>}
               </div>
               <Field layout="inline" label={CM.effort} hint={CM.effortHint}>
                 <NativeSelect aria-label="Compute effort" data-testid="cm-effort" value={draft.computeModel.effort ?? ''} onChange={(e) => set({ computeModel: cleanSlot(draft.computeModel.mode, draft.computeModel.model, e.target.value || undefined) })} className={W}>
@@ -113,7 +124,7 @@ export function ContactModelSettings({ id }: { id: PersonId }) {
         <EffectivePanel name={p.name} cm={cm} s={s} speaking={resolveSpeaking(cm)} compute={compute} allowed={gate.allowed} dirty={dirty} running={running} />
       </div>
 
-      <StallSettings name={p.name} stall={draft.stall} error={stallErr} open={adv} onOpenChange={setAdv} onChange={(v) => set({ stall: v })} />
+      {isLive ? <div data-testid="stall-off" className="mt-3 border-t border-line pt-3 text-[12.5px] text-fg-3">卡死判定不能单独设：后端只提供全局/联系人运行台账阈值，当前工作台不伪造本地开关。</div> : <StallSettings name={p.name} stall={draft.stall} error={stallErr} open={adv} onOpenChange={setAdv} onChange={(v) => set({ stall: v })} />}
 
       <AnimatePresence initial={false}>
         {(dirty || notice) && (

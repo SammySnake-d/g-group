@@ -18,6 +18,7 @@ import { FieldSwitch } from './FieldSwitch'
 
 const ROW = 'flex min-h-11 flex-col justify-center px-4 py-1.5'
 const SEL = 'w-[168px]'
+const OTHER = '__other__'
 
 export function GlobalModelDefaults() {
   const { modelSettings: s, modelsRev, saveModels } = useApp()
@@ -25,6 +26,7 @@ export function GlobalModelDefaults() {
   const [fixes, setFixes] = useState<Fix[]>([])
   const [savedN, setSavedN] = useState<number | null>(null)
   const [batch, setBatch] = useState(false)
+  const [otherCompute, setOtherCompute] = useState(false)
   const impactRef = useRef<HTMLDivElement>(null)
   useEffect(() => { setDraft(s); setFixes([]) }, [modelsRev]) // 任何一处保存过都从新的全局默认重新开始
 
@@ -32,7 +34,7 @@ export function GlobalModelDefaults() {
   const plan = planDefaults(contacts, s, draft, fixes)
   const changed = DEFAULT_FIELDS.filter((k) => draft[k] !== s[k])
   const dirty = changed.length > 0 || fixes.length > 0
-  const setField = (k: DefaultField, v: string) => { setDraft((d) => ({ ...d, [k]: v })); setSavedN(null) }
+  const setField = (k: DefaultField, v: string) => { setDraft((d) => ({ ...d, [k]: v, ...(k === 'defaultComputeModel' || k === 'defaultSpeakingModel') && v && !d.models.some((m) => m.id === v) ? { models: [...d.models, { id: v, label: v, vendor: 'unknown', harnesses: [...HARNESS_LIST] }] } : {} })); setSavedN(null) }
   const addFix = (f: Fix) => setFixes((fs) => [...fs.filter((x) => x.contactId !== f.contactId), f])
   const save = () => {
     if (!plan.canSave) return
@@ -56,10 +58,13 @@ export function GlobalModelDefaults() {
         <div className="flex items-center px-1 pb-1.5 pt-2 text-[12px] font-medium text-fg-3"><span className="flex-1">{DEFAULTS.section}</span></div>
         <div className="overflow-hidden rounded-xl bg-hover/60 [&>*+*]:border-t [&>*+*]:border-line">
           <Field layout="inline" className={ROW} label={DEFAULT_FIELD_LABEL.defaultComputeModel} hint={`继承全局的联系人用它（${computeWhere} 能跑）`}>
-            <NativeSelect aria-label={DEFAULT_FIELD_LABEL.defaultComputeModel} data-testid="def-compute" value={draft.defaultComputeModel} onChange={(e) => setField('defaultComputeModel', e.target.value)} className={SEL} invalid={!!plan.defaultsMismatch}>
+            <NativeSelect aria-label={DEFAULT_FIELD_LABEL.defaultComputeModel} data-testid="def-compute" value={otherCompute ? OTHER : draft.defaultComputeModel} onChange={(e) => e.target.value === OTHER ? (setOtherCompute(true), setField('defaultComputeModel', '')) : (setOtherCompute(false), setField('defaultComputeModel', e.target.value))} className={SEL} invalid={!!plan.defaultsMismatch}>
               {s.models.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+              {draft.defaultComputeModel && !s.models.some((m) => m.id === draft.defaultComputeModel) && <option value={draft.defaultComputeModel}>{draft.defaultComputeModel} · 目录里没声明</option>}
+              <option value={OTHER}>填别的模型 id…</option>
             </NativeSelect>
           </Field>
+          {otherCompute && <div className="flex gap-1.5 px-4 pb-2"><input data-testid="def-compute-other" className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-bg px-2 text-[13px]" placeholder="模型 ID" onChange={(e) => setField('defaultComputeModel', e.target.value)} /><Button data-testid="def-compute-other-ok" size="xs" variant="secondary" onClick={() => setOtherCompute(false)}>确定</Button></div>}
           <Field layout="inline" className={ROW} label={DEFAULT_FIELD_LABEL.defaultEffort} hint={DEFAULTS.effortHint}>
             <NativeSelect aria-label={DEFAULT_FIELD_LABEL.defaultEffort} data-testid="def-effort" value={draft.defaultEffort} onChange={(e) => setField('defaultEffort', e.target.value)} className={SEL}>
               {EFFORT_LIST.map((e) => <option key={e} value={e}>{e}</option>)}
@@ -73,6 +78,7 @@ export function GlobalModelDefaults() {
           <Field layout="inline" className={ROW} label={DEFAULT_FIELD_LABEL.defaultSpeakingModel} hint={DEFAULTS.talkHint}>
             <NativeSelect aria-label={DEFAULT_FIELD_LABEL.defaultSpeakingModel} data-testid="def-talk" value={draft.defaultSpeakingModel} onChange={(e) => setField('defaultSpeakingModel', e.target.value)} className={SEL}>
               {s.models.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+              {draft.defaultSpeakingModel && !s.models.some((m) => m.id === draft.defaultSpeakingModel) && <option value={draft.defaultSpeakingModel}>{draft.defaultSpeakingModel} · 目录里没声明</option>}
             </NativeSelect>
           </Field>
           <Field layout="inline" className={ROW} label={DEFAULTS.review}><FieldSwitch defaultChecked /></Field>

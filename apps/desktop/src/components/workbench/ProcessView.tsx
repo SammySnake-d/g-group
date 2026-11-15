@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useEffect } from 'react'
 import { History } from 'lucide-react'
 import { people, innerLog, type Msg, type PersonId } from '@/data'
 import { useApp } from '@/ctx'
@@ -6,6 +7,9 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/section'
 import { GroupAvatar } from '../Avatar'
 import { MessageList } from '../Messages'
+import { live } from '@/api/wire/live'
+import { runsLive } from '@/api/wire/workbench'
+import type { RunView } from '@g-group/api-contract'
 
 /* 联系人的完整过程:和聊天同一套模板,只有它一个人说话。从某个群打开时先只看这个群,可以「看全部」 */
 type Log = (typeof innerLog)[string]
@@ -34,9 +38,21 @@ function toMsgs(id: PersonId, items: Log, seg: number): Msg[] {
 }
 
 export function ProcessView({ id, conv }: { id: PersonId; conv?: string }) {
-  const { convs } = useApp()
+  const { convs, computes, isLive } = useApp((s) => ({ convs: s.convs, computes: s.computes, isLive: live(s) }))
   const [all, setAll] = useState(false)
+  const [runs, setRuns] = useState<RunView[]>([])
+  useEffect(() => { if (isLive) void runsLive(id, conv).then((r) => { if (r.ok) setRuns(r.value) }) }, [id, conv, isLive])
   const p = people[id]
+  if (isLive) {
+    const titleOf = (r: RunView) => (r.computeId && computes[r.computeId]?.title) || (r.taskId && computes[r.taskId]?.title) || r.note || '联系人运行'
+    const roomTitle = (r: RunView) => convs.find((c) => c.id === r.roomId)?.title ?? r.roomId
+    return <div data-testid={`process-${id}`} data-conv={conv ?? 'all'} className="flex min-w-0 flex-col px-4 pb-6">
+      <div className="sticky top-0 z-10 -mx-4 border-b border-line bg-bg/95 px-4 py-2 backdrop-blur text-center text-[12px] text-fg-3">这里只能看。后端运行台账没有逐句过程，不在这里编造。</div>
+      <h3 className="mt-4 text-[13px] font-semibold text-fg-2">运行台账</h3>
+      {!runs.length && <EmptyState icon={<History />} title={`${p?.name ?? '它'}还没有运行台账`} />}
+      <div className="mt-2 space-y-1.5">{runs.map((r) => <div key={r.id} data-testid="run-row" data-layer={r.layer} className="rounded-lg bg-hover/60 px-3 py-2 text-[12.5px]"><div className="font-medium">{titleOf(r)}</div><div className="text-fg-2">{roomTitle(r)} · {r.text} · 用时 {r.durationMs ? `${Math.round(r.durationMs / 1000)} 秒` : '—'}</div></div>)}</div>
+    </div>
+  }
   const only = conv && !all ? conv : undefined
   const log = (innerLog[id] ?? []).filter((l) => !only || l.conv === only)
   const title = (cid: string) => {

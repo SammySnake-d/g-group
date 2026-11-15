@@ -7,7 +7,7 @@ import { useApp } from '@/ctx'
 import { Button } from '@/components/ui/button'
 import { NativeSelect } from '@/components/ui/field'
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/modal'
-import { liveComputes, modelContacts, modelOption, snapshotOfCompute, toContactModels } from '@/modelConfig'
+import { liveComputes, modelContacts, modelOption, snapshotOfCompute, toContactModels, type ModelSettings } from '@/modelConfig'
 import { BATCH } from './constants'
 import { toPatches } from './logic'
 import { BatchColumns, refName } from './BatchColumns'
@@ -27,12 +27,14 @@ function BatchBody({ onClose }: { onClose: () => void }) {
   const contacts = modelContacts().map(toContactModels)
   const used = s.models.filter((m) => m.id === s.defaultComputeModel || m.id === s.defaultSpeakingModel || contacts.some((c) => c.speakingModel === m.id || resolveCompute(c, s).model.value === m.id))
   const [from, setFrom] = useState(used[0]?.id ?? s.models[0]!.id)
-  const [to, setTo] = useState(() => s.models.find((m) => m.id !== from)!.id)
+  const [to, setTo] = useState(() => s.models.find((m) => m.id !== from)?.id ?? '')
   const [res, setRes] = useState<Record<string, Resolution>>({})
-  const tasks = liveComputes(computes).map((c) => ({ id: c.id, model: snapshotOfCompute(c, s).model, label: `「${c.short ?? c.title}」` }))
-  const input = { contacts, defaults: s, from, to, tasks, resolutions: res }
+  const [otherTo, setOtherTo] = useState(false)
+  const effective: ModelSettings = to && !s.models.some((m) => m.id === to) ? { ...s, models: [...s.models, { id: to, label: to, vendor: 'unknown', harnesses: ['claude-code', 'codex'] }] } : s
+  const tasks = liveComputes(computes).map((c) => ({ id: c.id, model: snapshotOfCompute(c, effective).model, label: `「${c.short ?? c.title}」` }))
+  const input = { contacts, defaults: effective, from, to, tasks, resolutions: res }
   const plan = planReplace(input)
-  const pickFrom = (v: string) => { setFrom(v); setRes({}); if (v === to) setTo(s.models.find((m) => m.id !== v)!.id) }
+  const pickFrom = (v: string) => { setFrom(v); setRes({}); if (v === to) setTo(s.models.find((m) => m.id !== v)?.id ?? '') }
   const confirm = () => {
     const r = confirmReplace(input)
     if (!r.ok) return
@@ -40,7 +42,7 @@ function BatchBody({ onClose }: { onClose: () => void }) {
     saveModels({
       settings,
       contacts: patches.map(({ c, note }) => ({ id: c.id, patch: { model: c.speakingModel, harness: c.harness, computeModel: c.computeModel }, note: `批量把 ${from} 换成 ${to}：${note}，下一轮生效` })),
-      toast: `已把 ${from} 换成 ${to}（${r.changes.length} 处）`,
+      toast: `已把 ${from} 换成 ${to}`,
     })
     onClose()
   }
@@ -50,9 +52,10 @@ function BatchBody({ onClose }: { onClose: () => void }) {
       <ModalBody className="space-y-3">
         <div className="flex flex-wrap items-center gap-2 text-[13.5px]">
           把<NativeSelect aria-label="要换掉的模型" data-testid="br-from" value={from} onChange={(e) => pickFrom(e.target.value)} className="w-[200px]">{used.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}</NativeSelect>
-          换成<NativeSelect aria-label="换成的模型" data-testid="br-to" value={to} onChange={(e) => { setTo(e.target.value); setRes({}) }} className="w-[260px]">{s.models.filter((m) => m.id !== from).map((m) => <option key={m.id} value={m.id}>{modelOption(m.id, s)}</option>)}</NativeSelect>
+          换成<NativeSelect aria-label="换成的模型" data-testid="br-to" value={otherTo ? '__other__' : to} onChange={(e) => { if (e.target.value === '__other__') { setOtherTo(true); setTo('') } else { setOtherTo(false); setTo(e.target.value); setRes({}) } }} className="w-[260px]">{effective.models.filter((m) => m.id !== from).map((m) => <option key={m.id} value={m.id}>{modelOption(m.id, effective)}</option>)}<option value="__other__">填别的模型 id…</option></NativeSelect>
+          {otherTo && <><input data-testid="br-to-other" className="h-8 w-[220px] rounded-lg border border-line bg-bg px-2 text-[13px]" placeholder="模型 ID" onChange={(e) => setTo(e.target.value)} /><Button data-testid="br-to-other-ok" size="xs" variant="secondary" onClick={() => setOtherTo(false)}>确定</Button></>}
         </div>
-        <BatchColumns plan={plan} s={s} from={from} to={to} res={res}
+        <BatchColumns plan={plan} s={effective} from={from} to={to} res={res}
           onResolve={(k, r) => setRes((x) => ({ ...x, [k]: r }))} onUnresolve={(k) => setRes((x) => { const n = { ...x }; delete n[k]; return n })} />
         <div data-testid="br-untouched" className="space-y-0.5 text-[12px] text-fg-3">
           {plan.pinnedElsewhere.length > 0 && <div>固定在别的模型上的 {plan.pinnedElsewhere.map((i) => refName(i)).join('、')} 不动。</div>}
