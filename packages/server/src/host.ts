@@ -2403,6 +2403,10 @@ export class Host {
   /** 压缩没产出笔记时待保留的输入;重新检查会话权限、撤回和 rewind,不能把失权或撤回的原文送回模型。 */
   private pendingNoteInputs(contactId: string, roomIds: readonly string[]): Inbound[] {
     const saved = getDoc<{ inputs: Inbound[] }>(this.db, `note-pending:${contactId}`)?.value.inputs ?? [];
+    return this.visibleNoteInputs(saved, roomIds);
+  }
+  /** 对已保存输入和本轮新输入使用同一份权限及撤回核验。 */
+  private visibleNoteInputs(saved: readonly Inbound[], roomIds: readonly string[]): Inbound[] {
     const allowed = new Set(roomIds);
     const checkers = new Map<string, (f: Inbound) => Inbound | null>();
     const result: Inbound[] = [];
@@ -2629,7 +2633,18 @@ export class Host {
       }
     }
     const pendingNote = this.pendingNoteInputs(contactId, rooms.map((r) => r.id));
-    const effectiveNote = this.noteWithPending(note?.value.text ?? null, pendingNote);
+    const noteAtStart = note?.value.text ?? null;
+    const effectiveNote = this.noteWithPending(noteAtStart, pendingNote);
+    const roomIdsAtStart = rooms.map((r) => r.id);
+    // 每次外部模型调用之后重读全部来源:既有待压缩输入、本轮新输入、成员权限与旧笔记的撤回状态。
+    const noteSourcesChanged = () => {
+      const nowRooms = this.roomsOfContact(contactId).filter((r) => !this.exits.isLeaving(r.id, contactId)).map((r) => r.id);
+      if (JSON.stringify(nowRooms) !== JSON.stringify(roomIdsAtStart)) return true;
+      if (JSON.stringify(this.pendingNoteInputs(contactId, nowRooms)) !== JSON.stringify(pendingNote)) return true;
+      if (JSON.stringify(this.visibleNoteInputs(fresh, nowRooms)) !== JSON.stringify(fresh)) return true;
+      const old = this.stateNote(contactId);
+      return (old === null ? null : this.scrubNote(contactId, old, nowRooms)) !== noteAtStart;
+    };
     const ledgerLines = this.activeLedgerLines(contactId);
     const freshKeys = new Set(fresh.flatMap((f) => (f.kind === "message" ? [`${f.roomId}#${f.seq}`, ...(f.replyToSeq !== null ? [`${f.roomId}#${f.replyToSeq}`] : [])] : [])));
     const freshTasks = new Set(fresh.flatMap((f) => (f.kind === "compute" ? [f.taskId] : [])));
@@ -2742,18 +2757,15 @@ export class Host {
       }
     }
     // 模型执行期间可能发生撤回或移出:再次核对权限与原文,不得把旧快照继续发给 reflect 或提交。
-    const noteRooms = this.roomsOfContact(contactId).filter((r) => !this.exits.isLeaving(r.id, contactId)).map((r) => r.id);
-    const latestPending = this.pendingNoteInputs(contactId, noteRooms);
-    if (JSON.stringify(pendingNote) !== JSON.stringify(latestPending)) {
-      this.report("stale-round", { contactId, reason: "待压缩上下文被撤回、修改或失去权限" });
-      this.runs.settle(unit.id, { stale: true, note: "待压缩上下文变化,放弃旧结果并重跑" });
+    if (noteSourcesChanged()) {
+      this.report("stale-round", { contactId, reason: "压缩来源被撤回、修改或失去权限" });
+      this.runs.settle(unit.id, { stale: true, note: "压缩来源变化,放弃旧结果并重跑" });
       return "stale";
     }
-    const settled = await this.settleNote(contact, fresh, out, noteRooms, this.noteWithPending(note?.value.text ?? null, latestPending), latestPending, signal);
+    const settled = await this.settleNote(contact, fresh, out, roomIdsAtStart, effectiveNote, pendingNote, signal);
     if (signal.aborted || this.closed) return "done";
-    const commitRooms = this.roomsOfContact(contactId).filter((r) => !this.exits.isLeaving(r.id, contactId)).map((r) => r.id);
-    if (JSON.stringify(latestPending) !== JSON.stringify(this.pendingNoteInputs(contactId, commitRooms))) {
-      this.report("stale-round", { contactId, reason: "检查期间待压缩上下文发生变化" });
+    if (noteSourcesChanged()) {
+      this.report("stale-round", { contactId, reason: "检查期间压缩来源发生变化" });
       this.runs.settle(unit.id, { stale: true, note: "检查期间上下文变化,放弃旧结果并重跑" });
       return "stale";
     }
