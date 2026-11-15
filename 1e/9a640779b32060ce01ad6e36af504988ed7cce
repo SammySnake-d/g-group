@@ -1,0 +1,28 @@
+apps/desktop/docs/前端开发优先级-20261115.md
+  s_132ae2173e1d4c::t_2c22a069fd22a3 16
+apps/desktop/proof/p1-workbench-20261115/compute-preview3-ledger/summary.json
+  s_132ae2173e1d4c::t_91b563178cc38d 1-29
+apps/desktop/proof/p1-workbench-20261115/accept-packaged-compute.mjs
+  s_132ae2173e1d4c::t_3bda4526e84ad3 39,42,46-47,50,53-54,56-58,86
+  s_132ae2173e1d4c::t_e356e55b155b15 35,40-41,43-45
+apps/desktop/docs/p1-workbench-packaged-20261115.md
+  s_132ae2173e1d4c::t_2c22a069fd22a3 20,23
+apps/desktop/proof/p1-workbench-20261115/compute-preview3-ledger/result.json
+  s_132ae2173e1d4c::t_228dd7fdc6074f 1-185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1e9a640779b32060ce01ad6e36af504988ed7cce",
+  "prompts": {},
+  "sessions": {
+    "s_132ae2173e1d4c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-9c33-7e33-a920-de86304f9413",
+        "model": "group/gpt-routings"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
