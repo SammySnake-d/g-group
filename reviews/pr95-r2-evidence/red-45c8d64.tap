@@ -1,0 +1,291 @@
+TAP version 13
+# (node:5725) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order
+not ok 1 - G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order
+  ---
+  duration_ms: 34.164625
+  type: 'test'
+  location: '/private/tmp/gg-r2-claude-20261115/pr95-red/packages/server/src/memory-write-neighbors.test.ts:54:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    coarse: only hybrid matches, in stable tie order
+    + actual - expected
+    
+    + []
+    - [
+    -   'm-a',
+    -   'm-z'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'm-a'
+    1: 'm-z'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-r2-claude-20261115/pr95-red/packages/server/src/memory-write-neighbors.test.ts:62:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: G35-02 a query with no matching memory gives both write paths an empty neighborhood
+ok 2 - G35-02 a query with no matching memory gives both write paths an empty neighborhood
+  ---
+  duration_ms: 21.015791
+  type: 'test'
+  ...
+# Subtest: G35-03 both write paths keep contact, room, status and persona boundaries before retrieval
+not ok 3 - G35-03 both write paths keep contact, room, status and persona boundaries before retrieval
+  ---
+  duration_ms: 24.259333
+  type: 'test'
+  location: '/private/tmp/gg-r2-claude-20261115/pr95-red/packages/server/src/memory-write-neighbors.test.ts:75:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    coarse: only this contact's visible matching memory
+    + actual - expected
+    
+    + []
+    - [
+    -   'm-visible'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'm-visible'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-r2-claude-20261115/pr95-red/packages/server/src/memory-write-neighbors.test.ts:86:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: G35-R1-01 coarse and fine retrieve a query found only in the body
+not ok 4 - G35-R1-01 coarse and fine retrieve a query found only in the body
+  ---
+  duration_ms: 20.839333
+  type: 'test'
+  location: '/private/tmp/gg-r2-claude-20261115/pr95-red/packages/server/src/memory-write-neighbors.test.ts:90:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    coarse: body-only hit and all returned fields
+    + actual - expected
+    
+    + []
+    - [
+    -   {
+    -     body: '正文 NEIGHBOR_MATCH_NEEDLE',
+    -     id: 'm-body',
+    -     title: '与查询不同的标题'
+    -   }
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      id: 'm-body'
+      title: '与查询不同的标题'
+      body: '正文 NEIGHBOR_MATCH_NEEDLE'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-r2-claude-20261115/pr95-red/packages/server/src/memory-write-neighbors.test.ts:95:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: G35-R1-02 coarse and fine retrieve a query found only in the title
+not ok 5 - G35-R1-02 coarse and fine retrieve a query found only in the title
+  ---
+  duration_ms: 20.771125
+  type: 'test'
+  location: '/private/tmp/gg-r2-claude-20261115/pr95-red/packages/server/src/memory-write-neighbors.test.ts:99:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    coarse: title-only hit and all returned fields
+    + actual - expected
+    
+    + []
+    - [
+    -   {
+    -     body: '与查询不同的正文',
+    -     id: 'm-title',
+    -     title: '标题 NEIGHBOR_MATCH_NEEDLE'
+    -   }
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      id: 'm-title'
+      title: '标题 NEIGHBOR_MATCH_NEEDLE'
+      body: '与查询不同的正文'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-r2-claude-20261115/pr95-red/packages/server/src/memory-write-neighbors.test.ts:104:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: G35-R1-03 coarse and fine return the entire distinct title and body
+not ok 6 - G35-R1-03 coarse and fine return the entire distinct title and body
+  ---
+  duration_ms: 22.410375
+  type: 'test'
+  location: '/private/tmp/gg-r2-claude-20261115/pr95-red/packages/server/src/memory-write-neighbors.test.ts:108:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    coarse: distinct title and body preserved
+    + actual - expected
+    
+    + []
+    - [
+    -   {
+    -     body: '正文开头 NEIGHBOR_MATCH_NEEDLE\n正文完整末尾',
+    -     id: 'm-fields',
+    -     title: '标题 NEIGHBOR_MATCH_NEEDLE 完整末尾'
+    -   }
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      id: 'm-fields'
+      title: '标题 NEIGHBOR_MATCH_NEEDLE 完整末尾'
+      body: |-
+        正文开头 NEIGHBOR_MATCH_NEEDLE
+        正文完整末尾
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-r2-claude-20261115/pr95-red/packages/server/src/memory-write-neighbors.test.ts:115:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: G35-R1-04 coarse and fine return every one of five matching memories
+not ok 7 - G35-R1-04 coarse and fine return every one of five matching memories
+  ---
+  duration_ms: 21.228625
+  type: 'test'
+  location: '/private/tmp/gg-r2-claude-20261115/pr95-red/packages/server/src/memory-write-neighbors.test.ts:119:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    coarse: no unrequested two-item truncation
+    + actual - expected
+    
+    + []
+    - [
+    -   {
+    -     body: 'NEIGHBOR_MATCH_NEEDLE',
+    -     id: 'm-a',
+    -     title: 'NEIGHBOR_MATCH_NEEDLE'
+    -   },
+    -   {
+    -     body: 'NEIGHBOR_MATCH_NEEDLE',
+    -     id: 'm-b',
+    -     title: 'NEIGHBOR_MATCH_NEEDLE'
+    -   },
+    -   {
+    -     body: 'NEIGHBOR_MATCH_NEEDLE',
+    -     id: 'm-c',
+    -     title: 'NEIGHBOR_MATCH_NEEDLE'
+    -   },
+    -   {
+    -     body: 'NEIGHBOR_MATCH_NEEDLE',
+    -     id: 'm-d',
+    -     title: 'NEIGHBOR_MATCH_NEEDLE'
+    -   },
+    -   {
+    -     body: 'NEIGHBOR_MATCH_NEEDLE',
+    -     id: 'm-e',
+    -     title: 'NEIGHBOR_MATCH_NEEDLE'
+    -   }
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      id: 'm-a'
+      title: 'NEIGHBOR_MATCH_NEEDLE'
+      body: 'NEIGHBOR_MATCH_NEEDLE'
+    1:
+      id: 'm-b'
+      title: 'NEIGHBOR_MATCH_NEEDLE'
+      body: 'NEIGHBOR_MATCH_NEEDLE'
+    2:
+      id: 'm-c'
+      title: 'NEIGHBOR_MATCH_NEEDLE'
+      body: 'NEIGHBOR_MATCH_NEEDLE'
+    3:
+      id: 'm-d'
+      title: 'NEIGHBOR_MATCH_NEEDLE'
+      body: 'NEIGHBOR_MATCH_NEEDLE'
+    4:
+      id: 'm-e'
+      title: 'NEIGHBOR_MATCH_NEEDLE'
+      body: 'NEIGHBOR_MATCH_NEEDLE'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-r2-claude-20261115/pr95-red/packages/server/src/memory-write-neighbors.test.ts:125:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: G35-R1-05 coarse and fine rank a higher-scoring hit before lower id
+not ok 8 - G35-R1-05 coarse and fine rank a higher-scoring hit before lower id
+  ---
+  duration_ms: 21.642
+  type: 'test'
+  location: '/private/tmp/gg-r2-claude-20261115/pr95-red/packages/server/src/memory-write-neighbors.test.ts:129:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    coarse: score outranks id; expected values are fixed
+    + actual - expected
+    
+    + []
+    - [
+    -   {
+    -     body: 'NEIGHBOR_MATCH_NEEDLE',
+    -     id: 'm-z',
+    -     title: 'NEIGHBOR_MATCH_NEEDLE'
+    -   },
+    -   {
+    -     body: 'plain',
+    -     id: 'm-a',
+    -     title: 'NEIGHBOR_MATCH_NEEDLE'
+    -   }
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      id: 'm-z'
+      title: 'NEIGHBOR_MATCH_NEEDLE'
+      body: 'NEIGHBOR_MATCH_NEEDLE'
+    1:
+      id: 'm-a'
+      title: 'NEIGHBOR_MATCH_NEEDLE'
+      body: 'plain'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-r2-claude-20261115/pr95-red/packages/server/src/memory-write-neighbors.test.ts:139:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 1
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 343.655333
