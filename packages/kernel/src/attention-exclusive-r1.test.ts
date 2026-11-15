@@ -30,6 +30,7 @@ test("R1-03 重试定时器到点时只读轮在途,普通轮应延后而非遗�
   await held;
   await loop.idle();
   assert.equal(runs, 2, "到点后必须补跑一次普通轮");
+  assert.equal(loop.rounds("a"), 2);
   await loop.stop();
 });
 
@@ -46,5 +47,6 @@ test("R1-03 已有的 now 通知不能被后到的只读轮饿死", async () => 
   await second;
   await loop.idle();
   assert.deepEqual(order, ["只读1", "普通轮", "只读2"]);
+  assert.equal(loop.rounds("a"), 1);
   await loop.stop();
 });

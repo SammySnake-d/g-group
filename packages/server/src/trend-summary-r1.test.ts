@@ -154,7 +154,9 @@ test("R1-01 旧版遗留错误在本端隐藏后也不可从摘要视图泄露",
   const s = h.summaries.list({ roomId: g.id, viewerId: "me" }).summaries[0]!;
   h.db.store.db.prepare("UPDATE gg_summaries SET error = ? WHERE id = ?").run(`有要点没带来源:${marker}`, s.summaryId);
   val(await createService(h).handle("messages.delete", { roomId: g.id, seqs: [msg.seq], clientActionId: "hide" }));
-  assert.equal(JSON.stringify(h.getSummary(s.summaryId)).includes(marker), false, "旧版错误必须遵守本端隐藏");
+  const hidden = h.getSummary(s.summaryId);
+  assert.equal(hidden.error, "有要点没带来源");
+  assert.equal(JSON.stringify(hidden).includes(marker), false, "旧版错误必须遵守本端隐藏");
 });
 
 test("R1-02 同终点不同联系人:limit=1 按 nextCursor 翻页不重不漏", async () => {
@@ -233,6 +235,7 @@ test("R1-03 同联系人普通轮在途:另一群摘要排队,两次推理绝不
   await until(() => normalStarted, "普通轮开始");
   h.send({ roomId: g.id, clientActionId: "go", text: "摘要触发" });
   await tick(80);
+  assert.equal(h.summaries.list({ roomId: g.id, viewerId: "me" }).summaries[0]?.status, "generating");
   assert.equal(summaryStarted, false, "普通轮在途时摘要应排队");
   gate.release();
   await idle(h);
@@ -265,6 +268,7 @@ test("R1-03 同联系人摘要轮在途:另一会话普通轮排队,不同联系
   h.send({ roomId: dmA.id, clientActionId: "same", text: "普通消息" });
   h.send({ roomId: dmB.id, clientActionId: "other", text: "普通消息" });
   await until(() => otherNormal, "另一联系人可以运行");
+  assert.equal(h.summaries.list({ roomId: g.id, viewerId: "me" }).summaries[0]?.status, "generating");
   assert.equal(sameNormal, false, "摘要在途时相同联系人不能并发");
   gate.release();
   await idle(h);
@@ -298,6 +302,7 @@ test("R1-03 摘要排队期间来源被撤回:取得单飞入口后不再向模�
   h.retractMessage(g.id, msg.seq);
   gate.release();
   await idle(h);
+  assert.equal(h.summaries.list({ roomId: g.id, viewerId: "me" }).summaries[0]?.status, "empty");
   assert.equal(JSON.stringify(summaryInputs).includes(marker), false, "排队时被撤回的内容不能发送给模型");
 });
 
@@ -323,6 +328,7 @@ test("R1-03 摘要排队等待已超时:后续释放单飞入口也不再调用�
   await until(() => normalStarted, "普通轮开始");
   h.send({ roomId: g.id, clientActionId: "go", text: "触发摘要" });
   await until(() => h.summaries.list({ roomId: g.id, viewerId: "me" }).summaries[0]?.status === "failed", "摘要排队超时");
+  assert.equal(h.summaries.list({ roomId: g.id, viewerId: "me" }).summaries[0]?.error, "模型调用没成:等模型超时");
   assert.equal(summariesCalled, 0);
   gate.release();
   await idle(h);
