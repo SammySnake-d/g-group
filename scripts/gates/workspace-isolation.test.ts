@@ -261,6 +261,7 @@ test("另一进程拿到来源未知的 overlay 时拒绝,不能由可伪造的�
   fixture(root);
   const work = freshCopy(root);
   try {
+    write(work, ".gate-dependency-origin.json", JSON.stringify({ modules: path.join(root, "node_modules") }));
     const lib = new URL("./lib.ts", import.meta.url).href;
     const script = `import { freshCopy } from ${JSON.stringify(lib)}; freshCopy(${JSON.stringify(work)});`;
     const { NODE_TEST_CONTEXT: _ctx, ...env } = process.env;
@@ -268,6 +269,25 @@ test("另一进程拿到来源未知的 overlay 时拒绝,不能由可伪造的�
     assert.notEqual(r.status, 0, "未知 overlay 没有可信来源,应 fail closed");
     assert.match(r.stderr, /来源|依赖|overlay/i);
   } finally { fs.rmSync(work, { recursive: true, force: true }); }
+}));
+
+test("已删除副本的同路径新目录不能继承旧副本的依赖授权", () => inTemp((dir) => {
+  const root = path.join(dir, "repo"), outside = path.join(dir, "outside");
+  fixture(root);
+  const work = freshCopy(root);
+  const oldTmp = process.env.TMPDIR;
+  try {
+    fs.rmSync(work, { recursive: true, force: true });
+    fs.mkdirSync(path.join(work, "node_modules"), { recursive: true });
+    fs.mkdirSync(outside);
+    fs.symlinkSync(outside, path.join(work, "node_modules/external"));
+    process.env.TMPDIR = dir;
+    assert.throws(() => freshCopy(work), /来源|依赖|overlay/i);
+  } finally {
+    if (oldTmp === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = oldTmp;
+    fs.rmSync(work, { recursive: true, force: true });
+  }
 }));
 
 test("未知来源的外部包软链不能扩大依赖挂载范围", () => inTemp((dir) => {
