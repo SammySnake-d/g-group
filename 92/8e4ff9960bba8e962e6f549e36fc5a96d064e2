@@ -1,0 +1,34 @@
+apps/desktop/e2e/pr101-p0.electron.spec.ts
+  s_be862bfe4ebd7a::t_ca3346a815aeb8 1-5,7-145,147-158
+  s_be862bfe4ebd7a::t_aee3a1f854b4ec 6,146
+apps/desktop/proof/pr101-r2/backend-followups.json
+  s_be862bfe4ebd7a::t_46333221784614 1-20
+apps/desktop/proof/pr101-r2/catalog-failure-red.exit
+  s_be862bfe4ebd7a::t_11c9d418ba5939 1
+apps/desktop/proof/pr101-r2/catalog-failure-red.txt
+  s_be862bfe4ebd7a::t_337a821915dc2f 1-40
+apps/desktop/proof/pr101-r2/p0-red.exit
+  s_be862bfe4ebd7a::t_abea6fc0205b40 1
+apps/desktop/proof/pr101-r2/p0-red.txt
+  s_be862bfe4ebd7a::t_eef635cfd427d3 1-145
+apps/desktop/proof/pr101-r2/baseline-d02.exit
+  s_be862bfe4ebd7a::t_8db90a56e9a1ab 1
+apps/desktop/proof/pr101-r2/baseline-d02.txt
+  s_be862bfe4ebd7a::t_094ddd17127291 1-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "928e4ff9960bba8e962e6f549e36fc5a96d064e2",
+  "prompts": {},
+  "sessions": {
+    "s_be862bfe4ebd7a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1de94-42ad-7200-a40f-a6f126eca979",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
