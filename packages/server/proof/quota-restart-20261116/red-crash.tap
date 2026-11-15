@@ -1,0 +1,30 @@
+✖ AC-23 崩溃重启:在跑任务不能仅凭宿主退出确认停止,且保留原租约 (48.421458ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 267.473875
+
+✖ failing tests:
+
+test at packages/server/src/lease.test.ts:308:1
+✖ AC-23 崩溃重启:在跑任务不能仅凭宿主退出确认停止,且保留原租约 (48.421458ms)
+  AssertionError [ERR_ASSERTION]: 宿主退出不是进程停止确认
+  + actual - expected
+
+  + 'T11_Failed'
+  - 'T9_StopRequested'
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-quota-crash-red.lJ51BScD/packages/server/src/lease.test.ts:327:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'T11_Failed',
+    expected: 'T9_StopRequested',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

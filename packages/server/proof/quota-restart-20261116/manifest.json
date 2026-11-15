@@ -1,0 +1,87 @@
+{
+  "base": "31082df234b2b59af260d02e70f6b91ba5104bdd",
+  "source_commit": "166b62b6c6c2ee713275ed1a5cffa293991a08ee",
+  "requirements_commit": "90226df5ffd17656f2654ab8555f7e71a93639de",
+  "process_scope": "scriptedCompute only; no OS process signals; no real model; no heavy gates",
+  "observed": {
+    "initial_baseline_quota_exit": 0,
+    "old_run_regression": {
+      "passed": 54,
+      "total": 55,
+      "exit": 1
+    },
+    "updated_contract_calibration": {
+      "baseline_exit": 1,
+      "candidate_exit": 0,
+      "timing": "post-implementation calibration"
+    },
+    "related_regression": {
+      "passed": 74,
+      "total": 74,
+      "exit": 0
+    },
+    "typecheck_exit": 0,
+    "lint_exit": 0
+  },
+  "commands": [
+    [
+      "node",
+      "--test",
+      "--test-concurrency=1",
+      "packages/server/src/quota.test.ts",
+      "packages/server/src/lease.test.ts",
+      "packages/server/src/retry.test.ts",
+      "packages/server/src/runs.test.ts",
+      "packages/server/src/compute.test.ts",
+      "packages/server/src/delivery-plain.test.ts",
+      "packages/server/src/delivery-t8a.test.ts",
+      "packages/server/src/members-lifecycle.test.ts"
+    ],
+    [
+      "npm",
+      "run",
+      "typecheck"
+    ],
+    [
+      "./node_modules/.bin/biome",
+      "lint",
+      "--error-on-warnings",
+      "packages/server/src/db.ts",
+      "packages/server/src/host.ts",
+      "packages/server/src/quota.ts",
+      "packages/server/src/quota.test.ts",
+      "packages/server/src/lease.test.ts",
+      "packages/server/src/runs.test.ts"
+    ]
+  ],
+  "source_sha256": {
+    "packages/server/src/db.ts": "5542db0e5300f37bd166834cd7f8a438c71232331122b3611a66fd5278b5db13",
+    "packages/server/src/host.ts": "c1c66a2cf525888e2148d10fa685727f139749270d4900ec09308bb1cd18fb7c",
+    "packages/server/src/quota.ts": "3981b97f3e4c029ef50b7f34baaf3fc8de9a21a333b553ab3b96e642dc465328",
+    "packages/server/src/quota.test.ts": "5c80c6922e3055144bae3c5181b015a6c6b163655484e4e79d8858488315a9dd",
+    "packages/server/src/lease.test.ts": "074c76e7faf2685c21154ed2e8f42aa03b1f104140c548355cd8806f446060af",
+    "packages/server/src/runs.test.ts": "262c0111c101d145b70f4cf8d11ecf1c8a5ac9b065d5d7540d93b20d735132be"
+  },
+  "known_gaps": [
+    "No complete macOS descendant lifecycle proof; prior b941 false-positive stop remains independent.",
+    "Recovered leases stay blocked; automated post-restart observer/reclamation not implemented.",
+    "Queue persistence and simultaneous Host writers are not validated by this change."
+  ],
+  "raw_tap_sha256": {
+    "baseline-quota.tap": "9d74e32d2b02a0b63e953d8e1bf618d3f376e842cd50c81e36d393e76ce81d76",
+    "contract-full-regression.tap": "5593f86b850a8bc514afcdcd869190e06a6cca62cfd02aaf97a48773fc0d82da",
+    "final-regression.tap": "2ce5f1c27e385481a0fd377fc29a367de3e587fc30f685e649e4599840e470c6",
+    "final-targeted.tap": "c28db5fab7465091a535ede7aaff2d0a155893de4f1a4077d1fa7d272dd18e44",
+    "original-quota-restart-probe.tap": "3388173c6542139df6bb0e57d85b690c8094514ebdadc25e931dcc304aafa163",
+    "red-cancel-calibration.tap": "ccabdfb34a0bf0ebd16faa6bff624dbcaae45f483ccb08ed633b14758f0d9fd2",
+    "red-crash.tap": "239946323f3a377e53d1db018853cc2322cd2c22cc3ab867a669ccc9b8b5e6b8",
+    "red-give-up.tap": "25f979e84a870461d0a5b1305547bd9b501d2104f794534dec2b158425cadbbb",
+    "red-legacy.tap": "dc7ee41c359e5d4abcf373369d244826b3b87c845cf586f61644fd4b136e4d71",
+    "red-recovered-release.tap": "e3d067985ad0633f44408f9bdfd375648d6999551f3000a665db3ab0c0245e25",
+    "red-restart.tap": "8edab40a37a17c224a2c169c75afdb10301027e4f674e1ad5e34ba001352d669",
+    "red-storage.tap": "e1c04e8fe3bf6a8d95779742e86e1a2fde7e0ce64d6586e60efcd285aac9ed5f",
+    "runs-contract-calibration-green.tap": "a1529369cf6cd6287c3a4521e506b2c7a4a7e6e89db388e7a6f1542780dd518b",
+    "runs-contract-calibration-red.tap": "9cec3a708b727f7f1c432694f012b2f84c3dd5c83f2c49a493c0681026b33edd"
+  },
+  "tap_storage": "Readable TAP copies trim trailing whitespace only; changed copies also have byte-exact .tap.raw.gz archives. Originals remain in the isolated external evidence directory."
+}
