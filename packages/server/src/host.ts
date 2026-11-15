@@ -2379,7 +2379,7 @@ export class Host {
       .filter((e) => (e.status === "active" || e.status === "degraded") && !e.anchors.includes(PERSONA_ANCHOR) && e.anchors.some((a) => a === "global" || a.startsWith("room:") && q.rooms.includes(a.slice(5))))
       .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
     const byId = new Map(visible.map((e) => [e.id, e]));
-    return searchMemoryNeighborhood(visible.map((e) => ({ ref: e.id, role: "user" as const, text: `${e.title}\n${e.body}` })), q.text, visible.length)
+    return searchMemoryNeighborhood(visible.map((e) => ({ ref: e.id, role: "user" as const, text: `${e.title}\n${e.body}` })), q.text, 0)
       .map((hit) => { const e = byId.get(hit.ref)!; return { id: e.id, title: e.title, body: e.body }; });
   }
   /** G1 已经落地(或已规范化待落地)的候选:按来源 + 原话(新条目)或来源 + 正文(复述)认出来,接管后不再生成标记或第二份写入 */

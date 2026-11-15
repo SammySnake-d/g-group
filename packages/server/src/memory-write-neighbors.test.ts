@@ -86,3 +86,56 @@ test("G35-03 both write paths keep contact, room, status and persona boundaries 
   assert.deepEqual(requests.coarse.map((n) => n.id), ["m-visible"], "coarse: only this contact's visible matching memory");
   assert.deepEqual(requests.fine.map((n) => n.id), ["m-visible"], "fine: only this contact's visible matching memory");
 });
+
+test("G35-R1-01 coarse and fine retrieve a query found only in the body", async (t) => {
+  const s = setup(t, Host);
+  s.seed("m-body", `正文 ${NEEDLE}`, ["global"], { title: "与查询不同的标题" });
+  const requests = await s.request();
+  for (const stage of ["coarse", "fine"] as const) {
+    assert.deepEqual(requests[stage], [{ id: "m-body", title: "与查询不同的标题", body: `正文 ${NEEDLE}` }], `${stage}: body-only hit and all returned fields`);
+  }
+});
+
+test("G35-R1-02 coarse and fine retrieve a query found only in the title", async (t) => {
+  const s = setup(t, Host);
+  s.seed("m-title", "与查询不同的正文", ["global"], { title: `标题 ${NEEDLE}` });
+  const requests = await s.request();
+  for (const stage of ["coarse", "fine"] as const) {
+    assert.deepEqual(requests[stage], [{ id: "m-title", title: `标题 ${NEEDLE}`, body: "与查询不同的正文" }], `${stage}: title-only hit and all returned fields`);
+  }
+});
+
+test("G35-R1-03 coarse and fine return the entire distinct title and body", async (t) => {
+  const s = setup(t, Host);
+  const title = `标题 ${NEEDLE} 完整末尾`;
+  const body = `正文开头 ${NEEDLE}\n正文完整末尾`;
+  s.seed("m-fields", body, ["global"], { title });
+  const requests = await s.request();
+  for (const stage of ["coarse", "fine"] as const) {
+    assert.deepEqual(requests[stage], [{ id: "m-fields", title, body }], `${stage}: distinct title and body preserved`);
+  }
+});
+
+test("G35-R1-04 coarse and fine return every one of five matching memories", async (t) => {
+  const s = setup(t, Host);
+  for (const id of ["m-e", "m-c", "m-a", "m-d", "m-b"]) s.seed(id, NEEDLE, ["global"]);
+  const requests = await s.request();
+  const expected = ["m-a", "m-b", "m-c", "m-d", "m-e"].map((id) => ({ id, title: NEEDLE, body: NEEDLE }));
+  for (const stage of ["coarse", "fine"] as const) {
+    assert.deepEqual(requests[stage], expected, `${stage}: no unrequested two-item truncation`);
+  }
+});
+
+test("G35-R1-05 coarse and fine rank a higher-scoring hit before lower id", async (t) => {
+  const s = setup(t, Host);
+  s.seed("m-a", "plain", ["global"], { title: NEEDLE });
+  s.seed("m-z", NEEDLE, ["global"], { title: NEEDLE });
+  const requests = await s.request();
+  const expected = [
+    { id: "m-z", title: NEEDLE, body: NEEDLE },
+    { id: "m-a", title: NEEDLE, body: "plain" },
+  ];
+  for (const stage of ["coarse", "fine"] as const) {
+    assert.deepEqual(requests[stage], expected, `${stage}: score outranks id; expected values are fixed`);
+  }
+});
