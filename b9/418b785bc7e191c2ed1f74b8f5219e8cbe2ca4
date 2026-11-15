@@ -1,0 +1,19 @@
+packages/adapter-cc-compute/src/stop-confirm.ts
+  s_69f96fa873b14b::t_b612eeff94c47c 10-14,28-30,32-33,35-38,44-73,75-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b9418b785bc7e191c2ed1f74b8f5219e8cbe2ca4",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
