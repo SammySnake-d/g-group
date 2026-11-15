@@ -1972,7 +1972,7 @@ export class Host {
       const r = this.appendMessageTx(src.roomId, { kind: "contact", id: owner }, {
         text: `重跑任务:${src.title}(第 ${plan.event.attempt} 次,依据台账 ${unit.id})`,
         actionKey: `${req.key}:card`,
-        ...(req.fresh ? { causeRoots: this.loopGuard.rootsFor(req.fresh, src.roomId) } : {}),
+        causeRoots: this.loopGuard.taskRoots(taskId),
         replyToSeq: src.sourceSeq,
         quotedSeqs: [src.sourceSeq],
         card: { card_id: this.newId("card"), kind: "task-status", task_id: taskId, title: src.title.slice(0, 200), body: brief.slice(0, 20000), state: "open", actions: JSON.stringify([{ actionId: "cancel", label: "取消任务", style: "danger" }]), meta: JSON.stringify({ rerunOf: unit.id }) },
@@ -2560,7 +2560,7 @@ export class Host {
       minSliceBytes: this.opts.recallMinSliceBytes ?? RECALL_MIN_SLICE_BYTES,
     });
     if (!plan.ok) {
-      if (plan.reason === "over-budget") return this.failRound(contactId, roundId, focusRoom ?? fresh[0]!.roomId, lastSeen, inbox, { reason: "recall-over-budget", need: plan.need, budget: plan.budget, detail: plan.detail });
+      if (plan.reason === "over-budget") return this.failRound(contactId, roundId, focusRoom ?? fresh[0]!.roomId, lastSeen, inbox, fresh, { reason: "recall-over-budget", need: plan.need, budget: plan.budget, detail: plan.detail });
       this.setActivity(contactId, null, "idle");
       throw new Error(`引用召回规划失败:${plan.detail}`);
     }
@@ -2611,7 +2611,7 @@ export class Host {
       // 整轮超预算(D06 §2):显式失败——不截断、不调模型、游标不推进;出失败卡交用户重试或跳过,不在后台反复重跑
       if (e instanceof RoundAssembleError && e.reason === "over-budget" && e.need !== null && e.budget !== null) {
         this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: `这一轮上下文超预算:${e.message}` })) });
-        return this.failRound(contactId, roundId, focusRoom ?? fresh[0]!.roomId, lastSeen, inbox, { reason: "over-budget", need: e.need, budget: e.budget, detail: e.message });
+        return this.failRound(contactId, roundId, focusRoom ?? fresh[0]!.roomId, lastSeen, inbox, fresh, { reason: "over-budget", need: e.need, budget: e.budget, detail: e.message });
       }
       this.setActivity(contactId, null, "idle");
       this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
@@ -2652,7 +2652,7 @@ export class Host {
       else if (!signal.aborted && !this.closed) this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
       // 宿主中止(停机、发送前撤销)不是失败;卡死判定(RoundStalledError 带 stall)交 AC-36 按「整轮已判失败」处理,不静默重试同一轮
       if (signal.aborted || this.closed) return "done";
-      return this.onContactFailure(contactId, contact.name, e, { upstream, focusRoom, lastSeen, inboxEnd });
+      return this.onContactFailure(contactId, contact.name, e, { upstream, focusRoom, lastSeen, inboxEnd, fresh });
     } finally {
       this.roundStalls.delete(unit.id);
       signal.removeEventListener("abort", relay);
@@ -2709,7 +2709,7 @@ export class Host {
    * 这位联系人已有没处理的同类失败卡就只更新它(记下最新一批的位置),不重复出卡。返回 "done":不让注意循环在后台反复重跑,
    * 新输入来了或用户点「重试」才再试;点「跳过本轮」才把这批标为已处理。
    */
-  private failRound(contactId: string, roundId: string, roomId: string, lastSeen: Record<string, number>, inbox: { id: number }[], f: { reason: string; need: number; budget: number; detail: string }): RoundStatus {
+  private failRound(contactId: string, roundId: string, roomId: string, lastSeen: Record<string, number>, inbox: { id: number }[], fresh: readonly Inbound[], f: { reason: string; need: number; budget: number; detail: string }): RoundStatus {
     const name = this.contactDoc(contactId).value.name;
     const meta = { kind: "round-over-budget", contactId, lastSeen, inboxIds: inbox.map((i) => i.id), reason: f.reason, need: f.need, budget: f.budget };
     const what = f.reason === "recall-over-budget" ? "被引用消息的回读" : "这一轮要读的上下文";
@@ -2729,6 +2729,7 @@ export class Host {
         this.appendMessageTx(roomId, me, {
           text: "这一轮没跑成:上下文超预算",
           actionKey: `roundfail:${roundId}`,
+          causeRoots: this.loopGuard.rootsFor(fresh, roomId),
           card: {
             card_id: this.newId("card"),
             kind: "failure",
@@ -4311,12 +4312,12 @@ export class Host {
     return `${why}${fix}${extra ? `\n${extra}` : ""}\n\n原文:\n${cls.raw.slice(0, 8000) || "(没有原文)"}`.slice(0, 20000);
   }
   /** 宿主机械出一张原位失败卡(发送者记为出问题的联系人,不经它的脑子)。必须在事务里调用。 */
-  private postFailureCardTx(roomId: string, senderContactId: string, taskId: string | null, title: string, body: string, actions: CardActionRow[], meta: FailureCardMeta): { roomId: string; seq: number; cardId: string } {
+  private postFailureCardTx(roomId: string, senderContactId: string, taskId: string | null, title: string, body: string, actions: CardActionRow[], meta: FailureCardMeta, causeRoots?: readonly string[]): { roomId: string; seq: number; cardId: string } {
     const cardId = this.newId("card");
     const r = this.appendMessageTx(roomId, { kind: "contact", id: senderContactId }, {
       text: title.slice(0, 200),
       actionKey: `failure:${cardId}`,
-      ...(taskId ? { causeRoots: this.loopGuard.taskRoots(taskId) } : {}),
+      causeRoots: causeRoots ?? (taskId ? this.loopGuard.taskRoots(taskId) : []),
       card: { card_id: cardId, kind: "failure", task_id: taskId, title: title.slice(0, 200), body, state: "open", actions: JSON.stringify(actions.slice(0, 6)), meta: JSON.stringify(meta) },
     });
     return { roomId, seq: r.seq, cardId };
@@ -4327,13 +4328,13 @@ export class Host {
     return `任务「${getDoc<TaskDoc>(this.db, `task:${id}`)?.value.title ?? id}」`;
   }
   /** 全群合并的 1 张群级卡(F10/F2)。必须在事务里调用。 */
-  private groupCardTx(upstream: string, state: BreakerState, roomId: string, senderContactId: string, cls: Pick<FailureClass, "label" | "fix" | "raw">): { roomId: string; seq: number; cardId: string } {
+  private groupCardTx(upstream: string, state: BreakerState, roomId: string, senderContactId: string, cls: Pick<FailureClass, "label" | "fix" | "raw">, causeRoots: readonly string[]): { roomId: string; seq: number; cardId: string } {
     const names = state.members.map((m) => this.memberName(m)).join("、");
     const title = `${cls.label}:共用这个上游的${state.members.length > 1 ? ` ${state.members.length} 位成员` : "成员"}先暂停`;
     const how = state.manualOnly ? "鉴权或额度有问题,不会自动重试;修好以后点「重试」。" : "连续失败,后台重试已暂停;过一会儿会自动探测一次,恢复后接着处理,也可以现在点「重试」。";
     const body = this.failureBody("", { fix: cls.fix, raw: cls.raw }, 0, `${names} 用的上游 ${upstream} ${how}`).replace(/^没能继续。\n?/, "");
     const actions: CardActionRow[] = [{ actionId: "retry", label: "重试", style: "primary" }, { actionId: "skip", label: "跳过失败的这批消息", style: "default" }];
-    return this.postFailureCardTx(roomId, senderContactId, null, title, body, actions, { scope: "breaker", subject: upstream, contactId: senderContactId, upstream, attemptSeq: 0, models: [] });
+    return this.postFailureCardTx(roomId, senderContactId, null, title, body, actions, { scope: "breaker", subject: upstream, contactId: senderContactId, upstream, attemptSeq: 0, models: [] }, causeRoots);
   }
   /** 在途轮次标记(F12):本轮开始写、提交时删;宿主中途退出就留在库里,重启时据此认出未提交轮次。 */
   private markRunning(contactId: string, batchKey: string, roomId: string | null, lastSeen: Record<string, number>, inboxEnd: number) {
@@ -4350,7 +4351,7 @@ export class Host {
   }
 
   /** 联系人一轮失败:按 A×B 决定静默退避(抛 RoundRetry 交注意循环按延迟重跑)、出原位失败卡,或被共享熔断暂停;后两种返回 done 停在原位。 */
-  private onContactFailure(contactId: string, name: string, err: unknown, ctx: { upstream: string; focusRoom: string | null; lastSeen: Record<string, number>; inboxEnd: number }): RoundStatus {
+  private onContactFailure(contactId: string, name: string, err: unknown, ctx: { upstream: string; focusRoom: string | null; lastSeen: Record<string, number>; inboxEnd: number; fresh: readonly Inbound[] }): RoundStatus {
     const cls = this.classify(err);
     const heal = healOf(cls.reasonClass);
     if (heal === "user_stopped") {
@@ -4383,7 +4384,7 @@ export class Host {
         this.upsertFailureTx(row("paused"));
         this.clearRunningTx(contactId);
         if (room && (br.opened || !b.card_id)) {
-          card = this.groupCardTx(ctx.upstream, br.state, room, contactId, cls);
+          card = this.groupCardTx(ctx.upstream, br.state, room, contactId, cls, this.loopGuard.rootsFor(ctx.fresh, room));
           this.saveBreaker(ctx.upstream, br.state, { card_id: card.cardId, room_id: room });
         } else this.saveBreaker(ctx.upstream, br.state);
       });
@@ -4412,7 +4413,7 @@ export class Host {
         const actions = this.failureActions("contact", current);
         card = this.postFailureCardTx(room, contactId, null, `${name} 这一轮没回成:${cls.label}`, this.failureBody(cause, cls, attempts), actions, {
           scope: "contact", subject: contactId, contactId, upstream: ctx.upstream, attemptSeq, models: switchModels(actions),
-        });
+        }, this.loopGuard.rootsFor(ctx.fresh, room));
       }
       this.upsertFailureTx(row("card", { attempt_seq: attemptSeq, card_id: card?.cardId ?? null }));
       if (br.ok) this.saveBreaker(ctx.upstream, br.state);
@@ -4453,7 +4454,7 @@ export class Host {
       this.upsertFailureTx(base("paused"));
       let card = null as { roomId: string; seq: number; cardId: string } | null;
       if (br.opened || !b.card_id) {
-        card = this.groupCardTx(upstream, br.state, doc.roomId, row.contact_id, cls);
+        card = this.groupCardTx(upstream, br.state, doc.roomId, row.contact_id, cls, this.loopGuard.taskRoots(row.task_id));
         this.saveBreaker(upstream, br.state, { card_id: card.cardId, room_id: doc.roomId });
       } else this.saveBreaker(upstream, br.state);
       return { kind: "paused", upstream, card, label: cls.label };
