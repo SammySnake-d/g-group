@@ -4722,6 +4722,24 @@ export class Host {
       }
     };
   }
+  /** 根据崩溃前落盘的批次边界重建因果，不能把恢复失败卡当作一条全新起点。 */
+  private crashBatchRoots(contactId: string, roomId: string, batchEnd: string, inboxEnd: number, batchKey: string): string[] {
+    const ends = JSON.parse(batchEnd) as Record<string, number>;
+    const fresh: Inbound[] = [];
+    for (const room of this.roomsOfContact(contactId)) {
+      const end = ends[room.id];
+      if (end === undefined) continue;
+      const cur = this.cursor(contactId, room.id);
+      const rewound = rewindRanges(this.db, room.id);
+      for (const m of this.projected(room.id)) {
+        if (m.seq <= cur || m.seq > end || m.retracted || inRanges(rewound, m.seq) || (m.sender.kind === "contact" && m.sender.id === contactId)) continue;
+        fresh.push(this.toInbound(room.id, m));
+      }
+    }
+    for (const row of this.inbox(contactId)) if (row.id <= inboxEnd) fresh.push(JSON.parse(row.payload) as Inbound);
+    const roots = this.loopGuard.rootsFor(fresh, roomId);
+    return roots.length ? roots : [`crash-batch:${contactId}:${batchKey}`];
+  }
   /** 启动回收(F4/F6/F12):上次留下的在途轮次按 crash_recovery_count 续跑或熔断出卡;磁盘上没被领走的输入交给联系人;等续跑的任务、被暂停的成员接着排。 */
   private reconcileOnStart() {
     const cards: { roomId: string; seq: number; contactId: string }[] = [];
@@ -4748,7 +4766,7 @@ export class Host {
         const upstream = this.upstreamKey(prev?.model_override ?? contact.speakingModel);
         const c = this.postFailureCardTx(room, g.contact_id, null, `${contact.name} 这一轮没回成:${cls.label}`, this.failureBody("crash-loop", cls, 0), actions, {
           scope: "contact", subject: g.contact_id, contactId: g.contact_id, upstream, attemptSeq, models: switchModels(actions),
-        });
+        }, this.crashBatchRoots(g.contact_id, room, g.batch_end, g.inbox_end, g.batch_key));
         this.upsertFailureTx({
           scope: "contact", subject: g.contact_id, contact_id: g.contact_id, status: "card", heal: "unknown", effect: "B0", reason_class: "crash_loop", label: cls.label, fix: cls.fix, raw: cls.raw,
           attempts: 0, attempt_seq: attemptSeq, batch_end: g.batch_end, inbox_end: g.inbox_end, room_id: room, upstream, card_id: c.cardId, model_override: prev?.model_override ?? null, compute_id: null, delivery_unknown: 0,
