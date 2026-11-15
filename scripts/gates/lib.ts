@@ -214,15 +214,78 @@ export function sandboxed(args: string[], work: string, mounts: string[] = []) {
   return spawnSync(plan.cmd, plan.argv, plan.opts);
 }
 
-/** node_modules 中指向仓库源码的链接要重新指向副本;指向 node_modules 内部或仓库外的仍是外部依赖。 */
+// 查词法路径相对关系,不解析工作区内的二次链接;只在路径前缀与真实根同址时消除 /var 与 /private/var 等别名。
+function relativeToRealRoot(root: string, target: string): string | undefined {
+  const rel = path.relative(root, target);
+  if (!path.isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${path.sep}`)) return rel;
+  const suffix: string[] = [];
+  let part = target;
+  for (;;) {
+    try { if (fs.realpathSync(part) === root) return path.join(...suffix); } catch { /* 目标或其一部分可以悬空 */ }
+    const parent = path.dirname(part);
+    if (part === parent) return undefined;
+    suffix.unshift(path.basename(part));
+    part = parent;
+  }
+}
+
+/** node_modules 中指向仓库源码的链接要重新指向副本;指向 node_modules 内部的仍是外部依赖。 */
 function workspaceTarget(entry: string, modules: string): string | undefined {
   if (!fs.lstatSync(entry).isSymbolicLink()) return undefined;
   // 只解析链接文字,不跟着源码内的二次链接跑到副本外;缺失目标也重绑到副本,由加载失败阻断。
   const target = path.resolve(fs.realpathSync(path.dirname(entry)), fs.readlinkSync(entry));
-  const rel = path.relative(path.dirname(modules), target);
-  if (path.isAbsolute(rel) || rel === ".." || rel.startsWith(`..${path.sep}`)) return undefined;
+  const rel = relativeToRealRoot(path.dirname(modules), target);
+  if (rel === undefined) return undefined;
   if (rel === path.basename(modules) || rel.startsWith(`${path.basename(modules)}${path.sep}`)) return undefined;
   return rel;
+}
+
+// 只在创建副本的进程中记住依赖源;不读取副本内的元数据来授权挂载。
+// 失去这份上下文后,未知的外部包软链无法证明来源,须拒绝而非扩大挂载或偷偷回读原树。
+interface FileIdentity { dev: number; ino: number; birthtimeMs: number }
+interface DependencyOrigin { modules: string; rootIdentity: FileIdentity; modulesIdentity: FileIdentity }
+function fileIdentity(p: string): FileIdentity {
+  const { dev, ino, birthtimeMs } = fs.statSync(p);
+  return { dev, ino, birthtimeMs };
+}
+const sameIdentity = (a: FileIdentity, b: FileIdentity) => a.dev === b.dev && a.ino === b.ino && a.birthtimeMs === b.birthtimeMs;
+const dependencyOrigins = new Map<string, DependencyOrigin>();
+function checkOriginModules(modules: string) {
+  const check = (entry: string) => {
+    if (!fs.lstatSync(entry).isSymbolicLink() || workspaceTarget(entry, modules) !== undefined) return;
+    const target = path.resolve(fs.realpathSync(path.dirname(entry)), fs.readlinkSync(entry));
+    if (relativeToRealRoot(modules, target) === undefined) throw new Error(`依赖来源未知,拒绝包软链指向 node_modules 之外:${entry}`);
+  };
+  for (const e of fs.readdirSync(modules, { withFileTypes: true })) {
+    const full = path.join(modules, e.name);
+    check(full);
+    if (!e.name.startsWith("@")) continue;
+    const stat = fs.statSync(full, { throwIfNoEntry: false });
+    if (stat?.isDirectory()) for (const child of fs.readdirSync(full)) check(path.join(full, child));
+  }
+}
+function dependencyOrigin(root: string): string | undefined {
+  const nm = path.join(root, "node_modules");
+  if (!fs.lstatSync(nm, { throwIfNoEntry: false })) return undefined;
+  const key = fs.realpathSync(root);
+  const known = dependencyOrigins.get(key);
+  if (known) {
+    if (sameIdentity(fileIdentity(key), known.rootIdentity)) {
+      let unchanged = false;
+      try { unchanged = fs.realpathSync(known.modules) === known.modules && sameIdentity(fileIdentity(known.modules), known.modulesIdentity); } catch { /* 下方拒绝 */ }
+      if (!unchanged) throw new Error(`依赖来源已被替换或移除:${known.modules}`);
+      checkOriginModules(known.modules);
+      return known.modules;
+    }
+    dependencyOrigins.delete(key);
+  }
+  const modules = fs.realpathSync(nm);
+  checkOriginModules(modules);
+  return modules;
+}
+function rememberOrigin(root: string, modules: string) {
+  const key = fs.realpathSync(root);
+  dependencyOrigins.set(key, { modules, rootIdentity: fileIdentity(key), modulesIdentity: fileIdentity(modules) });
 }
 
 /** 外部依赖仍来自同一 node_modules;各 workspace 别名只指向这次的源码副本。 */
@@ -273,9 +336,9 @@ export function freshCopy(src: string): string {
   };
   try {
     walk("");
-    const nm = path.join(src, "node_modules");
     // lstat 区分“没有依赖目录”和“依赖链接悬空”:后者必须报错,不能静默当成无依赖。
-    if (fs.lstatSync(nm, { throwIfNoEntry: false })) copyDependencyLinks(fs.realpathSync(nm), dst);
+    const modules = dependencyOrigin(src);
+    if (modules) { copyDependencyLinks(modules, dst); rememberOrigin(dst, modules); }
     return dst;
   } catch (e) {
     fs.rmSync(dst, { recursive: true, force: true });
@@ -285,7 +348,7 @@ export function freshCopy(src: string): string {
 
 // 用 node --test 的 TAP 输出解析"每个文件里哪些具名测试通过/失败"。
 // 只认测试真的注册并执行后的结果;文件加载失败时 TAP 里只有文件级失败,不会出现具名测试。
-export const nmMount = (root: string) => { const nm = path.join(root, "node_modules"); return fs.existsSync(nm) ? [fs.realpathSync(nm)] : []; };
+export const nmMount = (root: string) => { const modules = dependencyOrigin(root); return modules ? [modules] : []; };
 
 export function runNodeTests(root: string, files: string[], extraArgs: string[] = []): TestRun {
   const passed: NamedTest[] = [], failed: NamedTest[] = [];
@@ -372,10 +435,10 @@ export function ctxFromGit(root: string, base: string, branch: string, pr?: numb
       const sha = r.stdout.trim();
       const isAnc = (a: string, b: string) => gitRaw(root, "merge-base", "--is-ancestor", a, b).status === 0;
       const inRange = isAnc(sha, "HEAD") && !isAnc(sha, mergeBase);
+      const modules = dependencyOrigin(root);
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gate-snap-"));
       git(root, "worktree", "add", "--detach", "-q", dir, sha);
-      const nm = path.join(root, "node_modules");
-      if (fs.existsSync(nm)) fs.symlinkSync(nm, path.join(dir, "node_modules"));
+      if (modules) { fs.symlinkSync(modules, path.join(dir, "node_modules")); rememberOrigin(dir, modules); }
       return { dir, inRange, cleanup: () => { git(root, "worktree", "remove", "--force", dir); } };
     },
   };
@@ -386,8 +449,11 @@ export function copyTree(src: string, dst: string, files: string[]) {
     fs.mkdirSync(path.dirname(path.join(dst, f)), { recursive: true });
     fs.copyFileSync(path.join(src, f), path.join(dst, f));
   }
-  const nm = path.join(src, "node_modules");
-  if (fs.existsSync(nm) && !fs.existsSync(path.join(dst, "node_modules"))) fs.symlinkSync(fs.realpathSync(nm), path.join(dst, "node_modules"));
+  const modules = dependencyOrigin(src);
+  if (modules && !fs.lstatSync(path.join(dst, "node_modules"), { throwIfNoEntry: false })) {
+    fs.symlinkSync(modules, path.join(dst, "node_modules"));
+    rememberOrigin(dst, modules);
+  }
 }
 
 export const p = (gate: string, msg: string): Problem => ({ gate, msg });
