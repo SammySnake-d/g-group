@@ -1,0 +1,73 @@
+receipts/feat-q06-1-count-trigger.json
+  s_125fc13e4dc62e::t_c6989c8fb236af 26-28,30-31
+reviews/pr98-r2-evidence/mutants-r2.py
+  s_69f96fa873b14b::t_958c1a900c5303 1-57
+reviews/pr98-r2-evidence/mutants/results.json
+  s_69f96fa873b14b::t_cbec189a1836fb 1-179
+reviews/pr98-r2-evidence/npm-test-summary.txt
+  s_078a60c6b18773::t_765a7b968d6449 1-98
+reviews/pr98-r2-evidence/probe-dissolving-M5.json
+  s_69f96fa873b14b::t_ea6e85bee447c1 1-76
+reviews/pr98-r2-evidence/probe-dissolving-head.json
+  s_69f96fa873b14b::t_50a87329a854f7 1-76
+reviews/pr98-r2-evidence/probe-dissolving-r2.mjs
+  s_69f96fa873b14b::t_561095ec52c05b 1-40
+reviews/pr98-r2-evidence/probe-head.json
+  s_69f96fa873b14b::t_35970968d2551c 1-535
+reviews/pr98-r2-evidence/probe-leaving-M4.json
+  s_69f96fa873b14b::t_71b0ceddd18b84 1-132
+reviews/pr98-r2-evidence/probe-leaving-head.json
+  s_69f96fa873b14b::t_f7778acc39ac0a 1-126
+reviews/pr98-r2-evidence/probe-leaving-r2.mjs
+  s_69f96fa873b14b::t_751db68cbe3ef5 1-46
+reviews/pr98-r2-evidence/probe-r1.json
+  s_69f96fa873b14b::t_03a34a4c622b18 1-504
+reviews/pr98-r2-evidence/probe-r2.mjs
+  s_69f96fa873b14b::t_c9cca2bea7d33b 1-179
+reviews/pr98-r2-evidence/red-cbb22309.tap
+  s_69f96fa873b14b::t_ddc15c3957f138 1-166
+reviews/feat-q06-1-count-trigger-r2.md
+  s_f511cdb1758a1f::t_af7512aeea38a2 1-129
+reviews/pr98-r2-evidence/MANIFEST.json
+  s_f511cdb1758a1f::t_d108844dddcd42 1-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "40c690da150fb532c8a3f2a9ed5bcee861e39399",
+  "prompts": {},
+  "sessions": {
+    "s_078a60c6b18773": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1df53-9aa3-71f3-bc58-9afcd358bb2a",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_125fc13e4dc62e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1defd-bfb5-74f3-8210-1927be85b8df",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_f511cdb1758a1f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eda2a1e9-6261-4de1-9a33-7cae46fce94b",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
