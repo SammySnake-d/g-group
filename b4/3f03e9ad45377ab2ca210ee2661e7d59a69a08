@@ -1,0 +1,21 @@
+apps/desktop/docs/p1-workbench-packaged-20261115.md
+  s_132ae2173e1d4c::t_5885b50d5ec5a9 20
+apps/desktop/docs/前端开发优先级-20261115.md
+  s_132ae2173e1d4c::t_5885b50d5ec5a9 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b43f03e9ad45377ab2ca210ee2661e7d59a69a08",
+  "prompts": {},
+  "sessions": {
+    "s_132ae2173e1d4c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-9c33-7e33-a920-de86304f9413",
+        "model": "group/gpt-routings"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
