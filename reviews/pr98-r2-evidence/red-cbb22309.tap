@@ -1,0 +1,166 @@
+TAP version 13
+# Subtest: 发给模型的 commit 工具声明里有可选的 everyNMessages,必填项不变;模型填了 N,这一轮登记成带 N 的承诺动作
+ok 1 - 发给模型的 commit 工具声明里有可选的 everyNMessages,必填项不变;模型填了 N,这一轮登记成带 N 的承诺动作
+  ---
+  duration_ms: 386.708916
+  type: 'test'
+  ...
+# Subtest: commit 工具的 everyNMessages 省略或给 null 时动作里没有这个字段;不是非负整数的不登记,原因回给模型
+ok 2 - commit 工具的 everyNMessages 省略或给 null 时动作里没有这个字段;不是非负整数的不登记,原因回给模型
+  ---
+  duration_ms: 49.437
+  type: 'test'
+  ...
+# (node:28534) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: 没人开就没有触发;开了之后第 99 条不冻结、第 100 条冻结一段、第 101 条不再冻结,coveredSeq 停在第 100 条
+ok 3 - 没人开就没有触发;开了之后第 99 条不冻结、第 100 条冻结一段、第 101 条不再冻结,coveredSeq 停在第 100 条
+  ---
+  duration_ms: 1198.6195
+  type: 'test'
+  ...
+# Subtest: 一段正好 N 条:连续两轮各冻结一段,第二段的起点就是第一段的终点;冻结时推 commitment.updated 带新的 coveredSeq
+ok 4 - 一段正好 N 条:连续两轮各冻结一段,第二段的起点就是第一段的终点;冻结时推 commitment.updated 带新的 coveredSeq
+  ---
+  duration_ms: 89.285583
+  type: 'test'
+  ...
+# Subtest: 不算群聊发言的不计数:system 通知、任务事实卡、撤回的消息、提出人本端删除的消息;联系人自己的发言照算
+ok 5 - 不算群聊发言的不计数:system 通知、任务事实卡、撤回的消息、提出人本端删除的消息;联系人自己的发言照算
+  ---
+  duration_ms: 159.762375
+  type: 'test'
+  ...
+# Subtest: Helper 发言照算:用户先凑一条,真实 helper.post 作为第二条冻结窗口
+ok 6 - Helper 发言照算:用户先凑一条,真实 helper.post 作为第二条冻结窗口
+  ---
+  duration_ms: 109.775708
+  type: 'test'
+  ...
+# Subtest: 触发视图窗口数按 trigger 隔离:另一房间的新触发不能带入已有窗口
+ok 7 - 触发视图窗口数按 trigger 隔离:另一房间的新触发不能带入已有窗口
+  ---
+  duration_ms: 60.729625
+  type: 'test'
+  ...
+# Subtest: 重放与重启不多数:同一 clientActionId 重发不计数;关宿主重开接着数,已冻结的不重冻,再开一次也不多冻
+ok 8 - 重放与重启不多数:同一 clientActionId 重发不计数;关宿主重开接着数,已冻结的不重冻,再开一次也不多冻
+  ---
+  duration_ms: 106.071459
+  type: 'test'
+  ...
+# Subtest: 消息已落盘但没来得及计数:重启时补冻结,攒了两个 N 就冻结两段,每段正好 N 条
+ok 9 - 消息已落盘但没来得及计数:重启时补冻结,攒了两个 N 就冻结两段,每段正好 N 条
+  ---
+  duration_ms: 80.403667
+  type: 'test'
+  ...
+# Subtest: 撤销承诺后不再触发:触发关闭并写明原因,之后聊多少条都不冻结;另一条没撤销的照常
+ok 10 - 撤销承诺后不再触发:触发关闭并写明原因,之后聊多少条都不冻结;另一条没撤销的照常
+  ---
+  duration_ms: 123.8365
+  type: 'test'
+  ...
+# Subtest: 联系人移出群、群解散后触发关闭并写明原因,不再冻结
+ok 11 - 联系人移出群、群解散后触发关闭并写明原因,不再冻结
+  ---
+  duration_ms: 108.315917
+  type: 'test'
+  ...
+# Subtest: 联系人移出后立即拉回:旧计数触发永久关闭、未处理窗口取消,必须重新提出承诺
+not ok 12 - 联系人移出后立即拉回:旧计数触发永久关闭、未处理窗口取消,必须重新提出承诺
+  ---
+  duration_ms: 90.257542
+  type: 'test'
+  location: '/private/tmp/gg-r2-claude-20261115/pr98-red/packages/server/src/count-triggers.test.ts:310:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   'active',
+    +   null,
+    -   'closed',
+    -   '联系人已不在这个会话',
+        [
+    +     'pending'
+    -     'cancelled'
+        ]
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'closed'
+    1: '联系人已不在这个会话'
+    2:
+      0: 'cancelled'
+  actual:
+    0: 'active'
+    1: ~
+    2:
+      0: 'pending'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-r2-claude-20261115/pr98-red/packages/server/src/count-triggers.test.ts:327:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 正在移出的联系人(在途任务还没停稳)也不再数:触发关闭,不冻结
+ok 13 - 正在移出的联系人(在途任务还没停稳)也不再数:触发关闭,不冻结
+  ---
+  duration_ms: 89.495834
+  type: 'test'
+  ...
+# Subtest: 私聊 rewind 撤下的消息和那条回退说明不计数:回退后只剩回退点之前的还算
+ok 14 - 私聊 rewind 撤下的消息和那条回退说明不计数:回退后只剩回退点之前的还算
+  ---
+  duration_ms: 72.913333
+  type: 'test'
+  ...
+# Subtest: 私聊 rewind 把提出承诺的那句撤下:承诺随回退撤销,触发在同一步关闭并写明原因,之后聊多少条都不冻结
+ok 15 - 私聊 rewind 把提出承诺的那句撤下:承诺随回退撤销,触发在同一步关闭并写明原因,之后聊多少条都不冻结
+  ---
+  duration_ms: 84.345459
+  type: 'test'
+  ...
+# Subtest: N 不合格整条拒收:0、小数、超过上限都不进账本也不建触发;合格的那条照常
+ok 16 - N 不合格整条拒收:0、小数、超过上限都不进账本也不建触发;合格的那条照常
+  ---
+  duration_ms: 140.52225
+  type: 'test'
+  ...
+# Subtest: 承诺原文出自联系人自己的回复时同样登记触发;从它这句回复之后开始数
+ok 17 - 承诺原文出自联系人自己的回复时同样登记触发;从它这句回复之后开始数
+  ---
+  duration_ms: 72.193042
+  type: 'test'
+  ...
+# Subtest: 不是用户提出的不算:联系人拿另一位联系人说的话登记按消息数触发的承诺被拒收,用户亲口说的才登记
+ok 18 - 不是用户提出的不算:联系人拿另一位联系人说的话登记按消息数触发的承诺被拒收,用户亲口说的才登记
+  ---
+  duration_ms: 90.086167
+  type: 'test'
+  ...
+# Subtest: 没处理的窗口每次宿主运行只交给消费方一次,重启后再交一次;结算只认一次,结算过的重启后不再交
+ok 19 - 没处理的窗口每次宿主运行只交给消费方一次,重启后再交一次;结算只认一次,结算过的重启后不再交
+  ---
+  duration_ms: 14.283833
+  type: 'test'
+  ...
+# Subtest: 触发关闭时没处理的窗口一并取消:不再交给消费方,消费方来结算也不认;已结算的不动
+ok 20 - 触发关闭时没处理的窗口一并取消:不再交给消费方,消费方来结算也不认;已结算的不动
+  ---
+  duration_ms: 19.617833
+  type: 'test'
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 19
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3614.878083

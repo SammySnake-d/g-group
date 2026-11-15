@@ -1,0 +1,504 @@
+{
+ "repo": "/private/tmp/gg-r2-claude-20261115/pr98-r1",
+ "summary": [
+  {
+   "name": "S1 rooms.removeMember 后立即 rooms.addMembers",
+   "defect": true
+  },
+  {
+   "name": "S2 移出拉回后重启宿主",
+   "defect": true
+  },
+  {
+   "name": "S3 同一联系人两个群:移出一群,二群触发与一群已结算窗口不受影响",
+   "defect": true
+  },
+  {
+   "name": "S4 rooms.dissolve 后不发消息",
+   "defect": false
+  },
+  {
+   "name": "S5 contacts.remove 后立即 rooms.addMembers",
+   "defect": true
+  },
+  {
+   "name": "S6 contacts.remove 后不发消息(只看是否持久关闭)",
+   "defect": true
+  },
+  {
+   "name": "S7 私聊触发:contacts.remove 后在私聊再发 2 条",
+   "defect": true
+  }
+ ],
+ "results": [
+  {
+   "name": "S1 rooms.removeMember 后立即 rooms.addMembers",
+   "steps": [
+    {
+     "label": "登记 N=2 后发 3 条",
+     "triggers": [
+      {
+       "room_id": "g-mwhyf8nf-2",
+       "every_n": 2,
+       "covered_seq": 4,
+       "status": "active",
+       "closed_reason": null
+      }
+     ],
+     "windows": [
+      {
+       "from_seq": 2,
+       "to_seq": 4,
+       "status": "pending",
+       "room_id": "g-mwhyf8nf-2"
+      }
+     ]
+    },
+    {
+     "label": "removeMember",
+     "r": {
+      "ok": true
+     },
+     "triggers": [
+      {
+       "room_id": "g-mwhyf8nf-2",
+       "every_n": 2,
+       "covered_seq": 4,
+       "status": "active",
+       "closed_reason": null
+      }
+     ],
+     "windows": [
+      {
+       "from_seq": 2,
+       "to_seq": 4,
+       "status": "pending",
+       "room_id": "g-mwhyf8nf-2"
+      }
+     ]
+    },
+    {
+     "label": "addMembers",
+     "r": {
+      "ok": true
+     },
+     "triggers": [
+      {
+       "room_id": "g-mwhyf8nf-2",
+       "every_n": 2,
+       "covered_seq": 4,
+       "status": "active",
+       "closed_reason": null
+      }
+     ],
+     "view": [
+      {
+       "status": "active",
+       "trigger": {
+        "kind": "message-count",
+        "everyN": 2,
+        "coveredSeq": 4,
+        "count": 1,
+        "active": true,
+        "windows": 1
+       }
+      }
+     ]
+    },
+    {
+     "label": "拉回后再发 1 条",
+     "triggers": [
+      {
+       "room_id": "g-mwhyf8nf-2",
+       "every_n": 2,
+       "covered_seq": 6,
+       "status": "active",
+       "closed_reason": null
+      }
+     ],
+     "windows": [
+      {
+       "from_seq": 2,
+       "to_seq": 4,
+       "status": "pending",
+       "room_id": "g-mwhyf8nf-2"
+      },
+      {
+       "from_seq": 4,
+       "to_seq": 6,
+       "status": "pending",
+       "room_id": "g-mwhyf8nf-2"
+      }
+     ],
+     "view": [
+      {
+       "status": "active",
+       "trigger": {
+        "kind": "message-count",
+        "everyN": 2,
+        "coveredSeq": 6,
+        "count": 0,
+        "active": true,
+        "windows": 2
+       }
+      }
+     ]
+    }
+   ],
+   "defect": true
+  },
+  {
+   "name": "S2 移出拉回后重启宿主",
+   "steps": [
+    {
+     "label": "移出拉回后",
+     "triggers": [
+      {
+       "room_id": "g-mwhyf8p1-2",
+       "every_n": 2,
+       "covered_seq": 4,
+       "status": "active",
+       "closed_reason": null
+      }
+     ],
+     "windows": [
+      {
+       "from_seq": 2,
+       "to_seq": 4,
+       "status": "pending",
+       "room_id": "g-mwhyf8p1-2"
+      }
+     ]
+    },
+    {
+     "label": "重启并再发 2 条",
+     "triggers": [
+      {
+       "room_id": "g-mwhyf8p1-2",
+       "every_n": 2,
+       "covered_seq": 6,
+       "status": "active",
+       "closed_reason": null
+      }
+     ],
+     "windows": [
+      {
+       "from_seq": 2,
+       "to_seq": 4,
+       "status": "pending",
+       "room_id": "g-mwhyf8p1-2"
+      },
+      {
+       "from_seq": 4,
+       "to_seq": 6,
+       "status": "pending",
+       "room_id": "g-mwhyf8p1-2"
+      }
+     ],
+     "view": [
+      {
+       "status": "active",
+       "trigger": {
+        "kind": "message-count",
+        "everyN": 2,
+        "coveredSeq": 6,
+        "count": 1,
+        "active": true,
+        "windows": 2
+       }
+      }
+     ]
+    }
+   ],
+   "defect": true
+  },
+  {
+   "name": "S3 同一联系人两个群:移出一群,二群触发与一群已结算窗口不受影响",
+   "steps": [
+    {
+     "label": "两群各自冻结,一群第 1 个窗口已结算",
+     "settled": true,
+     "windows": [
+      [
+       "g1",
+       "done"
+      ],
+      [
+       "g2",
+       "pending"
+      ],
+      [
+       "g1",
+       "pending"
+      ]
+     ]
+    },
+    {
+     "label": "移出一群后",
+     "triggers": [
+      [
+       "g1",
+       "active",
+       null
+      ],
+      [
+       "g2",
+       "active",
+       null
+      ]
+     ],
+     "windows": [
+      [
+       "g1",
+       "done"
+      ],
+      [
+       "g2",
+       "pending"
+      ],
+      [
+       "g1",
+       "pending"
+      ]
+     ]
+    }
+   ],
+   "defect": true
+  },
+  {
+   "name": "S4 rooms.dissolve 后不发消息",
+   "steps": [
+    {
+     "label": "dissolve",
+     "r": {
+      "ok": true
+     },
+     "triggers": [
+      {
+       "room_id": "g-mwhyf8rp-2",
+       "every_n": 2,
+       "covered_seq": 4,
+       "status": "closed",
+       "closed_reason": "会话已解散"
+      }
+     ],
+     "windows": [
+      {
+       "from_seq": 2,
+       "to_seq": 4,
+       "status": "cancelled",
+       "room_id": "g-mwhyf8rp-2"
+      }
+     ]
+    }
+   ],
+   "defect": false
+  },
+  {
+   "name": "S5 contacts.remove 后立即 rooms.addMembers",
+   "steps": [
+    {
+     "label": "contacts.remove",
+     "r": {
+      "ok": true
+     },
+     "members": 1,
+     "triggers": [
+      {
+       "room_id": "g-mwhyf8ss-2",
+       "every_n": 2,
+       "covered_seq": 4,
+       "status": "active",
+       "closed_reason": null
+      }
+     ],
+     "windows": [
+      {
+       "from_seq": 2,
+       "to_seq": 4,
+       "status": "pending",
+       "room_id": "g-mwhyf8ss-2"
+      }
+     ],
+     "view": [
+      {
+       "status": "active",
+       "trigger": {
+        "kind": "message-count",
+        "everyN": 2,
+        "coveredSeq": 4,
+        "count": 0,
+        "active": false,
+        "windows": 1
+       }
+      }
+     ]
+    },
+    {
+     "label": "addMembers",
+     "r": {
+      "ok": true
+     },
+     "triggers": [
+      {
+       "room_id": "g-mwhyf8ss-2",
+       "every_n": 2,
+       "covered_seq": 4,
+       "status": "active",
+       "closed_reason": null
+      }
+     ],
+     "view": [
+      {
+       "status": "active",
+       "trigger": {
+        "kind": "message-count",
+        "everyN": 2,
+        "coveredSeq": 4,
+        "count": 1,
+        "active": true,
+        "windows": 1
+       }
+      }
+     ]
+    },
+    {
+     "label": "再发 1 条",
+     "triggers": [
+      {
+       "room_id": "g-mwhyf8ss-2",
+       "every_n": 2,
+       "covered_seq": 6,
+       "status": "active",
+       "closed_reason": null
+      }
+     ],
+     "windows": [
+      {
+       "from_seq": 2,
+       "to_seq": 4,
+       "status": "pending",
+       "room_id": "g-mwhyf8ss-2"
+      },
+      {
+       "from_seq": 4,
+       "to_seq": 6,
+       "status": "pending",
+       "room_id": "g-mwhyf8ss-2"
+      }
+     ],
+     "view": [
+      {
+       "status": "active",
+       "trigger": {
+        "kind": "message-count",
+        "everyN": 2,
+        "coveredSeq": 6,
+        "count": 0,
+        "active": true,
+        "windows": 2
+       }
+      }
+     ]
+    }
+   ],
+   "defect": true
+  },
+  {
+   "name": "S6 contacts.remove 后不发消息(只看是否持久关闭)",
+   "steps": [
+    {
+     "label": "contacts.remove 后",
+     "triggers": [
+      {
+       "room_id": "g-mwhyf8u8-2",
+       "every_n": 2,
+       "covered_seq": 4,
+       "status": "active",
+       "closed_reason": null
+      }
+     ],
+     "windows": [
+      {
+       "from_seq": 2,
+       "to_seq": 4,
+       "status": "pending",
+       "room_id": "g-mwhyf8u8-2"
+      }
+     ],
+     "view": [
+      {
+       "status": "active",
+       "trigger": {
+        "kind": "message-count",
+        "everyN": 2,
+        "coveredSeq": 4,
+        "count": 0,
+        "active": false,
+        "windows": 1
+       }
+      }
+     ]
+    }
+   ],
+   "defect": true
+  },
+  {
+   "name": "S7 私聊触发:contacts.remove 后在私聊再发 2 条",
+   "steps": [
+    {
+     "label": "私聊登记后",
+     "triggers": [
+      {
+       "room_id": "dm-c-mwhyf8va-1",
+       "every_n": 2,
+       "covered_seq": 2,
+       "status": "active",
+       "closed_reason": null
+      }
+     ]
+    },
+    {
+     "label": "contacts.remove",
+     "r": {
+      "ok": true
+     },
+     "triggers": [
+      {
+       "room_id": "dm-c-mwhyf8va-1",
+       "every_n": 2,
+       "covered_seq": 2,
+       "status": "active",
+       "closed_reason": null
+      }
+     ]
+    },
+    {
+     "label": "删后在私聊发 2 条",
+     "sent": [
+      "ok",
+      "ok"
+     ],
+     "triggers": [
+      {
+       "room_id": "dm-c-mwhyf8va-1",
+       "every_n": 2,
+       "covered_seq": 4,
+       "status": "active",
+       "closed_reason": null
+      }
+     ],
+     "windows": [
+      {
+       "from_seq": 2,
+       "to_seq": 4,
+       "status": "pending",
+       "room_id": "dm-c-mwhyf8va-1"
+      }
+     ]
+    }
+   ],
+   "defect": true
+  }
+ ]
+}

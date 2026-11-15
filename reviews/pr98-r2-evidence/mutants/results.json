@@ -1,0 +1,179 @@
+{
+ "head": "f4533f77a027bded226892e228dd6842569e2bc8",
+ "tests": [
+  "packages/server/src/count-triggers.test.ts",
+  "packages/adapter-pi-contact/src/commit-every-n.test.ts"
+ ],
+ "clean": {
+  "exit": 0,
+  "tests": 20,
+  "pass": 20,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "todo": 0,
+  "failed": []
+ },
+ "mutants": [
+  {
+   "id": "M1-omit-helper",
+   "file": "packages/server/src/chat-range.ts",
+   "why": "第 1 轮 TEST-001 的存活故障:Helper 发言不计数",
+   "matches": 1,
+   "exit": 1,
+   "tests": 20,
+   "pass": 19,
+   "fail": 1,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "Helper 发言照算:用户先凑一条,真实 helper.post 作为第二条冻结窗口"
+   ],
+   "verdict": "KILLED"
+  },
+  {
+   "id": "M2-global-window-count",
+   "file": "packages/server/src/count-triggers.ts",
+   "why": "第 1 轮 TEST-002 的存活故障:视图窗口数不按 trigger 过滤",
+   "matches": 1,
+   "exit": 1,
+   "tests": 20,
+   "pass": 19,
+   "fail": 1,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "触发视图窗口数按 trigger 隔离:另一房间的新触发不能带入已有窗口"
+   ],
+   "verdict": "KILLED"
+  },
+  {
+   "id": "M3-no-close-on-remove",
+   "file": "packages/server/src/host.ts",
+   "why": "直接移出时不关闭触发(回到第 1 轮 CORR-001)",
+   "matches": 1,
+   "exit": 1,
+   "tests": 20,
+   "pass": 19,
+   "fail": 1,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "联系人移出后立即拉回:旧计数触发永久关闭、未处理窗口取消,必须重新提出承诺"
+   ],
+   "verdict": "KILLED"
+  },
+  {
+   "id": "M4-no-close-on-leaving",
+   "file": "packages/server/src/host.ts",
+   "why": "带在途任务的「移出中」开始时不关闭触发",
+   "matches": 1,
+   "exit": 0,
+   "tests": 20,
+   "pass": 20,
+   "fail": 0,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [],
+   "verdict": "SURVIVED"
+  },
+  {
+   "id": "M5-no-close-on-dissolve",
+   "file": "packages/server/src/host.ts",
+   "why": "解散时不即时关闭(可能与下一条 system 通知的惰性关闭等价)",
+   "matches": 1,
+   "exit": 0,
+   "tests": 20,
+   "pass": 20,
+   "fail": 0,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [],
+   "verdict": "SURVIVED"
+  },
+  {
+   "id": "M6-close-contact-all-rooms",
+   "file": "packages/server/src/count-triggers.ts",
+   "why": "移出一个群时把该联系人在别的群的触发也关掉",
+   "matches": 1,
+   "exit": 1,
+   "tests": 20,
+   "pass": 19,
+   "fail": 1,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "联系人移出群、群解散后触发关闭并写明原因,不再冻结"
+   ],
+   "verdict": "KILLED"
+  },
+  {
+   "id": "M7-close-room-all-contacts",
+   "file": "packages/server/src/count-triggers.ts",
+   "why": "移出一个联系人时把同群别的联系人的触发也关掉",
+   "matches": 1,
+   "exit": 0,
+   "tests": 20,
+   "pass": 20,
+   "fail": 0,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [],
+   "verdict": "SURVIVED"
+  },
+  {
+   "id": "M8-close-keeps-pending",
+   "file": "packages/server/src/count-triggers.ts",
+   "why": "关闭触发时不取消未处理窗口",
+   "matches": 1,
+   "exit": 1,
+   "tests": 20,
+   "pass": 18,
+   "fail": 2,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "联系人移出后立即拉回:旧计数触发永久关闭、未处理窗口取消,必须重新提出承诺",
+    "触发关闭时没处理的窗口一并取消:不再交给消费方,消费方来结算也不认;已结算的不动"
+   ],
+   "verdict": "KILLED"
+  },
+  {
+   "id": "M9-close-reason-dropped",
+   "file": "packages/server/src/count-triggers.ts",
+   "why": "移出关闭不写明原因",
+   "matches": 1,
+   "exit": 1,
+   "tests": 20,
+   "pass": 17,
+   "fail": 3,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "联系人移出群、群解散后触发关闭并写明原因,不再冻结",
+    "联系人移出后立即拉回:旧计数触发永久关闭、未处理窗口取消,必须重新提出承诺",
+    "正在移出的联系人(在途任务还没停稳)也不再数:触发关闭,不冻结"
+   ],
+   "verdict": "KILLED"
+  }
+ ],
+ "clean_after": {
+  "exit": 0,
+  "tests": 20,
+  "pass": 20,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "todo": 0,
+  "failed": []
+ }
+}

@@ -1,0 +1,126 @@
+{
+ "repo": "/private/tmp/gg-r2-claude-20261115/pr98",
+ "defect": {
+  "closedAtBegin": true,
+  "revivedAfterRejoin": false,
+  "atBegin": {
+   "status": "closed",
+   "pending": 0
+  },
+  "end": {
+   "status": "closed",
+   "windows": [
+    "cancelled"
+   ]
+  }
+ },
+ "steps": [
+  {
+   "label": "有在途任务,已有 1 个 pending 窗口",
+   "lastSeq": 6,
+   "triggers": [
+    {
+     "covered_seq": 4,
+     "status": "active",
+     "closed_reason": null
+    }
+   ],
+   "windows": [
+    {
+     "from_seq": 2,
+     "to_seq": 4,
+     "status": "pending"
+    }
+   ],
+   "taskOk": true
+  },
+  {
+   "label": "removeMember stopTasks 返回的那一刻(移出中)",
+   "lastSeq": 6,
+   "triggers": [
+    {
+     "covered_seq": 4,
+     "status": "closed",
+     "closed_reason": "联系人已不在这个会话"
+    }
+   ],
+   "windows": [
+    {
+     "from_seq": 2,
+     "to_seq": 4,
+     "status": "cancelled"
+    }
+   ],
+   "ok": true,
+   "leaving": [
+    "c-mwhyury9-1"
+   ]
+  },
+  {
+   "label": "停止确认放行、移出完成",
+   "lastSeq": 6,
+   "triggers": [
+    {
+     "covered_seq": 4,
+     "status": "closed",
+     "closed_reason": "联系人已不在这个会话"
+    }
+   ],
+   "windows": [
+    {
+     "from_seq": 2,
+     "to_seq": 4,
+     "status": "cancelled"
+    }
+   ],
+   "contactMembers": 0
+  },
+  {
+   "label": "拉回(不发新消息)",
+   "lastSeq": 6,
+   "triggers": [
+    {
+     "covered_seq": 4,
+     "status": "closed",
+     "closed_reason": "联系人已不在这个会话"
+    }
+   ],
+   "windows": [
+    {
+     "from_seq": 2,
+     "to_seq": 4,
+     "status": "cancelled"
+    }
+   ],
+   "ok": true,
+   "view": [
+    {
+     "kind": "message-count",
+     "everyN": 2,
+     "coveredSeq": 4,
+     "count": 0,
+     "active": false,
+     "windows": 1
+    }
+   ]
+  },
+  {
+   "label": "拉回后再发 1 条",
+   "lastSeq": 7,
+   "triggers": [
+    {
+     "covered_seq": 4,
+     "status": "closed",
+     "closed_reason": "联系人已不在这个会话"
+    }
+   ],
+   "windows": [
+    {
+     "from_seq": 2,
+     "to_seq": 4,
+     "status": "cancelled"
+    }
+   ]
+  }
+ ]
+}
