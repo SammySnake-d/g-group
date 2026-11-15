@@ -13,7 +13,7 @@ Running 2 tests using 1 worker
   ✘  2 [electron] › e2e/parity-r2-pano.electron.spec.ts:70:1 › 停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、卡在哪,全景卡也写无进展 (7.9s)
 
 
-  1) [electron] › e2e/parity-r2-cron.electron.spec.ts:223:1 › 斜杠命令:/todo、/notice 连后端时可用并写进后端;后端的 /remind 在菜单里,发出后定时页出现这条定时;/summary 仍灰着并写明原因 › 打 / :后端内置的 /task /remind /stop 列在菜单里;执行路径已接上合同的本地命令不灰;还关着的灰着并写明原因 
+  1) [electron] › e2e/parity-r2-cron.electron.spec.ts:223:1 › 斜杠命令:/todo、/notice 连后端时可用并写进后端;后端的 /remind 在菜单里,发出后定时页出现这条定时;/summary 仍灰着并写明原因 › 打 / :后端内置的 /task /remind /stop 列在菜单里;执行路径已接上合同的本地命令不灰;还关着的灰着并写明原因
 
     Error: expect(locator).toHaveCount(expected) failed
 
@@ -41,7 +41,7 @@ Running 2 tests using 1 worker
 
     Error Context: test-results/parity-r2-cron.electron-斜杠-dc5c5-后定时页出现这条定时-summary-仍灰着并写明原因-electron/error-context.md
 
-  2) [electron] › e2e/parity-r2-pano.electron.spec.ts:70:1 › 停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、卡在哪,全景卡也写无进展 
+  2) [electron] › e2e/parity-r2-pano.electron.spec.ts:70:1 › 停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、卡在哪,全景卡也写无进展
 
     Error: expect(locator).toContainText(expected) failed
 
@@ -69,6 +69,6 @@ Running 2 tests using 1 worker
     Error Context: test-results/parity-r2-pano.electron-停滞-69861-那一行原地变黄写明多久没动静、卡在哪-全景卡也写无进展-electron/error-context.md
 
   2 failed
-    [electron] › e2e/parity-r2-cron.electron.spec.ts:223:1 › 斜杠命令:/todo、/notice 连后端时可用并写进后端;后端的 /remind 在菜单里,发出后定时页出现这条定时;/summary 仍灰着并写明原因 
-    [electron] › e2e/parity-r2-pano.electron.spec.ts:70:1 › 停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、卡在哪,全景卡也写无进展 
+    [electron] › e2e/parity-r2-cron.electron.spec.ts:223:1 › 斜杠命令:/todo、/notice 连后端时可用并写进后端;后端的 /remind 在菜单里,发出后定时页出现这条定时;/summary 仍灰着并写明原因
+    [electron] › e2e/parity-r2-pano.electron.spec.ts:70:1 › 停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、卡在哪,全景卡也写无进展
 [serial] 结束,清掉残留进程 0 个

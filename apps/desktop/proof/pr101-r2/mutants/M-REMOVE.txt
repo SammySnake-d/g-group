@@ -20,7 +20,7 @@ dist/assets/BottomSheet-CNiRiGuT.js                   80.59 kB │ gzip:  27.17 
 dist/assets/index-BZZWUPLz.js                      2,099.45 kB │ gzip: 675.07 kB
 
 ✓ built in 1.10s
-[plugin builtin:vite-reporter] 
+[plugin builtin:vite-reporter]
 (!) Some chunks are larger than 500 kB after minification. Consider:
 - Using dynamic import() to code-split the application
 - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting

@@ -27,7 +27,7 @@ dist/assets/useTooltip-CpVx_tSY.js                    51.88 kB │ gzip:  17.11 
 dist/assets/BottomSheet-DAKnrB48.js                   80.59 kB │ gzip:  27.17 kB
 dist/assets/index-BeVSYfks.js                      2,099.36 kB │ gzip: 675.05 kB
 
-[plugin builtin:vite-reporter] 
+[plugin builtin:vite-reporter]
 (!) Some chunks are larger than 500 kB after minification. Consider:
 - Using dynamic import() to code-split the application
 - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting

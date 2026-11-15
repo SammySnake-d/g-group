@@ -211,7 +211,7 @@ Running 182 tests using 1 worker
   ✓  182 [electron] › e2e/shell.electron.spec.ts:8:1 › Electron 壳:安全基线开着,渲染层拿不到 Node,IPC 只认白名单方法 (2.7s)
 
 
-  1) [renderer] › e2e/compute.ui.spec.ts:138:5 › Compute 卡与 harness 会话 dark › 完整过程面板里失败的卡:「出错了」+ 一条细线提示条(不是红底块),重试原地可点 
+  1) [renderer] › e2e/compute.ui.spec.ts:138:5 › Compute 卡与 harness 会话 dark › 完整过程面板里失败的卡:「出错了」+ 一条细线提示条(不是红底块),重试原地可点
 
     Error: expect(locator).toHaveText(expected) failed
 
@@ -376,7 +376,7 @@ Running 182 tests using 1 worker
       - waiting for getByTestId('compute-card-scrape').getByTestId('compute-status')
       - Target page, context or browser has been closed
     Browser logs:
-    
+
     [pid=5056][err] [5062:27651907:1115/192057.643758:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
     [pid=5056][err] [5062:27651839:1115/192057.645654:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
     [pid=5056][err] [5062:27651907:1115/192057.645694:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
@@ -840,7 +840,7 @@ Running 182 tests using 1 worker
 
     Error Context: test-results/files-context.ui-来处：对话名打开对话；资产从「存下」那条来；没有来处时只留对话名-renderer/error-context.md
 
-  6) [renderer] › e2e/models.ui.spec.ts:182:1 › 默认 Harness 和默认 Compute 模型组合不成立时不能保存;只改默认说话模型说明只影响新建联系人 
+  6) [renderer] › e2e/models.ui.spec.ts:182:1 › 默认 Harness 和默认 Compute 模型组合不成立时不能保存;只改默认说话模型说明只影响新建联系人
 
     Error: locator.click: Target page, context or browser has been closed
     Browser logs:
@@ -1370,12 +1370,12 @@ Running 182 tests using 1 worker
     Error Context: test-results/visual.ui-F-VISUAL-dark-正文、会话标题、次要文字的对比度达标-renderer/error-context.md
 
   9 failed
-    [renderer] › e2e/compute.ui.spec.ts:138:5 › Compute 卡与 harness 会话 dark › 完整过程面板里失败的卡:「出错了」+ 一条细线提示条(不是红底块),重试原地可点 
+    [renderer] › e2e/compute.ui.spec.ts:138:5 › Compute 卡与 harness 会话 dark › 完整过程面板里失败的卡:「出错了」+ 一条细线提示条(不是红底块),重试原地可点
     [renderer] › e2e/concept-clips.ui.spec.ts:100:3 › 连拍 · 目光(dark):打字时等你的头像眼睛跟着光标走,回完眯眼笑 ──────────
     [renderer] › e2e/concept.ui.spec.ts:99:5 › 概念 light › 目光:挂着等你的事的头像看向输入框,打字时眼睛跟着光标走;回答后眯眼笑 ──────
     [renderer] › e2e/concept.ui.spec.ts:99:5 › 概念 dark › 目光:挂着等你的事的头像看向输入框,打字时眼睛跟着光标走;回答后眯眼笑 ───────
     [renderer] › e2e/files-context.ui.spec.ts:44:1 › 来处：对话名打开对话；资产从「存下」那条来；没有来处时只留对话名 ──────────────
-    [renderer] › e2e/models.ui.spec.ts:182:1 › 默认 Harness 和默认 Compute 模型组合不成立时不能保存;只改默认说话模型说明只影响新建联系人 
+    [renderer] › e2e/models.ui.spec.ts:182:1 › 默认 Harness 和默认 Compute 模型组合不成立时不能保存;只改默认说话模型说明只影响新建联系人
     [renderer] › e2e/progress.ui.spec.ts:76:1 › 关闭:Esc、点暗背景、×;搜索框里 Esc 先清搜索 ────────────────────────
     [renderer] › e2e/shell-look.ui.spec.ts:52:5 › 壳的观感 light › 进群就停在最底部:提问卡等内容展开变高后仍贴底,不冒出「回到最新」 ───
     [renderer] › e2e/visual.ui.spec.ts:50:5 › F-VISUAL dark › 正文、会话标题、次要文字的对比度达标 ───────────────────

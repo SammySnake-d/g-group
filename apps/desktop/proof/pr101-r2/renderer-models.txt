@@ -20,7 +20,7 @@ Running 9 tests using 1 worker
   ✓  9 [renderer] › e2e/models.ui.spec.ts:247:1 › 模型只在两处配:资料页只显示、点了去工作台设置;添加联系人不选模型,用全局默认 (1.8s)
 
 
-  1) [renderer] › e2e/models.ui.spec.ts:62:1 › 选了 Harness 跑不了的模型:就地阻断、给两条修复路径、保存不可用;点「单独指定兼容模型」后恢复可保存 
+  1) [renderer] › e2e/models.ui.spec.ts:62:1 › 选了 Harness 跑不了的模型:就地阻断、给两条修复路径、保存不可用;点「单独指定兼容模型」后恢复可保存
 
     Error: expect(received).toEqual(expected) // deep equality
 
@@ -50,6 +50,6 @@ Running 9 tests using 1 worker
     Error Context: test-results/models.ui-选了-Harness-跑不了的模-79daa-复路径、保存不可用-点「单独指定兼容模型」后恢复可保存-renderer/error-context.md
 
   1 failed
-    [renderer] › e2e/models.ui.spec.ts:62:1 › 选了 Harness 跑不了的模型:就地阻断、给两条修复路径、保存不可用;点「单独指定兼容模型」后恢复可保存 
+    [renderer] › e2e/models.ui.spec.ts:62:1 › 选了 Harness 跑不了的模型:就地阻断、给两条修复路径、保存不可用;点「单独指定兼容模型」后恢复可保存
   8 passed (18.8s)
 [serial] 结束,清掉残留进程 0 个
