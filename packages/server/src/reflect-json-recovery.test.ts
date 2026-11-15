@@ -117,6 +117,60 @@ function holdSecond() {
   return { started, release, gate: async (_i: RoundInput) => { if (++n === 2) { entered(); await finish; } } };
 }
 
+function holdFirst() {
+  let entered!: () => void, release!: () => void;
+  const started = new Promise<void>((r) => { entered = r; });
+  const finish = new Promise<void>((r) => { release = r; });
+  let n = 0;
+  return { started, release, gate: async (_i: RoundInput) => { if (++n === 1) { entered(); await finish; } } };
+}
+
+test("本轮主模型运行时撤回本轮新消息,反思不得继续接收其原文", async () => {
+  const hold = holdFirst();
+  const x = setup([valid, valid], false, hold.gate);
+  try {
+    const first = x.host.send({ roomId: x.dm.id, clientActionId: "1", text: "本轮撤回的新原文" });
+    await hold.started;
+    x.host.retractMessage(x.dm.id, first.seq);
+    hold.release();
+    await settle(x.host);
+    assert.ok(x.fake.seen.length >= 1);
+    for (const seen of x.fake.seen) assert.doesNotMatch(text(seen), /本轮撤回的新原文/);
+  } finally { hold.release(); await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
+});
+
+test("本轮反思运行时撤回本轮新消息,结果不落盘或进入下一轮", async () => {
+  let entered!: () => void, release!: () => void;
+  const started = new Promise<void>((r) => { entered = r; });
+  const finish = new Promise<void>((r) => { release = r; });
+  const poisoned = JSON.stringify({ note: "本轮撤回后不应落盘的结果", memories: [], personaSuggestion: null });
+  const x = setup([poisoned, valid, valid], false, undefined, async (index) => { if (index === 1) { entered(); await finish; } });
+  try {
+    const first = x.host.send({ roomId: x.dm.id, clientActionId: "1", text: "本轮反思期间撤回" });
+    await started;
+    x.host.retractMessage(x.dm.id, first.seq);
+    release();
+    await settle(x.host);
+    assert.doesNotMatch(x.host.stateNote(x.c.id) ?? "", /本轮撤回后不应落盘的结果/);
+    for (const req of x.requests.slice(1)) assert.doesNotMatch(req.blocks.map((b) => b.text).join("\n"), /本轮撤回后不应落盘的结果/);
+  } finally { release(); await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
+});
+
+test("本轮主模型运行中被移出源群,不得把源群新消息送去后续反思", async () => {
+  const hold = holdFirst();
+  const x = setup([valid], true, hold.gate);
+  try {
+    const group = x.host.createGroup("实验群", [{ kind: "contact", id: x.c.id }]);
+    x.host.send({ roomId: group.id, clientActionId: "1", text: "同轮移出群的原文", mentions: [{ id: x.c.id, source: "manual" }] });
+    await hold.started;
+    x.host.removeMember(group.id, { kind: "contact", id: x.c.id });
+    hold.release();
+    await settle(x.host);
+    for (const seen of x.fake.seen) assert.doesNotMatch(text(seen), /同轮移出群的原文/);
+    assert.equal(x.host.listMessages(group.id, {}).messages.filter((m) => m.sender.kind === "contact").length, 0);
+  } finally { hold.release(); await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
+});
+
 test("下一轮模型运行中撤回待压缩消息,反思与落盘不得再使用撤回原文", async () => {
   const hold = holdSecond();
   const x = setup(["不是 JSON 对象", " ", valid, valid], false, hold.gate);
