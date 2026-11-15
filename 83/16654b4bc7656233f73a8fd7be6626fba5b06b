@@ -1,0 +1,27 @@
+apps/desktop/e2e/native-files.electron.spec.ts
+  s_be862bfe4ebd7a::t_78710084455c4f 47,60,62-63,65
+apps/desktop/e2e/models.ui.spec.ts
+  s_be862bfe4ebd7a::t_3f72631a0eb6c6 19-24,47,49,65,84,89,100,115,157,184,192
+  s_be862bfe4ebd7a::t_78710084455c4f 77
+apps/desktop/e2e/pr101-p0.electron.spec.ts
+  s_be862bfe4ebd7a::t_af9e3428a9e80c 16-17,23-26,105,118-159
+  s_be862bfe4ebd7a::t_3f65092b971018 36,203
+  s_be862bfe4ebd7a::t_9cbf756d4db1f1 12-15
+  s_be862bfe4ebd7a::t_57fd742d7ebec0 160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8316654b4bc7656233f73a8fd7be6626fba5b06b",
+  "prompts": {},
+  "sessions": {
+    "s_be862bfe4ebd7a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1de94-42ad-7200-a40f-a6f126eca979",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
