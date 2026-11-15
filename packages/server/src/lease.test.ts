@@ -173,7 +173,7 @@ test("AC-23 重启:未确认停止的个人槽保留原租约,同联系人新任
     lr.finish(lr.asked[0]!, { ok: false, reason: "停止无法确认", remaining: [] });
     await until(() => before!.taskView(before!.taskDoc(first.id).value).waitingFor?.includes("停止未确认") === true, "停止未确认");
     const oldLease = before.quota.leaseOf(first.id);
-    assert.ok(oldLease && oldLease.stopping);
+    assert.ok(oldLease?.stopping);
     await before.close();
     before = undefined;
 
@@ -302,5 +302,95 @@ test("AC-23 升级旧库:未知原槽位的 T9 保守拦截相关个人和原群
     if (before) await before.close();
     if (afterRestart) await afterRestart.close();
     lr.compute.close();
+  }
+});
+
+test("AC-23 崩溃重启:在跑任务不能仅凭宿主退出确认停止,且保留原租约", async () => {
+  const f = file();
+  const lr = longRunning();
+  let before: Host | undefined;
+  let afterRestart: Host | undefined;
+  try {
+    const options = { file: f, mind: () => scriptedMind(), compute: () => lr.compute.adapter, maxDeferMs: 5, personalComputeSlots: 1 };
+    before = new Host(options);
+    const c = before.createContact({ name: "重启在跑任务" });
+    const dm = before.openDm(c.id).id;
+    before.send({ roomId: dm, clientActionId: "before-crash", text: "帮我写一份报告" });
+    await until(() => lr.compute.spawned.length === 1 && taskOf(before!, dm)?.state === "T3_Running", "任务运行中");
+    const task = taskOf(before, dm);
+    const lease = before.quota.leaseOf(task.id);
+    assert.ok(lease);
+    // 模拟宿主关闭后重新挂接同一持久库;替身不产生 OS 进程。
+    await before.close();
+    before = undefined;
+    afterRestart = new Host(options);
+    assert.equal(afterRestart.taskDoc(task.id).value.task.state, "T9_StopRequested", "宿主退出不是进程停止确认");
+    assert.deepEqual(afterRestart.quota.leaseOf(task.id), lease);
+    assert.ok(afterRestart.taskView(afterRestart.taskDoc(task.id).value).waitingFor?.includes("停止未确认"));
+    assert.ok("queued" in afterRestart.quota.acquire({ taskId: task.id, contactId: c.id, roomId: dm, isGroup: false }));
+  } finally {
+    if (before) await before.close();
+    if (afterRestart) await afterRestart.close();
+    lr.compute.close();
+  }
+});
+
+test("AC-23 失败后选择不重试:停止未确认不得直接转终态或释放租约", async () => {
+  let resolveQuiesce: (result: QuiesceResult) => void = () => {};
+  const gate = new Promise<QuiesceResult>((resolve) => { resolveQuiesce = resolve; });
+  const compute = scriptedCompute({
+    script: () => [{ kind: "started", sessionId: "s", resumed: false }, { kind: "failed", reason: "cyber_policy: flagged by safeguards", code: 1, signal: null, violations: [] }],
+    quiesce: () => gate,
+  });
+  const host = new Host({ file: file(), mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5, personalComputeSlots: 1 });
+  try {
+    const c = host.createContact({ name: "失败后停止" });
+    const dm = host.openDm(c.id).id;
+    host.send({ roomId: dm, clientActionId: "start", text: "帮我写一份报告" });
+    await until(() => host.listMessages(dm, {}).messages.some((m) => m.card?.kind === "failure"), "失败卡");
+    const first = taskOf(host, dm);
+    const failedRun = host.listRuns({}).runs.find((run) => run.layer === "compute-session" && run.taskId === first.id);
+    assert.ok(failedRun);
+    assert.throws(() => host.rerunRun(failedRun.id, "rerun-pending"), /停止尚未确认/, "未确认时不得重跑另一份执行器");
+    const card = host.listMessages(dm, {}).messages.find((m) => m.card?.kind === "failure")!;
+    host.cardAct({ roomId: dm, seq: card.seq, cardId: card.card!.cardId, actionId: "give-up", clientActionId: "give-up" });
+    assert.equal(host.taskDoc(first.id).value.task.state, "T9_StopRequested", "失败和不重试都不是停止确认");
+    assert.ok(host.quota.leaseOf(first.id));
+    resolveQuiesce({ ok: false, reason: "无法确认后代已停止", remaining: [] });
+    await until(() => host.taskView(host.taskDoc(first.id).value).waitingFor?.includes("停止未确认") === true, "等待停止未确认");
+    assert.equal(host.taskDoc(first.id).value.task.state, "T9_StopRequested");
+    assert.ok(host.quota.leaseOf(first.id));
+  } finally {
+    resolveQuiesce({ ok: false, reason: "测试结束", remaining: [] });
+    compute.close();
+    await host.close();
+  }
+});
+
+test("AC-23 失败后用户取消:停止未确认仍留 T9 并保留租约", async () => {
+  let resolveQuiesce: (result: QuiesceResult) => void = () => {};
+  const gate = new Promise<QuiesceResult>((resolve) => { resolveQuiesce = resolve; });
+  const compute = scriptedCompute({
+    script: () => [{ kind: "started", sessionId: "s", resumed: false }, { kind: "failed", reason: "cyber_policy: flagged by safeguards", code: 1, signal: null, violations: [] }],
+    quiesce: () => gate,
+  });
+  const host = new Host({ file: file(), mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5, personalComputeSlots: 1 });
+  try {
+    const c = host.createContact({ name: "失败后取消" });
+    const dm = host.openDm(c.id).id;
+    host.send({ roomId: dm, clientActionId: "start", text: "帮我写一份报告" });
+    await until(() => host.listMessages(dm, {}).messages.some((m) => m.card?.kind === "failure"), "失败卡");
+    const first = taskOf(host, dm);
+    host.stopTask(first.id, "me");
+    assert.equal(host.taskDoc(first.id).value.task.state, "T9_StopRequested");
+    assert.ok(host.quota.leaseOf(first.id));
+    resolveQuiesce({ ok: false, reason: "无法确认后代已停止", remaining: [] });
+    await until(() => host.taskView(host.taskDoc(first.id).value).waitingFor?.includes("停止未确认") === true, "等待停止未确认");
+    assert.equal(host.taskDoc(first.id).value.task.state, "T9_StopRequested");
+    assert.ok(host.quota.leaseOf(first.id));
+  } finally {
+    resolveQuiesce({ ok: false, reason: "测试结束", remaining: [] });
+    compute.close();
+    await host.close();
   }
 });

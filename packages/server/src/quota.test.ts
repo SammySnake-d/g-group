@@ -96,3 +96,12 @@ test("AC-23 租约持久化写入失败:不授予、不改变内存中的占用�
   fail = false;
   assert.deepEqual(q.release(first.granted.leaseId).granted.map((l) => l.taskId), ["t2"]);
 });
+
+test("AC-23 恢复租约后禁止未确认的 lease_id 直接释放,也不能复用同任务", () => {
+  const saved = { leaseId: "lease-before", scope: "personal:x" as const, taskId: "t1", contactId: "x", roomId: "dm-x", stopping: true };
+  const q = new QuotaTable({ ...cfg(1, {}), initialLeases: [saved] });
+  assert.ok("queued" in q.acquire(req("t1", "x", "dm-x")));
+  assert.deepEqual(q.release(saved.leaseId), { released: false, granted: [] }, "仅凭旧 lease_id 不是新进程已经确认停下");
+  assert.deepEqual(q.leaseOf("t1"), saved);
+  assert.ok("queued" in q.acquire(req("t2", "x", "dm-x")));
+});
