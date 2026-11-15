@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, afterEach, test } from "node:test";
 import type { ContactMind, Inbound, MindAction } from "@g-group/kernel";
-import { openDb } from "./db.ts";
+import { one, openDb } from "./db.ts";
 import { scriptedCompute } from "./fakes.ts";
 import { Host } from "./host.ts";
 import { LoopGuard } from "./loop-guard.ts";
@@ -226,4 +226,32 @@ test("宿主连续退出后的恢复失败卡沿用原始批次因果根", async
   const source = messages.find((m) => m.text === "故障前输入"); const card = messages.find((m) => m.card?.kind === "failure");
   assert.ok(source && card);
   assert.deepEqual(h3.loopGuard.rootsOf(dm.id, card.seq), h3.loopGuard.rootsOf(dm.id, source.seq));
+});
+
+
+test("用户重跑时联系人任务卡仍必须经过因果唤醒准入", async () => {
+  let starts = 0; let aId = "";
+  const compute = scriptedCompute({ script: () => (++starts === 1
+    ? [{ kind: "started", sessionId: "s1", resumed: false }, { kind: "failed", reason: "进程以 1 退出:API Error: 400 cyber_policy violation", code: 1, signal: null, violations: [] }]
+    : [{ kind: "started", sessionId: "s2", resumed: false }]) });
+  const mind = (): ContactMind => ({ async round(input) {
+    const actions: MindAction[] = [];
+    for (const f of input.fresh) if (input.contact.id === aId && f.kind === "message" && f.sender.kind === "user" && f.text === "开始") actions.push({ kind: "dispatch", roomId: f.roomId, sourceSeq: f.seq, title: "故障任务", task: "执行任务" });
+    return { actions, stateNote: null };
+  } });
+  const host = new Host({ file: nextFile(), mind, compute: () => compute.adapter, maxDeferMs: 2, loopGuard: { maxHops: 10 } }); hosts.push(host);
+  try {
+    const a = host.createContact({ name: "甲" }); aId = a.id; const b = host.createContact({ name: "乙" });
+    const group = host.createGroup("重跑", [{ kind: "contact", id: a.id }, { kind: "contact", id: b.id }]);
+    host.send({ roomId: group.id, clientActionId: "start", text: "开始", mentions: [{ id: a.id, source: "manual" }] });
+    await settle(host, () => compute.drained());
+    const failed = host.listRuns({ roomId: group.id }).runs.find((r) => r.layer === "compute-session" && r.status === "failed");
+    assert.ok(failed, "前置:Compute 实际失败");
+    host.rerunRun(failed.id, "rerun");
+    await settle(host, () => compute.drained());
+    const card = host.listMessages(group.id, {}).messages.find((m) => m.text.startsWith("重跑任务:故障任务"));
+    assert.ok(card && card.sender.kind === "contact", "重跑任务卡确由联系人发言");
+    const wake = one<{ allowed: number }>(host.db, "SELECT allowed FROM gg_loop_wakes WHERE room_id=? AND seq=? AND contact_id=?", group.id, card.seq, b.id);
+    assert.equal(wake?.allowed, 1, "联系人任务卡发给乙必须先写入准入记录");
+  } finally { compute.close(); }
 });
