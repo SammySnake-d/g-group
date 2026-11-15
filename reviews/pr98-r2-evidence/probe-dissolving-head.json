@@ -1,0 +1,76 @@
+{
+ "repo": "/private/tmp/gg-r2-claude-20261115/pr98",
+ "defect": {
+  "closedAtBegin": true,
+  "revivedAfterRejoin": false,
+  "atBegin": {
+   "status": "closed",
+   "pending": 0
+  },
+  "end": {
+   "status": "closed",
+   "windows": [
+    "cancelled"
+   ]
+  }
+ },
+ "steps": [
+  {
+   "label": "有在途任务,已有 1 个 pending 窗口",
+   "lastSeq": 6,
+   "triggers": [
+    {
+     "covered_seq": 4,
+     "status": "active",
+     "closed_reason": null
+    }
+   ],
+   "windows": [
+    {
+     "from_seq": 2,
+     "to_seq": 4,
+     "status": "pending"
+    }
+   ],
+   "taskOk": true
+  },
+  {
+   "label": "rooms.dissolve 返回的那一刻(在途任务未停,解散中)",
+   "lastSeq": 6,
+   "triggers": [
+    {
+     "covered_seq": 4,
+     "status": "closed",
+     "closed_reason": "会话已解散"
+    }
+   ],
+   "windows": [
+    {
+     "from_seq": 2,
+     "to_seq": 4,
+     "status": "cancelled"
+    }
+   ],
+   "ok": true,
+   "leaving": []
+  },
+  {
+   "label": "停止确认放行、解散完成",
+   "lastSeq": 7,
+   "triggers": [
+    {
+     "covered_seq": 4,
+     "status": "closed",
+     "closed_reason": "会话已解散"
+    }
+   ],
+   "windows": [
+    {
+     "from_seq": 2,
+     "to_seq": 4,
+     "status": "cancelled"
+    }
+   ]
+  }
+ ]
+}

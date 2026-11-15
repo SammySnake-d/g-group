@@ -1,0 +1,77 @@
+{
+ "pr": 98,
+ "round": 2,
+ "reviewed_head": "f4533f77a027bded226892e228dd6842569e2bc8",
+ "reviewed_hash": "62cbad4cf4a5e575db720406a168afdc01767b34e9a91cf1eb93942736baa9b7",
+ "reviewer": "claude:eda2a1e9-6261-4de1-9a33-7cae46fce94b",
+ "files": {
+  "gates-after-review.log": {
+   "sha256": "e16050fa69347338d4567e7cfb077b15856f07db02334110a6d86e8cddb02353",
+   "bytes": 2380
+  },
+  "gates-local-before-review.log": {
+   "sha256": "892e5a8c46b80b6a770125d2e77c4b529ed2763f73b41e3f5142c2cd11c9c13f",
+   "bytes": 2267
+  },
+  "gates-selftest.log.gz": {
+   "sha256": "669cf098a1800c74edf17dfbb1202ff09efd508e5e7c9ecb3846ff10e64c86e4",
+   "bytes": 8610
+  },
+  "mutants-r2.py": {
+   "sha256": "f1353fcb2e7d322dcecc6a06e8b7f539104c6881407ea5ac1dd97e6ab344eb9d",
+   "bytes": 4925
+  },
+  "mutants/results.json": {
+   "sha256": "1a91d8e410a4e581b61d29f5e29a0846c470518fa5f2bc84b69c9d26a0a5f288",
+   "bytes": 4368
+  },
+  "mutants/taps.tar.gz": {
+   "sha256": "edfd5da466a85f4b9d6d1c3c52ed98ea34a26e404ed0d37f239075bdaf6f1d0b",
+   "bytes": 6807
+  },
+  "npm-test-summary.txt": {
+   "sha256": "576039157eebc70176e8506d22ef9cb9f73b9480802daa8b7fc125d21803ded5",
+   "bytes": 7854
+  },
+  "probe-dissolving-M5.json": {
+   "sha256": "7dc7be143f29371fb2e4d2190cd89ada7e9e8aa46badd6156f4ed88571fed60e",
+   "bytes": 1232
+  },
+  "probe-dissolving-head.json": {
+   "sha256": "476f686790c489f1c77fbabd8c79dfceb2ac53f3edc2469b08dae4e086ac1c72",
+   "bytes": 1242
+  },
+  "probe-dissolving-r2.mjs": {
+   "sha256": "db54de204c79e3c5e758c53b673cecd61e7dba947093d6c9ccccbc843cc08966",
+   "bytes": 3835
+  },
+  "probe-head.json": {
+   "sha256": "61f79b2619ca364f28ea945b5cd3999be992092bf27043060745e55fb23f7477",
+   "bytes": 9707
+  },
+  "probe-leaving-M4.json": {
+   "sha256": "393097028d03290e7d42db825728095a2a72ac02d1ac482298b104d384d810c7",
+   "bytes": 2053
+  },
+  "probe-leaving-head.json": {
+   "sha256": "c2d67559b6b38fa06814c953c395453208e0ee78c57e1dc868ee8a2297e3a8bf",
+   "bytes": 2081
+  },
+  "probe-leaving-r2.mjs": {
+   "sha256": "bcdfe1591efbf03256a7d12deb9026e253ef2a6067f223a43da8b97225ede16f",
+   "bytes": 4486
+  },
+  "probe-r1.json": {
+   "sha256": "d804f3155040f579b41743af724b7de42f2b3179872422aba7663c673f964b14",
+   "bytes": 9098
+  },
+  "probe-r2.mjs": {
+   "sha256": "867331f32098d1ac1d7dfb32e3759f490c9bea6285548cd3834d3478194e2e9f",
+   "bytes": 11730
+  },
+  "red-cbb22309.tap": {
+   "sha256": "39b6bfecce0ac4d428caec6bef788b164a532bb901ffd615069139ffa52f39f6",
+   "bytes": 7264
+  }
+ }
+}

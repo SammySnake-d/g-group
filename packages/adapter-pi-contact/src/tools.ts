@@ -61,6 +61,7 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
       sourceSeq: f("seq", true, "引出这条承诺的消息 seq"),
       text: f("text", true, "承诺原文片段"),
       taskId: f("textOrNull", false, "关联的任务 id;还没有任务就省略"),
+      everyNMessages: f("seqOrNull", false, "用户要你「每 N 条消息做一次」(例如每 100 条总结一次)时填 N;宿主替你数这个会话的消息,到点把那一段交给你。不是这类承诺就省略"),
     },
   },
   forward: {
@@ -235,7 +236,10 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
   switch (tool) {
     case "reply": return act({ kind: "reply", roomId: s("roomId"), text: s("text"), replyToSeq: nn("replyToSeq") });
     case "dispatch_compute": return act({ kind: "dispatch", roomId: s("roomId"), sourceSeq: n("sourceSeq"), title: s("title"), task: s("task") });
-    case "commit": return act({ kind: "commit", roomId: s("roomId"), sourceSeq: n("sourceSeq"), text: s("text"), taskId: sn("taskId") });
+    case "commit": {
+      const every = nn("everyNMessages");
+      return act({ kind: "commit", roomId: s("roomId"), sourceSeq: n("sourceSeq"), text: s("text"), taskId: sn("taskId"), ...(every !== null ? { everyNMessages: every } : {}) });
+    }
     case "forward": {
       const src = nn("sourceSeq");
       return act({ kind: "forward", taskId: s("taskId"), text: s("text"), ...(src !== null ? { sourceSeq: src } : {}) });

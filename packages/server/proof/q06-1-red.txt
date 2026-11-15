@@ -1,0 +1,41 @@
+# 本机 arm64 node v22.22.0 @ 5579bc7(红提交:新测试 + 空壳),并发 1;全部按名字失败
+not ok 1 - 发给模型的 commit 工具声明里有可选的 everyNMessages,必填项不变;模型填了 N,这一轮登记成带 N 的承诺动作
+  failureType: 'testCodeFailure'
+not ok 2 - commit 工具的 everyNMessages 省略或给 null 时动作里没有这个字段;不是非负整数的不登记,原因回给模型
+  failureType: 'testCodeFailure'
+not ok 3 - 没人开就没有触发;开了之后第 99 条不冻结、第 100 条冻结一段、第 101 条不再冻结,coveredSeq 停在第 100 条
+  failureType: 'testCodeFailure'
+not ok 4 - 一段正好 N 条:连续两轮各冻结一段,第二段的起点就是第一段的终点;冻结时推 commitment.updated 带新的 coveredSeq
+  failureType: 'testCodeFailure'
+not ok 5 - 不算群聊发言的不计数:system 通知、任务事实卡、撤回的消息、提出人本端删除的消息;联系人自己的发言照算
+  failureType: 'testCodeFailure'
+not ok 6 - 重放与重启不多数:同一 clientActionId 重发不计数;关宿主重开接着数,已冻结的不重冻,再开一次也不多冻
+  failureType: 'testCodeFailure'
+not ok 7 - 消息已落盘但没来得及计数:重启时补冻结,攒了两个 N 就冻结两段,每段正好 N 条
+  failureType: 'testCodeFailure'
+not ok 8 - 撤销承诺后不再触发:触发关闭并写明原因,之后聊多少条都不冻结;另一条没撤销的照常
+  failureType: 'testCodeFailure'
+not ok 9 - 联系人移出群、群解散后触发关闭并写明原因,不再冻结
+  failureType: 'testCodeFailure'
+not ok 10 - 正在移出的联系人(在途任务还没停稳)也不再数:触发关闭,不冻结
+  failureType: 'testCodeFailure'
+not ok 11 - 私聊 rewind 撤下的消息和那条回退说明不计数:回退后只剩回退点之前的还算
+  failureType: 'testCodeFailure'
+not ok 12 - 私聊 rewind 把提出承诺的那句撤下:承诺随回退撤销,触发在同一步关闭并写明原因,之后聊多少条都不冻结
+  failureType: 'testCodeFailure'
+not ok 13 - N 不合格整条拒收:0、小数、超过上限都不进账本也不建触发;合格的那条照常
+  failureType: 'testCodeFailure'
+not ok 14 - 承诺原文出自联系人自己的回复时同样登记触发;从它这句回复之后开始数
+  failureType: 'testCodeFailure'
+not ok 15 - 不是用户提出的不算:联系人拿另一位联系人说的话登记按消息数触发的承诺被拒收,用户亲口说的才登记
+  failureType: 'testCodeFailure'
+not ok 16 - 没处理的窗口每次宿主运行只交给消费方一次,重启后再交一次;结算只认一次,结算过的重启后不再交
+  failureType: 'testCodeFailure'
+not ok 17 - 触发关闭时没处理的窗口一并取消:不再交给消费方,消费方来结算也不认;已结算的不动
+  failureType: 'testCodeFailure'
+# tests 17
+# pass 0
+# fail 17
+# cancelled 0
+# skipped 0
+# todo 0
