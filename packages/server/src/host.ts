@@ -1338,7 +1338,11 @@ export class Host {
         if (!opts.stopTasks) {
           throw new HostError("conflict", `联系人在这个群还有 ${live.length} 个在途任务,先停止或等它完成;要一并停止请带 stopTasks`, { tasks: live.map((t) => ({ taskId: t.id, title: t.title, state: t.state })) });
         }
-        this.exits.begin(roomId, m.id);
+        tx(this.db, () => {
+          this.exits.begin(roomId, m.id);
+          this.countTriggers.closeContactTx(m.id, roomId, "联系人已不在这个会话");
+        });
+        this.countTriggers.announce();
         this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
         for (const t of live) {
           if (t.state === "T9_StopRequested") continue;
@@ -1351,7 +1355,11 @@ export class Host {
         this.settleExit(roomId, m.id);
         return this.roomView(roomId);
       }
-      tx(this.db, () => this.exits.finishTx(roomId, m.id));
+      tx(this.db, () => {
+        this.exits.finishTx(roomId, m.id);
+        this.countTriggers.closeContactTx(m.id, roomId, "联系人已不在这个会话");
+      });
+      this.countTriggers.announce();
     } else run(this.db, "DELETE FROM gg_members WHERE room_id = ? AND kind = ? AND member_id = ?", roomId, m.kind, m.id);
     const view = this.roomView(roomId);
     this.bus.emit({ type: "room.updated", room: view });
@@ -1381,7 +1389,13 @@ export class Host {
    */
   dissolveRoom(input: { roomId: string; clientActionId: string }): RoomView {
     this.ownerGroup(input.roomId, "解散群");
-    if (!this.chatAdmin.beginDissolve(input.roomId, this.userId, input.clientActionId)) return this.roomView(input.roomId);
+    const began = tx(this.db, () => {
+      const ok = this.chatAdmin.beginDissolve(input.roomId, this.userId, input.clientActionId);
+      if (ok) this.countTriggers.closeRoomTx(input.roomId, "会话已解散");
+      return ok;
+    });
+    if (!began) return this.roomView(input.roomId);
+    this.countTriggers.announce();
     for (const s of this.scheduler.list({ roomId: input.roomId })) if (s.enabled) this.scheduler.update(s.id, { enabled: false });
     this.bus.emit({ type: "room.updated", room: this.roomView(input.roomId) });
     for (const t of this.liveTasksOfRoom(input.roomId)) {

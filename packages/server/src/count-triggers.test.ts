@@ -15,6 +15,7 @@ import { type CountTriggerDeps, type CountWindow, CountTriggers } from "./count-
 import { type Db, all, openDb, tx } from "./db.ts";
 import { scriptedCompute } from "./fakes.ts";
 import { Host } from "./host.ts";
+import { HELPER_ID } from "./helper.ts";
 import { createService } from "./service.ts";
 
 const dir = mkdtempSync(path.join(tmpdir(), "gg-count-trigger-"));
@@ -162,6 +163,39 @@ test("不算群聊发言的不计数:system 通知、任务事实卡、撤回的
   assert.deepEqual([kept.seq < reply, reply < fourth.seq, await count()], [true, true, 0]);
 });
 
+test("Helper 发言照算:用户先凑一条,真实 helper.post 作为第二条冻结窗口", async () => {
+  const h = track(new Host({ file: file(), mind: mind(), maxDeferMs: 5 }));
+  const svc = createService(h);
+  const a = h.createContact({ name: "小记" });
+  const g = h.createGroup("研发群", [contact(a.id)]);
+  h.send({ roomId: g.id, clientActionId: "ask", text: "每 2 条消息总结一次" });
+  await settle(h);
+  const mention = h.send({ roomId: g.id, clientActionId: "mention", text: "@Helper 先看这一条", mentions: [{ id: HELPER_ID, source: "manual" }] });
+  await settle(h);
+  const before = windowsOf(h).length;
+  const posted = await svc.handle("helper.post", { entry: { kind: "mention", roomId: g.id, seq: mention.seq }, text: "Helper 总结", clientActionId: "helper-1" });
+  assert.equal(posted.ok, true);
+  await settle(h);
+  assert.equal(windowsOf(h).length, before + 1, "helper 消息应作为可计数的群聊发言");
+});
+
+test("触发视图窗口数按 trigger 隔离:另一房间的新触发不能带入已有窗口", async () => {
+  const h = track(new Host({ file: file(), mind: mind(), maxDeferMs: 5 }));
+  const svc = createService(h);
+  const a = h.createContact({ name: "小记" });
+  const g1 = h.createGroup("一群", [contact(a.id)]);
+  const g2 = h.createGroup("二群", [contact(a.id)]);
+  h.send({ roomId: g1.id, clientActionId: "ask1", text: "每 2 条消息总结一次" });
+  h.send({ roomId: g2.id, clientActionId: "ask2", text: "每 2 条消息总结一次" });
+  await settle(h);
+  h.send({ roomId: g1.id, clientActionId: "g1-1", text: "一群一" });
+  h.send({ roomId: g1.id, clientActionId: "g1-2", text: "一群二" });
+  await settle(h);
+  const v1 = okValue<{ commitments: CommitmentView[] }>(await svc.handle("commitments.list", { roomId: g1.id })).commitments[0]!.trigger!;
+  const v2 = okValue<{ commitments: CommitmentView[] }>(await svc.handle("commitments.list", { roomId: g2.id })).commitments[0]!.trigger!;
+  assert.deepEqual([v1.windows, v2.windows], [1, 0]);
+});
+
 test("重放与重启不多数:同一 clientActionId 重发不计数;关宿主重开接着数,已冻结的不重冻,再开一次也不多冻", async () => {
   const f = file();
   const h1 = track(new Host({ file: f, mind: mind(), maxDeferMs: 5 }));
@@ -271,6 +305,34 @@ test("联系人移出群、群解散后触发关闭并写明原因,不再冻结"
   assert.deepEqual([byRoom.get(g1.id), byRoom.get(g2.id), windowsOf(h)], [["closed", "联系人已不在这个会话"], ["closed", "会话已解散"], []]);
   const views = okValue<{ commitments: CommitmentView[] }>(await svc.handle("commitments.list", { contactId: a.id })).commitments;
   assert.deepEqual(views.map((c) => [c.trigger?.active, c.trigger?.count]), [[false, 0], [false, 0]]);
+});
+
+test("联系人移出后立即拉回:旧计数触发永久关闭、未处理窗口取消,必须重新提出承诺", async () => {
+  const fired: { from: number; to: number }[] = [];
+  const h = track(new Host({ file: file(), mind: mind(), maxDeferMs: 5, onReport: fires(fired) }));
+  const svc = createService(h);
+  const a = h.createContact({ name: "小记" });
+  const g = h.createGroup("研发群", [contact(a.id)]);
+  h.send({ roomId: g.id, clientActionId: "ask", text: "每 2 条消息总结一次" });
+  await settle(h);
+  const commitment = okValue<{ commitments: CommitmentView[] }>(await svc.handle("commitments.list", { roomId: g.id })).commitments[0]!;
+  h.send({ roomId: g.id, clientActionId: "m1", text: "第一条" });
+  h.send({ roomId: g.id, clientActionId: "m2", text: "第二条" });
+  await settle(h);
+  const trigger = h.countTriggers.byCommitment(commitment.id)!;
+  assert.deepEqual([trigger.status, windowsOf(h).map((w) => w.status)], ["active", ["pending"]]);
+
+  h.removeMember(g.id, contact(a.id));
+  h.addMembers(g.id, [contact(a.id)]);
+  assert.deepEqual(
+    [h.countTriggers.byCommitment(commitment.id)?.status, h.countTriggers.byCommitment(commitment.id)?.closedReason, windowsOf(h).map((w) => w.status)],
+    ["closed", "联系人已不在这个会话", ["cancelled"]],
+  );
+  h.send({ roomId: g.id, clientActionId: "m3", text: "拉回后第一条" });
+  h.send({ roomId: g.id, clientActionId: "m4", text: "拉回后第二条" });
+  await settle(h);
+  assert.deepEqual([h.countTriggers.viewOf(commitment.id)?.active, windowsOf(h).length, fired.length], [false, 1, 1]);
+  assert.equal((await svc.handle("commitments.list", { roomId: g.id })).ok, true);
 });
 
 test("正在移出的联系人(在途任务还没停稳)也不再数:触发关闭,不冻结", async () => {

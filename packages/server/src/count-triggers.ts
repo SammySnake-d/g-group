@@ -217,6 +217,17 @@ export class CountTriggers {
     // 调用方自己推这条承诺的事件,这里不再重复通知
     this.dirty.delete(commitmentId);
   }
+  /** 成员离开或会话关闭时,在同一事务里关闭该作用域的全部触发并取消未处理窗口。 */
+  closeContactTx(contactId: string, roomId: string, reason: string): void {
+    for (const r of all<TriggerRow>(this.d.db, "SELECT * FROM gg_count_triggers WHERE contact_id = ? AND room_id = ? AND status = 'active'", contactId, roomId)) {
+      this.closeRowTx(toTrigger(r), reason);
+    }
+  }
+  closeRoomTx(roomId: string, reason: string): void {
+    for (const r of all<TriggerRow>(this.d.db, "SELECT * FROM gg_count_triggers WHERE room_id = ? AND status = 'active'", roomId)) {
+      this.closeRowTx(toTrigger(r), reason);
+    }
+  }
   /** 消费方处理完一个窗口(在它落自己结果的同一事务里调用);窗口已不是 pending(被取消、已处理过)返回 false。 */
   settleWindowTx(triggerId: string, toSeqInclusive: number, status: "done" | "failed"): boolean {
     return run(this.d.db, "UPDATE gg_count_windows SET status = ?, settled_at = ? WHERE trigger_id = ? AND to_seq = ? AND status = 'pending'", status, this.d.now(), triggerId, toSeqInclusive) === 1;
