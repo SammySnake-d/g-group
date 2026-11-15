@@ -153,3 +153,112 @@ test("正常完成:CLI 主进程退出(settled)后才归还槽位", async () => 
   compute.close();
   await host.close();
 });
+
+test("AC-23 重启:未确认停止的个人槽保留原租约,同联系人新任务不能开工", async () => {
+  const f = file();
+  const lr = longRunning();
+  let before: Host | undefined;
+  let afterRestart: Host | undefined;
+  try {
+    const options = { file: f, mind: () => scriptedMind(), compute: () => lr.compute.adapter, maxDeferMs: 5, personalComputeSlots: 1 };
+    before = new Host(options);
+    const c = before.createContact({ name: "重启个人槽" });
+    const dm = before.openDm(c.id).id;
+    before.send({ roomId: dm, clientActionId: "before", text: "帮我写一个报告" });
+    await until(() => lr.compute.spawned.length === 1 && taskOf(before!, dm)?.state === "T3_Running", "首个任务开工");
+    const first = taskOf(before, dm);
+    before.taskDecision(first.id, "cancel", "stop-before");
+    await until(() => lr.asked.length === 1, "开始确认停止");
+    lr.finish(lr.asked[0]!, { ok: false, reason: "停止无法确认", remaining: [] });
+    await until(() => before!.taskView(before!.taskDoc(first.id).value).waitingFor?.includes("停止未确认") === true, "停止未确认");
+    const oldLease = before.quota.leaseOf(first.id);
+    assert.ok(oldLease && oldLease.stopping);
+    await before.close();
+    before = undefined;
+
+    afterRestart = new Host(options);
+    afterRestart.send({ roomId: dm, clientActionId: "after", text: "帮我再写一份报告" });
+    await until(() => afterRestart!.listTasks({ roomId: dm }).length === 2, "重启后第二个任务已创建");
+    await afterRestart.idle();
+    await tick();
+    assert.deepEqual(afterRestart.quota.leaseOf(first.id), oldLease, "原 lease_id、作用域及 stopping 状态须保留");
+    assert.equal(afterRestart.taskDoc(first.id).value.task.state, "T9_StopRequested");
+    assert.equal(lr.compute.spawned.length, 1, "未确认的唯一槽位不能授给后继");
+  } finally {
+    if (before) await before.close();
+    if (afterRestart) await afterRestart.close();
+    lr.compute.close();
+  }
+});
+
+test("AC-23 重启:个人与群临时槽按原租约恢复,不跨联系人或跨群占用", async () => {
+  const f = file();
+  const lr = longRunning();
+  let before: Host | undefined;
+  let afterRestart: Host | undefined;
+  try {
+    const options = { file: f, mind: () => scriptedMind(), compute: () => lr.compute.adapter, maxDeferMs: 5, personalComputeSlots: 1 };
+    before = new Host(options);
+    const c = before.createContact({ name: "重启群槽" });
+    const other = before.createContact({ name: "另一联系人" });
+    const ga = before.createGroup("重启 A 群", [{ kind: "contact", id: c.id }, { kind: "contact", id: other.id }]);
+    const gb = before.createGroup("重启 B 群", [{ kind: "contact", id: c.id }]);
+    before.updateRoom(ga.id, { tempComputeSlots: 1 });
+    const mentions = [{ id: c.id, source: "manual" as const }];
+    before.send({ roomId: ga.id, clientActionId: "a1", text: "帮我写组件一", mentions });
+    await until(() => lr.compute.spawned.length === 1, "第一个任务开工");
+    before.send({ roomId: ga.id, clientActionId: "a2", text: "帮我写组件二", mentions });
+    await until(() => lr.compute.spawned.length === 2, "第二个任务借群临时槽");
+    const oldLeases = before.quota.view().leases.filter((l) => l.contactId === c.id);
+    assert.deepEqual(oldLeases.map((l) => l.scope).sort(), [`group:${ga.id}`, `personal:${c.id}`].sort());
+    for (const lease of oldLeases) before.taskDecision(lease.taskId, "cancel", `stop-${lease.taskId}`);
+    await until(() => lr.asked.length === 2, "两条停止均待确认");
+    for (const computeId of lr.asked) lr.finish(computeId, { ok: false, reason: "停止无法确认", remaining: [] });
+    await until(() => oldLeases.every((l) => before!.taskView(before!.taskDoc(l.taskId).value).waitingFor?.includes("停止未确认")), "两条停止均未确认");
+    const stoppedLeases = oldLeases.map((l) => before!.quota.leaseOf(l.taskId)!);
+    await before.close();
+    before = undefined;
+
+    afterRestart = new Host(options);
+    assert.deepEqual(stoppedLeases.map((l) => afterRestart!.quota.leaseOf(l.taskId)), stoppedLeases, "租约归属和作用域不能猜测或互换");
+    assert.ok("queued" in afterRestart.quota.acquire({ taskId: "new-a", contactId: c.id, roomId: ga.id, isGroup: true }));
+    assert.ok("queued" in afterRestart.quota.acquire({ taskId: "new-b", contactId: c.id, roomId: gb.id, isGroup: true }));
+    const independent = afterRestart.quota.acquire({ taskId: "new-other", contactId: other.id, roomId: ga.id, isGroup: true });
+    assert.ok("granted" in independent && independent.granted.scope === `personal:${other.id}`, "不同联系人个人槽不受影响");
+  } finally {
+    if (before) await before.close();
+    if (afterRestart) await afterRestart.close();
+    lr.compute.close();
+  }
+});
+
+test("AC-23 重启:已确认停止并归还的租约不复活,后继可开工", async () => {
+  const f = file();
+  const lr = longRunning();
+  let before: Host | undefined;
+  let afterRestart: Host | undefined;
+  try {
+    const options = { file: f, mind: () => scriptedMind(), compute: () => lr.compute.adapter, maxDeferMs: 5, personalComputeSlots: 1 };
+    before = new Host(options);
+    const c = before.createContact({ name: "正常停止" });
+    const dm = before.openDm(c.id).id;
+    before.send({ roomId: dm, clientActionId: "one", text: "帮我写一个报告" });
+    await until(() => lr.compute.spawned.length === 1 && taskOf(before!, dm)?.state === "T3_Running", "首任务开工");
+    const first = taskOf(before, dm);
+    before.taskDecision(first.id, "cancel", "stop");
+    await until(() => lr.asked.length === 1, "等待停止确认");
+    lr.finish(lr.asked[0]!);
+    await until(() => before!.taskDoc(first.id).value.task.state === "T10_Cancelled" && !before!.quota.leaseOf(first.id), "确认且归还");
+    await before.close();
+    before = undefined;
+    afterRestart = new Host(options);
+    assert.equal(afterRestart.quota.leaseOf(first.id), undefined);
+    afterRestart.send({ roomId: dm, clientActionId: "two", text: "帮我再写一份报告" });
+    await until(() => lr.compute.spawned.length === 2, "新任务可用已释放槽位");
+    assert.equal(afterRestart.taskDoc(first.id).value.task.state, "T10_Cancelled");
+  } finally {
+    if (before) await before.close();
+    if (afterRestart) await afterRestart.close();
+    lr.compute.close();
+  }
+});
