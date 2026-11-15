@@ -1,0 +1,21 @@
+apps/desktop/src/components/messages/cards/MsgFiles.tsx
+  s_be862bfe4ebd7a::t_5534154692c5ee 31,37
+apps/desktop/scripts/pack-mac.mjs
+  s_be862bfe4ebd7a::t_5534154692c5ee 11,37-44,46-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bdde490cea067b31ac2831a8eb86ea6ad3e029f0",
+  "prompts": {},
+  "sessions": {
+    "s_be862bfe4ebd7a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1de94-42ad-7200-a40f-a6f126eca979",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
