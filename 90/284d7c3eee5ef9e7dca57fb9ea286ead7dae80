@@ -1,0 +1,37 @@
+reviews/feat-desktop-backend-parity-20261113-r1.md
+  s_f330acd89eb5f4::t_22e1d851083c36 1-99
+reviews/pr101-r1-evidence/desktop-tsc.exit
+  s_f330acd89eb5f4::t_977f7dcb272e6e 1
+reviews/pr101-r1-evidence/gates.exit
+  s_f330acd89eb5f4::t_e5f35c3ca23618 1
+reviews/pr101-r1-evidence/group-walk.mjs
+  s_f330acd89eb5f4::t_bb02350dfbc497 1-52
+reviews/pr101-r1-evidence/model-walk.mjs
+  s_f330acd89eb5f4::t_1f82564e18548f 1-95
+reviews/pr101-r1-evidence/p0-walk.mjs
+  s_f330acd89eb5f4::t_a9082bf4953312 1-144
+reviews/pr101-r1-evidence/pack.exit
+  s_f330acd89eb5f4::t_f9b15ad72b3219 1
+reviews/pr101-r1-evidence/root-typecheck.exit
+  s_f330acd89eb5f4::t_6e2aacc3a3fa17 1
+reviews/pr101-r1-evidence/walk4-result.json
+  s_f330acd89eb5f4::t_d4d2bbb54349f4 1-72
+reviews/pr101-r1-evidence/walk5-model-result.json
+  s_f330acd89eb5f4::t_a313905e970df4 1-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "90284d7c3eee5ef9e7dca57fb9ea286ead7dae80",
+  "prompts": {},
+  "sessions": {
+    "s_f330acd89eb5f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c97d58c5-9066-4a01-9c04-79542de371c6",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
