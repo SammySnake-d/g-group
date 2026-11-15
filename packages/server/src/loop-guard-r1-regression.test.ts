@@ -152,7 +152,7 @@ test("探针P3：两个不相干会话的因果链不应互相计数、互相叫
   assert.ok(saw.b.includes("甲回应") && saw.c.includes("甲回应"), "甲在各群的回应都应唤醒该群的另一位");
 });
 
-async function blockedThenContinue(withUnrelatedRound: boolean) {
+async function prepareBlockedContinuation(withUnrelatedRound: boolean, HostCtor: typeof Host) {
   let aId = ""; const aSaw: string[][] = [];
   const mind = (): ContactMind => ({ async round(i) {
     const actions: MindAction[] = []; const ms = msgsOf(i);
@@ -162,7 +162,7 @@ async function blockedThenContinue(withUnrelatedRound: boolean) {
     } else for (const f of ms) if (f.sender.kind === "contact" && f.text === "甲说") actions.push({ kind: "reply", roomId: f.roomId, text: "乙的补充意见", replyToSeq: null });
     return { actions, stateNote: null };
   } });
-  const host = new Host({ ...fresh(), mind, maxDeferMs: 2, loopGuard: { maxHops: 1 } }); hosts.push(host);
+  const host = new HostCtor({ ...fresh(), mind, maxDeferMs: 2, loopGuard: { maxHops: 1 } }); hosts.push(host);
   const a = host.createContact({ name: "甲" }); aId = a.id; const b = host.createContact({ name: "乙" });
   const g = host.createGroup("探针四", [{ kind: "contact", id: a.id }, { kind: "contact", id: b.id }]);
   host.send({ roomId: g.id, clientActionId: "p4-1", text: "开始", mentions: [{ id: a.id, source: "manual" }] });
@@ -177,17 +177,25 @@ async function blockedThenContinue(withUnrelatedRound: boolean) {
     assert.ok(aSaw.some((r) => r.includes("私聊:user:顺便问个别的")), "前置:甲在私聊里跑过无关的一轮");
   }
   aSaw.length = 0;
-  host.send({ roomId: g.id, clientActionId: "p4-2", text: "继续讨论", mentions: [{ id: a.id, source: "manual" }] });
-  await settle(host);
-  const round = aSaw.find((r) => r.includes("群:user:继续讨论")) ?? [];
-  console.log(`P4${withUnrelatedRound ? "" : "(对照)"} 观测: 用户续话那一轮甲收到 ${JSON.stringify(round)}`);
-  return round;
+  return { host, g, a, aSaw };
 }
 test("探针P4(对照)：被拦后用户直接续话,被拦的那条原文随续话一起给到被拦的联系人", async () => {
-  assert.ok((await blockedThenContinue(false)).includes("群:contact:乙的补充意见"));
+  const { host, g, a, aSaw } = await prepareBlockedContinuation(false, Host);
+  const continued = host.send({ roomId: g.id, clientActionId: "p4-2", text: "继续讨论", mentions: [{ id: a.id, source: "manual" }] });
+  assert.equal(continued.text, "继续讨论", "续话必须实际发送成功");
+  await settle(host);
+  const round = aSaw.find((r) => r.includes("群:user:继续讨论")) ?? [];
+  console.log(`P4(对照) 观测: 用户续话那一轮甲收到 ${JSON.stringify(round)}`);
+  assert.ok(round.includes("群:contact:乙的补充意见"));
 });
 test("探针P4：被拦后该联系人先在别处跑过无关的一轮,用户再续话时被拦的那条原文仍应给到它", async () => {
-  assert.ok((await blockedThenContinue(true)).includes("群:contact:乙的补充意见"), "停止说明写的是「待处理…等用户发言继续」,用户续话时被拦的原文不该已被游标越过");
+  const { host, g, a, aSaw } = await prepareBlockedContinuation(true, Host);
+  const continued = host.send({ roomId: g.id, clientActionId: "p4-2", text: "继续讨论", mentions: [{ id: a.id, source: "manual" }] });
+  assert.equal(continued.text, "继续讨论", "续话必须实际发送成功");
+  await settle(host);
+  const round = aSaw.find((r) => r.includes("群:user:继续讨论")) ?? [];
+  console.log(`P4 观测: 用户续话那一轮甲收到 ${JSON.stringify(round)}`);
+  assert.ok(round.includes("群:contact:乙的补充意见"), "停止说明写的是「待处理…等用户发言继续」,用户续话时被拦的原文不该已被游标越过");
 });
 
 test("探针P5：默认上限下四人群里,已放行(已扣额度)的唤醒不应因同一条消息后面的目标被拦而作废", async () => {

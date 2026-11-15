@@ -26,7 +26,7 @@ async function settle(host: Host, drained: () => boolean = () => true) {
   }
   assert.fail("宿主未在有限窗口内安静");
 }
-async function dispatchedAndDelivered() {
+async function dispatchedAndDelivered(HostCtor: typeof Host = Host) {
   const compute = scriptedCompute({ script: () => [{ kind: "started", sessionId: "s", resumed: false }, { kind: "completed", result: "结果" }] });
   const mind = (): ContactMind => ({ async round(input) {
     const actions: MindAction[] = [];
@@ -37,7 +37,7 @@ async function dispatchedAndDelivered() {
     return { actions, stateNote: null };
   } });
   const file = nextFile();
-  const host = new Host({ file, mind, compute: () => compute.adapter, maxDeferMs: 2, loopGuard: { maxHops: 10 } }); hosts.push(host);
+  const host = new HostCtor({ file, mind, compute: () => compute.adapter, maxDeferMs: 2, loopGuard: { maxHops: 10 } }); hosts.push(host);
   const contact = host.createContact({ name: "甲" });
   const group = host.createGroup("任务", [{ kind: "contact", id: contact.id }]);
   host.send({ roomId: group.id, clientActionId: "start", text: "开始派活" });
@@ -47,7 +47,7 @@ async function dispatchedAndDelivered() {
 }
 
 test("R1-F01 派活任务卡继承触发消息的因果根", async () => {
-  const { host, group } = await dispatchedAndDelivered();
+  const { host, group } = await dispatchedAndDelivered(Host);
   const messages = host.listMessages(group.id, {}).messages;
   const source = messages.find((m) => m.text === "开始派活");
   const card = messages.find((m) => m.text === "接了任务:测试任务");
@@ -60,7 +60,7 @@ test("R1-F01 派活任务卡继承触发消息的因果根", async () => {
 });
 
 test("R1-F02 Compute 交付消息继承触发任务的因果根", async () => {
-  const { host, group } = await dispatchedAndDelivered();
+  const { host, group } = await dispatchedAndDelivered(Host);
   const messages = host.listMessages(group.id, {}).messages;
   const source = messages.find((m) => m.text === "开始派活");
   const delivery = messages.find((m) => m.text === "已经交付结果");
