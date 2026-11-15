@@ -1,0 +1,33 @@
+packages/adapter-cc-compute/src/quiesce.test.ts
+  s_69f96fa873b14b::t_5ca0976f1d6e67 92-94
+packages/adapter-cc-compute/src/stop-confirm-churn.test.ts
+  s_69f96fa873b14b::t_e87ea50bee1014 1-196
+packages/adapter-cc-compute/src/stop-confirm-group.test.ts
+  s_69f96fa873b14b::t_7049acf9a13309 1-69
+packages/adapter-cc-compute/src/stop-confirm-observed.test.ts
+  s_69f96fa873b14b::t_4e786d2b62f0c3 1-196
+packages/adapter-cc-compute/src/stop-confirm-safety.test.ts
+  s_69f96fa873b14b::t_0d1eff68f1a9c4 1-114
+packages/adapter-cc-compute/test-support/stop-confirm-churn-fixture.mjs
+  s_69f96fa873b14b::t_ff53156127bd6c 1-55
+packages/adapter-cc-compute/test-support/stop-confirm-group-fixture.mjs
+  s_69f96fa873b14b::t_fa71f5201e95f6 1-63
+packages/adapter-cc-compute/test-support/stop-confirm-observed-fixture.mjs
+  s_69f96fa873b14b::t_3846db9d9026f9 1-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "434286629ac8927343716a1693f2c3b518c9a48b",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
