@@ -50,15 +50,16 @@ function setup(responses: string[]) {
   const reports: [string, unknown][] = [];
   const requests: RoundInput["request"][] = [];
   const compactor = createPiCompactor({ provider: "fixture", model: MODEL, baseUrl: "http://fake.invalid", apiKey: KEY, fetch: fake.fetch });
-  const host = new Host({
+  const makeHost = () => new Host({
     file: path.join(dir, "gg.db"), dataDir: dir, maxDeferMs: 5,
     onReport: (what, detail) => reports.push([what, detail]),
     mind: () => ({ async round(i: RoundInput) { requests.push(i.request); return { actions: [], stateNote: null }; } }),
     compactor: () => compactor,
   });
+  const host = makeHost();
   const c = host.createContact({ name: "联系人", speakingModel: MODEL });
   const dm = host.openDm(c.id);
-  return { dir, fake, reports, requests, host, c, dm };
+  return { dir, fake, reports, requests, host, c, dm, makeHost };
 }
 const valid = JSON.stringify({ note: "第二轮检查笔记", memories: [], personaSuggestion: null });
 
@@ -83,12 +84,14 @@ test("reflect 返回不可解析 JSON 后宿主告警、同模型普通压缩兜
 });
 
 test("反思 JSON 持续无效且补压缩也失败时下一轮保留上轮未经压缩的原文", async () => {
-  const x = setup(["不是 JSON 对象", " ", "依然不是 JSON", " "]);
+  const x = setup(["不是 JSON 对象", " ", "依然不是 JSON", " ", valid, valid]);
   try {
     x.host.send({ roomId: x.dm.id, clientActionId: "1", text: "持久原文标记:安全发布之前必须先做审查" });
     await settle(x.host);
     assert.ok(x.reports.some(([w]) => w === "reflect-failed"));
     assert.ok(x.reports.some(([w]) => w === "compact-failed"));
+    await x.host.close();
+    x.host = x.makeHost();
     x.host.send({ roomId: x.dm.id, clientActionId: "2", text: "第二轮请继续" });
     await settle(x.host);
     assert.equal(x.fake.seen.length, 4);
@@ -97,5 +100,26 @@ test("反思 JSON 持续无效且补压缩也失败时下一轮保留上轮未�
     assert.ok(x.fake.seen.every((r) => r.model === MODEL));
     const next = x.requests[1]!.blocks.map((b) => b.text).join("\n");
     assert.match(next, /持久原文标记:安全发布之前必须先做审查/, "未生成可用笔记时,下一轮仍须带上未经压缩原文");
+    x.host.send({ roomId: x.dm.id, clientActionId: "3", text: "第三轮恢复" });
+    await settle(x.host);
+    assert.match(text(x.fake.seen[4]!), /持久原文标记:安全发布之前必须先做审查/);
+    assert.match(text(x.fake.seen[4]!), /第二轮请继续/);
+    assert.equal(x.host.stateNote(x.c.id), "第二轮检查笔记");
+    x.host.send({ roomId: x.dm.id, clientActionId: "4", text: "第四轮" });
+    await settle(x.host);
+    assert.doesNotMatch(x.requests[3]!.blocks.map((b) => b.text).join("\n"), /持久原文标记:安全发布之前必须先做审查/, "成功替换后不反复回送原文");
+  } finally { await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
+});
+
+test("未经压缩原文在撤回后不随回退上下文重新发给联系人", async () => {
+  const x = setup(["不是 JSON 对象", " ", valid]);
+  try {
+    const m = x.host.send({ roomId: x.dm.id, clientActionId: "1", text: "删" });
+    await settle(x.host);
+    x.host.retractMessage(x.dm.id, m.seq);
+    await settle(x.host);
+    const next = x.requests[1]!.blocks.map((b) => b.text).join("\n");
+    assert.doesNotMatch(next, /\n删\n/, "即使很短,撤回原文也不能再次发出");
+    assert.doesNotMatch(text(x.fake.seen[2]!), /\n删\n/);
   } finally { await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
 });
