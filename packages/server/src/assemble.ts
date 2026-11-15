@@ -9,6 +9,8 @@ export interface LedgerLine {
   readonly taskId: string;
   readonly text: string;
   readonly status: string;
+  /** 跟在承诺 id 后面的一句短说明(单行);一行索引里也看得到 */
+  readonly shortName?: string;
 }
 export interface AssembleContext {
   /** 各会话 processed_seq;内核装配用它拒绝旧消息混进第 4 块(AC-40 ⑪)。 */
@@ -156,7 +158,7 @@ export const kernelAssemble: RoundAssembler = (ctx) => {
       ...(ctx.memories && ctx.memories.length > 0 ? { memories: [...ctx.memories] } : {}),
     },
     ledger: {
-      open: ctx.ledger.map((l) => ({ id: l.id, sourceSeq: l.sourceSeq, taskId: l.taskId.startsWith("standing-") ? null : l.taskId, text: l.text, status: l.status })),
+      open: ctx.ledger.map((l) => ({ id: l.id, sourceSeq: l.sourceSeq, taskId: l.taskId.startsWith("standing-") ? null : l.taskId, text: l.text, status: l.status, ...(l.shortName !== undefined ? { shortName: l.shortName } : {}) })),
       boundIds: [...(ctx.boundIds ?? [])],
     },
     stateNote: ctx.stateNote === null ? null : { version: ctx.stateNoteVersion ?? 1, text: ctx.stateNote },

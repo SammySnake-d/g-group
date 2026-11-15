@@ -438,6 +438,57 @@ export const CommitmentView = obj({
 });
 export type CommitmentView = Infer<typeof CommitmentView>;
 
+// ---------- 群聊动向摘要(U80,D21.2–D21.4) ----------
+/**
+ * generating 生成中;ok 已生成;empty 这段没有可总结的群聊发言(没调模型);failed 没生成成(error 说明,可重做);
+ * stale 已过期:这段区间里有消息被撤回,正文已清空,对所有人都是过期(可重做)。
+ */
+export const SUMMARY_STATUSES = ["generating", "ok", "empty", "failed", "stale"] as const;
+/**
+ * 一份动向摘要:联系人对会话里 (fromSeqExclusive, toSeqInclusive] 这段群聊的解读(nature 固定为 llm-interpretation,不是当前事实)。
+ * 时间轴节点用它渲染(D21.3 第 13 项的渲染位由界面实现):每条要点带来源 sourceSeqs,点来源用 messages.list 的 aroundSeq 跳回原消息。
+ * 摘要只读:没有任何按钮或动作;要点里提到的待办,回原消息、原任务处理(AC-19)。
+ */
+export const TrendSummaryView = obj({
+  summaryId: id(),
+  roomId: id(),
+  /** 写这份摘要的联系人 */
+  contactId: id(),
+  /** 引出它的那条「每 N 条消息」承诺 */
+  commitmentId: id(),
+  nature: lit("llm-interpretation"),
+  fromSeqExclusive: seq(),
+  toSeqInclusive: seq(),
+  /** 生成时这段区间里可见的群聊发言条数 */
+  messageCount: int({ min: 0 }),
+  /** 实际读了几条;小于 messageCount 就是输入超上限、只读了前一部分(truncated=true),界面要如实标「未读完」 */
+  coveredCount: int({ min: 0 }),
+  /** 实际读到的最后一条;没读(生成中、empty、failed)为 null */
+  coveredToSeq: nullable(seq()),
+  truncated: bool(),
+  status: oneOf(SUMMARY_STATUSES),
+  /**
+   * 要点。status 不是 ok 时为空。hiddenSourceSeqs 是当前用户在自己这一端删掉的来源(不能再跳);
+   * 来源全被他删掉的要点不在这里,数量见 hiddenItems。本端删除只影响这位用户看到的视图,不改摘要本身。
+   */
+  items: arr(obj({ text: str({ min: 1, max: 500 }), sourceSeqs: arr(seq(), { max: 20 }), hiddenSourceSeqs: arr(seq(), { max: 20 }) }), { max: 30 }),
+  hiddenItems: int({ min: 0 }),
+  /** 生成时联系人的说话模型(快照) */
+  model: obj({ speakingModel: str({ max: 200 }) }),
+  generatedAt: nullable(isoTime()),
+  /** 过期原因与触发它的那条消息 seq;没过期都是 null */
+  staleReason: nullable(oneOf(["source-retracted"] as const)),
+  staleBySeq: nullable(seq()),
+  staleAt: nullable(isoTime()),
+  error: nullable(str({ max: 2000 })),
+  /** 同一区间的第几版(重做一次加一);supersedes 指上一版,supersededBy 指下一版 */
+  version: int({ min: 1 }),
+  supersedes: nullable(id()),
+  supersededBy: nullable(id()),
+  createdAt: isoTime(),
+});
+export type TrendSummaryView = Infer<typeof TrendSummaryView>;
+
 // ---------- 共享文档(AC-21) ----------
 /** 群共享文档的权威版本。写入只经 docs.commit:带读到的 version 作 baseVersion,版本变了回 conflict(detail.currentVer),不静默覆盖。 */
 export const SharedDocView = obj({

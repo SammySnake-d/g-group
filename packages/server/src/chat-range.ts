@@ -54,3 +54,10 @@ export function chatLines(db: Db, q: ChatRangeQuery): ChatLine[] {
 export function lastEventSeq(db: Db, roomId: string): number {
   return all<{ s: number | null }>(db, "SELECT max(seq) AS s FROM events WHERE session = ?", `room:${roomId}`)[0]?.s ?? 0;
 }
+
+/** 这个会话里已被撤回的消息 seq,升序。 */
+export function retractedSeqs(db: Db, roomId: string): number[] {
+  return project(loadLog(db.store, `room:${roomId}`).log)
+    .filter((m) => m.retracted)
+    .map((m) => m.seq);
+}

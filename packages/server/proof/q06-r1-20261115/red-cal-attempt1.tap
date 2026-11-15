@@ -1,0 +1,1001 @@
+TAP version 13
+# Subtest: R1-03 同联系人只读轮同步抛错后,后续轮仍能取得单飞入口
+ok 1 - R1-03 同联系人只读轮同步抛错后,后续轮仍能取得单飞入口
+  ---
+  duration_ms: 1.814167
+  type: 'test'
+  ...
+# Subtest: R1-03 重试定时器到点时只读轮在途,普通轮应延后而非遗失
+ok 2 - R1-03 重试定时器到点时只读轮在途,普通轮应延后而非遗失
+  ---
+  duration_ms: 4.632833
+  type: 'test'
+  ...
+# Subtest: R1-03 已有的 now 通知不能被后到的只读轮饿死
+ok 3 - R1-03 已有的 now 通知不能被后到的只读轮饿死
+  ---
+  duration_ms: 1.780334
+  type: 'test'
+  ...
+# Subtest: 没人开就没有触发;开了之后第 99 条不冻结、第 100 条冻结一段、第 101 条不再冻结,coveredSeq 停在第 100 条
+ok 4 - 没人开就没有触发;开了之后第 99 条不冻结、第 100 条冻结一段、第 101 条不再冻结,coveredSeq 停在第 100 条
+  ---
+  duration_ms: 330.86725
+  type: 'test'
+  ...
+# Subtest: 一段正好 N 条:连续两轮各冻结一段,第二段的起点就是第一段的终点;冻结时推 commitment.updated 带新的 coveredSeq
+ok 5 - 一段正好 N 条:连续两轮各冻结一段,第二段的起点就是第一段的终点;冻结时推 commitment.updated 带新的 coveredSeq
+  ---
+  duration_ms: 43.963292
+  type: 'test'
+  ...
+# Subtest: 不算群聊发言的不计数:system 通知、任务事实卡、撤回的消息、提出人本端删除的消息;联系人自己的发言照算
+ok 6 - 不算群聊发言的不计数:system 通知、任务事实卡、撤回的消息、提出人本端删除的消息;联系人自己的发言照算
+  ---
+  duration_ms: 69.709042
+  type: 'test'
+  ...
+# Subtest: Helper 发言照算:用户先凑一条,真实 helper.post 作为第二条冻结窗口
+ok 7 - Helper 发言照算:用户先凑一条,真实 helper.post 作为第二条冻结窗口
+  ---
+  duration_ms: 50.993708
+  type: 'test'
+  ...
+# Subtest: 触发视图窗口数按 trigger 隔离:另一房间的新触发不能带入已有窗口
+ok 8 - 触发视图窗口数按 trigger 隔离:另一房间的新触发不能带入已有窗口
+  ---
+  duration_ms: 38.929209
+  type: 'test'
+  ...
+# Subtest: 重放与重启不多数:同一 clientActionId 重发不计数;关宿主重开接着数,已冻结的不重冻,再开一次也不多冻
+ok 9 - 重放与重启不多数:同一 clientActionId 重发不计数;关宿主重开接着数,已冻结的不重冻,再开一次也不多冻
+  ---
+  duration_ms: 69.081458
+  type: 'test'
+  ...
+# Subtest: 消息已落盘但没来得及计数:重启时补冻结,攒了两个 N 就冻结两段,每段正好 N 条
+ok 10 - 消息已落盘但没来得及计数:重启时补冻结,攒了两个 N 就冻结两段,每段正好 N 条
+  ---
+  duration_ms: 42.150417
+  type: 'test'
+  ...
+# Subtest: 撤销承诺后不再触发:触发关闭并写明原因,之后聊多少条都不冻结;另一条没撤销的照常
+ok 11 - 撤销承诺后不再触发:触发关闭并写明原因,之后聊多少条都不冻结;另一条没撤销的照常
+  ---
+  duration_ms: 76.31725
+  type: 'test'
+  ...
+# Subtest: 联系人移出群、群解散后触发关闭并写明原因,不再冻结
+ok 12 - 联系人移出群、群解散后触发关闭并写明原因,不再冻结
+  ---
+  duration_ms: 34.289291
+  type: 'test'
+  ...
+# Subtest: 联系人移出后立即拉回:旧计数触发永久关闭、未处理窗口取消,必须重新提出承诺
+ok 13 - 联系人移出后立即拉回:旧计数触发永久关闭、未处理窗口取消,必须重新提出承诺
+  ---
+  duration_ms: 55.578542
+  type: 'test'
+  ...
+# Subtest: 正在移出的联系人(在途任务还没停稳)也不再数:触发关闭,不冻结
+ok 14 - 正在移出的联系人(在途任务还没停稳)也不再数:触发关闭,不冻结
+  ---
+  duration_ms: 51.883542
+  type: 'test'
+  ...
+# Subtest: 私聊 rewind 撤下的消息和那条回退说明不计数:回退后只剩回退点之前的还算
+ok 15 - 私聊 rewind 撤下的消息和那条回退说明不计数:回退后只剩回退点之前的还算
+  ---
+  duration_ms: 88.408166
+  type: 'test'
+  ...
+# Subtest: 私聊 rewind 把提出承诺的那句撤下:承诺随回退撤销,触发在同一步关闭并写明原因,之后聊多少条都不冻结
+ok 16 - 私聊 rewind 把提出承诺的那句撤下:承诺随回退撤销,触发在同一步关闭并写明原因,之后聊多少条都不冻结
+  ---
+  duration_ms: 48.335834
+  type: 'test'
+  ...
+# Subtest: N 不合格整条拒收:0、小数、超过上限都不进账本也不建触发;合格的那条照常
+ok 17 - N 不合格整条拒收:0、小数、超过上限都不进账本也不建触发;合格的那条照常
+  ---
+  duration_ms: 78.928458
+  type: 'test'
+  ...
+# Subtest: 承诺原文出自联系人自己的回复时同样登记触发;从它这句回复之后开始数
+ok 18 - 承诺原文出自联系人自己的回复时同样登记触发;从它这句回复之后开始数
+  ---
+  duration_ms: 24.507125
+  type: 'test'
+  ...
+# Subtest: 不是用户提出的不算:联系人拿另一位联系人说的话登记按消息数触发的承诺被拒收,用户亲口说的才登记
+ok 19 - 不是用户提出的不算:联系人拿另一位联系人说的话登记按消息数触发的承诺被拒收,用户亲口说的才登记
+  ---
+  duration_ms: 56.062583
+  type: 'test'
+  ...
+# Subtest: 没处理的窗口每次宿主运行只交给消费方一次,重启后再交一次;结算只认一次,结算过的重启后不再交
+ok 20 - 没处理的窗口每次宿主运行只交给消费方一次,重启后再交一次;结算只认一次,结算过的重启后不再交
+  ---
+  duration_ms: 7.245042
+  type: 'test'
+  ...
+# Subtest: 触发关闭时没处理的窗口一并取消:不再交给消费方,消费方来结算也不认;已结算的不动
+ok 21 - 触发关闭时没处理的窗口一并取消:不再交给消费方,消费方来结算也不认;已结算的不动
+  ---
+  duration_ms: 6.965375
+  type: 'test'
+  ...
+# Subtest: 到点只调一次联系人模型:第 99 条不调、第 100 条调一次读的正是那一段、第 101 条不再调;摘要不进会话、不被计数,重启和重发也不再调
+not ok 22 - 到点只调一次联系人模型:第 99 条不调、第 100 条调一次读的正是那一段、第 101 条不再调;摘要不进会话、不被计数,重启和重发也不再调
+  ---
+  duration_ms: 319.681917
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:107:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:126:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: 整段读全不设条数上限:201 条就读 201 条;超过输入字节上限只读前一部分并如实标 truncated,引用没读到的消息整份不要
+not ok 23 - 整段读全不设条数上限:201 条就读 201 条;超过输入字节上限只读前一部分并如实标 truncated,引用没读到的消息整份不要
+  ---
+  duration_ms: 790.332458
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:160:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    okValue (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:53:10)
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:171:16)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 一段只有 1 条消息也照做:每 1 条消息一段,各读各的那一条,前一段的终点就是后一段的起点
+not ok 24 - 一段只有 1 条消息也照做:每 1 条消息一段,各读各的那一条,前一段的终点就是后一段的起点
+  ---
+  duration_ms: 51.02725
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:213:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    okValue (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:53:10)
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:226:27)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 来源必须在本房、本区间、生成时可见:引用区间外、别的会话的 seq、已撤回的消息、没带来源的要点,整份都不要
+not ok 25 - 来源必须在本房、本区间、生成时可见:引用区间外、别的会话的 seq、已撤回的消息、没带来源的要点,整份都不要
+  ---
+  duration_ms: 62.056916
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:235:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    okValue (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:53:10)
+    latest (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:248:30)
+    async round (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:256:23)
+    async TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:258:18)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 没有可总结的发言不调模型:这一段全被撤回、提出人本端全删、只剩通知和任务卡,都记 empty
+not ok 26 - 没有可总结的发言不调模型:这一段全被撤回、提出人本端全删、只剩通知和任务卡,都记 empty
+  ---
+  duration_ms: 35.142584
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:275:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    okValue (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:53:10)
+    latest (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:283:30)
+    async TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:292:14)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 摘要只读:模型提出的验收结论、停止、交付、派活、承诺、转交、记忆、重跑、去别处发言都不执行,任务与其它记录一条不变
+not ok 27 - 摘要只读:模型提出的验收结论、停止、交付、派活、承诺、转交、记忆、重跑、去别处发言都不执行,任务与其它记录一条不变
+  ---
+  duration_ms: 5065.92625
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:309:1'
+  failureType: 'testCodeFailure'
+  error: '等不到:摘要轮开跑'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    until (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:48:37)
+    async TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:359:3)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 撤回后摘要对所有人过期、正文清掉:和撤回同一事务落盘,重启后仍过期;只认本会话、区间 (from, to] 里的撤回;搜索和联系人下一轮都见不到原文
+not ok 28 - 撤回后摘要对所有人过期、正文清掉:和撤回同一事务落盘,重启后仍过期;只认本会话、区间 (from, to] 里的撤回;搜索和联系人下一轮都见不到原文
+  ---
+  duration_ms: 61.414417
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:378:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    okValue (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:53:10)
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:400:34)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 过期后可重做:同一区间出新版本、指回旧版本,重新读这段现在可见的消息;同一 clientActionId 只做一次;不该重做的被拒
+not ok 29 - 过期后可重做:同一区间出新版本、指回旧版本,重新读这段现在可见的消息;同一 clientActionId 只做一次;不该重做的被拒
+  ---
+  duration_ms: 37.913292
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:436:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    okValue (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:53:10)
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:448:14)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 生成途中撤回:模型回来时这段已有新撤回,正文不落库,直接记过期;没撤回的那一份照常生成
+not ok 30 - 生成途中撤回:模型回来时这段已有新撤回,正文不落库,直接记过期;没撤回的那一份照常生成
+  ---
+  duration_ms: 5029.947167
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:473:1'
+  failureType: 'testCodeFailure'
+  error: '等不到:第一份开跑'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    until (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:48:37)
+    async TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:490:3)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 本端删除只影响那位用户的视图:摘要不过期、记录不变;他删掉全部来源的要点不再给他看,别人照常看到;重启后一样
+not ok 31 - 本端删除只影响那位用户的视图:摘要不过期、记录不变;他删掉全部来源的要点不再给他看,别人照常看到;重启后一样
+  ---
+  duration_ms: 42.252291
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:517:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    okValue (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:53:10)
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:532:18)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 模型没成不重试:抛错、超时都记 failed 写明原因,之后再来消息也不替这一段重调;重启打断的记 failed,重做才再调
+not ok 32 - 模型没成不重试:抛错、超时都记 failed 写明原因,之后再来消息也不替这一段重调;重启打断的记 failed,重做才再调
+  ---
+  duration_ms: 40.547833
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:553:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    okValue (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:53:10)
+    latest (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:570:30)
+    async TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:574:18)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 撤销承诺后还没生成的那一段不再调模型;不在这个会话里的用户读不到摘要
+not ok 33 - 撤销承诺后还没生成的那一段不再调模型;不在这个会话里的用户读不到摘要
+  ---
+  duration_ms: 55.53175
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:607:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+    +   0,
+    +   [],
+    -   1,
+        [
+    -     'ok'
+    -   ],
+    -   [
+    -     'done',
+          'cancelled',
+    +     'cancelled'
+        ]
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 1
+    1:
+      0: 'ok'
+    2:
+      0: 'done'
+      1: 'cancelled'
+  actual:
+    0: 0
+    1:
+    2:
+      0: 'cancelled'
+      1: 'cancelled'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:625:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 窗口冻结后联系人被移出或删除:不调模型并按各自状态结清
+not ok 34 - 窗口冻结后联系人被移出或删除:不调模型并按各自状态结清
+  ---
+  duration_ms: 45.037375
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:634:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    okValue (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:53:10)
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:653:14)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 已在队列的摘要,联系人退出后取得单飞入口时仍不可调模型
+not ok 35 - 已在队列的摘要,联系人退出后取得单飞入口时仍不可调模型
+  ---
+  duration_ms: 5040.729667
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:663:1'
+  failureType: 'testCodeFailure'
+  error: '等不到:摘要已排队'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    until (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:48:37)
+    async TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:684:3)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 平常轮的承诺账本写明这条承诺到点由宿主另起一轮交给它:联系人不用自己在会话里发总结
+not ok 36 - 平常轮的承诺账本写明这条承诺到点由宿主另起一轮交给它:联系人不用自己在会话里发总结
+  ---
+  duration_ms: 48.941375
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:692:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '未实现'
+    - '每 3 条消息一次(宿主替你数,到点另起一轮把那一段交给你写摘要;平常轮不要自己在会话里发总结)'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '每 3 条消息一次(宿主替你数,到点另起一轮把那一段交给你写摘要;平常轮不要自己在会话里发总结)'
+  actual: '未实现'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:706:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 时间轴读取:按区间从新到旧,beforeToSeq 翻页,limit 截断时 hasMore 为真
+not ok 37 - 时间轴读取:按区间从新到旧,beforeToSeq 翻页,limit 截断时 hasMore 为真
+  ---
+  duration_ms: 100.644625
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:709:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    okValue (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:53:10)
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summaries.test.ts:722:17)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 五块:第 1 块是只读摘要的规矩加人设且带缓存断点,第 2 块是承诺原文,第 4 块逐条带 seq 与发言者,第 5 块写明区间与条数
+not ok 38 - 五块:第 1 块是只读摘要的规矩加人设且带缓存断点,第 2 块是承诺原文,第 4 块逐条带 seq 与发言者,第 5 块写明区间与条数
+  ---
+  duration_ms: 2.612334
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-format.test.ts:9:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + []
+    - [
+    -   [
+    -     1,
+    -     '固定前缀',
+    -     true
+    -   ],
+    -   [
+    -     2,
+    -     '承诺账本',
+    -     false
+    -   ],
+    -   [
+    -     3,
+    -     '状态笔记',
+    -     false
+    -   ],
+    -   [
+    -     4,
+    -     '新消息',
+    -     false
+    -   ],
+    -   [
+    -     5,
+    -     '指针与按需换入',
+    -     false
+    -   ]
+    - ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      0: 1
+      1: '固定前缀'
+      2: true
+    1:
+      0: 2
+      1: '承诺账本'
+      2: false
+    2:
+      0: 3
+      1: '状态笔记'
+      2: false
+    3:
+      0: 4
+      1: '新消息'
+      2: false
+    4:
+      0: 5
+      1: '指针与按需换入'
+      2: false
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-format.test.ts:11:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: 截断如实写进第 5 块:只给了前几条、读到哪一条;没有承诺原文、没有人设时用占位
+not ok 39 - 截断如实写进第 5 块:只给了前几条、读到哪一条;没有承诺原文、没有人设时用占位
+  ---
+  duration_ms: 0.089
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-format.test.ts:21:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'text')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-format.test.ts:23:35)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: 要点解析:只认项目符号行,来源去重升序;中文括号、逗号顿号分隔、编号列表都认;不带符号的行不算要点
+not ok 40 - 要点解析:只认项目符号行,来源去重升序;中文括号、逗号顿号分隔、编号列表都认;不带符号的行不算要点
+  ---
+  duration_ms: 0.759833
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-format.test.ts:29:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      {
+    +   ok: false,
+    +   reason: '未实现'
+    -   items: [
+    -     {
+    -       sourceSeqs: [
+    -         11,
+    -         13
+    -       ],
+    -       text: '先修登录'
+    -     },
+    -     {
+    -       sourceSeqs: [
+    -         12,
+    -         13
+    -       ],
+    -       text: '周五发版'
+    -     },
+    -     {
+    -       sourceSeqs: [
+    -         11,
+    -         12
+    -       ],
+    -       text: '小安负责回归'
+    -     },
+    -     {
+    -       sourceSeqs: [
+    -         12
+    -       ],
+    -       text: '另一条回复里的要点'
+    -     }
+    -   ],
+    -   ok: true
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    ok: true
+    items:
+      0:
+        text: '先修登录'
+        sourceSeqs:
+          0: 11
+          1: 13
+      1:
+        text: '周五发版'
+        sourceSeqs:
+          0: 12
+          1: 13
+      2:
+        text: '小安负责回归'
+        sourceSeqs:
+          0: 11
+          1: 12
+      3:
+        text: '另一条回复里的要点'
+        sourceSeqs:
+          0: 12
+  actual:
+    ok: false
+    reason: '未实现'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-format.test.ts:32:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 不合格整份不要并说明原因:没带来源、来源不在读到的消息里、只有来源没有内容、一条都没有
+not ok 41 - 不合格整份不要并说明原因:没带来源、来源不在读到的消息里、只有来源没有内容、一条都没有
+  ---
+  duration_ms: 0.130667
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-format.test.ts:35:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      {
+        ok: false,
+    +   reason: '未实现'
+    -   reason: '有要点没带来源:这条没来源'
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    ok: false
+    reason: '有要点没带来源:这条没来源'
+  actual:
+    ok: false
+    reason: '未实现'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-format.test.ts:37:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 上限:要点 30 条、每条 500 字、每条来源 20 个,正好到上限收下,多一个就整份不要
+not ok 42 - 上限:要点 30 条、每条 500 字、每条来源 20 个,正好到上限收下,多一个就整份不要
+  ---
+  duration_ms: 0.167208
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-format.test.ts:45:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+    +   false,
+    -   30,
+        {
+          ok: false,
+    +     reason: '未实现'
+    -     reason: '要点超过 30 条'
+        }
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 30
+    1:
+      ok: false
+      reason: '要点超过 30 条'
+  actual:
+    0: false
+    1:
+      ok: false
+      reason: '未实现'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-format.test.ts:49:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: 按字节预算截取连续前缀:每条算正文的 UTF-8 字节加 64 字节记账;放不下的那条和它之后的都不要
+not ok 43 - 按字节预算截取连续前缀:每条算正文的 UTF-8 字节加 64 字节记账;放不下的那条和它之后的都不要
+  ---
+  duration_ms: 0.110958
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-format.test.ts:58:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+        0,
+    +   0,
+    +   0,
+    +   0,
+    +   0,
+    +   0
+    -   1,
+    -   1,
+    -   2,
+    -   2,
+    -   3
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 0
+    1: 1
+    2: 1
+    3: 2
+    4: 2
+    5: 3
+  actual:
+    0: 0
+    1: 0
+    2: 0
+    3: 0
+    4: 0
+    5: 0
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-format.test.ts:61:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: R1-01 解析失败含来源原文后撤回:错误不保存原文,get/list 与重启后均不泄漏
+not ok 44 - R1-01 解析失败含来源原文后撤回:错误不保存原文,get/list 与重启后均不泄漏
+  ---
+  duration_ms: 39.458375
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:61:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    val (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:58:86)
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:79:17)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: R1-01 生成期间撤回后解析失败:不把来源原文写进失败错误
+not ok 45 - R1-01 生成期间撤回后解析失败:不把来源原文写进失败错误
+  ---
+  duration_ms: 2030.099334
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:92:1'
+  failureType: 'testCodeFailure'
+  error: '没等到:摘要已读取消息'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    until (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:28:9)
+    async TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:102:3)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: R1-01 模型错误回显来源时:失败错误不存或向本端删除的用户暴露原文
+not ok 46 - R1-01 模型错误回显来源时:失败错误不存或向本端删除的用户暴露原文
+  ---
+  duration_ms: 43.215542
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:111:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    val (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:58:86)
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:121:13)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: R1-01 旧版遗留失败错误在撤回时同事务清空,重启后不可恢复
+not ok 47 - R1-01 旧版遗留失败错误在撤回时同事务清空,重启后不可恢复
+  ---
+  duration_ms: 33.124791
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:128:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    val (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:58:86)
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:138:13)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: R1-01 旧版遗留错误在本端隐藏后也不可从摘要视图泄露
+not ok 48 - R1-01 旧版遗留错误在本端隐藏后也不可从摘要视图泄露
+  ---
+  duration_ms: 28.596083
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:146:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'summaryId')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:157:102)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: R1-02 同终点不同联系人:limit=1 按 nextCursor 翻页不重不漏
+not ok 49 - R1-02 同终点不同联系人:limit=1 按 nextCursor 翻页不重不漏
+  ---
+  duration_ms: 31.578208
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:164:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    val (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:58:86)
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:174:15)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: R1-02 同终点历史多版本:includeSuperseded 用 nextCursor 逐页不重不漏
+not ok 50 - R1-02 同终点历史多版本:includeSuperseded 用 nextCursor 逐页不重不漏
+  ---
+  duration_ms: 25.198833
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:183:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    val (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:58:86)
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:192:17)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: R1-02 同联系人同版本同终点但起点不同:最终 id 排序键也不丢项
+not ok 51 - R1-02 同联系人同版本同终点但起点不同:最终 id 排序键也不丢项
+  ---
+  duration_ms: 25.1065
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:202:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    val (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:58:86)
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:211:17)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: R1-03 同联系人普通轮在途:另一群摘要排队,两次推理绝不重叠
+not ok 52 - R1-03 同联系人普通轮在途:另一群摘要排队,两次推理绝不重叠
+  ---
+  duration_ms: 102.03
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:220:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'generating'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'generating'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:241:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: R1-03 同联系人摘要轮在途:另一会话普通轮排队,不同联系人仍可运行
+not ok 53 - R1-03 同联系人摘要轮在途:另一会话普通轮排队,不同联系人仍可运行
+  ---
+  duration_ms: 2030.474083
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:249:1'
+  failureType: 'testCodeFailure'
+  error: '没等到:摘要开始'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    until (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:28:9)
+    async TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:271:3)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: R1-03 摘要排队期间来源被撤回:取得单飞入口后不再向模型发送原文
+not ok 54 - R1-03 摘要排队期间来源被撤回:取得单飞入口后不再向模型发送原文
+  ---
+  duration_ms: 2049.93625
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:282:1'
+  failureType: 'testCodeFailure'
+  error: '没等到:摘要排队'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    until (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:28:9)
+    async TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:306:3)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: R1-03 摘要排队等待已超时:后续释放单飞入口也不再调用模型
+not ok 55 - R1-03 摘要排队等待已超时:后续释放单飞入口也不再调用模型
+  ---
+  duration_ms: 2040.514542
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:314:1'
+  failureType: 'testCodeFailure'
+  error: '没等到:摘要排队超时'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    until (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:28:9)
+    async TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:336:3)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: R1-04 摘要记生成完成时点,更换说话模型后历史仍保留生成快照
+not ok 56 - R1-04 摘要记生成完成时点,更换说话模型后历史仍保留生成快照
+  ---
+  duration_ms: 43.403334
+  type: 'test'
+  location: '/private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:344:1'
+  failureType: 'testCodeFailure'
+  error: '{"ok":false,"error":{"code":"internal","message":"结果不符合合同:nextCursor: 缺少必填字段"}}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    val (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:58:86)
+    TestContext.<anonymous> (file:///private/tmp/gg-pr97-r1-rework/packages/server/src/trend-summary-r1.test.ts:354:18)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..56
+# tests 56
+# suites 0
+# pass 21
+# fail 35
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 27496.717709

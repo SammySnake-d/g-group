@@ -42,6 +42,8 @@ export interface AttentionOptions {
 export interface AttentionLoop {
   /** 有新输入送达这位联系人。 */
   notify(contactId: string, urgency: Urgency): void;
+  /** 同一联系人上的只读推理等附加轮次也进入同一单飞队列。 */
+  runExclusive<T>(contactId: string, run: (signal: AbortSignal) => Promise<T>): Promise<T>;
   /** 当前有没有在跑或排着的轮次(给 CLI/测试等待用)。 */
   busy(): boolean;
   /** 等到所有联系人都空闲(没有在跑、没有排队、没有攒批计时器)。 */
@@ -60,6 +62,7 @@ interface Slot {
   timerDue: "batch" | "retry" | null;
   staleRuns: number;
   count: number;
+  jobs: { run: (signal: AbortSignal) => Promise<unknown>; resolve: (value: unknown) => void; reject: (error: unknown) => void }[];
 }
 
 /** 失败策略给的退避延迟:有限非负数照用,其余(NaN、负数、无穷、非数字)按 retryMs 兜底。 */
@@ -79,7 +82,7 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
   const slot = (id: string): Slot => {
     let s = slots.get(id);
     if (!s) {
-      s = { running: null, controller: null, dirty: null, timer: null, timerDue: null, staleRuns: 0, count: 0 };
+      s = { running: null, controller: null, dirty: null, timer: null, timerDue: null, staleRuns: 0, count: 0, jobs: [] };
       slots.set(id, s);
     }
     return s;
@@ -101,7 +104,7 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
       return retryMs;
     }
   };
-  const isBusy = () => [...slots.values()].some((s) => s.running !== null || s.timer !== null || s.dirty !== null);
+  const isBusy = () => [...slots.values()].some((s) => s.running !== null || s.timer !== null || s.dirty !== null || s.jobs.length > 0);
   const settleWaiters = () => {
     if (isBusy()) return;
     const w = waiters;
@@ -118,8 +121,46 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
     s.timer = timers.set(() => {
       s.timer = null;
       s.timerDue = null;
-      start(id);
+      if (s.running) s.dirty = "now";
+      else start(id);
     }, ms);
+  };
+
+  const continueSlot = (id: string, s: Slot) => {
+    if (stopped) return settleWaiters();
+    const pending = s.dirty;
+    if (pending === "now") {
+      start(id);
+      return;
+    }
+    if (s.jobs.length) return startJob(id);
+    if (pending === "batch") {
+      s.dirty = null;
+      if (s.timer === null) arm(id, s, opts.maxDeferMs, "batch");
+    }
+    settleWaiters();
+  };
+  const startJob = (id: string): void => {
+    if (stopped) return;
+    const s = slot(id);
+    if (s.running) return;
+    const job = s.jobs.shift();
+    if (!job) {
+      continueSlot(id, s);
+      return;
+    }
+    const controller = new AbortController();
+    s.controller = controller;
+    // 不因调用方超时而释放单飞:只有实际推理 Promise 已结束才让下一轮进入。
+    s.running = Promise.resolve().then(async () => {
+      try { job.resolve(await job.run(controller.signal)); }
+      catch (e) { job.reject(e); }
+      finally {
+        s.running = null;
+        s.controller = null;
+        continueSlot(id, s);
+      }
+    });
   };
 
   const start = (id: string): void => {
@@ -147,7 +188,8 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
       if (status === "stale") {
         s.staleRuns++;
         if (s.staleRuns <= maxStale) {
-          start(id);
+          s.dirty = "now";
+          continueSlot(id, s);
           return;
         }
         report(id, "stale-limit", s.staleRuns);
@@ -158,19 +200,22 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
         const ms = delayAfter(id, failure);
         if (ms !== null && s.timer === null) arm(id, s, ms, "retry");
         s.dirty = null;
-        return settleWaiters();
+        return continueSlot(id, s);
       }
-      const pending = s.dirty;
-      if (pending === "now") start(id);
-      else if (pending === "batch") {
-        s.dirty = null;
-        if (s.timer === null) arm(id, s, opts.maxDeferMs, "batch");
-      }
-      settleWaiters();
+      continueSlot(id, s);
     })();
   };
 
   return {
+    runExclusive<T>(contactId: string, run: (signal: AbortSignal) => Promise<T>): Promise<T> {
+      if (stopped) return Promise.reject(new Error("注意循环已停止"));
+      const s = slot(contactId);
+      const promise = new Promise<T>((resolve, reject) => {
+        s.jobs.push({ run, resolve: (value) => resolve(value as T), reject });
+      });
+      if (!s.running) startJob(contactId);
+      return promise;
+    },
     notify(contactId, urgency) {
       if (stopped) return;
       if (urgency !== "now" && urgency !== "batch") throw new TypeError(`未知紧急度 ${String(urgency)}`);
@@ -197,6 +242,7 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
       for (const s of slots.values()) {
         clearTimer(s);
         s.dirty = null;
+        for (const job of s.jobs.splice(0)) job.reject(new Error("注意循环已停止"));
         s.controller?.abort();
         if (s.running) running.push(s.running);
       }

@@ -1,0 +1,129 @@
+TAP version 13
+# Subtest: R1-03 同联系人只读轮同步抛错后,后续轮仍能取得单飞入口
+ok 1 - R1-03 同联系人只读轮同步抛错后,后续轮仍能取得单飞入口
+  ---
+  duration_ms: 1.222583
+  type: 'test'
+  ...
+# Subtest: R1-03 重试定时器到点时只读轮在途,普通轮应延后而非遗失
+ok 2 - R1-03 重试定时器到点时只读轮在途,普通轮应延后而非遗失
+  ---
+  duration_ms: 2.050458
+  type: 'test'
+  ...
+# Subtest: R1-03 已有的 now 通知不能被后到的只读轮饿死
+ok 3 - R1-03 已有的 now 通知不能被后到的只读轮饿死
+  ---
+  duration_ms: 1.008084
+  type: 'test'
+  ...
+# Subtest: R1-01 解析失败含来源原文后撤回:错误不保存原文,get/list 与重启后均不泄漏
+ok 4 - R1-01 解析失败含来源原文后撤回:错误不保存原文,get/list 与重启后均不泄漏
+  ---
+  duration_ms: 39.162459
+  type: 'test'
+  ...
+# Subtest: R1-01 生成期间撤回后解析失败:不把来源原文写进失败错误
+ok 5 - R1-01 生成期间撤回后解析失败:不把来源原文写进失败错误
+  ---
+  duration_ms: 29.30025
+  type: 'test'
+  ...
+# Subtest: R1-01 模型错误回显来源时:失败错误不存或向本端删除的用户暴露原文
+ok 6 - R1-01 模型错误回显来源时:失败错误不存或向本端删除的用户暴露原文
+  ---
+  duration_ms: 24.932667
+  type: 'test'
+  ...
+# Subtest: R1-01 旧版遗留失败错误在撤回时同事务清空,重启后不可恢复
+ok 7 - R1-01 旧版遗留失败错误在撤回时同事务清空,重启后不可恢复
+  ---
+  duration_ms: 24.6375
+  type: 'test'
+  ...
+# Subtest: R1-01 旧版遗留错误在本端隐藏后也不可从摘要视图泄露
+ok 8 - R1-01 旧版遗留错误在本端隐藏后也不可从摘要视图泄露
+  ---
+  duration_ms: 24.296583
+  type: 'test'
+  ...
+# Subtest: R1-02 同终点不同联系人:limit=1 按 nextCursor 翻页不重不漏
+ok 9 - R1-02 同终点不同联系人:limit=1 按 nextCursor 翻页不重不漏
+  ---
+  duration_ms: 26.215542
+  type: 'test'
+  ...
+# Subtest: R1-02 同终点历史多版本:includeSuperseded 用 nextCursor 逐页不重不漏
+not ok 10 - R1-02 同终点历史多版本:includeSuperseded 用 nextCursor 逐页不重不漏
+  ---
+  duration_ms: 25.821583
+  type: 'test'
+  location: '/private/tmp/gg97-resume.xas2Qd/new-mutants/pagination-version/packages/server/src/trend-summary-r1.test.ts:179:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+        'sum-mwhy170g-9',
+    -   'sum-mwhy1709-7'
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'sum-mwhy170g-9'
+    1: 'sum-mwhy1709-7'
+  actual:
+    0: 'sum-mwhy170g-9'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg97-resume.xas2Qd/new-mutants/pagination-version/packages/server/src/trend-summary-r1.test.ts:194:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: R1-02 同联系人同版本同终点但起点不同:最终 id 排序键也不丢项
+ok 11 - R1-02 同联系人同版本同终点但起点不同:最终 id 排序键也不丢项
+  ---
+  duration_ms: 24.278833
+  type: 'test'
+  ...
+# Subtest: R1-03 同联系人普通轮在途:另一群摘要排队,两次推理绝不重叠
+ok 12 - R1-03 同联系人普通轮在途:另一群摘要排队,两次推理绝不重叠
+  ---
+  duration_ms: 110.3105
+  type: 'test'
+  ...
+# Subtest: R1-03 同联系人摘要轮在途:另一会话普通轮排队,不同联系人仍可运行
+ok 13 - R1-03 同联系人摘要轮在途:另一会话普通轮排队,不同联系人仍可运行
+  ---
+  duration_ms: 37.087416
+  type: 'test'
+  ...
+# Subtest: R1-03 摘要排队期间来源被撤回:取得单飞入口后不再向模型发送原文
+ok 14 - R1-03 摘要排队期间来源被撤回:取得单飞入口后不再向模型发送原文
+  ---
+  duration_ms: 38.820417
+  type: 'test'
+  ...
+# Subtest: R1-03 摘要排队等待已超时:后续释放单飞入口也不再调用模型
+ok 15 - R1-03 摘要排队等待已超时:后续释放单飞入口也不再调用模型
+  ---
+  duration_ms: 83.763542
+  type: 'test'
+  ...
+# Subtest: R1-04 摘要记生成完成时点,更换说话模型后历史仍保留生成快照
+ok 16 - R1-04 摘要记生成完成时点,更换说话模型后历史仍保留生成快照
+  ---
+  duration_ms: 29.923375
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 15
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 838.501458
