@@ -5,7 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { copyTree, ctxFromGit, freshCopy, GIT_SAFE_ARGS, gitEnv } from "./lib.ts";
+import { copyTree, ctxFromGit, freshCopy, GIT_SAFE_ARGS, gitEnv, nmMount, sandboxPlan } from "./lib.ts";
 
 const SCOPED = "modules/number-source";
 const PLAIN = "features/text-source";
@@ -186,4 +186,95 @@ test("node_modules 链接悬空时拒绝运行,不能静默当作没有依赖", 
   fs.mkdirSync(root);
   fs.symlinkSync(path.join(dir, "missing-dependencies"), path.join(root, "node_modules"));
   assert.throws(() => freshCopy(root), /ENOENT/);
+}));
+
+for (const layers of [2, 3]) test(`${layers}层副本的 workspace 使用各层源码且 Docker 计划只挂真实依赖来源`, () => inTemp((dir) => {
+  const root = path.join(dir, "repo");
+  fixture(root);
+  const copies: string[] = [];
+  try {
+    let previous = root;
+    for (let i = 0; i < layers; i++) {
+      const work = freshCopy(previous);
+      copies.push(work);
+      values(work, `layer-${i + 1}`);
+      expectOwn(work, `layer-${i + 1}`);
+      previous = work;
+    }
+    const expected = fs.realpathSync(path.join(root, "node_modules"));
+    const parent = copies.at(-2)!;
+    const work = copies.at(-1)!;
+    assert.deepEqual(nmMount(parent), [expected], "不得把前层 overlay 当成真实外部依赖");
+    const plan = sandboxPlan(["read.mjs"], work, nmMount(parent), "docker");
+    assert.ok(plan.argv.includes(`${expected}:${expected}`), "Docker 计划缺少真正的依赖目录");
+    assert.ok(!plan.argv.includes(`${fs.realpathSync(path.join(parent, "node_modules"))}:${fs.realpathSync(path.join(parent, "node_modules"))}`), "不得挂载上一层 overlay");
+  } finally { for (const work of copies.reverse()) fs.rmSync(work, { recursive: true, force: true }); }
+}));
+
+test("从副本创建变异树后再次复制,依赖挂载仍回到可信原始目录", () => inTemp((dir) => {
+  const root = path.join(dir, "repo"), transformed = path.join(dir, "transformed");
+  fixture(root);
+  const first = freshCopy(root);
+  fs.mkdirSync(transformed);
+  try {
+    copyTree(first, transformed, ["package.json", "read.mjs", `${SCOPED}/package.json`, `${SCOPED}/index.mjs`, `${PLAIN}/package.json`, `${PLAIN}/index.mjs`]);
+    const last = freshCopy(transformed);
+    try {
+      values(last, "mutation");
+      expectOwn(last, "mutation");
+      assert.deepEqual(nmMount(transformed), [fs.realpathSync(path.join(root, "node_modules"))]);
+    } finally { fs.rmSync(last, { recursive: true, force: true }); }
+  } finally { fs.rmSync(first, { recursive: true, force: true }); }
+}));
+
+test("绝对 scoped workspace 链跨多层副本仍只加载末层源码", () => inTemp((dir) => {
+  const root = path.join(dir, "repo");
+  fixture(root);
+  fs.unlinkSync(path.join(root, "node_modules/@fixture/number"));
+  fs.symlinkSync(path.join(root, SCOPED), path.join(root, "node_modules/@fixture/number"));
+  const first = freshCopy(root), second = freshCopy(first);
+  try {
+    values(root, "original-changed");
+    values(second, "second");
+    expectOwn(second, "second");
+    assert.deepEqual(nmMount(first), [fs.realpathSync(path.join(root, "node_modules"))]);
+  } finally { fs.rmSync(second, { recursive: true, force: true }); fs.rmSync(first, { recursive: true, force: true }); }
+}));
+
+test("悬空绝对 scoped workspace 链跨副本不得回退到原树", () => inTemp((dir) => {
+  const root = path.join(dir, "repo");
+  fixture(root);
+  fs.unlinkSync(path.join(root, "node_modules/@fixture/number"));
+  fs.rmSync(path.join(root, SCOPED), { recursive: true });
+  fs.symlinkSync(path.join(root, SCOPED), path.join(root, "node_modules/@fixture/number"));
+  const first = freshCopy(root), second = freshCopy(first);
+  try {
+    const r = run(second);
+    assert.notEqual(r.status, 0, "缺失包不能由原树或其他副本补齐");
+    assert.match(r.stderr, /ERR_MODULE_NOT_FOUND|Cannot find/);
+    assert.deepEqual(nmMount(first), [fs.realpathSync(path.join(root, "node_modules"))]);
+  } finally { fs.rmSync(second, { recursive: true, force: true }); fs.rmSync(first, { recursive: true, force: true }); }
+}));
+
+test("另一进程拿到来源未知的 overlay 时拒绝,不能由可伪造的文件授权额外挂载", () => inTemp((dir) => {
+  const root = path.join(dir, "repo");
+  fixture(root);
+  const work = freshCopy(root);
+  try {
+    const lib = new URL("./lib.ts", import.meta.url).href;
+    const script = `import { freshCopy } from ${JSON.stringify(lib)}; freshCopy(${JSON.stringify(work)});`;
+    const { NODE_TEST_CONTEXT: _ctx, ...env } = process.env;
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", script], { encoding: "utf8", env: { ...env, TMPDIR: dir }, timeout: 10_000 });
+    assert.notEqual(r.status, 0, "未知 overlay 没有可信来源,应 fail closed");
+    assert.match(r.stderr, /来源|依赖|overlay/i);
+  } finally { fs.rmSync(work, { recursive: true, force: true }); }
+}));
+
+test("未知来源的外部包软链不能扩大依赖挂载范围", () => inTemp((dir) => {
+  const root = path.join(dir, "repo"), other = path.join(dir, "outside");
+  fixture(root);
+  fs.mkdirSync(other);
+  fs.rmSync(path.join(root, "node_modules/fixture-external"), { recursive: true });
+  fs.symlinkSync(other, path.join(root, "node_modules/fixture-external"));
+  assert.throws(() => freshCopy(root), /来源|依赖|overlay/i);
 }));

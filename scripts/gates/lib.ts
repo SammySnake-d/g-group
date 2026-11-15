@@ -285,7 +285,7 @@ export function freshCopy(src: string): string {
 
 // 用 node --test 的 TAP 输出解析"每个文件里哪些具名测试通过/失败"。
 // 只认测试真的注册并执行后的结果;文件加载失败时 TAP 里只有文件级失败,不会出现具名测试。
-const nmMount = (root: string) => { const nm = path.join(root, "node_modules"); return fs.existsSync(nm) ? [fs.realpathSync(nm)] : []; };
+export const nmMount = (root: string) => { const nm = path.join(root, "node_modules"); return fs.existsSync(nm) ? [fs.realpathSync(nm)] : []; };
 
 export function runNodeTests(root: string, files: string[], extraArgs: string[] = []): TestRun {
   const passed: NamedTest[] = [], failed: NamedTest[] = [];
