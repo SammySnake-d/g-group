@@ -1022,10 +1022,12 @@ export class Host {
   }
 
   /** 发完一条消息之后:推事件、送达成员联系人的注意循环。 */
-  private afterAppend(roomId: string, seq: number, from: { kind: Member["kind"] | "helper" | "system"; id: string }) {
+  private afterAppend(roomId: string, seq: number, _from: { kind: Member["kind"] | "helper" | "system"; id: string }) {
     const msgs = this.projected(roomId);
     const m = msgs.find((x) => x.seq === seq);
     if (!m) return;
+    // 落盘事件的真实发送者才决定准入；重跑可能同时写用户说明和联系人任务卡。
+    const from = m.sender;
     const view = this.messageView(roomId, m, msgs);
     this.bus.emit({ type: "message.appended", message: view });
     this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
