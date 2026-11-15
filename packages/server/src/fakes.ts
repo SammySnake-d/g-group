@@ -97,6 +97,19 @@ export function scriptedCompute(
   const history = new Map<string, ComputeEvent[]>();
   /** haltOnStop:已被停下、还没续接的实例 */
   const halted = new Set<string>();
+  const waits = new Map<string, Set<() => void>>();
+  const wait = (computeId: string, ms: number) => new Promise<void>((resolve) => {
+    const pending = waits.get(computeId) ?? new Set<() => void>();
+    waits.set(computeId, pending);
+    const finish = () => {
+      clearTimeout(timer);
+      pending.delete(finish);
+      if (!pending.size) waits.delete(computeId);
+      resolve();
+    };
+    const timer = setTimeout(finish, ms);
+    pending.add(finish);
+  });
   const push = (e: ComputeEvent) => {
     if (e.kind === "completed" || e.kind === "failed" || e.kind === "stopped") ended.add(e.computeId);
     if (e.kind === "started") ended.delete(e.computeId);
@@ -110,8 +123,10 @@ export function scriptedCompute(
     busy.set(computeId, (busy.get(computeId) ?? 0) + 1);
     void (async () => {
       for (const e of evs) {
-        await new Promise((r) => setTimeout(r, (opts.stepMs ?? 1) + (opts.pause?.(e) ?? 0)));
-        if (opts.haltOnStop && halted.has(computeId)) break;
+        const ms = (opts.stepMs ?? 1) + (opts.pause?.(e) ?? 0);
+        if (opts.haltOnStop) await wait(computeId, ms);
+        else await new Promise((r) => setTimeout(r, ms));
+        if (opts.haltOnStop && (halted.has(computeId) || closed)) break;
         push(e);
       }
       busy.set(computeId, (busy.get(computeId) ?? 1) - 1);
@@ -162,6 +177,7 @@ export function scriptedCompute(
       if (opts.refuseStopAfterExit && ended.has(computeId)) return { ok: false as const, reason: `Compute ${computeId} 没有在运行的进程` };
       stopped.push(computeId);
       halted.add(computeId);
+      if (opts.haltOnStop) for (const finish of waits.get(computeId) ?? []) finish();
       push({ computeId, kind: "stopped", code: null, signal: null, scope: "main-then-group", violations: [] });
       return { ok: true };
     },
@@ -223,6 +239,7 @@ export function scriptedCompute(
     },
     close() {
       closed = true;
+      for (const pending of waits.values()) for (const finish of pending) finish();
       wake?.();
       actWake?.();
     },
