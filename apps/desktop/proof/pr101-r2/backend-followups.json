@@ -1,0 +1,20 @@
+[
+  {
+    "key": "B1",
+    "title": "fix(server): 群聊只 @ 一位时多位联系人起回合并互相唤醒",
+    "url": "https://github.com/SammySnake-d/g-group/issues/106",
+    "priority": 1
+  },
+  {
+    "key": "B2",
+    "title": "perf(server): 量出私聊和群聊真实回复的额外延迟并修根因",
+    "url": "https://github.com/SammySnake-d/g-group/issues/107",
+    "priority": 2
+  },
+  {
+    "key": "B3",
+    "title": "feat(server): 明确并补齐聊天图片传给联系人的最小路径",
+    "url": "https://github.com/SammySnake-d/g-group/issues/108",
+    "priority": 3
+  }
+]
