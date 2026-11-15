@@ -1,0 +1,22 @@
+packages/adapter-pi-contact/src/compact.test.ts
+  s_69f96fa873b14b::t_5526cc8f0e0b97 14,28,45-64
+packages/server/src/reflect-json-recovery.test.ts
+  s_69f96fa873b14b::t_d32a5166cf676f 14-15,23-26,33,51
+  s_69f96fa873b14b::t_ce237fc923f362 242-261
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8f85d7d032bfac6c4d03af2fb22625e090b0797a",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
