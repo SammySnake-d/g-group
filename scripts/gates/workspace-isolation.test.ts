@@ -123,3 +123,67 @@ test("副本缺少的 workspace 包不能从原树偷载,必须保留模块加�
     assert.match(r.stderr, /ERR_MODULE_NOT_FOUND|Cannot find/);
   } finally { fs.rmSync(work, { recursive: true, force: true }); }
 }));
+
+test("同一 scope 下重绑 workspace 时,同级外部包仍能读取", () => inTemp((dir) => {
+  const root = path.join(dir, "repo");
+  fixture(root);
+  write(root, "node_modules/@fixture/external/package.json", JSON.stringify({ name: "@fixture/external", type: "module", exports: "./index.mjs" }));
+  write(root, "node_modules/@fixture/external/index.mjs", source("external-dependency"));
+  write(root, "read.mjs", READER.replace('"@vendor/external"', '"@fixture/external"'));
+  const work = freshCopy(root);
+  try {
+    values(root, "changed-after-copy");
+    expectOwn(work, "original");
+  } finally { fs.rmSync(work, { recursive: true, force: true }); }
+}));
+
+test("workspace 指向仓内二次链接到副本外时不得跟随原树,缺少副本源码应失败", () => inTemp((dir) => {
+  const root = path.join(dir, "repo"), external = path.join(dir, "outside");
+  fixture(root);
+  fs.mkdirSync(external);
+  write(external, "package.json", JSON.stringify({ name: "@fixture/number", type: "module", exports: "./index.mjs" }));
+  write(external, "index.mjs", source("outside-source"));
+  fs.rmSync(path.join(root, SCOPED), { recursive: true });
+  fs.symlinkSync(external, path.join(root, SCOPED));
+  const work = freshCopy(root);
+  try {
+    const r = run(work);
+    assert.notEqual(r.status, 0, "不得沿着工作区链接回读副本外的源码");
+    assert.match(r.stderr, /ERR_MODULE_NOT_FOUND|Cannot find/);
+  } finally { fs.rmSync(work, { recursive: true, force: true }); }
+}));
+
+test("没有 workspace 别名时仍能读取原有外部依赖", () => inTemp((dir) => {
+  const root = path.join(dir, "repo");
+  fixture(root);
+  fs.unlinkSync(path.join(root, "node_modules/@fixture/number"));
+  fs.unlinkSync(path.join(root, "node_modules/fixture-text"));
+  write(root, "read.mjs", 'import { value } from "fixture-external"; console.log(value);\n');
+  const work = freshCopy(root);
+  try {
+    const r = run(work);
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(r.stdout.trim(), "external-dependency");
+  } finally { fs.rmSync(work, { recursive: true, force: true }); }
+}));
+
+test("依赖目录损坏时拒绝创建半成品副本,不回退到原树", () => inTemp((dir) => {
+  const root = path.join(dir, "repo");
+  write(root, "node_modules", "不是目录");
+  const oldTmp = process.env.TMPDIR;
+  process.env.TMPDIR = dir;
+  try {
+    assert.throws(() => freshCopy(root));
+    assert.deepEqual(fs.readdirSync(dir).filter((f) => f.startsWith("gate-run-")), []);
+  } finally {
+    if (oldTmp === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = oldTmp;
+  }
+}));
+
+test("node_modules 链接悬空时拒绝运行,不能静默当作没有依赖", () => inTemp((dir) => {
+  const root = path.join(dir, "repo");
+  fs.mkdirSync(root);
+  fs.symlinkSync(path.join(dir, "missing-dependencies"), path.join(root, "node_modules"));
+  assert.throws(() => freshCopy(root), /ENOENT/);
+}));
