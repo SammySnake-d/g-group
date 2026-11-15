@@ -1,0 +1,55 @@
+apps/desktop/proof/pr101-r2/gates.exit
+  s_be862bfe4ebd7a::t_e085e090535e8e 1
+apps/desktop/proof/pr101-r2/final-red-build.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 28
+apps/desktop/proof/pr101-r2/mutants/M-PASTE.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 23
+apps/desktop/proof/pr101-r2/mutants/M-PREVIEW.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 23
+apps/desktop/proof/pr101-r2/build-third.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 30
+apps/desktop/proof/pr101-r2/build-first.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 30
+apps/desktop/proof/pr101-r2/mutants-build.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 30
+apps/desktop/proof/pr101-r2/build-package.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 30
+apps/desktop/proof/pr101-r2/mutants/M-REMOVE.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 23
+apps/desktop/proof/pr101-r2/gates.txt
+  s_be862bfe4ebd7a::t_e085e090535e8e 1-11
+apps/desktop/proof/pr101-r2/baseline-build.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 28
+apps/desktop/proof/pr101-r2/mutants/M-DRAFT.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 23
+apps/desktop/proof/pr101-r2/content-hash.exit
+  s_be862bfe4ebd7a::t_e085e090535e8e 1
+apps/desktop/proof/pr101-r2/baseline-d02.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 16,44,72-73
+apps/desktop/proof/pr101-r2/desktop-regression.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 214,379,843,1373,1378
+apps/desktop/proof/pr101-r2/build-second.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 30
+apps/desktop/proof/pr101-r2/renderer-models.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 23,53
+apps/desktop/proof/pr101-r2/build-final.txt
+  s_be862bfe4ebd7a::t_91c547b95de640 30
+apps/desktop/proof/pr101-r2/content-hash.txt
+  s_be862bfe4ebd7a::t_e085e090535e8e 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f0c2049bc6ea8044a7053e89f45b6d37071dd5c8",
+  "prompts": {},
+  "sessions": {
+    "s_be862bfe4ebd7a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1de94-42ad-7200-a40f-a6f126eca979",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
