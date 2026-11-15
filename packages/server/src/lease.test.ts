@@ -184,6 +184,7 @@ test("AC-23 重启:未确认停止的个人槽保留原租约,同联系人新任
     await tick();
     assert.deepEqual(afterRestart.quota.leaseOf(first.id), oldLease, "原 lease_id、作用域及 stopping 状态须保留");
     assert.equal(afterRestart.taskDoc(first.id).value.task.state, "T9_StopRequested");
+    assert.ok("queued" in afterRestart.quota.acquire({ taskId: first.id, contactId: c.id, roomId: dm, isGroup: false }), "重启后不可复用未经确认的旧租约重跑同一任务");
     assert.equal(lr.compute.spawned.length, 1, "未确认的唯一槽位不能授给后继");
   } finally {
     if (before) await before.close();

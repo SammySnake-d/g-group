@@ -79,3 +79,20 @@ test("取消排队后不再被授予", () => {
   assert.deepEqual(q.release(t1.granted.leaseId).granted, []);
   assert.equal(q.waitingReason("t2"), null);
 });
+
+test("AC-23 租约持久化写入失败:不授予、不改变内存中的占用和排队", () => {
+  let fail = true;
+  const q = new QuotaTable({ ...cfg(1, {}), persist: () => { if (fail) throw new Error("租约存储失败"); } });
+  assert.throws(() => q.acquire(req("t1", "x", "dm-x")), /租约存储失败/);
+  assert.deepEqual(q.view(), { leases: [], waiting: [] });
+  fail = false;
+  const first = q.acquire(req("t1", "x", "dm-x"));
+  assert.ok("granted" in first);
+  assert.ok("queued" in q.acquire(req("t2", "x", "dm-x")));
+  const before = q.view();
+  fail = true;
+  assert.throws(() => q.release(first.granted.leaseId), /租约存储失败/);
+  assert.deepEqual(q.view(), before, "释放与排队者授予必须一起回滚");
+  fail = false;
+  assert.deepEqual(q.release(first.granted.leaseId).granted.map((l) => l.taskId), ["t2"]);
+});
