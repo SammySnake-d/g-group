@@ -1,0 +1,27 @@
+[WebServer] (node:83953) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:83986) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 15 tests using 1 worker
+
+(node:83987) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [electron] › e2e/native-files.electron.spec.ts:23:1 › 本地文件路径:选择的真实文件能取回原路径,内存 File 没有伪造路径;附件仍可发送 (3.6s)
+  ✓   2 [electron] › e2e/native-files.electron.spec.ts:47:1 › 截图:当前窗口返回有效 PNG,点击输入栏截图先待发、明确发送后成为真实图片附件,重启后仍在 (5.4s)
+  ✓   3 [electron] › e2e/native-files.electron.spec.ts:80:1 › 内存附件超过通用 IPC 上限仍按上传合同发送,普通请求不放宽 (2.9s)
+  ✓   4 [electron] › e2e/parity-r2-cron.electron.spec.ts:71:1 › 定时:合同表达不了的在编辑器里关着并写明原因;改内容、暂停以后端回包为准;删除后重开应用确实没了 (11.8s)
+  ✓   5 [electron] › e2e/parity-r2-cron.electron.spec.ts:162:1 › 搜索:搜的是后端全部历史——搜得到没读进来的旧消息、显示后端的真实序号,点了先把它读进来再跳回去 (3.2m)
+  ✓   6 [electron] › e2e/parity-r2-cron.electron.spec.ts:223:1 › 斜杠命令:/todo、/notice 连后端时可用并写进后端;后端的 /remind 在菜单里,发出后定时页出现这条定时;/summary 仍灰着并写明原因 (8.3s)
+  ✓   7 [electron] › e2e/parity-r2-pano.electron.spec.ts:42:1 › 进展全景按真实时钟算:连后端时在跑的 Compute 写的是现在的开始时刻、已跑几秒,不是演示时钟 02:16 (2.8s)
+  ✓   8 [electron] › e2e/parity-r2-pano.electron.spec.ts:70:1 › 停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、最后进展,全景卡也写无进展 (3.1s)
+  ✓   9 [electron] › e2e/pr101-p0.electron.spec.ts:40:1 › 图片粘贴先进待发区、不发消息；逐张删除后只留下另一张 (2.8s)
+  ✓  10 [electron] › e2e/pr101-p0.electron.spec.ts:61:1 › 图片草稿按会话保存，切走和重启不丢；纯图也能回车发送 (6.4s)
+  ✓  11 [electron] › e2e/pr101-p0.electron.spec.ts:85:1 › 多图和文字只发一条消息，聊天缩略图点击原地放大、关闭回到原聊天，重启仍能查看 (7.4s)
+  ✓  12 [electron] › e2e/pr101-p0.electron.spec.ts:118:1 › 桌面正常重启保留宿主默认模型，不被接入时的初始值覆盖 (4.6s)
+  ✓  13 [electron] › e2e/pr101-p0.electron.spec.ts:137:1 › 真实上游失败卡写出当前模型，给出联系人模型设置与模型接入路径 (2.9s)
+  ✓  14 [electron] › e2e/pr101-p0.electron.spec.ts:161:1 › 设置模型来自网关、当前值保留且选中，单独换说话模型后重启仍保存，新联系人使用新值 (5.6s)
+  ✓  15 [electron] › e2e/pr101-p0.electron.spec.ts:194:1 › 目录读取失败时保留当前模型，禁用换模并说清原因，不填演示目录 (2.2s)
+
+  15 passed (4.3m)
+[serial] 结束,清掉残留进程 0 个

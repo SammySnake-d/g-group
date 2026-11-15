@@ -1,0 +1,88 @@
+{
+  "head": "bdde490cea067b31ac2831a8eb86ea6ad3e029f0",
+  "binary": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release/mac-arm64/g-group.app/Contents/MacOS/g-group",
+  "model": "fengshao1227/deepseek-v4.1-flash",
+  "gateway": "http://127.0.0.1:3425",
+  "userData": "/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gg-pr101-r2-packaged-bWMJfj",
+  "steps": [
+    {
+      "name": "首次接入",
+      "ok": true,
+      "note": "模型和令牌经应用表单保存；宿主 live；真实联系人脑子未设 fake",
+      "ms": 716,
+      "screenshot": "../packaged/01-首次接入.png"
+    },
+    {
+      "name": "真实模型目录及当前值",
+      "ok": true,
+      "note": {
+        "count": 62,
+        "selected": "fengshao1227/deepseek-v4.1-flash",
+        "sameProvider": [
+          "fengshao1227/deepseek-v4.1-flash"
+        ],
+        "alternateInference": "未执行：用户仅指定这一个真实回复模型；另一模型写入及重启由 pr101-p0.electron.spec.ts 的受控网关验证"
+      },
+      "ms": 705,
+      "screenshot": "../packaged/02-真实模型目录及当前值.png"
+    },
+    {
+      "name": "添加联系人及私聊真实回复",
+      "ok": true,
+      "note": {
+        "text": "小克\n助手\n19:50\nDM_OK1",
+        "from": "c-mwhruqyq-1"
+      },
+      "ms": 63584,
+      "screenshot": "../packaged/03-添加联系人及私聊真实回复.png"
+    },
+    {
+      "name": "粘贴两图逐张删除",
+      "ok": true,
+      "note": "系统剪贴板+工具栏截图均先待发；移除一张后消息数不变",
+      "ms": 487,
+      "screenshot": "../packaged/04-粘贴两图逐张删除.png"
+    },
+    {
+      "name": "切会话与重启图片草稿保持",
+      "ok": true,
+      "note": "客户端 profile 中持久保存，切会话和重启后图仍在待发区",
+      "ms": 2642,
+      "screenshot": "../packaged/05-切会话与重启图片草稿保持.png"
+    },
+    {
+      "name": "发送后聊天缩略图",
+      "ok": true,
+      "note": "图文在同一条消息中，聊天显示真实图片缩略图",
+      "ms": 154,
+      "screenshot": "../packaged/06-发送后聊天缩略图.png"
+    },
+    {
+      "name": "聊天原地放大及关闭",
+      "ok": true,
+      "note": {
+        "width": 2640,
+        "height": 1690,
+        "complete": true
+      },
+      "ms": 141,
+      "screenshot": "../packaged/07-聊天原地放大及关闭.png"
+    },
+    {
+      "name": "建群及指定联系人真实回复",
+      "ok": false,
+      "error": "expect(locator).toBeVisible() failed\n\nLocator: getByTestId('chat-column').locator('[data-msg][data-from=\"c-mwhrw4l9-3\"]').filter({ hasText: 'TARGET_OK_3' }).first()\nExpected: visible\nTimeout: 360000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" getByTestId('chat-column').locator('[data-msg][data-from=\"c-mwhrw4l9-3\"]').filter({ hasText: 'TARGET_OK_3' }).first() with timeout 360000ms\n  - waiting for getByTestId('chat-column').locator('[data-msg][data-from=\"c-mwhrw4l9-3\"]').filter({ hasText: 'TARGET_OK_3' }).first()\n",
+      "ms": 360066,
+      "screenshot": "08-建群及指定联系人真实回复.png"
+    }
+  ],
+  "pageErrors": [],
+  "package": {
+    "packaged": true,
+    "version": "0.1.0",
+    "appPath": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release/mac-arm64/g-group.app/Contents/Resources/app.asar",
+    "sha256": "17378a2489af36e8e764aacee7f610c026cd0c99973594e12b3d539f3e89f4c1"
+  },
+  "previousResult": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/proof/pr101-r2/packaged/result.json",
+  "error": "建群及指定联系人真实回复 未通过"
+}

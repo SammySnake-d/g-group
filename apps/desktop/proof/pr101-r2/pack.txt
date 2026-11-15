@@ -1,0 +1,43 @@
+  • electron-builder  version=26.18.0 os=27.2.0
+  • loaded configuration  file=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release-stage/electron-builder.yml
+  • packageManager not detected by file, falling back to environment detection  resolvedPackageManager=npm detected=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release-stage
+  • detected workspace root for project using lock file  pm=npm config=undefined resolved=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra projectDir=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release-stage
+  • skipped dependencies rebuild  reason=npmRebuild is set to false
+  • packaging       platform=darwin arch=arm64 electron=39.8.10 appOutDir=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release/mac-arm64
+  • downloaded      label=electron progress=100%
+  ⨯ The server aborted pending request  failedTask=build stackTrace=ReadError: The server aborted pending request
+    at IncomingMessage.<anonymous> (/Users/snakesammy/.npm/_npx/186d6bad29d0bd10/node_modules/got/dist/source/core/index.js:809:31)
+    at Object.onceWrapper (node:events:622:28)
+    at IncomingMessage.emit (node:events:520:22)
+    at IncomingMessage.origin.emit (/Users/snakesammy/.npm/_npx/186d6bad29d0bd10/node_modules/@szmarczak/http-timer/dist/source/index.js:43:20)
+    at IncomingMessage._destroy (node:_http_incoming:221:10)
+    at _destroy (node:internal/streams/destroy:122:10)
+    at IncomingMessage.destroy (node:internal/streams/destroy:84:5)
+    at TLSSocket.socketCloseListener (node:_http_client:553:11)
+    at TLSSocket.emit (node:events:520:22)
+    at node:net:350:12
+    at TCP.done (node:internal/tls/wrap:669:7)
+node:internal/errors:998
+  const err = new Error(message);
+              ^
+
+Error: Command failed: npx -y electron-builder@26.18.0 --mac --publish never --config electron-builder.yml
+    at genericNodeError (node:internal/errors:998:15)
+    at wrappedFn (node:internal/errors:543:14)
+    at checkExecSyncError (node:child_process:925:11)
+    at execFileSync (node:child_process:961:15)
+    at run (file:///Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/scripts/pack-mac.mjs:16:40)
+    at file:///Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/scripts/pack-mac.mjs:40:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:639:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  status: 1,
+  signal: null,
+  output: [ null, null, null ],
+  pid: 68083,
+  stdout: null,
+  stderr: null
+}
+
+Node.js v25.8.1
+[serial] 结束,清掉残留进程 0 个

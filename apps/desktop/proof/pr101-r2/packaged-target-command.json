@@ -1,0 +1,13 @@
+{
+  "cwd": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop",
+  "command": [
+    "node",
+    "verify/serial.mjs",
+    "node",
+    "scripts/pr101-p0-walk.mjs",
+    "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release/mac-arm64/g-group.app/Contents/MacOS/g-group",
+    "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/proof/pr101-r2/packaged-target",
+    "/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gg-pr101-ud-V6mgik/gg-config.json",
+    "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/proof/pr101-r2/packaged/result.json"
+  ]
+}

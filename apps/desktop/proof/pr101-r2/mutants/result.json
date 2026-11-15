@@ -1,0 +1,37 @@
+{
+  "source": "bdde490cea067b31ac2831a8eb86ea6ad3e029f0",
+  "results": [
+    {
+      "id": "M-PASTE",
+      "criterion": "图片粘贴先进待发区",
+      "exit": 1,
+      "killed": true,
+      "other_criteria_failures": "未运行其他判据；本轮只声明定点检出，不声称隔离性全覆盖",
+      "log": "M-PASTE.txt"
+    },
+    {
+      "id": "M-REMOVE",
+      "criterion": "图片粘贴先进待发区",
+      "exit": 1,
+      "killed": true,
+      "other_criteria_failures": "未运行其他判据；本轮只声明定点检出，不声称隔离性全覆盖",
+      "log": "M-REMOVE.txt"
+    },
+    {
+      "id": "M-DRAFT",
+      "criterion": "图片草稿按会话保存",
+      "exit": 1,
+      "killed": true,
+      "other_criteria_failures": "未运行其他判据；本轮只声明定点检出，不声称隔离性全覆盖",
+      "log": "M-DRAFT.txt"
+    },
+    {
+      "id": "M-PREVIEW",
+      "criterion": "多图和文字只发一条消息",
+      "exit": 1,
+      "killed": true,
+      "other_criteria_failures": "未运行其他判据；本轮只声明定点检出，不声称隔离性全覆盖",
+      "log": "M-PREVIEW.txt"
+    }
+  ]
+}

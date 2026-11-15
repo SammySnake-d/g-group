@@ -1,0 +1,16 @@
+[
+  {
+    "path": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-red",
+    "files": 1207,
+    "bytes": 36108296,
+    "exit": 0,
+    "removed": true
+  },
+  {
+    "path": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-mutants",
+    "files": 1216,
+    "bytes": 36193595,
+    "exit": 0,
+    "removed": true
+  }
+]

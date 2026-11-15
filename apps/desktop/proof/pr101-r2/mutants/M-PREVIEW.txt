@@ -1,0 +1,66 @@
+
+> @g-group/desktop@0.1.0 build:renderer
+> vite build
+
+vite v8.3.6 building client environment for production...
+transforming...
+✓ 4071 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                        1.08 kB │ gzip:   0.52 kB
+dist/assets/index-DAKm5_do.css                       369.48 kB │ gzip:  60.12 kB
+dist/assets/mergeProps-ptS-gIMz.js                     0.59 kB │ gzip:   0.31 kB
+dist/assets/MenuBottomSheet-MiIBd7Zt.js                0.67 kB │ gzip:   0.42 kB
+dist/assets/MenuBottomSheetActionList-BdeRPvey.js      2.00 kB │ gzip:   1.07 kB
+dist/assets/ItemSwipeLayer-DbxqITvb.js                 9.11 kB │ gzip:   3.59 kB
+dist/assets/coarsePointer-Da-5cMux.js                 25.02 kB │ gzip:   7.43 kB
+dist/assets/useLayerDismissal-BB7sHgN6.js             40.52 kB │ gzip:  14.60 kB
+dist/assets/useTooltip-CpVx_tSY.js                    51.88 kB │ gzip:  17.11 kB
+dist/assets/BottomSheet-BrEsBX1w.js                   80.59 kB │ gzip:  27.18 kB
+dist/assets/index-BBMGKEtQ.js                      2,099.49 kB │ gzip: 675.08 kB
+
+✓ built in 1.10s
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+Running 1 test using 1 worker
+
+  ✘  1 [electron] › e2e/pr101-p0.electron.spec.ts:85:1 › 多图和文字只发一条消息，聊天缩略图点击原地放大、关闭回到原聊天，重启仍能查看 (7.9s)
+
+
+  1) [electron] › e2e/pr101-p0.electron.spec.ts:85:1 › 多图和文字只发一条消息，聊天缩略图点击原地放大、关闭回到原聊天，重启仍能查看 ──────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByTestId('image-preview')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByTestId('image-preview') with timeout 5000ms
+      - waiting for getByTestId('image-preview')
+
+
+       97 |     await expect(mine(run.win).locator('[data-testid^="attachment-"] img')).toHaveCount(2)
+       98 |     await run.win.getByTestId('attachment-first.png').click()
+    >  99 |     await expect(run.win.getByTestId('image-preview')).toBeVisible()
+          |                                                        ^
+      100 |     await expect(run.win.getByTestId('image-preview').locator('img')).toHaveJSProperty('naturalWidth', 1)
+      101 |     await expect(run.win.getByTestId('chat-column')).toBeVisible()
+      102 |     await expect(run.win.getByTestId('files-main')).toHaveCount(0)
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-mutants/apps/desktop/e2e/pr101-p0.electron.spec.ts:99:56
+
+    Error Context: test-results/pr101-p0.electron-多图和文字只发一条消息，聊天缩略图点击原地放大、关闭回到原聊天，重启仍能查看-electron/error-context.md
+
+  1 failed
+    [electron] › e2e/pr101-p0.electron.spec.ts:85:1 › 多图和文字只发一条消息，聊天缩略图点击原地放大、关闭回到原聊天，重启仍能查看 ───────
+[WebServer] (node:35063) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:35095) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+(node:35098) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)

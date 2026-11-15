@@ -1,0 +1,6 @@
+
+> @g-group/desktop@0.1.0 verify:structure
+> node verify/structure.mjs
+
+文件 347 个;超过 400 行的 0 个;原生 <button> 共 0 个
+结构检查通过

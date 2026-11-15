@@ -1,0 +1,22 @@
+  • electron-builder  version=26.18.0 os=27.2.0
+  • loaded configuration  file=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release-stage/electron-builder.yml
+  • packageManager not detected by file, falling back to environment detection  resolvedPackageManager=npm detected=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release-stage
+  • detected workspace root for project using lock file  pm=npm config=undefined resolved=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra projectDir=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release-stage
+  • skipped dependencies rebuild  reason=npmRebuild is set to false
+  • packaging       platform=darwin arch=arm64 electron=39.8.10 appOutDir=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release/mac-arm64
+  • using custom unpacked Electron distribution  electronDist=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-desktop-backend-parity/apps/desktop/node_modules/electron/dist
+  • copying unpacked Electron  source=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-desktop-backend-parity/apps/desktop/node_modules/electron/dist/Electron.app destination=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release/mac-arm64/Electron.app
+  • searching for node modules  pm=npm searchDir=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release-stage
+  • no node modules found in collection, trying next search directory  pm=npm searchDir=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release-stage
+  • searching for node modules  pm=npm searchDir=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra
+  • duplicate dependency references  dependencies=["@g-group/kernel@undefined","@g-group/adapter-cc-compute@undefined","@g-group/adapter-pi-contact@undefined","@g-group/adapter-sqlite@undefined","@g-group/kernel@undefined"]
+  • default Electron icon is used  reason=application icon is not set
+  • ad-hoc signing with hardenedRuntime enabled requires the com.apple.security.cs.disable-library-validation entitlement to prevent app launch failures due to library validation. See https://electron.build/code-signing for details.
+  • signing         file=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release/mac-arm64/g-group.app platform=darwin type=distribution identityName=- identityHash=none provisioningProfile=none
+  • skipped macOS notarization  reason=`notarize` options were unable to be generated
+  • building        target=macOS zip arch=arm64 file=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release/g-group-0.1.0-arm64-mac.zip
+  • building        target=DMG arch=arm64 file=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release/g-group-0.1.0-arm64.dmg
+  • building block map  blockMapFile=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release/g-group-0.1.0-arm64-mac.zip.blockmap
+
+已打包 g-group 0.1.0:/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/release
+[serial] 结束,清掉残留进程 0 个

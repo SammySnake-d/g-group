@@ -1,0 +1,186 @@
+[WebServer] (node:12909) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:12941) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 21 tests using 1 worker
+
+(node:13045) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [renderer] › e2e/compute.ui.spec.ts:138:5 › Compute 卡与 harness 会话 light › 完整过程面板里失败的卡:「出错了」+ 一条细线提示条(不是红底块),重试原地可点 (907ms)
+  ✓   2 [renderer] › e2e/compute.ui.spec.ts:138:5 › Compute 卡与 harness 会话 dark › 完整过程面板里失败的卡:「出错了」+ 一条细线提示条(不是红底块),重试原地可点 (821ms)
+  ✓   3 [renderer] › e2e/concept-clips.ui.spec.ts:100:3 › 连拍 · 目光(light):打字时等你的头像眼睛跟着光标走,回完眯眼笑 (6.1s)
+  ✓   4 [renderer] › e2e/concept-clips.ui.spec.ts:100:3 › 连拍 · 目光(dark):打字时等你的头像眼睛跟着光标走,回完眯眼笑 (6.3s)
+  ✓   5 [renderer] › e2e/concept.ui.spec.ts:99:5 › 概念 light › 目光:挂着等你的事的头像看向输入框,打字时眼睛跟着光标走;回答后眯眼笑 (1.6s)
+  ✓   6 [renderer] › e2e/concept.ui.spec.ts:99:5 › 概念 dark › 目光:挂着等你的事的头像看向输入框,打字时眼睛跟着光标走;回答后眯眼笑 (1.6s)
+  ✓   7 [renderer] › e2e/files-context.ui.spec.ts:44:1 › 来处：对话名打开对话；资产从「存下」那条来；没有来处时只留对话名 (1.0s)
+  ✓   8 [renderer] › e2e/models.ui.spec.ts:25:1 › 联系人 Compute 槽位切换三态:生效值和继承链跟着变 (1.1s)
+  ✓   9 [renderer] › e2e/models.ui.spec.ts:62:1 › 选了 Harness 跑不了的模型:就地阻断、给两条修复路径、保存不可用;点「单独指定兼容模型」后恢复可保存 (1.2s)
+  ✓  10 [renderer] › e2e/models.ui.spec.ts:98:1 › 改上游的说话模型:跟随它的 Compute 同样拦下;只能用来说话的模型没有可换的 Harness,只给一条路 (735ms)
+  ✓  11 [renderer] › e2e/models.ui.spec.ts:113:1 › 改模型保存后提示「下一轮生效、正在跑的这一轮不打断」,私聊里留记录;换 Harness 另外说明 (900ms)
+  ✓  12 [renderer] › e2e/models.ui.spec.ts:138:1 › 卡死阈值放在高级里:默认 15 分钟 / 120 秒,可以按联系人单独设,不合理的数不能保存 (1.0s)
+  ✓  13 [renderer] › e2e/models.ui.spec.ts:155:1 › 全局默认改 Compute 模型:先显示会影响几位联系人和失配,修好才能保存;保存后继承者用新值 (1.8s)
+  ✓  14 [renderer] › e2e/models.ui.spec.ts:182:1 › 默认 Harness 和默认 Compute 模型组合不成立时不能保存;只改默认说话模型说明只影响新建联系人 (1.8s)
+  ✓  15 [renderer] › e2e/models.ui.spec.ts:198:1 › 批量替换:预览三栏条目正确,冲突处理完才能确认;确认后联系人列表更新,在途任务按启动快照跑完 (3.1s)
+  ✘  16 [renderer] › e2e/models.ui.spec.ts:247:1 › 模型只在两处配:资料页只显示、点了去工作台设置;添加联系人不选模型,用全局默认 (132ms)
+(node:13650) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  17 [renderer] › e2e/progress.ui.spec.ts:76:1 › 关闭:Esc、点暗背景、×;搜索框里 Esc 先清搜索 (2.4s)
+  ✓  18 [renderer] › e2e/shell-look.ui.spec.ts:52:5 › 壳的观感 light › 进群就停在最底部:提问卡等内容展开变高后仍贴底,不冒出「回到最新」 (3.3s)
+  ✓  19 [renderer] › e2e/shell-look.ui.spec.ts:52:5 › 壳的观感 dark › 进群就停在最底部:提问卡等内容展开变高后仍贴底,不冒出「回到最新」 (3.3s)
+  ✓  20 [renderer] › e2e/visual.ui.spec.ts:50:5 › F-VISUAL light › 正文、会话标题、次要文字的对比度达标 (742ms)
+  ✓  21 [renderer] › e2e/visual.ui.spec.ts:50:5 › F-VISUAL dark › 正文、会话标题、次要文字的对比度达标 (730ms)
+
+
+  1) [renderer] › e2e/models.ui.spec.ts:247:1 › 模型只在两处配:资料页只显示、点了去工作台设置;添加联系人不选模型,用全局默认 ────────────
+
+    Error: page.goto: net::ERR_ABORTED; maybe frame was detached?
+    Call log:
+      - navigating to "http://localhost:5198/?freeze=1&conv=dm-claude", waiting until "load"
+
+
+      246 |
+      247 | test("模型只在两处配:资料页只显示、点了去工作台设置;添加联系人不选模型,用全局默认", async ({ page }) => {
+    > 248 |   await page.goto("/?freeze=1&conv=dm-claude");
+          |              ^
+      249 |   await page.getByTestId("chat-more").click();
+      250 |   await expect(page.getByTestId("person-model")).toContainText("Claude Opus 5.5 · Compute 跟随说话模型");
+      251 |   await expect(page.locator('[data-testid="float"] select')).toHaveCount(0);
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/e2e/models.ui.spec.ts:248:14
+
+    Error: browserContext.close: Test ended.
+    Browser logs:
+
+    <launching> /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-edgeupdater --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,HttpsUpgrades,HttpsFirstBalancedModeAutoEnable,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,AvoidCorsURLLoaderRestartOnRedirect,TcpPortRandomizationWin,OptimizationHints,NetworkTimeServiceQuerying,AimEnabled,PreconnectToSearch,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion --enable-features=CDPScreenshotNewSurface,SkipListAccountsWithoutGaiaCookies --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-updater-scheduler --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --enable-unsafe-swiftshader --edge-skip-compat-layer-relaunch --disable-stack-profiler --disable-infobars --disable-sync --do-not-de-elevate --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --disable-features=MacAppCodeSignClone --user-data-dir=/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/playwright_chromiumdev_profile-IU7tqa --remote-debugging-pipe --no-startup-window
+    <launched> pid=13055
+    [pid=13055][err] Trying to load the allocator multiple times. This is *not* supported.
+    [pid=13055][err] [13135:27863987:1115/194612.464149:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194612.464551:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194612.470345:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194612.470441:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194612.470567:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194612.470605:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194613.276016:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194613.276076:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194613.276575:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194613.276619:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194613.276720:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194613.276756:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194614.083151:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194614.083206:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194614.084888:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194614.084952:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194614.087287:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194614.087335:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194620.291907:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194620.291973:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194620.292399:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194620.292442:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194620.292539:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194620.292582:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194626.560119:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194626.560188:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194626.560656:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194626.560697:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194626.560790:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194626.560829:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] Created TensorFlow Lite XNNPACK delegate for CPU.
+    [pid=13055][err] [13135:27863987:1115/194628.121466:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:260] SharedImageManager::ProduceSkia: Trying to Produce a Skia representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.121560:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:260] SharedImageManager::ProduceSkia: Trying to Produce a Skia representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.123447:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:376] SharedImageManager::ProduceOverlay: Trying to Produce a Overlay representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.123456:ERROR:components/viz/service/display_embedder/skia_output_device_buffer_queue.cc:258] Invalid mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.123458:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:376] SharedImageManager::ProduceOverlay: Trying to Produce a Overlay representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.123460:ERROR:components/viz/service/display_embedder/skia_output_device_buffer_queue.cc:258] Invalid mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.123498:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:376] SharedImageManager::ProduceOverlay: Trying to Produce a Overlay representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.123505:ERROR:components/viz/service/display_embedder/skia_output_device_buffer_queue.cc:258] Invalid mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.123507:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:376] SharedImageManager::ProduceOverlay: Trying to Produce a Overlay representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.123510:ERROR:components/viz/service/display_embedder/skia_output_device_buffer_queue.cc:258] Invalid mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.123511:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:376] SharedImageManager::ProduceOverlay: Trying to Produce a Overlay representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.123513:ERROR:components/viz/service/display_embedder/skia_output_device_buffer_queue.cc:258] Invalid mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.123514:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:376] SharedImageManager::ProduceOverlay: Trying to Produce a Overlay representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.123516:ERROR:components/viz/service/display_embedder/skia_output_device_buffer_queue.cc:258] Invalid mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.123518:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:376] SharedImageManager::ProduceOverlay: Trying to Produce a Overlay representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.123519:ERROR:components/viz/service/display_embedder/skia_output_device_buffer_queue.cc:258] Invalid mailbox.
+    [pid=13055][err] [13135:27863987:1115/194628.207764:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194628.207822:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194628.211502:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194628.211566:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194628.211674:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194628.211713:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194629.771082:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:260] SharedImageManager::ProduceSkia: Trying to Produce a Skia representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194629.771190:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:260] SharedImageManager::ProduceSkia: Trying to Produce a Skia representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194629.771645:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:376] SharedImageManager::ProduceOverlay: Trying to Produce a Overlay representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194629.771651:ERROR:components/viz/service/display_embedder/skia_output_device_buffer_queue.cc:258] Invalid mailbox.
+    [pid=13055][err] [13135:27863987:1115/194629.771653:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:376] SharedImageManager::ProduceOverlay: Trying to Produce a Overlay representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194629.771655:ERROR:components/viz/service/display_embedder/skia_output_device_buffer_queue.cc:258] Invalid mailbox.
+    [pid=13055][err] [13135:27863987:1115/194629.771670:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:376] SharedImageManager::ProduceOverlay: Trying to Produce a Overlay representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194629.771676:ERROR:components/viz/service/display_embedder/skia_output_device_buffer_queue.cc:258] Invalid mailbox.
+    [pid=13055][err] [13135:27863987:1115/194629.771680:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:376] SharedImageManager::ProduceOverlay: Trying to Produce a Overlay representation from a non-existent mailbox.
+    [pid=13055][err] [13135:27863987:1115/194629.771682:ERROR:components/viz/service/display_embedder/skia_output_device_buffer_queue.cc:258] Invalid mailbox.
+    [pid=13055][err] [13135:27863987:1115/194629.833133:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194629.833191:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194629.834881:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194629.834935:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194629.835850:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194629.835923:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194630.861185:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194630.861253:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194630.865647:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194630.865716:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194630.865855:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194630.865901:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194631.955756:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194631.955843:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194631.956363:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194631.956404:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194631.958820:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194631.958867:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194633.225244:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194633.225326:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194633.226015:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194633.226058:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194633.226158:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194633.226211:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194633.977511:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194633.977570:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194633.978236:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194633.978293:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194633.979917:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194633.979983:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194634.857529:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194634.857584:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194634.858106:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194634.858147:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194634.861396:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194634.861460:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194635.859055:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194635.859113:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194635.859633:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194635.859676:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194635.861223:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194635.861270:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194637.686386:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194637.686447:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194637.687743:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194637.687787:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194637.690921:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194637.691000:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194639.491788:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194639.491843:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194639.492194:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194639.492244:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194639.493725:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194639.493773:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194642.540951:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194642.541019:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194642.541505:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194642.541565:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27863987:1115/194642.543876:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+    [pid=13055][err] [13135:27864031:1115/194642.543928:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+
+    Error Context: test-results/models.ui-模型只在两处配-资料页只显示、点了去工作台设置-添加联系人不选模型-用全局默认-renderer/error-context.md
+
+  1 failed
+    [renderer] › e2e/models.ui.spec.ts:247:1 › 模型只在两处配:资料页只显示、点了去工作台设置;添加联系人不选模型,用全局默认 ─────────────
+  20 passed (45.7s)
+[serial] 结束,清掉残留进程 0 个

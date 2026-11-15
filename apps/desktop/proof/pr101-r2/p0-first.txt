@@ -1,0 +1,123 @@
+[WebServer] (node:24847) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:24901) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 7 tests using 1 worker
+
+(node:24902) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [electron] › e2e/parity-r2-cron.electron.spec.ts:223:1 › 斜杠命令:/todo、/notice 连后端时可用并写进后端;后端的 /remind 在菜单里,发出后定时页出现这条定时;/summary 仍灰着并写明原因 (8.9s)
+  ✓  2 [electron] › e2e/parity-r2-pano.electron.spec.ts:70:1 › 停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、最后进展,全景卡也写无进展 (3.4s)
+  ✘  3 [electron] › e2e/pr101-p0.electron.spec.ts:34:1 › 图片粘贴先进待发区、不发消息；逐张删除后只留下另一张 (7.7s)
+(node:29348) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  4 [electron] › e2e/pr101-p0.electron.spec.ts:55:1 › 图片草稿按会话保存，切走和重启不丢；纯图也能回车发送 (5.6s)
+  ✘  5 [electron] › e2e/pr101-p0.electron.spec.ts:79:1 › 多图和文字只发一条消息，聊天缩略图点击原地放大、关闭回到原聊天，重启仍能查看 (2.9s)
+(node:32668) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  6 [electron] › e2e/pr101-p0.electron.spec.ts:112:1 › 设置模型来自网关、当前值保留且选中，单独换说话模型后重启仍保存，新联系人使用新值 (32.1s)
+(node:34141) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  7 [electron] › e2e/pr101-p0.electron.spec.ts:145:1 › 目录读取失败时保留当前模型，禁用换模并说清原因，不填演示目录 (7.0s)
+
+
+  1) [electron] › e2e/pr101-p0.electron.spec.ts:34:1 › 图片粘贴先进待发区、不发消息；逐张删除后只留下另一张 ──────────────────
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  getByTestId('composer-images').locator('[data-pending-image]')
+    Expected: 1
+    Received: 0
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCount" getByTestId('composer-images').locator('[data-pending-image]') with timeout 5000ms
+      - waiting for getByTestId('composer-images').locator('[data-pending-image]')
+        14 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      40 |     await app.evaluate(({ clipboard, nativeImage }, b64) => clipboard.writeImage(nativeImage.createFromBuffer(Buffer.from(b64, 'base64'))), png.toString('base64'))
+      41 |     await win.getByTestId('composer').press('Meta+V')
+    > 42 |     await expect(pending(win)).toHaveCount(1)
+         |                                ^
+      43 |     await expect(pending(win).locator('img')).toBeVisible()
+      44 |     await expect(mine(win)).toHaveCount(before)
+      45 |     await win.getByTestId('image-input').setInputFiles(image('second.png'))
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/e2e/pr101-p0.electron.spec.ts:42:32
+
+    Error Context: test-results/pr101-p0.electron-图片粘贴先进待发区、不发消息；逐张删除后只留下另一张-electron/error-context.md
+
+  2) [electron] › e2e/pr101-p0.electron.spec.ts:79:1 › 多图和文字只发一条消息，聊天缩略图点击原地放大、关闭回到原聊天，重启仍能查看 ──────
+
+    Error: locator.click: Error: strict mode violation: getByTestId('attachment-first.png') resolved to 2 elements:
+        1) <div data-elevation="none" data-variant="default" data-astryx-pressable="" data-pressable-container="true" data-testid="attachment-first.png" class="astryx-card x2kkz0m x153u1i6 xeuugli x7giv3 x1p8z4y0 x1de1mus xw28qpl x5lhr3w xf68679 x9f619 x1vii845 xojybgt x1gu2k80 x91ghl5 x1i3qcxz xkunwnr xswhm3q x1mzf5mb xj1bl4l xwuefyo x1litavf x1y0btm7 x1n2onr6 x1ypdohk x16khyan x1hl2dhg x1heor9g x14i3s5s xs19ii7 x12frdag x1nex4ik xbv1mwh xshfolx x1xcegdw xuedmi6 xo2sced x18etpvv xlr8y92 xro0fum x1s9pv7w xb8a…>…</div> aka getByTestId('attachment-first.png').first()
+        2) <div data-elevation="none" data-variant="default" data-astryx-pressable="" data-pressable-container="true" data-testid="attachment-first.png" class="astryx-card x2kkz0m x153u1i6 xeuugli x7giv3 x1p8z4y0 x1de1mus xw28qpl x5lhr3w xf68679 x9f619 x1vii845 xojybgt x1gu2k80 x91ghl5 x1i3qcxz xkunwnr xswhm3q x1mzf5mb xj1bl4l xwuefyo x1litavf x1y0btm7 x1n2onr6 x1ypdohk x16khyan x1hl2dhg x1heor9g x14i3s5s xs19ii7 x12frdag x1nex4ik xbv1mwh xshfolx x1xcegdw xuedmi6 xo2sced x18etpvv xlr8y92 xro0fum x1s9pv7w xb8a…>…</div> aka getByTestId('attachment-first.png').nth(1)
+
+    Call log:
+      - waiting for getByTestId('attachment-first.png')
+
+
+      90 |     await expect(mine(run.win)).toContainText('这两张一起发送')
+      91 |     await expect(mine(run.win).locator('[data-testid^="attachment-"] img')).toHaveCount(2)
+    > 92 |     await run.win.getByTestId('attachment-first.png').click()
+         |                                                       ^
+      93 |     await expect(run.win.getByTestId('image-preview')).toBeVisible()
+      94 |     await expect(run.win.getByTestId('image-preview').locator('img')).toHaveJSProperty('naturalWidth', 1)
+      95 |     await expect(run.win.getByTestId('chat-column')).toBeVisible()
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/e2e/pr101-p0.electron.spec.ts:92:55
+
+    Error Context: test-results/pr101-p0.electron-多图和文字只发一条消息，聊天缩略图点击原地放大、关闭回到原聊天，重启仍能查看-electron/error-context.md
+
+  3) [electron] › e2e/pr101-p0.electron.spec.ts:112:1 › 设置模型来自网关、当前值保留且选中，单独换说话模型后重启仍保存，新联系人使用新值 ───
+
+    TimeoutError: locator.click: Timeout 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('def-talk').getByRole('combobox')
+
+
+      28 | const pending = (win: Page) => win.getByTestId('composer-images').locator('[data-pending-image]')
+      29 | async function pickModel(win: Page, id: string, label: string) {
+    > 30 |   await win.getByTestId(id).getByRole('combobox').click()
+         |                                                   ^
+      31 |   await win.getByRole('option', { name: label, exact: true }).click()
+      32 | }
+      33 |
+        at pickModel (/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/e2e/pr101-p0.electron.spec.ts:30:51)
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/e2e/pr101-p0.electron.spec.ts:128:11
+
+    Error Context: test-results/pr101-p0.electron-设置模型来自网关、当前值保留且选中，单独换说话模型后重启仍保存，新联系人使用新值-electron/error-context.md
+
+  4) [electron] › e2e/pr101-p0.electron.spec.ts:145:1 › 目录读取失败时保留当前模型，禁用换模并说清原因，不填演示目录 ─────────────
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator: getByTestId('def-talk').getByRole('combobox')
+    Expected: "true"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveAttribute" getByTestId('def-talk').getByRole('combobox') with timeout 5000ms
+      - waiting for getByTestId('def-talk').getByRole('combobox')
+
+
+      152 |     await expect(win.getByTestId('model-catalog-error')).toContainText('模型目录', LONG)
+      153 |     await expect(win.getByTestId('def-talk')).toContainText('fixture/retained')
+    > 154 |     await expect(win.getByTestId('def-talk').getByRole('combobox')).toHaveAttribute('aria-disabled', 'true')
+          |                                                                     ^
+      155 |     await expect(win.getByTestId('model-defaults')).not.toContainText('Claude Opus 5.5')
+      156 |     await expect(win.getByTestId('model-catalog-error')).toContainText('模型接入')
+      157 |   } finally { await app.close(); rmSync(ud, { recursive: true, force: true }) }
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/e2e/pr101-p0.electron.spec.ts:154:69
+
+    Error Context: test-results/pr101-p0.electron-目录读取失败时保留当前模型，禁用换模并说清原因，不填演示目录-electron/error-context.md
+
+  4 failed
+    [electron] › e2e/pr101-p0.electron.spec.ts:34:1 › 图片粘贴先进待发区、不发消息；逐张删除后只留下另一张 ───────────────────
+    [electron] › e2e/pr101-p0.electron.spec.ts:79:1 › 多图和文字只发一条消息，聊天缩略图点击原地放大、关闭回到原聊天，重启仍能查看 ───────
+    [electron] › e2e/pr101-p0.electron.spec.ts:112:1 › 设置模型来自网关、当前值保留且选中，单独换说话模型后重启仍保存，新联系人使用新值 ────
+    [electron] › e2e/pr101-p0.electron.spec.ts:145:1 › 目录读取失败时保留当前模型，禁用换模并说清原因，不填演示目录 ──────────────
+  3 passed (1.2m)
+[serial] 结束,清掉残留进程 0 个

@@ -1,0 +1,46 @@
+[serial] 等别的测试跑完(/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop)…
+[WebServer] (node:68686) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:68718) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 7 tests using 1 worker
+
+(node:68783) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [renderer] › e2e/compute.ui.spec.ts:138:5 › Compute 卡与 harness 会话 light › 完整过程面板里失败的卡:「出错了」+ 一条细线提示条(不是红底块),重试原地可点 (687ms)
+  ✓  2 [renderer] › e2e/compute.ui.spec.ts:138:5 › Compute 卡与 harness 会话 dark › 完整过程面板里失败的卡:「出错了」+ 一条细线提示条(不是红底块),重试原地可点 (669ms)
+  ✓  3 [renderer] › e2e/concept-clips.ui.spec.ts:100:3 › 连拍 · 目光(light):打字时等你的头像眼睛跟着光标走,回完眯眼笑 (5.9s)
+  ✓  4 [renderer] › e2e/concept-clips.ui.spec.ts:100:3 › 连拍 · 目光(dark):打字时等你的头像眼睛跟着光标走,回完眯眼笑 (6.0s)
+  ✘  5 [renderer] › e2e/concept.ui.spec.ts:99:5 › 概念 light › 目光:挂着等你的事的头像看向输入框,打字时眼睛跟着光标走;回答后眯眼笑 (6.1s)
+(node:69079) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  6 [renderer] › e2e/concept.ui.spec.ts:99:5 › 概念 dark › 目光:挂着等你的事的头像看向输入框,打字时眼睛跟着光标走;回答后眯眼笑 (1.5s)
+  ✓  7 [renderer] › e2e/files-context.ui.spec.ts:44:1 › 来处：对话名打开对话；资产从「存下」那条来；没有来处时只留对话名 (994ms)
+
+
+  1) [renderer] › e2e/concept.ui.spec.ts:99:5 › 概念 light › 目光:挂着等你的事的头像看向输入框,打字时眼睛跟着光标走;回答后眯眼笑 ─────
+
+    Error: expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0.47
+    Received:   0.46
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      113 |       await expect(page.getByTestId("gaze-g12")).toHaveAttribute("data-live", "1");
+      114 |       await composer(page).pressSequentially("先只接飞书，按我勾选的内容引用就行，全量同步以后再说");
+    > 115 |       await expect.poll(async () => (await look("g12"))[0]).toBeGreaterThan(x0 + 0.1);
+          |                                                             ^
+      116 |       await shot(page, `concept/gaze-${theme}`, 400);
+      117 |       await composer(page).fill("");
+      118 |       // 回答了第一件:Argon 合并在同一个头像下的第二件(等你同意)还在等,头像继续看你
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-red/apps/desktop/e2e/concept.ui.spec.ts:115:61
+
+    Error Context: test-results/concept.ui-概念-light-目光-挂着等你的事的头像看向输入框-打字时眼睛跟着光标走-回答后眯眼笑-renderer/error-context.md
+
+  1 failed
+    [renderer] › e2e/concept.ui.spec.ts:99:5 › 概念 light › 目光:挂着等你的事的头像看向输入框,打字时眼睛跟着光标走;回答后眯眼笑 ──────
+  6 passed (30.0s)
+[serial] 结束,清掉残留进程 0 个

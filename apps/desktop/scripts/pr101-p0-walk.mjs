@@ -10,21 +10,27 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
 const { _electron: electron, expect } = require('@playwright/test')
-const [binary, output, configOwner] = process.argv.slice(2)
+const [binary, output, configOwner, resumeFrom] = process.argv.slice(2)
 if (!binary || !output || !configOwner) throw new Error('需要二进制、输出目录、现有配置所有者路径')
 const out = path.resolve(output)
 mkdirSync(out, { recursive: true })
 const gateway = JSON.parse(readFileSync(configOwner, 'utf8')).gateway
 const model = 'fengshao1227/deepseek-v4.1-flash'
 if (!gateway?.token || !gateway.baseUrl.includes('127.0.0.1:3425')) throw new Error('配置未解析到指定的本机网关')
-const ud = mkdtempSync(path.join(tmpdir(), 'gg-pr101-r2-packaged-'))
+const prior = resumeFrom ? JSON.parse(readFileSync(resumeFrom, 'utf8')) : null
+const ud = prior?.userData ?? mkdtempSync(path.join(tmpdir(), 'gg-pr101-r2-packaged-'))
 const desktop = path.resolve(import.meta.dirname, '..')
 const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: desktop, encoding: 'utf8' }).trim()
 const result = { head, binary, model, gateway: gateway.baseUrl, userData: ud, steps: [], pageErrors: [], package: {} }
+if (prior) {
+  result.previousResult = path.resolve(resumeFrom)
+  result.steps = prior.steps.slice(0, 7).map((s) => ({ ...s, screenshot: path.relative(out, path.resolve(path.dirname(resumeFrom), s.screenshot)) }))
+  result.package = prior.package
+}
 const env = Object.fromEntries(Object.entries(process.env).filter(([k, v]) => !['ELECTRON_RUN_AS_NODE', 'GG_MIND', 'GG_DATA_DIR', 'GG_REVIEW_TOKEN'].includes(k) && !k.startsWith('ANTHROPIC_') && typeof v === 'string'))
 let app, win
 const save = () => writeFileSync(path.join(out, 'result.json'), JSON.stringify(result, null, 2) + '\n')
-let n = 0
+let n = prior ? 7 : 0
 const step = async (name, fn) => {
   const start = Date.now()
   const row = { name, ok: false }
@@ -57,13 +63,15 @@ const column = () => win.getByTestId('chat-column')
 const own = () => column().locator('[data-msg][data-from="me"]')
 const pending = () => win.getByTestId('composer-images').locator('[data-pending-image]')
 const send = async (text) => { await win.getByTestId('composer').fill(text); await win.getByTestId('composer').press('Enter') }
-const reply = async (marker) => {
-  const rows = column().locator('[data-msg]:not([data-from="me"]):not([data-testid^="replying-"])').filter({ hasText: marker })
+const reply = async (marker, expectedFrom) => {
+  const selector = expectedFrom ? `[data-msg][data-from="${expectedFrom}"]` : '[data-msg]:not([data-from="me"]):not([data-testid^="replying-"])'
+  const rows = column().locator(selector).filter({ hasText: marker })
   await expect(rows.first()).toBeVisible({ timeout: 360_000 })
   return { text: (await rows.first().innerText()).slice(0, 300), from: await rows.first().getAttribute('data-from') }
 }
 try {
   await launch()
+  if (!prior) {
   await step('首次接入', async () => {
     const info = await app.evaluate(({ app }) => ({ packaged: app.isPackaged, version: app.getVersion(), appPath: app.getAppPath() }))
     if (!info.packaged) throw new Error('需要真正的打包版')
@@ -134,23 +142,50 @@ try {
     if (!dimensions.width || !dimensions.complete) throw new Error('预览图未加载')
     await expect(column()).toBeVisible()
     await expect(win.getByTestId('files-main')).toHaveCount(0)
+    await win.screenshot({ path: path.join(out, '07a-聊天原地放大.png') })
     await win.getByRole('button', { name: '关闭图片预览' }).click()
     await expect(preview).toHaveCount(0)
     await expect(win.getByTestId('chat').locator('header')).toContainText('小克')
     return dimensions
   })
+  } else {
+    // 复用已验完的七步和同一个 profile，只补目标联系人的真实回执。
+    await win.getByTestId('setup-base-url').fill(gateway.baseUrl)
+    await win.getByTestId('setup-token').fill(gateway.token)
+    await win.getByTestId('setup-model').fill(model)
+    await win.getByTestId('setup-save').click()
+    await expect(win.getByTestId('backend-demo')).toHaveAttribute('data-wire', 'live', LONG)
+    await win.getByTestId('list').locator('[data-testid^="conv-g-"]').filter({ hasText: 'P0打包验收群' }).click()
+    // 补留真正打开大图时的截图；不重发已经完成的图片消息。
+    await win.getByTestId('list').locator('[data-testid^="conv-dm-"]').filter({ hasText: '小克' }).click()
+    await own().filter({ hasText: '这是一张截图' }).locator('[data-testid^="attachment-"]').click()
+    await expect(win.getByTestId('image-preview')).toBeVisible(LONG)
+    await win.screenshot({ path: path.join(out, '07a-聊天原地放大.png') })
+    await win.getByRole('button', { name: '关闭图片预览' }).click()
+    await win.getByTestId('list').locator('[data-testid^="conv-g-"]').filter({ hasText: 'P0打包验收群' }).click()
+  }
   await step('建群及指定联系人真实回复', async () => {
+    if (!prior) {
     await win.getByTestId('nav-contacts').click()
     await win.getByTestId('list').getByText('发起群聊', { exact: true }).click()
     await win.getByLabel('群名').fill('P0打包验收群')
     for (const name of ['小克', '小林']) await win.locator('label').filter({ hasText: name }).getByRole('checkbox').click()
     await win.getByRole('button', { name: '创建群聊（3 人）' }).click()
     await expect(win.getByTestId('chat-title')).toContainText('P0打包验收群')
+    }
+    const target = await win.evaluate(async () => {
+      const r = await window.gg.invoke('contacts.list', {})
+      if (!r.ok) throw new Error('联系人列表没读到')
+      return r.value.contacts.find((p) => p.name === '小林')?.id
+    })
+    if (!target) throw new Error('没找到被点名的小林')
     const box = win.getByTestId('composer')
-    await box.fill('@小林 请只回复这八个字符:GRP_OK_2,不要做别的事。')
+    const marker = prior ? 'TARGET_OK_3' : 'GRP_OK_2'
+    await box.fill(`@小林 请只回复这些字符:${marker},不要做别的事。`)
     await box.press('Escape'); await box.press('Enter')
-    const response = await reply('GRP_OK_2')
-    return { ...response, routingScope: '只验收到真实回复；未点名者起回合/互相唤醒另由后端 #106 修复' }
+    const response = await reply(marker, target)
+    const others = await column().locator('[data-msg]:not([data-from="me"]):not([data-testid^="replying-"])').filter({ hasText: marker }).evaluateAll((els) => els.map((e) => ({ from: e.getAttribute('data-from'), text: e.innerText.slice(0, 300) })))
+    return { ...response, expectedFrom: target, observedReplies: others, routingScope: '确认为被点名的小林收到并给出真实回复；未点名者起回合/互相唤醒另由后端 #106 修复' }
   })
 } catch (e) { result.error = String(e.message) }
 finally {

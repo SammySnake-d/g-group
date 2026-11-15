@@ -1,0 +1,94 @@
+[WebServer] (node:52907) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:52939) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 7 tests using 1 worker
+
+(node:52961) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [electron] › e2e/parity-r2-cron.electron.spec.ts:223:1 › 斜杠命令:/todo、/notice 连后端时可用并写进后端;后端的 /remind 在菜单里,发出后定时页出现这条定时;/summary 仍灰着并写明原因 (8.5s)
+  ✓  2 [electron] › e2e/parity-r2-pano.electron.spec.ts:70:1 › 停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、最后进展,全景卡也写无进展 (3.8s)
+  ✓  3 [electron] › e2e/pr101-p0.electron.spec.ts:36:1 › 图片粘贴先进待发区、不发消息；逐张删除后只留下另一张 (2.8s)
+  ✓  4 [electron] › e2e/pr101-p0.electron.spec.ts:57:1 › 图片草稿按会话保存，切走和重启不丢；纯图也能回车发送 (5.7s)
+  ✘  5 [electron] › e2e/pr101-p0.electron.spec.ts:81:1 › 多图和文字只发一条消息，聊天缩略图点击原地放大、关闭回到原聊天，重启仍能查看 (8.0s)
+(node:60958) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  6 [electron] › e2e/pr101-p0.electron.spec.ts:114:1 › 设置模型来自网关、当前值保留且选中，单独换说话模型后重启仍保存，新联系人使用新值 (35.0s)
+(node:64305) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  7 [electron] › e2e/pr101-p0.electron.spec.ts:147:1 › 目录读取失败时保留当前模型，禁用换模并说清原因，不填演示目录 (2.3s)
+
+
+  1) [electron] › e2e/pr101-p0.electron.spec.ts:81:1 › 多图和文字只发一条消息，聊天缩略图点击原地放大、关闭回到原聊天，重启仍能查看 ──────
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByTestId('chat-title')
+    Expected substring: "图片预览"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByTestId('chat-title') with timeout 5000ms
+      - waiting for getByTestId('chat-title')
+
+
+       99 |     await run.win.getByRole('button', { name: '关闭图片预览' }).click()
+      100 |     await expect(run.win.getByTestId('image-preview')).toHaveCount(0)
+    > 101 |     await expect(run.win.getByTestId('chat-title')).toContainText('图片预览')
+          |                                                     ^
+      102 |     await run.app.close()
+      103 |     run = await launch(ud)
+      104 |     await run.win.getByTestId('list').locator('[data-testid^="conv-dm-"]').filter({ hasText: '图片预览' }).click()
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/e2e/pr101-p0.electron.spec.ts:101:53
+
+    Error Context: test-results/pr101-p0.electron-多图和文字只发一条消息，聊天缩略图点击原地放大、关闭回到原聊天，重启仍能查看-electron/error-context.md
+
+  2) [electron] › e2e/pr101-p0.electron.spec.ts:114:1 › 设置模型来自网关、当前值保留且选中，单独换说话模型后重启仍保存，新联系人使用新值 ───
+
+    TimeoutError: locator.click: Timeout 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('nav-contacts')
+        - locator resolved to <button data-on="0" type="button" aria-label="通讯录" data-state="closed" aria-pressed="false" data-testid="nav-contacts" class="inline-flex shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-fast ease-out active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg disabled:pointer-events-none disabled…>…</button>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <div data-testid="scrim" class="absolute inset-0 z-20"></div> intercepts pointer events
+        - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <div data-testid="scrim" class="absolute inset-0 z-20"></div> intercepts pointer events
+        - retrying click action
+          - waiting 100ms
+        56 × waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <div data-testid="scrim" class="absolute inset-0 z-20"></div> intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+
+
+      21 | }
+      22 | async function addContact(win: Page, name: string) {
+    > 23 |   await win.getByTestId('nav-contacts').click()
+         |                                         ^
+      24 |   await win.getByTestId('list').getByText('添加联系人', { exact: true }).click()
+      25 |   await win.getByPlaceholder('比如：设计师').fill(name)
+      26 |   await win.getByRole('button', { name: '添加', exact: true }).click()
+        at addContact (/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/e2e/pr101-p0.electron.spec.ts:23:41)
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/e2e/pr101-p0.electron.spec.ts:139:11
+
+    Error Context: test-results/pr101-p0.electron-设置模型来自网关、当前值保留且选中，单独换说话模型后重启仍保存，新联系人使用新值-electron/error-context.md
+
+  2 failed
+    [electron] › e2e/pr101-p0.electron.spec.ts:81:1 › 多图和文字只发一条消息，聊天缩略图点击原地放大、关闭回到原聊天，重启仍能查看 ───────
+    [electron] › e2e/pr101-p0.electron.spec.ts:114:1 › 设置模型来自网关、当前值保留且选中，单独换说话模型后重启仍保存，新联系人使用新值 ────
+  5 passed (1.1m)
+[serial] 结束,清掉残留进程 0 个
