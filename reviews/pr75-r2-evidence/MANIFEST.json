@@ -90,8 +90,8 @@
    "bytes": 1501
   },
   "npm-test-summary.txt": {
-   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-   "bytes": 0
+   "sha256": "0e3c1cd1524b68ab75a6d0e9b83dd9eeabcdb3aa9e5c20fd405987f624dce4ba",
+   "bytes": 8889
   },
   "probe-adapter-churn.mjs": {
    "sha256": "2c9bdf5b999911b658b3bbc8ec3b2a226578f24ed8644ef019590104e1c18ece",
