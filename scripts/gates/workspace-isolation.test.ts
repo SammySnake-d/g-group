@@ -307,6 +307,24 @@ test("原依赖目录被替换后不能沿用旧副本的来源授权", () => in
   }
 }));
 
+test("原依赖目录内包软链变更到未知位置时拒绝沿用授权", () => inTemp((dir) => {
+  const root = path.join(dir, "repo"), outside = path.join(dir, "outside");
+  fixture(root);
+  const work = freshCopy(root);
+  const oldTmp = process.env.TMPDIR;
+  try {
+    fs.rmSync(path.join(root, "node_modules/fixture-external"), { recursive: true });
+    fs.mkdirSync(outside);
+    fs.symlinkSync(outside, path.join(root, "node_modules/fixture-external"));
+    process.env.TMPDIR = dir;
+    assert.throws(() => freshCopy(work), /来源|依赖/i);
+  } finally {
+    if (oldTmp === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = oldTmp;
+    fs.rmSync(work, { recursive: true, force: true });
+  }
+}));
+
 test("未知来源的外部包软链不能扩大依赖挂载范围", () => inTemp((dir) => {
   const root = path.join(dir, "repo"), other = path.join(dir, "outside");
   fixture(root);
