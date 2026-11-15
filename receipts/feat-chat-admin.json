@@ -1,0 +1,44 @@
+{
+  "slice": "群管理与消息操作补齐(U03/U23/U26/U100,D05;设计真源 docs/dev-handbook v3.29 6109485):rooms.dissolve 只有群主(建群的用户)能解散,先进「解散中」(只读、不再送达联系人、本群定时停用),本群在途任务 Cancel → 停 Compute,全部真实停止确认后才「已解散」并把本群临时槽位清零,记录保留、列表标已解散、重复调用幂等;messages.delete(多选,逐条结果)与 rooms.clearHistory 只在用户这一端隐藏(gg_view_hides 只追加,触发器拒改写/删除),消息列表、搜索、会话预览不再返回,联系人上下文与原记录不动;messages.retract 在群里群主可撤回任何人的消息(领域 AppendAuthority 只认宿主交来的群主身份,只对撤回生效),走现有撤回级联;rooms.muteMember 为候选最小版(只拒收被禁言联系人在本群发的消息——回复、接活卡片、交付——并在它下一轮输入第 5 块写明被禁言,任务照跑、交付不改投、私聊不受影响、不发通知);领域发言者加 system,只给宿主通知用(host.postSystemNotice、解散说明),不唤醒联系人、不进账本待处理、不能作为接活或承诺的来源",
+  "acceptance": [
+    {
+      "id": "AC-05",
+      "status": "通过",
+      "evidence": "packages/server/proof/chat-admin-tests.txt",
+      "note": "本片子判据:本端删除/清空是 gg_view_hides 新行,删除前的会话事件与 gg_msg 逐字节不变、hash 链完整、库里改写/删除隐藏记录被触发器拒绝(chat-admin.test.ts「删除只动本端视图,和撤回不同…」);群主撤回是新撤回事件、原事件 hash 不变、新事件 hash 是 sha256 且 prev 接上一条(domain chat-admin.test.ts)。变异 H01(删除时原地 UPDATE gg_msg)、H02(清空原地改写并去掉触发器)被具名测试杀死,见 packages/server/proof/chat-admin-mutations.txt"
+    },
+    {
+      "id": "AC-08",
+      "status": "未测",
+      "reason": "本片只覆盖群主撤回别人消息走现有级联的部分:搜索不再返回原文、引用块变已撤回占位、两位联系人(含原发言者)下一轮收到「撤回了 #x」不见原文(chat-admin.test.ts「群主撤回联系人在群里的消息…」,变异 C01/C03/C04 被杀)。未覆盖:撤回路径「已发生副作用只标已发生」仍未实现(现状只有 rewind 标);依赖提议(R-Rule)失效未实现;「删 K 不丢 K 之后约束」未测。U23 的本端删除按已定语义只隐藏用户视图、不动联系人上下文,不是 AC-08 的对所有人删除"
+    },
+    {
+      "id": "AC-23",
+      "status": "未测",
+      "reason": "本片只覆盖解散路径的子判据(D05「解散群同理」):停止请求发出后任务停在 T9、两个租约 stopping=true 不归还、群仍标解散中、本群临时槽位不动;两个 Compute 逐个确认后才 T10、租约释放、解散完成并把本群临时槽位清零(chat-admin.test.ts「解散先停在途任务…」,变异 X01/X02/X03 被杀)。停止确认用的是测试替身的 quiesce,没有真实 CLI 进程;AC-23 其余判据(不跨群、不重复授予与释放)不在本片"
+    },
+    {
+      "id": "AC-49",
+      "status": "未测",
+      "reason": "成员加入/移出本身不在本片。本片补了 U03 的解散与禁言:解散见 AC-23 行;禁言(U03)是候选,非正式门禁——「禁言与停止执行是否同一件事」文档仍待定(需求 U03),按调度更正只做最小一项:拒收被禁言联系人在本群发的消息(回复、接活卡片、交付)并在它下一轮输入里写明被禁言;任务照跑、交付不改投、私聊不受影响、不发通知(chat-admin.test.ts「禁言:…」,变异 U01–U06 被杀),语义待用户定"
+    },
+    {
+      "id": "AC-57",
+      "status": "未测",
+      "reason": "U100「右键可删除」只补了后端:messages.delete(多选、逐条结果)、rooms.clearHistory、message.hidden 事件有测试;前端 MsgMenu「删除(只在你这边)」仍是本地操作,没接这个接口;AC-57 是 D+X 验收,界面部分没做"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:dd154965-afbd-4134-a1d3-c00f2a859eab",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "72315cb0c750858a255da1d59e598f26751a5715"
+  },
+  "unverifiable": "AC-05/AC-23:①「只追加」靠两层:代码只 INSERT gg_view_hides,库里触发器拒绝 UPDATE/DELETE;但同一库文件的其他连接仍可 DROP TRIGGER 后改写隐藏记录,本片不防这一点(会话事件表同样如此)。② 解散的停止确认用测试替身的 quiesce 放行,没有用真实 Claude Code/Codex 进程实测;真实适配器若丢了 stopped 事件,群会一直停在「解散中」(故意:不确认就不归还),需另有人工处置。③ 群主身份:新群建群同一事务记 gg_room_owner;本片之前建的群没有这行时取 gg_members 里最先写入(rowid 最小)的用户成员,建群人若被移出又有别的用户在群里,旧群的群主会落到别人身上。④ 非群主场景是用另一个 userId 打开同一份数据模拟的(宿主当前只有一位本机用户)。⑤ 本端隐藏只按 viewer_id 过滤消息列表、搜索、会话预览;files.list、messages.receipts、react 仍按原消息工作,被隐藏消息的附件仍出现在文件列表里",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "子代理实现(调度会话派的 S1 chat-admin 片;本机 16:30 重启丢失首版工作树后从 dev/integration 4efdee0 重开)。按调度更正:解散、单方删除/清空、群主删消息照已定做;禁言只做最小「拒收本群发言」并标候选;system 发言者只给宿主通知用,不经合同对外。新增服务方法 rooms.dissolve、rooms.muteMember、rooms.clearHistory、messages.delete,Helper 片(PR #64)的 HELPER_OPS 对账需要登记。变异在 box4 跑(34 杀死 / 0 存活);全量测试由 pre-push 钩子在本机跑(首版 1485 通过,本版以 PR 推送时钩子输出为准)。首版红/绿(ed7f054/03a625a)推送后 G-STUB 指出领域 3 条测试在 hashOf 返回错值时仍通过(verify 只比自洽),补了 sha256 格式与 prev 断言,红/绿按同样内容重做为现版本并强推(推前核对过没有别的分支叠在上面)。"
+}

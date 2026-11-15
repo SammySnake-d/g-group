@@ -1,3 +1,4 @@
+import { LoopGuard, type LoopLimits } from "./loop-guard.ts";
 // 本地宿主:把领域状态机、SQLite 存储、联系人注意循环、Compute 适配器和承诺账本拼成 P0 最小闭环(AC-30):
 //   用户在私聊/群里发消息 → 机械送达每位成员联系人的注意循环 → 联系人一轮(五块重拼 → ContactMind)提出动作
 //   → 宿主校验、分配 action_id、与游标/账本/任务同一事务落盘 → 起 Compute → Compute 语义事件回到联系人 → 联系人汇报/交付回聊天。
@@ -43,6 +44,7 @@ import {
   vendorOf,
   apply as applyTask,
   authz,
+  contextOnly,
   emptyLedger,
   emptyModelRecord,
   isAppendOnly,
@@ -136,6 +138,7 @@ import { RejectionFeed, ReworkOnce, claimRefusal, claimablePointers, mentionRefu
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
+import { CONTEXT_ONLY_REASON, ChatAdmin, DISSOLVED_REASON, SYSTEM_SENDER } from "./chat-admin.ts";
 import { MemoryStore } from "./memory-store.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
 import { PluginStore } from "./plugins.ts";
@@ -150,6 +153,8 @@ import { type CodeRepoConfig, type Workspace, Worktrees } from "./worktree.ts";
 import { type ArtifactRef, ArtifactStore, MAX_ARTIFACT_BYTES, MAX_ARTIFACTS, MAX_INLINE_TEXT, isReadable, recentReadable } from "./artifacts.ts";
 
 export interface HostOptions {
+  /** 联系人派生互唤的持久因果限额；默认总次数 4 为候选，可配置。 */
+  readonly loopGuard?: LoopLimits;
   readonly file: string;
   readonly userId?: string;
   readonly userName?: string;
@@ -256,6 +261,8 @@ interface TaskDoc {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly result: string | null;
+  /** 任务触发的 Compute 事件及代发消息共享的持久因果根。旧任务回溯来源消息。 */
+  readonly causeRoots?: readonly string[];
   /** 用户手动新建时填的描述,原样保留(AC-47)。 */
   readonly description?: string;
   /** 交付消息的 seq(AC-56:交付是普通消息);用户的验收结论只认这之后的消息。旧数据没有这个字段。 */
@@ -378,6 +385,8 @@ export class Host {
   private readonly exits: MemberExits;
   /** 被拒动作回告(feat/contact-actions):下一轮第 5 块逐条给该联系人,给过不重复 */
   private readonly rejections: RejectionFeed;
+  /** 群主、解散、禁言、本端隐藏(U03/U23/U26) */
+  private readonly chatAdmin: ChatAdmin;
   /** 共享文档单一提交点(AC-21):所有写入只经它 */
   readonly docs: SharedDocs;
   readonly worktrees: Worktrees | null;
@@ -432,6 +441,8 @@ export class Host {
   /** 联系人下一轮是对哪个失败轮次的重跑 */
   private readonly pendingRerun = new Map<string, { rerunOf: string; attempt: number }>();
 
+  readonly loopGuard: LoopGuard;
+
   constructor(opts: HostOptions) {
     this.opts = opts;
     this.now = opts.now ?? (() => new Date().toISOString());
@@ -441,8 +452,10 @@ export class Host {
     this.userId = opts.userId ?? "me";
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
+    this.loopGuard = new LoopGuard(this.db, opts.loopGuard, opts.clockMs);
     this.exits = new MemberExits({ db: this.db, now: this.now });
     this.rejections = new RejectionFeed(this.db);
+    this.chatAdmin = new ChatAdmin({ db: this.db, now: this.now });
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
     this.memory = new MemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d));
@@ -765,6 +778,7 @@ export class Host {
     tx(this.db, () => {
       run(this.db, "INSERT INTO gg_rooms (id, kind, title, created_at, updated_at) VALUES (?, 'group', ?, ?, ?)", id, title, at, at);
       for (const m of all_) run(this.db, "INSERT OR IGNORE INTO gg_members (room_id, kind, member_id) VALUES (?, ?, ?)", id, m.kind, m.id);
+      this.chatAdmin.recordOwner(id, this.userId);
     });
     const view = this.roomView(id);
     this.bus.emit({ type: "room.updated", room: view });
@@ -773,6 +787,7 @@ export class Host {
   addMembers(roomId: string, members: Member[]): RoomView {
     const r = this.roomRow(roomId);
     if (r.kind === "dm") throw new HostError("forbidden", "私聊不能加成员,请建群");
+    if (this.chatAdmin.isClosed(roomId)) throw new HostError("conflict", DISSOLVED_REASON);
     for (const m of members) if (m.kind === "contact") this.contactDoc(m.id);
     const leaving = members.filter((m) => m.kind === "contact" && this.exits.isLeaving(roomId, m.id));
     if (leaving.length) throw new HostError("conflict", "联系人正在移出这个群,等它在这里的在途任务停下再拉回", { leaving: leaving.map((m) => m.id) });
@@ -834,7 +849,8 @@ export class Host {
     const r = this.roomRow(roomId);
     const msgs = this.projected(roomId);
     const readSeq = this.readSeq(roomId, { kind: "user", id: this.userId });
-    const visible = msgs.filter((m) => !m.retracted);
+    const hidden = this.chatAdmin.hidden(roomId, this.userId);
+    const visible = msgs.filter((m) => !m.retracted && !hidden(m.seq));
     const last = visible.at(-1);
     const openCards = one<{ n: number }>(this.db, "SELECT count(*) AS n FROM gg_cards WHERE room_id = ? AND state = 'open'", roomId)?.n ?? 0;
     // 等用户回复的交付(普通消息交付,没有卡片)也算一件待你处理的事
@@ -860,6 +876,7 @@ export class Host {
       announcementCount: r.kind === "group" ? this.announcements.count(roomId) : 0,
       leavingMembers: this.exits.leavingIn(roomId),
       ...(r.kind === "group" ? { tempComputeSlots: getDoc<{ slots: number }>(this.db, `room-slots:${roomId}`)?.value.slots ?? 0 } : {}),
+      ...(r.kind === "group" ? this.chatAdmin.groupFields(roomId) : {}),
     };
   }
   markRead(roomId: string, m: Member, seq: number) {
@@ -930,7 +947,9 @@ export class Host {
   listMessages(roomId: string, q: { beforeSeq?: number; afterSeq?: number; aroundSeq?: number; limit?: number; threadRootSeq?: number | null }): { messages: MessageView[]; hasMore: boolean; hasMoreAfter?: boolean } {
     this.roomRow(roomId);
     if (q.aroundSeq !== undefined && (q.beforeSeq !== undefined || q.afterSeq !== undefined)) throw new HostError("invalid_params", "aroundSeq 不能和 beforeSeq/afterSeq 同时用");
-    const msgs = this.projected(roomId);
+    // 用户自己这一端删除/清空的消息不再列出(U23),引用块里也按看不到处理
+    const hidden = this.chatAdmin.hidden(roomId, this.userId);
+    const msgs = this.projected(roomId).filter((m) => !hidden(m.seq));
     let sel = msgs.filter((m) => (q.beforeSeq === undefined || m.seq < q.beforeSeq) && (q.afterSeq === undefined || m.seq > q.afterSeq));
     if (q.threadRootSeq !== undefined) {
       const roots = new Map(all<{ seq: number; thread_root: number | null }>(this.db, "SELECT seq, thread_root FROM gg_msg WHERE room_id = ?", roomId).map((r) => [r.seq, r.thread_root]));
@@ -953,15 +972,18 @@ export class Host {
   /** 写一条消息(正文进只追加日志,结构化字段进 gg_msg)。actionKey 相同的重放返回原消息,不重复入库。必须在事务里调用。 */
   private appendMessageTx(
     roomId: string,
-    sender: { kind: "user" | "contact" | "helper"; id: string },
-    f: { text: string; actionKey: string; clientActionId?: string | null; attachments?: string[]; threadRootSeq?: number | null; replyToSeq?: number | null; quotedSeqs?: number[]; mentions?: MessageView["mentions"]; command?: { name: string; args: unknown } | null; card?: Omit<CardRow, "room_id" | "seq"> | null },
+    sender: { kind: "user" | "contact" | "helper" | "system"; id: string },
+    f: { text: string; actionKey: string; clientActionId?: string | null; attachments?: string[]; threadRootSeq?: number | null; replyToSeq?: number | null; quotedSeqs?: number[]; mentions?: MessageView["mentions"]; command?: { name: string; args: unknown } | null; causeRoots?: readonly string[]; card?: Omit<CardRow, "room_id" | "seq"> | null },
   ): { seq: number; duplicate: boolean } {
     const key = `msg:${roomId}:${f.actionKey}`;
     const prior = one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key);
     if (prior) return { seq: (JSON.parse(prior.payload) as { seq: number }).seq, duplicate: true };
+    // 解散中/已解散的群只读:用户与 Helper 不能再写(联系人在 commitRound 里逐条拒收,宿主的 system 通知照写)
+    if ((sender.kind === "user" || sender.kind === "helper") && this.chatAdmin.isClosed(roomId)) throw new HostError("conflict", DISSOLVED_REASON);
     const at = this.now();
     const e = appendEvent(this.db.store, `room:${roomId}`, sender, { kind: "message", text: f.text }, at);
     recordAction(this.db.store, key, { seq: e.seq });
+    this.loopGuard.recordMessage(roomId, e.seq, f.causeRoots ?? []);
     indexMessageTx(this.db, { roomId, seq: e.seq, at, sender, threadRoot: f.threadRootSeq ?? null, text: f.text, attachments: f.attachments ?? [] });
     // 回复 = @原作者 + 引用(AC-37 ①):主回复对象一定在引用里;引用保序去重
     const quoted = [...new Set([...(f.quotedSeqs ?? []), ...(f.replyToSeq != null ? [f.replyToSeq] : [])])];
@@ -1000,19 +1022,32 @@ export class Host {
   }
 
   /** 发完一条消息之后:推事件、送达成员联系人的注意循环。 */
-  private afterAppend(roomId: string, seq: number, from: { kind: Member["kind"] | "helper"; id: string }) {
+  private afterAppend(roomId: string, seq: number, _from: { kind: Member["kind"] | "helper" | "system"; id: string }) {
     const msgs = this.projected(roomId);
     const m = msgs.find((x) => x.seq === seq);
     if (!m) return;
+    // 落盘事件的真实发送者才决定准入；重跑可能同时写用户说明和联系人任务卡。
+    const from = m.sender;
     const view = this.messageView(roomId, m, msgs);
     this.bus.emit({ type: "message.appended", message: view });
     this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
     const room = this.roomRow(roomId);
     const repliedTo = view.replyToSeq !== null ? msgs.find((x) => x.seq === view.replyToSeq) : undefined;
+    // system 通知只作上下文,不唤醒联系人;解散中/已解散的群不再送达
+    if (contextOnly(from) || this.chatAdmin.isClosed(roomId)) return;
     for (const mem of this.members(roomId)) {
       if (mem.kind !== "contact" || (from.kind === "contact" && from.id === mem.id) || this.exits.isLeaving(roomId, mem.id)) continue;
       // 调度只看元数据(@、私聊、回复对象),不读正文(D15.1)
       const direct = room.kind === "dm" || view.mentions.some((x) => x.id === mem.id) || (repliedTo?.sender.kind === "contact" && repliedTo.sender.id === mem.id);
+      if (from.kind === "contact") {
+        const wake = this.loopGuard.admit(roomId, seq, mem.id);
+        if (!wake.allowed) {
+          // 一根一条可见说明；被拦目标与消息另存待处理，不把等待误报为已经执行。
+          this.postSystemNotice(roomId, `自动往返已到上限(${wake.reason === "rate" ? "频率" : "总次数"})。待处理:消息 #${seq} 的后续自动讨论；等用户发言继续。`, `loop-limit:${wake.roots.join("|")}`);
+          continue;
+        }
+        if (wake.duplicate) continue;
+      }
       const urgency: Urgency = direct && from.kind === "user" ? "now" : "batch";
       this.loop.notify(mem.id, urgency);
     }
@@ -1157,10 +1192,13 @@ export class Host {
     return this.updatedView(roomId, seq);
   }
   private appendUserEvent(roomId: string, body: { kind: "edit"; target: number; text: string } | { kind: "retract"; target: number }) {
-    this.roomRow(roomId);
+    const room = this.roomRow(roomId);
+    if (body.kind === "edit" && this.chatAdmin.isClosed(roomId)) throw new HostError("conflict", DISSOLVED_REASON);
+    // 群里群主能撤回任何人的消息(U26);群主身份由宿主查出交给领域判定
+    const owner = room.kind === "group" && body.kind === "retract" ? this.chatAdmin.ownerOf(roomId) : null;
     try {
       tx(this.db, () => {
-        appendEvent(this.db.store, `room:${roomId}`, { kind: "user", id: this.userId }, body, this.now());
+        appendEvent(this.db.store, `room:${roomId}`, { kind: "user", id: this.userId }, body, this.now(), { groupOwner: owner === null ? null : { kind: "user", id: owner } });
         // 搜索索引同一事务更新:编辑只留新文字,撤回删行(AC-08 索引不再返回原文)
         if (body.kind === "edit") reindexEditTx(this.db, roomId, body.target, body.text);
         else unindexTx(this.db, roomId, body.target);
@@ -1169,7 +1207,7 @@ export class Host {
     } catch (e) {
       const code = (e as { code?: string }).code;
       if (code === "target-not-found" || code === "target-not-message") throw new HostError("not_found", `没有消息 #${body.target}`);
-      if (code === "not-original-sender") throw new HostError("forbidden", "只能改自己发的消息");
+      if (code === "not-original-sender") throw new HostError("forbidden", owner === null ? "只能改自己发的消息" : "只能改自己发的消息;群里只有群主能撤回别人的消息");
       if (code === "target-retracted") throw new HostError("conflict", "这条已撤回");
       throw e;
     }
@@ -1299,6 +1337,108 @@ export class Host {
     if (!this.exits.isLeaving(roomId, contactId) || this.liveTasksIn(roomId, contactId).length) return;
     tx(this.db, () => this.exits.finishTx(roomId, contactId));
     this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
+  }
+  // ======================= 群管理(U03/U23/U26,D05;规则见 chat-admin.ts) =======================
+  /** 只有群主能做的群操作;私聊 forbidden。 */
+  private ownerGroup(roomId: string, what: string): RoomRow {
+    const r = this.roomRow(roomId);
+    if (r.kind !== "group") throw new HostError("forbidden", `私聊不能${what}`);
+    if (!this.chatAdmin.isOwner(roomId, this.userId)) throw new HostError("forbidden", `只有群主能${what}`);
+    return r;
+  }
+  /**
+   * 解散群:先进「解散中」(只读,不再送达联系人,本群定时停用),本群在途任务 Cancel → 停 Compute;
+   * 每个任务都收到真实停止确认(T8/T10/T11)后才「已解散」并把本群临时槽位清零(AC-23/U09,D05「解散群同理」)。
+   * 已经开始解散的再调用不重复停止,返回当前状态。
+   */
+  dissolveRoom(input: { roomId: string; clientActionId: string }): RoomView {
+    this.ownerGroup(input.roomId, "解散群");
+    if (!this.chatAdmin.beginDissolve(input.roomId, this.userId, input.clientActionId)) return this.roomView(input.roomId);
+    for (const s of this.scheduler.list({ roomId: input.roomId })) if (s.enabled) this.scheduler.update(s.id, { enabled: false });
+    this.bus.emit({ type: "room.updated", room: this.roomView(input.roomId) });
+    for (const t of this.liveTasksOfRoom(input.roomId)) {
+      if (t.state === "T9_StopRequested") continue;
+      try {
+        this.stopTask(t.id, this.userId);
+      } catch (e) {
+        this.report("dissolve-stop-failed", { roomId: input.roomId, taskId: t.id, error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+    this.settleDissolve(input.roomId);
+    return this.roomView(input.roomId);
+  }
+  private liveTasksOfRoom(roomId: string): TaskView[] {
+    return this.listTasks({ roomId }).filter((t) => !EXIT_SETTLED.has(t.state));
+  }
+  /** 解散中的群:在途任务全部停稳才真正解散——槽位清零、记一条宿主的解散说明。 */
+  private settleDissolve(roomId: string) {
+    if (this.chatAdmin.dissolution(roomId) !== "dissolving" || this.liveTasksOfRoom(roomId).length) return;
+    const seq = tx(this.db, () => {
+      if (!this.chatAdmin.finishDissolve(roomId)) return null;
+      const slots = getDoc<{ slots: number }>(this.db, `room-slots:${roomId}`);
+      if (slots && slots.value.slots !== 0) putDoc(this.db, `room-slots:${roomId}`, slots.ver, { slots: 0 });
+      return this.appendMessageTx(roomId, SYSTEM_SENDER, { text: "本群已解散:记录保留可查,不能再发言,也不再给联系人派活", actionKey: "system:dissolved" }).seq;
+    });
+    if (seq !== null) this.afterAppend(roomId, seq, SYSTEM_SENDER);
+  }
+  /**
+   * 宿主通知(system 发言者,只给宿主自己用,不经合同对外):写进会话、推事件;不唤醒联系人,联系人下一轮只当上下文。
+   * 同一 actionKey 重放返回原消息。
+   */
+  postSystemNotice(roomId: string, text: string, actionKey: string): MessageView {
+    this.roomRow(roomId);
+    const r = tx(this.db, () => this.appendMessageTx(roomId, SYSTEM_SENDER, { text, actionKey: `system:${actionKey}` }));
+    if (!r.duplicate) this.afterAppend(roomId, r.seq, SYSTEM_SENDER);
+    return this.messageView(roomId, this.projected(roomId).find((x) => x.seq === r.seq)!);
+  }
+  /** 群内禁言(U03,候选,只做最小一项):只记状态,拒收在 commitRound,告知在 runRound 第 5 块;不停任务、不发通知。 */
+  muteMember(input: { roomId: string; contactId: string; muted: boolean; clientActionId: string }): RoomView {
+    this.ownerGroup(input.roomId, "禁言");
+    if (this.chatAdmin.isClosed(input.roomId)) throw new HostError("conflict", DISSOLVED_REASON);
+    if (!this.isMember(input.roomId, { kind: "contact", id: input.contactId })) throw new HostError("invalid_params", "不是这个群的联系人成员");
+    const changed = this.chatAdmin.setMuted(input.roomId, input.contactId, input.muted, this.userId);
+    const view = this.roomView(input.roomId);
+    if (changed) this.bus.emit({ type: "room.updated", room: view });
+    return view;
+  }
+  /**
+   * 删除 / 多选删除(U23/U100):只在用户这一端隐藏(只追加隐藏记录,原消息不改,联系人上下文不受影响)。
+   * 逐条给结果,不存在的 seq 记 not_found 不影响其他条;同一 clientActionId 重放返回原结果。
+   */
+  deleteMessages(input: { roomId: string; seqs: number[]; clientActionId: string }): { results: { seq: number; ok: boolean; error: { code: "not_found"; message: string } | null }[] } {
+    this.userRoom(input.roomId);
+    if (!input.seqs.length) throw new HostError("invalid_params", "至少选一条消息");
+    const key = `hide:${input.roomId}:${input.clientActionId}`;
+    const prior = one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key);
+    if (prior) return JSON.parse(prior.payload) as ReturnType<Host["deleteMessages"]>;
+    const exists = new Set(this.projected(input.roomId).map((m) => m.seq));
+    const results = [...new Set(input.seqs)].map((seq) => (exists.has(seq) ? { seq, ok: true, error: null } : { seq, ok: false, error: { code: "not_found" as const, message: `这个会话里没有 #${seq}` } }));
+    const seqs = results.filter((r) => r.ok).map((r) => r.seq);
+    tx(this.db, () => {
+      this.chatAdmin.hide(input.roomId, this.userId, seqs, input.clientActionId);
+      recordAction(this.db.store, key, { results });
+    });
+    if (seqs.length) {
+      this.bus.emit({ type: "message.hidden", roomId: input.roomId, seqs, uptoSeq: null });
+      this.bus.emit({ type: "room.updated", room: this.roomView(input.roomId) });
+    }
+    return { results };
+  }
+  /** 清空(U23):只在用户这一端隐藏此刻为止的全部消息,之后的新消息照常显示。同一 clientActionId 重放返回原结果。 */
+  clearHistory(input: { roomId: string; clientActionId: string }): { room: RoomView; clearedUptoSeq: number } {
+    this.userRoom(input.roomId);
+    const key = `clear:${input.roomId}:${input.clientActionId}`;
+    const prior = one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key);
+    if (prior) return { room: this.roomView(input.roomId), clearedUptoSeq: (JSON.parse(prior.payload) as { upto: number }).upto };
+    const upto = this.lastSeq(input.roomId);
+    tx(this.db, () => {
+      this.chatAdmin.clear(input.roomId, this.userId, upto, input.clientActionId);
+      recordAction(this.db.store, key, { upto });
+    });
+    this.bus.emit({ type: "message.hidden", roomId: input.roomId, seqs: [], uptoSeq: upto });
+    const room = this.roomView(input.roomId);
+    this.bus.emit({ type: "room.updated", room });
+    return { room, clearedUptoSeq: upto };
   }
   /** 删除联系人:有在途任务时拒绝;删除后从所有群移出,私聊记录保留。 */
   removeContact(id: string) {
@@ -1447,6 +1587,10 @@ export class Host {
     const { doc, effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: contactId });
     return eff.flatMap((e): HostEffect[] => (e.kind === "spawn-compute" ? [{ kind: "spawn", taskId, requestId: e.requestId, contactId, model: this.computeModelOf(contact), brief: doc.brief, roomId: doc.roomId }] : []));
   }
+  private bindTaskCauseTx(taskId: string, roots: readonly string[]): void {
+    const doc = this.taskDoc(taskId);
+    putDoc(this.db, `task:${taskId}`, doc.ver, { ...doc.value, causeRoots: roots });
+  }
   private actionTaskId(key: string): string | null {
     const prior = one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key);
     return prior ? (JSON.parse(prior.payload) as { taskId: string }).taskId : null;
@@ -1485,7 +1629,7 @@ export class Host {
         mentions: owner !== undefined ? [{ id: owner, source: "auto" }] : [],
         card: { card_id: this.newId("card"), kind: "task-status", task_id: taskId, title: title.slice(0, 200), body: brief.slice(0, 20000), state: "open", actions: JSON.stringify([{ actionId: "cancel", label: "取消任务", style: "danger" }]), meta: "{}" },
       }).seq;
-      const doc: TaskDoc = { task: newTask(taskId, this.userId), title: title.slice(0, 500), roomId: room.id, sourceSeq: s, brief, createdAt: this.now(), updatedAt: this.now(), result: null, ...(description ? { description } : {}) };
+      const doc: TaskDoc = { task: newTask(taskId, this.userId), title: title.slice(0, 500), roomId: room.id, sourceSeq: s, brief, createdAt: this.now(), updatedAt: this.now(), result: null, causeRoots: this.loopGuard.rootsOf(room.id, s), ...(description ? { description } : {}) };
       putDoc(this.db, `task:${taskId}`, 0, doc);
       if (owner !== undefined) effects.push(...this.claimForTx(taskId, owner));
       recordAction(this.db.store, key, { taskId });
@@ -1512,6 +1656,7 @@ export class Host {
         quotedSeqs: [doc.sourceSeq],
         mentions: [{ id: input.contactId, source: "auto" }],
       }).seq;
+      this.bindTaskCauseTx(input.taskId, this.loopGuard.rootsOf(doc.roomId, s));
       effects.push(...this.claimForTx(input.taskId, input.contactId));
       recordAction(this.db.store, key, { taskId: input.taskId });
       return s;
@@ -1691,6 +1836,8 @@ export class Host {
     const doc = this.taskDoc(id).value;
     // 任务每次变化后看负责人是否在这个群移出中:停止确认到了(T10/T11)才真正移出
     if (doc.task.owner) this.settleExit(doc.roomId, doc.task.owner);
+    // 解散中的群:在途任务都停稳了才真正解散
+    this.settleDissolve(doc.roomId);
     this.syncTaskRuns(id, doc.task.state);
   }
   /** 任务落到终态:台账里它还活着的 Compute 会话跟着收口(验收 → done;取消 → 已停止;失败 → failed) */
@@ -1771,14 +1918,14 @@ export class Host {
    */
   private rerunTx(
     target: RunUnit,
-    req: { initiator: { kind: "user" | "contact"; id: string }; trigger: "auto" | "explicit"; actor: { kind: "user" | "contact"; id: string }; roomId: string; basisSeq: number | null; key: string },
+    req: { initiator: { kind: "user" | "contact"; id: string }; trigger: "auto" | "explicit"; actor: { kind: "user" | "contact"; id: string }; roomId: string; basisSeq: number | null; key: string; fresh?: readonly Inbound[] },
   ):
     | { ok: true; effects: HostEffect[]; appended: { roomId: string; seq: number }[]; tasks: string[]; mode: "same_session" | "new_session"; taskId: string | null; attempt: number; notify: string | null }
     | { ok: false; reason: string; notDone: string | null; appended: { roomId: string; seq: number }[] } {
     const unit = this.rerunTarget(target);
     const appended: { roomId: string; seq: number }[] = [];
     const say = (text: string, suffix: string) => {
-      const r = this.appendMessageTx(req.roomId, req.actor, { text, actionKey: `${req.key}:${suffix}` });
+      const r = this.appendMessageTx(req.roomId, req.actor, { text, actionKey: `${req.key}:${suffix}`, ...(req.fresh ? { causeRoots: this.loopGuard.rootsFor(req.fresh, req.roomId) } : {}) });
       appended.push({ roomId: req.roomId, seq: r.seq });
     };
     const chain = this.runs.chain(unit.id);
@@ -1820,13 +1967,14 @@ export class Host {
       const brief = `${src.brief}
 
 [重跑说明] 这是任务 ${src.task.id} 的第 ${plan.event.attempt} 次重跑${plan.mode === "new_session" ? "(开新会话,不接着原会话)" : ""};上次结果:${why}。已经做过的副作用先核对再继续。`;
-      const doc0: TaskDoc = { task: newTask(taskId, src.task.requester), title: src.title, roomId: src.roomId, sourceSeq: src.sourceSeq, brief, createdAt: this.now(), updatedAt: this.now(), result: null };
+      const doc0: TaskDoc = { task: newTask(taskId, src.task.requester), title: src.title, roomId: src.roomId, sourceSeq: src.sourceSeq, brief, createdAt: this.now(), updatedAt: this.now(), result: null, causeRoots: req.fresh ? this.loopGuard.rootsFor(req.fresh, src.roomId) : this.loopGuard.taskRoots(src.task.id) };
       putDoc(this.db, `task:${taskId}`, 0, doc0);
       const { effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: owner });
       for (const e of eff) if (e.kind === "spawn-compute") effects.push({ kind: "spawn", taskId, requestId: e.requestId, contactId: owner, model: this.computeModelOf(this.contactDoc(owner).value), brief, roomId: src.roomId, rerunOf: unit.id, attempt: plan.event.attempt });
       const r = this.appendMessageTx(src.roomId, { kind: "contact", id: owner }, {
         text: `重跑任务:${src.title}(第 ${plan.event.attempt} 次,依据台账 ${unit.id})`,
         actionKey: `${req.key}:card`,
+        causeRoots: this.loopGuard.taskRoots(taskId),
         replyToSeq: src.sourceSeq,
         quotedSeqs: [src.sourceSeq],
         card: { card_id: this.newId("card"), kind: "task-status", task_id: taskId, title: src.title.slice(0, 200), body: brief.slice(0, 20000), state: "open", actions: JSON.stringify([{ actionId: "cancel", label: "取消任务", style: "danger" }]), meta: JSON.stringify({ rerunOf: unit.id }) },
@@ -2128,7 +2276,7 @@ export class Host {
     return { prefix: snap, pointers };
   }
   /** 写一条记忆(remember 动作或压缩检查给的记忆点);不合规返回原因 */
-  private rememberTx(contactId: string, a: Extract<MindAction, { kind: "remember" }>, roomIds: Set<string>, actionId: string, appended: { roomId: string; seq: number }[]): string | null {
+  private rememberTx(contactId: string, a: Extract<MindAction, { kind: "remember" }>, roomIds: Set<string>, actionId: string, appended: { roomId: string; seq: number }[], fresh: readonly Inbound[]): string | null {
     if (!roomIds.has(a.roomId)) return "不在这个会话里";
     let userQuote = false;
     if (a.sourceSeq !== null) {
@@ -2158,6 +2306,7 @@ export class Host {
       const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, {
         text: `记忆冲突,请你拍板:「${plan.entry.body}」(${plan.entry.id})和之前记下的「${old?.body ?? "?"}」(${plan.target})都来自你的原话,以哪条为准?`,
         actionKey: `${actionId}:memory-conflict`,
+        causeRoots: this.loopGuard.rootsFor(fresh, a.roomId),
         mentions: [{ id: this.userId, source: "auto" }],
       });
       appended.push({ roomId: a.roomId, seq: r.seq });
@@ -2279,8 +2428,10 @@ export class Host {
     const contact = this.contactDoc(contactId).value;
     // 移出中的群不再送达新消息,也不再装配进它的上下文
     const leavingRooms = this.exits.leavingRoomsOf(contactId);
-    const rooms = this.roomsOfContact(contactId).filter((r) => !leavingRooms.has(r.id));
+    // 解散中/已解散的群也不再送达(U03/D05)
+    const rooms = this.roomsOfContact(contactId).filter((r) => !leavingRooms.has(r.id) && !this.chatAdmin.isClosed(r.id));
     const fresh: Inbound[] = [];
+    const recoveredPending: InboundMessage[] = [];
     const ownOnly: { roomId: string; seq: number }[] = [];
     const lastSeen: Record<string, number> = {};
     // 被引用消息的确定性 Page-in(D06.3):逐条收集引用,统一交召回规划判权限、撤回与公平预算
@@ -2292,10 +2443,17 @@ export class Host {
       const msgs = project(log);
       // 私聊 rewind 撤下的消息(AC-48):不再送达,针对它们的编辑/撤回也不送达,引用它们也不换入
       const rewound = rewindRanges(this.db, r.id);
+      // 之前的无关轮次可能已越过被拦消息；同会话用户续话时，从持久待处理记录补回原文。
+      const latestUser = msgs.filter((m) => m.seq > cur && m.sender.kind === "user" && !m.retracted && !inRanges(rewound, m.seq)).at(-1);
+      if (latestUser) for (const seq of this.loopGuard.unresolvedBefore(r.id, contactId, latestUser.seq)) {
+        if (seq > cur || inRanges(rewound, seq)) continue;
+        const pending = msgs.find((m) => m.seq === seq);
+        if (pending && !pending.retracted) recoveredPending.push(this.toInbound(r.id, pending));
+      }
       lastSeen[r.id] = log.events.at(-1)?.seq ?? 0;
       // 按事件扫:编辑与撤回是新事件(只追加),作为「编辑 #x 为…」「撤回了 #x」送达,不回头改旧消息
       for (const ev of log.events) {
-        if (ev.seq <= cur) continue;
+        if (ev.seq <= cur || this.loopGuard.seen(r.id, ev.seq, contactId)) continue;
         if (ev.sender.kind === "contact" && ev.sender.id === contactId) {
           ownOnly.push({ roomId: r.id, seq: ev.seq });
           continue;
@@ -2336,10 +2494,22 @@ export class Host {
         }
       }
     }
+    // 达到限额的派生消息保留在日志；只由新用户输入续话，不因重启/旁路通知重新开轮。
+    const userSeqs = new Map<string, number>();
+    const cursorSeen = { ...lastSeen };
+    for (const f of fresh) if (f.kind === "message" && f.sender.kind === "user") userSeqs.set(f.roomId, Math.max(userSeqs.get(f.roomId) ?? 0, f.seq));
+    for (let i = fresh.length - 1; i >= 0; i--) {
+      const f = fresh[i]!;
+      if (f.kind === "message" && f.sender.kind === "contact" && !this.loopGuard.mayReceive(f.roomId, f.seq, contactId) && f.seq >= (userSeqs.get(f.roomId) ?? 0)) {
+        cursorSeen[f.roomId] = Math.min(cursorSeen[f.roomId] ?? 0, f.seq - 1);
+        fresh.splice(i, 1);
+      }
+    }
     const inbox = this.inbox(contactId);
     for (const i of inbox) fresh.push(JSON.parse(i.payload) as Inbound);
+    if (fresh.length > 0 && fresh.every((f) => f.kind === "message" && f.sender.kind === "system")) return "done";
     if (fresh.length === 0) {
-      if (ownOnly.length) tx(this.db, () => this.advanceCursorsTx(contactId, lastSeen));
+      if (ownOnly.length) tx(this.db, () => this.advanceCursorsTx(contactId, cursorSeen));
       return "done";
     }
     const focusRoom = fresh.find((f) => f.kind === "message")?.roomId ?? fresh[0]?.roomId ?? null;
@@ -2392,12 +2562,14 @@ export class Host {
       minSliceBytes: this.opts.recallMinSliceBytes ?? RECALL_MIN_SLICE_BYTES,
     });
     if (!plan.ok) {
-      if (plan.reason === "over-budget") return this.failRound(contactId, roundId, focusRoom ?? fresh[0]!.roomId, lastSeen, inbox, { reason: "recall-over-budget", need: plan.need, budget: plan.budget, detail: plan.detail });
+      if (plan.reason === "over-budget") return this.failRound(contactId, roundId, focusRoom ?? fresh[0]!.roomId, lastSeen, inbox, fresh, { reason: "recall-over-budget", need: plan.need, budget: plan.budget, detail: plan.detail });
       this.setActivity(contactId, null, "idle");
       throw new Error(`引用召回规划失败:${plan.detail}`);
     }
     this.report("recall", { contactId, roundId, items: plan.items.map(({ text: _t, ...rest }) => rest) });
     const pointers = plan.items.map((it) => renderRecall(it, sources.get(`${it.roomId}#${it.seq}`)?.sender ?? "?"));
+    // 旧版本可能已越过被拦原文；旧消息按 D06 只能进第 5 块，不冒充第 4 块新消息。
+    for (const m of recoveredPending) pointers.push({ ref: `待处理原文 ${m.roomId} #${m.seq}`, text: `${m.sender.name}: ${m.text}` });
     // 引用链(D24/AC-41):带引用的新消息附前 K 级,放在第 5 块(新消息之后,不进前缀);已换入或同在本轮的标 in_context
     const paged = new Set(plan.items.filter((it) => it.state === "Full" || it.state === "TruncatedSlice").map((it) => `${it.roomId}#${it.seq}`));
     const chainMsgs = new Map<string, QuoteMsg[]>();
@@ -2432,7 +2604,8 @@ export class Host {
       stateNote: note?.value.text ?? null,
       fresh,
       tasks: tasks.map((t) => `${t.id} [${t.state}] ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
-      pointers: [...rejectionPointers(shownRejections), ...claimable, ...pointers, ...mem.pointers],
+      // 保留 CA2 回告/可认领任务与 #71 禁言事实，各自相对顺序不变（Mira Bot #3011）。
+      pointers: [...rejectionPointers(shownRejections), ...claimable, ...pointers, ...mem.pointers, ...this.chatAdmin.muteNotes(contactId)],
       budgetBytes: this.opts.roundBudgetBytes ?? ROUND_BUDGET_BYTES,
       runs: this.runLinesFor(contactId, rooms),
       });
@@ -2440,7 +2613,7 @@ export class Host {
       // 整轮超预算(D06 §2):显式失败——不截断、不调模型、游标不推进;出失败卡交用户重试或跳过,不在后台反复重跑
       if (e instanceof RoundAssembleError && e.reason === "over-budget" && e.need !== null && e.budget !== null) {
         this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: `这一轮上下文超预算:${e.message}` })) });
-        return this.failRound(contactId, roundId, focusRoom ?? fresh[0]!.roomId, lastSeen, inbox, { reason: "over-budget", need: e.need, budget: e.budget, detail: e.message });
+        return this.failRound(contactId, roundId, focusRoom ?? fresh[0]!.roomId, lastSeen, inbox, fresh, { reason: "over-budget", need: e.need, budget: e.budget, detail: e.message });
       }
       this.setActivity(contactId, null, "idle");
       this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
@@ -2481,7 +2654,7 @@ export class Host {
       else if (!signal.aborted && !this.closed) this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
       // 宿主中止(停机、发送前撤销)不是失败;卡死判定(RoundStalledError 带 stall)交 AC-36 按「整轮已判失败」处理,不静默重试同一轮
       if (signal.aborted || this.closed) return "done";
-      return this.onContactFailure(contactId, contact.name, e, { upstream, focusRoom, lastSeen, inboxEnd });
+      return this.onContactFailure(contactId, contact.name, e, { upstream, focusRoom, lastSeen, inboxEnd, fresh });
     } finally {
       this.roundStalls.delete(unit.id);
       signal.removeEventListener("abort", relay);
@@ -2506,7 +2679,7 @@ export class Host {
     if (signal.aborted || this.closed) return "done";
     let done: { effects: HostEffect[] };
     try {
-      done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona, rejectionsShown: shownRejections.map((r) => r.actionId), inRoundRefusals: out.inRoundRefusals ?? [] });
+      done = this.commitRound(contactId, contact, roundId, fresh, inbox, cursorSeen, recoveredPending, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona, rejectionsShown: shownRejections.map((r) => r.actionId), inRoundRefusals: out.inRoundRefusals ?? [] });
     } catch (e) {
       this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
       throw e;
@@ -2538,7 +2711,7 @@ export class Host {
    * 这位联系人已有没处理的同类失败卡就只更新它(记下最新一批的位置),不重复出卡。返回 "done":不让注意循环在后台反复重跑,
    * 新输入来了或用户点「重试」才再试;点「跳过本轮」才把这批标为已处理。
    */
-  private failRound(contactId: string, roundId: string, roomId: string, lastSeen: Record<string, number>, inbox: { id: number }[], f: { reason: string; need: number; budget: number; detail: string }): RoundStatus {
+  private failRound(contactId: string, roundId: string, roomId: string, lastSeen: Record<string, number>, inbox: { id: number }[], fresh: readonly Inbound[], f: { reason: string; need: number; budget: number; detail: string }): RoundStatus {
     const name = this.contactDoc(contactId).value.name;
     const meta = { kind: "round-over-budget", contactId, lastSeen, inboxIds: inbox.map((i) => i.id), reason: f.reason, need: f.need, budget: f.budget };
     const what = f.reason === "recall-over-budget" ? "被引用消息的回读" : "这一轮要读的上下文";
@@ -2558,6 +2731,7 @@ export class Host {
         this.appendMessageTx(roomId, me, {
           text: "这一轮没跑成:上下文超预算",
           actionKey: `roundfail:${roundId}`,
+          causeRoots: this.loopGuard.rootsFor(fresh, roomId),
           card: {
             card_id: this.newId("card"),
             kind: "failure",
@@ -2660,12 +2834,15 @@ export class Host {
     fresh: Inbound[],
     inbox: { id: number }[],
     lastSeen: Record<string, number>,
+    recoveredPending: readonly InboundMessage[],
     out: { actions: readonly MindAction[]; stateNote: string | null; personaSuggestion?: string | null; rejectionsShown?: readonly string[]; inRoundRefusals?: readonly ActionRefusal[] },
   ): { effects: HostEffect[] } {
     const roomIds = new Set(this.roomsOfContact(contactId).map((r) => r.id));
     // 移出中:这个群里的发言、登记承诺与接新活一律拒绝(D05「先禁止新群内接单与发言」)
     const leavingRooms = this.exits.leavingRoomsOf(contactId);
     const freshMsgs = fresh.filter((f): f is InboundMessage => f.kind === "message");
+    const appendMessage = (roomId: string, sender: Parameters<Host["appendMessageTx"]>[1], fields: Parameters<Host["appendMessageTx"]>[2]) =>
+      this.appendMessageTx(roomId, sender, { ...fields, causeRoots: this.loopGuard.rootsFor(fresh, roomId) });
     const effects: HostEffect[] = [];
     const appended: { roomId: string; seq: number }[] = [];
     const touchedTasks = new Set<string>();
@@ -2678,6 +2855,8 @@ export class Host {
       const push = (roomId: string, c: Parameters<typeof applyLedger>[2]) => byRoom.set(roomId, [...(byRoom.get(roomId) ?? []), c]);
       const ledgerNow = new Map<string, Ledger>();
       for (const m of freshMsgs) {
+        // system 通知只作上下文,不进账本的待处理
+        if (contextOnly(m.sender)) continue;
         const led = ledgerNow.get(m.roomId) ?? this.ledgerOf(contactId, m.roomId).value;
         ledgerNow.set(m.roomId, led);
         if (led.messages.some((x) => x.seq === m.seq)) continue;
@@ -2701,6 +2880,8 @@ export class Host {
         switch (a.kind) {
           case "reply": {
             if (leavingRooms.has(a.roomId)) { reject(LEAVING_REASON); break; }
+            const replyBlock = this.chatAdmin.speakBlock(a.roomId, contactId);
+            if (replyBlock) { reject(replyBlock); break; }
             if (!roomIds.has(a.roomId)) { reject("不在这个会话里"); break; }
             if (!a.text.trim()) { reject("空消息"); break; }
             // 未落实声明(片 CA2):这一轮里被当场拒的动作所指的对象出现在正文里,就是宣称它已经做了——不发出这句话,只记回告
@@ -2711,7 +2892,7 @@ export class Host {
             if (atWhy) { reject(atWhy); break; }
             // @everyone(片 CA2,US1 §8.4):展开成该会话全体成员(含用户、不含发送者自己、不含 Helper),与逐个 @ 取并集、同一人只列一次
             const atIds = replyMentionIds(a.mentions, a.everyone === true, this.members(a.roomId), contactId);
-            const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [], ...(atIds.length ? { mentions: toMentions(atIds) } : {}) });
+            const r = appendMessage(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [], ...(atIds.length ? { mentions: toMentions(atIds) } : {}) });
             appended.push({ roomId: a.roomId, seq: r.seq });
             replies.push({ roomId: a.roomId, seq: r.seq, text: a.text });
             if (a.replyToSeq !== null) referenced.add(`${a.roomId}#${a.replyToSeq}`);
@@ -2719,8 +2900,12 @@ export class Host {
           }
           case "dispatch": {
             if (leavingRooms.has(a.roomId)) { reject(LEAVING_REASON); break; }
+            // 接活会在群里发一张任务卡:群已解散或它被禁言就拒收
+            const dispatchBlock = this.chatAdmin.speakBlock(a.roomId, contactId);
+            if (dispatchBlock) { reject(dispatchBlock); break; }
             const src = freshMsgs.find((m) => m.roomId === a.roomId && m.seq === a.sourceSeq);
             if (!src) { reject(`来源 ${a.roomId} #${a.sourceSeq} 不是本轮新消息`); break; }
+            if (contextOnly(src.sender)) { reject(CONTEXT_ONLY_REASON); break; }
             if (isRewound(this.db, a.roomId, a.sourceSeq)) { reject("来源消息已回退"); break; }
             if (!a.task.trim() || !a.title.trim()) { reject("任务说明为空"); break; }
             const claim = this.claimBlockedTx(contactId, src);
@@ -2730,12 +2915,12 @@ export class Host {
             const taskId = this.newId("t");
             const requester = src.sender.kind === "user" ? src.sender.id : this.userId;
             const t0 = newTask(taskId, requester);
-            const doc0: TaskDoc = { task: t0, title: a.title.slice(0, 500), roomId: a.roomId, sourceSeq: a.sourceSeq, brief: a.task, createdAt: this.now(), updatedAt: this.now(), result: null };
+            const doc0: TaskDoc = { task: t0, title: a.title.slice(0, 500), roomId: a.roomId, sourceSeq: a.sourceSeq, brief: a.task, createdAt: this.now(), updatedAt: this.now(), result: null, causeRoots: this.loopGuard.rootsFor(fresh, a.roomId) };
             putDoc(this.db, `task:${taskId}`, 0, doc0);
             const { effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: contactId });
             for (const e of eff) if (e.kind === "spawn-compute") effects.push({ kind: "spawn", taskId, requestId: e.requestId, contactId, model: this.computeModelOf(contact), brief: a.task, roomId: a.roomId });
             const cardId = this.newId("card");
-            const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, {
+            const r = appendMessage(a.roomId, { kind: "contact", id: contactId }, {
               text: `接了任务:${a.title}`,
               actionKey: `${actionId}:card`,
               replyToSeq: a.sourceSeq,
@@ -2750,8 +2935,10 @@ export class Host {
           }
           case "commit": {
             if (leavingRooms.has(a.roomId)) { reject(LEAVING_REASON); break; }
+            if (this.chatAdmin.isClosed(a.roomId)) { reject(DISSOLVED_REASON); break; }
             const src = freshMsgs.find((m) => m.roomId === a.roomId && m.seq === a.sourceSeq);
             if (!src) { reject(`来源 ${a.roomId} #${a.sourceSeq} 不是本轮新消息`); break; }
+            if (contextOnly(src.sender)) { reject(CONTEXT_ONLY_REASON); break; }
             if (isRewound(this.db, a.roomId, a.sourceSeq)) { reject("来源消息已回退"); break; }
             const key = `${a.roomId}#${a.sourceSeq}`;
             if (!src.text.includes(a.text)) {
@@ -2818,6 +3005,9 @@ export class Host {
           case "deliver": {
             const t = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
+            // 交付是发在任务所在群里的消息:群已解散或它被禁言就拒收,任务原样等着(不改投别处)
+            const deliverBlock = this.chatAdmin.speakBlock(t.roomId, contactId);
+            if (deliverBlock) { reject(deliverBlock); break; }
             if (t.task.state !== "T3_Running" || !t.task.computeId) { reject(`任务在 ${t.task.state},不能交付`); break; }
             const computeRow = one<{ status: string; result: string | null }>(this.db, "SELECT status, result FROM gg_compute WHERE compute_id = ?", t.task.computeId);
             if (computeRow?.result == null) { reject("Compute 还没完成,不能交付"); break; }
@@ -2842,7 +3032,7 @@ export class Host {
             // 审查门(AC-26):还没有跨厂商审查联系人时任务停在 T5,提出者本人回复通过即豁免审查并验收,记为 waived-by-user
             // 可读工件按内容快照进库,交付消息钉住 ref + sha256(AC-04)
             const arts = this.collectArtifacts(a.taskId);
-            const r = this.appendMessageTx(t.roomId, { kind: "contact", id: contactId }, {
+            const r = appendMessage(t.roomId, { kind: "contact", id: contactId }, {
               text: a.text,
               actionKey: actionId,
               replyToSeq: t.sourceSeq,
@@ -2888,7 +3078,7 @@ export class Host {
             break;
           }
           case "remember": {
-            const why = this.rememberTx(contactId, a, roomIds, actionId, appended);
+            const why = this.rememberTx(contactId, a, roomIds, actionId, appended, fresh);
             if (why) reject(why);
             break;
           }
@@ -2924,8 +3114,9 @@ export class Host {
               if (e instanceof HostError && e.code === "conflict") { reject(e.message); break; }
               throw e;
             }
+            this.bindTaskCauseTx(a.taskId, this.loopGuard.rootsFor(fresh, cur.roomId));
             effects.push(...claimed);
-            const r = this.appendMessageTx(cur.roomId, { kind: "contact", id: contactId }, { text: `认领了任务:${cur.title}`, actionKey: actionId, replyToSeq: cur.sourceSeq, quotedSeqs: [cur.sourceSeq] });
+            const r = appendMessage(cur.roomId, { kind: "contact", id: contactId }, { text: `认领了任务:${cur.title}`, actionKey: actionId, replyToSeq: cur.sourceSeq, quotedSeqs: [cur.sourceSeq] });
             appended.push({ roomId: cur.roomId, seq: r.seq });
             referenced.add(`${cur.roomId}#${cur.sourceSeq}`);
             touchedTasks.add(a.taskId);
@@ -2945,7 +3136,7 @@ export class Host {
               trigger = "explicit";
               if (basis.sender.kind === "user") initiator = { kind: "user", id: basis.sender.id };
             }
-            const r = this.rerunTx(unit, { initiator, trigger, actor: { kind: "contact", id: contactId }, roomId: a.roomId, basisSeq: a.basisSeq, key: actionId });
+            const r = this.rerunTx(unit, { initiator, trigger, actor: { kind: "contact", id: contactId }, roomId: a.roomId, basisSeq: a.basisSeq, key: actionId, fresh });
             appended.push(...r.appended);
             if (!r.ok) { reject(`不重跑:${r.reason}`); break; }
             effects.push(...r.effects);
@@ -2957,6 +3148,7 @@ export class Host {
       }
       // 账本:本轮新消息逐条 process(用户消息被动作引用即视为接下;承诺随来源消息登记)
       for (const m of freshMsgs) {
+        if (contextOnly(m.sender)) continue;
         const key = `${m.roomId}#${m.seq}`;
         const led = ledgerNow.get(m.roomId);
         if (led?.messages.some((x) => x.seq === m.seq && x.handled)) continue;
@@ -2977,6 +3169,14 @@ export class Host {
         push(e.roomId, { type: "process", actionId: `${roundId}:proc-own:${k}`, seq: e.seq, accepted: true, commitments: e.items });
       }
       for (const [roomId, cmds] of byRoom) this.ledgerTx(contactId, roomId, cmds);
+      // 补交的被拦原文与轮次动作同事务消费；失败重试不能丢失。
+      const continuedRooms = new Map<string, number>();
+      for (const m of freshMsgs) if (m.sender.kind === "user") continuedRooms.set(m.roomId, Math.max(continuedRooms.get(m.roomId) ?? 0, m.seq));
+      for (const m of freshMsgs) {
+        if (m.sender.kind === "contact" && m.seq < (continuedRooms.get(m.roomId) ?? 0)) this.loopGuard.resolve(m.roomId, m.seq, contactId);
+        this.loopGuard.markSeen(m.roomId, m.seq, contactId);
+      }
+      for (const m of recoveredPending) this.loopGuard.resolve(m.roomId, m.seq, contactId);
       // 游标、待处理输入、状态笔记与本轮动作同一事务(D15.1)
       this.advanceCursorsTx(contactId, lastSeen);
       for (const ib of inbox) run(this.db, "UPDATE gg_inbox SET consumed = 1 WHERE id = ?", ib.id);
@@ -3247,6 +3447,7 @@ export class Host {
           const r = this.appendMessageTx(doc.roomId, { kind: "contact", id: row.contact_id }, {
             text: `@${this.nameOf(who)} ${ev.needs}`,
             actionKey: `ask:${row.task_id}:${qId}`,
+            causeRoots: this.loopGuard.taskRoots(row.task_id),
             replyToSeq: doc.sourceSeq,
             quotedSeqs: [doc.sourceSeq],
             mentions: [{ id: t.requester, source: "auto" }],
@@ -3706,6 +3907,7 @@ export class Host {
         const r = this.appendMessageTx(doc.roomId, { kind: "contact", id: rv.owner_id }, {
           text: `@${this.nameOf({ kind: "user", id: t.requester })} 「${doc.title}」已由 ${who} 跨厂商审查通过${v.notes ? `:${v.notes}` : ""}。确认没问题就回复通过,要改哪里直接说。`,
           actionKey: `review-ok:${rv.task_id}:${rv.round}`,
+        causeRoots: this.loopGuard.taskRoots(rv.task_id),
           replyToSeq: doc.deliveredSeq ?? doc.sourceSeq,
           quotedSeqs: [doc.deliveredSeq ?? doc.sourceSeq],
           mentions: [{ id: t.requester, source: "auto" }],
@@ -3749,6 +3951,7 @@ export class Host {
       this.appendMessageTx(doc.roomId, { kind: "contact", id: owner }, {
         text: `@${this.nameOf({ kind: "user", id: t.requester })} 「${doc.title}」的跨厂商审查没做成:${reason.slice(0, 2000)}。你可以直接回复通过(记为你本人豁免审查,不算合规审查),或说要改的地方。`,
         actionKey: `review-fallback:${taskId}:${round}`,
+        causeRoots: this.loopGuard.taskRoots(taskId),
         replyToSeq: doc.deliveredSeq ?? doc.sourceSeq,
         quotedSeqs: [doc.deliveredSeq ?? doc.sourceSeq],
         mentions: [{ id: t.requester, source: "auto" }],
@@ -4111,11 +4314,12 @@ export class Host {
     return `${why}${fix}${extra ? `\n${extra}` : ""}\n\n原文:\n${cls.raw.slice(0, 8000) || "(没有原文)"}`.slice(0, 20000);
   }
   /** 宿主机械出一张原位失败卡(发送者记为出问题的联系人,不经它的脑子)。必须在事务里调用。 */
-  private postFailureCardTx(roomId: string, senderContactId: string, taskId: string | null, title: string, body: string, actions: CardActionRow[], meta: FailureCardMeta): { roomId: string; seq: number; cardId: string } {
+  private postFailureCardTx(roomId: string, senderContactId: string, taskId: string | null, title: string, body: string, actions: CardActionRow[], meta: FailureCardMeta, causeRoots?: readonly string[]): { roomId: string; seq: number; cardId: string } {
     const cardId = this.newId("card");
     const r = this.appendMessageTx(roomId, { kind: "contact", id: senderContactId }, {
       text: title.slice(0, 200),
       actionKey: `failure:${cardId}`,
+      causeRoots: causeRoots ?? (taskId ? this.loopGuard.taskRoots(taskId) : []),
       card: { card_id: cardId, kind: "failure", task_id: taskId, title: title.slice(0, 200), body, state: "open", actions: JSON.stringify(actions.slice(0, 6)), meta: JSON.stringify(meta) },
     });
     return { roomId, seq: r.seq, cardId };
@@ -4126,13 +4330,13 @@ export class Host {
     return `任务「${getDoc<TaskDoc>(this.db, `task:${id}`)?.value.title ?? id}」`;
   }
   /** 全群合并的 1 张群级卡(F10/F2)。必须在事务里调用。 */
-  private groupCardTx(upstream: string, state: BreakerState, roomId: string, senderContactId: string, cls: Pick<FailureClass, "label" | "fix" | "raw">): { roomId: string; seq: number; cardId: string } {
+  private groupCardTx(upstream: string, state: BreakerState, roomId: string, senderContactId: string, cls: Pick<FailureClass, "label" | "fix" | "raw">, causeRoots: readonly string[]): { roomId: string; seq: number; cardId: string } {
     const names = state.members.map((m) => this.memberName(m)).join("、");
     const title = `${cls.label}:共用这个上游的${state.members.length > 1 ? ` ${state.members.length} 位成员` : "成员"}先暂停`;
     const how = state.manualOnly ? "鉴权或额度有问题,不会自动重试;修好以后点「重试」。" : "连续失败,后台重试已暂停;过一会儿会自动探测一次,恢复后接着处理,也可以现在点「重试」。";
     const body = this.failureBody("", { fix: cls.fix, raw: cls.raw }, 0, `${names} 用的上游 ${upstream} ${how}`).replace(/^没能继续。\n?/, "");
     const actions: CardActionRow[] = [{ actionId: "retry", label: "重试", style: "primary" }, { actionId: "skip", label: "跳过失败的这批消息", style: "default" }];
-    return this.postFailureCardTx(roomId, senderContactId, null, title, body, actions, { scope: "breaker", subject: upstream, contactId: senderContactId, upstream, attemptSeq: 0, models: [] });
+    return this.postFailureCardTx(roomId, senderContactId, null, title, body, actions, { scope: "breaker", subject: upstream, contactId: senderContactId, upstream, attemptSeq: 0, models: [] }, causeRoots);
   }
   /** 在途轮次标记(F12):本轮开始写、提交时删;宿主中途退出就留在库里,重启时据此认出未提交轮次。 */
   private markRunning(contactId: string, batchKey: string, roomId: string | null, lastSeen: Record<string, number>, inboxEnd: number) {
@@ -4149,7 +4353,7 @@ export class Host {
   }
 
   /** 联系人一轮失败:按 A×B 决定静默退避(抛 RoundRetry 交注意循环按延迟重跑)、出原位失败卡,或被共享熔断暂停;后两种返回 done 停在原位。 */
-  private onContactFailure(contactId: string, name: string, err: unknown, ctx: { upstream: string; focusRoom: string | null; lastSeen: Record<string, number>; inboxEnd: number }): RoundStatus {
+  private onContactFailure(contactId: string, name: string, err: unknown, ctx: { upstream: string; focusRoom: string | null; lastSeen: Record<string, number>; inboxEnd: number; fresh: readonly Inbound[] }): RoundStatus {
     const cls = this.classify(err);
     const heal = healOf(cls.reasonClass);
     if (heal === "user_stopped") {
@@ -4182,7 +4386,7 @@ export class Host {
         this.upsertFailureTx(row("paused"));
         this.clearRunningTx(contactId);
         if (room && (br.opened || !b.card_id)) {
-          card = this.groupCardTx(ctx.upstream, br.state, room, contactId, cls);
+          card = this.groupCardTx(ctx.upstream, br.state, room, contactId, cls, this.loopGuard.rootsFor(ctx.fresh, room));
           this.saveBreaker(ctx.upstream, br.state, { card_id: card.cardId, room_id: room });
         } else this.saveBreaker(ctx.upstream, br.state);
       });
@@ -4211,7 +4415,7 @@ export class Host {
         const actions = this.failureActions("contact", current);
         card = this.postFailureCardTx(room, contactId, null, `${name} 这一轮没回成:${cls.label}`, this.failureBody(cause, cls, attempts), actions, {
           scope: "contact", subject: contactId, contactId, upstream: ctx.upstream, attemptSeq, models: switchModels(actions),
-        });
+        }, this.loopGuard.rootsFor(ctx.fresh, room));
       }
       this.upsertFailureTx(row("card", { attempt_seq: attemptSeq, card_id: card?.cardId ?? null }));
       if (br.ok) this.saveBreaker(ctx.upstream, br.state);
@@ -4252,7 +4456,7 @@ export class Host {
       this.upsertFailureTx(base("paused"));
       let card = null as { roomId: string; seq: number; cardId: string } | null;
       if (br.opened || !b.card_id) {
-        card = this.groupCardTx(upstream, br.state, doc.roomId, row.contact_id, cls);
+        card = this.groupCardTx(upstream, br.state, doc.roomId, row.contact_id, cls, this.loopGuard.taskRoots(row.task_id));
         this.saveBreaker(upstream, br.state, { card_id: card.cardId, room_id: doc.roomId });
       } else this.saveBreaker(upstream, br.state);
       return { kind: "paused", upstream, card, label: cls.label };
@@ -4520,6 +4724,24 @@ export class Host {
       }
     };
   }
+  /** 根据崩溃前落盘的批次边界重建因果，不能把恢复失败卡当作一条全新起点。 */
+  private crashBatchRoots(contactId: string, roomId: string, batchEnd: string, inboxEnd: number, batchKey: string): string[] {
+    const ends = JSON.parse(batchEnd) as Record<string, number>;
+    const fresh: Inbound[] = [];
+    for (const room of this.roomsOfContact(contactId)) {
+      const end = ends[room.id];
+      if (end === undefined) continue;
+      const cur = this.cursor(contactId, room.id);
+      const rewound = rewindRanges(this.db, room.id);
+      for (const m of this.projected(room.id)) {
+        if (m.seq <= cur || m.seq > end || m.retracted || inRanges(rewound, m.seq) || (m.sender.kind === "contact" && m.sender.id === contactId)) continue;
+        fresh.push(this.toInbound(room.id, m));
+      }
+    }
+    for (const row of this.inbox(contactId)) if (row.id <= inboxEnd) fresh.push(JSON.parse(row.payload) as Inbound);
+    const roots = this.loopGuard.rootsFor(fresh, roomId);
+    return roots.length ? roots : [`crash-batch:${contactId}:${batchKey}`];
+  }
   /** 启动回收(F4/F6/F12):上次留下的在途轮次按 crash_recovery_count 续跑或熔断出卡;磁盘上没被领走的输入交给联系人;等续跑的任务、被暂停的成员接着排。 */
   private reconcileOnStart() {
     const cards: { roomId: string; seq: number; contactId: string }[] = [];
@@ -4546,7 +4768,7 @@ export class Host {
         const upstream = this.upstreamKey(prev?.model_override ?? contact.speakingModel);
         const c = this.postFailureCardTx(room, g.contact_id, null, `${contact.name} 这一轮没回成:${cls.label}`, this.failureBody("crash-loop", cls, 0), actions, {
           scope: "contact", subject: g.contact_id, contactId: g.contact_id, upstream, attemptSeq, models: switchModels(actions),
-        });
+        }, this.crashBatchRoots(g.contact_id, room, g.batch_end, g.inbox_end, g.batch_key));
         this.upsertFailureTx({
           scope: "contact", subject: g.contact_id, contact_id: g.contact_id, status: "card", heal: "unknown", effect: "B0", reason_class: "crash_loop", label: cls.label, fix: cls.fix, raw: cls.raw,
           attempts: 0, attempt_seq: attemptSeq, batch_end: g.batch_end, inbox_end: g.inbox_end, room_id: room, upstream, card_id: c.cardId, model_override: prev?.model_override ?? null, compute_id: null, delivery_unknown: 0,
@@ -4717,6 +4939,7 @@ export class Host {
     const seq = this.appendMessageTx(doc.roomId, owner, {
       text: `「${doc.title}」要动手改了,群规是「${rule}」,先问你:${action}\n同意就直接回复「同意」(不用点按钮);不同意回复「不行」。`,
       actionKey: `authz:${t.id}:${qId}`,
+      causeRoots: this.loopGuard.taskRoots(t.id),
       replyToSeq: doc.sourceSeq,
       quotedSeqs: [doc.sourceSeq],
       mentions: [{ id: t.requester, source: "auto" }],
@@ -4757,7 +4980,7 @@ export class Host {
         if (!owner) return;
         const list = reqs.map((r, i) => `${i + 1}. 「${this.taskDoc(r.taskId).value.title}」:${r.action}(提问 #${r.askedSeq})`).join("\n");
         const sender: Member = { kind: "contact", id: owner };
-        const a = this.appendMessageTx(roomId, sender, { text: `你这句「${m.text.slice(0, 40)}」对应哪一件?现在有 ${reqs.length} 件等你同意,请回复对应的那条提问:\n${list}`, actionKey: `authz-ask:${roomId}:${seq}`, replyToSeq: seq, quotedSeqs: [seq], mentions: [{ id: m.sender.id, source: "auto" }] });
+        const a = this.appendMessageTx(roomId, sender, { text: `你这句「${m.text.slice(0, 40)}」对应哪一件?现在有 ${reqs.length} 件等你同意,请回复对应的那条提问:\n${list}`, actionKey: `authz-ask:${roomId}:${seq}`, causeRoots: this.loopGuard.rootsOf(roomId, seq), replyToSeq: seq, quotedSeqs: [seq], mentions: [{ id: m.sender.id, source: "auto" }] });
         out.appended.push({ roomId, seq: a.seq, sender });
       }
     });

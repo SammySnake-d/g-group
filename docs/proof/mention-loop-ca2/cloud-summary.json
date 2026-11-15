@@ -1,0 +1,276 @@
+{
+  "head": "e1e8ab02912a90335496c2172577ff72da57d46c",
+  "box": "box4",
+  "node": "v24.21.0",
+  "archive_sha256": "1755461d1b1a12f08611082ea9c9fda2d93ebd549cf6d3035f21a1b1089f0439",
+  "phase_log_hashes_verified": 11,
+  "source_files_original_bytes_verified": 526,
+  "counts": {
+    "loop-red": {
+      "tests": 10,
+      "pass": 0,
+      "fail": 10,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "loop-green": {
+      "tests": 10,
+      "pass": 10,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "seam-red": {
+      "tests": 5,
+      "pass": 0,
+      "fail": 5,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "seam-green": {
+      "tests": 5,
+      "pass": 5,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  },
+  "mutations": {
+    "mutations": {
+      "registered": 15,
+      "strict_named_assertion_kills": 15,
+      "survived": 0,
+      "complete_per_mutant_tests": 10,
+      "rows": [
+        {
+          "label": "因果元数据未落盘",
+          "target": "因果根继承：派生消息连续传递同一根，不能每条消息重新获额度",
+          "tests": 10,
+          "failures": 10,
+          "other_named_failures": [
+            "同根并发分支共用总额度，不同根互不占用，多根派生取每根约束",
+            "消息重投使用会话、消息与目标联系人的稳定键，不二次扣额度",
+            "频率额度使用滚动一分钟；频率停止持久保留，等新用户输入开新根",
+            "重启后保留次数、停止原因和待处理；新用户输入才建立新的因果根",
+            "因果元数据与消息事务同生共死；失败事务不留下额度占用",
+            "跨会话派生保持原因果根，不借输出到另一群重新获额度",
+            "配置拒绝无穷、零和非整数；省略次数时采用明确标候选的有限默认值",
+            "生产调度保留旁观者参与但同根自动往返到上限停止，只留一次停止说明；新用户消息可继续",
+            "生产重启不自动重开已停止的派生链；未读原文仍可查看，用户续话后再参与"
+          ]
+        },
+        {
+          "label": "派生消息另起新根",
+          "target": "因果根继承：派生消息连续传递同一根，不能每条消息重新获额度",
+          "tests": 10,
+          "failures": 4,
+          "other_named_failures": [
+            "跨会话派生保持原因果根，不借输出到另一群重新获额度",
+            "生产调度保留旁观者参与但同根自动往返到上限停止，只留一次停止说明；新用户消息可继续",
+            "生产重启不自动重开已停止的派生链；未读原文仍可查看，用户续话后再参与"
+          ]
+        },
+        {
+          "label": "移除总次数上限",
+          "target": "同根并发分支共用总额度，不同根互不占用，多根派生取每根约束",
+          "tests": 10,
+          "failures": 9,
+          "other_named_failures": [
+            "因果根继承：派生消息连续传递同一根，不能每条消息重新获额度",
+            "消息重投使用会话、消息与目标联系人的稳定键，不二次扣额度",
+            "重启后保留次数、停止原因和待处理；新用户输入才建立新的因果根",
+            "因果元数据与消息事务同生共死；失败事务不留下额度占用",
+            "跨会话派生保持原因果根，不借输出到另一群重新获额度",
+            "配置拒绝无穷、零和非整数；省略次数时采用明确标候选的有限默认值",
+            "生产调度保留旁观者参与但同根自动往返到上限停止，只留一次停止说明；新用户消息可继续",
+            "生产重启不自动重开已停止的派生链；未读原文仍可查看，用户续话后再参与"
+          ]
+        },
+        {
+          "label": "重投不查稳定键",
+          "target": "消息重投使用会话、消息与目标联系人的稳定键，不二次扣额度",
+          "tests": 10,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "频率窗口含一分钟边界",
+          "target": "频率额度使用滚动一分钟；频率停止持久保留，等新用户输入开新根",
+          "tests": 10,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "移除频率上限",
+          "target": "频率额度使用滚动一分钟；频率停止持久保留，等新用户输入开新根",
+          "tests": 10,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "停止原因不持久",
+          "target": "频率额度使用滚动一分钟；频率停止持久保留，等新用户输入开新根",
+          "tests": 10,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "新用户输入仍沿旧根",
+          "target": "重启后保留次数、停止原因和待处理；新用户输入才建立新的因果根",
+          "tests": 10,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "重启重置次数",
+          "target": "重启后保留次数、停止原因和待处理；新用户输入才建立新的因果根",
+          "tests": 10,
+          "failures": 2,
+          "other_named_failures": [
+            "生产重启不自动重开已停止的派生链；未读原文仍可查看，用户续话后再参与"
+          ]
+        },
+        {
+          "label": "跨会话丢弃输入根",
+          "target": "跨会话派生保持原因果根，不借输出到另一群重新获额度",
+          "tests": 10,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "允许零次数参数",
+          "target": "配置拒绝无穷、零和非整数；省略次数时采用明确标候选的有限默认值",
+          "tests": 10,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "消息生产未继承根",
+          "target": "生产调度保留旁观者参与但同根自动往返到上限停止，只留一次停止说明；新用户消息可继续",
+          "tests": 10,
+          "failures": 2,
+          "other_named_failures": [
+            "生产重启不自动重开已停止的派生链；未读原文仍可查看，用户续话后再参与"
+          ]
+        },
+        {
+          "label": "生产调度不拦限额",
+          "target": "生产调度保留旁观者参与但同根自动往返到上限停止，只留一次停止说明；新用户消息可继续",
+          "tests": 10,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "停止说明缺失",
+          "target": "生产调度保留旁观者参与但同根自动往返到上限停止，只留一次停止说明；新用户消息可继续",
+          "tests": 10,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "重启仍自动处理停止根",
+          "target": "生产重启不自动重开已停止的派生链；未读原文仍可查看，用户续话后再参与",
+          "tests": 10,
+          "failures": 1,
+          "other_named_failures": []
+        }
+      ]
+    },
+    "seam-mutations": {
+      "registered": 7,
+      "strict_named_assertion_kills": 7,
+      "survived": 0,
+      "complete_per_mutant_tests": 5,
+      "rows": [
+        {
+          "label": "CA2全员展开丢失",
+          "target": "CA2接缝01：@everyone与逐个@去重保留，同根派生仍有限停止",
+          "tests": 5,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "CA2被拒完成声明放行",
+          "target": "CA2接缝02：同轮被拒动作的完成声明仍不发送，也不产生自动唤醒额度",
+          "tests": 5,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "CA2非法逐个点名放行",
+          "target": "CA2接缝03：@everyone不掩盖非法逐个@，拒绝仍在消息与因果提交之前",
+          "tests": 5,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "CA2认领卡未继承根",
+          "target": "CA2接缝04：新增claim卡继承触发本轮的用户根，而不是另起卡片根",
+          "tests": 5,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "并集丢失回告",
+          "target": "CA2接缝05：同一轮真实装配同时保留被拒回告、可认领任务和禁言事实",
+          "tests": 5,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "并集丢失可认领任务",
+          "target": "CA2接缝05：同一轮真实装配同时保留被拒回告、可认领任务和禁言事实",
+          "tests": 5,
+          "failures": 1,
+          "other_named_failures": []
+        },
+        {
+          "label": "并集丢失禁言事实",
+          "target": "CA2接缝05：同一轮真实装配同时保留被拒回告、可认领任务和禁言事实",
+          "tests": 5,
+          "failures": 1,
+          "other_named_failures": []
+        }
+      ]
+    }
+  },
+  "full": {
+    "tests": 1522,
+    "pass": 1522,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "ca2_admin_regression": {
+    "tests": 24,
+    "pass": 24,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "service": {
+    "actual_service": true,
+    "scripted_mind_not_real_model": true,
+    "configured_hops": 2,
+    "default_hops_4_candidate_only": true,
+    "initial_rounds": 3,
+    "rounds_after_user_continue": 6,
+    "pending_before_restart": 1,
+    "restart_extra_rounds": 0,
+    "everyone_preserved": true,
+    "stop_notice_per_root": 1,
+    "passed": true
+  },
+  "observed_complete": true,
+  "limitations": [
+    "scripted mind, not real model/UI",
+    "maxHops=4 candidate only",
+    "mechanical gates and independent review pending"
+  ]
+}
