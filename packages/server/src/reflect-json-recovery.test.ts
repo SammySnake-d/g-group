@@ -44,7 +44,7 @@ async function settle(host: Host) {
   }
   throw new Error("宿主没有安静下来");
 }
-function setup(responses: string[]) {
+function setup(responses: string[], reply = false) {
   const dir = mkdtempSync(path.join(tmpdir(), "gg-reflect-json-"));
   const fake = provider(responses);
   const reports: [string, unknown][] = [];
@@ -53,7 +53,12 @@ function setup(responses: string[]) {
   const makeHost = () => new Host({
     file: path.join(dir, "gg.db"), dataDir: dir, maxDeferMs: 5,
     onReport: (what, detail) => reports.push([what, detail]),
-    mind: () => ({ async round(i: RoundInput) { requests.push(i.request); return { actions: [], stateNote: null }; } }),
+    mind: () => ({ async round(i: RoundInput) {
+      requests.push(i.request);
+      const m = i.fresh.find((f) => f.kind === "message");
+      const actions = reply && m?.kind === "message" ? [{ kind: "reply" as const, roomId: m.roomId, replyToSeq: m.seq, text: `回应:${m.text}` }] : [];
+      return { actions, stateNote: null };
+    } }),
     compactor: () => compactor,
   });
   const host = makeHost();
@@ -84,12 +89,13 @@ test("reflect 返回不可解析 JSON 后宿主告警、同模型普通压缩兜
 });
 
 test("反思 JSON 持续无效且补压缩也失败时下一轮保留上轮未经压缩的原文", async () => {
-  const x = setup(["不是 JSON 对象", " ", "依然不是 JSON", " ", valid, valid]);
+  const x = setup(["不是 JSON 对象", " ", "依然不是 JSON", " ", valid, valid], true);
   try {
     x.host.send({ roomId: x.dm.id, clientActionId: "1", text: "持久原文标记:安全发布之前必须先做审查" });
     await settle(x.host);
     assert.ok(x.reports.some(([w]) => w === "reflect-failed"));
     assert.ok(x.reports.some(([w]) => w === "compact-failed"));
+    assert.equal(x.host.listMessages(x.dm.id, {}).messages.filter((m) => m.sender.kind === "contact").length, 1, "本轮动作只落盘一次");
     await x.host.close();
     x.host = x.makeHost();
     x.host.send({ roomId: x.dm.id, clientActionId: "2", text: "第二轮请继续" });
@@ -98,6 +104,7 @@ test("反思 JSON 持续无效且补压缩也失败时下一轮保留上轮未�
     assert.equal(x.reports.filter(([w]) => w === "reflect-failed").length, 2);
     assert.equal(x.reports.filter(([w]) => w === "compact-failed").length, 2);
     assert.ok(x.fake.seen.every((r) => r.model === MODEL));
+    assert.equal(x.host.listMessages(x.dm.id, {}).messages.filter((m) => m.sender.kind === "contact").length, 2, "重启后旧输入没有重复执行动作");
     const next = x.requests[1]!.blocks.map((b) => b.text).join("\n");
     assert.match(next, /持久原文标记:安全发布之前必须先做审查/, "未生成可用笔记时,下一轮仍须带上未经压缩原文");
     x.host.send({ roomId: x.dm.id, clientActionId: "3", text: "第三轮恢复" });
