@@ -167,3 +167,37 @@ test("同批未点名群请求和点名别人的请求:联系人可引用并回�
   assert.ok(host.listMessages(group.id, {}).messages.some((m) => m.sender.id === b.id && m.replyToSeq === first && m.text === "我的进度是已完成"), "后一条对小林的点名不能吞掉小克对前一条的回复");
   await host.close();
 });
+
+test("同时收到别人被点名的消息和自己的 Compute 进度:不能吞掉进度汇报", async () => {
+  let owner = "";
+  let seen = false;
+  const mind = (): ContactMind => ({ async round(input) {
+    const progress = input.fresh.find((f) => f.kind === "compute" && f.signal === "milestone");
+    const other = input.fresh.find((f) => f.kind === "message" && f.text === "只问小林");
+    if (input.contact.id === owner && progress?.kind === "compute" && other) {
+      seen = true;
+      return { actions: [{ kind: "reply", roomId: progress.roomId, text: `进度:${progress.summary}`, replyToSeq: null }], stateNote: null };
+    }
+    return { actions: [], stateNote: null };
+  } });
+  const compute = scriptedCompute({ script: () => [{ kind: "started", sessionId: "s", resumed: false }] });
+  const host = new Host({ file: file(), mind, compute: () => compute.adapter, maxDeferMs: 80 });
+  try {
+    const a = host.createContact({ name: "小林" });
+    const b = host.createContact({ name: "小克" });
+    owner = b.id;
+    const group = host.createGroup("项目群", [{ kind: "contact", id: a.id }, { kind: "contact", id: b.id }]);
+    host.createTask({ roomId: group.id, clientActionId: "task", title: "整理材料", ownerContactId: b.id });
+    await settle(host, compute);
+    assert.equal(compute.spawned.length, 1, "小克的 Compute 已启动");
+    host.send({ roomId: group.id, clientActionId: "a", text: "只问小林", mentions: [{ id: a.id, source: "manual" }] });
+    compute.emit({ kind: "milestone", computeId: compute.spawned[0]!.computeId, stage: "整理", summary: "材料已整理" });
+    await new Promise((r) => setTimeout(r, 10));
+    await settle(host, compute);
+    assert.equal(seen, true, "进度与点名消息确实在同一轮");
+    assert.ok(host.listMessages(group.id, {}).messages.some((m) => m.sender.id === b.id && m.text === "进度:材料已整理"), "这条进度不是代答,不能拒收");
+  } finally {
+    compute.close();
+    await host.close();
+  }
+});
