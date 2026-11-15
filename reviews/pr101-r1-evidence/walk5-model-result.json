@@ -1,0 +1,105 @@
+{
+  "head": "143f72d179fa0db9edc224be9232a1aa2b0ab250",
+  "model": "fengshao1227/deepseek-v4.1-flash",
+  "userData": "/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gg-pr101-ud-iV1eOu",
+  "steps": [
+    {
+      "name": "接入模型",
+      "ok": true,
+      "note": "接入 fengshao1227/deepseek-v4.1-flash",
+      "ms": 797,
+      "shot": "01-接入模型.png"
+    },
+    {
+      "name": "添加联系人 小克",
+      "ok": true,
+      "ms": 817,
+      "shot": "02-添加联系人 小克.png"
+    },
+    {
+      "name": "设置页的模型选择",
+      "ok": true,
+      "note": {
+        "说话": {
+          "value": "claude-opus-5-5",
+          "shown": "Claude Opus 5.5",
+          "selectedIndex": 0,
+          "options": [
+            "claude-opus-5-5",
+            "claude-sonnet-5-5",
+            "claude-sonnet-4-6",
+            "claude-haiku-5-5",
+            "gpt-6.1",
+            "gpt-6",
+            "gemini-4",
+            "gemini-flash",
+            "grok-5",
+            "deepseek-v4"
+          ]
+        },
+        "Compute": {
+          "value": "claude-opus-5-5",
+          "shown": "Claude Opus 5.5",
+          "selectedIndex": 0,
+          "options": [
+            "claude-opus-5-5",
+            "claude-sonnet-5-5",
+            "claude-sonnet-4-6",
+            "claude-haiku-5-5",
+            "gpt-6.1",
+            "gpt-6",
+            "gemini-4",
+            "gemini-flash",
+            "grok-5",
+            "deepseek-v4"
+          ]
+        },
+        "接入行": "模型接入 模型网关 fengshao1227/deepseek-v4.1-flash"
+      },
+      "ms": 68,
+      "shot": "03-设置页的模型选择.png"
+    },
+    {
+      "name": "把默认说话模型改成 claude-sonnet-5-5",
+      "ok": true,
+      "note": {
+        "影响预览": "会影响 1 位联系人 保存后它们下一轮就用新值，正在跑的这一轮不打断 小克 fengshao1227/deepseek-v4.1-flash → claude-sonnet-5-5 默认说话模型只用于之后新建的联系人，已有联系人各自存了自己的。 取消 保存",
+        "保存后说话": {
+          "value": "claude-sonnet-5-5",
+          "shown": "Claude Sonnet 5.5",
+          "selectedIndex": 1,
+          "options": [
+            "claude-opus-5-5",
+            "claude-sonnet-5-5",
+            "claude-sonnet-4-6",
+            "claude-haiku-5-5",
+            "gpt-6.1",
+            "gpt-6",
+            "gemini-4",
+            "gemini-flash",
+            "grok-5",
+            "deepseek-v4"
+          ]
+        },
+        "保存后页面": "系人用它 low medium high xhigh max 默认 Harness 新建联系人的 Compute 用它 Claude Code Codex 默认说话模型 新建联系人说话用它 Claude Opus 5.5 Claude Sonnet 5.5 Claude Sonnet 4.6 Claude Haiku 5.5 GPT-6.1 GPT-6 Gemini 4 Gemini Flash Grok 5 DeepSeek V4 复核必须换一家模型 批量替换模型 把 X 换成 Y，先预览 已保存。受影响的 1 位联系人下一轮生效，正在跑的这一轮不打断。 各联系人现在用的模型 小克 说话 fengshao1227/deepseek-v4.1-flash · Compute claude-sonnet-5-5 · claude-code（继承全局） 通知 有事等我时提醒 有事等我时提醒 出错时提醒 出错时提醒 插件 插件中心 市场、安装、更新 连接 外部来源 已连 2 个 高级 调试模式 调试模式 调试模式会在 Compute 里显示内部编号等排查信息，平时不需要打开。 全局默认已保存"
+      },
+      "ms": 2576,
+      "shot": "04-把默认说话模型改成 claude-sonnet-5-5.png"
+    },
+    {
+      "name": "改完再发私聊",
+      "ok": true,
+      "note": {
+        "新联系人模型说明": "说话用全局默认的 Claude Sonnet 5.5，Compute 继承全局（Claude Sonnet 5.5）。加好以后在它的工作台「设置」里改。",
+        "等了秒": 178,
+        "对方给出": [
+          "小新 助手 15:20 小新 这一轮没回成:上游不可用 小新 这一轮没回成:上游不可用 等你选 重试本轮 跳过本轮 都不是，自己回答"
+        ]
+      },
+      "ms": 179339,
+      "shot": "05-改完再发私聊.png"
+    }
+  ],
+  "addNote": "说话用全局默认的 Claude Sonnet 5.5，Compute 继承全局（Claude Sonnet 5.5）。加好以后在它的工作台「设置」里改。",
+  "pageErrors": []
+}
