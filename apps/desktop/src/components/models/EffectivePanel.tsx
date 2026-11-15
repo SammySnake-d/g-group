@@ -36,7 +36,7 @@ export function EffectivePanel({ name, cm, s, speaking, compute, allowed, dirty,
           </div>
         </div>
         {!allowed && <div data-testid="cm-blocked" className="text-[12px] text-err">这样配，下次开 Compute 会被拦下；{name} 在群里说话不受影响。</div>}
-        {allowed && <div className="text-[12px] text-fg-3">复核要换一家：{name} 的产出会交给不是 {VENDOR_LABEL[vendor] ?? vendor} 的模型复核。</div>}
+        {allowed && <div className="text-[12px] text-fg-3">{vendor === 'unknown' ? '目录没有声明模型来源，当前无法确认跨厂商复核；实际运行以宿主判定为准。' : `复核要换一家：${name} 的产出会交给不是 ${VENDOR_LABEL[vendor] ?? vendor} 的模型复核。`}</div>}
         {running.length > 0 && <RunningNow running={running} cm={cm} s={s} allowed={allowed} dirty={dirty} compute={compute} />}
       </div>
     </div>

@@ -1,0 +1,16 @@
+{
+  "model": "fengshao1227/deepseek-v4.1-flash",
+  "packaged": {
+    "packaged": true,
+    "version": "0.1.1-preview.3"
+  },
+  "checks": [
+    "首次目录读取并明确选择 feishao 模型"
+  ],
+  "errors": [],
+  "startedAt": "2026-11-15T07:49:52.253Z",
+  "binarySha256": "886c2fc22043b8290e0d4b93ad74e2a6ed282f5dcbc86194b2f37d580e145a34",
+  "ok": false,
+  "failure": "locator.fill: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByPlaceholder('比如：设计师')\u001b[22m\n",
+  "finishedAt": "2026-11-15T07:50:26.990Z"
+}

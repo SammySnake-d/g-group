@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { people, dutyDefault, dutyByConv, presetOf, type PersonId } from '@/data'
 import { useApp } from '@/ctx'
 import { candidate } from '@/mut'
+import { live } from '@/api/wire/live'
+import { personaLive } from '@/api/wire/workbench'
 import { Button } from '@/components/ui/button'
 import { Chip } from '@/components/ui/chip'
 import { SectionHeader } from '@/components/ui/section'
@@ -14,21 +16,43 @@ import { InlineEdit, LayerHint, Source, WbCard } from './parts'
 const label = 'w-24 shrink-0 text-[12.5px]'
 
 export function Duty({ id }: { id: PersonId }) {
-  const { convs, updatePerson, toast } = useApp()
+  const { convs, updatePerson, toast, isLive } = useApp((s) => ({ convs: s.convs, updatePerson: s.updatePerson, toast: s.toast, isLive: live(s) }))
   const p = people[id]
-  const [def, setDef] = useState(dutyDefault[id] ?? p.role)
+  const [def, setDef] = useState(isLive ? p.role : dutyDefault[id] ?? p.role)
   const [byConv, setByConv] = useState<Record<string, string>>(() => Object.fromEntries(Object.entries(dutyByConv).map(([c, m]) => [c, m[id] ?? ''])))
-  const [preset, setPreset] = useState(presetOf[id] ?? '')
-  const [savedPreset, setSavedPreset] = useState(presetOf[id] ?? '')
+  const [preset, setPreset] = useState(isLive ? '' : presetOf[id] ?? '')
+  const [savedPreset, setSavedPreset] = useState(isLive ? '' : presetOf[id] ?? '')
   const [soul, setSoul] = useState(p.soul ?? '')
+  const [presetError, setPresetError] = useState<string | null>(null)
+  const [presetLoading, setPresetLoading] = useState(isLive)
+  const [presetSaving, setPresetSaving] = useState(false)
+  useEffect(() => {
+    setDef(isLive ? people[id]?.role ?? '' : dutyDefault[id] ?? people[id]?.role ?? '')
+    if (!isLive) return
+    let cancelled = false
+    setPresetLoading(true)
+    void personaLive(id).then((r) => {
+      if (cancelled) return
+      setPresetLoading(false)
+      if (r.ok) { setPreset(r.value); setSavedPreset(r.value); setPresetError(null) }
+      else setPresetError(r.message)
+    })
+    return () => { cancelled = true }
+  }, [id, isLive])
   const groups = convs.filter((c) => c.kind === 'group' && c.members.includes(id))
-  const titleOf = (conv: string) => convs.find((c) => c.id === conv)?.title
-  const saveDef = (v: string) => { if (!v || v === def) return; dutyDefault[id] = v; setDef(v); updatePerson(id, { role: v }, `默认职位改成「${v}」`) }
-  const saveConv = (conv: string, v: string) => {
-    dutyByConv[conv] = { ...(dutyByConv[conv] ?? {}) }
-    if (v) dutyByConv[conv][id] = v; else delete dutyByConv[conv][id]
-    setByConv((m) => ({ ...m, [conv]: v }))
-    updatePerson(id, {}, v ? `在「${titleOf(conv)}」的分工改成「${v}」` : `清空了在「${titleOf(conv)}」的分工`)
+  const saveDef = (v: string) => { if (!v || v === def) return; void updatePerson(id, { role: v }, `默认职位改成「${v}」`).then((ok) => { if (ok) { setDef(v); if (!isLive) dutyDefault[id] = v } }) }
+  const saveConv = (cid: string, v: string) => {
+    dutyByConv[cid] = { ...dutyByConv[cid] }
+    if (v) dutyByConv[cid][id] = v; else delete dutyByConv[cid][id]
+    setByConv((cur) => ({ ...cur, [cid]: v }))
+    void updatePerson(id, {}, `改了在「${convs.find((c) => c.id === cid)?.title}」的分工`)
+  }
+  const savePreset = async () => {
+    if (!presetDirty || presetSaving || presetLoading || presetError) return
+    setPresetSaving(true)
+    const ok = await updatePerson(id, isLive ? { persona: preset } : {}, '改了预设')
+    setPresetSaving(false)
+    if (ok) { setSavedPreset(preset); if (!isLive) presetOf[id] = preset }
   }
   const tools = (p.tools ?? []).filter((t) => t.on)
   const presetDirty = preset !== savedPreset
@@ -41,25 +65,21 @@ export function Duty({ id }: { id: PersonId }) {
           <span className={`${label} text-fg-3`}>默认职位</span>
           <InlineEdit testid="duty-default-edit" value={def} onSave={saveDef} />
         </div>
-        {groups.length > 0 && <Subhead className="mt-3">在这个群的分工</Subhead>}
-        {groups.map((g) => (
-          <div key={g.id} className="flex items-center gap-2 py-0.5">
-            <span className={`${label} flex min-w-0 items-center gap-1.5 text-fg-2`}><GroupAvatar ids={g.members} size={18} /><span className="truncate">{g.title}</span></span>
-            <InlineEdit testid={`duty-${g.id}`} value={byConv[g.id] ?? ''} placeholder={DUTY_FALLBACK} onSave={(v) => saveConv(g.id, v)} />
-          </div>
-        ))}
+        {isLive ? <div data-testid="duty-conv-off" className="mt-3 rounded-lg bg-hover/60 px-3 py-2 text-[12.5px] text-fg-3">还不能按群分工：后端合同暂未提供群级职责字段。</div> : groups.length > 0 && <Subhead className="mt-3">在这个群的分工</Subhead>}
+        {!isLive && groups.map((g) => <div key={g.id} className="flex items-center gap-2 py-0.5"><span className={`${label} flex min-w-0 items-center gap-1.5 text-fg-2`}><GroupAvatar ids={g.members} size={18} /><span className="truncate">{g.title}</span></span><InlineEdit testid={`duty-${g.id}`} value={byConv[g.id] ?? ''} placeholder={DUTY_FALLBACK} onSave={(v) => saveConv(g.id, v)} /></div>)}
       </WbCard>
 
       <WbCard>
         <SectionHeader className="mb-2" title={<>预设 <LayerHint k="预设" /></>} />
-        <TextArea data-testid="preset-edit" value={preset} onChange={(e) => setPreset(e.target.value)} rows={4} />
+        <TextArea data-testid="preset-edit" value={preset} disabled={presetLoading || !!presetError || presetSaving} onChange={(e) => setPreset(e.target.value)} rows={4} />
+        {presetError && <p role="alert" className="mt-2 text-[12px] text-err">预设没读到：{presetError}</p>}
         <div className="mt-2 flex items-center gap-2">
-          <span className={presetDirty ? 'flex-1 text-[12px] text-warm' : 'flex-1 text-[12px] text-fg-3'}>{presetDirty ? '有改动未保存' : '已保存'}</span>
-          <Button data-testid="preset-save" variant="primary" size="sm" disabled={!presetDirty} onClick={() => { presetOf[id] = preset; setSavedPreset(preset); updatePerson(id, {}, '改了预设') }}>保存</Button>
+          <span data-testid="preset-state" className={presetDirty ? 'flex-1 text-[12px] text-warm' : 'flex-1 text-[12px] text-fg-3'}>{presetLoading ? '正在读取…' : presetSaving ? '正在保存…' : presetError ? '未读取' : presetDirty ? '有改动未保存' : '已保存'}</span>
+          <Button data-testid="preset-save" variant="primary" size="sm" disabled={!presetDirty || presetLoading || !!presetError || presetSaving} onClick={savePreset}>保存</Button>
         </div>
       </WbCard>
 
-      {candidate('U61') && <WbCard>
+      {!isLive && candidate('U61') && <WbCard>
         <SectionHeader className="mb-2" title={<>性格 <LayerHint k="性格" /></>} />
         <TextArea data-testid="soul-edit" value={soul} onChange={(e) => setSoul(e.target.value)} rows={3} />
         <div className="mt-2 flex justify-end">

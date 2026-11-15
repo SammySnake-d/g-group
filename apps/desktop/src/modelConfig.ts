@@ -8,7 +8,11 @@ import { people, type Compute, type Person, type PersonId } from './data'
 
 export type Harness = (typeof HARNESSES)[number]
 export type Effort = (typeof EFFORTS)[number]
-export type ModelSettings = Omit<SettingsView, 'timezone'>
+export type ModelSettings = Omit<SettingsView, 'timezone'> & {
+  /** 连着后端时:界面列出来、但后端模型目录(settings.models)里没声明的模型 id——正在用的、这次手填的。
+   *  后端对没声明的不拦(原样用这个模型),界面上标出来,不替它写「能在哪些 Harness 上跑」 */
+  undeclared?: readonly string[]
+}
 
 export const HARNESS_LIST: readonly Harness[] = HARNESSES
 export const EFFORT_LIST: readonly Effort[] = EFFORTS
@@ -35,18 +39,47 @@ export const INITIAL_MODEL_SETTINGS: ModelSettings = {
   ],
 }
 
+/** 连上后端、还没读到 settings.get 时的空值:不拿演示目录顶上 */
+export const EMPTY_MODEL_SETTINGS: ModelSettings = { defaultHarness: 'claude-code', defaultSpeakingModel: '', defaultComputeModel: '', defaultEffort: 'medium', models: [] }
+
+/** 连着后端时给界面用的目录:后端声明的在前,后面补上正在用的(全局默认、ids 里给的)和这次手填的,标成「没声明」。
+ *  没声明的按后端的规矩不拦——所以这里让它在每个 Harness 上都过得去,厂商记 unknown(和 ui-core 对目录外模型的口径一致) */
+export function liveCatalog(s: ModelSettings, ids: readonly string[]): ModelSettings {
+  const known = s.models.filter((m) => !s.undeclared?.includes(m.id))
+  const declared = new Set(known.map((m) => m.id))
+  const undeclared = [...new Set([s.defaultSpeakingModel, s.defaultComputeModel, ...ids])].filter((id) => id && !declared.has(id))
+  return { ...s, models: [...known, ...undeclared.map((id) => ({ id, label: id, vendor: 'unknown', harnesses: [...HARNESS_LIST] }))], undeclared }
+}
+export const isUndeclared = (id: string | undefined, s: ModelSettings) => !!id && !!s.undeclared?.includes(id)
+/** 没声明的模型在下拉和说明里怎么写 */
+export const UNDECLARED = { option: '目录里没声明', where: '后端没声明它能在哪些 Harness 上跑，不拦' } as const
+
 export const harnessLabel = (h: string) => HARNESS_LABEL[h] ?? h
 export const modelLabel = (id: string | undefined, s: ModelSettings) => (id ? findModel(id, s.models)?.label ?? id : '没填')
 /** 下拉框里一行：名字 · 厂商 · 能在哪些 Harness 上跑 */
 export const modelOption = (id: string, s: ModelSettings) => {
   const m = findModel(id, s.models)
   if (!m) return id
+  if (isUndeclared(id, s)) return `${m.label} · ${UNDECLARED.option}`
   const where = m.harnesses.length ? m.harnesses.map(harnessLabel).join(' / ') : '只能用来说话'
   return `${m.label} · ${VENDOR_LABEL[m.vendor] ?? m.vendor} · ${where}`
 }
 
+/** 说话模型下拉里一行：名字 · 厂商（说话不选 Harness） */
+export const talkOption = (id: string, s: ModelSettings) => {
+  const m = findModel(id, s.models)
+  if (!m) return id
+  return `${m.label} · ${isUndeclared(id, s) ? UNDECLARED.option : VENDOR_LABEL[m.vendor] ?? m.vendor}`
+}
+/** 某个模型能在哪些 Harness 上跑的一句话 */
+export const whereRuns = (id: string, s: ModelSettings) =>
+  isUndeclared(id, s) ? UNDECLARED.where : `${(findModel(id, s.models)?.harnesses ?? []).map(harnessLabel).join(' / ') || '没有 Harness'} 能跑`
+
 /** 有模型配置的联系人：助手（不含真人和 Helper） */
 export const modelContacts = (): Person[] => Object.values(people).filter((p) => !p.human && p.computeModel && p.harness)
+
+/** 联系人配置里直接写着的模型 id(说话模型、单独指定的 Compute 模型) */
+export const usedModels = (): string[] => modelContacts().flatMap((p) => [p.model ?? '', p.computeModel?.mode === 'explicit' ? p.computeModel.model ?? '' : ''])
 
 export const toContactModels = (p: Person): ContactModels => ({
   id: p.id,

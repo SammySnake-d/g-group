@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { CircleAlert, CircleCheck, RotateCw } from 'lucide-react'
 import { shellCall, useAppShell } from '@/api/app-shell'
 import type { GatewayModel } from '@/api/app-shell-types'
+import { sameGatewayBase } from '@/api/gateway-identity'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Field, TextInput, ctaDisabled } from '@/components/pages/kit/parts'
@@ -20,13 +21,20 @@ export function SetupForm({ submitLabel = '保存并连接', onSaved, requireMod
   const [models, setModels] = useState<GatewayModel[] | null>(null)
   const [modelsBusy, setModelsBusy] = useState(false)
   const [modelsError, setModelsError] = useState<string | null>(null)
-  const hasToken = !!setup?.gateway?.hasToken
+  const requestVersion = useRef(0)
+  const hasToken = !!setup?.gateway?.hasToken && sameGatewayBase(baseUrl, setup.gateway.baseUrl)
   const ready = baseUrl.trim() && model.trim() && (token.trim() || hasToken)
+  const invalidateModels = () => {
+    requestVersion.current++
+    setModels(null); setModel(''); setModelsError(null); setModelsBusy(false); setError(null)
+  }
 
   const discoverModels = async () => {
+    const version = ++requestVersion.current
     setModelsBusy(true)
     setModelsError(null)
     const r = await shellCall('setup.models', { baseUrl, ...(token.trim() ? { token } : {}) })
+    if (version !== requestVersion.current) return
     setModelsBusy(false)
     if (!r.ok) { setModels([]); setModelsError(r.error); return }
     setModels(r.value.models)
@@ -52,15 +60,15 @@ export function SetupForm({ submitLabel = '保存并连接', onSaved, requireMod
 
   return (
     <form data-testid="setup-form" className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); if (ready && !busy) void save() }}>
-      <Field label="网关地址"><TextInput data-testid="setup-base-url" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.anthropic.com" autoComplete="off" spellCheck={false} inputMode="url" /></Field>
+      <Field label="网关地址"><TextInput data-testid="setup-base-url" value={baseUrl} disabled={busy} onChange={(e) => { invalidateModels(); setToken(''); setBaseUrl(e.target.value) }} placeholder="https://api.anthropic.com" autoComplete="off" spellCheck={false} inputMode="url" /></Field>
       <Field label="令牌" aside={hasToken ? <span className="text-[11.5px] font-normal text-fg-3">已保存，不改就留空</span> : undefined}>
-        <TextInput data-testid="setup-token" type="password" value={token} onChange={(e) => setToken(e.target.value)} placeholder={hasToken ? '••••••••' : 'sk-…'} autoComplete="off" />
+        <TextInput data-testid="setup-token" type="password" value={token} disabled={busy} onChange={(e) => { invalidateModels(); setToken(e.target.value) }} placeholder={hasToken ? '••••••••' : 'sk-…'} autoComplete="off" />
       </Field>
       <Field label="模型" aside={requireModelChoice ? <span className="text-[11.5px] font-normal text-fg-3">不会自动替换；从当前网关目录选</span> : undefined}>
-        <TextInput data-testid="setup-model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="先读取模型目录，或手动填模型 ID" autoComplete="off" spellCheck={false} />
+        <TextInput data-testid="setup-model" value={model} disabled={busy} onChange={(e) => setModel(e.target.value)} placeholder="先读取模型目录，或手动填模型 ID" autoComplete="off" spellCheck={false} />
       </Field>
       <div className="-mt-2 flex items-center gap-2">
-        <Button type="button" data-testid="setup-models-load" variant="secondary" size="xs" onClick={() => void discoverModels()} disabled={!baseUrl.trim() || (!token.trim() && !hasToken) || modelsBusy}>
+        <Button type="button" data-testid="setup-models-load" variant="secondary" size="xs" onClick={() => void discoverModels()} disabled={!baseUrl.trim() || (!token.trim() && !hasToken) || modelsBusy || busy}>
           {modelsBusy ? <><Spinner size="sm" tone="current" />读取中…</> : '读取可用模型'}
         </Button>
         {models && <span data-testid="setup-models-count" className="text-[12px] text-fg-3">已读到 {models.length} 个</span>}

@@ -15,7 +15,6 @@ export const UNWIRED = {
   rollback: '回到检查点',
   summarize: '总结',
   helperReply: '让 Helper 回复',
-  updatePerson: '改联系人设置',
 } as const satisfies Partial<Record<keyof AppState, string>>
 
 /** 把表里的动作包一层:连着后端就提示、不改界面;没连就照原样做 */

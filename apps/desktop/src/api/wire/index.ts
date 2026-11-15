@@ -17,14 +17,15 @@ import { messagesWiring } from './messages'
 import { noticesWiring } from './notices'
 import { pluginsWiring } from './plugins'
 import { roomsWiring } from './rooms'
-import { runsWiring } from './runs'
+import { runsWiring as ledgerWiring } from './runs'
 import { schedulesWiring } from './schedules'
 import { tasksWiring } from './tasks'
+import { processWiring } from './workbench'
 import { settingsWiring } from './settings'
 import type { Wiring, WireCtx } from './types'
 
 /** 已接线的实体,按读取顺序排。新实体:在 api/wire/ 下加一个文件,export 一个 defineWiring({...}),再在这里按依赖插一行 */
-export const WIRINGS: Wiring[] = [settingsWiring, contactsWiring, roomsWiring, messagesWiring, tasksWiring, runsWiring, filesWiring, noticesWiring, checklistWiring, schedulesWiring, pluginsWiring, followUpsWiring]
+export const WIRINGS: Wiring[] = [contactsWiring, settingsWiring, roomsWiring, messagesWiring, tasksWiring, ledgerWiring, processWiring, filesWiring, noticesWiring, checklistWiring, schedulesWiring, pluginsWiring, followUpsWiring]
 
 export type WireStatus =
   | { phase: 'off' }
