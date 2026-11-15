@@ -1,0 +1,65 @@
+apps/desktop/src/modelConfig.ts
+  s_132ae2173e1d4c::t_ab93a801c8270c 11-15,42-56,63,68-77,81-82
+  s_132ae2173e1d4c::t_5b8d98906be07b 83
+apps/desktop/src/api/wire/index.ts
+  s_132ae2173e1d4c::t_b6c2e787a3b931 20
+  s_132ae2173e1d4c::t_2db981e446441d 23,28
+apps/desktop/src/components/workbench/Duty.tsx
+  s_132ae2173e1d4c::t_eecce80f409c35 32
+  s_132ae2173e1d4c::t_797b59e1a737a0 52
+  s_132ae2173e1d4c::t_a29c7a09305fea 1-2,5-6,19,21-23,25-29,31,44-45,53,57
+apps/desktop/src/components/workbench/ProcessView.tsx
+  s_132ae2173e1d4c::t_99129580a3bfe5 2,10-12,41,43-44,46-55
+apps/desktop/src/api/wire/workbench.ts
+  s_132ae2173e1d4c::t_ab93a801c8270c 1-74
+apps/desktop/docs/前端开发优先级-20261115.md
+  s_132ae2173e1d4c::t_47f77ef5fda90a 37-44
+apps/desktop/src/components/models/GlobalModelDefaults.tsx
+  s_132ae2173e1d4c::t_91cd59730ff14d 21,29,61,64,67
+  s_132ae2173e1d4c::t_879de56a10ad05 37
+  s_132ae2173e1d4c::t_058e94a3a13c8b 63,81
+apps/desktop/src/components/workbench/Memory.tsx
+  s_132ae2173e1d4c::t_cbf094388956ee 17
+  s_132ae2173e1d4c::t_9c6aeef4d97b1c 4,12
+apps/desktop/src/components/workbench/Settings.tsx
+  s_132ae2173e1d4c::t_797b59e1a737a0 43
+  s_132ae2173e1d4c::t_3a257990db9e6a 1,4-5,14-15,17,19,22-30,32-35,37-42,44-46
+apps/desktop/src/components/models/BatchReplace.tsx
+  s_132ae2173e1d4c::t_f31b823f302608 30,37
+  s_132ae2173e1d4c::t_40b38c090bf5c8 34-35,55,58
+  s_132ae2173e1d4c::t_cffe53c1290c8a 32,56
+  s_132ae2173e1d4c::t_9a7b62e08b3350 10,33
+  s_132ae2173e1d4c::t_414d7ebabfc93f 45
+apps/desktop/e2e/parity-r2-wb.electron.spec.ts
+  s_132ae2173e1d4c::t_ab93a801c8270c 1-430
+apps/desktop/src/api/wire/settings.ts
+  s_132ae2173e1d4c::t_b6c2e787a3b931 1-3,5-6,8,12-16,24-28,31-36,39,41-48,51-62,64-69,71-74,77-79
+apps/desktop/src/components/workbench/Workbench.tsx
+  s_132ae2173e1d4c::t_8871345e00cd20 3,46
+apps/desktop/src/components/models/ContactModelSettings.tsx
+  s_132ae2173e1d4c::t_24123d7750f245 12
+  s_132ae2173e1d4c::t_c0f052bf5ddb68 78,99
+  s_132ae2173e1d4c::t_ffa39560a99323 9,27,127
+  s_132ae2173e1d4c::t_9b75b87f559582 24,33-34,76,79,82,97,100,104
+apps/desktop/src/store/slices/models.ts
+  s_132ae2173e1d4c::t_2d6b3a8765e042 8
+  s_132ae2173e1d4c::t_c0f052bf5ddb68 36
+  s_132ae2173e1d4c::t_f7e304b6dad9ab 44
+  s_132ae2173e1d4c::t_eecce80f409c35 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6ac3de08a0d1fac4d18d697a65ff9db9054e12e3",
+  "prompts": {},
+  "sessions": {
+    "s_132ae2173e1d4c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-9c33-7e33-a920-de86304f9413",
+        "model": "group/gpt-routings"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
