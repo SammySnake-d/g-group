@@ -83,5 +83,16 @@
     "runs-contract-calibration-green.tap": "a1529369cf6cd6287c3a4521e506b2c7a4a7e6e89db388e7a6f1542780dd518b",
     "runs-contract-calibration-red.tap": "9cec3a708b727f7f1c432694f012b2f84c3dd5c83f2c49a493c0681026b33edd"
   },
-  "tap_storage": "Readable TAP copies trim trailing whitespace only; changed copies also have byte-exact .tap.raw.gz archives. Originals remain in the isolated external evidence directory."
+  "tap_storage": "Readable TAP copies trim trailing whitespace only; changed copies also have byte-exact .tap.raw.gz archives. Originals remain in the isolated external evidence directory.",
+  "raw_log_sha256": {
+    "contract-typecheck.log": "396901319daac4a4413b23478852db3c572014f86c71d148273565f0f3332696",
+    "contract-lint.log": "67c7c9cf7b27f28cc05eff1b8682d579f958ea5a33ec90606da98cff6d9b9784",
+    "initial-lint.log": "7cfcb8fa356806b948b0b2211eceefb391552911e4170f8b8a231eea7648be0d"
+  },
+  "raw_log_sources": {
+    "contract-typecheck.log": "contract-typecheck.log",
+    "contract-lint.log": "contract-lint.log",
+    "initial-lint.log": "lint.log"
+  },
+  "log_storage": "Readable log copies trim trailing whitespace and terminal blank lines only; changed copies also have byte-exact .log.raw.gz archives. Originals remain in the isolated external evidence directory."
 }
