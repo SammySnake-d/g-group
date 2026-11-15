@@ -1,0 +1,19 @@
+packages/server/src/loop-guard-r1-regression.test.ts
+  s_69f96fa873b14b::t_cc61b1abcc3d33 1-222
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "355b8dc9b896fde921123e1284bd5d3e8a4bfd25",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
