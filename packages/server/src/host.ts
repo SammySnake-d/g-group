@@ -2567,11 +2567,12 @@ export class Host {
     const inboxEnd = inbox.at(-1)?.id ?? 0;
     let prior = this.failureRow("contact", contactId);
     if (prior?.status === "card") {
-      // 未交付是局部协议缺口,不是模型/网络故障:用户在该任务会话发来新指令时,
-      // 旧完成事件与新消息一起重新处理;其他种类的失败卡仍须用户显式操作。
+      // 未交付是局部协议缺口,不是模型/网络故障:用户在任一会话发来新指令时,
+      // 旧完成事件与新消息一起重新处理,不能让群里的失败卡挡住私聊;
+      // 其他种类的失败卡仍须用户显式操作。
       const end = JSON.parse(prior.batch_end) as Record<string, number>;
       const hasNewUser = prior.reason_class === "missing_delivery" && fresh.some((f) =>
-        f.kind === "message" && f.sender.kind === "user" && f.roomId === prior?.room_id && f.seq > (end[f.roomId] ?? 0));
+        f.kind === "message" && f.sender.kind === "user" && f.seq > (end[f.roomId] ?? 0));
       if (!hasNewUser) return "done";
       const cardId = prior.card_id;
       tx(this.db, () => {
@@ -2733,9 +2734,10 @@ export class Host {
         }
       }
     }
-    if (missingDelivery?.kind === "compute") {
+    if (missingDelivery?.kind === "compute" && !hasEffects) {
       // 本轮动作尚未落盘,因此按 B0 的未知失败走既有有界重试;耗尽后出可恢复失败卡,
       // 不消费完成事件、不伪造联系人发言,也不把执行完成当成用户验收。
+      // 有其他实质动作时由事务分别提交并保留未处理的完成事件,不能连带吞掉新私聊。
       const error = new Error(`Compute 已完成,联系人尚未交付任务 ${missingDelivery.taskId}`);
       this.setActivity(contactId, null, "idle");
       this.runs.end(unit.id, "failed", { failure: runFailure(this.classify(error)) });
