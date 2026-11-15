@@ -3589,8 +3589,8 @@ export class Host {
    *  epoch 是这一轮开始时的序号;期间任务又起了新一轮(续接),这次收尾就不动槽位 */
   private async afterRound(taskId: string, computeId: string, kind: "failed" | "stopped" | "completed", epoch: number) {
     const a = this.adapterForCompute(computeId);
-    let ok = true;
-    let why = "";
+    let ok = !!a;
+    let why = a ? "" : "找不到原执行器,无法核验停止";
     if (a) {
       if (kind !== "completed" && a.quiesce) {
         const q = await a.quiesce(computeId);
