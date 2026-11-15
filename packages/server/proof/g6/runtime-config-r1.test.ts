@@ -1,19 +1,17 @@
 // PR #96 R1:配置矩阵、替身续跑身份与真正 runner CLI → driver 子进程 → 宿主 → HTTP 请求。
 // 中性 loopback 响应器不连真实网关、不使用真实凭据。
 import assert from "node:assert/strict";
-import { spawn, type ChildProcess } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
-import { createServer } from "node:http";
+import { execFileSync, spawn, type ChildProcess } from "node:child_process";
+import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { speakingEndpointFromEnv } from "../../src/speaking.ts";
 import { gatewayEnv } from "./driver.ts";
 import { mkItem, mkSet } from "./fixtures/build.ts";
 import { configFingerprint, modelConfig, reuseKey } from "./manifest.ts";
-import { driverProcessEnv } from "./run.ts";
-import { standinReply } from "./standin.ts";
+import { driverProcessEnv, linkNodeModules } from "./run.ts";
 import type { RawRecord } from "./types.ts";
 
 const BASE = "http://fixture.invalid";
@@ -96,32 +94,49 @@ test("C96-R1-04 standin 忽略真实预算变化:指纹与续跑身份不变,真
   assert.equal(JSON.stringify(realConfigured).includes(TOKEN), false);
 });
 
-const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((entry) => entry.isDirectory() ? walk(path.join(dir, entry.name)) : [path.join(dir, entry.name)]);
-
-test("C96-R1-05 真正 runner CLI 经子进程与宿主把 65536 送到对话及检查 HTTP,manifest 保留完整预算", { timeout: 120_000 }, async () => {
-  const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "gg-g6-cli-r1-")));
-  const item = mkItem();
-  const fixture = path.join(dir, "set.json");
-  writeFileSync(fixture, JSON.stringify(mkSet([item])));
-  const seen: { body: { max_tokens?: number }; key: string | undefined }[] = [];
-  const server = createServer(async (req, res) => {
-    if (req.method === "GET") { res.writeHead(200); res.end("fixture"); return; }
-    const chunks: Buffer[] = [];
-    for await (const data of req) chunks.push(Buffer.from(data));
-    const text = Buffer.concat(chunks).toString("utf8");
-    seen.push({ body: JSON.parse(text) as { max_tokens?: number }, key: req.headers["x-api-key"] as string | undefined });
-    res.writeHead(200, { "content-type": "text/event-stream" });
-    res.end(standinReply(item, text));
-  });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+// 真正的 CLI、子进程、driver 和宿主均原样执行；禁网门禁中只把 fetch 末端换成进程内
+// Anthropic 响应器。真实 TCP loopback 另由 runtime-config-r1-http.integration.ts 独立核验。
+test("C96-R1-05 禁网下真实 runner CLI 经子进程和宿主传递 65536 及 manifest", { timeout: 120_000 }, async () => {
+  const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "gg-g6-cli-seatbelt-")));
   let child: ChildProcess | undefined;
   try {
-    const address = server.address();
-    assert.ok(address && typeof address !== "string");
+    const fixtureRepo = path.join(dir, "repo");
+    mkdirSync(fixtureRepo);
+    cpSync(path.join(repo, "packages"), path.join(fixtureRepo, "packages"), { recursive: true });
+    cpSync(path.join(repo, "package.json"), path.join(fixtureRepo, "package.json"));
+    const gitEnv = { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: dir, TMPDIR: dir, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
+    const git = (...args: string[]) => execFileSync("git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false", "-c", "gc.auto=0", "-c", "core.hooksPath=/dev/null", ...args], { cwd: fixtureRepo, env: gitEnv, stdio: "pipe" });
+    git("init", "-q", "-b", "main");
+    git("add", "packages", "package.json");
+    git("commit", "-qm", "fixture source snapshot");
+    linkNodeModules(repo, fixtureRepo);
+
+    const item = mkItem();
+    const fixture = path.join(dir, "set.json");
+    const itemPath = path.join(dir, "item.json");
+    const requests = path.join(dir, "requests.jsonl");
     const out = path.join(dir, "out");
-    const env = { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: dir, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1", ANTHROPIC_BASE_URL: `http://127.0.0.1:${address.port}`, ANTHROPIC_API_KEY: TOKEN, GG_SPEAKING_MAX_OUTPUT_TOKENS: "65536", GG_SPEAKING_CONTEXT_WINDOW: "983010" };
-    const args = [path.join(repo, "packages/server/proof/g6/run.ts"), "--mode=real", "--groups=g1", "--base=HEAD", `--models=${MODEL}`, "--items=T", "--reps=1", `--fixture=${fixture}`, `--out=${out}`, "--quiet=5", "--settle=0", "--step-timeout=5000", "--call-timeout=5000"];
-    child = spawn(process.execPath, args, { cwd: repo, env, detached: true, stdio: ["ignore", "pipe", "pipe"] });
+    const preload = path.join(dir, "transport.mjs");
+    const shim = path.join(dir, "node-with-transport");
+    writeFileSync(fixture, JSON.stringify(mkSet([item])));
+    writeFileSync(itemPath, JSON.stringify(item));
+    writeFileSync(preload, [
+      'import { readFileSync, appendFileSync } from "node:fs";',
+      `import { standinReply } from ${JSON.stringify(pathToFileURL(path.join(fixtureRepo, "packages/server/proof/g6/standin.ts")).href)};`,
+      `const item = JSON.parse(readFileSync(${JSON.stringify(itemPath)}, "utf8"));`,
+      `Object.defineProperty(process, "execPath", { value: ${JSON.stringify(shim)} });`,
+      'globalThis.fetch = async (url, init = {}) => {',
+      '  if (!init.method || init.method === "GET") return new Response("fixture", { status: 200 });',
+      '  if (init.method !== "POST" || !/\\/v1\\/messages(?:\\?|$)/.test(String(url)) || typeof init.body !== "string") throw new Error("unexpected fixture request " + init.method + " " + String(url) + " " + typeof init.body);',
+      `  appendFileSync(${JSON.stringify(requests)}, JSON.stringify({ body: JSON.parse(init.body), key: new Headers(init.headers).get("x-api-key") }) + "\\n");`,
+      '  return new Response(standinReply(item, init.body), { status: 200, headers: { "content-type": "text/event-stream" } });',
+      '};',
+    ].join("\n"));
+    writeFileSync(shim, `#!/bin/sh\nexec '${process.execPath}' --import '${preload}' "$@"\n`);
+    chmodSync(shim, 0o700);
+    const env = { ...gitEnv, ANTHROPIC_BASE_URL: BASE, ANTHROPIC_API_KEY: TOKEN, GG_SPEAKING_MAX_OUTPUT_TOKENS: "65536", GG_SPEAKING_CONTEXT_WINDOW: "983010" };
+    const args = ["--import", preload, path.join(fixtureRepo, "packages/server/proof/g6/run.ts"), "--mode=real", "--groups=g1", "--base=HEAD", `--models=${MODEL}`, "--items=T", "--reps=1", `--fixture=${fixture}`, `--out=${out}`, "--quiet=5", "--settle=0", "--step-timeout=5000", "--call-timeout=5000"];
+    child = spawn(process.execPath, args, { cwd: fixtureRepo, env, detached: true, stdio: ["ignore", "pipe", "pipe"] });
     let log = "";
     child.stdout!.on("data", (d: Buffer) => { log += d.toString(); });
     child.stderr!.on("data", (d: Buffer) => { log += d.toString(); });
@@ -134,20 +149,20 @@ test("C96-R1-05 真正 runner CLI 经子进程与宿主把 65536 送到对话及
     assert.deepEqual(exit, { code: 0, signal: null }, log);
     const summary = JSON.parse(readFileSync(path.join(out, "summary.json"), "utf8")) as { models: { speaking: Record<string, string> }[] };
     assert.deepEqual(summary.models[0]?.speaking, { GG_SPEAKING_MAX_OUTPUT_TOKENS: "65536", GG_SPEAKING_CONTEXT_WINDOW: "983010" });
+    const walk = (p: string): string[] => readdirSync(p, { withFileTypes: true }).flatMap((entry) => entry.isDirectory() ? walk(path.join(p, entry.name)) : [path.join(p, entry.name)]);
     const files = walk(path.join(out, "raw")).filter((file) => file.endsWith(".json"));
     assert.equal(files.length, 1, log);
     const raw = JSON.parse(readFileSync(files[0]!, "utf8")) as RawRecord;
     assert.equal(raw.status, "ok", raw.error ?? log);
     const dialogue = raw.calls.filter((call) => call.cls === "round");
     const checks = raw.calls.filter((call) => call.cls === "check");
-    assert.ok(dialogue.length > 0 && checks.length > 0, "真实宿主必须发对话与检查两类请求");
+    assert.ok(dialogue.length > 0 && checks.length > 0, `真实宿主必须发对话与检查两类请求:${JSON.stringify({ calls: raw.calls, reports: raw.reports, steps: raw.steps, log })}`);
     assert.ok([...dialogue, ...checks].every((call) => call.maxTokens === 65536));
+    const seen = readFileSync(requests, "utf8").trim().split("\n").map((line) => JSON.parse(line) as { body: { max_tokens?: number }; key: string });
     assert.equal(seen.length, raw.calls.length);
     assert.ok(seen.length > 0 && seen.every((request) => request.body.max_tokens === 65536 && request.key === TOKEN));
   } finally {
     if (child?.pid && child.exitCode === null && child.signalCode === null) process.kill(-child.pid, "SIGTERM");
-    server.closeAllConnections();
-    await new Promise<void>((resolve) => server.close(() => resolve()));
     rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 });
