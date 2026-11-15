@@ -1,0 +1,77 @@
+receipts/fix-group-mention-routing-20261115.json
+  s_b93b4373bbd684::t_38ce2791cb45c0 2,6-7,12,20-28,30,32,34-49
+packages/server/proof/group-mention-choice-20261115/biome-output.txt
+  s_b93b4373bbd684::t_1b8a4554842586 1
+packages/server/proof/group-mention-choice-20261115/evidence-diff-check-error.exit
+  s_b93b4373bbd684::t_1b8a4554842586 1
+packages/server/proof/group-mention-choice-20261115/evidence-diff-check-error-2.exit
+  s_b93b4373bbd684::t_b48eab6e15bf5d 1
+packages/server/proof/group-mention-choice-20261115/README.md
+  s_b93b4373bbd684::t_1b8a4554842586 13,28
+  s_b93b4373bbd684::t_b48eab6e15bf5d 20,29
+  s_b93b4373bbd684::t_05f705e02e4876 1-12,14-19,21-27
+packages/server/proof/group-mention-choice-20261115/biome.exit
+  s_b93b4373bbd684::t_ef97e8efb106ab 1
+packages/server/proof/group-mention-choice-20261115/cloud-failure-4df7.json
+  s_b93b4373bbd684::t_94edee56c0c3fb 1-25
+packages/server/proof/group-mention-choice-20261115/cloud-source-06a5.json
+  s_b93b4373bbd684::t_ff0685d7f0c29f 1-8
+packages/server/proof/group-mention-choice-20261115/cloud-status-06a5.json
+  s_b93b4373bbd684::t_f72fa06e964c51 1-25
+packages/server/proof/group-mention-choice-20261115/green-concurrent-snapshot.txt
+  s_b93b4373bbd684::t_912199af9188a7 1-29
+packages/server/proof/group-mention-choice-20261115/green-meaningful-supplement.txt
+  s_b93b4373bbd684::t_8a7ff0075eb2ec 1-17
+packages/server/proof/group-mention-choice-20261115/green-related-48.txt
+  s_b93b4373bbd684::t_9e175fdbd11c30 1-299
+packages/server/proof/group-mention-choice-20261115/initial-runner-syntax-error.txt
+  s_b93b4373bbd684::t_081e0ee8e5a840 1-44
+packages/server/proof/group-mention-choice-20261115/live-06a5-db-summary.json
+  s_b93b4373bbd684::t_fde5a54186ecfc 1-56
+packages/server/proof/group-mention-choice-20261115/live-06a5-result.json
+  s_b93b4373bbd684::t_6b2830dc99d93c 1-304
+packages/server/proof/group-mention-choice-20261115/live-06a5.txt
+  s_b93b4373bbd684::t_5577138c8cd4fd 1-37
+packages/server/proof/group-mention-choice-20261115/live-4df7-repeated.txt
+  s_b93b4373bbd684::t_631bd35bcdaf70 1-34
+packages/server/proof/group-mention-choice-20261115/live-4df7-result.json
+  s_b93b4373bbd684::t_ad920f11bd0fea 1-278
+packages/server/proof/group-mention-choice-20261115/package-06a5.txt
+  s_b93b4373bbd684::t_ac8f7decd4e8a2 1-48
+packages/server/proof/group-mention-choice-20261115/recall-and-group-green.txt
+  s_b93b4373bbd684::t_dd3b14a2e3282a 1-95
+packages/server/proof/group-mention-choice-20261115/recall-base-45976.txt
+  s_b93b4373bbd684::t_222a81168737d4 1-49
+packages/server/proof/group-mention-choice-20261115/recall-regressed-4df7.txt
+  s_b93b4373bbd684::t_6f8ad4c368ba69 1-57
+packages/server/proof/group-mention-choice-20261115/red-context-guidance.txt
+  s_b93b4373bbd684::t_27c36bf21cd1c6 1-34
+packages/server/proof/group-mention-choice-20261115/red-meaningful-supplement.txt
+  s_b93b4373bbd684::t_01d1b604248ce9 1-28
+packages/server/proof/group-mention-choice-20261115/source-hashes-06a5.txt
+  s_b93b4373bbd684::t_202bff2471b2a5 1-5
+packages/server/proof/group-mention-choice-20261115/suite.exit
+  s_b93b4373bbd684::t_535286a2ce1750 1
+packages/server/proof/group-mention-choice-20261115/suite.progress
+  s_b93b4373bbd684::t_6a5205e93e2003 1-3
+packages/server/proof/group-mention-choice-20261115/test.exit
+  s_b93b4373bbd684::t_bc708a51b05e4f 1
+packages/server/proof/group-mention-choice-20261115/typecheck.exit
+  s_b93b4373bbd684::t_03788898e6ecf8 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2bb7d12d4add57797354c5615a2ff96be9295189",
+  "prompts": {},
+  "sessions": {
+    "s_b93b4373bbd684": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1defe-5fc0-7860-ac40-8ae048dd2a50",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

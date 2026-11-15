@@ -1,0 +1,37 @@
+packages/server/proof/q06-r1-20261115/fixed-tests.log
+  s_69f96fa873b14b::t_e52117057e8610 1-341
+packages/server/proof/q06-r1-20261115/fixed-tests2.log
+  s_69f96fa873b14b::t_93fb52d63393ac 1-351
+packages/server/proof/q06-r1-20261115/fixed-tests5.log
+  s_69f96fa873b14b::t_c90f36cb42f48c 1-435
+packages/server/proof/q06-r1-20261115/g18-retest.log
+  s_69f96fa873b14b::t_11a48e31b51704 1-5
+packages/server/proof/q06-r1-20261115/inherited-dry.log
+  s_69f96fa873b14b::t_5f6aff4c40abc1 1-2
+packages/server/proof/q06-r1-20261115/inherited-selected.log
+  s_69f96fa873b14b::t_3c15f57b0b5004 1-21
+packages/server/proof/q06-r1-20261115/lint.log
+  s_69f96fa873b14b::t_3a8851506e44bb 1-2
+packages/server/proof/q06-r1-20261115/r1-mutations.log
+  s_69f96fa873b14b::t_9dca4e1ace935f 1-9
+packages/server/proof/q06-r1-20261115/tauto-static.log
+  s_69f96fa873b14b::t_31eef93ff21d09 1
+packages/server/proof/q06-r1-20261115/typecheck.log
+  s_69f96fa873b14b::t_dbdff6ac4a4e74 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db74d8691463bfa8fbbb3c107870d059c668663b",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,52 @@
+packages/adapter-pi-contact/src/compact.ts
+  s_125fc13e4dc62e::t_c838b04e37f12c 157
+packages/server/proof/b2-latency-20261116/README.md
+  s_125fc13e4dc62e::t_f798fe73b046e5 2,6,8,10,17,19,32,34,36,38,43,45,47
+  s_125fc13e4dc62e::t_d59cb1335f3265 1,3-5,7,9,11-16,18,20-31,33,35,37,39-42,44,46,48
+packages/adapter-pi-contact/src/compact.test.ts
+  s_125fc13e4dc62e::t_f01cfb93279cb8 91-113
+packages/server/proof/b2-latency-20261116/observations.json
+  s_125fc13e4dc62e::t_f798fe73b046e5 1-3,7-8,10-28,32-43,47-58,62-73,77-90,92-110,114-125,131-142,146-157,161-174,176-194,198-209,215-226,230-241,245-254,600-633
+  s_125fc13e4dc62e::t_d59cb1335f3265 4-6,9,29-31,44-46,59-61,74-76,91,111-113,126-130,143-145,158-160,175,195-197,210-214,227-229,242-244,255-599
+packages/kernel/src/runtime-ports.ts
+  s_125fc13e4dc62e::t_c838b04e37f12c 195-196
+scripts/measure-b2-round-dbtime-20261115221114.mjs
+  s_125fc13e4dc62e::t_f0d9a4621f904e 1-2,128-135
+  s_125fc13e4dc62e::t_00b04b21719dde 3-127
+packages/server/src/reflect-parallel.test.ts
+  s_125fc13e4dc62e::t_0797ec013479c5 27,68,111,145,181,222
+  s_125fc13e4dc62e::t_756a051817de24 133-140,142-144,146-165
+  s_125fc13e4dc62e::t_edc55178053783 206-221,223-246
+  s_125fc13e4dc62e::t_078d2533f4bd69 166-176,178-180,182-205
+  s_125fc13e4dc62e::t_1af54acda8a196 247-282,331-334
+  s_125fc13e4dc62e::t_2ae9221eda4890 335-384
+  s_125fc13e4dc62e::t_e2df8551629190 385-439
+  s_125fc13e4dc62e::t_2cb53b808e4708 1-5,7-22,24-26,28-54
+  s_125fc13e4dc62e::t_a01e6048522f8a 440-480
+  s_125fc13e4dc62e::t_bfa97520417af7 99-106,108-110,112-132
+  s_125fc13e4dc62e::t_01ed2c9110fc21 23,64,107,141,177
+  s_125fc13e4dc62e::t_e7dc7e8d35a0a5 6,283-330
+  s_125fc13e4dc62e::t_58e970061e0601 55-63,65-67,69-98
+packages/server/src/host.ts
+  s_125fc13e4dc62e::t_f15a8e6fb56603 2414,2417-2418,2420-2421,2425-2429,2432,2441,2458-2464
+  s_125fc13e4dc62e::t_3d6d1aa48101cc 2455-2456
+  s_125fc13e4dc62e::t_555b359bad84d0 397-398,1175,2422
+  s_125fc13e4dc62e::t_da7d35f20e22ea 2423-2424
+  s_125fc13e4dc62e::t_c838b04e37f12c 2415-2416,2419,2430-2431,2451-2454
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6b1acf8dcdfd857df8f1c2d9feba23657fd48554",
+  "prompts": {},
+  "sessions": {
+    "s_125fc13e4dc62e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1defd-bfb5-74f3-8210-1927be85b8df",
+        "model": "group/gpt-terra"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -1,0 +1,23 @@
+scripts/t177/g35-mutations.mjs
+  s_69f96fa873b14b::t_363f81b1eed60e 114-158,176,196
+packages/server/src/host.ts
+  s_69f96fa873b14b::t_fedc81f2af6f70 2382
+packages/server/src/memory-write-neighbors.test.ts
+  s_69f96fa873b14b::t_e8cff987b42536 89-141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "45c8d640c9e51bc8b3739dea3c1419023d2e6da9",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

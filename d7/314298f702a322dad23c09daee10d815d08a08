@@ -1,0 +1,25 @@
+packages/server/proof/g6/runtime-config-r1.test.ts
+  s_69f96fa873b14b::t_55fbf959bcd892 1-153
+packages/server/proof/g6/driver.ts
+  s_69f96fa873b14b::t_6253bc59c45ee5 83
+packages/server/proof/g6/manifest.ts
+  s_69f96fa873b14b::t_7d6aec6423d109 47,49
+packages/server/proof/g6/run.ts
+  s_69f96fa873b14b::t_de5c367253f5ac 17,295
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d7314298f702a322dad23c09daee10d815d08a08",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
