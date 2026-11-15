@@ -1,0 +1,32 @@
+移植后云端复验(box1,Ubuntu 24.04,2 核 3G,Node v24.21.0);由 claude:484c2330-2f15-49ae-9f7a-145e467cedb1 的子代理执行
+代码 HEAD=90dbe1310bf5a0832a577a6c0ef4eaf6f1d5a683  底座=origin/proof/t177-g6-g3-merge 122e0d4f1f8b0415cf0c413db28fa827f1d4067b
+开始 2026-11-13T16:05:28Z  结束 2026-11-13T16:08:34Z
+npm ci 退出 0
+npm run typecheck 退出 0
+npm run lint 退出 0: Checked 221 files in 603ms. No fixes applied.
+全量 node scripts/gates/test-runner.ts --test-concurrency=1 'packages/**/*.test.ts' 'scripts/gates/*.test.ts' 退出 0:
+# tests 1571
+# suites 0
+# pass 1571
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+具名变异 scripts/t177/g35-mutations.mjs 退出 0:
+原样对照:通过 3,失败 0,退出 0
+G35-M01 杀死:return every eligible memory instead of retrieval(被「G35-02 a query with no matching memory gives both write paths an empty neighborhood」发现)
+G35-M02 杀死:ignore the write-neighborhood query(被「G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order」发现)
+G35-M03 杀死:reverse stable tied order(被「G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order」发现)
+G35-M04 杀死:include revoked and superseded entries(被「G35-03 both write paths keep contact, room, status and persona boundaries before retrieval」发现)
+G35-M05 杀死:include persona suggestions(被「G35-03 both write paths keep contact, room, status and persona boundaries before retrieval」发现)
+G35-M06 杀死:include memories from unrelated rooms(被「G35-03 both write paths keep contact, room, status and persona boundaries before retrieval」发现)
+G35-M07 杀死:drop global matching entries(被「G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order」发现)
+G35-M08 杀死:drop degraded matching entries(被「G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order」发现)
+G35-M09 杀死:mix another contact memory into this neighborhood(被「G35-03 both write paths keep contact, room, status and persona boundaries before retrieval」发现)
+G35-M10 杀死:coarse path passes an empty query(被「G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order」发现)
+G35-M11 杀死:fine path passes an empty query(被「G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order」发现)
+G35-M12 杀死:lose matched memory bodies(被「G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order」发现)
+{"node":"v24.21.0","mutations":12,"killed":12,"survived":0,"control":{"passed":3,"failed":0},"afterControl":{"passed":3,"failed":0,"exit":0}}
+变异后源码还原检查(git status --porcelain 与 git diff --exit-code HEAD 均无输出)退出 0
+云端证据包 sha256 9b2f652a871ef2024d091ef5c809ec190778e997e0747c60124e84e28244bb38(含两片;本仓库只留摘要与变异结果)
+说明:这些数字只对上面这个 HEAD 与底座成立;候选包里 1730/1730、1734/1734 是在本地合并底座 930acf10 上跑的,不继承。

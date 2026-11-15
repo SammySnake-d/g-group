@@ -1,0 +1,58 @@
+{
+ "repo": "/private/tmp/gg-r2-claude-20261115/pr95",
+ "A": {
+  "ok": true,
+  "coarseCalls": 1,
+  "fineCalls": 1,
+  "fineBatchMarks": [
+   0
+  ],
+  "coarse": [
+   [
+    "m-a",
+    "m-b",
+    "m-c",
+    "m-d",
+    "m-e",
+    "m-f"
+   ]
+  ],
+  "fine": [
+   [
+    "m-a",
+    "m-b",
+    "m-c",
+    "m-d",
+    "m-e",
+    "m-f"
+   ]
+  ]
+ },
+ "B": {
+  "ok": true,
+  "fineUnion": [
+   "m-alpha",
+   "m-beta"
+  ],
+  "coarseCalls": 2,
+  "fineCalls": 1,
+  "fineBatchMarks": [
+   0
+  ],
+  "coarse": [
+   [
+    "m-alpha",
+    "m-beta"
+   ],
+   [
+    "m-beta"
+   ]
+  ],
+  "fine": [
+   [
+    "m-alpha",
+    "m-beta"
+   ]
+  ]
+ }
+}

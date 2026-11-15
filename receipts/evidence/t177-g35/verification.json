@@ -1,0 +1,63 @@
+{
+  "at": "2026-11-12T15:31:20.329815+00:00",
+  "scope": "G35 deterministic code candidate verification only; not overall backend release or G6 acceptance",
+  "head": "47f2fd73e98871ddde7bb6103af42ec916c49c4e",
+  "feature_green": "80dbab5b235c1d5d07baed3bff3513b95338f6f6",
+  "red": "62d6abff25da95b69b0c1ca2146a94bb22af88fe",
+  "accepted": true,
+  "box": "box4",
+  "command_execution_session": 99370,
+  "previous_failed_launcher": {
+    "session": 15157,
+    "exit": 1,
+    "stage": "script upload before final verification",
+    "error": "ECONNRESET relay.simular.cloud; final verification had not started"
+  },
+  "exits": {
+    "final-typecheck": 0,
+    "final-lint": 0,
+    "final-full": 0,
+    "final-mutations": 0,
+    "final-source-integrity": 0,
+    "group3-typecheck": 0,
+    "group3-targeted": 0
+  },
+  "full": {
+    "tests": 1730,
+    "pass": 1730,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "targeted_group3": {
+    "head": "d360ba95c285d8b20ea8f12578c314ec401acc62",
+    "tests": 31,
+    "pass": 31,
+    "fail": 0
+  },
+  "mutations": {
+    "node": "v24.21.0",
+    "mutations": 12,
+    "killed": 12,
+    "survived": 0,
+    "control": {
+      "passed": 3,
+      "failed": 0
+    },
+    "afterControl": {
+      "passed": 3,
+      "failed": 0,
+      "exit": 0
+    }
+  },
+  "mutation_loading_failures": 0,
+  "source_integrity_restored": true,
+  "cloud_archive_sha256": "0a4cdf80d8b7dbacf2a80b0d6d1d5e68fed4029a046aaad7d5c2da5391291d84",
+  "cloud_archive": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-t177-execution/backend-closeout-20261112/final-cloud-evidence.tar.gz",
+  "cloud_started": "2026-11-12T15:19:13Z",
+  "cloud_finished": "2026-11-12T15:24:24Z",
+  "overall_backend_complete": false,
+  "overall_G6_complete": false,
+  "independent_review": null
+}

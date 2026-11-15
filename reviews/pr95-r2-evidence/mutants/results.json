@@ -1,0 +1,211 @@
+{
+ "head": "ca933504a43f73e733c9cd8b85e9abdb456d0b81",
+ "tests": [
+  "packages/server/src/memory-write-neighbors.test.ts"
+ ],
+ "clean": {
+  "exit": 0,
+  "tests": 8,
+  "pass": 8,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "todo": 0,
+  "failed": []
+ },
+ "mutants": [
+  {
+   "id": "N1-default-limit",
+   "why": "不传上限,落到检索函数的默认值 5",
+   "matches": 1,
+   "before": "q.text, visible.length)",
+   "after": "q.text)",
+   "exit": 0,
+   "tests": 8,
+   "pass": 8,
+   "fail": 0,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [],
+   "verdict": "SURVIVED"
+  },
+  {
+   "id": "N2-cap-5",
+   "why": "静默截断到 5 条",
+   "matches": 1,
+   "before": "q.text, visible.length)",
+   "after": "q.text, Math.min(5, visible.length))",
+   "exit": 0,
+   "tests": 8,
+   "pass": 8,
+   "fail": 0,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [],
+   "verdict": "SURVIVED"
+  },
+  {
+   "id": "N3-cap-4",
+   "why": "静默截断到 4 条(对照:应被五条夹具发现)",
+   "matches": 1,
+   "before": "q.text, visible.length)",
+   "after": "q.text, Math.min(4, visible.length))",
+   "exit": 1,
+   "tests": 8,
+   "pass": 7,
+   "fail": 1,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "G35-R1-04 coarse and fine return every one of five matching memories"
+   ],
+   "verdict": "KILLED"
+  },
+  {
+   "id": "N4-limit-minus-one",
+   "why": "少取一条",
+   "matches": 1,
+   "before": "q.text, visible.length)",
+   "after": "q.text, visible.length - 1)",
+   "exit": 1,
+   "tests": 8,
+   "pass": 3,
+   "fail": 5,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "G35-R1-01 coarse and fine retrieve a query found only in the body",
+    "G35-R1-02 coarse and fine retrieve a query found only in the title",
+    "G35-R1-03 coarse and fine return the entire distinct title and body",
+    "G35-R1-04 coarse and fine return every one of five matching memories",
+    "G35-R1-05 coarse and fine rank a higher-scoring hit before lower id"
+   ],
+   "verdict": "KILLED"
+  },
+  {
+   "id": "N5-swap-title-body",
+   "why": "返回项标题与正文对调",
+   "matches": 1,
+   "before": ".map((hit) => { const e = byId.get(hit.ref)!; return { id: e.id, title: e.title, body: e.body }; });",
+   "after": ".map((hit) => { const e = byId.get(hit.ref)!; return { id: e.id, title: e.body, body: e.title }; });",
+   "exit": 1,
+   "tests": 8,
+   "pass": 4,
+   "fail": 4,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "G35-R1-01 coarse and fine retrieve a query found only in the body",
+    "G35-R1-02 coarse and fine retrieve a query found only in the title",
+    "G35-R1-03 coarse and fine return the entire distinct title and body",
+    "G35-R1-05 coarse and fine rank a higher-scoring hit before lower id"
+   ],
+   "verdict": "KILLED"
+  },
+  {
+   "id": "N6-rank-by-id-only",
+   "why": "命中后改按 id 排,不看相关度",
+   "matches": 1,
+   "before": ".map((hit) => { const e = byId.get(hit.ref)!; return { id: e.id, title: e.title, body: e.body }; });",
+   "after": ".sort((a, b) => a.ref < b.ref ? -1 : 1).map((hit) => { const e = byId.get(hit.ref)!; return { id: e.id, title: e.title, body: e.body }; });",
+   "exit": 1,
+   "tests": 8,
+   "pass": 7,
+   "fail": 1,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "G35-R1-05 coarse and fine rank a higher-scoring hit before lower id"
+   ],
+   "verdict": "KILLED"
+  },
+  {
+   "id": "N7-coarse-rooms-empty",
+   "why": "粗筛不带会话:本会话锚点的记忆进不了邻域",
+   "matches": 1,
+   "before": "this.memoryNeighbors(contact.id,{rooms:work.rooms,text:material})",
+   "after": "this.memoryNeighbors(contact.id,{rooms:[],text:material})",
+   "exit": 1,
+   "tests": 8,
+   "pass": 6,
+   "fail": 2,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order",
+    "G35-03 both write paths keep contact, room, status and persona boundaries before retrieval"
+   ],
+   "verdict": "KILLED"
+  },
+  {
+   "id": "N8-fine-rooms-empty",
+   "why": "精筛不带会话",
+   "matches": 1,
+   "before": "this.memoryNeighbors(contactId, { rooms, text:",
+   "after": "this.memoryNeighbors(contactId, { rooms: [], text:",
+   "exit": 1,
+   "tests": 8,
+   "pass": 6,
+   "fail": 2,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "G35-01 coarse and fine use the query, preserve global/degraded hits and stable tied order",
+    "G35-03 both write paths keep contact, room, status and persona boundaries before retrieval"
+   ],
+   "verdict": "KILLED"
+  },
+  {
+   "id": "N9-fine-first-mark-only",
+   "why": "精筛只用本批第一条原文检索",
+   "matches": 1,
+   "before": "text: batch.map((b) => b.mark.evidence ?? \"\").join(\"\\n\") }",
+   "after": "text: batch.slice(0, 1).map((b) => b.mark.evidence ?? \"\").join(\"\\n\") }",
+   "exit": 0,
+   "tests": 8,
+   "pass": 8,
+   "fail": 0,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [],
+   "verdict": "SURVIVED"
+  },
+  {
+   "id": "N10-room-anchor-any",
+   "why": "任何会话锚点都算可见(作者 M06 的同类,对照)",
+   "matches": 1,
+   "before": "a.startsWith(\"room:\") && q.rooms.includes(a.slice(5))",
+   "after": "a.startsWith(\"room:\")",
+   "exit": 1,
+   "tests": 8,
+   "pass": 7,
+   "fail": 1,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "G35-03 both write paths keep contact, room, status and persona boundaries before retrieval"
+   ],
+   "verdict": "KILLED"
+  }
+ ],
+ "clean_after": {
+  "exit": 0,
+  "tests": 8,
+  "pass": 8,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "todo": 0,
+  "failed": []
+ }
+}
