@@ -195,6 +195,24 @@ test("R1-02 同终点历史多版本:includeSuperseded 用 nextCursor 逐页不�
   assert.equal(page2.hasMore, false);
 });
 
+test("R1-02 同联系人同版本同终点但起点不同:最终 id 排序键也不丢项", async () => {
+  const h = host({ mind: () => summaryMind() });
+  const a = h.createContact({ name: "甲" });
+  const g = h.createGroup("群", [{ kind: "contact", id: a.id }]);
+  h.send({ roomId: g.id, clientActionId: "ask", text: "每 1 条消息总结一次" });
+  await idle(h);
+  h.send({ roomId: g.id, clientActionId: "m", text: "待总结" });
+  await idle(h);
+  const svc = createService(h);
+  const first = val<Page>(await svc.handle("summaries.list", { roomId: g.id })).summaries[0]!;
+  h.db.store.db.prepare(`INSERT INTO gg_summaries (id,room_id,contact_id,requester_id,commitment_id,trigger_id,from_seq,to_seq,version,supersedes,status,items,message_count,covered_count,covered_to_seq,truncated,model,generated_at,stale_reason,stale_by_seq,stale_at,error,created_at)
+    SELECT ?,room_id,contact_id,requester_id,commitment_id,trigger_id,from_seq-1,to_seq,version,supersedes,status,items,message_count,covered_count,covered_to_seq,truncated,model,generated_at,stale_reason,stale_by_seq,stale_at,error,created_at FROM gg_summaries WHERE id = ?`).run("summary-same-endpoint-tie", first.summaryId);
+  const page1 = val<Page>(await svc.handle("summaries.list", { roomId: g.id, limit: 1 }));
+  const page2 = val<Page>(await svc.handle("summaries.list", { roomId: g.id, limit: 1, cursor: page1.nextCursor } as never));
+  assert.deepEqual([...page1.summaries, ...page2.summaries].map((s) => s.summaryId).sort(), [first.summaryId, "summary-same-endpoint-tie"].sort());
+  assert.equal(page2.hasMore, false);
+});
+
 test("R1-03 同联系人普通轮在途:另一群摘要排队,两次推理绝不重叠", async () => {
   const gate = deferred();
   let normalStarted = false, summaryStarted = false, active = 0, maxActive = 0;
@@ -281,6 +299,34 @@ test("R1-03 摘要排队期间来源被撤回:取得单飞入口后不再向模�
   gate.release();
   await idle(h);
   assert.equal(JSON.stringify(summaryInputs).includes(marker), false, "排队时被撤回的内容不能发送给模型");
+});
+
+test("R1-03 摘要排队等待已超时:后续释放单飞入口也不再调用模型", async () => {
+  const gate = deferred();
+  let normalStarted = false, summariesCalled = 0;
+  const base = summaryMind();
+  const mind: ContactMind = { async round(i, s) {
+    if (!isSummary(i) && i.fresh.some((f) => f.kind === "message" && f.text === "阻塞普通轮")) {
+      normalStarted = true;
+      await gate.promise;
+    }
+    if (isSummary(i)) summariesCalled++;
+    return base.round(i, s);
+  } };
+  const h = host({ mind: () => mind, summaryTimeoutMs: 50 });
+  const a = h.createContact({ name: "甲" });
+  const g = h.createGroup("群", [{ kind: "contact", id: a.id }]);
+  const dm = h.openDm(a.id);
+  h.send({ roomId: g.id, clientActionId: "ask", text: "每 1 条消息总结一次" });
+  await idle(h);
+  h.send({ roomId: dm.id, clientActionId: "hold", text: "阻塞普通轮" });
+  await until(() => normalStarted, "普通轮开始");
+  h.send({ roomId: g.id, clientActionId: "go", text: "触发摘要" });
+  await until(() => h.summaries.list({ roomId: g.id, viewerId: "me" }).summaries[0]?.status === "failed", "摘要排队超时");
+  assert.equal(summariesCalled, 0);
+  gate.release();
+  await idle(h);
+  assert.equal(summariesCalled, 0, "已超时的排队任务不得稍后再启动模型");
 });
 
 test("R1-04 摘要记生成完成时点,更换说话模型后历史仍保留生成快照", async () => {

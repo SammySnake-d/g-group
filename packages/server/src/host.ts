@@ -137,7 +137,7 @@ import { CapabilityLibrary } from "./capabilities.ts";
 import { CONTEXT_ONLY_REASON, ChatAdmin, DISSOLVED_REASON, SYSTEM_SENDER } from "./chat-admin.ts";
 import { lastEventSeq } from "./chat-range.ts";
 import { CountTriggers, everyNProblem } from "./count-triggers.ts";
-import { type TrendSummary, TrendSummaries, summaryLedgerNote } from "./trend-summaries.ts";
+import { type SummaryListQuery, type TrendSummary, TrendSummaries, summaryLedgerNote } from "./trend-summaries.ts";
 import { MemoryStore } from "./memory-store.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
 import { PluginStore } from "./plugins.ts";
@@ -475,6 +475,8 @@ export class Host {
         const c = getDoc<ContactDoc & { removed?: boolean }>(this.db, `contact:${contactId}`)?.value;
         return c && !c.removed ? { profile: { id: c.id, name: c.name, speakingModel: c.speakingModel, persona: c.persona }, mind: this.opts.mind(this.contactView(c)) } : null;
       },
+      runExclusive: (contactId, run) => this.loop.runExclusive(contactId, run),
+      isClosing: () => this.closed,
       blockedWhy: (contactId, roomId) => (!this.isMember(roomId, { kind: "contact", id: contactId }) || this.exits.isLeaving(roomId, contactId) ? "联系人已不在这个会话" : this.chatAdmin.isClosed(roomId) ? "会话已解散" : null),
       roomTitle: (roomId) => this.roomRow(roomId).title,
       nameOf: (s) => this.nameOf(s),
@@ -2220,7 +2222,7 @@ export class Host {
   }
   // ======================= 群聊动向摘要(U80)=======================
   /** 一个会话的动向摘要(时间轴用);只给在这个会话里的用户,按他自己这一端的隐藏过滤要点。 */
-  listSummaries(q: { roomId: string; beforeToSeq?: number; includeSuperseded?: boolean; limit?: number }): { summaries: TrendSummary[]; hasMore: boolean } {
+  listSummaries(q: Omit<SummaryListQuery, "viewerId">): ReturnType<TrendSummaries["list"]> {
     this.userRoom(q.roomId);
     return this.summaries.list({ ...q, viewerId: this.userId });
   }
@@ -4959,8 +4961,10 @@ export class Host {
 
   // ======================= 生命周期 =======================
   async idle(): Promise<void> {
-    await this.loop.idle();
-    await this.summaries.idle();
+    do {
+      await this.loop.idle();
+      await this.summaries.idle();
+    } while (this.loop.busy() || this.summaries.busy());
   }
   /** 关闭宿主;重复调用直接返回。 */
   async close(): Promise<void> {

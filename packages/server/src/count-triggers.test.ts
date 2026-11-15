@@ -318,7 +318,7 @@ test("联系人移出后立即拉回:旧计数触发永久关闭、未处理窗�
   const commitment = okValue<{ commitments: CommitmentView[] }>(await svc.handle("commitments.list", { roomId: g.id })).commitments[0]!;
   h.send({ roomId: g.id, clientActionId: "m1", text: "第一条" });
   h.send({ roomId: g.id, clientActionId: "m2", text: "第二条" });
-  await settle(h);
+  // #97 接入消费方后 idle 会真正处理窗口;在发送的同一拍检查并移出,才能实测取消 pending。
   const trigger = h.countTriggers.byCommitment(commitment.id)!;
   assert.deepEqual([trigger.status, windowsOf(h).map((w) => w.status)], ["active", ["pending"]]);
 
@@ -328,6 +328,7 @@ test("联系人移出后立即拉回:旧计数触发永久关闭、未处理窗�
     [h.countTriggers.byCommitment(commitment.id)?.status, h.countTriggers.byCommitment(commitment.id)?.closedReason, windowsOf(h).map((w) => w.status)],
     ["closed", "联系人已不在这个会话", ["cancelled"]],
   );
+  await settle(h);
   h.send({ roomId: g.id, clientActionId: "m3", text: "拉回后第一条" });
   h.send({ roomId: g.id, clientActionId: "m4", text: "拉回后第二条" });
   await settle(h);

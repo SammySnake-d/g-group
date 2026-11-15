@@ -354,9 +354,12 @@ test("摘要只读:模型提出的验收结论、停止、交付、派活、承�
   svc.subscribe((e) => events.push(e));
   // 第三条消息落盘会动消息相关的表,所以基准取「摘要轮开跑那一刻」的全库状态,而不是发第三条之前
   const third = h.send({ roomId: g.id, clientActionId: "m3", text: "周五再看" });
+  // AC-31 单飞下平时轮与摘要轮不能并行:让平时轮先读第三条,再拍摘要执行前后的库快照。
+  h.loop.notify(a.id, "now");
   await until(() => calls.length === 1, "摘要轮开跑");
-  // 等联系人平时那一轮把第三条处理完(处理游标到第三条),再取基准;此时摘要轮还卡在模型那里
-  await until(() => all<{ p: number }>(h.db, "SELECT processed_seq AS p FROM gg_cursor WHERE contact_id = ? AND room_id = ?", a.id, g.id)[0]?.p === third.seq && !h.loop.busy(), "平时那一轮处理完第三条");
+  // 此时摘要正在持有单飞入口,平时轮已经处理完第三条。
+  await until(() => all<{ p: number }>(h.db, "SELECT processed_seq AS p FROM gg_cursor WHERE contact_id = ? AND room_id = ?", a.id, g.id)[0]?.p === third.seq, "平时那一轮处理完第三条");
+  assert.equal(h.loop.busy(), true);
   const mid = everythingElse(h);
   assert.deepEqual(rows(h).map((r) => r.status), ["generating"]);
   release();
@@ -628,7 +631,7 @@ test("撤销承诺后还没生成的那一段不再调模型;不在这个会话�
   assert.deepEqual(errOf(await svc2.handle("summaries.get", { summaryId: "sum-nope" })), ["not_found", "没有摘要 sum-nope"]);
 });
 
-test("到点时联系人已不在这个会话或已被删除:不调模型,记 failed 写明原因", async () => {
+test("窗口冻结后联系人被移出或删除:不调模型并按各自状态结清", async () => {
   const calls: RoundInput[] = [];
   const h = track(new Host({ file: file(), mind: mind(calls), maxDeferMs: 5 }));
   const svc = createService(h);
@@ -647,10 +650,43 @@ test("到点时联系人已不在这个会话或已被删除:不调模型,记 fa
   h.send({ roomId: g2.id, clientActionId: "b2", text: "二" });
   h.removeContact(b.id);
   await settle(h);
-  const s1 = okValue<{ summaries: TrendSummaryView[] }>(await svc.handle("summaries.list", { roomId: g1.id })).summaries[0]!;
-  const s2 = okValue<{ summaries: TrendSummaryView[] }>(await svc.handle("summaries.list", { roomId: g2.id })).summaries[0]!;
-  assert.deepEqual([[s1.status, s1.error], [s2.status, s2.error], calls.length], [["failed", "联系人已不在这个会话"], ["failed", "联系人已删除"], 0]);
-  assert.deepEqual(errOf(await svc.handle("summaries.regenerate", { summaryId: s2.summaryId, clientActionId: "r" })), ["conflict", "现在不能重做:联系人已删除"]);
+  const s1 = okValue<{ summaries: TrendSummaryView[] }>(await svc.handle("summaries.list", { roomId: g1.id })).summaries;
+  const s2 = okValue<{ summaries: TrendSummaryView[] }>(await svc.handle("summaries.list", { roomId: g2.id })).summaries;
+  const triggers = all<{ room_id: string; status: string; closed_reason: string | null }>(h.db, "SELECT room_id, status, closed_reason FROM gg_count_triggers");
+  const windows = all<{ status: string }>(h.db, "SELECT status FROM gg_count_windows");
+  assert.deepEqual([s1, s2.map((s) => [s.status, s.error]), calls.length], [[], [["failed", "联系人已删除"]], 0]);
+  assert.deepEqual(triggers.find((t) => t.room_id === g1.id) && [triggers.find((t) => t.room_id === g1.id)!.status, triggers.find((t) => t.room_id === g1.id)!.closed_reason], ["closed", "联系人已不在这个会话"]);
+  assert.deepEqual(windows.map((w) => w.status).sort(), ["cancelled", "failed"]);
+  assert.deepEqual(errOf(await svc.handle("summaries.regenerate", { summaryId: s2[0]!.summaryId, clientActionId: "r" })), ["conflict", "现在不能重做:联系人已删除"]);
+});
+
+test("已在队列的摘要,联系人退出后取得单飞入口时仍不可调模型", async () => {
+  const calls: RoundInput[] = [];
+  let open!: () => void;
+  let started = false;
+  const gate = new Promise<void>((resolve) => { open = resolve; });
+  live.gates.push(() => open());
+  const base = mind(calls)();
+  const h = track(new Host({ file: file(), maxDeferMs: 5, mind: () => ({
+    async round(input, signal) {
+      if (!isSummaryRound(input) && input.fresh.some((f) => f.kind === "message" && f.text === "阻塞普通轮")) { started = true; await gate; }
+      return base.round(input, signal);
+    },
+  }) }));
+  const a = h.createContact({ name: "小记" });
+  const g = h.createGroup("群", [contact(a.id)]);
+  const dm = h.openDm(a.id);
+  h.send({ roomId: g.id, clientActionId: "ask", text: "每 1 条消息总结一次" });
+  await settle(h);
+  h.send({ roomId: dm.id, clientActionId: "hold", text: "阻塞普通轮" });
+  await until(() => started, "普通轮在途");
+  h.send({ roomId: g.id, clientActionId: "m", text: "群聊消息" });
+  await until(() => rows(h).length === 1, "摘要已排队");
+  h.removeMember(g.id, contact(a.id));
+  open();
+  await settle(h);
+  const s = h.listSummaries({ roomId: g.id }).summaries[0]!;
+  assert.deepEqual([s.status, s.error, calls.length], ["failed", "联系人已不在这个会话", 0]);
 });
 
 test("平常轮的承诺账本写明这条承诺到点由宿主另起一轮交给它:联系人不用自己在会话里发总结", async () => {

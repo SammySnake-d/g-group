@@ -273,10 +273,10 @@ export const METHODS = {
   "commitments.revoke": method(obj({ commitmentId: id(), clientActionId: id() }), CommitmentView),
 
   // ---- 群聊动向摘要(U80,D21.2–D21.4):只读;由联系人「每 N 条消息」的承诺触发生成,见 CommitmentView.trigger ----
-  /** 一个会话的摘要,按区间从新到旧(时间轴用);默认每段只给最新版本,includeSuperseded 连旧版本一起给。beforeToSeq 翻页。不在这个会话 forbidden。 */
+  /** 一个会话的摘要按完整稳定排序键分页;nextCursor 原样带回。beforeToSeq 是按区间跳转,不能用于逐条翻页。 */
   "summaries.list": method(
-    obj({ roomId: id(), beforeToSeq: opt(seq()), includeSuperseded: opt(bool()), limit: opt(int({ min: 1, max: 200 })) }),
-    obj({ summaries: arr(TrendSummaryView), hasMore: bool() }),
+    obj({ roomId: id(), beforeToSeq: opt(seq()), cursor: opt(obj({ toSeq: seq(), contactId: id(), version: int({ min: 1 }), summaryId: id() })), includeSuperseded: opt(bool()), limit: opt(int({ min: 1, max: 200 })) }),
+    obj({ summaries: arr(TrendSummaryView), hasMore: bool(), nextCursor: nullable(obj({ toSeq: seq(), contactId: id(), version: int({ min: 1 }), summaryId: id() })) }),
   ),
   "summaries.get": method(obj({ summaryId: id() }), TrendSummaryView),
   /**
