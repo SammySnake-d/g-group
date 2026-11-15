@@ -107,6 +107,7 @@ test("反思 JSON 持续无效且补压缩也失败时下一轮保留上轮未�
     assert.equal(x.host.listMessages(x.dm.id, {}).messages.filter((m) => m.sender.kind === "contact").length, 2, "重启后旧输入没有重复执行动作");
     const next = x.requests[1]!.blocks.map((b) => b.text).join("\n");
     assert.match(next, /持久原文标记:安全发布之前必须先做审查/, "未生成可用笔记时,下一轮仍须带上未经压缩原文");
+    assert.match(next, /回应:持久原文标记:安全发布之前必须先做审查/, "还须保留实际已发送的联系人回复,不能只留用户输入");
     x.host.send({ roomId: x.dm.id, clientActionId: "3", text: "第三轮恢复" });
     await settle(x.host);
     assert.match(text(x.fake.seen[4]!), /持久原文标记:安全发布之前必须先做审查/);
