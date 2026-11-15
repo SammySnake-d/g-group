@@ -1,5 +1,5 @@
 // 应用壳的 IPC(gg-app:invoke / gg-app:event):接入模型、版本与更新。和宿主合同(gg:invoke)分开,方法白名单 + 来源校验。
-import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from "electron";
+import { app, BrowserWindow, ipcMain, net, type IpcMainInvokeEvent } from "electron";
 import { isTrustedOrigin } from "@g-group/ui-core";
 import { APP_IPC, APP_SHELL_METHODS, type AppShellEvent, type AppShellMethod, type SetupInput, type SetupView } from "../src/api/app-shell-types";
 import type { AppConfig } from "./app-config.ts";
@@ -31,11 +31,39 @@ export function bindAppIpc(o: { config: AppConfig; backend: Backend; updater: Up
     "setup.save": async (p) => {
       const g = o.config.saveGateway(p as unknown as SetupInput);
       log(`接入模型:网关 ${new URL(g.baseUrl).host},模型 ${g.model}`);
-      await o.backend.restart();
+      await o.backend.restart(true);
       const v = view();
       // 后端换了一个实例:让渲染层重新探测、全量读、订阅(回包先到,再重载)
       if (v.backend.state === "running") setTimeout(() => { for (const w of BrowserWindow.getAllWindows()) w.webContents.reload(); }, 150);
       return v;
+    },
+    // 复用 PR #102 的 setup.models 路径，设置页也读同一真实网关目录。
+    "setup.models": async (p) => {
+      const baseUrl = String(p.baseUrl ?? "").trim().replace(/\/+$/, "");
+      let url: URL;
+      try { url = new URL(baseUrl); } catch { throw new Error("网关地址不是有效的网址"); }
+      if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("网关地址应以 http:// 或 https:// 开头");
+      const saved = o.config.gateway();
+      const supplied = typeof p.token === "string" ? p.token.trim() : "";
+      // 改地址后不能把原网关的已存令牌发往另一个地址。
+      const token = supplied || (saved?.baseUrl === baseUrl ? saved.token : "");
+      if (!token) throw new Error("请为这个网关填写令牌");
+      url.pathname = `${url.pathname.replace(/\/+$/, "").replace(/\/v1$/, "")}/v1/models`;
+      url.search = "";
+      url.hash = "";
+      const res = await net.fetch(url.toString(), { headers: { authorization: `Bearer ${token}`, accept: "application/json" }, signal: AbortSignal.timeout(15_000), cache: "no-store", redirect: "error" });
+      if (!res.ok) throw new Error(`模型目录读取失败（HTTP ${res.status}）`);
+      const body = await res.json() as { data?: unknown };
+      if (!Array.isArray(body.data)) throw new Error("模型目录格式不正确，应包含 data 列表");
+      const models = new Map<string, { id: string; label: string }>();
+      for (const x of body.data) {
+        if (!x || typeof x !== "object") continue;
+        const row = x as { id?: unknown; name?: unknown };
+        const id = typeof row.id === "string" ? row.id.trim() : "";
+        if (!id || id.length > 200 || /\s/.test(id)) continue;
+        models.set(id, { id, label: typeof row.name === "string" && row.name.trim() ? row.name.trim().slice(0, 200) : id });
+      }
+      return { models: [...models.values()] };
     },
     "setup.detectClaude": () => {
       fixPath();

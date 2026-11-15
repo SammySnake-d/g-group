@@ -16,6 +16,7 @@ import { TaskTag } from './TaskTag'
 import { CronTrail } from './CronTrail'
 import { DispLine } from './DispLine'
 import { AskCard } from './ask/AskCard'
+import { FailureModelHint } from './cards/FailureModelHint'
 import { HelperExtra } from './cards/HelperExtra'
 import * as Concept from '@/concept'
 import { ComputeLine } from './compute/ComputeLine'
@@ -71,6 +72,7 @@ export function Row({ m, first, compact, highlight, selecting, checked, onSelect
         )}
         {m.k === 'text' && m.helper && <HelperExtra m={m} />}
         {m.k === 'text' && <AskCard msgId={m.id} />}
+        {m.k === 'text' && m.card?.kind === 'failure' && <FailureModelHint m={m} />}
         {m.k === 'text' && m.tag && <TaskTag msgId={m.id} tag={m.tag} />}
         {m.k === 'text' && m.cron && <CronTrail m={m} mine={mine} />}
         <RowFoot m={m} mine={mine} trail={trail} />

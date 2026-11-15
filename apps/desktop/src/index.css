@@ -10,6 +10,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 图片打开保持聊天上下文，不加入场/退场动画。 */
+.gg-image-preview, .gg-image-preview::backdrop, .gg-image-preview * {
+  animation: none !important;
+  transition: none !important;
+}
+
 /*
   语义色：同一组变量，亮/暗各一套取值。所有组件只引用这些变量。
   bg 主背景 · side 左栏 · bubble 他人气泡 · me 我的气泡 · fg 正文 · fg2 次要 · fg3 弱化

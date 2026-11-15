@@ -8,7 +8,7 @@ import { people, type Compute, type Person, type PersonId } from './data'
 
 export type Harness = (typeof HARNESSES)[number]
 export type Effort = (typeof EFFORTS)[number]
-export type ModelSettings = Omit<SettingsView, 'timezone'>
+export type ModelSettings = Omit<SettingsView, 'timezone'> & { catalog?: { state: 'ready' | 'error'; reason?: string; computeCapabilities: boolean } }
 
 export const HARNESS_LIST: readonly Harness[] = HARNESSES
 export const EFFORT_LIST: readonly Effort[] = EFFORTS

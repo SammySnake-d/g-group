@@ -13,6 +13,11 @@ import { artifacts, type Artifact, type Conversation, type QuoteRef } from '@/da
 import { attachLive } from '@/api/wire/chat-ops'
 import { live, liveCtx } from '@/api/wire/live'
 import { useApp, useAppStore } from '@/store'
+import { uploadFilesLive } from '@/api/wire/chat-ops'
+import { sendLive } from '@/api/wire/messages'
+import { scheduleDraftSave } from '@/api/wire/drafts'
+import { PendingImages } from '@/app/composer/PendingImages'
+import { addDraftImages, imageDraftOf, removeDraftImages, setImageSending, useImageDrafts } from '@/app/composer/imageDrafts'
 
 /* 输入区:一个圆角输入框,里面从上到下是 引用条 → 命令提示 → 自适应高度的输入 → 工具栏(左下角「+」取外部消息,右下角发送)。
    打 / 弹出命令菜单(Telegram 式),选中后在输入框里提示该填的参数;打 @ 弹出选人。两个菜单都贴着输入框上沿,焦点一直在输入框里。 */
@@ -24,18 +29,50 @@ export function Composer({ conv, draft, setDraft, quotes, onRemoveQuote, onSend,
   const [caret, setCaret] = useState(draft.length)
   const [focused, setFocused] = useState(false)
   const boxRef = useRef<HTMLDivElement>(null)
+  const imageDraft = useImageDrafts((s) => s.rooms[conv.id])
+
+  const send = async (override?: string) => {
+    const d = imageDraftOf(conv.id)
+    if (d.sending) return
+    if (!d.images.length || editing) { onSend(override); return }
+    const text = (override ?? draft).trim()
+    const submittedText = useAppStore.getState().drafts[conv.id] ?? ''
+    const images = [...d.images]
+    setImageSending(conv.id, true)
+    try {
+      if (isLive) {
+        const w = liveCtx(useAppStore.getState, useAppStore.setState)
+        const files = await uploadFilesLive(w, images.map((x) => x.file))
+        if (!files || !await sendLive(w, conv.id, text, quotes, files)) return
+      } else {
+        const files = await Promise.all(images.map(async (x) => {
+          const ref = await new Promise<string>((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result)); r.onerror = reject; r.readAsDataURL(x.file) })
+          return { ref, name: x.name, mime: x.file.type, bytes: x.file.size }
+        }))
+        pushMsg({ k: 'text', id: crypto.randomUUID(), from: 'me', text, files, ...(quotes.length ? { quotes } : {}) }, conv.id)
+      }
+      // 回执只清本次提交的内容；切去别处或期间新写的草稿不受影响。
+      await removeDraftImages(conv.id, images.map((x) => x.id))
+      useAppStore.setState((s) => ({
+        drafts: s.drafts[conv.id] === submittedText ? { ...s.drafts, [conv.id]: '' } : s.drafts,
+        quotes: { ...s.quotes, [conv.id]: (s.quotes[conv.id] ?? []).filter((q) => !quotes.includes(q)) },
+      }))
+      if (isLive) scheduleDraftSave(liveCtx(useAppStore.getState, useAppStore.setState), conv.id)
+    } finally { setImageSending(conv.id, false) }
+  }
 
   const placeCaret = (p: number) => {
     setCaret(p)
     setTimeout(() => { const el = inputRef.current; el?.focus(); el?.setSelectionRange(p, p) }, 0)
   }
-  const slash = useSlash({ conv, draft, setDraft, caret, focused, editing: !!editing, placeCaret, onSend, inputRef })
+  const slash = useSlash({ conv, draft, setDraft, caret, focused, editing: !!editing, placeCaret, onSend: (text) => { void send(text) }, inputRef })
   const at = useMention({ conv, draft, setDraft, placeCaret, inputRef })
   const tall = useAutoHeight(inputRef, boxRef, draft)
   useEffect(() => { setCaret(inputRef.current?.selectionStart ?? draft.length) }, [conv.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* C-US19:截图、文件、图片都真的发出去,变成一条文件消息,同时进「文件」里,写明来自这个会话 */
   const sendFile = (name: string, kind: Artifact['kind'], meta: string, file?: File) => {
+    if (file?.type.startsWith('image/')) { void addDraftImages(conv.id, [file]); return }
     /* 连上后端:按内容上传,再作为一条只有附件的消息发出;以后端回包为准 */
     if (isLive) { if (file) return attachLive(liveCtx(useAppStore.getState, useAppStore.setState), conv.id, [file]); return }
     const id = 'up' + Math.random().toString(36).slice(2, 7)
@@ -59,14 +96,20 @@ export function Composer({ conv, draft, setDraft, quotes, onRemoveQuote, onSend,
   }
 
   const onPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const images = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith('image/'))
+    // Electron 的系统剪贴板可能只给 items；优先读 files，避免同一张图取两遍。
+    const fromFiles = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith('image/'))
+    const fromItems = Array.from(e.clipboardData.items)
+      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+      .map((item) => item.getAsFile())
+      .filter((f): f is File => !!f)
+    const images = fromFiles.length ? fromFiles : fromItems
     if (!images.length) return
     e.preventDefault()
-    for (const file of images) void sendFile(file.name || `粘贴图片-${Date.now()}.png`, 'asset', `${(file.size / 1024).toFixed(0)} KB · 你粘贴的`, file)
+    if (!editing) void addDraftImages(conv.id, images)
   }
 
   const { inv, menuOpen, token } = slash
-  const canSend = inv ? inv.ok : !!draft.trim() || quotes.length > 0
+  const canSend = !imageDraft?.sending && (inv ? inv.ok : !!draft.trim() || quotes.length > 0 || !!imageDraft?.images.length)
   const ghost = inv && !menuOpen && !tall && caret >= draft.length && !inv.extra && inv.args.some((a) => a.value === undefined)
   const peer = conv.kind === 'dm' ? conv.members.find((m) => m !== 'me') : null
   return (
@@ -82,6 +125,7 @@ export function Composer({ conv, draft, setDraft, quotes, onRemoveQuote, onSend,
           </div>
         )}
         {quotes.length > 0 && <QuoteBar quotes={quotes} onRemove={onRemoveQuote} />}
+        {!editing && <PendingImages key={conv.id} room={conv.id} />}
         {inv && !menuOpen && <SlashHint inv={inv} />}
         {slash.unknown && <SlashUnknown name={slash.unknown} />}
         <div className="relative px-3">

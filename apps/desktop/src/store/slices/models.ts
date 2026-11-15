@@ -14,7 +14,7 @@ export interface ModelsCtx {
   modelsRev: number
   setModelSettings: (s: import('@/modelConfig').ModelSettings) => void
   /** 一次写入：全局默认 + 若干联系人的模型字段（每位联系人在私聊里留一条记录） */
-  saveModels: (s: { settings?: Partial<import('@/modelConfig').ModelSettings>; contacts?: { id: PersonId; patch: Partial<import('@/data').Person>; note: string }[]; toast?: string }) => void
+  saveModels: (s: { settings?: Partial<import('@/modelConfig').ModelSettings>; contacts?: { id: PersonId; patch: Partial<import('@/data').Person>; note: string }[]; toast?: string }) => Promise<boolean>
   updatePerson: (id: PersonId, patch: Partial<import('@/data').Person>, note: string) => void
 }
 export const MODELS_CTX_KEYS = ['modelSettings', 'modelsRev', 'setModelSettings', 'saveModels', 'updatePerson'] as const satisfies readonly (keyof ModelsCtx)[]
@@ -40,8 +40,8 @@ export const createModelsSlice: Slice<ModelsSlice> = (set, get) => {
       if (active !== dm?.id && convs.find((c) => c.id === active)?.members.includes(pid)) sys(active, text)
       get().toast('已保存')
     },
-    saveModels: ({ settings, contacts, toast }) => {
-      if (live(get())) { void saveModelsLive(liveCtx(get as never, set as never), { settings, contacts }).then((ok) => { if (ok) get().toast(toast ?? '已保存') }); return }
+    saveModels: async ({ settings, contacts, toast }) => {
+      if (live(get())) { const ok = await saveModelsLive(liveCtx(get, set), { settings, contacts }); if (ok) get().toast(toast ?? '已保存'); return ok }
       if (settings) L.modelSettings((m) => ({ ...m, ...settings }))
       for (const c of contacts ?? []) {
         Object.assign(people[c.id], c.patch)
@@ -50,6 +50,7 @@ export const createModelsSlice: Slice<ModelsSlice> = (set, get) => {
       }
       set((s) => ({ modelsRev: s.modelsRev + 1 }))
       get().toast(toast ?? '已保存')
+      return true
     },
   }
 }

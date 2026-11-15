@@ -12,9 +12,10 @@ import { broken } from '@/mut'
 import { uid } from '../boot'
 import { atLeast, sync } from '../remote'
 import { lens, type Slice } from '../state'
+import type { SlashCommand as HostCommand } from '@g-group/api-contract'
 
 /** 后端给的某个会话可用命令名;连同请求时的插件状态和成员一起记,本地状态变了就先按本地判断,等新清单 */
-export type RoomCommands = { names: string[]; plugins: PluginState[]; members: PersonId[] }
+export type RoomCommands = { names: string[]; commands: HostCommand[]; plugins: PluginState[]; members: PersonId[] }
 
 /** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 PLUGINS_CTX_KEYS */
 export interface PluginsCtx {
@@ -75,7 +76,7 @@ export const createPluginsSlice: Slice<PluginsSlice> = (set, get) => {
       if (!conv) return
       const stamp = { plugins: s.plugins, members: conv.members }
       /* 拿不到清单就按本地判断,不打扰你 */
-      void call('commands.list', { roomId }).then((r) => { if (r.ok) set((st) => ({ roomCommands: { ...st.roomCommands, [roomId]: { names: r.value.commands.map((c) => c.name), ...stamp } } })) })
+      void call('commands.list', { roomId }).then((r) => { if (r.ok) set((st) => ({ roomCommands: { ...st.roomCommands, [roomId]: { names: r.value.commands.map((c) => c.name), commands: r.value.commands, ...stamp } } })) })
     },
 
     setPlugins: (plugins) => set({ plugins }),

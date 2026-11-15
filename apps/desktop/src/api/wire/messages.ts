@@ -190,9 +190,9 @@ export const messagesWiring = defineWiring({
 
 /** 发送:正文里 @ 到的在场联系人记成 mentions(回复自动带上的那位记 auto);引用和主回复按序号带上;附件按 ref 带上。
  *  先乐观显示,回包到了换成后端那条;发不出去就撤下乐观那条、把话放回输入框,并说明原因 */
-export async function sendLive(w: WireCtx, roomId: string, text: string, quotes: readonly QuoteRef[], attachments: readonly { ref: string; name: string; mime: string; bytes: number }[] = []) {
+export async function sendLive(w: WireCtx, roomId: string, text: string, quotes: readonly QuoteRef[], attachments: readonly { ref: string; name: string; mime: string; bytes: number }[] = [], command?: { name: string; args: Record<string, string> }): Promise<boolean> {
   const conv = w.get().convs.find((c) => c.id === roomId)
-  if (!conv) return
+  if (!conv) return false
   const cid = actionId()
   const reply = quotes.find((q) => q.reply)
   const mentions = conv.members
@@ -207,9 +207,11 @@ export async function sendLive(w: WireCtx, roomId: string, text: string, quotes:
     ...(quotedSeqs.length ? { quotedSeqs } : {}),
     ...(replyToSeq !== null ? { replyToSeq } : {}),
     ...(attachments.length ? { attachments: attachments.map((a) => a.ref) } : {}),
+    ...(command ? { command } : {}),
   })
-  if (r.ok) { putMessages(w, roomId, [r.value]); return }
+  if (r.ok) { putMessages(w, roomId, [r.value]); return true }
   w.get().setConvs((cs) => cs.map((c) => (c.id === roomId ? { ...c, messages: c.messages.filter((m) => idOf(m) !== localId(cid)) } : c)))
   if (text && w.get().active === roomId && !w.get().drafts[roomId]) w.get().setDraft(text)
   w.get().toast(`没发出去：${r.error.message}`)
+  return false
 }

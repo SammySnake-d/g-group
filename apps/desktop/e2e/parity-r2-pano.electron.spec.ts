@@ -67,7 +67,7 @@ test("进展全景按真实时钟算:连后端时在跑的 Compute 写的是现�
   }
 });
 
-test("停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、卡在哪,全景卡也写无进展", async () => {
+test("停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、最后进展,全景卡也写无进展", async () => {
   test.setTimeout(150_000);
   const dataDir = mkdtempSync(path.join(tmpdir(), "gg-pstall-"));
   const { app, win, errors } = await launch(dataDir);
@@ -80,7 +80,10 @@ test("停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟
     // 让界面的钟往后拨 11 分钟(只拨 Date.now,不动后端):最近一条进度还是刚才那条,于是算出 11 分钟没动静
     await win.evaluate(() => { const real = Date.now.bind(Date); Date.now = () => real() + 11 * 60_000; });
     await expect(line).toHaveAttribute("data-state", "stalled", { timeout: 45_000 });
-    await expect(line).toContainText(/1[12] 分钟没动静 · 卡在「第 [12] 步 · /);
+    // TaskView 只提供 recentProgress，没有步骤计划（tasks.ts 的 steps 明确为空）。
+    // 本时点只有 started 摘要「已开始」，不能凭空声称卡在第 N 步。
+    await expect(line).toContainText(/1[12] 分钟没动静 · 最后进展「已开始」/);
+    await expect(line).not.toContainText('卡在');
     await shot(win, "stall-line");
     await win.getByTestId("nav-activity").click();
     const card = win.getByTestId("pano-board").locator('[data-testid^="pano-compute-"]').filter({ hasText: "慢慢整理资料" });

@@ -29,6 +29,10 @@ export interface SetupInput {
   token?: string
 }
 
+export interface GatewayModel { id: string; label: string }
+export interface SetupModelsInput { baseUrl: string; token?: string }
+export interface SetupModelsView { models: GatewayModel[] }
+
 export type UpdatePhase = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'installing' | 'error' | 'unsupported'
 export interface UpdateState {
   phase: UpdatePhase
@@ -55,6 +59,7 @@ export interface AppShellMethods {
   'window.capture': [Record<string, never>, { base64: string; width: number; height: number }]
   'setup.get': [Record<string, never>, SetupView]
   'setup.save': [SetupInput, SetupView]
+  'setup.models': [SetupModelsInput, SetupModelsView]
   'setup.detectClaude': [Record<string, never>, SetupView]
   'update.get': [Record<string, never>, UpdateState]
   'update.check': [Record<string, never>, UpdateState]
@@ -62,7 +67,7 @@ export interface AppShellMethods {
   'update.install': [Record<string, never>, UpdateState]
 }
 export type AppShellMethod = keyof AppShellMethods
-export const APP_SHELL_METHODS: readonly AppShellMethod[] = ['app.info', 'window.capture', 'setup.get', 'setup.save', 'setup.detectClaude', 'update.get', 'update.check', 'update.download', 'update.install']
+export const APP_SHELL_METHODS: readonly AppShellMethod[] = ['app.info', 'window.capture', 'setup.get', 'setup.save', 'setup.models', 'setup.detectClaude', 'update.get', 'update.check', 'update.download', 'update.install']
 
 export type AppShellResult<M extends AppShellMethod> = { ok: true; value: AppShellMethods[M][1] } | { ok: false; error: string }
 export type AppShellEvent = { type: 'update'; state: UpdateState }
