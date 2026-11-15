@@ -1,0 +1,21 @@
+packages/server/src/count-triggers.ts
+  s_69f96fa873b14b::t_598876f376c761 220-230
+packages/server/src/host.ts
+  s_69f96fa873b14b::t_598876f376c761 1306-1310,1323-1327,1357-1363
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f4533f77a027bded226892e228dd6842569e2bc8",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
