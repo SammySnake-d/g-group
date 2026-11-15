@@ -3574,6 +3574,7 @@ export class Host {
   }
   /** 归还这个任务的槽位,把空出来的给排队的下一个(们) */
   private giveBack(taskId: string) {
+    if (this.stopUnconfirmed.has(taskId)) return;
     const lease = this.quota.leaseOf(taskId);
     if (!lease) return;
     const { granted } = this.quota.release(lease.leaseId);
