@@ -9,15 +9,21 @@ import { _electron as electron, expect, test, type Page } from '@playwright/test
 const appDir = path.resolve(import.meta.dirname, '..')
 const env = Object.fromEntries(Object.entries(process.env).filter(([k, v]) => k !== 'ELECTRON_RUN_AS_NODE' && !k.startsWith('ANTHROPIC_') && typeof v === 'string')) as Record<string, string>
 const LONG = { timeout: 30_000 }
-const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64')
-const image = (name: string) => ({ name, mimeType: 'image/png', buffer: png })
-async function launch(ud: string) {
-  const app = await electron.launch({ args: [appDir], cwd: appDir, env: { ...env, GG_BACKEND: 'server', GG_MIND: 'fake', GG_COMPUTE: 'fake', GG_USER_DATA_DIR: ud, GG_UPDATE_AUTO: 'off' } })
+// 两张有合法 CRC、像素不同的 PNG；重复字节在宿主按内容寻址会得到同一 ref。
+const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64')
+const otherPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgaPj/HwAEggJ/59habAAAAABJRU5ErkJggg==', 'base64')
+const image = (name: string) => ({ name, mimeType: 'image/png', buffer: name === 'second.png' ? otherPng : png })
+async function launch(ud: string, mind = 'fake') {
+  const app = await electron.launch({ args: [appDir], cwd: appDir, env: { ...env, GG_BACKEND: 'server', GG_MIND: mind, GG_COMPUTE: 'fake', GG_USER_DATA_DIR: ud, GG_UPDATE_AUTO: 'off' } })
   const win = await app.firstWindow()
   await expect(win.getByTestId('backend-demo')).toHaveAttribute('data-wire', 'live', LONG)
   return { app, win }
 }
 async function addContact(win: Page, name: string) {
+  if (await win.getByTestId('scrim').count()) {
+    await win.keyboard.press('Escape')
+    await expect(win.getByTestId('scrim')).toHaveCount(0)
+  }
   await win.getByTestId('nav-contacts').click()
   await win.getByTestId('list').getByText('添加联系人', { exact: true }).click()
   await win.getByPlaceholder('比如：设计师').fill(name)
@@ -27,7 +33,7 @@ async function addContact(win: Page, name: string) {
 const mine = (win: Page) => win.getByTestId('chat-column').locator('[data-msg][data-from="me"]')
 const pending = (win: Page) => win.getByTestId('composer-images').locator('[data-pending-image]')
 async function pickModel(win: Page, id: string, label: string) {
-  await win.getByTestId(id).getByRole('combobox').click()
+  await win.getByTestId(id).click()
   await win.getByRole('option', { name: label, exact: true }).click()
 }
 
@@ -96,7 +102,7 @@ test('多图和文字只发一条消息，聊天缩略图点击原地放大、�
     await expect(run.win.getByTestId('files-main')).toHaveCount(0)
     await run.win.getByRole('button', { name: '关闭图片预览' }).click()
     await expect(run.win.getByTestId('image-preview')).toHaveCount(0)
-    await expect(run.win.getByTestId('chat-title')).toContainText('图片预览')
+    await expect(run.win.getByTestId('chat').locator('header')).toContainText('图片预览')
     await run.app.close()
     run = await launch(ud)
     await run.win.getByTestId('list').locator('[data-testid^="conv-dm-"]').filter({ hasText: '图片预览' }).click()
@@ -107,6 +113,49 @@ test('多图和文字只发一条消息，聊天缩略图点击原地放大、�
     await run.win.keyboard.press('Escape')
     await expect(run.win.getByTestId('image-preview')).toHaveCount(0)
   } finally { await run.app.close(); rmSync(ud, { recursive: true, force: true }) }
+})
+
+test('桌面正常重启保留宿主默认模型，不被接入时的初始值覆盖', async () => {
+  test.setTimeout(90_000)
+  const ud = mkdtempSync(path.join(tmpdir(), 'gg-pr101-defaults-'))
+  writeFileSync(path.join(ud, 'gg-config.json'), JSON.stringify({ gateway: { baseUrl: 'http://127.0.0.1:9', model: 'fixture/initial', token: 'NEUTRAL_FIXTURE_NO_CREDENTIALS' } }), { mode: 0o600 })
+  let run = await launch(ud)
+  try {
+    // 单独校准启动层：经真实合同造一个“设置已保存”的起点，随后关闭进程。
+    const saved = await run.win.evaluate(async () => {
+      const gg = (window as unknown as { gg: { invoke: (m: string, p: unknown) => Promise<unknown> } }).gg
+      return gg.invoke('settings.update', { defaultSpeakingModel: 'fixture/changed', confirmAffected: true })
+    })
+    expect(saved).toMatchObject({ ok: true, value: { defaultSpeakingModel: 'fixture/changed', defaultComputeModel: 'fixture/initial' } })
+    await run.app.close()
+    run = await launch(ud)
+    const restored = await run.win.evaluate(() => (window as unknown as { gg: { invoke: (m: string, p: unknown) => Promise<unknown> } }).gg.invoke('settings.get', {}))
+    expect(restored).toMatchObject({ ok: true, value: { defaultSpeakingModel: 'fixture/changed', defaultComputeModel: 'fixture/initial' } })
+  } finally { await run.app.close(); rmSync(ud, { recursive: true, force: true }) }
+})
+
+test('真实上游失败卡写出当前模型，给出联系人模型设置与模型接入路径', async () => {
+  test.setTimeout(90_000)
+  const server = createServer((_req, res) => {
+    res.writeHead(401, { 'content-type': 'application/json' })
+    res.end(JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: 'INVALID_API_KEY neutral fixture' } }))
+  })
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r))
+  const ud = mkdtempSync(path.join(tmpdir(), 'gg-pr101-failure-'))
+  writeFileSync(path.join(ud, 'gg-config.json'), JSON.stringify({ gateway: { baseUrl: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, model: 'fixture/failing', token: 'NEUTRAL_FIXTURE_NO_CREDENTIALS' } }), { mode: 0o600 })
+  const { app, win } = await launch(ud, 'pi')
+  try {
+    await addContact(win, '失败联系人')
+    await win.getByTestId('composer').fill('你好')
+    await win.getByTestId('send').click()
+    const card = win.getByTestId('chat-column').locator('[data-testid^="failure-model-"]')
+    await expect(card).toContainText('fixture/failing', { timeout: 60_000 })
+    await expect(card).toContainText('联系人设置 → 模型')
+    await expect(card).toContainText('设置 → 模型接入')
+    await card.getByRole('button', { name: '更换说话模型' }).click()
+    await expect(win.getByTestId('cm-card')).toBeVisible()
+    await expect(win.getByTestId('cm-talk')).toContainText('fixture/failing')
+  } finally { await app.close(); server.close(); rmSync(ud, { recursive: true, force: true }) }
 })
 
 test('设置模型来自网关、当前值保留且选中，单独换说话模型后重启仍保存，新联系人使用新值', async () => {
@@ -151,7 +200,7 @@ test('目录读取失败时保留当前模型，禁用换模并说清原因，�
     await win.getByTestId('nav-settings').click()
     await expect(win.getByTestId('model-catalog-error')).toContainText('模型目录', LONG)
     await expect(win.getByTestId('def-talk')).toContainText('fixture/retained')
-    await expect(win.getByTestId('def-talk').getByRole('combobox')).toHaveAttribute('aria-disabled', 'true')
+    await expect(win.getByTestId('def-talk')).toHaveAttribute('aria-disabled', 'true')
     await expect(win.getByTestId('model-defaults')).not.toContainText('Claude Opus 5.5')
     await expect(win.getByTestId('model-catalog-error')).toContainText('模型接入')
   } finally { await app.close(); rmSync(ud, { recursive: true, force: true }) }
