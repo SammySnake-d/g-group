@@ -117,7 +117,14 @@ export class QuotaTable {
   }
   /** 停止请求已发出:标记,但仍占着槽位 */
   markStopping(taskId: string): void {
-    this.change(() => { this.leases = this.leases.map((l) => (l.taskId === taskId && !l.stopping ? Object.freeze({ ...l, stopping: true }) : l)); });
+    const stopped = (lease: Lease) => lease.taskId === taskId && !lease.stopping ? Object.freeze({ ...lease, stopping: true }) : lease;
+    try {
+      this.change(() => { this.leases = this.leases.map(stopped); });
+    } catch (error) {
+      // 落盘失败不能把已结束/停止中的执行器回滚成可复用;磁盘旧租约在重启后也按未知恢复。
+      this.leases = this.leases.map(stopped);
+      throw error;
+    }
   }
   /** 确认已停止后释放。leaseId 不在(重复释放、迟到的旧租约号)就什么都不做。返回这次释放后新授予的排队者 */
   release(leaseId: string): { readonly released: boolean; readonly granted: readonly Lease[] } {

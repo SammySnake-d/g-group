@@ -3403,7 +3403,10 @@ export class Host {
         run(this.db, "INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)", row.contact_id, row.room_id, JSON.stringify(payload), at);
       }
     });
-    if (ev.kind === "failed" || ev.kind === "stopped") this.quota.markStopping(row.task_id);
+    if (ev.kind === "failed" || ev.kind === "stopped") {
+      try { this.quota.markStopping(row.task_id); }
+      catch (error) { this.report("lease-stop-persist", error); }
+    }
     this.ledgerComputeEvent(ev);
     if (ev.kind === "failed" || ev.kind === "stopped" || ev.kind === "completed") void this.afterRound(row.task_id, ev.computeId, ev.kind, this.launchEpoch.get(row.task_id) ?? 0);
     const progress: ComputeProgress = { computeId: ev.computeId, taskId: row.task_id, kind: ev.kind, ...(stage ? { stage } : {}), summary, at };
