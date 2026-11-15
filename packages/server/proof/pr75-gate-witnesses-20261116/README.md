@@ -35,7 +35,7 @@
 
 ## 证据入口与复现命令
 
-所有绝对命令、cwd、PID、退出码、耗时、冻结输入 sha256 和进程局部环境在 JSON 中，不用管道掩盖退出码。
+所有绝对命令、cwd、PID、退出码、耗时、冻结输入 sha256 和进程局部环境在 JSON 中，不用管道掩盖退出码。仓库忽略 `*.log`，本证明将原日志按原字节封存为相同路径的 `.log.gz`；`log-archives.json` 给出原名、压缩名和双哈希，逐份解压回读相等，未规范化或删掉失败输出。
 
 - `summary.json`：结果聚合及明确未完成项。
 - `raw/bound.json`、`raw/merge.execution.json`：基础、原树身份及正常 merge 事件。
