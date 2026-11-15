@@ -1,0 +1,54 @@
+packages/server/proof/q06-r1-20261115/red-cal.tap
+  s_69f96fa873b14b::t_77c1d53ca1a4de 1-1095
+packages/server/proof/q06-r1-20261115/snapshot-model.tap
+  s_69f96fa873b14b::t_77c1d53ca1a4de 1-128
+packages/server/proof/q06-r1-20261115/queue-retraction-true-red.tap
+  s_69f96fa873b14b::t_77c1d53ca1a4de 1-32
+packages/server/proof/q06-r1-20261115/README.md
+  s_69f96fa873b14b::t_5b52e1391b590b 1-10
+  s_69f96fa873b14b::t_465724764865d0 11-12
+packages/server/proof/q06-r1-20261115/snapshot-time.tap
+  s_69f96fa873b14b::t_77c1d53ca1a4de 1-125
+packages/server/proof/q06-r1-20261115/run-new-mutations.mjs
+  s_69f96fa873b14b::t_76bc5fb18f29e2 1-35
+receipts/feat-q06-2-trend-summary.json
+  s_69f96fa873b14b::t_5b52e1391b590b 31,33,44
+packages/server/proof/q06-r1-20261115/legacy-and-queue-true-red.tap
+  s_69f96fa873b14b::t_77c1d53ca1a4de 1-54
+packages/server/proof/q06-r1-20261115/clean.tap
+  s_69f96fa873b14b::t_77c1d53ca1a4de 1-106
+packages/server/proof/q06-r1-20261115/green.tap
+  s_69f96fa873b14b::t_5b52e1391b590b 1-412
+packages/server/proof/q06-r1-20261115/pagination-version.tap
+  s_69f96fa873b14b::t_77c1d53ca1a4de 1-129
+packages/server/proof/q06-r1-20261115/pagination-contact.tap
+  s_69f96fa873b14b::t_77c1d53ca1a4de 1-129
+packages/server/proof/q06-r1-20261115/privacy-parser.tap
+  s_69f96fa873b14b::t_77c1d53ca1a4de 1-154
+packages/server/proof/q06-r1-20261115/red-cal-attempt1.tap
+  s_69f96fa873b14b::t_77c1d53ca1a4de 1-1001
+packages/server/proof/q06-r1-20261115/fairness-true-red.tap
+  s_69f96fa873b14b::t_77c1d53ca1a4de 1-44
+packages/server/proof/q06-r1-20261115/pagination-id.tap
+  s_69f96fa873b14b::t_77c1d53ca1a4de 1-129
+packages/server/proof/q06-r1-20261115/privacy-legacy.tap
+  s_69f96fa873b14b::t_77c1d53ca1a4de 1-122
+packages/server/proof/q06-r1-20261115/privacy-scrub.tap
+  s_69f96fa873b14b::t_77c1d53ca1a4de 1-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "adc3a19855ca545f9f86b19c21c912f46f6a04a1",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
