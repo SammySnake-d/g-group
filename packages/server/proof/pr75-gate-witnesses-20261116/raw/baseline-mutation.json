@@ -1,0 +1,162 @@
+{
+  "source_head": "3efafc167a80f944a5cd7b839a3c7a9fc6ae3e53",
+  "kind": "原mutateReturns算法的纯定向后验校准，不调用正式门禁",
+  "transforms": [
+    {
+      "file": "packages/domain/src/authorization.ts",
+      "before_sha256": "1414607eabab92265aedc1c3a5720f4c7cfd92e4e2aa24c779f6958d99bd0ded",
+      "after_sha256": "ccf462a2dab7483749d66453358affb8bf31cad2281e6f8a4e016e0216e2e602",
+      "return_mutations": 2
+    },
+    {
+      "file": "packages/domain/src/cas.ts",
+      "before_sha256": "dc91a5560149426531ae477f0a87b209e14103a820a0fc3d2862b29ea4bc779b",
+      "after_sha256": "dc91a5560149426531ae477f0a87b209e14103a820a0fc3d2862b29ea4bc779b",
+      "return_mutations": 0
+    },
+    {
+      "file": "packages/domain/src/commitment-ledger.ts",
+      "before_sha256": "08e705cd8d1bc637765a193b4b24c0e03d79c919e8f71628297225333ed8cc32",
+      "after_sha256": "194a6d5eb5203840c3959e0afb9ca84eeb837ca6b9fd2b748b156598cce58b0e",
+      "return_mutations": 4
+    },
+    {
+      "file": "packages/domain/src/contact.ts",
+      "before_sha256": "c71cc8dc837fdf7eef20719ebfaea2038d2271d1291016d3cc9481fa8abc58b9",
+      "after_sha256": "01b481cd8e9ec160a50d9d96e1f5d519e3fceb33bc454ab124aa7e48224ac499",
+      "return_mutations": 8
+    },
+    {
+      "file": "packages/domain/src/errors.ts",
+      "before_sha256": "6da7c830970dc7cd75165b61e7b8cfd365f6c6a4ee4cf1783c7ed1b0c24dfe4a",
+      "after_sha256": "6da7c830970dc7cd75165b61e7b8cfd365f6c6a4ee4cf1783c7ed1b0c24dfe4a",
+      "return_mutations": 0
+    },
+    {
+      "file": "packages/domain/src/followups.ts",
+      "before_sha256": "da9e47feb533cc857517aee691c81741c429f788df5e8a3fe52bcb360ab4b68e",
+      "after_sha256": "70f45adb92794df951f374297b916fb108e5ff50996517a55cb17eb41aa3d592",
+      "return_mutations": 2
+    },
+    {
+      "file": "packages/domain/src/helper.ts",
+      "before_sha256": "fab56ff0e44bd470796bf4d053860c5707cbbe15f2cea646fef9ed5280f591c4",
+      "after_sha256": "1d47005d14983a0694d998e3a828ed1eea4118b857d07cf1268a09314eee3827",
+      "return_mutations": 1
+    },
+    {
+      "file": "packages/domain/src/index.ts",
+      "before_sha256": "350015d2d8ce11c3f6492d11b8c7a39b84376805388b525de00cf7c18bff01dd",
+      "after_sha256": "350015d2d8ce11c3f6492d11b8c7a39b84376805388b525de00cf7c18bff01dd",
+      "return_mutations": 0
+    },
+    {
+      "file": "packages/domain/src/lease.ts",
+      "before_sha256": "4c3e99c18f54279b3b363fc6b1b0ff14cb7ad34188bfacc425309f6a2a703891",
+      "after_sha256": "5bc257e8e9912edca13354f1d09963f91dccd102270f85efec735dabb9e14a3e",
+      "return_mutations": 1
+    },
+    {
+      "file": "packages/domain/src/log.ts",
+      "before_sha256": "576d2f83706c034ceeae7acb2acdb78b951e8e380dd98c57fb304b714493f294",
+      "after_sha256": "4f444ea12d25f859abff2edd1e48788799dc2d11e1e476e78dca2750e6bba7b8",
+      "return_mutations": 1
+    },
+    {
+      "file": "packages/domain/src/model-config.ts",
+      "before_sha256": "f9bd88b5892d4e7d668acfe2d42a2aa788e145d61d2a0f123a6e94d59f0c79f8",
+      "after_sha256": "a5ecdcaee1f818f4b27cd8d5e3cebb757fab628a22f18710ccbeaebdb033b418",
+      "return_mutations": 1
+    },
+    {
+      "file": "packages/domain/src/model-ledger.ts",
+      "before_sha256": "6d77fd627ed7807392883ac0345987fa3c9d3e730cd8d48d590f30a2a1ba41b1",
+      "after_sha256": "85811ae31e2bb227913e52f1ec2d34f834f1cd8874c5c01e4a5042732eddf94e",
+      "return_mutations": 3
+    },
+    {
+      "file": "packages/domain/src/plain.ts",
+      "before_sha256": "bafe141c5b5c0a2b3c00f4ac10f23c45249d65eeae836768e8af954a30ae743c",
+      "after_sha256": "e7880c6e43e52822bdd8ab56e49275d71c0b6add28a3424d31d3af0c1dc38277",
+      "return_mutations": 5
+    },
+    {
+      "file": "packages/domain/src/routing.ts",
+      "before_sha256": "e083b72961c55dbf75f552e3b4b8e107919db1e68cce877dc96a5399c197fcdc",
+      "after_sha256": "5ee887654c2bb4329d6f80fe78f3aefc3dde3d6765416ef32432f3c5ccc58ed7",
+      "return_mutations": 3
+    },
+    {
+      "file": "packages/domain/src/task.ts",
+      "before_sha256": "62af237f5b8ac6d0cc690ed853b524c6cbf8615e002522e68917b6a8d17d15ee",
+      "after_sha256": "c7e90d2959335b4505e77fe5085ce101e10deb2f34de89e6d8cd5baf2de66cab",
+      "return_mutations": 11
+    },
+    {
+      "file": "packages/domain/src/trace-replay.ts",
+      "before_sha256": "8c3822a01b83d97c41832e9d3e093143d0139dfd1693e40e3a498c211e5ed777",
+      "after_sha256": "3c9d1089206d82fdb229db93525ba0f6df3201422f2114d2869d59c84f9a7e98",
+      "return_mutations": 1
+    },
+    {
+      "file": "packages/domain/src/vendor.ts",
+      "before_sha256": "19aaf7186b3894e1eb5668b826f7dbec0cf91e9cbb1e7c8a56096f199ae4519b",
+      "after_sha256": "19aaf7186b3894e1eb5668b826f7dbec0cf91e9cbb1e7c8a56096f199ae4519b",
+      "return_mutations": 0
+    },
+    {
+      "file": "packages/kernel/src/attention.ts",
+      "before_sha256": "980ebc1a93ccdf613aefbbcba4c9b23af50d8162ffcebf0d9878fed7bedbd853",
+      "after_sha256": "3db186428186663e94f9837f9b6eb739d419d5eba5e3f805622ed4161ee17833",
+      "return_mutations": 1
+    }
+  ],
+  "tests": [
+    {
+      "file": "packages/domain/src/task.test.ts",
+      "sha256": "4bff09db0521268d56d0302c9fcbb293f71ec12879bad6fbd5dae619c1935060"
+    },
+    {
+      "file": "packages/kernel/src/attention-retry.test.ts",
+      "sha256": "4f98541f5bf26c76c65086cb6d950ce193ba8d376118d14e0c983272d7d821f7"
+    }
+  ],
+  "arm_sha256": "47204a73c857b3923398c93c64ef3e3bb7789dbe87d6d53e1cec215c1b99ca21",
+  "mutation_scope": "domain纯源码及kernel/attention.ts，无OS信号",
+  "copied": [
+    "packages/domain/src/authorization.test.ts",
+    "packages/domain/src/authorization.ts",
+    "packages/domain/src/cas.test.ts",
+    "packages/domain/src/cas.ts",
+    "packages/domain/src/commitment-ledger.test.ts",
+    "packages/domain/src/commitment-ledger.ts",
+    "packages/domain/src/contact.test.ts",
+    "packages/domain/src/contact.ts",
+    "packages/domain/src/errors.ts",
+    "packages/domain/src/followups.test.ts",
+    "packages/domain/src/followups.ts",
+    "packages/domain/src/helper.test.ts",
+    "packages/domain/src/helper.ts",
+    "packages/domain/src/index.ts",
+    "packages/domain/src/lease.test.ts",
+    "packages/domain/src/lease.ts",
+    "packages/domain/src/log.test.ts",
+    "packages/domain/src/log.ts",
+    "packages/domain/src/model-config.test.ts",
+    "packages/domain/src/model-config.ts",
+    "packages/domain/src/model-ledger.test.ts",
+    "packages/domain/src/model-ledger.ts",
+    "packages/domain/src/plain.ts",
+    "packages/domain/src/routing.test.ts",
+    "packages/domain/src/routing.ts",
+    "packages/domain/src/task-unreviewed.test.ts",
+    "packages/domain/src/task.test.ts",
+    "packages/domain/src/task.ts",
+    "packages/domain/src/trace-replay.test.ts",
+    "packages/domain/src/trace-replay.ts",
+    "packages/domain/src/vendor.test.ts",
+    "packages/domain/src/vendor.ts",
+    "packages/kernel/src/attention-retry.test.ts",
+    "packages/kernel/src/attention.ts"
+  ]
+}

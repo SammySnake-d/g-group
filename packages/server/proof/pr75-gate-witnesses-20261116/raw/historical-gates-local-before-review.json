@@ -1,0 +1,17 @@
+{
+ "cmd": [
+  "node",
+  "scripts/gates/run-all.ts",
+  "--local",
+  "--branch=feat/desktop-closed-loop",
+  "--base=origin/feat/desktop-files-provenance",
+  "--pr=75"
+ ],
+ "cwd": "/private/tmp/gg-r2-claude-20261115/pr75",
+ "started": "2026-11-15T16:11:13Z",
+ "seconds": 1316.2,
+ "limit_s": 3300,
+ "timed_out": false,
+ "exit": 1,
+ "log_bytes": 162203
+}

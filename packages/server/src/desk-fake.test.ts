@@ -13,8 +13,7 @@ const dir = mkdtempSync(path.join(tmpdir(), "gg-desk-fake-"));
 after(() => rmSync(dir, { recursive: true, force: true }));
 let n = 0;
 
-async function boot() {
-  const s = await startServer({ dataDir: path.join(dir, `d${++n}`), env: {} });
+async function boot(s: Started) {
   const c = s.host.createContact({ name: "小克" });
   const dm = s.host.openDm(c.id);
   return { s, dm };
@@ -35,7 +34,7 @@ const call = async <T>(s: Started, method: string, params: unknown): Promise<T> 
 };
 
 test("派什么活,替身 Compute 的进度就写什么:不再一律报 hello.txt", async () => {
-  const { s, dm } = await boot();
+  const { s, dm } = await boot(await startServer({ dataDir: path.join(dir, `d${++n}`), env: {} }));
   s.host.send({ roomId: dm.id, clientActionId: "m1", text: "帮我整理周报" });
   const t = await until("交付", () => { const x = taskOf(s, dm.id); return x?.deliveredSeq != null || (x && ["T5_InReview", "T8a_Delivered"].includes(x.state)) ? x : null; });
   const progress = s.host.progress(t.id);
@@ -44,15 +43,17 @@ test("派什么活,替身 Compute 的进度就写什么:不再一律报 hello.tx
   for (const p of milestones) assert.doesNotMatch(p.summary, /hello\.txt/, "进度不报和这件事无关的文件");
   assert.ok(milestones.some((p) => p.summary.includes("整理周报")), `进度说的是这件事:${milestones.map((p) => p.summary).join(" / ")}`);
   assert.equal(progress.at(-1)?.summary, "完成:整理周报");
+  assert.equal(s.host.taskViewById(t.id).title, "整理周报", "进度属于宿主按用户请求创建的任务");
   await s.close();
 });
 
 test("活里要验证码:替身 Compute 停在受阻,任务等你回答;你交还后它接着做完", async () => {
-  const { s, dm } = await boot();
+  const { s, dm } = await boot(await startServer({ dataDir: path.join(dir, `d${++n}`), env: {} }));
   s.host.send({ roomId: dm.id, clientActionId: "m1", text: "帮我登录后台查日志(要验证码)" });
   const blocked = await until("停在等你", () => { const x = taskOf(s, dm.id); return x?.state === "T4b_BlockedOnHuman" ? x : null; });
   assert.ok(blocked.pendingQuestion, "有待你回答的问题");
   assert.match(blocked.pendingQuestion.text, /验证码/);
+  assert.equal(s.host.taskViewById(blocked.id).state, "T4b_BlockedOnHuman", "实际任务在等用户回答");
   const ask = s.host.listMessages(dm.id, {}).messages.find((m) => m.card?.kind === "question" && m.card.taskId === blocked.id);
   assert.ok(ask, "联系人在会话里 @你 发了提问");
   assert.equal(ask.sender.kind, "contact", "是联系人说的,不是 Compute 自己在会话里说话");
@@ -63,7 +64,7 @@ test("活里要验证码:替身 Compute 停在受阻,任务等你回答;你交�
 });
 
 test("活里写了会失败:出一张挂在这件事上的原位失败卡,点重试后续接做完", async () => {
-  const { s, dm } = await boot();
+  const { s, dm } = await boot(await startServer({ dataDir: path.join(dir, `d${++n}`), env: {} }));
   s.host.send({ roomId: dm.id, clientActionId: "m1", text: "帮我抓取网页(会失败)" });
   const card = await until("失败卡", () => s.host.listMessages(dm.id, {}).messages.find((m) => m.card?.kind === "failure" && m.card.state === "open" && m.card.taskId !== null));
   const t = taskOf(s, dm.id)!;
@@ -71,12 +72,13 @@ test("活里写了会失败:出一张挂在这件事上的原位失败卡,点重
   assert.ok(card.card!.actions.some((a) => a.actionId === "retry"), "卡上有重试");
   await call<MessageView>(s, "cards.act", { roomId: dm.id, seq: card.seq, cardId: card.card!.cardId, actionId: "retry", clientActionId: "r1" });
   const done = await until("重试后做完", () => { const x = taskOf(s, dm.id); return x && ["T5_InReview", "T8a_Delivered"].includes(x.state) ? x : null; });
+  assert.equal(s.host.taskViewById(done.id).id, t.id, "重试继续原任务而不是另开一件");
   assert.equal(s.host.progress(done.id).at(-1)?.summary, "完成:抓取网页(会失败)");
   await s.close();
 });
 
 test("活里写了慢慢:停止后不再吐剩下的进度,任务落到已取消;可以按台账重跑", async () => {
-  const { s, dm } = await boot();
+  const { s, dm } = await boot(await startServer({ dataDir: path.join(dir, `d${++n}`), env: {} }));
   s.host.send({ roomId: dm.id, clientActionId: "m1", text: "帮我慢慢整理资料" });
   const running = await until("在做", () => { const x = taskOf(s, dm.id); return x?.state === "T3_Running" && x.recentProgress.length ? x : null; });
   await call(s, "tasks.cancel", { taskId: running.id, clientActionId: "c1" });
@@ -84,6 +86,7 @@ test("活里写了慢慢:停止后不再吐剩下的进度,任务落到已取消
   const kinds = () => s.host.progress(cancelled.id).map((p) => p.kind);
   await new Promise((r) => setTimeout(r, 800));
   assert.ok(!kinds().includes("completed"), `停下后没有再做完:${kinds().join(",")}`);
+  assert.equal(s.host.taskViewById(cancelled.id).state, "T10_Cancelled", "停止之后宿主任务仍为已取消");
   const { runs } = await call<{ runs: { id: string; layer: string; taskId: string | null; status: string }[] }>(s, "runs.list", { roomId: dm.id });
   const session = runs.find((r) => r.layer === "compute-session" && r.taskId === cancelled.id);
   assert.ok(session, "台账里有这次 Compute 会话");

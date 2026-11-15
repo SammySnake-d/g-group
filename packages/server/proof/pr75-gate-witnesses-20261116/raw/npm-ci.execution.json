@@ -1,0 +1,11 @@
+{
+  "event": "command_execution",
+  "command": [
+    "/bin/zsh",
+    "-c",
+    "npm ci --offline --no-audit --no-fund; rc=$?; printf \"%s\\n\" \"$rc\" > ../evidence/npm-ci.exit; exit \"$rc\""
+  ],
+  "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+  "pid": 82014,
+  "started_at": "2026-11-15T22:09:20.324373+00:00"
+}

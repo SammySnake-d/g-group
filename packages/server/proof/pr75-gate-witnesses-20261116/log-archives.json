@@ -1,0 +1,158 @@
+[
+  {
+    "original": "raw/assertion-preservation.log",
+    "archive": "raw/assertion-preservation.log.gz",
+    "original_sha256": "ff6db1def41a2f0be5141907778b87d733ce179fe4896689103053d6bc6f6d1c",
+    "archive_sha256": "025db0410676883f671f57109186754d345db9a86f7942cbef9cd45bf7276214"
+  },
+  {
+    "original": "raw/baseline-attention-real.log",
+    "archive": "raw/baseline-attention-real.log.gz",
+    "original_sha256": "98f907cedd1fc466856c5cd726817d2f9626dd5a1999af7f0c537ded04e06fa7",
+    "archive_sha256": "10ceaa105b3ac103354dba28913c5d27bdbab88f66555fbee1161c29e75ece50"
+  },
+  {
+    "original": "raw/baseline-prepare.log",
+    "archive": "raw/baseline-prepare.log.gz",
+    "original_sha256": "9fbfe1d7bc318c39712b82ce8752a97e5ceabeb9b2396db32ec049b73e3bb50c",
+    "archive_sha256": "0913a02fb9ff6b7d6e698df93d5a560e96e6545d1aa71d0f56e36f7b95202c61"
+  },
+  {
+    "original": "raw/baseline-pure-continuation-20261116T061830/attention-mutation.log",
+    "archive": "raw/baseline-pure-continuation-20261116T061830/attention-mutation.log.gz",
+    "original_sha256": "393a43bce9b2f7308d6dccbe2ed816ce08bf9241bf06cca8857ab928b25b006f",
+    "archive_sha256": "a5c47436d54fef3fa48d22ee83b0410e24b6769dcc36d0e7e1ac37011b4a9dd9"
+  },
+  {
+    "original": "raw/baseline-pure-continuation-20261116T061830/static.log",
+    "archive": "raw/baseline-pure-continuation-20261116T061830/static.log.gz",
+    "original_sha256": "58c40c82feb7c99066c357b0424330759058905453fdec4f3428f59e2fe53a49",
+    "archive_sha256": "755f36bd606107a806bfcffdf75ccb673142ca2eb7e95ee2d843fc3da4a18a60"
+  },
+  {
+    "original": "raw/baseline-pure-continuation-20261116T061830/supervisor.log",
+    "archive": "raw/baseline-pure-continuation-20261116T061830/supervisor.log.gz",
+    "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  {
+    "original": "raw/baseline-pure-continuation-20261116T061830/task-mutation.log",
+    "archive": "raw/baseline-pure-continuation-20261116T061830/task-mutation.log.gz",
+    "original_sha256": "86099d87c72bfe0e73e6be7953b6e807a8aa21fd1d731aea6cec7c6ea7a07ace",
+    "archive_sha256": "aaea359a2c11ade958a686271fe8cb54e82140035816b08495618ca445f5b928"
+  },
+  {
+    "original": "raw/baseline-safe/server-real.log",
+    "archive": "raw/baseline-safe/server-real.log.gz",
+    "original_sha256": "0652dd61ad66b682d369d77e1ef41f51decfc7c538e7e626e17f0a486e7e8108",
+    "archive_sha256": "e19d8395b93dbb831b195c5f11326ffb0ef3284f048e1fe1d5b862a1ee1e1505"
+  },
+  {
+    "original": "raw/baseline-safe-supervisor.log",
+    "archive": "raw/baseline-safe-supervisor.log.gz",
+    "original_sha256": "9f5ca06973942d8cce165a1f62d7e770adb6b018236232f59429a07d31c81a7d",
+    "archive_sha256": "52a7cce08cf497684c2d9d58f59bfb188c7a5cd184650463200e5eb397d3a510"
+  },
+  {
+    "original": "raw/baseline-server-real.log",
+    "archive": "raw/baseline-server-real.log.gz",
+    "original_sha256": "152581585ce1569f2d2473bd7a24cf16d966e967179b78c79e313c7b6837b132",
+    "archive_sha256": "2fd761b43ae803be34622b5b6aa36f8038861b86b072c456dabceed17429e33b"
+  },
+  {
+    "original": "raw/baseline-supervisor.log",
+    "archive": "raw/baseline-supervisor.log.gz",
+    "original_sha256": "2a8c36dccbcc1543814c4180b13aa0b7e23e595467ca436f1b0cd30b6b734d87",
+    "archive_sha256": "a65e915d2090451a64dabba8ec1020c5469070ab19887060683fc0f3fdbe1db6"
+  },
+  {
+    "original": "raw/baseline-task-real.log",
+    "archive": "raw/baseline-task-real.log.gz",
+    "original_sha256": "3185084759c31f3533a14502f383b2e8692a6f9b35ecd8cbba2926a1a506645b",
+    "archive_sha256": "52ed21656e273f525d3b12b902274ad1a84de588e8b557eb39a21979827c8a40"
+  },
+  {
+    "original": "raw/merge.log",
+    "archive": "raw/merge.log.gz",
+    "original_sha256": "e09aa8f89843a538ceb1059f74b192a5053d2574e735d72f009b1cd53912b5f0",
+    "archive_sha256": "dfbf0b9b1ac5d9f936d8a1fa7d9fab5a80cd275d8d666db1951d5fd034a3d19b"
+  },
+  {
+    "original": "raw/npm-ci.log",
+    "archive": "raw/npm-ci.log.gz",
+    "original_sha256": "145ca867942d87a25adc4c545f9437318097398786eece2b6d5eaca5dc070eee",
+    "archive_sha256": "83c5e653089e452f63ef544f6eec1b263d2fd78b1a35411dfc7780ecf9c11113"
+  },
+  {
+    "original": "raw/resume-command-20261116T061601/command.log",
+    "archive": "raw/resume-command-20261116T061601/command.log.gz",
+    "original_sha256": "74a465e064bddcd852c64a1bfcb8ad00d005df1d8a124907fb9a16566373b446",
+    "archive_sha256": "c2c11465ff1c9a6e87a1e14116278f6cd82d591a4c7a827e546638f461a2ff03"
+  },
+  {
+    "original": "raw/resume-command-20261116T061601/supervisor.log",
+    "archive": "raw/resume-command-20261116T061601/supervisor.log.gz",
+    "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  {
+    "original": "raw/strengthened-safe/attention-mutation.log",
+    "archive": "raw/strengthened-safe/attention-mutation.log.gz",
+    "original_sha256": "6decb13eb34427bb089457e004b2d317182ef7d0c7685ec90a6208828f377d13",
+    "archive_sha256": "9ac755e4fc53b61115dcca99d38b03164980c73ba3abec7fde8d888a528275e6"
+  },
+  {
+    "original": "raw/strengthened-safe/attention-real.log",
+    "archive": "raw/strengthened-safe/attention-real.log.gz",
+    "original_sha256": "8daaed5cfdfae62b939f11ffa169327322919192640bc70707a1a4956eb4898e",
+    "archive_sha256": "3e47aacba8c1c3ececcb8ba8b4a55ccc023bcc06f7240d242098fa62962388ac"
+  },
+  {
+    "original": "raw/strengthened-safe/lint.log",
+    "archive": "raw/strengthened-safe/lint.log.gz",
+    "original_sha256": "20a85b40ccceff9a62e02fff3293c2b977b8b84e8a51b215493f1c7cb863b721",
+    "archive_sha256": "96f8c0ae468af810545c73b42e8a0fb0f01b3d1910b6dc6c65525edcb4ceef6e"
+  },
+  {
+    "original": "raw/strengthened-safe/prepare.log",
+    "archive": "raw/strengthened-safe/prepare.log.gz",
+    "original_sha256": "adef19640389e3725e5976310cd7389130d75fdd8539641cc5ca73815b219ee1",
+    "archive_sha256": "a72e4801bbaf345c2470fb845724a209baa15895890491dcf77df14336abfe2b"
+  },
+  {
+    "original": "raw/strengthened-safe/server-real.log",
+    "archive": "raw/strengthened-safe/server-real.log.gz",
+    "original_sha256": "fceb64c6dc63d859152e79e2470b1f34f561927dd2a1d3746595ebc087e1f8ed",
+    "archive_sha256": "6bb9592ff531faea20f1c227f2e9eae3829dcacf54b263f3ab413e3c39c778ab"
+  },
+  {
+    "original": "raw/strengthened-safe/static.log",
+    "archive": "raw/strengthened-safe/static.log.gz",
+    "original_sha256": "8f6e16c78f31824441ade95997a8ce3c1927facdff828f2eefe52badb622d9e9",
+    "archive_sha256": "315efc91bb7e2b088d0deedb98ce118d501f580e0c49d2e75208cc1945fec441"
+  },
+  {
+    "original": "raw/strengthened-safe/task-mutation.log",
+    "archive": "raw/strengthened-safe/task-mutation.log.gz",
+    "original_sha256": "45808cda6c9671f1fde5e1ca9fa6e92c3f215e2069afffcb1859cc976ab03c2d",
+    "archive_sha256": "6172db9ca6b124cc3cae33232a62afe7ad7cbc5950a9a47f27f91e3867c70f68"
+  },
+  {
+    "original": "raw/strengthened-safe/task-real.log",
+    "archive": "raw/strengthened-safe/task-real.log.gz",
+    "original_sha256": "2370389e22da68aaf3b9e11000476b570d7576507a4bae6d294a972fc9b67789",
+    "archive_sha256": "529ec59ebf11ce4ab38e12e9b044cea460667c85b9a2e08b49e249ef22a34525"
+  },
+  {
+    "original": "raw/strengthened-safe/typecheck.log",
+    "archive": "raw/strengthened-safe/typecheck.log.gz",
+    "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  {
+    "original": "raw/strengthened-safe-supervisor.log",
+    "archive": "raw/strengthened-safe-supervisor.log.gz",
+    "original_sha256": "977ae2f3e2e93f6c8271c4de5a43b8c408f35c8d9ff6683b59307eacb60d9aff",
+    "archive_sha256": "2c2e783f09e549784cbb7c13e16b625c25848c108bc311817c9c84c715e4da3b"
+  }
+]

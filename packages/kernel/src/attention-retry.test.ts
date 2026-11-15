@@ -105,6 +105,7 @@ test("AC-36 retryAfter 自身抛错或给出非法延迟时按 retryMs 兜底", 
   await tick();
   assert.equal(runs, 2, "策略抛错按 retryMs");
   t.advance(200);
+  assert.equal(t.count(), 0, "重试到期时不应留下未触发的假计时器");
   await loop.idle();
   assert.equal(runs, 3, "非法延迟按 retryMs");
   assert.equal(loop.rounds("c1"), 3);

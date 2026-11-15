@@ -1,0 +1,12 @@
+{
+  "event": "command_execution",
+  "command": [
+    "git",
+    "-C",
+    "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+    "show",
+    "31082df234b2b59af260d02e70f6b91ba5104bdd:reviews/pr75-r2-evidence/gates-local-before-review.json"
+  ],
+  "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+  "exit": 0
+}

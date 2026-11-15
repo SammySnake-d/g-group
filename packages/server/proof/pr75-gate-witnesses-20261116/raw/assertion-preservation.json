@@ -1,0 +1,49 @@
+{
+  "source_head": "c8456dced7814434105bafb5599b17f3757a9c17",
+  "base": "3efafc167a80f944a5cd7b839a3c7a9fc6ae3e53",
+  "merge_parents": [
+    "3efafc167a80f944a5cd7b839a3c7a9fc6ae3e53",
+    "c5ce3bebf4803f9bc9304612e0c579f02eeb9f70"
+  ],
+  "changed_files": [
+    "packages/domain/src/task.test.ts",
+    "packages/kernel/src/attention-retry.test.ts",
+    "packages/server/src/delivery-t8a.test.ts",
+    "packages/server/src/desk-fake.test.ts",
+    "packages/server/src/start.test.ts"
+  ],
+  "production_and_gates_unchanged": true,
+  "all_original_assertions_preserved": true,
+  "files": [
+    {
+      "file": "packages/domain/src/task.test.ts",
+      "before_assert_calls": 670,
+      "after_assert_calls": 672,
+      "missing": []
+    },
+    {
+      "file": "packages/kernel/src/attention-retry.test.ts",
+      "before_assert_calls": 13,
+      "after_assert_calls": 14,
+      "missing": []
+    },
+    {
+      "file": "packages/server/src/delivery-t8a.test.ts",
+      "before_assert_calls": 34,
+      "after_assert_calls": 37,
+      "missing": []
+    },
+    {
+      "file": "packages/server/src/desk-fake.test.ts",
+      "before_assert_calls": 17,
+      "after_assert_calls": 21,
+      "missing": []
+    },
+    {
+      "file": "packages/server/src/start.test.ts",
+      "before_assert_calls": 3,
+      "after_assert_calls": 5,
+      "missing": []
+    }
+  ]
+}

@@ -643,6 +643,7 @@ test("AC-28① 交付待确认没有归档出口:状态集合里没有归档状�
     assert.ok(!["T10_Cancelled", "T11_Failed"].includes(r.task.state), `${e} 把 T8a 带进了终态`);
   }
   assert.equal(apply(t, SAMPLE.AcceptTimeout).ok, false);
+  assert.deepEqual(apply(t, SAMPLE.AcceptTimeout), { ok: false, reason: "T8a_Delivered × AcceptTimeout:交付待确认不超时、不归档(用户 #2273),只有用户确认或退回能离开 T8a" }, "应因交付等待用户而拒绝,不能把入参误判成无效事件冒充拒绝");
 });
 
 test("AC-28① 用户一直不说话:当前代次的 AcceptTimeout 在 T8a 被拒(用户定案 2273),任务原样停在 T8a,不归档、不算通过、不清当前交付(阳性埋雷)", () => {
@@ -1988,6 +1989,7 @@ test("R13 进程内改写 TABLE/行/格/STATES/EVENT_KINDS 都抛 TypeError,未�
   assert.throws(() => { (EVENT_KINDS as unknown as string[])[0] = "Forged"; }, TypeError);
   const r = apply(newTask("t1", "u1"), { kind: "Dispatch", computeId: "cc-1", model: PRODUCER, requestId: "t1#L0" });
   assert.equal(r.ok, false);
+  assert.deepEqual(r, { ok: false, reason: "T1_Open × Dispatch:尚未认领,不能派发" }, "必须因尚未认领被拒,而不是错误输入或其他原因");
   assert.equal(TABLE.T1_Open.Dispatch.kind, "reject");
   assert.equal(STATES.length, 11);
   assert.equal(EVENT_KINDS[0], "Claim");

@@ -1,0 +1,452 @@
+{
+  "kind": "后验测试校准，不是首次先红或完整门禁通过",
+  "base": "3efafc167a80f944a5cd7b839a3c7a9fc6ae3e53",
+  "tested_source_head": "c8456dced7814434105bafb5599b17f3757a9c17",
+  "branch": "fix/pr75-gate-witnesses-20261116",
+  "preserved_history": [
+    "87a128964b86f60ff6b43cd484c357df079a2321",
+    "c5ce3bebf4803f9bc9304612e0c579f02eeb9f70"
+  ],
+  "merge_parents": [
+    "3efafc167a80f944a5cd7b839a3c7a9fc6ae3e53",
+    "c5ce3bebf4803f9bc9304612e0c579f02eeb9f70"
+  ],
+  "baseline_initial_commands": [
+    {
+      "event": "command_execution",
+      "name": "prepare",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/witness-tools.mjs",
+        "prepare",
+        "baseline"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+      "started_at": "2026-11-15T22:12:34.470859+00:00",
+      "pid": 83947,
+      "exit": 0,
+      "elapsed_s": 0.328,
+      "finished_at": "2026-11-15T22:12:34.798806+00:00"
+    },
+    {
+      "event": "command_execution",
+      "name": "attention-real",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--experimental-test-isolation=none",
+        "--import",
+        "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/forbid-os-signals.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "--test-timeout=30000",
+        "packages/kernel/src/attention-retry.test.ts"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+      "started_at": "2026-11-15T22:12:34.821701+00:00",
+      "pid": 83970,
+      "exit": 0,
+      "elapsed_s": 0.111,
+      "finished_at": "2026-11-15T22:12:34.932274+00:00"
+    },
+    {
+      "event": "command_execution",
+      "name": "task-real",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--experimental-test-isolation=none",
+        "--import",
+        "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/forbid-os-signals.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "--test-timeout=30000",
+        "--test-name-pattern=^(AC-28① 交付待确认没有归档出口|R13 进程内改写 TABLE/行/格/STATES/EVENT_KINDS)",
+        "packages/domain/src/task.test.ts"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+      "started_at": "2026-11-15T22:12:34.952944+00:00",
+      "pid": 83973,
+      "exit": 0,
+      "elapsed_s": 0.133,
+      "finished_at": "2026-11-15T22:12:35.086174+00:00"
+    },
+    {
+      "event": "command_execution",
+      "name": "server-real",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--experimental-test-isolation=none",
+        "--import",
+        "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/forbid-os-signals.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "--test-timeout=30000",
+        "packages/server/src/delivery-t8a.test.ts",
+        "packages/server/src/desk-fake.test.ts",
+        "packages/server/src/start.test.ts"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+      "started_at": "2026-11-15T22:12:35.108630+00:00",
+      "pid": 83976,
+      "exit": 1,
+      "elapsed_s": 24.516,
+      "finished_at": "2026-11-15T22:12:59.624425+00:00"
+    }
+  ],
+  "baseline_pure_commands": [
+    {
+      "name": "static",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/witness-tools.mjs",
+        "static",
+        "baseline"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+      "expected_exits": [
+        1
+      ],
+      "event": "command_execution",
+      "pid": 87314,
+      "exit": 1,
+      "duration_s": 0.31908488273620605
+    },
+    {
+      "name": "attention-mutation",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--experimental-test-isolation=none",
+        "--import",
+        "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/forbid-os-signals.mjs",
+        "--import",
+        "./__gate_arm.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "--test-timeout=2000",
+        "packages/kernel/src/attention-retry.test.ts"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/baseline-mutation",
+      "expected_exits": [
+        1
+      ],
+      "event": "command_execution",
+      "pid": 87336,
+      "exit": 1,
+      "duration_s": 2.114798069000244
+    },
+    {
+      "name": "task-mutation",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--experimental-test-isolation=none",
+        "--import",
+        "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/forbid-os-signals.mjs",
+        "--import",
+        "./__gate_arm.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "--test-timeout=2000",
+        "--test-name-pattern=^(AC-28① 交付待确认没有归档出口|R13 进程内改写 TABLE/行/格/STATES/EVENT_KINDS)",
+        "packages/domain/src/task.test.ts"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/baseline-mutation",
+      "expected_exits": [
+        0
+      ],
+      "event": "command_execution",
+      "pid": 87361,
+      "exit": 0,
+      "duration_s": 0.14304804801940918
+    }
+  ],
+  "baseline_safe_commands": [
+    {
+      "event": "command_execution",
+      "name": "server-real",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--experimental-test-isolation=none",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "--test-timeout=30000",
+        "packages/server/src/delivery-t8a.test.ts",
+        "packages/server/src/desk-fake.test.ts",
+        "packages/server/src/start.test.ts"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+      "started_at": "2026-11-15T22:20:42.402452+00:00",
+      "pid": 88570,
+      "exit": 0,
+      "elapsed_s": 7.308,
+      "finished_at": "2026-11-15T22:20:49.710814+00:00"
+    }
+  ],
+  "strengthened_commands": [
+    {
+      "event": "command_execution",
+      "name": "prepare",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/witness-tools.mjs",
+        "prepare",
+        "strengthened"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+      "started_at": "2026-11-15T22:22:04.254499+00:00",
+      "pid": 89358,
+      "exit": 0,
+      "elapsed_s": 0.327,
+      "finished_at": "2026-11-15T22:22:04.581321+00:00"
+    },
+    {
+      "event": "command_execution",
+      "name": "attention-real",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--experimental-test-isolation=none",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "--test-timeout=30000",
+        "packages/kernel/src/attention-retry.test.ts"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+      "started_at": "2026-11-15T22:22:04.631159+00:00",
+      "pid": 89383,
+      "exit": 0,
+      "elapsed_s": 0.112,
+      "finished_at": "2026-11-15T22:22:04.742898+00:00"
+    },
+    {
+      "event": "command_execution",
+      "name": "task-real",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--experimental-test-isolation=none",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "--test-timeout=30000",
+        "--test-name-pattern=^(AC-28① 交付待确认没有归档出口|R13 进程内改写 TABLE/行/格/STATES/EVENT_KINDS)",
+        "packages/domain/src/task.test.ts"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+      "started_at": "2026-11-15T22:22:04.793099+00:00",
+      "pid": 89388,
+      "exit": 0,
+      "elapsed_s": 0.136,
+      "finished_at": "2026-11-15T22:22:04.929318+00:00"
+    },
+    {
+      "event": "command_execution",
+      "name": "server-real",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--experimental-test-isolation=none",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "--test-timeout=30000",
+        "packages/server/src/delivery-t8a.test.ts",
+        "packages/server/src/desk-fake.test.ts",
+        "packages/server/src/start.test.ts"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+      "started_at": "2026-11-15T22:22:04.979117+00:00",
+      "pid": 89393,
+      "exit": 0,
+      "elapsed_s": 7.271,
+      "finished_at": "2026-11-15T22:22:12.250140+00:00"
+    },
+    {
+      "event": "command_execution",
+      "name": "static",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/witness-tools.mjs",
+        "static",
+        "strengthened"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+      "started_at": "2026-11-15T22:22:12.313454+00:00",
+      "pid": 89482,
+      "exit": 0,
+      "elapsed_s": 0.311,
+      "finished_at": "2026-11-15T22:22:12.624585+00:00"
+    },
+    {
+      "event": "command_execution",
+      "name": "attention-mutation",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--experimental-test-isolation=none",
+        "--import",
+        "./__gate_arm.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "--test-timeout=2000",
+        "packages/kernel/src/attention-retry.test.ts"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/strengthened-mutation",
+      "started_at": "2026-11-15T22:22:12.675866+00:00",
+      "pid": 89507,
+      "exit": 1,
+      "elapsed_s": 0.112,
+      "finished_at": "2026-11-15T22:22:12.788144+00:00"
+    },
+    {
+      "event": "command_execution",
+      "name": "task-mutation",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--experimental-test-isolation=none",
+        "--import",
+        "./__gate_arm.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "--test-timeout=2000",
+        "--test-name-pattern=^(AC-28① 交付待确认没有归档出口|R13 进程内改写 TABLE/行/格/STATES/EVENT_KINDS)",
+        "packages/domain/src/task.test.ts"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/strengthened-mutation",
+      "started_at": "2026-11-15T22:22:12.838389+00:00",
+      "pid": 89512,
+      "exit": 1,
+      "elapsed_s": 0.134,
+      "finished_at": "2026-11-15T22:22:12.971940+00:00"
+    },
+    {
+      "event": "command_execution",
+      "name": "typecheck",
+      "command": [
+        "/opt/homebrew/bin/node",
+        "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo/node_modules/typescript/bin/tsc",
+        "-p",
+        "tsconfig.json"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+      "started_at": "2026-11-15T22:22:13.020904+00:00",
+      "pid": 89517,
+      "exit": 0,
+      "elapsed_s": 3.197,
+      "finished_at": "2026-11-15T22:22:16.218084+00:00"
+    },
+    {
+      "event": "command_execution",
+      "name": "lint",
+      "command": [
+        "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo/node_modules/.bin/biome",
+        "lint",
+        "--error-on-warnings",
+        "packages/domain/src/task.test.ts",
+        "packages/kernel/src/attention-retry.test.ts",
+        "packages/server/src/delivery-t8a.test.ts",
+        "packages/server/src/desk-fake.test.ts",
+        "packages/server/src/start.test.ts"
+      ],
+      "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+      "started_at": "2026-11-15T22:22:16.272614+00:00",
+      "pid": 89543,
+      "exit": 0,
+      "elapsed_s": 1.64,
+      "finished_at": "2026-11-15T22:22:17.912141+00:00"
+    }
+  ],
+  "static_problem_count": {
+    "before": 8,
+    "after": 0
+  },
+  "task_mutation": {
+    "before": {
+      "exit": 0,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "hit": 2
+    },
+    "after": {
+      "exit": 1,
+      "pass": 0,
+      "fail": 2,
+      "cancelled": 0,
+      "hit": 2
+    }
+  },
+  "attention_mutation": {
+    "before": {
+      "exit": 1,
+      "assertion_fail": 1,
+      "timeout_cancelled": 1,
+      "hit": 2
+    },
+    "after": {
+      "exit": 1,
+      "assertion_fail": 2,
+      "timeout_cancelled": 0,
+      "hit": 2
+    }
+  },
+  "real_targeted_tests": {
+    "before": {
+      "attention": 2,
+      "task": 2,
+      "server": 11,
+      "total": 15
+    },
+    "after": {
+      "attention": 2,
+      "task": 2,
+      "server": 11,
+      "total": 15
+    }
+  },
+  "original_assertions": {
+    "before": 737,
+    "after": 749,
+    "all_original_preserved": true
+  },
+  "production_and_gates_unchanged": true,
+  "same_production_mutation_bytes": true,
+  "safe_run_signal_events": [],
+  "executor_correction": {
+    "original_exit": 1,
+    "replay_exit": 1,
+    "corrected_server_exit": 0,
+    "cause": "自有旧guard误挡合法Host.workspaceNote git status spawnSync；不是产品红"
+  },
+  "formal_run_all_started_by_this_agent": false,
+  "full_G_RED_closed": false,
+  "historical_review_head": "31082df234b2b59af260d02e70f6b91ba5104bdd",
+  "historical_failed_item_count": {
+    "G-RED": 604,
+    "G-STUB": 2,
+    "G-TAUTO": 8
+  },
+  "historical_run_all": {
+    "cmd": [
+      "node",
+      "scripts/gates/run-all.ts",
+      "--local",
+      "--branch=feat/desktop-closed-loop",
+      "--base=origin/feat/desktop-files-provenance",
+      "--pr=75"
+    ],
+    "cwd": "/private/tmp/gg-r2-claude-20261115/pr75",
+    "started": "2026-11-15T16:11:13Z",
+    "seconds": 1316.2,
+    "limit_s": 3300,
+    "timed_out": false,
+    "exit": 1,
+    "log_bytes": 162203
+  },
+  "pushed_by_this_agent": false,
+  "pr_created_by_this_agent": false,
+  "self_approval_written": false
+}

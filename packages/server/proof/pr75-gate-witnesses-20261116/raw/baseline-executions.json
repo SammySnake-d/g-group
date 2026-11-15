@@ -1,0 +1,84 @@
+[
+  {
+    "event": "command_execution",
+    "name": "prepare",
+    "command": [
+      "/opt/homebrew/bin/node",
+      "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/witness-tools.mjs",
+      "prepare",
+      "baseline"
+    ],
+    "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+    "started_at": "2026-11-15T22:12:34.470859+00:00",
+    "pid": 83947,
+    "exit": 0,
+    "elapsed_s": 0.328,
+    "finished_at": "2026-11-15T22:12:34.798806+00:00"
+  },
+  {
+    "event": "command_execution",
+    "name": "attention-real",
+    "command": [
+      "/opt/homebrew/bin/node",
+      "--experimental-test-isolation=none",
+      "--import",
+      "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/forbid-os-signals.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "--test-concurrency=1",
+      "--test-timeout=30000",
+      "packages/kernel/src/attention-retry.test.ts"
+    ],
+    "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+    "started_at": "2026-11-15T22:12:34.821701+00:00",
+    "pid": 83970,
+    "exit": 0,
+    "elapsed_s": 0.111,
+    "finished_at": "2026-11-15T22:12:34.932274+00:00"
+  },
+  {
+    "event": "command_execution",
+    "name": "task-real",
+    "command": [
+      "/opt/homebrew/bin/node",
+      "--experimental-test-isolation=none",
+      "--import",
+      "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/forbid-os-signals.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "--test-concurrency=1",
+      "--test-timeout=30000",
+      "--test-name-pattern=^(AC-28① 交付待确认没有归档出口|R13 进程内改写 TABLE/行/格/STATES/EVENT_KINDS)",
+      "packages/domain/src/task.test.ts"
+    ],
+    "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+    "started_at": "2026-11-15T22:12:34.952944+00:00",
+    "pid": 83973,
+    "exit": 0,
+    "elapsed_s": 0.133,
+    "finished_at": "2026-11-15T22:12:35.086174+00:00"
+  },
+  {
+    "event": "command_execution",
+    "name": "server-real",
+    "command": [
+      "/opt/homebrew/bin/node",
+      "--experimental-test-isolation=none",
+      "--import",
+      "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/forbid-os-signals.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "--test-concurrency=1",
+      "--test-timeout=30000",
+      "packages/server/src/delivery-t8a.test.ts",
+      "packages/server/src/desk-fake.test.ts",
+      "packages/server/src/start.test.ts"
+    ],
+    "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+    "started_at": "2026-11-15T22:12:35.108630+00:00",
+    "pid": 83976,
+    "exit": 1,
+    "elapsed_s": 24.516,
+    "finished_at": "2026-11-15T22:12:59.624425+00:00"
+  }
+]

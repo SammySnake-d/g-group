@@ -1,0 +1,20 @@
+{
+  "event": "command_execution",
+  "command": [
+    "/opt/homebrew/bin/node",
+    "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/verify-preserved-assertions.mjs",
+    "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+    "3efafc167a80f944a5cd7b839a3c7a9fc6ae3e53",
+    "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/assertion-preservation.json"
+  ],
+  "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+  "exit": 0,
+  "elapsed_s": 0.323,
+  "runner_sha256": "e3a296043c20ba57810a8b01b9f80e90dabebc4d3d824dfef8354f4f43733e4a",
+  "env": {
+    "NODE_OPTIONS": "--import=/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/a5-length-c30-live-20261116/signal-guard-prepush/process-guard-v4.mjs",
+    "GG_A5_GUARD_LOG": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/assertion-signals.ndjson",
+    "TMPDIR": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/assertion-private-k9t_6an8",
+    "GG_TEST_RUN_TMP": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/evidence/assertion-private-k9t_6an8"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "source_head": "3efafc167a80f944a5cd7b839a3c7a9fc6ae3e53",
+  "input_hashes": {
+    "packages/domain/src/task.test.ts": "4bff09db0521268d56d0302c9fcbb293f71ec12879bad6fbd5dae619c1935060",
+    "packages/kernel/src/attention-retry.test.ts": "4f98541f5bf26c76c65086cb6d950ce193ba8d376118d14e0c983272d7d821f7",
+    "packages/server/src/delivery-t8a.test.ts": "97410c419806e2b6570d203cea06851bda2f3cf6b90f563bc7bab811d07df6e3",
+    "packages/server/src/desk-fake.test.ts": "cec070daf7c828fc18cfd6f799278b16b39e565d0366a9911e3a5eac4d612f55",
+    "packages/server/src/start.test.ts": "ea8d51559a54edda72bd2662615a4b5aa29bf4866c26442995f92e4ed672b8ae",
+    "packages/server/src/host.ts": "bf2282fe929cfc92e4ec30d9cee236f757fd22845a3b25010fcd8c7742f94b95",
+    "packages/server/src/fakes.ts": "ff64d0137ab72c236ef54e80ec0830daca8ecce4408e028ee6b81dd23038a0e6",
+    "packages/domain/src/task.ts": "62af237f5b8ac6d0cc690ed853b524c6cbf8615e002522e68917b6a8d17d15ee",
+    "packages/kernel/src/attention.ts": "980ebc1a93ccdf613aefbbcba4c9b23af50d8162ffcebf0d9878fed7bedbd853",
+    "scripts/gates/gates.ts": "2aae2a271bf02e4bd42e8040639ccf6e7f914070c8c6f8f845b95e5d0ac63ff7",
+    "scripts/gates/lib.ts": "a1ac68b76422ddc24b5e2c499da8278e745415492ecba60c4ecf7701ac7b565f",
+    "scripts/gates/testlint.ts": "6cee9fad90543309778ef2e35545cd398b370d8683ac5d842b74dae4174f9f04",
+    "package-lock.json": "7c90105a4aa5c51da6848f10a740f3162e7da31065aee1cf90e52539ea5ff813"
+  },
+  "runner_hashes": {
+    "witness-tools.mjs": "8c2c27d029418a8dc88499aaef2bcedd78b669a290be3d291155db35113c22cd",
+    "forbid-os-signals.mjs": "0586ba8d3cdccd3e2baf6b63139cbec94085f6d2dc47bf9750b4163914cb6790",
+    "run-witnesses.py": "8f02cb588bf4d063a5aca050d92894487fa82579802769045a0b2ce44d2d943c",
+    "run-witnesses-safe.py": "419107050bc448c5073f967b892b69417ac22093e10ed48c668bcdfa474fae4d"
+  },
+  "external_hashes": {
+    "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/a5-length-c30-live-20261116/signal-guard-prepush/process-guard-v4.mjs": "613234e3ac924739c1d741e5ca724aaabf9b2ccefda05c567367a33a20f384a8",
+    "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/a5-length-c30-live-20261116/signal-guard-prepush/native/table.node": "5c78af51c6bd12624420b2a0017ad2f874af0ddad61ba989a49f7710c95b8774"
+  },
+  "unchanged": true,
+  "signal_events": []
+}

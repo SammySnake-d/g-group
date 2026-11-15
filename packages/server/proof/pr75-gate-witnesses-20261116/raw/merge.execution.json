@@ -1,0 +1,19 @@
+{
+  "event": "command_execution",
+  "command": [
+    "git",
+    "-C",
+    "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+    "merge",
+    "--no-ff",
+    "-m",
+    "merge(test): retain retrospective PR75 gate witnesses",
+    "refs/heads/local-pr75-gate-witnesses-original"
+  ],
+  "cwd": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+  "started_at": "2026-11-15T22:21:42.428742+00:00",
+  "exit": 0,
+  "base": "3efafc167a80f944a5cd7b839a3c7a9fc6ae3e53",
+  "merge_target": "c5ce3bebf4803f9bc9304612e0c579f02eeb9f70",
+  "result_head": "c8456dced7814434105bafb5599b17f3757a9c17"
+}

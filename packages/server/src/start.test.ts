@@ -21,9 +21,11 @@ test("startServer(fake) + bindIpc:渲染进程经 gg:invoke 建联系人、私�
   const dm = await invoke("rooms.openDm", { contactId: c.value!.id });
   const sent = await invoke("messages.send", { roomId: dm.value!.id, clientActionId: "m", text: "帮我整理周报" });
   assert.ok(sent.ok);
+  assert.equal(s.host.listContacts().find((contact) => contact.id === c.value!.id)?.name, "小克", "IPC 建立的联系人确实保存在宿主");
   for (let i = 0; i < 100 && !events.some((e) => e.type === "task.updated" && (e as unknown as { task: { state: string } }).task.state === "T8a_Delivered"); i++) await new Promise((r) => setTimeout(r, 50));
   const types = new Set(events.map((e) => e.type));
   for (const t of ["contact.updated", "room.updated", "message.appended", "receipt.updated", "contact.activity", "task.updated", "compute.progress"]) assert.ok(types.has(t), `缺 ${t}`);
+  assert.equal(s.host.listTasks({ roomId: dm.value!.id })[0]?.state, "T8a_Delivered", "IPC 派活最终在宿主进入交付待确认");
   const mk = await invoke("plugins.marketplace", {});
   assert.ok(mk.ok, "默认挂上示例市场");
   await s.close();

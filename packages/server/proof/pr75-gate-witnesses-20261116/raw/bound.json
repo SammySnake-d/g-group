@@ -1,0 +1,9 @@
+{
+  "source": "/private/tmp/gg-stop-final-send-3efafc1-20261116",
+  "base": "3efafc167a80f944a5cd7b839a3c7a9fc6ae3e53",
+  "target": "/private/tmp/gg-pr75-gate-witnesses-dyugzcdc/repo",
+  "branch": "fix/pr75-gate-witnesses-20261116",
+  "original_unchanged": true,
+  "method": "后验校准，正常合并历史，不冒称首次先红",
+  "pending": "未改基线纯定向及静态testlint"
+}
