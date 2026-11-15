@@ -1,0 +1,28 @@
+{
+  "slice": "B1 群消息寻址：用户只 @ 一位联系人时，所有联系人仍进入各自注意回合；未被点名者不得直接代答原用户消息，但可引用已发布的联系人消息做纠错或独立复核。",
+  "acceptance": [
+    {
+      "id": "AC-27",
+      "status": "通过",
+      "evidence": "packages/server/proof/group-mention-routing-b1-red.txt"
+    },
+    {
+      "id": "AC-31",
+      "status": "未测",
+      "reason": "本片只覆盖 AC-31 的群消息寻址子路径：全员进入注意回合、提交层拦截未点名直答、联系人回复仍可触发旁观者纠错；AC-31 其余崩溃去重、撤销竞态、承诺 GC 与完整 A-T40 矩阵不在本片重新声明。相关行为与全量回归证据见 packages/server/proof/group-mention-routing-b1-full.txt。"
+    }
+  ],
+  "author": {
+    "agent": "codex",
+    "session": "codex:63f0bda7-4211-4c82-ae3b-08da3acc1f00",
+    "model": "group/gpt-terra"
+  },
+  "red": {
+    "commit": "b10a2c7131fbbee25080c5be5f6f7478aaf10806"
+  },
+  "unverifiable": "红基线在干净 detached worktree b10a2c7 上直接 node --test 运行，4 条中新增 B1 用例按名失败；仓库 test-runner 的变更扫描在该临时树只收集原有 3 条，因此不把它的 3/3 结果当红证据。绿实现 859a6f6 后 typecheck 通过，Biome 对两份受管文件通过，相关 host/group-claim/retry/recall 回归 43/43 通过，全仓 npm test 1668/1668 通过且 skip/todo/cancelled 为 0。未做真实网关模型或打包版重跑；B1 的真实打包证据仍是 PR101 首轮材料，需 Claude 在本分支上复核。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待 Claude 独立审查；未合并",
+  "notes": "当前基线 45976fca。已核对 #79 feat/contact-call-check：只覆盖 @everyone 展开与动作校验；已核对 #88 feat/mention-loop-guard-ca2：持久因果限额片，且现有审查结论为 REJECT；二者均未覆盖本 B1 的未点名 reply 寻址边界，未重复并入。代码只在 Host.commitRound 的 reply 提交处增加机械拒绝，保留全员送达与联系人回复唤醒；PR101 R2 桌面收据已记录该现象仍待后端修复。"
+}
