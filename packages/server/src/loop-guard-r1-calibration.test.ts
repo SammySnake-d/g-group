@@ -255,3 +255,59 @@ test("用户重跑时联系人任务卡仍必须经过因果唤醒准入", async
     assert.equal(wake?.allowed, 1, "联系人任务卡发给乙必须先写入准入记录");
   } finally { compute.close(); }
 });
+
+test("R1-F07 同一根多条消息被拦只产生一条停止说明", async () => {
+  let aId = "";
+  const mind = (): ContactMind => ({ async round(input) {
+    const user = input.fresh.find((f) => f.kind === "message" && f.sender.kind === "user");
+    return { actions: input.contact.id === aId && user ? [1, 2, 3].map((n): MindAction => ({ kind: "reply", roomId: user.roomId, text: `甲的消息 ${n}`, replyToSeq: null })) : [], stateNote: null };
+  } });
+  const host = new Host({ file: nextFile(), mind, maxDeferMs: 2, loopGuard: { maxHops: 1 } }); hosts.push(host);
+  const a = host.createContact({ name: "甲" }); aId = a.id; const b = host.createContact({ name: "乙" });
+  const group = host.createGroup("停止说明", [{ kind: "contact", id: a.id }, { kind: "contact", id: b.id }]);
+  host.send({ roomId: group.id, clientActionId: "start", text: "开始", mentions: [{ id: a.id, source: "manual" }] });
+  await settle(host);
+  assert.equal(host.loopGuard.pending().filter((p) => p.contactId === b.id).length, 2, "前置:两条不同消息确实被拦");
+  assert.equal(host.listMessages(group.id, {}).messages.filter((m) => m.sender.kind === "system" && m.text.includes("自动往返已到上限")).length, 1);
+});
+
+test("R1-F08 被拦的唤醒不得进入注意循环", async () => {
+  let aId = "";
+  const mind = (): ContactMind => ({ async round(input) {
+    const actions: MindAction[] = [];
+    for (const f of input.fresh) if (f.kind === "message") {
+      if (input.contact.id === aId && f.sender.kind === "user" && f.text === "开始") actions.push({ kind: "reply", roomId: f.roomId, text: "甲的发言", replyToSeq: null });
+      if (input.contact.id !== aId && f.sender.kind === "contact" && f.text === "甲的发言") actions.push({ kind: "reply", roomId: f.roomId, text: "乙的回应", replyToSeq: null });
+    }
+    return { actions, stateNote: null };
+  } });
+  const host = new Host({ file: nextFile(), mind, maxDeferMs: 2, loopGuard: { maxHops: 1 } }); hosts.push(host);
+  const a = host.createContact({ name: "甲" }); aId = a.id; const b = host.createContact({ name: "乙" });
+  const group = host.createGroup("拦截", [{ kind: "contact", id: a.id }, { kind: "contact", id: b.id }]);
+  host.send({ roomId: group.id, clientActionId: "start", text: "开始", mentions: [{ id: a.id, source: "manual" }] });
+  await settle(host);
+  assert.ok(host.loopGuard.pending().some((p) => p.contactId === a.id), "前置:乙对甲的唤醒已被拦");
+  assert.equal(host.loop.rounds(a.id), 1, "被拦唤醒不能额外排入注意循环，即便后续过滤层能挡住输入");
+});
+
+test("R1-F15 同一联系人消息重投不再排入注意循环", async () => {
+  let aId = "";
+  const mind = (): ContactMind => ({ async round(input) {
+    const user = input.fresh.find((f) => f.kind === "message" && f.sender.kind === "user" && f.text === "开始");
+    return { actions: input.contact.id === aId && user ? [{ kind: "reply", roomId: user.roomId, text: "甲的发言", replyToSeq: null }] : [], stateNote: null };
+  } });
+  const host = new Host({ file: nextFile(), mind, maxDeferMs: 2, loopGuard: { maxHops: 10 } }); hosts.push(host);
+  const a = host.createContact({ name: "甲" }); aId = a.id; const b = host.createContact({ name: "乙" });
+  const group = host.createGroup("重投", [{ kind: "contact", id: a.id }, { kind: "contact", id: b.id }]);
+  host.send({ roomId: group.id, clientActionId: "start", text: "开始", mentions: [{ id: a.id, source: "manual" }] });
+  await settle(host);
+  const sent = host.listMessages(group.id, {}).messages.find((m) => m.text === "甲的发言");
+  assert.ok(sent, "前置:联系人消息实际落盘并已投递");
+  const before = host.loop.rounds(b.id);
+  // 经真实宿主消息派送入口模拟事件重投；观察的不是调用次数桩，而是目标注意循环的实际轮数。
+  const replay = host as unknown as { afterAppend(roomId: string, seq: number, sender: { kind: "contact"; id: string }): void };
+  replay.afterAppend(group.id, sent.seq, { kind: "contact", id: a.id });
+  replay.afterAppend(group.id, sent.seq, { kind: "contact", id: a.id });
+  await settle(host);
+  assert.equal(host.loop.rounds(b.id), before, "幂等重投不能重排联系人轮次");
+});
