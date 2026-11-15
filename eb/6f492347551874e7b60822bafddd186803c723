@@ -1,0 +1,19 @@
+apps/desktop/proof/p1-workbench-20261115/compute-preview3-isolated/result.json
+  s_132ae2173e1d4c::t_fecb1f1262c3d5 1-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "eb6f492347551874e7b60822bafddd186803c723",
+  "prompts": {},
+  "sessions": {
+    "s_132ae2173e1d4c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-9c33-7e33-a920-de86304f9413",
+        "model": "group/gpt-routings"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
