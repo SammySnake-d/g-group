@@ -10,3 +10,5 @@
 - 叠加 #98 后旧测试冲突日志 `fixed-tests.log` / `fixed-tests2.log` / `fixed-tests5.log`：#98 一审 `206c8ac7` CORR-001 明定成员移出关闭触发、取消 pending，`f4533f77` 已实装；旧摘要测试改为断言取消而不是错误地要求 failed 摘要。#98 原测试的 idle 在接上摘要消费方后会先消费 pending，所以改同一发送拍检查、移出及拉回，完整保留 pending→cancelled、closed 与不复活断言。
 
 原始 TAP 保留 /tmp/gg97-resume.xas2Qd/；仓库内 TAP 仅去行尾空白，断言内容不变。
+
+原先红的逐条完整记录补入 `r1-initial-true-red.tap`（6红1绿）与 `r1-extra-true-red.tap`（8红1绿），绿项均为 R1-04。
