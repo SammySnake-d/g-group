@@ -253,6 +253,36 @@ test("R1-03 同联系人摘要轮在途:另一会话普通轮排队,不同联系
   assert.equal(sameNormal, true);
 });
 
+test("R1-03 摘要排队期间来源被撤回:取得单飞入口后不再向模型发送原文", async () => {
+  const marker = "NEUTRAL_RETRACT_IN_QUEUE_PR97";
+  const gate = deferred();
+  let normalStarted = false;
+  const summaryInputs: RoundInput[] = [];
+  const base = summaryMind();
+  const mind: ContactMind = { async round(i, s) {
+    if (!isSummary(i) && i.fresh.some((f) => f.kind === "message" && f.text === "阻塞普通轮")) {
+      normalStarted = true;
+      await gate.promise;
+    }
+    if (isSummary(i)) summaryInputs.push(i);
+    return base.round(i, s);
+  } };
+  const h = host({ mind: () => mind });
+  const a = h.createContact({ name: "甲" });
+  const g = h.createGroup("群", [{ kind: "contact", id: a.id }]);
+  const dm = h.openDm(a.id);
+  h.send({ roomId: g.id, clientActionId: "ask", text: "每 1 条消息总结一次" });
+  await idle(h);
+  h.send({ roomId: dm.id, clientActionId: "hold", text: "阻塞普通轮" });
+  await until(() => normalStarted, "普通轮开始");
+  const msg = h.send({ roomId: g.id, clientActionId: "secret", text: marker });
+  await until(() => h.db.store.db.prepare("SELECT status FROM gg_summaries WHERE room_id = ?").get(g.id) !== undefined, "摘要排队");
+  h.retractMessage(g.id, msg.seq);
+  gate.release();
+  await idle(h);
+  assert.equal(JSON.stringify(summaryInputs).includes(marker), false, "排队时被撤回的内容不能发送给模型");
+});
+
 test("R1-04 摘要记生成完成时点,更换说话模型后历史仍保留生成快照", async () => {
   let now = "2026-11-14T10:00:00.000Z";
   const h = host({ now: () => now, mind: () => summaryMind() });
