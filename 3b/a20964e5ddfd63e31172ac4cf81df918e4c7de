@@ -1,0 +1,21 @@
+packages/kernel/src/run-ledger.ts
+  s_69f96fa873b14b::t_9b5fd2b13cb822 234-237,461
+packages/server/src/host.ts
+  s_69f96fa873b14b::t_9b5fd2b13cb822 3256
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3ba20964e5ddfd63e31172ac4cf81df918e4c7de",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
