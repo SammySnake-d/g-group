@@ -72,9 +72,8 @@ async function okValue<T>(p: Promise<{ ok: true; value: unknown } | { ok: false;
 const taskVia = (svc: ReturnType<typeof createService>, taskId: string) => okValue<TaskView>(svc.handle("tasks.get", { taskId }));
 
 /** 私聊里派一件活并等它交付;返回宿主、服务、会话和任务。 */
-async function deliveredDm(compute = scriptedCompute()) {
+async function deliveredDm(compute = scriptedCompute(), host = new Host({ file: file(), mind: () => mindFor(), compute: () => compute.adapter, maxDeferMs: 5 })) {
   judge.taskId = null;
-  const host = new Host({ file: file(), mind: () => mindFor(), compute: () => compute.adapter, maxDeferMs: 5 });
   const svc = createService(host);
   const c = host.createContact({ name: "小克" });
   const dm = host.openDm(c.id);
@@ -86,7 +85,9 @@ async function deliveredDm(compute = scriptedCompute()) {
 }
 
 test("Q09 A0 私聊没有审查人:交付后经 service 读到 T8a 待确认、门禁 none、交付消息已钉住;沉默不通过", async () => {
-  const { host, svc, dm, task, compute } = await deliveredDm();
+  const compute = scriptedCompute();
+  const host = new Host({ file: file(), mind: () => mindFor(), compute: () => compute.adapter, maxDeferMs: 5 });
+  const { svc, dm, task } = await deliveredDm(compute, host);
   assert.equal(task.state, "T8a_Delivered", "交活后进 T8a 待确认,不停在 T5");
   assert.equal(task.reviewGate, "none", "没审过,不记合规也不记豁免");
   assert.deepEqual(task.reviews ?? [], [], "没有起审查");
@@ -98,6 +99,7 @@ test("Q09 A0 私聊没有审查人:交付后经 service 读到 T8a 待确认、�
   const later = await taskVia(svc, task.id);
   assert.equal(later.state, "T8a_Delivered", "沉默不自动通过、不归档");
   assert.equal(later.reviewGate, "none");
+  assert.equal(host.taskViewById(task.id).state, "T8a_Delivered", "宿主实际任务也仍等待用户确认");
   assert.equal(host.roomView(dm.id).pendingForUser, 2, "任务卡 + 一件等你确认的交付");
   compute.close();
   await host.close();
@@ -122,7 +124,9 @@ test("Q09 A0 群里只有同厂商联系人:不起审查,交付同样直接进 T
 });
 
 test("Q09 A2 本人普通回复「通过」:联系人提交结论,service 读到 T8_Accepted,如实记本人豁免;任务卡收口", async () => {
-  const { host, svc, dm, task, compute } = await deliveredDm();
+  const compute = scriptedCompute();
+  const host = new Host({ file: file(), mind: () => mindFor(), compute: () => compute.adapter, maxDeferMs: 5 });
+  const { svc, dm, task } = await deliveredDm(compute, host);
   assert.equal(task.state, "T8a_Delivered", "回复之前是交付待确认");
   judge.taskId = task.id;
   await okValue(svc.handle("messages.send", { roomId: dm.id, clientActionId: "u2", text: "通过,辛苦了" }));
@@ -130,6 +134,7 @@ test("Q09 A2 本人普通回复「通过」:联系人提交结论,service 读到
   const done = await taskVia(svc, task.id);
   assert.equal(done.state, "T8_Accepted");
   assert.equal(done.reviewGate, "waived-by-user", "没经审查的交付由本人验收 = 本人豁免,不算合规");
+  assert.equal(host.taskViewById(task.id).state, "T8_Accepted", "宿主实际任务已按本人确认推进");
   assert.equal(host.roomView(dm.id).pendingForUser, 0);
   assert.deepEqual(rejected(host), []);
   compute.close();
@@ -137,13 +142,16 @@ test("Q09 A2 本人普通回复「通过」:联系人提交结论,service 读到
 });
 
 test("Q09 A2 显式入口 tasks.accept:T8a 直接验到 T8;已验收后再点被拒", async () => {
-  const { host, svc, task, compute } = await deliveredDm();
+  const compute = scriptedCompute();
+  const host = new Host({ file: file(), mind: () => mindFor(), compute: () => compute.adapter, maxDeferMs: 5 });
+  const { svc, task } = await deliveredDm(compute, host);
   assert.equal(task.state, "T8a_Delivered", "点之前是交付待确认");
   const v = await okValue<TaskView>(svc.handle("tasks.accept", { taskId: task.id, clientActionId: "a1" }));
   assert.equal(v.state, "T8_Accepted");
   assert.equal(v.reviewGate, "waived-by-user");
   const again = await svc.handle("tasks.accept", { taskId: task.id, clientActionId: "a2" });
   assert.equal(again.ok ? "ok" : again.error.code, "conflict", "已经验收过,不再有待确认的交付");
+  assert.equal(host.taskViewById(task.id).state, "T8_Accepted", "拒绝重复验收后宿主状态不变");
   await settle(host, compute);
   compute.close();
   await host.close();
