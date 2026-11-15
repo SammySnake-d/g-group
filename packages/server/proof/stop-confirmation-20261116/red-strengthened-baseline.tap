@@ -1,0 +1,115 @@
+✖ AC-23 停止未确认后重试被拒:原租约不能复用或释放给后继 (62.857625ms)
+✖ AC-23 重启无原执行器后放弃失败任务:不得虚构停止确认 (43.293083ms)
+✖ AC-23 执行器未提供停止核验:轮次 settled 不得确认停止或归还槽位 (32.471583ms)
+✖ AC-23 停止未确认后用户重试:执行器愿意续接也不得调用 resume (24.8965ms)
+✔ AC-23 确认原执行器已退出后用户重试:允许同会话续接且申请新租约 (57.447875ms)
+✖ AC-23 没有宿主停止状态表时:配额仍拒绝同任务复用 stopping 租约 (0.167958ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 1
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 426.867333
+
+✖ failing tests:
+
+test at packages/server/src/stop-confirmation.test.ts:28:1
+✖ AC-23 停止未确认后重试被拒:原租约不能复用或释放给后继 (62.857625ms)
+  AssertionError [ERR_ASSERTION]: 续接未获新租约,不得归还原执行器仍占用的租约
+  + actual - expected
+
+  + undefined
+  - {
+  -   contactId: 'c-mwiccv6c-1',
+  -   leaseId: 'lease-l-mwiccv6n-6',
+  -   roomId: 'dm-c-mwiccv6c-1',
+  -   scope: 'personal:c-mwiccv6c-1',
+  -   stopping: true,
+  -   taskId: 't-mwiccv6k-3'
+  - }
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/calibration-base/packages/server/src/stop-confirmation.test.ts:52:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { leaseId: 'lease-l-mwiccv6n-6', scope: 'personal:c-mwiccv6c-1', taskId: 't-mwiccv6k-3', contactId: 'c-mwiccv6c-1', roomId: 'dm-c-mwiccv6c-1', stopping: true },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at packages/server/src/stop-confirmation.test.ts:62:1
+✖ AC-23 重启无原执行器后放弃失败任务:不得虚构停止确认 (43.293083ms)
+  AssertionError [ERR_ASSERTION]: 没有原执行器,不能以空观察确认停止并转 T11
+  + actual - expected
+
+  + 'T11_Failed'
+  - 'T9_StopRequested'
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/calibration-base/packages/server/src/stop-confirmation.test.ts:87:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'T11_Failed',
+    expected: 'T9_StopRequested',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/server/src/stop-confirmation.test.ts:97:1
+✖ AC-23 执行器未提供停止核验:轮次 settled 不得确认停止或归还槽位 (32.471583ms)
+  AssertionError [ERR_ASSERTION]: 轮次 settled 不证明主进程及全部后代已经停止
+  + actual - expected
+
+  + 'T10_Cancelled'
+  - 'T9_StopRequested'
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/calibration-base/packages/server/src/stop-confirmation.test.ts:114:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'T10_Cancelled',
+    expected: 'T9_StopRequested',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/server/src/stop-confirmation.test.ts:122:1
+✖ AC-23 停止未确认后用户重试:执行器愿意续接也不得调用 resume (24.8965ms)
+  AssertionError [ERR_ASSERTION]: 停止未确认时即使 resume 愿意成功,宿主也不得调用
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/calibration-base/packages/server/src/stop-confirmation.test.ts:141:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/server/src/stop-confirmation.test.ts:183:1
+✖ AC-23 没有宿主停止状态表时:配额仍拒绝同任务复用 stopping 租约 (0.167958ms)
+  AssertionError [ERR_ASSERTION]: 不依赖 Host.stopUnconfirmed 才能阻止复用
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/calibration-base/packages/server/src/stop-confirmation.test.ts:189:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

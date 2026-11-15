@@ -1,0 +1,37 @@
+✖ AC-23 停止未确认后重试被拒:原租约不能复用或释放给后继 (65.762417ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 292.89025
+
+✖ failing tests:
+
+test at packages/server/src/stop-confirmation.test.ts:27:1
+✖ AC-23 停止未确认后重试被拒:原租约不能复用或释放给后继 (65.762417ms)
+  AssertionError [ERR_ASSERTION]: 续接未获新租约,不得归还原执行器仍占用的租约
+  + actual - expected
+
+  + undefined
+  - {
+  -   contactId: 'c-mwibshz6-1',
+  -   leaseId: 'lease-l-mwibshzk-6',
+  -   roomId: 'dm-c-mwibshz6-1',
+  -   scope: 'personal:c-mwibshz6-1',
+  -   stopping: true,
+  -   taskId: 't-mwibshzh-3'
+  - }
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/stop-confirmation.test.ts:49:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { leaseId: 'lease-l-mwibshzk-6', scope: 'personal:c-mwibshz6-1', taskId: 't-mwibshzh-3', contactId: 'c-mwibshz6-1', roomId: 'dm-c-mwibshz6-1', stopping: true },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

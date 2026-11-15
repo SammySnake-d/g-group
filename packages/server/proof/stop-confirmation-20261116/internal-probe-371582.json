@@ -1,0 +1,91 @@
+{
+  "head": "371582432454d26e2e3bb4818fe1aac507afdc2d",
+  "no_os_processes": true,
+  "findings": [
+    {
+      "scenario": "停止未确认后同任务直接复用租约续接",
+      "before": {
+        "state": "T3_Running",
+        "lease": {
+          "leaseId": "lease-l-mwiblm53-6",
+          "scope": "personal:c-mwiblm4o-1",
+          "taskId": "t-mwiblm4z-3",
+          "contactId": "c-mwiblm4o-1",
+          "roomId": "dm-c-mwiblm4o-1",
+          "stopping": true
+        },
+        "waitingFor": "停止未确认:测试明确未确认停止(pid 4242)",
+        "spawned": 1,
+        "quiesceCalls": 1
+      },
+      "after": {
+        "state": "T3_Running",
+        "lease": {
+          "leaseId": "lease-l-mwiblm53-6",
+          "scope": "personal:c-mwiblm4o-1",
+          "taskId": "t-mwiblm4z-3",
+          "contactId": "c-mwiblm4o-1",
+          "roomId": "dm-c-mwiblm4o-1",
+          "stopping": true
+        },
+        "waitingFor": "停止未确认:测试明确未确认停止(pid 4242)",
+        "spawned": 1,
+        "resumed": 1,
+        "quiesceCalls": 1
+      }
+    },
+    {
+      "scenario": "停止未确认后同任务续接失败释放给后继",
+      "before": {
+        "state": "T3_Running",
+        "lease": {
+          "leaseId": "lease-l-mwiblm6i-6",
+          "scope": "personal:c-mwiblm6d-1",
+          "taskId": "t-mwiblm6g-3",
+          "contactId": "c-mwiblm6d-1",
+          "roomId": "dm-c-mwiblm6d-1",
+          "stopping": true
+        },
+        "waitingFor": "停止未确认:测试明确未确认停止(pid 4242)",
+        "spawned": 1,
+        "quiesceCalls": 1
+      },
+      "after": {
+        "state": "T3_Running",
+        "lease": null,
+        "waitingFor": "停止未确认:测试明确未确认停止(pid 4242)",
+        "spawned": 2,
+        "resumed": 0,
+        "quiesceCalls": 1
+      }
+    },
+    {
+      "scenario": "重启后无适配器点不重试伪造状态确认但恢复租约未释放",
+      "before": {
+        "state": "T3_Running",
+        "lease": {
+          "leaseId": "lease-l-mwiblm7w-6",
+          "taskId": "t-mwiblm7v-3",
+          "scope": "personal:c-mwiblm7s-1",
+          "contactId": "c-mwiblm7s-1",
+          "roomId": "dm-c-mwiblm7s-1",
+          "stopping": true
+        },
+        "waitingFor": "上次执行器停止未确认,不能复用原槽位"
+      },
+      "after": {
+        "state": "T11_Failed",
+        "lease": {
+          "leaseId": "lease-l-mwiblm7w-6",
+          "taskId": "t-mwiblm7v-3",
+          "scope": "personal:c-mwiblm7s-1",
+          "contactId": "c-mwiblm7s-1",
+          "roomId": "dm-c-mwiblm7s-1",
+          "stopping": true
+        },
+        "waitingFor": "上次执行器停止未确认,不能复用原槽位"
+      }
+    }
+  ],
+  "finalHead": "371582432454d26e2e3bb4818fe1aac507afdc2d"
+}

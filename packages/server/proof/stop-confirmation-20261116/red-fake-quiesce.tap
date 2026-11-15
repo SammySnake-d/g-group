@@ -1,0 +1,32 @@
+✖ scriptedCompute 默认停止核验:未知和正在运行不成功,实际 stopped 后才成功 (1.456459ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 119.089208
+
+✖ failing tests:
+
+test at packages/server/src/fakes-quiesce.test.ts:6:1
+✖ scriptedCompute 默认停止核验:未知和正在运行不成功,实际 stopped 后才成功 (1.456459ms)
+  AssertionError [ERR_ASSERTION]: 已确认无 OS 进程的替身仍须提供明确的停止核验入口
+  + actual - expected
+
+  + 'undefined'
+  - 'function'
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/fakes-quiesce.test.ts:9:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.start (node:internal/test_runner/test:1096:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

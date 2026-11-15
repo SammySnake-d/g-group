@@ -1,0 +1,6 @@
+正在执行 regression-77
+完成 regression-77: exit 1
+正在执行 typecheck
+完成 typecheck: exit 2
+正在执行 lint
+完成 lint: exit 0

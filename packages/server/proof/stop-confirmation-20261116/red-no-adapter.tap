@@ -1,0 +1,30 @@
+✖ AC-23 重启无原执行器后放弃失败任务:不得虚构停止确认 (56.209292ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 284.989667
+
+✖ failing tests:
+
+test at packages/server/src/stop-confirmation.test.ts:58:1
+✖ AC-23 重启无原执行器后放弃失败任务:不得虚构停止确认 (56.209292ms)
+  AssertionError [ERR_ASSERTION]: 没有原执行器,不能以空观察确认停止并转 T11
+  + actual - expected
+
+  + 'T11_Failed'
+  - 'T9_StopRequested'
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/stop-confirmation.test.ts:83:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'T11_Failed',
+    expected: 'T9_StopRequested',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
