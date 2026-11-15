@@ -95,3 +95,38 @@ test("完成事件两次都未交付:出可恢复失败卡,用户重试后只交
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("未交付失败卡出现后,同会话新的用户指令仍能处理并交付", async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "gg-delivery-new-user-"));
+  const compute = scriptedCompute({ script: () => [{ kind: "started", sessionId: "s", resumed: false }, { kind: "completed", result: "结果文件已写好" }] });
+  const mind: ContactMind = {
+    async round(input) {
+      const actions: MindAction[] = [];
+      const deliver = input.fresh.some((f) => f.kind === "message" && f.sender.kind === "user" && f.text === "交付吧");
+      for (const f of input.fresh) {
+        if (f.kind === "message" && f.sender.kind === "user" && f.text === "请写结果") actions.push({ kind: "dispatch", roomId: f.roomId, sourceSeq: f.seq, title: "写结果", task: "写结果" });
+        if (deliver && f.kind === "compute" && f.signal === "completed") actions.push({ kind: "deliver", taskId: f.taskId, text: `已完成:${f.summary}` });
+      }
+      return { actions, stateNote: null };
+    },
+  };
+  const host = new Host({ file: path.join(dir, "host.db"), mind: () => mind, compute: () => compute.adapter, maxDeferMs: 5, retry: { baseDelayMs: 5, maxDelayMs: 10, jitter: 0 } });
+  try {
+    const contact = host.createContact({ name: "联系人" });
+    const room = host.openDm(contact.id);
+    host.send({ roomId: room.id, clientActionId: "new-user-1", text: "请写结果" });
+    const deadline = Date.now() + 4000;
+    while (Date.now() < deadline && !host.listMessages(room.id, {}).messages.some((m) => m.card?.kind === "failure")) await new Promise((r) => setTimeout(r, 5));
+    const card = host.listMessages(room.id, {}).messages.find((m) => m.card?.kind === "failure");
+    assert.ok(card, "应先观察到未交付失败卡");
+    host.send({ roomId: room.id, clientActionId: "new-user-2", text: "交付吧" });
+    await host.idle();
+    assert.equal(host.listTasks({ roomId: room.id })[0]!.state, "T8a_Delivered");
+    assert.equal(host.listMessages(room.id, {}).messages.find((m) => m.seq === card.seq)?.card?.state, "expired");
+    assert.equal(host.listMessages(room.id, {}).messages.filter((m) => m.text === "已完成:结果文件已写好").length, 1);
+  } finally {
+    compute.close();
+    await host.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
