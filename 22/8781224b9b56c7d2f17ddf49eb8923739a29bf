@@ -1,0 +1,48 @@
+apps/desktop/electron/app-ipc.ts
+  s_132ae2173e1d4c::t_86cb53bb5864d7 2,40-51,53-63
+  s_132ae2173e1d4c::t_8efbc3e575e9cd 52
+  s_69f96fa873b14b::t_9e321c4cc21816 64
+apps/desktop/src/api/app-shell-types.ts
+  s_132ae2173e1d4c::t_86cb53bb5864d7 32-46,73,81
+apps/desktop/src/components/shell/SetupScreen.tsx
+  s_132ae2173e1d4c::t_86cb53bb5864d7 12-13
+apps/desktop/src/components/shell/SetupForm.tsx
+  s_132ae2173e1d4c::t_1f746ba19ceed9 59
+  s_132ae2173e1d4c::t_86cb53bb5864d7 4,12,15,20-22,26-35,60-69
+apps/desktop/src/data.ts
+  s_132ae2173e1d4c::t_82459dc0fa5885 375
+apps/desktop/src/api/wire/messages.ts
+  s_132ae2173e1d4c::t_82459dc0fa5885 214-215
+apps/desktop/e2e/app-shell.electron.spec.ts
+  s_132ae2173e1d4c::t_77302a7b90741d 62
+  s_132ae2173e1d4c::t_91fb52617ee7e8 36,59-61,63-78
+  s_69f96fa873b14b::t_99ed83088d6992 79-82
+apps/desktop/src/components/messages/lines/SysLines.tsx
+  s_132ae2173e1d4c::t_82459dc0fa5885 10,21,25,27
+apps/desktop/docs/前端开发优先级-20261115.md
+  s_132ae2173e1d4c::t_55c4ddec07eb5b 33-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "228781224b9b56c7d2f17ddf49eb8923739a29bf",
+  "prompts": {},
+  "sessions": {
+    "s_132ae2173e1d4c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-9c33-7e33-a920-de86304f9413",
+        "model": "group/gpt-routings"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
