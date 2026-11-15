@@ -52,7 +52,10 @@ test("R1-F01 派活任务卡继承触发消息的因果根", async () => {
   const source = messages.find((m) => m.text === "开始派活");
   const card = messages.find((m) => m.text === "接了任务:测试任务");
   assert.ok(source && card, "来源与任务卡必须实际落盘");
-  assert.deepEqual(host.loopGuard.rootsOf(group.id, card.seq), host.loopGuard.rootsOf(group.id, source.seq));
+  const sourceRoots = host.loopGuard.rootsOf(group.id, source.seq);
+  assert.ok(sourceRoots.length > 0, "来源消息必须有因果根");
+  assert.deepEqual(sourceRoots, [`message:${group.id}:${source.seq}`], "来源根必须明确指向触发消息");
+  assert.deepEqual(host.loopGuard.rootsOf(group.id, card.seq), sourceRoots, "任务卡必须继承来源因果根");
 });
 
 test("R1-F02 Compute 交付消息继承触发任务的因果根", async () => {
