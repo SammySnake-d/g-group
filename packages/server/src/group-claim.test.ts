@@ -7,7 +7,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
-import type { ContactMind, RoundInput } from "@g-group/kernel";
+import type { ContactMind, MindAction, RoundInput } from "@g-group/kernel";
 import { all } from "./db.ts";
 import { scriptedCompute } from "./fakes.ts";
 import { Host } from "./host.ts";
@@ -102,5 +102,40 @@ test("联系人每轮知道自己是谁:第 1 块写明名字与 id,并说明 @ 
   const forA = seen.find((s) => s.contact.id === a.id)!;
   assert.ok(forA.request.blocks.find((x) => x.block === 1)!.text.includes(`你是「小克」(联系人 id ${a.id})`));
   compute.close();
+  await host.close();
+});
+
+test("群里只 @ 一人:未被点名联系人仍进注意回合但不能越权公屏回复;联系人回复仍唤醒旁观者", async () => {
+  const rounds: RoundInput[] = [];
+  const mind = (): ContactMind => ({
+    async round(input) {
+      rounds.push(input);
+      const user = input.fresh.find((f) => f.kind === "message" && f.sender.kind === "user");
+      const peer = input.fresh.find((f) => f.kind === "message" && f.sender.kind === "contact" && f.sender.id !== input.contact.id);
+      if (input.contact.id === b.id && user?.kind === "message") {
+        const actions: MindAction[] = [{ kind: "reply", roomId: user.roomId, text: "小克越权回答", replyToSeq: null }];
+        if (peer?.kind === "message") actions.push({ kind: "reply", roomId: peer.roomId, text: "小克纠正", replyToSeq: peer.seq });
+        return { actions, stateNote: null };
+      }
+      if (input.contact.id === b.id && peer?.kind === "message") {
+        return { actions: [{ kind: "reply", roomId: peer.roomId, text: "小克纠正", replyToSeq: peer.seq }], stateNote: null };
+      }
+      return user?.kind === "message"
+        ? { actions: [{ kind: "reply", roomId: user.roomId, text: `${input.contact.name}回答`, replyToSeq: null }], stateNote: null }
+        : { actions: [], stateNote: null };
+    },
+  });
+  const host = new Host({ file: file(), mind, maxDeferMs: 5 });
+  const a = host.createContact({ name: "小林" });
+  const b = host.createContact({ name: "小克" });
+  const g = host.createGroup("项目群", [{ kind: "contact", id: a.id }, { kind: "contact", id: b.id }]);
+  const user = host.send({ roomId: g.id, clientActionId: "reply-scope", text: "请回答 P0 问题", mentions: [{ id: a.id, source: "manual" }] });
+  await settle(host, { drained: () => true });
+
+  const messages = host.listMessages(g.id, {}).messages;
+  assert.deepEqual(messages.filter((m) => m.sender.kind === "contact").map((m) => [m.sender.id, m.text]), [[a.id, "小林回答"], [b.id, "小克纠正"]]);
+  assert.ok(rounds.some((r) => r.contact.id === b.id && r.fresh.some((f) => f.kind === "message" && f.seq === user.seq)), "未被点名者仍收到用户消息并进入注意回合");
+  assert.ok(rounds.some((r) => r.contact.id === b.id && r.fresh.some((f) => f.kind === "message" && f.sender.kind === "contact" && f.text === "小林回答")), "联系人回复仍唤醒旁观者用于纠正");
+  assert.deepEqual(rejections(host), [{ kind: "reply", error: `这条消息 @ 的是别的联系人,不是你(${g.id} #${user.seq})` }]);
   await host.close();
 });
