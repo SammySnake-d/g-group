@@ -231,7 +231,10 @@ export function setStatus(units: readonly RunUnit[], id: string, to: RunStatus, 
   if (LIVE.has(to)) {
     const progress: RunProgress =
       u.status === "waiting_user" && to !== "waiting_user" ? { ...u.progress, toolsRunning: [...u.progress.toolsRunning], resumedAt: at } : { ...u.progress, toolsRunning: [...u.progress.toolsRunning] };
-    return { ok: true, changed: [freezeUnit({ ...u, status: to, progress })] };
+    // 等待说明属于本次状态:显式提供时持久化,状态切换时清掉旧说明,
+    // 同一状态的重复更新则保留,避免把上一轮完成误称为新的受阻提问。
+    const note = extra.note !== undefined ? extra.note : to === u.status ? u.note : null;
+    return { ok: true, changed: [freezeUnit({ ...u, status: to, progress, note })] };
   }
   const live = descendants(units, id).filter((d) => LIVE.has(d.status));
   if (to === "done") {
@@ -455,7 +458,7 @@ export function runDisplay(unit: RunUnit, now: number): { readonly tone: RunTone
     case "running":
       return { tone: "running", text: `运行中 · 已跑 ${took}` };
     case "waiting_user":
-      return { tone: "waiting", text: `等你回答 · 已跑 ${took}` };
+      return { tone: "waiting", text: `${unit.note ?? "等你回答"} · 已跑 ${took}` };
     case "done":
       return { tone: "done", text: `完成 · 用时 ${took}` };
     case "orphaned":

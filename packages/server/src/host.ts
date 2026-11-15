@@ -3253,7 +3253,7 @@ export class Host {
         return;
       case "completed":
         this.runs.end(m.turnId, "done");
-        this.runs.setStatus(m.sessionId, "waiting_user", {}, { note: "Compute 已完成,等交付与验收" });
+        this.runs.setStatus(m.sessionId, "waiting_user", { note: "Compute 已完成,等交付与验收" });
         return;
       case "failed": {
         const failure = runFailure(classifyFailure({ text: ev.reason }));
