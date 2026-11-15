@@ -95,7 +95,7 @@ test("C96-R1-04 standin 忽略真实预算变化:指纹与续跑身份不变,真
 });
 
 // 真正的 CLI、子进程、driver 和宿主均原样执行；禁网门禁中只把 fetch 末端换成进程内
-// Anthropic 响应器。真实 TCP loopback 另由 runtime-config-r1-http.integration.ts 独立核验。
+// Anthropic 响应器。真实 TCP loopback 另由 fixtures/runtime-config-r1-http.mjs 独立核验。
 test("C96-R1-05 禁网下真实 runner CLI 经子进程和宿主传递 65536 及 manifest", { timeout: 120_000 }, async () => {
   const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "gg-g6-cli-seatbelt-")));
   let child: ChildProcess | undefined;
