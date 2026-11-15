@@ -1859,7 +1859,7 @@ export class Host {
         ...(doc.artifacts ?? []).map((a) => ({ ref: a.ref, name: a.name, kind: "file" as const, sha256: a.sha256, bytes: a.bytes, mime: a.mime })),
       ],
       ...this.workspaceField(t.id),
-      waitingFor: this.quota.waitingReason(t.id) ?? this.stopUnconfirmed.get(t.id) ?? null,
+      waitingFor: this.stopUnconfirmed.get(t.id) ?? this.quota.waitingReason(t.id) ?? null,
       slot: this.slotOf(t.id),
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
@@ -3595,7 +3595,8 @@ export class Host {
       if (kind !== "completed" && a.quiesce) {
         const q = await a.quiesce(computeId);
         if (!q.ok) { ok = false; why = `${q.reason}${q.remaining.length ? `(pid ${q.remaining.join(",")})` : ""}`; }
-      } else await a.settled(computeId);
+      } else if (kind === "completed") await a.settled(computeId);
+      else { ok = false; why = "执行器未提供完整停止核验"; }
     }
     if (this.closed) return;
     if (!ok) {

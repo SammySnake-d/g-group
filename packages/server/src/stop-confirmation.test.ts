@@ -24,7 +24,7 @@ const failureScript = () => [
   { kind: "failed" as const, reason: "cyber_policy: flagged by safeguards", code: 1, signal: null, violations: [] },
 ];
 
-test("AC-23 停止未确认后重试被拒:原租约不能复用或释放给后继", async () => {
+test("AC-23 停止未确认后重试被拒:原租约不能复用或释放给后继", async (t) => {
   const compute = scriptedCompute({
     script: failureScript,
     quiesce: async () => ({ ok: false, reason: "原执行器停止未确认", remaining: [] }),
@@ -43,13 +43,16 @@ test("AC-23 停止未确认后重试被拒:原租约不能复用或释放给后�
     await until(() => host.listTasks({ roomId: dm }).length === 2, "后继已建好");
     assert.equal(compute.spawned.length, 1, "后继仍需等待原槽位");
     const failure = host.listMessages(dm, {}).messages.find((message) => message.card?.kind === "failure")!;
+    t.mock.timers.enable({ apis: ["setTimeout"] });
     host.cardAct({ roomId: dm, seq: failure.seq, cardId: failure.card!.cardId, actionId: "retry", clientActionId: "retry" });
-    // 候选应在配额入口拒绝原租约复用;反例会在续接失败后错误删除原租约。
-    await until(() => host.quota.waitingReason(first.id) !== null || host.quota.leaseOf(first.id) === undefined, "重试已到达配额或错误归还路径");
+    // 执行重试的零延时计时器并排空微任务,不能用点击前就存在的等待说明提前判绿。
+    t.mock.timers.tick(0);
+    await new Promise<void>((resolve) => setImmediate(resolve));
     assert.deepEqual(host.quota.leaseOf(first.id), lease, "续接未获新租约,不得归还原执行器仍占用的租约");
     assert.equal(compute.resumed.length, 0, "停止未确认不得续接原执行器");
     assert.equal(compute.spawned.length, 1, "后继不得占用未经核验的原槽位");
   } finally {
+    t.mock.timers.reset();
     compute.close();
     await host.close();
   }
