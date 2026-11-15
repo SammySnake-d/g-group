@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { createPiCompactor } from "@g-group/adapter-pi-contact";
-import type { RoundInput } from "@g-group/kernel";
+import type { Inbound, RoundInput } from "@g-group/kernel";
 import { Host } from "./host.ts";
 
 const MODEL = "fixture-fengshao-model";
@@ -44,7 +44,7 @@ async function settle(host: Host) {
   }
   throw new Error("宿主没有安静下来");
 }
-function setup(responses: string[], reply = false) {
+function setup(responses: string[], reply = false, gate?: (i: RoundInput) => Promise<void>) {
   const dir = mkdtempSync(path.join(tmpdir(), "gg-reflect-json-"));
   const fake = provider(responses);
   const reports: [string, unknown][] = [];
@@ -55,6 +55,7 @@ function setup(responses: string[], reply = false) {
     onReport: (what, detail) => reports.push([what, detail]),
     mind: () => ({ async round(i: RoundInput) {
       requests.push(i.request);
+      await gate?.(i);
       const m = i.fresh.find((f) => f.kind === "message");
       const actions = reply && m?.kind === "message" ? [{ kind: "reply" as const, roomId: m.roomId, replyToSeq: m.seq, text: `回应:${m.text}` }] : [];
       return { actions, stateNote: null };
@@ -86,6 +87,100 @@ test("reflect 返回不可解析 JSON 后宿主告警、同模型普通压缩兜
     assert.match(sys(x.fake.seen[2]!), /只输出一个 JSON 对象/);
     assert.match(text(x.fake.seen[2]!), /首轮压缩保留方向/);
     assert.equal(x.host.stateNote(x.c.id), "第二轮检查笔记");
+  } finally { await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
+});
+
+test("退出后重入同一群之前未触发其他轮次,旧待压缩消息不能复活", async () => {
+  const x = setup(["不是 JSON 对象", " ", valid]);
+  try {
+    const group = x.host.createGroup("实验群", [{ kind: "contact", id: x.c.id }]);
+    x.host.send({ roomId: group.id, clientActionId: "1", text: "群内原文-退出前", mentions: [{ id: x.c.id, source: "manual" }] });
+    await settle(x.host);
+    x.host.removeMember(group.id, { kind: "contact", id: x.c.id });
+    x.host.addMembers(group.id, [{ kind: "contact", id: x.c.id }]);
+    x.host.send({ roomId: x.dm.id, clientActionId: "2", text: "私聊继续" });
+    await settle(x.host);
+    assert.doesNotMatch(x.requests[1]!.blocks.map((b) => b.text).join("\n"), /群内原文-退出前/);
+    assert.doesNotMatch(text(x.fake.seen[2]!), /群内原文-退出前/);
+  } finally { await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
+});
+
+function holdSecond() {
+  let entered!: () => void, release!: () => void;
+  const started = new Promise<void>((r) => { entered = r; });
+  const finish = new Promise<void>((r) => { release = r; });
+  let n = 0;
+  return { started, release, gate: async (_i: RoundInput) => { if (++n === 2) { entered(); await finish; } } };
+}
+
+test("下一轮模型运行中撤回待压缩消息,反思与落盘不得再使用撤回原文", async () => {
+  const hold = holdSecond();
+  const x = setup(["不是 JSON 对象", " ", valid, valid], false, hold.gate);
+  try {
+    const first = x.host.send({ roomId: x.dm.id, clientActionId: "1", text: "运行中撤回原文标记" });
+    await settle(x.host);
+    x.host.send({ roomId: x.dm.id, clientActionId: "2", text: "让第二轮运行" });
+    await hold.started;
+    x.host.retractMessage(x.dm.id, first.seq);
+    hold.release();
+    await settle(x.host);
+    assert.doesNotMatch(text(x.fake.seen[2]!), /运行中撤回原文标记/);
+    assert.doesNotMatch(x.host.stateNote(x.c.id) ?? "", /运行中撤回原文标记/);
+  } finally { hold.release(); await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
+});
+
+test("下一轮模型运行中移出群,反思不得使用失权群的待压缩原文", async () => {
+  const hold = holdSecond();
+  const x = setup(["不是 JSON 对象", " ", valid], false, hold.gate);
+  try {
+    const group = x.host.createGroup("实验群", [{ kind: "contact", id: x.c.id }]);
+    x.host.send({ roomId: group.id, clientActionId: "1", text: "运行中失权原文标记", mentions: [{ id: x.c.id, source: "manual" }] });
+    await settle(x.host);
+    x.host.send({ roomId: x.dm.id, clientActionId: "2", text: "让第二轮运行" });
+    await hold.started;
+    x.host.removeMember(group.id, { kind: "contact", id: x.c.id });
+    hold.release();
+    await settle(x.host);
+    assert.doesNotMatch(text(x.fake.seen[2]!), /运行中失权原文标记/);
+    assert.doesNotMatch(x.host.stateNote(x.c.id) ?? "", /运行中失权原文标记/);
+  } finally { hold.release(); await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
+});
+
+test("同一批消息和撤回只送达撤回事件,不向联系人或反思传原文", async () => {
+  const hold = holdSecond();
+  const x = setup([valid, valid], false, hold.gate);
+  try {
+    x.host.send({ roomId: x.dm.id, clientActionId: "0", text: "启动占位轮" });
+    await settle(x.host);
+    x.host.send({ roomId: x.dm.id, clientActionId: "hold", text: "等待同批" });
+    await hold.started;
+    const first = x.host.send({ roomId: x.dm.id, clientActionId: "1", text: "同批撤回原文标记" });
+    x.host.retractMessage(x.dm.id, first.seq);
+    hold.release();
+    await settle(x.host);
+    assert.ok(x.requests.length >= 3);
+    for (const req of x.requests.slice(2)) assert.doesNotMatch(req.blocks.map((b) => b.text).join("\n"), /同批撤回原文标记/);
+    for (const seen of x.fake.seen.slice(1)) assert.doesNotMatch(text(seen), /同批撤回原文标记/);
+  } finally { hold.release(); await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
+});
+
+test("Compute 和定时输入失败后保留各自一次,不重置已消费事件或重复回复", async () => {
+  const x = setup(["不是 JSON 对象", " ", valid], true);
+  try {
+    const at = new Date().toISOString();
+    const inputs: Inbound[] = [
+      { kind: "compute", roomId: x.dm.id, taskId: "task-fixture", computeId: "compute-fixture", signal: "completed", summary: "计算输入原文标记", at },
+      { kind: "schedule", roomId: x.dm.id, scheduleId: "schedule-fixture", prompt: "定时输入原文标记", at },
+    ];
+    for (const i of inputs) x.host.db.store.db.prepare("INSERT INTO gg_inbox (contact_id, room_id, payload, at) VALUES (?, ?, ?, ?)").run(x.c.id, x.dm.id, JSON.stringify(i), at);
+    await x.host.runRound(x.c.id, new AbortController().signal);
+    const rows = x.host.db.store.db.prepare("SELECT consumed FROM gg_inbox WHERE contact_id = ? ORDER BY id").all(x.c.id) as { consumed: number }[];
+    assert.deepEqual(rows.map((r) => r.consumed), [1, 1]);
+    x.host.send({ roomId: x.dm.id, clientActionId: "2", text: "下一轮" });
+    await settle(x.host);
+    const next = x.requests.at(-1)!.blocks.map((b) => b.text).join("\n");
+    for (const marker of ["计算输入原文标记", "定时输入原文标记"]) assert.equal(next.split(marker).length - 1, 1, marker);
+    assert.equal(x.host.listMessages(x.dm.id, {}).messages.filter((m) => m.sender.kind === "contact").length, 1);
   } finally { await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
 });
 
