@@ -1,0 +1,19 @@
+apps/desktop/docs/p1-compute-packaged-20261115.md
+  s_132ae2173e1d4c::t_99d389778fa260 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f5436c01cc1ecaad3d0ef199005019286d44c180",
+  "prompts": {},
+  "sessions": {
+    "s_132ae2173e1d4c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-9c33-7e33-a920-de86304f9413",
+        "model": "group/gpt-routings"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
