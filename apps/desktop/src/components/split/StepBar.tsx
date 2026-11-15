@@ -12,6 +12,8 @@ const segCls = (c: Compute, state: Compute['steps'][number]['state']) =>
 
 export function StepBar({ c }: { c: Compute }) {
   const done = c.steps.filter((s) => s.state === 'done').length
+  /* 没有步骤计划(后端的任务合同里没有)就不画空条 */
+  if (!c.steps.length) return null
   return (
     <div className="mx-5 flex gap-1" data-testid="stepbar" role="img" aria-label={`共 ${c.steps.length} 步，做完 ${done} 步`}>
       {c.steps.map((s, i) => (

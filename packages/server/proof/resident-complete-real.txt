@@ -1,0 +1,43 @@
+# feat/resident-complete 真实运行:生产入口 startServer({ mind: "pi", compute: "claude" }),真实 pi 联系人脑子 + 真实 Claude Code 2.1.319 常驻 Compute(本片绿提交 0c1975d 的代码,本机,2026-11-11 20:41 +0800)
+# 命令: node packages/server/proof/resident-complete-real.ts /tmp/gg-rc-real(脚本同目录;网关地址与令牌只经环境变量,未打印;HOME 是本机真实 HOME,~/.claude/skills 只列目录名做交集)
+# 第 1 段 AC-29:勾选的 gg-skills:gg-neutral-style 在 CLI init 自报的实际加载清单里,库里没勾的 gg-unpicked-style 与本机 148 个全局 skill 不在
+#   (交集里的 deep-research 是 CLI 自带的同名 skill,gg-skills 以外 18 个与 v02-config-dir.txt bare 组的自带集合一致);勾选 skill 的格式被照做(note.md 第一行 STYLE: PICKED_SKILL_APPLIED)。
+#   原来常驻适配器没声明 isolation,宿主对勾选了 skill 的联系人直接拒绝启动(host.ts「这个 Compute 适配器还不支持勾选的 skill/MCP」)。
+# 第 2 段 AC-23 / AC-43:sleep 30 由 CLI 的 Bash 工具起,进程组与 CLI 不同(只对 CLI 进程组发信号够不着它);台账 compute-turn 显示 waiting=tool_running(常驻进程的活动流进了台账)。
+#   取消后:sleep 在停止请求后约 116 毫秒退出(CLI 收到 SIGTERM 自己结束了它),CLI 主进程约 727 毫秒退出;停止确认等主进程退出、核对停止时记下的后代都已退出后才回报,
+#   宿主同一刻才落 T10 并归还槽位;52 次采样(每 20 毫秒)里「槽位已归还而 sleep 或 CLI 还活着」0 次,「T9、槽位停止中、进程还在」26 次。
+# 跑完核对:本数据目录相关进程 0 个(ps 按数据目录路径查);本机同时有别的会话自己起的 sleep 30,不属于本次运行,未计入。下面是运行输出原文。
+[0.0s] 数据目录 /tmp/gg-rc-real;联系人脑子 pi、Compute 为真实 Claude Code 常驻适配器(startServer 生产接线);模型 = $ANTHROPIC_DEFAULT_SONNET_MODEL
+[0.2s] 能力库:skill gg-neutral-style、gg-unpicked-style;联系人只勾选 gg-neutral-style
+[62.5s] #1 我: 帮我开一个 Compute:按勾选的 skill gg-skills:gg-neutral-style 的格式要求,在它的当前工作目录写一个 note.md,正文写 hello-resident。写好汇报完成。
+[62.5s] #2 小克: 接了任务:写 note.md(hello-resident)  [卡片:task-status]
+[62.5s] #3 小克: 好的,Compute 已经开了,让它按 gg-neutral-style 的格式在工作目录里写 note.md,正文是 hello-resident。写好了我再告诉你。
+[62.5s] #4 小克: note.md 已经写好了，文件读回来核对过，内容没问题。 路径：`/private/tmp/gg-rc-real/compute/t-mwc3w5c9-3/note.md` 内容： ``` STYLE: PICKED_SKILL_APPLIED hello-resident ``` gg-neutral-style 
+[62.5s] 任务 t-mwc3w5c9-3 [T5_InReview] 进度=started>completed
+[62.5s] Compute ccr-86a4caf0-70c8-4331-94ae-fe47932222f5 实际加载(CLI init 自报): {"skills":["deep-research","gg-skills:gg-neutral-style","design","design-sync","dataviz","update-config","verify","debug","code-review","simplify","batch","fewer-permission-prompts","doctor","loop","claude-api","workflow-authoring","run","run-skill-generator","plugin-authoring"],"mcpServers":["host"]}
+[62.5s] 勾选的 gg-skills:gg-neutral-style 在实际加载里: true
+[62.5s] 未勾选的库 skill 是否出现: []
+[62.5s] 本机 ~/.claude/skills 目录数 148;与实际加载的交集(只比目录名): ["deep-research"]
+[62.5s] 实际加载里 gg-skills 以外的 skill 数 18(CLI 自带 skill,见 v02-config-dir.txt 的 bare 组)
+[62.5s] note.md: "STYLE: PICKED_SKILL_APPLIED\nhello-resident\n"
+[62.5s] 运行目录 run_homes/c-mwc3vq4r-1/claude-code: . ./config ./skills-bd4d71769f0b ./skills-bd4d71769f0b/.claude-plugin ./skills-bd4d71769f0b/.claude-plugin/plugin.json ./skills-bd4d71769f0b/skills ./skills-bd4d71769f0b/skills/gg-neutral-style
+[62.5s] config 目录(CLAUDE_CONFIG_DIR)里 CLI 写下的会话记录: 1 个
+[62.6s] 第 1 段结束前本数据目录的 CLI 进程: pid=63849 ppid=51775 pgid=63849 /Users/snakesammy/.local/share/claude/versions/2.1.319 -p --
+[63.4s] 宿主关闭后本数据目录的 CLI 进程: 0 个
+[99.2s] 任务 t-mwc3xkul-2 [T3_Running];CLI pid=91729 ppid=51775 pgid=91729 /Users/snakesammy/.local/share/claude/versions/2.1.319 -p --;sleep pid=97369 ppid=97362 pgid=97362 sleep 30(sleep 的进程组 不在 CLI 的进程组里)
+[99.2s] 台账 compute-turn run-mwc3xkv1-7: status=running waiting=tool_running(活动流进了台账)
+[99.2s] 停止前:槽位 {"leaseId":"lease-l-mwc3xkuu-5","scope":"personal:c-mwc3vq4r-1","taskId":"t-mwc3xkul-2","contactId":"c-mwc3vq4r-1","roomId":"dm-c-mwc3vq4r-1","stopping":false}
+[99.3s] 用户取消任务(停止请求发出)
+[100.5s] 时间线(毫秒,相对开始):停止请求 99211;CLI 主进程退出 99938;sleep 退出 99327;槽位归还 99938;落 T10 99938
+[100.5s] 采样 52 次;槽位已归还而 sleep 或 CLI 还活着的采样数: 0;T10 而进程还活着的采样数: 0
+[100.5s] 停止确认前(T9、槽位停止中、进程还在)的采样数: 26
+[100.5s] 结束时:sleep 30 还活着=false;CLI 还活着=false;槽位=null;任务 T10_Cancelled
+[100.5s] #1 我: 帮我开一个 Compute:按勾选的 skill gg-skills:gg-neutral-style 的格式要求,在它的当前工作目录写一个 note.md,正文写 hello-resident。写好汇报完成。
+[100.5s] #2 小克: 接了任务:写 note.md(hello-resident)
+[100.5s] #3 小克: 好的,Compute 已经开了,让它按 gg-neutral-style 的格式在工作目录里写 note.md,正文是 hello-resident。写好了我再告诉你。
+[100.5s] #4 小克: note.md 已经写好了，文件读回来核对过，内容没问题。 路径：`/private/tmp/gg-rc-real/compute/t-mwc3w5c9-3/note.md` 内容： ``` STYLE: PICKED_SKILL_APPLIED hello-resident ``` gg-neutral-style 
+[100.5s] #5 我: 帮我开一个 Compute:用 Bash 在前台运行命令 sleep 30(不要放后台、不要加 &),等命令自己结束后再汇报完成。
+[100.5s] #6 小克: 接了任务:前台运行 sleep 30
+[100.5s] #7 小克: 好的，已开 Compute 在前台跑 sleep 30(不放后台),命令自己结束后我来汇报完成。另外 note.md 那份交付还在等你确认。
+[100.5s] #8 我: 取消任务
+[100.7s] 宿主关闭后本数据目录的 CLI 进程: 0 个;本次的 sleep 30(pid 97369)还活着: false;它的进程组 97362 里还有 0 个进程

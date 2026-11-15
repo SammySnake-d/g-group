@@ -1,0 +1,6 @@
+[box] box2 上的 /workspace/728/wt-loop 已就绪(22472dc)
+[box] 已排队:npx tsc -p tsconfig.app.json; echo TSC_APP=$?; npx tsc -p tsconfig.electron.json --noEmit; echo TSC_EL=$?; npm run -s verify:structure 2>&1 | tail -1
+TSC_APP=0
+TSC_EL=0
+结构检查通过
+[box] 用了 box2;云端残留进程:0

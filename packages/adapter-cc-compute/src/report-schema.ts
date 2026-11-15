@@ -4,7 +4,7 @@ import { isPlainRecord, plainData } from "./plain.ts";
 
 /** 冻结数组,导出后不可改 */
 export const REPORT_KINDS: readonly string[] = Object.freeze(["started", "milestone", "blocked", "completed", "failed"]);
-const REPORT_KEYS: readonly string[] = Object.freeze(["kind", "summary", "stage", "needs", "constraintVer", "openQuestions", "doneSideEffects"]);
+const REPORT_KEYS: readonly string[] = Object.freeze(["kind", "summary", "stage", "needs", "constraintVer", "openQuestions", "doneSideEffects", "attachments"]);
 
 const deepFreeze = <T>(x: T): T => {
   if (typeof x === "object" && x !== null) for (const v of Object.values(x)) deepFreeze(v);
@@ -15,7 +15,7 @@ const TOOL = deepFreeze({
   name: "report_progress",
   description:
     "向宿主汇报任务进展。开始干活报 started;完成一个有意义的阶段报 milestone(带 stage);" +
-    "需要用户授权/提供信息/外部条件不满足而无法继续时报 blocked(带 needs)并停下;全部完成报 completed;放弃报 failed。" +
+    "需要用户授权/提供信息/外部条件不满足而无法继续时报 blocked(带 needs,有截图就把工作目录里的文件相对路径放进 attachments)并停下;全部完成报 completed;放弃报 failed。" +
     "知道当前生效的约束版本、未决问题或已经做完的有副作用的动作时,带上 constraintVer/openQuestions/doneSideEffects。",
   inputSchema: {
     type: "object",
@@ -27,6 +27,7 @@ const TOOL = deepFreeze({
       constraintVer: { type: "integer", minimum: 0, description: "当前遵守的群规/硬约束版本号" },
       openQuestions: { type: "array", items: { type: "string" }, description: "仍未决的问题(整份替换)" },
       doneSideEffects: { type: "array", items: { type: "string" }, description: "已经完成、不可重做的副作用(追加)" },
+      attachments: { type: "array", items: { type: "string" }, description: "blocked 时:要给用户看的截图等文件,工作目录内的相对路径" },
     },
     required: ["kind", "summary"],
     additionalProperties: false,
@@ -43,7 +44,7 @@ const strArr = (x: unknown): boolean => Array.isArray(x) && x.every((s) => typeo
 
 /** 返回违反项;空数组表示合规。先按纯数据合同判定(getter/setter/Proxy 不调用即拒收,R4-01),
  *  再查字段类型、枚举、条件必填、constraintVer 非负整数、未知字段。未知字段值为 undefined 也算未知;
- *  可选字段(stage/needs/constraintVer/openQuestions/doneSideEffects)为 undefined 按没给处理(R5-01) */
+ *  可选字段(stage/needs/constraintVer/openQuestions/doneSideEffects/attachments)为 undefined 按没给处理(R5-01) */
 export function reportErrors(input: unknown): string[] {
   const p = plainData(input, "汇报");
   if (!p.ok) return [`汇报必须是纯数据:${p.path} ${p.why}`];
@@ -61,5 +62,6 @@ export function reportErrors(input: unknown): string[] {
   if (a.constraintVer !== undefined && !(Number.isInteger(a.constraintVer) && (a.constraintVer as number) >= 0)) errs.push("constraintVer 须为非负整数");
   if (a.openQuestions !== undefined && !strArr(a.openQuestions)) errs.push("openQuestions 须为字符串数组");
   if (a.doneSideEffects !== undefined && !strArr(a.doneSideEffects)) errs.push("doneSideEffects 须为字符串数组");
+  if (a.attachments !== undefined && !strArr(a.attachments)) errs.push("attachments 须为字符串数组");
   return errs;
 }

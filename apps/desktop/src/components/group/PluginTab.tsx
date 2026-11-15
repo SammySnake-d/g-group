@@ -1,4 +1,6 @@
-/* 群资料·插件：本群挂了哪些插件。启停对所有聊天生效（插件是装在这台电脑上的）；从本群摘下只影响这里。 */
+/* 群资料·插件：本群挂了哪些插件。启停对所有聊天生效（插件是装在这台电脑上的）；从本群摘下只影响这里。
+   连上后端时读的是宿主里真实装好的插件(plugins.list):装好就对所有聊天生效,宿主没有「只挂到某个群」这一层,
+   所以不放「添加 / 摘下」,只留启停和去插件市场。 */
 import { useState } from 'react'
 import { ChevronRight, Plus, Store, X } from 'lucide-react'
 import { CATEGORY_LABEL, attachable, isInstalled } from '@g-group/ui-core'
@@ -19,6 +21,7 @@ const pickRow = 'h-auto w-full justify-start gap-2.5 rounded-lg px-2 py-1.5 text
 
 export function PluginTab({ conv }: { conv: Conversation }) {
   const { plugins, pluginAct, toast, setSection } = useApp()
+  const live = useApp((s) => s.backend.mode === 'connected')
   const [picking, setPicking] = useState(false)
   const mine = plugins.filter((p) => isInstalled(p) && p.manifest && p.convs.includes(conv.id))
   const free = attachable(plugins, conv.id)
@@ -27,6 +30,9 @@ export function PluginTab({ conv }: { conv: Conversation }) {
     <section className="px-2 pb-2 pt-1" data-testid="side-plugins">
       <div className="mb-1 flex h-8 items-center px-2">
         <span className="flex-1 text-[13px] font-semibold">{PLUGIN_TAB.title} <span className="font-normal tabular-nums text-fg-3">{mine.length}</span></span>
+        {live ? (
+          <Button data-testid="side-plugin-market" variant="ghost" size="xs" className="-mr-1 gap-1 px-2" onClick={() => setSection('plugins')}><Store />{PLUGIN_TAB.market}</Button>
+        ) : (
         <Popover open={picking} onOpenChange={setPicking}>
           <PopoverTrigger asChild>
             <Button data-testid="side-plugin-add" variant="ghost" size="xs" className="-mr-1 gap-1 px-2"><Plus />{PLUGIN_TAB.add}</Button>
@@ -48,8 +54,9 @@ export function PluginTab({ conv }: { conv: Conversation }) {
             </div>
           </PopoverContent>
         </Popover>
+        )}
       </div>
-      {mine.length === 0 && <div className="mx-2 rounded-xl border border-dashed border-line px-3 py-5 text-center text-[12.5px] text-fg-2">{PLUGIN_TAB.empty}<br />{PLUGIN_TAB.emptyHint}</div>}
+      {mine.length === 0 && <div className="mx-2 rounded-xl border border-dashed border-line px-3 py-5 text-center text-[12.5px] text-fg-2">{live ? PLUGIN_TAB.emptyLive : PLUGIN_TAB.empty}<br />{live ? PLUGIN_TAB.emptyLiveHint : PLUGIN_TAB.emptyHint}</div>}
       <div className="space-y-0.5">
         {mine.map((p) => {
           const m = p.manifest!
@@ -69,12 +76,12 @@ export function PluginTab({ conv }: { conv: Conversation }) {
                 </TooltipTrigger>
                 <TooltipContent>{on ? '停用（所有聊天）' : '启用（所有聊天）'}</TooltipContent>
               </Tooltip>
-              <IconButton data-testid={`side-plugin-detach-${p.id}`} label={`把「${m.name}」从本群摘下`} size="icon-sm" icon={<X />} className="ml-1 text-fg-3 hover:bg-sel" onClick={() => act(p.id, { type: 'detach', conv: conv.id })} />
+              {!live && <IconButton data-testid={`side-plugin-detach-${p.id}`} label={`把「${m.name}」从本群摘下`} size="icon-sm" icon={<X />} className="ml-1 text-fg-3 hover:bg-sel" onClick={() => act(p.id, { type: 'detach', conv: conv.id })} />}
             </div>
           )
         })}
       </div>
-      {mine.length > 0 && <p className="px-2 pt-2 text-[11.5px] text-fg-3">{PLUGIN_TAB.foot}</p>}
+      {mine.length > 0 && <p className="px-2 pt-2 text-[11.5px] text-fg-3">{live ? PLUGIN_TAB.footLive : PLUGIN_TAB.foot}</p>}
     </section>
   )
 }

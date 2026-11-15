@@ -3,6 +3,7 @@ import type { Artifact } from '@/data'
 import { useApp } from '@/store'
 import { boot } from '@/store/boot'
 import { Avatar } from '../Avatar'
+import { LiveFileBody } from './LiveFile'
 import { Preview } from '../split/Preview'
 import { AssetTable } from '../split/ArtifactView'
 import { ARTICLE_INTRO, ARTICLE_SEC4, PLAYBOOK_INTRO, PLAYBOOK_SECTIONS, articleSections } from '../split/constants'
@@ -10,6 +11,7 @@ import { ARTICLE_INTRO, ARTICLE_SEC4, PLAYBOOK_INTRO, PLAYBOOK_SECTIONS, article
 // 正文仍来自原来的内容源；目录缩略图和阅读页不另造一套文件内容。
 export function FileBody({ artifact: a }: { artifact: Artifact }) {
   const tasks = useApp((s) => s.checklist.filter((t) => t.conv === a.conv))
+  if (a.live) return <LiveFileBody file={a.live} />
   if (a.kind === 'page') return <Preview kind="login" />
   if (a.kind === 'asset') return <AssetTable />
   if (a.kind === 'sheet') return <div className="divide-y divide-line">{tasks.map((t) => <div key={t.id} className="flex items-center gap-4 py-4 text-[14px]">

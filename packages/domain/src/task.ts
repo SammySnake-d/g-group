@@ -6,7 +6,7 @@ import { type Vendor, vendorOf } from "./vendor.ts";
 // 导出的状态、事件种类与转移表一律冻结,进程内无法改写策略(用户 #2662)。
 export const STATES = Object.freeze(["T1_Open", "T2_Claimed", "T3_Running", "T4b_BlockedOnHuman", "T5_InReview", "T7_Delivering", "T8a_Delivered", "T8_Accepted", "T9_StopRequested", "T10_Cancelled", "T11_Failed"] as const);
 export type TaskState = (typeof STATES)[number];
-export const EVENT_KINDS = Object.freeze(["Claim", "Dispatch", "ProducerModelAdded", "NeedHuman", "HumanReply", "Amend", "SubmitForReview", "Review", "DeliveredCard", "UserAccept", "UserReject", "AcceptTimeout", "Cancel", "StoppedConfirmed", "ExecFailed"] as const);
+export const EVENT_KINDS = Object.freeze(["Claim", "Dispatch", "ProducerModelAdded", "NeedHuman", "HumanReply", "Amend", "SubmitForReview", "Review", "ReviewUnavailable", "DeliveredCard", "UserAccept", "UserReject", "AcceptTimeout", "Cancel", "StoppedConfirmed", "ExecFailed"] as const);
 export type EventKind = (typeof EVENT_KINDS)[number];
 
 export type TaskEvent =
@@ -23,6 +23,9 @@ export type TaskEvent =
   // 审查回包绑定被审对象 (round, commit, constraintVer):round 是每次提审新分配、永不复用的轮次号,对不上就是过期回包(CORR-01 / R2-CORR-04)
   | ({ kind: "Review"; reviewerId: string; reviewerModel: string; round: number; commit: string; constraintVer: number; waiverBy?: string }
     & ({ verdict: "approve" } | { verdict: "reject"; computeResumable: boolean }))
+  // 这一轮提审没有合格审查人,或审查没做成(宿主判定):交付照常发出、进 T8a 待确认(需求 §8.1 已定 1),门禁如实记 none。
+  // 同样绑定被审对象 (round, commit, constraintVer),对不上就是过期回包
+  | { kind: "ReviewUnavailable"; round: number; commit: string; constraintVer: number }
   // 交付侧事件都绑定交付代次 (deliveryRound, commit):代次在每次审查通过时新分配、永不复用;
   // 已发过但不是当前交付的代次是旧卡回包,一律幂等忽略,不打断批次(R5-CORR-01/02)
   // taskId:回包所属任务;与本任务不符即错投,拒绝(R6 跨任务边界)。deliveryRound 必须是本任务分配过的正整数(R6-CORR-02)
@@ -217,7 +220,11 @@ const userRejectRun = (t: Task, e: TaskEvent): Outcome => {
   const ev = as(e, "UserReject");
   return ev.by === t.requester ? rework(t, ev.computeResumable) : no(`只有提出者 ${t.requester} 能退回验收`);
 };
-const accept = (t: Task, e: TaskEvent): Outcome => as(e, "UserAccept").by === t.requester ? ok(set(t, { state: "T8_Accepted", badge: "accepted" })) : no(`只有提出者 ${t.requester} 能确认验收`);
+/** 验收:提出者本人才行。这次交付没经过审查(门禁 none)时,本人验收即本人豁免审查,如实记 waived-by-user,不算合规(AC-26 ⑤)。 */
+const accept = (t: Task, e: TaskEvent): Outcome => {
+  if (as(e, "UserAccept").by !== t.requester) return no(`只有提出者 ${t.requester} 能确认验收`);
+  return ok(set(t, { state: "T8_Accepted", badge: "accepted", reviewGate: t.reviewGate === "none" ? "waived-by-user" : t.reviewGate }));
+};
 
 /** T5 守卫(AC-26 / R-01):审查人≠作者;审查厂商不在累积生产厂商集合里;任何一方 unknown 都拒;提出者本人可豁免同厂商,记为 Waived。 */
 /** 跨厂商判定:返回门禁结论,或不通过的原因(以 Error 包装区分)。 */
@@ -243,6 +250,18 @@ const review = go((t, e) => {
   const round = t.deliverySeq + 1;
   const delivery: Delivery = { round, commit: t.reviewedCommit! };
   return ok(set(t, { state: "T7_Delivering", reviewGate: gate, approval: { reviewerModel: ev.reviewerModel, waiverBy: ev.waiverBy ?? null }, delivery, deliverySeq: round }),
+    [{ kind: "send-card", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);
+});
+/**
+ * 这一轮没有审查(找不到合格审查人,或审查没做成):交付照常发出,分配新的交付代次,门禁如实留 none、不记审查结论;
+ * 之后发卡确认即进 T8a 待确认(需求 §8.1 已定 1:交活后进 T8a,不说话不算通过)。过期回包幂等忽略(同 Review 的绑定)。
+ */
+const unreviewed = go((t, e) => {
+  const ev = as(e, "ReviewUnavailable");
+  if (ev.round !== t.reviewRound || ev.commit !== t.reviewedCommit || ev.constraintVer !== t.constraintVer) return ok(t);
+  const round = t.deliverySeq + 1;
+  const delivery: Delivery = { round, commit: t.reviewedCommit! };
+  return ok(set(t, { state: "T7_Delivering", reviewGate: "none", approval: null, delivery, deliverySeq: round }),
     [{ kind: "send-card", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);
 });
 /** 同一产物重新送审:新轮次、清掉结论与验收标记(R4-CORR-01)。 */
@@ -326,7 +345,7 @@ export const TABLE: TransitionTable = freezeTable({
     Claim: claim,
     Dispatch: rej("尚未认领,不能派发"), ProducerModelAdded: rej(NOT_RUNNING), NeedHuman: rej(NOT_RUNNING),
     HumanReply: ign(NO_CARD), Amend: bumpVer,
-    SubmitForReview: rej(NOT_RUNNING), Review: rej("不在审查中"), DeliveredCard: rej("没有工件可交付"),
+    SubmitForReview: rej(NOT_RUNNING), Review: rej("不在审查中"), ReviewUnavailable: rej("不在审查中"), DeliveredCard: rej("没有工件可交付"),
     UserAccept: rej(NOT_DELIVERED), UserReject: rej(NOT_DELIVERED), AcceptTimeout: ign(NOT_DELIVERED),
     Cancel: cancel, StoppedConfirmed: ign("没有在停止的 Compute"), ExecFailed: ign(NOT_RUNNING),
   },
@@ -336,7 +355,7 @@ export const TABLE: TransitionTable = freezeTable({
     Dispatch: go((t, e) => canBind(t, e) ? ok(set(bind(t, e), { state: "T3_Running" })) : orphan(t, e) ?? no("首派回包对不上")),
     ProducerModelAdded: rej(NOT_RUNNING), NeedHuman: unboundOr(NOT_RUNNING), HumanReply: ign(NO_CARD),
     Amend: amendQueued,
-    SubmitForReview: unboundOr(NOT_RUNNING), Review: rej("不在审查中"), DeliveredCard: rej("没有工件可交付"),
+    SubmitForReview: unboundOr(NOT_RUNNING), Review: rej("不在审查中"), ReviewUnavailable: rej("不在审查中"), DeliveredCard: rej("没有工件可交付"),
     UserAccept: rej(NOT_DELIVERED), UserReject: rej(NOT_DELIVERED), AcceptTimeout: ign(NOT_DELIVERED),
     Cancel: cancel, StoppedConfirmed: ack, ExecFailed: execFailed,
   },
@@ -353,7 +372,7 @@ export const TABLE: TransitionTable = freezeTable({
     }),
     HumanReply: ign("卡片已作废或已处理,迟到的点击幂等忽略"), Amend: amendLive,
     SubmitForReview: go(submit),
-    Review: rej("不在审查中"), DeliveredCard: rej("还没审查,不能直接交付"),
+    Review: rej("不在审查中"), ReviewUnavailable: rej("不在审查中"), DeliveredCard: rej("还没审查,不能直接交付"),
     UserAccept: rej(NOT_DELIVERED), UserReject: rej(NOT_DELIVERED), AcceptTimeout: ign(NOT_DELIVERED),
     Cancel: cancel, StoppedConfirmed: ack, ExecFailed: execFailed,
   },
@@ -369,27 +388,27 @@ export const TABLE: TransitionTable = freezeTable({
       const cleared = set(t, { pendingQ: null });
       return ev.answer === "approve" ? ok(set(cleared, { state: "T3_Running" })) : stopThenRun(cleared, "cancel");
     }),
-    Amend: amendLive, SubmitForReview: staleOr("等人确认中,不能提审"), Review: rej("不在审查中"), DeliveredCard: rej("等人确认中"),
+    Amend: amendLive, SubmitForReview: staleOr("等人确认中,不能提审"), Review: rej("不在审查中"), ReviewUnavailable: rej("不在审查中"), DeliveredCard: rej("等人确认中"),
     UserAccept: rej(NOT_DELIVERED), UserReject: rej(NOT_DELIVERED), AcceptTimeout: ign(NOT_DELIVERED),
     Cancel: cancel, StoppedConfirmed: ack, ExecFailed: execFailed,
   },
   T5_InReview: {
     Claim: rej("审查中,拒绝重复认领"), Dispatch: dispatchElse("已有 Compute"), ProducerModelAdded: addModel, NeedHuman: staleOr("审查中不再向人提问"),
     HumanReply: ign(NO_CARD), Amend: amendRework, SubmitForReview: go(submit),
-    Review: review, DeliveredCard: rej("还没审过,不能交付"),
+    Review: review, ReviewUnavailable: unreviewed, DeliveredCard: rej("还没审过,不能交付"),
     UserAccept: rej(NOT_DELIVERED), UserReject: rej(NOT_DELIVERED), AcceptTimeout: ign(NOT_DELIVERED),
     Cancel: cancel, StoppedConfirmed: ack, ExecFailed: execFailed,
   },
   T7_Delivering: {
     Claim: rej("交付中,拒绝重复认领"), Dispatch: dispatchElse("已有 Compute"), ProducerModelAdded: lateModel, NeedHuman: staleOr("交付中"),
-    HumanReply: ign(NO_CARD), Amend: amendRework, SubmitForReview: staleOr("已审完"), Review: ign("已审完,迟到的审查结论忽略"),
+    HumanReply: ign(NO_CARD), Amend: amendRework, SubmitForReview: staleOr("已审完"), Review: ign("已审完,迟到的审查结论忽略"), ReviewUnavailable: ign("已在交付,迟到的无审查结论忽略"),
     DeliveredCard: forDelivery((t) => ok(set(t, { state: "T8a_Delivered" }))),
     UserAccept: rej("卡片还没发到群里"), UserReject: rej("卡片还没发到群里"), AcceptTimeout: ign("卡片还没发到群里"),
     Cancel: cancel, StoppedConfirmed: ack, ExecFailed: ign("工件已落盘,只重发卡片,不回去重跑"),
   },
   T8a_Delivered: {
     Claim: rej("已交付"), Dispatch: dispatchElse("已交付"), ProducerModelAdded: lateModel, NeedHuman: staleOr("已交付"),
-    HumanReply: ign(NO_CARD), Amend: amendRework, SubmitForReview: staleOr("已交付"), Review: ign("已交付,迟到的审查结论忽略"),
+    HumanReply: ign(NO_CARD), Amend: amendRework, SubmitForReview: staleOr("已交付"), Review: ign("已交付,迟到的审查结论忽略"), ReviewUnavailable: ign("已交付,迟到的无审查结论忽略"),
     DeliveredCard: forDelivery((t) => ok(t)),
     UserAccept: forDelivery(accept),
     UserReject: forDelivery(userRejectRun),
@@ -462,6 +481,7 @@ const EVENT_SHAPES: { readonly [K in EventKind]: Shape } = {
   Amend: { req: { by: "str", computeResumable: "bool" } },
   SubmitForReview: { req: { commit: "str", computeId: "str", constraintVer: "nat" } },
   Review: { req: { reviewerId: "str", reviewerModel: "str", round: "pint", commit: "str", constraintVer: "nat", verdict: ["approve", "reject"] }, opt: { waiverBy: "str" } },
+  ReviewUnavailable: { req: { round: "pint", commit: "str", constraintVer: "nat" } },
   DeliveredCard: { req: DELIVERY_SHAPE },
   UserAccept: { req: { ...DELIVERY_SHAPE, by: "str" } },
   UserReject: { req: { ...DELIVERY_SHAPE, by: "str", computeResumable: "bool" } },

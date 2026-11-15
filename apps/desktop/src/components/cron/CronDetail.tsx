@@ -1,7 +1,7 @@
 /* 定时详情（#1286 #1850 #1858）：在右侧分栏打开。能改、能暂停、能删（二次确认）、能立即跑一次，
    能看每次醒来做了什么、点了跳回当次的消息。三处列表（本群 / 它的工作台 / 进展总览）点任意一行都打开这里。
    层级:做什么(标题)→ 规则卡(人话规则 + 表达式,「下次」最醒目,再往后几次)→ 操作 → 公告 → 运行历史。 */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AlarmClock, ArrowUpRight, Pencil, Play, Trash2 } from 'lucide-react'
 import { formatRunAt, localZoneLabel, nextRuns } from '@g-group/ui-core'
 import { useApp } from '@/ctx'
@@ -22,8 +22,12 @@ import { convName } from './util'
 
 export function CronDetail({ id }: { id: string }) {
   const { crons, convs, plugins, updateCron, removeCron, runCronNow, jump, openConv } = useApp()
+  const loadRuns = useApp((s) => s.loadCronRuns)
   const now = useNow()
   const c = crons.find((x) => x.id === id)
+  /* 连上后端:运行记录读 schedules.history;后端推来新的一次运行(lastRun 变了)再读一遍 */
+  const lastAt = c?.runs[0]?.at
+  useEffect(() => { loadRuns(id) }, [id, lastAt, loadRuns])
   const [edit, setEdit] = useState(false)
   const [asking, setAsking] = useState(false)
   if (!c) return <div className="p-6 text-[13px] text-fg-3" data-testid="cron-detail-gone">{DETAIL.gone}</div>

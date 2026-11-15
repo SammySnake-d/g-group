@@ -9,6 +9,8 @@ import { LIVE_TEXT } from './copy'
 
 export function PersonMenu({ id, children, side = 'top' }: { id: PersonId; children: ReactNode; side?: 'top' | 'left' | 'right' | 'bottom' }) {
   const { push, openDm, mention, convs, active, poke, silence, openWorkbench, openContact } = useApp()
+  /* 禁言的语义还没定(需求 U03「禁言与停止执行是否同一件事待定」),连上后端时不放这个入口 */
+  const isLive = useApp((s) => s.backend.mode === 'connected')
   const p = people[id]
   const live = useLive(id)
   const conv = convs.find((c) => c.id === active)
@@ -48,7 +50,7 @@ export function PersonMenu({ id, children, side = 'top' }: { id: PersonId; child
               {inGroup && <DropdownMenuItem data-testid="menu-inner" className="rounded-lg" onSelect={() => push({ t: 'inner', id, conv: active }, true)}>从群聊私信</DropdownMenuItem>}
               <DropdownMenuItem data-testid="menu-workbench" className="rounded-lg" onSelect={() => openWorkbench(id)}>去工作台管理</DropdownMenuItem>
               {inGroup && <DropdownMenuItem data-testid="menu-poke" className="rounded-lg" onSelect={() => poke(id)}>拍一拍</DropdownMenuItem>}
-              {inGroup && <DropdownMenuItem data-testid="menu-silence" className="rounded-lg" onSelect={() => silence(active, id)}>{silenced ? '解除禁言' : '禁言 30 分钟'}</DropdownMenuItem>}
+              {inGroup && !isLive && <DropdownMenuItem data-testid="menu-silence" className="rounded-lg" onSelect={() => silence(active, id)}>{silenced ? '解除禁言' : '禁言 30 分钟'}</DropdownMenuItem>}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         )}

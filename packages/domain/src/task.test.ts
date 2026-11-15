@@ -27,6 +27,7 @@ const SAMPLE: { [K in EventKind]: Extract<TaskEvent, { kind: K }> } = {
   HumanReply: { kind: "HumanReply", qId: "q", constraintVer: 0, answer: "approve" }, Amend: { kind: "Amend", by: "u1", computeResumable: true },
   SubmitForReview: { kind: "SubmitForReview", commit: "c2", computeId: "cc", constraintVer: 0 },
   Review: { kind: "Review", reviewerId: "r", reviewerModel: "gpt-6", round: 1, commit: "c", constraintVer: 0, verdict: "approve" },
+  ReviewUnavailable: { kind: "ReviewUnavailable", round: 1, commit: "c", constraintVer: 0 },
   DeliveredCard: { kind: "DeliveredCard", ...DC1 }, UserAccept: { kind: "UserAccept", by: "u1", ...DC1 }, UserReject: { kind: "UserReject", by: "u1", computeResumable: true, ...DC1 },
   AcceptTimeout: { kind: "AcceptTimeout", ...DC1 }, Cancel: { kind: "Cancel", by: "u1" }, StoppedConfirmed: { kind: "StoppedConfirmed", taskId: "t", computeId: "cc" }, ExecFailed: { kind: "ExecFailed", computeId: "cc" },
 };
@@ -55,41 +56,43 @@ const ORPHAN_STOP = (s: TaskState): Exp => ({ to: s, fx: [{ kind: "stop-compute"
 const SPEC: { [S in TaskState]: { [E in EventKind]: Exp } } = {
   T1_Open: {
     Claim: { to: "T2_Claimed", owner: "x" }, Dispatch: "rej", ProducerModelAdded: "rej", NeedHuman: "rej", HumanReply: "ign",
-    Amend: { to: "T1_Open", ver: 1 }, SubmitForReview: "rej", Review: "rej", DeliveredCard: "rej", UserAccept: "rej",
+    Amend: { to: "T1_Open", ver: 1 }, SubmitForReview: "rej", Review: "rej", ReviewUnavailable: "rej", DeliveredCard: "rej", UserAccept: "rej",
     UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T10_Cancelled", fx: [] }, StoppedConfirmed: "ign", ExecFailed: "ign",
   },
   T2_Claimed: {
     Claim: "rej", Dispatch: { to: "T3_Running", pm: PM2 }, ProducerModelAdded: "rej", NeedHuman: "rej", HumanReply: "ign",
     Amend: { to: "T2_Claimed", ver: 1, fx: [{ kind: "cancel-spawn", requestId: "t#L0" }, { kind: "spawn-compute", withHandoff: false, requestId: "t#L1", constraintVer: 1 }] },
-    SubmitForReview: "rej", Review: "rej", DeliveredCard: "rej", UserAccept: "rej",
+    SubmitForReview: "rej", Review: "rej", ReviewUnavailable: "rej", DeliveredCard: "rej", UserAccept: "rej",
     UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: [{ kind: "cancel-spawn", requestId: "t#L0" }] }, StoppedConfirmed: "ign", ExecFailed: "ign",
   },
   T3_Running: {
     Claim: "rej", Dispatch: ORPHAN_STOP("T3_Running"), ProducerModelAdded: { to: "T3_Running", pm: PM2 }, NeedHuman: { to: "T4b_BlockedOnHuman" }, HumanReply: "ign",
-    Amend: { to: "T3_Running", fx: [{ kind: "update-constraints", computeId: "cc", constraintVer: 1 }], ver: 1 }, SubmitForReview: { to: "T5_InReview", fx: [{ kind: "request-review", round: 1, commit: "c2", constraintVer: 0 }] }, Review: "rej", DeliveredCard: "rej",
+    Amend: { to: "T3_Running", fx: [{ kind: "update-constraints", computeId: "cc", constraintVer: 1 }], ver: 1 }, SubmitForReview: { to: "T5_InReview", fx: [{ kind: "request-review", round: 1, commit: "c2", constraintVer: 0 }] }, Review: "rej", ReviewUnavailable: "rej", DeliveredCard: "rej",
     UserAccept: "rej", UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: STOP }, StoppedConfirmed: "ign",
     ExecFailed: { to: "T9_StopRequested", fx: STOP },
   },
   T4b_BlockedOnHuman: {
     Claim: "rej", Dispatch: ORPHAN_STOP("T4b_BlockedOnHuman"), ProducerModelAdded: { to: "T4b_BlockedOnHuman", pm: PM2 }, NeedHuman: "rej", HumanReply: { to: "T3_Running", fx: [] },
-    Amend: { to: "T3_Running", fx: [{ kind: "update-constraints", computeId: "cc", constraintVer: 1 }], ver: 1 }, SubmitForReview: "rej", Review: "rej", DeliveredCard: "rej", UserAccept: "rej",
+    Amend: { to: "T3_Running", fx: [{ kind: "update-constraints", computeId: "cc", constraintVer: 1 }], ver: 1 }, SubmitForReview: "rej", Review: "rej", ReviewUnavailable: "rej", DeliveredCard: "rej", UserAccept: "rej",
     UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: STOP }, StoppedConfirmed: "ign",
     ExecFailed: { to: "T9_StopRequested", fx: STOP },
   },
   T5_InReview: {
     Claim: "rej", Dispatch: ORPHAN_STOP("T5_InReview"), ProducerModelAdded: { to: "T5_InReview", pm: PM2 }, NeedHuman: "rej", HumanReply: "ign",
-    Amend: REWORK, SubmitForReview: { to: "T5_InReview", fx: [{ kind: "request-review", round: 2, commit: "c2", constraintVer: 0 }] }, Review: { to: "T7_Delivering", fx: [{ kind: "send-card", taskId: "t", deliveryRound: 1, commit: "c", constraintVer: 0 }] }, DeliveredCard: "rej",
+    Amend: REWORK, SubmitForReview: { to: "T5_InReview", fx: [{ kind: "request-review", round: 2, commit: "c2", constraintVer: 0 }] }, Review: { to: "T7_Delivering", fx: [{ kind: "send-card", taskId: "t", deliveryRound: 1, commit: "c", constraintVer: 0 }] },
+    // 没有合格审查人或审查没做成:交付照常进 T7 → T8a 待确认(§8.1 已定 1),不停在 T5
+    ReviewUnavailable: { to: "T7_Delivering", fx: [{ kind: "send-card", taskId: "t", deliveryRound: 1, commit: "c", constraintVer: 0 }] }, DeliveredCard: "rej",
     UserAccept: "rej", UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: STOP }, StoppedConfirmed: "ign",
     ExecFailed: { to: "T9_StopRequested", fx: STOP },
   },
   T7_Delivering: {
     Claim: "rej", Dispatch: ORPHAN_STOP("T7_Delivering"), ProducerModelAdded: { to: "T7_Delivering", pm: PM2, fx: [] }, NeedHuman: "rej", HumanReply: "ign", Amend: REWORK,
-    SubmitForReview: "rej", Review: "ign", DeliveredCard: { to: "T8a_Delivered", fx: [] }, UserAccept: "rej", UserReject: "rej",
+    SubmitForReview: "rej", Review: "ign", ReviewUnavailable: "ign", DeliveredCard: { to: "T8a_Delivered", fx: [] }, UserAccept: "rej", UserReject: "rej",
     AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: STOP }, StoppedConfirmed: "ign", ExecFailed: "ign",
   },
   T8a_Delivered: {
     Claim: "rej", Dispatch: ORPHAN_STOP("T8a_Delivered"), ProducerModelAdded: { to: "T8a_Delivered", pm: PM2, fx: [] }, NeedHuman: "rej", HumanReply: "ign", Amend: REWORK,
-    SubmitForReview: "rej", Review: "ign", DeliveredCard: "ign", UserAccept: { to: "T8_Accepted", fx: [] }, UserReject: REWORK,
+    SubmitForReview: "rej", Review: "ign", ReviewUnavailable: "ign", DeliveredCard: "ign", UserAccept: { to: "T8_Accepted", fx: [] }, UserReject: REWORK,
     AcceptTimeout: "rej", Cancel: "ign", StoppedConfirmed: "ign", ExecFailed: "ign",
   },
   T8_Accepted: { ...allIgn(), Dispatch: ORPHAN_STOP("T8_Accepted"), ProducerModelAdded: { to: "T8_Accepted", pm: PM2, fx: [] }, Amend: REWORK, UserReject: REWORK },
@@ -1299,6 +1302,7 @@ const SHAPES: { [K in EventKind]: { req: Record<string, Dom>; opt?: Record<strin
   Amend: { req: { by: "s", computeResumable: "b" } },
   SubmitForReview: { req: { commit: "s", computeId: "s", constraintVer: "n" } },
   Review: { req: { reviewerId: "s", reviewerModel: "s", round: "p", commit: "s", constraintVer: "n", verdict: ["approve", "reject"] }, opt: { waiverBy: "s" } },
+  ReviewUnavailable: { req: { round: "p", commit: "s", constraintVer: "n" } },
   DeliveredCard: { req: { taskId: "s", deliveryRound: "p", commit: "s" } },
   UserAccept: { req: { taskId: "s", by: "s", deliveryRound: "p", commit: "s" } },
   UserReject: { req: { taskId: "s", by: "s", computeResumable: "b", deliveryRound: "p", commit: "s" } },

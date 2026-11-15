@@ -1,0 +1,97 @@
+{
+ "summary": {
+  "variant": "setsid",
+  "trials": 3,
+  "okTrue": 3,
+  "okFalse": 0,
+  "defects": 0,
+  "errors": 0,
+  "survivorsTotal": 0
+ },
+ "runs": [
+  {
+   "variant": "setsid",
+   "trial": 0,
+   "root": 58955,
+   "child": 58956,
+   "before": [
+    {
+     "pid": 58956,
+     "ppid": 58955,
+     "pgid": -1,
+     "stat": "?"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": null,
+   "result": {
+    "ok": true,
+    "killed": 1
+   },
+   "registered": 1,
+   "survivors": [],
+   "childAlive": false,
+   "defect": false,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "setsid",
+   "trial": 1,
+   "root": 58975,
+   "child": 58976,
+   "before": [
+    {
+     "pid": 58976,
+     "ppid": 58975,
+     "pgid": -1,
+     "stat": "?"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": null,
+   "result": {
+    "ok": true,
+    "killed": 1
+   },
+   "registered": 1,
+   "survivors": [],
+   "childAlive": false,
+   "defect": false,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "setsid",
+   "trial": 2,
+   "root": 58993,
+   "child": 58994,
+   "before": [
+    {
+     "pid": 58994,
+     "ppid": 58993,
+     "pgid": -1,
+     "stat": "?"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": null,
+   "result": {
+    "ok": true,
+    "killed": 1
+   },
+   "registered": 1,
+   "survivors": [],
+   "childAlive": false,
+   "defect": false,
+   "leftAfterCleanup": 0
+  }
+ ]
+}

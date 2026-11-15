@@ -5,7 +5,7 @@
 export const IPC_LIMITS = Object.freeze({ maxDepth: 32, maxBytes: 256 * 1024, maxKeys: 2000 });
 
 export type IpcCheck = { ok: true; method: string; params: unknown } | { ok: false; error: string };
-export type IpcOptions = { isMethod: (name: string) => boolean; devOrigin?: string };
+export type IpcOptions = { isMethod: (name: string) => boolean; devOrigin?: string; methodByteLimits?: Readonly<Record<string, number>> };
 
 /** 来源只认本应用的 app:// 协议(开发时额外认传入的 dev 源)。 */
 export function isTrustedOrigin(url: string, devOrigin?: string): boolean {
@@ -62,6 +62,8 @@ export function checkIpcRequest(req: unknown, senderUrl: string, opts: IpcOption
   const r = req as { method?: unknown; params?: unknown };
   if (typeof r.method !== "string" || !opts.isMethod(r.method)) return { ok: false, error: `不认识的方法 ${String(r.method)}` };
   const size = JSON.stringify(r.params ?? null).length;
-  if (size > IPC_LIMITS.maxBytes) return { ok: false, error: `参数 ${size} 字节,超过上限 ${IPC_LIMITS.maxBytes}` };
+  // 大文件方法由宿主按合同显式给限额;普通方法仍保留默认上限,不由请求参数决定。
+  const limit = opts.methodByteLimits && Object.hasOwn(opts.methodByteLimits, r.method) ? opts.methodByteLimits[r.method]! : IPC_LIMITS.maxBytes;
+  if (!Number.isSafeInteger(limit) || limit <= 0 || size > limit) return { ok: false, error: `参数 ${size} 字节,超过上限 ${limit}` };
   return { ok: true, method: r.method, params: r.params ?? null };
 }

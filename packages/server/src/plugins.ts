@@ -1,13 +1,19 @@
 // 插件:市场目录、安装、启停、配置、更新、卸载,以及插件声明的 slash 命令(用户 #719:「连插件市场和安装的入口都没有」)。
 // 插件包 = 一个目录,根上有 plugin.json(清单)。市场 = 一个 catalog.json,列出可装插件与包目录。
 // 安装先校验清单、核对用户勾选的权限覆盖清单声明的全部权限,再把包复制进宿主数据目录 plugins/<id>/<version>/,与来源解耦。
-// 本片只管理安装态与清单(版本、权限、命令、配置);插件代码的加载执行要走进程隔离(PR #6 R9-01 范围 A 的兜底),另片接入,
-// 所以这里不 import 任何插件代码。
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
+// 插件代码不在宿主进程里加载:带 entry 的插件经 PluginRuntime 在隔离子进程里执行(需求文档 §8.1 已定 17 的兜底),
+// 这里只做安装态、调用前的启用/类型检查与结果投影。
+// URL 安装:下载 .tgz(大小上限、可选 sha256 核对),在宿主数据目录 plugin-downloads/ 下解包(拒绝绝对路径、..、链接条目),
+// 之后与本地目录安装同一条路:校验清单、核对权限、复制进 plugins/<id>/<version>/;临时目录用完即删。
+// 签名校验不在首版(§8.1 已定:插件市场首版只做版本号显示与更新,在线提交/签名/分发不在首版),只记内容 sha256。
+import { createHash, randomUUID } from "node:crypto";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 import type { MarketplaceEntry, PluginView, SlashCommand } from "@g-group/api-contract";
 import { SlashCommand as SlashCommandSchema, arr, formatIssues, json, obj, oneOf, opt, str } from "@g-group/api-contract";
 import { type Db, HostError, all, one, run } from "./db.ts";
+import type { PluginRuntime, PluginTarget } from "./plugin-runtime.ts";
+import { extractTo, readTgz } from "./untar.ts";
 
 const KIND = oneOf(["data-source", "outbound-channel", "ui-extension"] as const);
 /** plugin.json 的形状。命令沿用合同里的 SlashCommand,但 source/pluginId/targetContactId 由宿主填。 */
@@ -81,6 +87,19 @@ export interface PluginStoreDeps {
   readonly now: () => string;
   readonly emit: (v: PluginView | { removed: string }) => void;
   readonly commandsChanged: () => void;
+  /** 插件进程运行时;带 entry 的插件经它在隔离子进程里执行 */
+  readonly runtime: PluginRuntime;
+  /** URL 安装的下载函数;默认全局 fetch */
+  readonly fetch?: (url: string) => Promise<Response>;
+  /** URL 安装的下载上限(字节),默认 20 MB;解包后上限为它的 4 倍 */
+  readonly maxDownloadBytes?: number;
+}
+type InstallSource = { kind: "marketplace"; id: string; version?: string } | { kind: "local-path"; path: string } | { kind: "url"; url: string; sha256?: string };
+/** URL 来源的 origin 列存 JSON:地址、实际内容 sha256、是否与用户给的值核对过 */
+interface UrlOrigin {
+  url: string;
+  sha256: string;
+  verified: boolean;
 }
 
 export class PluginStore {
@@ -132,6 +151,7 @@ export class PluginStore {
   view(r: Row): PluginView {
     const m = JSON.parse(r.manifest) as Manifest;
     const latest = r.source === "marketplace" ? (this.catalog().find((e) => e.id === r.id)?.manifest.version ?? null) : null;
+    const url = r.source === "url" ? (JSON.parse(r.origin) as UrlOrigin) : null;
     return {
       id: r.id,
       name: m.name,
@@ -147,6 +167,8 @@ export class PluginStore {
       config: r.config ? (JSON.parse(r.config) as unknown) : null,
       commands: (m.commands ?? []).map((c) => c.name),
       installedAt: r.installed_at,
+      executable: !!m.entry,
+      ...(url ? { integrity: { sha256: url.sha256, verified: url.verified } } : {}),
     };
   }
   list(): PluginView[] {
@@ -155,7 +177,62 @@ export class PluginStore {
   get(id: string): PluginView {
     return this.view(this.row(id));
   }
-  install(source: { kind: "marketplace"; id: string; version?: string } | { kind: "local-path"; path: string } | { kind: "url"; url: string }, granted: string[]): PluginView {
+  async install(source: InstallSource, granted: string[]): Promise<PluginView> {
+    if (source.kind !== "url") return this.installFrom(source, granted);
+    const bytes = await this.download(source.url);
+    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    if (source.sha256 !== undefined && source.sha256 !== sha256) throw new HostError("forbidden", `下载内容的 sha256 是 ${sha256},与给定的不符,不安装`);
+    const max = this.maxDownload();
+    const files = readTgz(bytes, { maxBytes: 4 * max, maxEntries: 5000 });
+    const tmpRoot = path.join(this.d.dataDir, "plugin-downloads");
+    const tmp = path.join(tmpRoot, randomUUID());
+    try {
+      mkdirSync(tmp, { recursive: true });
+      extractTo(files, tmp);
+      const top = readdirSync(tmp);
+      const root = existsSync(path.join(tmp, "plugin.json")) ? tmp : top.length === 1 && existsSync(path.join(tmp, top[0]!, "plugin.json")) ? path.join(tmp, top[0]!) : null;
+      if (!root) throw new HostError("invalid_params", "包里没有 plugin.json(根目录或唯一的顶层目录里)");
+      const origin: UrlOrigin = { url: source.url, sha256, verified: source.sha256 !== undefined };
+      return this.installFrom({ kind: "url", dir: root, origin: JSON.stringify(origin) }, granted);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+      if (existsSync(tmpRoot) && readdirSync(tmpRoot).length === 0) rmSync(tmpRoot, { recursive: true, force: true });
+    }
+  }
+  private maxDownload() {
+    return this.d.maxDownloadBytes ?? 20 * 1024 * 1024;
+  }
+  /** 下载插件包:非 2xx、跳到非 https、超过上限都拒绝;边读边计数,超了就停。 */
+  private async download(url: string): Promise<Buffer> {
+    const max = this.maxDownload();
+    let res: Response;
+    try {
+      res = await (this.d.fetch ?? ((u: string) => fetch(u)))(url);
+    } catch (e) {
+      throw new HostError("unavailable", `下载插件包失败:${(e as Error).message}`);
+    }
+    if (!res.ok) throw new HostError("unavailable", `下载插件包失败:HTTP ${res.status}`);
+    if (res.url && !res.url.startsWith("https://")) throw new HostError("forbidden", "下载被转到了非 https 地址,不安装");
+    const tooBig = () => new HostError("invalid_params", `插件包超过 ${max} 字节上限`);
+    if (Number(res.headers.get("content-length") ?? 0) > max) throw tooBig();
+    const chunks: Buffer[] = [];
+    let total = 0;
+    const reader = res.body?.getReader();
+    if (reader) {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > max) {
+          await reader.cancel().catch(() => {});
+          throw tooBig();
+        }
+        chunks.push(Buffer.from(value));
+      }
+    }
+    return Buffer.concat(chunks);
+  }
+  private installFrom(source: Exclude<InstallSource, { kind: "url" }> | { kind: "url"; dir: string; origin: string }, granted: string[]): PluginView {
     let dir: string;
     let origin: string;
     if (source.kind === "marketplace") {
@@ -169,7 +246,8 @@ export class PluginStore {
       if (!existsSync(dir) || !statSync(dir).isDirectory()) throw new HostError("invalid_params", `${dir} 不是目录`);
       origin = dir;
     } else {
-      throw new HostError("unavailable", "从 URL 安装尚未接入(需要下载与签名校验),请先用市场或本地目录");
+      dir = source.dir;
+      origin = source.origin;
     }
     const m = readManifest(dir);
     if (one(this.d.db, "SELECT 1 FROM gg_plugins WHERE id = ?", m.id)) throw new HostError("conflict", `插件 ${m.id} 已安装,要换版本请用更新`);
@@ -203,6 +281,7 @@ export class PluginStore {
   setEnabled(id: string, enabled: boolean): PluginView {
     this.row(id);
     run(this.d.db, "UPDATE gg_plugins SET enabled = ? WHERE id = ?", enabled ? 1 : 0, id);
+    if (!enabled) this.d.runtime.stop(id);
     const v = this.get(id);
     this.d.emit(v);
     this.d.commandsChanged();
@@ -213,6 +292,8 @@ export class PluginStore {
     const m = JSON.parse(r.manifest) as Manifest;
     if (!m.configSchema) throw new HostError("invalid_params", `插件 ${id} 没有可配置项`);
     run(this.d.db, "UPDATE gg_plugins SET config = ? WHERE id = ?", JSON.stringify(config), id);
+    // 新配置下次调用时以新进程生效(init 只在启动时跑一次)
+    this.d.runtime.stop(id);
     const v = this.get(id);
     this.d.emit(v);
     return v;
@@ -229,6 +310,7 @@ export class PluginStore {
     const all_ = [...had, ...(granted ?? [])];
     const missing = e.manifest.permissions.map((p) => p.key).filter((k) => !all_.includes(k));
     if (missing.length) throw new HostError("forbidden", `新版本需要你同意新增权限:${missing.join("、")}`, { missing });
+    this.d.runtime.stop(id);
     const target = this.copyIn(e.manifest, e.dir);
     run(this.d.db, "UPDATE gg_plugins SET version = ?, dir = ?, manifest = ?, granted = ? WHERE id = ?", e.manifest.version, target, JSON.stringify(e.manifest), JSON.stringify(e.manifest.permissions.map((p) => p.key)), id);
     const v = this.get(id);
@@ -237,12 +319,50 @@ export class PluginStore {
     return v;
   }
   uninstall(id: string) {
-    const r = this.row(id);
+    this.row(id);
+    this.d.runtime.forget(id);
     run(this.d.db, "DELETE FROM gg_plugins WHERE id = ?", id);
     rmSync(path.join(this.d.dataDir, "plugins", id), { recursive: true, force: true });
-    void r;
+    rmSync(path.join(this.d.dataDir, "plugin-data", id), { recursive: true, force: true });
     this.d.emit({ removed: id });
     this.d.commandsChanged();
+  }
+  /** 插件进程 pid(没在跑为 null)。 */
+  pid(id: string) {
+    return this.d.runtime.pid(id);
+  }
+  /** 调用前检查:已安装、已启用、有 entry、清单声明了这个类型。 */
+  private target(id: string, kind: "data-source" | "outbound-channel"): PluginTarget {
+    const r = this.row(id);
+    if (!r.enabled) throw new HostError("conflict", `插件 ${id} 已停用`);
+    const m = JSON.parse(r.manifest) as Manifest;
+    if (!m.entry) throw new HostError("unavailable", `插件 ${id} 没有可执行代码(清单没有 entry)`);
+    if (!m.kinds.includes(kind)) throw new HostError("invalid_params", `插件 ${id} 不是${kind === "data-source" ? "数据源" : "输出渠道"}`);
+    return { id, dir: r.dir, entry: m.entry, dataDir: path.join(this.d.dataDir, "plugin-data", id), config: r.config ? (JSON.parse(r.config) as unknown) : null, kinds: m.kinds };
+  }
+  /** 在隔离进程里拉数据源;外部事件经内核盖章为不可信。超出合同长度的事件记进 rejected,不截断。 */
+  async pull(id: string, sourceId?: string) {
+    const out = await this.d.runtime.pull(this.target(id, "data-source"), sourceId);
+    const rejected = [...out.rejected];
+    const events = out.events.filter((e, i) => {
+      const tooLong = e.content.length > 100_000 || e.author.length > 2000 || e.origin.source.length > 4096 || e.origin.nativeId.length > 4096 || e.sourceVersion.length > 4096 || e.attachments.length > 100;
+      if (tooLong) rejected.push({ sourceId: e.origin.source, index: i, reason: `事件 ${e.origin.nativeId.slice(0, 200)} 的字段超过合同长度上限` });
+      return !tooLong;
+    });
+    return {
+      events: events.map((e) => ({ ...e, origin: { ...e.origin }, attachments: e.attachments.map((a) => ({ ...a })) })),
+      rejected,
+      failures: out.failures,
+    };
+  }
+  /** 经输出渠道外发:同一 actionId 由内核按 B1/B2 记账,已确认复用回执,结果未知时 B2 不再发。 */
+  async send(id: string, actionId: string, payload: string) {
+    const r = await this.d.runtime.send(this.target(id, "outbound-channel"), actionId, payload);
+    if (r.ok) return { state: r.state, receiptId: r.receipt.receiptId, deduplicated: r.deduplicated, reason: null, detail: null };
+    return { state: r.state, receiptId: null, deduplicated: false, reason: r.reason, detail: r.detail.slice(0, 2000) };
+  }
+  close() {
+    this.d.runtime.close();
   }
   /** 已启用插件声明的 slash 命令。 */
   commands(): SlashCommand[] {

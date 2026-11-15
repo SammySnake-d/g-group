@@ -7,7 +7,7 @@ import test from "node:test";
 import { inspect } from "node:util";
 import { BLOCK_LABELS, type BlockNo, type RoundBlock, type RoundInput } from "@g-group/kernel";
 import { createPiContactMind, PiContactMindError, type PiContactMindOptions, RoundAbortedError, renderBlock } from "./mind.ts";
-import { PI_CONTACT_TOOL_NAMES } from "./tools.ts";
+import { PI_CONTACT_TOOL_NAMES, parseToolCall, TOOL_DECLARATIONS } from "./tools.ts";
 
 const KEY = "sk-test-SECRET-7f3a9c";
 const MODEL = "test-model-1";
@@ -85,7 +85,7 @@ const live = () => new AbortController().signal;
 const texts = (c: string | Block[]) => (typeof c === "string" ? [c] : c.map((b) => b.text));
 const until = async (cond: () => boolean) => { while (!cond()) await new Promise((r) => setTimeout(r, 5)); };
 
-test("首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有七个具名工具", async () => {
+test("首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有十三个具名工具(含 read_quote_parent、progress_rerun)", async () => {
   const fake = fakeAnthropic([{ text: "看过了,不用动作" }]);
   try {
     const out = await createPiContactMind(opts(fake)).round(input("r1"), live());
@@ -98,7 +98,7 @@ test("首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2�
     assert.deepEqual(body.messages.map((m) => ({ role: m.role, texts: texts(m.content) })), [
       { role: "user", texts: [2, 3, 4, 5].map((n) => `<block n="${n}" label="${BLOCK_LABELS[n as BlockNo]}">\nr1-第${n}块内容\n</block>`) },
     ]);
-    assert.deepEqual(body.tools?.map((t) => t.name), ["reply", "dispatch_compute", "commit", "forward", "deliver", "stop", "update_state_note"]);
+    assert.deepEqual(body.tools?.map((t) => t.name), ["reply", "dispatch_compute", "commit", "forward", "deliver", "stop", "verdict", "update_state_note", "remember", "memory_feedback", "read_memory", "read_quote_parent", "progress_rerun"]);
     assert.deepEqual([...PI_CONTACT_TOOL_NAMES], body.tools?.map((t) => t.name));
     assert.equal(renderBlock(blocks("r1")[3]!), `<block n="4" label="新消息">\nr1-第4块内容\n</block>`);
   } finally {
@@ -359,4 +359,120 @@ test("第 1 块 cacheBreakpoint 为 false 时请求里不设缓存断点", async
   } finally {
     await fake.close();
   }
+});
+
+// AC-56 / AC-28:联系人把用户对交付的普通回复转成验收结论的工具 verdict。只校验形状,来源语义由宿主核对。
+test("verdict 工具:通过与修改意见都登记成 verdict 动作,修改意见可省略", () => {
+  assert.ok(PI_CONTACT_TOOL_NAMES.includes("verdict"));
+  assert.deepEqual(parseToolCall("verdict", { taskId: "t-1", sourceSeq: 9, verdict: "accept" }), {
+    ok: true,
+    value: { kind: "action", action: { kind: "verdict", taskId: "t-1", sourceSeq: 9, verdict: "accept", feedback: null } },
+  });
+  assert.deepEqual(parseToolCall("verdict", { taskId: "t-1", sourceSeq: 10, verdict: "revise", feedback: "标题加粗" }), {
+    ok: true,
+    value: { kind: "action", action: { kind: "verdict", taskId: "t-1", sourceSeq: 10, verdict: "revise", feedback: "标题加粗" } },
+  });
+  const decl = TOOL_DECLARATIONS.find((d) => d.name === "verdict")!;
+  assert.deepEqual(decl.parameters, {
+    type: "object",
+    properties: {
+      taskId: { type: "string", minLength: 1, description: "被验收的任务 id" },
+      sourceSeq: { type: "integer", minimum: 0, description: "用户表达通过或修改意见的那条消息的 seq(必须是提出者本人在交付之后发的)" },
+      verdict: { type: "string", enum: ["accept", "revise"], description: "accept:用户明确说通过;revise:用户要改" },
+      feedback: { type: ["string", "null"], minLength: 1, description: "revise 时用户要改什么(原话);accept 省略" },
+    },
+    required: ["taskId", "sourceSeq", "verdict"],
+    additionalProperties: false,
+  });
+});
+
+test("verdict 工具:应失败的输入——结论不是 accept/revise、缺来源、来源不是整数——都判参数错误", () => {
+  assert.deepEqual(parseToolCall("verdict", { taskId: "t-1", sourceSeq: 9, verdict: "maybe" }), { ok: false, why: "verdict 只能是 accept 或 revise" });
+  assert.deepEqual(parseToolCall("verdict", { taskId: "t-1", verdict: "accept" }), { ok: false, why: "缺字段 sourceSeq" });
+  assert.deepEqual(parseToolCall("verdict", { taskId: "t-1", sourceSeq: 1.5, verdict: "accept" }), { ok: false, why: "sourceSeq 必须是非负整数" });
+});
+
+// ---------------------------------------------------------------- 记忆工具(D25,AC-42)
+
+test("remember 与 memory_feedback 登记成 remember / memory-use 动作;参数形状不对(锚点为空、关系不在枚举、good 不是布尔)不登记", async () => {
+  const fake = fakeAnthropic([
+    {
+      calls: [
+        { name: "remember", input: { roomId: "g1", sourceSeq: 12, title: "审查人", text: "PR 审查改交 Codex", anchors: ["room:g1", "tool:review"], quote: "审查改交 Codex", relation: "change", target: "m-1" } },
+        { name: "remember", input: { roomId: "g1", title: "风格", text: "先给结论", anchors: ["room:g1"] } },
+        { name: "memory_feedback", input: { id: "m-2", good: false, note: "走错路" } },
+        { name: "remember", input: { roomId: "g1", title: "x", text: "y", anchors: [] } },
+        { name: "remember", input: { roomId: "g1", title: "x", text: "y", anchors: ["room:g1"], relation: "替换" } },
+        { name: "memory_feedback", input: { id: "m-2", good: "no" } },
+      ],
+    },
+    { text: "完" },
+  ]);
+  try {
+    const out = await createPiContactMind(opts(fake)).round(input("r1"), live());
+    assert.deepEqual(out.actions, [
+      { kind: "remember", roomId: "g1", sourceSeq: 12, title: "审查人", text: "PR 审查改交 Codex", anchors: ["room:g1", "tool:review"], quote: "审查改交 Codex", relation: "change", target: "m-1" },
+      { kind: "remember", roomId: "g1", sourceSeq: null, title: "风格", text: "先给结论", anchors: ["room:g1"], quote: null, relation: null, target: null },
+      { kind: "memory-use", id: "m-2", good: false, note: "走错路" },
+    ]);
+    const results = fake.seen[1]!.body.messages[2]!.content as Block[];
+    assert.deepEqual(results.map((b) => b.is_error === true), [false, false, false, true, true, true]);
+  } finally {
+    await fake.close();
+  }
+});
+
+test("read_memory 在本轮内经宿主给的读取口取全文,结果作为工具结果进下一次请求;没有这条或没给读取口时以错误结果告知", async () => {
+  const fake = fakeAnthropic([{ calls: [{ name: "read_memory", input: { id: "m-7" } }, { name: "read_memory", input: { id: "m-无" } }] }, { text: "读到了" }, { calls: [{ name: "read_memory", input: { id: "m-7" } }] }, { text: "没读到" }]);
+  try {
+    const asked: string[] = [];
+    const tools = { readMemory: async (id: string) => { asked.push(id); return id === "m-7" ? "〔记忆 m-7〕部署前先跑测试" : null; } };
+    const out = await createPiContactMind(opts(fake)).round(input("r1"), live(), tools);
+    assert.deepEqual(out.actions, [], "读取不是动作");
+    assert.deepEqual(asked, ["m-7", "m-无"]);
+    const results = fake.seen[1]!.body.messages[2]!.content as Block[];
+    assert.match(JSON.stringify(results[0]!.content), /部署前先跑测试/);
+    assert.equal(results[0]!.is_error === true, false);
+    assert.equal(results[1]!.is_error, true);
+    await createPiContactMind(opts(fake)).round(input("r2"), live());
+    const none = fake.seen[3]!.body.messages[2]!.content as Block[];
+    assert.equal(none[0]!.is_error, true);
+  } finally {
+    await fake.close();
+  }
+});
+
+test("记忆工具参数在登记口逐字段校验(不只靠模型侧 schema):锚点为空或含空白、关系不在枚举、good 不是布尔都判参数错误", () => {
+  assert.deepEqual(parseToolCall("remember", { roomId: "g1", title: "x", text: "y", anchors: [] }), { ok: false, why: "anchors 必须是非空字符串组成的非空数组" });
+  assert.deepEqual(parseToolCall("remember", { roomId: "g1", title: "x", text: "y", anchors: ["room:g1", " "] }), { ok: false, why: "anchors 必须是非空字符串组成的非空数组" });
+  assert.deepEqual(parseToolCall("remember", { roomId: "g1", title: "x", text: "y", anchors: ["room:g1"], relation: "替换" }), { ok: false, why: "relation 只能是 change / refine / conflict" });
+  assert.deepEqual(parseToolCall("memory_feedback", { id: "m-1", good: "no" }), { ok: false, why: "good 必须是布尔值" });
+  assert.deepEqual(parseToolCall("read_memory", { id: "m-1" }), { ok: true, value: { kind: "read", id: "m-1" } });
+  const ok = parseToolCall("remember", { roomId: "g1", title: "x", text: "y", anchors: ["room:g1"], relation: "refine", target: "m-1" });
+  assert.deepEqual(ok, { ok: true, value: { kind: "action", action: { kind: "remember", roomId: "g1", sourceSeq: null, title: "x", text: "y", anchors: ["room:g1"], quote: null, relation: "refine", target: "m-1" } } });
+});
+
+test("read_quote_parent 经宿主的本轮查询口往上读一级,结果作为工具结果;参数形状不对不调用", async () => {
+  const fake = fakeAnthropic([{ calls: [{ name: "read_quote_parent", input: { roomId: "g1", seq: 7 } }, { name: "read_quote_parent", input: { roomId: "g1", seq: -1 } }] }, { text: "好" }]);
+  try {
+    const asked: [string, number][] = [];
+    const tools = { readMemory: async () => null, readQuoteParent: async (roomId: string, seq: number) => { asked.push([roomId, seq]); return "L1 #6 · 我 · t · via #7 · inline\n父句"; } };
+    const out = await createPiContactMind(opts(fake)).round(input("r1"), live(), tools);
+    assert.deepEqual(out.actions, []);
+    assert.deepEqual(asked, [["g1", 7]]);
+    const results = fake.seen[1]!.body.messages[2]!.content as Block[];
+    assert.match(JSON.stringify(results[0]!.content), /父句/);
+    assert.deepEqual(results.map((b) => b.is_error === true), [false, true]);
+    assert.deepEqual(parseToolCall("read_quote_parent", { roomId: "g1", seq: 7 }), { ok: true, value: { kind: "read-quote", roomId: "g1", seq: 7 } });
+  } finally {
+    await fake.close();
+  }
+});
+
+test("AC-45 forward 可带来源消息 seq:用户中途改条件时登记 sourceSeq,宿主据此升版;不带就是联系人自己的话", () => {
+  assert.deepEqual(parseToolCall("forward", { taskId: "t-1", text: "改成大阪", sourceSeq: 7 }), { ok: true, value: { kind: "action", action: { kind: "forward", taskId: "t-1", text: "改成大阪", sourceSeq: 7 } } });
+  const plain = parseToolCall("forward", { taskId: "t-1", text: "继续" });
+  assert.ok(plain.ok && plain.value.kind === "action");
+  assert.equal(Object.hasOwn(plain.value.action, "sourceSeq"), false);
+  assert.equal(parseToolCall("forward", { taskId: "t-1", text: "x", sourceSeq: -1 }).ok, false);
 });

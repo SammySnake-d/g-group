@@ -18,12 +18,12 @@ function StateIcon({ state }: { state: ComputeState }) {
 }
 
 export function SessionFooter({ state, elapsed, turns, calls, agents, background, owner, dm, readonly = true, onTalk }: {
-  state: ComputeState; elapsed: string; turns: number; calls: number; agents: number; background: number; owner: string; dm: boolean; readonly?: boolean; onTalk?: () => void
+  state: ComputeState; elapsed: string; turns: number; /** 不知道(后端没有工具调用级记录)就不给,状态行不写调用数 */ calls?: number; agents: number; background: number; owner: string; dm: boolean; readonly?: boolean; onTalk?: () => void
 }) {
   const facts = [
     { key: 'time', text: elapsed },
     { key: 'turns', text: COPY.turns(turns) },
-    { key: 'calls', text: COPY.calls(calls) },
+    ...(calls !== undefined ? [{ key: 'calls', text: COPY.calls(calls) }] : []),
     ...(agents > 0 ? [{ key: 'agents', text: COPY.agents(agents) }] : []),
     ...(background > 0 && state.key !== 'stopping' ? [{ key: 'bg', text: COPY.backgroundN(background) }] : []),
   ]

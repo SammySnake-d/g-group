@@ -1,0 +1,5 @@
+    Error: expect(locator).toHaveCount(expected) failed
+    Expected: 1
+    Received: 0
+    > 83 |       await expect(rows(win).filter({ hasText: "接了任务:写 hello.txt" }).and(win.locator('[data-msg]:not([data-from="me"])'))).toHaveCount(1);
+  1 failed

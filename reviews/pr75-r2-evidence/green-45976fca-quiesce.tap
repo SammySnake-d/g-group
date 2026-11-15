@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: 停止确认:脱离进程组(setsid)且忽略 SIGTERM 的子进程也被找出来关掉,都退出后才返回 ok
+ok 1 - 停止确认:脱离进程组(setsid)且忽略 SIGTERM 的子进程也被找出来关掉,都退出后才返回 ok
+  ---
+  duration_ms: 566.000917
+  type: 'test'
+  ...
+# Subtest: 停止确认的已知边界:停止前父子链就断了的守护进程(双 fork)找不到,quiesce 照样 ok,守护进程仍在
+ok 2 - 停止确认的已知边界:停止前父子链就断了的守护进程(双 fork)找不到,quiesce 照样 ok,守护进程仍在
+  ---
+  duration_ms: 507.433042
+  type: 'test'
+  ...
+# Subtest: 还在运行或未知的 Compute 不做停止确认
+ok 3 - 还在运行或未知的 Compute 不做停止确认
+  ---
+  duration_ms: 479.603333
+  type: 'test'
+  ...
+# Subtest: 纯函数:后代按父子链找(含脱组的),同组成员也算,僵尸不算;pid 复用到别的进程组不算还活着;读不到进程表给 null 不给空表
+ok 4 - 纯函数:后代按父子链找(含脱组的),同组成员也算,僵尸不算;pid 复用到别的进程组不算还活着;读不到进程表给 null 不给空表
+  ---
+  duration_ms: 29.957416
+  type: 'test'
+  ...
+# Subtest: 纯函数:ps 读不到时按 pgrep 逐层找后代与同组成员;pgrep 本身失败给 null(不能当成没有子进程)
+ok 5 - 纯函数:ps 读不到时按 pgrep 逐层找后代与同组成员;pgrep 本身失败给 null(不能当成没有子进程)
+  ---
+  duration_ms: 29.622958
+  type: 'test'
+  ...
+# Subtest: CORR-001:停止前快照到的子进程随后换进程组但仍存活,不能按 pgid 变化确认退出
+ok 6 - CORR-001:停止前快照到的子进程随后换进程组但仍存活,不能按 pgid 变化确认退出
+  ---
+  duration_ms: 28.507583
+  type: 'test'
+  ...
+# Subtest: CORR-001:真实时序中父进程退出、子进程 setsid 仍活着时停止确认不能返回 ok
+ok 7 - CORR-001:真实时序中父进程退出、子进程 setsid 仍活着时停止确认不能返回 ok
+  ---
+  duration_ms: 310.666041
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3546.764416

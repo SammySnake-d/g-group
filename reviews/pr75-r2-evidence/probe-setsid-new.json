@@ -1,0 +1,100 @@
+{
+ "summary": {
+  "variant": "setsid",
+  "trials": 3,
+  "okTrue": 3,
+  "okFalse": 0,
+  "defects": 0,
+  "errors": 0,
+  "survivorsTotal": 0
+ },
+ "runs": [
+  {
+   "variant": "setsid",
+   "trial": 0,
+   "root": 39299,
+   "child": 39305,
+   "before": [
+    {
+     "pid": 39305,
+     "ppid": 39299,
+     "pgid": 39299,
+     "stat": "S",
+     "identity": "Sun Nov 15 21:58:00 2026"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "39305     1 39305 Ss   Sun Nov 15 21:58:00 2026",
+   "result": {
+    "ok": true,
+    "killed": 1
+   },
+   "registered": 1,
+   "survivors": [],
+   "childAlive": false,
+   "defect": false,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "setsid",
+   "trial": 1,
+   "root": 39418,
+   "child": 39424,
+   "before": [
+    {
+     "pid": 39424,
+     "ppid": 39418,
+     "pgid": 39418,
+     "stat": "S",
+     "identity": "Sun Nov 15 21:58:00 2026"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "39424     1 39424 Ss   Sun Nov 15 21:58:00 2026",
+   "result": {
+    "ok": true,
+    "killed": 1
+   },
+   "registered": 1,
+   "survivors": [],
+   "childAlive": false,
+   "defect": false,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "setsid",
+   "trial": 2,
+   "root": 39537,
+   "child": 39555,
+   "before": [
+    {
+     "pid": 39555,
+     "ppid": 39537,
+     "pgid": 39537,
+     "stat": "S",
+     "identity": "Sun Nov 15 21:58:00 2026"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "39555     1 39555 Ss   Sun Nov 15 21:58:00 2026",
+   "result": {
+    "ok": true,
+    "killed": 1
+   },
+   "registered": 1,
+   "survivors": [],
+   "childAlive": false,
+   "defect": false,
+   "leftAfterCleanup": 0
+  }
+ ]
+}

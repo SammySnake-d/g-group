@@ -1,0 +1,67 @@
+RESULT=0
+  12 passed (2.9m)
+[WebServer] (node:1549708) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:1549721) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 49 tests using 1 worker
+
+(node:1549739) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/49] [renderer] › e2e/compute.ui.spec.ts:15:5 › Compute 卡与 harness 会话 light › 消息行点「打开会话」→ 分屏出现会话页,工具组默认折叠写「N 个调用」,展开看到每次调用与输入输出;只读、没有输入框
+[2/49] [renderer] › e2e/compute.ui.spec.ts:78:5 › Compute 卡与 harness 会话 light › 「更多」菜单里也有「打开会话」;分屏已开在别的页签时也会切回「会话」;点整行默认就是会话页
+[3/49] [renderer] › e2e/compute.ui.spec.ts:93:5 › Compute 卡与 harness 会话 light › 键盘走得通:Tab 到「打开会话」按回车,分屏打开会话页
+[4/49] [renderer] › e2e/compute.ui.spec.ts:101:5 › Compute 卡与 harness 会话 light › Codex 会话:分屏标 Codex;子代理组汇总已回来/失败;私聊派的活只读条写「回私聊」
+[5/49] [renderer] › e2e/compute.ui.spec.ts:115:5 › Compute 卡与 harness 会话 light › 完整过程面板里是 Compute 卡:进行中标签、做了什么、步骤与后台任务;卡头「打开会话」进分屏会话页
+[6/49] [renderer] › e2e/compute.ui.spec.ts:138:5 › Compute 卡与 harness 会话 light › 完整过程面板里失败的卡:「出错了」+ 一条细线提示条(不是红底块),重试原地可点
+[7/49] [renderer] › e2e/compute.ui.spec.ts:160:5 › Compute 卡与 harness 会话 light › 停止照 mirasim(v3.20 §8.1 已定 16):停的过程中卡上写「正在停止…」,都确认退出才「已停止」并注明范围
+[8/49] [renderer] › e2e/compute.ui.spec.ts:191:5 › Compute 卡与 harness 会话 light › 每个演示 Compute 在分屏里都能打开会话,对话流不空
+[9/49] [renderer] › e2e/compute.ui.spec.ts:15:5 › Compute 卡与 harness 会话 dark › 消息行点「打开会话」→ 分屏出现会话页,工具组默认折叠写「N 个调用」,展开看到每次调用与输入输出;只读、没有输入框
+[10/49] [renderer] › e2e/compute.ui.spec.ts:78:5 › Compute 卡与 harness 会话 dark › 「更多」菜单里也有「打开会话」;分屏已开在别的页签时也会切回「会话」;点整行默认就是会话页
+[11/49] [renderer] › e2e/compute.ui.spec.ts:93:5 › Compute 卡与 harness 会话 dark › 键盘走得通:Tab 到「打开会话」按回车,分屏打开会话页
+[12/49] [renderer] › e2e/compute.ui.spec.ts:101:5 › Compute 卡与 harness 会话 dark › Codex 会话:分屏标 Codex;子代理组汇总已回来/失败;私聊派的活只读条写「回私聊」
+[13/49] [renderer] › e2e/compute.ui.spec.ts:115:5 › Compute 卡与 harness 会话 dark › 完整过程面板里是 Compute 卡:进行中标签、做了什么、步骤与后台任务;卡头「打开会话」进分屏会话页
+[14/49] [renderer] › e2e/compute.ui.spec.ts:138:5 › Compute 卡与 harness 会话 dark › 完整过程面板里失败的卡:「出错了」+ 一条细线提示条(不是红底块),重试原地可点
+[15/49] [renderer] › e2e/compute.ui.spec.ts:160:5 › Compute 卡与 harness 会话 dark › 停止照 mirasim(v3.20 §8.1 已定 16):停的过程中卡上写「正在停止…」,都确认退出才「已停止」并注明范围
+[16/49] [renderer] › e2e/compute.ui.spec.ts:191:5 › Compute 卡与 harness 会话 dark › 每个演示 Compute 在分屏里都能打开会话,对话流不空
+[17/49] [renderer] › e2e/shell-flow.ui.spec.ts:9:1 › 提示条:右键置顶会话出现「已置顶」;多选删除后点撤销,消息回到原位置
+[18/49] [renderer] › e2e/shell-flow.ui.spec.ts:32:1 › 私聊回退:确认框写明撤下几条,Esc 只关确认框;确认后撤下,点恢复全部回来
+[19/49] [renderer] › e2e/shell-flow.ui.spec.ts:59:1 › Esc 逐层退:先收右侧浮层,再收分栏
+[20/49] [renderer] › e2e/shell-flow.ui.spec.ts:72:1 › @ 选人:打 @ 弹出,第一项是 Helper;方向键移动、回车填进输入框,焦点一直在输入框
+[21/49] [renderer] › e2e/shell-flow.ui.spec.ts:90:3 › 提示条和 / 命令菜单跟着主题 token(light)
+[22/49] [renderer] › e2e/shell-flow.ui.spec.ts:90:3 › 提示条和 / 命令菜单跟着主题 token(dark)
+[23/49] [renderer] › e2e/shell-flow.ui.spec.ts:108:1 › 键盘走通:分隔条 Tab 聚焦后 ←/→ 调宽并夹在范围里;会话列表 ↑/↓ 在行间移动焦点
+[24/49] [renderer] › e2e/shell-flow.ui.spec.ts:127:1 › 定时、插件、命令经接口合同:没连后端时走演示服务,建定时、删定时、停用插件、打 / 拉命令清单都有调用且都被接受
+[25/49] [renderer] › e2e/shell-look.ui.spec.ts:43:5 › 壳的观感 light › 左侧导航和聊天区是同一张纸,导航图标看得清
+[26/49] [renderer] › e2e/shell-look.ui.spec.ts:52:5 › 壳的观感 light › 进群就停在最底部:提问卡等内容展开变高后仍贴底,不冒出「回到最新」
+[27/49] [renderer] › e2e/shell-look.ui.spec.ts:61:5 › 壳的观感 light › 回到最新:阅读栏居中、紧贴输入框上方,点了回到底部
+[28/49] [renderer] › e2e/shell-look.ui.spec.ts:43:5 › 壳的观感 dark › 左侧导航和聊天区是同一张纸,导航图标看得清
+[29/49] [renderer] › e2e/shell-look.ui.spec.ts:52:5 › 壳的观感 dark › 进群就停在最底部:提问卡等内容展开变高后仍贴底,不冒出「回到最新」
+[30/49] [renderer] › e2e/shell-look.ui.spec.ts:61:5 › 壳的观感 dark › 回到最新:阅读栏居中、紧贴输入框上方,点了回到底部
+[31/49] [renderer] › e2e/slash.ui.spec.ts:20:1 › 打 / 弹出命令菜单:贴着输入框上沿、左对齐;每行有 /名字、中文名、说明、来源;没挂的插件灰显写原因
+[32/49] [renderer] › e2e/slash.ui.spec.ts:46:1 › 私聊里只出私聊能用的命令:群命令不出现,私聊对象声明的命令出现
+[33/49] [renderer] › e2e/slash.ui.spec.ts:55:1 › 继续打 sch 或 定时 过滤出 schedule;别名 ketchup 找到 summary;没有匹配时说没有这个命令
+[34/49] [renderer] › e2e/slash.ui.spec.ts:74:1 › ↑↓ 和 Enter 选中 schedule 后输入框变成 /schedule ,高亮当前该填的参数,发送旁说明缺什么;填完能执行
+[35/49] [renderer] › e2e/slash.ui.spec.ts:124:1 › Esc 关掉菜单,再打字重新弹出;工具栏 / 按钮也能打开同一个菜单
+[36/49] [renderer] › e2e/slash.ui.spec.ts:144:1 › 网址、路径、分数里的 / 不弹菜单
+[37/49] [renderer] › e2e/slash.ui.spec.ts:156:1 › /todo 某事 回车后群清单里多出这一项
+[38/49] [renderer] › e2e/slash.ui.spec.ts:167:1 › /summary 回车直接触发总结;/ketchup 是同一条命令
+[39/49] [renderer] › e2e/slash.ui.spec.ts:180:1 › 插件命令:飞书打开勾选外部消息页;Gmail 如实说要等后端、草稿留着;没挂的插件手打也执行不了
+[40/49] [renderer] › e2e/slash.ui.spec.ts:206:1 › /handoff @助手 事:发出一条 @ 它的消息;@ 不在群里的人报错不发
+[41/49] [renderer] › e2e/slash.ui.spec.ts:218:1 › 引用条:卡片按内容收缩,× 紧挨引用文字;多条各占一行;空输入框 Backspace / Esc 去掉最后一条;切会话回来还在
+[42/49] [renderer] › e2e/slash.ui.spec.ts:257:1 › 外部来源的引用挂在引用条上,标「不可信·外部」;入口是输入框左下角的 +
+[43/49] [renderer] › e2e/slash.ui.spec.ts:272:1 › 输入框高度自适应:空时一行(< 90px),多行变高,超过 8 行后在框里滚动
+[44/49] [renderer] › e2e/walk.ui.spec.ts:18:5 › 走查 light › W1 聊天主界面 → 群资料各页签
+[45/49] [renderer] › e2e/walk.ui.spec.ts:32:5 › 走查 light › W2 通讯录 → 联系人工作台各页签
+[46/49] [renderer] › e2e/walk.ui.spec.ts:46:5 › 走查 light › W3 文件 / 进展全景 / 插件 / 设置
+[47/49] [renderer] › e2e/walk.ui.spec.ts:18:5 › 走查 dark › W1 聊天主界面 → 群资料各页签
+[48/49] [renderer] › e2e/walk.ui.spec.ts:32:5 › 走查 dark › W2 通讯录 → 联系人工作台各页签
+[49/49] [renderer] › e2e/walk.ui.spec.ts:46:5 › 走查 dark › W3 文件 / 进展全景 / 插件 / 设置
+  49 passed (3.6m)
+510a9f7863d52c67f628731bd2199d822c4dc102205dbf151f9be2ecac951d25  /tmp/loop-final-46abb343.tgz
+46abb343a2e7cc9b27cdf534f73310a7b3cd2429
+[exit status 0]

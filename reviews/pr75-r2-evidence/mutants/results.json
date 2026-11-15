@@ -1,0 +1,144 @@
+{
+ "head": "45976fca3c1311451acf17c915509d724bf719f1",
+ "tests": [
+  "packages/adapter-cc-compute/src/quiesce.test.ts",
+  "packages/adapter-cc-compute/src/resident-quiesce.test.ts"
+ ],
+ "clean": {
+  "exit": 0,
+  "tests": 11,
+  "pass": 11,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "todo": 0,
+  "failed": []
+ },
+ "mutants": [
+  {
+   "id": "MA-unknown-identity-as-gone",
+   "file": "packages/adapter-cc-compute/src/procgroup.ts",
+   "why": "启动身份读不到时当成已退出",
+   "matches": 1,
+   "exit": 0,
+   "tests": 11,
+   "pass": 11,
+   "fail": 0,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [],
+   "verdict": "SURVIVED"
+  },
+  {
+   "id": "MB-unreadable-table-as-empty",
+   "file": "packages/adapter-cc-compute/src/stop-confirm.ts",
+   "why": "确认循环里读不到进程表时当成都退出了",
+   "matches": 1,
+   "exit": 0,
+   "tests": 11,
+   "pass": 11,
+   "fail": 0,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [],
+   "verdict": "SURVIVED"
+  },
+  {
+   "id": "MC-ignore-identity",
+   "file": "packages/adapter-cc-compute/src/procgroup.ts",
+   "why": "不比对启动身份(PID 复用会误杀)",
+   "matches": 1,
+   "exit": 1,
+   "tests": 11,
+   "pass": 10,
+   "fail": 1,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "纯函数:后代按父子链找(含脱组的),同组成员也算,僵尸不算;pid 复用到别的进程组不算还活着;读不到进程表给 null 不给空表"
+   ],
+   "verdict": "KILLED"
+  },
+  {
+   "id": "MD-pgid-again",
+   "file": "packages/adapter-cc-compute/src/procgroup.ts",
+   "why": "回到第 1 轮缺陷:进程组变了就当成退出",
+   "matches": 1,
+   "exit": 1,
+   "tests": 11,
+   "pass": 9,
+   "fail": 2,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "CORR-001:停止前快照到的子进程随后换进程组但仍存活,不能按 pgid 变化确认退出",
+    "CORR-001:真实时序中父进程退出、子进程 setsid 仍活着时停止确认不能返回 ok"
+   ],
+   "verdict": "KILLED"
+  },
+  {
+   "id": "ME-unknown-ignored-in-confirm",
+   "file": "packages/adapter-cc-compute/src/stop-confirm.ts",
+   "why": "确认循环忽略身份无法核对的进程",
+   "matches": 1,
+   "exit": 0,
+   "tests": 11,
+   "pass": 11,
+   "fail": 0,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [],
+   "verdict": "SURVIVED"
+  },
+  {
+   "id": "MF-no-kill",
+   "file": "packages/adapter-cc-compute/src/stop-confirm.ts",
+   "why": "只记数不真的发 SIGKILL",
+   "matches": 1,
+   "exit": 1,
+   "tests": 11,
+   "pass": 7,
+   "fail": 4,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [
+    "停止确认:脱离进程组(setsid)且忽略 SIGTERM 的子进程也被找出来关掉,都退出后才返回 ok",
+    "CORR-001:真实时序中父进程退出、子进程 setsid 仍活着时停止确认不能返回 ok",
+    "停止确认:停止前起的后代另建进程组且忽略 SIGTERM,没退出前不回报;找出来关掉、都退出后才回报 ok 与关掉的数量",
+    "这一轮失败但常驻进程还活着:停止确认结束常驻进程并关掉它的后代,都退出才回报;之后续接用同一会话 id 恢复"
+   ],
+   "verdict": "KILLED"
+  },
+  {
+   "id": "MG-zombie-alive",
+   "file": "packages/adapter-cc-compute/src/procgroup.ts",
+   "why": "僵尸进程当成还活着",
+   "matches": 1,
+   "exit": 0,
+   "tests": 11,
+   "pass": 11,
+   "fail": 0,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "failed": [],
+   "verdict": "SURVIVED"
+  }
+ ],
+ "clean_after": {
+  "exit": 0,
+  "tests": 11,
+  "pass": 11,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "todo": 0,
+  "failed": []
+ }
+}

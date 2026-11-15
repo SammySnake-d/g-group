@@ -1,0 +1,36 @@
+# AC-51 经宿主的真实端到端:Host + claudeCompute(常驻适配器,真实 Claude Code 2.1.319 (Claude Code))+ 规则替身联系人脑子;2026-11-09 10:41:13 +0800 本机
+# 命令: node packages/server/scripts/e2e-model-hotswap.ts "ai-iisbo/deepseek-v4.1-flash" "ai-iisbo/[乾坤按量]gpt-6.1-terra"
+# 网关地址与令牌只经环境变量交给 Claude Code,未打印;网关核对只摘 ~/.config/magpie/usage.jsonl 里本次会话的模型与状态字段。
+# 注意:这个网关端点把所有请求实际交给 claude-opus-5-5(served 字段),所以证明的是 Claude Code 发出的请求模型跟上了,不证明上游真按那个模型服务。下面是运行输出原文。
+[0.0s] 模型 A=ai-iisbo/deepseek-v4.1-flash B=ai-iisbo/[乾坤按量]gpt-6.1-terra;联系人 Compute 继承全局(compute 继承全局 → 全局 Compute 默认 ai-iisbo/deepseek-v4.1-flash)
+[1.1s] compute 事件 {"kind":"started","sessionId":"92c2d8eb-ca64-40c9-b8c9-3b2749bed533","pid":7529,"model":"ai-iisbo/deepseek-v4.1-flash"}
+[13.8s] compute 事件 {"kind":"completed","model":"ai-iisbo/deepseek-v4.1-flash","models":["ai-iisbo/deepseek-v4.1-flash"]}
+[13.9s] 第 1 轮结束,任务 t-mw8nlcuo-1 状态 T5_InReview
+[13.9s] 用户把联系人的 Compute 改成 ai-iisbo/[乾坤按量]gpt-6.1-terra;解析链:compute 单独指定 ai-iisbo/[乾坤按量]gpt-6.1-terra
+[21.9s] compute 事件 {"kind":"completed","model":"ai-iisbo/[乾坤按量]gpt-6.1-terra","models":["ai-iisbo/[乾坤按量]gpt-6.1-terra"]}
+[21.9s] started 事件数=1;会话=92c2d8eb-ca64-40c9-b8c9-3b2749bed533;pid=7529
+[21.9s] completed 事件实际模型:[["ai-iisbo/deepseek-v4.1-flash"],["ai-iisbo/[乾坤按量]gpt-6.1-terra"]]
+[21.9s] code.txt 内容="PLUM-7731"
+[21.9s] 任务启动快照={"harness":"claude-code","model":"ai-iisbo/deepseek-v4.1-flash","effort":"low","vendor":"deepseek"}
+[21.9s] 任务尝试账本=[[1,"start","ai-iisbo/deepseek-v4.1-flash","low"],[2,"turn","ai-iisbo/[乾坤按量]gpt-6.1-terra","low"]]
+[21.9s] 累积厂商=["deepseek","openai"]
+[21.9s] 会话消息:
+  #1 user: 帮我记住暗号 PLUM-7731,然后在当前目录写一个 hello.txt,内容是 ok,写好就汇报完成
+  #2 contact: 接了任务:记住暗号 PLUM-7731,然后在当前目录写一个 hello.txt,内容是 
+  #3 contact: 好的,我安排 Compute 去记住暗号 PLUM-7731,然后在当前目录写一个 hello.txt,内容是 ok,写好就汇报完成,有进度告诉你。
+  #4 contact: 做完了:我在当前目录写好了 hello.txt,内容是 ok(结尾没有换行),读出来核对过是对的。暗号 PLUM-7731 也记住了。完成情况已经向宿主汇报。
+  #5 user: 退回:把我让你记住的暗号写进当前目录的 code.txt,只写暗号本身,写好汇报完成
+  #6 contact: 收到:退回:把我让你记住的暗号写进当前目录的 code.txt,只写暗号本身,写好汇报完成
+  #7 contact: 做完了:我在当前目录写好了 code.txt,里面只有暗号 PLUM-7731,读出来核对过是对的。完成情况已经向宿主汇报。
+
+== 网关用量日志中本次会话(92c2d8eb-ca64-40c9-b8c9-3b2749bed533)的请求,共 7 条 ==
+{"t":"2026-11-09T10:40:03.022359+08:00","req":"ai-iisbo/deepseek-v4.1-flash","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"low","status":200,"stop":"tool_use"}
+{"t":"2026-11-09T10:40:10.924347+08:00","req":"ai-iisbo/deepseek-v4.1-flash","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"low","status":200,"stop":"tool_use"}
+{"t":"2026-11-09T10:40:13.779865+08:00","req":"ai-iisbo/deepseek-v4.1-flash","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"low","status":200,"stop":"end_turn"}
+{"t":"2026-11-09T10:40:15.743611+08:00","req":"ai-iisbo/[乾坤按量]gpt-6.1-terra","model":"claude-opus-5-5","served":"claude-opus-5-5","status":200,"stop":"max_tokens"}
+{"t":"2026-11-09T10:40:16.779315+08:00","req":"ai-iisbo/[乾坤按量]gpt-6.1-terra","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"low","status":200,"stop":"tool_use"}
+{"t":"2026-11-09T10:40:18.965134+08:00","req":"ai-iisbo/[乾坤按量]gpt-6.1-terra","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"low","status":200,"stop":"tool_use"}
+{"t":"2026-11-09T10:40:21.695902+08:00","req":"ai-iisbo/[乾坤按量]gpt-6.1-terra","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"low","status":200,"stop":"end_turn"}
+[22.1s] compute 事件 {"kind":"stopped"}
+[22.4s] 宿主关闭后 Claude Code 进程 7529 已退出;停止事件数=1
+[22.4s] 临时目录已删

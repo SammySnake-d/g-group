@@ -1,0 +1,29 @@
+# 云端 box3:Linux 6.8.0-142-generic,Node v24.21.0,在变基前的 e4127c5(红 86a28ee / 绿 1b579ae)上跑;变基到 89925a6 后插件相关源码与测试逐字未变(红 3594949 / 绿 81e37bf);同一轮全量:typecheck 0、lint 0、npm test 1310/1310
+# 原样:exit=0 失败 0 条 # tests 19 # pass 19 # fail 0
+✓ 杀死 不开权限模型(packages/server/src/plugin-runtime.ts) ← 插件在独立进程里运行:读包外的标记文件、写文件、起子进程都被拒,看不到宿主的环境变量 | rss-reader 示例插件:在隔离进程里按配置拉 RSS 与 Atom 订阅,宿主盖章成不可信外部事件 | webhook-out 示例插件:在隔离进程里 POST 到配置的地址拿回执;同一动作重发只认已有回执,不再请求 | webhook 接收端不回应:记结果未知并结束插件进程;B2 渠道之后拒绝自动重发 | 插件死循环超时被结束,宿主照常可用;下次调用重新起进程 | 插件进程崩溃、往标准输出写非 JSON、单行输出超过上限:都成受控失败,宿主仍可用 | 插件里没人接的拒绝、未捕获的异常、调 process.exit:只结束插件进程,这次外发记结果未知;重起后同一动作不自动重发 | 插件内存超过上限:只结束插件进程,这次拉取记失败,宿主照常;下次调用重新起进程 | 插件回应按请求 id 对上:旧 id、未知 id 的回应被丢弃;外发超时后才到的回执不改已落地的结果未知 | 插件交回 getter、Proxy 包装的数组和类实例:过了进程边界只剩 JSON 数据,宿主照常盖章 | 停用、改配置、卸载时结束旧插件进程;停用后调用被拒
+✓ 杀死 继承宿主环境变量(packages/server/src/plugin-runtime.ts) ← 插件在独立进程里运行:读包外的标记文件、写文件、起子进程都被拒,看不到宿主的环境变量
+✓ 杀死 给写文件权限(packages/server/src/plugin-runtime.ts) ← 插件在独立进程里运行:读包外的标记文件、写文件、起子进程都被拒,看不到宿主的环境变量
+✓ 杀死 不查符号链接(packages/server/src/plugin-runtime.ts) ← 插件包里有符号链接、入口不是 .mjs、或没有可执行入口时不启动
+✓ 杀死 不查 .mjs 入口(packages/server/src/plugin-runtime.ts) ← 插件包里有符号链接、入口不是 .mjs、或没有可执行入口时不启动
+✓ 杀死 超时不结束进程(packages/server/src/plugin-runtime.ts) ← webhook 接收端不回应:记结果未知并结束插件进程;B2 渠道之后拒绝自动重发 | 插件死循环超时被结束,宿主照常可用;下次调用重新起进程
+✓ 杀死 非 JSON 输出不当违规(packages/server/src/plugin-runtime.ts) ← 插件进程崩溃、往标准输出写非 JSON、单行输出超过上限:都成受控失败,宿主仍可用
+✓ 杀死 不限单行输出(两处检查都去掉)(packages/server/src/plugin-runtime.ts) ← 插件进程崩溃、往标准输出写非 JSON、单行输出超过上限:都成受控失败,宿主仍可用
+✓ 杀死 外发超时不留余量(进程先于内核超时)(packages/server/src/plugin-runtime.ts) ← webhook 接收端不回应:记结果未知并结束插件进程;B2 渠道之后拒绝自动重发 | 插件回应按请求 id 对上:旧 id、未知 id 的回应被丢弃;外发超时后才到的回执不改已落地的结果未知
+✓ 杀死 外发宽限不按参数(固定 200ms)(packages/server/src/plugin-runtime.ts) ← 插件回应按请求 id 对上:旧 id、未知 id 的回应被丢弃;外发超时后才到的回执不改已落地的结果未知
+✓ 杀死 不设堆上限(packages/server/src/plugin-runtime.ts) ← 插件内存超过上限:只结束插件进程,这次拉取记失败,宿主照常;下次调用重新起进程
+✓ 杀死 回应不按 id 对上(取最早的在途调用)(packages/server/src/plugin-runtime.ts) ← 插件回应按请求 id 对上:旧 id、未知 id 的回应被丢弃;外发超时后才到的回执不改已落地的结果未知
+✓ 杀死 插件进程吞掉没人接的拒绝与未捕获的异常(packages/server/runtime/plugin-runner.mjs) ← 插件里没人接的拒绝、未捕获的异常、调 process.exit:只结束插件进程,这次外发记结果未知;重起后同一动作不自动重发
+✓ 杀死 停用不结束进程(packages/server/src/plugins.ts) ← 停用、改配置、卸载时结束旧插件进程;停用后调用被拒
+✓ 杀死 改配置不结束进程(packages/server/src/plugins.ts) ← rss-reader 示例插件:在隔离进程里按配置拉 RSS 与 Atom 订阅,宿主盖章成不可信外部事件 | webhook-out 示例插件:在隔离进程里 POST 到配置的地址拿回执;同一动作重发只认已有回执,不再请求 | 停用、改配置、卸载时结束旧插件进程;停用后调用被拒
+✓ 杀死 卸载不结束进程(packages/server/src/plugins.ts) ← 停用、改配置、卸载时结束旧插件进程;停用后调用被拒
+✓ 杀死 停用后照样调用(packages/server/src/plugins.ts) ← 停用、改配置、卸载时结束旧插件进程;停用后调用被拒
+✓ 杀死 不核对 sha256(packages/server/src/plugins.ts) ← URL 安装:下载 tgz 包、核对 sha256、解包后照常校验清单与权限,来源记为 url
+✓ 杀死 下载不限大小(packages/server/src/plugins.ts) ← URL 安装拒绝不安全或不合格的包:绝对路径、上级目录、符号链接、硬链接、超过大小上限、解压炸开、不是 gzip、没有清单
+✓ 杀死 sha256 未给也标已核对(packages/server/src/plugins.ts) ← URL 安装:下载 tgz 包、核对 sha256、解包后照常校验清单与权限,来源记为 url
+✓ 杀死 临时目录不清(packages/server/src/plugins.ts) ← URL 安装:下载 tgz 包、核对 sha256、解包后照常校验清单与权限,来源记为 url | URL 安装拒绝不安全或不合格的包:绝对路径、上级目录、符号链接、硬链接、超过大小上限、解压炸开、不是 gzip、没有清单
+✓ 杀死 放行链接条目(packages/server/src/untar.ts) ← URL 安装拒绝不安全或不合格的包:绝对路径、上级目录、符号链接、硬链接、超过大小上限、解压炸开、不是 gzip、没有清单
+✓ 杀死 放行上级目录(packages/server/src/untar.ts) ← URL 安装拒绝不安全或不合格的包:绝对路径、上级目录、符号链接、硬链接、超过大小上限、解压炸开、不是 gzip、没有清单
+✓ 杀死 放行绝对路径(packages/server/src/untar.ts) ← URL 安装拒绝不安全或不合格的包:绝对路径、上级目录、符号链接、硬链接、超过大小上限、解压炸开、不是 gzip、没有清单
+✓ 杀死 解压不限大小(packages/server/src/untar.ts) ← URL 安装拒绝不安全或不合格的包:绝对路径、上级目录、符号链接、硬链接、超过大小上限、解压炸开、不是 gzip、没有清单
+✓ 杀死 收到时间不用宿主时钟(packages/server/src/host.ts) ← 插件在独立进程里运行:读包外的标记文件、写文件、起子进程都被拒,看不到宿主的环境变量 | rss-reader 示例插件:在隔离进程里按配置拉 RSS 与 Atom 订阅,宿主盖章成不可信外部事件
+# 变异 26 个,存活 0 个

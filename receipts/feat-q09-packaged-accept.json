@@ -1,0 +1,15 @@
+{
+  "slice": "打包版(macOS 安装副本)用真实模型重跑最小闭环:私聊、群聊各一件,只点界面走到 交付→T8a 待确认→沉默仍待确认→本人回复「通过」→T8 已验收;新 runner、只读核对脚本与截图收据",
+  "acceptance": [
+    { "id": "AC-28", "status": "未测", "reason": "打包版真实运行 apps/desktop/proof/q09-packaged/real-719e95d2/result.json:35 条具名断言全过(两件任务库里 T8a_Delivered/门禁 none → 沉默 30 秒仍 T8a → 本人「通过」→ T8_Accepted/accepted/waived-by-user),check-t8a.json 独立复核通过;旧包两份库同一脚本判红 old-db-red.json;独立审查待做" },
+    { "id": "AC-30", "status": "未测", "reason": "同上运行:群里 @ 派活 → 真实 Claude Code Compute → group.txt 精确内容 → 交付回群 → 待确认 → 通过;停止与纠正在 feat/q09-stop-proof 的 service 层真实运行里验,没有在打包版界面上再点一遍;待审" },
+    { "id": "AC-56", "status": "未测", "reason": "交付是普通消息、无验收卡,本人普通回复通过(群里回复交付消息并 @ 负责联系人);截图 06/07/10/11;待审" }
+  ],
+  "author": { "agent": "claude", "session": "claude:bf4ef95e-9b68-4262-a62d-ca75f35d1208", "model": "group/opus" },
+  "red": { "commit": "398a202c" },
+  "unverifiable": "AC-28:界面在 T5 与 T8a 都写「等你确认」,只有库能分辨,所以状态断言以 SQLite 只读快照为准;真实运行只有一次(每件一次),联系人模型把「通过」转成验收结论靠模型判断,一次通过不代表稳定率。安装包临时签名、未公证;包是 719e95d2 打的,之后只加了证据与收据提交。本片没有 packages 下的新测试,G-RED 对 apps 是空过。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "子代理写 runner,调度会话同号实跑。模型 workbuddy-ai/deepseek-v4.1-flash-sg(联系人与 Compute)。安装包与完整证据(含 userdata 与库快照)在 deliverables/g-group-closed-loop/t8a-accept-719e95d2/,不入库。app.asar sha256 5a027f008f3d6dfd311d8906060bae625241b2c8493ba890e6f2d0f11563a194。"
+}

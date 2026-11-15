@@ -1,0 +1,68 @@
+# 绿:实现提交 7f5e7a0 上,box1,2026-11-11 19:43
+
+## 1. 两份 tsc + 结构检查 + Electron 全量(新闭环用例 + 壳基线 + 旧的 backend 直调用例)
+# node box-e2e.mjs --wt /tmp/gg-live --box box1 --name live --port 5261 --project electron --shots … --cmd 'tsc app && tsc electron && verify:structure && build && GG_SHOTS=… playwright --project=electron'
+# 注:backend.electron.spec.ts 失败是旧用例等 card.kind=delivery 的交付卡(合入 dev/integration 后交付已是普通消息,AC-56),主会话在改那条用例;本分支没动它
+[box] box1 上的 /workspace/728/wt-live 已就绪(7f5e7a0)
+[box] 已排队:npx tsc -p tsconfig.app.json && echo TSC-APP-OK && npx tsc -p tsconfig.electron.json --noEmit && echo TSC-ELECTRON-OK && npm run verify:structure && npx vite build >/dev/null && npm run build:electron >/dev/null && GG_SHOTS=/workspace/728/shots-live DISPLAY=${DISPLAY:-:0} npx playwright test --project=electron --workers=1 --reporter=line
+TSC-APP-OK
+TSC-ELECTRON-OK
+
+> @g-group/desktop@0.1.0 verify:structure
+> node verify/structure.mjs
+
+文件 313 个;超过 400 行的 0 个;原生 <button> 共 0 个
+结构检查通过
+
+
+
+Running 3 tests using 1 worker
+
+
+[1/3] [electron] › e2e/backend.electron.spec.ts:11:1 › 接上宿主服务:私聊派活走完一圈,事件流推到渲染层
+  1) [electron] › e2e/backend.electron.spec.ts:11:1 › 接上宿主服务:私聊派活走完一圈,事件流推到渲染层 ─────────────────────
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+        "completed": true,
+    -   "delivery": true,
+    +   "delivery": false,
+        "reply": true,
+      }
+
+    Call Log:
+    - Test timeout of 30000ms exceeded
+
+      54 |         delivery: list.messages.some((m) => m.card?.kind === "delivery"),
+      55 |       };
+    > 56 |     }, { timeout: 30_000 }).toEqual({ reply: true, completed: true, delivery: true });
+         |                             ^
+      57 |     const tasks = await ok<{ tasks: { title: string; state: string; recentProgress: { kind: string }[] }[] }>("tasks.list", { roomId: room.id });
+      58 |     expect(tasks.tasks).toHaveLength(1);
+      59 |     expect(tasks.tasks[0]!.title).toContain("写 hello.txt");
+        at /workspace/728/wt-live/apps/desktop/e2e/backend.electron.spec.ts:56:29
+
+    Error Context: test-results/backend.electron-接上宿主服务-私聊派活走完一圈-事件流推到渲染层-electron/error-context.md
+
+
+
+[2/3] [electron] › e2e/closed-loop.electron.spec.ts:33:1 › 闭环:只经界面建联系人、私聊派活、建群拉人后群里派活,看到回复、Compute 推进与交付
+[3/3] [electron] › e2e/shell.electron.spec.ts:8:1 › Electron 壳:安全基线开着,渲染层拿不到 Node,IPC 只认白名单方法
+  1 failed
+    [electron] › e2e/backend.electron.spec.ts:11:1 › 接上宿主服务:私聊派活走完一圈,事件流推到渲染层 ──────────────────────
+  2 passed (48.5s)
+[box] 截图已取回到 /tmp/gg-live-shots2
+[box] 用了 box1;云端残留进程:0
+exit=1
+
+## 2. renderer 全量
+# node box-e2e.mjs --wt /tmp/gg-live --box box1 --name live --port 5261
+[box] box1 上的 /workspace/728/wt-live 已就绪(7f5e7a0)
+[box] 已排队:playwright --project=renderer (全量)
+  146 passed (8.8m)
+[box] 用了 box1;云端残留进程:0
+exit=0

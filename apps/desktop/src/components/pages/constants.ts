@@ -23,6 +23,11 @@ export const GROUP_CONFIRM = {
   leave: { note: '退出后你看不到这个群的新消息，助手们还在群里，它们的定时照常跑。', go: '退出' },
 } as const
 export type GroupConfirmKind = keyof typeof GROUP_CONFIRM
+/** 连上后端时解散的说明(群从会话列表移除,定时删除;在做的事先停下),和后端说群里还有在做的事时的追问 */
+export const DISSOLVE_LIVE = {
+  note: '解散后这个群从你和所有助手那里移除，群里的定时一起删掉，借出的群算力停下后作废。',
+  stop: '解散前要先停下这些事，停稳群才移除。',
+} as const
 
 /** 设置页外观:浅色 / 深色(小样用 Tailwind 自带色板画「纸」和「夜」,只是示意,不是界面 token) */
 export const THEMES = [

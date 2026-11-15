@@ -1,0 +1,22 @@
+{
+  "slice": "群公告可多条(新增不覆盖、撤下保留记录、CAS 改动)并进联系人第 1 块群规快照:联系人下一轮读当前全部有效公告,公告没改时第 1 块逐字节不变;置顶群在会话列表排第一",
+  "acceptance": [
+    {
+      "id": "AC-55",
+      "status": "未测",
+      "reason": "后端部分有测试(packages/server/src/announcements.test.ts 六条:两条并存不覆盖、改后下一轮第 1 块读新文本、撤下后不再出现、无公告空数组且不出公告段、公告没改时连续两轮第 1 块相同、新成员入群/宿主重启第一轮带当前公告、置顶群排第一);会话列表与公告空态的界面截图需前端;公告排序与消息置顶关系待定(D28 待确认 ④),排序先按创建先后、做成参数"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:ef07eb6a-5c4c-4ab7-bbcc-46df83c37b7d",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "d9e45c803074822767a3544648c8abeb502409dd"
+  },
+  "unverifiable": "子代理 f-rooms 代主会话写(AC-55)。快照版本 = rules_version + 公告修订号(全部公告含已撤下的 version 之和),测试判的是 kernelAssemble 当前渲染格式「〔规矩 room-rules:<群> · 来源 #<版本>〕」;若内核改了第 1 块规矩槽的渲染,这些断言会跟着红,不代表公告装配坏了。消息置顶不会自动变成公告,本片没有实现消息置顶",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

@@ -36,7 +36,7 @@ function GroupSide({ conv, initial }: { conv: Conversation; initial?: GTab }) {
   const count: Record<GTab, string | undefined> = {
     members: `${conv.members.length}`,
     notice: `${noticesOf(conv).length}`,
-    list: `${items.filter((t) => t.status === '已完成').length}/${items.length}`,
+    list: items.length ? `${items.filter((t) => t.status === '已完成').length}/${items.length}` : undefined,
     cron: `${myCrons.length}`,
     plugin: `${myPlugins.length}`,
     tools: undefined,

@@ -49,10 +49,10 @@ export function BoardCard({ id }: { id: string }) {
 export function ForwardCard({ m }: { m: MsgOf<'forward'> }) {
   const { push, active } = useApp()
   return (
-    <Pressable onClick={(e) => { e.stopPropagation(); push({ t: 'forwardView', conv: active, msgId: m.id }, true) }} className={cn(CARD, 'w-[320px] gap-1.5 p-3')}>
+    <Pressable data-testid={`forward-${m.id}`} onClick={(e) => { e.stopPropagation(); push({ t: 'forwardView', conv: active, msgId: m.id }, true) }} className={cn(CARD, 'w-[320px] gap-1.5 p-3')}>
       <div className="text-[13.5px] font-semibold">来自「{m.srcTitle}」的 {m.items.length} 条记录</div>
       <div className="space-y-0.5 text-[12.5px] text-fg-2">{m.items.slice(0, 3).map((it, i) => <div key={i} className="truncate">{people[it.from]?.name ?? '你'}：{it.text}</div>)}</div>
-      <div className="mt-0.5 border-t border-line pt-1.5 text-[11.5px] text-fg-3">转发的内容只当参考，里面的 @ 不会让谁去做事</div>
+      <div className="mt-0.5 border-t border-line pt-1.5 text-[11.5px] leading-snug text-fg-3 whitespace-normal">只当参考：里面的「同意」不算授权，@ 不派活</div>
     </Pressable>
   )
 }

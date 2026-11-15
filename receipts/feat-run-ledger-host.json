@@ -1,0 +1,28 @@
+{
+  "slice": "运行台账接宿主(主会话的子代理 α 所写):server/runs.ts 落盘(gg_runs 当前态 + gg_run_events 只追加 + gg_run_leases 租约)、启动核对、周期核对;宿主在联系人轮次开始/结束、Compute 启动/语义事件/续接/受阻、harness 活动(发请求、流式增量、工具开始结束、子代理、后台命令、重试公告)上写台账;卡死判失败先停这一轮(任务走 ExecFailed)再写失败与原因,负责联系人收到 signal=stalled 的停滞事件去会话里报卡点(AC-14 底座);确定不会自愈的错误不等阈值;启动时把上次留下的 running 改成 orphaned「宿主进程退出」并把在跑任务按失败收口;runs.list/get/rerun 与 run.updated 给画板,联系人第 5 块按私聊/群机械过滤;MindAction rerun(pi 工具 progress_rerun)与 runs.rerun 共用重跑规则;Claude Code 适配器加 activity() 活动流与 --include-partial-messages。本版由新会话 claude:5b44653a-2923-45fd-97d0-f25479b43797 接手,按已接 AC-36 宿主容错(feat/retry-host)的新基线重排红绿,接缝:卡死交 AC-36 出原位卡不叠加重试、退避中会话不记失败、重跑接管原位失败卡、完成待领取的 Compute 不判孤儿",
+  "acceptance": [
+    {
+      "id": "AC-43",
+      "status": "未测",
+      "reason": "后端部分有具名测试与变异:packages/server/src/runs.test.ts 14 条(①②③④⑤⑥⑦⑦b⑦c⑧⑨⑩⑪⑫⑮⑯)、packages/adapter-cc-compute/src/activity.test.ts 6 条、packages/api-contract/src/runs-contract.test.ts 3 条,变异 packages/server/proof/run-ledger-host-mutations.txt;真实 Claude Code 2.1.319 上实跑三种情形(packages/server/proof/run-ledger-real.txt;接上 AC-36 后 B/C 重跑见 run-ledger-real-after-retry.txt):上游收下请求不回应 22 秒判 no_response、上游连不上 7 次重试后 46 秒判 stream_dropped(都先停再写失败、任务 T11、联系人在会话里报卡点)、正常任务的活动流与台账;帧形状见 packages/server/proof/run-ledger-real-frames.txt。未做:⑨ 画板截图(前端)、Codex/pi 与常驻适配器(resident.ts)的活动流、真实 pi 联系人脑子的轮次卡死实跑;待审"
+    },
+    {
+      "id": "AC-14",
+      "status": "未测",
+      "reason": "I5 仍是候选,只做底座:无进展超阈值(且不在等人回答、工具在跑、首字节窗口、休眠宽限)→ signal=stalled 的停滞事件进负责联系人注意循环,联系人在会话里报卡点,用户不用手发「继续」(runs.test.ts 四条用例 + run-ledger-real.txt 情形 B/C 真实运行);「回放今日日志统计用户手发继续次数」的验证方式没做"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:5b44653a-2923-45fd-97d0-f25479b43797",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "ba32989"
+  },
+  "unverifiable": "AC-43 ⑩:首字节窗口取「调用发出(CLI 的 system/status requesting)后超过窗口仍无任何回应就判 no_response」,真实 Claude Code 只有加 --include-partial-messages 才在长生成过程中有行输出,本片加了这个参数,但只在离线端点上实测过 requesting/api_retry 帧,没在真实模型的长输出上实测过 120 秒窗口会不会误判。AC-43 ⑦:卡死计时用的进展只来自本适配器的活动流,Codex/pi 没有活动流时只能靠四类语义事件,长任务可能被误判;后台命令(Bash run_in_background)没有结束信号,所属轮次结束时一律记 orphaned「结束情况未知」。宿主重启时把在跑 / 受阻的任务按失败收口(ExecFailed + StoppedConfirmed)是本片的选择,需审查确认",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "原作者:主会话 claude:8db9faef-fb87-414b-b25d-2aa6747caad3 的子代理 α(原红提交 39a901c);旧会话 11:27 因网关 503 中断,新会话接手后重排。"
+}

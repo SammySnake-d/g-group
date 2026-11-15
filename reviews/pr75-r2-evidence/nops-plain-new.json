@@ -1,0 +1,127 @@
+{
+ "summary": {
+  "variant": "plain",
+  "trials": 3,
+  "okTrue": 0,
+  "okFalse": 3,
+  "defects": 0,
+  "errors": 0,
+  "survivorsTotal": 3
+ },
+ "runs": [
+  {
+   "variant": "plain",
+   "trial": 0,
+   "root": 58892,
+   "child": 58893,
+   "before": [
+    {
+     "pid": 58893,
+     "ppid": 58892,
+     "pgid": -1,
+     "stat": "?",
+     "identity": null
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": null,
+   "result": {
+    "ok": false,
+    "reason": "读不到进程表,无法确认它启动的子进程都已退出",
+    "remaining": [
+     58893
+    ]
+   },
+   "registered": 1,
+   "survivors": [
+    {
+     "pid": 58893,
+     "row": null,
+     "inBefore": true
+    }
+   ],
+   "childAlive": true,
+   "defect": false,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "plain",
+   "trial": 1,
+   "root": 58910,
+   "child": 58911,
+   "before": [
+    {
+     "pid": 58911,
+     "ppid": 58910,
+     "pgid": -1,
+     "stat": "?",
+     "identity": null
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": null,
+   "result": {
+    "ok": false,
+    "reason": "读不到进程表,无法确认它启动的子进程都已退出",
+    "remaining": [
+     58911
+    ]
+   },
+   "registered": 1,
+   "survivors": [
+    {
+     "pid": 58911,
+     "row": null,
+     "inBefore": true
+    }
+   ],
+   "childAlive": true,
+   "defect": false,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "plain",
+   "trial": 2,
+   "root": 58928,
+   "child": 58929,
+   "before": [
+    {
+     "pid": 58929,
+     "ppid": 58928,
+     "pgid": -1,
+     "stat": "?",
+     "identity": null
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": null,
+   "result": {
+    "ok": false,
+    "reason": "读不到进程表,无法确认它启动的子进程都已退出",
+    "remaining": [
+     58929
+    ]
+   },
+   "registered": 1,
+   "survivors": [
+    {
+     "pid": 58929,
+     "row": null,
+     "inBefore": true
+    }
+   ],
+   "childAlive": true,
+   "defect": false,
+   "leftAfterCleanup": 0
+  }
+ ]
+}

@@ -1,0 +1,342 @@
+{
+  "runner": "apps/desktop/proof/q09-packaged/accept-t8.mjs",
+  "mode": "real",
+  "note": "真实安装副本 + 真实模型",
+  "startedAt": "2026-11-14T06:55:50.121Z",
+  "bin": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/t8a-accept-719e95d2/installed/g-group.app/Contents/MacOS/g-group",
+  "appAsar": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/t8a-accept-719e95d2/installed/g-group.app/Contents/Resources/app.asar",
+  "appAsarSha256": "5a027f008f3d6dfd311d8906060bae625241b2c8493ba890e6f2d0f11563a194",
+  "model": "workbuddy-ai/deepseek-v4.1-flash-sg",
+  "appVersion": "0.1.0",
+  "tasks": {
+    "dm": {
+      "taskId": "t-mwg1y2m2-3",
+      "deliveryMsg": "dm-c-mwg1xq1r-1#4",
+      "passMsg": "dm-c-mwg1xq1r-1#5",
+      "final": {
+        "ver": 7,
+        "state": "T8_Accepted",
+        "reviewGate": "waived-by-user",
+        "badge": "accepted",
+        "deliveredSeq": 4,
+        "sourceSeq": 1,
+        "roomId": "dm-c-mwg1xq1r-1",
+        "requester": "me",
+        "owner": "c-mwg1xq1r-1",
+        "approval": null,
+        "delivery": {
+          "round": 1,
+          "commit": "result:ccr-bd4a3993-2907-432e-b1e9-eb2b1d1d1d1e"
+        },
+        "reviews": 0
+      }
+    },
+    "group": {
+      "taskId": "t-mwg209h4-j",
+      "deliveryMsg": "g-mwg1zxje-e#4",
+      "passMsg": "g-mwg1zxje-e#7",
+      "final": {
+        "ver": 7,
+        "state": "T8_Accepted",
+        "reviewGate": "waived-by-user",
+        "badge": "accepted",
+        "deliveredSeq": 4,
+        "sourceSeq": 1,
+        "roomId": "g-mwg1zxje-e",
+        "requester": "me",
+        "owner": "c-mwg1xq1r-1",
+        "approval": null,
+        "delivery": {
+          "round": 1,
+          "commit": "result:ccr-9b5490fd-4177-471a-92bd-d4a6eb1b1e73"
+        },
+        "reviews": 0
+      }
+    }
+  },
+  "snapshots": {
+    "dm": {
+      "path": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/t8a-accept-719e95d2/run1/t8a-snapshot-dm.db",
+      "sha256": "1856ff667876298db9c770d0a4faa6c6b27c825880de9818b8704c0cac39d4be",
+      "bytes": 344064,
+      "taskId": "t-mwg1y2m2-3",
+      "observed": {
+        "ver": 6,
+        "state": "T8a_Delivered",
+        "reviewGate": "none",
+        "badge": "none",
+        "deliveredSeq": 4,
+        "sourceSeq": 1,
+        "roomId": "dm-c-mwg1xq1r-1",
+        "requester": "me",
+        "owner": "c-mwg1xq1r-1",
+        "approval": null,
+        "delivery": {
+          "round": 1,
+          "commit": "result:ccr-bd4a3993-2907-432e-b1e9-eb2b1d1d1d1e"
+        },
+        "reviews": 0
+      },
+      "observedAfterDeliveryMs": 1
+    },
+    "group": {
+      "path": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/t8a-accept-719e95d2/run1/t8a-snapshot-group.db",
+      "sha256": "bbc4cee60b510c24ba25ea8f186b96efb4e6af8ccb95a19018aaa342584bfb41",
+      "bytes": 385024,
+      "taskId": "t-mwg209h4-j",
+      "observed": {
+        "ver": 6,
+        "state": "T8a_Delivered",
+        "reviewGate": "none",
+        "badge": "none",
+        "deliveredSeq": 4,
+        "sourceSeq": 1,
+        "roomId": "g-mwg1zxje-e",
+        "requester": "me",
+        "owner": "c-mwg1xq1r-1",
+        "approval": null,
+        "delivery": {
+          "round": 1,
+          "commit": "result:ccr-9b5490fd-4177-471a-92bd-d4a6eb1b1e73"
+        },
+        "reviews": 0
+      },
+      "observedAfterDeliveryMs": 1
+    }
+  },
+  "finalDb": {
+    "path": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/t8a-accept-719e95d2/run1/final.db",
+    "sha256": "1f2b3ee8887445f9d50d91e92b91e4564c3b1a7384b673410a13d66f30e2c266",
+    "bytes": 413696
+  },
+  "checker": {
+    "exitCode": 0,
+    "pass": true,
+    "failed": [],
+    "output": "check-t8a.json"
+  },
+  "pageErrors": {
+    "count": 0,
+    "messages": []
+  },
+  "secrets": {
+    "tokenFoundIn": [],
+    "gatewayFoundIn": [],
+    "error": null
+  },
+  "failure": null,
+  "endedAt": "2026-11-14T06:59:10.837Z",
+  "assertions": [
+    {
+      "name": "setup.token_input_masked",
+      "pass": true,
+      "detail": "type=password",
+      "at": "2026-11-14T06:55:55.086Z"
+    },
+    {
+      "name": "dm.delivered_message",
+      "pass": true,
+      "detail": "taskId=t-mwg1y2m2-3 交付消息=dm-c-mwg1xq1r-1#4",
+      "at": "2026-11-14T06:56:48.310Z"
+    },
+    {
+      "name": "dm.file_exact",
+      "pass": true,
+      "detail": "t-mwg1y2m2-3/hello.txt;字节数=17;内容=\"你好，g-group\\n\"",
+      "at": "2026-11-14T06:56:48.333Z"
+    },
+    {
+      "name": "dm.db_state_T8a_Delivered",
+      "pass": true,
+      "detail": "state=T8a_Delivered reviewGate=none badge=none deliveredSeq=4 sourceSeq=1 reviews=0 ver=6",
+      "at": "2026-11-14T06:56:48.336Z"
+    },
+    {
+      "name": "dm.db_reviewGate_none",
+      "pass": true,
+      "detail": "reviewGate=none",
+      "at": "2026-11-14T06:56:48.337Z"
+    },
+    {
+      "name": "dm.db_badge_none",
+      "pass": true,
+      "detail": "badge=none",
+      "at": "2026-11-14T06:56:48.337Z"
+    },
+    {
+      "name": "dm.db_deliveredSeq_set",
+      "pass": true,
+      "detail": "deliveredSeq=4 = 界面交付消息 dm-c-mwg1xq1r-1#4",
+      "at": "2026-11-14T06:56:48.337Z"
+    },
+    {
+      "name": "dm.db_no_reviewer",
+      "pass": true,
+      "detail": "gg_reviews 里没有这件任务",
+      "at": "2026-11-14T06:56:48.337Z"
+    },
+    {
+      "name": "dm.ui_pending_confirm",
+      "pass": true,
+      "detail": "新建 hello.txt· Claude Code 做完了，等你确认 · 19s",
+      "at": "2026-11-14T06:56:48.337Z"
+    },
+    {
+      "name": "dm.silence_still_T8a",
+      "pass": true,
+      "detail": "沉默 30 秒后 state=T8a_Delivered reviewGate=none badge=none deliveredSeq=4 sourceSeq=1 reviews=0 ver=6",
+      "at": "2026-11-14T06:57:18.341Z"
+    },
+    {
+      "name": "dm.silence_ui_still_pending",
+      "pass": true,
+      "detail": "界面仍是等你确认",
+      "at": "2026-11-14T06:57:18.345Z"
+    },
+    {
+      "name": "dm.user_pass_sent",
+      "pass": true,
+      "detail": "本人消息 dm-c-mwg1xq1r-1#5",
+      "at": "2026-11-14T06:57:24.931Z"
+    },
+    {
+      "name": "dm.db_state_T8_Accepted",
+      "pass": true,
+      "detail": "state=T8_Accepted reviewGate=waived-by-user badge=accepted deliveredSeq=4 sourceSeq=1 reviews=0 ver=7",
+      "at": "2026-11-14T06:57:36.005Z"
+    },
+    {
+      "name": "dm.db_badge_accepted",
+      "pass": true,
+      "detail": "badge=accepted",
+      "at": "2026-11-14T06:57:36.005Z"
+    },
+    {
+      "name": "dm.db_reviewGate_waived_by_user",
+      "pass": true,
+      "detail": "reviewGate=waived-by-user approval=null",
+      "at": "2026-11-14T06:57:36.005Z"
+    },
+    {
+      "name": "dm.ui_accepted",
+      "pass": true,
+      "detail": "新建 hello.txt· Claude Code 做完了，你已验收 · 19s",
+      "at": "2026-11-14T06:57:36.005Z"
+    },
+    {
+      "name": "group.delivered_message",
+      "pass": true,
+      "detail": "taskId=t-mwg209h4-j 交付消息=g-mwg1zxje-e#4",
+      "at": "2026-11-14T06:58:30.895Z"
+    },
+    {
+      "name": "group.file_exact",
+      "pass": true,
+      "detail": "t-mwg209h4-j/group.txt;字节数=19;内容=\"群聊闭环通过\\n\"",
+      "at": "2026-11-14T06:58:30.916Z"
+    },
+    {
+      "name": "group.db_state_T8a_Delivered",
+      "pass": true,
+      "detail": "state=T8a_Delivered reviewGate=none badge=none deliveredSeq=4 sourceSeq=1 reviews=0 ver=6",
+      "at": "2026-11-14T06:58:30.919Z"
+    },
+    {
+      "name": "group.db_reviewGate_none",
+      "pass": true,
+      "detail": "reviewGate=none",
+      "at": "2026-11-14T06:58:30.919Z"
+    },
+    {
+      "name": "group.db_badge_none",
+      "pass": true,
+      "detail": "badge=none",
+      "at": "2026-11-14T06:58:30.920Z"
+    },
+    {
+      "name": "group.db_deliveredSeq_set",
+      "pass": true,
+      "detail": "deliveredSeq=4 = 界面交付消息 g-mwg1zxje-e#4",
+      "at": "2026-11-14T06:58:30.920Z"
+    },
+    {
+      "name": "group.db_no_reviewer",
+      "pass": true,
+      "detail": "gg_reviews 里没有这件任务",
+      "at": "2026-11-14T06:58:30.920Z"
+    },
+    {
+      "name": "group.ui_pending_confirm",
+      "pass": true,
+      "detail": "新建 group.txt 写入「群聊闭环通过」· Claude Code 做完了，等你确认 · 17s",
+      "at": "2026-11-14T06:58:30.920Z"
+    },
+    {
+      "name": "group.silence_still_T8a",
+      "pass": true,
+      "detail": "沉默 30 秒后 state=T8a_Delivered reviewGate=none badge=none deliveredSeq=4 sourceSeq=1 reviews=0 ver=6",
+      "at": "2026-11-14T06:59:00.919Z"
+    },
+    {
+      "name": "group.silence_ui_still_pending",
+      "pass": true,
+      "detail": "界面仍是等你确认",
+      "at": "2026-11-14T06:59:00.919Z"
+    },
+    {
+      "name": "group.user_pass_sent",
+      "pass": true,
+      "detail": "本人消息 g-mwg1zxje-e#7",
+      "at": "2026-11-14T06:59:01.177Z"
+    },
+    {
+      "name": "group.db_state_T8_Accepted",
+      "pass": true,
+      "detail": "state=T8_Accepted reviewGate=waived-by-user badge=accepted deliveredSeq=4 sourceSeq=1 reviews=0 ver=7",
+      "at": "2026-11-14T06:59:10.288Z"
+    },
+    {
+      "name": "group.db_badge_accepted",
+      "pass": true,
+      "detail": "badge=accepted",
+      "at": "2026-11-14T06:59:10.288Z"
+    },
+    {
+      "name": "group.db_reviewGate_waived_by_user",
+      "pass": true,
+      "detail": "reviewGate=waived-by-user approval=null",
+      "at": "2026-11-14T06:59:10.288Z"
+    },
+    {
+      "name": "group.ui_accepted",
+      "pass": true,
+      "detail": "新建 group.txt 写入「群聊闭环通过」· Claude Code 做完了，你已验收 · 17s",
+      "at": "2026-11-14T06:59:10.288Z"
+    },
+    {
+      "name": "group.pass_replies_to_delivery",
+      "pass": true,
+      "detail": "g-mwg1zxje-e#7 reply_to=#4",
+      "at": "2026-11-14T06:59:10.539Z"
+    },
+    {
+      "name": "checker.check_t8a_py",
+      "pass": true,
+      "detail": "快照 T8a、最终 T8 均通过",
+      "at": "2026-11-14T06:59:10.541Z"
+    },
+    {
+      "name": "page.no_runtime_errors",
+      "pass": true,
+      "detail": "页面错误 0",
+      "at": "2026-11-14T06:59:10.653Z"
+    },
+    {
+      "name": "secrets.token_absent_from_evidence",
+      "pass": true,
+      "detail": "证据目录里没有令牌",
+      "at": "2026-11-14T06:59:10.837Z"
+    }
+  ],
+  "pass": true
+}

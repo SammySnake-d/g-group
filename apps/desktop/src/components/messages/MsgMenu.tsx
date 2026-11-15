@@ -2,6 +2,8 @@
 import type { ReactNode } from 'react'
 import { Bookmark, CheckSquare, Copy, Forward, History, Pencil, Pin, Quote as QuoteIcon, Reply, Trash2, Undo2, Zap } from 'lucide-react'
 import { useApp } from '@/ctx'
+import { live } from '@/api/wire/live'
+import { useAppStore } from '@/store'
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { cn } from '@/lib/utils'
 import { MENU_EMOJI, quoteText } from './copy'
@@ -11,7 +13,10 @@ import type { Bodied } from './types'
 
 
 export function MsgMenu({ m, children }: { m: Bodied; children: ReactNode }) {
-  const { addQuote, setSelecting, push, active, recall, react, toast, pinMsg, deleteMsg, setEditing, reedit, setRewindAsk, openSplit } = useApp()
+  const { addQuote, setSelecting, push, active, convs, recall, react, toast, pinMsg, deleteMsg, setEditing, reedit, setRewindAsk, openSplit } = useApp()
+  const isLive = useAppStore((s) => live(s))
+  const kind = convs.find((c) => c.id === active)?.kind
+  const group = kind === 'group'
   const mine = m.from === 'me'
   const text = quoteText(m)
   return (
@@ -25,11 +30,12 @@ export function MsgMenu({ m, children }: { m: Bodied; children: ReactNode }) {
         {m.k === 'compute' && <ContextMenuItem data-testid="ctx-open-session" className={MENU_ITEM} onSelect={() => openSplit({ t: 'compute', id: m.computeId, view: 'session' })}><Zap />{OPEN_SESSION}</ContextMenuItem>}
         <ContextMenuItem data-testid="ctx-copy" className={MENU_ITEM} onSelect={() => { navigator.clipboard?.writeText(text).catch(() => {}); toast('已复制') }}><Copy />复制</ContextMenuItem>
         <ContextMenuItem data-testid="ctx-forward" className={MENU_ITEM} onSelect={() => push({ t: 'forwardPick', from: active, msgIds: [m.id] }, true)}><Forward />转发</ContextMenuItem>
-        <ContextMenuItem data-testid="ctx-fav" className={MENU_ITEM} onSelect={() => toast('已收藏，在「文件 › 收藏」里')}><Bookmark />收藏</ContextMenuItem>
+        {/* 收藏还没有后端:连上后端时不放一个只会假装成功的入口 */}
+        {!isLive && <ContextMenuItem data-testid="ctx-fav" className={MENU_ITEM} onSelect={() => toast('已收藏，在「文件 › 收藏」里')}><Bookmark />收藏</ContextMenuItem>}
         <ContextMenuItem data-testid="ctx-multi" className={MENU_ITEM} onSelect={() => setSelecting(true)}><CheckSquare />多选</ContextMenuItem>
         <ContextMenuItem data-testid="ctx-quote" className={MENU_ITEM} onSelect={() => addQuote({ msgId: m.id, from: m.from, text })}><QuoteIcon />引用</ContextMenuItem>
-        {active.startsWith('g') && <ContextMenuItem data-testid="ctx-pin" className={MENU_ITEM} onSelect={() => pinMsg(active, m.id)}><Pin />置顶</ContextMenuItem>}
-        {active.startsWith('dm-') && <ContextMenuItem data-testid="ctx-rewind" className={MENU_ITEM} onSelect={() => setRewindAsk(m.id)}><History />回到这里</ContextMenuItem>}
+        {group && <ContextMenuItem data-testid="ctx-pin" className={MENU_ITEM} onSelect={() => pinMsg(active, m.id)}><Pin />置顶</ContextMenuItem>}
+        {kind === 'dm' && <ContextMenuItem data-testid="ctx-rewind" className={MENU_ITEM} onSelect={() => setRewindAsk(m.id)}><History />回到这里</ContextMenuItem>}
         <ContextMenuSeparator className={MENU_SEP} />
         {mine && m.k === 'text' && <ContextMenuItem data-testid="ctx-edit" className={MENU_ITEM} onSelect={() => { setEditing(m.id); reedit(m.text) }}><Pencil />编辑</ContextMenuItem>}
         {mine && <ContextMenuItem data-testid="ctx-recall" className={MENU_ITEM} onSelect={() => recall(m.id)}><Undo2 />撤回</ContextMenuItem>}

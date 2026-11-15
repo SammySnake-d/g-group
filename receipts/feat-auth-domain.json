@@ -1,0 +1,19 @@
+{
+  "slice": "授权与意图领域底座:补充关联边 Received/Applied/Rebound 与 E5b 单条改挂(源任务不取消、版本 +1、重放 #n、已落实先停旧执行器再回滚)、中途改条件原位升版;群规「改前先问」识别与写工具收紧、本人直接表态识别、答复绑定 (task,q,ver,动作,授权人) 与过期;路由兜底与回放两个数(追问次数、挂错未纠正)",
+  "acceptance": [
+    { "id": "AC-18", "status": "通过", "evidence": "packages/domain/proof/auth-intent-tests.txt", "notes": "按 P0 判据只验「两个数都能测出来」:routingReport 报追问次数与挂错且未纠正条数,改成 never-ask 时未纠正挂错上升、按给定阈值判红(routing.test.ts)。阈值待用户拍板,judgeRouting 全是参数、不给只报不判;回放语料是测试内的 #1728 缩样,真实群聊回放集未接;routeFollowUp 尚未接进宿主路由" },
+    { "id": "AC-16", "status": "未测", "reason": "领域判据已测(送达只记 Received,Applied 必须带产物引用与版本,版本更新的补充不被旧产物落实);宿主接线与产物指针见 feat/auth-host 收据" },
+    { "id": "AC-15", "status": "未测", "reason": "领域判据已测(改挂不取消 A、v_A_new = v+1、重放 #n、关联版本冲突、幂等、已落实先 stop-for-rollback、停止确认才 restore-workspace);宿主接线见 feat/auth-host 收据" },
+    { "id": "AC-17", "status": "未测", "reason": "领域判据已测(群规识别、gateTools、自然语言同意);宿主闭环与真实运行见 feat/auth-host 收据" },
+    { "id": "AC-19", "status": "未测", "reason": "领域判据已测(绑定、过期、一次性);宿主闭环见 feat/auth-host 收据" },
+    { "id": "AC-20", "status": "未测", "reason": "领域判据已测(只认 user、转发/外部/引用块/引号不算、多候选 ambiguous);宿主闭环见 feat/auth-host 收据" },
+    { "id": "AC-45", "status": "未测", "reason": "领域判据已测(amendWithFollowUp 原位升版、同一执行器 update/resume、终态拒绝、旧产物不落实新条件);宿主闭环见 feat/auth-host 收据" },
+    { "id": "R-05", "status": "通过", "evidence": "packages/domain/proof/auth-intent-mutations.txt", "notes": "49 个单点变异全部被具名测试杀死,阴性对照 39/39 绿(box3 云电脑,MUT_JOBS=2)" }
+  ],
+  "author": { "agent": "claude", "session": "claude:adaa7285-9f74-4d05-8e92-1a1b0d8d319c", "model": "claude-opus-5-5" },
+  "red": { "commit": "89d6974f51c3f2b23a16f4b5474ed4a3f8be6387" },
+  "unverifiable": "AC-17/20 的自然语言表态识别是机械规则(白名单短句 + 同意动词 + 否定词/条件词/反问即 unclear),识别不了的一律不放行;它可能被「好的但先别改配置」之外的新型条件句骗成 approve——consentIntent 的 HEDGE 词表是唯一防线,见 authorization.test.ts「AC-19 含义不清不放行」。AC-18 的阈值与真实回放集都没有",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

@@ -1,0 +1,115 @@
+{
+ "summary": {
+  "variant": "setpgid",
+  "trials": 3,
+  "okTrue": 3,
+  "okFalse": 0,
+  "defects": 3,
+  "errors": 0,
+  "survivorsTotal": 3
+ },
+ "runs": [
+  {
+   "variant": "setpgid",
+   "trial": 0,
+   "root": 39740,
+   "child": 39747,
+   "before": [
+    {
+     "pid": 39747,
+     "ppid": 39740,
+     "pgid": 39740,
+     "stat": "S"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "39747     1 39747 S    Sun Nov 15 21:58:01 2026",
+   "result": {
+    "ok": true,
+    "killed": 0
+   },
+   "registered": 1,
+   "survivors": [
+    {
+     "pid": 39747,
+     "row": "39747     1 39747 S    Sun Nov 15 21:58:01 2026",
+     "inBefore": true
+    }
+   ],
+   "childAlive": true,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "setpgid",
+   "trial": 1,
+   "root": 39860,
+   "child": 39866,
+   "before": [
+    {
+     "pid": 39866,
+     "ppid": 39860,
+     "pgid": 39860,
+     "stat": "S"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "39866     1 39866 S    Sun Nov 15 21:58:01 2026",
+   "result": {
+    "ok": true,
+    "killed": 0
+   },
+   "registered": 1,
+   "survivors": [
+    {
+     "pid": 39866,
+     "row": "39866     1 39866 S    Sun Nov 15 21:58:01 2026",
+     "inBefore": true
+    }
+   ],
+   "childAlive": true,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "setpgid",
+   "trial": 2,
+   "root": 39982,
+   "child": 39988,
+   "before": [
+    {
+     "pid": 39988,
+     "ppid": 39982,
+     "pgid": 39982,
+     "stat": "S"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "39988     1 39988 S    Sun Nov 15 21:58:02 2026",
+   "result": {
+    "ok": true,
+    "killed": 0
+   },
+   "registered": 1,
+   "survivors": [
+    {
+     "pid": 39988,
+     "row": "39988     1 39988 S    Sun Nov 15 21:58:02 2026",
+     "inBefore": true
+    }
+   ],
+   "childAlive": true,
+   "defect": true,
+   "leftAfterCleanup": 0
+  }
+ ]
+}

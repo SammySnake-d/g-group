@@ -1,0 +1,175 @@
+{
+ "repo": "/private/tmp/gg-r2-claude-20261115/pr75",
+ "summary": {
+  "trials": 10,
+  "quiesceOk": 10,
+  "defects": 10,
+  "errors": 0,
+  "survivors": [
+   2,
+   2,
+   3,
+   2,
+   2,
+   1,
+   2,
+   1,
+   1,
+   3
+  ],
+  "left": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ]
+ },
+ "runs": [
+  {
+   "trial": 0,
+   "stop": {
+    "ok": true
+   },
+   "quiesce": {
+    "ok": true,
+    "killed": 20
+   },
+   "registered": 22,
+   "survivors": 2,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "trial": 1,
+   "stop": {
+    "ok": true
+   },
+   "quiesce": {
+    "ok": true,
+    "killed": 20
+   },
+   "registered": 22,
+   "survivors": 2,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "trial": 2,
+   "stop": {
+    "ok": true
+   },
+   "quiesce": {
+    "ok": true,
+    "killed": 20
+   },
+   "registered": 23,
+   "survivors": 3,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "trial": 3,
+   "stop": {
+    "ok": true
+   },
+   "quiesce": {
+    "ok": true,
+    "killed": 20
+   },
+   "registered": 22,
+   "survivors": 2,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "trial": 4,
+   "stop": {
+    "ok": true
+   },
+   "quiesce": {
+    "ok": true,
+    "killed": 20
+   },
+   "registered": 22,
+   "survivors": 2,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "trial": 5,
+   "stop": {
+    "ok": true
+   },
+   "quiesce": {
+    "ok": true,
+    "killed": 21
+   },
+   "registered": 22,
+   "survivors": 1,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "trial": 6,
+   "stop": {
+    "ok": true
+   },
+   "quiesce": {
+    "ok": true,
+    "killed": 20
+   },
+   "registered": 22,
+   "survivors": 2,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "trial": 7,
+   "stop": {
+    "ok": true
+   },
+   "quiesce": {
+    "ok": true,
+    "killed": 21
+   },
+   "registered": 22,
+   "survivors": 1,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "trial": 8,
+   "stop": {
+    "ok": true
+   },
+   "quiesce": {
+    "ok": true,
+    "killed": 20
+   },
+   "registered": 21,
+   "survivors": 1,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "trial": 9,
+   "stop": {
+    "ok": true
+   },
+   "quiesce": {
+    "ok": true,
+    "killed": 19
+   },
+   "registered": 22,
+   "survivors": 3,
+   "defect": true,
+   "leftAfterCleanup": 0
+  }
+ ]
+}

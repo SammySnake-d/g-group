@@ -1,0 +1,38 @@
+# 绿:聊天主界面补全——云电脑 box2
+
+## HEAD e9d19b0(桌面端全套)
+== tsc app
+== tsc electron
+== structure
+文件 323 个;超过 400 行的 0 个;原生 <button> 共 0 个
+结构检查通过
+== build
+build rc=0
+== electron full
+  9 passed (1.4m)
+== renderer full
+  146 passed (8.5m)
+
+## 根目录 typecheck / lint / npm test(在 0855e57 上跑;之后的提交只动 apps/desktop,packages 没变)
+== root typecheck/lint/test
+Checked 217 files in 550ms. No fixes applied.
+# tests 1616
+# pass 1616
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+
+## 新用例单独跑(3bb81de):e2e/parity-chat.electron.spec.ts 与 packages/server/src/chat-parity.test.ts
+[box] 已排队:npx vite build >/dev/null 2>&1 && npm run build:electron >/dev/null 2>&1 && GG_SHOTS=/workspace/728/shots-p-chat DISPLAY=${DISPLAY:-:0} npx playwright test --project=electron --workers=1 --reporter=line e2e/parity-chat.electron.spec.ts 2>&1 | grep -E "^  [0-9]\) |Error:|Expected|Received|Locator:|> +[0-9]+ \||[0-9]+ (failed|passed)" | head -40; cd ../.. && node scripts/gates/test-runner.ts packages/server/src/chat-parity.test.ts 2>&1 | grep -E "^not ok|^ok|^# (tests|pass|fail)" | head -20
+  3 passed (49.0s)
+ok 1 - 转发:收件会话只看到选中几条的快照,看不到源会话其他消息;转发里的「同意」不算本人授权,任务仍停在等本人
+ok 2 - 删除只在你这边:列表、搜索、会话预览都不再给;联系人上下文不动;可以放回;清空后只显示之后的新消息
+ok 3 - 置顶:只是你的导航,RoomView.pinnedSeqs 为准;取消置顶移出;重开宿主还在
+ok 4 - 已读位置:联系人接走即已读,RoomView.memberReads 列出每位成员读到哪;重开宿主照样读得到
+ok 5 - 按内容上传附件:base64 存一份、同内容同 ref,随消息发出;空文件名被拒
+# tests 5
+# pass 5
+# fail 0
+
+说明:Electron 全量 9 条 = 原有 5 条 + parity-chat 4 条;renderer 全量 146 条;npm test 1616 条含 chat-parity 5 条。

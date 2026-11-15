@@ -1,0 +1,13 @@
+{
+  "pr": 75,
+  "branch": "feat/desktop-closed-loop",
+  "head": "cb9f13e00f5ac36f6bfea47d9f4c37d0ce9398ed",
+  "base": "907a87c0030ad671991ba8b81668b461118c2b6a",
+  "base_ref": "origin/feat/desktop-files-provenance",
+  "content_hash": "2a8d88358c0c4cc2eb0c309995e66fb5918a36ca672cda9dac8b1e5fbf69a83b",
+  "reviewer_session": "codex:5c7730f7-9b5e-436b-bf34-f54611e16e15",
+  "native_session": "01a1d98a-5952-7302-8957-6a95ce505d1e",
+  "model": "chatflows/gpt-6.1-sol",
+  "clone": "/private/tmp/g-group-pr75-r1-codex-20261114-5c7730f7",
+  "cloud_core": "/workspace/pr75-r1-codex-5c7730f7"
+}

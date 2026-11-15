@@ -1,0 +1,11 @@
+[box] box2 上的 /workspace/728/wt-loop 已就绪(a55d941)
+TSC_APP=0
+TSC_EL=0
+文件 318 个;超过 400 行的 0 个;原生 <button> 共 0 个
+结构检查通过
+STRUCT=0
+[box] 用了 box2;云端残留进程:0
+  5 passed (35.7s)
+[box] 用了 box2;云端残留进程:0
+  146 passed (9.2m)
+[box] 用了 box2;云端残留进程:0

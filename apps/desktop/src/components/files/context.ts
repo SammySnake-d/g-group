@@ -3,13 +3,14 @@ import { useAppStore } from '@/store'
 import { focusComposer } from '@/store/dom'
 
 type IdMsg = Extract<Msg, { id: string }>
-export const sourceLabel = (c: Conversation | undefined) => c ? c.kind === 'group' ? c.title : people[c.members.find((m) => m !== 'me') ?? 'me'].name : '来源不可用'
+export const sourceLabel = (c: Conversation | undefined) => c ? c.kind === 'group' ? c.title : people[c.members.find((m) => m !== 'me') ?? 'me']?.name ?? c.title : '来源不可用'
 /** 文件名、作者、来自哪个对话,任一含搜索词就算命中 */
 export const matchFile = (a: Artifact, query: string, convs: Conversation[]) => {
   const q = query.trim().toLocaleLowerCase()
-  return !q || `${a.name} ${people[a.by].name} ${sourceLabel(convs.find((c) => c.id === a.conv))}`.toLocaleLowerCase().includes(q)
+  return !q || `${a.name} ${people[a.by]?.name ?? ''} ${sourceLabel(convs.find((c) => c.id === a.conv))}`.toLocaleLowerCase().includes(q)
 }
-const isSource = (a: Artifact, m: IdMsg) => (m.k === 'file' && m.artifactId === a.id) || (m.k === 'asset' && m.assetId === a.id)
+/** 出现这份文件的那条消息:演示里是文件卡 / 资产卡;连上后端是带附件的消息或交付消息 */
+const isSource = (a: Artifact, m: IdMsg) => (m.k === 'file' && m.artifactId === a.id) || (m.k === 'asset' && m.assetId === a.id) || a.live?.src === m.id
 export function fileContext(a: Artifact, convs: Conversation[]) {
   const conv = convs.find((c) => c.id === a.conv)
   const messages = (conv?.messages ?? []).filter((m): m is IdMsg => 'id' in m)
@@ -58,7 +59,8 @@ export function provenance(a: Artifact, convs: Conversation[]) {
 
 /** 一站的原话:优先这一站里说的话(交付时的附言常有「重点看第 3 节」这种读法提示),没有话再用消息本身 */
 export const hopQuote = (h: Hop) => {
-  const said = h.msgs.find((m) => m.k === 'text')
+  /* 连上后端时交付那一站本身就是一句话(交付消息):引它,不引同一站里更早的客套 */
+  const said = h.isSource && h.target.k === 'text' ? h.target : h.msgs.find((m) => m.k === 'text')
   return (said ? messageText(said) : messageText(h.target)).replace(/\s*\n+\s*/g, ' ')
 }
 export const hopWho = (h: Hop) => (h.from ? people[h.from].name : '系统')

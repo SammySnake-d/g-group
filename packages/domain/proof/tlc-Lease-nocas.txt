@@ -1,0 +1,100 @@
+# 命令: java -cp tla2tools.jar tlc2.TLC -workers 1 -cleanup -noGenerateSpecTE -metadir <tmp> -config Lease-nocas.cfg -dumpTrace json traces/Lease-nocas.json Lease.tla
+# java: openjdk version "17.0.18" 2026-01-20
+# 时间: 2026-11-08T18:09:00Z
+TLC2 Version 2026.11.06.222357 (rev: d8fb231)
+Warning: Please run the Java VM, which executes TLC with a throughput optimized garbage collector, by passing the "-XX:+UseParallelGC" property.
+(Use the -nowarning option to disable this warning.)
+Running breadth-first search Model-Checking with fp 47 and seed -8498921799714602855 with 1 worker on 8 cores with 5939MB heap and 64MB offheap memory [pid: 39521] (Mac OS X 27.2 aarch64, Homebrew 17.0.18 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /private/tmp/gg-d-ac10/packages/domain/tla/Lease.tla
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-13066801199886137543/Naturals.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-13066801199886137543/FiniteSets.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-13066801199886137543/Sequences.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-13066801199886137543/_JsonTrace.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/_JsonTrace.tla)
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-13066801199886137543/TLC.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-13066801199886137543/TLCExt.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-13066801199886137543/Json.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/Json.tla)
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-13066801199886137543/Integers.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module Integers
+Semantic processing of module TLCExt
+Semantic processing of module Json
+Semantic processing of module _JsonTrace
+Semantic processing of module Lease
+Linting of module TLCExt
+Linting of module Json
+Linting of module _JsonTrace
+Linting of module Lease
+Starting... (2026-11-09 02:09:02)
+Implied-temporal checking--satisfiability problem has 1 branches.
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-09 02:09:03.
+Error: Invariant NoDoubleHold is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ holder = [a |-> "free", b |-> "free", c |-> "free"]
+/\ seen = [ h1 |-> [res |-> "free", ver |-> 0],
+  h2 |-> [res |-> "free", ver |-> 0],
+  h3 |-> [res |-> "free", ver |-> 0] ]
+/\ epoch = [a |-> 0, b |-> 0, c |-> 0]
+/\ conflicted = {}
+/\ held = [h1 |-> {}, h2 |-> {}, h3 |-> {}]
+/\ ver = [a |-> 0, b |-> 0, c |-> 0]
+/\ pc = [h1 |-> "acquiring", h2 |-> "acquiring", h3 |-> "acquiring"]
+/\ act = [op |-> "init"]
+
+State 2: <Read("h1","a") line 41, col 3 to line 47, col 59 of module Lease>
+/\ holder = [a |-> "free", b |-> "free", c |-> "free"]
+/\ seen = [ h1 |-> [res |-> "a", ver |-> 0],
+  h2 |-> [res |-> "free", ver |-> 0],
+  h3 |-> [res |-> "free", ver |-> 0] ]
+/\ epoch = [a |-> 0, b |-> 0, c |-> 0]
+/\ conflicted = {}
+/\ held = [h1 |-> {}, h2 |-> {}, h3 |-> {}]
+/\ ver = [a |-> 0, b |-> 0, c |-> 0]
+/\ pc = [h1 |-> "acquiring", h2 |-> "acquiring", h3 |-> "acquiring"]
+/\ act = [res |-> "a", ver |-> 0, op |-> "read", who |-> "h1"]
+
+State 3: <Read("h2","a") line 41, col 3 to line 47, col 59 of module Lease>
+/\ holder = [a |-> "free", b |-> "free", c |-> "free"]
+/\ seen = [ h1 |-> [res |-> "a", ver |-> 0],
+  h2 |-> [res |-> "a", ver |-> 0],
+  h3 |-> [res |-> "free", ver |-> 0] ]
+/\ epoch = [a |-> 0, b |-> 0, c |-> 0]
+/\ conflicted = {}
+/\ held = [h1 |-> {}, h2 |-> {}, h3 |-> {}]
+/\ ver = [a |-> 0, b |-> 0, c |-> 0]
+/\ pc = [h1 |-> "acquiring", h2 |-> "acquiring", h3 |-> "acquiring"]
+/\ act = [res |-> "a", ver |-> 0, op |-> "read", who |-> "h2"]
+
+State 4: <Grant("h1") line 51, col 3 to line 62, col 25 of module Lease>
+/\ holder = [a |-> "h1", b |-> "free", c |-> "free"]
+/\ seen = [ h1 |-> [res |-> "free", ver |-> 0],
+  h2 |-> [res |-> "a", ver |-> 0],
+  h3 |-> [res |-> "free", ver |-> 0] ]
+/\ epoch = [a |-> 1, b |-> 0, c |-> 0]
+/\ conflicted = {}
+/\ held = [h1 |-> {"a"}, h2 |-> {}, h3 |-> {}]
+/\ ver = [a |-> 1, b |-> 0, c |-> 0]
+/\ pc = [h1 |-> "acquiring", h2 |-> "acquiring", h3 |-> "acquiring"]
+/\ act = [res |-> "a", epoch |-> 1, op |-> "grant", who |-> "h1", base |-> 0, over |-> 0]
+
+State 5: <Grant("h2") line 51, col 3 to line 62, col 25 of module Lease>
+/\ holder = [a |-> "h2", b |-> "free", c |-> "free"]
+/\ seen = [ h1 |-> [res |-> "free", ver |-> 0],
+  h2 |-> [res |-> "free", ver |-> 0],
+  h3 |-> [res |-> "free", ver |-> 0] ]
+/\ epoch = [a |-> 2, b |-> 0, c |-> 0]
+/\ conflicted = {}
+/\ held = [h1 |-> {"a"}, h2 |-> {"a"}, h3 |-> {}]
+/\ ver = [a |-> 2, b |-> 0, c |-> 0]
+/\ pc = [h1 |-> "acquiring", h2 |-> "acquiring", h3 |-> "acquiring"]
+/\ act = [res |-> "a", epoch |-> 2, op |-> "grant", who |-> "h2", base |-> 0, over |-> 1]
+
+"CounterExample written: traces/Lease-nocas.json"
+37 states generated, 28 distinct states found, 12 states left on queue.
+The depth of the complete state graph search is 5.
+Finished in 03s at (2026-11-09 02:09:03)
+# 退出码: 12

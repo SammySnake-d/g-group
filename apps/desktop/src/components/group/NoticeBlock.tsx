@@ -1,8 +1,9 @@
-/* 群公告（#1566 #1593 #1618）：
+/* 群公告（#1566 #1593 #1618；AC-55）：
    - 像 QQ：可以有多条，只露置顶那条的前几行；「全部 N 条」展开成列表，每条可展开全文；没有公告时只有标题和「+」。
+   - 每条都能改（带版本，别人先改过不覆盖）、能撤下（先在原地说清后果再确认）。
    - 不像 mirasim：这里的公告由软件装配进每个助手接活前的上下文，所以每条都标出各助手装配到了哪一版。
      写「已装配」，不写「已遵守」——装配是软件做的、可核对；遵守与否要看它干的活。 */
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { ChevronRight, Plus } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useApp } from '@/ctx'
@@ -36,6 +37,27 @@ function Loaded({ conv, n }: { conv: Conversation; n: Notice }) {
   )
 }
 
+/** 「改 · 撤下」两个动作;撤下先在原地确认(破坏性操作不一点就走) */
+function Actions({ n, onEdit, onRemove, children }: { n: Notice; onEdit: () => void; onRemove: () => void; children?: ReactNode }) {
+  const [asking, setAsking] = useState(false)
+  if (asking) {
+    return (
+      <div data-testid={`notice-remove-ask-${n.id}`} role="alertdialog" aria-label={NOTICE.removeAsk} className="mt-1 flex basis-full items-center gap-1.5 text-[11.5px]">
+        <span className="min-w-0 flex-1 text-fg-2">{NOTICE.removeAsk}</span>
+        <Button variant="ghost" size="xs" onClick={() => setAsking(false)}>取消</Button>
+        <Button data-testid={`notice-remove-go-${n.id}`} variant="danger-solid" size="xs" onClick={() => { setAsking(false); onRemove() }}>{NOTICE.removeGo}</Button>
+      </div>
+    )
+  }
+  return (
+    <div className="mt-1 flex items-center gap-2 text-[11.5px] text-fg-3">
+      {children}
+      <Button data-testid={`notice-edit-${n.id}`} variant="link" size={null} className="text-[11.5px] text-fg-2" onClick={onEdit}>改</Button>
+      <Button data-testid={`notice-remove-${n.id}`} variant="link" size={null} className="text-[11.5px] text-fg-2 hover:text-err" onClick={() => setAsking(true)}>撤下</Button>
+    </div>
+  )
+}
+
 function Editor({ testid, inputTestid, value, onChange, onCancel, onSave, saveTestid, saveLabel, canSave, placeholder, counter }: {
   testid?: string; inputTestid: string; value: string; onChange: (v: string) => void; onCancel: () => void; onSave: () => void; saveTestid: string; saveLabel: string; canSave: boolean; placeholder?: string; counter?: boolean
 }) {
@@ -53,7 +75,8 @@ function Editor({ testid, inputTestid, value, onChange, onCancel, onSave, saveTe
 }
 
 export function NoticeBlock({ conv }: { conv: Conversation }) {
-  const { setNotice, editNotice, toast } = useApp()
+  const { setNotice, editNotice, removeNotice, toast } = useApp()
+  const live = useApp((s) => s.backend.mode === 'connected')
   const list = noticesOf(conv)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
@@ -63,7 +86,13 @@ export function NoticeBlock({ conv }: { conv: Conversation }) {
   const [v, setV] = useState('')
   const top = list.find((n) => n.top) ?? list[0]
   const many = list.length > 1
-  const publish = () => { const t = v.trim(); if (!t) return; setNotice(conv.id, t); toast(NOTICE.published); setAdding(false); setV('') }
+  /* 连上后端时发布成功与否由回包提示;演示里直接提示 */
+  const publish = () => { const t = v.trim(); if (!t) return; setNotice(conv.id, t); if (!live) toast(NOTICE.published); setAdding(false); setV('') }
+  const startEdit = (n: Notice) => { setEditing(n.id); setEv(n.text) }
+  const editor = (n: Notice) => editing === n.id && (
+    <Editor testid={`notice-editor-${n.id}`} inputTestid={`notice-edit-input-${n.id}`} value={ev} onChange={setEv} onCancel={() => setEditing(null)}
+      onSave={() => { editNotice(conv.id, n.id, ev.trim()); setEditing(null) }} saveTestid={`notice-edit-save-${n.id}`} saveLabel={`改到 v${n.ver + 1}`} canSave={!!ev.trim() && ev.trim() !== n.text} />
+  )
   return (
     <section className="border-b border-line px-4 pb-3 pt-3" data-testid="notice-block" data-count={list.length}>
       <div className="flex h-7 items-center">
@@ -83,13 +112,17 @@ export function NoticeBlock({ conv }: { conv: Conversation }) {
         )}
       </AnimatePresence>
       {!top ? null : !open ? (
-        <Button data-testid="notice-text" variant="ghost" size={null} onClick={() => (many ? setOpen(true) : setFull(full ? null : top.id))}
-          className="-mx-1.5 mt-0.5 block h-auto w-[calc(100%+12px)] whitespace-normal rounded-lg px-1.5 py-1 text-left font-normal active:scale-100">
-          <p className={cn('whitespace-pre-wrap text-[13px] leading-[1.65] text-fg-2', full !== top.id && 'line-clamp-3')}>
-            {top.top && many && <Chip tone="warm" size="xs" className="mr-1 align-[1px]">{NOTICE.pinned}</Chip>}{top.text}
-          </p>
-          <span className="mt-1 flex items-center gap-2 text-[11.5px] text-fg-3"><span className="truncate">{top.by} · {top.at}</span><span className="flex-1" /><Loaded conv={conv} n={top} /></span>
-        </Button>
+        <div data-testid={`notice-${top.id}`}>
+          <Button data-testid="notice-text" variant="ghost" size={null} onClick={() => (many ? setOpen(true) : setFull(full ? null : top.id))}
+            className="-mx-1.5 mt-0.5 block h-auto w-[calc(100%+12px)] whitespace-normal rounded-lg px-1.5 py-1 text-left font-normal active:scale-100">
+            <p className={cn('whitespace-pre-wrap text-[13px] leading-[1.65] text-fg-2', full !== top.id && 'line-clamp-3')}>
+              {top.top && many && <Chip tone="warm" size="xs" className="mr-1 align-[1px]">{NOTICE.pinned}</Chip>}{top.text}
+            </p>
+            <span className="mt-1 flex items-center gap-2 text-[11.5px] text-fg-3"><span className="truncate">{top.by} · {top.at}</span><span className="flex-1" /><Loaded conv={conv} n={top} /></span>
+          </Button>
+          {!many && <Actions n={top} onEdit={() => startEdit(top)} onRemove={() => removeNotice(conv.id, top.id)} />}
+          {!many && editor(top)}
+        </div>
       ) : (
         <ul className="-mx-1.5 mt-1 max-h-[340px] space-y-1 overflow-y-auto" data-testid="notice-list">
           {list.map((n) => (
@@ -99,15 +132,13 @@ export function NoticeBlock({ conv }: { conv: Conversation }) {
                 <span className="truncate">{n.by} · {n.at}</span>
               </div>
               <p className={cn('whitespace-pre-wrap text-[13px] leading-[1.6] text-fg', full !== n.id && 'line-clamp-2')}>{n.text}</p>
-              <div className="mt-1 flex items-center gap-2 text-[11.5px] text-fg-3">
-                {n.text.length > 40 && <Button data-testid={`notice-more-${n.id}`} variant="link" size={null} className="text-[11.5px]" onClick={() => setFull(full === n.id ? null : n.id)}>{full === n.id ? '收起' : '展开'}</Button>}
-                <Button data-testid={`notice-edit-${n.id}`} variant="link" size={null} className="text-[11.5px] text-fg-2" onClick={() => { setEditing(n.id); setEv(n.text) }}>改</Button>
-                <span className="flex-1" /><Loaded conv={conv} n={n} />
+              <div className="flex flex-wrap items-center gap-x-2">
+                <Actions n={n} onEdit={() => startEdit(n)} onRemove={() => removeNotice(conv.id, n.id)}>
+                  {n.text.length > 40 && <Button data-testid={`notice-more-${n.id}`} variant="link" size={null} className="text-[11.5px]" onClick={() => setFull(full === n.id ? null : n.id)}>{full === n.id ? '收起' : '展开'}</Button>}
+                </Actions>
+                <span className="flex-1" /><span className="mt-1 text-[11.5px] text-fg-3"><Loaded conv={conv} n={n} /></span>
               </div>
-              {editing === n.id && (
-                <Editor testid={`notice-editor-${n.id}`} inputTestid={`notice-edit-input-${n.id}`} value={ev} onChange={setEv} onCancel={() => setEditing(null)}
-                  onSave={() => { editNotice(conv.id, n.id, ev.trim()); setEditing(null) }} saveTestid={`notice-edit-save-${n.id}`} saveLabel={`改到 v${n.ver + 1}`} canSave={!!ev.trim() && ev.trim() !== n.text} />
-              )}
+              {editor(n)}
             </li>
           ))}
         </ul>

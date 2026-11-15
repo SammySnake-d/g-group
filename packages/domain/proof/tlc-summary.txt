@@ -1,0 +1,28 @@
+# AC-10 TLC 结果汇总(原始输出见同目录 tlc-<配置>.txt;规格与配置在 packages/domain/tla/;复跑:TLA2TOOLS=<tla2tools.jar> sh packages/domain/tla/run-tlc.sh)
+# TLC: TLC2 Version 2026.11.06.222357 (rev: d8fb231);java: openjdk version "17.0.18" 2026-01-20;-workers 1,BFS,CHECK_DEADLOCK TRUE
+# 退出码:0 = 无错误;11 = 死锁;12 = 不变量被违反
+
+配置                       | 退出码        | 状态数                                          | 结果
+Publish                  | 0          | 188 states generated, 129 distinct states found, 0 states left on queue. | Model checking completed. No error has been found.(含活性 Terminates)
+Publish-nocas            | 12         | 17 states generated, 17 distinct states found, 9 states left on queue. | Error: Invariant NoStalePublish is violated.
+Publish-nocas-double     | 12         | 46 states generated, 41 distinct states found, 18 states left on queue. | Error: Invariant NoDoubleWrite is violated.
+Publish-single           | 0          | 4 states generated, 3 distinct states found, 0 states left on queue. | Model checking completed. No error has been found.(含活性 Terminates)
+Publish-witness          | 12         | 61 states generated, 56 distinct states found, 23 states left on queue. | Error: Invariant PublishWitness is violated.
+Claim                    | 0          | 364 states generated, 235 distinct states found, 0 states left on queue. | Model checking completed. No error has been found.(含活性 Terminates)
+Claim-nocas              | 12         | 42 states generated, 33 distinct states found, 16 states left on queue. | Error: Invariant AtMostOneWinner is violated.
+Claim-single             | 0          | 4 states generated, 3 distinct states found, 0 states left on queue. | Model checking completed. No error has been found.(含活性 Terminates)
+Claim-witness            | 12         | 123 states generated, 100 distinct states found, 39 states left on queue. | Error: Invariant ClaimWitness is violated.
+Lease                    | 0          | 1402 states generated, 964 distinct states found, 0 states left on queue. | Model checking completed. No error has been found.(含活性 Terminates)
+Lease-nocas              | 12         | 37 states generated, 28 distinct states found, 12 states left on queue. | Error: Invariant NoDoubleHold is violated.
+Lease-noorder            | 11         | 6167 states generated, 3338 distinct states found, 1685 states left on queue. | Error: Deadlock reached.
+Lease-noorder-reverse    | 12         | 542 states generated, 360 distinct states found, 249 states left on queue. | Error: Invariant NoReverseGrant is violated.
+Lease-single             | 0          | 32 states generated, 26 distinct states found, 0 states left on queue. | Model checking completed. No error has been found.(含活性 Terminates)
+Lease-witness            | 12         | 897 states generated, 637 distinct states found, 83 states left on queue. | Error: Invariant LeaseWitness is violated.
+
+说明:
+- 正常版本(Publish、Claim、Lease)无反例:无旧稿发布/无双写、至多一个认领者、无双持有、不逆序授予、无死锁,且活性 Terminates 成立。
+- 去掉 CAS 版本校验(*-nocas,只改 UseCAS):三个规格都出反例,trace 存在 tla/traces/<配置>.json。
+- 去掉全序申请(Lease-noorder,只改 Ordered):出死锁反例;Lease-noorder-reverse 同一系统只查 NoReverseGrant,出逆序授予反例。
+- 单联系人/单持有者(*-single,且去掉 CAS)无反例:阴性对照。
+- *-witness 不是反例:带 CAS 的正常系统里故意取反的探针,用来拿到一条含冲突的真实行为,供回放核对真实实现逐步一致。
+- 反例转回归用例:packages/domain/src/trace-replay.test.ts(TLA-01–TLA-10),测试只读 traces/*.json,不需要 java。

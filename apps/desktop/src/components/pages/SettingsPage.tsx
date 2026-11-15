@@ -10,6 +10,9 @@ import { ListGroup, ListRow } from '@/components/ui/list-row'
 import { Choice, ChoiceGroup } from './kit/choice'
 import { Hint, PageScroll } from './kit/parts'
 import { THEMES } from './constants'
+import { appShell, useAppShell } from '@/api/app-shell'
+import { SetupForm } from '@/components/shell/SetupForm'
+import { UpdateAction } from '@/components/shell/updates'
 
 /* ---------- 设置:账号 → 外观 → 默认模型 → 通知 → 插件 → 连接 → 高级 ---------- */
 export function SettingsPage() {
@@ -18,12 +21,26 @@ export function SettingsPage() {
   const [waitingNotice, setWaitingNotice] = useState(true)
   const [errorNotice, setErrorNotice] = useState(true)
   const switchTheme = '[--color-accent:hsl(var(--me))] [--color-on-accent:hsl(var(--bg))]'
+  const { setup, info, update } = useAppShell()
+  const [editGateway, setEditGateway] = useState(false)
   return (
     <PageScroll>
       <Surface elevation="sunken" className="mx-3 mb-3 flex items-center gap-3 p-3">
         <Avatar id="me" size={44} />
-        <div className="min-w-0 flex-1"><div className="truncate text-[15px] font-semibold">39impacts</div><div className="text-[12.5px] tabular-nums text-fg-2">本月共花费 ¥85.30</div></div>
+        <div className="min-w-0 flex-1"><div className="truncate text-[15px] font-semibold">39impacts</div>{!appShell && <div className="text-[12.5px] tabular-nums text-fg-2">本月共花费 ¥85.30</div>}</div>
       </Surface>
+      {appShell && (
+        <ListGroup title="模型接入" testid="settings-gateway">
+          <ListRow label="模型网关" value={setup?.gateway ? setup.gateway.model : '还没接入'} onClick={() => setEditGateway((v) => !v)} />
+          {editGateway && <div className="p-3"><SetupForm submitLabel="保存并重新连接" onSaved={() => setEditGateway(false)} /></div>}
+        </ListGroup>
+      )}
+      {appShell && info && (
+        <ListGroup title="版本与更新" testid="settings-update">
+          <ListRow label={<span>g-group <span data-testid="app-version" className="tabular-nums">{info.version}</span></span>}><UpdateAction /></ListRow>
+          {update?.note && (update.phase === 'idle' || update.phase === 'error' || update.phase === 'unsupported') && <p data-testid="update-note" className="px-3 py-2 text-[12px] text-fg-3">{update.note}</p>}
+        </ListGroup>
+      )}
       <ListGroup title="外观">
         <ChoiceGroup label="外观" value={dark ? 'dark' : 'light'} onChange={(v) => setDark(v === 'dark')} className="flex gap-2 p-3">
           {THEMES.map((o) => (
@@ -47,7 +64,7 @@ export function SettingsPage() {
       </ListGroup>
       <ListGroup title="连接">
         <ListRow label="外部来源" value="已连 2 个" onClick={() => push({ t: 'sources' })} />
-        <ListRow label="模型服务" value="3 个" onClick={() => {}} />
+        {!appShell && <ListRow label="模型服务" value="3 个" onClick={() => {}} />}
       </ListGroup>
       <ListGroup title="高级"><ListRow label="调试模式"><Switch label="调试模式" isLabelHidden size="sm" className={switchTheme} value={debug} onChange={setDebug} /></ListRow></ListGroup>
       <Hint className="px-6 text-[12px]">调试模式会在 Compute 里显示内部编号等排查信息，平时不需要打开。</Hint>

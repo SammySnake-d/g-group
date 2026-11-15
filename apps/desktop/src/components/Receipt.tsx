@@ -4,10 +4,15 @@
    - 正文 @名字 后一个 5px 小点。
    和 mirasim 不同的一处：群里的联系人全部进名单（mirasim 群聊名单只算人，照搬就看不出联系人读没读）。
    已读位置只由宿主推进（联系人这一轮回复落盘时），表情和模型说的「收到」都改不了它。 */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import * as Tabs from '@animate-ui/react/primitives/radix-ui/tabs'
+import { call } from '@/api/backend'
+import { live } from '@/api/wire/live'
+import { clockOf } from '@/api/wire/types'
 import { people, type Conversation, type PersonId } from '@/data'
 import { useApp } from '@/ctx'
+import { useAppStore } from '@/store'
+import { rankIn } from '@/store/reads'
 import { broken } from '@/mut'
 import { cn } from '@/lib/utils'
 import { Avatar } from './Avatar'
@@ -26,18 +31,22 @@ const idsOf = (c: Conversation) => c.messages.filter((m) => 'id' in m).map((m) =
 /** 名单 = 会话成员 − 发送人。读到 = 这个人的已读位置 ≥ 这条消息；读到时间 = 位置第一次越过它的时刻 */
 export function receiptOf(c: Conversation, msgId: string, from: PersonId, text: string, reactions?: Record<string, PersonId[]>): Receipt | null {
   const ids = idsOf(c)
-  const seq = ids.indexOf(msgId)
-  if (seq < 0) return null
+  if (!ids.includes(msgId)) return null
+  /* 连上后端时按序号比(已读位置可能落在不在列表里的那条上),演示数据按列表先后 */
+  const rank = rankIn(ids)
+  const seq = rank(msgId)
   /* 坏实现（埋雷 AC-46-1）：照搬 mirasim 群聊，名单只算人，把联系人滤掉 */
   const audience = c.members.filter((p) => p !== from && (!broken('AC-46-1') || c.kind === 'dm' || people[p]?.human))
   const called = (p: PersonId) => text.includes('@' + people[p]?.name)
   const read: Row[] = [], unread: Row[] = []
   for (const p of audience) {
     const marks = c.reads?.[p] ?? []
-    let at = marks.find((r) => ids.indexOf(r.upto) >= seq)?.at
+    const mark = marks.find((r) => rank(r.upto) >= seq)
+    /* 读到时间空着 = 重启前就读到了,时刻在点开浮层时向宿主要 */
+    let at = mark ? mark.at || undefined : undefined
     /* 坏实现（埋雷 AC-46-3）：联系人点了表情就当它读了 */
-    if (!at && broken('AC-46-3') && reactions && Object.values(reactions).some((w) => w.includes(p))) at = '—'
-    ;(at ? read : unread).push({ id: p, at, called: called(p) })
+    if (!mark && broken('AC-46-3') && reactions && Object.values(reactions).some((w) => w.includes(p))) at = '—'
+    ;(mark || at ? read : unread).push({ id: p, at, called: called(p) })
   }
   const first = (a: Row, b: Row) => Number(b.called) - Number(a.called)
   return { read: read.sort(first), unread: unread.sort(first), dm: c.kind === 'dm' }
@@ -63,8 +72,9 @@ export function ReceiptGlyph({ fraction, size = 14 }: { fraction: number; size?:
 }
 
 /** MI：已读情况浮层。已读 / 未读两页签用 Animate UI 的 Tabs(role=tab、方向键切换、选中底滑过去) */
-function ReceiptList({ rc, msgId }: { rc: Receipt; msgId: string }) {
+function ReceiptList({ rc: local, msgId }: { rc: Receipt; msgId: string }) {
   const [tab, setTab] = useState<'read' | 'unread'>('read')
+  const rc = useLiveTimes(local, msgId)
   const lists = { read: rc.read, unread: rc.unread }
   return (
     <Tabs.Root value={tab} onValueChange={(v) => setTab(v as 'read' | 'unread')} className="flex flex-col" data-testid={`receipts-${msgId}`} data-tab={tab}>
@@ -94,6 +104,26 @@ function ReceiptList({ rc, msgId }: { rc: Receipt; msgId: string }) {
       ))}
     </Tabs.Root>
   )
+}
+
+/** 连上后端时,浮层一打开就向宿主要这条的回执(messages.receipts):读到时间以宿主记的为准,名单仍按界面算的 */
+function useLiveTimes(rc: Receipt, msgId: string): Receipt {
+  const [times, setTimes] = useState<Record<string, string>>({})
+  const on = useAppStore((s) => live(s))
+  useEffect(() => {
+    const m = /^(.*)#(\d+)$/.exec(msgId)
+    if (!on || !m) return
+    let gone = false
+    void call('messages.receipts', { roomId: m[1], seq: Number(m[2]) }).then((r) => {
+      if (gone || !r.ok) return
+      const me = useAppStore.getState().backend
+      const uid = me.mode === 'connected' ? me.userId : ''
+      setTimes(Object.fromEntries(r.value.read.map((x) => [x.member.kind === 'user' && x.member.id === uid ? 'me' : x.member.id, clockOf(x.at)])))
+    })
+    return () => { gone = true }
+  }, [on, msgId])
+  if (!Object.keys(times).length) return rc
+  return { ...rc, read: rc.read.map((r) => (times[r.id] ? { ...r, at: times[r.id] } : r)) }
 }
 
 function useReceipt(msgId: string) {

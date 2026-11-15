@@ -1,0 +1,71 @@
+{
+  "slice": "最小闭环可用版:桌面端连上真实宿主(联系人、会话、消息、任务、Compute 进度只读后端),只点界面走通建联系人→私聊派活→联系人回复→Compute 开始/完成→交付、建群拉人后群里 @ 派活;打包成 macOS 安装包(dmg+zip+latest-mac.yml,临时签名),首次打开整窗接入模型,应用内自动更新(查新版→提示→下载核对 sha512→退出后替换重开);Compute 行照设计挂在联系人「接了任务」那句下、不搬 Compute 原话;补齐三块原型对照界面，接通 File 本地路径与当前窗口截图附件，修复相同引用连续回复的头像分组",
+  "acceptance": [
+    {
+      "id": "AC-59",
+      "status": "通过",
+      "evidence": "apps/desktop/proof/app-shell/accept-update-steps.txt"
+    },
+    {
+      "id": "AC-34",
+      "status": "未测",
+      "reason": "原型三块对照已合入；22472dcb renderer 146/146，46abb343 受影响 renderer 49/49、Electron 19/19。闭环范围外资产、插件市场接线、记忆、Helper、进展全景仍未接真实数据，不能把局部闭环通过等同 AC-34 全量通过。详见 apps/desktop/proof/native-files/RESULT.md。"
+    },
+    {
+      "id": "AC-03",
+      "status": "未测",
+      "reason": "真实模型验收的数据库读回:聊天 9 条消息发言者只有 user/contact(accept-loop-steps.txt 与 deliverables 下 gg.db),本片没有新增埋雷标定"
+    },
+    {
+      "id": "AC-01",
+      "status": "未测",
+      "reason": "联系人列表、新建走合同,未做重启后身份不变的专门用例"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:16b87c7b-b9f6-4a8a-92d0-b64d3392ff32",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "4e7bc90b"
+  },
+  "unverifiable": "AC-59 的「重启安装」只在本机(macOS arm64、临时签名、更新地址为本机 http 服务)走通,GitHub Releases 真实发布未做,从安装盘直接打开时不替换的分支只有代码没有实测;Electron 用例在云电脑 Linux 上跑,更新提示条被点掉的问题云端没复现、本机真实安装才复现(apps/desktop/proof/app-shell/toast-red.txt),说明 Linux Electron 用例可能骗过 AC-59 的界面部分;G-RED/G-STUB 只认 packages/**/*.test.ts,apps/desktop 的 Playwright 红绿是手工在云电脑跑的;界面接线一部分由同会话派出的子代理写(feat/desktop-live-data,7f5e7a05);本轮新增 packages/ui-core/src/ipc-budgets.test.ts 的红提交为 a79d212a,不同于原切片 red.commit;负向边界对照在红基线已通过,不声称每条新增测试均先红。PR 的 G-RED 全分支统一红提交与独立来源门禁待审,未宣称全部门禁通过。",
+  "waiver": null,
+  "review": {
+    "agent": "claude",
+    "session": "claude:eda2a1e9-6261-4de1-9a33-7cae46fce94b",
+    "model": "group/opus",
+    "verdict": "reject",
+    "reviewed_hash": "53d7979ebe94b696308fc81d82d70e3853dd2e8147e2c492a0200b02d9eca567",
+    "notes": "reviews/feat-desktop-closed-loop-r2.md：第 2 轮 REJECT，冻结 45976fca。第 1 轮 CORR-001 已修掉并独立复核（快照后 setsid/setpgid，macOS 与 Linux，旧实现全部复现、新头 0 次）；红提交 ed46e123 两条 CORR-001 用例按业务断言失败，新头 7/7。新缺陷 CORR-002：本次删掉每轮整组 SIGKILL 且循环不重新找进程，停止确认期间新出生的同组子进程留着仍返回已停止；经 createComputeAdapter→stop→quiesce 复现，15 毫秒派生间隔旧头 0/10、新头 10/10，加回那一行后 0/10。自构 7 个单点故障 4 个存活（无法核对不能返回成功的三处分支与僵尸判断没有测试）。run-all --local --pr=75 用时 1316 秒退出 1：G-RED 604 项、G-STUB 2 项、G-TAUTO 8 项未过，记为未闭合。全量 1667/1667，自检 219/219。A5 真实模型两轮未过。Claude 审 Codex 的返修是跨厂商，但收据作者是 Claude，本审查不能单独满足 G-REVIEW。只审不改实现、不合并。"
+  },
+  "review_status": "待审",
+  "contributors": [
+    {
+      "agent": "astra",
+      "session": "codex:6ffb8674-ed13-4fa8-8380-aef9c5062e09",
+      "role": "T-186 接手实现与作者验证；独立审查待 Claude 与 hy4"
+    }
+  ],
+  "verification": {
+    "baseline": "22472dcbe19bc3a59331edc5833b3050e41b4b66",
+    "red": "52dcb911",
+    "implementation": "46abb343a2e7cc9b27cdf534f73310a7b3cd2429",
+    "red_evidence": "apps/desktop/proof/native-files/red.txt",
+    "grouping_red": "apps/desktop/proof/native-files/grouping-red.txt",
+    "green": "apps/desktop/proof/native-files/green.txt",
+    "remaining": "apps/desktop/proof/native-files/remaining-green.txt",
+    "final_implementation": "52412af151804e9a70110f0e2b388e55ab1cdaac",
+    "upload_limit_red": "a79d212a",
+    "upload_limit_green": "apps/desktop/proof/native-files/budget-green.txt",
+    "packaged": "apps/desktop/proof/native-files/packaged/manifest.json",
+    "packaged_acceptance": "apps/desktop/proof/native-files/packaged/final-resume-steps.txt",
+    "root_tests": {
+      "passed": 1630,
+      "failed": 0
+    },
+    "electron_scope": "46abb343 19/19;52412af1 受影响4/4 (新增大附件用例,无renderer改动)",
+    "real_model": "两个任务均done且文件精确匹配;最终包续验持久化与大截图发送"
+  }
+}
