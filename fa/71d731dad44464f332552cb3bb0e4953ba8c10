@@ -1,0 +1,21 @@
+packages/server/src/loop-guard-r1-calibration.test.ts
+  s_69f96fa873b14b::t_ce5b309e0eba9d 29,40,50,63
+packages/server/src/loop-guard-r1-regression.test.ts
+  s_69f96fa873b14b::t_36a4a7ccecb433 155,165,180,183-189,192-198
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fa71d731dad44464f332552cb3bb0e4953ba8c10",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
