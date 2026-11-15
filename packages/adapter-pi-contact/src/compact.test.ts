@@ -88,6 +88,29 @@ test("压缩器只用联系人的说话模型:请求里的说话模型与压缩�
   await assert.rejects(c3.compact(req(), new AbortController().signal), (e: unknown) => e instanceof PiContactMindError && e.code === "provider-error" && /空/.test(e.message));
 });
 
+test("pi 压缩器明确声明可与检查并行，取消压缩会传到传输层", async () => {
+  let started!: () => void;
+  const ready = new Promise<void>((resolve) => { started = resolve; });
+  let aborted = false;
+  const fetchFn: typeof globalThis.fetch = async (input, init) => {
+    const request = new Request(input, init);
+    started();
+    return new Promise<Response>((_resolve, reject) => {
+      const abort = () => { aborted = true; reject(new Error("传输已中止")); };
+      if (request.signal.aborted) abort();
+      else request.signal.addEventListener("abort", abort, { once: true });
+    });
+  };
+  const c = createPiCompactor({ provider: "fake", model: MODEL, baseUrl: "http://fake.invalid", apiKey: KEY, fetch: fetchFn });
+  assert.equal(c.concurrentReflectCompact, true);
+  const ac = new AbortController();
+  const pending = c.compact(req(), ac.signal);
+  await ready;
+  ac.abort();
+  await assert.rejects(pending, (e: unknown) => e instanceof PiContactMindError && e.code === "provider-error");
+  assert.equal(aborted, true);
+});
+
 test("reflect:一次调用同时出笔记、记忆点和人格建议;请求带人设、本轮材料、邻域记忆与「模型已写笔记」;输出按 JSON 解析,形状不对如实报错", async () => {
   const good = JSON.stringify({ note: "新笔记", memories: [{ title: "部署规矩", text: "部署前先跑测试", anchors: ["room:dm-1"], relation: "change", target: "m-1" }], personaSuggestion: null });
   const f = fake({ text: `好的:\n${good}` });
