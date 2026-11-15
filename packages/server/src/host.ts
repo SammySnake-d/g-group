@@ -2729,6 +2729,23 @@ export class Host {
   }
 
   /**
+   * 群消息寻址的机械边界:所有联系人仍会收到并处理用户消息,但明确 @ 了别人的消息不能被旁观者直接发言。
+   * 旁观者若是在回应另一位联系人已经发布的消息,必须带 replyToSeq,保留纠错/独立复核路径(U48/D19.3)。
+   * 这不是前置过滤:判定发生在动作提交处,游标与注意回合仍照常推进。
+   */
+  private replyScopeRefusal(contactId: string, action: Extract<MindAction, { kind: "reply" }>, fresh: readonly InboundMessage[]): string | null {
+    const room = this.roomRow(action.roomId);
+    if (room.kind !== "group") return null;
+    const latestUser = [...fresh].reverse().find((m) => m.roomId === action.roomId && m.sender.kind === "user");
+    if (!latestUser || latestUser.mentions.length === 0 || latestUser.mentions.includes(contactId)) return null;
+    if (action.replyToSeq !== null) {
+      const target = this.projected(action.roomId).find((m) => m.seq === action.replyToSeq);
+      if (target?.sender.kind === "contact" && target.sender.id !== contactId) return null;
+    }
+    return `这条消息 @ 的是别的联系人,不是你(${action.roomId} #${latestUser.seq})`;
+  }
+
+  /**
    * 一轮装配超预算的显式失败:在会话里出一张这位联系人的失败卡(说明超了多少、请分批),不截断、不调模型、游标不推进。
    * 这位联系人已有没处理的同类失败卡就只更新它(记下最新一批的位置),不重复出卡。返回 "done":不让注意循环在后台反复重跑,
    * 新输入来了或用户点「重试」才再试;点「跳过本轮」才把这批标为已处理。
@@ -2829,6 +2846,8 @@ export class Host {
             if (leavingRooms.has(a.roomId)) { reject(LEAVING_REASON); break; }
             if (!roomIds.has(a.roomId)) { reject("不在这个会话里"); break; }
             if (!a.text.trim()) { reject("空消息"); break; }
+            const replyScope = this.replyScopeRefusal(contactId, a, freshMsgs);
+            if (replyScope) { reject(replyScope); break; }
             const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [] });
             appended.push({ roomId: a.roomId, seq: r.seq });
             replies.push({ roomId: a.roomId, seq: r.seq, text: a.text });
