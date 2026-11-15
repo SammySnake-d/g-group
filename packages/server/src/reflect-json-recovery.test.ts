@@ -1,6 +1,6 @@
 // D23.3 / D25.12:真实 pi 压缩适配器接宿主;仅用进程内假流,验证格式失败与原文保留。
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -67,6 +67,7 @@ function setup(responses: string[], reply = false) {
   return { dir, fake, reports, requests, host, c, dm, makeHost };
 }
 const valid = JSON.stringify({ note: "第二轮检查笔记", memories: [], personaSuggestion: null });
+const validMemory = JSON.stringify({ note: "第二轮检查笔记", memories: [{ title: "发布要求", text: "发布前必须审查", anchors: ["global"], relation: null, target: null }], personaSuggestion: null });
 
 test("reflect 返回不可解析 JSON 后宿主告警、同模型普通压缩兜底,下一轮反思能恢复", async () => {
   const x = setup(["不是 JSON 对象", "首轮压缩保留方向", valid]);
@@ -143,5 +144,34 @@ test("联系人移出群之后,该群待压缩原文不进入其私聊上下文"
     await settle(x.host);
     assert.doesNotMatch(x.requests[1]!.blocks.map((b) => b.text).join("\n"), /群内专属原文标记/);
     assert.doesNotMatch(text(x.fake.seen[2]!), /群内专属原文标记/);
+  } finally { await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
+});
+
+test("失权群的待压缩原文不能经私聊反思再产生全局记忆", async () => {
+  const x = setup(["不是 JSON 对象", " ", validMemory]);
+  try {
+    const group = x.host.createGroup("实验群", [{ kind: "contact", id: x.c.id }]);
+    x.host.send({ roomId: group.id, clientActionId: "1", text: "群内专属原文标记", mentions: [{ id: x.c.id, source: "manual" }] });
+    await settle(x.host);
+    x.host.removeMember(group.id, { kind: "contact", id: x.c.id });
+    x.host.send({ roomId: x.dm.id, clientActionId: "2", text: "私聊继续" });
+    await settle(x.host);
+    assert.doesNotMatch(text(x.fake.seen[2]!), /群内专属原文标记/);
+    assert.doesNotMatch(x.host.stateNote(x.c.id) ?? "", /群内专属原文标记/);
+  } finally { await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
+});
+
+test("撤回后待压缩队列自身不持久保留撤回原文", async () => {
+  const x = setup(["不是 JSON 对象", " ", "不是 JSON 对象", " "]);
+  try {
+    const m = x.host.send({ roomId: x.dm.id, clientActionId: "1", text: "撤回后不得残留的原文标记" });
+    await settle(x.host);
+    x.host.retractMessage(x.dm.id, m.seq);
+    await settle(x.host);
+    const pending = x.host.db.store.db.prepare("SELECT value FROM docs WHERE key = ?").get(`note-pending:${x.c.id}`) as { value: string } | undefined;
+    assert.ok(pending);
+    assert.doesNotMatch(pending.value, /撤回后不得残留的原文标记/);
+    const files = path.join(x.dir, "memory", x.c.id);
+    if (existsSync(files)) assert.equal(readdirSync(files).length, 0);
   } finally { await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
 });

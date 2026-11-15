@@ -2398,10 +2398,41 @@ export class Host {
     if (r.hits > 0) this.report("state-note-scrubbed", { contactId, hits: r.hits });
     return r.text;
   }
+  /** 压缩没产出笔记时待保留的输入;重新检查会话权限、撤回和 rewind,不能把失权或撤回的原文送回模型。 */
+  private pendingNoteInputs(contactId: string, roomIds: readonly string[]): Inbound[] {
+    const saved = getDoc<{ inputs: Inbound[] }>(this.db, `note-pending:${contactId}`)?.value.inputs ?? [];
+    const allowed = new Set(roomIds);
+    const checkers = new Map<string, (f: Inbound) => Inbound | null>();
+    const result: Inbound[] = [];
+    for (const f of saved) {
+      if (!allowed.has(f.roomId)) continue;
+      if (f.kind !== "message") { result.push(f); continue; }
+      let check = checkers.get(f.roomId);
+      if (!check) {
+        const { log } = loadLog(this.db.store, `room:${f.roomId}`);
+        const msgs = project(log), ranges = rewindRanges(this.db, f.roomId), roomId = f.roomId;
+        check = (item) => {
+          if (item.kind !== "message") return item;
+          const ev = log.events.find((e) => e.seq === item.seq);
+          if (!ev) return null;
+          const target = ev.body.kind === "message" ? ev.seq : ev.body.target;
+          if (inRanges(ranges, target)) return null;
+          const msg = msgs.find((m) => m.seq === target);
+          if (ev.body.kind === "retract") return item;
+          if (!msg || msg.retracted) return null;
+          return ev.body.kind === "message" ? this.toInbound(roomId, msg) : item;
+        };
+        checkers.set(f.roomId, check);
+      }
+      const safe = check(f);
+      if (safe) result.push(safe);
+    }
+    return result;
+  }
   /** 本轮要落盘的状态笔记:模型没写就请压缩器补写(同一说话模型的独立调用),超上限就缩写;最后移除撤回原文 */
-  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], signal: AbortSignal): Promise<{ note: string | null; remember: MindAction[]; persona: string | null }> {
+  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], previous: string | null, pending: readonly Inbound[], signal: AbortSignal): Promise<{ note: string | null; remember: MindAction[]; persona: string | null; pending: Inbound[] }> {
     const contactId = contact.id;
-    const prev = this.stateNote(contactId);
+    const prev = previous;
     const compactor = this.opts.compactor?.(this.contactView(contact));
     const profile = { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona };
     const max = this.opts.stateNoteMaxBytes ?? null;
@@ -2447,7 +2478,9 @@ export class Host {
       }
       if (Buffer.byteLength(note, "utf8") > max) this.report("state-note-over-limit", { contactId, bytes: Buffer.byteLength(note, "utf8"), max });
     }
-    return { note: note === null ? null : this.scrubNote(contactId, note, roomIds), remember, persona };
+    // 没有可用笔记时,另存原始输入(不是重放动作);与游标同事务提交,下一轮仍可见,成功写笔记后清除。
+    const nextPending = note === null && (compactor || pending.length) ? [...pending, ...fresh] : [];
+    return { note: note === null ? null : this.scrubNote(contactId, note, roomIds), remember, persona, pending: nextPending };
   }
   private cursor(contactId: string, roomId: string): number {
     return one<{ processed_seq: number }>(this.db, "SELECT processed_seq FROM gg_cursor WHERE contact_id = ? AND room_id = ?", contactId, roomId)?.processed_seq ?? 0;
@@ -2586,6 +2619,12 @@ export class Host {
         note = getDoc<{ text: string }>(this.db, `note:${contactId}`);
       }
     }
+    const pendingNote = this.pendingNoteInputs(contactId, rooms.map((r) => r.id));
+    const effectiveNote = pendingNote.length === 0 ? (note?.value.text ?? null) : [
+      note?.value.text ?? "(没有旧状态笔记)",
+      "[之前压缩失败,保留的未压缩原文]",
+      compactMaterial(pendingNote, []),
+    ].join("\n");
     const ledgerLines = this.activeLedgerLines(contactId);
     const freshKeys = new Set(fresh.flatMap((f) => (f.kind === "message" ? [`${f.roomId}#${f.seq}`, ...(f.replyToSeq !== null ? [`${f.roomId}#${f.replyToSeq}`] : [])] : [])));
     const freshTasks = new Set(fresh.flatMap((f) => (f.kind === "compute" ? [f.taskId] : [])));
@@ -2628,7 +2667,7 @@ export class Host {
       boundIds: ledgerLines.filter((l) => freshKeys.has(`${l.roomId}#${l.sourceSeq}`) || freshTasks.has(l.taskId)).map((l) => l.id),
       processedSeq: Object.fromEntries(rooms.map((r) => [r.id, this.cursor(contactId, r.id)])),
       stateNoteVersion: note?.ver ?? 0,
-      stateNote: note?.value.text ?? null,
+      stateNote: effectiveNote,
       fresh,
       tasks: tasks.map((t) => `${t.id} [${t.state}] ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
       pointers: [...pointers, ...mem.pointers],
@@ -2697,11 +2736,11 @@ export class Host {
         }
       }
     }
-    const settled = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), signal);
+    const settled = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), effectiveNote, pendingNote, signal);
     if (signal.aborted || this.closed) return "done";
     let done: { effects: HostEffect[] };
     try {
-      done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona });
+      done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona, pendingNote: settled.pending });
     } catch (e) {
       this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
       throw e;
@@ -2788,7 +2827,7 @@ export class Host {
     fresh: Inbound[],
     inbox: { id: number }[],
     lastSeen: Record<string, number>,
-    out: { actions: readonly MindAction[]; stateNote: string | null; personaSuggestion?: string | null },
+    out: { actions: readonly MindAction[]; stateNote: string | null; personaSuggestion?: string | null; pendingNote: Inbound[] },
   ): { effects: HostEffect[] } {
     const roomIds = new Set(this.roomsOfContact(contactId).map((r) => r.id));
     // 移出中:这个群里的发言、登记承诺与接新活一律拒绝(D05「先禁止新群内接单与发言」)
@@ -3073,6 +3112,16 @@ export class Host {
       if (out.stateNote !== null) {
         const cur = getDoc<{ text: string }>(this.db, `note:${contactId}`);
         putDoc(this.db, `note:${contactId}`, cur?.ver ?? 0, { text: out.stateNote });
+      }
+      const pending = getDoc<{ inputs: Inbound[] }>(this.db, `note-pending:${contactId}`);
+      if (pending || out.pendingNote.length) {
+        // 只保存已经落盘的联系人发言,不保存被拒绝的模型动作,也不把它们当作下一轮的新输入执行。
+        const sent: Inbound[] = [];
+        if (out.pendingNote.length) for (const a of appended) {
+          const msg = project(loadLog(this.db.store, `room:${a.roomId}`).log).find((m) => m.seq === a.seq);
+          if (msg && !msg.retracted && msg.sender.kind === "contact" && msg.sender.id === contactId) sent.push(this.toInbound(a.roomId, msg));
+        }
+        putDoc(this.db, `note-pending:${contactId}`, pending?.ver ?? 0, { inputs: [...out.pendingNote, ...sent] });
       }
       for (const r of rejected) {
         run(this.db, "INSERT OR REPLACE INTO gg_effects (action_id, kind, payload, status, error, created_at) VALUES (?, ?, ?, 'rejected', ?, ?)", `${roundId}:rej:${rejected.indexOf(r)}`, r.action.kind, JSON.stringify(r.action), r.reason, this.now());
