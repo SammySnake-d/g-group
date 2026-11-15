@@ -17,7 +17,7 @@ interface Block { type: string; text?: string; id?: string; name?: string; input
 interface Body { model: string; system?: Block[]; tools?: { name: string; cache_control?: unknown }[]; messages: { role: string; content: string | Block[] }[] }
 interface Seen { url: string; headers: Headers; body: Body }
 type Turn =
-  | { readonly text?: string; readonly calls?: readonly { readonly name: string; readonly input: unknown }[] }
+  | { readonly text?: string; readonly calls?: readonly { readonly name: string; readonly input: unknown }[]; readonly stopReason?: "end_turn" | "max_tokens" }
   | { readonly status: number; readonly error: unknown }
   | { readonly hang: true };
 
@@ -57,7 +57,7 @@ function fakeAnthropic(turns: readonly Turn[]) {
           c.enqueue(sse("content_block_stop", { index: i }));
           i++;
         }
-        for (const x of end(t.calls?.length ? "tool_use" : "end_turn")) c.enqueue(x);
+        for (const x of end(t.stopReason ?? (t.calls?.length ? "tool_use" : "end_turn"))) c.enqueue(x);
         c.close();
       },
     });
@@ -84,6 +84,54 @@ const input = (tag: string, over: { blocks?: RoundBlock[]; speakingModel?: strin
 const live = () => new AbortController().signal;
 const texts = (c: string | Block[]) => (typeof c === "string" ? [c] : c.map((b) => b.text));
 const until = async (cond: () => boolean) => { while (!cond()) await new Promise((r) => setTimeout(r, 5)); };
+
+test("A5 截断无动作:真实 mind 收到 max_tokens 必须失败,不能当成空回合成功", async () => {
+  const fake = fakeAnthropic([{ stopReason: "max_tokens" }]);
+  try {
+    await assert.rejects(createPiContactMind(opts(fake)).round(input("a5"), live()), (e: unknown) =>
+      e instanceof PiContactMindError && e.code === "provider-error" && /截断/.test(e.message) && !inspect(e).includes(KEY));
+    assert.equal(fake.seen.length, 1);
+  } finally {
+    await fake.close();
+  }
+});
+
+test("A5 截断前已有动作与笔记:整轮失败,不得把先前登记的内容交给宿主", async () => {
+  const fake = fakeAnthropic([
+    { calls: [{ name: "reply", input: { roomId: "g1", text: "不得提交" } }, { name: "update_state_note", input: { note: "不得保存" } }] },
+    { text: "未完成的回复", stopReason: "max_tokens" },
+  ]);
+  try {
+    await assert.rejects(createPiContactMind(opts(fake)).round(input("a5"), live()), (e: unknown) =>
+      e instanceof PiContactMindError && e.code === "provider-error" && /截断/.test(e.message) && !inspect(e).includes(KEY));
+    assert.equal(fake.seen.length, 2);
+  } finally {
+    await fake.close();
+  }
+});
+
+test("A5 截断携带工具调用:本轮直接失败,不执行不完整工具或向模型续发", async () => {
+  const fake = fakeAnthropic([{ calls: [{ name: "reply", input: { roomId: "g1", text: "不得执行" } }], stopReason: "max_tokens" }]);
+  try {
+    await assert.rejects(createPiContactMind(opts(fake)).round(input("a5"), live()), (e: unknown) =>
+      e instanceof PiContactMindError && e.code === "provider-error" && /截断/.test(e.message) && !inspect(e).includes(KEY));
+    assert.equal(fake.seen.length, 1);
+  } finally {
+    await fake.close();
+  }
+});
+
+test("A5 正常 end_turn 的空回合仍可成功,不误判截断", async () => {
+  const fake = fakeAnthropic([{}, { text: "看过了" }]);
+  try {
+    const mind = createPiContactMind(opts(fake));
+    assert.deepEqual(await mind.round(input("empty"), live()), { actions: [], stateNote: null });
+    assert.deepEqual(await mind.round(input("text"), live()), { actions: [], stateNote: null });
+    assert.equal(fake.seen.length, 2);
+  } finally {
+    await fake.close();
+  }
+});
 
 test("首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有十三个具名工具(含 read_quote_parent、progress_rerun)", async () => {
   const fake = fakeAnthropic([{ text: "看过了,不用动作" }]);
