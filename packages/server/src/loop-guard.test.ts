@@ -52,6 +52,7 @@ test("因果根继承：派生消息连续传递同一根，不能每条消息�
   assert.equal(guard.admit("room-a", 3, "a").allowed, true);
   guard.recordMessage("room-a", 4, guard.rootsFor([input(3, "contact")], "room-a"));
   assert.deepEqual(guard.admit("room-a", 4, "b"), { allowed: false, duplicate: false, roots: [root("room-a", 1)], reason: "hops" });
+  assert.equal(guard.isStopped("room-a", 4), true);
 });
 
 test("同根并发分支共用总额度，不同根互不占用，多根派生取每根约束", async () => {
@@ -65,6 +66,7 @@ test("同根并发分支共用总额度，不同根互不占用，多根派生�
   assert.equal(guard.admit("room-a", 3, "b").allowed, false);
   guard.recordMessage("room-b", 2, ["root-b"]);
   assert.equal(guard.admit("room-b", 2, "c").allowed, true, "被拒的多根消息不消耗其他根额度");
+  assert.equal(guard.isStopped("room-b", 2), false);
 });
 
 test("消息重投使用会话、消息与目标联系人的稳定键，不二次扣额度", () => {
@@ -80,6 +82,7 @@ test("消息重投使用会话、消息与目标联系人的稳定键，不二�
   assert.equal(guard.admit("room-a", 4, "b").allowed, false);
   assert.equal(guard.admit("room-a", 4, "b").duplicate, true);
   assert.deepEqual(guard.pending().map((x) => [x.roomId, x.seq, x.contactId, x.reason]), [["room-a", 4, "b", "hops"]]);
+  assert.equal(guard.isStopped("room-a", 4), true);
 });
 
 test("频率额度使用滚动一分钟；频率停止持久保留，等新用户输入开新根", () => {
@@ -98,6 +101,7 @@ test("频率额度使用滚动一分钟；频率停止持久保留，等新用�
   now = 120_000;
   guard.recordMessage("room-a", 6, ["root-a"]);
   assert.equal(guard.admit("room-a", 6, "b").reason, "rate", "限额触发后不靠等一分钟自行继续");
+  assert.equal(guard.isStopped("room-a", 6), true);
 });
 
 test("重启后保留次数、停止原因和待处理；新用户输入才建立新的因果根", () => {
@@ -116,6 +120,7 @@ test("重启后保留次数、停止原因和待处理；新用户输入才建�
   assert.deepEqual(newRoots, [root("room-a", 4)]);
   guard.recordMessage("room-a", 5, newRoots);
   assert.equal(guard.admit("room-a", 5, "b").allowed, true);
+  assert.equal(guard.isStopped("room-a", 5), false);
 });
 
 test("因果元数据与消息事务同生共死；失败事务不留下额度占用", () => {
@@ -126,6 +131,7 @@ test("因果元数据与消息事务同生共死；失败事务不留下额度�
   assert.equal(guard.admit("room-a", 3, "b").allowed, true);
   guard.recordMessage("room-a", 4, ["root-a"]);
   assert.equal(guard.admit("room-a", 4, "b").allowed, false);
+  assert.equal(guard.isStopped("room-a", 4), true);
 });
 
 test("跨会话派生保持原因果根，不借输出到另一群重新获额度", () => {
@@ -136,6 +142,7 @@ test("跨会话派生保持原因果根，不借输出到另一群重新获额�
   assert.deepEqual(roots, ["root-a"]);
   guard.recordMessage("room-b", 1, roots);
   assert.equal(guard.admit("room-b", 1, "c").allowed, false);
+  assert.equal(guard.isStopped("room-b", 1), true);
 });
 
 test("配置拒绝无穷、零和非整数；省略次数时采用明确标候选的有限默认值", () => {
@@ -147,6 +154,7 @@ test("配置拒绝无穷、零和非整数；省略次数时采用明确标候�
   const guard = new LoopGuard(d);
   for (let seq = 1; seq <= 5; seq++) guard.recordMessage("room-a", seq, ["root-default"]);
   assert.deepEqual([1, 2, 3, 4, 5].map((seq) => guard.admit("room-a", seq, "b").allowed), [true, true, true, true, false]);
+  assert.equal(guard.isStopped("room-a", 5), true);
 });
 
 test("生产调度保留旁观者参与但同根自动往返到上限停止，只留一次停止说明；新用户消息可继续", async () => {

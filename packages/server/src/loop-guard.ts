@@ -1,13 +1,15 @@
 // U15 / D07.0：联系人派生唤醒按稳定因果根共享总次数和滚动频率；不判断话题语义。
 // 默认 4 次只是候选运行参数，调用者可配置；达到任一限制后该根持久停止，用户新输入建立新根。
 import type { Inbound } from "@g-group/kernel";
-import { type Db, all, one, run, tx } from "./db.ts";
+import { type Db, all, getDoc, one, run, tx } from "./db.ts";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS gg_loop_messages (room_id TEXT NOT NULL, seq INTEGER NOT NULL, roots TEXT NOT NULL, PRIMARY KEY(room_id,seq));
 CREATE TABLE IF NOT EXISTS gg_loop_roots (root TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0, stopped TEXT);
 CREATE TABLE IF NOT EXISTS gg_loop_wakes (room_id TEXT NOT NULL, seq INTEGER NOT NULL, contact_id TEXT NOT NULL, roots TEXT NOT NULL, allowed INTEGER NOT NULL, reason TEXT, at INTEGER NOT NULL, PRIMARY KEY(room_id,seq,contact_id));
 CREATE TABLE IF NOT EXISTS gg_loop_ticks (root TEXT NOT NULL, room_id TEXT NOT NULL, seq INTEGER NOT NULL, contact_id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY(root,room_id,seq,contact_id));
+CREATE TABLE IF NOT EXISTS gg_loop_resumed (room_id TEXT NOT NULL, seq INTEGER NOT NULL, contact_id TEXT NOT NULL, PRIMARY KEY(room_id,seq,contact_id));
+CREATE TABLE IF NOT EXISTS gg_loop_seen (room_id TEXT NOT NULL, seq INTEGER NOT NULL, contact_id TEXT NOT NULL, PRIMARY KEY(room_id,seq,contact_id));
 CREATE INDEX IF NOT EXISTS gg_loop_ticks_time ON gg_loop_ticks(root,at);
 `;
 export interface LoopLimits {
@@ -57,14 +59,21 @@ export class LoopGuard {
     const r = one<{ roots: string }>(this.db, "SELECT roots FROM gg_loop_messages WHERE room_id=? AND seq=?", roomId, seq);
     return r ? JSON.parse(r.roots) as string[] : [messageRoot(roomId, seq)];
   }
-  /** 同会话新用户输入是显式续话；否则合并本轮全部派生因果，跨会话也不能凭输出重置。 */
+  /** Compute 所属任务记录的根跨事件及重启保持不变；旧任务追溯来源消息。 */
+  taskRoots(taskId: string): string[] {
+    const task = getDoc<{ roomId: string; sourceSeq: number; causeRoots?: readonly string[] }>(this.db, `task:${taskId}`)?.value;
+    if (!task) return [`task:${taskId}`];
+    return task.causeRoots?.length ? sortedRoots(task.causeRoots) : this.rootsOf(task.roomId, task.sourceSeq);
+  }
+  /** 同会话用户输入开新根；该会话有派生输入时仅继承本会话，否则继承本轮全部因果。 */
   rootsFor(fresh: readonly Inbound[], roomId: string): string[] {
     const users = fresh.filter((f) => f.kind === "message" && f.roomId === roomId && f.sender.kind === "user");
     const latest = users.at(-1);
     if (latest?.kind === "message") return [messageRoot(latest.roomId, latest.seq)];
-    const roots = fresh.flatMap((f) => f.kind === "message" && f.sender.kind !== "system"
+    const source = fresh.filter((f) => f.roomId === roomId && (f.kind !== "message" || f.sender.kind !== "system"));
+    const roots = (source.length ? source : fresh).flatMap((f) => f.kind === "message" && f.sender.kind !== "system"
       ? this.rootsOf(f.roomId, f.seq)
-      : f.kind === "compute" ? [`compute:${f.computeId}:${f.signal}:${f.at}`]
+      : f.kind === "compute" ? this.taskRoots(f.taskId)
       : f.kind === "schedule" ? [`schedule:${f.scheduleId}:${f.at}`] : []);
     return sortedRoots(roots);
   }
@@ -99,8 +108,26 @@ export class LoopGuard {
   isStopped(roomId: string, seq: number): boolean {
     return this.rootsOf(roomId, seq).some((root) => !!one<{ stopped: string | null }>(this.db, "SELECT stopped FROM gg_loop_roots WHERE root=?", root)?.stopped);
   }
+  /** 已对该目标放行的消息不能因之后其他目标触线而被撤销。 */
+  mayReceive(roomId: string, seq: number, contactId: string): boolean {
+    const decision = one<{ allowed: number }>(this.db, "SELECT allowed FROM gg_loop_wakes WHERE room_id=? AND seq=? AND contact_id=?", roomId, seq, contactId);
+    return decision ? decision.allowed === 1 : !this.isStopped(roomId, seq);
+  }
+  seen(roomId: string, seq: number, contactId: string): boolean {
+    return !!one(this.db, "SELECT 1 FROM gg_loop_seen WHERE room_id=? AND seq=? AND contact_id=?", roomId, seq, contactId);
+  }
+  markSeen(roomId: string, seq: number, contactId: string): void {
+    run(this.db, "INSERT OR IGNORE INTO gg_loop_seen(room_id,seq,contact_id) VALUES(?,?,?)", roomId, seq, contactId);
+  }
+  /** 待处理原文只能在同会话的新用户发言之后补交，且成功提交轮次后才算消费。 */
+  unresolvedBefore(roomId: string, contactId: string, seq: number): number[] {
+    return all<{ seq: number }>(this.db, "SELECT w.seq FROM gg_loop_wakes w WHERE w.room_id=? AND w.contact_id=? AND w.allowed=0 AND w.seq<? AND NOT EXISTS (SELECT 1 FROM gg_loop_resumed r WHERE r.room_id=w.room_id AND r.seq=w.seq AND r.contact_id=w.contact_id) ORDER BY w.seq", roomId, contactId, seq).map((r) => r.seq);
+  }
+  resolve(roomId: string, seq: number, contactId: string): void {
+    run(this.db, "INSERT OR IGNORE INTO gg_loop_resumed(room_id,seq,contact_id) SELECT room_id,seq,contact_id FROM gg_loop_wakes WHERE room_id=? AND seq=? AND contact_id=? AND allowed=0", roomId, seq, contactId);
+  }
   pending(): BlockedWake[] {
-    return all<{ room_id: string; seq: number; contact_id: string; roots: string; reason: "hops" | "rate" }>(this.db, "SELECT room_id,seq,contact_id,roots,reason FROM gg_loop_wakes WHERE allowed=0 ORDER BY room_id,seq,contact_id")
+    return all<{ room_id: string; seq: number; contact_id: string; roots: string; reason: "hops" | "rate" }>(this.db, "SELECT w.room_id,w.seq,w.contact_id,w.roots,w.reason FROM gg_loop_wakes w WHERE w.allowed=0 AND NOT EXISTS (SELECT 1 FROM gg_loop_resumed r WHERE r.room_id=w.room_id AND r.seq=w.seq AND r.contact_id=w.contact_id) ORDER BY w.room_id,w.seq,w.contact_id")
       .map((r) => ({ roomId: r.room_id, seq: r.seq, contactId: r.contact_id, roots: JSON.parse(r.roots) as string[], reason: r.reason }));
   }
 }

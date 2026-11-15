@@ -138,4 +138,6 @@ test("CA2接缝05：同一轮真实装配同时保留被拒回告、可认领任
   assert.ok(fifth.includes("claim_task(taskId=t-seam-not-found) → 被拒:没有任务 t-seam-not-found"), "同一轮有 CA2 拒绝回告");
   assert.ok(fifth.includes(`可认领的任务 ${task.id}`), "同一轮有 CA2 可认领任务");
   assert.ok(fifth.includes(`禁言 ${group.id}`) && fifth.includes("三样并集群"), "同一轮有 #71 禁言事实");
+  assert.ok(fifth.indexOf("claim_task(taskId=t-seam-not-found)") < fifth.indexOf(`可认领的任务 ${task.id}`), "拒绝回告在可认领任务之前");
+  assert.ok(fifth.indexOf(`可认领的任务 ${task.id}`) < fifth.indexOf(`禁言 ${group.id}`), "可认领任务在禁言事实之前");
 });
