@@ -11,7 +11,7 @@ const KEY = "sk-test-SECRET-c0mp4ct";
 const MODEL = "test-model-1";
 interface Body { model: string; system?: { type: string; text: string }[]; tools?: unknown[]; messages: { role: string; content: string | { type: string; text?: string }[] }[]; max_tokens: number }
 
-function fake(reply: { text: string } | { status: number; error: unknown }) {
+function fake(reply: { text: string; stopReason?: "end_turn" | "max_tokens" } | { status: number; error: unknown }) {
   const seen: { body: Body; headers: Headers }[] = [];
   const enc = new TextEncoder();
   const sse = (type: string, data: object) => enc.encode(`event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`);
@@ -25,7 +25,7 @@ function fake(reply: { text: string } | { status: number; error: unknown }) {
         c.enqueue(sse("content_block_start", { index: 0, content_block: { type: "text", text: "" } }));
         c.enqueue(sse("content_block_delta", { index: 0, delta: { type: "text_delta", text: reply.text } }));
         c.enqueue(sse("content_block_stop", { index: 0 }));
-        c.enqueue(sse("message_delta", { delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 5 } }));
+        c.enqueue(sse("message_delta", { delta: { stop_reason: reply.stopReason ?? "end_turn", stop_sequence: null }, usage: { output_tokens: 5 } }));
         c.enqueue(sse("message_stop", {}));
         c.close();
       },
@@ -41,6 +41,26 @@ const req = (over: Partial<CompactRequest> = {}): CompactRequest => ({
   material: "[本轮新输入(原文)]\n#3 · dm-1 · 我(user:me) · t\n改成按长度排\n[联系人本轮动作]\n- reply → dm-1 ↩#3:fig, kiwi, banana\n",
   maxBytes: 2000,
   ...over,
+});
+
+test("压缩非空输出以 max_tokens 截断时拒绝当成完整笔记,结束的同文仍可用", async () => {
+  const truncated = fake({ text: "只写到一半", stopReason: "max_tokens" });
+  const c = createPiCompactor({ provider: "fake", model: MODEL, baseUrl: "http://fake.invalid", apiKey: KEY, fetch: truncated.fetch });
+  await assert.rejects(c.compact(req(), new AbortController().signal), (e: unknown) => e instanceof PiContactMindError && e.code === "provider-error" && /截断|length|max_tokens/.test(e.message));
+  assert.equal(truncated.seen.length, 1);
+  const finished = fake({ text: "只写到一半", stopReason: "end_turn" });
+  const c2 = createPiCompactor({ provider: "fake", model: MODEL, baseUrl: "http://fake.invalid", apiKey: KEY, fetch: finished.fetch });
+  assert.equal(await c2.compact(req(), new AbortController().signal), "只写到一半");
+});
+
+test("反思 max_tokens 截断即使碰巧是完整 JSON 也不得作为有效检查结果", async () => {
+  const completeLooking = JSON.stringify({ note: "截断但貌似完整", memories: [], personaSuggestion: null });
+  const truncated = fake({ text: completeLooking, stopReason: "max_tokens" });
+  const c = createPiCompactor({ provider: "fake", model: MODEL, baseUrl: "http://fake.invalid", apiKey: KEY, fetch: truncated.fetch });
+  await assert.rejects(c.reflect!({ ...req(), neighbors: [], noteWritten: null }, new AbortController().signal), (e: unknown) => e instanceof PiContactMindError && e.code === "provider-error" && /截断|length|max_tokens/.test(e.message));
+  const finished = fake({ text: completeLooking });
+  const c2 = createPiCompactor({ provider: "fake", model: MODEL, baseUrl: "http://fake.invalid", apiKey: KEY, fetch: finished.fetch });
+  assert.equal((await c2.reflect!({ ...req(), neighbors: [], noteWritten: null }, new AbortController().signal)).note, "截断但貌似完整");
 });
 const textOf = (c: Body["messages"][number]["content"]) => (typeof c === "string" ? c : c.map((x) => x.text ?? "").join("\n"));
 
