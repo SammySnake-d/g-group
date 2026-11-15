@@ -1,3 +1,4 @@
+import { TextInput } from '@astryxdesign/core/TextInput'
 /* ============ 设置页 ·「默认」一节(D07.4 规则 1/2/6;验收 AC-51) ============
    改全局默认先预检影响:会动到哪几位联系人、哪些会失配;失配修好才能保存,不会自动换成别的模型。 */
 import { useEffect, useRef, useState } from 'react'
@@ -5,10 +6,11 @@ import { AnimatePresence, motion } from 'motion/react'
 import { ArrowRightLeft, Check, ChevronRight } from 'lucide-react'
 import { planDefaults, type Fix } from '@g-group/ui-core'
 import { useApp } from '@/ctx'
+import { live } from '@/api/wire/live'
 import { collapse, rise } from '@/config/motion'
 import { Button } from '@/components/ui/button'
 import { Field, NativeSelect } from '@/components/ui/field'
-import { EFFORT_LIST, HARNESS_LIST, harnessLabel, modelContacts, toContactModels, type ModelSettings } from '@/modelConfig'
+import { EFFORT_LIST, HARNESS_LIST, harnessLabel, liveCatalog, modelContacts, toContactModels, usedModels, whereRuns, type ModelSettings } from '@/modelConfig'
 import { DEFAULTS, DEFAULT_FIELDS, DEFAULT_FIELD_LABEL, type DefaultField } from './constants'
 import { fixLabel } from './logic'
 import { DefaultsImpact } from './DefaultsImpact'
@@ -21,26 +23,30 @@ const SEL = 'w-[168px]'
 const OTHER = '__other__'
 
 export function GlobalModelDefaults() {
-  const { modelSettings: s, modelsRev, saveModels } = useApp()
+  const { modelSettings: s, modelsRev, saveModels, isLive } = useApp((st) => ({ modelSettings: st.modelSettings, modelsRev: st.modelsRev, saveModels: st.saveModels, isLive: live(st) }))
   const [draft, setDraft] = useState<ModelSettings>(s)
   const [fixes, setFixes] = useState<Fix[]>([])
   const [savedN, setSavedN] = useState<number | null>(null)
   const [batch, setBatch] = useState(false)
   const [otherCompute, setOtherCompute] = useState(false)
+  const [saving, setSaving] = useState(false)
   const impactRef = useRef<HTMLDivElement>(null)
   useEffect(() => { setDraft(s); setFixes([]) }, [modelsRev]) // 任何一处保存过都从新的全局默认重新开始
 
   const contacts = modelContacts().map(toContactModels)
-  const plan = planDefaults(contacts, s, draft, fixes)
+  const effective = isLive ? liveCatalog(draft, usedModels()) : draft
+  const plan = planDefaults(contacts, s, effective, fixes)
   const changed = DEFAULT_FIELDS.filter((k) => draft[k] !== s[k])
   const dirty = changed.length > 0 || fixes.length > 0
-  const setField = (k: DefaultField, v: string) => { setDraft((d) => ({ ...d, [k]: v, ...(k === 'defaultComputeModel' || k === 'defaultSpeakingModel') && v && !d.models.some((m) => m.id === v) ? { models: [...d.models, { id: v, label: v, vendor: 'unknown', harnesses: [...HARNESS_LIST] }] } : {} })); setSavedN(null) }
+  const setField = (k: DefaultField, v: string) => { setDraft((d) => ({ ...d, [k]: v })); setSavedN(null) }
   const addFix = (f: Fix) => setFixes((fs) => [...fs.filter((x) => x.contactId !== f.contactId), f])
-  const save = () => {
-    if (!plan.canSave) return
+  const save = async () => {
+    if (!plan.canSave || saving || !draft.defaultSpeakingModel.trim() || !draft.defaultComputeModel.trim()) return
     const settings: Partial<ModelSettings> = Object.fromEntries(changed.map((k) => [k, draft[k]]))
     const why = changed.map((k) => `${DEFAULT_FIELD_LABEL[k]}改成 ${draft[k]}`).join('、')
-    saveModels({
+    setSaving(true)
+    try {
+      const ok = await saveModels({
       settings,
       contacts: plan.patched.map((c) => {
         const f = fixes.find((x) => x.contactId === c.id)!
@@ -48,23 +54,24 @@ export function GlobalModelDefaults() {
       }),
       toast: DEFAULTS.savedToast,
     })
-    setSavedN(plan.affected.length)
+      if (ok) setSavedN(plan.affected.length)
+    } finally { setSaving(false) }
   }
-  const computeWhere = (s.models.find((m) => m.id === draft.defaultComputeModel)?.harnesses ?? []).map(harnessLabel).join(' / ') || '没有 Harness'
+  const computeWhere = whereRuns(draft.defaultComputeModel, effective)
 
   return (
     <>
       <div className="mx-3 mb-3" data-testid="model-defaults">
         <div className="flex items-center px-1 pb-1.5 pt-2 text-[12px] font-medium text-fg-3"><span className="flex-1">{DEFAULTS.section}</span></div>
         <div className="overflow-hidden rounded-xl bg-hover/60 [&>*+*]:border-t [&>*+*]:border-line">
-          <Field layout="inline" className={ROW} label={DEFAULT_FIELD_LABEL.defaultComputeModel} hint={`继承全局的联系人用它（${computeWhere} 能跑）`}>
+          <Field layout="inline" className={ROW} label={DEFAULT_FIELD_LABEL.defaultComputeModel} hint={`继承全局的联系人用它（${computeWhere}）`}>
             <NativeSelect aria-label={DEFAULT_FIELD_LABEL.defaultComputeModel} data-testid="def-compute" value={otherCompute ? OTHER : draft.defaultComputeModel} onChange={(e) => e.target.value === OTHER ? (setOtherCompute(true), setField('defaultComputeModel', '')) : (setOtherCompute(false), setField('defaultComputeModel', e.target.value))} className={SEL} invalid={!!plan.defaultsMismatch}>
               {s.models.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
               {draft.defaultComputeModel && !s.models.some((m) => m.id === draft.defaultComputeModel) && <option value={draft.defaultComputeModel}>{draft.defaultComputeModel} · 目录里没声明</option>}
               <option value={OTHER}>填别的模型 id…</option>
             </NativeSelect>
           </Field>
-          {otherCompute && <div className="flex gap-1.5 px-4 pb-2"><input data-testid="def-compute-other" className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-bg px-2 text-[13px]" placeholder="模型 ID" onChange={(e) => setField('defaultComputeModel', e.target.value)} /><Button data-testid="def-compute-other-ok" size="xs" variant="secondary" onClick={() => setOtherCompute(false)}>确定</Button></div>}
+          {otherCompute && <div className="flex gap-1.5 px-4 pb-2"><TextInput data-testid="def-compute-other" label="模型 ID" isLabelHidden size="sm" containerClassName="min-w-0 flex-1" value={draft.defaultComputeModel} placeholder="模型 ID" onChange={(value) => setField('defaultComputeModel', value)} /><Button data-testid="def-compute-other-ok" size="xs" variant="secondary" onClick={() => setOtherCompute(false)}>确定</Button></div>}
           <Field layout="inline" className={ROW} label={DEFAULT_FIELD_LABEL.defaultEffort} hint={DEFAULTS.effortHint}>
             <NativeSelect aria-label={DEFAULT_FIELD_LABEL.defaultEffort} data-testid="def-effort" value={draft.defaultEffort} onChange={(e) => setField('defaultEffort', e.target.value)} className={SEL}>
               {EFFORT_LIST.map((e) => <option key={e} value={e}>{e}</option>)}
@@ -93,7 +100,7 @@ export function GlobalModelDefaults() {
             <motion.div key="impact" {...collapse} className="overflow-hidden"
               onAnimationComplete={() => { if (dirty) impactRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) }}>
               {/* 一改就把影响预览滚进视野，不让用户以为改完就生效了 */}
-              <DefaultsImpact ref={impactRef} plan={plan} s={s} fixes={fixes} onFix={addFix} onUndoFix={(f) => setFixes((fs) => fs.filter((x) => x !== f))}
+              <DefaultsImpact ref={impactRef} plan={plan} saving={saving} s={effective} fixes={fixes} onFix={addFix} onUndoFix={(f) => setFixes((fs) => fs.filter((x) => x !== f))}
                 onSetField={setField} onCancel={() => { setDraft(s); setFixes([]) }} onSave={save} />
             </motion.div>
           )}

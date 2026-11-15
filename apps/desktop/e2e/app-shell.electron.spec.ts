@@ -41,6 +41,9 @@ test("没接入模型时整窗请用户接入;填好后宿主起来、界面连�
     await win.getByTestId("setup-save").click();
     await expect(win.getByTestId("setup-error")).toContainText("网关地址");
     await win.getByTestId("setup-base-url").fill("http://127.0.0.1:9/neutral");
+    await expect(win.getByTestId("setup-model")).toHaveValue("");
+    await win.getByTestId("setup-token").fill("NEUTRAL_FIXTURE_NO_CREDENTIALS");
+    await win.getByTestId("setup-model").fill("neutral-model");
     await win.getByTestId("setup-save").click();
     await expect(win.getByTestId("rail")).toBeVisible({ timeout: 20_000 });
     await expect(win.getByTestId("backend-demo")).toHaveAttribute("data-mode", "connected");

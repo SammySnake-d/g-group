@@ -16,6 +16,7 @@ const name = (id: string) => people[id]?.name ?? id
 /** 改全局默认的影响预览:会动到谁(前后值)、谁会失配(两条修复路径)、只影响新建联系人的字段;修好才能保存 */
 export const DefaultsImpact = forwardRef<HTMLDivElement, {
   plan: Plan
+  saving?: boolean
   s: ModelSettings
   fixes: Fix[]
   onFix: (f: Fix) => void
@@ -23,7 +24,7 @@ export const DefaultsImpact = forwardRef<HTMLDivElement, {
   onSetField: (k: DefaultField, v: string) => void
   onCancel: () => void
   onSave: () => void
-}>(({ plan, s, fixes, onFix, onUndoFix, onSetField, onCancel, onSave }, ref) => {
+}>(({ plan, saving, s, fixes, onFix, onUndoFix, onSetField, onCancel, onSave }, ref) => {
   const left = plan.mismatched.length + (plan.defaultsMismatch ? 1 : 0)
   return (
     <div ref={ref} data-testid="defaults-impact" className="mt-2 rounded-xl border border-line bg-bg p-3 text-[12.5px]">
@@ -76,8 +77,8 @@ export const DefaultsImpact = forwardRef<HTMLDivElement, {
       {plan.newContactsOnly.length > 0 && <div data-testid="impact-new-only" className="mt-2 text-[11.5px] text-fg-3">{plan.newContactsOnly.map((k) => (k === 'defaultHarness' ? '默认 Harness' : '默认说话模型')).join('、')}只用于之后新建的联系人，已有联系人各自存了自己的。</div>}
       <div className="mt-3 flex items-center gap-2 border-t border-line pt-2.5">
         <span role={plan.canSave ? undefined : 'alert'} className={cn('flex-1 text-[12px] tabular-nums', plan.canSave ? 'text-fg-3' : 'text-err')}>{plan.canSave ? '' : `还有 ${left} 处对不上，修好才能保存`}</span>
-        <Button data-testid="defaults-cancel" variant="ghost" size="sm" onClick={onCancel}>{DEFAULTS.cancel}</Button>
-        <Button data-testid="defaults-save" variant="primary" size="sm" className="px-4" disabled={!plan.canSave} onClick={onSave}>{DEFAULTS.save}</Button>
+        <Button data-testid="defaults-cancel" variant="ghost" size="sm" disabled={saving} onClick={onCancel}>{DEFAULTS.cancel}</Button>
+        <Button data-testid="defaults-save" variant="primary" size="sm" className="px-4" disabled={!plan.canSave || saving} onClick={onSave}>{saving ? '保存中…' : DEFAULTS.save}</Button>
       </div>
     </div>
   )

@@ -1,3 +1,4 @@
+import { TextInput } from '@astryxdesign/core/TextInput'
 /* ============ 联系人工作台 · 设置 · 模型(D07.4 规则 1/2/5、U93、U92;验收 R-17、AC-32) ============
    全软件只在两处改模型:这里和设置页「默认」一节。判定全部来自 @g-group/ui-core 的纯函数:生效值和继承链、同一个兼容判定。
    不兼容一律阻断并给两条修复路径,界面上没有任何「自动换一个能用的」分支。 */
@@ -11,7 +12,7 @@ import { collapse } from '@/config/motion'
 import { Slider } from '@/components/ui/slider'
 import { Button } from '@/components/ui/button'
 import { Field, NativeSelect } from '@/components/ui/field'
-import { EFFORT_LIST, HARNESS_LIST, VENDOR_LABEL, harnessLabel, liveComputes, modelLabel, modelOption } from '@/modelConfig'
+import { EFFORT_LIST, HARNESS_LIST, harnessLabel, liveCatalog, liveComputes, modelLabel, modelOption, talkOption } from '@/modelConfig'
 import { CM } from './constants'
 import { asContact, changeNote, cleanSlot, fromPerson, sameDraft, type Draft } from './logic'
 import { ComputeModeList } from './ComputeModeList'
@@ -24,7 +25,7 @@ const W = 'w-[230px]'
 const OTHER = '__other__'
 
 export function ContactModelSettings({ id }: { id: PersonId }) {
-  const { modelSettings: s, modelsRev, saveModels, computes, isLive } = useApp((st) => ({ modelSettings: st.modelSettings, modelsRev: st.modelsRev, saveModels: st.saveModels, computes: st.computes, isLive: live(st) }))
+  const { modelSettings, modelsRev, saveModels, computes, isLive } = useApp((st) => ({ modelSettings: st.modelSettings, modelsRev: st.modelsRev, saveModels: st.saveModels, computes: st.computes, isLive: live(st) }))
   const p = people[id]
   const [base, setBase] = useState<Draft>(() => fromPerson(p))
   const [draft, setDraft] = useState<Draft>(base)
@@ -32,6 +33,8 @@ export function ContactModelSettings({ id }: { id: PersonId }) {
   const [adv, setAdv] = useState(!!p.stall)
   const [talkOther, setTalkOther] = useState(false)
   const [computeOther, setComputeOther] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const s = isLive ? liveCatalog(modelSettings, [draft.speakingModel, draft.computeModel.model ?? '']) : modelSettings
   /* 别处（全局默认、批量替换）保存过：没改动就跟上新值 */
   useEffect(() => {
     const cur = fromPerson(people[id])
@@ -43,18 +46,20 @@ export function ContactModelSettings({ id }: { id: PersonId }) {
   const compute = gate.compute
   const dirty = !sameDraft(draft, base)
   const stallErr = draft.stall ? checkStall(draft.stall) : null
-  const canSave = dirty && gate.allowed && !stallErr
+  const canSave = dirty && gate.allowed && !stallErr && !!draft.speakingModel.trim() && !saving
   const running = liveComputes(computes, id)
   const set = (patch: Partial<Draft>) => { setDraft((d) => ({ ...d, ...patch })); setNotice(null) }
   const setSlot = (mode: ModelSlot['mode'], model?: string) => set({ computeModel: cleanSlot(mode, model, draft.computeModel.effort) })
   const fix = (f: Fix) => { const c = applyFix(cm, f); set({ harness: c.harness, computeModel: c.computeModel }) }
-  const save = () => {
+  const save = async () => {
     if (!canSave) return
     const nt = nextTurn(asContact(id, base), cm, s, running.length)
     const note = changeNote(base, draft, s) + (nt ? '，下一轮生效' : '')
-    saveModels({ contacts: [{ id, patch: { model: draft.speakingModel, harness: draft.harness, computeModel: draft.computeModel, computeQuota: draft.quota, stall: draft.stall ?? undefined }, note }] })
-    setBase(draft)
-    setNotice(nt)
+    setSaving(true)
+    try {
+      const ok = await saveModels({ contacts: [{ id, patch: { model: draft.speakingModel, harness: draft.harness, computeModel: draft.computeModel, computeQuota: draft.quota, ...(!isLive ? { stall: draft.stall ?? undefined } : {}) }, note }] })
+      if (ok) { setBase(draft); setNotice(nt) }
+    } finally { setSaving(false) }
   }
   const prevModel = resolveCompute(asContact(id, base), s).model.value
   const modeHint: Record<ModelSlot['mode'], string> = {
@@ -74,12 +79,12 @@ export function ContactModelSettings({ id }: { id: PersonId }) {
         <div className="min-w-0 space-y-3">
           <Field layout="inline" label={CM.talk} hint={CM.talkHint}>
             <NativeSelect aria-label={CM.talk} data-testid="cm-talk" value={talkOther ? OTHER : draft.speakingModel} onChange={(e) => e.target.value === OTHER ? (setTalkOther(true), set({ speakingModel: '' })) : (setTalkOther(false), set({ speakingModel: e.target.value }))} className={W}>
-              {s.models.map((m) => <option key={m.id} value={m.id}>{m.label} · {VENDOR_LABEL[m.vendor] ?? m.vendor}</option>)}
+              {s.models.map((m) => <option key={m.id} value={m.id}>{talkOption(m.id, s)}</option>)}
               {draft.speakingModel && !s.models.some((m) => m.id === draft.speakingModel) && <option value={draft.speakingModel}>{draft.speakingModel} · 目录里没声明</option>}
               <option value={OTHER}>填别的模型 id…</option>
             </NativeSelect>
           </Field>
-          {talkOther && <div className="mt-2 flex gap-1.5"><input data-testid="cm-talk-other" className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-bg px-2 text-[13px]" placeholder="模型 ID" onChange={(e) => set({ speakingModel: e.target.value })} /><Button data-testid="cm-talk-other-ok" size="xs" variant="secondary" onClick={() => setTalkOther(false)}>确定</Button></div>}
+          {talkOther && <div className="mt-2 flex gap-1.5"><TextInput data-testid="cm-talk-other" label="模型 ID" isLabelHidden size="sm" containerClassName="min-w-0 flex-1" value={draft.speakingModel} placeholder="模型 ID" onChange={(value) => set({ speakingModel: value })} /><Button data-testid="cm-talk-other-ok" size="xs" variant="secondary" onClick={() => setTalkOther(false)}>确定</Button></div>}
           <div className="border-t border-line pt-3">
             <div className="mb-2 text-[12px] font-medium text-fg-3">{CM.compute}</div>
             <div className="space-y-2.5">
@@ -101,7 +106,7 @@ export function ContactModelSettings({ id }: { id: PersonId }) {
                     </NativeSelect>
                   </Field>
                 )}
-                {computeOther && <div className="mt-2 flex gap-1.5"><input data-testid="cm-model-other" className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-bg px-2 text-[13px]" placeholder="模型 ID" onChange={(e) => setSlot('explicit', e.target.value)} /><Button data-testid="cm-model-other-ok" size="xs" variant="secondary" onClick={() => setComputeOther(false)}>确定</Button></div>}
+                {computeOther && <div className="mt-2 flex gap-1.5"><TextInput data-testid="cm-model-other" label="模型 ID" isLabelHidden size="sm" containerClassName="min-w-0 flex-1" value={draft.computeModel.model ?? ''} placeholder="模型 ID" onChange={(value) => setSlot('explicit', value)} /><Button data-testid="cm-model-other-ok" size="xs" variant="secondary" onClick={() => setComputeOther(false)}>确定</Button></div>}
               </div>
               <Field layout="inline" label={CM.effort} hint={CM.effortHint}>
                 <NativeSelect aria-label="Compute effort" data-testid="cm-effort" value={draft.computeModel.effort ?? ''} onChange={(e) => set({ computeModel: cleanSlot(draft.computeModel.mode, draft.computeModel.model, e.target.value || undefined) })} className={W}>

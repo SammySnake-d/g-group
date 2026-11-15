@@ -20,6 +20,7 @@ import { HelperExtra } from './cards/HelperExtra'
 import * as Concept from '@/concept'
 import { ComputeLine } from './compute/ComputeLine'
 import type { Bodied } from './types'
+import { FailureDetails } from './cards/FailureDetails'
 
 type RowProps = { m: Bodied; first: boolean; compact: boolean; highlight: boolean; selecting?: boolean; checked?: boolean; onSelect?: (id: string) => void; trail?: string; /** 这条的引用上面同一个人刚画过,不重复画 */ hideQuotes?: boolean; children: ReactNode }
 
@@ -70,6 +71,7 @@ export function Row({ m, first, compact, highlight, selecting, checked, onSelect
           </div>
         )}
         {m.k === 'text' && m.helper && <HelperExtra m={m} />}
+        {m.k === 'text' && m.card?.kind === 'failure' && <FailureDetails m={m} />}
         {m.k === 'text' && <AskCard msgId={m.id} />}
         {m.k === 'text' && m.tag && <TaskTag msgId={m.id} tag={m.tag} />}
         {m.k === 'text' && m.cron && <CronTrail m={m} mine={mine} />}

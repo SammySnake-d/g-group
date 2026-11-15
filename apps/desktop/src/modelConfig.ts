@@ -45,10 +45,10 @@ export const EMPTY_MODEL_SETTINGS: ModelSettings = { defaultHarness: 'claude-cod
 /** 连着后端时给界面用的目录:后端声明的在前,后面补上正在用的(全局默认、ids 里给的)和这次手填的,标成「没声明」。
  *  没声明的按后端的规矩不拦——所以这里让它在每个 Harness 上都过得去,厂商记 unknown(和 ui-core 对目录外模型的口径一致) */
 export function liveCatalog(s: ModelSettings, ids: readonly string[]): ModelSettings {
-  const declared = new Set(s.models.map((m) => m.id))
+  const known = s.models.filter((m) => !s.undeclared?.includes(m.id))
+  const declared = new Set(known.map((m) => m.id))
   const undeclared = [...new Set([s.defaultSpeakingModel, s.defaultComputeModel, ...ids])].filter((id) => id && !declared.has(id))
-  if (!undeclared.length) return s
-  return { ...s, models: [...s.models, ...undeclared.map((id) => ({ id, label: id, vendor: 'unknown', harnesses: [...HARNESS_LIST] }))], undeclared }
+  return { ...s, models: [...known, ...undeclared.map((id) => ({ id, label: id, vendor: 'unknown', harnesses: [...HARNESS_LIST] }))], undeclared }
 }
 export const isUndeclared = (id: string | undefined, s: ModelSettings) => !!id && !!s.undeclared?.includes(id)
 /** 没声明的模型在下拉和说明里怎么写 */

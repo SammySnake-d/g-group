@@ -43,8 +43,7 @@ export function bindAppIpc(o: { config: AppConfig; backend: Backend; updater: Up
       let url: URL;
       try { url = new URL(baseUrl); } catch { throw new Error("网关地址不是有效的网址"); }
       if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("网关地址应以 http:// 或 https:// 开头");
-      const saved = o.config.gateway();
-      const token = typeof p.token === "string" && p.token.trim() ? p.token.trim() : saved?.token ?? "";
+      const token = o.config.gatewayToken(baseUrl, typeof p.token === "string" ? p.token : undefined);
       if (!token) throw new Error("先填令牌");
       const modelsUrl = new URL(url.toString());
       modelsUrl.pathname = `${modelsUrl.pathname.replace(/\/+$/, "").replace(/\/v1$/, "")}/v1/models`;

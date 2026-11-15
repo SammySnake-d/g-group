@@ -4,6 +4,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { GatewayView, SetupInput } from "../src/api/app-shell-types";
+import { sameGatewayBase } from "../src/api/gateway-identity";
 
 export interface Gateway {
   baseUrl: string;
@@ -45,11 +46,17 @@ export class AppConfig {
     if (!g) return null;
     return { baseUrl: g.baseUrl ?? "", model: g.model ?? "", hasToken: !!g.token };
   }
+  /** 留空只复用同一个 API 的令牌，切换地址必须重新填写。 */
+  gatewayToken(baseUrl: string, supplied?: string): string {
+    if (supplied?.trim()) return supplied.trim();
+    const saved = this.gateway();
+    return saved && sameGatewayBase(baseUrl, saved.baseUrl) ? saved.token : "";
+  }
   /** 校验后保存;不合格抛 Error(人话原因) */
   saveGateway(input: SetupInput): Gateway {
     const baseUrl = String(input.baseUrl ?? "").trim().replace(/\/+$/, "");
     const model = String(input.model ?? "").trim();
-    const token = typeof input.token === "string" && input.token.trim() ? input.token.trim() : (this.read().gateway?.token ?? "");
+    const token = this.gatewayToken(baseUrl, input.token);
     let u: URL;
     try {
       u = new URL(baseUrl);
