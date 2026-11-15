@@ -1,0 +1,30 @@
+packages/server/proof/g6/runtime-config-r1.test.ts
+  s_69f96fa873b14b::t_0f17340c1a9b65 130
+  s_69f96fa873b14b::t_fcb5ce8ca42b58 97-100,103-117,119-129,131-139,152,161
+  s_69f96fa873b14b::t_db982ca05f66bc 159
+  s_69f96fa873b14b::t_2a93bc0bd70834 4-5,9,14
+packages/server/proof/g6/runtime-config-r1-http.integration.ts
+  s_69f96fa873b14b::t_a235d0ab65d5af 1-72
+packages/server/proof/g6/driver.ts
+  s_69f96fa873b14b::t_c781f119fcf72b 83
+packages/server/proof/g6/manifest.ts
+  s_69f96fa873b14b::t_e3c58f5ec023dc 47,49
+packages/server/proof/g6/run.ts
+  s_69f96fa873b14b::t_741dcc5b576022 17,295
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5db7e6a0e4ed537f07828567eeeec50d7520e59c",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

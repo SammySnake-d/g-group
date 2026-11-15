@@ -1,0 +1,111 @@
+receipts/feat-desktop-closed-loop.json
+  s_078a60c6b18773::t_cdd2d88fc5a489 36-38,40-41
+reviews/pr75-r2-evidence/MANIFEST.json
+  s_69f96fa873b14b::t_19ccbc6ad7389a 1-181
+reviews/pr75-r2-evidence/adapter-churn-gap0.05-new.json
+  s_078a60c6b18773::t_396f02fe113722 1-175
+reviews/pr75-r2-evidence/adapter-churn-gap0.05-old.json
+  s_078a60c6b18773::t_36a0484d688eb4 1-175
+reviews/pr75-r2-evidence/adapter-churn-gap0.2-new.json
+  s_078a60c6b18773::t_4cdeb2a7de1a05 1-175
+reviews/pr75-r2-evidence/adapter-churn-gap0.2-old.json
+  s_078a60c6b18773::t_8c4436f11f8e27 1-175
+reviews/pr75-r2-evidence/adapter-churn-head-plus-groupkill.json
+  s_078a60c6b18773::t_7071ab9bc22b61 1-175
+reviews/pr75-r2-evidence/adapter-churn-new.json
+  s_078a60c6b18773::t_408308f4ffc5b8 1-175
+reviews/pr75-r2-evidence/adapter-churn-old.json
+  s_078a60c6b18773::t_fc49e337feca0c 1-175
+reviews/pr75-r2-evidence/churn-cli-wrapper.mjs
+  s_078a60c6b18773::t_e66e913a068a08 1-17
+reviews/pr75-r2-evidence/gates-local-before-review.json
+  s_078a60c6b18773::t_b0eba9244b6142 1-17
+reviews/pr75-r2-evidence/green-45976fca-quiesce.tap
+  s_078a60c6b18773::t_b1da5455a1fa03 1-52
+reviews/pr75-r2-evidence/mutants-r2.py
+  s_078a60c6b18773::t_842ccb673365eb 1-35
+reviews/pr75-r2-evidence/mutants/results.json
+  s_078a60c6b18773::t_efc591e3955d25 1-144
+reviews/pr75-r2-evidence/nops-plain-new.json
+  s_078a60c6b18773::t_3d988fc807a6a5 1-127
+reviews/pr75-r2-evidence/nops-plain-old.json
+  s_078a60c6b18773::t_b9ede15ccc4d85 1-97
+reviews/pr75-r2-evidence/nops-setsid-new.json
+  s_078a60c6b18773::t_f4eb232e52e463 1-127
+reviews/pr75-r2-evidence/nops-setsid-old.json
+  s_078a60c6b18773::t_ee7b286f730168 1-97
+reviews/pr75-r2-evidence/probe-adapter-churn.mjs
+  s_078a60c6b18773::t_e5d8d1f2b736da 1-38
+reviews/pr75-r2-evidence/probe-churn-gap0.015-new.json
+  s_078a60c6b18773::t_5ffbbaf2526111 1-368
+reviews/pr75-r2-evidence/probe-churn-gap0.015-old.json
+  s_078a60c6b18773::t_63ff9520aacee1 1-293
+reviews/pr75-r2-evidence/probe-churn-gap0.05-new.json
+  s_078a60c6b18773::t_bd3a04d1fdedea 1-303
+reviews/pr75-r2-evidence/probe-churn-gap0.05-old.json
+  s_078a60c6b18773::t_4cf6ba770ea984 1-293
+reviews/pr75-r2-evidence/probe-churn-gap0.2-new.json
+  s_078a60c6b18773::t_f7c5c75c00cb21 1-303
+reviews/pr75-r2-evidence/probe-churn-gap0.2-old.json
+  s_078a60c6b18773::t_07ad5a8041e615 1-293
+reviews/pr75-r2-evidence/probe-churn-new.json
+  s_078a60c6b18773::t_109c6fd60e91ea 1-588
+reviews/pr75-r2-evidence/probe-churn-old.json
+  s_078a60c6b18773::t_30e327663dfca2 1-299
+reviews/pr75-r2-evidence/probe-plain-new.json
+  s_078a60c6b18773::t_bfc3366be6d051 1-158
+reviews/pr75-r2-evidence/probe-plain-old.json
+  s_078a60c6b18773::t_f8ba8add955b01 1-97
+reviews/pr75-r2-evidence/probe-r2.mjs
+  s_078a60c6b18773::t_baae936239ca53 1-99
+reviews/pr75-r2-evidence/probe-setpgid-new.json
+  s_078a60c6b18773::t_a78f0326b269dc 1-100
+reviews/pr75-r2-evidence/probe-setpgid-old.json
+  s_078a60c6b18773::t_637817c85cd996 1-115
+reviews/pr75-r2-evidence/probe-setsid-new.json
+  s_078a60c6b18773::t_05bd4563885519 1-100
+reviews/pr75-r2-evidence/probe-setsid-old.json
+  s_078a60c6b18773::t_a8bb42adb66339 1-115
+reviews/pr75-r2-evidence/probe-setsid-then-spawn-new.json
+  s_078a60c6b18773::t_3c528ca041fb5a 1-363
+reviews/pr75-r2-evidence/probe-setsid-then-spawn-old.json
+  s_078a60c6b18773::t_55d88ee8b2da03 1-403
+reviews/pr75-r2-evidence/red-ed46e123-quiesce.tap
+  s_078a60c6b18773::t_46beeca92030cc 1-90
+reviews/pr75-r2-evidence/run-bounded.py
+  s_078a60c6b18773::t_d85d6cae30194d 1-16
+reviews/feat-desktop-closed-loop-r2.md
+  s_f511cdb1758a1f::t_0dbc7a62bc31ca 1-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dc93b61a92118e4e37c1c7dcb571ebf922223bda",
+  "prompts": {},
+  "sessions": {
+    "s_078a60c6b18773": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1df53-9aa3-71f3-bc58-9afcd358bb2a",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_f511cdb1758a1f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eda2a1e9-6261-4de1-9a33-7cae46fce94b",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

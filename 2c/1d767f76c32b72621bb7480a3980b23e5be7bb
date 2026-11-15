@@ -1,0 +1,23 @@
+packages/server/proof/q06-r1-20261115/README.md
+  s_69f96fa873b14b::t_81026e3c3fd850 13-14
+packages/server/proof/q06-r1-20261115/r1-extra-true-red.tap
+  s_69f96fa873b14b::t_79b6c0351b21ea 1-186
+packages/server/proof/q06-r1-20261115/r1-initial-true-red.tap
+  s_69f96fa873b14b::t_5ad745e9731e38 1-142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2c1d767f76c32b72621bb7480a3980b23e5be7bb",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

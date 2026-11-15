@@ -1,0 +1,21 @@
+reviews/pr75-r2-evidence/MANIFEST.json
+  s_f511cdb1758a1f::t_85edb1becfbb15 93-94
+reviews/pr75-r2-evidence/npm-test-summary.txt
+  s_f511cdb1758a1f::t_58ac65ae95ca0f 1-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "31082df234b2b59af260d02e70f6b91ba5104bdd",
+  "prompts": {},
+  "sessions": {
+    "s_f511cdb1758a1f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eda2a1e9-6261-4de1-9a33-7cae46fce94b",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

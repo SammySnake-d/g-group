@@ -1,0 +1,23 @@
+packages/server/src/trend-summary-format.ts
+  s_69f96fa873b14b::t_29b8d800ddd49f 6-7,19,40-41,44-45,48-49
+packages/server/src/trend-summaries.ts
+  s_69f96fa873b14b::t_29b8d800ddd49f 2,11,15,60,66-67,69-70,72,74,76-78,80,82,84-85
+packages/kernel/src/attention.ts
+  s_69f96fa873b14b::t_4c6b25789d499e 124,132-133,151,159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b4b865a213b0acb3a7024a199364d46f3a0dee12",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

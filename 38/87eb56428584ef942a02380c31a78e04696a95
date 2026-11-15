@@ -1,0 +1,19 @@
+packages/server/src/group-claim.test.ts
+  s_5c9434363df00e::t_a2049d9e0f878c 142-169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3887eb56428584ef942a02380c31a78e04696a95",
+  "prompts": {},
+  "sessions": {
+    "s_5c9434363df00e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1df33-ec94-7183-8c54-9e8bcc0e79ec",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+packages/server/proof/group-mention-routing-b1-full.txt
+  s_b93b4373bbd684::t_93dd8e9200a98f 1-10023
+receipts/fix-group-mention-routing-20261115.json
+  s_b93b4373bbd684::t_665c808fb6b0cb 1-28
+packages/server/proof/group-mention-routing-b1-red.txt
+  s_b93b4373bbd684::t_7acac124ba9e25 1-45
+evidence/group-claim-red.exit
+  s_5c9434363df00e::t_1199661b63958a 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d739da71455a3f00bb323042433736621426649c",
+  "prompts": {},
+  "sessions": {
+    "s_5c9434363df00e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1df33-ec94-7183-8c54-9e8bcc0e79ec",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_b93b4373bbd684": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1defe-5fc0-7860-ac40-8ae048dd2a50",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

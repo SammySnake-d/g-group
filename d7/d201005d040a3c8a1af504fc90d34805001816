@@ -1,0 +1,21 @@
+packages/kernel/src/attention-exclusive-r1.test.ts
+  s_69f96fa873b14b::t_1764d1cb0a749e 13-17,22,32,34
+  s_69f96fa873b14b::t_9ae2932d8bdf7f 18-21,23-31,33
+  s_69f96fa873b14b::t_ddffa91f8c7f1a 35-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d7d201005d040a3c8a1af504fc90d34805001816",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
