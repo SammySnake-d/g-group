@@ -1,0 +1,29 @@
+import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { Host } from '../repo/packages/server/src/host.ts';
+import { scriptedCompute, scriptedMind } from '../repo/packages/server/src/fakes.ts';
+const dir=mkdtempSync(path.join(tmpdir(),'gg-stop-restart-proof-'));
+const file=path.join(dir,'host.db');
+const compute=scriptedCompute({script:()=>[{kind:'started',sessionId:'test-no-process',resumed:false}],quiesce:async()=>({ok:false,reason:'模拟无法确认停止',remaining:[]})});
+let first: Host|undefined; let second: Host|undefined;
+async function until(p:()=>boolean){const deadline=Date.now()+4000; while(!p()){if(Date.now()>deadline) throw Error('timed out'); await new Promise(r=>setTimeout(r,10));}}
+try {
+ first=new Host({file,mind:()=>scriptedMind(),compute:()=>compute.adapter,maxDeferMs:5,personalComputeSlots:1});
+ const contact=first.createContact({name:'重启测试'});const room=first.openDm(contact.id);
+ first.send({roomId:room.id,clientActionId:'one',text:'帮我写个报告'});
+ await until(()=>compute.spawned.length===1 && first!.listTasks({roomId:room.id})[0]?.state==='T3_Running');
+ const task=first.listTasks({roomId:room.id})[0]!;
+ first.taskDecision(task.id,'cancel','stop');
+ await until(()=>first!.taskView(first!.taskDoc(task.id).value).waitingFor?.includes('停止未确认')===true);
+ const before={state:first.taskDoc(task.id).value.task.state,lease:!!first.quota.leaseOf(task.id),spawned:compute.spawned.length};
+ await first.close(); first=undefined;
+ second=new Host({file,mind:()=>scriptedMind(),compute:()=>compute.adapter,maxDeferMs:5,personalComputeSlots:1});
+ const restart={state:second.taskDoc(task.id).value.task.state,lease:!!second.quota.leaseOf(task.id)};
+ second.send({roomId:room.id,clientActionId:'two',text:'帮我再写一份报告'});
+ await until(()=>compute.spawned.length>=2);
+ const after={state:second.taskDoc(task.id).value.task.state,lease:!!second.quota.leaseOf(task.id),spawned:compute.spawned.length};
+ console.log(JSON.stringify({before,restart,after}));
+ assert.equal(after.spawned,1,'T9 未经停止确认不可让第二任务占用同一个人的唯一槽位');
+} finally { if(first) await first.close(); if(second) await second.close(); compute.close(); rmSync(dir,{recursive:true,force:true}); }

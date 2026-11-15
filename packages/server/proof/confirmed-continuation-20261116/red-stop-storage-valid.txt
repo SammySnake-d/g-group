@@ -1,0 +1,28 @@
+✖ AC-23 失败卡已提交但停止标记落盘失败:原租约仍未知,用户 retry 不得复用 (41.598834ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 250.810917
+
+✖ failing tests:
+
+test at packages/server/src/stop-storage-failure.test.ts:20:1
+✖ AC-23 失败卡已提交但停止标记落盘失败:原租约仍未知,用户 retry 不得复用 (41.598834ms)
+  AssertionError [ERR_ASSERTION]: 停止标记写失败不得回滚成可复用原 lease
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-confirmed-continuation.lXXyh3MG/repo/packages/server/src/stop-storage-failure.test.ts:49:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

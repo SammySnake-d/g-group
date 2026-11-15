@@ -1,0 +1,39 @@
+{
+  "source_commit": "84ce2a3170afba08d5f240b518b84d4572cdfcb4",
+  "commands": [
+    [
+      "node",
+      "--test",
+      "--test-concurrency=1",
+      "packages/server/src/quota.test.ts",
+      "packages/server/src/lease.test.ts",
+      "packages/server/src/retry.test.ts",
+      "packages/server/src/runs.test.ts",
+      "packages/server/src/compute.test.ts",
+      "packages/server/src/delivery-plain.test.ts",
+      "packages/server/src/delivery-t8a.test.ts",
+      "packages/server/src/members-lifecycle.test.ts",
+      "packages/server/src/stop-confirmation.test.ts",
+      "packages/server/src/fakes-quiesce.test.ts"
+    ],
+    [
+      "npm",
+      "run",
+      "typecheck"
+    ],
+    [
+      "./node_modules/.bin/biome",
+      "lint",
+      "--error-on-warnings",
+      "packages/server/src/quota.ts",
+      "packages/server/src/host.ts",
+      "packages/server/src/fakes.ts",
+      "packages/server/src/stop-confirmation.test.ts",
+      "packages/server/src/fakes-quiesce.test.ts",
+      "packages/server/src/db.ts",
+      "packages/server/src/quota.test.ts",
+      "packages/server/src/lease.test.ts",
+      "packages/server/src/runs.test.ts"
+    ]
+  ]
+}

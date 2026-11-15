@@ -1,0 +1,25 @@
+✖ AC-23 升级旧库:未知原槽位的 T9 保守拦截相关个人和原群,不堵其他群 (68.96575ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 302.091292
+
+✖ failing tests:
+
+test at packages/server/src/lease.test.ts:267:1
+✖ AC-23 升级旧库:未知原槽位的 T9 保守拦截相关个人和原群,不堵其他群 (68.96575ms)
+  AssertionError [ERR_ASSERTION]: 原联系人个人槽有可能仍被占用
+      at TestContext.<anonymous> (file:///private/tmp/gg-quota-restart-fix.8SSz0nFq/repo/packages/server/src/lease.test.ts:296:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

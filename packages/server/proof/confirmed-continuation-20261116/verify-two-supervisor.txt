@@ -1,0 +1,4 @@
+正在执行 green-desk
+green-desk exit=0
+正在执行 green-intent
+green-intent exit=0

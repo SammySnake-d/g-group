@@ -1,0 +1,9 @@
+✔ AC-15 停止确认前的同任务续接须真排队:确认释放后授予新租约且不丢续接 (1.525ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 213.316667

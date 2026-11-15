@@ -1,0 +1,30 @@
+✖ AC-23 失败后用户取消:停止未确认仍留 T9 并保留租约 (33.301917ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 261.422542
+
+✖ failing tests:
+
+test at packages/server/src/lease.test.ts:367:1
+✖ AC-23 失败后用户取消:停止未确认仍留 T9 并保留租约 (33.301917ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+
+  + 'T10_Cancelled'
+  - 'T9_StopRequested'
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-quota-crash-red.lJ51BScD/packages/server/src/lease.test.ts:382:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'T10_Cancelled',
+    expected: 'T9_StopRequested',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

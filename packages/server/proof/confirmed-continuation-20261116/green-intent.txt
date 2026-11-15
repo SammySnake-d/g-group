@@ -1,0 +1,9 @@
+✔ AC-15 消息 m 已落实进工作区:先停旧执行器(任务不取消),停止确认后才让它回到 消息 m 之前并重做 消息 n (123.239292ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 338.055583

@@ -1,0 +1,8 @@
+正在执行 target-files
+target-files exit=0
+正在执行 regression-87
+regression-87 exit=0
+正在执行 typecheck
+typecheck exit=0
+正在执行 lint
+lint exit=0

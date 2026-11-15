@@ -1,0 +1,303 @@
+✔ 真实 Compute 的进程环境只带网关地址与令牌,不把模型写进环境;空闲会话按时回收 (1.308417ms)
+✔ 真实 Compute 用常驻适配器:声明会话内换模型能力、能插话;工厂收到的模型不固定进实例 (0.328ms)
+✔ 宿主关闭时停掉还活着的常驻会话:一轮做完(completed)进程仍在,也要停,不留后台进程 (32.237625ms)
+✔ 交付是普通消息:联系人 @ 提出者汇报结果,不挂交付卡;沉默不算通过,一直待确认 (124.218917ms)
+✔ 用户普通回复「通过」:联系人提交验收结论 → T8 已验收(记用户豁免)、承诺了结、任务卡收口 (53.305708ms)
+✔ 用户回复修改意见:原 Compute 可恢复就恢复原实例并带上意见,不新开 (50.966416ms)
+✔ 原 Compute 已停、不可恢复:退回时携交接新开一个 Compute,交接里有原要求、上次结果和修改意见 (54.129708ms)
+✔ 验收结论只认提出者本人的直接消息:别的联系人说「通过」、替不是自己的任务下结论、任务还没交付,都被拒且状态不变 (1057.252875ms)
+✔ 显式入口 tasks.accept / tasks.reject 不需要交付卡:记一条用户回复并按通过/退回推进 (54.469708ms)
+✔ Q09 A0 私聊没有审查人:交付后经 service 读到 T8a 待确认、门禁 none、交付消息已钉住;沉默不通过 (149.460791ms)
+✔ Q09 A0 群里只有同厂商联系人:不起审查,交付同样直接进 T8a (49.726209ms)
+✔ Q09 A2 本人普通回复「通过」:联系人提交结论,service 读到 T8_Accepted,如实记本人豁免;任务卡收口 (71.863292ms)
+✔ Q09 A2 显式入口 tasks.accept:T8a 直接验到 T8;已验收后再点被拒 (56.792417ms)
+✔ Q09 A2 阴性 他人:群里别的联系人说「通过」,负责联系人据此提交的结论被拒,任务仍在 T8a (96.537167ms)
+✔ Q09 A2 阴性 旧版本:第一版交付后要求修改,修改期间说的「通过」被拒;第二版交付后仍待确认,之后本人回复才验到 T8 (671.616584ms)
+✔ 取消后进程没确认退出前:任务停在 T9、槽位不归还、排队的不开工;确认后才 T10、归还并让排队的开工 (186.546959ms)
+✔ 停不干净(进程没全退出):不确认停止、不归还槽位,任务视图写明停止未确认 (35.181292ms)
+✔ 群临时 Compute 不跨群:个人满了借本群临时槽位;B 群没有临时槽位就排队,不挪用 A 群的 (165.98525ms)
+✔ 排队中的任务被取消:不再排队、直接落 T10,之后空出的槽位不会再起它 (184.047ms)
+✔ 正常完成:CLI 主进程退出(settled)后才归还槽位 (31.999167ms)
+✔ AC-23 重启:未确认停止的个人槽保留原租约,同联系人新任务不能开工 (64.267917ms)
+✔ AC-23 重启:个人与群临时槽按原租约恢复,不跨联系人或跨群占用 (52.163125ms)
+✔ AC-23 重启:已确认停止并归还的租约不复活,后继可开工 (63.553125ms)
+✔ AC-23 升级旧库:未知原槽位的 T9 保守拦截相关个人和原群,不堵其他群 (39.560584ms)
+✔ AC-23 崩溃重启:在跑任务不能仅凭宿主退出确认停止,且保留原租约 (23.399917ms)
+✔ AC-23 失败后选择不重试:停止未确认不得直接转终态或释放租约 (25.114708ms)
+✔ AC-23 失败后用户取消:停止未确认仍留 T9 并保留租约 (21.560042ms)
+✔ 重复加入只有一个成员、不挪游标;移出后再加回从当前末尾开始,不处理离开期间的旧消息 (57.283334ms)
+✔ 移出在这个群有在途任务的联系人:不带 stopTasks 被拒并列出任务,成员、任务、Compute 都不变;没有在途任务的照常移出 (27.5415ms)
+✖ 带 stopTasks:停止确认前成员仍在并标移出中,这个群的新消息不再送达、发言与接新活被拒;确认后才移除、任务 T10,别的群的任务照常 (52.425ms)
+✖ Compute 不回停止确认:成员一直不被移除、仍标移出中;重复移出不重复发停止,移出中不能拉回;确认到了才移除 (92.927959ms)
+✔ 个人槽位满了借本群临时槽位;本群也满就排队并写明原因;别的群有空槽也不借 (1.609ms)
+✔ 停止请求不归还槽位;确认停下后才释放,并按先来先到授予排队者 (0.209959ms)
+✔ 同一任务不重复授予;重复释放、迟到的旧租约号释放都幂等忽略 (0.532375ms)
+✔ 排队先来先到不插队;能借本群临时槽位的不必等个人槽位;别的联系人不受影响 (0.128458ms)
+✔ 取消排队后不再被授予 (0.180208ms)
+✔ AC-23 租约持久化写入失败:不授予、不改变内存中的占用和排队 (0.259208ms)
+✔ AC-23 恢复租约后禁止未确认的 lease_id 直接释放,也不能复用同任务 (0.076833ms)
+✔ F1 首次 502 静默恢复:联系人一轮 502 后退避重试成功,0 张失败卡,回复只发 1 次,自动重试不换模型 (36.360417ms)
+✔ F1 连续 502 耗尽自动重试上限:原位只出 1 张人话失败卡,原文折叠在详情,按钮是重试本轮/跳过本轮/换模型重试 (121.0215ms)
+✔ F8 认不出的错误(unknown×B0):有界重试 1 次即出卡,卡上写未识别并保留原文 (86.127125ms)
+✔ F2 403 配额耗尽:0 次自动重试;共用同一 Key 的 3 个联系人全群只出 1 张群级卡,冷却过后也不自动探测;修好后点重试三人都续跑 (214.501166ms)
+✔ F10 3 个联系人共用同一上游连续 502:共享熔断暂停后台重试,全群只出 1 张群级卡;半开探测恢复后三人都续跑,自动恢复抢先后点卡被拒 (290.258792ms)
+✔ F10 半开探测恢复后,被暂停、没有别的消息叫醒的成员也接着处理(两个私聊共用同一上游) (80.583166ms)
+✔ A27-05 [跳过本轮]只跳过失败批次:失败期间新到的 m_new 不被吞掉,下一轮正常处理 (82.680042ms)
+✔ A27-05 [重试本轮]连同失败期间新到的消息一起重跑;再失败出新卡,点旧卡被拒;连点只生效一次 (29.842042ms)
+✔ [换模型重试]只有用户显式选了才换:这一批用选中的模型重跑,之后的新消息仍用原模型;清单外的模型被拒 (21.202333ms)
+✔ F5 失败期间用户发新消息:退避等待中来的新消息提前触发重跑,两条一起处理,不丢不重 (22.387708ms)
+✔ F4 执行中途杀宿主再重启:未提交轮次自动重跑,已入库的 action_id 不重复出现;已提交的不再重跑 (61.028833ms)
+✔ F12 同一毒丸输入让宿主连续退出:第 1 次重启自动续跑,第 2 次熔断 CrashLoopBlocked 出卡;新成功轮次清零计数 (141.62975ms)
+✖ Compute 执行器中途崩溃(可自愈):对同一实例 resume 续跑(同一 CLI 会话),不从头 spawn,任务不进 T11,不打断联系人 (4020.603542ms)
+✖ 窗口 ② 对账(A27-03 底座):续跑提示带上工作区 git status,已写入的文件不让模型再追加一遍 (4041.540209ms)
+✔ F3 统一重试权:Compute 的 CLI 已按 CLAUDE_CODE_MAX_RETRIES 重试过上游错误,宿主不再叠加续跑,直接出 1 张卡 (91.990958ms)
+✖ F3 被信号结束的执行器崩溃(不是 CLI 里的上游错误)不算 CLI 重试过:宿主照常在同一会话续跑 (4016.426ms)
+✖ Compute 永久故障(平台拒绝):0 次自动续跑、原位出卡;[重试]走同一会话 resume,再失败出新卡;[不重试了]才进 T11 并告诉联系人 (4071.468833ms)
+✖ F13 半途换模:[换模型重试]选了厂商 B 才换,累积生产集合变成 {A, B},T5 审查同时拒绝 A、B 与 unknown,只放第三家 (4028.300333ms)
+✖ F7 用户主动停止不是失败:Compute 失败后等续跑期间用户停掉任务,不再续跑、不出失败卡,任务落 T10 而不是 T11 (83.248916ms)
+✖ F7 原位失败卡开着时用户停掉任务:卡作废不能再点,在途失败清掉,任务落 T10;之后不续跑、不再出卡 (81.597291ms)
+✔ F6 Compute 终态通知丢失(ack 前宿主退出):重启后从磁盘待领取表补领结果交给联系人,不重跑 Compute,不需要人类再发言 (28.839333ms)
+✔ F9 副作用不明(unknown 且已有进展,UnknownEffect→B2):0 次自动续跑,出卡写明为免重复没有自动重发 (62.279959ms)
+✔ 私聊派活:台账里有联系人轮次 → Compute 会话 → Compute 轮次 → 子代理 / 后台任务,带来源会话、消息序号、属于谁;Compute 在跑时轮次不记 done;验收后全部收口,画板与查询读同一份(AC-43 ①③⑥⑧) (112.534459ms)
+✔ 重放 2430 号:宿主重启后台单元变 orphaned,任务无停止确认保持 T9 和原租约,联系人主动报卡点(AC-43 ①②、AC-23、AC-14) (94.891458ms)
+✔ 同一夹具不杀进程:全部单元正常结束为 done,没有误报 orphaned;重启后核对不改已结束的单元;没有失败时 runs.rerun 没有可重跑项 (90.371083ms)
+✖ 重放 2734 号上游无响应:Compute 调用发出后既不回应也不断开,过了首字节窗口在一个核对周期内判 failed no_response;先停这一轮再写失败,带原因原文、用时、最后进展、阈值;任务走 ExecFailed,负责联系人收到停滞事件在会话里报卡点(AC-43 ⑦⑩、AC-14) (187.672917ms)
+✔ 重放断流重试:harness 每隔几秒报一次「正在重试」但始终没有输出,重试公告不刷新计时,到整轮阈值判 stream_dropped,原文带最近一次重试(AC-43 ⑪) (434.213084ms)
+✔ 合法等待不误判:Compute 受阻等用户回答、一个工具子进程持续运行,都超过阈值也不判卡死、不发停滞事件;工具结束后从结束时刻重新计时(AC-43 ⑫、AC-14 等慢工具不报停滞) (1046.806917ms)
+✔ 卡死阈值默认 15 分钟 / 120 秒;按联系人、按上游单独设都生效,判定按单独设的值走并在失败详情写明来源(AC-43 ⑯) (345.472166ms)
+✔ 联系人轮次卡死:脑子一直不返回,超过阈值宿主中止这一轮并记 failed stalled,交 AC-36 原位出失败卡、不再静默重试同一轮;关闭宿主不被卡住的脑子拖住(AC-43 ⑦) (486.014167ms)
+✔ 可见范围:联系人第 5 块只列它在私聊里自己的单元和所在群里全部成员的单元;别的群、别人私聊的不列;用户本人在 runs.list 看全部(AC-43 ④) (85.33425ms)
+✖ 重跑:只接受失败 / 中断 / 没跑完的;用户明确发起开新任务和新会话并留重跑事件,同一 clientActionId 幂等;同一单元租约期内第二次重跑被拒;人停的联系人不能自动重跑、用户明确要求才执行(AC-43 ⑤⑥⑦) (38.651875ms)
+✖ 重放 1663 号:cyber_policy 平台拒绝的 Compute 重跑开新任务、新会话,带原任务引用与上次原因,不在原会话「继续」(AC-43 坏实现 ⑤) (31.7885ms)
+✖ 自己名下自动重跑到上限 2 次后在群里报「未做:原因」;别人名下不自动重跑,有人明确要求才执行并在群里留记录:发起人、任务归属、依据的失败记录(AC-43 坏实现 ⑦b ⑦c) (44.324083ms)
+✔ 画板:同一上游同一原因的多条失败在 runs.list 里合并成一条群级提示;人停的显示「已停止」且色调与失败不同(AC-43 ⑨⑮) (99.265333ms)
+✖ 确定不会自愈的错误不等阈值:harness 的重试公告带 401,宿主当场停这一轮并记 auth_or_quota,任务走 ExecFailed (58.844375ms)
+✔ AC-23 停止未确认后重试被拒:原租约不能复用或释放给后继 (61.09725ms)
+✔ AC-23 重启无原执行器后放弃失败任务:不得虚构停止确认 (36.187542ms)
+✔ AC-23 执行器未提供停止核验:轮次 settled 不得确认停止或归还槽位 (34.165042ms)
+ℹ tests 77
+ℹ suites 0
+ℹ pass 63
+ℹ fail 14
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 32502.595458
+
+✖ failing tests:
+
+test at packages/server/src/members-lifecycle.test.ts:99:1
+✖ 带 stopTasks:停止确认前成员仍在并标移出中,这个群的新消息不再送达、发言与接新活被拒;确认后才移除、任务 T10,别的群的任务照常 (52.425ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+
+  + 'T9_StopRequested'
+  - 'T10_Cancelled'
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/members-lifecycle.test.ts:169:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'T9_StopRequested',
+    expected: 'T10_Cancelled',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/server/src/members-lifecycle.test.ts:187:1
+✖ Compute 不回停止确认:成员一直不被移除、仍标移出中;重复移出不重复发停止,移出中不能拉回;确认到了才移除 (92.927959ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+
+    [
+      [
+  +     'c-mwic09pk-1',
+        'me'
+      ],
+  +   [
+  +     {
+  +       id: 'c-mwic09pk-1',
+  +       kind: 'contact'
+  +     }
+  +   ],
+  +   'T9_StopRequested'
+  -   [],
+  -   'T10_Cancelled'
+    ]
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/members-lifecycle.test.ts:213:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ [ 'c-mwic09pk-1', 'me' ], [ [Object] ], 'T9_StopRequested' ],
+    expected: [ [ 'me' ], [], 'T10_Cancelled' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at packages/server/src/retry.test.ts:404:1
+✖ Compute 执行器中途崩溃(可自愈):对同一实例 resume 续跑(同一 CLI 会话),不从头 spawn,任务不进 T11,不打断联系人 (4020.603542ms)
+  Error: 等不到:续跑后交付
+      at until (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/retry.test.ts:51:33)
+      at async TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/retry.test.ts:411:3)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+
+test at packages/server/src/retry.test.ts:426:1
+✖ 窗口 ② 对账(A27-03 底座):续跑提示带上工作区 git status,已写入的文件不让模型再追加一遍 (4041.540209ms)
+  Error: 等不到:续跑
+      at until (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/retry.test.ts:51:33)
+      at async TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/retry.test.ts:437:3)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+
+test at packages/server/src/retry.test.ts:466:1
+✖ F3 被信号结束的执行器崩溃(不是 CLI 里的上游错误)不算 CLI 重试过:宿主照常在同一会话续跑 (4016.426ms)
+  Error: 等不到:续跑后交付
+      at until (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/retry.test.ts:51:33)
+      at async TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/retry.test.ts:479:3)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+
+test at packages/server/src/retry.test.ts:486:1
+✖ Compute 永久故障(平台拒绝):0 次自动续跑、原位出卡;[重试]走同一会话 resume,再失败出新卡;[不重试了]才进 T11 并告诉联系人 (4071.468833ms)
+  Error: 等不到:再失败出第 2 张卡
+      at until (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/retry.test.ts:51:33)
+      at async TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/retry.test.ts:500:3)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+
+test at packages/server/src/retry.test.ts:513:1
+✖ F13 半途换模:[换模型重试]选了厂商 B 才换,累积生产集合变成 {A, B},T5 审查同时拒绝 A、B 与 unknown,只放第三家 (4028.300333ms)
+  Error: 等不到:换模后交付
+      at until (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/retry.test.ts:51:33)
+      at async TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/retry.test.ts:531:3)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+
+test at packages/server/src/retry.test.ts:547:1
+✖ F7 用户主动停止不是失败:Compute 失败后等续跑期间用户停掉任务,不再续跑、不出失败卡,任务落 T10 而不是 T11 (83.248916ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+
+  + 'T9_StopRequested'
+  - 'T10_Cancelled'
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/retry.test.ts:560:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'T9_StopRequested',
+    expected: 'T10_Cancelled',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/server/src/retry.test.ts:567:1
+✖ F7 原位失败卡开着时用户停掉任务:卡作废不能再点,在途失败清掉,任务落 T10;之后不续跑、不再出卡 (81.597291ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+
+  + 'T9_StopRequested'
+  - 'T10_Cancelled'
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/retry.test.ts:580:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'T9_StopRequested',
+    expected: 'T10_Cancelled',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/server/src/runs.test.ts:198:1
+✖ 重放 2734 号上游无响应:Compute 调用发出后既不回应也不断开,过了首字节窗口在一个核对周期内判 failed no_response;先停这一轮再写失败,带原因原文、用时、最后进展、阈值;任务走 ExecFailed,负责联系人收到停滞事件在会话里报卡点(AC-43 ⑦⑩、AC-14) (187.672917ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+
+  + 'T9_StopRequested'
+  - 'T11_Failed'
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/runs.test.ts:227:10)
+      at runNextTicks (node:internal/process/task_queues:65:5)
+      at process.processTimers (node:internal/timers:538:9)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'T9_StopRequested',
+    expected: 'T11_Failed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/server/src/runs.test.ts:407:1
+✖ 重跑:只接受失败 / 中断 / 没跑完的;用户明确发起开新任务和新会话并留重跑事件,同一 clientActionId 幂等;同一单元租约期内第二次重跑被拒;人停的联系人不能自动重跑、用户明确要求才执行(AC-43 ⑤⑥⑦) (38.651875ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+    assert.ok(r1.ok)
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/runs.test.ts:420:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at packages/server/src/runs.test.ts:451:1
+✖ 重放 1663 号:cyber_policy 平台拒绝的 Compute 重跑开新任务、新会话,带原任务引用与上次原因,不在原会话「继续」(AC-43 坏实现 ⑤) (31.7885ms)
+  Error: 不能重跑:原执行器停止尚未确认,不能重跑
+      at Host.rerunRun (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/host.ts:2122:24)
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/runs.test.ts:462:18)
+      at runNextTicks (node:internal/process/task_queues:65:5)
+      at process.processTimers (node:internal/timers:538:9)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    code: 'conflict',
+    detail: { reason: '原执行器停止尚未确认,不能重跑', notDone: null }
+  }
+
+test at packages/server/src/runs.test.ts:476:1
+✖ 自己名下自动重跑到上限 2 次后在群里报「未做:原因」;别人名下不自动重跑,有人明确要求才执行并在群里留记录:发起人、任务归属、依据的失败记录(AC-43 坏实现 ⑦b ⑦c) (44.324083ms)
+  AssertionError [ERR_ASSERTION]: 原任务 + 自己名下自动重跑 2 次
+
+  1 !== 3
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/runs.test.ts:503:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 3,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/server/src/runs.test.ts:553:1
+✖ 确定不会自愈的错误不等阈值:harness 的重试公告带 401,宿主当场停这一轮并记 auth_or_quota,任务走 ExecFailed (58.844375ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+
+  + 'T9_StopRequested'
+  - 'T11_Failed'
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/runs.test.ts:568:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'T9_StopRequested',
+    expected: 'T11_Failed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

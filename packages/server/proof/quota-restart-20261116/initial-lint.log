@@ -1,0 +1,28 @@
+packages/server/src/lease.test.ts:176:15 lint/complexity/useOptionalChain  FIXABLE  ━━━━━━━━━━━━━━━━
+
+  ! Change to an optional chain.
+
+    174 │     await until(() => before!.taskView(before!.taskDoc(first.id).value).waitingFor?.includes("停止未确认") === true, "停止未确认");
+    175 │     const oldLease = before.quota.leaseOf(first.id);
+  > 176 │     assert.ok(oldLease && oldLease.stopping);
+        │               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    177 │     await before.close();
+    178 │     before = undefined;
+
+  i An optional chain is shorter, and it avoids repeating the same expression in each check.
+
+  i Unsafe fix: Change to an optional chain.
+
+    174 174 │       await until(() => before!.taskView(before!.taskDoc(first.id).value).waitingFor?.includes("停止未确认") === true, "停止未确认");
+    175 175 │       const oldLease = before.quota.leaseOf(first.id);
+    176     │ - ····assert.ok(oldLease·&&·oldLease.stopping);
+        176 │ + ····assert.ok(oldLease?.stopping);
+    177 177 │       await before.close();
+    178 178 │       before = undefined;
+
+
+Checked 5 files in 59ms. No fixes applied.
+Found 1 warning.
+lint ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some warnings were emitted while running checks.

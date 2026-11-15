@@ -1,0 +1,9 @@
+✔ 重放 2430 号:宿主重启后台单元变 orphaned,任务无停止确认保持 T9 和原租约,联系人主动报卡点(AC-43 ①②、AC-23、AC-14) (107.6475ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2337.371916

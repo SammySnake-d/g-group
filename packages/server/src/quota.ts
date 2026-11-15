@@ -27,6 +27,12 @@ export interface QuotaConfig {
   readonly personal: (contactId: string) => number;
   readonly group: (roomId: string) => number;
   readonly newId: () => string;
+  /** 上次启动留下的租约:身份和作用域原样恢复,但未经核对不能复用。 */
+  readonly initialLeases?: readonly Lease[];
+  /** 旧库没有租约明细,只知任务可能占个人槽或原群临时槽。 */
+  readonly uncertain?: readonly AcquireRequest[];
+  /** 原子保存本次租约增删改;失败时内存和排队状态一并回滚。 */
+  readonly persist?: (before: readonly Lease[], after: readonly Lease[]) => void;
 }
 export interface AcquireRequest {
   readonly taskId: string;
@@ -41,19 +47,40 @@ export class QuotaTable {
   private readonly cfg: QuotaConfig;
   private leases: Lease[] = [];
   private waiters: Waiter[] = [];
+  private readonly recovered: Set<string>;
+  private readonly uncertain: readonly AcquireRequest[];
   constructor(cfg: QuotaConfig) {
     this.cfg = cfg;
+    this.leases = (cfg.initialLeases ?? []).map((lease) => Object.freeze({ ...lease }));
+    this.recovered = new Set(this.leases.map((lease) => lease.taskId));
+    this.uncertain = (cfg.uncertain ?? []).map((hold) => Object.freeze({ ...hold }));
+  }
+  /** 先计算变更,持久化失败不暴露内存侧的部分授予或释放。 */
+  private change<T>(fn: () => T): T {
+    const before = this.leases;
+    const waiting = this.waiters;
+    this.leases = [...before];
+    this.waiters = [...waiting];
+    try {
+      const result = fn();
+      if (before.length !== this.leases.length || before.some((lease, i) => lease !== this.leases[i])) this.cfg.persist?.(before, this.leases);
+      return result;
+    } catch (e) {
+      this.leases = before;
+      this.waiters = waiting;
+      throw e;
+    }
   }
   private used(scope: ScopeKey): number {
-    return this.leases.filter((l) => l.scope === scope).length;
+    return this.leases.filter((l) => l.scope === scope).length + this.uncertain.filter((u) => scope === `personal:${u.contactId}` || (u.isGroup && scope === `group:${u.roomId}`)).length;
   }
   /** 能放进哪个槽位;排在前面、等同一个槽位的人(ahead)优先,不插队 */
   private fit(r: AcquireRequest, ahead: readonly Waiter[]): ScopeKey | null {
     const personal: ScopeKey = `personal:${r.contactId}`;
-    if (!ahead.some((w) => w.contactId === r.contactId) && this.used(personal) < this.cfg.personal(r.contactId)) return personal;
+    if (!this.uncertain.some((u) => u.contactId === r.contactId) && !ahead.some((w) => w.contactId === r.contactId) && this.used(personal) < this.cfg.personal(r.contactId)) return personal;
     if (r.isGroup) {
       const group: ScopeKey = `group:${r.roomId}`;
-      if (!ahead.some((w) => w.isGroup && w.roomId === r.roomId) && this.used(group) < this.cfg.group(r.roomId)) return group;
+      if (!this.uncertain.some((u) => u.isGroup && u.roomId === r.roomId) && !ahead.some((w) => w.isGroup && w.roomId === r.roomId) && this.used(group) < this.cfg.group(r.roomId)) return group;
     }
     return null;
   }
@@ -70,34 +97,55 @@ export class QuotaTable {
   /** 申请槽位。已持有就原样返回(不重复授予);排队中再申请不重复排 */
   acquire(r: AcquireRequest): AcquireResult {
     const held = this.leases.find((l) => l.taskId === r.taskId);
+    if (held && this.recovered.has(r.taskId)) return { queued: "上次执行器停止未确认,不能复用原槽位" };
+    if (held?.stopping) return this.change(() => {
+      const reason = "原执行器停止未确认,不能复用原槽位";
+      if (!this.waiters.some((waiter) => waiter.taskId === r.taskId)) this.waiters.push(Object.freeze({ ...r, reason }));
+      return { queued: reason };
+    });
     if (held) return { granted: held, reused: true };
+    if (this.uncertain.some((u) => u.taskId === r.taskId)) return { queued: "旧任务的占用槽位未知,不能复用" };
     const waiting = this.waiters.find((w) => w.taskId === r.taskId);
     if (waiting) return { queued: waiting.reason };
-    const scope = this.fit(r, this.waiters);
-    if (scope) return { granted: this.grant(r, scope), reused: false };
-    const reason = this.why(r);
-    this.waiters.push(Object.freeze({ ...r, reason }));
-    return { queued: reason };
+    return this.change(() => {
+      const scope = this.fit(r, this.waiters);
+      if (scope) return { granted: this.grant(r, scope), reused: false };
+      const reason = this.why(r);
+      this.waiters.push(Object.freeze({ ...r, reason }));
+      return { queued: reason };
+    });
   }
   /** 停止请求已发出:标记,但仍占着槽位 */
   markStopping(taskId: string): void {
-    this.leases = this.leases.map((l) => (l.taskId === taskId && !l.stopping ? Object.freeze({ ...l, stopping: true }) : l));
+    const stopped = (lease: Lease) => lease.taskId === taskId && !lease.stopping ? Object.freeze({ ...lease, stopping: true }) : lease;
+    try {
+      this.change(() => { this.leases = this.leases.map(stopped); });
+    } catch (error) {
+      // 落盘失败不能把已结束/停止中的执行器回滚成可复用;磁盘旧租约在重启后也按未知恢复。
+      this.leases = this.leases.map(stopped);
+      throw error;
+    }
   }
   /** 确认已停止后释放。leaseId 不在(重复释放、迟到的旧租约号)就什么都不做。返回这次释放后新授予的排队者 */
   release(leaseId: string): { readonly released: boolean; readonly granted: readonly Lease[] } {
     const i = this.leases.findIndex((l) => l.leaseId === leaseId);
     if (i < 0) return { released: false, granted: [] };
-    this.leases.splice(i, 1);
-    const granted: Lease[] = [];
-    const still: Waiter[] = [];
-    for (const w of this.waiters) {
-      // 排在前面、同样等这个槽位的人还在等,后面的就不越过它
-      const scope = this.fit(w, still);
-      if (scope) granted.push(this.grant(w, scope));
-      else still.push(w);
-    }
-    this.waiters = still;
-    return { released: true, granted };
+    const releasedTask = this.leases[i]!.taskId;
+    if (this.recovered.has(releasedTask)) return { released: false, granted: [] };
+    const result = this.change(() => {
+      this.leases.splice(i, 1);
+      const granted: Lease[] = [];
+      const still: Waiter[] = [];
+      for (const w of this.waiters) {
+        // 排在前面、同样等这个槽位的人还在等,后面的就不越过它
+        const scope = this.fit(w, still);
+        if (scope) granted.push(this.grant(w, scope));
+        else still.push(w);
+      }
+      this.waiters = still;
+      return { released: true, granted };
+    });
+    return result;
   }
   /** 不再排队(任务取消) */
   cancelWait(taskId: string): boolean {
@@ -109,6 +157,9 @@ export class QuotaTable {
     return this.leases.find((l) => l.taskId === taskId);
   }
   waitingReason(taskId: string): string | null {
+    if (this.recovered.has(taskId)) return "上次执行器停止未确认,不能复用原槽位";
+    if (this.uncertain.some((u) => u.taskId === taskId)) return "旧任务的占用槽位未知,不能复用";
+    if (this.leaseOf(taskId)?.stopping) return "原执行器停止未确认,不能复用原槽位";
     return this.waiters.find((w) => w.taskId === taskId)?.reason ?? null;
   }
   view(): { readonly leases: readonly Lease[]; readonly waiting: readonly Waiter[] } {

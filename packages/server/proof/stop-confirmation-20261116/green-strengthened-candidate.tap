@@ -1,0 +1,17 @@
+✔ scriptedCompute 默认停止核验:未知和正在运行不成功,实际 stopped 后才成功 (3.211542ms)
+✔ scriptedCompute 默认停止核验:失败终态仍须等待 settled 的退出门 (3.168541ms)
+✔ scriptedCompute 默认停止核验:即使曾有 failed,空 settled 也不得成功 (1.624ms)
+✔ AC-23 停止未确认后重试被拒:原租约不能复用或释放给后继 (63.15025ms)
+✔ AC-23 重启无原执行器后放弃失败任务:不得虚构停止确认 (55.68075ms)
+✔ AC-23 执行器未提供停止核验:轮次 settled 不得确认停止或归还槽位 (39.849583ms)
+✔ AC-23 停止未确认后用户重试:执行器愿意续接也不得调用 resume (45.559709ms)
+✔ AC-23 确认原执行器已退出后用户重试:允许同会话续接且申请新租约 (75.920583ms)
+✔ AC-23 没有宿主停止状态表时:配额仍拒绝同任务复用 stopping 租约 (0.16675ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 594.22725

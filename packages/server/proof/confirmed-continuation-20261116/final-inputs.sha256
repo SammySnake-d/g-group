@@ -1,0 +1,8 @@
+ff64d0137ab72c236ef54e80ec0830daca8ecce4408e028ee6b81dd23038a0e6  packages/server/src/fakes.ts
+0fe0c154123e6359a28651552521d89ed12cdbd44891de24d529b8b7cad5a405  packages/server/src/quota.ts
+bf2282fe929cfc92e4ec30d9cee236f757fd22845a3b25010fcd8c7742f94b95  packages/server/src/host.ts
+d0853a9c2e28bc4239ea44701c01e700e2a2bdaa17bf53d8d3d0c498d8bccdcf  packages/server/src/fakes-quiesce.test.ts
+59bdc8decdb99ae5c5f9cc32847dae2423bab131b4f3feee3c234007273bf6dd  packages/server/src/stop-confirmation.test.ts
+e5d6c15ab24a7fb368ea6af73e91ba746660de48175fc1b2156d53c11b02f40d  packages/server/src/stop-storage-failure.test.ts
+cec070daf7c828fc18cfd6f799278b16b39e565d0366a9911e3a5eac4d612f55  packages/server/src/desk-fake.test.ts
+898ed7751b849da70696c48a82d387c2d48d36e5e22d8c212467d09da43e71d5  packages/server/src/intent.test.ts

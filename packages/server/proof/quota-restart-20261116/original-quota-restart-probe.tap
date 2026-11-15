@@ -1,0 +1,21 @@
+(node:72467) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"before":{"state":"T9_StopRequested","lease":true,"spawned":1},"restart":{"state":"T9_StopRequested","lease":false},"after":{"state":"T9_StopRequested","lease":false,"spawned":2}}
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: T9 未经停止确认不可让第二任务占用同一个人的唯一槽位
+
+2 !== 1
+
+    at file:///private/tmp/gg-pr75-r2-codex-lgm3pod4/evidence/quota-restart-probe.ts:28:9 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 2,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.22.0

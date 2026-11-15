@@ -1,0 +1,9 @@
+✔ AC-23 失败卡已提交但停止标记落盘失败:原租约仍未知,用户 retry 不得复用 (40.046416ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 260.136709

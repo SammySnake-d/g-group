@@ -1,0 +1,18 @@
+from pathlib import Path
+import hashlib,json,subprocess
+repo = Path(__file__).resolve().parent.parent / "repo"
+e = Path(__file__).resolve().parent
+spec = json.loads((e / "final-command-arrays.json").read_text())
+assert subprocess.check_output(["git","-C",str(repo),"rev-parse","HEAD"],text=True).strip() == spec["source_commit"]
+for line in (e / "final-inputs.sha256").read_text().splitlines():
+    sha,name = line.split("  ",1)
+    assert hashlib.sha256((repo / name).read_bytes()).hexdigest() == sha,name
+codes=[]
+for name,command in zip(["target-files","regression-87","typecheck","lint"],spec["commands"]):
+    print("正在执行 " + name,flush=True)
+    with (e / (name + ".log")).open("wb") as out:
+        result=subprocess.run(command,cwd=repo,stdout=out,stderr=subprocess.STDOUT)
+    (e / (name + ".exit")).write_text(str(result.returncode) + "\n")
+    codes.append(result.returncode)
+    print(name + " exit=" + str(result.returncode),flush=True)
+(e / "verify-final.exit").write_text(str(int(any(codes))) + "\n")

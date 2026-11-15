@@ -1,0 +1,6 @@
+正在执行 regression-83
+完成 regression-83: exit 0
+正在执行 typecheck-v2
+完成 typecheck-v2: exit 0
+正在执行 lint-v2
+完成 lint-v2: exit 0

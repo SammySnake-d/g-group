@@ -1,0 +1,5 @@
+
+> typecheck
+> tsc -p tsconfig.json
+
+../../gg-quota-restart-fix.8SSz0nFq/repo/packages/api-contract/src/bridge.ts(32,5): error TS2717: Subsequent property declarations must have the same type.  Property 'gg' must be of type 'GGroupBridge', but here has type 'GGroupBridge'.

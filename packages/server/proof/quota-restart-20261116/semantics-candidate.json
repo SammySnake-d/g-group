@@ -1,0 +1,61 @@
+{
+  "source": "/private/tmp/gg-quota-restart-fix.8SSz0nFq/repo",
+  "before": {
+    "state": "T3_Running",
+    "computeId": "cp-1",
+    "retired": [],
+    "orphans": [],
+    "lease": {
+      "leaseId": "lease-l-mwib1ica-5",
+      "scope": "personal:c-mwib1ibz-0",
+      "taskId": "t-mwib1ic7-2",
+      "contactId": "c-mwib1ibz-0",
+      "roomId": "dm-c-mwib1ibz-0",
+      "stopping": false
+    },
+    "waitingFor": null,
+    "runs": [
+      {
+        "layer": "compute-session",
+        "status": "running",
+        "note": null,
+        "text": "运行中 · 已跑 0 秒"
+      },
+      {
+        "layer": "compute-turn",
+        "status": "running",
+        "note": null,
+        "text": "运行中 · 已跑 0 秒"
+      }
+    ]
+  },
+  "after": {
+    "state": "T9_StopRequested",
+    "computeId": "cp-1",
+    "retired": [],
+    "orphans": [],
+    "lease": {
+      "leaseId": "lease-l-mwib1ica-5",
+      "taskId": "t-mwib1ic7-2",
+      "scope": "personal:c-mwib1ibz-0",
+      "contactId": "c-mwib1ibz-0",
+      "roomId": "dm-c-mwib1ibz-0",
+      "stopping": false
+    },
+    "waitingFor": "上次执行器停止未确认,不能复用原槽位",
+    "runs": [
+      {
+        "layer": "compute-session",
+        "status": "orphaned",
+        "note": "宿主进程退出",
+        "text": "没跑完 · 宿主进程退出"
+      },
+      {
+        "layer": "compute-turn",
+        "status": "orphaned",
+        "note": "宿主进程退出",
+        "text": "没跑完 · 宿主进程退出"
+      }
+    ]
+  }
+}

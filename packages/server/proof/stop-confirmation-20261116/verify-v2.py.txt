@@ -1,0 +1,20 @@
+from pathlib import Path
+import hashlib, json, subprocess
+repo = Path(__file__).resolve().parent.parent / "repo"
+e = Path(__file__).resolve().parent
+spec = json.loads((e / "verify-v2-command-arrays.json").read_text())
+if subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip() != spec["source_commit"]:
+    raise SystemExit("冻结源码提交变化")
+for line in (e / "verify-v2-inputs.sha256").read_text().splitlines():
+    sha, name = line.split("  ", 1)
+    if hashlib.sha256((repo / name).read_bytes()).hexdigest() != sha:
+        raise SystemExit("冻结源码字节变化: " + name)
+statuses = []
+for name, command in zip(["regression-83", "typecheck-v2", "lint-v2"], spec["commands"]):
+    print(f"正在执行 {name}", flush=True)
+    with (e / (name + ".log")).open("wb") as log:
+        result = subprocess.run(command, cwd=repo, stdout=log, stderr=subprocess.STDOUT)
+    (e / (name + ".exit")).write_text(str(result.returncode) + "\n")
+    statuses.append(result.returncode)
+    print(f"完成 {name}: exit {result.returncode}", flush=True)
+(e / "verify-v2.exit").write_text(str(int(any(statuses))) + "\n")

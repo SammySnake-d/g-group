@@ -1,0 +1,10 @@
+✔ AC-23 失败卡已提交但停止标记落盘失败:原租约仍未知,用户 retry 不得复用 (39.287333ms)
+✔ AC-23 停止标记落盘失败后仍须真核验:确认成功才释放,合法 retry 仍可续接 (36.328334ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 294.945083

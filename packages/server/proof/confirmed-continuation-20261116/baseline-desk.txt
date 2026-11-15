@@ -1,0 +1,22 @@
+✔ 派什么活,替身 Compute 的进度就写什么:不再一律报 hello.txt (959.964917ms)
+✔ 活里要验证码:替身 Compute 停在受阻,任务等你回答;你交还后它接着做完 (1596.468375ms)
+✔ 活里写了会失败:出一张挂在这件事上的原位失败卡,点重试后续接做完 (1281.38675ms)
+✖ 活里写了慢慢:停止后不再吐剩下的进度,任务落到已取消;可以按台账重跑 (20340.440083ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 24677.01975
+
+✖ failing tests:
+
+test at packages/server/src/desk-fake.test.ts:78:1
+✖ 活里写了慢慢:停止后不再吐剩下的进度,任务落到已取消;可以按台账重跑 (20340.440083ms)
+  Error: 等不到:已取消
+      at until (file:///private/tmp/gg-confirmed-continuation.lXXyh3MG/repo/packages/server/src/desk-fake.test.ts:28:9)
+      at async TestContext.<anonymous> (file:///private/tmp/gg-confirmed-continuation.lXXyh3MG/repo/packages/server/src/desk-fake.test.ts:83:21)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7)

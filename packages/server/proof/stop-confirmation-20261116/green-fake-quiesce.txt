@@ -1,0 +1,12 @@
+✔ scriptedCompute 默认停止核验:未知和正在运行不成功,实际 stopped 后才成功 (2.915416ms)
+✔ AC-23 停止未确认后重试被拒:原租约不能复用或释放给后继 (55.876292ms)
+✔ AC-23 重启无原执行器后放弃失败任务:不得虚构停止确认 (36.898625ms)
+✔ AC-23 执行器未提供停止核验:轮次 settled 不得确认停止或归还槽位 (36.216125ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 467.96775

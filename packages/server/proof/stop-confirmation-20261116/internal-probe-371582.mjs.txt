@@ -1,0 +1,52 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { Host } from '/private/tmp/gg-quota-restart-fix.8SSz0nFq/repo/packages/server/src/host.ts';
+import { scriptedMind, scriptedCompute } from '/private/tmp/gg-quota-restart-fix.8SSz0nFq/repo/packages/server/src/fakes.ts';
+const repo='/private/tmp/gg-quota-restart-fix.8SSz0nFq/repo';
+const expected='371582432454d26e2e3bb4818fe1aac507afdc2d';
+const check=()=>{const sha=execFileSync('git',['-C',repo,'rev-parse','HEAD'],{encoding:'utf8'}).trim();if(sha!==expected)throw Error('冻结头已变化');return sha;};
+const dir=path.dirname(new URL(import.meta.url).pathname);
+const until=async(fn,label)=>{const end=Date.now()+2500;while(!fn()){if(Date.now()>end)throw Error(`等待超时:${label}`);await new Promise(r=>setTimeout(r,5));}};
+const output={head:check(),no_os_processes:true,findings:[]};
+const failureScript=()=>[{kind:'started',sessionId:'s',resumed:false},{kind:'failed',reason:'cyber_policy: flagged by safeguards',code:1,signal:null,violations:[]}];
+for(const refused of [false,true]){
+ check();
+ const calls=[];
+ const compute=scriptedCompute({script:failureScript,quiesce:async(id)=>{calls.push(id);return{ok:false,reason:'测试明确未确认停止',remaining:[4242]};},resumeResult:()=>refused?{ok:false,reason:'测试续跑被拒'}:null});
+ const host=new Host({file:path.join(dir,`reuse-${refused}.db`),mind:()=>scriptedMind(),compute:()=>compute.adapter,maxDeferMs:5,personalComputeSlots:1});
+ try{
+  const c=host.createContact({name:'租约核验'}),dm=host.openDm(c.id).id;
+  host.send({roomId:dm,clientActionId:'start',text:'帮我写报告'});
+  await until(()=>host.listMessages(dm,{}).messages.some(m=>m.card?.kind==='failure')&&host.listTasks({roomId:dm})[0]?.waitingFor?.includes('停止未确认'),'失败且停止未确认');
+  const first=host.listTasks({roomId:dm})[0],lease=host.quota.leaseOf(first.id);
+  if(refused){host.send({roomId:dm,clientActionId:'queued',text:'帮我再写一份报告'});await until(()=>host.listTasks({roomId:dm}).length===2,'后继排队');}
+  const card=host.listMessages(dm,{}).messages.find(m=>m.card?.kind==='failure');
+  const before={state:host.taskDoc(first.id).value.task.state,lease,waitingFor:host.taskView(host.taskDoc(first.id).value).waitingFor,spawned:compute.spawned.length,quiesceCalls:calls.length};
+  host.cardAct({roomId:dm,seq:card.seq,cardId:card.card.cardId,actionId:'retry',clientActionId:'retry'});
+  await until(()=>refused?compute.spawned.length===2:compute.resumed.length===1,'重试后可达结果');
+  const after={state:host.taskDoc(first.id).value.task.state,lease:host.quota.leaseOf(first.id)??null,waitingFor:host.taskView(host.taskDoc(first.id).value).waitingFor,spawned:compute.spawned.length,resumed:compute.resumed.length,quiesceCalls:calls.length};
+  output.findings.push({scenario:refused?'停止未确认后同任务续接失败释放给后继':'停止未确认后同任务直接复用租约续接',before,after});
+ }finally{compute.close();await host.close();}
+}
+check();
+const compute=scriptedCompute({script:failureScript,quiesce:async()=>({ok:false,reason:'测试明确未确认停止',remaining:[]})});
+const file=path.join(dir,'restart-no-adapter.db');
+let before=new Host({file,mind:()=>scriptedMind(),compute:()=>compute.adapter,maxDeferMs:5,personalComputeSlots:1});
+let after;
+try{
+ const c=before.createContact({name:'无适配器核验'}),dm=before.openDm(c.id).id;
+ before.send({roomId:dm,clientActionId:'start',text:'帮我写报告'});
+ await until(()=>before.listTasks({roomId:dm})[0]?.waitingFor?.includes('停止未确认'),'旧执行器未知');
+ const first=before.listTasks({roomId:dm})[0];
+ await before.close();before=null;compute.close();
+ after=new Host({file,mind:()=>scriptedMind(),maxDeferMs:5,personalComputeSlots:1});
+ const card=after.listMessages(dm,{}).messages.find(m=>m.card?.kind==='failure');
+ const old={state:after.taskDoc(first.id).value.task.state,lease:after.quota.leaseOf(first.id),waitingFor:after.taskView(after.taskDoc(first.id).value).waitingFor};
+ after.cardAct({roomId:dm,seq:card.seq,cardId:card.card.cardId,actionId:'give-up',clientActionId:'give-up'});
+ await new Promise(r=>setTimeout(r,5));
+ output.findings.push({scenario:'重启后无适配器点不重试伪造状态确认但恢复租约未释放',before:old,after:{state:after.taskDoc(first.id).value.task.state,lease:after.quota.leaseOf(first.id)??null,waitingFor:after.taskView(after.taskDoc(first.id).value).waitingFor}});
+}finally{compute.close();if(before)await before.close();if(after)await after.close();}
+output.finalHead=check();
+fs.writeFileSync(path.join(dir,'result.json'),JSON.stringify(output,null,2)+'\n');
+console.log(JSON.stringify(output,null,2));

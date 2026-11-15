@@ -1,0 +1,30 @@
+✖ AC-23 执行器未提供停止核验:轮次 settled 不得确认停止或归还槽位 (39.713959ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 240.961875
+
+✖ failing tests:
+
+test at packages/server/src/stop-confirmation.test.ts:93:1
+✖ AC-23 执行器未提供停止核验:轮次 settled 不得确认停止或归还槽位 (39.713959ms)
+  AssertionError [ERR_ASSERTION]: 轮次 settled 不证明主进程及全部后代已经停止
+  + actual - expected
+
+  + 'T10_Cancelled'
+  - 'T9_StopRequested'
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/stop-confirmation.test.ts:109:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'T10_Cancelled',
+    expected: 'T9_StopRequested',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

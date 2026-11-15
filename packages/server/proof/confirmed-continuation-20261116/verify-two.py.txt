@@ -1,0 +1,14 @@
+from pathlib import Path
+import subprocess
+repo = Path(__file__).resolve().parent.parent / "repo"
+e = Path(__file__).resolve().parent
+assert subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip() == 'b95c9c19f03bdf537a3183aa218bf4a79ee8220d'
+for name, command in [
+ ("green-desk", ["node", "--test", "--test-concurrency=1", "packages/server/src/desk-fake.test.ts"]),
+ ("green-intent", ["node", "--test", "--test-concurrency=1", "--test-name-pattern=AC.?15.*确认", "packages/server/src/intent.test.ts"]),
+]:
+    print("正在执行 " + name, flush=True)
+    with (e / (name + ".log")).open("wb") as out:
+        result = subprocess.run(command, cwd=repo, stdout=out, stderr=subprocess.STDOUT)
+    (e / (name + ".exit")).write_text(str(result.returncode) + "\n")
+    print(name + " exit=" + str(result.returncode), flush=True)
