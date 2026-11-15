@@ -127,7 +127,8 @@ test("R1-01 模型错误回显来源时:失败错误不存或向本端删除的�
 
 test("R1-01 旧版遗留失败错误在撤回时同事务清空,重启后不可恢复", async () => {
   const marker = "NEUTRAL_LEGACY_PR97_R1";
-  const h = host({ mind: () => summaryMind((i) => [{ kind: "reply", roomId: i.fresh[0]!.roomId, replyToSeq: null, text: "- 无来源" }]) });
+  const h = new Host({ file: path.join(dir, `legacy-hidden-${++n}.db`), mind: () => summaryMind((i) => [{ kind: "reply", roomId: i.fresh[0]!.roomId, replyToSeq: null, text: "- 无来源" }]), maxDeferMs: 5 });
+  hosts.push(h);
   const a = h.createContact({ name: "摘要员" });
   const g = h.createGroup("群", [{ kind: "contact", id: a.id }]);
   h.send({ roomId: g.id, clientActionId: "ask", text: "每 1 条消息总结一次" });
@@ -144,7 +145,8 @@ test("R1-01 旧版遗留失败错误在撤回时同事务清空,重启后不可�
 
 test("R1-01 旧版遗留错误在本端隐藏后也不可从摘要视图泄露", async () => {
   const marker = "NEUTRAL_LEGACY_HIDDEN_PR97_R1";
-  const h = host({ mind: () => summaryMind((i) => [{ kind: "reply", roomId: i.fresh[0]!.roomId, replyToSeq: null, text: "- 无来源" }]) });
+  const h = new Host({ file: path.join(dir, `legacy-hidden-view-${++n}.db`), mind: () => summaryMind((i) => [{ kind: "reply", roomId: i.fresh[0]!.roomId, replyToSeq: null, text: "- 无来源" }]), maxDeferMs: 5 });
+  hosts.push(h);
   const a = h.createContact({ name: "摘要员" });
   const g = h.createGroup("群", [{ kind: "contact", id: a.id }]);
   h.send({ roomId: g.id, clientActionId: "ask", text: "每 1 条消息总结一次" });
@@ -225,7 +227,8 @@ test("R1-03 同联系人普通轮在途:另一群摘要排队,两次推理绝不
     active++; maxActive = Math.max(maxActive, active);
     try { if (hold) { normalStarted = true; await gate.promise; } return await base.round(i, s); } finally { active--; }
   } };
-  const h = host({ mind: () => mind });
+  const h = new Host({ file: path.join(dir, `serial-normal-${++n}.db`), mind: () => mind, maxDeferMs: 5 });
+  hosts.push(h);
   const a = h.createContact({ name: "甲" });
   const g = h.createGroup("群", [{ kind: "contact", id: a.id }]);
   const dm = h.openDm(a.id);
@@ -256,7 +259,8 @@ test("R1-03 同联系人摘要轮在途:另一会话普通轮排队,不同联系
     }
     return base.round(i, s);
   } };
-  const h = host({ mind: () => mind });
+  const h = new Host({ file: path.join(dir, `serial-summary-${++n}.db`), mind: () => mind, maxDeferMs: 5 });
+  hosts.push(h);
   const a = h.createContact({ name: "甲" }); aId = a.id;
   const b = h.createContact({ name: "乙" }); bId = b.id;
   const g = h.createGroup("群", [{ kind: "contact", id: a.id }]);
@@ -289,7 +293,8 @@ test("R1-03 摘要排队期间来源被撤回:取得单飞入口后不再向模�
     if (isSummary(i)) summaryInputs.push(i);
     return base.round(i, s);
   } };
-  const h = host({ mind: () => mind });
+  const h = new Host({ file: path.join(dir, `serial-retract-${++n}.db`), mind: () => mind, maxDeferMs: 5 });
+  hosts.push(h);
   const a = h.createContact({ name: "甲" });
   const g = h.createGroup("群", [{ kind: "contact", id: a.id }]);
   const dm = h.openDm(a.id);
@@ -318,7 +323,8 @@ test("R1-03 摘要排队等待已超时:后续释放单飞入口也不再调用�
     if (isSummary(i)) summariesCalled++;
     return base.round(i, s);
   } };
-  const h = host({ mind: () => mind, summaryTimeoutMs: 50 });
+  const h = new Host({ file: path.join(dir, `serial-timeout-${++n}.db`), mind: () => mind, maxDeferMs: 5, summaryTimeoutMs: 50 });
+  hosts.push(h);
   const a = h.createContact({ name: "甲" });
   const g = h.createGroup("群", [{ kind: "contact", id: a.id }]);
   const dm = h.openDm(a.id);
