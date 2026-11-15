@@ -2638,6 +2638,8 @@ export class Host {
     const roomIdsAtStart = rooms.map((r) => r.id);
     // 每次外部模型调用之后重读全部来源:既有待压缩输入、本轮新输入、成员权限与旧笔记的撤回状态。
     const noteSourcesChanged = () => {
+      // 没有压缩器且没有待压缩原文时,没有后续检查调用;保留既有的逐动作拒绝及其可见报告。
+      if (!this.opts.compactor && pendingNote.length === 0) return false;
       const nowRooms = this.roomsOfContact(contactId).filter((r) => !this.exits.isLeaving(r.id, contactId)).map((r) => r.id);
       if (JSON.stringify(nowRooms) !== JSON.stringify(roomIdsAtStart)) return true;
       if (JSON.stringify(this.pendingNoteInputs(contactId, nowRooms)) !== JSON.stringify(pendingNote)) return true;
