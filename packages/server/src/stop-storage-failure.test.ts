@@ -38,7 +38,7 @@ test("AC-23 失败卡已提交但停止标记落盘失败:原租约仍未知,用
     await until(() => host.listTasks({ roomId: dm })[0]?.state === "T3_Running");
     const task = host.listTasks({ roomId: dm })[0]!;
     const lease = host.quota.leaseOf(task.id)!;
-    host.db.exec("CREATE TRIGGER fail_stop_storage BEFORE UPDATE ON gg_compute_leases WHEN NEW.stopping = 1 BEGIN SELECT RAISE(ABORT, 'stop-storage-test'); END");
+    host.db.store.db.exec("CREATE TRIGGER fail_stop_storage BEFORE UPDATE ON gg_compute_leases WHEN NEW.stopping = 1 BEGIN SELECT RAISE(ABORT, 'stop-storage-test'); END");
     compute.emit({ computeId: compute.spawned[0]!.computeId, kind: "failed", reason: "cyber_policy: flagged by safeguards", code: 1, signal: null, violations: [] });
     await until(() => reports.some((report) => report.includes("stop-storage-test")) && host.listMessages(dm, {}).messages.some((message) => message.card?.kind === "failure"));
     const failure = host.listMessages(dm, {}).messages.find((message) => message.card?.kind === "failure")!;
