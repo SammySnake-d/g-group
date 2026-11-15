@@ -95,6 +95,7 @@ test("R1-F06 别的会话用户输入不能重置本会话的派生根", () => {
   const guard = new LoopGuard(db);
   guard.recordMessage("a", 2, ["root-a"]);
   assert.deepEqual(guard.rootsFor([message("b", 5, "user"), message("a", 2, "contact")], "a"), ["root-a"]);
+  assert.equal(guard.isStopped("a", 2), false, "别的会话输入不能使本会话因果根停止");
 });
 
 test("R1-F09 两个独立根各自计数互不占用", () => {
@@ -104,6 +105,10 @@ test("R1-F09 两个独立根各自计数互不占用", () => {
   guard.recordMessage("b", 1, ["root-b"]);
   assert.equal(guard.admit("a", 1, "甲").allowed, true);
   assert.equal(guard.admit("b", 1, "乙").allowed, true);
+  guard.recordMessage("a", 2, ["root-a"]);
+  assert.equal(guard.admit("a", 2, "丙").allowed, false, "第一根必须在超额时停止");
+  assert.equal(guard.isStopped("a", 1), true, "第一根确实已停止");
+  assert.equal(guard.isStopped("b", 1), false, "独立第二根不能被第一根连带停止");
 });
 
 test("R1-F10 同会话多条派生输入必须继承每一根", () => {
@@ -112,6 +117,8 @@ test("R1-F10 同会话多条派生输入必须继承每一根", () => {
   guard.recordMessage("a", 1, ["root-a"]);
   guard.recordMessage("a", 2, ["root-b"]);
   assert.deepEqual(guard.rootsFor([message("a", 1, "contact"), message("a", 2, "contact")], "a"), ["root-a", "root-b"]);
+  guard.recordMessage("a", 3, guard.rootsFor([message("a", 1, "contact"), message("a", 2, "contact")], "a"));
+  assert.equal(guard.isStopped("a", 3), false, "只合并因果根不能提前停止消息");
 });
 
 test("R1-F11 多根消息第二根已停时仍判为停止", () => {
