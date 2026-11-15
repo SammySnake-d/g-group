@@ -1,0 +1,21 @@
+packages/server/src/compute-delivery-retry.test.ts
+  s_69f96fa873b14b::t_020e69c5f9151a 134
+  s_69f96fa873b14b::t_7768b6a2be7d23 166
+  s_69f96fa873b14b::t_73b43a53cdd4ad 133,135-165,167-178
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d14ffaf8733b731c0598457170657a726c2b0ca0",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
