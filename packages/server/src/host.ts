@@ -2552,23 +2552,8 @@ export class Host {
     // 共享熔断打开时不调模型,暂停到半开探测或用户在群级卡上点重试
     const processedNow: Record<string, number> = Object.fromEntries(rooms.map((r) => [r.id, this.cursor(contactId, r.id)]));
     const inboxEnd = inbox.at(-1)?.id ?? 0;
-    let prior = this.failureRow("contact", contactId);
-    if (prior?.status === "card") {
-      // 未交付是局部协议缺口,不是模型/网络故障:用户在该任务会话发来新指令时,
-      // 旧完成事件与新消息一起重新处理;其他种类的失败卡仍须用户显式操作。
-      const end = JSON.parse(prior.batch_end) as Record<string, number>;
-      const hasNewUser = prior.reason_class === "missing_delivery" && fresh.some((f) =>
-        f.kind === "message" && f.sender.kind === "user" && f.roomId === prior?.room_id && f.seq > (end[f.roomId] ?? 0));
-      if (!hasNewUser) return "done";
-      const cardId = prior.card_id;
-      tx(this.db, () => {
-        if (cardId) run(this.db, "UPDATE gg_cards SET state = 'expired' WHERE card_id = ? AND state = 'open'", cardId);
-        run(this.db, "DELETE FROM gg_failures WHERE scope = 'contact' AND subject = ? AND reason_class = 'missing_delivery'", contactId);
-      });
-      if (cardId) this.emitCardUpdated(cardId);
-      this.emitRetry({ scope: "contact", contactId, taskId: null, roomId: prior.room_id, state: "cleared", attempt: 0, limit: 0, label: "收到新指令" });
-      prior = undefined;
-    }
+    const prior = this.failureRow("contact", contactId);
+    if (prior?.status === "card") return "done";
     const model = prior?.model_override ?? contact.speakingModel;
     const upstream = this.upstreamKey(model);
     if (!this.admitUpstream(upstream, "interactive")) {
@@ -2698,21 +2683,11 @@ export class Host {
     }
     // 宿主关闭中止的轮次不改台账:留在运行中,下次启动核对成孤儿「宿主进程退出」
     if (signal.aborted || this.closed) return "done";
-    // 完成事件是待联系人交付的输入,不是「模型结束了这一轮」即可消费的通知。
-    // 只要求当前实例、当前约束版本的结果;旧结果、取消/续接中的任务不应被自动交付。
-    const missingDelivery = fresh.find((f) => {
-      if (f.kind !== "compute" || f.signal !== "completed") return false;
-      const doc = getDoc<TaskDoc>(this.db, `task:${f.taskId}`)?.value;
-      if (!doc || doc.task.owner !== contactId || doc.task.state !== "T3_Running" || doc.task.computeId !== f.computeId) return false;
-      const result = one<{ status: string; result: string | null }>(this.db, "SELECT status, result FROM gg_compute WHERE compute_id = ?", f.computeId);
-      if (result?.status !== "completed" || result.result === null) return false;
-      const follow = this.followOf(f.taskId).value;
-      if (follow.queued.length || (follow.resultVer ?? doc.task.constraintVer) !== doc.task.constraintVer) return false;
-      return !out.actions.some((a) => (a.kind === "deliver" || a.kind === "forward" || a.kind === "stop") && a.taskId === f.taskId);
-    });
+    // 模型回了话:这个上游是好的(熔断半开探测成功就恢复,交回被暂停的成员)
+    this.upstreamOk(upstream);
     // 发送前检查(AC-31 ④):本轮开始后又来了用户消息,就放弃本轮结果重跑,旧草稿不上屏
     const hasEffects = out.actions.some((a) => a.kind !== "commit");
-    if (hasEffects || missingDelivery) {
+    if (hasEffects) {
       for (const r of rooms) {
         const newer = loadLog(this.db.store, `room:${r.id}`).log.events.filter((m) => m.seq > (lastSeen[r.id] ?? 0) && m.sender.kind === "user");
         if (newer.length) {
@@ -2722,30 +2697,8 @@ export class Host {
         }
       }
     }
-    if (missingDelivery?.kind === "compute") {
-      // 本轮动作尚未落盘,因此按 B0 的未知失败走既有有界重试;耗尽后出可恢复失败卡,
-      // 不消费完成事件、不伪造联系人发言,也不把执行完成当成用户验收。
-      const error = new Error(`Compute 已完成,联系人尚未交付任务 ${missingDelivery.taskId}`);
-      this.setActivity(contactId, null, "idle");
-      this.runs.end(unit.id, "failed", { failure: runFailure(this.classify(error)) });
-      return this.onContactFailure(contactId, contact.name, error, { upstream, focusRoom, lastSeen, inboxEnd }, true);
-    }
-    // 模型完成了可提交的一轮:上游半开探测成功就恢复,交回被暂停的成员。
-    this.upstreamOk(upstream);
     const settled = await this.settleNote(contact, fresh, out, rooms.map((r) => r.id), signal);
     if (signal.aborted || this.closed) return "done";
-    // 反思/压缩可能等待模型数分钟。它返回后、实际提交之前再核对一次用户消息,
-    // 否则这段等待期间发来的停止或修改会被旧轮次的交付越过。
-    if (hasEffects || settled.remember.length) {
-      for (const r of rooms) {
-        const newer = loadLog(this.db.store, `room:${r.id}`).log.events.filter((m) => m.seq > (lastSeen[r.id] ?? 0) && m.sender.kind === "user");
-        if (newer.length) {
-          this.report("stale-round", { contactId, roomId: r.id, newer: newer.map((m) => m.seq) });
-          this.runs.settle(unit.id, { stale: true, note: "提交前检出更新的用户消息,本轮结果放弃并重跑" });
-          return "stale";
-        }
-      }
-    }
     let done: { effects: HostEffect[] };
     try {
       done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona });
@@ -4286,7 +4239,7 @@ export class Host {
   }
 
   /** 联系人一轮失败:按 A×B 决定静默退避(抛 RoundRetry 交注意循环按延迟重跑)、出原位失败卡,或被共享熔断暂停;后两种返回 done 停在原位。 */
-  private onContactFailure(contactId: string, name: string, err: unknown, ctx: { upstream: string; focusRoom: string | null; lastSeen: Record<string, number>; inboxEnd: number }, missingDelivery = false): RoundStatus {
+  private onContactFailure(contactId: string, name: string, err: unknown, ctx: { upstream: string; focusRoom: string | null; lastSeen: Record<string, number>; inboxEnd: number }): RoundStatus {
     const cls = this.classify(err);
     const heal = healOf(cls.reasonClass);
     if (heal === "user_stopped") {
@@ -4309,7 +4262,7 @@ export class Host {
     const b = this.breakerRow(ctx.upstream);
     const br = breakerFailure(b.state, { nowMs: this.clock(), heal, member: `contact:${contactId}`, reason: cls.label }, this.breakerPolicy);
     const row = (status: FailureRow["status"], over: Partial<FailureRow> = {}): Omit<FailureRow, "created_at" | "updated_at"> => ({
-      scope: "contact", subject: contactId, contact_id: contactId, status, heal, effect: "B0", reason_class: missingDelivery ? "missing_delivery" : cls.reasonClass, label: cls.label, fix: cls.fix, raw: cls.raw,
+      scope: "contact", subject: contactId, contact_id: contactId, status, heal, effect: "B0", reason_class: cls.reasonClass, label: cls.label, fix: cls.fix, raw: cls.raw,
       attempts, attempt_seq: prev?.attempt_seq ?? 0, batch_end: batchEnd, inbox_end: inboxEnd, room_id: room, upstream: ctx.upstream, card_id: null, model_override: model, compute_id: null, delivery_unknown: 0, ...over,
     });
     if (br.ok && br.state.status !== "closed") {
