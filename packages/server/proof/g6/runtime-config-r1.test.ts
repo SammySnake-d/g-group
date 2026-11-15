@@ -109,7 +109,8 @@ test("C96-R1-05 禁网下真实 runner CLI 经子进程和宿主传递 65536 及
     git("init", "-q", "-b", "main");
     git("add", "packages", "package.json");
     git("commit", "-qm", "fixture source snapshot");
-    linkNodeModules(repo, fixtureRepo);
+    const linked = linkNodeModules(repo, fixtureRepo);
+    assert.ok(linked.includes("@g-group/server"), "被测工作树的宿主依赖必须指向其自身");
 
     const item = mkItem();
     const fixture = path.join(dir, "set.json");
