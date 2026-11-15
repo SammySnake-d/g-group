@@ -1,0 +1,5 @@
+476fb230aeb1bc926dedb4d70fe156698a69b57c66af286657020e87f146b525  /private/tmp/gg-b1-user-choice-20261115/cloud-candidate-06a5.patch
+d7e7f7e31ba814e3c21ce2d496fafaefa150b263dd069cd29345bd141f772a4e  packages/server/src/host.ts
+da9a0188921f7f50ccf090135d2723be193b491ea221c57554517d78b0b75a9d  packages/server/src/assemble.ts
+dc3fb0d2cbf287c226edd2435096a3786315c3497e2f631032d3231c766088f9  packages/server/src/group-claim.test.ts
+7d3c37a685b6825608783d450d5a2d783d2f154ef40cee71a502c24d09a02346  packages/server/src/group-supplement.test.ts

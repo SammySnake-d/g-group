@@ -1,0 +1,25 @@
+{
+  "schema": "ibcluster.receipt.v1",
+  "runId": "20261115T144622342616Z-3a036f21",
+  "action": "exec",
+  "checkedAt": "2026-11-15T14:46:22.343038+00:00",
+  "phase": "finished",
+  "success": true,
+  "receipt": "/Users/snakesammy/projects/instabox-cluster/checks/exec-20261115T144622342616Z-3a036f21/receipt.json",
+  "configSha256": "b75bd2c802bd06bba4cff0806279df862ebf18286fa34f1a5e75c5977545ec89",
+  "commandSha256": "ad499bf7f888d57769806c901050db3fe89de7db96ed0aa902d93575e1a53041",
+  "results": [
+    {
+      "stdout": "=== failing test ===\n8458-  ---\n8459-  duration_ms: 75.955246\n8460-  type: 'test'\n8461-  ...\n8462-# Subtest: 失败卡「跳过本轮」由用户显式点才推进游标,下一轮只处理跳过之后的消息;「重试」把这批重新交给联系人\n8463:not ok 1399 - 失败卡「跳过本轮」由用户显式点才推进游标,下一轮只处理跳过之后的消息;「重试」把这批重新交给联系人\n8464-  ---\n8465-  duration_ms: 48.34303\n8466-  type: 'test'\n8467-  location: '/data/ibcluster/work/g-group-b1-choice-4df7f6b-20261115/packages/server/src/recall.test.ts:196:1'\n8468-  failureType: 'testCodeFailure'\n8469-  error: '跳过后联系人跑了一轮'\n8470-  code: 'ERR_ASSERTION'\n8471-  name: 'AssertionError'\n8472-  expected: true\n8473-  operator: '=='\n8474-  stack: |-\n8475-    TestContext.<anonymous> (file:///data/ibcluster/work/g-group-b1-choice-4df7f6b-20261115/packages/server/src/recall.test.ts:211:10)\n8476-    async Test.run (node:internal/test_runner/test:1054:7)\n8477-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n8478-  ...\n8479-# Subtest: 被引用原文里的旧 @ 与 /stop 只当数据换入第 5 块:不唤醒被提到的联系人、不改新消息的 mentions 与命令\n8480-ok 1400 - 被引用原文里的旧 @ 与 /stop 只当数据换入第 5 块:不唤醒被提到的联系人、不改新消息的 mentions 与命令\n8481-  ---\n8482-  duration_ms: 116.966332\n8483-  type: 'test'\n8484-  ...\n8485-# (node:2482892) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n8486-# (Use `node --trace-warnings ...` to show where the warning was created)\n8487-# Subtest: 移出借了本群临时槽位的联系人:CLI 主进程与脱组后代都退出前任务停在 T9、临时槽位不归还、成员仍标移出中,退出后才 T10、归还、删成员;重复移出不重发停止;它在别群的长任务、成员与个人槽位全程不受影响\n8488-ok 1401 - 移出借了本群临时槽位的联系人:CLI 主进程与脱组后代都退出前任务停在 T9、临时槽位不归还、成员仍标移出中,退出后才 T10、归还、删成员;重复移出不重发停止;它在别群的长任务、成员与个人槽位全程不受影响\n8489-  ---\n8490-  duration_ms: 2974.133708\n8491-  type: 'test'\n8492-  ...\n8493-# (node:2483933) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n8494-# (Use `node --trace-warnings ...` to show where the warning was created)\n8495-# Subtest: 常驻适配器 + 联系人勾选 skill/MCP:宿主不再拒绝,带专属配置目录、勾选 skill 插件目录与勾选 MCP 启动,实际加载清单记进任务视图\n8496-ok 1402 - 常驻适配器 + 联系人勾选 skill/MCP:宿主不再拒绝,带专属配置目录、勾选 skill 插件目录与勾选 MCP 启动,实际加载清单记进任务视图\n8497-  ---\n8498-  duration_ms: 222.623784\n--\n10147-  ---\n10148-  duration_ms: 165.111502\n10149-  type: 'test'\n10150-  ...\n10151-1..1672\n10152:# tests 1672\n10153-# suites 0\n10154:# pass 1671\n10155:# fail 1\n10156-# cancelled 0\n10157-# skipped 0\n10158-# todo 0\n10159-# duration_ms 69975.475068\n=== typecheck partial ===\n\n> typecheck\n> tsc -p tsconfig.json\n\n=== refs ===\n-rw-rw-r-- 1 user user 2 Nov 15 14:42 install.exit\n-rw-rw-r-- 1 user user 2 Nov 15 14:43 test.exit\n",
+      "stderr": "",
+      "exitCode": 0,
+      "timedOut": false,
+      "truncated": false,
+      "id": "m_agqu43w437ea3ss6izru5gdjwe",
+      "name": "pentest-1",
+      "success": true
+    }
+  ],
+  "lastPhase": "exec:pentest-1",
+  "finishedAt": "2026-11-15T14:46:26.318845+00:00"
+}

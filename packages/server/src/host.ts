@@ -2703,6 +2703,11 @@ export class Host {
     try {
       done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona });
     } catch (e) {
+      if (e instanceof GroupReplyStaleError) {
+        this.report("stale-round", { contactId, roomId: e.roomId, newer: e.newer });
+        this.runs.settle(unit.id, { stale: true, note: "群回复提交前检出其他联系人的新消息,本轮结果放弃并重新复核" });
+        return "stale";
+      }
       this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
       throw e;
     }
@@ -2801,6 +2806,14 @@ export class Host {
     let hadFailure = false as boolean;
     const notifyAfter: string[] = [];
     tx(this.db, () => {
+      // 群回复的版本检查必须在实际提交事务里:整理状态笔记期间也可能有别的联系人先发言。
+      // 不判断新消息是否有价值,也不机械禁言;回到注意循环后由联系人结合原消息与新消息复核。
+      const replyRooms = new Set(out.actions.flatMap((a) => a.kind === "reply" && roomIds.has(a.roomId) && !leavingRooms.has(a.roomId) ? [a.roomId] : []));
+      for (const roomId of replyRooms) {
+        if (this.roomRow(roomId).kind !== "group") continue;
+        const newer = loadLog(this.db.store, `room:${roomId}`).log.events.filter((m) => m.seq > (lastSeen[roomId] ?? 0) && m.sender.kind === "contact" && m.sender.id !== contactId);
+        if (newer.length) throw new GroupReplyStaleError(roomId, newer.map((m) => m.seq));
+      }
       // 账本:本轮新消息先 receive
       const byRoom = new Map<string, Parameters<typeof applyLedger>[2][]>();
       const push = (roomId: string, c: Parameters<typeof applyLedger>[2]) => byRoom.set(roomId, [...(byRoom.get(roomId) ?? []), c]);
@@ -4959,6 +4972,16 @@ export class Host {
 
 const LAYER_NAMES: Readonly<Record<RunUnit["layer"], string>> = Object.freeze({ "contact-round": "联系人轮次", "compute-session": "Compute 会话", "compute-turn": "Compute 轮次", background: "后台任务", subagent: "子代理" });
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+class GroupReplyStaleError extends Error {
+  readonly roomId: string;
+  readonly newer: number[];
+  constructor(roomId: string, newer: number[]) {
+    super("群回复的消息快照已变化");
+    this.name = "GroupReplyStaleError";
+    this.roomId = roomId;
+    this.newer = newer;
+  }
+}
 /** 联系人轮次被宿主判卡死(D26 第 8.3 节)。注意循环收到它按出错处理 */
 export class RoundStalledError extends Error {
   readonly verdict: StallVerdict;

@@ -1,0 +1,45 @@
+✔ 群里一条消息 @ 了别的联系人,没被 @ 的联系人提出接活被拒,只有被 @ 的人建任务 (43.055542ms)
+✔ 同一条消息只能被一位联系人接:先落盘的拿到,后来的被拒,不起第二个 Compute (56.315541ms)
+✔ 联系人每轮知道自己是谁:第 1 块写明名字与 id,并说明 @ 别人的活不归自己、交付不重复发 (33.068583ms)
+✖ 群里只 @ 一人:未被点名联系人仍进注意回合但不能越权公屏回复;联系人回复仍唤醒旁观者 (41.963792ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 377.625125
+
+✖ failing tests:
+
+test at packages/server/src/group-claim.test.ts:108:1
+✖ 群里只 @ 一人:未被点名联系人仍进注意回合但不能越权公屏回复;联系人回复仍唤醒旁观者 (41.963792ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+
+    [
+      [
+        'c-mwhtiz1r-1',
+        '小林回答'
+      ],
+      [
+        'c-mwhtiz1r-2',
+  +     '小克越权回答'
+  +   ],
+  +   [
+  +     'c-mwhtiz1r-2',
+        '小克纠正'
+      ]
+    ]
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-b1-red/packages/server/src/group-claim.test.ts:136:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ [ 'c-mwhtiz1r-1', '小林回答' ], [ 'c-mwhtiz1r-2', '小克越权回答' ], [ 'c-mwhtiz1r-2', '小克纠正' ] ],
+    expected: [ [ 'c-mwhtiz1r-1', '小林回答' ], [ 'c-mwhtiz1r-2', '小克纠正' ] ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

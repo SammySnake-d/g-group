@@ -1,0 +1,56 @@
+{
+  "source_commit": "06a5ca7f822fa35b71874dd165eafb1b2fe7c79f",
+  "model": "fengshao1227/deepseek-v4.1-flash",
+  "walk_exit": 0,
+  "seconds": 245,
+  "visible_replies": [
+    "小林 助手 23:00 我 我 请只回复这八个字符:GRP_OK_2,不要做别的事。 @小林 GRP_OK_2"
+  ],
+  "typing_at_script_stop": [],
+  "runs": [
+    {
+      "contactId": "c-mwhynjv7-2",
+      "sourceSeq": 1,
+      "status": "done",
+      "upstream": "fengshao1227/deepseek-v4.1-flash",
+      "startedAt": 1794754776827,
+      "endedAt": 1794754845959
+    },
+    {
+      "contactId": "c-mwhynjb8-1",
+      "sourceSeq": 1,
+      "status": "done",
+      "upstream": "fengshao1227/deepseek-v4.1-flash",
+      "startedAt": 1794754778330,
+      "endedAt": 1794754871568
+    },
+    {
+      "contactId": "c-mwhynjb8-1",
+      "sourceSeq": 1,
+      "status": "done",
+      "upstream": "fengshao1227/deepseek-v4.1-flash",
+      "startedAt": 1794754871570,
+      "endedAt": 1794755021226
+    }
+  ],
+  "effects": [],
+  "message_metadata": [
+    {
+      "seq": 1,
+      "mentions": [
+        {
+          "id": "c-mwhynjv7-2",
+          "source": "manual"
+        }
+      ],
+      "replyTo": null
+    },
+    {
+      "seq": 2,
+      "mentions": [],
+      "replyTo": 1
+    }
+  ],
+  "database_sha256": "fd85a211007eecf1643430606c50c1d31d8e95530a49777766bc42df59db8231",
+  "scope": "隔离包以 PR101 前端与本候选后端构建；仅 AppConfig 改为内存态以避免测试令牌落盘。Compute 使用 fake；此记录不证明持久因果互唤上限。"
+}

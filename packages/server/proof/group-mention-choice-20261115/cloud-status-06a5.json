@@ -1,0 +1,25 @@
+{
+  "schema": "ibcluster.receipt.v1",
+  "runId": "20261115T150440816889Z-4b5f8f77",
+  "action": "exec",
+  "checkedAt": "2026-11-15T15:04:40.817684+00:00",
+  "phase": "finished",
+  "success": true,
+  "receipt": "/Users/snakesammy/projects/instabox-cluster/checks/exec-20261115T150440816889Z-4b5f8f77/receipt.json",
+  "configSha256": "b75bd2c802bd06bba4cff0806279df862ebf18286fa34f1a5e75c5977545ec89",
+  "commandSha256": "3d259517b9129fdbd3c9139560d60c328664e0eff680d6c60f0c61fc618ff4e6",
+  "results": [
+    {
+      "stdout": "=== progress ===\nstarted=2026-11-15T14:59:44Z\ntest=0 typecheck=0 biome=0\nfinished=2026-11-15T15:01:04Z\ntest=0\ntypecheck=0\nbiome=0\nsuite=0\n=== test ===\n  duration_ms: 206.554048\n  type: 'test'\n  ...\n1..1673\n# tests 1673\n# suites 0\n# pass 1673\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 70251.855677\ntest-runner:实际执行并通过 1673 条用例\n=== typecheck ===\n\n> typecheck\n> tsc -p tsconfig.json\n\n=== biome ===\nChecked 4 files in 104ms. No fixes applied.\n=== tmux ===\nnot-running\n",
+      "stderr": "",
+      "exitCode": 0,
+      "timedOut": false,
+      "truncated": false,
+      "id": "m_agqu43w437ea3ss6izru5gdjwe",
+      "name": "pentest-1",
+      "success": true
+    }
+  ],
+  "lastPhase": "exec:pentest-1",
+  "finishedAt": "2026-11-15T15:04:45.553132+00:00"
+}
