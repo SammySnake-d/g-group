@@ -1,15 +1,15 @@
 {
-  "slice": "B1 群消息寻址：用户只 @ 一位联系人时，所有联系人仍进入各自注意回合；未被点名者不得直接代答原用户消息，但可引用已发布的联系人消息做纠错或独立复核。",
+  "slice": "B1 群回复：每位联系人仍收到消息；有新信息的未点名联系人可补充。群回复提交前在事务内检查是否已有其他联系人发言，快照变化则交回注意循环复核。",
   "acceptance": [
     {
       "id": "AC-27",
-      "status": "通过",
-      "evidence": "packages/server/proof/group-mention-routing-b1-red.txt"
+      "status": "未测",
+      "reason": "各次行为变更分别保留了先红后绿，见证据 README；正式 G-RED/G-STUB 等门禁尚未完成，不能把局部红绿标成完整 AC-27 通过。"
     },
     {
       "id": "AC-31",
       "status": "未测",
-      "reason": "本片只覆盖 AC-31 的群消息寻址子路径：全员进入注意回合、提交层拦截未点名直答、联系人回复仍可触发旁观者纠错；AC-31 其余崩溃去重、撤销竞态、承诺 GC 与完整 A-T40 矩阵不在本片重新声明。相关行为与全量回归证据见 packages/server/proof/group-mention-routing-b1-full.txt。"
+      "reason": "本片只验证全员送达、群回复快照竞态及部分已有回归；崩溃去重、承诺回收和完整 A-T40 场景未在本片重验。"
     }
   ],
   "author": {
@@ -17,12 +17,34 @@
     "session": "codex:63f0bda7-4211-4c82-ae3b-08da3acc1f00",
     "model": "group/gpt-terra"
   },
-  "red": {
-    "commit": "b10a2c7131fbbee25080c5be5f6f7478aaf10806"
-  },
-  "unverifiable": "红基线在干净 detached worktree b10a2c7 上直接 node --test 运行，4 条中新增 B1 用例按名失败；仓库 test-runner 的变更扫描在该临时树只收集原有 3 条，因此不把它的 3/3 结果当红证据。绿实现 859a6f6 后 typecheck 通过，Biome 对两份受管文件通过，相关 host/group-claim/retry/recall 回归 43/43 通过，全仓 npm test 1668/1668 通过且 skip/todo/cancelled 为 0。未做真实网关模型或打包版重跑；B1 的真实打包证据仍是 PR101 首轮材料，需 Claude 在本分支上复核。",
-  "waiver": null,
+  "additional_author_sessions": [
+    {
+      "agent": "codex",
+      "session": "codex:729f7a96-8295-4a06-8b41-46e100bf454e",
+      "model": "group/gpt-terra",
+      "note": "重复线在用户确认后已停止；3887eb56 至 228b9e3e 的提交被保留，原机械禁言后续撤销。"
+    }
+  ],
   "review": null,
-  "review_status": "待 Claude 独立审查；未合并",
-  "notes": "当前基线 45976fca。已核对 #79 feat/contact-call-check：只覆盖 @everyone 展开与动作校验；已核对 #88 feat/mention-loop-guard-ca2：持久因果限额片，且现有审查结论为 REJECT；二者均未覆盖本 B1 的未点名 reply 寻址边界，未重复并入。代码只在 Host.commitRound 的 reply 提交处增加机械拒绝，保留全员送达与联系人回复唤醒；PR101 R2 桌面收据已记录该现象仍待后端修复。"
+  "red": {
+    "commit": "39b04ba72b06cb1d1f324c078e5e8f2611776e88"
+  },
+  "unverifiable": "AC-27 正式红基线和空桩门禁未完成；红提交 39b04ba 仅是并发快照竞态的真实红，其余测试有各自红提交，不能声称所有测试在这一个提交都红。AC-31 仅覆盖相关子路径。真实模型单次走查不能证明所有语义场景或同因果链的有界性；#88 当前 R1 REJECT，依赖返修和集成复验。",
+  "waiver": null,
+  "review_status": "未独立审查、未合并；先完成推送及 #88 依赖处理，再交 Claude。",
+  "baseline": "45976fca3c1311451acf17c915509d724bf719f1",
+  "source_commit_tested": "06a5ca7f822fa35b71874dd165eafb1b2fe7c79f",
+  "red_green": [
+    {"red": "bf0c6b969d9ec6897909492d88db003ac7c8cfd4", "green": "dc9a46b348cfac62eb319f4012051b64109e301f", "scope": "对先前错误候选的未点名实质补充误拒回归，不是对集成头的红测"},
+    {"red": "b33836803d6a86e7d6a8202f4d08f31280f1a47e", "green": "4df7f6b2736fba7bf7ef6147ec3a244ffa27b510", "scope": "群聊指引装配，不证明模型会遵守"},
+    {"red": "39b04ba72b06cb1d1f324c078e5e8f2611776e88", "green": "06a5ca7f822fa35b71874dd165eafb1b2fe7c79f", "scope": "并发回复及笔记整理期间的新联系人消息，在提交事务中复核"}
+  ],
+  "verification": {
+    "proof": "packages/server/proof/group-mention-choice-20261115/README.md",
+    "targeted": "相关 48/48 通过，含群聊、host、召回与重试；此前提示词引起预算失败，已按原预算修正。",
+    "cloud": "pentest-1 在被测源码 06a5ca7f 上 npm test 1673/1673，失败、跳过、todo、取消均为 0；typecheck 0，四个变更文件 Biome lint 0。",
+    "real": "同一 group-walk.mjs 和 fengshao1227/deepseek-v4.1-flash：只小林一条回复、3 个已结束联系人回合、245 秒脚本停止观察时无正在回复。隔离包仅 AppConfig 临时内存化；Compute 为 fake；单次不能证明防无限互唤。"
+  },
+  "history_correction": "本收据在 d739da7 的旧版错误写成未点名者不得直接答复，并错误排除了 #88 的相关性；旧文件及旧红绿作为历史保留在 Git 中，不再作为当前验收结论。",
+  "dependencies": "#79 主要处理 @everyone 和动作校验；#88 是持久因果限额，Claude R1 REJECT。须返修 #88，审其 #76→#79 与 #71 依赖，再基于最新集成头合流复验；本片未重造因果限额。"
 }

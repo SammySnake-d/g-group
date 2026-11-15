@@ -1,0 +1,48 @@
+
+> @g-group/desktop@0.1.0 build:electron
+> vite build -c vite.electron.config.ts && GG_ENTRY=preload vite build -c vite.electron.config.ts && GG_ENTRY=report-mcp vite build -c vite.electron.config.ts
+
+vite v8.3.6 building ssr environment for production...
+
+ WARN  inlineDynamicImports option is deprecated, please use codeSplitting: false instead.
+
+transforming...
+✓ 405 modules transformed.
+rendering chunks...
+computing gzip size...
+dist-electron/assets/node-RjQ6esBx.cjs                    1.29 kB │ gzip:   0.55 kB
+dist-electron/assets/node-BxRqsDU1.cjs                  113.21 kB │ gzip:  28.32 kB
+dist-electron/assets/src-jHZ8ReH3.cjs                   193.18 kB │ gzip:  48.73 kB
+dist-electron/assets/anthropic-messages-BnA73lsk.cjs    622.79 kB │ gzip: 132.31 kB
+dist-electron/main.cjs                                1,062.76 kB │ gzip: 308.74 kB
+
+✓ built in 880ms
+vite v8.3.6 building ssr environment for production...
+
+ WARN  inlineDynamicImports option is deprecated, please use codeSplitting: false instead.
+
+transforming...
+✓ 10 modules transformed.
+rendering chunks...
+computing gzip size...
+dist-electron/preload.cjs  68.16 kB │ gzip: 22.73 kB
+
+✓ built in 738ms
+vite v8.3.6 building ssr environment for production...
+
+ WARN  inlineDynamicImports option is deprecated, please use codeSplitting: false instead.
+
+transforming...
+✓ 4 modules transformed.
+rendering chunks...
+computing gzip size...
+dist-electron/report-mcp.cjs  9.72 kB │ gzip: 4.11 kB
+
+✓ built in 412ms
+/private/tmp/gg-b1-pack-06a5ca7-20261115/g-group.app: replacing existing signature
+candidate=06a5ca7f822fa35b71874dd165eafb1b2fe7c79f
+header_sha256=389fd8a7eb6b03dc3b598688a3b0a26d5bde392c399f966ecf9e308a6ef106b9
+d7e7f7e31ba814e3c21ce2d496fafaefa150b263dd069cd29345bd141f772a4e  /private/tmp/gg-b1-live-06a5ca7/packages/server/src/host.ts
+da9a0188921f7f50ccf090135d2723be193b491ea221c57554517d78b0b75a9d  /private/tmp/gg-b1-live-06a5ca7/packages/server/src/assemble.ts
+62c9823f6a4ea241ad81dd187520675ba03017a01db06172fcfb8c8021f2cf93  /private/tmp/gg-b1-live-06a5ca7/apps/desktop/dist-electron/main.cjs
+5e1d007ae79a0e379b50784c3ec06d710303c7d41080332029921963a84e4522  /private/tmp/gg-b1-pack-06a5ca7-20261115/candidate.asar

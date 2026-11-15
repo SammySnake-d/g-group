@@ -1,0 +1,49 @@
+TAP version 13
+# (node:88821) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AC-37 ③ 回复超长第 10 条 + 引用第 12/15/18 条:第 5 块里第 10 条显式截断带游标,第 12、18 条全文不被挤掉,撤回的第 15 条只给占位,清单可观测
+ok 1 - AC-37 ③ 回复超长第 10 条 + 引用第 12/15/18 条:第 5 块里第 10 条显式截断带游标,第 12、18 条全文不被挤掉,撤回的第 15 条只给占位,清单可观测
+  ---
+  duration_ms: 84.866542
+  type: 'test'
+  ...
+# Subtest: 越权两道拒绝(AC-37 的跨会话第 99 条):messages.send 引用本会话没有的 seq 直接 invalid_params 不入库;数据层伪造的跨会话引用在装配时 AccessDenied 且不带原文
+ok 2 - 越权两道拒绝(AC-37 的跨会话第 99 条):messages.send 引用本会话没有的 seq 直接 invalid_params 不入库;数据层伪造的跨会话引用在装配时 AccessDenied 且不带原文
+  ---
+  duration_ms: 85.023
+  type: 'test'
+  ...
+# Subtest: AC-06 阴性对照:同一批里被引用的消息已在第 4 块,不触发 Page-in;清单为空
+ok 3 - AC-06 阴性对照:同一批里被引用的消息已在第 4 块,不触发 Page-in;清单为空
+  ---
+  duration_ms: 61.520708
+  type: 'test'
+  ...
+# Subtest: AC-06 整轮超预算显式失败:会话里出失败卡说明超出多少字节,不调模型、不截断、游标不推进,不在后台反复重跑;同一批再来消息只更新这张卡
+ok 4 - AC-06 整轮超预算显式失败:会话里出失败卡说明超出多少字节,不调模型、不截断、游标不推进,不在后台反复重跑;同一批再来消息只更新这张卡
+  ---
+  duration_ms: 76.355833
+  type: 'test'
+  ...
+# Subtest: 失败卡「跳过本轮」由用户显式点才推进游标,下一轮只处理跳过之后的消息;「重试」把这批重新交给联系人
+ok 5 - 失败卡「跳过本轮」由用户显式点才推进游标,下一轮只处理跳过之后的消息;「重试」把这批重新交给联系人
+  ---
+  duration_ms: 83.20125
+  type: 'test'
+  ...
+# Subtest: 被引用原文里的旧 @ 与 /stop 只当数据换入第 5 块:不唤醒被提到的联系人、不改新消息的 mentions 与命令
+ok 6 - 被引用原文里的旧 @ 与 /stop 只当数据换入第 5 块:不唤醒被提到的联系人、不改新消息的 mentions 与命令
+  ---
+  duration_ms: 116.920125
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 684.020584
+test-runner:实际执行并通过 6 条用例

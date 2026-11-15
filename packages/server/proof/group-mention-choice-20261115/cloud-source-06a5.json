@@ -1,0 +1,8 @@
+{
+  "stdout": "/data/ibcluster/work/g-group-b1-228b9e3-20261115/src.tar.gz: OK\n/data/ibcluster/work/g-group-b1-choice-06a5ca7-20261115/candidate.patch: OK\npatching file packages/server/src/assemble.ts\npatching file packages/server/src/group-claim.test.ts\npatching file packages/server/src/group-supplement.test.ts\npatching file packages/server/src/host.ts\nd7e7f7e31ba814e3c21ce2d496fafaefa150b263dd069cd29345bd141f772a4e  packages/server/src/host.ts\nda9a0188921f7f50ccf090135d2723be193b491ea221c57554517d78b0b75a9d  packages/server/src/assemble.ts\ndc3fb0d2cbf287c226edd2435096a3786315c3497e2f631032d3231c766088f9  packages/server/src/group-claim.test.ts\n7d3c37a685b6825608783d450d5a2d783d2f154ef40cee71a502c24d09a02346  packages/server/src/group-supplement.test.ts\n/usr/bin/tmux\n",
+  "stderr": "",
+  "exitCode": 0,
+  "timedOut": false,
+  "truncated": false,
+  "oomKilled": false
+}
