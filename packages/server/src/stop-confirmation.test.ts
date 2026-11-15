@@ -6,6 +6,7 @@ import path from "node:path";
 import { after, test } from "node:test";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
+import { QuotaTable } from "./quota.ts";
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-stop-confirmation-"));
 after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -116,4 +117,76 @@ test("AC-23 执行器未提供停止核验:轮次 settled 不得确认停止或�
     compute.close();
     await host.close();
   }
+});
+
+test("AC-23 停止未确认后用户重试:执行器愿意续接也不得调用 resume", async (t) => {
+  const compute = scriptedCompute({
+    script: failureScript,
+    quiesce: async () => ({ ok: false, reason: "仍有活后代,停止未确认", remaining: [] }),
+  });
+  const host = new Host({ file: file(), mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5, personalComputeSlots: 1 });
+  try {
+    const contact = host.createContact({ name: "愿意续接但停止未确认" });
+    const dm = host.openDm(contact.id).id;
+    host.send({ roomId: dm, clientActionId: "start", text: "帮我写一份报告" });
+    await until(() => host.listTasks({ roomId: dm })[0]?.waitingFor?.includes("停止未确认") === true, "原执行器停止未确认");
+    const task = host.listTasks({ roomId: dm })[0]!;
+    const saved = host.quota.leaseOf(task.id);
+    assert.ok(saved?.stopping);
+    const failure = host.listMessages(dm, {}).messages.find((message) => message.card?.kind === "failure")!;
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    host.cardAct({ roomId: dm, seq: failure.seq, cardId: failure.card!.cardId, actionId: "retry", clientActionId: "retry" });
+    t.mock.timers.tick(0);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(compute.resumed.length, 0, "停止未确认时即使 resume 愿意成功,宿主也不得调用");
+    assert.deepEqual(host.quota.leaseOf(task.id), saved);
+    assert.equal(compute.spawned.length, 1);
+  } finally {
+    t.mock.timers.reset();
+    compute.close();
+    await host.close();
+  }
+});
+
+test("AC-23 确认原执行器已退出后用户重试:允许同会话续接且申请新租约", async () => {
+  let confirm!: () => void;
+  const confirmed = new Promise<void>((resolve) => { confirm = resolve; });
+  const compute = scriptedCompute({
+    script: failureScript,
+    quiesce: async () => { await confirmed; return { ok: true, killed: 0 }; },
+  });
+  const host = new Host({ file: file(), mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5, personalComputeSlots: 1 });
+  try {
+    const contact = host.createContact({ name: "合法确认后续接" });
+    const dm = host.openDm(contact.id).id;
+    host.send({ roomId: dm, clientActionId: "start", text: "帮我写一份报告" });
+    await until(() => host.listMessages(dm, {}).messages.some((message) => message.card?.kind === "failure"), "原位失败卡");
+    const task = host.listTasks({ roomId: dm })[0]!;
+    const saved = host.quota.leaseOf(task.id);
+    assert.ok(saved?.stopping, "确认前仍持有原租约");
+    confirm();
+    await until(() => host.quota.leaseOf(task.id) === undefined, "可信核验后原槽位归还");
+    const failure = host.listMessages(dm, {}).messages.find((message) => message.card?.kind === "failure")!;
+    host.cardAct({ roomId: dm, seq: failure.seq, cardId: failure.card!.cardId, actionId: "retry", clientActionId: "retry" });
+    await until(() => compute.resumed.length === 1, "合法同会话续接");
+    assert.equal(compute.resumed[0]!.computeId, compute.spawned[0]!.computeId);
+    assert.equal(compute.spawned.length, 1, "不是从头 spawn 新会话");
+    const current = host.quota.leaseOf(task.id);
+    assert.ok(current && current.leaseId !== saved.leaseId && !current.stopping, "续接必须重新申请已确认释放后的槽位");
+  } finally {
+    confirm();
+    compute.close();
+    await host.close();
+  }
+});
+
+test("AC-23 没有宿主停止状态表时:配额仍拒绝同任务复用 stopping 租约", () => {
+  const quota = new QuotaTable({ personal: () => 1, group: () => 0, newId: () => "one" });
+  const request = { taskId: "task", contactId: "contact", roomId: "dm-contact", isGroup: false };
+  const acquired = quota.acquire(request);
+  assert.ok("granted" in acquired);
+  quota.markStopping(request.taskId);
+  assert.ok("queued" in quota.acquire(request), "不依赖 Host.stopUnconfirmed 才能阻止复用");
+  assert.equal(quota.view().leases.length, 1);
+  assert.equal(quota.leaseOf(request.taskId)?.leaseId, acquired.granted.leaseId);
 });
