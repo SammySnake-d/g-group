@@ -2733,12 +2733,15 @@ export class Host {
    * 旁观者若是在回应另一位联系人已经发布的消息,必须带 replyToSeq,保留纠错/独立复核路径(U48/D19.3)。
    * 这不是前置过滤:判定发生在动作提交处,游标与注意回合仍照常推进。
    */
-  private replyScopeRefusal(contactId: string, action: Extract<MindAction, { kind: "reply" }>, fresh: readonly InboundMessage[]): string | null {
+  private replyScopeRefusal(contactId: string, action: Extract<MindAction, { kind: "reply" }>, fresh: readonly Inbound[]): string | null {
     const room = this.roomRow(action.roomId);
     if (room.kind !== "group") return null;
+    // 无引用的发言如果与自身 Compute/定时事件同批,不能断定它是在代答另一人的点名。
+    if (action.replyToSeq === null && fresh.some((f) => f.roomId === action.roomId && f.kind !== "message")) return null;
+    const messages = fresh.filter((f): f is InboundMessage => f.kind === "message");
     // 带明确引用时先看被回复的用户消息,不能把同批另一条较新的点名套到它身上。
-    const quotedUser = action.replyToSeq === null ? undefined : fresh.find((m) => m.roomId === action.roomId && m.seq === action.replyToSeq && m.sender.kind === "user");
-    const latestUser = quotedUser ?? [...fresh].reverse().find((m) => m.roomId === action.roomId && m.sender.kind === "user");
+    const quotedUser = action.replyToSeq === null ? undefined : messages.find((m) => m.roomId === action.roomId && m.seq === action.replyToSeq && m.sender.kind === "user");
+    const latestUser = quotedUser ?? [...messages].reverse().find((m) => m.roomId === action.roomId && m.sender.kind === "user");
     if (!latestUser || latestUser.mentions.length === 0 || latestUser.mentions.includes(contactId)) return null;
     if (action.replyToSeq !== null) {
       const target = this.projected(action.roomId).find((m) => m.seq === action.replyToSeq);
@@ -2848,7 +2851,7 @@ export class Host {
             if (leavingRooms.has(a.roomId)) { reject(LEAVING_REASON); break; }
             if (!roomIds.has(a.roomId)) { reject("不在这个会话里"); break; }
             if (!a.text.trim()) { reject("空消息"); break; }
-            const replyScope = this.replyScopeRefusal(contactId, a, freshMsgs);
+            const replyScope = this.replyScopeRefusal(contactId, a, fresh);
             if (replyScope) { reject(replyScope); break; }
             const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [] });
             appended.push({ roomId: a.roomId, seq: r.seq });
