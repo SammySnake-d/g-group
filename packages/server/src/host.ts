@@ -2479,6 +2479,19 @@ export class Host {
     };
   }
 
+  /** 仅当前实例、当前条件版本且没有待续接补充的完成事件需要联系人处理。 */
+  private pendingComputeDeliveries(contactId: string, fresh: readonly Inbound[]): Extract<Inbound, { kind: "compute" }>[] {
+    return fresh.filter((f): f is Extract<Inbound, { kind: "compute" }> => {
+      if (f.kind !== "compute" || f.signal !== "completed") return false;
+      const doc = getDoc<TaskDoc>(this.db, `task:${f.taskId}`)?.value;
+      if (!doc || doc.task.owner !== contactId || doc.task.state !== "T3_Running" || doc.task.computeId !== f.computeId) return false;
+      const result = one<{ status: string; result: string | null }>(this.db, "SELECT status, result FROM gg_compute WHERE compute_id = ?", f.computeId);
+      if (result?.status !== "completed" || result.result === null) return false;
+      const follow = this.followOf(f.taskId).value;
+      return !follow.queued.length && (follow.resultVer ?? doc.task.constraintVer) === doc.task.constraintVer;
+    });
+  }
+
   async runRound(contactId: string, signal: AbortSignal): Promise<RoundStatus> {
     if (this.closed) return "done";
     const contact = this.contactDoc(contactId).value;
@@ -2630,6 +2643,12 @@ export class Host {
       if (chain) pointers.push({ ref: `${f.roomId} #${f.seq} 的引用链`, text: renderQuoteChain(chain) });
     }
     const mem = this.memoryForRound(contactId, fresh);
+    // 任务相关的宿主提示只进会变的第 5 块,不伪造用户消息、不改固定前缀;
+    // 首次和重试都说明完成事件需要处理,仍由联系人选择交付、续接或停止。
+    const deliveryHints = [...new Map(this.pendingComputeDeliveries(contactId, fresh).map((f) => [f.taskId, f])).values()].map((f) => ({
+      ref: `任务 ${f.taskId} 的 Compute 完成处理`,
+      text: "当前条件下的 Compute 已完成。结果可交付时请调用 deliver,以 taskId 和面向用户的交付 text 说明结果;需要继续处理可用 forward,需要停止可用 stop。执行完成不等于用户验收。",
+    }));
     let request: ReturnType<RoundAssembler>;
     try {
       request = this.assemble({
@@ -2646,7 +2665,7 @@ export class Host {
       stateNote: note?.value.text ?? null,
       fresh,
       tasks: tasks.map((t) => `${t.id} [${t.state}] ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
-      pointers: [...pointers, ...mem.pointers],
+      pointers: [...pointers, ...mem.pointers, ...deliveryHints],
       budgetBytes: this.opts.roundBudgetBytes ?? ROUND_BUDGET_BYTES,
       runs: this.runLinesFor(contactId, rooms),
       });
@@ -2700,16 +2719,8 @@ export class Host {
     if (signal.aborted || this.closed) return "done";
     // 完成事件是待联系人交付的输入,不是「模型结束了这一轮」即可消费的通知。
     // 只要求当前实例、当前约束版本的结果;旧结果、取消/续接中的任务不应被自动交付。
-    const missingDelivery = fresh.find((f) => {
-      if (f.kind !== "compute" || f.signal !== "completed") return false;
-      const doc = getDoc<TaskDoc>(this.db, `task:${f.taskId}`)?.value;
-      if (!doc || doc.task.owner !== contactId || doc.task.state !== "T3_Running" || doc.task.computeId !== f.computeId) return false;
-      const result = one<{ status: string; result: string | null }>(this.db, "SELECT status, result FROM gg_compute WHERE compute_id = ?", f.computeId);
-      if (result?.status !== "completed" || result.result === null) return false;
-      const follow = this.followOf(f.taskId).value;
-      if (follow.queued.length || (follow.resultVer ?? doc.task.constraintVer) !== doc.task.constraintVer) return false;
-      return !out.actions.some((a) => (a.kind === "deliver" || a.kind === "forward" || a.kind === "stop") && a.taskId === f.taskId);
-    });
+    const pendingDelivery = this.pendingComputeDeliveries(contactId, fresh);
+    const missingDelivery = pendingDelivery.find((f) => !out.actions.some((a) => (a.kind === "deliver" || a.kind === "forward" || a.kind === "stop") && a.taskId === f.taskId));
     // 发送前检查(AC-31 ④):本轮开始后又来了用户消息,就放弃本轮结果重跑,旧草稿不上屏
     const hasEffects = out.actions.some((a) => a.kind !== "commit");
     if (hasEffects || missingDelivery) {
@@ -2728,7 +2739,7 @@ export class Host {
       const error = new Error(`Compute 已完成,联系人尚未交付任务 ${missingDelivery.taskId}`);
       this.setActivity(contactId, null, "idle");
       this.runs.end(unit.id, "failed", { failure: runFailure(this.classify(error)) });
-      return this.onContactFailure(contactId, contact.name, error, { upstream, focusRoom, lastSeen, inboxEnd }, true);
+      return this.onContactFailure(contactId, contact.name, error, { upstream, focusRoom: missingDelivery.roomId, lastSeen, inboxEnd }, true);
     }
     // 模型完成了可提交的一轮:上游半开探测成功就恢复,交回被暂停的成员。
     this.upstreamOk(upstream);
@@ -2746,17 +2757,24 @@ export class Host {
         }
       }
     }
-    let done: { effects: HostEffect[] };
+    let done: { effects: HostEffect[]; unhandledDelivery: Extract<Inbound, { kind: "compute" }> | null };
     try {
-      done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona });
+      done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona }, pendingDelivery);
     } catch (e) {
       this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
       throw e;
     }
-    this.expireRoundFailures(contactId);
+    if (!done.unhandledDelivery) this.expireRoundFailures(contactId);
     this.setActivity(contactId, null, "idle");
     // 这一轮起的 Compute 会话挂在这个轮次下面(父子一致:Compute 还在跑,轮次就等它,不记 done)
     await this.runEffects(done.effects.map((e) => (e.kind === "spawn" && !e.parentRunId ? { ...e, parentRunId: unit.id } : e)));
+    if (done.unhandledDelivery) {
+      // 动作存在不等于通过宿主校验。拒绝动作时只保留对应完成事件,
+      // 已提交的其他动作不重放;保留失败计数,复用同一有界重试及失败卡。
+      const error = new Error(`Compute 已完成,联系人尚未交付任务 ${done.unhandledDelivery.taskId}`);
+      this.runs.end(unit.id, "failed", { failure: runFailure(this.classify(error)) });
+      return this.onContactFailure(contactId, contact.name, error, { upstream, focusRoom: done.unhandledDelivery.roomId, lastSeen, inboxEnd }, true);
+    }
     this.runs.settle(unit.id);
     return "done";
   }
@@ -2833,10 +2851,11 @@ export class Host {
     contact: ContactDoc,
     roundId: string,
     fresh: Inbound[],
-    inbox: { id: number }[],
+    inbox: { id: number; payload: string }[],
     lastSeen: Record<string, number>,
     out: { actions: readonly MindAction[]; stateNote: string | null; personaSuggestion?: string | null },
-  ): { effects: HostEffect[] } {
+    pendingDelivery: readonly Extract<Inbound, { kind: "compute" }>[],
+  ): { effects: HostEffect[]; unhandledDelivery: Extract<Inbound, { kind: "compute" }> | null } {
     const roomIds = new Set(this.roomsOfContact(contactId).map((r) => r.id));
     // 移出中:这个群里的发言、登记承诺与接新活一律拒绝(D05「先禁止新群内接单与发言」)
     const leavingRooms = this.exits.leavingRoomsOf(contactId);
@@ -2845,6 +2864,8 @@ export class Host {
     const appended: { roomId: string; seq: number }[] = [];
     const touchedTasks = new Set<string>();
     const rejected: { action: MindAction; reason: string }[] = [];
+    const handledDelivery = new Set<string>();
+    const unhandledDeliveries: Extract<Inbound, { kind: "compute" }>[] = [];
     let hadFailure = false as boolean;
     const notifyAfter: string[] = [];
     tx(this.db, () => {
@@ -2870,6 +2891,7 @@ export class Host {
       let i = 0;
       for (const a of out.actions) {
         const actionId = `${roundId}:a${i++}`;
+        const rejectedBefore = rejected.length;
         const reject = (reason: string) => rejected.push({ action: a, reason });
         switch (a.kind) {
           case "reply": {
@@ -3082,6 +3104,12 @@ export class Host {
             break;
           }
         }
+        if ((a.kind === "deliver" || a.kind === "forward" || a.kind === "stop") && rejected.length === rejectedBefore) handledDelivery.add(a.taskId);
+      }
+      for (const f of pendingDelivery) {
+        if (handledDelivery.has(f.taskId)) continue;
+        // 反思期间任务可能已取消或换版;只为仍有效的当前完成事件保留输入。
+        if (this.pendingComputeDeliveries(contactId, [f]).length) unhandledDeliveries.push(f);
       }
       // 账本:本轮新消息逐条 process(用户消息被动作引用即视为接下;承诺随来源消息登记)
       for (const m of freshMsgs) {
@@ -3107,10 +3135,16 @@ export class Host {
       for (const [roomId, cmds] of byRoom) this.ledgerTx(contactId, roomId, cmds);
       // 游标、待处理输入、状态笔记与本轮动作同一事务(D15.1)
       this.advanceCursorsTx(contactId, lastSeen);
-      for (const ib of inbox) run(this.db, "UPDATE gg_inbox SET consumed = 1 WHERE id = ?", ib.id);
+      for (const ib of inbox) {
+        const item = JSON.parse(ib.payload) as Inbound;
+        if (item.kind === "compute" && item.signal === "completed" && unhandledDeliveries.some((f) => f.taskId === item.taskId && f.computeId === item.computeId)) continue;
+        run(this.db, "UPDATE gg_inbox SET consumed = 1 WHERE id = ?", ib.id);
+      }
       // 这一批提交成功:在途失败(残留瞬态错误、换模覆盖)清掉,在途轮次标记与 crash_recovery_count 清零(F12「新成功轮次重置计数」)
-      hadFailure = run(this.db, "DELETE FROM gg_failures WHERE scope = 'contact' AND subject = ?", contactId) > 0;
-      run(this.db, "DELETE FROM gg_round_guard WHERE contact_id = ?", contactId);
+      if (!unhandledDeliveries.length) {
+        hadFailure = run(this.db, "DELETE FROM gg_failures WHERE scope = 'contact' AND subject = ?", contactId) > 0;
+        run(this.db, "DELETE FROM gg_round_guard WHERE contact_id = ?", contactId);
+      }
       if (out.personaSuggestion) {
         // 人格不随压缩改(在固定前缀里,改了缓存全失效);只记一条建议,同一建议只挂佐证
         const plan = planMemoryWrite(this.memory.list(contactId), { title: "建议改人格", body: out.personaSuggestion, anchors: [PERSONA_ANCHOR], source: null, relation: null }, this.now(), () => this.newId("m"));
@@ -3130,7 +3164,7 @@ export class Host {
     for (const a of appended) this.afterAppend(a.roomId, a.seq, { kind: "contact", id: contactId });
     for (const id of touchedTasks) this.emitTask(id);
     for (const c of notifyAfter) this.loop.notify(c, "now");
-    return { effects };
+    return { effects, unhandledDelivery: unhandledDeliveries[0] ?? null };
   }
 
   // ======================= Compute =======================
