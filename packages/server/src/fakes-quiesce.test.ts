@@ -62,3 +62,25 @@ test("scriptedCompute 默认停止核验:即使曾有 failed,空 settled 也不�
     compute.close();
   }
 });
+
+test("scriptedCompute haltOnStop:取消自己的长等待,生产队列真结束后才确认停止", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const compute = scriptedCompute({ haltOnStop: true, pause: (event) => event.kind === "started" ? 0 : 60_000 });
+  try {
+    const spawned = await compute.adapter.spawn({ task: "很慢的活" });
+    assert.ok(spawned.ok);
+    const events = compute.adapter.events()[Symbol.asyncIterator]();
+    t.mock.timers.tick(1);
+    assert.equal((await events.next()).value.kind, "started");
+    await compute.adapter.stop(spawned.computeId);
+    assert.equal((await events.next()).value.kind, "stopped");
+    assert.deepEqual(await compute.adapter.quiesce!(spawned.computeId), { ok: true, killed: 0 }, "必须取消真实挂起的替身等待,不能弱化 busy 判断");
+    assert.equal(compute.drained(), true, "自己的生产队列已经结束");
+    t.mock.timers.tick(60_001);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(compute.drained(), true, "取消的等待不能在稍后又吐里程碑或完成");
+  } finally {
+    compute.close();
+    t.mock.timers.reset();
+  }
+});
