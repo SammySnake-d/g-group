@@ -105,7 +105,7 @@ test("联系人每轮知道自己是谁:第 1 块写明名字与 id,并说明 @ 
   await host.close();
 });
 
-test("群里只 @ 一人:未被点名联系人仍进注意回合但不能越权公屏回复;联系人回复仍唤醒旁观者", async () => {
+test("群里只 @ 一人:未被点名联系人可补充新信息,联系人回复仍唤醒旁观者纠正", async () => {
   const rounds: RoundInput[] = [];
   const mind = (): ContactMind => ({
     async round(input) {
@@ -113,7 +113,7 @@ test("群里只 @ 一人:未被点名联系人仍进注意回合但不能越权�
       const user = input.fresh.find((f) => f.kind === "message" && f.sender.kind === "user");
       const peer = input.fresh.find((f) => f.kind === "message" && f.sender.kind === "contact" && f.sender.id !== input.contact.id);
       if (input.contact.id === b.id && user?.kind === "message") {
-        const actions: MindAction[] = [{ kind: "reply", roomId: user.roomId, text: "小克越权回答", replyToSeq: null }];
+        const actions: MindAction[] = [{ kind: "reply", roomId: user.roomId, text: "小克补充了新的回滚路径", replyToSeq: null }];
         if (peer?.kind === "message") actions.push({ kind: "reply", roomId: peer.roomId, text: "小克纠正", replyToSeq: peer.seq });
         return { actions, stateNote: null };
       }
@@ -133,10 +133,10 @@ test("群里只 @ 一人:未被点名联系人仍进注意回合但不能越权�
   await settle(host, { drained: () => true });
 
   const messages = host.listMessages(g.id, {}).messages;
-  assert.deepEqual(messages.filter((m) => m.sender.kind === "contact").map((m) => [m.sender.id, m.text]), [[a.id, "小林回答"], [b.id, "小克纠正"]]);
+  assert.deepEqual(messages.filter((m) => m.sender.kind === "contact").map((m) => [m.sender.id, m.text]).sort(), [[a.id, "小林回答"], [b.id, "小克补充了新的回滚路径"], [b.id, "小克纠正"]].sort());
   assert.ok(rounds.some((r) => r.contact.id === b.id && r.fresh.some((f) => f.kind === "message" && f.seq === user.seq)), "未被点名者仍收到用户消息并进入注意回合");
   assert.ok(rounds.some((r) => r.contact.id === b.id && r.fresh.some((f) => f.kind === "message" && f.sender.kind === "contact" && f.text === "小林回答")), "联系人回复仍唤醒旁观者用于纠正");
-  assert.deepEqual(rejections(host), [{ kind: "reply", error: `这条消息 @ 的是别的联系人,不是你(${g.id} #${user.seq})` }]);
+  assert.deepEqual(rejections(host), [], "不能因未被点名而拒绝补充或纠错");
   await host.close();
 });
 
