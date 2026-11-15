@@ -265,7 +265,7 @@ test("来源必须在本房、本区间、生成时可见:引用区间外、别�
   const gone = await round((q) => `- 引了已撤回的 [#${q[0]}]\n- 正常 [#${q[1]}]`, true);
   assert.deepEqual([gone.s.status, gone.s.error, gone.s.coveredCount, calls.at(-1)!.fresh.map((x) => (x.kind === "message" ? x.seq : -1))], ["failed", `来源 #${gone.seqs[0]} 不在这次读到的消息里`, 2, [gone.seqs[1], gone.seqs[2]]]);
   const bare = await round((q) => `- 有来源 [#${q[0]}]\n- 没来源的一条`);
-  assert.deepEqual([bare.s.status, bare.s.error], ["failed", "有要点没带来源:没来源的一条"]);
+  assert.deepEqual([bare.s.status, bare.s.error], ["failed", "有要点没带来源"]);
   // 对照:同样的写法,来源都在这一段里 → 生成
   const fine = await round((q) => `前言不算\n- 方向是先修登录 [#${q[0]} #${q[2]}]\n- 有人提议周五发版 [#${q[1]}]`);
   assert.deepEqual([fine.s.status, fine.s.error, fine.s.items], ["ok", null, [{ text: "方向是先修登录", sourceSeqs: [fine.seqs[0], fine.seqs[2]], hiddenSourceSeqs: [] }, { text: "有人提议周五发版", sourceSeqs: [fine.seqs[1]], hiddenSourceSeqs: [] }]]);
@@ -569,7 +569,7 @@ test("模型没成不重试:抛错、超时都记 failed 写明原因,之后再�
   h.send({ roomId: g.id, clientActionId: "m2", text: "二" });
   await settle(h);
   const failed = await latest();
-  assert.deepEqual([failed.status, failed.error, failed.items, failed.generatedAt, calls.length], ["failed", "模型调用没成:上游 502", [], null, 1]);
+  assert.deepEqual([failed.status, failed.error, failed.items, failed.generatedAt, calls.length], ["failed", "模型调用没成", [], null, 1]);
   const m3 = h.send({ roomId: g.id, clientActionId: "m3", text: "三" });
   await settle(h);
   assert.deepEqual([calls.length, all<{ status: string }>(h.db, "SELECT status FROM gg_count_windows").map((w) => w.status)], [1, ["failed"]]);

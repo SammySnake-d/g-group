@@ -142,6 +142,21 @@ test("R1-01 旧版遗留失败错误在撤回时同事务清空,重启后不可�
   assert.equal(JSON.stringify(h.getSummary(s.summaryId)).includes(marker), false);
 });
 
+test("R1-01 旧版遗留错误在本端隐藏后也不可从摘要视图泄露", async () => {
+  const marker = "NEUTRAL_LEGACY_HIDDEN_PR97_R1";
+  const h = host({ mind: () => summaryMind((i) => [{ kind: "reply", roomId: i.fresh[0]!.roomId, replyToSeq: null, text: "- 无来源" }]) });
+  const a = h.createContact({ name: "摘要员" });
+  const g = h.createGroup("群", [{ kind: "contact", id: a.id }]);
+  h.send({ roomId: g.id, clientActionId: "ask", text: "每 1 条消息总结一次" });
+  await idle(h);
+  const msg = h.send({ roomId: g.id, clientActionId: "secret", text: marker });
+  await idle(h);
+  const s = h.summaries.list({ roomId: g.id, viewerId: "me" }).summaries[0]!;
+  h.db.store.db.prepare("UPDATE gg_summaries SET error = ? WHERE id = ?").run(`有要点没带来源:${marker}`, s.summaryId);
+  val(await createService(h).handle("messages.delete", { roomId: g.id, seqs: [msg.seq], clientActionId: "hide" }));
+  assert.equal(JSON.stringify(h.getSummary(s.summaryId)).includes(marker), false, "旧版错误必须遵守本端隐藏");
+});
+
 test("R1-02 同终点不同联系人:limit=1 按 nextCursor 翻页不重不漏", async () => {
   const h = host({ mind: () => summaryMind() });
   const a = h.createContact({ name: "甲" });
