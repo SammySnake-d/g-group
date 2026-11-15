@@ -1,0 +1,97 @@
+{
+ "summary": {
+  "variant": "plain",
+  "trials": 3,
+  "okTrue": 3,
+  "okFalse": 0,
+  "defects": 0,
+  "errors": 0,
+  "survivorsTotal": 0
+ },
+ "runs": [
+  {
+   "variant": "plain",
+   "trial": 0,
+   "root": 37331,
+   "child": 37351,
+   "before": [
+    {
+     "pid": 37351,
+     "ppid": 37331,
+     "pgid": 37331,
+     "stat": "S"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "37351     1 37331 S    Sun Nov 15 21:57:56 2026",
+   "result": {
+    "ok": true,
+    "killed": 1
+   },
+   "registered": 1,
+   "survivors": [],
+   "childAlive": false,
+   "defect": false,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "plain",
+   "trial": 1,
+   "root": 37629,
+   "child": 37652,
+   "before": [
+    {
+     "pid": 37652,
+     "ppid": 37629,
+     "pgid": 37629,
+     "stat": "S"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "37652     1 37629 S    Sun Nov 15 21:57:56 2026",
+   "result": {
+    "ok": true,
+    "killed": 1
+   },
+   "registered": 1,
+   "survivors": [],
+   "childAlive": false,
+   "defect": false,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "plain",
+   "trial": 2,
+   "root": 37907,
+   "child": 37933,
+   "before": [
+    {
+     "pid": 37933,
+     "ppid": 37907,
+     "pgid": 37907,
+     "stat": "S"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "37933     1 37907 S    Sun Nov 15 21:57:57 2026",
+   "result": {
+    "ok": true,
+    "killed": 1
+   },
+   "registered": 1,
+   "survivors": [],
+   "childAlive": false,
+   "defect": false,
+   "leftAfterCleanup": 0
+  }
+ ]
+}

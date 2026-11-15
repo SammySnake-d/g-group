@@ -1,0 +1,588 @@
+{
+ "summary": {
+  "variant": "churn",
+  "trials": 10,
+  "okTrue": 10,
+  "okFalse": 0,
+  "defects": 10,
+  "errors": 0,
+  "survivorsTotal": 55
+ },
+ "runs": [
+  {
+   "variant": "churn",
+   "trial": 0,
+   "root": 48535,
+   "child": 48541,
+   "before": [
+    {
+     "pid": 48541,
+     "ppid": 48535,
+     "pgid": 48535,
+     "stat": "S",
+     "identity": "Sun Nov 15 22:02:40 2026"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "48541     1 48535 S    Sun Nov 15 22:02:40 2026",
+   "result": {
+    "ok": true,
+    "killed": 11
+   },
+   "registered": 18,
+   "survivors": [
+    {
+     "pid": 48615,
+     "row": "48615     1 48535 S    Sun Nov 15 22:02:40 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 48616,
+     "row": "48616     1 48535 S    Sun Nov 15 22:02:40 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 48617,
+     "row": "48617     1 48535 S    Sun Nov 15 22:02:40 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 48640,
+     "row": "48640     1 48535 S    Sun Nov 15 22:02:40 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 48624,
+     "row": "48624     1 48535 S    Sun Nov 15 22:02:40 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 48641,
+     "row": "48641     1 48535 S    Sun Nov 15 22:02:40 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 48642,
+     "row": "48642     1 48535 S    Sun Nov 15 22:02:40 2026",
+     "inBefore": false
+    }
+   ],
+   "childAlive": false,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "churn",
+   "trial": 1,
+   "root": 48842,
+   "child": 48851,
+   "before": [
+    {
+     "pid": 48851,
+     "ppid": 48842,
+     "pgid": 48842,
+     "stat": "S",
+     "identity": "Sun Nov 15 22:02:40 2026"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "48851     1 48842 S    Sun Nov 15 22:02:40 2026",
+   "result": {
+    "ok": true,
+    "killed": 14
+   },
+   "registered": 19,
+   "survivors": [
+    {
+     "pid": 48929,
+     "row": "48929     1 48842 S    Sun Nov 15 22:02:40 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 48930,
+     "row": "48930     1 48842 S    Sun Nov 15 22:02:40 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 48952,
+     "row": "48952     1 48842 S    Sun Nov 15 22:02:40 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 48953,
+     "row": "48953     1 48842 S    Sun Nov 15 22:02:40 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 48954,
+     "row": "48954     1 48842 S    Sun Nov 15 22:02:40 2026",
+     "inBefore": false
+    }
+   ],
+   "childAlive": false,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "churn",
+   "trial": 2,
+   "root": 49088,
+   "child": 49094,
+   "before": [
+    {
+     "pid": 49094,
+     "ppid": 49088,
+     "pgid": 49088,
+     "stat": "S",
+     "identity": "Sun Nov 15 22:02:41 2026"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "49094     1 49088 S    Sun Nov 15 22:02:41 2026",
+   "result": {
+    "ok": true,
+    "killed": 12
+   },
+   "registered": 19,
+   "survivors": [
+    {
+     "pid": 49190,
+     "row": "49190     1 49088 S    Sun Nov 15 22:02:41 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49191,
+     "row": "49191     1 49088 S    Sun Nov 15 22:02:41 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49192,
+     "row": "49192     1 49088 S    Sun Nov 15 22:02:41 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49214,
+     "row": "49214     1 49088 S    Sun Nov 15 22:02:41 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49215,
+     "row": "49215     1 49088 S    Sun Nov 15 22:02:41 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49217,
+     "row": "49217     1 49088 S    Sun Nov 15 22:02:41 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49216,
+     "row": "49216     1 49088 S    Sun Nov 15 22:02:41 2026",
+     "inBefore": false
+    }
+   ],
+   "childAlive": false,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "churn",
+   "trial": 3,
+   "root": 49393,
+   "child": 49399,
+   "before": [
+    {
+     "pid": 49399,
+     "ppid": 49393,
+     "pgid": 49393,
+     "stat": "S",
+     "identity": "Sun Nov 15 22:02:41 2026"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "49399     1 49393 S    Sun Nov 15 22:02:41 2026",
+   "result": {
+    "ok": true,
+    "killed": 11
+   },
+   "registered": 17,
+   "survivors": [
+    {
+     "pid": 49473,
+     "row": "49473     1 49393 S    Sun Nov 15 22:02:41 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49474,
+     "row": "49474     1 49393 S    Sun Nov 15 22:02:41 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49489,
+     "row": "49489     1 49393 S    Sun Nov 15 22:02:41 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49475,
+     "row": "49475     1 49393 S    Sun Nov 15 22:02:41 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49498,
+     "row": "49498     1 49393 S    Sun Nov 15 22:02:41 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49499,
+     "row": "49499     1 49393 S    Sun Nov 15 22:02:41 2026",
+     "inBefore": false
+    }
+   ],
+   "childAlive": false,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "churn",
+   "trial": 4,
+   "root": 49684,
+   "child": 49690,
+   "before": [
+    {
+     "pid": 49690,
+     "ppid": 49684,
+     "pgid": 49684,
+     "stat": "S",
+     "identity": "Sun Nov 15 22:02:42 2026"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "49690     1 49684 R    Sun Nov 15 22:02:42 2026",
+   "result": {
+    "ok": true,
+    "killed": 11
+   },
+   "registered": 16,
+   "survivors": [
+    {
+     "pid": 49764,
+     "row": "49764     1 49684 S    Sun Nov 15 22:02:42 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49765,
+     "row": "49765     1 49684 S    Sun Nov 15 22:02:42 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49783,
+     "row": "49783     1 49684 S    Sun Nov 15 22:02:42 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49788,
+     "row": "49788     1 49684 S    Sun Nov 15 22:02:42 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 49789,
+     "row": "49789     1 49684 S    Sun Nov 15 22:02:42 2026",
+     "inBefore": false
+    }
+   ],
+   "childAlive": false,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "churn",
+   "trial": 5,
+   "root": 49924,
+   "child": 49930,
+   "before": [
+    {
+     "pid": 49930,
+     "ppid": 49924,
+     "pgid": 49924,
+     "stat": "S",
+     "identity": "Sun Nov 15 22:02:42 2026"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "49930     1 49924 R    Sun Nov 15 22:02:42 2026",
+   "result": {
+    "ok": true,
+    "killed": 11
+   },
+   "registered": 16,
+   "survivors": [
+    {
+     "pid": 50006,
+     "row": "50006     1 49924 S    Sun Nov 15 22:02:42 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50008,
+     "row": "50008     1 49924 S    Sun Nov 15 22:02:42 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50031,
+     "row": "50031     1 49924 S    Sun Nov 15 22:02:42 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50016,
+     "row": "50016     1 49924 S    Sun Nov 15 22:02:42 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50032,
+     "row": "50032     1 49924 S    Sun Nov 15 22:02:42 2026",
+     "inBefore": false
+    }
+   ],
+   "childAlive": false,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "churn",
+   "trial": 6,
+   "root": 50179,
+   "child": 50185,
+   "before": [
+    {
+     "pid": 50185,
+     "ppid": 50179,
+     "pgid": 50179,
+     "stat": "S",
+     "identity": "Sun Nov 15 22:02:43 2026"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "50185     1 50179 S    Sun Nov 15 22:02:43 2026",
+   "result": {
+    "ok": true,
+    "killed": 11
+   },
+   "registered": 16,
+   "survivors": [
+    {
+     "pid": 50259,
+     "row": "50259     1 50179 S    Sun Nov 15 22:02:43 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50260,
+     "row": "50260     1 50179 S    Sun Nov 15 22:02:43 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50280,
+     "row": "50280     1 50179 S    Sun Nov 15 22:02:43 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50283,
+     "row": "50283     1 50179 S    Sun Nov 15 22:02:43 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50284,
+     "row": "50284     1 50179 S    Sun Nov 15 22:02:43 2026",
+     "inBefore": false
+    }
+   ],
+   "childAlive": false,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "churn",
+   "trial": 7,
+   "root": 50441,
+   "child": 50447,
+   "before": [
+    {
+     "pid": 50447,
+     "ppid": 50441,
+     "pgid": 50441,
+     "stat": "S",
+     "identity": "Sun Nov 15 22:02:43 2026"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "50447     1 50441 S    Sun Nov 15 22:02:43 2026",
+   "result": {
+    "ok": true,
+    "killed": 12
+   },
+   "registered": 17,
+   "survivors": [
+    {
+     "pid": 50522,
+     "row": "50522     1 50441 S    Sun Nov 15 22:02:43 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50523,
+     "row": "50523     1 50441 S    Sun Nov 15 22:02:43 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50545,
+     "row": "50545     1 50441 S    Sun Nov 15 22:02:43 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50546,
+     "row": "50546     1 50441 S    Sun Nov 15 22:02:43 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50547,
+     "row": "50547     1 50441 S    Sun Nov 15 22:02:43 2026",
+     "inBefore": false
+    }
+   ],
+   "childAlive": false,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "churn",
+   "trial": 8,
+   "root": 50681,
+   "child": 50687,
+   "before": [
+    {
+     "pid": 50687,
+     "ppid": 50681,
+     "pgid": 50681,
+     "stat": "S",
+     "identity": "Sun Nov 15 22:02:44 2026"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "50687     1 50681 S    Sun Nov 15 22:02:44 2026",
+   "result": {
+    "ok": true,
+    "killed": 11
+   },
+   "registered": 16,
+   "survivors": [
+    {
+     "pid": 50764,
+     "row": "50764     1 50681 S    Sun Nov 15 22:02:44 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50765,
+     "row": "50765     1 50681 S    Sun Nov 15 22:02:44 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50787,
+     "row": "50787     1 50681 S    Sun Nov 15 22:02:44 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50788,
+     "row": "50788     1 50681 S    Sun Nov 15 22:02:44 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 50789,
+     "row": "50789     1 50681 S    Sun Nov 15 22:02:44 2026",
+     "inBefore": false
+    }
+   ],
+   "childAlive": false,
+   "defect": true,
+   "leftAfterCleanup": 0
+  },
+  {
+   "variant": "churn",
+   "trial": 9,
+   "root": 50923,
+   "child": 50929,
+   "before": [
+    {
+     "pid": 50929,
+     "ppid": 50923,
+     "pgid": 50923,
+     "stat": "S",
+     "identity": "Sun Nov 15 22:02:44 2026"
+    }
+   ],
+   "parentResult": {
+    "code": 0,
+    "signal": null
+   },
+   "childRowBeforeConfirm": "50929     1 50923 S    Sun Nov 15 22:02:44 2026",
+   "result": {
+    "ok": true,
+    "killed": 12
+   },
+   "registered": 17,
+   "survivors": [
+    {
+     "pid": 51004,
+     "row": "51004     1 50923 S    Sun Nov 15 22:02:44 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 51005,
+     "row": "51005     1 50923 S    Sun Nov 15 22:02:44 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 51027,
+     "row": "51027     1 50923 S    Sun Nov 15 22:02:44 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 51028,
+     "row": "51028     1 50923 S    Sun Nov 15 22:02:44 2026",
+     "inBefore": false
+    },
+    {
+     "pid": 51029,
+     "row": "51029     1 50923 S    Sun Nov 15 22:02:44 2026",
+     "inBefore": false
+    }
+   ],
+   "childAlive": false,
+   "defect": true,
+   "leftAfterCleanup": 0
+  }
+ ]
+}
