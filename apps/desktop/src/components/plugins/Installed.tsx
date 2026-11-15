@@ -1,4 +1,5 @@
-/* 已安装:每行写清挂在哪、谁能调用;就地启停、更新、卸载(卸载走二次确认)。装着的,加上正在装 / 正在卸的(让你看到进度)。 */
+/* 已安装:每行写清挂在哪、谁能调用;就地启停、更新、卸载(卸载走二次确认)。装着的,加上正在装 / 正在卸的(让你看到进度)。
+   连着后端时:插件对所有聊天生效(后端不分会话挂载、没有调用者名单),每行只写这一句。 */
 import { Trash2 } from 'lucide-react'
 import { PHASE_LABEL, marketList } from '@g-group/ui-core'
 import type { PluginState } from '@/data'
@@ -9,7 +10,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { ActionButton } from './ActionButton'
-import { COPY } from './constants'
+import { COPY, COPY_LIVE } from './constants'
 import type { PluginFlow } from './flow'
 import { EmptyBox, PageHead } from './layout'
 import { CategoryTag, PluginIcon, Spinner } from './tags'
@@ -17,12 +18,14 @@ import { convName, personName } from './util'
 
 export function Installed({ flow, open, onDiscover }: { flow: PluginFlow; open: (id: string) => void; onDiscover: () => void }) {
   const { plugins, pluginCatalog, convs, pluginAct, toast } = useApp()
+  const live = useApp((s) => s.backend.mode === 'connected')
   const items = marketList(pluginCatalog, plugins, { text: '', category: 'all', filter: 'all', sort: 'name' }).filter((it) => it.install && it.install.phase !== 'not_installed')
   return (
     <div className="mx-auto max-w-[920px] px-8 pb-14 pt-7" data-testid="plg-installed">
-      <PageHead title={COPY.installedTitle} desc={COPY.installedDesc} />
+      <PageHead title={COPY.installedTitle} desc={live ? COPY_LIVE.installedDesc : COPY.installedDesc} />
       {items.length === 0 ? (
-        <EmptyBox>{COPY.installedEmpty}<Button variant="link" size={null} className="text-[13px]" onClick={onDiscover}>去发现</Button></EmptyBox>
+        live ? <EmptyBox testid="plg-installed-empty">{COPY_LIVE.installedEmpty}</EmptyBox>
+          : <EmptyBox>{COPY.installedEmpty}<Button variant="link" size={null} className="text-[13px]" onClick={onDiscover}>去发现</Button></EmptyBox>
       ) : (
         <div className="mt-6 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-elev">
           {items.map((it) => {
@@ -41,10 +44,12 @@ export function Installed({ flow, open, onDiscover }: { flow: PluginFlow; open: 
                     <CategoryTag c={m.category} />
                     {s.phase === 'disabled' && <Chip data-testid={`plg-disabled-${m.id}`} tone="neutral" variant="outline">已停用</Chip>}
                   </div>
+                  {live ? <div data-testid={`plg-row-where-${m.id}`} className="mt-0.5 truncate text-[12.5px] text-fg-2">{COPY_LIVE.rowWhere}</div> : (
                   <div className="mt-0.5 truncate text-[12.5px] text-fg-2">
                     {s.convs.length ? <>挂在 {s.convs.map((c) => convName(convs, c)).join('、')}</> : <span className="text-warm">还没挂到聊天，现在不生效</span>}
                     <span className="text-fg-3"> · {s.callers.length ? `${s.callers.map(personName).join('、')} 能调用` : '还没有助手能调用'}</span>
                   </div>
+                  )}
                 </div>
                 {busy ? <span role="status" className="inline-flex shrink-0 items-center gap-1.5 text-[12.5px] text-fg-2"><Spinner />{PHASE_LABEL[s.phase]}…</span> : <>
                   {it.hasUpdate && <ActionButton m={it.manifest} s={s} upd flow={flow} />}

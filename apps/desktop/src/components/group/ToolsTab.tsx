@@ -1,6 +1,6 @@
 /* 群资料·工具：每项写清楚做什么、来自哪里、对应哪条 / 命令，点了直接执行或打开对应页面。
    插件带来的命令点了填进输入框（参数在那边补）；斜杠补全菜单在输入框里做。
-   连上后端时只列真能用的内置项(群文件、临时算力),再列群里每位联系人勾选的能力(skill / MCP,说明来自能力库)。 */
+   连上后端时只列真能用的内置项(临时算力、复制团队),再列群里每位联系人勾选的能力(skill / MCP,说明来自能力库)。 */
 import { useEffect, useState, type ReactNode } from 'react'
 import { ChevronRight, Puzzle } from 'lucide-react'
 import type { CapabilityLibraryView } from '@g-group/api-contract'
@@ -81,7 +81,7 @@ export function ToolsTab({ conv }: { conv: Conversation }) {
     compute: conv.tempCompute ? `${poolUsed(computes, conv.id)}/${conv.tempCompute.max} 在用` : '没开',
   }
   const builtin: ToolRow[] = BUILTIN_TOOLS.filter((b) => !live || LIVE_TOOLS.includes(b.key)).map((b) => ({
-    key: b.key, icon: <BuiltinIcon I={b.icon} />, title: b.title, cmd: b.cmd, desc: b.desc, how: b.how, meta: meta[b.key],
+    key: b.key, icon: <BuiltinIcon I={b.icon} />, title: b.title, cmd: b.cmd, desc: (live && b.liveDesc) || b.desc, how: b.how, meta: meta[b.key],
     run: () => (b.page ? push({ t: b.page, id: conv.id }, true) : summarize(conv.id)),
   }))
   const fromPlugins: ToolRow[] = pluginCommands(plugins, conv.id).map((c) => {

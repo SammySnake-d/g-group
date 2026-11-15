@@ -1,10 +1,11 @@
-/* 卸载二次确认:先把后果一条条摆出来(摘下哪些聊天、谁不能再调用、哪些命令失效、收回几项权限),确认才卸。 */
+/* 卸载二次确认:先把后果一条条摆出来(摘下哪些聊天、谁不能再调用、哪些命令失效、收回几项权限),确认才卸。
+   连着后端时插件对所有聊天生效,不写「从哪些聊天摘下」,写所有聊天里都不能再用。 */
 import type { ReactNode } from 'react'
 import { ShieldOff, SquareSlash, Trash2, Unplug, UserX } from 'lucide-react'
 import { useApp } from '@/ctx'
 import { Button } from '@/components/ui/button'
 import { Modal, ModalBody, ModalFooter, useExitValue } from '@/components/ui/modal'
-import { COPY } from './constants'
+import { COPY, COPY_LIVE } from './constants'
 import { PluginIcon } from './tags'
 import { convName, personName } from './util'
 
@@ -14,6 +15,7 @@ function Line({ icon, children }: { icon: ReactNode; children: ReactNode }) {
 
 export function UninstallDialog({ id: live, onClose }: { id: string | null; onClose: () => void }) {
   const { plugins, convs, pluginAct, toast } = useApp()
+  const connected = useApp((st) => st.backend.mode === 'connected')
   const id = useExitValue(live)
   const s = id ? plugins.find((p) => p.id === id) : undefined
   const m = useExitValue(s?.manifest)
@@ -24,8 +26,9 @@ export function UninstallDialog({ id: live, onClose }: { id: string | null; onCl
       {s && (
         <ModalBody>
           <ul className="divide-y divide-line rounded-xl border border-line px-3.5 text-[13px] text-fg-2">
-            <Line icon={<Unplug />}>{s.convs.length ? <>从 <span className="tabular-nums">{s.convs.length}</span> 个聊天摘下：{s.convs.map((c) => convName(convs, c)).join('、')}</> : '没挂在任何聊天上'}</Line>
-            {s.callers.length > 0 && <Line icon={<UserX />}>{s.callers.map(personName).join('、')} 不能再调用它</Line>}
+            {connected ? <Line icon={<Unplug />}>{COPY_LIVE.uninstallAll}</Line>
+              : <Line icon={<Unplug />}>{s.convs.length ? <>从 <span className="tabular-nums">{s.convs.length}</span> 个聊天摘下：{s.convs.map((c) => convName(convs, c)).join('、')}</> : '没挂在任何聊天上'}</Line>}
+            {!connected && s.callers.length > 0 && <Line icon={<UserX />}>{s.callers.map(personName).join('、')} 不能再调用它</Line>}
             {m.contributes.commands.length > 0 && <Line icon={<SquareSlash />}>这些命令不能再用：<span className="font-code text-fg">{m.contributes.commands.map((c) => `/${c.name}`).join('  ')}</span></Line>}
             {s.granted.length > 0 && <Line icon={<ShieldOff />}>已同意的 <span className="tabular-nums">{s.granted.length}</span> 项权限一并收回</Line>}
           </ul>

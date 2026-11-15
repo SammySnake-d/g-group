@@ -134,6 +134,12 @@ export async function retagLive(w: WireCtx, id: string, toTaskId: string) {
 
 /** 发附件:磁盘文件交给宿主读取;截图/内存文件按内容上传,再作为一条消息发出。 */
 export async function attachLive(w: WireCtx, roomId: string, files: readonly File[]) {
+  const done = await uploadFilesLive(w, files)
+  if (done?.length) await sendLive(w, roomId, '', [], done)
+}
+
+/** 只上传所选文件，不发送；输入框明确发送时把 ref 与同一条文字/引用一起提交。 */
+export async function uploadFilesLive(w: WireCtx, files: readonly File[]): Promise<MsgFile[] | null> {
   const done: MsgFile[] = []
   for (const f of files) {
     try {
@@ -141,13 +147,14 @@ export async function attachLive(w: WireCtx, roomId: string, files: readonly Fil
       const r = localPath
         ? await w.call('attachments.add', { path: localPath })
         : await w.call('attachments.upload', { name: f.name, base64: await toBase64(f) })
-      if (!r.ok) return fail(w, `「${f.name}」没发出去`, r.error)
+      if (!r.ok) { fail(w, `「${f.name}」没发出去`, r.error); return null }
       done.push(r.value)
     } catch (e) {
-      return w.get().toast(`「${f.name}」没发出去：${e instanceof Error ? e.message : String(e)}`)
+      w.get().toast(`「${f.name}」没发出去：${e instanceof Error ? e.message : String(e)}`)
+      return null
     }
   }
-  if (done.length) await sendLive(w, roomId, '', [], done)
+  return done
 }
 async function toBase64(f: File): Promise<string> {
   const bytes = new Uint8Array(await f.arrayBuffer())

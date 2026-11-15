@@ -26,23 +26,23 @@ function BatchBody({ onClose }: { onClose: () => void }) {
   const { modelSettings: s, computes, saveModels } = useApp()
   const contacts = modelContacts().map(toContactModels)
   const used = s.models.filter((m) => m.id === s.defaultComputeModel || m.id === s.defaultSpeakingModel || contacts.some((c) => c.speakingModel === m.id || resolveCompute(c, s).model.value === m.id))
-  const [from, setFrom] = useState(used[0]?.id ?? s.models[0]!.id)
-  const [to, setTo] = useState(() => s.models.find((m) => m.id !== from)!.id)
+  const [from, setFrom] = useState(used[0]?.id ?? s.models[0]?.id ?? '')
+  const [to, setTo] = useState(() => s.models.find((m) => m.id !== from)?.id ?? '')
   const [res, setRes] = useState<Record<string, Resolution>>({})
   const tasks = liveComputes(computes).map((c) => ({ id: c.id, model: snapshotOfCompute(c, s).model, label: `「${c.short ?? c.title}」` }))
   const input = { contacts, defaults: s, from, to, tasks, resolutions: res }
   const plan = planReplace(input)
-  const pickFrom = (v: string) => { setFrom(v); setRes({}); if (v === to) setTo(s.models.find((m) => m.id !== v)!.id) }
-  const confirm = () => {
+  const pickFrom = (v: string) => { setFrom(v); setRes({}); if (v === to) setTo(s.models.find((m) => m.id !== v)?.id ?? '') }
+  const confirm = async () => {
     const r = confirmReplace(input)
     if (!r.ok) return
     const { settings, contacts: patches } = toPatches(r.changes, contacts)
-    saveModels({
+    const saved = await saveModels({
       settings,
       contacts: patches.map(({ c, note }) => ({ id: c.id, patch: { model: c.speakingModel, harness: c.harness, computeModel: c.computeModel }, note: `批量把 ${from} 换成 ${to}：${note}，下一轮生效` })),
       toast: `已把 ${from} 换成 ${to}（${r.changes.length} 处）`,
     })
-    onClose()
+    if (saved) onClose()
   }
   const blockedWhy = plan.problem ?? (plan.conflicts.length ? `还有 ${plan.conflicts.length} 处冲突，先选怎么处理` : plan.explicit.length ? '' : `没有地方直接用了 ${from}`)
   return (

@@ -62,7 +62,7 @@ export function AlertStrip({ compute, state, actions }: { compute: Compute; stat
   if (!a) return null
   return (
     <div role={a.tone === 'neutral' ? 'status' : 'alert'} className={cn('flex min-w-0 items-center gap-2 border-t px-3.5 py-2', LINE[a.tone])} data-testid="compute-card-alert" data-tone={a.tone}>
-      <a.icon aria-hidden className={cn('size-3.5 shrink-0', INK[a.tone], a.icon === Square && 'size-3 fill-current', state.key === 'stopping' && 'pulse-dot')} strokeWidth={2.25} />
+      <a.icon aria-hidden className={cn('size-3.5 shrink-0', INK[a.tone], a.icon === Square && 'size-3 fill-current')} strokeWidth={2.25} />
       <div className="min-w-0 flex-1 text-[12.5px] leading-5">
         <span className={cn('font-medium', INK[a.tone])}>{a.title}</span>
         {a.detail && <span className="text-fg-2"> · {a.detail}</span>}

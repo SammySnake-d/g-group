@@ -15,7 +15,6 @@ export const UNWIRED = {
   rollback: '回到检查点',
   summarize: '总结',
   helperReply: '让 Helper 回复',
-  saveModels: '改模型设置',
   updatePerson: '改联系人设置',
 } as const satisfies Partial<Record<keyof AppState, string>>
 

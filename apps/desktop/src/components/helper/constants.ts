@@ -40,6 +40,13 @@ export const PANEL_CSV_REPLY = '我把表格读成了 4 项，按本群的分工
 export const droppedLine = (name: string) => `（拖进来一个文件：${name}）`
 export const DROP_ASK = 'CSV 转成本群清单'
 
+/* ---------- 连着后端:合同里没有让 Helper 生成回答的方法(只有 helper.context / note / history / post),不出本地剧本回答 ---------- */
+export const HELPER_OFF = 'Helper 还不会回答：后端还没有让 Helper 生成回答的方法'
+export const HELPER_OFF_PANEL = '所以这里不能提问，拖进来的文件也不会交给它。等后端有了这一步再开。'
+export const HELPER_OFF_GLOBAL = '下面的命令照常能用；打的字只用来找命令，不会发给 Helper。'
+export const HELPER_OFF_NO_CMD = '没有叫这个的命令。'
+export const HELPER_OFF_PLACEHOLDER = '找命令…'
+
 /* ---------- 全局(⌘K)的话术 ---------- */
 export const GLOBAL_DRAFT_REPLY = '草稿在这里，你点「发送」我才发：'
 export const globalNoGroup = (name: string) => `我没找到「${name}」这个群。你说一下完整的群名？`

@@ -9,14 +9,15 @@ import { UninstallDialog } from './UninstallDialog'
 
 export function usePluginFlow() {
   const { plugins, pluginCatalog, pluginAct, toast } = useApp()
+  const live = useApp((s) => s.backend.mode === 'connected')
   const [consent, setConsent] = useState<Consent | null>(null)
   const [removing, setRemoving] = useState<string | null>(null)
   const [justInstalled, setJustInstalled] = useState<string | null>(null)
   const [attachFor, setAttachFor] = useState<string | null>(null)
-  /* 装好的那一刻（安装中 → 已启用）接着问挂到哪个聊天 */
+  /* 装好的那一刻（安装中 → 已启用）接着问挂到哪个聊天;连着后端时插件对所有聊天生效,不问 */
   useEffect(() => {
-    if (justInstalled && plugins.find((p) => p.id === justInstalled)?.phase === 'enabled') { setAttachFor(justInstalled); setJustInstalled(null) }
-  }, [plugins, justInstalled])
+    if (justInstalled && plugins.find((p) => p.id === justInstalled)?.phase === 'enabled') { if (!live) setAttachFor(justInstalled); setJustInstalled(null) }
+  }, [plugins, justInstalled, live])
   const latestOf = (id: string) => pluginCatalog.find((m) => m.id === id) ?? plugins.find((p) => p.id === id)?.manifest ?? null
   const install = (m: PluginManifest) => setConsent({ mode: 'install', manifest: m, perms: m.permissions })
   const update = (id: string) => {

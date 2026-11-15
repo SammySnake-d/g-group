@@ -9,6 +9,9 @@
 //   - GG_DATA_DIR 数据目录(默认 userData/gg-data);GG_CATALOG 插件市场目录文件。
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
+import { readDoc } from "@g-group/adapter-sqlite";
+import type { SettingsView } from "@g-group/api-contract";
 import { type Started, startServer } from "@g-group/server";
 import type { BackendRun } from "../src/api/app-shell-types";
 import type { AppConfig } from "./app-config.ts";
@@ -50,8 +53,8 @@ export class Backend {
   }
 
   /** 按当前环境与设置(重新)起宿主;串行执行,前一次关完再起 */
-  restart(): Promise<BackendRun> {
-    const next = this.chain.then(() => this.doRestart());
+  restart(useGatewayDefaults = false): Promise<BackendRun> {
+    const next = this.chain.then(() => this.doRestart(useGatewayDefaults));
     this.chain = next.catch(() => {});
     return next;
   }
@@ -64,7 +67,7 @@ export class Backend {
     await s?.close();
   }
 
-  private async doRestart(): Promise<BackendRun> {
+  private async doRestart(useGatewayDefaults: boolean): Promise<BackendRun> {
     const old = this.started;
     this.started = null;
     this.o.onServer(null);
@@ -89,6 +92,15 @@ export class Backend {
     const modelEnv = gateway ? { ANTHROPIC_BASE_URL: gateway.baseUrl, ANTHROPIC_AUTH_TOKEN: gateway.token, ANTHROPIC_DEFAULT_SONNET_MODEL: gateway.model } : env;
     const claude = this.claudePath();
     try {
+      // startServer 的网关环境只负责首次默认；正常重启时，设置页写入的
+      // SQLite 文档才是默认模型真源。只读旧文档，仍经宿主提交点恢复。
+      const file = path.join(dataDir, "gg.db");
+      let previous: SettingsView | undefined;
+      if (!useGatewayDefaults && existsSync(file)) {
+        const db = new DatabaseSync(file, { readOnly: true });
+        try { previous = readDoc({ file, db, onCasRead: undefined }, "settings")?.value as SettingsView | undefined; }
+        finally { db.close(); }
+      }
       this.started = await startServer({
         dataDir,
         catalogFile,
@@ -101,6 +113,7 @@ export class Backend {
         },
         onReport: (what, detail) => console.warn(`[gg-server] ${what}`, detail),
       });
+      if (previous) this.started.host.updateSettings({ ...previous, confirmAffected: true });
       this.o.onServer(this.started);
       this.run = { state: "running", mind, compute };
       log(`宿主已起:脑子 ${mind},Compute ${compute}${compute === "claude" ? `(${claude ?? "没找到 claude 命令"})` : ""},数据 ${dataDir}`);

@@ -1,0 +1,68 @@
+
+> @g-group/desktop@0.1.0 build:renderer
+> vite build
+
+vite v8.3.6 building client environment for production...
+transforming...
+✓ 4071 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                        1.08 kB │ gzip:   0.52 kB
+dist/assets/index-DAKm5_do.css                       369.48 kB │ gzip:  60.12 kB
+dist/assets/mergeProps-ptS-gIMz.js                     0.59 kB │ gzip:   0.31 kB
+dist/assets/MenuBottomSheet-BJVrrJdl.js                0.67 kB │ gzip:   0.42 kB
+dist/assets/MenuBottomSheetActionList-CoHXXmyo.js      2.00 kB │ gzip:   1.07 kB
+dist/assets/ItemSwipeLayer-6-KY5eCy.js                 9.11 kB │ gzip:   3.59 kB
+dist/assets/coarsePointer-Da-5cMux.js                 25.02 kB │ gzip:   7.43 kB
+dist/assets/useLayerDismissal-BB7sHgN6.js             40.52 kB │ gzip:  14.60 kB
+dist/assets/useTooltip-CpVx_tSY.js                    51.88 kB │ gzip:  17.11 kB
+dist/assets/BottomSheet-3EpL6-hO.js                   80.59 kB │ gzip:  27.17 kB
+dist/assets/index-CXz6grmW.js                      2,099.52 kB │ gzip: 675.07 kB
+
+✓ built in 1.06s
+[plugin builtin:vite-reporter]
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+Running 1 test using 1 worker
+
+  ✘  1 [electron] › e2e/pr101-p0.electron.spec.ts:40:1 › 图片粘贴先进待发区、不发消息；逐张删除后只留下另一张 (7.9s)
+
+
+  1) [electron] › e2e/pr101-p0.electron.spec.ts:40:1 › 图片粘贴先进待发区、不发消息；逐张删除后只留下另一张 ──────────────────
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  getByTestId('composer-images').locator('[data-pending-image]')
+    Expected: 1
+    Received: 0
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCount" getByTestId('composer-images').locator('[data-pending-image]') with timeout 5000ms
+      - waiting for getByTestId('composer-images').locator('[data-pending-image]')
+        14 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      46 |     await app.evaluate(({ clipboard, nativeImage }, b64) => clipboard.writeImage(nativeImage.createFromBuffer(Buffer.from(b64, 'base64'))), png.toString('base64'))
+      47 |     await win.getByTestId('composer').press('Meta+V')
+    > 48 |     await expect(pending(win)).toHaveCount(1)
+         |                                ^
+      49 |     await expect(pending(win).locator('img')).toBeVisible()
+      50 |     await expect(mine(win)).toHaveCount(before)
+      51 |     await win.getByTestId('image-input').setInputFiles(image('second.png'))
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-mutants/apps/desktop/e2e/pr101-p0.electron.spec.ts:48:32
+
+    Error Context: test-results/pr101-p0.electron-图片粘贴先进待发区、不发消息；逐张删除后只留下另一张-electron/error-context.md
+
+  1 failed
+    [electron] › e2e/pr101-p0.electron.spec.ts:40:1 › 图片粘贴先进待发区、不发消息；逐张删除后只留下另一张 ───────────────────
+[WebServer] (node:29812) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:29844) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+(node:29845) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)

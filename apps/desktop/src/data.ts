@@ -133,6 +133,12 @@ export interface Compute {
   /** AC-45：约束版本。你改了派活消息，在途任务原位升版，不另开 */
   cver?: number
   constraint?: string
+  /** 连上后端时任务带来的真实时刻(毫秒):开始(首次 Compute 启动)、最近一条进度、结束;演示数据没有,进展全景按演示时钟换算 */
+  startedAt?: number
+  lastAt?: number
+  endedAt?: number
+  /** 连上后端:任务已派出但 Compute 还没开工(等槽位、等上游恢复);phase 写的是在等什么 */
+  queued?: boolean
 }
 
 const loginDiff: DiffLine[] = [

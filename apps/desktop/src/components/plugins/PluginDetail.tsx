@@ -7,7 +7,7 @@ import { Chip } from '@/components/ui/chip'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { ActionButton } from './ActionButton'
-import { COPY } from './constants'
+import { COPY, COPY_LIVE } from './constants'
 import { About, Capabilities, Changelog, Permissions } from './DetailSections'
 import type { PluginFlow } from './flow'
 import { GrantCard } from './GrantCard'
@@ -17,6 +17,7 @@ import { WhereCard } from './WhereCard'
 
 export function PluginDetail({ id, flow, onBack, backLabel }: { id: string; flow: PluginFlow; onBack: () => void; backLabel: string }) {
   const { plugins, pluginCatalog, pluginAct, toast } = useApp()
+  const live = useApp((st) => st.backend.mode === 'connected')
   const s = plugins.find((p) => p.id === id) ?? null
   const latest = pluginCatalog.find((m) => m.id === id) ?? s?.manifest ?? null
   if (!latest) return <div className="p-8 text-[13px] text-fg-2">没有这个插件。<Button variant="link" size={null} className="text-[13px]" onClick={onBack}>返回</Button></div>
@@ -64,7 +65,7 @@ export function PluginDetail({ id, flow, onBack, backLabel }: { id: string; flow
           <Changelog latest={latest} s={s} installed={installed} />
         </div>
         <aside className="min-w-0 space-y-4">
-          {installed && s ? <WhereCard s={s} /> : <SideCard title="在哪里生效"><p className="text-[13px] leading-relaxed text-fg-2">{COPY.whereEmpty}</p></SideCard>}
+          {installed && s ? <WhereCard s={s} /> : <SideCard title="在哪里生效"><p className="text-[13px] leading-relaxed text-fg-2">{live ? COPY_LIVE.where : COPY.whereEmpty}</p></SideCard>}
           {installed && s && m.category === 'outbound' && <GrantCard s={s} />}
           <SideCard title="信息">
             <dl className="grid grid-cols-[64px_minmax(0,1fr)] gap-y-1.5 text-[12.5px]">

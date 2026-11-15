@@ -1,0 +1,40 @@
+[WebServer] (node:1902) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1934) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:1936) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [electron] › e2e/pr101-p0.electron.spec.ts:145:1 › 目录读取失败时保留当前模型，禁用换模并说清原因，不填演示目录 (32.2s)
+
+
+  1) [electron] › e2e/pr101-p0.electron.spec.ts:145:1 › 目录读取失败时保留当前模型，禁用换模并说清原因，不填演示目录 ─────────────
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByTestId('model-catalog-error')
+    Expected substring: "模型目录"
+    Timeout: 30000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByTestId('model-catalog-error') with timeout 30000ms
+      - waiting for getByTestId('model-catalog-error')
+
+
+      150 |   try {
+      151 |     await win.getByTestId('nav-settings').click()
+    > 152 |     await expect(win.getByTestId('model-catalog-error')).toContainText('模型目录', LONG)
+          |                                                          ^
+      153 |     await expect(win.getByTestId('def-talk')).toContainText('fixture/retained')
+      154 |     await expect(win.getByTestId('def-talk').getByRole('combobox')).toHaveAttribute('aria-disabled', 'true')
+      155 |     await expect(win.getByTestId('model-defaults')).not.toContainText('Claude Opus 5.5')
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/e2e/pr101-p0.electron.spec.ts:152:58
+
+    Error Context: test-results/pr101-p0.electron-目录读取失败时保留当前模型，禁用换模并说清原因，不填演示目录-electron/error-context.md
+
+  1 failed
+    [electron] › e2e/pr101-p0.electron.spec.ts:145:1 › 目录读取失败时保留当前模型，禁用换模并说清原因，不填演示目录 ──────────────
+[serial] 结束,清掉残留进程 0 个

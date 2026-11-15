@@ -1,0 +1,97 @@
+{
+  "slice": "PR #101 R2 桌面返修：真实网关模型目录、当前模型保留与持久化、图片待发/逐张删/图文一起发/会话草稿/聊天原地预览；修宿主斜杠菜单合并；校正停滞用例为 TaskView 实际提供的最后进展。产品代码仅 apps/desktop；按返修 A.4 的明确要求另补本收据。",
+  "acceptance": [
+    {
+      "id": "AC-24",
+      "status": "未测",
+      "reason": "本片新增图片切会话/重启保持、纯图回车、逐张删除已在真实 Electron 和打包版通过；完整 AC-24 还含跨窗口版本冲突、全部迟到回执时序等，本轮不将局部通过扩大成全条通过。",
+      "evidence": "apps/desktop/proof/pr101-r2/p0-green.txt"
+    },
+    {
+      "id": "AC-32",
+      "status": "未测",
+      "reason": "前端真实目录、保留当前选中、目录失败禁用、另一说话模型保存/重启/新联系人使用已由受控网关通过。打包真实回复只用指定 feishao 模型。目录不声明 Harness 兼容性，Compute 保留原值并说明；未测完整压缩/快照/三时机链。",
+      "evidence": "apps/desktop/proof/pr101-r2/p0-green.txt"
+    },
+    {
+      "id": "AC-34",
+      "status": "未测",
+      "reason": "打包图片与设置通过，但全链指定群聊回执 360 秒未通过：只 @ 小林，却由小克回复，已独立归后端 #106。完整桌面首跑173/182非全绿；受影响失败项补跑记录原样保留。",
+      "evidence": "apps/desktop/proof/pr101-r2/packaged-target/result.json"
+    },
+    {
+      "id": "AC-36",
+      "status": "未测",
+      "reason": "pi 适配器连接受控 401 上游的失败卡已实测显示模型与可点击换模入口；完整重试/熔断/副作用/版本领取矩阵未全量复核。",
+      "evidence": "apps/desktop/proof/pr101-r2/p0-green.txt"
+    },
+    {
+      "id": "R-02",
+      "status": "未测",
+      "reason": "928e4ff9 为首轮新增P0红提交；最终用例在8316654b的原产品副本7/7按行为失败，bdde490c实现上7/7通过、关联15/15。最终同体对照是实现后补做，不能倒填时间顺序；机械G-RED只扫描packages/**/*.test.ts，不把其空范围通过当作Electron全量校准。",
+      "evidence": "apps/desktop/proof/pr101-r2/final-red.txt"
+    },
+    {
+      "id": "R-05",
+      "status": "未测",
+      "reason": "本轮四个定点变异（粘贴即发、删掉全部、重启丢图、不放大）全部被相应行为断言检出；未为所有模型/目录判据做独立变异，也未跑所有判据的交叉隔离性矩阵。",
+      "evidence": "apps/desktop/proof/pr101-r2/mutants/result.json"
+    }
+  ],
+  "author": {
+    "agent": "astra",
+    "session": "codex:01a1de94-42ad-7200-a40f-a6f126eca979",
+    "model": "gpt-6"
+  },
+  "red": {
+    "commit": "8316654b"
+  },
+  "unverifiable": "R-02 最终红绿为实现后的同体补校准；自动G-RED/G-STUB/G-TAUTO不覆盖apps/desktop。AC-34 群聊指定小林回执未通过，前七步图片/模型验收不替代整链成功。AC-32 网关只有一个fengshao1227模型，另一真实模型回复未执行。R-01 新头尚无第二轮独立审查；本机若缺当前Codex原始会话映射，G-PROVENANCE照实失败，不生成会话或厂商凭证。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待 Claude 第二轮独立审查；未合并",
+  "previous_review": {
+    "commit": "90284d7c3eee5ef9e7dca57fb9ea286ead7dae80",
+    "verdict": "reject",
+    "path": "reviews/feat-desktop-backend-parity-20261113-r1.md"
+  },
+  "verification": {
+    "baseline": "90284d7c3eee5ef9e7dca57fb9ea286ead7dae80",
+    "initial_red": "928e4ff9",
+    "calibrated_red": "8316654b",
+    "implementation": "33b517f5",
+    "runtime_source_commit": "bdde490cea067b31ac2831a8eb86ea6ad3e029f0",
+    "targeted_electron": {
+      "passed": 15,
+      "failed": 0,
+      "evidence": "apps/desktop/proof/pr101-r2/p0-green.txt"
+    },
+    "full_desktop_first": {
+      "passed": 173,
+      "failed": 9,
+      "electron_passed": 36,
+      "evidence": "apps/desktop/proof/pr101-r2/desktop-regression.txt"
+    },
+    "renderer_recheck": {
+      "passed": 20,
+      "failed": 1,
+      "evidence": "apps/desktop/proof/pr101-r2/renderer-recheck.txt",
+      "remaining_recheck": "apps/desktop/proof/pr101-r2/renderer-last-recheck.txt"
+    },
+    "packaged": {
+      "passed": 7,
+      "total": 8,
+      "evidence": "apps/desktop/proof/pr101-r2/packaged-target/result.json",
+      "initial_result": "apps/desktop/proof/pr101-r2/packaged/result.json",
+      "note": "初版群聊脚本只认任意联系人回复，补验改为指定contactId后失败；初始8/8不能当最终验收。"
+    },
+    "mutants": {
+      "killed": 4,
+      "total": 4,
+      "evidence": "apps/desktop/proof/pr101-r2/mutants/result.json"
+    },
+    "package_manifest": "apps/desktop/proof/pr101-r2/package-manifest.json",
+    "packaged_script": "apps/desktop/scripts/pr101-p0-walk.mjs",
+    "backend_followups": "apps/desktop/proof/pr101-r2/backend-followups.json"
+  }
+}

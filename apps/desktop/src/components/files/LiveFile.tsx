@@ -20,14 +20,15 @@ async function fetchContent(f: Live): Promise<Content> {
     if (!r.ok) return { kind: 'error', message: r.error.message }
     return r.value.text != null ? { kind: 'text', text: r.value.text, truncated: false } : { kind: 'other' }
   }
-  const r = await call('files.read', { ref: f.ref, maxBytes: PREVIEW_BYTES })
+  const maxBytes = f.mime.startsWith('image/') ? Math.min(16 * 1024 * 1024, Math.max(f.bytes, PREVIEW_BYTES)) : PREVIEW_BYTES
+  const r = await call('files.read', { ref: f.ref, maxBytes })
   if (!r.ok) return { kind: 'error', message: r.error.message }
   if (r.value.encoding === 'text') return { kind: 'text', text: r.value.content, truncated: r.value.truncated }
   if (r.value.mime.startsWith('image/') && !r.value.truncated) return { kind: 'image', src: `data:${r.value.mime};base64,${r.value.content}` }
   return { kind: 'other' }
 }
 
-function useContent(f: Live): Content | null {
+export function useContent(f: Live): Content | null {
   const key = `${f.ref}|${f.bytes}`
   const [c, setC] = useState<Content | null>(null)
   useEffect(() => {

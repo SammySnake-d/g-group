@@ -1,0 +1,74 @@
+[WebServer] (node:80869) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:80902) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:80967) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [electron] › e2e/parity-r2-cron.electron.spec.ts:223:1 › 斜杠命令:/todo、/notice 连后端时可用并写进后端;后端的 /remind 在菜单里,发出后定时页出现这条定时;/summary 仍灰着并写明原因 (34.5s)
+(node:82489) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [electron] › e2e/parity-r2-pano.electron.spec.ts:70:1 › 停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、卡在哪,全景卡也写无进展 (7.9s)
+
+
+  1) [electron] › e2e/parity-r2-cron.electron.spec.ts:223:1 › 斜杠命令:/todo、/notice 连后端时可用并写进后端;后端的 /remind 在菜单里,发出后定时页出现这条定时;/summary 仍灰着并写明原因 › 打 / :后端内置的 /task /remind /stop 列在菜单里;执行路径已接上合同的本地命令不灰;还关着的灰着并写明原因
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  getByTestId('slash-item-remind')
+    Expected: 1
+    Received: 0
+    Timeout:  30000ms
+
+    Call log:
+      - Expect "toHaveCount" getByTestId('slash-item-remind') with timeout 30000ms
+      - waiting for getByTestId('slash-item-remind')
+        63 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      235 |       // 后端 commands.list 给的内置命令(到了才说明这个会话的清单已经读回来)
+      236 |       for (const n of ["remind", "task", "stop"]) {
+    > 237 |         await expect(slashItem(win, n)).toHaveCount(1, LONG);
+          |                                         ^
+      238 |         await expect(slashItem(win, n).getByTestId("slash-disabled")).toHaveCount(0);
+      239 |         await expect(slashItem(win, n).getByTestId("slash-src")).toHaveText("内置");
+      240 |       }
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/e2e/parity-r2-cron.electron.spec.ts:237:41
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/e2e/parity-r2-cron.electron.spec.ts:230:5
+
+    Error Context: test-results/parity-r2-cron.electron-斜杠-dc5c5-后定时页出现这条定时-summary-仍灰着并写明原因-electron/error-context.md
+
+  2) [electron] › e2e/parity-r2-pano.electron.spec.ts:70:1 › 停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、卡在哪,全景卡也写无进展
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByTestId('chat-column').locator('[data-testid^="compute-line-"]').filter({ hasText: '慢慢整理资料' })
+    Expected pattern: /1[12] 分钟没动静 · 卡在「第 [12] 步 · /
+    Received string:  "慢慢整理资料· 11 分钟没动静 · 最后进展「已开始」"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" getByTestId('chat-column').locator('[data-testid^="compute-line-"]').filter({ hasText: '慢慢整理资料' }) with timeout 5000ms
+      - waiting for getByTestId('chat-column').locator('[data-testid^="compute-line-"]').filter({ hasText: '慢慢整理资料' })
+        14 × locator resolved to <button type="button" data-state="stalled" data-testid="compute-line-t-mwhng7ut-3" class="select-none items-center whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform] duration-fast ease-out active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-45 [&_svg]:pointer-events-none [&_svg]:shrink-0 justify-start text-left font-normal…>…</button>
+           - unexpected value "慢慢整理资料· 11 分钟没动静 · 最后进展「已开始」"
+
+
+      81 |     await win.evaluate(() => { const real = Date.now.bind(Date); Date.now = () => real() + 11 * 60_000; });
+      82 |     await expect(line).toHaveAttribute("data-state", "stalled", { timeout: 45_000 });
+    > 83 |     await expect(line).toContainText(/1[12] 分钟没动静 · 卡在「第 [12] 步 · /);
+         |                        ^
+      84 |     await shot(win, "stall-line");
+      85 |     await win.getByTestId("nav-activity").click();
+      86 |     const card = win.getByTestId("pano-board").locator('[data-testid^="pano-compute-"]').filter({ hasText: "慢慢整理资料" });
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop/e2e/parity-r2-pano.electron.spec.ts:83:24
+
+    Error Context: test-results/parity-r2-pano.electron-停滞-69861-那一行原地变黄写明多久没动静、卡在哪-全景卡也写无进展-electron/error-context.md
+
+  2 failed
+    [electron] › e2e/parity-r2-cron.electron.spec.ts:223:1 › 斜杠命令:/todo、/notice 连后端时可用并写进后端;后端的 /remind 在菜单里,发出后定时页出现这条定时;/summary 仍灰着并写明原因
+    [electron] › e2e/parity-r2-pano.electron.spec.ts:70:1 › 停滞检测按真实时刻:连后端时在跑的 Compute 超过 10 分钟没有新进度,那一行原地变黄写明多久没动静、卡在哪,全景卡也写无进展
+[serial] 结束,清掉残留进程 0 个

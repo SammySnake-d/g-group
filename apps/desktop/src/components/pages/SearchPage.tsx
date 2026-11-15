@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { SearchX } from 'lucide-react'
+import { live } from '@/api/wire/live'
 import { people, type Msg } from '@/data'
 import { useApp } from '@/ctx'
 import { broken } from '@/mut'
@@ -7,10 +8,17 @@ import { Avatar } from '@/components/Avatar'
 import { EmptyState } from '@/components/ui/section'
 import { ListItem } from '@/components/ui/list-row'
 import { PageScroll, TextInput } from './kit/parts'
+import { SearchLive } from './SearchLive'
 
 /* ---------- 查找聊天记录 ----------
-   AC-25:每条结果带 #seq,点了跳回原消息并高亮;AC-08:撤回的消息变成系统行,原文不再被搜到 */
+   AC-25:每条结果带 #seq,点了跳回原消息并高亮;AC-08:撤回的消息变成系统行,原文不再被搜到。
+   连上后端:搜后端的全部历史、带真实序号(SearchLive);演示模式:在本地的演示消息里找 */
 export function SearchPage({ id }: { id: string }) {
+  const isLive = useApp((s) => live(s))
+  return isLive ? <SearchLive id={id} /> : <SearchDemo id={id} />
+}
+
+function SearchDemo({ id }: { id: string }) {
   const { convs, jump, closeAll } = useApp()
   const [q, setQ] = useState('飞书')
   const g = convs.find((c) => c.id === id)!

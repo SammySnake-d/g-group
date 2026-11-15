@@ -16,6 +16,12 @@ const openSettings = async (page: Page) => {
   await expect(page.getByTestId("model-defaults")).toBeVisible();
 };
 
+// Astryx Selector 通过真实弹层选项操作，断言仍检查原来的模型配置行为。
+const pickModel = async (page: Page, id: string, label: string) => {
+  await page.getByTestId(id).click();
+  await page.getByRole("option", { name: label, exact: true }).click();
+};
+
 test("联系人 Compute 槽位切换三态:生效值和继承链跟着变", async ({ page }) => {
   await contactSettings(page);
   const summary = page.getByTestId("cm-summary");
@@ -38,9 +44,9 @@ test("联系人 Compute 槽位切换三态:生效值和继承链跟着变", asyn
 
   // 单独指定:先带上当前生效的模型,不凭空换;再选 gpt-6.1
   await page.getByTestId("cm-mode-explicit").click();
-  await expect(page.getByTestId("cm-model")).toHaveValue("claude-sonnet-5-5");
+  await expect(page.getByTestId("cm-model")).toHaveText("Claude Sonnet 5.5");
   await expect(summary).toHaveText("Compute → 单独指定 → claude-sonnet-5-5 · claude-code · high");
-  await page.getByTestId("cm-model").selectOption("gpt-6.1");
+  await pickModel(page, "cm-model", "GPT-6.1");
   await expect(summary).toHaveText("Compute → 单独指定 → gpt-6.1 · claude-code · high");
   await expect(chain).toHaveText(/单独指定.*联系人单独指定的模型.*gpt-6\.1/);
 
@@ -56,7 +62,7 @@ test("联系人 Compute 槽位切换三态:生效值和继承链跟着变", asyn
 test("选了 Harness 跑不了的模型:就地阻断、给两条修复路径、保存不可用;点「单独指定兼容模型」后恢复可保存", async ({ page }) => {
   await contactSettings(page);
   await page.getByTestId("cm-mode-explicit").click();
-  await page.getByTestId("cm-model").selectOption("gpt-6");
+  await pickModel(page, "cm-model", "GPT-6");
   const box = page.getByTestId("cm-mismatch");
   await expect(box).toBeVisible();
   await expect(page.getByTestId("cm-mismatch-text")).toHaveText("Claude Code 这个 Harness 跑不了 GPT-6，不会自动换成别的模型。选一条修好再保存：");
@@ -68,19 +74,19 @@ test("选了 Harness 跑不了的模型:就地阻断、给两条修复路径、�
   // 两条路:单独指定兼容模型(候选是 Claude Code 能跑的,默认保持原来的 claude-opus-5-5),或换成能跑 gpt-6 的 Codex
   await expect(page.getByTestId("cm-mismatch-pin-model")).toHaveValue("claude-opus-5-5");
   const options = await page.getByTestId("cm-mismatch-pin-model").locator("option").evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
-  expect(options).toEqual(["gpt-6.1", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "gemini-4", "grok-5", "deepseek-v4"]);
+  expect(options).toEqual(["gpt-6.1", "claude-opus-5-5", "claude-sonnet-5-5", "claude-sonnet-4-6", "claude-haiku-5-5", "gemini-4", "grok-5", "deepseek-v4"]);
   await expect(page.getByTestId("cm-mismatch-harness")).toHaveText("换 Harness 为 Codex");
   await shot(page, "models-mismatch");
 
   await page.getByTestId("cm-mismatch-pin-model").selectOption("gpt-6.1");
   await page.getByTestId("cm-mismatch-pin").click();
   await expect(box).toHaveCount(0);
-  await expect(page.getByTestId("cm-model")).toHaveValue("gpt-6.1");
+  await expect(page.getByTestId("cm-model")).toHaveText("GPT-6.1");
   await expect(page.getByTestId("cm-summary")).toHaveText("Compute → 单独指定 → gpt-6.1 · claude-code · xhigh");
   await expect(page.getByTestId("cm-save")).toBeEnabled();
 
   // 另一条路:换 Harness
-  await page.getByTestId("cm-model").selectOption("gpt-6");
+  await pickModel(page, "cm-model", "GPT-6");
   await expect(page.getByTestId("cm-save")).toBeDisabled();
   await page.getByTestId("cm-mismatch-harness").click();
   await expect(page.getByTestId("cm-harness")).toHaveValue("codex");
@@ -91,7 +97,7 @@ test("选了 Harness 跑不了的模型:就地阻断、给两条修复路径、�
 
 test("改上游的说话模型:跟随它的 Compute 同样拦下;只能用来说话的模型没有可换的 Harness,只给一条路", async ({ page }) => {
   await contactSettings(page);
-  await page.getByTestId("cm-talk").selectOption("gemini-flash");
+  await pickModel(page, "cm-talk", "Gemini Flash");
   await expect(page.getByTestId("cm-speaking-summary")).toHaveText("说话 → gemini-flash");
   await expect(page.getByTestId("cm-mismatch-text")).toHaveText("Claude Code 这个 Harness 跑不了 Gemini Flash，不会自动换成别的模型。选一条修好再保存：");
   await expect(page.getByTestId("cm-mismatch-noharness")).toHaveText("没有 Harness 能跑 Gemini Flash（它只能用来说话）");
@@ -106,7 +112,7 @@ test("改上游的说话模型:跟随它的 Compute 同样拦下;只能用来说
 
 test("改模型保存后提示「下一轮生效、正在跑的这一轮不打断」,私聊里留记录;换 Harness 另外说明", async ({ page }) => {
   await contactSettings(page);
-  await page.getByTestId("cm-talk").selectOption("gpt-6.1");
+  await pickModel(page, "cm-talk", "GPT-6.1");
   await page.getByTestId("cm-save").click();
   const note = page.getByTestId("next-turn");
   await expect(note).toContainText("已保存，下一轮生效，不用再手动切。");
@@ -148,7 +154,7 @@ test("卡死阈值放在高级里:默认 15 分钟 / 120 秒,可以按联系人�
 
 test("全局默认改 Compute 模型:先显示会影响几位联系人和失配,修好才能保存;保存后继承者用新值", async ({ page }) => {
   await openSettings(page);
-  await page.getByTestId("def-compute").selectOption("grok-5");
+  await pickModel(page, "def-compute", "Grok 5");
   await expect(page.getByTestId("impact-count")).toHaveText("会影响 3 位联系人");
   for (const id of ["astra", "grok", "gemini"]) await expect(page.getByTestId(`impact-row-${id}`)).toContainText("claude-sonnet-5-5 → grok-5");
   await expect(page.getByTestId("impact-row-claude")).toHaveCount(0);
@@ -175,7 +181,7 @@ test("全局默认改 Compute 模型:先显示会影响几位联系人和失配,
 
 test("默认 Harness 和默认 Compute 模型组合不成立时不能保存;只改默认说话模型说明只影响新建联系人", async ({ page }) => {
   await openSettings(page);
-  await page.getByTestId("def-compute").selectOption("claude-opus-5-5");
+  await pickModel(page, "def-compute", "Claude Opus 5.5");
   await page.getByTestId("def-harness").selectOption("codex");
   await expect(page.getByTestId("defaults-combo-text")).toHaveText("Codex 这个 Harness 跑不了 Claude Opus 5.5，不会自动换成别的模型。选一条修好再保存：");
   await expect(page.getByTestId("defaults-save")).toBeDisabled();
@@ -183,7 +189,7 @@ test("默认 Harness 和默认 Compute 模型组合不成立时不能保存;只�
   await expect(page.getByTestId("def-harness")).toHaveValue("claude-code");
   await expect(page.getByTestId("defaults-combo")).toHaveCount(0);
   await page.getByTestId("defaults-cancel").click();
-  await page.getByTestId("def-talk").selectOption("gpt-6.1");
+  await pickModel(page, "def-talk", "GPT-6.1");
   await expect(page.getByTestId("impact-count")).toHaveText("已有的联系人都不受影响");
   await expect(page.getByTestId("impact-new-only")).toHaveText("默认说话模型只用于之后新建的联系人，已有联系人各自存了自己的。");
   await expect(page.getByTestId("defaults-save")).toBeEnabled();

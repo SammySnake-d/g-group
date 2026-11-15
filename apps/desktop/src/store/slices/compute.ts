@@ -2,6 +2,7 @@
 import { type Activity, type Compute, type Pending } from '@/data'
 import { declineHumanLive, resolveLive, resumeLive, returnHumanLive, stopLive, tellLive } from '@/api/wire/compute-actions'
 import { live, liveCtx } from '@/api/wire/live'
+import type { TaskLedger } from '@/api/wire/runs'
 import { broken } from '@/mut'
 import { clock, frozen, later, uid } from '../boot'
 import { lens, type Slice } from '../state'
@@ -37,6 +38,10 @@ export type ComputeSlice = ComputeCtx & {
   putCompute: (c: Compute) => void
   /** 连上后端时由 api/wire/cards 写:某个会话里由卡片来的「待你处理」整批换掉(别的会话、别的来源不动) */
   putCardPending: (roomId: string, list: Pending[]) => void
+  /** 连上后端时的运行台账摘要(按任务 id;api/wire/runs 写):进展全景读它,演示模式为空 */
+  ledger: Record<string, TaskLedger>
+  setLedger: (all: Record<string, TaskLedger>) => void
+  putLedger: (taskId: string, l: TaskLedger) => void
 }
 
 export const createComputeSlice: Slice<ComputeSlice> = (set, get) => {
@@ -54,6 +59,9 @@ export const createComputeSlice: Slice<ComputeSlice> = (set, get) => {
     setComputes: (list) => set({ computes: Object.fromEntries(list.map((c) => [c.id, c])) }),
     putCompute: (c) => L.computes((cs) => ({ ...cs, [c.id]: c })),
     putCardPending: (roomId, list) => L.pending((ps) => [...ps.filter((p) => !(p.conv === roomId && p.id.startsWith('card:'))), ...list]),
+    ledger: {},
+    setLedger: (ledger) => set({ ledger }),
+    putLedger: (taskId, l) => set((s) => ({ ledger: { ...s.ledger, [taskId]: l } })),
 
     addAct: (cid, a) => L.computes((cs) => ({ ...cs, [cid]: { ...cs[cid], activity: [...cs[cid].activity.map((x) => ({ ...x, live: false })), { ...a, id: 'x' + uid(), at: '刚刚' } as Activity] } })),
 

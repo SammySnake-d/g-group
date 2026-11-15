@@ -8,7 +8,7 @@ import { people, type Compute, type Person, type PersonId } from './data'
 
 export type Harness = (typeof HARNESSES)[number]
 export type Effort = (typeof EFFORTS)[number]
-export type ModelSettings = Omit<SettingsView, 'timezone'>
+export type ModelSettings = Omit<SettingsView, 'timezone'> & { catalog?: { state: 'ready' | 'error'; reason?: string; computeCapabilities: boolean } }
 
 export const HARNESS_LIST: readonly Harness[] = HARNESSES
 export const EFFORT_LIST: readonly Effort[] = EFFORTS
@@ -24,6 +24,7 @@ export const INITIAL_MODEL_SETTINGS: ModelSettings = {
   models: [
     { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', vendor: 'anthropic', harnesses: ['claude-code'] },
     { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', vendor: 'anthropic', harnesses: ['claude-code', 'codex'] },
+    { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', vendor: 'anthropic', harnesses: ['claude-code', 'codex'] },
     { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', vendor: 'anthropic', harnesses: ['claude-code', 'codex'] },
     { id: 'gpt-6.1', label: 'GPT-6.1', vendor: 'openai', harnesses: ['codex', 'claude-code'] },
     { id: 'gpt-6', label: 'GPT-6', vendor: 'openai', harnesses: ['codex'] },

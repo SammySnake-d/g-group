@@ -1,4 +1,5 @@
-/* 详情页右栏「在哪里生效」:挂在哪些聊天、谁能调用,就地增删。三样(启用、挂上、在名单里)都满足才用得上。 */
+/* 详情页右栏「在哪里生效」:挂在哪些聊天、谁能调用,就地增删。三样(启用、挂上、在名单里)都满足才用得上。
+   连着后端时:宿主里的插件对所有聊天生效,后端不分会话挂载、没有调用者名单——不放「挂到 / 摘下 / 谁能调用」,把原因写在卡上。 */
 import { useState, type ReactNode } from 'react'
 import { Plus, X } from 'lucide-react'
 import type { PluginState } from '@/data'
@@ -7,7 +8,7 @@ import { Avatar } from '@/components/Avatar'
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { COPY } from './constants'
+import { COPY, COPY_LIVE } from './constants'
 import { SideCard } from './layout'
 import { assistants, convName, groupsFirst, personName } from './util'
 
@@ -40,6 +41,8 @@ function AddPicker({ testid, label, items }: { testid: string; label: string; it
 
 export function WhereCard({ s }: { s: PluginState }) {
   const { convs, pluginAct, toast } = useApp()
+  const live = useApp((st) => st.backend.mode === 'connected')
+  if (live) return <WhereLive />
   const act = (a: Parameters<typeof pluginAct>[1]) => { const r = pluginAct(s.id, a); if (!r.ok) toast(r.error) }
   const free = convs.filter((c) => !s.convs.includes(c.id)).sort(groupsFirst)
   return (
@@ -61,6 +64,16 @@ export function WhereCard({ s }: { s: PluginState }) {
         </div>
       </div>
       <p className="mt-4 border-t border-line pt-3 text-[11.5px] leading-relaxed text-fg-3">{COPY.whereRule}</p>
+    </SideCard>
+  )
+}
+
+/** 连着后端:对所有聊天生效,不能挂 / 摘 / 限定调用者 */
+export function WhereLive() {
+  return (
+    <SideCard title="在哪里生效" testid="plg-where">
+      <p className="text-[13px] font-medium leading-relaxed text-fg">{COPY_LIVE.where}</p>
+      <p className="mt-1.5 text-[12px] leading-relaxed text-fg-3">{COPY_LIVE.whereHow}</p>
     </SideCard>
   )
 }

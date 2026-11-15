@@ -8,6 +8,7 @@
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 
 const here = path.resolve(import.meta.dirname, "..");
 const repo = path.resolve(here, "../..");
@@ -33,9 +34,17 @@ writeFileSync(
   path.join(stage, "package.json"),
   JSON.stringify({ name: "g-group", productName: "g-group", version, description: pkg.description, author: "SammySnake-d", main: "dist-electron/main.cjs", license: "UNLICENSED" }, null, 2),
 );
-const cfg = readFileSync(path.join(here, "electron-builder.yml"), "utf8")
+const sourceConfig = readFileSync(path.join(here, "electron-builder.yml"), "utf8");
+const require = createRequire(import.meta.url);
+const electronPackage = require.resolve("electron/package.json");
+const localElectron = path.join(path.dirname(electronPackage), "dist");
+const wantedElectron = /^electronVersion:\s*([^\s]+)\s*$/m.exec(sourceConfig)?.[1];
+const installedElectron = readFileSync(path.join(localElectron, "version"), "utf8").trim();
+if (!wantedElectron || wantedElectron !== installedElectron) throw new Error(`打包需要 Electron ${wantedElectron ?? "（配置缺失）"}，本地为 ${installedElectron}；请先安装匹配的项目依赖`);
+const cfg = sourceConfig
   .replace("from: ../../packages/server/catalog", "from: catalog")
-  .replace("output: release", `output: ${JSON.stringify(path.join(here, "release"))}`);
+  .replace("output: release", `output: ${JSON.stringify(path.join(here, "release"))}`)
+  + `\nelectronDist: ${JSON.stringify(localElectron)}\n`;
 writeFileSync(path.join(stage, "electron-builder.yml"), cfg);
 run("npx", ["-y", "electron-builder@26.18.0", "--mac", "--publish", "never", "--config", "electron-builder.yml"], stage);
 console.log(`\n已打包 g-group ${version}:${path.join(here, "release")}`);

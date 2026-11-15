@@ -1,8 +1,10 @@
 /* 定时编辑器的表单:做什么 → 由谁、在哪 → 什么时候醒 → 什么时候开口 → 开启。
-   保存前整张校验,不合法保存按钮不可用;缺什么写在保存按钮旁边。 */
+   保存前整张校验,不合法保存按钮不可用;缺什么写在保存按钮旁边。
+   连上后端时合同表达不了的几项关着(另外三种触发、「有情况才说」;改已有定时时的负责人和会话),原因写在那一项下面。 */
 import { useId, useState, type ReactNode } from 'react'
 import { Megaphone } from 'lucide-react'
 import { CRON_PRESETS, parseCron, toLocalDateTime, triggerError, type CronTrigger, type CronTriggerKind } from '@g-group/ui-core'
+import { live } from '@/api/wire/live'
 import { useApp } from '@/ctx'
 import { people, type Cron, type PersonId } from '@/data'
 import { useNow } from '@/cronView'
@@ -14,7 +16,7 @@ import { Field, SelectMenu, Textarea } from '@/components/ui/field'
 import { ModalBody, ModalFooter } from '@/components/ui/modal'
 import { Segmented } from '@/components/ui/segmented'
 import { Switch } from '@/components/ui/switch'
-import { EDITOR, KINDS, SPEAKS, SPEAK_HINT } from './constants'
+import { CRON_LIVE, EDITOR, KINDS, SPEAKS, SPEAK_HINT } from './constants'
 import { CronExprField, pillCls } from './CronExprField'
 import { EventField, MessagesField, OnceField } from './TriggerFields'
 import { convName, isBot } from './util'
@@ -35,6 +37,9 @@ function Group({ label, hint, children }: { label: string; hint?: ReactNode; chi
 
 export function EditorBody({ init, seed, conv, owner, onClose, onSave }: EditorProps) {
   const { convs, plugins } = useApp()
+  /* 连上后端:只有合同表达得了的能选;改已有的定时时负责人和会话不能动(schedules.update 不收) */
+  const isLive = useApp((s) => live(s))
+  const fixed = isLive && !!init
   const now = useNow()
   const t0 = init?.trigger
   const usable = convs.filter((c) => c.members.some(isBot))
@@ -87,25 +92,33 @@ export function EditorBody({ init, seed, conv, owner, onClose, onSave }: EditorP
             placeholder={EDITOR.whatPh} className="min-h-[76px] resize-y" />
         </Field>
 
-        <div className="grid grid-cols-[minmax(0,200px)_minmax(0,1fr)] gap-4">
-          <Field label={EDITOR.where}>
-            <SelectMenu testid="cron-editor-conv" placeholder={EDITOR.wherePh} value={where} onChange={pickWhere}
-              options={usable.map((c) => ({ value: c.id, label: convName(c) }))} />
-          </Field>
-          <Group label={EDITOR.who} hint={g ? EDITOR.whoHint : undefined}>
-            <div className="flex min-h-9 flex-wrap items-center gap-1.5">
-              {!g && <span className="text-[12.5px] text-fg-3">{EDITOR.whoFirst}</span>}
-              {candidates.map((p) => (
-                <Button key={p} data-testid={`cron-editor-who-${p}`} aria-pressed={who === p} onClick={() => setWho(p)} variant="outline" size={null} shape="pill" className={cn(pillCls(who === p), 'gap-1.5 pl-1')}>
-                  <Avatar id={p} size={22} status={false} mood="idle" />{people[p].name}
-                </Button>
-              ))}
-            </div>
-          </Group>
+        <div>
+          <div className="grid grid-cols-[minmax(0,200px)_minmax(0,1fr)] gap-4">
+            <Field label={EDITOR.where}>
+              {fixed ? (
+                <Button data-testid="cron-editor-conv" variant="outline" size="md" disabled className="w-full justify-start px-3 font-normal shadow-none"><span className="min-w-0 truncate">{convName(g, where)}</span></Button>
+              ) : (
+                <SelectMenu testid="cron-editor-conv" placeholder={EDITOR.wherePh} value={where} onChange={pickWhere}
+                  options={usable.map((c) => ({ value: c.id, label: convName(c) }))} />
+              )}
+            </Field>
+            <Group label={EDITOR.who} hint={g ? EDITOR.whoHint : undefined}>
+              <div className="flex min-h-9 flex-wrap items-center gap-1.5">
+                {!g && <span className="text-[12.5px] text-fg-3">{EDITOR.whoFirst}</span>}
+                {candidates.map((p) => (
+                  <Button key={p} data-testid={`cron-editor-who-${p}`} aria-pressed={who === p} disabled={fixed} onClick={() => setWho(p)} variant="outline" size={null} shape="pill" className={cn(pillCls(who === p), 'gap-1.5 pl-1')}>
+                    <Avatar id={p} size={22} status={false} mood="idle" />{people[p].name}
+                  </Button>
+                ))}
+              </div>
+            </Group>
+          </div>
+          {fixed && <div data-testid="cron-editor-fixed-off" className="mt-1.5 text-[12px] leading-relaxed text-fg-3">{CRON_LIVE.fixed}</div>}
         </div>
 
         <Group label={EDITOR.when}>
-          <Segmented ariaLabel={EDITOR.when} value={kind} onChange={setKind} options={KINDS.map((k) => ({ ...k, testid: `cron-editor-kind-${k.value}` }))} />
+          <Segmented ariaLabel={EDITOR.when} value={kind} onChange={setKind} options={KINDS.map((k) => ({ ...k, testid: `cron-editor-kind-${k.value}`, disabled: isLive && k.value !== 'cron' }))} />
+          {isLive && <div data-testid="cron-editor-kinds-off" className="mt-1.5 text-[12px] leading-relaxed text-fg-3">{CRON_LIVE.kinds}</div>}
           <div className="mt-3 rounded-xl border border-line bg-side p-3.5">
             {kind === 'cron' && <CronExprField expr={expr} setExpr={setExpr} custom={custom} setCustom={setCustom} now={now} />}
             {kind === 'once' && <OnceField at={onceAt} setAt={setOnceAt} err={tErr} now={now} />}
@@ -115,8 +128,10 @@ export function EditorBody({ init, seed, conv, owner, onClose, onSave }: EditorP
         </Group>
 
         <Group label={EDITOR.speak}>
-          <Segmented ariaLabel={EDITOR.speak} value={speak} onChange={setSpeak} options={SPEAKS.map((s) => ({ ...s, testid: `cron-editor-speak-${s.value}` }))} />
-          <div className="mt-1.5 text-[12px] text-fg-3">{SPEAK_HINT[speak]}</div>
+          <Segmented ariaLabel={EDITOR.speak} value={speak} onChange={setSpeak} options={SPEAKS.map((s) => ({ ...s, testid: `cron-editor-speak-${s.value}`, disabled: isLive && s.value !== 'always' }))} />
+          {isLive
+            ? <div data-testid="cron-editor-speak-off" className="mt-1.5 text-[12px] leading-relaxed text-fg-3">{CRON_LIVE.speak}</div>
+            : <div className="mt-1.5 text-[12px] text-fg-3">{SPEAK_HINT[speak]}</div>}
         </Group>
 
         {g?.kind === 'group' && (g.notices?.length ?? 0) > 0 && (

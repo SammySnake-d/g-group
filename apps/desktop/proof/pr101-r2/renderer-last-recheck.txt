@@ -1,0 +1,13 @@
+[WebServer] (node:63277) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:63314) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:63340) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [renderer] › e2e/models.ui.spec.ts:247:1 › 模型只在两处配:资料页只显示、点了去工作台设置;添加联系人不选模型,用全局默认 (1.9s)
+
+  1 passed (7.1s)
+[serial] 结束,清掉残留进程 0 个

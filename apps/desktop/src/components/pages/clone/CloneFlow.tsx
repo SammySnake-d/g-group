@@ -1,25 +1,48 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { PersonId } from '@/data'
 import { useApp } from '@/ctx'
+import { cloneGroupLive, personaLive } from '@/api/wire/clone'
+import { liveCtx } from '@/api/wire/live'
+import { useAppStore } from '@/store'
 import { Button } from '@/components/ui/button'
 import { PageFooter } from '@/components/pages/kit/parts'
-import { STEPS, type Item } from './constants'
-import { cloneItems } from './items'
+import { CLONE_LIVE, STEPS, STEPS_LIVE, type Item } from './constants'
+import { cloneItems, cloneItemsLive, type Personas } from './items'
 import { StepConfirm, StepName, StepPick } from './CloneSteps'
 
 /* 群模板:复制团队到新项目,三步(概念卡第 12 张;#1160 #1172 #1278)。
-   这里持有全部状态:第几步、群名、成员、哪些条目不带(本项目专属的默认不带,要勾才带) */
+   这里持有全部状态:第几步、群名、成员、哪些条目不带(本项目专属的默认不带,要勾才带)。
+   连着后端时:第 2 步的群规读这个群现在有效的公告(conv.notices)、成员的预设读后端(contacts.profile,只读),协作手册以后再定、不列;
+   「创建新群」由后端建群并逐条发布选中的公告(api/wire/clone):群建好才切过去(这一页随之收起),没建成就留在这里;公告带过去几条以回包为准提示。 */
+
+const wire = () => liveCtx(useAppStore.getState, useAppStore.setState)
+
+/** 连着后端时读每位联系人的预设;没连不读 */
+function usePersonas(ids: PersonId[], on: boolean): Personas {
+  const [map, setMap] = useState<Personas>({})
+  const key = ids.join(',')
+  useEffect(() => {
+    if (!on) return
+    let gone = false
+    for (const id of key ? key.split(',') : []) void personaLive(wire(), id).then((p) => { if (!gone) setMap((m) => ({ ...m, [id]: p })) })
+    return () => { gone = true }
+  }, [key, on])
+  return map
+}
 
 export function CloneFlow({ id }: { id: string }) {
   const { convs, playbook, createGroup, closeAll } = useApp()
+  const live = useApp((s) => s.backend.mode === 'connected')
   const g = convs.find((c) => c.id === id)
   const [step, setStep] = useState(0)
   const [title, setTitle] = useState(() => `${g?.title ?? '群'}（新项目）`)
   const allMembers = (g?.members ?? []).filter((m) => m !== 'me')
   const [members, setMembers] = useState<PersonId[]>(allMembers)
-  const items = cloneItems(g, playbook, members)
+  const personas = usePersonas(allMembers, live)
+  const [busy, setBusy] = useState(false)
+  const items = live ? cloneItemsLive(g, members, personas) : cloneItems(g, playbook, members)
 
   const [off, setOff] = useState<Record<string, boolean>>({})
   const [localOn, setLocalOn] = useState<Record<string, boolean>>({})
@@ -36,18 +59,26 @@ export function CloneFlow({ id }: { id: string }) {
   const canNext = step === 0 ? !!title.trim() && members.length > 0 : true
 
   const go = () => {
+    if (live) {
+      if (busy) return
+      setBusy(true)
+      const notices = kept.filter((it) => it.group === 'rule').map((it) => it.text)
+      /* 群建好那一刻接线层就切到新群(切会话会收起这一页),公告接着在后面逐条发;没建成就留在这一页,可以再点 */
+      void cloneGroupLive(wire(), title.trim(), members, notices).then(() => setBusy(false))
+      return
+    }
     createGroup(title.trim(), members, `从「${g.title}」复制了团队：带了 ${nMembers} 位成员、${nRules} 条规则和经验；没有带聊天记录、文件和任务`)
     closeAll()
   }
 
   return (
     <div data-testid="clone-flow" className="flex h-full min-h-0 flex-col">
-      <Stepper step={step} />
+      <Stepper step={step} steps={live ? STEPS_LIVE : STEPS} />
 
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {step === 0 && <StepName title={title} setTitle={setTitle} allMembers={allMembers} members={members} setMembers={setMembers} />}
-        {step === 1 && <StepPick items={items} picked={picked} toggle={toggle} openLocal={openLocal} setOpenLocal={setOpenLocal} />}
-        {step === 2 && <StepConfirm title={title} members={members} allMembers={allMembers} kept={kept} dropped={dropped} nMembers={nMembers} nRules={nRules} />}
+        {step === 1 && <StepPick items={items} picked={picked} toggle={toggle} openLocal={openLocal} setOpenLocal={setOpenLocal} live={live} />}
+        {step === 2 && <StepConfirm title={title} members={members} allMembers={allMembers} kept={kept} dropped={dropped} nMembers={nMembers} nRules={nRules} live={live} />}
       </div>
 
       <PageFooter className="flex items-center gap-2">
@@ -56,7 +87,7 @@ export function CloneFlow({ id }: { id: string }) {
         {step < 2 ? (
           <Button data-testid="clone-next" variant="primary" size="md" disabled={!canNext} onClick={() => setStep((s) => s + 1)} className="px-5">下一步</Button>
         ) : (
-          <Button data-testid="clone-go" variant="primary" size="md" onClick={go} className="px-5">创建新群</Button>
+          <Button data-testid="clone-go" variant="primary" size="md" disabled={busy} onClick={go} className="px-5">{busy ? CLONE_LIVE.creating : '创建新群'}</Button>
         )}
       </PageFooter>
     </div>
@@ -64,17 +95,17 @@ export function CloneFlow({ id }: { id: string }) {
 }
 
 /** 步骤指示:做完的打勾、当前的墨色实心、没到的空心;当前步 aria-current=step */
-function Stepper({ step }: { step: number }) {
+function Stepper({ step, steps }: { step: number; steps: readonly string[] }) {
   return (
     <ol className="flex items-center gap-1.5 border-b border-line px-4 py-3">
-      {STEPS.map((s, i) => (
+      {steps.map((s, i) => (
         <li key={s} aria-current={i === step ? 'step' : undefined} className="flex min-w-0 items-center gap-1.5">
           <span className={cn('grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-semibold tabular-nums transition-colors duration-base ease-out',
             i < step ? 'bg-hover text-fg-2' : i === step ? 'bg-fg text-bg' : 'border border-line text-fg-3')}>
             {i < step ? <Check className="h-3 w-3" strokeWidth={2.5} /> : i + 1}
           </span>
           <span className={cn('truncate text-[12.5px]', i === step ? 'font-medium text-fg' : 'text-fg-3')}>{s}</span>
-          {i < STEPS.length - 1 && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-fg-3" />}
+          {i < steps.length - 1 && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-fg-3" />}
         </li>
       ))}
     </ol>

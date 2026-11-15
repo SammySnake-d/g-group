@@ -44,7 +44,7 @@ test("本地文件路径:选择的真实文件能取回原路径,内存 File 没
   }
 });
 
-test("截图:当前窗口返回有效 PNG,点击输入栏截图发送真实附件,重启后仍在", async () => {
+test("截图:当前窗口返回有效 PNG,点击输入栏截图先待发、明确发送后成为真实图片附件,重启后仍在", async () => {
   const dir = mkdtempSync(path.join(tmpdir(), "gg-native-shot-"));
   let { app, win } = await launch(dir);
   try {
@@ -57,9 +57,12 @@ test("截图:当前窗口返回有效 PNG,点击输入栏截图发送真实附�
     expect(png.length).toBeGreaterThan(1000);
     await expect(win.getByTestId("tool-shot")).toBeVisible();
     await win.getByTestId("tool-shot").click();
+    await expect(win.getByTestId("composer-images").locator("img")).toHaveCount(1, LONG);
     const card = win.locator('[data-testid^="attachment-截图 "]');
+    await expect(card).toHaveCount(0);
+    await win.getByTestId("send").click();
     await expect(card).toHaveCount(1, LONG);
-    await expect(card).toContainText("你发的");
+    await expect(card.locator("img")).toBeVisible();
     const cardId = await card.getAttribute("data-testid");
     await shot(win, "native-window-shot-sent");
     await app.close();

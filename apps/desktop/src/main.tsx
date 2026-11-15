@@ -4,7 +4,8 @@ import './index.css'
 import App from './App.tsx'
 import { AstryxRoot } from './astryx/AstryxRoot'
 import { AstryxProbe } from './astryx/Probe'
-import { applyMotionCssVars } from './config/motion'
+import { AnimateUIProvider } from '@animate-ui/react/provider'
+import { applyMotionCssVars, TEMPO } from './config/motion'
 
 // 首帧前就定好主题,避免先亮后暗闪一下
 if (new URLSearchParams(location.search).get('theme') === 'dark') document.documentElement.classList.add('dark')
@@ -14,6 +15,6 @@ applyMotionCssVars()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AstryxRoot>{new URLSearchParams(location.search).get('preview') === 'astryx' ? <AstryxProbe /> : <App />}</AstryxRoot>
+    <AnimateUIProvider tempo={TEMPO}><AstryxRoot>{new URLSearchParams(location.search).get('preview') === 'astryx' ? <AstryxProbe /> : <App />}</AstryxRoot></AnimateUIProvider>
   </StrictMode>,
 )

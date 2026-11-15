@@ -1,8 +1,11 @@
 // 插件接线:plugins.list 全量读 → 插件切片(本机真实装好的插件);plugin.updated 整条换,plugin.removed 删掉。
 // 宿主里装好的插件对所有聊天生效(commands.list 不分会话),所以连上后端时每个插件都挂在全部会话上;新会话出现时补上。
 // 合同里没有的(简介、图标、命令标题与参数、更新记录、风险级别)不编:名字用合同的,图标按 id 稳定挑色、取名字首字,风险一律按低显示原文说明。
+// 写:卸载(plugins.uninstall)、启停(plugins.setEnabled)、更新(plugins.update)以后端回包为准写回;后端不收就提示原因,界面不变。
+// 合同缺、所以连着后端时不做的:挂到某个聊天 / 摘下 / 调用者名单(后端不分会话挂载),外发预授权(plugins.configure 只存插件自己的配置,
+// 外发前后端不核对范围,PluginView 也表达不了授权失效)。
 import type { CapabilityLibraryView, PluginView } from '@g-group/api-contract'
-import type { PluginCategory, PluginManifest } from '@g-group/ui-core'
+import type { PluginAction, PluginCategory, PluginManifest } from '@g-group/ui-core'
 import { SWATCHES, type PluginState } from '@/data'
 import { call } from '../backend'
 import { defineWiring, read, type WireCtx } from './types'
@@ -60,4 +63,18 @@ export const pluginsWiring = defineWiring({
 export async function capabilitiesLive(): Promise<CapabilityLibraryView | null> {
   const r = await call('capabilities.list', {})
   return r.ok ? r.value : null
+}
+
+const WRITE_LABEL = { uninstall: '卸载', enable: '启用', disable: '停用', update: '更新' } as const
+export type PluginWrite = Extract<PluginAction, { type: keyof typeof WRITE_LABEL }>
+
+/** 卸载 / 启停 / 更新:后端收下才改界面(以回包为准),不收就提示原因、界面不变;done 是收下后的一句提示 */
+export async function pluginWriteLive(w: WireCtx, id: string, a: PluginWrite, done?: string) {
+  const r = a.type === 'uninstall' ? await w.call('plugins.uninstall', { pluginId: id })
+    : a.type === 'update' ? await w.call('plugins.update', { pluginId: id, version: a.manifest.version, grantedPermissions: [...a.consent] })
+    : await w.call('plugins.setEnabled', { pluginId: id, enabled: a.type === 'enable' })
+  if (!r.ok) { w.get().toast(`没${WRITE_LABEL[a.type]}成：${r.error.message}`); return }
+  if ('id' in r.value) w.get().putPlugin(toPluginState(r.value, allConvs(w)))
+  else w.get().setPlugins(w.get().plugins.filter((p) => p.id !== id))
+  if (done) w.get().toast(done)
 }

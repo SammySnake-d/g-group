@@ -14,6 +14,7 @@ import { live } from '@/api/wire/live'
 import { shellCall } from '@/api/app-shell'
 import { useApp } from '@/store'
 import { SourcePicker } from './SourcePicker'
+import { FileInput } from '@astryxdesign/core'
 
 type Props = {
   conv: Conversation
@@ -70,11 +71,11 @@ export function Toolbar({ conv, inv, canSend, nudge, onInsert, onAt, onSlash, on
       </Popover>
       <IconButton data-testid="tool-at" label="@ 某人（第一项是 Helper）" onClick={onAt} icon={<AtSign strokeWidth={1.6} />} />
       <IconButton data-testid="tool-slash" label="命令（也可以直接打 /）" onMouseDown={(e) => e.preventDefault()} onClick={onSlash} icon={<Slash strokeWidth={2} />} />
-      <IconButton data-testid="tool-shot" label={capturing ? '正在发送截图' : '截图（截当前窗口发出去）'} disabled={capturing} onClick={() => void capture()} icon={<Scissors strokeWidth={1.6} />} />
+      <IconButton data-testid="tool-shot" label={capturing ? '正在截取图片' : '截图（添加到待发区）'} disabled={capturing} onClick={() => void capture()} icon={<Scissors strokeWidth={1.6} />} />
       <IconButton data-testid="tool-file" label="文件" onClick={() => fileRef.current?.click()} icon={<FolderClosed strokeWidth={1.6} />} />
       <IconButton data-testid="tool-image" label="图片" onClick={() => imgRef.current?.click()} icon={<ImageIcon strokeWidth={1.6} />} />
       <input ref={fileRef} data-testid="file-input" type="file" multiple hidden onChange={(e) => pick(e, 'doc')} />
-      <input ref={imgRef} data-testid="image-input" type="file" accept="image/*" multiple hidden onChange={(e) => pick(e, 'asset')} />
+      <span hidden><FileInput ref={imgRef} data-testid="image-input" label="选择待发图片" value={null} accept="image/*" isMultiple onChange={(files) => { for (const f of Array.isArray(files) ? files : files ? [files] : []) onFile(f.name, 'asset', `${(f.size / 1024).toFixed(0)} KB`, f); if (imgRef.current) imgRef.current.value = '' }} /></span>
       {broken('AC-50-2') && <IconButton data-testid="tool-history" label="聊天记录" onClick={() => push({ t: 'search', id: conv.id }, true)} icon={<History strokeWidth={1.6} />} />}
       <div className="min-w-0 flex-1" />
       {inv && inv.missing.length > 0 && (

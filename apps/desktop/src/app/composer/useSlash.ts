@@ -5,9 +5,14 @@ import { people, type Conversation } from '@/data'
 import { findInfo } from '@/pluginInfo'
 import { useApp } from '@/store'
 import { slashEntries } from '@/store/select'
+import { live, liveCtx } from '@/api/wire/live'
+import { sendLive } from '@/api/wire/messages'
+import { useAppStore } from '@/store'
+import { hostCommand, normalizeHostCron } from './hostCommands'
 
 /** 后端这个会话没给这条命令 */
 const NOT_OFFERED = '后端在这个会话没提供这条命令'
+const LIVE_OFF: Record<string, string> = { summary: '总结还没接上后端', workspace: '工作区还没接上后端', links: '关联会话还没接上后端', pins: '记下的事还没接上后端', playbook: '协作手册还没接上后端' }
 
 type Args = {
   conv: Conversation
@@ -37,7 +42,14 @@ export function useSlash({ conv, draft, setDraft, caret, focused, editing, place
   const entries = useMemo(() => {
     const local = slashEntries({ plugins, pluginCatalog }, conv)
     if (!offered || offered.plugins !== plugins || offered.members !== conv.members) return local
-    return local.map((e) => (!e.disabled && !offered.names.includes(e.command.name) ? { ...e, disabled: NOT_OFFERED } : e))
+    if (!live(useAppStore.getState())) return local
+    const merged = local.map((e) => {
+      if (LIVE_OFF[e.command.name]) return { ...e, disabled: LIVE_OFF[e.command.name] }
+      // 已接 tasks/announcements 等合同的本地菜单动作，不要求宿主重复注册为斜杠命令。
+      return e.command.source === 'builtin' || e.disabled || offered.names.includes(e.command.name) ? e : { ...e, disabled: NOT_OFFERED }
+    })
+    const names = new Set(merged.map((e) => e.command.name))
+    return [...merged, ...offered.commands.filter((c) => !names.has(c.name)).map((c) => ({ command: hostCommand(c, conv) }))]
   }, [plugins, pluginCatalog, conv, offered])
   const assistantNames = useMemo(() => conv.members.filter((m) => m !== 'me' && !people[m]?.human).map((m) => people[m].name), [conv.members])
   const token = editing ? null : detectSlash(draft, Math.min(caret, draft.length))
@@ -46,7 +58,8 @@ export function useSlash({ conv, draft, setDraft, caret, focused, editing, place
   const shown = menuOpen && token ? filterCommands(entries, token.query) : []
   const nUsable = shown.filter((e) => !e.disabled).length
   const sel = nUsable ? Math.min(slashIdx, nUsable - 1) : -1
-  const inv = editing ? null : parseInvocation(draft, entries, { people: assistantNames })
+  const host = offered?.commands.find((c) => c.name === /^\s*[/／]([\w-]+)/.exec(draft)?.[1])
+  const inv = editing ? null : parseInvocation(normalizeHostCron(draft, host, conv), entries, { people: assistantNames })
   const unknown = !inv && !menuOpen && !editing ? /^\s*[/／]([a-z0-9][a-z0-9-]*)(?=\s|$)/i.exec(draft)?.[1] : undefined
 
   useEffect(() => { setSlashIdx(0) }, [token?.query])
@@ -56,6 +69,12 @@ export function useSlash({ conv, draft, setDraft, caret, focused, editing, place
     const c = v.command
     const val = (k: string) => v.values[k] ?? ''
     if (v.blocked) { toast(v.blocked); return false }
+    if (live(useAppStore.getState()) && offered?.commands.some((x) => x.name === c.name)) {
+      const args = { ...v.values }
+      if (args.contact) args.contact = conv.members.find((id) => people[id]?.name === args.contact) ?? args.contact
+      void sendLive(liveCtx(useAppStore.getState, useAppStore.setState), conv.id, draft, [], [], { name: c.name, args })
+      return true
+    }
     const src = parseSource(c.source)
     if (src?.kind === 'assistant') { onSend(`@${people[src.id].name} ${c.title}：${Object.values(v.values).join(' ')}`); return true }
     if (src?.kind === 'plugin') {

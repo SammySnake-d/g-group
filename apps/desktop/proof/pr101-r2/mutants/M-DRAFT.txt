@@ -1,0 +1,66 @@
+
+> @g-group/desktop@0.1.0 build:renderer
+> vite build
+
+vite v8.3.6 building client environment for production...
+transforming...
+✓ 4071 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                        1.08 kB │ gzip:   0.52 kB
+dist/assets/index-DAKm5_do.css                       369.48 kB │ gzip:  60.12 kB
+dist/assets/mergeProps-ptS-gIMz.js                     0.59 kB │ gzip:   0.31 kB
+dist/assets/MenuBottomSheet-Be0375NX.js                0.67 kB │ gzip:   0.42 kB
+dist/assets/MenuBottomSheetActionList-25f0ev7R.js      2.00 kB │ gzip:   1.07 kB
+dist/assets/ItemSwipeLayer-a6ptvTVu.js                 9.11 kB │ gzip:   3.59 kB
+dist/assets/coarsePointer-Da-5cMux.js                 25.02 kB │ gzip:   7.43 kB
+dist/assets/useLayerDismissal-BB7sHgN6.js             40.52 kB │ gzip:  14.60 kB
+dist/assets/useTooltip-CpVx_tSY.js                    51.88 kB │ gzip:  17.11 kB
+dist/assets/BottomSheet-OvVntFCk.js                   80.59 kB │ gzip:  27.17 kB
+dist/assets/index-BszomYKp.js                      2,099.43 kB │ gzip: 675.06 kB
+
+✓ built in 1.07s
+[plugin builtin:vite-reporter]
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+Running 1 test using 1 worker
+
+  ✘  1 [electron] › e2e/pr101-p0.electron.spec.ts:61:1 › 图片草稿按会话保存，切走和重启不丢；纯图也能回车发送 (10.6s)
+
+
+  1) [electron] › e2e/pr101-p0.electron.spec.ts:61:1 › 图片草稿按会话保存，切走和重启不丢；纯图也能回车发送 ──────────────────
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator: getByTestId('composer-images').locator('[data-pending-image]').locator('img')
+    Expected: "draft.png"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveAttribute" getByTestId('composer-images').locator('[data-pending-image]').locator('img') with timeout 5000ms
+      - waiting for getByTestId('composer-images').locator('[data-pending-image]').locator('img')
+
+
+      75 |     run = await launch(ud)
+      76 |     await run.win.getByTestId('list').locator('[data-testid^="conv-dm-"]').filter({ hasText: '图片甲' }).click()
+    > 77 |     await expect(pending(run.win).locator('img')).toHaveAttribute('alt', 'draft.png')
+         |                                                   ^
+      78 |     await run.win.getByTestId('composer').press('Enter')
+      79 |     await expect(mine(run.win).locator('[data-testid="attachment-draft.png"] img')).toBeVisible(LONG)
+      80 |     await expect(run.win.getByTestId('composer-images')).toHaveCount(0)
+        at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-mutants/apps/desktop/e2e/pr101-p0.electron.spec.ts:77:51
+
+    Error Context: test-results/pr101-p0.electron-图片草稿按会话保存，切走和重启不丢；纯图也能回车发送-electron/error-context.md
+
+  1 failed
+    [electron] › e2e/pr101-p0.electron.spec.ts:61:1 › 图片草稿按会话保存，切走和重启不丢；纯图也能回车发送 ───────────────────
+[WebServer] (node:32544) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:32576) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+(node:32578) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)

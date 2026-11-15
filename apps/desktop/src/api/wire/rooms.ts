@@ -98,16 +98,17 @@ function createActionId(title: string, ids: PersonId[]) {
   return id
 }
 
-/** 建群并拉进选中的联系人;选了临时算力就再设上。建好切过去 */
-export async function createGroupLive(w: WireCtx, title: string, ids: PersonId[], pool?: number) {
+/** 建群并拉进选中的联系人;选了临时算力就再设上。建好切过去,返回新群 id;没建成(已提示)返回 null */
+export async function createGroupLive(w: WireCtx, title: string, ids: PersonId[], pool?: number): Promise<string | null> {
   const r = await w.call('rooms.createGroup', { clientActionId: createActionId(title, ids), title, members: ids.map((id) => ({ kind: 'contact' as const, id })) })
-  if (!r.ok) { w.get().toast(`没建成群：${why(r.error)}`); return }
+  if (!r.ok) { w.get().toast(`没建成群：${why(r.error)}`); return null }
   await addRoom(w, r.value)
   w.get().openConv(r.value.id)
-  if (!pool) return
+  if (!pool) return r.value.id
   const u = await w.call('rooms.update', { roomId: r.value.id, tempComputeSlots: pool })
   if (u.ok) upsertRoom(w, u.value)
   else w.get().toast(`群临时算力没设上：${why(u.error)}`)
+  return r.value.id
 }
 
 /** 拉人进群:成员以回包为准 */

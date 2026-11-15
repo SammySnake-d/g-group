@@ -58,13 +58,13 @@ export const TOOLS = {
   manage: '去设置',
 } as const
 
-/** 连上后端时真能用的内置工具(其余要的数据或能力还没接:协作手册、工作区、关联会话、记下的事、复制团队、总结;
- *  群文件由文件列表那一块接上 pages/FilesPage 后把它加回来) */
-export const LIVE_TOOLS: readonly string[] = ['compute']
+/** 连上后端时真能用的内置工具(其余要的数据或能力还没接:协作手册、工作区、关联会话、记下的事、总结;
+ *  群文件由文件列表那一块接上 pages/FilesPage 后把它加回来)。复制团队:成员 + 群公告带到新群(协作手册以后再定) */
+export const LIVE_TOOLS: readonly string[] = ['compute', 'clone']
 
 export type ToolHow = '执行' | '打开' | '填入输入框'
 /** 内置工具:每项写清做什么、对应哪条 / 命令、点了是执行还是打开(打开的页面 key 与 push 的 t 一致) */
-export const BUILTIN_TOOLS: { key: string; icon: LucideIcon; title: string; cmd: string; desc: string; how: ToolHow; page?: 'playbook' | 'files' | 'workspace' | 'links' | 'commits' | 'pool' | 'clone' }[] = [
+export const BUILTIN_TOOLS: { key: string; icon: LucideIcon; title: string; cmd: string; desc: string; /** 连着后端时的说法(和演示不一样才写) */ liveDesc?: string; how: ToolHow; page?: 'playbook' | 'files' | 'workspace' | 'links' | 'commits' | 'pool' | 'clone' }[] = [
   { key: 'summary', icon: Sparkles, title: '总结未读', cmd: 'summary', desc: '让 Helper 把你不在时的消息总结成几条要点，发在本群，每条能点回原消息', how: '执行' },
   { key: 'playbook', icon: BookOpen, title: '协作手册', cmd: 'playbook', desc: '本群的约定和流程，助手接活前会读；改动要你批准', how: '打开', page: 'playbook' },
   { key: 'files', icon: FileText, title: '群文件', cmd: 'files', desc: '本群发过的文件和助手产出的文档', how: '打开', page: 'files' },
@@ -72,7 +72,7 @@ export const BUILTIN_TOOLS: { key: string; icon: LucideIcon; title: string; cmd:
   { key: 'links', icon: Link2, title: '关联会话', cmd: 'links', desc: '把私聊记录关联进来，本群的助手才看得到', how: '打开', page: 'links' },
   { key: 'commits', icon: Pin, title: '记下的事', cmd: 'pins', desc: '助手答应过的事，比如「有进度就 @你」', how: '打开', page: 'commits' },
   { key: 'compute', icon: Cpu, title: '临时算力', cmd: 'pool', desc: '本群借给助手的临时算力，用完归还', how: '打开', page: 'pool' },
-  { key: 'clone', icon: Copy, title: '复制团队', cmd: 'clone', desc: '把成员和协作手册复制到新群；聊天、任务和凭据不带', how: '打开', page: 'clone' },
+  { key: 'clone', icon: Copy, title: '复制团队', cmd: 'clone', desc: '把成员和协作手册复制到新群；聊天、任务和凭据不带', liveDesc: '把成员和群公告复制到新群；聊天、任务和凭据不带（协作手册以后再定）', how: '打开', page: 'clone' },
 ]
 
 export const MEMBERS = {

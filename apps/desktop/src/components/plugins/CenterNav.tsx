@@ -1,9 +1,10 @@
 /* 插件中心左边自己的一栏:发现 / 已安装 / 有更新 + 类别 + 从文件或地址安装。 */
 import { FileUp } from 'lucide-react'
 import { CATEGORY_LABEL, PLUGIN_CATEGORIES, type PluginCategory } from '@g-group/ui-core'
+import { useApp } from '@/ctx'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { COPY, TABS, type PluginTab } from './constants'
+import { COPY, COPY_LIVE, TABS, type PluginTab } from './constants'
 
 type Counts = { all: number; installed: number; updates: number; byCategory: Record<PluginCategory, number> }
 
@@ -13,11 +14,12 @@ export function CenterNav({ tab, inDetail, cat, counts, onTab, onCat, onSideload
   tab: PluginTab; inDetail: boolean; cat: PluginCategory | 'all'; counts: Counts
   onTab: (t: PluginTab) => void; onCat: (c: PluginCategory | 'all') => void; onSideload: () => void
 }) {
+  const live = useApp((s) => s.backend.mode === 'connected')
   return (
     <aside className="flex w-[228px] shrink-0 flex-col border-r border-line bg-side px-3 pb-3 pt-4">
       <div className="px-2.5 pb-3">
         <div className="text-[16px] font-semibold tracking-[-0.01em]">{COPY.centerTitle}</div>
-        <div className="mt-0.5 text-pretty text-[12px] leading-snug text-fg-3">{COPY.centerDesc}</div>
+        <div className="mt-0.5 text-pretty text-[12px] leading-snug text-fg-3">{live ? COPY_LIVE.centerDesc : COPY.centerDesc}</div>
       </div>
       <div role="tablist" aria-label="插件" aria-orientation="vertical" className="space-y-0.5">
         {TABS.map(({ k, label, icon: I, badge }) => {
@@ -52,7 +54,7 @@ export function CenterNav({ tab, inDetail, cat, counts, onTab, onCat, onSideload
         <FileUp className="h-4 w-4 shrink-0 text-fg-2" />
         <span className="min-w-0"><span className="block text-[13px] font-medium">{COPY.sideloadTitle}</span><span className="block whitespace-nowrap text-[11px] font-normal text-fg-3">{COPY.sideloadHint}</span></span>
       </Button>
-      <p className="mt-2 px-1 text-pretty text-[11px] leading-snug text-fg-3">{COPY.demoNote}</p>
+      <p data-testid="plg-mode-note" className="mt-2 px-1 text-pretty text-[11px] leading-snug text-fg-3">{live ? COPY_LIVE.liveNote : COPY.demoNote}</p>
     </aside>
   )
 }

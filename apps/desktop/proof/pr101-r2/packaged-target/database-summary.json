@@ -1,0 +1,217 @@
+{
+  "database_sha256": "3333ff9ae492b171400a3f0e385f107b684415e84ae8e110b51bb829fe95a302",
+  "events": [
+    {
+      "session": "room:dm-c-mwhruqyq-1",
+      "seq": 1,
+      "sender_kind": "user",
+      "sender_id": "me",
+      "body": {
+        "kind": "message",
+        "text": "请只回复这六个字符:DM_OK1,不要做别的事。"
+      }
+    },
+    {
+      "session": "room:dm-c-mwhruqyq-1",
+      "seq": 2,
+      "sender_kind": "contact",
+      "sender_id": "c-mwhruqyq-1",
+      "body": {
+        "kind": "message",
+        "text": "DM_OK1"
+      }
+    },
+    {
+      "session": "room:dm-c-mwhruqyq-1",
+      "seq": 3,
+      "sender_kind": "user",
+      "sender_id": "me",
+      "body": {
+        "kind": "message",
+        "text": "这是一张截图，后续无需回复。"
+      }
+    },
+    {
+      "session": "room:g-mwhrw7k9-2",
+      "seq": 1,
+      "sender_kind": "user",
+      "sender_id": "me",
+      "body": {
+        "kind": "message",
+        "text": "@小林 请只回复这八个字符:GRP_OK_2,不要做别的事。"
+      }
+    },
+    {
+      "session": "room:g-mwhrw7k9-2",
+      "seq": 2,
+      "sender_kind": "contact",
+      "sender_id": "c-mwhruqyq-1",
+      "body": {
+        "kind": "message",
+        "text": "GRP_OK_2"
+      }
+    },
+    {
+      "session": "room:g-mwhrw7k9-2",
+      "seq": 3,
+      "sender_kind": "user",
+      "sender_id": "me",
+      "body": {
+        "kind": "message",
+        "text": "@小林 请只回复这些字符:TARGET_OK_3,不要做别的事。"
+      }
+    },
+    {
+      "session": "room:g-mwhrw7k9-2",
+      "seq": 4,
+      "sender_kind": "contact",
+      "sender_id": "c-mwhruqyq-1",
+      "body": {
+        "kind": "message",
+        "text": "TARGET_OK_3"
+      }
+    }
+  ],
+  "messages": [
+    {
+      "room_id": "dm-c-mwhruqyq-1",
+      "seq": 1,
+      "mentions": [],
+      "attachments": []
+    },
+    {
+      "room_id": "dm-c-mwhruqyq-1",
+      "seq": 2,
+      "mentions": [],
+      "attachments": []
+    },
+    {
+      "room_id": "dm-c-mwhruqyq-1",
+      "seq": 3,
+      "mentions": [],
+      "attachments": [
+        "att-864a8fc658f83f27955a8693168dbf8a"
+      ]
+    },
+    {
+      "room_id": "g-mwhrw7k9-2",
+      "seq": 1,
+      "mentions": [
+        {
+          "id": "c-mwhrw4l9-3",
+          "source": "manual"
+        }
+      ],
+      "attachments": []
+    },
+    {
+      "room_id": "g-mwhrw7k9-2",
+      "seq": 2,
+      "mentions": [],
+      "attachments": []
+    },
+    {
+      "room_id": "g-mwhrw7k9-2",
+      "seq": 3,
+      "mentions": [
+        {
+          "id": "c-mwhrw4l9-3",
+          "source": "manual"
+        }
+      ],
+      "attachments": []
+    },
+    {
+      "room_id": "g-mwhrw7k9-2",
+      "seq": 4,
+      "mentions": [],
+      "attachments": []
+    }
+  ],
+  "runs": [
+    {
+      "id": "run-mwhrur5e-2",
+      "contactId": "c-mwhruqyq-1",
+      "roomId": "dm-c-mwhruqyq-1",
+      "sourceSeq": 1,
+      "status": "done",
+      "upstream": "fengshao1227/deepseek-v4.1-flash",
+      "startedAt": 1794743354354,
+      "endedAt": 1794743417181,
+      "reasonClass": null,
+      "raw": null
+    },
+    {
+      "id": "run-mwhrw6i4-1",
+      "contactId": "c-mwhruqyq-1",
+      "roomId": "dm-c-mwhruqyq-1",
+      "sourceSeq": 3,
+      "status": "done",
+      "upstream": "fengshao1227/deepseek-v4.1-flash",
+      "startedAt": 1794743420908,
+      "endedAt": 1794743455836,
+      "reasonClass": null,
+      "raw": null
+    },
+    {
+      "id": "run-mwhrwym3-4",
+      "contactId": "c-mwhruqyq-1",
+      "roomId": "g-mwhrw7k9-2",
+      "sourceSeq": 1,
+      "status": "done",
+      "upstream": "fengshao1227/deepseek-v4.1-flash",
+      "startedAt": 1794743457339,
+      "endedAt": 1794743510105,
+      "reasonClass": null,
+      "raw": null
+    },
+    {
+      "id": "run-mwhrw7o9-3",
+      "contactId": "c-mwhrw4l9-3",
+      "roomId": "g-mwhrw7k9-2",
+      "sourceSeq": 1,
+      "status": "orphaned",
+      "upstream": "fengshao1227/deepseek-v4.1-flash",
+      "startedAt": 1794743422425,
+      "endedAt": 1794743921659,
+      "reasonClass": null,
+      "raw": null
+    },
+    {
+      "id": "run-mwhs6yvg-2",
+      "contactId": "c-mwhruqyq-1",
+      "roomId": "g-mwhrw7k9-2",
+      "sourceSeq": 3,
+      "status": "done",
+      "upstream": "fengshao1227/deepseek-v4.1-flash",
+      "startedAt": 1794743924236,
+      "endedAt": 1794743983107,
+      "reasonClass": null,
+      "raw": null
+    },
+    {
+      "id": "run-mwhs6wvz-1",
+      "contactId": "c-mwhrw4l9-3",
+      "roomId": "g-mwhrw7k9-2",
+      "sourceSeq": 1,
+      "status": "done",
+      "upstream": "fengshao1227/deepseek-v4.1-flash",
+      "startedAt": 1794743921663,
+      "endedAt": 1794744010030,
+      "reasonClass": null,
+      "raw": null
+    },
+    {
+      "id": "run-mwhs8t2p-3",
+      "contactId": "c-mwhrw4l9-3",
+      "roomId": "g-mwhrw7k9-2",
+      "sourceSeq": 1,
+      "status": "done",
+      "upstream": "fengshao1227/deepseek-v4.1-flash",
+      "startedAt": 1794744010033,
+      "endedAt": 1794744201684,
+      "reasonClass": null,
+      "raw": null
+    }
+  ]
+}

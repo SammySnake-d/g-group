@@ -9,7 +9,7 @@ import { useApp } from '@/ctx'
 import { collapse } from '@/config/motion'
 import { Slider } from '@/components/ui/slider'
 import { Field, NativeSelect } from '@/components/ui/field'
-import { EFFORT_LIST, HARNESS_LIST, VENDOR_LABEL, harnessLabel, liveComputes, modelLabel, modelOption } from '@/modelConfig'
+import { EFFORT_LIST, HARNESS_LIST, harnessLabel, liveComputes, modelLabel } from '@/modelConfig'
 import { CM } from './constants'
 import { asContact, changeNote, cleanSlot, fromPerson, sameDraft, type Draft } from './logic'
 import { ComputeModeList } from './ComputeModeList'
@@ -17,6 +17,7 @@ import { EffectivePanel } from './EffectivePanel'
 import { MismatchFix } from './MismatchFix'
 import { StallSettings } from './StallSettings'
 import { SaveBar } from './SaveBar'
+import { ModelPicker } from './ModelPicker'
 
 const W = 'w-[230px]'
 
@@ -38,16 +39,19 @@ export function ContactModelSettings({ id }: { id: PersonId }) {
   const compute = gate.compute
   const dirty = !sameDraft(draft, base)
   const stallErr = draft.stall ? checkStall(draft.stall) : null
-  const canSave = dirty && gate.allowed && !stallErr
+  const computeUnchanged = draft.harness === base.harness && JSON.stringify(draft.computeModel) === JSON.stringify(base.computeModel)
+  const speakingOnly = !!s.catalog && !s.catalog.computeCapabilities && computeUnchanged
+  const computeOff = !!s.catalog && (s.catalog.state !== 'ready' || !s.catalog.computeCapabilities)
+  const canSave = dirty && (gate.allowed || speakingOnly) && !stallErr && s.catalog?.state !== 'error'
   const running = liveComputes(computes, id)
   const set = (patch: Partial<Draft>) => { setDraft((d) => ({ ...d, ...patch })); setNotice(null) }
   const setSlot = (mode: ModelSlot['mode'], model?: string) => set({ computeModel: cleanSlot(mode, model, draft.computeModel.effort) })
   const fix = (f: Fix) => { const c = applyFix(cm, f); set({ harness: c.harness, computeModel: c.computeModel }) }
-  const save = () => {
+  const save = async () => {
     if (!canSave) return
     const nt = nextTurn(asContact(id, base), cm, s, running.length)
     const note = changeNote(base, draft, s) + (nt ? '，下一轮生效' : '')
-    saveModels({ contacts: [{ id, patch: { model: draft.speakingModel, harness: draft.harness, computeModel: draft.computeModel, computeQuota: draft.quota, stall: draft.stall ?? undefined }, note }] })
+    if (!await saveModels({ contacts: [{ id, patch: { model: draft.speakingModel, ...(computeUnchanged ? {} : { harness: draft.harness, computeModel: draft.computeModel }), computeQuota: draft.quota, stall: draft.stall ?? undefined }, note }] })) return
     setBase(draft)
     setNotice(nt)
   }
@@ -68,12 +72,11 @@ export function ContactModelSettings({ id }: { id: PersonId }) {
         {/* ---- 左：配置 ---- */}
         <div className="min-w-0 space-y-3">
           <Field layout="inline" label={CM.talk} hint={CM.talkHint}>
-            <NativeSelect aria-label={CM.talk} data-testid="cm-talk" value={draft.speakingModel} onChange={(e) => set({ speakingModel: e.target.value })} className={W}>
-              {s.models.map((m) => <option key={m.id} value={m.id}>{m.label} · {VENDOR_LABEL[m.vendor] ?? m.vendor}</option>)}
-            </NativeSelect>
+            <ModelPicker s={s} label={CM.talk} testid="cm-talk" value={draft.speakingModel} onChange={(v) => set({ speakingModel: v })} />
           </Field>
-          <div className="border-t border-line pt-3">
+          <fieldset disabled={computeOff} className="border-t border-line pt-3">
             <div className="mb-2 text-[12px] font-medium text-fg-3">{CM.compute}</div>
+            {computeOff && <p className="mb-2 text-[12px] text-fg-3">网关没有提供 Harness 兼容声明，Compute 保留当前设置；可独立更换说话模型。</p>}
             <div className="space-y-2.5">
               <Field layout="inline" label={CM.harness}>
                 <NativeSelect aria-label="Compute Harness" data-testid="cm-harness" value={draft.harness} onChange={(e) => set({ harness: e.target.value })} className={W}>
@@ -86,9 +89,7 @@ export function ContactModelSettings({ id }: { id: PersonId }) {
                   onPick={(m) => setSlot(m, m === 'explicit' ? compute.model.value || s.defaultComputeModel : undefined)} />
                 {draft.computeModel.mode === 'explicit' && (
                   <Field layout="inline" label={CM.explicitModel} hint={CM.explicitHint} className="mt-2">
-                    <NativeSelect aria-label="单独指定的 Compute 模型" data-testid="cm-model" value={draft.computeModel.model ?? ''} onChange={(e) => setSlot('explicit', e.target.value)} invalid={!gate.allowed} className={W}>
-                      {s.models.map((m) => <option key={m.id} value={m.id}>{modelOption(m.id, s)}</option>)}
-                    </NativeSelect>
+                    <ModelPicker s={s} label="单独指定的 Compute 模型" testid="cm-model" value={draft.computeModel.model ?? ''} onChange={(v) => setSlot('explicit', v)} compute invalid={!gate.allowed} />
                   </Field>
                 )}
               </div>
@@ -102,15 +103,15 @@ export function ContactModelSettings({ id }: { id: PersonId }) {
                 <div className={`${W} px-1`}><Slider value={[draft.quota]} min={1} max={5} step={1} onValueChange={(v) => set({ quota: v[0] })} /></div>
               </Field>
             </div>
-          </div>
-          {gate.mismatch && (
+          </fieldset>
+          {gate.mismatch && !computeOff && (
             <MismatchFix testid="cm-mismatch" m={gate.mismatch} s={s} prefer={prevModel}
               onPin={(model) => fix({ kind: 'pin-model', contactId: id, model })} onHarness={(h) => fix({ kind: 'switch-harness', contactId: id, harness: h })} />
           )}
         </div>
 
         {/* ---- 右：生效值与继承链 ---- */}
-        <EffectivePanel name={p.name} cm={cm} s={s} speaking={resolveSpeaking(cm)} compute={compute} allowed={gate.allowed} dirty={dirty} running={running} />
+        <EffectivePanel name={p.name} cm={cm} s={s} speaking={resolveSpeaking(cm)} compute={compute} allowed={gate.allowed || speakingOnly} dirty={dirty} running={running} />
       </div>
 
       <StallSettings name={p.name} stall={draft.stall} error={stallErr} open={adv} onOpenChange={setAdv} onChange={(v) => set({ stall: v })} />
@@ -118,7 +119,7 @@ export function ContactModelSettings({ id }: { id: PersonId }) {
       <AnimatePresence initial={false}>
         {(dirty || notice) && (
           <motion.div key="save" {...collapse} className="overflow-hidden">
-            <SaveBar dirty={dirty} allowed={gate.allowed} stallErr={!!stallErr} canSave={canSave} notice={notice} s={s} cm={cm} name={p.name}
+            <SaveBar dirty={dirty} allowed={gate.allowed || speakingOnly} stallErr={!!stallErr} canSave={canSave} notice={notice} s={s} cm={cm} name={p.name}
               running={running.map((c) => `${c.model} · ${c.harness}`)} onRevert={() => { setDraft(base); setNotice(null) }} onSave={save} />
           </motion.div>
         )}

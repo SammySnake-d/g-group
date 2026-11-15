@@ -1,0 +1,6 @@
+[serial] 等别的测试跑完(/Users/snakesammy/.mirasim/assistants/deliverables/g-group-pr101-r2-astra/apps/desktop)…
+M-PASTE 按行为断言检出
+M-REMOVE 按行为断言检出
+M-DRAFT 按行为断言检出
+M-PREVIEW 按行为断言检出
+[serial] 结束,清掉残留进程 0 个

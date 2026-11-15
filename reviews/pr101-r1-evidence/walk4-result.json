@@ -1,0 +1,72 @@
+{
+  "head": "143f72d179fa0db9edc224be9232a1aa2b0ab250",
+  "model": "fengshao1227/deepseek-v4.1-flash",
+  "baseUrl": "http://127.0.0.1:3425",
+  "userData": "/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gg-pr101-ud-V6mgik",
+  "steps": [
+    {
+      "name": "首次打开",
+      "ok": true,
+      "ms": 52,
+      "note": "打包版 0.1.0;接入页初值 {\"url\":\"\",\"model\":\"\",\"modelPlaceholder\":\"claude-sonnet-4-6\",\"modelTag\":\"INPUT\"}",
+      "shot": "01-首次打开.png"
+    },
+    {
+      "name": "配 API 选模型",
+      "ok": true,
+      "ms": 172,
+      "note": "保存后宿主 connected / live",
+      "shot": "02-配 API 选模型.png"
+    },
+    {
+      "name": "添加联系人 小克",
+      "ok": true,
+      "ms": 665,
+      "note": "添加页模型说明:说话用全局默认的 fengshao1227/deepseek-v4.1-flash，Compute 继承全局（fengshao1227/deepseek-v4.1-flash）。加好以后在它的工作台「设置」里改。",
+      "shot": "03-添加联系人 小克.png"
+    },
+    {
+      "name": "私聊收到真实回复",
+      "ok": true,
+      "ms": 209961,
+      "note": "真实回复(210s):小克 助手 15:05 DM_OK1",
+      "shot": "04-私聊收到真实回复.png"
+    },
+    {
+      "name": "添加联系人 小林",
+      "ok": true,
+      "ms": 573,
+      "note": "添加页模型说明:说话用全局默认的 fengshao1227/deepseek-v4.1-flash，Compute 继承全局（fengshao1227/deepseek-v4.1-flash）。加好以后在它的工作台「设置」里改。",
+      "shot": "05-添加联系人 小林.png"
+    },
+    {
+      "name": "建群",
+      "ok": true,
+      "ms": 606,
+      "note": "审查群 (3) 3",
+      "shot": "06-建群.png"
+    },
+    {
+      "name": "群聊 @ 收到真实回复",
+      "ok": true,
+      "ms": 128262,
+      "note": "真实回复(128s):小克 助手 15:07 GRP_OK_2;回复方 data-from=c-mwhhlerj-1;群里对方消息共 1 条",
+      "shot": "07-群聊 @ 收到真实回复.png"
+    },
+    {
+      "name": "粘贴图片",
+      "ok": true,
+      "ms": 161,
+      "note": "粘贴后出现附件 attachment-image.png;disabled=true;title=image.png;里面有缩略图 img=0;输入框上方有待发预览=0",
+      "shot": "08-粘贴图片.png"
+    },
+    {
+      "name": "点开预览",
+      "ok": true,
+      "ms": 149,
+      "note": "预览出图 {\"w\":640,\"h\":400,\"complete\":true};点开后聊天栏还在=false(否=被带去了文件区整页)",
+      "shot": "09-点开预览.png"
+    }
+  ],
+  "pageErrors": []
+}

@@ -1,0 +1,9 @@
+绿:提交 22e7990d(修复),box2,2026-11-14 21:23
+Running 1 test using 1 worker
+(node:1829259) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[1/1] [electron] › e2e/parity-r2-replying.electron.spec.ts:65:1 › 群里两位联系人同时在回:各有一张正在回复卡;一位回完,另一位的卡和已有消息原样留着,列表不重刷不跳
+  1 passed (53.7s)
+[box] 截图已取回到 /Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/shots-r2/replying
+[box] 用了 box2;云端残留进程:0
+exit=0

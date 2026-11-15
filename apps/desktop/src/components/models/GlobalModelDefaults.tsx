@@ -15,6 +15,10 @@ import { DefaultsImpact } from './DefaultsImpact'
 import { ModelOverview } from './ModelOverview'
 import { BatchReplace } from './BatchReplace'
 import { FieldSwitch } from './FieldSwitch'
+import { ModelPicker } from './ModelPicker'
+import { loadModelCatalog } from '@/api/wire/settings'
+import { liveCtx } from '@/api/wire/live'
+import { useAppStore } from '@/store'
 
 const ROW = 'flex min-h-11 flex-col justify-center px-4 py-1.5'
 const SEL = 'w-[168px]'
@@ -29,16 +33,21 @@ export function GlobalModelDefaults() {
   useEffect(() => { setDraft(s); setFixes([]) }, [modelsRev]) // 任何一处保存过都从新的全局默认重新开始
 
   const contacts = modelContacts().map(toContactModels)
-  const plan = planDefaults(contacts, s, draft, fixes)
   const changed = DEFAULT_FIELDS.filter((k) => draft[k] !== s[k])
+  const rawPlan = planDefaults(contacts, s, draft, fixes)
+  // /models 不等于 Harness 能力表。只改说话模型时保留未改的 Compute，
+  // 不因缺能力元数据逼用户把原本的 Compute 换成演示模型。
+  const speakingOnly = !!s.catalog && !s.catalog.computeCapabilities && changed.every((k) => k === 'defaultSpeakingModel') && fixes.length === 0
+  const plan = speakingOnly ? { ...rawPlan, defaultsMismatch: null, canSave: rawPlan.mismatched.length === 0 } : rawPlan
+  const computeOff = !!s.catalog && (s.catalog.state !== 'ready' || !s.catalog.computeCapabilities)
   const dirty = changed.length > 0 || fixes.length > 0
   const setField = (k: DefaultField, v: string) => { setDraft((d) => ({ ...d, [k]: v })); setSavedN(null) }
   const addFix = (f: Fix) => setFixes((fs) => [...fs.filter((x) => x.contactId !== f.contactId), f])
-  const save = () => {
+  const save = async () => {
     if (!plan.canSave) return
     const settings: Partial<ModelSettings> = Object.fromEntries(changed.map((k) => [k, draft[k]]))
     const why = changed.map((k) => `${DEFAULT_FIELD_LABEL[k]}改成 ${draft[k]}`).join('、')
-    saveModels({
+    const saved = await saveModels({
       settings,
       contacts: plan.patched.map((c) => {
         const f = fixes.find((x) => x.contactId === c.id)!
@@ -46,7 +55,7 @@ export function GlobalModelDefaults() {
       }),
       toast: DEFAULTS.savedToast,
     })
-    setSavedN(plan.affected.length)
+    if (saved) setSavedN(plan.affected.length)
   }
   const computeWhere = (s.models.find((m) => m.id === draft.defaultComputeModel)?.harnesses ?? []).map(harnessLabel).join(' / ') || '没有 Harness'
 
@@ -54,29 +63,27 @@ export function GlobalModelDefaults() {
     <>
       <div className="mx-3 mb-3" data-testid="model-defaults">
         <div className="flex items-center px-1 pb-1.5 pt-2 text-[12px] font-medium text-fg-3"><span className="flex-1">{DEFAULTS.section}</span></div>
+        {s.catalog?.state === 'error' && <div data-testid="model-catalog-error" role="status" className="mb-2 rounded-lg bg-warm-soft px-3 py-2 text-[12.5px] text-fg-2">{s.catalog.reason}<Button variant="ghost" size="xs" onClick={() => void loadModelCatalog(liveCtx(useAppStore.getState, useAppStore.setState))}>重试读取目录</Button></div>}
+        {computeOff && <p className="mb-2 px-1 text-[12px] text-fg-3">Compute 保留当前值：网关目录没有声明 Harness 兼容能力；说话模型可独立设置。</p>}
         <div className="overflow-hidden rounded-xl bg-hover/60 [&>*+*]:border-t [&>*+*]:border-line">
-          <Field layout="inline" className={ROW} label={DEFAULT_FIELD_LABEL.defaultComputeModel} hint={`继承全局的联系人用它（${computeWhere} 能跑）`}>
-            <NativeSelect aria-label={DEFAULT_FIELD_LABEL.defaultComputeModel} data-testid="def-compute" value={draft.defaultComputeModel} onChange={(e) => setField('defaultComputeModel', e.target.value)} className={SEL} invalid={!!plan.defaultsMismatch}>
-              {s.models.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-            </NativeSelect>
+          <Field layout="inline" className={ROW} label={DEFAULT_FIELD_LABEL.defaultComputeModel} hint={computeOff ? '继承全局的联系人用它；尚无 Harness 兼容能力声明' : `继承全局的联系人用它（${computeWhere} 能跑）`}>
+            <ModelPicker s={s} label={DEFAULT_FIELD_LABEL.defaultComputeModel} testid="def-compute" value={draft.defaultComputeModel} onChange={(v) => setField('defaultComputeModel', v)} compute invalid={!!plan.defaultsMismatch} />
           </Field>
           <Field layout="inline" className={ROW} label={DEFAULT_FIELD_LABEL.defaultEffort} hint={DEFAULTS.effortHint}>
-            <NativeSelect aria-label={DEFAULT_FIELD_LABEL.defaultEffort} data-testid="def-effort" value={draft.defaultEffort} onChange={(e) => setField('defaultEffort', e.target.value)} className={SEL}>
+            <NativeSelect aria-label={DEFAULT_FIELD_LABEL.defaultEffort} data-testid="def-effort" disabled={computeOff} value={draft.defaultEffort} onChange={(e) => setField('defaultEffort', e.target.value)} className={SEL}>
               {EFFORT_LIST.map((e) => <option key={e} value={e}>{e}</option>)}
             </NativeSelect>
           </Field>
           <Field layout="inline" className={ROW} label={DEFAULT_FIELD_LABEL.defaultHarness} hint={DEFAULTS.harnessHint}>
-            <NativeSelect aria-label={DEFAULT_FIELD_LABEL.defaultHarness} data-testid="def-harness" value={draft.defaultHarness} onChange={(e) => setField('defaultHarness', e.target.value)} className={SEL} invalid={!!plan.defaultsMismatch}>
+            <NativeSelect aria-label={DEFAULT_FIELD_LABEL.defaultHarness} data-testid="def-harness" disabled={computeOff} value={draft.defaultHarness} onChange={(e) => setField('defaultHarness', e.target.value)} className={SEL} invalid={!!plan.defaultsMismatch}>
               {HARNESS_LIST.map((h) => <option key={h} value={h}>{harnessLabel(h)}</option>)}
             </NativeSelect>
           </Field>
           <Field layout="inline" className={ROW} label={DEFAULT_FIELD_LABEL.defaultSpeakingModel} hint={DEFAULTS.talkHint}>
-            <NativeSelect aria-label={DEFAULT_FIELD_LABEL.defaultSpeakingModel} data-testid="def-talk" value={draft.defaultSpeakingModel} onChange={(e) => setField('defaultSpeakingModel', e.target.value)} className={SEL}>
-              {s.models.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-            </NativeSelect>
+            <ModelPicker s={s} label={DEFAULT_FIELD_LABEL.defaultSpeakingModel} testid="def-talk" value={draft.defaultSpeakingModel} onChange={(v) => setField('defaultSpeakingModel', v)} />
           </Field>
           <Field layout="inline" className={ROW} label={DEFAULTS.review}><FieldSwitch defaultChecked /></Field>
-          <Button data-testid="open-batch" variant="ghost" size="md" onClick={() => setBatch(true)}
+          <Button data-testid="open-batch" variant="ghost" size="md" disabled={!!s.catalog && (s.catalog.state !== 'ready' || s.models.length < 2)} title={s.models.length < 2 ? '目录至少有两个模型才能批量替换' : undefined} onClick={() => setBatch(true)}
             className="h-auto min-h-11 w-full justify-start gap-3 rounded-none px-4 text-left text-[14px] font-normal text-fg active:scale-100">
             <ArrowRightLeft aria-hidden className="text-fg-2" /><span className="flex-1">{DEFAULTS.batch}</span><span className="text-[12.5px] text-fg-2">{DEFAULTS.batchHint}</span><ChevronRight aria-hidden className="text-fg-3" />
           </Button>

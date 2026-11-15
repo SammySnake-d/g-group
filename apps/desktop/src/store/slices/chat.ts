@@ -14,6 +14,8 @@ import { lens, type Slice } from '../state'
 
 type TextMsg = Extract<Msg, { k: 'text' }>
 type Draft = string | ((d: string) => string)
+/** 某位联系人正在某个会话里回复:从什么时候开始、在忙哪种(在看 / 在想 / 在写) */
+export type Replying = { who: PersonId; since: number; what: string }
 
 /** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 CHAT_CTX_KEYS */
 export interface ChatCtx {
@@ -65,9 +67,10 @@ export type ChatSlice = ChatCtx & {
   say: (cid: string, from: PersonId, text: string, delay?: number, extra?: Partial<TextMsg>) => void
   /** AC-46 已读位置:只由宿主推进、只进不退 */
   advanceRead: (cid: string, who: PersonId, upto?: string) => void
-  /** 联系人「正在回复」从什么时候开始(按会话;连上后端时由 contact.activity 推进,卡里显示真实时长) */
-  replyingSince: Record<string, number>
-  /** 连上后端:某位联系人在某个会话里正在回复(roomId=null 表示不在任何会话里忙了) */
+  /** 连上后端:各会话里正在回复的联系人,**一人一条**、按开始的先后排(由 contact.activity 推进,卡里显示真实时长)。
+   *  一个会话只留一个位置的话,后开始想的会顶掉先开始的,它回完又把位置清空——先开始的明明还在想,卡却没了(DM 3401) */
+  replying: Record<string, Replying[]>
+  /** 连上后端:某位联系人在某个会话里正在回复(roomId=null 表示不在任何会话里忙了)。只动这一位自己的那条 */
   setReplying: (who: PersonId, roomId: string | null, activity: string) => void
   /** 连上后端:以后端为准换掉这些消息上的表情回应 */
   putReactions: (m: Record<string, Record<string, PersonId[]>>) => void
@@ -76,8 +79,6 @@ export type ChatSlice = ChatCtx & {
   setUnreadAt: (m: Record<string, number>) => void
   /** 连上后端:把存着的草稿(文字 + 引用)放回输入框 */
   restoreDraft: (cid: string, text: string, quotes: QuoteRef[]) => void
-  /** 正在回复的是哪种忙(在看 / 在想 / 在写) */
-  replyingWhat: Record<string, string>
 }
 
 export const createChatSlice: Slice<ChatSlice> = (set, get) => {
@@ -97,8 +98,7 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
     editing: null,
     unreadAt: {},
     newFrom: {},
-    replyingSince: {},
-    replyingWhat: {},
+    replying: {},
 
     pushMsg: (m, cid) => {
       L.convs((cs) => cs.map((c) => (c.id === cid ? { ...c, messages: [...c.messages, m] } : c)))
@@ -175,12 +175,28 @@ export const createChatSlice: Slice<ChatSlice> = (set, get) => {
       L.quotes((all) => ({ ...all, [cid]: quotes }))
     },
     setReplying: (who, roomId, activity) => set((s) => {
+      const replying: Record<string, Replying[]> = {}
       const typing = { ...s.typing }
-      for (const [cid, p] of Object.entries(typing)) if (p === who && cid !== roomId) typing[cid] = null
-      if (!roomId) return { typing }
-      const same = s.typing[roomId] === who
-      typing[roomId] = who
-      return { typing, replyingSince: same ? s.replyingSince : { ...s.replyingSince, [roomId]: Date.now() }, replyingWhat: { ...s.replyingWhat, [roomId]: activity } }
+      let changed = false
+      /* 别的会话里这一位的那条拿掉(它的注意力挪走了,或这一轮结束了);别人的条目原样留着,连数组都不换 */
+      for (const [cid, list] of Object.entries(s.replying)) {
+        if (cid === roomId) { replying[cid] = list; continue }
+        const rest = list.filter((r) => r.who !== who)
+        if (rest.length === list.length) { replying[cid] = list; continue }
+        changed = true
+        if (rest.length) replying[cid] = rest
+        typing[cid] = rest[0]?.who ?? null
+      }
+      if (roomId) {
+        const list = s.replying[roomId] ?? []
+        const cur = list.find((r) => r.who === who)
+        /* 已经在回:只换「在忙哪种」,开始时刻和排位不动;新开始的排到最后 */
+        if (!cur) { replying[roomId] = [...list, { who, since: Date.now(), what: activity }]; changed = true }
+        else if (cur.what !== activity) { replying[roomId] = list.map((r) => (r === cur ? { ...r, what: activity } : r)); changed = true }
+        /* 会话列表那行「X 正在输入…」:写最先开始的那一位 */
+        typing[roomId] = replying[roomId]?.[0]?.who ?? null
+      }
+      return changed ? { replying, typing } : s
     }),
     putReactions: (m) => L.reactions((r) => ({ ...r, ...m })),
     setUnreadAt: (m) => {

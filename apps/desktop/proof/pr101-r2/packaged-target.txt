@@ -1,0 +1,13 @@
+失败 建群及指定联系人真实回复 expect(locator).toBeVisible() failed
+
+Locator: getByTestId('chat-column').locator('[data-msg][data-from="c-mwhrw4l9-3"]').filter({ hasText: 'TARGET_OK_3' }).first()
+Expected: visible
+Timeout: 360000ms
+Error: element(s) not found
+
+Call log:
+  - Expect "toBeVisible" getByTestId('chat-column').locator('[data-msg][data-from="c-mwhrw4l9-3"]').filter({ hasText: 'TARGET_OK_3' }).first() with timeout 360000ms
+  - waiting for getByTestId('chat-column').locator('[data-msg][data-from="c-mwhrw4l9-3"]').filter({ hasText: 'TARGET_OK_3' }).first()
+
+{"passed":7,"total":8,"pageErrors":0}
+[serial] 结束,清掉残留进程 0 个

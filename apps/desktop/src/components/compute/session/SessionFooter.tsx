@@ -10,7 +10,7 @@ import type { ComputeState } from '../StatusChip'
    ② 只读条：Compute 不在群里说话(AC-03)，要改要求去找派它的联系人；这里不是输入框，是「回群里 @XX」。 */
 
 function StateIcon({ state }: { state: ComputeState }) {
-  if (state.key === 'stopping') return <Square aria-hidden className="pulse-dot size-3 shrink-0 fill-fg-3 text-fg-3" />
+  if (state.key === 'stopping') return <Square aria-hidden className="size-3 shrink-0 fill-fg-3 text-fg-3" />
   if (state.key === 'running' || state.key === 'stalled' || state.key === 'human') return <span className="spin-ring" aria-hidden />
   if (state.tone === 'err') return <TriangleAlert aria-hidden className="size-3.5 shrink-0 text-err" />
   if (state.key === 'stopped') return <Square aria-hidden className="size-3 shrink-0 fill-fg-3 text-fg-3" />

@@ -3,7 +3,7 @@
 // 消息 id = 会话 id#seq:全局唯一、重读也不变。任务卡(task-status)照设计画成两样:联系人说的那句(派活记录的正文)
 // 和挂在它下面的 Compute 那一行(id 后缀 ~c)——Compute 是联系人派出去的执行者,不在聊天里说话,这一行只写标题、阶段、耗时。
 // 其余卡片按正文显示。转发来的画成转发卡,附件画在气泡下;私聊回退撤下的消息不再显示,回退那条记成一行灰字。
-// 表情回应以后端为准写进 reactions;联系人「正在回复」(contact.activity)写进 typing,卡里只写真实的活动和时长,不编步骤。
+// 表情回应以后端为准写进 reactions;联系人「正在回复」(contact.activity)写进 replying(每个会话里一人一条),卡里只写真实的活动和时长,不编步骤。
 import type { MessageView, MemberRef } from '@g-group/api-contract'
 import { people, type Msg, type PersonId, type QuoteRef, type ReadMarks } from '@/data'
 import { loadDrafts, onDraftUpdated } from './drafts'
@@ -190,9 +190,9 @@ export const messagesWiring = defineWiring({
 
 /** 发送:正文里 @ 到的在场联系人记成 mentions(回复自动带上的那位记 auto);引用和主回复按序号带上;附件按 ref 带上。
  *  先乐观显示,回包到了换成后端那条;发不出去就撤下乐观那条、把话放回输入框,并说明原因 */
-export async function sendLive(w: WireCtx, roomId: string, text: string, quotes: readonly QuoteRef[], attachments: readonly { ref: string; name: string; mime: string; bytes: number }[] = []) {
+export async function sendLive(w: WireCtx, roomId: string, text: string, quotes: readonly QuoteRef[], attachments: readonly { ref: string; name: string; mime: string; bytes: number }[] = [], command?: { name: string; args: Record<string, string> }): Promise<boolean> {
   const conv = w.get().convs.find((c) => c.id === roomId)
-  if (!conv) return
+  if (!conv) return false
   const cid = actionId()
   const reply = quotes.find((q) => q.reply)
   const mentions = conv.members
@@ -207,9 +207,11 @@ export async function sendLive(w: WireCtx, roomId: string, text: string, quotes:
     ...(quotedSeqs.length ? { quotedSeqs } : {}),
     ...(replyToSeq !== null ? { replyToSeq } : {}),
     ...(attachments.length ? { attachments: attachments.map((a) => a.ref) } : {}),
+    ...(command ? { command } : {}),
   })
-  if (r.ok) { putMessages(w, roomId, [r.value]); return }
+  if (r.ok) { putMessages(w, roomId, [r.value]); return true }
   w.get().setConvs((cs) => cs.map((c) => (c.id === roomId ? { ...c, messages: c.messages.filter((m) => idOf(m) !== localId(cid)) } : c)))
   if (text && w.get().active === roomId && !w.get().drafts[roomId]) w.get().setDraft(text)
   w.get().toast(`没发出去：${r.error.message}`)
+  return false
 }
