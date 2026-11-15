@@ -52,10 +52,11 @@ test("R1-F01 派活任务卡继承触发消息的因果根", async () => {
   const source = messages.find((m) => m.text === "开始派活");
   const card = messages.find((m) => m.text === "接了任务:测试任务");
   assert.ok(source && card, "来源与任务卡必须实际落盘");
-  const sourceRoots = host.loopGuard.rootsOf(group.id, source.seq);
-  assert.ok(sourceRoots.length > 0, "来源消息必须有因果根");
-  assert.deepEqual(sourceRoots, [`message:${group.id}:${source.seq}`], "来源根必须明确指向触发消息");
-  assert.deepEqual(host.loopGuard.rootsOf(group.id, card.seq), sourceRoots, "任务卡必须继承来源因果根");
+  const expectedRoots = [`message:${group.id}:${source.seq}`];
+  const cardRoots = host.loopGuard.rootsOf(group.id, card.seq);
+  assert.ok(cardRoots.length > 0, "任务卡必须有因果根");
+  assert.deepEqual(cardRoots, expectedRoots, "任务卡必须继承触发消息因果根");
+  assert.deepEqual(host.loopGuard.rootsOf(group.id, source.seq), expectedRoots, "来源根必须明确指向触发消息");
 });
 
 test("R1-F02 Compute 交付消息继承触发任务的因果根", async () => {
@@ -64,7 +65,11 @@ test("R1-F02 Compute 交付消息继承触发任务的因果根", async () => {
   const source = messages.find((m) => m.text === "开始派活");
   const delivery = messages.find((m) => m.text === "已经交付结果");
   assert.ok(source && delivery, "来源与交付消息必须实际落盘");
-  assert.deepEqual(host.loopGuard.rootsOf(group.id, delivery.seq), host.loopGuard.rootsOf(group.id, source.seq));
+  const expectedRoots = [`message:${group.id}:${source.seq}`];
+  const deliveryRoots = host.loopGuard.rootsOf(group.id, delivery.seq);
+  assert.ok(deliveryRoots.length > 0, "交付消息必须有因果根");
+  assert.deepEqual(deliveryRoots, expectedRoots, "交付消息必须继承触发消息因果根");
+  assert.deepEqual(host.loopGuard.rootsOf(group.id, source.seq), expectedRoots, "来源根必须明确指向触发消息");
 });
 
 test("任务因果根实际持久化，宿主重启后 Compute 事件仍继承来源", async () => {
@@ -72,11 +77,17 @@ test("任务因果根实际持久化，宿主重启后 Compute 事件仍继承�
   const task = host.listTasks({})[0];
   const source = host.listMessages(group.id, {}).messages.find((m) => m.text === "开始派活");
   assert.ok(task && source);
+  const expectedRoots = [`message:${group.id}:${source.seq}`];
   await host.close();
   const resumed = new Host({ file, mind, maxDeferMs: 2 }); hosts.push(resumed);
-  assert.deepEqual(resumed.loopGuard.taskRoots(task.id), resumed.loopGuard.rootsOf(group.id, source.seq));
+  const taskRoots = resumed.loopGuard.taskRoots(task.id);
+  assert.ok(taskRoots.length > 0, "重启后任务必须保留因果根");
+  assert.deepEqual(taskRoots, expectedRoots, "重启后任务根必须指向原始触发消息");
   const f: Inbound = { kind: "compute", roomId: group.id, taskId: task.id, computeId: "c-restarted", signal: "completed", summary: "完成", at: "2026-11-16T00:00:00.000Z" };
-  assert.deepEqual(resumed.loopGuard.rootsFor([f], group.id), resumed.loopGuard.rootsOf(group.id, source.seq));
+  const eventRoots = resumed.loopGuard.rootsFor([f], group.id);
+  assert.ok(eventRoots.length > 0, "重启后 Compute 事件必须有因果根");
+  assert.deepEqual(eventRoots, expectedRoots, "重启后 Compute 事件必须继承任务来源根");
+  assert.deepEqual(resumed.loopGuard.rootsOf(group.id, source.seq), expectedRoots, "重启后来源根必须指向触发消息");
 });
 
 test("R1-F06 别的会话用户输入不能重置本会话的派生根", () => {
