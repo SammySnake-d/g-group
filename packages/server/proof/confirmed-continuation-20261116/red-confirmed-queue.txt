@@ -1,0 +1,34 @@
+✖ AC-15 停止确认前的同任务续接须真排队:确认释放后授予新租约且不丢续接 (2.523292ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 225.90875
+
+✖ failing tests:
+
+test at packages/server/src/stop-confirmation.test.ts:194:1
+✖ AC-15 停止确认前的同任务续接须真排队:确认释放后授予新租约且不丢续接 (2.523292ms)
+  AssertionError [ERR_ASSERTION]: 实际确认释放后应唤醒先前被拦截的续接
+  + actual - expected
+
+  + []
+  - [
+  -   'task'
+  - ]
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-confirmed-continuation.lXXyh3MG/repo/packages/server/src/stop-confirmation.test.ts:204:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.start (node:internal/test_runner/test:1096:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'task' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

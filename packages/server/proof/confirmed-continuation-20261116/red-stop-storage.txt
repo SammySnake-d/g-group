@@ -1,0 +1,20 @@
+✖ AC-23 失败卡已提交但停止标记落盘失败:原租约仍未知,用户 retry 不得复用 (24.511458ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 236.28325
+
+✖ failing tests:
+
+test at packages/server/src/stop-storage-failure.test.ts:20:1
+✖ AC-23 失败卡已提交但停止标记落盘失败:原租约仍未知,用户 retry 不得复用 (24.511458ms)
+  TypeError: host.db.exec is not a function
+      at TestContext.<anonymous> (file:///private/tmp/gg-confirmed-continuation.lXXyh3MG/repo/packages/server/src/stop-storage-failure.test.ts:41:13)
+      at runNextTicks (node:internal/process/task_queues:65:5)
+      at process.processTimers (node:internal/timers:538:9)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)

@@ -1,0 +1,35 @@
+✖ scriptedCompute haltOnStop:取消自己的长等待,生产队列真结束后才确认停止 (3.250708ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 154.003833
+
+✖ failing tests:
+
+test at packages/server/src/fakes-quiesce.test.ts:66:1
+✖ scriptedCompute haltOnStop:取消自己的长等待,生产队列真结束后才确认停止 (3.250708ms)
+  AssertionError [ERR_ASSERTION]: 必须取消真实挂起的替身等待,不能弱化 busy 判断
+  + actual - expected
+
+    {
+  +   ok: false,
+  +   reason: '这一轮还没有确认终结',
+  +   remaining: []
+  -   killed: 0,
+  -   ok: true
+    }
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-confirmed-continuation.lXXyh3MG/repo/packages/server/src/fakes-quiesce.test.ts:77:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: { ok: false, reason: '这一轮还没有确认终结', remaining: [] },
+    expected: { ok: true, killed: 0 },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

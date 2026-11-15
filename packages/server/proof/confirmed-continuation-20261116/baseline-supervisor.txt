@@ -1,0 +1,4 @@
+正在执行 baseline-desk
+baseline-desk exit=1
+正在执行 baseline-intent
+baseline-intent exit=1

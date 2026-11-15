@@ -1,0 +1,13 @@
+{
+  "source_head": "d7c2cf7f3d11ed88fa9c6cae15f9456b77790cd4",
+  "log": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/stop-guard-d7c2cf7f-20261116/test.log",
+  "sha256": "ea7fda9702d21ff7c6b80207640dd49833af71e55aa21c38a2efe9a38cd8f249",
+  "observed_counts": {
+    "tests": 1685,
+    "pass": 1683,
+    "fail": 2
+  },
+  "runner_owner": "root; full run not repeated by this agent",
+  "exit_path": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/stop-guard-d7c2cf7f-20261116/test.exit",
+  "exit": 1
+}

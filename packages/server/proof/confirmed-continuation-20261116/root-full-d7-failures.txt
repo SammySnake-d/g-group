@@ -1,0 +1,70 @@
+not ok 1255 - 活里写了慢慢:停止后不再吐剩下的进度,任务落到已取消;可以按台账重跑
+  ---
+  duration_ms: 20357.346334
+  type: 'test'
+  location: '/private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/desk-fake.test.ts:78:1'
+  failureType: 'testCodeFailure'
+  error: '等不到:已取消'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    until (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/desk-fake.test.ts:28:9)
+    async TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/desk-fake.test.ts:83:21)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# (node:99299) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AC-24 / AC-37 ② 草稿按会话独立保存,切到别的会话不串;重启宿主后正文、主回复、引用、@ 与版本原样还在
+ok 1256 - AC-24 / AC-37 ② 草稿按会话独立保存,切到别的会话不串;重启宿主后正文、主回复、引用、@ 与版本原样还在
+  ---
+  duration_ms: 21.319542
+  type: 'test'
+  ...
+# Subtest: drafts.save 按 draftVer CAS:旧版本写入返回 conflict 并带当前草稿,不静默覆盖;版本不前进与不合格草稿被拒
+ok 1257 - drafts.save 按 draftVer CAS:旧版本写入返回 conflict 并带当前草稿,不静默覆盖;版本不前进与不合格草稿被拒
+  ---
+  duration_ms: 15.240458
+  type: 'test'
+  ...
+# Subtest: 草稿不是消息:反复保存不产生会话事件、不进待处理输入、不触发联系人轮次;对照:真发一条就触发
+
+not ok 1323 - AC-15 消息 m 已落实进工作区:先停旧执行器(任务不取消),停止确认后才让它回到 消息 m 之前并重做 消息 n
+  ---
+  duration_ms: 102.378709
+  type: 'test'
+  location: '/private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/intent.test.ts:579:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    停稳之后只续接一次
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-stop-confirm-guards.nlnf5Rri/repo/packages/server/src/intent.test.ts:599:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: AC-15 改挂到别的会话的任务、改挂到自己都被拒
+ok 1324 - AC-15 改挂到别的会话的任务、改挂到自己都被拒
+  ---
+  duration_ms: 86.160209
+  type: 'test'
+  ...
+# (node:99968) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+
+  ...
+1..1685
+# tests 1685
+# suites 0
+# pass 1683
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 52116.974875

@@ -1,0 +1,28 @@
+✖ AC-15 消息 m 已落实进工作区:先停旧执行器(任务不取消),停止确认后才让它回到 消息 m 之前并重做 消息 n (116.898042ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 321.72
+
+✖ failing tests:
+
+test at packages/server/src/intent.test.ts:579:1
+✖ AC-15 消息 m 已落实进工作区:先停旧执行器(任务不取消),停止确认后才让它回到 消息 m 之前并重做 消息 n (116.898042ms)
+  AssertionError [ERR_ASSERTION]: 停稳之后只续接一次
+
+  0 !== 1
+
+      at TestContext.<anonymous> (file:///private/tmp/gg-confirmed-continuation.lXXyh3MG/repo/packages/server/src/intent.test.ts:599:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
