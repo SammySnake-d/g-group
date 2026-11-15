@@ -1,0 +1,83 @@
+apps/desktop/scripts/pr101-p0-walk.mjs
+  s_be862bfe4ebd7a::t_254cedf48173c1 1-163
+apps/desktop/src/components/messages/cards/MsgFiles.tsx
+  s_be862bfe4ebd7a::t_cb18ad90e3eb02 7-11,43-54
+  s_be862bfe4ebd7a::t_9cbf756d4db1f1 26-27,31
+  s_be862bfe4ebd7a::t_1852d6d450c0d6 55
+apps/desktop/src/modelConfig.ts
+  s_be862bfe4ebd7a::t_d524b527a37f11 11
+apps/desktop/src/store/slices/plugins.ts
+  s_be862bfe4ebd7a::t_95febc3f1521db 15,18,79
+apps/desktop/src/app/composer/Toolbar.tsx
+  s_be862bfe4ebd7a::t_cb18ad90e3eb02 78
+  s_be862bfe4ebd7a::t_89996dcad3d98c 17,74
+apps/desktop/electron/app-ipc.ts
+  s_be862bfe4ebd7a::t_d524b527a37f11 2,40-66
+  s_be862bfe4ebd7a::t_9cbf756d4db1f1 34
+  s_be862bfe4ebd7a::t_fa0a14dcce7737 67
+apps/desktop/src/api/app-shell-types.ts
+  s_be862bfe4ebd7a::t_d524b527a37f11 32-35,62,70
+apps/desktop/electron/backend.ts
+  s_be862bfe4ebd7a::t_9cbf756d4db1f1 12-14,56-57,70,95-103,116
+apps/desktop/src/api/wire/settings.ts
+  s_be862bfe4ebd7a::t_d524b527a37f11 3-5,13-39,43,72-73
+apps/desktop/src/api/wire/chat-ops.ts
+  s_be862bfe4ebd7a::t_89996dcad3d98c 137-142,150,153-154,157
+apps/desktop/e2e/parity-r2-pano.electron.spec.ts
+  s_be862bfe4ebd7a::t_95febc3f1521db 70,83-86
+apps/desktop/src/api/wire/messages.ts
+  s_be862bfe4ebd7a::t_89996dcad3d98c 193,195,210,212,216
+apps/desktop/src/components/Composer.tsx
+  s_be862bfe4ebd7a::t_9cbf756d4db1f1 99,105
+  s_be862bfe4ebd7a::t_5cd2ba40015565 18,60
+  s_be862bfe4ebd7a::t_89996dcad3d98c 16-17,19-20,32-59,61-62,68,75,108,112,128
+  s_be862bfe4ebd7a::t_3f65092b971018 100-104
+apps/desktop/src/components/files/LiveFile.tsx
+  s_be862bfe4ebd7a::t_cb18ad90e3eb02 23-24,31
+apps/desktop/src/components/models/ContactModelSettings.tsx
+  s_be862bfe4ebd7a::t_e14be0aa447b9a 12,122
+  s_be862bfe4ebd7a::t_40aeacc2ad8d87 44,77,79,106-107,114
+  s_be862bfe4ebd7a::t_f873a7b7dd4313 20,42-43,45,50,54,75,92
+apps/desktop/src/components/messages/cards/ImagePreview.tsx
+  s_be862bfe4ebd7a::t_5a034b6ffd0193 1-13
+apps/desktop/src/components/messages/cards/FailureModelHint.tsx
+  s_be862bfe4ebd7a::t_e14be0aa447b9a 1-17
+apps/desktop/src/components/models/BatchReplace.tsx
+  s_be862bfe4ebd7a::t_5cd2ba40015565 29-30,35-36,40,45
+apps/desktop/src/app/composer/PendingImages.tsx
+  s_be862bfe4ebd7a::t_5a034b6ffd0193 1-27
+apps/desktop/src/app/composer/imageDrafts.ts
+  s_be862bfe4ebd7a::t_5a034b6ffd0193 1-74
+apps/desktop/src/index.css
+  s_be862bfe4ebd7a::t_e14be0aa447b9a 13-18
+apps/desktop/src/components/models/GlobalModelDefaults.tsx
+  s_be862bfe4ebd7a::t_f873a7b7dd4313 18-21,37-42,46,50,58,66-67,70,73,78,83
+  s_be862bfe4ebd7a::t_5cd2ba40015565 69,86
+apps/desktop/src/components/models/ModelPicker.tsx
+  s_be862bfe4ebd7a::t_3f65092b971018 8-9
+  s_be862bfe4ebd7a::t_d524b527a37f11 1-7,10-11
+apps/desktop/src/components/messages/Row.tsx
+  s_be862bfe4ebd7a::t_e14be0aa447b9a 19,75
+apps/desktop/src/app/composer/hostCommands.ts
+  s_be862bfe4ebd7a::t_95febc3f1521db 1-27
+apps/desktop/src/app/composer/useSlash.ts
+  s_be862bfe4ebd7a::t_95febc3f1521db 8-11,15,45-52,61-62,72-77
+apps/desktop/src/store/slices/models.ts
+  s_be862bfe4ebd7a::t_f873a7b7dd4313 17,43-44,53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "33b517f5dfe97784980ad0151c8ce9be5929dab0",
+  "prompts": {},
+  "sessions": {
+    "s_be862bfe4ebd7a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1de94-42ad-7200-a40f-a6f126eca979",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
