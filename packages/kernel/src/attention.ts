@@ -121,16 +121,20 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
     s.timer = timers.set(() => {
       s.timer = null;
       s.timerDue = null;
-      start(id);
+      if (s.running) s.dirty = "now";
+      else start(id);
     }, ms);
   };
 
   const continueSlot = (id: string, s: Slot) => {
     if (stopped) return settleWaiters();
     const pending = s.dirty;
+    if (pending === "now") {
+      start(id);
+      return;
+    }
     if (s.jobs.length) return startJob(id);
-    if (pending === "now") start(id);
-    else if (pending === "batch") {
+    if (pending === "batch") {
       s.dirty = null;
       if (s.timer === null) arm(id, s, opts.maxDeferMs, "batch");
     }
@@ -148,7 +152,7 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
     const controller = new AbortController();
     s.controller = controller;
     // 不因调用方超时而释放单飞:只有实际推理 Promise 已结束才让下一轮进入。
-    s.running = (async () => {
+    s.running = Promise.resolve().then(async () => {
       try { job.resolve(await job.run(controller.signal)); }
       catch (e) { job.reject(e); }
       finally {
@@ -156,7 +160,7 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
         s.controller = null;
         continueSlot(id, s);
       }
-    })();
+    });
   };
 
   const start = (id: string): void => {
