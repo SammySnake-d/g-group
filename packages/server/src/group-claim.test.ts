@@ -139,3 +139,31 @@ test("群里只 @ 一人:未被点名联系人仍进注意回合但不能越权�
   assert.deepEqual(rejections(host), [{ kind: "reply", error: `这条消息 @ 的是别的联系人,不是你(${g.id} #${user.seq})` }]);
   await host.close();
 });
+
+test("同批未点名群请求和点名别人的请求:联系人可引用并回复前者", async () => {
+  let bId = "";
+  let first = 0;
+  let seen = false;
+  const mind = (): ContactMind => ({
+    async round(input) {
+      const earlier = input.fresh.find((f) => f.kind === "message" && f.seq === first);
+      const later = input.fresh.find((f) => f.kind === "message" && f.text === "只问小林");
+      if (input.contact.id === bId && earlier?.kind === "message" && later) {
+        seen = true;
+        return { actions: [{ kind: "reply", roomId: earlier.roomId, text: "我的进度是已完成", replyToSeq: earlier.seq }], stateNote: null };
+      }
+      return { actions: [], stateNote: null };
+    },
+  });
+  const host = new Host({ file: file(), mind, maxDeferMs: 50 });
+  const a = host.createContact({ name: "小林" });
+  const b = host.createContact({ name: "小克" });
+  bId = b.id;
+  const group = host.createGroup("项目群", [{ kind: "contact", id: a.id }, { kind: "contact", id: b.id }]);
+  first = host.send({ roomId: group.id, clientActionId: "all", text: "大家汇报一下各自进度" }).seq;
+  host.send({ roomId: group.id, clientActionId: "a", text: "只问小林", mentions: [{ id: a.id, source: "manual" }] });
+  await settle(host, { drained: () => true });
+  assert.equal(seen, true, "两条请求同批交给小克");
+  assert.ok(host.listMessages(group.id, {}).messages.some((m) => m.sender.id === b.id && m.replyToSeq === first && m.text === "我的进度是已完成"), "后一条对小林的点名不能吞掉小克对前一条的回复");
+  await host.close();
+});
