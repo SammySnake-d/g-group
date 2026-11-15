@@ -290,6 +290,23 @@ test("已删除副本的同路径新目录不能继承旧副本的依赖授权",
   }
 }));
 
+test("原依赖目录被替换后不能沿用旧副本的来源授权", () => inTemp((dir) => {
+  const root = path.join(dir, "repo");
+  fixture(root);
+  const work = freshCopy(root);
+  const oldTmp = process.env.TMPDIR;
+  try {
+    fs.renameSync(path.join(root, "node_modules"), path.join(root, "old-node_modules"));
+    fs.mkdirSync(path.join(root, "node_modules"));
+    process.env.TMPDIR = dir;
+    assert.throws(() => freshCopy(work), /来源|依赖|替换/i);
+  } finally {
+    if (oldTmp === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = oldTmp;
+    fs.rmSync(work, { recursive: true, force: true });
+  }
+}));
+
 test("未知来源的外部包软链不能扩大依赖挂载范围", () => inTemp((dir) => {
   const root = path.join(dir, "repo"), other = path.join(dir, "outside");
   fixture(root);
