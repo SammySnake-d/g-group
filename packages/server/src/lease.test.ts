@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { after, test } from "node:test";
 import type { QuiesceResult } from "@g-group/adapter-cc-compute";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
@@ -256,6 +257,46 @@ test("AC-23 重启:已确认停止并归还的租约不复活,后继可开工", 
     afterRestart.send({ roomId: dm, clientActionId: "two", text: "帮我再写一份报告" });
     await until(() => lr.compute.spawned.length === 2, "新任务可用已释放槽位");
     assert.equal(afterRestart.taskDoc(first.id).value.task.state, "T10_Cancelled");
+  } finally {
+    if (before) await before.close();
+    if (afterRestart) await afterRestart.close();
+    lr.compute.close();
+  }
+});
+
+test("AC-23 升级旧库:未知原槽位的 T9 保守拦截相关个人和原群,不堵其他群", async () => {
+  const f = file();
+  const lr = longRunning();
+  let before: Host | undefined;
+  let afterRestart: Host | undefined;
+  try {
+    const options = { file: f, mind: () => scriptedMind(), compute: () => lr.compute.adapter, maxDeferMs: 5, personalComputeSlots: 1 };
+    before = new Host(options);
+    const c = before.createContact({ name: "旧库联系人" });
+    const other = before.createContact({ name: "其他人" });
+    before.updateContact(other.id, { computeSlots: 0 });
+    const ga = before.createGroup("旧任务原群", [{ kind: "contact", id: c.id }, { kind: "contact", id: other.id }]);
+    const gb = before.createGroup("无关群", [{ kind: "contact", id: other.id }]);
+    before.updateRoom(ga.id, { tempComputeSlots: 1 });
+    before.updateRoom(gb.id, { tempComputeSlots: 1 });
+    before.send({ roomId: ga.id, clientActionId: "old", text: "帮我写一份报告", mentions: [{ id: c.id, source: "manual" }] });
+    await until(() => lr.compute.spawned.length === 1 && taskOf(before!, ga.id)?.state === "T3_Running", "旧任务开工");
+    const task = taskOf(before, ga.id);
+    before.taskDecision(task.id, "cancel", "old-stop");
+    await until(() => lr.asked.length === 1, "旧任务停止待确认");
+    lr.finish(lr.asked[0]!, { ok: false, reason: "停止无法确认", remaining: [] });
+    await until(() => before!.taskView(before!.taskDoc(task.id).value).waitingFor?.includes("停止未确认") === true, "旧任务未确认");
+    await before.close();
+    before = undefined;
+    // 旧版本只有任务和 Compute 数据,没有任何精确槽位记录;模拟升级前真实状态。
+    const oldDb = new DatabaseSync(f);
+    try { oldDb.exec("DROP TABLE IF EXISTS gg_compute_leases"); } finally { oldDb.close(); }
+    afterRestart = new Host(options);
+    assert.equal(afterRestart.taskDoc(task.id).value.task.state, "T9_StopRequested");
+    assert.ok("queued" in afterRestart.quota.acquire({ taskId: "other-personal", contactId: c.id, roomId: `dm-${c.id}`, isGroup: false }), "原联系人个人槽有可能仍被占用");
+    assert.ok("queued" in afterRestart.quota.acquire({ taskId: "other-group-a", contactId: other.id, roomId: ga.id, isGroup: true }), "原群临时槽也有可能仍被占用");
+    const independent = afterRestart.quota.acquire({ taskId: "other-group-b", contactId: other.id, roomId: gb.id, isGroup: true });
+    assert.ok("granted" in independent && independent.granted.scope === `group:${gb.id}`, "不无故阻断无关群");
   } finally {
     if (before) await before.close();
     if (afterRestart) await afterRestart.close();
