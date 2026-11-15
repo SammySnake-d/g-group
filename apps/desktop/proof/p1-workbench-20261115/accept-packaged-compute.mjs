@@ -32,22 +32,30 @@ try {
   await win.getByTestId('composer').press('Enter')
   const line = win.getByTestId('chat-column').locator('[data-testid^="compute-line-"]').first()
   await expect(line).toBeVisible({ timeout: 240000 })
-  result.checks.push('真实联系人派出 Compute')
+  result.checks.push(contactMode === 'fake' ? '规则联系人派出真实 Compute' : '真实联系人派出 Compute')
   console.log('REAL_FEISHAO_DISPATCH_OK')
   const taskId = (await line.getAttribute('data-testid')).slice('compute-line-'.length)
   result.taskId = taskId
-  result.runsAtDispatch = await win.evaluate((taskId) => window.gg.invoke('runs.list', {}).then((r) => r.ok ? r.value.runs.filter((x) => x.taskId === taskId) : r), taskId)
-  // 显式绑定实际运行模型；不是只核对配置里的默认值。
-  assert(result.runsAtDispatch.every((r) => !r.model || r.model === model))
-  await expect(line).toHaveAttribute('data-state', 'done', { timeout: 540000 })
+  await expect.poll(async () => win.evaluate((taskId) => window.gg.invoke('tasks.progress', { taskId }).then((r) => r.ok && r.value.progress.some((x) => x.kind === 'completed')), taskId), { timeout: 360000, intervals: [1000, 3000, 5000] }).toBe(true)
+  const task = await win.evaluate((taskId) => window.gg.invoke('tasks.get', { taskId }), taskId)
+  assert(task.ok)
+  result.taskState = task.value.state
+  result.modelAttempts = task.value.modelAttempts
+  result.modelSnapshot = task.value.modelSnapshot
+  assert(result.modelAttempts.length && result.modelAttempts.every((attempt) => attempt.model === model), '实际尝试账本必须只使用指定 feishao 模型')
+  const run = task.value.computeRuns.find((x) => x.status === 'completed')
+  assert(run && run.model === model, '真实 Compute run 必须完成且使用指定模型')
   const file = path.join(dir, 'gg-data', 'compute', taskId, 'feishao-compute.txt')
   assert.equal(readFileSync(file, 'utf8').trim(), 'FEISHAO_COMPUTE_OK')
-  result.checks.push('真实 Compute 完成且文件内容吻合')
+  result.checks.push('真实 Compute 上游完成、进度 completed、交付内容吻合、实际尝试模型匹配')
   await line.click()
   await win.getByTestId('cview-activity').click()
-  await expect(win.getByTestId('activity')).toContainText('完成')
+  result.computeLineState = await line.getAttribute('data-state')
+  result.activity = await win.getByTestId('activity').innerText()
   await win.screenshot({ path: path.join(out, '真实Compute完成.png') })
-  result.checks.push('打包版打开真实 Compute 过程')
+  result.acceptanceComplete = ['T8a_Delivered', 'T8_Accepted'].includes(task.value.state)
+  if (!result.acceptanceComplete) result.remainingGap = `Compute run 已完成，但任务仍处于 ${task.value.state}; 桌面状态 ${result.computeLineState}`
+  result.checks.push('打包版查看 Compute 过程页')
   result.ok = true
 } catch (e) {
   result.ok = false
@@ -75,5 +83,5 @@ try {
   if (result.backend?.ok) result.backend = result.backend.value.backend
   result.finishedAt = new Date().toISOString()
   writeFileSync(path.join(out, 'result.json'), JSON.stringify(result, null, 2))
-  console.log(result.ok ? 'REAL_FEISHAO_COMPUTE_OK' : `REAL_FEISHAO_COMPUTE_FAILED: ${result.failure}`)
+  console.log(result.ok ? result.acceptanceComplete ? 'REAL_FEISHAO_COMPUTE_ACCEPTED' : 'REAL_FEISHAO_COMPUTE_PARTIAL' : `REAL_FEISHAO_COMPUTE_FAILED: ${result.failure}`)
 }

@@ -17,9 +17,10 @@
 - 应用壳与恢复 Electron 5 项通过：首次接入、真实目录形状、更新校验、旧请求隔离 / 凭据归属、故障卡原因 / 保存拒绝 / 新填模型 follow-speaking / 手动重试。
 - preview.2 打包版职责与预设保存重启通过；preview.3 为最终后续包。
 - preview.3 真实目录读取并明确选择 feishao，真实私聊 / 群聊 @ 回复、联系人台账、公告与置顶通过。模型始终是 `fengshao1227/deepseek-v4.1-flash`；没有用 hy4 或 workbuddy 模型做本轮真实请求。
+- preview.3 真实 Compute 发起后，feishao 模型生成指定文件且逐字校验成功，`gg_compute.status=completed`、Compute run completed、`tasks.progress` 收到真实 `completed`，尝试账本模型也是指定 feishao ID。**但宿主父任务文档仍是 `T3_Running` 且没有交付状态**，安装包计算行保持 running；所以 Compute 用户闭环未通过。仅把文件生成 / 子运行完成记实，不将任务状态或 UI 误记成功。
 - `real-preview3` 首次验收脚本在 setup 保存触发页面重载时过早点了添加联系人，超时；`real-preview3-r2` 等待实际 load 后重跑完整链路通过。初次失败证据保留，不把它当作产品成功。
 
-复跑脚本与截图 / result.json 在 `../proof/p1-workbench-20261115/`。凭据从本机 `.claude/settings.json` 读取到内存，只写本轮临时 AppConfig（0600），退出后删除；证据不含凭据与完整用户数据。
+复跑脚本与截图 / result.json 在 `../proof/p1-workbench-20261115/`。凭据从本机 `.claude/settings.json` 读取到内存，只写本轮临时 AppConfig（0600），退出后删除；证据不含令牌。真实计算回执仅保留任务 / run 状态、尝试模型和中性测试文件。
 
 ## 仍关闭
 
