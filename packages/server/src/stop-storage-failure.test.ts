@@ -56,3 +56,42 @@ test("AC-23 失败卡已提交但停止标记落盘失败:原租约仍未知,用
     await host.close();
   }
 });
+
+test("AC-23 停止标记落盘失败后仍须真核验:确认成功才释放,合法 retry 仍可续接", async () => {
+  let confirm!: () => void;
+  const confirmed = new Promise<void>((resolve) => { confirm = resolve; });
+  const reports: string[] = [];
+  const compute = scriptedCompute({
+    script: () => [{ kind: "started", sessionId: "s", resumed: false }],
+    quiesce: async () => { await confirmed; return { ok: true, killed: 0 }; },
+  });
+  const host = new Host({
+    file: path.join(root, "confirmed.db"), mind: () => scriptedMind(), compute: () => compute.adapter,
+    personalComputeSlots: 1, maxDeferMs: 5,
+    onReport: (what, data) => { reports.push(`${what}:${String(data)}`); },
+  });
+  try {
+    const contact = host.createContact({ name: "落盘失败后的可信核验" });
+    const dm = host.openDm(contact.id).id;
+    host.send({ roomId: dm, clientActionId: "start", text: "帮我写一份报告" });
+    await until(() => host.listTasks({ roomId: dm })[0]?.state === "T3_Running");
+    const task = host.listTasks({ roomId: dm })[0]!;
+    const lease = host.quota.leaseOf(task.id)!;
+    host.db.store.db.exec("CREATE TRIGGER fail_stop_storage BEFORE UPDATE ON gg_compute_leases WHEN NEW.stopping = 1 BEGIN SELECT RAISE(ABORT, 'stop-storage-test'); END");
+    compute.emit({ computeId: compute.spawned[0]!.computeId, kind: "failed", reason: "cyber_policy: flagged by safeguards", code: 1, signal: null, violations: [] });
+    await until(() => reports.some((report) => report.includes("stop-storage-test")));
+    assert.equal(host.quota.leaseOf(task.id)?.leaseId, lease.leaseId, "可信确认前仍持有原租约");
+    assert.equal(host.quota.leaseOf(task.id)?.stopping, true);
+    confirm();
+    await until(() => host.quota.leaseOf(task.id) === undefined);
+    const failure = host.listMessages(dm, {}).messages.find((message) => message.card?.kind === "failure")!;
+    host.cardAct({ roomId: dm, seq: failure.seq, cardId: failure.card!.cardId, actionId: "retry", clientActionId: "retry" });
+    await until(() => compute.resumed.length === 1);
+    assert.equal(compute.resumed[0]!.computeId, compute.spawned[0]!.computeId);
+    assert.ok(host.quota.leaseOf(task.id)?.leaseId !== lease.leaseId, "可信核验后的续接必须重新领租约");
+  } finally {
+    confirm();
+    compute.close();
+    await host.close();
+  }
+});
