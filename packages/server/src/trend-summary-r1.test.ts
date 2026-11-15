@@ -108,6 +108,40 @@ test("R1-01 生成期间撤回后解析失败:不把来源原文写进失败错�
   assert.equal(JSON.stringify(h.db.store.db.prepare("SELECT error,items FROM gg_summaries").all()).includes(marker), false, "持久字段不能保留原文");
 });
 
+test("R1-01 模型错误回显来源时:失败错误不存或向本端删除的用户暴露原文", async () => {
+  const marker = "NEUTRAL_THROW_PR97_R1";
+  const h = host({ mind: () => summaryMind(() => { throw new Error(`模型拒绝:${marker}`); }) });
+  const a = h.createContact({ name: "摘要员" });
+  const g = h.createGroup("群", [{ kind: "contact", id: a.id }]);
+  h.send({ roomId: g.id, clientActionId: "ask", text: "每 1 条消息总结一次" });
+  await idle(h);
+  const msg = h.send({ roomId: g.id, clientActionId: "secret", text: marker });
+  await idle(h);
+  const svc = createService(h);
+  const s = val<Page>(await svc.handle("summaries.list", { roomId: g.id })).summaries[0]!;
+  assert.equal(s.status, "failed");
+  assert.equal(JSON.stringify(s).includes(marker), false, "上游错误也不能保存来源正文");
+  val(await svc.handle("messages.delete", { roomId: g.id, seqs: [msg.seq], clientActionId: "hide" }));
+  assert.equal(JSON.stringify(await svc.handle("summaries.get", { summaryId: s.summaryId })).includes(marker), false);
+});
+
+test("R1-01 旧版遗留失败错误在撤回时同事务清空,重启后不可恢复", async () => {
+  const marker = "NEUTRAL_LEGACY_PR97_R1";
+  const h = host({ mind: () => summaryMind((i) => [{ kind: "reply", roomId: i.fresh[0]!.roomId, replyToSeq: null, text: "- 无来源" }]) });
+  const a = h.createContact({ name: "摘要员" });
+  const g = h.createGroup("群", [{ kind: "contact", id: a.id }]);
+  h.send({ roomId: g.id, clientActionId: "ask", text: "每 1 条消息总结一次" });
+  await idle(h);
+  const msg = h.send({ roomId: g.id, clientActionId: "secret", text: marker });
+  await idle(h);
+  const s = val<Page>(await createService(h).handle("summaries.list", { roomId: g.id })).summaries[0]!;
+  h.db.store.db.prepare("UPDATE gg_summaries SET error = ? WHERE id = ?").run(marker, s.summaryId);
+  h.retractMessage(g.id, msg.seq);
+  const row = h.db.store.db.prepare("SELECT error FROM gg_summaries WHERE id = ?").get(s.summaryId);
+  assert.equal(JSON.stringify(row).includes(marker), false, "撤回事务清理旧记录的错误");
+  assert.equal(JSON.stringify(h.getSummary(s.summaryId)).includes(marker), false);
+});
+
 test("R1-02 同终点不同联系人:limit=1 按 nextCursor 翻页不重不漏", async () => {
   const h = host({ mind: () => summaryMind() });
   const a = h.createContact({ name: "甲" });
