@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: C96-R1-01 API_KEY-only 与 AUTH_TOKEN 都经 runner 和 driver 传给宿主,无关环境不透传
+ok 1 - C96-R1-01 API_KEY-only 与 AUTH_TOKEN 都经 runner 和 driver 传给宿主,无关环境不透传
+  ---
+  duration_ms: 0.689917
+  type: 'test'
+  ...
+# Subtest: C96-R1-02 仅 output、仅 context、两者、空值与缺省分别穿透,非法值由宿主拒绝
+ok 2 - C96-R1-02 仅 output、仅 context、两者、空值与缺省分别穿透,非法值由宿主拒绝
+  ---
+  duration_ms: 0.872792
+  type: 'test'
+  ...
+# Subtest: C96-R1-03 实际 65536/983010 档在两级环境、宿主配置与 manifest 中原样保留
+ok 3 - C96-R1-03 实际 65536/983010 档在两级环境、宿主配置与 manifest 中原样保留
+  ---
+  duration_ms: 0.163458
+  type: 'test'
+  ...
+# Subtest: C96-R1-04 standin 忽略真实预算变化:指纹与续跑身份不变,真实模式与凭据对照不回退
+ok 4 - C96-R1-04 standin 忽略真实预算变化:指纹与续跑身份不变,真实模式与凭据对照不回退
+  ---
+  duration_ms: 0.317916
+  type: 'test'
+  ...
+# Subtest: C96-R1-05 禁网下真实 runner CLI 经子进程和宿主传递 65536 及 manifest
+ok 5 - C96-R1-05 禁网下真实 runner CLI 经子进程和宿主传递 65536 及 manifest
+  ---
+  duration_ms: 1275.2725
+  type: 'test'
+  ...
+# Subtest: G6CFG-01 driver keeps explicit output and context settings, including invalid values for host rejection
+ok 6 - G6CFG-01 driver keeps explicit output and context settings, including invalid values for host rejection
+  ---
+  duration_ms: 0.523209
+  type: 'test'
+  ...
+# Subtest: G6CFG-02 runner child environment carries speaking settings without copying unrelated host state
+ok 7 - G6CFG-02 runner child environment carries speaking settings without copying unrelated host state
+  ---
+  duration_ms: 0.137833
+  type: 'test'
+  ...
+# Subtest: G6CFG-03 both budgets enter fingerprints and resume identity, but credentials do not
+ok 8 - G6CFG-03 both budgets enter fingerprints and resume identity, but credentials do not
+  ---
+  duration_ms: 0.714667
+  type: 'test'
+  ...
+# Subtest: G6CFG-04 real-mode driver host sends the inherited cap to both dialogue and memory checks
+ok 9 - G6CFG-04 real-mode driver host sends the inherited cap to both dialogue and memory checks
+  ---
+  duration_ms: 263.497375
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1926.656792

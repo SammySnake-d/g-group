@@ -1,0 +1,244 @@
+TAP version 13
+# (node:40822) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: C96-R1-01 API_KEY-only 与 AUTH_TOKEN 都经 runner 和 driver 传给宿主,无关环境不透传
+not ok 1 - C96-R1-01 API_KEY-only 与 AUTH_TOKEN 都经 runner 和 driver 传给宿主,无关环境不透传
+  ---
+  duration_ms: 1.479125
+  type: 'test'
+  location: '/private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config-r1.test.ts:22:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - '65536'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '65536'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config-r1.test.ts:30:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: C96-R1-02 仅 output、仅 context、两者、空值与缺省分别穿透,非法值由宿主拒绝
+not ok 2 - C96-R1-02 仅 output、仅 context、两者、空值与缺省分别穿透,非法值由宿主拒绝
+  ---
+  duration_ms: 1.464417
+  type: 'test'
+  location: '/private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config-r1.test.ts:38:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    
+    undefined !== {}
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config-r1.test.ts:56:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: C96-R1-03 实际 65536/983010 档在两级环境、宿主配置与 manifest 中原样保留
+not ok 3 - C96-R1-03 实际 65536/983010 档在两级环境、宿主配置与 manifest 中原样保留
+  ---
+  duration_ms: 0.545833
+  type: 'test'
+  location: '/private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config-r1.test.ts:69:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   undefined,
+    +   undefined
+    -   '65536',
+    -   '983010'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '65536'
+    1: '983010'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config-r1.test.ts:74:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: C96-R1-04 standin 忽略真实预算变化:指纹与续跑身份不变,真实模式与凭据对照不回退
+not ok 4 - C96-R1-04 standin 忽略真实预算变化:指纹与续跑身份不变,真实模式与凭据对照不回退
+  ---
+  duration_ms: 0.133875
+  type: 'test'
+  location: '/private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config-r1.test.ts:80:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    
+    undefined !== {}
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config-r1.test.ts:85:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: C96-R1-05 禁网下真实 runner CLI 经子进程和宿主传递 65536 及 manifest
+not ok 5 - C96-R1-05 禁网下真实 runner CLI 经子进程和宿主传递 65536 及 manifest
+  ---
+  duration_ms: 1613.628292
+  type: 'test'
+  location: '/private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config-r1.test.ts:99:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + undefined
+    - {
+    -   GG_SPEAKING_CONTEXT_WINDOW: '983010',
+    -   GG_SPEAKING_MAX_OUTPUT_TOKENS: '65536'
+    - }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    GG_SPEAKING_MAX_OUTPUT_TOKENS: '65536'
+    GG_SPEAKING_CONTEXT_WINDOW: '983010'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config-r1.test.ts:152:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# (node:40823) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: G6CFG-01 driver keeps explicit output and context settings, including invalid values for host rejection
+not ok 6 - G6CFG-01 driver keeps explicit output and context settings, including invalid values for host rejection
+  ---
+  duration_ms: 0.75575
+  type: 'test'
+  location: '/private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config.test.ts:15:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - '9216'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '9216'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config.test.ts:17:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: G6CFG-02 runner child environment carries speaking settings without copying unrelated host state
+not ok 7 - G6CFG-02 runner child environment carries speaking settings without copying unrelated host state
+  ---
+  duration_ms: 0.148625
+  type: 'test'
+  location: '/private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config.test.ts:22:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - '9216'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '9216'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config.test.ts:24:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: G6CFG-03 both budgets enter fingerprints and resume identity, but credentials do not
+not ok 8 - G6CFG-03 both budgets enter fingerprints and resume identity, but credentials do not
+  ---
+  duration_ms: 0.495375
+  type: 'test'
+  location: '/private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config.test.ts:30:1'
+  failureType: 'testCodeFailure'
+  error: 'GG_SPEAKING_MAX_OUTPUT_TOKENS'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'c02d037096a2723a8597f889e6dbf3b9'
+  actual: 'c02d037096a2723a8597f889e6dbf3b9'
+  operator: 'notStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config.test.ts:36:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: G6CFG-04 real-mode driver host sends the inherited cap to both dialogue and memory checks
+not ok 9 - G6CFG-04 real-mode driver host sends the inherited cap to both dialogue and memory checks
+  ---
+  duration_ms: 275.979542
+  type: 'test'
+  location: '/private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config.test.ts:43:1'
+  failureType: 'testCodeFailure'
+  error: 'dialogue cap'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-pr96-rework/packages/server/proof/g6/runtime-config.test.ts:54:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 0
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1831.222917

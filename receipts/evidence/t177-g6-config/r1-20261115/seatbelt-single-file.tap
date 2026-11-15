@@ -1,0 +1,45 @@
+### packages/server/proof/g6/runtime-config-r1.test.ts
+TAP version 13
+# (node:28903) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: C96-R1-01 API_KEY-only 与 AUTH_TOKEN 都经 runner 和 driver 传给宿主,无关环境不透传
+ok 1 - C96-R1-01 API_KEY-only 与 AUTH_TOKEN 都经 runner 和 driver 传给宿主,无关环境不透传
+  ---
+  duration_ms: 0.615292
+  type: 'test'
+  ...
+# Subtest: C96-R1-02 仅 output、仅 context、两者、空值与缺省分别穿透,非法值由宿主拒绝
+ok 2 - C96-R1-02 仅 output、仅 context、两者、空值与缺省分别穿透,非法值由宿主拒绝
+  ---
+  duration_ms: 0.849958
+  type: 'test'
+  ...
+# Subtest: C96-R1-03 实际 65536/983010 档在两级环境、宿主配置与 manifest 中原样保留
+ok 3 - C96-R1-03 实际 65536/983010 档在两级环境、宿主配置与 manifest 中原样保留
+  ---
+  duration_ms: 0.16025
+  type: 'test'
+  ...
+# Subtest: C96-R1-04 standin 忽略真实预算变化:指纹与续跑身份不变,真实模式与凭据对照不回退
+ok 4 - C96-R1-04 standin 忽略真实预算变化:指纹与续跑身份不变,真实模式与凭据对照不回退
+  ---
+  duration_ms: 0.302208
+  type: 'test'
+  ...
+# Subtest: C96-R1-05 禁网下真实 runner CLI 经子进程和宿主传递 65536 及 manifest
+ok 5 - C96-R1-05 禁网下真实 runner CLI 经子进程和宿主传递 65536 及 manifest
+  ---
+  duration_ms: 1221.855834
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1361.378208
+
+{"exitOk":true,"passed":[{"file":"packages/server/proof/g6/runtime-config-r1.test.ts","name":"C96-R1-01 API_KEY-only 与 AUTH_TOKEN 都经 runner 和 driver 传给宿主,无关环境不透传"},{"file":"packages/server/proof/g6/runtime-config-r1.test.ts","name":"C96-R1-02 仅 output、仅 context、两者、空值与缺省分别穿透,非法值由宿主拒绝"},{"file":"packages/server/proof/g6/runtime-config-r1.test.ts","name":"C96-R1-03 实际 65536/983010 档在两级环境、宿主配置与 manifest 中原样保留"},{"file":"packages/server/proof/g6/runtime-config-r1.test.ts","name":"C96-R1-04 standin 忽略真实预算变化:指纹与续跑身份不变,真实模式与凭据对照不回退"},{"file":"packages/server/proof/g6/runtime-config-r1.test.ts","name":"C96-R1-05 禁网下真实 runner CLI 经子进程和宿主传递 65536 及 manifest"}],"failed":[]}

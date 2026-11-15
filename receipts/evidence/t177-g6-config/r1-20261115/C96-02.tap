@@ -1,0 +1,34 @@
+TAP version 13
+# Subtest: C96-R1-02 仅 output、仅 context、两者、空值与缺省分别穿透,非法值由宿主拒绝
+not ok 1 - C96-R1-02 仅 output、仅 context、两者、空值与缺省分别穿透,非法值由宿主拒绝
+  ---
+  duration_ms: 1.300625
+  type: 'test'
+  location: '/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gg96-mutations-bA5ev4/tree/packages/server/proof/g6/runtime-config-r1.test.ts:38:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200000 !== 983010
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 983010
+  actual: 200000
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gg96-mutations-bA5ev4/tree/packages/server/proof/g6/runtime-config-r1.test.ts:55:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 165.738292
