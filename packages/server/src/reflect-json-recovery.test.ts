@@ -123,3 +123,17 @@ test("未经压缩原文在撤回后不随回退上下文重新发给联系人",
     assert.doesNotMatch(text(x.fake.seen[2]!), /\n删\n/);
   } finally { await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
 });
+
+test("联系人移出群之后,该群待压缩原文不进入其私聊上下文", async () => {
+  const x = setup(["不是 JSON 对象", " ", valid]);
+  try {
+    const group = x.host.createGroup("实验群", [{ kind: "contact", id: x.c.id }]);
+    x.host.send({ roomId: group.id, clientActionId: "1", text: "群内专属原文标记", mentions: [{ id: x.c.id, source: "manual" }] });
+    await settle(x.host);
+    x.host.removeMember(group.id, { kind: "contact", id: x.c.id });
+    x.host.send({ roomId: x.dm.id, clientActionId: "2", text: "私聊继续" });
+    await settle(x.host);
+    assert.doesNotMatch(x.requests[1]!.blocks.map((b) => b.text).join("\n"), /群内专属原文标记/);
+    assert.doesNotMatch(text(x.fake.seen[2]!), /群内专属原文标记/);
+  } finally { await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
+});
