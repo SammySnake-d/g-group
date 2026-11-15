@@ -98,7 +98,11 @@ export class QuotaTable {
   acquire(r: AcquireRequest): AcquireResult {
     const held = this.leases.find((l) => l.taskId === r.taskId);
     if (held && this.recovered.has(r.taskId)) return { queued: "上次执行器停止未确认,不能复用原槽位" };
-    if (held?.stopping) return { queued: "原执行器停止未确认,不能复用原槽位" };
+    if (held?.stopping) return this.change(() => {
+      const reason = "原执行器停止未确认,不能复用原槽位";
+      if (!this.waiters.some((waiter) => waiter.taskId === r.taskId)) this.waiters.push(Object.freeze({ ...r, reason }));
+      return { queued: reason };
+    });
     if (held) return { granted: held, reused: true };
     if (this.uncertain.some((u) => u.taskId === r.taskId)) return { queued: "旧任务的占用槽位未知,不能复用" };
     const waiting = this.waiters.find((w) => w.taskId === r.taskId);
