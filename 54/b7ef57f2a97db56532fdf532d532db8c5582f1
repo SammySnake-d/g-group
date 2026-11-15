@@ -1,0 +1,70 @@
+packages/server/proof/b2-latency-20261116/continuation-20261116/probe-system-transmission-20261116.mjs
+  s_125fc13e4dc62e::t_e335cda374136d 1-30
+packages/server/src/response-before-reflect.test.ts
+  s_125fc13e4dc62e::t_22f97c5b3091c8 41,106-145
+  s_125fc13e4dc62e::t_b8d0d4c8964dbd 42-74
+  s_125fc13e4dc62e::t_cb56a9eae77fa9 1-40
+  s_125fc13e4dc62e::t_9e58f573435c27 146-168,171-189,192-196
+  s_125fc13e4dc62e::t_7c20fefc066596 169-170
+  s_125fc13e4dc62e::t_49519d06ea4cbb 190-191
+  s_125fc13e4dc62e::t_5f6595d336c9b8 75-105
+  s_125fc13e4dc62e::t_bd37a418bd160b 201,218,229-231,240
+  s_125fc13e4dc62e::t_9c69ad5209f055 197-200,202-217,219-228,232-239,241-247
+packages/server/proof/b2-latency-20261116/continuation-20261116/README.md
+  s_125fc13e4dc62e::t_7fcdf0ebf61ba1 1-23,25-36
+  s_125fc13e4dc62e::t_eb885ddaca0864 24
+packages/adapter-pi-contact/src/compact.test.ts
+  s_125fc13e4dc62e::t_882502438c0cd7 91
+packages/server/proof/b2-latency-20261116/continuation-20261116/host-measurements.json
+  s_125fc13e4dc62e::t_e335cda374136d 1-486
+packages/server/proof/b2-latency-20261116/continuation-20261116/reflect-json-schema-chat.json
+  s_125fc13e4dc62e::t_e335cda374136d 1-60
+packages/server/proof/b2-latency-20261116/continuation-20261116/direct-same-prompt.json
+  s_125fc13e4dc62e::t_e335cda374136d 1-15
+packages/server/proof/b2-latency-20261116/README.md
+  s_125fc13e4dc62e::t_57928da8ada31b 3-4
+packages/server/src/host.ts
+  s_125fc13e4dc62e::t_a66bc576198deb 255,257,2503-2505,2507-2508,2514,2816
+  s_125fc13e4dc62e::t_1c7ec43544ff50 2588
+  s_125fc13e4dc62e::t_5ab106ec7ea3f4 2813
+  s_125fc13e4dc62e::t_969e130c2a9db2 2809-2810,2812
+  s_125fc13e4dc62e::t_c82009f89e05cf 1617,2806-2808,2811,2814,2817-2818,2820,2822-2827,2915,3185-3189,4786
+  s_125fc13e4dc62e::t_c1f774257d46ba 2490-2502,2506,2509-2510,2515-2545,2549-2555
+  s_125fc13e4dc62e::t_aa9a5e226baede 248-250,252-254,256,258-261
+  s_125fc13e4dc62e::t_7d18919497fe39 251,562-563,2819,2821
+  s_125fc13e4dc62e::t_51c2d5bf97ead8 411,2437,2439,2465,2469,2475,2487
+  s_125fc13e4dc62e::t_62e1db7bc9b41b 2421-2435,2511-2513,2546-2548
+packages/server/proof/b2-latency-20261116/continuation-20261116/probe-reflect-json-schema-chat-20261116.mjs
+  s_125fc13e4dc62e::t_e335cda374136d 1-18
+packages/server/proof/b2-latency-20261116/continuation-20261116/system-transmission.json
+  s_125fc13e4dc62e::t_e335cda374136d 1-58
+packages/server/src/reflect-parallel.test.ts
+  s_125fc13e4dc62e::t_8bff2c71044ef8 341,388,426,430
+  s_125fc13e4dc62e::t_eca4d77c2c6c57 1,10,47,56,92-93,288,290,292,310,312,322,325,327,335,352,382,400
+packages/server/proof/b2-latency-20261116/continuation-20261116/probe-reflect-order-20261116.mjs
+  s_125fc13e4dc62e::t_e335cda374136d 1-24
+packages/adapter-pi-contact/src/compact.ts
+  s_125fc13e4dc62e::t_882502438c0cd7 157
+packages/server/proof/b2-latency-20261116/continuation-20261116/probe-direct-same-prompt-v7.mjs
+  s_125fc13e4dc62e::t_e335cda374136d 1-25
+packages/server/proof/b2-latency-20261116/continuation-20261116/reflect-probe-suffix-1.request.json
+  s_125fc13e4dc62e::t_e335cda374136d 1-26
+packages/server/proof/b2-latency-20261116/continuation-20261116/reflect-order.json
+  s_125fc13e4dc62e::t_e335cda374136d 1-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "54b7ef57f2a97db56532fdf532d532db8c5582f1",
+  "prompts": {},
+  "sessions": {
+    "s_125fc13e4dc62e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1defd-bfb5-74f3-8210-1927be85b8df",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

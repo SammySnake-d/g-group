@@ -1,0 +1,21 @@
+packages/server/src/compute-delivery-prompt.test.ts
+  s_69f96fa873b14b::t_a8f9466ef9eba3 1-135
+packages/server/src/compute-delivery-rejected-limit.test.ts
+  s_69f96fa873b14b::t_6c3ac18af9662a 1-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "275b5ad5daa23b6655989ef0b33019fe42689629",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

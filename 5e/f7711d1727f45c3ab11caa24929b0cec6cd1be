@@ -1,0 +1,19 @@
+packages/server/src/compute-delivery-cross-room.test.ts
+  s_69f96fa873b14b::t_5cca52d60bc473 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5ef7711d1727f45c3ab11caa24929b0cec6cd1be",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

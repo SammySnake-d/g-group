@@ -1,0 +1,88 @@
+packages/server/src/host.ts
+  s_9d7fa6e9d65b83::t_81c5da98c826f7 2496-2498,2501-2503
+  s_03527c71eef786::t_2b8ae823c38fa3 1630
+  s_18f4e42a362f21::t_28252877e2bb77 2510,2915
+  s_377be331e17ebd::t_60bd25f88185bd 2277,3078
+  s_55f14ed2baa035::t_755ce1eaf859c1 2680
+  s_960e513757cc2f::t_89095a031cc613 2454
+  s_00309a6b1778cc::t_69ba4165840256 1919,1926,1968,3136
+  s_69f96fa873b14b::t_40d3adc637084a 264-265,1588-1591,1657,1975,2307,2432,2444-2450,2504,2569-2570,2834,3114,3169-3176,3447,3907,3951,4319,4921,4962
+packages/server/src/loop-guard.ts
+  s_9d7fa6e9d65b83::t_cab2f5dce648a6 4,11-12,62-68,73-74,76,111-128,130
+packages/server/src/loop-guard.test.ts
+  s_69f96fa873b14b::t_82d41a32f77b54 55,69,85,104,123,134,145,157
+packages/server/src/mention-loop-ca2.test.ts
+  s_69f96fa873b14b::t_a4b09d6a5f3100 141-142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7cdf64a36c1a4c59b022f66b4d707ad6a4b8d355",
+  "prompts": {},
+  "sessions": {
+    "s_00309a6b1778cc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5b44653a-2923-45fd-97d0-f25479b43797",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_03527c71eef786": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0a8f74fffd601798",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_18f4e42a362f21": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a02374a8ddd5486aa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_55f14ed2baa035": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a598f0de3461d2f9d",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_960e513757cc2f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8ee8c131c7dae80f",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_9d7fa6e9d65b83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cfc8-db89-7400-b3de-876bd8478982",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
