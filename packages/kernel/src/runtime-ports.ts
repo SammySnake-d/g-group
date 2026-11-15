@@ -192,6 +192,8 @@ export interface ReflectResult {
   readonly personaSuggestion: string | null;
 }
 export interface ContactCompactor {
+  /** 显式声明同一实例的 reflect 与 compact 可并行；宿主可中止不再需要的 compact。未声明时保持串行。 */
+  readonly concurrentReflectCompact?: boolean;
   compact(req: CompactRequest, signal: AbortSignal): Promise<string>;
   /** 有就每轮调用(取代只在缺笔记时调的 compact);没有就退回 compact */
   reflect?(req: ReflectRequest, signal: AbortSignal): Promise<ReflectResult>;

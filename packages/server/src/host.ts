@@ -394,6 +394,8 @@ export class Host {
   private readonly newId: (prefix: string) => string;
   private readonly assemble: RoundAssembler;
   private readonly activity = new Map<string, Activity>();
+  /** 每个在途推测补写登记涉及的会话；撤回可能影响新消息、旧笔记或动作，需及时中止。 */
+  private readonly speculativeNotes = new Set<{ controller: AbortController; rooms: ReadonlySet<string> }>();
   private readonly adapters = new Map<string, ComputeAdapter>();
   private readonly pumps: Promise<void>[] = [];
   private roundNo = 0;
@@ -1170,6 +1172,7 @@ export class Host {
   /** 撤回自己的消息:原文不再进任何联系人的上下文(AC-08)。 */
   retractMessage(roomId: string, seq: number): MessageView {
     this.appendUserEvent(roomId, { kind: "retract", target: seq });
+    for (const pending of this.speculativeNotes) if (pending.rooms.has(roomId)) pending.controller.abort();
     return this.updatedView(roomId, seq);
   }
   private appendUserEvent(roomId: string, body: { kind: "edit"; target: number; text: string } | { kind: "retract"; target: number }) {
@@ -2408,17 +2411,34 @@ export class Host {
     let note = out.stateNote;
     const remember: MindAction[] = [];
     let persona: string | null = null;
+    type FallbackResult = { ok: true; value: string } | { ok: false; error: unknown };
+    let speculative: { controller: AbortController; result: Promise<FallbackResult>; detach: () => void } | null = null;
+    const material = compactor && fresh.length > 0 ? compactMaterial(fresh, out.actions) : "";
     // 每轮结束、原文移出窗口前由代码固定发起一次检查(用户 #1196、协调 #1250):同一次调用写笔记、检查有没有值得记的、最多一条人格建议
-    let reflected = false;
     if (compactor?.reflect && fresh.length > 0) {
       const list = this.memory.list(contactId);
       const anchors = this.roundAnchors(fresh);
       const neighbors = list
         .filter((e) => (e.status === "active" || e.status === "degraded") && !e.anchors.includes(PERSONA_ANCHOR) && e.anchors.some((x) => anchors.includes(x) || x === GLOBAL_ANCHOR))
         .map((e) => ({ id: e.id, title: e.title, body: e.body }));
+      // 准备检查材料成功后才预启动后备，避免准备本身出错却发送额外材料。
+      // 检查成功时可中止后备，但已发送的请求仍可能产生成本。
+      if (compactor.concurrentReflectCompact === true && note === null) {
+        const controller = new AbortController();
+        const relayAbort = () => controller.abort();
+        const pending = { controller, rooms: new Set(roomIds) };
+        this.speculativeNotes.add(pending);
+        const detach = () => { signal.removeEventListener("abort", relayAbort); this.speculativeNotes.delete(pending); };
+        if (signal.aborted) relayAbort();
+        else signal.addEventListener("abort", relayAbort, { once: true });
+        const result: Promise<FallbackResult> = Promise.resolve()
+          .then(() => compactor.compact({ contact: profile, kind: "round-note", previous: prev, material, maxBytes: max }, controller.signal))
+          .then((value) => ({ ok: true as const, value }), (error: unknown) => ({ ok: false as const, error }))
+          .finally(detach);
+        speculative = { controller, result, detach };
+      }
       try {
-        const r: ReflectResult = await compactor.reflect({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max, neighbors, noteWritten: out.stateNote }, signal);
-        reflected = true;
+        const r: ReflectResult = await compactor.reflect({ contact: profile, kind: "round-note", previous: prev, material, maxBytes: max, neighbors, noteWritten: out.stateNote }, signal);
         if (note === null) note = r.note;
         const lastUser = [...fresh].reverse().find((f): f is InboundMessage => f.kind === "message" && f.sender.kind === "user");
         const roomId = lastUser?.roomId ?? fresh[0]!.roomId;
@@ -2428,9 +2448,20 @@ export class Host {
         this.report("reflect-failed", { contactId, error: e instanceof Error ? e.message : String(e) });
       }
     }
-    if (note === null && !reflected && compactor && fresh.length > 0) {
+    if (note !== null && speculative) {
+      speculative.detach();
+      speculative.controller.abort();
+    }
+    // 即使检查本身成功，如果它未提供笔记也仍须补写(D06)。
+    if (note === null && compactor && fresh.length > 0) {
       try {
-        note = await compactor.compact({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max }, signal);
+        if (speculative) {
+          const r = await speculative.result;
+          if (!r.ok) throw r.error;
+          note = r.value;
+        } else {
+          note = await compactor.compact({ contact: profile, kind: "round-note", previous: prev, material, maxBytes: max }, signal);
+        }
       } catch (e) {
         this.report("compact-failed", { contactId, kind: "round-note", error: e instanceof Error ? e.message : String(e) });
         note = null;

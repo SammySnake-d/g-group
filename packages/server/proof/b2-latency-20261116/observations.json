@@ -1,0 +1,714 @@
+{
+  "baseline": "45976fca3c1311451acf17c915509d724bf719f1",
+  "requirements": "90226df5ffd17656f2654ab8555f7e71a93639de",
+  "description": "合成私聊的真实 Host；前四个隔离样本使用真实主回合，受控样本固定假主回合。历史样本有父目录依赖混用。",
+  "measureScriptSha256": "01a20481b7ed8bc67a5f1c2009dbb5284c5fd4849b0090c476ca6779b65ddefc",
+  "controlledScriptSha256": "0ca5cc34872e11f880134aa96154d389b3d040f0f4c688814b215f94482e57d9",
+  "runs": [
+    {
+      "label": "历史混合依赖基线",
+      "sample": "b2-baseline",
+      "modelRequested": "fengshao1227/deepseek-v4.1-flash",
+      "sentEventAt": "2026-11-15T12:27:29.897Z",
+      "replyEventAt": "2026-11-15T12:28:44.199Z",
+      "messageToReplyMs": 74302,
+      "stateNotePresent": true,
+      "sqliteSha256": "a37f462590f63e0e2da0d286048b8080703230209902ba203a37603bfb058032",
+      "calls": [
+        {
+          "index": 1,
+          "operation": null,
+          "startedAt": "2026-11-15T12:27:29.972Z",
+          "firstByteMs": 2899,
+          "totalMs": 10888,
+          "status": 200,
+          "requestBytes": 12446,
+          "systemBytes": 3553,
+          "messageBytes": 654,
+          "promptBytes": null,
+          "toolCalls": null,
+          "stopReason": "tool_use",
+          "bodyError": null
+        },
+        {
+          "index": 2,
+          "operation": null,
+          "startedAt": "2026-11-15T12:27:40.863Z",
+          "firstByteMs": 3007,
+          "totalMs": 15968,
+          "status": 200,
+          "requestBytes": 14804,
+          "systemBytes": 3553,
+          "messageBytes": 3012,
+          "promptBytes": null,
+          "toolCalls": null,
+          "stopReason": "end_turn",
+          "bodyError": null
+        },
+        {
+          "index": 3,
+          "operation": null,
+          "startedAt": "2026-11-15T12:27:56.837Z",
+          "firstByteMs": 2292,
+          "totalMs": 18495,
+          "status": 200,
+          "requestBytes": 2202,
+          "systemBytes": 1665,
+          "messageBytes": 439,
+          "promptBytes": null,
+          "toolCalls": null,
+          "stopReason": "end_turn",
+          "bodyError": null
+        },
+        {
+          "index": 4,
+          "operation": null,
+          "startedAt": "2026-11-15T12:28:15.334Z",
+          "firstByteMs": 3005,
+          "totalMs": 28863,
+          "status": 200,
+          "requestBytes": 1278,
+          "systemBytes": 836,
+          "messageBytes": 344,
+          "promptBytes": null,
+          "toolCalls": null,
+          "stopReason": "end_turn",
+          "bodyError": null
+        }
+      ],
+      "reports": [
+        {
+          "what": "recall",
+          "atMs": 17
+        },
+        {
+          "what": "reflect-failed",
+          "atMs": 45450
+        }
+      ]
+    },
+    {
+      "label": "历史混合依赖基线",
+      "sample": "b2-baseline-dbtime-1",
+      "modelRequested": "fengshao1227/deepseek-v4.1-flash",
+      "sentEventAt": "2026-11-15T14:26:01.458Z",
+      "replyEventAt": "2026-11-15T14:28:28.114Z",
+      "messageToReplyMs": 146656,
+      "stateNotePresent": true,
+      "sqliteSha256": "42c48b279a1979e3308747298df32bdcae79cb39099d7a600bcf32d6eba4e26e",
+      "calls": [
+        {
+          "index": 1,
+          "operation": "contact-round",
+          "startedAt": "2026-11-15T14:26:01.505Z",
+          "firstByteMs": 3025,
+          "totalMs": 13702,
+          "status": 200,
+          "requestBytes": 12446,
+          "systemBytes": 3553,
+          "messageBytes": 654,
+          "promptBytes": 4207,
+          "toolCalls": [],
+          "stopReason": "tool_use",
+          "bodyError": null
+        },
+        {
+          "index": 2,
+          "operation": "contact-round",
+          "startedAt": "2026-11-15T14:26:15.213Z",
+          "firstByteMs": 2048,
+          "totalMs": 2301,
+          "status": 200,
+          "requestBytes": 15186,
+          "systemBytes": 3553,
+          "messageBytes": 3394,
+          "promptBytes": 6947,
+          "toolCalls": [
+            "reply"
+          ],
+          "stopReason": "end_turn",
+          "bodyError": null
+        },
+        {
+          "index": 3,
+          "operation": "reflect",
+          "startedAt": "2026-11-15T14:26:17.519Z",
+          "firstByteMs": 2894,
+          "totalMs": 47128,
+          "status": 200,
+          "requestBytes": 2202,
+          "systemBytes": 1665,
+          "messageBytes": 439,
+          "promptBytes": 2104,
+          "toolCalls": [],
+          "stopReason": "end_turn",
+          "bodyError": null
+        },
+        {
+          "index": 4,
+          "operation": "compact",
+          "startedAt": "2026-11-15T14:27:04.649Z",
+          "firstByteMs": 3948,
+          "totalMs": 83462,
+          "status": 200,
+          "requestBytes": 1278,
+          "systemBytes": 836,
+          "messageBytes": 344,
+          "promptBytes": 1180,
+          "toolCalls": [],
+          "stopReason": "end_turn",
+          "bodyError": null
+        }
+      ],
+      "reports": [
+        {
+          "what": "recall",
+          "atMs": 12
+        },
+        {
+          "what": "reflect-failed",
+          "atMs": 63199
+        }
+      ]
+    },
+    {
+      "label": "历史混合依赖候选",
+      "sample": "b2-parallel-after-3",
+      "modelRequested": "fengshao1227/deepseek-v4.1-flash",
+      "sentEventAt": "2026-11-15T15:54:09.921Z",
+      "replyEventAt": "2026-11-15T15:55:34.516Z",
+      "messageToReplyMs": 84595,
+      "stateNotePresent": true,
+      "sqliteSha256": "f9c582470b1a1c618aaff448db9128b069c67c70ad2b714f5fdf1053350c76f6",
+      "calls": [
+        {
+          "index": 1,
+          "operation": "contact-round",
+          "startedAt": "2026-11-15T15:54:09.970Z",
+          "firstByteMs": 3023,
+          "totalMs": 8440,
+          "status": 200,
+          "requestBytes": 12446,
+          "systemBytes": 3553,
+          "messageBytes": 654,
+          "promptBytes": 4207,
+          "toolCalls": [],
+          "stopReason": "tool_use",
+          "bodyError": null
+        },
+        {
+          "index": 2,
+          "operation": "contact-round",
+          "startedAt": "2026-11-15T15:54:18.418Z",
+          "firstByteMs": 2808,
+          "totalMs": 3929,
+          "status": 200,
+          "requestBytes": 13826,
+          "systemBytes": 3553,
+          "messageBytes": 2034,
+          "promptBytes": 5587,
+          "toolCalls": [
+            "reply"
+          ],
+          "stopReason": "end_turn",
+          "bodyError": null
+        },
+        {
+          "index": 3,
+          "operation": "reflect",
+          "startedAt": "2026-11-15T15:54:22.353Z",
+          "firstByteMs": 2035,
+          "totalMs": 72160,
+          "status": 200,
+          "requestBytes": 2202,
+          "systemBytes": 1665,
+          "messageBytes": 439,
+          "promptBytes": 2104,
+          "toolCalls": [],
+          "stopReason": "max_tokens",
+          "bodyError": null
+        },
+        {
+          "index": 4,
+          "operation": "compact",
+          "startedAt": "2026-11-15T15:54:22.354Z",
+          "firstByteMs": 2438,
+          "totalMs": 35608,
+          "status": 200,
+          "requestBytes": 1278,
+          "systemBytes": 836,
+          "messageBytes": 344,
+          "promptBytes": 1180,
+          "toolCalls": [],
+          "stopReason": "end_turn",
+          "bodyError": null
+        }
+      ],
+      "reports": [
+        {
+          "what": "recall",
+          "atMs": 13
+        },
+        {
+          "what": "reflect-failed",
+          "atMs": 84602
+        }
+      ]
+    },
+    {
+      "label": "隔离基线",
+      "sample": "b2-clean-baseline-1",
+      "modelRequested": "fengshao1227/deepseek-v4.1-flash",
+      "sentEventAt": "2026-11-15T16:11:06.441Z",
+      "replyEventAt": "2026-11-15T16:12:02.023Z",
+      "messageToReplyMs": 55582,
+      "stateNotePresent": true,
+      "sqliteSha256": "aee255a649ad1675d8d35cff3fa0ed0bec0fc2dc072973c83f96c8b0a759a6b2",
+      "calls": [
+        {
+          "index": 1,
+          "operation": "contact-round",
+          "startedAt": "2026-11-15T16:11:06.473Z",
+          "firstByteMs": 3023,
+          "totalMs": 31757,
+          "status": 200,
+          "requestBytes": 12446,
+          "systemBytes": 3553,
+          "messageBytes": 654,
+          "promptBytes": 4207,
+          "toolCalls": [],
+          "stopReason": "tool_use",
+          "bodyError": null
+        },
+        {
+          "index": 2,
+          "operation": "contact-round",
+          "startedAt": "2026-11-15T16:11:38.233Z",
+          "firstByteMs": 3009,
+          "totalMs": 5505,
+          "status": 200,
+          "requestBytes": 20361,
+          "systemBytes": 3553,
+          "messageBytes": 8569,
+          "promptBytes": 12122,
+          "toolCalls": [
+            "reply",
+            "update_state_note"
+          ],
+          "stopReason": "end_turn",
+          "bodyError": null
+        },
+        {
+          "index": 3,
+          "operation": "reflect",
+          "startedAt": "2026-11-15T16:11:43.740Z",
+          "firstByteMs": 3011,
+          "totalMs": 18282,
+          "status": 200,
+          "requestBytes": 2509,
+          "systemBytes": 1665,
+          "messageBytes": 746,
+          "promptBytes": 2411,
+          "toolCalls": [],
+          "stopReason": "end_turn",
+          "bodyError": null
+        }
+      ],
+      "reports": [
+        {
+          "what": "recall",
+          "atMs": 13
+        }
+      ]
+    },
+    {
+      "label": "隔离候选",
+      "sample": "b2-clean-after-1",
+      "modelRequested": "fengshao1227/deepseek-v4.1-flash",
+      "sentEventAt": "2026-11-15T16:12:36.065Z",
+      "replyEventAt": "2026-11-15T16:13:19.348Z",
+      "messageToReplyMs": 43283,
+      "stateNotePresent": true,
+      "sqliteSha256": "f4f6f31004de3c0296b5b377c940bcd83d356d5f3ea3c9091ccb9030802f416b",
+      "calls": [
+        {
+          "index": 1,
+          "operation": "contact-round",
+          "startedAt": "2026-11-15T16:12:36.113Z",
+          "firstByteMs": 2614,
+          "totalMs": 26017,
+          "status": 200,
+          "requestBytes": 12446,
+          "systemBytes": 3553,
+          "messageBytes": 654,
+          "promptBytes": 4207,
+          "toolCalls": [],
+          "stopReason": "tool_use",
+          "bodyError": null
+        },
+        {
+          "index": 2,
+          "operation": "contact-round",
+          "startedAt": "2026-11-15T16:13:02.134Z",
+          "firstByteMs": 3010,
+          "totalMs": 5348,
+          "status": 200,
+          "requestBytes": 19569,
+          "systemBytes": 3553,
+          "messageBytes": 7777,
+          "promptBytes": 11330,
+          "toolCalls": [
+            "reply",
+            "update_state_note"
+          ],
+          "stopReason": "end_turn",
+          "bodyError": null
+        },
+        {
+          "index": 3,
+          "operation": "reflect",
+          "startedAt": "2026-11-15T16:13:07.484Z",
+          "firstByteMs": 3011,
+          "totalMs": 11860,
+          "status": 200,
+          "requestBytes": 2512,
+          "systemBytes": 1665,
+          "messageBytes": 749,
+          "promptBytes": 2414,
+          "toolCalls": [],
+          "stopReason": "end_turn",
+          "bodyError": null
+        }
+      ],
+      "reports": [
+        {
+          "what": "recall",
+          "atMs": 13
+        }
+      ]
+    },
+    {
+      "label": "隔离候选",
+      "sample": "b2-clean-after-2",
+      "modelRequested": "fengshao1227/deepseek-v4.1-flash",
+      "sentEventAt": "2026-11-15T16:14:23.412Z",
+      "replyEventAt": "2026-11-15T16:15:03.769Z",
+      "messageToReplyMs": 40357,
+      "stateNotePresent": true,
+      "sqliteSha256": "fd818a7ec6102eab5ee7e4c07cd0d71f887bf28345c752ba6dc564b98fa68862",
+      "calls": [
+        {
+          "index": 1,
+          "operation": "contact-round",
+          "startedAt": "2026-11-15T16:14:23.465Z",
+          "firstByteMs": 4175,
+          "totalMs": 20375,
+          "status": 200,
+          "requestBytes": 12446,
+          "systemBytes": 3553,
+          "messageBytes": 654,
+          "promptBytes": 4207,
+          "toolCalls": [],
+          "stopReason": "tool_use",
+          "bodyError": null
+        },
+        {
+          "index": 2,
+          "operation": "contact-round",
+          "startedAt": "2026-11-15T16:14:43.844Z",
+          "firstByteMs": 2756,
+          "totalMs": 7018,
+          "status": 200,
+          "requestBytes": 17445,
+          "systemBytes": 3553,
+          "messageBytes": 5653,
+          "promptBytes": 9206,
+          "toolCalls": [
+            "reply",
+            "update_state_note"
+          ],
+          "stopReason": "end_turn",
+          "bodyError": null
+        },
+        {
+          "index": 3,
+          "operation": "reflect",
+          "startedAt": "2026-11-15T16:14:50.866Z",
+          "firstByteMs": 3013,
+          "totalMs": 12899,
+          "status": 200,
+          "requestBytes": 2548,
+          "systemBytes": 1665,
+          "messageBytes": 785,
+          "promptBytes": 2450,
+          "toolCalls": [],
+          "stopReason": "end_turn",
+          "bodyError": null
+        }
+      ],
+      "reports": [
+        {
+          "what": "recall",
+          "atMs": 14
+        }
+      ]
+    },
+    {
+      "label": "隔离候选",
+      "sample": "b2-clean-after-3",
+      "modelRequested": "fengshao1227/deepseek-v4.1-flash",
+      "sentEventAt": "2026-11-15T16:16:36.108Z",
+      "replyEventAt": "2026-11-15T16:17:13.432Z",
+      "messageToReplyMs": 37324,
+      "stateNotePresent": true,
+      "sqliteSha256": "61443da17b53c2022180bf832ae72cc8fe202f064f68faae6cb41ad1e6924096",
+      "calls": [
+        {
+          "index": 1,
+          "operation": "contact-round",
+          "startedAt": "2026-11-15T16:16:36.155Z",
+          "firstByteMs": 3025,
+          "totalMs": 17611,
+          "status": 200,
+          "requestBytes": 12446,
+          "systemBytes": 3553,
+          "messageBytes": 654,
+          "promptBytes": 4207,
+          "toolCalls": [],
+          "stopReason": "tool_use",
+          "bodyError": null
+        },
+        {
+          "index": 2,
+          "operation": "contact-round",
+          "startedAt": "2026-11-15T16:16:53.769Z",
+          "firstByteMs": 2248,
+          "totalMs": 10815,
+          "status": 200,
+          "requestBytes": 16685,
+          "systemBytes": 3553,
+          "messageBytes": 4893,
+          "promptBytes": 8446,
+          "toolCalls": [
+            "reply",
+            "update_state_note"
+          ],
+          "stopReason": "end_turn",
+          "bodyError": null
+        },
+        {
+          "index": 3,
+          "operation": "reflect",
+          "startedAt": "2026-11-15T16:17:04.589Z",
+          "firstByteMs": 2028,
+          "totalMs": 8839,
+          "status": 200,
+          "requestBytes": 2434,
+          "systemBytes": 1665,
+          "messageBytes": 671,
+          "promptBytes": 2336,
+          "toolCalls": [],
+          "stopReason": "end_turn",
+          "bodyError": null
+        }
+      ],
+      "reports": [
+        {
+          "what": "recall",
+          "atMs": 12
+        }
+      ]
+    },
+    {
+      "label": "受控假主回合基线",
+      "sample": "b2-controlled-baseline-1",
+      "modelRequested": "fengshao1227/deepseek-v4.1-flash",
+      "sentEventAt": "2026-11-15T16:18:03.864Z",
+      "replyEventAt": "2026-11-15T16:18:58.080Z",
+      "messageToReplyMs": 54216,
+      "stateNotePresent": true,
+      "sqliteSha256": "affd037a5f238e77566779455bbfc9170bf5aeda262aab6ff0de8ef639c590a0",
+      "calls": [
+        {
+          "index": 1,
+          "operation": "reflect",
+          "startedAt": "2026-11-15T16:18:03.912Z",
+          "firstByteMs": 3020,
+          "totalMs": 54166,
+          "status": 200,
+          "requestBytes": 2208,
+          "systemBytes": 1665,
+          "messageBytes": 445,
+          "promptBytes": 2110,
+          "toolCalls": [],
+          "stopReason": "end_turn",
+          "bodyError": null
+        }
+      ],
+      "reports": [
+        {
+          "what": "recall",
+          "atMs": 13
+        }
+      ]
+    },
+    {
+      "label": "受控假主回合候选",
+      "sample": "b2-controlled-after-1",
+      "modelRequested": "fengshao1227/deepseek-v4.1-flash",
+      "sentEventAt": "2026-11-15T16:19:47.266Z",
+      "replyEventAt": "2026-11-15T16:20:50.652Z",
+      "messageToReplyMs": 63386,
+      "stateNotePresent": true,
+      "sqliteSha256": "1330497c29b3b34a082d8c7ab50c2ea67a7ba56343fc25b76bd0be073d438703",
+      "calls": [
+        {
+          "index": 1,
+          "operation": "reflect",
+          "startedAt": "2026-11-15T16:19:47.318Z",
+          "firstByteMs": 2415,
+          "totalMs": 63325,
+          "status": 200,
+          "requestBytes": 2208,
+          "systemBytes": 1665,
+          "messageBytes": 445,
+          "promptBytes": 2110,
+          "toolCalls": [],
+          "stopReason": "end_turn",
+          "bodyError": null
+        },
+        {
+          "index": 2,
+          "operation": "compact",
+          "startedAt": "2026-11-15T16:19:47.321Z",
+          "firstByteMs": 3014,
+          "totalMs": null,
+          "status": 200,
+          "requestBytes": 1284,
+          "systemBytes": 836,
+          "messageBytes": 350,
+          "promptBytes": 1186,
+          "toolCalls": [],
+          "stopReason": null,
+          "bodyError": "AbortError: This operation was aborted"
+        }
+      ],
+      "reports": [
+        {
+          "what": "recall",
+          "atMs": 13
+        }
+      ]
+    },
+    {
+      "label": "隔离最终候选",
+      "sample": "b2-clean-final-1",
+      "modelRequested": "fengshao1227/deepseek-v4.1-flash",
+      "sentEventAt": "2026-11-15T16:30:59.107Z",
+      "replyEventAt": "2026-11-15T16:31:42.637Z",
+      "messageToReplyMs": 43530,
+      "stateNotePresent": true,
+      "sqliteSha256": "f3bb3a21c81daca2e97aeac5650ffbee83576231c7198a34d7b37f598f34298d",
+      "calls": [
+        {
+          "index": 1,
+          "operation": "contact-round",
+          "startedAt": "2026-11-15T16:30:59.140Z",
+          "firstByteMs": 3022,
+          "totalMs": 28112,
+          "status": 200,
+          "requestBytes": 12446,
+          "systemBytes": 3553,
+          "messageBytes": 654,
+          "promptBytes": 4207,
+          "toolCalls": [],
+          "stopReason": "tool_use",
+          "bodyError": null
+        },
+        {
+          "index": 2,
+          "operation": "contact-round",
+          "startedAt": "2026-11-15T16:31:27.259Z",
+          "firstByteMs": 2558,
+          "totalMs": 2562,
+          "status": 200,
+          "requestBytes": 20181,
+          "systemBytes": 3553,
+          "messageBytes": 8389,
+          "promptBytes": 11942,
+          "toolCalls": [
+            "reply",
+            "update_state_note"
+          ],
+          "stopReason": "end_turn",
+          "bodyError": null
+        },
+        {
+          "index": 3,
+          "operation": "reflect",
+          "startedAt": "2026-11-15T16:31:29.825Z",
+          "firstByteMs": 2317,
+          "totalMs": 12810,
+          "status": 200,
+          "requestBytes": 2466,
+          "systemBytes": 1665,
+          "messageBytes": 703,
+          "promptBytes": 2368,
+          "toolCalls": [],
+          "stopReason": "end_turn",
+          "bodyError": null
+        }
+      ],
+      "reports": [
+        {
+          "what": "recall",
+          "atMs": 12
+        }
+      ]
+    }
+  ],
+  "cloud": {
+    "machine": "box1",
+    "node": "v24.21.0",
+    "baseline": "45976fca3c1311451acf17c915509d724bf719f1",
+    "tests": 1680,
+    "passed": 1680,
+    "failed": 0,
+    "skipped": 0,
+    "scopeTests": 33,
+    "scopePassed": 33,
+    "typecheckExit": 0,
+    "lintExit": 0,
+    "archiveSha256": "c57418d7387f8982099cb96a42c6a711d98aa0c759ec06d6a8167790370a4047"
+  },
+  "directGateway": {
+    "model": "fengshao1227/deepseek-v4.1-flash",
+    "status": 200,
+    "firstByteMs": 2518,
+    "totalMs": 3545,
+    "requestBytes": 198,
+    "responseBytes": 4282,
+    "responseModels": [
+      "fengshao1227/deepseek-v4.1-flash"
+    ],
+    "stopReasons": [
+      "end_turn"
+    ],
+    "matchesMarker": true
+  },
+  "localPushHook": {
+    "previousCandidateCommit": "6b1acf8dcdfd857df8f1c2d9feba23657fd48554",
+    "node": "v24.11.1",
+    "result": "failed",
+    "tests": 1679,
+    "passed": 1677,
+    "failed": 2,
+    "failures": [
+      "CORR-001:真实时序中父进程退出、子进程 setsid 仍活着时停止确认不能返回 ok",
+      "另一进程持锁超过初始化等待:openStore 在 initBusyTimeoutMs 后抛 database is locked"
+    ],
+    "isolatedRerunPassed": 3,
+    "log": "local-push-hook-failure.tap.gz",
+    "isolatedLog": "local-isolated-recheck.tap.gz"
+  }
+}
