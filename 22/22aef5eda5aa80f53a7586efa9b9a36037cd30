@@ -1,0 +1,64 @@
+apps/desktop/e2e/native-files.electron.spec.ts
+  s_799d2190e567fe::t_12c1d38d2ec81a 40-41,62-63,86-87
+apps/desktop/e2e/parity-chat.electron.spec.ts
+  s_799d2190e567fe::t_12c1d38d2ec81a 275-276
+apps/desktop/src/components/messages/cards/MsgFiles.tsx
+  s_799d2190e567fe::t_35261e15c7d711 6,26,32
+apps/desktop/src/app/chat/ChatHeader.tsx
+  s_799d2190e567fe::t_9c802ec2e62558 21-44
+third_party/ds-bot/UPSTREAM.md
+  s_799d2190e567fe::t_b97bafd67c3c2c 1-16
+third_party/ds-bot/NOTICE
+  s_799d2190e567fe::t_b97bafd67c3c2c 1-9
+third_party/ds-bot/LICENSE
+  s_799d2190e567fe::t_b97bafd67c3c2c 1-20
+apps/desktop/src/index.css
+  s_799d2190e567fe::t_aca207d558efd0 153-207
+apps/desktop/src/app/list/ListPane.tsx
+  s_799d2190e567fe::t_54c58c191145e5 1,20-25,41-46
+  s_078a60c6b18773::t_ecf9f41d63c0eb 47
+apps/desktop/src/dsbot/Attribution.tsx
+  s_799d2190e567fe::t_b97bafd67c3c2c 1-14
+apps/desktop/src/app/Rail.tsx
+  s_799d2190e567fe::t_e471e6eab16c6d 32
+apps/desktop/src/dsbot/theme.ts
+  s_799d2190e567fe::t_b97bafd67c3c2c 1-15,23
+  s_799d2190e567fe::t_53841ab44bff72 16-22
+apps/desktop/src/components/Composer.tsx
+  s_799d2190e567fe::t_a22e23b53ace9d 1,18-20,28-30,33-35,40-73,87,95,99,103,105,108-109,115,119,121,123,128-133,135-137
+  s_799d2190e567fe::t_272d97b1c20d54 134
+docs/DS-BOT-FRONTEND-STATUS.md
+  s_799d2190e567fe::t_7307c9d7cb230d 1-28
+apps/desktop/DESIGN.md
+  s_799d2190e567fe::t_762fddae05c0a2 1-41
+apps/desktop/src/components/pages/SettingsPage.tsx
+  s_799d2190e567fe::t_8b2c53b76d5ef2 16,72
+apps/desktop/e2e/attachments.ui.spec.ts
+  s_799d2190e567fe::t_7a38061ef81c53 1-20
+apps/desktop/src/App.tsx
+  s_799d2190e567fe::t_53841ab44bff72 39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2222aef5eda5aa80f53a7586efa9b9a36037cd30",
+  "prompts": {},
+  "sessions": {
+    "s_078a60c6b18773": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1df53-9aa3-71f3-bc58-9afcd358bb2a",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_799d2190e567fe": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1e382-c030-7b92-b28e-122d26db7c51",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
