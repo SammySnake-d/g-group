@@ -1,0 +1,21 @@
+packages/server/src/reflect-json-recovery.test.ts
+  s_69f96fa873b14b::t_86fd130667a45d 8,47,58,93-149,152,157-158,160,165-185
+  s_69f96fa873b14b::t_fd050e2d040f82 150-151,153-156,159,161-164
+  s_69f96fa873b14b::t_0a8fcfb0bbadff 186
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "715f4fa789dbbb55ce6b15005e62b200d8cd2661",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

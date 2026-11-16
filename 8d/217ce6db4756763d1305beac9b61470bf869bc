@@ -1,0 +1,19 @@
+packages/server/src/host.ts
+  s_69f96fa873b14b::t_7998cd81d455b5 2406-2409,2636-2647,2760-2762,2765,2767-2768
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8d217ce6db4756763d1305beac9b61470bf869bc",
+  "prompts": {},
+  "sessions": {
+    "s_69f96fa873b14b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dba8-daa3-7c92-91f5-3e25d2411f98",
+        "model": "group/gpt-terra"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

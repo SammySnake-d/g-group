@@ -1,0 +1,41 @@
+receipts/fix-t177-g35-memory-neighbors.json
+  s_f511cdb1758a1f::t_d8f0c707797e58 28-30,32-33
+reviews/fix-t177-g35-memory-neighbors-r2.md
+  s_f511cdb1758a1f::t_c73a46ee9854ab 1-100
+reviews/pr95-r2-evidence/MANIFEST.json
+  s_f511cdb1758a1f::t_5357479985562b 1-61
+reviews/pr95-r2-evidence/author-mutations/results.json
+  s_f511cdb1758a1f::t_227e1b07ed8225 1-240
+reviews/pr95-r2-evidence/mutants-r2.py
+  s_f511cdb1758a1f::t_dcd1b82be14c1f 1-40
+reviews/pr95-r2-evidence/mutants/results.json
+  s_f511cdb1758a1f::t_2c6ef2b52b15f8 1-211
+reviews/pr95-r2-evidence/npm-test-summary.txt
+  s_f511cdb1758a1f::t_bc404d0c373d25 1-9
+reviews/pr95-r2-evidence/probe-N1.json
+  s_f511cdb1758a1f::t_2e23c455e15b14 1-56
+reviews/pr95-r2-evidence/probe-N9.json
+  s_f511cdb1758a1f::t_4c40ec30a6fef7 1-56
+reviews/pr95-r2-evidence/probe-head.json
+  s_f511cdb1758a1f::t_7e48f81d8e6434 1-58
+reviews/pr95-r2-evidence/probe-r2.mjs
+  s_f511cdb1758a1f::t_cebc2eabfe8884 1-32
+reviews/pr95-r2-evidence/red-45c8d64.tap
+  s_f511cdb1758a1f::t_7f6ae3ea46ec75 1-291
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d90779764d11d7c3cd10480550548c7af933255d",
+  "prompts": {},
+  "sessions": {
+    "s_f511cdb1758a1f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eda2a1e9-6261-4de1-9a33-7cae46fce94b",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
