@@ -1,0 +1,23 @@
+apps/desktop/src/dsbot-base/styles.css
+  s_799d2190e567fe::t_9d0ab1defa9979 12,15
+  s_799d2190e567fe::t_09bf03121f470e 22-27
+apps/desktop/src/dsbot-base/DsBotApp.tsx
+  s_799d2190e567fe::t_b2dc1487f89b3d 348
+  s_799d2190e567fe::t_71269d34b3d879 181,186-187,189,204-208,263
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4c569c0dbb40bd73cd1b3a141b590f934b146fcc",
+  "prompts": {},
+  "sessions": {
+    "s_799d2190e567fe": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1e382-c030-7b92-b28e-122d26db7c51",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
