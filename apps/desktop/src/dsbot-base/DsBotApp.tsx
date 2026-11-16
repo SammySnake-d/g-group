@@ -13,7 +13,7 @@ import { ArrowUpIcon } from './upstream/ds-bot/src/client/icons.js'
 import './styles.css'
 
 type PendingFile = { id: string; file: File; preview?: string }
-type Dialog = 'contact' | 'group' | 'settings' | null
+type Dialog = 'new' | 'contact' | 'group' | 'settings' | null
 type ChatEntry = MessageView
 const GButton = (props) => createElement('button', props, props.children)
 
@@ -43,8 +43,6 @@ function botFor(contact: ContactView) {
     id: contact.id,
     name: contact.name,
     role: contact.bio,
-    shape: 'star',
-    color: 'blue',
     avatar: contact.avatar ? { image: contact.avatar } : undefined,
     model: contact.speakingModel,
     createdAt: when(contact.createdAt),
@@ -72,13 +70,23 @@ function roomFor(room: RoomView, contacts: ContactView[]) {
 }
 
 function makeRoster(contacts: ContactView[], rooms: RoomView[], userId: string, selected: string | null) {
-  const bots = contacts.map(botFor)
+  const bots = contacts.map((contact, index) => ({
+    ...botFor(contact),
+    // The first real contact occupies DS-Bot's Main Bot seat.  Keeping the
+    // whale look here gives the same visual anchor as the upstream product
+    // without inventing a second g-group entity.
+    ...(index === 0 && !contact.avatar ? { avatar: { shape: 'whale' }, color: 'deepseek' } : {}),
+  }))
+  // DS-Bot's shell reserves the first Bot as the Main Bot tile.  g-group does
+  // not have a separate synthetic "Chief" entity, so keep that visual slot
+  // bound to the first real contact and leave the rest in the conversation list.
+  const mainBotId = bots[0]?.id ?? null
   const roomViews = rooms.map((room) => roomFor(room, contacts))
   const byId = Object.fromEntries(bots.map((bot) => [bot.id, bot]))
   return {
     revision: rooms.length + contacts.length,
-    mainBotId: null,
-    mainBotIds: [],
+    mainBotId,
+    mainBotIds: mainBotId ? [mainBotId] : [],
     bots,
     rooms: roomViews,
     agents: [],
@@ -221,14 +229,14 @@ function GGroupComposer({ room, roster, actions, onSent }) {
       setError(cause instanceof Error ? cause.message : String(cause))
     } finally { setSending(false) }
   }
-  return <div className="dsb-composer-root">
-    <div className="dsb-composer-wrap">
+  return <div className="dsh_composerRoot">
+    <div className="dsh_composerWrap">
       {error && <p className="dsb-composer-error" role="alert">{error}</p>}
       {pending.length > 0 && <div className="gg-pending-row">{pending.map((item) => <div key={item.id} className="gg-pending-item">{item.preview ? <img src={item.preview} alt={item.file.name} /> : <span>file</span>}<small>{item.file.name}</small><GButton type="button" aria-label={`移除 ${item.file.name}`} onClick={() => setPending((old) => old.filter((entry) => entry.id !== item.id))}>×</GButton></div>)}</div>}
-      <div className="dsb-composer" data-composer-card data-multiline={text.includes('\n') || undefined}>
-        <div className="dsb-composer-tools"><ComposerPlus sessionId={room.id} inputActions={inputActions} useInput={() => false} useRoster={(selector) => selector(roster)} actions={actions} /></div>
-        <div className="dsb-composer-input"><textarea ref={field} rows={1} value={text} disabled={sending} placeholder={`Message ${room.name}`} aria-label={`Message ${room.name}`} onChange={(event) => setText(event.target.value)} onPaste={(event) => queueFiles(event.clipboardData.files)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send() } }} /></div>
-        <div className="dsb-composer-trailing"><ComposerVoice sessionId={room.id} inputActions={inputActions} actions={actions} useUi={(selector) => selector({ quote: null })} useRoster={(selector) => selector(roster)} /><GButton type="button" className="dsb-send" aria-label="Send message" disabled={sending || (!text.trim() && pending.length === 0)} onClick={() => void send()}><ArrowUpIcon /></GButton></div>
+      <div className="dsh_composer" data-composer-card data-multiline={text.includes('\n') || undefined}>
+        <div className="dsh_tools"><ComposerPlus sessionId={room.id} inputActions={inputActions} useInput={() => false} useRoster={(selector) => selector(roster)} actions={actions} /></div>
+        <div className="dsh_input"><textarea ref={field} rows={1} value={text} disabled={sending} placeholder={`Message ${room.name}`} aria-label={`Message ${room.name}`} onChange={(event) => setText(event.target.value)} onPaste={(event) => queueFiles(event.clipboardData.files)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send() } }} /></div>
+        <div className="dsh_trailing"><ComposerVoice sessionId={room.id} inputActions={inputActions} actions={actions} useUi={(selector) => selector({ quote: null })} useRoster={(selector) => selector(roster)} /><GButton type="button" className="bt-send" aria-label="Send message" disabled={sending || (!text.trim() && pending.length === 0)} onClick={() => void send()}><ArrowUpIcon /></GButton></div>
         <input ref={files} type="file" multiple hidden onChange={(event) => { queueFiles(event.currentTarget.files); event.currentTarget.value = '' }} />
       </div>
     </div>
@@ -243,9 +251,9 @@ function GGroupChat({ roster, room, messages, contacts, userId, actions, onSent 
     setFilePreview(result.value.encoding === 'base64' ? `data:${result.value.mime};base64,${result.value.content}` : result.value.content)
   }
   const items = messages[room.id] ?? []
-  return <div className="dsb-chat">
-    <div className="dsb-scroll" data-conversation-scroll>
-      <div className="dsb-column"><div className="dsb-flow" data-chat-flow role="feed" aria-label={room.name}>
+  return <div className="dsh_chat">
+    <div className="dsh_scroll" data-conversation-scroll>
+      <div className="dsh_column"><div className="dsh_flow" data-chat-flow role="feed" aria-label={room.name}>
         {items.length === 0 && <div className="gg-empty"><span>✦</span><h2>开始与 {room.name} 对话</h2><p>消息通过 g-group 真实后端发送。</p></div>}
         {items.map((message) => <Fragment key={`${message.roomId}-${message.seq}`}><ChatRows items={[toUpstreamItem(message, userId, contacts, room.id)]} sessionId={room.id} roster={roster} actions={actions} useUi={(selector) => selector({ reactions: {} })} clock /><AttachmentCards message={message} onOpen={(ref) => void openFile(ref)} /></Fragment>)}
       </div></div>
@@ -289,14 +297,34 @@ function SettingsDialog({ roster, onClose }) {
   return <div className="gg-dialog-backdrop"><div className="gg-dialog"><h2>会话信息</h2><p className="gg-dialog-note">当前界面由 DS-Bot 前端组件渲染，数据由 g-group 后端提供。</p><dl className="gg-facts"><div><dt>联系人</dt><dd>{roster.bots.length}</dd></div><div><dt>会话</dt><dd>{roster.rooms.length}</dd></div><div><dt>模型</dt><dd>fengshao1227/deepseek-v4.1-flash</dd></div></dl><div className="gg-dialog-actions"><GButton className="primary" onClick={onClose}>完成</GButton></div></div></div>
 }
 
+function NewActionsDialog({ onClose, onContact, onGroup }) {
+  return <div className="gg-dialog-backdrop"><div className="gg-dialog gg-new-actions"><h2>新建</h2><p className="gg-dialog-note">沿用 DS-Bot 的新建入口，选择 g-group 会话类型。</p><div className="gg-new-action-list"><GButton type="button" onClick={onContact}>联系人</GButton><GButton type="button" onClick={onGroup}>群聊</GButton></div><div className="gg-dialog-actions"><GButton type="button" onClick={onClose}>取消</GButton></div></div></div>
+}
+
 export function DsBotApp() {
   useUpstreamStyles()
   const data = useRosterData()
   const [dialog, setDialog] = useState<Dialog>(null)
-  const [wide, setWide] = useState(true)
+  const [sidebarPref, setSidebarPrefState] = useState<'open' | 'rail' | 'hidden'>('open')
   const room = data.rooms.find((entry) => entry.id === data.selected) ?? null
   const roster = useMemo(() => makeRoster(data.contacts, data.rooms, data.userId, data.selected), [data.contacts, data.rooms, data.userId, data.selected])
-  const sessions = useMemo(() => ({ ids: data.rooms.map((entry) => entry.id), byId: Object.fromEntries(data.rooms.map((entry) => [entry.id, { id: entry.id, title: entry.title, displayTitle: entry.title, updatedAt: when(entry.updatedAt), retainedBy: { mainView: entry.id === data.selected ? 1 : 0 } }])) }), [data.rooms, data.selected])
+  const sessions = useMemo(() => {
+    const byId = Object.fromEntries(data.rooms.map((entry) => [entry.id, {
+      id: entry.id,
+      title: entry.title,
+      displayTitle: entry.title,
+      updatedAt: when(entry.updatedAt),
+      retainedBy: { mainView: entry.id === data.selected ? 1 : 0 },
+    }]))
+    // BotRow asks DS-Bot for the contact's currentPart (its sessionId or id),
+    // while g-group stores the selected DM under a room id.  Add those aliases
+    // so the Main Bot tile and each contact row receive the same active state.
+    for (const contact of data.contacts) {
+      const dm = data.rooms.find((entry) => entry.kind === 'dm' && entry.members.some((member) => member.kind === 'contact' && member.id === contact.id))
+      if (dm) byId[contact.id] = { id: contact.id, title: contact.name, displayTitle: contact.name, updatedAt: when(dm.updatedAt), retainedBy: { mainView: dm.id === data.selected ? 1 : 0 } }
+    }
+    return { ids: Object.keys(byId), byId }
+  }, [data.contacts, data.rooms, data.selected])
   const ui = useMemo(() => ({ details: null, view: 'details', visits: {}, unread: {}, reactions: {}, quote: null }), [])
   const status = useMemo(() => new Map(), [])
   const activity = useMemo(() => ({}), [])
@@ -313,12 +341,14 @@ export function DsBotApp() {
   const useLive = useCallback((selector) => selector({}), [])
   const useRegistry = useCallback((selector) => selector(0), [])
   const useUpdate = useCallback((selector) => selector({ available: false, phase: 'idle' }), [])
+  const useFrame = useCallback((selector) => selector({ viewport: typeof window === 'undefined' ? 1320 : window.innerWidth, sidebarWidth: 430, collapsedWidth: 0 }), [])
+  const useSidebarPref = useCallback((selector) => selector(sidebarPref), [sidebarPref])
   const actions = useMemo(() => ({
     openSession: (id) => { const target = data.rooms.find((entry) => entry.id === id) ?? data.rooms.find((entry) => entry.kind === 'dm' && entry.members.some((member) => member.kind === 'contact' && member.id === id)); if (target) void data.select(target.id) },
-    openNewChat: () => setDialog('contact'),
+    openNewChat: () => setDialog('new'),
     openSettings: () => setDialog('settings'),
-    toggleSidebar: () => setWide((value) => !value),
-    toggleLeftHidden: () => setWide((value) => !value),
+    toggleSidebar: () => setSidebarPrefState((value) => value === 'hidden' ? 'open' : 'hidden'),
+    toggleLeftHidden: () => setSidebarPrefState((value) => value === 'hidden' ? 'open' : 'hidden'),
     openPalette: () => {},
     openMenu: () => {},
     setFlags: async () => {},
@@ -326,7 +356,7 @@ export function DsBotApp() {
     beginSectionRename: () => {},
     endSectionRename: () => {},
     setSidebarWidth: () => {},
-    setSidebarPref: () => {},
+    setSidebarPref: (value) => setSidebarPrefState(value),
     setLeftDrawer: () => {},
     setPanelYield: () => {},
     beginVisit: () => {},
@@ -348,11 +378,19 @@ export function DsBotApp() {
     composeGoal: () => {},
     openExchange: () => {},
   }), [data.rooms, data.select])
-  const views = { useRoster, useUi, useSessions, useSessionStatus, useSessionRetainInfo, useActivity, useWork, useRegistry, useUpdate, useMemoryNews, useTurnClock, useLive, actions }
+  const views = { useRoster, useUi, useSessions, useSessionStatus, useSessionRetainInfo, useActivity, useWork, useRegistry, useUpdate, useMemoryNews, useTurnClock, useLive, useFrame, useSidebarPref, actions }
   const selectedRoom = room ? roster.roomsById[room.id] : null
-  return <div className="dsb-frame" data-rail={wide ? undefined : ''} data-testid="dsbot-frame">
-    <aside className="dsb-side"><div className="dsb-band" /><div className="dsb-side-list"><TeamSidebar {...views} wide={wide} /></div><div className="gg-quick-actions"><GButton type="button" onClick={() => setDialog('contact')}>＋ 联系人</GButton><GButton type="button" onClick={() => setDialog('group')}>◎ 新建群聊</GButton></div><div className="dsb-side-foot"><GButton type="button" className="dsb-settings" title="设置" onClick={() => setDialog('settings')}><YouAvatar /></GButton></div></aside>
-    <main className="dsb-main dsb_centerCol"><div className="dsb-band" />{selectedRoom && <div className="dsb-head"><HeaderPill {...views} sessionId={selectedRoom.id} useSession={() => (selector) => selector({ pendingSubmissions: [] })} /></div>}{room ? <GGroupChat roster={roster} room={selectedRoom} messages={data.messages} contacts={data.contacts} userId={data.userId} actions={actions} onSent={async (id) => { await data.refresh(id) }} /> : <div className="gg-empty-page">{data.loading ? '正在加载 g-group 会话…' : data.error || '还没有会话，请从侧栏新建联系人。'}</div>}</main>
+  return <div className="dsb-frame" data-testid="dsbot-frame">
+    {/* There is no DSH shell sidebar in this host.  Passing a collapsed shell
+        hint prevents the upstream sync effect from toggling our own column on
+        mount; TeamSidebar still computes its open/rail/hidden mode from the
+        real useSidebarPref source above. */}
+    <TeamSidebar {...views} wide={false} />
+    <main className="dsh_centerCol dsb-main">
+      {selectedRoom && <header className="dsh_header"><HeaderPill {...views} sessionId={selectedRoom.id} useSession={() => (selector) => selector({ pendingSubmissions: [] })} /></header>}
+      {room ? <GGroupChat roster={roster} room={selectedRoom} messages={data.messages} contacts={data.contacts} userId={data.userId} actions={actions} onSent={async (id) => { await data.refresh(id) }} /> : <div className="gg-empty-page">{data.loading ? '正在加载 g-group 会话…' : data.error || '还没有会话，请从 DS-Bot 的 ＋ 新建联系人。'}</div>}
+    </main>
+    {dialog === 'new' && <NewActionsDialog onClose={() => setDialog(null)} onContact={() => setDialog('contact')} onGroup={() => setDialog('group')} />}
     {dialog === 'contact' && <ContactDialog roster={roster} onClose={() => setDialog(null)} onSaved={async (id) => { await data.refresh(id) }} />}
     {dialog === 'group' && <GroupDialog roster={roster} onClose={() => setDialog(null)} onSaved={async (id) => { await data.refresh(id) }} />}
     {dialog === 'settings' && <SettingsDialog roster={roster} onClose={() => setDialog(null)} />}

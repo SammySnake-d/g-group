@@ -1,12 +1,29 @@
-/* g-group additions around the vendored DS-Bot client surface. */
-html, body, #root { height: 100%; margin: 0; }
+/* The host geometry expected by the vendored DS-Bot conversation CSS.  The
+ * upstream client normally receives these classes from DSH's shell; g-group
+ * supplies the same slots while keeping its own backend adapter underneath. */
+html, body, #root { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+body { background: var(--bt-main, #fcfcfc); color: var(--bt-ink, #141414); font-family: var(--bt-font, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif); }
+.dsb-frame { position: relative; display: flex; width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; background: var(--bt-main, #fcfcfc); color: var(--bt-ink, #141414); }
+.dsb-main { position: relative; display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--bt-main, #fcfcfc); transition: margin-left .3s cubic-bezier(.2,0,0,1); }
+.dsh_header { position: absolute; inset: 0 0 auto; z-index: 8; display: flex; justify-content: center; padding: 10px 0 0; pointer-events: none; background: transparent; }
+.dsh_header .bt-head { width: 100%; pointer-events: auto; }
+.dsh_chat { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; }
+.dsh_scroll { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 60px 11px 16px 16px; box-sizing: border-box; }
+.dsh_column { display: flex; flex: 1 1 auto; flex-direction: column; width: 100%; max-width: 960px; min-height: 100%; margin: 0 auto; box-sizing: border-box; }
+.dsh_flow { width: 100%; margin-top: 0; padding-bottom: 4px; }
+.dsh_composerRoot { display: flex; flex: none; justify-content: center; width: 100%; padding: 0 16px 13px; box-sizing: border-box; }
+.dsh_composerWrap { width: 100%; max-width: 992px; min-width: 0; }
+.dsh_composer { width: 100%; }
+.dsh_input { min-width: 0; flex: 1 1 auto; }
+.dsh_input textarea { display: block; width: 100%; min-height: 24px; max-height: 180px; resize: none; border: 0; outline: 0; background: transparent; color: var(--bt-ink, #141414); font: inherit; font-size: 14px; line-height: 24px; padding: 2px 0; box-sizing: border-box; }
+.dsh_tools, .dsh_trailing { display: flex; align-items: center; gap: 8px; flex: none; }
+.dsh_trailing .bt-send { width: 28px; min-width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--bt-accent, #4d6bfe); color: #fff; cursor: pointer; }
+.dsh_trailing .bt-send:disabled { display: none; }
+.gg-empty-page { display: grid; flex: 1 1 auto; place-items: center; min-width: 0; min-height: 0; padding: 60px 24px 24px; color: var(--bt-ink-3, #777); text-align: center; }
 .gg-empty, .gg-empty-page { display: grid; place-items: center; min-height: 320px; color: var(--bt-ink-3, #777); text-align: center; }
 .gg-empty span { display: grid; place-items: center; width: 44px; height: 44px; margin: 0 auto 12px; border-radius: 50%; background: var(--bt-accent, #4d6bfe); color: #fff; font-size: 22px; }
 .gg-empty h2 { margin: 0 0 4px; color: var(--bt-ink, #141414); font-size: 18px; }
 .gg-empty p { margin: 0; font-size: 12px; }
-.gg-quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px 6px; }
-.gg-quick-actions button { min-width: 0; padding: 7px 4px; overflow: hidden; border: 1px solid var(--bt-line-2, #ddd); border-radius: 9px; background: transparent; color: var(--bt-ink, #141414); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-.gg-quick-actions button:hover { border-color: var(--bt-accent, #4d6bfe); color: var(--bt-accent, #4d6bfe); }
 .gg-message-files { display: flex; flex-wrap: wrap; gap: 8px; max-width: min(720px, 100%); margin: 5px 0 8px 30px; }
 .gg-file-card { display: flex; align-items: center; gap: 8px; min-width: 190px; max-width: 280px; padding: 8px 10px; border: 1px solid var(--bt-line-2, #ddd); border-radius: 12px; background: var(--bt-card, #fff); color: var(--bt-ink, #141414); text-align: left; cursor: pointer; }
 .gg-file-card:hover { border-color: var(--bt-accent, #4d6bfe); }
@@ -36,8 +53,19 @@ html, body, #root { height: 100%; margin: 0; }
 .gg-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .gg-dialog-actions button { padding: 8px 13px; border: 1px solid var(--bt-line-2, #ddd); border-radius: 9px; background: transparent; color: inherit; cursor: pointer; }
 .gg-dialog-actions button.primary { border-color: var(--bt-accent, #4d6bfe); background: var(--bt-accent, #4d6bfe); color: var(--bt-accent-ink, #fff); }
+.gg-new-actions { width: min(360px, calc(100% - 32px)); }
+.gg-new-action-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.gg-new-action-list button { min-height: 48px; border: 1px solid var(--bt-line-2, #ddd); border-radius: 14px; background: var(--bt-hover, #f3f2ef); color: inherit; font: inherit; cursor: pointer; }
+.gg-new-action-list button:hover { border-color: var(--bt-accent, #4d6bfe); background: var(--bt-accent-soft, #eef0ff); }
 .gg-dialog-note { margin: 0; color: var(--bt-ink-2, #777); font-size: 13px; line-height: 1.6; }
 .gg-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; }
 .gg-facts div { padding: 9px; border-radius: 9px; background: var(--bt-hover, #f3f2ef); }
 .gg-facts dt { color: var(--bt-ink-2, #888); font-size: 10px; }
 .gg-facts dd { margin: 4px 0 0; font-size: 12px; }
+
+/* The reference DS-Bot shell keeps only Search and New in this host.  Folder
+ * sections and the shell collapse switch belong to the full DSH frame, which
+ * g-group does not mount around the conversation. */
+.bt-side-top .bt-round[aria-label="New section"],
+.bt-side-top .bt-side-collapse { display: none; }
+.bt-tile[aria-current="page"] { background: color-mix(in srgb, var(--bt-ink) 12%, transparent); }
