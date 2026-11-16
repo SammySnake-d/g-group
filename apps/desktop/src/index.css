@@ -151,9 +151,8 @@
 .shimmer { background: hsl(var(--sel)); }
 @media (prefers-reduced-motion: reduce) { .spin-ring { animation: none } }
 
-/* DS-Bot visual adaptation (frozen upstream commit is recorded in src/dsbot/theme.ts).
-   These rules only shape the shell; g-group's real store, API and domain state
-   still own every list row, message and action. */
+/* Product tokens retained for settings and legacy surfaces. The active
+   conversation renderer injects the frozen DS-Bot client CSS from dsbot-base. */
 .dsbot-shell {
   --dsbot-accent: #4f6fff;
   --dsbot-accent-soft: #eef1ff;

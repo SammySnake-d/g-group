@@ -1,10 +1,9 @@
 /**
- * Visual language adapted from Fei2411/DS-Bot's desktop shell.
+ * DS-Bot frontend provenance for the vendored renderer.
  *
- * This is deliberately a small adapter: g-group keeps its own domain objects,
- * store and backend wire. The values below only carry the visual grammar that
- * made the reference useful (quiet paper surface, blue active state and a
- * centered conversation pill).
+ * The live renderer is mounted from dsbot-base/upstream. g-group keeps its own
+ * domain objects, store and backend wire; this record makes the source and
+ * license visible to the settings/about surface.
  */
 export const DS_BOT_FRONTEND_SOURCE = {
   repository: 'https://github.com/Fei2411/DS-Bot',

@@ -2,6 +2,12 @@
 
 更新：2026-11-16
 
+当前入口已经切换为 DS-Bot 冻结提交 `a66cc737` 的实际 client 组件：
+`TeamSidebar`、`HeaderPill`、`ChatRows`/`GroupMessage`、头像 marks、Composer
+原语和上游 CSS 均从 `apps/desktop/src/dsbot-base/upstream/` 渲染；
+`DsBotApp.tsx` 只做 g-group 数据映射和动作适配。旧的 g-group `Rail/ListPane/MainPane`
+不再组装主对话面。
+
 ## 已落到真实 g-group 后端接线的能力
 
 | 能力 | 状态 | 证据/入口 |

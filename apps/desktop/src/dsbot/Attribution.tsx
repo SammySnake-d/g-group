@@ -8,7 +8,7 @@ import { DS_BOT_FRONTEND_SOURCE } from './theme'
 export function DsBotAttribution() {
   return (
     <p className="text-[11px] leading-5 text-fg-3">
-      聊天界面视觉底座改自 <a className="underline decoration-fg-3/50 underline-offset-2 hover:text-fg" href={DS_BOT_FRONTEND_SOURCE.repository} target="_blank" rel="noreferrer">DS-Bot</a>（{DS_BOT_FRONTEND_SOURCE.commit.slice(0, 8)}，{DS_BOT_FRONTEND_SOURCE.license}）。
+      聊天界面使用 <a className="underline decoration-fg-3/50 underline-offset-2 hover:text-fg" href={DS_BOT_FRONTEND_SOURCE.repository} target="_blank" rel="noreferrer">DS-Bot</a> 前端组件（{DS_BOT_FRONTEND_SOURCE.commit.slice(0, 8)}，{DS_BOT_FRONTEND_SOURCE.license}），由 g-group 适配自己的后端与领域。
     </p>
   )
 }

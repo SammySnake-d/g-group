@@ -1,0 +1,43 @@
+/* g-group additions around the vendored DS-Bot client surface. */
+html, body, #root { height: 100%; margin: 0; }
+.gg-empty, .gg-empty-page { display: grid; place-items: center; min-height: 320px; color: var(--bt-ink-3, #777); text-align: center; }
+.gg-empty span { display: grid; place-items: center; width: 44px; height: 44px; margin: 0 auto 12px; border-radius: 50%; background: var(--bt-accent, #4d6bfe); color: #fff; font-size: 22px; }
+.gg-empty h2 { margin: 0 0 4px; color: var(--bt-ink, #141414); font-size: 18px; }
+.gg-empty p { margin: 0; font-size: 12px; }
+.gg-quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px 6px; }
+.gg-quick-actions button { min-width: 0; padding: 7px 4px; overflow: hidden; border: 1px solid var(--bt-line-2, #ddd); border-radius: 9px; background: transparent; color: var(--bt-ink, #141414); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.gg-quick-actions button:hover { border-color: var(--bt-accent, #4d6bfe); color: var(--bt-accent, #4d6bfe); }
+.gg-message-files { display: flex; flex-wrap: wrap; gap: 8px; max-width: min(720px, 100%); margin: 5px 0 8px 30px; }
+.gg-file-card { display: flex; align-items: center; gap: 8px; min-width: 190px; max-width: 280px; padding: 8px 10px; border: 1px solid var(--bt-line-2, #ddd); border-radius: 12px; background: var(--bt-card, #fff); color: var(--bt-ink, #141414); text-align: left; cursor: pointer; }
+.gg-file-card:hover { border-color: var(--bt-accent, #4d6bfe); }
+.gg-file-card span:last-child { display: grid; gap: 2px; min-width: 0; }
+.gg-file-card strong, .gg-file-card small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gg-file-card strong { font-size: 12px; font-weight: 500; }
+.gg-file-card small { color: var(--bt-ink-3, #777); font-size: 10px; }
+.gg-file-kind { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border-radius: 8px; background: var(--bt-hover, #f0f0f0); }
+.gg-pending-row { display: flex; gap: 7px; overflow: auto; padding: 0 0 7px; }
+.gg-pending-item { position: relative; display: flex; align-items: center; gap: 5px; max-width: 190px; padding: 5px 24px 5px 5px; border: 1px solid var(--bt-line-2, #ddd); border-radius: 10px; background: var(--bt-card, #fff); }
+.gg-pending-item img, .gg-pending-item > span { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: 7px; object-fit: cover; background: var(--bt-hover, #f0f0f0); }
+.gg-pending-item small { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.gg-pending-item button { position: absolute; top: 3px; right: 4px; border: 0; background: none; color: var(--bt-ink-3, #777); cursor: pointer; }
+.gg-lightbox { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: #111c; }
+.gg-lightbox button { position: absolute; top: 16px; right: 22px; border: 0; background: #fff2; color: #fff; font-size: 28px; cursor: pointer; }
+.gg-lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 10px; }
+.gg-lightbox pre { max-width: 85vw; max-height: 80vh; overflow: auto; padding: 18px; border-radius: 10px; background: #fff; color: #222; }
+.gg-dialog-backdrop { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: #1d1b1880; }
+.gg-dialog { width: min(420px, calc(100% - 32px)); display: grid; gap: 15px; padding: 24px; border-radius: 18px; background: var(--bt-card, #fff); color: var(--bt-ink, #222); box-shadow: 0 16px 50px #1114; }
+.gg-dialog h2 { margin: 0; font-size: 19px; }
+.gg-dialog label { display: grid; gap: 6px; color: var(--bt-ink-2, #777); font-size: 12px; }
+.gg-dialog input { padding: 9px; border: 1px solid var(--bt-line-2, #ddd); border-radius: 9px; background: transparent; color: inherit; font: inherit; }
+.gg-dialog fieldset { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--bt-line-2, #ddd); border-radius: 10px; }
+.gg-dialog legend { padding: 0 4px; color: var(--bt-ink-2, #777); font-size: 12px; }
+.gg-check { display: flex !important; grid-template-columns: none !important; align-items: center; gap: 7px; }
+.gg-check input { width: auto; }
+.gg-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.gg-dialog-actions button { padding: 8px 13px; border: 1px solid var(--bt-line-2, #ddd); border-radius: 9px; background: transparent; color: inherit; cursor: pointer; }
+.gg-dialog-actions button.primary { border-color: var(--bt-accent, #4d6bfe); background: var(--bt-accent, #4d6bfe); color: var(--bt-accent-ink, #fff); }
+.gg-dialog-note { margin: 0; color: var(--bt-ink-2, #777); font-size: 13px; line-height: 1.6; }
+.gg-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; }
+.gg-facts div { padding: 9px; border-radius: 9px; background: var(--bt-hover, #f3f2ef); }
+.gg-facts dt { color: var(--bt-ink-2, #888); font-size: 10px; }
+.gg-facts dd { margin: 4px 0 0; font-size: 12px; }
