@@ -1,0 +1,21 @@
+third_party/ds-bot/LICENSE
+  s_799d2190e567fe::t_8a9e3ff5e9dd20 5-189
+third_party/ds-bot/NOTICE
+  s_799d2190e567fe::t_335523f1cda7a3 1-266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ccbee7308511c5efe860539c6c541c4249f981fb",
+  "prompts": {},
+  "sessions": {
+    "s_799d2190e567fe": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1e382-c030-7b92-b28e-122d26db7c51",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
