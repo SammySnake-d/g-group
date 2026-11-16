@@ -9,16 +9,22 @@ body { background: var(--bt-main, #fcfcfc); color: var(--bt-ink, #141414); font-
 .dsh_header .bt-head { width: 100%; pointer-events: auto; }
 .dsh_chat { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; }
 .dsh_scroll { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 60px 11px 16px 16px; box-sizing: border-box; }
-.dsh_column { display: flex; flex: 1 1 auto; flex-direction: column; width: 100%; max-width: 960px; min-height: 100%; margin: 0 auto; box-sizing: border-box; }
+.dsh_column { display: flex; flex: 1 1 auto; flex-direction: column; width: 100%; max-width: 748px; min-height: 100%; margin: 0 auto; box-sizing: border-box; }
 .dsh_flow { width: 100%; margin-top: 0; padding-bottom: 4px; }
 .dsh_composerRoot { display: flex; flex: none; justify-content: center; width: 100%; padding: 0 16px 13px; box-sizing: border-box; }
-.dsh_composerWrap { width: 100%; max-width: 992px; min-width: 0; }
+.dsh_composerWrap { width: 100%; max-width: 748px; min-width: 0; }
 .dsh_composer { width: 100%; }
 .dsh_input { min-width: 0; flex: 1 1 auto; }
 .dsh_input textarea { display: block; width: 100%; min-height: 24px; max-height: 180px; resize: none; border: 0; outline: 0; background: transparent; color: var(--bt-ink, #141414); font: inherit; font-size: 14px; line-height: 24px; padding: 2px 0; box-sizing: border-box; }
 .dsh_tools, .dsh_trailing { display: flex; align-items: center; gap: 8px; flex: none; }
 .dsh_trailing .bt-send { width: 28px; min-width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--bt-accent, #4d6bfe); color: #fff; cursor: pointer; }
 .dsh_trailing .bt-send:disabled { display: none; }
+/* The upstream composer keeps its voice-chat affordance hidden until the DSH
+ * host wires the native composer.  This host owns that slot, so expose the
+ * same blue voice button used by the DS-Bot reference in direct messages;
+ * groups keep the upstream no-voice behavior. */
+div.dsh_trailing .bt-voice { display: inline-grid !important; }
+body[data-bt-room] div.dsh_trailing .bt-voice { display: none !important; }
 .gg-empty-page { display: grid; flex: 1 1 auto; place-items: center; min-width: 0; min-height: 0; padding: 60px 24px 24px; color: var(--bt-ink-3, #777); text-align: center; }
 .gg-empty, .gg-empty-page { display: grid; place-items: center; min-height: 320px; color: var(--bt-ink-3, #777); text-align: center; }
 .gg-empty span { display: grid; place-items: center; width: 44px; height: 44px; margin: 0 auto 12px; border-radius: 50%; background: var(--bt-accent, #4d6bfe); color: #fff; font-size: 22px; }

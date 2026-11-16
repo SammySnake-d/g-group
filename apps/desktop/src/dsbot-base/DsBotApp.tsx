@@ -178,21 +178,21 @@ function useInput(field, setText) {
   }), [field, setText])
 }
 
-function toUpstreamItem(message: MessageView, userId: string, contacts: ContactView[], roomId: string) {
+function toUpstreamItem(message: MessageView, userId: string, contacts: ContactView[], room: RoomView) {
   const time = when(message.at)
   if (message.sender.kind === 'user' && message.sender.id === userId) return { kind: 'user', text: message.text, time, images: message.attachments.filter((item) => item.mime.startsWith('image/')).length }
   const contact = contacts.find((entry) => entry.id === message.sender.id)
   if (message.sender.kind === 'contact' || message.sender.kind === 'helper') {
-    return { kind: 'post', botId: message.sender.id, name: contact?.name ?? (message.sender.kind === 'helper' ? 'Helper' : message.sender.id), text: message.text, roomId, seq: message.seq, time }
+    if (room.kind === 'dm') return { kind: 'bot', text: message.text, time }
+    return { kind: 'post', botId: message.sender.id, name: contact?.name ?? (message.sender.kind === 'helper' ? 'Helper' : message.sender.id), text: message.text, roomId: room.id, seq: message.seq, time }
   }
-  return { kind: 'event', role: 'report', name: '系统', text: message.text, roomId, time }
+  return { kind: 'event', role: 'report', name: '系统', text: message.text, roomId: room.id, time }
 }
 
 function AttachmentCards({ message, onOpen }) {
   if (message.attachments.length === 0) return null
   return <div className="gg-message-files">{message.attachments.map((attachment) => <GButton key={attachment.ref} type="button" className="gg-file-card" onClick={() => onOpen(attachment.ref)}><span className="gg-file-kind">{attachment.mime.startsWith('image/') ? 'image' : 'file'}</span><span><strong>{attachment.name}</strong><small>{attachment.mime} · {attachment.bytes} B</small></span></GButton>)}</div>
 }
-
 function GGroupComposer({ room, roster, actions, onSent }) {
   const [text, setText] = useState('')
   const [pending, setPending] = useState<PendingFile[]>([])
@@ -201,6 +201,11 @@ function GGroupComposer({ room, roster, actions, onSent }) {
   const field = useRef(null)
   const inputActions = useInput(field, setText)
   const files = useRef(null)
+  useEffect(() => {
+    if (room.kind === 'group') document.body.dataset.btRoom = ''
+    else delete document.body.dataset.btRoom
+    return () => { delete document.body.dataset.btRoom }
+  }, [room.kind])
   const queueFiles = (list) => {
     if (!list) return
     const additions = [...list].map((file) => ({ id: `${file.name}-${file.lastModified}-${Math.random()}`, file, preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined }))
@@ -255,7 +260,7 @@ function GGroupChat({ roster, room, messages, contacts, userId, actions, onSent 
     <div className="dsh_scroll" data-conversation-scroll>
       <div className="dsh_column"><div className="dsh_flow" data-chat-flow role="feed" aria-label={room.name}>
         {items.length === 0 && <div className="gg-empty"><span>✦</span><h2>开始与 {room.name} 对话</h2><p>消息通过 g-group 真实后端发送。</p></div>}
-        {items.map((message) => <Fragment key={`${message.roomId}-${message.seq}`}><ChatRows items={[toUpstreamItem(message, userId, contacts, room.id)]} sessionId={room.id} roster={roster} actions={actions} useUi={(selector) => selector({ reactions: {} })} clock /><AttachmentCards message={message} onOpen={(ref) => void openFile(ref)} /></Fragment>)}
+        {items.map((message) => <Fragment key={`${message.roomId}-${message.seq}`}><ChatRows items={[toUpstreamItem(message, userId, contacts, room)]} sessionId={room.id} roster={roster} actions={actions} useUi={(selector) => selector({ reactions: {} })} clock /><AttachmentCards message={message} onOpen={(ref) => void openFile(ref)} /></Fragment>)}
       </div></div>
     </div>
     <GGroupComposer room={room} roster={roster} actions={actions} onSent={onSent} />
@@ -292,7 +297,6 @@ function GroupDialog({ roster, onClose, onSaved }) {
   }
   return <div className="gg-dialog-backdrop"><form className="gg-dialog" onSubmit={(event) => { event.preventDefault(); void save() }}><h2>新建群聊</h2><label>群名称<input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="比如：产品讨论" /></label><fieldset><legend>选择联系人</legend>{roster.bots.map((contact) => <label key={contact.id} className="gg-check"><input type="checkbox" checked={members.includes(contact.id)} onChange={(event) => setMembers((old) => event.target.checked ? [...old, contact.id] : old.filter((id) => id !== contact.id))} />{contact.name}</label>)}</fieldset><div className="gg-dialog-actions"><GButton type="button" onClick={onClose}>取消</GButton><GButton className="primary" disabled={busy || !title.trim() || members.length === 0}>创建群聊（{members.length + 1} 人）</GButton></div></form></div>
 }
-
 function SettingsDialog({ roster, onClose }) {
   return <div className="gg-dialog-backdrop"><div className="gg-dialog"><h2>会话信息</h2><p className="gg-dialog-note">当前界面由 DS-Bot 前端组件渲染，数据由 g-group 后端提供。</p><dl className="gg-facts"><div><dt>联系人</dt><dd>{roster.bots.length}</dd></div><div><dt>会话</dt><dd>{roster.rooms.length}</dd></div><div><dt>模型</dt><dd>fengshao1227/deepseek-v4.1-flash</dd></div></dl><div className="gg-dialog-actions"><GButton className="primary" onClick={onClose}>完成</GButton></div></div></div>
 }
@@ -341,7 +345,7 @@ export function DsBotApp() {
   const useLive = useCallback((selector) => selector({}), [])
   const useRegistry = useCallback((selector) => selector(0), [])
   const useUpdate = useCallback((selector) => selector({ available: false, phase: 'idle' }), [])
-  const useFrame = useCallback((selector) => selector({ viewport: typeof window === 'undefined' ? 1320 : window.innerWidth, sidebarWidth: 430, collapsedWidth: 0 }), [])
+  const useFrame = useCallback((selector) => selector({ viewport: typeof window === 'undefined' ? 1320 : window.innerWidth, sidebarWidth: 320, collapsedWidth: 0 }), [])
   const useSidebarPref = useCallback((selector) => selector(sidebarPref), [sidebarPref])
   const actions = useMemo(() => ({
     openSession: (id) => { const target = data.rooms.find((entry) => entry.id === id) ?? data.rooms.find((entry) => entry.kind === 'dm' && entry.members.some((member) => member.kind === 'contact' && member.id === id)); if (target) void data.select(target.id) },
@@ -381,10 +385,6 @@ export function DsBotApp() {
   const views = { useRoster, useUi, useSessions, useSessionStatus, useSessionRetainInfo, useActivity, useWork, useRegistry, useUpdate, useMemoryNews, useTurnClock, useLive, useFrame, useSidebarPref, actions }
   const selectedRoom = room ? roster.roomsById[room.id] : null
   return <div className="dsb-frame" data-testid="dsbot-frame">
-    {/* There is no DSH shell sidebar in this host.  Passing a collapsed shell
-        hint prevents the upstream sync effect from toggling our own column on
-        mount; TeamSidebar still computes its open/rail/hidden mode from the
-        real useSidebarPref source above. */}
     <TeamSidebar {...views} wide={false} />
     <main className="dsh_centerCol dsb-main">
       {selectedRoom && <header className="dsh_header"><HeaderPill {...views} sessionId={selectedRoom.id} useSession={() => (selector) => selector({ pendingSubmissions: [] })} /></header>}
