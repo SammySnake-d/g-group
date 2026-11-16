@@ -1,0 +1,255 @@
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/context-menu.js
+  s_799d2190e567fe::t_c6f42568229448 1-226
+docs/DS-BOT-FRONTEND-STATUS.md
+  s_799d2190e567fe::t_2ced3d314630e2 5-10
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/characters.js
+  s_799d2190e567fe::t_c6f42568229448 1-136
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/connectors.js
+  s_799d2190e567fe::t_c6f42568229448 1-667
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/at-menu.js
+  s_799d2190e567fe::t_c6f42568229448 1-115
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/btw-model.js
+  s_799d2190e567fe::t_c6f42568229448 1-266
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/details-drawer.js
+  s_799d2190e567fe::t_c6f42568229448 1-344
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/sidebar.js
+  s_799d2190e567fe::t_c6f42568229448 1-1400
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/btw.js
+  s_799d2190e567fe::t_c6f42568229448 1-105
+apps/desktop/src/dsbot-base/DsBotApp.tsx
+  s_799d2190e567fe::t_b3d3273b3e0448 2,18,185,227,231,254,270,285,289
+  s_799d2190e567fe::t_18f1d3136918b3 3-17,19-184,186-226,228-230,232-253,255-269,271-284,286-288,290-314,316-350,352-353,355-360
+  s_799d2190e567fe::t_33f616600df21d 354
+  s_799d2190e567fe::t_effdddd37486ee 1
+  s_799d2190e567fe::t_1a467715d0386b 315,351
+apps/desktop/src/dsbot-base/styles.css
+  s_799d2190e567fe::t_66a1992689ece0 7-9
+  s_799d2190e567fe::t_7fbe62654f01c2 1-6,10-43
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/locales/zh-tw.js
+  s_799d2190e567fe::t_c6f42568229448 1-88
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/secret-card.js
+  s_799d2190e567fe::t_c6f42568229448 1-364
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/queue-dock.js
+  s_799d2190e567fe::t_c6f42568229448 1-224
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/styles.js
+  s_799d2190e567fe::t_c6f42568229448 1-1496
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/read-page.js
+  s_799d2190e567fe::t_c6f42568229448 1-335
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/bot-browsers.js
+  s_799d2190e567fe::t_c6f42568229448 1-642
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/capability-settings.js
+  s_799d2190e567fe::t_c6f42568229448 1-167
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/fold.js
+  s_799d2190e567fe::t_c6f42568229448 1-160
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/header-navigation.js
+  s_799d2190e567fe::t_c6f42568229448 1-36
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/speech.js
+  s_799d2190e567fe::t_c6f42568229448 1-162
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/connector-marks.js
+  s_799d2190e567fe::t_c6f42568229448 1-178
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/local-agents-page.js
+  s_799d2190e567fe::t_c6f42568229448 1-109
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/api.js
+  s_799d2190e567fe::t_c6f42568229448 1-42
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/browser-overlap.js
+  s_799d2190e567fe::t_c6f42568229448 1-4
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/side-chat.js
+  s_799d2190e567fe::t_c6f42568229448 1-159
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/diagnostics.js
+  s_799d2190e567fe::t_c6f42568229448 1-93
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/exchange.js
+  s_799d2190e567fe::t_c6f42568229448 1-74
+apps/desktop/src/App.tsx
+  s_799d2190e567fe::t_bd1343259b4d88 3,6-10,16
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/handoff-card.js
+  s_799d2190e567fe::t_c6f42568229448 1-132
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/icons.js
+  s_799d2190e567fe::t_c6f42568229448 1-113
+apps/desktop/src/dsbot/Attribution.tsx
+  s_799d2190e567fe::t_78de098a087525 11
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/schedules.js
+  s_799d2190e567fe::t_c6f42568229448 1-292
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/learning-card-model.js
+  s_799d2190e567fe::t_c6f42568229448 1-72
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/i18n.js
+  s_799d2190e567fe::t_c6f42568229448 1-1849
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/mark.js
+  s_799d2190e567fe::t_c6f42568229448 1-175
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/member-status.js
+  s_799d2190e567fe::t_c6f42568229448 1-256
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/shared/group-replies.js
+  s_799d2190e567fe::t_c6f42568229448 1-79
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/settings.js
+  s_799d2190e567fe::t_c6f42568229448 1-387
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/team-actions.js
+  s_799d2190e567fe::t_c6f42568229448 1-274
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/browser-pane.js
+  s_799d2190e567fe::t_c6f42568229448 1-868
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/cell-empty.js
+  s_799d2190e567fe::t_c6f42568229448 1-38
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/providers-page.js
+  s_799d2190e567fe::t_c6f42568229448 1-208
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/create-bot.js
+  s_799d2190e567fe::t_c6f42568229448 1-126
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/feedback.js
+  s_799d2190e567fe::t_c6f42568229448 1-169
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/side-model.js
+  s_799d2190e567fe::t_c6f42568229448 1-171
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/turn-error.js
+  s_799d2190e567fe::t_c6f42568229448 1-260
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/goal.js
+  s_799d2190e567fe::t_c6f42568229448 1-403
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/user-message.js
+  s_799d2190e567fe::t_5ffe676d422fb6 2-6
+  s_799d2190e567fe::t_c6f42568229448 1,7-150
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/overlay-hooks.js
+  s_799d2190e567fe::t_c6f42568229448 1-21
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/model-menu.js
+  s_799d2190e567fe::t_c6f42568229448 1-596
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/shared-map.js
+  s_799d2190e567fe::t_c6f42568229448 1-65
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/agent-badge.js
+  s_799d2190e567fe::t_c6f42568229448 1-26
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/connectors-page.js
+  s_799d2190e567fe::t_c6f42568229448 1-268
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/locales/es.js
+  s_799d2190e567fe::t_c6f42568229448 1-2309
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/about.js
+  s_799d2190e567fe::t_c6f42568229448 1-160
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/storage.js
+  s_799d2190e567fe::t_c6f42568229448 1-72
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/enter-steer.js
+  s_799d2190e567fe::t_c6f42568229448 1-37
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/computer.js
+  s_799d2190e567fe::t_c6f42568229448 1-371
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/inks.js
+  s_799d2190e567fe::t_c6f42568229448 1-27
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/permission-picker.js
+  s_799d2190e567fe::t_c6f42568229448 1-47
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/bot-draft.js
+  s_799d2190e567fe::t_c6f42568229448 1-54
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/voice.js
+  s_799d2190e567fe::t_c6f42568229448 1-299
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/palette.js
+  s_799d2190e567fe::t_c6f42568229448 1-141
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/learning-card.js
+  s_799d2190e567fe::t_c6f42568229448 1-228
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/usage-data.js
+  s_799d2190e567fe::t_c6f42568229448 1-159
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/locales/fr.js
+  s_799d2190e567fe::t_c6f42568229448 1-2273
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/bot-settings.js
+  s_799d2190e567fe::t_c6f42568229448 1-299
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/turn-reasoning.js
+  s_799d2190e567fe::t_c6f42568229448 1-44
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/frame-layout.js
+  s_799d2190e567fe::t_c6f42568229448 1-91
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/locales/de.js
+  s_799d2190e567fe::t_c6f42568229448 1-2309
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/frame-watch.js
+  s_799d2190e567fe::t_c6f42568229448 1-109
+apps/desktop/src/index.css
+  s_799d2190e567fe::t_cf539628f9575b 154-155
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/new-chat.js
+  s_799d2190e567fe::t_c6f42568229448 1-183
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/themes.js
+  s_799d2190e567fe::t_c6f42568229448 1-128
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/usage-page.js
+  s_799d2190e567fe::t_c6f42568229448 1-760
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/shared/mentions.js
+  s_799d2190e567fe::t_c6f42568229448 1-72
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/folder-menu.js
+  s_799d2190e567fe::t_c6f42568229448 1-112
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/memory-panel.js
+  s_799d2190e567fe::t_c6f42568229448 1-471
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/text.js
+  s_799d2190e567fe::t_c6f42568229448 1-291
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/approval-notices.js
+  s_799d2190e567fe::t_c6f42568229448 1-36
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/settings-shell.js
+  s_799d2190e567fe::t_c6f42568229448 1-546
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/open-window.js
+  s_799d2190e567fe::t_c6f42568229448 1-21
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/motion.js
+  s_799d2190e567fe::t_c6f42568229448 1-271
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/agent-logos.js
+  s_799d2190e567fe::t_c6f42568229448 1-52
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/agent-new.js
+  s_799d2190e567fe::t_c6f42568229448 1-24
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/card-hold.js
+  s_799d2190e567fe::t_c6f42568229448 1-18
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/kept-private.js
+  s_799d2190e567fe::t_c6f42568229448 1-26
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/overlays.js
+  s_799d2190e567fe::t_c6f42568229448 1-72
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/im-page.js
+  s_799d2190e567fe::t_c6f42568229448 1-434
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/sources.js
+  s_799d2190e567fe::t_c6f42568229448 1-68
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/shared/im-platforms.js
+  s_799d2190e567fe::t_c6f42568229448 1-86
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/avatar-library.js
+  s_799d2190e567fe::t_c6f42568229448 1-159
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/dsh-offer.js
+  s_799d2190e567fe::t_c6f42568229448 1-14
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/right-panel.js
+  s_799d2190e567fe::t_c6f42568229448 1-49
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/browser-settings.js
+  s_799d2190e567fe::t_c6f42568229448 1-129
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/questions.js
+  s_799d2190e567fe::t_c6f42568229448 1-244
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/group-settings.js
+  s_799d2190e567fe::t_c6f42568229448 1-180
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/header.js
+  s_799d2190e567fe::t_c6f42568229448 1-248
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/enter-key.js
+  s_799d2190e567fe::t_c6f42568229448 1-20
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/dsh-primitives.js
+  s_799d2190e567fe::t_1e46b766c6c693 1-2,4-17
+  s_799d2190e567fe::t_11dda66d107669 3
+apps/desktop/src/dsbot/theme.ts
+  s_799d2190e567fe::t_5f4775027592b8 2,4-6
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/composer.js
+  s_799d2190e567fe::t_c6f42568229448 1-221
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/surface.js
+  s_799d2190e567fe::t_c6f42568229448 1-94
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/phone-page.js
+  s_799d2190e567fe::t_c6f42568229448 1-91
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/open-listed.js
+  s_799d2190e567fe::t_c6f42568229448 1-27
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/activity-row.js
+  s_799d2190e567fe::t_c6f42568229448 1-195
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/agent-routes.js
+  s_799d2190e567fe::t_c6f42568229448 1-62
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/cells.js
+  s_799d2190e567fe::t_c6f42568229448 1-1230
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/locales/ko.js
+  s_799d2190e567fe::t_c6f42568229448 1-2309
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/index.js
+  s_799d2190e567fe::t_c6f42568229448 1-1275
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/widget-cell.js
+  s_799d2190e567fe::t_118069031e1554 1-16
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/locales/ja.js
+  s_799d2190e567fe::t_c6f42568229448 1-2273
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/agent-cards.js
+  s_799d2190e567fe::t_c6f42568229448 1-160
+third_party/ds-bot/UPSTREAM.md
+  s_799d2190e567fe::t_6332448960396a 17-23
+  s_799d2190e567fe::t_cd1bbfe89138b0 1,3-8,14-15,24-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "090efa884f310cde083a6ba1790c51c297846baf",
+  "prompts": {},
+  "sessions": {
+    "s_799d2190e567fe": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1e382-c030-7b92-b28e-122d26db7c51",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
