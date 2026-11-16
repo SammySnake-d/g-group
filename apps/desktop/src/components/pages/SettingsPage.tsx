@@ -13,6 +13,7 @@ import { THEMES } from './constants'
 import { appShell, useAppShell } from '@/api/app-shell'
 import { SetupForm } from '@/components/shell/SetupForm'
 import { UpdateAction } from '@/components/shell/updates'
+import { DsBotAttribution } from '@/dsbot/Attribution'
 
 /* ---------- 设置:账号 → 外观 → 默认模型 → 通知 → 插件 → 连接 → 高级 ---------- */
 export function SettingsPage() {
@@ -68,6 +69,7 @@ export function SettingsPage() {
       </ListGroup>
       <ListGroup title="高级"><ListRow label="调试模式"><Switch label="调试模式" isLabelHidden size="sm" className={switchTheme} value={debug} onChange={setDebug} /></ListRow></ListGroup>
       <Hint className="px-6 text-[12px]">调试模式会在 Compute 里显示内部编号等排查信息，平时不需要打开。</Hint>
+      <div className="px-6 pb-6 pt-2"><DsBotAttribution /></div>
     </PageScroll>
   )
 }

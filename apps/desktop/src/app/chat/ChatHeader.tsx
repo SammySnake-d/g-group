@@ -18,26 +18,30 @@ export function ChatHeader({ conv }: { conv: Conversation }) {
   const peer = conv.kind === 'dm' ? conv.members.find((m) => m !== 'me')! : null
   const links = (conv.links ?? []).map((l) => convs.find((c) => c.id === l)).filter(Boolean) as Conversation[]
   return (
-    <header className="flex h-[52px] shrink-0 items-center gap-2 border-b border-line pl-5 pr-3">
-      {peer ? (
-        <PersonMenu id={peer} side="bottom">
-          <Button variant="ghost" size={null} className={titleBtn}><span className="truncate text-[15px] font-semibold">{conv.title}</span><span className="text-[12px] font-normal text-fg-3">{people[peer].role}</span></Button>
-        </PersonMenu>
-      ) : (
-        <Button variant="ghost" size={null} data-testid="chat-title" onClick={() => (broken('AC-50-3') ? push({ t: 'group', id: conv.id }, true) : openSplit({ t: 'group', id: conv.id }))} className={titleBtn}>
-          <span className="truncate text-[15px] font-semibold">{conv.title}</span>
-          <span className="shrink-0 text-[13px] font-normal tabular-nums text-fg-3">({conv.members.length})</span>
-          {conv.muted && <BellOff className="h-3.5 w-3.5 text-fg-3" />}
-        </Button>
-      )}
-      {links.length > 0 && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button data-testid="chat-links" variant="secondary" size="xs" shape="pill" onClick={() => push({ t: 'links', id: conv.id }, true)} className="text-fg-2 hover:text-fg"><Link2 />关联 {links.length}</Button>
-          </TooltipTrigger>
-          <TooltipContent>{`关联了：${links.map((l) => l.title).join('、')}`}</TooltipContent>
-        </Tooltip>
-      )}
+    <header className="dsbot-header relative flex h-[58px] shrink-0 items-center gap-2 border-b border-line px-4" data-dsbot-header="true">
+      <div className="dsbot-header-title absolute left-1/2 top-1/2 z-[1] -translate-x-1/2 -translate-y-1/2">
+        {peer ? (
+          <PersonMenu id={peer} side="bottom">
+            <Button variant="ghost" size={null} className={`${titleBtn} dsbot-title-pill`}><span className="truncate text-[14px] font-semibold">{conv.title}</span><span className="text-[11px] font-normal text-fg-3">{people[peer].role}</span></Button>
+          </PersonMenu>
+        ) : (
+          <Button variant="ghost" size={null} data-testid="chat-title" onClick={() => (broken('AC-50-3') ? push({ t: 'group', id: conv.id }, true) : openSplit({ t: 'group', id: conv.id }))} className={`${titleBtn} dsbot-title-pill`}>
+            <span className="truncate text-[14px] font-semibold">{conv.title}</span>
+            <span className="shrink-0 text-[12px] font-normal tabular-nums text-fg-3">({conv.members.length})</span>
+            {conv.muted && <BellOff className="h-3.5 w-3.5 text-fg-3" />}
+          </Button>
+        )}
+      </div>
+      <div className="flex min-w-0 items-center gap-2">
+        {links.length > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button data-testid="chat-links" variant="secondary" size="xs" shape="pill" onClick={() => push({ t: 'links', id: conv.id }, true)} className="text-fg-2 hover:text-fg"><Link2 />关联 {links.length}</Button>
+            </TooltipTrigger>
+            <TooltipContent>{`关联了：${links.map((l) => l.title).join('、')}`}</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
       <div className="flex-1" />
       <IconButton data-testid="head-helper" label="Helper（只读这个聊天，只有你看得到）" active={helperPanel} onClick={() => setHelperPanel(!helperPanel)} icon={<Bot shape={HELPER_MARK.shape} color={HELPER_MARK.color} size={20} />} />
       <IconButton data-testid="head-search" label="查找聊天记录" onClick={() => push({ t: 'search', id: conv.id }, true)} icon={<Search strokeWidth={1.6} />} />

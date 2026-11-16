@@ -36,7 +36,7 @@ function Shell() {
   })
   return (
     <TooltipProvider delayDuration={500} skipDelayDuration={300}>
-      <div className="relative flex h-full min-h-[640px] overflow-hidden bg-bg text-fg">
+      <div className="dsbot-shell relative flex h-full min-h-[640px] overflow-hidden bg-bg text-fg" data-dsbot-shell="true">
         <Rail section={section} panoOpen={panoOpen} badge={badge} running={running} helperOpen={helperGlobal} backend={backend} wire={wire} onReload={rewire}
           onSection={setSection} onPano={() => setPanoOpen(true)} onHelper={() => setHelperGlobal(!helperGlobal)} onSettings={() => push({ t: 'settings' }, true)} />
         {section !== 'plugins' && <>

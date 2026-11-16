@@ -37,6 +37,8 @@ test("本地文件路径:选择的真实文件能取回原路径,内存 File 没
     await expect(win.getByTestId("file-input")).toHaveAttribute("data-native-path", file);
     const memoryPath = await win.evaluate(() => (window as unknown as { ggApp: { getPathForFile: (f: File) => string } }).ggApp.getPathForFile(new File(["内容"], "内存.txt")));
     expect(memoryPath).toBe("");
+    await expect(win.getByTestId("pending-attachments")).toBeVisible(LONG);
+    await win.getByTestId("send").click();
     await expect(win.getByTestId("attachment-有空格的 附件.txt")).toBeVisible(LONG);
   } finally {
     await app.close();
@@ -57,6 +59,8 @@ test("截图:当前窗口返回有效 PNG,点击输入栏截图发送真实附�
     expect(png.length).toBeGreaterThan(1000);
     await expect(win.getByTestId("tool-shot")).toBeVisible();
     await win.getByTestId("tool-shot").click();
+    await expect(win.getByTestId("pending-attachments")).toBeVisible(LONG);
+    await win.getByTestId("send").click();
     const card = win.locator('[data-testid^="attachment-截图 "]');
     await expect(card).toHaveCount(1, LONG);
     await expect(card).toContainText("你发的");
@@ -79,6 +83,8 @@ test("内存附件超过通用 IPC 上限仍按上传合同发送,普通请求�
   const { app, win } = await launch(dir);
   try {
     await win.getByTestId("file-input").setInputFiles({ name: "大附件.txt", mimeType: "text/plain", buffer: Buffer.alloc(300_000, "x") });
+    await expect(win.getByTestId("pending-attachments")).toBeVisible(LONG);
+    await win.getByTestId("send").click();
     await expect(win.getByTestId("attachment-大附件.txt")).toBeVisible(LONG);
     const denied = await win.evaluate(() => (window as unknown as { gg: { invoke: (m: string, p: object) => Promise<{ ok: boolean; error?: { message: string } }> } }).gg.invoke("messages.send", { text: "x".repeat(300_000) }));
     expect(denied.ok).toBe(false);

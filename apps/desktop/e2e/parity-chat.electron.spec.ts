@@ -272,6 +272,8 @@ test("私聊回到某条:确认框写明真实要撤下几条;之后的撤下、
 
     await test.step("发一个文件:出现附件卡(名字、大小),重启后还在", async () => {
       await win.getByTestId("file-input").setInputFiles({ name: "需求补充.md", mimeType: "text/markdown", buffer: Buffer.from("# 需求补充\n第一条\n") });
+      await expect(win.getByTestId("pending-attachments")).toBeVisible(LONG);
+      await win.getByTestId("send").click();
       const card = win.getByTestId("chat-column").getByTestId("attachment-需求补充.md");
       await expect(card).toBeVisible(LONG);
       await expect(card).toContainText("B · 你发的");
