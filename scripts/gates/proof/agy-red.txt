@@ -72,3 +72,20 @@ not ok 8 - codexCliRolloutToTurns 与 loadSession 拒绝缺少 session_meta 或 
 ✗ 拦下:codex-cli rollout 的 session_meta 缺少 session_id/id 被拦 (2s)
 自检失败
 自检耗时 2s:用例 3/3,并发 3(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0
+=== Round 4 incremental Red commit: 155da62c (test(gates): red reproduce merge.sh /dev/stderr and TAP pipe drain) ===
+--- scripts/gates/*.test.ts named failures on 155da62c ---
+not ok 9 - scripts/merge.sh 动态基座分支保护查询区分 200(--required)、404 未保护(无 --required)与 500 故障(fail-closed)
+  error: tee: /dev/stderr: Permission denied
+not ok 18 - 有失败用例且 TAP 输出超 128KB 时完整刷新管道不截断末尾失败汇总
+  error: 'missing final-fail in 65536-byte TAP output'
+# tests 37
+# pass 35
+# fail 2
+=== Round 4 Green commit: 94e90d16 (fix(gates): avoid /dev/stderr in merge.sh and drain test-runner output) ===
+--- scripts/gates/*.test.ts on 94e90d16 ---
+ok 9 - scripts/merge.sh 动态基座分支保护查询区分 200(--required)、404 未保护(无 --required)与 500 故障(fail-closed)
+ok 18 - 有失败用例且 TAP 输出超 128KB 时完整刷新管道不截断末尾失败汇总
+# tests 37
+# pass 37
+# fail 0
+test-runner:实际执行并通过 37 条用例

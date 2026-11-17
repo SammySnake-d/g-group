@@ -34,20 +34,13 @@
   ],
   "author": {
     "agent": "carbon",
-    "session": "antigravity:8220b44b-5ff9-4731-b42d-4ac4b7c196c9",
+    "session": "antigravity:32ea3173-88b3-43de-a0c5-e670ec5491e1",
     "model": "gemini-4-carbon-high"
   },
   "red": {
     "commit": "5e7b6922bdb4b4297fa6886ca6740f24a3c36459"
   },
-  "unverifiable": "R-01 / AC-26:agyRecoverStepModels 从 conversations/<id>.db(含活跃 -wal)每行末尾 2KB protobuf trailer 按 last_step_index+1 精确绑定对应 PLANNER_RESPONSE 模型(未匹配轮次保持 unknown 拦下,中途换模完整保留累积厂商集合),codexCliRolloutToTurns 强制要求 rollout 含非空匹配的 session_meta(session_id/id)并按轮次绑定模型,但若上游网关在同型号标识背后静默换模,本机落盘记录无法区分;同时目标基座通过所有者授权的 Day-0 引导落地门禁更新。R-02:G-RED 的 isTest 只覆盖 packages/**/*.test.ts,门禁脚本新增的 scripts/gates/{antigravity,workspace-isolation}.test.ts 与 selftest.ts 在初始红提交 5e7b6922(25 条单测 + 30 条自检具名失败)及第 3 轮增量红提交 3ed37c68(新增无 session_meta / 无 id 具名失败)的先红证据留存于 scripts/gates/proof/agy-red.txt,由跨厂商审查人独立复现。R-07:stripRunCommandWrapper 与 stripCodexExecWrapper 已限定仅剥离退出码 0 的包装头,但仍基于宿主落盘命令文本与输出解析而非内核级进程审计。R-18:本机在 macOS seatbelt 下实跑全部 251/251 自检与 152/152 变异(0 存活),Linux Docker 沙箱路径留待远端 self-check 工作流验证;scripts/merge.sh 已通过模拟 gh 的 200/404/500 单测覆盖分支保护 fail-closed,真实 GitHub 合并仍需在已审通过的远端 PR 上执行。",
+  "unverifiable": "R-01 / AC-26:agyRecoverStepModels 从 conversations/<id>.db(含活跃 -wal)每行末尾 2KB protobuf trailer 按 last_step_index+1 精确绑定对应 PLANNER_RESPONSE 模型(未匹配轮次保持 unknown 拦下,中途换模完整保留累积厂商集合),codexCliRolloutToTurns 强制要求 rollout 含非空匹配的 session_meta(session_id/id)并按轮次绑定模型,但若上游网关在同型号标识背后静默换模,本机落盘记录无法区分;同时目标基座通过所有者授权的 Day-0 引导落地门禁更新。R-02:G-RED 的 isTest 只覆盖 packages/**/*.test.ts,门禁脚本新增的 scripts/gates/{antigravity,test-runner,workspace-isolation}.test.ts 与 selftest.ts 在初始红提交 5e7b6922(25 条单测 + 30 条自检具名失败)、第 3 轮增量红提交 3ed37c68(新增无 session_meta / 无 id 具名失败)及第 4 轮增量红提交 155da62c(复现 merge.sh 管道 tee /dev/stderr 权限拒绝与 test-runner.ts 超 128KB TAP 管道截断,2 条单测具名失败并在 94e90d16 转绿)的先红证据留存于 scripts/gates/proof/agy-red.txt,由跨厂商审查人独立复现。R-07:stripRunCommandWrapper 与 stripCodexExecWrapper 已限定仅剥离退出码 0 的包装头,但仍基于宿主落盘命令文本与输出解析而非内核级进程审计。R-18:本机在 macOS seatbelt 下实跑全部 251/251 自检与 152/152 变异(0 存活),Linux Docker 沙箱路径留待远端 self-check 工作流验证;scripts/merge.sh 已通过模拟 gh 的 200/404/500 单测覆盖分支保护 fail-closed,真实 GitHub 合并仍需在已审通过的远端 PR 上执行。",
   "waiver": null,
-  "review": {
-    "agent": "codex-cli",
-    "session": "codex-cli:01a1eb91-53d5-76f3-9cd9-1bf752899a17",
-    "model": "shayu/gpt-6.2-sol",
-    "verdict": "approve",
-    "reviewed_hash": "30a051ca66cf1c65eeb725586dae4e7c0d6e98177160ad0e5cca8c3219525f7b",
-    "notes": "Round 3 closes the R2 session_meta P1: both omission cases fail closed, blank/mismatched IDs reject, matching IDs pass; Red/Green and 152/152 mutants verified. Owner-authorized Day-0 bootstrap onto dev/agy-backend; origin/$BASE_REF judge remains strict."
-  }
+  "review": null
 }
