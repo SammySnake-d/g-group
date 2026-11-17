@@ -1,235 +1,241 @@
-=== scripts/gates/*.test.ts (35 cases) ===
+=== scripts/gates/*.test.ts (36 cases) ===
 TAP version 13
-# (node:87350) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (node:3694) ExperimentalWarning: SQLite is an experimental feature and might change at any time
 # (Use `node --trace-warnings ...` to show where the warning was created)
 # Subtest: stripRunCommandWrapper 仅在退出码为 0 时剥离单层与双重 Created At 包装头并规范化 \\r\\n
 ok 1 - stripRunCommandWrapper 仅在退出码为 0 时剥离单层与双重 Created At 包装头并规范化 \\r\\n
   ---
-  duration_ms: 0.545458
+  duration_ms: 0.52525
   type: 'test'
   ...
 # Subtest: agyStepsToTurns 按位置配对多工具调用并按 step_index 逐轮绑定模型,未匹配轮次保持 undefined 不涂抹
 ok 2 - agyStepsToTurns 按位置配对多工具调用并按 step_index 逐轮绑定模型,未匹配轮次保持 undefined 不涂抹
   ---
-  duration_ms: 0.429125
+  duration_ms: 0.445292
   type: 'test'
   ...
 # Subtest: agyRecoverStepModels 只取每行末尾 2KB trailer 抗 >20KB 前缀污染,并从活跃 WAL 恢复逐轮 step_index -> model
 ok 3 - agyRecoverStepModels 只取每行末尾 2KB trailer 抗 >20KB 前缀污染,并从活跃 WAL 恢复逐轮 step_index -> model
   ---
-  duration_ms: 3.526959
+  duration_ms: 4.258125
   type: 'test'
   ...
 # Subtest: loadSession 支持 antigravity 逐轮换模保留、未匹配轮次保持 unknown、派生根共享与软链逃逸拦截
 ok 4 - loadSession 支持 antigravity 逐轮换模保留、未匹配轮次保持 unknown、派生根共享与软链逃逸拦截
   ---
-  duration_ms: 5.517417
+  duration_ms: 5.288167
   type: 'test'
   ...
 # Subtest: turnTouchesRepo 识别 edit_file/run_command 与大写 Path/TargetFile,并对无路径写调用保守计入
 ok 5 - turnTouchesRepo 识别 edit_file/run_command 与大写 Path/TargetFile,并对无路径写调用保守计入
   ---
-  duration_ms: 0.786375
+  duration_ms: 0.783375
   type: 'test'
   ...
 # Subtest: stripCodexExecWrapper 仅在退出码为 0 时剥离完整与精简包装头并规范化 \\r\\n
 ok 6 - stripCodexExecWrapper 仅在退出码为 0 时剥离完整与精简包装头并规范化 \\r\\n
   ---
-  duration_ms: 0.1205
+  duration_ms: 0.120041
   type: 'test'
   ...
 # Subtest: codexCliRolloutToTurns 与 loadSession 支持日期目录检索、session_meta 身份核对与软链逃逸拦截
 ok 7 - codexCliRolloutToTurns 与 loadSession 支持日期目录检索、session_meta 身份核对与软链逃逸拦截
   ---
-  duration_ms: 2.003
+  duration_ms: 2.119083
+  type: 'test'
+  ...
+# Subtest: codexCliRolloutToTurns 与 loadSession 拒绝缺少 session_meta 或 session_meta 缺少身份标识的 rollout
+ok 8 - codexCliRolloutToTurns 与 loadSession 拒绝缺少 session_meta 或 session_meta 缺少身份标识的 rollout
+  ---
+  duration_ms: 1.458667
   type: 'test'
   ...
 # Subtest: scripts/merge.sh 动态基座分支保护查询区分 200(--required)、404 未保护(无 --required)与 500 故障(fail-closed)
-ok 8 - scripts/merge.sh 动态基座分支保护查询区分 200(--required)、404 未保护(无 --required)与 500 故障(fail-closed)
+ok 9 - scripts/merge.sh 动态基座分支保护查询区分 200(--required)、404 未保护(无 --required)与 500 故障(fail-closed)
   ---
-  duration_ms: 1636.988416
+  duration_ms: 1502.442375
   type: 'test'
   ...
 # Subtest: countTests 读顶层汇总行,忽略缩进的子测试汇总
-ok 9 - countTests 读顶层汇总行,忽略缩进的子测试汇总
+ok 10 - countTests 读顶层汇总行,忽略缩进的子测试汇总
   ---
-  duration_ms: 0.504958
+  duration_ms: 0.53075
   type: 'test'
   ...
 # Subtest: countTests 没有汇总行时给 undefined
-ok 10 - countTests 没有汇总行时给 undefined
+ok 11 - countTests 没有汇总行时给 undefined
   ---
-  duration_ms: 0.055667
+  duration_ms: 0.057542
   type: 'test'
   ...
 # Subtest: 0 条用例判失败
-ok 11 - 0 条用例判失败
+ok 12 - 0 条用例判失败
   ---
-  duration_ms: 91.323208
+  duration_ms: 84.474125
   type: 'test'
   ...
 # Subtest: 1 条通过的用例判通过
-ok 12 - 1 条通过的用例判通过
+ok 13 - 1 条通过的用例判通过
   ---
-  duration_ms: 137.01325
+  duration_ms: 134.327291
   type: 'test'
   ...
 # Subtest: 全部 skip 判失败
-ok 13 - 全部 skip 判失败
+ok 14 - 全部 skip 判失败
   ---
-  duration_ms: 133.210417
+  duration_ms: 131.738084
   type: 'test'
   ...
 # Subtest: 全部 todo 判失败
-ok 14 - 全部 todo 判失败
+ok 15 - 全部 todo 判失败
   ---
-  duration_ms: 128.75325
+  duration_ms: 126.612709
   type: 'test'
   ...
 # Subtest: 通过与 skip 混合判失败
-ok 15 - 通过与 skip 混合判失败
+ok 16 - 通过与 skip 混合判失败
   ---
-  duration_ms: 131.303916
+  duration_ms: 131.522916
   type: 'test'
   ...
 # Subtest: 有失败用例判失败
-ok 16 - 有失败用例判失败
+ok 17 - 有失败用例判失败
   ---
-  duration_ms: 127.252167
+  duration_ms: 128.269042
   type: 'test'
   ...
 # Subtest: 普通副本经 scoped/unscoped workspace 别名加载自身冻结源码,不回读后来变化的原树,外部依赖仍可读
-ok 17 - 普通副本经 scoped/unscoped workspace 别名加载自身冻结源码,不回读后来变化的原树,外部依赖仍可读
+ok 18 - 普通副本经 scoped/unscoped workspace 别名加载自身冻结源码,不回读后来变化的原树,外部依赖仍可读
   ---
-  duration_ms: 43.623166
+  duration_ms: 41.040959
   type: 'test'
   ...
 # Subtest: 红快照再复制后 workspace 别名只加载红源码,不把候选源码混进先红证据
-ok 18 - 红快照再复制后 workspace 别名只加载红源码,不把候选源码混进先红证据
+ok 19 - 红快照再复制后 workspace 别名只加载红源码,不把候选源码混进先红证据
   ---
-  duration_ms: 311.381167
+  duration_ms: 303.752459
   type: 'test'
   ...
 # Subtest: 变异副本再复制后 workspace 别名加载变异源码,不绕过 copyTree 中的实现变更
-ok 19 - 变异副本再复制后 workspace 别名加载变异源码,不绕过 copyTree 中的实现变更
+ok 20 - 变异副本再复制后 workspace 别名加载变异源码,不绕过 copyTree 中的实现变更
   ---
-  duration_ms: 110.418791
+  duration_ms: 112.1215
   type: 'test'
   ...
 # Subtest: 副本缺少的 workspace 包不能从原树偷载,必须保留模块加载失败
-ok 20 - 副本缺少的 workspace 包不能从原树偷载,必须保留模块加载失败
+ok 21 - 副本缺少的 workspace 包不能从原树偷载,必须保留模块加载失败
   ---
-  duration_ms: 38.070333
+  duration_ms: 37.088416
   type: 'test'
   ...
 # Subtest: 同一 scope 下重绑 workspace 时,同级外部包仍能读取
-ok 21 - 同一 scope 下重绑 workspace 时,同级外部包仍能读取
+ok 22 - 同一 scope 下重绑 workspace 时,同级外部包仍能读取
   ---
-  duration_ms: 35.412583
+  duration_ms: 35.116834
   type: 'test'
   ...
 # Subtest: workspace 指向仓内二次链接到副本外时不得跟随原树,缺少副本源码应失败
-ok 22 - workspace 指向仓内二次链接到副本外时不得跟随原树,缺少副本源码应失败
+ok 23 - workspace 指向仓内二次链接到副本外时不得跟随原树,缺少副本源码应失败
   ---
-  duration_ms: 34.17675
+  duration_ms: 34.79575
   type: 'test'
   ...
 # Subtest: 没有 workspace 别名时仍能读取原有外部依赖
-ok 23 - 没有 workspace 别名时仍能读取原有外部依赖
+ok 24 - 没有 workspace 别名时仍能读取原有外部依赖
   ---
-  duration_ms: 32.918333
+  duration_ms: 34.825333
   type: 'test'
   ...
 # Subtest: 依赖目录损坏时拒绝创建半成品副本,不回退到原树
-ok 24 - 依赖目录损坏时拒绝创建半成品副本,不回退到原树
+ok 25 - 依赖目录损坏时拒绝创建半成品副本,不回退到原树
   ---
-  duration_ms: 0.937958
+  duration_ms: 1.373875
   type: 'test'
   ...
 # Subtest: node_modules 链接悬空时拒绝运行,不能静默当作没有依赖
-ok 25 - node_modules 链接悬空时拒绝运行,不能静默当作没有依赖
+ok 26 - node_modules 链接悬空时拒绝运行,不能静默当作没有依赖
   ---
-  duration_ms: 0.991375
+  duration_ms: 1.235792
   type: 'test'
   ...
 # Subtest: 2层副本的 workspace 使用各层源码且 Docker 计划只挂真实依赖来源
-ok 26 - 2层副本的 workspace 使用各层源码且 Docker 计划只挂真实依赖来源
+ok 27 - 2层副本的 workspace 使用各层源码且 Docker 计划只挂真实依赖来源
   ---
-  duration_ms: 68.227417
+  duration_ms: 65.077083
   type: 'test'
   ...
 # Subtest: 3层副本的 workspace 使用各层源码且 Docker 计划只挂真实依赖来源
-ok 27 - 3层副本的 workspace 使用各层源码且 Docker 计划只挂真实依赖来源
+ok 28 - 3层副本的 workspace 使用各层源码且 Docker 计划只挂真实依赖来源
   ---
-  duration_ms: 97.609417
+  duration_ms: 98.33775
   type: 'test'
   ...
 # Subtest: 从副本创建变异树后再次复制,依赖挂载仍回到可信原始目录
-ok 28 - 从副本创建变异树后再次复制,依赖挂载仍回到可信原始目录
+ok 29 - 从副本创建变异树后再次复制,依赖挂载仍回到可信原始目录
   ---
-  duration_ms: 38.75875
+  duration_ms: 40.4555
   type: 'test'
   ...
 # Subtest: 绝对 scoped workspace 链跨多层副本仍只加载末层源码
-ok 29 - 绝对 scoped workspace 链跨多层副本仍只加载末层源码
+ok 30 - 绝对 scoped workspace 链跨多层副本仍只加载末层源码
   ---
-  duration_ms: 38.000791
+  duration_ms: 38.250416
   type: 'test'
   ...
 # Subtest: 悬空绝对 scoped workspace 链跨副本不得回退到原树
-ok 30 - 悬空绝对 scoped workspace 链跨副本不得回退到原树
+ok 31 - 悬空绝对 scoped workspace 链跨副本不得回退到原树
   ---
-  duration_ms: 36.469292
+  duration_ms: 36.481708
   type: 'test'
   ...
 # Subtest: 另一进程拿到来源未知的 overlay 时拒绝,不能由可伪造的文件授权额外挂载
-ok 31 - 另一进程拿到来源未知的 overlay 时拒绝,不能由可伪造的文件授权额外挂载
+ok 32 - 另一进程拿到来源未知的 overlay 时拒绝,不能由可伪造的文件授权额外挂载
   ---
-  duration_ms: 64.4435
+  duration_ms: 59.731916
   type: 'test'
   ...
 # Subtest: 已删除副本的同路径新目录不能继承旧副本的依赖授权
-ok 32 - 已删除副本的同路径新目录不能继承旧副本的依赖授权
+ok 33 - 已删除副本的同路径新目录不能继承旧副本的依赖授权
   ---
-  duration_ms: 7.256917
+  duration_ms: 7.761083
   type: 'test'
   ...
 # Subtest: 原依赖目录被替换后不能沿用旧副本的来源授权
-ok 33 - 原依赖目录被替换后不能沿用旧副本的来源授权
+ok 34 - 原依赖目录被替换后不能沿用旧副本的来源授权
   ---
-  duration_ms: 9.104167
+  duration_ms: 9.378
   type: 'test'
   ...
 # Subtest: 原依赖目录内包软链变更到未知位置时拒绝沿用授权
-ok 34 - 原依赖目录内包软链变更到未知位置时拒绝沿用授权
+ok 35 - 原依赖目录内包软链变更到未知位置时拒绝沿用授权
   ---
-  duration_ms: 9.173583
+  duration_ms: 8.655167
   type: 'test'
   ...
 # Subtest: 未知来源的外部包软链不能扩大依赖挂载范围
-ok 35 - 未知来源的外部包软链不能扩大依赖挂载范围
+ok 36 - 未知来源的外部包软链不能扩大依赖挂载范围
   ---
-  duration_ms: 5.944041
+  duration_ms: 7.162541
   type: 'test'
   ...
-1..35
-# tests 35
+1..36
+# tests 36
 # suites 0
-# pass 35
+# pass 36
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 1947.583084
+# duration_ms 1810.71375
 === full npm test summary (packages/**/*.test.ts + scripts/gates/*.test.ts) ===
-1..1694
-# tests 1694
+1..1695
+# tests 1695
 # suites 0
-# pass 1694
+# pass 1695
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 52003.5755
-test-runner:实际执行并通过 1694 条用例
+# duration_ms 51914.173459
+test-runner:实际执行并通过 1695 条用例
 exit=0

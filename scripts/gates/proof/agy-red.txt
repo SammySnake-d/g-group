@@ -61,3 +61,14 @@ not ok 35 - 未知来源的外部包软链不能扩大依赖挂载范围
 ✗ 拦下:codex-cli rollout 内部 session_meta id 与文件名不一致被拦 (2s)
 自检失败
 自检耗时 12s:用例 30/30,并发 4(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0
+=== Round 3 incremental Red commit: 3ed37c68 (test(gates): 第 3 轮红提交 — 拒绝缺少 session_meta 或无身份标识的 codex-cli rollout [skip ci]) ===
+--- scripts/gates/*.test.ts named failure on 3ed37c68 ---
+not ok 8 - codexCliRolloutToTurns 与 loadSession 拒绝缺少 session_meta 或 session_meta 缺少身份标识的 rollout
+# tests 36
+# pass 35
+# fail 1
+--- gates:selftest new cases on 3ed37c68 (2/2 failed) ---
+✗ 拦下:codex-cli rollout 缺少 session_meta 记录被拦 (2s)
+✗ 拦下:codex-cli rollout 的 session_meta 缺少 session_id/id 被拦 (2s)
+自检失败
+自检耗时 2s:用例 3/3,并发 3(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0
