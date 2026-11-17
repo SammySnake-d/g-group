@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import ts from "typescript";
 import YAML from "yaml";
-import { type Ctx, type Gate, GIT_SAFE_ARGS, gitEnv, type NamedTest, type Problem, copyTree, existing, isGoverned, isSrc, isTest, p, runNodeTests } from "./lib.ts";
+import { type Ctx, type Gate, GIT_SAFE_ARGS, gitEnv, type NamedTest, type Problem, agyBrainRoot, agyConversationsRoot, agyPluginDataRoot, canonicalProvenanceRoots, codexCliSessionsRoot, copyTree, existing, isGoverned, isSrc, isTest, p, runNodeTests } from "./lib.ts";
 import { analyzeTestFile, lintTestFile } from "./testlint.ts";
 import { type Vendor, vendorOf } from "./vendor.ts";
 
@@ -86,6 +86,13 @@ const SESSION_RE = /^([a-z]+):([A-Za-z0-9-]+)$/;
 const realHome = () => os.userInfo().homedir;
 export const sessionsRoot = () => process.env.MIRASIM_SESSIONS ?? path.join(realHome(), ".mirasim/sessions");
 export const roomsRoot = () => process.env.MIRASIM_ROOMS ?? path.join(realHome(), ".mirasim/chat/rooms");
+export { agyBrainRoot, agyConversationsRoot, agyPluginDataRoot, canonicalProvenanceRoots, codexCliSessionsRoot };
+export function stripRunCommandWrapper(_output: string): string { return ""; }
+export function agyStepsToTurns(_lines: string[], _stepModels?: ReadonlyMap<number, string>): Turn[] { return []; }
+export function agyRecoverStepModels(_convRoot: string, _id: string): Map<number, string> { return new Map(); }
+export function stripCodexExecWrapper(_output: string): string { return ""; }
+export type CodexCliParsed = { ok: true; turns: Turn[]; workdir: string | undefined } | { ok: false; why: string };
+export function codexCliRolloutToTurns(_lines: string[], _expectedId?: string): CodexCliParsed { return { ok: false, why: "red stub" }; }
 
 type Loaded = { ok: true; turns: Turn[]; workdir: string | undefined } | { ok: false; why: string };
 /** 严格解析 <harness>:<id>,realpath 之后必须仍在会话根目录里(防 ../ 与软链逃逸) */

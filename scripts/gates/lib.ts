@@ -234,7 +234,7 @@ export function freshCopy(src: string): string {
 
 // 用 node --test 的 TAP 输出解析"每个文件里哪些具名测试通过/失败"。
 // 只认测试真的注册并执行后的结果;文件加载失败时 TAP 里只有文件级失败,不会出现具名测试。
-const nmMount = (root: string) => { const nm = path.join(root, "node_modules"); return fs.existsSync(nm) ? [fs.realpathSync(nm)] : []; };
+export const nmMount = (root: string) => { const nm = path.join(root, "node_modules"); return fs.existsSync(nm) ? [fs.realpathSync(nm)] : []; };
 
 export function runNodeTests(root: string, files: string[], extraArgs: string[] = []): TestRun {
   const passed: NamedTest[] = [], failed: NamedTest[] = [];
@@ -347,3 +347,9 @@ export function runGates(ctx: Ctx, gates: readonly Gate[]): GateResult[] {
     catch (e) { return { gate, problems: [{ gate: gate.id, msg: `门禁自身出错:${(e as Error).message}` }] }; }
   });
 }
+
+export const agyBrainRoot = (): string => "";
+export const agyConversationsRoot = (): string => "";
+export const agyPluginDataRoot = (): string => "";
+export const codexCliSessionsRoot = (): string => "";
+export function canonicalProvenanceRoots(): string[] { return []; }
