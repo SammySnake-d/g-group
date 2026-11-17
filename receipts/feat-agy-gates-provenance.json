@@ -1,0 +1,46 @@
+{
+  "slice": "门禁与合并入口支持 Antigravity Swarm(逐轮 step_index 模型绑定,拒绝跨轮涂抹与未知轮次)及本机 codex-cli(session_meta 身份核对与退出码 0 包装剥离)双向跨厂商写审:合入 pre-push 真实退出码与 @g-group/* 工作区副本依赖隔离,来源读取与 seatbelt 拒读共享 canonicalProvenanceRoots(覆盖非 HOME AGY_BRAIN_ROOT 及其派生 ../conversations/../plugin_data、AGY_CONV_ROOT、CODEX_CLI_SESSIONS_ROOT),merge.sh 支持动态基座并按 HTTP 200/404 Branch not protected 严格 fail-closed",
+  "acceptance": [
+    {
+      "id": "R-01",
+      "status": "通过",
+      "evidence": "scripts/gates/proof/agy-selftest.txt"
+    },
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "scripts/gates/proof/agy-red.txt"
+    },
+    {
+      "id": "R-03",
+      "status": "通过",
+      "evidence": "scripts/gates/proof/agy-test.txt"
+    },
+    {
+      "id": "R-04",
+      "status": "通过",
+      "evidence": "scripts/gates/proof/agy-selftest.txt"
+    },
+    {
+      "id": "R-07",
+      "status": "未测",
+      "reason": "G-PROVENANCE 通过 Antigravity transcript(_full).jsonl + conversations/<id>.db(node:sqlite 逐轮 trailer 绑定,含活跃 -wal)及本机 ~/.codex/sessions/**/rollout-*-<id>.jsonl(核对 session_meta id 与退出码 0)机械核验会话来源、累积生产厂商与 hash 输出;业务切片证据是否取自真实运行时对象仍由独立审查人核验"
+    },
+    {
+      "id": "R-18",
+      "status": "通过",
+      "evidence": "scripts/gates/proof/agy-mutation.txt"
+    }
+  ],
+  "author": {
+    "agent": "carbon",
+    "session": "antigravity:8220b44b-5ff9-4731-b42d-4ac4b7c196c9",
+    "model": "gemini-4-carbon-high"
+  },
+  "red": {
+    "commit": "5e7b6922bdb4b4297fa6886ca6740f24a3c36459"
+  },
+  "unverifiable": "R-01 / AC-26:agyRecoverStepModels 从 conversations/<id>.db(含活跃 -wal)每行末尾 2KB protobuf trailer 按 last_step_index+1 精确绑定对应 PLANNER_RESPONSE 模型(未匹配轮次保持 unknown 拦下,中途换模完整保留累积厂商集合),codexCliRolloutToTurns 从 rollout-*-<id>.jsonl 校验 session_meta id 并按轮次绑定模型,但若上游网关在同型号标识背后静默换模,本机落盘记录无法区分;同时目标基座需先完成受信任门禁引导以识别新增 harness/reviewer。R-02:G-RED 的 isTest 只覆盖 packages/**/*.test.ts,门禁脚本新增的 scripts/gates/{antigravity,workspace-isolation}.test.ts(红提交 5e7b6922 上 25 条具名失败)与 selftest.ts(30 条红例失败)留存于 scripts/gates/proof/agy-red.txt,由跨厂商审查人独立复现。R-07:stripRunCommandWrapper 与 stripCodexExecWrapper 已限定仅剥离退出码 0 的包装头,但仍基于宿主落盘命令文本与输出解析而非内核级进程审计。R-18:本机在 macOS seatbelt 下实跑全部 249/249 自检与 150/150 变异(0 存活),Linux Docker 沙箱路径留待远端 self-check 工作流验证;scripts/merge.sh 已通过模拟 gh 的 200/404/500 单测覆盖分支保护 fail-closed,真实 GitHub 合并仍需在已审通过的远端 PR 上执行。",
+  "waiver": null,
+  "review": null
+}
