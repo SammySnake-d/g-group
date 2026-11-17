@@ -1,0 +1,16 @@
+scripts/gates/test-runner.ts
+  h_f33e46a035b77c 33-54
+scripts/merge.sh
+  h_f33e46a035b77c 14-16,30-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "94e90d1621ca55568629e6897b41802c88236a99",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
