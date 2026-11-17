@@ -1,0 +1,16 @@
+scripts/gates/antigravity.test.ts
+  h_f33e46a035b77c 297-357
+scripts/gates/selftest.ts
+  h_f33e46a035b77c 1367,1444-1460
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3ed37c681c0782d31c6062122344c22c420b49aa",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
