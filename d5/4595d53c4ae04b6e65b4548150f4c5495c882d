@@ -1,0 +1,22 @@
+.githooks/pre-push
+  h_f33e46a035b77c 7
+scripts/gates/gates.ts
+  h_f33e46a035b77c 5,8,85,87,91-246,254-302,331-332,348
+scripts/gates/lib.ts
+  h_f33e46a035b77c 120,150,217-325,337-346,351,357-358,361,438,441,452-456
+scripts/gates/policy.json
+  h_f33e46a035b77c 1
+scripts/merge.sh
+  h_f33e46a035b77c 2,5,14-15,20-21,24,29,35-40,42-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d54595d53c4ae04b6e65b4548150f4c5495c882d",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
