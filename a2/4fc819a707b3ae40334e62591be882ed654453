@@ -1,0 +1,174 @@
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/dsh-primitives.js
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-3
+apps/desktop/src/dsbot-base/upstream/app/src/fonts.css
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-7
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/widget-cell.js
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-2,4-11,13-162
+apps/desktop/src/dsbot-base/upstream/app/ui/index.html
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-13
+apps/desktop/src/dsbot-base/upstream/app/src/macos.css
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-13
+apps/desktop/src/dsbot-base/upstream/app/ui/src/app.js
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-78
+apps/desktop/verify/dsbot-reference.mjs
+  s_3c344be2fe3577::t_77da8e7eb3ddbe 1-3,5-20,23-29,40-68,79-97
+  s_3c344be2fe3577::t_c7cc517e149f16 4,21,30-39,69-78
+  s_3c344be2fe3577::t_88368fdb1f34bd 22
+apps/desktop/scripts/pack-mac.mjs
+  s_3c344be2fe3577::t_d4458cd62f6acc 32-34
+apps/desktop/src/dsbot-base/upstream/app/ui/src/chat.js
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-203
+third_party/ds-bot/UPSTREAM.md
+  s_3c344be2fe3577::t_98924ba05cbbf2 27-33,35-41,57
+  s_3c344be2fe3577::t_d4458cd62f6acc 1-26,34,42-45,55-56
+  s_3c344be2fe3577::t_996313ec87c2d6 46-54
+apps/desktop/src/dsbot/attachments.js
+  s_3c344be2fe3577::t_98924ba05cbbf2 98-102,107,124-125,158
+  s_3c344be2fe3577::t_3cfe283ab84f2c 22
+  s_3c344be2fe3577::t_ee8a8d74ed518b 1-21,23-97,103-106,108-123,126-157,159
+apps/desktop/index.html
+  s_3c344be2fe3577::t_66cba9a18bfc7a 5
+apps/desktop/src/dsbot/chat-message.ts
+  s_3c344be2fe3577::t_2387be93f130cc 1-28
+apps/desktop/proof/dsbot-window-20261117/packaged/receipt.json
+  s_3c344be2fe3577::t_7364ae1887bb92 1-299
+apps/desktop/verify/dsbot-packaged-error.mjs
+  s_3c344be2fe3577::t_1ef40f8d7cf369 24,33,36,68-73
+  s_3c344be2fe3577::t_e9aa3c4fbfd725 1-23,25-32,34-35,37-67,74-85
+apps/desktop/proof/dsbot-window-20261117/README.md
+  s_3c344be2fe3577::t_2b34fa29b97ef4 1-113
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/sidebar.js
+  s_3c344be2fe3577::t_e7fb12864e4b91 1260
+apps/desktop/src/dsbot-base/upstream/app/ui/src/api.js
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-55
+apps/desktop/electron-builder.yml
+  s_3c344be2fe3577::t_d4458cd62f6acc 14
+  s_3c344be2fe3577::t_54ebfc9bde7084 25-26
+apps/desktop/electron/renderer-permissions.ts
+  s_3c344be2fe3577::t_e099447f9eb8b7 1-13
+apps/desktop/electron/renderer-permissions.test.ts
+  s_3c344be2fe3577::t_e099447f9eb8b7 1-19
+apps/desktop/src/main.tsx
+  s_3c344be2fe3577::t_58f5361dd2f093 1-7,12-16
+  s_3c344be2fe3577::t_548546bc8950e3 8,10-11
+apps/desktop/src/dsbot-base/upstream/app/ui/src/main.js
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-40
+apps/desktop/proof/dsbot-window-20261117/visual/receipt.json
+  s_3c344be2fe3577::t_260619a1601883 1-139,141-202,204-361
+  s_3c344be2fe3577::t_7364ae1887bb92 140,203
+apps/desktop/src/dsbot/bridge.ts
+  s_3c344be2fe3577::t_df59edaa5e8363 1-9,12-27,29-43,45-51,53-54,57-104,106-120,125-131,136-143,145-174,176-188,190-215,222-229,231-268,270,273-287,289-295,297-337,339-343,359-360,377-389,391-394
+  s_3c344be2fe3577::t_378aa03a5b9b78 52,55-56,175,189,230,272
+  s_3c344be2fe3577::t_524767ca87ee9f 28
+  s_3c344be2fe3577::t_decf663151877b 121-124
+  s_3c344be2fe3577::t_f0d944c38ef73e 10,216-221,288,296,344-358,361-376
+  s_3c344be2fe3577::t_2387be93f130cc 11
+  s_3c344be2fe3577::t_c7fbdcfe8f1dfa 44,132-135,144,269,271,338,390
+  s_3c344be2fe3577::t_5df139a5e0782e 105
+apps/desktop/proof/dsbot-window-20261117/sse/packaged-receipt.json
+  s_3c344be2fe3577::t_7364ae1887bb92 1-108
+apps/desktop/verify/dsbot-sse-error-control.mjs
+  s_3c344be2fe3577::t_3c9706f3c5baea 1-32,34-76
+  s_3c344be2fe3577::t_e099447f9eb8b7 33
+apps/desktop/verify/dsbot-visual-fixture.mjs
+  s_3c344be2fe3577::t_6a7c3f8f45b5ad 35
+  s_3c344be2fe3577::t_77da8e7eb3ddbe 1-34,36-61,63-65,67-92
+  s_3c344be2fe3577::t_87512afd58b245 62,66
+apps/desktop/verify/dsbot-visual-fixture.test.mjs
+  s_3c344be2fe3577::t_c7cc517e149f16 14-15
+  s_3c344be2fe3577::t_4b26c71667a2d7 3
+  s_3c344be2fe3577::t_0fdadf72981571 1-2,4-13,16-37
+apps/desktop/verify/dsbot-packaged.mjs
+  s_3c344be2fe3577::t_98924ba05cbbf2 134-145,147-149
+  s_3c344be2fe3577::t_e099447f9eb8b7 163
+  s_3c344be2fe3577::t_43aa819c6bc8ed 62,77
+  s_3c344be2fe3577::t_92c36db8b5a8e7 67,72,83,194,202
+  s_3c344be2fe3577::t_3cfe283ab84f2c 112-113,155-162,168-170
+  s_3c344be2fe3577::t_6c78126dbaf3c5 172
+  s_3c344be2fe3577::t_66cba9a18bfc7a 23,33-35,51-53,55,87-111,114-133,146,150-154,171,173-177
+  s_3c344be2fe3577::t_73c3c229f6d0e2 1-22,24-32,36-50,54,56-61,63-66,68-71,73-76,78-82,84-86,178-193,195-201,203
+  s_3c344be2fe3577::t_cf7fff01af15ae 164-167
+third_party/ds-bot/SOURCE-MANIFEST.json
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-486
+apps/desktop/proof/dsbot-window-20261117/EVIDENCE-SHA256.json
+  s_3c344be2fe3577::t_d5fc5a4319fab4 3-9,13-14,16-21,25-26,31-32
+  s_3c344be2fe3577::t_260619a1601883 1-2,10-12,15,22-24,27-30,33
+apps/desktop/proof/dsbot-window-20261117/release.json
+  s_3c344be2fe3577::t_260619a1601883 1,3,9-13,16-18,21-23,26-27,31-33
+  s_3c344be2fe3577::t_7364ae1887bb92 2,4-8,14-15,19-20,24-25,28-30
+apps/desktop/verify/dsbot-source-integrity.mjs
+  s_3c344be2fe3577::t_d4458cd62f6acc 1-19
+apps/desktop/electron/main.ts
+  s_3c344be2fe3577::t_e099447f9eb8b7 16,163-171
+apps/desktop/vite.config.ts
+  s_3c344be2fe3577::t_43aa819c6bc8ed 70
+  s_3c344be2fe3577::t_58f5361dd2f093 3-7,9,16,19-39,87-90,95,97
+  s_3c344be2fe3577::t_3cfe283ab84f2c 48
+  s_3c344be2fe3577::t_350b6454969742 8,10-15,17-18,43-47,49-69,71-85
+  s_3c344be2fe3577::t_548546bc8950e3 40-42,86
+apps/desktop/proof/dsbot-window-20261117/MANUAL-VISUAL-CHECK.json
+  s_3c344be2fe3577::t_7364ae1887bb92 1-27
+apps/desktop/src/dsbot-base/upstream/app/ui/src/app.css
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-92
+apps/desktop/src/dsbot-base/upstream/app/ui/src/team.js
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-271
+apps/desktop/src/dsbot-base/upstream/app/ui/src/locale.js
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-19
+apps/desktop/src/dsbot-base/upstream/ds-bot/src/client/user-message.js
+  s_3c344be2fe3577::t_e7fb12864e4b91 2
+apps/desktop/verify/dsbot-model-probe.mjs
+  s_3c344be2fe3577::t_c210bf8dd6fe66 1-70
+apps/desktop/src/dsbot/upstream-mentions.d.ts
+  s_3c344be2fe3577::t_f0d944c38ef73e 1-3
+apps/desktop/src/dsbot-base/upstream/app/ui/src/primitives.js
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-45
+apps/desktop/src/dsbot/bridge.test.ts
+  s_3c344be2fe3577::t_e9aa3c4fbfd725 264,267
+  s_3c344be2fe3577::t_378aa03a5b9b78 222,270-289
+  s_3c344be2fe3577::t_2387be93f130cc 9-10
+  s_3c344be2fe3577::t_decf663151877b 1-8,11-107,109-117,119-221
+  s_3c344be2fe3577::t_84d52de498d90f 108,118
+  s_3c344be2fe3577::t_f0d944c38ef73e 223-248
+  s_3c344be2fe3577::t_3c9706f3c5baea 257-263,265-266,268-269
+  s_3c344be2fe3577::t_43bedd7479e359 249-256
+apps/desktop/src/dsbot-base/upstream/app/src/page-card.css
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-112
+apps/desktop/src/dsbot-base/upstream/app/src/material.css
+  s_3c344be2fe3577::t_e7fb12864e4b91 1-52
+apps/desktop/DESIGN.md
+  s_3c344be2fe3577::t_82bfb0854cff05 64-68
+  s_3c344be2fe3577::t_98924ba05cbbf2 19-20,33-35,57-60
+  s_3c344be2fe3577::t_58f5361dd2f093 10-14,16-18,21-23,42,44-56,61-63
+apps/desktop/package-lock.json
+  s_3c344be2fe3577::t_ca4cd86d7b76fa 14-18,34,36,40-43,45-56,59,63-66,177-468,2433-2532,2546-2552,2590-2622,2630-2635,2646-2660,2700-2705,2717-2722,2753-2758,2836-2845,2998-3047,3136-3145,3198-3210,3240-3251,3300-3311,3333-3345,3353-3361,3468-3483,3812-3894,3916-3931,3951-3974,4004-4013,4037-4046,4057-4068,4110-4134,4423-4432,4470-5374,5377-5379,5382-5395,5397-5401,5404-5435,5450-5464,5627-5643,5660-5684,5937-5946,5958-5963,6096-6122,6212-6301,6473-6510,6537-6546,6555-6577,6781-6800,6849-6949,7041-7068,7257-7266
+apps/desktop/package.json
+  s_3c344be2fe3577::t_7b1cc041a57f93 27-31,47,49,53-56,58-69,72,76-79
+apps/desktop/proof/dsbot-window-20261117/model-probe.json
+  s_3c344be2fe3577::t_a5fcde0335518e 1-11
+apps/desktop/proof/dsbot-window-20261117/regression/clipboard-before-receipt.json
+  s_3c344be2fe3577::t_b565e848579f27 1-67
+apps/desktop/proof/dsbot-window-20261117/regression/error-details-before-receipt.json
+  s_3c344be2fe3577::t_d1ee0edbed1711 1-109
+apps/desktop/proof/dsbot-window-20261117/regression/executor-query-404-invalid-replay.json
+  s_3c344be2fe3577::t_fe1f29e06a40c2 1-15
+apps/desktop/proof/dsbot-window-20261117/regression/image-pending-before-receipt.json
+  s_3c344be2fe3577::t_f779949f113990 1-61
+apps/desktop/proof/dsbot-window-20261117/sse/host-receipt.json
+  s_3c344be2fe3577::t_167d6ddebffe9e 1-319
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a24fc819a707b3ae40334e62591be882ed654453",
+  "prompts": {},
+  "sessions": {
+    "s_3c344be2fe3577": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1e8f6-656a-7030-8815-fed7d48d9d2f",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
