@@ -1,0 +1,89 @@
+# 连续投递丢要求:改前改后对照(D23 第 9 节、AC-40;用户要求「先测基线再改,改后再测一次」)
+# 同一模型 fnqtz/claude-opus-5-5、同一脚本 packages/server/proof/loss-eval.mjs、同一套 3 场景 × 3 投递节奏 × 3 次;真实 pi 联系人经模型网关,Compute 用脚本假件(题目不需要跑命令)
+# 改前 = dev/integration eed6dfd;改后 = 其上加 feat/g-state-note(状态笔记补写 + 撤回移除);2026-11-09 本机运行,网关令牌只经环境变量传入
+
+## 改前:改前-eed6dfd(2026-11-09T01:58:59.270Z)
+batch S1-三件并列 #1: 3/3
+batch S1-三件并列 #2: 3/3
+batch S1-三件并列 #3: 3/3
+batch S2-中途改条件 #1: 2/2
+batch S2-中途改条件 #2: 2/2
+batch S2-中途改条件 #3: 2/2
+batch S3-闲聊夹补充与改约定 #1: 3/3
+batch S3-闲聊夹补充与改约定 #2: 3/3
+batch S3-闲聊夹补充与改约定 #3: 3/3
+stream S1-三件并列 #1: 3/3
+stream S1-三件并列 #2: 3/3
+stream S1-三件并列 #3: 3/3
+stream S2-中途改条件 #1: 0/2 丢:改成按长度:fig kiwi banana、大写:FIG KIWI BANANA
+stream S2-中途改条件 #2: 0/2 丢:改成按长度:fig kiwi banana、大写:FIG KIWI BANANA
+stream S2-中途改条件 #3: 0/2 丢:改成按长度:fig kiwi banana、大写:FIG KIWI BANANA
+stream S3-闲聊夹补充与改约定 #1: 2/3 丢:草稿改成周六上午十点
+stream S3-闲聊夹补充与改约定 #2: 3/3
+stream S3-闲聊夹补充与改约定 #3: 2/3 丢:草稿改成周六上午十点
+interleave S1-三件并列 #1: 3/3
+interleave S1-三件并列 #2: 3/3
+interleave S1-三件并列 #3: 3/3
+interleave S2-中途改条件 #1: 2/2
+interleave S2-中途改条件 #2: 2/2
+interleave S2-中途改条件 #3: 2/2
+interleave S3-闲聊夹补充与改约定 #1: 3/3
+interleave S3-闲聊夹补充与改约定 #2: 3/3
+interleave S3-闲聊夹补充与改约定 #3: 3/3
+汇总: {"batch": {"total": 24, "lost": 0, "rate": 0}, "stream": {"total": 24, "lost": 8, "rate": 0.333}, "interleave": {"total": 24, "lost": 0, "rate": 0}, "all": {"total": 72, "lost": 8, "rate": 0.111}}
+
+## 改后:改后-feat/g-state-note(2026-11-09T02:07:24.996Z)
+batch S1-三件并列 #1: 3/3
+batch S1-三件并列 #2: 3/3
+batch S1-三件并列 #3: 3/3
+batch S2-中途改条件 #1: 2/2
+batch S2-中途改条件 #2: 2/2
+batch S2-中途改条件 #3: 2/2
+batch S3-闲聊夹补充与改约定 #1: 3/3
+batch S3-闲聊夹补充与改约定 #2: 3/3
+batch S3-闲聊夹补充与改约定 #3: 3/3
+stream S1-三件并列 #1: 3/3
+stream S1-三件并列 #2: 3/3
+stream S1-三件并列 #3: 3/3
+stream S2-中途改条件 #1: 2/2
+stream S2-中途改条件 #2: 2/2
+stream S2-中途改条件 #3: 2/2
+stream S3-闲聊夹补充与改约定 #1: 3/3
+stream S3-闲聊夹补充与改约定 #2: 3/3
+stream S3-闲聊夹补充与改约定 #3: 3/3
+interleave S1-三件并列 #1: 3/3
+interleave S1-三件并列 #2: 3/3
+interleave S1-三件并列 #3: 3/3
+interleave S2-中途改条件 #1: 2/2
+interleave S2-中途改条件 #2: 2/2
+interleave S2-中途改条件 #3: 2/2
+interleave S3-闲聊夹补充与改约定 #1: 3/3
+interleave S3-闲聊夹补充与改约定 #2: 3/3
+interleave S3-闲聊夹补充与改约定 #3: 3/3
+汇总: {"batch": {"total": 24, "lost": 0, "rate": 0}, "stream": {"total": 24, "lost": 0, "rate": 0}, "interleave": {"total": 24, "lost": 0, "rate": 0}, "all": {"total": 72, "lost": 0, "rate": 0}}
+
+## 同一场景原文对照(stream S2 #1:一条一条发、中途改条件)
+### 改前
+#1 我: 把这几个词按字母倒序排一下:kiwi, banana, fig
+#2 小克: 按字母倒序排好了:kiwi, fig, banana
+#3 我: 等下,改成按长度从短到长排
+#4 小克: 我这边没找到正在做的排序任务，之前的上下文也不在。你说的是要排哪份数据（哪个文件或哪段内容）？"长度"是指字符串长度吗？发我一下，我马上按从短到长排。
+#5 我: 结果全部用大写字母写
+#6 小克: 好的，结果会全部用大写字母写。不过我这边还是不知道要排的是哪份数据。请把内容直接发给我，或者告诉我文件路径。另外，“长度”是按字符数算吗？长度一样的按什么顺序排？
+### 改后
+#1 我: 把这几个词按字母倒序排一下:kiwi, banana, fig
+#2 小克: 按字母倒序排好了:kiwi, fig, banana
+#3 我: 等下,改成按长度从短到长排
+#4 小克: 按长度从短到长排好了:fig, kiwi, banana
+#5 我: 结果全部用大写字母写
+#6 小克: FIG, KIWI, BANANA
+改后第 3 次请求里的第 3 块(宿主用同一模型补写的状态笔记):
+<block n="3" label="状态笔记">
+[状态笔记 v1]
+1 在做什么:没有没了结的要求。#1(dm-c-mw8m8k5e-0)要把 kiwi, banana, fig 按字母倒序排,已经回复结果「kiwi, fig, banana」。
+2 下一步:等新消息。
+3 完成判据:#1 已完成。
+4 相关指针:dm-c-mw8m8k5e-0 #1。
+5 走不通的路:无。
+
+</block>

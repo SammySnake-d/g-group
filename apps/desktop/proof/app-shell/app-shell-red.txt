@@ -1,0 +1,12 @@
+[1/2] [electron] › e2e/app-shell.electron.spec.ts:29:1 › 没接入模型时整窗请用户接入;填好后宿主起来、界面连上,令牌不回传给界面
+  1) [electron] › e2e/app-shell.electron.spec.ts:29:1 › 没接入模型时整窗请用户接入;填好后宿主起来、界面连上,令牌不回传给界面 ────────
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+    Error Context: test-results/app-shell.electron-没接入模型时整窗请用户接入-填好后宿主起来、界面连上-令牌不回传给界面-electron/error-context.md
+[2/2] [electron] › e2e/app-shell.electron.spec.ts:58:1 › 自动更新:提示新版本 → 下载并核对 sha512 → 可以重启安装;校验不过的下载被丢掉并说明;没发布过版本时如实说
+  2) [electron] › e2e/app-shell.electron.spec.ts:58:1 › 自动更新:提示新版本 → 下载并核对 sha512 → 可以重启安装;校验不过的下载被丢掉并说明;没发布过版本时如实说 
+    Error: expect(locator).toHaveText(expected) failed
+    Error: element(s) not found
+    Error Context: test-results/app-shell.electron-自动更新-提示-49ad8-安装-校验不过的下载被丢掉并说明-没发布过版本时如实说-electron/error-context.md
+  2 failed
+    [electron] › e2e/app-shell.electron.spec.ts:29:1 › 没接入模型时整窗请用户接入;填好后宿主起来、界面连上,令牌不回传给界面 ─────────

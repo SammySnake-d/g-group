@@ -1,0 +1,24 @@
+# 2026-11-06T06:05:44Z HEAD=981370c node=v22.22.0 cpus=8
+# 负载:另一份副本 /tmp/cc-flake-load-9Zwo/repo 循环跑 npm test(pid 51974)
+run 1: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[16.81 54.59 77.91]
+run 2: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[11.33 47.89 74.24]
+run 3: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[8.10 42.47 71.04]
+run 4: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[7.79 38.06 68.11]
+run 5: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[7.35 34.16 65.30]
+run 6: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[5.91 30.85 62.84]
+run 7: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[9.26 28.29 60.25]
+run 8: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[17.37 27.69 58.54]
+run 9: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[15.03 25.97 56.51]
+run 10: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[13.05 24.00 54.38]
+run 11: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[12.36 22.40 52.39]
+run 12: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[18.03 22.27 50.78]
+run 13: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[22.56 22.97 49.57]
+run 14: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[18.78 21.77 47.90]
+run 15: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[14.81 20.41 46.20]
+run 16: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[12.20 18.87 44.30]
+run 17: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[13.27 18.42 42.98]
+run 18: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[14.68 18.28 41.80]
+run 19: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[12.17 17.19 40.45]
+run 20: exit=0 pass=57 fail=0 F-03=[ok 8 ok 9 ok 10 ] load=[10.66 16.17 39.01]
+# 负载副本在这期间跑完 npm test       20 次
+# 20 次中失败 0 次

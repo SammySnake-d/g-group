@@ -1,0 +1,12 @@
+{
+  "slice": "插件市场与安装管理:plugin.json 清单校验、catalog.json 市场(两个示例插件)、市场/本地目录安装(复制进宿主数据目录)、权限同意、启停、配置、版本更新(新权限需重新同意)、卸载、启用插件的 slash 命令进补全;合同 plugins.update 增加 grantedPermissions",
+  "acceptance": [
+    { "id": "AC-35", "status": "未测", "reason": "⑤ 阶段 III(插件版本号显示与更新)有测试(plugins.test.ts);插件代码加载执行、进程隔离、阶段 I/II 不在本片" }
+  ],
+  "author": { "agent": "claude", "session": "claude:18b4f4b0-3cf6-4d51-be92-ca20094b2ce3", "model": "fnqtz/claude-opus-5-5" },
+  "red": null,
+  "unverifiable": "先写后测(用户 #717);示例插件只有清单、没有可执行代码,运行时接入前在描述里如实写明;URL 安装返回 unavailable",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

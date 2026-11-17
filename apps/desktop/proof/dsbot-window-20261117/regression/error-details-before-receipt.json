@@ -1,0 +1,109 @@
+{
+  "mode": "packaged pi/Host/IPC/UI with local SSE error fixture",
+  "realModelAcceptance": false,
+  "appPath": "/tmp/dsbot-astra-20261117/delivery5/g-group.app",
+  "model": "fengshao1227/deepseek-v4.1-flash",
+  "startedAt": "2026-11-17T10:50:06.728Z",
+  "errors": [
+    "Error: expect(locator).toContainText(expected) failed\n\nLocator: locator('.dsb-flow')\nExpected substring: \"11102\"\nReceived string:    \"今天 18:50离线错误回放，不发真实模型请求请求被拒:共用这个上游的成员先暂停\"\nTimeout: 5000ms\n\nCall log:\n  - Expect \"toContainText\" locator('.dsb-flow') with timeout 5000ms\n  - waiting for locator('.dsb-flow')\n    14 × locator resolved to <div role=\"feed\" class=\"dsb-flow\" data-chat-flow=\"\" aria-busy=\"false\" aria-label=\"错误回放联系人\">…</div>\n       - unexpected value \"今天 18:50离线错误回放，不发真实模型请求请求被拒:共用这个上游的成员先暂停\"\n\n    at captureRawStack (/Users/snakesammy/.mirasim/assistants/deliverables/g-group-ds-bot-frontend-20261116/apps/desktop/node_modules/playwright-core/lib/coreBundle.js:9551:17)\n    at callMatcherAsStep (/Users/snakesammy/.mirasim/assistants/deliverables/g-group-ds-bot-frontend-20261116/apps/desktop/node_modules/playwright/lib/matchers/expect.js:13342:57)\n    at Object.toContainText (/Users/snakesammy/.mirasim/assistants/deliverables/g-group-ds-bot-frontend-20261116/apps/desktop/node_modules/playwright/lib/matchers/expect.js:13334:23)\n    at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-ds-bot-frontend-20261116/apps/desktop/verify/dsbot-packaged-error.mjs:50:42"
+  ],
+  "outcome": "failed-control",
+  "ledger": {
+    "ok": true,
+    "value": {
+      "runs": [
+        {
+          "id": "run-mwkkmitx-2",
+          "layer": "contact-round",
+          "parentId": null,
+          "children": [],
+          "roomId": "dm-c-mwkkmiov-1",
+          "sourceSeq": 1,
+          "contactId": "c-mwkkmiov-1",
+          "taskId": null,
+          "computeId": null,
+          "upstream": "fengshao1227/deepseek-v4.1-flash",
+          "status": "failed",
+          "tone": "failed",
+          "text": "失败 · 请求被拒 · 用时 0 秒",
+          "reasonClass": "invalid_request",
+          "label": "请求被拒",
+          "raw": "模型请求失败(error):{\"type\":\"error\",\"error\":{\"type\":\"model_unavailable\",\"message\":\"当前模型不可用，请切换模型\",\"code\":11102,\"msg\":\"model [hy4-flash-free] service info not found\"}}",
+          "retryClass": "Permanent",
+          "rulesVersion": "2026-11-09.1",
+          "note": null,
+          "startedAt": "2026-11-17T10:50:11.541Z",
+          "endedAt": "2026-11-17T10:50:11.580Z",
+          "durationMs": 39,
+          "lastProgressAt": "2026-11-17T10:50:11.541Z",
+          "thresholdMs": null,
+          "thresholdSource": null,
+          "judgedAt": null,
+          "waiting": null,
+          "idleMs": 0,
+          "rerunOf": null,
+          "attempt": 0,
+          "updatedAt": "2026-11-17T10:50:16.611Z"
+        }
+      ],
+      "hints": [
+        {
+          "roomId": "dm-c-mwkkmiov-1",
+          "upstream": "fengshao1227/deepseek-v4.1-flash",
+          "reasonClass": "invalid_request",
+          "label": "请求被拒",
+          "runIds": [
+            "run-mwkkmitx-2"
+          ]
+        }
+      ]
+    }
+  },
+  "contacts": {
+    "ok": true,
+    "value": {
+      "contacts": [
+        {
+          "id": "c-mwkkmiov-1",
+          "name": "错误回放联系人",
+          "avatar": null,
+          "bio": "",
+          "speakingModel": "fengshao1227/deepseek-v4.1-flash",
+          "harness": "claude-code",
+          "computeModel": {
+            "mode": "inherit"
+          },
+          "tools": [],
+          "computeAssets": [],
+          "activity": "idle",
+          "createdAt": "2026-11-17T10:50:11.359Z",
+          "computeResolved": {
+            "resolved": {
+              "harness": "claude-code",
+              "model": "fengshao1227/deepseek-v4.1-flash",
+              "effort": "medium",
+              "vendor": "deepseek",
+              "modelSource": "global",
+              "effortSource": "global",
+              "chain": [
+                "compute 继承全局",
+                "全局 Compute 默认 fengshao1227/deepseek-v4.1-flash"
+              ]
+            },
+            "support": "undeclared"
+          }
+        }
+      ]
+    }
+  },
+  "screenshot": "/tmp/dsbot-astra-20261117/packaged-error-baseline5b/failure.png",
+  "temporaryCredentialRemoved": true,
+  "requests": [
+    {
+      "url": "/v1/messages?beta=true",
+      "model": "fengshao1227/deepseek-v4.1-flash"
+    }
+  ],
+  "asarSha256": "7861180f6a5281c7e9f21095d9b0731778045579293f6d58df4669e4e0952067",
+  "finishedAt": "2026-11-17T10:50:16.797Z"
+}

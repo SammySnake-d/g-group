@@ -1,0 +1,13 @@
+# 红:提交 c9619ad(用例已改为右侧来处,实现仍是页头一行),box1 上 npx playwright test e2e/files-context.ui.spec.ts
+[4/5] [renderer] › e2e/files-context.ui.spec.ts:59:1 › 来处：站多时先列 5 站、其余点开；右栏放不下时自己滚动，正文不动
+  4) [renderer] › e2e/files-context.ui.spec.ts:59:1 › 来处：站多时先列 5 站、其余点开；右栏放不下时自己滚动，正文不动 ────────────
+    Error: expect(locator).toHaveCount(expected) failed
+[5/5] [renderer] › e2e/files-context.ui.spec.ts:75:1 › 来处：1024 窗口仍在右侧、带原话；列表栏拉到最宽时收成一列头像，悬停看原话、点了能跳；不横向溢出
+  5) [renderer] › e2e/files-context.ui.spec.ts:75:1 › 来处：1024 窗口仍在右侧、带原话；列表栏拉到最宽时收成一列头像，悬停看原话、点了能跳；不横向溢出 
+    Error: expect(locator).toHaveAttribute(expected) failed
+  5 failed
+    [renderer] › e2e/files-context.ui.spec.ts:8:3 › 来处 light：在正文右侧、不动手就看得到人、动作和原话；长文档翻到底仍在旁边；任一站可跳、可回 
+    [renderer] › e2e/files-context.ui.spec.ts:8:3 › 来处 dark：在正文右侧、不动手就看得到人、动作和原话；长文档翻到底仍在旁边；任一站可跳、可回 
+    [renderer] › e2e/files-context.ui.spec.ts:44:1 › 来处：对话名打开对话；资产从「存下」那条来；没有来处时只留对话名 ──────────────
+    [renderer] › e2e/files-context.ui.spec.ts:59:1 › 来处：站多时先列 5 站、其余点开；右栏放不下时自己滚动，正文不动 ─────────────
+    [renderer] › e2e/files-context.ui.spec.ts:75:1 › 来处：1024 窗口仍在右侧、带原话；列表栏拉到最宽时收成一列头像，悬停看原话、点了能跳；不横向溢出 

@@ -1,0 +1,109 @@
+# 命令: java -cp tla2tools.jar tlc2.TLC -workers 1 -cleanup -noGenerateSpecTE -metadir <tmp> -config Claim-witness.cfg -dumpTrace json traces/Claim-witness.json Claim.tla
+# java: openjdk version "17.0.18" 2026-01-20
+# 时间: 2026-11-08T18:08:49Z
+TLC2 Version 2026.11.06.222357 (rev: d8fb231)
+Warning: Please run the Java VM, which executes TLC with a throughput optimized garbage collector, by passing the "-XX:+UseParallelGC" property.
+(Use the -nowarning option to disable this warning.)
+Running breadth-first search Model-Checking with fp 115 and seed -6996638960887463559 with 1 worker on 8 cores with 5939MB heap and 64MB offheap memory [pid: 38239] (Mac OS X 27.2 aarch64, Homebrew 17.0.18 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /private/tmp/gg-d-ac10/packages/domain/tla/Claim.tla
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-12954196750848364538/Naturals.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-12954196750848364538/FiniteSets.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-12954196750848364538/_JsonTrace.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/_JsonTrace.tla)
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-12954196750848364538/Sequences.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-12954196750848364538/TLC.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-12954196750848364538/TLCExt.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-12954196750848364538/Json.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/Json.tla)
+Parsing file /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/tlc-12954196750848364538/Integers.tla (jar:file:/private/tmp/gg-d-tools/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module Integers
+Semantic processing of module TLCExt
+Semantic processing of module Json
+Semantic processing of module _JsonTrace
+Semantic processing of module Claim
+Linting of module TLCExt
+Linting of module Json
+Linting of module _JsonTrace
+Linting of module Claim
+Starting... (2026-11-09 02:08:52)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-09 02:08:53.
+Error: Invariant ClaimWitness is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ seenOwner = [c1 |-> "none", c2 |-> "none", c3 |-> "none"]
+/\ owner = "none"
+/\ seenVer = [c1 |-> 0, c2 |-> 0, c3 |-> 0]
+/\ retried = [c1 |-> FALSE, c2 |-> FALSE, c3 |-> FALSE]
+/\ ver = 0
+/\ pc = [c1 |-> "idle", c2 |-> "idle", c3 |-> "idle"]
+/\ act = [op |-> "init"]
+/\ winners = {}
+
+State 2: <Read("c1") line 26, col 3 to line 31, col 47 of module Claim>
+/\ seenOwner = [c1 |-> "none", c2 |-> "none", c3 |-> "none"]
+/\ owner = "none"
+/\ seenVer = [c1 |-> 0, c2 |-> 0, c3 |-> 0]
+/\ retried = [c1 |-> FALSE, c2 |-> FALSE, c3 |-> FALSE]
+/\ ver = 0
+/\ pc = [c1 |-> "read", c2 |-> "idle", c3 |-> "idle"]
+/\ act = [ver |-> 0, op |-> "read", who |-> "c1"]
+/\ winners = {}
+
+State 3: <Read("c2") line 26, col 3 to line 31, col 47 of module Claim>
+/\ seenOwner = [c1 |-> "none", c2 |-> "none", c3 |-> "none"]
+/\ owner = "none"
+/\ seenVer = [c1 |-> 0, c2 |-> 0, c3 |-> 0]
+/\ retried = [c1 |-> FALSE, c2 |-> FALSE, c3 |-> FALSE]
+/\ ver = 0
+/\ pc = [c1 |-> "read", c2 |-> "read", c3 |-> "idle"]
+/\ act = [ver |-> 0, op |-> "read", who |-> "c2"]
+/\ winners = {}
+
+State 4: <Commit("c1") line 43, col 3 to line 51, col 46 of module Claim>
+/\ seenOwner = [c1 |-> "none", c2 |-> "none", c3 |-> "none"]
+/\ owner = "c1"
+/\ seenVer = [c1 |-> 0, c2 |-> 0, c3 |-> 0]
+/\ retried = [c1 |-> FALSE, c2 |-> FALSE, c3 |-> FALSE]
+/\ ver = 1
+/\ pc = [c1 |-> "won", c2 |-> "read", c3 |-> "idle"]
+/\ act = [op |-> "commit", who |-> "c1", base |-> 0, over |-> 0]
+/\ winners = {"c1"}
+
+State 5: <Conflict("c2") line 55, col 3 to line 65, col 58 of module Claim>
+/\ seenOwner = [c1 |-> "none", c2 |-> "none", c3 |-> "none"]
+/\ owner = "c1"
+/\ seenVer = [c1 |-> 0, c2 |-> 0, c3 |-> 0]
+/\ retried = [c1 |-> FALSE, c2 |-> TRUE, c3 |-> FALSE]
+/\ ver = 1
+/\ pc = [c1 |-> "won", c2 |-> "idle", c3 |-> "idle"]
+/\ act = [op |-> "conflict", who |-> "c2", base |-> 0, cur |-> 1]
+/\ winners = {"c1"}
+
+State 6: <Read("c2") line 26, col 3 to line 31, col 47 of module Claim>
+/\ seenOwner = [c1 |-> "none", c2 |-> "c1", c3 |-> "none"]
+/\ owner = "c1"
+/\ seenVer = [c1 |-> 0, c2 |-> 1, c3 |-> 0]
+/\ retried = [c1 |-> FALSE, c2 |-> TRUE, c3 |-> FALSE]
+/\ ver = 1
+/\ pc = [c1 |-> "won", c2 |-> "read", c3 |-> "idle"]
+/\ act = [ver |-> 1, op |-> "read", who |-> "c2"]
+/\ winners = {"c1"}
+
+State 7: <Rejected("c2") line 35, col 3 to line 39, col 67 of module Claim>
+/\ seenOwner = [c1 |-> "none", c2 |-> "c1", c3 |-> "none"]
+/\ owner = "c1"
+/\ seenVer = [c1 |-> 0, c2 |-> 1, c3 |-> 0]
+/\ retried = [c1 |-> FALSE, c2 |-> TRUE, c3 |-> FALSE]
+/\ ver = 1
+/\ pc = [c1 |-> "won", c2 |-> "lost", c3 |-> "idle"]
+/\ act = [ver |-> 1, op |-> "rejected", who |-> "c2"]
+/\ winners = {"c1"}
+
+"CounterExample written: traces/Claim-witness.json"
+123 states generated, 100 distinct states found, 39 states left on queue.
+The depth of the complete state graph search is 7.
+Finished in 02s at (2026-11-09 02:08:53)
+# 退出码: 12

@@ -1,0 +1,29 @@
+{
+  "packagedVersion": "0.1.1-preview.3",
+  "model": "fengshao1227/deepseek-v4.1-flash",
+  "taskId": "t-mwhk6k60-3",
+  "computeId": "ccr-e0934403-f95a-41c9-b3f1-d9e754ce0c48",
+  "modelSnapshot": {
+    "harness": "claude-code",
+    "model": "fengshao1227/deepseek-v4.1-flash",
+    "effort": "medium",
+    "vendor": "deepseek"
+  },
+  "modelAttempt": {
+    "seq": 1,
+    "model": "fengshao1227/deepseek-v4.1-flash",
+    "reason": "start"
+  },
+  "computeRunStatus": "completed",
+  "progress": ["started", "completed"],
+  "deliveredFile": {
+    "name": "feishao-compute.txt",
+    "bytes": 18,
+    "content": "FEISHAO_COMPUTE_OK",
+    "sha256": "699c74b8a03b491731304a17a1db49cb0f39f0001b7e6de896e9defb06fcd661"
+  },
+  "taskState": "T3_Running",
+  "desktopComputeLineState": "running",
+  "acceptanceComplete": false,
+  "finding": "Compute and file execution completed, but the host task remained T3_Running and the desktop kept showing running. Do not report the full task lifecycle as complete."
+}

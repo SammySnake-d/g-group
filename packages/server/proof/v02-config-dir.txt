@@ -1,0 +1,31 @@
+# V-02 实测:Claude Code 专属配置目录 / --bare / --plugin-dir 下 skill 的可见性(2026-11-09 01:5x,本机)
+# CLI:claude 2.1.319;模型经网关(ANTHROPIC_BASE_URL),令牌只经环境变量传,未落盘;每组 env -i 起干净环境
+# 假 HOME=/tmp/gg-v02/home,其 .claude/skills/gg-neutral-global-skill/SKILL.md 是「全局」标记 skill(内容 NEUTRAL_FIXTURE_NO_CREDENTIALS)
+# 专属目录 /tmp/gg-v02/run:skills/gg-neutral-picked-skill(「勾选」标记 skill);插件目录 /tmp/gg-v02/run/plugin(.claude-plugin/plugin.json name=gg-picked,skills/ 软链勾选 skill)
+# 命令形状:claude -p "reply with the single word ok" --output-format stream-json --verbose [--bare] --max-turns 1 --tools "" --append-system-prompt probe [--plugin-dir DIR]
+# 看 system/init 帧的 skills 字段(另 18 个是 CLI 自带 skill,两边一样)
+bare-home	--bare,HOME 有全局 skill,不设 CLAUDE_CONFIG_DIR
+	init.skills 中的标记 skill: [](共 18 个)
+nobare-home	不带 --bare,HOME 有全局 skill,不设 CLAUDE_CONFIG_DIR
+	init.skills 中的标记 skill: ["gg-neutral-global-skill"](共 19 个)
+bare-cfg	--bare,CLAUDE_CONFIG_DIR=专属目录(内有勾选 skill)
+	init.skills 中的标记 skill: [](共 18 个)
+nobare-cfg	不带 --bare,CLAUDE_CONFIG_DIR=专属目录(内有勾选 skill)
+	init.skills 中的标记 skill: ["gg-neutral-picked-skill"](共 19 个)
+bare-plugdir	--bare,CLAUDE_CONFIG_DIR=专属目录,--plugin-dir 专属插件目录
+	init.skills 中的标记 skill: ["gg-picked:gg-neutral-picked-skill"](共 19 个)
+bare-plugdir-home	--bare,不设 CLAUDE_CONFIG_DIR,--plugin-dir 专属插件目录
+	init.skills 中的标记 skill: ["gg-picked:gg-neutral-picked-skill"](共 19 个)
+slash-none	--bare,不设 CLAUDE_CONFIG_DIR,提示为 /gg-neutral-global-skill
+	result: "I don't have a skill or command named **`/gg-neutral-global-skill`** in this session, so I can't run it, and I don't kno"…
+slash-run	--bare,CLAUDE_CONFIG_DIR=专属目录,提示为 /gg-neutral-global-skill
+	result: "I don't recognize `/gg-neutral-global-skill`. It isn't a skill or command I can see in this session, and I don't have an"…
+# 补充:--bare 下 --tools default 只展开成 Bash/Edit/Read,没有 Skill 工具;问「有哪些 skill」回答没有;
+#   提示开头写 /gg-picked:gg-neutral-picked-skill 时展开成功(result 为 PICKED_MARKER);
+#   让它 Read 插件目录里的 SKILL.md 绝对路径(dontAsk + --allowedTools Read)读取成功并照做(result 以 PICKED_MARKER 开头)。
+# 结论:
+# 1. 不带 --bare 时 CLAUDE_CONFIG_DIR 生效:只看到专属目录里的 skill,看不到 HOME 里的全局 skill(V-02 对 CC 成立)。
+# 2. 带 --bare(适配器现状)时 HOME 与 CLAUDE_CONFIG_DIR 下的 skill 都不加载,全局 skill 连 /名字 也展开不了;
+#    勾选的 skill 只有经 --plugin-dir 才加载,且没有 Skill 工具 → 适配器在首个提示里列出勾选 skill 与 SKILL.md 路径,Compute 需要时 Read。
+# 3. 所以 AC-29 的做法:保留 --bare,专属配置目录作 CLAUDE_CONFIG_DIR(设置与会话记录不落本机 ~/.claude),勾选 skill 走 --plugin-dir,
+#    MCP 走 --mcp-config + --strict-mcp-config。V-02 里 Codex(CODEX_HOME)本片没测。

@@ -1,0 +1,33 @@
+{
+  "version": "0.1.0-dsbot.20261117.7",
+  "platform": "macOS arm64",
+  "zip": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-ds-bot-frontend-20261116/apps/desktop/release/g-group-0.1.0-dsbot.20261117.7-arm64-mac.zip",
+  "zipBytes": 99127635,
+  "zipSha256": "12c6af56fcd1e354d6ed8b188fb06729b0eba9d42604e2e5c74b7add65799f92",
+  "app": "/tmp/dsbot-astra-20261117/delivery7/g-group.app",
+  "asarSha256": "0f8c9852a0a68130a9da7259119c72b9961264980fe7d9afa9ecb5264c785b76",
+  "codesignVerifyDeepStrict": "passed",
+  "notarized": false,
+  "provenance": {
+    "LICENSE": {
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "matchesSource": true
+    },
+    "NOTICE": {
+      "bytes": 15557,
+      "sha256": "4c7d3e4e7607f02ed9e4fb940442be7d0d107b57beb54660e1526a7be07c2aad",
+      "matchesSource": true
+    },
+    "SOURCE-MANIFEST.json": {
+      "bytes": 17379,
+      "sha256": "d7786e34e08098db13b9b54d4dca9dd692423a979897c8dfe29bb6d3a2c27440",
+      "matchesSource": true
+    },
+    "UPSTREAM.md": {
+      "bytes": 3983,
+      "sha256": "acdb667ba620fd2151b908dd625e86f85f4dca3f048381eac7df545c97b4faee",
+      "matchesSource": true
+    }
+  }
+}

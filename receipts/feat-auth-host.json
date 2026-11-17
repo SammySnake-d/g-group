@@ -1,0 +1,63 @@
+{
+  "slice": "授权与意图接进宿主闭环:群规「改代码前先问我」时 Compute 拿不到写工具 → 受阻进 T4b、负责人在会话 @ 用户提问 → 用户本人直接回复「同意」(按钮可选)绑定 (task,q,ver) 放行一次、续接换上写工具;联系人/引用/多候选不放行、改条件后迟到同意过期;用户中途改条件原位升版送进同一 Compute,旧版本结果不能交付,交付时补充标 Applied 指向 result@v;tasks.rebindFollowUp 改挂补充",
+  "acceptance": [
+    {
+      "id": "AC-17",
+      "status": "通过",
+      "evidence": "packages/server/proof/real-auth-run.txt",
+      "notes": "真实 Claude Code:首轮 tools=[Read,Glob,Grep]、hello.txt 不存在、任务 T4b;用户只回「同意」后续接 tools 含 Write,文件写入一次并交付。运行原文是变基到含「交付是普通消息」的 dev/integration 之后跑的。替身测试见 proof/auth-intent-tests.txt(不经批准不写、按钮与自然语言同一路径、拒绝取消、同一同意不放行两次、无此群规不插问)。坏实现「只有点按钮能放行」由 AC-17 本人直接回复用例覆盖。与 AC-44 并存:群规要求先问且这一版没授权时,受阻先登记授权提问(meta.authz),一般提问卡不再重复发;授权卡的按钮、tasks.answer(按表态映射同意/不行,含义不清 invalid_params)、本人自然语言答复走同一条绑定路径"
+    },
+    {
+      "id": "AC-19",
+      "status": "通过",
+      "evidence": "packages/server/proof/auth-intent-tests.txt",
+      "notes": "答复绑定 (task_id, q_id, constraint_ver)、动作与授权人;改条件后迟到的「同意」→ 授权 expired、提问卡 expired、不换写工具;歧义追问。「取消后迟到」「错任务」在领域 settleRequest 用例覆盖"
+    },
+    {
+      "id": "AC-20",
+      "status": "通过",
+      "evidence": "packages/server/proof/auth-intent-tests.txt",
+      "notes": "宿主路径:群里另一联系人回「同意」不放行;引用旧「同意」、引用块里的「同意」不放行;两件待授权时「同意」不擅自选、联系人追问,回复其中一条提问只放行那件。转发与外部材料:宿主目前没有转发入口、外部数据源内容不经 send 入会话,consentFromMessage 恒传 forwarded/external=false;领域 resolveConsent 已拒这两类(authorization.test.ts),转发入口(U100)接入时须把标志带进来。等授权时联系人 forward 用户的话(AC-44 的转达路径)对授权提问拒收,不当作授权"
+    },
+    {
+      "id": "AC-45",
+      "status": "通过",
+      "evidence": "packages/server/proof/auth-intent-tests.txt",
+      "notes": "② 东京→大阪:同一任务 v0→v1、同一个 Compute、不新开任务;Compute 运行中拒绝续接时补充排队,本轮结束续上;③ 依据 v0 的结果交付被拒,按 v1 结果交付后补充 Applied@v1。① 草稿作废沿用 host.test「发送前撤销竞态」(旧草稿不上屏)"
+    },
+    {
+      "id": "AC-16",
+      "status": "通过",
+      "evidence": "packages/server/proof/auth-intent-tests.txt",
+      "notes": "补充送达、Compute 已完成但未交付 → 仍 Received、appliedIn=null;交付后 Applied 指向 result:<computeId>@v1。产物指针是宿主内部 result 记录,不是文件/提交解析(与 AC-40 的产物解析器一起再接)"
+    },
+    {
+      "id": "AC-15",
+      "status": "未测",
+      "reason": "已实现并测:改挂不取消 A、A 版本 +1、重放 #n 不含 #m、B 收下 #m、关联版本冲突返回 conflict 带 currentVer、重复改挂幂等、#m 已落实时先停旧执行器(任务不取消)停止确认后才续接回滚、改挂后 #m 不能再被转给 A。未做:工作区回滚靠给 Compute 的续接说明让它自己撤改,没有机械检查点(git 快照)可证明恢复到 #m 之前;第二台按 #m 定向作废未发草稿没有实现(现有只有整轮发送前撤销);第一台按 E5b 转 M3 的路由机未接"
+    },
+    {
+      "id": "AC-18",
+      "status": "未测",
+      "reason": "两个数已能测(feat/auth-domain 收据通过);宿主路由还没用 routeFollowUp,线上回放报告未接,阈值待定"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "packages/server/proof/auth-intent-host-mutations.txt",
+      "notes": "宿主接线 22 个单点变异(收写工具、续接重核工具、群规进 brief、授权分版本、受阻登记授权提问、消息对授权、授权后续接、forward 升版、交付查版本、排队与续上、标 Applied、改挂停旧执行器/回滚/冲突码/同会话/重放、改条件过期、提问卡状态、授权提问拒收联系人转达、授权卡路由、tasks.answer 表态映射)全部被 intent.test.ts 具名测试杀死(box3 云电脑)"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:adaa7285-9f74-4d05-8e92-1a1b0d8d319c",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "0205d4c010cc5b4e9bfded4191ee61b2797f142f"
+  },
+  "unverifiable": "AC-17 放行依赖适配器把续接的 tools 真的换进 CLI 的 --tools/--allowedTools(adapter.test「AC-17 续接时换工具清单」核对了 argv),但 Bash 被收走后若 Compute 用别的已授权 MCP 工具写盘,本片不拦——当前 Compute 只挂 report_progress 一个 MCP。AC-45 的结果版本按「已开始轮次的版本先进先出」推断,假如适配器在 resume 返回 ok 后没有真的起新一轮,resultVer 会错配;真实适配器 resume ok 即 launch",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

@@ -1,0 +1,13 @@
+{
+  "slice": "被引用消息的确定性 Page-in 按逐条召回清单装配(Full / TruncatedSlice+续读游标 / DeletedOrWithdrawn / AccessDenied,保底切片 + 主回复优先 + 其余按序均分),联系人一轮整轮超预算时显式失败:出失败卡说明超出多少、请分批,不截断、不调模型、游标不推进、不在后台反复重跑,由用户点重试或跳过本轮",
+  "acceptance": [
+    { "id": "AC-06", "status": "未测", "reason": "宿主侧缺口已补并有具名测试(packages/server/src/recall.test.ts:窗口内不 Page-in 阴性对照、整轮超预算失败卡、跳过/重试;packages/kernel/src/recall.test.ts:恰在边界、少 1 字节显式截断、保底装不下显式 over-budget),真实 pi 联系人跑通一次多引用装配(packages/server/proof/e-recall-real.txt),11 个手工变异见 packages/server/proof/e-recall-mutations.txt;预算数值待决(需求文档 v3.20 §8.1 待决 13),待审查" },
+    { "id": "AC-37", "status": "未测", "reason": "只做 ③ 的宿主装配部分:#10 超长截断带游标、#12 #18 不被挤掉、撤回 #15 占位、越权 #99 两道拒绝(发送侧 invalid_params + 装配侧 AccessDenied)、旧引用原文里的 @ 与 /stop 不当控制指令,有具名测试与真实运行;① ② 的草稿与 @ 联动、③ 的气泡明暗对比与点击滚动高亮属 X 层(前端),未测;联系人按续读游标继续读原文的工具还没有;待审查" }
+  ],
+  "author": { "agent": "claude", "session": "claude:f5d9723d-a248-4483-95eb-5ba31b3fda33", "model": "fnqtz/claude-opus-5-5", "notes": "由该会话派出的子代理执行" },
+  "red": { "commit": "70630a19be4cdafc5fb47518eadd2a9f550a7834" },
+  "unverifiable": "AC-37 ③ 的公平切片只用确定性夹具和一次真实 pi 运行验证;真实运行只证明这一次模型读到了切片与占位并据此作答,不证明模型会按 next_cursor 去续读(还没有续读工具)。可能骗过检查的点:预算以 UTF-8 字节代替 max_recall_tokens,字节与 token 比例随语言变化,数值待决(v3.20 §8.1 待决 13);五块装配的 invalid-input / volatile-in-prefix 等其他确定性失败仍走注意循环的退避重跑,本片只把 over-budget 改成显式失败",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

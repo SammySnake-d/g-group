@@ -1,0 +1,17 @@
+{
+  "slice": "P0 闭环后端:内核注意循环单飞调度器(attention.ts)+ SQLite 可重入事务入口 + 本地服务层 @g-group/server(宿主 Host:私聊/群聊、只追加消息与结构化字段、联系人一轮 runRound → ContactMind → 动作校验与单事务落盘、任务状态机、Compute 适配器接线与语义事件回流、承诺账本接线、交付卡/任务卡、已读回执;按 @g-group/api-contract 的 createService/bindIpc;CLI 驱动器)",
+  "acceptance": [
+    { "id": "AC-30", "status": "未测", "reason": "host.test.ts 用替身跑通私聊派活→Compute→进度→交付→确认;另有真实 Claude Code Compute 一次运行(packages/server/proof/e2e-claude-compute.txt),但联系人脑子仍是规则替身,pi 真实脑子未接入,压缩后约束保留未测;待审查" },
+    { "id": "AC-31", "status": "未测", "reason": "①全员送达、②单飞与有界攒批(attention.test.ts)、③入库端去重、④发送前撤销重跑均有测试且通过;崩溃窗口注入(入库后记成功前崩溃)未做;待审查补先红后绿与变异" },
+    { "id": "AC-46", "status": "未测", "reason": "接走即已读、群名单含联系人、被 @ 排前有测试;样式与话题名单未做" },
+    { "id": "AC-26", "status": "未测", "reason": "没有跨厂商审查联系人时交付卡让提出者本人豁免,任务记 waived-by-user(测试断言);自动送跨厂商审查未做" },
+    { "id": "AC-40", "status": "未测", "reason": "承诺随来源消息登记、验收后以产物了结有测试;处置完整性(每条消息一条处置)与轮末对账未接" },
+    { "id": "AC-05", "status": "未测", "reason": "重启后记录、任务、游标仍在(host.test.ts);事务回滚(store.test.ts)" }
+  ],
+  "author": { "agent": "claude", "session": "claude:18b4f4b0-3cf6-4d51-be92-ca20094b2ce3", "model": "fnqtz/claude-opus-5-5" },
+  "red": null,
+  "unverifiable": "先写后测(用户 #717),先红后绿与变异留审查阶段补。默认五块装配 assemble.ts 是过渡实现,内核 assembleRound 合入后替换。真实运行用的是网关模型,模型 id 经环境变量传入。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

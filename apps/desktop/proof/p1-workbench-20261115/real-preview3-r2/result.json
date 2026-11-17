@@ -1,0 +1,19 @@
+{
+  "model": "fengshao1227/deepseek-v4.1-flash",
+  "packaged": {
+    "packaged": true,
+    "version": "0.1.1-preview.3"
+  },
+  "checks": [
+    "首次目录读取并明确选择 feishao 模型",
+    "真实私聊回复 FEISHAO_DM_OK",
+    "工作台职责、预设保存及真实模型运行台账",
+    "建群及 @ 指定 agent 真实回复 FEISHAO_GROUP_OK",
+    "真实后端公告与置顶"
+  ],
+  "errors": [],
+  "startedAt": "2026-11-15T07:51:07.580Z",
+  "binarySha256": "886c2fc22043b8290e0d4b93ad74e2a6ed282f5dcbc86194b2f37d580e145a34",
+  "ok": true,
+  "finishedAt": "2026-11-15T07:54:12.440Z"
+}

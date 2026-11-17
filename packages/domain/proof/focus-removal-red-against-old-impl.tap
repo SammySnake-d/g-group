@@ -1,0 +1,444 @@
+TAP version 13
+# Subtest: AC-01 同 id 重复新建被拒,不会覆盖原联系人的记忆
+ok 1 - AC-01 同 id 重复新建被拒,不会覆盖原联系人的记忆
+  ---
+  duration_ms: 2.086458
+  type: 'test'
+  ...
+# Subtest: AC-01 换说话模型或改名,id 与记忆不变(阴性对照)
+ok 2 - AC-01 换说话模型或改名,id 与记忆不变(阴性对照)
+  ---
+  duration_ms: 0.745875
+  type: 'test'
+  ...
+# Subtest: AC-01 更新不存在的联系人被拒
+ok 3 - AC-01 更新不存在的联系人被拒
+  ---
+  duration_ms: 0.164916
+  type: 'test'
+  ...
+# Subtest: AC-33 shell、任意写文件、浏览器自动化等通用工具不能进联系人直接工具清单,拒绝理由指向 Compute
+ok 4 - AC-33 shell、任意写文件、浏览器自动化等通用工具不能进联系人直接工具清单,拒绝理由指向 Compute
+  ---
+  duration_ms: 0.69575
+  type: 'test'
+  ...
+# Subtest: AC-33 具名有界工具可以授予联系人(阴性对照)
+ok 5 - AC-33 具名有界工具可以授予联系人(阴性对照)
+  ---
+  duration_ms: 0.561333
+  type: 'test'
+  ...
+# Subtest: AC-33 派给 Compute 的说明不带联系人的记忆和性格,只带任务、群规切片、白名单子集与凭据引用
+ok 6 - AC-33 派给 Compute 的说明不带联系人的记忆和性格,只带任务、群规切片、白名单子集与凭据引用
+  ---
+  duration_ms: 2.085959
+  type: 'test'
+  ...
+# Subtest: AC-33 同一联系人只切记忆和性格开关,说明内容完全一样(阴性对照)
+ok 7 - AC-33 同一联系人只切记忆和性格开关,说明内容完全一样(阴性对照)
+  ---
+  duration_ms: 0.26125
+  type: 'test'
+  ...
+# Subtest: AC-33 只给 Compute 的能力资产可以派给 Compute,联系人本体仍调不到;没登记的照样被拒
+ok 8 - AC-33 只给 Compute 的能力资产可以派给 Compute,联系人本体仍调不到;没登记的照样被拒
+  ---
+  duration_ms: 0.317375
+  type: 'test'
+  ...
+# Subtest: AC-33 派给 Compute 的工具超出联系人白名单被拒
+ok 9 - AC-33 派给 Compute 的工具超出联系人白名单被拒
+  ---
+  duration_ms: 0.405792
+  type: 'test'
+  ...
+# Subtest: AC-33 凭据只给引用句柄,明文密钥被拒
+ok 10 - AC-33 凭据只给引用句柄,明文密钥被拒
+  ---
+  duration_ms: 0.466334
+  type: 'test'
+  ...
+# Subtest: AC-33 placement 只能是 local / byom_daemon / cloud_sandbox
+ok 11 - AC-33 placement 只能是 local / byom_daemon / cloud_sandbox
+  ---
+  duration_ms: 0.157291
+  type: 'test'
+  ...
+# Subtest: 定时是联系人的承诺:必须带时区和允许误差
+ok 12 - 定时是联系人的承诺:必须带时区和允许误差
+  ---
+  duration_ms: 78.888917
+  type: 'test'
+  ...
+# Subtest: 承诺 id 不能重复
+ok 13 - 承诺 id 不能重复
+  ---
+  duration_ms: 1.264584
+  type: 'test'
+  ...
+# Subtest: AC-31⑤ 绑定任务全部终态但末次汇报还没发出,承诺仍有效;同一状态只补上发送确认就回收
+ok 14 - AC-31⑤ 绑定任务全部终态但末次汇报还没发出,承诺仍有效;同一状态只补上发送确认就回收
+  ---
+  duration_ms: 1.985125
+  type: 'test'
+  ...
+# Subtest: AC-31⑤ 承诺回收后不影响新承诺:旧承诺 done 后不能再撤销,新承诺照常立
+ok 15 - AC-31⑤ 承诺回收后不影响新承诺:旧承诺 done 后不能再撤销,新承诺照常立
+  ---
+  duration_ms: 1.758709
+  type: 'test'
+  ...
+# Subtest: AC-31⑤ 定时承诺不随任务结束回收(阴性对照)
+ok 16 - AC-31⑤ 定时承诺不随任务结束回收(阴性对照)
+  ---
+  duration_ms: 1.360208
+  type: 'test'
+  ...
+# Subtest: AC-31⑤ 别的任务的汇报确认不回收无关承诺(阴性对照)
+ok 17 - AC-31⑤ 别的任务的汇报确认不回收无关承诺(阴性对照)
+  ---
+  duration_ms: 0.14
+  type: 'test'
+  ...
+# Subtest: 撤销承诺置为 revoked,不能重复撤销
+ok 18 - 撤销承诺置为 revoked,不能重复撤销
+  ---
+  duration_ms: 0.200208
+  type: 'test'
+  ...
+# Subtest: 联系人更新不改入参目录
+ok 19 - 联系人更新不改入参目录
+  ---
+  duration_ms: 0.089041
+  type: 'test'
+  ...
+# Subtest: CH-05 末次汇报确认先于终态到达:不被吞掉,任务终态后立即回收;重复确认与重复终态幂等
+ok 20 - CH-05 末次汇报确认先于终态到达:不被吞掉,任务终态后立即回收;重复确认与重复终态幂等
+  ---
+  duration_ms: 0.277333
+  type: 'test'
+  ...
+# Subtest: CH-05 先终态后确认的顺序照旧回收(对照),确认重放不改结果
+ok 21 - CH-05 先终态后确认的顺序照旧回收(对照),确认重放不改结果
+  ---
+  duration_ms: 0.109959
+  type: 'test'
+  ...
+# Subtest: CH-05 跨任务负对照:先确认的任务不替别的任务放行,无关任务的确认不被记下
+ok 22 - CH-05 跨任务负对照:先确认的任务不替别的任务放行,无关任务的确认不被记下
+  ---
+  duration_ms: 0.183625
+  type: 'test'
+  ...
+# Subtest: CH-05 定时承诺的绑定任务先确认汇报也不回收、不记录(阴性对照)
+ok 23 - CH-05 定时承诺的绑定任务先确认汇报也不回收、不记录(阴性对照)
+  ---
+  duration_ms: 0.225667
+  type: 'test'
+  ...
+# Subtest: CH-06 已登记为 Compute 专用的脚本不能再以同名登记成直接工具;别的有界工具照常可授(阴性对照)
+ok 24 - CH-06 已登记为 Compute 专用的脚本不能再以同名登记成直接工具;别的有界工具照常可授(阴性对照)
+  ---
+  duration_ms: 0.162625
+  type: 'test'
+  ...
+# Subtest: CH-07 空名或仅空白的工具不能授为直接工具,也不能写进 Compute 说明;有效名照常(阴性对照)
+ok 25 - CH-07 空名或仅空白的工具不能授为直接工具,也不能写进 Compute 说明;有效名照常(阴性对照)
+  ---
+  duration_ms: 0.234417
+  type: 'test'
+  ...
+# Subtest: CH-08 一个任务终态且已汇报、另一个仍在跑:承诺不回收
+ok 26 - CH-08 一个任务终态且已汇报、另一个仍在跑:承诺不回收
+  ---
+  duration_ms: 0.164708
+  type: 'test'
+  ...
+# Subtest: CH-08 Compute 说明原样保留多条群规和多项凭据引用
+ok 27 - CH-08 Compute 说明原样保留多条群规和多项凭据引用
+  ---
+  duration_ms: 0.081458
+  type: 'test'
+  ...
+# Subtest: CH-08 定时允许误差 0 秒合法(非负含 0),负数仍被拒(对照)
+ok 28 - CH-08 定时允许误差 0 秒合法(非负含 0),负数仍被拒(对照)
+  ---
+  duration_ms: 0.194833
+  type: 'test'
+  ...
+# Subtest: CH-09 同一任务两条承诺:只履行旧承诺的迟到回执不替新承诺放行,新承诺仍等自己的回执
+ok 29 - CH-09 同一任务两条承诺:只履行旧承诺的迟到回执不替新承诺放行,新承诺仍等自己的回执
+  ---
+  duration_ms: 0.138458
+  type: 'test'
+  ...
+# Subtest: CH-09 回执依据位置早于承诺出处时,即使点名这条承诺也不算数;依据位置不早于出处才算(对照)
+ok 30 - CH-09 回执依据位置早于承诺出处时,即使点名这条承诺也不算数;依据位置不早于出处才算(对照)
+  ---
+  duration_ms: 0.083959
+  type: 'test'
+  ...
+# Subtest: CH-09 一条汇报经宿主明确判定覆盖两条承诺:两条都生效;先确认后终态与先终态后确认结果一致,重放不变
+ok 31 - CH-09 一条汇报经宿主明确判定覆盖两条承诺:两条都生效;先确认后终态与先终态后确认结果一致,重放不变
+  ---
+  duration_ms: 0.121792
+  type: 'test'
+  ...
+# Subtest: CH-10 空名或仅空白的 Compute 能力资产不能登记;合法具名资产照常登记并可派出(阴性对照)
+ok 32 - CH-10 空名或仅空白的 Compute 能力资产不能登记;合法具名资产照常登记并可派出(阴性对照)
+  ---
+  duration_ms: 0.134916
+  type: 'test'
+  ...
+# Subtest: CH-11 已撤销承诺:迟到的汇报确认不再记录,迟到的终态不把 revoked 改成 done
+ok 33 - CH-11 已撤销承诺:迟到的汇报确认不再记录,迟到的终态不把 revoked 改成 done
+  ---
+  duration_ms: 0.185667
+  type: 'test'
+  ...
+# Subtest: CH-11 Compute 说明保留全部已授权工具
+ok 34 - CH-11 Compute 说明保留全部已授权工具
+  ---
+  duration_ms: 0.089917
+  type: 'test'
+  ...
+# Subtest: CH-11 双任务乱序:先终态 A、B 再先确认 B 只移除 B;先确认 A、B 再先终态 B 只消耗 B 的确认
+ok 35 - CH-11 双任务乱序:先终态 A、B 再先确认 B 只移除 B;先确认 A、B 再先终态 B 只消耗 B 的确认
+  ---
+  duration_ms: 0.183542
+  type: 'test'
+  ...
+# Subtest: CH-09 两条承诺出处都早于汇报依据位置,回执只点名 kA:只有 kA 生效,kB 仍等自己的回执
+ok 36 - CH-09 两条承诺出处都早于汇报依据位置,回执只点名 kA:只有 kA 生效,kB 仍等自己的回执
+  ---
+  duration_ms: 0.119042
+  type: 'test'
+  ...
+# Subtest: CH-12 承诺出处必须是非负整数消息位置:NaN、Infinity、负数、小数被拒;0 与正整数照常(对照)
+ok 37 - CH-12 承诺出处必须是非负整数消息位置:NaN、Infinity、负数、小数被拒;0 与正整数照常(对照)
+  ---
+  duration_ms: 0.131209
+  type: 'test'
+  ...
+# Subtest: CH-12 回执依据位置不是非负整数时不确认、不回收;同一回执换成合法位置才生效(对照)
+ok 38 - CH-12 回执依据位置不是非负整数时不确认、不回收;同一回执换成合法位置才生效(对照)
+  ---
+  duration_ms: 0.151833
+  type: 'test'
+  ...
+# Subtest: CH-13 回执作用域为空时不确认任何承诺;点名后才确认(对照)
+ok 39 - CH-13 回执作用域为空时不确认任何承诺;点名后才确认(对照)
+  ---
+  duration_ms: 0.088083
+  type: 'test'
+  ...
+# Subtest: CH-13 同一回执点名两条承诺时逐条比较出处:出处 100 与 200、依据 150 只确认前者;顺序颠倒结果相同
+ok 40 - CH-13 同一回执点名两条承诺时逐条比较出处:出处 100 与 200、依据 150 只确认前者;顺序颠倒结果相同
+  ---
+  duration_ms: 0.14925
+  type: 'test'
+  ...
+# Subtest: CH-13 交错重放:先确认 T1、再 T2、再重放 T1,不重复记录;再全部终态后回收
+ok 41 - CH-13 交错重放:先确认 T1、再 T2、再重放 T1,不重复记录;再全部终态后回收
+  ---
+  duration_ms: 0.65
+  type: 'test'
+  ...
+# Subtest: CH-13 换行、回车、非断行空格等任何空白组成的名字都不能登记为 Compute 能力资产或直接工具;夹空白的有效名照常(对照)
+ok 42 - CH-13 换行、回车、非断行空格等任何空白组成的名字都不能登记为 Compute 能力资产或直接工具;夹空白的有效名照常(对照)
+  ---
+  duration_ms: 0.216958
+  type: 'test'
+  ...
+# Subtest: CH-14 同名不同类的 Compute 能力资产第二次登记明确拒绝,原资产不变;两种顺序都一样
+ok 43 - CH-14 同名不同类的 Compute 能力资产第二次登记明确拒绝,原资产不变;两种顺序都一样
+  ---
+  duration_ms: 6.612
+  type: 'test'
+  ...
+# Subtest: CH-14 同名同类的 Compute 能力资产重复登记幂等成功;不同名不同类照常并存(对照)
+ok 44 - CH-14 同名同类的 Compute 能力资产重复登记幂等成功;不同名不同类照常并存(对照)
+  ---
+  duration_ms: 0.224792
+  type: 'test'
+  ...
+# Subtest: CH-15 消息位置以安全整数为界:MAX_SAFE_INTEGER 合法,+1 与更大值被拒;回执依据位置同样以此为界
+ok 45 - CH-15 消息位置以安全整数为界:MAX_SAFE_INTEGER 合法,+1 与更大值被拒;回执依据位置同样以此为界
+  ---
+  duration_ms: 0.458375
+  type: 'test'
+  ...
+# Subtest: CH-15 -0 按位置 0 处理(合法);负的最小值被拒(对照)
+ok 46 - CH-15 -0 按位置 0 处理(合法);负的最小值被拒(对照)
+  ---
+  duration_ms: 0.260042
+  type: 'test'
+  ...
+# Subtest: CH-15 已回收(done)的承诺不能被撤销改写成 revoked;有效承诺可以撤销(对照)
+ok 47 - CH-15 已回收(done)的承诺不能被撤销改写成 revoked;有效承诺可以撤销(对照)
+  ---
+  duration_ms: 0.791584
+  type: 'test'
+  ...
+# Subtest: CH-16 同名资产 3×3 类别组合:同类重复登记幂等(只留一项),异类第二次登记明确拒绝且原资产不变
+ok 48 - CH-16 同名资产 3×3 类别组合:同类重复登记幂等(只留一项),异类第二次登记明确拒绝且原资产不变
+  ---
+  duration_ms: 1.122458
+  type: 'test'
+  ...
+# Subtest: CH-16 每类登记两个不同名资产都并存,且都能派给 Compute;未登记的同类名字仍被拒(对照)
+ok 49 - CH-16 每类登记两个不同名资产都并存,且都能派给 Compute;未登记的同类名字仍被拒(对照)
+  ---
+  duration_ms: 0.519208
+  type: 'test'
+  ...
+# Subtest: CH-16 名字按全名精确匹配:前缀相同的不同名资产无论先后各自独立登记、各自判重
+ok 50 - CH-16 名字按全名精确匹配:前缀相同的不同名资产无论先后各自独立登记、各自判重
+  ---
+  duration_ms: 0.40625
+  type: 'test'
+  ...
+# Subtest: CH-16 直接工具与每类资产同名双向互斥;不同名的直接工具与资产照常并存(对照)
+ok 51 - CH-16 直接工具与每类资产同名双向互斥;不同名的直接工具与资产照常并存(对照)
+  ---
+  duration_ms: 35.757709
+  type: 'test'
+  ...
+# Subtest: CH-17 说明生成后改调用方的 rules/tools/credentialRefs 数组,说明不受影响;同时改三项也一样
+ok 52 - CH-17 说明生成后改调用方的 rules/tools/credentialRefs 数组,说明不受影响;同时改三项也一样
+  ---
+  duration_ms: 0.623
+  type: 'test'
+  ...
+# Subtest: CH-17 说明里的 rules/tools/credentialRefs 不能被改写,改写尝试不影响调用方入参(反方向)
+ok 53 - CH-17 说明里的 rules/tools/credentialRefs 不能被改写,改写尝试不影响调用方入参(反方向)
+  ---
+  duration_ms: 0.561
+  type: 'test'
+  ...
+# Subtest: CH-17 同名异类拒绝理由写出实际的资产名和两个类别(非 research 名对照)
+ok 54 - CH-17 同名异类拒绝理由写出实际的资产名和两个类别(非 research 名对照)
+  ---
+  duration_ms: 0.122292
+  type: 'test'
+  ...
+# Subtest: CH-18 入参类型不对时明确拒绝:数组字段不是数组、数组里混了非字符串、task 不是字符串
+ok 55 - CH-18 入参类型不对时明确拒绝:数组字段不是数组、数组里混了非字符串、task 不是字符串
+  ---
+  duration_ms: 0.683416
+  type: 'test'
+  ...
+# Subtest: CH-19 多项凭据逐项校验:合法引用后跟明文、空路径、路径含空白都拒;多个合法引用通过(对照)
+ok 56 - CH-19 多项凭据逐项校验:合法引用后跟明文、空路径、路径含空白都拒;多个合法引用通过(对照)
+  ---
+  duration_ms: 0.440042
+  type: 'test'
+  ...
+# Subtest: CH-20 入参不是对象、字段类型不对、资产类别不认识:登记入口一律明确拒绝;合法输入照常(对照)
+ok 57 - CH-20 入参不是对象、字段类型不对、资产类别不认识:登记入口一律明确拒绝;合法输入照常(对照)
+  ---
+  duration_ms: 0.255542
+  type: 'test'
+  ...
+# Subtest: CH-22 placement 只有缺省或 undefined 时默认 local;显式 null、未知字符串、数字都拒绝;三种合法值原样返回
+ok 58 - CH-22 placement 只有缺省或 undefined 时默认 local;显式 null、未知字符串、数字都拒绝;三种合法值原样返回
+  ---
+  duration_ms: 0.41525
+  type: 'test'
+  ...
+# Subtest: CH-23 数组字段:首项非字符串、类数组对象一律拒绝;真字符串数组照常(对照)
+ok 59 - CH-23 数组字段:首项非字符串、类数组对象一律拒绝;真字符串数组照常(对照)
+  ---
+  duration_ms: 0.172125
+  type: 'test'
+  ...
+# Subtest: CH-23 凭据引用必须整串是引用:明文前缀加合法引用后缀拒绝;纯引用照常(对照)
+ok 60 - CH-23 凭据引用必须整串是引用:明文前缀加合法引用后缀拒绝;纯引用照常(对照)
+  ---
+  duration_ms: 0.159209
+  type: 'test'
+  ...
+# Subtest: CH-25 只接受普通数据对象:外层 Proxy、数组 Proxy、自定义原型对象、类实例都拒;普通对象与 Object.create(null) 通过
+ok 61 - CH-25 只接受普通数据对象:外层 Proxy、数组 Proxy、自定义原型对象、类实例都拒;普通对象与 Object.create(null) 通过
+  ---
+  duration_ms: 0.608125
+  type: 'test'
+  ...
+# Subtest: CH-25 回执与登记入口同样拒绝外层 Proxy:回执作用域不能在读后改写;普通回执照常(对照)
+ok 62 - CH-25 回执与登记入口同样拒绝外层 Proxy:回执作用域不能在读后改写;普通回执照常(对照)
+  ---
+  duration_ms: 0.345708
+  type: 'test'
+  ...
+# Subtest: 普通数据合同:联系人每个公开入口的每个对象字段做成 getter 或 setter 都直接拒绝,getter 调用 0 次;同样内容的数据属性通过(对照)
+ok 63 - 普通数据合同:联系人每个公开入口的每个对象字段做成 getter 或 setter 都直接拒绝,getter 调用 0 次;同样内容的数据属性通过(对照)
+  ---
+  duration_ms: 6.2105
+  type: 'test'
+  ...
+# Subtest: 普通数据合同:嵌套 schedule 对象与数组字段里的访问器同样拒绝、getter 调用 0 次
+ok 64 - 普通数据合同:嵌套 schedule 对象与数组字段里的访问器同样拒绝、getter 调用 0 次
+  ---
+  duration_ms: 0.609958
+  type: 'test'
+  ...
+# Subtest: 普通数据合同:逐个入口拒绝外层 Proxy 与数组 Proxy,普通对象通过(对照)
+ok 65 - 普通数据合同:逐个入口拒绝外层 Proxy 与数组 Proxy,普通对象通过(对照)
+  ---
+  duration_ms: 0.594667
+  type: 'test'
+  ...
+# Subtest: 快照合同:入口返回后改调用方对象或数组,已存状态与输出都不变(addContact/updateContact/commit/回执)
+ok 66 - 快照合同:入口返回后改调用方对象或数组,已存状态与输出都不变(addContact/updateContact/commit/回执)
+  ---
+  duration_ms: 1.163875
+  type: 'test'
+  ...
+# Subtest: 普通数据合同:快照是冻结的空原型对象,schema 外字段丢弃
+ok 67 - 普通数据合同:快照是冻结的空原型对象,schema 外字段丢弃
+  ---
+  duration_ms: 0.5385
+  type: 'test'
+  ...
+# Subtest: 普通数据合同:Object.prototype 上有同名可写数据属性、setter、不可写属性时,快照字段照常写入、setter 调用 0 次;无污染时同样(对照)
+ok 68 - 普通数据合同:Object.prototype 上有同名可写数据属性、setter、不可写属性时,快照字段照常写入、setter 调用 0 次;无污染时同样(对照)
+  ---
+  duration_ms: 18.593875
+  type: 'test'
+  ...
+# Subtest: g-group 第 2273 号讨论撤销专职开关:联系人没有 focus 字段,模块不导出 setFocus/decideUnderFocus,有承诺时也没有按「专职」婉拒的路径
+not ok 69 - g-group 第 2273 号讨论撤销专职开关:联系人没有 focus 字段,模块不导出 setFocus/decideUnderFocus,有承诺时也没有按「专职」婉拒的路径
+  ---
+  duration_ms: 5.074959
+  type: 'test'
+  location: '/private/tmp/pr4-oldimpl/packages/domain/src/contact.test.ts:883:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/pr4-oldimpl/packages/domain/src/contact.test.ts:885:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..69
+# tests 69
+# suites 0
+# pass 68
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 431.834167

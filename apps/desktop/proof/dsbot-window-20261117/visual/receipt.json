@@ -1,0 +1,361 @@
+{
+  "fixture": "视觉夹具，不是真实模型和后端验收",
+  "upstream": "/tmp/ds-bot-feasibility-20261116/repo",
+  "frozenCommit": "a66cc737cfb6c3d8a2597e748cded6cab1206dd3",
+  "sourceHashes": {
+    "app/ui/src/api.js": "832359ff9a986489cf8bd30937eca7e6fb67e555070f54b8f8caa0da361c0f13",
+    "app/ui/src/app.css": "83fad64f3690cbe35af50f3829a56e92165ce2b6899e37ece5b173a1d9c47340",
+    "app/ui/src/app.js": "10e3a1f291b1e118fe9168dbdcfa8a4388d781d7fcb37bf36a0a5f1bbe5a9cbc",
+    "app/ui/src/chat.js": "e9cf6fb95b440aadbc23710f7b9871009d46c70d15693e26e59ed40995ee8699",
+    "app/ui/src/locale.js": "623e86d9279d50aca5513be5e9c3b3dae59cad906a14d63e682d275f32d03d04",
+    "app/ui/src/main.js": "90527cbe9d8cdb191fad40d0672ea9c695b1f62f0dd59f4be361dd6df9bfb929",
+    "app/ui/src/primitives.js": "f7f3f80dd9d0573248eea866384e9d303f0e685edcdb806f84430b1100b5d854",
+    "app/ui/src/team.js": "3d5909dea6305ba708475854c39179ac1d5ce61a8ac6c3d0281b7b3872c9aad4",
+    "ds-bot/src/client/about.js": "6d838289fbfec700f4d22c0b9ab13991a15d588b06f728a87f46dd4d6f0036f5",
+    "ds-bot/src/client/activity-row.js": "95f5ae823305a0db0c799de2ce476c530e0a7a5c02609eb05bc9e239c8f77f31",
+    "ds-bot/src/client/agent-badge.js": "338d389fbe09f0a5e8cb4e6a36022808cdef03874d4a79e36bdd82ca2f32aa62",
+    "ds-bot/src/client/agent-cards.js": "cb5292b84c71409ad268728fbd81d35874cddf86b10a2d08784df2ae81a1911e",
+    "ds-bot/src/client/agent-logos.js": "eecc73f30635cdbdcf7672e1646d3ac21ccb18a4514b612bc86137e9cd2e010b",
+    "ds-bot/src/client/agent-new.js": "c75271900555f0e32c7adeca89b601ffc43e9d10257abf5aa219fa0d33c95edf",
+    "ds-bot/src/client/agent-routes.js": "53b64eb77621b23d4984261b8c5c692f5ff5e68204b77748515df4acda533eb6",
+    "ds-bot/src/client/api.js": "af4a4be22904ce3f33b7d16b52d6d03912496e7c18c5499fac5128041a0a9d85",
+    "ds-bot/src/client/approval-notices.js": "be00d41b9fbd715e91c4b828691a4f3475f616763109c503814b657dc7d4b738",
+    "ds-bot/src/client/at-menu.js": "a0feee8fdb684324e7160f422c7930ec4ae032ef214d5d4651a7f6ede3c82124",
+    "ds-bot/src/client/avatar-library.js": "2b9d5ca8d4cf75afe671ad6592dcbe10c6106686cbd99b8c83ced8e0566b2e3b",
+    "ds-bot/src/client/bot-browsers.js": "b3d0c2acc12fbc6dddd617964416fdaf2ce7969974d35c7643f085e9eba643e1",
+    "ds-bot/src/client/bot-draft.js": "41260a3536da1219cc3ef777f3cf1ae701e0207f87ec0604fd829533f6f9cbbe",
+    "ds-bot/src/client/bot-settings.js": "7368d5d8f215f334f159c6210f2039640c72b64f2dc52d7dbfa50ec701cda8f4",
+    "ds-bot/src/client/browser-overlap.js": "faf614e1e4c0a47332d8b77f85cd7b71640fed907fd34d18daf0727962d50a94",
+    "ds-bot/src/client/browser-pane.js": "378f1c7b9dcafe4eefc84138d83ca84602f40b3aafab2cc21005957020bc22ac",
+    "ds-bot/src/client/browser-settings.js": "7ba645390d5365cc4fbefab0e3fd67d98b26ece4aaff5f4ee4f6a283e7f48bc4",
+    "ds-bot/src/client/btw-model.js": "da56675fb185e4dc349e586ce0614b78703369cc97ebfddde9369f06e65fc20d",
+    "ds-bot/src/client/btw.js": "088a47fdb051499508d1e3a572969b7f945b1ba059b3cc00b383e20a8a492b2f",
+    "ds-bot/src/client/capability-settings.js": "155463086ee16ce6a59c39858b58cd9e598f723639b0cdd106ff66590bdc47db",
+    "ds-bot/src/client/card-hold.js": "7b502ac2eb2d9c8e80a0141f21330a5713d7cffd74839be23187de090f8f55de",
+    "ds-bot/src/client/cell-empty.js": "2dc299effe712e62a77422803c50328f4dcece613829d8dba49e87e3dc571b7e",
+    "ds-bot/src/client/cells.js": "ce94610e4c8952b03bac3144140e045c2542df0c475e3903f1143e8a8342feef",
+    "ds-bot/src/client/characters.js": "d0c6ded534e8db5cc87bad32d2aca3872733a0b459bc76a643382b2eeeadf954",
+    "ds-bot/src/client/composer.js": "665455ac5f73b6e927790ca5998aca75a71e74610a1baa74a99b45c24d284bad",
+    "ds-bot/src/client/computer.js": "265ab98a309d8bbd0bef1da6467f6baf1fae3f3a2b75d9d086a88396f4e9e9f7",
+    "ds-bot/src/client/connector-marks.js": "99903554dd8e7a806b8436ad33528462f6d7edf208a850c8a23aa0fc6d5ab7d4",
+    "ds-bot/src/client/connectors-page.js": "cdc6e7b98588d3a4cc1b45f768613ccff4e14b61712066219c5073d32d13c4df",
+    "ds-bot/src/client/connectors.js": "b15b3b3d8b9865d67f0042982906db6ef787c555bb37b1f9a3c622f66f0a7b6b",
+    "ds-bot/src/client/context-menu.js": "8f283adccaec544728010e6459a669f13a5c21330284c14514c2efac1c8a6753",
+    "ds-bot/src/client/create-bot.js": "1af9e9376ec6d6352ac66b3808426a8e634d2ae825c45de4a2b4c7f8ddd03b85",
+    "ds-bot/src/client/details-drawer.js": "a9037a6cc39ff9a3880c076ef9737fcd6dc7dbe21caf597f67cd507f6056bf1b",
+    "ds-bot/src/client/diagnostics.js": "fae8f3ca6eaf59ac18e26e78c25bd6935dff02b7459ddcf71fa9b178de32d574",
+    "ds-bot/src/client/dsh-offer.js": "fa24986d887d7cc631aad060f04ee85d958b8e8c6c0d16dc692f73e40e2bf4e7",
+    "ds-bot/src/client/dsh-primitives.js": "0ebba52e839e6f83ee396a6fb351fb9cf4700f2d57dc6608655023bc4f83003f",
+    "ds-bot/src/client/enter-key.js": "93dfe998249d11915630122872c25e39d2f599f9134a68c4f96f3b4b96ba2cfb",
+    "ds-bot/src/client/enter-steer.js": "635218a43aacdbafe5fb8b89168a49ef1d40e7ae70c665cd190bb0c7dd71f199",
+    "ds-bot/src/client/exchange.js": "255ec00e79eecf2e6b60903c06ffa4cb30469d9abc4f0210bac0fbc179fd3dfa",
+    "ds-bot/src/client/feedback.js": "f6450cefdd9223f891dd5ec414607ae08b8b35f9c907d394b010cc48d6c48596",
+    "ds-bot/src/client/fold.js": "5c3a9b4079bbb853d4f9bf6a6eb33d32e4bdc9d4203bcd7b51a4717da8a05113",
+    "ds-bot/src/client/folder-menu.js": "341b955ac847885a448d33cd0c4d009cbd704cc29f6cc60070e1d7bf8d48e290",
+    "ds-bot/src/client/frame-layout.js": "b0096455eb40e7f924a83f9a4a0d469acad01203927944bf93fe71c4fb005ef5",
+    "ds-bot/src/client/frame-watch.js": "107f111c814cb3f5d8c69cd9fb3e9397a29430c63ea8531d9b95f05680d3da09",
+    "ds-bot/src/client/goal.js": "8c3b085da47e2adfa2985b0a4a85f11074f2466b8f166ffdc615e3fdf51c6c2c",
+    "ds-bot/src/client/group-settings.js": "475b104a782913891f36aa12bcd61b06e2841834372e141466e30ac7bed66ffe",
+    "ds-bot/src/client/handoff-card.js": "4b4f9962b66cf44b14ab0811c90ddb47d579e4fefa2a49356d6287914b12368e",
+    "ds-bot/src/client/header-navigation.js": "814bf5918e9f3e89ff75c159e2f1490fc88e422956e30c3fca5a616738f4d803",
+    "ds-bot/src/client/header.js": "53e8a6837a0be2dbab4fa1148231f3be22f8d7c384e1e8bff6cbc7c60b466672",
+    "ds-bot/src/client/i18n.js": "301899f3f2a17bfeb6f95051818718fc0d19dedd68c1106f259c5c14b6700bf3",
+    "ds-bot/src/client/icons.js": "fb5d6da5d3bd2fd716d32780124f0ed9c18b0972a9223f44de0efb7db8f8d729",
+    "ds-bot/src/client/im-page.js": "612ed2f4bfc15efe11a99d6a818f64aae7da21a7c25d5db07018216a51fa57b7",
+    "ds-bot/src/client/index.js": "1c881dca9a715c4afce5945ee30bcbf0ddeec8e944650cf05e997938bc74617e",
+    "ds-bot/src/client/inks.js": "f5c9d5a288a6eda1f24a3cd263346dd84e5b052fd90f92338f8b2af9492ba00b",
+    "ds-bot/src/client/kept-private.js": "dc6f08910cee4365ad9bd600352de6f0cb1291e5130af19797dda421a10d1614",
+    "ds-bot/src/client/learning-card-model.js": "10a66e292ed351e64752b0d9b05ea3cbbaa4d6bc751ae08205209d569fbcb364",
+    "ds-bot/src/client/learning-card.js": "7cc632d29d4aed023e2c6e0ae560fcf301ca3e5f90e9b8a3672afe4a2e73bed0",
+    "ds-bot/src/client/local-agents-page.js": "dfabe39addc61fd9794c7ede472e4b10c9d4ff38afbfc1a2a75b49552b3a0d81",
+    "ds-bot/src/client/mark.js": "4e543afb099ab9dfc2e4a5f9170032eed1d81f62a0e4ccc09a02a01bdf8e79ef",
+    "ds-bot/src/client/member-status.js": "daad0017539df634af4b39fba0fead5d1159317461d49ef5146d59f312758a93",
+    "ds-bot/src/client/memory-panel.js": "8ed9fb3eaa479b5a74281f278bcb7ba1f8189f5e1366c6cdbbe5c89859815aac",
+    "ds-bot/src/client/model-menu.js": "ac75c0b016a107848f3321ade5f0d78209b77bc755da6e1e5e5df9506d441f53",
+    "ds-bot/src/client/motion.js": "0279195961ec2e4262e7cb3c10f42eb138677c1e617a1c478fe4cf0c4feaf3fb",
+    "ds-bot/src/client/new-chat.js": "60b8029769eb121b1d273d3354aae4cc77c424be46f647528b6ba434c7bdeda7",
+    "ds-bot/src/client/open-listed.js": "a5f02199c264f35906fc06c9c8aefa192792955df733ea381118f0f04c2d21be",
+    "ds-bot/src/client/open-window.js": "f3cbfa809c63b8a4a80dc6ad7725e79c37776eaebeef8ad26bfae6a1ca1c0b7c",
+    "ds-bot/src/client/overlay-hooks.js": "d2791e867d489236b20e1e470cab2939563ba13c93879d75024ad238727d07ce",
+    "ds-bot/src/client/overlays.js": "c00fbd4744acffe892ece0e267d4138e3fa1b0f2e9d4177e7ed5d407771e0e97",
+    "ds-bot/src/client/palette.js": "acacfcd97b6f3171d3a9e287272bf1a76823c4839cf5dd463d88e51f0b37bf05",
+    "ds-bot/src/client/permission-picker.js": "338ed8324d2a7475fc2321f47684e3f029526b50ab2958257e44499f27e56432",
+    "ds-bot/src/client/phone-page.js": "a98807a7352cb85d79c265d102f1af56648a13a3efab612d19dfed4a5ae82697",
+    "ds-bot/src/client/providers-page.js": "3492a69e8552708f1f512c60b1c668e8a90fc474afbed0a5b28dd355e8eca5f1",
+    "ds-bot/src/client/questions.js": "6f2dea15b41f2f68d7cf051d6ec3d91e52309e7fe148f96baddc8cf5c5fb9c03",
+    "ds-bot/src/client/queue-dock.js": "6c6250a4d3242ee72dcb4682a4c9c223fc039dab72c3256487f0ff15c5a924bd",
+    "ds-bot/src/client/read-page.js": "6f2c98538be049d05297558171be3f458c7ba8f89267c9a3f6194e6656a4767a",
+    "ds-bot/src/client/right-panel.js": "883ba777cbf2d05784517a1f7887510ef8be9d9c4387dd2577b33d615830d0cd",
+    "ds-bot/src/client/schedules.js": "62061ed06a29ae42f36cdac4a2de22d7bc0669e9fdd1530bad33976bb4b79e97",
+    "ds-bot/src/client/secret-card.js": "c7db1ba133deb90d3c3e2c2f762ae2be61d1bf652aa744526974bb31fb2adbc9",
+    "ds-bot/src/client/settings-shell.js": "24559da981ddd8c5e14d1b4eb74314f2d8b620d19057f0be012ef3edcbfc1f9d",
+    "ds-bot/src/client/settings.js": "a6df7e527c33b3d420b84fa997b6578117a54101dfa4ce5633acbc6bad0707b0",
+    "ds-bot/src/client/shared-map.js": "4e68578ee54ca527aa3c90697c5faa2079e010d18e51b17af3fa1dbd258e02d0",
+    "ds-bot/src/client/side-chat.js": "7b528a509cc096f6dad8c355195ebe764d828279c8622df3986d8deec34b4a0a",
+    "ds-bot/src/client/side-model.js": "4179ce9c3bef47eb51b234269d72479de1e7b2c83316036175a4cc2e0305fdcf",
+    "ds-bot/src/client/sidebar.js": "e0da18e069230b475eb079ed653e3561e6539234630af98b968d78ac626b4ecf",
+    "ds-bot/src/client/sources.js": "3beaff456910211f3cc9e60833e8675bdb30b0a2f85aac3676ad338398211b2a",
+    "ds-bot/src/client/speech.js": "bf8a9a4fab4ad9d43dff8457b52121fe1f43985090c7b0837bd7f001e95dd6c4",
+    "ds-bot/src/client/storage.js": "25726f5f95abab1e4720c5537666120dafd7d4e02b6d0a38aeea6bbeb69c0c9b",
+    "ds-bot/src/client/styles.js": "25046a8c591a9cd40b598be36e5bf66d4c0f371620aa105ea77f9aaa10736c48",
+    "ds-bot/src/client/surface.js": "f04b3ef47ff422f1c89367edadc22b73bbda6151920184dc85f2015ba41c75c2",
+    "ds-bot/src/client/team-actions.js": "1dc0b4821910ed17058c00118c971c340e1cb2c9ae1fd30f5f2100f21c4ba339",
+    "ds-bot/src/client/text.js": "c302c3479996956a45a84b259c94c56db2c3de48592e1e8da0d5190dd2519b11",
+    "ds-bot/src/client/themes.js": "039a9688519f4dcb67aea6bfeb86a64218fcc55a3a25b5cb322529abd97fdcfd",
+    "ds-bot/src/client/turn-error.js": "5273115b58e650644434e4159ab335ac4b672c9eb056cee8c7e5e6b410af1403",
+    "ds-bot/src/client/turn-reasoning.js": "ca7c4e7fd402a752cd4a2d5693b7eb003e91839b1e514d3fe8a4df1315a291d0",
+    "ds-bot/src/client/usage-data.js": "8ab23415f031e9d052f227a0a046ec68ed78a743b66ffa4875ac1a6cf7ce2787",
+    "ds-bot/src/client/usage-page.js": "0913cce3884093ba270b5ef4d05dd58c2eb91ba66acafa603ba9e850e0146276",
+    "ds-bot/src/client/user-message.js": "8d909dc35bccc9f2e61dd3804fe6a62ce147f0d310460ac8574ba3289bde964e",
+    "ds-bot/src/client/voice.js": "af4f1d0a963f757ae4fd1f5b23f5ee126100e49c0b08f9988be4017b2febf1df",
+    "ds-bot/src/client/widget-cell.js": "9fecec6ced931ad596d471f69bb6dbc41fb29cec480e4a35eb9b74d76d1b9160",
+    "ds-bot/src/shared/group-replies.js": "eac1d26c4ade92c58fe504083fe0222d60b166e8c9134a5427cca5edfe2a039b",
+    "ds-bot/src/shared/im-platforms.js": "cd5452fee7f2a994e12935e27f4390b2757bf468c015bbefb2952652ad6358e8",
+    "ds-bot/src/shared/mentions.js": "a011d792da173dcf86f3a480ea8b9f8411528bf0b9a99db36a37e6b0e0aeecec",
+    "app/ui/index.html": "ae404ae531c2a20b906d071207776fde8b8aff2f6e3aa060dc7db859b9f83f35",
+    "app/vite.config.js": "74bd6dde312a38583e7e4e32b472207f624df51a7cdaa11a732836cc183f1d3b",
+    "app/src/fonts.css": "aba007a64b319f75300abaff1ab4aa41f679f9bdb3f41d368dd6933ceeb0b19b",
+    "app/src/macos.css": "0101b6361b18ea4c3ea96fd48b6121db82752aaae64a244620e4133c6d3ad1d3",
+    "app/src/material.css": "95d6c09ce13692662184e141875b944cf77c52b2879fa2f383c14afd03f8fda2",
+    "app/src/page-card.css": "a0f508e80cca5de199b2b507c6f7c2d4f48367ff81a9430f0834667cec03e145"
+  },
+  "dependencies": {
+    "vite": "8.3.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.2.2-rc.3",
+    "deep-view": "0.1.2"
+  },
+  "viewport": {
+    "width": 1200,
+    "height": 800
+  },
+  "locale": "zh-CN",
+  "colorScheme": "light",
+  "screenshots": [
+    {
+      "label": "original",
+      "path": "/tmp/dsbot-astra-20261117/visual-r7/original.png",
+      "sha256": "6007e9834e345f95d95ab3b1950b63c0d29fcd7e9a8ec58ff931ab00ba8d8221",
+      "state": {
+        "title": "DS Bot",
+        "language": "zh-CN",
+        "mainCards": 1,
+        "listNames": [
+          "研究助手\n一起把想法落地",
+          "产品讨论组\n先跑通对话，再逐项完善。",
+          "设计伙伴",
+          "代码伙伴"
+        ],
+        "listItems": 3,
+        "timeSeparators": 1,
+        "bodyText": "设置\n研究助手\n记忆已更新\n今天 17:57\n\n我们先把聊天闭环跑通，今天做哪几件事？\n\n今天先完成三件事：\n\n配置 API，选择模型。\n加入联系人，发起私聊。\n建一个群，确认消息能收到。\n\n把这份列表留着，再给我一张小图和一行代码。\n\n可以，先用同一组数据对照界面。\n\n复制\nconst ready = true\n\nDS Bot\n研究助手\n一起把想法落地\n产品讨论组\n先跑通对话，再逐项完善。\n设计伙伴\n代码伙伴",
+        "mainMargin": null,
+        "sidebarWidth": 280,
+        "computed": {
+          "userBubble": {
+            "color": "rgb(252, 252, 252)",
+            "background": "rgb(7, 7, 7)",
+            "width": 290,
+            "height": 38,
+            "x": 892,
+            "y": 123
+          },
+          "assistantBubble": {
+            "color": "rgb(20, 20, 20)",
+            "background": "rgb(238, 238, 238)",
+            "width": 226,
+            "height": 136,
+            "x": 352,
+            "y": 183
+          },
+          "composer": {
+            "color": "rgb(20, 20, 20)",
+            "background": "color(srgb 0.988235 0.988235 0.988235 / 0.78)",
+            "width": 837,
+            "height": 49,
+            "x": 352,
+            "y": 738
+          },
+          "header": {
+            "color": "rgb(20, 20, 20)",
+            "background": "rgba(0, 0, 0, 0)",
+            "width": 864,
+            "height": 40,
+            "x": 336,
+            "y": 4
+          },
+          "sidebar": {
+            "color": "rgb(20, 20, 20)",
+            "background": "rgba(0, 0, 0, 0)",
+            "width": 280,
+            "height": 800,
+            "x": 0,
+            "y": 0
+          }
+        }
+      }
+    },
+    {
+      "label": "candidate",
+      "path": "/tmp/dsbot-astra-20261117/visual-r7/candidate.png",
+      "sha256": "58a9472121198006e690ffe331cd4efc0e43809bbbe10f559ea5df9c2d12d47f",
+      "state": {
+        "title": "g-group",
+        "language": "zh-CN",
+        "mainCards": 1,
+        "listNames": [
+          "研究助手\n一起把想法落地",
+          "产品讨论组\n先跑通对话，再逐项完善。",
+          "设计伙伴",
+          "代码伙伴"
+        ],
+        "listItems": 3,
+        "timeSeparators": 1,
+        "bodyText": "设置\n研究助手\n记忆已更新\n今天 17:57\n\n我们先把聊天闭环跑通，今天做哪几件事？\n\n今天先完成三件事：\n\n配置 API，选择模型。\n加入联系人，发起私聊。\n建一个群，确认消息能收到。\n\n把这份列表留着，再给我一张小图和一行代码。\n\n可以，先用同一组数据对照界面。\n\n复制\nconst ready = true\n\ng-group\n研究助手\n一起把想法落地\n产品讨论组\n先跑通对话，再逐项完善。\n设计伙伴\n代码伙伴",
+        "fixtureCalls": [
+          {
+            "method": "session.hello",
+            "params": {
+              "clientApiVersion": "0.1.0"
+            }
+          },
+          {
+            "method": "contacts.list",
+            "params": {}
+          },
+          {
+            "method": "rooms.list",
+            "params": {}
+          },
+          {
+            "method": "settings.get",
+            "params": {}
+          },
+          {
+            "method": "contacts.list",
+            "params": {}
+          },
+          {
+            "method": "rooms.list",
+            "params": {}
+          },
+          {
+            "method": "settings.get",
+            "params": {}
+          },
+          {
+            "method": "contacts.list",
+            "params": {}
+          },
+          {
+            "method": "rooms.list",
+            "params": {}
+          },
+          {
+            "method": "settings.get",
+            "params": {}
+          },
+          {
+            "method": "messages.list",
+            "params": {
+              "roomId": "dm-main",
+              "limit": 100
+            }
+          },
+          {
+            "method": "contacts.list",
+            "params": {}
+          },
+          {
+            "method": "rooms.list",
+            "params": {}
+          },
+          {
+            "method": "settings.get",
+            "params": {}
+          }
+        ],
+        "mainMargin": null,
+        "sidebarWidth": 280,
+        "computed": {
+          "userBubble": {
+            "color": "rgb(252, 252, 252)",
+            "background": "rgb(7, 7, 7)",
+            "width": 290,
+            "height": 38,
+            "x": 892,
+            "y": 123
+          },
+          "assistantBubble": {
+            "color": "rgb(20, 20, 20)",
+            "background": "rgb(238, 238, 238)",
+            "width": 226,
+            "height": 136,
+            "x": 352,
+            "y": 183
+          },
+          "composer": {
+            "color": "rgb(20, 20, 20)",
+            "background": "color(srgb 0.988235 0.988235 0.988235 / 0.78)",
+            "width": 837,
+            "height": 49,
+            "x": 352,
+            "y": 738
+          },
+          "header": {
+            "color": "rgb(20, 20, 20)",
+            "background": "rgba(0, 0, 0, 0)",
+            "width": 864,
+            "height": 40,
+            "x": 336,
+            "y": 4
+          },
+          "sidebar": {
+            "color": "rgb(20, 20, 20)",
+            "background": "rgba(0, 0, 0, 0)",
+            "width": 280,
+            "height": 800,
+            "x": 0,
+            "y": 0
+          }
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "calls": [
+    {
+      "label": "original",
+      "endpoint": "state",
+      "payload": {
+        "since": -1,
+        "models": "",
+        "locale": "zh"
+      }
+    },
+    {
+      "label": "original",
+      "endpoint": "state",
+      "payload": {
+        "since": -1,
+        "models": "",
+        "locale": "zh"
+      }
+    },
+    {
+      "label": "original",
+      "endpoint": "models",
+      "payload": null
+    },
+    {
+      "label": "original",
+      "endpoint": "chat",
+      "payload": {
+        "botId": "contact-main"
+      }
+    }
+  ]
+}

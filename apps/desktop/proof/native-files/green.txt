@@ -1,0 +1,84 @@
+[box] box3 上的 /workspace/728/wt-loop-native-green 已就绪(46abb34)
+[box] 已排队:npx tsc -p tsconfig.app.json && npx tsc -p tsconfig.electron.json --noEmit && npm run verify:structure && npx vite build && npm run build:electron && GG_PW_PORT=5282 GG_SHOTS=/workspace/728/shots-loop-native-green DISPLAY=${DISPLAY:-:0} npx playwright test --project=electron --workers=1 --reporter=line e2e/native-files.electron.spec.ts e2e/parity-chat.electron.spec.ts e2e/shell.electron.spec.ts
+✓ 3396 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                        1.00 kB │ gzip:   0.50 kB
+dist/assets/index-tvESiEwt.css                       370.61 kB │ gzip:  60.40 kB
+dist/assets/MenuBottomSheetActionList-C5PA3LEn.js      2.00 kB │ gzip:   1.07 kB
+dist/assets/ItemSwipeLayer-DXPETWlo.js                 9.07 kB │ gzip:   3.58 kB
+dist/assets/focusOutline.stylex-DWq2SOhH.js           25.04 kB │ gzip:   7.43 kB
+dist/assets/timing-BcS6eaD2.js                        40.54 kB │ gzip:  14.57 kB
+dist/assets/useTooltip-BLPUgI-N.js                    51.25 kB │ gzip:  16.95 kB
+dist/assets/MenuBottomSheet-BOWEacbX.js               81.04 kB │ gzip:  27.30 kB
+dist/assets/index-BvYhxqQL.js                      2,008.92 kB │ gzip: 649.68 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 5.50s
+
+> @g-group/desktop@0.1.0 build:electron
+> vite build -c vite.electron.config.ts && GG_ENTRY=preload vite build -c vite.electron.config.ts && GG_ENTRY=report-mcp vite build -c vite.electron.config.ts
+
+vite v8.3.6 building ssr environment for production...
+
+ WARN  inlineDynamicImports option is deprecated, please use codeSplitting: false instead.
+
+transforming...
+✓ 403 modules transformed.
+rendering chunks...
+computing gzip size...
+dist-electron/assets/node-CS3dfF7g.cjs                    1.20 kB │ gzip:   0.50 kB
+dist-electron/assets/node-DUQtZJCJ.cjs                  112.69 kB │ gzip:  28.20 kB
+dist-electron/assets/src-Dpfu1nCA.cjs                   189.05 kB │ gzip:  48.60 kB
+dist-electron/assets/anthropic-messages-BcVq0PnA.cjs    611.43 kB │ gzip: 131.97 kB
+dist-electron/main.cjs                                1,034.39 kB │ gzip: 301.28 kB
+
+✓ built in 716ms
+vite v8.3.6 building ssr environment for production...
+
+ WARN  inlineDynamicImports option is deprecated, please use codeSplitting: false instead.
+
+transforming...
+✓ 10 modules transformed.
+rendering chunks...
+computing gzip size...
+dist-electron/preload.cjs  67.84 kB │ gzip: 22.59 kB
+
+✓ built in 328ms
+vite v8.3.6 building ssr environment for production...
+
+ WARN  inlineDynamicImports option is deprecated, please use codeSplitting: false instead.
+
+transforming...
+✓ 4 modules transformed.
+rendering chunks...
+computing gzip size...
+dist-electron/report-mcp.cjs  9.72 kB │ gzip: 4.11 kB
+
+✓ built in 281ms
+[WebServer] (node:1546694) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:1546707) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 7 tests using 1 worker
+
+(node:1546725) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/7] [electron] › e2e/native-files.electron.spec.ts:23:1 › 本地文件路径:选择的真实文件能取回原路径,内存 File 没有伪造路径;附件仍可发送
+[2/7] [electron] › e2e/native-files.electron.spec.ts:47:1 › 截图:当前窗口返回有效 PNG,点击输入栏截图发送真实附件,重启后仍在
+[3/7] [electron] › e2e/parity-chat.electron.spec.ts:59:1 › 私聊里就近操作消息:表情、编辑、撤回、删除都由后端落实;重启后回执、草稿、表情、编辑、撤回、删除都还在;正在回复卡只写真实活动
+[4/7] [electron] › e2e/parity-chat.electron.spec.ts:156:1 › 群里置顶、转发、多选删除、清空:置顶条显示并在重启后还在;转发到私聊是一张转发卡;删的只在你这边
+[5/7] [electron] › e2e/parity-chat.electron.spec.ts:232:1 › 私聊回到某条:确认框写明真实要撤下几条;之后的撤下、留一行灰字;发文件是附件卡;切走时来的回复回来时有新消息分隔线
+[6/7] [electron] › e2e/parity-chat.electron.spec.ts:295:1 › 联系人连着几句都回你同一条:引用只在第一句上画一次,后面几句并在同一个头像下
+[7/7] [electron] › e2e/shell.electron.spec.ts:8:1 › Electron 壳:安全基线开着,渲染层拿不到 Node,IPC 只认白名单方法
+  7 passed (1.2m)
+[box] 截图已取回到 /private/tmp/gg-loop-scripts/shots-native
+[box] 用了 box3;云端残留进程:0

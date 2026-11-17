@@ -1,0 +1,93 @@
+{
+  "model": "fengshao1227/deepseek-v4.1-flash",
+  "contactMode": "fake",
+  "realCompute": true,
+  "checks": [
+    "规则联系人派出真实 Compute",
+    "真实 Compute 完成且文件内容吻合",
+    "打包版打开真实 Compute 过程"
+  ],
+  "startedAt": "2026-11-15T08:07:53.809Z",
+  "app": {
+    "packaged": true,
+    "version": "0.1.1-preview.3"
+  },
+  "backend": {
+    "state": "running",
+    "mind": "fake",
+    "compute": "claude"
+  },
+  "taskId": "t-mwhjy65w-3",
+  "runsAtDispatch": [
+    {
+      "id": "run-mwhjy663-7",
+      "layer": "compute-session",
+      "parentId": "run-mwhjy65q-2",
+      "children": [
+        "run-mwhjy663-8"
+      ],
+      "roomId": "dm-c-mwhjy62o-1",
+      "sourceSeq": 1,
+      "contactId": "c-mwhjy62o-1",
+      "taskId": "t-mwhjy65w-3",
+      "computeId": "ccr-ab39f18e-0133-488e-9e30-5f175bc21ff6",
+      "upstream": "fengshao1227/deepseek-v4.1-flash",
+      "status": "running",
+      "tone": "running",
+      "text": "运行中 · 已跑 0 秒",
+      "reasonClass": null,
+      "label": null,
+      "raw": null,
+      "retryClass": null,
+      "rulesVersion": null,
+      "note": null,
+      "startedAt": "2026-11-15T08:07:56.859Z",
+      "endedAt": null,
+      "durationMs": 88,
+      "lastProgressAt": "2026-11-15T08:07:56.859Z",
+      "thresholdMs": null,
+      "thresholdSource": null,
+      "judgedAt": null,
+      "waiting": null,
+      "idleMs": 0,
+      "rerunOf": null,
+      "attempt": 0,
+      "updatedAt": "2026-11-15T08:07:56.947Z"
+    },
+    {
+      "id": "run-mwhjy663-8",
+      "layer": "compute-turn",
+      "parentId": "run-mwhjy663-7",
+      "children": [],
+      "roomId": "dm-c-mwhjy62o-1",
+      "sourceSeq": 1,
+      "contactId": "c-mwhjy62o-1",
+      "taskId": "t-mwhjy65w-3",
+      "computeId": "ccr-ab39f18e-0133-488e-9e30-5f175bc21ff6",
+      "upstream": "fengshao1227/deepseek-v4.1-flash",
+      "status": "running",
+      "tone": "running",
+      "text": "运行中 · 已跑 0 秒",
+      "reasonClass": null,
+      "label": null,
+      "raw": null,
+      "retryClass": null,
+      "rulesVersion": null,
+      "note": null,
+      "startedAt": "2026-11-15T08:07:56.859Z",
+      "endedAt": null,
+      "durationMs": 88,
+      "lastProgressAt": "2026-11-15T08:07:56.859Z",
+      "thresholdMs": null,
+      "thresholdSource": null,
+      "judgedAt": null,
+      "waiting": null,
+      "idleMs": 88,
+      "rerunOf": null,
+      "attempt": 0,
+      "updatedAt": "2026-11-15T08:07:56.947Z"
+    }
+  ],
+  "ok": true,
+  "finishedAt": "2026-11-15T08:08:34.013Z"
+}

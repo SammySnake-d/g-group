@@ -1,0 +1,22 @@
+{
+  "slice": "Compute 受阻求助闭环(T4b / tasks.answer):当前实例当前版本报 blocked → 任务进 T4b(q_id),宿主不重试不重派;负责联系人在任务会话里 @提出者 发提问卡并附工作目录里的截图(report_progress 的 blocked 新增可选 attachments),Compute 不直接发言;用户经 tasks.answer、卡片「回答」或在聊天里回答由联系人 forward 转达(联系人自己编的、或把卡片上已回答过的那条再转一次,一律拒收)→ 按 (task_id, q_id, constraint_ver) 走 HumanReply 回 T3 并 resume 原 Compute;「不做了」→ 取消并停 Compute;任务离开 T4b 或换了新问题时旧提问卡标「已过期·未执行」,其上的点击与迟到的 tasks.answer 幂等忽略、不送进 Compute;Compute brief 带人工验证规则。主会话 claude:8db9faef-fb87-414b-b25d-2aa6747caad3 自己写(非子代理)。",
+  "acceptance": [
+    {
+      "id": "AC-44",
+      "status": "未测",
+      "reason": "确定性层:packages/server/src/help.test.ts 12 条 + packages/adapter-cc-compute/src/attachments.test.ts 2 条 + host.test.ts 改动 3 条覆盖 ①–⑤(进 T4b 不重试不重派、联系人 @提出者附截图且 Compute 不发言、tasks.answer/聊天转达回 T3 续接原实例、卡片回答不被重复转发、拒绝取消并停 Compute、取消后与换问题后的迟到回答幂等忽略并标过期),坏实现 24 个变异见 packages/server/proof/compute-help-mutations.txt。真实跨层运行(真实 pi 联系人 + 真实 Claude Code Compute,本机中性夹具后台登录要短信验证码,原文随跨厂商审查切片合入 packages/server/proof/e2e-help-review-run{1,2,3}.txt):三次都是 Compute 下载挑战图后报 blocked 停下、任务进 T4b、联系人 @我 发提问卡附截图、回答前夹具收到带 sms_code 的登录 0 次;tasks.answer 后 T3 续接同一 Compute、登录成功、导出 orders.csv。run2 之后联系人脑子的上游(anyrouter)一直 provider-error,宿主按旧注意循环无限重试、没有交付(AC-36 的缺口,子代理 β 在做);run3 见到联系人把卡片上的回答又 forward 一次(被适配器以「还在运行」拒),据此加了宿主侧拒收。① 的「不猜不反复提交」只在这几次运行里观察到,不是机械保证;⑤ 的迟到回答没在真实运行里做。待跨厂商审查"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:8db9faef-fb87-414b-b25d-2aa6747caad3",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "aa83682"
+  },
+  "unverifiable": "AC-44 ①「不重试、不猜」对宿主是机械保证(收到 blocked 只进 T4b、发卡,不 resume 不重派,M01/M02 变异被杀),对 Compute 只是 brief 里的规则文本(HUMAN_VERIFICATION_RULE),模型是否真的不自己反复提交验证码、不找打码服务,只有真实运行能观察,测试证明不了。AC-44 ② 的截图来自 Compute 自报的相对路径:宿主只收任务工作目录内(realpath 后)的 png/jpg/jpeg/gif/webp、单张 ≤20 MB,目录外和非图片丢弃并报告;图片内容是不是验证码页面宿主不核对。AC-44 ③ 的聊天转达路径要求提出者本轮在任务会话里、提问卡之后发过言,但不核对联系人转达的文字与用户原话一致(联系人可能改写)。constraint_ver 变化导致的过期只能经状态机现有的 Amend 路径触发,宿主目前没有在 T4b 改条件的入口,故⑤只用「取消后」与「换了新问题后」两种迟到回答验证;版本校验本身由 @g-group/domain task.ts 的 HumanReply 守卫负责。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

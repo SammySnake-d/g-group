@@ -1,0 +1,13 @@
+{
+  "slice": "真实联系人脑子接入:服务层依赖 @g-group/adapter-pi-contact,CLI 与 startServer 的 mind=pi 按每位联系人的说话模型建实例(网关令牌走 Bearer);联系人自己回复里的「我会做」承诺挂到那条回复上进账本;真实 pi + 真实 Claude Code 跑通私聊派活闭环",
+  "acceptance": [
+    { "id": "AC-30", "status": "未测", "reason": "真实 pi 脑子 + 真实 Claude Code Compute 跑通一次私聊派活→执行→结果回聊天→交付卡(packages/server/proof/e2e-pi-claude.txt);群聊派活、压缩后约束保留未实跑;待审查" },
+    { "id": "AC-40", "status": "未测", "reason": "② 联系人回复里的承诺登记有测试(host.test.ts)且真实运行里用户原话承诺进了账本;处置完整性与轮末对账未接" }
+  ],
+  "author": { "agent": "claude", "session": "claude:18b4f4b0-3cf6-4d51-be92-ca20094b2ce3", "model": "fnqtz/claude-opus-5-5" },
+  "red": null,
+  "unverifiable": "先写后测(用户 #717);真实运行依赖网关与模型,结果随模型输出变化,只证明这一次跑通",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

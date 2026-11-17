@@ -1,0 +1,23 @@
+{
+  "implementation": "52412af151804e9a70110f0e2b388e55ab1cdaac",
+  "dist_sha256": "03b38c8985cf1a01bba586b8f60530f08f5daeaad745df9bc4f27b0ac220cebf",
+  "version": "0.1.0",
+  "published": false,
+  "signature": "ad-hoc; codesign --verify --deep --strict passed",
+  "zip_manifest_verified": true,
+  "installed_asar_sha256": "37343b3b73f47da8719c747b0a0186aa7b9181508a4722a3d3441b04ab068b1a",
+  "files": {
+    "g-group-0.1.0-arm64.dmg": {
+      "bytes": 111838604,
+      "sha256": "31987f380908fcee6f01eda1b5c41e7be83da163d0b091a5810603d1b145bb4a"
+    },
+    "g-group-0.1.0-arm64-mac.zip": {
+      "bytes": 108148213,
+      "sha256": "e5e4bebdc92bf4e8adf2e2564b9fb15c9c42d23abcfcf84134b9e207d2109d9a"
+    },
+    "latest-mac.yml": {
+      "bytes": 351,
+      "sha256": "af62d0ffd88ce8586d94bc184cef5a54dfc714a59a8544e097a166a5cd937a4c"
+    }
+  }
+}

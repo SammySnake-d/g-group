@@ -1,0 +1,319 @@
+{
+  "mode": "offline SSE error -> current pi-ai -> real Host/SQLite",
+  "realModelAcceptance": false,
+  "model": "fengshao1227/deepseek-v4.1-flash",
+  "startedAt": "2026-11-17T10:47:00.660Z",
+  "reportedError": {
+    "type": "error",
+    "error": {
+      "type": "model_unavailable",
+      "message": "当前模型不可用，请切换模型",
+      "code": 11102,
+      "msg": "model [hy4-flash-free] service info not found"
+    }
+  },
+  "errors": [],
+  "elapsedMs": 79,
+  "runs": [
+    {
+      "id": "run-mwkkifjt-2",
+      "layer": "contact-round",
+      "parentId": null,
+      "children": [],
+      "roomId": "dm-c-mwkkifjp-1",
+      "sourceSeq": 1,
+      "contactId": "c-mwkkifjp-1",
+      "taskId": null,
+      "computeId": null,
+      "upstream": "fengshao1227/deepseek-v4.1-flash",
+      "status": "failed",
+      "tone": "failed",
+      "text": "失败 · 请求被拒 · 用时 0 秒",
+      "reasonClass": "invalid_request",
+      "label": "请求被拒",
+      "raw": "模型请求失败(error):{\"type\":\"error\",\"error\":{\"type\":\"model_unavailable\",\"message\":\"当前模型不可用，请切换模型\",\"code\":11102,\"msg\":\"model [hy4-flash-free] service info not found\"}}",
+      "retryClass": "Permanent",
+      "rulesVersion": "2026-11-09.1",
+      "note": null,
+      "startedAt": "2026-11-17T10:47:00.665Z",
+      "endedAt": "2026-11-17T10:47:00.736Z",
+      "durationMs": 71,
+      "lastProgressAt": "2026-11-17T10:47:00.665Z",
+      "thresholdMs": null,
+      "thresholdSource": null,
+      "judgedAt": null,
+      "waiting": null,
+      "idleMs": 0,
+      "rerunOf": null,
+      "attempt": 0,
+      "updatedAt": "2026-11-17T10:47:00.739Z"
+    }
+  ],
+  "failureMessage": {
+    "roomId": "dm-c-mwkkifjp-1",
+    "seq": 2,
+    "threadRootSeq": null,
+    "sender": {
+      "kind": "contact",
+      "id": "c-mwkkifjp-1"
+    },
+    "text": "请求被拒:共用这个上游的成员先暂停",
+    "mentions": [],
+    "replyToSeq": null,
+    "quotedSeqs": [],
+    "quotes": [],
+    "attachments": [],
+    "card": {
+      "kind": "failure",
+      "cardId": "card-mwkkiflu-3",
+      "taskId": null,
+      "title": "请求被拒:共用这个上游的成员先暂停",
+      "body": "修法:改模型配置\n离线错误回放 用的上游 fengshao1227/deepseek-v4.1-flash 鉴权或额度有问题,不会自动重试;修好以后点「重试」。\n\n原文:\n模型请求失败(error):{\"type\":\"error\",\"error\":{\"type\":\"model_unavailable\",\"message\":\"当前模型不可用，请切换模型\",\"code\":11102,\"msg\":\"model [hy4-flash-free] service info not found\"}}",
+      "state": "open",
+      "actions": [
+        {
+          "actionId": "retry",
+          "label": "重试",
+          "style": "primary"
+        },
+        {
+          "actionId": "skip",
+          "label": "跳过失败的这批消息",
+          "style": "default"
+        }
+      ]
+    },
+    "command": null,
+    "reactions": [],
+    "edited": false,
+    "retracted": false,
+    "clientActionId": null,
+    "at": "2026-11-17T10:47:00.738Z"
+  },
+  "contact": {
+    "id": "c-mwkkifjp-1",
+    "name": "离线错误回放",
+    "avatar": null,
+    "bio": "",
+    "speakingModel": "fengshao1227/deepseek-v4.1-flash",
+    "harness": "claude-code",
+    "computeModel": {
+      "mode": "inherit"
+    },
+    "tools": [],
+    "computeAssets": [],
+    "createdAt": "2026-11-17T10:47:00.661Z",
+    "activity": "idle",
+    "computeResolved": {
+      "resolved": {
+        "harness": "claude-code",
+        "model": "claude-sonnet-4-6",
+        "effort": "medium",
+        "vendor": "anthropic",
+        "modelSource": "global",
+        "effortSource": "global",
+        "chain": [
+          "compute 继承全局",
+          "全局 Compute 默认 claude-sonnet-4-6"
+        ]
+      },
+      "support": "undeclared"
+    }
+  },
+  "outcome": "failed-round-card-and-idle-observed",
+  "requests": [
+    {
+      "url": "http://sse-control.invalid/v1/messages?beta=true",
+      "model": "fengshao1227/deepseek-v4.1-flash",
+      "elapsedMs": 72
+    }
+  ],
+  "events": [
+    {
+      "elapsedMs": 4,
+      "type": "message.appended",
+      "message": {
+        "roomId": "dm-c-mwkkifjp-1",
+        "seq": 1,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "user",
+          "id": "me"
+        },
+        "text": "离线错误回放，不调用真实模型",
+        "mentions": [],
+        "replyToSeq": null,
+        "quotedSeqs": [],
+        "quotes": [],
+        "attachments": [],
+        "card": null,
+        "command": null,
+        "reactions": [],
+        "edited": false,
+        "retracted": false,
+        "clientActionId": "offline-sse-error",
+        "at": "2026-11-17T10:47:00.663Z"
+      },
+      "eventSeq": 4,
+      "at": "2026-11-17T10:47:00.664Z"
+    },
+    {
+      "elapsedMs": 5,
+      "type": "run.updated",
+      "run": {
+        "id": "run-mwkkifjt-2",
+        "layer": "contact-round",
+        "parentId": null,
+        "children": [],
+        "roomId": "dm-c-mwkkifjp-1",
+        "sourceSeq": 1,
+        "contactId": "c-mwkkifjp-1",
+        "taskId": null,
+        "computeId": null,
+        "upstream": "fengshao1227/deepseek-v4.1-flash",
+        "status": "running",
+        "tone": "running",
+        "text": "运行中 · 已跑 0 秒",
+        "reasonClass": null,
+        "label": null,
+        "raw": null,
+        "retryClass": null,
+        "rulesVersion": null,
+        "note": null,
+        "startedAt": "2026-11-17T10:47:00.665Z",
+        "endedAt": null,
+        "durationMs": 0,
+        "lastProgressAt": "2026-11-17T10:47:00.665Z",
+        "thresholdMs": null,
+        "thresholdSource": null,
+        "judgedAt": null,
+        "waiting": null,
+        "idleMs": 0,
+        "rerunOf": null,
+        "attempt": 0,
+        "updatedAt": "2026-11-17T10:47:00.665Z"
+      },
+      "eventSeq": 7,
+      "at": "2026-11-17T10:47:00.665Z"
+    },
+    {
+      "elapsedMs": 5,
+      "type": "contact.activity",
+      "contactId": "c-mwkkifjp-1",
+      "roomId": "dm-c-mwkkifjp-1",
+      "activity": "thinking",
+      "eventSeq": 8,
+      "at": "2026-11-17T10:47:00.665Z"
+    },
+    {
+      "elapsedMs": 75,
+      "type": "contact.activity",
+      "contactId": "c-mwkkifjp-1",
+      "roomId": null,
+      "activity": "idle",
+      "eventSeq": 9,
+      "at": "2026-11-17T10:47:00.735Z"
+    },
+    {
+      "elapsedMs": 76,
+      "type": "run.updated",
+      "run": {
+        "id": "run-mwkkifjt-2",
+        "layer": "contact-round",
+        "parentId": null,
+        "children": [],
+        "roomId": "dm-c-mwkkifjp-1",
+        "sourceSeq": 1,
+        "contactId": "c-mwkkifjp-1",
+        "taskId": null,
+        "computeId": null,
+        "upstream": "fengshao1227/deepseek-v4.1-flash",
+        "status": "failed",
+        "tone": "failed",
+        "text": "失败 · 请求被拒 · 用时 0 秒",
+        "reasonClass": "invalid_request",
+        "label": "请求被拒",
+        "raw": "模型请求失败(error):{\"type\":\"error\",\"error\":{\"type\":\"model_unavailable\",\"message\":\"当前模型不可用，请切换模型\",\"code\":11102,\"msg\":\"model [hy4-flash-free] service info not found\"}}",
+        "retryClass": "Permanent",
+        "rulesVersion": "2026-11-09.1",
+        "note": null,
+        "startedAt": "2026-11-17T10:47:00.665Z",
+        "endedAt": "2026-11-17T10:47:00.736Z",
+        "durationMs": 71,
+        "lastProgressAt": "2026-11-17T10:47:00.665Z",
+        "thresholdMs": null,
+        "thresholdSource": null,
+        "judgedAt": null,
+        "waiting": null,
+        "idleMs": 0,
+        "rerunOf": null,
+        "attempt": 0,
+        "updatedAt": "2026-11-17T10:47:00.736Z"
+      },
+      "eventSeq": 10,
+      "at": "2026-11-17T10:47:00.736Z"
+    },
+    {
+      "elapsedMs": 78,
+      "type": "message.appended",
+      "message": {
+        "roomId": "dm-c-mwkkifjp-1",
+        "seq": 2,
+        "threadRootSeq": null,
+        "sender": {
+          "kind": "contact",
+          "id": "c-mwkkifjp-1"
+        },
+        "text": "请求被拒:共用这个上游的成员先暂停",
+        "mentions": [],
+        "replyToSeq": null,
+        "quotedSeqs": [],
+        "quotes": [],
+        "attachments": [],
+        "card": {
+          "kind": "failure",
+          "cardId": "card-mwkkiflu-3",
+          "taskId": null,
+          "title": "请求被拒:共用这个上游的成员先暂停",
+          "body": "修法:改模型配置\n离线错误回放 用的上游 fengshao1227/deepseek-v4.1-flash 鉴权或额度有问题,不会自动重试;修好以后点「重试」。\n\n原文:\n模型请求失败(error):{\"type\":\"error\",\"error\":{\"type\":\"model_unavailable\",\"message\":\"当前模型不可用，请切换模型\",\"code\":11102,\"msg\":\"model [hy4-flash-free] service info not found\"}}",
+          "state": "open",
+          "actions": [
+            {
+              "actionId": "retry",
+              "label": "重试",
+              "style": "primary"
+            },
+            {
+              "actionId": "skip",
+              "label": "跳过失败的这批消息",
+              "style": "default"
+            }
+          ]
+        },
+        "command": null,
+        "reactions": [],
+        "edited": false,
+        "retracted": false,
+        "clientActionId": null,
+        "at": "2026-11-17T10:47:00.738Z"
+      },
+      "eventSeq": 11,
+      "at": "2026-11-17T10:47:00.738Z"
+    },
+    {
+      "elapsedMs": 78,
+      "type": "retry.updated",
+      "scope": "contact",
+      "contactId": "c-mwkkifjp-1",
+      "taskId": null,
+      "roomId": "dm-c-mwkkifjp-1",
+      "state": "paused",
+      "attempt": 0,
+      "limit": 0,
+      "label": "请求被拒",
+      "eventSeq": 13,
+      "at": "2026-11-17T10:47:00.739Z"
+    }
+  ],
+  "finishedAt": "2026-11-17T10:47:00.741Z"
+}

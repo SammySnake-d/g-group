@@ -1,0 +1,61 @@
+{
+  "appPath": "/tmp/dsbot-astra-20261117/baseline4/g-group.app",
+  "mode": "real packaged host + fake mind control",
+  "realModelAcceptance": false,
+  "credentialOwner": "/Users/snakesammy/.claude/settings.json",
+  "userData": "/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/dsbot-package-control-k1BbE4",
+  "model": "fengshao1227/deepseek-v4.1-flash",
+  "startedAt": "2026-11-17T10:40:27.671Z",
+  "checks": [
+    {
+      "name": "新安装未配置时不使用演示后端",
+      "backend": {
+        "state": "needs-setup"
+      }
+    },
+    {
+      "name": "从真实网关目录选择指定模型"
+    },
+    {
+      "name": "原版设置页保存网关",
+      "configMode": "600",
+      "tokenResolved": true
+    },
+    {
+      "name": "未重启窗口即连接真实宿主（尚无联系人、没有生成请求）"
+    },
+    {
+      "name": "重启读取网关模型与令牌存在位",
+      "backend": {
+        "state": "running",
+        "mind": "fake",
+        "compute": "fake"
+      }
+    },
+    {
+      "name": "通过原版表单创建 验收主联系人"
+    },
+    {
+      "name": "通过原版表单创建 验收同伴"
+    },
+    {
+      "name": "私聊发送与回复持久化（明确 fake 控制）"
+    },
+    {
+      "name": "原版建群与群聊回复（明确 fake 控制，无管理员权限）"
+    }
+  ],
+  "errors": [],
+  "screenshots": [
+    "/tmp/dsbot-astra-20261117/baseline4-regression/dm-fake-control.png",
+    "/tmp/dsbot-astra-20261117/baseline4-regression/group-fake-control.png",
+    "/tmp/dsbot-astra-20261117/baseline4-regression/image-pending-native-paste.png",
+    "/tmp/dsbot-astra-20261117/baseline4-regression/failure.png"
+  ],
+  "outcome": "failed",
+  "error": "Error: expect(locator).toHaveCount(expected) failed\n\nLocator:  locator('.dsb-pending')\nExpected: 0\nReceived: 1\nTimeout:  5000ms\n\nCall log:\n  - Expect \"toHaveCount\" locator('.dsb-pending') with timeout 5000ms\n  - waiting for locator('.dsb-pending')\n    14 × locator resolved to 1 element\n       - unexpected value \"1\"\n\n    at captureRawStack (/Users/snakesammy/.mirasim/assistants/deliverables/g-group-ds-bot-frontend-20261116/apps/desktop/node_modules/playwright-core/lib/coreBundle.js:9551:17)\n    at callMatcherAsStep (/Users/snakesammy/.mirasim/assistants/deliverables/g-group-ds-bot-frontend-20261116/apps/desktop/node_modules/playwright/lib/matchers/expect.js:13342:57)\n    at Object.toHaveCount (/Users/snakesammy/.mirasim/assistants/deliverables/g-group-ds-bot-frontend-20261116/apps/desktop/node_modules/playwright/lib/matchers/expect.js:13334:23)\n    at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-ds-bot-frontend-20261116/apps/desktop/verify/dsbot-packaged.mjs:112:47",
+  "failureText": "设置\n验收主联系人、验收同伴\n记忆已更新\n今天 18:40\n\n@验收主联系人 群聊接线控制，请回复。\n\n验收主联系人18:40\n\n收到:@验收主联系人 群聊接线控制，请回复。\n\n[附件 1 个]\n\nimage.png：这个文件没有出现在你所在的会话里\n\ng-group\n验收主联系人\n验收主联系人、验收同伴\n[附件 1 个]\n验收同伴",
+  "temporaryCredentialRemoved": true,
+  "asarSha256": "4924aa88ce9b65333e7ef8bae36ee521565d20c1143aec431ee97450184b1484",
+  "finishedAt": "2026-11-17T10:40:46.334Z"
+}

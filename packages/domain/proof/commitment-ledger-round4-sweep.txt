@@ -1,0 +1,372 @@
+第三轮返修机械复扫：源与测试取 8126173f162cb0779ca29a332bfaa98912d5680d，单进程逐个注入。
+命令：node operator-sweep.mjs <仓库目录> <probe.mjs>
+存活项仅记录，未逐条判定等价；收据 R-05 选择未测。
+KILLED L53 if-false :: value === null || typeof value === "boolean" || typeof value === "string" (186)
+KILLED L53 drop-right(false) :: typeof value === "string" (186)
+KILLED L53 drop-left(false) :: value === null (184)
+KILLED L53 drop-right(false) :: typeof value === "boolean" (168)
+KILLED L53 flip ===→!== :: === (15)
+KILLED L53 flip ===→!== :: === (15)
+KILLED L53 flip ===→!== :: === (15)
+KILLED L54 if-false :: typeof value === "number" && Number.isFinite(value) (186)
+SURVIVED L54 drop-left(true) :: typeof value === "number" probe_diff=[]
+SURVIVED L54 drop-right(true) :: Number.isFinite(value) probe_diff=[]
+KILLED L54 flip ===→!== :: === (186)
+SURVIVED L55 drop-right(false) :: ancestors.has(value) probe_diff=[]
+SURVIVED L55 drop-left(false) :: typeof value !== "object" probe_diff=[]
+KILLED L55 drop-right(false) :: types.isProxy(value) (8)
+KILLED L55 flip !==→=== :: !== (186)
+KILLED L58 flip !==→=== :: !== (186)
+KILLED L58 drop-left(true) :: proto !== Object.prototype (186)
+SURVIVED L58 drop-right(true) :: proto !== null probe_diff=[]
+KILLED L58 flip !==→=== :: !== (186)
+KILLED L58 flip !==→=== :: !== (1)
+KILLED L61 flip !==→=== :: !== (186)
+KILLED L65 drop-left(true) :: array (186)
+KILLED L65 drop-right(true) :: (!Number.isSafeInteger(length) || length < 0 || keys.length !== length + 1) (186)
+KILLED L65 drop-right(false) :: keys.length !== length + 1 (1)
+SURVIVED L65 drop-left(false) :: !Number.isSafeInteger(length) probe_diff=[]
+SURVIVED L65 drop-right(false) :: length < 0 probe_diff=[]
+KILLED L65 flip <→<= :: < (186)
+KILLED L65 flip !==→=== :: !== (186)
+SURVIVED L67 drop-left(true) :: array probe_diff=[]
+KILLED L67 drop-right(true) :: key === "length" (164)
+KILLED L67 flip ===→!== :: === (186)
+SURVIVED L71 drop-right(false) :: (array && (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= length)) probe_diff=[]
+SURVIVED L70 drop-right(false) :: key === "constructor" probe_diff=[]
+SURVIVED L70 drop-right(false) :: key === "prototype" probe_diff=[]
+SURVIVED L70 drop-right(false) :: key === "__proto__" probe_diff=[]
+SURVIVED L69 drop-right(false) :: descriptor.set probe_diff=[]
+SURVIVED L69 drop-right(false) :: descriptor.get probe_diff=[]
+KILLED L69 drop-left(false) :: !descriptor?.enumerable (1)
+SURVIVED L69 drop-right(false) :: !("value" in descriptor) probe_diff=[]
+KILLED L70 flip ===→!== :: === (186)
+KILLED L70 flip ===→!== :: === (186)
+KILLED L70 flip ===→!== :: === (186)
+KILLED L71 drop-left(true) :: array (186)
+KILLED L71 drop-right(true) :: (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= length) (168)
+SURVIVED L71 drop-left(false) :: !/^(0|[1-9]\d*)$/.test(key) probe_diff=[]
+SURVIVED L71 drop-right(false) :: Number(key) >= length probe_diff=[]
+SURVIVED L71 flip >=→> :: >= probe_diff=[]
+KILLED L79 drop-left(true) :: value !== null (183)
+KILLED L79 drop-right(true) :: typeof value === "object" (202)
+KILLED L79 flip !==→=== :: !== (7)
+KILLED L79 flip ===→!== :: === (7)
+SURVIVED L86 drop-right(true) :: !Array.isArray(x) probe_diff=[]
+KILLED L86 drop-left(true) :: x !== null (5)
+SURVIVED L86 drop-right(true) :: typeof x === "object" probe_diff=[]
+KILLED L86 flip !==→=== :: !== (188)
+KILLED L86 flip ===→!== :: === (186)
+KILLED L87 drop-left(true) :: typeof x === "string" (8)
+KILLED L87 drop-right(true) :: x.trim().length > 0 (8)
+KILLED L87 flip ===→!== :: === (203)
+KILLED L87 flip >→>= :: > (8)
+KILLED L88 drop-left(false) :: x === null (101)
+KILLED L88 drop-right(false) :: text(x) (183)
+KILLED L88 flip ===→!== :: === (101)
+KILLED L89 drop-right(true) :: x > 0 (1)
+SURVIVED L89 drop-left(true) :: typeof x === "number" probe_diff=[]
+SURVIVED L89 drop-right(true) :: Number.isSafeInteger(x) probe_diff=[]
+KILLED L89 flip ===→!== :: === (186)
+KILLED L89 flip >→>= :: > (1)
+KILLED L90 drop-right(true) :: x >= 0 (1)
+SURVIVED L90 drop-left(true) :: typeof x === "number" probe_diff=[]
+SURVIVED L90 drop-right(true) :: Number.isSafeInteger(x) probe_diff=[]
+KILLED L90 flip ===→!== :: === (186)
+KILLED L90 flip >=→> :: >= (186)
+KILLED L92 drop-left(true) :: Object.keys(x).length === expected.length (2)
+SURVIVED L92 drop-right(true) :: expected.every((key) => Object.hasOwn(x, key)) probe_diff=[]
+KILLED L92 flip ===→!== :: === (186)
+SURVIVED L94 drop-right(true) :: text(x.id) probe_diff=[]
+KILLED L94 drop-right(true) :: (x.kind === "user" || x.kind === "contact" || x.kind === "compute") (4)
+SURVIVED L93 drop-left(true) :: obj(x) probe_diff=[]
+SURVIVED L93 drop-right(true) :: keys(x, ["kind", "id"]) probe_diff=[]
+KILLED L94 drop-right(false) :: x.kind === "compute" (18)
+KILLED L94 drop-left(false) :: x.kind === "user" (181)
+KILLED L94 drop-right(false) :: x.kind === "contact" (74)
+KILLED L94 flip ===→!== :: === (182)
+KILLED L94 flip ===→!== :: === (78)
+KILLED L94 flip ===→!== :: === (22)
+KILLED L98 drop-right(true) :: (!handled || typeof x.handled === "boolean") (1)
+SURVIVED L98 drop-right(true) :: (x.replyToSeq === null || seq(x.replyToSeq)) probe_diff=[]
+SURVIVED L97 drop-right(true) :: maybeText(x.taskId) probe_diff=[]
+SURVIVED L97 drop-right(true) :: text(x.text) probe_diff=[]
+KILLED L97 drop-right(true) :: actor(x.sender) (1)
+KILLED L97 drop-right(true) :: seq(x.seq) (1)
+SURVIVED L97 drop-right(true) :: text(x.id) probe_diff=[]
+SURVIVED L95 drop-left(true) :: obj(x) probe_diff=[]
+SURVIVED L96 drop-right(true) :: keys(x, handled ? ["id", "seq", "sender", "text", "taskId", "replyToSeq", "handled"] : ["id", "seq", "sender", probe_diff=[]
+KILLED L98 drop-left(false) :: x.replyToSeq === null (184)
+KILLED L98 drop-right(false) :: seq(x.replyToSeq) (2)
+KILLED L98 flip ===→!== :: === (184)
+KILLED L98 drop-left(false) :: !handled (185)
+KILLED L98 drop-right(false) :: typeof x.handled === "boolean" (167)
+KILLED L98 flip ===→!== :: === (167)
+SURVIVED L99 drop-right(true) :: text(x.text) probe_diff=[]
+SURVIVED L99 drop-right(true) :: text(x.taskId) probe_diff=[]
+SURVIVED L99 drop-right(true) :: text(x.id) probe_diff=[]
+SURVIVED L99 drop-left(true) :: obj(x) probe_diff=[]
+SURVIVED L99 drop-right(true) :: keys(x, ["id", "taskId", "text"]) probe_diff=[]
+KILLED L102 if-false :: !obj(x) || !keys(x, ["ownerId", "version", "messages", "commitments", "actions", "activity"]) || !text(x.owner (6)
+SURVIVED L104 drop-right(false) :: !Array.isArray(x.activity) probe_diff=[]
+SURVIVED L104 drop-right(false) :: !Array.isArray(x.actions) probe_diff=[]
+SURVIVED L103 drop-right(false) :: !Array.isArray(x.commitments) probe_diff=[]
+SURVIVED L103 drop-right(false) :: !Array.isArray(x.messages) probe_diff=[]
+KILLED L103 drop-right(false) :: !version(x.version) (1)
+KILLED L103 drop-right(false) :: !text(x.ownerId) (1)
+KILLED L102 drop-left(false) :: !obj(x) (3)
+KILLED L102 drop-right(false) :: !keys(x, ["ownerId", "version", "messages", "commitments", "actions", "activity"]) (1)
+KILLED L105 if-false :: !x.messages.every((m: unknown) => message(m, true)) (1)
+KILLED L106 if-false :: !x.commitments.every((c: unknown) => obj(c) && keys(c, ["id", "sourceSeq", "taskId", "text", "status", "resolu (1)
+SURVIVED L109 drop-right(true) :: (c.resolution === null || (obj(c.resolution) && keys(c.resolution, ["detail", "artifact"]) && maybeText(c.reso probe_diff=[]
+KILLED L108 drop-right(true) :: (c.status === "active" || c.status === "done" || c.status === "revoked" || c.status === "superseded" || c.stat (1)
+SURVIVED L107 drop-right(true) :: maybeText(c.computeId) probe_diff=[]
+SURVIVED L107 drop-right(true) :: text(c.text) probe_diff=[]
+SURVIVED L107 drop-right(true) :: text(c.taskId) probe_diff=[]
+SURVIVED L107 drop-right(true) :: seq(c.sourceSeq) probe_diff=[]
+SURVIVED L107 drop-right(true) :: text(c.id) probe_diff=[]
+SURVIVED L106 drop-left(true) :: obj(c) probe_diff=[]
+SURVIVED L106 drop-right(true) :: keys(c, ["id", "sourceSeq", "taskId", "text", "status", "resolution", "computeId"]) probe_diff=[]
+KILLED L108 drop-right(false) :: c.status === "blocked" (4)
+KILLED L108 drop-right(false) :: c.status === "superseded" (4)
+KILLED L108 drop-right(false) :: c.status === "revoked" (5)
+KILLED L108 drop-left(false) :: c.status === "active" (98)
+KILLED L108 drop-right(false) :: c.status === "done" (7)
+KILLED L108 flip ===→!== :: === (99)
+KILLED L108 flip ===→!== :: === (8)
+KILLED L108 flip ===→!== :: === (6)
+KILLED L108 flip ===→!== :: === (5)
+KILLED L108 flip ===→!== :: === (5)
+KILLED L109 drop-left(false) :: c.resolution === null (98)
+KILLED L109 drop-right(false) :: (obj(c.resolution) && keys(c.resolution, ["detail", "artifact"]) && maybeText(c.resolution.detail) && maybeTex (20)
+KILLED L109 flip ===→!== :: === (98)
+SURVIVED L109 drop-right(true) :: maybeText(c.resolution.artifact) probe_diff=[]
+SURVIVED L109 drop-right(true) :: maybeText(c.resolution.detail) probe_diff=[]
+SURVIVED L109 drop-left(true) :: obj(c.resolution) probe_diff=[]
+SURVIVED L109 drop-right(true) :: keys(c.resolution, ["detail", "artifact"]) probe_diff=[]
+KILLED L110 if-false :: !x.actions.every((a: unknown) => obj(a) && keys(a, ["id", "payload"]) && text(a.id) && typeof a.payload === "s (1)
+SURVIVED L110 drop-left(false) :: !x.actions.every((a: unknown) => obj(a) && keys(a, ["id", "payload"]) && text(a.id) && typeof a.payload === "s probe_diff=[]
+KILLED L111 drop-right(false) :: !x.activity.every((a: unknown) => obj(a) && keys(a, ["roundId", "commitmentId", "taskId", "actor", "kind", "te (1)
+SURVIVED L110 drop-right(true) :: typeof a.payload === "string" probe_diff=[]
+SURVIVED L110 drop-right(true) :: text(a.id) probe_diff=[]
+SURVIVED L110 drop-left(true) :: obj(a) probe_diff=[]
+SURVIVED L110 drop-right(true) :: keys(a, ["id", "payload"]) probe_diff=[]
+KILLED L110 flip ===→!== :: === (167)
+SURVIVED L112 drop-right(true) :: maybeText(a.text) probe_diff=[]
+KILLED L112 drop-right(true) :: (a.kind === "progress" || a.kind === "close") (1)
+SURVIVED L112 drop-right(true) :: actor(a.actor) probe_diff=[]
+SURVIVED L111 drop-right(true) :: text(a.taskId) probe_diff=[]
+SURVIVED L111 drop-right(true) :: text(a.commitmentId) probe_diff=[]
+SURVIVED L111 drop-right(true) :: text(a.roundId) probe_diff=[]
+SURVIVED L111 drop-left(true) :: obj(a) probe_diff=[]
+SURVIVED L111 drop-right(true) :: keys(a, ["roundId", "commitmentId", "taskId", "actor", "kind", "text"]) probe_diff=[]
+KILLED L112 drop-left(false) :: a.kind === "progress" (4)
+KILLED L112 drop-right(false) :: a.kind === "close" (20)
+KILLED L112 flip ===→!== :: === (5)
+KILLED L112 flip ===→!== :: === (21)
+KILLED L121 drop-right(true) :: x.activity.every((a: { commitmentId: string; taskId: string }) => commitments.some((c) => c.id === a.commitmen (2)
+KILLED L118 drop-right(true) :: commitments.every((c) => messages.some((m) => m.seq === c.sourceSeq && m.handled && m.text.includes(c.text)) & (9)
+KILLED L117 drop-right(true) :: new Set(actions.map((a) => a.id)).size === actions.length (1)
+KILLED L117 drop-right(true) :: new Set(commitments.map((c) => c.id)).size === commitments.length (1)
+KILLED L116 drop-left(true) :: new Set(messages.map((m) => m.id)).size === messages.length (1)
+KILLED L116 drop-right(true) :: new Set(messages.map((m) => m.seq)).size === messages.length (1)
+KILLED L116 flip ===→!== :: === (186)
+KILLED L116 flip ===→!== :: === (186)
+KILLED L117 flip ===→!== :: === (186)
+KILLED L117 flip ===→!== :: === (186)
+KILLED L118 drop-left(true) :: messages.some((m) => m.seq === c.sourceSeq && m.handled && m.text.includes(c.text)) (3)
+KILLED L119 drop-right(true) :: (c.status === "active" ? c.resolution === null : c.resolution !== null && (c.status === "done" ? text(c.resolu (6)
+KILLED L118 drop-right(true) :: m.text.includes(c.text) (1)
+KILLED L118 drop-left(true) :: m.seq === c.sourceSeq (1)
+KILLED L118 drop-right(true) :: m.handled (1)
+KILLED L118 flip ===→!== :: === (99)
+KILLED L119 flip ===→!== :: === (100)
+KILLED L119 flip ===→!== :: === (99)
+KILLED L119 drop-left(true) :: c.resolution !== null (1)
+KILLED L120 drop-right(true) :: (c.status === "done" ? text(c.resolution.artifact) : text(c.resolution.detail)) (4)
+KILLED L119 flip !==→=== :: !== (21)
+KILLED L120 flip ===→!== :: === (20)
+KILLED L121 drop-left(true) :: c.id === a.commitmentId (1)
+KILLED L121 drop-right(true) :: c.taskId === a.taskId (1)
+KILLED L121 flip ===→!== :: === (23)
+KILLED L121 flip ===→!== :: === (25)
+KILLED L125 if-false :: !obj(x) || !text(x.actionId) (3)
+KILLED L125 drop-left(false) :: !obj(x) (2)
+KILLED L125 drop-right(false) :: !text(x.actionId) (1)
+KILLED L126 if-false :: x.type === "receive" (185)
+KILLED L126 flip ===→!== :: === (186)
+SURVIVED L126 drop-left(true) :: keys(x, ["type", "actionId", "message"]) probe_diff=[]
+KILLED L126 drop-right(true) :: message(x.message, false) (2)
+KILLED L127 if-false :: x.type === "process" (153)
+KILLED L127 flip ===→!== :: === (153)
+SURVIVED L128 drop-right(true) :: x.commitments.every(proposal) probe_diff=[]
+SURVIVED L128 drop-right(true) :: Array.isArray(x.commitments) probe_diff=[]
+KILLED L128 drop-right(true) :: typeof x.accepted === "boolean" (1)
+SURVIVED L127 drop-left(true) :: keys(x, ["type", "actionId", "seq", "accepted", "commitments"]) probe_diff=[]
+SURVIVED L127 drop-right(true) :: seq(x.seq) probe_diff=[]
+KILLED L128 flip ===→!== :: === (154)
+KILLED L129 if-false :: x.type === "bind-compute" (28)
+KILLED L129 flip ===→!== :: === (86)
+KILLED L130 drop-right(true) :: maybeText(x.computeId) (2)
+KILLED L130 drop-right(true) :: actor(x.actor) (1)
+SURVIVED L130 drop-right(true) :: text(x.taskId) probe_diff=[]
+SURVIVED L129 drop-left(true) :: keys(x, ["type", "actionId", "commitmentId", "taskId", "actor", "computeId"]) probe_diff=[]
+SURVIVED L130 drop-right(true) :: text(x.commitmentId) probe_diff=[]
+KILLED L131 if-false :: x.type === "progress" (25)
+KILLED L131 flip ===→!== :: === (74)
+KILLED L132 drop-right(true) :: text(x.text) (1)
+SURVIVED L132 drop-right(true) :: text(x.roundId) probe_diff=[]
+KILLED L132 drop-right(true) :: actor(x.actor) (1)
+SURVIVED L132 drop-right(true) :: text(x.taskId) probe_diff=[]
+SURVIVED L131 drop-left(true) :: keys(x, ["type", "actionId", "commitmentId", "taskId", "actor", "roundId", "text"]) probe_diff=[]
+SURVIVED L132 drop-right(true) :: text(x.commitmentId) probe_diff=[]
+SURVIVED L136 drop-right(true) :: maybeText(x.detail) probe_diff=[]
+SURVIVED L136 drop-right(true) :: maybeText(x.artifact) probe_diff=[]
+KILLED L135 drop-right(true) :: (x.outcome === "done" || x.outcome === "revoked" || x.outcome === "superseded" || x.outcome === "blocked") (1)
+SURVIVED L134 drop-right(true) :: text(x.roundId) probe_diff=[]
+KILLED L134 drop-right(true) :: actor(x.actor) (1)
+SURVIVED L134 drop-right(true) :: text(x.taskId) probe_diff=[]
+SURVIVED L134 drop-right(true) :: text(x.commitmentId) probe_diff=[]
+SURVIVED L133 drop-left(true) :: x.type === "close" probe_diff=[]
+KILLED L133 drop-right(true) :: keys(x, ["type", "actionId", "commitmentId", "taskId", "actor", "roundId", "outcome", "artifact", "detail"]) (1)
+KILLED L133 flip ===→!== :: === (56)
+KILLED L135 drop-right(false) :: x.outcome === "blocked" (17)
+KILLED L135 drop-right(false) :: x.outcome === "superseded" (13)
+KILLED L135 drop-left(false) :: x.outcome === "done" (23)
+KILLED L135 drop-right(false) :: x.outcome === "revoked" (13)
+KILLED L135 flip ===→!== :: === (24)
+KILLED L135 flip ===→!== :: === (14)
+KILLED L135 flip ===→!== :: === (14)
+KILLED L135 flip ===→!== :: === (18)
+KILLED L140 if-false :: value === null || typeof value !== "object" (186)
+KILLED L140 drop-left(false) :: value === null (184)
+KILLED L140 drop-right(false) :: typeof value !== "object" (186)
+KILLED L140 flip ===→!== :: === (1)
+KILLED L140 flip !==→=== :: !== (1)
+SURVIVED L141 if-false :: Array.isArray(value) probe_diff=[]
+KILLED L148 if-false :: !text(ownerId) (3)
+KILLED L157 if-false :: !isLedger(state) || !isCommand(input) || !version(expectedVersion) (37)
+KILLED L157 drop-right(false) :: !version(expectedVersion) (2)
+KILLED L157 drop-left(false) :: !isLedger(state) (22)
+KILLED L157 drop-right(false) :: !isCommand(input) (14)
+KILLED L159 flip ===→!== :: === (167)
+KILLED L160 if-false :: previous (12)
+KILLED L160 flip ===→!== :: === (12)
+KILLED L161 if-false :: state.version !== expectedVersion (5)
+KILLED L161 flip !==→=== :: !== (186)
+KILLED L166 flip ===→!== :: === (186)
+KILLED L168 if-false :: m.sender.kind === "compute" (1)
+KILLED L168 flip ===→!== :: === (185)
+KILLED L169 flip ===→!== :: === (15)
+KILLED L170 if-false :: old (4)
+KILLED L172 if-false :: canonical(prior as unknown as Json) !== canonical(m as unknown as Json) (2)
+KILLED L172 flip !==→=== :: !== (4)
+KILLED L176 if-false :: messages.some((entry) => entry.seq === m.seq) (1)
+KILLED L176 flip ===→!== :: === (11)
+KILLED L177 flip !==→=== :: !== (184)
+KILLED L178 flip ===→!== :: === (1)
+KILLED L179 if-false :: !parent (1)
+KILLED L180 if-false :: parent.taskId !== m.taskId (1)
+KILLED L180 flip !==→=== :: !== (1)
+KILLED L183 flip ===→!== :: === (153)
+KILLED L184 flip ===→!== :: === (152)
+KILLED L185 if-false :: !m (1)
+KILLED L186 if-false :: m.handled (1)
+KILLED L187 if-false :: m.sender.kind === "user" && !input.accepted && input.commitments.length (1)
+KILLED L187 drop-right(true) :: input.commitments.length (1)
+KILLED L187 drop-left(true) :: m.sender.kind === "user" (1)
+KILLED L187 drop-right(true) :: !input.accepted (147)
+KILLED L187 flip ===→!== :: === (2)
+KILLED L188 if-false :: m.sender.kind === "contact" && m.sender.id !== state.ownerId && input.commitments.length (1)
+KILLED L188 drop-right(true) :: input.commitments.length (1)
+KILLED L188 drop-left(true) :: m.sender.kind === "contact" (147)
+KILLED L188 drop-right(true) :: m.sender.id !== state.ownerId (1)
+KILLED L188 flip ===→!== :: === (148)
+KILLED L188 flip !==→=== :: !== (2)
+KILLED L189 if-false :: input.commitments.some((c) => m.taskId !== null && c.taskId !== m.taskId) (1)
+KILLED L189 drop-left(true) :: m.taskId !== null (1)
+KILLED L189 drop-right(true) :: c.taskId !== m.taskId (146)
+KILLED L189 flip !==→=== :: !== (2)
+KILLED L189 flip !==→=== :: !== (147)
+KILLED L191 if-false :: new Set(ids).size !== ids.length || ids.some((id) => commitments.some((c) => c.id === id)) (3)
+KILLED L191 drop-left(false) :: new Set(ids).size !== ids.length (1)
+KILLED L191 drop-right(false) :: ids.some((id) => commitments.some((c) => c.id === id)) (2)
+KILLED L191 flip !==→=== :: !== (149)
+KILLED L191 flip ===→!== :: === (5)
+KILLED L192 if-false :: input.commitments.some((c) => !m.text.includes(c.text)) (3)
+KILLED L193 flip ===→!== :: === (102)
+KILLED L196 flip ===→!== :: === (84)
+KILLED L197 if-false :: !current (2)
+KILLED L198 if-false :: current.taskId !== input.taskId (4)
+KILLED L198 flip !==→=== :: !== (84)
+KILLED L199 if-false :: current.status !== "active" (16)
+KILLED L199 flip !==→=== :: !== (83)
+KILLED L200 flip ===→!== :: === (67)
+KILLED L201 if-false :: input.actor.kind !== "contact" || input.actor.id !== state.ownerId (6)
+KILLED L201 drop-left(false) :: input.actor.kind !== "contact" (2)
+KILLED L201 drop-right(false) :: input.actor.id !== state.ownerId (2)
+KILLED L201 flip !==→=== :: !== (17)
+KILLED L201 flip !==→=== :: !== (16)
+KILLED L202 flip ===→!== :: === (7)
+KILLED L204 flip ===→!== :: === (60)
+KILLED L205 if-false :: input.actor.kind === "user" || (input.actor.kind === "contact" && input.actor.id !== state.ownerId) || (input. (10)
+KILLED L206 drop-right(false) :: (input.actor.kind === "compute" && input.actor.id !== current.computeId) (8)
+KILLED L205 drop-left(false) :: input.actor.kind === "user" (1)
+KILLED L205 drop-right(false) :: (input.actor.kind === "contact" && input.actor.id !== state.ownerId) (1)
+KILLED L205 flip ===→!== :: === (11)
+KILLED L205 drop-left(true) :: input.actor.kind === "contact" (5)
+KILLED L205 drop-right(true) :: input.actor.id !== state.ownerId (5)
+KILLED L205 flip ===→!== :: === (6)
+KILLED L205 flip !==→=== :: !== (6)
+KILLED L206 drop-left(true) :: input.actor.kind === "compute" (5)
+KILLED L206 drop-right(true) :: input.actor.id !== current.computeId (5)
+KILLED L206 flip ===→!== :: === (13)
+KILLED L206 flip !==→=== :: !== (12)
+KILLED L208 if-false :: input.actor.kind === "compute" || (input.actor.kind === "contact" && input.actor.id !== state.ownerId) || (inp (7)
+KILLED L209 drop-right(false) :: (input.actor.kind === "user" && input.outcome !== "revoked") (4)
+KILLED L208 drop-left(false) :: input.actor.kind === "compute" (2)
+KILLED L208 drop-right(false) :: (input.actor.kind === "contact" && input.actor.id !== state.ownerId) (1)
+KILLED L208 flip ===→!== :: === (51)
+KILLED L208 drop-left(true) :: input.actor.kind === "contact" (6)
+KILLED L208 drop-right(true) :: input.actor.id !== state.ownerId (44)
+KILLED L208 flip ===→!== :: === (7)
+KILLED L208 flip !==→=== :: !== (45)
+KILLED L209 drop-left(true) :: input.actor.kind === "user" (38)
+KILLED L209 drop-right(true) :: input.outcome !== "revoked" (6)
+KILLED L209 flip ===→!== :: === (42)
+KILLED L209 flip !==→=== :: !== (10)
+KILLED L210 flip ===→!== :: === (49)
+KILLED L212 drop-right(true) :: artifactExists(input.artifact) === true (5)
+KILLED L212 drop-right(true) :: !types.isProxy(artifactExists) (2)
+KILLED L212 drop-left(true) :: !!input.artifact (2)
+SURVIVED L212 drop-right(true) :: typeof artifactExists === "function" probe_diff=[]
+KILLED L212 flip ===→!== :: === (10)
+KILLED L212 flip ===→!== :: === (14)
+KILLED L213 if-false :: !exists (8)
+KILLED L214 if-false :: !input.detail || input.artifact !== null (7)
+KILLED L214 drop-left(false) :: !input.detail (4)
+KILLED L214 drop-right(false) :: input.artifact !== null (4)
+KILLED L214 flip !==→=== :: !== (28)
+KILLED L215 flip ===→!== :: === (33)
+KILLED L218 flip ===→!== :: === (26)
+KILLED L230 if-false :: !isLedger(state) || !text(roundId) || !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.len (7)
+KILLED L230 drop-right(false) :: new Set(ids).size !== ids.length (1)
+SURVIVED L230 drop-right(false) :: !ids.every(text) probe_diff=[]
+KILLED L230 drop-right(false) :: !Array.isArray(ids) (2)
+KILLED L230 drop-left(false) :: !isLedger(state) (3)
+KILLED L230 drop-right(false) :: !text(roundId) (3)
+KILLED L230 flip !==→=== :: !== (18)
+KILLED L231 if-false :: ids.some((id) => !state.commitments.some((c) => c.id === id)) (1)
+KILLED L231 flip ===→!== :: === (15)
+KILLED L233 flip ===→!== :: === (14)
+KILLED L234 drop-left(true) :: c.status === "active" (4)
+KILLED L234 drop-right(true) :: !state.activity.some((a) => a.roundId === roundId && a.commitmentId === id && a.taskId === c.taskId) (3)
+KILLED L234 flip ===→!== :: === (13)
+SURVIVED L234 drop-right(true) :: a.taskId === c.taskId probe_diff=[]
+KILLED L234 drop-left(true) :: a.roundId === roundId (2)
+KILLED L234 drop-right(true) :: a.commitmentId === id (1)
+KILLED L234 flip ===→!== :: === (4)
+KILLED L234 flip ===→!== :: === (3)
+KILLED L234 flip ===→!== :: === (3)
+KILLED L236 flip ===→!== :: === (15)
+TOTAL 368 killed=279 survived=89 (其中探针可观测差异=0) invalid=0

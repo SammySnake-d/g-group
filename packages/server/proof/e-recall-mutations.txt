@@ -1,0 +1,82 @@
+# 运行环境:云电脑 box4(Linux,/workspace/backend-e/recall),命令 node packages/server/proof/e-recall-mutations.mjs;按用户 dm#1128 变异在云端跑
+# 每个变异跑它列出的测试文件:kernel 变异跑 packages/kernel/src/recall.test.ts(部分也跑宿主 packages/server/src/recall.test.ts),host 变异跑宿主测试;两份测试文件同名 recall.test.ts,✖ 行前缀只写文件名
+# e-recall 手工变异 2026-11-08T18:31:04.572Z @ ab617b1
+基线 packages/kernel/src/recall.test.ts: 全绿
+基线 packages/server/src/recall.test.ts: 全绿
+
+## M1 去掉保底切片(先到先得,首条超长吞掉后续)
+  packages/kernel/src/recall.ts: "c.alloc = Math.min(c.total, x.minSliceBytes);" → "c.alloc = 0;"
+  结果: 杀死
+  ✖ recall.test.ts › 恰在边界:原文总字节正好等于预算时全部 Full;少 1 字节时主回复显式截成 TruncatedSlice 带游标,不是整条消失
+  ✖ recall.test.ts › 首条超长耗尽预算(阳性埋雷:先到先得会把第 12、18 条挤掉):第 10 条截断带原长与续读游标,第 12、18 条仍是 Full 原文
+  ✖ recall.test.ts › 主回复优先补满:主回复超长时其余超长引用只拿保底切片,保底切片也显式带游标
+  ✖ recall.test.ts › 保底切片都装不下时显式失败 over-budget 并说明需要多少,不悄悄丢掉任何一条;占位不占预算
+  ✖ recall.test.ts › AC-37 ③ 回复超长第 10 条 + 引用第 12/15/18 条:第 5 块里第 10 条显式截断带游标,第 12、18 条全文不被挤掉,撤回的第 15 条只给占位,清单可观测
+
+## M2 撤回不占位、按原文换入
+  packages/kernel/src/recall.ts: "else if (src.retracted) pushOwn(states, \"DeletedOrWithdrawn\");" → "else if (src.retracted && false) pushOwn(states, \"DeletedOrWithdrawn\");"
+  结果: 杀死
+  ✖ recall.test.ts › 预算内:主回复与各条引用逐条 Full 原文,撤回给占位,跨会话拒绝,保序
+  ✖ recall.test.ts › 恰在边界:原文总字节正好等于预算时全部 Full;少 1 字节时主回复显式截成 TruncatedSlice 带游标,不是整条消失
+  ✖ recall.test.ts › 首条超长耗尽预算(阳性埋雷:先到先得会把第 12、18 条挤掉):第 10 条截断带原长与续读游标,第 12、18 条仍是 Full 原文
+  ✖ recall.test.ts › 已撤回只给 DeletedOrWithdrawn 占位(阳性埋雷:捞出撤回原文):不带原文、不报原长、不给游标
+  ✖ recall.test.ts › 保底切片都装不下时显式失败 over-budget 并说明需要多少,不悄悄丢掉任何一条;占位不占预算
+  ✖ recall.test.ts › AC-37 ③ 回复超长第 10 条 + 引用第 12/15/18 条:第 5 块里第 10 条显式截断带游标,第 12、18 条全文不被挤掉,撤回的第 15 条只给占位,清单可观测
+
+## M3 跨会话引用不拒绝
+  packages/kernel/src/recall.ts: "if (r.roomId !== r.fromRoomId || !readable.has(r.roomId) || !src)" → "if (!src)"
+  结果: 杀死
+  ✖ recall.test.ts › 预算内:主回复与各条引用逐条 Full 原文,撤回给占位,跨会话拒绝,保序
+  ✖ recall.test.ts › 恰在边界:原文总字节正好等于预算时全部 Full;少 1 字节时主回复显式截成 TruncatedSlice 带游标,不是整条消失
+  ✖ recall.test.ts › 首条超长耗尽预算(阳性埋雷:先到先得会把第 12、18 条挤掉):第 10 条截断带原长与续读游标,第 12、18 条仍是 Full 原文
+  ✖ recall.test.ts › 越权引用机械拒绝(阳性埋雷:放行跨会话原文):别的会话、非成员会话、本会话没有的 seq 都是 AccessDenied 且不带原文
+  ✖ recall.test.ts › 保底切片都装不下时显式失败 over-budget 并说明需要多少,不悄悄丢掉任何一条;占位不占预算
+
+## M4 主回复不优先补满
+  packages/kernel/src/recall.ts: "if (!c.primary || left === 0) continue;" → "continue;"
+  结果: 杀死
+  ✖ recall.test.ts › 主回复优先补满:主回复超长时其余超长引用只拿保底切片,保底切片也显式带游标
+
+## M5 保底装不下时不显式失败
+  packages/kernel/src/recall.ts: "if (need > x.budgetBytes) {" → "if (need > x.budgetBytes && false) {"
+  结果: 杀死
+  ✖ recall.test.ts › 保底切片都装不下时显式失败 over-budget 并说明需要多少,不悄悄丢掉任何一条;占位不占预算
+
+## M6 截断不带续读游标
+  packages/kernel/src/recall.ts: "const nextCursor = Object.freeze({ offset: cut.text.length, remainingBytes: st.total - cut.bytes });" → "const nextCursor = null;"
+  结果: 杀死
+  ✖ recall.test.ts › 恰在边界:原文总字节正好等于预算时全部 Full;少 1 字节时主回复显式截成 TruncatedSlice 带游标,不是整条消失
+  ✖ recall.test.ts › 首条超长耗尽预算(阳性埋雷:先到先得会把第 12、18 条挤掉):第 10 条截断带原长与续读游标,第 12、18 条仍是 Full 原文
+  ✖ recall.test.ts › 主回复优先补满:主回复超长时其余超长引用只拿保底切片,保底切片也显式带游标
+  ✖ recall.test.ts › 切片按字符边界切:多字节字符不切坏,切片字节不超过分到的预算,游标指向未读部分开头
+  ✖ recall.test.ts › AC-37 ③ 回复超长第 10 条 + 引用第 12/15/18 条:第 5 块里第 10 条显式截断带游标,第 12、18 条全文不被挤掉,撤回的第 15 条只给占位,清单可观测
+
+## M7 宿主只换入前两条引用(取最近 N 条)
+  packages/server/src/host.ts: "for (const q of [...(raw.replyTo !== null ? [raw.replyTo] : []), ...raw.quoted]) {" → "for (const q of [...(raw.replyTo !== null ? [raw.replyTo] : []), ...raw.quoted].slice(0, 2)) {"
+  结果: 杀死
+  ✖ recall.test.ts › AC-37 ③ 回复超长第 10 条 + 引用第 12/15/18 条:第 5 块里第 10 条显式截断带游标,第 12、18 条全文不被挤掉,撤回的第 15 条只给占位,清单可观测
+
+## M8 窗口内消息也重复换入
+  packages/server/src/host.ts: "if (src && !src.retracted && fresh.some(" → "if (false && fresh.some("
+  结果: 杀死
+  ✖ recall.test.ts › AC-06 阴性对照:同一批里被引用的消息已在第 4 块,不触发 Page-in;清单为空
+  ✖ recall.test.ts › 被引用原文里的旧 @ 与 /stop 只当数据换入第 5 块:不唤醒被提到的联系人、不改新消息的 mentions 与命令
+
+## M9 整轮超预算照旧抛错(后台退避重跑、用户看不到)
+  packages/server/src/host.ts: "return this.failRound(contactId, roundId, focusRoom ?? fresh[0]!.roomId, lastSeen, inbox, { reason: \"over-budget\"" → "throw e; return this.failRound(contactId, roundId, focusRoom ?? fresh[0]!.roomId, lastSeen, inbox, { reason: \"over-bud
+  结果: 杀死
+  ✖ recall.test.ts › AC-06 整轮超预算显式失败:会话里出失败卡说明超出多少字节,不调模型、不截断、游标不推进,不在后台反复重跑;同一批再来消息只更新这张卡
+  ✖ recall.test.ts › 失败卡「跳过本轮」由用户显式点才推进游标,下一轮只处理跳过之后的消息;「重试」把这批重新交给联系人
+
+## M10 同一批反复出失败卡
+  packages/server/src/host.ts: "    if (open) {\n      run(this.db, \"UPDATE gg_cards SET body" → "    if (open && false) {\n      run(this.db, \"UPDATE gg_cards SET body"
+  结果: 杀死
+  ✖ recall.test.ts › AC-06 整轮超预算显式失败:会话里出失败卡说明超出多少字节,不调模型、不截断、游标不推进,不在后台反复重跑;同一批再来消息只更新这张卡
+  ✖ recall.test.ts › 失败卡「跳过本轮」由用户显式点才推进游标,下一轮只处理跳过之后的消息;「重试」把这批重新交给联系人
+
+## M11 跳过本轮不推进游标
+  packages/server/src/host.ts: "    this.advanceCursorsTx(meta.contactId, meta.lastSeen ?? {});\n    for (const id of meta.inboxIds" → "    for (const id of meta.inboxIds"
+  结果: 杀死
+  ✖ recall.test.ts › 失败卡「跳过本轮」由用户显式点才推进游标,下一轮只处理跳过之后的消息;「重试」把这批重新交给联系人
+
+# 合计 11 个变异,杀死 11,存活 0

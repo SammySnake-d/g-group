@@ -1,0 +1,27 @@
+{
+  "basis": "running frozen upstream, not docs/images",
+  "viewport": {
+    "width": 1200,
+    "height": 800
+  },
+  "locale": "zh-CN",
+  "colorScheme": "light",
+  "reviewed": "side-by-side and actual packaged attachment/error screenshots",
+  "items": {
+    "sidebar": "no visible non-brand difference in this fixture",
+    "main-contact-card": "no visible non-brand difference in this fixture",
+    "contact-rows": "no visible non-brand difference in this fixture",
+    "avatars": "no visible non-brand difference in this fixture",
+    "title-pill": "no visible non-brand difference in this fixture",
+    "timeline": "no visible non-brand difference in this fixture",
+    "user-and-assistant-bubble-ink-and-background": "no visible non-brand difference in this fixture",
+    "markdown-list-and-code": "no visible non-brand difference in this fixture",
+    "composer-button-placement": "no visible non-brand difference in this fixture",
+    "chinese-copy": "no visible non-brand difference in this fixture"
+  },
+  "intentionalDifferences": [
+    "g-group name and whale brand replacement",
+    "attachment pending/file/image/audio controls are explicit additions, absent from original window composer"
+  ],
+  "scopeLimit": "single fixed light-theme screenshot, not all UI states; no real-model acceptance"
+}

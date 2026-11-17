@@ -1,0 +1,53 @@
+{
+  "slice": "SQLite 存储适配器第一片(adapter 层,只依赖 domain):用 Node 内置 node:sqlite 把会话事件只追加落盘(触发器拒绝 UPDATE/DELETE/覆盖 INSERT,编辑/撤回作为新事件落盘,读回用 domain verify 重算 hash 链)、共享文档在单个 BEGIN IMMEDIATE 写事务里比版本并提交(两个真实进程竞争只有一个成功;拿不到写锁返回 busy 且不写入;初始化等锁、提交才用调用方的 busy 超时;初始化失败当场关闭连接并抛原始错误)、外发动作按 action_id 唯一索引入库去重(含 SIGKILL 崩溃后重放),关闭重开同一文件状态都在。",
+  "acceptance": [
+    {
+      "id": "AC-05",
+      "status": "未测",
+      "reason": "整项要求宿主所有编辑/撤回/纠正入口都只追加新事件,宿主写入路径要等内核接线。本片已实测的存储层子判据(packages/adapter-sqlite/proof/tests.txt 中『直接用 SQL UPDATE/DELETE』『INSERT OR REPLACE』『绕过触发器篡改』『编辑和撤回都作为新事件落盘』『关闭再打开同一文件』各条;mutations.txt 的 S01–S03、S09、S11、S12、S14 被杀)"
+    },
+    {
+      "id": "AC-21",
+      "status": "未测",
+      "reason": "整项要求两人共享文档提交时后提交者收到冲突;宿主调用方在 busy 后如何重新读版本和重试尚未接线,不能判整项。本片已实测的存储层子判据(tests.txt 中『两个独立进程基于同一版本同时提交』『另一进程持有写锁期间提交返回 busy』『提交遵守调用方的 busyTimeoutMs』『调度延迟反例』『版本冲突不改任何文档』各条;mutations.txt 的 S04–S06、S13、S16–S20 被杀;初始化失败不遗留连接见『初始化失败』『只读目录』『另一进程持锁超过初始化等待』各条与 S21–S26(含 close 自身抛错仍保留原始错误);多进程用例 30 轮全绿见 proof/flake-30.txt)"
+    },
+    {
+      "id": "AC-31",
+      "status": "未测",
+      "reason": "整项①–⑤依赖内核的注意循环、processed_seq 同事务落盘、发送前 based_on_seq 拦截和承诺 GC,内核包还不存在。本片只证明③里『actions 表按 action_id 入库幂等、自动提交后 SIGKILL 重放仍只有 1 行、重放不改其他动作』的存储子判据(mutations.txt 的 S07/S08/S15 被杀),不能当作群内实际只显示一条消息的端到端证据"
+    },
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "packages/adapter-sqlite/proof/tests.txt"
+    },
+    {
+      "id": "R-03",
+      "status": "通过",
+      "evidence": "packages/adapter-sqlite/proof/mutations.txt"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "packages/adapter-sqlite/proof/mutations.txt"
+    }
+  ],
+  "author": {
+    "agent": "claude",
+    "session": "claude:91b17b26-1e2d-4bc5-904f-9d3aab1e0f38",
+    "model": "claude-opus-5-5"
+  },
+  "red": {
+    "commit": "7a1eac8e0ff41e7df4c6138d68af568853d1ecac"
+  },
+  "unverifiable": "AC-05:触发器只挡经 SQL 的 UPDATE/DELETE/覆盖 INSERT;能 DROP TRIGGER 的人仍能改库。verify 只检查当前保留下来的链是否自洽:单改正文不重算会报 brokenAt(已测),但删掉尾部事件、删掉整条会话、或改正文并重算后续全部 hash 都返回 ok:true,本片没有外部可信头或长度锚。宿主所有写消息入口是否都走 appendEvent 要等内核接线。AC-21:多进程用例用 stdin 行协议做屏障,A 读到版本后停住直到父进程显式 release,不靠睡眠定时;每次等待有上限(默认 10s/20s),失败/超时都 SIGKILL 回收子进程。30 轮(proof/flake-30.txt)只证明本机 macOS + Node 22.22.0 下稳定,CI 容器、负载更高的机器未测;『提交遵守 busy 超时』用 2s 上限判定,极端慢机可能误红。初始化等锁默认 10s(可用 initBusyTimeoutMs 配置),持锁超过上限时 openStore 抛 database is locked 并当场关闭连接;这条用 200ms 上限测过,默认 10s 那一档没有实跑。连接是否遗留用本进程 /dev/fd 条目数判断(macOS 已跑,Linux 有 /dev/fd 但本片没在 Linux 上跑),只能发现每次失败都漏的情况,不能定位是哪个描述符;只读目录用例在 root 下运行会因 root 可写而失败。close 自身抛错是测试内替换 DatabaseSync.prototype.close 的人工注入(先真关闭再抛错),不代表真实 SQLite 会这样失败;close 真失败、连接未关上的情况无法注入,未测。多进程长时间争用、WAL checkpoint 未测;busy 后由调用方重读版本重试的策略不在本片。AC-31:只到 actions 表单行去重;外层跨表事务(动作与 processed_seq 同事务)尚未存在,审查提到的 R18(提前 COMMIT 后在外层事务提交前被杀)是未来内核接线的风险,本片未覆盖。R-03 依赖 G-STUB 门禁实跑。R-05 的通过只覆盖 mutations.mjs 列出的 26 种故障,不代表每条判据都已穷尽双侧标定;夹具负例(就绪前退出、结果后异常退出)校准的是测试夹具,不是产品代码。文档 value 用 JSON 存取,非 JSON 值行为未定义也未测。node:sqlite 在 Node 22 仍是 experimental。",
+  "waiver": null,
+  "review": {
+    "agent": "codex",
+    "session": "codex:ac7c92d1-5ee6-484b-8325-64a980d8528f",
+    "model": "gpt-6.1-terra",
+    "verdict": "approve",
+    "reviewed_hash": "a1c33fcd3b2d124c0f269b89d14e4d513a7e0fc621af65de3e1e1bfab68b2ceb",
+    "notes": "第五轮独立复现 52 条绿、红版 29 条具名失败、26 项变异及 30 轮并发；RR-04 原存活变异已被新测试杀死。批准 SQLite 切片，整项 AC 仍未测，来源门禁待会话落盘后重验；详见第五轮报告。"
+  }
+}

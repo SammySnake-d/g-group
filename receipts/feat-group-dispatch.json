@@ -1,0 +1,13 @@
+{
+  "slice": "群聊派活真实跑通:群里 @ 联系人派活 → Compute 执行 → 联系人在群里转述与交付,Compute 不上群公屏;宿主按元数据判定群里接活归属(没被 @ 的不接、同一条消息只一人接),联系人每轮知道自己是谁;CLI group 命令与 AC-03 发言者核对",
+  "acceptance": [
+    { "id": "AC-03", "status": "通过", "evidence": "packages/server/proof/e2e-group-pi-claude.txt" },
+    { "id": "AC-30", "status": "未测", "reason": "群里派活 → 联系人建任务 → 真实 Claude Code Compute 执行 → 结果回群 → 待确认已真实跑通(proof/e2e-group-pi-claude.txt;修复前的缺口见 proof/e2e-group-pi-claude-run1.txt);「Compute 内部压缩后约束仍有效」未测;交付仍是现有交付卡,改普通消息在 AC-56 切片;待审查" }
+  ],
+  "author": { "agent": "claude", "session": "claude:ef07eb6a-5c4c-4ab7-bbcc-46df83c37b7d", "model": "claude-opus-5-5" },
+  "red": { "commit": "c961ad3eb9652401d2813015df4da1352e942caf" },
+  "unverifiable": "AC-03 的判定只看消息日志的发言者种类与 gg_compute 里的实例 id:若将来 Compute 借用联系人身份写消息(id 不在 gg_compute),senderAudit 认不出,要靠宿主写消息入口只开放给联系人动作这一结构约束;AC-30 的真实运行依赖网关与模型,只证明这一次小研没有抢活,群里接活的机械兜底由 group-claim.test.ts 的替身覆盖",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

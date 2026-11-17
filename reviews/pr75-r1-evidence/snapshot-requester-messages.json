@@ -1,0 +1,30 @@
+[
+  {
+    "task": "t-mwg1y2m2-3",
+    "requester": "me",
+    "deliveredSeq": 4,
+    "requester_accept_messages": [
+      {
+        "seq": 5,
+        "sender_kind": "user",
+        "sender_id": "me",
+        "text": "通过"
+      }
+    ],
+    "pass": true
+  },
+  {
+    "task": "t-mwg209h4-j",
+    "requester": "me",
+    "deliveredSeq": 4,
+    "requester_accept_messages": [
+      {
+        "seq": 7,
+        "sender_kind": "user",
+        "sender_id": "me",
+        "text": "@小克 通过"
+      }
+    ],
+    "pass": true
+  }
+]

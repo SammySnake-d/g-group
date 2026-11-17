@@ -1,0 +1,16 @@
+{
+  "model": "fengshao1227/deepseek-v4.1-flash",
+  "realCompute": true,
+  "checks": [
+    "真实联系人派出 Compute"
+  ],
+  "startedAt": "2026-11-15T07:54:13.018Z",
+  "app": {
+    "packaged": true,
+    "version": "0.1.1-preview.3"
+  },
+  "ok": false,
+  "failure": "expect(locator).toHaveAttribute(expected) failed\n\nLocator:  getByTestId('chat-column').locator('[data-testid^=\"compute-line-\"]').first()\nExpected: \"done\"\nReceived: \"running\"\nTimeout:  360000ms\n\nCall log:\n  - Expect \"toHaveAttribute\" getByTestId('chat-column').locator('[data-testid^=\"compute-line-\"]').first() with timeout 360000ms\n  - waiting for getByTestId('chat-column').locator('[data-testid^=\"compute-line-\"]').first()\n    714 × locator resolved to <button type=\"button\" data-cver=\"1\" data-state=\"running\" data-testid=\"compute-line-t-mwhjjj5g-3\" class=\"select-none items-center whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform] duration-fast ease-out active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-45 [&_svg]:pointer-events-none [&_svg]:shrink-0 justify-start text-le…>…</button>\n        - unexpected value \"running\"\n",
+  "visible": "请现在调用 dispatch_compute 工具派一个 Compute，标题「飞勺文件验收」。任务：在自己的工作目录写 feishao-compute.txt，内容精确为 FEISHAO_COMPUTE_OK；先用 report_progress 报 started，完成后报 completed，并交付该文件。只在本任务工作目录操作，不调用其他模型，不启动或停止其他进程。不要只回复口头答应。\n展开全文\n飞勺 Compute 验收\n助手\n15:56\n我\n我\n请现在调用 dispatch_compute 工具派一个 Compute，标题「飞勺文件验收」。任务：在自己的工作目录写 feishao-compute.txt，内容精确为 FEISHAO_COMPUTE_OK；先用 report_progress 报 started，完成后报 completed，并交付该文件。只在本任务工作目录操作，不调用其他模型，不启动或停止其他进程。不要只回复口头答应。\n接了任务:飞勺文件验收\n飞勺文件验收\nClaude Code 在做\n打开会话\n已按你的要求派发 Compute 任务「飞勺文件验收」，等它跑完我再交付文件并请你验收。",
+  "finishedAt": "2026-11-15T08:02:34.552Z"
+}

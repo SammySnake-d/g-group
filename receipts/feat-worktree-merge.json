@@ -1,0 +1,12 @@
+{
+  "slice": "代码任务独立 worktree 与受控合流:每个任务一个 git worktree + 任务分支作 Compute 工作目录,交付把改动提交成候选并钉住 sha,用户验收(豁免审查)后在单通道里合入目标分支——主线未变快进;已推进就在独立集成工作树基于新 head 合并并跑重验,update-ref 带旧值 CAS,被抢就重来;冲突或重验失败目标分支不动、任务不记验收、交付卡改成只能退回;合同加 tasks.integrate 与 TaskView.workspace",
+  "acceptance": [
+    { "id": "AC-22", "status": "未测", "reason": "每个代码任务独立 worktree、交付钉候选提交、合入前校验 target_head(未变快进/已变合并后重验)、冲突与重验失败不动主线、重验期间被抢 CAS 重来,有具名测试(packages/server/src/worktree.test.ts 10 条、packages/api-contract/src/workspace.test.ts 合同 1 条)与行为变异校准(packages/server/proof/worktree-mutations.mjs,结果 worktree-mutations.txt);真实 Claude Code Compute 跑通快进与主线推进后合并重验(packages/server/proof/worktree-merge.txt);任务状态机还没有 T6 Integrating(domain/task.ts 归兄弟任务 B),合入状态记在 R-Worktree 资源 W2–W6 上:审查豁免后任务先到 T8a,合入成功才记 T8;任务取消/失败时工作树不自动归档;待审查" }
+  ],
+  "author": { "agent": "claude", "session": "claude:d8a7aa23-47af-454b-95e5-c7f8adf89c7c", "model": "claude-opus-5-5" },
+  "red": { "commit": "2c2fe528621f880e17f60a40f578782f29a9b6e8" },
+  "unverifiable": "AC-22 的 CAS 只在合并路径上有确定性测试(重验脚本在第一次运行时推进 main,验证第二次基于最新 head);快进路径「读到 head 之后、update-ref 之前被抢」没有注入点,靠 git update-ref <新> <旧> 的原子比较保证,变异校准也没覆盖这条;单通道只在同一宿主进程内串行,多个宿主进程同时合入同一目标分支只靠 CAS 兜底;真实运行只证明这一次的两种合入路径",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

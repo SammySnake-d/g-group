@@ -1,0 +1,13 @@
+{
+  "slice": "联系人运行时接缝:Inbound(消息/Compute 事件/定时)、五块重拼 RoundRequest、ContactMind、MindAction;只有类型与常量,供注意循环、五块装配与 pi 联系人适配器并行实现",
+  "acceptance": [
+    { "id": "AC-31", "status": "未测", "reason": "只定义接缝;注意循环由后续切片实现" },
+    { "id": "AC-39", "status": "未测", "reason": "只定义五块形状;装配由后续切片实现" }
+  ],
+  "author": { "agent": "claude", "session": "claude:18b4f4b0-3cf6-4d51-be92-ca20094b2ce3", "model": "fnqtz/claude-opus-5-5" },
+  "red": null,
+  "unverifiable": "纯类型接缝,无可执行行为;先写后测(用户 #717)",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

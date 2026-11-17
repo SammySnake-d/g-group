@@ -1,0 +1,108 @@
+{
+  "mode": "packaged pi/Host/IPC/UI with local SSE error fixture",
+  "realModelAcceptance": false,
+  "appPath": "/tmp/dsbot-astra-20261117/delivery7/g-group.app",
+  "model": "fengshao1227/deepseek-v4.1-flash",
+  "startedAt": "2026-11-17T10:55:30.104Z",
+  "errors": [],
+  "elapsedMs": 124,
+  "ledger": {
+    "ok": true,
+    "value": {
+      "runs": [
+        {
+          "id": "run-mwkktfx8-2",
+          "layer": "contact-round",
+          "parentId": null,
+          "children": [],
+          "roomId": "dm-c-mwkktfsh-1",
+          "sourceSeq": 1,
+          "contactId": "c-mwkktfsh-1",
+          "taskId": null,
+          "computeId": null,
+          "upstream": "fengshao1227/deepseek-v4.1-flash",
+          "status": "failed",
+          "tone": "failed",
+          "text": "失败 · 请求被拒 · 用时 0 秒",
+          "reasonClass": "invalid_request",
+          "label": "请求被拒",
+          "raw": "模型请求失败(error):{\"type\":\"error\",\"error\":{\"type\":\"model_unavailable\",\"message\":\"当前模型不可用，请切换模型\",\"code\":11102,\"msg\":\"model [hy4-flash-free] service info not found\"}}",
+          "retryClass": "Permanent",
+          "rulesVersion": "2026-11-09.1",
+          "note": null,
+          "startedAt": "2026-11-17T10:55:34.364Z",
+          "endedAt": "2026-11-17T10:55:34.392Z",
+          "durationMs": 28,
+          "lastProgressAt": "2026-11-17T10:55:34.364Z",
+          "thresholdMs": null,
+          "thresholdSource": null,
+          "judgedAt": null,
+          "waiting": null,
+          "idleMs": 0,
+          "rerunOf": null,
+          "attempt": 0,
+          "updatedAt": "2026-11-17T10:55:34.415Z"
+        }
+      ],
+      "hints": [
+        {
+          "roomId": "dm-c-mwkktfsh-1",
+          "upstream": "fengshao1227/deepseek-v4.1-flash",
+          "reasonClass": "invalid_request",
+          "label": "请求被拒",
+          "runIds": [
+            "run-mwkktfx8-2"
+          ]
+        }
+      ]
+    }
+  },
+  "contacts": {
+    "ok": true,
+    "value": {
+      "contacts": [
+        {
+          "id": "c-mwkktfsh-1",
+          "name": "错误回放联系人",
+          "avatar": null,
+          "bio": "",
+          "speakingModel": "fengshao1227/deepseek-v4.1-flash",
+          "harness": "claude-code",
+          "computeModel": {
+            "mode": "inherit"
+          },
+          "tools": [],
+          "computeAssets": [],
+          "activity": "idle",
+          "createdAt": "2026-11-17T10:55:34.193Z",
+          "computeResolved": {
+            "resolved": {
+              "harness": "claude-code",
+              "model": "fengshao1227/deepseek-v4.1-flash",
+              "effort": "medium",
+              "vendor": "deepseek",
+              "modelSource": "global",
+              "effortSource": "global",
+              "chain": [
+                "compute 继承全局",
+                "全局 Compute 默认 fengshao1227/deepseek-v4.1-flash"
+              ]
+            },
+            "support": "undeclared"
+          }
+        }
+      ]
+    }
+  },
+  "screenshot": "/tmp/dsbot-astra-20261117/packaged-error-r7/failure-visible.png",
+  "outcome": "error-visible-run-failed-contact-idle",
+  "temporaryCredentialRemoved": true,
+  "requests": [
+    {
+      "url": "/v1/messages?beta=true",
+      "model": "fengshao1227/deepseek-v4.1-flash"
+    }
+  ],
+  "asarSha256": "0f8c9852a0a68130a9da7259119c72b9961264980fe7d9afa9ecb5264c785b76",
+  "finishedAt": "2026-11-17T10:55:34.677Z"
+}

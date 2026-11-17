@@ -1,0 +1,28 @@
+# AC-29 真实运行:联系人勾选的 skill/MCP 可用,能力库里没勾的与本机全局 skill 不进入(2026-11-09,本机)
+# 命令:node packages/server/proof/ac29-real-run.ts /tmp/gg-c-real-iso(建能力库 → 建联系人并勾选 → 私聊派活 → 读任务视图;MCP 是同目录 echo-mcp.mjs)
+# 真实 Claude Code CLI 2.1.319 + 本仓库适配器;联系人脑子是规则替身 scriptedMind(不连模型);HOME 是本机真实 HOME
+# 本机 ~/.claude/skills 只列了目录名做交集,没有读任何文件内容
+# 2026-11-08T18:21:16.314Z 真实 Claude Code Compute(fnqtz/claude-opus-5-5),联系人脑子为规则替身 scriptedMind;HOME 为本机真实 HOME
+# 能力库:skill gg-proof-style、gg-unpicked-style;MCP gg-echo、gg-unpicked。联系人只勾选 gg-proof-style 与 gg-echo
+#1 我: 帮我先调用 gg-echo 服务器的 echo 工具回显 hello-iso,再按勾选的 skill gg-skills:gg-proof-style 的要求把回显结果写进当前目录的 note.md
+#2 小克: 接了任务:先调用 gg-echo 服务器的 echo 工具回显 hello-iso,再按勾  [卡片:task-status]
+#3 小克: 好的,我安排 Compute 去先调用 gg-echo 服务器的 echo 工具回显 hello-iso,再按勾选的 skill gg-skills:gg-proof-style 的要求把回显结果写进当前目录的 note.md,有进度告诉你。
+#4 小克: 做完了:我用 echo 工具回显了 hello-iso,返回结果是 `ECHO:hello-iso`,已按 gg-proof-style 的格式写进当前目录的 `note.md`。
+
+这个 skill 要求第一行是固定标记、第二行起写正文,所以文件内容是:
+```
+STYLE: PICKED_SKILL_APPLIED
+ECHO:hello-iso
+```
+
+也已经向宿主报告任务完成。  [卡片:delivery]
+任务 t-mw85ry5h-1 [T5_InReview] 进度=started>completed
+Compute cc-76262f25-9119-4d6c-a61a-acd3935ee0ee 实际加载(CLI init 自报): {"skills":["deep-research","gg-skills:gg-proof-style","design","design-sync","dataviz","update-config","verify","debug","code-review","simplify","batch","fewer-permission-prompts","doctor","loop","claude-api","workflow-authoring","run","run-skill-generator","plugin-authoring"],"mcpServers":["gg-echo","host"]}
+本机 ~/.claude/skills 目录数 148;与实际加载的交集: ["deep-research"]
+未勾选的库 skill/MCP 是否出现: []
+note.md: "STYLE: PICKED_SKILL_APPLIED\nECHO:hello-iso\n"
+运行目录 run_homes/c-mw85ry50-0/claude-code: . ./config ./skills-21aaf00cef2c ./skills-21aaf00cef2c/.claude-plugin ./skills-21aaf00cef2c/.claude-plugin/plugin.json ./skills-21aaf00cef2c/skills ./skills-21aaf00cef2c/skills/gg-proof-style
+config 目录(CLAUDE_CONFIG_DIR)里 CLI 写下的会话记录: 1 个
+# 交集里的 deep-research:同名的是 CLI 自带 skill。对照 v02-config-dir.txt 的 bare-home 组(假 HOME,只有一个全局标记 skill):
+#   假 HOME 下 CLI 自带 skill 18 个;本次真实运行里 gg-skills 以外的 18 个;两组集合相同: true
+# 结论:实际加载的 skill = CLI 自带 18 个 + 勾选的 gg-skills:gg-proof-style;MCP = host + 勾选的 gg-echo;未勾选的 gg-unpicked-style、gg-unpicked 与本机 148 个全局 skill 都没进入;勾选的 MCP 工具被调用(ECHO:hello-iso)、勾选 skill 的格式被照做(STYLE: PICKED_SKILL_APPLIED);CLI 会话记录落在专属 config 目录。

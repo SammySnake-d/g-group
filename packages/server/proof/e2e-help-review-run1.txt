@@ -1,0 +1,77 @@
+# 第 1 次真实运行(2026-11-09,feat/cross-vendor-review 修结论判读之前):真实 pi 联系人(anyrouter/claude-opus-5-5)+ 真实 Claude Code Compute;审查人 Compute 模型 glm/glm-5.3-flash(zhipu)
+# 命令: node packages/server/proof/e2e-help-review.ts /tmp/gg-e2e-help(网关地址与令牌只经环境变量传入,未落盘);下面是 stdout/stderr 原文
+# 结果:AC-44 路径跑通(受阻→T4b→@我+截图→回答前 0 次带验证码登录→tasks.answer→T3 续接→导出→交付);审查人最终回复第一行是「审查已完成并提交:**APPROVE**。」,当时的判读只认行首,判为认不出、退回提出者豁免卡(没有误判成通过)。之后改了判读规则,见第 2 次运行
+(node:73060) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[   0.0s] 夹具订单后台 http://127.0.0.1:55207(短信验证码只在夹具里,驱动脚本扮演用户读出)
+[   0.0s] 联系人 小克:说话/Compute 模型 anyrouter/claude-opus-5-5;小审:Compute 模型 glm/glm-5.3-flash(审查人)
+[   0.0s] #1 我: 帮我登录 http://127.0.0.1:55207 的订单后台(账号 demo-user,密码 demo-pass),把订单导出成你工作目录里的 orders.csv,做完告诉我
+[ 106.4s] #2 小克: 接了任务:导出订单为 orders.csv  [卡片 task-status/open:取消任务]
+[ 106.4s] #3 小克: 好的，已经开始登录后台导出订单。导完会存成工作目录里的 orders.csv，到时告诉你。
+[ 106.8s]   · Compute cc-1248d111- started: 已开始
+[ 259.1s]   · Compute cc-1248d111- blocked: 受阻:用 demo-user / demo-pass 登录时,后台返回 403「需要短信验证码」。验证码已发到管理员手机,不能自动获取。请查看管理员手机上的短信验证码并回复给我(sms_code)。收到后我会带上验证码重新登录,导出全部订单,保存为 orders.csv。如果验证码已过期,请先告诉我,我再重新发起一次登录。。登录订单后台需要短信验证码,只能由人提供,已暂停等待用户
+[ 259.1s] #4 小克: @我 用 demo-user / demo-pass 登录时,后台返回 403「需要短信验证码」。验证码已发到管理员手机,不能自动获取。请查看管理员手机上的短信验证码并回复给我(sms_code)。收到后我会带上验证码重新登录,导出全部订单,保存为 orders.csv。如果验证码已过期,请先告诉我,我再重新发起一次登录。  [卡片 question/open:回答|不做了]  [附件 challenge.png image/png 299B]
+[ 259.5s] 任务 t-mw89xqmi-2 状态 T4b_BlockedOnHuman;待回答问题 {"qId":"q-mw8a10es-5","text":"用 demo-user / demo-pass 登录时,后台返回 403「需要短信验证码」。验证码已发到管理员手机,不能自动获取。请查看管理员手机上的短信验证码并回复给我(sms_code)。收到后我会带上验证码重新登录,导出全部订单,保存为 orders.csv。如果验证码已过期,请先告诉我,我再重新发起一次登录。"}
+[ 259.5s] 回答前夹具收到的请求:回答前 GET / / 回答前 POST /login / 回答前 GET /challenge.png
+[ 259.5s] #5 我: 回答:短信验证码是 151179
+[ 259.5s] tasks.answer → ok,任务 T3_Running
+[ 259.9s]   · Compute cc-1248d111- started: 已开始
+[ 319.4s]   · Compute cc-1248d111- milestone(登录成功): 用你提供的短信验证码登录成功,已拿到会话 token,接下来拉取订单数据
+[ 519.7s]   · Compute cc-1248d111- completed: 我用你给的短信验证码登录了后台，订单已导出到工作目录下的 `orders.csv`。
+
+- **文件路径**：`/private/tmp/gg-e2e-help/work/t-mw89xqmi-2/orders.csv`
+- **行数**：共 4 行，1 行表头加 3 条订单
+- **列名**：`order_id`, `item`, `qty`
+
+```
+order_id,item,qty
+A-1001,键盘,2
+A-1002,显示器,1
+A-1003,鼠标,3
+```
+
+文件内容和后台返回的数据一字不差。我用 CSV 解析器检查过，每行都是 3 列，订单号没有重复。后台接口说明里没有提到分页
+[ 650.7s] #6 小克: 验证码收到，已经登录成功，正在拉订单，导好了跟你说。
+[ 726.3s] #7 小克: 订单已导出成 orders.csv。
+- 路径：/private/tmp/gg-e2e-help/work/t-mw89xqmi-2/orders.csv
+- 共 4 行：1 行表头（order_id, item, qty），3 条订单（A-1001 键盘×2、A-1002 显示器×1、A-1003 鼠标×3）
+- 每行 3 列，订单号不重复。接口说明和返回结果里都没有分页信息，所以 3 条应该就是全部订单。
+- 文件是 UTF-8 编码。用 Excel 打开如果中文乱码，改用“按 UTF-8 导入”就行。
+另外，工作目录里还有一张之前存的验证页面截图 challenge.png，用不上的话可以删掉。
+[ 821.5s] #8 小克: @我 「导出订单为 orders.csv」的跨厂商审查没做成:审查结论认不出(第一行应是 APPROVE 或 REJECT):审查已完成并提交：**APPROVE**。
+
+核对结果摘要(全程只读，未改动任何文件)：
+
+- **文件存在**:`orders.csv` 在交付说明所指路径下([orders.csv](/private/tmp/gg-e2e-help/work/t-mw89xqmi-2/orders.csv))。
+- **实际打开核对**：4 行 = 1 行表头(`order_id,item,qty`)+ 3   [卡片 delivery/open:豁免审查并通过|退回]
+[ 821.8s] 任务状态 T5_InReview 审查门 none 审查记录 [{"round":1,"reviewerContactId":"c-mw89vgj9-1","model":"glm/glm-5.3-flash","vendor":"zhipu","status":"failed","notes":"审查结论认不出(第一行应是 APPROVE 或 REJECT):审查已完成并提交：**APPROVE**。\n\n核对结果摘要(全程只读，未改动任何文件)：\n\n- **文件存在**:`orders.csv` 在交付说明所指路径下([orders.csv](/private/tmp/gg-e2e-help/work/t-mw89xqmi-2/orders.csv))。\n- **实际打开核对**：4 行 = 1 行表头(`order_id,item,qty`)+ 3 ","startedAt":"2026-11-08T20:28:04.850Z","endedAt":"2026-11-08T20:29:40.049Z"}]
+[ 821.8s] orders.csv 内容:
+order_id,item,qty
+A-1001,键盘,2
+A-1002,显示器,1
+A-1003,鼠标,3
+
+[ 821.8s] 夹具收到的全部请求:回答前 GET / / 回答前 POST /login / 回答前 GET /challenge.png / 回答后 POST /login sms_code=对 / 回答后 GET /orders / 回答后 GET /orders / 回答后 GET /orders
+[ 821.8s] 回答前带 sms_code 的登录尝试次数:0(Compute 自己猜/反复提交验证码会大于 0)
+[ 821.8s] 最终任务 t-mw89xqmi-2 [T5_InReview] 审查门=none 进度=started>blocked>started>milestone>completed
+[ 821.8s] —— 会话全文 ——
+#1 我(user): 帮我登录 http://127.0.0.1:55207 的订单后台(账号 demo-user,密码 demo-pass),把订单导出成你工作目录里的 orders.csv,做完告诉我
+#2 小克(contact): 接了任务:导出订单为 orders.csv  [卡片 task-status/open]
+#3 小克(contact): 好的，已经开始登录后台导出订单。导完会存成工作目录里的 orders.csv，到时告诉你。
+#4 小克(contact): @我 用 demo-user / demo-pass 登录时,后台返回 403「需要短信验证码」。验证码已发到管理员手机,不能自动获取。请查看管理员手机上的短信验证码并回复给我(sms_code)。收到后我会带上验证码重新登录,导出全部订单,保存为 orders.csv。如果验证码已过期,请先告诉我,我再重新发起一次登录。  [卡片 question/done]  [附件 challenge.png]
+#5 我(user): 回答:短信验证码是 151179
+#6 小克(contact): 验证码收到，已经登录成功，正在拉订单，导好了跟你说。
+#7 小克(contact): 订单已导出成 orders.csv。
+- 路径：/private/tmp/gg-e2e-help/work/t-mw89xqmi-2/orders.csv
+- 共 4 行：1 行表头（order_id, item, qty），3 条订单（A-1001 键盘×2、A-1002 显示器×1、A-1003 鼠标×3）
+- 每行 3 列，订单号不重复。接口说明和返回结果里都没有分页信息，所以 3 条应该就是全部订单。
+- 文件是 UTF-8 编码。用 Excel 打开如果中文乱码，改用“按 UTF-8 导入”就行。
+另外，工作目录里还有一张之前存的验证页面截图 challenge.png，用不上的话可以删掉。
+#8 小克(contact): @我 「导出订单为 orders.csv」的跨厂商审查没做成:审查结论认不出(第一行应是 APPROVE 或 REJECT):审查已完成并提交：**APPROVE**。
+
+核对结果摘要(全程只读，未改动任何文件)：
+
+- **文件存在**:`orders.csv` 在交付说明所指路径下([orders.csv](/private/tmp/gg-e2e-help/work/t-mw89xqmi-2/orders.csv))。
+- **实际打开核对**：4 行 = 1 行表头(`order_id,item,qty`)+ 3   [卡片 delivery/open]
+[ 821.8s] 结束,退出码 0;审查人 小审 id c-mw89vgj9-1
+exit=0

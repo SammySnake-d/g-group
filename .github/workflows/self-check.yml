@@ -1,0 +1,38 @@
+# PR 自己的门禁代码自证:类型检查、lint、门禁自检、变异校验、测试。
+# 不是合并的裁判(裁判在 main 上那份可信门禁 workflow 里),但改门禁的 PR 要靠它证明新门禁自己是可信的。
+name: self-check
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: self-check-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  self-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      GATE_SANDBOX_IMAGE: node:22.22.0-slim
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: "22.22.0" }
+      - run: npm ci
+      - name: 拉沙箱镜像(门禁执行 PR 测试只走沙箱,没有就停)
+        run: docker pull "$GATE_SANDBOX_IMAGE"
+      - name: 类型检查
+        run: npm run typecheck
+      - name: lint
+        run: npm run lint
+      - name: 测试
+        run: npm test
+      # 这两步始终运行:不按路径跳过(RR-09)。main 上的 G-WORKFLOW 断言它们存在且无 if / continue-on-error。
+      - name: 门禁自检(真实命令行入口,合规必放行、违规必拦下)
+        run: npm run gates:selftest
+      - name: 门禁变异校验(把门禁改坏,自检必须发现)
+        timeout-minutes: 120
+        run: GATE_MUTATION_JOBS=2 npm run gates:mutation

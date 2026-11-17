@@ -1,0 +1,252 @@
+{
+  "pass": true,
+  "failed": [],
+  "dbs": [
+    {
+      "kind": "snapshot",
+      "db": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/t8a-accept-719e95d2/run1/t8a-snapshot-dm.db",
+      "pinned_task": "t-mwg1y2m2-3",
+      "sha256": "1856ff667876298db9c770d0a4faa6c6b27c825880de9818b8704c0cac39d4be",
+      "unchanged_after_read": true,
+      "tasks": [
+        {
+          "task_id": "t-mwg1y2m2-3",
+          "doc_version": 6,
+          "room_id": "dm-c-mwg1xq1r-1",
+          "title": "新建 hello.txt",
+          "requester": "me",
+          "owner": "c-mwg1xq1r-1",
+          "state": "T8a_Delivered",
+          "reviewGate": "none",
+          "badge": "none",
+          "deliveredSeq": 4,
+          "sourceSeq": 1,
+          "reviews": 0,
+          "approval": null,
+          "delivery": {
+            "round": 1,
+            "commit": "result:ccr-bd4a3993-2907-432e-b1e9-eb2b1d1d1d1e"
+          },
+          "checks": [
+            {
+              "name": "snapshot.state_T8a_Delivered",
+              "pass": true,
+              "detail": "state=T8a_Delivered reviewGate=none badge=none deliveredSeq=4"
+            },
+            {
+              "name": "snapshot.reviewGate_none",
+              "pass": true,
+              "detail": "state=T8a_Delivered reviewGate=none badge=none deliveredSeq=4"
+            },
+            {
+              "name": "snapshot.badge_none",
+              "pass": true,
+              "detail": "state=T8a_Delivered reviewGate=none badge=none deliveredSeq=4"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "name": "db.read_only_unchanged",
+          "pass": true,
+          "detail": "sha256 前 1856ff667876298db9c770d0a4faa6c6b27c825880de9818b8704c0cac39d4be 后 1856ff667876298db9c770d0a4faa6c6b27c825880de9818b8704c0cac39d4be"
+        },
+        {
+          "name": "db.has_delivered_no_review_task",
+          "pass": true,
+          "detail": "已交付且无审查人的任务 1 件 / 全部 1 件"
+        },
+        {
+          "name": "snapshot.pinned_task_present",
+          "pass": true,
+          "detail": "指定任务 t-mwg1y2m2-3"
+        }
+      ],
+      "pass": true
+    },
+    {
+      "kind": "snapshot",
+      "db": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/t8a-accept-719e95d2/run1/t8a-snapshot-group.db",
+      "pinned_task": "t-mwg209h4-j",
+      "sha256": "bbc4cee60b510c24ba25ea8f186b96efb4e6af8ccb95a19018aaa342584bfb41",
+      "unchanged_after_read": true,
+      "tasks": [
+        {
+          "task_id": "t-mwg1y2m2-3",
+          "doc_version": 7,
+          "room_id": "dm-c-mwg1xq1r-1",
+          "title": "新建 hello.txt",
+          "requester": "me",
+          "owner": "c-mwg1xq1r-1",
+          "state": "T8_Accepted",
+          "reviewGate": "waived-by-user",
+          "badge": "accepted",
+          "deliveredSeq": 4,
+          "sourceSeq": 1,
+          "reviews": 0,
+          "approval": null,
+          "delivery": {
+            "round": 1,
+            "commit": "result:ccr-bd4a3993-2907-432e-b1e9-eb2b1d1d1d1e"
+          },
+          "checks": [
+            {
+              "name": "snapshot.other_task_T8a_or_accepted",
+              "pass": true,
+              "detail": "state=T8_Accepted reviewGate=waived-by-user badge=accepted deliveredSeq=4"
+            }
+          ]
+        },
+        {
+          "task_id": "t-mwg209h4-j",
+          "doc_version": 6,
+          "room_id": "g-mwg1zxje-e",
+          "title": "新建 group.txt 写入「群聊闭环通过」",
+          "requester": "me",
+          "owner": "c-mwg1xq1r-1",
+          "state": "T8a_Delivered",
+          "reviewGate": "none",
+          "badge": "none",
+          "deliveredSeq": 4,
+          "sourceSeq": 1,
+          "reviews": 0,
+          "approval": null,
+          "delivery": {
+            "round": 1,
+            "commit": "result:ccr-9b5490fd-4177-471a-92bd-d4a6eb1b1e73"
+          },
+          "checks": [
+            {
+              "name": "snapshot.state_T8a_Delivered",
+              "pass": true,
+              "detail": "state=T8a_Delivered reviewGate=none badge=none deliveredSeq=4"
+            },
+            {
+              "name": "snapshot.reviewGate_none",
+              "pass": true,
+              "detail": "state=T8a_Delivered reviewGate=none badge=none deliveredSeq=4"
+            },
+            {
+              "name": "snapshot.badge_none",
+              "pass": true,
+              "detail": "state=T8a_Delivered reviewGate=none badge=none deliveredSeq=4"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "name": "db.read_only_unchanged",
+          "pass": true,
+          "detail": "sha256 前 bbc4cee60b510c24ba25ea8f186b96efb4e6af8ccb95a19018aaa342584bfb41 后 bbc4cee60b510c24ba25ea8f186b96efb4e6af8ccb95a19018aaa342584bfb41"
+        },
+        {
+          "name": "db.has_delivered_no_review_task",
+          "pass": true,
+          "detail": "已交付且无审查人的任务 2 件 / 全部 2 件"
+        },
+        {
+          "name": "snapshot.pinned_task_present",
+          "pass": true,
+          "detail": "指定任务 t-mwg209h4-j"
+        }
+      ],
+      "pass": true
+    },
+    {
+      "kind": "final",
+      "db": "/Users/snakesammy/.mirasim/assistants/deliverables/g-group-closed-loop/t8a-accept-719e95d2/run1/final.db",
+      "pinned_task": null,
+      "sha256": "1f2b3ee8887445f9d50d91e92b91e4564c3b1a7384b673410a13d66f30e2c266",
+      "unchanged_after_read": true,
+      "tasks": [
+        {
+          "task_id": "t-mwg1y2m2-3",
+          "doc_version": 7,
+          "room_id": "dm-c-mwg1xq1r-1",
+          "title": "新建 hello.txt",
+          "requester": "me",
+          "owner": "c-mwg1xq1r-1",
+          "state": "T8_Accepted",
+          "reviewGate": "waived-by-user",
+          "badge": "accepted",
+          "deliveredSeq": 4,
+          "sourceSeq": 1,
+          "reviews": 0,
+          "approval": null,
+          "delivery": {
+            "round": 1,
+            "commit": "result:ccr-bd4a3993-2907-432e-b1e9-eb2b1d1d1d1e"
+          },
+          "checks": [
+            {
+              "name": "final.state_T8_Accepted",
+              "pass": true,
+              "detail": "state=T8_Accepted reviewGate=waived-by-user badge=accepted deliveredSeq=4"
+            },
+            {
+              "name": "final.badge_accepted",
+              "pass": true,
+              "detail": "state=T8_Accepted reviewGate=waived-by-user badge=accepted deliveredSeq=4"
+            },
+            {
+              "name": "final.reviewGate_waived_by_user",
+              "pass": true,
+              "detail": "state=T8_Accepted reviewGate=waived-by-user badge=accepted deliveredSeq=4"
+            }
+          ]
+        },
+        {
+          "task_id": "t-mwg209h4-j",
+          "doc_version": 7,
+          "room_id": "g-mwg1zxje-e",
+          "title": "新建 group.txt 写入「群聊闭环通过」",
+          "requester": "me",
+          "owner": "c-mwg1xq1r-1",
+          "state": "T8_Accepted",
+          "reviewGate": "waived-by-user",
+          "badge": "accepted",
+          "deliveredSeq": 4,
+          "sourceSeq": 1,
+          "reviews": 0,
+          "approval": null,
+          "delivery": {
+            "round": 1,
+            "commit": "result:ccr-9b5490fd-4177-471a-92bd-d4a6eb1b1e73"
+          },
+          "checks": [
+            {
+              "name": "final.state_T8_Accepted",
+              "pass": true,
+              "detail": "state=T8_Accepted reviewGate=waived-by-user badge=accepted deliveredSeq=4"
+            },
+            {
+              "name": "final.badge_accepted",
+              "pass": true,
+              "detail": "state=T8_Accepted reviewGate=waived-by-user badge=accepted deliveredSeq=4"
+            },
+            {
+              "name": "final.reviewGate_waived_by_user",
+              "pass": true,
+              "detail": "state=T8_Accepted reviewGate=waived-by-user badge=accepted deliveredSeq=4"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "name": "db.read_only_unchanged",
+          "pass": true,
+          "detail": "sha256 前 1f2b3ee8887445f9d50d91e92b91e4564c3b1a7384b673410a13d66f30e2c266 后 1f2b3ee8887445f9d50d91e92b91e4564c3b1a7384b673410a13d66f30e2c266"
+        },
+        {
+          "name": "db.has_delivered_no_review_task",
+          "pass": true,
+          "detail": "已交付且无审查人的任务 2 件 / 全部 2 件"
+        }
+      ],
+      "pass": true
+    }
+  ]
+}

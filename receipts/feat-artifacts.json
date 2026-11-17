@@ -1,0 +1,12 @@
+{
+  "slice": "工件回传:交付时把 Compute 本次产出的可读工件(.md/文本/表格/HTML/PDF/图片)按内容 sha256 快照进宿主数据目录,同内容只存一份;交付消息(AC-56 交付是普通消息)带上工件 ref + sha256,artifacts.get 点开读出同一份并校验 hash;代码任务读钉住的候选提交(工作区之后再改卡片不变),没有代码仓时收 Compute 启动后改过的可读文件;合同加 artifacts.get、MessageView.artifacts、TaskView 文件工件的 sha256/bytes/mime",
+  "acceptance": [
+    { "id": "AC-04", "status": "未测", "reason": "卡片引用 hash、点开内容 hash 与磁盘快照相同、工作区改了卡片仍指向交付时的版本、退回重做后新卡指新版本、同一工件重发不生成第二个文件、快照被改过拒绝读出,有具名测试(packages/server/src/artifacts.test.ts 5 条、packages/api-contract/src/artifacts.test.ts 合同 1 条)与行为变异校准(packages/server/proof/artifacts-mutations.mjs,结果 artifacts-mutations.txt);真实 Claude Code Compute 写 docs/summary.md 与 src/util.ts,交付消息只带 .md,sha256 与快照、合入后 main 里的文件一致(packages/server/proof/artifacts.txt);Computer Use 缩略图(U45 预留扩展,位置待决)未做;没有代码仓时按修改时间收集,工作目录被别的任务同时写会混进来;待审查" }
+  ],
+  "author": { "agent": "claude", "session": "claude:d8a7aa23-47af-454b-95e5-c7f8adf89c7c", "model": "claude-opus-5-5" },
+  "red": { "commit": "678ba8c5e726dd3ca5918c940f230a693414d229" },
+  "unverifiable": "AC-04 的「卡片点开内容与磁盘文件 hash 相同」由 artifacts.get 读快照时重算 sha256 保证,但渲染进程若绕开 artifacts.get 直接按 path 读文件,中间被改就看不到这层校验;没有代码仓时的收集按 mtime ≥ Compute 启动时间 - 2 秒,文件系统时钟粒度或时间回拨会让个别文件漏收或多收,测试只覆盖了一小时前的旧文件",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

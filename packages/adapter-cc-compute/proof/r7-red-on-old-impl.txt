@@ -1,0 +1,59 @@
+# 第七轮独立先红:旧实现上只换入新测试文件与假 CLI
+# 旧实现 = b3e1bf8(第七轮被审 17cf2a1 之后只加了审查文件)的 packages/adapter-cc-compute/src/ 与 mcp/;
+# 新测试 = 7c28b83 的 src/adapter.test.ts 与 test-support/fake-claude.mjs。复现:
+#   git archive b3e1bf8 | tar -x -C <目录>; git show 7c28b83:<两个文件> 覆盖进去; node --test --test-reporter=tap --test-name-pattern='^R7-' packages/adapter-cc-compute/src/adapter.test.ts
+# 结果:R7-01 两条、R7-02 两条按名失败;R7-03 在旧实现上通过(原实现本来就是精确匹配),其先红由 M108(审查 S04 原样)被杀死证明。
+
+not ok 1 - R7-01:受阻后并发两次 resume 只受理一个、另一个立即被明确拒绝,只起一个续接 CLI;stop 后原 CLI 与续接 CLI 全部回收(正反对照)
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    [
+    -   false,
+    true,
+    +   true
+not ok 2 - R7-01:resume 在途(正等冻结的上一轮退出)时 stop:stop 受理,在途续接被明确拒绝,stop 确认之后不再起 CLI;原 CLI 回收、进程表里不剩本测试的进程(竞态对照)
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    {
+    +   ok: true
+    -   ok: false,
+    -   reason: '续接还没启动时这个 Compute 已被停止,这次续接作废'
+not ok 3 - R7-02:init 前的帧与 init 里 type/subtype/host 状态是对象、数组、null 的合法 JSON 时 preInitFrame/checkInit 按合同拒收、给固定说明、不抛错;拒收回执的 text 是对象或数组时不拼接、不抛错;坏 JSON 与非对象照常拒收,合法字符串与 connected 的 init 照常(对照)
+    'Cannot convert object to primitive value'
+    code: 'ERR_TEST_FAILURE'
+    name: 'TypeError'
+    stack: |-
+    String (<anonymous>)
+    preInitFrame (file://<旧实现副本>/packages/adapter-cc-compute/src/events.ts:66:41)
+not ok 4 - R7-02:适配器宿主子进程里,CLI 输出 type/subtype/host 状态为对象或数组、拒收回执 text 为对象、汇报 kind 嵌套过深的合法 JSON:宿主不退出,对应 Compute 各自 failed(或按合同记拒收)并回收 CLI,同一适配器随后的正常 Compute 照常 completed(正反对照)
+    file://<旧实现副本>/packages/adapter-cc-compute/src/events.ts:66
+    return { kind: "rejected", reason: `${String(m.type)}${m.subtype !== undefined ? `/${String(m.subtype)}` : ""}` };
+    ^
+    TypeError: Cannot convert object to primitive value
+    at String (<anonymous>)
+    at preInitFrame (file://<旧实现副本>/packages/adapter-cc-compute/src/events.ts:66:41)
+ok 5 - R7-03:init 之前与认可帧只差子类型的 system 帧(hook_neutral_unlisted、前缀延长、大小写、空白、截短)一律拒收,端到端回收并 failed;同一剧本只把子类型换成认可的 hook_started 时放行并完成(单开关邻接对照)
+# tests 5
+# pass 1
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+
+# 新增单点变异 M97–M112 逐个注入后 tsc -p tsconfig.json(变异体本身是合法 TypeScript):
+M97 typecheck 退出 0
+M98 typecheck 退出 0
+M99 typecheck 退出 0
+M100 typecheck 退出 0
+M101 typecheck 退出 0
+M102 typecheck 退出 0
+M103 typecheck 退出 0
+M104 typecheck 退出 0
+M105 typecheck 退出 0
+M106 typecheck 退出 0
+M107 typecheck 退出 0
+M108 typecheck 退出 0
+M109 typecheck 退出 0
+M110 typecheck 退出 0
+M111 typecheck 退出 0
+M112 typecheck 退出 0

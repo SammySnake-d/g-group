@@ -1,0 +1,16 @@
+{
+  "name": "@g-group/adapter-pi-contact",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@earendil-works/pi-agent-core": "1.5.0",
+    "@earendil-works/pi-ai": "1.5.0",
+    "@g-group/kernel": "*"
+  },
+  "gGroup": {
+    "layer": "adapter"
+  }
+}

@@ -1,0 +1,94 @@
+D23 domain-only verification
+Base: afd02560f9546147da380382404eb6106222a9b8 (origin/feat/domain-core)
+Red: ff0255c1f4b505542b555231f98f14f306e8cba6
+Green implementation: eb296c42f451e5e48d77a664fc88ad7c2a72a6d1
+Additional red: ba5fa58a3f204b61d42c810f82109b09fa3376c0
+Additional green: de6256dff22e3bab3fe11972c18bd1992e481ad2
+Source-text red: 82c321568c46a729e92a323b62de7b8fbbee6201
+Source-text green: 2291e2b70314a899c4fcbcd8dfe63c695aac8863
+
+node --test --test-reporter=spec packages/domain/src/commitment-ledger.test.ts
+Red: 22 named failures, 0 passed, 0 file-level failures; exit 1.
+Green: 22 named passes, 0 failures; exit 0.
+Additional red: the strengthened duplicate-message test failed by accepting
+a different message under the retry action ID; 21 passed, 1 failed, exit 1.
+Additional green: the same attempt returns action-id-conflict; 22 pass.
+Source-text red: an invented obligation was accepted; 21 passed, 1 failed.
+Source-text green: invented text is rejected; multiple exact excerpts pass.
+
+npm test --silent
+45 tests passed, 0 failed; exit 0. The 23 inherited tests are included.
+npm run typecheck
+exit 0
+./node_modules/.bin/biome lint --error-on-warnings
+Checked 16 files, no fixes; exit 0.
+scripts/gates/testlint.ts lintTestFile on commitment-ledger.test.ts
+[]
+scripts/gates/gates.ts stub.run with origin/feat/domain-core base
+[]
+
+Domain tests exercise a proposed immutable snapshot, not physical persistence.
+The done resolver is a trusted injected predicate; external artifact existence and
+production actor authentication require host integration and separate acceptance.
+
+Round 1 rework (codex:f2b3dc7a-ec4a-4277-ba62-5bd978ce063e)
+The binding feature had three failing named tests at 077f44b61f9eadefd5fc78d049d1432446857219
+(22 passed, 3 failed), before the implementation at dd6f341f164ca94a5b7ad56646ba5ea2b0acf7bb
+(25 passed, 0 failed). Unbound Compute progress was accepted before and is rejected afterwards.
+For the subsequently added tests against already implemented behavior, e417a25e47f3e31b90d69f38a022c40e892888a0
+is a retrospective stub control: 49 named tests failed. Restoring the implementation in
+b0d71549bed4846044beca95f5c112b4b7f6ba1d made all 49 pass. This retrospective control
+does not establish that those supplementary tests were written before the original implementation.
+
+node --test packages/domain/src/commitment-ledger.test.ts: 49 passed, 0 failed.
+npm test: 72 passed, 0 failed, including 23 inherited tests.
+npm run typecheck: exit 0.
+npm run lint: exit 0, 16 files checked.
+node packages/domain/proof/commitment-ledger-mutations.mjs: 54 named mutants killed;
+the designated test's diagnostic must contain the declared marker. F09 and F19 detect
+the explicitly expected exception; an unrelated test or a file-level failure is not a kill.
+All 49 named tests have a declared mutant, and all 18 implemented rejection reason strings
+are asserted. Some tests cover multiple criteria; one mutant per test does not prove that
+every individual criterion is calibrated, so R-05 remains unverified.
+
+Round 2 criterion calibration (codex:99008d31-cc72-445d-bd0a-b9cb0a8d1882)
+The original 49 scenarios remain. There are 92 additional named criterion tests.
+The supplementary red control de5eca2de427e799a19baf6db33a03be05f9f192
+ran after the original implementation: 141 named failures, no file-level failures,
+no skips. Restoring the existing implementation in efb97a13484e32bb202bf52cb3442ac3017417ae
+gave 141 named passes, no failures or skips. Names and summaries from both actual
+runs are in commitment-ledger-round2-red-green.txt. An earlier round-2 pair was
+488359c and a27629e; the later pair includes all 141 current named tests.
+
+This is a retrospective stub control for supplementary tests, not evidence that
+every later criterion or test existed before its original implementation. The
+original feature's red/green sequence and the binding feature's earlier red/green
+sequence are listed above and remain unchanged.
+
+npm test --silent: 164 passed, 0 failed, 0 skipped, including 23 inherited tests.
+npm run typecheck: exit 0. npm run lint: exit 0, 16 files checked.
+node packages/domain/proof/commitment-ledger-mutations.mjs: 154/154 named
+mutations killed; 141/141 named tests mapped. The serial runner runs the unchanged
+same inputs as the negative control, checks a single injection site, and records
+the actual matched diagnostic and other criterion failures. F09, F19 and
+C93-C100 deliberately inject exceptions; the runner verifies those exception
+diagnostics instead of treating a file-load failure as a kill. The existing broad
+scenarios remain alongside isolated criteria, so dependent tests may also fail when
+a shared prerequisite is mutated; these collateral failures are shown in the log.
+These mutations calibrate the stated local criteria, not untested host integration
+or every conceivable implementation fault.
+
+Round 3 verification (previous figures above describe earlier runs)
+Final red c06c1420eb5c2fb3960e2b71d8aba774d7de49fe: 176 named failures, 0 passes, 0 file-level failures; retrospective stub after implementation.
+Final green d0d1ed9e4e4ee78d76d6458039a2fa43da21be5c: 176/176 named passes.
+npm run typecheck: exit 0; npm run lint: exit 0, 16 files checked; npm test: 199/199, 0 failed, 0 skipped.
+Serial mutation calibration: unchanged control 176/176; 176/176 named mappings; 190/190 killed, 0 survived.
+Round 2 review mutants R2-F01 through R2-F10 are included; each maps to a named test and diagnostic.
+The implementation is byte-identical to b37b2f0, and the full host-level AC-40 / AC-16 remain untested.
+
+Round 4 verification (previous figures above describe earlier runs)
+Retrospective red e58d1d78d325a7591b0dbdb5f811b7940ba5807b: 206 named failures, 0 passes, 0 file-level failures; the stub is after the original implementation.
+Green 632fea7becca780f1d972d830ea4b69aa462ef2d: 206/206 named passes; implementation identical to a0eff90.
+npm run typecheck and lint: exit 0; npm test: 229/229 pass, 0 failed, 0 skipped, 0 todo.
+Serial mutation calibration: unchanged control 206/206; 206/206 named mappings; 221/221 killed, 0 survived, including all R3-F01–R3-F27 with named diagnostics.
+R-05 remains untested in full: a passing listed mutation set alone does not prove calibration of every criterion.

@@ -1,0 +1,15 @@
+{
+  "slice": "交活后没有跨厂商审查人(或审查没做成)时不审,任务直接进 T8a 待确认,不再停在 T5_InReview(需求 §8.1 已定 1);沉默一直待确认;提出者本人普通回复或 tasks.accept 验到 T8,没经审查的交付如实记 waived-by-user;回退不再对已交付待确认的任务声称取消",
+  "acceptance": [
+    { "id": "AC-28", "status": "未测", "reason": "确定性层有具名测试:packages/domain/src/task-unreviewed.test.ts 7 条、packages/server/src/delivery-t8a.test.ts 6 条(经 createService:T8a、沉默、本人通过到 T8、他人与旧版本阴性),红 packages/server/proof/q09-t8a/red.txt(38 条按名失败)、绿 green.txt(264/264);打包版真实模型的 T8a→确认→T8 在叠加片 feat/q09-packaged-accept 验,独立审查待做" },
+    { "id": "AC-26", "status": "未测", "reason": "有合格审查人的路径未改;没有审查人/审查没做成由「停在 T5」改为「进 T8a、门禁 none,本人验收记 waived-by-user」,review.test.ts、review-actual.test.ts 对应用例已改期望;正式验收待审" },
+    { "id": "AC-48", "status": "未测", "reason": "回退不再把 T8a 任务列为取消(状态机对 T8a 的 Cancel 本来就是空操作,原文案会声称已取消);rewind.test.ts 一条改写;其余条目不在本片" }
+  ],
+  "author": { "agent": "claude", "session": "claude:bf4ef95e-9b68-4262-a62d-ca75f35d1208", "model": "group/opus" },
+  "red": { "commit": "398a202c" },
+  "unverifiable": "AC-28:绿靠规则替身脑子与剧本 Compute,真实联系人是否把「通过」转成 verdict 这里验不到(由打包版真实模型验收补)。存量测试文件改了期望(T5→T8a),G-TAUTO 可能把这些文件里旧的弱测试一并报出;retry.test.ts 的 F13 用例把任务放回 T5 态核对守卫,判的是领域 apply 的结果。reviewFallback 之后任务在 T8a,复核失败说明消息仍会发,用户看到两条(交付 + 说明)。",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审",
+  "notes": "接手 T-186:原作者 Astra(codex:6ffb8674-ed13-4fa8-8380-aef9c5062e09)中断,用户 DM#3281 定改由 Claude Code 写。叠在 PR #75(feat/desktop-closed-loop bbb245b2)上。全量:typecheck/lint 0,npm test 1643/1643,gates:selftest 219/219(不经管道,退出码 0)。"
+}

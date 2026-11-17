@@ -1,0 +1,79 @@
+# AC-51 经宿主的真实运行(补充,2026-11-09 20:35 +0800 本机,接手会话 claude:6cc08ff4-6b3e-4c77-8c0c-740d8ab6b882)
+# 被测代码:feat/model-hotswap-wire(d0cc0e6 + 本提交前一个提交里对实跑脚本的改动:第 2 轮也收「换模型被拒」并打印进度),真实 Claude Code 2.1.319 常驻适配器(claudeCompute)+ 规则替身联系人脑子。
+# 目的:上一份 e2e-model-hotswap.txt 的网关端点把所有请求交给 claude-opus-5-5,只证明了请求模型跟上;这次想用两条真实上游让网关「实际服务的模型」也跟着换。
+#
+# 运行一(下面第一段原文):命令 node packages/server/scripts/e2e-model-hotswap.ts "anyrouter/claude-opus-5-5" "workbuddy-ai/deepseek-v4.1-flash-sg"
+#   结果:第 1 轮网关实际服务 claude-opus-5-5;用户把 Compute 改成 deepseek 后,Claude Code 在轮边界发 set_model,上游 WorkBuddy 回 429(额度用完),
+#   set_model 回包 error「… model not changed」、error_code rate_limit → 适配器返回 model-switch-failed → 宿主这一轮不发出、记 blocked/model 进度,
+#   联系人向用户说明原因与两条修复路径(单独指定兼容模型 / 更换 Harness);网关在切换探测之后没有任何请求,账本只有 start=A,没有退回旧模型继续跑。
+#   这是 AC-51 ④「切换失败不静默」第一次由真实 harness 触发(此前只在假 CLI 上验证,feat/cc-resident)。
+# 运行二(第二段原文,用改动前的脚本 d0cc0e6):命令 node packages/server/scripts/e2e-model-hotswap.ts "workbuddy-ai/deepseek-v4.1-flash-sg" "anyrouter/claude-opus-5-5"
+#   结果:第 1 轮网关实际服务 deepseek-v4.1-flash-sg(真实 deepseek);换到 anyrouter 时 set_model 的探测请求 15 秒没回包(网关记 499),第 2 轮没有发出,
+#   旧脚本只等「第 2 轮完成」,240 秒后退出,宿主侧的消息与进度没打印(网关行为另从 ~/.config/magpie/usage.jsonl 按会话 id 摘取,附在后面)。
+# 仍没证明的:AC-51 ① 的「同一会话里换成功、网关实际服务的模型也跟着变」。需要两条同时可用的上游;运行时只有 anyrouter 可用
+#   (WorkBuddy 20:10 起 429 额度用完,fnqtz 11:14 起 503,ai-iisbo 11-08 起 401),等有第二条可用上游时用同一命令重跑即可。
+# 附注:运行一里联系人看到的说明有一处重复「这一轮没有发出。这一轮没有发出;」(适配器原因末尾和宿主文案各写了一次),不影响行为,留给审查后一并改。
+# 网关地址与令牌只经环境变量交给 Claude Code,未打印。
+
+== 运行一 原文 ==
+[0.0s] 模型 A=anyrouter/claude-opus-5-5 B=workbuddy-ai/deepseek-v4.1-flash-sg;联系人 Compute 继承全局(compute 继承全局 → 全局 Compute 默认 anyrouter/claude-opus-5-5)
+(node:43165) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[0.8s] compute 事件 {"kind":"started","sessionId":"f36cfad8-0f2c-4f57-a46c-63175793e9df","pid":43236,"model":"anyrouter/claude-opus-5-5"}
+[153.7s] compute 事件 {"kind":"completed","model":"anyrouter/claude-opus-5-5","models":["anyrouter/claude-opus-5-5"]}
+[153.7s] 第 1 轮结束,任务 t-mw98v41k-1 状态 T5_InReview
+[153.7s] 用户把联系人的 Compute 改成 workbuddy-ai/deepseek-v4.1-flash-sg;解析链:compute 单独指定 workbuddy-ai/deepseek-v4.1-flash-sg
+[154.5s] 第 2 轮后任务状态 T3_Running
+[154.5s] 进度:[{"kind":"started","summary":"已开始"},{"kind":"completed","summary":"我在当前目录写好了 hello.txt,内容是 `ok`,末尾没有换行,读出来确认过没问题。暗号我也记住了,需要时问我就行。宿主那边已经报了完成。"},{"kind":"blocked","stage":"model","summary":"换模型没成功:换到模型 workbuddy-ai/deepseek-v4.1-flash-sg 失败:API error: 429 WorkBuddy AI: Credits exhausted. Please visit the link below to purchase add-on packs and get more credits: https://www.codebuddy.ai/profile/usage — WorkBuddy requires an active credit package even for 0-rate free models; check your account package balance · model not changed(rate_limit);这一轮没有发出。这一轮没有发出;可以单独指定一个兼容的模型,或更换支持该模型的 Harness"}]
+[154.5s] started 事件数=1;会话=f36cfad8-0f2c-4f57-a46c-63175793e9df;pid=43236
+[154.5s] completed 事件实际模型:[["anyrouter/claude-opus-5-5"]]
+[154.5s] code.txt 不存在
+[154.5s] 任务启动快照={"harness":"claude-code","model":"anyrouter/claude-opus-5-5","effort":"low","vendor":"anthropic"}
+[154.5s] 任务尝试账本=[[1,"start","anyrouter/claude-opus-5-5","low"]]
+[154.5s] 累积厂商=["anthropic"]
+[154.5s] 会话消息:
+  #1 user: 帮我记住暗号 PLUM-7731,然后在当前目录写一个 hello.txt,内容是 ok,写好就汇报完成
+  #2 contact: 接了任务:记住暗号 PLUM-7731,然后在当前目录写一个 hello.txt,内容是 
+  #3 contact: 好的,我安排 Compute 去记住暗号 PLUM-7731,然后在当前目录写一个 hello.txt,内容是 ok,写好就汇报完成,有进度告诉你。
+  #4 contact: 做完了:我在当前目录写好了 hello.txt,内容是 `ok`,末尾没有换行,读出来确认过没问题。暗号我也记住了,需要时问我就行。宿主那边已经报了完成。
+  #5 user: 退回:把我让你记住的暗号写进当前目录的 code.txt,只写暗号本身,写好汇报完成
+  #6 contact: 收到:退回:把我让你记住的暗号写进当前目录的 code.txt,只写暗号本身,写好汇报完成
+  #7 contact: 需要你帮忙:换模型没成功:换到模型 workbuddy-ai/deepseek-v4.1-flash-sg 失败:API error: 429 WorkBuddy AI: Credits exhausted. Please visit the link below to purchase add-on packs an
+
+== 网关用量日志中本次会话(f36cfad8-0f2c-4f57-a46c-63175793e9df)的请求,共 5 条 ==
+{"t":"2026-11-09T20:35:29.779493+08:00","req":"anyrouter/claude-opus-5-5","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"low","status":200,"stop":"tool_use"}
+{"t":"2026-11-09T20:36:13.007916+08:00","req":"anyrouter/claude-opus-5-5","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"low","status":200,"stop":"tool_use"}
+{"t":"2026-11-09T20:36:47.418423+08:00","req":"anyrouter/claude-opus-5-5","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"low","status":200,"stop":"tool_use"}
+{"t":"2026-11-09T20:37:24.372057+08:00","req":"anyrouter/claude-opus-5-5","model":"claude-opus-5-5","served":"claude-opus-5-5","effort":"low","status":200,"stop":"end_turn"}
+{"t":"2026-11-09T20:38:02.669488+08:00","req":"workbuddy-ai/deepseek-v4.1-flash-sg","model":"deepseek-v4.1-flash-sg","status":429}
+[154.7s] compute 事件 {"kind":"stopped"}
+[155.0s] 宿主关闭后 Claude Code 进程 43236 已退出;停止事件数=1
+[155.0s] 临时目录已删
+
+== 运行二 原文(改动前的脚本)==
+[0.0s] 模型 A=workbuddy-ai/deepseek-v4.1-flash-sg B=anyrouter/claude-opus-5-5;联系人 Compute 继承全局(compute 继承全局 → 全局 Compute 默认 workbuddy-ai/deepseek-v4.1-flash-sg)
+(node:14264) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[0.6s] compute 事件 {"kind":"started","sessionId":"b4b1faf7-cff2-48a6-a97a-501ce2a02fdd","pid":14276,"model":"workbuddy-ai/deepseek-v4.1-flash-sg"}
+[9.3s] compute 事件 {"kind":"completed","model":"workbuddy-ai/deepseek-v4.1-flash-sg","models":["workbuddy-ai/deepseek-v4.1-flash-sg"]}
+[9.3s] 第 1 轮结束,任务 t-mw97d9bz-1 状态 T5_InReview
+[9.3s] 用户把联系人的 Compute 改成 anyrouter/claude-opus-5-5;解析链:compute 单独指定 anyrouter/claude-opus-5-5
+[249.4s] compute 事件 {"kind":"stopped"}
+[249.7s] 宿主关闭后 Claude Code 进程 14276 已退出;停止事件数=1
+[249.7s] 临时目录已删
+file:///private/tmp/gg-d/packages/server/scripts/e2e-model-hotswap.ts:43
+    if (Date.now() > end) throw new Error(`等不到:${what}`);
+                                ^
+
+Error: 等不到:第 2 轮完成
+    at wait (file:///private/tmp/gg-d/packages/server/scripts/e2e-model-hotswap.ts:43:33)
+    at async file:///private/tmp/gg-d/packages/server/scripts/e2e-model-hotswap.ts:62:3
+
+Node.js v22.22.0
+
+== 运行二 网关记录(按会话 id b4b1faf7-cff2-48a6-a97a-501ce2a02fdd 从 usage.jsonl 摘取)==
+{"t": "2026-11-09T19:53:37.017846+08:00", "req": "workbuddy-ai/deepseek-v4.1-flash-sg", "model": "deepseek-v4.1-flash-sg", "served": "deepseek-v4.1-flash-sg", "effort": "low", "status": 200, "stop": "tool_calls", "ms": 2163}
+{"t": "2026-11-09T19:53:40.623695+08:00", "req": "workbuddy-ai/deepseek-v4.1-flash-sg", "model": "deepseek-v4.1-flash-sg", "served": "deepseek-v4.1-flash-sg", "effort": "low", "status": 200, "stop": "tool_calls", "ms": 1735}
+{"t": "2026-11-09T19:53:42.411827+08:00", "req": "workbuddy-ai/deepseek-v4.1-flash-sg", "model": "deepseek-v4.1-flash-sg", "served": "deepseek-v4.1-flash-sg", "effort": "low", "status": 200, "stop": "tool_calls", "ms": 1819}
+{"t": "2026-11-09T19:53:44.254449+08:00", "req": "workbuddy-ai/deepseek-v4.1-flash-sg", "model": "deepseek-v4.1-flash-sg", "served": "deepseek-v4.1-flash-sg", "effort": "low", "status": 200, "stop": "stop", "ms": 1392}
+{"t": "2026-11-09T19:53:45.688415+08:00", "req": "anyrouter/claude-opus-5-5", "model": "claude-opus-5-5", "served": null, "effort": null, "status": 499, "stop": null, "ms": 15026}

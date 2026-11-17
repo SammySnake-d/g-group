@@ -1,0 +1,13 @@
+{
+  "slice": "锁文件补齐 @biomejs/biome 各平台可选依赖条目,让 Linux 上 npm ci 装得上 biome、self-check 的 lint 能跑(只新增 9 个锁文件条目,版本不变)",
+  "acceptance": [
+    { "id": "R-07", "status": "通过", "evidence": "scripts/proof/lockfile-platforms.txt" },
+    { "id": "R-02", "status": "未测", "reason": "只改依赖锁文件,没有源码和测试;红绿以 npm ci 按 Linux 平台安装的改前/改后对比代替(见证据文件)" }
+  ],
+  "author": { "agent": "claude", "session": "claude:6cc08ff4-6b3e-4c77-8c0c-740d8ab6b882", "model": "claude-opus-5-5" },
+  "red": null,
+  "unverifiable": "R-07:本机是 macOS,按 --os=linux 安装只证明锁文件里有 Linux 包且 npm 会选中它,不证明 Linux 二进制能跑;真正在 Linux 上跑 lint 以本 PR 的 GitHub self-check 为准。云电脑当时 DNS 不通,没能在 box3 上跑",
+  "waiver": null,
+  "review": null,
+  "review_status": "待审"
+}

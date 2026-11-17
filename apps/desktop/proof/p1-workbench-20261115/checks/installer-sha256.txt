@@ -1,0 +1,1 @@
+4b3e6bceb88ec2c97958eb3603b9982d47e22c67e6f43fb475c9759fa704cc37  apps/desktop/release/g-group-0.1.1-preview.3-arm64.dmg
