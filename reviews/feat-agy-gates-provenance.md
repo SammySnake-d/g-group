@@ -120,3 +120,22 @@ Each fault had a passing unmodified control; all three failed for the intended r
 **Scope:** Owner-authorized Day-0 bootstrap onto `dev/agy-backend` at `1ec576d5`. The existing judge on `origin/$BASE_REF` remains authoritative in `scripts/merge.sh`; the expected pre-B0 harness incompatibility is not a rejection of the candidate and this review does not waive the trusted judge. No live Linux Docker test or GitHub merge was performed.
 
 Candidate `--local`: **8/8 passed**, exit 0; 17 changed files inspected. `G-PROVENANCE` and `G-REVIEW` passed using the live sessions and the reviewed content hash stayed unchanged.
+
+## Round 4 — APPROVE
+
+- PR #119: `feat/agy-gates-provenance` → `dev/agy-backend`; reviewed HEAD `0b15b9b50d692edfdca608b94d8c9edadbbf68fc`, base `1ec576d5217d2a6301014c8479b111560dc4abec`.
+- Reviewer: `codex-cli:01a1ebce-a7e7-71d2-aee5-e7a71ee3bdc5`, `shayu/gpt-6.2-sol` (OpenAI); native `session_meta.cwd` matched the review checkout and the standalone hash command returned `b1b6107c3b63c3e42d0f138d6ea22442dfaa0c8ae723ba607bf16fa3ed788e37`.
+- Local checks (macOS, Node v22.22.0): typecheck, Biome lint and both shell syntax checks passed; `npm test` **1696/1696**, `gates:selftest` **251/251**, `GATE_MUTATION_JOBS=2 npm run gates:mutation` **152/152 killed**, zero survivors.
+
+**Linux CI root cause and fix.** In [the previous Ubuntu self-check](https://github.com/SammySnake-d/g-group/actions/runs/44190122192), `npm test` exited 1 after the visible TAP output ended mid-line at test 226, without the top-level summary. `test-runner.ts` had queued stdout/stderr writes and then force-exited before the asynchronous pipes flushed. It now assigns `process.exitCode` on failure so both streams can drain while retaining the intended status; lines 10–29 are byte-identical to Round 3, preserving the `mutation.ts` injection anchors. `merge.sh` no longer reopens `/dev/stderr` through `tee`; it captures the judge output, prints to inherited fd 2 and preserves a failing judge status. It also replaces `< <(...)` with a checked `gh pr view` capture and a here-string. It **uses**, rather than removes, explicit origin-tracking fetch refspecs for both head and base. The pinned head and base judge still govern the merge.
+
+**Independent Red/Green replay.** The two test files were byte-identical at reviewed HEAD, Red (`155da62c7df7f721a32a184b11bcc981e30023b1`) and Green (`94e90d1621ca55568629e6897b41802c88236a99`). `node --test scripts/gates/antigravity.test.ts scripts/gates/test-runner.test.ts` failed exactly the two tests below on Red (**16/18 passed**, exit 1) and passed **18/18** on Green (exit 0). Each single-site fault restored independently on Green failed only its matching named test (**17/18 passed**, exit 1).
+
+| Regression test | Observed Red and isolated fault evidence |
+| --- | --- |
+| `scripts/merge.sh 动态基座分支保护查询区分 200(--required)、404 未保护(无 --required)与 500 故障(fail-closed)` | The `tee` fixture deterministically rejects `/dev/stderr`; reintroducing `\| tee /dev/stderr` reproduced `tee: /dev/stderr: Permission denied`. The Green fixture exercised 200, 404 and fail-closed 500. |
+| `有失败用例且 TAP 输出超 128KB 时完整刷新管道不截断末尾失败汇总` | The oversized TAP fixture requires the terminal `final-fail` and `# fail 1`. Replacing the child-failure `process.exitCode` assignment with immediate `process.exit(...)` reproduced `missing final-fail in 65536-byte TAP output`. |
+
+The isolated fault clone was removed. The [Ubuntu self-check for the reviewed SHA](https://github.com/SammySnake-d/g-group/actions/runs/44198031044) was **in progress** at the wait-free check. The `tee` permission error was replayed with the fixture, not a live GitHub merge; no local Linux Docker execution was performed. No waiver or earlier review text was changed.
+
+Candidate `--local`: **8/8 passed**, exit 0. Both `G-PROVENANCE` and `G-REVIEW` passed against the native records, and `CONTENT_HASH` matched the standalone hash.
