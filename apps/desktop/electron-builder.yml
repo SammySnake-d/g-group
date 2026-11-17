@@ -11,6 +11,7 @@ files:
   - package.json
   - dist/**/*
   - dist-electron/**/*
+  - third-party/**/*
 asar: true
 # Compute 的汇报工具由 claude 命令以子进程拉起,要放在 asar 外面
 asarUnpack:
@@ -21,6 +22,8 @@ extraResources:
 # 不装运行时依赖:主进程、宿主与渲染层都已由 vite 打成单文件
 npmRebuild: false
 electronVersion: 39.8.10
+# Keep the shipped Chinese/English locales; electron-builder prunes before signing.
+electronLanguages: [en, en-US, en-GB, zh-CN, zh-TW]
 mac:
   category: public.app-category.productivity
   target:

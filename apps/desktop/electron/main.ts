@@ -13,6 +13,7 @@ import { Backend } from "./backend.ts";
 import { initLog, log } from "./log.ts";
 import { fixPath } from "./shell-env.ts";
 import { DEFAULT_FEED, Updater } from "./updater.ts";
+import { rendererPermissionAllowed } from "./renderer-permissions.ts";
 
 // 测试与验收可以把整个应用的数据放到别处(设置、数据库、更新下载),不碰用户自己的那份
 if (process.env.GG_USER_DATA_DIR) app.setPath("userData", process.env.GG_USER_DATA_DIR);
@@ -159,8 +160,15 @@ app.whenReady().then(async () => {
     setTimeout(() => void updater.check(), 10_000);
     setInterval(() => void updater.check(), UPDATE_CHECK_EVERY_MS);
   }
-  // 渲染层不申请任何系统权限(摄像头、通知、定位……)
-  session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
+  // 原版代码块的复制按钮只需写剪贴板;读剪贴板与其他系统权限仍拒绝。
+  session.defaultSession.setPermissionCheckHandler((wc, permission, origin, details) => rendererPermissionAllowed(permission, {
+    isMainFrame: details.isMainFrame, requestingUrl: details.requestingUrl ?? origin,
+    topLevelUrl: wc?.getURL() ?? "", focused: wc?.isFocused() ?? false,
+  }, DEV_ORIGIN));
+  session.defaultSession.setPermissionRequestHandler((wc, permission, cb, details) => cb(rendererPermissionAllowed(permission, {
+    isMainFrame: details.isMainFrame, requestingUrl: details.requestingUrl,
+    topLevelUrl: wc.getURL(), focused: wc.isFocused(),
+  }, DEV_ORIGIN)));
   createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

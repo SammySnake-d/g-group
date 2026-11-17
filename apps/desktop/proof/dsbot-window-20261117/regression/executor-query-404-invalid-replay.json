@@ -1,0 +1,15 @@
+{
+  "mode": "packaged pi/Host/IPC/UI with local SSE error fixture",
+  "realModelAcceptance": false,
+  "appPath": "/tmp/dsbot-astra-20261117/delivery5/g-group.app",
+  "model": "fengshao1227/deepseek-v4.1-flash",
+  "startedAt": "2026-11-17T10:48:10.429Z",
+  "errors": [
+    "Error: expect(locator).toContainText(expected) failed\n\nLocator: locator('.dsb-flow')\nExpected substring: \"11102\"\nReceived string:    \"今天 18:48离线错误回放，不发真实模型请求错误回放联系人 这一轮没回成:未识别的失败\"\nTimeout: 5000ms\n\nCall log:\n  - Expect \"toContainText\" locator('.dsb-flow') with timeout 5000ms\n  - waiting for locator('.dsb-flow')\n    6 × locator resolved to <div role=\"feed\" class=\"dsb-flow\" data-chat-flow=\"\" aria-busy=\"false\" aria-label=\"错误回放联系人\">…</div>\n      - unexpected value \"今天 18:48离线错误回放，不发真实模型请求\"\n    8 × locator resolved to <div role=\"feed\" class=\"dsb-flow\" data-chat-flow=\"\" aria-busy=\"false\" aria-label=\"错误回放联系人\">…</div>\n      - unexpected value \"今天 18:48离线错误回放，不发真实模型请求错误回放联系人 这一轮没回成:未识别的失败\"\n\n    at captureRawStack (/Users/snakesammy/.mirasim/assistants/deliverables/g-group-ds-bot-frontend-20261116/apps/desktop/node_modules/playwright-core/lib/coreBundle.js:9551:17)\n    at callMatcherAsStep (/Users/snakesammy/.mirasim/assistants/deliverables/g-group-ds-bot-frontend-20261116/apps/desktop/node_modules/playwright/lib/matchers/expect.js:13342:57)\n    at Object.toContainText (/Users/snakesammy/.mirasim/assistants/deliverables/g-group-ds-bot-frontend-20261116/apps/desktop/node_modules/playwright/lib/matchers/expect.js:13334:23)\n    at /Users/snakesammy/.mirasim/assistants/deliverables/g-group-ds-bot-frontend-20261116/apps/desktop/verify/dsbot-packaged-error.mjs:50:42"
+  ],
+  "outcome": "failed-control",
+  "temporaryCredentialRemoved": true,
+  "requests": [],
+  "asarSha256": "7861180f6a5281c7e9f21095d9b0731778045579293f6d58df4669e4e0952067",
+  "finishedAt": "2026-11-17T10:48:20.949Z"
+}

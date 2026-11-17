@@ -1257,9 +1257,7 @@ export function BrandMark({ size = 24 }) {
   return h('span', { className: 'bt-brand-whale' }, h(BotMark, { look: MAIN_LOOK, size }))
 }
 export function BrandName() {
-  return h(Fragment, null,
-    h(BrandMark, { size: 24 }),
-    h('span', { style: { fontWeight: 600, fontSize: 14 } }, 'DS Bot'))
+  return h('span', { style: { fontWeight: 600, fontSize: 14 } }, 'DS Bot')
 }
 
 // With the whale holding the settings seat, the Bot row is just the account menu;

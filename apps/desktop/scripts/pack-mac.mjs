@@ -29,6 +29,9 @@ mkdirSync(stage, { recursive: true });
 cpSync(path.join(here, "dist"), path.join(stage, "dist"), { recursive: true });
 cpSync(path.join(here, "dist-electron"), path.join(stage, "dist-electron"), { recursive: true, filter: (s) => !s.endsWith(".map") });
 cpSync(path.join(repo, "packages/server/catalog"), path.join(stage, "catalog"), { recursive: true });
+// The renderer is an Apache-2.0 derivative: ship provenance and notices in the
+// actual application, not only in the source checkout.
+cpSync(path.join(repo, "third_party/ds-bot"), path.join(stage, "third-party/ds-bot"), { recursive: true });
 writeFileSync(
   path.join(stage, "package.json"),
   JSON.stringify({ name: "g-group", productName: "g-group", version, description: pkg.description, author: "SammySnake-d", main: "dist-electron/main.cjs", license: "UNLICENSED" }, null, 2),

@@ -1,9 +1,5 @@
 import { createElement as h, Fragment, useEffect, useRef, useState } from 'react'
-const ui = {
-  projectUserText: (text) => text,
-  fileExtension: (name) => String(name ?? '').split('.').at(-1) ?? '',
-  fileSizeText: (bytes) => Number.isFinite(bytes) ? `${bytes} B` : '',
-}
+import * as ui from '@deepseek-ai/dsh-client-ui-primitives'
 import { imPlatform } from '../shared/im-platforms.js'
 import { mentionSpans } from '../shared/mentions.js'
 import { BotMark } from './mark.js'
