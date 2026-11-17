@@ -1,0 +1,26 @@
+receipts/feat-agy-gates-provenance.json
+  h_f33e46a035b77c 1-46
+scripts/gates/proof/agy-lint.txt
+  h_f33e46a035b77c 1-2
+scripts/gates/proof/agy-mutation.txt
+  h_f33e46a035b77c 1-151
+scripts/gates/proof/agy-red.txt
+  h_f33e46a035b77c 1-56
+scripts/gates/proof/agy-selftest.txt
+  h_f33e46a035b77c 1-261
+scripts/gates/proof/agy-test.txt
+  h_f33e46a035b77c 1-229
+scripts/gates/proof/agy-typecheck.txt
+  h_f33e46a035b77c 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "932ce94a6ca08fe58ba7ccf585ae0d132ade64c6",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
