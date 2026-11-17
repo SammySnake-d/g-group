@@ -11,8 +11,9 @@ PR="$1"
 # 剥掉 hook 可能注入的 GIT_* 环境,避免写到别的仓库
 for v in $(env | sed -n 's/^\(GIT_[A-Za-z_]*\)=.*/\1/p'); do unset "$v"; done
 REPO_ROOT=$(git rev-parse --show-toplevel)
-read -r BR SHA BASE_REF < <(gh pr view "$PR" --json headRefName,headRefOid,baseRefName -q '.headRefName + " " + .headRefOid + " " + .baseRefName')
-git -C "$REPO_ROOT" fetch -q origin "$BR" "$BASE_REF"
+PR_META=$(gh pr view "$PR" --json headRefName,headRefOid,baseRefName -q '.headRefName + " " + .headRefOid + " " + .baseRefName')
+read -r BR SHA BASE_REF <<< "$PR_META"
+git -C "$REPO_ROOT" fetch -q origin "+refs/heads/$BR:refs/remotes/origin/$BR" "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
 TMP=$(mktemp -d)
 cleanup() { git -C "$REPO_ROOT" worktree remove --force "$TMP/pr" >/dev/null 2>&1 || true; git -C "$REPO_ROOT" worktree remove --force "$TMP/judge" >/dev/null 2>&1 || true; rm -rf "$TMP"; }
 trap cleanup EXIT
@@ -26,7 +27,13 @@ else
 fi
 (cd "$JUDGE" && npm ci --silent)
 (cd "$TMP/pr" && npm ci --silent --ignore-scripts)
-OUT=$(node "$JUDGE/scripts/gates/run-all.ts" --repo="$TMP/pr" --base="origin/$BASE_REF" --branch="$BR" --pr="$PR" --local | tee /dev/stderr)
+if OUT=$(node "$JUDGE/scripts/gates/run-all.ts" --repo="$TMP/pr" --base="origin/$BASE_REF" --branch="$BR" --pr="$PR" --local); then
+  printf '%s\n' "$OUT" >&2
+else
+  GATE_RC=$?
+  [ -z "$OUT" ] || printf '%s\n' "$OUT" >&2
+  exit "$GATE_RC"
+fi
 HASH=$(printf '%s\n' "$OUT" | sed -n 's/^CONTENT_HASH=//p')
 [ -n "$HASH" ] || { echo "门禁没有给出内容 hash"; exit 1; }
 gh api -X POST "repos/{owner}/{repo}/statuses/$SHA" -f state=success -f context=provenance \

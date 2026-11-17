@@ -30,13 +30,26 @@ export function verdict(tap: string): string | undefined {
 
 if (import.meta.main) {
   const globs = process.argv.slice(2);
-  if (globs.length === 0) { console.error("test-runner:没有给测试文件 glob"); process.exit(2); }
-  const r = spawnSync(process.execPath, ["--test", "--test-reporter=tap", ...globs], { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
-  process.stdout.write(r.stdout ?? "");
-  process.stderr.write(r.stderr ?? "");
-  if (r.error) { console.error(`test-runner:node --test 没能运行:${r.error.message}`); process.exit(1); }
-  if (r.status !== 0) process.exit(r.status ?? 1);
-  const why = verdict(r.stdout ?? "");
-  if (why) { console.error(`test-runner:${why}(glob:${globs.join(" ")})`); process.exit(1); }
-  console.error(`test-runner:实际执行并通过 ${summary(r.stdout ?? "", "pass")} 条用例`);
+  if (globs.length === 0) {
+    console.error("test-runner:没有给测试文件 glob");
+    process.exitCode = 2;
+  } else {
+    const r = spawnSync(process.execPath, ["--test", "--test-reporter=tap", ...globs], { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+    process.stdout.write(r.stdout ?? "");
+    process.stderr.write(r.stderr ?? "");
+    if (r.error) {
+      console.error(`test-runner:node --test 没能运行:${r.error.message}`);
+      process.exitCode = 1;
+    } else if (r.status !== 0) {
+      process.exitCode = r.status ?? 1;
+    } else {
+      const why = verdict(r.stdout ?? "");
+      if (why) {
+        console.error(`test-runner:${why}(glob:${globs.join(" ")})`);
+        process.exitCode = 1;
+      } else {
+        console.error(`test-runner:实际执行并通过 ${summary(r.stdout ?? "", "pass")} 条用例`);
+      }
+    }
+  }
 }
