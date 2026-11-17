@@ -1,0 +1,91 @@
+Red commit: 5e7b6922 (test(gates): 红提交 — Antigravity 逐轮模型绑定、规范化沙箱根、codex-cli 与 merge 门禁测试 [skip ci])
+=== scripts/gates/*.test.ts named failures on Red (25 failed: antigravity.test.ts 8/8 + workspace-isolation.test.ts 17/19) ===
+not ok 1 - stripRunCommandWrapper 仅在退出码为 0 时剥离单层与双重 Created At 包装头并规范化 \\r\\n
+not ok 2 - agyStepsToTurns 按位置配对多工具调用并按 step_index 逐轮绑定模型,未匹配轮次保持 undefined 不涂抹
+not ok 3 - agyRecoverStepModels 只取每行末尾 2KB trailer 抗 >20KB 前缀污染,并从活跃 WAL 恢复逐轮 step_index -> model
+not ok 4 - loadSession 支持 antigravity 逐轮换模保留、未匹配轮次保持 unknown、派生根共享与软链逃逸拦截
+not ok 5 - turnTouchesRepo 识别 edit_file/run_command 与大写 Path/TargetFile,并对无路径写调用保守计入
+not ok 6 - stripCodexExecWrapper 仅在退出码为 0 时剥离完整与精简包装头并规范化 \\r\\n
+not ok 7 - codexCliRolloutToTurns 与 loadSession 支持日期目录检索、session_meta 身份核对与软链逃逸拦截
+not ok 8 - scripts/merge.sh 动态基座分支保护查询区分 200(--required)、404 未保护(无 --required)与 500 故障(fail-closed)
+not ok 17 - 普通副本经 scoped/unscoped workspace 别名加载自身冻结源码,不回读后来变化的原树,外部依赖仍可读
+not ok 18 - 红快照再复制后 workspace 别名只加载红源码,不把候选源码混进先红证据
+not ok 19 - 变异副本再复制后 workspace 别名加载变异源码,不绕过 copyTree 中的实现变更
+not ok 20 - 副本缺少的 workspace 包不能从原树偷载,必须保留模块加载失败
+not ok 21 - 同一 scope 下重绑 workspace 时,同级外部包仍能读取
+not ok 22 - workspace 指向仓内二次链接到副本外时不得跟随原树,缺少副本源码应失败
+not ok 24 - 依赖目录损坏时拒绝创建半成品副本,不回退到原树
+not ok 25 - node_modules 链接悬空时拒绝运行,不能静默当作没有依赖
+not ok 26 - 2层副本的 workspace 使用各层源码且 Docker 计划只挂真实依赖来源
+not ok 27 - 3层副本的 workspace 使用各层源码且 Docker 计划只挂真实依赖来源
+not ok 28 - 从副本创建变异树后再次复制,依赖挂载仍回到可信原始目录
+not ok 29 - 绝对 scoped workspace 链跨多层副本仍只加载末层源码
+not ok 31 - 另一进程拿到来源未知的 overlay 时拒绝,不能由可伪造的文件授权额外挂载
+not ok 32 - 已删除副本的同路径新目录不能继承旧副本的依赖授权
+not ok 33 - 原依赖目录被替换后不能沿用旧副本的来源授权
+not ok 34 - 原依赖目录内包软链变更到未知位置时拒绝沿用授权
+not ok 35 - 未知来源的外部包软链不能扩大依赖挂载范围
+# tests 35
+# pass 10
+# fail 25
+=== gates:selftest new cases on Red (30/30 failed) ===
+✗ 放行:opus-agy 审 carbon(antigravity)作者放行(跨厂商 Anthropic/Google) (2s)
+✗ 拦下:opus-agy 审 Anthropic 模型作者被拦(同为 anthropic) (2s)
+✗ 拦下:opus-agy 审查会话必须是 antigravity 会话 (2s)
+✗ 放行:hydrogen 审 claude(antigravity)作者放行(跨厂商 Google/Anthropic) (2s)
+✗ 放行:hydrogen 审 codex 作者放行(跨厂商 Google/OpenAI) (2s)
+✗ 拦下:hydrogen 审 Google 模型作者被拦(同为 google) (2s)
+✗ 拦下:antigravity 会话软链逃逸被拦 (2s)
+✗ 放行:antigravity 回退读 transcript.jsonl 放行 (2s)
+✗ 拦下:antigravity 审查 hash 不匹配被拦 (2s)
+✗ 放行:antigravity 大 prompt blob 与非占位符行不干扰 sqlite 模型识别 (2s)
+✗ 拦下:antigravity 作者中途换模(先 anthropic 后 google)累积生产厂商被拦 (2s)
+✗ 拦下:antigravity 作者存在未匹配到 gen_metadata 的工具轮次按 unknown 拦下 (2s)
+✗ 拦下:antigravity 审查 hash 命令退出码非零被拦 (2s)
+✗ 放行:antigravity run_command 双重 header 与 \r\n 被正确剥离 (2s)
+✗ 放行:antigravity 作者 edit_file 相对 Path 参数按 cwd 解析进本仓库 (2s)
+✗ 放行:antigravity 作者 edit_file 无路径时按写操作计入产出 (2s)
+✗ 拦下:antigravity 作者后续轮次同厂商 run_command 无路径也被拦 (2s)
+✗ 放行:R7-01 沙箱拦 .gemini/antigravity/brain、plugin_data 与 conversations 读取 (0s)
+✗ 放行:codex-cli 审 carbon(antigravity)作者放行(跨厂商 OpenAI/Google) (2s)
+✗ 拦下:codex-cli 审 OpenAI 模型作者被拦(同为 openai) (2s)
+✗ 拦下:codex-cli 审查会话必须是 codex-cli 会话 (2s)
+✗ 拦下:codex-cli 会话软链逃逸被拦 (2s)
+✗ 放行:codex-cli thread_settings_applied 模型与数组输出剥离放行 (2s)
+✗ 放行:codex-cli 作者相对路径补丁按 turn_context cwd 解析进本仓库 (2s)
+✗ 放行:carbon-agy 审 codex-cli(shayu/gpt-6.2-sol)作者放行(跨厂商 Google/OpenAI) (2s)
+✗ 拦下:carbon-agy 审 Google 模型作者被拦(同为 google) (2s)
+✗ 拦下:carbon-agy 审查会话必须是 antigravity 会话 (2s)
+✗ 放行:R7-01 自定义非 HOME 的 AGY_BRAIN_ROOT 及其派生 conversations/plugin_data 与 CODEX_CLI_SESSIONS_ROOT 一并拒读 (0s)
+✗ 拦下:codex-cli 审查 hash 命令退出码非零被拦 (2s)
+✗ 拦下:codex-cli rollout 内部 session_meta id 与文件名不一致被拦 (2s)
+自检失败
+自检耗时 12s:用例 30/30,并发 4(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0
+=== Round 3 incremental Red commit: 3ed37c68 (test(gates): 第 3 轮红提交 — 拒绝缺少 session_meta 或无身份标识的 codex-cli rollout [skip ci]) ===
+--- scripts/gates/*.test.ts named failure on 3ed37c68 ---
+not ok 8 - codexCliRolloutToTurns 与 loadSession 拒绝缺少 session_meta 或 session_meta 缺少身份标识的 rollout
+# tests 36
+# pass 35
+# fail 1
+--- gates:selftest new cases on 3ed37c68 (2/2 failed) ---
+✗ 拦下:codex-cli rollout 缺少 session_meta 记录被拦 (2s)
+✗ 拦下:codex-cli rollout 的 session_meta 缺少 session_id/id 被拦 (2s)
+自检失败
+自检耗时 2s:用例 3/3,并发 3(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0
+=== Round 4 incremental Red commit: 155da62c (test(gates): red reproduce merge.sh /dev/stderr and TAP pipe drain) ===
+--- scripts/gates/*.test.ts named failures on 155da62c ---
+not ok 9 - scripts/merge.sh 动态基座分支保护查询区分 200(--required)、404 未保护(无 --required)与 500 故障(fail-closed)
+  error: tee: /dev/stderr: Permission denied
+not ok 18 - 有失败用例且 TAP 输出超 128KB 时完整刷新管道不截断末尾失败汇总
+  error: 'missing final-fail in 65536-byte TAP output'
+# tests 37
+# pass 35
+# fail 2
+=== Round 4 Green commit: 94e90d16 (fix(gates): avoid /dev/stderr in merge.sh and drain test-runner output) ===
+--- scripts/gates/*.test.ts on 94e90d16 ---
+ok 9 - scripts/merge.sh 动态基座分支保护查询区分 200(--required)、404 未保护(无 --required)与 500 故障(fail-closed)
+ok 18 - 有失败用例且 TAP 输出超 128KB 时完整刷新管道不截断末尾失败汇总
+# tests 37
+# pass 37
+# fail 0
+test-runner:实际执行并通过 37 条用例

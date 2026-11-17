@@ -4,8 +4,10 @@
 // 跑的是 import.meta.dirname 下的那份门禁代码,所以 mutation.ts 改坏一份副本后跑它的自检,必须失败。
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
+import type { DatabaseSync } from "node:sqlite";
 import { containerPlanProblems, GIT_SAFE_ARGS, gitEnv, type Receipt, sandboxed, sandboxPlan } from "./lib.ts";
 import * as judge from "./judge.ts";
 import { CASE_MARK, type CaseResult, evidence, type Kind, killedBy, parseGateOutput } from "./judge.ts";
@@ -114,10 +116,17 @@ function runCaseInner(tmp: string, c: Case, i: number): Run {
   write(repo, c.headFn ? c.headFn(dir) : (c.head ?? HEAD_OK));
   commit(repo, "green");
   fs.mkdirSync(sessions, { recursive: true });
-  const env = { MIRASIM_SESSIONS: sessions, MIRASIM_ROOMS: rooms, GATE_OWNER_UID: OWNER_UID, GATE_OWNER_NAME: OWNER_NAME, ...c.env, ...c.envFn?.(dir) };
+  const agyBrain = path.join(dir, "brain"), codexCli = path.join(dir, "codex-sessions");
+  const env = { MIRASIM_SESSIONS: sessions, MIRASIM_ROOMS: rooms, GATE_OWNER_UID: OWNER_UID, GATE_OWNER_NAME: OWNER_NAME, AGY_BRAIN_ROOT: agyBrain, CODEX_CLI_SESSIONS_ROOT: codexCli, ...c.env, ...c.envFn?.(dir) };
   const putTurns = (session: string, turns: object[]) => {
     const [h, id] = session.split(":");
-    write(path.join(sessions, h!, id!), { "turns.jsonl": `${turns.map((t) => JSON.stringify(t)).join("\n")}\n` });
+    if (h === "antigravity") {
+      write(path.join(agyBrain, id!, ".system_generated", "logs"), { "transcript_full.jsonl": `${turns.map((t) => JSON.stringify(t)).join("\n")}\n` });
+    } else if (h === "codex-cli") {
+      write(path.join(codexCli, "2026", "11", "18"), { [`rollout-2026-11-18T00-00-00-${id!}.jsonl`]: `${turns.map((t) => JSON.stringify(t)).join("\n")}\n` });
+    } else {
+      write(path.join(sessions, h!, id!), { "turns.jsonl": `${turns.map((t) => JSON.stringify(t)).join("\n")}\n` });
+    }
   };
   if (c.receipt !== null) {
     const r: Receipt = {
@@ -168,6 +177,39 @@ const ARGON_REVIEW = (r: Receipt) => { r.review = { ...r.review!, agent: "argon"
 const argonReviewTurns = (h: string) => [{ model: "ai-iisbo-2/[vertex]gemini-4-argon", toolCalls: [{ name: "Bash", input: { command: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }, result: h }] }];
 const ARGON_ROOM = () => [{ v: 1, seq: 50, by: "ai-claude", name: "Claude Code", kind: "message", text: "审查", card: { type: "dispatch", session: "claude:argon1", assistant: "ai-argon" } }];
 const claudeReviewTurns = (h: string) => [{ model: "ai-x/claude-opus-5-5", toolCalls: [{ name: "Bash", input: { command: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }, result: h }] }];
+// Antigravity Swarm:Carbon 作者(Google 模型)与 Opus 审查人(Anthropic 模型),以及 Hydrogen 备用审查人(Google 模型)
+const CARBON_AGY_AUTHOR = (r: Receipt) => { r.author = { agent: "carbon", session: "antigravity:agy-a", model: "gemini-4-carbon-high" }; };
+const carbonAgyAuthorTurns = (repo: string) => [
+  { step_index: 0, type: "PLANNER_RESPONSE", model: "gemini-4-carbon-high", tool_calls: [{ name: "write_file", args: { Path: path.join(repo, "packages/core/src/add.ts"), Content: ADD_OK } }] },
+  { step_index: 1, type: "GENERIC", content: "Created At: 2026-01-01T00:00:00Z\nCompleted At: 2026-01-01T00:00:01Z\nCommand exited with code 0.\n\nCommand output:\nok" },
+];
+const CLAUDE_AGY_AUTHOR = (r: Receipt) => { r.author = { agent: "claude", session: "antigravity:agy-a", model: "claude-opus-4-6-thinking" }; };
+const claudeAgyAuthorTurns = (repo: string) => [
+  { step_index: 0, type: "PLANNER_RESPONSE", model: "claude-opus-4-6-thinking", tool_calls: [{ name: "write_file", args: { Path: path.join(repo, "packages/core/src/add.ts"), Content: ADD_OK } }] },
+  { step_index: 1, type: "GENERIC", content: "Created At: 2026-01-01T00:00:00Z\nCompleted At: 2026-01-01T00:00:01Z\nCommand exited with code 0.\n\nCommand output:\nok" },
+];
+const OPUS_AGY_REVIEW = (r: Receipt) => { r.review = { ...r.review!, agent: "opus-agy", model: "claude-opus-4-6-thinking", session: "antigravity:agy-rv1" }; };
+const opusAgyReviewTurns = (h: string) => [
+  { step_index: 0, type: "PLANNER_RESPONSE", model: "claude-opus-4-6-thinking", tool_calls: [{ name: "run_command", args: { CommandLine: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" } }] },
+  { step_index: 1, type: "GENERIC", content: `Created At: 2026-01-01T00:00:00Z\nCompleted At: 2026-01-01T00:00:01Z\nCommand exited with code 0.\n\nCommand output:\n${h}` },
+];
+const HYDROGEN_REVIEW = (r: Receipt) => { r.review = { ...r.review!, agent: "hydrogen", model: "gemini-4-hydrogen-xhigh", session: "antigravity:agy-rv1" }; };
+const hydrogenReviewTurns = (h: string) => [
+  { step_index: 0, type: "PLANNER_RESPONSE", model: "gemini-4-hydrogen-xhigh", tool_calls: [{ name: "run_command", args: { CommandLine: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" } }] },
+  { step_index: 1, type: "GENERIC", content: `Created At: 2026-01-01T00:00:00Z\nCompleted At: 2026-01-01T00:00:01Z\nCommand exited with code 0.\n\nCommand output:\n${h}` },
+];
+const CODEX_CLI_REVIEW = (r: Receipt) => { r.review = { ...r.review!, agent: "codex-cli", model: "fnqtz-gpt/gpt-6.1-terra", session: "codex-cli:ccli-rv1" }; };
+const codexCliReviewTurns = (h: string) => [
+  { type: "session_meta", payload: { id: "ccli-rv1", cwd: "/" } },
+  { type: "turn_context", payload: { model: "fnqtz-gpt/gpt-6.1-terra", cwd: "/tmp/rev" } },
+  { type: "response_item", payload: { type: "function_call", name: "exec_command", call_id: "call_1", arguments: JSON.stringify({ cmd: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }) } },
+  { type: "response_item", payload: { type: "function_call_output", call_id: "call_1", output: `Chunk ID: a1b2c3\nWall time: 0.0500 seconds\nProcess exited with code 0\nOriginal token count: 16\nOutput:\n${h}\n` } },
+];
+const CARBON_AGY_REVIEW = (r: Receipt) => { r.review = { ...r.review!, agent: "carbon-agy", model: "gemini-4-carbon-high", session: "antigravity:agy-rv1" }; };
+const carbonAgyReviewTurns = (h: string) => [
+  { step_index: 0, type: "PLANNER_RESPONSE", model: "gemini-4-carbon-high", tool_calls: [{ name: "run_command", args: { CommandLine: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" } }] },
+  { step_index: 1, type: "GENERIC", content: `Created At: 2026-01-01T00:00:00Z\nCompleted At: 2026-01-01T00:00:01Z\nCommand exited with code 0.\n\nCommand output:\n${h}` },
+];
 const OWNER_UID = "usr_owner", OWNER_NAME = "39impacts.talent";
 const user = (seq: number, text: string, by = OWNER_UID, name = OWNER_NAME) => ({ v: 1, seq, by, name, kind: "message", text });
 const SAME = R((r) => { r.review!.model = "claude-sonnet-5-5"; r.waiver = { by: OWNER_NAME, reason: "g-group#900" }; });
@@ -370,7 +412,15 @@ function fakeRuntime(root: string, libs: boolean): { exe: string; libs: string[]
 /** 在临时目录、假 HOME(符号链接)下生成执行计划;mode 与 exe 由调用方给。只用中性内容。 */
 function withPlanFixture<T>(prefix: string, fn: (fx: { tmp: string; real: string; link: string; work: string; dep: string; rw: string; rh: string; rd: string }) => T): T {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  const saved = { h: process.env.HOME, s: process.env.MIRASIM_SESSIONS, r: process.env.MIRASIM_ROOMS, i: process.env.GATE_SANDBOX_IMAGE };
+  const saved = {
+    h: process.env.HOME,
+    s: process.env.MIRASIM_SESSIONS,
+    r: process.env.MIRASIM_ROOMS,
+    i: process.env.GATE_SANDBOX_IMAGE,
+    ab: process.env.AGY_BRAIN_ROOT,
+    ac: process.env.AGY_CONV_ROOT,
+    cc: process.env.CODEX_CLI_SESSIONS_ROOT,
+  };
   try {
     const real = path.join(tmp, "home-real"), link = path.join(tmp, "home-link"), work = path.join(tmp, "work"), dep = path.join(tmp, "deps", "node_modules");
     write(real, Object.fromEntries(R7_DENY.slice(0, 3).map((f) => [f, NEUTRAL])));
@@ -380,9 +430,20 @@ function withPlanFixture<T>(prefix: string, fn: (fx: { tmp: string; real: string
     process.env.HOME = link;
     delete process.env.MIRASIM_SESSIONS;
     delete process.env.MIRASIM_ROOMS;
+    delete process.env.AGY_BRAIN_ROOT;
+    delete process.env.AGY_CONV_ROOT;
+    delete process.env.CODEX_CLI_SESSIONS_ROOT;
     return fn({ tmp, real, link, work, dep, rw: fs.realpathSync(work), rh: fs.realpathSync(real), rd: fs.realpathSync(dep) });
   } finally {
-    for (const [k, v] of [["HOME", saved.h], ["MIRASIM_SESSIONS", saved.s], ["MIRASIM_ROOMS", saved.r], ["GATE_SANDBOX_IMAGE", saved.i]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+    for (const [k, v] of [
+      ["HOME", saved.h],
+      ["MIRASIM_SESSIONS", saved.s],
+      ["MIRASIM_ROOMS", saved.r],
+      ["GATE_SANDBOX_IMAGE", saved.i],
+      ["AGY_BRAIN_ROOT", saved.ab],
+      ["AGY_CONV_ROOT", saved.ac],
+      ["CODEX_CLI_SESSIONS_ROOT", saved.cc],
+    ] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 }
@@ -881,12 +942,12 @@ export const CASES: Case[] = [
     let o: { allowed: string[]; harness: string; codex: string; ctx: string[]; layers: string[]; scripts: Record<string, string>; review: string[]; harnesses: string[] };
     try { o = JSON.parse(r.stdout.trim().split("\n").pop() ?? ""); } catch { return `探针没跑通:${r.stdout}${r.stderr}`; }
     const bad: string[] = [];
-    if (o.allowed.join(",") !== "codex,astra,claude,argon") bad.push(`allowedReviewers 变成 ${o.allowed}`);
+    if (o.allowed.join(",") !== "codex,astra,claude,argon,opus-agy,hydrogen,codex-cli,carbon-agy") bad.push(`allowedReviewers 变成 ${o.allowed}`);
     if (o.harness !== "codex" || o.codex !== "codex") bad.push(`harnessOf 变成 ${o.harness}/${o.codex}`);
     if (o.ctx.join(",") !== "trusted-gates,provenance,self-check") bad.push(`PROTECTED_CONTEXTS 变成 ${o.ctx}`);
     if (o.layers.join(",") !== "domain,kernel,adapter,plugin,app") bad.push(`LAYERS 变成 ${o.layers}`);
     if (Object.keys(o.scripts).length !== 3 || o.scripts.test === "true") bad.push(`REQUIRED_GATE_SCRIPTS 变成 ${JSON.stringify(o.scripts)}`);
-    if (o.harnesses.join(",") !== "claude,codex,pi") bad.push(`HARNESSES 变成 ${o.harnesses}`);
+    if (o.harnesses.join(",") !== "claude,codex,pi,antigravity,codex-cli") bad.push(`HARNESSES 变成 ${o.harnesses}`);
     if (!o.review.some((m) => m.includes("审查人必须是"))) bad.push(`改了导出名单后 unlisted 审查人被放行:${JSON.stringify(o.review)}`);
     return bad.length ? bad.join(";") : undefined; }, expect: null },
   { name: "R6-03 改 ALL_GATES/LOCAL_GATES 里的门禁对象(run/id/rule/加属性)不改变后续门禁行为", direct: () => {
@@ -1109,6 +1170,294 @@ export const CASES: Case[] = [
   { name: "相对路径跨包", head: { ...HEAD_OK, "packages/kern/package.json": PKG("@g-group/kern", "kernel"), "packages/kern/src/k.ts": `import { add } from "../../core/src/add.ts";\nexport const k = add;\n` }, expect: "跨出了包" },
   { name: "依赖声明里反向引用", head: { ...HEAD_OK, "packages/kern/package.json": PKG("@g-group/kern", "kernel"), "packages/core/package.json": PKG("@g-group/core", "domain", { dependencies: { "@g-group/kern": "*" } }) }, expect: "依赖声明里引用了 kernel" },
   { name: "包没声明层级", head: { ...HEAD_OK, "packages/core/package.json": JSON.stringify({ name: "@g-group/core" }) }, expect: "gGroup.layer" },
+  // ── Antigravity + Opus/Hydrogen 来源门禁与沙箱保护 ──
+  { name: "opus-agy 审 carbon(antigravity)作者放行(跨厂商 Anthropic/Google)",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); OPUS_AGY_REVIEW(r); }),
+    reviewerTurns: opusAgyReviewTurns, expect: null },
+  { name: "opus-agy 审 Anthropic 模型作者被拦(同为 anthropic)",
+    authorTurns: claudeAgyAuthorTurns,
+    receipt: R((r) => { CLAUDE_AGY_AUTHOR(r); OPUS_AGY_REVIEW(r); }),
+    reviewerTurns: opusAgyReviewTurns, expect: "审查厂商 anthropic 在作者的产出厂商集合" },
+  { name: "opus-agy 审查会话必须是 antigravity 会话",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); OPUS_AGY_REVIEW(r); r.review!.session = "claude:rv1"; }),
+    reviewerTurns: claudeReviewTurns, expect: "必须是 antigravity 会话" },
+  { name: "hydrogen 审 claude(antigravity)作者放行(跨厂商 Google/Anthropic)",
+    authorTurns: claudeAgyAuthorTurns,
+    receipt: R((r) => { CLAUDE_AGY_AUTHOR(r); HYDROGEN_REVIEW(r); }),
+    reviewerTurns: hydrogenReviewTurns, expect: null },
+  { name: "hydrogen 审 codex 作者放行(跨厂商 Google/OpenAI)",
+    authorTurns: CODEX_AUTHOR_TURNS,
+    receipt: R((r) => { CODEX_AUTHOR(r); HYDROGEN_REVIEW(r); }),
+    reviewerTurns: hydrogenReviewTurns, expect: null },
+  { name: "hydrogen 审 Google 模型作者被拦(同为 google)",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); HYDROGEN_REVIEW(r); }),
+    reviewerTurns: hydrogenReviewTurns, expect: "审查厂商 google 在作者的产出厂商集合" },
+  { name: "antigravity 会话软链逃逸被拦",
+    setup: ({ dir }) => {
+      const escaped = path.join(dir, "escaped");
+      write(escaped, { "transcript_full.jsonl": `${JSON.stringify({ step_index: 0, type: "PLANNER_RESPONSE", tool_calls: [{ name: "run_command", args: { CommandLine: "true" } }] })}\n` });
+      const logDir = path.join(dir, "brain", "agy-rv1", ".system_generated", "logs");
+      fs.rmSync(path.join(logDir, "transcript_full.jsonl"), { force: true });
+      fs.symlinkSync(path.join(escaped, "transcript_full.jsonl"), path.join(logDir, "transcript_full.jsonl"));
+    },
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); OPUS_AGY_REVIEW(r); }),
+    reviewerTurns: opusAgyReviewTurns, expect: "brain 根目录之外" },
+  { name: "antigravity 回退读 transcript.jsonl 放行",
+    setup: ({ dir, hash }) => {
+      const logDir = path.join(dir, "brain", "agy-rv1", ".system_generated", "logs");
+      fs.rmSync(path.join(logDir, "transcript_full.jsonl"), { force: true });
+      write(logDir, { "transcript.jsonl": `${opusAgyReviewTurns(hash).map((t) => JSON.stringify(t)).join("\n")}\n` });
+    },
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); OPUS_AGY_REVIEW(r); }),
+    reviewerTurns: opusAgyReviewTurns, expect: null },
+  { name: "antigravity 审查 hash 不匹配被拦",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); OPUS_AGY_REVIEW(r); }),
+    reviewerTurns: () => [
+      { step_index: 0, type: "PLANNER_RESPONSE", model: "claude-opus-4-6-thinking", tool_calls: [{ name: "run_command", args: { CommandLine: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" } }] },
+      { step_index: 1, type: "GENERIC", content: "Created At: 2026-01-01T00:00:00Z\nCompleted At: 2026-01-01T00:00:01Z\nCommand exited with code 0.\n\nCommand output:\nwrong_hash_value" },
+    ], expect: "审查会话里没有一次" },
+  { name: "antigravity 大 prompt blob 与非占位符行不干扰 sqlite 模型识别",
+    setup: ({ dir }) => {
+      const dbDir = path.join(dir, "conversations");
+      fs.mkdirSync(dbDir, { recursive: true });
+      const { DatabaseSync: SqliteDb } = createRequire(import.meta.url)("node:sqlite") as { DatabaseSync: typeof DatabaseSync };
+      const db = new SqliteDb(path.join(dbDir, "agy-a.db"));
+      try {
+        db.exec("PRAGMA journal_mode = WAL; CREATE TABLE gen_metadata (idx INTEGER PRIMARY KEY, data BLOB);");
+        const pollutedPrefix = `${"x".repeat(20_000)}last_step_index:1 MODEL_PLACEHOLDER_M999 claude-opus-4-6-thinking`;
+        const cleanTrailer = `${"z".repeat(2100)}last_step_index\x12\x011 MODEL_PLACEHOLDER_M427 gemini-4-carbon-high`;
+        db.prepare("INSERT INTO gen_metadata (idx, data) VALUES (?, ?)").run(170, Buffer.from(pollutedPrefix + cleanTrailer, "latin1"));
+        db.prepare("INSERT INTO gen_metadata (idx, data) VALUES (?, ?)").run(180, Buffer.from("last_step_index\x12\x011 brief note mentioning claude-opus-4-6-thinking"));
+      } finally { db.close(); }
+    },
+    authorTurns: (repo) => [
+      { step_index: 2, type: "PLANNER_RESPONSE", tool_calls: [{ name: "write_file", args: { Path: path.join(repo, "packages/core/src/add.ts"), Content: ADD_OK } }] },
+      { step_index: 3, type: "GENERIC", content: "Created At: 2026-01-01T00:00:00Z\nCompleted At: 2026-01-01T00:00:01Z\nCommand exited with code 0.\n\nCommand output:\nok" },
+    ],
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); OPUS_AGY_REVIEW(r); }),
+    reviewerTurns: opusAgyReviewTurns, expect: null },
+  { name: "antigravity 作者中途换模(先 anthropic 后 google)累积生产厂商被拦",
+    setup: ({ dir }) => {
+      const dbDir = path.join(dir, "conversations");
+      fs.mkdirSync(dbDir, { recursive: true });
+      const { DatabaseSync: SqliteDb } = createRequire(import.meta.url)("node:sqlite") as { DatabaseSync: typeof DatabaseSync };
+      const db = new SqliteDb(path.join(dbDir, "agy-a.db"));
+      try {
+        db.exec("PRAGMA journal_mode = WAL; CREATE TABLE gen_metadata (idx INTEGER PRIMARY KEY, data BLOB);");
+        db.prepare("INSERT INTO gen_metadata (idx, data) VALUES (?, ?)").run(1, Buffer.from("last_step_index\x12\x011 MODEL_PLACEHOLDER_M1 claude-opus-4-6-thinking"));
+        db.prepare("INSERT INTO gen_metadata (idx, data) VALUES (?, ?)").run(2, Buffer.from("last_step_index\x12\x014 MODEL_PLACEHOLDER_M2 gemini-4-carbon-high"));
+      } finally { db.close(); }
+    },
+    authorTurns: (repo) => [
+      { step_index: 2, type: "PLANNER_RESPONSE", tool_calls: [{ name: "write_file", args: { Path: path.join(repo, "packages/core/src/add.ts"), Content: ADD_OK } }] },
+      { step_index: 3, type: "GENERIC", content: "Created At: 2026-01-01T00:00:00Z\nCompleted At: 2026-01-01T00:00:01Z\nMade 1 file" },
+      { step_index: 5, type: "PLANNER_RESPONSE", tool_calls: [{ name: "edit_file", args: { Path: path.join(repo, "packages/core/src/add.ts"), Target: "a", Replacement: "a" } }] },
+      { step_index: 6, type: "GENERIC", content: "Created At: 2026-01-01T00:00:02Z\nCompleted At: 2026-01-01T00:00:03Z\nEdited 1 file" },
+    ],
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); OPUS_AGY_REVIEW(r); }),
+    reviewerTurns: opusAgyReviewTurns, expect: "审查厂商 anthropic 在作者的产出厂商集合" },
+  { name: "antigravity 作者存在未匹配到 gen_metadata 的工具轮次按 unknown 拦下",
+    setup: ({ dir }) => {
+      const dbDir = path.join(dir, "conversations");
+      fs.mkdirSync(dbDir, { recursive: true });
+      const { DatabaseSync: SqliteDb } = createRequire(import.meta.url)("node:sqlite") as { DatabaseSync: typeof DatabaseSync };
+      const db = new SqliteDb(path.join(dbDir, "agy-a.db"));
+      try {
+        db.exec("PRAGMA journal_mode = WAL; CREATE TABLE gen_metadata (idx INTEGER PRIMARY KEY, data BLOB);");
+        db.prepare("INSERT INTO gen_metadata (idx, data) VALUES (?, ?)").run(1, Buffer.from("last_step_index\x12\x011 MODEL_PLACEHOLDER_M1 gemini-4-carbon-high"));
+      } finally { db.close(); }
+    },
+    authorTurns: (repo) => [
+      { step_index: 2, type: "PLANNER_RESPONSE", tool_calls: [{ name: "write_file", args: { Path: path.join(repo, "packages/core/src/add.ts"), Content: ADD_OK } }] },
+      { step_index: 5, type: "PLANNER_RESPONSE", tool_calls: [{ name: "edit_file", args: { Path: path.join(repo, "packages/core/src/add.ts"), Target: "a", Replacement: "a" } }] },
+    ],
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); OPUS_AGY_REVIEW(r); }),
+    reviewerTurns: opusAgyReviewTurns, expect: "认不出厂商的产出轮次" },
+  { name: "antigravity 审查 hash 命令退出码非零被拦",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); OPUS_AGY_REVIEW(r); }),
+    reviewerTurns: (h) => [
+      { step_index: 0, type: "PLANNER_RESPONSE", model: "claude-opus-4-6-thinking", tool_calls: [{ name: "run_command", args: { CommandLine: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" } }] },
+      { step_index: 1, type: "GENERIC", content: `Created At: 2026-01-01T00:00:00Z\nCompleted At: 2026-01-01T00:00:01Z\nCommand exited with code 1.\n\nCommand output:\n${h}` },
+    ], expect: "审查会话里没有一次" },
+  { name: "antigravity run_command 双重 header 与 \\r\\n 被正确剥离",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); OPUS_AGY_REVIEW(r); }),
+    reviewerTurns: (h) => [
+      { step_index: 0, type: "PLANNER_RESPONSE", model: "claude-opus-4-6-thinking", tool_calls: [{ name: "run_command", args: { CommandLine: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" } }] },
+      { step_index: 1, type: "GENERIC", content: `Created At: 2026-01-01T00:00:00Z\r\nCompleted At: 2026-01-01T00:00:01Z\r\nCreated At: 2026-01-01T00:00:00Z\r\nCompleted At: 2026-01-01T00:00:01Z\r\nCommand exited with code 0.\r\n\r\nCommand output:\r\n${h}\r\n` },
+    ], expect: null },
+  { name: "antigravity 作者 edit_file 相对 Path 参数按 cwd 解析进本仓库",
+    setup: ({ dir }) => { fs.mkdirSync(path.join(dir, "work"), { recursive: true }); },
+    authorTurns: (repo) => [
+      { step_index: 0, type: "PLANNER_RESPONSE", model: "gemini-4-carbon-high", tool_calls: [{ name: "edit_file", args: { Path: "../repo/packages/core/src/add.ts", cwd: path.join(path.dirname(repo), "work"), Target: "old", Replacement: "new" } }] },
+      { step_index: 1, type: "GENERIC", content: "Created At: 2026-01-01T00:00:00Z\nCompleted At: 2026-01-01T00:00:01Z\nMade 1 replacement" },
+    ],
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); OPUS_AGY_REVIEW(r); }),
+    reviewerTurns: opusAgyReviewTurns, expect: null },
+  { name: "antigravity 作者 edit_file 无路径时按写操作计入产出",
+    authorTurns: (_repo) => [
+      { step_index: 0, type: "PLANNER_RESPONSE", model: "gemini-4-carbon-high", tool_calls: [{ name: "edit_file", args: { Target: "old", Replacement: "new" } }] },
+      { step_index: 1, type: "GENERIC", content: "Created At: 2026-01-01T00:00:00Z\nCompleted At: 2026-01-01T00:00:01Z\nMade 1 replacement" },
+    ],
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); OPUS_AGY_REVIEW(r); }),
+    reviewerTurns: opusAgyReviewTurns, expect: null },
+  { name: "antigravity 作者后续轮次同厂商 run_command 无路径也被拦",
+    authorTurns: (repo) => [
+      ...carbonAgyAuthorTurns(repo),
+      { step_index: 2, type: "PLANNER_RESPONSE", model: "claude-opus-4-6-thinking", tool_calls: [{ name: "run_command", args: { CommandLine: "npm test" } }] },
+      { step_index: 3, type: "GENERIC", content: "Created At: 2026-01-01T00:00:00Z\nCompleted At: 2026-01-01T00:00:01Z\nCommand exited with code 0.\n\nCommand output:\nok" },
+    ],
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); OPUS_AGY_REVIEW(r); }),
+    reviewerTurns: opusAgyReviewTurns, expect: "审查厂商 anthropic 在作者的产出厂商集合" },
+  { name: "R7-01 沙箱拦 .gemini/antigravity/brain、plugin_data 与 conversations 读取", direct: () => {
+    return withPlanFixture("gate-agy-sb-", ({ real, link, rh, work, dep }) => {
+      const subs = [".gemini/antigravity/brain", ".gemini/antigravity/plugin_data", ".gemini/antigravity/conversations"];
+      write(real, Object.fromEntries(subs.map((sub) => [`${sub}/fixture`, NEUTRAL])));
+      const plan = sandboxPlan(["-e", "0"], work, [dep], "seatbelt");
+      const lines = (plan.profile ?? "").split("\n");
+      const denyLine = lines[lines.length - 1] ?? "";
+      const bad: string[] = [];
+      for (const h of [link, rh]) {
+        for (const sub of subs) {
+          if (!denyLine.includes(`(subpath "${path.join(h, sub)}")`)) bad.push(`固定拒读清单缺 ${path.join(h, sub)}`);
+        }
+      }
+      return bad.length ? bad.join("\n") : undefined;
+    });
+  }, expect: null },
+  // ── 本机 codex-cli 审查会话门禁 ──
+  { name: "codex-cli 审 carbon(antigravity)作者放行(跨厂商 OpenAI/Google)",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); CODEX_CLI_REVIEW(r); }),
+    reviewerTurns: codexCliReviewTurns, expect: null },
+  { name: "codex-cli 审 OpenAI 模型作者被拦(同为 openai)",
+    authorTurns: (repo) => [
+      { type: "session_meta", payload: { id: "ccli-a", cwd: repo } },
+      { type: "turn_context", payload: { model: "fnqtz-gpt/gpt-6.1-sol", cwd: repo } },
+      { type: "response_item", payload: { type: "custom_tool_call", name: "apply_patch", call_id: "c1", input: `*** Begin Patch\n*** Update File: ${path.join(repo, "packages/core/src/add.ts")}\n` } },
+    ],
+    receipt: R((r) => { r.author = { agent: "codex", session: "codex-cli:ccli-a", model: "fnqtz-gpt/gpt-6.1-sol" }; CODEX_CLI_REVIEW(r); }),
+    reviewerTurns: codexCliReviewTurns, expect: "审查厂商 openai 在作者的产出厂商集合" },
+  { name: "codex-cli 审查会话必须是 codex-cli 会话",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); CODEX_CLI_REVIEW(r); r.review!.session = "codex:b"; }),
+    reviewerTurns: reviewerOk, expect: "必须是 codex-cli 会话" },
+  { name: "codex-cli 会话软链逃逸被拦",
+    setup: ({ dir }) => {
+      const escaped = path.join(dir, "escaped-codex");
+      write(escaped, { "forged.jsonl": `${JSON.stringify({ type: "session_meta", payload: { id: "ccli-rv1", cwd: "/" } })}\n` });
+      const target = path.join(dir, "codex-sessions", "2026", "11", "18", "rollout-2026-11-18T00-00-00-ccli-rv1.jsonl");
+      fs.rmSync(target, { force: true });
+      fs.symlinkSync(path.join(escaped, "forged.jsonl"), target);
+    },
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); CODEX_CLI_REVIEW(r); }),
+    reviewerTurns: codexCliReviewTurns, expect: "codex-cli 会话记录经软链指到了会话根目录之外" },
+  { name: "codex-cli thread_settings_applied 模型与数组输出剥离放行",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); CODEX_CLI_REVIEW(r); }),
+    reviewerTurns: (h) => [
+      { type: "session_meta", payload: { session_id: "ccli-rv1", cwd: "/" } },
+      { type: "event_msg", payload: { type: "thread_settings_applied", thread_settings: { model: "fnqtz-gpt/gpt-6.1-terra", cwd: "/tmp/rev" } } },
+      { type: "response_item", payload: { type: "function_call", name: "exec_command", call_id: "call_arr", arguments: JSON.stringify({ cmd: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }) } },
+      { type: "response_item", payload: { type: "function_call_output", call_id: "call_arr", output: [{ type: "input_text", text: "Wall time: 0.02 seconds\r\nProcess exited with code 0\r\nOutput:" }, { type: "input_text", text: h }] } },
+    ], expect: null },
+  { name: "codex-cli 作者相对路径补丁按 turn_context cwd 解析进本仓库",
+    setup: ({ dir }) => { fs.mkdirSync(path.join(dir, "outside"), { recursive: true }); },
+    authorTurns: (repo) => [
+      { type: "session_meta", payload: { id: "ccli-a", cwd: path.join(path.dirname(repo), "outside") } },
+      { type: "turn_context", payload: { model: "fnqtz-gpt/gpt-6.1-sol", cwd: repo } },
+      { type: "response_item", payload: { type: "custom_tool_call", name: "apply_patch", call_id: "c_rel", input: "*** Begin Patch\n*** Update File: packages/core/src/add.ts\n" } },
+    ],
+    receipt: R((r) => { r.author = { agent: "codex", session: "codex-cli:ccli-a", model: "fnqtz-gpt/gpt-6.1-sol" }; OPUS_AGY_REVIEW(r); }),
+    reviewerTurns: opusAgyReviewTurns, expect: null },
+  { name: "carbon-agy 审 codex-cli(shayu/gpt-6.2-sol)作者放行(跨厂商 Google/OpenAI)",
+    authorTurns: (repo) => [
+      { type: "session_meta", payload: { id: "ccli-sol", cwd: repo } },
+      { type: "turn_context", payload: { model: "shayu/gpt-6.2-sol", cwd: repo } },
+      { type: "response_item", payload: { type: "custom_tool_call", name: "apply_patch", call_id: "c_sol", input: `*** Begin Patch\n*** Update File: ${path.join(repo, "packages/core/src/add.ts")}\n` } },
+    ],
+    receipt: R((r) => { r.author = { agent: "codex-cli", session: "codex-cli:ccli-sol", model: "shayu/gpt-6.2-sol" }; CARBON_AGY_REVIEW(r); }),
+    reviewerTurns: carbonAgyReviewTurns, expect: null },
+  { name: "carbon-agy 审 Google 模型作者被拦(同为 google)",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); CARBON_AGY_REVIEW(r); }),
+    reviewerTurns: carbonAgyReviewTurns, expect: "审查厂商 google 在作者的产出厂商集合" },
+  { name: "carbon-agy 审查会话必须是 antigravity 会话",
+    authorTurns: CODEX_AUTHOR_TURNS,
+    receipt: R((r) => { CODEX_AUTHOR(r); CARBON_AGY_REVIEW(r); r.review!.session = "codex:b"; }),
+    reviewerTurns: reviewerOk, expect: "必须是 antigravity 会话" },
+  { name: "R7-01 自定义非 HOME 的 AGY_BRAIN_ROOT 及其派生 conversations/plugin_data 与 CODEX_CLI_SESSIONS_ROOT 一并拒读", direct: () => {
+    return withPlanFixture("gate-agy-ext-", ({ tmp, work, dep }) => {
+      const extStore = path.join(tmp, "ext-agy-store");
+      const extBrain = path.join(extStore, "brain");
+      const extConv = path.join(extStore, "conversations");
+      const extPlugin = path.join(extStore, "plugin_data");
+      const extCodex = path.join(tmp, "ext-codex-sessions");
+      const brainLink = path.join(tmp, "brain-link");
+      write(extBrain, { "fixture.txt": NEUTRAL });
+      write(extConv, { "fixture.db": NEUTRAL });
+      write(extPlugin, { "fixture.txt": NEUTRAL });
+      write(extCodex, { "fixture.jsonl": NEUTRAL });
+      fs.symlinkSync(extBrain, brainLink);
+      process.env.AGY_BRAIN_ROOT = brainLink;
+      process.env.CODEX_CLI_SESSIONS_ROOT = extCodex;
+      const plan = sandboxPlan(["-e", "0"], work, [dep], "seatbelt");
+      const lines = (plan.profile ?? "").split("\n");
+      const denyLine = lines[lines.length - 1] ?? "";
+      const want = [
+        brainLink,
+        fs.realpathSync(extBrain),
+        fs.realpathSync(extConv),
+        fs.realpathSync(extPlugin),
+        fs.realpathSync(extCodex),
+      ];
+      const bad = want.filter((p) => !denyLine.includes(`(subpath "${p}")`)).map((p) => `固定拒读清单缺自定义路径 ${p}`);
+      return bad.length ? bad.join("\n") : undefined;
+    });
+  }, expect: null },
+  { name: "codex-cli 审查 hash 命令退出码非零被拦",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); CODEX_CLI_REVIEW(r); }),
+    reviewerTurns: (h) => [
+      { type: "session_meta", payload: { id: "ccli-rv1", cwd: "/" } },
+      { type: "turn_context", payload: { model: "fnqtz-gpt/gpt-6.1-terra", cwd: "/tmp/rev" } },
+      { type: "response_item", payload: { type: "function_call", name: "exec_command", call_id: "call_bad", arguments: JSON.stringify({ cmd: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }) } },
+      { type: "response_item", payload: { type: "function_call_output", call_id: "call_bad", output: `Chunk ID: a1b2c3\nWall time: 0.0500 seconds\nProcess exited with code 1\nOutput:\n${h}\n` } },
+    ], expect: "审查会话里没有一次" },
+  { name: "codex-cli rollout 内部 session_meta id 与文件名不一致被拦",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); CODEX_CLI_REVIEW(r); }),
+    reviewerTurns: (h) => [
+      { type: "session_meta", payload: { id: "forged-other-session", cwd: "/" } },
+      { type: "turn_context", payload: { model: "fnqtz-gpt/gpt-6.1-terra", cwd: "/tmp/rev" } },
+      { type: "response_item", payload: { type: "function_call", name: "exec_command", call_id: "call_1", arguments: JSON.stringify({ cmd: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }) } },
+      { type: "response_item", payload: { type: "function_call_output", call_id: "call_1", output: `Chunk ID: a1b2c3\nWall time: 0.0500 seconds\nProcess exited with code 0\nOutput:\n${h}\n` } },
+    ], expect: "session_meta id" },
+  { name: "codex-cli rollout 缺少 session_meta 记录被拦",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); CODEX_CLI_REVIEW(r); }),
+    reviewerTurns: (h) => [
+      { type: "turn_context", payload: { model: "fnqtz-gpt/gpt-6.1-terra", cwd: "/tmp/rev" } },
+      { type: "response_item", payload: { type: "function_call", name: "exec_command", call_id: "call_1", arguments: JSON.stringify({ cmd: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }) } },
+      { type: "response_item", payload: { type: "function_call_output", call_id: "call_1", output: `Chunk ID: a1b2c3\nWall time: 0.0500 seconds\nProcess exited with code 0\nOutput:\n${h}\n` } },
+    ], expect: "缺少 session_meta 身份标识" },
+  { name: "codex-cli rollout 的 session_meta 缺少 session_id/id 被拦",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); CODEX_CLI_REVIEW(r); }),
+    reviewerTurns: (h) => [
+      { type: "session_meta", payload: { cwd: "/" } },
+      { type: "turn_context", payload: { model: "fnqtz-gpt/gpt-6.1-terra", cwd: "/tmp/rev" } },
+      { type: "response_item", payload: { type: "function_call", name: "exec_command", call_id: "call_1", arguments: JSON.stringify({ cmd: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }) } },
+      { type: "response_item", payload: { type: "function_call_output", call_id: "call_1", output: `Chunk ID: a1b2c3\nWall time: 0.0500 seconds\nProcess exited with code 0\nOutput:\n${h}\n` } },
+    ], expect: "缺少 session_meta 身份标识" },
 ];
 
 /**
@@ -1186,7 +1535,7 @@ export async function selfTest(only?: (c: Case) => boolean): Promise<boolean> {
   }));
   // FAILFAST 下没启动的用例不打印;已跑完的按顺序补齐
   for (const i of idx) if (results[i] && idx.indexOf(i) >= printed) printOne(i);
-  for (const [m, v] of [["o1", "openai"], ["gpt-6-astra", "openai"], ["ai-iisbo/[乾坤按量]gpt-6-astra", "openai"], ["claude-opus-5-5", "anthropic"], ["grok-4.7", "xai"], ["gemini-4-argon", "google"], ["stealth/crouton-alpha", "unknown"], [undefined, "unknown"]] as const) {
+  for (const [m, v] of [["o1", "openai"], ["gpt-6-astra", "openai"], ["ai-iisbo/[乾坤按量]gpt-6-astra", "openai"], ["fnqtz-gpt/gpt-6.1-terra", "openai"], ["fnqtz-gpt/gpt-6.1-sol", "openai"], ["shayu/gpt-6.2-sol", "openai"], ["gpt-oss-120b-medium", "openai"], ["claude-opus-5-5", "anthropic"], ["claude-opus-4-6-thinking", "anthropic"], ["grok-4.7", "xai"], ["gemini-4-argon", "google"], ["gemini-4-carbon-high", "google"], ["gemini-4-hydrogen-xhigh", "google"], ["gemini-pro-orchestrator", "google"], ["gemini-pro-orchestrator-argon", "google"], ["stealth/crouton-alpha", "unknown"], [undefined, "unknown"]] as const) {
     const pass = vendorOf(m) === v;
     if (!pass) ok = false;
     console.log(`${pass ? "✓" : "✗"} vendorOf(${m}) = ${vendorOf(m)}`);
