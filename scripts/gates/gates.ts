@@ -2,8 +2,10 @@
 // 门禁代码本身在 CI 里取自 main(trusted-gates.yml,pull_request_target),PR 里的版本只当被检查的数据。
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
+import type { DatabaseSync } from "node:sqlite";
 import ts from "typescript";
 import YAML from "yaml";
 import { type Ctx, type Gate, GIT_SAFE_ARGS, gitEnv, type NamedTest, type Problem, agyBrainRoot, agyConversationsRoot, agyPluginDataRoot, canonicalProvenanceRoots, codexCliSessionsRoot, copyTree, existing, isGoverned, isSrc, isTest, p, runNodeTests } from "./lib.ts";
@@ -80,19 +82,183 @@ export const review: Gate = {
 interface ToolCall { name?: string; input?: unknown; result?: unknown }
 interface Turn { model?: string; toolCalls?: ToolCall[] }
 // 判定用的是内部私有快照;导出的只是冻结数组副本,改它不影响判定(R5-03:Set 冻结不住 add/delete)
-const HARNESS_LIST: readonly string[] = deepFreeze(["claude", "codex", "pi"]);
+const HARNESS_LIST: readonly string[] = deepFreeze(["claude", "codex", "pi", "antigravity", "codex-cli"]);
 export const HARNESSES: readonly string[] = HARNESS_LIST;
-const SESSION_RE = /^([a-z]+):([A-Za-z0-9-]+)$/;
+const SESSION_RE = /^([a-z][a-z-]*):([A-Za-z0-9-]+)$/;
 const realHome = () => os.userInfo().homedir;
 export const sessionsRoot = () => process.env.MIRASIM_SESSIONS ?? path.join(realHome(), ".mirasim/sessions");
 export const roomsRoot = () => process.env.MIRASIM_ROOMS ?? path.join(realHome(), ".mirasim/chat/rooms");
 export { agyBrainRoot, agyConversationsRoot, agyPluginDataRoot, canonicalProvenanceRoots, codexCliSessionsRoot };
-export function stripRunCommandWrapper(_output: string): string { return ""; }
-export function agyStepsToTurns(_lines: string[], _stepModels?: ReadonlyMap<number, string>): Turn[] { return []; }
-export function agyRecoverStepModels(_convRoot: string, _id: string): Map<number, string> { return new Map(); }
-export function stripCodexExecWrapper(_output: string): string { return ""; }
-export type CodexCliParsed = { ok: true; turns: Turn[]; workdir: string | undefined } | { ok: false; why: string };
-export function codexCliRolloutToTurns(_lines: string[], _expectedId?: string): CodexCliParsed { return { ok: false, why: "red stub" }; }
+
+/**
+ * 剥离 Antigravity run_command 在 GENERIC 步骤里的外层包装头(真实记录存在双重 Created At/Completed At 与 \r\n),
+ * 仅当退出码为 0 时剥离包装头,并将全部 \r\n 规范化为 \n;非零退出码保留包装头以阻止失败命令伪造 reviewed_hash。
+ */
+export function stripRunCommandWrapper(output: string): string {
+  const norm = output.replace(/\r\n/g, "\n");
+  const m = /^(?:Created At: [^\n]*\nCompleted At: [^\n]*\n)+Command exited with code 0\.\n\nCommand output:\n/.exec(norm);
+  return m ? norm.slice(m[0].length) : norm;
+}
+
+/** 将 Antigravity transcript(_full).jsonl 步骤序列按位置配对还原为 Turn[],并按 step_index 精确绑定每轮模型(绝不跨轮涂抹) */
+export function agyStepsToTurns(lines: string[], stepModels?: ReadonlyMap<number, string>): Turn[] {
+  const turns: Turn[] = [];
+  let activeTurn: Turn | undefined;
+  let resultIdx = 0;
+  for (const l of lines) {
+    if (!l) continue;
+    let s: { step_index?: unknown; type?: unknown; tool_calls?: unknown; content?: unknown; model?: unknown };
+    try { s = JSON.parse(l) as typeof s; } catch { continue; }
+    if (s.type === "PLANNER_RESPONSE") {
+      if (Array.isArray(s.tool_calls) && s.tool_calls.length > 0) {
+        const toolCalls: ToolCall[] = s.tool_calls.map((raw) => {
+          const tc = (raw && typeof raw === "object" ? raw : {}) as { name?: unknown; args?: unknown };
+          const inp = (tc.args && typeof tc.args === "object" && !Array.isArray(tc.args) ? tc.args : {}) as Record<string, unknown>;
+          const input = typeof inp.CommandLine === "string" ? { ...inp, command: inp.CommandLine } : inp;
+          const c: ToolCall = { input, result: undefined };
+          if (typeof tc.name === "string" && tc.name) c.name = tc.name;
+          return c;
+        });
+        const turn: Turn = { toolCalls };
+        const explicitModel = typeof s.model === "string" && s.model ? s.model : undefined;
+        const recovered = typeof s.step_index === "number" ? stepModels?.get(s.step_index) : undefined;
+        const boundModel = explicitModel ?? recovered;
+        if (boundModel) turn.model = boundModel;
+        turns.push(turn);
+        activeTurn = turn;
+        resultIdx = 0;
+      } else {
+        activeTurn = undefined;
+      }
+    } else if (s.type === "GENERIC" && typeof s.content === "string" && activeTurn?.toolCalls && resultIdx < activeTurn.toolCalls.length) {
+      activeTurn.toolCalls[resultIdx]!.result = stripRunCommandWrapper(s.content);
+      resultIdx++;
+    }
+  }
+  return turns;
+}
+
+const AGY_MODEL_RE = /gemini-pro-orchestrator(?:-argon)?|claude-(?:opus|sonnet|haiku)-\d+-\d+(?:-thinking)?|gemini-\d+-[a-z][\w-]*|gemini-flash-[\w-]+|gpt-oss-[\w-]+/;
+const AGY_LAST_STEP_RE = /last_step_index[^0-9]{1,8}(\d+)/;
+/**
+ * 从 Antigravity 会话 SQLite 数据库(conversations/<id>.db,含活跃 -wal)逐轮恢复 step_index -> model 映射:
+ * 每条 gen_metadata 行的末尾 2KB protobuf trailer 带 MODEL_PLACEHOLDER_、last_step_index 与该次生成的真实模型名,
+ * 只取 raw.subarray(-2048) 避开前部 >100KB prompt/schema 大块污染,将 Number(last_step_index) + 1 精确绑定到对应 PLANNER_RESPONSE。
+ */
+export function agyRecoverStepModels(convRoot: string, id: string): Map<number, string> {
+  const out = new Map<number, string>();
+  let db: DatabaseSync | undefined;
+  try {
+    const dbPath = path.join(convRoot, `${id}.db`);
+    if (!fs.existsSync(dbPath)) return out;
+    const convReal = fs.realpathSync(convRoot);
+    const dbReal = fs.realpathSync(dbPath);
+    if (!dbReal.startsWith(convReal + path.sep)) return out;
+    const { DatabaseSync: SqliteDb } = createRequire(import.meta.url)("node:sqlite") as { DatabaseSync: typeof DatabaseSync };
+    db = new SqliteDb(dbReal, { readOnly: true });
+    const rows = db.prepare("SELECT idx, data FROM gen_metadata ORDER BY idx ASC").all() as Array<{ idx: number; data: Uint8Array | string }>;
+    for (const row of rows) {
+      const raw = typeof row.data === "string" ? Buffer.from(row.data, "utf8") : Buffer.from(row.data);
+      const tail = raw.subarray(-2048).toString("latin1");
+      if (!tail.includes("MODEL_PLACEHOLDER_")) continue;
+      const stepHit = AGY_LAST_STEP_RE.exec(tail);
+      const modelHit = AGY_MODEL_RE.exec(tail);
+      if (stepHit?.[1] && modelHit?.[0]) out.set(Number(stepHit[1]) + 1, modelHit[0]);
+    }
+    return out;
+  } catch {
+    return out;
+  } finally {
+    try { db?.close(); } catch { /* 关闭失败不影响只读句柄回收 */ }
+  }
+}
+
+/**
+ * 剥离本机 codex-cli exec_command 的包装头([Chunk ID] / Wall time / Process exited with code 0 / [Original token count] / Output:),
+ * 仅当退出码为 0 时剥离包装头,并将全部 \r\n 规范化为 \n;非零退出码保留包装头以防误认失败输出。
+ */
+export function stripCodexExecWrapper(output: string): string {
+  const norm = output.replace(/\r\n/g, "\n");
+  const m = /^(?:Chunk ID: [^\n]*\n)?Wall time: [^\n]*\nProcess exited with code 0\n(?:Original token count: \d+\n)?Output:\n/.exec(norm);
+  return m ? norm.slice(m[0].length) : norm;
+}
+
+function normalizeCodexCliOutput(out: unknown): string {
+  if (typeof out === "string") return stripCodexExecWrapper(out);
+  if (Array.isArray(out)) {
+    const joined = out
+      .map((item) => (item && typeof item === "object" && typeof (item as { text?: unknown }).text === "string" ? (item as { text: string }).text : ""))
+      .filter(Boolean)
+      .join("\n");
+    return stripCodexExecWrapper(joined);
+  }
+  return stripCodexExecWrapper(str(out));
+}
+
+function parseCodexCliInput(raw: unknown, currentCwd: string | undefined): unknown {
+  let obj: Record<string, unknown> | undefined;
+  if (typeof raw === "string") {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) obj = { ...(parsed as Record<string, unknown>) };
+    } catch { /* 非 JSON 原文(如 apply_patch 补丁文本) */ }
+    if (!obj) obj = { raw };
+  } else if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    obj = { ...(raw as Record<string, unknown>) };
+  } else {
+    return raw;
+  }
+  if (currentCwd && typeof obj.cwd !== "string" && typeof obj.workdir !== "string" && typeof obj.working_directory !== "string") obj.cwd = currentCwd;
+  return obj;
+}
+
+export type CodexCliParsed =
+  | { ok: true; turns: Turn[]; workdir: string | undefined }
+  | { ok: false; why: string };
+
+/** 将本机 codex-cli rollout-*-<id>.jsonl 解析为 Turn[] 与默认 workdir,并核对 session_meta 会话身份 */
+export function codexCliRolloutToTurns(lines: string[], expectedId?: string): CodexCliParsed {
+  const turns: Turn[] = [];
+  const byCallId = new Map<string, ToolCall>();
+  let defaultWorkdir: string | undefined;
+  let currentModel: string | undefined;
+  let currentCwd: string | undefined;
+  for (const l of lines) {
+    if (!l) continue;
+    let rec: { type?: unknown; payload?: unknown };
+    try { rec = JSON.parse(l) as typeof rec; } catch { continue; }
+    const p = (rec.payload && typeof rec.payload === "object" ? rec.payload : {}) as Record<string, unknown>;
+    if (rec.type === "session_meta") {
+      const metaId = typeof p.session_id === "string" && p.session_id ? p.session_id : typeof p.id === "string" && p.id ? p.id : undefined;
+      if (expectedId !== undefined && metaId !== undefined && metaId !== expectedId) {
+        return { ok: false, why: `codex-cli 会话记录内部 session_meta id(${metaId}) 与请求的 ${expectedId} 不一致` };
+      }
+      if (typeof p.cwd === "string" && p.cwd) {
+        defaultWorkdir ??= p.cwd;
+        currentCwd ??= p.cwd;
+      }
+    } else if (rec.type === "turn_context") {
+      if (typeof p.model === "string" && p.model) currentModel = p.model;
+      if (typeof p.cwd === "string" && p.cwd) currentCwd = p.cwd;
+    } else if (rec.type === "event_msg" && p.type === "thread_settings_applied") {
+      const ts = (p.thread_settings && typeof p.thread_settings === "object" ? p.thread_settings : {}) as Record<string, unknown>;
+      if (typeof ts.model === "string" && ts.model) currentModel = ts.model;
+      if (typeof ts.cwd === "string" && ts.cwd) currentCwd = ts.cwd;
+    } else if (rec.type === "response_item" && (p.type === "function_call" || p.type === "custom_tool_call")) {
+      const rawIn = p.type === "function_call" ? p.arguments : p.input;
+      const call: ToolCall = { input: parseCodexCliInput(rawIn, currentCwd), result: undefined };
+      if (typeof p.name === "string" && p.name) call.name = p.name;
+      const turn: Turn = { toolCalls: [call] };
+      if (currentModel) turn.model = currentModel;
+      turns.push(turn);
+      if (typeof p.call_id === "string" && p.call_id) byCallId.set(p.call_id, call);
+    } else if (rec.type === "response_item" && (p.type === "function_call_output" || p.type === "custom_tool_call_output")) {
+      const call = typeof p.call_id === "string" ? byCallId.get(p.call_id) : undefined;
+      if (call) call.result = normalizeCodexCliOutput(p.output);
+    }
+  }
+  return { ok: true, turns, workdir: defaultWorkdir };
+}
 
 type Loaded = { ok: true; turns: Turn[]; workdir: string | undefined } | { ok: false; why: string };
 /** 严格解析 <harness>:<id>,realpath 之后必须仍在会话根目录里(防 ../ 与软链逃逸) */
@@ -100,6 +266,55 @@ export function loadSession(base: string, session: string): Loaded {
   const m = SESSION_RE.exec(typeof session === "string" ? session : "");
   if (!m) return { ok: false, why: `格式必须是 <harness>:<id>(id 只含字母、数字和 -),实际 "${session}"` };
   if (!HARNESS_LIST.includes(m[1]!)) return { ok: false, why: `harness "${m[1]}" 不在白名单 ${HARNESS_LIST.join("/")} 里` };
+  if (m[1] === "antigravity") {
+    const agyRoot = agyBrainRoot();
+    let root: string;
+    try { root = fs.realpathSync(agyRoot); } catch { return { ok: false, why: `Antigravity brain 根目录 ${agyRoot} 不存在` }; }
+    const insideBrain = (f: string) => f.startsWith(root + path.sep);
+    const logDir = path.join(root, m[2]!, ".system_generated", "logs");
+    let real: string;
+    try {
+      real = fs.realpathSync(path.join(logDir, "transcript_full.jsonl"));
+    } catch {
+      try {
+        real = fs.realpathSync(path.join(logDir, "transcript.jsonl"));
+      } catch {
+        return { ok: false, why: `会话记录不存在:${session}` };
+      }
+    }
+    if (!insideBrain(real)) return { ok: false, why: `Antigravity 会话记录经软链指到了 brain 根目录之外(${real})` };
+    const lines = fs.readFileSync(real, "utf8").split("\n").filter(Boolean);
+    const rawTurns = agyStepsToTurns(lines);
+    const turns = rawTurns.some((t) => t.model === undefined)
+      ? agyStepsToTurns(lines, agyRecoverStepModels(agyConversationsRoot(), m[2]!))
+      : rawTurns;
+    return { ok: true, turns, workdir: undefined };
+  }
+  if (m[1] === "codex-cli") {
+    const cliRoot = codexCliSessionsRoot();
+    let root: string;
+    try { root = fs.realpathSync(cliRoot); } catch { return { ok: false, why: `codex-cli 会话根目录 ${cliRoot} 不存在` }; }
+    const insideCodexCli = (f: string) => f.startsWith(root + path.sep);
+    const suffix = `-${m[2]!}.jsonl`;
+    const found: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) walk(full);
+        else if ((e.isFile() || e.isSymbolicLink()) && e.name.startsWith("rollout-") && e.name.endsWith(suffix)) found.push(full);
+      }
+    };
+    walk(root);
+    if (found.length === 0) return { ok: false, why: `会话记录不存在:${session}` };
+    const chosen = found.sort().at(-1)!;
+    let real: string;
+    try { real = fs.realpathSync(chosen); } catch { return { ok: false, why: `会话记录不存在:${session}` }; }
+    if (!insideCodexCli(real)) return { ok: false, why: `codex-cli 会话记录经软链指到了会话根目录之外(${real})` };
+    const lines = fs.readFileSync(real, "utf8").split("\n").filter(Boolean);
+    const parsed = codexCliRolloutToTurns(lines, m[2]!);
+    if (!parsed.ok) return parsed;
+    return { ok: true, turns: parsed.turns, workdir: parsed.workdir };
+  }
   let root: string;
   try { root = fs.realpathSync(base); } catch { return { ok: false, why: `会话根目录 ${base} 不存在` }; }
   const inside = (f: string) => f.startsWith(root + path.sep);
@@ -128,8 +343,8 @@ function parseInput(x: unknown): Record<string, unknown> {
   }
   return (x && typeof x === "object" ? x : {}) as Record<string, unknown>;
 }
-const WRITE_TOOLS = /^(write|edit|multiedit|notebookedit|apply_patch|applypatch|str_replace|fs_write|create_file|write_file|patch)$/i;
-const SHELL_TOOLS = /^(bash|shell|execute_bash|exec_command|run_shell|local_shell|terminal)$/i;
+const WRITE_TOOLS = /^(write|edit|multiedit|notebookedit|apply_patch|applypatch|str_replace|fs_write|create_file|write_file|edit_file|patch)$/i;
+const SHELL_TOOLS = /^(bash|shell|shell_command|execute_bash|exec_command|run_shell|local_shell|terminal|run_command)$/i;
 /**
  * 这一轮有没有改过本仓库:路径按工具 cwd、会话 workdir 解析成绝对路径再判断;
  * 写操作类工具(文件写入、补丁、shell)只要有一个路径判定不了,就按"改过"算(宁多勿少)。
@@ -145,7 +360,7 @@ export function turnTouchesRepo(t: Turn, workdir: string | undefined, inRepo: (a
       return cwd ? path.resolve(cwd, q) : undefined;
     };
     const cands: string[] = [];
-    for (const k of ["file_path", "path", "notebook_path", "filePath", "target_file"]) if (typeof inp[k] === "string") cands.push(inp[k] as string);
+    for (const k of ["file_path", "path", "Path", "notebook_path", "filePath", "target_file", "TargetFile"]) if (typeof inp[k] === "string") cands.push(inp[k] as string);
     for (const s of strings(inp)) {
       for (const m of s.matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)) cands.push(m[1]!.trim());
       for (const m of s.matchAll(/^\*\*\* Move to: (.+)$/gm)) cands.push(m[1]!.trim());
