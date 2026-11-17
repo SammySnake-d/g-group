@@ -1364,6 +1364,7 @@ export const CASES: Case[] = [
     authorTurns: carbonAgyAuthorTurns,
     receipt: R((r) => { CARBON_AGY_AUTHOR(r); CODEX_CLI_REVIEW(r); }),
     reviewerTurns: (h) => [
+      { type: "session_meta", payload: { session_id: "ccli-rv1", cwd: "/" } },
       { type: "event_msg", payload: { type: "thread_settings_applied", thread_settings: { model: "fnqtz-gpt/gpt-6.1-terra", cwd: "/tmp/rev" } } },
       { type: "response_item", payload: { type: "function_call", name: "exec_command", call_id: "call_arr", arguments: JSON.stringify({ cmd: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }) } },
       { type: "response_item", payload: { type: "function_call_output", call_id: "call_arr", output: [{ type: "input_text", text: "Wall time: 0.02 seconds\r\nProcess exited with code 0\r\nOutput:" }, { type: "input_text", text: h }] } },
@@ -1440,6 +1441,23 @@ export const CASES: Case[] = [
       { type: "response_item", payload: { type: "function_call", name: "exec_command", call_id: "call_1", arguments: JSON.stringify({ cmd: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }) } },
       { type: "response_item", payload: { type: "function_call_output", call_id: "call_1", output: `Chunk ID: a1b2c3\nWall time: 0.0500 seconds\nProcess exited with code 0\nOutput:\n${h}\n` } },
     ], expect: "session_meta id" },
+  { name: "codex-cli rollout 缺少 session_meta 记录被拦",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); CODEX_CLI_REVIEW(r); }),
+    reviewerTurns: (h) => [
+      { type: "turn_context", payload: { model: "fnqtz-gpt/gpt-6.1-terra", cwd: "/tmp/rev" } },
+      { type: "response_item", payload: { type: "function_call", name: "exec_command", call_id: "call_1", arguments: JSON.stringify({ cmd: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }) } },
+      { type: "response_item", payload: { type: "function_call_output", call_id: "call_1", output: `Chunk ID: a1b2c3\nWall time: 0.0500 seconds\nProcess exited with code 0\nOutput:\n${h}\n` } },
+    ], expect: "缺少 session_meta 身份标识" },
+  { name: "codex-cli rollout 的 session_meta 缺少 session_id/id 被拦",
+    authorTurns: carbonAgyAuthorTurns,
+    receipt: R((r) => { CARBON_AGY_AUTHOR(r); CODEX_CLI_REVIEW(r); }),
+    reviewerTurns: (h) => [
+      { type: "session_meta", payload: { cwd: "/" } },
+      { type: "turn_context", payload: { model: "fnqtz-gpt/gpt-6.1-terra", cwd: "/tmp/rev" } },
+      { type: "response_item", payload: { type: "function_call", name: "exec_command", call_id: "call_1", arguments: JSON.stringify({ cmd: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }) } },
+      { type: "response_item", payload: { type: "function_call_output", call_id: "call_1", output: `Chunk ID: a1b2c3\nWall time: 0.0500 seconds\nProcess exited with code 0\nOutput:\n${h}\n` } },
+    ], expect: "缺少 session_meta 身份标识" },
 ];
 
 /**

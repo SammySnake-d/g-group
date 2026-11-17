@@ -294,6 +294,67 @@ test("codexCliRolloutToTurns 与 loadSession 支持日期目录检索、session_
   }
 }));
 
+test("codexCliRolloutToTurns 与 loadSession 拒绝缺少 session_meta 或 session_meta 缺少身份标识的 rollout", () => inTemp((dir) => {
+  const cliRoot = path.join(dir, "codex-sessions");
+  const saved = process.env.CODEX_CLI_SESSIONS_ROOT;
+  process.env.CODEX_CLI_SESSIONS_ROOT = cliRoot;
+  try {
+    const dayDir = path.join(cliRoot, "2026", "11", "18");
+    fs.mkdirSync(dayDir, { recursive: true });
+    const turnBody = [
+      JSON.stringify({ type: "turn_context", payload: { model: "shayu/gpt-6.2-sol", cwd: "/repo-a" } }),
+      JSON.stringify({
+        type: "response_item",
+        payload: {
+          type: "function_call",
+          name: "exec_command",
+          call_id: "call_hash",
+          arguments: JSON.stringify({ cmd: "node scripts/gates/run-all.ts --hash --branch=feat/x --base=main" }),
+        },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        payload: {
+          type: "function_call_output",
+          call_id: "call_hash",
+          output: "Wall time: 0.01 seconds\nProcess exited with code 0\nOutput:\nhash5678\n",
+        },
+      }),
+    ];
+
+    const noMetaParsed = codexCliRolloutToTurns(turnBody, "01a1eb09-nometa");
+    assert.equal(noMetaParsed.ok, false);
+    if (!noMetaParsed.ok) assert.match(noMetaParsed.why, /缺少 session_meta 身份标识/);
+    fs.writeFileSync(path.join(dayDir, "rollout-2026-11-18T04-00-00-01a1eb09-nometa.jsonl"), `${turnBody.join("\n")}\n`);
+    const noMetaLoaded = loadSession(path.join(dir, "unused"), "codex-cli:01a1eb09-nometa");
+    assert.equal(noMetaLoaded.ok, false);
+    if (!noMetaLoaded.ok) assert.match(noMetaLoaded.why, /缺少 session_meta 身份标识/);
+
+    const noIdLines = [JSON.stringify({ type: "session_meta", payload: { cwd: "/repo-a" } }), ...turnBody];
+    const noIdParsed = codexCliRolloutToTurns(noIdLines, "01a1eb09-noid");
+    assert.equal(noIdParsed.ok, false);
+    if (!noIdParsed.ok) assert.match(noIdParsed.why, /缺少 session_meta 身份标识/);
+    fs.writeFileSync(path.join(dayDir, "rollout-2026-11-18T04-01-00-01a1eb09-noid.jsonl"), `${noIdLines.join("\n")}\n`);
+    const noIdLoaded = loadSession(path.join(dir, "unused"), "codex-cli:01a1eb09-noid");
+    assert.equal(noIdLoaded.ok, false);
+    if (!noIdLoaded.ok) assert.match(noIdLoaded.why, /缺少 session_meta 身份标识/);
+
+    const blankIdParsed = codexCliRolloutToTurns(
+      [JSON.stringify({ type: "session_meta", payload: { session_id: "   ", cwd: "/repo-a" } }), ...turnBody],
+      "01a1eb09-blank",
+    );
+    assert.equal(blankIdParsed.ok, false);
+    if (!blankIdParsed.ok) assert.match(blankIdParsed.why, /缺少 session_meta 身份标识/);
+
+    const validSidLines = [JSON.stringify({ type: "session_meta", payload: { session_id: "01a1eb09-sid", cwd: "/repo-a" } }), ...turnBody];
+    const validSidParsed = codexCliRolloutToTurns(validSidLines, "01a1eb09-sid");
+    assert.equal(validSidParsed.ok, true);
+  } finally {
+    if (saved === undefined) delete process.env.CODEX_CLI_SESSIONS_ROOT;
+    else process.env.CODEX_CLI_SESSIONS_ROOT = saved;
+  }
+}));
+
 test("scripts/merge.sh 动态基座分支保护查询区分 200(--required)、404 未保护(无 --required)与 500 故障(fail-closed)", () => inTemp((dir) => {
   const git = (cwd: string, ...args: string[]) => execFileSync("git", [...GIT_SAFE_ARGS, ...args], { cwd, encoding: "utf8", env: gitEnv() }).trim();
   const bare = path.join(dir, "origin.git");
