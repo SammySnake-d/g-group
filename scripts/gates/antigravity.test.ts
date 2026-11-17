@@ -382,8 +382,7 @@ test("scripts/merge.sh 动态基座分支保护查询区分 200(--required)、40
   git(repo, "push", "-q", "origin", "feat/t");
 
   fs.writeFileSync(path.join(bin, "npm"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
-  const ghScript = `#!/usr/bin/env node
-import fs from "node:fs";
+  const ghScript = `import fs from "node:fs";
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.MOCK_GH_LOG, JSON.stringify(args) + "\\n");
 if (args[0] === "pr" && args[1] === "view") {
@@ -399,15 +398,30 @@ if (args[0] === "api" && args.includes("-i")) {
 }
 process.exit(0);
 `;
-  fs.writeFileSync(path.join(bin, "gh"), ghScript, { mode: 0o755 });
+  const ghMjs = path.join(bin, "gh.mjs");
+  fs.writeFileSync(ghMjs, ghScript);
+  fs.writeFileSync(path.join(bin, "gh"), `#!/bin/sh\nexec "${process.execPath}" "${ghMjs}" "$@"\n`, { mode: 0o755 });
+  const teeScript = [
+    "#!/bin/sh",
+    'for arg in "$@"; do',
+    '  if [ "$arg" = "/dev/stderr" ]; then',
+    '    echo "tee: /dev/stderr: Permission denied" >&2',
+    "    exit 1",
+    "  fi",
+    "done",
+    'exec /usr/bin/tee "$@"',
+    "",
+  ].join("\n");
+  fs.writeFileSync(path.join(bin, "tee"), teeScript, { mode: 0o755 });
 
   const runMerge = (mode: string) => {
     const logFile = path.join(dir, `gh-${mode}.log`);
     fs.writeFileSync(logFile, "");
+    const { NODE_TEST_CONTEXT: _ntc, ...cleanEnv } = gitEnv();
     const r = spawnSync("/bin/bash", [path.join(repo, "scripts/merge.sh"), "12"], {
       cwd: repo,
       encoding: "utf8",
-      env: { ...gitEnv(), PATH: `${bin}:${path.dirname(process.execPath)}:/usr/bin:/bin`, MOCK_GH_LOG: logFile, MOCK_PROT_MODE: mode },
+      env: { ...cleanEnv, TMPDIR: dir, PATH: `${bin}:${path.dirname(process.execPath)}:/usr/bin:/bin`, MOCK_GH_LOG: logFile, MOCK_PROT_MODE: mode },
       timeout: 30_000,
     });
     const calls = fs.readFileSync(logFile, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l) as string[]);

@@ -61,3 +61,17 @@ test("有失败用例判失败", () => {
   const r = runIn({ "a.test.ts": 'import { test } from "node:test";\ntest("bad", () => { throw new Error("x"); });\n' });
   assert.notEqual(r.code, 0);
 });
+
+test("有失败用例且 TAP 输出超 128KB 时完整刷新管道不截断末尾失败汇总", () => {
+  const r = runIn({
+    "a.test.ts": [
+      'import { test } from "node:test";',
+      'for (let i = 0; i < 400; i++) test("pad-" + i + "-" + "x".repeat(180), () => {});',
+      'test("final-fail", () => { throw new Error("boom"); });',
+      "",
+    ].join("\n"),
+  });
+  assert.notEqual(r.code, 0);
+  assert.ok(/not ok .*final-fail/.test(r.out), `missing final-fail in ${r.out.length}-byte TAP output`);
+  assert.ok(/# fail 1/.test(r.out), `missing # fail 1 summary in ${r.out.length}-byte TAP output`);
+});
