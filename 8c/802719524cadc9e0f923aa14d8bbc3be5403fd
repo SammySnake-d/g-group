@@ -1,0 +1,25 @@
+scripts/gates/workspace-isolation.test.ts
+  h_f33e46a035b77c 1-335
+scripts/gates/gates.ts
+  h_f33e46a035b77c 89-92
+scripts/gates/lib.ts
+  h_f33e46a035b77c 237
+scripts/gates/antigravity.test.ts
+  h_f33e46a035b77c 1-169
+scripts/gates/mutation.ts
+  h_f33e46a035b77c 46-63
+scripts/gates/selftest.ts
+  h_f33e46a035b77c 7,10,119-120,123-127,178-198,912,917,1140-1242,1245-1256,1334
+  h_f33e46a035b77c 1243-1244
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8c802719524cadc9e0f923aa14d8bbc3be5403fd",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
