@@ -88,3 +88,35 @@ The active native rollout's `session_meta` reports `originator=codex_exec` and l
 The five corresponding unmodified selftests passed; four mutants exited 1 on the named cases. The isolated replay/fault directory was deleted. No live GitHub merge or Linux Docker execution was attempted.
 
 Candidate `--local`: **7/8**, exit 1, content hash unchanged. Only `G-REVIEW` failed (`审查结论是 reject`); `G-PROVENANCE` passed on the genuine sessions.
+
+## Round 3 — APPROVE
+
+**Reviewed HEAD:** `1297737782e9e0a39ccdfcb718571bfdd6092c16`
+
+**Base:** `origin/dev/agy-backend` at `1ec576d5217d2a6301014c8479b111560dc4abec`
+
+**Content hash:** `30a051ca66cf1c65eeb725586dae4e7c0d6e98177160ad0e5cca8c3219525f7b`
+
+**Reviewer:** `codex-cli:01a1eb91-53d5-76f3-9cd9-1bf752899a17` (`shayu/gpt-6.2-sol`, OpenAI)
+
+**Round 2 P1 closed (R-01/R-07).** `codexCliRolloutToTurns` now requires `seenMatchingMeta` for a requested session. It trims `session_id`/`id`, explicitly rejects a missing identity and a mismatching ID, and rejects a rollout with no matching metadata before returning success. `loadSession` supplies the requested ID and preserves those rejections. A separate 12-case neutral runtime matrix exercised both entry points: absent metadata, omitted/empty/whitespace-only identity, and mismatched identity were rejected; matching `session_id`, matching `id`, and matching `id` with a blank `session_id` passed.
+
+The active native rollout has `originator=codex_exec` and literal `cwd=/tmp/gg-agy-rev-119-r3`. Its `turn_context` and paired tool records bind the reviewer model to the exact standalone hash command, exit 0 and the stdout above. The candidate loader independently matched that real call/result pair. The author receipt remains `carbon` / Antigravity (Google); no waiver was requested or used.
+
+### Independent evidence
+
+- With byte-identical HEAD test sources, Red `3ed37c681c0782d31c6062122344c22c420b49aa` failed the named parser/loader unit test and both named provenance cases (`codex-cli rollout 缺少 session_meta 记录被拦`, `codex-cli rollout 的 session_meta 缺少 session_id/id 被拦`). Both Red selftests completed all eight gates but wrongly allowed the incomplete fixture. Green `b71e9371eb23b82d63784f2a64623d921d5285c0` passed the same unit and both selftests: `G-PROVENANCE` rejected each fixture with `缺少 session_meta 身份标识`. The gate-script replay is separate from `G-RED`, which selects package tests.
+- Node 22.22.0: typecheck passed; lint passed via `rtk bypass npm run lint` (Biome, 234 files) after the RTK wrapper reported an ESLint JSON parse error. Full `npm test` passed **1,695/1,695** (zero skipped, todo or cancelled); full selftest passed **251/251**. `GATE_MUTATION_JOBS=2 npm run gates:mutation` passed the unmodified control and killed **152/152**, zero survivors. Both new Codex metadata mutants were killed by their designated `G-PROVENANCE` cases.
+- The unchanged full suites covered bidirectional cross-vendor checks, Antigravity turn-model attribution and unknown/mixed-vendor rejection, wrapper exit status, workspace snapshot isolation, and merge protection responses (200, explicit unprotected 404, and fail-closed 500). A live macOS Seatbelt probe denied reads of all four neutral custom roots (brain, conversations, plugin_data, Codex); the worktree control was readable. `sh -n .githooks/pre-push` and `bash -n scripts/merge.sh` passed.
+
+| Isolated single-site fault | Observed named failure |
+|---|---|
+| Remove the `!seenMatchingMeta` guard | Missing `session_meta` selftest exited 1; the inner `G-PROVENANCE` unexpectedly passed. |
+| Accept an absent `metaId` | Missing `session_id/id` selftest exited 1; the inner `G-PROVENANCE` unexpectedly passed. |
+| Omit `agyConversationsRoot()` from `canonicalProvenanceRoots` | `R7-01` exited 1 because the deny rule lost the real derived conversations directory. |
+
+Each fault had a passing unmodified control; all three failed for the intended reason, not a crash or timeout. The isolated fault copy was deleted.
+
+**Scope:** Owner-authorized Day-0 bootstrap onto `dev/agy-backend` at `1ec576d5`. The existing judge on `origin/$BASE_REF` remains authoritative in `scripts/merge.sh`; the expected pre-B0 harness incompatibility is not a rejection of the candidate and this review does not waive the trusted judge. No live Linux Docker test or GitHub merge was performed.
+
+Candidate `--local`: **8/8 passed**, exit 0; 17 changed files inspected. `G-PROVENANCE` and `G-REVIEW` passed using the live sessions and the reviewed content hash stayed unchanged.
