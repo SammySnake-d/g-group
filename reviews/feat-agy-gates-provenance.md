@@ -56,3 +56,35 @@ Each run used the same named selftest in an isolated candidate tree (`GATE_SELFT
 | Change `carbon-agy` reviewer harness from `antigravity` to `codex` (`policy.json:1`) | `carbon-agy 审 codex-cli(shayu/gpt-6.2-sol)作者放行(跨厂商 Google/OpenAI)` (`selftest.ts:1316`) | The candidate rejected the expected Antigravity session under the wrong policy mapping. |
 
 The isolated fault directory was deleted after the runs. No review-owned runner processes remained. The final candidate rerun again returned 7/8. No commit was created or pushed.
+
+## Round 2 — REJECT
+
+**Reviewed HEAD:** `67ca055a837c84d225ff231143f3cec9a5ec9e76`  
+**Base:** `origin/dev/agy-backend` at `1ec576d5217d2a6301014c8479b111560dc4abec`  
+**Content hash:** `b284575af17f28a5201708dca3d38017815ecf67554eafc32c1a4320a4dd4f1d`  
+**Reviewer:** `codex-cli:01a1eb6c-a103-7983-a19c-12192a8c0b7c` (`shayu/gpt-6.2-sol`, OpenAI)
+
+The active native rollout's `session_meta` reports `originator=codex_exec` and literal `cwd=/tmp/gg-agy-rev-119-r2`. Its `turn_context` and the standalone `exec_command` call/result bind the reviewer model, exit 0, and exact `--hash` stdout to this review. The candidate loader attributed all 98 logged author tool turns to Google; its provenance check accepted the genuine Google/OpenAI session pair. No waiver was used.
+
+### Blocking finding
+
+**P1 — Codex CLI rollouts without an internal session ID are accepted (R-01/R-07).** `codexCliRolloutToTurns` (`scripts/gates/gates.ts:220–260`) reports a mismatch only when `metaId` is defined. It does not require a matching `session_meta` ID before returning `ok: true`; `loadSession` forwards that success (`:292–313`). In an isolated neutral fixture, the same loader returned **accepted** with a matching ID, **rejected** with a different ID, **accepted** with a `session_meta` record lacking an ID, and **accepted** with no `session_meta` record at all. Thus the new identity check is optional for incomplete or malformed rollouts. Require a nonempty matching native ID when `expectedId` is supplied and add negative tests for both omission cases. This does not invalidate the genuine Round 2 rollout, which contains the matching ID.
+
+### Verified fixes and regression evidence
+
+- Antigravity binds `s.step_index` to `last_step_index + 1` from the marked final 2 KiB of each SQLite metadata row, includes active WAL data, and leaves unmatched turns unknown. Named cases reject an Anthropic reviewer when authorship spans Anthropic and Google, and reject unknown producer turns.
+- The loader and Seatbelt share the root resolvers in `lib.ts`. An actual Seatbelt run against neutral, non-HOME fixtures denied the symlinked brain's real store, its derived conversations and plugin-data siblings, and the Codex CLI session root (`EPERM` × 4); a work-directory control remained readable.
+- Both wrappers leave recognized nonzero results unstripped. The merge-script test exercised HTTP 200 (`--required`), explicit 404 `Branch not protected` (ordinary checks), and HTTP 500 (no checks or merge). `scripts/merge.sh` still selects the existing runner from `origin/$BASE_REF`. Under Owner Decision A3, this is the authorized Day-0 bootstrap onto `dev/agy-backend`; the isolated pre-B0 judge returned **6/8**, with old harness/policy failures in `G-PROVENANCE` and `G-REVIEW` (plus the reject verdict). That expected incompatibility is not a Round 2 finding; do not substitute the candidate as the trusted judge.
+- Node 22.22.0: typecheck exited 0; plain lint was intercepted by the RTK ESLint-output parser, then `rtk bypass npm run lint` exited 0 (Biome, 234 files); `npm test` passed **1,694/1,694**, no skip/todo/cancel; full selftest passed **249/249**. `GATE_MUTATION_JOBS=2 npm run gates:mutation` passed its unmodified control and detected **150/150 mutations**, zero survivors.
+- Isolated Red `5e7b6922bdb4b4297fa6886ca6740f24a3c36459`: the three test sources are byte-identical to the candidate. The gate test batch ran 35 with **25 named failures** (8 Antigravity/Codex/merge and 17 workspace isolation), 10 passing controls and no skips. All **30/30** new selftests failed by name on Red.
+
+| Isolated single-site fault | Named selftest(s) that failed |
+|---|---|
+| Fall back to the session's latest model | `antigravity 作者中途换模(先 anthropic 后 google)累积生产厂商被拦`; `antigravity 作者存在未匹配到 gen_metadata 的工具轮次按 unknown 拦下` |
+| Omit the real derived conversations root | `R7-01 自定义非 HOME 的 AGY_BRAIN_ROOT 及其派生 conversations/plugin_data 与 CODEX_CLI_SESSIONS_ROOT 一并拒读` |
+| Strip the Codex wrapper for nonzero exit codes | `codex-cli 审查 hash 命令退出码非零被拦` |
+| Skip the explicit Codex ID mismatch check | `codex-cli rollout 内部 session_meta id 与文件名不一致被拦` |
+
+The five corresponding unmodified selftests passed; four mutants exited 1 on the named cases. The isolated replay/fault directory was deleted. No live GitHub merge or Linux Docker execution was attempted.
+
+Candidate `--local`: **7/8**, exit 1, content hash unchanged. Only `G-REVIEW` failed (`审查结论是 reject`); `G-PROVENANCE` passed on the genuine sessions.
