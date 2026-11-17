@@ -1,0 +1,22 @@
+receipts/feat-agy-gates-provenance.json
+  s_d2790b0ff3abd0::t_b617d391fc2718 45-52
+reviews/feat-agy-gates-provenance.md
+  s_d2790b0ff3abd0::t_b617d391fc2718 59-88
+  s_d2790b0ff3abd0::t_7ae71fd4aaffab 89-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "045ad48fc41e4e75b56ee0b688a16419edfdc502",
+  "prompts": {},
+  "sessions": {
+    "s_d2790b0ff3abd0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1eb6c-a103-7983-a19c-12192a8c0b7c",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
