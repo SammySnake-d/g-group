@@ -223,15 +223,22 @@ export function codexCliRolloutToTurns(lines: string[], expectedId?: string): Co
   let defaultWorkdir: string | undefined;
   let currentModel: string | undefined;
   let currentCwd: string | undefined;
+  let seenMatchingMeta = false;
   for (const l of lines) {
     if (!l) continue;
     let rec: { type?: unknown; payload?: unknown };
     try { rec = JSON.parse(l) as typeof rec; } catch { continue; }
     const p = (rec.payload && typeof rec.payload === "object" ? rec.payload : {}) as Record<string, unknown>;
     if (rec.type === "session_meta") {
-      const metaId = typeof p.session_id === "string" && p.session_id ? p.session_id : typeof p.id === "string" && p.id ? p.id : undefined;
-      if (expectedId !== undefined && metaId !== undefined && metaId !== expectedId) {
-        return { ok: false, why: `codex-cli 会话记录内部 session_meta id(${metaId}) 与请求的 ${expectedId} 不一致` };
+      const metaId = typeof p.session_id === "string" && p.session_id.trim()
+        ? p.session_id.trim()
+        : typeof p.id === "string" && p.id.trim()
+          ? p.id.trim()
+          : undefined;
+      if (expectedId !== undefined) {
+        if (metaId === undefined) return { ok: false, why: `codex-cli 会话记录缺少 session_meta 身份标识(请求 ${expectedId})` };
+        if (metaId !== expectedId) return { ok: false, why: `codex-cli 会话记录内部 session_meta id(${metaId}) 与请求的 ${expectedId} 不一致` };
+        seenMatchingMeta = true;
       }
       if (typeof p.cwd === "string" && p.cwd) {
         defaultWorkdir ??= p.cwd;
@@ -256,6 +263,9 @@ export function codexCliRolloutToTurns(lines: string[], expectedId?: string): Co
       const call = typeof p.call_id === "string" ? byCallId.get(p.call_id) : undefined;
       if (call) call.result = normalizeCodexCliOutput(p.output);
     }
+  }
+  if (expectedId !== undefined && !seenMatchingMeta) {
+    return { ok: false, why: `codex-cli 会话记录缺少 session_meta 身份标识(请求 ${expectedId})` };
   }
   return { ok: true, turns, workdir: defaultWorkdir };
 }
