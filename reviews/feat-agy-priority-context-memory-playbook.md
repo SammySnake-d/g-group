@@ -77,3 +77,56 @@
 ### 4. Infrastructure Note (`G-PROVENANCE` Model Regex)
 
 - After `@coordinator` switched `@reviewer-carbon` to `gemini-3.8-flash-high`, Antigravity `conversations/<id>.db` records `gemini-3.8-flash-s` in `gen_metadata`, which does not match `scripts/gates/gates.ts:141` `AGY_MODEL_RE` (`gemini-\d+-[a-z][\w-]*` lacks dotted versions like `3.8`). Before Round 2 approval can pass `G-PROVENANCE` (`8/8`), `@coordinator` will need either to switch `@reviewer-carbon` to a model matching `AGY_MODEL_RE` or land a base-branch update to `AGY_MODEL_RE`.
+
+
+---
+
+# REVIEW 2: APPROVE b21e64891feba05f2087b41a7044dde14272acb56add560992ad57eda7b28f2e
+
+## Round 2 — APPROVE
+
+- **PR**: `#124` (`feat/agy-priority-context-memory-playbook` → `dev/agy-backend` at `618fb79a`)
+- **Author**: `codex-cli:01a1ee5f-e210-7b00-892f-836f6421b2c2` (`ling-jing/gpt-6.1-sol`, vendor `openai`)
+- **Reviewer**: `carbon-agy` (`antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98`, `gemini-3.8-flash-high`, vendor `google`)
+- **Combined Red Commit**: `2f3d0f2279e4dfd88e81ea4c32dfcc3504c11996`
+- **Green Commit**: `1a9f8f9b9e019832807883ee8052d41a266a5ccf`
+- **Reviewed HEAD**: `b1c39562fbe67e0c4b51719595b2fc159b4cf43f`
+- **Reviewed Content Hash**: `b21e64891feba05f2087b41a7044dde14272acb56add560992ad57eda7b28f2e`
+
+### 1. Verification of Round 1 Defect Fixes
+
+1. **P1-1 (`Host.settleNote` batched `MemoryCoverage` & `G1-03P`) — FIXED**:
+   - `capture()` now iterates `r.memories.entries()`, assigns unique per-item write IDs (`${work.id}:${index}:${m.roomId}:${m.sourceSeq}:${m.title}`), plans sequentially against a working `entries` copy, accumulates `writes[]` and `unresolved`, and calls `coverage.prepare(work.id, writes, unresolved)` + `coverage.apply(work.id, ...)` **once** after the loop.
+   - `memory-api.test.ts` now tests `[legitimate, valid two, fabrication]` and asserts `coverage[0]?.state === "failed"`, `coverage[0]?.unresolved === 1`, and `coverage[0]?.writes?.length === 2`.
+2. **P1-2 (`source-retracted` entries excluded from structured write planning) — FIXED**:
+   - `capture()` initializes `const entries = this.memory.list(contactId)` (visible memories only, matching `Host.rememberTx`), preventing retracted memories from matching as `restate` or relation targets.
+   - Verified by new regression test `P1A structured reflect ignores a source-retracted entry when planning relations`.
+3. **P1-3 (Post-`commitRound` `capture()` gating & `ask-user` conflict prompt) — FIXED**:
+   - `settleNote` now extracts unstructured legacy memories into `remember[]` immediately and returns `capture` to `runRound`, which invokes `settled.capture?.()` **after** `commitRound` succeeds — so a `GroupReplyStaleError` abandons the round with zero `.md`, `gg_memory`, or `memory-coverage:*` writes.
+   - `plan.kind === "ask-user"` populates `question: { roomId: check.source.roomId, text: ... }` on `CaptureWrite` and passes `() => this.loop.notify(contactId, "now")` to `coverage.apply`, keeping both direct-quote memories `active` with `conflictsWith`.
+   - Verified by `P1A stale group reply during reflect abandons all structured capture writes` and `P1A ask-user structured conflict passes its question through apply and notifies`.
+4. **All 3 P2 Notes — ADDRESSED**:
+   - `memory-coverage.test.ts` adds `G1-04CAS external md edit during apply is preserved and rejects the stale write` (killing former survivor `P1A-F3`).
+   - `playbook.ts` short-circuits already-scrubbed invalidations in `list()` (zero extra writes, `updatedAt` preserved) and emits `room.updated` on `clone()` even when no announcements are copied.
+   - `memory-write-neighbors.test.ts:35` cleaned up (`0` Biome infos/warnings/errors).
+
+### 2. Independent Round 2 Verification & Fault Injection
+
+- **Typecheck & Lint**: `npm run typecheck` (exit `0`) and `npm run lint` (`310` files checked, `0` errors, `0` warnings, `0` infos, exit `0`).
+- **Full Offline Test Suite**: `npm test` passed **`2091/2091`** (`0` failed, `0` skipped, `0` cancelled, `0` todo).
+- **Block-1 Prefix Budget**: `packages/adapter-pi-contact/src/recall.test.ts` passed (`1/1`, `< 4000` UTF-8 bytes).
+- **Combined Red Replay (`2f3d0f22`)**: `tsc -p tsconfig.json` exit `0`; **`71/71` tests failed** (`0` passed, `0` skipped); empty test diff between Red `2f3d0f22` and Green `1a9f8f9b`.
+- **Independent Round 2 Single-Site Fault Injections (`6/6` Killed)**:
+
+| Fault ID | Target Site | Injected Mutation | Result | Killing Test(s) |
+| :--- | :--- | :--- | :--- | :--- |
+| `P1A-R2-F1` | `packages/server/src/host.ts` | Pass `0` instead of `unresolved` to `coverage.prepare` | **KILLED** (`1` failure) | `memory-api.test.ts` — `P1A Host structured reflect validates per-message verbatim evidence and records coverage` |
+| `P1A-R2-F2` | `packages/server/src/host.ts` | Revert `this.memory.list(contactId)` back to `this.memory.listAll(contactId)` | **KILLED** (`1` failure) | `memory-api.test.ts` — `P1A structured reflect ignores a source-retracted entry when planning relations` |
+| `P1A-R2-F3` | `packages/server/src/host.ts` | Skip post-`commitRound` `settled.capture?.()` call | **KILLED** (`3` failures) | `memory-api.test.ts` — structured reflect, source-retracted, ask-user conflict |
+| `P1A-R2-F4` | `packages/server/src/memory-coverage.ts:52` | Bypass concurrent-disk-edit CAS guard (former R1 survivor `P1A-F3`) | **KILLED** (`1` failure) | `memory-coverage.test.ts` — `G1-04CAS external md edit during apply is preserved and rejects the stale write` |
+| `P1A-R2-F5` | `packages/server/src/playbook.ts:39` | Bypass already-scrubbed invalidation short-circuit in `list()` | **KILLED** (`1` failure) | `playbook.test.ts` — `P1A repeated listing of scrubbed invalidation preserves updatedAt` |
+| `P1A-R2-F6` | `packages/server/src/playbook.ts:99` | Remove `room.updated` emit in `clone()` | **KILLED** (`1` failure) | `playbook.test.ts` — `P1A clone emits room.updated even when no announcements are copied` |
+
+### Verdict
+
+All Round 1 P1 defects and P2 items are cleanly resolved and verified with runtime evidence and fault injections. **APPROVE** (`b21e64891feba05f2087b41a7044dde14272acb56add560992ad57eda7b28f2e`).
