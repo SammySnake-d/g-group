@@ -1,0 +1,25 @@
+packages/server/src/bus.ts
+  s_6da11bdeb4da59::t_256433de1b2918 35
+packages/server/src/cli.ts
+  s_6da11bdeb4da59::t_f673e48aa01c90 2-3,83,130-131,139-142,144-145,166-181
+packages/server/src/http-ws.ts
+  s_6da11bdeb4da59::t_e1287caab77bc4 1-5,11,18,24-180,182-193
+packages/server/src/start.ts
+  s_6da11bdeb4da59::t_a20769b0966896 17-18,23,47,59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bb8a0fb427d20ab3892681b38d79d53aaca697f1",
+  "prompts": {},
+  "sessions": {
+    "s_6da11bdeb4da59": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1eef2-c7e4-74d3-9b9f-70c85d987ada",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
