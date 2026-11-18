@@ -412,6 +412,7 @@ const TERMINAL: ReadonlySet<string> = new Set(["T8_Accepted", "T10_Cancelled", "
 
 export class Host {
   readonly db: Db;
+  readonly usage = { rows(): import("./cache-stats.ts").UsageRow[] { return []; }, record(_meta: {kind: import("@g-group/kernel").UsageKind; contactId: string; roomIds: readonly string[]; roundId: string}, _u: import("@g-group/kernel").ModelUsage): void { throw new Error("B4 red stub: record usage"); } };
   readonly bus: Bus;
   readonly userId: string;
   readonly userName: string;

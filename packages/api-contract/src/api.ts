@@ -59,6 +59,8 @@ const Page = { limit: opt(int({ min: 1, max: 500 })) };
 
 const method = <P, R>(params: Schema<P>, result: Schema<R>) => ({ params, result });
 
+import { USAGE_METHODS } from "./usage.ts";
+
 export const METHODS = {
   // 会话握手:核对合同版本,拿当前事件游标(订阅从这里接)。
   "session.hello": method(obj({ clientApiVersion: str({ max: 20 }) }), obj({ apiVersion: str(), serverTime: isoTime(), eventSeq: seq(), userId: id() })),
@@ -446,6 +448,7 @@ export const METHODS = {
     }),
     SettingsView,
   ),
+  ...USAGE_METHODS,
 } as const;
 
 export type MethodTable = typeof METHODS;

@@ -16,3 +16,4 @@ export * from "./quote-chain.ts";
 
 export * from "./history-search.ts";
 export * from "./history-tools.ts";
+export * from "./model-usage.ts";

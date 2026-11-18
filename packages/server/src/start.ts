@@ -13,6 +13,11 @@ import { type IpcMainLike, type Service, bindIpc, createService } from "./servic
 export interface StartOptions {
   /** 数据目录:gg.db、插件包、附件、Compute 工作目录都在这下面。 */
   readonly dataDir: string;
+  readonly api?: import("@g-group/adapter-pi-contact").PiProtocol;
+  readonly protocols?: readonly import("@g-group/adapter-pi-contact").PiProtocol[];
+  readonly magpie?: boolean;
+  readonly stateNoteMaxBytes?: number | null;
+  readonly fetch?: typeof globalThis.fetch;
   /** fake:规则替身(不连模型,开发前端用);pi:真实联系人脑子。默认 fake。 */
   readonly mind?: "fake" | "pi";
   /** fake:剧本 Compute(按派的活说话,见 fakes.ts deskCompute);claude:真实 Claude Code CLI。默认 fake。 */
@@ -36,6 +41,7 @@ export interface Started {
   close(): Promise<void>;
 }
 
+export const DEFAULT_STATE_NOTE_MAX_BYTES = 8192;
 export const SAMPLE_CATALOG = fileURLToPath(new URL("../catalog/catalog.json", import.meta.url));
 
 export async function startServer(o: StartOptions): Promise<Started> {

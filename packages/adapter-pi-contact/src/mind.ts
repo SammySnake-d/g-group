@@ -14,7 +14,11 @@ import { parseToolCall, TOOL_DECLARATIONS } from "./tools.ts";
 
 export interface PiContactMindOptions {
   /** 模型协议。本片只接 Anthropic Messages 兼容端点(默认即此)。 */
-  readonly api?: "anthropic-messages";
+  readonly api?: import("./protocols.ts").PiProtocol;
+  readonly protocols?: readonly import("./protocols.ts").PiProtocol[];
+  readonly healthCache?: import("./protocols.ts").ProtocolHealthCache;
+  readonly sessionAffinity?: boolean;
+  readonly reasoning?: boolean;
   /** 服务商标识(进 pi 的 provider 字段,不含密钥),例如 "anthropic"、"magpie"。 */
   readonly provider: string;
   /** 模型 id,原样发给端点;必须与 RoundInput.contact.speakingModel 一致,不一致整轮拒绝(不静默换模)。 */
@@ -24,7 +28,7 @@ export interface PiContactMindOptions {
   /** 密钥,由调用方传入。适配器不读环境变量。 */
   readonly apiKey: string;
   /** 密钥放哪个请求头:x-api-key(默认,Anthropic API 密钥)或 Authorization: Bearer(网关令牌)。 */
-  readonly authHeader?: "x-api-key" | "bearer";
+  readonly authHeader?: import("./protocols.ts").PiAuthHeader;
   /** 单次回复的输出上限,默认 4096。 */
   readonly maxTokens?: number;
   /** 模型上下文窗口,默认 200000(只用于 pi 的模型描述)。 */
