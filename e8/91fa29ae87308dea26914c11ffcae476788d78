@@ -1,0 +1,39 @@
+packages/adapter-pi-contact/src/tools.ts
+  s_21d4cbfd0a5fd4::t_db7f2eba5fe55b 1,5,26
+packages/domain/src/log.ts
+  s_21d4cbfd0a5fd4::t_286d87f3da049a 7,26
+packages/kernel/src/history-search.ts
+  s_21d4cbfd0a5fd4::t_daed6c6dd3d5e2 1,5-6
+packages/kernel/src/history-tools.ts
+  s_21d4cbfd0a5fd4::t_7a5a1d782bf3ec 4,7,20,33,36-37,44-45,54-55,58-59,61-62,64-65,67-68,70-71,80-81,83-84,87-88,90-91,93-94
+packages/kernel/src/memory.ts
+  s_21d4cbfd0a5fd4::t_e72a049de9e736 5-6,11,149-158,160,163-165,168,172,177
+packages/server/src/assemble.ts
+  s_21d4cbfd0a5fd4::t_ee372ae16bc78b 98,118
+packages/server/src/compaction-summary.ts
+  s_21d4cbfd0a5fd4::t_50094dfda47878 7,12-15
+packages/server/src/history.ts
+  s_21d4cbfd0a5fd4::t_0e2c09ecd7f698 1,8,47-49,51-52
+packages/server/src/host.ts
+  s_21d4cbfd0a5fd4::t_44d71873dc1bb2 133,1055-1056,1102,1152,1505,1526,1747,2101,2108,2151,2459,2525,2527,2573,2626,2670,2723,2738,2742-2743,2754,2757,2760,2765,2810,2831,2835,2867,2922,2963,2982,3123,3160,3193,4406,4421,4427,4444,4477,4506,4547,4837,5048
+packages/server/src/loop-guard.ts
+  s_21d4cbfd0a5fd4::t_5ca46389448140 2,24-33
+packages/server/src/room-post-budget.ts
+  s_21d4cbfd0a5fd4::t_e7a2f094101d07 30-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e891fa29ae87308dea26914c11ffcae476788d78",
+  "prompts": {},
+  "sessions": {
+    "s_21d4cbfd0a5fd4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ec82-9ccb-7fa0-80ae-658287515888",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
