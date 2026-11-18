@@ -1,0 +1,36 @@
+{
+  "slice": "Q08 / AC-23 prerequisite: enable the isolated process gate layer and recover dotted Gemini model versions; runtime process cleanup follows in P1-B.",
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "scripts/gates/proof/process-layer.txt"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "scripts/gates/proof/process-layer.txt"
+    },
+    {
+      "id": "R-18",
+      "status": "通过",
+      "evidence": "scripts/gates/proof/process-layer.txt"
+    },
+    {
+      "id": "AC-23",
+      "status": "未测",
+      "reason": "本片仅交付 Q08 process 分层门禁前置条件；真实进程清理、停止确认与槽位归还等待 P1-B。"
+    }
+  ],
+  "author": {
+    "agent": "codex-cli",
+    "session": "codex-cli:01a1ee2b-38ee-7cd1-8041-c3b9ae6f1ce0",
+    "model": "ling-jing/gpt-6.1-sol"
+  },
+  "red": {
+    "commit": "316f8a3527b7801017ac2ca44409864ec4585cba"
+  },
+  "review": null,
+  "waiver": null,
+  "unverifiable": "AC-23: 本片仅验证 Q08 的包分层边界，真实进程清理、后代进程终止、停止确认与资源归还待 P1-B（packages/process-tools 与 packages/adapter-codex-compute）实现并实测。R-02: scripts/gates/*.test.ts 不在 isTest 的 packages/**/*.test.ts 范围，G-RED 不机械重放这些测试；红提交的具名 ERR_ASSERTION 与同一测试文件转绿记录见证据，独立审查仍待。R-05 / R-18: 既有门禁变异集与 Q08 自检证明当前边界，不替代 AC-23 运行时验收。R-01: review=null，来源门禁此时跳过来源核验，7/8 不能视为独立审查或作者来源已核验。"
+}
