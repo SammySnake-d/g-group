@@ -24,7 +24,7 @@ export interface Asset {
 }
 export interface LibraryView {
   readonly skills: { readonly name: string; readonly description: string }[];
-  readonly mcp: { readonly name: string }[];
+  readonly mcp: { readonly name: string; readonly description?: string; readonly command?: string }[];
   readonly scripts?: { readonly name: string; readonly description: string }[];
 }
 /** 一次派活要交给 Compute 的隔离配置 */
@@ -49,8 +49,7 @@ function skillDescription(file: string): string {
   return line ? line.replace(/^description\s*:\s*/, "").replace(/^["']|["']$/g, "").trim() : "";
 }
 
-/** 读 <名>.json 成 MCP 启动配置;不合格返回原因 */
-function mcpSpec(file: string): McpServerSpec | string {
+function mcpEntry(file: string): { spec: McpServerSpec; description?: string } | string {
   let raw: unknown;
   try {
     raw = JSON.parse(readFileSync(file, "utf8"));
@@ -58,10 +57,34 @@ function mcpSpec(file: string): McpServerSpec | string {
     return "配置不是合法 JSON";
   }
   if (!isRecord(raw) || typeof raw.command !== "string" || !raw.command) return "配置缺 command";
-  if (Object.keys(raw).some((k) => k !== "command" && k !== "args" && k !== "env")) return "配置只收 command/args/env";
+  if (Object.keys(raw).some((k) => k !== "command" && k !== "args" && k !== "env" && k !== "description")) return "配置只收 command/args/env/description";
   if (raw.args !== undefined && !isStrArr(raw.args)) return "args 必须是字符串数组";
   if (raw.env !== undefined && !(isRecord(raw.env) && Object.values(raw.env).every((v) => typeof v === "string"))) return "env 必须是字符串到字符串";
-  return { command: raw.command, ...(raw.args ? { args: [...raw.args] } : {}), ...(raw.env ? { env: { ...(raw.env as Record<string, string>) } } : {}) };
+  if (raw.description !== undefined && typeof raw.description !== "string") return "description 必须是字符串";
+  const spec: McpServerSpec = {
+    command: raw.command,
+    ...(raw.args ? { args: [...raw.args] } : {}),
+    ...(raw.env ? { env: { ...(raw.env as Record<string, string>) } } : {}),
+  };
+  const desc = typeof raw.description === "string" && raw.description.trim() ? raw.description.trim() : undefined;
+  return desc ? { spec, description: desc } : { spec };
+}
+
+/** 读 <名>.json 成 MCP 启动配置;不合格返回原因 */
+function mcpSpec(file: string): McpServerSpec | string {
+  const res = mcpEntry(file);
+  return typeof res === "string" ? res : res.spec;
+}
+
+function scriptDescription(file: string): string {
+  const firstLines = readFileSync(file, "utf8").split(/\r?\n/).slice(0, 6);
+  for (const line of firstLines) {
+    const cleaned = line.trim();
+    if (!cleaned || cleaned.startsWith("#!")) continue;
+    if (cleaned.startsWith("#") || cleaned.startsWith("//")) return cleaned.replace(/^[#/]+\s*/, "").trim();
+    break;
+  }
+  return "";
 }
 
 export class CapabilityLibrary {
@@ -77,9 +100,90 @@ export class CapabilityLibrary {
   private mcpFile(name: string) {
     return path.join(this.root, "mcp", `${name}.json`);
   }
-  /** Red baseline stub. */
-  prepare(_contactId: string, _harness: string, _assets: readonly Asset[]): PrepareResult { return { ok: false, missing: ["red stub"] }; }
-  list(): LibraryView { return { skills: [], mcp: [] }; }
+  /** 库里可勾选的 skill 与 MCP(联系人设置页的勾选清单) */
+  list(): LibraryView {
+    const skills: { name: string; description: string }[] = [];
+    const sd = path.join(this.root, "skills");
+    if (existsSync(sd)) {
+      for (const n of readdirSync(sd).sort()) {
+        const f = path.join(sd, n, "SKILL.md");
+        if (NAME.test(n) && existsSync(f)) skills.push({ name: n, description: skillDescription(f) });
+      }
+    }
+    const mcp: { name: string; description?: string }[] = [];
+    const md = path.join(this.root, "mcp");
+    if (existsSync(md)) {
+      for (const f of readdirSync(md).sort()) {
+        if (!f.endsWith(".json")) continue;
+        const name = f.slice(0, -5);
+        if (!NAME.test(name)) continue;
+        const parsed = mcpEntry(path.join(md, f));
+        if (typeof parsed !== "string") {
+          mcp.push(parsed.description ? { name, description: parsed.description } : { name });
+        }
+      }
+    }
+    const scripts: { name: string; description: string }[] = [];
+    const scd = path.join(this.root, "scripts");
+    if (existsSync(scd)) {
+      for (const n of readdirSync(scd).sort()) {
+        const full = path.join(scd, n);
+        const key = n.replace(/\.[^.]+$/, "");
+        if (n.length > 64 || !NAME.test(key)) continue;
+        const mdFile = path.join(full, "SKILL.md");
+        if (existsSync(mdFile)) scripts.push({ name: n, description: skillDescription(mdFile) });
+        else if (statSync(full, { throwIfNoEntry: false })?.isFile()) scripts.push({ name: n, description: scriptDescription(full) });
+      }
+    }
+    return scripts.length > 0 ? { skills, mcp, scripts } : { skills, mcp };
+  }
+
+  /** 按勾选集合生成专属运行目录。缺项(库里没有、配置坏了)一律不启动,返回缺哪些 */
+  prepare(contactId: string, harness: string, assets: readonly Asset[]): PrepareResult {
+    const missing: string[] = [];
+    const skills: string[] = [];
+    const mcpServers: Record<string, McpServerSpec> = {};
+    for (const a of assets) {
+      if (a.kind === "script") continue;
+      if (!NAME.test(a.name)) {
+        missing.push(`${a.name}(名字不合规)`);
+        continue;
+      }
+      if (a.kind === "skill") {
+        if (existsSync(path.join(this.skillDir(a.name), "SKILL.md"))) skills.push(a.name);
+        else missing.push(`skill ${a.name}(能力库里没有)`);
+      } else {
+        const f = this.mcpFile(a.name);
+        const spec = existsSync(f) ? mcpSpec(f) : "能力库里没有";
+        if (typeof spec === "string") missing.push(`MCP ${a.name}(${spec})`);
+        else if (a.name === "host") missing.push("MCP host(名字留给 report_progress)");
+        else mcpServers[a.name] = spec;
+      }
+    }
+    if (missing.length) return { ok: false, missing };
+    const home = path.join(this.runHomes, segment(contactId), segment(harness));
+    const configDir = path.join(home, "config");
+    mkdirSync(configDir, { recursive: true });
+    const pluginDirs: string[] = [];
+    if (skills.length) {
+      skills.sort();
+      // 勾选指纹:同一组勾选复用同一个插件目录,改了勾选就是新目录,正在跑的 Compute 看的旧目录不被改动
+      const fp = createHash("sha256").update(JSON.stringify(skills.map((s) => [s, this.skillDir(s)]))).digest("hex").slice(0, 12);
+      const dir = path.join(home, `skills-${fp}`);
+      if (!existsSync(path.join(dir, ".claude-plugin", "plugin.json"))) {
+        const tmp = `${dir}.tmp-${process.pid}-${Date.now()}`;
+        rmSync(tmp, { recursive: true, force: true });
+        mkdirSync(path.join(tmp, ".claude-plugin"), { recursive: true });
+        mkdirSync(path.join(tmp, "skills"), { recursive: true });
+        writeFileSync(path.join(tmp, ".claude-plugin", "plugin.json"), `${JSON.stringify({ name: SKILL_PLUGIN, version: "0.0.0", description: "联系人勾选的 skill(宿主生成)" })}\n`);
+        for (const s of skills) symlinkSync(this.skillDir(s), path.join(tmp, "skills", s), "dir");
+        rmSync(dir, { recursive: true, force: true });
+        renameSync(tmp, dir);
+      }
+      pluginDirs.push(dir);
+    }
+    return { ok: true, home: { configDir, pluginDirs, mcpServers, skills: skills.map((s) => `${SKILL_PLUGIN}:${s}`) } };
+  }
 
   /** 运行目录里实际软链出来的 skill(测试与诊断用):插件目录 skills/ 下每一项指向库里的哪个目录 */
   linkedSkills(pluginDir: string): { name: string; target: string }[] {

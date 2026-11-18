@@ -13,13 +13,19 @@ const DEFAULT_MAX_BYTES = 1024 * 1024;
 export function contactProfile(host: Host, contactId: string): ContactProfileView {
   const doc = host.contactDoc(contactId).value;
   const note = getDoc<{ text: string }>(host.db, `note:${contactId}`);
+  const allTasks = host.listTasks({ contactId });
+  const doneTasks = allTasks
+    .filter((t) => DONE_STATES.has(t.state))
+    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
+    .slice(0, 50);
   return {
     contact: host.contactView(doc),
     persona: doc.persona ?? "",
     memory: { stateNote: note ? { text: note.value.text, version: note.ver } : null, longTerm: longTermMemory(host, contactId) },
     duties: {
       commitments: host.listCommitments({ contactId, status: "active" }),
-      tasks: host.listTasks({ contactId }).filter((t) => !DONE_STATES.has(t.state)),
+      tasks: allTasks.filter((t) => !DONE_STATES.has(t.state)),
+      doneTasks,
       schedules: host.scheduler.list({ contactId }),
       rooms: host.roomsOfContact(contactId).map((r) => ({ roomId: r.id, kind: r.kind, title: r.title })),
     },

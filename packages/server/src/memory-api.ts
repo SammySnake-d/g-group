@@ -1,9 +1,11 @@
 // 联系人长期记忆的对外接口(需求文档 D25 第 4 节;验收 AC-42 ⑤⑧⑨、AC-54)。只给用户本人:联系人、Helper 或别的身份来调一律 forbidden。
 //   list / get:全部条目(不含「建议改人格」),标出准入(前缀 / 锚点)、对外状态(含「来源已撤回」)、现在是否进上下文;
+//   add:用户手动补充/沉淀一条长期记忆(按 scope 写前缀/锚点,经 planMemoryWrite 去重判关系后立即生效);
 //   revoke:按 D25 状态机改「已撤销」并升版本,md 与索引都保留(不物理删除);之后不进任何上下文;
 //   rebuild:删掉索引从 md 真源重建;longTermMemory:联系人资料页的长期记忆概览。
+import { randomUUID } from "node:crypto";
 import type { LongTermMemoryView, MemoryView, ParamsOf } from "@g-group/api-contract";
-import { GLOBAL_ANCHOR } from "@g-group/kernel";
+import { GLOBAL_ANCHOR, planMemoryWrite } from "@g-group/kernel";
 import { HostError } from "./db.ts";
 import type { Host } from "./host.ts";
 
@@ -73,9 +75,32 @@ export function getMemoryView(host: Host, actor: MemoryActor, p: ParamsOf<"memor
   return viewOf(host, p.contactId, p.memoryId);
 }
 
-/** 用户撤销:active / degraded → revoked(升版本);已撤销原样返回;已替代 conflict。md 与索引行都保留,不物理删除。 */
-export function addMemory(_host: Host, _actor: MemoryActor, _p: ParamsOf<"memory.add">): MemoryView { throw new HostError("internal", "red stub"); }
+/** 用户手动补充/沉淀一条长期记忆(走 D25 planMemoryWrite 去重与锚点准入,写下即生效)。 */
+export function addMemory(host: Host, actor: MemoryActor, p: ParamsOf<"memory.add">): MemoryView {
+  onlyOwner(host, actor);
+  host.contactDoc(p.contactId);
+  const title = p.title.trim();
+  const body = p.body.trim();
+  if (!title || !body) throw new HostError("invalid_params", "记忆标题和正文不能为空");
+  const rawAnchors = (p.anchors ?? []).map((a) => a.trim()).filter(Boolean);
+  if (rawAnchors.includes(PERSONA_ANCHOR)) throw new HostError("invalid_params", "不能手动添加建议人格记忆");
+  const anchors =
+    p.scope === "prefix"
+      ? [GLOBAL_ANCHOR, ...rawAnchors.filter((a) => a !== GLOBAL_ANCHOR)]
+      : rawAnchors.filter((a) => a !== GLOBAL_ANCHOR);
+  const finalAnchors = anchors.length > 0 ? anchors : ["manual"];
+  const now = host.memory.now();
+  const all = host.memory.listAll(p.contactId);
+  const hidden = host.memory.hiddenIds(all);
+  const existing = all.filter((entry) => !hidden.has(entry.id) && !entry.anchors.includes(PERSONA_ANCHOR));
+  const plan = planMemoryWrite(existing, { title, body, anchors: finalAnchors, source: null, relation: null }, now, () => `mem-${randomUUID().slice(0, 12)}`);
+  if (plan.kind === "invalid") throw new HostError("invalid_params", plan.why);
+  for (const entry of plan.changed) host.memory.put(p.contactId, entry);
+  const id = plan.kind === "restate" ? plan.target : plan.entry.id;
+  return viewOf(host, p.contactId, id);
+}
 
+/** 用户撤销:active / degraded → revoked(升版本);已撤销原样返回;已替代 conflict。md 与索引行都保留,不物理删除。 */
 export function revokeMemory(host: Host, actor: MemoryActor, p: ParamsOf<"memory.revoke">): MemoryView {
   onlyOwner(host, actor);
   viewOf(host, p.contactId, p.memoryId);
