@@ -50,7 +50,14 @@
   "red": {
     "commit": "d2e38ab3d6a8c1924c9ed4fb45aca551cae762d4"
   },
-  "review": null,
+  "review": {
+    "agent": "carbon-agy",
+    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
+    "model": "gemini-4-carbon-high",
+    "verdict": "reject",
+    "reviewed_hash": "b8198350a59df2538b1b8c39282e008131a982ee8f1e4ea3cddc8924ae125228",
+    "notes": "Round 1 REJECT (see reviews/feat-agy-p0-config-provenance-receipts.md): Blocking P1 in Host.readLinked (packages/server/src/host.ts:1605-1635) — (1) missing retractedBodies + scrubLineBody scrub and unscrubbed query term filter leak echoed retracted message bodies across rooms (AC-08 / G4b); (2) unbounded this.projected(link.linkedRoomId) leaks post-uptoSeq editMessage revisions across the static room link upper bound (U24). All other B3 components (config history WITHOUT ROWID + triggers, task timeline seams/actors/cursors, retract disclosure, forward provenance & consent veto, and contract polish) verified clean with 1971/1971 tests, 70/70 Red failures, and 8/8 fault injections killed."
+  },
   "waiver": null,
   "unverifiable": "AC-01、AC-08、AC-20、AC-32、AC-46：本片的证据仅为 D 层受控替身和真实宿主/SQLite；真实供应商、UI 与端到端 X 层留 B4/B9，C-US09 撤回取消在途任务留 B6。独立跨厂商审查尚未执行，不请求豁免。",
   "verification": {
