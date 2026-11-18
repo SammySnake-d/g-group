@@ -1,0 +1,45 @@
+packages/adapter-codex-compute/src/adapter.test.ts
+  s_4615ac13a0183c::t_276c0f3510e0b9 9,11,40,54,61,89,109
+packages/adapter-codex-compute/src/adapter.ts
+  s_4615ac13a0183c::t_b47e782d29be19 1,10-13,15-23
+packages/adapter-codex-compute/src/feed.ts
+  s_4615ac13a0183c::t_9a00f544ecb3c7 2-3
+packages/adapter-codex-compute/src/protocol.ts
+  s_4615ac13a0183c::t_bb48bb381b7724 2,24-26
+packages/adapter-codex-compute/src/startup.ts
+  s_4615ac13a0183c::t_9cbea5fea0556c 1-2
+packages/kernel/src/compute.ts
+  s_4615ac13a0183c::t_4d0d35d26c8a8d 165
+packages/process-tools/src/cleanup.ts
+  s_4615ac13a0183c::t_f6901014a5379d 1-6
+packages/process-tools/src/procgroup.ts
+  s_4615ac13a0183c::t_6ff82c1ba36091 2,4-9
+packages/process-tools/src/stop-confirm.ts
+  s_4615ac13a0183c::t_dd687febadd105 1-2,4-6
+packages/server/src/cli.ts
+  s_4615ac13a0183c::t_3821ba5caa43d0 8,14,75,123
+packages/server/src/compute.ts
+  s_4615ac13a0183c::t_21976cb91e20c6 53-55
+packages/server/src/harness-switch.test.ts
+  s_4615ac13a0183c::t_0552abadee5567 123,142,181,188,197,217,227
+packages/server/src/host.ts
+  s_4615ac13a0183c::t_19b3c87a1b108a 2198,3593,4195-4196,4329-4330,5722-5730
+packages/server/src/start.ts
+  s_4615ac13a0183c::t_ede5bb1544674c 8,20-21,29,49,53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "56d3e81b7304861619648177b2da7788e5beddaf",
+  "prompts": {},
+  "sessions": {
+    "s_4615ac13a0183c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f07c-37be-71c1-84c4-538a939db970",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
