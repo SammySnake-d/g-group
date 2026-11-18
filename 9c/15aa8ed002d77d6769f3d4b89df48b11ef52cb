@@ -1,0 +1,27 @@
+README.md
+  s_c847363fc44382::t_946cbc24bc1758 16-21
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  s_c847363fc44382::t_946cbc24bc1758 1-26
+docs/spec/验收文档-v0.1.md
+  s_c847363fc44382::t_946cbc24bc1758 297-314
+packages/server/proof/p1a-context-memory-playbook.txt
+  s_c847363fc44382::t_f238eb2b3a37f1 1-38
+receipts/feat-agy-priority-context-memory-playbook.json
+  s_c847363fc44382::t_de602a3df9c624 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9c15aa8ed002d77d6769f3d4b89df48b11ef52cb",
+  "prompts": {},
+  "sessions": {
+    "s_c847363fc44382": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1eda8-b7c7-77c3-9505-693220ca61f5",
+        "model": "ling-jing/gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
