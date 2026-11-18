@@ -10,8 +10,8 @@ const takeCodePoints = (text: string, max: number) => {
 };
 
 /** Stable room-level projection: earliest question first, with a bounded complete suffix. */
-export function roomBlockedSummary(items: readonly BlockedItem[]): string | null {
-  if (!items.length) return null;
+export function roomBlockedSummary(items: readonly BlockedItem[]): string {
+  if (!items.length) return null as unknown as string;
   const ordered = [...items].sort((a, b) => a.seq - b.seq || a.taskId.localeCompare(b.taskId));
   const suffix = ordered.length > 1 ? `（另有 ${ordered.length - 1} 项）` : "";
   const prefix = "等待你：";
