@@ -3,6 +3,7 @@
 // 进程环境只带网关地址与令牌;模型不写进环境(写进去就成了「启动时定模型」,F05 的反例)。
 // 空闲会话按时回收,下一轮用同一会话 id 带这一轮的生效模型恢复(D27 第 4 节第 7 条:是否常驻、何时回收是宿主的资源策略)。
 import type { ComputeAdapter } from "@g-group/adapter-cc-compute";
+import { createCodexComputeAdapter } from "@g-group/adapter-codex-compute";
 import { createResidentComputeAdapter } from "@g-group/adapter-cc-compute/resident";
 
 const PASS = ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"] as const;
@@ -50,7 +51,9 @@ export function claudeCompute(env: Readonly<Record<string, string | undefined>>,
   return () => createResidentComputeAdapter(opts);
 }
 
-/** Compile-time placeholder for the red test commit. */
-export function codexCompute(_env: Readonly<Record<string, string | undefined>>): (model: string) => ComputeAdapter {
-  return () => { throw new Error("Codex compute is not implemented"); };
+/** Codex owns thread history; each Compute slot owns a separate CODEX_HOME. */
+export function codexCompute(env: Readonly<Record<string, string | undefined>>, dataDir?: string, commands: ComputeCommands = {}): (model: string) => ComputeAdapter {
+  const hostEnv: Record<string, string> = {};
+  for (const key of ["OPENAI_API_KEY", "OPENAI_BASE_URL", "CODEX_API_KEY", "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"]) if (env[key]) hostEnv[key] = env[key]!;
+  return () => createCodexComputeAdapter({ hostEnv, ...(dataDir ? { dataDir } : {}), ...(commands.runner ? { runner: commands.runner } : {}) });
 }

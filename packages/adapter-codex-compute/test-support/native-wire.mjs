@@ -8,6 +8,10 @@ let n = 0;
 const send = (m) => process.stdout.write(JSON.stringify(m) + "\n");
 const mode = process.env.FIXTURE_MODE ?? "normal";
 const thread = "native-thread-1";
+if (mode === "stubborn") {
+  process.on("SIGTERM", () => writeFileSync(path.join(process.env.CODEX_HOME, "term-at"), String(Date.now())));
+  setInterval(() => {}, 1000);
+}
 const stored = path.join(process.env.CODEX_HOME, "fixture-history.json");
 const terminal = (id, status = "completed") => ({ method: "turn/completed", params: { threadId: thread, turn: { id, status, items: [{ type: "agentMessage", id: `item-${id}`, text: `reply-${id}` }], error: null } } });
 createInterface({ input: process.stdin }).on("line", async (line) => {
@@ -42,7 +46,7 @@ createInterface({ input: process.stdin }).on("line", async (line) => {
   } else if (m.method === "turn/start") {
     const id = `native-turn-${++n}`;
     if (mode === "turn-rpc-error") { send({ id: m.id, error: { code: -32001, message: "model denied", data: { model: "probe-A", retryable: false } } }); return; }
-    if (mode === "early-flood") { for (let i = 0; i < 66; i++) send(terminal("foreign-" + i)); return; }
+    if (mode === "early-flood") { for (let i = 0; i < 66; i++) send(terminal("foreign-" + i)); send({ id: m.id, result: { turn: { id, status: "inProgress", items: [] } } }); send(terminal(id)); return; }
 
     const state = JSON.parse(readFileSync(stored, "utf8")); state.turns.push({ id }); writeFileSync(stored, JSON.stringify(state));
     if (mode === "early") {
@@ -55,6 +59,13 @@ createInterface({ input: process.stdin }).on("line", async (line) => {
     send({ method: "turn/started", params: { threadId: thread, turn: { id, status: "inProgress" } } });
     if (mode === "turn-oversized") { process.stdout.write("x".repeat(2 * 1024 * 1024) + "\n"); return; }
     if (mode === "crash") process.exit(7);
+    if (mode === "progress") {
+      for (let i = 0; i < Number(process.env.FIXTURE_COUNT ?? 1000); i++) send({ method: "item/agentMessage/delta", params: { threadId: thread, turnId: id, itemId: "text", delta: "x" } });
+      const item = { id: "report-tool", type: "mcpToolCall", server: "gg_progress", tool: "report_progress", status: "completed", result: { structuredContent: { kind: "milestone", stage: "proof", summary: "structured native progress" } } };
+      send({ method: "item/started", params: { threadId: thread, turnId: id, item } });
+      send({ method: "item/completed", params: { threadId: thread, turnId: id, item } });
+      send({ method: "thread/tokenUsage/updated", params: { threadId: thread, turnId: id, tokenUsage: {} } });
+    }
     if (mode === "exit0") process.exit(0);
     if (mode === "malformed") { process.stdout.write("not-json\n"); return; }
     if (mode === "approval") send({ id: "native-approval-1", method: "item/commandExecution/requestApproval", params: { threadId: thread, turnId: id, command: "fixture-not-executed" } });

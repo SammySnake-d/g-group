@@ -4,13 +4,13 @@
 //   node packages/server/src/cli.ts log --db ./gg.db [roomId]
 //   node packages/server/src/cli.ts group --db ./gg.db --members 小克,小研 --to 小克 "@小克 帮我在你的工作目录写 group.txt"
 // 选项:--mind fake|pi(默认 fake 规则脑子;pi 需要 @g-group/adapter-pi-contact 与模型网关环境变量)
-//       --compute fake|claude(默认 fake;claude 起真实 Claude Code CLI)  --cwd 目录(Compute 工作目录)  --timeout 秒
+//       --compute fake|claude|codex(默认 fake;claude 起真实 Claude Code CLI)  --cwd 目录(Compute 工作目录)  --timeout 秒
 //       --repo 仓库 --target 分支 [--verify "命令 参数…"](AC-22:每个任务一个 worktree 作 Compute 工作目录)  --accept(交付后豁免审查并验收,代码任务随即合入)
 //       --no-progress-ms 毫秒 --first-byte-ms 毫秒(AC-43 ⑯ 卡死阈值的基础层,默认 15 分钟 / 120 秒)
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { claudeCompute } from "./compute.ts";
+import { claudeCompute, codexCompute } from "./compute.ts";
 import { ensureGroup, sendAndWait, senderAudit } from "./drive.ts";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
@@ -75,7 +75,7 @@ function makeCompute(kind: string) {
     const c = scriptedCompute({ stepMs: 50 });
     return { factory: () => c.adapter, close: () => c.close() };
   }
-  if (kind === "claude") return { factory: claudeCompute(process.env), close: () => {} };
+  if (kind === "claude" || kind === "codex") return { factory: { "claude-code": claudeCompute(process.env), codex: codexCompute(process.env) }, close: () => {} };
   throw new Error(`未知 --compute ${kind}`);
 }
 
@@ -123,7 +123,7 @@ async function runGroup(host: Host, model: string | undefined) {
 
 async function main() {
   if (cmd !== "dm" && cmd !== "log" && cmd !== "group") {
-    console.log("用法: cli.ts dm|log|group --db 文件 [--name 联系人] [--members 甲,乙 --to 甲] [--mind fake|pi] [--api 协议 | --protocols 协议,协议] [--magpie | --no-magpie] [--note-max-bytes 字节|none] [--compute fake|claude] [--cwd 目录] \"消息\"");
+    console.log("用法: cli.ts dm|log|group --db 文件 [--name 联系人] [--members 甲,乙 --to 甲] [--mind fake|pi] [--api 协议 | --protocols 协议,协议] [--magpie | --no-magpie] [--note-max-bytes 字节|none] [--compute fake|claude|codex] [--cwd 目录] \"消息\"");
     process.exit(2);
   }
   const { defaultModel: model, ...mind } = await makeMind(values.mind);
@@ -152,6 +152,7 @@ async function main() {
     onReport: (what, detail) => console.error(`[宿主] ${what}`, typeof detail === "object" ? JSON.stringify(detail) : detail),
   });
   try {
+    if (values.compute === "codex") host.updateSettings({ defaultHarness: "codex", confirmAffected: true });
     if (model) host.updateSettings({ defaultComputeModel: model, defaultSpeakingModel: model, confirmAffected: true });
     if (cmd === "group") return await runGroup(host, model);
     let contact = host.listContacts().find((c) => c.name === values.name);
