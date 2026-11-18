@@ -1,0 +1,113 @@
+{
+  "slice": "P1-B: shared process tools, Codex app-server protocol and AC-51 ⑦ harness handoff.",
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "packages/server/proof/p1b-codex-protocol.txt"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "packages/server/proof/p1b-codex-protocol.txt"
+    },
+    {
+      "id": "AC-23",
+      "status": "未测",
+      "reason": "D 层通过自有真实进程树、停止确认/租约隔离与 wire 清理；真实 Codex 二进制 X 层与 Windows 留 P3。"
+    },
+    {
+      "id": "AC-51",
+      "status": "未测",
+      "reason": "D 层证明双向轮边界 handoff、原任务/worktree/分支/SHA、实例与跨厂商追加账本；真实二进制和模型 S+X 留 P3。"
+    },
+    {
+      "id": "V-02",
+      "status": "未测",
+      "reason": "wire 子进程验证真实 HOME 与每槽 CODEX_HOME 分离；真实 Codex 认证/会话/配置和真实能力隔离 X 层留 P3。"
+    }
+  ],
+  "author": {
+    "agent": "codex-cli",
+    "model": "fnqtz-gpt/gpt-6.1-sol",
+    "session": "codex-cli:01a1eea6-33fc-7510-965f-bbdab05304c0"
+  },
+  "red": {
+    "commit": "64e43d187a247c38856d3de59057bf387b5228f1"
+  },
+  "review": null,
+  "waiver": null,
+  "unverifiable": "AC-23 / AC-51 / V-02 的 D 层已验证，整体 D+X 仍未测：确定性 native-wire、自有 OS 进程和 git worktree 不替代真实 codex-cli 0.169.0 / 上游模型 S+X E2E（P3）。sandbox 不冒充逐工具授权：只映射完整 native workspace scope 与空工具只读范围，其他子集、Claude skill 插件明确拒收。Windows、完全脱离父子关系的托管进程、宿主崩溃中的 Harness 原子接续、真实项目配置叠加仍待测。R-02 最终 Red 在 Green 前修订保留任务 fixture 与字面测试名，archive typecheck=0、57/57 ERR_ASSERTION；Green 无 packages/**/*.test.ts 改动。ling-jing 与 fnqtz-gpt 同属 OpenAI，provider 切换不构成独立跨厂商审查；review/waiver=null。",
+  "verification": {
+    "baseline": "618fb79a98698692916edae38420bb8e22b1b6d1",
+    "implementation": "7f58a64ab727f07f3ae04cb50ed6bf6a4fcc23cb",
+    "red_tests": {
+      "failed": 57,
+      "passed": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "typecheck_exit": 0
+    },
+    "green_test_edits": 0,
+    "typecheck_exit": 0,
+    "lint_exit": 0,
+    "root_tests": {
+      "passed": 2079,
+      "failed": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "gates_selftest": {
+      "passed": 255,
+      "exit": 0
+    },
+    "recall": {
+      "passed": 1,
+      "prefix_utf8_bytes": "<4000"
+    },
+    "reference_cc_r2": {
+      "passed": 3,
+      "source": "41dace26:packages/adapter-cc-compute/src/shared-process-r2.test.ts"
+    },
+    "mutations": {
+      "killed": 21,
+      "survived": 0,
+      "sourceUnchanged": true,
+      "ids": [
+        "R1-03-no-line-ps",
+        "R1-05-grace",
+        "A1",
+        "A6",
+        "A7",
+        "A10",
+        "A12",
+        "A13",
+        "memoized-exit",
+        "identity",
+        "exit-snapshot",
+        "RPC-error-fidelity",
+        "resume-id",
+        "steer-id",
+        "interrupt-kind",
+        "persistent-thread",
+        "approval-policy",
+        "early-bound",
+        "V02-HOME",
+        "V02-CODEX_HOME",
+        "handoff"
+      ]
+    },
+    "local_gates": {
+      "passed": 7,
+      "failed": [
+        "G-REVIEW"
+      ],
+      "exit": 1,
+      "command": "node scripts/gates/run-all.ts --local --branch=feat/agy-priority-codex-protocol --base=origin/dev/agy-backend",
+      "boundary": "review=null; G-PROVENANCE takes its no-review path, not a claim that independent review provenance has been verified."
+    },
+    "binary_model_e2e": "未测; P3"
+  }
+}
