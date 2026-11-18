@@ -2,20 +2,13 @@
   "slice": "P1-A：每轮 SpeakingSnapshot、记忆证据与卫生/覆盖台账、协作观察及净室群模板克隆（D 层候选）",
   "author": {
     "agent": "codex-cli",
-    "session": "codex-cli:01a1eda8-b7c7-77c3-9505-693220ca61f5",
+    "session": "codex-cli:01a1ee5f-e210-7b00-892f-836f6421b2c2",
     "model": "ling-jing/gpt-6.1-sol"
   },
   "red": {
-    "commit": "92166d1f6c50181304322102163ffd187698af73"
+    "commit": "2f3d0f2279e4dfd88e81ea4c32dfcc3504c11996"
   },
-  "review": {
-    "agent": "carbon-agy",
-    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
-    "model": "gemini-3.8-flash-high",
-    "verdict": "reject",
-    "reviewed_hash": "072fb2d2c5c56ec555fa7e061fcd40b47f5e3d6bfda6af0d114b6ad6004575d2",
-    "notes": "Round 1 REJECT (see reviews/feat-agy-priority-context-memory-playbook.md): 3 live-reproduced P1 defects in Host.settleNote capture(): (1) per-item coverage.prepare/apply inside loop records state=ok/unresolved=0 on [valid,invalid] batch (violating G1-03P) and overwrites work.writes; (2) planMemoryWrite receives this.memory.listAll() instead of visible list(), leaking source-retracted entries into write-relation matching (violating AC-08/memory-hygiene); (3) capture() executes before commitRound GroupReplyStaleError check (committing abandoned-round memories) and drops ask-user conflict prompts."
-  },
+  "review": null,
   "waiver": null,
   "acceptance": [
     {
