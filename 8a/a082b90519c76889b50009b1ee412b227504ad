@@ -1,0 +1,59 @@
+packages/process-tools/src/cleanup.ts
+  s_bc50607f93d369::t_fda34dae57b8e9 1-6
+packages/adapter-codex-compute/src/index.ts
+  s_bc50607f93d369::t_92ef6e9e2fb567 1-2
+packages/server/src/compute.ts
+  s_bc50607f93d369::t_38d925cd5ae8f7 52-56
+packages/process-tools/src/cleanup.test.ts
+  s_bc50607f93d369::t_fa73d83164b8c1 1-138
+packages/process-tools/test-support/tree.mjs
+  s_bc50607f93d369::t_90ea1e35352899 1-12
+packages/adapter-codex-compute/package.json
+  s_bc50607f93d369::t_097c0e5aab728e 1-8
+packages/process-tools/proof/cloud.mjs
+  s_bc50607f93d369::t_3d4d7c86cb4c8a 1-94
+packages/process-tools/test-support/unobservable.mjs
+  s_bc50607f93d369::t_3ee18a9a0c402b 1-13
+packages/process-tools/test-support/three-children.mjs
+  s_bc50607f93d369::t_c71ea16a123de3 1-10
+packages/process-tools/test-support/refresh-tree.mjs
+  s_bc50607f93d369::t_a781822b5da67e 1-12
+packages/process-tools/src/cleanup-confirm.test.ts
+  s_bc50607f93d369::t_2fc09916c22517 1-429
+packages/process-tools/proof/mutations.mjs
+  s_bc50607f93d369::t_a3a34fff936597 1-108
+packages/adapter-codex-compute/src/protocol.ts
+  s_bc50607f93d369::t_103478e3d45914 1-32
+packages/process-tools/package.json
+  s_bc50607f93d369::t_32eae18f3723f8 1-11
+packages/process-tools/src/procgroup.ts
+  s_bc50607f93d369::t_4362c75ba6aa67 1-9
+packages/process-tools/src/index.ts
+  s_bc50607f93d369::t_32d682fa020f61 1-4
+packages/process-tools/src/procgroup.test.ts
+  s_bc50607f93d369::t_2e4860d740dc38 1-26
+packages/kernel/src/compute.ts
+  s_bc50607f93d369::t_69a93c4368f87b 1-227
+packages/kernel/package.json
+  s_bc50607f93d369::t_783da9ba3f3b70 6-7
+packages/adapter-codex-compute/src/protocol.test.ts
+  s_bc50607f93d369::t_b03b70ec9a341f 1-361
+packages/adapter-codex-compute/test-support/native-wire.mjs
+  s_bc50607f93d369::t_954600f209d5e1 1-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8aa082b90519c76889b50009b1ee412b227504ad",
+  "prompts": {},
+  "sessions": {
+    "s_bc50607f93d369": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1eea6-33fc-7510-965f-bbdab05304c0",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
