@@ -7,6 +7,7 @@ import {
   CommitmentView,
   ComputeProgress,
   ContactProfileView,
+  ContactConfigVersion,
   ContactView,
   EFFORTS,
   ExternalEventView,
@@ -39,6 +40,7 @@ import {
   StallThresholdsView,
   TASK_STATES,
   TaskView,
+  TaskTimelineEvent,
   UpstreamStallView,
 } from "./entities.ts";
 import { DraftBody, DraftView } from "./draft.ts";
@@ -81,6 +83,8 @@ export const METHODS = {
   "contacts.update": method(
     obj({
       contactId: id(),
+      clientActionId: opt(id()),
+      expectedVersion: opt(int({ min: 1 })),
       name: opt(str({ min: 1, max: 80 })),
       bio: opt(str({ max: 2000 })),
       avatar: opt(nullable(str({ max: 2048 }))),
@@ -103,12 +107,19 @@ export const METHODS = {
   /** 联系人主面板(AC-54):视图 + 预设 + 工作记忆 + 职责(承诺、在途任务、定时、所在会话)。 */
   "contacts.profile": method(obj({ contactId: id() }), ContactProfileView),
   "contacts.remove": method(obj({ contactId: id() }), Ok),
+  /** U07:历史按配置版本倒序,当前版本用于 CAS;不导出身份/记忆或任何凭据。 */
+  "contacts.history": method(obj({ contactId: id(), beforeVersion: opt(int({ min: 1 })), ...Page }), obj({ contactId: id(), currentVersion: int({ min: 1 }), versions: arr(ContactConfigVersion), hasMore: bool() })),
+  /** 回滚只恢复配置,生成新版本。重复 clientActionId 返回原结果,改参数复用同一号报 conflict。 */
+  "contacts.rollback": method(obj({ contactId: id(), version: int({ min: 1 }), expectedVersion: int({ min: 1 }), clientActionId: id(), confirmAffected: opt(bool()) }), obj({ contact: ContactView, version: int({ min: 1 }) })),
+
   /** 全局能力库里可勾选的 skill 与 MCP(AC-29)。联系人的 Compute 只加载它勾选的那些,本机全局的默认不进入。 */
   "capabilities.list": method(Empty, CapabilityLibraryView),
 
   // ---- 会话 ----
   "rooms.list": method(Empty, obj({ rooms: arr(RoomView) })),
   "rooms.get": method(obj({ roomId: id() }), RoomView),
+  "rooms.link": method(obj({ roomId: id(), linkedRoomId: id(), clientActionId: id() }), RoomView),
+  "rooms.unlink": method(obj({ roomId: id(), linkedRoomId: id(), clientActionId: id() }), RoomView),
   /** 打开与某联系人的私聊;已存在则返回原会话。 */
   "rooms.openDm": method(obj({ contactId: id() }), RoomView),
   "rooms.createGroup": method(obj({ clientActionId: id(), title: str({ min: 1, max: 200 }), members: arr(MemberRef, { max: 100 }) }), RoomView),
@@ -176,7 +187,7 @@ export const METHODS = {
    * 转发(U25):把 fromRoomId 里选中的几条以你的一条消息发到 toRoomId,带这几条的快照(MessageView.forward)。
    * 收件会话只看到这几条,不获得源会话的读取权;里面的「同意」不算你此刻的授权(AC-20),也不按它派活。clientActionId 幂等。
    */
-  "messages.forward": method(obj({ clientActionId: id(), fromRoomId: id(), seqs: arr(seq(), { max: 100 }), toRoomId: id() }), MessageView),
+  "messages.forward": method(obj({ clientActionId: id(), fromRoomId: id(), seqs: arr(seq(), { max: 100 }), toRoomId: id(), note: opt(str({ max: 2000 })) }), MessageView),
   /** 置顶 / 取消置顶一条消息(只是你找回用的导航,不当群规,D28.4);改动推 room.updated,RoomView.pinnedSeqs 为准。 */
   "messages.pin": method(obj({ roomId: id(), seq: seq(), on: bool() }), RoomView),
   /**
@@ -228,6 +239,8 @@ export const METHODS = {
     obj({ tasks: arr(TaskView) }),
   ),
   "tasks.get": method(obj({ taskId: id() }), TaskView),
+  /** U80/D21 内置 P0 只读事实流,按只追加 id 正序 keyset 分页;游标绑定任务。旧任务可以没有历史。 */
+  "tasks.timeline": method(obj({ taskId: id(), cursor: opt(str({ min: 1, max: 2000 })), limit: opt(int({ min: 1, max: 200 })) }), obj({ events: arr(TaskTimelineEvent), nextCursor: nullable(str({ max: 2000 })) })),
   "tasks.progress": method(obj({ taskId: id(), afterAt: opt(isoTime()), ...Page }), obj({ progress: arr(ComputeProgress) })),
   /** 普通回复也能确认/退回(AC-28);这两个是同一语义的显式入口。 */
   "tasks.accept": method(obj({ taskId: id(), clientActionId: id() }), TaskView),

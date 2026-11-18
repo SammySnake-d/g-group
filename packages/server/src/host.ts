@@ -142,6 +142,7 @@ import { LoopGuard, type LoopLimits } from "./loop-guard.ts";
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
+import { installContactHistory } from "./contact-config-history.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
 import { MemoryStore } from "./memory-store.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
@@ -485,6 +486,7 @@ export class Host {
     this.userId = opts.userId ?? "me";
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
+    installContactHistory(this.db, this.now());
     this.loopGuard = new LoopGuard(this.db, opts.loopGuard, opts.clockMs);
     this.exits = new MemberExits({ db: this.db, now: this.now });
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
@@ -1462,6 +1464,12 @@ export class Host {
    * 转发选中的几条到另一个会话:以你的一条消息记下这几条的快照(收件方只看到它们,不获得源会话读取权)。
    * 转发内容里的「同意」不是你此刻的表态:不走对话授权(AC-20),也不带 @(不按它派活)。clientActionId 幂等。
    */
+  linkRooms(_input: { roomId: string; linkedRoomId: string; clientActionId: string }): RoomView {
+    throw new HostError("internal", "B3 not implemented");
+  }
+  unlinkRooms(_input: { roomId: string; linkedRoomId: string; clientActionId: string }): RoomView {
+    throw new HostError("internal", "B3 not implemented");
+  }
   forwardMessages(input: { clientActionId: string; fromRoomId: string; seqs: readonly number[]; toRoomId: string }): MessageView {
     const src = this.userRoom(input.fromRoomId);
     const dst = this.userRoom(input.toRoomId);

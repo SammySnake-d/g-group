@@ -35,6 +35,8 @@ export function createService(host: Host): Service {
   const helper = new HelperDesk(host);
   const H: { [M in MethodName]: Handler } = {
     "session.hello": () => ({ apiVersion: API_VERSION, serverTime: new Date().toISOString(), eventSeq: host.bus.head(), userId: host.userId }),
+    "contacts.rollback": () => { throw new HostError("internal", "B3 not implemented"); },
+    "contacts.history": () => { throw new HostError("internal", "B3 not implemented"); },
     "contacts.list": () => ({ contacts: host.listContacts() }),
     "contacts.get": (p: { contactId: string }) => host.contactView(host.contactDoc(p.contactId).value),
     "contacts.create": (p: Parameters<Host["createContact"]>[0]) => host.createContact(p),
@@ -45,6 +47,8 @@ export function createService(host: Host): Service {
       host.removeContact(p.contactId);
       return { ok: true };
     },
+    "rooms.unlink": () => { throw new HostError("internal", "B3 not implemented"); },
+    "rooms.link": () => { throw new HostError("internal", "B3 not implemented"); },
     "rooms.list": () => ({ rooms: host.roomsOfUser() }),
     "rooms.get": (p: { roomId: string }) => host.roomView(p.roomId),
     "rooms.openDm": (p: { contactId: string }) => host.openDm(p.contactId),
@@ -85,6 +89,7 @@ export function createService(host: Host): Service {
     "files.list": (p: { roomId: string }) => ({ files: listFiles(host, p.roomId) }),
     "files.read": (p: { ref: string; maxBytes?: number }) => readFile(host, p.ref, p.maxBytes),
     "cards.act": (p: Parameters<Host["cardAct"]>[0]) => host.cardAct(p),
+    "tasks.timeline": () => { throw new HostError("internal", "B3 not implemented"); },
     "tasks.list": (p: Parameters<Host["listTasks"]>[0] & { limit?: number }) => ({ tasks: host.listTasks(p).slice(0, p.limit ?? 200) }),
     "tasks.get": (p: { taskId: string }) => host.taskViewById(p.taskId),
     "tasks.progress": (p: { taskId: string; limit?: number }) => {
