@@ -1,8 +1,11 @@
+import { memoryHandlers } from "./memory-api.ts";
+import { PlaybookStore } from "./playbook.ts";
 // 按 @g-group/api-contract 对外:handle(method, params) 校验参数 → 调宿主 → 校验结果;subscribe 推事件流。
 // Electron 主进程用 bindIpc 把它挂到 ipcMain;CLI 与测试直接调 handle。
 import {
   API_VERSION,
   type ApiResult,
+  type ParamsOf,
   type ErrorCode,
   type MethodName,
   type ServerEvent,
@@ -33,7 +36,15 @@ export interface Service {
 
 export function createService(host: Host): Service {
   const helper = new HelperDesk(host);
+  const playbook = new PlaybookStore(host);
   const H: { [M in MethodName]: Handler } = {
+    ...memoryHandlers(host),
+    "playbook.list": (p: ParamsOf<"playbook.list">) => ({ entries: playbook.list(p) }),
+    "playbook.record": (p: ParamsOf<"playbook.record">) => playbook.record(p),
+    "playbook.invalidate": (p: ParamsOf<"playbook.invalidate">) => playbook.invalidate(p.entryId),
+    "playbook.remove": (p: ParamsOf<"playbook.remove">) => playbook.remove(p.entryId),
+    "playbook.promoteToAnnouncement": (p: ParamsOf<"playbook.promoteToAnnouncement">) => playbook.promote(p),
+    "rooms.clone": (p: ParamsOf<"rooms.clone">) => playbook.clone(p),
     "session.hello": () => ({ apiVersion: API_VERSION, serverTime: new Date().toISOString(), eventSeq: host.bus.head(), userId: host.userId }),
     "contacts.rollback": (p: Parameters<Host["rollbackContact"]>[0]) => host.rollbackContact(p),
     "contacts.history": ({ contactId, ...query }: { contactId: string } & NonNullable<Parameters<Host["contactHistory"]>[1]>) => host.contactHistory(contactId, query),

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { assembleSpeaking } from "./speaking.ts";
 // gg:P0 闭环的命令行驱动器(技术栈文档阶段一「先用 CLI/测试驱动跑通」)。
 //   node packages/server/src/cli.ts dm --db ./gg.db --name 小克 "帮我在 /tmp/gg-demo 写 hello.txt"
 //   node packages/server/src/cli.ts log --db ./gg.db [roomId]
@@ -12,9 +13,9 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { claudeCompute } from "./compute.ts";
 import { ensureGroup, sendAndWait, senderAudit } from "./drive.ts";
-import { scriptedCompute, scriptedMind } from "./fakes.ts";
+import { scriptedCompute } from "./fakes.ts";
 import { Host } from "./host.ts";
-import { DEFAULT_STATE_NOTE_MAX_BYTES, makePiRuntime } from "./pi-runtime.ts";
+import { DEFAULT_STATE_NOTE_MAX_BYTES } from "./pi-runtime.ts";
 import { cliRunThresholds } from "./runtime-config.ts";
 
 const { values, positionals } = parseArgs({
@@ -48,18 +49,14 @@ const { values, positionals } = parseArgs({
 const [cmd, ...rest] = positionals;
 
 async function makeMind(kind: string) {
-  if (kind === "fake") return { mind: () => scriptedMind(), defaultModel: values.model ?? process.env.ANTHROPIC_DEFAULT_SONNET_MODEL };
-  if (kind === "pi") {
-    const { protocolFor } = await import("@g-group/adapter-pi-contact");
-    const bad = (why: string): never => { throw new Error(why); };
-    return makePiRuntime({
-      ...(values.api !== undefined ? { api: protocolFor(values.api, bad) } : {}),
-      ...(values.protocols !== undefined ? { protocols: values.protocols.split(",").map((s) => protocolFor(s.trim(), bad)) } : {}),
-      ...(values.magpie !== undefined ? { magpie: values.magpie } : {}),
-      ...(values.model !== undefined ? { model: values.model } : {}),
-    }, process.env);
-  }
-  throw new Error(`未知 --mind ${kind}`);
+  const { protocolFor } = await import("@g-group/adapter-pi-contact");
+  const bad = (why: string): never => { throw new Error(why); };
+  return assembleSpeaking(kind, {
+    ...(values.api !== undefined ? { api: protocolFor(values.api, bad) } : {}),
+    ...(values.protocols !== undefined ? { protocols: values.protocols.split(",").map(s => protocolFor(s.trim(), bad)) } : {}),
+    ...(values.magpie !== undefined ? { magpie: values.magpie } : {}),
+    ...(values.model !== undefined ? { model: values.model } : {}),
+  }, process.env);
 }
 
 function noteLimit(value: string | undefined): number | null {
