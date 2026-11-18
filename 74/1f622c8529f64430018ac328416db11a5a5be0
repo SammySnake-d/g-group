@@ -1,0 +1,86 @@
+README.md
+  h_f33e46a035b77c 16-21
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  h_f33e46a035b77c 1,3,5-28,35
+docs/spec/验收文档-v0.1.md
+  h_f33e46a035b77c 303-319
+packages/adapter-pi-contact/src/compact.ts
+  h_f33e46a035b77c 31,43-45,71
+packages/api-contract/src/api.ts
+  h_f33e46a035b77c 1-2,454-455
+packages/api-contract/src/index.ts
+  h_f33e46a035b77c 8-10
+packages/api-contract/src/memory.ts
+  h_f33e46a035b77c 1-61
+packages/api-contract/src/playbook.ts
+  h_f33e46a035b77c 1-13
+packages/domain/src/model-config.ts
+  h_f33e46a035b77c 1,121-202,337-338
+packages/domain/src/speaking-endpoint.test.ts
+  h_f33e46a035b77c 1-83
+packages/kernel/src/index.ts
+  h_f33e46a035b77c 20-21
+packages/kernel/src/memory-capture.test.ts
+  h_f33e46a035b77c 1-70
+packages/kernel/src/memory-capture.ts
+  h_f33e46a035b77c 1-79
+packages/kernel/src/memory.ts
+  h_f33e46a035b77c 19,22
+packages/kernel/src/runtime-ports.ts
+  h_f33e46a035b77c 194-197,209,221,226-227
+packages/server/proof/p1a-context-memory-playbook.txt
+  h_f33e46a035b77c 1-105
+packages/server/src/cli.ts
+  h_f33e46a035b77c 2,16,18,52-59
+packages/server/src/host.ts
+  h_f33e46a035b77c 1-4,155,197-198,227,437,457,518,1423,1966-1967,2682,2741,2774-2777,2828,2893-2909,2914-2918,2925,2929-2930,2932,2937-2965,2994,2996,3191,3193,3279,3295,3329,3348
+packages/server/src/memory-api.test.ts
+  h_f33e46a035b77c 1-284
+packages/server/src/memory-api.ts
+  h_f33e46a035b77c 1-118
+packages/server/src/memory-coverage.test.ts
+  h_f33e46a035b77c 1-111
+packages/server/src/memory-coverage.ts
+  h_f33e46a035b77c 1-81
+packages/server/src/memory-hygiene.test.ts
+  h_f33e46a035b77c 1-289
+packages/server/src/memory-hygiene.ts
+  h_f33e46a035b77c 1-143
+packages/server/src/memory-store.ts
+  h_f33e46a035b77c 3,41-42
+packages/server/src/memory-write-neighbors.test.ts
+  h_f33e46a035b77c 1-56
+packages/server/src/pi-runtime.ts
+  h_f33e46a035b77c 1,69-70,72-74,79-86
+packages/server/src/playbook.test.ts
+  h_f33e46a035b77c 1-139
+packages/server/src/playbook.ts
+  h_f33e46a035b77c 1-102
+packages/server/src/profile.test.ts
+  h_f33e46a035b77c 55
+packages/server/src/service.ts
+  h_f33e46a035b77c 1-2,8,39,41-47
+packages/server/src/speaking-snapshot.test.ts
+  h_f33e46a035b77c 1-315
+packages/server/src/speaking.ts
+  h_f33e46a035b77c 1-13
+packages/server/src/start.ts
+  h_f33e46a035b77c 1,7,9,11,47-48,62
+packages/server/src/views.ts
+  h_f33e46a035b77c 1,19
+receipts/feat-agy-priority-context-memory-playbook.json
+  h_f33e46a035b77c 1-53
+reviews/feat-agy-priority-context-memory-playbook.md
+  h_f33e46a035b77c 1-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "741f622c8529f64430018ac328416db11a5a5be0",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
