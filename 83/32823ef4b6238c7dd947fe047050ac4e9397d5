@@ -1,0 +1,25 @@
+packages/server/src/host.ts
+  s_52fba055a3038c::t_aa4833ba72ceb9 145,151,669,674-676,678-691,825,1018,1048,1051-1055,1352,1467-1468,1470-1471,1473,1482,1484,1486-1487,1490-1491,1496,1737,1803,1805,1852,1892,2061,2064,2257,2499,2763,2853,3027,3075,3173,3362,3406,3503,3912,4170,5170,5177,5179,5248-5249,5268-5269,5278,5289,5298,5347-5348,5414-5417
+packages/server/src/contact-config-history.ts
+  s_52fba055a3038c::t_aa4833ba72ceb9 1,3-4,9
+packages/server/src/service.ts
+  s_52fba055a3038c::t_aa4833ba72ceb9 38-39,50-51,80,92,95,97
+packages/adapter-pi-contact/src/tools.ts
+  s_52fba055a3038c::t_aa4833ba72ceb9 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8332823ef4b6238c7dd947fe047050ac4e9397d5",
+  "prompts": {},
+  "sessions": {
+    "s_52fba055a3038c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ecef-0b2a-7b20-8837-b3f7345344c2",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
