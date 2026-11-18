@@ -1,0 +1,21 @@
+packages/server/src/compute-stop-restart.test.ts
+  s_affafcc4e20b47::t_478ce0d3c66109 27-101
+  s_affafcc4e20b47::t_b2d84baaa1c6c5 269-270
+  s_affafcc4e20b47::t_4880b226609919 1-26,102-268,271-313
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6f2fb1c6ae36e7438e217115a1b27017aa8d546e",
+  "prompts": {},
+  "sessions": {
+    "s_affafcc4e20b47": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ec1b-5225-7370-80a4-3596ddbad3a4",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
