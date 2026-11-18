@@ -1,0 +1,114 @@
+README.md
+  h_f33e46a035b77c 18,20,25,31,35,107-117
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  h_f33e46a035b77c 10-12,20,25,38,40-47
+docs/spec/验收文档-v0.1.md
+  h_f33e46a035b77c 316-329,332
+package-lock.json
+  h_f33e46a035b77c 680-683,704-707,1461-1470,1500-1502,1507
+packages/adapter-cc-compute/package.json
+  h_f33e46a035b77c 5-16
+packages/adapter-cc-compute/src/adapter.ts
+  h_f33e46a035b77c 27-28,134,236,323,456,488,495
+packages/adapter-cc-compute/src/procgroup.ts
+  h_f33e46a035b77c 1-2
+packages/adapter-cc-compute/src/resident.ts
+  h_f33e46a035b77c 36-37,188,215,297,305,457,460,599,659,693,705-712
+packages/adapter-cc-compute/src/stop-confirm.ts
+  h_f33e46a035b77c 1
+packages/adapter-cc-compute/src/types.ts
+  h_f33e46a035b77c 1
+packages/adapter-cc-compute/test-support/resident-leaver.mjs
+  h_f33e46a035b77c 1-20
+packages/adapter-codex-compute/mcp/report.mjs
+  h_f33e46a035b77c 1-17
+packages/adapter-codex-compute/package.json
+  h_f33e46a035b77c 1-15
+packages/adapter-codex-compute/proof/resources.mjs
+  h_f33e46a035b77c 1-47
+packages/adapter-codex-compute/proof/startup.mjs
+  h_f33e46a035b77c 1-16
+packages/adapter-codex-compute/proof/wire.mjs
+  h_f33e46a035b77c 1-37
+packages/adapter-codex-compute/src/adapter.test.ts
+  h_f33e46a035b77c 1-123
+packages/adapter-codex-compute/src/adapter.ts
+  h_f33e46a035b77c 1-171
+packages/adapter-codex-compute/src/feed.ts
+  h_f33e46a035b77c 1-14
+packages/adapter-codex-compute/src/index.ts
+  h_f33e46a035b77c 1-4
+packages/adapter-codex-compute/src/protocol.test.ts
+  h_f33e46a035b77c 1-605
+packages/adapter-codex-compute/src/protocol.ts
+  h_f33e46a035b77c 1-362
+packages/adapter-codex-compute/src/startup.ts
+  h_f33e46a035b77c 1-27
+packages/adapter-codex-compute/test-support/native-wire.mjs
+  h_f33e46a035b77c 1-75
+packages/kernel/package.json
+  h_f33e46a035b77c 6-7
+packages/kernel/src/compute.ts
+  h_f33e46a035b77c 1-230
+packages/process-tools/package.json
+  h_f33e46a035b77c 1-11
+packages/process-tools/proof/mutations.mjs
+  h_f33e46a035b77c 1-68
+packages/process-tools/src/cleanup-confirm.test.ts
+  h_f33e46a035b77c 1-429
+packages/process-tools/src/cleanup.test.ts
+  h_f33e46a035b77c 1-138
+packages/process-tools/src/cleanup.ts
+  h_f33e46a035b77c 1-160
+packages/process-tools/src/index.ts
+  h_f33e46a035b77c 1-5
+packages/process-tools/src/procgroup.test.ts
+  h_f33e46a035b77c 1-26
+packages/process-tools/src/procgroup.ts
+  h_f33e46a035b77c 1-107
+packages/process-tools/src/stop-confirm.ts
+  h_f33e46a035b77c 1-51
+packages/process-tools/test-support/refresh-tree.mjs
+  h_f33e46a035b77c 1-12
+packages/process-tools/test-support/three-children.mjs
+  h_f33e46a035b77c 1-10
+packages/process-tools/test-support/tree.mjs
+  h_f33e46a035b77c 1-12
+packages/process-tools/test-support/unobservable.mjs
+  h_f33e46a035b77c 1-13
+packages/server/package.json
+  h_f33e46a035b77c 18
+packages/server/proof/p1b-codex-process-protocol.txt
+  h_f33e46a035b77c 1-2
+packages/server/proof/p1b-codex-protocol.txt
+  h_f33e46a035b77c 1-99
+packages/server/proof/p1b-handoff.mjs
+  h_f33e46a035b77c 1-96
+packages/server/src/cli.ts
+  h_f33e46a035b77c 10,16,82,130,164
+packages/server/src/compute.ts
+  h_f33e46a035b77c 6,53-59
+packages/server/src/harness-switch.test.ts
+  h_f33e46a035b77c 1-236
+packages/server/src/host.ts
+  h_f33e46a035b77c 452-454,2201,3596,3964,4138-4146,4195-4338,4352-4353,4468-4472,4491-4496,5888-5891
+packages/server/src/start.ts
+  h_f33e46a035b77c 8,22,31,51,55-58,77
+receipts/feat-agy-http-ws-bridge.json
+  h_f33e46a035b77c 5-6,45
+receipts/feat-agy-priority-codex-protocol.json
+  h_f33e46a035b77c 1-142
+reviews/feat-agy-priority-codex-protocol.md
+  h_f33e46a035b77c 1-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2aef1b1d239e68d302ac55c445835ec0a33c9e40",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
