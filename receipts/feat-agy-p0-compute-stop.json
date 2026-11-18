@@ -1,0 +1,54 @@
+{
+  "slice": "B1：停止确认与持久租约隔离；按 Harness 路由、可配置卡死阈值、PID 孤儿核对、联系人只读 progress_get 与工件原子写入。",
+  "acceptance": [
+    {
+      "id": "AC-23",
+      "status": "通过",
+      "evidence": "packages/server/proof/b1-compute-stop.txt"
+    },
+    {
+      "id": "AC-43",
+      "status": "未测",
+      "reason": "本片 D 层已验证私聊/群 progress_get、PID 存活与孤儿核对、动态阈值、拒收轮次记账；未做 X 层真实上游断流/卡死、全景画板及真实 Codex CLI 端到端验收，留 B8/B9。"
+    },
+    {
+      "id": "AC-51",
+      "status": "未测",
+      "reason": "本片 D 层验证按 Harness 选路、Codex 未接入时阻止派活及切模被拒的台账；真实 Codex CLI 适配器、跨 Harness 接续、网关逐请求模型与同 PID/会话的 X 层热切换留 B8/B9。"
+    },
+    {
+      "id": "R-17",
+      "status": "通过",
+      "evidence": "packages/server/proof/b1-compute-stop.txt"
+    }
+  ],
+  "author": {
+    "agent": "codex-cli",
+    "session": "codex-cli:01a1ebf2-9504-7bf0-937c-48c2ba061e8b",
+    "model": "shayu/gpt-6.2-sol"
+  },
+  "red": {
+    "commit": "ba39ad48b6c00a0f266e441da5435f9fa3a4aac7"
+  },
+  "review": null,
+  "waiver": null,
+  "unverifiable": "AC-23 和 R-17 是 D 层结果：用确定性执行器、SQLite 故障注入和模型配置回归测得，不表示真实模型验收。AC-43 / AC-51 尚无 X 层证据；无独立审查，不请求豁免。",
+  "verification": {
+    "baseline": "926956560af22959c726953cfb4248f4056e3155",
+    "implementation": "2afdf13b2f97cbde3044a4ca0ee397f013813eeb",
+    "red_tests": {
+      "assertion_failures": 59,
+      "unchanged_passed": 42
+    },
+    "targeted_tests": {
+      "passed": 101,
+      "failed": 0,
+      "skipped": 0
+    },
+    "root_tests": {
+      "passed": 1753,
+      "failed": 0,
+      "skipped": 0
+    }
+  }
+}
