@@ -1,0 +1,29 @@
+package-lock.json
+  s_6da11bdeb4da59::t_8f6723f8b63fa7 891-900,1415-1417,1491-1492,1496-1498
+packages/server/package.json
+  s_6da11bdeb4da59::t_cef4cdb5742893 5-10,17-21,23-25
+packages/server/src/cli.ts
+  s_6da11bdeb4da59::t_93d16e670835e6 25-29,127
+packages/server/src/http-ws.test.ts
+  s_6da11bdeb4da59::t_226859e1c7badd 1-261
+packages/server/src/http-ws.ts
+  s_6da11bdeb4da59::t_ce5ef67919ca3d 1-25
+packages/server/src/index.ts
+  s_6da11bdeb4da59::t_d9a902f51d6549 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "036b7c10dbf4912da919f54426a5d132162b19eb",
+  "prompts": {},
+  "sessions": {
+    "s_6da11bdeb4da59": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1eef2-c7e4-74d3-9b9f-70c85d987ada",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
