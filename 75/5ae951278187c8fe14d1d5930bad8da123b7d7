@@ -1,0 +1,39 @@
+packages/adapter-pi-contact/src/mind.ts
+  s_52fba055a3038c::t_3a459aef464f0c 208-213
+packages/adapter-pi-contact/src/tools.ts
+  s_52fba055a3038c::t_d5ffa056a2f50b 6,24,138-147,221,295
+packages/api-contract/src/entities.ts
+  s_52fba055a3038c::t_217afee7fdba79 291
+packages/server/proof/b3-config-provenance-receipts.txt
+  s_52fba055a3038c::t_ec74e990438701 1-33
+packages/server/src/contact-config-history.ts
+  s_52fba055a3038c::t_ee651f6aa41c38 1-3,5-19,24-79
+packages/server/src/db.ts
+  s_52fba055a3038c::t_9808270be3f79f 45-51
+packages/server/src/forward-link.ts
+  s_52fba055a3038c::t_78712c92834439 1-138
+packages/server/src/rewind.ts
+  s_52fba055a3038c::t_a8bdd7c38ced23 33-39
+packages/server/src/service.ts
+  s_52fba055a3038c::t_670ee77a4c1ff8 38-39,50-51,80,92,95,97
+packages/server/src/task-timeline.ts
+  s_52fba055a3038c::t_e2ce45080fb169 1-72
+packages/server/src/host.ts
+  s_52fba055a3038c::t_3c103b0b7fd593 31,72,147-148,154,158,423,495,675-678,683-685,687-737,871-872,1003,1023,1062,1068,1098,1381,1393-1395,1401-1423,1433-1434,1540-1564,1566-1567,1569-1576,1579-1585,1589,1593,1595,1597,1600-1601,1606,1611-1649,1886,1904,1906,1937,1955,1957,2004-2005,2045,2051,2118-2124,2222-2224,2227,2229,2421-2422,2664,2928,3018,3189,3191,3194,3242,3255,3341,3419,3531,3575,3672,4081-4083,4341,5341,5343,5349,5351-5353,5422-5424,5443-5444,5453,5464,5473,5522,5588-5591
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "755ae951278187c8fe14d1d5930bad8da123b7d7",
+  "prompts": {},
+  "sessions": {
+    "s_52fba055a3038c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ecef-0b2a-7b20-8837-b3f7345344c2",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
