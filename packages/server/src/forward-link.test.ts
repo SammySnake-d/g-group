@@ -578,3 +578,111 @@ test("rewind marks the source of an existing forward copy and prevents making a 
   assert.deepEqual(marked?.items.map((item) => [item.text, item.sourceRetracted]), [[after.text, true]]);
   assert.equal(await failCode(svc, "messages.forward", { ...input, clientActionId: "new-copy" }), "conflict");
 });
+
+test("AC-08 G4b: read_linked scrubs echoed retracted bodies and pre-retract edits before filtering query", async () => {
+  const original = "我的储物柜号码是 4471,钥匙放在前台";
+  const edited = "我的储物柜号码是 8126,钥匙放在办公室";
+  const got: (string | null)[] = [];
+  let dmId = "";
+  let nextId = 0;
+  const host = open({
+    file: file(), maxDeferMs: 5, newId: (prefix) => `${prefix}-g4b-${++nextId}`,
+    mind: probe([], async (_me, i, tools) => {
+      for (const f of i.fresh) {
+        if (f.kind !== "message" || f.sender.kind !== "user") continue;
+        if (f.roomId === dmId) {
+          const body = f.text.replace(/^\(编辑了 #\d+\)/, "");
+          if (body === original || body === edited) return [{ kind: "reply", roomId: dmId, text: `收到:${body}`, replyToSeq: null }];
+        } else if (f.text === "查关联记录" && tools?.readLinked) {
+          got.push(await tools.readLinked(LINK(f.roomId, dmId)));
+          got.push(await tools.readLinked(LINK(f.roomId, dmId, { query: "4471" })));
+          got.push(await tools.readLinked(LINK(f.roomId, dmId, { query: "8126" })));
+        }
+      }
+      return [];
+    }),
+  });
+  const svc = createService(host);
+  const a = host.createContact({ name: "小克" });
+  const b = host.createContact({ name: "小研" });
+  const dm = host.openDm(a.id);
+  dmId = dm.id;
+  const g = host.createGroup("项目群", [{ kind: "contact", id: b.id }]);
+  const m = host.send({ roomId: dm.id, clientActionId: "original", text: original });
+  await settle(host);
+  host.editMessage(dm.id, m.seq, edited);
+  await settle(host);
+  const echoes = msgsOf(host, dm.id).filter(({ sender }) => sender.kind === "contact");
+  assert.deepEqual(echoes.map(({ text }) => text), [`收到:${original}`, `收到:${edited}`]);
+  const linked = await call<RoomView>(svc, "rooms.link", { roomId: g.id, linkedRoomId: dm.id, clientActionId: "link" });
+  assert.equal(linked.linkedRooms?.[0]?.uptoSeq, echoes.at(-1)?.seq, "the link covers both replies");
+  host.retractMessage(dm.id, m.seq);
+  await settle(host);
+  host.send({ roomId: g.id, clientActionId: "read", text: "查关联记录" });
+  await settle(host);
+
+  assert.doesNotMatch(got[0] ?? "", /4471|8126/, "unfiltered linked reads must not expose either echoed version");
+  for (const echo of echoes) {
+    assert.match(got[0] ?? "", new RegExp(`^#${echo.seq} · .* · 收到:〔已撤回内容已移除〕$`, "m"), "each surviving reply remains visible with its body scrubbed");
+  }
+  for (const filtered of got.slice(1)) {
+    assert.match(filtered ?? "", /本次 0 条/, "query terms present only in scrubbed text must not match");
+    assert.doesNotMatch(filtered ?? "", /4471|8126/);
+  }
+  assert.equal(got.length, 3);
+});
+
+test("U24: read_linked enforces static uptoSeq bound against post-link edits while honoring post-link retracts", async () => {
+  const got: (string | null)[] = [];
+  let dmId = "";
+  const host = open({
+    file: file(), maxDeferMs: 5,
+    mind: probe([], async (_me, i, tools) => {
+      const m = i.fresh.find((f): f is InboundMessage => f.kind === "message" && f.text === "查关联记录");
+      if (m && tools?.readLinked) {
+        got.push(await tools.readLinked(LINK(m.roomId, dmId)));
+        got.push(await tools.readLinked(LINK(m.roomId, dmId, { query: "POST_LINK_SECRET_EDIT" })));
+      }
+      return [];
+    }),
+  });
+  const svc = createService(host);
+  const a = host.createContact({ name: "小克" });
+  const b = host.createContact({ name: "小研" });
+  const dm = host.openDm(a.id);
+  dmId = dm.id;
+  const g = host.createGroup("项目群", [{ kind: "contact", id: b.id }]);
+  const m = host.send({ roomId: dm.id, clientActionId: "original", text: "PRE_LINK_ORIGINAL_TEXT" });
+  await settle(host);
+  const link = (clientActionId: string) => call<RoomView>(svc, "rooms.link", { roomId: g.id, linkedRoomId: dm.id, clientActionId });
+  const read = async (clientActionId: string) => {
+    host.send({ roomId: g.id, clientActionId, text: "查关联记录" });
+    await settle(host);
+  };
+  const pinned = (await link("link")).linkedRooms?.[0]?.uptoSeq;
+  assert.equal(pinned, m.seq);
+  host.editMessage(dm.id, m.seq, "POST_LINK_SECRET_EDIT");
+  const editSeq = host.lastSeq(dm.id);
+  assert.ok(editSeq > m.seq);
+  await settle(host);
+  await read("before-refresh");
+  assert.doesNotMatch(got[0] ?? "", /POST_LINK_SECRET_EDIT/, "unfiltered reads must not see edits beyond the pinned upper bound");
+  assert.match(got[0] ?? "", /PRE_LINK_ORIGINAL_TEXT/);
+  assert.match(got[1] ?? "", /本次 0 条/, "query must not match a post-link edit");
+  assert.doesNotMatch(got[1] ?? "", /POST_LINK_SECRET_EDIT/);
+
+  const refreshed = (await link("refresh")).linkedRooms?.[0]?.uptoSeq;
+  assert.equal(refreshed, editSeq);
+  await read("after-refresh");
+  assert.match(got[2] ?? "", /POST_LINK_SECRET_EDIT/);
+  assert.match(got[3] ?? "", /POST_LINK_SECRET_EDIT/, "the same query matches after refreshing the link");
+
+  host.retractMessage(dm.id, m.seq);
+  assert.ok(host.lastSeq(dm.id) > editSeq);
+  await settle(host);
+  await read("after-retract");
+  assert.match(got[4] ?? "", new RegExp(`^#${m.seq} · .* · 已撤回$`, "m"), "a retract beyond the refreshed bound takes effect without another refresh");
+  assert.doesNotMatch(got[4] ?? "", /PRE_LINK_ORIGINAL_TEXT|POST_LINK_SECRET_EDIT/);
+  assert.match(got[5] ?? "", /本次 0 条/);
+  assert.doesNotMatch(got[5] ?? "", /POST_LINK_SECRET_EDIT/);
+});
