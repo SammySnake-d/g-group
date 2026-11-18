@@ -1,0 +1,19 @@
+scripts/gates/process-layer.test.ts
+  s_6b62a024142f98::t_e1521c93eed471 1-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "316f8a3527b7801017ac2ca44409864ec4585cba",
+  "prompts": {},
+  "sessions": {
+    "s_6b62a024142f98": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ee2b-38ee-7cd1-8041-c3b9ae6f1ce0",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
