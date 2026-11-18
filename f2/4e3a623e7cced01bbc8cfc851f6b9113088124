@@ -1,0 +1,21 @@
+packages/server/proof/b3-config-provenance-receipts.txt
+  s_6cd220149f8906::t_826e80d6ed12ab 1-33
+receipts/feat-agy-p0-config-provenance-receipts.json
+  s_6cd220149f8906::t_9ca7d1fa2916c0 1-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f24e3a623e7cced01bbc8cfc851f6b9113088124",
+  "prompts": {},
+  "sessions": {
+    "s_6cd220149f8906": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ecc3-7e14-7b60-98ad-3684ffa7bb7b",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
