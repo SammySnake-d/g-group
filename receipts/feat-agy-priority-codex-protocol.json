@@ -29,27 +29,20 @@
   ],
   "author": {
     "agent": "codex-cli",
-    "model": "fnqtz-gpt/gpt-6.1-sol",
-    "session": "codex-cli:01a1eea6-33fc-7510-965f-bbdab05304c0"
+    "model": "fnqtz-gpt/gpt-6.2-sol",
+    "session": "codex-cli:01a1f07c-37be-71c1-84c4-538a939db970"
   },
   "red": {
-    "commit": "64e43d187a247c38856d3de59057bf387b5228f1"
+    "commit": "56d3e81b7304861619648177b2da7788e5beddaf"
   },
-  "review": {
-    "agent": "carbon-agy",
-    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
-    "model": "gemini-4-carbon-high",
-    "verdict": "reject",
-    "reviewed_hash": "9cf5bea5f2756e1e4ebc471264344e626f3d247e43039bd4ee244378d01d3bd3",
-    "notes": "Round 1 REJECT (see reviews/feat-agy-priority-codex-protocol.md): (P1-1) Live-reproduced in Host.switchHarness: next.spawn() refusal/failure leaves e.computeId permanently in this.harnessRetiring after retiring previous, causing (a) permanent onComputeEvent blackhole + permanent Compute quota lease leak on revert/resume, and (b) permanent T9_StopRequested deadlock on task cancel. (P1-2) createCodexComputeAdapter (151 LOC) has zero behavioral tests in packages/**/*.test.ts (P1B-F5 pluginDirs refusal survived), and harness-switch.test.ts lacks missing-harness & quarantine tests (P1B-F6 harnessBlockReason bypass survived)."
-  },
+  "review": null,
   "waiver": null,
-  "unverifiable": "AC-23 / AC-51 / V-02 的 D 层已验证，整体 D+X 仍未测：确定性 native-wire、自有 OS 进程和 git worktree 不替代真实 codex-cli 0.169.0 / 上游模型 S+X E2E（P3）。sandbox 不冒充逐工具授权：只映射完整 native workspace scope 与空工具只读范围，其他子集、Claude skill 插件明确拒收。Windows、完全脱离父子关系的托管进程、宿主崩溃中的 Harness 原子接续、真实项目配置叠加仍待测。R-02 最终 Red 在 Green 前修订保留任务 fixture 与字面测试名，archive typecheck=0、57/57 ERR_ASSERTION；Green 无 packages/**/*.test.ts 改动。ling-jing 与 fnqtz-gpt 同属 OpenAI，provider 切换不构成独立跨厂商审查；review/waiver=null。",
+  "unverifiable": "AC-23 / AC-51 / V-02 的 D 层已验证，整体 D+X 仍未测：确定性 native-wire、自有 OS 进程和 git worktree 不替代真实 codex-cli 0.169.0 / 上游模型 S+X E2E（P3）。sandbox 不冒充逐工具授权：只映射完整 native workspace scope 与空工具只读范围，其他子集、Claude skill 插件明确拒收。Windows、完全脱离父子关系的托管进程、宿主崩溃中的 Harness 原子接续、真实项目配置叠加仍待测。R-02 合并 Red 保留 R1/R2 测试，typecheck=0，67/67 用例按名字失败，Green 无测试文件改动。ling-jing 与 fnqtz-gpt 同属 OpenAI，provider 切换不构成独立跨厂商审查；review/waiver=null。",
   "verification": {
-    "baseline": "618fb79a98698692916edae38420bb8e22b1b6d1",
-    "implementation": "7f58a64ab727f07f3ae04cb50ed6bf6a4fcc23cb",
+    "baseline": "0683b560e26151af343929c198922d2cc40a03f0",
+    "implementation": "cf39235bb46814e2a5a063dbf743827e446d4d6c",
     "red_tests": {
-      "failed": 57,
+      "failed": 67,
       "passed": 0,
       "cancelled": 0,
       "skipped": 0,
@@ -60,7 +53,7 @@
     "typecheck_exit": 0,
     "lint_exit": 0,
     "root_tests": {
-      "passed": 2079,
+      "passed": 2158,
       "failed": 0,
       "cancelled": 0,
       "skipped": 0,
@@ -79,6 +72,38 @@
       "source": "41dace26:packages/adapter-cc-compute/src/shared-process-r2.test.ts"
     },
     "mutations": {
+      "killed": 4,
+      "survived": 0,
+      "sourceUnchanged": true,
+      "ids": [
+        "P1B-F5-pluginDirs",
+        "P1B-F6-missing-harness",
+        "P1B-R2-retiring-clear",
+        "P1B-R2-cancel-after-fail"
+      ]
+    },
+    "local_gates": {
+      "passed": 7,
+      "failed": [
+        "G-REVIEW"
+      ],
+      "exit": 1,
+      "command": "node --experimental-strip-types scripts/gates/run-all.ts --local --branch=feat/agy-priority-codex-protocol --base=origin/dev/agy-backend",
+      "boundary": "review=null; G-PROVENANCE takes its no-review path, not a claim that independent review provenance has been verified."
+    },
+    "binary_model_e2e": "未测; P3",
+    "lint_diagnostics": {
+      "infos": 0,
+      "warnings": 0,
+      "errors": 0
+    },
+    "proofs": [
+      "wire.mjs",
+      "resources.mjs",
+      "startup.mjs",
+      "p1b-handoff.mjs"
+    ],
+    "prior_mutations": {
       "killed": 21,
       "survived": 0,
       "sourceUnchanged": true,
@@ -105,16 +130,6 @@
         "V02-CODEX_HOME",
         "handoff"
       ]
-    },
-    "local_gates": {
-      "passed": 7,
-      "failed": [
-        "G-REVIEW"
-      ],
-      "exit": 1,
-      "command": "node scripts/gates/run-all.ts --local --branch=feat/agy-priority-codex-protocol --base=origin/dev/agy-backend",
-      "boundary": "review=null; G-PROVENANCE takes its no-review path, not a claim that independent review provenance has been verified."
-    },
-    "binary_model_e2e": "未测; P3"
+    }
   }
 }

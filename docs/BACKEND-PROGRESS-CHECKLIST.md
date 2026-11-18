@@ -39,8 +39,8 @@ P1-A 无 R-Rule 审批链、BlockerRate 自动路由或多人 CRDT 编辑。净�
 - [x] 移植 @g-group/process-tools（process 层），Claude 一次性/常驻与 Codex 共用；保留 B1 停止确认、租约隔离和启动身份核验。
 - [x] Codex app-server 0.169.0 wire 协议、每槽 CODEX_HOME / 真实 HOME 分离、启动并发限制、RPC 超时与结构化错误。
 - [x] AC-51 ⑦ 双向轮边界换 Harness：在途轮次不打断，确认旧执行器停止后同任务/worktree 起新会话，实例与跨厂商模型账本只追加。
-- [x] **已验证完成边界**：确定性 fake/native-wire、真实自有进程树与 git worktree；PR #91/#93 回归、A1/A6/A7/A10/A12/A13、57 条新增红测试、2079 全量绿、255 门禁自检、21/21 故障变异；缺失 Harness 和停止未确认均阻止后继启动。
-- [x] **关键文件/测试/PR**：packages/process-tools/src/*.test.ts、packages/adapter-codex-compute/src/protocol.test.ts、packages/server/src/harness-switch.test.ts、既有 resident-stop/B1 回归；来源 PR #91（41dace26）、PR #93（a73cff64）；分支 feat/agy-priority-codex-protocol。证据：[P1-B proof](../packages/server/proof/p1b-codex-protocol.txt)；收据：[P1-B receipt](../receipts/feat-agy-priority-codex-protocol.json)。
+- [x] **已验证完成边界**：确定性 fake/native-wire、真实自有进程树与 git worktree；PR #91/#93 回归、A1/A6/A7/A10/A12/A13、合并 Red 67/67 用例失败，Green 全量 2158 条通过，门禁自检 255/255。R2 的 4/4 个故障变异均被捕获。缺失 Harness 和停止未确认均阻止后继启动。后继启动失败后可重新启动已退出的 Harness，或取消任务并释放租约。
+- [x] **关键文件/测试/PR**：packages/process-tools/src/*.test.ts、packages/adapter-codex-compute/src/{protocol,adapter}.test.ts、packages/server/src/harness-switch.test.ts、既有 resident-stop/B1 回归；来源 PR #91（41dace26）、PR #93（a73cff64）；分支 feat/agy-priority-codex-protocol。证据：[P1-B proof](../packages/server/proof/p1b-codex-protocol.txt)；收据：[P1-B receipt](../receipts/feat-agy-priority-codex-protocol.json)。
 - [ ] **未完成/待测边界**：独立跨厂商审查；真实 codex-cli 0.169.0 二进制 E2E、真实网关和模型 S+X、真实能力配置叠加及 Windows 留 P3。AC-23 / AC-51 / V-02 整体 D+X 保持“未测”。任意 Claude 工具子集与 skill 插件不冒充已映射，明确拒收。
 
 P1-B 不替代 B1 已有证明，也不把 wire 实验提升为真实 Codex 或模型验收。
