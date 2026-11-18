@@ -1,0 +1,25 @@
+packages/server/src/memory-api.test.ts
+  s_7fcb8ccaf69b1e::t_6c6b851efefb49 195,202-207,211-228
+packages/server/src/memory-coverage.test.ts
+  s_7fcb8ccaf69b1e::t_78997a2b29b0bb 104-110
+packages/server/src/memory-write-neighbors.test.ts
+  s_7fcb8ccaf69b1e::t_91908e0fca93bb 32
+packages/server/src/playbook.test.ts
+  s_7fcb8ccaf69b1e::t_6703743e80bb79 61-66,108-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "359287d011b99bda6e5f14e349fc6020e3a71bad",
+  "prompts": {},
+  "sessions": {
+    "s_7fcb8ccaf69b1e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ee2b-3c9a-7043-9b4c-147f0d9dc5e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
