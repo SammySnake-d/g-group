@@ -1,0 +1,2 @@
+P1-B canonical proof and D-vs-X boundaries: packages/server/proof/p1b-codex-protocol.txt
+Runnable handoff proof: packages/server/proof/p1b-handoff.mjs

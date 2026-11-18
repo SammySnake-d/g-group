@@ -89,3 +89,14 @@ npm run typecheck && npm run lint && npm test && npm run gates:selftest
 
 - 旧消息与记忆的混合检索使用 [acp-kernel 0.0.191](https://github.com/ranxianglei/acp-kernel)，来自 [Billion Context `541cf26`](https://github.com/ranxianglei/billion-context/tree/541cf26/kernel)。随仓保留 [MIT 及出处标注条款](third_party/acp-kernel/LICENSE)和[上游构建说明](third_party/acp-kernel/UPSTREAM.md)。
 - `packages/server/src/room-post-budget.ts`、`compaction-summary.ts` 与配套测试改编自 [milind-soni/OpenMausBot (`613ed01fd`)](https://github.com/milind-soni/OpenMausBot/tree/613ed01fd)，Copyright 2026 Milind Soni and OpenMausBot contributors，[Apache-2.0](packages/server/licenses/OpenMausBot-APACHE-2.0.txt)。
+
+
+## Codex Compute 与轮边界换 Harness（P1-B）
+
+startServer({ compute: "codex", dataDir }) 与 CLI --compute fake|claude|codex 已接入。真实运行模式注册 Claude Code 和 Codex 工厂；联系人选择 Harness 与兼容模型，宿主不静默代跑。Codex 使用 app-server 原生线程与 turn；开发指令放在线程启动/恢复参数，每轮通过 turn/start 显式发 model/effort。
+
+每个 Compute 槽位使用独立 CODEX_HOME，保留真实 HOME 供 git、SSH 和用户工具使用。联系人换 Harness 后，在下一轮边界确认旧执行器停止，再在同任务 worktree 建新原生会话，保留分支/SHA、进度与追加模型账本。工具授权只映射完整 native workspace scope 或空工具只读范围；其它子集与 Claude skill 插件明确拒收。
+
+本片已验证确定性 native-wire、真实自有进程清理、双向 handoff 与取消/rewind；真实 codex-cli 0.169.0 二进制 E2E、模型 S+X 和实际能力配置验证留 P3。AC-23 / AC-51 / V-02 整体仍“未测”，独立审查待完成。详见[证明](packages/server/proof/p1b-codex-protocol.txt)与[进度清单](docs/BACKEND-PROGRESS-CHECKLIST.md)。
+
+packages/adapter-codex-compute/src/startup.ts 的启动 admission 思路参考 OpenMausBot 613ed01fd（Apache-2.0），源码注明出处；[许可](packages/server/licenses/OpenMausBot-APACHE-2.0.txt)随仓保留。
