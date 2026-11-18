@@ -58,3 +58,32 @@
   - `F0-F3` (`capabilities.ts` MCP `description` projection): **KILLED**.
   - `F0-F4` (`views.ts` `doneTasks.slice(0, 50)` cap): **KILLED**.
   - `F0-F5` (`views.ts` `updatedAt` vs `createdAt` sort key): **SURVIVED** (see P2 above).
+
+
+---
+
+# REVIEW 2: APPROVE 3014a7c367d613b28d67541ca1e7398d1963e60d648c91205a4fcc63c78301d7
+
+## Round 2 — APPROVE
+
+- **PR**: `#128` (`feat/agy-frontend-contract-extensions` → `dev/agy-backend`)
+- **Author**: `codex-cli:01a1f0da-8e63-7d51-a2bd-316818d1943b` (`fnqtz-gpt/gpt-6.2-sol`, vendor `openai`)
+- **Reviewer**: `carbon-agy` (`antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98`, `gemini-4-carbon-high`, vendor `google`)
+- **Red Commit**: `e395a32a1ecf01cafa235890d8d550339e1d41d8`
+- **Green Commit**: `69442f2ae8c461d4b8bde293b99cf4019a039024`
+- **Reviewed HEAD**: `6a81d4388ee0abe47ab2d98a0aba946302f0ee78`
+- **Reviewed Content Hash**: `3014a7c367d613b28d67541ca1e7398d1963e60d648c91205a4fcc63c78301d7`
+
+### 1. Verification of Round 1 Fixes
+
+1. **P1-1 RESOLVED (`receipts/feat-agy-frontend-contract-extensions.json:6`)**: `author.session` updated to real `codex-cli:01a1f0da-8e63-7d51-a2bd-316818d1943b`.
+2. **P1-2 RESOLVED (`packages/server/src/memory-api.ts:86, 93-95`, `memory-api.test.ts`)**: `addMemory` rejects `PERSONA_ANCHOR` (`"persona-suggestion"`) with `invalid_params` before writing and filters `hiddenIds` + `PERSONA_ANCHOR` out of `existing` before `planMemoryWrite`, so manual re-addition of a retracted message quote creates a fresh `source: null`, `state: "active"`, `effective: true` memory.
+3. **P1-3 RESOLVED (`packages/server/src/magpie-discovery.ts:46-56, 104-136`, `magpie-discovery.test.ts`)**: `gatewayUrl` validates `http:` / `https:` without embedded credentials, `readLocalMagpieUrl` / `local.foundConfig` is restricted to `targetsLocal`, and `record()` upgrades `cur.label` when merging across harnesses.
+4. **P2 RESOLVED (`packages/server/src/views.test.ts:26-38`, `capabilities.ts:132,135`)**: `views.test.ts` differentiates `createdAt` vs `updatedAt` (**`F0-R2-F5` `updatedAt -> createdAt` mutation now KILLED**), and `capabilities.ts` skips `n.length > 64` script names and broken symlinks (`statSync(..., { throwIfNoEntry: false })?.isFile()`).
+
+### 2. Independent Verification
+
+- `npm run typecheck`: exit `0`; `npm run lint`: exit `0` (`331` files, `0` diagnostics).
+- Targeted test suites (`capabilities.test.ts`, `magpie-discovery.test.ts`, `memory-api.test.ts`, `views.test.ts`): **`30/30` passed**.
+- Live Round 2 repro script + `F0-R2-F5` fault injection: all passed (`R2_REPRO_VERIFIED_ALL_FIXED=true`, `F0-R2-F5 killed=True`).
+- `AC-54`, `AC-29`, and `AC-42` remain honestly marked `"未测"` pending frontend UI and P3 verification.
