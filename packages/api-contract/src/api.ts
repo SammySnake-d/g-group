@@ -139,6 +139,9 @@ export const METHODS = {
    * stopTasks=true 时成员先进「移出中」、在途任务 Cancel → 停 Compute,真实停止确认后才移除(dissolved=false 表示还在等停下)。私聊 forbidden。
    */
   "rooms.dissolve": method(obj({ roomId: id(), stopTasks: opt(bool()) }), obj({ roomId: id(), dissolved: bool() })),
+  "rooms.muteMember": method(obj({ roomId: id(), contactId: id(), muted: bool(), clientActionId: id() }), RoomView),
+  "rooms.transferOwnership": method(obj({ roomId: id(), userId: id(), clientActionId: id() }), RoomView),
+  "rooms.kick": method(obj({ roomId: id(), member: MemberRef, clientActionId: id() }), RoomView),
   /** 用户自己的已读位置,只影响用户视图(AC-46)。 */
   "rooms.markRead": method(obj({ roomId: id(), seq: seq() }), Ok),
   /** 私聊 rewind 预览(AC-48):只读,不改任何状态;用户看完不确认即取消。群聊 forbidden;回退点不是本会话的消息 invalid_params。 */
@@ -199,6 +202,8 @@ export const METHODS = {
    * hidden=false 把删掉的放回来(提示条上的「撤销」)。返回这次实际改动的条数。
    */
   "messages.hide": method(obj({ roomId: id(), seqs: arr(seq(), { max: 500 }), hidden: opt(bool()) }), obj({ changed: int({ min: 0 }) })),
+  "messages.delete": method(obj({ roomId: id(), seqs: arr(seq(), { max: 500 }), clientActionId: id() }), obj({ results: arr(obj({ seq: seq(), ok: bool(), error: nullable(obj({ code: oneOf(["not_found"] as const), message: str({ max: 500 }) })) })) })),
+  "messages.deleteMessages": method(obj({ roomId: id(), seqs: arr(seq(), { max: 500 }), clientActionId: id() }), obj({ results: arr(obj({ seq: seq(), ok: bool(), error: nullable(obj({ code: oneOf(["not_found"] as const), message: str({ max: 500 }) })) })) })),
   /** 清空聊天记录(U23):把这个会话现有的消息全部从你这边隐去(之后的新消息照常显示);联系人的记忆、资产与上下文不受影响。 */
   "rooms.clearHistory": method(obj({ roomId: id() }), obj({ clearedUpto: seq() })),
   // ---- 输入框草稿(AC-24、AC-37 ②:按会话持久化,切窗口与重启都不丢;不是消息,不送达任何联系人) ----

@@ -12,6 +12,7 @@ export const ServerEvent = tagged("type", {
   /** 编辑、撤回、表情、卡片状态变化:整条替换。 */
   "message.updated": ev("message.updated", { message: MessageView }),
   "receipt.updated": ev("receipt.updated", { roomId: id(), member: MemberRef, readSeq: seq() }),
+  "message.hidden": ev("message.hidden", { roomId: id(), seqs: arr(seq()), uptoSeq: nullable(seq()) }),
   "room.updated": ev("room.updated", { room: RoomView }),
   "room.removed": ev("room.removed", { roomId: id() }),
   /** 某会话的输入框草稿变了(另一个窗口保存、发送回执清理):渲染进程按 draftVer 合并。 */

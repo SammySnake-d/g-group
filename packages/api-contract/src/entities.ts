@@ -150,6 +150,10 @@ export const RoomView = obj({
   memberReads: opt(arr(obj({ member: MemberRef, readSeq: seq() }), { max: 200 })),
   /** 置顶消息(你自己找回用,不当群规、不装配进联系人上下文,D28.4),按置顶先后。 */
   pinnedSeqs: opt(arr(seq(), { max: 500 })),
+  ownerId: opt(id()),
+  dissolution: opt(oneOf(["dissolving", "dissolved"] as const)),
+  mutedMembers: opt(arr(MemberRef)),
+  blockedSummary: opt(nullable(str({ max: 500 }))),
 });
 export type RoomView = Infer<typeof RoomView>;
 /** 群公告(U97/U86):一个群可有多条,当前有效的全部装配进联系人第 1 块「群规快照」位。version 每次改动 +1(CAS 用)。 */

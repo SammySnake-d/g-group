@@ -69,6 +69,9 @@ export function createService(host: Host): Service {
     "rooms.removeMember": (p: { roomId: string; member: { kind: "user" | "contact"; id: string }; stopTasks?: boolean }) =>
       host.removeMember(p.roomId, p.member, p.stopTasks === undefined ? {} : { stopTasks: p.stopTasks }),
     "rooms.dissolve": (p: { roomId: string; stopTasks?: boolean }) => host.dissolveRoom(p.roomId, p.stopTasks === undefined ? {} : { stopTasks: p.stopTasks }),
+    "rooms.muteMember": (p: { roomId: string; contactId: string; muted: boolean; clientActionId: string }) => host.muteMember(p.roomId, p.contactId, p.muted, p.clientActionId),
+    "rooms.transferOwnership": (p: { roomId: string; userId: string; clientActionId: string }) => host.transferOwnership(p.roomId, p.userId, p.clientActionId),
+    "rooms.kick": (p: { roomId: string; member: { kind: "user" | "contact"; id: string }; clientActionId: string }) => host.removeMember(p.roomId, p.member),
     "rooms.markRead": (p: { roomId: string; seq: number }) => {
       host.markRead(p.roomId, { kind: "user", id: host.userId }, p.seq);
       return { ok: true };
@@ -91,6 +94,8 @@ export function createService(host: Host): Service {
     "messages.forward": (p: Parameters<Host["forwardMessages"]>[0]) => host.forwardMessages(p),
     "messages.pin": (p: { roomId: string; seq: number; on: boolean }) => host.pinMessage(p.roomId, p.seq, p.on),
     "messages.hide": (p: { roomId: string; seqs: number[]; hidden?: boolean }) => host.hideMessages(p.roomId, p.seqs, p.hidden ?? true),
+    "messages.delete": (p: { roomId: string; seqs: number[]; clientActionId: string }) => host.deleteMessages(p.roomId, p.seqs, p.clientActionId),
+    "messages.deleteMessages": (p: { roomId: string; seqs: number[]; clientActionId: string }) => host.deleteMessages(p.roomId, p.seqs, p.clientActionId),
     "rooms.clearHistory": (p: { roomId: string }) => host.clearHistory(p.roomId),
     "drafts.get": (p: { roomId: string }) => host.draft(p.roomId),
     "drafts.save": (p: { roomId: string; expectedVer: number; draft: Parameters<Host["saveDraft"]>[2] }) => host.saveDraft(p.roomId, p.expectedVer, p.draft),

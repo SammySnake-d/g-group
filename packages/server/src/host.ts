@@ -182,6 +182,8 @@ import { type SearchPage, type SearchQuery, ensureSearchIndex, indexMessageTx, r
 import { SharedDocs } from "./shared-docs.ts";
 import { type CodeRepoConfig, type Workspace, Worktrees } from "./worktree.ts";
 import { type ArtifactRef, ArtifactStore, MAX_ARTIFACT_BYTES, MAX_ARTIFACTS, MAX_INLINE_TEXT, isReadable, recentReadable } from "./artifacts.ts";
+import { ChatAdmin } from "./chat-admin.ts";
+import { roomBlockedSummary } from "./room-blocked-summary.ts";
 
 export interface HostOptions {
   /** T-177: only already-scoped room history is sent to this local retrieval seam. */
@@ -495,6 +497,7 @@ export class Host {
   private readonly computePids = new Map<string, number>();
 
   readonly loopGuard: LoopGuard;
+  readonly chatAdmin: ChatAdmin;
   private readonly history: HistoryAccess;
 
   constructor(opts: HostOptions) {
@@ -506,6 +509,7 @@ export class Host {
     this.userId = opts.userId ?? "me";
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
+    this.chatAdmin = new ChatAdmin({ db: this.db, now: this.now });
     this.usage = new UsageLedger({ db: this.db, now: this.now, report: (w, d) => this.report(w, d) });
     installContactHistory(this.db, this.now());
     this.links = new ForwardLinkStore(this.db);
@@ -955,6 +959,7 @@ export class Host {
       for (const m of all_) run(this.db, "INSERT OR IGNORE INTO gg_members (room_id, kind, member_id) VALUES (?, ?, ?)", id, m.kind, m.id);
       if (key) recordAction(this.db.store, key, { roomId: id });
     });
+    this.chatAdmin.recordOwner(id, this.userId);
     const view = this.roomView(id);
     this.bus.emit({ type: "room.updated", room: view });
     return view;
@@ -1033,6 +1038,15 @@ export class Host {
     const pending = openCards + listDocs<TaskDoc>(this.db, "task:").filter((d) => d.value.roomId === roomId && awaitingUser(d.value)).length;
     const draft = getDoc<DraftView>(this.db, `draft:${roomId}`)?.value;
     const linkedRooms = this.linksOfUser(roomId).map(({ linkedRoomId, kind, title, uptoSeq, linkedAt }) => ({ roomId: linkedRoomId, kind, title, uptoSeq, linkedAt }));
+    const blockers = all<CardRow>(this.db, "SELECT * FROM gg_cards WHERE room_id = ? AND kind = 'question' AND state = 'open' ORDER BY seq", roomId)
+      .flatMap((card) => {
+        const task = card.task_id ? getDoc<TaskDoc>(this.db, `task:${card.task_id}`)?.value : undefined;
+        const message = msgs.find((m) => m.seq === card.seq);
+        if (!task?.task.pendingQ || !message || message.retracted || task.task.pendingQ.qId !== JSON.parse(card.meta).qId) return [];
+        const qId = task.task.pendingQ.qId;
+        const text = this.authzOf(task.task.id).value.requests.find((q) => q.qId === qId)?.action ?? this.questionText(task.task.id, qId);
+        return [{ taskId: task.task.id, seq: card.seq, text }];
+      });
     return {
       id: r.id,
       kind: r.kind,
@@ -1056,6 +1070,8 @@ export class Host {
       ...(r.kind === "group" ? { tempComputeSlots: getDoc<{ slots: number }>(this.db, `room-slots:${roomId}`)?.value.slots ?? 0 } : {}),
       memberReads: this.memberReads(roomId),
       pinnedSeqs: getDoc<{ seqs: number[] }>(this.db, `pins:${roomId}`)?.value.seqs ?? [],
+      ...this.chatAdmin.groupFields(roomId),
+      blockedSummary: roomBlockedSummary(blockers),
     };
   }
   /** 当前成员各自的已读位置(AC-46);没读过的不列。 */
@@ -1426,6 +1442,7 @@ export class Host {
     const sender = { kind: "system" as const, id: "retract-effects" };
     const notices: number[] = [];
     const copies: ReturnType<ForwardLinkStore["markSourceRetractedTx"]> = [];
+    const cancelTasks: string[] = [];
     try {
       tx(this.db, () => {
         appendEvent(this.db.store, `room:${roomId}`, { kind: "user", id: this.userId }, body, this.now());
@@ -1441,6 +1458,7 @@ export class Host {
           };
           for (const { value: doc } of listDocs<TaskDoc>(this.db, "task:")) {
             if (doc.roomId !== roomId || doc.sourceSeq !== body.target) continue;
+            if (body.kind === "retract" && /^T[2-8]_/.test(doc.task.state)) cancelTasks.push(doc.task.id);
             const completed = all<{ id: number; compute_id: string; summary: string; at: string }>(this.db, "SELECT id, compute_id, summary, at FROM gg_progress WHERE task_id = ? AND kind = 'completed' ORDER BY id", doc.task.id);
             for (const record of completed) {
               const clean = scrubRetracted(record.summary, hidden);
@@ -1462,6 +1480,9 @@ export class Host {
       if (code === "not-original-sender") throw new HostError("forbidden", "只能改自己发的消息");
       if (code === "target-retracted") throw new HostError("conflict", "这条已撤回");
       throw e;
+    }
+    for (const taskId of cancelTasks) {
+      try { this.stopTask(taskId, this.userId); } catch (e) { this.report("retract-stop-failed", { taskId, error: e instanceof Error ? e.message : String(e) }); }
     }
     this.emitForwardUpdates(copies);
     for (const seq of notices) this.afterAppend(roomId, seq, sender);
@@ -1754,6 +1775,7 @@ export class Host {
    */
   removeMember(roomId: string, m: Member, opts: { stopTasks?: boolean } = {}): RoomView {
     const r = this.roomRow(roomId);
+    if (r.kind === "group" && !this.chatAdmin.isOwner(roomId, this.userId)) throw new HostError("forbidden", "只有群主能移出成员");
     if (r.kind === "dm") throw new HostError("forbidden", "私聊不能移出成员");
     if (!this.isMember(roomId, m)) throw new HostError("not_found", "不是这个群的成员");
     if (m.kind === "contact") {
@@ -1815,6 +1837,7 @@ export class Host {
    */
   dissolveRoom(roomId: string, opts: { stopTasks?: boolean } = {}): { roomId: string; dissolved: boolean } {
     const r = this.roomRow(roomId);
+    if (r.kind === "group" && !this.chatAdmin.isOwner(roomId, this.userId)) throw new HostError("forbidden", "只有群主能解散群");
     if (r.kind !== "group") throw new HostError("forbidden", "私聊不能解散");
     if (!this.isMember(roomId, { kind: "user", id: this.userId })) return { roomId, dissolved: true };
     const live = this.listTasks({ roomId }).filter((t) => t.ownerContactId !== null && !EXIT_SETTLED.has(t.state) && !this.deliveredAwaitingUser(t));
@@ -1827,6 +1850,28 @@ export class Host {
     for (const m of this.members(roomId)) if (m.kind === "contact") this.removeMember(roomId, m, { stopTasks: true });
     return { roomId, dissolved: this.finishDissolve(roomId) };
   }
+  muteMember(roomId: string, contactId: string, muted: boolean, _clientActionId: string): RoomView {
+    const r = this.roomRow(roomId);
+    if (r.kind !== "group") throw new HostError("forbidden", "私聊不能禁言");
+    if (!this.chatAdmin.isOwner(roomId, this.userId)) throw new HostError("forbidden", "只有群主能禁言");
+    if (!this.isMember(roomId, { kind: "contact", id: contactId })) throw new HostError("not_found", "联系人不在这个群");
+    this.chatAdmin.setMuted(roomId, contactId, muted, this.userId);
+    this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
+    return this.roomView(roomId);
+  }
+  transferOwnership(roomId: string, userId: string, _clientActionId: string): RoomView {
+    const r = this.roomRow(roomId);
+    if (r.kind !== "group") throw new HostError("forbidden", "私聊不能转让群主");
+    if (!this.chatAdmin.isOwner(roomId, this.userId)) throw new HostError("forbidden", "只有群主能转让");
+    if (!userId.trim()) throw new HostError("invalid_params", "群主不能为空");
+    this.chatAdmin.recordOwner(roomId, userId);
+    run(this.db, "UPDATE gg_room_owner SET owner_id = ?, at = ? WHERE room_id = ?", userId, this.now(), roomId);
+    return this.roomView(roomId);
+  }
+  deleteMessages(roomId: string, seqs: readonly number[], _clientActionId: string) {
+    return { results: seqs.map((seq) => { try { this.hideMessages(roomId, [seq], true); return { seq, ok: true, error: null }; } catch (e) { return { seq, ok: false, error: { code: "not_found" as const, message: e instanceof Error ? e.message : String(e) } }; } }) };
+  }
+
   /** 解散中的群:联系人成员都已移出就收尾(你退出、群临时槽位作废、推 room.removed)。返回是否已移除。 */
   private finishDissolve(roomId: string): boolean {
     if (!getDoc(this.db, `room-dissolving:${roomId}`)) return false;
