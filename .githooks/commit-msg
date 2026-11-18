@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+message=${1:?commit message file required}
+stats=$(git diff --cached --numstat -- . ':!package-lock.json' \
+  ':(exclude,glob)scripts/*-baseline.json' ':(exclude,glob)packages/*/proof/**' \
+  ':!reviews/' ':!receipts/')
+changed_lines=$(printf '%s\n' "$stats" | awk '{ total += $1 + $2 } END { print total + 0 }')
+
+if [ "$changed_lines" -gt 300 ] && ! grep -Eq '^Verified:[[:space:]]*[^[:space:]]' "$message"; then
+  echo "[commit-msg] ${changed_lines} changed lines (>300). Add a Verified: trailer with the commands executed." >&2
+  exit 1
+fi

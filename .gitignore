@@ -2,3 +2,6 @@ node_modules/
 .DS_Store
 *.log
 .gate-tmp/
+
+# Advisory verification lock
+/.suite.lock/

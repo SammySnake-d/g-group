@@ -9,6 +9,10 @@
     "node": ">=22.18"
   },
   "scripts": {
+    "check:docs": "node scripts/check-docs.ts",
+    "check:contracts": "node scripts/check-contracts.ts",
+    "check:structure": "node scripts/check-structure.ts",
+    "check": "npm run check:docs && npm run check:contracts && npm run check:structure && npm run typecheck",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "biome lint --error-on-warnings",
     "test": "node scripts/gates/test-runner.ts \"packages/**/*.test.ts\" \"scripts/gates/*.test.ts\"",
