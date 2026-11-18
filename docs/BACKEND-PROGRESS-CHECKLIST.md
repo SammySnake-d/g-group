@@ -24,3 +24,17 @@
 | P1-A | D 层同轮 round/reflect/compact/shrink 配置冻结、下一轮替换保留笔记/记忆；逐字证据核验、覆盖写入恢复、md/SQLite 启动对账；撤回/回退清洗；memory.* 与 profile 概览；邻域标题/正文/数量/相关度；playbook 与公告分离，Block 5 注入，净室 clone | `speaking-snapshot.test.ts`、`speaking-endpoint.test.ts`、`memory-capture.test.ts`、`memory-coverage.test.ts`、`memory-hygiene.test.ts`、`memory-api.test.ts`、`memory-write-neighbors.test.ts`、`playbook.test.ts`；`packages/server/proof/p1a-context-memory-playbook.txt` | D08.3 已定目标：默契可沉淀、可复制、群公告≠协作手册。DM#2103 的手册载体与具体机制仍属候选；本片 team/pair 观察 API 是本次授权的后端候选，不宣称已定产品方案。AC-42 真实模型 S+X、AC-32 X 层、AC-54 前端渲染、AC-08 在途任务取消及 P3 总体验收未测；G5 两阶段不纳入 |
 
 P1-A 无 R-Rule 审批链、BlockerRate 自动路由或多人 CRDT 编辑。净室克隆不复制聊天消息、任务、承诺、共享文档、关联群、Compute 或处理游标；复制观察使用新群模板来源标记，不开放旧群聊天。独立审查未完成前不作发布/合入结论。
+
+## Step 2A — `chore/agy-gates-process-layer`（Q08 / AC-23 前置，PR #125 已合入：`618fb79a`）
+
+- [x] `G-LAYER` 识别 `process` 层：`process: []`，仅 `adapter` 新增向 `process` 的依赖许可。
+- [x] 保留 `domain/kernel/plugin/app -> process`、`adapter -> adapter` 及相对路径跨包禁令。
+- [x] `AGY_MODEL_RE` 识别 `gemini-3.8-flash-s` / `gemini-3.8-flash-high`；数据库回归拒绝畸形和未知名称。
+- [x] 测试先红后绿提交，类型检查、lint、全量测试、门禁自检与变异校验通过；证据见 `scripts/gates/proof/process-layer.txt`。
+- [x] 收据 `receipts/chore-agy-gates-process-layer.json` 保留 `review: null` / `waiver: null`，AC-23 运行时部分标为未测。
+- [x] PR #125 已合入 `dev/agy-backend`，使可信 `$JUDGE` 识别 `process`。
+
+## Step 2B — P1-B（Step 2A 已合入）
+
+- [ ] 移植 `packages/process-tools` 与 `packages/adapter-codex-compute`。
+- [ ] 实测 AC-23 的进程清理、停止确认后归还及冲突后继隔离；本前置切片不宣称这些运行时行为完成。
