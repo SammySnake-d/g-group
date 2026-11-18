@@ -1,0 +1,47 @@
+packages/api-contract/src/memory.ts
+  s_173fcb351f5325::t_6a4d0b0aa8621a 57-68
+packages/server/src/magpie-discovery.ts
+  s_173fcb351f5325::t_6a85d0fa770e05 1-9
+  s_173fcb351f5325::t_737603e0b096c1 10-12
+  s_173fcb351f5325::t_01cd77346ed90d 13-147
+packages/server/src/magpie-discovery.test.ts
+  s_173fcb351f5325::t_33efba52e70e9d 1-68
+packages/server/src/views.test.ts
+  s_173fcb351f5325::t_f62202b4750ad4 1-39
+  s_173fcb351f5325::t_1caccf591baba6 40
+packages/server/src/capabilities.test.ts
+  s_173fcb351f5325::t_dcedab3be33216 60,77-78,95-98,139-140,168-169,175-191
+packages/api-contract/src/api.ts
+  s_173fcb351f5325::t_cbe1b742e7ee1f 434-449
+packages/server/src/memory-api.test.ts
+  s_173fcb351f5325::t_a4c4ff6c8bc917 14,285-335
+packages/server/src/memory-api.ts
+  s_173fcb351f5325::t_9bc470da011f7e 139
+  s_173fcb351f5325::t_1944a9dc64823a 3,6,8,78-99
+packages/api-contract/src/entities.ts
+  s_173fcb351f5325::t_f120c0ab60cc9d 574-575,642-643
+packages/server/src/capabilities.ts
+  s_173fcb351f5325::t_62adcc5305222a 28
+  s_173fcb351f5325::t_a47ec04747eced 27
+  s_173fcb351f5325::t_d055c352dd1398 52,60,63-87,113,115-138
+packages/server/src/service.ts
+  s_173fcb351f5325::t_e3d84ef9a5bd7c 22,164
+packages/server/src/views.ts
+  s_173fcb351f5325::t_26716ae2be98a2 16-20,27-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6d4c79e087489ebb7c59fafede799d42772b6c61",
+  "prompts": {},
+  "sessions": {
+    "s_173fcb351f5325": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f0bf-a6ec-7e40-83a5-fd27bd422428",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
