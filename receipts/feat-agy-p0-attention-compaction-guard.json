@@ -23,7 +23,7 @@
       "id": "R-02",
       "status": "通过",
       "evidence": "packages/server/proof/b2-attention-compaction-guard.txt",
-      "reason": "基线 1767 通过；可编译 RED 记录 130 个命名失败；GREEN 1896 通过，RED 后测试未改。"
+      "reason": "R2 增量 RED 在 R1 实现上 6 条具名断言失败；回放 R1 空桩的合并 RED 可编译，R1+R2 共 136 条变更测试全部具名失败，25 条未变对照通过。冻结同一份测试到 R2 GREEN，全库 1902 通过，0 跳过。"
     },
     {
       "id": "R-03",
@@ -41,57 +41,99 @@
       "id": "R-05",
       "status": "通过",
       "evidence": "packages/server/proof/b2-attention-compaction-guard.txt",
-      "reason": "日志列出的 8 条 D 层判据逐点标定：8/8 原版对照通过，8/8 单点变异在命名断言失败。不代表整条 AC 或未列出的产品判据已标定。"
+      "reason": "Round 1 日志列出的 8 条 D 层判据已逐点标定；Round 2 新增 6 条测试均在旧实现上按名断言失败、修复后通过。不代表整条 AC 或未列出的产品判据已标定。"
     }
   ],
   "author": {
     "agent": "codex-cli",
-    "session": "codex-cli:01a1ec48-cee6-7443-bea3-0bb9312c7274",
+    "session": "codex-cli:01a1ec82-9ccb-7fa0-80ae-658287515888",
     "model": "shayu/gpt-6.2-sol"
   },
   "red": {
-    "commit": "07cef7c6df795003e755f4b2b6191ab7e1a2fef5"
+    "commit": "e891fa29ae87308dea26914c11ffcae476788d78"
   },
-  "review": {
-    "agent": "carbon-agy",
-    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
-    "model": "gemini-4-carbon-high",
-    "verdict": "reject",
-    "reviewed_hash": "c5cbd909f6d05452459ca27a36abf0319fe73ec4198ace5520264498dfeaed3e",
-    "notes": "Round 1 REJECT (see reviews/feat-agy-p0-attention-compaction-guard.md): P1 US2/G4-01/D06.3/AC-46 — In Host.runRound, unread system loop-guard notices and pre-splice refs from LoopGuard-withheld group messages leak across session boundaries when a contact is woken in an unrelated private DM or other room, exposing the stopped group to prefetch, query_history, quote Page-In (Block 5), focusRoom selection, and premature markRead."
-  },
+  "review": null,
   "waiver": null,
-  "unverifiable": "按 R-08，部分 D 层通过不等同 AC-08、AC-32、AC-42 整项通过；B3/B4/B8/B9 未覆盖范围见各项。尚无独立跨厂商审查，不请求豁免。",
+  "unverifiable": "按 R-08，D 层覆盖不等同 AC-08、AC-32、AC-42 整项通过；B3/B4/B8/B9 未覆盖范围见各项。Round 1 拒绝记录原样保留，Round 2 尚无独立跨厂商审查，不请求豁免。",
   "verification": {
-    "baseline": "5d80aa865478eab0b6d83071db9717d37a7844f3",
-    "baseline_tests": {
-      "passed": 1767,
-      "failed": 0,
-      "skipped": 0
+    "round1": {
+      "baseline": "5d80aa865478eab0b6d83071db9717d37a7844f3",
+      "baseline_tests": {
+        "passed": 1767,
+        "failed": 0,
+        "skipped": 0
+      },
+      "implementation": "3415fbeac0c4d0f628492f8554d2d58ee074b129",
+      "red_tests": {
+        "files": 20,
+        "named_failures": 130,
+        "unchanged_passed": 25,
+        "missing": 0,
+        "skipped": 0
+      },
+      "root_tests": {
+        "passed": 1896,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "cancelled": 0
+      },
+      "calibration": {
+        "named_assertion_kills": 8,
+        "original_code_controls_passed": 8
+      },
+      "block1_utf8_bytes": [
+        3465,
+        3465
+      ],
+      "clean_lifecycle_disabled_install": "passed",
+      "red_commit": "07cef7c6df795003e755f4b2b6191ab7e1a2fef5",
+      "rejected_branch_head": "deca76cfcd6b1a69e118bfdea08526d959cbf65f",
+      "review_record": "reviews/feat-agy-p0-attention-compaction-guard.md"
     },
-    "implementation": "3415fbeac0c4d0f628492f8554d2d58ee074b129",
-    "red_tests": {
-      "files": 20,
-      "named_failures": 130,
-      "unchanged_passed": 25,
-      "missing": 0,
-      "skipped": 0
-    },
-    "root_tests": {
-      "passed": 1896,
-      "failed": 0,
-      "skipped": 0,
-      "todo": 0,
-      "cancelled": 0
-    },
-    "calibration": {
-      "named_assertion_kills": 8,
-      "original_code_controls_passed": 8
-    },
-    "block1_utf8_bytes": [
-      3465,
-      3465
-    ],
-    "clean_lifecycle_disabled_install": "passed"
+    "round2": {
+      "incremental_red": {
+        "parent": "deca76cfcd6b1a69e118bfdea08526d959cbf65f",
+        "commit": "759a44e8cb97222f58a6b865bed6180598f31cce",
+        "named_assertion_failures": 6,
+        "unchanged_passed": 10,
+        "skipped": 0
+      },
+      "combined_red": {
+        "implementation_baseline": "07cef7c6df795003e755f4b2b6191ab7e1a2fef5",
+        "commit": "e891fa29ae87308dea26914c11ffcae476788d78",
+        "typecheck_exit_code": 0,
+        "files": 20,
+        "named_failures": 136,
+        "unchanged_passed": 25,
+        "missing": 0,
+        "skipped": 0
+      },
+      "green": {
+        "commit": "4910d0e0dd82ceb3a30d29bc0c9e35d260c61264",
+        "typecheck_exit_code": 0,
+        "lint_exit_code": 0,
+        "targeted_tests": {
+          "tests": 46,
+          "pass": 46,
+          "fail": 0,
+          "skipped": 0,
+          "todo": 0,
+          "cancelled": 0
+        },
+        "root_tests": {
+          "tests": 1902,
+          "pass": 1902,
+          "fail": 0,
+          "skipped": 0,
+          "todo": 0,
+          "cancelled": 0
+        },
+        "block1_utf8_bytes": [
+          3473,
+          3473
+        ]
+      }
+    }
   }
 }

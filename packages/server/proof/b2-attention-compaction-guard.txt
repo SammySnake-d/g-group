@@ -165,3 +165,26 @@ not ok 152 - caps one bot at ten posts a minute, and lets the cap lapse with the
 not ok 153 - reaches every one of its rules from an empty budget
 not ok 154 - tells the model to stop rather than to retry, whichever rule refuses
 not ok 155 - forgets posts older than every window it consults
+
+Round 2 — LoopGuard cross-session isolation (PR #121)
+Incremental Red: 759a44e8cb97222f58a6b865bed6180598f31cce, directly on rejected Round 1 head deca76cfcd6b1a69e118bfdea08526d959cbf65f.
+  node --test packages/server/src/loop-guard.test.ts: exit 1; 6 new named assertion failures, 10 existing tests passed, 0 skipped, todo or cancelled.
+Combined branch Red: e891fa29ae87308dea26914c11ffcae476788d78; only 13 non-test sources reverted to Round 1 stubs 07cef7c6df795003e755f4b2b6191ab7e1a2fef5.
+  npm exec -- tsc -p tsconfig.json: exit 0. node --test: 20 files, 161 tests; 136 changed tests each failed by name, 25 unchanged tests passed, 0 missing, file errors, skipped, todo or cancelled.
+Round 2 Green: 4910d0e0dd82ceb3a30d29bc0c9e35d260c61264; restored Round 1 Green sources plus the Host and HistoryAccess fixes. All test files are byte-identical from incremental Red through Green.
+  npm run typecheck: exit 0. npm run lint: exit 0 (269 files). Targeted LoopGuard and recall tests: 46/46 passed. npm test: 1902/1902 passed, 0 failed, skipped, todo or cancelled.
+  Adapter recall.test.ts kept the wire prefix below 4000 UTF-8 bytes. Direct Host measurement: 3473 and 3473 bytes on two default group turns; prefix identical.
+  Round 1 review Markdown remains byte-for-byte unchanged. Round 2 review is pending.
+
+Incremental Red (the same six named tests pass on Round 2 Green)
+not ok 11 - R2 G4-a 停止通知不能混入私聊新输入、运行来源或推进被拦群的已读
+not ok 12 - R2 D06.3 有未读停止通知时第五块只预取私聊、不带被拦群的预取或引用
+not ok 13 - R2 G4-01 私聊 query_history 只搜本会话、拒绝显式搜索和回读被拦群
+not ok 14 - R2 D06.3 没有未读系统通知时，被拦回复的引用也不进入私聊第五块
+not ok 15 - R2 AC-46 群有可交付新输入时，已读仍停在被拦消息之前
+not ok 16 - R2 G4-03 即使群在本轮活跃，系统通知也不作为预取查询
+
+Observed isolation controls
+- With an unread group notice: the DM no longer inherits the group as fresh input or run source, never searches it, and gets no group quote or prefetch hit. The DM still prefetches, searches, and reads its own history.
+- With no unread notice: the Round 1 Block 5 contained the withheld reply’s group #1 quote; Round 2 gives no pointer from that group, while normal DM prefetch remains.
+- AC-46: a group with only withheld input and a notice sees no read advancement from the unrelated DM. With a helper message keeping the group active, readSeq stays at #2 (before withheld #3) rather than advancing to #5. Even in the active group the notice does not seed prefetch.
