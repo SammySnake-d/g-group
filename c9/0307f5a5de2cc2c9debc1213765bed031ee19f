@@ -1,0 +1,64 @@
+packages/adapter-pi-contact/src/progress-tool.test.ts
+  s_1a776f3707f34d::t_428f310a8c0259 1-99
+packages/server/src/stop-storage-failure.test.ts
+  s_1a776f3707f34d::t_428f310a8c0259 1-6,8-41,44-82,85-102
+  s_1a776f3707f34d::t_b3d8ec3e9f69bd 7,42-43,83-84
+packages/server/src/runtime-config.test.ts
+  s_1a776f3707f34d::t_428f310a8c0259 1-18,20-158,160-167,170-255,258-275,278-305,308-311,313-366,368-397,399-412,414,416-496
+  s_1a776f3707f34d::t_b3d8ec3e9f69bd 276-277,367,398,413,415
+  s_1a776f3707f34d::t_cfc31b949640a4 19,159,168-169,256-257,306-307,312
+packages/server/src/stop-confirmation.test.ts
+  s_1a776f3707f34d::t_b3d8ec3e9f69bd 153,157,169-170
+  s_1a776f3707f34d::t_99ebc153ac013b 168
+  s_1a776f3707f34d::t_428f310a8c0259 1-102,105-152,154-156,158-167,171-212
+  s_1a776f3707f34d::t_008dc0de86af0a 103-104
+packages/server/src/atomic.test.ts
+  s_1a776f3707f34d::t_a5509558aedca7 1-44,46-51,53-58,60-65,67-76,78-84,86-101,103-109,111-175,177-211,213-233,235-240,242-271,273-290
+  s_1a776f3707f34d::t_b3d8ec3e9f69bd 45,52,59,66,77,85,102,110,176,212,234,241
+  s_1a776f3707f34d::t_2a741914a2b8ac 272
+packages/server/src/progress-get.ts
+  s_1a776f3707f34d::t_a5509558aedca7 1-9
+packages/server/src/runtime-config.ts
+  s_1a776f3707f34d::t_a5509558aedca7 1-66
+packages/server/src/runs.test.ts
+  s_1a776f3707f34d::t_428f310a8c0259 125,129,138-141,146,153-158,162-167
+packages/kernel/src/runtime-ports.ts
+  s_1a776f3707f34d::t_428f310a8c0259 133-134
+packages/server/src/quota.test.ts
+  s_1a776f3707f34d::t_428f310a8c0259 82-84,87-102,105-109
+  s_1a776f3707f34d::t_198a552945b666 85-86,103-104
+packages/server/src/fakes-quiesce.test.ts
+  s_1a776f3707f34d::t_b3d8ec3e9f69bd 42,62,80
+  s_1a776f3707f34d::t_428f310a8c0259 1-17,21-41,43-61,63-79,81-90
+  s_1a776f3707f34d::t_3ac22146af28dd 19
+  s_1a776f3707f34d::t_3257aa4de473c4 18,20
+packages/api-contract/src/entities.ts
+  s_1a776f3707f34d::t_428f310a8c0259 64-75,95-98,664-667
+packages/api-contract/src/api.ts
+  s_1a776f3707f34d::t_428f310a8c0259 39,42,98-99,431-432
+packages/server/src/lease.test.ts
+  s_1a776f3707f34d::t_b3d8ec3e9f69bd 10,251-253,262
+  s_1a776f3707f34d::t_428f310a8c0259 7,158-250,254-261,263-401
+packages/server/src/atomic.ts
+  s_1a776f3707f34d::t_a5509558aedca7 1-4
+packages/adapter-pi-contact/src/mind.test.ts
+  s_1a776f3707f34d::t_428f310a8c0259 88,101
+packages/kernel/src/orphan-pid.test.ts
+  s_1a776f3707f34d::t_428f310a8c0259 1-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c90307f5a5de2cc2c9debc1213765bed031ee19f",
+  "prompts": {},
+  "sessions": {
+    "s_1a776f3707f34d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ebf2-9504-7bf0-937c-48c2ba061e8b",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
