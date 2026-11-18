@@ -1,0 +1,21 @@
+packages/server/proof/p1a-context-memory-playbook.txt
+  s_d36a3ff0ab81e8::t_bd6f5b3eeebb9f 1,4-62,64-84,102
+receipts/feat-agy-priority-context-memory-playbook.json
+  s_d36a3ff0ab81e8::t_02bcf1b83a23d4 5,9,11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6a2b6cd0601bf92f0c5288351b92db79dcb6473b",
+  "prompts": {},
+  "sessions": {
+    "s_d36a3ff0ab81e8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ee5f-e210-7b00-892f-836f6421b2c2",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
