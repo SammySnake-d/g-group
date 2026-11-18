@@ -15,9 +15,24 @@
 
 ## dev/agy-backend 后端进度
 
-[docs/BACKEND-PROGRESS-CHECKLIST.md](docs/BACKEND-PROGRESS-CHECKLIST.md) 按优先级记录 B0–B4 与 P1-A 的实现、证据和未测边界。P1-A 提供每轮冻结说话配置、长期记忆卫生与证据台账、协作观察和净室群模板克隆；公告与协作观察分开，观察只在 Block 5 按需注入。
+[docs/BACKEND-PROGRESS-CHECKLIST.md](docs/BACKEND-PROGRESS-CHECKLIST.md) 按优先级记录 B0–B4、P1-A 与 P1-C 的实现、证据和未测边界。P1-A 提供每轮冻结说话配置、长期记忆卫生与证据台账、协作观察和净室群模板克隆；公告与协作观察分开，观察只在 Block 5 按需注入。
 
-当前勾选表示对应 D 层后端切片落地。B4 的 ling-jing 上游故障尚未形成 live 成功闭环；P1-B Codex、P1-C HTTP/WS、P2-A/B 和 P3 真实模型/前端 D+X 验收仍待完成。DM#2103 手册具体方案继续标为候选。
+当前勾选表示对应 D 层后端切片落地。B4 的 ling-jing 上游故障尚未形成 live 成功闭环；P1-C 的 HTTP/WS 合同、鉴权、背压、resync 与 CLI 生命周期已通过离线 D 层验证；真实 Electron 前端端到端手动 UI smoke 等待前端启动/P3。P1-B Codex、P2-A/B 和 P3 真实模型/前端 D+X 验收仍待完成。DM#2103 手册具体方案继续标为候选。
+
+## HTTP + WebSocket 后端（P1-C）
+
+```sh
+npm ci --offline --ignore-scripts
+node packages/server/src/cli.ts serve --data-dir ./gg-data --port 3489 --host 127.0.0.1 --mind fake --compute fake
+# 显式允许前端来源并启用鉴权：
+node packages/server/src/cli.ts serve --data-dir ./gg-data --token local-secret --cors-origin http://localhost:5173
+```
+
+启动输出一行 JSON：`httpUrl`、`wsUrl`（`/api/events` 端点）、`eventSeq`；SIGINT/SIGTERM 关闭 HTTP、WS 和 Host。`--port 0` 分配临时端口；`--db PATH` 覆盖数据库路径，否则使用 `--data-dir/gg.db`（未指定目录时 `./gg.db`）。支持 `--mind fake|pi`、`--compute fake|claude|codex`、`--api`、`--protocols`、`--magpie/--no-magpie`、`--model`、`--note-max-bytes N|none`。本分支未含 P1-B Codex 适配器，选择 codex 明确失败；真实 pi/Claude 依赖对应网关/CLI，本片未作现场验证。
+
+`POST /api/invoke` 发送 `{ "method": "session.hello", "params": { "clientApiVersion": "0.1.0" } }`，响应为合同 `ApiResult`；版本值以 `@g-group/api-contract` 的 `API_VERSION` 为准。事件从 `WS /api/events?sinceEventSeq=N` 续订，窗口过期收到 `stream.resync` 后重新加载快照。HTTP Bearer 和 WS `?token=`/Bearer 使用同一可选令牌；令牌启用时 health 只返回 `{ "ok": true }`，端点输出不带令牌。
+
+CORS 默认只放行 HTTP(S) 的 localhost/127.0.0.1/[::1] 来源；拒绝其它 Origin 的请求和 WS upgrade。`--cors-origin` 可重复或用逗号分隔；`file://`/`null` 需显式列入，`*` 是显式全放行。库入口 `createHttpWsBridge(started, options)` 只管理传输；`serveHttpWs({ dataDir, ...options })` 同时管理 Host。可配 `pingIntervalMs`（默认 30000）及 `maxBufferedBytes`（默认 8 MiB）；慢客户端超限后断开并取消订阅。近 35 MB base64 上传、413、补发和资源释放的证据见 [P1-C proof](packages/server/proof/p1c-http-ws-bridge.txt)。 macOS Seatbelt 的完全禁网策略会阻止 loopback listen；运行本片隔离门禁须使用现有 Docker 模式：预备 Node 22 镜像（例如 `node:22-slim`；本次实跑复用的本地镜像见 proof），再以 `GATE_SANDBOX_IMAGE=node:22-slim node scripts/gates/run-all.ts --local --branch=feat/agy-http-ws-bridge --base=origin/dev/agy-backend` 执行，容器仍为 `--network none`。
 
 ## 分工
 

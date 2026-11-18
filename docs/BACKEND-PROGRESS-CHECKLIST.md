@@ -9,7 +9,7 @@
 - [x] B4 #123：Magpie 多协议、缓存用量与说话模型热替换。
 - [x] P1-A：不可变轮次配置、长期记忆卫生/证据/覆盖台账、协作观察及净室群克隆（后端候选实现）。
 - [ ] P1-B：Codex `app-server` Compute 适配与真实链路。
-- [ ] P1-C：HTTP + WS Bridge。
+- [x] P1-C：HTTP + WS Bridge（已列 D 层边界）。
 - [ ] P2-A：Admin / Quota / Helper；C-US09 撤回取消在途任务。
 - [ ] P2-B：Plugins / Outbox / Commitments。
 - [ ] P3：完整 D+X 验收矩阵、真实模型 S+X 评测与前端联调。
@@ -22,6 +22,7 @@
 | B3 | D 层配置 CAS 历史与回滚预检、只追加任务时间线、撤回副作用披露及回执兼容 | #122；`host.ts`；`receipts/feat-agy-p0-config-provenance-receipts.json` | 真实模型与 UI 的回滚体验、全部 AC-08/AC-20/AC-32/AC-46 D+X 判定未完成 |
 | B4 | D 层四协议发现、提交前故障转移、推理输出 8192 floor、用量 sink、下一轮模型替换 | #123；`pi-runtime.ts`、`b4-hotswap-speaking.test.ts`；`packages/server/proof/b4-magpie-protocols-cache.txt` | 既有 live Magpie/ling-jing 上游错误（502 故障背景）尚未形成成功闭环；该 proof 最终只记录 upstream-error，不把 HTTP 外层 200 当模型成功；X 层留 P3 |
 | P1-A | D 层同轮 round/reflect/compact/shrink 配置冻结、下一轮替换保留笔记/记忆；逐字证据核验、覆盖写入恢复、md/SQLite 启动对账；撤回/回退清洗；memory.* 与 profile 概览；邻域标题/正文/数量/相关度；playbook 与公告分离，Block 5 注入，净室 clone | `speaking-snapshot.test.ts`、`speaking-endpoint.test.ts`、`memory-capture.test.ts`、`memory-coverage.test.ts`、`memory-hygiene.test.ts`、`memory-api.test.ts`、`memory-write-neighbors.test.ts`、`playbook.test.ts`；`packages/server/proof/p1a-context-memory-playbook.txt` | D08.3 已定目标：默契可沉淀、可复制、群公告≠协作手册。DM#2103 的手册载体与具体机制仍属候选；本片 team/pair 观察 API 是本次授权的后端候选，不宣称已定产品方案。AC-42 真实模型 S+X、AC-32 X 层、AC-54 前端渲染、AC-08 在途任务取消及 P3 总体验收未测；G5 两阶段不纳入 |
+| P1-C | D 层真实 HTTP/WS 合同：RPC/health、近 35 MB base64 上传及 413、JSON 错误、恒时令牌比较、CORS 白名单、游标补发/窗口溢出 resync、ping/pong、背压断开与订阅清理；CLI 双信号关闭 HTTP+WS+Host | `packages/server/src/http-ws.ts`、`http-ws.test.ts`、`cli.ts`、`bus.ts`；`packages/server/proof/p1c-http-ws-bridge.txt`；`receipts/feat-agy-http-ws-bridge.json`；分支 `feat/agy-http-ws-bridge`（PR 待创建） | 真实 Electron 前端端到端手动 UI smoke 等待前端启动/P3；AC-05/AC-31/AC-46/AC-51 整体验收仍未测；真实 pi/Claude 网关联调未测；`--compute codex` 明确报 P1-B 未接入，不回退 fake/Claude；独立审查待完成 |
 
 P1-A 无 R-Rule 审批链、BlockerRate 自动路由或多人 CRDT 编辑。净室克隆不复制聊天消息、任务、承诺、共享文档、关联群、Compute 或处理游标；复制观察使用新群模板来源标记，不开放旧群聊天。独立审查未完成前不作发布/合入结论。
 
