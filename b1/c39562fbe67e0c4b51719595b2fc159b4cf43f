@@ -1,0 +1,30 @@
+README.md
+  h_f33e46a035b77c 65-66,71
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  h_f33e46a035b77c 27-40
+docs/spec/验收文档-v0.1.md
+  h_f33e46a035b77c 143-144
+receipts/chore-agy-gates-process-layer.json
+  h_f33e46a035b77c 1-43
+reviews/chore-agy-gates-process-layer.md
+  h_f33e46a035b77c 1-49
+scripts/gates/gates.ts
+  h_f33e46a035b77c 141,951,954
+scripts/gates/process-layer.test.ts
+  h_f33e46a035b77c 1-83
+scripts/gates/proof/process-layer.txt
+  h_f33e46a035b77c 1-474
+scripts/gates/selftest.ts
+  h_f33e46a035b77c 948,1168-1183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b1c39562fbe67e0c4b51719595b2fc159b4cf43f",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
