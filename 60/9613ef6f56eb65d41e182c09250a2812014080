@@ -1,0 +1,23 @@
+receipts/chore-agy-gates-process-layer.json
+  s_aa2f34b47f2c3c::t_1988ab3d42d3db 33-40
+reviews/chore-agy-gates-process-layer.md
+  s_aa2f34b47f2c3c::t_1daf39485d6c74 1-40
+  s_aa2f34b47f2c3c::t_ec012466a73832 41-43
+  s_aa2f34b47f2c3c::t_92419fcb2c90e2 44-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "609613ef6f56eb65d41e182c09250a2812014080",
+  "prompts": {},
+  "sessions": {
+    "s_aa2f34b47f2c3c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ee6d-5b07-76b3-aab5-ebb676250b66",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
