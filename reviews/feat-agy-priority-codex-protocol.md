@@ -59,3 +59,53 @@
     - `P1B-F4` (`protocol.ts:280` `thread/resume` id check): **KILLED** (`CXP-R1-01`).
     - `P1B-F5` (`adapter.ts:70` `pluginDirs` refusal): **SURVIVED** (`0` failures → P1-2).
     - `P1B-F6` (`host.ts:4193` `harnessBlockReason` guard): **SURVIVED** (`0` failures → P1-2).
+
+
+---
+
+# REVIEW 2: APPROVE c5aedb67d63a47acd49d847f950fd56ae6405ebb15d799375c1bbe052bc778f4
+
+## Round 2 — APPROVE
+
+- **PR**: `#126` (`feat/agy-priority-codex-protocol` → `dev/agy-backend` at `0683b560`)
+- **Author**: `codex-cli:01a1f07c-37be-71c1-84c4-538a939db970` (`fnqtz-gpt/gpt-6.2-sol`, vendor `openai`)
+- **Reviewer**: `carbon-agy` (`antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98`, `gemini-4-carbon-high`, vendor `google`)
+- **Combined Red Commit**: `56d3e81b7304861619648177b2da7788e5beddaf`
+- **Green Commit**: `cf39235bb46814e2a5a063dbf743827e446d4d6c`
+- **Reviewed HEAD**: `f5d9bde40626f93539a8232bbb7eb26c39328656`
+- **Reviewed Content Hash**: `c5aedb67d63a47acd49d847f950fd56ae6405ebb15d799375c1bbe052bc778f4`
+
+### 1. Verification of Round 1 Blocking Defects & Non-Blocking Notes
+
+1. **P1-1 RESOLVED (`packages/server/src/host.ts:3963, 4186-4293`)**:
+   - `Host.switchHarness` wraps `this.harnessRetiring.add(e.computeId)` inside `try { ... } finally { this.harnessRetiring.delete(e.computeId); }`, guaranteeing `e.computeId` is never left trapped in `harnessRetiring` on `next.spawn` refusal, thrown startup error, or unconfirmed stop.
+   - Once `previous.stop(e.computeId)` + `previous.quiesce(e.computeId)` succeed (`alreadyRetired = this.retiredComputes.has(e.computeId)`), `this.retiredComputes.add(e.computeId)` records the retired instance.
+   - `Host.computeTurn` (`host.ts:4186`) checks `if (resolved.harness !== row.harness || this.retiredComputes.has(e.computeId))`, routing post-refusal revert/retry of a retired source into `switchHarness` (skipping duplicate `previous.stop` and launching a fresh replacement instance via `finishReplacementSpawn` with `previous.snapshot` handoff, releasing the acquired Compute slot cleanly on refusal/throw).
+   - `Host.runEffects` `case "stop"` (`host.ts:4135-4152`) handles both in-flight retirement (`this.harnessRetiring.has(e.computeId)` → marks lease stopping so `switchHarness` confirms via `confirmRetiredStop`) and post-retirement cancellation (`this.retiredComputes.has(e.computeId)` → immediately fires `confirmRetiredStop` → `StoppedConfirmed` → `T10_Cancelled` + `giveBack`).
+2. **P1-2 RESOLVED (`packages/adapter-codex-compute/src/adapter.test.ts` & `packages/server/src/harness-switch.test.ts`)**:
+   - Added `packages/adapter-codex-compute/src/adapter.test.ts` (`5` tests against deterministic `native-wire.mjs`): quiescence-gated `snapshot()`, `opts.pluginDirs` refusal (`"Codex skill plugins are not mapped"`), partial tool-subset refusal (`"Codex cannot enforce this per-tool whitelist"`) + `[]` → `"read-only"` vs `DEFAULT_NATIVE_SCOPE` → `"workspace-write"` sandbox mapping, multi-turn + post-quiesce `thread/resume` persistence, and `steer` + single `"stopped"` emission.
+   - Added `5` tests in `packages/server/src/harness-switch.test.ts`: unregistered destination harness blocked before `previous.stop`, unconfirmed `quiesce` quarantine retaining lease without spawning replacement, relaunching retired source after replacement refusal and delivering replacement events without quota leak, `T10_Cancelled` confirmation after replacement refusal, and retrying throwing replacement without stopping retired source twice.
+3. **P2 RESOLVED (`packages/adapter-codex-compute/src/{adapter,protocol}.ts`)**:
+   - `publish(slot, event)` deduplicates `"stopped"` per turn via `slot.turnStopped`, guards stale client pumps on reopen (`if (slot.client !== client) return`), restores `slot.history` / `slot.turnStopped` if `startTurn` throws, and drains `setImmediate` before fallback `"stopped"`.
+   - All 9 Biome `lint/style/useTemplate` diagnostics resolved (`npm run lint`: `326` files checked, `0` errors, `0` warnings, `0` infos).
+
+### 2. Independent Verification & Round 2 Fault Injection Results
+
+- **Static & Test Suite Verification**:
+  - `npm run typecheck`: exit `0`.
+  - `npm run lint`: exit `0` (`326` files checked, `0` errors, `0` warnings, `0` infos).
+  - Full offline `npm test`: **`2158/2158` passed** (`0` failed, `0` skipped, `0` cancelled, `0` todo).
+  - `node --test packages/adapter-pi-contact/src/recall.test.ts`: `1/1` passed (stable Block-1 prefix `< 4000` UTF-8 bytes).
+  - Combined Red (`56d3e81b7304861619648177b2da7788e5beddaf`) replay: `tsc -p tsconfig.json` exit `0`, **`67/67` failed** (`0` passed), `0` test-file edits between `56d3e81b` and `cf39235b`.
+- **Single-Site Round 2 Fault Injections (`6/6` Killed)**:
+
+| Fault ID | Target & Mutation | Result | Killing Test(s) |
+| --- | --- | --- | --- |
+| `P1B-R2-F1` | `adapter.ts`: bypass `opts.pluginDirs?.length` refusal | **KILLED** (`1` failure) | `P1B adapter refuses Claude plugin directories` |
+| `P1B-R2-F2` | `adapter.ts`: bypass `slot.turnStopped` duplicate `"stopped"` guard | **KILLED** (`2` failures) | `P1B adapter resumes the same native thread across turns and stops once after completion` (+ steer/interrupt test) |
+| `P1B-R2-F3` | `host.ts`: bypass `harnessBlockReason(resolved.harness, ...)` | **KILLED** (`1` failure) | `AC-51 ⑦ reports an unregistered destination before stopping the source` |
+| `P1B-R2-F4` | `host.ts`: omit `this.harnessRetiring.delete(e.computeId)` in `finally` | **KILLED** (`4` failures) | `AC-51 ⑦ quarantines an unconfirmed stop...` (+ relaunch, cancel, retry tests) |
+| `P1B-R2-F5` | `host.ts`: omit `this.retiredComputes.has(e.computeId)` in `computeTurn` | **KILLED** (`1` failure) | `AC-51 ⑦ relaunches the retired source after refusal and delivers replacement events` |
+| `P1B-R2-F6` | `host.ts`: omit `this.retiredComputes.has(e.computeId)` in `runEffects` `"stop"` | **KILLED** (`1` failure) | `AC-51 ⑦ confirms cancellation of the retired source after replacement refusal` |
+
+- **Honesty & Gate Boundaries**: `AC-23`, `AC-51`, and `V-02` remain honestly marked `"未测"` in `receipts/feat-agy-priority-codex-protocol.json`, `docs/BACKEND-PROGRESS-CHECKLIST.md`, `docs/spec/验收文档-v0.1.md`, and `README.md` pending P3 real `codex-cli` binary + live model `S+X` verification.
