@@ -1,0 +1,800 @@
+packages/server/src/loop-guard.ts
+  s_f506d89fd64ab4::t_a4aec33d1ea7ff 1-34
+packages/kernel/src/history-tools.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-74
+packages/adapter-pi-contact/src/mind.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 137,150
+  s_f506d89fd64ab4::t_a4aec33d1ea7ff 20,60,88-124,126-129,132-135
+  s_f506d89fd64ab4::t_999e52e9005430 125,130-131,136
+packages/kernel/src/index.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 16-18
+packages/server/src/loop-guard-r1-regression.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-51,53-86,88-112,114-138,140-164,166-170,172-230
+  s_f506d89fd64ab4::t_a4aec33d1ea7ff 52,87,113,139,165,171
+packages/kernel/src/history-search.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-7
+packages/server/src/loop-guard-r1-calibration.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-39,41-140,142-145,147-161,163-167,169,171-177,179-194,196-199,201-206,208-220,222-248,250-262,264-285,287-290,292-304,306-309,311-319,321-334
+  s_f506d89fd64ab4::t_a4aec33d1ea7ff 40,141,146,162,168,170,178,195,200,207,263,286,291,305,310,320
+  s_f506d89fd64ab4::t_ae228f0713e3c0 221,249
+packages/kernel/src/history-scrub.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-66
+packages/server/src/host.ts
+  s_f506d89fd64ab4::t_a4aec33d1ea7ff 133-134,170-173,463-464,474
+packages/adapter-pi-contact/src/recall.test.ts
+  s_f506d89fd64ab4::t_cd6a05012a1a6f 1-20
+packages/adapter-pi-contact/src/history-tools.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-7,9-17,20-90
+  s_f506d89fd64ab4::t_cd6a05012a1a6f 8,18-19
+packages/server/src/history-tools.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-370
+packages/server/src/loop-guard.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-83,85-117,119-161,163-171,173-180,182-184,186-187,189-190,192-196
+  s_f506d89fd64ab4::t_a4aec33d1ea7ff 84,118,162,172,181,185,188,191
+packages/kernel/src/history-search.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-60
+packages/server/src/history.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-54
+packages/server/src/history-scrub.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-163
+packages/server/src/group-claim.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 10,107-168,172-193,196-208
+  s_f506d89fd64ab4::t_68dc17489dd61a 169-171,194-195
+packages/adapter-pi-contact/src/compact.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 14,28,45-64
+packages/server/src/a5-fresh-auth-races.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-51,53-57,59-78,80-102,104-135,137,139-154,156-168,170-181,183,185-198,200-203,205-218,220,222-236,238,240-258,260-278,280-310,312-329,331-343,345-358,360-373,375-424
+  s_f506d89fd64ab4::t_c36cfd225353dc 52,58,79,103,136,138,155,169,182,184,199,204,219,221,237,239,259,279,311,330,344,359,374
+packages/kernel/src/history-tools.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-6,8-32,34-38,58-95
+  s_f506d89fd64ab4::t_a4aec33d1ea7ff 7,33,39-57
+packages/server/src/a5-truncated-turn.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-42,44-50,52-67,69-76,78-85,87-148
+  s_f506d89fd64ab4::t_375d3c7514c13d 43,51,68,77,86
+packages/server/src/compaction-summary.test.ts
+  s_f506d89fd64ab4::t_a4aec33d1ea7ff 1-52,54-110,112
+  s_f506d89fd64ab4::t_3152ec8e2e2dd5 53,111
+packages/server/src/history-prefetch.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-205
+packages/kernel/src/compact.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 12-14
+packages/kernel/src/memory-rank.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-121
+packages/server/src/room-post-budget.test.ts
+  s_f506d89fd64ab4::t_a4aec33d1ea7ff 1-26,28-34,36-62,64-69,71-74,76-80,82-84,86-89,91,93-100,102-104,106-113,115-119,121-128,130-131,133,135-140,142-143,145-154,157-159,165-170,173-180,183-194,196-198
+  s_f506d89fd64ab4::t_6a9bc3b89211f2 27,35,63,70,75,81,85,90,92,101,105,114,120,129,132,134,141,144,155-156,160-164,171-172,181-182,195
+packages/adapter-pi-contact/fixtures/history-provider.ts
+  s_f506d89fd64ab4::t_cd6a05012a1a6f 1-38
+packages/server/src/group-supplement.test.ts
+  s_f506d89fd64ab4::t_d2260aaf3d88b0 1-28,30-35,39-60,62-65,68-142
+  s_f506d89fd64ab4::t_cd6a05012a1a6f 143-192
+  s_f506d89fd64ab4::t_ca5f615c68effc 29,36-38,61,66-67
+.npmrc
+  s_f506d89fd64ab4::t_520e3f13842e00 1-3
+package-lock.json
+  s_f506d89fd64ab4::t_99d7c2f04fb4cc 891-898,1469-1470
+packages/kernel/package.json
+  s_f506d89fd64ab4::t_b6fb61e2733f95 5-14
+packages/kernel/src/memory.ts
+  s_f506d89fd64ab4::t_4492a3b9a467ee 150-154
+packages/kernel/src/runtime-ports.ts
+  s_f506d89fd64ab4::t_13e98f7e473f9e 127-131,139-140
+packages/server/src/compaction-summary.ts
+  s_f506d89fd64ab4::t_d2affc83bfb47a 1-15
+packages/server/src/room-post-budget.ts
+  s_f506d89fd64ab4::t_dcc47c02d2a18f 1-33
+third_party/acp-kernel/.gitignore
+  s_f506d89fd64ab4::t_d78b592ae6217d 1-9
+third_party/acp-kernel/.prettierignore
+  s_f506d89fd64ab4::t_ee21d79674450f 1-12
+third_party/acp-kernel/.prettierrc
+  s_f506d89fd64ab4::t_24da8926569840 1-11
+third_party/acp-kernel/DESIGN-prompts.md
+  s_f506d89fd64ab4::t_4cdaf3624188ff 1-234
+third_party/acp-kernel/DESIGN.md
+  s_f506d89fd64ab4::t_592afd5796e08c 1-271
+third_party/acp-kernel/LICENSE
+  s_f506d89fd64ab4::t_5b2eaf15b494e2 1-57
+third_party/acp-kernel/NOTICE
+  s_f506d89fd64ab4::t_4b22a1bd624865 1-16
+third_party/acp-kernel/PROVENANCE.md
+  s_f506d89fd64ab4::t_b145d2b11dbfdb 1-96
+third_party/acp-kernel/README.md
+  s_f506d89fd64ab4::t_ab78d82fd1fef4 1-343
+third_party/acp-kernel/SECURITY.md
+  s_f506d89fd64ab4::t_c47fef1000c496 1-67
+third_party/acp-kernel/UPSTREAM.md
+  s_f506d89fd64ab4::t_fc97747346c299 1-416
+third_party/acp-kernel/bench/search/bench.ts
+  s_f506d89fd64ab4::t_28d5c7ad1d8443 1-76
+third_party/acp-kernel/bench/search/corpus.ts
+  s_f506d89fd64ab4::t_28d156bea7a984 1-289
+third_party/acp-kernel/dist/absorb.d.ts
+  s_f506d89fd64ab4::t_24236b70a8a902 1-62
+third_party/acp-kernel/dist/block-map.d.ts
+  s_f506d89fd64ab4::t_c8381f4a7835f0 1-19
+third_party/acp-kernel/dist/boundaries.d.ts
+  s_f506d89fd64ab4::t_3ace90b50cfb4a 1-59
+third_party/acp-kernel/dist/cache-report.d.ts
+  s_f506d89fd64ab4::t_742a4423b0dfd3 1-222
+third_party/acp-kernel/dist/ccr.d.ts
+  s_f506d89fd64ab4::t_8adfa993146760 1-191
+third_party/acp-kernel/dist/chunk-5NN4XL6Q.js
+  s_f506d89fd64ab4::t_42edcf1f1ef8b9 1-839
+third_party/acp-kernel/dist/chunk-6ECDTFU5.js
+  s_f506d89fd64ab4::t_0c43ad9fc1f526 1-84
+third_party/acp-kernel/dist/chunk-M4F7HU2H.js
+  s_f506d89fd64ab4::t_5cddea300ea022 1-671
+third_party/acp-kernel/dist/compress-tools.d.ts
+  s_f506d89fd64ab4::t_a0d5e1326893e5 1-1146
+third_party/acp-kernel/dist/compress.d.ts
+  s_f506d89fd64ab4::t_564458fa5b7d39 1-100
+third_party/acp-kernel/dist/compression-rules.d.ts
+  s_f506d89fd64ab4::t_69ba06273e3516 1-33
+third_party/acp-kernel/dist/config.d.ts
+  s_f506d89fd64ab4::t_4603b2ffd21903 1-4
+third_party/acp-kernel/dist/content-store.d.ts
+  s_f506d89fd64ab4::t_35b9ab0475c695 1-103
+third_party/acp-kernel/dist/crush.d.ts
+  s_f506d89fd64ab4::t_95b71f29d6def2 1-142
+third_party/acp-kernel/dist/decompress.d.ts
+  s_f506d89fd64ab4::t_9efc912d25f433 1-68
+third_party/acp-kernel/dist/filter/apply.d.ts
+  s_f506d89fd64ab4::t_d5affb83277204 1-10
+third_party/acp-kernel/dist/filter/index.d.ts
+  s_f506d89fd64ab4::t_dd5721354d9aaa 1-5
+third_party/acp-kernel/dist/filter/registry.d.ts
+  s_f506d89fd64ab4::t_9cfed4da827313 1-6
+third_party/acp-kernel/dist/filter/types.d.ts
+  s_f506d89fd64ab4::t_191b21c5fdc71d 1-28
+third_party/acp-kernel/dist/handoff.d.ts
+  s_f506d89fd64ab4::t_b565e684893094 1-35
+third_party/acp-kernel/dist/hide-consumed.d.ts
+  s_f506d89fd64ab4::t_7ee5a2532bc705 1-15
+third_party/acp-kernel/dist/index.d.ts
+  s_f506d89fd64ab4::t_5fb31f75a0d45f 1-70
+third_party/acp-kernel/dist/index.js
+  s_f506d89fd64ab4::t_90ac6cd96fa680 1-9823
+third_party/acp-kernel/dist/instance-reid.d.ts
+  s_f506d89fd64ab4::t_f3c019ea8c50d0 1-42
+third_party/acp-kernel/dist/media-refs.d.ts
+  s_f506d89fd64ab4::t_25324d361de022 1-66
+third_party/acp-kernel/dist/message-kind.d.ts
+  s_f506d89fd64ab4::t_5eadc69242d12d 1-11
+third_party/acp-kernel/dist/nudge-text.d.ts
+  s_f506d89fd64ab4::t_ba088b7d50be4d 1-35
+third_party/acp-kernel/dist/output-steering.d.ts
+  s_f506d89fd64ab4::t_5089216d1b014f 1-176
+third_party/acp-kernel/dist/packs.d.ts
+  s_f506d89fd64ab4::t_12e30a22857d58 1-96
+third_party/acp-kernel/dist/panel/cache.d.ts
+  s_f506d89fd64ab4::t_65b64db3502d46 1-35
+third_party/acp-kernel/dist/panel/format.d.ts
+  s_f506d89fd64ab4::t_164cd30bbc741d 1-5
+third_party/acp-kernel/dist/panel/index.d.ts
+  s_f506d89fd64ab4::t_ffbda31763c8ef 1-7
+third_party/acp-kernel/dist/panel/index.js
+  s_f506d89fd64ab4::t_0584e465c328fc 1-183
+third_party/acp-kernel/dist/panel/panel.d.ts
+  s_f506d89fd64ab4::t_193de0e4ea23d0 1-64
+third_party/acp-kernel/dist/panel/topic.d.ts
+  s_f506d89fd64ab4::t_0a255d48c9bbd2 1-2
+third_party/acp-kernel/dist/parse-compress-input.d.ts
+  s_f506d89fd64ab4::t_66bea5f208b979 1-48
+third_party/acp-kernel/dist/persist/index.d.ts
+  s_f506d89fd64ab4::t_cf62d3b6f4377b 1-19
+third_party/acp-kernel/dist/persist/index.js
+  s_f506d89fd64ab4::t_6e67639f56a4cd 1-574
+third_party/acp-kernel/dist/persist/state-merge.d.ts
+  s_f506d89fd64ab4::t_b4cbffc0f35eee 1-11
+third_party/acp-kernel/dist/persist/store.d.ts
+  s_f506d89fd64ab4::t_7e0158ea69f078 1-271
+third_party/acp-kernel/dist/pipeline.d.ts
+  s_f506d89fd64ab4::t_70f9931b4013a1 1-49
+third_party/acp-kernel/dist/prompts.d.ts
+  s_f506d89fd64ab4::t_25e3a36df1c88a 1-54
+third_party/acp-kernel/dist/protected.d.ts
+  s_f506d89fd64ab4::t_c8cd6069e1606f 1-208
+third_party/acp-kernel/dist/prune.d.ts
+  s_f506d89fd64ab4::t_279f76e199a188 1-79
+third_party/acp-kernel/dist/reasoning-pairs.d.ts
+  s_f506d89fd64ab4::t_320878c0d229a0 1-33
+third_party/acp-kernel/dist/rebuild.d.ts
+  s_f506d89fd64ab4::t_28fd4179da5af7 1-20
+third_party/acp-kernel/dist/recommend.d.ts
+  s_f506d89fd64ab4::t_85a4d795d8fbe0 1-79
+third_party/acp-kernel/dist/refold.d.ts
+  s_f506d89fd64ab4::t_96a8847dc7f7cf 1-27
+third_party/acp-kernel/dist/refs.d.ts
+  s_f506d89fd64ab4::t_dd9ec6be4d78b9 1-79
+third_party/acp-kernel/dist/relocate-compress.d.ts
+  s_f506d89fd64ab4::t_4cdbd2f0423898 1-107
+third_party/acp-kernel/dist/render-refs.d.ts
+  s_f506d89fd64ab4::t_1091c9ada76679 1-40
+third_party/acp-kernel/dist/report.d.ts
+  s_f506d89fd64ab4::t_4fac844f881ec6 1-29
+third_party/acp-kernel/dist/rules.d.ts
+  s_f506d89fd64ab4::t_901a50e3d355e8 1-59
+third_party/acp-kernel/dist/search.d.ts
+  s_f506d89fd64ab4::t_2162a70a1834f5 1-10
+third_party/acp-kernel/dist/search/algorithms/bm25.d.ts
+  s_f506d89fd64ab4::t_2e7068914095e0 1-15
+third_party/acp-kernel/dist/search/algorithms/fuzzy.d.ts
+  s_f506d89fd64ab4::t_e7b0eb7e08d111 1-24
+third_party/acp-kernel/dist/search/algorithms/hybrid.d.ts
+  s_f506d89fd64ab4::t_a9472e750f1e4e 1-3
+third_party/acp-kernel/dist/search/algorithms/semantic.d.ts
+  s_f506d89fd64ab4::t_312ed36dcb7ddb 1-37
+third_party/acp-kernel/dist/search/algorithms/substring.d.ts
+  s_f506d89fd64ab4::t_edb03ae659c499 1-9
+third_party/acp-kernel/dist/search/doc-cache.d.ts
+  s_f506d89fd64ab4::t_93c58dd65f5fe3 1-65
+third_party/acp-kernel/dist/search/index.d.ts
+  s_f506d89fd64ab4::t_1f1c02fdca7cca 1-33
+third_party/acp-kernel/dist/search/registry.d.ts
+  s_f506d89fd64ab4::t_ce3650bf9acc65 1-10
+third_party/acp-kernel/dist/search/stemmer.d.ts
+  s_f506d89fd64ab4::t_5c7d6edd26e3ad 1-11
+third_party/acp-kernel/dist/search/tokenizer.d.ts
+  s_f506d89fd64ab4::t_cb59014daea21c 1-28
+third_party/acp-kernel/dist/search/types.d.ts
+  s_f506d89fd64ab4::t_e2fd2809f9f447 1-92
+third_party/acp-kernel/dist/segment.d.ts
+  s_f506d89fd64ab4::t_c427e59b0cc00f 1-33
+third_party/acp-kernel/dist/state.d.ts
+  s_f506d89fd64ab4::t_05cfcb3e2b4520 1-18
+third_party/acp-kernel/dist/surface-config.d.ts
+  s_f506d89fd64ab4::t_9f226c60fba617 1-91
+third_party/acp-kernel/dist/sync.d.ts
+  s_f506d89fd64ab4::t_8096a59e642097 1-7
+third_party/acp-kernel/dist/tokenize.d.ts
+  s_f506d89fd64ab4::t_d7fd7f01573dd0 1-18
+third_party/acp-kernel/dist/tool-pairs.d.ts
+  s_f506d89fd64ab4::t_a7ffa67df79bc5 1-40
+third_party/acp-kernel/dist/transform-channel.d.ts
+  s_f506d89fd64ab4::t_a2de4471f9aabf 1-9
+third_party/acp-kernel/dist/truncate-tools.d.ts
+  s_f506d89fd64ab4::t_3b4cf24b943d18 1-24
+third_party/acp-kernel/dist/truncate.d.ts
+  s_f506d89fd64ab4::t_3492a4835c76d0 1-10
+third_party/acp-kernel/dist/turn-integrity.d.ts
+  s_f506d89fd64ab4::t_67047de8745c32 1-79
+third_party/acp-kernel/dist/types.d.ts
+  s_f506d89fd64ab4::t_34735230dba73b 1-796
+third_party/acp-kernel/dist/unit-projection.d.ts
+  s_f506d89fd64ab4::t_82dec65c2c665d 1-129
+third_party/acp-kernel/dist/viable.d.ts
+  s_f506d89fd64ab4::t_68c1ce99495806 1-13
+third_party/acp-kernel/dist/view-latch.d.ts
+  s_f506d89fd64ab4::t_bcdf5e1198445e 1-24
+third_party/acp-kernel/dist/wire/anthropic.d.ts
+  s_f506d89fd64ab4::t_ebbf09110fa146 1-88
+third_party/acp-kernel/dist/wire/bili-message.d.ts
+  s_f506d89fd64ab4::t_4d1d1ddbe0364e 1-114
+third_party/acp-kernel/dist/wire/compress-detect.d.ts
+  s_f506d89fd64ab4::t_74537e895b4274 1-142
+third_party/acp-kernel/dist/wire/demoted-thinking.d.ts
+  s_f506d89fd64ab4::t_aebdc1e1e0a75a 1-50
+third_party/acp-kernel/dist/wire/formats.d.ts
+  s_f506d89fd64ab4::t_505c307c6dd935 1-10
+third_party/acp-kernel/dist/wire/google.d.ts
+  s_f506d89fd64ab4::t_04787fcd576515 1-127
+third_party/acp-kernel/dist/wire/identity.d.ts
+  s_f506d89fd64ab4::t_fa7f4a0183457f 1-81
+third_party/acp-kernel/dist/wire/index.d.ts
+  s_f506d89fd64ab4::t_68abe47f96bb87 1-13
+third_party/acp-kernel/dist/wire/index.js
+  s_f506d89fd64ab4::t_d736c70cf32605 1-2426
+third_party/acp-kernel/dist/wire/message-id.d.ts
+  s_f506d89fd64ab4::t_3d9b358f6352f1 1-43
+third_party/acp-kernel/dist/wire/mirror.d.ts
+  s_f506d89fd64ab4::t_12a12938f2794e 1-72
+third_party/acp-kernel/dist/wire/openai.d.ts
+  s_f506d89fd64ab4::t_377352ed0d04a7 1-80
+third_party/acp-kernel/dist/wire/responses.d.ts
+  s_f506d89fd64ab4::t_8d8d6938f3773e 1-111
+third_party/acp-kernel/dist/wire/util.d.ts
+  s_f506d89fd64ab4::t_8b58660c03df76 1-13
+third_party/acp-kernel/package-lock.json
+  s_f506d89fd64ab4::t_57b34ba3989938 1-2033
+third_party/acp-kernel/package.json
+  s_f506d89fd64ab4::t_a42dba0612b977 1-72
+third_party/acp-kernel/scripts/ci/check-pr.sh
+  s_f506d89fd64ab4::t_e4d58e6c1784f8 1-33
+third_party/acp-kernel/scripts/format-until-stable.mjs
+  s_f506d89fd64ab4::t_79a0ef3f634956 1-38
+third_party/acp-kernel/src/absorb.ts
+  s_f506d89fd64ab4::t_ffc9ae7c745bc9 1-406
+third_party/acp-kernel/src/block-map.ts
+  s_f506d89fd64ab4::t_8d116758195e1b 1-73
+third_party/acp-kernel/src/boundaries.ts
+  s_f506d89fd64ab4::t_2c45bae72e3720 1-502
+third_party/acp-kernel/src/cache-report.ts
+  s_f506d89fd64ab4::t_1e62f44ecf9908 1-766
+third_party/acp-kernel/src/ccr.ts
+  s_f506d89fd64ab4::t_0f25b0c59bbde6 1-671
+third_party/acp-kernel/src/compress-tools.ts
+  s_f506d89fd64ab4::t_ea8710a1e602ac 1-739
+third_party/acp-kernel/src/compress.ts
+  s_f506d89fd64ab4::t_838670ab90b9a7 1-2577
+third_party/acp-kernel/src/compression-rules.ts
+  s_f506d89fd64ab4::t_623d3b7ddd5932 1-145
+third_party/acp-kernel/src/config.ts
+  s_f506d89fd64ab4::t_98ec980aa396e1 1-224
+third_party/acp-kernel/src/content-store.ts
+  s_f506d89fd64ab4::t_4dda01fb31da21 1-189
+third_party/acp-kernel/src/crush.ts
+  s_f506d89fd64ab4::t_8cf1ea166f44ce 1-1832
+third_party/acp-kernel/src/decompress.ts
+  s_f506d89fd64ab4::t_4b394fe44438f8 1-296
+third_party/acp-kernel/src/filter/apply.ts
+  s_f506d89fd64ab4::t_d496cee7e6774b 1-106
+third_party/acp-kernel/src/filter/index.ts
+  s_f506d89fd64ab4::t_76bcdd382082ef 1-9
+third_party/acp-kernel/src/filter/registry.ts
+  s_f506d89fd64ab4::t_04e2e3f34848c0 1-25
+third_party/acp-kernel/src/filter/types.ts
+  s_f506d89fd64ab4::t_0185f073e1bc9e 1-29
+third_party/acp-kernel/src/handoff.ts
+  s_f506d89fd64ab4::t_27149580fbd3ef 1-129
+third_party/acp-kernel/src/hide-consumed.ts
+  s_f506d89fd64ab4::t_6ff46a36739eeb 1-440
+third_party/acp-kernel/src/index.ts
+  s_f506d89fd64ab4::t_ef1e01bf79790a 1-388
+third_party/acp-kernel/src/instance-reid.ts
+  s_f506d89fd64ab4::t_bb9af545778b91 1-134
+third_party/acp-kernel/src/media-refs.ts
+  s_f506d89fd64ab4::t_d5474019281a0f 1-247
+third_party/acp-kernel/src/message-kind.ts
+  s_f506d89fd64ab4::t_4bcaeecef8a1b3 1-15
+third_party/acp-kernel/src/nudge-text.ts
+  s_f506d89fd64ab4::t_44d4297e21f093 1-360
+third_party/acp-kernel/src/output-steering.ts
+  s_f506d89fd64ab4::t_8d95a41d3aac12 1-320
+third_party/acp-kernel/src/packs.ts
+  s_f506d89fd64ab4::t_f802d2d1d0a985 1-456
+third_party/acp-kernel/src/panel/cache.ts
+  s_f506d89fd64ab4::t_941371a4b7b50b 1-71
+third_party/acp-kernel/src/panel/format.ts
+  s_f506d89fd64ab4::t_5804d45b370b9f 1-10
+third_party/acp-kernel/src/panel/index.ts
+  s_f506d89fd64ab4::t_2f9d0f6202e35d 1-6
+third_party/acp-kernel/src/panel/panel.ts
+  s_f506d89fd64ab4::t_48a7cd46c234f1 1-219
+third_party/acp-kernel/src/panel/topic.ts
+  s_f506d89fd64ab4::t_0a7140f1884c85 1-13
+third_party/acp-kernel/src/parse-compress-input.ts
+  s_f506d89fd64ab4::t_05ce3d7a48744b 1-1041
+third_party/acp-kernel/src/persist/index.ts
+  s_f506d89fd64ab4::t_de8593e47cb062 1-23
+third_party/acp-kernel/src/persist/state-merge.ts
+  s_f506d89fd64ab4::t_31843e27d6a680 1-29
+third_party/acp-kernel/src/persist/store.ts
+  s_f506d89fd64ab4::t_6c7e827a2e72a9 1-819
+third_party/acp-kernel/src/pipeline.ts
+  s_f506d89fd64ab4::t_dee63705375917 1-71
+third_party/acp-kernel/src/prompts.ts
+  s_f506d89fd64ab4::t_6c83b05384d484 1-99
+third_party/acp-kernel/src/protected.ts
+  s_f506d89fd64ab4::t_d85616cfdf031c 1-813
+third_party/acp-kernel/src/prune.ts
+  s_f506d89fd64ab4::t_e4b5a8104834cc 1-661
+third_party/acp-kernel/src/reasoning-pairs.ts
+  s_f506d89fd64ab4::t_a0f7e65a8b3fd2 1-102
+third_party/acp-kernel/src/rebuild.ts
+  s_f506d89fd64ab4::t_3a78f75d0ad769 1-79
+third_party/acp-kernel/src/recommend.ts
+  s_f506d89fd64ab4::t_f5917627adbcf8 1-732
+third_party/acp-kernel/src/refold.ts
+  s_f506d89fd64ab4::t_bb60fba3bc093f 1-95
+third_party/acp-kernel/src/refs.ts
+  s_f506d89fd64ab4::t_b360234313fa7f 1-347
+third_party/acp-kernel/src/relocate-compress.ts
+  s_f506d89fd64ab4::t_0fa8a3a1978013 1-313
+third_party/acp-kernel/src/render-refs.ts
+  s_f506d89fd64ab4::t_c1719020bcacfd 1-212
+third_party/acp-kernel/src/report.ts
+  s_f506d89fd64ab4::t_fb38381d9d58d8 1-622
+third_party/acp-kernel/src/rules.ts
+  s_f506d89fd64ab4::t_daa266ac41ee51 1-162
+third_party/acp-kernel/src/search.ts
+  s_f506d89fd64ab4::t_f45bbaafd574fc 1-35
+third_party/acp-kernel/src/search/SEARCH.md
+  s_f506d89fd64ab4::t_c21baff0e3ba46 1-178
+third_party/acp-kernel/src/search/algorithms/bm25.ts
+  s_f506d89fd64ab4::t_7fb8a831bdb410 1-54
+third_party/acp-kernel/src/search/algorithms/fuzzy.ts
+  s_f506d89fd64ab4::t_f9cd71985de5c0 1-51
+third_party/acp-kernel/src/search/algorithms/hybrid.ts
+  s_f506d89fd64ab4::t_8231cca40c12c9 1-43
+third_party/acp-kernel/src/search/algorithms/semantic.ts
+  s_f506d89fd64ab4::t_f3982876e66f74 1-112
+third_party/acp-kernel/src/search/algorithms/substring.ts
+  s_f506d89fd64ab4::t_bddfd67983efe6 1-33
+third_party/acp-kernel/src/search/doc-cache.ts
+  s_f506d89fd64ab4::t_04aa045b6c535c 1-112
+third_party/acp-kernel/src/search/index.ts
+  s_f506d89fd64ab4::t_9c1ed9a567df82 1-188
+third_party/acp-kernel/src/search/registry.ts
+  s_f506d89fd64ab4::t_12bb73207f365d 1-32
+third_party/acp-kernel/src/search/stemmer.ts
+  s_f506d89fd64ab4::t_a9f44e23674d87 1-27
+third_party/acp-kernel/src/search/tokenizer.ts
+  s_f506d89fd64ab4::t_5578ceadb6e09f 1-123
+third_party/acp-kernel/src/search/types.ts
+  s_f506d89fd64ab4::t_7b439e33370cd8 1-109
+third_party/acp-kernel/src/segment.ts
+  s_f506d89fd64ab4::t_dae30f05315e93 1-49
+third_party/acp-kernel/src/state.ts
+  s_f506d89fd64ab4::t_d1d5b4d4b0b25a 1-100
+third_party/acp-kernel/src/surface-config.ts
+  s_f506d89fd64ab4::t_92f4eef86f0c44 1-177
+third_party/acp-kernel/src/sync.ts
+  s_f506d89fd64ab4::t_594ad755dedae0 1-175
+third_party/acp-kernel/src/tokenize.ts
+  s_f506d89fd64ab4::t_3116e5db1759de 1-68
+third_party/acp-kernel/src/tool-pairs.ts
+  s_f506d89fd64ab4::t_bbfd95a3f3365c 1-91
+third_party/acp-kernel/src/transform-channel.ts
+  s_f506d89fd64ab4::t_5b7a4ddad7ef2c 1-14
+third_party/acp-kernel/src/truncate-tools.ts
+  s_f506d89fd64ab4::t_c1f974faa2f87a 1-149
+third_party/acp-kernel/src/truncate.ts
+  s_f506d89fd64ab4::t_791a976d166ade 1-40
+third_party/acp-kernel/src/turn-integrity.ts
+  s_f506d89fd64ab4::t_d0e55c6ec84602 1-261
+third_party/acp-kernel/src/types.ts
+  s_f506d89fd64ab4::t_7f1b6d6362f88d 1-838
+third_party/acp-kernel/src/unit-projection.ts
+  s_f506d89fd64ab4::t_95e15927a2b11a 1-1078
+third_party/acp-kernel/src/viable.ts
+  s_f506d89fd64ab4::t_fc3ad27452a983 1-13
+third_party/acp-kernel/src/view-latch.ts
+  s_f506d89fd64ab4::t_89edc159e04e82 1-163
+third_party/acp-kernel/src/wire/anthropic.ts
+  s_f506d89fd64ab4::t_b0f7de00babea6 1-622
+third_party/acp-kernel/src/wire/bili-message.ts
+  s_f506d89fd64ab4::t_726fafedeee99b 1-122
+third_party/acp-kernel/src/wire/compress-detect.ts
+  s_f506d89fd64ab4::t_1df5d7a2aded55 1-443
+third_party/acp-kernel/src/wire/demoted-thinking.ts
+  s_f506d89fd64ab4::t_d1b1003c2a1499 1-79
+third_party/acp-kernel/src/wire/formats.ts
+  s_f506d89fd64ab4::t_2229d99515ca39 1-55
+third_party/acp-kernel/src/wire/google.ts
+  s_f506d89fd64ab4::t_c425c9beea99f7 1-606
+third_party/acp-kernel/src/wire/identity.ts
+  s_f506d89fd64ab4::t_d119812a5eed26 1-136
+third_party/acp-kernel/src/wire/index.ts
+  s_f506d89fd64ab4::t_652a64aa4cf610 1-12
+third_party/acp-kernel/src/wire/message-id.ts
+  s_f506d89fd64ab4::t_691b1fb899b668 1-58
+third_party/acp-kernel/src/wire/mirror.ts
+  s_f506d89fd64ab4::t_d37e16d971d6cd 1-292
+third_party/acp-kernel/src/wire/openai.ts
+  s_f506d89fd64ab4::t_83bd01f320269e 1-612
+third_party/acp-kernel/src/wire/responses.ts
+  s_f506d89fd64ab4::t_3c9e0928fa2a85 1-1133
+third_party/acp-kernel/src/wire/util.ts
+  s_f506d89fd64ab4::t_d157711eb7746e 1-23
+third_party/acp-kernel/tests/absorb.test.ts
+  s_f506d89fd64ab4::t_08442236f81e86 1-557
+third_party/acp-kernel/tests/anthropic-system-message-passthrough.test.ts
+  s_f506d89fd64ab4::t_ddb9458ec2149e 1-274
+third_party/acp-kernel/tests/block-map.test.ts
+  s_f506d89fd64ab4::t_15da63f207e37e 1-285
+third_party/acp-kernel/tests/cache-report.test.ts
+  s_f506d89fd64ab4::t_4f01ac2a4db897 1-612
+third_party/acp-kernel/tests/carrier-advertise-validate.test.ts
+  s_f506d89fd64ab4::t_346c5d5c27c99f 1-397
+third_party/acp-kernel/tests/ccr-restamp.test.ts
+  s_f506d89fd64ab4::t_113ba914b716a4 1-66
+third_party/acp-kernel/tests/ccr.test.ts
+  s_f506d89fd64ab4::t_642be2eb7d9984 1-1663
+third_party/acp-kernel/tests/checkpoint-carrier.test.ts
+  s_f506d89fd64ab4::t_10f7758a115e60 1-358
+third_party/acp-kernel/tests/compress-detect.test.ts
+  s_f506d89fd64ab4::t_5cfd0c8712cd92 1-314
+third_party/acp-kernel/tests/compress-schema-contract.test.ts
+  s_f506d89fd64ab4::t_08d5cfe4caa0e1 1-253
+third_party/acp-kernel/tests/compress-tools.test.ts
+  s_f506d89fd64ab4::t_2ec75f6d8da46e 1-138
+third_party/acp-kernel/tests/compress.test.ts
+  s_f506d89fd64ab4::t_1a85c0926b641f 1-1453
+third_party/acp-kernel/tests/covered-seq-sentinel.test.ts
+  s_f506d89fd64ab4::t_304b528c72440b 1-148
+third_party/acp-kernel/tests/cross-protocol-identity.test.ts
+  s_f506d89fd64ab4::t_2848a85e176017 1-342
+third_party/acp-kernel/tests/crush.test.ts
+  s_f506d89fd64ab4::t_a2db1f87efdab3 1-1217
+third_party/acp-kernel/tests/dead-ref-split.test.ts
+  s_f506d89fd64ab4::t_65288315fa1d8a 1-127
+third_party/acp-kernel/tests/dead-refs.test.ts
+  s_f506d89fd64ab4::t_b1a155557811b0 1-220
+third_party/acp-kernel/tests/decompress-report.test.ts
+  s_f506d89fd64ab4::t_c4a872f0c3097e 1-358
+third_party/acp-kernel/tests/doc-cache.test.ts
+  s_f506d89fd64ab4::t_c7f92573a77a3e 1-224
+third_party/acp-kernel/tests/effective-gate-chars.test.ts
+  s_f506d89fd64ab4::t_84d7067ba861dd 1-185
+third_party/acp-kernel/tests/fixtures/prompt-function-default.txt
+  s_f506d89fd64ab4::t_9047197f473412 1-67
+third_party/acp-kernel/tests/fixtures/prompt-hybrid-default.txt
+  s_f506d89fd64ab4::t_672224edec504d 1-71
+third_party/acp-kernel/tests/fixtures/prompt-text-default.txt
+  s_f506d89fd64ab4::t_377b24b82cfde5 1-83
+third_party/acp-kernel/tests/handoff.test.ts
+  s_f506d89fd64ab4::t_c6eda393a85403 1-368
+third_party/acp-kernel/tests/hide-consumed-mcp.test.ts
+  s_f506d89fd64ab4::t_ff509b4c8513dc 1-166
+third_party/acp-kernel/tests/hide-consumed-stub.test.ts
+  s_f506d89fd64ab4::t_f6414bf0ccacf0 1-230
+third_party/acp-kernel/tests/hide-merge-rebuild.test.ts
+  s_f506d89fd64ab4::t_98ef6a58e2dba3 1-597
+third_party/acp-kernel/tests/issue1476-reid.test.ts
+  s_f506d89fd64ab4::t_a4890410fbaccf 1-308
+third_party/acp-kernel/tests/issue2886-recent-pair-integrity.test.ts
+  s_f506d89fd64ab4::t_2e9c71bd12f94b 1-202
+third_party/acp-kernel/tests/issue3003-all-or-nothing-length.test.ts
+  s_f506d89fd64ab4::t_8d9e3889f39d07 1-253
+third_party/acp-kernel/tests/issue3046-duplicate-tool-call-ids.test.ts
+  s_f506d89fd64ab4::t_b9f00ecf4e8af4 1-216
+third_party/acp-kernel/tests/issue3236-recommend-apply-consistency.test.ts
+  s_f506d89fd64ab4::t_5faad33885f7ad 1-473
+third_party/acp-kernel/tests/issue3302-sparse-ref-unknown.test.ts
+  s_f506d89fd64ab4::t_c8cda5b3cc94da 1-185
+third_party/acp-kernel/tests/issue3371-consumed-unit-screen.test.ts
+  s_f506d89fd64ab4::t_a896e85cea57c7 1-122
+third_party/acp-kernel/tests/issue3406-screen-observability.test.ts
+  s_f506d89fd64ab4::t_969f6770180e9f 1-171
+third_party/acp-kernel/tests/issue3406-screen-scale.test.ts
+  s_f506d89fd64ab4::t_7339538056a10f 1-236
+third_party/acp-kernel/tests/issue3410-wire-passthrough.test.ts
+  s_f506d89fd64ab4::t_972a7205347dcc 1-144
+third_party/acp-kernel/tests/issue3674-nudge-low-water.test.ts
+  s_f506d89fd64ab4::t_8eeb5817bbb1e7 1-138
+third_party/acp-kernel/tests/issue3769-orphan-sweep.test.ts
+  s_f506d89fd64ab4::t_0ced35bb0a0cbb 1-374
+third_party/acp-kernel/tests/issue3935-truncation-shrink.test.ts
+  s_f506d89fd64ab4::t_2310160e25bfda 1-127
+third_party/acp-kernel/tests/issue3939-fold-boundary-pins.test.ts
+  s_f506d89fd64ab4::t_37d0ae3fd5a473 1-375
+third_party/acp-kernel/tests/issue3939-ref-migration-defer.test.ts
+  s_f506d89fd64ab4::t_6b8d2b22abb3b3 1-89
+third_party/acp-kernel/tests/issue3939-truncate-latch.test.ts
+  s_f506d89fd64ab4::t_187fed89ae1e2d 1-139
+third_party/acp-kernel/tests/issue3939-view-latch.test.ts
+  s_f506d89fd64ab4::t_217af1efbe87f8 1-184
+third_party/acp-kernel/tests/issue3939-wire-byte-stability.test.ts
+  s_f506d89fd64ab4::t_fcf82f92d58b08 1-214
+third_party/acp-kernel/tests/issue3939-wire-unknown-parts-pins.test.ts
+  s_f506d89fd64ab4::t_03637f42777508 1-111
+third_party/acp-kernel/tests/issue3945-id-collision.test.ts
+  s_f506d89fd64ab4::t_03536dd2ca9241 1-110
+third_party/acp-kernel/tests/issue3953-straddle-truncate.test.ts
+  s_f506d89fd64ab4::t_e4d96906774bdc 1-79
+third_party/acp-kernel/tests/issue4166-openai-midsystem-pins.test.ts
+  s_f506d89fd64ab4::t_a4798f4bdaca45 1-147
+third_party/acp-kernel/tests/issue4166-responses-midsystem-pins.test.ts
+  s_f506d89fd64ab4::t_088b72c169a57e 1-139
+third_party/acp-kernel/tests/issue4289-failed-compress-fold.test.ts
+  s_f506d89fd64ab4::t_927258179623f3 1-453
+third_party/acp-kernel/tests/issue4292-orphan-system-guard.test.ts
+  s_f506d89fd64ab4::t_93d64a99d3075b 1-312
+third_party/acp-kernel/tests/issue4311-summary-dedup.test.ts
+  s_f506d89fd64ab4::t_fe1d0f0754b124 1-180
+third_party/acp-kernel/tests/issue4313-message-timestamps.test.ts
+  s_f506d89fd64ab4::t_c40dc1e1c38782 1-226
+third_party/acp-kernel/tests/issue4348-receipt-lace.test.ts
+  s_f506d89fd64ab4::t_b3d5052210c64b 1-193
+third_party/acp-kernel/tests/issue4457-sidecar-system-folds.test.ts
+  s_f506d89fd64ab4::t_1b61d6d3d32a3f 1-172
+third_party/acp-kernel/tests/issue4484-merge-coverage.test.ts
+  s_f506d89fd64ab4::t_5a8b023838f11c 1-288
+third_party/acp-kernel/tests/issue4521-retry-livelock.test.ts
+  s_f506d89fd64ab4::t_d689c474498fa9 1-195
+third_party/acp-kernel/tests/issue4570-system-position-final-wire.test.ts
+  s_f506d89fd64ab4::t_3a63c4cec612d6 1-206
+third_party/acp-kernel/tests/issue5101-truncate-blocked-latch.test.ts
+  s_f506d89fd64ab4::t_b0ac677c0558df 1-180
+third_party/acp-kernel/tests/issue5109-anchor-skip-injections.test.ts
+  s_f506d89fd64ab4::t_8e69cba505df6a 1-132
+third_party/acp-kernel/tests/issue5337-shared-screening.test.ts
+  s_f506d89fd64ab4::t_191751ebe04198 1-293
+third_party/acp-kernel/tests/issue5415-absorb-debt-nudge.test.ts
+  s_f506d89fd64ab4::t_41c199bf9b64b4 1-198
+third_party/acp-kernel/tests/issue5432-follow-side-heal.test.ts
+  s_f506d89fd64ab4::t_c830e0e626c908 1-420
+third_party/acp-kernel/tests/issue5531-stranded-reasoning-residue.test.ts
+  s_f506d89fd64ab4::t_3f1e1c57dc5264 1-271
+third_party/acp-kernel/tests/issue5620-ref-recoverable-media.test.ts
+  s_f506d89fd64ab4::t_02897a0206642b 1-421
+third_party/acp-kernel/tests/issue5698-t1-harvest-stall.test.ts
+  s_f506d89fd64ab4::t_9c3d442955830d 1-388
+third_party/acp-kernel/tests/issue5751-tool-pair-widening.test.ts
+  s_f506d89fd64ab4::t_88414a766eb45e 1-259
+third_party/acp-kernel/tests/issue5789-tier2-merge-ladder.test.ts
+  s_f506d89fd64ab4::t_fd25fe54f47391 1-290
+third_party/acp-kernel/tests/issue5919-shredded-merge.test.ts
+  s_f506d89fd64ab4::t_00c1a9d1cd34e0 1-240
+third_party/acp-kernel/tests/issue684-turn-integrity.test.ts
+  s_f506d89fd64ab4::t_81f313d1e294a4 1-233
+third_party/acp-kernel/tests/media-payload.test.ts
+  s_f506d89fd64ab4::t_2b2199e6a48425 1-1216
+third_party/acp-kernel/tests/message-protection.test.ts
+  s_f506d89fd64ab4::t_113da33ba3dcea 1-228
+third_party/acp-kernel/tests/nudge-pressure-benefit.test.ts
+  s_f506d89fd64ab4::t_738ca0c765ade2 1-274
+third_party/acp-kernel/tests/nudge-pressure-estimate-hold-backstop.test.ts
+  s_f506d89fd64ab4::t_825de0850975cc 1-152
+third_party/acp-kernel/tests/nudge-pressure-no-sample-hold.test.ts
+  s_f506d89fd64ab4::t_2cb3d7402dce1d 1-123
+third_party/acp-kernel/tests/nudge-sections.test.ts
+  s_f506d89fd64ab4::t_479f8edbe03179 1-121
+third_party/acp-kernel/tests/nudge-text.test.ts
+  s_f506d89fd64ab4::t_f8ea7d7c2b1bb8 1-540
+third_party/acp-kernel/tests/nudge.test.ts
+  s_f506d89fd64ab4::t_5bd633063ce425 1-1761
+third_party/acp-kernel/tests/open-objectives.test.ts
+  s_f506d89fd64ab4::t_6a1bf341713a0a 1-183
+third_party/acp-kernel/tests/openai-system-hoist.test.ts
+  s_f506d89fd64ab4::t_9c01e298df8ba5 1-130
+third_party/acp-kernel/tests/orphan-endpoint-snap.test.ts
+  s_f506d89fd64ab4::t_9510dbec3bd5ff 1-309
+third_party/acp-kernel/tests/orphan-fixes.test.ts
+  s_f506d89fd64ab4::t_79724d44ae9f8b 1-354
+third_party/acp-kernel/tests/output-steering.test.ts
+  s_f506d89fd64ab4::t_6c13a138f3d530 1-429
+third_party/acp-kernel/tests/packs.test.ts
+  s_f506d89fd64ab4::t_9cbae0b86d1912 1-600
+third_party/acp-kernel/tests/panel.test.ts
+  s_f506d89fd64ab4::t_060f7516d8a44f 1-296
+third_party/acp-kernel/tests/parse-compress-input.test.ts
+  s_f506d89fd64ab4::t_47fc107f94ace3 1-1429
+third_party/acp-kernel/tests/persist.test.ts
+  s_f506d89fd64ab4::t_15e4c0120253ab 1-1252
+third_party/acp-kernel/tests/pipeline.test.ts
+  s_f506d89fd64ab4::t_879a8c27d52fe8 1-340
+third_party/acp-kernel/tests/prompts.test.ts
+  s_f506d89fd64ab4::t_829adaef41a735 1-254
+third_party/acp-kernel/tests/protect-recent.test.ts
+  s_f506d89fd64ab4::t_e8d86e3afa4949 1-870
+third_party/acp-kernel/tests/protected-content.test.ts
+  s_f506d89fd64ab4::t_d6d6d889b04049 1-459
+third_party/acp-kernel/tests/protected-latest.test.ts
+  s_f506d89fd64ab4::t_3a87d9bdd43364 1-382
+third_party/acp-kernel/tests/protected-paths.test.ts
+  s_f506d89fd64ab4::t_301f0dba752f16 1-241
+third_party/acp-kernel/tests/protected-virtual-paths.test.ts
+  s_f506d89fd64ab4::t_6eaabddae62b37 1-145
+third_party/acp-kernel/tests/prune-orphan-mcp.test.ts
+  s_f506d89fd64ab4::t_65dd17f5872e56 1-77
+third_party/acp-kernel/tests/prune-recommend-scale.test.ts
+  s_f506d89fd64ab4::t_7ed259b32b40fa 1-348
+third_party/acp-kernel/tests/range-coverage.test.ts
+  s_f506d89fd64ab4::t_dffed35573bec7 1-182
+third_party/acp-kernel/tests/ranges-consistency.test.ts
+  s_f506d89fd64ab4::t_eaca089fb4fa5b 1-360
+third_party/acp-kernel/tests/reasoning-pairs.test.ts
+  s_f506d89fd64ab4::t_f2c2e0522af08f 1-489
+third_party/acp-kernel/tests/recommend-merge.test.ts
+  s_f506d89fd64ab4::t_ba2086d869d5b9 1-296
+third_party/acp-kernel/tests/recommend-range-integrity.test.ts
+  s_f506d89fd64ab4::t_adcd2b53b7e75d 1-211
+third_party/acp-kernel/tests/recommend.test.ts
+  s_f506d89fd64ab4::t_3264e080ff8e7c 1-532
+third_party/acp-kernel/tests/refold.test.ts
+  s_f506d89fd64ab4::t_7916002f1715c7 1-789
+third_party/acp-kernel/tests/refs.test.ts
+  s_f506d89fd64ab4::t_0f57dc944b24f6 1-166
+third_party/acp-kernel/tests/regression-bili-470.test.ts
+  s_f506d89fd64ab4::t_fac3a2a89786cb 1-299
+third_party/acp-kernel/tests/regression-bugfixes.test.ts
+  s_f506d89fd64ab4::t_c32afdbfda7fa8 1-600
+third_party/acp-kernel/tests/regression-empty-rewrap.test.ts
+  s_f506d89fd64ab4::t_eba70b9d484c60 1-232
+third_party/acp-kernel/tests/regression-features.test.ts
+  s_f506d89fd64ab4::t_8640ae3c3f39e3 1-266
+third_party/acp-kernel/tests/regression-promote-after-prune.test.ts
+  s_f506d89fd64ab4::t_c3caec3c8868ef 1-652
+third_party/acp-kernel/tests/relocate-compress.test.ts
+  s_f506d89fd64ab4::t_5d9b8d303514d9 1-482
+third_party/acp-kernel/tests/report-accounting.test.ts
+  s_f506d89fd64ab4::t_c5685a2d8970b7 1-194
+third_party/acp-kernel/tests/report-tool-accounting.test.ts
+  s_f506d89fd64ab4::t_5f087cd1e1533c 1-175
+third_party/acp-kernel/tests/report-truncation.test.ts
+  s_f506d89fd64ab4::t_bd0abce1598603 1-151
+third_party/acp-kernel/tests/responses-head-role.test.ts
+  s_f506d89fd64ab4::t_d8ddcc4276809b 1-71
+third_party/acp-kernel/tests/reversed-ranges.test.ts
+  s_f506d89fd64ab4::t_cf3cd9d2c28dfe 1-245
+third_party/acp-kernel/tests/rules.test.ts
+  s_f506d89fd64ab4::t_73e6d0ef19017e 1-271
+third_party/acp-kernel/tests/scrub-lone-surrogates.test.ts
+  s_f506d89fd64ab4::t_d8768e72139f48 1-107
+third_party/acp-kernel/tests/search.test.ts
+  s_f506d89fd64ab4::t_221cf14b4ec874 1-827
+third_party/acp-kernel/tests/segment.test.ts
+  s_f506d89fd64ab4::t_723751368d3930 1-81
+third_party/acp-kernel/tests/seq-interval-coverage.test.ts
+  s_f506d89fd64ab4::t_c9f34693bad648 1-217
+third_party/acp-kernel/tests/seq-restamp.test.ts
+  s_f506d89fd64ab4::t_3e57c98763de40 1-220
+third_party/acp-kernel/tests/state-prune.test.ts
+  s_f506d89fd64ab4::t_4b4089096342cf 1-396
+third_party/acp-kernel/tests/status-surface-meta.test.ts
+  s_f506d89fd64ab4::t_cdb0b0d6820e4d 1-142
+third_party/acp-kernel/tests/surface-config.test.ts
+  s_f506d89fd64ab4::t_2c08afeaba22d9 1-266
+third_party/acp-kernel/tests/sync-config.test.ts
+  s_f506d89fd64ab4::t_4c8f0c80b34de5 1-186
+third_party/acp-kernel/tests/terminal-escape.test.ts
+  s_f506d89fd64ab4::t_08254414e0ba86 1-369
+third_party/acp-kernel/tests/thinking-tokens.test.ts
+  s_f506d89fd64ab4::t_7d564f6e54c961 1-203
+third_party/acp-kernel/tests/tier-scale-separation.test.ts
+  s_f506d89fd64ab4::t_80b6b0023b62ec 1-191
+third_party/acp-kernel/tests/token-snapshot.test.ts
+  s_f506d89fd64ab4::t_5f2ab6b7e9ec93 1-263
+third_party/acp-kernel/tests/tokenizer.test.ts
+  s_f506d89fd64ab4::t_6396e3bbbed16f 1-72
+third_party/acp-kernel/tests/tool-pair-integrity.test.ts
+  s_f506d89fd64ab4::t_4ba90dc832a725 1-343
+third_party/acp-kernel/tests/tool-pairs.test.ts
+  s_f506d89fd64ab4::t_a2d31b5770aaa4 1-468
+third_party/acp-kernel/tests/transform-channel.test.ts
+  s_f506d89fd64ab4::t_3ac5b0c126afa9 1-13
+third_party/acp-kernel/tests/truncate-keep-filter.test.ts
+  s_f506d89fd64ab4::t_ac461846c9833b 1-195
+third_party/acp-kernel/tests/truncate-surrogates.test.ts
+  s_f506d89fd64ab4::t_886483879723f1 1-287
+third_party/acp-kernel/tests/validation.test.ts
+  s_f506d89fd64ab4::t_8465fa3aa5111f 1-303
+third_party/acp-kernel/tests/viable.test.ts
+  s_f506d89fd64ab4::t_a6e8feeb004174 1-23
+third_party/acp-kernel/tests/wire-bili-message-roundtrip.test.ts
+  s_f506d89fd64ab4::t_5bc31717ff91da 1-1376
+third_party/acp-kernel/tests/wire-conversation-signal.test.ts
+  s_f506d89fd64ab4::t_275c000260572a 1-96
+third_party/acp-kernel/tests/wire-demoted-thinking.test.ts
+  s_f506d89fd64ab4::t_2fd6c0d4ddaa4c 1-244
+third_party/acp-kernel/tests/wire-formats.test.ts
+  s_f506d89fd64ab4::t_6501b6cc751a13 1-137
+third_party/acp-kernel/tests/wire-google.test.ts
+  s_f506d89fd64ab4::t_b26c554344d768 1-520
+third_party/acp-kernel/tests/wire-mirror.test.ts
+  s_f506d89fd64ab4::t_b0618013a535e9 1-352
+third_party/acp-kernel/tests/wire-proxy-message-id.test.ts
+  s_f506d89fd64ab4::t_22a4b3288ada72 1-155
+third_party/acp-kernel/tests/wire-reasoning-echo.test.ts
+  s_f506d89fd64ab4::t_91edf03615d3e7 1-230
+third_party/acp-kernel/tests/wire-schema-gemini.test.ts
+  s_f506d89fd64ab4::t_e79067f0b58ef3 1-122
+third_party/acp-kernel/tests/wire-schema-top-level.test.ts
+  s_f506d89fd64ab4::t_88691c782129c9 1-111
+third_party/acp-kernel/tests/wire-subagent-namespace.test.ts
+  s_f506d89fd64ab4::t_0a3a890902e08c 1-81
+third_party/acp-kernel/tests/wire-tool-result-toolname.test.ts
+  s_f506d89fd64ab4::t_74d8ceb481bfb8 1-356
+third_party/acp-kernel/tsconfig.json
+  s_f506d89fd64ab4::t_10c4a892c955c9 1-25
+third_party/acp-kernel/tsup.config.ts
+  s_f506d89fd64ab4::t_f862f9dc37050c 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "41950f831f67af69b03be83733309356f6d212d7",
+  "prompts": {},
+  "sessions": {
+    "s_f506d89fd64ab4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ec48-cee6-7443-bea3-0bb9312c7274",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
