@@ -46,6 +46,8 @@ import {
 import { DraftBody, DraftView } from "./draft.ts";
 import { arr, bool, id, int, isoTime, json, lit, nullable, obj, oneOf, opt, type Schema, seq, str, tagged } from "./schema.ts";
 
+import { USAGE_METHODS } from "./usage.ts";
+
 /** 合同版本:破坏性改动加主版本;渲染进程启动时用 session.hello 核对。 */
 export const API_VERSION = "0.1.0";
 
@@ -58,8 +60,6 @@ const Ok = obj({ ok: lit(true) });
 const Page = { limit: opt(int({ min: 1, max: 500 })) };
 
 const method = <P, R>(params: Schema<P>, result: Schema<R>) => ({ params, result });
-
-import { USAGE_METHODS } from "./usage.ts";
 
 export const METHODS = {
   // 会话握手:核对合同版本,拿当前事件游标(订阅从这里接)。

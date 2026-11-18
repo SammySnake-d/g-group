@@ -24,6 +24,7 @@ export interface ContactModels {
   readonly id: string;
   readonly name: string;
   readonly speakingModel: string;
+  readonly speakingModelInherited?: boolean;
   readonly harness: string;
   readonly computeModel: ComputeSlot;
 }
@@ -195,22 +196,23 @@ function applyToDefaults(d: ModelDefaults, change: ModelChange): ModelDefaults {
 function stripUndefined<T extends object>(o: T): Partial<T> {
   return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
-function applyToContact(c: ContactModels, change: ModelChange): { next: ContactModels; explicit: boolean } {
+function applyToContact(c: ContactModels, change: ModelChange, defaultsAfter: ModelDefaults): { next: ContactModels; explicit: boolean } {
   if (change.kind === "contact") {
     if (change.contactId !== c.id) return { next: c, explicit: false };
     return { next: { ...c, ...stripUndefined(change.patch) }, explicit: true };
   }
   if (change.kind === "batch-replace") {
-    const speaks = c.speakingModel === change.from;
+    const inherited = c.speakingModelInherited === true;
+    const speaks = !inherited && c.speakingModel === change.from;
     const slot = c.computeModel;
     const pinned = slot.mode === "explicit" && slot.model === change.from;
-    if (!speaks && !pinned) return { next: c, explicit: false };
+    if (!speaks && !pinned && !inherited) return { next: c, explicit: false };
     return {
-      next: { ...c, speakingModel: speaks ? change.to : c.speakingModel, computeModel: pinned ? { ...slot, model: change.to } : slot },
-      explicit: true,
+      next: { ...c, speakingModel: inherited ? defaultsAfter.speakingModel : speaks ? change.to : c.speakingModel, computeModel: pinned ? { ...slot, model: change.to } : slot },
+      explicit: speaks || pinned,
     };
   }
-  return { next: c, explicit: false };
+  return { next: c.speakingModelInherited ? { ...c, speakingModel: defaultsAfter.speakingModel } : c, explicit: false };
 }
 
 /** 保存前预检(时机 ①②):算出改动后每位联系人的生效值,列出所有受影响的下游与冲突;不落盘。 */
@@ -220,7 +222,7 @@ export function previewChange(defaults: ModelDefaults, contacts: readonly Contac
   const nextContacts: ContactModels[] = [];
   const affected: AffectedContact[] = [];
   for (const c of contacts) {
-    const { next: n, explicit } = applyToContact(c, change);
+    const { next: n, explicit } = applyToContact(c, change, defaultsAfter);
     const next: ContactModels = { ...n, computeModel: { ...n.computeModel } };
     nextContacts.push(next);
     const before = resolveCompute(defaults, c);

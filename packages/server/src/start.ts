@@ -8,16 +8,13 @@ import { type ContactCompactor, type ContactMind, DEFAULT_RETRY_POLICY, type Thr
 import { type ComputeCommands, claudeCompute } from "./compute.ts";
 import { deskCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
+import { DEFAULT_STATE_NOTE_MAX_BYTES, makePiRuntime, type PiRuntimeOptions } from "./pi-runtime.ts";
 import { type IpcMainLike, type Service, bindIpc, createService } from "./service.ts";
 
-export interface StartOptions {
+export interface StartOptions extends PiRuntimeOptions {
   /** 数据目录:gg.db、插件包、附件、Compute 工作目录都在这下面。 */
   readonly dataDir: string;
-  readonly api?: import("@g-group/adapter-pi-contact").PiProtocol;
-  readonly protocols?: readonly import("@g-group/adapter-pi-contact").PiProtocol[];
-  readonly magpie?: boolean;
   readonly stateNoteMaxBytes?: number | null;
-  readonly fetch?: typeof globalThis.fetch;
   /** fake:规则替身(不连模型,开发前端用);pi:真实联系人脑子。默认 fake。 */
   readonly mind?: "fake" | "pi";
   /** fake:剧本 Compute(按派的活说话,见 fakes.ts deskCompute);claude:真实 Claude Code CLI。默认 fake。 */
@@ -41,43 +38,22 @@ export interface Started {
   close(): Promise<void>;
 }
 
-export const DEFAULT_STATE_NOTE_MAX_BYTES = 8192;
+export { DEFAULT_STATE_NOTE_MAX_BYTES };
 export const SAMPLE_CATALOG = fileURLToPath(new URL("../catalog/catalog.json", import.meta.url));
 
 export async function startServer(o: StartOptions): Promise<Started> {
   const env = o.env ?? process.env;
   mkdirSync(o.dataDir, { recursive: true });
-  const model = env.ANTHROPIC_DEFAULT_SONNET_MODEL;
+  let model = o.model ?? env.ANTHROPIC_DEFAULT_SONNET_MODEL;
   // 规则替身每轮先等一会儿(GG_MIND_DELAY_MS,只给 fake):界面用例要看得见「正在回复」这段真实的忙碌
   const delayMs = Math.min(Math.max(Number(process.env.GG_MIND_DELAY_MS) || 0, 0), 60_000);
   let mind: (c: ContactView) => ContactMind = () => scriptedMind(delayMs ? { delayMs } : {});
   let compactor: ((c: ContactView) => ContactCompactor) | undefined;
   if (o.mind === "pi") {
-    // 字面量动态 import:按需加载 pi 依赖,G-LAYER 也能核对依赖方向
-    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as { createPiContactMind(opts: Record<string, unknown>): ContactMind; createPiCompactor(opts: Record<string, unknown>): ContactCompactor };
-    const bearer = env.ANTHROPIC_AUTH_TOKEN;
-    const apiKey = bearer ?? env.ANTHROPIC_API_KEY;
-    if (!apiKey || !model) throw new Error("mind=pi 需要 ANTHROPIC_AUTH_TOKEN(或 ANTHROPIC_API_KEY)与 ANTHROPIC_DEFAULT_SONNET_MODEL");
-    // 每位联系人用自己的说话模型(U68);同一模型复用一个实例
-    const cache = new Map<string, ContactMind>();
-    mind = (c) => {
-      let m = cache.get(c.speakingModel);
-      if (!m) {
-        m = mod.createPiContactMind({ provider: "anthropic", model: c.speakingModel, baseUrl: env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
-        cache.set(c.speakingModel, m);
-      }
-      return m;
-    };
-    // 状态笔记压缩:同一说话模型的独立调用(AC-32 ③),同一模型复用一个实例
-    const compactors = new Map<string, ContactCompactor>();
-    compactor = (c) => {
-      let k = compactors.get(c.speakingModel);
-      if (!k) {
-        k = mod.createPiCompactor({ provider: "anthropic", model: c.speakingModel, baseUrl: env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
-        compactors.set(c.speakingModel, k);
-      }
-      return k;
-    };
+    const pi = await makePiRuntime(o, env);
+    model = pi.defaultModel;
+    mind = pi.mind;
+    compactor = pi.compactor;
   }
   const fake = o.compute === "claude" ? null : deskCompute({ stepMs: 300 });
   const compute = fake
@@ -98,6 +74,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
       return d;
     },
     ...(o.onReport ? { onReport: o.onReport } : {}),
+    stateNoteMaxBytes: o.stateNoteMaxBytes === undefined ? DEFAULT_STATE_NOTE_MAX_BYTES : o.stateNoteMaxBytes,
     computeHarnessRetries: fake ? 0 : DEFAULT_RETRY_POLICY.maxAutoRetries,
     ...(o.computeInputMaxBytes !== undefined ? { computeInputMaxBytes: o.computeInputMaxBytes } : {}),
     ...(o.runThresholds ? { runThresholds: o.runThresholds } : {}),
