@@ -1,0 +1,77 @@
+package-lock.json
+  s_bc50607f93d369::t_45805b1b885529 680-683,704-707,1451-1460,1490-1492,1497
+packages/adapter-cc-compute/package.json
+  s_bc50607f93d369::t_320900ff112239 5-16
+packages/adapter-cc-compute/src/adapter.ts
+  s_bc50607f93d369::t_7ce2faacbbb82f 27-28,134,236,323,456,488,495
+packages/adapter-cc-compute/src/procgroup.ts
+  s_bc50607f93d369::t_d650e8b4772f5d 1-2
+packages/adapter-cc-compute/src/resident.ts
+  s_bc50607f93d369::t_7f6d459c71158a 36-37,188,215,297,305,457,460,599,659,693,705-712
+packages/adapter-cc-compute/src/stop-confirm.ts
+  s_bc50607f93d369::t_32419af93018ca 1
+packages/adapter-cc-compute/src/types.ts
+  s_bc50607f93d369::t_20fccdbfc0f032 1
+packages/adapter-cc-compute/test-support/resident-leaver.mjs
+  s_bc50607f93d369::t_e8a819fb951965 1-20
+packages/adapter-codex-compute/mcp/report.mjs
+  s_bc50607f93d369::t_60f44262199fca 1-17
+packages/adapter-codex-compute/package.json
+  s_bc50607f93d369::t_6df62957112275 5-14
+packages/adapter-codex-compute/proof/resources.mjs
+  s_bc50607f93d369::t_05b75b08783f65 1,3-4,6-11,13-42,44-46
+packages/adapter-codex-compute/proof/wire.mjs
+  s_bc50607f93d369::t_76718beb6b2913 1-37
+packages/adapter-codex-compute/src/adapter.ts
+  s_bc50607f93d369::t_f97ef71184990d 1-151
+packages/adapter-codex-compute/src/feed.ts
+  s_bc50607f93d369::t_3232801609bb3b 1-14
+packages/adapter-codex-compute/src/index.ts
+  s_bc50607f93d369::t_df27c8317a2d42 3-4
+packages/adapter-codex-compute/src/protocol.ts
+  s_bc50607f93d369::t_f04aff1817ade6 2-3,7,9,18-20,31,34-361
+packages/adapter-codex-compute/src/startup.ts
+  s_bc50607f93d369::t_f8bb85c361935f 1-27
+packages/adapter-codex-compute/test-support/native-wire.mjs
+  s_bc50607f93d369::t_a30e09d7c7a345 11-14,49,62-68
+packages/kernel/src/compute.ts
+  s_bc50607f93d369::t_483d8ca480b128 165,228-230
+packages/process-tools/proof/mutations.mjs
+  s_bc50607f93d369::t_d9b98bbb845637 1,8-10,12,14-17,19-39,41-44,46-47,49-57,59-63,66-68
+packages/process-tools/src/cleanup.ts
+  s_bc50607f93d369::t_14f91e72e47d76 1-160
+packages/process-tools/src/index.ts
+  s_bc50607f93d369::t_017791886757ec 1-2,5
+packages/process-tools/src/procgroup.ts
+  s_bc50607f93d369::t_b3fbe7dde7fab0 1-6,8-91,93-107
+packages/process-tools/src/stop-confirm.ts
+  s_bc50607f93d369::t_f2a23e897187a7 1-51
+packages/server/package.json
+  s_bc50607f93d369::t_065f3c4d373348 5-10,17-18,20-22
+packages/server/proof/p1b-handoff.mjs
+  s_bc50607f93d369::t_1180009f3926ef 1-96
+packages/server/src/cli.ts
+  s_bc50607f93d369::t_e0a61bdac7cd03 7,13,78,126,155
+packages/server/src/compute.ts
+  s_bc50607f93d369::t_a090071d1c74be 6,54-58
+packages/server/src/host.ts
+  s_bc50607f93d369::t_4f882c4822a2df 447-448,2192,3532,3900,4122-4219,4234,4349-4353,4372-4377,5769-5772
+packages/server/src/start.ts
+  s_bc50607f93d369::t_08be8d94be7582 8,20-21,29,58,62-65,85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7f58a64ab727f07f3ae04cb50ed6bf6a4fcc23cb",
+  "prompts": {},
+  "sessions": {
+    "s_bc50607f93d369": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1eea6-33fc-7510-965f-bbdab05304c0",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
