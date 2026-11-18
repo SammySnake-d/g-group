@@ -147,6 +147,11 @@ export function planMemoryWrite(entries: readonly MemoryEntry[], w: MemoryWrite,
 const inWindow = (e: MemoryEntry, now: string) => (e.validFrom === null || e.validFrom <= now) && (e.validTo === null || e.validTo > now);
 
 /** 本轮文字与条目的字面重合:本轮文字的相邻二字与英文词,在条目标题+正文里出现的个数 */
+/** Compile-only entry for the new ranking seam; existing selection is unchanged on RED. */
+export function memoryTextRanks(entries: readonly MemoryEntry[], _text: string): Map<string, number> {
+  return new Map(entries.map((e) => [e.id, 0]));
+}
+
 function overlap(text: string, e: MemoryEntry) {
   const t = squash(text).toLowerCase();
   if (t === "") return 0;

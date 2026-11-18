@@ -124,6 +124,11 @@ export interface RoundOutput {
   readonly stateNote: string | null;
 }
 
+/** query_history 的两种用法:检索(roomId 给了只搜其中一个会话,limit 不给用默认)与分页回读(before/after 不给用默认) */
+export type HistoryQuery =
+  | { readonly kind: "search"; readonly query: string; readonly roomId: string | null; readonly limit: number | null }
+  | { readonly kind: "read"; readonly roomId: string; readonly seq: number; readonly before: number | null; readonly after: number | null };
+
 /** 本轮内可用的只读查询口(宿主提供):联系人在同一轮的工具往返里按 id 取全文,不是动作、不落盘 */
 export interface RoundTools {
   /** 按 id 读一条记忆全文(含状态与关系);没有这条或无权读返回 null */
@@ -131,6 +136,8 @@ export interface RoundTools {
   /** 引用链往上读一级(D24 read_quote_parent):这条消息直接引用的那几条;会话不可读返回 null */
   readQuoteParent?(roomId: string, seq: number): Promise<string | null>;
   /** 运行台账查一个单元(D26 第 4 节 progress_get):状态、原因类别、子单元与最近事件(条数有界);roomId 是在哪个会话里查,决定可见范围;看不到或没有返回 null */
+  /** 本轮会话中的只读旧消息检索与分页回读。 */
+  queryHistory?(q: HistoryQuery): Promise<string | null>;
   progressGet?(id: string, roomId: string): Promise<string | null>;
 }
 

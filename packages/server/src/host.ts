@@ -130,6 +130,8 @@ import {
   RoundAssembleError,
   kernelAssemble,
 } from "./assemble.ts";
+import type { HistoryPrefetchOptions, HistorySearchFn } from "./history.ts";
+import { LoopGuard, type LoopLimits } from "./loop-guard.ts";
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
@@ -165,6 +167,10 @@ import { type CodeRepoConfig, type Workspace, Worktrees } from "./worktree.ts";
 import { type ArtifactRef, ArtifactStore, MAX_ARTIFACT_BYTES, MAX_ARTIFACTS, MAX_INLINE_TEXT, isReadable, recentReadable } from "./artifacts.ts";
 
 export interface HostOptions {
+  readonly historySearch?: HistorySearchFn;
+  readonly historyPrefetch?: false | HistoryPrefetchOptions;
+  readonly loopGuard?: LoopLimits;
+  readonly roomPostBudget?: false;
   readonly file: string;
   readonly userId?: string;
   readonly userName?: string;
@@ -454,6 +460,8 @@ export class Host {
   /** computeId → harness 自报的 CLI 主进程 pid(常驻进程跨轮不变),新开的轮次沿用它做存活核对 */
   private readonly computePids = new Map<string, number>();
 
+  readonly loopGuard: LoopGuard;
+
   constructor(opts: HostOptions) {
     this.opts = opts;
     this.now = opts.now ?? (() => new Date().toISOString());
@@ -463,6 +471,7 @@ export class Host {
     this.userId = opts.userId ?? "me";
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
+    this.loopGuard = new LoopGuard(this.db, opts.loopGuard, opts.clockMs);
     this.exits = new MemberExits({ db: this.db, now: this.now });
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
