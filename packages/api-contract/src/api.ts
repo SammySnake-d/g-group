@@ -1,3 +1,5 @@
+import { PLAYBOOK_METHODS } from "./playbook.ts";
+import { MEMORY_METHODS } from "./memory.ts";
 // 渲染进程经 preload 调用的方法表。每个方法 = 参数 schema + 结果 schema;主进程收到调用先校验参数,
 // 回包前校验结果,渲染进程收到回包可再校验一次(开发模式)。方法名「域.动作」,新增只加不改。
 import {
@@ -449,6 +451,8 @@ export const METHODS = {
     SettingsView,
   ),
   ...USAGE_METHODS,
+  ...MEMORY_METHODS,
+  ...PLAYBOOK_METHODS,
 } as const;
 
 export type MethodTable = typeof METHODS;

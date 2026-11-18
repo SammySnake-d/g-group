@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 // 模型配置(需求文档 D07.4 规则 1–3、5、6,AC-32):Compute 模型三态继承、Harness 兼容性三时机校验、受影响下游预览、
 // 「把模型 X 批量换成 Y」预览与应用、压缩复用说话模型。纯函数:不改入参,返回冻结的新值。
 //   - 继承顺序 全局默认 → 联系人 → 单个任务;存储层只存显式覆盖值(联系人的 Compute 槽位 mode=inherit 时不存模型)。
@@ -116,6 +117,46 @@ export function checkCompressionCall(contact: ContactModels, requestedModel: str
   if (requestedModel === want) return { ok: true };
   return freeze({ ok: false, code: "compression-model-mismatch", reason: `压缩必须用联系人 ${contact.name} 的说话模型 ${want},拒绝改用 ${requestedModel}(失败时保留原文,不换模型)` });
 }
+
+// ------------------------------------------------------------------ 说话侧有效配置快照(T-177 G2 = D;AC-32 ③)
+/** 宿主级的说话侧端点配置:联系人只有 speakingModel 一个字段,其余都取这一份(启动参数与环境变量)。 */
+export interface SpeakingEndpoint {
+  readonly provider: string;
+  readonly baseUrl: string;
+  /** 认证引用,不是密钥值:`<请求头>:env:<变量名>`(请求头 bearer / x-api-key),或 none。密钥只在私有调用边界按引用解析。 */
+  readonly authRef: string;
+  /** 单次输出上限,映射到适配器的 maxTokens;与状态笔记字节上限 stateNoteMaxBytes 无关。 */
+  readonly maxOutputTokens: number;
+  readonly contextWindow: number;
+  /** 推理参数,默认空;适配器没声明支持就显式拒绝,不丢弃后假装继承。 */
+  readonly reasoning?: Readonly<Record<string, unknown>>;
+}
+/** 一轮里对话、补写、检查共用的同一份不可变配置;fingerprint 覆盖全部非敏感字段与宿主启动号。 */
+export type EffectiveSpeakingConfig = Readonly<{
+  model: string;
+  vendor: Vendor;
+  provider: string;
+  baseUrl: string;
+  authRef: string;
+  maxOutputTokens: number;
+  contextWindow: number;
+  reasoning: Readonly<Record<string, unknown>>;
+  fingerprint: string;
+}>;
+/** 与两个 pi 适配器原有默认值相同(4096 / 200000),开发入口与生产入口共用这一份,不各写一套。 */
+export const DEFAULT_SPEAKING_ENDPOINT: SpeakingEndpoint = Object.freeze({ provider: "anthropic", baseUrl: "https://api.anthropic.com", authRef: "none", maxOutputTokens: 4096, contextWindow: 200_000, reasoning: Object.freeze({}) });
+const AUTH_REF = /^(?:none|(?:bearer|x-api-key):env:[A-Z_][A-Z0-9_]*)$/;
+export class SpeakingConfigError extends Error {
+  readonly code = "invalid-speaking-config";
+}
+function canonical(v: unknown): unknown { throw new Error("P1-A compile-only stub"); }
+/** 宿主端点配置的合法性:错了直接拒绝(说明里不回显原值,认证引用位置可能被误填成密钥)。 */
+export function checkSpeakingEndpoint(e: SpeakingEndpoint): SpeakingEndpoint { throw new Error("P1-A compile-only stub"); }
+/** 每轮开始解析一次:model 是这一轮实际生效的模型(含用户在失败卡上选的备用模型),其余取宿主级配置;bootId 是宿主启动号。
+ *  fingerprint 用 authRef + 启动号代替尚不存在的凭据修订号:进程内换密钥不改指纹,不在覆盖范围。 */
+export function resolveSpeakingConfig(endpoint: SpeakingEndpoint, model: string, bootId: string): EffectiveSpeakingConfig { throw new Error("P1-A compile-only stub"); }
+/** 快照指纹:规范化后的全部非敏感字段 + 宿主启动号的 sha256。缓存、诊断都按它认同一份配置。 */
+export function speakingFingerprint(body: Omit<EffectiveSpeakingConfig, "fingerprint">, bootId: string): string { throw new Error("P1-A compile-only stub"); }
 
 export function supportOf(caps: readonly ModelCapability[], harness: string, model: string): Support {
   const decl = caps.find((c) => c.id === model);

@@ -52,7 +52,7 @@ test("资料一次给出视图、预设、工作记忆与职责(承诺、在途�
   const p = r.value as ContactProfileView;
   assert.deepEqual([p.contact.id, p.contact.name], [c.id, "小克"]);
   assert.equal(p.persona, "做事先给结论");
-  assert.deepEqual(p.memory, { stateNote: { text: `处理到 ${dm.id} #${sent.seq}`, version: 1 }, longTerm: null });
+  assert.deepEqual(p.memory, { stateNote: { text: `处理到 ${dm.id} #${sent.seq}`, version: 1 }, longTerm: { prefix: { count: 0, items: [] }, anchored: { count: 0, items: [] }, sourceRetracted: 0, inactive: 0 } });
   assert.deepEqual(p.duties.commitments.map((k) => [k.text, k.status, k.taskId, k.roomId]), [["写周报", "active", task.id, dm.id]]);
   assert.deepEqual(p.duties.tasks.map((t) => [t.id, t.state, t.title]), [[task.id, "T3_Running", "写周报"]]);
   assert.deepEqual(p.duties.schedules.map((s) => [s.id, s.roomTitle, s.contactName]), [[sch.id, "项目群", "小克"]]);

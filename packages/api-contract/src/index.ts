@@ -5,3 +5,6 @@ export * from "./entities.ts";
 export * from "./events.ts";
 export * from "./schema.ts";
 export * from "./usage.ts";
+
+export * from "./memory.ts";
+export * from "./playbook.ts";

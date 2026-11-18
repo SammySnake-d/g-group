@@ -148,7 +148,7 @@ import { contactVersion, contactVersions, installContactHistory, recordContactCo
 import { type ForwardRecord, ForwardLinkStore, renderForwardText, renderLinked } from "./forward-link.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
 import { UsageLedger } from "./usage.ts";
-import { MemoryStore } from "./memory-store.ts";
+import { HygienicMemoryStore } from "./memory-hygiene.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
 import { PluginStore } from "./plugins.ts";
 import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief, reviewModelProblem } from "./review.ts";
@@ -190,7 +190,8 @@ export interface HostOptions {
   readonly userId?: string;
   readonly userName?: string;
   /** 每位联系人的脑子;同一个实现可服务多位联系人(round 输入里带联系人档案)。 */
-  readonly mind: (contact: ContactView) => ContactMind;
+  readonly mind: (contact: ContactView, speaking: modelConfig.EffectiveSpeakingConfig) => ContactMind;
+  readonly speakingEndpoint?: () => modelConfig.SpeakingEndpoint;
   /**
    * 按 (Harness, 模型) 取 Compute 适配器(AC-51 ⑦、D07.4 规则 2):给一个函数就是 Claude Code 的工厂;给表就是每个 Harness 一个工厂。
    * 表里没有的 Harness 是没接入:选了它的联系人派活在启动前被拦下,不改用别的 Harness 代跑。不给则派活直接失败(任务进 T11 并告诉联系人)。
@@ -219,7 +220,7 @@ export interface HostOptions {
   readonly newId?: (prefix: string) => string;
   readonly maxDeferMs?: number;
   /** 状态笔记压缩器(D06 第 2 小节第 3 块、D25 第 8 节):按联系人取,必须用它的说话模型做独立调用(AC-32 ③)。不给就不压缩。 */
-  readonly compactor?: (contact: ContactView) => ContactCompactor;
+  readonly compactor?: (contact: ContactView, speaking: modelConfig.EffectiveSpeakingConfig) => ContactCompactor;
   /** 状态笔记的 UTF-8 字节上限;超了请压缩器缩写,仍超就保留并报告,不截断。null / 不给:不设上限。 */
   readonly stateNoteMaxBytes?: number | null;
   /** 会话中途的全局记忆变化在第 5 块累积到几条就并入第 1 块前缀(D25 第 6 节「快照加增量」)。默认 20。 */
@@ -447,7 +448,7 @@ export class Host {
   private readonly stopUnconfirmed = new Map<string, string>();
   private readonly opts: HostOptions;
   private readonly now: () => string;
-  private readonly memory: MemoryStore;
+  readonly memory: HygienicMemoryStore;
   private readonly newId: (prefix: string) => string;
   private readonly assemble: RoundAssembler;
   private readonly activity = new Map<string, Activity>();
@@ -508,7 +509,7 @@ export class Host {
     this.exits = new MemberExits({ db: this.db, now: this.now });
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
     ensureSearchIndex(this.db);
-    this.memory = new MemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d));
+    this.memory = new HygienicMemoryStore(this.db, join(opts.dataDir ?? dirname(opts.file), "memory"), (w, d) => this.report(w, d), this.now);
     this.history = new HistoryAccess({
       db: this.db,
       readableRooms: (contactId) => {
@@ -2876,12 +2877,13 @@ export class Host {
     return `${prefix}\n${summary}`;
   }
   /** 本轮要落盘的状态笔记:模型没写就请压缩器补写(同一说话模型的独立调用),超上限就缩写;最后移除撤回原文 */
+  memoryNeighbors(_contactId: string, _q: { rooms: readonly string[]; text: string }): { id: string; title: string; body: string }[] { throw new Error("P1-A memory neighborhood not implemented"); }
   private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], previous: string | null, pending: readonly Inbound[], signal: AbortSignal, sourcesChanged: () => boolean, roundId: string): Promise<{ note: string | null; remember: MindAction[]; persona: string | null; pending: Inbound[] } | null> {
     const contactId = contact.id;
     const prev = previous;
     const usageRooms = [...new Set(fresh.map((f) => f.roomId))];
     const usage = (kind: "compact" | "reflect") => this.usage.sink({ kind, roundId, contactId, roomIds: usageRooms });
-    const compactor = this.opts.compactor?.(this.contactView(contact));
+    const compactor = this.opts.compactor?.(this.contactView(contact), modelConfig.resolveSpeakingConfig(modelConfig.DEFAULT_SPEAKING_ENDPOINT, contact.speakingModel, this.bootId));
     const profile = { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona };
     const max = this.opts.stateNoteMaxBytes ?? null;
     let note = out.stateNote;
@@ -3228,7 +3230,7 @@ export class Host {
           return progressGet(this.runs, contactId, this.roomsOfContact(contactId).filter((r) => !leaving.has(r.id)), roomId, id);
         },
       };
-      out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, ac.signal, tools, this.usage.sink({ kind: "round", contactId, roomIds: [...freshRooms], roundId })), stalled, closing]);
+      out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: model }, modelConfig.resolveSpeakingConfig(modelConfig.DEFAULT_SPEAKING_ENDPOINT, model, this.bootId)).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, ac.signal, tools, this.usage.sink({ kind: "round", contactId, roomIds: [...freshRooms], roundId })), stalled, closing]);
     } catch (e) {
       this.setActivity(contactId, null, "idle");
       if (stall) this.runs.failStalled(unit.id, stall);
