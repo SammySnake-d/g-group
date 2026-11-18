@@ -52,7 +52,14 @@
   "red": {
     "commit": "07cef7c6df795003e755f4b2b6191ab7e1a2fef5"
   },
-  "review": null,
+  "review": {
+    "agent": "carbon-agy",
+    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
+    "model": "gemini-4-carbon-high",
+    "verdict": "reject",
+    "reviewed_hash": "c5cbd909f6d05452459ca27a36abf0319fe73ec4198ace5520264498dfeaed3e",
+    "notes": "Round 1 REJECT (see reviews/feat-agy-p0-attention-compaction-guard.md): P1 US2/G4-01/D06.3/AC-46 — In Host.runRound, unread system loop-guard notices and pre-splice refs from LoopGuard-withheld group messages leak across session boundaries when a contact is woken in an unrelated private DM or other room, exposing the stopped group to prefetch, query_history, quote Page-In (Block 5), focusRoom selection, and premature markRead."
+  },
   "waiver": null,
   "unverifiable": "按 R-08，部分 D 层通过不等同 AC-08、AC-32、AC-42 整项通过；B3/B4/B8/B9 未覆盖范围见各项。尚无独立跨厂商审查，不请求豁免。",
   "verification": {
