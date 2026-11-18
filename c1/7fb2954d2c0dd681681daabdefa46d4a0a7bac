@@ -1,0 +1,25 @@
+README.md
+  s_54254ea6b50f3d::t_0d68cce61dcc46 96,99-100
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  s_54254ea6b50f3d::t_93a10b094057f7 13-14
+docs/spec/验收文档-v0.1.md
+  s_54254ea6b50f3d::t_69175e41b041db 310,319-320,330
+packages/adapter-pi-contact/src/recall.test.ts
+  s_54254ea6b50f3d::t_8e4a85d04428e6 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c17fb2954d2c0dd681681daabdefa46d4a0a7bac",
+  "prompts": {},
+  "sessions": {
+    "s_54254ea6b50f3d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f0f5-ce75-7d12-8c7a-f0525c23cc53",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
