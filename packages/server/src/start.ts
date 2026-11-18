@@ -4,7 +4,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ContactView } from "@g-group/api-contract";
-import { type ContactCompactor, type ContactMind, DEFAULT_RETRY_POLICY, type ThresholdConfig } from "@g-group/kernel";
+import { type ContactCompactor, type ContactMind, DEFAULT_RETRY_POLICY } from "@g-group/kernel";
 import { type ComputeCommands, claudeCompute } from "./compute.ts";
 import { deskCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
@@ -26,8 +26,6 @@ export interface StartOptions {
   readonly computeInputMaxBytes?: number | null;
   /** compute=claude 时起 Compute 的 claude 命令与汇报工具命令(打包后的桌面应用给自带路径);不给用适配器默认值。 */
   readonly computeCommands?: ComputeCommands;
-  /** 卡死阈值的基础层(AC-43 ⑯):不给就是 15 分钟 / 120 秒;用户在设置里、联系人上单独设的覆盖它 */
-  readonly runThresholds?: ThresholdConfig;
 }
 export interface Started {
   readonly host: Host;
@@ -94,7 +92,6 @@ export async function startServer(o: StartOptions): Promise<Started> {
     ...(o.onReport ? { onReport: o.onReport } : {}),
     computeHarnessRetries: fake ? 0 : DEFAULT_RETRY_POLICY.maxAutoRetries,
     ...(o.computeInputMaxBytes !== undefined ? { computeInputMaxBytes: o.computeInputMaxBytes } : {}),
-    ...(o.runThresholds ? { runThresholds: o.runThresholds } : {}),
   });
   if (model) host.updateSettings({ defaultSpeakingModel: model, defaultComputeModel: model, confirmAffected: true });
   const service = createService(host);
