@@ -1,0 +1,47 @@
+README.md
+  s_f506d89fd64ab4::t_c0550e04fa2b2f 78-82
+packages/adapter-pi-contact/src/compact.ts
+  s_f506d89fd64ab4::t_0ef1b9c15b04a0 142-143
+packages/adapter-pi-contact/src/mind.ts
+  s_f506d89fd64ab4::t_d2d2c20a9d71ba 196-207,236,257-260,286
+packages/adapter-pi-contact/src/tools.ts
+  s_f506d89fd64ab4::t_41f606fd818580 1-2,6,23,28,40-41,144-155,182,211,252-254,285-297
+packages/domain/src/log.ts
+  s_f506d89fd64ab4::t_18b89f99471739 7,26
+packages/kernel/src/history-search.ts
+  s_f506d89fd64ab4::t_a60f919c86aa44 1-8,12-33
+packages/kernel/src/history-tools.ts
+  s_f506d89fd64ab4::t_5a75643540dbff 4-5,8-9,22,25-26,36,38,41-67,69,75-83,92-95,98-100,102-109,111-114,116-128,130-155,157,159,161,163,165,169-181,183-234,236-243,245-248,250-256,258-273
+packages/kernel/src/memory.ts
+  s_f506d89fd64ab4::t_a49b6fe80e172c 5-7,11,13,151-152,154,157-174,177,181,183,187-188
+packages/server/proof/memory-mutations.mjs
+  s_f506d89fd64ab4::t_d825e4b1311d1b 43,68
+packages/server/src/assemble.ts
+  s_f506d89fd64ab4::t_74d90c95308efc 98,118-119
+packages/server/src/compaction-summary.ts
+  s_f506d89fd64ab4::t_1b9bab2f837077 6,8-70,74-98
+packages/server/src/history.ts
+  s_f506d89fd64ab4::t_35e62c9d177829 7-30,32,47-48,67-68,74-141,143-239,242-243
+packages/server/src/host.ts
+  s_f506d89fd64ab4::t_d90791cfef6157 119-122,128,138-140,177,181,285-286,296-297,477,493-503,894-895,1082-1083,1091-1099,1137-1160,1162,1166,1171,1177-1187,1214-1225,1237,1590-1593,1614-1617,1800-1803,1842,1869,2197,2204,2247,2254,2556,2586,2622-2677,2679,2681,2691,2710,2719,2730-2732,2771,2783-2788,2792,2833-2843,2846,2848,2890-2906,2918,2926,2928,2935-2938,2941-2951,2953,2964,2967,2970-2978,2983,3015,3029,3050-3056,3058-3062,3065,3067-3071,3102,3122,3158-3160,3166,3174-3181,3187,3211-3217,3227,3237,3245,3260,3343,3381,3418,3430,3452-3457,3472-3481,3742,4264,4317,4683,4688,4699,4705,4722,4755,4784,4825,5089-5106,5133,5304,5345,5461-5470
+packages/server/src/loop-guard.ts
+  s_f506d89fd64ab4::t_c077f594a3d937 1-2,4,6-14,34-39,41-135
+packages/server/src/room-post-budget.ts
+  s_f506d89fd64ab4::t_77f0f295e79b8c 30-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3415fbeac0c4d0f628492f8554d2d58ee074b129",
+  "prompts": {},
+  "sessions": {
+    "s_f506d89fd64ab4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ec48-cee6-7443-bea3-0bb9312c7274",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
