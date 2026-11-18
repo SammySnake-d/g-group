@@ -1,0 +1,27 @@
+README.md
+  s_173fcb351f5325::t_6e36b82937d440 118-121
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  s_173fcb351f5325::t_017de16f34a239 48-54
+docs/spec/验收文档-v0.1.md
+  s_173fcb351f5325::t_3715d0c0076127 312-315
+packages/server/proof/f0-frontend-contracts.txt
+  s_173fcb351f5325::t_42b9380b5cf007 1-22
+receipts/feat-agy-frontend-contract-extensions.json
+  s_173fcb351f5325::t_c5f82cc8e403ab 1-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8e8e118bb0b76e01f8f15d172193b8ec8d484791",
+  "prompts": {},
+  "sessions": {
+    "s_173fcb351f5325": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f0bf-a6ec-7e40-83a5-fd27bd422428",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}

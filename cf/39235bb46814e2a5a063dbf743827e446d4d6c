@@ -1,0 +1,41 @@
+packages/adapter-codex-compute/src/adapter.ts
+  s_4615ac13a0183c::t_d5fa57065bcc55 1-8,17-74,76-167,170
+packages/adapter-codex-compute/src/feed.ts
+  s_4615ac13a0183c::t_ee155e96225665 1,3-13
+packages/adapter-codex-compute/src/protocol.ts
+  s_4615ac13a0183c::t_2479ae9631bbcd 1-6,8-9,18-20,34-361
+packages/adapter-codex-compute/src/startup.ts
+  s_4615ac13a0183c::t_bbbb4be38272ae 1-22
+packages/kernel/src/compute.ts
+  s_4615ac13a0183c::t_1e0fb340917eec 165,228-230
+packages/process-tools/src/cleanup.ts
+  s_4615ac13a0183c::t_37bd213a0222cf 1-160
+packages/process-tools/src/procgroup.ts
+  s_4615ac13a0183c::t_c12785fdc4bb89 1-6,8-91,93-107
+packages/process-tools/src/stop-confirm.ts
+  s_4615ac13a0183c::t_085a35eec69b69 1-7,9-50
+packages/server/src/cli.ts
+  s_4615ac13a0183c::t_bb7a02f3ca1dc8 8,14,75,123,152
+packages/server/src/compute.ts
+  s_4615ac13a0183c::t_b9a4850c2710dc 6,54-58
+packages/server/src/host.ts
+  s_4615ac13a0183c::t_98bdcbe4aa5cfc 452-454,2201,3596,3964,4138-4146,4195-4338,4352-4353,4468-4472,4491-4496,5888-5891
+packages/server/src/start.ts
+  s_4615ac13a0183c::t_df07e926afb44f 8,20-21,29,49,53-56,75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cf39235bb46814e2a5a063dbf743827e446d4d6c",
+  "prompts": {},
+  "sessions": {
+    "s_4615ac13a0183c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f07c-37be-71c1-84c4-538a939db970",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
