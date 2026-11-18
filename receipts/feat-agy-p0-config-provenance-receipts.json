@@ -50,7 +50,14 @@
   "red": {
     "commit": "ff8e700236ae677ad1a06ff9521fcce294f7e6c5"
   },
-  "review": null,
+  "review": {
+    "agent": "carbon-agy",
+    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
+    "model": "gemini-4-carbon-high",
+    "verdict": "approve",
+    "reviewed_hash": "5d2f0ffd9b4f509525b3a423a1b85cb9ceda1e23bc166127ae546f45f63ce6d0",
+    "notes": "Round 2 APPROVE (see reviews/feat-agy-p0-config-provenance-receipts.md): Verified Round 1 P1 fix in Host.readLinked (AC-08 / G4b retractedBodies + scrubLineBody scrubbing of echoed originals and pre-retract edits before query filtering, and U24 static uptoSeq event bound blocking post-link edits while honoring post-link retracts). Independent typecheck, lint, 1973/1973 tests, R2 incremental Red (2/2), combined Red (72/72), live repro probe, and 4/4 R2 single-site fault injections all passed."
+  },
   "waiver": null,
   "unverifiable": "AC-01、AC-08、AC-20、AC-32、AC-46：本片证据仅为 D 层受控替身和真实宿主/SQLite；真实供应商、UI 与端到端 X 层留 B4/B9，C-US09 撤回取消在途任务留 B6。R1 Red=d2e38ab3d6a8c1924c9ed4fb45aca551cae762d4；R1 由 carbon-agy 拒绝（c3d25d4d12514b2cabdd20c1bbd0edd659c09efd）；R2 incremental Red=8264ebe4ffe33837997c1ca23a30f4dfa40df5a1；R2 combined Red=ff8e700236ae677ad1a06ff9521fcce294f7e6c5。R2 等待新的独立跨厂商审查，不请求豁免。",
   "verification": {

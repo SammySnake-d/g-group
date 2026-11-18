@@ -1,4 +1,4 @@
-# REVIEW 1: REJECT b8198350a59df2538b1b8c39282e008131a982ee8f1e4ea3cddc8924ae125228
+# REVIEW 2: APPROVE 5d2f0ffd9b4f509525b3a423a1b85cb9ceda1e23bc166127ae546f45f63ce6d0
 
 ## Round 1 — REJECT
 
@@ -66,3 +66,47 @@ node scripts/gates/run-all.ts --local --base=origin/dev/agy-backend --branch=fea
 | `B3-F6` | `host.ts`: invert `compute.status === "completed"` filter on `computeRuns` | `RD03` (`failed`/`stopped`/`running` Compute disclosure tests + `RD01`/`RD02`) |
 | `B3-F7` | `host.ts`: set `forwarded: false` in `consentFromMessage` | `forward-link.test.ts`: `forward provenance vetoes consent when the resolver sees a forwarded row...` |
 | `B3-F8` | `host.ts`: drop `AND at > ?` filter in `Host.progress` | `B301 tasks.progress filters strictly after afterAt before applying the requested limit` |
+
+
+## Round 2 — APPROVE
+
+**Reviewed HEAD:** `910b905f6caf38e267ede8856c7038a604e12f65`  
+**Base:** `origin/dev/agy-backend` at `491c26c3bfe44892276569fb46bbde38c525e151`  
+**Content hash:** `5d2f0ffd9b4f509525b3a423a1b85cb9ceda1e23bc166127ae546f45f63ce6d0`  
+**Author:** `codex-cli:01a1ecef-0b2a-7b20-8837-b3f7345344c2` (`shayu/gpt-6.2-sol`, OpenAI)  
+**Reviewer:** `antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98` (`carbon-agy` / `gemini-4-carbon-high`, Google)
+
+### Round 1 blocker resolution verified
+
+1. **Resolved — `Host.readLinked` (`read_linked`) retract-echo scrubbing (`AC-08` / `G4b`) & static `uptoSeq` edit upper bound (`U24`) (`packages/server/src/host.ts:1630–1642`):**
+   - **Sub-issue A (`AC-08` / `G4b` echoed retracted bodies & pre-retract edits)**:
+     - `Host.readLinked` (`host.ts:1630–1631, 1638–1642`) loads `log` once via `loadLog(this.db.store, \`room:${link.linkedRoomId}\`)`, computes `retracted = retractedBodies(log.events)` across the full event log (capturing both original bodies and pre-retract edits), and scrubs every non-`gone` candidate text (`this.forwardText(link.linkedRoomId, m)`) via `scrubLineBody(raw, retracted).text` **before** applying `terms.every((t) => text.toLowerCase().includes(t))` and rendering.
+     - Re-running the exact Round 1 live reproduction probe confirmed `#2 · 小甲` renders `收到:〔已撤回内容已移除〕` and `read_linked({ query: "4471" })` returns `本次 0 条`.
+   - **Sub-issue B (`U24` static `uptoSeq` bound against post-link edits)**:
+     - `Host.readLinked` (`host.ts:1633`) projects `{ ...log, events: log.events.filter((e) => e.seq <= link.uptoSeq || e.body.kind === "retract") }`, keeping post-link `message` and `edit` events (`e.seq > link.uptoSeq`) invisible until `rooms.link` refreshes `uptoSeq` while honoring post-link `retract` events immediately.
+     - Re-running the Round 1 live reproduction probe confirmed `#3 · 我` retains `关联前的公开约定:12 月 3 日` and `read_linked({ query: "POST_LINK_SECRET" })` returns `本次 0 条`.
+   - **Regression coverage**: `packages/server/src/forward-link.test.ts` adds 2 Round-2 tests (`AC-08 G4b: read_linked scrubs echoed retracted bodies and pre-retract edits before filtering query` and `U24: read_linked enforces static uptoSeq bound against post-link edits while honoring post-link retracts`).
+
+### Independent Round 2 verification evidence
+
+```sh
+node /tmp/gg-agy-rev-b3/scripts/gates/run-all.ts --hash --repo=/tmp/gg-agy-rev-b3 --branch=feat/agy-p0-config-provenance-receipts --base=origin/dev/agy-backend
+npm run typecheck
+npm run lint
+npm test
+node scripts/gates/run-all.ts --local --base=origin/dev/agy-backend --branch=feat/agy-p0-config-provenance-receipts
+```
+
+- `npm run typecheck`: exit 0.
+- `npm run lint`: Biome checked 279 files, exit 0.
+- `npm test`: **1973/1973** passed (`0` failed, `0` skipped, `0` todo, `0` cancelled).
+- Isolated R2 incremental Red replay (`8264ebe4ffe33837997c1ca23a30f4dfa40df5a1` in `/tmp/gg-agy-fault-b3`): zero diff on `packages/server/src/forward-link.test.ts` to Green (`8f9d547c`); **2/2** new R2 tests failed by name (`12` unchanged passed).
+- Isolated combined R1+R2 Red replay (`ff8e700236ae677ad1a06ff9521fcce294f7e6c5` in `/tmp/gg-agy-fault-b3`): `tsc -p tsconfig.json` exit 0; zero test diff across `"packages/**/*.test.ts"` `"scripts/gates/*.test.ts"` to Green (`8f9d547c`); 8 changed test files ran `95` tests with **72 named failures** and `23` unchanged passing controls (`0` skipped).
+- Isolated R2 single-point fault injections (`4/4` killed in `/tmp/gg-agy-fault-b3`, then deleted):
+
+| Fault ID | Single-point mutation | Caught by named test(s) |
+|---|---|---|
+| `B3-R2-F1` | `host.ts:1639`: omit `scrubLineBody(raw, retracted)` (`const text = raw`) | `AC-08 G4b: read_linked scrubs echoed retracted bodies and pre-retract edits before filtering query` |
+| `B3-R2-F2` | `host.ts:1642`: filter `terms` against unscrubbed `forwardText` instead of scrubbed `text` | `AC-08 G4b: read_linked scrubs echoed retracted bodies and pre-retract edits before filtering query` |
+| `B3-R2-F3` | `host.ts:1633`: restore unbounded `project(log)` | `U24: read_linked enforces static uptoSeq bound against post-link edits while honoring post-link retracts` |
+| `B3-R2-F4` | `host.ts:1633`: drop `|| e.body.kind === "retract"` from bounded log projection | `U24: read_linked enforces static uptoSeq bound against post-link edits while honoring post-link retracts` |
