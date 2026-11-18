@@ -1,0 +1,167 @@
+Slice B2 — attention routing, history retrieval, autonomous loop guard, length-safe compaction
+Base (B1): 5d80aa865478eab0b6d83071db9717d37a7844f3
+RED: 07cef7c6df795003e755f4b2b6191ab7e1a2fef5
+GREEN: 3415fbeac0c4d0f628492f8554d2d58ee074b129
+
+Feature map (D-layer unless noted)
+- History: one acp-kernel import seam (kernel/src/history-search.ts); hard-filtered memory candidates ranked by hybrid relevance; Host queries and bounded prefetch; read-only query_history; retract scrub in search, paging, prefetch and compaction inputs. Contact tools: 15; B1 progress_get remains last.
+- Attention: structured mentions and @everyone dispatch; substantive unmentioned replies can supplement without parroting; group snapshot drift is rechecked at commit before a reply is recorded.
+- Autonomous safeguards: persistent SQLite causal roots travel through messages and Compute; root hop/fan-out stops survive restart. Room post budget handles duplicate windows, ring cooldown, sender caps and escalation; user-initiated turns are not refused by the autonomous-post policy. No chat-admin, contact-actions or contact-call-check paths imported.
+- Compaction: truncated Contact output drops staged state/actions atomically while preserving input. Truncated compaction output is rejected; pending and fresh visibility is revalidated after asynchronous work; a failed compaction retains raw context and any committed reply. Large recovery context can use deterministic, bounded, source-labelled excerpts without replacing persisted originals.
+- Provenance of reused source: Billion Context 541cf26 / acp-kernel 0.0.191 (MIT); OpenMausBot 613ed01fd (Apache-2.0). See README and third_party/acp-kernel/UPSTREAM.md.
+
+Baseline npm test: 1767 passed; 0 failed, cancelled, skipped or todo.
+RED npm exec -- tsc -p tsconfig.json: exit 0.
+RED node --test: 20 changed test files, 155 tests; 130 named failures, 25 passed, 0 cancelled, skipped or todo (exit 1 as intended).
+Frozen tests: git diff RED GREEN -- packages/**/*.test.ts was empty.
+
+GREEN npm run typecheck: exit 0.
+GREEN lint: exit 0.
+GREEN npm test: 1896 passed; 0 failed, cancelled, skipped or todo.
+Default Host group Block-1: 3465 and 3465 UTF-8 bytes across two turns; both below 4000.
+Clean-archive npm ci --silent --ignore-scripts: exit 0. Packaged acp-kernel 0.0.191 live hybrid retrieval returned the expected top hit without lifecycle scripts or a vendor-local build.
+B1 protected paths and progress_get fixture matched the base; vendor tree matched ref/g3.
+
+R-03 / R-04: G-STUB, G-TAUTO and G-LAYER each reported 0 problems on the GREEN preflight.
+R-05: bounded calibration of the eight paths below. Each comparison ran the same named test against unmodified GREEN and a single-site fault; the control passed and the mutant reached and failed its assertion. This does not certify full AC coverage.
+hybrid-memory-rank: control passed; mutant assertion failed — packages/kernel/src/memory-rank.test.ts › G3-a3 稀有词优先:同锚点下与本轮文字共有稀有词的条目排在只共有常见词的条目前面
+retract-scrub: control passed; mutant assertion failed — packages/server/src/history-scrub.test.ts › 预取行不带已撤回原文:联系人回话抄了用户原文、用户撤回后,第 5 块只留编号、作者、时间,原文换成占位
+group-snapshot-recheck: control passed; mutant assertion failed — packages/server/src/group-supplement.test.ts › 并发群回复在提交时发现别人已发言须复核,无新信息不重复且有新信息可补充
+causal-hop-cap: control passed; mutant assertion failed — packages/server/src/loop-guard.test.ts › 因果根继承：派生消息连续传递同一根，不能每条消息重新获额度
+room-duplicate-window: control passed; mutant assertion failed — packages/server/src/room-post-budget.test.ts › refuses an identical repost inside the duplicate window and allows it after
+atomic-length-stop: control passed; mutant assertion failed — packages/adapter-pi-contact/src/mind.test.ts › A5 截断前已有动作与笔记:整轮失败,不得把先前登记的内容交给宿主
+fallback-authorization: control passed; mutant assertion failed — packages/server/src/a5-fresh-auth-races.test.ts › 授权在失败反思期间撤回:不能将旧快照发给下一次普通压缩
+bounded-excerpt: control passed; mutant assertion failed — packages/server/src/a5-fresh-auth-races.test.ts › 大段失败上下文在主轮次退到带来源的有界摘录,原文仍持久化
+8/8 one-site mutants killed by named assertion failures; 8/8 original-code controls passed
+
+Canonical RED — named failures
+not ok 1 - 压缩非空输出以 max_tokens 截断时拒绝当成完整笔记,结束的同文仍可用
+not ok 2 - 反思 max_tokens 截断即使碰巧是完整 JSON 也不得作为有效检查结果
+not ok 6 - query_history 是声明给模型的一个内置只读查询工具:检索与分页回读两种用法经宿主本轮查询口取结果作为工具结果,不登记动作;参数形状不对不调用
+not ok 7 - 找旧消息:没给查询口、宿主拒绝或查询口出错都以错误结果告知模型,出错不说成没找到
+not ok 8 - A5 截断无动作:真实 mind 收到 max_tokens 必须失败,不能当成空回合成功
+not ok 9 - A5 截断前已有动作与笔记:整轮失败,不得把先前登记的内容交给宿主
+not ok 10 - A5 截断携带工具调用:本轮直接失败,不执行不完整工具或向模型续发
+not ok 11 - A5 正常 end_turn 的空回合仍可成功,不误判截断
+not ok 12 - 首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有十五个具名工具(含 read_quote_parent、progress_rerun、progress_get、query_history)
+not ok 32 - 历史回读工具的原文进工具结果,不进小于 4000 UTF-8 字节的缓存前缀
+not ok 33 - 已撤回原文的集合:消息本体与撤回前的每个编辑稿都在内;没撤回就是空
+not ok 34 - 正文里出现已撤回原文:只换掉那一段,别的字留着(联系人回话「收到:…」与用户自己的消息都算)
+not ok 35 - 抄写时分了行或加了空格、精确替换不掉:整段隐去,不留半截
+not ok 36 - 短文本不扫(与状态笔记同一规则):撤回「好的」不会把别的消息里的「好的」一起抹掉
+not ok 37 - G3-01a 改写问法能找回原消息:会议安排、谁来审查、部署到测试服都命中原文(这些问法在原文里没有字面子串)
+not ok 38 - G3-01b 空查询、空集合、不相关的查询都返回空,不回退成整个集合
+not ok 39 - G3-01c 同分按传入先后排,换个顺序传入结果跟着换;最多返回 limit 条
+not ok 40 - G3-01d 只在传入的文档里排序:结果都来自传入集合;ref 重复直接报错,不让上游按 ref 合并时串文
+not ok 41 - 消息版本是作用到它的最后一个编辑或撤回事件的 seq,没有就是消息自己的 seq;撤回的、宿主判为看不见的不带正文,交给检索的文档只收可读的最新版本
+not ok 42 - 预取挑选:每条新消息的命中先过最小分、切在断崖前,再按名次轮流合并,同一条只收一次,最多 3 条;指针只给一行预览
+not ok 43 - 回读邻域:前后各自最多 20 条;正文按回读预算从近到远装,装不下的一侧停下并给续读位置;中心太长只给前一段
+not ok 44 - G3-a1 全文分量只用名次:命中按检索分数分档,是 0 起、步长 1 的整数,同分同值,未命中为 0
+not ok 45 - G3-a2 名次封顶在旧字面重合个数的上界内:档数多于本轮文字的字面单位时,最高档也不超过上界
+not ok 46 - G3-a3 稀有词优先:同锚点下与本轮文字共有稀有词的条目排在只共有常见词的条目前面
+not ok 47 - G3-a4 并列顺序稳定:同分按 id 排,与传入顺序无关;md 序列化再解析(重建索引)前后展开结果相同
+not ok 48 - G3-a5 AC-42 现有夹具(审查人从 Astra 改为 Codex 等)换分量前后展开与清单相同
+not ok 49 - G3-01e 全文最相关也越不过硬筛:已替代、已撤销、过期、锚点不相交、全局条目不进读取
+not ok 50 - reflect 返回不可解析 JSON 后宿主告警、同模型普通压缩兜底,下一轮反思能恢复
+not ok 51 - 退出后重入同一群之前未触发其他轮次,旧待压缩消息不能复活
+not ok 52 - 本轮主模型运行时撤回本轮新消息,反思不得继续接收其原文
+not ok 53 - 本轮反思运行时撤回本轮新消息,结果不落盘或进入下一轮
+not ok 54 - 本轮主模型运行中被移出源群,不得把源群新消息送去后续反思
+not ok 55 - 下一轮模型运行中撤回待压缩消息,反思与落盘不得再使用撤回原文
+not ok 56 - 反思调用进行中原文被撤回,丢弃旧反思结果且旧动作不重复提交
+not ok 57 - 下一轮模型运行中移出群,反思不得使用失权群的待压缩原文
+not ok 58 - 同一批消息和撤回只送达撤回事件,不向联系人或反思传原文
+not ok 59 - Compute 和定时输入失败后保留各自一次,不重置已消费事件或重复回复
+not ok 60 - 反思 JSON 持续无效且补压缩也失败时下一轮保留上轮未经压缩的原文
+not ok 61 - 反思无效且补压缩被截断时,宿主不覆盖旧笔记并保留本轮原文给下一轮
+not ok 62 - 未经压缩原文在撤回后不随回退上下文重新发给联系人
+not ok 63 - 联系人移出群之后,该群待压缩原文不进入其私聊上下文
+not ok 64 - 失权群的待压缩原文不能经私聊反思再产生全局记忆
+not ok 65 - 撤回后待压缩队列自身不持久保留撤回原文
+not ok 66 - 授权在失败反思期间撤回:不能将旧快照发给下一次普通压缩
+not ok 67 - 大段失败上下文在主轮次退到带来源的有界摘录,原文仍持久化
+not ok 68 - A5 宿主:无动作 max_tokens 不推进群游标,进入失败流程
+not ok 69 - A5 宿主:动作后 max_tokens 整轮不提交,群游标不推进
+not ok 70 - A5 宿主:正常 end_turn 空回合照常成功并推进游标
+not ok 71 - A5 宿主:默认未知失败上限一次重试,恢复时原消息仍被处理且不换模型预算
+not ok 72 - A5 宿主:持续截断按默认未知失败上限只重试一次,不推进游标
+not ok 73 - keeps the last two exchanges and folds only older history
+not ok 74 - preserves corrections, signs, paths and unfinished outcomes without promoting the opening request
+not ok 75 - under pressure keeps recent corrections rather than pinning obsolete instructions
+not ok 76 - preserves prior summaries as labelled source data, not instructions for the helper
+not ok 77 - opens only the excerpt fallback with the header stored records are recognised by
+not ok 78 - works without a model helper
+not ok 79 - aborts a timed-out helper and uses the labelled deterministic fallback
+not ok 80 - Stop prevents a late helper result from being committed, even if it ignores cancellation
+not ok 81 - bounds model output without losing the latest source correction
+not ok 82 - a failed text helper falls back to labelled excerpts with the source correction
+not ok 83 - UTF-8 excerpt budget does not split code points or omit the latest correction
+not ok 87 - 群里只 @ 一人:未被点名联系人可补充新信息,联系人回复仍唤醒旁观者纠正
+not ok 88 - 同批未点名群请求和点名别人的请求:联系人可引用并回复前者
+not ok 89 - 同时收到别人被点名的消息和自己的 Compute 进度:不能吞掉进度汇报
+not ok 90 - 群里点名另一人时未被点名者可直接发表有新信息的补充
+not ok 91 - 未被点名者收到的群聊指引区分重复附和与有新信息的补充
+not ok 92 - 并发群回复在提交时发现别人已发言须复核,无新信息不重复且有新信息可补充
+not ok 93 - 结构化 @everyone 展开为当前成员,与逐个点名去重并立即唤醒;纯正文不升级注意级别
+not ok 94 - 宿主自动群发的重复与无人回答额度拒收,有真人新消息仍可发言
+not ok 95 - G4-03 模型不调工具,第 5 块也有最多 3 条旧消息指针:只给编号、作者、时间、一行预览,标明旧消息供参考不是新要求;和新消息一字不差的旧消息不预取
+not ok 96 - G4-03 关掉预取第 5 块就没有旧消息指针;开和关两种情况下第 1 块固定前缀逐字相同,预取前后也不变
+not ok 97 - G4-03 预取不挤显式引用:被引用的旧消息照常整条换入、不在预取里重复;整轮超预算时先丢预取,这一轮照常跑
+not ok 98 - G4-b 预取超时不挡这一轮:检索挂住或同步检索超过时限都照常调模型,第 5 块写明没预取成,诊断里有耗时
+not ok 99 - G4-b 预取出错不挡这一轮:照常调模型,第 5 块写明没预取成,诊断里有原因
+not ok 100 - 预取行不带已撤回原文:联系人回话抄了用户原文、用户撤回后,第 5 块只留编号、作者、时间,原文换成占位
+not ok 101 - 回读窗口不带已撤回原文:抄了原文的邻居只换掉那一段,撤回的那条仍给占位,别的字留着
+not ok 102 - 检索结果不带已撤回原文:命中那条仍给编号、作者、时间与版本,正文里的原文换成占位
+not ok 103 - 抄写时分不出原样(加了空格)时整段正文隐去:行还在、编号与作者还在,不留半截
+not ok 104 - 只换抄到撤回原文的那条:没抄到的消息一字不动
+not ok 105 - G4-01 交给检索的文档只有当前可见的最新版本:撤回的、私聊回退撤下的、编辑前的旧稿都不在里面;命中的版本取最后一次编辑的 seq
+not ok 106 - G4-01 联系人同时在私聊和群里:群里这一轮搜不到也读不到私聊的内容,私聊那一轮照常搜得到
+not ok 107 - G4-a 一轮同时带群和私聊的新消息:预取每条只搜它自己的会话,工具在这一轮的会话集合里搜,不同会话同号不串
+not ok 108 - G4-02 检索之后、返回之前被编辑或撤回:撤回的命中去掉,编辑过的改读当前版本,不回检索时的旧正文
+not ok 109 - G4-02 检索之后、返回之前联系人被移出这个群:这个群的命中不再返回
+not ok 110 - G4-02 回读时每条邻居单独核对:撤回的只给占位、回退撤下的看不见,中心这条给最新版本
+not ok 111 - G4-02 回读超过回读预算就分页:每页正文不超预算,照给出的续读位置接着读能读全
+not ok 112 - R1-F01 派活任务卡继承触发消息的因果根
+not ok 113 - R1-F02 Compute 交付消息继承触发任务的因果根
+not ok 114 - 任务因果根实际持久化，宿主重启后 Compute 事件仍继承来源
+not ok 115 - R1-F06 别的会话用户输入不能重置本会话的派生根
+not ok 116 - R1-F09 两个独立根各自计数互不占用
+not ok 117 - R1-F10 同会话多条派生输入必须继承每一根
+not ok 118 - R1-F11 多根消息第二根已停时仍判为停止
+not ok 119 - R1-F14 宿主把滚动频率上限接入真实注意循环
+not ok 120 - 被拦原文跨重启和无关私聊保留，续话只补交一次
+not ok 121 - 旧游标已越过被拦消息时，用户续话在第五块补回原文
+not ok 122 - 失败联系人代发的群级卡继承触发输入的因果根
+not ok 123 - 宿主连续退出后的恢复失败卡沿用原始批次因果根
+not ok 124 - 用户重跑时联系人任务卡仍必须经过因果唤醒准入
+not ok 125 - R1-F07 同一根多条消息被拦只产生一条停止说明
+not ok 126 - R1-F08 被拦的唤醒不得进入注意循环
+not ok 127 - R1-F15 同一联系人消息重投不再排入注意循环
+not ok 128 - 探针P1：记忆冲突提问(联系人发言)应继承因果根；两位联系人借它互唤应在上限内停止
+not ok 129 - 探针P1b：重跑到上限后的「未做」说明(联系人发言)应继承因果根；两位联系人借它互唤应在上限内停止
+not ok 130 - 探针P2：经 Compute 往返的联系人互唤(派活→完成→回话→再派活)应受同一因果链上限约束
+not ok 131 - 探针P3：两个不相干会话的因果链不应互相计数、互相叫停
+not ok 132 - 探针P4(对照)：被拦后用户直接续话,被拦的那条原文随续话一起给到被拦的联系人
+not ok 133 - 探针P4：被拦后该联系人先在别处跑过无关的一轮,用户再续话时被拦的那条原文仍应给到它
+not ok 134 - 探针P5：默认上限下四人群里,已放行(已扣额度)的唤醒不应因同一条消息后面的目标被拦而作废
+not ok 135 - 因果根继承：派生消息连续传递同一根，不能每条消息重新获额度
+not ok 136 - 同根并发分支共用总额度，不同根互不占用，多根派生取每根约束
+not ok 137 - 消息重投使用会话、消息与目标联系人的稳定键，不二次扣额度
+not ok 138 - 频率额度使用滚动一分钟；频率停止持久保留，等新用户输入开新根
+not ok 139 - 重启后保留次数、停止原因和待处理；新用户输入才建立新的因果根
+not ok 140 - 因果元数据与消息事务同生共死；失败事务不留下额度占用
+not ok 141 - 跨会话派生保持原因果根，不借输出到另一群重新获额度
+not ok 142 - 配置拒绝无穷、零和非整数；省略次数时采用明确标候选的有限默认值
+not ok 143 - 生产调度保留旁观者参与但同根自动往返到上限停止，只留一次停止说明；新用户消息可继续
+not ok 144 - 生产重启不自动重开已停止的派生链；未读原文仍可查看，用户续话后再参与
+not ok 145 - allows the first post into a quiet room and records it
+not ok 146 - refuses an identical repost inside the duplicate window and allows it after
+not ok 147 - lets a different bot say the same words
+not ok 148 - trips the breaker when a third bot closes the ring back onto the first
+not ok 149 - does not call a two-bot back-and-forth a ring
+not ok 150 - sends the room to the human on its third unanswered bot post
+not ok 151 - re-arms the ceiling when the person writes in the room
+not ok 152 - caps one bot at ten posts a minute, and lets the cap lapse with the minute
+not ok 153 - reaches every one of its rules from an empty budget
+not ok 154 - tells the model to stop rather than to retry, whichever rule refuses
+not ok 155 - forgets posts older than every window it consults
