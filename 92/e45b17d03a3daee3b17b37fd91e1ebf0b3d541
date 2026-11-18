@@ -1,0 +1,29 @@
+README.md
+  s_5d1aef1d5fe15f::t_c2bcb87db70256 20
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  s_5d1aef1d5fe15f::t_602f33633f78f1 14,42-49
+docs/spec/验收文档-v0.1.md
+  s_5d1aef1d5fe15f::t_d698749551a9d0 303-313
+docs/概念卡.md
+  s_5d1aef1d5fe15f::t_abdaefadd21062 415-426
+packages/server/proof/p2a1-chat-admin-summary.txt
+  s_5d1aef1d5fe15f::t_097b15bfa7f5b4 1-7
+receipts/feat-agy-p2a1-chat-admin-summary.json
+  s_5d1aef1d5fe15f::t_5eb797eede36db 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "92e45b17d03a3daee3b17b37fd91e1ebf0b3d541",
+  "prompts": {},
+  "sessions": {
+    "s_5d1aef1d5fe15f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1effa-6e3d-7161-9ff1-25907a09e97a",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
