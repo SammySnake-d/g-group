@@ -65,3 +65,53 @@ node scripts/gates/run-all.ts --local --repo=/tmp/gg-agy-rev-120 --base=origin/d
 | `F3` | `runtime-config.ts` `harnessBlockReason`: return `null` (bypass unconnected Harness check) | `runtime-config.test.ts`: `联系人选 codex:派活在启动前被拦...` |
 | `F4` | `run-ledger.ts` `reconcileOrphans`: drop `u.status === "running"` guard on `!probe.alive(u.pid)` | `orphan-pid.test.ts`: `等人回答的单元不按执行进程判定...` |
 | `F5` | `progress-get.ts` `progressGet`: drop `visibleRuns([u], viewer)` check | `runtime-config.test.ts`: `progress_get 可见范围...` |
+
+## Round 2 — APPROVE
+
+**Reviewed HEAD:** `943b9d9523ffed4513cebf9cea7fb7992591fd6f`  
+**Base:** `origin/dev/agy-backend` at `926956560af22959c726953cfb4248f4056e3155`  
+**Content hash:** `6eb4a7937a27ab36a9a0c0df0a262e9eda2c8f5355133da41da429d58635dff7`  
+**Author:** `codex-cli:01a1ec1b-5225-7370-80a4-3596ddbad3a4` (`shayu/gpt-6.2-sol`, OpenAI)  
+**Reviewer:** `antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98` (`carbon-agy` / `gemini-4-carbon-high`, Google)
+
+### Round 1 findings verification
+
+1. **Round 1 P1 #1 (`AC-23` / `AC-36` — `packages/server/src/db.ts:38–44, 93–159`, `packages/server/src/host.ts:520–524, 597, 1987–2002, 3710–3789`) — RESOLVED.**
+   - `openDb()` checks `sqlite_schema` for `gg_compute_leases` **inside the same transaction** before executing `SCHEMA`, and invokes `migrateLegacyHolds(db)` into `gg_compute_legacy_holds` only when upgrading a pre-B1 database (`!hadLeases`), rolling back and closing the DB handle on error.
+   - `migrateLegacyHolds(db)` excludes queued-only tasks (`!computeId && !orphans.length`) and tasks whose Compute instances are already `'completed'`, while persisting genuine pre-B1 `T3_Running` / `T4b_BlockedOnHuman` / `T9_StopRequested` holds across subsequent restarts.
+   - On B1+ databases, `Host` reads `gg_compute_leases` (`savedLeases`) and `gg_compute_legacy_holds` (`uncertain`) directly without fabricating phantom `uncertain` holds from `task:*` docs.
+   - `detachedStopConfirmed`, `recoverReleasedStops`, `cancelQueuedSpawn` (guarded by `this.quota.leaseOf(e.taskId) || this.stopUnconfirmed.has(e.taskId)` so in-flight `spawn` leases are never bypassed), and `ledgerResume` (re-binding persisted `compute-session` on post-restart `resume`) cleanly handle post-restart failure-card `retry`, `rerunRun`, `give-up`, `stopTask`, queued-only `T9`, and `completed`-before-`deliver` tasks, while preserving `T9_StopRequested` and lease quarantine whenever an unconfirmed lease or legacy hold exists.
+
+2. **Round 1 P1 #2 (`R-17` / `AC-51` / `AC-26` — `packages/server/src/db.ts:81–85, 102–105`, `packages/server/src/host.ts:3598–3600, 3885–3929, 5134–5146`) — RESOLVED.**
+   - `reviewerFor` resolves each candidate contact's Compute `{ harness, model, effort }` (`resolveComputeFor`) and prefers connected, compatible cross-vendor reviewers (`!this.reviewComputeProblem(c.resolved)`).
+   - `spawnReview` re-verifies `reviewComputeProblem(resolved)` and `reviewModelProblem` at spawn time, routes via `this.adapterFor(harness, model)` with `{ model, effort }`, and falls back via `reviewFallback` with an explicit reason when unconnected or incompatible — **never** substituting `claude-code` for `codex`.
+   - `openDb` migrates existing `gg_reviews` tables via `ALTER TABLE gg_reviews ADD COLUMN harness TEXT` (preserving `NULL` for historical pre-migration rows without fabricating `"claude-code"`), `spawnReview` persists `harness`, and both `adapterForCompute` and `Host.close()` route stop calls to the actual Harness adapter.
+
+3. **Round 1 note (`packages/server/src/host.ts:2789–2792`) & Review History — RESOLVED.**
+   - `progressGet` now filters `this.exits.leavingRoomsOf(contactId)` dynamically on every query (`compute-stop-restart.test.ts:311–336`).
+   - Round 1 review in `reviews/feat-agy-p0-compute-stop.md` was preserved byte-for-byte verbatim, and `receipts/feat-agy-p0-compute-stop.json` accurately documents `R-02` incremental + combined Red SHAs, `AC-23`/`R-17` D-layer scope, and `AC-43`/`AC-51` `"未测"` X-layer boundaries.
+
+### Commands and Round 2 verification evidence
+
+```sh
+node /tmp/gg-agy-rev-120/scripts/gates/run-all.ts --hash --repo=/tmp/gg-agy-rev-120 --branch=feat/agy-p0-compute-stop --base=origin/dev/agy-backend
+npm run typecheck
+npm run lint
+npm test
+node scripts/gates/run-all.ts --local --base=origin/dev/agy-backend --branch=feat/agy-p0-compute-stop
+```
+
+- `npm run typecheck`: exit 0.
+- `npm run lint`: Biome checked 245 files, exit 0.
+- `npm test`: **1767/1767** passed (`0` failed, `0` skipped, `0` todo, `0` cancelled).
+- Zero test diff `eb1744c4..8f7a8da0` (`packages/**/*.test.ts`, `scripts/gates/*.test.ts`) and `bbf69bf8..8f7a8da0` (`compute-stop-restart.test.ts`).
+- Isolated R2 incremental Red replay (`bbf69bf8cbe920e19e22a8120b270ce9814ed766` on R1 implementation): **14/14** named tests in `compute-stop-restart.test.ts` failed (`0` passed, `0` skipped).
+- Isolated combined R1+R2 Red replay (`eb1744c444a7469a06e20ea33cfc2d46452c48cf`): 12 changed test files ran `115` tests with **73 named assertion failures** and `42` unchanged passing controls (`0` skipped).
+- Isolated Round 2 single-site fault injections (`4/4` killed in `/tmp/gg-agy-fault-120`, then deleted):
+
+| Fault ID | Single-point mutation | Caught by named test(s) |
+|---|---|---|
+| `R2-F1` | `db.ts` `openDb`: skip `migrateLegacyHolds(db)` when `!hadLeases` | `compute-stop-restart.test.ts`: both pre-B1 migration & second-boot tests failed |
+| `R2-F2` | `host.ts` `afterRound`: bypass `detachedStopConfirmed` check when `!a` | `compute-stop-restart.test.ts`: post-restart `give-up`, `stopTask`, and `completed`-before-`deliver` tests failed |
+| `R2-F3` | `host.ts` `spawnReview`: drop `this.reviewComputeProblem(resolved)` check | `compute-stop-restart.test.ts`: disconnected & incompatible `codex` reviewer `R-17` tests failed |
+| `R2-F4` | `host.ts` `progressGet`: drop `!leaving.has(r.id)` filter | `compute-stop-restart.test.ts`: `B1 R2 AC-43: progress_get hides a leaving room while membership is still present` |

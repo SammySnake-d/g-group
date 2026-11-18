@@ -30,7 +30,14 @@
   "red": {
     "commit": "eb1744c444a7469a06e20ea33cfc2d46452c48cf"
   },
-  "review": null,
+  "review": {
+    "agent": "carbon-agy",
+    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
+    "model": "gemini-4-carbon-high",
+    "verdict": "approve",
+    "reviewed_hash": "6eb4a7937a27ab36a9a0c0df0a262e9eda2c8f5355133da41da429d58635dff7",
+    "notes": "Round 2 APPROVE (see reviews/feat-agy-p0-compute-stop.md): Verified both Round 1 P1 fixes (AC-23/AC-36 durable gg_compute_legacy_holds migration + detachedStopConfirmed/recoverReleasedStops/ledgerResume restart paths, and R-17/AC-51/AC-26 reviewer Harness resolution/persistence without silent claude-code substitution) plus leavingRooms filtering on progress_get. Independent typecheck, lint, 1767/1767 tests, R2 incremental Red (14/14), combined Red (73/73), and 4/4 R2 single-site fault injections all passed."
+  },
   "waiver": null,
   "unverifiable": "R-02：R1 Red ba39ad48b6c00a0f266e441da5435f9fa3a4aac7（ba39ad48）；R2 incremental Red bbf69bf8cbe920e19e22a8120b270ce9814ed766 在 R1 9d38e306a908aafcb748f4e135c1d253ad881954（9d38e306）实现上实跑；combined branch Red eb1744c444a7469a06e20ea33cfc2d46452c48cf 将相同测试放在 R1 Red 非测试源码上重放，供 G-RED 使用，不替代增量红证据。AC-23 / AC-36 / R-17 是确定性执行器与 SQLite 持久状态及迁移的 D 层结果；真实 CLI 跨宿主续接或进程回收、真实网关及 AC-43 / AC-51 的 X 层仍未测。Round 1 审查原样保留；Round 2 尚无独立审查，不请求豁免。",
   "verification": {
