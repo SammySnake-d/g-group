@@ -1,0 +1,21 @@
+packages/server/proof/f0-frontend-contracts.txt
+  s_173fcb351f5325::t_ab83c1e0cc4883 3-4
+receipts/feat-agy-frontend-contract-extensions.json
+  s_173fcb351f5325::t_069017b411c8b0 9,19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ef06b731ab0a0902778a538ac1acd8fca8ec13b4",
+  "prompts": {},
+  "sessions": {
+    "s_173fcb351f5325": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f0bf-a6ec-7e40-83a5-fd27bd422428",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
