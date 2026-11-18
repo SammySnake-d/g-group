@@ -1,0 +1,16 @@
+receipts/feat-agy-p0-compute-stop.json
+  h_f33e46a035b77c 33-40
+reviews/feat-agy-p0-compute-stop.md
+  h_f33e46a035b77c 68-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e278a8ed7e68aaa86d30e1ec95d1f4560b3abb30",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
