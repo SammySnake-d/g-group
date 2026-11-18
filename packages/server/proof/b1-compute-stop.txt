@@ -722,3 +722,61 @@ ok 84 - AC-23 停止标记落盘失败后仍须真核验:确认成功才释放,�
 # skipped 0
 # todo 0
 # duration_ms 6151.716916
+
+Round 2 — restart lease recovery, review Harness routing and leaving-room visibility
+R1 reviewed state retained: 9d38e306a908aafcb748f4e135c1d253ad881954
+R2 incremental RED: bbf69bf8cbe920e19e22a8120b270ce9814ed766
+R2 combined branch RED (receipt.red.commit): eb1744c444a7469a06e20ea33cfc2d46452c48cf
+R2 GREEN: 8f7a8da04cfa75f3fb57623ac1eed3cd079f0aae
+
+Incremental RED replay on R1 implementation 9d38e306a908aafcb748f4e135c1d253ad881954
+node --test packages/server/src/compute-stop-restart.test.ts packages/server/src/stop-confirmation.test.ts (exit 1 as intended)
+14/14 new tests failed by name with ERR_ASSERTION. All 7 inherited controls passed, including the recovered-lease stop quarantine control.
+# tests 21
+# suites 0
+# pass 7
+# fail 14
+# cancelled 0
+# skipped 0
+# todo 0
+not ok 1 - B1 R2 AC-23: failure-card restart leaves personal and group capacity free and dispatches a new task
+not ok 2 - B1 R2 AC-36: retry on a quiesced failure card after restart reaches the original session adapter
+not ok 3 - B1 R2 AC-36: rerunRun after restart retires the quiesced failure card and starts a fresh task
+not ok 4 - B1 R2 AC-23: give-up confirms the quiesced failed Compute after restart without an adapter
+not ok 5 - B1 R2 AC-23: stopTask confirms an already-quiesced failure-card Compute after restart
+not ok 6 - B1 R2 AC-23: restart retires a queued-only T9 whose launch never held a lease
+not ok 7 - B1 R2 AC-36: completion released before deliver stays out of quarantine on restart
+not ok 8 - B1 R2 AC-23: pre-B1 migration excludes completed Compute and a launch with no process
+not ok 9 - B1 R2 AC-23: migrated T3/T4b/T9 holds survive a second boot and still protect both scopes
+not ok 10 - B1 R2 R-17: disconnected Codex reviewer does not spawn on Claude Code and gives an explicit reason
+not ok 11 - B1 R2 R-17: connected but incompatible Codex reviewer is not spawned on any adapter
+not ok 12 - B1 R2 R-17: migrated gg_reviews records Codex and consumes the connected review adapter verdict
+not ok 13 - B1 R2 R-17: cancelling T5 stops the review on the persisted Codex adapter
+not ok 14 - B1 R2 AC-43: progress_get hides a leaving room while membership is still present
+
+Combined branch RED replay on ba39ad48b6c00a0f266e441da5435f9fa3a4aac7 non-test packages/*/src files
+npm exec -- tsc -p tsconfig.json (exit 0)
+G-RED changedTests + sandboxed runNodeTests replay: 12 files, 115 named leaf tests; 73/73 changed tests failed by name exactly once, 42 unchanged controls passed, 0 skipped, 0 missing. The underlying test replay intentionally failed.
+Test-file parity: no changes under packages/**/*.test.ts from incremental RED through combined RED and GREEN (git diff exit 0).
+
+GREEN typecheck: npm run typecheck (exit 0)
+GREEN lint: rtk bypass npm run lint (exit 0; 245 files)
+GREEN focused restart / lease / stop-confirmation / review / review-actual TAP (exit 0)
+# tests 51
+# suites 0
+# pass 51
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+
+GREEN npm test (exit 0)
+# tests 1767
+# suites 4
+# pass 1767
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+
+Boundary: deterministic Compute adapters and SQLite state/upgrade fixtures, not live Codex or Claude Code CLI, real gateway or cross-host process reconciliation. A persisted unconfirmed hold still blocks reuse without trusted stop evidence. Round 1 review is unchanged; Round 2 awaits independent review.
