@@ -35,7 +35,14 @@
   "red": {
     "commit": "64e43d187a247c38856d3de59057bf387b5228f1"
   },
-  "review": null,
+  "review": {
+    "agent": "carbon-agy",
+    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
+    "model": "gemini-4-carbon-high",
+    "verdict": "reject",
+    "reviewed_hash": "9cf5bea5f2756e1e4ebc471264344e626f3d247e43039bd4ee244378d01d3bd3",
+    "notes": "Round 1 REJECT (see reviews/feat-agy-priority-codex-protocol.md): (P1-1) Live-reproduced in Host.switchHarness: next.spawn() refusal/failure leaves e.computeId permanently in this.harnessRetiring after retiring previous, causing (a) permanent onComputeEvent blackhole + permanent Compute quota lease leak on revert/resume, and (b) permanent T9_StopRequested deadlock on task cancel. (P1-2) createCodexComputeAdapter (151 LOC) has zero behavioral tests in packages/**/*.test.ts (P1B-F5 pluginDirs refusal survived), and harness-switch.test.ts lacks missing-harness & quarantine tests (P1B-F6 harnessBlockReason bypass survived)."
+  },
   "waiver": null,
   "unverifiable": "AC-23 / AC-51 / V-02 的 D 层已验证，整体 D+X 仍未测：确定性 native-wire、自有 OS 进程和 git worktree 不替代真实 codex-cli 0.169.0 / 上游模型 S+X E2E（P3）。sandbox 不冒充逐工具授权：只映射完整 native workspace scope 与空工具只读范围，其他子集、Claude skill 插件明确拒收。Windows、完全脱离父子关系的托管进程、宿主崩溃中的 Harness 原子接续、真实项目配置叠加仍待测。R-02 最终 Red 在 Green 前修订保留任务 fixture 与字面测试名，archive typecheck=0、57/57 ERR_ASSERTION；Green 无 packages/**/*.test.ts 改动。ling-jing 与 fnqtz-gpt 同属 OpenAI，provider 切换不构成独立跨厂商审查；review/waiver=null。",
   "verification": {
