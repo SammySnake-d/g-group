@@ -99,6 +99,21 @@ export const ContactView = obj({
 });
 export type ContactView = Infer<typeof ContactView>;
 
+/** U07:配置快照只包含联系人定义,不含身份、记忆、任务、游标、凭据值或运行状态。 */
+export const ContactConfig = obj({
+  name: str({ min: 1, max: 80 }), avatar: nullable(str({ max: 2048 })), bio: str({ max: 2000 }),
+  speakingModel: str({ max: 200 }), harness: oneOf(HARNESSES), computeModel: ModelSlot,
+  tools: arr(str({ max: 200 })), computeAssets: arr(obj({ name: str({ max: 200 }), kind: oneOf(["mcp", "skill", "script"] as const) })),
+  computeSlots: nullable(int({ min: 1, max: 64 })), persona: str({ max: 20000 }),
+});
+export type ContactConfig = Infer<typeof ContactConfig>;
+export const ContactConfigVersion = obj({
+  version: int({ min: 1 }), at: isoTime(),
+  kind: oneOf(["baseline", "create", "update", "batch", "rollback"] as const),
+  restoredFrom: nullable(int({ min: 1 })), config: ContactConfig,
+});
+export type ContactConfigVersion = Infer<typeof ContactConfigVersion>;
+
 // ---------- 会话(私聊 / 群聊)----------
 export const ROOM_KINDS = ["dm", "group"] as const;
 export const MemberRef = obj({ kind: oneOf(["user", "contact"] as const), id: id() });
@@ -128,6 +143,7 @@ export const RoomView = obj({
   announcementCount: opt(int({ min: 0 })),
   /** 移出中的成员(AC-49/D05):仍在 members 里,但这个群的新消息不再送达、发言与接新活被拒,等在途任务真实停止确认后才移除。 */
   leavingMembers: opt(arr(MemberRef)),
+  linkedRooms: opt(arr(obj({ roomId: id(), kind: oneOf(ROOM_KINDS), title: str({ max: 200 }), uptoSeq: seq(), linkedAt: isoTime() }))),
   /** 群临时 Compute 槽位数(AC-23,只给本群任务借用,不跨群);私聊没有这个字段。 */
   tempComputeSlots: opt(int({ min: 0, max: 64 })),
   /** 每位成员(你和联系人)的已读位置(AC-46):重启后旧消息的回执靠它画;读到时间按需用 messages.receipts 取。没读过的成员不列。 */
@@ -179,7 +195,29 @@ export const Card = obj({
 });
 export const Reaction = obj({ emoji: str({ min: 1, max: 32 }), by: arr(MemberRef) });
 export const SlashInvocation = obj({ name: str({ min: 1, max: 64 }), args: json() });
+/**
+ * 转发的聊天记录(U25/US2):转发那一刻的原文快照,存在目标会话里。不授予目标会话读原会话的权限;
+ * 原消息之后被撤回(或被私聊 rewind 撤下)时 sourceRetracted=true,副本正文不删(候选,需拍板 4)。
+ */
+export const ForwardedItem = obj({
+  /** 在原会话里的序号(只给用户自己看来源;联系人看到的副本里不带) */
+  seq: seq(),
+  sender: Sender,
+  senderName: str({ max: 80 }),
+  at: isoTime(),
+  text: str({ max: 100000 }),
+  sourceRetracted: bool(),
+});
+export const ForwardedBlock = obj({
+  fromRoomId: id(),
+  fromTitle: str({ max: 200 }),
+  fromKind: oneOf(ROOM_KINDS),
+  /** 转发时附的一句话;没附为 null。 */
+  note: nullable(str({ max: 2000 })),
+  items: arr(ForwardedItem, { max: 100 }),
+});
 export const MessageView = obj({
+  forwarded: opt(ForwardedBlock),
   roomId: id(),
   seq: seq(),
   /** 话题(thread)根消息序号;主流消息为 null。 */
@@ -248,6 +286,15 @@ export const TASK_STATES = [
 export type TaskStateName = (typeof TASK_STATES)[number];
 /** Compute 四类语义事件 + 起止(与 @g-group/adapter-cc-compute ComputeEvent.kind 一致)。 */
 export const COMPUTE_EVENT_KINDS = ["started", "milestone", "blocked", "completed", "failed", "stopped"] as const;
+/** 任务事实流只记录写入时实际发生的事实,不从当前任务倒推历史;data 不存用户补充正文。 */
+export const TaskTimelineState = obj({ state: oneOf(TASK_STATES), owner: nullable(id()), constraintVer: int({ min: 0 }), computeId: nullable(id()) });
+export type TaskTimelineState = Infer<typeof TaskTimelineState>;
+export const TaskTimelineEvent = obj({
+  id: int({ min: 1 }), taskId: id(), roomId: id(), sourceSeq: seq(), at: isoTime(),
+  kind: oneOf(["created", "task", "model-attempt", "follow-up"] as const), cause: str({ min: 1, max: 100 }),
+  actor: nullable(MemberRef), before: nullable(TaskTimelineState), after: TaskTimelineState, data: json(),
+});
+export type TaskTimelineEvent = Infer<typeof TaskTimelineEvent>;
 export const ComputeProgress = obj({
   computeId: id(),
   taskId: id(),

@@ -130,7 +130,17 @@ export type HistoryQuery =
   | { readonly kind: "read"; readonly roomId: string; readonly seq: number; readonly before: number | null; readonly after: number | null };
 
 /** 本轮内可用的只读查询口(宿主提供):联系人在同一轮的工具往返里按 id 取全文,不是动作、不落盘 */
+/** read_linked 的参数:query 按词过滤(全部命中才算),beforeSeq 往前翻页,limit 条数(宿主收紧到 1–50,不给用默认)。 */
+export interface LinkedQuery {
+  readonly roomId: string;
+  readonly linkedRoomId: string | null;
+  readonly query: string | null;
+  readonly beforeSeq: number | null;
+  readonly limit: number | null;
+}
+
 export interface RoundTools {
+  readLinked?(q: LinkedQuery): Promise<string | null>;
   /** 按 id 读一条记忆全文(含状态与关系);没有这条或无权读返回 null */
   readMemory(id: string): Promise<string | null>;
   /** 引用链往上读一级(D24 read_quote_parent):这条消息直接引用的那几条;会话不可读返回 null */

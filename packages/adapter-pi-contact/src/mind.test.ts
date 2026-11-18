@@ -147,7 +147,7 @@ test("首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2�
     assert.deepEqual(body.messages.map((m) => ({ role: m.role, texts: texts(m.content) })), [
       { role: "user", texts: [2, 3, 4, 5].map((n) => `<block n="${n}" label="${BLOCK_LABELS[n as BlockNo]}">\nr1-第${n}块内容\n</block>`) },
     ]);
-    assert.deepEqual(body.tools?.map((t) => t.name), ["reply", "dispatch_compute", "commit", "forward", "deliver", "stop", "verdict", "update_state_note", "remember", "memory_feedback", "read_memory", "read_quote_parent", "progress_rerun", "query_history", "progress_get"]);
+    assert.deepEqual(body.tools?.map((t) => t.name), ["reply", "dispatch_compute", "commit", "forward", "deliver", "stop", "verdict", "update_state_note", "remember", "memory_feedback", "read_memory", "read_quote_parent", "progress_rerun", "query_history", "read_linked", "progress_get"]);
     assert.deepEqual([...PI_CONTACT_TOOL_NAMES], body.tools?.map((t) => t.name));
     assert.equal(renderBlock(blocks("r1")[3]!), `<block n="4" label="新消息">\nr1-第4块内容\n</block>`);
   } finally {

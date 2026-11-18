@@ -28,6 +28,7 @@ import {
   type RunView,
   type SettingsView,
   type TaskView,
+  type TaskTimelineEvent,
   draftIssues,
   draftPreview,
   emptyDraft,
@@ -68,6 +69,7 @@ import {
   type HealClass,
   type Inbound,
   type InboundMessage,
+  type LinkedQuery,
   type MemoryEntry,
   type QuoteMsg,
   buildQuoteChain,
@@ -142,15 +144,18 @@ import { LoopGuard, type LoopLimits } from "./loop-guard.ts";
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
 import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
+import { contactVersion, contactVersions, installContactHistory, recordContactConfig, rememberConfigAction, replayConfigAction } from "./contact-config-history.ts";
+import { type ForwardRecord, ForwardLinkStore, renderForwardText, renderLinked } from "./forward-link.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
 import { MemoryStore } from "./memory-store.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
 import { PluginStore } from "./plugins.ts";
 import { REVIEW_TOOLS, parseVerdict, pickReviewer, reviewBrief, reviewModelProblem } from "./review.ts";
-import { type RewindPlan, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
+import { type RewindPlan, computeRuns, inRanges, isRewound, planRewind, rewindNotice, rewindRanges } from "./rewind.ts";
 import { type AcquireRequest, type Lease, QuotaTable, type ScopeKey } from "./quota.ts";
 import { DEFAULT_RUN_CHECK_MS, RunStore, checkRunWake } from "./runs.ts";
 import { progressGet } from "./progress-get.ts";
+import { type TaskFactOrigin, readTaskTimeline, recordFollowFacts, recordTaskFacts, recordTaskTransition } from "./task-timeline.ts";
 import {
   type ComputeFactories,
   type ComputeFactory,
@@ -415,6 +420,7 @@ export class Host {
   readonly plugins: PluginStore;
   readonly announcements: AnnouncementStore;
   private readonly exits: MemberExits;
+  private readonly links: ForwardLinkStore;
   /** 共享文档单一提交点(AC-21):所有写入只经它 */
   readonly docs: SharedDocs;
   readonly worktrees: Worktrees | null;
@@ -485,6 +491,8 @@ export class Host {
     this.userId = opts.userId ?? "me";
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
+    installContactHistory(this.db, this.now());
+    this.links = new ForwardLinkStore(this.db);
     this.loopGuard = new LoopGuard(this.db, opts.loopGuard, opts.clockMs);
     this.exits = new MemberExits({ db: this.db, now: this.now });
     // 搜索索引是派生物:表缺失或版本不符就从只追加日志重建(AC-25)
@@ -664,29 +672,69 @@ export class Host {
     };
     // 保存时机(AC-32 ②①):新联系人自己的 Compute 生效值不兼容就先拦,看过预览确认后才存
     this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), [this.contactModels(doc)], this.caps(), { kind: "contact", contactId: id, patch: {} }), input.confirmAffected === true);
-    putDoc(this.db, `contact:${id}`, 0, doc);
+    tx(this.db, () => {
+      const version = putDoc(this.db, `contact:${id}`, 0, doc);
+      recordContactConfig(this.db, id, version, doc, "create", this.now());
+    });
     const view = this.contactView(doc);
     this.bus.emit({ type: "contact.updated", contact: view });
     return view;
   }
-  updateContact(id: string, input: Partial<Omit<ContactDoc, "id" | "createdAt" | "warning">> & { confirmAffected?: boolean }): ContactView {
-    const { confirmAffected, warning: _w, ...patch } = input as typeof input & { warning?: unknown };
-    // 卡死阈值覆盖(AC-43 ⑯):null 清掉;给了就整份替换这位联系人的覆盖
+  updateContact(id: string, input: Partial<Omit<ContactDoc, "id" | "createdAt" | "warning">> & { confirmAffected?: boolean; clientActionId?: string; expectedVersion?: number }): ContactView {
+    const { confirmAffected, clientActionId, expectedVersion, warning: _w, ...patch } = input as typeof input & { warning?: unknown };
+    // 保留 B1 的卡死阈值检查;历史回滚只恢复白名单配置。
     if (patch.stall !== undefined && patch.stall !== null) patch.stall = checkStall(patch.stall, "stall");
-    const cur = this.contactDoc(id);
-    const next: ContactDoc = { ...cur.value, ...patch, id, createdAt: cur.value.createdAt };
-    if (patch.speakingModel !== undefined || patch.harness !== undefined || patch.computeModel !== undefined) {
-      const change: modelConfig.ModelChange = {
-        kind: "contact",
-        contactId: id,
-        patch: { speakingModel: next.speakingModel, harness: next.harness, computeModel: next.computeModel },
-      };
-      this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), this.liveContacts().map((c) => this.contactModels(c)), this.caps(), change), confirmAffected === true);
-    }
-    putDoc(this.db, `contact:${id}`, cur.ver, next);
-    const view = this.contactView(next);
-    this.bus.emit({ type: "contact.updated", contact: view });
-    return view;
+    const changed = tx(this.db, () => {
+      const cur = this.activeContactDoc(id);
+      const request = { kind: "update", patch, expectedVersion, confirmAffected: confirmAffected === true };
+      const replay = replayConfigAction<ContactView>(this.db, id, clientActionId, request);
+      if (replay) return { view: replay.result, replay: true };
+      if (expectedVersion !== undefined && expectedVersion !== cur.ver) throw new HostError("conflict", "联系人配置已更新,请重新读取", { currentVersion: cur.ver });
+      const next: ContactDoc = { ...cur.value, ...patch, id, createdAt: cur.value.createdAt };
+      if (patch.speakingModel !== undefined || patch.harness !== undefined || patch.computeModel !== undefined) this.guardContactConfig(next, confirmAffected === true);
+      const version = putDoc(this.db, `contact:${id}`, cur.ver, next);
+      recordContactConfig(this.db, id, version, next, "update", this.now());
+      const view = this.contactView(next);
+      rememberConfigAction(this.db, id, clientActionId, request, view);
+      return { view, replay: false };
+    });
+    if (!changed.replay) this.bus.emit({ type: "contact.updated", contact: changed.view });
+    return changed.view;
+  }
+  private activeContactDoc(id: string) {
+    const current = this.contactDoc(id);
+    if ((current.value as ContactDoc & { removed?: boolean }).removed) throw new HostError("not_found", `没有联系人 ${id}`);
+    return current;
+  }
+  private guardContactConfig(next: ContactDoc, confirmed: boolean) {
+    const change: modelConfig.ModelChange = {
+      kind: "contact", contactId: next.id,
+      patch: { speakingModel: next.speakingModel, harness: next.harness, computeModel: next.computeModel },
+    };
+    this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), this.liveContacts().map((c) => this.contactModels(c)), this.caps(), change), confirmed);
+  }
+  contactHistory(id: string, query: { beforeVersion?: number; limit?: number } = {}) {
+    const current = this.activeContactDoc(id);
+    return { contactId: id, currentVersion: current.ver, ...contactVersions(this.db, id, query) };
+  }
+  rollbackContact(input: { contactId: string; version: number; expectedVersion: number; clientActionId: string; confirmAffected?: boolean }) {
+    const changed = tx(this.db, () => {
+      const current = this.activeContactDoc(input.contactId);
+      const request = { kind: "rollback", version: input.version, expectedVersion: input.expectedVersion, confirmAffected: input.confirmAffected === true };
+      const replay = replayConfigAction<{ contact: ContactView; version: number }>(this.db, input.contactId, input.clientActionId, request);
+      if (replay) return { result: replay.result, replay: true };
+      if (input.expectedVersion !== current.ver) throw new HostError("conflict", "联系人配置已更新,请重新读取", { currentVersion: current.ver });
+      const historical = contactVersion(this.db, input.contactId, input.version);
+      const next: ContactDoc = { ...current.value, ...historical.config };
+      this.guardContactConfig(next, input.confirmAffected === true);
+      const version = putDoc(this.db, `contact:${input.contactId}`, current.ver, next);
+      recordContactConfig(this.db, input.contactId, version, next, "rollback", this.now(), input.version);
+      const result = { contact: this.contactView(next), version };
+      rememberConfigAction(this.db, input.contactId, input.clientActionId, request, result);
+      return { result, replay: false };
+    });
+    if (!changed.replay) this.bus.emit({ type: "contact.updated", contact: changed.result.contact });
+    return changed.result;
   }
   contactDoc(id: string): { value: ContactDoc; ver: number } {
     const d = getDoc<ContactDoc>(this.db, `contact:${id}`);
@@ -820,7 +868,8 @@ export class Host {
         if (!changedIds.has(m.id)) continue;
         const d = this.contactDoc(m.id);
         const next: ContactDoc = { ...d.value, speakingModel: m.speakingModel, computeModel: m.computeModel as ContactDoc["computeModel"] };
-        putDoc(this.db, `contact:${m.id}`, d.ver, next);
+        const version = putDoc(this.db, `contact:${m.id}`, d.ver, next);
+        recordContactConfig(this.db, m.id, version, next, "batch", this.now());
         touched.push(next);
       }
     });
@@ -951,6 +1000,7 @@ export class Host {
     // 等用户回复的交付(普通消息交付,没有卡片)也算一件待你处理的事
     const pending = openCards + listDocs<TaskDoc>(this.db, "task:").filter((d) => d.value.roomId === roomId && awaitingUser(d.value)).length;
     const draft = getDoc<DraftView>(this.db, `draft:${roomId}`)?.value;
+    const linkedRooms = this.linksOfUser(roomId).map(({ linkedRoomId, kind, title, uptoSeq, linkedAt }) => ({ roomId: linkedRoomId, kind, title, uptoSeq, linkedAt }));
     return {
       id: r.id,
       kind: r.kind,
@@ -970,6 +1020,7 @@ export class Host {
       updatedAt: r.updated_at,
       announcementCount: r.kind === "group" ? this.announcements.count(roomId) : 0,
       leavingMembers: this.exits.leavingIn(roomId),
+      ...(linkedRooms.length ? { linkedRooms } : {}),
       ...(r.kind === "group" ? { tempComputeSlots: getDoc<{ slots: number }>(this.db, `room-slots:${roomId}`)?.value.slots ?? 0 } : {}),
       memberReads: this.memberReads(roomId),
       pinnedSeqs: getDoc<{ seqs: number[] }>(this.db, `pins:${roomId}`)?.value.seqs ?? [],
@@ -1008,12 +1059,13 @@ export class Host {
     for (const r of all<{ emoji: string; kind: Member["kind"]; member_id: string }>(this.db, "SELECT emoji, kind, member_id FROM gg_reactions WHERE room_id = ? AND seq = ? ORDER BY rowid", roomId, m.seq)) {
       reactions.set(r.emoji, [...(reactions.get(r.emoji) ?? []), { kind: r.kind, id: r.member_id }]);
     }
+    const fwd = m.retracted ? null : this.links.get(roomId, m.seq);
     return {
       roomId,
       seq: m.seq,
       threadRootSeq: meta?.thread_root ?? null,
       sender: { kind: m.sender.kind, id: m.sender.id },
-      text: m.retracted ? "" : m.text,
+      text: m.retracted ? "" : fwd ? renderForwardText(fwd) : m.text,
       mentions: meta ? (JSON.parse(meta.mentions) as MessageView["mentions"]) : [],
       replyToSeq: meta?.reply_to ?? null,
       quotedSeqs: quoted,
@@ -1043,13 +1095,8 @@ export class Host {
       at: one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${roomId}`, m.seq)?.at ?? this.now(),
       ...(isRewound(this.db, roomId, m.seq) ? { rewound: true } : {}),
       ...(m.retracted ? {} : this.messageArtifacts(roomId, m.seq)),
-      ...this.forwardOf(roomId, m),
+      ...(fwd ? this.links.view(fwd, this.userId) : {}),
     };
-  }
-  private forwardOf(roomId: string, m: ProjectedMessage): { forward?: NonNullable<MessageView["forward"]> } {
-    if (m.retracted) return {};
-    const f = getDoc<NonNullable<MessageView["forward"]>>(this.db, `forward:${roomId}:${m.seq}`)?.value;
-    return f ? { forward: f } : {};
   }
   listMessages(roomId: string, q: { beforeSeq?: number; afterSeq?: number; aroundSeq?: number; limit?: number; threadRootSeq?: number | null }): { messages: MessageView[]; hasMore: boolean; hasMoreAfter?: boolean } {
     this.roomRow(roomId);
@@ -1331,6 +1378,7 @@ export class Host {
   /** 编辑自己的消息:追加编辑事件,不改旧事件;联系人下一轮收到「编辑了 #x」。 */
   editMessage(roomId: string, seq: number, text: string): MessageView {
     if (!text.trim()) throw new HostError("invalid_params", "消息不能为空");
+    if (getDoc(this.db, `forward:${roomId}:${seq}`)) throw new HostError("conflict", "转发来的记录不能编辑,要改就撤回它再转一次");
     if (isRewound(this.db, roomId, seq)) throw new HostError("conflict", `#${seq} 已回退,不能再编辑`);
     this.appendUserEvent(roomId, { kind: "edit", target: seq, text });
     return this.updatedView(roomId, seq);
@@ -1342,12 +1390,37 @@ export class Host {
   }
   private appendUserEvent(roomId: string, body: { kind: "edit"; target: number; text: string } | { kind: "retract"; target: number }) {
     this.roomRow(roomId);
+    const sender = { kind: "system" as const, id: "retract-effects" };
+    const notices: number[] = [];
+    const copies: ReturnType<ForwardLinkStore["markSourceRetractedTx"]> = [];
     try {
       tx(this.db, () => {
         appendEvent(this.db.store, `room:${roomId}`, { kind: "user", id: this.userId }, body, this.now());
         // 搜索索引同一事务更新:编辑只留新文字,撤回删行(AC-08 索引不再返回原文)
         if (body.kind === "edit") reindexEditTx(this.db, roomId, body.target, body.text);
-        else unindexTx(this.db, roomId, body.target);
+        else {
+          unindexTx(this.db, roomId, body.target);
+          copies.push(...this.links.markSourceRetractedTx(roomId, [body.target]));
+          const hidden = this.retractedTexts([roomId]);
+          const disclose = (key: string, text: string) => {
+            const notice = this.appendMessageTx(roomId, sender, { text, actionKey: `system:retract-effects:${body.target}:${key}` });
+            if (!notice.duplicate) notices.push(notice.seq);
+          };
+          for (const { value: doc } of listDocs<TaskDoc>(this.db, "task:")) {
+            if (doc.roomId !== roomId || doc.sourceSeq !== body.target) continue;
+            const completed = all<{ id: number; compute_id: string; summary: string; at: string }>(this.db, "SELECT id, compute_id, summary, at FROM gg_progress WHERE task_id = ? AND kind = 'completed' ORDER BY id", doc.task.id);
+            for (const record of completed) {
+              const clean = scrubRetracted(record.summary, hidden);
+              const outcome = clean.leaked ? "(完成摘要含已撤回内容,已省略)" : clean.text.slice(0, 2000);
+              disclose(`completed:${record.id}`, `撤回 #${body.target}。任务 ${doc.task.id} / Compute ${record.compute_id} 于 ${record.at} 已报告完成:${outcome}。已发生的副作用无法撤回;撤回消息不等于撤销外部操作。`);
+            }
+            for (const compute of computeRuns(this.db, doc.task.id)) {
+              if (compute.status === "completed") continue;
+              const at = compute.ended_at ?? compute.started_at;
+              disclose(`run:${compute.compute_id}`, `撤回 #${body.target}。任务 ${doc.task.id} / Compute ${compute.compute_id} 的台账状态为 ${compute.status} (${at})。不能确认这次运行已完成;已发生的副作用无法撤回。`);
+            }
+          }
+        }
         run(this.db, "UPDATE gg_rooms SET updated_at = ? WHERE id = ?", this.now(), roomId);
       });
     } catch (e) {
@@ -1357,6 +1430,8 @@ export class Host {
       if (code === "target-retracted") throw new HostError("conflict", "这条已撤回");
       throw e;
     }
+    this.emitForwardUpdates(copies);
+    for (const seq of notices) this.afterAppend(roomId, seq, sender);
     for (const mem of this.members(roomId)) if (mem.kind === "contact") this.loop.notify(mem.id, "batch");
   }
   private updatedView(roomId: string, seq: number): MessageView {
@@ -1462,33 +1537,115 @@ export class Host {
    * 转发选中的几条到另一个会话:以你的一条消息记下这几条的快照(收件方只看到它们,不获得源会话读取权)。
    * 转发内容里的「同意」不是你此刻的表态:不走对话授权(AC-20),也不带 @(不按它派活)。clientActionId 幂等。
    */
-  forwardMessages(input: { clientActionId: string; fromRoomId: string; seqs: readonly number[]; toRoomId: string }): MessageView {
+  linkRooms(input: { roomId: string; linkedRoomId: string; clientActionId: string }): RoomView {
+    return this.changeRoomLink(input, true);
+  }
+  unlinkRooms(input: { roomId: string; linkedRoomId: string; clientActionId: string }): RoomView {
+    return this.changeRoomLink(input, false);
+  }
+  private changeRoomLink(input: { roomId: string; linkedRoomId: string; clientActionId: string }, link: boolean): RoomView {
+    const room = this.userRoom(input.roomId);
+    if (link) this.userRoom(input.linkedRoomId);
+    if (input.linkedRoomId === room.id) throw new HostError("invalid_params", "不能把会话关联到自己");
+    const key = `room-link:${room.id}:${input.clientActionId}`;
+    const changed = tx(this.db, () => {
+      const prior = one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", key);
+      if (prior) {
+        const action = JSON.parse(prior.payload) as { linkedRoomId: string; link: boolean };
+        if (action.link !== link || action.linkedRoomId !== input.linkedRoomId) throw new HostError("conflict", "同一动作号已用于不同关联请求");
+        return false;
+      }
+      const updated = link ? this.links.linkTx(room.id, input.linkedRoomId, this.lastSeq(input.linkedRoomId), input.clientActionId, this.now()) : this.links.unlinkTx(room.id, input.linkedRoomId);
+      recordAction(this.db.store, key, { linkedRoomId: input.linkedRoomId, link });
+      return updated;
+    });
+    const view = this.roomView(room.id);
+    if (changed) this.bus.emit({ type: "room.updated", room: view });
+    return view;
+  }
+  private linksOfUser(roomId: string) {
+    return this.links.linksOf(roomId).filter((l) => this.isMember(l.linkedRoomId, { kind: "user", id: this.userId }));
+  }
+  private emitForwardUpdates(touched: readonly { roomId: string; seq: number }[]) {
+    for (const { roomId, seq } of touched) {
+      if (!this.isMember(roomId, { kind: "user", id: this.userId })) continue;
+      const m = this.projected(roomId).find((x) => x.seq === seq);
+      if (m && !m.retracted) this.bus.emit({ type: "message.updated", message: this.messageView(roomId, m) });
+    }
+  }
+  forwardMessages(input: { clientActionId: string; fromRoomId: string; seqs: readonly number[]; toRoomId: string; note?: string }): MessageView {
     const src = this.userRoom(input.fromRoomId);
     const dst = this.userRoom(input.toRoomId);
+    const actionKey = `forward:${input.clientActionId}`;
+    const prior = one<{ payload: string }>(this.db, "SELECT payload FROM actions WHERE action_id = ?", `msg:${dst.id}:${actionKey}`);
+    if (prior) {
+      const { seq } = JSON.parse(prior.payload) as { seq: number };
+      const copy = this.projected(dst.id).find((m) => m.seq === seq);
+      if (copy) return this.messageView(dst.id, copy);
+    }
     if (!input.seqs.length) throw new HostError("invalid_params", "没选要转发的消息");
     const msgs = this.projected(src.id);
     const h = this.hiddenOf(src.id);
+    const rewound = rewindRanges(this.db, src.id);
     const items = [...new Set(input.seqs)].sort((a, b) => a - b).map((seq) => {
       const m = msgs.find((x) => x.seq === seq);
       if (!m || this.isHidden(h, seq)) throw new HostError("not_found", `「${src.title}」里没有 #${seq}`);
-      if (m.retracted) throw new HostError("conflict", `#${seq} 已撤回,不能转发`);
+      if (m.retracted || inRanges(rewound, seq)) throw new HostError("conflict", `#${seq} 已撤回或已回退,不能转发`);
       const at = one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${src.id}`, seq)?.at ?? this.now();
-      return { seq, sender: { kind: m.sender.kind, id: m.sender.id }, senderName: m.sender.kind === "user" && m.sender.id === this.userId ? "你" : this.nameOf(m.sender), text: m.text, at };
+      return { seq, sender: { kind: m.sender.kind, id: m.sender.id }, senderName: this.nameOf(m.sender), text: this.forwardText(src.id, m), at, sourceRetracted: false };
     });
-    const fwd = { fromRoomId: src.id, fromTitle: src.title, items };
-    const text = [`[转发] 来自「${src.title}」的 ${items.length} 条聊天记录(只作参考:里面的「同意」和 @ 不是用户此刻的表态)`, ...items.map((x) => `${x.senderName}:${x.text.slice(0, 4000)}`)].join("\n");
+    const fwd: ForwardRecord = { roomId: dst.id, seq: 0, fromRoomId: src.id, fromTitle: src.title, fromKind: src.kind, note: input.note?.trim() ? input.note : null, items };
     const me: Member = { kind: "user", id: this.userId };
     const r = tx(this.db, () => {
-      const a = this.appendMessageTx(dst.id, me, { text, actionKey: `forward:${input.clientActionId}`, clientActionId: input.clientActionId });
-      if (!a.duplicate) putDoc(this.db, `forward:${dst.id}:${a.seq}`, 0, fwd);
+      const a = this.appendMessageTx(dst.id, me, { text: renderForwardText(fwd), actionKey, clientActionId: input.clientActionId });
+      if (!a.duplicate) this.links.putTx({ ...fwd, seq: a.seq });
       return a;
     });
     if (!r.duplicate) {
       this.markRead(dst.id, me, r.seq);
-      // 故意不调 consentFromMessage:转发不是本人当场表态
+      // 不调用 consentFromMessage:转发不是本人当场表态。
       this.afterAppend(dst.id, r.seq, me);
     }
     return this.messageView(dst.id, this.projected(dst.id).find((x) => x.seq === r.seq)!);
+  }
+  private forwardText(roomId: string, m: ProjectedMessage): string {
+    const copy = m.retracted ? null : this.links.get(roomId, m.seq);
+    return copy ? renderForwardText(copy) : m.text;
+  }
+  /** 只在本轮输入所在的会话里,按用户授予的上界读关联背景。 */
+  private readLinked(contactId: string, freshRooms: ReadonlySet<string>, q: LinkedQuery): string | null {
+    const me = { kind: "user" as const, id: this.userId };
+    const contact = { kind: "contact" as const, id: contactId };
+    if (!freshRooms.has(q.roomId) || !this.isMember(q.roomId, me) || !this.isMember(q.roomId, contact) || this.exits.isLeaving(q.roomId, contactId)) return null;
+    const links = this.linksOfUser(q.roomId);
+    if (q.linkedRoomId === null) {
+      if (!links.length) return "本会话没有关联别的聊天记录";
+      return ["本会话关联的聊天记录(只读、只到关联那一刻的上界以内):", ...links.map((l) => `- ${l.linkedRoomId} · ${l.kind === "dm" ? "私聊" : "群聊"}「${l.title}」· 上界 #${l.uptoSeq}(关联于 ${l.linkedAt})`)].join("\n");
+    }
+    const link = links.find((l) => l.linkedRoomId === q.linkedRoomId);
+    if (!link) return null;
+    const hidden = this.hiddenOf(link.linkedRoomId);
+    const rewound = rewindRanges(this.db, link.linkedRoomId);
+    const terms = q.query?.toLowerCase().split(/\s+/).filter(Boolean) ?? [];
+    const { log } = loadLog(this.db.store, `room:${link.linkedRoomId}`);
+    const retracted = retractedBodies(log.events);
+    // The link freezes message and edit visibility, but later retractions still take effect.
+    const snapshot = project({ ...log, events: log.events.filter((e) => e.seq <= link.uptoSeq || e.body.kind === "retract") });
+    const candidates = snapshot
+      .filter((m) => m.seq <= link.uptoSeq && (q.beforeSeq === null || m.seq < q.beforeSeq) && !this.isHidden(hidden, m.seq))
+      .map((m) => {
+        const gone = m.retracted || inRanges(rewound, m.seq);
+        const raw = gone ? "" : this.forwardText(link.linkedRoomId, m);
+        const text = !gone && retracted.length ? scrubLineBody(raw, retracted).text : raw;
+        return { m, gone, text };
+      })
+      .filter(({ text }) => terms.every((t) => text.toLowerCase().includes(t)));
+    const limit = Math.min(Math.max(q.limit ?? 20, 1), 50);
+    const page = candidates.slice(-limit).map(({ m, gone, text }) => ({
+      seq: m.seq, gone, text: text.slice(0, 4000), senderName: this.nameOf(m.sender),
+      at: one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${link.linkedRoomId}`, m.seq)?.at ?? "",
+    }));
+    return renderLinked(link, page, candidates.length - page.length);
   }
   // 客户端会话级未发送缓冲(AC-24、AC-37 ②;D11.5、C-US28):只存不送,绝不进联系人注意循环,也不产生会话事件。
   /** 某会话的草稿;没存过返回 draftVer = 0 的空草稿。 */
@@ -1726,7 +1883,7 @@ export class Host {
         ranges: rewindRanges(this.db, roomId),
         tasks: this.listTasks({ roomId }),
         activeCommitments: this.listCommitments({ roomId, status: "active" }),
-        computeRuns: (taskId) => all(this.db, "SELECT compute_id, status, result, started_at, ended_at FROM gg_compute WHERE task_id = ? ORDER BY started_at, compute_id", taskId),
+        computeRuns: (taskId) => computeRuns(this.db, taskId),
       },
       toSeq,
     );
@@ -1744,7 +1901,9 @@ export class Host {
     const me: Member = { kind: "user", id: this.userId };
     const upto = this.lastSeq(roomId);
     const effects: HostEffect[] = [];
+    const copies: ReturnType<ForwardLinkStore["markSourceRetractedTx"]> = [];
     const result = tx(this.db, () => {
+      copies.push(...this.links.markSourceRetractedTx(roomId, plan.messages.map((m) => m.seq)));
       const tasks = plan.tasks.map((t) => {
         const { doc, effects: eff } = this.stepTaskTx(t.taskId, { kind: "Cancel", by: this.userId });
         for (const e of eff) if (e.kind === "stop-compute") effects.push({ kind: "stop", taskId: t.taskId, computeId: e.computeId });
@@ -1775,6 +1934,7 @@ export class Host {
       const pm = msgs.find((x) => x.seq === m.seq);
       if (pm) this.bus.emit({ type: "message.updated", message: this.messageView(roomId, pm, msgs) });
     }
+    this.emitForwardUpdates(copies);
     this.afterAppend(roomId, result.markerSeq, me);
     for (const t of plan.tasks) this.emitTask(t.taskId);
     const changed = new Set(plan.commitments.map((k) => k.commitmentId));
@@ -1792,9 +1952,9 @@ export class Host {
     if (!this.isMember(roomId, { kind: "contact", id: contactId })) throw new HostError("invalid_params", "这位联系人不在这个会话里");
   }
   /** 事务内:负责人认领任务,返回起 Compute 的副作用(与联系人 dispatch 同一条派发路径)。 */
-  private claimForTx(taskId: string, contactId: string): HostEffect[] {
+  private claimForTx(taskId: string, contactId: string, cause = "ManualAssign"): HostEffect[] {
     const contact = this.contactDoc(contactId).value;
-    const { doc, effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: contactId });
+    const { doc, effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: contactId }, {}, { cause, actor: { kind: "user", id: this.userId } });
     return eff.flatMap((e): HostEffect[] => (e.kind === "spawn-compute" ? [{ kind: "spawn", taskId, requestId: e.requestId, contactId, model: this.computeModelOf(contact), brief: doc.brief, roomId: doc.roomId }] : []));
   }
   private bindTaskCauseTx(taskId: string, roots: readonly string[]): void {
@@ -1841,7 +2001,8 @@ export class Host {
       }).seq;
       const doc: TaskDoc = { task: newTask(taskId, this.userId), title: title.slice(0, 500), roomId: room.id, sourceSeq: s, brief, createdAt: this.now(), updatedAt: this.now(), result: null, causeRoots: this.loopGuard.rootsOf(room.id, s), ...(description ? { description } : {}) };
       putDoc(this.db, `task:${taskId}`, 0, doc);
-      if (owner !== undefined) effects.push(...this.claimForTx(taskId, owner));
+      recordTaskFacts(this.db, null, doc, "ManualCreate", me, { requester: doc.task.requester });
+      if (owner !== undefined) effects.push(...this.claimForTx(taskId, owner, "ManualCreateClaim"));
       recordAction(this.db.store, key, { taskId });
       return s;
     });
@@ -1881,12 +2042,13 @@ export class Host {
     return d;
   }
   /** 在事务里推进任务状态机;被状态机拒绝抛 conflict。 */
-  private stepTaskTx(id: string, ev: TaskEvent, extra: Partial<TaskDoc> = {}): { doc: TaskDoc; effects: ReturnType<typeof applyTask> extends infer O ? (O extends { ok: true; effects: infer E } ? E : never) : never } {
+  private stepTaskTx(id: string, ev: TaskEvent, extra: Partial<TaskDoc> = {}, origin: TaskFactOrigin = {}): { doc: TaskDoc; effects: ReturnType<typeof applyTask> extends infer O ? (O extends { ok: true; effects: infer E } ? E : never) : never } {
     const cur = this.taskDoc(id);
     const out = applyTask(cur.value.task, ev);
     if (!out.ok) throw new HostError("conflict", `任务 ${id} 拒绝 ${ev.kind}:${out.reason}`);
     const doc: TaskDoc = { ...cur.value, ...extra, task: out.task, updatedAt: this.now() };
     putDoc(this.db, `task:${id}`, cur.ver, doc);
+    recordTaskTransition(this.db, cur.value, doc, ev, origin);
     this.expireQuestionsTx(id, out.task);
     this.retireReviewsTx(id, out.task);
     return { doc, effects: out.effects };
@@ -1953,6 +2115,13 @@ export class Host {
     return this.taskView(this.taskDoc(taskId).value);
   }
   /** 按 id 读权威任务文档(正文与版本同一次读出)投影成视图;群入口、侧边栏、事件都走这里或 listTasks,不读缓存副本(AC-02) */
+  /** U80/D21: 当前成员才可读;不借用未带成员过滤的 tasks.list/progress。 */
+  taskTimeline(q: { taskId: string; cursor?: string; limit?: number }): { events: TaskTimelineEvent[]; nextCursor: string | null } {
+    const doc = this.taskDoc(q.taskId).value;
+    this.roomRow(doc.roomId);
+    if (!this.isMember(doc.roomId, { kind: "user", id: this.userId })) throw new HostError("forbidden", "你不在这个会话里");
+    return readTaskTimeline(this.db, q);
+  }
   taskViewById(id: string): TaskView {
     const d = this.taskDoc(id);
     return this.taskView(d.value, d.ver);
@@ -2050,11 +2219,14 @@ export class Host {
     const c = this.questionCard(taskId, qId);
     return c ? String((JSON.parse(c.meta) as { needs?: string }).needs ?? "").slice(0, 5000) : "";
   }
-  progress(taskId: string, limit = 200): ComputeProgress[] {
+  progress(taskId: string, limit = 200, opts: { afterAt?: string } = {}): ComputeProgress[] {
+    const after = opts.afterAt === undefined ? null : Date.parse(opts.afterAt);
+    if (after !== null && !Number.isFinite(after)) throw new HostError("invalid_params", "afterAt 不是有效时间");
     return all<{ compute_id: string; kind: ComputeProgress["kind"]; stage: string | null; summary: string; at: string }>(
       this.db,
-      "SELECT * FROM (SELECT * FROM gg_progress WHERE task_id = ? ORDER BY id DESC LIMIT ?) ORDER BY id",
+      `SELECT * FROM (SELECT * FROM gg_progress WHERE task_id = ?${after === null ? "" : " AND at > ?"} ORDER BY id DESC LIMIT ?) ORDER BY id`,
       taskId,
+      ...(after === null ? [] : [new Date(after).toISOString()]),
       limit,
     ).map((p) => ({ computeId: p.compute_id, taskId, kind: p.kind, ...(p.stage ? { stage: p.stage } : {}), summary: p.summary, at: p.at }));
   }
@@ -2246,7 +2418,8 @@ export class Host {
 [重跑说明] 这是任务 ${src.task.id} 的第 ${plan.event.attempt} 次重跑${plan.mode === "new_session" ? "(开新会话,不接着原会话)" : ""};上次结果:${why}。已经做过的副作用先核对再继续。`;
       const doc0: TaskDoc = { task: newTask(taskId, src.task.requester), title: src.title, roomId: src.roomId, sourceSeq: src.sourceSeq, brief, createdAt: this.now(), updatedAt: this.now(), result: null, causeRoots: req.fresh ? this.loopGuard.rootsFor(req.fresh, src.roomId) : this.loopGuard.taskRoots(src.task.id) };
       putDoc(this.db, `task:${taskId}`, 0, doc0);
-      const { effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: owner });
+      recordTaskFacts(this.db, null, doc0, "RerunCreate", plan.event.initiator, { requester: doc0.task.requester, rerunOfTask: src.task.id, runId: unit.id });
+      const { effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: owner }, {}, { cause: "RerunClaim", actor: plan.event.initiator, data: { runId: unit.id } });
       for (const e of eff) if (e.kind === "spawn-compute") effects.push({ kind: "spawn", taskId, requestId: e.requestId, contactId: owner, model: this.computeModelOf(this.contactDoc(owner).value), brief, roomId: src.roomId, rerunOf: unit.id, attempt: plan.event.attempt });
       const r = this.appendMessageTx(src.roomId, { kind: "contact", id: owner }, {
         text: `重跑任务:${src.title}(第 ${plan.event.attempt} 次,依据台账 ${unit.id})`,
@@ -2488,7 +2661,7 @@ export class Host {
       const meta = one<MsgMeta>(this.db, "SELECT * FROM gg_msg WHERE room_id = ? AND seq = ?", roomId, m.seq);
       const quoted = [...(meta?.reply_to != null ? [meta.reply_to] : []), ...(meta ? (JSON.parse(meta.quoted) as number[]) : [])];
       const at = one<{ at: string }>(this.db, "SELECT at FROM events WHERE session = ? AND seq = ?", `room:${roomId}`, m.seq)?.at ?? "";
-      out.push({ seq: m.seq, author: this.nameOf(m.sender), at, text: m.text, quoted, retracted: m.retracted });
+      out.push({ seq: m.seq, author: this.nameOf(m.sender), at, text: this.forwardText(roomId, m), quoted, retracted: m.retracted });
     }
     return out;
   }
@@ -2752,7 +2925,7 @@ export class Host {
       roomId,
       seq: m.seq,
       sender: { kind: m.sender.kind, id: m.sender.id, name: this.nameOf(m.sender) },
-      text: m.text,
+      text: this.forwardText(roomId, m),
       replyToSeq: replyTo !== null && earlier(replyTo) ? replyTo : null,
       quotedSeqs: meta ? (JSON.parse(meta.quoted) as number[]).filter(earlier) : [],
       mentions: meta ? (JSON.parse(meta.mentions) as { id: string }[]).map((x) => x.id) : [],
@@ -2842,7 +3015,7 @@ export class Host {
           refs.push({ fromRoomId: r.id, roomId: r.id, seq: q, primary: q === raw.replyTo });
           // 私聊 rewind 撤下的消息(AC-48)不换入原文:按撤回处理,只给占位,原文不进召回规划
           const gone = !!src && inRanges(rewound, src.seq);
-          if (src && !sources.has(`${r.id}#${q}`)) sources.set(`${r.id}#${q}`, { roomId: r.id, seq: q, text: gone ? "" : src.text, retracted: src.retracted || gone, sender: this.nameOf(src.sender) });
+          if (src && !sources.has(`${r.id}#${q}`)) sources.set(`${r.id}#${q}`, { roomId: r.id, seq: q, text: gone ? "" : this.forwardText(r.id, src), retracted: src.retracted || gone, sender: this.nameOf(src.sender) });
         }
       }
     }
@@ -3013,10 +3186,12 @@ export class Host {
     let out: Awaited<ReturnType<ContactMind["round"]>>;
     try {
       // 每一轮现场定生效模型(原则 70):用户在失败卡上显式选了备用模型才换,只用于重跑这一批;自动重试永远用原模型(严禁静默换模)
+      const freshRooms = new Set(fresh.filter((f) => f.kind !== "message" || f.sender.kind !== "system").map((f) => f.roomId));
       const tools: RoundTools = {
+        readLinked: async (q) => this.readLinked(contactId, freshRooms, q),
         readMemory: async (id: string) => this.renderMemory(contactId, id),
         readQuoteParent: async (roomId: string, seq: number) => this.readQuoteParent(contactId, roomId, seq),
-        ...this.history.tools(contactId, new Set(fresh.filter((f) => f.kind !== "message" || f.sender.kind !== "system").map((f) => f.roomId))),
+        ...this.history.tools(contactId, freshRooms),
         // progress_get(D26 第 4 节):在 roomId 里按可见范围查一个台账单元
         progressGet: async (id: string, roomId: string) => {
           const leaving = this.exits.leavingRoomsOf(contactId);
@@ -3064,7 +3239,7 @@ export class Host {
       this.runs.settle(unit.id, { stale: true, note: "检查期间上下文变化,放弃旧结果并重跑" });
       return "stale";
     }
-    let done: { effects: HostEffect[] };
+    let done: { effects: HostEffect[]; replyRoomId: string | null };
     try {
       done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, cursorSeen, recoveredPending, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona, pendingNote: settled.pending });
     } catch (e) {
@@ -3077,6 +3252,7 @@ export class Host {
       throw e;
     }
     this.expireRoundFailures(contactId);
+    if (done.replyRoomId !== null) this.setActivity(contactId, done.replyRoomId, "replying");
     this.setActivity(contactId, null, "idle");
     // 这一轮起的 Compute 会话挂在这个轮次下面(父子一致:Compute 还在跑,轮次就等它,不记 done)
     await this.runEffects(done.effects.map((e) => (e.kind === "spawn" && !e.parentRunId ? { ...e, parentRunId: unit.id } : e)));
@@ -3162,7 +3338,7 @@ export class Host {
     cursorSeen: Record<string, number>,
     recoveredPending: readonly InboundMessage[],
     out: { actions: readonly MindAction[]; stateNote: string | null; personaSuggestion?: string | null; pendingNote: Inbound[] },
-  ): { effects: HostEffect[] } {
+  ): { effects: HostEffect[]; replyRoomId: string | null } {
     const roomIds = new Set(this.roomsOfContact(contactId).map((r) => r.id));
     // 移出中:这个群里的发言、登记承诺与接新活一律拒绝(D05「先禁止新群内接单与发言」)
     const leavingRooms = this.exits.leavingRoomsOf(contactId);
@@ -3240,6 +3416,7 @@ export class Host {
             const t0 = newTask(taskId, requester);
             const doc0: TaskDoc = { task: t0, title: a.title.slice(0, 500), roomId: a.roomId, sourceSeq: a.sourceSeq, brief: a.task, createdAt: this.now(), updatedAt: this.now(), result: null, causeRoots: this.loopGuard.rootsOf(a.roomId, a.sourceSeq) };
             putDoc(this.db, `task:${taskId}`, 0, doc0);
+            recordTaskFacts(this.db, null, doc0, "ContactDispatch", { kind: "contact", id: contactId }, { requester });
             const { effects: eff } = this.stepTaskTx(taskId, { kind: "Claim", by: contactId });
             for (const e of eff) if (e.kind === "spawn-compute") effects.push({ kind: "spawn", taskId, requestId: e.requestId, contactId, model: this.computeModelOf(contact), brief: a.task, roomId: a.roomId });
             const cardId = this.newId("card");
@@ -3351,7 +3528,7 @@ export class Host {
               mentions: [{ id: t.task.requester, source: "auto" }],
             });
             if (arts.length && !r.duplicate) run(this.db, "INSERT OR IGNORE INTO gg_msg_artifacts (room_id, seq, artifacts) VALUES (?, ?, ?)", t.roomId, r.seq, JSON.stringify(arts));
-            const { effects: sub } = this.stepTaskTx(a.taskId, { kind: "SubmitForReview", commit, computeId: t.task.computeId, constraintVer: t.task.constraintVer }, { result: a.text, deliveredSeq: r.seq, artifacts: arts });
+            const { effects: sub } = this.stepTaskTx(a.taskId, { kind: "SubmitForReview", commit, computeId: t.task.computeId, constraintVer: t.task.constraintVer }, { result: a.text, deliveredSeq: r.seq, artifacts: arts }, { actor: { kind: "contact", id: contactId } });
             // 落实:这一版产物覆盖到的补充标 Applied,指向产物与版本
             const applied = fu.applyArtifact(follow.value.state, { artifact: `${commit}@v${resultVer}`, artifactVer: resultVer });
             if (applied.ok) this.putFollowTx(a.taskId, follow, { ...follow.value, state: applied.value });
@@ -3395,7 +3572,7 @@ export class Host {
           case "stop": {
             const t = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
-            const { effects: eff } = this.stepTaskTx(a.taskId, { kind: "Cancel", by: contactId });
+            const { effects: eff } = this.stepTaskTx(a.taskId, { kind: "Cancel", by: contactId }, {}, { actor: { kind: "contact", id: contactId } });
             for (const e of eff) if (e.kind === "stop-compute") {
               this.stopBy.set(e.computeId, contactId);
               effects.push({ kind: "stop", taskId: a.taskId, computeId: e.computeId });
@@ -3492,7 +3669,7 @@ export class Host {
     for (const a of appended) this.afterAppend(a.roomId, a.seq, { kind: "contact", id: contactId });
     for (const id of touchedTasks) this.emitTask(id);
     for (const c of notifyAfter) this.loop.notify(c, "now");
-    return { effects };
+    return { effects, replyRoomId: appended.at(-1)?.roomId ?? null };
   }
 
   // ======================= Compute =======================
@@ -3901,7 +4078,9 @@ export class Host {
       if (o.ok) task = o.task;
       else this.report("producer-model-rejected", { taskId, model, reason: o.reason });
     }
-    putDoc(this.db, `task:${taskId}`, cur.ver, { ...cur.value, task, models, updatedAt: this.now() });
+    const doc = { ...cur.value, task, models, updatedAt: this.now() };
+    putDoc(this.db, `task:${taskId}`, cur.ver, doc);
+    recordTaskFacts(this.db, cur.value, doc, "ProducerModelAdded", null, { computeId, model });
   }
   /**
    * 送进 Compute 的每一次后续输入(联系人转达、用户退回重试……)都走这里(AC-51 ①⑤):
@@ -4159,7 +4338,7 @@ export class Host {
       for (const x of eff) if (x.kind === "stop-compute") late.push(x.computeId);
       // 新实例的第一轮依据启动时的约束版本
       const f = this.followOf(e.taskId);
-      this.putFollowTx(e.taskId, f, { ...f.value, rounds: [launchVer], resultVer: null });
+      this.putFollowTx(e.taskId, f, { ...f.value, rounds: [launchVer], resultVer: null }, "RoundStarted");
     });
     const session = ledger(r.computeId, model);
     const turn = this.runs.start({ layer: "compute-turn", parentId: session.id, roomId: e.roomId, sourceSeq: session.sourceSeq, contactId: e.contactId, taskId: e.taskId, computeId: r.computeId, upstream: model });
@@ -5159,16 +5338,19 @@ export class Host {
   private followOf(taskId: string): { value: FollowDoc; ver: number } {
     return getDoc<FollowDoc>(this.db, `follow:${taskId}`) ?? { value: { state: fu.emptyFollowUps(taskId), rounds: [], resultVer: null, queued: [] }, ver: 0 };
   }
-  private putFollowTx(taskId: string, cur: { ver: number }, next: FollowDoc) {
+  private putFollowTx(taskId: string, cur: { value: FollowDoc; ver: number }, next: FollowDoc, cause = "FollowUpApplied", actor: Member | null = null) {
     putDoc(this.db, `follow:${taskId}`, cur.ver, next);
+    recordFollowFacts(this.db, this.taskDoc(taskId).value, cur.value, next, cause, this.now(), actor);
   }
   private authzOf(taskId: string): { value: AuthzDoc; ver: number } {
     return getDoc<AuthzDoc>(this.db, `authz:${taskId}`) ?? { value: { requests: [] }, ver: 0 };
   }
   /** 写任务文档(CAS):用于领域层合成函数已经算好的新任务(改条件、改挂)。 */
-  private saveTaskTx(id: string, cur: { value: TaskDoc; ver: number }, task: Task) {
+  private saveTaskTx(id: string, cur: { value: TaskDoc; ver: number }, task: Task, cause: string, actor: Member = { kind: "user", id: this.userId }) {
     if (task === cur.value.task) return;
-    putDoc(this.db, `task:${id}`, cur.ver, { ...cur.value, task, updatedAt: this.now() });
+    const doc = { ...cur.value, task, updatedAt: this.now() };
+    putDoc(this.db, `task:${id}`, cur.ver, doc);
+    recordTaskFacts(this.db, cur.value, doc, cause, actor);
   }
   private roomRuleLines(roomId: string): string[] {
     return this.roomRow(roomId).rules.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -5237,8 +5419,9 @@ export class Host {
     const r = fu.amendWithFollowUp({ task: cur.value.task, followUps: f.value.state }, { roomId: t.roomId, seq: sourceSeq, text: src.text, by: src.sender.id, computeResumable: true });
     if (!r.ok) return r;
     if (r.task === cur.value.task) return { ok: true, effects: [] };
-    this.saveTaskTx(taskId, cur, r.task);
-    this.putFollowTx(taskId, f, { ...f.value, state: r.followUps });
+    const actor = { kind: "user" as const, id: src.sender.id };
+    this.saveTaskTx(taskId, cur, r.task, "FollowUpAmend", actor);
+    this.putFollowTx(taskId, f, { ...f.value, state: r.followUps }, "FollowUpReceived", actor);
     this.expireAuthzTx(taskId);
     return { ok: true, effects: this.taskEffectsToHost(taskId, r.taskEffects, `${text}\n(用户补充 #${sourceSeq},任务条件已更新到 v${r.task.constraintVer},之后的产出必须体现它)`) };
   }
@@ -5257,8 +5440,8 @@ export class Host {
     try {
       tx(this.db, () => {
         const f = this.followOf(e.taskId);
-        if (r.ok) this.putFollowTx(e.taskId, f, { ...f.value, rounds: [...f.value.rounds, this.taskDoc(e.taskId).value.task.constraintVer] });
-        else if (/还在运行/.test(r.reason)) this.putFollowTx(e.taskId, f, { ...f.value, queued: [...f.value.queued, e.text] });
+        if (r.ok) this.putFollowTx(e.taskId, f, { ...f.value, rounds: [...f.value.rounds, this.taskDoc(e.taskId).value.task.constraintVer] }, "ResumeAccepted");
+        else if (/还在运行/.test(r.reason)) this.putFollowTx(e.taskId, f, { ...f.value, queued: [...f.value.queued, e.text] }, "ResumeQueued");
       });
     } catch (err) {
       this.report("follow-round", err);
@@ -5267,7 +5450,7 @@ export class Host {
   private flushQueuedTx(taskId: string, computeId: string): HostEffect[] {
     const f = this.followOf(taskId);
     if (!f.value.queued.length) return [];
-    this.putFollowTx(taskId, f, { ...f.value, queued: [] });
+    this.putFollowTx(taskId, f, { ...f.value, queued: [] }, "ResumeDequeued");
     return [{ kind: "resume", taskId, computeId, text: f.value.queued.join("\n\n") }];
   }
   /** Compute 事件里与意图相关的部分:轮次结束记版本、排队补充续上、改前先问时把受阻变成授权提问、改挂回滚等停止确认。 */
@@ -5278,7 +5461,7 @@ export class Host {
     if (ev.kind === "stopped" && f.value.state.pendingRollback?.computeId === ev.computeId) {
       const r = fu.confirmRollbackStopped(f.value.state, ev.computeId);
       if (r.ok) {
-        this.putFollowTx(taskId, f, { ...f.value, state: r.value, rounds: [] });
+        this.putFollowTx(taskId, f, { ...f.value, state: r.value, rounds: [] }, "RollbackStopped");
         for (const e of r.effects) if (e.kind === "restore-workspace") out.effects.push({ kind: "resume", taskId, computeId: ev.computeId, text: restoreText(e) });
         out.quiet = true;
       }
@@ -5287,7 +5470,7 @@ export class Host {
     if (ev.kind !== "completed" && ev.kind !== "blocked" && ev.kind !== "failed") return;
     const [ver, ...rest] = f.value.rounds;
     const next: FollowDoc = { ...f.value, rounds: rest, resultVer: ev.kind === "completed" && ver !== undefined ? ver : f.value.resultVer };
-    this.putFollowTx(taskId, f, next);
+    this.putFollowTx(taskId, f, next, ev.kind === "completed" ? "RoundCompleted" : ev.kind === "blocked" ? "RoundBlocked" : "RoundFailed");
     if (ev.kind === "completed" && next.queued.length && t.task.computeId === ev.computeId) out.effects.push(...this.flushQueuedTx(taskId, ev.computeId));
     if (ev.kind === "blocked") this.raiseAuthorizationTx(t, ev, out);
   }
@@ -5336,8 +5519,7 @@ export class Host {
       const res = authz.resolveConsent(requests, {
         roomId, seq, sender: { kind: m.sender.kind, id: m.sender.id }, text: m.text,
         replyToSeq: meta?.reply_to ?? null, quotedSeqs: meta ? (JSON.parse(meta.quoted) as number[]) : [],
-        // 宿主目前没有转发入口;外部数据源的内容不经 send 进会话
-        forwarded: false, external: false,
+        forwarded: Boolean(getDoc(this.db, `forward:${roomId}:${seq}`)), external: false,
       });
       if (res.kind === "decision") this.settleConsentTx(res.binding, res.decision, out);
       else if (res.kind === "ambiguous") {
@@ -5403,10 +5585,10 @@ export class Host {
       if (!r.ok) throw new HostError(/关联版本已变/.test(r.reason) ? "conflict" : "invalid_params", r.reason, /关联版本已变/.test(r.reason) ? { currentVer: fa.value.state.bindingVer } : undefined);
       recordAction(this.db.store, `rebind:${input.clientActionId}`, { from: input.fromTaskId, to: input.toTaskId });
       if (r.idempotent) return;
-      this.saveTaskTx(input.fromTaskId, a, r.from.task);
-      this.saveTaskTx(input.toTaskId, b, r.to.task);
-      this.putFollowTx(input.fromTaskId, fa, { ...fa.value, state: r.from.followUps });
-      this.putFollowTx(input.toTaskId, fb, { ...fb.value, state: r.to.followUps });
+      this.saveTaskTx(input.fromTaskId, a, r.from.task, "RebindTaskOut");
+      this.saveTaskTx(input.toTaskId, b, r.to.task, "RebindTaskIn");
+      this.putFollowTx(input.fromTaskId, fa, { ...fa.value, state: r.from.followUps }, "FollowUpReboundOut", { kind: "user", id: this.userId });
+      this.putFollowTx(input.toTaskId, fb, { ...fb.value, state: r.to.followUps }, "FollowUpReboundIn", { kind: "user", id: this.userId });
       this.expireAuthzTx(input.fromTaskId);
       this.expireAuthzTx(input.toTaskId);
       const halting = r.from.effects.some((e) => e.kind === "stop-for-rollback");
