@@ -1,0 +1,52 @@
+packages/server/src/host.ts
+  s_1a776f3707f34d::t_1015a0066a5217 142,144-160,173-177,249-250,452-455,473,516-530,535-548,593-596,644-647,669,671,676,697-716,725,1913,1993,1997-2019,2021-2043,2115,2775-2780,3202,3205-3206,3209,3275-3281,3496,3558-3570,3654-3660,3682,3693-3698,3700,3702-3706,3708-3711,3713-3726,3764-3767,3776,3780,3797-3802,4607,4693
+packages/server/src/runs.ts
+  s_1a776f3707f34d::t_1015a0066a5217 78-79,350-360,388-398
+  s_1a776f3707f34d::t_1a3e43f3b9a1a9 399
+packages/server/src/quota.ts
+  s_1a776f3707f34d::t_1015a0066a5217 30-35,50-51,54-72,75,80,83,100-105,107,110-116,120-127,133-150,162-164
+packages/server/src/db.ts
+  s_1a776f3707f34d::t_1015a0066a5217 35-39
+README.md
+  s_1a776f3707f34d::t_1015a0066a5217 74-77
+packages/adapter-pi-contact/src/mind.ts
+  s_1a776f3707f34d::t_1015a0066a5217 206-210
+packages/server/src/cli.ts
+  s_1a776f3707f34d::t_1015a0066a5217 9,19,40-41,137,154
+packages/server/src/atomic.ts
+  s_1a776f3707f34d::t_1015a0066a5217 1-139
+packages/server/src/runtime-config.ts
+  s_1a776f3707f34d::t_1015a0066a5217 1-7,9-10,13,15,18-24,26-29,31-33,35,47-75,77-78,80,82-84,92,97,100-134,136-170,172-182
+packages/server/src/fakes.ts
+  s_1a776f3707f34d::t_1015a0066a5217 67-68,97,100-112,114,116,126-129,143-150,156,169-170,180,200,202,230,242
+packages/server/src/artifacts.ts
+  s_1a776f3707f34d::t_1015a0066a5217 5,7,58-59,62-63
+packages/adapter-pi-contact/src/tools.ts
+  s_1a776f3707f34d::t_1015a0066a5217 1,22,146-153,193-194,263
+packages/server/src/start.ts
+  s_1a776f3707f34d::t_1015a0066a5217 7,29-30,97
+packages/kernel/src/run-ledger.ts
+  s_1a776f3707f34d::t_1015a0066a5217 249-250,259
+packages/server/src/progress-get.ts
+  s_1a776f3707f34d::t_1015a0066a5217 1-5,8,11-13,15-67
+packages/server/src/service.ts
+  s_1a776f3707f34d::t_1015a0066a5217 147
+packages/server/licenses/OpenMausBot-APACHE-2.0.txt
+  s_1a776f3707f34d::t_1015a0066a5217 1-202
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2afdf13b2f97cbde3044a4ca0ee397f013813eeb",
+  "prompts": {},
+  "sessions": {
+    "s_1a776f3707f34d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ebf2-9504-7bf0-937c-48c2ba061e8b",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
