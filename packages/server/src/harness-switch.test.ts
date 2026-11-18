@@ -120,6 +120,7 @@ test("AC-51 ⑦ codex -> claude-code: boundary handoff retains task, workspace a
 
 async function failedHandoff(
   t: import("node:test").TestContext,
+  HostClass: typeof Host,
   opts: { missing?: boolean; quiesceFails?: boolean; throws?: boolean } = {},
 ) {
   const source = scriptedCompute({
@@ -138,7 +139,7 @@ async function failedHandoff(
   };
   const destination = scriptedCompute({ idPrefix: "destination" });
   let attempts = 0;
-  const host: Host = new Host({
+  const host: Host = new HostClass({
     file: file(),
     mind: () => forwardingMind(() => host),
     compute: {
@@ -177,14 +178,14 @@ async function failedHandoff(
 }
 
 test("AC-51 ⑦ reports an unregistered destination before stopping the source", async (t) => {
-  const { host, task, old, source } = await failedHandoff(t, { missing: true });
+  const { host, task, old, source } = await failedHandoff(t, Host, { missing: true });
   assert.ok(host.progress(task.id).some((p) => p.computeId === old && p.kind === "blocked" && /还没有接入它的适配器.*修复路径/.test(p.summary)));
   assert.deepEqual(source.stopped, []);
   assert.equal(host.taskDoc(task.id).value.task.computeId, old);
 });
 
 test("AC-51 ⑦ quarantines an unconfirmed stop and retains the lease without spawning", async (t) => {
-  const { host, task, old, source, attempts } = await failedHandoff(t, { quiesceFails: true });
+  const { host, task, old, source, attempts } = await failedHandoff(t, Host, { quiesceFails: true });
   assert.deepEqual(source.stopped, [old]);
   assert.equal(attempts(), 0);
   assert.match(host.listTasks({}).find((taskView) => taskView.id === task.id)?.waitingFor ?? "", /停止未确认:still alive/);
@@ -193,7 +194,7 @@ test("AC-51 ⑦ quarantines an unconfirmed stop and retains the lease without sp
 });
 
 test("AC-51 ⑦ relaunches the retired source after refusal and delivers replacement events", async (t) => {
-  const { host, task, old, source, c, send, attempts } = await failedHandoff(t);
+  const { host, task, old, source, c, send, attempts } = await failedHandoff(t, Host);
   assert.equal(attempts(), 1);
   assert.equal(Reflect.get(host, "harnessRetiring").has(old), false);
   assert.equal(host.quota.leaseOf(task.id), undefined);
@@ -213,7 +214,7 @@ test("AC-51 ⑦ relaunches the retired source after refusal and delivers replace
 });
 
 test("AC-51 ⑦ confirms cancellation of the retired source after replacement refusal", async (t) => {
-  const { host, task, old, source, attempts } = await failedHandoff(t);
+  const { host, task, old, source, attempts } = await failedHandoff(t, Host);
   assert.equal(attempts(), 1);
   host.taskDecision(task.id, "cancel", "c1");
   await settle(host, source);
@@ -223,7 +224,7 @@ test("AC-51 ⑦ confirms cancellation of the retired source after replacement re
 });
 
 test("AC-51 ⑦ retries a throwing replacement without stopping the retired source again", async (t) => {
-  const { host, task, old, source, send, attempts } = await failedHandoff(t, { throws: true });
+  const { host, task, old, source, send, attempts } = await failedHandoff(t, Host, { throws: true });
   assert.equal(attempts(), 1);
   assert.equal(Reflect.get(host, "harnessRetiring").has(old), false);
   assert.equal(host.quota.leaseOf(task.id), undefined);

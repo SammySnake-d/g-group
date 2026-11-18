@@ -162,7 +162,7 @@ export type ComputeEvent =
        * 脱离进程组的后代(setsid、双 fork 守护进程)任何情况下都不覆盖。
        * 内核不得把 stopped 当作执行树已静止,更不是容器级静止;完全隔离归 placement=cloud_sandbox / 容器,不在本适配器。
        */
-      readonly scope: "main-then-group" | "turn-interrupt";
+      readonly scope: "main-then-group";
       /** 停止之前适配器判定过的违规(工具越界、init 无法核验等),停止优先于违规但违规保留可审计 */
       readonly violations: readonly string[];
     };
@@ -225,6 +225,3 @@ export interface RejectedReport {
   readonly kind: unknown;
   readonly reason: string;
 }
-
-/** Shared host-facing execution port; both native harness adapters implement this contract. */
-export type ComputePort = ComputeAdapter;

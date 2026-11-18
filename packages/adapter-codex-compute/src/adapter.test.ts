@@ -6,9 +6,9 @@ import { type TestContext, test } from "node:test";
 import type { SpawnOptions } from "@g-group/kernel/compute";
 import { createCodexComputeAdapter } from "./adapter.ts";
 
-function fixture(t: TestContext, mode = "normal") {
+function fixture(t: TestContext, createAdapter: typeof createCodexComputeAdapter, mode = "normal") {
   const root = mkdtempSync(path.join(tmpdir(), "gg-codex-adapter-"));
-  const adapter = createCodexComputeAdapter({
+  const adapter = createAdapter({
     runner: { command: process.execPath, args: [path.resolve(import.meta.dirname, "../test-support/native-wire.mjs")] },
     hostEnv: { FIXTURE_MODE: mode },
     dataDir: root,
@@ -37,7 +37,7 @@ function requests(home: string) {
 }
 
 test("P1B adapter snapshots only after quiescence", async (t) => {
-  const { adapter, spawn } = fixture(t, "progress");
+  const { adapter, spawn } = fixture(t, createCodexComputeAdapter, "progress");
   const result = await spawn();
   assert.ok(result.ok);
   const id = result.computeId;
@@ -51,14 +51,14 @@ test("P1B adapter snapshots only after quiescence", async (t) => {
 });
 
 test("P1B adapter refuses Claude plugin directories", async (t) => {
-  const { spawn } = fixture(t);
+  const { spawn } = fixture(t, createCodexComputeAdapter);
   const result = await spawn([], { pluginDirs: ["/some/plugin"] });
   assert.equal(result.ok, false);
   assert.match(result.reason, /plugin/i);
 });
 
 test("P1B adapter rejects partial tool lists and maps both supported sandbox scopes", async (t) => {
-  const { adapter, spawn } = fixture(t);
+  const { adapter, spawn } = fixture(t, createCodexComputeAdapter);
   const partial = await spawn(["Read"]);
   assert.equal(partial.ok, false);
   assert.match(partial.reason, /Codex cannot enforce this per-tool whitelist/);
@@ -86,7 +86,7 @@ test("P1B adapter rejects partial tool lists and maps both supported sandbox sco
 });
 
 test("P1B adapter resumes the same native thread across turns and stops once after completion", async (t) => {
-  const { adapter, spawn } = fixture(t);
+  const { adapter, spawn } = fixture(t, createCodexComputeAdapter);
   const result = await spawn();
   assert.ok(result.ok);
   const id = result.computeId;
@@ -106,7 +106,7 @@ test("P1B adapter resumes the same native thread across turns and stops once aft
 });
 
 test("P1B adapter steers and interrupts each active turn with one stopped event", async (t) => {
-  const { adapter, spawn } = fixture(t, "hold");
+  const { adapter, spawn } = fixture(t, createCodexComputeAdapter, "hold");
   const result = await spawn();
   assert.ok(result.ok);
   const id = result.computeId;

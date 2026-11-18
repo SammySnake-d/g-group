@@ -5,7 +5,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_RETRY_POLICY, type ThresholdConfig } from "@g-group/kernel";
-import { type ComputeCommands, claudeCompute, codexCompute } from "./compute.ts";
+import { type ComputeCommands, claudeCompute } from "./compute.ts";
 import { deskCompute } from "./fakes.ts";
 import { Host } from "./host.ts";
 import { DEFAULT_STATE_NOTE_MAX_BYTES, type PiRuntimeOptions } from "./pi-runtime.ts";
@@ -17,8 +17,8 @@ export interface StartOptions extends PiRuntimeOptions {
   readonly stateNoteMaxBytes?: number | null;
   /** fake:规则替身(不连模型,开发前端用);pi:真实联系人脑子。默认 fake。 */
   readonly mind?: "fake" | "pi";
-  /** fake:剧本 Compute(按派的活说话,见 fakes.ts deskCompute);claude/codex:真实原生 CLI,同时注册两种 Harness。默认 fake。 */
-  readonly compute?: "fake" | "claude" | "codex";
+  /** fake:剧本 Compute(按派的活说话,见 fakes.ts deskCompute);claude:真实 Claude Code CLI。默认 fake。 */
+  readonly compute?: "fake" | "claude";
   /** 模型网关环境(ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN / ANTHROPIC_DEFAULT_SONNET_MODEL),默认 process.env。 */
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** 插件市场目录文件;默认包内示例市场。 */
@@ -26,7 +26,7 @@ export interface StartOptions extends PiRuntimeOptions {
   readonly onReport?: (what: string, detail: unknown) => void;
   /** 给 Compute 的单次输入字节上限(§8.1 待决 13);不给=不设上限 */
   readonly computeInputMaxBytes?: number | null;
-  /** compute=claude/codex 时所选 Harness 的启动命令与汇报工具命令(打包后的桌面应用给自带路径);不给用适配器默认值。 */
+  /** compute=claude 时起 Compute 的 claude 命令与汇报工具命令(打包后的桌面应用给自带路径);不给用适配器默认值。 */
   readonly computeCommands?: ComputeCommands;
   /** 卡死阈值的基础层(AC-43 ⑯):不给就是 15 分钟 / 120 秒;用户在设置里、联系人上单独设的覆盖它 */
   readonly runThresholds?: ThresholdConfig;
@@ -46,14 +46,11 @@ export async function startServer(o: StartOptions): Promise<Started> {
   mkdirSync(o.dataDir, { recursive: true });
   const delayMs = Math.min(Math.max(Number(env.GG_MIND_DELAY_MS) || 0, 0), 60_000);
   const { defaultModel: model, ...speaking } = await assembleSpeaking(o.mind ?? "fake", o, env, delayMs);
-  const fake = o.compute === "claude" || o.compute === "codex" ? null : deskCompute({ stepMs: 300 });
+  const fake = o.compute === "claude" ? null : deskCompute({ stepMs: 300 });
   const compute = fake
     ? () => fake.adapter
     : // 统一重试权(AC-36 F3):CLI 自己对上游错误重试的次数就是宿主的自动重试上限,宿主不再叠加(computeHarnessRetries 同值)
-      {
-        "claude-code": claudeCompute(env, { CLAUDE_CODE_MAX_RETRIES: String(DEFAULT_RETRY_POLICY.maxAutoRetries) }, o.compute === "claude" ? o.computeCommands : {}),
-        codex: codexCompute(env, path.join(o.dataDir, "codex"), o.compute === "codex" ? o.computeCommands : {}),
-      };
+      claudeCompute(env, { CLAUDE_CODE_MAX_RETRIES: String(DEFAULT_RETRY_POLICY.maxAutoRetries) }, o.computeCommands);
   const work = path.join(o.dataDir, "compute");
   const host = new Host({
     file: path.join(o.dataDir, "gg.db"),
@@ -72,7 +69,6 @@ export async function startServer(o: StartOptions): Promise<Started> {
     ...(o.computeInputMaxBytes !== undefined ? { computeInputMaxBytes: o.computeInputMaxBytes } : {}),
     ...(o.runThresholds ? { runThresholds: o.runThresholds } : {}),
   });
-  if (o.compute === "codex") host.updateSettings({ defaultHarness: "codex", confirmAffected: true });
   if (model) host.updateSettings({ defaultSpeakingModel: model, defaultComputeModel: model, confirmAffected: true });
   const service = createService(host);
   return {

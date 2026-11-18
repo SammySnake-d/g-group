@@ -449,9 +449,6 @@ export class Host {
   /** 每个任务第几次起 CLI(启动或续接);某一轮的收尾只在它仍是最新一轮时归还槽位 */
   private readonly launchEpoch = new Map<string, number>();
   /** 停止没确认下来的原因(进程没退干净),任务视图里显示 */
-  private readonly harnessRetiring = new Set<string>();
-  private readonly retiredComputes = new Set<string>();
-  private readonly harnessPending = new Map<string, { taskId: string; computeId: string; text: string }>();
   private readonly stopUnconfirmed = new Map<string, string>();
   private readonly opts: HostOptions;
   private readonly now: () => string;
@@ -2198,7 +2195,7 @@ export class Host {
         const loaded = getDoc<{ skills: string[]; mcpServers: string[] }>(this.db, `compute-loaded:${r.compute_id}`)?.value;
         return {
           computeId: r.compute_id,
-          harness: r.harness as TaskView["computeRuns"][number]["harness"],
+          harness: r.harness as "claude-code",
           model: r.model,
           placement: "local" as const,
           status: r.status as TaskView["computeRuns"][number]["status"],
@@ -3593,7 +3590,7 @@ ${e.body}` })), q.text, visible.length);
             if (!t || t.task.owner !== contactId) { reject("不是你的任务"); break; }
             if (t.task.state !== "T3_Running" || !t.task.computeId) { reject(`任务在 ${t.task.state},不能交付`); break; }
             const computeRow = one<{ status: string; result: string | null }>(this.db, "SELECT status, result FROM gg_compute WHERE compute_id = ?", t.task.computeId);
-            if (computeRow?.result == null || this.harnessPending.has(t.task.computeId)) { reject("Compute 还没完成后续轮次,不能交付"); break; }
+            if (computeRow?.result == null) { reject("Compute 还没完成,不能交付"); break; }
             // 结果必须是按当前条件版本做出来的:新条件只送达、还没进产物,不算完成(AC-45 ③、AC-16)
             const follow = this.followOf(a.taskId);
             const resultVer = follow.value.resultVer ?? t.task.constraintVer;
@@ -3961,7 +3958,6 @@ ${e.body}` })), q.text, visible.length);
     }
   }
   private onComputeEvent(ev: ComputeEvent) {
-    if (this.harnessRetiring.has(ev.computeId) || this.retiredComputes.has(ev.computeId)) return;
     const rv = one<ReviewRow>(this.db, "SELECT * FROM gg_reviews WHERE compute_id = ?", ev.computeId);
     if (rv) return this.onReviewEvent(rv, ev);
     const row = one<{ task_id: string; contact_id: string; room_id: string; harness: string }>(this.db, "SELECT task_id, contact_id, room_id, harness FROM gg_compute WHERE compute_id = ?", ev.computeId);
@@ -4135,15 +4131,6 @@ ${e.body}` })), q.text, visible.length);
             await this.adapterForCompute(e.computeId)?.stop(e.computeId);
             continue;
           }
-          if (this.harnessRetiring.has(e.computeId)) {
-            // The handoff owns stop confirmation, including cleanup of any replacement in flight.
-            this.markLeaseStopping(e.taskId);
-            continue;
-          }
-          if (this.retiredComputes.has(e.computeId)) {
-            this.confirmRetiredStop(e.taskId, e.computeId);
-            continue;
-          }
           const a = this.computeRuns.has(e.computeId) ? this.adapterForCompute(e.computeId) : null;
           const epoch = this.launchEpoch.get(e.taskId) ?? 0;
           this.markLeaseStopping(e.taskId);
@@ -4192,150 +4179,6 @@ ${e.body}` })), q.text, visible.length);
    * 送进 Compute 的每一次后续输入(联系人转达、用户退回重试……)都走这里(AC-51 ①⑤):
    * 按此刻的配置现场解析这一轮的 {model, effort},不兼容先拦;交给适配器在轮边界切换;切换失败这一轮不算发出,不退回旧模型。
    */
-  private confirmRetiredStop(taskId: string, computeId: string) {
-    const task = this.taskDoc(taskId).value.task;
-    if (task.state !== "T9_StopRequested" || task.computeId !== computeId) return;
-    this.stopUnconfirmed.delete(taskId);
-    this.pendingLaunch.delete(taskId);
-    this.quota.cancelWait(taskId);
-    tx(this.db, () => this.stepTaskTx(taskId, { kind: "StoppedConfirmed", taskId, computeId }));
-    this.giveBack(taskId);
-    this.emitTask(taskId);
-  }
-
-  /** AC-51 ⑦: retire the previous native session only after its turn has settled. */
-  private async switchHarness(
-    e: { taskId: string; computeId: string; text: string },
-    row: { contact_id: string; room_id: string; harness: string; model: string },
-    previous: ComputeAdapter,
-    resolved: ReturnType<Host["resolveComputeFor"]>,
-    reason: AttemptReason,
-  ): Promise<boolean> {
-    if (this.harnessRetiring.has(e.computeId)) return true;
-    const blocked = harnessBlockReason(resolved.harness, connectedHarnesses(this.factories));
-    if (blocked) return this.turnRefused(e.taskId, e.computeId, row, blocked);
-    const model = modelConfig.checkCompute(this.caps(), resolved);
-    if (!model.ok) return this.turnRefused(e.taskId, e.computeId, row, model.reason);
-    const runs = this.computeRuns.get(e.computeId);
-    const turn = runs ? this.runs.get(runs.turnId) : null;
-    if (turn?.status === "running") {
-      const old = this.harnessPending.get(e.computeId);
-      this.harnessPending.set(e.computeId, { ...e, text: old ? `${old.text}\n\n${e.text}` : e.text });
-      return true;
-    }
-    const contact = this.contactDoc(row.contact_id).value;
-    const prep = this.capabilities.prepare(row.contact_id, resolved.harness, contact.computeAssets ?? []);
-    if (!prep.ok) return this.turnRefused(e.taskId, e.computeId, row, `勾选的能力不可用:${prep.missing.join("、")}`);
-    const next = this.adapterFor(resolved.harness, resolved.model);
-    if (!next) return this.turnRefused(e.taskId, e.computeId, row, "目标 Harness 未配置");
-    const task = this.taskDoc(e.taskId).value;
-    const progress = all<{ summary: string }>(this.db, "SELECT summary FROM gg_progress WHERE task_id = ? ORDER BY rowid DESC LIMIT 20", e.taskId);
-    const text = `Harness handoff from ${row.harness} to ${resolved.harness}.\nTask: ${task.title}\nTask detail: ${task.brief || task.description || ""}\nPrior progress:\n${progress.reverse().map(p => p.summary).join("\n")}\nNext input:\n${e.text}`;
-    const over = this.overComputeInput(text);
-    if (over) return this.turnRefused(e.taskId, e.computeId, row, over);
-    // Old stopped events must not change task state or release a successor's lease.
-    const epoch = (this.launchEpoch.get(e.taskId) ?? 0) + 1;
-    this.launchEpoch.set(e.taskId, epoch);
-    this.harnessRetiring.add(e.computeId);
-    try {
-      if (!this.retiredComputes.has(e.computeId)) {
-        this.markLeaseStopping(e.taskId);
-        try {
-          await previous.stop(e.computeId);
-          const q = await previous.quiesce?.(e.computeId);
-          if (!q?.ok) {
-            this.stopUnconfirmed.set(e.taskId, `停止未确认:${q?.reason ?? "原执行器未提供完整停止核验"}`);
-            this.emitTask(e.taskId);
-            return false;
-          }
-        } catch (error) {
-          this.stopUnconfirmed.set(e.taskId, `停止未确认:Harness handoff ${String(error)}`);
-          this.emitTask(e.taskId);
-          return false;
-        }
-        this.retiredComputes.add(e.computeId);
-        this.stopUnconfirmed.delete(e.taskId);
-        run(this.db, "UPDATE gg_compute SET status = 'stopped', ended_at = COALESCE(ended_at, ?) WHERE compute_id = ?", this.now(), e.computeId);
-        this.computePids.delete(e.computeId);
-        if (runs) {
-          if (turn && isLive(turn.status)) this.runs.end(turn.id, "interrupted", {}, { note: "Harness handoff" });
-          this.runs.end(runs.sessionId, "done", {}, { note: "Harness handoff" });
-        }
-        this.giveBack(e.taskId);
-      }
-
-      const current = this.taskDoc(e.taskId).value.task;
-      if (current.computeId !== e.computeId || current.state === "T9_StopRequested" || current.state === "T10_Cancelled" || this.closed) {
-        this.confirmRetiredStop(e.taskId, e.computeId);
-        return false;
-      }
-      if (!this.takeSlot({ ...e, kind: "resume" }, row.contact_id, row.room_id)) return true;
-      return await this.finishReplacementSpawn(e, row, previous, next, resolved, prep.home, text, reason);
-    } finally {
-      this.harnessRetiring.delete(e.computeId);
-    }
-  }
-
-  private async finishReplacementSpawn(
-    e: { taskId: string; computeId: string },
-    row: { contact_id: string; room_id: string },
-    previous: ComputeAdapter,
-    next: ComputeAdapter,
-    resolved: ReturnType<Host["resolveComputeFor"]>,
-    home: Extract<ReturnType<Host["capabilities"]["prepare"]>, { ok: true }>["home"],
-    text: string,
-    reason: AttemptReason,
-  ): Promise<boolean> {
-    const cwd = this.computeCwdFor(e.taskId);
-    const task = this.taskDoc(e.taskId).value;
-    const runs = this.computeRuns.get(e.computeId);
-    let r: Awaited<ReturnType<ComputeAdapter["spawn"]>>;
-    try {
-      const handoff = previous.snapshot(e.computeId);
-      r = await next.spawn(
-        { task: text, rules: [HUMAN_VERIFICATION_RULE, ...this.roomRuleLines(row.room_id)], tools: [...this.computeToolsFor(e.taskId)], credentialRefs: [], placement: "local" },
-        { ...(cwd ? { cwd } : {}), model: resolved.model, effort: resolved.effort, ...(handoff.ok ? { handoff: handoff.snapshot } : {}), configDir: home.configDir, pluginDirs: [...home.pluginDirs], mcpServers: home.mcpServers },
-      );
-    } catch (error) {
-      r = { ok: false, reason: String(error) };
-    }
-    if (!r.ok) {
-      this.confirmRetiredStop(e.taskId, e.computeId);
-      return this.turnRefused(e.taskId, e.computeId, row, r.reason);
-    }
-    const latest = this.taskDoc(e.taskId).value.task;
-    if (latest.computeId !== e.computeId || latest.state === "T9_StopRequested" || latest.state === "T10_Cancelled" || this.closed) {
-      try {
-        await next.stop(r.computeId);
-        const q = await next.quiesce?.(r.computeId);
-        if (!q?.ok) throw new Error(q?.reason ?? "目标执行器未提供完整停止核验");
-        this.confirmRetiredStop(e.taskId, e.computeId);
-      } catch (error) {
-        this.stopUnconfirmed.set(e.taskId, `停止未确认:取消途中启动的新 Harness ${String(error)}`);
-        this.emitTask(e.taskId);
-      }
-      return false;
-    }
-    tx(this.db, () => {
-      run(this.db, "INSERT INTO gg_compute (compute_id, task_id, contact_id, room_id, harness, model, status, started_at) VALUES (?, ?, ?, ?, ?, ?, 'starting', ?)", r.computeId, e.taskId, row.contact_id, row.room_id, resolved.harness, resolved.model, this.now());
-      const cur = this.taskDoc(e.taskId);
-      this.saveTaskTx(e.taskId, cur, {
-        ...cur.value.task, computeId: r.computeId,
-        instances: [...new Set([...cur.value.task.instances, r.computeId])],
-        retired: [...new Set([...cur.value.task.retired, e.computeId])],
-      }, "HarnessHandoff");
-      this.recordTurnTx(e.taskId, r.computeId, resolved.harness, resolved.model, resolved.effort, reason);
-      const f = this.followOf(e.taskId);
-      this.putFollowTx(e.taskId, f, { ...f.value, rounds: [cur.value.task.constraintVer], resultVer: null }, "RoundStarted");
-    });
-    const old = runs ? this.runs.get(runs.sessionId) : null;
-    const session = this.runs.start({ layer: "compute-session", parentId: old?.parentId ?? null, roomId: row.room_id, sourceSeq: task.sourceSeq, contactId: row.contact_id, taskId: e.taskId, computeId: r.computeId, upstream: resolved.model });
-    const fresh = this.runs.start({ layer: "compute-turn", parentId: session.id, roomId: row.room_id, sourceSeq: task.sourceSeq, contactId: row.contact_id, taskId: e.taskId, computeId: r.computeId, upstream: resolved.model });
-    this.computeRuns.set(r.computeId, { sessionId: session.id, turnId: fresh.id });
-    this.emitTask(e.taskId);
-    return true;
-  }
-
   private async computeTurn(e: { taskId: string; computeId: string; text: string }, reason: AttemptReason = "turn"): Promise<boolean> {
     const row = one<{ contact_id: string; room_id: string; harness: string; model: string }>(this.db, "SELECT contact_id, room_id, harness, model FROM gg_compute WHERE compute_id = ?", e.computeId);
     const a = row ? this.adapterFor(row.harness, row.model) : null;
@@ -4349,8 +4192,8 @@ ${e.body}` })), q.text, visible.length);
     const override = this.failureRow("task", e.taskId)?.model_override ?? null;
     const resolved = base && override ? { ...base, model: override } : base;
     if (resolved) {
-      if (resolved.harness !== row.harness || this.retiredComputes.has(e.computeId)) {
-        return this.switchHarness(e, row, a, resolved, reason);
+      if (resolved.harness !== row.harness) {
+        return this.turnRefused(e.taskId, e.computeId, row, `这个 Compute 跑在 ${row.harness} 上,联系人已改用 ${resolved.harness};换 Harness 要在新 Harness 上开新会话(随 Codex 接入实现),这一轮没有发出`);
       }
       const chk = modelConfig.checkCompute(this.caps(), resolved);
       if (!chk.ok) { this.turnRefused(e.taskId, e.computeId, row, chk.reason); return false; }
@@ -4465,11 +4308,6 @@ ${e.body}` })), q.text, visible.length);
       this.report("stop-unconfirmed", { taskId, computeId, reason: why });
     }
     this.emitTask(taskId);
-    const pending = this.harnessPending.get(computeId);
-    if (!why && pending && kind === "completed") {
-      this.harnessPending.delete(computeId);
-      await this.resumeCompute({ kind: "resume", ...pending });
-    } else if (kind !== "completed") this.harnessPending.delete(computeId);
   }
   /** 取消还在排队(或启动没成功)的启动请求:不再排队,当场确认撤销 */
   private cancelQueuedSpawn(e: Extract<HostEffect, { kind: "cancel-spawn" }>) {
@@ -4488,12 +4326,8 @@ ${e.body}` })), q.text, visible.length);
     if (!row) return this.report("resume-failed", { ...e, reason: "没有这个 Compute" });
     if (!this.takeSlot(e, row.contact_id, row.room_id)) return;
     // 续接这一轮(AC-51 现场解析生效模型在 computeTurn 里);没送进 Compute 就当场归还槽位
-    const epoch = this.launchEpoch.get(e.taskId) ?? 0;
-    if (await this.computeTurn(e)) {
-      // Handoff advances the epoch before retiring the old process. Do not advance it
-      // again after a successor has already emitted a terminal/cancellation event.
-      if ((this.launchEpoch.get(e.taskId) ?? 0) === epoch) this.launchEpoch.set(e.taskId, epoch + 1);
-    } else this.giveBack(e.taskId);
+    if (await this.computeTurn(e)) this.launchEpoch.set(e.taskId, (this.launchEpoch.get(e.taskId) ?? 0) + 1);
+    else this.giveBack(e.taskId);
   }
   /** 续接成功:上一轮结束(停在受阻的这一轮已经做完),同一会话开新一轮 */
   private ledgerResume(computeId: string, taskId: string, roomId: string) {
@@ -5885,10 +5719,15 @@ ${e.body}` })), q.text, visible.length);
     this.plugins.close();
     await this.loop.stop();
     // 一次性适配器只有在跑的才有进程;常驻适配器一轮做完(completed)、停在受阻(blocked)时进程仍在,关闭时一并停掉,不留后台进程
-    for (const r of all<{ compute_id: string }>(this.db, "SELECT compute_id FROM gg_compute WHERE status IN ('starting','running','blocked','completed')")) {
-      const a = this.adapterForCompute(r.compute_id);
-      try { await a?.stop(r.compute_id); }
-      catch { /* durable leases remain quarantined on shutdown failure */ }
+    for (const a of this.adapters.values()) {
+      const statuses = isModelAware(a) ? "('starting','running','blocked','completed')" : "('starting','running')";
+      for (const r of all<{ compute_id: string }>(this.db, `SELECT compute_id FROM gg_compute WHERE status IN ${statuses}`)) {
+        try {
+          await a.stop(r.compute_id);
+        } catch {
+          /* 关闭时尽力停止 */
+        }
+      }
     }
     for (const r of all<{ compute_id: string }>(this.db, "SELECT compute_id FROM gg_reviews WHERE status = 'running'")) {
       try { await this.adapterForCompute(r.compute_id)?.stop(r.compute_id); }
