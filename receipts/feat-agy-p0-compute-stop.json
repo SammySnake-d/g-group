@@ -30,7 +30,14 @@
   "red": {
     "commit": "ba39ad48b6c00a0f266e441da5435f9fa3a4aac7"
   },
-  "review": null,
+  "review": {
+    "agent": "carbon-agy",
+    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
+    "model": "gemini-4-carbon-high",
+    "verdict": "reject",
+    "reviewed_hash": "3a020254a65e1948a6e9eed1bd3a744f47c89860c98c7b614b264ce1d701ebd7",
+    "notes": "Round 1 REJECT (see reviews/feat-agy-p0-compute-stop.md): (1) P1 AC-23/AC-36 — Host startup unconditionally treats any T3/T4b/T9 task without a gg_compute_leases row as a legacy uncertain hold, deadlocking all personal/group slots and wedging failure-card actions after normal restart even when quiesce already confirmed stop and released the lease; (2) P1 R-17/AC-51/AC-26 — spawnReview and adapterForCompute hardcode claude-code, silently substituting claude-code when the selected cross-vendor reviewer contact uses codex."
+  },
   "waiver": null,
   "unverifiable": "AC-23 和 R-17 是 D 层结果：用确定性执行器、SQLite 故障注入和模型配置回归测得，不表示真实模型验收。AC-43 / AC-51 尚无 X 层证据；无独立审查，不请求豁免。",
   "verification": {
