@@ -44,7 +44,7 @@
   ],
   "unverifiable": "AC-05/AC-31/AC-46/AC-51：合同与传输测试不证明产品整体验收、真实模型或 Electron UI；前端端到端手动 UI smoke 留前端启动/P3。CLI serve 已接通 P1-B codexCompute 装配；真实模型/Electron UI 端到端留 P3。R-01 独立审查待完成，review=null；G-PROVENANCE 在 review=null 时不核验来源，不把其绿当作独立身份认证。",
   "verification": {
-    "implementation": "bb8a0fb427d20ab3892681b38d79d53aaca697f1",
+    "implementation": "2aef1b1d239e68d302ac55c445835ec0a33c9e40",
     "red_tests": {
       "named_failures": 13,
       "passed": 0
@@ -56,7 +56,7 @@
       "skipped": 0
     },
     "root_tests": {
-      "passed": 2104,
+      "passed": 2171,
       "failed": 0,
       "cancelled": 0,
       "skipped": 0,
@@ -77,7 +77,10 @@
       "failed": [
         "G-REVIEW"
       ],
-      "reason": "Independent review pending; review=null, waiver=null."
-    }
+      "reason": "Independent review pending. review=null, waiver=null."
+    },
+    "typecheck": "passed",
+    "lint": "passed",
+    "cli_codex_smoke": "serve --compute codex returned defaultHarness=codex via settings.get and exited 0 on SIGTERM."
   }
 }
