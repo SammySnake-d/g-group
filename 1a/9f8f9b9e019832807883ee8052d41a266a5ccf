@@ -1,0 +1,41 @@
+packages/domain/src/model-config.ts
+  s_d36a3ff0ab81e8::t_8755fc444b86ea 152-156,158-187,190-197,199-201,337-338
+packages/kernel/src/memory-capture.ts
+  s_d36a3ff0ab81e8::t_731b05d55cf659 8-10,17-28,30-39,41-79
+packages/server/src/cli.ts
+  s_d36a3ff0ab81e8::t_66d544023b3c69 2,16,18,52-59
+packages/server/src/host.ts
+  s_d36a3ff0ab81e8::t_a33555c817801d 1-4,437,1421,1964-1965,2680,2739,2772-2775,2826,2891-2907,2912-2916,2923,2927-2928,2930,2935-2963,2992,2994,3189,3191,3277,3293,3327,3346
+packages/server/src/memory-api.ts
+  s_d36a3ff0ab81e8::t_c16a6b35284025 20-22,25-58,60-64,66-69,71-74,77-84,87-92,95-107
+packages/server/src/memory-coverage.ts
+  s_d36a3ff0ab81e8::t_b8f6e385b9ec38 24-80
+packages/server/src/memory-hygiene.ts
+  s_d36a3ff0ab81e8::t_5d3bb8bbcc9029 25-29,45-63,65-67,69-78,80-102,106-112,115-133,136-143
+packages/server/src/pi-runtime.ts
+  s_d36a3ff0ab81e8::t_721e05f58fbf71 1,69-70,72-74,79-86
+packages/server/src/playbook.ts
+  s_d36a3ff0ab81e8::t_cdcb8ae89b3835 1-3,5-7,9,12-101
+packages/server/src/speaking.ts
+  s_d36a3ff0ab81e8::t_e8f948263c75ce 1-13
+packages/server/src/start.ts
+  s_d36a3ff0ab81e8::t_e62895b9fef104 1,7,9,11,47-48,59
+packages/server/src/views.ts
+  s_d36a3ff0ab81e8::t_8d0a728b47e7fc 1,19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1a9f8f9b9e019832807883ee8052d41a266a5ccf",
+  "prompts": {},
+  "sessions": {
+    "s_d36a3ff0ab81e8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ee5f-e210-7b00-892f-836f6421b2c2",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
