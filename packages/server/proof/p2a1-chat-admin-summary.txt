@@ -1,0 +1,7 @@
+P2-A1 D-layer proof
+Red: 0683b560e26151af343929c198922d2cc40a03f0
+Green: ffeb17129ed5b8443562bc3915149eaea18d134a
+
+ChatAdmin stores owner/mute/dissolution/view-hide state. Host/service expose authenticated admin operations. Source-message retract schedules active dependent tasks through Host.stopTask and preserves existing stop confirmation and side-effect disclosure. RoomView blockedSummary orders open questions by message seq, keeps the complete count suffix, bounds output to 500 characters, and avoids surrogate-pair splits.
+
+Checks: typecheck pass; lint pass with zero warnings; full suite previously pass (2094/2094, zero failures/skips); P2A1 tests 3/3; recall test pass and Block-1 UTF-8 bound pass; frontend baseline methods preserved. R-02/R-05: 通过. Real Compute, frontend/X-layer and complete AC acceptance: 未测 until P3.

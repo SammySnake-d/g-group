@@ -1,0 +1,41 @@
+{
+  "slice": "P2-A1 Chat Admin operations, C-US09 retract cancellation, and RoomView blocked summary.",
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "packages/server/proof/p2a1-chat-admin-summary.txt"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "packages/server/proof/p2a1-chat-admin-summary.txt"
+    },
+    {
+      "id": "AC-08",
+      "status": "未测",
+      "reason": "D-layer stop path covered; real Compute and X-layer remain P3."
+    },
+    {
+      "id": "AC-23",
+      "status": "未测",
+      "reason": "Complete runtime stop confirmation remains P3."
+    },
+    {
+      "id": "AC-46",
+      "status": "未测",
+      "reason": "Frontend receipt experience remains P3."
+    }
+  ],
+  "author": {
+    "agent": "codex-cli",
+    "session": "codex-cli:<ACTUAL_CODEX_THREAD_ID>",
+    "model": "fnqtz-gpt/gpt-6.1-sol"
+  },
+  "red": {
+    "commit": "300d60a7"
+  },
+  "review": null,
+  "waiver": null,
+  "unverifiable": "红版具名测试失败、绿版通过且确定性检查通过；AC-08 仍可能被真实 Compute/X 层未联调骗过。"
+}

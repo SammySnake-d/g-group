@@ -11,6 +11,7 @@
 - [ ] P1-B：Codex `app-server` Compute 适配与真实链路。
 - [ ] P1-C：HTTP + WS Bridge。
 - [ ] P2-A：Admin / Quota / Helper；C-US09 撤回取消在途任务。
+- [x] Step 3A / P2-A1：Chat Admin、C-US09 retract cancellation、RoomView blocked summary（D 层边界已验证；X/P3 未测）。
 - [ ] P2-B：Plugins / Outbox / Commitments。
 - [ ] P3：完整 D+X 验收矩阵、真实模型 S+X 评测与前端联调。
 
@@ -38,3 +39,11 @@ P1-A 无 R-Rule 审批链、BlockerRate 自动路由或多人 CRDT 编辑。净�
 
 - [ ] 移植 `packages/process-tools` 与 `packages/adapter-codex-compute`。
 - [ ] 实测 AC-23 的进程清理、停止确认后归还及冲突后继隔离；本前置切片不宣称这些运行时行为完成。
+
+
+## Step 3A — P2-A1
+
+- [x] Chat Admin 群主鉴权、禁言、移出/解散、转让与批量本端隐藏删除。
+- [x] C-US09 撤回来源消息触发既有 Host stop 路径；RoomView 阻塞摘要按提问序、带尾注、500 字符上限。
+- [x] D 层证据见 `packages/server/proof/p2a1-chat-admin-summary.txt`；R-02/R-05 通过。
+- [ ] 真实 Compute、前端联调、X 层与完整 AC 留 P3。
