@@ -1,0 +1,21 @@
+packages/server/proof/b2-attention-compaction-guard.txt
+  s_f506d89fd64ab4::t_9fbfb50b6e69d2 1-167
+receipts/feat-agy-p0-attention-compaction-guard.json
+  s_f506d89fd64ab4::t_0d5fd37cb77ef6 1-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1c5372180f49cbc4d249cf3fe78db62ce84438ab",
+  "prompts": {},
+  "sessions": {
+    "s_f506d89fd64ab4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ec48-cee6-7443-bea3-0bb9312c7274",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
