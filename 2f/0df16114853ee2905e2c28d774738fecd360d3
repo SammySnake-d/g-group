@@ -1,0 +1,27 @@
+README.md
+  s_6da11bdeb4da59::t_33a206361a1939 18,20-35
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  s_6da11bdeb4da59::t_4b0940f512a699 12,25
+docs/spec/验收文档-v0.1.md
+  s_6da11bdeb4da59::t_7b372671afa831 303,316-318
+packages/server/proof/p1c-http-ws-bridge.txt
+  s_6da11bdeb4da59::t_b3764b2edb22aa 1-178
+receipts/feat-agy-http-ws-bridge.json
+  s_6da11bdeb4da59::t_6e319626499063 1-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2f0df16114853ee2905e2c28d774738fecd360d3",
+  "prompts": {},
+  "sessions": {
+    "s_6da11bdeb4da59": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1eef2-c7e4-74d3-9b9f-70c85d987ada",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
