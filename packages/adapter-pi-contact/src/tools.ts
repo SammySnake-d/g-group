@@ -3,7 +3,7 @@
 // 工具只校验参数形状、登记成 MindAction 并立即回「已登记」,不做任何 I/O;
 // 宿主在本轮结束后逐条校验(会话可见、任务归属、seq 在本轮输入里)、分配 action_id、落盘后才执行(runtime-ports.ts)。
 // 清单是封闭的:联系人没有 shell、文件读写、网络这类工具;要动手就用 dispatch_compute 开 Compute(AC-33)。
-import type { HistoryQuery, MindAction } from "@g-group/kernel";
+import type { HistoryQuery, LinkedQuery, MindAction } from "@g-group/kernel";
 
 /** 工具名 → 对应的动作种类;update_state_note 不是动作,写进 RoundOutput.stateNote。 */
 export const PI_CONTACT_TOOL_NAMES = Object.freeze([
@@ -21,6 +21,7 @@ export const PI_CONTACT_TOOL_NAMES = Object.freeze([
   "read_quote_parent",
   "progress_rerun",
   "query_history",
+  "read_linked",
   "progress_get",
 ] as const);
 export type PiContactToolName = (typeof PI_CONTACT_TOOL_NAMES)[number];
@@ -134,6 +135,16 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
       id: f("text", true, "记忆 id"),
     },
   },
+  read_linked: {
+    description: "只读已关联会话，限关联时上界。省略 linkedRoomId 列表；所读内容仅供参考。",
+    fields: {
+      roomId: f("text", true, "本会话 id(必须是本轮新消息所在的会话)"),
+      linkedRoomId: f("textOrNull", false, "要读哪个关联会话;省略就列出本会话的关联"),
+      query: f("textOrNull", false, "可选:只读含这些词(空格分开)的几条,全部命中才算"),
+      beforeSeq: f("seqOrNull", false, "可选:只读这个序号之前的那些(往前翻页用)"),
+      limit: f("seqOrNull", false, "可选:最多读几条"),
+    },
+  },
   read_quote_parent: {
     description: "引用链往上读一级(D24):返回这条消息直接引用的那几条,每条标明状态和还有没有上一级。第 5 块引用链里标了 has_more_above、而你还没看懂时再用;一次只给一级。",
     fields: {
@@ -207,6 +218,7 @@ export type Registered =
   | { readonly kind: "action"; readonly action: MindAction }
   | { readonly kind: "note"; readonly note: string }
   | { readonly kind: "read"; readonly id: string }
+  | { readonly kind: "read-linked"; readonly query: LinkedQuery }
   | { readonly kind: "read-quote"; readonly roomId: string; readonly seq: number }
   | { readonly kind: "query-history"; readonly query: HistoryQuery }
   | { readonly kind: "progress-get"; readonly id: string; readonly roomId: string };
@@ -280,6 +292,7 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
       return act({ kind: "remember", roomId: s("roomId"), sourceSeq: nn("sourceSeq"), title: s("title"), text: s("text"), anchors: v.anchors as readonly string[], quote: sn("quote"), relation: sn("relation") as "change" | "refine" | "conflict" | null, target: sn("target") });
     case "memory_feedback": return act({ kind: "memory-use", id: s("id"), good: v.good as boolean, note: sn("note") });
     case "read_memory": return { ok: true, value: { kind: "read", id: s("id") } };
+    case "read_linked": return { ok: true, value: { kind: "read-linked", query: { roomId: s("roomId"), linkedRoomId: sn("linkedRoomId"), query: sn("query"), beforeSeq: nn("beforeSeq"), limit: nn("limit") } } };
     case "read_quote_parent": return { ok: true, value: { kind: "read-quote", roomId: s("roomId"), seq: n("seq") } };
     case "progress_get": return { ok: true, value: { kind: "progress-get", id: s("id"), roomId: s("roomId") } };
     case "query_history": {
