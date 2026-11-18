@@ -1,0 +1,53 @@
+Slice B4: feat/agy-p0-magpie-protocols-cache
+Base: d5f2fcb3cdb5239f63b96a8a043a99791757046a (origin/dev/agy-backend)
+Red: 766c1a17971377d063fe850980a34f36948a9baf
+Green: 6f6f969176581bd05ded5904b173c49ed632280a
+
+Offline evidence
+- Red: npm run typecheck exit 0. Four files, 43 exact named failures, 0 passed / skipped / cancelled / todo.
+- The reasoning regression also failed on the previous B4 Green: captured max_output_tokens=4096 on both the contact round and reflection. The same budget assertion passes after the runtime floor is applied; replacing the floor with 4096 kills the named regression.
+- Green: npm run typecheck and npm run lint exit 0. npm test exit 0: 2016 passed, 0 failed / skipped / cancelled / todo.
+- Red and Green packages/**/*.test.ts blobs are identical; Green does not edit tests.
+- Isolated command: node packages/server/proof/b4-spot-mutations.mjs
+KILLED anthropic-auth-header | packages/adapter-pi-contact/src/protocols.test.ts | anthropic-messages:工具声明进 system.tools、工具结果回填成 tool_result、密钥进 x-api-key,响应里的工具调用登记成动作
+KILLED openai-chat-codec | packages/adapter-pi-contact/src/protocols.test.ts | openai-chat:工具声明进 tools[].function、工具结果回填成 role:tool、密钥进 Authorization: Bearer
+KILLED openai-responses-codec | packages/adapter-pi-contact/src/protocols.test.ts | openai-responses:工具声明是顶层 function、工具结果回填成 function_call_output、密钥进 Authorization: Bearer
+KILLED google-codec | packages/adapter-pi-contact/src/protocols.test.ts | google-generative-ai:工具声明进 tools[].functionDeclarations、工具结果回填成 functionResponse、密钥进 x-goog-api-key
+KILLED chat-session-affinity | packages/adapter-pi-contact/src/protocols.test.ts | B4 affinity compat is typed per codec and the OpenAI wire retains one contact-scoped session without retention fields
+KILLED no-precommit-failover | packages/adapter-pi-contact/src/protocols.test.ts | B4 clean failure fails over on the exact same model then a shared cooldown also routes the compactor
+KILLED postcommit-replay | packages/adapter-pi-contact/src/protocols.test.ts | B4 text, thinking and tool deltas independently bar failover after an SSE error
+KILLED usage-sink-not-committing | packages/adapter-pi-contact/src/protocols.test.ts | B4 a committed usage receipt bars failover even with no text or tool deltas
+KILLED probe-token-floor | packages/adapter-pi-contact/src/protocols.test.ts | B4 probe requests exactly one tool, at least 8192 tokens and decodes the tool call via fallback
+KILLED runtime-reasoning-token-floor | packages/server/src/usage.test.ts | B4 Magpie reasoning models get at least 8192 output tokens for both contact rounds and reflection
+KILLED health-ttl-second-failure | packages/adapter-pi-contact/src/protocols.test.ts | B4 cache cooldowns are 1m, 2m, 5m, 10m, 10m; all-cooling probes earliest expiry and success resets
+KILLED discovery-guesses-despite-endpoints | packages/adapter-pi-contact/src/protocols.test.ts | B4 read-only Magpie discovery uses gateway.json and capability endpoints, not a guessed model name
+KILLED without-breakpoint-collapse | packages/adapter-pi-contact/src/usage.test.ts | B4 breakpoint placement collapses oversized Anthropic markers without mutating the input
+KILLED responses-prefix-missing-system | packages/adapter-pi-contact/src/usage.test.ts | B4 Responses also hashes the leading system item emitted by pi-ai, never a later system item
+KILLED implicit-4-to-1-not-detected | packages/server/src/usage.test.ts | B4 RPC persists and respects implicit breakpoints for all three automatic codecs while catching 4:1 billing on each
+KILLED implicit-hits-rejected | packages/server/src/usage.test.ts | B4 RPC persists and respects implicit breakpoints for all three automatic codecs while catching 4:1 billing on each
+KILLED miss-ttl-ignored | packages/server/src/usage.test.ts | 未命中归因:同前缀间隔超过 TTL 的未命中记过期(不算前缀变化);TTL 内同前缀仍未命中记 uncached;前缀变了记 prefix-changed;首调记 cold;不带断点的请求不归因;TTL 按参数
+KILLED rpc-not-registered | packages/server/src/usage.test.ts | B4 RPC persists and respects implicit breakpoints for all three automatic codecs while catching 4:1 billing on each
+KILLED mid-round-compactor-model-swap | packages/server/src/b4-hotswap-speaking.test.ts | B4 contacts.update holds the old model through round, reflection and shrink, then next round retains contact state
+KILLED inheritance-never-applied | packages/server/src/b4-hotswap-speaking.test.ts | B4 settings.update and models.batchReplace reach inheriting contacts on their respective next turns
+Spot mutations: 20/20 killed by their designated tests (all unchanged controls passed).
+
+Live evidence (final attempt on Green; exit 1)
+Command: node --disable-warning=ExperimentalWarning packages/server/proof/magpie-live-probe.mjs
+B4 local Magpie verification: 2026-11-18T06:11:10.032Z http://127.0.0.1:3425 ling-jing/deepseek-v4.1-flash
+PASS discovery: hello identified Magpie; exact model advertised openai-responses, openai-chat, anthropic-messages
+diagnostic one-tool probe: upstream-error
+FAIL one-tool probe (raw gateway, model and account messages intentionally omitted)
+PASS config read-only: 4 allowlisted config files unchanged (SHA-256, mtime and size; daemon telemetry excluded)
+wire discovery: GET /api/hello 200
+wire discovery: GET /v1/models 200
+wire one-tool probe: POST /v1/responses 200 max_output=8192 tools=1
+
+Earlier attempts during this rebuild (not substitutes for the final run)
+- Attempt 1: exit 1; PASS discovery; PASS one-tool probe; PASS round 1; FAIL conversation 2 (raw gateway, model and account messages intentionally omitted); PASS config read-only
+- Attempt 2: exit 1; PASS discovery; PASS one-tool probe; diagnostic round 1; FAIL conversation 1 (raw gateway, model and account messages intentionally omitted); PASS config read-only
+- Attempt 3: exit 1; PASS discovery; FAIL one-tool probe (raw gateway, model and account messages intentionally omitted); FAIL read-only fingerprint comparison or temporary data cleanup; no raw paths or config values printed
+- Attempt 4: exit 1; PASS discovery; diagnostic one-tool probe; FAIL one-tool probe (raw gateway, model and account messages intentionally omitted); PASS config read-only
+- Attempt 5: exit 1; PASS discovery; diagnostic one-tool probe; FAIL one-tool probe (raw gateway, model and account messages intentionally omitted); PASS config read-only
+
+Config scope: live daemon telemetry under ~/.config/magpie/ (such as usage.jsonl) updates normally when Magpie serves requests. It is not part of the allowlisted configuration comparison. No config paths, digests, contents or credentials are logged by the runner.
+Scope limit: this proof does not claim complete product UI/X acceptance, live harness hot-swap acceptance or independent review.
