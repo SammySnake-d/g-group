@@ -4,9 +4,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, afterEach, test } from "node:test";
-import type { ContactMind, Inbound, MindAction } from "@g-group/kernel";
+import { type ContactMind, type Inbound, type MindAction, PREFETCH_REF, type RoundInput, type RoundTools, searchHistory } from "@g-group/kernel";
 import { openDb, tx } from "./db.ts";
-import { Host } from "./host.ts";
+import { Host, type HostOptions } from "./host.ts";
 import { LoopGuard } from "./loop-guard.ts";
 
 const dir = mkdtempSync(path.join(tmpdir(), "gg-loop-limit-"));
@@ -195,4 +195,144 @@ test("生产重启不自动重开已停止的派生链；未读原文仍可查�
   h2.send({ roomId: g.id, clientActionId: "u2", text: "用户续话", mentions: [{ id: a.id, source: "manual" }] });
   await settle(h2);
   assert.ok(rounds.length > before);
+});
+
+const groupSecret = "仅群内可见：琥珀编号 7788（测试数据）";
+const handoff = "@乙 复查琥珀项目";
+const dmHistory = "天气预报：明天放晴";
+const dmQuestion = "天气预报更新了吗";
+const block5 = (i: RoundInput | undefined) => i?.request.blocks.find((b) => b.block === 5)?.text ?? "";
+
+function isolationOptions(observe?: (input: RoundInput, tools: RoundTools) => void | Promise<void>) {
+  let beforeSecondReply: (() => void) | undefined;
+  let id = 0;
+  const searched: string[] = [];
+  const options: HostOptions = {
+    file: file(), maxDeferMs: 2, roomPostBudget: false, loopGuard: { maxHops: 1 },
+    // The group sorts before the DM, so its notice can also corrupt run attribution.
+    newId: (prefix) => `${prefix === "g" ? "a-group" : prefix}-${++id}`,
+    historySearch: (docs, query, limit) => {
+      searched.push(query);
+      // A notice-driven search has a relevant older group hit even if the quoted secret was already paged in.
+      return searchHistory(docs, query.startsWith("自动往返已到上限") ? handoff : query, limit);
+    },
+    mind: () => ({ async round(i, _signal, tools) {
+      const actions: MindAction[] = [];
+      for (const f of i.fresh) {
+        if (f.kind !== "message") continue;
+        if (i.contact.name === "甲" && f.sender.kind === "user" && f.text === groupSecret) actions.push({ kind: "reply", roomId: f.roomId, text: handoff, replyToSeq: null });
+        if (i.contact.name === "乙" && f.sender.kind === "contact" && f.text === handoff) {
+          beforeSecondReply?.();
+          actions.push({ kind: "reply", roomId: f.roomId, text: "@丙 请确认琥珀编号", replyToSeq: 1 });
+        }
+      }
+      if (i.contact.name === "丙" && tools) await observe?.(i, tools);
+      return { actions, stateNote: null };
+    } }),
+  };
+  return { options, searched, beforeReply: (fn: () => void) => { beforeSecondReply = fn; } };
+}
+
+async function stopGroup(h: Host, fixture: ReturnType<typeof isolationOptions>) {
+  hosts.push(h);
+  const a = h.createContact({ name: "甲" });
+  const b = h.createContact({ name: "乙" });
+  const c = { kind: "contact" as const, id: h.createContact({ name: "丙" }).id };
+  const dm = h.openDm(c.id);
+  const prior = h.send({ roomId: dm.id, clientActionId: "weather-history", text: dmHistory });
+  await settle(h);
+  const g = h.createGroup("琥珀项目群", [{ kind: "contact", id: a.id }, { kind: "contact", id: b.id }]);
+  // Joining after #2 gives 丙 a real delivery cursor at #2 without marking the group read.
+  fixture.beforeReply(() => { h.addMembers(g.id, [c]); });
+  const original = h.send({ roomId: g.id, clientActionId: "group-start", text: groupSecret, mentions: [{ id: a.id, source: "manual" }] });
+  await settle(h);
+  const messages = h.listMessages(g.id, {}).messages;
+  const blocked = messages.find((m) => m.sender.id === b.id);
+  const notice = messages.find((m) => m.sender.kind === "system");
+  assert.ok(blocked && notice, "生产链必须真的写入乙的回复及停止通知");
+  assert.deepEqual([original.seq, blocked.seq, blocked.replyToSeq, notice.seq], [1, 3, original.seq, 4]);
+  assert.ok(h.loopGuard.blockedWakes().some((w) => w.roomId === g.id && w.seq === blocked.seq && w.contactId === c.id));
+  fixture.searched.length = 0;
+  return { c, dm, prior, g, original, blocked, notice };
+}
+
+test("R2 G4-a 停止通知不能混入私聊新输入、运行来源或推进被拦群的已读", async () => {
+  let round: RoundInput | undefined;
+  const fixture = isolationOptions((i) => { round = i; });
+  const h = new Host(fixture.options);
+  const { c, dm, g } = await stopGroup(h, fixture);
+  const readBefore = h.readSeq(g.id, c);
+  const dmInput = h.send({ roomId: dm.id, clientActionId: "dm-question", text: dmQuestion });
+  await settle(h);
+  const last = h.listRuns({ contactId: c.id, limit: 1 }).runs[0];
+  assert.deepEqual({ fresh: round?.fresh.map((f) => f.roomId), run: last && [last.roomId, last.sourceSeq], groupRead: h.readSeq(g.id, c) },
+    { fresh: [dm.id], run: [dm.id, dmInput.seq], groupRead: readBefore });
+});
+
+test("R2 D06.3 有未读停止通知时第五块只预取私聊、不带被拦群的预取或引用", async () => {
+  let round: RoundInput | undefined;
+  const fixture = isolationOptions((i) => { round = i; });
+  const h = new Host(fixture.options);
+  const { dm, g } = await stopGroup(h, fixture);
+  h.send({ roomId: dm.id, clientActionId: "dm-question", text: dmQuestion });
+  await settle(h);
+  const fifth = block5(round);
+  assert.deepEqual({ queries: fixture.searched, groupQuote: fifth.includes(`〔${g.id} #`), groupPrefetch: fifth.includes(`\n${g.id} #`), dmPrefetch: fifth.includes(PREFETCH_REF) && fifth.includes(dmHistory) },
+    { queries: [dmQuestion], groupQuote: false, groupPrefetch: false, dmPrefetch: true });
+});
+
+test("R2 G4-01 私聊 query_history 只搜本会话、拒绝显式搜索和回读被拦群", async () => {
+  let groupId = "";
+  let dmId = "";
+  const results: (string | null)[] = [];
+  const fixture = isolationOptions(async (_i, tools) => {
+    if (!groupId || !tools.queryHistory) return;
+    const query = { kind: "search" as const, query: "琥珀编号", limit: null };
+    results.push(await tools.queryHistory({ ...query, roomId: null }));
+    results.push(await tools.queryHistory({ ...query, roomId: groupId }));
+    results.push(await tools.queryHistory({ kind: "read", roomId: groupId, seq: 1, before: 0, after: 0 }));
+    results.push(await tools.queryHistory({ ...query, query: "天气预报", roomId: dmId }));
+    results.push(await tools.queryHistory({ kind: "read", roomId: dmId, seq: 1, before: 0, after: 0 }));
+  });
+  const h = new Host(fixture.options);
+  const { dm, g } = await stopGroup(h, fixture);
+  groupId = g.id; dmId = dm.id;
+  h.send({ roomId: dm.id, clientActionId: "dm-question", text: dmQuestion });
+  await settle(h);
+  assert.deepEqual({ missesInDm: results[0]?.startsWith(`没有找到相关的旧消息(只搜了本轮所在的会话 ${dm.id};`), groupSearch: results[1], groupRead: results[2], dmSearch: results[3]?.includes(dmHistory), dmRead: results[4]?.includes(dmHistory) },
+    { missesInDm: true, groupSearch: null, groupRead: null, dmSearch: true, dmRead: true });
+});
+
+test("R2 D06.3 没有未读系统通知时，被拦回复的引用也不进入私聊第五块", async () => {
+  let round: RoundInput | undefined;
+  const fixture = isolationOptions((i) => { round = i; });
+  const h = new Host(fixture.options);
+  const { c, dm, g, notice } = await stopGroup(h, fixture);
+  // Seed only the notice as already seen; the quoting reply remains beyond the delivery cursor.
+  h.db.store.db.prepare("INSERT INTO gg_loop_seen (room_id, seq, contact_id) VALUES (?, ?, ?)").run(g.id, notice.seq, c.id);
+  h.send({ roomId: dm.id, clientActionId: "dm-question", text: dmQuestion });
+  await settle(h);
+  assert.deepEqual(round?.fresh.map((f) => f.roomId), [dm.id]);
+  assert.ok(block5(round).includes(dmHistory), "私聊的正常预取仍在");
+  assert.ok(!block5(round).includes(g.id) && !block5(round).includes(groupSecret), `第五块不应有被拦群引用：${block5(round)}`);
+});
+
+test("R2 AC-46 群有可交付新输入时，已读仍停在被拦消息之前", async () => {
+  let round: RoundInput | undefined;
+  const fixture = isolationOptions((i) => { round = i; });
+  const h = new Host(fixture.options);
+  const { c, g, original, blocked } = await stopGroup(h, fixture);
+  const kept = h.postAsHelper(g.id, "helper", "已上传不相关的附件", original.seq, "helper-update");
+  await settle(h);
+  assert.ok(round?.fresh.some((f) => f.kind === "message" && f.seq === kept.seq && f.sender.kind === "helper"));
+  assert.equal(h.readSeq(g.id, c), blocked.seq - 1);
+});
+
+test("R2 G4-03 即使群在本轮活跃，系统通知也不作为预取查询", async () => {
+  const fixture = isolationOptions();
+  const h = new Host(fixture.options);
+  const { g, original } = await stopGroup(h, fixture);
+  const kept = h.postAsHelper(g.id, "helper", "已上传不相关的附件", original.seq, "helper-update");
+  await settle(h);
+  assert.deepEqual([...new Set(fixture.searched)], [kept.text]);
 });
