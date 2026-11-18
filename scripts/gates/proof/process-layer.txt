@@ -1,0 +1,474 @@
+Q08 / AC-23 prerequisite gate proof
+Branch: chore/agy-gates-process-layer
+Base: origin/dev/agy-backend (46284e53)
+Reference: refs/remotes/ref/shared-process-cleanup (41dace26)
+Red commit: 316f8a3527b7801017ac2ca44409864ec4585cba
+Green commit: a285653094824bb4cf98ae8755c9d078d177b7c3
+
+Scope: scripts/gates only plus checklist/acceptance/architecture documentation and receipt.
+No packages/process-tools or packages/adapter-codex-compute ported.
+The process-layer.test.ts bytes are identical between Red and Green.
+
+Environment repair: replaced pre-existing node_modules symlink to another checkout with a
+local dependency directory and local workspace links, including the vendored acp-kernel.
+No tracked dependency manifest or lockfile changes. Initial typecheck setup failure was
+resolved before the Red commit; the successful rerun is retained below.
+
+R-02: red witnesses S-PROC-LAYER-01, S-PROC-LAYER-03, S-PROC-LAYER-04 and dotted
+Gemini recovery fail with ERR_ASSERTION against unchanged production gates.
+S-PROC-LAYER-02 and S-PROC-LAYER-05 are baseline regression controls, already passing.
+G-RED's isTest only covers packages/**/*.test.ts; these script tests are evidenced here,
+not mechanically replayed by G-RED. Independent review remains pending.
+
+R-05/R-18: selftests exercise legal/illegal layer edges; all existing gate mutants killed.
+AC-23 runtime cleanup and stop/resource handoff remain pending P1-B.
+The requested 7/8 local result is a pre-review result: review=null makes G-PROVENANCE
+skip provenance verification. It does not establish independent review or provenance.
+
+
+=== typecheck-red: exit 0; raw log SHA256 396901319daac4a4413b23478852db3c572014f86c71d148273565f0f3332696 ===
+
+> typecheck
+> tsc -p tsconfig.json
+
+
+
+=== process-layer-red: exit 1; raw log SHA256 817cb5aa901ef57a8649114abafb70f1dd244c63bd41219d8fef99f30f3029c7 ===
+TAP version 13
+# (node:61174) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: S-PROC-LAYER-01: adapter may import and declare the process utility
+not ok 1 - S-PROC-LAYER-01: adapter may import and declare the process utility
+  ---
+  duration_ms: 3.486542
+  type: 'test'
+  location: '/private/tmp/gg-agy-auth-p1b0/scripts/gates/process-layer.test.ts:23:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   {
+    +     gate: 'G-LAYER',
+    +     msg: 'packages/process-tools/package.json 缺 name 或合法的 gGroup.layer(domain/kernel/adapter/plugin/app)'
+    +   },
+    +   {
+    +     gate: 'G-LAYER',
+    +     msg: 'packages/process-tools/src/index.ts 不属于任何声明了层级的包'
+    +   }
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      gate: 'G-LAYER'
+      msg: 'packages/process-tools/package.json 缺 name 或合法的 gGroup.layer(domain/kernel/adapter/plugin/app)'
+    1:
+      gate: 'G-LAYER'
+      msg: 'packages/process-tools/src/index.ts 不属于任何声明了层级的包'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-agy-auth-p1b0/scripts/gates/process-layer.test.ts:27:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: S-PROC-LAYER-02: adapter-to-adapter imports and declarations remain forbidden
+ok 2 - S-PROC-LAYER-02: adapter-to-adapter imports and declarations remain forbidden
+  ---
+  duration_ms: 0.411416
+  type: 'test'
+  ...
+# Subtest: S-PROC-LAYER-03: domain and kernel cannot acquire process I/O through imports or declarations
+not ok 3 - S-PROC-LAYER-03: domain and kernel cannot acquire process I/O through imports or declarations
+  ---
+  duration_ms: 0.513834
+  type: 'test'
+  location: '/private/tmp/gg-agy-auth-p1b0/scripts/gates/process-layer.test.ts:39:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-agy-auth-p1b0/scripts/gates/process-layer.test.ts:45:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: S-PROC-LAYER-04: plugin/app do not gain the new process dependency and process cannot depend upward
+not ok 4 - S-PROC-LAYER-04: plugin/app do not gain the new process dependency and process cannot depend upward
+  ---
+  duration_ms: 0.251292
+  type: 'test'
+  location: '/private/tmp/gg-agy-auth-p1b0/scripts/gates/process-layer.test.ts:49:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-agy-auth-p1b0/scripts/gates/process-layer.test.ts:56:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: S-PROC-LAYER-05: relative cross-package imports remain forbidden
+ok 5 - S-PROC-LAYER-05: relative cross-package imports remain forbidden
+  ---
+  duration_ms: 0.157459
+  type: 'test'
+  ...
+# Subtest: agyRecoverStepModels recognizes dotted Gemini versions and rejects malformed or unknown names
+not ok 6 - agyRecoverStepModels recognizes dotted Gemini versions and rejects malformed or unknown names
+  ---
+  duration_ms: 2.791
+  type: 'test'
+  location: '/private/tmp/gg-agy-auth-p1b0/scripts/gates/process-layer.test.ts:66:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + Map(0) {}
+    - Map(2) {
+    -   1 => 'gemini-3.8-flash-s',
+    -   2 => 'gemini-3.8-flash-high'
+    - }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/gg-agy-auth-p1b0/scripts/gates/process-layer.test.ts:78:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 2
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 302.86925
+
+
+=== process-layer-green: exit 0; raw log SHA256 44b5196f601d85fed263e2cd0b2e2170334a12d4c741161e47d715c291e55dad ===
+TAP version 13
+# (node:63952) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: S-PROC-LAYER-01: adapter may import and declare the process utility
+ok 1 - S-PROC-LAYER-01: adapter may import and declare the process utility
+  ---
+  duration_ms: 3.461834
+  type: 'test'
+  ...
+# Subtest: S-PROC-LAYER-02: adapter-to-adapter imports and declarations remain forbidden
+ok 2 - S-PROC-LAYER-02: adapter-to-adapter imports and declarations remain forbidden
+  ---
+  duration_ms: 0.374333
+  type: 'test'
+  ...
+# Subtest: S-PROC-LAYER-03: domain and kernel cannot acquire process I/O through imports or declarations
+ok 3 - S-PROC-LAYER-03: domain and kernel cannot acquire process I/O through imports or declarations
+  ---
+  duration_ms: 0.498209
+  type: 'test'
+  ...
+# Subtest: S-PROC-LAYER-04: plugin/app do not gain the new process dependency and process cannot depend upward
+ok 4 - S-PROC-LAYER-04: plugin/app do not gain the new process dependency and process cannot depend upward
+  ---
+  duration_ms: 0.48775
+  type: 'test'
+  ...
+# Subtest: S-PROC-LAYER-05: relative cross-package imports remain forbidden
+ok 5 - S-PROC-LAYER-05: relative cross-package imports remain forbidden
+  ---
+  duration_ms: 0.190333
+  type: 'test'
+  ...
+# Subtest: agyRecoverStepModels recognizes dotted Gemini versions and rejects malformed or unknown names
+ok 6 - agyRecoverStepModels recognizes dotted Gemini versions and rejects malformed or unknown names
+  ---
+  duration_ms: 2.770084
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 299.928125
+
+
+=== typecheck-green: exit 0; raw log SHA256 396901319daac4a4413b23478852db3c572014f86c71d148273565f0f3332696 ===
+
+> typecheck
+> tsc -p tsconfig.json
+
+
+
+=== lint-green: exit 0; raw log SHA256 46c03920c831447aa6d324a0336960e2e5e1cf7832dd4ab2149960a5fe330e79 ===
+
+> lint
+> biome lint --error-on-warnings
+
+Checked 294 files in 708ms. No fixes applied.
+
+
+=== test-green: exit 0; raw log SHA256 97e337b4f3564df9883ffd1cd9c174ab0784b16908cc4012bb75d5d66c059779 ===
+  type: 'test'
+  ...
+# Subtest: 原依赖目录被替换后不能沿用旧副本的来源授权
+ok 2003 - 原依赖目录被替换后不能沿用旧副本的来源授权
+  ---
+  duration_ms: 29.7995
+  type: 'test'
+  ...
+# Subtest: 原依赖目录内包软链变更到未知位置时拒绝沿用授权
+ok 2004 - 原依赖目录内包软链变更到未知位置时拒绝沿用授权
+  ---
+  duration_ms: 28.950709
+  type: 'test'
+  ...
+# Subtest: 未知来源的外部包软链不能扩大依赖挂载范围
+ok 2005 - 未知来源的外部包软链不能扩大依赖挂载范围
+  ---
+  duration_ms: 25.362583
+  type: 'test'
+  ...
+1..2005
+# tests 2022
+# suites 4
+# pass 2022
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 95493.525667
+test-runner:实际执行并通过 2022 条用例
+
+
+=== selftest-green: exit 0; raw log SHA256 352dac92be893ce9b0cc21aa372a2e33061ba41370ee71459ee008fe7f574f72 ===
+✓ 放行:Q08 合规:adapter 只新增依赖 process 工具层 (34s)
+__GATE_CASE__{"name":"Q08 合规:adapter 只新增依赖 process 工具层","direct":false,"expect":null,"exit":0,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":[],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
+✓ 拦下:Q08 adapter 仍不能依赖另一个 adapter (36s)
+__GATE_CASE__{"name":"Q08 adapter 仍不能依赖另一个 adapter","direct":false,"expect":"不能依赖 adapter","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✗"},"expectHit":["G-LAYER"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
+✓ 拦下:Q08 kernel 不能取得 process 工具 (37s)
+__GATE_CASE__{"name":"Q08 kernel 不能取得 process 工具","direct":false,"expect":"不能依赖 process","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✗"},"expectHit":["G-LAYER"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
+✓ 拦下:Q08 domain 不能取得 process 工具 (31s)
+__GATE_CASE__{"name":"Q08 domain 不能取得 process 工具","direct":false,"expect":"不能依赖 process","exit":1,"gates":{"G-PROVENANCE":"✓","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✗"},"expectHit":["G-LAYER"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
+__GATE_CASE__{"name":"codex-cli rollout 缺少 session_meta 记录被拦","direct":false,"expect":"缺少 session_meta 身份标识","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
+✓ 拦下:codex-cli rollout 的 session_meta 缺少 session_id/id 被拦 (8s)
+__GATE_CASE__{"name":"codex-cli rollout 的 session_meta 缺少 session_id/id 被拦","direct":false,"expect":"缺少 session_meta 身份标识","exit":1,"gates":{"G-PROVENANCE":"✗","G-TRACE":"✓","G-REVIEW":"✓","G-RED":"✓","G-STUB":"✓","G-TAUTO":"✓","G-WORKFLOW":"✓","G-LAYER":"✓"},"expectHit":["G-PROVENANCE"],"gateErrors":[],"complete":true,"pass":true,"kind":"ok"}
+✓ vendorOf(o1) = openai
+✓ vendorOf(gpt-6-astra) = openai
+✓ vendorOf(ai-iisbo/[乾坤按量]gpt-6-astra) = openai
+✓ vendorOf(fnqtz-gpt/gpt-6.1-terra) = openai
+✓ vendorOf(fnqtz-gpt/gpt-6.1-sol) = openai
+✓ vendorOf(shayu/gpt-6.2-sol) = openai
+✓ vendorOf(gpt-oss-120b-medium) = openai
+✓ vendorOf(claude-opus-5-5) = anthropic
+✓ vendorOf(claude-opus-4-6-thinking) = anthropic
+✓ vendorOf(grok-4.7) = xai
+✓ vendorOf(gemini-4-argon) = google
+✓ vendorOf(gemini-4-carbon-high) = google
+✓ vendorOf(gemini-4-hydrogen-xhigh) = google
+✓ vendorOf(gemini-pro-orchestrator) = google
+✓ vendorOf(gemini-pro-orchestrator-argon) = google
+✓ vendorOf(stealth/crouton-alpha) = unknown
+✓ vendorOf(undefined) = unknown
+自检通过
+自检耗时 477s:用例 255/255,并发 4(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0
+
+
+=== mutation-green: exit 0; raw log SHA256 8566403ad8028e3081ef22a73e0d5c3048b25f987237fa632c226bf374465242 ===
+原样副本自检耗时 470s
+✓ 原样副本自检通过
+[1/152] ✓ 变异「本机模式不跑来源核对」(6s)被「合规:先红后绿、跨厂商审查、来源核对通过」发现:执行器:退出码 0→0,门禁 ✓PROVENANCE ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER
+[2/152] ✓ 变异「CI 模式不跑任何门禁」(6s)被「合规(CI 模式,不跑来源核对)」发现:执行器:退出码 0→0,门禁 ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → (无)
+[3/152] ✓ 变异「有问题也退出 0」(8s)被「CI 模式下违规同样拦下」发现:执行器:退出码 1→0,门禁 ✗TRACE ✓REVIEW ✗RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → ✗TRACE ✓REVIEW ✗RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER
+[4/152] ✓ 变异「执行器吞掉问题」(8s)被「CI 模式下违规同样拦下」发现:执行器:退出码 1→0,门禁 ✗TRACE ✓REVIEW ✗RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER
+[5/152] ✓ 变异「执行器把门禁出错当放行」(7s)被「RR-02 没有沙箱就停」发现:执行器:退出码 1→0,门禁 ✓PROVENANCE ✓TRACE ✓REVIEW ✗RED ✗STUB ✗TAUTO ✓WORKFLOW ✓LAYER → ✓PROVENANCE ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER
+[6/152] ✓ 变异「workflow/依赖清单不算受管」(7s)被「F-02 只改 workflow 没收据」发现:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+[7/152] ✓ 变异「来源核对不比对 hash」(10s)被「审查会话算出的是别的 hash」发现:G-PROVENANCE 不再按预期原因「审查会话里没有一次」拦下(✗ → ✓)
+[8/152] ✓ 变异「来源核对看全会话模型」(11s)被「F-04 历史出现过别家模型,算 hash 那一轮是同厂商」发现:G-PROVENANCE 不再按预期原因「实际是 anthropic」拦下(✗ → ✓)
+[9/152] ✓ 变异「豁免认消息里任意一行指令」(8s)被「RR-13 指令前另有说明文字」发现:G-PROVENANCE 不再按预期原因「不是一条格式为」拦下(✗ → ✓)
+[10/152] ✓ 变异「红提交只要求点名一条」(9s)被「红提交上第二条测试本来就绿」发现:G-RED 不再按预期原因「zero 放到红提交的实现上没有按名字失败」拦下(✗ → ✓)
+[11/152] ✓ 变异「空桩失败不按名字计数」(12s)被「F-07 测试只读顶层常量」发现:G-STUB 仍拦下但不再是预期原因「空桩后没有按名字失败」
+[12/152] ✓ 变异「断言不要求判源码结果」(12s)被「F-07 断言只判复制的逻辑」发现:G-TAUTO 不再按预期原因「没有一条断言判的是被测源码」拦下(✗ → ✓)
+[13/152] ✓ 变异「测试只认字面 test」(6s)被「合规:node:test 别名 + 断言」发现:G-RED 由放行变为拦下(不是门禁自身出错)
+[14/152] ✓ 变异「去掉审查人白名单检查」(13s)被「审查人 grok 被拦」发现:G-REVIEW 不再按预期原因「审查人必须是」拦下(✗ → ✓)
+[15/152] ✓ 变异「来源核对不查审查会话 harness」(14s)被「原则 68 claude 审查会话必须是 claude 会话」发现:G-PROVENANCE 不再按预期原因「必须是 claude 会话」拦下(✗ → ✓)
+[16/152] ✓ 变异「审查会话 harness 不按审查人区分」(12s)被「原则 68 claude 审 codex 作者放行(claude 会话)」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[17/152] ✓ 变异「claude 不受跨厂商约束」(11s)被「原则 68 claude 审查照样要跨研发厂商:作者用 Anthropic 模型」发现:G-REVIEW 不再按预期原因「同为 anthropic」拦下(✗ → ✓)
+[18/152] ✓ 变异「claude 可审 claude 作者」(9s)被「原则 68 claude 审 claude 作者被拦(禁止自审)」发现:G-REVIEW 仍拦下但不再是预期原因「审查人与作者是同一个(claude)」
+[19/152] ✓ 变异「名单漏掉 argon」(9s)被「原则 68 argon 审 codex 作者放行(claude 会话,g-group#3199 备用审查人)」发现:G-REVIEW 由放行变为拦下(不是门禁自身出错)
+[20/152] ✓ 变异「argon 会话回退成 codex」(8s)被「原则 68 argon 审 codex 作者放行(claude 会话,g-group#3199 备用审查人)」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[21/152] ✓ 变异「argon-chat 也进名单」(9s)被「原则 68 argon-chat 当审查人被拦(不能执行命令)」发现:G-REVIEW 不再按预期原因「审查人必须是」拦下(✗ → ✓)
+[22/152] ✓ 变异「名单漏掉 opus-agy」(8s)被「opus-agy 审 carbon(antigravity)作者放行(跨厂商 Anthropic/Google)」发现:G-REVIEW 由放行变为拦下(不是门禁自身出错)
+[23/152] ✓ 变异「opus-agy 会话回退成 codex」(8s)被「opus-agy 审 carbon(antigravity)作者放行(跨厂商 Anthropic/Google)」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[24/152] ✓ 变异「名单漏掉 hydrogen」(6s)被「hydrogen 审 codex 作者放行(跨厂商 Google/OpenAI)」发现:G-REVIEW 由放行变为拦下(不是门禁自身出错)
+[25/152] ✓ 变异「hydrogen 会话回退成 codex」(8s)被「hydrogen 审 codex 作者放行(跨厂商 Google/OpenAI)」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[26/152] ✓ 变异「名单漏掉 codex-cli」(7s)被「codex-cli 审 carbon(antigravity)作者放行(跨厂商 OpenAI/Google)」发现:G-REVIEW 由放行变为拦下(不是门禁自身出错)
+[27/152] ✓ 变异「codex-cli 会话回退成 codex」(8s)被「codex-cli 审 carbon(antigravity)作者放行(跨厂商 OpenAI/Google)」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[28/152] ✓ 变异「名单漏掉 carbon-agy」(8s)被「carbon-agy 审 codex-cli(shayu/gpt-6.2-sol)作者放行(跨厂商 Google/OpenAI)」发现:G-REVIEW 由放行变为拦下(不是门禁自身出错)
+[29/152] ✓ 变异「carbon-agy 会话回退成 codex」(7s)被「carbon-agy 审 codex-cli(shayu/gpt-6.2-sol)作者放行(跨厂商 Google/OpenAI)」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[30/152] ✓ 变异「不剥离 codex-cli exec_command 包装」(8s)被「codex-cli 审 carbon(antigravity)作者放行(跨厂商 OpenAI/Google)」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[31/152] ✓ 变异「stripCodexExecWrapper 放行非零退出码」(10s)被「codex-cli 审查 hash 命令退出码非零被拦」发现:G-PROVENANCE 不再按预期原因「审查会话里没有一次」拦下(✗ → ✓)
+[32/152] ✓ 变异「codex-cli 不核对 session_meta id」(9s)被「codex-cli rollout 内部 session_meta id 与文件名不一致被拦」发现:G-PROVENANCE 不再按预期原因「session_meta id」拦下(✗ → ✓)
+[33/152] ✓ 变异「codex-cli 放行无 id 的 session_meta」(10s)被「codex-cli rollout 的 session_meta 缺少 session_id/id 被拦」发现:G-PROVENANCE 不再按预期原因「缺少 session_meta 身份标识」拦下(✗ → ✓)
+[34/152] ✓ 变异「codex-cli 放行缺少 session_meta 记录的 rollout」(9s)被「codex-cli rollout 缺少 session_meta 记录被拦」发现:G-PROVENANCE 不再按预期原因「缺少 session_meta 身份标识」拦下(✗ → ✓)
+[35/152] ✓ 变异「codex-cli 会话软链逃逸不查」(7s)被「codex-cli 会话软链逃逸被拦」发现:G-PROVENANCE 仍拦下但不再是预期原因「codex-cli 会话记录经软链指到了会话根目录之外」
+[36/152] ✓ 变异「codex-cli 不继承 turn_context 的 cwd」(9s)被「codex-cli 作者相对路径补丁按 turn_context cwd 解析进本仓库」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[37/152] ✓ 变异「不剥离 run_command 包装」(10s)被「opus-agy 审 carbon(antigravity)作者放行(跨厂商 Anthropic/Google)」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[38/152] ✓ 变异「stripRunCommandWrapper 不认双重 header」(10s)被「antigravity run_command 双重 header 与 \r\n 被正确剥离」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[39/152] ✓ 变异「stripRunCommandWrapper 放行非零退出码」(14s)被「antigravity 审查 hash 命令退出码非零被拦」发现:G-PROVENANCE 不再按预期原因「审查会话里没有一次」拦下(✗ → ✓)
+[40/152] ✓ 变异「antigravity 会话软链逃逸不查」(13s)被「antigravity 会话软链逃逸被拦」发现:G-PROVENANCE 仍拦下但不再是预期原因「brain 根目录之外」
+[41/152] ✓ 变异「antigravity 不回退读 transcript.jsonl」(9s)被「antigravity 回退读 transcript.jsonl 放行」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[42/152] ✓ 变异「agyRecoverStepModels 不截尾部 2KB」(10s)被「antigravity 大 prompt blob 与非占位符行不干扰 sqlite 模型识别」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[43/152] ✓ 变异「agyRecoverStepModels 不核对 MODEL_PLACEHOLDER_」(9s)被「antigravity 大 prompt blob 与非占位符行不干扰 sqlite 模型识别」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[44/152] ✓ 变异「agyRecoverStepModels 跨步涂抹最后模型」(8s)被「antigravity 作者中途换模(先 anthropic 后 google)累积生产厂商被拦」发现:G-PROVENANCE 不再按预期原因「审查厂商 anthropic 在作者的产出厂商集合」拦下(✗ → ✓)
+[45/152] ✓ 变异「WRITE_TOOLS 漏掉 edit_file」(7s)被「antigravity 作者 edit_file 无路径时按写操作计入产出」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[46/152] ✓ 变异「SHELL_TOOLS 漏掉 run_command」(9s)被「antigravity 作者后续轮次同厂商 run_command 无路径也被拦」发现:G-PROVENANCE 不再按预期原因「审查厂商 anthropic 在作者的产出厂商集合」拦下(✗ → ✓)
+[47/152] ✓ 变异「不查 Path 大写参数名」(10s)被「antigravity 作者 edit_file 相对 Path 参数按 cwd 解析进本仓库」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[48/152] ✓ 变异「沙箱不拦 .gemini/antigravity 目录」(7s)被「R7-01 沙箱拦 .gemini/antigravity/brain、plugin_data 与 conversations 读取」发现:直接判定用例在变异下判失败:固定拒读清单缺 /var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-agy-sb-BsGAwj/home-link/.gemini/ant
+[49/152] ✓ 变异「沙箱不拦自定义来源根目录及派生 conversations」(6s)被「R7-01 自定义非 HOME 的 AGY_BRAIN_ROOT 及其派生 conversations/plugin_data 与 CODEX_CLI_SESSIONS_ROOT 一并拒读」发现:直接判定用例在变异下判失败:固定拒读清单缺自定义路径 /var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-
+[50/152] ✓ 变异「不核对派活卡片」(8s)被「派活卡片显示会话属于别的助手」发现:G-PROVENANCE 不再按预期原因「对不上」拦下(✗ → ✓)
+[51/152] ✓ 变异「session 不做 realpath 包含检查」(8s)被「RR-01 会话文件软链到 PR 里的伪造记录」发现:G-PROVENANCE 不再按预期原因「会话根目录之外」拦下(✗ → ✓)
+[52/152] ✓ 变异「session harness 不查白名单」(8s)被「RR-01 harness 不在白名单」发现:G-PROVENANCE 仍拦下但不再是预期原因「不在白名单」
+[53/152] ✓ 变异「没有沙箱时回退宿主」(8s)被「RR-02 没有沙箱就停」发现:G-RED 不再按预期原因「没有可用沙箱」拦下(✗ → ✓)
+[54/152] ✓ 变异「workflow 不查写权限」(6s)被「RR-03 带引号的写权限」发现:G-WORKFLOW 不再按预期原因「申请了写权限 statuses」拦下(✗ → ✓)
+[55/152] ✓ 变异「workflow 不拒绝表达式名字」(7s)被「RR-03 job 名用表达式拼出受保护名」发现:G-WORKFLOW 不再按预期原因「名字含表达式」拦下(✗ → ✓)
+[56/152] ✓ 变异「不拦自比较断言」(6s)被「RR-04 自比较断言」发现:G-TAUTO 不再按预期原因「自比较或恒真」拦下(✗ → ✓)
+[57/152] ✓ 变异「不拦不可达断言」(8s)被「RR-04 不可达断言」发现:G-TAUTO 不再按预期原因「执行不到」拦下(✗ → ✓)
+[58/152] ✓ 变异「不做返回值变异校准」(7s)被「RR-04 断言没检查返回值(返回值变异存活)」发现:G-STUB 不再按预期原因「返回错误值」拦下(✗ → ✓)
+[59/152] ✓ 变异「相对路径写操作不算产出」(9s)被「RR-05 判不了路径的 shell 轮次也算进去」发现:G-PROVENANCE 不再按预期原因「在作者的产出厂商集合」拦下(✗ → ✓)
+[60/152] ✓ 变异「测试身份按集合比较(计数去重)」(9s)被「RR-06 同名间接测试零断言」发现:G-TAUTO 不再按预期原因「运行时注册了 2 次」拦下(✗ → ✓)
+[61/152] ✓ 变异「不核对红提交测试体」(8s)被「RR-07 红提交上是另一份假断言」发现:G-RED 仍拦下但不再是预期原因「测试体和现在不同」
+[62/152] ✓ 变异「豁免不核对 uid」(9s)被「RR-08 冒用所有者名字的另一个 uid」发现:G-PROVENANCE 不再按预期原因「不是仓库所有者」拦下(✗ → ✓)
+[63/152] ✓ 变异「豁免认引用里的文字」(6s)被「RR-13 整条消息是引用块里的指令」发现:G-PROVENANCE 不再按预期原因「不是一条格式为」拦下(✗ → ✓)
+[64/152] ✓ 变异「git 子进程继承 GIT_*」(6s)被「隔离:hook 环境的 GIT_DIR 指向别的仓库,门禁不碰它」发现:执行器:退出码 0→1,门禁 ✓PROVENANCE ✓TRACE ✓REVIEW ✓RED ✓STUB ✓TAUTO ✓WORKFLOW ✓LAYER → (无);副作用检查失败:GIT_DIR 指向的另一个仓库被改动了
+[65/152] ✓ 变异「self-check 白名单放给所有文件」(10s)被「RR-03 别的 workflow 冒充 self-check」发现:G-WORKFLOW 不再按预期原因「冒充受保护检查名 self-check」拦下(✗ → ✓)
+[66/152] ✓ 变异「不检查 self-check 必需步骤」(10s)被「RR-09 self-check.yml 只 echo」发现:G-WORKFLOW 不再按预期原因「缺必需步骤」拦下(✗ → ✓)
+[67/152] ✓ 变异「不检查 self-check 步骤的 if」(9s)被「RR-09 门禁自检步骤加 if: false」发现:G-WORKFLOW 不再按预期原因「带了 if」拦下(✗ → ✓)
+[68/152] ✓ 变异「不检查 self-check job 的 if」(10s)被「RR-09 job 加 if」发现:G-WORKFLOW 不再按预期原因「带了 if」拦下(✗ → ✓)
+[69/152] ✓ 变异「不检查 self-check continue-on-error」(9s)被「RR-09 job 加 continue-on-error」发现:G-WORKFLOW 不再按预期原因「带了 continue-on-error」拦下(✗ → ✓)
+[70/152] ✓ 变异「变异命令允许任意后缀」(7s)被「RR-09 变异命令后接 || true」发现:G-WORKFLOW 不再按预期原因「缺必需步骤」拦下(✗ → ✓)
+[71/152] ✓ 变异「不检查 package.json 门禁脚本」(13s)被「RR-09 package.json 把 gates:mutation 改成 true」发现:G-WORKFLOW 不再按预期原因「scripts["gates:mutation"] 必须是」拦下(✗ → ✓)
+[72/152] ✓ 变异「不检查 self-check 的 shell/working-directory」(13s)被「RR-09 必需步骤换 shell」发现:G-WORKFLOW 不再按预期原因「带了 shell」拦下(✗ → ✓)
+[73/152] ✓ 变异「不检查 self-check 的 defaults」(16s)被「RR-09 job 用 defaults 换 shell」发现:G-WORKFLOW 不再按预期原因「带了 defaults」拦下(✗ → ✓)
+[74/152] ✓ 变异「红重放不覆盖测试依赖」(16s)被「RR-11 helper 在红提交上给了错期望值」发现:G-RED 不再按预期原因「没有按名字失败」拦下(✗ → ✓)
+[75/152] ✓ 变异「测试依赖只认非源码文件」(8s)被「RR-11 helper 在红提交上给了错期望值」发现:G-RED 不再按预期原因「没有按名字失败」拦下(✗ → ✓)
+[76/152] ✓ 变异「返回值变异退回按文件判定」(9s)被「RR-12 一条强测试 + 一条只断言 typeof」发现:G-STUB 不再按预期原因「返回错误值」拦下(✗ → ✓)
+[77/152] ✓ 变异「hash 调用认任意含 run-all --hash 的命令」(10s)被「RR-14 printf 打印 hash、run-all 只在注释里」发现:G-PROVENANCE 不再按预期原因「审查会话里没有一次」拦下(✗ → ✓)
+[78/152] ✓ 变异「hash 调用不拒 shell 元字符」(12s)被「RR-14 真实 hash 输出被丢弃、再 echo hash」发现:G-PROVENANCE 不再按预期原因「审查会话里没有一次」拦下(✗ → ✓)
+[79/152] ✓ 变异「hash 调用不要求 node 后紧跟 run-all」(11s)被「RR-14 node 先跑别的脚本、run-all 只是它的参数」发现:G-PROVENANCE 不再按预期原因「审查会话里没有一次」拦下(✗ → ✓)
+[80/152] ✓ 变异「产出厂商不认同仓库的另一个 clone」(11s)被「RR-15 后续轮次写进同仓库的另一个 clone」发现:G-PROVENANCE 仍拦下但不再是预期原因「在作者的产出厂商集合」
+[81/152] ✓ 变异「0 用例判通过」(7s)被「g-group#2538 测试入口 0 条用例判失败」发现:直接判定用例在变异下判失败:0 条用例没有判失败(退出 1)
+[82/152] ✓ 变异「读不到汇总行判通过」(9s)被「R4-02 判定:读不到汇总行判失败」发现:直接判定用例在变异下判失败:没有汇总行却判 通过
+[83/152] ✓ 变异「skip 计入用例数」(10s)被「R4-02 测试入口全部 skip 判失败」发现:直接判定用例在变异下判失败:全部 skip 没有按"没有实际执行"判失败(退出 0)
+[84/152] ✓ 变异「通过数为 0 也算执行」(9s)被「R4-02 测试入口全部 todo 判失败」发现:直接判定用例在变异下判失败:全部 todo 没有按"没有实际执行"判失败(退出 0)
+[85/152] ✓ 变异「不要求 test 脚本为规范值」(20s)被「g-group#2538 test 脚本改回裸 node --test(0 用例也判通过)」发现:G-WORKFLOW 仍拦下但不再是预期原因「scripts["test"] 必须是」
+[86/152] ✓ 变异「self-check 不要求 npm test 步骤」(19s)被「g-group#2538 self-check 缺 npm test 步骤」发现:G-WORKFLOW 不再按预期原因「缺必需步骤:run 为 npm test」拦下(✗ → ✓)
+[87/152] ✓ 变异「self-check 不查 GATE_* 环境开关」(16s)被「R4-01 self-check job env 设 GATE_ 开关缩小自检」发现:G-WORKFLOW 不再按预期原因「设置了门禁开关 GATE_SELFTEST_ONLY」拦下(✗ → ✓)
+[88/152] ✓ 变异「执行故障也算目标判因」(13s)被「R4-01 提示用例无关夹具故障不算发现」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:改了代码没收据 执行故障(error)
+[89/152] ✓ 变异「任意非零即算发现」(31s)被「R4-01 端到端:中性变异 + 提示用例夹具故障,变异校验必须判存活」发现:直接判定用例在变异下判失败:中性变异在提示用例夹具故障下被判成发现(退出 0)
+[90/152] ✓ 变异「任何门禁变了都算目标」(11s)被「R4-01 错的门禁变了不算发现目标」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+[91/152] ✓ 变异「门禁自身出错也算拦下」(14s)被「R4-01 目标门禁因自身出错拦下不算预期原因」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-RED 由放行变为拦下(不是门禁自身出错)
+[92/152] ✓ 变异「预期拦下变成门禁自身出错仍算发现」(16s)被「R5-01 目标门禁由预期拦下变为门禁自身出错不算发现」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-TRACE 仍拦下但不再是预期原因「缺收据」
+[93/152] ✓ 变异「目标门禁没跑也参与判定」(14s)被「R5-01 目标门禁没跑(观测缺失)不算发现」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-TRACE 从完整运行的执行列表里消失(没有运行)
+[94/152] ✓ 变异「门禁移出执行列表不算发现」(9s)被「R5-01 目标门禁从完整运行的执行列表里消失算发现」发现:直接判定用例在变异下判失败:门禁被移出执行列表却没算发现(判因 undefined)
+[95/152] ✓ 变异「输出完整性只看头部」(5s)被「R4-01 门禁输出解析:注册数与列出数一致且有 CONTENT_HASH 才算完整」发现:直接判定用例在变异下判失败:解析不对:{"full":{"gates":{"G-TRACE":"✓","G-RED":"✗"},"expectHit":["G-RED"],"gateErrors":[],"header":true,"complete":true},"
+[96/152] ✓ 变异「基线门禁出错一律排除」(5s)被「R5-01 基线就是按预期以门禁自身出错拦下(fail-closed)、变异后放行算发现」发现:直接判定用例在变异下判失败:预期的 fail-closed 拦下变成放行却没算发现
+[97/152] ✓ 变异「判因不核对退出码」(5s)被「R5-01 结构化判因与退出码不一致不算发现」发现:直接判定用例在变异下判失败:不该算发现,却给出判因:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+[98/152] ✓ 变异「结构化结果不校验就收」(4s)被「R5-02 parseCases 遇到 null/数组/缺字段/错类型/非法枚举不抛错且全部拒收」发现:直接判定用例在变异下判失败:非法行被收下 9 条:[[],1,"x",{"name":"a"},{"name":"改了代码没收据","pass":"yes","kind":"ok","direct":false,"expect":"缺收据","exit":1,"gat
+[99/152] ✓ 变异「不拒 Proxy」(4s)被「R5-02 getter/setter/Proxy 回调 0 次且被拒收」发现:直接判定用例在变异下判失败:proxyObj:非法结果被当成证据:["G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)",null,{"case":"改了代码没收据","ev":"G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)"}]
+[100/152] ✓ 变异「不拒访问器属性」(4s)被「R5-02 getter/setter/Proxy 回调 0 次且被拒收」发现:直接判定用例在变异下判失败:setterObj:非法结果被当成证据:["G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)",null,{"case":"改了代码没收据","ev":"G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)"}]
+[101/152] ✓ 变异「导出策略不冻结」(4s)被「R5-03 改导出的策略对象不改变后续门禁行为」发现:直接判定用例在变异下判失败:allowedReviewers 变成 ;harnessOf 变成 claude/claude;PROTECTED_CONTEXTS 变成 ;LAYERS 变成 domain,kernel,process,adapter,plugin,ap
+[102/152] ✓ 变异「只冻结顶层」(5s)被「R5-03 改导出的策略对象不改变后续门禁行为」发现:直接判定用例在变异下判失败:allowedReviewers 变成 ;harnessOf 变成 claude/codex
+[103/152] ✓ 变异「注入点唯一性只查字符串」(5s)被「R5-04 正则注入点 0 次/多次在变异执行前拒绝,恰 1 次放行」发现:直接判定用例在变异下判失败:injectionCount 结果 [1,1,0,0,1,1,2,0,1]
+[104/152] ✓ 变异「门禁临时 HOME 退出不删」(8s)被「磁盘:门禁命令行与一条自检用例跑完不在 TMPDIR 留下 gate-home/gate-run/gate-snap/gate-selftest 目录」发现:直接判定用例在变异下判失败:留下了 1 个临时目录:gate-home-y3o2GN
+[105/152] ✓ 变异「从 ALL_GATES 删掉 trace」(5s)被「改了代码没收据」发现:G-TRACE 从完整运行的执行列表里消失(没有运行)
+[106/152] ✓ 变异「从 ALL_GATES 删掉 review」(5s)被「作者自审」发现:G-REVIEW 从完整运行的执行列表里消失(没有运行)
+[107/152] ✓ 变异「从 ALL_GATES 删掉 red」(4s)被「收据没写红提交」发现:G-RED 从完整运行的执行列表里消失(没有运行)
+[108/152] ✓ 变异「从 ALL_GATES 删掉 stub」(4s)被「F-07 测试只读顶层常量」发现:G-STUB 从完整运行的执行列表里消失(没有运行)
+[109/152] ✓ 变异「从 ALL_GATES 删掉 tautology」(5s)被「恒真断言」发现:G-TAUTO 从完整运行的执行列表里消失(没有运行)
+[110/152] ✓ 变异「从 ALL_GATES 删掉 workflow」(6s)被「PR 的 workflow 冒充受保护检查名」发现:G-WORKFLOW 从完整运行的执行列表里消失(没有运行)
+[111/152] ✓ 变异「从 ALL_GATES 删掉 layers(末项)」(6s)被「领域层反向依赖内核」发现:G-LAYER 从完整运行的执行列表里消失(没有运行)
+[112/152] ✓ 变异「变异侧输出不完整仍判因」(4s)被「R6-01 目标门禁仍在但变异侧输出不完整(缺 CONTENT_HASH/少列表项/截断)不算发现」发现:直接判定用例在变异下判失败:预期拦下→放行:不该算发现,却给出判因:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+[113/152] ✓ 变异「killedBy 先用 instanceof 判 Map」(4s)被「R6-02 killedBy 基线 Map 是 Proxy/撤销的 Proxy/伪 Map、结果数组是 Proxy 时 trap 回调 0 次、不抛错、不给判因」发现:直接判定用例在变异下判失败:基线 Map Proxy:抛错 中性标记:trap 被调用
+[114/152] ✓ 变异「数组校验先 Array.isArray 后判 Proxy」(4s)被「R6-02 killedBy 基线 Map 是 Proxy/撤销的 Proxy/伪 Map、结果数组是 Proxy 时 trap 回调 0 次、不抛错、不给判因」发现:直接判定用例在变异下判失败:结果数组撤销的 Proxy:抛错 Cannot perform 'IsArray' on a proxy that has been revoked
+[115/152] ✓ 变异「ALL_GATES 只冻结数组」(4s)被「R6-03 改 ALL_GATES/LOCAL_GATES 里的门禁对象(run/id/rule/加属性)不改变后续门禁行为」发现:直接判定用例在变异下判失败:门禁对象没有全部冻结;ALL_GATES 的 id 变成 G-Y,G-X,G-RED,G-STUB,G-TAUTO,G-WORKFLOW,G-LAYER;门禁对象被加上了属性;门禁的 run 被替换;改了门禁对象后非法审查人被
+[116/152] ✓ 变异「LOCAL_GATES 只冻结数组」(5s)被「R6-03 改 ALL_GATES/LOCAL_GATES 里的门禁对象(run/id/rule/加属性)不改变后续门禁行为」发现:直接判定用例在变异下判失败:门禁对象没有全部冻结;LOCAL_GATES 的 id 变成 G-Z;门禁对象被加上了属性;门禁的 run 被替换
+[117/152] ✓ 变异「零宽匹配按 UTF-16 单元前进」(8s)被「R6-04 正则注入计数:零宽 /u 按码点前进不死循环,sticky 与普通搜索计数一致」发现:直接判定用例在变异下判失败:injectionCount 结果 [1,null,null,null,3,null,2,2,0,2,2,1,1,0,2],应为 [1,2,2,4,3,2,2,2,0,2,2,1,1,0,2]
+[118/152] ✓ 变异「计数保留 sticky」(11s)被「R6-04 正则注入计数:零宽 /u 按码点前进不死循环,sticky 与普通搜索计数一致」发现:直接判定用例在变异下判失败:injectionCount 结果 [1,2,2,4,3,2,2,2,0,1,1,0,0,0,2],应为 [1,2,2,4,3,2,2,2,0,2,2,1,1,0,2]
+[119/152] ✓ 变异「注入保留 sticky」(9s)被「R6-04 sticky 正则注入点按计数时的同一语义替换」发现:直接判定用例在变异下判失败:inject 结果 ["x MARK y","x MARK y","x DONE y","x DONE y","a$$b"],应为 ["x DONE y","x DONE y","x DONE y","x DONE y","a$$b"]
+[120/152] ✓ 变异「沙箱不拒读 HOME 下的点文件」(13s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:没有 HOME 点文件默认拒读规则
+[121/152] ✓ 变异「点文件拒读只按未规范化的 HOME」(15s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:点文件默认拒读缺 /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-TgAZhD/home-real
+[122/152] ✓ 变异「沙箱不放行挂载的依赖」(13s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:放行规则缺 /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-6PHwfQ/deps/node_modules
+[123/152] ✓ 变异「sandboxed 不把挂载交给 seatbelt」(11s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:放行规则缺 /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-7bJlGM/deps/node_modules
+[124/152] ✓ 变异「放行项盖过拒读清单(去掉末尾的拒读清单)」(12s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:最后一条不是排在放行之后的固定拒读清单:(allow file-read-data (subpath "/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000g
+[125/152] ✓ 变异「拒读清单漏掉 .git-credentials 与 .netrc」(12s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:固定拒读清单缺 /var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-Kj2wwL/home-link/.git-cre
+[126/152] ✓ 变异「拒读清单不按 realpath」(6s)被「R7-01 seatbelt 读隔离规则跨平台核对:点文件默认拒读、放行副本与挂载、末尾固定拒读清单(原样与 realpath)」发现:直接判定用例在变异下判失败:固定拒读清单缺 /private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r701p-6GQDmt/home-real/.git-credentials
+[127/152] ✓ 变异「执行计划额外放行 HOME」(6s)被「R9-01 seatbelt 读放行范围恰为工作副本与挂载的依赖,多出的放行项(如整个 HOME)判失败」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r901-3jmjLy/work\")","(subpath \"/pr
+[128/152] ✓ 变异「seatbelt 放行联网」(5s)被「R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖」发现:直接判定用例在变异下判失败:seatbelt 联网规则应恰为 (deny network*),实际 ["(allow network*)"]
+[129/152] ✓ 变异「docker 不断网」(5s)被「R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖」发现:直接判定用例在变异下判失败:docker 应恰有一处 --network none,实际 [["--network","host"]]
+[130/152] ✓ 变异「docker 额外挂载 HOME」(20s)被「R9-02 联网隔离规则跨平台核对:seatbelt 恰为 deny network*,docker 恰为 --network none 且只挂副本与依赖」发现:直接判定用例在变异下判失败:docker 挂载应恰为副本与依赖,实际 ["/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r902p-sJrdx
+[131/152] ✓ 变异「不放行运行时自带的动态库」(23s)被「R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r903-EcvGDV/work\"
+[132/152] ✓ 变异「运行时库按目录放行」(27s)被「R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r903-inXCr4/work\")",
+[133/152] ✓ 变异「运行时库不限 .dylib」(29s)被「R9-03 动态链接运行时:读放行逐个列出 bin/ 与 ../lib/ 下的 .dylib(literal,realpath),不放行目录与其它文件」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r903-WMnz5q/work\
+[134/152] ✓ 变异「来源按目录名认仓库」(55s)被「R10-01 作者只操作同名的非仓库目录(来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+[135/152] ✓ 变异「仓库身份判不了按同一仓库算」(53s)被「R10-01 作者只操作同名、还没有提交的 git 仓库(身份确认不了,来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+[136/152] ✓ 变异「不认宿主记录证明的已清理克隆」(39s)被「R10-02 清理后:同一记录里 git 输出的本仓库提交号证明是本仓库,来源门禁仍认出」发现:G-PROVENANCE 由放行变为拦下(不是门禁自身出错)
+[137/152] ✓ 变异「git 仓库不比仓库身份」(43s)被「R10-01 作者只操作同名的另一个 git 仓库(来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+[138/152] ✓ 变异「记录证据不看现状」(8s)被「R10-02 本仓库提交号出自现存的非仓库目录(现状与记录矛盾,来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+[139/152] ✓ 变异「记录里的提交号不核对属于本仓库」(9s)被「R10-02 克隆已清理、git 输出的是另一个仓库的提交号(来源门禁拒绝)」发现:G-PROVENANCE 不再按预期原因「找不到对本仓库的任何操作」拦下(✗ → ✓)
+[140/152] ✓ 变异「受管范围导出不冻结」(4s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结;UNGOVERNED 变成 
+[141/152] ✓ 变异「受管范围只冻结数组不冻结元素」(4s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结;UNGOVERNED 变成 /^docs\// /^reviews\// /^receipts\// [object RegExp]
+[142/152] ✓ 变异「豁免格式导出不冻结」(5s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结
+[143/152] ✓ 变异「受管判定直接用导出的未冻结数组」(6s)被「R10-03 真实门禁:同进程改写受管范围策略后,受管改动没收据照样拦下」发现:G-TRACE 不再按预期原因「缺收据」拦下(✗ → ✓)
+[144/152] ✓ 变异「豁免格式判定直接用导出的未冻结正则」(5s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结;改写豁免格式后格式不对的豁免被放行:[]
+[145/152] ✓ 变异「git 安全参数不冻结」(5s)被「R10-03 改写导出的受管范围策略(数组增删、元素改写)不改变受管判定与门禁结论」发现:直接判定用例在变异下判失败:UNGOVERNED(连同元素)、WAIVER_RE、GIT_SAFE_ARGS 没有全部冻结;GIT_SAFE_ARGS 变成  core.hooksPath=.githooks
+[146/152] ✓ 变异「容器计划多出一处 --mount 只读挂载」(5s)被「R10-04 容器执行计划逐项核对:只挂工作副本与依赖,另一种挂载形式(--mount/--volume/附着写法/--tmpfs/--volumes-from)、多挂少挂与其它参数判失败」发现:直接判定用例在变异下判失败:容器执行计划应逐项为 ["run","--rm","--network","none","--user","501:20","-e","HOME=/p
+[147/152] ✓ 变异「容器核对放过 --mount」(5s)被「R10-04 容器执行计划逐项核对:只挂工作副本与依赖,另一种挂载形式(--mount/--volume/附着写法/--tmpfs/--volumes-from)、多挂少挂与其它参数判失败」发现:直接判定用例在变异下判失败:--mount 只读绑定 没有判失败
+[148/152] ✓ 变异「容器核对不限 -v 集合」(5s)被「R10-04 容器执行计划逐项核对:只挂工作副本与依赖,另一种挂载形式(--mount/--volume/附着写法/--tmpfs/--volumes-from)、多挂少挂与其它参数判失败」发现:直接判定用例在变异下判失败:多一个 -v 没有判失败
+[149/152] ✓ 变异「运行库符号链接不放行」(5s)被「R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r1005-A7xiYJ/work\")","(su
+[150/152] ✓ 变异「运行库链接不限运行时目录」(7s)被「R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r1005-y4gR3Q/work\")","(
+[151/152] ✓ 变异「运行库链接目标不限 .dylib」(7s)被「R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r1005-BDXmeI/work\")
+[152/152] ✓ 变异「运行库链接目标不限普通文件」(5s)被「R10-05 运行库为符号链接:读放行列出指向运行时内 .dylib 的实际文件,指向运行时之外、目录、非 .dylib 或悬空的链接不放行」发现:直接判定用例在变异下判失败:读放行范围应恰为 ["(subpath \"/private/var/folders/lh/z4bcmr1d18z53jcctpfhwdt80000gn/T/gate-r1005-PH52ce/work\")","
+变异校验通过

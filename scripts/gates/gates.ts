@@ -138,7 +138,7 @@ export function agyStepsToTurns(lines: string[], stepModels?: ReadonlyMap<number
   return turns;
 }
 
-const AGY_MODEL_RE = /gemini-pro-orchestrator(?:-argon)?|claude-(?:opus|sonnet|haiku)-\d+-\d+(?:-thinking)?|gemini-\d+-[a-z][\w-]*|gemini-flash-[\w-]+|gpt-oss-[\w-]+/;
+const AGY_MODEL_RE = /gemini-pro-orchestrator(?:-argon)?|claude-(?:opus|sonnet|haiku)-\d+-\d+(?:-thinking)?|gemini-\d+(?:\.\d+)?-[a-z][\w-]*|gemini-flash-[\w-]+|gpt-oss-[\w-]+/;
 const AGY_LAST_STEP_RE = /last_step_index[^0-9]{1,8}(\d+)/;
 /**
  * 从 Antigravity 会话 SQLite 数据库(conversations/<id>.db,含活跃 -wal)逐轮恢复 step_index -> model 映射:
@@ -948,10 +948,10 @@ export const workflow: Gate = {
 };
 
 // ---------------------------------------------------------------- 插件化分层
-export const LAYERS = deepFreeze(["domain", "kernel", "adapter", "plugin", "app"] as const);
+export const LAYERS = deepFreeze(["domain", "kernel", "process", "adapter", "plugin", "app"] as const);
 type Layer = (typeof LAYERS)[number];
 const ALLOWED: Record<Layer, Layer[]> = {
-  domain: [], kernel: ["domain"], adapter: ["domain", "kernel"], plugin: ["domain", "kernel"], app: ["domain", "kernel", "adapter", "plugin"],
+  domain: [], kernel: ["domain"], process: [], adapter: ["domain", "kernel", "process"], plugin: ["domain", "kernel"], app: ["domain", "kernel", "adapter", "plugin"],
 };
 type Manifest = { name?: string; gGroup?: { layer?: string } } & Partial<Record<"dependencies" | "devDependencies" | "peerDependencies" | "optionalDependencies", Record<string, string>>>;
 
