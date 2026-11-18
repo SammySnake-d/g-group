@@ -1,0 +1,99 @@
+packages/adapter-pi-contact/src/protocols.ts
+  s_31dfb986e9ac6a::t_2eb2092bb441e5 1-4,6-13
+  s_31dfb986e9ac6a::t_408a253391399b 5
+  s_31dfb986e9ac6a::t_1cab52a0a10efd 14-24
+packages/api-contract/src/usage.ts
+  s_31dfb986e9ac6a::t_b368756a949322 1-59
+packages/server/src/start.ts
+  s_8545dccd4816b0::t_6dd0d2b583578b 44
+  s_7f422c52350e16::t_b19311be8d6513 16-17,19-20
+  s_b3368d8f94ae5a::t_db129cd49f5d2f 18
+packages/adapter-pi-contact/src/usage.test.ts
+  s_31dfb986e9ac6a::t_cc525c4e092e6a 10,166-204
+  s_31dfb986e9ac6a::t_b368756a949322 1-9,11-165,205
+packages/api-contract/src/index.ts
+  s_31dfb986e9ac6a::t_b368756a949322 7
+packages/kernel/src/runtime-ports.ts
+  s_31dfb986e9ac6a::t_b368756a949322 8-9,158,216,218
+packages/adapter-pi-contact/src/mind.ts
+  s_31dfb986e9ac6a::t_b368756a949322 17-21,31
+packages/adapter-pi-contact/src/index.ts
+  s_31dfb986e9ac6a::t_b368756a949322 4-5
+packages/server/src/usage.test.ts
+  s_31dfb986e9ac6a::t_b368756a949322 1-347,385
+  s_31dfb986e9ac6a::t_cc525c4e092e6a 348-373,387,397
+  s_31dfb986e9ac6a::t_27c8a12cffeb48 374-384,386,388-396
+packages/server/src/service.ts
+  s_31dfb986e9ac6a::t_2eb2092bb441e5 152
+packages/kernel/src/model-usage.ts
+  s_31dfb986e9ac6a::t_b368756a949322 1-30
+packages/server/src/cache-stats.ts
+  s_31dfb986e9ac6a::t_2eb2092bb441e5 1-97
+packages/adapter-pi-contact/src/protocols.test.ts
+  s_31dfb986e9ac6a::t_2eb2092bb441e5 136-137,331-500
+  s_31dfb986e9ac6a::t_25c7fbbeba6428 14,230-233
+  s_31dfb986e9ac6a::t_b368756a949322 1-13,15-135,138-229,234-330,501
+packages/server/src/b4-hotswap-speaking.test.ts
+  s_31dfb986e9ac6a::t_3567767fd25efe 11,34,56-58,66,74,96,115
+  s_31dfb986e9ac6a::t_cc525c4e092e6a 1-10,12-33,35-55,59-65,67-73,75-95,97-114,116-130
+packages/server/src/host.ts
+  s_18f4e42a362f21::t_28252877e2bb77 415
+packages/kernel/src/index.ts
+  s_31dfb986e9ac6a::t_b368756a949322 19
+packages/api-contract/src/api.ts
+  s_31dfb986e9ac6a::t_b368756a949322 62-63,451
+packages/adapter-pi-contact/src/magpie.ts
+  s_31dfb986e9ac6a::t_3dcfdaaecaa9b4 3-5
+  s_31dfb986e9ac6a::t_2eb2092bb441e5 1-2,6-33
+packages/adapter-pi-contact/src/usage.ts
+  s_31dfb986e9ac6a::t_2eb2092bb441e5 1
+  s_31dfb986e9ac6a::t_81a605e79b7803 2-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "41eb25ed79a0cd1f3688f3eb02288b8f807d7c56",
+  "prompts": {},
+  "sessions": {
+    "s_18f4e42a362f21": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a02374a8ddd5486aa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_31dfb986e9ac6a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ed15-0959-7892-b944-baf92d93c13c",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": null
+    },
+    "s_7f422c52350e16": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18b4f4b0-3cf6-4d51-be92-ca20094b2ce3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_8545dccd4816b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acff44844de2c7322",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_b3368d8f94ae5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aff9ebe3f7dda50e6",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
