@@ -130,6 +130,8 @@ export interface RoundTools {
   readMemory(id: string): Promise<string | null>;
   /** 引用链往上读一级(D24 read_quote_parent):这条消息直接引用的那几条;会话不可读返回 null */
   readQuoteParent?(roomId: string, seq: number): Promise<string | null>;
+  /** 运行台账查一个单元(D26 第 4 节 progress_get):状态、原因类别、子单元与最近事件(条数有界);roomId 是在哪个会话里查,决定可见范围;看不到或没有返回 null */
+  progressGet?(id: string, roomId: string): Promise<string | null>;
 }
 
 export interface ContactMind {
