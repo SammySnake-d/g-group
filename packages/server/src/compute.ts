@@ -49,3 +49,8 @@ export function claudeCompute(env: Readonly<Record<string, string | undefined>>,
   const opts = { ...base, hostEnv: { ...base.hostEnv, ...extraEnv } };
   return () => createResidentComputeAdapter(opts);
 }
+
+/** Compile-time placeholder for the red test commit. */
+export function codexCompute(_env: Readonly<Record<string, string | undefined>>): (model: string) => ComputeAdapter {
+  return () => { throw new Error("Codex compute is not implemented"); };
+}
