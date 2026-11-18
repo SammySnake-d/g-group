@@ -1,0 +1,47 @@
+packages/domain/src/model-config.ts
+  s_d36a3ff0ab81e8::t_4e962327ab30d4 152,154,157,159
+packages/kernel/src/memory-capture.ts
+  s_d36a3ff0ab81e8::t_956b7493daa6ad 8,15,17,19-20
+packages/server/src/cli.ts
+  s_d36a3ff0ab81e8::t_23ae034e569fe9 15,17,51-62
+packages/server/src/host.ts
+  s_d36a3ff0ab81e8::t_4e1012283e203f 433,2673,2764,2815,2880-2881,2886,2896-2900,2902,2907,3233,3267
+packages/server/src/memory-api.test.ts
+  s_d36a3ff0ab81e8::t_fad67481b2ceaf 4,10,13,197,204-209,213-284
+packages/server/src/memory-api.ts
+  s_d36a3ff0ab81e8::t_38afc021958282 20,23,25,27,29,32,35,38
+packages/server/src/memory-coverage.test.ts
+  s_d36a3ff0ab81e8::t_a5799ff3e3851e 2,6,104-111
+packages/server/src/memory-coverage.ts
+  s_d36a3ff0ab81e8::t_bd5b7c8c677a0d 24-37
+packages/server/src/memory-hygiene.ts
+  s_d36a3ff0ab81e8::t_e0a31a8beae7eb 25,41,43,45-46,48,52,55,58
+packages/server/src/memory-write-neighbors.test.ts
+  s_d36a3ff0ab81e8::t_27b7b87729824c 32,35
+packages/server/src/pi-runtime.ts
+  s_d36a3ff0ab81e8::t_40ecce892ef215 68-69,71-72,77-79
+packages/server/src/playbook.test.ts
+  s_d36a3ff0ab81e8::t_bfd226419d95b2 61-69,111-115
+packages/server/src/playbook.ts
+  s_d36a3ff0ab81e8::t_b6445d4f7adb63 5-11
+packages/server/src/start.ts
+  s_d36a3ff0ab81e8::t_9230fa2eea6387 6-7,9,11,47-57,68-69
+packages/server/src/views.ts
+  s_d36a3ff0ab81e8::t_bda03c63c74d1b 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2f3d0f2279e4dfd88e81ea4c32dfcc3504c11996",
+  "prompts": {},
+  "sessions": {
+    "s_d36a3ff0ab81e8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ee5f-e210-7b00-892f-836f6421b2c2",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
