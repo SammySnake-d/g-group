@@ -1,0 +1,21 @@
+packages/server/proof/b1-compute-stop.txt
+  s_affafcc4e20b47::t_8827e3795f26a6 725-782
+receipts/feat-agy-p0-compute-stop.json
+  s_affafcc4e20b47::t_a03bae9d6c99c4 27,31,33,35,38,40-44,47,52,54-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "943b9d9523ffed4513cebf9cea7fb7992591fd6f",
+  "prompts": {},
+  "sessions": {
+    "s_affafcc4e20b47": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ec1b-5225-7370-80a4-3596ddbad3a4",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
