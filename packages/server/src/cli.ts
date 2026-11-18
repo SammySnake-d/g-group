@@ -22,6 +22,11 @@ const { values, positionals } = parseArgs({
   allowPositionals: true,
   allowNegative: true,
   options: {
+    port: { type: "string", default: "3489" },
+    host: { type: "string", default: "127.0.0.1" },
+    token: { type: "string" },
+    "cors-origin": { type: "string", multiple: true },
+    "data-dir": { type: "string" },
     db: { type: "string", default: "./gg.db" },
     name: { type: "string", default: "小克" },
     mind: { type: "string", default: "fake" },
@@ -119,6 +124,7 @@ async function runGroup(host: Host, model: string | undefined) {
 }
 
 async function main() {
+  if (cmd === "serve") throw new Error("P1-C serve not implemented");
   if (cmd !== "dm" && cmd !== "log" && cmd !== "group") {
     console.log("用法: cli.ts dm|log|group --db 文件 [--name 联系人] [--members 甲,乙 --to 甲] [--mind fake|pi] [--api 协议 | --protocols 协议,协议] [--magpie | --no-magpie] [--note-max-bytes 字节|none] [--compute fake|claude] [--cwd 目录] \"消息\"");
     process.exit(2);
