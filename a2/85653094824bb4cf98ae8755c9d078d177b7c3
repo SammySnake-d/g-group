@@ -1,0 +1,21 @@
+scripts/gates/gates.ts
+  s_6b62a024142f98::t_6200ccc75ab856 141,951,954
+scripts/gates/selftest.ts
+  s_6b62a024142f98::t_d50e802a82c9da 948,1168-1183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a285653094824bb4cf98ae8755c9d078d177b7c3",
+  "prompts": {},
+  "sessions": {
+    "s_6b62a024142f98": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ee2b-38ee-7cd1-8041-c3b9ae6f1ce0",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
