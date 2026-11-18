@@ -1,0 +1,31 @@
+packages/api-contract/src/api.ts
+  s_5d1aef1d5fe15f::t_d7ed8f0807aa46 142-144,205-206
+packages/api-contract/src/entities.ts
+  s_5d1aef1d5fe15f::t_46ca4f09585ed6 153-156
+packages/api-contract/src/events.ts
+  s_5d1aef1d5fe15f::t_ea9cb069050a32 15
+packages/server/src/chat-admin.ts
+  s_5d1aef1d5fe15f::t_deb1699df74646 1-13,16-47,49-144
+packages/server/src/host.ts
+  s_5d1aef1d5fe15f::t_ce5179a1782166 185-186,500,512,962,1041-1049,1073-1074,1445,1461,1484-1486,1778,1840,1853-1874
+packages/server/src/room-blocked-summary.ts
+  s_5d1aef1d5fe15f::t_e9e3325c0e00f5 7-21
+packages/server/src/service.ts
+  s_5d1aef1d5fe15f::t_7323a9e3aa311f 72-74,97-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "083c16fe3276db65ecd6f3a3c12fe2ddc1fe79a2",
+  "prompts": {},
+  "sessions": {
+    "s_5d1aef1d5fe15f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1effa-6e3d-7161-9ff1-25907a09e97a",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
