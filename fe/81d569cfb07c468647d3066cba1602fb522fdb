@@ -1,0 +1,19 @@
+receipts/feat-agy-p2a1-chat-admin-summary.json
+  s_5d1aef1d5fe15f::t_73c94fbd96de2e 36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fe81d569cfb07c468647d3066cba1602fb522fdb",
+  "prompts": {},
+  "sessions": {
+    "s_5d1aef1d5fe15f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1effa-6e3d-7161-9ff1-25907a09e97a",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
