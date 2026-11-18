@@ -1,0 +1,27 @@
+packages/server/src/capabilities.ts
+  s_a65735228eebfc::t_1013ec67caf433 27,52,60,63-87,103-186
+packages/server/src/magpie-discovery.ts
+  s_a65735228eebfc::t_d5dd2bcd7f6410 1-170
+packages/server/src/memory-api.ts
+  s_a65735228eebfc::t_0bbf9cb44edff4 3,6,8,78-101,103
+packages/server/src/service.ts
+  s_a65735228eebfc::t_007edb3dfd34b3 22,164
+packages/server/src/views.ts
+  s_a65735228eebfc::t_183285cd2009e0 16-20,27-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "69442f2ae8c461d4b8bde293b99cf4019a039024",
+  "prompts": {},
+  "sessions": {
+    "s_a65735228eebfc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f0da-8e63-7d51-a2bd-316818d1943b",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
