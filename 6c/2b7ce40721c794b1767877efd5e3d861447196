@@ -1,0 +1,51 @@
+packages/api-contract/src/api.ts
+  s_173fcb351f5325::t_cbe1b742e7ee1f 434-449
+packages/server/src/capabilities.test.ts
+  s_173fcb351f5325::t_dcedab3be33216 60,77-78,95-98,139-140,168-169,175-191
+packages/server/src/views.test.ts
+  s_173fcb351f5325::t_f62202b4750ad4 1-39
+  s_173fcb351f5325::t_1caccf591baba6 40
+docs/spec/验收文档-v0.1.md
+  s_173fcb351f5325::t_3715d0c0076127 312-315
+packages/api-contract/src/entities.ts
+  s_173fcb351f5325::t_f120c0ab60cc9d 574-575,642-643
+receipts/feat-agy-frontend-contract-extensions.json
+  s_173fcb351f5325::t_c5f82cc8e403ab 1-33
+packages/server/src/magpie-discovery.ts
+  s_173fcb351f5325::t_6a85d0fa770e05 9
+  s_173fcb351f5325::t_020e851d9ddce3 1-8
+packages/server/src/memory-api.test.ts
+  s_173fcb351f5325::t_a4c4ff6c8bc917 14,285-335
+packages/server/src/magpie-discovery.test.ts
+  s_173fcb351f5325::t_33efba52e70e9d 1-70
+packages/server/proof/f0-frontend-contracts.txt
+  s_173fcb351f5325::t_42b9380b5cf007 1-22
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  s_173fcb351f5325::t_017de16f34a239 48-54
+packages/api-contract/src/memory.ts
+  s_173fcb351f5325::t_6a4d0b0aa8621a 57-68
+README.md
+  s_173fcb351f5325::t_6e36b82937d440 118-121
+packages/server/src/capabilities.ts
+  s_173fcb351f5325::t_1b5c5245805437 28,96-103
+packages/server/src/memory-api.ts
+  s_173fcb351f5325::t_c288e2660f2796 77-80,119
+packages/server/src/service.ts
+  s_173fcb351f5325::t_a4242c8d9aa1e2 160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6c2b7ce40721c794b1767877efd5e3d861447196",
+  "prompts": {},
+  "sessions": {
+    "s_173fcb351f5325": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f0bf-a6ec-7e40-83a5-fd27bd422428",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
