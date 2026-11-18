@@ -1,0 +1,16 @@
+receipts/feat-agy-p0-attention-compaction-guard.json
+  h_f33e46a035b77c 55-62
+reviews/feat-agy-p0-attention-compaction-guard.md
+  h_f33e46a035b77c 1-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "deca76cfcd6b1a69e118bfdea08526d959cbf65f",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
