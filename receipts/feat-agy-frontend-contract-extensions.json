@@ -1,0 +1,85 @@
+{
+  "slice": "F0 frontend contract extensions",
+  "author": {
+    "agent": "codex-cli",
+    "model": "fnqtz-gpt/gpt-6.2-sol",
+    "session": "codex-cli:01a1f0da-8e63-7d51-a2bd-316818d1943b"
+  },
+  "red": {
+    "commit": "e395a32a1ecf01cafa235890d8d550339e1d41d8",
+    "tests": [
+      "models.discoverGateway",
+      "inferModelVendor",
+      "memory.add",
+      "capabilities.list",
+      "contacts.profile doneTasks"
+    ]
+  },
+  "green": {
+    "commit": "69442f2ae8c461d4b8bde293b99cf4019a039024"
+  },
+  "review": {
+    "agent": "carbon-agy",
+    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
+    "model": "gemini-4-carbon-high",
+    "verdict": "approve",
+    "reviewed_hash": "3014a7c367d613b28d67541ca1e7398d1963e60d648c91205a4fcc63c78301d7",
+    "notes": "Round 2 APPROVE (see reviews/feat-agy-frontend-contract-extensions.md): Verified P1-1 fixed (author.session populated with codex-cli:01a1f0da-8e63-7d51-a2bd-316818d1943b), P1-2 fixed (addMemory rejects persona-suggestion anchor and filters hiddenIds + PERSONA_ANCHOR before planMemoryWrite so manual re-adds of retracted quotes create active effective entries), P1-3 fixed (discoverGatewayCatalog validates HTTP(S) baseUrl without embedded credentials, restricts local.foundConfig to local Magpie targets, and upgrades cur.label across harnesses), and P2 fixed (views.test.ts updatedAt sort mutation F0-R2-F5 killed; capabilities.ts scripts name<=64 + broken-symlink guard covered). 30/30 targeted tests, typecheck, lint (0 diagnostics across 331 files), and live R2 repro checks all passed."
+  },
+  "waiver": null,
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "packages/server/proof/f0-frontend-contracts.txt"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "packages/server/proof/f0-frontend-contracts.txt"
+    },
+    {
+      "id": "AC-54",
+      "status": "未测",
+      "reason": "D 层 contacts.profile 返回 long-term memory 与 doneTasks 并通过合同检查，前端渲染、用户入口和 Electron UI wiring 仍未测。"
+    },
+    {
+      "id": "AC-29",
+      "status": "未测",
+      "reason": "D 层能力目录与 Compute 参数边界已测，前端能力选择 UI、真实 CLI/Compute 加载与 X 层仍未测。"
+    },
+    {
+      "id": "AC-42",
+      "status": "未测",
+      "reason": "D 层 memory.add 与既有记忆读写边界已测，真实模型 S+X、前端记忆入口与完整 UI wiring 仍未测。"
+    }
+  ],
+  "unverifiable": "AC-54, AC-29, AC-42: this proof covers D-layer service behavior and strict frontend contract parity only. Frontend UI rendering, real Magpie/gateway/model traffic, and Electron end-to-end behavior remain unmeasured. review=null means independent review is pending.",
+  "verification": {
+    "typecheck": "passed",
+    "lint": "passed",
+    "targeted_tests": {
+      "passed": 30,
+      "failed": 0
+    },
+    "root_tests": {
+      "passed": 2186,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "contract_parity": {
+      "methods": 107,
+      "events": 21,
+      "backendChecked": true
+    },
+    "local_gates": {
+      "passed": 7,
+      "total": 8,
+      "failed": [
+        "G-REVIEW"
+      ],
+      "reason": "Independent review pending. review=null, waiver=null."
+    }
+  }
+}

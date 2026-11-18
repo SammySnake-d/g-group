@@ -1,0 +1,27 @@
+F0 frontend contract extensions — D-layer proof
+Branch: feat/agy-frontend-contract-extensions
+Red: e395a32a1ecf01cafa235890d8d550339e1d41d8
+Green: 69442f2ae8c461d4b8bde293b99cf4019a039024
+
+Contract snapshot checks
+- cmp packages/api-contract/src/api.ts entities.ts memory.ts against /tmp/gg-agy-f0-snapshot: pass
+- strict frontend parity: { ok: true, issues: [], stats: { methods: 107, events: 21, backendChecked: true } }
+
+Red witness
+- npm run typecheck: exit 0
+- targeted F0 tests on Red: 22 named failures across discovery, memory.add, MCP/scripts, and doneTasks
+- test files were unchanged from Red through Green
+
+Green witness
+- targeted F0 tests: 30 passed, 0 failed
+- npm run typecheck: exit 0
+- npm run lint: exit 0
+- npm test: 2186 passed, 0 failed, 0 skipped, 0 todo
+
+Round 1 verification
+- F0-F5: changing the doneTasks sort key from updatedAt to createdAt fails the first-task assertion (done-53 instead of done-4).
+- The active Codex CLI rollout loads and its repository turns resolve to vendor openai.
+- The Round 1 rejection is retained verbatim in reviews/feat-agy-frontend-contract-extensions.md. Round 2 review is pending.
+
+Boundary
+- This proof covers D-layer service behavior and contract parity. Frontend rendering, real Magpie/gateway/model traffic, and Electron end-to-end wiring remain unmeasured.

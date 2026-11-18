@@ -571,6 +571,8 @@ export const ContactProfileView = obj({
     commitments: arr(CommitmentView),
     /** 在途任务(未到 T8/T10/T11)。 */
     tasks: arr(TaskView),
+    /** 已结项 / 失败 / 取消的任务(情景记忆「做过的」)。 */
+    doneTasks: opt(arr(TaskView)),
     schedules: arr(ScheduleView),
     /** 所在会话。 */
     rooms: arr(obj({ roomId: id(), kind: oneOf(ROOM_KINDS), title: str({ max: 200 }) })),
@@ -637,7 +639,8 @@ export type PluginView = Infer<typeof PluginView>;
 /** 全局能力库:联系人设置页的勾选清单。勾选结果写进 ContactView.computeAssets(contacts.update)。 */
 export const CapabilityLibraryView = obj({
   skills: arr(obj({ name: str({ min: 1, max: 64 }), description: str({ max: 2000 }) })),
-  mcp: arr(obj({ name: str({ min: 1, max: 64 }) })),
+  mcp: arr(obj({ name: str({ min: 1, max: 64 }), description: opt(str({ max: 2000 })), command: opt(str({ max: 500 })) })),
+  scripts: opt(arr(obj({ name: str({ min: 1, max: 64 }), description: str({ max: 2000 }) }))),
 });
 export type CapabilityLibraryView = Infer<typeof CapabilityLibraryView>;
 

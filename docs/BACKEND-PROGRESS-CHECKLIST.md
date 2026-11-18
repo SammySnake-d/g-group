@@ -45,3 +45,10 @@ P1-A 无 R-Rule 审批链、BlockerRate 自动路由或多人 CRDT 编辑。净�
 - [ ] **未完成/待测边界**：真实 codex-cli 0.169.0 二进制 E2E、真实网关和模型 S+X、真实能力配置叠加及 Windows 留 P3。AC-23 / AC-51 / V-02 整体 D+X 保持“未测”。任意 Claude 工具子集与 skill 插件不冒充已映射，明确拒收。
 
 P1-B 不替代 B1 已有证明，也不把 wire 实验提升为真实 Codex 或模型验收。
+
+## F0 — `feat/agy-frontend-contract-extensions`
+
+- [x] `@g-group/api-contract` 与前端快照逐字一致，补齐 `models.discoverGateway`、`memory.add`、`ContactProfileView.duties.doneTasks`、MCP 描述与脚本目录字段；合同 parity 为 107 methods / 21 events。
+- [x] D 层 Magpie/兼容网关模型发现、长期记忆手动写入、能力目录 MCP 描述与 scripts listing、联系人已完成任务历史已接入。
+- [x] Hardened Red/Green、类型检查、lint、全量测试与严格合同检查已完成。
+- [ ] 前端 UI 渲染、真实 Magpie/网关、真实模型与 Electron 端到端联调留待 P3。

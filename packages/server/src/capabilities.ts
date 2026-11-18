@@ -24,7 +24,8 @@ export interface Asset {
 }
 export interface LibraryView {
   readonly skills: { readonly name: string; readonly description: string }[];
-  readonly mcp: { readonly name: string }[];
+  readonly mcp: { readonly name: string; readonly description?: string; readonly command?: string }[];
+  readonly scripts?: { readonly name: string; readonly description: string }[];
 }
 /** 一次派活要交给 Compute 的隔离配置 */
 export interface RunHome {
@@ -48,8 +49,7 @@ function skillDescription(file: string): string {
   return line ? line.replace(/^description\s*:\s*/, "").replace(/^["']|["']$/g, "").trim() : "";
 }
 
-/** 读 <名>.json 成 MCP 启动配置;不合格返回原因 */
-function mcpSpec(file: string): McpServerSpec | string {
+function mcpEntry(file: string): { spec: McpServerSpec; description?: string } | string {
   let raw: unknown;
   try {
     raw = JSON.parse(readFileSync(file, "utf8"));
@@ -57,10 +57,34 @@ function mcpSpec(file: string): McpServerSpec | string {
     return "配置不是合法 JSON";
   }
   if (!isRecord(raw) || typeof raw.command !== "string" || !raw.command) return "配置缺 command";
-  if (Object.keys(raw).some((k) => k !== "command" && k !== "args" && k !== "env")) return "配置只收 command/args/env";
+  if (Object.keys(raw).some((k) => k !== "command" && k !== "args" && k !== "env" && k !== "description")) return "配置只收 command/args/env/description";
   if (raw.args !== undefined && !isStrArr(raw.args)) return "args 必须是字符串数组";
   if (raw.env !== undefined && !(isRecord(raw.env) && Object.values(raw.env).every((v) => typeof v === "string"))) return "env 必须是字符串到字符串";
-  return { command: raw.command, ...(raw.args ? { args: [...raw.args] } : {}), ...(raw.env ? { env: { ...(raw.env as Record<string, string>) } } : {}) };
+  if (raw.description !== undefined && typeof raw.description !== "string") return "description 必须是字符串";
+  const spec: McpServerSpec = {
+    command: raw.command,
+    ...(raw.args ? { args: [...raw.args] } : {}),
+    ...(raw.env ? { env: { ...(raw.env as Record<string, string>) } } : {}),
+  };
+  const desc = typeof raw.description === "string" && raw.description.trim() ? raw.description.trim() : undefined;
+  return desc ? { spec, description: desc } : { spec };
+}
+
+/** 读 <名>.json 成 MCP 启动配置;不合格返回原因 */
+function mcpSpec(file: string): McpServerSpec | string {
+  const res = mcpEntry(file);
+  return typeof res === "string" ? res : res.spec;
+}
+
+function scriptDescription(file: string): string {
+  const firstLines = readFileSync(file, "utf8").split(/\r?\n/).slice(0, 6);
+  for (const line of firstLines) {
+    const cleaned = line.trim();
+    if (!cleaned || cleaned.startsWith("#!")) continue;
+    if (cleaned.startsWith("#") || cleaned.startsWith("//")) return cleaned.replace(/^[#/]+\s*/, "").trim();
+    break;
+  }
+  return "";
 }
 
 export class CapabilityLibrary {
@@ -86,10 +110,32 @@ export class CapabilityLibrary {
         if (NAME.test(n) && existsSync(f)) skills.push({ name: n, description: skillDescription(f) });
       }
     }
-    const mcp: { name: string }[] = [];
+    const mcp: { name: string; description?: string }[] = [];
     const md = path.join(this.root, "mcp");
-    if (existsSync(md)) for (const f of readdirSync(md).sort()) if (f.endsWith(".json") && NAME.test(f.slice(0, -5)) && typeof mcpSpec(path.join(md, f)) !== "string") mcp.push({ name: f.slice(0, -5) });
-    return { skills, mcp };
+    if (existsSync(md)) {
+      for (const f of readdirSync(md).sort()) {
+        if (!f.endsWith(".json")) continue;
+        const name = f.slice(0, -5);
+        if (!NAME.test(name)) continue;
+        const parsed = mcpEntry(path.join(md, f));
+        if (typeof parsed !== "string") {
+          mcp.push(parsed.description ? { name, description: parsed.description } : { name });
+        }
+      }
+    }
+    const scripts: { name: string; description: string }[] = [];
+    const scd = path.join(this.root, "scripts");
+    if (existsSync(scd)) {
+      for (const n of readdirSync(scd).sort()) {
+        const full = path.join(scd, n);
+        const key = n.replace(/\.[^.]+$/, "");
+        if (n.length > 64 || !NAME.test(key)) continue;
+        const mdFile = path.join(full, "SKILL.md");
+        if (existsSync(mdFile)) scripts.push({ name: n, description: skillDescription(mdFile) });
+        else if (statSync(full, { throwIfNoEntry: false })?.isFile()) scripts.push({ name: n, description: scriptDescription(full) });
+      }
+    }
+    return scripts.length > 0 ? { skills, mcp, scripts } : { skills, mcp };
   }
 
   /** 按勾选集合生成专属运行目录。缺项(库里没有、配置坏了)一律不启动,返回缺哪些 */
