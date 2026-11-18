@@ -1,0 +1,46 @@
+packages/kernel/src/memory-capture.ts
+  s_c847363fc44382::t_1f346f92331ebf 8-10,17-28,31-39,41-79
+  s_c847363fc44382::t_e1b1aad78392d5 30
+packages/server/src/memory-hygiene.ts
+  s_c847363fc44382::t_1f346f92331ebf 25-29,45-63,65-67,69-78,80-102,106-112,115-133,136-143
+packages/server/src/views.ts
+  s_c847363fc44382::t_1f346f92331ebf 1,19
+packages/server/src/memory-api.ts
+  s_c847363fc44382::t_1f346f92331ebf 20-22,25-58,60-64,66-69,71-74,77-84,87-92,95-107
+packages/domain/src/model-config.ts
+  s_c847363fc44382::t_1f346f92331ebf 152-156,158-187,190-197,199-201
+  s_c847363fc44382::t_7b7d3a445cb844 337-338
+packages/server/src/host.ts
+  s_c847363fc44382::t_b8e156fcc1b5f9 1-4,437,1421,1964-1965,2680,2739,2772-2773,2775,2826,2891-2907,2912-2916,2928,2930,2935-2953,2982-2983,3180,3182,3268,3284,3318
+  s_c847363fc44382::t_1e0349b1987833 2774,2923,2927
+packages/server/src/memory-coverage.ts
+  s_c847363fc44382::t_1f346f92331ebf 24-80
+packages/adapter-pi-contact/src/compact.ts
+  s_c847363fc44382::t_c2cfc052a0b1d0 31,43-45,71
+packages/server/src/cli.ts
+  s_c847363fc44382::t_a62130a9b9a018 2,16,18,52-59
+packages/server/src/pi-runtime.ts
+  s_c847363fc44382::t_f6dd71128a396e 1,69-70,72-74,79-86
+packages/server/src/playbook.ts
+  s_c847363fc44382::t_6af999e836b56f 1-3,5-7,9,12-95
+packages/server/src/speaking.ts
+  s_c847363fc44382::t_58120c1e2d92de 1-13
+packages/server/src/start.ts
+  s_c847363fc44382::t_beb52ab7b15280 1,7,9,11,47-48,59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6d0dcac40b4e967aa6dda809bf3ba768d349edc3",
+  "prompts": {},
+  "sessions": {
+    "s_c847363fc44382": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1eda8-b7c7-77c3-9505-693220ca61f5",
+        "model": "ling-jing/gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
