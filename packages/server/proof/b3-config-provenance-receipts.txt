@@ -1,0 +1,33 @@
+B3 D-layer proof — real Host, service, and SQLite; controlled Mind/Compute/provider fixtures.
+Base: 491c26c3bfe44892276569fb46bbde38c525e151; baseline npm test: 1902 passed, 0 failed.
+Red: d2e38ab3d6a8c1924c9ed4fb45aca551cae762d4
+  npm run typecheck: exit 0. node --test on all 8 changed test files: changed tests 0 passed / 70 failed by name; unchanged tests 23 passed; no file-level failure, cancel, skip or todo.
+  One ordered tool-list expectation was corrected and recalibrated before committing Green so the inherited progress_get-last contract stays unchanged. Final Red and Green test files are identical.
+Green: 48549293263154fe26cec41e878a65b1da64d275
+  npm run typecheck: exit 0 (0 errors). npm run lint: exit 0 (279 files, 0 warnings/errors).
+  npm test: exit 0; 1971 passed / 0 failed / 0 cancelled / 0 skipped / 0 todo.
+  Adapter + chat parity: 35 passed, including recall.test.ts and unchanged progress-tool.test.ts.
+  Provider-captured real Host Block-1 wirePrefix (default DM, no custom persona/rules): 3471 UTF-8 bytes (<= 3850).
+  recall.test.ts near-limit synthetic wirePrefix reproduced at 3997 UTF-8 bytes (< 4000); read_linked tool description 101 bytes.
+  Frontend wire check: all 89 existing frontend RPC names retained; existing field optionality preserved in touched DTOs; the frontend decodes real legacy forward and linked room responses.
+Scoped mutations: 19/19 killed by ERR_ASSERTION in the designated named test; unmutated and restored temporary-copy controls both green.
+  CFG-rowid → CFG17 R2-01 rowid-targeted replacement is rejected with recursive triggers off; version 1 remains byte-identical
+  CFG-same-PK → CFG13 R1-01 覆盖插入不能原位改写历史且回滚仍使用原配置
+  CFG-S1-effort → CFG15 R1-03 回滚恢复每个白名单字段含工具能力槽位和模型harness
+  CFG-S2-nulls → CFG18 S-2 rollback clears avatar and Compute slots when the stored values are null
+  TT-user-waiver → TT15 tasks.accept records one waiver by the actual user and the ordered delivery state changes
+  TT-update → TT14 raw SQL cannot update or delete a persisted timeline event
+  TT-delete → TT14 raw SQL cannot update or delete a persisted timeline event
+  R01-doc-result → RD01 retract discloses the ledger outcome, not the contact's different delivery
+  R02-needs-contact-delivery → RD02 completed ledger is disclosed even if the contact never delivers
+  R03-noncomplete-claims-complete → RD03 failed Compute reports actual status and time, never completion or undo
+  R04-later-source-included → RD04 retracting earlier chat never discloses a later task; only its actual source does
+  R05-deletes-ledger → RD05 retract discloses completed effects without modifying any progress ledger row
+  R06-first-task-only → RD06 all tasks with the same message source are disclosed, including a second Compute run
+  R07-first-completion-only → RD07 each completion report for one task/Compute gets its own ledger-based disclosure
+  R08-retract-clock → RD08 disclosure cites the completed ledger time even though its message has the later retract time
+  RD-noncompleted-omitted → RD03 running Compute reports actual status and time, never completion or undo
+  progress-afterAt-ignored → B301 tasks.progress filters strictly after afterAt before applying the requested limit
+  activity-no-replying → B302 committed visible contact reply emits thinking then replying in its room then idle
+  forward-consent-no-provenance → forward provenance vetoes consent when the resolver sees a forwarded row with bare approval text
+Boundary: AC-05 proof is for this slice’s append-only history/timeline and unchanged ledger bytes. AC-01/08/20/32/46 live/UI/model checks are not claimed; no in-flight-task cancellation on retract was added.
