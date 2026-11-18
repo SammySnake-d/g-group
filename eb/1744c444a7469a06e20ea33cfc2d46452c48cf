@@ -1,0 +1,41 @@
+packages/server/src/progress-get.ts
+  s_affafcc4e20b47::t_d03b43251a4c6e 1,7-8
+packages/server/src/start.ts
+  s_affafcc4e20b47::t_d03b43251a4c6e 7
+packages/kernel/src/run-ledger.ts
+  s_affafcc4e20b47::t_d03b43251a4c6e 249,258
+packages/server/src/runs.ts
+  s_affafcc4e20b47::t_d03b43251a4c6e 348
+packages/server/src/service.ts
+  s_affafcc4e20b47::t_d03b43251a4c6e 147
+packages/server/src/atomic.ts
+  s_affafcc4e20b47::t_d03b43251a4c6e 1-4
+packages/server/src/quota.ts
+  s_affafcc4e20b47::t_d03b43251a4c6e 48,53,56,76-80,84,90-100
+packages/server/src/artifacts.ts
+  s_affafcc4e20b47::t_d03b43251a4c6e 5,57-62,65
+packages/server/src/fakes.ts
+  s_affafcc4e20b47::t_d03b43251a4c6e 67-68,100,111-112,171,173,201
+packages/adapter-pi-contact/src/tools.ts
+  s_affafcc4e20b47::t_d03b43251a4c6e 1,184
+packages/server/src/host.ts
+  s_affafcc4e20b47::t_d03b43251a4c6e 142,156-157,531,538,586-587,609,635-636,645,1833,1913-1914,1918-1938,1940,2671,3095,3098,3351,3440-3444,3559-3560,3562-3563,3565-3566,3568-3569,3571-3572,3575-3576,3578-3584,3619,3628,3632,4453,4459-4461,4534-4535
+packages/server/src/runtime-config.ts
+  s_affafcc4e20b47::t_d03b43251a4c6e 1-2,4,11,13-14,27-31,34,49-50,52-53,55-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "eb1744c444a7469a06e20ea33cfc2d46452c48cf",
+  "prompts": {},
+  "sessions": {
+    "s_affafcc4e20b47": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ec1b-5225-7370-80a4-3596ddbad3a4",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
