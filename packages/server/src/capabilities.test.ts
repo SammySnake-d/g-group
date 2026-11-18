@@ -57,8 +57,7 @@ test("专属运行目录只放勾选的 skill 与 MCP:库里没勾的、假 HOME
   const { d, home } = dataDir();
   const lib = new CapabilityLibrary(d);
   const r = lib.prepare("c1", "claude-code", [{ name: "a-style", kind: "skill" }, { name: "notes", kind: "mcp" }, { name: "run.sh", kind: "script" }]);
-  assert.ok(r.ok);
-  if (!r.ok) return;
+  assert.equal(r.ok, true);
   assert.equal(r.home.configDir, path.join(d, "run_homes", "c1", "claude-code", "config"));
   assert.equal(r.home.pluginDirs.length, 1);
   assert.deepEqual(lib.linkedSkills(r.home.pluginDirs[0]!), [{ name: "a-style", target: path.join(d, "library", "skills", "a-style") }]);
@@ -75,8 +74,8 @@ test("两个同 harness 的联系人勾选不同集合,运行目录与 MCP 互�
   const lib = new CapabilityLibrary(d);
   const r1 = lib.prepare("c1", "claude-code", [{ name: "a-style", kind: "skill" }, { name: "notes", kind: "mcp" }]);
   const r2 = lib.prepare("c2", "claude-code", [{ name: "b-style", kind: "skill" }, { name: "files", kind: "mcp" }]);
-  assert.ok(r1.ok && r2.ok);
-  if (!r1.ok || !r2.ok) return;
+  assert.equal(r1.ok, true);
+  assert.equal(r2.ok, true);
   assert.notEqual(r1.home.configDir, r2.home.configDir);
   assert.deepEqual(lib.linkedSkills(r1.home.pluginDirs[0]!).map((s) => s.name), ["a-style"]);
   assert.deepEqual(lib.linkedSkills(r2.home.pluginDirs[0]!).map((s) => s.name), ["b-style"]);
@@ -93,8 +92,10 @@ test("改了勾选就换新插件目录,旧目录不被改动;没勾 skill 就�
   const r2 = lib.prepare("c1", "claude-code", [{ name: "b-style", kind: "skill" }]);
   const r3 = lib.prepare("c1", "claude-code", [{ name: "a-style", kind: "skill" }]);
   const r4 = lib.prepare("c1", "claude-code", [{ name: "notes", kind: "mcp" }]);
-  assert.ok(r1.ok && r2.ok && r3.ok && r4.ok);
-  if (!r1.ok || !r2.ok || !r3.ok || !r4.ok) return;
+  assert.equal(r1.ok, true);
+  assert.equal(r2.ok, true);
+  assert.equal(r3.ok, true);
+  assert.equal(r4.ok, true);
   assert.notEqual(r1.home.pluginDirs[0], r2.home.pluginDirs[0]);
   assert.equal(r1.home.pluginDirs[0], r3.home.pluginDirs[0]);
   assert.deepEqual(lib.linkedSkills(r1.home.pluginDirs[0]!).map((s) => s.name), ["a-style"]);
@@ -135,8 +136,8 @@ test("宿主派活把专属配置目录、勾选 skill 的插件目录和勾选 
   assert.deepEqual(task?.computeRuns[0]?.loaded, { skills: ["gg-skills:a-style"], mcpServers: ["host", "notes"] });
   const svc = createService(host);
   const got = await svc.handle("tasks.get", { taskId: task!.id });
-  assert.ok(got.ok);
-  assert.deepEqual(got.ok ? (got.value as { computeRuns: { loaded?: unknown }[] }).computeRuns[0]?.loaded : null, { skills: ["gg-skills:a-style"], mcpServers: ["host", "notes"] });
+  assert.equal(got.ok, true);
+  assert.deepEqual((got.value as { computeRuns: { loaded?: unknown }[] }).computeRuns[0]?.loaded, { skills: ["gg-skills:a-style"], mcpServers: ["host", "notes"] });
   compute.close();
   await host.close();
 });
@@ -164,10 +165,45 @@ test("capabilities.list:列出库里可勾选的 skill(带描述)与配置合格
   const host = new Host({ file: path.join(d, "h.db"), dataDir: d, mind: () => scriptedMind(), maxDeferMs: 5 });
   const svc = createService(host);
   const r = await svc.handle("capabilities.list", {});
-  assert.ok(r.ok);
-  assert.deepEqual(r.ok ? r.value : null, {
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.value, {
     skills: [{ name: "a-style", description: "a-style NEUTRAL_FIXTURE_NO_CREDENTIALS" }, { name: "b-style", description: "b-style NEUTRAL_FIXTURE_NO_CREDENTIALS" }],
     mcp: [{ name: "files" }, { name: "notes" }],
   });
   await host.close();
+});
+
+test("capabilities.list:支持 MCP 可选 description 与 scripts 列表,且不透传 description 给 CLI", async () => {
+  const { d } = dataDir();
+  fs.writeFileSync(
+    path.join(d, "library", "mcp", "search.json"),
+    JSON.stringify({ command: "/usr/bin/true", args: ["--search"], description: "检索代码与文档库" }),
+  );
+  fs.mkdirSync(path.join(d, "library", "scripts"), { recursive: true });
+  fs.writeFileSync(path.join(d, "library", "scripts", "check-ui.mjs"), "#!/usr/bin/env node\n// 校验前端双主题与红线\nconsole.log('ok');\n");
+  const lib = new CapabilityLibrary(d);
+  const list = lib.list();
+  assert.deepEqual(list.mcp.find((m) => m.name === "search"), { name: "search", description: "检索代码与文档库" });
+  assert.deepEqual(list.scripts, [{ name: "check-ui.mjs", description: "校验前端双主题与红线" }]);
+  const prep = lib.prepare("c2", "claude-code", [{ name: "search", kind: "mcp" }]);
+  assert.equal(prep.ok, true);
+  assert.deepEqual(prep.home.mcpServers, { search: { command: "/usr/bin/true", args: ["--search"] } });
+});
+
+test("capabilities.list scripts:跳过超长名称与失效符号链接", async () => {
+  const { d } = dataDir();
+  const scripts = path.join(d, "library", "scripts");
+  fs.mkdirSync(scripts, { recursive: true });
+  const maxName = `${"a".repeat(60)}.mjs`;
+  fs.writeFileSync(path.join(scripts, maxName), "// Valid script\n");
+  fs.writeFileSync(path.join(scripts, `a${maxName}`), "// Too long\n");
+  fs.symlinkSync("missing.mjs", path.join(scripts, "broken.mjs"));
+  const host = new Host({ file: path.join(d, "h.db"), dataDir: d, mind: () => scriptedMind() });
+  try {
+    const result = await createService(host).handle("capabilities.list", {});
+    assert.equal(result.ok, true);
+    assert.deepEqual((result.value as ReturnType<CapabilityLibrary["list"]>).scripts, [{ name: maxName, description: "Valid script" }]);
+  } finally {
+    await host.close();
+  }
 });

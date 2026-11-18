@@ -54,6 +54,18 @@ export const MEMORY_METHODS = {
   /** 一个联系人的全部长期记忆(不含「建议改人格」);可按准入与对外状态筛。 */
   "memory.list": { params: obj({ contactId: id(), scope: opt(oneOf(MEMORY_SCOPES)), status: opt(oneOf(MEMORY_STATES)) }), result: obj({ memories: arr(MemoryView) }) },
   "memory.get": { params: one, result: MemoryView },
+  /** 用户手动补充/沉淀一条长期记忆(按 scope=prefix/anchored 进全局或情景锚点,经 planMemoryWrite 去重判关系后立即生效)。 */
+  "memory.add": {
+    params: obj({
+      contactId: id(),
+      title: str({ min: 1, max: 200 }),
+      body: str({ min: 1, max: 20000 }),
+      scope: oneOf(MEMORY_SCOPES),
+      anchors: opt(arr(str({ min: 1, max: 500 }), { max: 32 })),
+      clientActionId: id(),
+    }),
+    result: MemoryView,
+  },
   /** 用户撤销一条:状态改「已撤销」,md 与索引都保留;已撤销的再撤销原样返回;已替代的不能撤销(conflict)。 */
   "memory.revoke": { params: obj({ contactId: id(), memoryId: id(), clientActionId: id() }), result: MemoryView },
   /** 用户触发:删掉索引从 md 真源重建;不给 contactId 就重建全部联系人。 */

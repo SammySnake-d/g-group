@@ -431,6 +431,22 @@ export const METHODS = {
     obj({ clientActionId: id(), from: str({ min: 1, max: 200 }), to: str({ min: 1, max: 200 }), apply: opt(bool()), confirmAffected: opt(bool()) }),
     obj({ applied: bool(), preview: ModelChangePreview }),
   ),
+  /** 探测模型网关或本机 Magpie(127.0.0.1:3425):按 Claude Code / Codex Harness 身份读取各自的模型目录。 */
+  "models.discoverGateway": method(
+    obj({
+      baseUrl: opt(str({ min: 1, max: 2000 })),
+      apiKey: opt(str({ max: 2000 })),
+      kind: opt(oneOf(["magpie", "openai-compatible", "anthropic"] as const)),
+      scanLocal: opt(bool()),
+    }),
+    obj({
+      source: str({ max: 100 }),
+      baseUrl: str({ max: 2000 }),
+      detectedMagpie: bool(),
+      harnesses: arr(oneOf(HARNESSES)),
+      models: arr(obj({ id: str({ min: 1, max: 200 }), label: str({ min: 1, max: 200 }), vendor: str({ min: 1, max: 64 }), harnesses: arr(oneOf(HARNESSES)) })),
+    }),
+  ),
 
   // ---- 设置 ----
   "settings.get": method(Empty, SettingsView),

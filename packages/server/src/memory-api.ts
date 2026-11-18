@@ -74,6 +74,8 @@ export function getMemoryView(host: Host, actor: MemoryActor, p: ParamsOf<"memor
 }
 
 /** 用户撤销:active / degraded → revoked(升版本);已撤销原样返回;已替代 conflict。md 与索引行都保留,不物理删除。 */
+export function addMemory(_host: Host, _actor: MemoryActor, _p: ParamsOf<"memory.add">): MemoryView { throw new HostError("internal", "red stub"); }
+
 export function revokeMemory(host: Host, actor: MemoryActor, p: ParamsOf<"memory.revoke">): MemoryView {
   onlyOwner(host, actor);
   viewOf(host, p.contactId, p.memoryId);
@@ -112,6 +114,7 @@ export function memoryHandlers(host: Host) {
   return {
     "memory.list": (p: ParamsOf<"memory.list">) => listMemoryViews(host, me(), p),
     "memory.get": (p: ParamsOf<"memory.get">) => getMemoryView(host, me(), p),
+    "memory.add": (p: ParamsOf<"memory.add">) => addMemory(host, me(), p),
     "memory.revoke": (p: ParamsOf<"memory.revoke">) => revokeMemory(host, me(), p),
     "memory.rebuild": (p: ParamsOf<"memory.rebuild">) => rebuildMemories(host, me(), p),
   };

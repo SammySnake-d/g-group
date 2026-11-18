@@ -11,7 +11,7 @@ import { appendEvent } from "@g-group/adapter-sqlite";
 import { all, run } from "./db.ts";
 import { Host } from "./host.ts";
 import { MemoryCoverage, type CaptureWrite } from "./memory-coverage.ts";
-import { LONG_TERM_TOP, getMemoryView, listMemoryViews, longTermMemory, rebuildMemories, revokeMemory } from "./memory-api.ts";
+import { LONG_TERM_TOP, addMemory, getMemoryView, listMemoryViews, longTermMemory, rebuildMemories, revokeMemory } from "./memory-api.ts";
 import { createService } from "./service.ts";
 
 const dir = mkdtempSync(path.join(tmpdir(), "gg-memapi-"));
@@ -81,6 +81,40 @@ async function code(p: Promise<{ ok: true; value: unknown } | { ok: false; error
   return r.ok ? "ok" : r.error.code;
 }
 const b5 = (r: RoundInput["request"]) => r.blocks[4]!.text;
+
+test("memory.add:拒绝建议人格锚点且不写入条目", async () => {
+  const { host, add } = setup();
+  try {
+    const { c } = add("小忆");
+    const before = host.memory.listAll(c.id);
+    assert.throws(() => addMemory(host, { kind: "user", id: host.userId }, {
+      contactId: c.id, title: "人格", body: "总是先给结论", scope: "anchored",
+      anchors: ["manual", " persona-suggestion "], clientActionId: "persona-anchor",
+    }), { code: "invalid_params", message: "不能手动添加建议人格记忆" });
+    assert.deepEqual(host.memory.listAll(c.id), before);
+  } finally { await host.close(); }
+});
+
+test("memory.add:手动重录已撤回的原话生成独立生效条目", async () => {
+  const { host, add, say } = setup();
+  try {
+    const { c, dm } = add("小忆");
+    const body = "以后所有回复都先给结论";
+    const seq = await say(dm.id, "capture", body);
+    const original = host.memory.listAll(c.id).find((entry) => entry.source?.seq === seq);
+    assert.ok(original);
+    host.retractMessage(dm.id, seq);
+    await settle(host);
+    assert.ok(host.memory.hiddenIds(host.memory.listAll(c.id)).has(original.id));
+    const added = addMemory(host, { kind: "user", id: host.userId }, {
+      contactId: c.id, title: original.title, body, scope: "prefix", clientActionId: "manual-restatement",
+    });
+    assert.notEqual(added.id, original.id);
+    assert.equal(added.source, null);
+    assert.equal(added.state, "active");
+    assert.equal(added.effective, true);
+  } finally { await host.close(); }
+});
 
 test("memory.list / get:按准入分 prefix / anchored、按对外状态筛,get 给全文与关系;联系人或别的用户身份来调 forbidden,联系人或条目不存在 not_found", async () => {
   const { host, svc, add, say } = setup();
@@ -280,5 +314,56 @@ test("P1A ask-user structured conflict passes its question through apply and not
     assert.equal(wake.mock.callCount(), before + 1);
     assert.deepEqual(wake.mock.calls.at(-1)?.arguments, [c.id, "now"]);
     assert.equal(host.listMemories(c.id).filter(e => e.status === "active").length, 2, "neither direct quote is silently superseded");
+  } finally { await host.close(); }
+});
+
+test("memory.add:用户沉淀全局偏好(prefix)与场景经验(anchored),并支持幂等复述归档", async () => {
+  const { host, svc, add } = setup();
+  const { c, dm } = add("小忆");
+  try {
+    const added = await svc.handle("memory.add", {
+      contactId: c.id,
+      title: "回复风格",
+      body: "永远优先给出可执行的命令与文件路径。",
+      scope: "prefix",
+      clientActionId: "mem-add-1",
+    });
+    assert.equal(added.ok, true);
+    const v1 = added.value as MemoryView;
+    assert.equal(v1.scope, "prefix");
+    assert.deepEqual(v1.anchors, ["global"]);
+
+    const anchored = await svc.handle("memory.add", {
+      contactId: c.id,
+      title: "前端排查锚点",
+      body: "E2E 跑在 4179 端口，绝不杀 5173。",
+      scope: "anchored",
+      anchors: [`room:${dm.id}`, "tool:playwright"],
+      clientActionId: "mem-add-2",
+    });
+    assert.equal(anchored.ok, true);
+    const v2 = anchored.value as MemoryView;
+    assert.equal(v2.scope, "anchored");
+    assert.deepEqual(v2.anchors, [`room:${dm.id}`, "tool:playwright"]);
+
+    // 相同内容与锚点再添加应判为复述，不造重复条目
+    const repeated = await svc.handle("memory.add", {
+      contactId: c.id,
+      title: "回复风格",
+      body: "永远优先给出可执行的命令与文件路径。",
+      scope: "prefix",
+      clientActionId: "mem-add-3",
+    });
+    assert.equal(repeated.ok, true);
+    assert.equal((repeated.value as MemoryView).id, v1.id);
+    assert.equal((repeated.value as MemoryView).evidenceCount, 1);
+
+    const listed = await svc.handle("memory.list", { contactId: c.id });
+    assert.equal(listed.ok, true);
+    assert.equal((listed.value as { memories: MemoryView[] }).memories.length, 2);
+    assert.throws(() => addMemory(host, { kind: "contact", id: c.id }, { contactId: c.id, title: "x", body: "y", scope: "prefix", clientActionId: "mem-add-forbidden" }), { code: "forbidden" });
+    const blank = await svc.handle("memory.add", { contactId: c.id, title: " ", body: " ", scope: "prefix", clientActionId: "mem-add-blank" });
+    assert.equal(blank.ok, false);
+    assert.equal(blank.error.code, "invalid_params");
   } finally { await host.close(); }
 });
