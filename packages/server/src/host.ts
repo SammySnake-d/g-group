@@ -147,6 +147,7 @@ import { EXIT_SETTLED, LEAVING_REASON, MemberExits } from "./members.ts";
 import { contactVersion, contactVersions, installContactHistory, recordContactConfig, rememberConfigAction, replayConfigAction } from "./contact-config-history.ts";
 import { type ForwardRecord, ForwardLinkStore, renderForwardText, renderLinked } from "./forward-link.ts";
 import { CapabilityLibrary } from "./capabilities.ts";
+import { UsageLedger } from "./usage.ts";
 import { MemoryStore } from "./memory-store.ts";
 import { PluginRuntime } from "./plugin-runtime.ts";
 import { PluginStore } from "./plugins.ts";
@@ -279,6 +280,12 @@ const QUOTE_CHAIN_K = 3;
 const QUOTE_SCAN_CAP = 32;
 const PERSONA_ANCHOR = "persona-suggestion";
 /** 用户原话里说了这类词才允许记成全局(D25 第 10 节场景 B) */
+function committedPiFailure(error: unknown): boolean {
+  if (!(error instanceof Error) || error.name !== "PiContactMindError") return false;
+  const failure = error as Error & { committed?: boolean; retryableTruncation?: boolean };
+  return failure.committed === true && failure.retryableTruncation !== true;
+}
+
 const GLOBAL_WORDS = /以后|所有|一律|始终|永远|每次|always|from now on/i;
 
 /** 状态笔记含撤回原文且无法精确移除时,整份作废后的占位(撤回优先,AC-08) */
@@ -286,6 +293,8 @@ const VOIDED_NOTE = "(状态笔记含已撤回内容,已作废;请按承诺账�
 
 interface ContactDoc extends Omit<ContactView, "activity"> {
   readonly persona: string;
+  /** Legacy rows lack provenance, so only contacts created without a model in B4 follow the default. */
+  readonly speakingModelInherited?: boolean;
 }
 interface RoomPostState { readonly budget: RoomPostBudget; readonly lastHumanAt?: number }
 
@@ -412,6 +421,7 @@ const TERMINAL: ReadonlySet<string> = new Set(["T8_Accepted", "T10_Cancelled", "
 
 export class Host {
   readonly db: Db;
+  readonly usage: UsageLedger;
   readonly bus: Bus;
   readonly userId: string;
   readonly userName: string;
@@ -491,6 +501,7 @@ export class Host {
     this.userId = opts.userId ?? "me";
     this.userName = opts.userName ?? "我";
     this.db = openDb(opts.file);
+    this.usage = new UsageLedger({ db: this.db, now: this.now, report: (w, d) => this.report(w, d) });
     installContactHistory(this.db, this.now());
     this.links = new ForwardLinkStore(this.db);
     this.loopGuard = new LoopGuard(this.db, opts.loopGuard, opts.clockMs);
@@ -663,6 +674,7 @@ export class Host {
       avatar: null,
       bio: input.bio ?? "",
       speakingModel: input.speakingModel ?? settings.defaultSpeakingModel,
+      ...(input.speakingModel === undefined ? { speakingModelInherited: true } : {}),
       harness: input.harness ?? settings.defaultHarness,
       computeModel: input.computeModel ?? { mode: "inherit" },
       tools: [],
@@ -680,7 +692,7 @@ export class Host {
     this.bus.emit({ type: "contact.updated", contact: view });
     return view;
   }
-  updateContact(id: string, input: Partial<Omit<ContactDoc, "id" | "createdAt" | "warning">> & { confirmAffected?: boolean; clientActionId?: string; expectedVersion?: number }): ContactView {
+  updateContact(id: string, input: Partial<Omit<ContactDoc, "id" | "createdAt" | "warning" | "speakingModelInherited">> & { confirmAffected?: boolean; clientActionId?: string; expectedVersion?: number }): ContactView {
     const { confirmAffected, clientActionId, expectedVersion, warning: _w, ...patch } = input as typeof input & { warning?: unknown };
     // 保留 B1 的卡死阈值检查;历史回滚只恢复白名单配置。
     if (patch.stall !== undefined && patch.stall !== null) patch.stall = checkStall(patch.stall, "stall");
@@ -690,7 +702,7 @@ export class Host {
       const replay = replayConfigAction<ContactView>(this.db, id, clientActionId, request);
       if (replay) return { view: replay.result, replay: true };
       if (expectedVersion !== undefined && expectedVersion !== cur.ver) throw new HostError("conflict", "联系人配置已更新,请重新读取", { currentVersion: cur.ver });
-      const next: ContactDoc = { ...cur.value, ...patch, id, createdAt: cur.value.createdAt };
+      const next: ContactDoc = { ...cur.value, ...patch, ...(patch.speakingModel !== undefined ? { speakingModelInherited: false } : {}), id, createdAt: cur.value.createdAt };
       if (patch.speakingModel !== undefined || patch.harness !== undefined || patch.computeModel !== undefined) this.guardContactConfig(next, confirmAffected === true);
       const version = putDoc(this.db, `contact:${id}`, cur.ver, next);
       recordContactConfig(this.db, id, version, next, "update", this.now());
@@ -725,7 +737,7 @@ export class Host {
       if (replay) return { result: replay.result, replay: true };
       if (input.expectedVersion !== current.ver) throw new HostError("conflict", "联系人配置已更新,请重新读取", { currentVersion: current.ver });
       const historical = contactVersion(this.db, input.contactId, input.version);
-      const next: ContactDoc = { ...current.value, ...historical.config };
+      const next: ContactDoc = { ...current.value, ...historical.config, speakingModelInherited: false };
       this.guardContactConfig(next, input.confirmAffected === true);
       const version = putDoc(this.db, `contact:${input.contactId}`, current.ver, next);
       recordContactConfig(this.db, input.contactId, version, next, "rollback", this.now(), input.version);
@@ -742,7 +754,7 @@ export class Host {
     return d;
   }
   contactView(doc: ContactDoc): ContactView {
-    const { persona: _p, removed: _r, computeResolved: _cr, warning: _w, ...rest } = doc as ContactDoc & { removed?: boolean };
+    const { persona: _p, removed: _r, computeResolved: _cr, warning: _w, speakingModelInherited: _inherited, ...rest } = doc as ContactDoc & { removed?: boolean };
     const resolved = this.resolveComputeFor(doc);
     const warning = harnessWarning(doc.harness, connectedHarnesses(this.factories));
     return {
@@ -792,12 +804,27 @@ export class Host {
     const patch = { ...rest, ...(runThresholds !== undefined ? { runThresholds: checkRunThresholds(runThresholds) } : {}) } as Partial<SettingsView>;
     const cur = getDoc<SettingsView>(this.db, "settings");
     const next = { ...(cur?.value ?? DEFAULT_SETTINGS), ...patch };
-    // 上游改动(AC-32 ②):全局默认或能力声明变了,保存前按新值预检全部下游联系人
+    const touched: ContactDoc[] = [];
+    let speakingUpdates: readonly modelConfig.ContactModels[] = [];
+    // Preflight using the new default, then commit that value and inherited contact snapshots together.
     if (patch.defaultHarness !== undefined || patch.defaultSpeakingModel !== undefined || patch.defaultComputeModel !== undefined || patch.defaultEffort !== undefined || patch.models !== undefined) {
       const change: modelConfig.ModelChange = { kind: "defaults", patch: defaultsOf(next) };
-      this.guardModelChange(modelConfig.previewChange(this.modelDefaults(), this.liveContacts().map((c) => this.contactModels(c)), capsOf(next), change), confirmAffected === true);
+      const outcome = modelConfig.previewChange(this.modelDefaults(), this.liveContacts().map((c) => this.contactModels(c)), capsOf(next), change);
+      this.guardModelChange(outcome, confirmAffected === true);
+      if (next.defaultSpeakingModel !== (cur?.value ?? DEFAULT_SETTINGS).defaultSpeakingModel) speakingUpdates = outcome.contacts.filter((c) => c.speakingModelInherited);
     }
-    putDoc(this.db, "settings", cur?.ver ?? 0, next);
+    tx(this.db, () => {
+      putDoc(this.db, "settings", cur?.ver ?? 0, next);
+      for (const change of speakingUpdates) {
+        const d = this.contactDoc(change.id);
+        if (d.value.speakingModel === change.speakingModel) continue;
+        const updated: ContactDoc = { ...d.value, speakingModel: change.speakingModel };
+        const version = putDoc(this.db, `contact:${change.id}`, d.ver, updated);
+        recordContactConfig(this.db, change.id, version, updated, "update", this.now());
+        touched.push(updated);
+      }
+    });
+    for (const c of touched) this.bus.emit({ type: "contact.updated", contact: this.contactView(c) });
     return this.settingsView();
   }
   // ======================= 模型配置(AC-32) =======================
@@ -808,7 +835,7 @@ export class Host {
     return capsOf(this.settings());
   }
   private contactModels(c: ContactDoc): modelConfig.ContactModels {
-    return { id: c.id, name: c.name, speakingModel: c.speakingModel, harness: c.harness, computeModel: c.computeModel };
+    return { id: c.id, name: c.name, speakingModel: c.speakingModel, ...(c.speakingModelInherited ? { speakingModelInherited: true } : {}), harness: c.harness, computeModel: c.computeModel };
   }
   /** 这位联系人 Compute 此刻的生效值:每次现场解析,不复用启动时的值(U93)。 */
   resolveComputeFor(c: ContactDoc, override?: modelConfig.TaskModelOverride): modelConfig.ResolvedCompute {
@@ -858,7 +885,7 @@ export class Host {
     const preview = previewView(out.preview);
     if (o.apply !== true) return { applied: false, preview };
     this.guardModelChange(out, o.confirmAffected === true);
-    const changedIds = new Set(out.preview.affected.filter((a) => a.involvement === "explicit-reference").map((a) => a.contactId));
+    const changedIds = new Set(out.preview.affected.filter((a) => a.involvement === "explicit-reference" || a.changed.includes("speaking-model")).map((a) => a.contactId));
     const touched: ContactDoc[] = [];
     tx(this.db, () => {
       const cur = getDoc<SettingsView>(this.db, "settings");
@@ -2849,9 +2876,11 @@ export class Host {
     return `${prefix}\n${summary}`;
   }
   /** 本轮要落盘的状态笔记:模型没写就请压缩器补写(同一说话模型的独立调用),超上限就缩写;最后移除撤回原文 */
-  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], previous: string | null, pending: readonly Inbound[], signal: AbortSignal, sourcesChanged: () => boolean): Promise<{ note: string | null; remember: MindAction[]; persona: string | null; pending: Inbound[] } | null> {
+  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], previous: string | null, pending: readonly Inbound[], signal: AbortSignal, sourcesChanged: () => boolean, roundId: string): Promise<{ note: string | null; remember: MindAction[]; persona: string | null; pending: Inbound[] } | null> {
     const contactId = contact.id;
     const prev = previous;
+    const usageRooms = [...new Set(fresh.map((f) => f.roomId))];
+    const usage = (kind: "compact" | "reflect") => this.usage.sink({ kind, roundId, contactId, roomIds: usageRooms });
     const compactor = this.opts.compactor?.(this.contactView(contact));
     const profile = { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona };
     const max = this.opts.stateNoteMaxBytes ?? null;
@@ -2868,7 +2897,7 @@ export class Host {
         .filter((e) => (e.status === "active" || e.status === "degraded") && !e.anchors.includes(PERSONA_ANCHOR) && e.anchors.some((x) => anchors.includes(x) || x === GLOBAL_ANCHOR))
         .map((e) => ({ id: e.id, title: e.title, body: e.body }));
       try {
-        const r: ReflectResult = await compactor.reflect({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max, neighbors, noteWritten: out.stateNote }, signal);
+        const r: ReflectResult = await compactor.reflect({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max, neighbors, noteWritten: out.stateNote }, signal, usage("reflect"));
         reflected = true;
         if (note === null) note = r.note;
         const lastUser = [...fresh].reverse().find((f): f is InboundMessage => f.kind === "message" && f.sender.kind === "user");
@@ -2876,13 +2905,14 @@ export class Host {
         for (const m of r.memories) remember.push({ kind: "remember", roomId, sourceSeq: lastUser?.seq ?? null, title: m.title, text: m.text, anchors: m.anchors, quote: null, relation: m.relation, target: m.target });
         persona = r.personaSuggestion;
       } catch (e) {
+        if (committedPiFailure(e)) reflected = true; // Keep the pending material; do not issue a replacement compaction.
         this.report("reflect-failed", { contactId, error: e instanceof Error ? e.message : String(e) });
       }
     }
     if (note === null && !reflected && compactor && fresh.length > 0) {
       if (signal.aborted || sourcesChanged()) return null;
       try {
-        note = await compactor.compact({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max }, signal);
+        note = await compactor.compact({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max }, signal, usage("compact"));
       } catch (e) {
         this.report("compact-failed", { contactId, kind: "round-note", error: e instanceof Error ? e.message : String(e) });
         note = null;
@@ -2892,7 +2922,7 @@ export class Host {
       if (signal.aborted || sourcesChanged()) return null;
       if (compactor) {
         try {
-          const shorter = await compactor.compact({ contact: profile, kind: "shrink", previous: note, material: "", maxBytes: max }, signal);
+          const shorter = await compactor.compact({ contact: profile, kind: "shrink", previous: note, material: "", maxBytes: max }, signal, usage("compact"));
           if (Buffer.byteLength(shorter, "utf8") < Buffer.byteLength(note, "utf8")) note = shorter;
         } catch (e) {
           this.report("compact-failed", { contactId, kind: "shrink", error: e instanceof Error ? e.message : String(e) });
@@ -3198,7 +3228,7 @@ export class Host {
           return progressGet(this.runs, contactId, this.roomsOfContact(contactId).filter((r) => !leaving.has(r.id)), roomId, id);
         },
       };
-      out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, ac.signal, tools), stalled, closing]);
+      out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: model }).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, ac.signal, tools, this.usage.sink({ kind: "round", contactId, roomIds: [...freshRooms], roundId })), stalled, closing]);
     } catch (e) {
       this.setActivity(contactId, null, "idle");
       if (stall) this.runs.failStalled(unit.id, stall);
@@ -3232,7 +3262,7 @@ export class Host {
       this.runs.settle(unit.id, { stale: true, note: "压缩来源变化,放弃旧结果并重跑" });
       return "stale";
     }
-    const settled = await this.settleNote({ ...contact, speakingModel: model }, fresh, out, roomIdsAtStart, fullNote, pendingNote, signal, noteSourcesChanged);
+    const settled = await this.settleNote({ ...contact, speakingModel: model }, fresh, out, roomIdsAtStart, fullNote, pendingNote, signal, noteSourcesChanged, roundId);
     if (signal.aborted || this.closed) return "done";
     if (settled === null || noteSourcesChanged()) {
       this.report("stale-round", { contactId, reason: "检查期间压缩来源发生变化" });
@@ -4928,7 +4958,8 @@ export class Host {
       scope: "contact", subject: contactId, contact_id: contactId, status, heal, effect: "B0", reason_class: cls.reasonClass, label: cls.label, fix: cls.fix, raw: cls.raw,
       attempts, attempt_seq: prev?.attempt_seq ?? 0, batch_end: batchEnd, inbox_end: inboxEnd, room_id: room, upstream: ctx.upstream, card_id: null, model_override: model, compute_id: null, delivery_unknown: 0, ...over,
     });
-    if (br.ok && br.state.status !== "closed") {
+    const committed = committedPiFailure(err);
+    if (!committed && br.ok && br.state.status !== "closed") {
       // 共享熔断打开:暂停,不出自己的卡;当前没有可点的群级卡(刚打开,或用户发起的探测又失败了)才出 1 张
       let card = null as { roomId: string; seq: number; cardId: string } | null;
       tx(this.db, () => {
@@ -4944,7 +4975,8 @@ export class Host {
       this.emitRetry({ scope: "contact", contactId, taskId: null, roomId: room, state: "paused", attempt: 0, limit: 0, label: cls.label });
       return "done";
     }
-    const d = decideRetry({ heal, effect: "B0", attempts, harnessAttempts: 0, stallJudged: cls.via === "stall" }, this.retryPolicy, this.random);
+    const d = committed ? { kind: "card", cause: "permanent" } as const
+      : decideRetry({ heal, effect: "B0", attempts, harnessAttempts: 0, stallJudged: cls.via === "stall" }, this.retryPolicy, this.random);
     if (d.kind === "retry") {
       tx(this.db, () => {
         this.upsertFailureTx(row("retrying", { attempts: d.attempt }));

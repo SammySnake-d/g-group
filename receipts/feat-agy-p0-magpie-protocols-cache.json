@@ -1,0 +1,87 @@
+{
+  "slice": "B4：联系人四种原生协议、Magpie 发现与提交前故障转移、缓存用量及下一轮说话模型热切换。",
+  "author": {
+    "agent": "codex-cli",
+    "model": "shayu/gpt-6.2-sol",
+    "session": "codex-cli:01a1ed38-962c-75b1-b7fd-5fd31c90467d"
+  },
+  "red": {
+    "commit": "766c1a17971377d063fe850980a34f36948a9baf"
+  },
+  "review": {
+    "agent": "carbon-agy",
+    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
+    "model": "gemini-4-carbon-high",
+    "verdict": "approve",
+    "reviewed_hash": "519620f5cdff74209164e426f87ff0db200f17370ace14760b9119e8dc58de3e",
+    "notes": "Round 1 APPROVE (see reviews/feat-agy-p0-magpie-protocols-cache.md): Verified 4 pi-ai lazy codecs & typed compat affinity, Magpie read-only discovery + strict pre-commit same-model failover + 1m/2m/5m/10m ProtocolHealthCache + >=8192 reasoning floor, <=4 cache_control collapse + 4-codec prefixHash + usage.cacheStats implicit/explicit accounting, turn-boundary speakingModel hot-swap, and honest 未测 boundaries. Independent typecheck, lint, 2016/2016 offline tests, 43/43 Red failures, and 6/6 single-site fault injections all passed."
+  },
+  "waiver": null,
+  "acceptance": [
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "packages/server/proof/b4-magpie-protocols-cache.txt"
+    },
+    {
+      "id": "AC-39",
+      "status": "未测",
+      "reason": "D 层已验证固定前缀、断点、拆账、TTL 与低命中；本轮未通过完整现场双轮及缓存统计。完整 UI/X 层留 B9。"
+    },
+    {
+      "id": "AC-51",
+      "status": "未测",
+      "reason": "D 层以 startServer、受控网关与真实 SQLite 验证轮内固定说话模型（含 reflect/shrink）、下一轮立即生效、上游拒绝不回退及状态保留。Codex harness 切换 ⑦ 留 B8，完整 X 层留 B9。"
+    },
+    {
+      "id": "AC-32",
+      "status": "未测",
+      "reason": "D 层验证严格同模型提交前协议回退及回复和检查的 8192 输出预算；本轮现场端到端未通过。完整 X 层留 B9。"
+    },
+    {
+      "id": "AC-36",
+      "status": "未测",
+      "reason": "D 层验证提交边界与健康冷却；完整现场端到端与 X 层尚未通过。"
+    }
+  ],
+  "unverifiable": "AC-39/AC-51/AC-32/AC-36：整套现场脚本未退出 0，不能宣称现场双轮及真实缓存统计通过。完整 UI/X 层、B8 harness 热切换与独立跨厂商审查仍待。",
+  "verification": {
+    "baseline": "d5f2fcb3cdb5239f63b96a8a043a99791757046a",
+    "implementation": "6f6f969176581bd05ded5904b173c49ed632280a",
+    "red_tests": {
+      "files": 4,
+      "named_failures": 43,
+      "passed": 0,
+      "skipped": 0
+    },
+    "root_tests": {
+      "passed": 2016,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0
+    },
+    "spot_mutants": {
+      "killed": 20,
+      "total": 20
+    },
+    "local_magpie": {
+      "runs": 6,
+      "exit_code": 1,
+      "prior_exit_codes": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "discovery": true,
+      "single_tool": false,
+      "http_failover": false,
+      "durable_multi_round": false,
+      "usage_stats_verified": false,
+      "config_fingerprint_verified": true,
+      "implementation": "6f6f969176581bd05ded5904b173c49ed632280a"
+    }
+  }
+}

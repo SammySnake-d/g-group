@@ -11,15 +11,15 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { claudeCompute } from "./compute.ts";
-import type { ContactView } from "@g-group/api-contract";
-import type { ContactCompactor, ContactMind } from "@g-group/kernel";
 import { ensureGroup, sendAndWait, senderAudit } from "./drive.ts";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
+import { DEFAULT_STATE_NOTE_MAX_BYTES, makePiRuntime } from "./pi-runtime.ts";
 import { cliRunThresholds } from "./runtime-config.ts";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
+  allowNegative: true,
   options: {
     db: { type: "string", default: "./gg.db" },
     name: { type: "string", default: "小克" },
@@ -28,6 +28,10 @@ const { values, positionals } = parseArgs({
     cwd: { type: "string" },
     timeout: { type: "string", default: "600" },
     model: { type: "string" },
+    api: { type: "string" },
+    protocols: { type: "string" },
+    magpie: { type: "boolean" },
+    "note-max-bytes": { type: "string" },
     members: { type: "string", default: "小克,小研" },
     to: { type: "string" },
     title: { type: "string", default: "项目群" },
@@ -43,39 +47,29 @@ const { values, positionals } = parseArgs({
 });
 const [cmd, ...rest] = positionals;
 
-async function makeMind(kind: string): Promise<{ mind: (c: ContactView) => ContactMind; compactor?: (c: ContactView) => ContactCompactor }> {
-  if (kind === "fake") return { mind: () => scriptedMind() };
+async function makeMind(kind: string) {
+  if (kind === "fake") return { mind: () => scriptedMind(), defaultModel: values.model ?? process.env.ANTHROPIC_DEFAULT_SONNET_MODEL };
   if (kind === "pi") {
-    // 字面量动态 import:按需加载 pi 依赖,G-LAYER 也能核对依赖方向
-    const mod = (await import("@g-group/adapter-pi-contact")) as unknown as { createPiContactMind(o: Record<string, unknown>): ContactMind; createPiCompactor(o: Record<string, unknown>): ContactCompactor };
-    const bearer = process.env.ANTHROPIC_AUTH_TOKEN;
-    const apiKey = bearer ?? process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error("--mind pi 需要 ANTHROPIC_AUTH_TOKEN 或 ANTHROPIC_API_KEY");
-    const opts = (model: string) => ({ provider: "anthropic", model, baseUrl: process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com", apiKey, authHeader: bearer ? "bearer" : "x-api-key" });
-    const cache = new Map<string, ContactMind>();
-    const compactors = new Map<string, ContactCompactor>();
-    return {
-      mind: (c) => {
-        let m = cache.get(c.speakingModel);
-        if (!m) {
-          m = mod.createPiContactMind(opts(c.speakingModel));
-          cache.set(c.speakingModel, m);
-        }
-        return m;
-      },
-      // 状态笔记压缩:同一说话模型的独立调用(AC-32 ③)
-      compactor: (c) => {
-        let k = compactors.get(c.speakingModel);
-        if (!k) {
-          k = mod.createPiCompactor(opts(c.speakingModel));
-          compactors.set(c.speakingModel, k);
-        }
-        return k;
-      },
-    };
+    const { protocolFor } = await import("@g-group/adapter-pi-contact");
+    const bad = (why: string): never => { throw new Error(why); };
+    return makePiRuntime({
+      ...(values.api !== undefined ? { api: protocolFor(values.api, bad) } : {}),
+      ...(values.protocols !== undefined ? { protocols: values.protocols.split(",").map((s) => protocolFor(s.trim(), bad)) } : {}),
+      ...(values.magpie !== undefined ? { magpie: values.magpie } : {}),
+      ...(values.model !== undefined ? { model: values.model } : {}),
+    }, process.env);
   }
   throw new Error(`未知 --mind ${kind}`);
 }
+
+function noteLimit(value: string | undefined): number | null {
+  if (value === undefined) return DEFAULT_STATE_NOTE_MAX_BYTES;
+  if (value === "none") return null;
+  const n = Number(value);
+  if (!/^\d+$/.test(value) || !Number.isSafeInteger(n) || n <= 0) throw new Error("--note-max-bytes expects a positive integer or 'none'");
+  return n;
+}
+
 function makeCompute(kind: string) {
   if (kind === "fake") {
     const c = scriptedCompute({ stepMs: 50 });
@@ -129,15 +123,18 @@ async function runGroup(host: Host, model: string | undefined) {
 
 async function main() {
   if (cmd !== "dm" && cmd !== "log" && cmd !== "group") {
-    console.log("用法: cli.ts dm|log|group --db 文件 [--name 联系人] [--members 甲,乙 --to 甲] [--mind fake|pi] [--compute fake|claude] [--cwd 目录] \"消息\"");
+    console.log("用法: cli.ts dm|log|group --db 文件 [--name 联系人] [--members 甲,乙 --to 甲] [--mind fake|pi] [--api 协议 | --protocols 协议,协议] [--magpie | --no-magpie] [--note-max-bytes 字节|none] [--compute fake|claude] [--cwd 目录] \"消息\"");
     process.exit(2);
   }
+  const { defaultModel: model, ...mind } = await makeMind(values.mind);
+  const stateNoteMaxBytes = noteLimit(values["note-max-bytes"]);
   const compute = makeCompute(values.compute);
   const cwdRoot = values.cwd ? path.resolve(values.cwd) : undefined;
   const runThresholds = cliRunThresholds({ noProgressMs: values["no-progress-ms"], firstByteMs: values["first-byte-ms"] });
   const host = new Host({
     file: path.resolve(values.db),
-    ...(await makeMind(values.mind)),
+    ...mind,
+    stateNoteMaxBytes,
     compute: compute.factory,
     ...(cwdRoot
       ? {
@@ -155,7 +152,6 @@ async function main() {
     onReport: (what, detail) => console.error(`[宿主] ${what}`, typeof detail === "object" ? JSON.stringify(detail) : detail),
   });
   try {
-    const model = values.model ?? process.env.ANTHROPIC_DEFAULT_SONNET_MODEL;
     if (model) host.updateSettings({ defaultComputeModel: model, defaultSpeakingModel: model, confirmAffected: true });
     if (cmd === "group") return await runGroup(host, model);
     let contact = host.listContacts().find((c) => c.name === values.name);

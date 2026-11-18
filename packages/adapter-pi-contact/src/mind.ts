@@ -7,24 +7,30 @@
 // 工具只登记动作、不做 I/O(tools.ts);宿主校验、分配 action_id、落盘后才执行。
 // 密钥只由调用方传入,只在发请求时交给 pi-ai;不读环境变量,不进返回值、错误信息和日志。
 import { Agent, type AgentMessage, type AgentTool, type AgentToolResult, type StreamFn } from "@earendil-works/pi-agent-core";
-import { type AssistantMessage, type Model, type SimpleStreamOptions, type SystemMessage, toToolDeclaration, type UserMessage } from "@earendil-works/pi-ai";
-import { anthropicMessagesApi } from "@earendil-works/pi-ai/api/anthropic-messages.lazy";
-import { BLOCK_LABELS, type BlockNo, type ContactMind, type MindAction, plainData, type RoundBlock, type RoundInput, type RoundOutput, type RoundTools } from "@g-group/kernel";
+import { type AssistantMessage, type SystemMessage, toToolDeclaration, type UserMessage } from "@earendil-works/pi-ai";
+import { BLOCK_LABELS, type BlockNo, type ContactMind, type MindAction, plainData, type RoundBlock, type RoundInput, type RoundOutput, type RoundTools, type UsageSink } from "@g-group/kernel";
+import { PiContactMindError, RoundAbortedError } from "./errors.ts";
+import { modelForProtocol, type PiAuthHeader, type PiProtocol, type ProtocolHealthCache } from "./protocols.ts";
+import { type Attempt, describe, resolveOptions, sessionFor, streamRequest, withProtocols } from "./request.ts";
 import { parseToolCall, TOOL_DECLARATIONS } from "./tools.ts";
 
 export interface PiContactMindOptions {
-  /** 模型协议。本片只接 Anthropic Messages 兼容端点(默认即此)。 */
-  readonly api?: "anthropic-messages";
+  /** A single explicit codec is strict. A list enables pre-commit failover for this exact model. */
+  readonly api?: PiProtocol;
+  readonly protocols?: readonly PiProtocol[];
+  readonly healthCache?: ProtocolHealthCache;
+  readonly sessionAffinity?: boolean;
+  readonly reasoning?: boolean;
   /** 服务商标识(进 pi 的 provider 字段,不含密钥),例如 "anthropic"、"magpie"。 */
   readonly provider: string;
   /** 模型 id,原样发给端点;必须与 RoundInput.contact.speakingModel 一致,不一致整轮拒绝(不静默换模)。 */
   readonly model: string;
-  /** Anthropic 兼容端点根地址(SDK 会接 /v1/messages)。 */
+  /** 服务端根地址,由所选协议拼接请求路径。 */
   readonly baseUrl: string;
   /** 密钥,由调用方传入。适配器不读环境变量。 */
   readonly apiKey: string;
   /** 密钥放哪个请求头:x-api-key(默认,Anthropic API 密钥)或 Authorization: Bearer(网关令牌)。 */
-  readonly authHeader?: "x-api-key" | "bearer";
+  readonly authHeader?: PiAuthHeader;
   /** 单次回复的输出上限,默认 4096。 */
   readonly maxTokens?: number;
   /** 模型上下文窗口,默认 200000(只用于 pi 的模型描述)。 */
@@ -33,102 +39,23 @@ export interface PiContactMindOptions {
   readonly cacheRetention?: "short" | "long";
   /** 一轮最多发几次请求(含工具往返),默认 8;到上限模型仍在调工具则整轮失败。 */
   readonly maxRequestsPerRound?: number;
-  /** HTTP 传输,默认 globalThis.fetch。代理、录制与测试用;请求体由 pi-ai 的 Anthropic 适配照常构造。 */
+  /** HTTP 传输,默认 globalThis.fetch。代理、录制与测试用;请求体由 pi-ai 的原生协议适配器构造。 */
   readonly fetch?: typeof globalThis.fetch;
 }
 
-export type PiContactMindErrorCode = "invalid-options" | "invalid-request" | "model-mismatch" | "provider-error" | "request-limit" | "internal";
-/** 可辨认的失败。message 已隐去密钥。 */
-export class PiContactMindError extends Error {
-  readonly code: PiContactMindErrorCode;
-  constructor(code: PiContactMindErrorCode, message: string) {
-    super(message);
-    this.name = "PiContactMindError";
-    this.code = code;
-  }
-}
-/** 宿主中止本轮(signal abort)。name 为 AbortError,便于按惯例识别。 */
-export class RoundAbortedError extends Error {
-  readonly code = "aborted" as const;
-  constructor() {
-    super("本轮已被宿主中止");
-    this.name = "AbortError";
-  }
-}
-export const isRoundAborted = (e: unknown): e is RoundAbortedError => e instanceof RoundAbortedError;
+export { PiContactMindError, type PiContactMindErrorCode, RoundAbortedError, isRoundAborted } from "./errors.ts";
 
 /** 第 2–5 块在 user 消息里的呈现:每块一个文本段,带块号与标签,空块也占位。 */
 export function renderBlock(b: RoundBlock): string {
   return `<block n="${b.block}" label="${b.label}">\n${b.text}\n</block>`;
 }
 
-interface Resolved {
-  readonly provider: string;
-  readonly model: string;
-  readonly baseUrl: string;
-  readonly apiKey: string;
-  readonly authHeader: "x-api-key" | "bearer";
-  readonly maxTokens: number;
-  readonly contextWindow: number;
-  readonly cacheRetention: "short" | "long";
-  readonly maxRequestsPerRound: number;
-  readonly fetch: typeof globalThis.fetch | undefined;
-}
-
-const OPTION_KEYS = new Set(["api", "provider", "model", "baseUrl", "apiKey", "authHeader", "maxTokens", "contextWindow", "cacheRetention", "maxRequestsPerRound", "fetch"]);
-
-function resolveOptions(opts: unknown): Resolved {
-  const bad = (why: string): never => { throw new PiContactMindError("invalid-options", `createPiContactMind 选项不合格:${why}`); };
-  const p = plainData(opts, "opts", { topFunctions: true });
-  if (!p.ok) return bad(`${p.path} ${p.why}`);
-  const o = p.value;
-  if (typeof o !== "object" || o === null || Array.isArray(o)) return bad("必须是对象");
-  const r = o as Record<string, unknown>;
-  for (const k of Object.keys(r)) if (!OPTION_KEYS.has(k)) bad(`未知字段 ${k}`);
-  const text = (k: string): string => {
-    const v = r[k];
-    if (typeof v !== "string" || v.trim() === "") return bad(`${k} 必须是非空字符串`);
-    return v;
-  };
-  const int = (k: string, dflt: number, min: number, max: number): number => {
-    const v = r[k];
-    if (v === undefined) return dflt;
-    if (typeof v !== "number" || !Number.isSafeInteger(v) || v < min || v > max) return bad(`${k} 必须是 ${min}–${max} 的整数`);
-    return v;
-  };
-  const oneOf = <T extends string>(k: string, allowed: readonly T[], dflt: T): T => {
-    const v = r[k];
-    if (v === undefined) return dflt;
-    if (typeof v !== "string" || !(allowed as readonly string[]).includes(v)) return bad(`${k} 只能是 ${allowed.join(" / ")}`);
-    return v as T;
-  };
-  oneOf("api", ["anthropic-messages"], "anthropic-messages");
-  const fetchFn = r.fetch;
-  if (fetchFn !== undefined && typeof fetchFn !== "function") bad("fetch 必须是函数");
-  const baseUrl = text("baseUrl");
-  let url: URL;
-  try { url = new URL(baseUrl); } catch { return bad("baseUrl 不是合法 URL"); }
-  if (url.protocol !== "http:" && url.protocol !== "https:") bad("baseUrl 必须是 http(s)");
-  return {
-    provider: text("provider"),
-    model: text("model"),
-    baseUrl,
-    apiKey: text("apiKey"),
-    authHeader: oneOf("authHeader", ["x-api-key", "bearer"], "x-api-key"),
-    maxTokens: int("maxTokens", 4096, 1, 1_000_000),
-    contextWindow: int("contextWindow", 200_000, 1, 100_000_000),
-    cacheRetention: oneOf("cacheRetention", ["short", "long"], "short"),
-    maxRequestsPerRound: int("maxRequestsPerRound", 8, 1, 64),
-    fetch: fetchFn as typeof globalThis.fetch | undefined,
-  };
-}
-
 /** 校验并取出本轮的五块(冻结副本)。块号必须正好 1–5 依次出现,标签与 BLOCK_LABELS 一致;缓存断点只允许在第 1 块。 */
-function readRound(input: unknown, model: string): { blocks: readonly RoundBlock[] } {
+function readRound(input: unknown, model: string): { blocks: readonly RoundBlock[]; contactId: string } {
   const bad = (why: string): never => { throw new PiContactMindError("invalid-request", `本轮输入不合格:${why}`); };
   const p = plainData(input, "input");
   if (!p.ok) return bad(`${p.path} ${p.why}`);
-  const x = p.value as { contact?: { speakingModel?: unknown }; request?: { blocks?: unknown } } | null;
+  const x = p.value as { contact?: { speakingModel?: unknown; id?: unknown }; request?: { blocks?: unknown } } | null;
   if (!x || typeof x !== "object") return bad("input 必须是对象");
   const speaking = x.contact?.speakingModel;
   if (typeof speaking !== "string") return bad("contact.speakingModel 必须是字符串");
@@ -148,33 +75,23 @@ function readRound(input: unknown, model: string): { blocks: readonly RoundBlock
     }
   }
   if ((blocks[0] as RoundBlock).text.trim() === "") bad("第 1 块(固定前缀)不能为空");
-  return { blocks: blocks as readonly RoundBlock[] };
+  return { blocks: blocks as readonly RoundBlock[], contactId: typeof x.contact?.id === "string" ? x.contact.id : model };
 }
 
-const describe = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-
 export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
-  const cfg = resolveOptions(opts);
-  const redact = (s: string): string => s.split(cfg.apiKey).join("[密钥已隐去]");
-  const model: Model<"anthropic-messages"> = {
-    id: cfg.model,
-    name: cfg.model,
-    api: "anthropic-messages",
-    provider: cfg.provider,
-    baseUrl: cfg.baseUrl,
-    reasoning: false,
-    input: ["text"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: cfg.contextWindow,
-    maxTokens: cfg.maxTokens,
-  };
-  const api = anthropicMessagesApi();
+  const cfg = resolveOptions(opts, "mind");
+  const redact = cfg.redact;
   const declarations = TOOL_DECLARATIONS.map((d) => toToolDeclaration({ name: d.name, description: d.description, parameters: d.parameters }));
 
-  async function round(input: RoundInput, signal: AbortSignal, tools?: RoundTools): Promise<RoundOutput> {
+  async function round(input: RoundInput, signal: AbortSignal, tools?: RoundTools, usage?: UsageSink): Promise<RoundOutput> {
     if (!(signal instanceof AbortSignal)) throw new PiContactMindError("invalid-request", "signal 必须是 AbortSignal");
     if (signal.aborted) throw new RoundAbortedError();
-    const { blocks } = readRound(input, cfg.model);
+    const { blocks, contactId } = readRound(input, cfg.model);
+    const sessionId = sessionFor(cfg, "contact", contactId);
+    return (await withProtocols(cfg, signal, (attempt) => run(blocks, attempt, sessionId, signal, tools, usage))).value;
+  }
+
+  async function run(blocks: readonly RoundBlock[], attempt: Attempt, sessionId: string | undefined, signal: AbortSignal, tools?: RoundTools, usage?: UsageSink): Promise<RoundOutput> {
     const [b1, ...rest] = blocks as [RoundBlock, ...RoundBlock[]];
     const now = Date.now();
     // 第 1 块:system,带工具声明(S-1:宿主拼装要带上 system 里的 toolsAdded,provider 从这里取工具清单)
@@ -241,14 +158,9 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
     let limitHit = false;
     let truncated = false;
     let last: AssistantMessage | undefined;
-    const keyOpts: Partial<SimpleStreamOptions> = cfg.authHeader === "bearer" ? {} : { apiKey: cfg.apiKey };
-    const streamFn: StreamFn = (m, ctx, o) => api.streamSimple(m, ctx, {
-      ...o,
-      ...keyOpts,
-      ...(cfg.authHeader === "bearer" ? { headers: { ...o?.headers, authorization: `Bearer ${cfg.apiKey}` } } : {}),
-      ...(cfg.fetch ? { fetch: cfg.fetch } : {}),
-      maxTokens: cfg.maxTokens,
-      cacheRetention: b1.cacheBreakpoint ? cfg.cacheRetention : "none",
+    const model = modelForProtocol(attempt.protocol, cfg);
+    const streamFn: StreamFn = (_m, ctx, options) => streamRequest(cfg, attempt, ctx, {
+      options, cache: b1.cacheBreakpoint, request: requests, sessionId, ...(usage ? { sink: usage } : {}),
     });
     const agent = new Agent({
       initialState: { model, tools: agentTools, thinkingLevel: "off" },
@@ -256,6 +168,7 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
       toolExecution: "sequential",
       prepareRequest: ({ context }) => {
         requests++;
+        if (requests > 1) attempt.committed = true;
         return { context: { ...context, messages: [...base, ...exchange] } };
       },
       finishTurn: (turn) => {
@@ -284,12 +197,17 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
       await agent.prompt(fresh);
     } catch (e) {
       if (signal.aborted) throw new RoundAbortedError();
+      if (e instanceof PiContactMindError) throw e;
       throw new PiContactMindError("internal", redact(describe(e)));
     } finally {
       signal.removeEventListener("abort", onAbort);
     }
     if (signal.aborted) throw new RoundAbortedError();
-    if (truncated) throw new PiContactMindError("provider-error", "模型回复达到输出上限而被截断,整轮未提交");
+    if (truncated) {
+      // A5: keep the host's existing same-model whole-round retry for empty, single-codec length results.
+      const retryableTruncation = cfg.protocols.length === 1 && requests === 1 && last?.content.length === 0;
+      throw new PiContactMindError("provider-error", "模型回复达到输出上限而被截断,整轮未提交", false, retryableTruncation);
+    }
     if (limitHit) throw new PiContactMindError("request-limit", `本轮已发 ${requests} 次请求,模型仍在调工具;上限 ${cfg.maxRequestsPerRound}`);
     const end = last as AssistantMessage | undefined;
     if (!end) throw new PiContactMindError("internal", "本轮没有收到模型回复");

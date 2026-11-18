@@ -149,6 +149,7 @@ export function createService(host: Host): Service {
     "models.preview": (p: { change: Parameters<Host["previewModelChange"]>[0] }) => host.previewModelChange(p.change),
     "models.batchReplace": (p: { from: string; to: string; apply?: boolean; confirmAffected?: boolean }) =>
       host.batchReplaceModels(p.from, p.to, { ...(p.apply !== undefined ? { apply: p.apply } : {}), ...(p.confirmAffected !== undefined ? { confirmAffected: p.confirmAffected } : {}) }),
+    "usage.cacheStats": (p: Parameters<Host["usage"]["cacheStats"]>[0]) => host.usage.cacheStats(p),
     "settings.get": () => host.settingsView(),
     "settings.update": (p: Parameters<Host["updateSettings"]>[0]) => host.updateSettings(p),
   };
