@@ -1,0 +1,29 @@
+README.md
+  s_bc50607f93d369::t_2d0edfb55508f3 86-96
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  s_bc50607f93d369::t_92a20ca6e7a4db 14,16-23
+docs/spec/验收文档-v0.1.md
+  s_bc50607f93d369::t_2c5feaba318e41 299-309
+packages/server/proof/p1b-codex-process-protocol.txt
+  s_bc50607f93d369::t_759157d75b0c63 1-2
+packages/server/proof/p1b-codex-protocol.txt
+  s_bc50607f93d369::t_7b19a814f97440 1-86
+receipts/feat-agy-priority-codex-protocol.json
+  s_bc50607f93d369::t_c9d6a140c33908 1-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3792591a472b71e8ff24988f64781f91d74d9583",
+  "prompts": {},
+  "sessions": {
+    "s_bc50607f93d369": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1eea6-33fc-7510-965f-bbdab05304c0",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
