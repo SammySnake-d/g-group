@@ -1,0 +1,16 @@
+receipts/feat-agy-frontend-contract-extensions.json
+  h_f33e46a035b77c 21-28
+reviews/feat-agy-frontend-contract-extensions.md
+  h_f33e46a035b77c 1-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cc09aa0ccbd0c42a2ab2bc943e89f07f211b53ba",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
