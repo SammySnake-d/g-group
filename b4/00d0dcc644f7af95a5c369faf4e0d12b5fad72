@@ -1,0 +1,25 @@
+scripts/check-contracts.ts
+  s_54254ea6b50f3d::t_911e63dc2eabfe 1-3
+scripts/check-docs.ts
+  s_54254ea6b50f3d::t_a4134cc784356a 1-3
+scripts/check-structure.ts
+  s_54254ea6b50f3d::t_28121e4eb1158e 1-3
+scripts/gates/autonomous-governance.test.ts
+  s_54254ea6b50f3d::t_16462ae65563b8 1-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b400d0dcc644f7af95a5c369faf4e0d12b5fad72",
+  "prompts": {},
+  "sessions": {
+    "s_54254ea6b50f3d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f0f5-ce75-7d12-8c7a-f0525c23cc53",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
