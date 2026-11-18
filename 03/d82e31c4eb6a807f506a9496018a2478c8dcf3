@@ -1,0 +1,25 @@
+packages/server/proof/magpie-live-probe.mjs
+  s_31dfb986e9ac6a::t_0001cc0d341336 1-143
+packages/server/proof/b4-spot-mutations.mjs
+  s_31dfb986e9ac6a::t_0001cc0d341336 1-63
+receipts/feat-agy-p0-magpie-protocols-cache.json
+  s_31dfb986e9ac6a::t_75553efaf0940f 1-72
+packages/server/proof/b4-magpie-protocols-cache.txt
+  s_31dfb986e9ac6a::t_75553efaf0940f 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "03d82e31c4eb6a807f506a9496018a2478c8dcf3",
+  "prompts": {},
+  "sessions": {
+    "s_31dfb986e9ac6a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ed15-0959-7892-b944-baf92d93c13c",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
