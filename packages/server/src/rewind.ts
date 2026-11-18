@@ -30,13 +30,6 @@ export function isRewound(db: Db, roomId: string, seq: number): boolean {
   return inRanges(rewindRanges(db, roomId), seq);
 }
 
-/** 回退与撤回共用的运行台账口径。 */
-export function computeRuns(db: Db, taskId: string) {
-  return all<{ compute_id: string; status: string; result: string | null; started_at: string; ended_at: string | null }>(
-    db, "SELECT compute_id, status, result, started_at, ended_at FROM gg_compute WHERE task_id = ? ORDER BY started_at, compute_id", taskId,
-  );
-}
-
 export interface RewindSource {
   readonly room: { readonly id: string; readonly kind: "dm" | "group" };
   readonly messages: readonly ProjectedMessage[];

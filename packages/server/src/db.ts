@@ -42,13 +42,6 @@ CREATE TABLE IF NOT EXISTS gg_compute_leases (
 CREATE TABLE IF NOT EXISTS gg_compute_legacy_holds (
   task_id TEXT PRIMARY KEY, contact_id TEXT NOT NULL, room_id TEXT NOT NULL, is_group INTEGER NOT NULL CHECK (is_group IN (0, 1))
 );
-CREATE TABLE IF NOT EXISTS gg_task_events (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, room_id TEXT NOT NULL, at TEXT NOT NULL, payload TEXT NOT NULL);
-CREATE INDEX IF NOT EXISTS gg_task_events_task_id ON gg_task_events (task_id, id);
-CREATE TRIGGER IF NOT EXISTS gg_task_events_no_replace BEFORE INSERT ON gg_task_events
-  WHEN EXISTS (SELECT 1 FROM gg_task_events WHERE id = NEW.id)
-  BEGIN SELECT RAISE(ABORT, 'task timeline immutable'); END;
-CREATE TRIGGER IF NOT EXISTS gg_task_events_no_update BEFORE UPDATE ON gg_task_events BEGIN SELECT RAISE(ABORT, 'task timeline immutable'); END;
-CREATE TRIGGER IF NOT EXISTS gg_task_events_no_delete BEFORE DELETE ON gg_task_events BEGIN SELECT RAISE(ABORT, 'task timeline immutable'); END;
 CREATE TABLE IF NOT EXISTS gg_progress (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, compute_id TEXT NOT NULL, kind TEXT NOT NULL, stage TEXT, summary TEXT NOT NULL, at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS gg_schedules (
   id TEXT PRIMARY KEY, contact_id TEXT NOT NULL, room_id TEXT NOT NULL, title TEXT NOT NULL, cron TEXT NOT NULL, tz TEXT NOT NULL, prompt TEXT NOT NULL,

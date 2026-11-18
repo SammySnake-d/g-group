@@ -35,8 +35,8 @@ export function createService(host: Host): Service {
   const helper = new HelperDesk(host);
   const H: { [M in MethodName]: Handler } = {
     "session.hello": () => ({ apiVersion: API_VERSION, serverTime: new Date().toISOString(), eventSeq: host.bus.head(), userId: host.userId }),
-    "contacts.rollback": (p: Parameters<Host["rollbackContact"]>[0]) => host.rollbackContact(p),
-    "contacts.history": ({ contactId, ...query }: { contactId: string } & NonNullable<Parameters<Host["contactHistory"]>[1]>) => host.contactHistory(contactId, query),
+    "contacts.rollback": () => { throw new HostError("internal", "B3 not implemented"); },
+    "contacts.history": () => { throw new HostError("internal", "B3 not implemented"); },
     "contacts.list": () => ({ contacts: host.listContacts() }),
     "contacts.get": (p: { contactId: string }) => host.contactView(host.contactDoc(p.contactId).value),
     "contacts.create": (p: Parameters<Host["createContact"]>[0]) => host.createContact(p),
@@ -47,8 +47,8 @@ export function createService(host: Host): Service {
       host.removeContact(p.contactId);
       return { ok: true };
     },
-    "rooms.unlink": (p: Parameters<Host["unlinkRooms"]>[0]) => host.unlinkRooms(p),
-    "rooms.link": (p: Parameters<Host["linkRooms"]>[0]) => host.linkRooms(p),
+    "rooms.unlink": () => { throw new HostError("internal", "B3 not implemented"); },
+    "rooms.link": () => { throw new HostError("internal", "B3 not implemented"); },
     "rooms.list": () => ({ rooms: host.roomsOfUser() }),
     "rooms.get": (p: { roomId: string }) => host.roomView(p.roomId),
     "rooms.openDm": (p: { contactId: string }) => host.openDm(p.contactId),
@@ -77,7 +77,7 @@ export function createService(host: Host): Service {
     "messages.retract": (p: { roomId: string; seq: number }) => host.retractMessage(p.roomId, p.seq),
     "messages.react": (p: { roomId: string; seq: number; emoji: string; on: boolean }) => host.react(p.roomId, p.seq, p.emoji, p.on),
     "messages.receipts": (p: { roomId: string; seq: number }) => host.receipts(p.roomId, p.seq),
-    "messages.forward": (p: Parameters<Host["forwardMessages"]>[0]) => host.forwardMessages(p),
+    "messages.forward": (p: { clientActionId: string; fromRoomId: string; seqs: number[]; toRoomId: string }) => host.forwardMessages(p),
     "messages.pin": (p: { roomId: string; seq: number; on: boolean }) => host.pinMessage(p.roomId, p.seq, p.on),
     "messages.hide": (p: { roomId: string; seqs: number[]; hidden?: boolean }) => host.hideMessages(p.roomId, p.seqs, p.hidden ?? true),
     "rooms.clearHistory": (p: { roomId: string }) => host.clearHistory(p.roomId),
@@ -89,12 +89,12 @@ export function createService(host: Host): Service {
     "files.list": (p: { roomId: string }) => ({ files: listFiles(host, p.roomId) }),
     "files.read": (p: { ref: string; maxBytes?: number }) => readFile(host, p.ref, p.maxBytes),
     "cards.act": (p: Parameters<Host["cardAct"]>[0]) => host.cardAct(p),
-    "tasks.timeline": (p: Parameters<Host["taskTimeline"]>[0]) => host.taskTimeline(p),
+    "tasks.timeline": () => { throw new HostError("internal", "B3 not implemented"); },
     "tasks.list": (p: Parameters<Host["listTasks"]>[0] & { limit?: number }) => ({ tasks: host.listTasks(p).slice(0, p.limit ?? 200) }),
     "tasks.get": (p: { taskId: string }) => host.taskViewById(p.taskId),
-    "tasks.progress": (p: { taskId: string; limit?: number; afterAt?: string }) => {
+    "tasks.progress": (p: { taskId: string; limit?: number }) => {
       host.taskDoc(p.taskId);
-      return { progress: host.progress(p.taskId, p.limit ?? 200, p) };
+      return { progress: host.progress(p.taskId, p.limit ?? 200) };
     },
     "tasks.accept": (p: { taskId: string; clientActionId: string }) => host.taskDecision(p.taskId, "accept", p.clientActionId),
     "tasks.reject": (p: { taskId: string; clientActionId: string; feedback: string }) => host.taskDecision(p.taskId, "reject", p.clientActionId, p.feedback),
