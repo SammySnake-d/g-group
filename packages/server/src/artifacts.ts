@@ -2,8 +2,9 @@
 // 按内容 sha256 快照进宿主数据目录 artifacts/<sha256><扩展名>,同内容只存一份;交付卡片引用 ref + sha256,
 // 之后工作区里的文件再改,卡片仍指向交付时的那份快照。代码文件不进卡片(群里不便全量看,U45)。
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { writeFileAtomic } from "./atomic.ts";
 import { type Db, one, run } from "./db.ts";
 
 export interface ArtifactRef {
@@ -54,15 +55,12 @@ export class ArtifactStore {
     const mime = READABLE_MIME[ext] ?? "application/octet-stream";
     const file = path.join(this.dir, `${sha256}${ext}`);
     mkdirSync(this.dir, { recursive: true });
-    if (!existsSync(file)) {
-      // 先写临时文件再改名:半截文件不会被当成快照
-      const tmp = `${file}.${process.pid}.tmp`;
-      writeFileSync(tmp, data);
-      renameSync(tmp, file);
-    }
+    // 同目录临时文件先同步内容,再原子发布;半截文件不会被当成快照。
+    if (!existsSync(file)) writeFileAtomic(file, data);
     // 名字用工作目录里的相对路径(统一成 /),同名不同目录的工件能分清
     const shown = name.split(path.sep).join("/").slice(-500);
-    run(this.db, "INSERT OR IGNORE INTO gg_artifacts (ref, sha256, name, mime, bytes, path, added_at) VALUES (?, ?, ?, ?, ?, ?, ?)", ref, sha256, shown, mime, data.length, file, this.now());
+    const inserted = run(this.db, "INSERT OR IGNORE INTO gg_artifacts (ref, sha256, name, mime, bytes, path, added_at) VALUES (?, ?, ?, ?, ?, ?, ?)", ref, sha256, shown, mime, data.length, file, this.now());
+    if (inserted !== 1 && (inserted !== 0 || this.get(ref)?.sha256 !== sha256)) throw new Error(`工件 ${ref} 登记失败或与已登记的 sha256 冲突`);
     return { ref, name: shown, mime, bytes: data.length, sha256 };
   }
   get(ref: string): (ArtifactRef & { readonly path: string }) | undefined {

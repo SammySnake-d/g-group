@@ -71,3 +71,7 @@ npm ci
 git config core.hooksPath .githooks
 npm run typecheck && npm run lint && npm test && npm run gates:selftest
 ```
+
+## 第三方代码
+
+`packages/server/src/atomic.ts` 及配套测试改编自 [milind-soni/OpenMausBot (`613ed01fd`)](https://github.com/milind-soni/OpenMausBot/tree/613ed01fd)（Copyright 2026 Milind Soni and OpenMausBot contributors），许可为 [Apache-2.0](packages/server/licenses/OpenMausBot-APACHE-2.0.txt)。

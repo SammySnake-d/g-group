@@ -64,8 +64,8 @@ export function scriptedCompute(
     idPrefix?: string;
     /** false:扮演不声明按轮换模型能力的旧适配器(没有 capabilities)。 */
     modelAware?: boolean;
-    /** 停止确认(AC-23):给了就当作适配器的 quiesce;测试用它控制「进程什么时候真的退干净」 */
-    quiesce?: (computeId: string) => Promise<QuiesceResult>;
+    /** 停止确认(AC-23):默认按本轮终态及 settled 判断;函数控制退出门,false 显式模拟缺少完整核验。 */
+    quiesce?: false | ((computeId: string) => Promise<QuiesceResult>);
     /** settled 之前等它(模拟 CLI 主进程退出得慢) */
     settle?: (computeId: string) => Promise<void>;
     /** 和真实一次性适配器一样:这一轮已经以 completed/failed 结束的实例,stop 返回拒绝(没有在运行的进程),不再报 stopped */
@@ -94,11 +94,26 @@ export function scriptedCompute(
   const turns: { computeId: string; turn: TurnModel | undefined }[] = [];
   const stopped: string[] = [];
   const ended = new Set<string>();
+  const history = new Map<string, ComputeEvent[]>();
   /** haltOnStop:已被停下、还没续接的实例 */
   const halted = new Set<string>();
+  const waits = new Map<string, Set<() => void>>();
+  const wait = (computeId: string, ms: number) => new Promise<void>((resolve) => {
+    const pending = waits.get(computeId) ?? new Set<() => void>();
+    waits.set(computeId, pending);
+    const finish = () => {
+      clearTimeout(timer);
+      pending.delete(finish);
+      if (!pending.size) waits.delete(computeId);
+      resolve();
+    };
+    const timer = setTimeout(finish, ms);
+    pending.add(finish);
+  });
   const push = (e: ComputeEvent) => {
-    if (e.kind === "completed" || e.kind === "failed") ended.add(e.computeId);
+    if (e.kind === "completed" || e.kind === "failed" || e.kind === "stopped") ended.add(e.computeId);
     if (e.kind === "started") ended.delete(e.computeId);
+    history.get(e.computeId)?.push(e);
     queue.push(e);
     wake?.();
   };
@@ -108,8 +123,10 @@ export function scriptedCompute(
     busy.set(computeId, (busy.get(computeId) ?? 0) + 1);
     void (async () => {
       for (const e of evs) {
-        await new Promise((r) => setTimeout(r, (opts.stepMs ?? 1) + (opts.pause?.(e) ?? 0)));
-        if (opts.haltOnStop && halted.has(computeId)) break;
+        const ms = (opts.stepMs ?? 1) + (opts.pause?.(e) ?? 0);
+        if (opts.haltOnStop) await wait(computeId, ms);
+        else await new Promise((r) => setTimeout(r, ms));
+        if (opts.haltOnStop && (halted.has(computeId) || closed)) break;
         push(e);
       }
       busy.set(computeId, (busy.get(computeId) ?? 1) - 1);
@@ -123,11 +140,20 @@ export function scriptedCompute(
       { kind: "milestone", stage: "写文件", summary: "已写好 hello.txt" },
       { kind: "completed", result: `完成:${(brief as { task: string }).task}` },
     ]);
+  const defaultQuiesce = async function (this: ComputeAdapter, computeId: string): Promise<QuiesceResult> {
+    if (!history.has(computeId)) return { ok: false, reason: `未知的 Compute ${computeId}`, remaining: [] };
+    if (!ended.has(computeId)) return { ok: false, reason: "这一轮还没结束(运行中或停在受阻),先停止", remaining: [] };
+    const events = await this.settled(computeId);
+    const last = events.at(-1)?.kind;
+    if ((busy.get(computeId) ?? 0) > 0 || (last !== "completed" && last !== "failed" && last !== "stopped")) return { ok: false, reason: "这一轮还没有确认终结", remaining: [] };
+    return { ok: true, killed: 0 };
+  };
   const adapter = {
     capabilities: { inSessionModelSwitch: true, isolation: true },
     async spawn(brief: unknown, o?: { cwd?: string; model?: string; effort?: string }): Promise<SpawnResult> {
       if (opts.failSpawn) return { ok: false, reason: opts.failSpawn };
       const computeId = `${opts.idPrefix ?? "cp"}-${++n}`;
+      history.set(computeId, []);
       spawned.push({ computeId, brief, cwd: o?.cwd, model: o?.model, effort: o?.effort, opts: o });
       toolsOf.set(computeId, JSON.stringify((brief as { tools?: unknown }).tools ?? null));
       play(computeId, script(computeId, brief).map((e) => ({ ...e, computeId }) as ComputeEvent));
@@ -140,6 +166,8 @@ export function scriptedCompute(
       const changed = o?.tools !== undefined && JSON.stringify(o.tools) !== toolsOf.get(computeId);
       if (o?.tools) toolsOf.set(computeId, JSON.stringify(o.tools));
       resumed.push({ computeId, text, ...(changed && o?.tools ? { tools: [...o.tools] } : {}) });
+      history.set(computeId, []);
+      ended.delete(computeId);
       halted.delete(computeId);
       turns.push({ computeId, turn });
       play(computeId, [...(opts.resumeScript?.(computeId, turn, text, o?.tools) ?? []), ...(opts.onResume?.(computeId, text) ?? [])].map((e) => ({ ...e, computeId }) as ComputeEvent));
@@ -149,6 +177,7 @@ export function scriptedCompute(
       if (opts.refuseStopAfterExit && ended.has(computeId)) return { ok: false as const, reason: `Compute ${computeId} 没有在运行的进程` };
       stopped.push(computeId);
       halted.add(computeId);
+      if (opts.haltOnStop) for (const finish of waits.get(computeId) ?? []) finish();
       push({ computeId, kind: "stopped", code: null, signal: null, scope: "main-then-group", violations: [] });
       return { ok: true };
     },
@@ -168,9 +197,9 @@ export function scriptedCompute(
     },
     async settled(computeId) {
       await opts.settle?.(computeId);
-      return [];
+      return Object.freeze([...(history.get(computeId) ?? [])]);
     },
-    ...(opts.quiesce ? { quiesce: opts.quiesce } : {}),
+    ...(opts.quiesce === false ? {} : { quiesce: opts.quiesce ?? defaultQuiesce }),
     snapshot: () => ({ ok: false as const, reason: "not-quiescent" }),
     rejectedReports: () => [],
     activity() {
@@ -198,7 +227,7 @@ export function scriptedCompute(
     /** 所有剧本事件都已吐出且被消费。 */
     /** 这个实例此刻生效的工具清单(派发时的 brief,或最近一次续接换上的)。 */
     currentTools: (computeId: string): string[] => JSON.parse(toolsOf.get(computeId) ?? "null") ?? [],
-    drained: () => inflight === 0 && queue.length === 0 && acts.length === 0,
+    drained: (): boolean => inflight === 0 && queue.length === 0 && acts.length === 0,
     /** 按需补发一条语义事件(剧本之外,测试用) */
     emit(e: ComputeEvent) {
       push(e);
@@ -210,6 +239,7 @@ export function scriptedCompute(
     },
     close() {
       closed = true;
+      for (const pending of waits.values()) for (const finish of pending) finish();
       wake?.();
       actWake?.();
     },
