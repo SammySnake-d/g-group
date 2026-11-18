@@ -1,0 +1,19 @@
+receipts/feat-agy-http-ws-bridge.json
+  s_808691e9162787::t_1459a42c0e1670 47,59,80-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0fc23a6b19491db03a7a0039030804e981238346",
+  "prompts": {},
+  "sessions": {
+    "s_808691e9162787": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f0a2-30c5-7282-9fe7-b1bd1996a12a",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
