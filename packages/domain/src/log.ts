@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { DomainError } from "./errors.ts";
 
 /** 会话里能发言的主体。Compute 不在其中:它的结果只能由联系人转述(AC-03)。Helper 只在被叫到的会话里作答。 */
-export type SenderKind = "user" | "contact" | "helper" | "system";
+export type SenderKind = "user" | "contact" | "helper";
 export interface Sender { readonly kind: SenderKind; readonly id: string }
 export type EventBody =
   | { readonly kind: "message"; readonly text: string }
@@ -23,7 +23,7 @@ export interface ProjectedMessage { seq: number; sender: Sender; text: string; e
 export type VerifyResult = { ok: true } | { ok: false; brokenAt: number };
 
 const GENESIS = "0".repeat(64);
-const SENDERS: ReadonlySet<string> = new Set<SenderKind>(["user", "contact", "helper", "system"]);
+const SENDERS: ReadonlySet<string> = new Set<SenderKind>(["user", "contact", "helper"]);
 
 function hashOf(e: Omit<LogEvent, "hash">): string {
   return createHash("sha256").update(JSON.stringify([e.seq, e.at, e.sender.kind, e.sender.id, e.body, e.prev])).digest("hex");

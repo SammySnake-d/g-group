@@ -193,18 +193,6 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
       execute: async (_id: string, params: unknown): Promise<AgentToolResult<null>> => {
         const r = parseToolCall(d.name, params);
         if (!r.ok) return { content: [{ type: "text", text: `未登记:参数不合形状(${r.why})。请按工具说明修正后重新调用。` }], details: null, isError: true };
-        if (r.value.kind === "query-history") {
-          const q = r.value.query;
-          if (!tools?.queryHistory) return { content: [{ type: "text", text: "本轮没有找旧消息的查询口" }], details: null, isError: true };
-          let got: string | null;
-          try {
-            got = await tools.queryHistory(q);
-          } catch (e) {
-            return { content: [{ type: "text", text: `找旧消息出错(不代表没说过):${redact(describe(e))}` }], details: null, isError: true };
-          }
-          if (got === null) return { content: [{ type: "text", text: q.kind === "search" ? `${q.roomId ?? "本轮"}不在本轮可查的会话里` : `读不到 ${q.roomId} #${q.seq}(不在本轮会话里或没有这条)` }], details: null, isError: true };
-          return { content: [{ type: "text", text: got }], details: null };
-        }
         if (r.value.kind === "read-quote") {
           const got = tools?.readQuoteParent ? await tools.readQuoteParent(r.value.roomId, r.value.seq) : null;
           if (got === null) return { content: [{ type: "text", text: tools?.readQuoteParent ? `读不到 ${r.value.roomId} #${r.value.seq}` : "本轮没有引用链查询口" }], details: null, isError: true };
@@ -233,7 +221,6 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
     const exchange: AgentMessage[] = [];
     let requests = 0;
     let limitHit = false;
-    let truncated = false;
     let last: AssistantMessage | undefined;
     const keyOpts: Partial<SimpleStreamOptions> = cfg.authHeader === "bearer" ? {} : { apiKey: cfg.apiKey };
     const streamFn: StreamFn = (m, ctx, o) => api.streamSimple(m, ctx, {
@@ -254,10 +241,6 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
       },
       finishTurn: (turn) => {
         if (turn.message.stopReason === "error" || turn.message.stopReason === "aborted") return undefined;
-        if (turn.message.stopReason === "length") {
-          truncated = true;
-          return { action: "end" };
-        }
         if (turn.toolResults.length > 0 && requests >= cfg.maxRequestsPerRound) {
           limitHit = true;
           return { action: "end" };
@@ -283,7 +266,6 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
       signal.removeEventListener("abort", onAbort);
     }
     if (signal.aborted) throw new RoundAbortedError();
-    if (truncated) throw new PiContactMindError("provider-error", "模型回复达到输出上限而被截断,整轮未提交");
     if (limitHit) throw new PiContactMindError("request-limit", `本轮已发 ${requests} 次请求,模型仍在调工具;上限 ${cfg.maxRequestsPerRound}`);
     const end = last as AssistantMessage | undefined;
     if (!end) throw new PiContactMindError("internal", "本轮没有收到模型回复");

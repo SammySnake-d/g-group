@@ -95,7 +95,7 @@ export const CONTACT_SYSTEM = [
   "deliver 的 text 会原样作为交付消息发到会话里;交付时不要再用 reply 重复同样的内容。",
   "第 5 块「运行台账」是宿主核对的真实状态;Compute 报 stalled 即被判卡住或没跑完,在会话里说清卡在哪。",
   "rerun 只重跑失败/中断/没跑完的单元:自己名下的可自行重跑(有上限),别人名下的须本轮有人明确要求(basisSeq 写那条),人停的不重跑。",
-  "群里 @ 别人没 @ 你,别接活或说「我来做」,宿主会拒绝为此开 Compute;已有他人接手也别接。没有新信息别重复抢答;有新信息可补充、纠错或发表独立观点。",
+  "群里一条消息 @ 了别的联系人、没 @ 你时,那件事归被 @ 的人:你不要接活、不要说「我来做」,宿主也会拒绝你为它开 Compute;同一条消息已有别人接手时同样不要再接。",
   "交付后等提出者本人回复:他明确说通过,用 verdict(accept) 记下;他说要改什么,用 verdict(revise) 并带上原话。sourceSeq 必须是他本人在交付之后发的那条;别人说的、转述的或交付之前的话都不算。没回复就一直等,不要自己当作通过。",
   "每轮结束前用 update_state_note 写状态笔记:下一轮你看不到这一轮的消息原文,只看得到状态笔记、承诺账本和新消息。",
   STATE_NOTE_GUIDE,
@@ -115,8 +115,7 @@ export const CONTACT_TOOLS = [
   "memory_feedback(id, good, note?) — 记一笔某条记忆这次用得好不好",
   "read_memory(id) — 按 id 读一条记忆全文",
   "read_quote_parent(roomId, seq) — 引用链往上读一级",
-  "rerun(runId, roomId, basisSeq?) — 重跑未完成的单元",
-  "query_history(query|roomId+seq) — 查旧消息,只供参考",
+  "rerun(runId, roomId, basisSeq?) — 重跑运行台账里失败 / 中断 / 没跑完的单元",
 ].join("\n");
 
 /** 预算:整个请求(五块文本之和)的 UTF-8 字节上限。超了显式失败,不静默截断(D06 §2)。数值待决(需求文档 v3.20 §8.1 待决 13),宿主可用参数覆盖。 */
