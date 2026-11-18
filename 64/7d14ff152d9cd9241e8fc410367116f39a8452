@@ -1,0 +1,107 @@
+packages/adapter-pi-contact/src/errors.ts
+  s_31dfb986e9ac6a::t_408a253391399b 1-5,8-23
+  s_31dfb986e9ac6a::t_ff0ffd9a54cdbb 6-7
+packages/adapter-pi-contact/src/compact.ts
+  s_31dfb986e9ac6a::t_0638b9f97ee3df 5-9,74-76,84,86,90-103,105,113
+packages/adapter-pi-contact/src/usage.ts
+  s_31dfb986e9ac6a::t_408a253391399b 1-9,11-126
+packages/server/src/start.ts
+  s_31dfb986e9ac6a::t_582c1397d451c3 11,77
+  s_377be331e17ebd::t_27d5c47e535041 53,56
+  s_7f422c52350e16::t_b19311be8d6513 14,47
+  s_7f422c52350e16::t_3666698abb466d 54-55
+  s_31dfb986e9ac6a::t_b368756a949322 41
+packages/adapter-pi-contact/src/protocols.ts
+  s_31dfb986e9ac6a::t_408a253391399b 1-9,12-13,15-22,24-25,27,29,31,33,36-103,105-123,125-141,143-172
+  s_31dfb986e9ac6a::t_6a438898ad87c8 104,124
+packages/server/src/host.ts
+  s_31dfb986e9ac6a::t_511c6354a40e52 150,283-288,296-297,504,677,695,705,740,757,807-808,816,2879,2882-2883,2908,3265,4961-4962,4978-4979
+  s_18f4e42a362f21::t_28252877e2bb77 817-827
+  s_377be331e17ebd::t_02bf2e80d14259 2915,2925
+  s_00309a6b1778cc::t_69ba4165840256 3231
+  s_377be331e17ebd::t_99c43d9967f883 809,812-814,838,888
+  s_377be331e17ebd::t_60bd25f88185bd 2900
+  s_31dfb986e9ac6a::t_cc525c4e092e6a 424
+packages/server/src/service.ts
+  s_31dfb986e9ac6a::t_8f690e6b566d48 152
+packages/server/src/cli.ts
+  s_7f422c52350e16::t_b323c11b96aab6 57,60
+  s_31dfb986e9ac6a::t_c450291403b9bf 17,22,31-34,64-72,129-130
+  s_377be331e17ebd::t_3aee5137895de7 50-51,53-56,58-59,136-137
+  s_45f973090a4dd5::t_978475bd77bdc1 126
+packages/adapter-pi-contact/src/mind.ts
+  s_31dfb986e9ac6a::t_09cff67fa2b536 10-14,18-21,28,33,42,54,58,78,82-83,86,89-94,161-163,171,200,206-210
+  s_31dfb986e9ac6a::t_408a253391399b 46
+packages/adapter-pi-contact/src/magpie.ts
+  s_31dfb986e9ac6a::t_3dcfdaaecaa9b4 1-4,7-9,38-148
+packages/server/src/cache-stats.ts
+  s_31dfb986e9ac6a::t_344db090b5158c 11,97-247
+packages/api-contract/src/api.ts
+  s_31dfb986e9ac6a::t_fad7b0433fef4c 49-50
+packages/server/src/usage.ts
+  s_31dfb986e9ac6a::t_2ea0e8a5560057 1-111
+packages/domain/src/model-config.ts
+  s_377be331e17ebd::t_f0c5638f2c8786 199,205-206,209,211-212,215,225
+  s_31dfb986e9ac6a::t_bc735436719f70 27
+packages/adapter-pi-contact/src/request.ts
+  s_31dfb986e9ac6a::t_e3dd218cd76c57 4,117,138,159,170,174
+  s_31dfb986e9ac6a::t_408a253391399b 1-3,5-116,118-137,139-158,160-169,171-173,175-191
+packages/server/src/pi-runtime.ts
+  s_31dfb986e9ac6a::t_caf9cb0922a111 1-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "647d14ff152d9cd9241e8fc410367116f39a8452",
+  "prompts": {},
+  "sessions": {
+    "s_00309a6b1778cc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5b44653a-2923-45fd-97d0-f25479b43797",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_18f4e42a362f21": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a02374a8ddd5486aa",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_31dfb986e9ac6a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ed15-0959-7892-b944-baf92d93c13c",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_377be331e17ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "366a4421-c4e1-455e-85a2-0721597033e5",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_45f973090a4dd5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a51cdc3b09003b508",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    },
+    "s_7f422c52350e16": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "18b4f4b0-3cf6-4d51-be92-ca20094b2ce3",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
