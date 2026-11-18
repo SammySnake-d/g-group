@@ -246,7 +246,8 @@ export function setStatus(units: readonly RunUnit[], id: string, to: RunStatus, 
 }
 
 /**
- * 存活核对:上一次宿主启动留下的在跑单元记「宿主进程退出」,同一启动里执行进程已不在的记「执行进程已不在」,子孙一并成孤儿。
+ * 存活核对:上一次宿主启动留下的在跑单元记「宿主进程退出」,同一启动里执行进程已不在的 running 单元记「执行进程已不在」,子孙一并成孤儿。
+ * 进程存活只核对 running(D26 第 3 节):等人回答的单元进程可以不在(一次性进程停在受阻就退出,常驻进程空闲回收),用户回答后按会话 id 续接。
  * 只返回改动了的单元。
  */
 export function reconcileOrphans(units: readonly RunUnit[], probe: { readonly bootId: string; readonly at: number; readonly alive: (pid: number) => boolean }): readonly RunUnit[] {
@@ -255,7 +256,7 @@ export function reconcileOrphans(units: readonly RunUnit[], probe: { readonly bo
     if (!LIVE.has(u.status)) continue;
     let note: string | null = null;
     if (u.bootId !== probe.bootId) note = "宿主进程退出";
-    else if (u.pid !== null && !probe.alive(u.pid)) note = "执行进程已不在";
+    else if (u.pid !== null && u.status === "running" && !probe.alive(u.pid)) note = "执行进程已不在";
     if (note) out.set(u.id, ended(u, "orphaned", probe.at, { note }));
   }
   for (const id of [...out.keys()]) {
