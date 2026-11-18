@@ -72,3 +72,48 @@ node scripts/gates/run-all.ts --local --base=origin/dev/agy-backend --branch=fea
 | `B2-F3` | `loop-guard.ts` `admit`: bypass `row.count >= this.maxHops` cap | `loop-guard.test.ts`: causal root hop-cap tests failed |
 | `B2-F4` | `mind.ts` `finishTurn`: skip `stopReason === "length"` truncation guard | `mind.test.ts`: `A5` truncated contact turn tests failed |
 | `B2-F5` | `host.ts` `settleNote`: drop `sourcesChanged()` recheck before fallback `compact` | `a5-fresh-auth-races.test.ts`: `授权在失败反思期间撤回:不能将旧快照发给下一次普通压缩` |
+
+
+## Round 2 — APPROVE
+
+**Reviewed HEAD:** `1b72d555901fd5e66d1b0e918f68f46010265ebc`  
+**Base:** `origin/dev/agy-backend` at `5d80aa865478eab0b6d83071db9717d37a7844f3`  
+**Content hash:** `e1118b83fa1d08ade667b3042eea85ed8c03fdd7f38d736462c899d8b6e05258`  
+**Author:** `codex-cli:01a1ec82-9ccb-7fa0-80ae-658287515888` (`shayu/gpt-6.2-sol`, OpenAI)  
+**Reviewer:** `antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98` (`carbon-agy` / `gemini-4-carbon-high`, Google)
+
+### Round 1 blocker resolution verified
+
+1. **Resolved — Cross-session isolation of `LoopGuard`-withheld group messages and `system` loop notices (`US2`, `G4-01`/`G4-a`, `D06.3`/`AC-37`, `AC-46`):**
+   - **Sub-issue A (`system` notice piggybacking, `prefetch` & `query_history` room scoping, `focusRoom`/`firstMsg` attribution)**:
+     - `packages/server/src/host.ts` (`runRound`, lines 2826–2835) filters `candidates` against `this.loopGuard.mayReceive` into `kept` and skips any room where `!kept.some(({ input }) => input.sender.kind !== "system")`, keeping `system`-only rooms out of `activeMessageRooms`, `fresh`, `refs`, and `sources`.
+     - `firstMsg` (`host.ts:2855–2856, 2879`) selects `f.kind === "message" && f.sender.kind !== "system"` for `focusRoom` and `unit.sourceSeq`; `this.history.tools` (`host.ts:3019`) scopes `query_history` strictly to `fresh.filter((f) => f.kind !== "message" || f.sender.kind !== "system")`; `HistoryAccess.prefetch` (`packages/server/src/history.ts:183–193`) excludes `sender.kind === "system"` from both `scope` and search queries even when a group is active in the current round.
+   - **Sub-issue B (post-`LoopGuard` `refs` / `planRecall` Page-In gating)**:
+     - `refs` and `sources` (`host.ts:2835–2847`) are collected solely from `kept` messages of `activeMessageRooms`, and `planRecall` (`host.ts:2914–2920`) receives `readableRooms: [...activeMessageRooms]`, preventing withheld quoting replies from paging group messages into unrelated private DM or other-room Block-5 contexts.
+   - **Sub-issue C (`markRead` bounded by `cursorSeen`)**:
+     - `host.ts:2871` advances `this.markRead` only for `activeMessageRooms` up to `cursorSeen[roomId] ?? 0` (capped at `blocked.seq - 1` when `LoopGuard` withholds a message), while `commitRound` (`host.ts:3458`) records delivered messages in `gg_loop_seen` so subsequent rounds neither re-deliver seen items nor prematurely mark withheld messages read.
+   - **Regression coverage**: `packages/server/src/loop-guard.test.ts` adds 6 focused Round-2 tests (`R2 G4-a`, two `R2 D06.3`, `R2 G4-01`, `R2 AC-46`, `R2 G4-03`) covering DM isolation with/without unread `system` notices, `query_history` search/read denial on the stopped group, `readSeq` preservation below blocked seq, and `prefetch` exclusion of `system` notices in active rooms.
+
+### Independent Round 2 verification evidence
+
+```sh
+node /tmp/gg-agy-rev-121/scripts/gates/run-all.ts --hash --repo=/tmp/gg-agy-rev-121 --branch=feat/agy-p0-attention-compaction-guard --base=origin/dev/agy-backend
+npm run typecheck
+npm run lint
+npm test
+node scripts/gates/run-all.ts --local --base=origin/dev/agy-backend --branch=feat/agy-p0-attention-compaction-guard
+```
+
+- `npm run typecheck`: exit 0.
+- `npm run lint`: Biome checked 269 files, exit 0.
+- `npm test`: **1902/1902** passed (`0` failed, `0` skipped, `0` todo, `0` cancelled).
+- Isolated R2 incremental Red replay (`759a44e8cb97222f58a6b865bed6180598f31cce` on `deca76cf` in `/tmp/gg-agy-fault-121`): zero diff on `packages/server/src/loop-guard.test.ts` to Green (`4910d0e0`); **6/6** new R2 tests failed by name with assertion errors while all **10** existing tests passed.
+- Isolated combined R1+R2 Red replay (`e891fa29ae87308dea26914c11ffcae476788d78` in `/tmp/gg-agy-fault-121`): `tsc -p tsconfig.json` exit 0; zero test diff across `"packages/**/*.test.ts"` `"scripts/gates/*.test.ts"` to Green (`4910d0e0`); 20 changed test files ran `161` tests with **136 named failures** and `25` unchanged passing controls (`0` skipped).
+- Isolated R2 single-point fault injections (`4/4` killed in `/tmp/gg-agy-fault-121`, then deleted):
+
+| Fault ID | Single-point mutation | Caught by named test(s) |
+|---|---|---|
+| `R2-F1` | `host.ts:2833`: replace `!kept.some(... !== "system")` with `kept.length === 0` | `loop-guard.test.ts`: `R2 G4-a 停止通知不能混入私聊新输入、运行来源或推进被拦群的已读` (+ restart loop test) |
+| `R2-F2` | `host.ts:3019`: widen `history.tools` scope from active non-`system` rooms to `rooms` | `loop-guard.test.ts`: `R2 G4-01 私聊 query_history 只搜本会话、拒绝显式搜索和回读被拦群` |
+| `R2-F3` | `host.ts:2871`: advance `markRead` to `lastSeen[roomId]` instead of `cursorSeen[roomId]` | `loop-guard.test.ts`: `R2 AC-46 群有可交付新输入时，已读仍停在被拦消息之前` |
+| `R2-F4` | `history.ts:183`: include `sender.kind === "system"` in `prefetch` messages | `loop-guard.test.ts`: `R2 G4-03 即使群在本轮活跃，系统通知也不作为预取查询` |

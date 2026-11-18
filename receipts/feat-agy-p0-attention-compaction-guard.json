@@ -52,7 +52,14 @@
   "red": {
     "commit": "e891fa29ae87308dea26914c11ffcae476788d78"
   },
-  "review": null,
+  "review": {
+    "agent": "carbon-agy",
+    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
+    "model": "gemini-4-carbon-high",
+    "verdict": "approve",
+    "reviewed_hash": "e1118b83fa1d08ade667b3042eea85ed8c03fdd7f38d736462c899d8b6e05258",
+    "notes": "Round 2 APPROVE (see reviews/feat-agy-p0-attention-compaction-guard.md): Verified Round 1 cross-session isolation fix across Host.runRound and HistoryAccess.prefetch (activeMessageRooms gating, post-LoopGuard refs collection, cursorSeen markRead bound, non-system prefetch/query_history/focusRoom scoping). Independent typecheck, lint, 1902/1902 tests, R2 incremental Red (6/6), combined Red (136/136), and 4/4 R2 single-site fault injections all passed."
+  },
   "waiver": null,
   "unverifiable": "按 R-08，D 层覆盖不等同 AC-08、AC-32、AC-42 整项通过；B3/B4/B8/B9 未覆盖范围见各项。Round 1 拒绝记录原样保留，Round 2 尚无独立跨厂商审查，不请求豁免。",
   "verification": {
